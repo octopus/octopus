@@ -16,17 +16,26 @@
 !! 02110-1301, USA.
 !!
 
-  subroutine X(write_header)(fname, np_global, ierr)
+  subroutine X(write_header)(fname, np_global, ierr, version, nst, ndim, nik)
     character(len=*),    intent(in)  :: fname
     integer,             intent(in)  :: np_global
     integer,             intent(out) :: ierr
+    integer, optional,   intent(in)  :: version
+    integer, optional,   intent(in)  :: nst
+    integer, optional,   intent(in)  :: ndim
+    integer, optional,   intent(in)  :: nik
 
-    integer :: iio
+    integer :: iio, version_, nst_, ndim_, nik_
     
     PUSH_SUB(X(write_header))
 
+    version_ = optional_default(version, 0)
+    nst_ = optional_default(nst, 0)
+    ndim_ = optional_default(ndim, 0)
+    nik_ = optional_default(nik, 0)
+
     iio = 0;
-    call write_header(np_global, R_TYPE_IOBINARY, ierr, iio, string_f_to_c(fname))
+    call write_header(np_global, R_TYPE_IOBINARY, ierr, iio, version_, nst_, ndim_, nik_, string_f_to_c(fname))
     call io_incr_counters(iio)
     
     POP_SUB(X(write_header))

@@ -575,9 +575,9 @@ contains
       filename = trim(restart_dir(restart))//'/'//"restart_states.obf"
       if(restart_is_root(restart)) then
         if (states_are_real(st)) then
-          call dwrite_header(trim(filename), size(st%group%dpsi), ierr)
+          call dwrite_header(trim(filename), gr%mesh%np_global, ierr, 1, st%nst, st%d%dim, st%d%kpt%nglobal)
         else
-          call zwrite_header(trim(filename), size(st%group%zpsi), ierr)
+          call zwrite_header(trim(filename), gr%mesh%np_global, ierr, 1, st%nst, st%d%dim, st%d%kpt%nglobal)
         end if
       end if
 
@@ -1090,6 +1090,7 @@ contains
 #else
       integer :: offset
 #endif
+      integer :: version, nst, ndim, nik
       PUSH_SUB(states_elec_load.load_parallel)
 
       restart_filename = trim(restart_dir(restart))//'/'//"restart_states.obf"
@@ -1100,13 +1101,37 @@ contains
       end if
       ! read header only on root and broadcast to the others
       if(restart_is_root(restart)) then
-        call io_binary_get_info(trim(restart_filename), read_np, file_size, ierr, number_type, correct_endianness)
+        version = 1
+        call io_binary_get_info(trim(restart_filename), read_np, file_size, ierr, &
+          number_type, correct_endianness, version, nst, ndim, nik)
+        if(ierr /= 0) then
+          message(1) = "Error: header information of restart file corrupted."
+          call messages_fatal(1)
+        end if
+        if(nst /= st%nst) then
+          write(message(1), "(A,I6,A,I6,A)") "Error: ", st%nst, " states expected, only ", &
+            nst, " found."
+          call messages_fatal(1)
+        end if
+        if(ndim /= st%d%dim) then
+          write(message(1), "(A,I6,A,I6,A)") "Error: spinor dimenstion ", st%d%dim, &
+            " expected, but ", ndim, " found."
+          call messages_fatal(1)
+        end if
+        if(nik /= st%d%kpt%nglobal) then
+          write(message(1), "(A,I6,A,I6,A)") "Error: ", st%d%kpt%nglobal, " k points expected, only ", &
+            nik, " found."
+          call messages_fatal(1)
+        end if
       end if
 #ifdef HAVE_MPI
       call MPI_Bcast(read_np, 1, MPI_INTEGER, 0, restart_get_comm(restart), mpi_err)
       call MPI_Bcast(file_size, 1, MPI_INTEGER, 0, restart_get_comm(restart), mpi_err)
       call MPI_Bcast(number_type, 1, MPI_INTEGER, 0, restart_get_comm(restart), mpi_err)
       call MPI_Bcast(correct_endianness, 1, MPI_INTEGER, 0, restart_get_comm(restart), mpi_err)
+      call MPI_Bcast(nst, 1, MPI_INTEGER, 0, restart_get_comm(restart), mpi_err)
+      call MPI_Bcast(ndim, 1, MPI_INTEGER, 0, restart_get_comm(restart), mpi_err)
+      call MPI_Bcast(nik, 1, MPI_INTEGER, 0, restart_get_comm(restart), mpi_err)
 #endif
 
       call states_elec_get_mpi_types_reading(st, number_type, mpi_filetype, mpi_localtype)
@@ -1121,9 +1146,10 @@ contains
         errorcode = mpi_err
         call MPI_Error_string(errorcode, string, resultlen, mpi_err)
         message(1) = "Error opening the parallel restart file."
-        message(2) = "Message: "//string
-        message(3) = "Trying serial restart files."
-        call messages_warning(3)
+        message(2) = "Error message:"
+        message(3) = trim(string)
+        message(4) = "Trying serial restart files."
+        call messages_warning(4)
         parallel_restart = .false.
       else
         call MPI_File_set_view(fh, 64_MPI_OFFSET_KIND + offset*extent, mpi_filetype, filetype, "internal", MPI_INFO_NULL, mpi_err)

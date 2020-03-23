@@ -145,9 +145,9 @@ static inline void init_header(header_t * hp){
   for(ii=0;ii<5;ii++) hp -> extra[ii] = 0;
 }
 
-static inline int check_header(header_t * hp, int * correct_endianness){
+static inline int check_header(header_t * hp, int * correct_endianness, int * version){
   if( strcmp("pulpo", hp -> text) != 0 ) return 5;
-  if( hp -> version != 0 ) return 5;
+  if( hp -> version != *version ) return 5;
 
   /* Check the endianness of integer values and fix header
      components */
@@ -183,7 +183,7 @@ static inline int check_header(header_t * hp, int * correct_endianness){
   return 0;
 }
 
-void io_write_header(const int * np, int * type, int * ierr, int * iio, char * fname)
+void io_write_header(const int * np, int * type, int * ierr, int * iio, int * version, int * nst, int * ndim, int * nik, char * fname)
 {
   header_t * hp;
   int fd;
@@ -209,6 +209,12 @@ void io_write_header(const int * np, int * type, int * ierr, int * iio, char * f
   init_header(hp);
   hp->np = *np;
   hp->type = *type;
+  if(*version == 1) {
+    hp->version = 1;
+    hp->extra[0] = *nst;
+    hp->extra[1] = *ndim;
+    hp->extra[2] = *nik;
+  }
 
   /* write header */
   moved = write(fd, hp, sizeof(header_t));
@@ -233,7 +239,8 @@ void write_binary(const int * np, void * ff, int * type, int * ierr, int * iio, 
   *ierr = 0;
   
   if(*nhd != 1){
-    io_write_header(np, type, ierr, iio, fname);
+    ii = 0;
+    io_write_header(np, type, ierr, iio, &ii, &ii, &ii, &ii, fname);
   }
   
   fd = open (fname, O_WRONLY,
@@ -270,7 +277,7 @@ void write_binary(const int * np, void * ff, int * type, int * ierr, int * iio, 
 }
 
 /* this function neither allocates nor deallocates 'hp' */
-void io_read_header(header_t * hp, int * correct_endianness, int * ierr, int * iio, char * fname)
+void io_read_header(header_t * hp, int * correct_endianness, int * ierr, int * iio, int * version, char * fname)
 {
   int fd;
   ssize_t moved;
@@ -293,7 +300,7 @@ void io_read_header(header_t * hp, int * correct_endianness, int * ierr, int * i
     return;
   }
 
-  *ierr = check_header(hp, correct_endianness);
+  *ierr = check_header(hp, correct_endianness, version);
   if( *ierr != 0 ){
     return;
   }
@@ -308,6 +315,7 @@ void read_binary(const int * np, const int * offset, byte * ff, int * output_typ
   int fd, ii;
   ssize_t moved;
   int correct_endianness;
+  int version = 0;
   byte * read_f;
   
   assert(np > 0);
@@ -315,7 +323,7 @@ void read_binary(const int * np, const int * offset, byte * ff, int * output_typ
   /* read the header */
   hp = (header_t *) malloc(sizeof(header_t));
   assert(hp != NULL);
-  io_read_header(hp, &correct_endianness, ierr, iio, fname);
+  io_read_header(hp, &correct_endianness, ierr, iio, &version, fname);
   if (*ierr != 0) {
      free(hp);
      return;
@@ -474,7 +482,7 @@ static void convert ( multi * in, multi * out, int t_in, int t_out){
 }
 
 
-void get_info_binary(int * np, int * type, int * file_size, int * ierr, int * iio, int * correct_endianness, char * fname)
+void get_info_binary(int * np, int * type, int * file_size, int * ierr, int * iio, int * correct_endianness, int * version, int * nst, int * ndim, int * nik, char * fname)
 {
   header_t * hp;
   struct stat st;
@@ -483,11 +491,20 @@ void get_info_binary(int * np, int * type, int * file_size, int * ierr, int * ii
   assert(hp != NULL);
 
   /* read header */
-  io_read_header(hp, correct_endianness, ierr, iio, fname);
+  io_read_header(hp, correct_endianness, ierr, iio, version, fname);
+
+  *nst = 0;
+  *ndim = 0;
+  *nik = 0;
 
   if(*ierr == 0) {
     *np  = hp->np;
     *type = (int) hp->type;
+    if(*version == 1) {
+      *nst = hp->extra[0];
+      *ndim = hp->extra[1];
+      *nik = hp->extra[2];
+    }
   } else {
     *np = 0;
     *type = TYPE_NONE;

@@ -67,23 +67,31 @@ module io_binary_oct_m
   end interface io_binary_read_parallel
 
   interface
-    subroutine get_info_binary(np, type, file_size, ierr, iio, correct_endianness, fname) bind(c)
+    subroutine get_info_binary(np, type, file_size, ierr, iio, correct_endianness, version, nst, ndim,  nik, fname) bind(c)
       use iso_c_binding
       integer(c_int),         intent(out)   :: np        !< Number of points of the mesh, written in the header
       integer(c_int),         intent(out)   :: type      !< Type of number
       integer(c_int),         intent(out)   :: file_size !< The actual size of the file
       integer(c_int),         intent(out)   :: ierr
       integer(c_int),         intent(inout) :: iio
-      integer(c_int),         intent(out)   :: correct_endianness
+      integer(c_int),         intent(out)   :: correct_endianness !< do we need to correct for endianness change?
+      integer(c_int),         intent(in)    :: version   !< the version of the obf file
+      integer(c_int),         intent(out)   :: nst       !< number of states in obf file (version 1 only)
+      integer(c_int),         intent(out)   :: ndim      !< spinor dimension in obf file (version 1 only)
+      integer(c_int),         intent(out)   :: nik       !< number of k points in obf file (version 1 only)
       character(kind=c_char), intent(in)    :: fname(*)
     end subroutine get_info_binary
 
-    subroutine write_header(np, type, ierr, iio, fname) bind(c, name="io_write_header")
+    subroutine write_header(np, type, ierr, iio, version, nst, ndim, nik, fname) bind(c, name="io_write_header")
       use iso_c_binding
       integer(c_int),         intent(in)    :: np
       integer(c_int),         intent(in)    :: type
       integer(c_int),         intent(out)   :: ierr
       integer(c_int),         intent(inout) :: iio
+      integer(c_int),         intent(in)    :: version
+      integer(c_int),         intent(in)    :: nst
+      integer(c_int),         intent(in)    :: ndim
+      integer(c_int),         intent(in)    :: nik
       character(kind=c_char), intent(in)    :: fname(*)
     end subroutine write_header
 
@@ -189,13 +197,14 @@ contains
     integer,             intent(out) :: ierr
     integer, optional,   intent(in)  :: offset
 
-    integer :: read_np, number_type, file_size, iio, correct_endianness
+    integer :: read_np, number_type, file_size, iio, correct_endianness, tmp
     real(8), allocatable :: read_ff(:)
 
     PUSH_SUB(try_dread_binary)
 
     iio = 0
-    call get_info_binary(read_np, number_type, file_size, ierr, iio, correct_endianness, string_f_to_c(fname))
+    call get_info_binary(read_np, number_type, file_size, ierr, iio, &
+      correct_endianness, 0, tmp, tmp, tmp, string_f_to_c(fname))
     call io_incr_counters(iio)
  
     ! if the type of the file is real, then read real numbers and convert to complex
@@ -227,13 +236,14 @@ contains
     complex(8),          intent(inout) :: ff(:)
     integer,             intent(out)   :: ierr
 
-    integer :: read_np, number_type, file_size, iio, correct_endianness
+    integer :: read_np, number_type, file_size, iio, correct_endianness, tmp
     real(8), allocatable :: read_ff(:)
 
     PUSH_SUB(try_dread_parallel)
 
     iio = 0
-    call get_info_binary(read_np, number_type, file_size, ierr, iio, correct_endianness, string_f_to_c(fname))
+    call get_info_binary(read_np, number_type, file_size, ierr, iio, &
+      correct_endianness, 0, tmp, tmp, tmp, string_f_to_c(fname))
     call io_incr_counters(iio)
     ! if the type of the file is real, then read real numbers and convert to complex
     if (number_type /= TYPE_DOUBLE_COMPLEX) then
@@ -255,24 +265,34 @@ contains
 
   !------------------------------------------------------
 
-  subroutine io_binary_get_info(fname, np, file_size, ierr, type, correct_endianness)
+  subroutine io_binary_get_info(fname, np, file_size, ierr, type, correct_endianness, version, nst, ndim, nik)
     character(len=*),    intent(in)    :: fname
     integer,             intent(out)   :: np
     integer,             intent(out)   :: file_size
     integer,             intent(out)   :: ierr
     integer, optional,   intent(out)   :: type
     logical, optional,   intent(out)   :: correct_endianness
+    integer, optional,   intent(in)    :: version
+    integer, optional,   intent(out)   :: nst
+    integer, optional,   intent(out)   :: ndim
+    integer, optional,   intent(out)   :: nik
 
-    integer :: type_, correct_endianness_, iio
+    integer :: type_, correct_endianness_, iio, version_, nst_, ndim_, nik_
     
     PUSH_SUB(io_binary_get_info)
 
+    version_ = optional_default(version, 0)
+
     iio = 0
-    call get_info_binary(np, type_, file_size, ierr, iio, correct_endianness_, string_f_to_c(fname))
+    call get_info_binary(np, type_, file_size, ierr, iio, correct_endianness_, &
+      version_, nst_, ndim_, nik_, string_f_to_c(fname))
     call io_incr_counters(iio)
 
     if(present(type)) type = type_
     if(present(correct_endianness)) correct_endianness = correct_endianness_ /= 0
+    if(present(nst)) nst = nst_
+    if(present(ndim)) ndim = ndim_
+    if(present(nik)) nik = nik_
 
     POP_SUB(io_binary_get_info)
   end subroutine io_binary_get_info
