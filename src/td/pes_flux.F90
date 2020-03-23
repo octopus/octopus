@@ -750,6 +750,31 @@ contains
       call messages_fatal(1, namespace=namespace)
     end if
     call messages_print_var_option(stdout, 'PES_Flux_Momenutum_Grid', this%kgrid)
+    
+    
+    !Check availability of the calculation requested
+    if (this%surf_shape == M_SPHERICAL) then
+      if (this%kgrid == M_CARTESIAN) then
+        call messages_not_implemented('Cartesian momentum grid with a spherical surface')
+      end if
+      if (simul_box_is_periodic(sb)) then
+        call messages_not_implemented('Spherical surface flux for periodic systems')
+      end if
+      if (mdim == 1) then
+        call messages_not_implemented('Spherical surface flux for one-dimensional systems')
+      end if
+    end if
+    
+    if (this%surf_shape == M_CUBIC) then
+      if (this%kgrid == M_CARTESIAN .and. .not. simul_box_is_periodic(sb)) then
+        call messages_not_implemented('Cartesian momentum grid with cubic surface for finite systems')        
+      end if
+      if (simul_box_is_periodic(sb)) then
+        call messages_not_implemented('Use of cubic surface for periodic systems (use pln)')                
+      end if
+    end if
+    
+    
 
     !%Variable PES_Flux_EnergyGrid
     !%Type block
