@@ -16,3 +16,4 @@ CH = 1.2*angstrom
 %
 
 Preconditioner = pre_poisson
+StatesPack = yes

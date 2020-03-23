@@ -25,3 +25,4 @@ PCMCalculation = true
 PCMStaticEpsilon = 78.39
 PCMTessSubdivider = 4
 MixField = density
+StatesPack = yes

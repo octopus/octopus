@@ -1765,7 +1765,7 @@ contains
     character(len=1000) :: all_flags
     type(c_ptr) :: cuda_module
 #endif
-    
+   
     PUSH_SUB(accel_kernel_build)
 
     call profiling_in(prof, "ACCEL_COMPILE", exclude = .true.)

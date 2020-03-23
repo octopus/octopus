@@ -47,3 +47,4 @@ FromScratch = yes
 TDMaxSteps = 150
 
 TDOutput = energy + geometry + total_current + gauge_field
+StatesPack = yes

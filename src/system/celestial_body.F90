@@ -20,6 +20,7 @@
 #include "global.h"
 
 module celestial_body_oct_m
+  use clock_oct_m
   use global_oct_m
   use interaction_abst_oct_m
   use interaction_gravity_oct_m
@@ -32,6 +33,7 @@ module celestial_body_oct_m
   use parser_oct_m
   use profiling_oct_m
   use propagator_abst_oct_m
+  use quantity_oct_m
   use space_oct_m
   use system_abst_oct_m
   use write_iter_oct_m
@@ -49,22 +51,26 @@ module celestial_body_oct_m
     FLOAT, public :: pos(1:MAX_DIM)
     FLOAT, public :: vel(1:MAX_DIM)
     FLOAT, public :: acc(1:MAX_DIM)
+    FLOAT, public :: prev_acc(1:MAX_DIM)
+    FLOAT, public :: save_pos(1:MAX_DIM)
+    FLOAT, public :: save_vel(1:MAX_DIM)
     FLOAT, public :: tot_force(1:MAX_DIM)
-    type(linked_list_t) :: interactions
-
-    type(space_t) :: space
+    FLOAT, public :: prev_tot_force(1:MAX_DIM)
 
     type(c_ptr) :: output_handle
   contains
     procedure :: add_interaction_partner => celestial_body_add_interaction_partner
     procedure :: has_interaction => celestial_body_has_interaction
     procedure :: do_td_operation => celestial_body_do_td
-    procedure :: update_interactions => celestial_body_update_interactions
-    procedure :: update_interaction_as_partner => celestial_body_update_interaction_as_partner
     procedure :: write_td_info => celestial_body_write_td_info
     procedure :: td_write_init => celestial_body_td_write_init
     procedure :: td_write_iter => celestial_body_td_write_iter
     procedure :: td_write_end => celestial_body_td_write_end
+    procedure :: is_tolerance_reached => celestial_body_is_tolerance_reached
+    procedure :: store_current_status => celestial_body_store_current_status
+    procedure :: update_quantity => celestial_body_update_quantity
+    procedure :: update_exposed_quantity => celestial_body_update_exposed_quantity
+    procedure :: set_pointers_to_interaction => celestial_set_pointers_to_interaction
     final :: celestial_body_finalize
   end type celestial_body_t
 
@@ -137,7 +143,13 @@ contains
     call messages_print_var_value(stdout, 'CelestialBodyInitialVelocity', sys%vel(1:sys%space%dim))
 
     sys%acc = M_ZERO
+    sys%prev_acc = M_ZERO
     sys%tot_force = M_ZERO
+
+    sys%quantities(POSITION)%required = .true.
+    sys%quantities(VELOCITY)%required = .true.
+    sys%quantities(POSITION)%protected = .true.
+    sys%quantities(VELOCITY)%protected = .true.
 
     call messages_print_stress(stdout, namespace=namespace)
 
@@ -146,8 +158,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine celestial_body_add_interaction_partner(this, partner)
-    class(celestial_body_t), intent(inout) :: this
-    class(system_abst_t),    intent(in)    :: partner
+    class(celestial_body_t), target, intent(inout) :: this
+    class(system_abst_t),            intent(inout) :: partner
 
     class(interaction_gravity_t), pointer :: gravity
     type(interaction_gravity_t) :: gravity_t
@@ -156,6 +168,10 @@ contains
 
     if (partner%has_interaction(gravity_t)) then
       gravity => interaction_gravity_t(this%space%dim, partner)
+      this%quantities(POSITION)%required = .true.
+      this%quantities(MASS)%required = .true.
+      gravity%system_mass => this%mass
+      gravity%system_pos  => this%pos
       call this%interactions%add(gravity)
     end if
 
@@ -181,39 +197,24 @@ contains
 
   ! ---------------------------------------------------------
   subroutine celestial_body_do_td(this, operation)
-    class(celestial_body_t),  intent(inout) :: this
-    integer,               intent(in)    :: operation
+    class(celestial_body_t), intent(inout) :: this
+    integer,                 intent(in)    :: operation
 
     type(interaction_iterator_t) :: iter
 
     PUSH_SUB(celestial_body_do_td)
 
     select case(operation)
-    case(VERLET_SYNC_DT)
-      if (debug%info) then
-        message(1) = "Debug: Propagation step - Synchronizing time for " + trim(this%namespace%get())
-        call messages_info(1)
-      end if
-
-      this%prop%internal_time = this%prop%internal_time + this%prop%dt
-      call this%prop%next()
-
-    case(VERLET_UPDATE_POS)
-      if (debug%info) then
-        message(1) = "Debug: Propagation step - Updating positions for " + trim(this%namespace%get())
-        call messages_info(1)
-      end if
-
+    case (VERLET_UPDATE_POS)
       this%acc(1:this%space%dim) = this%tot_force(1:this%space%dim)
       this%pos(1:this%space%dim) = this%pos(1:this%space%dim) + this%prop%dt * this%vel(1:this%space%dim) &
-                                   + M_HALF * this%prop%dt**2 * this%tot_force(1:this%space%dim)
-      call this%prop%next()
+                                 + M_HALF * this%prop%dt**2 * this%tot_force(1:this%space%dim)
 
-    case(VERLET_COMPUTE_ACC)
-      if (debug%info) then
-        message(1) = "Debug: Propagation step - Computing acceleration for " + trim(this%namespace%get())
-        call messages_info(1)
-      end if
+      call this%quantities(POSITION)%clock%increment()
+
+    case (VERLET_COMPUTE_ACC)
+      !Use as SCF criterium
+      this%prev_tot_force(1:this%space%dim) = this%tot_force(1:this%space%dim)
 
       !We sum the forces from the different partners
       this%tot_force(1:this%space%dim) = M_ZERO
@@ -228,17 +229,45 @@ contains
         end select
       end do
       this%tot_force(1:this%space%dim) = this%tot_force(1:this%space%dim) / this%mass
-      call this%prop%next()
 
-    case(VERLET_COMPUTE_VEL)
-      if (debug%info) then
-        message(1) = "Debug: Propagation step - Computing velocity for " + trim(this%namespace%get())
-        call messages_info(1)
+    case (VERLET_COMPUTE_VEL)
+      this%vel(1:this%space%dim) = this%vel(1:this%space%dim) &
+                                 + M_HALF * this%prop%dt * (this%acc(1:this%space%dim) + this%tot_force(1:this%space%dim))
+
+      call this%quantities(VELOCITY)%clock%increment()
+
+    case (BEEMAN_PREDICT_POS)
+      this%pos(1:this%space%dim) = this%pos(1:this%space%dim) + this%prop%dt * this%vel(1:this%space%dim) &
+                                 + M_ONE/CNST(6.0) * this%prop%dt**2  &
+                                 * (M_FOUR*this%acc(1:this%space%dim) - this%prev_acc(1:this%space%dim))
+      this%prev_acc(1:this%space%dim) = this%acc(1:this%space%dim)
+      this%acc(1:this%space%dim) = this%tot_force(1:this%space%dim)
+
+      if (.not. this%prop%predictor_corrector) then
+        call this%quantities(POSITION)%clock%increment()
       end if
 
-      this%vel(1:this%space%dim) = this%vel(1:this%space%dim) + &
-         M_HALF * this%prop%dt * (this%acc(1:this%space%dim) + this%tot_force(1:this%space%dim))
-      call this%prop%next()
+    case (BEEMAN_PREDICT_VEL)
+      this%vel(1:this%space%dim) = this%vel(1:this%space%dim)  &
+                                 + M_ONE/CNST(6.0) * this%prop%dt * (this%acc(1:this%space%dim) &
+                                 + M_TWO * this%tot_force(1:this%space%dim) - this%prev_acc(1:this%space%dim))
+
+      call this%quantities(VELOCITY)%clock%increment()
+
+    case( BEEMAN_CORRECT_POS)
+      this%pos(1:this%space%dim) = this%save_pos(1:this%space%dim) + this%prop%dt * this%save_vel(1:this%space%dim) &
+                                 + M_ONE/CNST(6.0) * this%prop%dt**2  &
+                                 * (M_TWO * this%acc(1:this%space%dim) + this%tot_force(1:this%space%dim))
+
+      !We set it to the propagation time to avoid double increment
+      call this%quantities(POSITION)%clock%set_time(this%prop%clock)
+
+    case (BEEMAN_CORRECT_VEL)
+      this%vel(1:this%space%dim) = this%save_vel(1:this%space%dim) &
+                                 + M_HALF * this%prop%dt * (this%acc(1:this%space%dim) + this%tot_force(1:this%space%dim))
+
+      !We set it to the propagation time to avoid double increment
+      call this%quantities(VELOCITY)%clock%set_time(this%prop%clock)
 
     case default
       message(1) = "Unsupported TD operation."
@@ -246,52 +275,41 @@ contains
     end select
 
    POP_SUB(celestial_body_do_td)
-
   end subroutine celestial_body_do_td
 
   ! ---------------------------------------------------------
-  subroutine celestial_body_update_interactions(this)
-    class(celestial_body_t), intent(inout) :: this
-
-    class(interaction_abst_t), pointer :: interaction
-    type(interaction_iterator_t) :: iter
-
-    PUSH_SUB(celestial_body_update_interactions)
-
-    call iter%start(this%interactions)
-    do while (iter%has_next())
-      interaction => iter%get_next_interaction()
-      select type (interaction)
-      type is (interaction_gravity_t)
-        call interaction%update(this%mass, this%pos)
-      class default
-        message(1) = "Unknown interaction by the celestial body " + this%namespace%get()
-        call messages_fatal(1)
-      end select
-    end do
-
-    POP_SUB(celestial_body_update_interactions)
-  end subroutine celestial_body_update_interactions
-
-  ! ---------------------------------------------------------
-  subroutine celestial_body_update_interaction_as_partner(this, interaction)
+  logical function celestial_body_is_tolerance_reached(this, tol) result(converged)
     class(celestial_body_t),   intent(in)    :: this
-    class(interaction_abst_t), intent(inout) :: interaction
+    FLOAT,                     intent(in)    :: tol
 
-    PUSH_SUB(celestial_body_update_interaction_as_partner)
+    PUSH_SUB(celestial_body_is_tolerance_reached)
 
-    select type (interaction)
-    type is (interaction_gravity_t)
-      interaction%partner_mass = this%mass
-      interaction%partner_pos = this%pos
+    !Here we put the criterium that acceleration change is below the tolerance
+    converged = .false.
+    if(sum((this%prev_tot_force(1:this%space%dim) -this%tot_force(1:this%space%dim))**2) < tol**2) then
+      converged = .true.
+    end if 
 
-    class default
-      message(1) = "Unknown interaction by the celestial body " + this%namespace%get()
-      call messages_fatal(1)
-    end select
+    if (debug%info) then
+      write(message(1), '(a, e12.6, a, e12.6)') "Debug: -- Change in acceleration  ", &
+          sqrt(sum((this%prev_tot_force(1:this%space%dim) - this%tot_force(1:this%space%dim))**2)), " and tolerance ", tol
+      call messages_info(1)
+    end if
 
-    POP_SUB(celestial_body_update_interaction_as_partner)
-  end subroutine celestial_body_update_interaction_as_partner
+    POP_SUB(celestial_body_is_tolerance_reached)
+   end function celestial_body_is_tolerance_reached
+
+   ! ---------------------------------------------------------
+   subroutine celestial_body_store_current_status(this)
+     class(celestial_body_t),   intent(inout)    :: this
+
+     PUSH_SUB(celestial_body_store_current_status) 
+
+     this%save_pos(1:this%space%dim) = this%pos(1:this%space%dim)
+     this%save_vel(1:this%space%dim) = this%vel(1:this%space%dim)
+
+     POP_SUB(celestial_body_store_current_status)
+   end subroutine celestial_body_store_current_status
 
   ! ---------------------------------------------------------
   subroutine celestial_body_write_td_info(this)
@@ -373,7 +391,6 @@ contains
     end if
 
     call write_iter_start(this%output_handle)
-
     call write_iter_double(this%output_handle, this%pos, this%space%dim)
     call write_iter_double(this%output_handle, this%vel, this%space%dim)
     call write_iter_nl(this%output_handle)
@@ -393,6 +410,74 @@ contains
 
     POP_SUB(celestial_body_td_write_end)
   end subroutine celestial_body_td_write_end
+
+  ! ---------------------------------------------------------
+  subroutine celestial_body_update_quantity(this, iq, clock)
+    class(celestial_body_t),   intent(inout) :: this
+    integer,                   intent(in)    :: iq
+    class(clock_t),            intent(in)    :: clock
+
+    PUSH_SUB(celestial_body_update_quantity)
+
+    ! We are not allowed to update protected quantities!
+    ASSERT(.not. this%quantities(iq)%protected)
+
+    select case (iq)
+    case (MASS)
+      !The celestial body has a mass, but it is not necessary to update it, as it does not change with time.
+      call this%quantities(iq)%clock%set_time(clock)
+    case default
+      message(1) = "Incompatible quantity."
+      call messages_fatal(1)
+    end select
+
+    POP_SUB(celestial_body_update_quantity)
+  end subroutine celestial_body_update_quantity
+
+ ! ---------------------------------------------------------
+ logical function celestial_body_update_exposed_quantity(this, iq, clock) result(updated)
+    class(celestial_body_t),   intent(inout) :: this
+    integer,                   intent(in)    :: iq
+    class(clock_t),            intent(in)    :: clock
+
+    PUSH_SUB(celestial_body_update_exposed_quantity)
+
+    ! We are not allowed to update protected quantities!
+    ASSERT(.not. this%quantities(iq)%protected)
+
+    select case (iq)
+    case (MASS)
+      !The celestial body has a mass, but it does not require any update, as it does not change with time.
+      updated = .true.
+      call this%quantities(iq)%clock%set_time(this%clock)
+    case default
+      message(1) = "Incompatible quantity."
+      call messages_fatal(1)
+    end select
+
+    POP_SUB(celestial_body_update_exposed_quantity)
+  end function celestial_body_update_exposed_quantity
+
+  ! ---------------------------------------------------------
+  subroutine celestial_set_pointers_to_interaction(this, inter)
+    class(celestial_body_t), target,  intent(inout) :: this
+    class(interaction_abst_t),        intent(inout) :: inter
+
+    PUSH_SUB(celestial_set_pointers_to_interaction)
+
+    select type(inter)
+    type is(interaction_gravity_t)
+      this%quantities(POSITION)%required = .true.
+      this%quantities(MASS)%required = .true.
+      inter%partner_mass => this%mass
+      inter%partner_pos => this%pos
+    class default
+      message(1) = "Unsupported interaction."
+      call messages_fatal(1)
+    end select
+
+    POP_SUB(celestial_set_pointers_to_interaction)
+  end subroutine celestial_set_pointers_to_interaction
 
   ! ---------------------------------------------------------
   subroutine celestial_body_finalize(this)

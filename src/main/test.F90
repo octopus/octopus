@@ -45,6 +45,7 @@ module test_oct_m
   use poisson_oct_m
   use profiling_oct_m
   use projector_oct_m
+  use propagator_beeman_oct_m
   use propagator_verlet_oct_m
   use simul_box_oct_m
   use clock_oct_m
@@ -915,10 +916,13 @@ contains
 
     type(namespace_t) :: global_namespace, earth_namespace, moon_namespace, sun_namespace
     class(celestial_body_t), pointer :: sun, earth, moon
-    class(propagator_verlet_t), pointer :: prop_sun, prop_earth, prop_moon
-    integer :: it, Nstep, internal_loop
-    logical :: all_done
-    FLOAT :: dt
+    class(propagator_verlet_t), pointer :: prop_sun, prop_earth
+    class(propagator_beeman_t), pointer :: prop_moon
+    integer :: it, internal_loop
+    integer :: earth_Nstep, moon_Nstep, sun_Nstep
+    logical :: any_td_step_done, all_done_max_td_steps
+    FLOAT :: sun_dt, earth_dt, moon_dt, smallest_algo_dt
+    integer, parameter :: MAX_PROPAGATOR_STEPS = 1000
 
     PUSH_SUB(test_celestial_dynamics)
 
@@ -945,54 +949,89 @@ contains
     call moon%add_interaction_partner(earth)
     call moon%add_interaction_partner(sun)
 
+    ! 'Loop' over systems and get (potentially) different time-steps and propagation times
+    call parse_variable(sun_namespace, 'TDTimeStep', CNST(10.0), sun_dt)
+    call parse_variable(earth_namespace, 'TDTimeStep', CNST(10.0), earth_dt)
+    call parse_variable(moon_namespace, 'TDTimeStep', CNST(10.0), moon_dt)
+
+    call parse_variable(sun_namespace, 'TDMaxSteps', 1000, sun_Nstep)
+    call parse_variable(earth_namespace, 'TDMaxSteps', 1000, earth_Nstep)
+    call parse_variable(moon_namespace, 'TDMaxSteps', 1000, moon_Nstep)
+
+    all_done_max_td_steps = .false.
+
     !Creates Verlet propagators
-    call parse_variable(global_namespace, 'TDTimeStep', CNST(10.0), dt)
-    prop_sun => propagator_verlet_t(M_ZERO, dt)
-    prop_earth => propagator_verlet_t(M_ZERO, dt)
-    prop_moon => propagator_verlet_t(M_ZERO, dt)
+    prop_sun => propagator_verlet_t(sun_dt)
+    prop_earth => propagator_verlet_t(earth_dt)
+    prop_moon => propagator_beeman_t(moon_dt, .true.)
 
     !Associate them to subsystems
     call sun%set_propagator(prop_sun)
     call earth%set_propagator(prop_earth)
     call moon%set_propagator(prop_moon)
+    smallest_algo_dt = min(prop_sun%dt/prop_sun%algo_steps,     &
+                           prop_earth%dt/prop_earth%algo_steps, &
+                           prop_moon%dt/prop_moon%algo_steps)
+
+    !Associate them to subsystems
+    call sun%init_clocks(sun_dt, smallest_algo_dt)
+    call earth%init_clocks(earth_dt, smallest_algo_dt)
+    call moon%init_clocks(moon_dt, smallest_algo_dt)
 
     !Initialize output and write data at time zero
-    call sun%td_write_init(dt)
-    call earth%td_write_init(dt)
-    call moon%td_write_init(dt)
+    call sun%td_write_init(sun_dt)
+    call earth%td_write_init(earth_dt)
+    call moon%td_write_init(moon_dt)
     call sun%td_write_iter(0)
     call earth%td_write_iter(0)
     call moon%td_write_iter(0)
 
-    call parse_variable(global_namespace, 'TDMaxSteps', 1000, Nstep)
-    do it = 1, Nstep
+    it = 0
 
-      all_done = .false.
+    call prop_sun%rewind()
+    call prop_earth%rewind()
+    call prop_moon%rewind()
+
+    do while(.not. all_done_max_td_steps)
+
+      it = it + 1
+
+      any_td_step_done = .false.
       internal_loop = 1
 
-      call prop_sun%rewind()
-      call prop_earth%rewind()
-      call prop_moon%rewind()
-
-      do while(.not. all_done .and. internal_loop < 1000)
+      do while(.not. any_td_step_done .and. internal_loop < MAX_PROPAGATOR_STEPS)
 
         call sun%dt_operation()
         call earth%dt_operation()
         call moon%dt_operation()
 
         !We check the exit condition
-        all_done = prop_sun%step_is_done() .and. prop_earth%step_is_done() .and. prop_moon%step_is_done()
+        any_td_step_done = prop_sun%step_is_done() .or. prop_earth%step_is_done() .or. prop_moon%step_is_done()
         INCR(internal_loop, 1)
       end do
 
-      !Output
-      call sun%write_td_info()
-      call earth%write_td_info()
-      call moon%write_td_info()
+      if(prop_sun%step_is_done()) then
+        call prop_sun%rewind() 
+        call sun%write_td_info()
+        call sun%td_write_iter(it)
+      end if
 
-      call sun%td_write_iter(it)
-      call earth%td_write_iter(it)
-      call moon%td_write_iter(it)
+      if(prop_earth%step_is_done()) then
+        call prop_earth%rewind()
+        call earth%write_td_info()
+        call earth%td_write_iter(it)
+      end if
+
+      if(prop_moon%step_is_done()) then
+        call prop_moon%rewind()
+        call moon%write_td_info()
+        call moon%td_write_iter(it)
+      end if
+
+      ! Fixme: should be changed to final propagation time
+      all_done_max_td_steps = (sun%clock%get_tick().ge.sun_Nstep) &
+                        .and. (earth%clock%get_tick().ge.earth_Nstep) &
+                        .and. (moon%clock%get_tick().ge.moon_Nstep)
     end do
 
     call sun%td_write_end()
@@ -1014,7 +1053,7 @@ contains
   subroutine test_clock(param)
     type(test_parameters_t), intent(in) :: param
 
-    type(clock_t) test_clock_a, test_clock_b
+    type(clock_t) :: test_clock_a, test_clock_b
 
     PUSH_SUB(test_clock)
 

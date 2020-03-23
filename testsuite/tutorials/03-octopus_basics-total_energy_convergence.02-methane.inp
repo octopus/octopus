@@ -16,3 +16,4 @@ CH = 1.2*angstrom
 # NOTE: This line is not included in the tutorial input file.
 # It is added to prevent the code from using the restart information from the previous run.
 fromScratch = yes
+StatesPack = yes

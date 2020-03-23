@@ -425,10 +425,10 @@ subroutine X(subspace_diag_hamiltonian)(namespace, mesh, st, hm, ik, hmss)
       call X(accel_gemm)(transA = ACCEL_BLAS_N, transB = ACCEL_BLAS_C, &
         M = int(st%nst, 8), N = int(st%nst, 8), K = int(mesh%np, 8), &
         alpha = R_TOTYPE(mesh%volume_element), &
-        A = st%group%psib(st%group%block_start, ik)%ff_device, offA = 0_8, &
-        lda = int(st%group%psib(st%group%block_start, ik)%pack_size(1), 8), &
-        B = hpsib(st%group%block_start)%ff_device, offB = 0_8, &
-        ldb = int(hpsib(st%group%block_start)%pack_size(1), 8), &
+        A = hpsib(st%group%block_start)%ff_device, offA = 0_8, &
+        lda = int(hpsib(st%group%block_start)%pack_size(1), 8), &
+        B = st%group%psib(st%group%block_start, ik)%ff_device, offB = 0_8, &
+        ldb = int(st%group%psib(st%group%block_start, ik)%pack_size(1), 8), &
         beta = R_TOTYPE(CNST(0.0)), &
         C = hmss_buffer, offC = 0_8, ldc = int(st%nst, 8))
 
@@ -465,8 +465,9 @@ subroutine X(subspace_diag_hamiltonian)(namespace, mesh, st, hm, ik, hmss)
         call X(accel_gemm)(transA = ACCEL_BLAS_N, transB = ACCEL_BLAS_C, &
           M = int(st%nst, 8), N = int(st%nst, 8), K = int(size*st%d%dim, 8), &
           alpha = R_TOTYPE(mesh%volume_element), &
-          A = psi_buffer, offA = 0_8, lda = int(st%nst, 8), &
-          B = hpsi_buffer, offB = 0_8, ldb = int(st%nst, 8), beta = R_TOTYPE(CNST(1.0)), & 
+          A = hpsi_buffer, offA = 0_8, lda = int(st%nst, 8), &
+          B = psi_buffer, offB = 0_8, ldb = int(st%nst, 8), &
+          beta = R_TOTYPE(CNST(1.0)), & 
           C = hmss_buffer, offC = 0_8, ldc = int(st%nst, 8))
         
         call accel_finish()

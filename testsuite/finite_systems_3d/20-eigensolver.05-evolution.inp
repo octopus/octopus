@@ -30,3 +30,4 @@ SCFCalculatePartialCharges = yes
 
 ExperimentalFeatures = yes
 
+StatesPack = yes

@@ -36,3 +36,4 @@ ConvRelDens = 1e-7
 MaximumIter = 1
 
 SCFCalculateStress = yes
+StatesPack = yes

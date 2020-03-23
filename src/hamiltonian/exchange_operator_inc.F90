@@ -212,7 +212,7 @@ subroutine X(exchange_operator_hartree_apply) (this, namespace, der, st_d, exx_c
   FLOAT   :: ff
   R_TYPE, allocatable :: rho(:), pot(:), psi2(:, :), psi(:, :), hpsi(:, :)
 
-  PUSH_SUB(X(exchange_operator))
+  PUSH_SUB(X(exchange_operator_hartree_apply))
 
   if(der%mesh%sb%kpoints%full%npoints > st_d%ispin) then
     call messages_not_implemented("exchange operator with k-points", namespace=namespace)

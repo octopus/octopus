@@ -50,3 +50,4 @@ AbsorbingBoundaries = mask
 AbWidth = 50
 
 TDOutput = laser + multipoles + dipole_acceleration
+StatesPack = yes
