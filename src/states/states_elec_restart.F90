@@ -1114,7 +1114,7 @@ contains
           call messages_fatal(1)
         end if
         if(ndim /= st%d%dim) then
-          write(message(1), "(A,I6,A,I6,A)") "Error: spinor dimenstion ", st%d%dim, &
+          write(message(1), "(A,I6,A,I6,A)") "Error: spinor dimension ", st%d%dim, &
             " expected, but ", ndim, " found."
           call messages_fatal(1)
         end if
