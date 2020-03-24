@@ -308,7 +308,7 @@
     ASSERT(product(ubound(ff)) >= np)
 
     iio = 0
-    call read_binary(np, 0, c_loc(ff(1,1)), R_TYPE_IOBINARY, ierr, iio, string_f_to_c(fname))
+    call read_binary(np, 0_c_int64_t, c_loc(ff(1,1)), R_TYPE_IOBINARY, ierr, iio, string_f_to_c(fname))
     call io_incr_counters(iio)
 
     POP_SUB(X(read_binary2))
@@ -329,7 +329,7 @@
     ASSERT(product(ubound(ff)) >= np)
 
     iio = 0
-    call read_binary(np, 0, c_loc(ff(1,1,1)), R_TYPE_IOBINARY, ierr, iio, string_f_to_c(fname))
+    call read_binary(np, 0_c_int64_t, c_loc(ff(1,1,1)), R_TYPE_IOBINARY, ierr, iio, string_f_to_c(fname))
     call io_incr_counters(iio)
 
     POP_SUB(X(read_binary3))
@@ -350,7 +350,7 @@
     ASSERT(product(ubound(ff)) >= np)
 
     iio = 0
-    call read_binary(np, 0, c_loc(ff(1,1,1,1)), R_TYPE_IOBINARY, ierr, iio, string_f_to_c(fname))
+    call read_binary(np, 0_c_int64_t, c_loc(ff(1,1,1,1)), R_TYPE_IOBINARY, ierr, iio, string_f_to_c(fname))
     call io_incr_counters(iio)
 
     POP_SUB(X(read_binary4))
@@ -371,7 +371,7 @@
     ASSERT(product(ubound(ff)) >= np)
 
     iio = 0
-    call read_binary(np, 0, c_loc(ff(1,1,1,1,1)), R_TYPE_IOBINARY, ierr, iio, string_f_to_c(fname))
+    call read_binary(np, 0_c_int64_t, c_loc(ff(1,1,1,1,1)), R_TYPE_IOBINARY, ierr, iio, string_f_to_c(fname))
     call io_incr_counters(iio)
 
     POP_SUB(X(read_binary5))
