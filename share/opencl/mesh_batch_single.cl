@@ -109,7 +109,6 @@ __kernel void dbatch_mf_dotp(
   if(idim >= ndim) return;
 
   for(int ip=0; ip<np; ip++) {
-//    tmp_dot += xx_buffer[idim + (ndim-1)*ist + (ip<<ldxx)] * psi_buffer[ip + (idim<<ldpsi)];
     tmp_dot += psi_buffer[ip + (idim<<ldpsi)];
   }
   dot_buffer[ist] = tmp_dot;

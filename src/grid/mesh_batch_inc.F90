@@ -141,7 +141,7 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
   case(BATCH_DEVICE_PACKED)
     ASSERT(.not. mesh%use_curvilinear)
 
-    call accel_create_buffer(dot_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, aa%nst*bb%nst)
+    call accel_create_buffer(dot_buffer, ACCEL_MEM_WRITE_ONLY, R_TYPE_VAL, aa%nst*bb%nst)
 
     call profiling_in(prof_gemmcl, "DOTP_BATCH_CL_GEMM")
     
@@ -536,10 +536,6 @@ subroutine X(mesh_batch_mf_dotp)(mesh, aa, psi, dot, reduce, nst)
 
     ASSERT(.not. mesh%use_curvilinear)
 
-    ! First, move the state to the GPU
-    ! - create buffers
-    !   * single state phi:
- 
     np_padded = pad_pow2(mesh%np)
 
     call accel_create_buffer(phi_buffer, ACCEL_MEM_READ_ONLY, R_TYPE_VAL, np_padded * aa%dim)
@@ -548,12 +544,8 @@ subroutine X(mesh_batch_mf_dotp)(mesh, aa, psi, dot, reduce, nst)
       call accel_write_buffer(phi_buffer, mesh%np, psi, offset=(idim-1)*np_padded)
     end do
 
-    !   * result:
-
     call accel_create_buffer(dot_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, aa%nst)
        
-    ! Prepare and run the kernel:
-
     wgsize = accel_kernel_workgroup_size(X(kernel_batch_dotp))
 
     global_sizes = (/ pad(aa%nst, wgsize/aa%dim),  aa%dim, 1 /)
@@ -576,10 +568,8 @@ subroutine X(mesh_batch_mf_dotp)(mesh, aa, psi, dot, reduce, nst)
     call accel_kernel_run(X(kernel_batch_dotp), global_sizes, local_sizes)
     call accel_finish() 
 
-    ! Move the result back to the CPU
     call accel_read_buffer(dot_buffer, nst_, dot)
 
-    ! Release accel buffers:
     call accel_release_buffer(phi_buffer)
     call accel_release_buffer(dot_buffer)
 
@@ -646,8 +636,6 @@ subroutine X(mesh_batch_mf_axpy)(mesh, aa, xx, psi, nst)
 
     else !Spinor case
 
-      ! Old code:
-
       SAFE_ALLOCATE(phi(1:mesh%np, 1:xx%dim))
 
       do ist = 1, nst_
@@ -664,12 +652,9 @@ subroutine X(mesh_batch_mf_axpy)(mesh, aa, xx, psi, nst)
 
   case(BATCH_DEVICE_PACKED)
 
-
-    ! Create a buffer for aa(nst)
     call accel_create_buffer(aa_buffer, ACCEL_MEM_READ_ONLY, R_TYPE_VAL, xx%nst) 
     call accel_write_buffer(aa_buffer, xx%nst, aa)
 
-    ! Craete a buffer for the result psi
     np_padded = pad_pow2(mesh%np)
 
     call accel_create_buffer(psi_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, np_padded * xx%dim)
@@ -685,9 +670,6 @@ subroutine X(mesh_batch_mf_axpy)(mesh, aa, xx, psi, nst)
     call accel_set_kernel_arg(X(kernel_batch_axpy), 5, aa_buffer)
     call accel_set_kernel_arg(X(kernel_batch_axpy), 6, psi_buffer)
     call accel_set_kernel_arg(X(kernel_batch_axpy), 7, log2(np_padded))
-
-    ! set local and global sizes:
-    ! to be done!
 
     wgsize = accel_kernel_workgroup_size(X(kernel_batch_axpy))
 
