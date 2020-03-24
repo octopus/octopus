@@ -385,6 +385,7 @@ contains
     integer :: mpistat(MPI_STATUS_SIZE), fh
 #endif
     integer :: filetype, localtype, mpitype
+    logical :: parallel_restart
 
     PUSH_SUB(states_elec_dump)
 
@@ -406,7 +407,16 @@ contains
 
     call restart_block_signals()
 
-    if(st%parallel_restart .and. .not. present(lr)) then
+    parallel_restart = st%parallel_restart
+    if(present(lr)) parallel_restart = .false.
+    ! the arrays dpsi and zpsi are needed for the parallel restart to work
+    if (states_are_real(st)) then
+      if(.not. associated(st%group%dpsi)) parallel_restart = .false.
+    else
+      if(.not. associated(st%group%zpsi)) parallel_restart = .false.
+    end if
+
+    if(parallel_restart) then
       call dump_parallel
     end if
 
@@ -483,7 +493,7 @@ contains
           if (should_write .and. present(st_start_writing)) then
             if (ist < st_start_writing) should_write = .false.
           end if
-          if(st%parallel_restart .and. .not. present(lr)) should_write = .false.
+          if(parallel_restart) should_write = .false.
 
           if (should_write) then
             if (.not. present(lr)) then
@@ -918,6 +928,8 @@ contains
       restart_version = 0
     end if
 
+    if(restart_version == 0) parallel_restart = .false.
+
     if(parallel_restart) then
       call load_parallel
       if(parallel_restart) filled = .true.
@@ -1115,10 +1127,13 @@ contains
       if(.not.io_file_exists(restart_filename)) then
         message(1) = "Error: restart file not found."
         message(2) = "File: "//trim(restart_filename)
-        call messages_fatal(2)
+        message(3) = "Try restart files version 0"
+        call messages_warning(3)
+        parallel_restart = .false.
+        restart_version = 0
       end if
       ! read header only on root and broadcast to the others
-      if(restart_is_root(restart)) then
+      if(restart_is_root(restart) .and. parallel_restart) then
         version = 1
         call io_binary_get_info(trim(restart_filename), read_np, file_size, ierr, &
           number_type, correct_endianness, version, nst, ndim, nik)
