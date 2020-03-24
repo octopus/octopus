@@ -930,6 +930,12 @@ contains
 
     if(restart_version == 0) parallel_restart = .false.
 
+    restart_filename = trim(restart_dir(restart))//'/'//"restart_states.obf"
+    if(.not.io_file_exists(restart_filename)) then
+      parallel_restart = .false.
+      restart_version = 0
+    end if
+
     if(parallel_restart) then
       call load_parallel
       if(parallel_restart) filled = .true.
