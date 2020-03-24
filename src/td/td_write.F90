@@ -437,7 +437,7 @@ contains
           SAFE_DEALLOCATE_P(writ%gs_st%spin)
           SAFE_ALLOCATE(writ%gs_st%spin(1:3, 1:writ%gs_st%nst, 1:writ%gs_st%d%nik))
         end if
-        call mpi_grp_init(writ%gs_st%mpi_grp, MPI_COMM_NULL)
+        call mpi_grp_init(writ%gs_st%mpi_grp, -1)
         call distributed_init(writ%gs_st%dist, writ%gs_st%nst, writ%gs_st%mpi_grp%comm)
         writ%gs_st%lnst = writ%gs_st%st_end - writ%gs_st%st_start + 1
 
