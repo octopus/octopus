@@ -642,7 +642,8 @@ contains
           if (mod(i_space-1, chunk_size) == 0) then
             call profiling_in(prof_io,"READING")
             !TODO: check for any error on the whole file before reading by parts.
-            call io_binary_read(trim(filename), chunk_size, point_tmp(1:chunk_size, t_point), ierr, offset=int(i_space-1, c_int64_t))
+            call io_binary_read(trim(filename), chunk_size, point_tmp(1:chunk_size, t_point), &
+              ierr, offset=int(i_space-1, c_int64_t))
             call profiling_out(prof_io)
             if (i_time == c_start) read_count = 0
           end if
