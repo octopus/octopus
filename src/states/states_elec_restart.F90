@@ -26,6 +26,7 @@ module states_elec_restart_oct_m
   use io_binary_oct_m
   use io_function_oct_m
   use io_oct_m
+  use iso_c_binding
   use kpoints_oct_m
   use lalg_basic_oct_m
   use linear_response_oct_m
@@ -664,7 +665,8 @@ contains
     character(len=MAX_PATH_LEN) :: restart_filename
     integer :: read_np, number_type, file_size
     logical :: correct_endianness, parallel_restart
-
+    integer :: restart_version
+    integer(c_int64_t) :: offset
 
 #if defined(HAVE_MPI)
     integer              :: iread_tmp
@@ -900,6 +902,7 @@ contains
     filled = .false.
 
 
+    restart_version = 1
     parallel_restart = st%parallel_restart
     if(parallel_restart .and. restart_has_map(restart)) then
       message(1) = "Reading from reordered grid not supported for parallel restart."
@@ -912,12 +915,20 @@ contains
       message(2) = "Trying to read serial restart files"
       call messages_warning(1)
       parallel_restart = .false.
+      restart_version = 0
     end if
 
     if(parallel_restart) then
-        call load_parallel
-        filled = .true.
-    else
+      call load_parallel
+      if(parallel_restart) filled = .true.
+    end if
+
+    if(restart_version == 1) then
+      restart_file = "restart_states"
+    end if
+
+    ! parallel_restart might have changed in load_parallel (if it was not possible)
+    if(.not. parallel_restart) then
       ! Now we read the wavefunctions. At this point we need to have all the information from the
       ! states, occs, and wfns files in order to avoid serialisation of reads, as restart_read
       ! works as a barrier.
@@ -945,10 +956,17 @@ contains
               cycle
             end if
 
-            if (states_are_real(st)) then
-              call drestart_read_mesh_function(restart, restart_file(idim, ist, ik), gr%mesh, dpsi, err)
+            if(restart_version == 1) then
+              offset = (ist - 1) * st%d%dim * int(gr%mesh%np_global, c_int64_t) + &
+                int(ik - 1, c_int64_t) * st%nst * st%d%dim * int(gr%mesh%np_global, c_int64_t)
             else
-              call zrestart_read_mesh_function(restart, restart_file(idim, ist, ik), gr%mesh, zpsi, err)
+              offset = 0
+            end if
+
+            if (states_are_real(st)) then
+              call drestart_read_mesh_function(restart, restart_file(idim, ist, ik), gr%mesh, dpsi, err, offset)
+            else
+              call zrestart_read_mesh_function(restart, restart_file(idim, ist, ik), gr%mesh, zpsi, err, offset)
             end if
 
             if(states_are_real(st)) then
@@ -1030,10 +1048,10 @@ contains
       end if
       call messages_print_stress(stdout, trim(str), namespace=namespace)
       if(.not. present(skip)) then
-        write(message(1),'(a,i6,a,i6,a)') 'Only ', iread,' files out of ', &
+        write(message(1),'(a,i6,a,i6,a)') 'Only ', iread,' states out of ', &
              st%nst * st%d%nik * st%d%dim, ' could be read.'
       else
-        write(message(1),'(a,i6,a,i6,a)') 'Only ', iread,' files out of ', &
+        write(message(1),'(a,i6,a,i6,a)') 'Only ', iread,' states out of ', &
              st%nst * st%d%nik * st%d%dim, ' were loaded.'
         ierr = 0
       end if
@@ -1109,21 +1127,48 @@ contains
           call messages_fatal(1)
         end if
         if(nst /= st%nst) then
-          write(message(1), "(A,I6,A,I6,A)") "Error: ", st%nst, " states expected, only ", &
+          write(message(1), "(A,I6,A,I6,A)") "Warning: ", st%nst, " states expected, but ", &
             nst, " found."
-          call messages_fatal(1)
+          call messages_warning(1)
+          parallel_restart = .false.
         end if
         if(ndim /= st%d%dim) then
-          write(message(1), "(A,I6,A,I6,A)") "Error: spinor dimension ", st%d%dim, &
+          write(message(1), "(A,I6,A,I6,A)") "Warning: spinor dimension ", st%d%dim, &
             " expected, but ", ndim, " found."
-          call messages_fatal(1)
+          call messages_warning(1)
+          parallel_restart = .false.
         end if
         if(nik /= st%d%kpt%nglobal) then
-          write(message(1), "(A,I6,A,I6,A)") "Error: ", st%d%kpt%nglobal, " k points expected, only ", &
+          write(message(1), "(A,I6,A,I6,A)") "Warning: ", st%d%kpt%nglobal, " k points expected, but ", &
             nik, " found."
-          call messages_fatal(1)
+          call messages_warning(1)
+          parallel_restart = .false.
         end if
       end if
+
+      ! the arrays dpsi and zpsi are needed for the parallel restart to work
+      if (states_are_real(st)) then
+        if(.not. associated(st%group%dpsi)) parallel_restart = .false.
+      else
+        if(.not. associated(st%group%zpsi)) parallel_restart = .false.
+      end if
+
+#ifndef HAVE_MPI
+      parallel_restart = .false.
+      message(1) = "Parallel restart not supported for serial runs."
+      call messages_warning(1)
+#endif
+
+#ifdef HAVE_MPI
+      call MPI_Bcast(parallel_restart, 1, MPI_LOGICAL, 0, restart_get_comm(restart), mpi_err)
+#endif
+
+      ! We cannot use the parallel restart feature, return
+      if(.not. parallel_restart) then
+        POP_SUB(states_elec_load.load_parallel)
+        return
+      end if
+
 #ifdef HAVE_MPI
       call MPI_Bcast(read_np, 1, MPI_INTEGER, 0, restart_get_comm(restart), mpi_err)
       call MPI_Bcast(file_size, 1, MPI_INTEGER, 0, restart_get_comm(restart), mpi_err)
@@ -1181,10 +1226,6 @@ contains
 
         call MPI_File_close(fh, mpi_err)
       end if
-#else
-      message(1) = "Parallel restart not yet supported for serial runs."
-      message(2) = "The default for serial runs is to not use this feature."
-      call messages_fatal(2)
 #endif
 
       call states_elec_exchange_points(st, gr, forward=.false.)

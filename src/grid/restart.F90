@@ -26,6 +26,7 @@ module restart_oct_m
   use io_oct_m
   use io_binary_oct_m
   use io_function_oct_m
+  use iso_c_binding
   use loct_oct_m
   use mesh_oct_m
   use mesh_batch_oct_m

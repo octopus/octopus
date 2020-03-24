@@ -220,22 +220,26 @@
     integer,             intent(in)   :: np
     R_TYPE, target,      intent(out)  :: ff(:)
     integer,             intent(out)  :: ierr
-    integer, optional,   intent(in)   :: offset
+    integer(c_int64_t), optional,   intent(in)   :: offset
 
     integer :: iio
+    integer(c_int64_t) :: offset_
 
     PUSH_SUB(X(read_binary))
 
     ASSERT(np > 0)
     ASSERT(product(ubound(ff)) >= np)
+    offset_ = 0
+    if(present(offset)) offset_ = offset
 
     ierr = -1
 #ifdef R_TCOMPLEX
-    call try_dread_binary(fname, np, ff, ierr, offset)
+    call try_dread_binary(fname, np, ff, ierr, offset_)
 #endif
     if(ierr == -1) then
       iio = 0
-      call read_binary(np, optional_default(offset, 0), c_loc(ff(1)), R_TYPE_IOBINARY, ierr, iio, string_f_to_c(fname))
+      call read_binary(np, offset_, c_loc(ff(1)), &
+        R_TYPE_IOBINARY, ierr, iio, string_f_to_c(fname))
       call io_incr_counters(iio)
     end if
 

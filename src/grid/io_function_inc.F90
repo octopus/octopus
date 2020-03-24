@@ -39,19 +39,19 @@
 !!             -4 : function in file is complex, dp. \n
 ! ---------------------------------------------------------
 
-subroutine X(io_function_input)(filename, namespace, mesh, ff, ierr, map)
+subroutine X(io_function_input)(filename, namespace, mesh, ff, ierr, map, offset)
   character(len=*),  intent(in)    :: filename
   type(namespace_t), intent(in)    :: namespace
   type(mesh_t),      intent(in)    :: mesh
   R_TYPE,            intent(inout) :: ff(:)
   integer,           intent(out)   :: ierr
   integer, optional, intent(in)    :: map(:)
-  !
+  integer(c_int64_t), optional, intent(in)    :: offset
 
 #if defined(HAVE_MPI)
   R_TYPE, allocatable :: ff_global(:)
 #endif
-  !
+
   PUSH_SUB(X(io_function_input))
 
   ASSERT(ubound(ff, dim = 1) == mesh%np .or. ubound(ff, dim = 1) == mesh%np_part)
@@ -64,7 +64,7 @@ subroutine X(io_function_input)(filename, namespace, mesh, ff, ierr, map)
     if(mpi_grp_is_root(mesh%mpi_grp)) then
       SAFE_DEALLOCATE_A(ff_global)
       SAFE_ALLOCATE(ff_global(1:mesh%np_global))
-      call X(io_function_input_global)(filename, namespace, mesh, ff_global, ierr, map)
+      call X(io_function_input_global)(filename, namespace, mesh, ff_global, ierr, map, offset)
     end if
     if(debug%info) call messages_debug_newlines(2)
 
@@ -85,7 +85,7 @@ subroutine X(io_function_input)(filename, namespace, mesh, ff, ierr, map)
     ASSERT(.false.) 
 #endif
   else
-    call X(io_function_input_global)(filename, namespace, mesh, ff, ierr, map)
+    call X(io_function_input_global)(filename, namespace, mesh, ff, ierr, map, offset)
   end if
 
   POP_SUB(X(io_function_input))
@@ -94,13 +94,14 @@ end subroutine X(io_function_input)
 
 
 ! ---------------------------------------------------------
-subroutine X(io_function_input_global)(filename, namespace, mesh, ff, ierr, map)
+subroutine X(io_function_input_global)(filename, namespace, mesh, ff, ierr, map, offset)
   character(len=*),  intent(in)    :: filename
   type(namespace_t), intent(in)    :: namespace
   type(mesh_t),      intent(in)    :: mesh
   R_TYPE,            intent(inout) :: ff(:)
   integer,           intent(out)   :: ierr
   integer, optional, intent(in)    :: map(:)
+  integer(c_int64_t), optional, intent(in)    :: offset
 
   integer :: ip, np, ii, jj, kk, file_size
   integer(8) :: dims(3)
@@ -168,7 +169,7 @@ subroutine X(io_function_input_global)(filename, namespace, mesh, ff, ierr, map)
       if (ierr == 0) then
         SAFE_ALLOCATE(read_ff(1:np))
 
-        call io_binary_read(io_workpath(filename, namespace), np, read_ff, ierr)
+        call io_binary_read(io_workpath(filename, namespace), np, read_ff, ierr, offset=offset)
         call profiling_count_transfers(np, read_ff(1))
         
         if (ierr == 0) then
@@ -182,7 +183,7 @@ subroutine X(io_function_input_global)(filename, namespace, mesh, ff, ierr, map)
       end if
 
     else
-      call io_binary_read(io_workpath(filename, namespace), mesh%np_global, ff, ierr)
+      call io_binary_read(io_workpath(filename, namespace), mesh%np_global, ff, ierr, offset=offset)
       call profiling_count_transfers(mesh%np_global, ff(1))
     end if
 

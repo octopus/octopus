@@ -110,7 +110,7 @@ module io_binary_oct_m
     subroutine read_binary(np, offset, ff, output_type, ierr, iio, fname) bind(c, name="read_binary")
       use iso_c_binding
       integer(c_int),         intent(in)    :: np
-      integer(c_int),         intent(in)    :: offset
+      integer(c_int64_t),     intent(in)    :: offset
       type(c_ptr),            value         :: ff
       integer(c_int),         intent(in)    :: output_type
       integer(c_int),         intent(in)    :: ierr
@@ -195,7 +195,7 @@ contains
     integer,             intent(in)  :: np
     complex(8),          intent(out) :: ff(:)
     integer,             intent(out) :: ierr
-    integer, optional,   intent(in)  :: offset
+    integer(c_int64_t), optional,   intent(in)  :: offset
 
     integer :: read_np, number_type, file_size, iio, correct_endianness, tmp
     real(8), allocatable :: read_ff(:)

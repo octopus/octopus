@@ -102,19 +102,22 @@ end subroutine X(restart_write_mesh_function)
 ! ---------------------------------------------------------
 !> In domain parallel case each process reads a part of the file.
 !! At the end all the processes have the corresponding mesh part
-subroutine X(restart_read_mesh_function)(restart, filename, mesh, ff, ierr)
-  type(restart_t),  intent(in)    :: restart
-  character(len=*), intent(in)    :: filename
-  type(mesh_t),     intent(in)    :: mesh
-  R_TYPE, target,   intent(inout) :: ff(:)
-  integer,          intent(out)   :: ierr
+subroutine X(restart_read_mesh_function)(restart, filename, mesh, ff, ierr, offset)
+  type(restart_t),              intent(in)    :: restart
+  character(len=*),             intent(in)    :: filename
+  type(mesh_t),                 intent(in)    :: mesh
+  R_TYPE, target,               intent(inout) :: ff(:)
+  integer,                      intent(out)   :: ierr
+  integer(c_int64_t), optional, intent(in)    :: offset
 
-  integer :: ip, np, offset, file_size
+  integer :: ip, np, file_size
   R_TYPE, pointer :: read_ff(:)
   type(profile_t), save :: prof_io
   type(batch_t) :: ffb
   type(profile_t), save :: prof_comm
   character(len=MAX_PATH_LEN) :: full_filename
+  integer(c_int64_t) :: offset_
+  logical :: use_io_function_input
   
   PUSH_SUB(X(restart_read_mesh_function))
 
@@ -125,10 +128,12 @@ subroutine X(restart_read_mesh_function)(restart, filename, mesh, ff, ierr)
   nullify(read_ff)
   full_filename = trim(restart%pwd)//'/'//trim(filename)//'.obf'
   
-  if (restart_has_map(restart) .and. mesh%parallel_in_domains) then 
+  use_io_function_input = restart_has_map(restart) .and. mesh%parallel_in_domains
+  if(present(offset)) use_io_function_input = use_io_function_input .or. offset > 0
+  if(use_io_function_input) then
     ! for the moment we do not do this directly
     call X(io_function_input) (full_filename, restart%namespace, mesh, ff(1:mesh%np), ierr, &
-                               map = restart%map)
+                               map=restart%map, offset=offset)
 
     POP_SUB(X(restart_read_mesh_function))
     return
@@ -149,10 +154,10 @@ subroutine X(restart_read_mesh_function)(restart, filename, mesh, ff, ierr)
     read_ff => ff
   end if
 
-  offset = 0
+  offset_ = 0
   !in the parallel case, each node reads a part of the file
   if(mesh%parallel_in_domains) then
-    offset = mesh%vp%xlocal - 1
+    offset_ = mesh%vp%xlocal - 1
   end if
 
   ASSERT(associated(read_ff))
@@ -168,7 +173,7 @@ subroutine X(restart_read_mesh_function)(restart, filename, mesh, ff, ierr)
   else
 #endif
     call io_binary_read(io_workpath(full_filename, restart%namespace), np, &
-      read_ff, ierr, offset = offset)
+      read_ff, ierr, offset = offset_)
 #ifdef HAVE_MPI2
   end if
 #endif
