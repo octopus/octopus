@@ -23,6 +23,7 @@ module lda_u_io_oct_m
   use global_oct_m
   use io_oct_m
   use io_function_oct_m
+  use iso_c_binding
   use lalg_basic_oct_m
   use lda_u_oct_m
   use mesh_oct_m
@@ -688,6 +689,9 @@ contains
     character(len=12)    :: filename
     character(len=1)     :: char
     character(len=50)    :: str
+    integer :: restart_version
+    character(len=MAX_PATH_LEN) :: restart_filename
+    integer(c_int64_t) :: offset
  
 
     PUSH_SUB(lda_u_loadbasis)
@@ -760,6 +764,14 @@ contains
     end do
     call restart_close(restart_gs, wfns_file)
 
+    ! check if we have restart file format 0 or 1
+    restart_version = 1
+    restart_filename = trim(restart_dir(restart_gs))//'/'//"restart_states.obf"
+    if(.not.io_file_exists(restart_filename)) restart_version = 0
+    if(restart_version == 1) then
+      restart_file = "restart_states"
+    end if
+
     !We loop over the states we need
     do is = 1, lda_u%maxnorbs
       ist = lda_u%basisstates(is)
@@ -770,10 +782,16 @@ contains
           call messages_fatal(1, namespace=namespace)
         end if
 
-        if (states_are_real(st)) then
-          call drestart_read_mesh_function(restart_gs, restart_file(idim, ist), mesh, dpsi, err)
+        if(restart_version == 1) then
+          offset = (ist - 1) * st%d%dim * int(mesh%np_global, c_int64_t)
         else
-          call zrestart_read_mesh_function(restart_gs, restart_file(idim, ist), mesh, zpsi, err)
+          offset = 0
+        end if
+
+        if (states_are_real(st)) then
+          call drestart_read_mesh_function(restart_gs, restart_file(idim, ist), mesh, dpsi, err, offset)
+        else
+          call zrestart_read_mesh_function(restart_gs, restart_file(idim, ist), mesh, zpsi, err, offset)
         end if
 
         if(states_are_real(st)) then
