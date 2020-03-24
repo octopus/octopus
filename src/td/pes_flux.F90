@@ -518,6 +518,10 @@ contains
       if(this%nsrfcpnts > 0) flush(223)
     end if
 
+    ! Generate the reciprocal space mesh grid
+    call pes_flux_reciprocal_mesh_gen(this, namespace, mesh%sb, st, mesh%mpi_grp%comm)
+
+
     ! get the values of the spherical harmonics for the surface points for M_SPHERICAL
     if(this%surf_shape == M_SPHERICAL) then
       SAFE_ALLOCATE(this%ylm_r(0:this%lmax, -this%lmax:this%lmax, this%nsrfcpnts_start:this%nsrfcpnts_end))
@@ -538,8 +542,6 @@ contains
       if (mesh%sb%dim >1 ) call pes_flux_tabulate_cub_pw(this, mesh, st)
     end if
 
-    ! Generate the reciprocal space mesh grid
-    call pes_flux_reciprocal_mesh_gen(this, namespace, mesh%sb, st, mesh%mpi_grp%comm)
 
 
     ! -----------------------------------------------------------------
@@ -745,12 +747,13 @@ contains
     call parse_variable(namespace, 'PES_Flux_Momenutum_Grid', this%kgrid, this%kgrid)
     if(.not.varinfo_valid_option('PES_Flux_Momenutum_Grid', this%kgrid, is_flag = .true.)) &
       call messages_input_error('PES_Flux_Momenutum_Grid')
-    if(this%surf_shape == M_SPHERICAL .and. mdim /= 3) then
-      message(1) = 'Spherical grid works only in 3d.'
-      call messages_fatal(1, namespace=namespace)
-    end if
     call messages_print_var_option(stdout, 'PES_Flux_Momenutum_Grid', this%kgrid)
-    
+
+
+!     if(this%surf_shape == M_SPHERICAL .and. mdim /= 3) then
+!       message(1) = 'Spherical grid works only in 3d.'
+!       call messages_fatal(1, namespace=namespace)
+!     end if
     
     !Check availability of the calculation requested
     if (this%surf_shape == M_SPHERICAL) then
@@ -1302,9 +1305,9 @@ contains
 
       this%nkpnts_start = 1 
       this%nkpnts_end   = this%nkpnts
-  
+      
 
-      SAFE_ALLOCATE(this%kcoords_cub(1:mdim, 1:this%nkpnts, kptst:kptend))
+      SAFE_ALLOCATE(this%kcoords_cub(1:mdim, this%nkpnts_start:this%nkpnts_end, kptst:kptend))
 
 
       nkp_out = 0 
@@ -1784,8 +1787,10 @@ contains
     integer   :: mdim,nfaces, ikp_start, ikp_end, fdim, ng, nfp, kptst, kptend
     integer   :: ifc, ig, igu, igv,  idim, idir, n_dir, ifp, max_fcpts, ik, ikp
     integer   :: isp_start, isp_end, isp, iguv(1:2)
-    FLOAT     :: gvec(this%nsrfcpnts,1:2),  DRS(1:2), shift 
+    FLOAT     :: gvec(this%nsrfcpnts,1:2),  DRS(1:2), shift
     FLOAT, allocatable :: gg(:,:)
+    
+    CMPLX    :: tmp
 
     PUSH_SUB(pes_flux_tabulate_cub_pw)
   
@@ -1822,8 +1827,8 @@ print *, "ifc=", ifc, "isp_start/end=", isp_start, isp_end
         if(abs(this%srfcnrml(idir, this%face_idx_range(ifc, 1))) >= M_EPSILON) n_dir = idir
       end do 
 
-print *, "this%NN(n_dir,:)=", this%NN(n_dir,:)
-            
+print *, "this%NN(n_dir,:)= ", this%NN(n_dir,:)
+print *, "this%LLr(n_dir,:)= ",this%LLr(n_dir,:)+abs(this%srfcnrml(n_dir,this%face_idx_range(ifc, 1)))             
       SAFE_ALLOCATE(gg(1:2,1:ng))
       
       gg(:,:) = M_ZERO
@@ -1834,9 +1839,10 @@ print *, "this%NN(n_dir,:)=", this%NN(n_dir,:)
           iguv=(/igu,igv/)
           do idim = 1, fdim
             if(this%LLr(n_dir,idim) > M_EPSILON) then
-              gg(idim, ig)= (iguv(idim) - this%NN(n_dir,idim)/2 - &
-                            (M_ONE + mod(this%NN(n_dir,idim),2))*M_HALF ) * & !even/odd grid centering
-                             M_TWO*M_PI/this%LLr(n_dir,idim)          
+              gg(idim, ig)= (iguv(idim)  & ! - this%NN(n_dir,idim)/2 &
+                             -1) & 
+!                           -  (M_ONE + mod(this%NN(n_dir,idim),2))*M_HALF ) & !even/odd grid centering
+                          *  M_TWO*M_PI/this%LLr(n_dir,idim)          
             end if
           end do
           ig = ig + 1
@@ -1862,14 +1868,41 @@ print *, ig, ng
           do idir = 1, mdim 
             if (idir == n_dir ) cycle
             if(this%LLr(n_dir,idim)> M_EPSILON) &
-              this%expg(ifp,ig, ifc) = this%expg(ifp,ig, ifc) * exp(M_zI*gg(idim,ig) * &
-                                       this%rcoords(idir, isp_start+ifp-1)) * &
-                                       (M_PI/this%LLr(n_dir,idim))**(fdim/M_z2)
+              this%expg(ifp,ig, ifc) = this%expg(ifp,ig, ifc) * exp(M_zI*gg(idim,ig) &
+                                     * this%rcoords(idir, isp_start+ifp-1)) &
+                                     *  sqrt(M_ONE/this%LLr(n_dir,idim))
+!                                     *  sqrt(M_ONE/this%LLr(n_dir,idim))
             idim= idim+1
           end do
         end do
       end do  
-        
+
+      igu = 7
+      igv = 16      
+      do ifp = 1, nfp   
+        tmp = this%expg(ifp,igu, ifc)*conjg(this%expg(ifp,igv, ifc))         
+        print *,this%rcoords(1, isp_start+ifp-1), real(this%expg(ifp,igu, ifc)), aimag(this%expg(ifp,igu, ifc)),&
+                                                  real(this%expg(ifp,igv, ifc)), aimag(this%expg(ifp,igv, ifc)), &
+                                                  real(tmp), aimag(tmp)
+      end do
+      
+      do igu = 1,ng
+        do igv = 1,ng
+!           tmp = sum(this%expg(:,igu, ifc)*conjg(this%expg(:,igv, ifc))) &
+!               * this%srfcnrml(n_dir,this%face_idx_range(ifc, 1))
+          tmp = M_z0
+          do ifp = 1, nfp
+            tmp = tmp+this%expg(ifp,igu, ifc)*conjg(this%expg(ifp,igv, ifc)) &
+                * this%srfcnrml(n_dir,this%face_idx_range(ifc, 1))
+            
+          end do
+               
+          print *, igu, igv, abs(tmp), this%srfcnrml(n_dir,this%face_idx_range(ifc, 1))
+        end do
+      end do
+!       call exit()
+
+     
       this%sinc(:,:,:,:) = M_ONE
       do ik = kptst, kptend
         do ig = 1,ng
@@ -1880,12 +1913,11 @@ print *, ig, ng
               if(abs(gg(idim,ig) - this%kcoords_cub(idir, ikp, ik)) > M_EPSILON) then
                 this%sinc(ikp,ig,ik,ifc) = this%sinc(ikp,ig, ik, ifc)* &
                               sin(M_HALF*this%LLr(n_dir,idim) *(gg(idim,ig) - this%kcoords_cub(idir,ikp, ik))) / &
-                              (gg(idim,ig) - this%kcoords_cub(idir, ikp, ik))
+                              (gg(idim,ig) - this%kcoords_cub(idir, ikp, ik)) * &
+                              sqrt(M_TWO/(this%LLr(n_dir,idim)*M_PI)) 
               else
-                this%sinc(ikp,ig,ik,ifc) = M_ONE
+                this%sinc(ikp,ig,ik,ifc) = sqrt(this%LLr(n_dir,idim)/(M_TWO*M_PI))
               end if   
-              if(this%LLr(n_dir,idim)> M_EPSILON) &
-                this%sinc(ikp,ig,ik,ifc) = this%sinc(ikp,ig,ik,ifc) *  sqrt(M_TWO/this%LLr(n_dir,idim))            
               idim= idim+1
             end do          
           end do
@@ -2612,8 +2644,8 @@ print *, ig, ng
         
    
         do idir = 1, mdim -1
-          this%LLr(n_dir,idir) = RSmax(idir) - RSmin(idir)
-          if(dRS(idir) > M_ZERO) this%NN(n_dir,idir) = int(this%LLr(n_dir,idir)/dRS(idir))+1
+          this%LLr(n_dir,idir) = RSmax(idir) - RSmin(idir) + dRS(idir)
+          if(dRS(idir) > M_ZERO) this%NN(n_dir,idir) = int(this%LLr(n_dir,idir)/dRS(idir))
         end do        
 
 !         LL(:) = RSmax(:) - RSmin(:)
