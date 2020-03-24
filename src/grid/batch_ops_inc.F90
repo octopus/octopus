@@ -220,6 +220,115 @@ end subroutine X(batch_axpy_vec)
 
 ! --------------------------------------------------------------
 
+! --------------------------------------------------------------------------
+! This routine performs a set of axpy operations for each mesh function x of a batch (xx), 
+! and accumulate the result to y (psi in this case), a single mesh function.
+subroutine X(batch_mf_axpy)(np, aa, xx, psi, nst)
+  integer,           intent(in)    :: np
+  class(batch_t),    intent(in)    :: xx
+  R_TYPE,            intent(inout) :: psi(:,:) 
+  R_TYPE,            intent(in)    :: aa(:)
+  integer, optional, intent(in)    :: nst
+
+  integer :: ist, indb, idim, nst_
+  type(profile_t), save :: prof
+  R_TYPE, allocatable :: phi(:,:)
+
+  ! GPU related variables
+  type(accel_mem_t) :: aa_buffer
+  type(accel_mem_t) :: psi_buffer
+  integer :: wgsize, np_padded
+  integer :: local_sizes(3)
+  integer :: global_sizes(3)
+
+  PUSH_SUB(X(batch_mf_axpy))
+  call profiling_in(prof, "AXPY_MF_BATCH")
+
+  ASSERT(xx%dim == ubound(psi,dim=2))
+
+  nst_ = xx%nst
+  if(present(nst)) nst_ = nst
+
+
+  select case(xx%status())
+  case(BATCH_NOT_PACKED)
+    do ist = 1, nst_
+      do idim = 1, xx%dim
+        indb = xx%ist_idim_to_linear((/ist, idim/))
+        if(abs(aa(ist)) < M_EPSILON) cycle
+        call lalg_axpy(np, aa(ist), xx%X(ff_linear)(:, indb), psi(1:np, idim))
+      end do
+    end do
+
+  case(BATCH_PACKED)
+
+    if(xx%dim == 1) then 
+
+      call blas_gemv('T', nst_, np, R_TOTYPE(M_ONE), xx%X(ff_pack)(1,1), &
+                    ubound(xx%X(ff_pack), dim=1), aa(1), 1, R_TOTYPE(M_ONE), psi(1,1), 1)
+
+    else !Spinor case
+
+      SAFE_ALLOCATE(phi(1:np, 1:xx%dim))
+
+      do ist = 1, nst_
+        if(abs(aa(ist)) < M_EPSILON) cycle
+        call batch_get_state(xx, ist, np, phi) 
+        do idim = 1, xx%dim
+          call lalg_axpy(np, aa(ist), phi(1:np, idim), psi(1:np, idim))
+        end do
+      end do
+
+      SAFE_DEALLOCATE_A(phi)
+
+    end if
+
+  case(BATCH_DEVICE_PACKED)
+
+    call accel_create_buffer(aa_buffer, ACCEL_MEM_READ_ONLY, R_TYPE_VAL, xx%nst) 
+    call accel_write_buffer(aa_buffer, xx%nst, aa)
+
+    np_padded = pad_pow2(np)
+
+    call accel_create_buffer(psi_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, np_padded * xx%dim)
+    do idim=1, xx%dim
+      call accel_write_buffer(psi_buffer, np, psi, offset=(idim-1)*np_padded)
+    end do
+
+    call accel_set_kernel_arg(X(kernel_batch_axpy), 0, np)
+    call accel_set_kernel_arg(X(kernel_batch_axpy), 1, nst_)
+    call accel_set_kernel_arg(X(kernel_batch_axpy), 2, xx%dim)
+    call accel_set_kernel_arg(X(kernel_batch_axpy), 3, xx%ff_device)
+    call accel_set_kernel_arg(X(kernel_batch_axpy), 4, log2(xx%pack_size(1)))
+    call accel_set_kernel_arg(X(kernel_batch_axpy), 5, aa_buffer)
+    call accel_set_kernel_arg(X(kernel_batch_axpy), 6, psi_buffer)
+    call accel_set_kernel_arg(X(kernel_batch_axpy), 7, log2(np_padded))
+
+    wgsize = accel_kernel_workgroup_size(X(kernel_batch_axpy))
+
+    global_sizes = (/ pad(np, wgsize/xx%dim), xx%dim, 1 /)
+    local_sizes  = (/ wgsize/xx%dim,          xx%dim, 1 /)
+
+    call accel_kernel_run(X(kernel_batch_axpy), global_sizes, local_sizes)
+    call accel_finish()
+
+    do idim=1, xx%dim
+      call accel_read_buffer(psi_buffer, np, psi, offset=(idim-1)*np_padded)
+    end do
+
+    call accel_release_buffer(aa_buffer)
+    call accel_release_buffer(psi_buffer)
+    
+
+  end select
+
+  call profiling_out(prof)
+  POP_SUB(X(batch_mf_axpy))
+end subroutine X(batch_mf_axpy)
+
+
+! --------------------------------------------------------------
+
 subroutine X(batch_scal_const)(np, aa, xx)
   integer,           intent(in)    :: np
   R_TYPE,            intent(in)    :: aa

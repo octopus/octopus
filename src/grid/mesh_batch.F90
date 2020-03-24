@@ -56,9 +56,7 @@ module mesh_batch_oct_m
     dmesh_batch_orthogonalization,  &
     zmesh_batch_orthogonalization,  &
     dmesh_batch_mf_dotp,            &
-    zmesh_batch_mf_dotp,            &
-    dmesh_batch_mf_axpy,            &
-    zmesh_batch_mf_axpy
+    zmesh_batch_mf_dotp
 
 contains
 

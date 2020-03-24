@@ -720,7 +720,7 @@ subroutine X(states_elec_orthogonalize_single_batch)(st, mesh, nst, iqn, phi, no
       if(all(mask(minst:maxst))) cycle
     end if
 
-    call X(mesh_batch_mf_axpy)(mesh, -ss(minst:maxst), st%group%psib(ib, iqn), phi, nst = maxst-minst+1) 
+    call X(batch_mf_axpy)(mesh%np, -ss(minst:maxst), st%group%psib(ib, iqn), phi, nst = maxst-minst+1) 
 
   end do
 
