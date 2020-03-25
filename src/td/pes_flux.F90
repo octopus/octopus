@@ -27,6 +27,7 @@ module pes_flux_oct_m
   use hamiltonian_elec_oct_m
   use kpoints_oct_m
   use io_oct_m
+  use lalg_adv_oct_m
   use lasers_oct_m
   use loct_oct_m
   use loct_math_oct_m
@@ -1787,13 +1788,15 @@ contains
     integer   :: mdim,nfaces, ikp_start, ikp_end, fdim, ng, nfp, kptst, kptend
     integer   :: ifc, ig, igu, igv,  idim, idir, n_dir, ifp, max_fcpts, ik, ikp
     integer   :: isp_start, isp_end, isp, iguv(1:2)
-    FLOAT     :: gvec(this%nsrfcpnts,1:2),  DRS(1:2), shift
+    FLOAT     :: gvec(this%nsrfcpnts,1:2),  DRS(1:2), shift, Jac(1:2,1:2), jdet, r_red(1:3), k_red(1:3)
     FLOAT, allocatable :: gg(:,:)
     
     CMPLX    :: tmp
 
     PUSH_SUB(pes_flux_tabulate_cub_pw)
-  
+    
+    ! Here we work in reduced coordinates
+
     mdim      = mesh%sb%dim 
     fdim      = mdim - 1
 
@@ -1815,6 +1818,7 @@ contains
     this%expg = M_z0
     this%sinc = M_ZERO
     
+    
     do ifc = 1, nint((nfaces+0.5)/2)
       isp_start = this%face_idx_range(ifc, 1)
       isp_end   = this%face_idx_range(ifc, 2)
@@ -1827,8 +1831,17 @@ print *, "ifc=", ifc, "isp_start/end=", isp_start, isp_end
         if(abs(this%srfcnrml(idir, this%face_idx_range(ifc, 1))) >= M_EPSILON) n_dir = idir
       end do 
 
+!       if(this%surf_shape == M_PLANES) then
+!         ! This is not general but should work in the only case where is relevant
+!         !i.e. when the system is semiperiodic in <=2 dimensions
+!         Jac(1:fdim, 1:fdim) = mesh%sb%rlattice_primitive(1:fdim, 1:fdim) !The Jacobian on the surface
+!         jdet = lalg_determinant(fdim, Jac, invert = .false.)
+! print *, "jdet =", jdet
+!         this%srfcnrml(n_dir,isp_start:isp_end) = this%srfcnrml(n_dir,isp_start:isp_end)*jdet
+!       end if
+      
 print *, "this%NN(n_dir,:)= ", this%NN(n_dir,:)
-print *, "this%LLr(n_dir,:)= ",this%LLr(n_dir,:)+abs(this%srfcnrml(n_dir,this%face_idx_range(ifc, 1)))             
+print *, "this%LLr(n_dir,:)= ",this%LLr(n_dir,:)            
       SAFE_ALLOCATE(gg(1:2,1:ng))
       
       gg(:,:) = M_ZERO
@@ -1848,12 +1861,9 @@ print *, "this%LLr(n_dir,:)= ",this%LLr(n_dir,:)+abs(this%srfcnrml(n_dir,this%fa
       end do
       
 
-      !From reduced to absolute
-      ! this routine is not general but should work in the only case where is relevant
-      !i.e. when the system is semiperiodic in <2 dimensions 
-      do ig = 1,ng
-        gg(1:2, ig) = matmul(mesh%sb%klattice_primitive(1:2,1:2),gg(1:2,ig))
-      end do
+!       do ig = 1,ng
+!         gg(1:2, ig) = matmul(mesh%sb%klattice_primitive(1:2,1:2),gg(1:2,ig))
+!       end do
       
 print *, ig, ng
       
@@ -1870,26 +1880,40 @@ print *, ig, ng
       this%expg(:,:,:) = M_z1
       do ig = 1,ng
         do ifp = 1, nfp
+          if(this%surf_shape == M_PLANES) then   
+            r_red(1:mdim) = matmul(this%rcoords(1:mdim,isp_start+ifp-1),mesh%sb%klattice_primitive(1:mdim,1:mdim))              
+          else
+            r_red(1:mdim)= this%rcoords(1:mdim, isp_start+ifp-1)
+          end if
           idim = 1
-          do idir = 1, mdim 
+          do idir = 1, mdim
             if (idir == n_dir ) cycle
-            if(this%LLr(n_dir,idim)> M_EPSILON) &
-              this%expg(ifp,ig, ifc) = this%expg(ifp,ig, ifc) * exp(M_zI*gg(idim,ig) &
-                                     * this%rcoords(idir, isp_start+ifp-1)) &
-                                     *  sqrt(M_ONE/this%LLr(n_dir,idim))
+            this%expg(ifp,ig, ifc) = this%expg(ifp,ig, ifc) * exp(M_zI*gg(idim,ig) &
+                                   * r_red(idir) ) &
+!                                     * this%rcoords(idir, isp_start+ifp-1) ) &
+                                   *  sqrt(M_ONE/this%LLr(n_dir,idim))
             idim= idim+1
           end do
+          
+!           this%expg(ifp,ig, ifc) = exp(M_zI*sum(gg(1:2,ig)*r_red(1:2)) )*(M_ONE/this%LLr(n_dir,1))
+!           if (ig ==66) print *,  gg(1:2,ig), this%expg(ifp,ig, ifc)
+!           if (ig ==6 ) print *,  gg(1:2,ig), this%expg(ifp,ig, ifc)
+
         end do
       end do  
 
-      igu = 7
-      igv = 16      
-      do ifp = 1, nfp   
-        tmp = this%expg(ifp,igu, ifc)*conjg(this%expg(ifp,igv, ifc))         
-        print *,this%rcoords(1:2, isp_start+ifp-1), real(this%expg(ifp,igu, ifc)), aimag(this%expg(ifp,igu, ifc)),&
-                                                  real(this%expg(ifp,igv, ifc)), aimag(this%expg(ifp,igv, ifc))
-      end do
+!       igu = 58
+!       igv = 70
+!       do ifp = 1, nfp
+!         tmp = this%expg(ifp,igu, ifc)*conjg(this%expg(ifp,igv, ifc))
+!         write(226,*) matmul(this%rcoords(1:2,isp_start+ifp-1),mesh%sb%klattice_primitive(1:2,1:2)), &
+!                                                   real(this%expg(ifp,igu, ifc)), aimag(this%expg(ifp,igu, ifc)),&
+!                                                   real(this%expg(ifp,igv, ifc)), aimag(this%expg(ifp,igv, ifc))
+!       end do
+!       flush(226)
       
+  
+      ! Check normalization of plane waves on face
       do igu = 1,ng
         do igv = 1,ng
 !           tmp = sum(this%expg(:,igu, ifc)*conjg(this%expg(:,igv, ifc))) &
@@ -1911,13 +1935,21 @@ print *, ig, ng
       do ik = kptst, kptend
         do ig = 1,ng
           do ikp = ikp_start, ikp_end
+            if(this%surf_shape == M_PLANES) then              
+              k_red(1:mdim)= matmul(this%kcoords_cub(1:mdim,ikp, ik), mesh%sb%rlattice_primitive(1:mdim,1:mdim) ) 
+            else
+              k_red(1:mdim)= this%kcoords_cub(1:mdim,ikp, ik) 
+            end if
             idim = 1
             do idir = 1, mdim 
               if (idir == n_dir ) cycle
-              if(abs(gg(idim,ig) - this%kcoords_cub(idir, ikp, ik)) > M_EPSILON) then
+!               if(abs(gg(idim,ig) - this%kcoords_cub(idir, ikp, ik)) > M_EPSILON) then
+              if(abs(gg(idim,ig) - k_red(idir)) > M_EPSILON) then
                 this%sinc(ikp,ig,ik,ifc) = this%sinc(ikp,ig, ik, ifc)* &
-                              sin(M_HALF*this%LLr(n_dir,idim) *(gg(idim,ig) - this%kcoords_cub(idir,ikp, ik))) / &
-                              (gg(idim,ig) - this%kcoords_cub(idir, ikp, ik)) * &
+                              sin(M_HALF*this%LLr(n_dir,idim) *(gg(idim,ig) - k_red(idir))) / &
+                              (gg(idim,ig) - k_red(idir)) * &
+!                               sin(M_HALF*this%LLr(n_dir,idim) *(gg(idim,ig) - this%kcoords_cub(idir,ikp, ik))) / &
+!                               (gg(idim,ig) - this%kcoords_cub(idir, ikp, ik)) * &
                               sqrt(M_TWO/(this%LLr(n_dir,idim)*M_PI)) 
               else
                 this%sinc(ikp,ig,ik,ifc) = sqrt(this%LLr(n_dir,idim)/(M_TWO*M_PI))
@@ -2400,7 +2432,8 @@ print *, ig, ng
 
     PUSH_SUB(pes_flux_getcube)
 
-    ! this routine is parallelized over the mesh in any case
+    ! this routine works on absolute coordinates
+    
 
     mdim = mesh%sb%dim
     
