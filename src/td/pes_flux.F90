@@ -1839,14 +1839,20 @@ print *, "this%LLr(n_dir,:)= ",this%LLr(n_dir,:)+abs(this%srfcnrml(n_dir,this%fa
           iguv=(/igu,igv/)
           do idim = 1, fdim
             if(this%LLr(n_dir,idim) > M_EPSILON) then
-              gg(idim, ig)= (iguv(idim)  & ! - this%NN(n_dir,idim)/2 &
-                             -1) & 
-!                           -  (M_ONE + mod(this%NN(n_dir,idim),2))*M_HALF ) & !even/odd grid centering
+              gg(idim, ig)= (iguv(idim)  - this%NN(n_dir,idim)/2) & 
                           *  M_TWO*M_PI/this%LLr(n_dir,idim)          
             end if
           end do
           ig = ig + 1
         end do
+      end do
+      
+
+      !From reduced to absolute
+      ! this routine is not general but should work in the only case where is relevant
+      !i.e. when the system is semiperiodic in <2 dimensions 
+      do ig = 1,ng
+        gg(1:2, ig) = matmul(mesh%sb%klattice_primitive(1:2,1:2),gg(1:2,ig))
       end do
       
 print *, ig, ng
@@ -1871,7 +1877,6 @@ print *, ig, ng
               this%expg(ifp,ig, ifc) = this%expg(ifp,ig, ifc) * exp(M_zI*gg(idim,ig) &
                                      * this%rcoords(idir, isp_start+ifp-1)) &
                                      *  sqrt(M_ONE/this%LLr(n_dir,idim))
-!                                     *  sqrt(M_ONE/this%LLr(n_dir,idim))
             idim= idim+1
           end do
         end do
@@ -1881,9 +1886,8 @@ print *, ig, ng
       igv = 16      
       do ifp = 1, nfp   
         tmp = this%expg(ifp,igu, ifc)*conjg(this%expg(ifp,igv, ifc))         
-        print *,this%rcoords(1, isp_start+ifp-1), real(this%expg(ifp,igu, ifc)), aimag(this%expg(ifp,igu, ifc)),&
-                                                  real(this%expg(ifp,igv, ifc)), aimag(this%expg(ifp,igv, ifc)), &
-                                                  real(tmp), aimag(tmp)
+        print *,this%rcoords(1:2, isp_start+ifp-1), real(this%expg(ifp,igu, ifc)), aimag(this%expg(ifp,igu, ifc)),&
+                                                  real(this%expg(ifp,igv, ifc)), aimag(this%expg(ifp,igv, ifc))
       end do
       
       do igu = 1,ng
