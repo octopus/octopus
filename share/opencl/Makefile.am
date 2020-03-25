@@ -34,6 +34,7 @@ dist_opencl_DATA =              \
 	pack.cl                 \
 	copy.cl                 \
 	mesh_batch_single.cl	\
+	batch_axpy_function.cl  \
 	subarray.cl             \
 	density.cl              \
 	phase.cl                \

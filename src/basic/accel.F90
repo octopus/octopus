@@ -598,10 +598,10 @@ contains
     call accel_kernel_start_call(zkernel_dot_matrix, 'mesh_batch.cl', "zdot_matrix")
     call accel_kernel_start_call(zkernel_dot_matrix_spinors, 'mesh_batch.cl', "zdot_matrix_spinors")
 
-    call accel_kernel_start_call(dkernel_batch_axpy, 'mesh_batch_single.cl', "dbatch_mf_axpy", flags = '-lineinfo')
-    call accel_kernel_start_call(zkernel_batch_axpy, 'mesh_batch_single.cl', "zbatch_mf_axpy", flags = '-lineinfo')
-    call accel_kernel_start_call(dkernel_batch_dotp, 'mesh_batch_single.cl', "dbatch_mf_dotp", flags = '-lineinfo')
-    call accel_kernel_start_call(zkernel_batch_dotp, 'mesh_batch_single.cl', "zbatch_mf_dotp", flags = '-lineinfo')
+    call accel_kernel_start_call(dkernel_batch_axpy, 'batch_axpy_function.cl', "dbatch_axpy_function", flags = '-lineinfo')
+    call accel_kernel_start_call(zkernel_batch_axpy, 'batch_axpy_function.cl', "zbatch_axpy_function", flags = '-lineinfo')
+    call accel_kernel_start_call(dkernel_batch_dotp, 'batch_axpy_function.cl', "dbatch_mf_dotp", flags = '-lineinfo')
+    call accel_kernel_start_call(zkernel_batch_dotp, 'batch_axpy_function.cl', "zbatch_mf_dotp", flags = '-lineinfo')
     
     call accel_kernel_start_call(dzmul, 'mul.cl', "dzmul", flags = '-DRTYPE_DOUBLE')
     call accel_kernel_start_call(zzmul, 'mul.cl', "zzmul", flags = '-DRTYPE_COMPLEX')

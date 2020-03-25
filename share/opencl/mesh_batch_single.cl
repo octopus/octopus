@@ -1,5 +1,5 @@
 /*
- Copyright (C) 2012 X. Andrade
+ Copyright (C) 2012-2020 X. Andrade, M. Lueders
 
  This program is free software; you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
@@ -21,52 +21,6 @@
 #include <cl_global.h>
 #include <cl_complex.h>
 
-/* The X(batch_mf_axpy) kernels should be called on a global grid of (np, ndim, 1) */
-
-__kernel void dbatch_mf_axpy(
-    const int np,  //< number of mesh points
-    const int nst, //< number of states
-    const int ndim, //< number of spin components
-    __global const double* __restrict xx_buffer, const int ldxx, //< batch of states
-    __global const double* __restrict aa_buffer,                 //< buffer of weights
-    __global double* __restrict psi_buffer, const int ldpsi      //< single state accumulating the result
-) {
-
-  int ip   = get_global_id(0);
-  int idim = get_global_id(1);
-
-  double tmp = 0.0;
-
-  if(ip   >= np) return;
-  if(idim >= ndim) return;
-
-  for(int ist=0; ist<nst; ist++) {
-     tmp += aa_buffer[ist] * xx_buffer[ist + (ip<<ldxx)];
-  }
-  psi_buffer[ip + (idim<<ldpsi)] += tmp;
-}
-
-__kernel void zbatch_mf_axpy(
-    const int np,   // number of mesh points
-    const int nst,  // number of states
-    const int ndim, // number of spin components
-    __global const double2* __restrict xx_buffer, const int ldxx, // batch of states
-    __global const double2* __restrict aa_buffer,                 // buffer of weights
-    __global double2* __restrict psi_buffer, const int ldpsi)     // single state accumulating the result
-{
-  int ip   = get_global_id(0);
-  int idim = get_global_id(1);
-
-  double2 tmp = double2(0.0, 0.0);
-
-  if(ip   >= np) return;
-  if(idim >= ndim) return;
-
-  for(int ist=0; ist<nst; ist++) {
-     tmp += aa_buffer[ist] * xx_buffer[ist + (ip<<ldxx)];
-  }
-  psi_buffer[ip + (idim<<ldpsi)] += tmp;
-}
 
 // The X(batch_mf_dotp) kernels should be called on a global grid of (nst, ndim, 1)
 

@@ -223,7 +223,7 @@ end subroutine X(batch_axpy_vec)
 ! --------------------------------------------------------------------------
 ! This routine performs a set of axpy operations for each mesh function x of a batch (xx), 
 ! and accumulate the result to y (psi in this case), a single mesh function.
-subroutine X(batch_mf_axpy)(np, aa, xx, psi, nst)
+subroutine X(batch_axpy_function)(np, aa, xx, psi, nst)
   integer,           intent(in)    :: np
   class(batch_t),    intent(in)    :: xx
   R_TYPE,            intent(inout) :: psi(:,:) 
@@ -241,7 +241,7 @@ subroutine X(batch_mf_axpy)(np, aa, xx, psi, nst)
   integer :: local_sizes(3)
   integer :: global_sizes(3)
 
-  PUSH_SUB(X(batch_mf_axpy))
+  PUSH_SUB(X(batch_axpy_function))
   call profiling_in(prof, "AXPY_MF_BATCH")
 
   ASSERT(xx%dim == ubound(psi,dim=2))
@@ -323,8 +323,8 @@ subroutine X(batch_mf_axpy)(np, aa, xx, psi, nst)
   end select
 
   call profiling_out(prof)
-  POP_SUB(X(batch_mf_axpy))
-end subroutine X(batch_mf_axpy)
+  POP_SUB(X(batch_axpy_function))
+end subroutine X(batch_axpy_function)
 
 
 ! --------------------------------------------------------------

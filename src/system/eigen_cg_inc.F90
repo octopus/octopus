@@ -143,11 +143,7 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
 
     ! Orthogonalize starting eigenfunctions to those already calculated...
     if(ist > 1) then
-      if(accel_is_enabled()) then
-        call X(states_elec_orthogonalize_single)(st, gr%mesh, ist - 1, ik, psi, normalize = .true.)
-      else
-        call X(states_elec_orthogonalize_single_batch)(st, gr%mesh, ist - 1, ik, psi, normalize = .true.)
-      end if
+      call X(states_elec_orthogonalize_single_batch)(st, gr%mesh, ist - 1, ik, psi, normalize = .true.)
     end if
 
     ! Calculate starting gradient: |hpsi> = H|psi>
@@ -229,13 +225,8 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
       ! PTA92, eq. 5.18
       dot = X(mf_dotp) (gr%mesh, st%d%dim, psi, g0)
       ! orthogonalize against previous or all states, depending on the optional argument orthogonalize_to_all
-      if(accel_is_enabled()) then
-        call X(states_elec_orthogonalize_single)(st, gr%mesh, ist - 1, ik, g0, normalize = .false., &
+      call X(states_elec_orthogonalize_single_batch)(st, gr%mesh, ist - 1, ik, g0, normalize = .false., &
           against_all=orthogonalize_to_all)
-      else
-        call X(states_elec_orthogonalize_single_batch)(st, gr%mesh, ist - 1, ik, g0, normalize = .false., &
-          against_all=orthogonalize_to_all)
-      end if
 
       do idim = 1, st%d%dim
         call lalg_axpy(gr%mesh%np, -dot, psi(:, idim), g0(:, idim))
@@ -462,11 +453,7 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
 
     ! one could orthogonalize against all states here, but it turns out not
     ! to accelerate convergence
-    if(accel_is_enabled()) then
-      call X(states_elec_orthogonalize_single)(st, gr%mesh, ist - 1, ik, psi, normalize = .true.)
-    else
-      call X(states_elec_orthogonalize_single_batch)(st, gr%mesh, ist - 1, ik, psi, normalize = .true.)
-    end if
+    call X(states_elec_orthogonalize_single_batch)(st, gr%mesh, ist - 1, ik, psi, normalize = .true.)
     call states_elec_set_state(st, gr%mesh, ist, ik, psi)
 
     niter = niter + iter + 1

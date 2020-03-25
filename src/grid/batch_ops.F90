@@ -44,8 +44,8 @@ module batch_ops_oct_m
     batch_set_points,               &
     batch_points_block_size,        &
     batch_mul,                      &
-    dbatch_mf_axpy,                 &
-    zbatch_mf_axpy
+    dbatch_axpy_function,                 &
+    zbatch_axpy_function
 
   interface batch_axpy
     module procedure dbatch_axpy_const
