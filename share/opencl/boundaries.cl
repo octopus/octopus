@@ -1,5 +1,5 @@
 /*
- Copyright (C) 2013 X. Andrade
+ Copyright (C) 2013-2020 X. Andrade, M. Lueders
 
  This program is free software; you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
@@ -19,6 +19,7 @@
 */
 
 #include <cl_global.h>
+#include <cl_complex.h>
 
 __kernel void boundaries_periodic(const int nper, 
 				  __global const int * __restrict per_points,
@@ -33,6 +34,24 @@ __kernel void boundaries_periodic(const int nper,
   const int ip_inn = per_points[iper*2 + 1] - 1;
 
   ff[(ip_bnd<<ldff) + ist] = ff[(ip_inn<<ldff) + ist];
+
+}
+
+__kernel void boundaries_periodic_corr(const int nper, 
+				  __global const int * __restrict per_points,
+				  __global double2 * __restrict ff,
+				  const int ldff,
+          __global double2 * __restrict phase_correction,
+          const int np){
+  const int ist  = get_global_id(0);
+  const int iper = get_global_id(1);
+  
+  if(iper >= nper) return;
+  
+  const int ip_bnd = per_points[iper*2    ] - 1;
+  const int ip_inn = per_points[iper*2 + 1] - 1;
+
+  ff[(ip_bnd<<ldff) + ist] = complex_mul( ff[(ip_inn<<ldff) + ist], phase_correction[ip_bnd - np]);
 
 }
 
@@ -78,6 +97,32 @@ __kernel void boundaries_periodic_recv(const int maxrecv,
   ff[(ip_recv<<ldff) + ist] = recvbuffer[((maxrecv*ipart + ip)<<ldff) + ist];
   
 }
+
+__kernel void boundaries_periodic_recv_corr(const int maxrecv,
+				       __global const int * __restrict nrecv,
+				       __global const int * __restrict per_recv,
+				       const int ldper_recv,
+				       __global const double2 * __restrict recvbuffer,
+				       __global double * __restrict ff,
+				       const int ldff,
+               __global double2 * __restrict phase_correction,
+               const int np){
+
+  const int ist   = get_global_id(0);
+  const int ip    = get_global_id(1);
+  const int ipart = get_global_id(2);
+  
+  const int np = nrecv[ipart];
+
+  if(ip >= np) return;
+  
+  const int ip_recv = per_recv[ldper_recv*ipart + ip] - 1;
+
+  ff[(ip_recv<<ldff) + ist] = complex_mul(recvbuffer[((maxrecv*ipart + ip)<<ldff) + ist], phase_correction[ip_recv-np]);
+  
+}
+
+
 /*
  Local Variables:
  mode: c
