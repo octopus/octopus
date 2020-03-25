@@ -103,7 +103,7 @@ __kernel void boundaries_periodic_recv_corr(const int maxrecv,
 				       __global const int * __restrict per_recv,
 				       const int ldper_recv,
 				       __global const double2 * __restrict recvbuffer,
-				       __global double * __restrict ff,
+				       __global double2 * __restrict ff,
 				       const int ldff,
                __global double2 * __restrict phase_correction,
                const int np){
@@ -112,9 +112,9 @@ __kernel void boundaries_periodic_recv_corr(const int maxrecv,
   const int ip    = get_global_id(1);
   const int ipart = get_global_id(2);
   
-  const int np = nrecv[ipart];
+  const int np_local = nrecv[ipart];
 
-  if(ip >= np) return;
+  if(ip >= np_local) return;
   
   const int ip_recv = per_recv[ldper_recv*ipart + ip] - 1;
 
