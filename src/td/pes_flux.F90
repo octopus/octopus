@@ -898,20 +898,22 @@ contains
              call messages_input_error('PES_Flux_ThetaK')              
         end do 
         if(this%nstepsthetak < 0) call messages_input_error('PES_Flux_ThetaK')
-      end if
+      else 
 
-      !%Variable PES_Flux_StepsThetaK
-      !%Type integer
-      !%Default 45
-      !%Section Time-Dependent::PhotoElectronSpectrum
-      !%Description
-      !% Number of steps in <math>\theta</math> (<math>0 \le \theta \le \pi</math>) for the spherical grid in k.
-      !%End
-      call parse_variable(namespace, 'PES_Flux_StepsThetaK', 45, this%nstepsthetak)
-      if(this%nstepsthetak < 0) call messages_input_error('PES_Flux_StepsThetaK')
+        !%Variable PES_Flux_StepsThetaK
+        !%Type integer
+        !%Default 45
+        !%Section Time-Dependent::PhotoElectronSpectrum
+        !%Description
+        !% Number of steps in <math>\theta</math> (<math>0 \le \theta \le \pi</math>) for the spherical grid in k.
+        !%End
+        call parse_variable(namespace, 'PES_Flux_StepsThetaK', 45, this%nstepsthetak)
+        if(this%nstepsthetak < 0) call messages_input_error('PES_Flux_StepsThetaK')
+
+        ! should do this at some point 
+  !       call messages_obsolete_variable(namespace, 'PES_Flux_StepsThetaK')
+      end if
       
-      ! should do this at some point 
-!       call messages_obsolete_variable(namespace, 'PES_Flux_StepsThetaK')
     
 
       !%Variable PES_Flux_PhiK
@@ -939,23 +941,24 @@ contains
         call parse_block_integer(blk, 0, 2, this%nstepsphik)
         call parse_block_end(blk)
         do idim = 1,2
-          if (this%phik_rng(idim) < M_ZERO .or. this%phik_rng(idim) > M_PI) &
+          if (this%phik_rng(idim) < M_ZERO .or. this%phik_rng(idim) > M_TWO*M_PI) &
              call messages_input_error('PES_Flux_PhiK')              
         end do 
         if(this%nstepsphik < 0) call messages_input_error('PES_Flux_PhiK')
+
+      else
+
+        !%Variable PES_Flux_StepsPhiK
+        !%Type integer
+        !%Default 90
+        !%Section Time-Dependent::PhotoElectronSpectrum
+        !%Description
+        !% Number of steps in <math>\phi</math> (<math>0 \le \phi \le 2 \pi</math>) for the spherical grid in k.
+        !%End
+        call parse_variable(namespace, 'PES_Flux_StepsPhiK', 90, this%nstepsphik)
+        if(this%nstepsphik < 0) call messages_input_error('PES_Flux_StepsPhiK')
+        if(this%nstepsphik == 0) this%nstepsphik = 1
       end if
-
-
-      !%Variable PES_Flux_StepsPhiK
-      !%Type integer
-      !%Default 90
-      !%Section Time-Dependent::PhotoElectronSpectrum
-      !%Description
-      !% Number of steps in <math>\phi</math> (<math>0 \le \phi \le 2 \pi</math>) for the spherical grid in k.
-      !%End
-      call parse_variable(namespace, 'PES_Flux_StepsPhiK', 90, this%nstepsphik)
-      if(this%nstepsphik < 0) call messages_input_error('PES_Flux_StepsPhiK')
-      if(this%nstepsphik == 0) this%nstepsphik = 1
 
       
       Dthetak  = M_ZERO
@@ -993,7 +996,7 @@ contains
         
       end select
 
-      write(message(1),'(a)') "Polar grid:"
+      write(message(1),'(a)') "Polar momentum grid:"
       call messages_info(1)
       if(mdim == 3)  then
 !         call messages_print_var_value(stdout, "PES_Flux_StepsThetaK", this%nstepsthetak)
@@ -1828,7 +1831,7 @@ print *, "ifc=", ifc, "isp_start/end=", isp_start, isp_end
       
       n_dir = 0 
       do idir = 1, mdim
-        if(abs(this%srfcnrml(idir, this%face_idx_range(ifc, 1))) >= M_EPSILON) n_dir = idir
+        if(abs(this%srfcnrml(idir, isp_start)) >= M_EPSILON) n_dir = idir
       end do 
 
 !       if(this%surf_shape == M_PLANES) then
@@ -1880,7 +1883,8 @@ print *, ig, ng
       this%expg(:,:,:) = M_z1
       do ig = 1,ng
         do ifp = 1, nfp
-          if(this%surf_shape == M_PLANES) then   
+          if(this%surf_shape == M_PLANES) then 
+            !convert from absolute to reduced          
             r_red(1:mdim) = matmul(this%rcoords(1:mdim,isp_start+ifp-1),mesh%sb%klattice_primitive(1:mdim,1:mdim))              
           else
             r_red(1:mdim)= this%rcoords(1:mdim, isp_start+ifp-1)
@@ -1935,8 +1939,9 @@ print *, ig, ng
       do ik = kptst, kptend
         do ig = 1,ng
           do ikp = ikp_start, ikp_end
-            if(this%surf_shape == M_PLANES) then              
-              k_red(1:mdim)= matmul(this%kcoords_cub(1:mdim,ikp, ik), mesh%sb%rlattice_primitive(1:mdim,1:mdim) ) 
+            if(this%surf_shape == M_PLANES) then       
+              !convert from absolute to reduced        
+              k_red(1:mdim) = matmul(this%kcoords_cub(1:mdim,ikp, ik), mesh%sb%rlattice_primitive(1:mdim,1:mdim) ) 
             else
               k_red(1:mdim)= this%kcoords_cub(1:mdim,ikp, ik) 
             end if
@@ -2069,7 +2074,7 @@ print *, ig, ng
       ! get the direction normal to the surface 
       n_dir = 0 
       do idir = 1, mdim
-        if(abs(this%srfcnrml(idir, this%face_idx_range(ifc, 1))) >= M_EPSILON) n_dir = idir
+        if(abs(this%srfcnrml(idir, isp_start)) >= M_EPSILON) n_dir = idir
       end do 
 
       itstep = tdstep_on_node
