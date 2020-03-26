@@ -127,14 +127,14 @@ contains
   subroutine multisystem_end(systems)
     type(linked_list_t), intent(inout) :: systems
 
-    type(system_iterator_t) :: iter
-    class(system_abst_t), pointer :: sys
+    type(list_iterator_t) :: iter
+    class(*), pointer :: sys
 
     PUSH_SUB(multisystem_end)
 
     call iter%start(systems)
     do while (iter%has_next())
-      sys => iter%get_next_system()
+      sys => iter%get_next()
       SAFE_DEALLOCATE_P(sys)
     end do
 
