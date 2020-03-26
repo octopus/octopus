@@ -918,7 +918,6 @@ contains
     type(test_parameters_t), intent(in) :: param
 
     type(namespace_t) :: global_namespace
-    class(celestial_body_t), pointer :: sun, earth, moon
     integer :: it, internal_loop
     logical :: any_td_step_done, all_done_max_td_steps
     integer, parameter :: MAX_PROPAGATOR_STEPS = 1000
