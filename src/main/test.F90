@@ -958,6 +958,19 @@ contains
         !Find the smallest dt
         smallest_algo_dt = min(smallest_algo_dt, sys%prop%dt/sys%prop%algo_steps)
 
+      class default
+        message(1) = "Unknow system type."
+        call messages_fatal(1)
+      end select
+    end do
+
+    ! Loop over systems
+    call iter%start(systems)
+    do while (iter%has_next())
+      sys => iter%get_next()
+      select type(sys)
+      class is (system_abst_t)
+
         !Associate them to subsystems
         call sys%init_clocks(sys%prop%dt, smallest_algo_dt)
 
