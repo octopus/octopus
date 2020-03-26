@@ -61,10 +61,6 @@ module xc_functl_oct_m
     XC_FAMILY_RDMFT = 2048, &
     XC_FAMILY_LIBVDWXC = 4096
 
-#ifndef HAVE_LIBXC_HYB_MGGA
-  integer, public, parameter :: XC_FAMILY_HYB_MGGA = 64
-#endif
-
   type xc_functl_t
     ! Components are public by default
     integer         :: family            !< LDA, GGA, etc.
@@ -375,9 +371,6 @@ contains
 
     character(len=120) :: s1, s2
     integer :: ii
-#if !defined(HAVE_LIBXC3) && !defined(HAVE_LIBXC4)
-    type(XC_F90(pointer_t)) :: str
-#endif
     
     PUSH_SUB(xc_functl_write_info)
 
@@ -435,19 +428,11 @@ contains
       call messages_info(2, iunit)
       
       ii = 0
-#if defined HAVE_LIBXC3 || defined HAVE_LIBXC4
       call XC_F90(info_refs)(functl%info, ii, s1)
-#else
-      call XC_F90(info_refs)(functl%info, ii, str, s1)
-#endif
       do while(ii >= 0)
         write(message(1), '(4x,a,i1,2a)') '[', ii, '] ', trim(s1)
         call messages_info(1, iunit)
-#if defined HAVE_LIBXC3 || defined HAVE_LIBXC4
         call XC_F90(info_refs)(functl%info, ii, s1)
-#else
-        call XC_F90(info_refs)(functl%info, ii, str, s1)
-#endif
       end do
     end if
 
