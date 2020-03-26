@@ -49,21 +49,21 @@ dnl The tests
 AC_MSG_CHECKING([for libxc])
 
 testprog3="AC_LANG_PROGRAM([],[
-  use xc_f90_lib_m
+  use xc_f03_lib_m
   implicit none
   integer :: major
   integer :: minor
   integer :: micro
-  call xc_f90_version(major, minor, micro)])"
+  call xc_f03_version(major, minor, micro)])"
 
 testprog4="AC_LANG_PROGRAM([],[
-  use xc_f90_lib_m
+  use xc_f03_lib_m
   implicit none
   integer :: major
   integer :: minor
   integer :: micro
   integer :: flags = XC_FLAGS_NEEDS_LAPLACIAN
-  call xc_f90_version(major, minor, micro)]
+  call xc_f03_version(major, minor, micro)]
   write(*,*) flags)"
 
 testprog5="AC_LANG_PROGRAM([],[
@@ -94,14 +94,14 @@ if test ! -z "$with_libxc_prefix"; then
 
   # static linkage, version 4
   if test x"$acx_libxc_ok" = xno; then
-    LIBS_LIBXC="$with_libxc_prefix/lib/libxcf90.a $with_libxc_prefix/lib/libxc.a"
+    LIBS_LIBXC="$with_libxc_prefix/lib/libxcf03.a $with_libxc_prefix/lib/libxc.a"
     LIBS="$LIBS_LIBXC $acx_libxc_save_LIBS"
     AC_LINK_IFELSE($testprog4, [acx_libxc_ok=yes; acx_libxc_v4=yes], [])
   fi
   
   # static linkage, version 3
   if test x"$acx_libxc_ok" = xno; then
-    LIBS_LIBXC="$with_libxc_prefix/lib/libxcf90.a $with_libxc_prefix/lib/libxc.a"
+    LIBS_LIBXC="$with_libxc_prefix/lib/libxcf03.a $with_libxc_prefix/lib/libxc.a"
     LIBS="$LIBS_LIBXC $acx_libxc_save_LIBS"
     AC_LINK_IFELSE($testprog3, [acx_libxc_ok=yes; acx_libxc_v3=yes], [])
   fi
@@ -126,7 +126,7 @@ if test x"$acx_libxc_ok" = xno; then
   else
     LIBS_LIBXC=""
   fi
-  LIBS_LIBXC="$LIBS_LIBXC -lxcf90 -lxc"
+  LIBS_LIBXC="$LIBS_LIBXC -lxcf03 -lxc"
   LIBS="$LIBS_LIBXC $acx_libxc_save_LIBS"
   AC_LINK_IFELSE($testprog4, [acx_libxc_ok=yes; acx_libxc_v4=yes], [])
 fi
@@ -138,7 +138,7 @@ if test x"$acx_libxc_ok" = xno; then
   else
     LIBS_LIBXC=""
   fi
-  LIBS_LIBXC="$LIBS_LIBXC -lxcf90 -lxc"
+  LIBS_LIBXC="$LIBS_LIBXC -lxcf03 -lxc"
   LIBS="$LIBS_LIBXC $acx_libxc_save_LIBS"
   AC_LINK_IFELSE($testprog3, [acx_libxc_ok=yes; acx_libxc_v3=yes], [])
 fi
