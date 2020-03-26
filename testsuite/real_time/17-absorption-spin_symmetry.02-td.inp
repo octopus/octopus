@@ -33,3 +33,4 @@ TDDeltaStrengthMode = kick_spin_and_density
 
 FilterPotentials = filter_none
 
+StatesPack = yes

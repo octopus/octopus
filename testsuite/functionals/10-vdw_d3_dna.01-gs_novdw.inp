@@ -21,3 +21,4 @@ TotalStates = 128
 SCFCalculatePartialCharges = yes
 
 ExperimentalFeatures = yes
+StatesPack = yes

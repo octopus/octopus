@@ -22,3 +22,4 @@ EMCalcMagnetooptics = true
 MagneticGaugeCorrection = icl
 
 FilterPotentials = filter_none
+StatesPack = yes

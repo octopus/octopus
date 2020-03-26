@@ -34,3 +34,4 @@ ExtraStates = 1
 
 DisableAccel = yes
 
+StatesPack = yes

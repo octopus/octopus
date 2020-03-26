@@ -41,3 +41,4 @@ RDMToleranceFO = 1e-6
 RDMConvEner = 1e-7
 
 RestartWrite = no
+StatesPack = yes
