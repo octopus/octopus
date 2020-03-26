@@ -423,18 +423,22 @@ contains
 
     PUSH_SUB(system_init_propagator) 
 
+    call messages_experimental('Multisystem propagator framework')
+
     !%Variable TDSystemPropagator
     !%Type integer
     !%Default verlet
     !%Section Time-Dependent::Propagation
     !%Description
-    !% A temporary variable to set the propagator in the multisystem framework
+    !% A variable to set the propagator in the multisystem framework.
+    !% This is a temporary solution, and should be replaced by the
+    !% TDPropagator variable.
     !%Option verlet 1
-    !% Verlet propagator.
+    !% (Experimental) Verlet propagator.
     !%Option beeman 2
-    !% Beeman propagator without predictor-corrector.
+    !% (Experimental) Beeman propagator without predictor-corrector.
     !%Option beeman_scf 3
-    !% Beeman propagator with predictor-corrector scheme.
+    !% (Experimental) Beeman propagator with predictor-corrector scheme.
     !%End
     call parse_variable(this%namespace, 'TDSystemPropagator', PROP_VERLET, prop)
     if(.not.varinfo_valid_option('TDSystemPropagator', prop)) call messages_input_error('TDSystemPropagator')

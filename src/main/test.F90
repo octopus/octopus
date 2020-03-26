@@ -925,8 +925,8 @@ contains
     FLOAT :: smallest_algo_dt
     
     type(linked_list_t) :: systems
-    type(list_iterator_t) :: iter
-    class(*), pointer :: sys
+    type(system_iterator_t) :: iter
+    class(system_abst_t), pointer :: sys
 
     PUSH_SUB(test_celestial_dynamics)
 
@@ -949,42 +949,29 @@ contains
     ! Loop over systems
     call iter%start(systems)
     do while (iter%has_next())
-      sys => iter%get_next()
-      select type(sys)
-      class is (system_abst_t)
-        !Initialize the propagator
-        call sys%init_propagator()
+      sys => iter%get_next_system()
 
-        !Find the smallest dt
-        smallest_algo_dt = min(smallest_algo_dt, sys%prop%dt/sys%prop%algo_steps)
+      !Initialize the propagator
+      call sys%init_propagator()
 
-      class default
-        message(1) = "Unknow system type."
-        call messages_fatal(1)
-      end select
-    end do
+      !Find the smallest dt
+      smallest_algo_dt = min(smallest_algo_dt, sys%prop%dt/sys%prop%algo_steps)
 
-    ! Loop over systems
-    call iter%start(systems)
-    do while (iter%has_next())
-      sys => iter%get_next()
-      select type(sys)
-      class is (system_abst_t)
-
-        !Associate them to subsystems
-        call sys%init_clocks(sys%prop%dt, smallest_algo_dt)
-
-        call sys%prop%rewind()
-
-      class default
-        message(1) = "Unknow system type."
-        call messages_fatal(1)
-      end select
     end do
 
     call iter%start(systems)
     do while (iter%has_next())
-      sys => iter%get_next()
+      sys => iter%get_next_system()
+
+      !Associate them to subsystems
+      call sys%init_clocks(sys%prop%dt, smallest_algo_dt)
+
+      call sys%prop%rewind()
+    end do
+
+    call iter%start(systems)
+    do while (iter%has_next())
+      sys => iter%get_next_system()
       select type(sys)
       type is (celestial_body_t)
 
@@ -1012,19 +999,12 @@ contains
 
         call iter%start(systems)
         do while (iter%has_next())
-          sys => iter%get_next()
-          select type (sys)
-          type is (celestial_body_t)
+          sys => iter%get_next_system()
 
-            call sys%dt_operation()
+          call sys%dt_operation()
 
-            !We check the exit condition
-            any_td_step_done = any_td_step_done .or. sys%prop%step_is_done()
-
-          class default
-            message(1) = "Unknow system type."
-            call messages_fatal(1)
-          end select
+          !We check the exit condition
+          any_td_step_done = any_td_step_done .or. sys%prop%step_is_done()
         end do
 
         INCR(internal_loop, 1)
@@ -1035,31 +1015,30 @@ contains
 
       call iter%start(systems)
       do while (iter%has_next())
-        sys => iter%get_next()
+        sys => iter%get_next_system()
 
-        select type (sys)
-        type is (celestial_body_t)
+        if(sys%prop%step_is_done()) then
+          call sys%prop%rewind()
+          call sys%write_td_info()
 
-          if(sys%prop%step_is_done()) then
-            call sys%prop%rewind()
-            call sys%write_td_info()
+          select type (sys)
+          type is (celestial_body_t)
             call sys%td_write_iter(it)
-          end if
+          class default
+            message(1) = "Unknow system type."
+            call messages_fatal(1)
+          end select
+        end if
 
-          ! Fixme: should be changed to final propagation time
-          all_done_max_td_steps = all_done_max_td_steps .and. (sys%clock%get_sim_time() > sys%prop%max_td_steps*sys%prop%dt)
-
-       class default
-          message(1) = "Unknow system type."
-          call messages_fatal(1)
-        end select
+        ! Fixme: should be changed to final propagation time
+        all_done_max_td_steps = all_done_max_td_steps .and. (sys%clock%get_sim_time() > sys%prop%max_td_steps*sys%prop%dt)
       end do
 
     end do
 
     call iter%start(systems)
     do while (iter%has_next())
-      sys => iter%get_next()
+      sys => iter%get_next_system()
       select type (sys)
       type is (celestial_body_t)
 
