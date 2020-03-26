@@ -21,6 +21,7 @@ AC_DEFUN([ACX_LIBXC], [
 acx_libxc_ok=no
 acx_libxc_v3=no
 acx_libxc_v4=no
+acx_libxc_v5=no
 
 dnl Check if the library was given in the command line
 dnl if not, use environment variables or defaults
@@ -65,6 +66,16 @@ testprog4="AC_LANG_PROGRAM([],[
   call xc_f90_version(major, minor, micro)]
   write(*,*) flags)"
 
+testprog5="AC_LANG_PROGRAM([],[
+  use xc_f90_lib_m
+  implicit none
+  integer :: major
+  integer :: minor
+  integer :: micro
+  integer :: flags = XC_FLAGS_HAVE_ALL
+  call xc_f90_version(major, minor, micro)]
+  write(*,*) flags)"
+
 FCFLAGS="$FCFLAGS_LIBXC $acx_libxc_save_FCFLAGS"
 
 # set from environment variable, if not blank
@@ -74,6 +85,13 @@ if test ! -z "$LIBS_LIBXC"; then
 fi
 
 if test ! -z "$with_libxc_prefix"; then
+  # static linkage, version 5
+  if test x"$acx_libxc_ok" = xno; then
+    LIBS_LIBXC="$with_libxc_prefix/lib/libxcf90.a $with_libxc_prefix/lib/libxc.a"
+    LIBS="$LIBS_LIBXC $acx_libxc_save_LIBS"
+    AC_LINK_IFELSE($testprog5, [acx_libxc_ok=yes; acx_libxc_v5=yes], [])
+  fi
+
   # static linkage, version 4
   if test x"$acx_libxc_ok" = xno; then
     LIBS_LIBXC="$with_libxc_prefix/lib/libxcf90.a $with_libxc_prefix/lib/libxc.a"
@@ -87,6 +105,18 @@ if test ! -z "$with_libxc_prefix"; then
     LIBS="$LIBS_LIBXC $acx_libxc_save_LIBS"
     AC_LINK_IFELSE($testprog3, [acx_libxc_ok=yes; acx_libxc_v3=yes], [])
   fi
+fi
+
+# dynamic linkage, version 5
+if test x"$acx_libxc_ok" = xno; then
+  if test ! -z "$with_libxc_prefix"; then
+    LIBS_LIBXC="-L$with_libxc_prefix/lib"
+  else
+    LIBS_LIBXC=""
+  fi
+  LIBS_LIBXC="$LIBS_LIBXC -lxcf90 -lxc"
+  LIBS="$LIBS_LIBXC $acx_libxc_save_LIBS"
+  AC_LINK_IFELSE($testprog5, [acx_libxc_ok=yes; acx_libxc_v5=yes], [])
 fi
 
 # dynamic linkage, version 4
@@ -125,8 +155,11 @@ fi
 AC_MSG_CHECKING([whether libxc version is 3.0])
 AC_MSG_RESULT([$acx_libxc_v3])
 
-AC_MSG_CHECKING([whether libxc version is >= 4.0])
+AC_MSG_CHECKING([whether libxc version is 4])
 AC_MSG_RESULT([$acx_libxc_v4])
+
+AC_MSG_CHECKING([whether libxc version is 5])
+AC_MSG_RESULT([$acx_libxc_v5])
 
 if test x"$acx_libxc_v3" = xyes; then
   AC_DEFINE(HAVE_LIBXC3, 1, [Defined if you have version 3 of the LIBXC library.])
@@ -134,6 +167,10 @@ fi
 
 if test x"$acx_libxc_v4" = xyes; then
   AC_DEFINE(HAVE_LIBXC4, 1, [Defined if you have version 4 of the LIBXC library.])
+fi
+
+if test x"$acx_libxc_v5" = xyes; then
+  AC_DEFINE(HAVE_LIBXC5, 1, [Defined if you have version 5 of the LIBXC library.])
 fi
 
 AC_SUBST(FCFLAGS_LIBXC)
