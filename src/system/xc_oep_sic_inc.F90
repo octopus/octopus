@@ -30,9 +30,12 @@ subroutine X(oep_sic) (xcs, gr, psolver, namespace, st, is, oep, ex, ec, exxop)
   type(exchange_operator_t), intent(in) :: exxop
 
   integer  :: ist
-  FLOAT :: ex2, ec2, ex_, ec_, edummy
+  FLOAT :: ex2, ec2, ex_, ec_
   FLOAT, allocatable :: vxc(:, :), rho(:,:)
   R_TYPE, allocatable :: psi(:, :)
+#if defined(HAVE_MPI)
+  FLOAT :: edummy
+#endif
 
   call profiling_in(C_PROFILING_XC_SIC, 'XC_SIC')
   PUSH_SUB(X(oep_sic))

@@ -69,7 +69,7 @@ subroutine xc_get_vxc(der, xcs, st, psolver, namespace, rho, ispin, &
   FLOAT, allocatable :: unp_dens(:), unp_dedd(:)
 
   integer :: ib, ip, isp, families, ixc, spin_channels, is, idir, ipstart, ipend
-  FLOAT   :: rr, energy(1:2)
+  FLOAT   :: energy(1:2)
   logical :: gga, mgga, mgga_withexc, libvdwxc
   type(profile_t), save :: prof, prof_libxc
   logical :: calc_energy
@@ -632,11 +632,6 @@ contains
   !> initialize GGAs
   !!   *) allocates gradient of the density (gdens), dedgd, and its local variants
   subroutine gga_init()
-    integer :: ii
-#ifdef HAVE_LIBXC4
-    FLOAT :: parameters(4)
-#endif
-
     PUSH_SUB(xc_get_vxc.gga_init)
 
     ! allocate variables
