@@ -220,8 +220,12 @@ contains
 
     PUSH_SUB(propagator_parse_td_variables)
 
+    ! This variable is also defined (and properly documented) in td/td.F90.
+    ! This is temporary, until all the propagators are moved to the new framework.
     call parse_variable(namespace, 'TDTimeStep', CNST(10.0), this%dt)
 
+    ! This variable is also defined (and properly documented) in td/td.F90.
+    ! This is temporary, until all the propagators are moved to the new framework.
     call parse_variable(namespace, 'TDMaxSteps', 1000, this%max_td_steps)
 
     POP_SUB(propagator_parse_td_variables)

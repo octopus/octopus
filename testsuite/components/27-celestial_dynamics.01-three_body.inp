@@ -1,4 +1,5 @@
 CalculationMode = test
+ExperimentalFeatures = yes
 
 TestMode = celestial_dynamics
 
