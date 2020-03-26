@@ -962,15 +962,12 @@ contains
     do while (iter%has_next())
       sys => iter%get_next_system()
 
-      !Associate them to subsystems
+      !Initialize the system clocks
       call sys%init_clocks(sys%prop%dt, smallest_algo_dt)
 
       call sys%prop%rewind()
-    end do
 
-    call iter%start(systems)
-    do while (iter%has_next())
-      sys => iter%get_next_system()
+      !Iniatialize output
       select type(sys)
       type is (celestial_body_t)
 
