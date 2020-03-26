@@ -16,7 +16,7 @@
 !! 02110-1301, USA.
 !!
 
-subroutine xc_get_vxc(der, xcs, st, psolver, namespace, rho, ispin, ioniz_pot, qtot, &
+subroutine xc_get_vxc(der, xcs, st, psolver, namespace, rho, ispin, &
     exx_op, vxc, ex, ec, deltaxc, vtau, ex_density, ec_density)
   type(derivatives_t),    intent(in)    :: der             !< Discretization and the derivative operators and details
   type(xc_t), target,     intent(inout) :: xcs             !< Details about the xc functional used
@@ -25,8 +25,6 @@ subroutine xc_get_vxc(der, xcs, st, psolver, namespace, rho, ispin, ioniz_pot, q
   type(namespace_t),      intent(in)    :: namespace
   FLOAT,                  intent(in)    :: rho(:, :)       !< Electronic density 
   integer,                intent(in)    :: ispin           !< Number of spin channels 
-  FLOAT,                  intent(in)    :: ioniz_pot
-  FLOAT,                  intent(in)    :: qtot 
   type(exchange_operator_t), intent(in) :: exx_op
   FLOAT, optional,        intent(inout) :: vxc(:,:)        !< XC potential
   FLOAT, optional,        intent(inout) :: ex              !< Exchange energy.
@@ -233,16 +231,8 @@ subroutine xc_get_vxc(der, xcs, st, psolver, namespace, rho, ispin, ioniz_pot, q
           call XC_F90(lda_vxc)(functl(ixc)%conf, n_block, l_dens(1,1), l_dedd(1,1))
 
         case(XC_FAMILY_GGA, XC_FAMILY_HYB_GGA)
-          l_vsigma = M_ZERO
-
-          if(functl(ixc)%id == XC_GGA_X_LB) then
-            call mesh_r(der%mesh, ip, rr)
-            call XC_F90(gga_lb_modified)(functl(ixc)%conf, n_block, l_dens(1,1), l_sigma(1,1), &
-              rr, l_dedd(1,1))
-          else
-            call XC_F90(gga_vxc)(functl(ixc)%conf, n_block, l_dens(1,1), l_sigma(1,1), &
-              l_dedd(1,1), l_vsigma(1,1))
-          end if
+          call XC_F90(gga_vxc)(functl(ixc)%conf, n_block, l_dens(1,1), l_sigma(1,1), &
+            l_dedd(1,1), l_vsigma(1,1))
 
         case(XC_FAMILY_MGGA, XC_FAMILY_HYB_MGGA)
           call XC_F90(mgga_vxc)(functl(ixc)%conf, n_block, l_dens(1,1), l_sigma(1,1), l_ldens(1,1), l_tau(1,1), &
@@ -287,18 +277,10 @@ subroutine xc_get_vxc(der, xcs, st, psolver, namespace, rho, ispin, ioniz_pot, q
           call XC_F90(lda_vxc)(xcs%functional(ixc, 1)%conf, n_block, unp_dens(1), unp_dedd(1))
           
         case(XC_FAMILY_GGA, XC_FAMILY_HYB_GGA, XC_FAMILY_MGGA, XC_FAMILY_HYB_MGGA)
-          l_vsigma = M_ZERO
-          
           call messages_not_implemented('XC density correction for GGA/mGGA', namespace=namespace)
           
-          if(functl(ixc)%id == XC_GGA_X_LB) then
-            call mesh_r(der%mesh, ip, rr)
-            call XC_F90(gga_lb_modified)(xcs%functional(ixc, 1)%conf, n_block, unp_dens(1), l_sigma(1,1), &
-              rr, unp_dedd(1))
-          else
-            call XC_F90(gga_vxc)(xcs%functional(ixc, 1)%conf, n_block, unp_dens(1), l_sigma(1,1), &
-              unp_dedd(1), l_vsigma(1,1))
-          end if
+          call XC_F90(gga_vxc)(xcs%functional(ixc, 1)%conf, n_block, unp_dens(1), l_sigma(1,1), &
+            unp_dedd(1), l_vsigma(1,1))
         end select
         
         do ib = 1, n_block
@@ -663,21 +645,6 @@ contains
 
     SAFE_ALLOCATE(dedgd(1:der%mesh%np_part, 1:der%mesh%sb%dim, 1:spin_channels))
     dedgd = M_ZERO
-
-    do ii = 1, 2
-      if(functl(ii)%id == XC_GGA_X_LB) then
-#ifdef HAVE_LIBXC4
-        parameters(1) = functl(ii)%LB94_modified
-        parameters(2) = functl(ii)%LB94_threshold
-        parameters(3) = ioniz_pot
-        parameters(4) = qtot
-        call XC_F90(func_set_ext_params)(functl(ii)%conf, parameters(1))        
-#else
-        call XC_F90(gga_lb_set_par)(functl(ii)%conf, &
-          functl(ii)%LB94_modified, functl(ii)%LB94_threshold, ioniz_pot, qtot)
-#endif
-      end if
-    end do
 
     POP_SUB(xc_get_vxc.gga_init)
   end subroutine gga_init

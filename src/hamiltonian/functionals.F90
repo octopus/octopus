@@ -73,9 +73,6 @@ module xc_functl_oct_m
     type(XC_F90(pointer_t))          :: conf         !< the pointer used to call the library
     type(XC_F90(pointer_t)), private :: info         !< information about the functional
     type(libvdwxc_t)                 :: libvdwxc     !< libvdwxc data for van der Waals functionals
-
-    integer         :: LB94_modified     !< should I use a special version of LB94 that
-    FLOAT           :: LB94_threshold    !< needs to be handled specially
   end type xc_functl_t
 
 contains
@@ -111,7 +108,7 @@ contains
 #ifdef HAVE_LIBXC4
     FLOAT   :: parameters(2)
 #endif
-    logical :: ok, lb94_modified
+    logical :: ok
 
     PUSH_SUB(xc_functl_init_functl)
 
@@ -311,33 +308,6 @@ contains
 #else
       call XC_F90(lda_c_2d_prm_set_par)(functl%conf, nel)
 #endif
-      
-    ! FIXME: libxc has XC_GGA_X_LBM, isn`t that the modified one?
-    case(XC_GGA_X_LB)
-      !%Variable LB94_modified
-      !%Type logical
-      !%Default no
-      !%Section Hamiltonian::XC
-      !%Description
-      !% Whether to use a modified form of the LB94 functional (<tt>XCFunctional = xc_gga_x_lb</tt>).
-      !%End
-      call parse_variable(namespace, 'LB94_modified', .false., lb94_modified)
-      if(lb94_modified) then
-        functl%LB94_modified = 1
-      else
-        functl%LB94_modified = 0
-      end if
-
-      ! FIXME: libxc seems to have 1e-32 as a threshold, should we not use that?
-      !%Variable LB94_threshold
-      !%Type float
-      !%Default 1.0e-6
-      !%Section Hamiltonian::XC
-      !%Description
-      !% A threshold for the LB94 functional (<tt>XCFunctional = xc_gga_x_lb</tt>).
-      !%End
-      call parse_variable(namespace, 'LB94_threshold', CNST(1.0e-6), functl%LB94_threshold)
-      
     end select
     
     POP_SUB(xc_functl_init_functl)
