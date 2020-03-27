@@ -461,7 +461,7 @@ subroutine X(mesh_batch_mf_dotp)(mesh, aa, psi, dot, reduce, nst)
   R_TYPE, allocatable :: phi(:, :)
 
   ! Variables related to the GPU:
-  type(accel_mem_t) :: phi_buffer
+  type(accel_mem_t) :: psi_buffer
   type(accel_mem_t) :: dot_buffer
   integer :: wgsize, np_padded
   integer :: local_sizes(3)
@@ -519,7 +519,7 @@ subroutine X(mesh_batch_mf_dotp)(mesh, aa, psi, dot, reduce, nst)
 
     else
 
-      ! Note: curvilinear coordinates are handled inside the ml_dotp function!
+      ! Note: curvilinear coordinates are handled inside the mf_dotp function!
   
       dot(1:nst_) = M_ZERO
       do ist = 1, nst_
@@ -538,22 +538,20 @@ subroutine X(mesh_batch_mf_dotp)(mesh, aa, psi, dot, reduce, nst)
 
     np_padded = pad_pow2(mesh%np)
 
-    call accel_create_buffer(phi_buffer, ACCEL_MEM_READ_ONLY, R_TYPE_VAL, np_padded * aa%dim)
+    call accel_create_buffer(dot_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, aa%nst)
+    call accel_create_buffer(psi_buffer, ACCEL_MEM_READ_ONLY, R_TYPE_VAL, np_padded * aa%dim)
 
     do idim=1, aa%dim
-      call accel_write_buffer(phi_buffer, mesh%np, psi, offset=(idim-1)*np_padded)
+      call accel_write_buffer(psi_buffer, mesh%np, psi(1:mesh%np,idim), offset=(idim-1)*np_padded)
     end do
-
-    call accel_create_buffer(dot_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, aa%nst)
        
     wgsize = accel_kernel_workgroup_size(X(kernel_batch_dotp))
 
-    global_sizes = (/ pad(aa%nst, wgsize/aa%dim),  aa%dim, 1 /)
-    local_sizes  = (/ wgsize/aa%dim,               aa%dim, 1 /)
+    global_sizes = (/ pad(aa%nst, wgsize),  1, 1 /)
+    local_sizes  = (/ wgsize,               1, 1 /)
    
-
     ASSERT(accel_buffer_is_allocated(aa%ff_device))
-    ASSERT(accel_buffer_is_allocated(phi_buffer))
+    ASSERT(accel_buffer_is_allocated(psi_buffer))
     ASSERT(accel_buffer_is_allocated(dot_buffer))
 
     call accel_set_kernel_arg(X(kernel_batch_dotp), 0, mesh%np)
@@ -561,7 +559,7 @@ subroutine X(mesh_batch_mf_dotp)(mesh, aa, psi, dot, reduce, nst)
     call accel_set_kernel_arg(X(kernel_batch_dotp), 2, aa%dim)
     call accel_set_kernel_arg(X(kernel_batch_dotp), 3, aa%ff_device)
     call accel_set_kernel_arg(X(kernel_batch_dotp), 4, log2(aa%pack_size(1)))
-    call accel_set_kernel_arg(X(kernel_batch_dotp), 5, phi_buffer)
+    call accel_set_kernel_arg(X(kernel_batch_dotp), 5, psi_buffer)
     call accel_set_kernel_arg(X(kernel_batch_dotp), 6, log2(np_padded))
     call accel_set_kernel_arg(X(kernel_batch_dotp), 7, dot_buffer)
 
@@ -570,7 +568,7 @@ subroutine X(mesh_batch_mf_dotp)(mesh, aa, psi, dot, reduce, nst)
 
     call accel_read_buffer(dot_buffer, nst_, dot)
 
-    call accel_release_buffer(phi_buffer)
+    call accel_release_buffer(psi_buffer)
     call accel_release_buffer(dot_buffer)
 
   end select

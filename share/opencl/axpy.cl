@@ -70,49 +70,27 @@ __kernel void X(xpay_vec)(const int np,
 
 /* The X(batch_axpy_function) kernels should be called on a global grid of (np, ndim, 1) */
 
-__kernel void dbatch_axpy_function(
+__kernel void X(batch_axpy_function)(
     const int np,  //< number of mesh points
     const int nst, //< number of states
     const int ndim, //< number of spin components
-    __global const double* __restrict xx_buffer, const int ldxx, //< batch of states
-    __global const double* __restrict aa_buffer,                 //< buffer of weights
-    __global double* __restrict psi_buffer, const int ldpsi      //< single state accumulating the result
+    __global const rtype * __restrict xx, const int ldxx, //< batch of states
+    __global const rtype * __restrict aa,                 //< buffer of weights
+    __global rtype * __restrict yy, const int ldyy        //< single state accumulating the result
 ) {
 
   int ip   = get_global_id(0);
   int idim = get_global_id(1);
 
-  double tmp = 0.0;
+  rtype  tmp = 0.0;
 
   if(ip   >= np) return;
   if(idim >= ndim) return;
 
   for(int ist=0; ist<nst; ist++) {
-     tmp += aa_buffer[ist] * xx_buffer[ist + (ip<<ldxx)];
+     tmp += MUL(aa[ist], xx[idim + ndim*ist + (ip<<ldxx)]);
   }
-  psi_buffer[ip + (idim<<ldpsi)] += tmp;
-}
-
-__kernel void zbatch_axpy_function(
-    const int np,   // number of mesh points
-    const int nst,  // number of states
-    const int ndim, // number of spin components
-    __global const double2* __restrict xx_buffer, const int ldxx, // batch of states
-    __global const double2* __restrict aa_buffer,                 // buffer of weights
-    __global double2* __restrict psi_buffer, const int ldpsi)     // single state accumulating the result
-{
-  int ip   = get_global_id(0);
-  int idim = get_global_id(1);
-
-  double2 tmp = double2(0.0, 0.0);
-
-  if(ip   >= np) return;
-  if(idim >= ndim) return;
-
-  for(int ist=0; ist<nst; ist++) {
-     tmp += aa_buffer[ist] * xx_buffer[ist + (ip<<ldxx)];
-  }
-  psi_buffer[ip + (idim<<ldpsi)] += tmp;
+  yy[ip + (idim<<ldyy)] += tmp;
 }
 
 

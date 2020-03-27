@@ -22,7 +22,7 @@
 #include <cl_complex.h>
 
 
-// The X(batch_mf_dotp) kernels should be called on a global grid of (nst, ndim, 1)
+// The X(batch_mf_dotp) kernels should be called on a global grid of (nst, 1, 1)
 
 __kernel void zbatch_mf_dotp(
       const int np,    //< number of mesh points
@@ -32,18 +32,16 @@ __kernel void zbatch_mf_dotp(
       __global const double2* __restrict psi_buffer, const int ldpsi, //< single state
       __global double2* __restrict dot_buffer                         //< vector of dot products
 ) {
-  int ist  = get_global_id(0);
-  int idim = get_global_id(1);
+  int ist = get_global_id(0);
 
   double2 tmp_dot = double2(0.0, 0.0);
 
-  if(ist  >= nst) return;
-  if(idim >= ndim) return;
+  if(ist >= nst) return;
 
   for(int ip=0; ip<np; ip++) {
-    tmp_dot += complex_mul( complex_conj(xx_buffer[idim + (ndim-1)*ist + (ip<<ldxx)]), psi_buffer[ip + (idim<<ldpsi)]);
+    for(int idim=0; idim< ndim; idim++) tmp_dot += complex_mul( complex_conj(xx_buffer[idim + (ndim)*ist + (ip<<ldxx)]), psi_buffer[ip + (idim<<ldpsi)]);
   }
-  dot_buffer[ist] += tmp_dot;
+  dot_buffer[ist] = tmp_dot;
 }
 
 __kernel void dbatch_mf_dotp(
@@ -54,16 +52,14 @@ __kernel void dbatch_mf_dotp(
       __global const double* __restrict psi_buffer, const int ldpsi, //< single state
       __global double* __restrict dot_buffer                         //< vector of dot products
 ) {
-  int ist  = get_global_id(0); // [0:nst-1]
-  int idim = get_global_id(1); // [0:ndim-1]
+  int ist = get_global_id(0); // [0:nst-1]
 
   double tmp_dot = 0.0;
 
-  if(ist  >= nst) return;
-  if(idim >= ndim) return;
+  if(ist >= nst) return;
 
   for(int ip=0; ip<np; ip++) {
-    tmp_dot += psi_buffer[ip + (idim<<ldpsi)];
+    for(int idim=0; idim< ndim; idim++) tmp_dot += xx_buffer[idim + (ndim)*ist + (ip<<ldxx)] * psi_buffer[ip + (idim<<ldpsi)];
   }
   dot_buffer[ist] = tmp_dot;
 }

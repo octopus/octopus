@@ -18,6 +18,8 @@
 
 ! --------------------------------------------------------------
 
+!> This routine applies an 'pair-wise' axpy operation to all functions 
+!! of the batches xx and yy, where the same constant aa is used for all functions.
 subroutine X(batch_axpy_const)(np, aa, xx, yy)
   integer,           intent(in)    :: np
   R_TYPE,            intent(in)    :: aa
@@ -104,6 +106,9 @@ end subroutine X(batch_axpy_const)
 
 ! --------------------------------------------------------------
 
+!> This routine applies an 'pair-wise' axpy operation to all functions 
+!! of the batches xx and yy, where the constant aa(ist) is used for the 
+!! functions xx(ist), yy(ist).
 subroutine X(batch_axpy_vec)(np, aa, xx, yy, a_start, a_full)
   integer,            intent(in)    :: np
   R_TYPE,             intent(in)    :: aa(:)
@@ -221,8 +226,8 @@ end subroutine X(batch_axpy_vec)
 ! --------------------------------------------------------------
 
 ! --------------------------------------------------------------------------
-! This routine performs a set of axpy operations for each mesh function x of a batch (xx), 
-! and accumulate the result to y (psi in this case), a single mesh function.
+!> This routine performs a set of axpy operations for each function x of a batch (xx), 
+!! and accumulate the result to y (psi in this case), a single function.
 subroutine X(batch_axpy_function)(np, aa, xx, psi, nst)
   integer,           intent(in)    :: np
   class(batch_t),    intent(in)    :: xx
@@ -242,7 +247,7 @@ subroutine X(batch_axpy_function)(np, aa, xx, psi, nst)
   integer :: global_sizes(3)
 
   PUSH_SUB(X(batch_axpy_function))
-  call profiling_in(prof, "AXPY_MF_BATCH")
+  call profiling_in(prof, "BATCH_AXPY_FUNCTION")
 
   ASSERT(xx%dim == ubound(psi,dim=2))
 
@@ -292,7 +297,7 @@ subroutine X(batch_axpy_function)(np, aa, xx, psi, nst)
 
     call accel_create_buffer(psi_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, np_padded * xx%dim)
     do idim=1, xx%dim
-      call accel_write_buffer(psi_buffer, np, psi, offset=(idim-1)*np_padded)
+      call accel_write_buffer(psi_buffer, np, psi(1:np,idim), offset=(idim-1)*np_padded)
     end do
 
     call accel_set_kernel_arg(X(kernel_batch_axpy), 0, np)
@@ -313,7 +318,7 @@ subroutine X(batch_axpy_function)(np, aa, xx, psi, nst)
     call accel_finish()
 
     do idim=1, xx%dim
-      call accel_read_buffer(psi_buffer, np, psi, offset=(idim-1)*np_padded)
+      call accel_read_buffer(psi_buffer, np, psi(1:np,idim), offset=(idim-1)*np_padded)
     end do
 
     call accel_release_buffer(aa_buffer)
