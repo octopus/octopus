@@ -669,20 +669,6 @@ contains
 
 
   ! ---------------------------------------------------------
-  !> Returns a mask with mask(i) = .false. for eigenvector i unconverged.
-  subroutine X(lobpcg_conv_mask)(mask)
-    logical, intent(out) :: mask(:)
-
-    PUSH_SUB(X(lobpcg).X(lobpcg_conv_mask))
-
-    mask     = .true.
-    mask(uc(1:nuc)) = .false.
-
-    POP_SUB(X(lobpcg).X(lobpcg_conv_mask))
-  end subroutine X(lobpcg_conv_mask)
-
-
-  ! ---------------------------------------------------------
   !> Orthonormalize the column vectors of vs.
   subroutine X(lobpcg_orth)(v_start, vs, chol_failure)
     integer,        intent(in)    :: v_start

@@ -424,20 +424,6 @@ contains
 
   end subroutine derivatives_get_stencil_grad
 
-
-  ! ---------------------------------------------------------
-  subroutine derivatives_update(der, namespace, mesh)
-    type(derivatives_t),    intent(inout) :: der
-    type(namespace_t),      intent(in)    :: namespace
-    type(mesh_t),   target, intent(in)    :: mesh
-    
-    call derivatives_get_stencil_lapl(der)
-    call derivatives_get_stencil_grad(der)
-    
-    call derivatives_build(der, namespace, mesh)
-    
-  end subroutine derivatives_update
-
   ! ---------------------------------------------------------
   subroutine derivatives_build(der, namespace, mesh)
     type(derivatives_t),    intent(inout) :: der

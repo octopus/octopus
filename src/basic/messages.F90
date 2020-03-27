@@ -238,8 +238,6 @@ contains
       close(iunit_out)
  
     end if
-
-    call debug_end(debug)
   
   end subroutine messages_end
 

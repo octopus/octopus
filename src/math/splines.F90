@@ -504,33 +504,6 @@ contains
 
 
   !------------------------------------------------------------
-  subroutine spline_copy(splout, splin)
-    type(spline_t), intent(inout) :: splout
-    type(spline_t), intent(in)    :: splin
-
-    integer :: npoints
-    real(8), allocatable :: x(:), y(:)
-
-    PUSH_SUB(spline_copy)
-
-    npoints = oct_spline_npoints(splin%spl, splin%acc)
-
-    SAFE_ALLOCATE( x(1:npoints))
-    SAFE_ALLOCATE( y(1:npoints))
-
-    call oct_spline_x(splin%spl, splin%acc, x(1))
-    call oct_spline_y(splin%spl, splin%acc, y(1))
-
-    call spline_fit(npoints, x, y, splout)
-
-    SAFE_DEALLOCATE_A(x)
-    SAFE_DEALLOCATE_A(y)
-
-    POP_SUB(spline_copy)
-  end subroutine spline_copy
-
-
-  !------------------------------------------------------------
   subroutine spline_fit8(nrc, rofi, ffit, spl)
     integer,        intent(in)    :: nrc
     real(8),        intent(in)    :: rofi(:)
