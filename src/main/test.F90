@@ -966,6 +966,44 @@ contains
       call sys%init_clocks(sys%prop%dt, smallest_algo_dt)
 
       call sys%prop%rewind()
+      call sys%prop_init%rewind()
+    end do
+
+    !We start by the initialization loop
+    do while(.not. all_done_max_td_steps)
+
+      any_td_step_done = .false.
+      internal_loop = 1
+
+      do while(.not. any_td_step_done .and. internal_loop < MAX_PROPAGATOR_STEPS)
+
+        any_td_step_done = .false.
+
+        call iter%start(systems)
+        do while (iter%has_next())
+          sys => iter%get_next_system()
+
+          call sys%dt_operation(init=.true.)
+
+          !We check the exit condition
+          any_td_step_done = any_td_step_done .or. sys%prop_init%step_is_done()
+        end do
+
+        INCR(internal_loop, 1)
+      end do
+
+      all_done_max_td_steps = .true.
+      
+      call iter%start(systems)
+      do while (iter%has_next())
+        sys => iter%get_next_system()
+        all_done_max_td_steps = all_done_max_td_steps .and. sys%prop_init%step_is_done()
+      end do
+    end do
+
+    call iter%start(systems)
+    do while (iter%has_next())
+      sys => iter%get_next_system()
 
       ! Initialize output
       select type(sys)
@@ -981,8 +1019,12 @@ contains
       end select
     end do
 
-    ! The full TD loop
+    !The full TD loop
     call messages_print_stress(stdout, "Propagation", namespace=global_namespace)
+
+    all_done_max_td_steps = .false.
+    it = 0
+
     do while(.not. all_done_max_td_steps)
 
       it = it + 1
