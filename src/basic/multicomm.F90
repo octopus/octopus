@@ -958,32 +958,33 @@ contains
   !! between nprocs processors.
   !! THREADSAFE
   subroutine multicomm_divide_range(nobjs, nprocs, istart, ifinal, lsize, scalapack_compat)
-    integer,           intent(in)    :: nobjs !< Number of points to divide
-    integer,           intent(in)    :: nprocs !< Number of processors
+    integer,           intent(in)  :: nobjs !< Number of points to divide
+    integer,           intent(in)  :: nprocs !< Number of processors
     integer,           intent(out) :: istart(:)
     integer,           intent(out) :: ifinal(:)
     integer, optional, intent(out) :: lsize(:) !< Number of objects in each partition
-    logical, optional, intent(in)    :: scalapack_compat
+    logical, optional, intent(in)  :: scalapack_compat
 
     integer :: ii, jj, rank
     logical :: scalapack_compat_
-#ifdef HAVE_SCALAPACK
     integer :: nbl, size
-#endif
-    
-    scalapack_compat_ = .false.
-#ifdef HAVE_SCALAPACK
-    if(present(scalapack_compat)) scalapack_compat_ = scalapack_compat
-#endif
+
     ! no push_sub, threadsafe
-    if(scalapack_compat_) then
-#ifdef HAVE_SCALAPACK      
+
+    scalapack_compat_ = optional_default(scalapack_compat, .false.)
+#ifndef HAVE_SCALAPACK
+    scalapack_compat_ = .false.
+#endif
+
+    if (scalapack_compat_) then
       nbl = nobjs/nprocs
       if (mod(nobjs, nprocs) /= 0) INCR(nbl, 1)
       
       istart(1) = 1
       do rank = 1, nprocs
+#ifdef HAVE_SCALAPACK
         size = numroc(nobjs, nbl, rank - 1, 0, nprocs)
+#endif
         if(size > 0) then
           if(rank > 1) istart(rank) = ifinal(rank - 1) + 1
           ifinal(rank) = istart(rank) + size - 1
@@ -992,7 +993,6 @@ contains
           ifinal(rank) = 0
         end if
       end do
-#endif
     else
       
       if(nprocs <= nobjs) then

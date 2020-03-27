@@ -1221,16 +1221,18 @@ contains
   integer function accel_kernel_workgroup_size(kernel) result(workgroup_size)
     type(accel_kernel_t), intent(inout) :: kernel
 
-    integer(8) :: workgroup_size8
 #ifdef HAVE_OPENCL
+    integer(8) :: workgroup_size8
     integer :: ierr
 #endif
+
+    workgroup_size = 0
 
 #ifdef HAVE_OPENCL
     call clGetKernelWorkGroupInfo(kernel%kernel, accel%device%cl_device, CL_KERNEL_WORK_GROUP_SIZE, workgroup_size8, ierr)
     if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "EnqueueNDRangeKernel")
-#endif
     workgroup_size = workgroup_size8
+#endif
 
 #ifdef HAVE_CUDA
     workgroup_size = accel%max_workgroup_size
