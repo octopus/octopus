@@ -488,6 +488,8 @@ contains
 
     PUSH_SUB(celestial_body_finalize)
 
+    deallocate(this%prop)
+
     call iter%start(this%interactions)
     do while (iter%has_next())
       interaction => iter%get_next_interaction()
