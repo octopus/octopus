@@ -30,9 +30,7 @@ module nl_operator_oct_m
   use mesh_oct_m
   use messages_oct_m
   use mpi_oct_m
-#ifdef HAVE_OPENMP
   use multicomm_oct_m
-#endif
   use namespace_oct_m
   use operate_f_oct_m
   use par_vec_oct_m

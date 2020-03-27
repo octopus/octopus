@@ -66,9 +66,7 @@ module multicomm_oct_m
   
   public ::                          &
     multicomm_divide_range,          &
-#ifdef HAVE_OPENMP
     multicomm_divide_range_omp,      &
-#endif
 #if defined(HAVE_MPI)
     multicomm_create_all_pairs,      &
 #endif
