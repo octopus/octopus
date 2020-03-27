@@ -2160,7 +2160,7 @@ contains
 
     z = zmf_dotp(mesh, f1(:, 1) , f1(:, 2))
 
-    spin(1) = M_TWO*dble(z)
+    spin(1) = M_TWO*TOFLOAT(z)
     spin(2) = M_TWO*aimag(z)
     spin(3) = zmf_nrm2(mesh, f1(:, 1))**2 - zmf_nrm2(mesh, f1(:, 2))**2
     spin = M_HALF*spin ! spin is half the sigma matrix.
@@ -2197,15 +2197,15 @@ contains
 
   ! ---------------------------------------------------------
 
-  real(8) function states_elec_wfns_memory(st, mesh) result(memory)
+  FLOAT function states_elec_wfns_memory(st, mesh) result(memory)
     type(states_elec_t), intent(in) :: st
     type(mesh_t),        intent(in) :: mesh
 
     PUSH_SUB(states_elec_wfns_memory)
-    memory = 0.0_8
+    memory = M_ZERO
 
     ! orbitals
-    memory = memory + REAL_PRECISION*dble(mesh%np_part_global)*st%d%dim*dble(st%nst)*st%d%kpt%nglobal
+    memory = memory + REAL_PRECISION*TOFLOAT(mesh%np_part_global)*st%d%dim*TOFLOAT(st%nst)*st%d%kpt%nglobal
 
     POP_SUB(states_elec_wfns_memory)
   end function states_elec_wfns_memory
@@ -2237,7 +2237,7 @@ contains
       else if(st%d%cl_states_mem < CNST(0.0)) then
         max_mem = max_mem + int(st%d%cl_states_mem, 8)*(1024_8)**2
       else
-        max_mem = int(st%d%cl_states_mem*real(max_mem, REAL_PRECISION), 8)
+        max_mem = int(st%d%cl_states_mem*TOFLOAT(max_mem), 8)
       end if
     else
       max_mem = HUGE(max_mem)

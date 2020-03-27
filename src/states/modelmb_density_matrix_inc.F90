@@ -45,12 +45,12 @@ subroutine X(mf_calculate_gamma)(ikeeppart, mb_1part, nparticles_densmat, &
   SAFE_ALLOCATE(forward_map_gamma(1:mesh%np_global))
   SAFE_ALLOCATE(icoord_map(1:mesh%np))
 
-  volume_element = 1.0d0
+  volume_element = M_ONE
   do jdim = 1, mesh%sb%dim
-    if (mesh%spacing(jdim) > 1.e-10) volume_element=volume_element*mesh%spacing(jdim)
+    if (mesh%spacing(jdim) > CNST(1.0e-10)) volume_element=volume_element*mesh%spacing(jdim)
   end do
   do jdim = (ikeeppart - 1)*mb_1part%ndim1part + 1, ikeeppart*mb_1part%ndim1part
-    if (mesh%spacing(jdim) > 1.e-10) volume_element = volume_element/mesh%spacing(jdim)
+    if (mesh%spacing(jdim) > CNST(1.e-10)) volume_element = volume_element/mesh%spacing(jdim)
   end do
 
   ASSERT (ubound(gamma, dim=1) == mb_1part%npt)
@@ -301,7 +301,7 @@ subroutine X(modelmb_density_matrix_write)(gr, st, wf, mm, denmat, namespace)
     ! note: for eventual multiple particles in 4D (eg 8D total) this would fail to give the last values of dipole_moment
     write (message(1),'(a,I6,a,I6,a,I6)') 'For particle ', ikeeppart, ' of mb state ', mm
     write (message(2),'(a,3E20.10)') 'The dipole moment is (in a.u. = e bohr):     ', dipole_moment(1:min(3,ndim1part))
-    write (message(3),'(a,E15.3)') '     with intrinsic numerical error usually <= ', 1.e-6*mb_1part%npt
+    write (message(3),'(a,E15.3)') '     with intrinsic numerical error usually <= ', CNST(1.e-6)*mb_1part%npt
     call messages_info(3)
 
     SAFE_DEALLOCATE_A(evectors)

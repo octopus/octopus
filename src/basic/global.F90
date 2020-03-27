@@ -107,7 +107,7 @@ module global_oct_m
 
   !> The stack.
   character(len=80), public          :: sub_stack(50)
-  real(8), public                    :: time_stack(50)
+  FLOAT, public                      :: time_stack(50)
   integer, public                    :: no_sub_stack = 0
 
   !> Same for profiling mode.

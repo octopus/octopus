@@ -136,8 +136,8 @@ contains
     logical,      intent(out) :: inside(:)
 
     integer :: ip
-    real(8), parameter :: DELTA = CNST(1e-12)
-    real(8) :: llimit(MAX_DIM), ulimit(MAX_DIM)
+    FLOAT, parameter :: DELTA = CNST(1e-12)
+    FLOAT :: llimit(MAX_DIM), ulimit(MAX_DIM)
     FLOAT :: rr
     FLOAT, allocatable :: xx(:, :)
 

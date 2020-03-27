@@ -301,7 +301,7 @@ subroutine X(subspace_diag_scalapack)(namespace, mesh, st, hm, ik, eigenval, psi
   end if
 
   lwork = nint(abs(rttmp))
-  lrwork = nint(real(ftmp, 8))
+  lrwork = nint(TOFLOAT(ftmp))
 
   SAFE_ALLOCATE(work(1:lwork))
   SAFE_ALLOCATE(rwork(1:lrwork))

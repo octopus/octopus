@@ -1234,7 +1234,7 @@ contains
       ipmax = 0
       wmodmax = M_z0
       do ip=1, mesh%np
-        wmod = real(zwn(ip)*conjg(zwn(ip)), REAL_PRECISION)
+        wmod = TOFLOAT(zwn(ip)*conjg(zwn(ip)))
         if(wmod > wmodmax) then
           ipmax = ip
           wmodmax = wmod
@@ -1244,7 +1244,7 @@ contains
      
 
       forall(ip=1:mesh%np)
-        dwn(ip) = real(zwn(ip), REAL_PRECISION)
+        dwn(ip) = TOFLOAT(zwn(ip))
       end forall
         
       call dio_function_output(how, 'wannier', trim(fname), namespace, mesh, &

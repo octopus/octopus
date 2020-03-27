@@ -703,15 +703,15 @@ contains
       call write_files("maxwell_sigma_m-z", tmp)
       ! pml_a for electric field dim = 1
       tmp(:) = M_ZERO
-      call get_pml_io_function(real(bc%pml_a(:, 1)), bc, tmp)
+      call get_pml_io_function(TOFLOAT(bc%pml_a(:, 1)), bc, tmp)
       call write_files("maxwell_sigma_pml_a_e-x", tmp)
       ! pml_a for electric field dim = 2
       tmp(:) = M_ZERO
-      call get_pml_io_function(real(bc%pml_a(:, 2)), bc, tmp)
+      call get_pml_io_function(TOFLOAT(bc%pml_a(:, 2)), bc, tmp)
       call write_files("maxwell_sigma_pml_a_e-y", tmp)
       ! pml_a for electric field dim = 3
       tmp(:) = M_ZERO
-      call get_pml_io_function(real(bc%pml_a(:, 3)), bc, tmp)
+      call get_pml_io_function(TOFLOAT(bc%pml_a(:, 3)), bc, tmp)
       call write_files("maxwell_sigma_pml_a_e-z", tmp)
       ! pml_a for magnetic field dim = 1
       tmp(:) = M_ZERO

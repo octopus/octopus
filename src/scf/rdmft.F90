@@ -937,8 +937,8 @@ contains
   subroutine write_iter_info_rdmft(iter, size, energy, maxdr, maxdf, theta)
     integer,     intent(in) :: iter
     integer,     intent(in) :: size
-    real(8),     intent(in) :: energy, maxdr, maxdf
-    real(8),     intent(in) :: theta(size)
+    FLOAT,       intent(in) :: energy, maxdr, maxdf
+    FLOAT,       intent(in) :: theta(size)
 
     PUSH_SUB(write_iter_info_rdmft)
 

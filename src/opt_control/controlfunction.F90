@@ -1048,7 +1048,7 @@ contains
             ez = ez * ezdt
           end do
           ft = ft * dt
-          write(iunit,'(3es20.8e3)') ww, real(ft), aimag(ft)
+          write(iunit,'(3es20.8e3)') ww, TOFLOAT(ft), aimag(ft)
         end do
         call io_close(iunit)
       end do
@@ -1077,7 +1077,7 @@ contains
           ez = ez * ezdt
         end do
         ft = ft * dt
-        write(iunit,'(3es20.8e3)') ww, real(ft), aimag(ft)
+        write(iunit,'(3es20.8e3)') ww, TOFLOAT(ft), aimag(ft)
       end do
 
       call io_close(iunit)
@@ -1162,7 +1162,7 @@ contains
         do iter = 1, tdf_niter(ff) + 1
           time = (iter - 1) * tdf_dt(ff)
           fi = tdf(par_%f(ipar), iter)
-          tdp = sqrt(real(tdf(cf_common%td_penalty(ipar), iter), kind=REAL_PRECISION))
+          tdp = sqrt(TOFLOAT(tdf(cf_common%td_penalty(ipar), iter)))
           call tdf_set_numerical(ff, iter, fi * tdp)
         end do
         integral = integral + tdf_dot_product(ff, ff)
@@ -1175,7 +1175,7 @@ contains
         do iter = 1, tdf_niter(ff) + 1
           time = (iter - 1) * tdf_dt(ff)
           fi = tdf(par_%f(ipar), iter)
-          tdp = sqrt(real(tdf(cf_common%td_penalty(ipar), iter)))
+          tdp = sqrt(TOFLOAT(tdf(cf_common%td_penalty(ipar), iter)))
           call tdf_set_numerical(ff, iter, fi * tdp * cos(par_%w0 * time))
         end do
         integral = integral + tdf_dot_product(ff, ff)

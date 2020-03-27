@@ -226,8 +226,8 @@ end subroutine dpoisson_solve_direct_sm
     SAFE_ALLOCATE(aux1(1:sm%np))
     SAFE_ALLOCATE(aux2(1:sm%np))
     ! first the real part
-    aux1(1:sm%np) = real(rho(1:sm%np))
-    aux2(1:sm%np) = real(pot(1:sm%np))
+    aux1(1:sm%np) = TOFLOAT(rho(1:sm%np))
+    aux2(1:sm%np) = TOFLOAT(pot(1:sm%np))
     call dpoisson_solve_direct_sm(this, sm, aux2, aux1)
     pot(1:sm%np)  = aux2(1:sm%np)
 
