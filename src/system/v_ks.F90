@@ -910,9 +910,7 @@ contains
           vxc_sic = M_ZERO
 
           rho(:, ispin) = ks%calc%density(:, ispin) / qsp(ispin)
-          ! TODO : check for solid:   -minval(st%eigenval(st%nst,:))
-          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%psolver_fine, namespace, rho, st%d%ispin, &
-            -minval(st%eigenval(st%nst,:)), qsp(ispin), hm%exxop, vxc_sic)
+          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%psolver_fine, namespace, rho, st%d%ispin, hm%exxop, vxc_sic)
 
           ks%calc%vxc = ks%calc%vxc - vxc_sic
         end do
@@ -966,22 +964,20 @@ contains
       ! Get the *local* XC term
       if(ks%calc%calc_energy) then
         if (family_is_mgga_with_exc(hm%xc)) then
-          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%psolver_fine, namespace, &
-            ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, hm%exxop, ks%calc%vxc, &
-            ex = ks%calc%energy%exchange, ec = ks%calc%energy%correlation, deltaxc = ks%calc%energy%delta_xc, vtau = ks%calc%vtau)
+          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%psolver_fine, namespace, ks%calc%density, st%d%ispin, hm%exxop, &
+            ks%calc%vxc, ex = ks%calc%energy%exchange, ec = ks%calc%energy%correlation, deltaxc = ks%calc%energy%delta_xc, &
+            vtau = ks%calc%vtau)
         else
-          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%psolver_fine, namespace, &
-            ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, hm%exxop, ks%calc%vxc, &
-            ex = ks%calc%energy%exchange, ec = ks%calc%energy%correlation, deltaxc = ks%calc%energy%delta_xc)
+          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%psolver_fine, namespace, ks%calc%density, st%d%ispin, hm%exxop, &
+            ks%calc%vxc, ex = ks%calc%energy%exchange, ec = ks%calc%energy%correlation, deltaxc = ks%calc%energy%delta_xc)
         end if
       else
         if (family_is_mgga_with_exc(hm%xc)) then
-          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%psolver_fine, namespace, &
-            ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, hm%exxop, &
+          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%psolver_fine, namespace, ks%calc%density, st%d%ispin, hm%exxop, &
             ks%calc%vxc, vtau = ks%calc%vtau)
         else
-          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%psolver_fine, namespace, &
-            ks%calc%density, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, hm%exxop, ks%calc%vxc)
+          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%psolver_fine, namespace, ks%calc%density, st%d%ispin, hm%exxop, &
+            ks%calc%vxc)
         end if
       end if
 

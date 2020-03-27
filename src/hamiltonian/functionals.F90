@@ -61,10 +61,6 @@ module xc_functl_oct_m
     XC_FAMILY_RDMFT = 2048, &
     XC_FAMILY_LIBVDWXC = 4096
 
-#ifndef HAVE_LIBXC_HYB_MGGA
-  integer, public, parameter :: XC_FAMILY_HYB_MGGA = 64
-#endif
-
   type xc_functl_t
     ! Components are public by default
     integer         :: family            !< LDA, GGA, etc.
@@ -77,9 +73,6 @@ module xc_functl_oct_m
     type(XC_F90(pointer_t))          :: conf         !< the pointer used to call the library
     type(XC_F90(pointer_t)), private :: info         !< information about the functional
     type(libvdwxc_t)                 :: libvdwxc     !< libvdwxc data for van der Waals functionals
-
-    integer         :: LB94_modified     !< should I use a special version of LB94 that
-    FLOAT           :: LB94_threshold    !< needs to be handled specially
   end type xc_functl_t
 
 contains
@@ -115,7 +108,7 @@ contains
 #ifdef HAVE_LIBXC4
     FLOAT   :: parameters(2)
 #endif
-    logical :: ok, lb94_modified
+    logical :: ok
 
     PUSH_SUB(xc_functl_init_functl)
 
@@ -315,35 +308,17 @@ contains
 #else
       call XC_F90(lda_c_2d_prm_set_par)(functl%conf, nel)
 #endif
-      
-    ! FIXME: libxc has XC_GGA_X_LBM, isn`t that the modified one?
-    case(XC_GGA_X_LB)
-      !%Variable LB94_modified
-      !%Type logical
-      !%Default no
-      !%Section Hamiltonian::XC
-      !%Description
-      !% Whether to use a modified form of the LB94 functional (<tt>XCFunctional = xc_gga_x_lb</tt>).
-      !%End
-      call parse_variable(namespace, 'LB94_modified', .false., lb94_modified)
-      if(lb94_modified) then
-        functl%LB94_modified = 1
-      else
-        functl%LB94_modified = 0
+
+    case (XC_GGA_X_LB)
+      if (parse_is_defined(namespace, 'LB94_modified')) then
+        call messages_obsolete_variable(namespace, 'LB94_modified')
       end if
 
-      ! FIXME: libxc seems to have 1e-32 as a threshold, should we not use that?
-      !%Variable LB94_threshold
-      !%Type float
-      !%Default 1.0e-6
-      !%Section Hamiltonian::XC
-      !%Description
-      !% A threshold for the LB94 functional (<tt>XCFunctional = xc_gga_x_lb</tt>).
-      !%End
-      call parse_variable(namespace, 'LB94_threshold', CNST(1.0e-6), functl%LB94_threshold)
-      
+      if (parse_is_defined(namespace, 'LB94_threshold')) then
+        call messages_obsolete_variable(namespace, 'LB94_threshold')
+      end if
     end select
-    
+
     POP_SUB(xc_functl_init_functl)
   end subroutine xc_functl_init_functl
   
@@ -375,9 +350,6 @@ contains
 
     character(len=120) :: s1, s2
     integer :: ii
-#if !defined(HAVE_LIBXC3) && !defined(HAVE_LIBXC4)
-    type(XC_F90(pointer_t)) :: str
-#endif
     
     PUSH_SUB(xc_functl_write_info)
 
@@ -435,19 +407,11 @@ contains
       call messages_info(2, iunit)
       
       ii = 0
-#if defined HAVE_LIBXC3 || defined HAVE_LIBXC4
       call XC_F90(info_refs)(functl%info, ii, s1)
-#else
-      call XC_F90(info_refs)(functl%info, ii, str, s1)
-#endif
       do while(ii >= 0)
         write(message(1), '(4x,a,i1,2a)') '[', ii, '] ', trim(s1)
         call messages_info(1, iunit)
-#if defined HAVE_LIBXC3 || defined HAVE_LIBXC4
         call XC_F90(info_refs)(functl%info, ii, s1)
-#else
-        call XC_F90(info_refs)(functl%info, ii, str, s1)
-#endif
       end do
     end if
 
