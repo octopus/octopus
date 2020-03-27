@@ -308,8 +308,17 @@ contains
 #else
       call XC_F90(lda_c_2d_prm_set_par)(functl%conf, nel)
 #endif
+
+    case (XC_GGA_X_LB)
+      if (parse_is_defined(namespace, 'LB94_modified')) then
+        call messages_obsolete_variable(namespace, 'LB94_modified')
+      end if
+
+      if (parse_is_defined(namespace, 'LB94_threshold')) then
+        call messages_obsolete_variable(namespace, 'LB94_threshold')
+      end if
     end select
-    
+
     POP_SUB(xc_functl_init_functl)
   end subroutine xc_functl_init_functl
   
