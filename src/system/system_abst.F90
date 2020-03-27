@@ -59,7 +59,6 @@ module system_abst_oct_m
                                                            !< quantity`s identifiers.
   contains
     procedure :: dt_operation =>  system_dt_operation
-    procedure :: set_propagator => system_set_propagator
     procedure :: init_clocks => system_init_clocks
     procedure :: reset_clocks => system_reset_clocks
     procedure :: update_exposed_quantities => system_update_exposed_quantities
@@ -289,18 +288,6 @@ contains
   end subroutine system_dt_operation
 
   ! ---------------------------------------------------------
-  subroutine system_set_propagator(this, propagator)
-    class(system_abst_t),             intent(inout) :: this
-    class(propagator_abst_t), target, intent(in)    :: propagator
-
-    PUSH_SUB(system_set_propagator)
-
-    this%prop => propagator
-
-    POP_SUB(system_set_propagator)
-  end subroutine system_set_propagator
-
-  ! ---------------------------------------------------------
   subroutine system_init_clocks(this, dt, smallest_algo_dt)
     class(system_abst_t), intent(inout) :: this
     FLOAT,                intent(in)    :: dt, smallest_algo_dt
@@ -415,7 +402,7 @@ contains
     POP_SUB(system_update_exposed_quantities)
   end function system_update_exposed_quantities
 
-
+  ! ---------------------------------------------------------
   subroutine system_init_propagator(this)
     class(system_abst_t),      intent(inout) :: this
 
@@ -445,11 +432,11 @@ contains
 
     select case(prop)
     case(PROP_VERLET)
-      call this%set_propagator(propagator_verlet_t(this%namespace))
+      this%prop => propagator_verlet_t(this%namespace)
     case(PROP_BEEMAN)
-      call this%set_propagator(propagator_beeman_t(this%namespace, .false.))
+      this%prop => propagator_beeman_t(this%namespace, .false.)
     case(PROP_BEEMAN_SCF)
-      call this%set_propagator(propagator_beeman_t(this%namespace, .true.))
+      this%prop => propagator_beeman_t(this%namespace, .true.)
     end select
 
     POP_SUB(system_init_propagator)
@@ -474,7 +461,6 @@ contains
 
     POP_SUB(system_iterator_get_next)
   end function system_iterator_get_next
-
 
 end module system_abst_oct_m
 
