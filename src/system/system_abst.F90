@@ -26,15 +26,20 @@ module system_abst_oct_m
   use messages_oct_m
   use namespace_oct_m
   use linked_list_oct_m
+  use parser_oct_m
   use profiling_oct_m
   use propagator_abst_oct_m
+  use propagator_verlet_oct_m
+  use propagator_beeman_oct_m
   use quantity_oct_m
   use space_oct_m
+  use varinfo_oct_m
   implicit none
 
   private
   public ::               &
-    system_abst_t
+    system_abst_t,        &
+    system_iterator_t
 
   type, abstract :: system_abst_t
     private
@@ -54,10 +59,10 @@ module system_abst_oct_m
                                                            !< quantity`s identifiers.
   contains
     procedure :: dt_operation =>  system_dt_operation
-    procedure :: set_propagator => system_set_propagator
     procedure :: init_clocks => system_init_clocks
     procedure :: reset_clocks => system_reset_clocks
     procedure :: update_exposed_quantities => system_update_exposed_quantities
+    procedure :: init_propagator => system_init_propagator
     procedure(system_add_interaction_partner),        deferred :: add_interaction_partner
     procedure(system_has_interaction),                deferred :: has_interaction
     procedure(system_do_td_op),                       deferred :: do_td_operation
@@ -138,6 +143,14 @@ module system_abst_oct_m
     end subroutine system_set_pointers_to_interaction
 
   end interface
+
+  !> This class extends the list iterator and adds one method to get the
+  !! system as a pointer of type class(system_abst_t).
+  type, extends(list_iterator_t) :: system_iterator_t
+    private
+  contains
+    procedure :: get_next_system => system_iterator_get_next
+  end type system_iterator_t
 
 contains
 
@@ -275,18 +288,6 @@ contains
   end subroutine system_dt_operation
 
   ! ---------------------------------------------------------
-  subroutine system_set_propagator(this, propagator)
-    class(system_abst_t),             intent(inout) :: this
-    class(propagator_abst_t), target, intent(in)    :: propagator
-
-    PUSH_SUB(system_set_propagator)
-
-    this%prop => propagator
-
-    POP_SUB(system_set_propagator)
-  end subroutine system_set_propagator
-
-  ! ---------------------------------------------------------
   subroutine system_init_clocks(this, dt, smallest_algo_dt)
     class(system_abst_t), intent(inout) :: this
     FLOAT,                intent(in)    :: dt, smallest_algo_dt
@@ -400,6 +401,66 @@ contains
 
     POP_SUB(system_update_exposed_quantities)
   end function system_update_exposed_quantities
+
+  ! ---------------------------------------------------------
+  subroutine system_init_propagator(this)
+    class(system_abst_t),      intent(inout) :: this
+
+    integer :: prop
+
+    PUSH_SUB(system_init_propagator) 
+
+    call messages_experimental('Multisystem propagator framework')
+
+    !%Variable TDSystemPropagator
+    !%Type integer
+    !%Default verlet
+    !%Section Time-Dependent::Propagation
+    !%Description
+    !% A variable to set the propagator in the multisystem framework.
+    !% This is a temporary solution, and should be replaced by the
+    !% TDPropagator variable.
+    !%Option verlet 1
+    !% (Experimental) Verlet propagator.
+    !%Option beeman 2
+    !% (Experimental) Beeman propagator without predictor-corrector.
+    !%Option beeman_scf 3
+    !% (Experimental) Beeman propagator with predictor-corrector scheme.
+    !%End
+    call parse_variable(this%namespace, 'TDSystemPropagator', PROP_VERLET, prop)
+    if(.not.varinfo_valid_option('TDSystemPropagator', prop)) call messages_input_error('TDSystemPropagator')
+
+    select case(prop)
+    case(PROP_VERLET)
+      this%prop => propagator_verlet_t(this%namespace)
+    case(PROP_BEEMAN)
+      this%prop => propagator_beeman_t(this%namespace, .false.)
+    case(PROP_BEEMAN_SCF)
+      this%prop => propagator_beeman_t(this%namespace, .true.)
+    end select
+
+    POP_SUB(system_init_propagator)
+  end subroutine system_init_propagator
+
+  ! ---------------------------------------------------------
+  function system_iterator_get_next(this) result(value)
+    class(system_iterator_t), intent(inout) :: this
+    class(system_abst_t),     pointer       :: value
+
+    class(*), pointer :: ptr
+
+    PUSH_SUB(system_iterator_get_next)
+
+    ptr => this%get_next()
+    select type (ptr)
+    class is (system_abst_t)
+      value => ptr
+    class default
+      ASSERT(.false.)
+    end select
+
+    POP_SUB(system_iterator_get_next)
+  end function system_iterator_get_next
 
 end module system_abst_oct_m
 

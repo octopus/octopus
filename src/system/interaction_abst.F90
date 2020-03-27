@@ -37,7 +37,7 @@ module interaction_abst_oct_m
   type, abstract :: interaction_abst_t
     private
     !> The interaction requires access to some quantities to be evaluated, both
-    !> form the system and form the partner.
+    !> from the system and from the partner.
     integer,              public :: n_system_quantities  !< Number of quantities needed from the system
     integer, allocatable, public :: system_quantities(:) !< Identifiers of the quantities needed from the system
 

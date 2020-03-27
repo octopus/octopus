@@ -27,11 +27,13 @@ module multisystem_oct_m
   use parser_oct_m
   use profiling_oct_m
   use system_oct_m
+  use system_abst_oct_m
   implicit none
 
   private
-  public ::           &
-    multisystem_init, &
+  public ::                        &
+    multisystem_init,              &
+    multisystem_init_interactions, &
     multisystem_end
 
   integer, parameter ::         &
@@ -41,6 +43,7 @@ module multisystem_oct_m
   
 contains
 
+  ! ---------------------------------------------------------------------------------------
   subroutine multisystem_init(systems, global_namespace)
     type(linked_list_t), intent(inout) :: systems
     type(namespace_t),   intent(in)  :: global_namespace
@@ -77,6 +80,9 @@ contains
         case (SYSTEM_ELECTRONIC)
           sys => system_init(namespace_t(system_name))
           call systems%add(sys)
+        case (SYSTEM_CELESTIAL_BODY)
+          sys => celestial_body_t(namespace_t(system_name))
+          call systems%add(sys)
         case default
           call messages_input_error('Systems')
         end select
@@ -90,6 +96,34 @@ contains
     POP_SUB(multisystem_init)
   end subroutine multisystem_init
 
+
+  ! ---------------------------------------------------------------------------------------
+  subroutine multisystem_init_interactions(systems)
+    type(linked_list_t), intent(inout) :: systems
+
+    class(system_abst_t), pointer :: sys1, sys2
+    type(system_iterator_t) :: iter1, iter2
+
+    PUSH_SUB(multisystem_init_interactions)
+
+    call iter1%start(systems)
+    do while (iter1%has_next())
+      sys1 => iter1%get_next_system()
+      call iter2%start(systems)
+      do while (iter2%has_next())
+        sys2 => iter2%get_next_system()
+        !No self interaction
+        if(.not.associated(sys1, sys2)) then
+          call sys1%add_interaction_partner(sys2)
+        end if
+      end do
+    end do
+
+    POP_SUB(multisystem_init_interactions)
+
+  end subroutine multisystem_init_interactions
+
+  ! ---------------------------------------------------------------------------------------
   subroutine multisystem_end(systems)
     type(linked_list_t), intent(inout) :: systems
 
