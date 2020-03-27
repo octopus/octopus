@@ -328,7 +328,6 @@ contains
           this%nops = this%nops + 1
           call symm_op_copy(tmpop, this%ops(this%nops))
         end if
-        call symm_op_end(tmpop)
       end do
 
       SAFE_DEALLOCATE_A(position)
@@ -410,17 +409,9 @@ contains
   subroutine symmetries_end(this)
     type(symmetries_t),  intent(inout) :: this
 
-    integer :: iop
-
     PUSH_SUB(symmetries_end)
 
-    if(allocated(this%ops)) then
-      do iop = 1, this%nops
-        call symm_op_end(this%ops(iop))
-      end do
-
-      SAFE_DEALLOCATE_A(this%ops)
-    end if
+    SAFE_DEALLOCATE_A(this%ops)
 
     POP_SUB(symmetries_end)
   end subroutine symmetries_end
