@@ -1,0 +1,48 @@
+include targets.inc
+
+.SUFFIXES: .yaml
+.PHONY: testsuite all comparison
+
+NPROCS ?= 1
+SLURM ?= false
+ifeq ($(SLURM),true)
+  MPIEXEC ?= srun --mem 2200M -N1 -c1 -n$(NPROCS) --exclusive --export=ALL
+else
+  MPIEXEC ?= mpiexec -n $(NPROCS)
+endif
+OCTOPUS ?= ${bin_directory}/octopus
+bin_testsuite ?= ./
+
+TESTS ?= all
+
+REFERENCE_FILE ?= reference.yaml
+
+RUN_FOLDER=runs
+
+all: testsuite timings.yaml combinations.yaml
+testsuite: $(targets)
+
+targets.inc:
+	testsuite=${testsuite_dir} python3 ${bin_testsuite}/create_combinations.py $(TESTS)
+
+%/profiling/time.yaml:
+	@mkdir -p $(@D)
+	cd $(@D)/.. && $(MPIEXEC) $(OCTOPUS) > log.out 2> log.err
+	@cd $(@D) && bash process_timings.sh
+
+timings.yaml: $(targets)
+	@echo Creating $@
+	@for i in $(RUN_FOLDER)/*/*; do [ -d $$i ] && echo $$i || :; done > _runlist
+	@<_runlist xargs -n1 sh -c 'for i do printf "%s\nrun: $${i#$(RUN_FOLDER)/}\n" ---; cat $$i/profiling/time.yaml; done' '' > $@
+	@rm -f _runlist
+
+combinations.yaml: timings.yaml
+	@echo Creating $@
+	@for i in $(RUN_FOLDER)/*; do cat $$i/combinations.yaml; done > $@
+
+comparison: $(REFERENCE_FILE) timings.yaml
+	@echo Comparing results to $(REFERENCE_FILE).
+	@python3 ${bin_testsuite}/compare_results.py $(REFERENCE_FILE) timings.yaml
+
+clean:
+	rm -rf runs targets.inc timings.yaml combinations.yaml
