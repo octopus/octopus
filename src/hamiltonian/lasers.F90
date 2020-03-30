@@ -57,7 +57,9 @@ module lasers_oct_m
     laser_set_phi,                &
     laser_set_f_value,            &
     laser_carrier_frequency,      &
+    dvlaser_operator_linear,      &
     zvlaser_operator_linear,      &
+    dvlaser_operator_quadratic,   &
     zvlaser_operator_quadratic
 
 
