@@ -42,3 +42,5 @@ sampling = 20 # Time-steps per day
 days = 365
 TDTimeStep = 24*3600/sampling
 TDMaxSteps = days*sampling
+
+Debug = interaction_graph
