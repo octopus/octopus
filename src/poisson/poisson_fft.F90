@@ -81,6 +81,7 @@ contains
 
     this%coulb%qq(1:mesh%sb%periodic_dim) = M_ZERO
     this%coulb%singularity = M_ZERO
+    this%coulb%mu = M_ZERO
 
     call poisson_fft_get_kernel(this, namespace, mesh, cube, this%coulb, kernel, soft_coulb_param, fullcube) 
 
@@ -98,6 +99,14 @@ contains
     type(cube_t), optional, intent(in) :: fullcube !< needed for Hockney kernel 
 
     PUSH_SUB(poisson_fft_get_kernel)
+
+    if(coulb%mu > M_EPSILON) then
+      if(mesh%sb%dim /= 3 .or. kernel /= POISSON_FFT_KERNEL_NOCUT) then
+        message(1) = "The screened Coulomb potential is only implemented in 3D for PoissonFFTKernel=fft_nocut."
+        call messages_fatal(1)
+      end if
+    end if
+
 
     if(kernel == POISSON_FFT_KERNEL_HOCKNEY) then
       if (.not. present(fullcube)) then
@@ -222,13 +231,17 @@ contains
     type(fourier_space_op_t), intent(inout) :: coulb
 
     integer :: ix, iy, iz, ixx(3), db(3)
-    FLOAT :: temp(3), modg2
+    FLOAT :: temp(3), modg2, inv_four_mu2
     FLOAT :: gg(3)
     FLOAT, allocatable :: fft_Coulb_FS(:,:,:)
 
     PUSH_SUB(poisson_fft_build_3d_3d)
 
     db(1:3) = cube%rs_n_global(1:3)
+
+    if(coulb%mu > M_EPSILON) then
+      inv_four_mu2 = M_ONE/((M_TWO*coulb%mu)**2)
+    end if
 
     ! store the Fourier transform of the Coulomb interaction
     SAFE_ALLOCATE(fft_Coulb_FS(1:cube%fs_n_global(1), 1:cube%fs_n_global(2), 1:cube%fs_n_global(3)))
@@ -248,20 +261,28 @@ contains
          !HH not very elegant
          if(cube%fft%library.eq.FFTLIB_NFFT) modg2=cube%Lfs(ix,1)**2+cube%Lfs(iy,2)**2+cube%Lfs(iz,3)**2
 
-          if(abs(modg2) > M_EPSILON) then
-            fft_Coulb_FS(ix, iy, iz) = M_ONE/modg2
-          else
-            !We use the user-defined value of the singularity
-            fft_Coulb_FS(ix, iy, iz) = coulb%singularity
-          end if
+         if(abs(modg2) > CNST(1e-6)) then
+           !Screened coulomb potential (erfc function)
+           if(coulb%mu > M_EPSILON) then
+             fft_Coulb_FS(ix, iy, iz) = M_FOUR*M_PI/modg2*(M_ONE-exp(-modg2*inv_four_mu2))
+           else
+             fft_Coulb_FS(ix, iy, iz) = M_FOUR*M_PI/modg2
+           end if
+         else
+           !Screened coulomb potential (erfc function)
+           if(coulb%mu > M_EPSILON) then
+             !Analytical limit of 1/|q|^2*(1-exp(-|q|^2/4mu^2))
+             fft_Coulb_FS(ix, iy, iz) =  M_FOUR*M_PI*inv_four_mu2
+           else
+             !We use the user-defined value of the singularity
+             fft_Coulb_FS(ix, iy, iz) = coulb%singularity
+           end if
+         end if
+
         end do
       end do
 
     end do
-
-    forall(iz=1:cube%fs_n_global(3), iy=1:cube%fs_n_global(2), ix=1:cube%fs_n_global(1))
-      fft_Coulb_FS(ix, iy, iz) = M_FOUR*M_PI*fft_Coulb_FS(ix, iy, iz)
-    end forall
 
     call dfourier_space_op_init(coulb, cube, fft_Coulb_FS)
 

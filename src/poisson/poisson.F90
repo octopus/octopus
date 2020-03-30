@@ -1323,12 +1323,13 @@ contains
 
   !----------------------------------------------------------------
 
-  subroutine poisson_build_kernel(this, namespace, sb, coulb, qq, singul)
+  subroutine poisson_build_kernel(this, namespace, sb, coulb, qq, mu, singul)
     type(poisson_t),  intent(in) :: this
     type(namespace_t),intent(in) :: namespace
     type(simul_box_t),intent(in) :: sb
     type(fourier_space_op_t), intent(inout) :: coulb
     FLOAT,            intent(in) :: qq(:)
+    FLOAT,            intent(in) :: mu
     FLOAT, optional,  intent(in) :: singul
 
     PUSH_SUB(poisson_build_kernel)
@@ -1336,6 +1337,14 @@ contains
     if(simul_box_is_periodic(sb)) then
       ASSERT(ubound(qq, 1) >= sb%periodic_dim)
       ASSERT(this%method == POISSON_FFT)
+    end if
+
+    if(mu > M_EPSILON) then
+      if(this%method /= POISSON_FFT) then
+        write(message(1),'(a)') "Poisson solver with range separation is only implemented with FFT."
+        call messages_fatal(1)
+      end if
+      coulb%mu = mu
     end if
 
     !TODO: this should be a select case supporting other kernels.
