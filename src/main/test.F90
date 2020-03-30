@@ -939,7 +939,7 @@ contains
     ! Initialize systems
     call multisystem_init(systems, global_namespace)
 
-    call multisystem_init_interactions(systems)
+    call multisystem_init_interactions(systems, global_namespace)
 
     all_done_max_td_steps = .false.
     it = 0
