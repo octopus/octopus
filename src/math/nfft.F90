@@ -43,9 +43,7 @@ module nfft_oct_m
     znfft_forward,   &
     znfft_backward,  &
     dnfft_forward,   &
-    dnfft_backward,  &
-    znfft_forward1,  &
-    dnfft_forward1
+    dnfft_backward
 
   ! global constants
   integer, public, parameter ::         &
@@ -423,7 +421,7 @@ contains
     POP_SUB(nfft_precompute)
   end subroutine nfft_precompute
 
-!--------------------------------------------
+  !--------------------------------------------
   subroutine dnfft_forward(nfft, in, out)
     type(nfft_t), intent(in)  :: nfft
     FLOAT,        intent(in)  :: in(:,:,:)
@@ -433,35 +431,39 @@ contains
     integer:: b(6)
 
     PUSH_SUB(dnfft_forward)
-    
+
     b(1) = lbound(in, dim=1)
     b(2) = ubound(in, dim=1)
     b(3) = lbound(in, dim=2)
     b(4) = ubound(in, dim=3)
     b(5) = lbound(in, dim=3)
     b(6) = ubound(in, dim=3)
-    
+
 !    SAxFE_ALLOCATE(zin(b(1):b(2),b(3):b(4),b(5):b(6)))
     allocate(zin(b(1):b(2),b(3):b(4),b(5):b(6)))
     zin = in
-    call znfft_forward1(nfft, zin, out)
+    call nfft_forward1(nfft, zin, out)
 
     deallocate(zin)
 !     SAxFE_DEALLOCATE_A(zin)
+
     POP_SUB(dnfft_forward)
   end subroutine dnfft_forward
 
-!--------------------------------------------  
+  !--------------------------------------------
   subroutine znfft_forward(nfft, in, out)
     type(nfft_t), intent(in)  :: nfft
     CMPLX,        intent(in)  :: in(:,:,:)
     CMPLX,        intent(out) :: out(:,:,:)
+
     PUSH_SUB(znfft_forward)
-    call znfft_forward1(nfft, in, out)
+
+    call nfft_forward1(nfft, in, out)
+
     POP_SUB(znfft_forward)
   end subroutine znfft_forward
-  
-!--------------
+
+  !--------------------------------------------
   subroutine dnfft_backward(nfft, in, out)
     type(nfft_t), intent(in)  :: nfft
     CMPLX,        intent(in)  :: in (:,:,:)
@@ -478,31 +480,92 @@ contains
     b(4) = ubound(out, dim=3)
     b(5) = lbound(out, dim=3)
     b(6) = ubound(out, dim=3)
-    
+
     allocate(zout(b(1):b(2),b(3):b(4),b(5):b(6)))
-    
-    call znfft_backward1(nfft, in, zout)
+
+    call nfft_backward1(nfft, in, zout)
     out = zout
     deallocate(zout)
+
     POP_SUB(dnfft_backward)
   end subroutine dnfft_backward
-  
+
+  !--------------------------------------------
   subroutine znfft_backward(nfft, in, out)
     type(nfft_t), intent(in)  :: nfft
     CMPLX,        intent(in)  :: in (:,:,:)
     CMPLX,        intent(out) :: out(:,:,:)
+
     PUSH_SUB(znfft_backward)
-    call znfft_backward1(nfft, in, out)
+
+    call nfft_backward1(nfft, in, out)
+
     POP_SUB(znfft_backward)
   end subroutine znfft_backward
 
-#include "undef.F90"
-#include "real.F90"
-#include "nfft_inc.F90"
+  !--------------------------------------------
+  subroutine nfft_forward1(nfft, in, out)
+    type(nfft_t), intent(in)  :: nfft
+    CMPLX,        intent(in)  :: in(:,:,:)
+    CMPLX,        intent(out) :: out(:,:,:)
 
-#include "undef.F90"
-#include "complex.F90"
-#include "nfft_inc.F90"
+    integer :: ix, iy, iz
+
+    PUSH_SUB(nfft_forward1)
+
+    do ix = 1, nfft%N(1)
+      do iy = 1, nfft%N(2)
+        do iz = 1, nfft%N(3)
+          call zoct_set_f_hat(nfft%plan, nfft%dim, in(ix,iy,iz), ix, iy, iz)
+        end do
+      end do
+    end do
+
+    call oct_nfft_trafo(nfft%plan)
+
+    do ix = 1, nfft%M(1)
+      do iy = 1, nfft%M(2)
+        do iz = 1, nfft%M(3)
+          call zoct_get_f(nfft%plan, nfft%M, nfft%dim, out(ix,iy,iz), ix, iy, iz)
+        end do
+      end do
+    end do
+
+    POP_SUB(nfft_forward1)
+  end subroutine nfft_forward1
+
+  ! ---------------------------------------------------------
+  subroutine nfft_backward1(nfft, in, out)
+    type(nfft_t), intent(in)  :: nfft
+    CMPLX,        intent(in)  :: in (:,:,:)
+    CMPLX,        intent(out) :: out(:,:,:)
+
+    integer :: ix, iy, iz
+
+    PUSH_SUB(nfft_backward1)
+
+    do ix = 1, nfft%M(1)
+      do iy = 1, nfft%M(2)
+        do iz = 1, nfft%M(3)
+          call zoct_set_f(nfft%plan, nfft%M, nfft%dim, in(ix,iy,iz), ix, iy, iz)
+        end do
+      end do
+    end do
+
+    call oct_nfft_adjoint(nfft%plan)
+
+    do ix = 1,nfft%N(1)
+      do iy = 1, nfft%N(2)
+        do iz = 1, nfft%N(3)
+          call zoct_get_f_hat(nfft%plan, nfft%dim, out(ix,iy,iz), ix, iy, iz)
+        end do
+      end do
+    end do
+
+    out = out/nfft%norm
+
+    POP_SUB(nfft_backward1)
+  end subroutine nfft_backward1
 
 end module nfft_oct_m
 

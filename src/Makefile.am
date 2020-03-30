@@ -192,7 +192,6 @@ noinst_HEADERS +=                             \
 	math/math_inc.F90                     \
 	math/matrix_inc.F90                   \
 	math/matrix_ops_inc.F90               \
-	math/nfft_inc.F90                     \
 	math/ode_solver_inc.F90               \
 	math/pnfft_inc.F90                    \
 	math/root_solver_inc.F90              \
