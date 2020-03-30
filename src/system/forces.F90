@@ -616,6 +616,28 @@ subroutine forces_from_scf(namespace, gr, geo, hm, force_scf, vhxc_old)
   POP_SUB(forces_from_scf)
 end subroutine forces_from_scf
 
+!---------------------------------------------------------------------------
+subroutine total_force_from_local_potential(gr, ep, gdensity, force)
+  type(grid_t),                   intent(in)    :: gr
+  type(epot_t),                   intent(in)    :: ep
+  FLOAT,                          intent(in)    :: gdensity(:, :)
+  FLOAT,                          intent(inout) :: force(:)
+
+  integer            :: idir
+  FLOAT              :: force_tmp(1:MAX_DIM)
+
+  PUSH_SUB(total_force_from_local_potential)
+
+  do idir = 1, gr%mesh%sb%dim
+    force_tmp(idir) = dmf_dotp(gr%mesh, ep%vpsl(1:gr%mesh%np), gdensity(:, idir), reduce = .false.)
+  end do
+
+  if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm,  force_tmp, dim = gr%mesh%sb%dim)
+  force(1:gr%mesh%sb%dim) = force(1:gr%mesh%sb%dim) + force_tmp(1:gr%mesh%sb%dim)
+
+  POP_SUB(total_force_from_local_potential)
+end subroutine total_force_from_local_potential
+
 
 #include "undef.F90"
 #include "real.F90"
