@@ -967,7 +967,7 @@ contains
           end if
         end if
 
-        compute_phase_correction = .not.accel_is_enabled()
+        compute_phase_correction = .true.
         if(.not. allocated(this%hm_base%phase_corr)) then
           if(compute_phase_correction) then
             SAFE_ALLOCATE(this%hm_base%phase_corr(mesh%np+1:mesh%np_part, this%d%kpt%start:this%d%kpt%end))

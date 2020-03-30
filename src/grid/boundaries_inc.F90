@@ -249,10 +249,6 @@ subroutine X(boundaries_set_batch)(boundaries, ffb, phase_correction)
   call profiling_in(set_bc_prof, 'SET_BC')
   
   ASSERT(ffb%type() == R_TYPE_VAL)
-  ! phase correction not implemented for OpenCL
-  if(present(phase_correction)) then
-    ASSERT(ffb%status() /= BATCH_DEVICE_PACKED)
-  end if
 
   ! The boundary points are at different locations depending on the presence
   ! of ghost points due to domain parallelization.
