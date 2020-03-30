@@ -106,7 +106,7 @@ module pes_flux_oct_m
     FLOAT            :: radius
     integer, pointer :: face_idx_range(:,:)            !< face_idx_start(nface,1:2) 1 (2) start (end) idx of face nface in rcoords(:,:)
 
-
+    CMPLX, pointer   :: expkr(:,:,:,:)                  !< for cubic surface: Fourier basis on a face of the cube
     CMPLX, pointer   :: expg(:,:,:)                    !< for cubic surface: Fourier basis on a face of the cube
     FLOAT, pointer   :: sinc(:,:,:,:)                  !< for cubic surface: sync function for Fourier components parallel to cube faces
     FLOAT, pointer   :: LLr(:,:)                       !< for cubic surface: coordinates of the face edges
@@ -142,7 +142,6 @@ module pes_flux_oct_m
     integer          :: par_strategy                   !< parallelization strategy 
     integer          :: dim                            !< dimensions
     integer          :: pdim                           !< periodic dimensions
-
 
   end type pes_flux_t
 
@@ -540,7 +539,9 @@ contains
       end if
 
     else 
-      if (mesh%sb%dim >1 ) call pes_flux_tabulate_cub_pw(this, mesh, st)
+      
+      call pes_flux_integrate_cub_tabulate_direct_a(this, mesh, st)
+!       if (mesh%sb%dim >1 ) call pes_flux_tabulate_cub_pw(this, mesh, st)
     end if
 
 
@@ -561,11 +562,11 @@ contains
 ! #endif
 !     end if
 
-    if (mesh%sb%dim == 1) then
-      this%tdsteps = save_iter 
-    else
-      this%tdsteps = 1
-    end if
+!     if (mesh%sb%dim == 1) then
+!       this%tdsteps = save_iter
+!     else
+    this%tdsteps = 1
+!     end if
     
     if (bitand(this%par_strategy, OPTION__PES_FLUX_PARALLELIZATION__PF_TIME) /= 0) then
 #if defined(HAVE_MPI)
@@ -585,7 +586,7 @@ contains
     !% on the suface. 
     !% By default true when <tt>PES_Flux_Shape = cub</tt>.
     !%End
-    call parse_variable(namespace, 'PES_Flux_UseMemory', .true., this%usememory)
+    call parse_variable(namespace, 'PES_Flux_UseMemory', .false., this%usememory)
     call messages_print_var_value(stdout, "PES_Flux_UseMemory", this%usememory)            
 
     SAFE_ALLOCATE(this%wf(stst:stend, 1:sdim, kptst:kptend, 0:this%nsrfcpnts, 1:this%tdsteps))
@@ -649,6 +650,7 @@ contains
   subroutine pes_flux_end(this)
     type(pes_flux_t), intent(inout) :: this
 
+    integer          :: ii  
     PUSH_SUB(pes_flux_end)
 
     if(this%surf_shape == M_SPHERICAL) then
@@ -674,7 +676,9 @@ contains
       SAFE_DEALLOCATE_P(this%expg)
       SAFE_DEALLOCATE_P(this%sinc)
       SAFE_DEALLOCATE_P(this%LLr)
-      SAFE_DEALLOCATE_P(this%NN)
+      SAFE_DEALLOCATE_P(this%NN)      
+      
+      SAFE_DEALLOCATE_P(this%expkr)
     end if
 
     SAFE_DEALLOCATE_P(this%srfcnrml)
@@ -1564,7 +1568,7 @@ contains
                   ip_local = this%srfcpnt(isp)
                   this%wf(ist, isdim, ik, isp, this%itstep) = st%occ(ist, ik) * psi(ip_local)
                   this%gwf(ist, isdim, ik, isp, this%itstep, 1:mdim) = &
-                    st%occ(ist, ik) * gpsi(ip_local, 1:mdim) ! * mesh%spacing(1:mdim) ?
+                    st%occ(ist, ik) * gpsi(ip_local, 1:mdim) 
                 end if
               end do
               if(mesh%parallel_in_domains) then
@@ -1609,12 +1613,16 @@ contains
     FLOAT,               intent(in)    :: dt
      
     PUSH_SUB(pes_flux_integrate_cub)
+
+
+    call pes_flux_integrate_cub_direct_a(this, mesh, st, dt)
     
-    if (mesh%sb%dim == 1) then
-      call pes_flux_integrate_cub_direct(this, mesh, st, dt)
-    else 
-      call pes_flux_integrate_cub_pw(this, mesh, st, dt)
-    end if 
+!     if (mesh%sb%dim == 1) then
+! !     if (.true.) then
+!       call pes_flux_integrate_cub_direct(this, mesh, st, dt)
+!     else
+!       call pes_flux_integrate_cub_pw(this, mesh, st, dt)
+!     end if
   
     POP_SUB(pes_flux_integrate_cub)
   end subroutine pes_flux_integrate_cub  
@@ -1782,6 +1790,261 @@ contains
   end subroutine pes_flux_integrate_cub_direct
 
 
+
+  ! ---------------------------------------------------------
+  subroutine pes_flux_integrate_cub_tabulate_direct_a(this,mesh,st)
+    type(pes_flux_t),    intent(inout) :: this
+    type(mesh_t),        intent(in)    :: mesh
+    type(states_elec_t), intent(in)    :: st
+
+    integer            :: stst, stend, kptst, kptend, sdim, mdim
+    integer            :: ist, ik, isdim, imdim
+    integer            :: isp, ikp, ikp_start, ikp_end
+
+      
+    PUSH_SUB(pes_flux_integrate_cub_tabulate_direct_a) 
+
+    kptst     = st%d%kpt%start
+    kptend    = st%d%kpt%end
+    mdim      = mesh%sb%dim
+
+    ikp_start = this%nkpnts_start
+    ikp_end   = this%nkpnts_end
+    
+    
+    if (this%surf_shape /= M_CARTESIAN) then
+      
+      SAFE_ALLOCATE(this%expkr(1:this%nsrfcpnts,ikp_start:ikp_end,kptst:kptend,1))
+
+      do ik = kptst, kptend
+        do ikp = ikp_start, ikp_end
+          do isp = 1, this%nsrfcpnts 
+            this%expkr(isp,ikp,ik,1) = exp(-M_zI * sum(this%rcoords(1:mdim,isp) &
+                                                * this%kcoords_cub(1:mdim, ikp, ik)) ) &
+                                                * (M_TWO*M_PI)**(-mdim/M_TWO)
+      
+          end do
+        end do
+      end do
+          
+    else
+    !some smart mapping  
+      
+    end if
+    
+    
+    POP_SUB(pes_flux_integrate_cub_tabulate_direct_a)  
+          
+  end subroutine pes_flux_integrate_cub_tabulate_direct_a
+
+  ! ---------------------------------------------------------
+  subroutine pes_flux_integrate_cub_direct_a(this, mesh, st, dt)
+    type(pes_flux_t),    intent(inout) :: this
+    type(mesh_t),        intent(in)    :: mesh
+    type(states_elec_t), intent(inout) :: st
+    FLOAT,               intent(in)    :: dt
+
+    integer            :: stst, stend, kptst, kptend, sdim, mdim
+    integer            :: ist, ik, isdim, imdim
+    integer            :: isp, ikp, itstep
+    integer            :: idir, n_dir, nfaces
+    CMPLX, allocatable :: Jk_cub(:,:,:,:), spctramp_cub(:,:,:,:)
+    CMPLX, allocatable :: conjgplanewf_cub(:,:)
+    CMPLX, allocatable :: conjgphase_cub(:,:,:)
+    FLOAT, allocatable :: k_dot_aux(:)
+    integer            :: ikp_start, ikp_end, isp_start, isp_end
+    FLOAT              :: vec, kpoint(1:3), k_dot_r, expkr 
+    integer            :: ifc
+    CMPLX, allocatable :: wfpw_node(:,:,:,:), gwfpw_node(:,:,:,:),wfpw(:), gwfpw(:)
+    CMPLX, allocatable :: phase(:,:),vphase(:,:)
+    
+    integer            :: tdstep_on_node
+    integer            :: ng, ig, nfp
+    
+    type(profile_t), save :: prof_init
+      
+    PUSH_SUB(pes_flux_integrate_cub_direct_a)
+
+    ! this routine is parallelized over surface points since the number of 
+    ! states is in most cases less than the number of surface points
+
+    call profiling_in(prof_init, 'PES_FLUX_INTEGRATE_CUB_DIRECT_A') 
+
+    if (debug%info) then
+      call messages_write("Debug: calculating pes_flux cub surface integral (accelerated direct expression)")
+      call messages_info()
+    end if
+
+
+    tdstep_on_node = 1
+    if (bitand(this%par_strategy, OPTION__PES_FLUX_PARALLELIZATION__PF_TIME) /= 0) then
+#if defined(HAVE_MPI)
+      if(mesh%parallel_in_domains) tdstep_on_node = mesh%mpi_grp%rank + 1
+#endif
+    end if
+
+    stst      = st%st_start
+    stend     = st%st_end
+    kptst     = st%d%kpt%start
+    kptend    = st%d%kpt%end
+    sdim      = st%d%dim
+    mdim      = mesh%sb%dim
+
+    ikp_start = this%nkpnts_start
+    ikp_end   = this%nkpnts_end
+    isp_start = this%nsrfcpnts_start
+    isp_end   = this%nsrfcpnts_end
+
+
+
+    SAFE_ALLOCATE(Jk_cub(stst:stend, 1:sdim, kptst:kptend, ikp_start:ikp_end))
+    SAFE_ALLOCATE(spctramp_cub(stst:stend, 1:sdim, kptst:kptend, ikp_start:ikp_end))
+    spctramp_cub = M_z0
+
+    
+    SAFE_ALLOCATE(vphase(ikp_start:ikp_end, kptst:kptend))
+    SAFE_ALLOCATE(phase(ikp_start:ikp_end, kptst:kptend))
+    vphase(:,:) = M_z0
+    phase(:,:) = M_z0
+
+    
+    nfaces = mdim*2
+    if(this%surf_shape == M_PLANES) nfaces = 2 ! We only have two planes 
+          
+
+    do ifc = 1, nfaces
+      
+      isp_start = this%face_idx_range(ifc, 1)
+      isp_end   = this%face_idx_range(ifc, 2)
+      
+      nfp = isp_end - isp_start + 1 ! faces can have a different number of points
+
+      SAFE_ALLOCATE( wfpw_node(stst:stend, 1:sdim, kptst:kptend, ikp_start:ikp_end))
+      SAFE_ALLOCATE(gwfpw_node(stst:stend, 1:sdim, kptst:kptend, ikp_start:ikp_end))
+
+      SAFE_ALLOCATE( wfpw(ikp_start:ikp_end))
+      SAFE_ALLOCATE(gwfpw(ikp_start:ikp_end))
+
+      wfpw = M_z0
+      gwfpw = M_z0
+
+! print *,ifc, isp_start, isp_end
+      ! get the direction normal to the surface 
+      n_dir = 0 
+      do idir = 1, mdim
+        if(abs(this%srfcnrml(idir, isp_start)) >= M_EPSILON) n_dir = idir
+      end do 
+
+      itstep = tdstep_on_node
+      do ik = kptst, kptend
+        do ist = stst, stend
+          do isdim = 1, sdim
+        
+            do ikp = ikp_start , ikp_end
+              
+              gwfpw(ikp) = &
+                sum(this%gwf(ist, isdim, ik, isp_start:isp_end, itstep, n_dir) &
+                  * this%expkr(isp_start:isp_end,ikp,ik,1))
+
+
+              wfpw(ikp) = &
+                sum(this%wf(ist, isdim, ik, isp_start:isp_end, itstep)        &
+                  * this%expkr(isp_start:isp_end,ikp,ik,1))
+        
+            end do 
+            
+            gwfpw(:) = gwfpw(:) * this%srfcnrml(n_dir, isp_start) ! surface area element ds
+            wfpw(:)  = wfpw(:)  * this%srfcnrml(n_dir, isp_start) ! surface area element ds
+            
+            if(itstep == tdstep_on_node) then
+              gwfpw_node(ist, isdim, ik, :) = gwfpw(:)
+               wfpw_node(ist, isdim, ik, :) = wfpw(:)
+            end if              
+            
+
+          end do 
+        end do 
+      end do 
+
+
+      ! get the previous Volkov phase
+      vphase(ikp_start:ikp_end,:) = this%conjgphase_prev_cub(ikp_start:ikp_end,:)
+      
+      Jk_cub(:, :, :, :) = M_z0
+
+      do itstep = 1, this%itstep
+
+        do ik = kptst, kptend
+          
+          kpoint(1:mdim) = kpoints_get_point(mesh%sb%kpoints, ik)
+          do ikp = ikp_start, ikp_end
+            vec = sum((this%kcoords_cub(1:mdim, ikp, ik) - kpoint(1:mdim) - this%veca(1:mdim, itstep) / P_c)**2)
+            vphase(ikp, ik) = vphase(ikp, ik) * exp(M_zI * vec * dt / M_TWO)
+
+!             vec = this%kcoords_cub(n_dir, ikp, ik) * this%rcoords(n_dir, isp_start)
+!             phase(ikp, ik)  = vphase(ikp, ik) * exp(M_zI * vec )/sqrt(M_TWO * M_PI)
+            phase(ikp, ik)  = vphase(ikp, ik)
+          end do
+          
+          if(itstep /= tdstep_on_node) cycle ! cannot skip before otherwise we do not accumulate the Volkov phase
+
+          do ist = stst, stend
+            do isdim = 1, sdim
+              
+              ! communicate the current surface integrals
+              if(itstep == tdstep_on_node) then
+                gwfpw(:) = gwfpw_node(ist, isdim, ik, :)
+                 wfpw(:) =  wfpw_node(ist, isdim, ik, :)
+              end if
+
+                
+              Jk_cub(ist, isdim, ik, ikp_start:ikp_end) = Jk_cub(ist, isdim, ik,ikp_start:ikp_end) +  &
+                phase(ikp_start:ikp_end, ik) * ( wfpw(ikp_start:ikp_end) * &
+                   (M_TWO * this%veca(n_dir, itstep) / P_c  + kpoint(n_dir) - this%kcoords_cub(n_dir, ikp_start:ikp_end, ik)) + &
+                    M_zI * gwfpw(ikp_start:ikp_end) )
+                            
+
+          end do ! isdim
+        end do ! ist     
+      end do ! is
+
+    end do !istep
+    
+    
+    spctramp_cub(:,:,:,:) = spctramp_cub(:,:,:,:) + Jk_cub(:,:,:,:) * M_HALF 
+        
+        
+        
+    SAFE_DEALLOCATE_A(gwfpw)
+    SAFE_DEALLOCATE_A(wfpw)
+    SAFE_DEALLOCATE_A(gwfpw_node)
+    SAFE_DEALLOCATE_A(wfpw_node)
+        
+    end do ! face loop 
+
+
+    this%conjgphase_prev_cub(ikp_start:ikp_end,:) = vphase(ikp_start:ikp_end,:)
+
+
+    if(mesh%parallel_in_domains .and. bitand(this%par_strategy, OPTION__PES_FLUX_PARALLELIZATION__PF_TIME) /= 0) then
+      call comm_allreduce(mesh%mpi_grp%comm, spctramp_cub)
+    end if
+
+
+    this%spctramp_cub = this%spctramp_cub + spctramp_cub
+
+    SAFE_DEALLOCATE_A(Jk_cub)
+    SAFE_DEALLOCATE_A(spctramp_cub)
+    SAFE_DEALLOCATE_A(phase)
+    SAFE_DEALLOCATE_A(vphase)
+
+    call profiling_out(prof_init)
+
+    POP_SUB(pes_flux_integrate_cub_direct_a)
+  end subroutine pes_flux_integrate_cub_direct_a
+
+
+
   ! ---------------------------------------------------------
   subroutine pes_flux_tabulate_cub_pw(this, mesh, st)
     type(pes_flux_t),    intent(inout) :: this
@@ -1918,20 +2181,18 @@ print *, ig, ng
       
   
       ! Check normalization of plane waves on face
-      do igu = 1,ng
-        do igv = 1,ng
-!           tmp = sum(this%expg(:,igu, ifc)*conjg(this%expg(:,igv, ifc))) &
-!               * this%srfcnrml(n_dir,this%face_idx_range(ifc, 1))
-          tmp = M_z0
-          do ifp = 1, nfp
-            tmp = tmp+this%expg(ifp,igu, ifc)*conjg(this%expg(ifp,igv, ifc)) &
-                * this%srfcnrml(n_dir,this%face_idx_range(ifc, 1))
-            
-          end do
-               
-          print *, igu, igv, abs(tmp), this%srfcnrml(n_dir,this%face_idx_range(ifc, 1))
-        end do
-      end do
+!       do igu = 1,ng
+!         do igv = 1,ng
+!           tmp = M_z0
+!           do ifp = 1, nfp
+!             tmp = tmp+this%expg(ifp,igu, ifc)*conjg(this%expg(ifp,igv, ifc)) &
+!                 * this%srfcnrml(n_dir,this%face_idx_range(ifc, 1))
+!
+!           end do
+!
+!           print *, igu, igv, abs(tmp), this%srfcnrml(n_dir,this%face_idx_range(ifc, 1))
+!         end do
+!       end do
 !       call exit()
 
      
@@ -2070,7 +2331,7 @@ print *, ig, ng
       wfpw = M_z0
       gwfpw = M_z0
 
-!       print *,ifc, isp_start, isp_end
+print *,ifc, isp_start, isp_end
       ! get the direction normal to the surface 
       n_dir = 0 
       do idir = 1, mdim
@@ -2084,19 +2345,20 @@ print *, ig, ng
         
             do ig = 1, ng
               
-!                 print *, int(ifc/2), int((ifc+0.5)/2),nint((ifc+0.5)/2), nint((2+0.5)/2), nint((3+0.5)/2)
+! print *, int(ifc/2), int((ifc+0.5)/2),nint((ifc+0.5)/2), nint((2+0.5)/2), nint((3+0.5)/2)
               gwfpw(ig) = &
                 sum(this%gwf(ist, isdim, ik, isp_start:isp_end, itstep, n_dir) &
-                  * this%expg(1:nfp,ig,nint((ifc+0.5)/2)) &
-                  * this%srfcnrml(n_dir, isp_start:isp_end)) ! surface area element ds
-              
+                  * this%expg(1:nfp,ig,nint((ifc+0.5)/2)))
+
+
               wfpw(ig) = &
                 sum(this%wf(ist, isdim, ik, isp_start:isp_end, itstep)        &
-                  * this%expg(1:nfp,ig,nint((ifc+0.5)/2)) & 
-                  * this%srfcnrml(n_dir, isp_start:isp_end))
+                  * this%expg(1:nfp,ig,nint((ifc+0.5)/2)))
         
             end do 
             
+            gwfpw(:) = gwfpw(:) * this%srfcnrml(n_dir, isp_start) ! surface area element ds
+            wfpw(:)  = wfpw(:)  * this%srfcnrml(n_dir, isp_start) ! surface area element ds
             
             if(itstep == tdstep_on_node) then
               gwfpw_node(ist, isdim, ik, :) = gwfpw(:)
@@ -2123,11 +2385,11 @@ print *, ig, ng
             vec = sum((this%kcoords_cub(1:mdim, ikp, ik) - kpoint(1:mdim) - this%veca(1:mdim, itstep) / P_c)**2)
             vphase(ikp, ik) = vphase(ikp, ik) * exp(M_zI * vec * dt / M_TWO)
 
-            vec = this%kcoords_cub(n_dir, ikp, ik) * this%rcoords(n_dir, this%face_idx_range(ifc, 1))
+            vec = this%kcoords_cub(n_dir, ikp, ik) * this%rcoords(n_dir, isp_start)
             phase(ikp, ik)  = vphase(ikp, ik) * exp(M_zI * vec )/sqrt(M_TWO * M_PI)
           end do
           
-          if(itstep /= tdstep_on_node) cycle
+          if(itstep /= tdstep_on_node) cycle ! cannot skip before otherwise we do not accumulate the Volkov phase
 
           do ist = stst, stend
             do isdim = 1, sdim
@@ -2614,11 +2876,11 @@ print *, ig, ng
       this%srfcnrml = M_ZERO
       this%rcoords  = M_ZERO
 
-      this%face_idx_range = 0
+      this%face_idx_range(:,:) = 0
     
       isp = 0
       nface = 0
-      do idir = mdim, 1, -1
+      do idir = mdim, 1, -1 ! Start counting from z to simplify implementation for semiperiodic systems (pln)
         do pm = -1, 1, 2 
           nface = nface + 1
           this%face_idx_range(nface,1) = isp + 1
@@ -2648,6 +2910,8 @@ print *, ig, ng
         end do      
       end do
       
+      
+      !Get dimensions and spacing on each (pair of) face 
       do ifc = 1, nint((nfaces+0.5)/2)
         isp_start = this%face_idx_range(ifc, 1)
         isp_end   = this%face_idx_range(ifc, 2)
@@ -2655,10 +2919,10 @@ print *, ig, ng
         !retrieve face normal direction
         n_dir = 0 
         do idir = 1, mdim
-          if(abs(this%srfcnrml(idir, this%face_idx_range(ifc, 1))) >= M_EPSILON) n_dir = idir
+          if(abs(this%srfcnrml(idir, isp_start)) >= M_EPSILON) n_dir = idir
         end do 
       
-! print *, n_dir,  isp_start, isp_start     
+! print *, n_dir,  isp_start, isp_start, this%nsrfcpnts
         !retrieve the spacing on the face
         dRS(:) = M_ZERO
         idim = 1
@@ -2673,6 +2937,7 @@ print *, ig, ng
         RSmin = M_ZERO
         RSmax = M_ZERO
         do isp = isp_start, isp_end
+          !measure in reduced coordinates 
           xx(1:mdim) = matmul(this%rcoords(1:mdim,isp),mesh%sb%klattice_primitive(1:mdim,1:mdim))
           idim = 1
           do idir = 1, mdim 
