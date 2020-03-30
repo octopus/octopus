@@ -29,14 +29,11 @@ module mpi_debug_oct_m
 
   private
 
-#if !defined(HAVE_MPI)
-  integer, public :: mpi_debug_dummy !< this avoids compilers complaining about empty module
-#else
   public ::               &
     mpi_debug_statistics, &
     mpi_debug_in,         &
     mpi_debug_out
-
+#if defined(HAVE_MPI)
   public ::                      &
     TSD_MPI_Barrier,             &
     TSZ_MPI_Barrier,             &
@@ -65,7 +62,7 @@ module mpi_debug_oct_m
     TSD_MPI_Allgather,           &
     TSZ_MPI_Allgather,           &
     TSI_MPI_Allgather
-
+#endif
   integer, parameter :: C_NUM_MPI_ROUTINES = 11
 
   integer, public, parameter ::  &
@@ -100,11 +97,9 @@ module mpi_debug_oct_m
   real(8), public :: sec_accum(C_NUM_MPI_ROUTINES)    = M_ZERO
 
   real(8) :: sec_in
-#endif
 
 contains
 
-#if defined(HAVE_MPI)
   ! ---------------------------------------------------------
   subroutine mpi_debug_statistics()
     integer :: j
@@ -140,7 +135,9 @@ contains
     if(.not.debug%info) return
 
     call_counter(index) = call_counter(index) + 1
+#if defined(HAVE_MPI)
     sec_in              = MPI_Wtime()
+#endif
     write(message(1),'(a,f18.6,a,z8.8,a,i6.6,a,f13.6)') '* MPI_I ', &
       sec_in, ' '//mpi_rlabel(index)//' : 0x', comm, ' | ',  &
       call_counter(index), ' - ', sec_accum(index)
@@ -156,7 +153,9 @@ contains
 
     if(.not.debug%info) return
 
+#if defined(HAVE_MPI)
     sec_out = MPI_Wtime()
+#endif
     call mpi_time_accum(index, sec_out, sec_diff)
     write(message(1),'(a,f18.6,a,z8.8,a,i6.6,a,f13.6,a,f13.6)')         &
       '* MPI_O ', sec_out, ' '//mpi_rlabel(index)//' : 0x', comm, ' | ', &
@@ -175,7 +174,7 @@ contains
     sec_accum(index) = sec_accum(index) + sec_diff
   end subroutine mpi_time_accum
 
-
+#if defined(HAVE_MPI)
 #include "undef.F90"
 #include "real.F90"
 #include "mpi_debug_inc.F90"
@@ -187,12 +186,6 @@ contains
 #include "undef.F90"
 #include "integer.F90"
 #include "mpi_debug_inc.F90"
-
-#else
-  subroutine this_module_is_not_empty()
-    integer :: neither_is_this_subroutine
-    neither_is_this_subroutine = 0
-  end subroutine this_module_is_not_empty
 #endif
 end module mpi_debug_oct_m
 
