@@ -275,6 +275,7 @@ contains
 
     this%avoid_ab = .false.
     if(this%surf_shape == M_CUBIC .or. this%surf_shape == M_PLANES) then
+      
       if(hm%bc%abtype /= NOT_ABSORBING) then
         !%Variable PES_Flux_AvoidAB
         !%Type logical
@@ -2729,6 +2730,8 @@ print *,ifc, isp_start, isp_end
       
       
       this%nsrfcpnts = 0 
+print *, mdim, mindim
+      
       do ndir = mdim, mindim, -1
         area = M_ONE
         do idir=1, mdim
@@ -2737,11 +2740,12 @@ print *,ifc, isp_start, isp_end
         end do
         
         npface = int(fc_ptdens * area) ! number of points on the face
-        
+print *, "npface =", npface,  "border(:)=",  border(:)        
+
         idim = 1 
         do idir=1, mdim
           if (idir == ndir) cycle
-          NN(ndir,idim) = int(npface / (border(idir)*factor))
+          NN(ndir,idim) = int( sqrt(npface * (border(idir)*factor)**2/area) )
           dS(ndir,idim) = border(idir)*factor/NN(ndir,idim)
           this%LLr(ndir,idim) = NN(ndir,idim)*dS(ndir,idim)
           idx(ndir,idim) = idir
@@ -2752,9 +2756,13 @@ print *,ifc, isp_start, isp_end
       
       this%NN(1:mdim,:)  = NN(1:mdim,:)
       
-      print *,  this%nsrfcpnts, NN(mdim,:)
+      
+print *,  this%nsrfcpnts, NN(mdim,:)
 
-      print *,  this%LLr(mdim,:)
+print *, "this%LLr(mdim,:) = ", this%LLr(mdim,:)
+      
+      ASSERT(this%nsrfcpnts > 0) !at this point should be satisfied otherwise the point density is way too small
+
       
       SAFE_ALLOCATE(this%srfcnrml(1:mdim, 0:this%nsrfcpnts))
       SAFE_ALLOCATE(this%rcoords(1:mdim, 0:this%nsrfcpnts))
