@@ -180,10 +180,10 @@ contains
       call this%prop%finished()
 
     case (UPDATE_INTERACTIONS)
-      !We increment by one algorithmic step
+      ! We increment by one algorithmic step
       call this%prop%clock%increment()
 
-      !Loop over all interactions
+      ! Loop over all interactions
       all_updated = .true.
       call iter%start(this%interactions)
       do while (iter%has_next())
@@ -221,8 +221,8 @@ contains
         end if
       end do
 
-      !Move to next propagator step if all interactions have been
-      !updated. Otherwise try again later.
+      ! Move to next propagator step if all interactions have been
+      ! updated. Otherwise try again later.
       if(all_updated) then
         this%accumulated_loop_ticks = this%accumulated_loop_ticks + 1
         call this%prop%next()
@@ -243,8 +243,8 @@ contains
       end if
 
     case (END_SCF_LOOP)
-      !Here we first check if we did the maximum number of steps.
-      !Otherwise, we need check the tolerance 
+      ! Here we first check if we did the maximum number of steps.
+      ! Otherwise, we need check the tolerance
       if(this%prop%scf_count == this%prop%max_scf_count) then
         if (debug%info) then
           message(1) = "Debug: -- Max SCF Iter reached for " + trim(this%namespace%get())
@@ -253,7 +253,7 @@ contains
         this%prop%inside_scf = .false.
         call this%prop%next()
       else
-        !We reset the pointer to the begining of the scf loop
+        ! We reset the pointer to the beginning of the scf loop
         if(this%is_tolerance_reached(this%prop%scf_tol)) then
           if (debug%info) then
             message(1) = "Debug: -- SCF tolerance reached for " + trim(this%namespace%get())
@@ -262,10 +262,10 @@ contains
           this%prop%inside_scf = .false.
           call this%prop%next()
         else
-          !We rewind the instruction stack
+          ! We rewind the instruction stack
           call this%prop%rewind_scf_loop()
 
-          !We reset the clocks
+          ! We reset the clocks
           call this%reset_clocks(this%accumulated_loop_ticks)
           this%accumulated_loop_ticks = 0
           if (debug%info) then
