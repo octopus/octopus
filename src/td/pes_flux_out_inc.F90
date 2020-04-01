@@ -537,7 +537,7 @@ subroutine pes_flux_pmesh_sph(this, dim, kpoints, ll, LG, pmesh, idxZero, krng, 
   Dphik = abs(this%phik_rng(2) - this%phik_rng(1))/(this%nstepsphik)
   
   do ikk = 1, this%nk 
-    kact = this%krad(ikk)
+    kact = this%klinear(ikk,1)
     iomk = 0
 
     do ith = 0, this%nstepsthetak
@@ -830,10 +830,10 @@ subroutine pes_flux_output(this, mesh, sb, st, namespace, dt)
   select case (this%kgrid)
   
   case (M_POLAR)
-    call  pes_flux_out_polar_ascii(this, mesh, sb, st, namespace, dt)
+    call  pes_flux_out_polar_ascii(this, st, namespace, dt, sb%dim)
   
   case (M_CARTESIAN)
-    !empty
+    call pes_flux_out_cartesian_ascii(this, st, namespace, dt, sb%dim)
     
   case default
     !empty      
@@ -844,14 +844,94 @@ subroutine pes_flux_output(this, mesh, sb, st, namespace, dt)
 end subroutine pes_flux_output
 
 
-! ---------------------------------------------------------
-subroutine pes_flux_out_polar_ascii(this, mesh, sb, st, namespace, dt)
+subroutine pes_flux_out_cartesian_ascii(this, st, namespace, dt, dim)
   type(pes_flux_t), intent(inout)    :: this
-  type(mesh_t),        intent(in)    :: mesh
-  type(simul_box_t),   intent(in)    :: sb
   type(states_elec_t), intent(in)    :: st
   type(namespace_t),   intent(in)    :: namespace
   FLOAT,               intent(in)    :: dt
+  integer,             intent(in)    :: dim
+  
+  
+  integer            :: stst, stend, kptst, kptend, sdim, mdim, idir
+  integer            :: iunit
+  integer            :: ik, ist, isdim, ikp, ikpt, ik1, ik2, ik3
+  FLOAT, allocatable :: spctrout_cub(:)
+  
+  PUSH_SUB(pes_flux_out_cartesian_ascii)
+  
+  stst   = st%st_start
+  stend  = st%st_end
+  kptst  = st%d%kpt%start
+  kptend = st%d%kpt%end
+  sdim   = st%d%dim
+  mdim   = dim
+
+  SAFE_ALLOCATE(spctrout_cub(1:this%nkpnts))
+  spctrout_cub = M_ZERO
+
+  ! calculate spectra & total distribution
+  do ik = kptst, kptend
+    do ist = stst, stend
+      do isdim = 1, sdim
+
+      spctrout_cub(1:this%nkpnts) = spctrout_cub(1:this%nkpnts) + &
+        abs(this%spctramp_cub(ist, isdim, ik, 1:this%nkpnts))**M_TWO * dt**M_TWO
+        
+      end do 
+    end do
+  end do
+  
+  if(st%parallel_in_states .or. st%d%kpt%parallel) then
+#if defined(HAVE_MPI)
+      call comm_allreduce(st%st_kpt_mpi_grp%comm, spctrout_cub)
+#endif
+  end if
+  
+  
+  if(mpi_grp_is_root(mpi_world)) then
+    iunit = io_open('td.general/PES_flux.distribution.out', namespace, action='write', position='rewind')
+    if (mdim == 3) write(iunit, '(a19)') '# kz, ky, kx, spectrum'
+    if (mdim == 2) write(iunit, '(a19)') '# ky, kx, spectrum'
+    if (mdim == 1) write(iunit, '(a19)') '# kx, spectrum'
+    
+    
+    
+    ikpt = 1
+    ikp = 0
+
+    do ik3 = 1, this%ll(3)
+      do ik2 = 1, this%ll(2)
+        do ik1 = 1, this%ll(1)
+          ikp = ikp + 1 
+          
+          do idir = mdim, 1, -1
+            write(iunit, '(1x,e18.10E3)', advance='no') this%kcoords_cub(idir, ikp, ikpt)
+          end do
+          write(iunit, '(1x,e18.10E3)', advance='no') spctrout_cub(ikp)
+          write(iunit, '(1x)', advance='yes')
+          
+        end do
+        write(iunit, '(1x)', advance='yes')
+      end do
+      write(iunit, '(1x)', advance='yes')
+    end do
+    
+    call io_close(iunit)
+  end if
+  
+  SAFE_DEALLOCATE_A(spctrout_cub)
+  
+  POP_SUB(pes_flux_out_cartesian_ascii)
+end subroutine pes_flux_out_cartesian_ascii
+
+
+! ---------------------------------------------------------
+subroutine pes_flux_out_polar_ascii(this, st, namespace, dt, dim)
+  type(pes_flux_t), intent(inout)    :: this
+  type(states_elec_t), intent(in)    :: st
+  type(namespace_t),   intent(in)    :: namespace
+  FLOAT,               intent(in)    :: dt
+  integer,             intent(in)    :: dim
 
   integer            :: stst, stend, kptst, kptend, sdim, mdim
   integer            :: ist, ik, isdim
@@ -875,7 +955,7 @@ subroutine pes_flux_out_polar_ascii(this, mesh, sb, st, namespace, dt)
   kptst  = st%d%kpt%start
   kptend = st%d%kpt%end
   sdim   = st%d%dim
-  mdim   = mesh%sb%dim
+  mdim   = dim
 
   SAFE_ALLOCATE(spctrsum(1:st%nst, 1:sdim, 1:st%d%nik, 1:this%nk))
   spctrsum = M_ZERO
@@ -1022,7 +1102,7 @@ subroutine pes_flux_out_polar_ascii(this, mesh, sb, st, namespace, dt)
     if (this%surf_shape==M_SPHERICAL) then
       write(iunittwo, '(a29)') '# k, theta, phi, distribution'
       do ikk = 1, this%nk 
-        kact = this%krad(ikk)
+        kact = this%klinear(ikk,1)
         iomk = 0
 
         do ith = 0, this%nstepsthetak
@@ -1098,7 +1178,7 @@ subroutine pes_flux_out_polar_ascii(this, mesh, sb, st, namespace, dt)
         write(iunittwo, '(a22)') '# k, phi, distribution'
         ikp = 0
         do ikk = 1, this%nk
-          kact = this%krad(ikk)
+          kact = this%klinear(ikk,1)
           
           do iph = 0, this%nstepsphik - 1
             ikp = ikp + 1
@@ -1127,7 +1207,7 @@ subroutine pes_flux_out_polar_ascii(this, mesh, sb, st, namespace, dt)
         write(iunittwo, '(a29)') '# k, theta, phi, distribution'
         ikp    = 0
         do ikk = 1, this%nk
-          kact = this%krad(ikk)
+          kact = this%klinear(ikk,1)
 
           do ith = 0, this%nstepsthetak
 !             thetak = ith * M_PI / this%nstepsthetak

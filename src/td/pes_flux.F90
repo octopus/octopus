@@ -84,14 +84,18 @@ module pes_flux_oct_m
     FLOAT            :: phik_rng(1:2)                  !< the range of phik in [0,2pi]
     integer          :: nstepsomegak
     integer          :: nstepsomegak_start, nstepsomegak_end
-    FLOAT, pointer   :: krad(:)                        !< the grid for the radial part of the k-mesh
     FLOAT            :: ktransf(1:3,1:3)               !< transformation matrix for k-mesh 
+
+    FLOAT, pointer   :: klinear(:,:)                   !< A set of liner grids to help define the k-mesh
+                                                       !< polar:     klinear(nk,1)    defines the radial part of the k-mesh
+                                                       !< cartesian: klinear(nk,1:3)  defines the the k-mesh along each axes
 
     FLOAT            :: dk                             !< parameters for k-mesh
     FLOAT, pointer   :: kcoords_cub(:,:,:)             !< coordinates of k-points
     FLOAT, pointer   :: kcoords_sph(:,:,:)
     integer          :: kgrid                          !< how is the grid in k: polar/cartesian
 
+    ! Surface 
     integer, public  :: surf_shape                     !< shape of the surface (= cube/sphere/planes)
     integer          :: nsrfcpnts                      !< total number of surface points
     integer          :: nsrfcpnts_start, nsrfcpnts_end !< for cubic surface: number of surface points on node
@@ -106,12 +110,14 @@ module pes_flux_oct_m
     FLOAT            :: radius
     integer, pointer :: face_idx_range(:,:)            !< face_idx_start(nface,1:2) 1 (2) start (end) idx of face nface in rcoords(:,:)
 
-    CMPLX, pointer   :: expkr(:,:,:,:)                  !< for cubic surface: Fourier basis on a face of the cube
+    CMPLX, pointer   :: expkr(:,:,:,:)                 !< for cubic surface: Fourier basis on a face of the cube
     CMPLX, pointer   :: expg(:,:,:)                    !< for cubic surface: Fourier basis on a face of the cube
     FLOAT, pointer   :: sinc(:,:,:,:)                  !< for cubic surface: sync function for Fourier components parallel to cube faces
     FLOAT, pointer   :: LLr(:,:)                       !< for cubic surface: coordinates of the face edges
     integer, pointer :: NN(:,:)                        !< for cubic surface: number of points on each face mapping coord
 
+
+    ! Surface and time integration 
     integer          :: tdsteps                        !< = sys%outp%restart_write_interval (M_PLANES/M_CUBIC)
                                                        !< = mesh%mpi_grp%size (M_SPHERICAL)
     integer          :: max_iter                       !< td%max_iter
@@ -140,7 +146,7 @@ module pes_flux_oct_m
     logical          :: surf_interp                    !< interpolate points on the surface
 
     integer          :: par_strategy                   !< parallelization strategy 
-    integer          :: dim                            !< dimensions
+    integer          :: dim                            !< simulation box dimensions
     integer          :: pdim                           !< periodic dimensions
 
   end type pes_flux_t
@@ -172,7 +178,7 @@ contains
     FLOAT              :: border(MAX_DIM)       ! distance of surface from border
     FLOAT              :: offset(MAX_DIM)       ! offset for border
     integer            :: stst, stend, kptst, kptend, sdim, mdim, pdim
-    integer            :: imdim
+    integer            :: imdim, idir
     integer            :: isp, ikp
     integer            :: il, ik
     integer            :: ikk, ith, iph, iomk
@@ -661,7 +667,7 @@ contains
       SAFE_DEALLOCATE_P(this%ylm_r)
       SAFE_DEALLOCATE_P(this%conjgphase_prev_sph)
       SAFE_DEALLOCATE_P(this%spctramp_sph)
-      SAFE_DEALLOCATE_P(this%krad)
+      SAFE_DEALLOCATE_P(this%klinear)
     else
       SAFE_DEALLOCATE_P(this%kcoords_cub)
       SAFE_DEALLOCATE_P(this%conjgphase_prev_cub)
@@ -705,7 +711,7 @@ contains
     integer           :: kptst, kptend  
     integer           :: isp, ikp, ikpt, ibz1, ibz2
     integer           :: il, ll, mm, idim, idir
-    integer           :: ikk, ith, iph, iomk,ie
+    integer           :: ikk, ith, iph, iomk,ie, ik1, ik2, ik3
     FLOAT             :: kmax, kmin, kact, thetak, phik
     type(block_t)     :: blk
       
@@ -775,9 +781,9 @@ contains
     end if
     
     if (this%surf_shape == M_CUBIC) then
-      if (this%kgrid == M_CARTESIAN .and. .not. simul_box_is_periodic(sb)) then
-        call messages_not_implemented('Cartesian momentum grid with cubic surface for finite systems')        
-      end if
+!       if (this%kgrid == M_CARTESIAN .and. .not. simul_box_is_periodic(sb)) then
+!         call messages_not_implemented('Cartesian momentum grid with cubic surface for finite systems')
+!       end if
       if (simul_box_is_periodic(sb)) then
         call messages_not_implemented('Use of cubic surface for periodic systems (use pln)')                
       end if
@@ -826,7 +832,61 @@ contains
       call messages_write(")")
       call messages_info()
     
+      kmax = sqrt(M_TWO*Emax)
+      kmin = sqrt(M_TWO*Emin)
+      this%dk = sqrt(M_TWO*DE)
+
     end if 
+
+    if (.not. use_enegy_grid) then
+      
+      !%Variable PES_Flux_Kmax
+      !%Type float
+      !%Default 1.0
+      !%Section Time-Dependent::PhotoElectronSpectrum
+      !%Description
+      !% The maximum value of |k|.
+      !%End
+      call parse_variable(namespace, 'PES_Flux_Kmax', M_ONE, kmax)
+!       call messages_print_var_value(stdout, "PES_Flux_Kmax", kmax)
+      if(kmax <= M_ZERO) call messages_input_error('PES_Flux_Kmax')
+
+      !%Variable PES_Flux_Kmin
+      !%Type float
+      !%Default 0.0
+      !%Section Time-Dependent::PhotoElectronSpectrum
+      !%Description
+      !% The minimum value of |k|.
+      !%End
+      call parse_variable(namespace, 'PES_Flux_Kmin', M_ZERO, kmin)
+!       call messages_print_var_value(stdout, "PES_Flux_Kmin", kmin)
+      if(kmax <= M_ZERO) call messages_input_error('PES_Flux_Kmin')
+
+
+      !%Variable PES_Flux_DeltaK
+      !%Type float
+      !%Default 0.002
+      !%Section Time-Dependent::PhotoElectronSpectrum
+      !%Description
+      !% Spacing of the k-mesh in |k| (equidistant).
+      !%End
+      call parse_variable(namespace, 'PES_Flux_DeltaK', CNST(0.002), this%dk)
+      if(this%dk <= M_ZERO) call messages_input_error('PES_Flux_DeltaK')
+!       call messages_print_var_value(stdout, "PES_Flux_DeltaK", this%dk)
+
+    endif
+
+    call messages_write("Momentum linear grid (Pmin, Pmax, DP) [") 
+    call messages_write(trim(units_abbrev(units_out%mass*units_out%velocity)))
+    call messages_write("]:  (")
+    call messages_write(kmin,fmt = '(f8.3)')
+    call messages_write(", ")
+    call messages_write(kmax, fmt = '(f8.3)')
+    call messages_write(", ")
+    call messages_write(this%dk, fmt = '(e9.2)')
+    call messages_write(")")
+    call messages_info()
+
 
 
     
@@ -836,43 +896,6 @@ contains
       ! Setting up k-mesh
       ! 1D = 2 points, 2D = polar coordinates, 3D = spherical coordinates
       ! -----------------------------------------------------------------
-      if (.not. use_enegy_grid) then
-        
-        !%Variable PES_Flux_Kmax
-        !%Type float
-        !%Default 1.0
-        !%Section Time-Dependent::PhotoElectronSpectrum
-        !%Description
-        !% The maximum value of |k|.
-        !%End
-        call parse_variable(namespace, 'PES_Flux_Kmax', M_ONE, kmax)
-        call messages_print_var_value(stdout, "PES_Flux_Kmax", kmax)
-        if(kmax <= M_ZERO) call messages_input_error('PES_Flux_Kmax')
-
-        !%Variable PES_Flux_Kmin
-        !%Type float
-        !%Default 0.0
-        !%Section Time-Dependent::PhotoElectronSpectrum
-        !%Description
-        !% The minimum value of |k|.
-        !%End
-        call parse_variable(namespace, 'PES_Flux_Kmin', M_ZERO, kmin)
-        call messages_print_var_value(stdout, "PES_Flux_Kmin", kmin)
-        if(kmax <= M_ZERO) call messages_input_error('PES_Flux_Kmin')
-
-
-        !%Variable PES_Flux_DeltaK
-        !%Type float
-        !%Default 0.002
-        !%Section Time-Dependent::PhotoElectronSpectrum
-        !%Description
-        !% Spacing of the k-mesh in |k| (equidistant).
-        !%End
-        call parse_variable(namespace, 'PES_Flux_DeltaK', CNST(0.002), this%dk)
-        if(this%dk <= M_ZERO) call messages_input_error('PES_Flux_DeltaK')
-        call messages_print_var_value(stdout, "PES_Flux_DeltaK", this%dk)
-
-      endif
       
       
       !%Variable PES_Flux_ThetaK
@@ -1030,7 +1053,7 @@ contains
       this%ll(3)      = this%nstepsthetak !- 1
       this%ll(mdim+1:3) = 1
       
-      SAFE_ALLOCATE(this%krad(1:this%nk))
+      SAFE_ALLOCATE(this%klinear(1:this%nk,1))
       
 
     else 
@@ -1076,23 +1099,6 @@ contains
       
                 
       
-      if (this%arpes_grid) then
-  
-        nkmax = floor(Emax/DE)
-        nkmin = floor(Emin/DE)
-
-      else 
-      
-        kmax = sqrt(M_TWO*Emax)
-        kmin = sqrt(M_TWO*Emin)
-        this%dk = sqrt(M_TWO*DE)
-
-        nkmax = floor(kmax/this%dk)
-        nkmin = floor(kmin/this%dk)
-        
-      end if
-    
-      this%nk = abs(nkmax - nkmin) + 1
     
       !%Variable PES_Flux_BZones
       !%Type block
@@ -1140,22 +1146,47 @@ contains
 !         if (idim > 0 ) NBZ(idim) = 1
       end if 
 
-      ! This information is needed for postprocessing the data
-      this%ll(:)   = 1
-      this%ll(1:pdim) = (NBZ(1:pdim)-1)*2+1
-      this%ll(mdim)   = this%nk 
+
+
+      this%ll(:) = 1
+
+      if (simul_box_is_periodic(sb)) then
+
+        if (this%arpes_grid) then
+          nkmax = floor(Emax/DE)
+          nkmin = floor(Emin/DE)
+
+        else 
+          nkmax = floor(kmax/this%dk)
+          nkmin = floor(kmin/this%dk)
+      
+        end if
+  
+        this%nk = abs(nkmax - nkmin) + 1
+
+        ! This information is needed for postprocessing the data
+      
+        this%ll(1:pdim) = (NBZ(1:pdim)-1)*2+1
+        this%ll(mdim)   = this%nk 
       
 
-      call messages_write("Number of Brillouin zones = ")
-      do idim = 1 , pdim
-        call messages_write( this%ll(idim) )
-        if (.not. idim == pdim) call messages_write(" x ")        
-      end do 
-      call messages_info()
-            
+        call messages_write("Number of Brillouin zones = ")
+        do idim = 1 , pdim
+          call messages_write( this%ll(idim) )
+          if (.not. idim == pdim) call messages_write(" x ")        
+        end do 
+        call messages_info()
+      else
+
+        this%nk = floor(abs(kmax - kmin)/this%dk) + 1
+        this%ll(1:mdim) = this%nk 
+
+        SAFE_ALLOCATE(this%klinear(1:maxval(this%ll(1:mdim)),1:mdim))
+        this%klinear = M_ZERO
+      end if      
+      
       ! Total number of points
       this%nkpnts = product(this%ll(1:mdim))*this%ngpt
-      
       
 
     end if    
@@ -1173,11 +1204,11 @@ contains
     
       if(use_enegy_grid) then
         do ie = 1, this%nk  
-          this%krad(ie) = sqrt(M_TWO*(ie * DE + Emin))
+          this%klinear(ie,1) = sqrt(M_TWO*(ie * DE + Emin))
         end do
       else  
         do ikk = 1, this%nk  
-          this%krad(ikk) = ikk * this%dk + kmin
+          this%klinear(ikk,1) = ikk * this%dk + kmin
         end do
       end if
       
@@ -1217,10 +1248,8 @@ contains
         ! spherical harmonics & kcoords_sph
         iomk = 0
         do ith = 0, this%nstepsthetak
-!           thetak = ith * M_PI / this%nstepsthetak
           thetak = ith * Dthetak + this%thetak_rng(1)
           do iph = 0, this%nstepsphik - 1
-!             phik = iph * M_TWO * M_PI / this%nstepsphik
             phik = iph * Dphik + this%phik_rng(1)
             iomk = iomk + 1
             if(iomk >= this%nstepsomegak_start .and. iomk <= this%nstepsomegak_end) then
@@ -1235,7 +1264,6 @@ contains
               this%kcoords_sph(2, this%nk_start:this%nk_end, iomk) = sin(phik) * sin(thetak)
               this%kcoords_sph(3, this%nk_start:this%nk_end, iomk) = cos(thetak)
             end if
-!             if(ith == 0 .or. ith == this%nstepsthetak) exit
             if(thetak < M_EPSILON .or. abs(thetak-M_PI) < M_EPSILON) exit
           end do
         end do
@@ -1243,7 +1271,7 @@ contains
         if(this%nk_start > 0) then
           ! Bessel functions & kcoords_sph
           do ikk = this%nk_start, this%nk_end
-            kact = this%krad(ikk)
+            kact = this%klinear(ikk,1)
             do ll = 0, this%lmax
               this%j_l(ll, ikk) = loct_sph_bessel(ll, kact * this%radius) * &
                                   M_TWO * M_PI / (M_TWO * M_PI)**M_THREE/M_TWO
@@ -1277,7 +1305,7 @@ contains
             if(ikk == 0) cycle
             ikp = ikp + 1
 !             kact = ikk * this%dk 
-            kact = sign(1,ikk)*this%krad(abs(ikk))
+            kact = sign(1,ikk)*this%klinear(abs(ikk),1)
             this%kcoords_cub(1, ikp, kptst:kptend+1) = kact
           end do
 
@@ -1296,7 +1324,7 @@ contains
                 do iph = 0, this%nstepsphik - 1
                   ikp = ikp + 1
                   phik = iph * Dphik + this%phik_rng(1)
-                  kact = this%krad(ikk)
+                  kact = this%klinear(ikk,1)
                                 this%kcoords_cub(1, ikp, ikpt) = kact * cos(phik) * sin(thetak) + kpoint(1)
                                 this%kcoords_cub(2, ikp, ikpt) = kact * sin(phik) * sin(thetak) + kpoint(2)
                   if(mdim == 3) this%kcoords_cub(3, ikp, ikpt) = kact * cos(thetak)
@@ -1318,39 +1346,77 @@ contains
 
       SAFE_ALLOCATE(this%kcoords_cub(1:mdim, this%nkpnts_start:this%nkpnts_end, kptst:kptend))
 
+      if(use_enegy_grid) then
+        do idir = 1, mdim
+          do ie = 1, this%ll(idir)  
+            this%klinear(ie,idir) = sign(ie * DE + Emin,M_ONE)*sqrt(M_TWO*(ie * DE + abs(Emin)))
+          end do
+        end do
+      else  
+        do idir = 1, mdim
+          do ikk = 1, this%ll(idir)  
+            this%klinear(ikk,idir) = ikk * this%dk + kmin
+          end do
+        end do
+      end if
 
-      nkp_out = 0 
-      do ikpt = kptst, kptend
-        ikp = 0
-        do ikk = nkmin, nkmax
-      
-          ! loop over periodic directions
-          select case (pdim)
-            case (1)
-            do ibz1 = -(NBZ(1)-1), (NBZ(1)-1) 
-              do ig = 1, this%ngpt
-                kvec(1) = ibz1 * sb%klattice(1, 1) + gpoints(1,ig)               
-                call fill_non_periodic_dimension(this)
-              end do      
-            end do
 
-            case (2)
-            
-            do ibz2 = -(NBZ(2)-1), (NBZ(2)-1) 
+      if (simul_box_is_periodic(sb)) then
+        nkp_out = 0 
+        do ikpt = kptst, kptend
+          ikp = 0
+          do ikk = nkmin, nkmax
+    
+            ! loop over periodic directions
+            select case (pdim)
+              case (1)
               do ibz1 = -(NBZ(1)-1), (NBZ(1)-1) 
                 do ig = 1, this%ngpt
-                  kvec(1:2) = ibz1 * sb%klattice(1:2, 1) + ibz2 * sb%klattice(1:2, 2) &
-                            + gpoints(1:2,ig) 
+                  kvec(1) = ibz1 * sb%klattice(1, 1) + gpoints(1,ig)               
                   call fill_non_periodic_dimension(this)
+                end do      
+              end do
+
+              case (2)
+          
+              do ibz2 = -(NBZ(2)-1), (NBZ(2)-1) 
+                do ibz1 = -(NBZ(1)-1), (NBZ(1)-1) 
+                  do ig = 1, this%ngpt
+                    kvec(1:2) = ibz1 * sb%klattice(1:2, 1) + ibz2 * sb%klattice(1:2, 2) &
+                              + gpoints(1:2,ig) 
+                    call fill_non_periodic_dimension(this)
+                  end do
                 end do
               end do
-            end do
-
-          end select
-
-      
+          
+            end select
+    
+          end do
         end do
-      end do
+      else
+        
+        ikpt = 1
+        ikp = 0
+        kvec(:) = M_ZERO
+        do ik3 = 1, this%ll(3)
+          if(mdim>2) kvec(3) = this%klinear(ik3,3)
+          do ik2 = 1, this%ll(2)
+            if(mdim>1) kvec(2) = this%klinear(ik2,2)
+            do ik1 = 1, this%ll(1)
+              ikp = ikp + 1 
+              kvec(1) = this%klinear(ik1,1)
+              this%kcoords_cub(1:mdim, ikp, ikpt) =  kvec(1:mdim)
+              
+              if(debug%info .and. mpi_grp_is_root(mpi_world)) then
+                write(225,*) ikp, this%kcoords_cub(1:mdim, ikp, ikpt)
+                if(this%nsrfcpnts > 0) flush(225)
+              end if              
+
+            end do
+          end do
+        end do
+        
+      end if
   
       if (debug%info .and. mpi_grp_is_root(mpi_world)) then
         ! this does not work for parallel in kpoint 
@@ -1409,7 +1475,8 @@ contains
       end do
       call messages_info(1+mdim)
 
-
+      
+      !Apply the transformation
       if (this%surf_shape == M_SPHERICAL) then
 
         iomk = 0
