@@ -326,8 +326,10 @@ contains
     write(message(2),fmt) "Coordinates: ", (this%pos(idir), idir = 1, this%space%dim)
     write(message(3),fmt) "Velocity:    ", (this%vel(idir), idir = 1, this%space%dim)
     write(message(4),fmt) "Acceleration:", (this%acc(idir), idir = 1, this%space%dim)
-    write(message(5),'(4x,A,I8.7)') 'Clock tick: ', this%clock%get_tick()
-    call messages_info(5)
+    write(message(5),fmt) "Force:       ", (this%tot_force(idir), idir = 1, this%space%dim)
+    write(message(6),'(4x,A,I8.7)')  'Clock tick:      ', this%clock%get_tick()
+    write(message(7),'(4x,A,e14.6)') 'Simulation time: ', this%clock%get_sim_time()
+    call messages_info(7)
 
     POP_SUB(celestial_body_write_td_info)
   end subroutine celestial_body_write_td_info
