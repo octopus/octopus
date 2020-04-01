@@ -132,26 +132,28 @@ module command_line_oct_m
     subroutine getopt_oscillator_strength(mode, omega, searchinterval, &
                                           order, nresonances, nfrequencies, time, &
                                           l, m, damping, file)
+      use iso_c_binding
       implicit none
-      integer, intent(inout) :: mode
-      real(8), intent(inout) :: omega
-      real(8), intent(inout) :: searchinterval
-      integer, intent(inout) :: order, nresonances, nfrequencies
-      real(8), intent(inout) :: time
-      integer, intent(inout) :: l, m
-      real(8), intent(inout) :: damping
+      integer,          intent(inout) :: mode
+      real(c_double),   intent(inout) :: omega
+      real(c_double),   intent(inout) :: searchinterval
+      integer,          intent(inout) :: order, nresonances, nfrequencies
+      real(c_double),   intent(inout) :: time
+      integer,          intent(inout) :: l, m
+      real(c_double),   intent(inout) :: damping
       character(len=*), intent(inout) :: file
     end subroutine getopt_oscillator_strength
 
     subroutine getopt_harmonic_spectrum(w0, m, ar, x, y, z, pol)
+      use iso_c_binding
       implicit none
-      real(8)         , intent(inout) :: w0
-      integer         , intent(inout) :: m
-      integer         , intent(inout) :: ar
-      character(len=*), intent(inout) :: pol
-      real(8)         , intent(inout) :: x
-      real(8)         , intent(inout) :: y
-      real(8)         , intent(inout) :: z
+      real(c_double)           , intent(inout) :: w0
+      integer                  , intent(inout) :: m
+      integer                  , intent(inout) :: ar
+      character(len=*)         , intent(inout) :: pol
+      real(c_double)           , intent(inout) :: x
+      real(c_double)           , intent(inout) :: y
+      real(c_double)           , intent(inout) :: z
     end subroutine getopt_harmonic_spectrum
 
     subroutine getopt_help(mode, name)
@@ -162,16 +164,17 @@ module command_line_oct_m
     
     subroutine getopt_photoelectron_spectrum(estep, espan, &
       thstep, thspan, phstep, phspan, pol, center, pvec, integrate)
+      use iso_c_binding
       implicit none
-      real(8), intent(inout) :: estep
-      real(8), intent(inout) :: espan(2)
-      real(8), intent(inout) :: thstep
-      real(8), intent(inout) :: thspan(2)
-      real(8), intent(inout) :: phstep
-      real(8), intent(inout) :: phspan(2)
-      real(8), intent(inout) :: pol(3)
-      real(8), intent(inout) :: center(3)
-      real(8), intent(inout) :: pvec(3)
+      real(c_double), intent(inout) :: estep
+      real(c_double), intent(inout) :: espan(2)
+      real(c_double), intent(inout) :: thstep
+      real(c_double), intent(inout) :: thspan(2)
+      real(c_double), intent(inout) :: phstep
+      real(c_double), intent(inout) :: phspan(2)
+      real(c_double), intent(inout) :: pol(3)
+      real(c_double), intent(inout) :: center(3)
+      real(c_double), intent(inout) :: pvec(3)
       integer, intent(inout) :: integrate
     end subroutine getopt_photoelectron_spectrum
 

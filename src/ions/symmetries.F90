@@ -61,14 +61,14 @@ module symmetries_oct_m
     character(len=6)         :: schoenflies
   end type symmetries_t
 
-  real(8), parameter, public :: SYMPREC = CNST(1e-5)
+  FLOAT, parameter, public :: SYMPREC = CNST(1e-5)
 
   !> NOTE: unfortunately, these routines use global variables shared among them
   interface
     subroutine symmetries_finite_init(natoms, types, positions, verbosity, point_group)
       integer, intent(in)  :: natoms
       integer, intent(in)  :: types !< (natoms)
-      real(8), intent(in)  :: positions !< (3, natoms)
+      FLOAT,   intent(in)  :: positions !< (3, natoms)
       integer, intent(in)  :: verbosity
       integer, intent(out) :: point_group
     end subroutine symmetries_finite_init
@@ -100,8 +100,8 @@ contains
 
     integer :: max_size, dim4syms
     integer :: idir, iatom, iop, verbosity, point_group
-    real(8) :: lattice(1:3, 1:3)
-    real(8), allocatable :: position(:, :)
+    FLOAT   :: lattice(1:3, 1:3)
+    FLOAT, allocatable :: position(:, :)
     integer, allocatable :: typs(:)
     type(block_t) :: blk
     type(symm_op_t) :: tmpop
@@ -109,7 +109,7 @@ contains
     logical :: found_identity, is_supercell
     integer                  :: fullnops
     integer, allocatable     :: rotation(:, :, :)
-    real(8), allocatable     :: translation(:, :)
+    FLOAT,   allocatable     :: translation(:, :)
     character(kind=c_char) :: c_symbol(11), c_schoenflies(7) 
     logical :: def_sym_comp
     
@@ -129,7 +129,7 @@ contains
 
     dim4syms = min(3,dim)
 
-    def_sym_comp = (geo%natoms < 100)
+    def_sym_comp = (geo%natoms < 100) .or. periodic_dim > 0
     def_sym_comp = def_sym_comp .and. dim == 3
     
     !%Variable SymmetriesCompute
@@ -141,6 +141,7 @@ contains
     !%
     !% By default, symmetries are computed when running in 3
     !% dimensions for systems with less than 100 atoms.
+    !% For periodic systems, the default is always true, irrespective of the number of atoms.
     !%End
     call parse_variable(namespace, 'SymmetriesCompute', def_sym_comp, this%symmetries_compute)
 
@@ -268,7 +269,7 @@ contains
       do iop = 1, fullnops
         if(all(rotation(1:3, 1:3, iop) == identity(1:3, 1:3))) then
           found_identity = .true.
-          if(any(abs(translation(1:3, iop)) > real(SYMPREC, REAL_PRECISION))) then
+          if(any(abs(translation(1:3, iop)) > TOFLOAT(SYMPREC))) then
             is_supercell = .true.
             write(message(1),'(a,3f12.6)') 'Identity has a fractional translation ', translation(1:3, iop)
             call messages_info(1)
@@ -320,10 +321,10 @@ contains
       do iop = 1, fullnops
         call symm_op_init(tmpop, rotation(1:3, 1:3, iop), rlattice(1:dim4syms,1:dim4syms), &
                               klattice(1:dim4syms,1:dim4syms), dim4syms, &
-                              real(translation(1:3, iop), REAL_PRECISION))
+                              TOFLOAT(translation(1:3, iop)))
 
-        if(symm_op_invariant_cart(tmpop, this%breakdir, real(SYMPREC, REAL_PRECISION)) &
-         .and. .not. symm_op_has_translation(tmpop, real(SYMPREC, REAL_PRECISION))) then
+        if(symm_op_invariant_cart(tmpop, this%breakdir, TOFLOAT(SYMPREC)) &
+         .and. .not. symm_op_has_translation(tmpop, TOFLOAT(SYMPREC))) then
           this%nops = this%nops + 1
           call symm_op_copy(tmpop, this%ops(this%nops))
         end if

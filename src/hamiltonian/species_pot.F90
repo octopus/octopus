@@ -97,7 +97,7 @@ contains
     case (SPECIES_FROM_FILE, SPECIES_USDEF, SPECIES_SOFT_COULOMB, SPECIES_FULL_DELTA, SPECIES_FULL_GAUSSIAN) ! ... from userdef
       do isp = 1, spin_channels
         rho(1:mesh%np, isp) = M_ONE
-        x = (species_zval(species)/real(spin_channels, REAL_PRECISION)) / dmf_integrate(mesh, rho(:, isp))
+        x = (species_zval(species)/TOFLOAT(spin_channels)) / dmf_integrate(mesh, rho(:, isp))
         rho(1:mesh%np, isp) = x * rho(1:mesh%np, isp)
       end do
 
@@ -172,7 +172,7 @@ contains
             call mesh_r(mesh, ip, rr, origin = atom%x)
             if(rr <= species_jradius(species)) then
               rho(ip, 1:spin_channels) = species_zval(species) /   &
-                (mesh%vol_pp(ip)*real(in_points*spin_channels, REAL_PRECISION))
+                (mesh%vol_pp(ip)*TOFLOAT(in_points*spin_channels))
             end if
           end do
         else
@@ -180,7 +180,7 @@ contains
             call mesh_r(mesh, ip, rr, origin = atom%x)
             if(rr <= species_jradius(species)) then
               rho(ip, 1:spin_channels) = species_zval(species) /   &
-                (mesh%vol_pp(1)*real(in_points*spin_channels, REAL_PRECISION))
+                (mesh%vol_pp(1)*TOFLOAT(in_points*spin_channels))
             end if
           end do
         end if
@@ -210,7 +210,7 @@ contains
             rr = abs( mesh%x( ip, 3 ) )
             if( rr <= species_jthick(species)/M_TWO ) then
               rho(ip, 1:spin_channels) = species_zval(species) /   &
-                (mesh%vol_pp(ip)*real(in_points*spin_channels, REAL_PRECISION))
+                (mesh%vol_pp(ip)*TOFLOAT(in_points*spin_channels))
             end if
           end do
         else
@@ -218,7 +218,7 @@ contains
             rr = abs( mesh%x( ip, 3 ) )
             if( rr <= species_jthick(species)/M_TWO ) then
               rho(ip, 1:spin_channels) = species_zval(species) /   &
-                (mesh%vol_pp(1)*real(in_points*spin_channels, REAL_PRECISION))
+                (mesh%vol_pp(1)*TOFLOAT(in_points*spin_channels))
             end if
           end do
         end if
@@ -567,7 +567,7 @@ contains
     type(volume_t) :: volume
     logical :: have_point
 #ifdef HAVE_MPI
-    real(8) :: local_min(2), global_min(2)
+    FLOAT   :: local_min(2), global_min(2)
 #endif
     type(submesh_t)       :: sphere
     type(profile_t), save :: prof
@@ -626,7 +626,7 @@ contains
       ! in parallel we have to find the minimum of the whole grid
       if(mesh%parallel_in_domains) then
 
-        local_min = (/ dist2_min, dble(mesh%mpi_grp%rank)/)
+        local_min = (/ dist2_min, TOFLOAT(mesh%mpi_grp%rank)/)
         call MPI_Allreduce(local_min, global_min, 1, MPI_2DOUBLE_PRECISION, MPI_MINLOC, mesh%mpi_grp%comm, mpi_err)
 
         if(mesh%mpi_grp%rank /= nint(global_min(2))) have_point = .false.
@@ -912,10 +912,11 @@ contains
     FLOAT,                   intent(out) :: vl(:)
 
     FLOAT :: a1, a2, Rb2 ! for jellium
-    FLOAT :: xx(MAX_DIM), r, r2
-    integer :: ip, err, idim
+    FLOAT :: xx(MAX_DIM), x_atom_per(MAX_DIM), r, r2, threshold
+    integer :: ip, err, idim, icell
     type(ps_t), pointer :: ps
     CMPLX :: zpot
+    type(periodic_copy_t) :: pp
 
     type(profile_t), save :: prof
 
@@ -927,31 +928,45 @@ contains
 
       case(SPECIES_SOFT_COULOMB)
 
-        do ip = 1, mesh%np
-          xx(1:mesh%sb%dim) = mesh%x(ip,1:mesh%sb%dim) - x_atom(1:mesh%sb%dim)
-          r2 = sum(xx(1:mesh%sb%dim)**2)
-          vl(ip) = -species_zval(species)/sqrt(r2+species_sc_alpha(species))
+        call parse_variable(namespace, 'SpeciesProjectorSphereThreshold', CNST(0.001), threshold)
+
+        !Assuming that we want to take the contribution from all replica that contributes up to 0.001
+        ! to the center of the cell, we arrive to a range of 1000 a.u.. 
+        call periodic_copy_init(pp, mesh%sb, x_atom, range = species_zval(species) / threshold)
+        vl = M_ZERO
+        do icell = 1, periodic_copy_num(pp)
+          x_atom_per(1:mesh%sb%dim) = periodic_copy_position(pp, mesh%sb, icell)
+          do ip = 1, mesh%np
+            call mesh_r(mesh, ip, r, origin = x_atom_per, coords = xx)
+            r2 = r*r
+            vl(ip) = vl(ip) -species_zval(species)/sqrt(r2+species_sc_alpha(species))
+          end do
         end do
+        call periodic_copy_end(pp)
 
       case(SPECIES_USDEF)
+        !TODO: we should control the value of 10 by a variable. 
+        call periodic_copy_init(pp, mesh%sb, x_atom, range = CNST(10.0) * maxval(mesh%sb%lsize(1:mesh%sb%dim)))
+        vl = M_ZERO
+        do icell = 1, periodic_copy_num(pp)
+          x_atom_per(1:mesh%sb%dim) = periodic_copy_position(pp, mesh%sb, icell)
+          do ip = 1, mesh%np
+            call mesh_r(mesh, ip, r, origin = x_atom_per, coords = xx)
 
-        do ip = 1, mesh%np
-          
-          xx = M_ZERO
-          xx(1:mesh%sb%dim) = mesh%x(ip,1:mesh%sb%dim) - x_atom(1:mesh%sb%dim)
-          r = sqrt(sum(xx(1:mesh%sb%dim)**2))
-          
-          ! Note that as the spec%user_def is in input units, we have to convert
-          ! the units back and forth
-          forall(idim = 1:mesh%sb%dim) xx(idim) = units_from_atomic(units_inp%length, xx(idim))
-          r = units_from_atomic(units_inp%length, r)
-          zpot = species_userdef_pot(species, mesh%sb%dim, xx, r)
-          vl(ip)   = units_to_atomic(units_inp%energy, real(zpot))
-
+            ! Note that as the spec%user_def is in input units, we have to convert
+            ! the units back and forth
+            forall(idim = 1:mesh%sb%dim) xx(idim) = units_from_atomic(units_inp%length, xx(idim))
+            r = units_from_atomic(units_inp%length, r)
+            zpot = species_userdef_pot(species, mesh%sb%dim, xx, r)
+            vl(ip) = vl(ip) + units_to_atomic(units_inp%energy, TOFLOAT(zpot))
+          end do
         end do
 
+        call periodic_copy_end(pp)
 
       case(SPECIES_FROM_FILE)
+
+        ASSERT(mesh%sb%periodic_dim == 0)
 
         call dio_function_input(trim(species_filename(species)), namespace, mesh, vl, err)
         if(err /= 0) then
@@ -961,6 +976,9 @@ contains
         end if
 
       case(SPECIES_JELLIUM)
+
+        ASSERT(mesh%sb%periodic_dim == 0)
+
         a1 = species_z(species)/(M_TWO*species_jradius(species)**3)
         a2 = species_z(species)/species_jradius(species)
         Rb2= species_jradius(species)**2
@@ -995,6 +1013,8 @@ contains
 
       case(SPECIES_PSEUDO, SPECIES_PSPIO)
        
+        ASSERT(mesh%sb%periodic_dim == 0)
+
         ps => species_ps(species)
 
         do ip = 1, mesh%np

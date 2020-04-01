@@ -7,6 +7,7 @@ fromScratch = yes
 
 CalculationMode = opt_control
 ExperimentalFeatures = yes
+StatesPack = yes
 
 
 # ------------------
@@ -91,6 +92,5 @@ electric_field | 1 | 0 | 0 | freq | "envelope_function"
 #---------------------------- 
 Output=  wfs + density
 OutputFormat= axis_x
-
 
 

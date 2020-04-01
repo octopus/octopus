@@ -102,7 +102,7 @@ contains
   !! This is a high-level interface that reads the input file and
   !! calls the proper function.
   subroutine convert()
-    type(system_t) :: sys
+    type(system_t), pointer :: sys
 
     character(MAX_PATH_LEN)  :: basename, folder, ref_name, ref_folder, folder_default
     integer                  :: c_start, c_end, c_step, c_start_default, length, c_how
@@ -112,7 +112,7 @@ contains
     PUSH_SUB(convert)
 
     call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
-    call system_init(sys, default_namespace)
+    sys => system_init(default_namespace)
 
     message(1) = 'Info: Converting files'
     message(2) = ''
@@ -263,7 +263,7 @@ contains
          subtract_file, ref_name, ref_folder)
     end select
 
-    call system_end(sys)
+    SAFE_DEALLOCATE_P(sys)
 
     POP_SUB(convert)
   end subroutine convert
@@ -768,7 +768,7 @@ contains
     type(block_t)       :: blk
     type(restart_t)     :: restart 
     type(unit_t)        :: units
-    real(8)             :: f_re, f_im
+    FLOAT               :: f_re, f_im
     FLOAT, allocatable  :: tmp_ff(:), scalar_ff(:)
 
     character(len=200) :: var, scalar_expression
@@ -852,7 +852,7 @@ contains
       call parse_block_string(blk, i_op-1, 3, scalar_expression)
 
       do ip = 1, mesh%np
-        call parse_expression(f_re, f_im, trim(var), real(tmp_ff(ip), 8), trim(scalar_expression))
+        call parse_expression(f_re, f_im, trim(var), TOFLOAT(tmp_ff(ip)), trim(scalar_expression))
         !TODO: implement use of complex functions. 
         scalar_ff(ip) = scalar_ff(ip) + f_re
       end do

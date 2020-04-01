@@ -155,7 +155,7 @@ contains
         '   Ionic charge: ', species_zval(geo%atom(iatom)%species)
 
       if(.not. write_real) write(iunit,'(a)') 'Real:'
-      call output_tensor(iunit, real(this%charge(:, :, iatom)), dim, unit_one)
+      call output_tensor(iunit, TOFLOAT(this%charge(:, :, iatom)), dim, unit_one)
 
       if(.not. write_real) then
         write(iunit,'(a)') 'Imaginary:'
@@ -175,7 +175,7 @@ contains
         call output_tensor(iunit, TOFLOAT(abs(this%charge(:, :, iatom))), dim, unit_one)
 
         write(iunit,'(a)') 'Phase:'
-        phase(1:dim, 1:dim) = atan2(aimag(this%charge(1:dim, 1:dim, iatom)), real(this%charge(1:dim, 1:dim, iatom)))
+        phase(1:dim, 1:dim) = atan2(aimag(this%charge(1:dim, 1:dim, iatom)), TOFLOAT(this%charge(1:dim, 1:dim, iatom)))
         call output_tensor(iunit, phase(:, :), dim, unit_one, write_average = .false.)
         write(iunit,'(a)')
       end do
@@ -183,7 +183,7 @@ contains
 
     write(iunit,'(a)') '# Discrepancy of Born effective charges from acoustic sum rule before correction, per atom'
     if(.not. write_real) write(iunit,'(a)') 'Real:'
-    call output_tensor(iunit, real(this%delta(:, :)), dim, unit_one)
+    call output_tensor(iunit, TOFLOAT(this%delta(:, :)), dim, unit_one)
     if(.not. write_real) then
       write(iunit,'(a)') 'Imaginary:'
       call output_tensor(iunit, aimag(this%delta(:, :)), dim, unit_one)

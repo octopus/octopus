@@ -24,13 +24,14 @@ subroutine poisson_kernel_init(this, namespace, all_nodes_comm)
 
   integer :: maxl, iter, dim_electronic
   logical :: valid_solver
-
+  FLOAT :: qq(1:MAX_DIM)
+  
   PUSH_SUB(poisson_kernel_init)
 
   select case(this%method)
   case(POISSON_DIRECT_SUM, POISSON_FMM, POISSON_FFT, POISSON_CG, POISSON_CG_CORRECTED)
     valid_solver = .true.
-  case(POISSON_MULTIGRID, POISSON_ISF, POISSON_LIBISF, POISSON_POKE)
+  case(POISSON_MULTIGRID, POISSON_ISF, POISSON_PSOLVER, POISSON_POKE)
     valid_solver = .true.
   case(POISSON_NO)
     write(message(1),'(a)')'Info: you have elected to not use a Poisson solver.'
@@ -160,13 +161,18 @@ subroutine poisson_kernel_init(this, namespace, all_nodes_comm)
   case(POISSON_ISF)
     call poisson_isf_init(this%isf_solver, namespace, this%der%mesh, this%cube, all_nodes_comm, init_world = this%all_nodes_default)
     
-  case(POISSON_LIBISF)
+  case(POISSON_PSOLVER)
     !! We`ll use the MPI_WORLD_COMM, to use all the available processes for the
     !! Poisson solver
-    this%cube%mpi_grp = mpi_world
-    call poisson_libisf_init(this%libisf_solver, namespace, this%der%mesh, this%cube)
-    call poisson_libisf_get_dims(this%libisf_solver, this%cube)
-    this%cube%parallel_in_domains = this%libisf_solver%datacode == "D" .and. mpi_world%size > 1
+    if(this%all_nodes_default) then
+      this%cube%mpi_grp = mpi_world
+    else
+      this%cube%mpi_grp = this%der%mesh%mpi_grp
+    end if
+    qq(1:MAX_DIM) = M_ZERO
+    call poisson_psolver_init(this%psolver_solver, namespace, this%der%mesh, this%cube, M_ZERO, qq)
+    call poisson_psolver_get_dims(this%psolver_solver, this%cube)
+    this%cube%parallel_in_domains = this%psolver_solver%datacode == "D" .and. mpi_world%size > 1
     if (this%cube%parallel_in_domains) then
       call mesh_cube_parallel_map_init(this%mesh_cube_map, this%der%mesh, this%cube)
     end if
@@ -174,7 +180,7 @@ subroutine poisson_kernel_init(this, namespace, all_nodes_comm)
   case(POISSON_FFT)
 
     call poisson_fft_init(this%fft_solver, namespace, this%der%mesh, this%cube, this%kernel, &
-      soft_coulb_param = this%poisson_soft_coulomb_param, qq = this%qq)
+      soft_coulb_param = this%poisson_soft_coulomb_param)
     ! soft parameter has no effect unless in 1D
 
     if (this%kernel == POISSON_FFT_KERNEL_CORRECTED) then
@@ -190,30 +196,6 @@ subroutine poisson_kernel_init(this, namespace, all_nodes_comm)
 
   POP_SUB(poisson_kernel_init)
 end subroutine poisson_kernel_init
-
-
-!-----------------------------------------------------------------
-subroutine poisson_kernel_reinit(this, namespace, qq)
-  type(poisson_t),   intent(inout) :: this
-  type(namespace_t), intent(in)    :: namespace
-  FLOAT,             intent(in)    :: qq(:)
-
-  PUSH_SUB(poisson_kernel_reinit)
-
-  select case(this%method)
-  case(POISSON_FFT)
-    if(any(abs(this%qq(1:this%der%mesh%sb%periodic_dim) - qq(1:this%der%mesh%sb%periodic_dim)) > M_EPSILON)) then
-      this%qq(1:this%der%mesh%sb%periodic_dim) = qq(1:this%der%mesh%sb%periodic_dim)
-      call poisson_fft_end(this%fft_solver)
-      call poisson_fft_init(this%fft_solver, namespace, this%der%mesh, this%cube, this%kernel, &
-        soft_coulb_param = this%poisson_soft_coulomb_param, qq = this%qq)
-    end if
-  case default
-    call messages_not_implemented("poisson_kernel_reinit with other methods than FFT")
-  end select
-
-  POP_SUB(poisson_kernel_reinit)
-end subroutine poisson_kernel_reinit
 
 !! Local Variables:
 !! mode: f90

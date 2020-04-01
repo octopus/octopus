@@ -237,8 +237,8 @@ contains
     integer :: ii, no_lines_
     logical :: only_root_writes_, should_write
     integer, allocatable :: recv_buf(:), recv_req(:)
-    integer, parameter :: FATAL_TAG = 1620299
 #ifdef HAVE_MPI
+    integer, parameter :: FATAL_TAG = 1620299
     logical :: received
     integer :: send_req
 #endif
@@ -624,8 +624,6 @@ contains
     character(len=*),           intent(in) :: var
     character(len=*), optional, intent(in) :: details
 
-    type(block_t) :: blk
-    
     call messages_write('Input error in the input variable '// trim(var))
     
     if(present(details)) then
@@ -1254,7 +1252,10 @@ contains
       write(number, '(f12.6)') tval
     end if
 
-    if(optional_default(align_left, .false.)) number = ' '//adjustl(number)
+    if(optional_default(align_left, .false.)) then
+      number = adjustl(number)
+      number(1:len(number)) = ' '//number(1:len(number)-1)
+    end if
 
     write(message(current_line), '(a, a)') trim(message(current_line)), trim(number)
 

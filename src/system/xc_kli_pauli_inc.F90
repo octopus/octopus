@@ -72,9 +72,9 @@ subroutine xc_kli_pauli_solve(mesh, namespace, st, oep)
 
   SAFE_ALLOCATE(t_v(1:mesh%np, 1:4))
   t_v = M_ZERO
-  t_v(1:mesh%np,1) = real(weighted_hf(1:mesh%np,2,2), REAL_PRECISION)
-  t_v(1:mesh%np,2) = real(weighted_hf(1:mesh%np,1,1), REAL_PRECISION)
-  t_v(1:mesh%np,3) = -real(weighted_hf(1:mesh%np,1,2) + weighted_hf(1:mesh%np,2,1), REAL_PRECISION)
+  t_v(1:mesh%np,1) = TOFLOAT(weighted_hf(1:mesh%np,2,2))
+  t_v(1:mesh%np,2) = TOFLOAT(weighted_hf(1:mesh%np,1,1))
+  t_v(1:mesh%np,3) = -TOFLOAT(weighted_hf(1:mesh%np,1,2) + weighted_hf(1:mesh%np,2,1))
   t_v(1:mesh%np,4) = -aimag(weighted_hf(1:mesh%np,1,2) - weighted_hf(1:mesh%np,2,1))
   SAFE_DEALLOCATE_A(weighted_hf)
 
@@ -147,9 +147,9 @@ subroutine xc_kli_pauli_solve(mesh, namespace, st, oep)
       ! arrange them in a 4-vector
       SAFE_ALLOCATE(p_i(1:mesh%np, 1:4, 1:eigen_n))
       p_i = M_ZERO
-      p_i(1:mesh%np,1,:) = real(rho_i(1:mesh%np,1,1,:)) 
-      p_i(1:mesh%np,2,:) = real(rho_i(1:mesh%np,2,2,:))  
-      p_i(1:mesh%np,3,:) = M_TWO*real(rho_i(1:mesh%np,1,2,:),REAL_PRECISION)  
+      p_i(1:mesh%np,1,:) = TOFLOAT(rho_i(1:mesh%np,1,1,:)) 
+      p_i(1:mesh%np,2,:) = TOFLOAT(rho_i(1:mesh%np,2,2,:))  
+      p_i(1:mesh%np,3,:) = M_TWO*TOFLOAT(rho_i(1:mesh%np,1,2,:))  
       p_i(1:mesh%np,4,:) = M_TWO*aimag(rho_i(1:mesh%np,1,2,:))  
       
       SAFE_DEALLOCATE_A(rho_i)
@@ -174,7 +174,7 @@ subroutine xc_kli_pauli_solve(mesh, namespace, st, oep)
 
         do ist=1,eigen_n
           kssi = oep%eigen_index(ist)
-          delta_v(ist) = delta_v(ist) - real(sum(oep%uxc_bar(kssi,:)))
+          delta_v(ist) = delta_v(ist) - TOFLOAT(sum(oep%uxc_bar(kssi,:)))
         end do
 
         !

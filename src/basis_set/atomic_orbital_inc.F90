@@ -213,7 +213,7 @@ end subroutine X(get_atomic_orbital)
         do ip = 1, submesh%np
           ww = species_zval(species)*submesh%x(ip, 0)/ii
           phi(ip) = sqrt( (2*species_zval(species)/ii)**3 * factorial(ii - ll - 1) / (2*ii*factorial(ii+ll)) ) * &
-            exp(-ww) * (2 * ww)**ll * loct_sf_laguerre_n(ii-ll-1, real(2*ll + 1, REAL_PRECISION), 2*ww)
+            exp(-ww) * (2 * ww)**ll * loct_sf_laguerre_n(ii-ll-1, TOFLOAT(2*ll + 1), 2*ww)
         end do
       end if
 

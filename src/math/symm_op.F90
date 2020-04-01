@@ -246,7 +246,7 @@ contains
     integer,          intent(in)  :: aa(:) !< (3)
     integer                       :: bb(1:this%dim)
 
-    bb(1:this%dim) = nint(dsymm_op_apply_red(this, real(aa, REAL_PRECISION)))
+    bb(1:this%dim) = nint(dsymm_op_apply_red(this, TOFLOAT(aa)))
     
   end function isymm_op_apply_red
 
@@ -257,7 +257,7 @@ contains
     integer,          intent(in)  :: aa(:) !< (3)
     integer                       :: bb(1:this%dim)
 
-    bb(1:this%dim) = nint(dsymm_op_apply_inv_red(this, real(aa, REAL_PRECISION)))
+    bb(1:this%dim) = nint(dsymm_op_apply_inv_red(this, TOFLOAT(aa)))
     
   end function isymm_op_apply_inv_red
 

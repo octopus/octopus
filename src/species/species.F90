@@ -171,7 +171,7 @@ module species_oct_m
   logical :: initialized = .false.
   integer :: default_pseudopotential_set_id
   type(pseudo_set_t) :: default_pseudopotential_set
-  real(8) :: energy_tolerance
+  FLOAT   :: energy_tolerance
   logical :: automatic
   
 contains
@@ -330,8 +330,6 @@ contains
     select case (default_pseudopotential_set_id)
     case (OPTION__PSEUDOPOTENTIALSET__NONE)
       call messages_experimental('PseudopotentialSet = none')
-    case (OPTION__PSEUDOPOTENTIALSET__SG15)
-      call messages_experimental('PseudopotentialSet = sg15')
     case (OPTION__PSEUDOPOTENTIALSET__HSCV_LDA)
       call messages_experimental('PseudopotentialSet = hscv_lda')
     case (OPTION__PSEUDOPOTENTIALSET__HSCV_PBE)

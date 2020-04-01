@@ -1,62 +1,65 @@
-## Copyright (C) YAML developers
+## Copyright (C) 2020 M. Oliveira
+##
+## This program is free software; you can redistribute it and/or modify
+## it under the terms of the GNU General Public License as published by
+## the Free Software Foundation; either version 2, or (at your option)
+## any later version.
+##
+## This program is distributed in the hope that it will be useful,
+## but WITHOUT ANY WARRANTY; without even the implied warranty of
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+## GNU General Public License for more details.
+##
+## You should have received a copy of the GNU General Public License
+## along with this program; if not, write to the Free Software
+## Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+## 02110-1301, USA.
 ##
 ##
 
 AC_DEFUN([ACX_YAML], [
-  dnl Yaml input file support
-  AC_ARG_WITH([yaml-path],
-              AS_HELP_STRING([--with-yaml-prefix=DIR], [Directory where libYAML was installed.]),
-              [ac_path_yaml=$withval])
-  AC_ARG_ENABLE(internal-libyaml, AS_HELP_STRING([--disable-internal-libyaml], [Do not build and link with internal libyaml library (default = auto).]), ac_build_libyaml=$enableval, ac_build_libyaml="auto")
-  
-  ac_use_libyaml="no"
-  if test x"$ac_path_yaml" == x"" ; then
-     ac_path_yaml="/usr"
-  fi
-  dnl auto-detect if build = no or build = auto
-  if test x"$ac_build_libyaml" != x"yes" ; then
-     LDFLAGS_SVG="$LDFLAGS"
-     AC_LANG_PUSH(C)
-     LDFLAGS="$LDFLAGS -L$ac_path_yaml/lib"
-     AC_CHECK_LIB([yaml], [yaml_parser_parse],
-                  [ac_use_libyaml=yes], [ac_use_libyaml=no])
-     if test x"$ac_use_libyaml" = x"yes"; then
-        if test x"$ac_path_yaml" != x"/usr" ; then
-           LIB_YAML_CFLAGS="-I$ac_path_yaml/include"
-           LIB_YAML_LIBS="-L$ac_path_yaml/lib "
-        fi
-        LIB_YAML_LIBS=$LIB_YAML_LIBS"-lyaml"
-     else
-        AC_MSG_WARN([libyaml is not available, building internal one.])
-     fi
-     AC_LANG_POP(C)
-     LDFLAGS="$LDFLAGS_SVG"
-  fi
-  dnl internal if yes or auto and not detected.
-  if test x"$ac_use_libyaml" != x"yes" ; then
-     ac_use_libyaml="yes"
-     ac_build_libyaml="yes"
-     LIB_YAML_CFLAGS="-I\$(top_srcdir)"/external_libs/yaml-0.1.4/include
-     LIB_YAML_LIBS="\$(top_builddir)/external_libs/yaml-0.1.4/src/.libs/libyaml.a"
-     dnl tar -xzf ${srcdir}/external_libs/PyYAML-3.10.tar.gz
-  fi
-  AC_DEFINE([HAVE_YAML], [], [If set, we can call yaml.h])
-  AC_SUBST(LIB_YAML_CFLAGS)
-  AC_SUBST(LIB_YAML_LIBS)
-  # Define the package version numbers and the bug reporting link of yaml.
-  m4_define([YAML_MAJOR], 0)
-  m4_define([YAML_MINOR], 1)
-  m4_define([YAML_PATCH], 4)
-  m4_define([YAML_BUGS], [http://pyyaml.org/newticket?component=libyaml])
-  
-  m4_define([YAML_RELEASE], 0)
-  m4_define([YAML_CURRENT], 2)
-  m4_define([YAML_REVISION], 2)
-  m4_define([YAML_AGE], 0)
-  
-  # Define macro variables for the package version numbers of yaml.
-  AC_DEFINE(YAML_VERSION_MAJOR, YAML_MAJOR, [Define the major version number.])
-  AC_DEFINE(YAML_VERSION_MINOR, YAML_MINOR, [Define the minor version number.])
-  AC_DEFINE(YAML_VERSION_PATCH, YAML_PATCH, [Define the patch version number.])
-  AC_DEFINE(YAML_VERSION_STRING, "YAML_MAJOR.YAML_MINOR.YAML_PATCH", [Define the version string.])
-])dnl ACX_YAML
+acx_libyaml_ok=no
+
+dnl Check if the library was given in the command line
+dnl if not, use environment variables or defaults
+AC_ARG_WITH(yaml-prefix, [AS_HELP_STRING([--with-yaml-prefix=DIR], [Directory where LibYAML was installed.])])
+
+# Set CFLAGS_LIBYAML only if not set from environment
+if test x"$CFLAGS_LIBYAML" = x; then
+  case $with_yaml_prefix in
+    "") CFLAGS_LIBYAML="-I/usr/include" ;;
+    *)  CFLAGS_LIBYAML="-I$with_yaml_prefix/include" ;;
+  esac
+fi
+
+dnl Backup LIBS and CFLAGS
+acx_libyaml_save_LIBS="$LIBS"
+acx_libyaml_save_CFLAGS="$CFLAGS"
+
+if test -z "$LIBS_LIBYAML"; then
+  case $with_yaml_prefix in
+    "") LIBS_LIBYAML="" ;;
+    *)  LIBS_LIBYAML="-L$with_yaml_prefix/lib" ;;
+  esac
+fi
+
+LIBS="$LIBS_LIBYAML $acx_libyaml_save_LIBS"
+AC_CHECK_LIB([yaml], [yaml_parser_parse], [acx_libyaml_ok=yes], [acx_libyaml_ok=no])
+
+dnl Finally, execute ACTION-IF-FOUND/ACTION-IF-NOT-FOUND:
+if test x"$acx_libyaml_ok" = xyes; then
+  LIBS_LIBYAML="$LIBS_YAML -lyaml"
+  AC_DEFINE([HAVE_YAML], 1, [Defined if you have the LibYAML library.])
+
+else
+  AC_MSG_WARN([Could not find LibYAML library.])
+  LIBS_LIBYAML=""
+  CFLAGS_LIBYAML=""
+fi
+
+AC_SUBST(LIBS_LIBYAML)
+AC_SUBST(CFLAGS_LIBYAML)
+LIBS="$acx_libyaml_save_LIBS"
+CFLAGS="$acx_libyaml_save_CFLAGS"
+
+])dnl ACX_LIBYAML

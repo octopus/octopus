@@ -337,9 +337,20 @@ ACX_ELPA
 dnl check for Libfm
 ACX_LIBFM
 
-dnl check for ISF included from version 1.7.6 of BigDFT
-ACX_ISF
-AM_CONDITIONAL(COMPILE_ISF, test x${HAVE_COMP_ISF} = x1)
+dnl Check for PSOlver library.
+dnl PSolver depends on LibYAML and on Futile, so we first check for those one.
+AC_LANG_PUSH(C)
+ACX_YAML
+AC_LANG_POP(C)
+ACX_FUTILE
+ACX_PSOLVER
+
+dnl If PSolver was not found, we check for older versions of the library (1.7.x),
+dnl which we named ISF
+if test "x$acx_psolver_ok" = "xno"; then
+  ACX_ISF
+fi
+AM_CONDITIONAL(COMPILE_LIBYAML, test "x${HAVE_ISF}" == "x1")
 
 dnl check for PSPIO
 ACX_PSPIO
@@ -354,8 +365,6 @@ ACX_PATH_METIS
 ACX_PATH_PARMETIS
 AC_LANG_POP(C)
 AM_CONDITIONAL(COMPILE_METIS, test x${HAVE_COMP_METIS} = x1)
-
-ACX_YAML
 
 dnl performance analysis using the likwid marker API
 ACX_LIKWID
@@ -425,6 +434,8 @@ AC_CONFIG_FILES([Makefile
   build/Makefile
   build/octopus.spec
   testsuite/Makefile
+  testsuite/performance/Makefile
+  testsuite/performance/tests/Makefile
   testsuite/components/Makefile 
   testsuite/finite_systems_1d/Makefile 
   testsuite/finite_systems_2d/Makefile
@@ -441,6 +452,7 @@ AC_CONFIG_FILES([Makefile
   testsuite/tutorials/Makefile
   testsuite/symmetries/Makefile])
 AC_CONFIG_FILES([testsuite/oct-run_testsuite.sh], [chmod +x testsuite/oct-run_testsuite.sh])
+AC_CONFIG_FILES([testsuite/performance/oct-run_performance_testsuite.sh], [chmod +x testsuite/performance/oct-run_performance_testsuite.sh])
 AC_CONFIG_FILES([doc/html/varsRightFrame.html])
 
 AC_CONFIG_SUBDIRS([external_libs/spglib-1.9.9])

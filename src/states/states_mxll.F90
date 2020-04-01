@@ -229,8 +229,7 @@ contains
     type(geometry_t),            intent(in)    :: geo
     type(block_t)        :: blk
     integer :: idim, nlines, ncols, il
-    FLOAT   :: zero_dummy(MAX_DIM), pos(MAX_DIM)
-    character(len=1024)  :: string(MAX_DIM)
+    FLOAT   :: pos(MAX_DIM)
 
     PUSH_SUB(states_mxll_init)
 
@@ -327,29 +326,23 @@ contains
 
     PUSH_SUB(states_mxll_allocate)
 
-    call batch_init(st%rsb, st%d%dim, 1)
-    call st%rsb%zallocate(1, 1, mesh%np_part, mirror = st%d%mirror_states)
+    call zbatch_init(st%rsb, st%d%dim, 1, 1, mesh%np_part)
     call batch_set_zero(st%rsb)
 
-    call batch_init(st%rs_transb, st%d%dim, 1)
-    call st%rs_transb%zallocate(1, 1, mesh%np_part, mirror = st%d%mirror_states)
+    call zbatch_init(st%rs_transb, st%d%dim, 1, 1, mesh%np_part)
     call batch_set_zero(st%rs_transb)
  
-    call batch_init(st%rs_longb, st%d%dim, 1)
-    call st%rs_longb%zallocate(1, 1, mesh%np_part, mirror = st%d%mirror_states)
+    call zbatch_init(st%rs_longb, st%d%dim, 1, 1, mesh%np_part)
     call batch_set_zero(st%rs_longb)
 
-    call batch_init(st%rs_curr_dens_rest1b, st%d%dim, 1)
-    call st%rs_curr_dens_rest1b%zallocate(1, 1, mesh%np_part, mirror = st%d%mirror_states)
+    call zbatch_init(st%rs_curr_dens_rest1b, st%d%dim, 1, 1, mesh%np_part)
     call batch_set_zero(st%rs_curr_dens_rest1b)
     
-    call batch_init(st%rs_curr_dens_rest2b, st%d%dim, 1)
-    call st%rs_curr_dens_rest2b%zallocate(1, 1, mesh%np_part, mirror = st%d%mirror_states)
+    call zbatch_init(st%rs_curr_dens_rest2b, st%d%dim, 1, 1, mesh%np_part)
     call batch_set_zero(st%rs_curr_dens_rest2b)
    
 !    Another alternative
-!    call batch_init(st%rs_state_transb, hm%d%dim, 1)
-!    call st%rs_state_transb%add_state(1, st%rs_state_trans)
+!    call batch_init(st%rs_state_transb, hm%d%dim, 1, 1, st%rs_state_trans)
 !    call st%rs_state_transb%end()
 
     POP_SUB(states_mxll_allocate)
@@ -513,9 +506,9 @@ contains
     ! no PUSH_SUB, called too often
 
     if (present(ep_element)) then
-      electric_field_vector(:) = sqrt(M_TWO/ep_element) * real(rs_state_vector(:))
+      electric_field_vector(:) = sqrt(M_TWO/ep_element) * TOFLOAT(rs_state_vector(:))
     else
-      electric_field_vector(:) = sqrt(M_TWO/P_ep) * real(rs_state_vector(:))
+      electric_field_vector(:) = sqrt(M_TWO/P_ep) * TOFLOAT(rs_state_vector(:))
     end if
 
   end subroutine get_electric_field_vector
@@ -561,9 +554,9 @@ contains
      
     do ip = 1, np_
       if (present(ep_field)) then
-        electric_field(ip, :) = sqrt(M_TWO/ep_field(ip)) * real(rs_aux(ip, :), REAL_PRECISION)
+        electric_field(ip, :) = sqrt(M_TWO/ep_field(ip)) * TOFLOAT(rs_aux(ip, :))
       else 
-        electric_field(ip,:) = sqrt(M_TWO/P_ep) * real(rs_aux(ip, :), REAL_PRECISION)
+        electric_field(ip,:) = sqrt(M_TWO/P_ep) * TOFLOAT(rs_aux(ip, :))
       end if
     end do
 
@@ -620,9 +613,9 @@ contains
     ! no PUSH_SUB, called too often
 
     if (present(ep_element)) then
-      current_element = sqrt(M_TWO*ep_element) * real(rs_current_element, REAL_PRECISION)
+      current_element = sqrt(M_TWO*ep_element) * TOFLOAT(rs_current_element)
     else
-      current_element = sqrt(M_TWO*P_ep) * real(rs_current_element, REAL_PRECISION)
+      current_element = sqrt(M_TWO*P_ep) * TOFLOAT(rs_current_element)
     end if
 
   end subroutine get_current_element
@@ -637,9 +630,9 @@ contains
     ! no PUSH_SUB, called too often
 
     if (present(ep_element)) then
-      current_vector(:) = sqrt(M_TWO*ep_element) * real(rs_current_vector(:), REAL_PRECISION)
+      current_vector(:) = sqrt(M_TWO*ep_element) * TOFLOAT(rs_current_vector(:))
     else
-      current_vector(:) = sqrt(M_TWO*P_ep) * real(rs_current_vector(:), REAL_PRECISION)
+      current_vector(:) = sqrt(M_TWO*P_ep) * TOFLOAT(rs_current_vector(:))
     end if
 
   end subroutine get_current_vector
@@ -661,9 +654,9 @@ contains
 
     do ip = 1, np_
       if (present(ep_field)) then
-        current_field(ip, :) = sqrt(M_TWO*ep_field(ip)) * real(rs_current_field(ip, :), REAL_PRECISION)
+        current_field(ip, :) = sqrt(M_TWO*ep_field(ip)) * TOFLOAT(rs_current_field(ip, :))
       else
-        current_field(ip, :) = sqrt(M_TWO*P_ep) * real(rs_current_field(ip, :), REAL_PRECISION)
+        current_field(ip, :) = sqrt(M_TWO*P_ep) * TOFLOAT(rs_current_field(ip, :))
       end if
     end do
 
@@ -681,7 +674,7 @@ contains
     type(states_mxll_t), intent(in)      :: st
     type(mesh_t),        intent(in)      :: mesh
 
-    integer :: ip, mpi_err, pos_index_local, pos_index_global, rankmin, ip_global
+    integer :: ip, pos_index_local, pos_index_global, rankmin
     FLOAT   :: dmin
     CMPLX   :: ztmp(MAX_DIM)
     CMPLX, allocatable :: ztmp_global(:)
@@ -754,13 +747,13 @@ contains
       do ip = 1, gr%mesh%np
         poynting_vector(ip, :) = M_ONE/mu_field(ip) * sqrt(M_TWO/ep_field(ip)) &
                               * sqrt(M_TWO*mu_field(ip)) &
-                              * dcross_product(real(rs_aux(ip, :), REAL_PRECISION), rs_sign*aimag(rs_aux(ip, :)))
+                              * dcross_product(TOFLOAT(rs_aux(ip, :)), rs_sign*aimag(rs_aux(ip, :)))
       end do
     else
       do ip = 1, gr%mesh%np
         poynting_vector(ip,:) = M_ONE/st%mu(ip) * sqrt(M_TWO/st%ep(ip)) &
                               * sqrt(M_TWO*st%mu(ip)) &
-                              * dcross_product(real(rs_aux(ip, :), REAL_PRECISION), rs_sign*aimag(rs_aux(ip, :)))
+                              * dcross_product(TOFLOAT(rs_aux(ip, :)), rs_sign*aimag(rs_aux(ip, :)))
       end do
     end if
 
@@ -781,7 +774,7 @@ contains
 
     do ip = 1, gr%mesh%np
       poynting_vector(ip, :) = M_ONE/P_mu * sqrt(M_TWO/P_ep) * sqrt(M_TWO*P_mu) &
-               & * dcross_product(real(st%rs_state_plane_waves(ip,:), REAL_PRECISION), &
+               & * dcross_product(TOFLOAT(st%rs_state_plane_waves(ip,:)), &
                & rs_sign*aimag(st%rs_state_plane_waves(ip,:)))
     end do
 

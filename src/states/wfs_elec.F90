@@ -29,7 +29,9 @@ module wfs_elec_oct_m
   private
   public ::                         &
     wfs_elec_t,                     &
-    wfs_elec_init
+    wfs_elec_init,                  &
+    dwfs_elec_init,                &
+    zwfs_elec_init
 
   type, extends(batch_t) :: wfs_elec_t
     private
@@ -45,28 +47,13 @@ module wfs_elec_oct_m
 
   !--------------------------------------------------------------
   interface wfs_elec_init
-    module procedure  wfs_elec_init_empty
-    module procedure dwfs_elec_init_contiguous
-    module procedure zwfs_elec_init_contiguous
+    module procedure dwfs_elec_init_with_memory_3
+    module procedure zwfs_elec_init_with_memory_3
+    module procedure dwfs_elec_init_with_memory_2
+    module procedure zwfs_elec_init_with_memory_2
   end interface wfs_elec_init
 
 contains
-
-  !--------------------------------------------------------------
-  subroutine wfs_elec_init_empty(this, dim, nst, ik)
-    type(wfs_elec_t), intent(out)   :: this
-    integer,          intent(in)    :: dim
-    integer,          intent(in)    :: nst
-    integer,          intent(in)    :: ik
-
-    PUSH_SUB(wfs_elec_init_empty)
-
-    this%ik = ik
-    this%has_phase = .false.
-    call batch_init(this%batch_t, dim, nst)
-
-    POP_SUB(wfs_elec_init_empty)
-  end subroutine wfs_elec_init_empty
 
   !--------------------------------------------------------------
   subroutine wfs_elec_clone_to(this, dest, pack, copy_data)
@@ -78,7 +65,7 @@ contains
     PUSH_SUB(wfs_elec_clone_to)
 
     if (.not. allocated(dest)) then
-      allocate(wfs_elec_t::dest)
+      SAFE_ALLOCATE_TYPE(wfs_elec_t, dest)
     else
       message(1) = "Internal error: destination batch in wfs_elec_clone_to has been previously allocated."
       call messages_fatal(1)
@@ -108,7 +95,7 @@ contains
     PUSH_SUB(wfs_elec_clone_to_array)
 
     if (.not. allocated(dest)) then
-      allocate(wfs_elec_t::dest(n_batches))
+      SAFE_ALLOCATE_TYPE_ARRAY(wfs_elec_t, dest, (1:n_batches))
     else
       message(1) = "Internal error: destination batch in wfs_elec_clone_to_array has been previously allocated."
       call messages_fatal(1)

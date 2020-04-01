@@ -25,6 +25,7 @@
 
 module states_elec_block_oct_m
   use batch_oct_m
+  use batch_ops_oct_m
   use global_oct_m
   use lalg_basic_oct_m
   use math_oct_m

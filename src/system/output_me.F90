@@ -40,6 +40,7 @@ module output_me_oct_m
   use projector_oct_m
   use profiling_oct_m
   use simul_box_oct_m
+  use singularity_oct_m
   use states_abst_oct_m
   use states_elec_oct_m
   use states_elec_calc_oct_m
@@ -61,7 +62,7 @@ module output_me_oct_m
 
   type output_me_t
     private
-    integer :: what                !< what to output 
+    integer, public :: what                !< what to output 
     !> If output_ksdipole, this number sets up which matrix elements will
     !! be printed: e.g. if ksmultipoles = 3, the dipole, quadrupole and 
     !! octopole matrix elements (between Kohn-Sham or single-particle orbitals).
@@ -78,8 +79,9 @@ module output_me_oct_m
     OUTPUT_ME_ANG_MOMENTUM   =   2, &
     OUTPUT_ME_ONE_BODY       =   4, &
     OUTPUT_ME_TWO_BODY       =   8, &
-    OUTPUT_ME_KS_MULTIPOLES  =  16, &
-    OUTPUT_ME_DIPOLE         =  32
+    OUTPUT_ME_TWO_BODY_EXC_K =  16, &
+    OUTPUT_ME_KS_MULTIPOLES  =  32, &
+    OUTPUT_ME_DIPOLE         =  64
 
 contains
   
@@ -114,9 +116,13 @@ contains
     !%Option two_body 8
     !% <math>\left< ij \left| \frac{1}{\left|\vec{r}_1-\vec{r}_2\right|} \right| kl \right></math>.
     !% Not available with states parallelization.
-    !%Option ks_multipoles 16
+    !% Not available with states parallelization. For periodic system, this is not available for k-point parallelization neither.
+    !%Option two_body_exc_k 16
+    !% <math>\left< n1-k1, n2-k2 \left| \frac{1}{\left|\vec{r}_1-\vec{r}_2\right|} \right| n2-k1 n1-k2 \right></math>.
+    !% Not available with states parallelization. For periodic system, this is not available for k-point parallelization neither.
+    !%Option ks_multipoles 32
     !% See <tt>OutputMEMultipoles</tt>. Not available with states parallelization.
-    !%Option dipole 32
+    !%Option dipole 64
     !% Prints the dipole matrix elements. Not available with states parallelization.
     !% For periodic systems, the intraband terms (dipole matrix elements between degenerated states)
     !% are set to zero, and only the absolute value of the dipole matrix element is printed.
@@ -199,13 +205,14 @@ contains
     type(states_elec_t),      intent(inout) :: st
     type(grid_t),             intent(in)    :: gr
     type(geometry_t),         intent(in)    :: geo
-    type(hamiltonian_elec_t), intent(in)    :: hm
+    type(hamiltonian_elec_t), intent(inout) :: hm
 
     integer :: id, ll, mm, ik, iunit
     character(len=256) :: fname
     FLOAT, allocatable :: doneint(:), dtwoint(:)
     CMPLX, allocatable :: zoneint(:), ztwoint(:)
     integer, allocatable :: iindex(:,:), jindex(:,:), kindex(:,:), lindex(:,:)
+    type(singularity_t) :: singul
     
     PUSH_SUB(output_me)
 
@@ -322,22 +329,40 @@ contains
 
     end if
 
-    if(bitand(this%what, output_me_two_body) /= 0) then
+    if(bitand(this%what, output_me_two_body) /= 0 .or. bitand(this%what, output_me_two_body_exc_k) /= 0) then
       message(1) = "Computing two-body matrix elements"
       call messages_info(1)
 
       ASSERT(.not. st%parallel_in_states)
-      if(st%parallel_in_states) then
-        call messages_not_implemented("OutputMatrixElements=two_body with states parallelization", namespace=namespace)
+        if(bitand(this%what, output_me_two_body) /= 0) then
+        if(st%parallel_in_states)  call messages_not_implemented("OutputMatrixElements=two_body with states parallelization")
+        if(st%d%kpt%parallel) call messages_not_implemented("OutputMatrixElements=two_body with k-points parallelization")
+        ! how to do this properly? states_matrix
+        iunit = io_open(trim(dir)//'/output_me_two_body', namespace, action='write')
+        write(iunit, '(a)') '#(n1,k1) (n2,k2) (n3,k3) (n4,k4) (n1-k1, n2-k2|n3-k3, n4-k4)'
+      else
+        if(st%parallel_in_states)  call messages_not_implemented("OutputMatrixElements=two_body_exc_k with states parallelization")
+        if(st%d%kpt%parallel) call messages_not_implemented("OutputMatrixElements=two_body_exc_k with k-points parallelization")
+        ! how to do this properly? states_matrix
+        iunit = io_open(trim(dir)//'/output_me_two_body_density', namespace, action='write')
+        write(iunit, '(a)') '#(n1,k1) (n2,k2) (n1-k1, n1-k2|n2-k2, n2-k1)'
       end if
-      if(st%d%kpt%parallel) then
-        call messages_not_implemented("OutputMatrixElements=two_body with k-points parallelization", namespace=namespace)
-      end if
-      ! how to do this properly? states_elec_matrix
-      iunit = io_open(trim(dir)//'/output_me_two_body', namespace, action='write')
-      write(iunit, '(a)') '#(n1,k1) (n2,k2) (n3,k3) (n4,k4) (n1-k1, n2-k2|n3-k3, n4-k4)'
 
-      id = st%d%nik*this%nst*(st%d%nik*this%nst+1)*(st%d%nik**2*this%nst**2+st%d%nik*this%nst+2)/8
+      call singularity_nullify(singul)
+      if(bitand(this%what, output_me_two_body) /= 0) then
+        if(states_are_real(st)) then
+          id = st%d%nik*this%nst*(st%d%nik*this%nst+1)*(st%d%nik**2*this%nst**2+st%d%nik*this%nst+2)/8
+        else
+          id = (st%d%nik*this%nst)**4
+        end if
+      else
+        id = (st%d%nik*this%nst)**2
+      end if
+
+      if(states_are_complex(st)) then
+        call singularity_init(singul, namespace, st, gr%sb)
+      end if
+
       SAFE_ALLOCATE(iindex(1:2, 1:id))
       SAFE_ALLOCATE(jindex(1:2, 1:id))
       SAFE_ALLOCATE(kindex(1:2, 1:id))
@@ -345,7 +370,7 @@ contains
 
       if (states_are_real(st)) then
         SAFE_ALLOCATE(dtwoint(1:id))
-        call dstates_elec_me_two_body(st, namespace, gr, hm%psolver, this%st_start, this%st_end, iindex, jindex, kindex, &
+        call dstates_elec_me_two_body(st, namespace, gr, hm%exxop%psolver, this%st_start, this%st_end, iindex, jindex, kindex, &
           lindex, dtwoint)
         do ll = 1, id
           write(iunit, '(4(i4,i5),e15.6)') iindex(1:2,ll), jindex(1:2,ll), kindex(1:2,ll), lindex(1:2,ll), dtwoint(ll)
@@ -356,16 +381,23 @@ contains
         if(associated(hm%hm_base%phase)) then
           !We cannot pass the phase array like that if kpt%start is not 1.  
           ASSERT(.not.st%d%kpt%parallel) 
-          call zstates_elec_me_two_body(st, namespace, gr, hm%psolver, this%st_start, this%st_end, &
-                     iindex, jindex, kindex, lindex, ztwoint, phase = hm%hm_base%phase) 
+          call zstates_elec_me_two_body(st, namespace, gr, hm%exxop%psolver, this%st_start, this%st_end, &
+                     iindex, jindex, kindex, lindex, ztwoint, phase = hm%hm_base%phase, &
+                     singularity = singul, exc_k = (bitand(this%what, output_me_two_body_exc_k) /= 0)) 
         else
-          call zstates_elec_me_two_body(st, namespace, gr, hm%psolver, this%st_start, this%st_end, &
-                     iindex, jindex, kindex, lindex, ztwoint)
+          call zstates_elec_me_two_body(st, namespace, gr, hm%exxop%psolver, this%st_start, this%st_end, &
+                     iindex, jindex, kindex, lindex, ztwoint, exc_k = (bitand(this%what, output_me_two_body_exc_k) /= 0))
         end if
 
-        do ll = 1, id
-          write(iunit, '(4(i4,i5),2e15.6)') iindex(1:2,ll), jindex(1:2,ll), kindex(1:2,ll), lindex(1:2,ll), ztwoint(ll)
-        enddo
+        if(bitand(this%what, output_me_two_body) /= 0) then
+          do ll = 1, id
+            write(iunit, '(4(i4,i5),2e15.6)') iindex(1:2,ll), jindex(1:2,ll), kindex(1:2,ll), lindex(1:2,ll), ztwoint(ll)
+          enddo
+        else
+          do ll = 1, id
+            write(iunit, '(2(i4,i5),2e15.6)') iindex(1:2,ll), kindex(1:2,ll), ztwoint(ll)
+          enddo
+        end if
         SAFE_DEALLOCATE_A(ztwoint)
       end if
       
@@ -374,6 +406,8 @@ contains
       SAFE_DEALLOCATE_A(kindex)
       SAFE_DEALLOCATE_A(lindex)
       call io_close(iunit)
+
+      call singularity_end(singul)
 
     end if
 

@@ -536,10 +536,10 @@ contains
     type(restart_t), optional, intent(in)    :: restart_load
     type(restart_t), optional, intent(in)    :: restart_dump
 
-    logical :: finish, gs_run_, berry_conv, forced_finish_tmp
+    logical :: finish, gs_run_, berry_conv
     integer :: iter, is, iatom, nspin, ierr, iberry, idir, verbosity_, ib, iqn
     FLOAT :: evsum_out, evsum_in, forcetmp, dipole(MAX_DIM), dipole_prev(MAX_DIM)
-    real(8) :: etime, itime
+    FLOAT :: etime, itime
     character(len=MAX_PATH_LEN) :: dirname
     type(lcao_t) :: lcao    !< Linear combination of atomic orbitals
     type(profile_t), save :: prof
@@ -547,6 +547,9 @@ contains
     FLOAT, allocatable :: vhxc_old(:,:)
     FLOAT, allocatable :: forceout(:,:), forcein(:,:), forcediff(:), tmp(:)
     class(wfs_elec_t), allocatable :: psioutb(:, :)
+#ifdef HAVE_MPI
+    logical :: forced_finish_tmp    
+#endif
 
     PUSH_SUB(scf_run)
 
@@ -651,7 +654,7 @@ contains
 
     case(OPTION__MIXFIELD__STATES)
 
-      allocate(wfs_elec_t::psioutb(st%group%block_start:st%group%block_end, st%d%kpt%start:st%d%kpt%end))
+      SAFE_ALLOCATE_TYPE_ARRAY(wfs_elec_t, psioutb, (st%group%block_start:st%group%block_end, st%d%kpt%start:st%d%kpt%end))
 
       do iqn = st%d%kpt%start, st%d%kpt%end
         do ib = st%group%block_start, st%group%block_end
@@ -1051,10 +1054,6 @@ contains
     ! ---------------------------------------------------------
     subroutine scf_write_iter()
       character(len=50) :: str
-      FLOAT :: mem
-#ifdef HAVE_MPI
-      FLOAT :: mem_tmp
-#endif
 
       PUSH_SUB(scf_run.scf_write_iter)
 
@@ -1215,6 +1214,15 @@ contains
           write(iunit,'(1x)')
         end if
         ! otherwise, these values are uninitialized, and unknown.
+
+        if (bitand(ks%xc_family, XC_FAMILY_OEP) /= 0 .and. ks%theory_level /= HARTREE_FOCK) then
+          if (((ks%oep%level == XC_OEP_FULL) .or. (ks%oep%level == XC_OEP_KLI)) .and. ks%oep%has_photons) then
+            write(iunit, '(a)') 'Photon observables:'
+            write(iunit, '(6x, a, es15.8,a,es15.8,a)') 'Photon number = ', ks%oep%pt%pt_number(1)
+            write(iunit, '(6x, a, es15.8,a,es15.8,a)') 'Photon ex. = ', ks%oep%pt%ex
+            write(iunit,'(1x)')
+          end if
+        end if
 
         if(scf%calc_force) call forces_write_info(iunit, geo, gr%sb, dir, namespace)
 

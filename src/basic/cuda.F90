@@ -45,7 +45,8 @@ module cuda_oct_m
     cuda_device_name,                   &
     cuda_device_capability,             &
     cuda_driver_version,                &
-    cuda_set_stream
+    cuda_set_stream,                    &
+    cuda_deref
 
   interface
 
@@ -287,6 +288,32 @@ module cuda_oct_m
       type(c_ptr), intent(inout) :: stream
       integer,     intent(in)    :: stream_number
     end subroutine cuda_set_stream
+
+    ! -------------------------------------------------
+
+    subroutine cuda_memcpy_htod(cuda_ptr, data, size, offset, async)
+      use iso_c_binding
+      implicit none
+
+      type(c_ptr),     intent(inout) :: cuda_ptr
+      type(*),         intent(in)    :: data
+      integer(8),      intent(in)    :: size
+      integer(8),      intent(in)    :: offset
+      logical(c_bool), intent(in)    :: async
+    end subroutine cuda_memcpy_htod
+
+    ! -------------------------------------------------
+
+    subroutine cuda_memcpy_dtoh(cuda_ptr, data, size, offset, async)
+      use iso_c_binding
+      implicit none
+
+      type(c_ptr),     intent(inout) :: cuda_ptr
+      type(*),         intent(inout) :: data
+      integer(8),      intent(in)    :: size
+      integer(8),      intent(in)    :: offset
+      logical(c_bool), intent(in)    :: async
+    end subroutine cuda_memcpy_dtoh
   end interface
   
 end module cuda_oct_m

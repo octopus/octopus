@@ -266,10 +266,10 @@ contains
     integer,    optional, intent(in)  :: st_start_writing
     logical,    optional, intent(in)  :: verbose
 
-    integer :: iunit_wfns, iunit_states, iwt
+    integer :: iunit_wfns, iunit_states
     integer :: err, err2(2), ist, idim, itot
     integer :: root(1:P_STRATEGY_MAX)
-    character(len=MAX_PATH_LEN) :: filename, filename1, filename_tmp
+    character(len=MAX_PATH_LEN) :: filename
     character(len=300) :: lines(3)
     logical :: should_write, verbose_
     CMPLX,  allocatable :: zff_global(:)
@@ -386,11 +386,9 @@ contains
     character(len=256)   :: lines(3), label_
     character(len=50)    :: str
 
-    FLOAT                :: imev, my_kweight
     logical              :: verbose_
     character(len=256), allocatable :: restart_file(:, :)
     logical,            allocatable :: restart_file_present(:, :)
-    integer, allocatable :: lowest_missing_tmp(:)
 
     PUSH_SUB(states_mxll_load)
 

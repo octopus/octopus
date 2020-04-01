@@ -3,6 +3,7 @@ fromScratch = yes
 
 CalculationMode = opt_control
 ExperimentalFeatures = yes
+StatesPack = yes
 
 
 # ------------------
@@ -86,6 +87,4 @@ Output=  wfs + current
 OutputFormat= axis_x
 
 DisableAccel = yes
-
-
 

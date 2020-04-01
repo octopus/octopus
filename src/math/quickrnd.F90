@@ -47,7 +47,7 @@ contains
     ! no PUSH_SUB, called too often
 
     iseed = mod(iseed*ia + ic, im)
-    rnd = real(iseed, REAL_PRECISION)/real(im, REAL_PRECISION)
+    rnd = TOFLOAT(iseed)/TOFLOAT(im)
 
   end subroutine dquickrnd_single
 
@@ -65,7 +65,7 @@ contains
 
     do ii = 1, nn
       iseed = mod(iseed*ia + ic, im)
-      rnd(ii) = real(iseed, REAL_PRECISION)/real(im, REAL_PRECISION)
+      rnd(ii) = TOFLOAT(iseed)/TOFLOAT(im)
     end do
     
     POP_SUB(quickrnd_array)
@@ -86,9 +86,9 @@ contains
 
     do ii = 1, nn
       iseed = mod(iseed*ia + ic, im)
-      rnd(ii) = real(iseed, REAL_PRECISION)/real(im, REAL_PRECISION)
+      rnd(ii) = TOFLOAT(iseed)/TOFLOAT(im)
       iseed = mod(iseed*ia + ic, im)
-      rnd(ii) = rnd(ii) + M_ZI*real(iseed, REAL_PRECISION)/real(im, REAL_PRECISION)
+      rnd(ii) = rnd(ii) + M_ZI*TOFLOAT(iseed)/TOFLOAT(im)
       rnd(ii) = rnd(ii)/sqrt(CNST(2.0))
     end do
     

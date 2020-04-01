@@ -1063,7 +1063,6 @@ contains
     type(kick_t),             intent(in)    :: kick
     integer,                  intent(in)    :: iter
 
-    character(len=50) :: aux
     CMPLX, allocatable :: tm(:,:)
     integer :: ii, iq
 
@@ -1103,7 +1102,7 @@ contains
       call write_iter_start(out_magnets)
       do iq = 1, kick%nqvec
         do ii = 1, 6
-          call write_iter_double(out_magnets, real(tm(ii, iq),REAL_PRECISION), 1)
+          call write_iter_double(out_magnets, TOFLOAT(tm(ii, iq)), 1)
           call write_iter_double(out_magnets, aimag(tm(ii, iq)), 1)
         end do
       end do
@@ -1141,7 +1140,7 @@ contains
        call pert_setup_dir(angular_momentum, idir)
        !we have to multiply by 2, because the perturbation returns L/2
        angular(idir) = &
-         M_TWO*real(zpert_states_elec_expectation_value(angular_momentum, namespace, gr, geo, hm, st), REAL_PRECISION)
+         M_TWO*TOFLOAT(zpert_states_elec_expectation_value(angular_momentum, namespace, gr, geo, hm, st))
     end do
 
     call pert_end(angular_momentum)
@@ -2315,7 +2314,7 @@ contains
       do ik = 1, st%d%nik
         do ist = gs_st%st_start, st%nst
           do uist = gs_st%st_start, gs_st%st_end
-            call write_iter_double(out_proj,  real(projections(ist, uist, ik), REAL_PRECISION), 1)
+            call write_iter_double(out_proj, TOFLOAT(projections(ist, uist, ik)), 1)
             call write_iter_double(out_proj, aimag(projections(ist, uist, ik)), 1)
           end do
         end do
@@ -2710,7 +2709,7 @@ contains
     !%End 
     call parse_variable(namespace, 'TDFloquetSample',20 ,nt)
     call messages_print_var_value(stdout,'Number of Floquet time-sampling points', nT)
-    dt = Tcycle/real(nT)
+    dt = Tcycle/TOFLOAT(nT)
 
     !%Variable TDFloquetDimension
     !%Type integer
@@ -2732,7 +2731,7 @@ contains
        Fdim = 3
     endif
 
-    dt = Tcycle/real(nT)
+    dt = Tcycle/TOFLOAT(nT)
 
     ! we are only interested for k-point with zero weight
     nik=gr%sb%kpoints%nik_skip

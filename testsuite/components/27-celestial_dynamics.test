@@ -1,0 +1,50 @@
+# -*- coding: utf-8 mode: shell-script -*-
+
+Test       : Oct-test celestial
+Program    : octopus
+TestGroups : short-run, components
+Enabled    : Yes
+
+Processors: 1
+Input: 27-celestial_dynamics.01-three_body.inp
+
+Precision: 1e-15
+match ; Sun pos x   (t=0)  ; LINEFIELD(Sun/td.general/coordinates, 6, 3) ; 0.0
+Precision: 1e-15
+match ; Sun pos y   (t=0)  ; LINEFIELD(Sun/td.general/coordinates, 6, 4) ; 0.0
+Precision: 1e-15
+match ; Earth pos x (t=0)  ; LINEFIELD(Earth/td.general/coordinates, 6, 3) ; 1.495980230000e+11
+Precision: 1e-15
+match ; Earth pos y (t=0)  ; LINEFIELD(Earth/td.general/coordinates, 6, 4) ; 0.0
+Precision: 1e-15
+match ; Moon pos x  (t=0)  ; LINEFIELD(Moon/td.general/coordinates, 6, 3) ; 1.499824220000e+11
+Precision: 1e-15
+match ; Moon pos y  (t=0)  ; LINEFIELD(Moon/td.general/coordinates, 6, 4) ; 0.0
+Precision: 1e-08
+match ; Sun pos x   (t=365 days)  ; LINEFIELD(Sun/td.general/coordinates, -1, 3) ; 19.76835042078
+Precision: 1e-15
+match ; Sun pos y   (t=365 days)  ; LINEFIELD(Sun/td.general/coordinates, -1, 4) ; 2861013.715798
+match ; Earth pos x (t=365 days)  ; LINEFIELD(Earth/td.general/coordinates, -1, 3) ; 149601257343.7
+Precision: 0.002
+match ; Earth pos y (t=365 days)  ; LINEFIELD(Earth/td.general/coordinates, -1, 4) ; -1325522635.227
+Precision: 1e-15
+match ; Moon pos x  (t=365 days)  ; LINEFIELD(Moon/td.general/coordinates, -1, 3) ; 149183890977.8
+Precision: 0.02
+match ; Moon pos y  (t=365 days)  ; LINEFIELD(Moon/td.general/coordinates, -1, 4) ; -1641567621.0310001
+Precision: 1e-15
+match ; Sun vel x   (t=365 days)  ; LINEFIELD(Sun/td.general/coordinates, -1, 5) ; -0.0008451264506688
+match ; Sun vel y   (t=365 days)  ; LINEFIELD(Sun/td.general/coordinates, -1, 6) ; 3.5905404518189996e-06
+Precision: 1e-10
+match ; Earth vel x (t=365 days)  ; LINEFIELD(Earth/td.general/coordinates, -1, 5) ; 272.49681507965
+Precision: 1e-15
+match ; Earth vel y (t=365 days)  ; LINEFIELD(Earth/td.general/coordinates, -1, 6) ; 29801.01060921
+Precision: 1e-07
+match ; Moon vel x  (t=365 days)  ; LINEFIELD(Moon/td.general/coordinates, -1, 5) ; 723.5685099472
+match ; Moon vel y  (t=365 days)  ; LINEFIELD(Moon/td.general/coordinates, -1, 6) ; 29095.63795492
+
+match ; Sun-Earth interaction  ; GREPCOUNT(interaction_graph.dot, 'Sun -> Earth') ; 1
+match ; Sun-Moon interaction   ; GREPCOUNT(interaction_graph.dot, 'Sun -> Moon') ; 1
+match ; Earth-Sun interaction  ; GREPCOUNT(interaction_graph.dot, 'Earth -> Sun') ; 1
+match ; Earth-Moon interaction ; GREPCOUNT(interaction_graph.dot, 'Earth -> Moon') ; 1
+match ; Moon-Sun interaction   ; GREPCOUNT(interaction_graph.dot, 'Moon -> Sun') ; 1
+match ; Moon-Earth interaction ; GREPCOUNT(interaction_graph.dot, 'Moon -> Earth') ; 1

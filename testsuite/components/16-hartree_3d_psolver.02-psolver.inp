@@ -8,7 +8,8 @@ BoxShape = sphere
 Radius  = 8.0*angstrom
 Spacing = 0.3*angstrom
 
-PoissonSolver = libisf
+PoissonSolver = psolver
 ExperimentalFeatures = yes
 
-PoissonSolverISFParallelData = yes
+PoissonSolverPSolverParallelData = yes
+StatesPack = yes

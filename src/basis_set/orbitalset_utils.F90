@@ -28,6 +28,7 @@ module orbitalset_utils_oct_m
   use mesh_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use orbitalset_oct_m
   use periodic_copy_oct_m
   use poisson_oct_m
@@ -70,8 +71,9 @@ contains
     end do
   end function orbitalset_utils_count
 
-  subroutine orbitalset_init_intersite(this, ind, sb, geo, der, psolver, os, nos, maxnorbs, rcut, kpt, has_phase)
+  subroutine orbitalset_init_intersite(this, namespace, ind, sb, geo, der, psolver, os, nos, maxnorbs, rcut, kpt, has_phase)
     type(orbitalset_t),           intent(inout) :: this
+    type(namespace_t),            intent(in)    :: namespace
     integer,                      intent(in)    :: ind
     type(simul_box_t),            intent(in)    :: sb
     type(geometry_t),             intent(in)    :: geo
@@ -205,7 +207,7 @@ contains
         !Build information needed for the direct Poisson solver on the submesh
         call submesh_build_global(sm)
 
-        call poisson_init_sm(this%poisson, psolver, der, sm)
+        call poisson_init_sm(this%poisson, namespace, psolver, der, sm)
         np_sphere = sm%np
 
         do ist = 1, this%norbs

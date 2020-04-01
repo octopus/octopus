@@ -3,6 +3,7 @@
 
 Dimensions = 1
 fromScratch = yes
+StatesPack = yes
 
 CalculationMode = opt_control
 
@@ -108,6 +109,4 @@ electric_field | 1 | 0 | 0 | freq | "envelope_function"
 Output = potential + density + wfs
 OutputFormat = axis_x
 TDOutput = laser + td_occup 
-
-
 

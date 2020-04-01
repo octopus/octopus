@@ -240,7 +240,6 @@ void sym_init_table ()  /* puts arithmetic functions in table. */
 void sym_end_table()
 {
   symrec *ptr, *ptr2;
-  int l, col;
 
   for (ptr = sym_table; ptr != NULL;){
     free(ptr->name);

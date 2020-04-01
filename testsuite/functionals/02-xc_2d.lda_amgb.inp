@@ -33,3 +33,4 @@ XCFunctional = lda_x_2d + lda_c_2d_amgb
 
 
 
+StatesPack = yes

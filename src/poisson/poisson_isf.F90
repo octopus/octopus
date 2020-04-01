@@ -32,6 +32,7 @@ module poisson_isf_oct_m
   use profiling_oct_m
   use scaling_function_oct_m
   use sgfft_oct_m
+  use submesh_oct_m
 
   implicit none
   
@@ -212,13 +213,14 @@ contains
   end subroutine poisson_isf_init
 
   ! ---------------------------------------------------------
-  subroutine poisson_isf_solve(this, mesh, cube, pot, rho, all_nodes)
+  subroutine poisson_isf_solve(this, mesh, cube, pot, rho, all_nodes, sm)
     type(poisson_isf_t), intent(in)    :: this
     type(mesh_t),        intent(in)    :: mesh
     type(cube_t),        intent(in)    :: cube
     FLOAT,               intent(out)   :: pot(:)
     FLOAT,               intent(in)    :: rho(:)
     logical,             intent(in)    :: all_nodes
+    type(submesh_t),     optional,  intent(in)    :: sm  !< If present pot and rho are assumed to come from it
 
     integer :: i_cnf, nn(1:3)
     type(cube_function_t) :: rho_cf
@@ -228,10 +230,14 @@ contains
     call cube_function_null(rho_cf)
     call dcube_function_alloc_RS(cube, rho_cf)
 
-    if(mesh%parallel_in_domains) then
-      call dmesh_to_cube(mesh, rho, cube, rho_cf, local=.true.)
+    if(present(sm)) then
+      call dsubmesh_to_cube(sm, rho, cube, rho_cf)
     else
-      call dmesh_to_cube(mesh, rho, cube, rho_cf)
+      if(mesh%parallel_in_domains) then
+        call dmesh_to_cube(mesh, rho, cube, rho_cf, local=.true.)
+      else
+        call dmesh_to_cube(mesh, rho, cube, rho_cf)
+      end if
     end if
 
     ! Choose configuration.
@@ -278,10 +284,14 @@ contains
 #endif
     end if
 
-    if(mesh%parallel_in_domains) then
-      call dcube_to_mesh(cube, rho_cf, mesh, pot, local=.true.)
+    if(present(sm)) then
+      call dcube_to_submesh(cube, rho_cf, sm, pot)
     else
-       call dcube_to_mesh(cube, rho_cf, mesh, pot)
+      if(mesh%parallel_in_domains) then
+        call dcube_to_mesh(cube, rho_cf, mesh, pot, local=.true.)
+      else
+        call dcube_to_mesh(cube, rho_cf, mesh, pot)
+      end if
     end if
     
     call dcube_function_free_RS(cube, rho_cf)

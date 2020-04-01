@@ -1006,7 +1006,7 @@ contains
     CMPLX, allocatable :: kick_function(:), psi(:, :)
 
     CMPLX, allocatable :: kick_pcm_function(:)
-    integer :: ns, idir, iq
+    integer :: ns, iq
     FLOAT :: uvec(MAX_DIM), vvec(MAX_DIM), Gvec(MAX_DIM,MAX_DIM)
     FLOAT :: xx(MAX_DIM), rr
 
@@ -1129,10 +1129,10 @@ contains
                 !           (u_z      u_x-i*u_y)            (v_z         v_x-i*v_y)
                 ! =cos(q.r) (                  )  + sin(q.r)(                     )
                 !           (u_x+i*u_y  -u_z   )            (v_x+i*v_y   -v_z     )
-                psi(ip, 1) = psi(ip, 1) -M_zI*sin(kick%delta_strength)*( real(kick_function(ip), REAL_PRECISION) &
+                psi(ip, 1) = psi(ip, 1) -M_zI*sin(kick%delta_strength)*( TOFLOAT(kick_function(ip)) &
                                   * (uvec(3)*cc(1) + (uvec(1)-M_zI*uvec(2))*cc(2)) &
                        + aimag(kick_function(ip)) * (vvec(3)*cc(1) + (vvec(1)-M_zI*vvec(2))*cc(2)))
-                psi(ip, 2) = psi(ip, 2) -M_zI*sin(kick%delta_strength)*( real(kick_function(ip), REAL_PRECISION) &
+                psi(ip, 2) = psi(ip, 2) -M_zI*sin(kick%delta_strength)*( TOFLOAT(kick_function(ip)) &
                                   * (-uvec(3)*cc(2) + (uvec(1)+M_zI*uvec(2))*cc(1)) &
                        + aimag(kick_function(ip)) * (-vvec(3)*cc(2) + (vvec(1)+M_zI*vvec(2))*cc(1)))
 

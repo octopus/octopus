@@ -147,10 +147,8 @@ contains
     FLOAT              :: offset(MAX_DIM)       ! offset for border
     integer            :: stst, stend, kptst, kptend, sdim, mdim, pdim
     integer            :: imdim
-    integer            :: isp, ikp
+    integer            :: isp
     integer            :: il, ik
-    integer            :: ikk, ith, iph, iomk
-    FLOAT              :: kmax, kact, thetak, phik, kpoint(1:3)
 
     FLOAT, allocatable :: k_dot_aux(:)
     integer            :: nstepsphir, nstepsthetar
@@ -555,8 +553,8 @@ contains
 
     integer           :: mdim, pdim
     integer           :: kptst, kptend  
-    integer           :: isp, ikp, ikpt, ibz1, ibz2
-    integer           :: il, ll, mm, idim
+    integer           :: ikp, ikpt, ibz1, ibz2
+    integer           :: ll, mm, idim
     integer           :: ikk, ith, iph, iomk
     FLOAT             :: kmax, kmin, kact, thetak, phik
     type(block_t)     :: blk

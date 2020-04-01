@@ -74,9 +74,8 @@ subroutine X(eigensolver_evolution)(namespace, mesh, st, hm, te, tol, niter, con
     ! type of a batch, or to modify the batch_copy_data_to routine to allow the copy between batches of
     ! different types.
     do ist = conv + 1, st%nst
-      call wfs_elec_init(zpsib, hm%d%dim, 1, ik)
       call states_elec_get_state(st, mesh, ist, ik, zpsi)
-      call zpsib%add_state(ist, zpsi)
+      call wfs_elec_init(zpsib, hm%d%dim, ist, ist, zpsi, ik)
 
       call hamiltonian_elec_base_set_phase_corr(hm%hm_base, mesh, zpsib)
       call exponential_apply_batch(te, namespace, mesh, hm, zpsib, -tau, imag_time = .true.)

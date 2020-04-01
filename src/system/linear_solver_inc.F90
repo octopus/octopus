@@ -147,8 +147,8 @@ subroutine X(linear_solver_solve_HXeY_batch) (this, namespace, hm, gr, st, xb, y
 
   case default
     do ii = 1, xb%nst
-      call X(linear_solver_solve_HXeY) (this, namespace, hm, gr, st, xb%states(ii)%ist, xb%ik, xb%states(ii)%X(psi), &
-        yb%states(ii)%X(psi), shift(ii), tol, residue(ii), iter_used(ii), occ_response)
+      call X(linear_solver_solve_HXeY) (this, namespace, hm, gr, st, xb%ist(ii), xb%ik, xb%X(ff)(:,:,ii), &
+        yb%X(ff)(:,:,ii), shift(ii), tol, residue(ii), iter_used(ii), occ_response)
     end do
 
   end select
@@ -602,7 +602,7 @@ subroutine X(linear_solver_operator_batch) (hm, namespace, gr, st, shift, xb, hx
     SAFE_ALLOCATE(shift_ist_indexed(st%st_start:st%st_end))
     
     do ii = 1, xb%nst 
-      shift_ist_indexed(xb%states(ii)%ist) = shift(ii)
+      shift_ist_indexed(xb%ist(ii)) = shift(ii)
     end do
     
     call batch_axpy(gr%mesh%np, shift_ist_indexed, xb, hxb)
@@ -612,8 +612,8 @@ subroutine X(linear_solver_operator_batch) (hm, namespace, gr, st, shift, xb, hx
   else
 
     do ii = 1, xb%nst
-      call X(linear_solver_operator)(hm, namespace, gr, st, xb%states(ii)%ist, xb%ik, shift(ii), xb%states(ii)%X(psi), &
-        hxb%states(ii)%X(psi))
+      call X(linear_solver_operator)(hm, namespace, gr, st, xb%ist(ii), xb%ik, shift(ii), xb%X(ff)(:,:,ii), &
+        hxb%X(ff)(:,:,ii))
     end do
 
   end if

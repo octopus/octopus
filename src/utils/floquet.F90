@@ -54,7 +54,7 @@ program oct_floquet
 
   integer :: ierr
 
-  type(system_t) :: sys
+  type(system_t), pointer :: sys
   type(simul_box_t) :: sb
   type(states_elec_t) :: st
   type(grid_t)   :: gr
@@ -92,7 +92,7 @@ program oct_floquet
   call restart_module_init(default_namespace)
 
   call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
-  call system_init(sys, default_namespace)
+  sys => system_init(default_namespace)
   call simul_box_init(sb, default_namespace, sys%geo, sys%space)
   ! make shortcut copies
   st = sys%st
@@ -136,7 +136,7 @@ program oct_floquet
 
   call simul_box_end(sb)
   call fft_all_end()
-  call system_end(sys)
+  SAFE_DEALLOCATE_P(sys)
   call profiling_end(default_namespace)
   call io_end()
   call print_date("Calculation ended on ")
@@ -168,7 +168,7 @@ contains
 
       call parse_variable(default_namespace, 'TDFloquetSample',20 ,nt)
       call messages_print_var_value(stdout,'Number of Floquet time-sampling points', nT)
-      dt = Tcycle/real(nT)
+      dt = Tcycle/TOFLOAT(nT)
 
       call parse_variable(default_namespace, 'TDFloquetDimension',-1,Forder)
       if(Forder.ge.0) then
@@ -183,7 +183,7 @@ contains
         Fdim = 3
       endif
 
-      dt = Tcycle/real(nT)
+      dt = Tcycle/TOFLOAT(nT)
 
       POP_SUB(floquet_init)
 

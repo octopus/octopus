@@ -161,7 +161,7 @@
           opsi(ip, 1) = tg%rho(ip)*zpsi(ip, 1)
         end do
         
-        tg%td_fitness(time) = tg%td_fitness(time) + psi%occ(ist, 1)*real(zmf_dotp(gr%mesh, psi%d%dim, zpsi, opsi), REAL_PRECISION)
+        tg%td_fitness(time) = tg%td_fitness(time) + psi%occ(ist, 1)*TOFLOAT(zmf_dotp(gr%mesh, psi%d%dim, zpsi, opsi))
 
       end do
       SAFE_DEALLOCATE_A(opsi)

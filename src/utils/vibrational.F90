@@ -224,13 +224,11 @@
 
     ftvaf = M_ONE
 
-    call batch_init(vafb, 1, 1)
-    call vafb%add_state(vaf)
+    call batch_init(vafb, vaf)
 
     call spectrum_signal_damp(spectrum%damp, spectrum%damp_factor, 1, nvaf, M_ZERO, deltat, vafb)
 
-    call batch_init(ftvafb, 1, 1)
-    call ftvafb%add_state(ftvaf)
+    call batch_init(ftvafb, ftvaf)
 
     call spectrum_fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_COS, spectrum%noise, &
       1, nvaf, M_ZERO, deltat, vafb, spectrum%min_energy, spectrum%max_energy, spectrum%energy_step, ftvafb)
@@ -298,7 +296,7 @@
           end do
         end do
 
-        vaf(itm) = vaf(itm)/real(ntime - itm + 1, REAL_PRECISION)
+        vaf(itm) = vaf(itm)/TOFLOAT(ntime - itm + 1)
 
       end do
 

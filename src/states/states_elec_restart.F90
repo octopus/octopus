@@ -925,9 +925,8 @@ contains
     type(grid_t),         intent(in)    :: gr
     integer,              intent(out)   :: ierr
 
-    integer :: iunit, isp, err, err2(2), idir
+    integer :: isp, err, err2(2), idir
     character(len=80) :: filename
-    character(len=300) :: lines(2)
 
     PUSH_SUB(states_elec_dump_frozen)
 
@@ -1292,7 +1291,7 @@ contains
     integer,              intent(out) :: ierr
 
     integer :: iunit_spin
-    integer :: err, err2(2), ik, idir, ist
+    integer :: err, err2(2), ik, ist
     character(len=300) :: lines(3)
 
     PUSH_SUB(states_elec_dump_spin)

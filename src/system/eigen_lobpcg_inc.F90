@@ -394,14 +394,14 @@ subroutine X(lobpcg)(namespace, gr, st, hm, st_start, st_end, psi, constr_start,
     ! Apply Hamiltonian to residuals.
 
     if(lnuc > 0) then
-      call wfs_elec_init(psib, st%d%dim, lnuc, ik)
-      call wfs_elec_init(hpsib, st%d%dim, lnuc, ik)
+      call X(wfs_elec_init)(psib, st%d%dim, 1, lnuc, ubound(res, dim=1), ik)
+      call X(wfs_elec_init)(hpsib, st%d%dim, 1, lnuc, ubound(h_res, dim=1), ik)
     end if
     
     do i = 1, lnuc
       ist = luc(i)
-      call psib%add_state(ist, res(:, :, ist))
-      call hpsib%add_state(ist, h_res(:, :, ist))
+      call batch_set_state(psib, i, ubound(res, dim=1), res(:, :, ist))
+      call batch_set_state(hpsib, i, ubound(h_res, dim=1), h_res(:, :, ist))
     end do
 
     if(lnuc > 0) then
@@ -409,6 +409,11 @@ subroutine X(lobpcg)(namespace, gr, st, hm, st_start, st_end, psi, constr_start,
     end if
 
     niter = niter + lnuc
+
+    do i = 1, lnuc
+      ist = luc(i)
+      call batch_get_state(hpsib, i, ubound(h_res, dim=1), h_res(:, :, ist))
+    end do
 
     call psib%end()
     call hpsib%end()

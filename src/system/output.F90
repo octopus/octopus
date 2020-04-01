@@ -86,6 +86,8 @@ module output_oct_m
 #endif
   use young_oct_m
   use xc_oct_m
+  use xc_oep_oct_m
+  use XC_F90(lib_m)
 
   implicit none
 
@@ -106,6 +108,7 @@ module output_oct_m
     output_kick,         &
     output_scalar_pot,   &
     output_needs_current, &
+    output_need_exchange,&
     output_mxll_init,    &
     output_mxll
 
@@ -297,6 +300,9 @@ contains
     !%Option heat_current bit(33)
     !% Outputs the total heat current density. The output file is
     !% called <tt>heat_current-</tt>.
+    !%Option photon_correlator bit(34)
+    !% Outputs the electron-photon correlation function. The output file is
+    !% called <tt>photon_correlator</tt>.
     !%End
     call parse_variable(namespace, 'Output', 0, outp%what)
 
@@ -471,6 +477,8 @@ contains
 
     if(bitand(outp%what, OPTION__OUTPUT__MATRIX_ELEMENTS) /= 0) then
       call output_me_init(outp%me, namespace, sb, st, nst)
+    else
+      outp%me%what = 0
     end if
 
     if(bitand(outp%what, OPTION__OUTPUT__BERKELEYGW) /= 0) then
@@ -620,7 +628,7 @@ contains
       outp%how = 0
     end if
 
-    ! At this point, we don't know whether the states will be real or complex.
+    ! At this point, we don`t know whether the states will be real or complex.
     ! We therefore pass .false. to states_are_real, and need to check for real states later.
 
     if(output_needs_current(outp, .false.)) then
@@ -732,6 +740,18 @@ contains
       if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__KANAMORIU) /= 0)&
         call lda_u_write_kanamoriU(dir, st, hm%lda_u, namespace)
     end if
+    
+    if (bitand(ks%xc_family, XC_FAMILY_OEP) /= 0 .and. ks%theory_level /= HARTREE_FOCK) then
+      if (ks%oep%level == XC_OEP_FULL) then
+        if (ks%oep%has_photons) then
+          if(bitand(outp%what, OPTION__OUTPUT__PHOTON_CORRELATOR) /= 0) then
+            write(fname, '(a)') 'photon_correlator'
+            call dio_function_output(outp%how, dir, trim(fname), namespace, gr%mesh, ks%oep%pt%correlator(:,1), &
+              units_out%length, ierr, geo = geo)
+          end if
+        end if
+      end if
+    end if
 
     call profiling_out(prof)
     POP_SUB(output_all)
@@ -840,7 +860,7 @@ contains
       call basins_analyze(basins, gr%mesh, ff(:), st%rho, CNST(0.01))
 
       call dio_function_output(outp%how, dir, trim(filename), namespace, gr%mesh, &
-        real(basins%map, REAL_PRECISION), unit_one, ierr, geo = geo, grp = mpi_grp)
+        TOFLOAT(basins%map), unit_one, ierr, geo = geo, grp = mpi_grp)
       ! this quantity is dimensionless
 
       write(fname,'(4a)') trim(dir), '/', trim(filename), '.info'
@@ -948,8 +968,8 @@ contains
 
       ASSERT(.not. gr%have_fine_mesh)
 
-      call xc_get_vxc(gr%fine%der, ks%xc, st, hm%psolver, namespace, st%rho, st%d%ispin, &
-        -minval(st%eigenval(st%nst,:)), st%qtot, hm%exxop, ex_density = ex_density, ec_density = ec_density)
+      call xc_get_vxc(gr%fine%der, ks%xc, st, hm%psolver, namespace, st%rho, st%d%ispin, hm%exxop, &
+        ex_density = ex_density, ec_density = ec_density)
       forall(ip = 1:gr%fine%mesh%np, is = 1:st%d%nspin)
         energy_density(ip, is) = energy_density(ip, is) + ex_density(ip) + ec_density(ip)
       end forall
@@ -1239,8 +1259,7 @@ contains
     SAFE_ALLOCATE(vxc(1:gr%mesh%np, 1:st%d%nspin))
     vxc(:,:) = M_ZERO
     ! we should not include core rho here. that is why we do not just use hm%vxc
-    call xc_get_vxc(gr%der, ks%xc, st, hm%psolver, namespace, st%rho, st%d%ispin, &
-      -minval(st%eigenval(st%nst, :)), st%qtot, hm%exxop, vxc)
+    call xc_get_vxc(gr%der, ks%xc, st, hm%psolver, namespace, st%rho, st%d%ispin, hm%exxop, vxc)
 
     message(1) = "BerkeleyGW output: vxc.dat"
     if(bgw%calc_exchange) message(1) = trim(message(1)) // ", x.dat"
@@ -1470,6 +1489,18 @@ contains
 #endif
 
   end subroutine output_berkeleygw
+
+ 
+  !--------------------------------------------------------------
+
+  logical function output_need_exchange(outp) result(need_exx)
+    type(output_t),         intent(in)    :: outp
+
+    need_exx =( bitand(outp%what, OPTION__OUTPUT__BERKELEYGW) /= 0 &
+           .or. bitand(outp%me%what, OPTION__OUTPUTMATRIXELEMENTS__TWO_BODY) /= 0 &
+           .or. bitand(outp%me%what, OPTION__OUTPUTMATRIXELEMENTS__TWO_BODY_EXC_K) /= 0 )
+  end function output_need_exchange
+
 
    ! ---------------------------------------------------------
   subroutine output_dftu_orbitals(outp, dir, namespace, this, st, mesh, geo, has_phase)

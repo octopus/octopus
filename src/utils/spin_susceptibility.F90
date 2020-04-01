@@ -39,18 +39,17 @@ program spin_susceptibility
 
   implicit none
 
-  integer :: in_file, out_file, ref_file, ii, jj, kk, idir, jdir, ierr, ib, num_col, num_col_cart
-  integer :: time_steps, time_steps_ref, energy_steps, istart, iend, ntiter, n_rows, iq
-  FLOAT   :: dt, dt_ref, tt, ww, norm, dot
+  integer :: in_file, out_file, ii, jj, kk, ierr, ib, num_col, num_col_cart
+  integer :: time_steps, energy_steps, istart, iend, ntiter, iq
+  FLOAT   :: dt, tt, ww
   FLOAT, allocatable :: ftreal(:,:), ftimag(:,:)
   FLOAT, allocatable :: m_cart(:,:), magnetization(:,:,:)
   type(spectrum_t)  :: spectrum
-  type(block_t)     :: blk
   type(batch_t)     :: vecpotb, ftrealb, ftimagb
   type(namespace_t) :: namespace
   type(kick_t)      :: kick
   character(len=256) :: header
-  character(len=MAX_PATH_LEN) :: ref_filename, fname
+  character(len=MAX_PATH_LEN) :: fname
   CMPLX, allocatable :: chi(:,:)
 
   ! Initialize stuff
@@ -186,15 +185,9 @@ program spin_susceptibility
     SAFE_ALLOCATE(ftreal(1:energy_steps, num_col))
     SAFE_ALLOCATE(ftimag(1:energy_steps, num_col))
 
-    call batch_init(vecpotb, 1, num_col)
-    call batch_init(ftrealb, 1, num_col)
-    call batch_init(ftimagb, 1, num_col)
-
-    do ib = 1, num_col
-      call vecpotb%add_state(magnetization(:, ib, iq))
-      call ftrealb%add_state(ftreal(1:energy_steps,ib))
-      call ftimagb%add_state(ftimag(1:energy_steps,ib))
-    end do
+    call batch_init(vecpotb, 1, 1, num_col, magnetization(:, :, iq))
+    call batch_init(ftrealb, 1, 1, num_col, ftreal)
+    call batch_init(ftimagb, 1, 1, num_col, ftimag)
 
 
     call spectrum_signal_damp(spectrum%damp, spectrum%damp_factor, istart, iend, spectrum%start_time, dt, vecpotb)
@@ -235,7 +228,7 @@ program spin_susceptibility
     do kk = 1, energy_steps
       ww = (kk-1)*spectrum%energy_step + spectrum%min_energy
       write(out_file, '(13e15.6)') ww,                                   &
-               (real(chi(kk,ii), REAL_PRECISION), aimag(chi(kk,ii)), ii = 1, num_col/2)
+               (TOFLOAT(chi(kk,ii)), aimag(chi(kk,ii)), ii = 1, num_col/2)
     end do
     call io_close(out_file)
 

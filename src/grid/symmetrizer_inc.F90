@@ -19,7 +19,7 @@
 !> supply field and symmfield, and/or field_vector and symmfield_vector
 subroutine X(symmetrizer_apply)(this, np, field, field_vector, symmfield, symmfield_vector, &
           suppress_warning, reduced_quantity)
-  type(symmetrizer_t), target, intent(in)    :: this
+  type(symmetrizer_t),         intent(in)    :: this
   integer,                     intent(in)    :: np !mesh%np or mesh%fine%np
   R_TYPE,    optional, target, intent(in)    :: field(:) !< (np)
   R_TYPE,    optional, target, intent(in)    :: field_vector(:, :)  !< (np, 3)
@@ -31,11 +31,9 @@ subroutine X(symmetrizer_apply)(this, np, field, field_vector, symmfield, symmfi
   logical,           optional, intent(in)    :: reduced_quantity
 
   integer :: ip, iop, nops, ipsrc, idir
-  FLOAT :: destpoint(1:3), srcpoint(1:3), lsize(1:3), offset(1:3)
   R_TYPE  :: acc, acc_vector(1:3)
   FLOAT   :: weight, maxabsdiff, maxabs
   R_TYPE, pointer :: field_global(:), field_global_vector(:, :)
-  type(pv_t), pointer :: vp
 
   PUSH_SUB(X(symmetrizer_apply))
 
@@ -53,7 +51,6 @@ subroutine X(symmetrizer_apply)(this, np, field, field_vector, symmfield, symmfi
   end if
 
   ASSERT(associated(this%mesh))
-  vp => this%mesh%vp
 
   ! With domain parallelization, we collect all points of the
   ! 'field' array. This seems reasonable, since we will probably
@@ -65,7 +62,7 @@ subroutine X(symmetrizer_apply)(this, np, field, field_vector, symmfield, symmfi
     if(this%mesh%parallel_in_domains) then
       SAFE_ALLOCATE(field_global(1:this%mesh%np_global))
 #ifdef HAVE_MPI
-      call vec_allgather(vp, field_global, field)
+      call vec_allgather(this%mesh%vp, field_global, field)
 #endif
     else
       field_global => field
@@ -78,7 +75,7 @@ subroutine X(symmetrizer_apply)(this, np, field, field_vector, symmfield, symmfi
       SAFE_ALLOCATE(field_global_vector(1:this%mesh%np_global, 1:3))
       do idir = 1, 3
 #ifdef HAVE_MPI
-        call vec_allgather(vp, field_global_vector(:, idir), field_vector(:, idir))
+        call vec_allgather(this%mesh%vp, field_global_vector(:, idir), field_vector(:, idir))
 #endif
       end do
     else
@@ -89,54 +86,13 @@ subroutine X(symmetrizer_apply)(this, np, field, field_vector, symmfield, symmfi
   nops = symmetries_number(this%mesh%sb%symm)
   weight = M_ONE/nops
 
-  lsize(1:3) = dble(this%mesh%idx%ll(1:3))
-  offset(1:3) = dble(this%mesh%idx%nr(1, 1:3) + this%mesh%idx%enlarge(1:3))
-
   do ip = 1, np
-    if(this%mesh%parallel_in_domains) then
-      ! convert to global point
-      destpoint(1:3) = dble(this%mesh%idx%lxyz(vp%local(vp%xlocal + ip - 1), 1:3)) - offset(1:3)
-    else
-      destpoint(1:3) = dble(this%mesh%idx%lxyz(ip, 1:3)) - offset(1:3)
-    end if
-    ! offset moves corner of cell to origin, in integer mesh coordinates
-
-    ASSERT(all(destpoint >= 0))
-    ASSERT(all(destpoint < lsize))
-
-    ! move to center of cell in real coordinates
-    destpoint = destpoint - dble(int(lsize)/2)
-
-    !convert to proper reduced coordinates
-    forall(idir = 1:3) destpoint(idir) = destpoint(idir)/lsize(idir)
-
-    if(present(field)) &
-      acc = M_ZERO
-    if(present(field_vector)) &
-      acc_vector(1:3) = M_ZERO
+    if(present(field)) acc = M_ZERO
+    if(present(field_vector)) acc_vector(1:3) = M_ZERO
 
     ! iterate over all points that go to this point by a symmetry operation
     do iop = 1, nops
-      srcpoint = symm_op_apply_red(this%mesh%sb%symm%ops(iop), destpoint) 
-
-      !We now come back to what should be an integer, if the symmetric point beloings to the grid
-      !At this point, this is already checked
-      forall(idir = 1:3) srcpoint(idir) = srcpoint(idir)*lsize(idir)  
-
-      ! move back to reference to origin at corner of cell
-      srcpoint = srcpoint + dble(int(lsize)/2)
-
-      ! apply periodic boundary conditions in periodic directions
-      do idir = 1, this%mesh%sb%periodic_dim
-        if(nint(srcpoint(idir)) < 0 .or. nint(srcpoint(idir)) >= lsize(idir)) then
-          srcpoint(idir) = modulo(srcpoint(idir)+M_HALF*SYMPREC, lsize(idir))
-        end if
-      end do
-      ASSERT(all(srcpoint >= -SYMPREC))
-      ASSERT(all(srcpoint < lsize))
-      srcpoint(1:3) = srcpoint(1:3) + offset(1:3)
-
-      ipsrc = this%mesh%idx%lxyz_inv(nint(srcpoint(1)), nint(srcpoint(2)), nint(srcpoint(3)))
+      ipsrc = this%map(ip, iop)
 
       if(present(field)) then
         acc = acc + field_global(ipsrc)
@@ -187,6 +143,61 @@ subroutine X(symmetrizer_apply)(this, np, field, field_vector, symmfield, symmfi
 
   POP_SUB(X(symmetrizer_apply))
 end subroutine X(symmetrizer_apply)
+
+!The same as for symmetrizer_apply, but a single symmetry operation
+!Here iop can be negative, indicating the spatial symmetry plus time reversal symmetry
+subroutine X(symmetrizer_apply_single)(this, np, iop, field, symmfield)
+  type(symmetrizer_t),         intent(in)    :: this
+  integer,                     intent(in)    :: np !mesh%np or mesh%fine%np
+  integer,                     intent(in)    :: iop
+  R_TYPE,              target, intent(in)    :: field(:) !< (np)
+  R_TYPE,                      intent(out)   :: symmfield(:) !< (np)
+
+  integer :: ip
+  R_TYPE, pointer :: field_global(:)
+  type(profile_t), save :: prof
+
+  PUSH_SUB(X(symmetrizer_apply_single))
+
+  call profiling_in(prof, 'SYMMETRIZE_SINGLE')
+
+  ASSERT(ubound(field, dim = 1) >= np)
+  ASSERT(ubound(symmfield, dim = 1) >= np)
+  ASSERT(associated(this%mesh))
+
+  ! With domain parallelization, we collect all points of the
+  ! 'field' array. This seems reasonable, since we will probably
+  ! need almost all points anyway.
+  !
+  ! The symmfield array is kept locally.
+
+  if(this%mesh%parallel_in_domains) then
+    SAFE_ALLOCATE(field_global(1:this%mesh%np_global))
+#ifdef HAVE_MPI
+    call vec_allgather(this%mesh%vp, field_global, field)
+#endif
+  else
+    field_global => field
+  end if
+
+  if(iop>0) then
+    do ip = 1, np
+       symmfield(ip) = field_global(this%map(ip,abs(iop)))
+    end do
+  else
+    do ip = 1, np
+       symmfield(ip) = R_CONJ(field_global(this%map(ip,abs(iop))))
+    end do
+  end if
+
+  if(this%mesh%parallel_in_domains) then
+    SAFE_DEALLOCATE_P(field_global)
+  end if
+
+  call profiling_out(prof)
+
+  POP_SUB(X(symmetrizer_apply_single))
+end subroutine X(symmetrizer_apply_single)
 
 ! -------------------------------------------------------------------------------
 subroutine X(symmetrize_tensor_cart)(symm, tensor)

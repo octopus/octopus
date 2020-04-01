@@ -3,7 +3,7 @@ CalculationMode = test
 TestMode = exp_apply
 TestRepetitions = 5
 
-PeriodicDimensions = 3
+BoxShape = parallelepiped
 
 aCell = 5
 bCell = 4
@@ -28,3 +28,4 @@ jradius = r_s * (N_electrons)^(1.0/3.0)
 %
 
 ForceComplex = yes
+StatesPack = yes

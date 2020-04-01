@@ -703,15 +703,15 @@ contains
       call write_files("maxwell_sigma_m-z", tmp)
       ! pml_a for electric field dim = 1
       tmp(:) = M_ZERO
-      call get_pml_io_function(real(bc%pml_a(:, 1)), bc, tmp)
+      call get_pml_io_function(TOFLOAT(bc%pml_a(:, 1)), bc, tmp)
       call write_files("maxwell_sigma_pml_a_e-x", tmp)
       ! pml_a for electric field dim = 2
       tmp(:) = M_ZERO
-      call get_pml_io_function(real(bc%pml_a(:, 2)), bc, tmp)
+      call get_pml_io_function(TOFLOAT(bc%pml_a(:, 2)), bc, tmp)
       call write_files("maxwell_sigma_pml_a_e-y", tmp)
       ! pml_a for electric field dim = 3
       tmp(:) = M_ZERO
-      call get_pml_io_function(real(bc%pml_a(:, 3)), bc, tmp)
+      call get_pml_io_function(TOFLOAT(bc%pml_a(:, 3)), bc, tmp)
       call write_files("maxwell_sigma_pml_a_e-z", tmp)
       ! pml_a for magnetic field dim = 1
       tmp(:) = M_ZERO
@@ -1648,7 +1648,7 @@ contains
 
     PUSH_SUB(maxwell_plane_waves_boundaries_init)
 
-    test_limit = 10**(-9)
+    test_limit = CNST(10.0e-9)
 
     !%Variable UserDefinedMaxwellIncidentWaves
     !%Type block
@@ -1774,8 +1774,8 @@ contains
           call messages_info(4)
           call mxf_read(bc%plane_waves_mx_function(il), namespace, trim(mxf_expression), ierr)
           if (ierr /= 0) then            
-            write(message(1),'(3A)') 'Error in the ""', trim(mxf_expression), '"" field defined in the &
-                                      UserDefinedMaxwellIncidentWaves block'
+            write(message(1),'(3A)') 'Error in the ""', trim(mxf_expression), &
+              '"" field defined in the UserDefinedMaxwellIncidentWaves block'
             call messages_fatal(1, namespace=namespace)
           end if
           e_field  = units_to_atomic(units_inp%energy/units_inp%length, e_field)
@@ -1819,8 +1819,8 @@ contains
           call messages_info(3)
           !call mxf_read(bc%plane_waves_mx_function(il), trim(mxf_expression), ierr)
           !if (ierr /= 0) then            
-          !  write(message(1),'(3A)') 'Error in the "', trim(mxf_expression), '" field defined in the &
-          !                            UserDefinedMaxwellIncidentWaves block'
+          !  write(message(1),'(3A)') 'Error in the "', trim(mxf_expression), &
+          !    '" field defined in the UserDefinedMaxwellIncidentWaves block'
           !  call messages_fatal(1, namespace=namespace)
           !end if
           e_field  = units_to_atomic(units_inp%energy/units_inp%length, e_field)

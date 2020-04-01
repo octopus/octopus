@@ -413,16 +413,14 @@ contains
     logical, optional,         intent(in)    :: set_bc !< If set to .false. the boundary conditions are assumed to be set previously.
 
     type(profile_t), save :: prof_hamiltonian
-    logical :: pack
-    integer :: terms_
+!    logical :: pack
+!    integer :: terms_
 
     PUSH_SUB(hamiltonian_mxll_apply_batch)
     call profiling_in(prof_hamiltonian, "MXLL_HAMILTONIAN")
 
     ASSERT(psib%status() == hpsib%status())
 
-    ASSERT(psib%is_ok())
-    ASSERT(hpsib%is_ok())
     ASSERT(psib%nst == hpsib%nst)
 
     !Not implemented at the moment
@@ -446,8 +444,8 @@ contains
       endif
     end if
 
-    call zderivatives_curl(der, psib%states(1)%zpsi, hpsib%states(1)%zpsi)
-    hpsib%states(1)%zpsi(:,:) = P_c * hpsib%states(1)%zpsi(:,:)
+    call zderivatives_curl(der, psib%zff(:, :, 1), hpsib%zff(:, :, 1))
+    hpsib%zff(:,:,1) = P_c * hpsib%zff(:,:,1)
   
 !    if(pack) then
 !      call psib%do_unpack(copy = .false.)
@@ -479,10 +477,8 @@ contains
 
     PUSH_SUB(hamiltonian_mxll_apply)
 
-!    call batch_init(psib, hm%d%dim, 1)
-!    call psib%add_state(ist, psi)
-!    call batch_init(hpsib, hm%d%dim, 1)
-!    call hpsib%add_state(ist, hpsi)
+!    call batch_init(psib, hm%d%dim, ist, ist, psi)
+!    call batch_init(hpsib, hm%d%dim, ist, ist, hpsi)
 !
 !    call hamiltonian_mxll_apply_batch(hm, der, psib, hpsib, ik, time = time, terms = terms, Imtime = Imtime, set_bc = set_bc)
 !
@@ -521,8 +517,8 @@ contains
     type(states_mxll_t),      intent(inout) :: hst
     FLOAT, optional,          intent(in)    :: time
 
-    integer :: ik, ib
-    FLOAT, allocatable :: psi(:, :)
+!    integer :: ik, ib
+!    FLOAT, allocatable :: psi(:, :)
   
     PUSH_SUB(X(hamiltonian_mxll_apply_all))
 
@@ -842,9 +838,9 @@ contains
         pml_b(:) = hm%bc%pml_b(ip_in, :)
         pml_g(:) = hm%bc%pml_conv_plus(ip_in, pml_dir,:)
         pml(ip)  = rs_sign * pml_c(pml_dir) * tmp_partial(ip) &
-                 + rs_sign * pml_c(pml_dir) * real(pml_a(pml_dir)) * real(tmp_partial(ip)) &
+                 + rs_sign * pml_c(pml_dir) * TOFLOAT(pml_a(pml_dir)) * TOFLOAT(tmp_partial(ip)) &
                  + rs_sign * M_zI * pml_c(pml_dir) * aimag(pml_a(pml_dir)) * aimag(tmp_partial(ip)) &
-                 + rs_sign * pml_c(pml_dir) * real(pml_b(pml_dir)) * real(pml_g(field_dir)) &
+                 + rs_sign * pml_c(pml_dir) * TOFLOAT(pml_b(pml_dir)) * TOFLOAT(pml_g(field_dir)) &
                  + rs_sign * M_zI * pml_c(pml_dir) * aimag(pml_b(pml_dir)) * aimag(pml_g(field_dir))
       end do
 
@@ -888,14 +884,14 @@ contains
         pml_g_p(:) = hm%bc%pml_conv_plus(ip_in, pml_dir, :)
         pml_g_m(:) = hm%bc%pml_conv_minus(ip_in, pml_dir, :)
         pml(ip,1)  = pml_c(pml_dir) * tmp_partial(ip, 1) &
-                   + pml_c(pml_dir) * real(pml_a(pml_dir)) * real(tmp_partial(ip, 1)) &
+                   + pml_c(pml_dir) * TOFLOAT(pml_a(pml_dir)) * TOFLOAT(tmp_partial(ip, 1)) &
                    + M_zI * pml_c(pml_dir) * aimag(pml_a(pml_dir)) * aimag(tmp_partial(ip, 1)) &
-                   + pml_c(pml_dir) * real(pml_b(pml_dir)) * real(pml_g_p(field_dir)) &
+                   + pml_c(pml_dir) * TOFLOAT(pml_b(pml_dir)) * TOFLOAT(pml_g_p(field_dir)) &
                    + M_zI * pml_c(pml_dir) * aimag(pml_b(pml_dir)) * aimag(pml_g_p(field_dir))
         pml(ip,2)  = pml_c(pml_dir) * tmp_partial(ip, 2) &
-                   + pml_c(pml_dir) * real(pml_a(pml_dir)) * real(tmp_partial(ip, 2)) &
+                   + pml_c(pml_dir) * TOFLOAT(pml_a(pml_dir)) * TOFLOAT(tmp_partial(ip, 2)) &
                    + M_zI * pml_c(pml_dir) * aimag(pml_a(pml_dir)) * aimag(tmp_partial(ip, 2)) &
-                   + pml_c(pml_dir) * real(pml_b(pml_dir)) * real(pml_g_m(field_dir)) &
+                   + pml_c(pml_dir) * TOFLOAT(pml_b(pml_dir)) * TOFLOAT(pml_g_m(field_dir)) &
                    + M_zI * pml_c(pml_dir) * aimag(pml_b(pml_dir)) * aimag(pml_g_m(field_dir))
       end do
 
@@ -936,31 +932,31 @@ contains
           ff_minus(1) = psi(ip, 4)
           ff_minus(2) = psi(ip, 5)
           ff_minus(3) = psi(ip, 6)
-          aux_ep      = dcross_product(aux_ep,real(ff_plus+ff_minus))
+          aux_ep      = dcross_product(aux_ep,TOFLOAT(ff_plus+ff_minus))
           aux_mu      = dcross_product(aux_mu,aimag(ff_plus-ff_minus))
           oppsi(ip, 1) = oppsi(ip, 1)*cc                                         &
                        - cc * aux_ep(1) - cc * M_zI * aux_mu(1)                  &
-                       - M_zI * sigma_e * real(ff_plus(1) + ff_minus(1))         &
+                       - M_zI * sigma_e * TOFLOAT(ff_plus(1) + ff_minus(1))         &
                        - M_zI * sigma_m * M_zI * aimag(ff_plus(1) - ff_minus(1))
           oppsi(ip, 4) = oppsi(ip, 4)*cc                                         &
                        + cc * aux_ep(1) - cc * M_zI * aux_mu(1)                  &
-                       - M_zI * sigma_e * real(ff_plus(1) + ff_minus(1))         &
+                       - M_zI * sigma_e * TOFLOAT(ff_plus(1) + ff_minus(1))         &
                        + M_zI * sigma_m * M_zI * aimag(ff_plus(1) - ff_minus(1))
           oppsi(ip, 2) = oppsi(ip, 2)*cc                                         &
                        - cc * aux_ep(2) - cc * M_zI * aux_mu(2)                  &
-                       - M_zI * sigma_e * real(ff_plus(2) + ff_minus(2))         &
+                       - M_zI * sigma_e * TOFLOAT(ff_plus(2) + ff_minus(2))         &
                        - M_zI * sigma_m * M_zI * aimag(ff_plus(2) - ff_minus(2))
           oppsi(ip, 5) = oppsi(ip, 5)*cc                                         &
                        + cc * aux_ep(2) - cc * M_zI * aux_mu(2)                  &
-                       - M_zI * sigma_e * real(ff_plus(2) + ff_minus(2))         &
+                       - M_zI * sigma_e * TOFLOAT(ff_plus(2) + ff_minus(2))         &
                        + M_zI * sigma_m * M_zI * aimag(ff_plus(2) - ff_minus(2)) 
           oppsi(ip, 3) = oppsi(ip, 3)*cc                                         &
                        - cc * aux_ep(3) - cc * M_zI * aux_mu(3)                  &
-                       - M_zI * sigma_e * real(ff_plus(3) + ff_minus(3))         &
+                       - M_zI * sigma_e * TOFLOAT(ff_plus(3) + ff_minus(3))         &
                        - M_zI * sigma_m * M_zI * aimag(ff_plus(3) - ff_minus(3))
           oppsi(ip, 6) = oppsi(ip, 6)*cc                                         &
                        + cc * aux_ep(3) - cc * M_zI * aux_mu(3)                  &
-                       - M_zI * sigma_e * real(ff_plus(3) + ff_minus(3))         &
+                       - M_zI * sigma_e * TOFLOAT(ff_plus(3) + ff_minus(3))         &
                        + M_zI * sigma_m * M_zI * aimag(ff_plus(3) - ff_minus(3))
         end do
       end if
@@ -980,7 +976,6 @@ contains
 
     integer            :: ip, ip_in, il, np_part
     FLOAT              :: cc, aux_ep(3), aux_mu(3), sigma_e, sigma_m
-    FLOAT, allocatable :: tmp_e(:,:), tmp_b(:,:), tmp_curl_e(:,:), tmp_curl_b(:,:)
     CMPLX              :: ff_plus(3), ff_minus(3)
 
     PUSH_SUB(maxwell_medium_boxes_calculation)
@@ -1003,31 +998,31 @@ contains
           ff_minus(1)  = psi(ip, 4)
           ff_minus(2)  = psi(ip, 5)
           ff_minus(3)  = psi(ip, 6)
-          aux_ep       = dcross_product(aux_ep,real(ff_plus+ff_minus))
+          aux_ep       = dcross_product(aux_ep,TOFLOAT(ff_plus+ff_minus))
           aux_mu       = dcross_product(aux_mu,aimag(ff_plus-ff_minus))
           oppsi(ip, 1) = oppsi(ip,1)*cc                                          &
                        - cc * aux_ep(1) - cc * M_zI * aux_mu(1)                  &
-                       - M_zI * sigma_e * real(ff_plus(1) + ff_minus(1))         &
+                       - M_zI * sigma_e * TOFLOAT(ff_plus(1) + ff_minus(1))         &
                        - M_zI * sigma_m * M_zI * aimag(ff_plus(1) - ff_minus(1))
           oppsi(ip, 4) = oppsi(ip,4)*cc                                          &
                        + cc * aux_ep(1) - cc * M_zI * aux_mu(1)                  &
-                       - M_zI * sigma_e * real(ff_plus(1) + ff_minus(1))         &
+                       - M_zI * sigma_e * TOFLOAT(ff_plus(1) + ff_minus(1))         &
                        + M_zI * sigma_m * M_zI * aimag(ff_plus(1) - ff_minus(1))
           oppsi(ip, 2) = oppsi(ip,2)*cc                                          &
                        - cc * aux_ep(2) - cc * M_zI * aux_mu(2)                  &
-                       - M_zI * sigma_e * real(ff_plus(2) + ff_minus(2))         &
+                       - M_zI * sigma_e * TOFLOAT(ff_plus(2) + ff_minus(2))         &
                        - M_zI * sigma_m * M_zI * aimag(ff_plus(2) - ff_minus(2))
           oppsi(ip, 5) = oppsi(ip,5)*cc                                          &
                        + cc * aux_ep(2) - cc * M_zI * aux_mu(2)                  &
-                       - M_zI * sigma_e * real(ff_plus(2) + ff_minus(2))         &
+                       - M_zI * sigma_e * TOFLOAT(ff_plus(2) + ff_minus(2))         &
                        + M_zI * sigma_m * M_zI * aimag(ff_plus(2) - ff_minus(2)) 
           oppsi(ip, 3) = oppsi(ip,3)*cc                                          &
                        - cc * aux_ep(3) - cc * M_zI * aux_mu(3)                  &
-                       - M_zI * sigma_e * real(ff_plus(3) + ff_minus(3))         &
+                       - M_zI * sigma_e * TOFLOAT(ff_plus(3) + ff_minus(3))         &
                        - M_zI * sigma_m * M_zI * aimag(ff_plus(3) - ff_minus(3))
           oppsi(ip, 6) = oppsi(ip,6)*cc                                          &
                        + cc * aux_ep(3) - cc * M_zI * aux_mu(3)                  &
-                       - M_zI * sigma_e * real(ff_plus(3) + ff_minus(3))         &
+                       - M_zI * sigma_e * TOFLOAT(ff_plus(3) + ff_minus(3))         &
                        + M_zI * sigma_m * M_zI * aimag(ff_plus(3) - ff_minus(3))
         end do
       end do
@@ -1142,9 +1137,10 @@ contains
     type(states_mxll_t),      intent(in)    :: st
     CMPLX,                    intent(inout) :: transverse_field(:,:)
 
-    integer            :: idim, rankmin, ip_local, ip_global, ii, jj, kk, ip, ip_in
-    FLOAT              :: pos(3), dmin
-    CMPLX              :: surface_integral(3)
+    integer            :: idim, ip, ip_in
+!    integer            :: rankmin, ip_local, ip_global, ii, jj, kk
+!    FLOAT              :: pos(3), dmin
+!    CMPLX              :: surface_integral(3)
     CMPLX, allocatable :: field_old(:,:), ztmp(:,:), tmp_poisson(:)
 
     PUSH_SUB(maxwell_helmholtz_decomposition_trans_field)
@@ -1234,7 +1230,8 @@ contains
     CMPLX,               intent(in)    :: field(:,:)
     CMPLX,               intent(inout) :: surface_integral(:)
 
-    integer             :: idim, ip_surf, ix, ix_max, iy, iy_max, iz, iz_max, ii_max
+    integer             :: ip_surf, ix, ix_max, iy, iy_max, iz, iz_max, ii_max
+!    integer             :: idim
     FLOAT               :: xx(3)
     CMPLX               :: tmp_sum(3), normal(3)
     CMPLX,  allocatable :: tmp_global(:,:), tmp_surf(:,:,:,:,:)

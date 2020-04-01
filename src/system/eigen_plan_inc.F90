@@ -60,6 +60,7 @@ subroutine X(eigensolver_plan) (namespace, gr, st, hm, pre, tol, niter, converge
 
   ! Some hard-coded parameters.
   integer, parameter  :: krylov = 15 ! The Krylov subspace size.
+  integer, parameter  :: krylov_half = 7 ! Half the Krylov subspace size (rounded down).
 
   PUSH_SUB(X(eigensolver_plan))
 
@@ -119,7 +120,7 @@ subroutine X(eigensolver_plan) (namespace, gr, st, hm, pre, tol, niter, converge
     if (d1 <= st%d%block_size) then !start from beginning
       blk = st%d%block_size
     else                   !restart to work on another set of eigen-pairs
-      blk = min(krylov/2, d1)
+      blk = min(krylov_half, d1)
     end if
 
     !copy next set of Ritz vector/initial guesses to vv
@@ -167,15 +168,12 @@ subroutine X(eigensolver_plan) (namespace, gr, st, hm, pre, tol, niter, converge
         end if
       end do ortho
 
-      call wfs_elec_init(vvb, st%d%dim, blk, ik)
+      call X(wfs_elec_init)(vvb, st%d%dim, 1, blk, gr%mesh%np_part, ik)
       call wfs_elec_init(avb, st%d%dim, d1 + 1, d1 + blk, av(:, :, d1 + 1:), ik)
-      call vvb%X(allocate)(d1 + 1, d1 + blk, gr%mesh%np_part)
 
       ! we need to copy to mesh%np_part size array
       do ist = 1, blk
-        do idim = 1, dim
-          call lalg_copy(gr%mesh%np, vv(:, idim, d1 + ist), vvb%states(ist)%X(psi)(:, idim))
-        end do
+        call batch_set_state(vvb, ist, gr%mesh%np, vv(:, :, d1 + ist))
       end do
 
       call X(hamiltonian_elec_apply_batch)(hm, namespace, gr%mesh, vvb, avb)

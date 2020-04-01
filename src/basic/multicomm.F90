@@ -568,9 +568,9 @@ contains
       ! calculate fraction of idle time
       frac = M_ONE
       do ii = 1, P_STRATEGY_MAX
-        n_max = ceiling(real(index_range(ii), REAL_PRECISION) / real(real_group_sizes(ii), REAL_PRECISION))
+        n_max = ceiling(TOFLOAT(index_range(ii)) / TOFLOAT(real_group_sizes(ii)))
         kk = n_max*real_group_sizes(ii)
-        frac = frac*(M_ONE - real(kk - index_range(ii), REAL_PRECISION) / real(kk, REAL_PRECISION))
+        frac = frac*(M_ONE - TOFLOAT(kk - index_range(ii)) / TOFLOAT(kk))
       end do
 
       write(message(1), '(a,f5.2,a)') "Info: Octopus will waste at least ", &
@@ -594,10 +594,10 @@ contains
       integer :: coords(MAX_INDEX)
       integer :: new_comm, new_comm_size
       character(len=6) :: node_type
-#endif
       type(mpi_grp_t) :: reorder_grp
       integer :: base_group, reorder_group, ranks(base_grp%size)
       integer :: ii, jj, kk, ll, nn, reorder_comm
+#endif
 
       PUSH_SUB(multicomm_init.group_comm_create)
 
@@ -1041,8 +1041,8 @@ contains
     integer, intent(out)   :: nobjs_loc   !< Number of objects in each partition
 
     integer :: rank
-    integer, allocatable :: istart(:), ifinal(:), lsize(:)
 #ifdef HAVE_OPENMP
+    integer, allocatable :: istart(:), ifinal(:), lsize(:)
     integer :: nthreads
 #endif
 

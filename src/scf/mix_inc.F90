@@ -231,7 +231,7 @@ subroutine X(broyden_extrapolation_aux)(this, ii, coeff, iter_used, dbeta, dwork
   FLOAT, optional,    intent(in) :: dbeta(:, :), dwork(:), dgamma
   CMPLX, optional,    intent(in) :: zbeta(:, :), zwork(:), zgamma
 
-  FLOAT, parameter :: w0 = CNST(0.01), ww = M_FIVE
+  FLOAT, parameter :: ww = M_FIVE
   integer :: d1,d2,d3, ipos, i
   R_TYPE  :: gamma
   R_TYPE, allocatable :: f(:, :, :)
@@ -489,7 +489,7 @@ subroutine X(pulay_extrapolation)(this, d2, d3, vin, vout, vnew, iter_used, f, d
       if(j > i) a(j, i) = a(i, j)
     end do
   end do
-  if (all(abs(a) < 1.0E-8)) then
+  if (all(abs(a) < CNST(1.0E-8))) then
     ! residuals are too small. Do not mix.
     vnew = vout
     POP_SUB(X(pulay_extrapolation))

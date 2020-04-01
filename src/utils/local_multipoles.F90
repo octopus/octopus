@@ -65,7 +65,7 @@ program oct_local_multipoles
     type(local_write_t)             :: writ            !< write option for local domains analysis.
   end type local_domain_t
 
-  type(system_t)        :: sys
+  type(system_t), pointer :: sys
   type(simul_box_t)     :: sb
   integer, parameter    :: BADER = 512
   FLOAT                 :: BaderThreshold
@@ -93,13 +93,13 @@ program oct_local_multipoles
   call restart_module_init(default_namespace)
 
   call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
-  call system_init(sys, default_namespace)
+  sys => system_init(default_namespace)
   call simul_box_init(sb, default_namespace, sys%geo, sys%space)
 
   call local_domains()
 
   call simul_box_end(sb)
-  call system_end(sys)
+  SAFE_DEALLOCATE_P(sys)
   call profiling_end(default_namespace)
   call io_end()
   call print_date("Calculation ended on ")
@@ -903,7 +903,7 @@ contains
       do ip = 1, sys%gr%mesh%np
         do id = 1, nd
           if (inside(ip, id)) then 
-            dble_domain_map(id, ip) = DBLE(id)
+            dble_domain_map(id, ip) = TOFLOAT(id)
             domain_mesh(ip) = domain_mesh(ip) + dble_domain_map(id, ip)
           end if
         end do

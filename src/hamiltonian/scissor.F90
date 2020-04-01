@@ -94,7 +94,7 @@ contains
   if(gr%mesh%parallel_in_domains) call messages_not_implemented("Scissor operator parallel in domains", namespace=namespace)
 
   this%apply = .true.
-  this%gap = real(gap)
+  this%gap = gap
 
   write(message(1),'(a)')    'Start loading GS states.'
   call messages_info(1) 

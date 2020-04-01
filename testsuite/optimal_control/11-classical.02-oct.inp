@@ -3,6 +3,7 @@
 CalculationMode = opt_control
 
 ExperimentalFeatures = yes
+StatesPack = yes
 
 Dimensions = 2
 fromScratch = yes
@@ -84,7 +85,5 @@ OCTControlFunctionOmegaMax = 10.0
 OCTFixFluenceTo = -1
 
 OCTDoubleCheck = no
-
-
 
 

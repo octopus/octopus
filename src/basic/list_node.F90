@@ -45,9 +45,9 @@ module list_node_oct_m
 contains
 
   function constructor(value, next)
+    class(list_node_t), pointer :: constructor
     class(*),           target  :: value
     class(list_node_t), pointer :: next
-    class(list_node_t), pointer :: constructor
 
     PUSH_SUB(constructor)
 
@@ -55,7 +55,7 @@ contains
     ! causes an internal compiler error with GCC 6.4.0
     allocate(constructor)
     constructor%next_node => next
-    allocate(constructor%value, source = value)
+    constructor%value => value
 
     POP_SUB(constructor)
   end function constructor
@@ -102,7 +102,7 @@ contains
       nullify(this%next_node)
     end if
     if (associated(this%value)) then
-      deallocate(this%value)
+      nullify(this%value)
     end if
     
     POP_SUB(finalize)

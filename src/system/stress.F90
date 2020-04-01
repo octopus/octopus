@@ -213,7 +213,7 @@ contains
       call cube_function_alloc_fs(cube, cf)
       
       call dcube_function_rs2fs(cube, cf)
-      cf%fs = cf%fs/dble(cube%rs_n(1)*cube%rs_n(2)*cube%rs_n(3)) !Normalize
+      cf%fs = cf%fs/TOFLOAT(cube%rs_n(1)*cube%rs_n(2)*cube%rs_n(3)) !Normalize
 
       select case(cube%fft%library)
       case(FFTLIB_PFFT)
@@ -225,7 +225,7 @@ contains
             xx(1:3) = cube%Lrs(1,1:3)
             xx(1:3) = matmul(gr%sb%rlattice(1:3,1:3),xx)
          else
-            xx(1:3) = -dble(cube%rs_n_global(1:3)/2 )/dble(cube%rs_n_global(1:3))
+            xx(1:3) = -TOFLOAT(cube%rs_n_global(1:3)/2 )/TOFLOAT(cube%rs_n_global(1:3))
             xx(1:3) = matmul(gr%sb%rlattice(1:3,1:3),xx)
          end if
          do kk = 1, cube%fs_n(3)
@@ -265,10 +265,10 @@ contains
       type(fourier_space_op_t), pointer    :: coulb
       integer :: db(3)
       integer :: ix,iy,iz, ixx(3)
-      FLOAT :: gg(3), modg2, temp(3)
+      FLOAT :: gg(3), modg2, temp(3), qq(1:MAX_DIM)
 
-
-
+      qq(1:MAX_DIM) = M_ZERO
+ 
       cube => this%cube
       coulb => this%fft_solver%coulb
 
@@ -294,7 +294,7 @@ contains
                do iz = 1, cube%rs_n_global(3)
                   ixx(3) = pad_feq(iz, db(3), .true.)
 
-                  call poisson_fft_gg_transform_l(ixx, temp, gr%fine%der%mesh%sb, this%fft_solver%qq, gg, modg2)
+                  call poisson_fft_gg_transform_l(ixx, temp, gr%fine%der%mesh%sb, qq, gg, modg2)
 
                   !HH not very elegant
                   if(cube%fft%library.eq.FFTLIB_NFFT) modg2=cube%Lfs(ix,1)**2+cube%Lfs(iy,2)**2+cube%Lfs(iz,3)**2
@@ -337,7 +337,6 @@ contains
     integer :: ik, ist, idir, jdir, idim, ispin
     CMPLX, allocatable :: gpsi(:, :, :), psi(:, :)
     type(profile_t), save :: prof
-    logical, parameter :: hamiltonian_elec_current = .false.
 
     call profiling_in(prof, "STRESS_FROM_KEE")    
     PUSH_SUB(stress_from_kinetic_energy_electron)
@@ -373,7 +372,7 @@ contains
                 do idim = 1, st%d%dim
                    stress_l(idir,jdir) = stress_l(idir,jdir) + &
                         st%d%kweights(ik)*st%occ(ist, ik) &
-                        *dmf_integrate(der%mesh, real(conjg(gpsi(:, idir, idim))*gpsi(:, jdir, idim)))
+                        *dmf_integrate(der%mesh, TOFLOAT(conjg(gpsi(:, idir, idim))*gpsi(:, jdir, idim)))
                 end do
              end do
           end do
@@ -426,7 +425,7 @@ contains
              do jj = 1, cube%rs_n_global(2)
                 do ii = 1, cube%rs_n_global(1)
                    ss = ss + abs(rho_total_fs(ii,jj,kk))**2 &
-                        *2d0*Gvec_G(ii, jj, kk,idir)*Gvec_G(ii, jj, kk,jdir) &
+                        *M_TWO*Gvec_G(ii, jj, kk,idir)*Gvec_G(ii, jj, kk,jdir) &
                         *FourPi_G2(ii, jj, kk)
                 end do
              end do
@@ -450,7 +449,7 @@ contains
     do idir = 1,3
        stress_l(idir,idir) = stress_l(idir,idir) + ss
     end do
-    stress_l = 0.5d0 * stress_l
+    stress_l = CNST(0.5) * stress_l
 
     
     stress_Hartree =  stress_l
@@ -564,13 +563,13 @@ contains
 
                    stress_t_NL(idir, jdir) = stress_t_NL(idir, jdir) &
                         +2d0*st%d%kweights(ik)*st%occ(ist, ik) &
-                        *dmf_integrate(der%mesh, real(conjg(gpsi(1:der%mesh%np,idir,idim))*rppsi(1:der%mesh%np,jdir,idim)))
+                        *dmf_integrate(der%mesh, TOFLOAT(conjg(gpsi(1:der%mesh%np,idir,idim))*rppsi(1:der%mesh%np,jdir,idim)))
 
                    if(idir /= jdir)cycle
 
                    stress_t_NL(idir, jdir) = stress_t_NL(idir, jdir) &
                         +st%d%kweights(ik)*st%occ(ist, ik) &
-                        *dmf_integrate(der%mesh, real(conjg(psi(1:der%mesh%np,idim))*rppsi(1:der%mesh%np,4,idim))) 
+                        *dmf_integrate(der%mesh, TOFLOAT(conjg(psi(1:der%mesh%np,idim))*rppsi(1:der%mesh%np,4,idim))) 
 
                 end do
              end do
@@ -642,14 +641,14 @@ contains
              do idir =1,3
                 do jdir =1,3
                    stress_t_LR(idir, jdir) = stress_t_LR(idir, jdir) &
-                        + real(zfact)*Gvec_G(ii, jj, kk,idir)*Gvec_G(ii, jj, kk,jdir)
+                        + TOFLOAT(zfact)*Gvec_G(ii, jj, kk,idir)*Gvec_G(ii, jj, kk,jdir)
                 end do
              end do
              
              do idir =1,3
                 stress_t_LR(idir, idir) = stress_t_LR(idir, idir) &
                      - FourPi_G2(ii,jj,kk)*exp(-M_HALF*sigma_erf**2*g2) &
-                     *real(rho_total_fs(ii,jj,kk)*conjg(zphase))
+                     * TOFLOAT(rho_total_fs(ii,jj,kk)*conjg(zphase))
              end do
 
           end do

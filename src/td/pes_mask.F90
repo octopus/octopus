@@ -812,8 +812,7 @@ contains
     type(pes_mask_t),  intent(inout) :: mask
     type(simul_box_t),   intent(in)  :: sb
 
-    integer :: ii,dim
-    FLOAT   :: temp
+    integer :: ii, dim
 
     PUSH_SUB(pes_mask_generate_Lk)
 
@@ -1004,7 +1003,7 @@ contains
 
     call pes_mask_mesh_to_cube(mask, mask_fn, mask%cM, local = local_)
 
-    if(present(mask_sq)) mask_sq = real(mask%cM%zRS)
+    if(present(mask_sq)) mask_sq = TOFLOAT(mask%cM%zRS)
 
 
 

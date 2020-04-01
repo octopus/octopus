@@ -107,8 +107,6 @@ subroutine X(hamiltonian_elec_apply_batch) (hm, namespace, mesh, psib, hpsib, te
     if(psib%status() == BATCH_DEVICE_PACKED) set_phase = .true.
   end if
 
-  ASSERT(psib%is_ok())
-  ASSERT(hpsib%is_ok())
   ASSERT(psib%nst == hpsib%nst)
   ASSERT(psib%ik >= hm%d%kpt%start .and. psib%ik <= hm%d%kpt%end)
 
@@ -213,19 +211,19 @@ subroutine X(hamiltonian_elec_apply_batch) (hm, namespace, mesh, psib, hpsib, te
     select case(hm%theory_level)
 
     case(HARTREE)
-      call X(exchange_operator_hartree_apply)(hm%exxop, namespace, hm%der, hm%d, hm%exxop%cam_alpha, epsib, hpsib, hm%psolver)
+      call X(exchange_operator_hartree_apply)(hm%exxop, namespace, hm%der, hm%d, hm%exxop%cam_alpha, epsib, hpsib)
 
     case(HARTREE_FOCK)
       if(hm%scdm_EXX)  then
         call X(exchange_operator_scdm_apply)(hm%exxop, namespace, hm%scdm, hm%der, hm%d, epsib, hpsib, hm%exxop%cam_alpha, &
-                          hm%theory_level == HARTREE, hm%psolver)
+                          hm%theory_level == HARTREE)
       else
         ! standard HF 
-        call X(exchange_operator_apply)(hm%exxop, namespace, hm%der, hm%d, epsib, hpsib, hm%psolver, .false.)
+        call X(exchange_operator_apply)(hm%exxop, namespace, hm%der, hm%d, epsib, hpsib, .false.)
       end if
 
     case(RDMFT)
-      call X(exchange_operator_apply)(hm%exxop, namespace, hm%der, hm%d, epsib, hpsib, hm%psolver, .true.)
+      call X(exchange_operator_apply)(hm%exxop, namespace, hm%der, hm%d, epsib, hpsib, .true.)
     end select
     call profiling_out(prof_exx)
     
@@ -330,10 +328,8 @@ subroutine X(hamiltonian_elec_apply_single) (hm, namespace, mesh, psi, hpsi, ist
 
   PUSH_SUB(X(hamiltonian_elec_apply_single))
   
-  call wfs_elec_init(psib, hm%d%dim, 1, ik)
-  call psib%add_state(ist, psi)
-  call wfs_elec_init(hpsib, hm%d%dim, 1, ik)
-  call hpsib%add_state(ist, hpsi)
+  call wfs_elec_init(psib, hm%d%dim, ist, ist, psi, ik)
+  call wfs_elec_init(hpsib, hm%d%dim, ist, ist, hpsi, ik)
 
   if(present(set_phase)) then
     psib%has_phase = .not. set_phase
@@ -465,8 +461,6 @@ subroutine X(hamiltonian_elec_magnus_apply_batch) (hm, namespace, mesh, psib, hp
   ! We will assume, for the moment, no spinors.
   if (hm%d%dim /= 1) call messages_not_implemented("Magnus with spinors", namespace=namespace)
 
-  ASSERT(psib%is_ok())
-  ASSERT(hpsib%is_ok())
   ASSERT(psib%nst == hpsib%nst)
 
   ispin = states_elec_dim_get_spin_index(hm%d, psib%ik)
@@ -543,7 +537,7 @@ subroutine X(h_mgga_terms) (hm, mesh, psib, hpsib)
   SAFE_ALLOCATE(grad(1:mesh%np_part, 1:mesh%sb%dim))
   SAFE_ALLOCATE(diverg(1:mesh%np))
 
-  allocate(wfs_elec_t::gradb(1:mesh%sb%dim))
+  SAFE_ALLOCATE_TYPE_ARRAY(wfs_elec_t, gradb, (1:mesh%sb%dim))
 
   call hpsib%copy_to(divb)
   

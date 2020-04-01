@@ -328,7 +328,7 @@ contains
       write(message(2),'(a)') '--this may take a while--'
       call messages_info(2)
 
-      call dstates_elec_me_two_body(st, namespace, gr, hm%psolver, 1, st%nst, rdm%i_index, rdm%j_index, rdm%k_index, &
+      call dstates_elec_me_two_body(st, namespace, gr, hm%exxop%psolver, 1, st%nst, rdm%i_index, rdm%j_index, rdm%k_index, &
         rdm%l_index, rdm%twoint)
       call rdm_integrals(rdm, namespace, hm, st, gr%mesh)
       call sum_integrals(rdm)
@@ -475,7 +475,7 @@ contains
     subroutine scf_write_static(dir, fname)
       character(len=*), intent(in) :: dir, fname
 
-      integer :: iunit, ist, idir
+      integer :: iunit, ist
       FLOAT :: photon_number
       FLOAT, allocatable :: photon_number_state (:), ekin_state (:), epot_state (:)
 
@@ -620,7 +620,7 @@ contains
     FLOAT,                       intent(out) :: epot_state(:)
 
     integer :: ist, dim_photon
-    FLOAT   :: qq, q2_exp, laplace_exp
+    FLOAT   :: q2_exp, laplace_exp
     FLOAT, allocatable :: psi(:, :), psi_q2(:), dpsidq(:), d2psidq2(:)
 
     PUSH_SUB(calc_photon_number)
@@ -675,7 +675,6 @@ contains
     type(states_elec_t), intent(inout) :: st
 
     FLOAT, allocatable ::  occin(:,:)
-    integer :: ist
 
     PUSH_SUB(set_occ_pinning)    
 
@@ -938,8 +937,8 @@ contains
   subroutine write_iter_info_rdmft(iter, size, energy, maxdr, maxdf, theta)
     integer,     intent(in) :: iter
     integer,     intent(in) :: size
-    real(8),     intent(in) :: energy, maxdr, maxdf
-    real(8),     intent(in) :: theta(size)
+    FLOAT,       intent(in) :: energy, maxdr, maxdf
+    FLOAT,       intent(in) :: theta(size)
 
     PUSH_SUB(write_iter_info_rdmft)
 
@@ -1178,7 +1177,7 @@ contains
     type(grid_t),        intent(in)    :: gr
     FLOAT,               intent(in)    :: lambda(:, :)
     
-    integer :: iqn, iorb, jorb, ist
+    integer :: iorb, jorb, ist
     FLOAT, allocatable :: vecnat_new(:,:)
 
     PUSH_SUB(assign_eigenfunctions)

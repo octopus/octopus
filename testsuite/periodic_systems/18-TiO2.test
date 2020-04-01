@@ -33,10 +33,10 @@ match ; Eigenvalue  5 ; GREPFIELD(static/info, '#k =   1', 3, 5) ; -1.206990
 
 match ; Two-body (vvvv) Re ; LINEFIELD(static/output_me_two_body, 2, 9); 0.545066E-01
 match ; Two-body (vvvv) Im ; LINEFIELD(static/output_me_two_body, 2, 10); 0.000000E+00
-match ; Two-body (cccc) Re ; LINEFIELD(static/output_me_two_body, 7, 9); 0.193133E+00
-match ; Two-body (cccc) Im ; LINEFIELD(static/output_me_two_body, 7, 10); 0.000000E+00
-match ; Two-body (vvcc) Re ; LINEFIELD(static/output_me_two_body, 116, 9); 0.107633E-01
-match ; Two-body (vvcc) Re ; LINEFIELD(static/output_me_two_body, 116, 10); 0.767005E-20
+match ; Two-body (cccc) Re ; LINEFIELD(static/output_me_two_body, 1887, 9);  0.193133E+00
+match ; Two-body (cccc) Im ; LINEFIELD(static/output_me_two_body, 1887, 10); 0.0000E+00
+match ; Two-body (vvcc) Re ; LINEFIELD(static/output_me_two_body, 14, 9); -0.228148E-14
+match ; Two-body (vvcc) Re ; LINEFIELD(static/output_me_two_body, 14, 10); 0.0000E+00
 
 match ; Direct gap ; GREPFIELD(static/info, 'Direct gap', 7, 0) ; 0.0506
 match ; Indirect gap ; GREPFIELD(static/info, 'Indirect gap', 10, 0) ; 0.0199
