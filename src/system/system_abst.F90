@@ -65,6 +65,7 @@ module system_abst_oct_m
     procedure :: reset_clocks => system_reset_clocks
     procedure :: update_exposed_quantities => system_update_exposed_quantities
     procedure :: init_propagator => system_init_propagator
+    procedure :: update_interactions => system_update_interactions
     procedure(system_add_interaction_partner),        deferred :: add_interaction_partner
     procedure(system_has_interaction),                deferred :: has_interaction
     procedure(system_do_td_op),                       deferred :: do_td_operation
@@ -161,10 +162,8 @@ contains
     class(system_abst_t),     intent(inout) :: this
     logical, optional,        intent(in)    :: init
 
-    integer :: tdop, iq, q_id
+    integer :: tdop
     logical :: all_updated
-    class(interaction_abst_t), pointer :: interaction
-    type(interaction_iterator_t) :: iter
     class(propagator_abst_t), pointer :: prop
 
     PUSH_SUB(system_dt_operation)
@@ -201,43 +200,8 @@ contains
       ! We increment by one algorithmic step
       call prop%clock%increment()
 
-      ! Loop over all interactions
-      all_updated = .true.
-      call iter%start(this%interactions)
-      do while (iter%has_next())
-        interaction => iter%get_next_interaction()
-
-        if (.not. interaction%clock == prop%clock) then
-          ! Update the system quantities that will be needed for computing the interaction
-          do iq = 1, interaction%n_system_quantities
-            ! Get requested quantity ID
-            q_id = interaction%system_quantities(iq)
-
-            ! All needed quantities must have been marked as required. If not, then fix your code!
-            ASSERT(this%quantities(q_id)%required)
-
-            ! We do not need to update the protected quantities, the propagator takes care of that
-            if (this%quantities(q_id)%protected) cycle
-
-            if (.not. this%quantities(q_id)%clock == prop%clock) then
-              ! The requested quantity is not at the requested time, so we try to update it
-
-              ! Sanity check: it should never happen that the quantity is in advance
-              ! with respect to the requested time.
-              if (this%quantities(q_id)%clock > prop%clock) then
-                message(1) = "The quantity clock is in advance compared to the requested clock."
-                call messages_fatal(1)
-              end if
-
-              call this%update_quantity(q_id, prop%clock)
-            end if
-
-          end do
-
-          ! We can now try to update the interaction
-          all_updated = interaction%update(prop%clock) .and. all_updated
-        end if
-      end do
+      ! Try to update all the interactions
+      all_updated = this%update_interactions(this%prop%clock)
 
       ! Move to next propagator step if all interactions have been
       ! updated. Otherwise try again later.
@@ -419,6 +383,58 @@ contains
 
     POP_SUB(system_update_exposed_quantities)
   end function system_update_exposed_quantities
+
+  ! ---------------------------------------------------------
+  logical function system_update_interactions(this, clock) result(all_updated)
+    class(system_abst_t),      intent(inout) :: this
+    type(clock_t),             intent(in)    :: clock !< Requested time for the update
+
+    integer :: iq, q_id
+    class(interaction_abst_t), pointer :: interaction
+    type(interaction_iterator_t) :: iter
+
+    PUSH_SUB(system_update_interactions)
+
+    !Loop over all interactions
+    all_updated = .true.
+    call iter%start(this%interactions)
+    do while (iter%has_next())
+      interaction => iter%get_next_interaction()
+
+      if (.not. interaction%clock == clock) then
+        ! Update the system quantities that will be needed for computing the interaction
+        do iq = 1, interaction%n_system_quantities
+          ! Get requested quantity ID
+          q_id = interaction%system_quantities(iq)
+
+          ! All needed quantities must have been marked as required. If not, then fix your code!
+          ASSERT(this%quantities(q_id)%required)
+
+          ! We do not need to update the protected quantities, the propagator takes care of that
+          if (this%quantities(q_id)%protected) cycle
+
+          if (.not. this%quantities(q_id)%clock == clock) then
+            ! The requested quantity is not at the requested time, so we try to update it
+
+            ! Sanity check: it should never happen that the quantity is in advance
+            ! with respect to the requested time.
+            if (this%quantities(q_id)%clock > clock) then
+              message(1) = "The quantity clock is in advance compared to the requested clock."
+              call messages_fatal(1)
+            end if
+
+            call this%update_quantity(q_id, clock)
+          end if
+
+        end do
+
+        ! We can now try to update the interaction
+        all_updated = interaction%update(clock) .and. all_updated
+      end if
+    end do
+
+    POP_SUB(system_update_interactions)
+  end function system_update_interactions
 
   ! ---------------------------------------------------------
   subroutine system_init_propagator(this)
