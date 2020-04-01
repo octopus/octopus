@@ -47,19 +47,15 @@ module fourier_shell_oct_m
 
 contains
 
-  FLOAT function fourier_shell_cutoff(cube, mesh, is_wfn, dg)
+  FLOAT function fourier_shell_cutoff(cube, mesh, is_wfn)
     type(cube_t),    intent(in)  :: cube
     type(mesh_t),    intent(in)  :: mesh
     logical,         intent(in)  :: is_wfn
-    FLOAT, optional, intent(out) :: dg(:) !< (3)
 
     integer :: ii
-    FLOAT :: dg_(3), gg(3), ng(3)
+    FLOAT :: gg(3), ng(3)
 
     PUSH_SUB(fourier_shell_cutoff)
-
-    dg_(1:3) = M_TWO*M_PI/(cube%rs_n_global(1:3)*mesh%spacing(1:3))
-    if(present(dg)) dg(1:3) = dg_(1:3)
 
     ! Neither nfft/2 nor -nfft/2 should be a valid G-vector component.
     ! Therefore these points should not be considered for the
@@ -98,7 +94,8 @@ contains
 
     PUSH_SUB(fourier_shell_init)
 
-    this%ekin_cutoff = fourier_shell_cutoff(cube, mesh, present(kk), dg = dg)
+    this%ekin_cutoff = fourier_shell_cutoff(cube, mesh, present(kk))
+    dg(1:3) = M_TWO*M_PI/(cube%rs_n_global(1:3)*mesh%spacing(1:3))
 
     SAFE_ALLOCATE(modg2(1:product(cube%rs_n_global(1:3))))
     SAFE_ALLOCATE(ucoords(1:3, 1:product(cube%rs_n_global(1:3))))
