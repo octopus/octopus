@@ -1744,6 +1744,7 @@ subroutine X(states_elec_me_two_body) (st, namespace, gr, psolver, st_min, st_ma
 
   if(present(singularity)) then
     call fourier_space_op_nullify(coulb)
+    qq = M_ZERO
     call poisson_build_kernel(psolver, namespace, gr%sb, coulb, qq)
   end if
 
