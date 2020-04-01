@@ -82,8 +82,7 @@ module propagator_abst_oct_m
     BEEMAN_PREDICT_POS           =  9,  &
     BEEMAN_PREDICT_VEL           = 10,  &
     BEEMAN_CORRECT_POS           = 11,  &
-    BEEMAN_CORRECT_VEL           = 12,  &
-    LOAD                         = 13
+    BEEMAN_CORRECT_VEL           = 12
 
   ! Known multisystem propagators
   integer, public, parameter ::        &
@@ -207,8 +206,6 @@ contains
       description = "Correction step  - Computing position for"
     case (BEEMAN_CORRECT_VEL)
       description = "Correction step  - Computing velocity for"
-    case (LOAD)
-      description = "Loading data for"
     case default
       description = "Unknown step for "
     end select

@@ -919,7 +919,7 @@ contains
 
     type(namespace_t) :: global_namespace
     integer :: it, internal_loop
-    logical :: any_td_step_done, all_done_max_td_steps
+    logical :: any_td_step_done, all_done_max_td_steps, all_updated
     integer, parameter :: MAX_PROPAGATOR_STEPS = 1000
     FLOAT :: smallest_algo_dt
     
@@ -936,69 +936,41 @@ contains
 
     global_namespace = namespace_t("")
 
-
-    ! Initialize systems
+    ! Initialize systems and interactions
     call multisystem_init(systems, global_namespace)
-
     call multisystem_init_interactions(systems, global_namespace)
 
-    all_done_max_td_steps = .false.
-    it = 0
+    ! Initialize all propagators and find the smallest time-step
     smallest_algo_dt = CNST(1e10)
-
-    ! Loop over systems
     call iter%start(systems)
     do while (iter%has_next())
       sys => iter%get_next_system()
 
-      !Initialize the propagator
+      ! Initialize the propagator
       call sys%init_propagator()
 
-      !Find the smallest dt
+      ! Find the smallest dt
       smallest_algo_dt = min(smallest_algo_dt, sys%prop%dt/sys%prop%algo_steps)
     end do
 
+    ! Initialize all the clocks
+    call iter%start(systems)
+    do while (iter%has_next())
+      sys => iter%get_next_system()
+      call sys%init_clocks(sys%prop%dt, smallest_algo_dt)
+    end do
+
+    ! Update all the interactions at the initial time
     call iter%start(systems)
     do while (iter%has_next())
       sys => iter%get_next_system()
 
-      ! Initialize the system clocks
-      call sys%init_clocks(sys%prop%dt, smallest_algo_dt)
+      all_updated = sys%update_interactions(sys%clock)
 
-      call sys%prop%rewind()
-      call sys%prop_init%rewind()
-    end do
-
-    !We start by the initialization loop
-    do while(.not. all_done_max_td_steps)
-
-      any_td_step_done = .false.
-      internal_loop = 1
-
-      do while(.not. any_td_step_done .and. internal_loop < MAX_PROPAGATOR_STEPS)
-
-        any_td_step_done = .false.
-
-        call iter%start(systems)
-        do while (iter%has_next())
-          sys => iter%get_next_system()
-
-          call sys%dt_operation(init=.true.)
-
-          !We check the exit condition
-          any_td_step_done = any_td_step_done .or. sys%prop_init%step_is_done()
-        end do
-
-        INCR(internal_loop, 1)
-      end do
-
-      all_done_max_td_steps = .true.
-      
-      call iter%start(systems)
-      do while (iter%has_next())
-        sys => iter%get_next_system()
-        all_done_max_td_steps = all_done_max_td_steps .and. sys%prop_init%step_is_done()
-      end do
+      if (.not. all_updated) then
+        message(1) = "Unable to update interactions when initializing the propagation."
+        call messages_fatal(1)
+      end if
     end do
 
     call iter%start(systems)

@@ -30,7 +30,6 @@ module system_abst_oct_m
   use profiling_oct_m
   use propagator_abst_oct_m
   use propagator_beeman_oct_m
-  use propagator_init_oct_m
   use propagator_verlet_oct_m
   use quantity_oct_m
   use space_oct_m
@@ -48,7 +47,6 @@ module system_abst_oct_m
     type(space_t), public :: space
 
     class(propagator_abst_t), pointer, public :: prop
-    class(propagator_init_t), pointer, public :: prop_init
     type(clock_t), public :: clock
 
     integer :: accumulated_loop_ticks
@@ -158,23 +156,15 @@ module system_abst_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine system_dt_operation(this, init)
+  subroutine system_dt_operation(this)
     class(system_abst_t),     intent(inout) :: this
-    logical, optional,        intent(in)    :: init
 
     integer :: tdop
     logical :: all_updated
-    class(propagator_abst_t), pointer :: prop
 
     PUSH_SUB(system_dt_operation)
 
-    if(optional_default(init, .false.)) then
-      prop => this%prop_init
-    else
-      prop => this%prop
-    end if
-
-    tdop = prop%get_td_operation()
+    tdop = this%prop%get_td_operation()
 
     if (debug%info) then
       write(message(1), '(a,a,1X,a)') "Debug: ", trim(propagator_step_debug_message(tdop)), trim(this%namespace%get())
@@ -183,22 +173,14 @@ contains
 
     select case (tdop)
     case (FINISHED)
-      if (.not. prop%step_is_done()) then
+      if (.not. this%prop%step_is_done()) then
         call this%clock%increment()
       end if
-      call prop%finished()
-
-    case(LOAD)
-      !At the moment we do nothing here
-      if (debug%info) then
-        message(1) = "Debug: -- Loading data for " + trim(this%namespace%get())
-        call messages_info(1)
-      end if
-      call prop%next()
+      call this%prop%finished()
 
     case (UPDATE_INTERACTIONS)
       ! We increment by one algorithmic step
-      call prop%clock%increment()
+      call this%prop%clock%increment()
 
       ! Try to update all the interactions
       all_updated = this%update_interactions(this%prop%clock)
@@ -207,51 +189,51 @@ contains
       ! updated. Otherwise try again later.
       if(all_updated) then
         this%accumulated_loop_ticks = this%accumulated_loop_ticks + 1
-        call prop%next()
+        call this%prop%next()
       else
-        call prop%clock%decrement()
+        call this%prop%clock%decrement()
       end if
 
     case (START_SCF_LOOP)
-      ASSERT(prop%predictor_corrector)
+      ASSERT(this%prop%predictor_corrector)
  
-      call prop%save_scf_start()
-      prop%inside_scf = .true.
+      call this%prop%save_scf_start()
+      this%prop%inside_scf = .true.
       this%accumulated_loop_ticks = 0
 
       if (debug%info) then
-        write(message(1), '(a,i3,a)') "Debug: -- SCF iter ", prop%scf_count, " for " + trim(this%namespace%get())
+        write(message(1), '(a,i3,a)') "Debug: -- SCF iter ", this%prop%scf_count, " for " + trim(this%namespace%get())
         call messages_info(1)
       end if
 
     case (END_SCF_LOOP)
       ! Here we first check if we did the maximum number of steps.
       ! Otherwise, we need check the tolerance 
-      if(prop%scf_count == prop%max_scf_count) then
+      if(this%prop%scf_count == this%prop%max_scf_count) then
         if (debug%info) then
           message(1) = "Debug: -- Max SCF Iter reached for " + trim(this%namespace%get())
           call messages_info(1)
         end if
-        prop%inside_scf = .false.
-        call prop%next()
+        this%prop%inside_scf = .false.
+        call this%prop%next()
       else
         ! We reset the pointer to the begining of the scf loop
-        if(this%is_tolerance_reached(prop%scf_tol)) then
+        if(this%is_tolerance_reached(this%prop%scf_tol)) then
           if (debug%info) then
             message(1) = "Debug: -- SCF tolerance reached for " + trim(this%namespace%get())
             call messages_info(1)
           end if
-          prop%inside_scf = .false.
-          call prop%next()
+          this%prop%inside_scf = .false.
+          call this%prop%next()
         else
           ! We rewind the instruction stack
-          call prop%rewind_scf_loop()
+          call this%prop%rewind_scf_loop()
 
           ! We reset the clocks
           call this%reset_clocks(this%accumulated_loop_ticks)
           this%accumulated_loop_ticks = 0
           if (debug%info) then
-            write(message(1), '(a,i3,a)') "Debug: -- SCF iter ", prop%scf_count, " for " + trim(this%namespace%get())
+            write(message(1), '(a,i3,a)') "Debug: -- SCF iter ", this%prop%scf_count, " for " + trim(this%namespace%get())
            call messages_info(1)
          end if 
         end if
@@ -259,11 +241,11 @@ contains
 
     case (STORE_CURRENT_STATUS)
       call this%store_current_status()
-      call prop%next()
+      call this%prop%next()
 
     case default
       call this%do_td_operation(tdop)
-      call prop%next()
+      call this%prop%next()
     end select
 
     POP_SUB(system_dt_operation)
@@ -474,7 +456,7 @@ contains
       this%prop => propagator_beeman_t(this%namespace, .true.)
     end select
 
-    this%prop_init => propagator_init_t(this%namespace)
+    call this%prop%rewind()
 
     POP_SUB(system_init_propagator)
   end subroutine system_init_propagator
