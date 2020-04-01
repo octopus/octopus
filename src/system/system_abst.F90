@@ -429,6 +429,7 @@ contains
     !%End
     call parse_variable(this%namespace, 'TDSystemPropagator', PROP_VERLET, prop)
     if(.not.varinfo_valid_option('TDSystemPropagator', prop)) call messages_input_error('TDSystemPropagator')
+    call messages_print_var_option(stdout, 'TDSystemPropagator', prop)
 
     select case(prop)
     case(PROP_VERLET)
