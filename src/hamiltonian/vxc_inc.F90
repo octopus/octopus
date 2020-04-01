@@ -16,7 +16,7 @@
 !! 02110-1301, USA.
 !!
 
-subroutine xc_get_vxc(der, xcs, st, psolver, namespace, rho, ispin, ioniz_pot, qtot, &
+subroutine xc_get_vxc(der, xcs, st, psolver, namespace, rho, ispin, &
     exx_op, vxc, ex, ec, deltaxc, vtau, ex_density, ec_density)
   type(derivatives_t),    intent(in)    :: der             !< Discretization and the derivative operators and details
   type(xc_t), target,     intent(inout) :: xcs             !< Details about the xc functional used
@@ -25,8 +25,6 @@ subroutine xc_get_vxc(der, xcs, st, psolver, namespace, rho, ispin, ioniz_pot, q
   type(namespace_t),      intent(in)    :: namespace
   FLOAT,                  intent(in)    :: rho(:, :)       !< Electronic density 
   integer,                intent(in)    :: ispin           !< Number of spin channels 
-  FLOAT,                  intent(in)    :: ioniz_pot
-  FLOAT,                  intent(in)    :: qtot 
   type(exchange_operator_t), intent(in) :: exx_op
   FLOAT, optional,        intent(inout) :: vxc(:,:)        !< XC potential
   FLOAT, optional,        intent(inout) :: ex              !< Exchange energy.
@@ -71,7 +69,7 @@ subroutine xc_get_vxc(der, xcs, st, psolver, namespace, rho, ispin, ioniz_pot, q
   FLOAT, allocatable :: unp_dens(:), unp_dedd(:)
 
   integer :: ib, ip, isp, families, ixc, spin_channels, is, idir, ipstart, ipend
-  FLOAT   :: rr, energy(1:2)
+  FLOAT   :: energy(1:2)
   logical :: gga, mgga, mgga_withexc, libvdwxc
   type(profile_t), save :: prof, prof_libxc
   logical :: calc_energy
@@ -233,16 +231,8 @@ subroutine xc_get_vxc(der, xcs, st, psolver, namespace, rho, ispin, ioniz_pot, q
           call XC_F90(lda_vxc)(functl(ixc)%conf, n_block, l_dens(1,1), l_dedd(1,1))
 
         case(XC_FAMILY_GGA, XC_FAMILY_HYB_GGA)
-          l_vsigma = M_ZERO
-
-          if(functl(ixc)%id == XC_GGA_X_LB) then
-            call mesh_r(der%mesh, ip, rr)
-            call XC_F90(gga_lb_modified)(functl(ixc)%conf, n_block, l_dens(1,1), l_sigma(1,1), &
-              rr, l_dedd(1,1))
-          else
-            call XC_F90(gga_vxc)(functl(ixc)%conf, n_block, l_dens(1,1), l_sigma(1,1), &
-              l_dedd(1,1), l_vsigma(1,1))
-          end if
+          call XC_F90(gga_vxc)(functl(ixc)%conf, n_block, l_dens(1,1), l_sigma(1,1), &
+            l_dedd(1,1), l_vsigma(1,1))
 
         case(XC_FAMILY_MGGA, XC_FAMILY_HYB_MGGA)
           call XC_F90(mgga_vxc)(functl(ixc)%conf, n_block, l_dens(1,1), l_sigma(1,1), l_ldens(1,1), l_tau(1,1), &
@@ -287,18 +277,10 @@ subroutine xc_get_vxc(der, xcs, st, psolver, namespace, rho, ispin, ioniz_pot, q
           call XC_F90(lda_vxc)(xcs%functional(ixc, 1)%conf, n_block, unp_dens(1), unp_dedd(1))
           
         case(XC_FAMILY_GGA, XC_FAMILY_HYB_GGA, XC_FAMILY_MGGA, XC_FAMILY_HYB_MGGA)
-          l_vsigma = M_ZERO
-          
           call messages_not_implemented('XC density correction for GGA/mGGA', namespace=namespace)
           
-          if(functl(ixc)%id == XC_GGA_X_LB) then
-            call mesh_r(der%mesh, ip, rr)
-            call XC_F90(gga_lb_modified)(xcs%functional(ixc, 1)%conf, n_block, unp_dens(1), l_sigma(1,1), &
-              rr, unp_dedd(1))
-          else
-            call XC_F90(gga_vxc)(xcs%functional(ixc, 1)%conf, n_block, unp_dens(1), l_sigma(1,1), &
-              unp_dedd(1), l_vsigma(1,1))
-          end if
+          call XC_F90(gga_vxc)(xcs%functional(ixc, 1)%conf, n_block, unp_dens(1), l_sigma(1,1), &
+            unp_dedd(1), l_vsigma(1,1))
         end select
         
         do ib = 1, n_block
@@ -650,11 +632,6 @@ contains
   !> initialize GGAs
   !!   *) allocates gradient of the density (gdens), dedgd, and its local variants
   subroutine gga_init()
-    integer :: ii
-#ifdef HAVE_LIBXC4
-    FLOAT :: parameters(4)
-#endif
-
     PUSH_SUB(xc_get_vxc.gga_init)
 
     ! allocate variables
@@ -663,21 +640,6 @@ contains
 
     SAFE_ALLOCATE(dedgd(1:der%mesh%np_part, 1:der%mesh%sb%dim, 1:spin_channels))
     dedgd = M_ZERO
-
-    do ii = 1, 2
-      if(functl(ii)%id == XC_GGA_X_LB) then
-#ifdef HAVE_LIBXC4
-        parameters(1) = functl(ii)%LB94_modified
-        parameters(2) = functl(ii)%LB94_threshold
-        parameters(3) = ioniz_pot
-        parameters(4) = qtot
-        call XC_F90(func_set_ext_params)(functl(ii)%conf, parameters(1))        
-#else
-        call XC_F90(gga_lb_set_par)(functl(ii)%conf, &
-          functl(ii)%LB94_modified, functl(ii)%LB94_threshold, ioniz_pot, qtot)
-#endif
-      end if
-    end do
 
     POP_SUB(xc_get_vxc.gga_init)
   end subroutine gga_init
@@ -775,7 +737,7 @@ contains
       if(alpha > 1) then
         write(message(1), '(a,f6.3,a)') 'MVORB mixing parameter bigger than one (' , alpha ,').'
         call messages_warning(1, namespace=namespace)
-        alpha = 0.25
+        alpha = CNST(0.25)
       end if
 
 
@@ -797,12 +759,12 @@ contains
       if(alpha > 1) then
         write(message(1), '(a,f6.3,a)') 'MVORB mixing parameter bigger than one (' , alpha ,').'
         call messages_warning(1, namespace=namespace)
-        alpha = 0.25
+        alpha = CNST(0.25)
       end if
       if(alpha < 0) then
         write(message(1), '(a,f6.3,a)') 'MVORB mixing parameter smaller than zero (' , alpha ,').'
         call messages_warning(1, namespace=namespace)
-        alpha = 0.25
+        alpha = CNST(0.25)
       end if
 
 #ifdef HAVE_LIBXC4
@@ -1034,7 +996,7 @@ subroutine xc_density_correction_calc(xcs, der, psolver, namespace, nspin, densi
 
       deriv = (qxc - qxc_old)/(x1 - ncutoff_old)
 
-      if(.not. done .and. abs(qxc) >= 1.0_8) then
+      if(.not. done .and. abs(qxc) >= M_ONE) then
         find_root = .true.
         done = .true.
         ncutoff = x1
@@ -1057,14 +1019,14 @@ subroutine xc_density_correction_calc(xcs, der, psolver, namespace, nspin, densi
       x1 = ncutoff
       x2 = ncutoff_old
       x3 = ncutoff
-      f1 = 1.0_8 + get_qxc(der%mesh, nxc, density(:, 1), x1)
-      f2 = 1.0_8 + get_qxc(der%mesh, nxc, density(:, 1), x2)
+      f1 = M_ONE + get_qxc(der%mesh, nxc, density(:, 1), x1)
+      f2 = M_ONE + get_qxc(der%mesh, nxc, density(:, 1), x2)
 
       do ip = 1, 20
-        if(abs(f1 - f2) < 1e-16_8) exit
+        if(abs(f1 - f2) < CNST(1.0e-16)) exit
         x3 = x2 - f2*(x2 - x1)/(f2 - f1)
-        f3 = 1.0_8 + get_qxc(der%mesh, nxc, density(:, 1), x3)
-        if(abs(f3) < 1e-6_8) exit
+        f3 = M_ONE + get_qxc(der%mesh, nxc, density(:, 1), x3)
+        if(abs(f3) < CNST(1.0e-6)) exit
         x1 = x2
         f1 = f2
         x2 = x3

@@ -22,30 +22,17 @@ module singularity_oct_m
   use comm_oct_m
   use distributed_oct_m
   use global_oct_m
-  use hamiltonian_elec_base_oct_m
   use kpoints_oct_m
-  use lalg_adv_oct_m
-  use lalg_basic_oct_m
-  use mesh_oct_m
-  use mesh_function_oct_m
-  use mesh_batch_oct_m
   use messages_oct_m
   use mpi_oct_m
   use parser_oct_m
-  use par_vec_oct_m
   use namespace_oct_m
-  use poisson_oct_m
   use profiling_oct_m
-  use scdm_oct_m
   use simul_box_oct_m
-  use symmetries_oct_m
-  use symmetrizer_oct_m
   use states_elec_oct_m
   use states_elec_dim_oct_m
-  use states_elec_parallel_oct_m
   use unit_oct_m
   use unit_system_oct_m
-  use xc_oct_m
 
   implicit none
 
@@ -88,12 +75,18 @@ contains
     type(states_elec_t),       intent(in)    :: st
     type(simul_box_t),         intent(in)    :: sb
 
+    integer :: default
+
     PUSH_SUB(singularity_init)
+
 
     if(.not.allocated(this%Fk)) then
       SAFE_ALLOCATE(this%Fk(st%d%kpt%start:st%d%kpt%end))
       this%Fk(st%d%kpt%start:st%d%kpt%end) = M_ZERO
       this%FF = M_ZERO
+    end if
+
+    if(.not.allocated(this%Fk) .and. sb%periodic_dim > 0) then
 
       !%Variable HFSingularity
       !%Type integer
@@ -115,7 +108,11 @@ contains
       !%Option spherical_bz 3
       !% The divergence in q=0 is treated analytically assuming a spherical Brillouin zone
       !%End
-      call parse_variable(namespace, 'HFSingularity', SINGULARITY_GENERAL, this%coulomb_singularity)
+
+      default = SINGULARITY_NONE
+      if(sb%dim == 3) default = SINGULARITY_GENERAL
+      
+      call parse_variable(namespace, 'HFSingularity', default, this%coulomb_singularity)
       call messages_print_var_option(stdout,  'HFSingularity', this%coulomb_singularity)
 
       if(this%coulomb_singularity /= SINGULARITY_NONE) then
@@ -152,7 +149,7 @@ contains
     FLOAT :: energy
     type(distributed_t) :: dist_kpt
     type(profile_t), save :: prof
-    FLOAT, parameter :: SINGUL_CNST = 7.7955541794415 !The constant is 4*pi*(3/(4*pi))^1/3
+    FLOAT, parameter :: SINGUL_CNST = CNST(7.7955541794415) !The constant is 4*pi*(3/(4*pi))^1/3
  
     PUSH_SUB(singularity_correction)
 

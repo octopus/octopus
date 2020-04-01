@@ -18,7 +18,7 @@
 
 ! ---------------------------------------------------------
 
-subroutine X(exchange_operator_single)(this, namespace, der, st_d, ist, ik, psi, hpsi, psolver, rdmft)
+subroutine X(exchange_operator_single)(this, namespace, der, st_d, ist, ik, psi, hpsi, rdmft)
   type(exchange_operator_t), intent(inout) :: this 
   type(namespace_t),         intent(in)    :: namespace
   type(derivatives_t),       intent(in)    :: der
@@ -27,7 +27,6 @@ subroutine X(exchange_operator_single)(this, namespace, der, st_d, ist, ik, psi,
   integer,                   intent(in)    :: ik
   R_TYPE,                    intent(in)    :: psi(:, :)
   R_TYPE,                    intent(inout) :: hpsi(:, :)
-  type(poisson_t),           intent(in)    :: psolver
   logical,                   intent(in)    :: rdmft
 
   type(wfs_elec_t) :: psib, hpsib
@@ -37,7 +36,7 @@ subroutine X(exchange_operator_single)(this, namespace, der, st_d, ist, ik, psi,
   call wfs_elec_init(psib, st_d%dim, ist, ist, psi, ik)
   call wfs_elec_init(hpsib, st_d%dim, ist, ist, hpsi, ik)
 
-  call X(exchange_operator_apply)(this, namespace, der, st_d, psib, hpsib, psolver, rdmft)
+  call X(exchange_operator_apply)(this, namespace, der, st_d, psib, hpsib, rdmft)
 
   call psib%end()
   call hpsib%end()
@@ -47,14 +46,13 @@ end subroutine X(exchange_operator_single)
 
 ! ---------------------------------------------------------
 
-subroutine X(exchange_operator_apply)(this, namespace, der, st_d, psib, hpsib, psolver, rdmft)
+subroutine X(exchange_operator_apply)(this, namespace, der, st_d, psib, hpsib, rdmft)
   type(exchange_operator_t), intent(in)    :: this
   type(namespace_t),         intent(in)    :: namespace
   type(derivatives_t),       intent(in)    :: der
   type(states_elec_dim_t),   intent(in)    :: st_d
   class(wfs_elec_t),         intent(inout) :: psib
   class(wfs_elec_t),         intent(inout) :: hpsib
-  type(poisson_t),           intent(in)    :: psolver
   logical,                   intent(in)    :: rdmft
 
   integer :: ibatch, jst, ip, idim, ik2, ib, ii, ist
@@ -63,7 +61,9 @@ subroutine X(exchange_operator_apply)(this, namespace, der, st_d, psib, hpsib, p
   R_TYPE, allocatable :: psi2(:, :), psi(:, :), hpsi(:, :)
   R_TYPE, allocatable :: rho(:), pot(:)
   FLOAT :: qq(1:MAX_DIM) 
-  integer :: ikpoint
+  integer :: ikpoint, ikpoint2, npath
+  type(fourier_space_op_t) :: coulb
+  logical :: use_external_kernel
 
   type(profile_t), save :: prof, prof2
 
@@ -75,13 +75,7 @@ subroutine X(exchange_operator_apply)(this, namespace, der, st_d, psib, hpsib, p
   ! in the Coulomb potential, and must be changed for each q point
   exx_coef = max(this%cam_alpha,this%cam_beta)
 
-  if(this%cam_omega <= M_EPSILON) then
-    if(st_d%nik > st_d%ispin) then
-      call messages_not_implemented("unscreened exchange operator without k-points", namespace=namespace)
-    end if
-  end if
-
-  if(der%mesh%sb%kpoints%full%npoints > 1) call messages_not_implemented("exchange operator with k-points", namespace=namespace)
+  npath = SIZE(der%mesh%sb%kpoints%coord_along_path)
 
   if(this%cam_beta > M_EPSILON) then
     ASSERT(this%cam_alpha < M_EPSILON)
@@ -99,7 +93,13 @@ subroutine X(exchange_operator_apply)(this, namespace, der, st_d, psib, hpsib, p
   SAFE_ALLOCATE(psi2(1:der%mesh%np, 1:st_d%dim))
 
   ikpoint = states_elec_dim_get_kpoint_index(st_d, psib%ik)
-  qq(1:der%dim) = M_ZERO
+
+  use_external_kernel = (st_d%nik > st_d%spin_channels .or. this%cam_omega > M_EPSILON)
+  if(use_external_kernel) then
+    call fourier_space_op_nullify(coulb)
+    call poisson_build_kernel(this%psolver, namespace, der%mesh%sb, coulb, qq)
+  end if
+
 
   do ibatch = 1, psib%nst
     ist = psib%ist(ibatch)
@@ -108,6 +108,23 @@ subroutine X(exchange_operator_apply)(this, namespace, der, st_d, psib, hpsib, p
 
     do ik2 = 1, st_d%nik
       if(states_elec_dim_get_spin_index(st_d, ik2) /= states_elec_dim_get_spin_index(st_d, psib%ik)) cycle
+
+      ikpoint2 = states_elec_dim_get_kpoint_index(st_d, ik2)
+      !Down-sampling and q-grid
+      if(st_d%nik > st_d%spin_channels) then
+        if(.not.kpoints_is_compatible_downsampling(der%mesh%sb%kpoints, ikpoint, ikpoint2)) cycle
+        qq(1:der%dim) = kpoints_get_point(der%mesh%sb%kpoints, ikpoint, absolute_coordinates=.false.) &
+                      - kpoints_get_point(der%mesh%sb%kpoints, ikpoint2, absolute_coordinates=.false.)
+      end if
+      ! Updating of the poisson solver
+      ! In case of k-points, the poisson solver must contains k-q
+      ! in the Coulomb potential, and must be changed for each q point
+      if(use_external_kernel) then
+        call poisson_build_kernel(this%psolver, namespace, der%mesh%sb, coulb, qq, &
+                  -(der%mesh%sb%kpoints%full%npoints-npath)*der%mesh%sb%rcell_volume  &
+                     *(this%singul%Fk(ik2)-this%singul%FF))
+      end if
+
       
       do ib = 1, this%st%group%nblocks
         !We copy data into psi2b from the corresponding MPI task
@@ -141,7 +158,11 @@ subroutine X(exchange_operator_apply)(this, namespace, der, st_d, psib, hpsib, p
           call profiling_out(prof)
 
           !and V_ij
-          call X(poisson_solve)(psolver, pot, rho, all_nodes = .false.)
+          if(use_external_kernel) then
+            call X(poisson_solve)(this%psolver, pot, rho, all_nodes = .false., kernel=coulb)
+          else
+            call X(poisson_solve)(this%psolver, pot, rho, all_nodes = .false.)
+          end if
 
           !Accumulate the result
           call profiling_in(prof2, "EXCHANGE_ACCUMULATE")
@@ -162,6 +183,10 @@ subroutine X(exchange_operator_apply)(this, namespace, der, st_d, psib, hpsib, p
 
   end do
 
+  if(use_external_kernel) then
+    call fourier_space_op_end(coulb)
+  end if
+
   SAFE_DEALLOCATE_A(psi)
   SAFE_DEALLOCATE_A(hpsi)
   SAFE_DEALLOCATE_A(rho)
@@ -174,7 +199,7 @@ end subroutine X(exchange_operator_apply)
 
 ! ---------------------------------------------------------
 
-subroutine X(exchange_operator_hartree_apply) (this, namespace, der, st_d, exx_coef, psib, hpsib, psolver)
+subroutine X(exchange_operator_hartree_apply) (this, namespace, der, st_d, exx_coef, psib, hpsib)
   type(exchange_operator_t), intent(in)    :: this
   type(namespace_t),         intent(in)    :: namespace
   type(derivatives_t),       intent(in)    :: der
@@ -182,13 +207,12 @@ subroutine X(exchange_operator_hartree_apply) (this, namespace, der, st_d, exx_c
   FLOAT,                     intent(in)    :: exx_coef
   class(wfs_elec_t),         intent(inout) :: psib
   class(wfs_elec_t),         intent(inout) :: hpsib
-  type(poisson_t),           intent(in)    :: psolver
 
   integer :: ibatch, ip, idim, ik2, ist
   FLOAT   :: ff
   R_TYPE, allocatable :: rho(:), pot(:), psi2(:, :), psi(:, :), hpsi(:, :)
 
-  PUSH_SUB(X(exchange_operator))
+  PUSH_SUB(X(exchange_operator_hartree_apply))
 
   if(der%mesh%sb%kpoints%full%npoints > st_d%ispin) then
     call messages_not_implemented("exchange operator with k-points", namespace=namespace)
@@ -225,7 +249,7 @@ subroutine X(exchange_operator_hartree_apply) (this, namespace, der, st_d, exx_c
         end forall
       end do
 
-      call X(poisson_solve)(psolver, pot, rho, all_nodes = .false.)
+      call X(poisson_solve)(this%psolver, pot, rho, all_nodes = .false.)
 
       ff = this%st%occ(ist, ik2)
       if(st_d%ispin == UNPOLARIZED) ff = M_HALF*ff
@@ -253,7 +277,7 @@ end subroutine X(exchange_operator_hartree_apply)
 
 ! scdm_EXX
 ! ---------------------------------------------------------
-subroutine X(exchange_operator_scdm_apply) (this, namespace, scdm, der, st_d, psib, hpsib, exx_coef, hartree, psolver)
+subroutine X(exchange_operator_scdm_apply) (this, namespace, scdm, der, st_d, psib, hpsib, exx_coef, hartree)
   type(exchange_operator_t), intent(in)    :: this
   type(namespace_t),         intent(in)    :: namespace
   type(scdm_t),              intent(in)    :: scdm
@@ -263,7 +287,6 @@ subroutine X(exchange_operator_scdm_apply) (this, namespace, scdm, der, st_d, ps
   class(wfs_elec_t),         intent(inout) :: hpsib
   FLOAT,                     intent(in)    :: exx_coef
   logical,                   intent(in)    :: hartree
-  type(poisson_t),           intent(in)    :: psolver
 
   integer :: ist, jst, ip, idim, ik2, ibatch
   integer :: ii, jj, kk, ll, count

@@ -37,3 +37,4 @@ RestartWriteInterval = 100
 
 FilterPotentials = filter_none
 
+StatesPack = yes

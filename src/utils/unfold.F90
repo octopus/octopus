@@ -69,7 +69,7 @@ program oct_unfold
 
   implicit none
 
-  type(system_t)        :: sys
+  type(system_t), pointer :: sys
   type(simul_box_t)     :: sb
   integer               :: ik, idim, nkpoints
   type(restart_t)       :: restart
@@ -110,7 +110,7 @@ program oct_unfold
   call restart_module_init(default_namespace)
 
   call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
-  call system_init(sys, default_namespace)
+  sys => system_init(default_namespace)
   call simul_box_init(sb, default_namespace, sys%geo, sys%space)
 
   if(sb%periodic_dim == 0) then
@@ -302,7 +302,7 @@ program oct_unfold
 
   call simul_box_end(sb)
   call fft_all_end()
-  call system_end(sys)
+  SAFE_DEALLOCATE_P(sys)
   call profiling_end(default_namespace)
   call io_end()
   call print_date("Calculation ended on ")
@@ -355,7 +355,8 @@ contains
     CMPLX, allocatable :: zpsi(:), field_g(:)
     integer :: file_ake, iq, ist, idim, nenergy 
     integer :: ig, ix, iy, iz, ik, ie, gmin, gmax
-    FLOAT   :: eigmin, eigmax, de, norm, tol=1e-7
+    FLOAT   :: eigmin, eigmax, de, norm
+    FLOAT, parameter :: tol = CNST(1e-7)
     integer, parameter          :: nextend = 10
     FLOAT :: vec_pc(MAX_DIM),vec_sc(MAX_DIM)
     type(fourier_shell_t)       :: shell 
@@ -444,7 +445,7 @@ contains
       select case(sb%periodic_dim)
       case(3)
         do ig = 1, shell%ngvectors
-          call kpoints_to_absolute(sb%klattice, real(shell%red_gvec(1:3,ig), REAL_PRECISION), vec_sc(1:3), 3)
+          call kpoints_to_absolute(sb%klattice, TOFLOAT(shell%red_gvec(1:3,ig)), vec_sc(1:3), 3)
           do ix = gmin, gmax
             do iy = gmin, gmax
               do iz = gmin, gmax
@@ -462,7 +463,7 @@ contains
       case(2)
 
         do ig = 1, shell%ngvectors
-          call kpoints_to_absolute(sb%klattice, real(shell%red_gvec(1:2,ig), REAL_PRECISION), vec_sc(1:2), 2)
+          call kpoints_to_absolute(sb%klattice, TOFLOAT(shell%red_gvec(1:2,ig)), vec_sc(1:2), 2)
           do ix = gmin, gmax
             do iy = gmin, gmax
               vec_pc(1:2) = ix * klattice_pc(1:2,1) + iy * klattice_pc(1:2,2)

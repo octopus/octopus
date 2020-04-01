@@ -121,10 +121,9 @@ subroutine X(xc_oep_calc)(oep, namespace, xcs, apply_sic_pz, gr, hm, st, ex, ec,
         ! solve the KLI equation
         if(oep%level /= XC_OEP_FULL .or. first) then
           oep%vxc = M_ZERO
-          call X(xc_KLI_solve) (gr%mesh, st, is, oep)
+          call X(xc_KLI_solve) (namespace, gr%mesh, gr, hm, st, is, oep, first)
           vxc(1:gr%mesh%np, is) = vxc(1:gr%mesh%np, is) + oep%vxc(1:gr%mesh%np, 1)
         end if
-
         ! if asked, solve the full OEP equation
         if(oep%level == XC_OEP_FULL .and. (.not. first)) then
           call X(xc_oep_solve)(namespace, gr, hm, st, is, vxc(:,is), oep)
@@ -158,7 +157,9 @@ subroutine X(xc_oep_solve) (namespace, gr, hm, st, is, vxc, oep)
   FLOAT :: vxc_bar, ff, residue
   FLOAT, allocatable :: ss(:), vxc_old(:)
   R_TYPE, allocatable :: bb(:,:), psi(:, :), psi2(:,:)
-
+  R_TYPE, allocatable :: phi1(:,:,:)
+  logical, allocatable :: orthogonal(:)
+  
   call profiling_in(C_PROFILING_XC_OEP_FULL, 'XC_OEP_FULL')
   PUSH_SUB(X(xc_oep_solve))
 
@@ -170,12 +171,25 @@ subroutine X(xc_oep_solve) (namespace, gr, hm, st, is, vxc, oep)
   SAFE_ALLOCATE(vxc_old(1:gr%mesh%np))
   SAFE_ALLOCATE(psi(1:gr%mesh%np, 1:st%d%dim))
   SAFE_ALLOCATE(psi2(1:gr%mesh%np, 1:st%d%dim))
+  SAFE_ALLOCATE(orthogonal(1:oep%noccst))
+
+  if (oep%has_photons) then
+    SAFE_ALLOCATE(phi1(1:gr%mesh%np, 1:st%d%dim, 1:oep%noccst))
+  end if
 
   call lalg_copy(gr%mesh%np, vxc, vxc_old)
 
   if(.not. lr_is_allocated(oep%lr)) then
     call lr_allocate(oep%lr, st, gr%mesh)
     oep%lr%X(dl_psi)(:,:, :, :) = M_ZERO
+  end if
+
+  if (oep%has_photons) then
+    if(.not. lr_is_allocated(oep%photon_lr)) then
+      call lr_allocate(oep%photon_lr, st, gr%mesh)
+      oep%photon_lr%X(dl_psi)(:, :, :, :) = M_ZERO
+    end if
+    call X(xc_oep_pt_phi)(namespace, gr, hm, st, is, oep, phi1)
   end if
 
   ! fix xc potential (needed for Hpsi)
@@ -196,17 +210,34 @@ subroutine X(xc_oep_solve) (namespace, gr, hm, st, is, vxc, oep)
       bb(1:gr%mesh%np, 1) = -(oep%vxc(1:gr%mesh%np, is) - (vxc_bar - oep%uxc_bar(ist, is)))* &
         R_CONJ(psi(:, 1)) + oep%X(lxc)(1:gr%mesh%np, ist, is)
 
-      call X(lr_orth_vector) (gr%mesh, st, bb, ist, is, R_TOTYPE(M_ZERO))
+      if (oep%has_photons) call X(xc_oep_pt_rhs)(gr, st, is, oep, phi1, ist, bb)
+
+      if (oep%has_photons) then
+        orthogonal = .true.
+        orthogonal(ist) = .false.
+        call X(states_elec_orthogonalize_single)(st, gr%mesh, st%nst, is, bb, normalize = .false., mask = orthogonal)
+      else
+        call X(lr_orth_vector) (gr%mesh, st, bb, ist, is, R_TOTYPE(M_ZERO))
+      end if
 
       call X(linear_solver_solve_HXeY)(oep%solver, namespace, hm, gr, st, ist, is, oep%lr%X(dl_psi)(:,:, ist, is), bb, &
            R_TOTYPE(-st%eigenval(ist, is)), oep%scftol%final_tol, residue, iter_used)
 
-      call X(lr_orth_vector) (gr%mesh, st, oep%lr%X(dl_psi)(:,:, ist, is), ist, is, R_TOTYPE(M_ZERO))
+      if (oep%has_photons) then
+        orthogonal = .true.
+        orthogonal(ist) = .false.
+        call X(states_elec_orthogonalize_single)(st, gr%mesh, st%nst, is, &
+        oep%lr%X(dl_psi)(:,:, ist, is), normalize = .false., mask = orthogonal)
+      else
+        call X(lr_orth_vector) (gr%mesh, st, oep%lr%X(dl_psi)(:,:, ist, is), ist, is, R_TOTYPE(M_ZERO))
+      end if
 
       ! calculate this funny function ss
       ! ss = ss + 2*dl_psi*psi
       call lalg_axpy(gr%mesh%np, M_TWO, R_REAL(oep%lr%X(dl_psi)(1:gr%mesh%np, 1, ist, is)*psi(:, 1)), ss(:))
-
+      if (oep%has_photons) then
+        call X(xc_oep_pt_inhomog)(gr, st, is, oep, phi1, ist, ss)
+      end if
     end do
 
     select case (oep%mixing_scheme)
@@ -222,7 +253,7 @@ subroutine X(xc_oep_solve) (namespace, gr, hm, st, is, vxc, oep)
 
       if(debug%info) then
         write(message(1), '(a,es14.6,a,es14.8)') "Info: oep%mixing:", oep%mixing, " norm2ss: ", dmf_nrm2(gr%mesh, ss)
-        call messages_info(1)
+       call messages_info(1)
       end if
 
       call lalg_copy(gr%mesh%np, is, oep%vxc, oep%vxc_old)
@@ -235,6 +266,9 @@ subroutine X(xc_oep_solve) (namespace, gr, hm, st, is, vxc, oep)
         call states_elec_get_state(st, gr%mesh, ist, is, psi)
         psi2(:, 1) = R_CONJ(psi(:, 1))*psi(:,1)
         vxc_bar = X(mf_integrate)(gr%mesh, psi2(:, 1)*oep%vxc(1:gr%mesh%np, is))
+        if (oep%has_photons) then
+          call X(xc_oep_pt_uxcbar)(gr, st, is, oep, phi1, ist, vxc_bar)
+	end if
         oep%vxc(1:gr%mesh%np,is) = oep%vxc(1:gr%mesh%np,is) - (vxc_bar - oep%uxc_bar(ist,is))
       end if
     end do
@@ -268,6 +302,10 @@ subroutine X(xc_oep_solve) (namespace, gr, hm, st, is, vxc, oep)
   SAFE_DEALLOCATE_A(vxc_old)
   SAFE_DEALLOCATE_A(psi)
   SAFE_DEALLOCATE_A(psi2)
+  SAFE_DEALLOCATE_A(orthogonal)
+  if (oep%has_photons) then
+    SAFE_DEALLOCATE_A(phi1)
+  end if
 
   POP_SUB(X(xc_oep_solve))
   call profiling_out(C_PROFILING_XC_OEP_FULL)

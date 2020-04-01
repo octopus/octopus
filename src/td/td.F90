@@ -133,8 +133,8 @@ contains
   ! ---------------------------------------------------------
 
   subroutine td_init(td, sys)
-    type(td_t),            intent(inout) :: td
-    class(system_abst_t),        intent(inout) :: sys
+    type(td_t), intent(inout) :: td
+    class(*),   intent(inout) :: sys
 
     integer :: default
     FLOAT   :: spacing, default_dt, propagation_time
@@ -184,86 +184,83 @@ contains
 
       call messages_print_var_value(stdout, 'TDIonicTimeScale', td%mu)
 
-    end select
 
-    !%Variable TDTimeStep
-    !%Type float
-    !%Section Time-Dependent::Propagation
-    !%Description
-    !% The time-step for the time propagation. For most propagators you
-    !% want to use the largest value that is possible without the
-    !% evolution becoming unstable.
-    !%
-    !% The default value is the maximum value that we have found
-    !% empirically that is stable for the spacing <math>h</math>:
-    !% <math>dt = 0.0426 - 0.207 h + 0.808 h^2</math>
-    !% (from parabolic fit to Fig. 4 of http://dx.doi.org/10.1021/ct800518j,
-    !% probably valid for 3D systems only).
-    !% However, you might need to adjust this value.
-    !%End
+      !%Variable TDTimeStep
+      !%Type float
+      !%Section Time-Dependent::Propagation
+      !%Description
+      !% The time-step for the time propagation. For most propagators you
+      !% want to use the largest value that is possible without the
+      !% evolution becoming unstable.
+      !%
+      !% The default value is the maximum value that we have found
+      !% empirically that is stable for the spacing <math>h</math>:
+      !% <math>dt = 0.0426 - 0.207 h + 0.808 h^2</math>
+      !% (from parabolic fit to Fig. 4 of http://dx.doi.org/10.1021/ct800518j,
+      !% probably valid for 3D systems only).
+      !% However, you might need to adjust this value.
+      !%End
 
-    spacing = minval(sys%gr%mesh%spacing(1:sys%gr%sb%dim))
-    default_dt = CNST(0.0426) - CNST(0.207)*spacing + CNST(0.808)*spacing**2
-    default_dt = default_dt*td%mu
+      spacing = minval(sys%gr%mesh%spacing(1:sys%gr%sb%dim))
+      default_dt = CNST(0.0426) - CNST(0.207)*spacing + CNST(0.808)*spacing**2
+      default_dt = default_dt*td%mu
 
-    call parse_variable(sys%namespace, 'TDTimeStep', default_dt, td%dt, unit = units_inp%time)
+      call parse_variable(sys%namespace, 'TDTimeStep', default_dt, td%dt, unit = units_inp%time)
 
-    if (td%dt <= M_ZERO) then
-      write(message(1),'(a)') 'Input: TDTimeStep must be positive.'
-      call messages_fatal(1, namespace=sys%namespace)
-    end if
+      if (td%dt <= M_ZERO) then
+        write(message(1),'(a)') 'Input: TDTimeStep must be positive.'
+        call messages_fatal(1, namespace=sys%namespace)
+      end if
 
-    call messages_print_var_value(stdout, 'TDTimeStep', td%dt, unit = units_out%time)
-    
-    if(parse_is_defined(sys%namespace, 'TDMaxSteps') .and. parse_is_defined(sys%namespace, 'TDPropagationTime')) then
-      call messages_write('You cannot set TDMaxSteps and TDPropagationTime at the same time')
-      call messages_fatal(namespace=sys%namespace)
-    end if
-
-    !%Variable TDPropagationTime
-    !%Type float
-    !%Section Time-Dependent::Propagation
-    !%Description
-    !% The length of the time propagation. You cannot set this variable
-    !% at the same time as <tt>TDMaxSteps</tt>. By default this variable will
-    !% not be used.
-    !%
-    !% The units for this variable are <math>\hbar</math>/Hartree (or <math>\hbar</math>/eV if you
-    !% selected <tt>ev_angstrom</tt> as input units). The approximate conversions to
-    !% femtoseconds are 1 fs = 41.34 <math>\hbar</math>/Hartree = 1.52 <math>\hbar</math>/eV.
-    !%End
-    call parse_variable(sys%namespace, 'TDPropagationTime', CNST(-1.0), propagation_time, unit = units_inp%time)
-
-    call messages_obsolete_variable(sys%namespace, 'TDMaximumIter', 'TDMaxSteps')
-
-    !%Variable TDMaxSteps
-    !%Type integer
-    !%Default 1500
-    !%Section Time-Dependent::Propagation
-    !%Description
-    !% Number of time-propagation steps that will be performed. You
-    !% cannot use this variable together with <tt>TDPropagationTime</tt>.
-    !%End
-    default = 1500
-    if(propagation_time > CNST(0.0)) default = nint(propagation_time/td%dt)
-    call parse_variable(sys%namespace, 'TDMaxSteps', default, td%max_iter)
-
-    if(propagation_time <= CNST(0.0)) propagation_time = td%dt*td%max_iter
-
-    call messages_print_var_value(stdout, 'TDPropagationTime', propagation_time, unit = units_out%time)
-    call messages_print_var_value(stdout, 'TDMaxSteps', td%max_iter)
-
-    if(td%max_iter < 1) then
-      write(message(1), '(a,i6,a)') "Input: '", td%max_iter, "' is not a valid value for TDMaxSteps."
-      message(2) = '(TDMaxSteps <= 1)'
-      call messages_fatal(2, namespace=sys%namespace)
-    end if
-
-    td%iter = 0
-
-    select type (sys)
-    type is (system_t)
+      call messages_print_var_value(stdout, 'TDTimeStep', td%dt, unit = units_out%time)
       
+
+      if(parse_is_defined(sys%namespace, 'TDMaxSteps') .and. parse_is_defined(sys%namespace, 'TDPropagationTime')) then
+        call messages_write('You cannot set TDMaxSteps and TDPropagationTime at the same time')
+        call messages_fatal(namespace=sys%namespace)
+      end if
+
+      !%Variable TDPropagationTime
+      !%Type float
+      !%Section Time-Dependent::Propagation
+      !%Description
+      !% The length of the time propagation. You cannot set this variable
+      !% at the same time as <tt>TDMaxSteps</tt>. By default this variable will
+      !% not be used.
+      !%
+      !% The units for this variable are <math>\hbar</math>/Hartree (or <math>\hbar</math>/eV if you
+      !% selected <tt>ev_angstrom</tt> as input units). The approximate conversions to
+      !% femtoseconds are 1 fs = 41.34 <math>\hbar</math>/Hartree = 1.52 <math>\hbar</math>/eV.
+      !%End
+      call parse_variable(sys%namespace, 'TDPropagationTime', CNST(-1.0), propagation_time, unit = units_inp%time)
+
+      call messages_obsolete_variable(sys%namespace, 'TDMaximumIter', 'TDMaxSteps')
+
+      !%Variable TDMaxSteps
+      !%Type integer
+      !%Default 1500
+      !%Section Time-Dependent::Propagation
+      !%Description
+      !% Number of time-propagation steps that will be performed. You
+      !% cannot use this variable together with <tt>TDPropagationTime</tt>.
+      !%End
+      default = 1500
+      if(propagation_time > CNST(0.0)) default = nint(propagation_time/td%dt)
+      call parse_variable(sys%namespace, 'TDMaxSteps', default, td%max_iter)
+
+      if(propagation_time <= CNST(0.0)) propagation_time = td%dt*td%max_iter
+
+      call messages_print_var_value(stdout, 'TDPropagationTime', propagation_time, unit = units_out%time)
+      call messages_print_var_value(stdout, 'TDMaxSteps', td%max_iter)
+
+      if(td%max_iter < 1) then
+        write(message(1), '(a,i6,a)') "Input: '", td%max_iter, "' is not a valid value for TDMaxSteps."
+        message(2) = '(TDMaxSteps <= 1)'
+        call messages_fatal(2, namespace=sys%namespace)
+      end if
+
+      td%iter = 0
+
       td%dt = td%dt/td%mu
 
       ! now the photoelectron stuff
@@ -365,6 +362,44 @@ contains
 
     type is (system_mxll_t)
       
+      spacing = minval(sys%gr%mesh%spacing(1:sys%gr%sb%dim))
+      default_dt = CNST(0.0426) - CNST(0.207)*spacing + CNST(0.808)*spacing**2
+      default_dt = default_dt*td%mu
+
+      call parse_variable(sys%namespace, 'TDTimeStep', default_dt, td%dt, unit = units_inp%time)
+
+      if (td%dt <= M_ZERO) then
+        write(message(1),'(a)') 'Input: TDTimeStep must be positive.'
+        call messages_fatal(1, namespace=sys%namespace)
+      end if
+
+      call messages_print_var_value(stdout, 'TDTimeStep', td%dt, unit = units_out%time)
+
+      if(parse_is_defined(sys%namespace, 'TDMaxSteps') .and. parse_is_defined(sys%namespace, 'TDPropagationTime')) then
+        call messages_write('You cannot set TDMaxSteps and TDPropagationTime at the same time')
+        call messages_fatal(namespace=sys%namespace)
+      end if
+
+      call parse_variable(sys%namespace, 'TDPropagationTime', CNST(-1.0), propagation_time, unit = units_inp%time)
+
+      call messages_obsolete_variable(sys%namespace, 'TDMaximumIter', 'TDMaxSteps')
+
+      default = 1500
+      if(propagation_time > CNST(0.0)) default = nint(propagation_time/td%dt)
+      call parse_variable(sys%namespace, 'TDMaxSteps', default, td%max_iter)
+
+      if(propagation_time <= CNST(0.0)) propagation_time = td%dt*td%max_iter
+
+      call messages_print_var_value(stdout, 'TDPropagationTime', propagation_time, unit = units_out%time)
+      call messages_print_var_value(stdout, 'TDMaxSteps', td%max_iter)
+
+      if(td%max_iter < 1) then
+        write(message(1), '(a,i6,a)') "Input: '", td%max_iter, "' is not a valid value for TDMaxSteps."
+        message(2) = '(TDMaxSteps <= 1)'
+        call messages_fatal(2, namespace=sys%namespace)
+      end if
+
+
       !%Variable TDMaxwellTDRelaxationSteps
       !%Type integer
       !%Default 100
@@ -440,7 +475,7 @@ contains
   ! ---------------------------------------------------------
   
   subroutine td_run(sys, fromScratch)
-    class(system_abst_t), target, intent(inout) :: sys
+    class(*), target, intent(inout) :: sys
     logical,                intent(inout) :: fromScratch
 
     type(td_t)                   :: td
@@ -453,7 +488,7 @@ contains
     logical                      :: stopping_tmp
 #endif
     integer                      :: iter, ierr, scsteps
-    real(8)                      :: etime
+    FLOAT                        :: etime
     type(profile_t),        save :: prof
     type(restart_t)              :: restart_load, restart_dump
 
@@ -554,7 +589,7 @@ contains
       end if
 
       call messages_print_stress(stdout, "Time-Dependent Simulation", namespace=sys%namespace)
-      call print_header()
+      call print_header(sys%namespace)
 
       if(td%pesv%calc_spm .or. td%pesv%calc_mask .and. fromScratch) then
         call pes_init_write(td%pesv,gr%mesh,st, sys%namespace)
@@ -759,9 +794,11 @@ contains
         units_from_atomic(units_out%energy, sys%hm%energy),    &
         M_ZERO
       call messages_info(1)
+        write(*,*) 'iter', iter, td%max_iter
       
       etime = loct_clock()
       propagation_mxll: do iter = td%iter, td%max_iter
+        write(*,*) 'iter', iter
 
         stopping = clean_stop(sys%mc%master_comm)
         call profiling_in(prof, "TIME_STEP")
@@ -847,12 +884,13 @@ contains
 
   contains
 
-    subroutine print_header()
+    subroutine print_header(namespace)
+    type(namespace_t),    intent(in)    :: namespace
 
       write(message(1), '(a7,1x,a14,a14,a10,a17)') 'Iter ', 'Time ', 'Energy ', 'SC Steps', 'Elapsed Time '
 
       call messages_info(1)
-      call messages_print_stress(stdout, namespace=sys%namespace)
+      call messages_print_stress(stdout, namespace%get())
 
     end subroutine print_header
 
@@ -906,7 +944,7 @@ contains
           call v_ks_calc(sys%ks, sys%namespace, sys%hm, st, sys%geo, calc_eigenval=.true., time = iter*td%dt, calc_energy=.true.)
           call forces_calculate(gr, sys%namespace, geo, sys%hm, st, sys%ks, t = iter*td%dt, dt = td%dt)
           call messages_print_stress(stdout, "Time-dependent simulation proceeds", namespace=sys%namespace)
-          call print_header()
+          call print_header(sys%namespace)
         end if
       end if
       end select
@@ -1407,7 +1445,7 @@ contains
 
         do iqn = st%d%kpt%start, st%d%kpt%end
           if(states_are_real(st)) then
-            call states_elec_rotate(stin, namespace, gr%mesh, real(rotation_matrix, REAL_PRECISION), iqn)
+            call states_elec_rotate(stin, namespace, gr%mesh, TOFLOAT(rotation_matrix), iqn)
           else
             call states_elec_rotate(stin, namespace, gr%mesh, rotation_matrix, iqn)
           end if

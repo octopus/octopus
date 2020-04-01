@@ -102,7 +102,7 @@ module fft_oct_m
     private
     integer         :: slot    !< in which slot do we have this fft
 
-    integer         :: type    !< is the fft real or complex
+    integer, public :: type    !< is the fft real or complex
     integer, public :: library !< what library are we using
 
     integer         :: comm           !< MPI communicator
@@ -122,9 +122,10 @@ module fft_oct_m
     !integer(ptrdiff_t_kind) :: pfft_planb !< PFFT plan for backward transform
 
     !> The following arrays have to be stored here and allocated in the initialization routine because of PFFT 
-    FLOAT, pointer, public :: drs_data(:,:,:) !< array used to store the function in real space that is passed to PFFT.
-    CMPLX, pointer, public :: zrs_data(:,:,:) !< array used to store the function in real space that is passed to PFFT.
-    CMPLX, pointer, public ::  fs_data(:,:,:) !< array used to store the function in fourier space that is passed to PFFT
+    !> These arrays are also used for FFTW, as we want to have aligned memory
+    FLOAT, pointer, public :: drs_data(:,:,:) !< array used to store the function in real space.
+    CMPLX, pointer, public :: zrs_data(:,:,:) !< array used to store the function in real space.
+    CMPLX, pointer, public ::  fs_data(:,:,:) !< array used to store the function in Fourier space.
 #ifdef HAVE_CLFFT
     !> data for clfft
     type(clfftPlanHandle) :: cl_plan_fw 
@@ -135,13 +136,14 @@ module fft_oct_m
     type(nfft_t),  public :: nfft
     type(pnfft_t), public :: pnfft
 
+    logical, public :: aligned_memory
   end type fft_t
 
   logical, save, public :: fft_initialized = .false.
   integer, save         :: fft_refs(FFT_MAX)
   type(fft_t), save     :: fft_array(FFT_MAX)
   logical               :: fft_optimize
-  integer               :: fft_prepare_plan
+  integer, save         :: fft_prepare_plan
   integer, public       :: fft_default_lib = -1
   type(nfft_t), save    :: nfft_options
   type(pnfft_t), save   :: pnfft_options
@@ -214,6 +216,14 @@ contains
     !%Option fftw_estimate 64
     !% This is the "fast initialization" scheme, in which the plan is merely guessed from "reasonable"
     !% assumptions.
+    !%Option fftw_patient 32
+    !% It is like fftw_measure, but considers a wider range of algorithms and often produces a
+    !% "more optimal" plan (especially for large transforms), but at the expense of several times
+    !% longer planning time (especially for large transforms).
+    !%Option fftw_exhaustive 8
+    !% It is like fftw_patient, but considers an even wider range of algorithms, 
+    !% including many that we think are unlikely to be fast, to produce the most optimal
+    !%  plan but with a substantially increased planning time.
     !%End
     call parse_variable(namespace, 'FFTPreparePlan', FFTW_MEASURE, fft_prepare_plan)
     if(.not. varinfo_valid_option('FFTPreparePlan', fft_prepare_plan)) call messages_input_error('FFTPreparePlan')
@@ -298,7 +308,7 @@ contains
   end subroutine fft_all_end
 
   ! ---------------------------------------------------------
-  subroutine fft_init(this, nn, dim, type, library, optimize, optimize_parity, mpi_comm, mpi_grp)
+  subroutine fft_init(this, nn, dim, type, library, optimize, optimize_parity, mpi_comm, mpi_grp, use_aligned)
     type(fft_t),       intent(inout) :: this     !< FFT data type
     integer,           intent(inout) :: nn(3)    !< Size of the box
     integer,           intent(in)    :: dim      !< Dimensions of the box
@@ -309,6 +319,7 @@ contains
                                                  !! even (0), odd (1), or whatever (negative).
     integer, optional, intent(out)   :: mpi_comm !< MPI communicator
     type(mpi_grp_t), optional, intent(in) :: mpi_grp !< the mpi_group we want to use for the parallelization
+    logical, optional                :: use_aligned !< For FFTW we can use aligned memory
 
     integer :: ii, jj, fft_dim, idir, column_size, row_size, alloc_size, n3
     integer :: n_1, n_2, n_3, nn_temp(3)
@@ -331,6 +342,8 @@ contains
 
     mpi_grp_ = mpi_world
     if(present(mpi_grp)) mpi_grp_ = mpi_grp
+
+    this%aligned_memory = optional_default(use_aligned, .false.)
 
     ! First, figure out the dimensionality of the FFT.
     fft_dim = 0
@@ -415,7 +428,8 @@ contains
       if(fft_refs(ii) /= FFT_NULL) then
         if(all(nn(1:dim) == fft_array(ii)%rs_n_global(1:dim)) .and. type == fft_array(ii)%type &
              .and. library_ == fft_array(ii)%library .and. library_ /= FFTLIB_NFFT &
-             .and. library_ /= FFTLIB_PNFFT ) then
+             .and. library_ /= FFTLIB_PNFFT &
+             .and. this%aligned_memory .eqv. fft_array(ii)%aligned_memory) then
              ! NFFT and PNFFT plans are always allocated from scratch since they 
              ! are very likely to be different
           this = fft_array(ii)              ! return a copy
@@ -445,6 +459,8 @@ contains
     nullify(fft_array(jj)%drs_data)
     nullify(fft_array(jj)%zrs_data)
     nullify(fft_array(jj)%fs_data)
+
+    fft_array(jj)%aligned_memory = this%aligned_memory 
 
     ! Initialize parallel communicator
     select case (library_)
@@ -482,6 +498,11 @@ contains
       fft_array(jj)%fs_n = fft_array(jj)%fs_n_global
       fft_array(jj)%rs_istart = 1
       fft_array(jj)%fs_istart = 1
+
+      if(this%aligned_memory) then
+        call fftw_alloc_memory(fft_array(jj)%rs_n_global, type == FFT_REAL, fft_array(jj)%fs_n_global, &
+                               fft_array(jj)%drs_data, fft_array(jj)%zrs_data, fft_array(jj)%fs_data)
+      end if
 
     case (FFTLIB_PFFT)
 #ifdef HAVE_PFFT     
@@ -546,10 +567,28 @@ contains
     ! Prepare plans
     select case (library_)
     case (FFTLIB_FFTW)
-      call fftw_prepare_plan(fft_array(jj)%planf, fft_dim, fft_array(jj)%rs_n_global, &
+      if(.not. this%aligned_memory) then
+        call fftw_prepare_plan(fft_array(jj)%planf, fft_dim, fft_array(jj)%rs_n_global, &
            type == FFT_REAL, FFTW_FORWARD, fft_prepare_plan+FFTW_UNALIGNED)
-      call fftw_prepare_plan(fft_array(jj)%planb, fft_dim, fft_array(jj)%rs_n_global, &
+        call fftw_prepare_plan(fft_array(jj)%planb, fft_dim, fft_array(jj)%rs_n_global, &
            type == FFT_REAL, FFTW_BACKWARD, fft_prepare_plan+FFTW_UNALIGNED)
+      else
+        if(type == FFT_REAL) then
+          call fftw_prepare_plan(fft_array(jj)%planf, fft_dim, fft_array(jj)%rs_n_global, &
+             type == FFT_REAL, FFTW_FORWARD, fft_prepare_plan, &
+             din_=fft_array(jj)%drs_data, cout_=fft_array(jj)%fs_data)
+          call fftw_prepare_plan(fft_array(jj)%planb, fft_dim, fft_array(jj)%rs_n_global, &
+             type == FFT_REAL, FFTW_BACKWARD, fft_prepare_plan, &
+             din_=fft_array(jj)%drs_data, cout_=fft_array(jj)%fs_data)
+        else
+          call fftw_prepare_plan(fft_array(jj)%planf, fft_dim, fft_array(jj)%rs_n_global, &
+             type == FFT_REAL, FFTW_FORWARD, fft_prepare_plan, &
+             cin_=fft_array(jj)%zrs_data, cout_=fft_array(jj)%fs_data)
+          call fftw_prepare_plan(fft_array(jj)%planb, fft_dim, fft_array(jj)%rs_n_global, &
+             type == FFT_REAL, FFTW_BACKWARD, fft_prepare_plan, &
+             cin_=fft_array(jj)%zrs_data, cout_=fft_array(jj)%fs_data)
+        end if
+      end if
 
     case(FFTLIB_NFFT)
      call nfft_copy_info(this%nfft,fft_array(jj)%nfft) !copy default parameters set in the calling routine 
@@ -845,6 +884,12 @@ contains
         case (FFTLIB_FFTW)
           call fftw_destroy_plan(fft_array(ii)%planf)
           call fftw_destroy_plan(fft_array(ii)%planb)
+
+          if(this%aligned_memory) then
+            call fftw_free_memory(this%type == FFT_REAL, &
+              fft_array(ii)%drs_data, fft_array(ii)%zrs_data, fft_array(ii)%fs_data)
+          end if
+
         case (FFTLIB_PFFT)
 #ifdef HAVE_PFFT
           call pfft_destroy_plan(fft_array(ii)%planf)
@@ -1009,8 +1054,8 @@ contains
 
     PUSH_SUB(fft_operation_count)
 
-    fullsize = product(dble(fft%fs_n(1:3)))
-    call profiling_count_operations(5.0_8*fullsize*log(fullsize)/log(2.0_8))
+    fullsize = product(TOFLOAT(fft%fs_n(1:3)))
+    call profiling_count_operations(CNST(5.0)*fullsize*log(fullsize)/log(M_TWO))
 
     POP_SUB(fft_operation_count)
   end subroutine fft_operation_count

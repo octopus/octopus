@@ -70,6 +70,7 @@ basic_f_srcs =                                 \
 	basic/nvtx.F90                         \
 	basic/parser.F90                       \
 	basic/profiling.F90                    \
+	basic/clock.F90             \
 	basic/sort.F90                         \
 	basic/space.F90                        \
 	basic/string.F90                       \
@@ -359,9 +360,9 @@ poisson_f_srcs =                                 \
 	poisson/poisson_fft.F90                  \
 	poisson/poisson_fmm.F90                  \
 	poisson/poisson_isf.F90                  \
-	poisson/poisson_libisf.F90               \
 	poisson/poisson_multigrid.F90            \
 	poisson/poisson_no.F90                   \
+	poisson/poisson_psolver.F90              \
 	poisson/scaling_function.F90
 
 poisson_c_srcs =                                 \
@@ -374,7 +375,8 @@ noinst_HEADERS +=                                \
 	poisson/poisson_inc.F90                  \
 	poisson/poisson_direct_sm_inc.F90        \
 	poisson/poisson_init_inc.F90             \
-	poisson/poisson_direct_inc.F90
+	poisson/poisson_direct_inc.F90           \
+        poisson/poisson_fft_inc.F90
 
 # Sources in states
 states_f_srcs =                                 \
@@ -479,6 +481,7 @@ noinst_HEADERS +=                                    \
 # Sources in system
 system_f_srcs =                                 \
 	system/current.F90                      \
+	system/celestial_body.F90               \
 	system/dos.F90                          \
 	system/eigen_cg.F90                     \
 	system/eigen_lobpcg.F90                 \
@@ -488,6 +491,8 @@ system_f_srcs =                                 \
 	system/energy_calc.F90                  \
 	system/exponential.F90                  \
 	system/forces.F90                       \
+	system/interaction_abst.F90             \
+	system/interaction_gravity.F90          \
 	system/linear_solver.F90                \
 	system/magnetic.F90                     \
 	system/multisystem.F90                  \
@@ -495,7 +500,12 @@ system_f_srcs =                                 \
 	system/output_me.F90                    \
 	system/partial_charges.F90              \
 	system/pert.F90                         \
+	system/photon_mode.F90                  \
 	system/preconditioners.F90              \
+	system/propagator_abst.F90              \
+        system/propagator_verlet.F90            \
+        system/propagator_beeman.F90            \
+	system/quantity.F90                     \
 	system/stress.F90                       \
 	system/subspace.F90                     \
 	system/system.F90                       \
@@ -530,6 +540,7 @@ noinst_HEADERS +=                               \
 	system/xc_kli_inc.F90                   \
 	system/xc_kli_pauli_inc.F90             \
 	system/xc_oep_inc.F90                   \
+	system/xc_oep_qed_inc.F90               \
 	system/xc_oep_sic_inc.F90               \
 	system/xc_oep_x_inc.F90
 

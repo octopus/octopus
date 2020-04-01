@@ -232,13 +232,13 @@ contains
 
     case(SCF_TOL_LINEAR)
       r = this%initial_tol + (this%final_tol - this%initial_tol) * &
-        real(iter, REAL_PRECISION) / real(this%iter_window, REAL_PRECISION)
+        TOFLOAT(iter) / TOFLOAT(this%iter_window)
 
     case(SCF_TOL_EXP)
       logi = log(this%initial_tol)
       logf = log(this%final_tol)
       r = logi + (logf - logi) * &
-        real(iter, REAL_PRECISION) / real(this%iter_window, REAL_PRECISION)
+        TOFLOAT(iter) / TOFLOAT(this%iter_window)
       r = exp(r)
     end select
       

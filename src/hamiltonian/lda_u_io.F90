@@ -372,10 +372,10 @@ contains
           if (states_are_real(st)) then
             mm(ia, 3) = mm(ia, 3) + this%dn(im,im,1,ios) - this%dn(im,im,2,ios) 
           else
-            mm(ia, 3) = mm(ia, 3) + real(this%zn(im,im,1,ios) - this%zn(im,im,2,ios))
+            mm(ia, 3) = mm(ia, 3) + TOFLOAT(this%zn(im,im,1,ios) - this%zn(im,im,2,ios))
             !Spinors
             if(this%nspins /= this%spin_channels) then
-              mm(ia, 1) = mm(ia, 1) + 2*real(this%zn(im,im,3,ios))
+              mm(ia, 1) = mm(ia, 1) + 2*TOFLOAT(this%zn(im,im,3,ios))
               mm(ia, 2) = mm(ia, 2) - 2*aimag(this%zn(im,im,3,ios))
             end if
           end if  

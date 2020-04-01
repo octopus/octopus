@@ -483,7 +483,7 @@ contains
       end do
       
     case(oct_tg_hhgnew)
-      gvec(1:gr%sb%dim) = real(tg%gvec(iter + 1, 1:gr%sb%dim), REAL_PRECISION)
+      gvec(1:gr%sb%dim) = TOFLOAT(tg%gvec(iter + 1, 1:gr%sb%dim))
 
       do ik = inh%d%kpt%start, inh%d%kpt%end
         do ist = inh%st_start, inh%st_end

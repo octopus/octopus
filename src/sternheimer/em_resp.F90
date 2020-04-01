@@ -1172,7 +1172,7 @@ contains
       end do
 
       write(iunit, '(a)') '# Real part of dielectric constant'
-      call output_tensor(iunit, real(epsilon(1:gr%sb%dim, 1:gr%mesh%sb%dim)), gr%sb%dim, unit_one)
+      call output_tensor(iunit, TOFLOAT(epsilon(1:gr%sb%dim, 1:gr%mesh%sb%dim)), gr%sb%dim, unit_one)
       write(iunit, '(a)')
       write(iunit, '(a)') '# Imaginary part of dielectric constant'
       call output_tensor(iunit, aimag(epsilon(1:gr%sb%dim, 1:gr%mesh%sb%dim)), gr%sb%dim, unit_one)
@@ -1188,7 +1188,7 @@ contains
         end do
 
         write(iunit, '(a)') '# Real part of dielectric constant'
-        call output_tensor(iunit, real(epsilon(1:gr%sb%dim, 1:gr%mesh%sb%dim)), gr%sb%dim, unit_one)
+        call output_tensor(iunit, TOFLOAT(epsilon(1:gr%sb%dim, 1:gr%mesh%sb%dim)), gr%sb%dim, unit_one)
         write(iunit, '(a)')
         write(iunit, '(a)') '# Imaginary part of dielectric constant'
         call output_tensor(iunit, aimag(epsilon(1:gr%sb%dim, 1:gr%mesh%sb%dim)), gr%sb%dim, unit_one)
@@ -1230,7 +1230,7 @@ contains
           end do
           do idir = 1, gr%sb%dim
             do idir1 = 1, gr%sb%dim
-              write(iunit, '(e20.8)', advance = 'no') real(epsilon_k(idir, idir1, ik))
+              write(iunit, '(e20.8)', advance = 'no') TOFLOAT(epsilon_k(idir, idir1, ik))
             end do
           end do
           write(iunit, *)
@@ -1329,9 +1329,9 @@ contains
       if(use_kdotp) then
         write(iunit, '(a)') hyphens
         write(iunit, '(1a)') '# Magnetization [ppm a.u.]'
-        write(iunit, '(3f20.8)') units_from_atomic(unit_ppm, real(em_vars%magn(1))), &
-          units_from_atomic(unit_ppm, real(em_vars%magn(2))), &
-          units_from_atomic(unit_ppm, real(em_vars%magn(3)))
+        write(iunit, '(3f20.8)') units_from_atomic(unit_ppm, TOFLOAT(em_vars%magn(1))), &
+          units_from_atomic(unit_ppm, TOFLOAT(em_vars%magn(2))), &
+          units_from_atomic(unit_ppm, TOFLOAT(em_vars%magn(3)))
       end if
 
       call io_close(iunit)      
@@ -1497,7 +1497,7 @@ contains
              str_center('['//trim(units_abbrev(units_out%length**4)) //']', 20)
 
         ff = M_ZERO
-        if(em_vars%omega(iomega) /= 0) ff = real(dic)/(M_THREE*em_vars%omega(iomega))
+        if(em_vars%omega(iomega) /= 0) ff = TOFLOAT(dic)/(M_THREE*em_vars%omega(iomega))
 
         write(iunit, '(3e20.8)') units_from_atomic(units_out%energy, em_vars%omega(iomega)), &
              units_from_atomic(units_out%length**3, aimag(dic)/(P_C*M_PI)), units_from_atomic(units_out%length**4, ff)
@@ -1540,7 +1540,7 @@ contains
  
       write(iunit, '(a25)', advance = 'no') str_center("Re alpha [a.u.]", 25)
       do idir = 1, gr%sb%dim + 1 
-        write(iunit, '(e20.8)', advance = 'no') real(diff(idir))
+        write(iunit, '(e20.8)', advance = 'no') TOFLOAT(diff(idir))
       end do
       write(iunit, *)
 
@@ -1552,7 +1552,7 @@ contains
 
       write(iunit, '(a25)', advance = 'no') str_center("Re epsilon (B = 1 a.u.)", 25)
       do idir = 1, gr%sb%dim + 1
-        write(iunit, '(e20.8)', advance = 'no') real(epsilon_m(idir))
+        write(iunit, '(e20.8)', advance = 'no') TOFLOAT(epsilon_m(idir))
       end do
       write(iunit, *)
 
@@ -1586,7 +1586,7 @@ contains
  
         write(iunit, '(a25)', advance = 'no') str_center("Re alpha [a.u.]", 25)
         do idir = 1, gr%sb%dim + 1 
-          write(iunit, '(e20.8)', advance = 'no') real(diff(idir))
+          write(iunit, '(e20.8)', advance = 'no') TOFLOAT(diff(idir))
         end do
         write(iunit, *)
 
@@ -1598,7 +1598,7 @@ contains
 
         write(iunit, '(a25)', advance = 'no') str_center("Re epsilon (B = 1 a.u.)", 25)
         do idir = 1, gr%sb%dim + 1
-          write(iunit, '(e20.8)', advance = 'no') real(epsilon_m(idir))
+          write(iunit, '(e20.8)', advance = 'no') TOFLOAT(epsilon_m(idir))
         end do
         write(iunit, *)
 
@@ -1639,7 +1639,7 @@ contains
             write(iunit, '(e20.8)', advance = 'no') gr%sb%kpoints%reduced%red_point(idir, ik)
           end do
           do idir = 1, gr%sb%dim
-            write(iunit, '(e20.8)', advance = 'no') real(eps_mk(idir))
+            write(iunit, '(e20.8)', advance = 'no') TOFLOAT(eps_mk(idir))
           end do
           do idir = 1, gr%sb%dim
             write(iunit, '(e20.8)', advance = 'no') aimag(eps_mk(idir))
@@ -1688,7 +1688,7 @@ contains
         do kk = 1, sb%dim
           write(iunit,'(a,e20.8,e20.8)') 'beta '// &
                index2axis(ii)//index2axis(jj)//index2axis(kk)//' ', &
-               units_from_atomic(units_out%hyperpolarizability, real( beta(ii, jj, kk))), &
+               units_from_atomic(units_out%hyperpolarizability, TOFLOAT( beta(ii, jj, kk))), &
                units_from_atomic(units_out%hyperpolarizability, aimag(beta(ii, jj, kk)))
         end do
       end do
@@ -1713,7 +1713,7 @@ contains
 
       do ii = 1, sb%dim
         write(iunit, '(a, 2e20.8)') 'beta // '//index2axis(ii), &
-          units_from_atomic(units_out%hyperpolarizability, real(bpar(ii))), &
+          units_from_atomic(units_out%hyperpolarizability, TOFLOAT(bpar(ii))), &
           units_from_atomic(units_out%hyperpolarizability, aimag(bpar(ii)))
       end do
 
@@ -1721,7 +1721,7 @@ contains
 
       do ii = 1, sb%dim
         write(iunit, '(a, 2e20.8)') 'beta _L '//index2axis(ii), &
-          units_from_atomic(units_out%hyperpolarizability, real(bper(ii))), &
+          units_from_atomic(units_out%hyperpolarizability, TOFLOAT(bper(ii))), &
           units_from_atomic(units_out%hyperpolarizability, aimag(bper(ii)))
       end do
 
@@ -1729,7 +1729,7 @@ contains
 
       do ii = 1, sb%dim
         write(iunit, '(a, 2e20.8)') 'beta  k '//index2axis(ii), &
-          units_from_atomic(units_out%hyperpolarizability, real(bk(ii))), &
+          units_from_atomic(units_out%hyperpolarizability, TOFLOAT(bk(ii))), &
           units_from_atomic(units_out%hyperpolarizability, aimag(bk(ii)))
       end do
 
@@ -1738,10 +1738,10 @@ contains
       write(iunit, '()')
       write(iunit, '(a)') 'beta for liquid- or gas-phase hyper-Rayleigh scattering:'
       write(iunit, '(a, 2e20.8)') 'VV polarization ', &
-         units_from_atomic(units_out%hyperpolarizability, real(sqrt(HRS_VV))), &
+         units_from_atomic(units_out%hyperpolarizability, TOFLOAT(sqrt(HRS_VV))), &
          units_from_atomic(units_out%hyperpolarizability, aimag(sqrt(HRS_VV)))
       write(iunit, '(a, 2e20.8)') 'HV polarization ', &
-         units_from_atomic(units_out%hyperpolarizability, real(sqrt(HRS_HV))), &
+         units_from_atomic(units_out%hyperpolarizability, TOFLOAT(sqrt(HRS_HV))), &
          units_from_atomic(units_out%hyperpolarizability, aimag(sqrt(HRS_HV)))
     end if
 

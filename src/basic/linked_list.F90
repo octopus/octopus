@@ -25,33 +25,59 @@ module linked_list_oct_m
   implicit none
 
   private
-  public :: linked_list_t
+  public :: linked_list_t,  &
+            list_iterator_t
 
+
+  !---------------------------------------------------------------------------
+  !> This class implements a linked list of unlimited polymorphic values. This
+  !> allows the storeage of any type of data. Iterating over the list is done
+  !> using the associated list_counter_t. There are two ways of iterating. The
+  !> first is by using a "do while" construct:
+  !>
+  !>  call iter%start(list)
+  !>  do while (iter%has_next())
+  !>     value => iter%get_next()
+  !>     ...
+  !>  end do
+  !>
+  !> The second method is with a simple "do":
+  !>
+  !>  call iter%start(list)
+  !>  do
+  !>     if (.not. iter%has_next()) exit
+  !>     value => iter%get_next()
+  !>     ...
+  !>  end do
+  !>
   type :: linked_list_t
     private
     class(list_node_t), pointer :: first_node => null()
     class(list_node_t), pointer :: last_node => null()
-    class(list_node_t), pointer :: current_node => null()
   contains
-    procedure :: add_node
-    procedure :: first
-    procedure :: next
-    procedure :: current
-    procedure :: rewind
-    procedure :: has_more_values
-    generic   :: add => add_node
-    final     :: finalize
+    procedure :: add => linked_list_add_node
+    final     :: linked_list_finalize
   end type linked_list_t
+
+  type :: list_iterator_t
+    private
+    class(list_node_t), pointer :: next_node => null()
+  contains
+    procedure :: start    => list_iterator_start
+    procedure :: has_next => list_iterator_has_next
+    procedure :: get_next => list_iterator_get_next
+  end type list_iterator_t
 
 contains
 
-  subroutine add_node(this, value)
-    class(linked_list_t), intent(inout) :: this
-    class(*),             intent(in)    :: value
+  ! ---------------------------------------------------------
+  subroutine linked_list_add_node(this, value)
+    class(linked_list_t) :: this
+    class(*),             target        :: value
 
     class(list_node_t), pointer :: new_node
 
-    PUSH_SUB(add_node)
+    PUSH_SUB(linked_list_add_node)
 
     if (.not. associated(this%first_node)) then
       this%first_node => list_node(value, this%first_node)
@@ -62,76 +88,61 @@ contains
       this%last_node => new_node
     end if
 
-    POP_SUB(add_node)
-  end subroutine add_node
+    POP_SUB(linked_list_add_node)
+  end subroutine linked_list_add_node
 
-  function first(this)
-    class(linked_list_t), intent(in) :: this
-    class(*),             pointer    :: first
-
-    PUSH_SUB(first)
-
-    first => this%first_node%get()
-
-    POP_SUB(first)
-  end function first
-
-  function current(this)
-    class(linked_list_t), intent(in) :: this
-    class(*),             pointer    :: current
-
-    PUSH_SUB(current)
-
-    current => this%current_node%get()
-
-    POP_SUB(current)
-  end function current
-
-  subroutine next(this)
-    class(linked_list_t), intent(inout) :: this
-
-    PUSH_SUB(next)
-
-    this%current_node => this%current_node%next()
-
-    POP_SUB(next)
-  end subroutine next
-
-  logical function has_more_values(this)
-    class(linked_list_t), intent(in) :: this
-
-    PUSH_SUB(has_more_values)
-
-    has_more_values = associated(this%current_node)
-
-    POP_SUB(has_more_values)
-  end function has_more_values
-
-  subroutine rewind(this)
-    class(linked_list_t), intent(inout) :: this
-
-    PUSH_SUB(rewind)
-
-    this%current_node => this%first_node
-
-    POP_SUB(rewind)
-  end subroutine rewind
-
-  subroutine finalize(this)
+  ! ---------------------------------------------------------
+  subroutine linked_list_finalize(this)
     type(linked_list_t), intent(inout) :: this
 
-    class(list_node_t), pointer :: next
+    class(list_node_t), pointer :: current, next
 
-    PUSH_SUB(finalize)
+    PUSH_SUB(linked_list_finalize)
 
-    call this%rewind()
-    do while (associated(this%current_node))
-      next => this%current_node%next()
-      deallocate(this%current_node)
-      this%current_node => next
+    current => this%first_node
+    do while (associated(current))
+      next => current%next()
+      deallocate(current)
+      current => next
     end do
 
-    POP_SUB(finalize)
-  end subroutine finalize
+    POP_SUB(linked_list_finalize)
+  end subroutine linked_list_finalize
+
+  ! ---------------------------------------------------------
+  subroutine list_iterator_start(this, list)
+    class(list_iterator_t), intent(inout)      :: this
+    class(linked_list_t),   intent(in), target :: list
+
+    PUSH_SUB(list_iterator_start)
+
+    this%next_node => list%first_node
+
+    POP_SUB(list_iterator_start)
+  end subroutine list_iterator_start
+
+  ! ---------------------------------------------------------
+  logical function list_iterator_has_next(this)
+    class(list_iterator_t), intent(in) :: this
+
+    PUSH_SUB(list_iterator_has_next)
+
+    list_iterator_has_next = associated(this%next_node)
+
+    POP_SUB(list_iterator_has_next)
+  end function list_iterator_has_next
+
+  ! ---------------------------------------------------------
+  function list_iterator_get_next(this) result(value)
+    class(list_iterator_t), intent(inout) :: this
+    class(*),              pointer        :: value
+
+    PUSH_SUB(list_iterator_get_next)
+
+    value => this%next_node%get()
+    this%next_node => this%next_node%next()
+
+    POP_SUB(list_iterator_get_next)
+  end function list_iterator_get_next
 
 end module linked_list_oct_m

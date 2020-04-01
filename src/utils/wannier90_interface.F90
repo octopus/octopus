@@ -75,7 +75,7 @@ program wannier90_interface
   integer              :: ii, nik, iter, nst
 
   type(restart_t)      :: restart
-  type(system_t)       :: sys
+  type(system_t), pointer :: sys
   logical              :: w90_spinors, scdm_proj, w90_scdm
   integer              :: w90_nntot, w90_num_bands, w90_num_kpts   ! w90 input parameters
   integer, allocatable :: w90_nnk_list(:,:)                        !
@@ -120,7 +120,7 @@ program wannier90_interface
   call unit_system_init(namespace)
 
   call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
-  call system_init(sys, namespace)
+  sys => system_init(namespace)
 
   !%Variable Wannier90Prefix
   !%Type string
@@ -257,7 +257,7 @@ program wannier90_interface
   SAFE_DEALLOCATE_A(band_index)
   SAFE_DEALLOCATE_A(w90_nnk_list)
 
-  call system_end(sys)
+  SAFE_DEALLOCATE_P(sys)
   call fft_all_end()
   call io_end()
   call profiling_end(namespace)
@@ -1234,7 +1234,7 @@ contains
       ipmax = 0
       wmodmax = M_z0
       do ip=1, mesh%np
-        wmod = real(zwn(ip)*conjg(zwn(ip)), REAL_PRECISION)
+        wmod = TOFLOAT(zwn(ip)*conjg(zwn(ip)))
         if(wmod > wmodmax) then
           ipmax = ip
           wmodmax = wmod
@@ -1244,7 +1244,7 @@ contains
      
 
       forall(ip=1:mesh%np)
-        dwn(ip) = real(zwn(ip), REAL_PRECISION)
+        dwn(ip) = TOFLOAT(zwn(ip))
       end forall
         
       call dio_function_output(how, 'wannier', trim(fname), namespace, mesh, &

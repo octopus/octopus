@@ -44,9 +44,9 @@ module system_oct_m
   use states_abst_oct_m
   use states_elec_oct_m
   use states_elec_dim_oct_m
-  use system_abst_oct_m
   use v_ks_oct_m
   use xc_oct_m
+  use xc_oep_oct_m
 
   implicit none
 
@@ -54,27 +54,36 @@ module system_oct_m
   public ::               &
     system_t,             &
     system_init,          &
-    system_end,           &
     system_h_setup
 
-  type, extends(system_abst_t) :: system_t
+  type :: system_t
     ! Components are public by default
+    type(space_t)                :: space
+    type(geometry_t)             :: geo
+    type(grid_t),        pointer :: gr    !< the mesh
     type(states_elec_t), pointer :: st    !< the states
     type(v_ks_t)                 :: ks    !< the Kohn-Sham potentials
+    type(output_t)               :: outp  !< the output
+    type(multicomm_t)            :: mc    !< index and domain communicators
+    type(namespace_t)            :: namespace
     type(hamiltonian_elec_t)     :: hm
+  contains
+    final :: system_finalize
   end type system_t
   
 contains
   
   !----------------------------------------------------------
-  subroutine system_init(sys, namespace)
-    type(system_t),    intent(out) :: sys
-    type(namespace_t), intent(in)  :: namespace
+  function system_init(namespace) result(sys)
+    class(system_t),    pointer    :: sys
+    type(namespace_t), intent(in) :: namespace
 
     type(profile_t), save :: prof
 
     PUSH_SUB(system_init)
     call profiling_in(prof,"SYSTEM_INIT")
+
+    SAFE_ALLOCATE(sys)
 
     SAFE_ALLOCATE(sys%gr)
     SAFE_ALLOCATE(sys%st)
@@ -111,7 +120,7 @@ contains
     call v_ks_init(sys%ks, sys%namespace, sys%gr, sys%st, sys%geo, sys%mc)
 
     call hamiltonian_elec_init(sys%hm, sys%namespace, sys%gr, sys%geo, sys%st, sys%ks%theory_level, &
-      sys%ks%xc, sys%mc)
+      sys%ks%xc, sys%mc, need_exchange = output_need_exchange(sys%outp) .or. sys%ks%oep%level /= XC_OEP_NONE)
     
     if(poisson_is_multigrid(sys%hm%psolver)) call grid_create_multigrid(sys%gr, sys%namespace, sys%geo, sys%mc)
   
@@ -140,13 +149,13 @@ contains
       POP_SUB(system_init.parallel_init)
     end subroutine parallel_init
 
-  end subroutine system_init
+  end function system_init
 
   !----------------------------------------------------------
-  subroutine system_end(sys)
+  subroutine system_finalize(sys)
     type(system_t), intent(inout) :: sys
 
-    PUSH_SUB(system_end)
+    PUSH_SUB(system_finalize)
 
     call hamiltonian_elec_end(sys%hm)
 
@@ -169,8 +178,8 @@ contains
 
     SAFE_DEALLOCATE_P(sys%gr)
 
-    POP_SUB(system_end)
-  end subroutine system_end
+    POP_SUB(system_finalize)
+  end subroutine system_finalize
 
 
   !----------------------------------------------------------

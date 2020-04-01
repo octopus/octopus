@@ -697,7 +697,7 @@ contains
         if(mesh%use_curvilinear) then
           forall(j = 1:dim) x(j) = mesh%x(p + op(1)%ri(i, op(1)%rimap(p)), j) - mesh%x(p, j)
         else
-          forall(j = 1:dim) x(j) = real(op(1)%stencil%points(j, i), REAL_PRECISION)*mesh%spacing(j)
+          forall(j = 1:dim) x(j) = TOFLOAT(op(1)%stencil%points(j, i))*mesh%spacing(j)
           ! TODO : this internal if clause is inefficient - the condition is determined globally
           if (mesh%sb%nonorthogonal .and. .not. optional_default(force_orthogonal, .false.))  & 
               x(1:dim) = matmul(mesh%sb%rlattice_primitive(1:dim,1:dim), x(1:dim))

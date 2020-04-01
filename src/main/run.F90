@@ -132,6 +132,7 @@ contains
     integer,           intent(in) :: cm
 
     type(linked_list_t) :: systems
+    type(list_iterator_t) :: iter
     class(*), pointer :: sys
     type(profile_t), save :: calc_mode_prof
     logical :: fromScratch
@@ -175,9 +176,9 @@ contains
     call multisystem_init(systems, namespace)
 
     ! Loop over systems
-    call systems%rewind()
-    do while (systems%has_more_values())
-      sys => systems%current()
+    call iter%start(systems)
+    do while (iter%has_next())
+      sys => iter%get_next()
       select type (sys)
 
       type is (system_mxll_t)
@@ -320,7 +321,6 @@ contains
         message(1) = "Unknow system type."
         call messages_fatal(1)
       end select
-      call systems%next()
     end do
 
     ! Finalize systems

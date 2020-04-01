@@ -105,15 +105,15 @@ contains
     end do
     
     ! The l- and m-dependent prefactors are included in the KB energies
-    rkb_p%f(1, 1, 1) = real(l + so_strength*lm + 1, REAL_PRECISION)
-    rkb_p%f(1, 2, 1) = so_strength*sqrt(real((l + lm + 1)*(l - lm), REAL_PRECISION))
-    rkb_p%f(1, 1, 2) = so_strength*sqrt(real((l - lm + 1)*(l + lm), REAL_PRECISION))
-    rkb_p%f(1, 2, 2) = real(l - so_strength*lm + 1, REAL_PRECISION)
-    rkb_p%f(2, 1, 1) = real(l - so_strength*lm, REAL_PRECISION)
-    rkb_p%f(2, 2, 1) = -so_strength*sqrt(real((l + lm + 1)*(l - lm), REAL_PRECISION))
-    rkb_p%f(2, 1, 2) = -so_strength*sqrt(real((l - lm + 1)*(l + lm), REAL_PRECISION))
-    rkb_p%f(2, 2, 2) = real(l + so_strength*lm, REAL_PRECISION)
-    rkb_p%f = rkb_p%f/real(2*l + 1, REAL_PRECISION)
+    rkb_p%f(1, 1, 1) = TOFLOAT(l + so_strength*lm + 1)
+    rkb_p%f(1, 2, 1) = so_strength*sqrt(TOFLOAT((l + lm + 1)*(l - lm)))
+    rkb_p%f(1, 1, 2) = so_strength*sqrt(TOFLOAT((l - lm + 1)*(l + lm)))
+    rkb_p%f(1, 2, 2) = TOFLOAT(l - so_strength*lm + 1)
+    rkb_p%f(2, 1, 1) = TOFLOAT(l - so_strength*lm)
+    rkb_p%f(2, 2, 1) = -so_strength*sqrt(TOFLOAT((l + lm + 1)*(l - lm)))
+    rkb_p%f(2, 1, 2) = -so_strength*sqrt(TOFLOAT((l - lm + 1)*(l + lm)))
+    rkb_p%f(2, 2, 2) = TOFLOAT(l + so_strength*lm)
+    rkb_p%f = rkb_p%f/TOFLOAT(2*l + 1)
 
     ps => species_ps(a%species)
     rkb_p%f(1, :, :) = rkb_p%f(1, :, :) * ps%h(l, 1, 1)

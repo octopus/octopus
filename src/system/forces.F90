@@ -235,12 +235,12 @@ contains
     
       res(:) = M_ZERO
       do m = 1, ubound(res, 1)
-        res(m) = real( zmf_dotp(gr%mesh, viapsi(:, 1), derpsi(:, m, 1), reduce = .false.) , REAL_PRECISION)
+        res(m) = TOFLOAT( zmf_dotp(gr%mesh, viapsi(:, 1), derpsi(:, m, 1), reduce = .false.))
       end do
       if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm,  res)
 
       call states_elec_get_state(chi, gr%mesh, ist, ik, zpsi)
-      pdot3 = real(M_zI * zmf_dotp(gr%mesh, zpsi(:, 1), viapsi(:, 1)), REAL_PRECISION)
+      pdot3 = TOFLOAT(M_zI * zmf_dotp(gr%mesh, zpsi(:, 1), viapsi(:, 1)))
       geo%atom(iatom)%x(j) = qold
 
       SAFE_DEALLOCATE_A(viapsi)

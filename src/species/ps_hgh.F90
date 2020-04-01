@@ -431,7 +431,7 @@ contains
 
     PUSH_SUB(projectorr_scalar)
 
-    x = l + real(4*i-1, REAL_PRECISION)/M_TWO
+    x = l + TOFLOAT(4*i-1)/M_TWO
     y = loct_gamma(x)
     x = sqrt(y)
     if(l==0 .and. i==1) then
@@ -441,7 +441,7 @@ contains
     end if
 
     projectorr_scalar = sqrt(M_TWO) * rr * exp(-r**2/(M_TWO*p%rc(l)**2)) / &
-      (  p%rc(l)**(l + real(4*i-1, REAL_PRECISION)/M_TWO) * x )
+      (  p%rc(l)**(l + TOFLOAT(4*i-1)/M_TWO) * x )
 
     POP_SUB(projectorr_scalar)
   end function projectorr_scalar
@@ -577,7 +577,7 @@ contains
       do n = 1, psp%conf%p
         l = psp%conf%l(n)
         do ir = 2, psp%g%nrval
-          vtot = 2*psp%vlocal(ir) + ve(ir, 1) + dble(l*(l + 1))/(psp%g%rofi(ir)**2)
+          vtot = 2*psp%vlocal(ir) + ve(ir, 1) + TOFLOAT(l*(l + 1))/(psp%g%rofi(ir)**2)
           nonl = M_ZERO
           if(iter>2 .and. psp%l_max >=0 .and. psp%rphi(ir, n) > CNST(1.0e-7)) then
             do i = 1, 3
@@ -601,7 +601,7 @@ contains
         end do
         nprin = l + 1
         if(iter == 1) then
-          e = -((psp%z_val/dble(nprin))**2)
+          e = -((psp%z_val/TOFLOAT(nprin))**2)
           z = psp%z_val
         else
           e = psp%eigen(n)

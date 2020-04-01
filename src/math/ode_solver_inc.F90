@@ -97,7 +97,7 @@ subroutine X(ode_step)(os, func, startval, solutionp, solutionvec)
   SAFE_ALLOCATE(yn(1:os%nsize))
   SAFE_ALLOCATE(y0(1:os%nsize))
 
-  dh = (os%tmax-os%tmin)/real(os%nsteps, REAL_PRECISION)
+  dh = (os%tmax-os%tmin)/TOFLOAT(os%nsteps)
   tn = os%tmin
   yn = startval
 

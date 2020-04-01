@@ -81,12 +81,22 @@ subroutine X(fourier_space_op_init)(this, cube, op, in_device)
   nullify(this%dop)
   nullify(this%zop)
 
+#ifdef R_TREAL
+  this%real_op = .true.
+#else
+  this%real_op = .false.
+#endif
+
   if(cube%fft%library /= FFTLIB_ACCEL .or. .not. optional_default(in_device, .true.)) then
     this%in_device_memory = .false.
     SAFE_ALLOCATE(this%X(op)(1:cube%fs_n(1), 1:cube%fs_n(2), 1:cube%fs_n(3)))
-    forall (kk = 1:cube%fs_n(3), jj = 1:cube%fs_n(2), ii = 1:cube%fs_n(1)) 
-      this%X(op)(ii, jj, kk) = op(ii, jj, kk)
-    end forall
+    do kk = 1,cube%fs_n(3)
+      do jj = 1,cube%fs_n(2)
+        do ii = 1,cube%fs_n(1)
+          this%X(op)(ii, jj, kk) = op(ii, jj, kk)
+        end do
+      end do
+    end do
   else
     this%in_device_memory = .true.
 
@@ -144,25 +154,49 @@ subroutine X(fourier_space_op_apply)(this, cube, cf)
   if(cube%fft%library == FFTLIB_PFFT) then
     !Note that the function in fourier space returned by PFFT is transposed
     ! Probably in this case this%X(op) should be also transposed
-    !$omp parallel do private(ii, jj, kk)
-    do ii = 1, cube%fs_n(1)
-      do jj = 1, cube%fs_n(2)
-        do kk = 1, cube%fs_n(3)
-          cf%fs(kk, ii, jj) = cf%fs(kk, ii, jj)*this%X(op) (ii, jj, kk)
+    if(this%real_op) then
+      !$omp parallel do private(ii, jj, kk)
+      do ii = 1, cube%fs_n(1)
+        do jj = 1, cube%fs_n(2)
+          do kk = 1, cube%fs_n(3)
+            cf%fs(kk, ii, jj) = cf%fs(kk, ii, jj)*this%dop(ii, jj, kk)
+          end do
         end do
       end do
-    end do
-    !$omp end parallel do
+      !$omp end parallel do
+    else
+      !$omp parallel do private(ii, jj, kk)
+      do ii = 1, cube%fs_n(1)
+        do jj = 1, cube%fs_n(2)
+          do kk = 1, cube%fs_n(3)
+            cf%fs(kk, ii, jj) = cf%fs(kk, ii, jj)*this%X(op) (ii, jj, kk)
+          end do
+        end do
+      end do
+      !$omp end parallel do
+    end if
   else if(cube%fft%library == FFTLIB_FFTW .or. .not. this%in_device_memory) then
-    !$omp parallel do private(ii, jj, kk)
-    do kk = 1, cube%fs_n(3)
-      do jj = 1, cube%fs_n(2)
-        do ii = 1, cube%fs_n(1)
-          cf%fs(ii, jj, kk) = cf%fs(ii, jj, kk)*this%X(op)(ii, jj, kk)
+    if(this%real_op) then
+      !$omp parallel do private(ii, jj, kk)
+      do kk = 1, cube%fs_n(3)
+        do jj = 1, cube%fs_n(2)
+          do ii = 1, cube%fs_n(1)
+            cf%fs(ii, jj, kk) = cf%fs(ii, jj, kk)*this%dop(ii, jj, kk)
+          end do
         end do
       end do
-    end do
-    !$omp end parallel do
+      !$omp end parallel do
+    else
+      !$omp parallel do private(ii, jj, kk)
+      do kk = 1, cube%fs_n(3)
+        do jj = 1, cube%fs_n(2)
+          do ii = 1, cube%fs_n(1)
+            cf%fs(ii, jj, kk) = cf%fs(ii, jj, kk)*this%X(op)(ii, jj, kk)
+          end do
+        end do
+      end do
+      !$omp end parallel do
+    end if
   else if(cube%fft%library == FFTLIB_ACCEL) then
     call accel_set_kernel_arg(X(zmul), 0, product(cube%fs_n(1:3)))
     call accel_set_kernel_arg(X(zmul), 1, this%op_buffer)

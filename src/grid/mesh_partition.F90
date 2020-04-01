@@ -782,7 +782,7 @@ contains
 #endif
 
     ! Calculate partition quality
-    scal = real(npart, REAL_PRECISION)/npoints
+    scal = TOFLOAT(npart)/npoints
 
     quality = M_ZERO
 

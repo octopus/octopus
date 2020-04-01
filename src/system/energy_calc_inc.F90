@@ -40,7 +40,7 @@ subroutine X(calculate_eigenvalues)(namespace, hm, der, st)
   call X(calculate_expectation_values)(namespace, hm, der, st, eigen)
 
   st%eigenval(st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end) = &
-    real(eigen(st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end), REAL_PRECISION)
+    TOFLOAT(eigen(st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
 
   call comm_allreduce(st%st_kpt_mpi_grp%comm, st%eigenval)
 
@@ -112,7 +112,7 @@ FLOAT function X(energy_calc_electronic)(namespace, hm, der, st, terms) result(e
 
   call X(calculate_expectation_values)(namespace, hm, der, st, tt, terms = terms)
 
-  energy = states_elec_eigenvalues_sum(st, real(tt, REAL_PRECISION))
+  energy = states_elec_eigenvalues_sum(st, TOFLOAT(tt))
 
   SAFE_DEALLOCATE_A(tt)
   POP_SUB(X(energy_calc_electronic))

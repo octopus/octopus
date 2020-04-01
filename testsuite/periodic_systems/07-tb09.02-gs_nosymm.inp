@@ -40,3 +40,4 @@ ConvRelEv = 1e-8
 ParDomains = no
 
 FilterPotentials = filter_none
+StatesPack = yes

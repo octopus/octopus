@@ -21,3 +21,4 @@ XCFunctional = lda_c_wigner
 
 FilterPotentials = filter_none
 
+StatesPack = yes

@@ -20,11 +20,14 @@
 
 module system_mxll_oct_m
   use calc_mode_par_oct_m
+  use clock_oct_m
   use distributed_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_mxll_oct_m
+  use interaction_abst_oct_m
+  use iso_c_binding
   use mesh_oct_m
   use messages_oct_m
   use mpi_oct_m
@@ -34,6 +37,8 @@ module system_mxll_oct_m
   use parser_oct_m
   use poisson_oct_m
   use profiling_oct_m
+  use propagator_abst_oct_m
+  use quantity_oct_m
   use simul_box_oct_m
   use sort_oct_m
   use space_oct_m
@@ -45,35 +50,62 @@ module system_mxll_oct_m
 
   private
   public ::               &
-    system_mxll_t,        &
-    system_mxll_init,     &
-    system_mxll_end
+    system_mxll_t
 
   integer, parameter, public ::           &
     MULTIGRID_MX_TO_MA_EQUAL   = 1,       &
     MULTIGRID_MX_TO_MA_LARGE   = 2
 
   type, extends(system_abst_t) :: system_mxll_t
-    ! Components are public by default
     type(states_mxll_t), pointer :: st    !< the states
     type(hamiltonian_mxll_t)     :: hm
+!    type(space_t)                :: space
+    type(geometry_t)             :: geo
+    type(grid_t),        pointer :: gr    !< the mesh
+    type(output_t)               :: outp  !< the output
+    type(multicomm_t)            :: mc    !< index and domain communicators
+
+    type(c_ptr) :: output_handle
+  contains
+    procedure :: add_interaction_partner => system_mxll_add_interaction_partner
+    procedure :: has_interaction => system_mxll_has_interaction
+    procedure :: do_td_operation => system_mxll_do_td
+    procedure :: write_td_info => system_mxll_write_td_info
+    procedure :: td_write_init => system_mxll_td_write_init
+    procedure :: td_write_iter => system_mxll_td_write_iter
+    procedure :: td_write_end => system_mxll_td_write_end
+    procedure :: is_tolerance_reached => system_mxll_is_tolerance_reached
+    procedure :: store_current_status => system_mxll_store_current_status
+    procedure :: update_quantity => system_mxll_update_quantity
+    procedure :: update_exposed_quantity => system_mxll_update_exposed_quantity
+    procedure :: set_pointers_to_interaction => system_mxll_set_pointers_to_interaction
+    final :: system_mxll_finalize
   end type system_mxll_t
 
+  interface system_mxll_t
+    procedure system_mxll_init
+  end interface system_mxll_t
+
 contains
-  
-  !----------------------------------------------------------
-  subroutine system_mxll_init(sys, namespace)
-    type(system_mxll_t), intent(inout) :: sys
-    type(namespace_t), intent(in)  :: namespace
-    
+
+  ! ---------------------------------------------------------
+  function system_mxll_init(namespace) result(sys)
+    class(system_mxll_t), pointer    :: sys
+    type(namespace_t),    intent(in) :: namespace
+
     type(profile_t), save :: prof
+    integer :: n_rows, idir
+    type(block_t) :: blk
 
     PUSH_SUB(system_mxll_init)
     call profiling_in(prof,"SYSTEM_INIT")
 
+    SAFE_ALLOCATE(sys)
+
+    sys%namespace = namespace
+
     SAFE_ALLOCATE(sys%gr)
     SAFE_ALLOCATE(sys%st)
-    sys%namespace = namespace
 
     call messages_obsolete_variable(sys%namespace, 'SystemName')
 
@@ -109,6 +141,10 @@ contains
     call hamiltonian_mxll_init(sys%hm, sys%namespace, sys%gr, sys%st)
     
     call profiling_out(prof)
+
+    ! Initialize the propagator
+    !call sys%init_propagator()
+
     POP_SUB(system_mxll_init)    
 
   contains
@@ -135,7 +171,7 @@ contains
       POP_SUB(system_mxll_init.parallel_init)
     end subroutine parallel_mxll_init
 
-  end subroutine system_mxll_init
+  end function system_mxll_init
 
   !----------------------------------------------------------
   subroutine system_mxll_end(sys)
@@ -163,7 +199,240 @@ contains
   end subroutine system_mxll_end
 
 
-    !----------------------------------------------------------
+  ! ---------------------------------------------------------
+  subroutine system_mxll_add_interaction_partner(this, partner)
+    class(system_mxll_t), target, intent(inout) :: this
+    class(system_abst_t),         intent(inout) :: partner
+
+    PUSH_SUB(system_mxll_add_interaction_partner)
+
+    POP_SUB(system_mxll_add_interaction_partner)
+  end subroutine system_mxll_add_interaction_partner
+
+  ! ---------------------------------------------------------
+  logical function system_mxll_has_interaction(this, interaction)
+    class(system_mxll_t),      intent(in) :: this
+    class(interaction_abst_t), intent(in) :: interaction
+
+    PUSH_SUB(system_mxll_has_interaction)
+
+    POP_SUB(system_mxll_has_interaction)
+  end function system_mxll_has_interaction
+
+  ! ---------------------------------------------------------
+  subroutine system_mxll_do_td(this, operation)
+    class(system_mxll_t), intent(inout) :: this
+    integer,              intent(in)    :: operation
+
+    type(interaction_iterator_t) :: iter
+
+    PUSH_SUB(system_mxll_do_td)
+
+    select case(operation)
+    case (VERLET_UPDATE_POS)
+
+    case (VERLET_COMPUTE_ACC)
+
+    case (VERLET_COMPUTE_VEL)
+
+    case (BEEMAN_PREDICT_POS)
+
+    case (BEEMAN_PREDICT_VEL)
+
+    case( BEEMAN_CORRECT_POS)
+
+    case (BEEMAN_CORRECT_VEL)
+
+    case default
+      message(1) = "Unsupported TD operation."
+      call messages_fatal(1, namespace=this%namespace)
+    end select
+
+   POP_SUB(system_mxll_do_td)
+  end subroutine system_mxll_do_td
+
+  ! ---------------------------------------------------------
+  logical function system_mxll_is_tolerance_reached(this, tol) result(converged)
+    class(system_mxll_t),   intent(in)    :: this
+    FLOAT,                  intent(in)    :: tol
+
+    PUSH_SUB(system_mxll_is_tolerance_reached)
+
+    POP_SUB(system_mxll_is_tolerance_reached)
+   end function system_mxll_is_tolerance_reached
+
+   ! ---------------------------------------------------------
+   subroutine system_mxll_store_current_status(this)
+     class(system_mxll_t),   intent(inout)    :: this
+
+     PUSH_SUB(system_mxll_store_current_status)
+
+     POP_SUB(system_mxll_store_current_status)
+   end subroutine system_mxll_store_current_status
+
+  ! ---------------------------------------------------------
+  subroutine system_mxll_write_td_info(this)
+    class(system_mxll_t), intent(in) :: this
+
+    PUSH_SUB(system_mxll_write_td_info)
+
+    POP_SUB(system_mxll_write_td_info)
+  end subroutine system_mxll_write_td_info
+
+  ! ---------------------------------------------------------
+  subroutine system_mxll_td_write_init(this, dt)
+    class(system_mxll_t), intent(inout) :: this
+    FLOAT,                intent(in)    :: dt
+
+    PUSH_SUB(system_mxll_td_write_init)
+
+
+    POP_SUB(system_mxll_td_write_init)
+  end subroutine system_mxll_td_write_init
+
+  ! ---------------------------------------------------------
+  subroutine system_mxll_td_write_iter(this, iter)
+    class(system_mxll_t), intent(inout) :: this
+    integer,              intent(in)    :: iter
+
+    integer :: idir
+    character(len=50) :: aux
+
+    if(.not.mpi_grp_is_root(mpi_world)) return ! only first node outputs
+
+    PUSH_SUB(system_mxll_td_write_iter)
+
+    if(iter == 0) then
+      ! header
+      call write_iter_clear(this%output_handle)
+      call write_iter_string(this%output_handle,'################################################################################')
+      call write_iter_nl(this%output_handle)
+      call write_iter_string(this%output_handle,'# HEADER')
+      call write_iter_nl(this%output_handle)
+
+      ! first line: column names
+      call write_iter_header_start(this%output_handle)
+
+      do idir = 1, this%space%dim
+        write(aux, '(a2,i3,a1)') 'x(', idir, ')'
+        call write_iter_header(this%output_handle, aux)
+      end do
+      do idir = 1, this%space%dim
+        write(aux, '(a2,i3,a1)') 'v(', idir, ')'
+        call write_iter_header(this%output_handle, aux)
+      end do
+      call write_iter_nl(this%output_handle)
+
+
+      call write_iter_string(this%output_handle,'################################################################################')
+      call write_iter_nl(this%output_handle)
+    end if
+
+    call write_iter_start(this%output_handle)
+    call write_iter_nl(this%output_handle)
+
+    POP_SUB(system_mxll_td_write_iter)
+  end subroutine system_mxll_td_write_iter
+
+  ! ---------------------------------------------------------
+  subroutine system_mxll_td_write_end(this)
+    class(system_mxll_t), intent(inout) :: this
+
+    PUSH_SUB(system_mxll_td_write_end)
+
+    if (mpi_grp_is_root(mpi_world)) then
+      call write_iter_end(this%output_handle)
+    end if
+
+    POP_SUB(system_mxll_td_write_end)
+  end subroutine system_mxll_td_write_end
+
+  ! ---------------------------------------------------------
+  subroutine system_mxll_update_quantity(this, iq, clock)
+    class(system_mxll_t),   intent(inout) :: this
+    integer,                   intent(in)    :: iq
+    class(clock_t),            intent(in)    :: clock
+
+    PUSH_SUB(system_mxll_update_quantity)
+
+    ! We are not allowed to update protected quantities!
+    ASSERT(.not. this%quantities(iq)%protected)
+
+    select case (iq)
+    case (MASS)
+      !The celestial body has a mass, but it is not necessary to update it, as it does not change with time.
+      call this%quantities(iq)%clock%set_time(clock)
+    case default
+      message(1) = "Incompatible quantity."
+      call messages_fatal(1)
+    end select
+
+    POP_SUB(system_mxll_update_quantity)
+  end subroutine system_mxll_update_quantity
+
+ ! ---------------------------------------------------------
+ logical function system_mxll_update_exposed_quantity(this, iq, clock) result(updated)
+    class(system_mxll_t),   intent(inout) :: this
+    integer,                   intent(in)    :: iq
+    class(clock_t),            intent(in)    :: clock
+
+    PUSH_SUB(system_mxll_update_exposed_quantity)
+
+    ! We are not allowed to update protected quantities!
+    ASSERT(.not. this%quantities(iq)%protected)
+
+    select case (iq)
+    case (MASS)
+      !The celestial body has a mass, but it does not require any update, as it does not change with time.
+      updated = .true.
+      call this%quantities(iq)%clock%set_time(this%clock)
+    case default
+      message(1) = "Incompatible quantity."
+      call messages_fatal(1)
+    end select
+
+    POP_SUB(system_mxll_update_exposed_quantity)
+  end function system_mxll_update_exposed_quantity
+
+  ! ---------------------------------------------------------
+  subroutine system_mxll_set_pointers_to_interaction(this, inter)
+    class(system_mxll_t), target,  intent(inout) :: this
+    class(interaction_abst_t),        intent(inout) :: inter
+
+    PUSH_SUB(system_mxll_set_pointers_to_interaction)
+
+!    select type(inter)
+!    type is(interaction_gravity_t)
+!    class default
+!      message(1) = "Unsupported interaction."
+!      call messages_fatal(1)
+!    end select
+
+    POP_SUB(system_mxll_set_pointers_to_interaction)
+  end subroutine system_mxll_set_pointers_to_interaction
+
+  ! ---------------------------------------------------------
+  subroutine system_mxll_finalize(this)
+    type(system_mxll_t), intent(inout) :: this
+
+    type(interaction_iterator_t) :: iter
+    class(interaction_abst_t), pointer :: interaction
+
+    PUSH_SUB(system_mxll_finalize)
+
+    !deallocate(this%prop)
+
+    call iter%start(this%interactions)
+    do while (iter%has_next())
+      interaction => iter%get_next_interaction()
+      SAFE_DEALLOCATE_P(interaction)
+    end do
+
+    POP_SUB(system_mxll_finalize)
+  end subroutine system_mxll_finalize
+
+
+  !----------------------------------------------------------
   subroutine system_check_match_maxwell_and_matter(sys_elec, sys_mxll, multigrid_mode)
     type(system_t),           intent(in)  :: sys_elec
     type(system_mxll_t),      intent(in)  :: sys_mxll

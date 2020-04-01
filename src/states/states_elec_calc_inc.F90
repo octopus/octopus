@@ -171,7 +171,7 @@ contains
     call pblas_herk(uplo = 'U', trans = 'C', n = st%nst, k = total_np, &
       alpha = R_TOTYPE(mesh%vol_pp(1)), a = psi(1, 1, st%st_start), ia = 1, ja = 1, desca = psi_desc(1), &
       beta = R_TOTYPE(M_ZERO), c = ss(1, 1), ic = 1, jc = 1, descc = ss_desc(1))
-    call profiling_count_operations(dble(mesh%np)*dble(nst)**2*(R_ADD + R_MUL))
+    call profiling_count_operations(TOFLOAT(mesh%np*nst)**2*(R_ADD + R_MUL))
     call profiling_out(prof_herk)
 
     call profiling_in(prof_cholesky, "SCALAPACK_CHOLESKY")
@@ -420,13 +420,23 @@ subroutine X(states_elec_trsm)(st, namespace, mesh, ik, ss)
 
     call profiling_out(prof_copy)
 
+    if(st%parallel_in_states) then
+      SAFE_ALLOCATE(psicopy(1:st%nst, 1:st%d%dim, 1:block_size))
+    end if
+
     do sp = 1, mesh%np, block_size
       size = min(block_size, mesh%np - sp + 1)
-      
+
       do ib = st%group%block_start, st%group%block_end
         ASSERT(R_TYPE_VAL == st%group%psib(ib, ik)%type())
         call batch_get_points(st%group%psib(ib, ik), sp, sp + size - 1, psicopy_buffer, st%nst)
       end do
+
+      if(st%parallel_in_states) then
+        call accel_read_buffer(psicopy_buffer, st%nst*st%d%dim*block_size, psicopy)
+        call states_elec_parallel_gather(st, (/st%d%dim, size/), psicopy)
+        call accel_write_buffer(psicopy_buffer, st%nst*st%d%dim*block_size, psicopy)
+      end if
 
       call X(accel_trsm)(side = ACCEL_BLAS_LEFT, uplo = ACCEL_BLAS_UPPER, &
         trans = ACCEL_BLAS_T, diag = ACCEL_BLAS_DIAG_NON_UNIT, &
@@ -439,13 +449,16 @@ subroutine X(states_elec_trsm)(st, namespace, mesh, ik, ss)
       end do
     end do
 
-    
+    if(st%parallel_in_states) then
+      SAFE_DEALLOCATE_A(psicopy)
+    end if
+
     call accel_release_buffer(ss_buffer)
     call accel_release_buffer(psicopy_buffer)
 
   end if
 
-  call profiling_count_operations(mesh%np*dble(st%nst)*(st%nst + 1)*CNST(0.5)*(R_ADD + R_MUL))
+  call profiling_count_operations(mesh%np*TOFLOAT(st%nst*(st%nst + 1))*CNST(0.5)*(R_ADD + R_MUL))
 
 
   call profiling_out(prof)
@@ -1328,7 +1341,7 @@ subroutine X(states_elec_rotate)(st, namespace, mesh, uu, ik)
         call accel_write_buffer(psicopy_buffer, st%nst*st%d%dim*block_size, psicopy)
       end if
 
-      call X(accel_gemm)(transA = CUBLAS_OP_T, transB = CUBLAS_OP_N, &
+      call X(accel_gemm)(transA = CUBLAS_OP_C, transB = CUBLAS_OP_N, &
         M = int(st%nst, 8), N = int(size, 8), K = int(st%nst, 8), alpha = R_TOTYPE(M_ONE), &
         A = uu_buffer, offA = 0_8, lda = int(ubound(uu, dim = 1), 8), &
         B = psicopy_buffer, offB = 0_8, ldb = int(st%nst, 8), beta = R_TOTYPE(M_ZERO), &
@@ -1464,7 +1477,7 @@ subroutine X(states_elec_calc_overlap)(st, mesh, ik, overlap)
         n = int(st%nst, 8), k = int(size*st%d%dim, 8), &
         alpha = mesh%volume_element, &
         A = psi_buffer, offa = 0_8, lda = int(st%nst, 8), &
-        beta = 1.0_8, &
+        beta = M_ONE, &
         C = overlap_buffer, offc = 0_8, ldc = int(st%nst, 8))
       call accel_finish()
     end do
@@ -1697,6 +1710,7 @@ subroutine X(states_elec_me_two_body) (st, namespace, gr, psolver, st_min, st_ma
   FLOAT :: qq(1:MAX_DIM)
   logical :: exc_k_
   class(wfs_elec_t), pointer :: wfs
+  type(fourier_space_op_t) :: coulb
 
   PUSH_SUB(X(states_elec_me_two_body))
 
@@ -1728,6 +1742,11 @@ subroutine X(states_elec_me_two_body) (st, namespace, gr, psolver, st_min, st_ma
   exc_k_ = .false.
   if(present(exc_k)) exc_k_ = exc_k
 
+  if(present(singularity)) then
+    call fourier_space_op_nullify(coulb)
+    call poisson_build_kernel(psolver, namespace, gr%sb, coulb, qq)
+  end if
+
   do ist_global = 1, nst_tot
     ist = mod(ist_global - 1, nst) + 1
     ikpt = (ist_global - ist) / nst + 1
@@ -1754,7 +1773,7 @@ subroutine X(states_elec_me_two_body) (st, namespace, gr, psolver, st_min, st_ma
                          - kpoints_get_point(gr%sb%kpoints, jkpoint, absolute_coordinates=.false.)
         ! In case of k-points, the poisson solver must contains k-q 
         ! in the Coulomb potential, and must be changed for each q point
-        call poisson_kernel_reinit(psolver, namespace, qq, &
+        call poisson_build_kernel(psolver, namespace, gr%sb, coulb, qq, &
                   -(gr%sb%kpoints%full%npoints-npath)*gr%sb%rcell_volume*(singularity%Fk(jkpoint)-singularity%FF))
       end if
 
@@ -1772,7 +1791,11 @@ subroutine X(states_elec_me_two_body) (st, namespace, gr, psolver, st_min, st_ma
       end if
 
       nn(1:gr%mesh%np) = R_CONJ(psii(1:gr%mesh%np))*psij(1:gr%mesh%np)
-      call X(poisson_solve)(psolver, vv, nn, all_nodes=.false.)
+      if(present(singularity)) then
+        call X(poisson_solve)(psolver, vv, nn, all_nodes=.false., kernel=coulb)
+      else
+        call X(poisson_solve)(psolver, vv, nn, all_nodes=.false.)
+      end if
 
       !We now put back the phase that we treated analytically using the Poisson solver
 #ifdef R_TCOMPLEX
@@ -1853,6 +1876,10 @@ subroutine X(states_elec_me_two_body) (st, namespace, gr, psolver, st_min, st_ma
 
   if(gr%mesh%parallel_in_domains) then
     call comm_allreduce(gr%mesh%mpi_grp%comm, twoint)
+  end if
+
+  if(present(singularity)) then
+    call fourier_space_op_end(coulb)
   end if
 
   SAFE_DEALLOCATE_A(nn)

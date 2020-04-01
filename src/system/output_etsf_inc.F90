@@ -606,7 +606,7 @@ subroutine output_etsf_wfs_rsp_write(st, mesh, cube, cf, ncid, namespace)
           else
             call states_elec_get_state(st, mesh, idim, ist, ik + ispin - 1, zpsi)
 
-            call dmesh_to_cube(mesh, real(zpsi, REAL_PRECISION), cube, cf, local = .true.)
+            call dmesh_to_cube(mesh, TOFLOAT(zpsi), cube, cf, local = .true.)
             local_wfs(1, 1:n(1), 1:n(2), 1:n(3), idim, ist, ik+(ispin-1)*nkpoints) = cf%drs(1:n(1), 1:n(2), 1:n(3))
 
             call dmesh_to_cube(mesh, aimag(zpsi), cube, cf, local = .true.)
@@ -762,7 +762,7 @@ subroutine output_etsf_wfs_pw_write(st, mesh, cube, cf, shell, ncid, namespace)
           iy = shell%coords(2, ig)
           iz = shell%coords(3, ig)
           
-          local_wfs(1, ig, idim, ist, ikpoint, ispin) = real(cf%fs(ix, iy, iz), 8)
+          local_wfs(1, ig, idim, ist, ikpoint, ispin) = TOFLOAT(cf%fs(ix, iy, iz))
           local_wfs(2, ig, idim, ist, ikpoint, ispin) = aimag(cf%fs(ix, iy, iz))
         end do
 

@@ -152,9 +152,6 @@ contains
     SAFE_ALLOCATE(psi(1:der%mesh%np_part, 1:st%d%dim))
     SAFE_ALLOCATE(gpsi(1:der%mesh%np_part, 1:st%d%dim))
 
-    SAFE_ALLOCATE(weight(1:psib%nst))
-    forall(ist = 1:psib%nst) weight(ist) = st%d%kweights(ik)*st%occ(psib%ist(ist), ik)
- 
     if(st%d%ispin == SPINORS .or. (psib%status() == BATCH_DEVICE_PACKED .and. der%mesh%sb%dim /= 3)) then
 
       do idir = 1, der%mesh%sb%dim
@@ -181,7 +178,7 @@ contains
               current(ip, idir, 1) = current(ip, idir, 1) + ww*aimag(conjg(psi(ip, 1))*gpsi(ip, 1))
               current(ip, idir, 2) = current(ip, idir, 2) + ww*aimag(conjg(psi(ip, 2))*gpsi(ip, 2))
               c_tmp = conjg(psi(ip, 1))*gpsi(ip, 2) - psi(ip, 2)*conjg(gpsi(ip, 1))
-              current(ip, idir, 3) = current(ip, idir, 3) + ww* real(c_tmp)
+              current(ip, idir, 3) = current(ip, idir, 3) + ww*TOFLOAT(c_tmp)
               current(ip, idir, 4) = current(ip, idir, 4) + ww*aimag(c_tmp)
             end do
             !$omp end parallel do
@@ -193,6 +190,10 @@ contains
     else if(psib%status() == BATCH_DEVICE_PACKED) then
 
       ASSERT(der%mesh%sb%dim == 3)
+
+      SAFE_ALLOCATE(weight(1:psib%nst))
+      forall(ist = 1:psib%nst) weight(ist) = st%d%kweights(ik)*st%occ(psib%ist(ist), ik)
+
       
       call accel_create_buffer(buff_weight, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, psib%nst)
       call accel_write_buffer(buff_weight, psib%nst, weight)
@@ -232,8 +233,12 @@ contains
       
       call accel_release_buffer(buff_weight)
       call accel_release_buffer(buff_current)
+
+      SAFE_DEALLOCATE_A(weight)
       
     else
+
+      ASSERT(psib%is_packed() .eqv. gpsib(1)%is_packed())
 
       do ii = 1, psib%nst
         ist = states_elec_block_min(st, ib) + ii - 1
@@ -361,7 +366,7 @@ contains
                     ww*aimag(conjg(psi(ip, 2))*hrpsi(ip, 2) - conjg(psi(ip, 2))*rhpsi(ip, 2))
                   c_tmp = conjg(psi(ip, 1))*hrpsi(ip, 2) - conjg(psi(ip, 1))*rhpsi(ip, 2) &
                     -psi(ip, 2)*conjg(hrpsi(ip, 1)) - psi(ip, 2)*conjg(rhpsi(ip, 1))
-                  current(ip, idir, 3) = current(ip, idir, 3) + ww* real(c_tmp)
+                  current(ip, idir, 3) = current(ip, idir, 3) + ww*TOFLOAT(c_tmp)
                   current(ip, idir, 4) = current(ip, idir, 4) + ww*aimag(c_tmp)
                 end do
                 !$omp end parallel do
@@ -384,7 +389,7 @@ contains
     case(CURRENT_GRADIENT, CURRENT_GRADIENT_CORR)
 
       if(this%method == CURRENT_GRADIENT_CORR .and. .not. family_is_mgga_with_exc(hm%xc) &
-        .and. hm%lda_u_level == DFT_U_NONE .and. .not. der%mesh%sb%nonorthogonal) then
+        .and. hm%lda_u_level == DFT_U_NONE) then
 
         ! we can use the packed version
         
@@ -403,11 +408,7 @@ contains
               call st%group%psib(ib, ik)%copy_data_to(der%mesh%np_part, epsib)
             end if
 
-            !The call to individual derivatives_perfom routines returns the derivatives along
-            !the primitive axis in case of non-orthogonal cells, whereas the code expects derivatives
-            !along the Cartesian axis.
-            ASSERT(.not.der%mesh%sb%nonorthogonal)
-            ! this should now take non-orthogonal axis into account, but needs more testing
+            ! this now takes non-orthogonal axis into account
             do idir = 1, der%mesh%sb%dim
               call epsib%copy_to(commpsib(idir))
             end do
@@ -415,14 +416,8 @@ contains
 
             call zhamiltonian_elec_base_nlocal_position_commutator(hm%hm_base, der%mesh, st%d, epsib, commpsib)
 
-            if(associated(hm%hm_base%phase)) then
-              do idir = 1, der%mesh%sb%dim
-                call zhamiltonian_elec_base_phase(hm%hm_base, der%mesh, der%mesh%np_part, conjugate = .true., &
-                  psib = commpsib(idir))
-              end do
-            end if
-            
-            call current_batch_accumulate(st, der, ik, ib, st%group%psib(ib, ik), commpsib, current, current_kpt)
+
+            call current_batch_accumulate(st, der, ik, ib, epsib, commpsib, current, current_kpt)
 
             do idir = 1, der%mesh%sb%dim
               call commpsib(idir)%end()
@@ -506,7 +501,7 @@ contains
                   current(ip, idir, 2) = current(ip, idir, 2) + &
                     ww*aimag(conjg(psi(ip, 2))*gpsi(ip, idir, 2))
                   c_tmp = conjg(psi(ip, 1))*gpsi(ip, idir, 2) - psi(ip, 2)*conjg(gpsi(ip, idir, 1))
-                  current(ip, idir, 3) = current(ip, idir, 3) + ww* real(c_tmp)
+                  current(ip, idir, 3) = current(ip, idir, 3) + ww*TOFLOAT(c_tmp)
                   current(ip, idir, 4) = current(ip, idir, 4) + ww*aimag(c_tmp)
                 end do
                 !$omp end parallel do
@@ -912,7 +907,7 @@ contains
         do ip = 1, mesh%np
           exp_arg = st%external_current_omega(jn) * time + tdf(st%external_current_td_phase(jn),time)
           amp(1:st%d%dim) = st%external_current_amplitude(ip, 1:st%d%dim, jn)*tdf(st%external_current_td_function(jn), time)
-          j_vector(1:st%d%dim) = real(amp(1:st%d%dim) * exp(-M_zI*exp_arg))
+          j_vector(1:st%d%dim) = TOFLOAT(amp(1:st%d%dim) * exp(-M_zI*exp_arg))
           current(ip, 1:st%d%dim) = current(ip, 1:st%d%dim) + j_vector(1:st%d%dim)
         end do
       end if
