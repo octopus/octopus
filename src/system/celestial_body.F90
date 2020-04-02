@@ -380,6 +380,10 @@ contains
         write(aux, '(a2,i3,a1)') 'v(', idir, ')'
         call write_iter_header(this%output_handle, aux)
       end do
+      do idir = 1, this%space%dim
+        write(aux, '(a2,i3,a1)') 'f(', idir, ')'
+        call write_iter_header(this%output_handle, aux)
+      end do
       call write_iter_nl(this%output_handle)
 
       ! second line: units
@@ -395,6 +399,7 @@ contains
     call write_iter_start(this%output_handle)
     call write_iter_double(this%output_handle, this%pos, this%space%dim)
     call write_iter_double(this%output_handle, this%vel, this%space%dim)
+    call write_iter_double(this%output_handle, this%tot_force, this%space%dim)
     call write_iter_nl(this%output_handle)
     
     POP_SUB(celestial_body_td_write_iter)
