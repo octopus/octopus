@@ -52,8 +52,8 @@ module celestial_body_oct_m
     FLOAT, public :: vel(1:MAX_DIM)
     FLOAT, public :: acc(1:MAX_DIM)
     FLOAT, public :: prev_acc(1:MAX_DIM,1) !< A storage of the prior times. At the moment we only can store one time 
-    FLOAT, public :: save_pos(1:MAX_DIM) !< A storage for the SCF loops
-    FLOAT, public :: save_vel(1:MAX_DIM) !< A storage for the SCF loops
+    FLOAT, public :: save_pos(1:MAX_DIM)   !< A storage for the SCF loops
+    FLOAT, public :: save_vel(1:MAX_DIM)   !< A storage for the SCF loops
     FLOAT, public :: tot_force(1:MAX_DIM)
     FLOAT, public :: prev_tot_force(1:MAX_DIM) !< Used for the SCF convergence criterium
 
@@ -213,10 +213,10 @@ contains
       call this%quantities(POSITION)%clock%increment()
 
     case (VERLET_COMPUTE_ACC)
-      !Use as SCF criterium
+      ! Use as SCF criterium
       this%prev_tot_force(1:this%space%dim) = this%tot_force(1:this%space%dim)
 
-      !We sum the forces from the different partners
+      ! We sum the forces from the different partners
       this%tot_force(1:this%space%dim) = M_ZERO
       call iter%start(this%interactions)
       do while (iter%has_next())
@@ -259,14 +259,14 @@ contains
                                  + M_ONE/CNST(6.0) * this%prop%dt**2  &
                                  * (M_TWO * this%acc(1:this%space%dim) + this%tot_force(1:this%space%dim))
 
-      !We set it to the propagation time to avoid double increment
+      ! We set it to the propagation time to avoid double increment
       call this%quantities(POSITION)%clock%set_time(this%prop%clock)
 
     case (BEEMAN_CORRECT_VEL)
       this%vel(1:this%space%dim) = this%save_vel(1:this%space%dim) &
                                  + M_HALF * this%prop%dt * (this%acc(1:this%space%dim) + this%tot_force(1:this%space%dim))
 
-      !We set it to the propagation time to avoid double increment
+      ! We set it to the propagation time to avoid double increment
       call this%quantities(VELOCITY)%clock%set_time(this%prop%clock)
 
     case default
@@ -284,7 +284,7 @@ contains
 
     PUSH_SUB(celestial_body_is_tolerance_reached)
 
-    !Here we put the criterium that acceleration change is below the tolerance
+    ! Here we put the criterion that acceleration change is below the tolerance
     converged = .false.
     if(sum((this%prev_tot_force(1:this%space%dim) -this%tot_force(1:this%space%dim))**2) < tol**2) then
       converged = .true.
@@ -326,8 +326,10 @@ contains
     write(message(2),fmt) "Coordinates: ", (this%pos(idir), idir = 1, this%space%dim)
     write(message(3),fmt) "Velocity:    ", (this%vel(idir), idir = 1, this%space%dim)
     write(message(4),fmt) "Acceleration:", (this%acc(idir), idir = 1, this%space%dim)
-    write(message(5),'(4x,A,I8.7)') 'Clock tick: ', this%clock%get_tick()
-    call messages_info(5)
+    write(message(5),fmt) "Force:       ", (this%tot_force(idir), idir = 1, this%space%dim)
+    write(message(6),'(4x,A,I8.7)')  'Clock tick:      ', this%clock%get_tick()
+    write(message(7),'(4x,A,e14.6)') 'Simulation time: ', this%clock%get_sim_time()
+    call messages_info(7)
 
     POP_SUB(celestial_body_write_td_info)
   end subroutine celestial_body_write_td_info
@@ -378,6 +380,10 @@ contains
         write(aux, '(a2,i3,a1)') 'v(', idir, ')'
         call write_iter_header(this%output_handle, aux)
       end do
+      do idir = 1, this%space%dim
+        write(aux, '(a2,i3,a1)') 'f(', idir, ')'
+        call write_iter_header(this%output_handle, aux)
+      end do
       call write_iter_nl(this%output_handle)
 
       ! second line: units
@@ -393,6 +399,7 @@ contains
     call write_iter_start(this%output_handle)
     call write_iter_double(this%output_handle, this%pos, this%space%dim)
     call write_iter_double(this%output_handle, this%vel, this%space%dim)
+    call write_iter_double(this%output_handle, this%tot_force, this%space%dim)
     call write_iter_nl(this%output_handle)
     
     POP_SUB(celestial_body_td_write_iter)
@@ -424,7 +431,7 @@ contains
 
     select case (iq)
     case (MASS)
-      !The celestial body has a mass, but it is not necessary to update it, as it does not change with time.
+      ! The celestial body has a mass, but it is not necessary to update it, as it does not change with time.
       call this%quantities(iq)%clock%set_time(clock)
     case default
       message(1) = "Incompatible quantity."
@@ -447,7 +454,7 @@ contains
 
     select case (iq)
     case (MASS)
-      !The celestial body has a mass, but it does not require any update, as it does not change with time.
+      ! The celestial body has a mass, but it does not require any update, as it does not change with time.
       updated = .true.
       call this%quantities(iq)%clock%set_time(this%clock)
     case default

@@ -57,7 +57,7 @@ module propagator_abst_oct_m
     type(clock_t), public :: clock
 
   contains
-    !Below are the list of operations that needs to be implemented
+    ! Below are the list of operations that needs to be implemented
     procedure :: get_td_operation => propagator_get_tdop
     procedure :: step_is_done => propagator_step_is_done
     procedure :: next => propagator_next
@@ -152,7 +152,7 @@ contains
     
     PUSH_SUB(propagator_save_scf_start)
 
-    !Save the current iteration state (START_SCF_LOOP) and move to next step
+    ! Save the current iteration state (START_SCF_LOOP) and move to next step
     this%scf_start = this%iter
     call this%next()
     this%scf_count = 0
@@ -166,7 +166,7 @@ contains
 
     PUSH_SUB(propagator_rewind_scf_loop)
 
-    !Reset the iteration state to the beginning of the loop (START_SCF_LOOP) and move to next step
+    ! Reset the iteration state to the beginning of the loop (START_SCF_LOOP) and move to next step
     this%iter = this%scf_start
     call this%next()
     this%scf_count = this%scf_count + 1

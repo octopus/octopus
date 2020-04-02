@@ -936,6 +936,7 @@ contains
 
     global_namespace = namespace_t("")
 
+
     ! Initialize systems
     call multisystem_init(systems, global_namespace)
 
@@ -955,23 +956,22 @@ contains
 
       !Find the smallest dt
       smallest_algo_dt = min(smallest_algo_dt, sys%prop%dt/sys%prop%algo_steps)
-
     end do
 
     call iter%start(systems)
     do while (iter%has_next())
       sys => iter%get_next_system()
 
-      !Initialize the system clocks
+      ! Initialize the system clocks
       call sys%init_clocks(sys%prop%dt, smallest_algo_dt)
 
       call sys%prop%rewind()
 
-      !Iniatialize output
+      ! Initialize output
       select type(sys)
       type is (celestial_body_t)
 
-        !Initialize output and write data at time zero
+        ! Initialize output and write data at time zero
         call sys%td_write_init(sys%prop%dt)
         call sys%td_write_iter(0)
 
@@ -981,7 +981,8 @@ contains
       end select
     end do
 
-    !The full TD loop
+    ! The full TD loop
+    call messages_print_stress(stdout, "Propagation", namespace=global_namespace)
     do while(.not. all_done_max_td_steps)
 
       it = it + 1
@@ -999,7 +1000,7 @@ contains
 
           call sys%dt_operation()
 
-          !We check the exit condition
+          ! We check the exit condition
           any_td_step_done = any_td_step_done .or. sys%prop%step_is_done()
         end do
 
@@ -1029,6 +1030,8 @@ contains
         ! Fixme: should be changed to final propagation time
         all_done_max_td_steps = all_done_max_td_steps .and. (sys%clock%get_sim_time() > sys%prop%max_td_steps*sys%prop%dt)
       end do
+     write (message(1), '(a)') repeat ('-', 71)
+     call messages_info(1)
 
     end do
 
