@@ -636,11 +636,12 @@ contains
           call accel_create_buffer(op%buff_outer, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, pad(op%nouter, accel_max_workgroup_size()))
           call accel_write_buffer(op%buff_outer, op%nouter, outer_points)
 
+          SAFE_DEALLOCATE_A(inner_points)
+          SAFE_DEALLOCATE_A(outer_points)
+          SAFE_DEALLOCATE_A(all_points)
+  
         end if
-        
-        SAFE_DEALLOCATE_A(inner_points)
-        SAFE_DEALLOCATE_A(outer_points)
-        
+                
       case(OP_NOMAP)
 
         ASSERT(op%mesh%sb%dim == 3)

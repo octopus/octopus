@@ -1721,6 +1721,7 @@ contains
       call accel_read_buffer(buff_proj, 4*this%full_projection_size*psib%pack_size_real(1), proj)
       call comm_allreduce(mesh%vp%comm, proj)
       call accel_write_buffer(buff_proj, 4*this%full_projection_size*psib%pack_size_real(1), proj)
+      SAFE_DEALLOCATE_A(proj)
     end if
 
     if(this%projector_mix) then
