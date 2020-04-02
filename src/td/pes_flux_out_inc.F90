@@ -41,7 +41,11 @@ subroutine pes_flux_pmesh(this, namespace, dim, kpoints, ll, LG, pmesh, idxZero,
     call pes_flux_pmesh_sph(this, dim, kpoints, ll, LG, pmesh, idxZero, krng, Lp)
   
   case (M_CARTESIAN)
-    call pes_flux_pmesh_pln(this, namespace, dim, kpoints, ll, LG, pmesh, idxZero, krng, Lp, Ekin)
+    if (kpoints_have_zero_weight_path(kpoints)) then
+      call pes_flux_pmesh_pln(this, namespace, dim, kpoints, ll, LG, pmesh, idxZero, krng, Lp, Ekin)
+    else
+      call pes_flux_pmesh_cub(this, namespace, dim, kpoints, ll, LG, pmesh, idxZero, krng, Lp, Ekin)
+    end if
   
   end select
   
@@ -59,7 +63,7 @@ subroutine pes_flux_map_from_states(this, restart, st, ll, pesP, krng, Lp, istin
   integer,             intent(in) :: ll(:)
   FLOAT, target,       intent(out) :: pesP(:,:,:,:)
   integer,             intent(in)  :: krng(:) 
-  integer,  pointer,   intent(in) :: Lp(:,:,:,:,:)  
+  integer,  pointer,   intent(in)  :: Lp(:,:,:,:,:)  
   integer, optional,   intent(in)  :: istin 
 
   PUSH_SUB(pes_flux_map_from_states)
@@ -78,11 +82,14 @@ subroutine pes_flux_map_from_states(this, restart, st, ll, pesP, krng, Lp, istin
 
 end subroutine pes_flux_map_from_states
 
+
+
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! PLANES
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-! This needed in order to flip the sign of each Kpoit and 
+! This needed in order to flip the sign of each Kpoint and 
 ! still preserve an array ordering on the kpoint mesh 
 ! such that the lowest index touple is associated with the smaller 
 ! (negative) kpoint value.
@@ -500,6 +507,67 @@ end subroutine pes_flux_map_from_state_1
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! CUBE (parallelepiped in spirit)
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+subroutine pes_flux_pmesh_cub(this, namespace, dim, kpoints, ll, LG, pmesh, idxZero, krng, Lp, Ekin)
+  type(pes_flux_t),  intent(in)    :: this
+  type(namespace_t), intent(in)    :: namespace
+  integer,           intent(in)    :: dim
+  type(kpoints_t),   intent(inout) :: kpoints 
+  integer,           intent(in)    :: ll(:)             !< ll(1:dim): the dimensions of the gpoint-mesh
+  FLOAT,             intent(in)    :: LG(:,:)           !< LG(1:maxval(ll),1:dim): the  gpoints  
+  FLOAT,             intent(out)   :: pmesh(:,:,:,:)    !< pmesh(i1,i2,i3,1:dim): contains the positions of point
+                                                        !< in the final mesh in momentum space "p" combining the 
+  integer,           intent(out) :: idxZero(:)          !< The triplet identifying the zero of the coordinates           
+
+  integer,           intent(in)  :: krng(:)             !< The range identifying the zero-weight path 
+                                                        !< mask-mesh with kpoints. 
+  integer, pointer,  intent(out) :: Lp(:,:,:,:,:)       !< Allocated inside this subroutine
+                                                        !< maps a mask-mesh triplet of indices together with a kpoint 
+                                                        !< index into a triplet on the combined momentum space mesh.
+
+  FLOAT,  optional,  intent(out) :: Ekin(:,:,:)         !< The total kinetic energy associated with the momentum p
+  
+  
+  
+  integer :: ikpt,ikp, ik1, ik2, ik3
+  
+  
+  PUSH_SUB(pes_flux_pmesh_cub)
+  
+  idxZero(1:3) =(/0,0,0/) 
+  
+  SAFE_ALLOCATE(Lp(1:this%ll(1), 1:this%ll(2), this%ll(3), krng(1):krng(2), 1:3))          
+  
+  
+  ikpt = 1
+  ikp = 0
+  do ik3 = 1, this%ll(3)
+    do ik2 = 1, this%ll(2)
+      do ik1 = 1, this%ll(1)
+        ikp = ikp + 1 
+        
+
+        Lp(ik1, ik2, ik3, :, 1) = ik1  
+        Lp(ik1, ik2, ik3, :, 2) = ik2  
+        Lp(ik1, ik2, ik3, :, 3) = ik3  
+        
+        pmesh(ik1, ik2, ik3, 1:dim) = this%kcoords_cub(1:dim, ikp, ikpt)
+        
+
+      end do
+    end do
+  end do
+  
+  
+  
+  POP_SUB(pes_flux_pmesh_cub)
+end subroutine pes_flux_pmesh_cub
+
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! SPHERE
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -561,6 +629,7 @@ subroutine pes_flux_pmesh_sph(this, dim, kpoints, ll, LG, pmesh, idxZero, krng, 
         ip1 = ikk
         ip2 = iph+1
         ip3 = ith 
+        
 
         Lp(ikk, iomk, 1, :, 1) = ip1  
         Lp(ikk, iomk, 1, :, 2) = ip2
