@@ -154,6 +154,9 @@ contains
     if(this%status() == BATCH_DEVICE_PACKED) call this%do_unpack(copy, force = .true.)
     if(this%status() == BATCH_PACKED) call this%do_unpack(copy, force = .true.)
 
+    if(this%is_allocated) then
+      call this%deallocate_unpacked_host()
+    end if
 
     SAFE_DEALLOCATE_P(this%ist_idim_index)
     SAFE_DEALLOCATE_A(this%ist)
