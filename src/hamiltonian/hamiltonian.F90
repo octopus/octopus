@@ -53,6 +53,7 @@ module hamiltonian_oct_m
   use states_oct_m
   use states_dim_oct_m
   use states_parallel_oct_m
+  use thermal_gradient_oct_m
   use types_oct_m
   use unit_oct_m
   use unit_system_oct_m
@@ -282,6 +283,9 @@ contains
 
     ! Calculate initial value of the gauge vector field
     call gauge_field_init(hm%ep%gfield, gr%sb)
+
+    ! Calculate initial value of the thermal gradient
+    call thermal_gradient_init(hm%ep%tfield, gr%sb)
 
     nullify(hm%vberry)
     if(associated(hm%ep%E_field) .and. simul_box_is_periodic(gr%sb) .and. .not. gauge_field_is_applied(hm%ep%gfield)) then
@@ -782,8 +786,12 @@ contains
         this%hm_base%uniform_vector_potential(1:mesh%sb%periodic_dim) = &
           this%hm_base%uniform_vector_potential(1:mesh%sb%periodic_dim) - time_*this%ep%e_field(1:mesh%sb%periodic_dim)
       end if
+
+
+      ! thermal gradient 
+
       
-    end if
+   end if
 
     ! the vector potential of a static magnetic field
     if(associated(this%ep%a_static)) then

@@ -47,6 +47,7 @@ module epot_oct_m
   use submesh_oct_m
   use symmetrizer_oct_m
   use tdfunction_oct_m
+  use thermal_gradient_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use varinfo_oct_m
@@ -99,6 +100,10 @@ module epot_oct_m
     !> The possible kick
     type(kick_t) :: kick
 
+
+    ! thermal gradient
+    type(thermal_gradient_t) :: tfield  !< thermal gradient
+    
     !> The gyromagnetic ratio (-2.0 for the electron, but different if we treat
     !! *effective* electrons in a quantum dot. It affects the spin Zeeman term.)
     FLOAT :: gyromagnetic_ratio
