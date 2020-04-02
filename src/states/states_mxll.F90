@@ -82,17 +82,14 @@ module states_mxll_oct_m
     ! Components are public by default
     type(states_elec_dim_t)      :: d
     integer                      :: rs_sign
-!    type(states_elec_group_t)    :: group
     logical                      :: parallel_in_states !< Am I parallel in states?
-    type(type_t), public         :: wfs_type         !< real (TYPE_FLOAT) or complex (TYPE_CMPLX) wavefunctions
-    integer, public              :: nst                   !< Number of states in each irreducible subspace
+    type(type_t), public         :: wfs_type         !< complex (TYPE_CMPLX)
+    integer, public              :: nst              !< Number of states in each irreducible subspace
     logical, public              :: packed
 
     type(batch_t)       :: rsb
-    type(batch_t)  :: rs_transb
+    type(batch_t)       :: rs_transb
     type(batch_t)       :: rs_longb
-!    type(batch_t), pointer       :: rs_curr_dens_rest1b
-!    type(batch_t), pointer       :: rs_curr_dens_rest2b
     
     CMPLX, pointer               :: rs_state_plane_waves(:,:)
     CMPLX, pointer               :: rs_state(:,:)
@@ -195,12 +192,6 @@ module states_mxll_oct_m
     integer                     :: st_start, st_end
     integer, pointer            :: node(:)
 
-  ! contains 
-  !   procedure :: nullify => states_mxll_null
-  !   procedure :: write_info => states_mxll_write_info
-  !   procedure :: pack => states_mxll_pack
-  !   procedure :: unpack => states_mxll_unpack
-  !   procedure :: set_zero => states_mxll_set_zero
   end type states_mxll_t
 
 contains
@@ -212,7 +203,6 @@ contains
     PUSH_SUB(states_mxll_null)
 
     call states_elec_dim_null(st%d)
-!    call states_elec_group_null(st%group)
     call distributed_nullify(st%dist) 
     st%wfs_type = TYPE_CMPLX
     st%d%orth_method = 0
@@ -225,57 +215,6 @@ contains
     POP_SUB(states_mxll_null)
   end subroutine states_mxll_null
 
-  ! ! --------------------------------------------------------
-  ! subroutine states_mxll_write_info(st)
-  !   class(states_mxll_t),    intent(in) :: st
-
-  !   !USH_SUB(states_mxll_write_info)
-
-  !   call messages_print_stress(stdout, "Maxwell States")
-  !   write(message(2), '(a,i8)')    'Number of states         = ', st%nst
-  !   call messages_info(3)
-
-  !   call messages_print_stress(stdout)
-
-  !   !OP_SUB(states_mxll_write_info)
-  ! end subroutine states_mxll_write_info
-
-  ! ! ------------------------------------------------------------
-  ! subroutine states_mxll_set_zero(st)
-  !   class(states_mxll_t),    intent(inout) :: st
-
-  !   !USH_SUB(states_mxll_set_zero)
-
-  !   st%rs_state(:,:) = M_z0
-  !   st%rs_state_trans(:,:) = M_z0
-  !   st%rs_state_long(:,:) = M_z0
-  !   st%rs_current_density_restart_t1 = M_z0
-  !   st%rs_current_density_restart_t2 = M_z0
-    
-  !   !OP_SUB(states_mxll_set_zero)
-  ! end subroutine states_mxll_set_zero
-
-  ! ! ---------------------------------------------------------
-  ! subroutine states_mxll_pack(st, copy)
-  !   class(states_mxll_t),    intent(inout) :: st
-  !   logical,      optional, intent(in)    :: copy
-
-  !   !USH_SUB(states_mxll_pack)
-  !   ! Nothing done here for the moment
-
-  !   !OP_SUB(states_mxll_pack)
-  ! end subroutine states_mxll_pack
-
-  ! ! ------------------------------------------------------------
-  ! subroutine states_mxll_unpack(st, copy)
-  !   class(states_mxll_t),    intent(inout) :: st
-  !   logical,      optional, intent(in)    :: copy
-
-  !   !USH_SUB(states_mxll_unpack)
-  !   ! Nothing done here for the moment
-    
-  !   !OP_SUB(states_mxll_unpack)
-  ! end subroutine states_mxll_unpack
   
   ! ---------------------------------------------------------
   subroutine states_mxll_init(st, namespace, gr, geo)
@@ -398,25 +337,6 @@ contains
     SAFE_ALLOCATE(st%rs_current_density_restart_t2(1:mesh%np_part, 1:st%d%dim))
     st%rs_current_density_restart_t2 = M_z0
 
-    !call zbatch_init(st%rsb, st%d%dim, 1, 1, mesh%np_part)
-    !call batch_set_zero(st%rsb)
-
-    !call zbatch_init(st%rs_transb, st%d%dim, 1, 1, mesh%np_part)
-    !call batch_set_zero(st%rs_transb)
- 
-    !call zbatch_init(st%rs_longb, st%d%dim, 1, 1, mesh%np_part)
-    !call batch_set_zero(st%rs_longb)
-
-    !call zbatch_init(st%rs_curr_dens_rest1b, st%d%dim, 1, 1, mesh%np_part)
-    !call batch_set_zero(st%rs_curr_dens_rest1b)
-    !
-    !call zbatch_init(st%rs_curr_dens_rest2b, st%d%dim, 1, 1, mesh%np_part)
-    !call batch_set_zero(st%rs_curr_dens_rest2b)
-   
-!    Another alternative
-!    call batch_init(st%rs_state_transb, hm%d%dim, 1, 1, st%rs_state_trans)
-!    call st%rs_state_transb%end()
-
     POP_SUB(states_mxll_allocate)
   end subroutine states_mxll_allocate
 
@@ -429,12 +349,6 @@ contains
     call states_elec_dim_end(st%d)
     SAFE_DEALLOCATE_P(st%rs_state)
     SAFE_DEALLOCATE_P(st%rs_state_trans)
-
-!    call batch_end(st%rsb)
-!    call batch_end(st%rs_transb)
-!    call batch_end(st%rs_longb)
-!    call batch_end(st%rs_curr_dens_rest1b)
-!    call batch_end(st%rs_curr_dens_rest2b)
 
 #ifdef HAVE_SCALAPACK
     call blacs_proc_grid_end(st%dom_st_proc_grid)
@@ -456,7 +370,6 @@ contains
     FLOAT,   optional, intent(in)    :: mu_element
 
     ! no PUSH_SUB, called too often
-
 
     if (present(ep_element) .and. present(mu_element)) then
       rs_element = sqrt(ep_element/M_TWO) * e_element + M_zI * rs_sign * sqrt(M_ONE/(M_TWO*mu_element)) * b_element

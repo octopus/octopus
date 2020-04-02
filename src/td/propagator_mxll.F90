@@ -832,16 +832,11 @@ contains
     FLOAT              :: dd, width
     CMPLX, allocatable :: tmp_pot_ma_gr(:,:), tmp_pot_mx_gr(:,:), tmp_grad_mx_gr(:,:)
 
-!    !AFE_ALLOCATE(tmp_pot_ma_gr(1:gr_elec%mesh%np_part,1))
     SAFE_ALLOCATE(tmp_pot_mx_gr(1:gr_mxll%mesh%np_part,1))
     SAFE_ALLOCATE(tmp_grad_mx_gr(1:gr_mxll%mesh%np,1:gr_mxll%sb%dim))
+    ! this subroutine needs the matter part
 
     PUSH_SUB(calculate_matter_longitudinal_field)
-
-!    tmp_pot_ma_gr(:,:) = M_z0
-!    tmp_pot_ma_gr(1:gr_elec%mesh%np,1) = M_z1 * ( hm_elec%vhartree(1:gr_elec%mesh%np) + hm_elec%ep%vpsl(1:gr_elec%mesh%np) )
-
-!    call zma_mesh_to_mx_mesh(st_mxll, gr_mxll, st_elec, gr_elec, tmp_pot_ma_gr, tmp_pot_mx_gr, 1)
 
     tmp_pot_mx_gr(:,:) = M_ZERO
     tmp_grad_mx_gr(:,:) = M_ZERO
@@ -893,15 +888,10 @@ contains
 
     if (hm_mxll%ma_mx_coupling) then
 
-      ! if (trans_calc_method == OPTION__MAXWELLTRANSFIELDCALCULATIONMETHOD__TRANS_FIELD_MATTER) then
-      !   !AFE_ALLOCATE(tmp_field(1:gr_mxll%mesh%np_part,1:st_mxll%d%dim))
-      !   if (hm_mxll%ma_mx_coupling_apply .and. (tr%current_prop_test == 0)) then
-      !     call calculate_matter_longitudinal_field(gr_mxll, st_mxll, hm_mxll, gr, st, hm, tmp_field)
-      !   end if
-      !   transverse_field(1:np,:) = field(1:np,:) - tmp_field(1:np,:)
-      !   !AFE_DEALLOCATE_A(tmp_field)
+       ! check what other transverse field methods are needed
 
-!      else if (trans_calc_method == OPTION__MAXWELLTRANSFIELDCALCULATIONMETHOD__TRANS_FIELD_POISSON) then
+       ! trans_calc_method == OPTION__MAXWELLTRANSFIELDCALCULATIONMETHOD__TRANS_FIELD_POISSON
+       
         ! plane waves subtraction
         if (tr_mxll%bc_plane_waves .and. hm_mxll%plane_waves_apply) then
           transverse_field(1:np,:) = field(1:np,:) - st_mxll%rs_state_plane_waves(1:np,:)
@@ -3286,7 +3276,6 @@ contains
     PUSH_SUB(plane_waves_in_box_calculation)
     
     np            = gr%mesh%np_part
-    !rs_state(:,:) = M_z0
     do wn=1, bc%plane_waves_number
       vv(:)        = hm%bc%plane_waves_v_vector(:,wn)
       k_vector(:)  = hm%bc%plane_waves_k_vector(:,wn)

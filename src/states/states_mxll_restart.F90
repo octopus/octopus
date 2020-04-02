@@ -129,8 +129,6 @@ contains
 
     if(parse_block(namespace, 'UserDefinedInitialMaxwellStates', blk) == 0) then
 
-      !call messages_print_stress(stdout, trim('Substitution of the electromagnetic fields'), namespace=namespace)
-
       ! find out how many lines (i.e. states) the block has
       nlines = parse_block_n(blk)
 

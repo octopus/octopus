@@ -53,7 +53,6 @@ module hamiltonian_mxll_oct_m
     zhamiltonian_mxll_apply,                    &
     dhamiltonian_mxll_magnus_apply,             &
     zhamiltonian_mxll_magnus_apply,             &
-!   !    hamiltonian_mxll_apply_all,                 &
     hamiltonian_mxll_apply_batch,               &
     hamiltonian_mxll_span,                      &
     hamiltonian_mxll_adjoint,                   &
@@ -62,11 +61,8 @@ module hamiltonian_mxll_oct_m
     hamiltonian_mxll_update,                    &
     hamiltonian_mxll_get_time,                  &
     hamiltonian_mxll_apply_packed,              &
- !   maxwell_fft_hamiltonian,                    &
     maxwell_helmholtz_decomposition_trans_field,&
-    maxwell_helmholtz_decomposition_long_field, &
-    surface_integral_helmholtz_transverse
-
+    maxwell_helmholtz_decomposition_long_field
 
    type, extends(hamiltonian_abst_t) :: hamiltonian_mxll_t
     !> The Hamiltonian must know what are the "dimensions" of the spaces,
@@ -83,7 +79,6 @@ module hamiltonian_mxll_oct_m
 
     type(nl_operator_t), pointer   :: operators(:) 
 
-!    type(poisson_t)                :: poisson
     FLOAT, pointer                 :: vector_potential(:,:)
 
     type(bc_mxll_t)                :: bc
@@ -95,9 +90,6 @@ module hamiltonian_mxll_oct_m
     logical                        :: propagation_apply
 
     integer                        :: op_method
-
-!    logical                        :: lorentz_force
-!    logical                        :: lorentz_force_apply
 
     integer, pointer               :: rs_state_fft_map(:,:,:)
     integer, pointer               :: rs_state_fft_map_inv(:,:)
@@ -127,9 +119,6 @@ module hamiltonian_mxll_oct_m
     logical                        :: plane_waves_apply
     logical                        :: spatial_constant
     logical                        :: spatial_constant_apply
-
-!    logical                        :: diamagnetic_current
-!    logical                        :: spin_current
 
     integer                        :: medium_calculation
 
@@ -180,10 +169,6 @@ module hamiltonian_mxll_oct_m
     logical                        :: cpml_hamiltonian = .false.
 
     logical                        :: diamag_current = .false.
-
-!    integer                        :: current_prop_test = 0
-
-!    CMPLX, pointer                 :: test_output(:,:)
 
     type(cube_t)                   :: cube
     type(mesh_cube_parallel_map_t) :: mesh_cube_map
@@ -451,8 +436,6 @@ contains
     logical, optional,         intent(in)    :: set_bc !< If set to .false. the boundary conditions are assumed to be set previously.
 
     type(profile_t), save :: prof_hamiltonian
-!    logical :: pack
-!    integer :: terms_
 
     PUSH_SUB(hamiltonian_mxll_apply_batch)
     call profiling_in(prof_hamiltonian_mxll, "MXLL_HAMILTONIAN")
@@ -513,23 +496,7 @@ contains
 
     PUSH_SUB(zhamiltonian_mxll_apply)
 
-!    call batch_init(psib, hm%d%dim, ist, ist, psi)
-!    call batch_init(hpsib, hm%d%dim, ist, ist, hpsi)
-!
-!    call hamiltonian_mxll_apply_batch(hm, der, psib, hpsib, ik, time = time, terms = terms, Imtime = Imtime, set_bc = set_bc)
-!
-!    call psib%end()
-!    call hpsib%end()
-
     call profiling_in(prof_hamiltonian_mxll, "MAXWELLHAMILTONIAN")
-
-!    if (present(time)) then
-!      if (abs(time - hm%current_time) > CNST(1e-10)) then
-!        write(message(1),'(a)') 'hamiltonian_apply_batch time assertion failed.'
-!        write(message(2),'(a,f12.6,a,f12.6)') 'time = ', time, '; hm%current_time = ', hm%current_time
-!        call messages_fatal(2, namespace=namespace)
-!      end if
-!    end if
 
     SAFE_ALLOCATE(rs_aux_in(1:mesh%np_part, 1:3))
     SAFE_ALLOCATE(rs_aux_out(1:mesh%np_part, 1:3))
@@ -549,10 +516,6 @@ contains
     POP_SUB(zhamiltonian_mxll_apply)
   end subroutine zhamiltonian_mxll_apply
 
-
-  ! ---------------------------------------------------------
-!  subroutine hamiltonian_mxll_apply_all(hm, namespace, der, st, hst, time) removed
-!  end subroutine hamiltonian_mxll_apply_all
 
   ! ---------------------------------------------------------
   !> Applying the Maxwell Hamiltonian on Maxwell states with finite difference
@@ -1087,25 +1050,7 @@ contains
     SAFE_DEALLOCATE_A(ztmp)
     SAFE_DEALLOCATE_A(tmp_poisson)
 
-!    ! correction surface integral
-!    if (hm_elec%mx_ma_trans_field_calc_corr) then
-!      call mesh_nearest_point_infos(gr%mesh, hm_elec%mx_ma_coupling_points(:,1), dmin, rankmin, &
-!                                    ip_local, ip_global)
-!      ip_local  = 1
-!      ip_global = 1
-!      do ii = -gr%der%order, gr%der%order
-!        do jj = -gr%der%order, gr%der%order
-!          do kk = -gr%der%order, gr%der%order
-!            pos(1) = gr%mesh%x(ip_local,1) * ii * gr%mesh%spacing(1)
-!            pos(2) = gr%mesh%x(ip_local,2) * jj * gr%mesh%spacing(2)
-!            pos(3) = gr%mesh%x(ip_local,3) * kk * gr%mesh%spacing(3)
-!            call surface_integral_helmholtz_transverse(gr, st, pos, field_old, surface_integral)
-!            transverse_field(ip_local,:) = transverse_field(ip_local,:) - M_ONE / (M_FOUR * M_PI) * surface_integral(:)
-!          end do
-!        end do
-!      end do
-!      pos(:) = gr%mesh%x(ip_local,:)
-!    end if
+    ! here we could add surface integral correction from Renes code
 
     SAFE_DEALLOCATE_A(field_old)
 
@@ -1137,135 +1082,6 @@ contains
     SAFE_DEALLOCATE_A(tmp_poisson)
 
   end subroutine maxwell_helmholtz_decomposition_long_field
-
-  ! ---------------------------------------------------------
-  !> Surface integral of the Helmholtz decomposition to calculate the transverse field
-  !> (maybe should be a general math function)
-  subroutine surface_integral_helmholtz_transverse(gr, st, pos, field, surface_integral)
-    type(grid_t),        intent(in)    :: gr
-    type(states_mxll_t), intent(in)    :: st
-    FLOAT,               intent(in)    :: pos(:) 
-    CMPLX,               intent(in)    :: field(:,:)
-    CMPLX,               intent(inout) :: surface_integral(:)
-
-    integer             :: ip_surf, ix, ix_max, iy, iy_max, iz, iz_max, ii_max
-!    integer             :: idim
-    FLOAT               :: xx(3)
-    CMPLX               :: tmp_sum(3), normal(3)
-    CMPLX,  allocatable :: tmp_global(:,:), tmp_surf(:,:,:,:,:)
-
-    SAFE_ALLOCATE(tmp_global(1:gr%mesh%np_part_global,1:st%d%dim))
-
-!    if (gr%mesh%parallel_in_domains) then
-!      do idim=1, st%d%dim
-!#if defined(HAVE_MPI)
-!        call vec_allgather(gr%mesh%vp, tmp_global(:,idim), field(:,idim))
-!        call MPI_Barrieri(gr%mesh%vp%comm, mpi_err)
-!#endif
-!      end do
-!    else
-      tmp_global(:,:) = field(:,:)
-!    end if
-
-    ix_max = st%surface_grid_rows_number(1)
-    iy_max = st%surface_grid_rows_number(2)
-    iz_max = st%surface_grid_rows_number(3)
-    ii_max = max(ix_max,iy_max,iz_max)
-
-    SAFE_ALLOCATE(tmp_surf(1:2,1:st%d%dim,1:ii_max,1:ii_max,1:st%d%dim))
-
-    tmp_surf = M_z0
-    tmp_sum  = M_z0
-
-    do iy = 1, iy_max
-      do iz = 1, iz_max
-        do ip_surf = 1, st%surface_grid_points_number(1,iy,iz)
-          normal    =  M_z0
-          normal(1) = -M_z1
-          xx(:) = gr%mesh%idx%lxyz(st%surface_grid_points_map(1, 1, iy, iz, ip_surf), :) &
-                * gr%mesh%spacing(1:3)
-          tmp_surf(1, 1, iy, iz,:) = tmp_surf(1, 1, iy, iz, :) & 
-             + zcross_product(normal(:), tmp_global(st%surface_grid_points_map(1, 1, iy, iz, ip_surf), :)) &
-             / sqrt( (xx(1) - pos(1))**2 + (xx(2) - pos(2))**2 + (xx(3) - pos(3))**2 )
-          normal    =  M_z0
-          normal(1) = +M_z1
-          xx(:) = gr%mesh%idx%lxyz(st%surface_grid_points_map(2, 1, iy, iz, ip_surf), :) &
-                * gr%mesh%spacing(1:3)
-          tmp_surf(2, 1, iy, iz, :) = tmp_surf(2, 1, iy, iz, :) &
-             + zcross_product(normal(:), tmp_global(st%surface_grid_points_map(2, 1, iy, iz, ip_surf), :)) &
-             / sqrt( (xx(1) - pos(1))**2 + (xx(2) - pos(2))**2 + (xx(3) - pos(3))**2 )
-        end do
-        tmp_surf(1, 1, iy, iz, :) = tmp_surf(1, 1, iy, iz, :) / float(st%surface_grid_points_number(1, iy, iz))
-        tmp_surf(2, 1, iy, iz, :) = tmp_surf(2, 1, iy, iz, :) / float(st%surface_grid_points_number(1, iy, iz))
-      end do
-    end do
-    do iy = 1, iy_max
-      do iz = 1, iz_max
-        tmp_sum(:) = tmp_sum(:) + tmp_surf(1, 1, iy, iz, :) * st%surface_grid_element(:)
-        tmp_sum(:) = tmp_sum(:) + tmp_surf(2, 1, iy, iz, :) * st%surface_grid_element(:)
-      end do
-    end do
-
-    do ix = 1, ix_max
-      do iz = 1, iz_max
-        do ip_surf = 1, st%surface_grid_points_number(2, ix, iz)
-          normal    =  M_z0
-          normal(2) = -M_z1
-          xx(:) = gr%mesh%idx%lxyz(st%surface_grid_points_map(1, 2, ix, iz, ip_surf), :) &
-                * gr%mesh%spacing(1:3)
-          tmp_surf(1, 2, ix, iz, :) = tmp_surf(1, 2, ix, iz, :) &
-             + zcross_product(normal(:), tmp_global(st%surface_grid_points_map(1, 2, ix, iz, ip_surf), :)) &
-             / sqrt( (xx(1) - pos(1))**2 + (xx(2) - pos(2))**2 + (xx(3) - pos(3))**2 )
-          normal    =  M_z0
-          normal(2) =  M_z1
-          xx(:) = gr%mesh%idx%lxyz(st%surface_grid_points_map(2, 2, ix, iz, ip_surf), :) &
-                * gr%mesh%spacing(1:3)
-          tmp_surf(2, 2, ix, iz, :) = tmp_surf(2, 2, ix, iz, :) &
-             + zcross_product(normal(:), tmp_global(st%surface_grid_points_map(2, 2, ix, iz, ip_surf), :)) &
-             / sqrt( (xx(1) - pos(1))**2 + (xx(2) - pos(2))**2 + (xx(3) - pos(3))**2 )
-        end do
-        tmp_surf(1, 2, ix, iz, :) = tmp_surf(1, 2, ix, iz, :) / float(st%surface_grid_points_number(2, ix, iz))
-        tmp_surf(2, 2, ix, iz, :) = tmp_surf(2, 2, ix, iz, :) / float(st%surface_grid_points_number(2, ix, iz))
-      end do
-    end do
-    do ix = 1, ix_max
-      do iz = 1, iz_max
-        tmp_sum(:) = tmp_sum(:) + tmp_surf(1, 2, ix, iz, :) * st%surface_grid_element(:)
-        tmp_sum(:) = tmp_sum(:) + tmp_surf(2, 2, ix, iz, :) * st%surface_grid_element(:)
-      end do
-    end do
-
-    do ix = 1, ix_max
-      do iy = 1, iy_max
-        do ip_surf = 1, st%surface_grid_points_number(3, ix, iy)
-          normal    =  M_z0
-          normal(3) = -M_z1
-          xx(:) = gr%mesh%idx%lxyz(st%surface_grid_points_map(1, 3, ix, iy, ip_surf), :) &
-                * gr%mesh%spacing(1:3)
-          tmp_surf(1, 3, ix, iy, :) = tmp_surf(1, 3, ix, iy, :) &
-             + zcross_product(normal(:),tmp_global(st%surface_grid_points_map(1, 3, ix, iy, ip_surf), :)) &
-             / sqrt( (xx(1) - pos(1))**2 + (xx(2) - pos(2))**2 + (xx(3) - pos(3))**2 )
-          normal    =  M_z0
-          normal(3) =  M_z1
-          xx(:) = gr%mesh%idx%lxyz(st%surface_grid_points_map(2, 3, ix, iy, ip_surf), :) &
-                * gr%mesh%spacing(1:3)
-          tmp_surf(2, 3, ix, iy, :) = tmp_surf(2, 3, ix, iy, :) &
-             + zcross_product(normal(:), tmp_global(st%surface_grid_points_map(2, 3, ix, iy, ip_surf), :)) &
-             / sqrt( (xx(1)-pos(1))**2 + (xx(2)-pos(2))**2 + (xx(3)-pos(3))**2 )
-        end do
-        tmp_surf(1, 3, ix, iy, :) = tmp_surf(1, 3, ix, iy, :) / float(st%surface_grid_points_number(3, ix, iy))
-        tmp_surf(2, 3, ix, iy, :) = tmp_surf(2, 3, ix, iy, :) / float(st%surface_grid_points_number(3, ix, iy))
-      end do
-    end do
-    do ix = 1, ix_max
-      do iy = 1, iy_max
-        tmp_sum(:) = tmp_sum(:) - tmp_surf(1, 3, ix, iy, :) * st%surface_grid_element(:)
-        tmp_sum(:) = tmp_sum(:) + tmp_surf(2, 3, ix, iy, :) * st%surface_grid_element(:)
-      end do
-    end do
-
-  end subroutine surface_integral_helmholtz_transverse
-
 
   ! ---------------------------------------------------------
   !> Maxwell hamiltonian Magnus (not implemeted)
