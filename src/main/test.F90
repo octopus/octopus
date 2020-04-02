@@ -977,6 +977,9 @@ contains
     do while (iter%has_next())
       sys => iter%get_next_system()
 
+      ! Write information for initial time
+      call sys%write_td_info()
+
       ! Initialize output
       select type(sys)
       type is (celestial_body_t)
@@ -991,7 +994,7 @@ contains
       end select
     end do
 
-    !The full TD loop
+    ! The full TD loop
     call messages_print_stress(stdout, "Propagation", namespace=global_namespace)
 
     all_done_max_td_steps = .false.
