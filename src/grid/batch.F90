@@ -142,21 +142,18 @@ contains
       !deallocate directly to avoid unnecessary copies
       if(this%status() == BATCH_DEVICE_PACKED) then
         call this%deallocate_packed_device()
-      else if(this%status() == BATCH_PACKED) then
+      end if
+      if(this%status() == BATCH_PACKED .or. this%status_host == BATCH_PACKED) then
         call this%deallocate_packed_host()
       end if
       this%status_of = BATCH_NOT_PACKED
       this%status_host = BATCH_NOT_PACKED
       this%host_buffer_count = 0
       this%device_buffer_count = 0
-    else if(this%is_packed()) then
-      call this%do_unpack(copy, force = .true.)
-      if(this%status() == BATCH_PACKED) call this%do_unpack(copy, force = .true.)
     end if
+    if(this%status() == BATCH_DEVICE_PACKED) call this%do_unpack(copy, force = .true.)
+    if(this%status() == BATCH_PACKED) call this%do_unpack(copy, force = .true.)
 
-    if(this%is_allocated) then
-      call this%deallocate_unpacked_host()
-    end if
 
     SAFE_DEALLOCATE_P(this%ist_idim_index)
     SAFE_DEALLOCATE_A(this%ist)
