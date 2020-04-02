@@ -528,8 +528,7 @@ contains
     FLOAT,   optional, intent(in)    :: ep_field(:)
     integer, optional, intent(in)    :: np
 
-    CMPLX, allocatable :: rs_aux(:,:)
-    integer :: ip, ii, np_
+    integer :: ip, np_
 
     PUSH_SUB(get_electric_field_state)
 
@@ -557,7 +556,7 @@ contains
     FLOAT,   optional, intent(in)    :: mu_field(:)
     integer, optional, intent(in)    :: np
 
-    integer :: ip, ii, np_
+    integer :: ip, np_
 
     PUSH_SUB(get_magnetic_field_state)
 
@@ -706,7 +705,7 @@ contains
     FLOAT,          optional, intent(in)    :: mu_field(:)
     FLOAT,          optional, intent(inout) :: mean_value(:)
 
-    integer            :: ip, ii, ip_in, idir
+    integer            :: ip, ip_in, idir
 
     PUSH_SUB(get_poynting_vector)
 

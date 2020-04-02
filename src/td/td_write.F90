@@ -3618,7 +3618,7 @@ contains
     FLOAT,               intent(in)    :: dt
     logical,             intent(in)    :: plane_wave_flag
 
-    integer            :: il, ip, ip_in, idir
+    integer            :: idir
     FLOAT              :: field(MAX_DIM), field_2(MAX_DIM)
     FLOAT, allocatable :: dtmp(:,:) 
     character(len=80)  :: aux
@@ -3697,7 +3697,7 @@ contains
     integer,             intent(in)    :: iter
     FLOAT,               intent(in)    :: dt
 
-    integer :: il, idir
+    integer :: idir
     FLOAT :: field(MAX_DIM)
     character(len=80) :: aux
 

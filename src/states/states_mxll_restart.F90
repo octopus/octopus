@@ -270,7 +270,6 @@ contains
     character(len=MAX_PATH_LEN) :: filename
     character(len=300) :: lines(3)
     logical :: should_write, verbose_
-    CMPLX,  allocatable :: zff_global(:)
 
     PUSH_SUB(states_mxll_dump)
 
@@ -326,7 +325,6 @@ contains
        end if
 
        if (should_write) then
-!          call batch_get_state(st%rsb, (/ist, idim/), gr%mesh%np, zff_global)
           call zrestart_write_mesh_function(restart, filename, gr%mesh, zff(:,idim), err, root = root)
           if (err /= 0) err2(2) = err2(2) + 1
        end if

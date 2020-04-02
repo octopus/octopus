@@ -435,8 +435,6 @@ contains
     integer, optional,         intent(in)    :: terms
     logical, optional,         intent(in)    :: set_bc !< If set to .false. the boundary conditions are assumed to be set previously.
 
-    type(profile_t), save :: prof_hamiltonian
-
     PUSH_SUB(hamiltonian_mxll_apply_batch)
     call profiling_in(prof_hamiltonian_mxll, "MXLL_HAMILTONIAN")
 

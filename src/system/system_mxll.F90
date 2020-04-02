@@ -94,8 +94,6 @@ contains
     type(namespace_t),    intent(in) :: namespace
 
     type(profile_t), save :: prof
-    integer :: n_rows, idir
-    type(block_t) :: blk
 
     PUSH_SUB(system_mxll_init)
     call profiling_in(prof,"SYSTEM_INIT")
@@ -430,48 +428,7 @@ contains
 
     POP_SUB(system_mxll_finalize)
   end subroutine system_mxll_finalize
-
-
-  !----------------------------------------------------------
-  subroutine system_check_match_maxwell_and_matter(sys_elec, sys_mxll, multigrid_mode)
-    type(system_t),           intent(in)  :: sys_elec
-    type(system_mxll_t),      intent(in)  :: sys_mxll
-    integer,        optional, intent(out) :: multigrid_mode
-
-    integer :: err
-
-    PUSH_SUB(system_check_match_maxwell_and_matter)
-
-    err = 0
-    if (sys_mxll%gr%sb%box_shape /= PARALLELEPIPED)  then
-      write(message(1), '(a)') 'The MaxwellBoxShape has to be set as:'
-      write(message(2), '(a)') 'MaxwellBoxShape == PARALLELEPIPED'
-      call messages_fatal(2)
-    end if
-    if (any(sys_mxll%gr%mesh%spacing(:) /= sys_elec%gr%mesh%spacing(:))) then
-      if (any(sys_mxll%gr%mesh%spacing(:) < M_FOUR * sys_elec%gr%sb%lsize(:))) err = err + 1
-    end if
-    if (err /= 0) then
-      write(message(1), '(a)') 'The "MaxwellSpacing" for the Maxwell grid has to be equal to'
-      write(message(2), '(a)') 'the "Spacing" of the matter grid for all 3 dimensions.'
-      write(message(3), '(a)') 'or'
-      write(message(4), '(a)') 'The "MaxwellSpacing" for the Maxwell grid hast to be at least'
-      write(message(5), '(a)') 'four times larger than the matter box size "Lsize" for all'
-      write(message(6), '(a)') '3 dimensions.'
-      call messages_fatal(6)
-    end if
-    if (all(sys_mxll%gr%mesh%spacing(:) == sys_elec%gr%mesh%spacing(:))) then
-      multigrid_mode = MULTIGRID_MX_TO_MA_EQUAL 
-    elseif (all(sys_mxll%gr%mesh%spacing(:) >= M_FOUR * sys_elec%gr%sb%lsize(:))) then
-      multigrid_mode = MULTIGRID_MX_TO_MA_LARGE
-    else
-      write(message(1), '(a)') 'There is no valid multigird option for current Maxwell and Matter grids.'
-      call messages_fatal(1)
-    end if
-
-    POP_SUB(system_check_match_maxwell_and_matter)
-  end subroutine system_check_match_maxwell_and_matter
-
+  
 
 end module system_mxll_oct_m
 

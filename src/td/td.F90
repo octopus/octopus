@@ -492,10 +492,9 @@ contains
     type(profile_t),        save :: prof
     type(restart_t)              :: restart_load, restart_dump
 
-    type(restart_t)            :: restart_mxll, restart_mxll_dump
     CMPLX, allocatable         :: rs_current_density_ext_t1(:,:), rs_current_density_ext_t2(:,:)
     CMPLX, allocatable         :: rs_charge_density_ext_t1(:), rs_charge_density_ext_t2(:)
-    CMPLX, allocatable         :: rs_state_init(:,:), rs_state_vac_fluc(:,:)
+    CMPLX, allocatable         :: rs_state_init(:,:)
     FLOAT                      :: bc_bounds(2,MAX_DIM), dt_bounds(2,MAX_DIM)
     
     PUSH_SUB(td_run)

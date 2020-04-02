@@ -392,7 +392,7 @@ contains
     FLOAT,                      intent(in)    :: time
     FLOAT,                      intent(in)    :: dt
 
-    integer            :: ii, inter_steps, ff_dim, ip, ip_in, idim
+    integer            :: ii, inter_steps, ff_dim, idim
     FLOAT              :: inter_dt, inter_time, delay
     CMPLX, allocatable :: ff_rs_state(:,:)
     CMPLX, allocatable :: ff_rs_state_pml(:,:)
@@ -628,8 +628,6 @@ contains
     CMPLX,               intent(in)    :: rs_state(:,:)
     CMPLX,               intent(inout) :: ff_rs_state(:,:)
 
-    CMPLX, allocatable :: rs_state_plus(:,:), rs_state_minus(:,:) 
-
     if (hm%operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE_MEDIUM) then
       message(1) = "Maxwell solver in linear media not yet implemented"
       call messages_fatal(1)
@@ -647,8 +645,6 @@ contains
     type(hamiltonian_mxll_t), intent(in)    :: hm
     CMPLX,               intent(in)    :: ff_rs_state(:,:)
     CMPLX,               intent(inout) :: rs_state(:,:)
-
-    CMPLX, allocatable :: rs_state_plus(:,:), rs_state_minus(:,:) 
 
     if (hm%operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE_MEDIUM) then
       call transform_rs_state_to_6x6_rs_state_backward(ff_rs_state, rs_state)
@@ -828,8 +824,6 @@ contains
     CMPLX,                         intent(inout) :: rs_state_matter(:,:)
     type(geometry_t),    optional, intent(in)    :: geo
 
-    integer            :: idim, ip
-    FLOAT              :: dd, width
     CMPLX, allocatable :: tmp_pot_ma_gr(:,:), tmp_pot_mx_gr(:,:), tmp_grad_mx_gr(:,:)
 
     SAFE_ALLOCATE(tmp_pot_mx_gr(1:gr_mxll%mesh%np_part,1))
@@ -874,10 +868,7 @@ contains
     FLOAT,                      intent(inout) :: vector_potential(:,:)
     type(geometry_t), optional, intent(in)    :: geo
 
-    integer            :: ip, ip_in, np
-    FLOAT              :: abs_r
-    CMPLX, allocatable :: tmp_field(:,:), tmp_field_2(:,:)
-    logical            :: trans_test, vec_pot_test
+    integer            :: np
 
     PUSH_SUB(get_vector_pot_and_transverse_field)
 
@@ -924,8 +915,7 @@ contains
         CMPLX,                      intent(in)    :: field(:,:)
         FLOAT,                      intent(inout) :: vector_potential(:,:)
 
-        integer :: idim, wn, ip
-        FLOAT   :: k_vector(MAX_DIM), k_vector_abs, e_field(MAX_DIM), b_field(MAX_DIM)
+        integer :: idim
         FLOAT, allocatable :: dtmp(:,:)
 
         SAFE_ALLOCATE(dtmp(1:gr%mesh%np_part,1:3))
@@ -1112,9 +1102,9 @@ contains
     type(states_mxll_t),      intent(inout) :: st
     FLOAT,               intent(in)    :: bounds(:,:)
 
-    integer :: ix, ix_max, iix, iy, iy_max, iiy, iz, iz_max, iiz, idx1, idx2, rankmin, ip_local, ip_global, nn_max
+    integer :: ix, ix_max, iix, iy, iy_max, iiy, iz, iz_max, iiz, idx1, idx2, ip_global, nn_max
     integer, allocatable :: nn(:,:,:,:)
-    FLOAT   :: rr(3), rr_min(3), rr_max(3), delta(3), dmin, vec(2), min_1(3), max_1(3), min_2(3), max_2(3)
+    FLOAT   :: rr(3), delta(3), vec(2), min_1(3), max_1(3), min_2(3), max_2(3)
 
     PUSH_SUB(surface_grid_points_mapping)
 
@@ -1492,8 +1482,7 @@ contains
     CMPLX, optional,     intent(in)  :: rs_field_plane_waves(:,:)
     FLOAT, optional,     intent(out) :: mx_energy_plane_waves
 
-    integer            :: ip, ip_in, ip_bd, dim
-    FLOAT              :: dd_energy, dd_e_energy, dd_b_energy
+    integer            :: ip, ip_in, dim
     FLOAT, allocatable :: energy_density(:), energy_density_plane_waves(:), tmp(:), tmp_pw(:)
     FLOAT, allocatable :: e_energy_density(:), tmp_e(:)
     FLOAT, allocatable :: b_energy_density(:), tmp_b(:)
@@ -1573,7 +1562,7 @@ contains
     FLOAT,               intent(out)   :: energy_via_flux_calc(:)
     FLOAT,  optional,    intent(out)   :: energy_via_flux_calc_dir(:,:)
 
-    integer             :: idim, idir, ip_surf, ip_global, ix, ix_max, iy, iy_max, iz, iz_max, ii_max
+    integer             :: idim, ip_surf, ix, ix_max, iy, iy_max, iz, iz_max, ii_max
     FLOAT               :: tmp_sum
     FLOAT,  allocatable :: poynting_vector(:,:), tmp_global(:,:), tmp_surf(:,:,:,:,:)
 
@@ -1682,7 +1671,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine energy_rate_calc_plane_waves(gr, st, iter, dt, energy_rate, &
-                                                  delta_energy, energy_via_flux_calc, energy_via_flux_calc_dir)
+       delta_energy, energy_via_flux_calc, energy_via_flux_calc_dir)
     type(grid_t),        intent(in)    :: gr
     type(states_mxll_t),      intent(in)    :: st
     integer,             intent(in)    :: iter
@@ -1692,7 +1681,7 @@ contains
     FLOAT,               intent(out)   :: energy_via_flux_calc(:)
     FLOAT,  optional,    intent(out)   :: energy_via_flux_calc_dir(:,:)
 
-    integer             :: idim, idir, ip_surf, ip_global, ix, ix_max, iy, iy_max, iz, iz_max, ii_max
+    integer             :: idim, ip_surf, ix, ix_max, iy, iy_max, iz, iz_max, ii_max
     FLOAT               :: tmp_sum
     FLOAT,  allocatable :: poynting_vector(:,:), tmp_global(:,:), tmp_surf(:,:,:,:,:)
 
@@ -1806,7 +1795,7 @@ contains
     FLOAT,               intent(in)    :: dt
     FLOAT,               intent(out)   :: poynting_box_surface(:,:,:)
 
-    integer             :: idim, idir, ip_surf, ip_global, ix, ix_max, iy, iy_max, iz, iz_max, ii_max
+    integer             :: idim, ip_surf, ix, ix_max, iy, iy_max, iz, iz_max, ii_max
     FLOAT,  allocatable :: poynting_vector(:,:), tmp_global(:,:), tmp_surf(:,:,:,:,:)
 
     PUSH_SUB(poynting_vector_through_box_surfaces)
@@ -1905,12 +1894,12 @@ contains
   ! ---------------------------------------------------------
   subroutine poynting_vector_through_box_surfaces_plane_waves(gr, st, iter, dt, poynting_box_surface)
     type(grid_t),        intent(in)    :: gr
-    type(states_mxll_t),      intent(in)    :: st
+    type(states_mxll_t), intent(in)    :: st
     integer,             intent(in)    :: iter
     FLOAT,               intent(in)    :: dt
     FLOAT,               intent(out)   :: poynting_box_surface(:,:,:)
 
-    integer             :: idim, idir, ip_surf, ip_global, ix, ix_max, iy, iy_max, iz, iz_max, ii_max
+    integer             :: idim, ip_surf, ix, ix_max, iy, iy_max, iz, iz_max, ii_max
     FLOAT,  allocatable :: poynting_vector(:,:), tmp_global(:,:), tmp_surf(:,:,:,:,:)
 
     PUSH_SUB(poynting_vector_through_box_surfaces_plane_waves)
@@ -2015,7 +2004,7 @@ contains
     FLOAT,               intent(out)   :: e_field_box_surface(:,:,:)
     FLOAT,               intent(out)   :: b_field_box_surface(:,:,:)
 
-    integer             :: idim, idir, ip_surf, ip_global, ix, ix_max, iy, iy_max, iz, iz_max, ii_max, ip_in, ip
+    integer             :: idim, ip_surf, ix, ix_max, iy, iy_max, iz, iz_max, ii_max
     FLOAT,  allocatable :: e_surf(:,:,:,:,:), b_surf(:,:,:,:,:), e_field(:,:), &
       e_field_global(:,:), b_field(:,:), b_field_global(:,:)
 
@@ -2163,7 +2152,7 @@ contains
     FLOAT,               intent(out)   :: e_field_box_surface(:,:,:)
     FLOAT,               intent(out)   :: b_field_box_surface(:,:,:)
 
-    integer             :: idim, idir, ip_surf, ip_global, ix, ix_max, iy, iy_max, iz, iz_max, ii_max
+    integer             :: idim, ip_surf, ix, ix_max, iy, iy_max, iz, iz_max, ii_max
     FLOAT,  allocatable :: e_surf(:,:,:,:,:), b_surf(:,:,:,:,:), e_field(:,:), &
       e_field_global(:,:), b_field(:,:), b_field_global(:,:)
 
@@ -2307,8 +2296,7 @@ contains
     FLOAT,                      intent(in)    :: time_delay
     CMPLX,                      intent(inout) :: rs_state(:,:)
 
-    integer            :: ip, ip_in, ip_lim, idim
-    FLOAT              :: ka(MAX_DIM), si(MAX_DIM), ee(MAX_DIM), bb(MAX_DIM), ee_aux(MAX_DIM), bb_aux(MAX_DIM), j_aux(MAX_DIM)
+    integer            :: ip, ip_in, idim
     logical            :: mask_check = .false.
 
     PUSH_SUB(mask_absorbing_boundaries)
@@ -2349,7 +2337,7 @@ contains
   ! ---------------------------------------------------------
   subroutine maxwell_mask(hm, rs_state)
     type(hamiltonian_mxll_t), intent(in)    :: hm
-    CMPLX,               intent(inout) :: rs_state(:,:)
+    CMPLX,                    intent(inout) :: rs_state(:,:)
 
     integer :: ip, ip_in, idim
 
@@ -2377,7 +2365,7 @@ contains
     CMPLX,                      intent(in)    :: ff_rs_state(:,:)
     CMPLX,                      intent(inout) :: ff_rs_state_pml(:,:)
 
-    integer            :: ip, ip_in, ff_points, ff_dim
+    integer            :: ip, ff_points, ff_dim
     CMPLX, allocatable :: ff_rs_state_plane_waves(:,:), rs_state_constant(:,:), ff_rs_state_constant(:,:)
 
     PUSH_SUB(pml_propagation_stage_1)
@@ -2805,7 +2793,7 @@ contains
     type(grid_t),        intent(in)    :: gr
     integer,             intent(in)    :: nr_of_boxes
 
-    integer :: il, ip, ip_in, ip_in_max, ip_bd, ip_bd_max, ipp, idim, point_info, err
+    integer :: il, ip, ip_in, ip_in_max, ip_bd, ip_bd_max, ipp, idim
     FLOAT   :: bounds(2,3), xx(MAX_DIM), xxp(MAX_DIM), dd, dd_max, dd_min
     FLOAT, allocatable  :: tmp(:), tmp_grad(:,:)
 
@@ -3178,15 +3166,12 @@ contains
     FLOAT                      :: time_delay
     CMPLX                      :: rs_state(:,:)
 
-    integer                    :: ip, ip_global, ip_in, wn, oam, sam
-    FLOAT                      :: dd, x_prop(MAX_DIM), rr, vv(MAX_DIM), k_vector(MAX_DIM), k_vector_abs, nn, rad, phi, test_perp, test_limit
-    FLOAT                      :: width, shift, e0(MAX_DIM), e_field(MAX_DIM), dummy(MAX_DIM), b0(MAX_DIM), b_field(MAX_DIM)
-    CMPLX                      :: rs_state_add(MAX_DIM), unit_sigma(3), unit_z(3), unit_plus(3), unit_minus(3)
-    CMPLX                      :: e0cmplx(MAX_DIM), b0cmplx(MAX_DIM)
+    integer                    :: ip, ip_in, wn
+    FLOAT                      :: x_prop(MAX_DIM), rr, vv(MAX_DIM), k_vector(MAX_DIM), k_vector_abs, nn
+    FLOAT                      :: e0(MAX_DIM), e_field(MAX_DIM), b_field(MAX_DIM)
+    CMPLX                      :: rs_state_add(MAX_DIM)
 
     PUSH_SUB(plane_waves_boundaries_calculation)
-
-    test_limit = CNST(1e-9)
 
     if (hm%plane_waves_apply) then
       do wn = 1, hm%bc%plane_waves_number
@@ -3230,7 +3215,7 @@ contains
     FLOAT                      :: dt
     FLOAT                      :: time_delay
 
-    integer            :: ip_in, ip, ff_dim
+    integer            :: ff_dim
     CMPLX, allocatable :: ff_rs_state(:,:)
 
     PUSH_SUB(plane_waves_propagation)
@@ -3268,9 +3253,9 @@ contains
     type(hamiltonian_mxll_t),  intent(in)    :: hm
     CMPLX,                intent(inout) :: rs_state(:,:)
 
-    integer              :: ip, ip_global, ip_in, wn, oam, sam, idim, np
-    FLOAT                :: dd, x_prop(MAX_DIM), rr, vv(MAX_DIM), k_vector(MAX_DIM), k_vector_abs, nn, rad, phi
-    FLOAT                :: width, shift, e0(MAX_DIM), e_field(MAX_DIM), dummy(MAX_DIM), b0(MAX_DIM), b_field(MAX_DIM)
+    integer              :: ip, wn, idim, np
+    FLOAT                :: x_prop(MAX_DIM), rr, vv(MAX_DIM), k_vector(MAX_DIM), k_vector_abs, nn
+    FLOAT                :: e0(MAX_DIM), e_field(MAX_DIM), dummy(MAX_DIM), b_field(MAX_DIM)
     CMPLX                :: rs_state_add(MAX_DIM)
 
     PUSH_SUB(plane_waves_in_box_calculation)
