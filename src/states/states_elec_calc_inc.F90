@@ -1696,7 +1696,7 @@ subroutine X(states_elec_me_two_body) (st, namespace, gr, psolver, st_min, st_ma
   integer,             intent(out)             :: kindex(:,:)
   integer,             intent(out)             :: lindex(:,:)
   R_TYPE,              intent(out)             :: twoint(:)  !
-  CMPLX,     optional, intent(in)              :: phase(:,:)
+  CMPLX,     optional, intent(in)              :: phase(:,st%d%kpt%start:)
   type(singularity_t), optional,intent(in)  :: singularity
   logical, optional, intent(in)             :: exc_k
 
