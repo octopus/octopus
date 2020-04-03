@@ -3290,7 +3290,7 @@ contains
             e0(:)      = bc%plane_waves_e_field(:,wn)
             e_field(:) = e0(:) * mxf(bc%plane_waves_mx_function(wn), x_prop(:))
           end if
-          b_field = M_ONE/P_c * M_ONE/k_vector_abs * dcross_product(k_vector, e_field)
+          b_field(:) = M_ONE/(P_c * k_vector_abs) * dcross_product(k_vector, e_field)
           call build_rs_vector(e_field, b_field, st%rs_sign, rs_state_add, st%ep(ip), st%mu(ip))
           rs_state(ip,:) = rs_state(ip,:) + rs_state_add(:)
         end do
