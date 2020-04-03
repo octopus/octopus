@@ -838,7 +838,9 @@ contains
 
     end if 
 
-    if (.not. use_enegy_grid) then
+    !ugly hack (since this input variable is properly handled below) but effective 
+    call parse_variable(namespace, 'PES_Flux_ARPES_grid', .false., this%arpes_grid)
+    if (.not. use_enegy_grid .or. this%arpes_grid) then
       
       !%Variable PES_Flux_Kmax
       !%Type float
@@ -870,7 +872,7 @@ contains
       !%Description
       !% Spacing of the k-mesh in |k| (equidistant).
       !%End
-      call parse_variable(namespace, 'PES_Flux_DeltaK', CNST(0.002), this%dk)
+      call parse_variable(namespace, 'PES_Flux_DeltaK', CNST(0.2), this%dk)
       if(this%dk <= M_ZERO) call messages_input_error('PES_Flux_DeltaK')
 !       call messages_print_var_value(stdout, "PES_Flux_DeltaK", this%dk)
 
@@ -1094,7 +1096,8 @@ contains
       !% regular grid.
       !% By default true when <tt>PES_Flux_Shape = pln</tt>.
       !%End
-      call parse_variable(namespace, 'PES_Flux_ARPES_grid', .true., this%arpes_grid)
+      this%arpes_grid = kpoints_have_zero_weight_path(sb%kpoints)
+      call parse_variable(namespace, 'PES_Flux_ARPES_grid', this%arpes_grid, this%arpes_grid)
       call messages_print_var_value(stdout, "PES_Flux_ARPES_grid", this%arpes_grid)       
       
                 
@@ -1150,7 +1153,7 @@ contains
 
       this%ll(:) = 1
 
-      if (simul_box_is_periodic(sb)) then
+      if (kpoints_have_zero_weight_path(sb%kpoints)) then
 
         if (this%arpes_grid) then
           nkmax = floor(Emax/DE)
@@ -1176,13 +1179,27 @@ contains
           if (.not. idim == pdim) call messages_write(" x ")        
         end do 
         call messages_info()
+        
       else
 
-        this%nk = floor(abs(kmax - kmin)/this%dk) + 1
-        this%ll(1:mdim) = this%nk 
+        if (.not. this%arpes_grid) then
+          this%nk = floor(abs(kmax - kmin)/this%dk) + 1
+          this%ll(1:mdim) = this%nk 
+          
+        else
+          
+          nkmax = floor(Emax/DE)
+          nkmin = floor(Emin/DE)
+          this%nk = abs(nkmax - nkmin) + 1
+          
+          this%ll(1:pdim) = floor(abs(kmax - kmin)/this%dk) + 1
+          this%ll(mdim) = this%nk
+          
+        end if
 
         SAFE_ALLOCATE(this%klinear(1:maxval(this%ll(1:mdim)),1:mdim))
         this%klinear = M_ZERO
+
       end if      
       
       ! Total number of points
@@ -1344,24 +1361,15 @@ contains
       this%nkpnts_end   = this%nkpnts
       
 
-      SAFE_ALLOCATE(this%kcoords_cub(1:mdim, this%nkpnts_start:this%nkpnts_end, kptst:kptend))
-
-      if(use_enegy_grid) then
-        do idir = 1, mdim
-          do ie = 1, this%ll(idir)  
-            this%klinear(ie,idir) = sign(ie * DE + Emin,M_ONE)*sqrt(M_TWO*(ie * DE + abs(Emin)))
-          end do
-        end do
-      else  
-        do idir = 1, mdim
-          do ikk = 1, this%ll(idir)  
-            this%klinear(ikk,idir) = ikk * this%dk + kmin
-          end do
-        end do
-      end if
 
 
-      if (simul_box_is_periodic(sb)) then
+
+      if (kpoints_have_zero_weight_path(sb%kpoints)) then
+        ! its a special case because we are generating a different (1D) grid for 
+        ! each kpoint and then we combine it in postprocessing
+
+        SAFE_ALLOCATE(this%kcoords_cub(1:mdim, this%nkpnts_start:this%nkpnts_end, kptst:kptend))
+                
         nkp_out = 0 
         do ikpt = kptst, kptend
           ikp = 0
@@ -1393,49 +1401,106 @@ contains
     
           end do
         end do
-      else
-        
-        ikpt = 1
-        ikp = 0
-        kvec(:) = M_ZERO
-        do ik3 = 1, this%ll(3)
-          if(mdim>2) kvec(3) = this%klinear(ik3,3)
-          do ik2 = 1, this%ll(2)
-            if(mdim>1) kvec(2) = this%klinear(ik2,2)
-            do ik1 = 1, this%ll(1)
-              ikp = ikp + 1 
-              kvec(1) = this%klinear(ik1,1)
-              this%kcoords_cub(1:mdim, ikp, ikpt) =  kvec(1:mdim)
-              
-              if(debug%info .and. mpi_grp_is_root(mpi_world)) then
-                write(225,*) ikp, this%kcoords_cub(1:mdim, ikp, ikpt)
-                if(this%nsrfcpnts > 0) flush(225)
-              end if              
 
-            end do
+      else
+
+        SAFE_ALLOCATE(this%kcoords_cub(1:mdim, this%nkpnts_start:this%nkpnts_end, 1))
+
+        
+      
+        do idir = 1, mdim
+          do ikk = 1, this%ll(idir)  
+            this%klinear(ikk,idir) = ikk * this%dk + kmin
           end do
         end do
+
+        
+        if (.not. this%arpes_grid) then
+          ! Normal velocity map
+
+          
+          ikpt = 1
+          ikp = 0
+          kvec(:) = M_ZERO
+          do ik3 = 1, this%ll(3)
+            if(mdim>2) kvec(3) = this%klinear(ik3,3)
+            do ik2 = 1, this%ll(2)
+              if(mdim>1) kvec(2) = this%klinear(ik2,2)
+              do ik1 = 1, this%ll(1)
+                ikp = ikp + 1 
+                kvec(1) = this%klinear(ik1,1)
+                this%kcoords_cub(1:mdim, ikp, ikpt) =  kvec(1:mdim)
+              
+
+              end do
+            end do
+          end do
+
+        else ! we want an ARPES-friendly grid layout 
+          
+          nkp_out = 0 
+          ikpt = 1
+          ikp = 0
+          kvec(:) = M_ZERO
+          do ikk = nkmin, nkmax ! this is going to be turned into energy 
+    
+            ! loop over periodic directions
+            select case (pdim)
+              case (1)
+              
+              do ik1 = 1, this%ll(1)
+                kvec(1) = this%klinear(ik1,1) 
+                kvec(1:pdim) = matmul(sb%klattice_primitive(1:pdim,1:pdim),kvec(1:pdim))
+                call fill_non_periodic_dimension(this)               
+              end do
+
+              case (2)
+          
+              do ik2 = 1, this%ll(2)
+                do ik1 = 1, this%ll(1)
+                  kvec(1:2) = (/this%klinear(ik1,1), this%klinear(ik2,2)/)
+                  kvec(1:pdim) = matmul(sb%klattice_primitive(1:pdim,1:pdim),kvec(1:pdim))
+                  call fill_non_periodic_dimension(this)
+
+                  
+                end do
+              end do
+            end select
+              
+          end do
+        
+        
+        end if
         
       end if
   
       if (debug%info .and. mpi_grp_is_root(mpi_world)) then
         ! this does not work for parallel in kpoint 
         ! you need to gather kcoords_pln
-        write(229,*) "#   ikpt (kpoint index),   ikp (momentum index),   this%kcoords_pln(1:mdim, ikp, ikpt)"
-        do ikpt = kptst, kptend
-          do ikp = 1, this%nkpnts
-            write(229,*) ikpt, ikp, this%kcoords_cub(1:mdim, ikp, ikpt)
+        if (kpoints_have_zero_weight_path(sb%kpoints)) then
+          write(229,*) "#   ikpt (kpoint index),   ikp (momentum index),   this%kcoords_cub(1:mdim, ikp, ikpt)"
+          do ikpt = kptst, kptend
+            do ikp = 1, this%nkpnts
+              write(229,*) ikpt, ikp, this%kcoords_cub(1:mdim, ikp, ikpt)
+            end do
           end do
-        end do
+        else
+          write(229,*) "#   ikp (momentum index),   this%kcoords_cub(1:mdim, ikp, ikpt)"
+          do ikp = 1, this%nkpnts
+            write(229,*) ikp, this%kcoords_cub(1:mdim, ikp, 1)
+          end do
+        end if
         flush(229)
       end if
-
-      call messages_write("Number of points with E<p//^2/2 = ")
-      call messages_write(nkp_out)
-      call messages_write(" [of ")
-      call messages_write(this%nkpnts*kpoints_number(sb%kpoints))
-      call messages_write("]")
-      call messages_info()
+      
+      if (this%arpes_grid) then
+        call messages_write("Number of points with E<p//^2/2 = ")
+        call messages_write(nkp_out)
+        call messages_write(" [of ")
+        call messages_write(this%nkpnts*kpoints_number(sb%kpoints))
+        call messages_write("]")
+        call messages_info()
+      end if
       
       SAFE_DEALLOCATE_A(gpoints)
       SAFE_DEALLOCATE_A(gpoints_reduced)
@@ -1532,20 +1597,17 @@ contains
       sign = 1         
       if (ikk /= 0) sign= ikk/abs(ikk)        
       
-      if (this%arpes_grid) then
-        kpoint(1:sb%dim) = kpoints_get_point(sb%kpoints, ikpt)
-        kpar(1:pdim) = kvec(1:pdim) - kpoint(1:pdim)
-        val = abs(ikk)*DE * M_TWO - sum(kpar(1:pdim)**2)
-        if (val >= 0) then
-          kvec(mdim) =  sign * sqrt(val)
-        else  ! if E < p//^2/2
-          !FIXME: Should handle the exception doing something smarter than this
-          kvec(mdim) = sqrt(val) ! set to NaN
+      kpoint(1:sb%dim) = M_ZERO
+      if (kpoints_have_zero_weight_path(sb%kpoints)) kpoint(1:sb%dim) = kpoints_get_point(sb%kpoints, ikpt)
+      kpar(1:pdim) = kvec(1:pdim) - kpoint(1:pdim)
+      val = abs(ikk)*DE * M_TWO - sum(kpar(1:pdim)**2)
+      if (val >= 0) then
+        kvec(mdim) =  sign * sqrt(val)
+      else  ! if E < p//^2/2
+        !FIXME: Should handle the exception doing something smarter than this
+        kvec(mdim) = sqrt(val) ! set to NaN
 !           kvec(mdim) = M_HUGE ! set to infinity
-          nkp_out = nkp_out + 1
-        end if
-      else         
-        kvec(mdim) = ikk * this%dk 
+        nkp_out = nkp_out + 1
       end if
       
       this%kcoords_cub(1:mdim, ikp, ikpt) =  kvec(1:mdim)
@@ -1872,15 +1934,21 @@ contains
       
     PUSH_SUB(pes_flux_integrate_cub_tabulate_direct_a) 
 
-    kptst     = st%d%kpt%start
-    kptend    = st%d%kpt%end
+    if (kpoints_have_zero_weight_path(mesh%sb%kpoints)) then
+      kptst     = st%d%kpt%start
+      kptend    = st%d%kpt%end
+    else
+      kptst     = 1
+      kptend    = 1
+    end if
+
     mdim      = mesh%sb%dim
 
     ikp_start = this%nkpnts_start
     ikp_end   = this%nkpnts_end
     
     
-    if (this%surf_shape /= M_CARTESIAN) then
+    if (.true.) then
       
       SAFE_ALLOCATE(this%expkr(1:this%nsrfcpnts,ikp_start:ikp_end,kptst:kptend,1))
 
@@ -1913,7 +1981,7 @@ contains
     FLOAT,               intent(in)    :: dt
 
     integer            :: stst, stend, kptst, kptend, sdim, mdim
-    integer            :: ist, ik, isdim, imdim
+    integer            :: ist, ik, isdim, imdim, ik_map
     integer            :: isp, ikp, itstep
     integer            :: idir, n_dir, nfaces
     CMPLX, allocatable :: Jk_cub(:,:,:,:), spctramp_cub(:,:,:,:)
@@ -2005,6 +2073,12 @@ contains
 
       itstep = tdstep_on_node
       do ik = kptst, kptend
+        if (kpoints_have_zero_weight_path(mesh%sb%kpoints)) then
+          ik_map = ik 
+        else
+          ik_map = 1 
+        end if
+        
         do ist = stst, stend
           do isdim = 1, sdim
         
@@ -2012,12 +2086,12 @@ contains
               
               gwfpw(ikp) = &
                 sum(this%gwf(ist, isdim, ik, isp_start:isp_end, itstep, n_dir) &
-                  * this%expkr(isp_start:isp_end,ikp,ik,1))
+                  * this%expkr(isp_start:isp_end,ikp,ik_map,1))
 
 
               wfpw(ikp) = &
                 sum(this%wf(ist, isdim, ik, isp_start:isp_end, itstep)        &
-                  * this%expkr(isp_start:isp_end,ikp,ik,1))
+                  * this%expkr(isp_start:isp_end,ikp,ik_map,1))
         
             end do 
             
@@ -2043,10 +2117,16 @@ contains
       do itstep = 1, this%itstep
 
         do ik = kptst, kptend
+
+          if (kpoints_have_zero_weight_path(mesh%sb%kpoints)) then
+            ik_map = ik 
+          else
+            ik_map = 1 
+          end if
           
           kpoint(1:mdim) = kpoints_get_point(mesh%sb%kpoints, ik)
           do ikp = ikp_start, ikp_end
-            vec = sum((this%kcoords_cub(1:mdim, ikp, ik) - kpoint(1:mdim) - this%veca(1:mdim, itstep) / P_c)**2)
+            vec = sum((this%kcoords_cub(1:mdim, ikp, ik_map) - kpoint(1:mdim) - this%veca(1:mdim, itstep) / P_c)**2)
             vphase(ikp, ik) = vphase(ikp, ik) * exp(M_zI * vec * dt / M_TWO)
 
 !             vec = this%kcoords_cub(n_dir, ikp, ik) * this%rcoords(n_dir, isp_start)
@@ -2068,7 +2148,7 @@ contains
                 
               Jk_cub(ist, isdim, ik, ikp_start:ikp_end) = Jk_cub(ist, isdim, ik,ikp_start:ikp_end) +  &
                 phase(ikp_start:ikp_end, ik) * ( wfpw(ikp_start:ikp_end) * &
-                   (M_TWO * this%veca(n_dir, itstep) / P_c  + kpoint(n_dir) - this%kcoords_cub(n_dir, ikp_start:ikp_end, ik)) + &
+                   (M_TWO * this%veca(n_dir, itstep) / P_c  + kpoint(n_dir) - this%kcoords_cub(n_dir, ikp_start:ikp_end, ik_map)) + &
                     M_zI * gwfpw(ikp_start:ikp_end) )
                             
 

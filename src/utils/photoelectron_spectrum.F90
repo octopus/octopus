@@ -371,7 +371,7 @@ program photoelectron_spectrum
     llp(1:dim) = llg(1:dim)
     llp(kpth_dir) = llg(kpth_dir) * nkpt    
   else
-    llp(1:dim) = llg(1:dim) * sb%kpoints%nik_axis(1:dim)    
+    llp(1:dim) = llg(1:dim)  
   endif  
   llp(1:pdim) = llp(1:pdim) * ngpt
   

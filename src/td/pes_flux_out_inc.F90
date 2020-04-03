@@ -532,7 +532,7 @@ subroutine pes_flux_pmesh_cub(this, namespace, dim, kpoints, ll, LG, pmesh, idxZ
   
   
   integer :: ikpt,ikp, ik1, ik2, ik3
-  
+  FLOAT   :: vec(1:3)
   
   PUSH_SUB(pes_flux_pmesh_cub)
   
@@ -554,7 +554,8 @@ subroutine pes_flux_pmesh_cub(this, namespace, dim, kpoints, ll, LG, pmesh, idxZ
         Lp(ik1, ik2, ik3, :, 3) = ik3  
         
         pmesh(ik1, ik2, ik3, 1:dim) = this%kcoords_cub(1:dim, ikp, ikpt)
-        
+
+        Ekin(ik1, ik2, ik3) = sum(this%kcoords_cub(1:dim, ikp, ikpt)**2)*M_HALF
 
       end do
     end do
