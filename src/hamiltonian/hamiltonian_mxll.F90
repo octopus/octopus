@@ -96,7 +96,6 @@ module hamiltonian_mxll_oct_m
 
     logical                        :: mx_ma_coupling
     logical                        :: mx_ma_coupling_apply
-    integer                        :: mx_ma_coupling_type
     integer                        :: mx_ma_trans_field_calc_method
     logical                        :: mx_ma_trans_field_calc_corr
     integer                        :: mx_ma_coupling_points_number
@@ -246,6 +245,11 @@ contains
     hm%energy_density = M_ZERO
     hm%e_energy_density = M_ZERO
     hm%b_energy_density = M_ZERO
+
+    hm%mx_ma_coupling_apply = .false.
+    hm%mx_ma_coupling  = .false.
+    hm%ma_mx_coupling_apply = .false.
+    hm%ma_mx_coupling  = .false.
 
     SAFE_ALLOCATE(hm%cube%fft)
 
