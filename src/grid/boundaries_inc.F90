@@ -571,6 +571,9 @@ contains
           ASSERT(lbound(phase_correction, 1) == 1)
           ASSERT(ubound(phase_correction, 1) == boundaries%mesh%np_part - boundaries%mesh%np)
           ASSERT(R_TYPE_VAL == TYPE_CMPLX)
+
+          call accel_create_buffer(buff_recv, ACCEL_MEM_READ_ONLY, R_TYPE_VAL, ffb%pack_size(1)*maxrecv*npart)
+          call accel_write_buffer(buff_recv, ffb%pack_size(1)*maxrecv*npart, recvbuffer)
   
           call accel_create_buffer(buff_phase_corr, ACCEL_MEM_READ_ONLY, TYPE_CMPLX, boundaries%mesh%np_part - boundaries%mesh%np)
           call accel_write_buffer(buff_phase_corr, boundaries%mesh%np_part - boundaries%mesh%np, phase_correction )
