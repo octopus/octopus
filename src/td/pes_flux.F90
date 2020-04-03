@@ -1375,29 +1375,32 @@ contains
           ikp = 0
           do ikk = nkmin, nkmax
     
-            ! loop over periodic directions
-            select case (pdim)
-              case (1)
-              do ibz1 = -(NBZ(1)-1), (NBZ(1)-1) 
-                do ig = 1, this%ngpt
-                  kvec(1) = ibz1 * sb%klattice(1, 1) + gpoints(1,ig)               
-                  call fill_non_periodic_dimension(this)
-                end do      
-              end do
-
-              case (2)
-          
-              do ibz2 = -(NBZ(2)-1), (NBZ(2)-1) 
-                do ibz1 = -(NBZ(1)-1), (NBZ(1)-1) 
-                  do ig = 1, this%ngpt
-                    kvec(1:2) = ibz1 * sb%klattice(1:2, 1) + ibz2 * sb%klattice(1:2, 2) &
-                              + gpoints(1:2,ig) 
-                    call fill_non_periodic_dimension(this)
-                  end do
-                end do
-              end do
-          
-            end select
+            kvec(1:mdim) = - kpoints_get_point(sb%kpoints, ikpt)             
+            call fill_non_periodic_dimension(this)
+    
+!             ! loop over periodic directions
+!             select case (pdim)
+!               case (1)
+!               do ibz1 = -(NBZ(1)-1), (NBZ(1)-1)
+!                 do ig = 1, this%ngpt
+!                   kvec(1) = ibz1 * sb%klattice(1, 1) + gpoints(1,ig)
+!                   call fill_non_periodic_dimension(this)
+!                 end do
+!               end do
+!
+!               case (2)
+!
+!               do ibz2 = -(NBZ(2)-1), (NBZ(2)-1)
+!                 do ibz1 = -(NBZ(1)-1), (NBZ(1)-1)
+!                   do ig = 1, this%ngpt
+!                     kvec(1:2) = ibz1 * sb%klattice(1:2, 1) + ibz2 * sb%klattice(1:2, 2) &
+!                               + gpoints(1:2,ig)
+!                     call fill_non_periodic_dimension(this)
+!                   end do
+!                 end do
+!               end do
+!
+!             end select
     
           end do
         end do
@@ -1597,9 +1600,9 @@ contains
       sign = 1         
       if (ikk /= 0) sign= ikk/abs(ikk)        
       
-      kpoint(1:sb%dim) = M_ZERO
-      if (kpoints_have_zero_weight_path(sb%kpoints)) kpoint(1:sb%dim) = kpoints_get_point(sb%kpoints, ikpt)
-      kpar(1:pdim) = kvec(1:pdim) - kpoint(1:pdim)
+!       kpoint(1:sb%dim) = M_ZERO
+!       if (kpoints_have_zero_weight_path(sb%kpoints)) kpoint(1:sb%dim) = kpoints_get_point(sb%kpoints, ikpt)
+      kpar(1:pdim) = kvec(1:pdim) !- kpoint(1:pdim)
       val = abs(ikk)*DE * M_TWO - sum(kpar(1:pdim)**2)
       if (val >= 0) then
         kvec(mdim) =  sign * sqrt(val)
@@ -1930,17 +1933,17 @@ contains
     integer            :: stst, stend, kptst, kptend, sdim, mdim
     integer            :: ist, ik, isdim, imdim
     integer            :: isp, ikp, ikp_start, ikp_end
-
+    integer            :: ik_map
       
     PUSH_SUB(pes_flux_integrate_cub_tabulate_direct_a) 
 
-    if (kpoints_have_zero_weight_path(mesh%sb%kpoints)) then
+!     if (kpoints_have_zero_weight_path(mesh%sb%kpoints)) then
       kptst     = st%d%kpt%start
       kptend    = st%d%kpt%end
-    else
-      kptst     = 1
-      kptend    = 1
-    end if
+!     else
+!       kptst     = 1
+!       kptend    = 1
+!     end if
 
     mdim      = mesh%sb%dim
 
@@ -1953,10 +1956,16 @@ contains
       SAFE_ALLOCATE(this%expkr(1:this%nsrfcpnts,ikp_start:ikp_end,kptst:kptend,1))
 
       do ik = kptst, kptend
+        if (kpoints_have_zero_weight_path(mesh%sb%kpoints)) then
+          ik_map = ik
+        else
+          ik_map = 1
+        end if
         do ikp = ikp_start, ikp_end
           do isp = 1, this%nsrfcpnts 
             this%expkr(isp,ikp,ik,1) = exp(-M_zI * sum(this%rcoords(1:mdim,isp) &
-                                                * this%kcoords_cub(1:mdim, ikp, ik)) ) &
+                                                * (this%kcoords_cub(1:mdim, ikp, ik_map) + kpoints_get_point(mesh%sb%kpoints, ik))) ) &
+!                                                * this%kcoords_cub(1:mdim, ikp, ik_map)) ) &                                                
                                                 * (M_TWO*M_PI)**(-mdim/M_TWO)
       
           end do
@@ -2073,11 +2082,11 @@ contains
 
       itstep = tdstep_on_node
       do ik = kptst, kptend
-        if (kpoints_have_zero_weight_path(mesh%sb%kpoints)) then
+!         if (kpoints_have_zero_weight_path(mesh%sb%kpoints)) then
           ik_map = ik 
-        else
-          ik_map = 1 
-        end if
+!         else
+!           ik_map = 1
+!         end if
         
         do ist = stst, stend
           do isdim = 1, sdim
@@ -2126,7 +2135,8 @@ contains
           
           kpoint(1:mdim) = kpoints_get_point(mesh%sb%kpoints, ik)
           do ikp = ikp_start, ikp_end
-            vec = sum((this%kcoords_cub(1:mdim, ikp, ik_map) - kpoint(1:mdim) - this%veca(1:mdim, itstep) / P_c)**2)
+!             vec = sum((this%kcoords_cub(1:mdim, ikp, ik_map) - kpoint(1:mdim) - this%veca(1:mdim, itstep) / P_c)**2)
+            vec = sum((this%kcoords_cub(1:mdim, ikp, ik_map) - this%veca(1:mdim, itstep) / P_c)**2)
             vphase(ikp, ik) = vphase(ikp, ik) * exp(M_zI * vec * dt / M_TWO)
 
 !             vec = this%kcoords_cub(n_dir, ikp, ik) * this%rcoords(n_dir, isp_start)

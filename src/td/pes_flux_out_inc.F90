@@ -273,8 +273,10 @@ subroutine pes_flux_pmesh_pln(this, namespace, dim, kpoints, ll, LG, pmesh, idxZ
           
             ! The final momentum corresponds to p = K-G. 
             ! I have to subtract G only along the periodic dimensions
-            pmesh(ip1, ip2, ip3, 1:this%pdim) = kpt(1:this%pdim) - GG(1:this%pdim)
-            pmesh(ip1, ip2, ip3, dim)         = GG(dim)
+!             pmesh(ip1, ip2, ip3, 1:this%pdim) = kpt(1:this%pdim) - GG(1:this%pdim)
+!             pmesh(ip1, ip2, ip3, dim)         = GG(dim)
+            pmesh(ip1, ip2, ip3, 1:dim)         = GG(1:dim)
+
             pmesh(ip1, ip2, ip3, dim+1)       = pmesh(ip1, ip2, ip3, dim+1) + 1 
           
           
