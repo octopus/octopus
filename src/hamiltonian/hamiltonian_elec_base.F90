@@ -816,7 +816,7 @@ contains
     ! check if we only want a phase correction for the boundary points
     phase_correction = .false.
     if(associated(hm_base%phase)) phase_correction = .true.
-    if(accel_is_enabled()) phase_correction = .false.
+    ! if(accel_is_enabled()) phase_correction = .false.
 
     !write(message(1),'("hamiltonian_elec_base_set_phase_corr ",6L)') phase_correction
     !call messages_warning(1)
@@ -846,7 +846,7 @@ contains
     ! check if we only want a phase correction for the boundary points
     phase_correction = .false.
     if(associated(hm_base%phase)) phase_correction = .true.
-    if(accel_is_enabled()) phase_correction = .false.
+    ! if(accel_is_enabled()) phase_correction = .false.
 
     !We apply the phase only to np points, and the phase for the np+1 to np_part points
     !will be treated as a phase correction in the Hamiltonian
