@@ -132,7 +132,7 @@ module td_write_oct_m
     OUT_B_FIELD_SURF_Y          = 8, &
     OUT_B_FIELD_SURF_Z          = 9, &
     OUT_MAXWELL_MAX             = 9
-    
+
 
   type td_write_t
     private
@@ -1894,10 +1894,10 @@ contains
     type(hamiltonian_elec_t), intent(in) :: hm
     integer,             intent(in)      :: iter
     FLOAT, intent(in)                    :: ke
-    
+
     integer :: ii
 
-    integer :: n_columns         
+    integer :: n_columns
 
     if(.not.mpi_grp_is_root(mpi_world)) return ! only first node outputs
 
@@ -3249,21 +3249,21 @@ contains
     !% Maxwell simulation. Many of the options can increase the computational
     !% cost of the simulation, so only use the ones that you need. In
     !% most cases the default value is enough, as it is adapted to the
-    !% details of the TD run. 
+    !% details of the TD run.
     !%Option maxwell_energy 1
     !% Output of the electromagnetic field energy into the folder <tt>td.general/maxwell</tt>.
     !%Option fields 2
-    !% Output of the electromagnetic field at the origin of the simulation box into the 
+    !% Output of the electromagnetic field at the origin of the simulation box into the
     !% folder <tt>td.general/fields</tt>
     !%Option mean_poynting 4
-    !% Output of the mean Poynting vector 
+    !% Output of the mean Poynting vector
     !%Option e_field_surface 8
     !% Output of the E field sliced along the planes x=0, y=0, z=0 for each field component
     !%Option b_field_surface 16
     !% Output of the B field sliced along the planes x=0, y=0, z=0 for each field component
     !%End
 
-    default = 2**(OUT_MAXWELL_ENERGY - 1) 
+    default = 2**(OUT_MAXWELL_ENERGY - 1)
     call parse_variable(namespace, 'MaxwellTDOutput', default, flags)
 
     if(.not.varinfo_valid_option('MaxwellTDOutput', flags, is_flag = .true.)) call messages_input_error('MaxwellTDOutput')
@@ -3418,20 +3418,20 @@ contains
 
     integer :: ii
 
-    integer :: n_columns         
+    integer :: n_columns
 
     if(.not.mpi_grp_is_root(mpi_world)) return ! only first node outputs
 
     PUSH_SUB(td_write_maxwell_energy)
 
     n_columns = 7
-    
+
     if(iter == 0) then
       call td_write_print_header_init(out_maxwell_energy)
 
       ! first line -> column names
       call write_iter_header_start(out_maxwell_energy)
-      call write_iter_header(out_maxwell_energy, 'Mx energy')  
+      call write_iter_header(out_maxwell_energy, 'Mx energy')
       call write_iter_header(out_maxwell_energy, 'E energy')
       call write_iter_header(out_maxwell_energy, 'B energy')
       call write_iter_header(out_maxwell_energy, 'Mx energy s. b.')
@@ -3481,7 +3481,7 @@ contains
 
     integer :: ii
 
-    integer :: n_columns         
+    integer :: n_columns
 
     if(.not.mpi_grp_is_root(mpi_world)) return ! only first node outputs
 
@@ -3494,19 +3494,19 @@ contains
 
       ! first line -> column names
       call write_iter_header_start(out_field_surf)
-      call write_iter_header(out_field_surf, '- x direction')  
+      call write_iter_header(out_field_surf, '- x direction')
       call write_iter_header(out_field_surf, '+ x direction')
       call write_iter_header(out_field_surf, '- y direction')
       call write_iter_header(out_field_surf, '+ y direction')
       call write_iter_header(out_field_surf, '- z direction')
       call write_iter_header(out_field_surf, '+ z direction')
-      call write_iter_header(out_field_surf, '- x dir. p. w.')  
+      call write_iter_header(out_field_surf, '- x dir. p. w.')
       call write_iter_header(out_field_surf, '+ x dir. p. w.')
       call write_iter_header(out_field_surf, '- y dir. p. w.')
       call write_iter_header(out_field_surf, '+ y dir. p. w.')
       call write_iter_header(out_field_surf, '- z dir. p. w.')
       call write_iter_header(out_field_surf, '+ z dir. p. w.')
-    
+
       call write_iter_nl(out_field_surf)
 
       ! units
@@ -3517,7 +3517,7 @@ contains
         call write_iter_header(out_field_surf, '[' // trim(units_abbrev(unit_one)) // ']')
       end do
       call write_iter_nl(out_field_surf)
-      
+
       call td_write_print_header_end(out_field_surf)
     end if
 
@@ -3550,7 +3550,7 @@ contains
 
     integer :: ii
 
-    integer :: n_columns         
+    integer :: n_columns
 
     if(.not.mpi_grp_is_root(mpi_world)) return ! only first node outputs
 
@@ -3563,19 +3563,19 @@ contains
 
       ! first line -> column names
       call write_iter_header_start(out_field_surf)
-      call write_iter_header(out_field_surf, '- x direction')  
+      call write_iter_header(out_field_surf, '- x direction')
       call write_iter_header(out_field_surf, '+ x direction')
       call write_iter_header(out_field_surf, '- y direction')
       call write_iter_header(out_field_surf, '+ y direction')
       call write_iter_header(out_field_surf, '- z direction')
       call write_iter_header(out_field_surf, '+ z direction')
-      call write_iter_header(out_field_surf, '- x dir. p. w.')  
+      call write_iter_header(out_field_surf, '- x dir. p. w.')
       call write_iter_header(out_field_surf, '+ x dir. p. w.')
       call write_iter_header(out_field_surf, '- y dir. p. w.')
       call write_iter_header(out_field_surf, '+ y dir. p. w.')
       call write_iter_header(out_field_surf, '- z dir. p. w.')
       call write_iter_header(out_field_surf, '+ z dir. p. w.')
-    
+
       call write_iter_nl(out_field_surf)
 
       ! units
@@ -3586,7 +3586,7 @@ contains
         call write_iter_header(out_field_surf, '[' // trim(units_abbrev(unit_one)) // ']')
       end do
       call write_iter_nl(out_field_surf)
-      
+
       call td_write_print_header_end(out_field_surf)
     end if
 
@@ -3620,7 +3620,7 @@ contains
 
     integer            :: idir
     FLOAT              :: field(MAX_DIM), field_2(MAX_DIM)
-    FLOAT, allocatable :: dtmp(:,:) 
+    FLOAT, allocatable :: dtmp(:,:)
     character(len=80)  :: aux
 
     SAFE_ALLOCATE(dtmp(1:gr%mesh%np,1:st%d%dim))
@@ -3749,7 +3749,7 @@ contains
       call write_iter_header(out_fields, '[' // trim(units_abbrev(units_out%time)) // ']')
 
       ! Note that we do not print out units of E, B, or A, but rather units of e*E, e*B, e*A.
-      ! (force, force, and energy, respectively). The reason is that the units of E, B or A 
+      ! (force, force, and energy, respectively). The reason is that the units of E, B or A
       ! are ugly.
       aux = '[' // trim(units_abbrev(units_out%force)) // ']'
       do idir = 1, 4 * gr%mesh%sb%dim

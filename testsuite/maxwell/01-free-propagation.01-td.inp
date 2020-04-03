@@ -1,5 +1,5 @@
 # ----- Calculation mode and parallelization ------------------------------------------------------
- 
+
  CalculationMode   = td
  RestartWrite = no
 
@@ -50,7 +50,7 @@
 
 # ----- Output variables --------------------------------------------------------------------------
 
- OutputFormat = plane_x + plane_y + plane_z + vtk + xyz + axis_x  
+ OutputFormat = plane_x + plane_y + plane_z + vtk + xyz + axis_x
 
 
 # ----- Maxwell output variables ------------------------------------------------------------------

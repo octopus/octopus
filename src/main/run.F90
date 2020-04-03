@@ -189,7 +189,7 @@ contains
            message(1) = "Maxwell systems currently support only TD propagation"
            call messages_info(1)
         end select
-        
+
       type is (system_t)
         if (sys%hm%pcm%run_pcm) then
           select case (calc_mode_id)

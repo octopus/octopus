@@ -209,7 +209,7 @@ contains
     POP_SUB(hamiltonian_mxll_null)
   end subroutine hamiltonian_mxll_null
 
-  
+
   ! ---------------------------------------------------------
   !> Initializing the Maxwell Hamiltonian
   subroutine hamiltonian_mxll_init(hm, namespace, gr, st)
@@ -271,7 +271,7 @@ contains
     !% The propagation operation is done by 4x4 matrices also with Gauss laws constraint in medium
     !%End
     call parse_variable(namespace, 'MaxwellHamiltonianOperator', OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE, hm%operator)
-    
+
     if (hm%operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE_GAUSS) then
       hm%d%dim = hm%d%dim+1
     else if (hm%operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE_MEDIUM) then
@@ -465,7 +465,7 @@ contains
     POP_SUB(hamiltonian_mxll_apply_batch)
   end subroutine hamiltonian_mxll_apply_batch
 
-  
+
   ! --------------------------------------------------------
   !> Apply hamiltonian to real states (not possible)
   subroutine dhamiltonian_mxll_apply(hm, namespace, mesh, psib, hpsib, terms, set_bc)
@@ -479,7 +479,7 @@ contains
 
     write(message(1),'(a)') 'dhamiltonian_mxll_apply not implemented (states are complex).'
     call messages_fatal(1, namespace=namespace)
-    
+
   end subroutine dhamiltonian_mxll_apply
 
   ! ---------------------------------------------------------
@@ -492,7 +492,7 @@ contains
     class(batch_t),      target, intent(inout) :: hpsib
     integer,           optional, intent(in)    :: terms
     logical,           optional, intent(in)    :: set_bc !< If set to .false. the boundary conditions are assumed to be set previously.
-    
+
     CMPLX, allocatable :: rs_aux_in(:,:), rs_aux_out(:,:)
     integer :: ii
 
@@ -509,7 +509,7 @@ contains
 
     call maxwell_hamiltonian_apply_fd(hm, hm%der, rs_aux_in, rs_aux_out)
 
-    do ii = 1, 3 
+    do ii = 1, 3
       call batch_set_state(hpsib, ii, mesh%np_part, rs_aux_out(:, ii))
     end do
 
@@ -1095,10 +1095,10 @@ contains
     class(batch_t),              intent(inout) :: hpsib
     FLOAT,                       intent(in)    :: vmagnus(:, :, :)
     logical,           optional, intent(in)    :: set_phase
-    
+
     write(message(1),'(a)') 'hamiltonian_mxll_magnus_apply not implemeted'
     call messages_fatal(1, namespace=namespace)
-    
+
   end subroutine dhamiltonian_mxll_magnus_apply
 
   ! ---------------------------------------------------------
@@ -1111,10 +1111,10 @@ contains
     class(batch_t),              intent(inout) :: hpsib
     FLOAT,                       intent(in)    :: vmagnus(:, :, :)
     logical,           optional, intent(in)    :: set_phase
-    
+
     write(message(1),'(a)') 'hamiltonian_mxll_magnus_apply not implemeted'
     call messages_fatal(1, namespace=namespace)
-    
+
   end subroutine zhamiltonian_mxll_magnus_apply
 
 end module hamiltonian_mxll_oct_m

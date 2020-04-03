@@ -143,7 +143,7 @@ contains
 
     select type (sys)
     type is (system_t)
-      
+
       call ion_dynamics_init(td%ions, sys%namespace, sys%geo)
 
       !%Variable TDIonicTimeScale
@@ -213,7 +213,7 @@ contains
       end if
 
       call messages_print_var_value(stdout, 'TDTimeStep', td%dt, unit = units_out%time)
-      
+
 
       if(parse_is_defined(sys%namespace, 'TDMaxSteps') .and. parse_is_defined(sys%namespace, 'TDPropagationTime')) then
         call messages_write('You cannot set TDMaxSteps and TDPropagationTime at the same time')
@@ -307,17 +307,17 @@ contains
       if( sys%hm%lda_u_level /= DFT_U_NONE .and. td%recalculate_gs) &
         call messages_not_implemented("DFT+U with RecalculateGSDuringEvolution=yes", namespace=sys%namespace)
 
-      !%Variable TDScissor 
-      !%Type float 
-      !%Default 0.0 
-      !%Section Time-Dependent 
-      !%Description 
-      !% (experimental) If set, a scissor operator will be applied in the 
-      !% Hamiltonian, shifting the excitation energies by the amount 
-      !% specified. By default, it is not applied. 
-      !%End 
-      call parse_variable(sys%namespace, 'TDScissor', CNST(0.0), td%scissor) 
-      td%scissor = units_to_atomic(units_inp%energy, td%scissor) 
+      !%Variable TDScissor
+      !%Type float
+      !%Default 0.0
+      !%Section Time-Dependent
+      !%Description
+      !% (experimental) If set, a scissor operator will be applied in the
+      !% Hamiltonian, shifting the excitation energies by the amount
+      !% specified. By default, it is not applied.
+      !%End
+      call parse_variable(sys%namespace, 'TDScissor', CNST(0.0), td%scissor)
+      td%scissor = units_to_atomic(units_inp%energy, td%scissor)
       call messages_print_var_value(stdout, 'TDScissor', td%scissor)
 
       call propagator_init(sys%gr, sys%namespace, sys%st, td%tr, &
@@ -361,7 +361,7 @@ contains
       end if
 
     type is (system_mxll_t)
-      
+
       spacing = minval(sys%gr%mesh%spacing(1:sys%gr%sb%dim))
       default_dt = CNST(0.0426) - CNST(0.207)*spacing + CNST(0.808)*spacing**2
       default_dt = default_dt*td%mu
@@ -429,7 +429,7 @@ contains
           call messages_write(' has to be smaller than ')
           call messages_write(' TDMaxwellKSRelaxationSteps. ')
           call messages_write(' TDMaxwellTDRelaxationSteps ')
-          call messages_write(' and ') 
+          call messages_write(' and ')
           call messages_write(' TDMaxwellKSRelaxationSteps ')
           call messages_write(' have to be smaller than TDMaxSteps.')
           call messages_fatal()
@@ -496,7 +496,7 @@ contains
     CMPLX, allocatable         :: rs_charge_density_ext_t1(:), rs_charge_density_ext_t2(:)
     CMPLX, allocatable         :: rs_state_init(:,:)
     FLOAT                      :: bc_bounds(2,MAX_DIM), dt_bounds(2,MAX_DIM)
-    
+
     PUSH_SUB(td_run)
 
 
@@ -521,7 +521,7 @@ contains
         else
           !complex wfs are required for Ehrenfest
           call states_elec_allocate_wfns(st, gr%mesh, TYPE_CMPLX, packed=.true.)
-        end if 
+        end if
       else
         call states_elec_allocate_wfns(st, gr%mesh, packed=.true.)
         call scf_init(td%scf, sys%namespace, sys%gr, sys%geo, sys%st, sys%mc, sys%hm)
@@ -619,13 +619,13 @@ contains
               call kick_apply(gr%mesh, st, td%ions, geo, sys%hm%ep%kick, sys%hm%psolver, pcm = sys%hm%pcm)
             end if
             call td_write_kick(sys%outp, sys%namespace, gr%mesh, sys%hm%ep%kick, geo, iter)
-            !We activate the sprial BC only after the kick, 
+            !We activate the sprial BC only after the kick,
             !to be sure that the first iteration corresponds to the ground state
             if(gr%der%boundaries%spiralBC) gr%der%boundaries%spiral = .true.
           end if
         end if
 
-        ! in case use scdm localized states for exact exchange and request a new localization             
+        ! in case use scdm localized states for exact exchange and request a new localization
         if(sys%hm%scdm_EXX) scdm_is_local = .false.
 
         ! time iterate the system, one time step.
@@ -640,9 +640,9 @@ contains
         end select
 
         !Apply mask absorbing boundaries
-        if(sys%hm%bc%abtype == MASK_ABSORBING) call zvmask(gr%mesh, sys%hm, st) 
+        if(sys%hm%bc%abtype == MASK_ABSORBING) call zvmask(gr%mesh, sys%hm, st)
 
-        !Photoelectron stuff 
+        !Photoelectron stuff
         if (td%pesv%calc_spm .or. td%pesv%calc_mask .or. td%pesv%calc_flux) then
           call pes_calc(td%pesv, sys%namespace, gr%mesh, st, td%dt, iter, gr, sys%hm, stopping)
         end if
@@ -669,7 +669,7 @@ contains
 
     type is (system_mxll_t)
 
-      SAFE_ALLOCATE(sys%st%energy_rate(1:td%max_iter)) 
+      SAFE_ALLOCATE(sys%st%energy_rate(1:td%max_iter))
       SAFE_ALLOCATE(sys%st%delta_energy(1:td%max_iter))
       SAFE_ALLOCATE(sys%st%energy_via_flux_calc(1:td%max_iter))
       SAFE_ALLOCATE(sys%st%trans_energy_rate(1:td%max_iter))
@@ -693,14 +693,14 @@ contains
       SAFE_ALLOCATE(rs_charge_density_ext_t1(1:sys%gr%mesh%np_part))
       SAFE_ALLOCATE(rs_charge_density_ext_t2(1:sys%gr%mesh%np_part))
 
-      SAFE_ALLOCATE(rs_state_init(1:sys%gr%mesh%np_part, 1:sys%st%d%dim)) 
+      SAFE_ALLOCATE(rs_state_init(1:sys%gr%mesh%np_part, 1:sys%st%d%dim))
       rs_state_init(:,:) = M_z0
 
       td%energy_update_iter = 1
-      
+
       call propagator_mxll_init(sys%gr, sys%namespace, sys%st, sys%hm, td%tr_mxll)
       call states_mxll_allocate(sys%st, sys%gr%mesh)
-      call external_current_init(sys%st, sys%namespace, sys%gr%mesh) 
+      call external_current_init(sys%st, sys%namespace, sys%gr%mesh)
       sys%hm%propagation_apply = .true.
 
       if (parse_is_defined(sys%namespace, 'UserDefinedMaxwellIncidentWaves') .and. (td%tr_mxll%bc_plane_waves)) then
@@ -794,7 +794,7 @@ contains
         M_ZERO
       call messages_info(1)
         write(*,*) 'iter', iter, td%max_iter
-      
+
       etime = loct_clock()
       propagation_mxll: do iter = td%iter, td%max_iter
         write(*,*) 'iter', iter
@@ -980,7 +980,7 @@ contains
 
       select type (sys)
       type is (system_t)
-      
+
       !%Variable TDFreezeOrbitals
       !%Type integer
       !%Default 0
@@ -1203,7 +1203,7 @@ contains
 
       select type (sys)
       type is (system_t)
-      
+
       call td_write_iter(write_handler, sys%namespace, sys%outp, gr, st, sys%hm, geo, sys%hm%ep%kick, td%dt, 0)
 
       ! I apply the delta electric field *after* td_write_iter, otherwise the
@@ -1274,7 +1274,7 @@ contains
 
       call io_close(iunit)
       end select
-      
+
       POP_SUB(td_run.td_read_coordinates)
     end subroutine td_read_coordinates
 

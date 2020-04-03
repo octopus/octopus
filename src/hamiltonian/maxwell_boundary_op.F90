@@ -1102,7 +1102,7 @@ contains
     POP_SUB(maxwell_medium_points_mapping)
   end subroutine maxwell_medium_points_mapping
 
-  
+
   ! ---------------------------------------------------------
   subroutine bc_mxll_generate_pml(bc, gr, bounds, dt)
     type(bc_mxll_t),    intent(inout) :: bc

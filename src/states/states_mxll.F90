@@ -215,7 +215,7 @@ contains
     POP_SUB(states_mxll_null)
   end subroutine states_mxll_null
 
-  
+
   ! ---------------------------------------------------------
   subroutine states_mxll_init(st, namespace, gr, geo)
     type(states_mxll_t), target, intent(inout) :: st
@@ -569,7 +569,7 @@ contains
         magnetic_field(ip, :) = sqrt(M_TWO*P_mu) * rs_sign * aimag(rs_state(ip, :))
       end if
    end do
-   
+
    POP_SUB(get_magnetic_field_state)
 
   end subroutine get_magnetic_field_state

@@ -61,7 +61,7 @@ module propagator_base_oct_m
     type(propagation_ops_elec_t) :: propagation_ops_elec
   end type propagator_t
 
-  
+
   type propagator_mxll_t
     integer             :: tr_method
     integer             :: op_method
@@ -75,7 +75,7 @@ module propagator_base_oct_m
     logical             :: bc_medium         = .false.
     type(exponential_t) :: te
     integer             :: inter_steps
-    FLOAT               :: delay_time 
+    FLOAT               :: delay_time
     FLOAT               :: scf_threshold
     logical             :: plane_waves_in_box
     integer             :: tr_etrs_approx

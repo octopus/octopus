@@ -93,7 +93,7 @@ module propagator_mxll_oct_m
     maxwell_mask,                            &
     td_function_mxll_init,                   &
     plane_waves_in_box_calculation
-    
+
 contains
 
   ! ---------------------------------------------------------
@@ -110,7 +110,7 @@ contains
     logical :: plane_waves_set = .false.
 
     PUSH_SUB(propagator_mxll_init)
-   
+
     !%Variable MaxwellTDPropagator
     !%Type integer
     !%Default etrs
@@ -134,7 +134,7 @@ contains
     !% Example:
     !%
     !% <tt>%MaxwellBoundaryConditions
-    !% <br>&nbsp;&nbsp;   zero | mirror_pec | consant 
+    !% <br>&nbsp;&nbsp;   zero | mirror_pec | consant
     !% <br>%</tt>
     !%
     !% Description follows
@@ -355,7 +355,7 @@ contains
     !% should be performed self-consistently.  In practice, for most
     !% purposes this is not necessary, except perhaps in the first
     !% iterations. This variable holds the number of propagation steps
-    !% for which the propagation is done self-consistently. 
+    !% for which the propagation is done self-consistently.
     !%
     !% This variable controls the accuracy threshold for the self consistency.
     !%End
@@ -401,7 +401,7 @@ contains
     PUSH_SUB(propagation_mxll_etrs)
 
 
-            
+
     if (tr%plane_waves_in_box) then
       call plane_waves_in_box_calculation(hm%bc, time+dt, gr, st, hm, rs_state)
       POP_SUB(propagation_mxll_etrs)
@@ -418,7 +418,7 @@ contains
       ff_dim = 6
     else if (hm%operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE_GAUSS) then
       ff_dim = 4
-    else 
+    else
       ff_dim = 3
     end if
 
@@ -441,7 +441,7 @@ contains
 
       message(1) = "Maxwell-matter coupling or external current not implemented yet"
       call messages_fatal(1)
-      
+
     end if
 
     do ii=1, inter_steps
@@ -633,7 +633,7 @@ contains
       call messages_fatal(1)
     else if (hm%operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE_GAUSS) then
       call transform_rs_state_to_4x4_rs_state_forward(rs_state, ff_rs_state)
-    else 
+    else
       ff_rs_state(:,1:3) = rs_state(:,1:3)
     end if
 
@@ -650,7 +650,7 @@ contains
       call transform_rs_state_to_6x6_rs_state_backward(ff_rs_state, rs_state)
     else if (hm%operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE_MEDIUM) then
       call transform_rs_state_to_4x4_rs_state_backward(ff_rs_state, rs_state)
-    else 
+    else
       rs_state(:,1:3) = ff_rs_state(:,1:3)
     end if
 
@@ -669,7 +669,7 @@ contains
       call transform_rs_densities_to_6x6_rs_densities_forward(rs_charge_density, rs_current_density, ff_density)
     else if (hm%operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE_MEDIUM) then
       call transform_rs_densities_to_4x4_rs_densities_forward(rs_charge_density, rs_current_density, ff_density)
-    else 
+    else
       ff_density(:,1:3) = rs_current_density(:,1:3)
     end if
 
@@ -688,7 +688,7 @@ contains
       call transform_rs_densities_to_6x6_rs_densities_backward(ff_density, rs_charge_density, rs_current_density)
     else if (hm%operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE_MEDIUM) then
       call transform_rs_densities_to_4x4_rs_densities_backward(ff_density, rs_charge_density, rs_current_density)
-    else 
+    else
       rs_current_density(:,1:3) = ff_density(:,1:3)
     end if
 
@@ -882,7 +882,7 @@ contains
        ! check what other transverse field methods are needed
 
        ! trans_calc_method == OPTION__MAXWELLTRANSFIELDCALCULATIONMETHOD__TRANS_FIELD_POISSON
-       
+
         ! plane waves subtraction
         if (tr_mxll%bc_plane_waves .and. hm_mxll%plane_waves_apply) then
           transverse_field(1:np,:) = field(1:np,:) - st_mxll%rs_state_plane_waves(1:np,:)
@@ -895,14 +895,14 @@ contains
         if (tr_mxll%bc_plane_waves .and. hm_mxll%plane_waves_apply) then
           transverse_field(1:np,:) = transverse_field(1:np,:) + st_mxll%rs_state_plane_waves(1:np,:)
         end if
- 
+
     else
 
       transverse_field(:,:) = field
 
     end if
 
- 
+
     POP_SUB(get_vector_pot_and_transverse_field)
 
     contains
@@ -1227,7 +1227,7 @@ contains
           st%surface_grid_points_number(2,idx1,idx2) = st%surface_grid_points_number(2,idx1,idx2)+1
           if (nn_max < st%surface_grid_points_number(2,idx1,idx2)) then
             nn_max = st%surface_grid_points_number(2,idx1,idx2)
-          end if 
+          end if
         end if
       end do
     end do
@@ -1470,7 +1470,7 @@ contains
 
   !----------------------------------------------------------
   subroutine energy_mxll_calc(gr, st, hm, rs_field, mx_energy, mx_e_energy, mx_b_energy, &
-                                 mx_energy_boundary, rs_field_plane_waves, mx_energy_plane_waves) 
+                                 mx_energy_boundary, rs_field_plane_waves, mx_energy_plane_waves)
     type(grid_t),        intent(in)  :: gr
     type(states_mxll_t),      intent(in)  :: st
     type(hamiltonian_mxll_t), intent(in)  :: hm
@@ -1500,7 +1500,7 @@ contains
     SAFE_ALLOCATE(tmp_pw(1:gr%mesh%np))
 
 
-    call energy_density_calc(gr, st, rs_field, energy_density, & 
+    call energy_density_calc(gr, st, rs_field, energy_density, &
                                      e_energy_density, b_energy_density,       &
                                      hm%plane_waves, &
                                      rs_field_plane_waves, energy_density_plane_waves)
@@ -1598,7 +1598,7 @@ contains
     do iy=1, iy_max
       do iz=1, iz_max
         do ip_surf=1, st%surface_grid_points_number(1,iy,iz)
-          tmp_surf(1,1,iy,iz,:) = tmp_surf(1,1,iy,iz,:) & 
+          tmp_surf(1,1,iy,iz,:) = tmp_surf(1,1,iy,iz,:) &
                                 + tmp_global(st%surface_grid_points_map(1,1,iy,iz,ip_surf),:)
           tmp_surf(2,1,iy,iz,:) = tmp_surf(2,1,iy,iz,:) &
                                 + tmp_global(st%surface_grid_points_map(2,1,iy,iz,ip_surf),:)
@@ -1716,7 +1716,7 @@ contains
     do iy=1, iy_max
       do iz=1, iz_max
         do ip_surf=1, st%surface_grid_points_number(1,iy,iz)
-          tmp_surf(1,1,iy,iz,:) = tmp_surf(1,1,iy,iz,:) & 
+          tmp_surf(1,1,iy,iz,:) = tmp_surf(1,1,iy,iz,:) &
                                 + tmp_global(st%surface_grid_points_map(1,1,iy,iz,ip_surf),:)
           tmp_surf(2,1,iy,iz,:) = tmp_surf(2,1,iy,iz,:) &
                                 + tmp_global(st%surface_grid_points_map(2,1,iy,iz,ip_surf),:)
@@ -1830,7 +1830,7 @@ contains
     do iy=1, iy_max
       do iz=1, iz_max
         do ip_surf=1, st%surface_grid_points_number(1,iy,iz)
-          tmp_surf(1,1,iy,iz,:) = tmp_surf(1,1,iy,iz,:) & 
+          tmp_surf(1,1,iy,iz,:) = tmp_surf(1,1,iy,iz,:) &
                                 + tmp_global(st%surface_grid_points_map(1,1,iy,iz,ip_surf),:)
           tmp_surf(2,1,iy,iz,:) = tmp_surf(2,1,iy,iz,:) &
                                 + tmp_global(st%surface_grid_points_map(2,1,iy,iz,ip_surf),:)
@@ -1933,7 +1933,7 @@ contains
     do iy=1, iy_max
       do iz=1, iz_max
         do ip_surf=1, st%surface_grid_points_number(1,iy,iz)
-          tmp_surf(1,1,iy,iz,:) = tmp_surf(1,1,iy,iz,:) & 
+          tmp_surf(1,1,iy,iz,:) = tmp_surf(1,1,iy,iz,:) &
                                 + tmp_global(st%surface_grid_points_map(1,1,iy,iz,ip_surf),:)
           tmp_surf(2,1,iy,iz,:) = tmp_surf(2,1,iy,iz,:) &
                                 + tmp_global(st%surface_grid_points_map(2,1,iy,iz,ip_surf),:)
@@ -2054,11 +2054,11 @@ contains
     do iy=1, iy_max
       do iz=1, iz_max
         do ip_surf=1, st%surface_grid_points_number(1,iy,iz)
-          e_surf(1,1,iy,iz,:) = e_surf(1,1,iy,iz,:) & 
+          e_surf(1,1,iy,iz,:) = e_surf(1,1,iy,iz,:) &
                                 + e_field_global(st%surface_grid_points_map(1,1,iy,iz,ip_surf),:)
           e_surf(2,1,iy,iz,:) = e_surf(2,1,iy,iz,:) &
                                 + e_field_global(st%surface_grid_points_map(2,1,iy,iz,ip_surf),:)
-          b_surf(1,1,iy,iz,:) = b_surf(1,1,iy,iz,:) & 
+          b_surf(1,1,iy,iz,:) = b_surf(1,1,iy,iz,:) &
                                 + b_field_global(st%surface_grid_points_map(1,1,iy,iz,ip_surf),:)
           b_surf(2,1,iy,iz,:) = b_surf(2,1,iy,iz,:) &
                                 + b_field_global(st%surface_grid_points_map(2,1,iy,iz,ip_surf),:)
@@ -2196,11 +2196,11 @@ contains
     do iy=1, iy_max
       do iz=1, iz_max
         do ip_surf=1, st%surface_grid_points_number(1,iy,iz)
-          e_surf(1,1,iy,iz,:) = e_surf(1,1,iy,iz,:) & 
+          e_surf(1,1,iy,iz,:) = e_surf(1,1,iy,iz,:) &
                                 + e_field_global(st%surface_grid_points_map(1,1,iy,iz,ip_surf),:)
           e_surf(2,1,iy,iz,:) = e_surf(2,1,iy,iz,:) &
                                 + e_field_global(st%surface_grid_points_map(2,1,iy,iz,ip_surf),:)
-          b_surf(1,1,iy,iz,:) = b_surf(1,1,iy,iz,:) & 
+          b_surf(1,1,iy,iz,:) = b_surf(1,1,iy,iz,:) &
                                 + b_field_global(st%surface_grid_points_map(1,1,iy,iz,ip_surf),:)
           b_surf(2,1,iy,iz,:) = b_surf(2,1,iy,iz,:) &
                                 + b_field_global(st%surface_grid_points_map(2,1,iy,iz,ip_surf),:)
@@ -2798,7 +2798,7 @@ contains
     FLOAT, allocatable  :: tmp(:), tmp_grad(:,:)
 
     PUSH_SUB(generate_medium_boxes)
- 
+
     SAFE_ALLOCATE(tmp(gr%mesh%np_part))
     SAFE_ALLOCATE(tmp_grad(gr%mesh%np_part,1:gr%mesh%sb%dim))
 
@@ -2809,7 +2809,7 @@ contains
     ip_in_max = 0
     do il=1, nr_of_boxes
       do idim=1, 3
-        bounds(1,idim) = hm%medium_box_center(idim,il) - hm%medium_box_size(idim,il)/M_TWO 
+        bounds(1,idim) = hm%medium_box_center(idim,il) - hm%medium_box_size(idim,il)/M_TWO
         bounds(2,idim) = hm%medium_box_center(idim,il) + hm%medium_box_size(idim,il)/M_TWO
       end do
       ip_in=0
@@ -2871,15 +2871,15 @@ contains
             if (dd < dd_min) dd_min=dd
           end do
           hm%medium_box_ep(ip_in,il) = P_ep &
-                                                     + ( ( P_ep * hm%medium_box_ep_factor(il) - P_ep )  & 
+                                                     + ( ( P_ep * hm%medium_box_ep_factor(il) - P_ep )  &
                                                          * M_ONE/(M_ONE + exp( -M_FIVE/dd_max * (dd_min-M_TWO*dd_max)) ) )
-          hm%medium_box_mu(ip_in,il) = P_mu & 
+          hm%medium_box_mu(ip_in,il) = P_mu &
                                                      + ( ( P_mu * hm%medium_box_mu_factor(il) - P_mu ) &
                                                      * M_ONE/(M_ONE + exp( -M_FIVE/dd_max * (dd_min-M_TWO*dd_max)) ) )
           hm%medium_box_c(ip_in,il)  = &
             M_ONE/sqrt(hm%medium_box_ep(ip_in,il)*hm%medium_box_mu(ip_in,il))
           hm%medium_box_sigma_e(ip_in,il) = hm%medium_box_sigma_e_factor(il) &
-                                                          * M_ONE/(M_ONE + exp( -M_FIVE/dd_max * (dd_min-M_TWO*dd_max)) ) 
+                                                          * M_ONE/(M_ONE + exp( -M_FIVE/dd_max * (dd_min-M_TWO*dd_max)) )
           hm%medium_box_sigma_m(ip_in,il) = hm%medium_box_sigma_m(ip_in,il) &
                                                           * M_ONE/(M_ONE + exp( -M_FIVE/dd_max * (dd_min-M_TWO*dd_max)) )
         else if (hm%medium_box_shape(il) == OPTION__MAXWELLMEDIUMBOX__EDGED) then
@@ -2940,7 +2940,7 @@ contains
         end if
 
       end function check_point_in_bounds
- 
+
       logical pure function check_point_on_bounds(xx, bounds) result (check)
         FLOAT, intent(in) :: xx(:)
         FLOAT, intent(in) :: bounds(:,:)
@@ -3055,7 +3055,7 @@ contains
     CMPLX,               intent(inout) :: rs_state(:,:)
 
     integer :: ip, ic, icn
-    FLOAT   :: tf_old, tf_new 
+    FLOAT   :: tf_old, tf_new
 
     PUSH_SUB(spatial_constant_calculation)
 
@@ -3099,7 +3099,7 @@ contains
           bc%constant_rs_state(ip_in,:) = st%rs_state_const(:)
         end do
       end if
-    end if    
+    end if
 
     POP_SUB(constant_boundaries_calculation)
   end subroutine constant_boundaries_calculation
@@ -3184,10 +3184,10 @@ contains
             k_vector_abs = sqrt(sum(k_vector(:)**2))
             x_prop(:)    = mesh%x(ip,:) - vv(:) * (time - time_delay)
             rr           = sqrt(sum(x_prop(:)**2))
-            if (hm%bc%plane_waves_modus(wn) == & 
+            if (hm%bc%plane_waves_modus(wn) == &
                 OPTION__USERDEFINEDMAXWELLINCIDENTWAVES__PLANE_WAVE_MX_FUNCTION) then
               e0(:)      = hm%bc%plane_waves_e_field(:,wn)
-              e_field(:) = e0(:) * mxf(hm%bc%plane_waves_mx_function(wn), x_prop(:)) 
+              e_field(:) = e0(:) * mxf(hm%bc%plane_waves_mx_function(wn), x_prop(:))
             end if
             b_field(1:3) = M_ONE/P_c * M_ONE/k_vector_abs * dcross_product(k_vector,e_field)
             call build_rs_vector(e_field, b_field, st%rs_sign, rs_state_add, st%ep(ip), st%mu(ip))
@@ -3224,7 +3224,7 @@ contains
       ff_dim = 6
     else if (hm%operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE_GAUSS) then
       ff_dim = 4
-    else 
+    else
       ff_dim = 3
     end if
 
@@ -3259,7 +3259,7 @@ contains
     CMPLX                :: rs_state_add(MAX_DIM)
 
     PUSH_SUB(plane_waves_in_box_calculation)
-    
+
     np            = gr%mesh%np_part
     do wn=1, bc%plane_waves_number
       vv(:)        = hm%bc%plane_waves_v_vector(:,wn)
@@ -3285,10 +3285,10 @@ contains
                  bc%plane_waves_e_field_string(idim,wn))
                e_field(idim) = units_to_atomic(units_inp%energy/units_inp%length, e_field(idim))
             end do
-          else if (bc%plane_waves_modus(wn) == & 
+          else if (bc%plane_waves_modus(wn) == &
             OPTION__USERDEFINEDMAXWELLINCIDENTWAVES__PLANE_WAVE_MX_FUNCTION) then
             e0(:)      = bc%plane_waves_e_field(:,wn)
-            e_field(:) = e0(:) * mxf(bc%plane_waves_mx_function(wn), x_prop(:)) 
+            e_field(:) = e0(:) * mxf(bc%plane_waves_mx_function(wn), x_prop(:))
           end if
           b_field = M_ONE/P_c * M_ONE/k_vector_abs * dcross_product(k_vector, e_field)
           call build_rs_vector(e_field, b_field, st%rs_sign, rs_state_add, st%ep(ip), st%mu(ip))
