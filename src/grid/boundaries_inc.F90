@@ -672,6 +672,14 @@ contains
           call accel_finish()
         end if
       else
+
+        !write(message(1), '("DEBUG: ubound(phase_correction,1) = ",I10)') ubound(phase_correction, 1) 
+        !write(message(2), '("DEBUG: boundaries%mesh%np_part, boundaries%mesh%np = ",3I10)') &
+        !  boundaries%mesh%np_part, boundaries%mesh%np, &
+        !  boundaries%mesh%np_part - boundaries%mesh%np  
+
+        !call messages_warning(2)
+
         ASSERT(lbound(phase_correction, 1) == 1)
         ASSERT(ubound(phase_correction, 1) == boundaries%mesh%np_part - boundaries%mesh%np)
         ASSERT(R_TYPE_VAL == TYPE_CMPLX)
