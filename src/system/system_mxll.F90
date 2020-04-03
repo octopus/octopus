@@ -222,8 +222,6 @@ contains
     class(system_mxll_t), intent(inout) :: this
     integer,              intent(in)    :: operation
 
-    type(interaction_iterator_t) :: iter
-
     PUSH_SUB(system_mxll_do_td)
 
     select case(operation)
@@ -255,6 +253,8 @@ contains
     FLOAT,                  intent(in)    :: tol
 
     PUSH_SUB(system_mxll_is_tolerance_reached)
+
+    converged = .false.
 
     POP_SUB(system_mxll_is_tolerance_reached)
    end function system_mxll_is_tolerance_reached

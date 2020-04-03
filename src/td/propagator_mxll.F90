@@ -367,7 +367,7 @@ contains
     !%Section States
     !%Description
     !% Analytic evaluation of the incoming waves inside the box,
-    !% not doing any numerical propagation of Maxwell's equations.
+    !% not doing any numerical propagation of Maxwells equations.
     !%End
     call parse_variable(namespace, 'MaxwellPlaneWavesInBox', .false., tr%plane_waves_in_box)
     call set_medium_rs_state(st, gr, hm)
@@ -2916,7 +2916,7 @@ contains
           tmp_grad(ip,:)/(M_FOUR * hm%medium_box_mu(ip_in,il))
       end do
 
-      ! print information about the medium box -- get from Rene's version in maxwell_propagator.F90
+      ! print information about the medium box -- get from Renes version in maxwell_propagator.F90
 
       SAFE_DEALLOCATE_A(tmp)
     end do
