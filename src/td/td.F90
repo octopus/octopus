@@ -364,7 +364,6 @@ contains
 
       spacing = minval(sys%gr%mesh%spacing(1:sys%gr%sb%dim))
       default_dt = CNST(0.0426) - CNST(0.207)*spacing + CNST(0.808)*spacing**2
-      default_dt = default_dt*td%mu
 
       call parse_variable(sys%namespace, 'TDTimeStep', default_dt, td%dt, unit = units_inp%time)
 
@@ -399,6 +398,7 @@ contains
         call messages_fatal(2, namespace=sys%namespace)
       end if
 
+      td%iter = 0
 
       !%Variable TDMaxwellTDRelaxationSteps
       !%Type integer
