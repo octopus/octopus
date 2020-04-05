@@ -1,16 +1,25 @@
 # -*- coding: utf-8 mode: shell-script -*-
 
-Test       : Photoelectron linear regime (flux 1D)
+Test       : Photoelectron in 1D
 Program    : octopus
 TestGroups : short-run, photo_electron
 Enabled    : Yes
 
 
-# 1d hydrogen
+# 1d hydrogen linear
 Processors : 2
-Input      : 07-flux_1d.h1d_lin.inp
+Input      : 07-flux_1d.01-h1d_lin.inp
 Precision  : 1.0e-6
 match ; PES [val  1] ; LINEFIELD(td.general/PES_flux.power.sum, 139, 2) ; 0.7855140734E-003
 match ; PES [val  2] ; LINEFIELD(td.general/PES_flux.power.sum, 144, 2) ; 0.1752351824E-002
 match ; PES [val  3] ; LINEFIELD(td.general/PES_flux.power.sum, 149, 2) ; 0.5567889626E-003
 
+
+
+# 1d hydrogen ATI
+Processors : 2
+Input      : 07-flux_1d.02-h1d_ati.inp
+Precision  : 1.0e-6
+match ; PES [val  1] ; LINEFIELD(td.general/PES_flux.power.sum, 101, 2) ; 0.5894079909E+000
+match ; PES [val  2] ; LINEFIELD(td.general/PES_flux.power.sum, 174, 2) ; 0.1304053118E+001
+match ; PES [val  3] ; LINEFIELD(td.general/PES_flux.power.sum, 223, 2) ; 0.1012194306E+001

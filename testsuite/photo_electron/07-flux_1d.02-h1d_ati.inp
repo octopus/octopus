@@ -1,0 +1,76 @@
+CalculationMode = td
+
+Dimensions = 1
+FromScratch = YES
+
+Debug = info
+ExperimentalFeatures = YES
+
+#############################
+# GS
+#############################
+
+%Coordinates
+"H1D" | 0.0
+%
+
+%Species
+'H1D' | species_user_defined | potential_formula | '-1.0/(abs(x)+0.002)' | valence | 1
+%
+
+%UserDefinedStates
+  1 | 1 | 1 | formula | "sqrt(2)*x*exp(-abs(x))" | normalize_no
+%
+
+OnlyUserDefinedInitialStates = YES
+
+BoxShape = sphere
+Radius = 60  
+Spacing = 0.2
+
+TheoryLevel = independent_particles
+
+
+
+#############################
+# Boundaries
+#############################
+AbsorbingBoundaries = cap
+
+%ABShape
+ 20 | Radius
+%
+
+#############################
+# PES
+#############################
+PhotoElectronSpectrum = pes_flux
+
+PES_Flux_Kmax = sqrt(2*10)
+PES_Flux_DeltaK = 0.01
+PES_Flux_Shape = cub
+%PES_Flux_Lsize
+  20 | 0 | 0
+%
+
+##########################
+#LASER
+##########################
+
+omega = 1
+amplitude = 1*137
+tc=2*pi/omega
+Ntot=5
+nr=2 
+
+%TDExternalFields
+  vector_potential | 1 | 0 | 0 | omega | "trap"
+%
+
+%TDFunctions
+ "trap" | tdf_trapezoidal| amplitude | (Ntot-2*nr)*tc | Ntot*tc/2 | nr*tc
+%
+
+
+TDTimeStep = 0.008
+TDPropagationTime = (Ntot+1)*tc
