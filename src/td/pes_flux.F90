@@ -317,7 +317,7 @@ contains
           call parse_block_float(blk, 0, imdim - 1, border(imdim))
         end do
         ! Snap the face to the closest grid point
-        border(1:mdim) = floor(border(1:mdim)/mesh%spacing(1:mdim))*mesh%spacing(1:mdim)
+        border(1:mdim) = int(border(1:mdim)/mesh%spacing(1:mdim))*mesh%spacing(1:mdim)
         call parse_block_end(blk)
 
       else if (parse_is_defined(namespace, 'PES_Flux_Lsize')) then 
@@ -1634,11 +1634,12 @@ contains
 
     integer            :: stst, stend, kptst, kptend, sdim, mdim
     integer            :: ist, ik, isdim, imdim
-    integer            :: isp
+    integer            :: isp,ip
     integer            :: il, ip_local
     CMPLX, allocatable :: gpsi(:,:), psi(:)
     CMPLX, allocatable :: interp_values(:)
     logical            :: contains_isp
+    FLOAT              :: kpoint(1:3)
 
     PUSH_SUB(pes_flux_calc)
 
@@ -1666,11 +1667,28 @@ contains
       end do
       this%veca(:, this%itstep) = - this%veca(:, this%itstep)
 
+!       this%veca(:, this%itstep) = hm%hm_base%uniform_vector_potential(:)
+
       ! save wavefunctions & gradients
       do ik = kptst, kptend
         do ist = stst, stend
           do isdim = 1, sdim
             call states_elec_get_state(st, mesh, isdim, ist, ik, psi)
+            
+            if(this%surf_shape == M_CUBIC .or. this%surf_shape == M_PLANES) then
+              ! Apply the phase containing kpoint only
+              kpoint(1:mdim) = kpoints_get_point(mesh%sb%kpoints, states_elec_dim_get_kpoint_index(st%d, ik))
+
+              !$omp parallel do schedule(static)
+              do ip = 1, mesh%np_part
+                psi(ip) = exp(-M_zI*sum(mesh%x(ip, 1:mdim)*kpoint(1:mdim)))*psi(ip) 
+              end do
+              
+              
+!               psi(1: mesh%np_part) = hm%hm_base%phase(1: mesh%np_part, ik) * psi(1: mesh%np_part)
+!               call states_elec_set_phase(st%d, psi, hm%hm_base%phase(1: mesh%np_part, ik), mesh%np_part, .false.)
+            end if
+            
             call zderivatives_grad(gr%der, psi, gpsi, .true.)
 
             if(this%surf_interp) then
@@ -1937,13 +1955,13 @@ contains
       
     PUSH_SUB(pes_flux_integrate_cub_tabulate_direct_a) 
 
-!     if (kpoints_have_zero_weight_path(mesh%sb%kpoints)) then
+    if (kpoints_have_zero_weight_path(mesh%sb%kpoints)) then
       kptst     = st%d%kpt%start
       kptend    = st%d%kpt%end
-!     else
-!       kptst     = 1
-!       kptend    = 1
-!     end if
+    else
+      kptst     = 1
+      kptend    = 1
+    end if
 
     mdim      = mesh%sb%dim
 
@@ -1956,16 +1974,10 @@ contains
       SAFE_ALLOCATE(this%expkr(1:this%nsrfcpnts,ikp_start:ikp_end,kptst:kptend,1))
 
       do ik = kptst, kptend
-        if (kpoints_have_zero_weight_path(mesh%sb%kpoints)) then
-          ik_map = ik
-        else
-          ik_map = 1
-        end if
         do ikp = ikp_start, ikp_end
           do isp = 1, this%nsrfcpnts 
             this%expkr(isp,ikp,ik,1) = exp(-M_zI * sum(this%rcoords(1:mdim,isp) &
-                                                * (this%kcoords_cub(1:mdim, ikp, ik_map) + kpoints_get_point(mesh%sb%kpoints, ik))) ) &
-!                                                * this%kcoords_cub(1:mdim, ikp, ik_map)) ) &                                                
+                                                * this%kcoords_cub(1:mdim, ikp, ik)) ) &                                                
                                                 * (M_TWO*M_PI)**(-mdim/M_TWO)
       
           end do
@@ -2082,11 +2094,11 @@ contains
 
       itstep = tdstep_on_node
       do ik = kptst, kptend
-!         if (kpoints_have_zero_weight_path(mesh%sb%kpoints)) then
+        if (kpoints_have_zero_weight_path(mesh%sb%kpoints)) then
           ik_map = ik 
-!         else
-!           ik_map = 1
-!         end if
+        else
+          ik_map = 1
+        end if
         
         do ist = stst, stend
           do isdim = 1, sdim
@@ -2158,7 +2170,8 @@ contains
                 
               Jk_cub(ist, isdim, ik, ikp_start:ikp_end) = Jk_cub(ist, isdim, ik,ikp_start:ikp_end) +  &
                 phase(ikp_start:ikp_end, ik) * ( wfpw(ikp_start:ikp_end) * &
-                   (M_TWO * this%veca(n_dir, itstep) / P_c  + kpoint(n_dir) - this%kcoords_cub(n_dir, ikp_start:ikp_end, ik_map)) + &
+!                    (M_TWO * this%veca(n_dir, itstep) / P_c  + kpoint(n_dir) - this%kcoords_cub(n_dir, ikp_start:ikp_end, ik_map)) + &
+                   (M_TWO * this%veca(n_dir, itstep) / P_c  - this%kcoords_cub(n_dir, ikp_start:ikp_end, ik_map)) + &
                     M_zI * gwfpw(ikp_start:ikp_end) )
                             
 
