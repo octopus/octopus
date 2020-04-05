@@ -534,14 +534,15 @@ subroutine pes_flux_pmesh_cub(this, namespace, dim, kpoints, ll, LG, pmesh, idxZ
   
   
   integer :: ikpt,ikp, ik1, ik2, ik3
-  FLOAT   :: vec(1:3)
+  FLOAT   :: vec(1:3), tmp, min
   
   PUSH_SUB(pes_flux_pmesh_cub)
   
-  idxZero(1:3) =(/0,0,0/) 
+  idxZero(1:3) =(/(this%ll(1)+1)/2,(this%ll(2)+1)/2,(this%ll(3)+1)/2 /) 
   
   SAFE_ALLOCATE(Lp(1:this%ll(1), 1:this%ll(2), this%ll(3), krng(1):krng(2), 1:3))          
   
+  min = M_HUGE
   
   ikpt = 1
   ikp = 0
@@ -558,6 +559,13 @@ subroutine pes_flux_pmesh_cub(this, namespace, dim, kpoints, ll, LG, pmesh, idxZ
         pmesh(ik1, ik2, ik3, 1:dim) = this%kcoords_cub(1:dim, ikp, ikpt)
 
         Ekin(ik1, ik2, ik3) = sum(this%kcoords_cub(1:dim, ikp, ikpt)**2)*M_HALF
+        
+!         ! get the origin index
+!         tmp=sum(pmesh(ik1, ik2, ik3, 1:dim)**2)
+!         if (tmp<min) then
+!           min = tmp
+!           idxZero(1:3) = (/ik1, ik2, ik3/)
+!         end if
 
       end do
     end do
