@@ -310,11 +310,11 @@ contains
       ! we do not change absolute path names
       wpath = trim(path)
     else
-      if(namespace%get() == "") then
+      if(namespace%get('/') == "") then
         write(wpath, '(3a)') trim(work_dir), "/", trim(path)
       else
         ! inamespaceert namespace into path
-        write(wpath, '(5a)') trim(work_dir), "/", trim(namespace%get()), &
+        write(wpath, '(5a)') trim(work_dir), "/", trim(namespace%get('/')), &
           "/",  trim(path)
       end if
     end if

@@ -67,7 +67,7 @@ contains
       write(stderr,'(a)') 'Trying to create the following namespace:'
       if (present(parent)) then
         if (parent%len() > 0) then
-          write(stderr,'(a)') trim(parent%get()) // "/" // name
+          write(stderr,'(a)') trim(parent%get()) // "." // name
         end if
       else
         write(stderr,'(a)') name
@@ -90,14 +90,23 @@ contains
   end function namespace_init
 
   ! ---------------------------------------------------------
-  recursive function namespace_get(this) result(name)
-    class(namespace_t), intent(in) :: this
+  recursive function namespace_get(this, delimiter) result(name)
+    class(namespace_t),           intent(in) :: this
+    character(len=1),   optional, intent(in) :: delimiter
     character(len=MAX_NAMESPACE_LEN) :: name
+
+    character(len=1) :: delimiter_
+
+    if (present(delimiter)) then
+      delimiter_ = delimiter
+    else
+      delimiter_ = '.'
+    end if
 
     name = ""
     if (associated(this%parent)) then
       if (this%parent%len() > 0) then
-        name = trim(this%parent%get()) // "/"
+        name = trim(this%parent%get()) // delimiter_
       end if
     end if
     name = trim(name)//this%name
