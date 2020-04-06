@@ -1246,6 +1246,8 @@ contains
         end if
 
         call MPI_File_close(fh, mpi_err)
+        call MPI_Type_free(localtype, mpi_err)
+        call MPI_Type_free(filetype, mpi_err)
       end if
 #endif
 
