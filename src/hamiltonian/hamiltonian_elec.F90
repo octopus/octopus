@@ -383,15 +383,15 @@ contains
     !%End
     hm%mass_scaling(1:gr%sb%dim) = M_ONE
     if(parse_block(namespace, 'MassScaling', blk) == 0) then
-        ncols = parse_block_cols(blk, 0)
-        if(ncols > gr%sb%dim) then
-          call messages_input_error("MassScaling")
-        end if
-        iline = 1 ! just deal with 1 line - should be generalized
-        do icol = 1, ncols
-          call parse_block_float(blk, iline - 1, icol - 1, hm%mass_scaling(icol))
-        end do
-        call parse_block_end(blk)
+      ncols = parse_block_cols(blk, 0)
+      if(ncols > gr%sb%dim) then
+        call messages_input_error(namespace, "MassScaling")
+      end if
+      iline = 1 ! just deal with 1 line - should be generalized
+      do icol = 1, ncols
+        call parse_block_float(blk, iline - 1, icol - 1, hm%mass_scaling(icol))
+      end do
+      call parse_block_end(blk)
     end if
 
     hm%inh_term = .false.

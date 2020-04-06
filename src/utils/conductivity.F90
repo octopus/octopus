@@ -90,7 +90,7 @@
 
     call messages_obsolete_variable(global_namespace, 'PropagationSpectrumTimeStepFactor', 'ConductivitySpectrumTimeStepFactor')
     call parse_variable(global_namespace, 'ConductivitySpectrumTimeStepFactor', 1, skip)
-    if(skip <= 0) call messages_input_error('ConductivitySpectrumTimeStepFactor')
+    if(skip <= 0) call messages_input_error(global_namespace, 'ConductivitySpectrumTimeStepFactor')
 
     !%Variable ConductivityFromForces
     !%Type logical

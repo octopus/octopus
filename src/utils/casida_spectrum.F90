@@ -63,7 +63,7 @@ program casida_spectrum
 
   ! Reads the spin components. This is read here, as well as in states_init.
   call parse_variable(global_namespace, 'SpinComponents', 1, cs%ispin)
-  if(.not.varinfo_valid_option('SpinComponents', cs%ispin)) call messages_input_error('SpinComponents')
+  if(.not.varinfo_valid_option('SpinComponents', cs%ispin)) call messages_input_error(global_namespace, 'SpinComponents')
   cs%ispin = min(2, cs%ispin)
 
   !%Variable CasidaSpectrumBroadening

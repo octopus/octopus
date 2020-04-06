@@ -521,7 +521,7 @@ contains
           call messages_fatal(2)
         end if
         call parse_block_float(blk, row, 2, rsize, unit = units_inp%length)
-        if(rsize < M_ZERO) call messages_input_error('radius')
+        if(rsize < M_ZERO) call messages_input_error(namespace, 'radius')
         call parse_block_string(blk, row, 3, clist)
         nb = 0
         do ic = 1, sys%geo%natoms
@@ -529,13 +529,13 @@ contains
         end do
       case(SPHERE)
         call parse_block_float(blk, row, 2, rsize, unit = units_inp%length)
-        if(rsize < M_ZERO) call messages_input_error('radius')
+        if(rsize < M_ZERO) call messages_input_error(namespace, 'radius')
         do ic = 1, dim 
           call parse_block_float(blk, row, 2 + ic, center(ic), unit = units_inp%length)
         end do
       case(CYLINDER)
         call parse_block_float(blk, row, 2, rsize, unit = units_inp%length)
-        if(rsize < M_ZERO) call messages_input_error('radius')
+        if(rsize < M_ZERO) call messages_input_error(namespace, 'radius')
         call parse_block_float(blk, row, 3, xsize, unit = units_inp%length)
         do ic = 1, dim 
           call parse_block_float(blk, row, 3 + ic, center(ic), unit = units_inp%length)
@@ -744,7 +744,7 @@ contains
         call messages_obsolete_variable(namespace, 'LDOutputHow', 'LDOutputFormat')
         call parse_variable(namespace, 'LDOutputFormat', 0, how)
         if(.not.varinfo_valid_option('OutputFormat', how, is_flag=.true.)) then
-          call messages_input_error('LDOutputFormat')
+          call messages_input_error(namespace, 'LDOutputFormat')
         end if
         filename = 'basinsmap'
         call dio_function_output(how, trim('local.general'), trim(filename), global_namespace, &
@@ -894,7 +894,7 @@ contains
     if (extra_write) then
       call parse_variable(global_namespace, 'LDOutputFormat', 0, how)
       if(.not.varinfo_valid_option('OutputFormat', how, is_flag=.true.)) then
-        call messages_input_error('LDOutputFormat')
+        call messages_input_error(global_namespace, 'LDOutputFormat')
       end if
       dble_domain_map(1:nd, 1:sys%gr%mesh%np) = M_ZERO
       domain_mesh(1:sys%gr%mesh%np) = M_ZERO

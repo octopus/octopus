@@ -249,7 +249,7 @@ contains
     !%End
     call parse_variable(namespace, 'OCTControlFunctionRepresentation', ctr_rt, cf_common%representation)
       if(.not.varinfo_valid_option('OCTControlFunctionRepresentation', cf_common%representation)) &
-        call messages_input_error('OCTControlFunctionRepresentation')
+        call messages_input_error(namespace, 'OCTControlFunctionRepresentation')
       select case(cf_common%representation)
       case(ctr_fourier_series_h)
         write(message(1), '(a)') 'Info: The OCT control functions will be represented as a Fourier series,'
@@ -352,9 +352,9 @@ contains
     !%End
     call parse_variable(namespace, 'OCTControlFunctionType', controlfunction_mode_epsilon, cf_common%mode)
     if(.not.varinfo_valid_option('OCTControlFunctionType', cf_common%mode)) &
-      call messages_input_error('OCTControlFunctionType')
+      call messages_input_error(namespace, 'OCTControlFunctionType')
     if(cf_common%representation == ctr_rt .and. (cf_common%mode /= controlfunction_mode_epsilon) ) &
-      call messages_input_error('OCTControlFunctionType')
+      call messages_input_error(namespace, 'OCTControlFunctionType')
     call messages_print_var_option(stdout, 'OCTControlFunctionType', cf_common%mode)
 
 
@@ -453,11 +453,11 @@ contains
       ! We have a block
       ncols = parse_block_cols(blk, 0)
       if(ncols /= cf_common%no_controlfunctions) then
-        call messages_input_error('OCTPenalty')
+        call messages_input_error(namespace, 'OCTPenalty')
       else
         do ipar = 1, ncols
           call parse_block_float(blk, 0, ipar - 1, cf_common%alpha(ipar))
-          if(cf_common%alpha(ipar) <= M_ZERO) call messages_input_error('OCTPenalty')
+          if(cf_common%alpha(ipar) <= M_ZERO) call messages_input_error(namespace, 'OCTPenalty')
         end do
       end if
     else
@@ -493,7 +493,7 @@ contains
       end if
 
       no_lines = parse_block_n(blk)
-      if(no_lines /= cf_common%no_controlfunctions) call messages_input_error('OCTLaserEnvelope')
+      if(no_lines /= cf_common%no_controlfunctions) call messages_input_error(namespace, 'OCTLaserEnvelope')
 
       do irow = 1, no_lines
         call parse_block_string(blk, irow - 1, 0, expression)

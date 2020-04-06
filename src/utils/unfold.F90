@@ -140,7 +140,7 @@ program oct_unfold
   !%End
   call parse_variable(global_namespace, 'UnfoldMode', 0, run_mode)
   if( .not. varinfo_valid_option('UnfoldMode', run_mode)) then
-    call messages_input_error("UnfoldMode must be set to a value different from 0.")
+    call messages_input_error(global_namespace, "UnfoldMode must be set to a value different from 0.")
   end if
 
   !%Variable UnfoldLatticeParameters

@@ -318,7 +318,7 @@ program photoelectron_spectrum
   st_range(1:2)=(/1, st%nst/)
   resolve_states = .false.
   if(parse_block(global_namespace, 'PhotoelectronSpectrumResolveStates', blk) == 0) then
-    if(parse_block_cols(blk,0) < 2) call messages_input_error('PhotoelectronSpectrumResolveStates')
+    if(parse_block_cols(blk,0) < 2) call messages_input_error(global_namespace, 'PhotoelectronSpectrumResolveStates')
     do idim = 1, 2
       call parse_block_integer(blk, 0, idim - 1, st_range(idim))
     end do

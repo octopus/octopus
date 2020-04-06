@@ -320,7 +320,7 @@ contains
     end if
 
     if(.not.varinfo_valid_option('Output', outp%what, is_flag=.true.)) then
-      call messages_input_error('Output')
+      call messages_input_error(namespace, 'Output')
     end if
 
     if(bitand(outp%what, OPTION__OUTPUT__MMB_WFS) /= 0) then
@@ -597,7 +597,7 @@ contains
     call parse_variable(namespace, 'Output_KPT', 0_8, outp%whatBZ)
 
     if(.not.varinfo_valid_option('Output_KPT', outp%whatBZ, is_flag=.true.)) then
-      call messages_input_error('Output_KPT')
+      call messages_input_error(namespace, 'Output_KPT')
     end if
 
     if(bitand(outp%whatBZ, OPTION__OUTPUT_KPT__CURRENT_KPT) /= 0) then

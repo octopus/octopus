@@ -149,8 +149,9 @@ contains
       !%End
       
       call parse_variable(namespace, 'MagneticGaugeCorrection', GAUGE_GIPAW, this%gauge)
-      if(.not.varinfo_valid_option('MagneticGaugeCorrection', this%gauge)) &
-           call messages_input_error('MagneticGaugeCorrection')
+      if(.not.varinfo_valid_option('MagneticGaugeCorrection', this%gauge)) then
+        call messages_input_error(namespace, 'MagneticGaugeCorrection')
+      end if
 
     end if
 

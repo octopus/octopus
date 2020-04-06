@@ -125,8 +125,9 @@ contains
     !% Fullweight restriction
     !%End
     call parse_variable(namespace, 'PoissonSolverMGRestrictionMethod', 2, this%restriction_method)
-    if(.not.varinfo_valid_option('PoissonSolverMGRestrictionMethod', this%restriction_method)) &
-       call messages_input_error('PoissonSolverMGRestrictionMethod')
+    if(.not.varinfo_valid_option('PoissonSolverMGRestrictionMethod', this%restriction_method)) then
+      call messages_input_error(namespace, 'PoissonSolverMGRestrictionMethod')
+    end if
     call messages_print_var_option(stdout, "PoissonSolverMGRestrictionMethod", this%restriction_method)
 
     !%Variable PoissonSolverMGRelaxationMethod
@@ -149,8 +150,9 @@ contains
       call parse_variable(namespace, 'PoissonSolverMGRelaxationMethod', GAUSS_SEIDEL, this%relaxation_method)
     end if
 
-    if(.not.varinfo_valid_option('PoissonSolverMGRelaxationMethod', this%relaxation_method)) &
-      call messages_input_error('PoissonSolverMGRelaxationMethod')
+    if(.not.varinfo_valid_option('PoissonSolverMGRelaxationMethod', this%relaxation_method)) then
+      call messages_input_error(namespace, 'PoissonSolverMGRelaxationMethod')
+    end if
     call messages_print_var_option(stdout, "PoissonSolverMGRelaxationMethod", this%relaxation_method)
 
     !%Variable PoissonSolverMGRelaxationFactor

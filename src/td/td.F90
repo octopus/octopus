@@ -270,10 +270,10 @@ contains
     !%End
 
     call parse_variable(sys%namespace, 'TDDynamics', EHRENFEST, td%dynamics)
-    if(.not.varinfo_valid_option('TDDynamics', td%dynamics)) call messages_input_error('TDDynamics')
+    if(.not.varinfo_valid_option('TDDynamics', td%dynamics)) call messages_input_error(sys%namespace, 'TDDynamics')
     call messages_print_var_option(stdout, 'TDDynamics', td%dynamics)
     if(td%dynamics .ne. EHRENFEST) then
-      if(.not.ion_dynamics_ions_move(td%ions)) call messages_input_error('TDDynamics')
+      if(.not.ion_dynamics_ions_move(td%ions)) call messages_input_error(sys%namespace, 'TDDynamics')
     end if
 
     !%Variable RecalculateGSDuringEvolution
@@ -1147,7 +1147,7 @@ contains
         call states_elec_end(stin)
 
       else
-        call messages_input_error(trim(block_name), '"' // trim(block_name) // '" has to be specified as block.')
+        call messages_input_error(namespace, trim(block_name), '"' // trim(block_name) // '" has to be specified as block.')
       end if
       
     end if

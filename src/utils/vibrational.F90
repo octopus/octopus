@@ -78,7 +78,7 @@
 
     call messages_obsolete_variable(global_namespace, 'PropagationSpectrumTimeStepFactor', 'VibrationalSpectrumTimeStepFactor')
     call parse_variable(global_namespace, 'VibrationalSpectrumTimeStepFactor', 10, skip)
-    if(skip <= 0) call messages_input_error('VibrationalSpectrumTimeStepFactor')
+    if(skip <= 0) call messages_input_error(global_namespace, 'VibrationalSpectrumTimeStepFactor')
 
     max_freq = spectrum_nenergy_steps(spectrum)
 

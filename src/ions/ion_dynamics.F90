@@ -231,7 +231,7 @@ contains
     !%End
     
     call parse_variable(namespace, 'Thermostat', THERMO_NONE, this%thermostat)
-    if(.not.varinfo_valid_option('Thermostat', this%thermostat)) call messages_input_error('Thermostat')
+    if(.not.varinfo_valid_option('Thermostat', this%thermostat)) call messages_input_error(namespace, 'Thermostat')
     call messages_print_var_option(stdout, 'Thermostat', this%thermostat)
     
     if(this%thermostat /= THERMO_NONE) then

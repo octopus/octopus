@@ -87,7 +87,7 @@ contains
           sys => celestial_body_t(namespace_t(system_name))
           call systems%add(sys)
         case default
-          call messages_input_error('Systems')
+          call messages_input_error(namespace, 'Systems')
         end select
       end do
       call parse_block_end(blk)

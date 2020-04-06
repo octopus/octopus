@@ -160,7 +160,7 @@ contains
 
     call parse_variable(namespace, 'PhotoElectronSpectrum', PHOTOELECTRON_NONE, photoelectron_flags)
     if(.not.varinfo_valid_option('PhotoElectronSpectrum', photoelectron_flags, is_flag = .true.)) then
-      call messages_input_error('PhotoElectronSpectrum')
+      call messages_input_error(namespace, 'PhotoElectronSpectrum')
     end if
     
     pes%calc_spm  = bitand(photoelectron_flags, PHOTOELECTRON_SPM) /= 0

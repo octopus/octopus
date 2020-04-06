@@ -628,7 +628,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine messages_input_error(var, details)
+  subroutine messages_input_error(namespace, var, details)
+    type(namespace_t),          intent(in) :: namespace
     character(len=*),           intent(in) :: var
     character(len=*), optional, intent(in) :: details
 
@@ -646,7 +647,7 @@ contains
     
     call messages_write('You can get the documentation of the variable with the command:', new_line = .true.)
     call messages_write('  oct-help -p '//trim(var))
-    call messages_fatal()
+    call messages_fatal(namespace=namespace)
 
   end subroutine messages_input_error
   ! ---------------------------------------------------------

@@ -206,7 +206,7 @@ contains
         call messages_info(1)
         call scheme_nlopt()
     case default
-      call messages_input_error('OCTScheme')
+      call messages_input_error(sys%namespace, 'OCTScheme')
     end select
 
     ! do final test run: propagate initial state with optimal field

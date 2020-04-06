@@ -224,7 +224,7 @@ contains
     !% memory than other methods.
     !%End
     call parse_variable(namespace, 'LCAOStart', mode_default, this%mode)
-    if(.not.varinfo_valid_option('LCAOStart', this%mode)) call messages_input_error('LCAOStart')
+    if(.not.varinfo_valid_option('LCAOStart', this%mode)) call messages_input_error(namespace, 'LCAOStart')
 
     call messages_print_var_option(stdout, 'LCAOStart', this%mode)
 
@@ -1122,7 +1122,7 @@ contains
       !% the <tt>AtomsMagnetDirection</tt> block has to be set.
       !%End
       call parse_variable(namespace, 'GuessMagnetDensity', INITRHO_FERROMAGNETIC, gmd_opt)
-      if(.not.varinfo_valid_option('GuessMagnetDensity', gmd_opt)) call messages_input_error('GuessMagnetDensity')
+      if(.not.varinfo_valid_option('GuessMagnetDensity', gmd_opt)) call messages_input_error(namespace, 'GuessMagnetDensity')
       call messages_print_var_option(stdout, 'GuessMagnetDensity', gmd_opt)
     end if
 

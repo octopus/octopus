@@ -350,7 +350,7 @@ contains
     !%End
     call parse_variable(namespace, 'PCMEpsilonModel', PCM_DEBYE_MODEL, pcm%which_eps)
     call messages_print_var_value(stdout, "PCMEpsilonModel", pcm%which_eps)
-    if (.not. varinfo_valid_option('PCMEpsilonModel', pcm%which_eps)) call messages_input_error('PCMEpsilonModel')
+    if (.not. varinfo_valid_option('PCMEpsilonModel', pcm%which_eps)) call messages_input_error(namespace, 'PCMEpsilonModel')
 
     if (pcm%tdlevel == PCM_TD_EOM .and. pcm%which_eps == PCM_DRUDE_MODEL) &
       call messages_experimental("Drude-Lorentz EOM-PCM is experimental")

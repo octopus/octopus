@@ -179,7 +179,7 @@ contains
     this%pos = M_ZERO
     if (parse_block(this%namespace, 'CelestialBodyInitialPosition', blk) == 0) then
       n_rows = parse_block_n(blk)
-      if (n_rows > 1) call  messages_input_error('CelestialBodyInitialPosition')
+      if (n_rows > 1) call  messages_input_error(this%namespace, 'CelestialBodyInitialPosition')
 
       do idir = 1, this%space%dim
         call parse_block_float(blk, 0, idir - 1, this%pos(idir))
@@ -197,7 +197,7 @@ contains
     this%vel = M_ZERO
     if (parse_block(this%namespace, 'CelestialBodyInitialVelocity', blk) == 0) then
       n_rows = parse_block_n(blk)
-      if (n_rows > 1) call  messages_input_error('CelestialBodyInitialVelocity')
+      if (n_rows > 1) call  messages_input_error(this%namespace, 'CelestialBodyInitialVelocity')
       do idir = 1, this%space%dim
         call parse_block_float(blk, 0, idir - 1, this%vel(idir))
       end do

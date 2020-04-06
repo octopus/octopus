@@ -495,7 +495,7 @@ contains
     !% (Experimental) Beeman propagator with predictor-corrector scheme.
     !%End
     call parse_variable(this%namespace, 'TDSystemPropagator', PROP_VERLET, prop)
-    if(.not.varinfo_valid_option('TDSystemPropagator', prop)) call messages_input_error('TDSystemPropagator')
+    if(.not.varinfo_valid_option('TDSystemPropagator', prop)) call messages_input_error(this%namespace, 'TDSystemPropagator')
     call messages_print_var_option(stdout, 'TDSystemPropagator', prop)
 
     select case(prop)

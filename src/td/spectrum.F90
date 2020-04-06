@@ -144,7 +144,7 @@ contains
     call parse_variable(namespace, 'PropagationSpectrumType', SPECTRUM_ABSORPTION, spectrum%spectype)
 
     if(.not.varinfo_valid_option('PropagationSpectrumType', spectrum%spectype)) then
-      call messages_input_error('PropagationSpectrumType')
+      call messages_input_error(namespace, 'PropagationSpectrumType')
     end if
     call messages_print_var_option(stdout, 'PropagationSpectrumType', spectrum%spectype)
       
@@ -161,7 +161,7 @@ contains
     !%End
     call parse_variable(namespace, 'SpectrumMethod', SPECTRUM_FOURIER, spectrum%method)
     if(.not.varinfo_valid_option('SpectrumMethod', spectrum%method)) then
-      call messages_input_error('SpectrumMethod')
+      call messages_input_error(namespace, 'SpectrumMethod')
     end if
     call messages_print_var_option(stdout, 'SpectrumMethod', spectrum%method)
 
@@ -205,7 +205,7 @@ contains
     call parse_variable(namespace, 'PropagationSpectrumDampMode', default, spectrum%damp)
 
     if(.not.varinfo_valid_option('PropagationSpectrumDampMode', spectrum%damp)) then
-      call messages_input_error('PropagationSpectrumDampMode')
+      call messages_input_error(namespace, 'PropagationSpectrumDampMode')
     end if
     call messages_print_var_option(stdout, 'PropagationSpectrumDampMode', spectrum%damp)
 
@@ -232,7 +232,7 @@ contains
     !%End
     call parse_variable(namespace, 'PropagationSpectrumTransform', SPECTRUM_TRANSFORM_SIN, spectrum%transform)
     if(.not.varinfo_valid_option('PropagationSpectrumTransform', spectrum%transform)) then
-      call messages_input_error('PropagationSpectrumTransform')
+      call messages_input_error(namespace, 'PropagationSpectrumTransform')
     end if
     call messages_print_var_option(stdout, 'PropagationSpectrumTransform', spectrum%transform)
 

@@ -273,7 +273,7 @@ contains
       !% It must satisfy <tt>EigensolverImaginaryTime > 0</tt>.
       !%End
       call parse_variable(namespace, 'EigensolverImaginaryTime', CNST(10.0), eigens%imag_time)
-      if(eigens%imag_time <= M_ZERO) call messages_input_error('EigensolverImaginaryTime')
+      if(eigens%imag_time <= M_ZERO) call messages_input_error(namespace, 'EigensolverImaginaryTime')
       
       call exponential_init(eigens%exponential_operator, namespace)
       
@@ -301,7 +301,7 @@ contains
       call messages_experimental("preconditioned steepest descent (PSD) eigensolver")
 
     case default
-      call messages_input_error('Eigensolver')
+      call messages_input_error(namespace, 'Eigensolver')
     end select
 
     call messages_print_stress(stdout, 'Eigensolver', namespace=namespace)
@@ -339,7 +339,7 @@ contains
     !% increase it if you know what you are doing).
     !%End
     call parse_variable(namespace, 'EigensolverMaxIter', default_iter, eigens%es_maxiter)
-    if(eigens%es_maxiter < 1) call messages_input_error('EigensolverMaxIter')
+    if(eigens%es_maxiter < 1) call messages_input_error(namespace, 'EigensolverMaxIter')
 
     if(eigens%es_maxiter > default_iter) then
       call messages_write('You have specified a large number of eigensolver iterations (')

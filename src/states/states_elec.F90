@@ -272,7 +272,7 @@ contains
     !% directions at different points. This vector is always in 3D regardless of <tt>Dimensions</tt>.
     !%End
     call parse_variable(namespace, 'SpinComponents', UNPOLARIZED, st%d%ispin)
-    if(.not.varinfo_valid_option('SpinComponents', st%d%ispin)) call messages_input_error('SpinComponents')
+    if(.not.varinfo_valid_option('SpinComponents', st%d%ispin)) call messages_input_error(namespace, 'SpinComponents')
     call messages_print_var_option(stdout, 'SpinComponents', st%d%ispin)
     ! Use of spinors requires complex wavefunctions.
     if (st%d%ispin == SPINORS) call states_set_complex(st)
@@ -732,23 +732,18 @@ contains
 
       ncols = parse_block_cols(blk, 0)
       if(ncols > st%nst) then
-        message(1) = "Too many columns in block Occupations."
-        call messages_warning(1, namespace=namespace)
-        call messages_input_error("Occupations")
+        call messages_input_error(namespace, "Occupations", "Too many columns in block Occupations.")
       end if
 
       nrows = parse_block_n(blk)
       if(nrows /= st%d%nik) then
-        message(1) = "Wrong number of rows in block Occupations."
-        call messages_warning(1, namespace=namespace)
-        call messages_input_error("Occupations")
+        call messages_input_error(namespace, "Occupations", "Wrong number of rows in block Occupations.")
       end if
 
       do ik = 1, st%d%nik - 1
         if(parse_block_cols(blk, ik) /= ncols) then
-          message(1) = "All rows in block Occupations must have the same number of columns."
-          call messages_warning(1, namespace=namespace)
-          call messages_input_error("Occupations")
+          call messages_input_error(namespace, "Occupations", &
+            "All rows in block Occupations must have the same number of columns.")
         end if
       end do
 
@@ -950,7 +945,7 @@ contains
         do j = 1, 3
           call parse_block_float(blk, i-1, j-1, st%spin(j, i, 1))
         end do
-        if( abs(sum(st%spin(1:3, i, 1)**2) - M_FOURTH) > CNST(1.0e-6)) call messages_input_error('InitialSpins')
+        if( abs(sum(st%spin(1:3, i, 1)**2) - M_FOURTH) > CNST(1.0e-6)) call messages_input_error(namespace, 'InitialSpins')
       end do
       call parse_block_end(blk)
       st%fixed_spins = .true.
@@ -1308,7 +1303,9 @@ contains
     
     call parse_variable(namespace, 'StatesOrthogonalization', default, st%d%orth_method)
 
-    if(.not.varinfo_valid_option('StatesOrthogonalization', st%d%orth_method)) call messages_input_error('StatesOrthogonalization')
+    if(.not.varinfo_valid_option('StatesOrthogonalization', st%d%orth_method)) then
+      call messages_input_error(namespace, 'StatesOrthogonalization')
+    end if
     call messages_print_var_option(stdout, 'StatesOrthogonalization', st%d%orth_method)
 
     !%Variable StatesCLDeviceMemory

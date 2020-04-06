@@ -265,7 +265,7 @@ contains
 
 
     if(.not.varinfo_valid_option('OCTTargetOperator', tg%type)) &
-      call messages_input_error('OCTTargetOperator')
+      call messages_input_error(namespace, 'OCTTargetOperator')
 
     call states_elec_copy(tg%st, stin)
     call states_elec_deallocate_wfns(tg%st)

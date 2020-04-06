@@ -121,9 +121,7 @@
           end do
           call parse_block_end(blk)
         else
-          message(1) = '"OCTTargetDensityState" has to be specified as block.'
-          call messages_info(1)
-          call messages_input_error('OCTTargetDensity')
+          call messages_input_error(namespace, 'OCTTargetDensityFromState', 'Has to be specified as block.')
         end if
 
       else
@@ -242,11 +240,9 @@
     if (target_mode(tg)  ==  oct_targetmode_td) then
       call parse_variable(namespace, 'OCTStartIterCurrTg', 0, tg%strt_iter_curr_tg)
       if (tg%strt_iter_curr_tg  <  0) then
-        message(1) = 'OCTStartIterCurrTg must be positive.'
-        call messages_fatal(1)
+        call messages_input_error(namespace, 'OCTStartIterCurrTg', 'Must be positive.')
       elseif (tg%strt_iter_curr_tg >= td%max_iter) then
-        message(1) = 'OCTStartIterCurrTg has to be  <  TDMaximumIter.'
-        call messages_fatal(1)
+        call messages_input_error(namespace, 'OCTStartIterCurrTg', 'Has to be  <  TDMaximumIter.')
       end if
       write(message(1), '(a,i3)')   'Info: TargetMode = ', target_mode(tg)
       write(message(2), '(a,i8)') 'Info: OCTStartIterCurrTg = ',  tg%strt_iter_curr_tg
@@ -314,9 +310,7 @@
                              
         call parse_block_end(blk)     
       else
-        message(1) = '"OCTSpatialCurrWeight" has to be specified as a block.'
-        call messages_info(1)
-        call messages_input_error('OCTEvalBoxCurrTg')
+        call messages_input_error(namespace, 'OCTSpatialCurrWeight', 'Has to be specified as a block.')
       end if
     end if
 

@@ -143,7 +143,7 @@ contains
     !%End
     call messages_obsolete_variable(namespace, 'OEP_Level', 'OEPLevel')
     call parse_variable(namespace, 'OEPLevel', XC_OEP_KLI, oep%level)
-    if(.not. varinfo_valid_option('OEPLevel', oep%level)) call messages_input_error('OEPLevel')
+    if(.not. varinfo_valid_option('OEPLevel', oep%level)) call messages_input_error(namespace, 'OEPLevel')
 
     if(oep%level /= XC_OEP_NONE) then
 

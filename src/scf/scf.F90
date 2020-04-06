@@ -319,7 +319,7 @@ contains
     if(hm%theory_level == INDEPENDENT_PARTICLES) mixdefault = OPTION__MIXFIELD__NONE
 
     call parse_variable(namespace, 'MixField', mixdefault, scf%mix_field)
-    if(.not.varinfo_valid_option('MixField', scf%mix_field)) call messages_input_error('MixField')
+    if(.not.varinfo_valid_option('MixField', scf%mix_field)) call messages_input_error(namespace, 'MixField')
     call messages_print_var_option(stdout, 'MixField', scf%mix_field, "what to mix during SCF cycles")
 
     if (scf%mix_field == OPTION__MIXFIELD__POTENTIAL .and. hm%theory_level == INDEPENDENT_PARTICLES) then

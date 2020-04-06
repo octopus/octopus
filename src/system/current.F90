@@ -109,7 +109,7 @@ contains
     !%End
 
     call parse_variable(namespace, 'CurrentDensity', CURRENT_GRADIENT_CORR, this%method)
-    if(.not.varinfo_valid_option('CurrentDensity', this%method)) call messages_input_error('CurrentDensity')
+    if(.not.varinfo_valid_option('CurrentDensity', this%method)) call messages_input_error(namespace, 'CurrentDensity')
     if(this%method /= CURRENT_GRADIENT_CORR) then
       call messages_experimental("CurrentDensity /= gradient_corrected")
     end if

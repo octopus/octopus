@@ -223,10 +223,12 @@ contains
 
     call parse_variable(namespace, 'DerivativesStencil', default_stencil, der%stencil_type)
     
-    if(.not.varinfo_valid_option('DerivativesStencil', der%stencil_type)) call messages_input_error('DerivativesStencil')
+    if(.not.varinfo_valid_option('DerivativesStencil', der%stencil_type)) then
+      call messages_input_error(namespace, 'DerivativesStencil')
+    end if
     call messages_print_var_option(stdout, "DerivativesStencil", der%stencil_type)
 
-    if(use_curvilinear  .and.  der%stencil_type < DER_CUBE) call messages_input_error('DerivativesStencil')
+    if(use_curvilinear  .and.  der%stencil_type < DER_CUBE) call messages_input_error(namespace, 'DerivativesStencil')
     if(der%stencil_type == DER_VARIATIONAL) then
       call parse_variable(namespace, 'DerivativesLaplacianFilter', M_ONE, der%lapl_cutoff)
     end if
@@ -272,7 +274,7 @@ contains
     call parse_variable(namespace, 'ParallelizationOfDerivatives', NON_BLOCKING, der%comm_method)
     
     if(.not. varinfo_valid_option('ParallelizationOfDerivatives', der%comm_method)) then
-      call messages_input_error('ParallelizationOfDerivatives')
+      call messages_input_error(namespace, 'ParallelizationOfDerivatives')
     end if
 
     call messages_obsolete_variable(namespace, 'OverlapDerivatives', 'ParallelizationOfDerivatives')

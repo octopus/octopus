@@ -118,7 +118,7 @@ contains
     call parse_variable(namespace, 'ResponseMethod', LR, get_resp_method)
 
     if(.not.varinfo_valid_option('ResponseMethod', get_resp_method)) then
-      call messages_input_error('ResponseMethod')
+      call messages_input_error(namespace, 'ResponseMethod')
     end if
 
     POP_SUB(get_resp_method)

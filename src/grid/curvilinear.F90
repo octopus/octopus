@@ -101,7 +101,7 @@ contains
     !% (NOT WORKING).
     !%End
     call parse_variable(namespace, 'CurvMethod', CURV_METHOD_UNIFORM, cv%method)
-    if(.not.varinfo_valid_option('CurvMethod', cv%method)) call messages_input_error('CurvMethod')
+    if(.not.varinfo_valid_option('CurvMethod', cv%method)) call messages_input_error(namespace, 'CurvMethod')
     call messages_print_var_option(stdout, "CurvMethod", cv%method)
 
     ! FIXME: The other two methods are apparently not working
