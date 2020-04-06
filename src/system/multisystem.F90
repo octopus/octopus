@@ -81,10 +81,10 @@ contains
 
         select case (system_type)
         case (SYSTEM_ELECTRONIC)
-          sys => system_init(namespace_t(system_name))
+          sys => system_init(namespace_t(system_name, parent=namespace))
           call systems%add(sys)
         case (SYSTEM_CELESTIAL_BODY)
-          sys => celestial_body_t(namespace_t(system_name))
+          sys => celestial_body_t(namespace_t(system_name, parent=namespace))
           call systems%add(sys)
         case default
           call messages_input_error(namespace, 'Systems')
