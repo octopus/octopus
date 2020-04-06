@@ -156,7 +156,10 @@ contains
     end if
     ! get the batch data if it is on the GPU
     if(this%status() == BATCH_DEVICE_PACKED) call this%do_unpack(copy, force = .true.)
-    if(this%status() == BATCH_PACKED) call this%do_unpack(copy, force = .true.)
+    ! unpack if still packed and if initial status was unpacked
+    if(this%status() == BATCH_PACKED .and. this%initial_status == BATCH_NOT_PACKED) then
+      call this%do_unpack(copy, force = .true.)
+    end if
 
     if(this%is_allocated) then
       call this%deallocate_unpacked_host()
