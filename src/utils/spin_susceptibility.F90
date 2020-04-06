@@ -46,7 +46,6 @@ program spin_susceptibility
   FLOAT, allocatable :: m_cart(:,:), magnetization(:,:,:)
   type(spectrum_t)  :: spectrum
   type(batch_t)     :: vecpotb, ftrealb, ftimagb
-  type(namespace_t) :: namespace
   type(kick_t)      :: kick
   character(len=256) :: header
   character(len=MAX_PATH_LEN) :: fname
@@ -60,28 +59,26 @@ program spin_susceptibility
   call getopt_end()
 
   call parser_init()
-  namespace = namespace_t("")
 
+  call messages_init(global_namespace)
 
-  call messages_init(namespace)
+  call io_init(global_namespace)
 
-  call io_init(namespace)
+  call unit_system_init(global_namespace)
 
-  call unit_system_init(namespace)
+  call spectrum_init(spectrum, global_namespace)
 
-  call spectrum_init(spectrum, namespace)
-
-  in_file = io_open('td.general/total_magnetization', namespace, action='read', status='old', die=.false.)
+  in_file = io_open('td.general/total_magnetization', global_namespace, action='read', status='old', die=.false.)
   if(in_file < 0) then
-    message(1) = "Cannot open file '"//trim(io_workpath('td.general/total_magnetization', namespace))//"'"
+    message(1) = "Cannot open file '"//trim(io_workpath('td.general/total_magnetization', global_namespace))//"'"
     call messages_fatal(1)
   end if
   rewind(in_file)
   read(in_file,*)
   read(in_file,*)
-  call kick_read(kick, in_file, namespace)
+  call kick_read(kick, in_file, global_namespace)
   call io_skip_header(in_file)
-  call spectrum_count_time_steps(namespace, in_file, time_steps, dt)
+  call spectrum_count_time_steps(global_namespace, in_file, time_steps, dt)
 
   time_steps = time_steps + 1
 
@@ -157,7 +154,7 @@ program spin_susceptibility
   SAFE_DEALLOCATE_A(m_cart)
 
   write(message(1), '(a, i7, a)') "Info: Read ", time_steps, " steps from file '"// &
-    trim(io_workpath('td.general/total_magnetization', namespace))//"'"
+    trim(io_workpath('td.general/total_magnetization', global_namespace))//"'"
   call messages_info(1)
 
   write(header, '(9a15)') '#  time', 'Re[m_+(q,t)]', 'Im[m_+(q,t)]', &
@@ -167,7 +164,7 @@ program spin_susceptibility
   do iq = 1, kick%nqvec
 
     write(fname, '(a,i3.3)') 'td.general/transverse_magnetization_q', iq
-    out_file = io_open(trim(fname), namespace, action='write')
+    out_file = io_open(trim(fname), global_namespace, action='write')
     write(out_file,'(a)') trim(header)
     do kk = 1, time_steps
       write(out_file, '(9e15.6)') (kk - 1)*dt, (magnetization(kk,ii,iq), ii = 1,8)
@@ -223,7 +220,7 @@ program spin_susceptibility
               'Re[\chi_{zz}(q)]', 'Im[\chi_{zz}(q)]', 'Re[\chi_{zz}(-q)]', 'Im[\chi_{zz}(-q)]'
 
     write(fname, '(a,i3.3)') 'td.general/spin_susceptibility_q', iq
-    out_file = io_open(trim(fname), namespace, action='write')
+    out_file = io_open(trim(fname), global_namespace, action='write')
     write(out_file,'(a)') trim(header)
     do kk = 1, energy_steps
       ww = (kk-1)*spectrum%energy_step + spectrum%min_energy

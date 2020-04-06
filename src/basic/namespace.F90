@@ -24,14 +24,15 @@ module namespace_oct_m
   implicit none
 
   private
-  public :: namespace_t
+  public :: namespace_t, &
+            global_namespace
 
   integer, parameter :: MAX_NAMESPACE_LEN = 128
 
   type :: namespace_t
     private
-    character(len=MAX_NAMESPACE_LEN) :: name
-    type(namespace_t), pointer :: parent
+    character(len=MAX_NAMESPACE_LEN) :: name = ""
+    type(namespace_t), pointer :: parent => NULL()
   contains
     procedure :: get => namespace_get
     procedure :: len => namespace_len
@@ -40,6 +41,8 @@ module namespace_oct_m
   interface namespace_t
     procedure namespace_init
   end interface namespace_t
+
+  type(namespace_t) :: global_namespace
 
 contains
 

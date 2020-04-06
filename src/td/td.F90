@@ -936,7 +936,6 @@ contains
     type(linked_list_t), intent(inout) :: systems
     logical,             intent(inout) :: fromScratch
 
-    type(namespace_t) :: global_namespace
     integer :: it, internal_loop
     logical :: any_td_step_done, all_done_max_td_steps
     integer, parameter :: MAX_PROPAGATOR_STEPS = 1000
@@ -954,7 +953,6 @@ contains
 
     ! this should eventually be moved up to run.F90 when all systems
     ! are derived classes from system_abst
-    global_namespace = namespace_t("")
     call multisystem_init_interactions(systems, global_namespace)
 
     all_done_max_td_steps = .false.

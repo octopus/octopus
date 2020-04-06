@@ -1137,7 +1137,6 @@ program oscillator_strength
                         READ_RESONANCES_FROM_FILE         = 3, &
                         GENERATE_OMEGA_FILE               = 4
   character(len=100) :: ffile
-  type(namespace_t) :: default_namespace
 
   ! Reads the information passed through the command line options (if available).
   call getopt_init(ierr)
@@ -1169,19 +1168,18 @@ program oscillator_strength
   ! Initialize stuff
   call global_init(is_serial = .true.)
   call parser_init()
-  default_namespace = namespace_t("")
-  call io_init(default_namespace, defaults = .true.)
+  call io_init(global_namespace, defaults = .true.)
 
   select case(run_mode)
   case(GENERATE_NTHORDER_SIGNAL)
-    call generate_signal(default_namespace, order, observable)
+    call generate_signal(global_namespace, order, observable)
   case(ANALYZE_NTHORDER_SIGNAL)
     call analyze_signal(order, omega, search_interval, final_time, nresonances, nfrequencies, damping, &
-      default_namespace)
+      global_namespace)
   case(READ_RESONANCES_FROM_FILE)
-    call read_resonances_file(order, ffile, default_namespace, search_interval, final_time, nfrequencies)
+    call read_resonances_file(order, ffile, global_namespace, search_interval, final_time, nfrequencies)
   case(GENERATE_OMEGA_FILE)
-    call print_omega_file(default_namespace, omega, search_interval, final_time, nfrequencies)
+    call print_omega_file(global_namespace, omega, search_interval, final_time, nfrequencies)
   case default
   end select
 
