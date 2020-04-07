@@ -458,8 +458,8 @@ contains
       endif
     end if
 
-    call zderivatives_curl(der, psib%zff(:, :, 1), hpsib%zff(:, :, 1))
-    hpsib%zff(:,:,1) = P_c * hpsib%zff(:,:,1)
+    call zderivatives_curl(der, psib%zff(:, 1, :), hpsib%zff(:, 1, :))
+    hpsib%zff(:,1,:) = hm%rs_sign * P_c * hpsib%zff(:,1,:)
   
     call profiling_out(prof_hamiltonian_mxll)
     POP_SUB(hamiltonian_mxll_apply_batch)
@@ -500,18 +500,26 @@ contains
 
     call profiling_in(prof_hamiltonian_mxll, "MAXWELLHAMILTONIAN")
 
-    SAFE_ALLOCATE(rs_aux_in(1:mesh%np_part, 1:3))
-    SAFE_ALLOCATE(rs_aux_out(1:mesh%np_part, 1:3))
+    if (hm%operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE .and. &
+         all(hm%bc%bc_ab_type(:) /= OPTION__MAXWELLABSORBINGBOUNDARIES__CPML)) then
 
-    do ii = 1, 3
-      call batch_get_state(psib, ii, mesh%np_part, rs_aux_in(:, ii))
-    end do
+      call hamiltonian_mxll_apply_batch(hm, namespace, hm%der, psib, hpsib)
 
-    call maxwell_hamiltonian_apply_fd(hm, hm%der, rs_aux_in, rs_aux_out)
+    else
 
-    do ii = 1, 3
-      call batch_set_state(hpsib, ii, mesh%np_part, rs_aux_out(:, ii))
-    end do
+      SAFE_ALLOCATE(rs_aux_in(1:mesh%np_part, 1:3))
+      SAFE_ALLOCATE(rs_aux_out(1:mesh%np_part, 1:3))
+      do ii = 1, 3
+         call batch_get_state(psib, ii, mesh%np_part, rs_aux_in(:, ii))
+      end do
+      call maxwell_hamiltonian_apply_fd(hm, hm%der, rs_aux_in, rs_aux_out)
+      do ii = 1, 3
+         call batch_set_state(hpsib, ii, mesh%np_part, rs_aux_out(:, ii))
+      end do
+      SAFE_DEALLOCATE_A(rs_aux_in)
+      SAFE_DEALLOCATE_A(rs_aux_out)
+      
+    end if
 
     call profiling_out(prof_hamiltonian_mxll)
 
