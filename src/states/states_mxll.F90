@@ -106,17 +106,17 @@ module states_mxll_oct_m
     integer, pointer             :: rs_state_fft_map(:,:,:)
     integer, pointer             :: rs_state_fft_map_inv(:,:)
 
-    FLOAT, pointer               :: energy_rate(:)
-    FLOAT, pointer               :: delta_energy(:)
-    FLOAT, pointer               :: energy_via_flux_calc(:)
+    FLOAT, allocatable            :: energy_rate(:)
+    FLOAT, allocatable            :: delta_energy(:)
+    FLOAT, allocatable            :: energy_via_flux_calc(:)
 
-    FLOAT, pointer               :: trans_energy_rate(:)
-    FLOAT, pointer               :: trans_delta_energy(:)
-    FLOAT, pointer               :: trans_energy_via_flux_calc(:)
+    FLOAT, allocatable            :: trans_energy_rate(:)
+    FLOAT, allocatable            :: trans_delta_energy(:)
+    FLOAT, allocatable            :: trans_energy_via_flux_calc(:)
 
-    FLOAT, pointer               :: plane_waves_energy_rate(:)
-    FLOAT, pointer               :: plane_waves_delta_energy(:)
-    FLOAT, pointer               :: plane_waves_energy_via_flux_calc(:)
+    FLOAT, allocatable            :: plane_waves_energy_rate(:)
+    FLOAT, allocatable            :: plane_waves_delta_energy(:)
+    FLOAT, allocatable            :: plane_waves_energy_via_flux_calc(:)
 
     FLOAT                        :: poynting_vector_box_surface(1:2,1:MAX_DIM,1:MAX_DIM) = M_ZERO
     FLOAT                        :: poynting_vector_box_surface_plane_waves(1:2,1:MAX_DIM,1:MAX_DIM) = M_ZERO
@@ -126,9 +126,9 @@ module states_mxll_oct_m
     FLOAT                        :: magnetic_field_box_surface_plane_waves(1:2,1:MAX_DIM,1:MAX_DIM) = M_ZERO
 
     logical                      :: rs_state_const_external = .false.
-    CMPLX, pointer               :: rs_state_const(:)
-    CMPLX, pointer               :: rs_state_const_amp(:,:)
-    type(tdf_t), pointer         :: rs_state_const_td_function(:)
+    CMPLX, allocatable           :: rs_state_const(:)
+    CMPLX, allocatable           :: rs_state_const_amp(:,:)
+    type(tdf_t), allocatable     :: rs_state_const_td_function(:)
 
     FLOAT                        :: poynting_mean(MAX_DIM)
     FLOAT                        :: poynting_mean_plane_waves(MAX_DIM)
@@ -151,9 +151,9 @@ module states_mxll_oct_m
     type(mesh_plane_t)           :: surface(2,MAX_DIM)
 
     integer                      :: selected_points_number
-    FLOAT, pointer               :: selected_points_coordinate(:,:)
-    CMPLX, pointer               :: selected_points_rs_state(:,:)
-    CMPLX, pointer               :: selected_points_rs_state_trans(:,:)
+    FLOAT, allocatable           :: selected_points_coordinate(:,:)
+    CMPLX, allocatable           :: selected_points_rs_state(:,:)
+    CMPLX, allocatable           :: selected_points_rs_state_trans(:,:)
     FLOAT                        :: rs_state_trans_var
 
     FLOAT, pointer               :: grid_rho(:,:)
@@ -349,6 +349,35 @@ contains
     call states_elec_dim_end(st%d)
     SAFE_DEALLOCATE_A(st%rs_state)
     SAFE_DEALLOCATE_A(st%rs_state_trans)
+    SAFE_DEALLOCATE_A(st%selected_points_coordinate)
+    SAFE_DEALLOCATE_A(st%selected_points_rs_state)
+    SAFE_DEALLOCATE_A(st%selected_points_rs_state_trans)
+    SAFE_DEALLOCATE_A(st%rs_state_long)
+    SAFE_DEALLOCATE_A(st%rs_current_density_restart_t1)
+    SAFE_DEALLOCATE_A(st%rs_current_density_restart_t2)
+
+    if (allocated(st%rs_state_const)) then
+      SAFE_DEALLOCATE_A(st%rs_state_const)
+    end if
+    if (allocated(st%rs_state_const_td_function)) then
+      SAFE_DEALLOCATE_A(st%rs_state_const_td_function)
+    end if
+    if (allocated(st%rs_state_const_amp)) then
+      SAFE_DEALLOCATE_A(st%rs_state_const_amp)
+    end if
+    if (allocated(st%rs_state_plane_waves)) then
+      SAFE_DEALLOCATE_A(st%rs_state_plane_waves)
+    end if
+
+    SAFE_DEALLOCATE_A(st%energy_rate)
+    SAFE_DEALLOCATE_A(st%delta_energy)
+    SAFE_DEALLOCATE_A(st%energy_via_flux_calc)
+    SAFE_DEALLOCATE_A(st%trans_energy_rate)
+    SAFE_DEALLOCATE_A(st%trans_delta_energy)
+    SAFE_DEALLOCATE_A(st%trans_energy_via_flux_calc)
+    SAFE_DEALLOCATE_A(st%plane_waves_energy_rate)
+    SAFE_DEALLOCATE_A(st%plane_waves_delta_energy)
+    SAFE_DEALLOCATE_A(st%plane_waves_energy_via_flux_calc)
 
 #ifdef HAVE_SCALAPACK
     call blacs_proc_grid_end(st%dom_st_proc_grid)

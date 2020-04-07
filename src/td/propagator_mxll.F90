@@ -617,6 +617,9 @@ contains
       end do
     end do
 
+    SAFE_DEALLOCATE_P(st%rs_state_fft_map)
+    SAFE_DEALLOCATE_P(st%rs_state_fft_map_inv)
+
     POP_SUB(rs_state_to_cube_map)
   end subroutine rs_state_to_cube_map
 
@@ -3045,7 +3048,7 @@ contains
   ! ---------------------------------------------------------
   subroutine spatial_constant_calculation(constant_calc, st, gr, hm, time, dt, delay, rs_state)
     logical,             intent(in)    :: constant_calc
-    type(states_mxll_t),      intent(in)    :: st
+    type(states_mxll_t),      intent(inout)    :: st
     type(grid_t),        intent(in)    :: gr
     type(hamiltonian_mxll_t), intent(in)    :: hm
     FLOAT,               intent(in)    :: time

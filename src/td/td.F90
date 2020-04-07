@@ -873,6 +873,12 @@ contains
 !      call restart_end(restart_dump)
 
       ! free memory
+      SAFE_DEALLOCATE_A(rs_current_density_ext_t1)
+      SAFE_DEALLOCATE_A(rs_current_density_ext_t2)
+      SAFE_DEALLOCATE_A(rs_charge_density_ext_t1)
+      SAFE_DEALLOCATE_A(rs_charge_density_ext_t2)
+      SAFE_DEALLOCATE_A(rs_state_init)
+
       call states_mxll_end(sys%st)
 
     end select
