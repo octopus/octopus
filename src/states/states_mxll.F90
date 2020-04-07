@@ -91,14 +91,14 @@ module states_mxll_oct_m
     type(batch_t)       :: rs_transb
     type(batch_t)       :: rs_longb
     
-    CMPLX, pointer               :: rs_state_plane_waves(:,:)
-    CMPLX, pointer               :: rs_state(:,:)
-    CMPLX, pointer               :: rs_state_trans(:,:)
-    CMPLX, pointer               :: rs_state_long(:,:)
+    CMPLX, allocatable               :: rs_state_plane_waves(:,:)
+    CMPLX, allocatable               :: rs_state(:,:)
+    CMPLX, allocatable               :: rs_state_trans(:,:)
+    CMPLX, allocatable               :: rs_state_long(:,:)
     
     logical                      :: rs_current_density_restart = .false.
-    CMPLX, pointer               :: rs_current_density_restart_t1(:,:)
-    CMPLX, pointer               :: rs_current_density_restart_t2(:,:)
+    CMPLX, allocatable               :: rs_current_density_restart_t1(:,:)
+    CMPLX, allocatable               :: rs_current_density_restart_t2(:,:)
 
     FLOAT, pointer               :: ep(:)
     FLOAT, pointer               :: mu(:)
@@ -347,8 +347,8 @@ contains
     PUSH_SUB(states_mxll_end)
 
     call states_elec_dim_end(st%d)
-    SAFE_DEALLOCATE_P(st%rs_state)
-    SAFE_DEALLOCATE_P(st%rs_state_trans)
+    SAFE_DEALLOCATE_A(st%rs_state)
+    SAFE_DEALLOCATE_A(st%rs_state_trans)
 
 #ifdef HAVE_SCALAPACK
     call blacs_proc_grid_end(st%dom_st_proc_grid)

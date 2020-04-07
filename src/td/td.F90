@@ -705,10 +705,8 @@ contains
 
       if (parse_is_defined(sys%namespace, 'UserDefinedMaxwellIncidentWaves') .and. (td%tr_mxll%bc_plane_waves)) then
         SAFE_ALLOCATE(sys%st%rs_state_plane_waves(1:sys%gr%mesh%np_part, 1:sys%st%d%dim))
-        sys%st%rs_state_plane_waves = M_z0
+        sys%st%rs_state_plane_waves(:,:) = M_z0
       end if
-
-      sys%st%rs_state_trans = sys%st%rs_state ! no mx_ma coupling
 
       sys%hm%plane_waves_apply = .true.
       sys%hm%spatial_constant_apply = .true.
@@ -740,9 +738,9 @@ contains
       if (parse_is_defined(sys%namespace, 'UserDefinedInitialMaxwellStates')) then
         call states_mxll_read_user_def(sys%gr%mesh, sys%st, rs_state_init, sys%namespace)
         call messages_print_stress(stdout, "Setting initial EM field inside box")
-        sys%st%rs_state = sys%st%rs_state + rs_state_init
+        sys%st%rs_state(:,:) = sys%st%rs_state + rs_state_init
         if (td%tr_mxll%bc_plane_waves) then
-          sys%st%rs_state_plane_waves = rs_state_init
+          sys%st%rs_state_plane_waves(:,:) = rs_state_init
         end if
         if (td%tr_mxll%bc_constant) &
           sys%st%rs_state_const(:) = rs_state_init(sys%gr%mesh%idx%lxyz_inv(0,0,0),:)

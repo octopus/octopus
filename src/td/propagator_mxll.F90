@@ -205,7 +205,6 @@ contains
           hm%plane_waves = .true.
           hm%bc_plane_waves = .true.
           hm%bc_add_ab_region = .true.
-          SAFE_ALLOCATE(st%rs_state_plane_waves(1:gr%mesh%np_part, 1:st%d%dim))
         else if (hm%bc%bc_type(icol) == OPTION__MAXWELLBOUNDARYCONDITIONS__MEDIUM) then
           string = 'Medium boundary'
         end if
