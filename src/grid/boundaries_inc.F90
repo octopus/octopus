@@ -586,14 +586,14 @@ contains
           call accel_set_kernel_arg(kernel_recv_corr, 3, ubound(boundaries%per_recv, dim = 1))
           call accel_set_kernel_arg(kernel_recv_corr, 4, buff_recv)
           call accel_set_kernel_arg(kernel_recv_corr, 5, ffb%ff_device)
-          call accel_set_kernel_arg(kernel_recv_corr, 6, log2(ffb%pack_size_real(1)))
+          call accel_set_kernel_arg(kernel_recv_corr, 6, log2(ffb%pack_size(1)))
           call accel_set_kernel_arg(kernel_recv_corr, 7, buff_phase_corr)
           call accel_set_kernel_arg(kernel_recv_corr, 8, boundaries%mesh%np)
   
-          wgsize = accel_kernel_workgroup_size(kernel_recv_corr)/ffb%pack_size_real(1)
+          wgsize = accel_kernel_workgroup_size(kernel_recv_corr)/ffb%pack_size(1)
 
-          call accel_kernel_run(kernel_recv_corr, (/ffb%pack_size_real(1), pad(maxrecv, wgsize), npart/), &
-            (/ffb%pack_size_real(1), wgsize, 1/))
+          call accel_kernel_run(kernel_recv_corr, (/ffb%pack_size(1), pad(maxrecv, wgsize), npart/), &
+            (/ffb%pack_size(1), wgsize, 1/))
 
           call accel_finish()
 
