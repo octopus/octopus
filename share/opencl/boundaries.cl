@@ -22,9 +22,9 @@
 #include <cl_complex.h>
 
 __kernel void boundaries_periodic(const int nper, 
-				  __global const int * __restrict per_points,
-				  __global double * __restrict ff,
-				  const int ldff){
+               __global const int * __restrict per_points,
+               __global double * __restrict ff,
+               const int ldff){
   const int ist  = get_global_id(0);
   const int iper = get_global_id(1);
   
@@ -38,11 +38,11 @@ __kernel void boundaries_periodic(const int nper,
 }
 
 __kernel void boundaries_periodic_corr(const int nper, 
-				  __global const int * __restrict per_points,
-				  __global double2 * __restrict ff,
-				  const int ldff,
-          __global double2 * __restrict phase_correction,
-          const int np){
+               __global const int * __restrict per_points,
+               __global double2 * __restrict ff,
+               const int ldff,
+               __global double2 * __restrict phase_correction,
+               const int np){
   const int ist  = get_global_id(0);
   const int iper = get_global_id(1);
   
