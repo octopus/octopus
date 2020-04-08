@@ -154,7 +154,7 @@ program dielectric_function
   call io_close(in_file)
 
   !We remove the reference
-  if(parse_is_defined('GaugeFieldDelay')) then
+  if(parse_is_defined('TransientAbsorptionReference')) then
     time_steps_ref = time_steps_ref + 1
     SAFE_ALLOCATE(vecpot_ref(1:time_steps_ref, space%dim*3))
     call io_skip_header(ref_file)

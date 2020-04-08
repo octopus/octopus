@@ -314,7 +314,7 @@ contains
                                                 os, work, os%radius, os%ndim)
               norm = M_ZERO
               do idim = 1, os%ndim
-                norm = norm + dsm_nrm2(os%sphere, os%dorb(1:os%sphere%np,idim,work))
+                norm = norm + dsm_nrm2(os%sphere, os%dorb(1:os%sphere%np,idim,work))**2
               end do
              norm = sqrt(norm)
             else
@@ -322,7 +322,7 @@ contains
                                                 os, work, os%radius, os%ndim)
               norm = M_ZERO
               do idim = 1, os%ndim
-                norm = norm + zsm_nrm2(os%sphere, os%zorb(1:os%sphere%np,idim,work))
+                norm = norm + zsm_nrm2(os%sphere, os%zorb(1:os%sphere%np,idim,work))**2
               end do
              norm = sqrt(norm)
             end if
