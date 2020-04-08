@@ -3353,7 +3353,7 @@ contains
   subroutine td_write_mxll_end(writ)
     type(td_write_t), intent(inout) :: writ
 
-    integer :: ist, iout
+    integer :: iout
 
     PUSH_SUB(td_write_mxll_end)
 
