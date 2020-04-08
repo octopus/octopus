@@ -56,11 +56,11 @@ __kernel void boundaries_periodic_corr(const int nper,
 }
 
 __kernel void boundaries_periodic_send(const int maxsend,
-				       __global const int * __restrict nsend,
-				       __global const int * __restrict per_send,
-				       __global const double * __restrict ff,
-				       const int ldff, 
-				       __global double * __restrict sendbuffer){
+               __global const int * __restrict nsend,
+               __global const int * __restrict per_send,
+               __global const double * __restrict ff,
+               const int ldff, 
+               __global double * __restrict sendbuffer){
 
   const int ist   = get_global_id(0);
   const int ip    = get_global_id(1);
@@ -77,12 +77,12 @@ __kernel void boundaries_periodic_send(const int maxsend,
 }
 
 __kernel void boundaries_periodic_recv(const int maxrecv,
-				       __global const int * __restrict nrecv,
-				       __global const int * __restrict per_recv,
-				       const int ldper_recv,
-				       __global const double * __restrict recvbuffer,
-				       __global double * __restrict ff,
-				       const int ldff){
+               __global const int * __restrict nrecv,
+               __global const int * __restrict per_recv,
+               const int ldper_recv,
+               __global const double * __restrict recvbuffer,
+               __global double * __restrict ff,
+               const int ldff){
 
   const int ist   = get_global_id(0);
   const int ip    = get_global_id(1);
@@ -99,12 +99,12 @@ __kernel void boundaries_periodic_recv(const int maxrecv,
 }
 
 __kernel void boundaries_periodic_recv_corr(const int maxrecv,
-				       __global const int * __restrict nrecv,
-				       __global const int * __restrict per_recv,
-				       const int ldper_recv,
-				       __global const double2 * __restrict recvbuffer,
-				       __global double2 * __restrict ff,
-				       const int ldff,
+               __global const int * __restrict nrecv,
+               __global const int * __restrict per_recv,
+               const int ldper_recv,
+               __global const double2 * __restrict recvbuffer,
+               __global double2 * __restrict ff,
+               const int ldff,
                __global double2 * __restrict phase_correction,
                const int np){
 
