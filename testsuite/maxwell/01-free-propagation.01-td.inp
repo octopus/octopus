@@ -7,6 +7,7 @@
   'Maxwell' | maxwell
 %
 
+ DisableAccel = yes
 
  Maxwell.ParDomains = auto
  Maxwell.ParStates  = no
@@ -68,7 +69,7 @@
 # ----- Time step variables -----------------------------------------------------------------------
 
  TDTimeStep                        = 0.002
- TDMaxSteps                        = 200
+ TDMaxSteps                        = 100
 
 
 # ----- Maxwell field variables -------------------------------------------------------------------

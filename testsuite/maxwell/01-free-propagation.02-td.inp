@@ -4,6 +4,9 @@ CalculationMode                   = td
   'Maxwell' | maxwell
 %
 
+
+DisableAccel = yes
+
 Maxwell.ParStates                 = no
 
 pi=3.14159265359
