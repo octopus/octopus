@@ -78,6 +78,7 @@ module td_write_oct_m
     td_write_data,  &
     td_write_kick,  &
     td_write_output, &
+    td_write_mxll_end, &
     td_write_mxll_init, &
     td_write_mxll_iter, &
     td_write_mxll_free_data
@@ -3346,6 +3347,25 @@ contains
 
     POP_SUB(td_write_mxll_init)
   end subroutine td_write_mxll_init
+
+  
+  ! ---------------------------------------------------------
+  subroutine td_write_mxll_end(writ)
+    type(td_write_t), intent(inout) :: writ
+
+    integer :: ist, iout
+
+    PUSH_SUB(td_write_mxll_end)
+
+    if(mpi_grp_is_root(mpi_world)) then    
+       do iout = 1, OUT_MAXWELL_MAX
+          if(writ%out(iout)%write)  call write_iter_end(writ%out(iout)%handle)
+       end do
+    end if
+
+    POP_SUB(td_write_mxll_end)
+  end subroutine td_write_mxll_end
+    
 
   ! ---------------------------------------------------------
   subroutine td_write_mxll_iter(writ, gr, st, hm, dt, iter)

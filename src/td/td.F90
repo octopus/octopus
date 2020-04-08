@@ -717,24 +717,6 @@ contains
       dt_bounds(1,:) = bc_bounds(1,:) - sys%gr%der%order * sys%gr%mesh%spacing(:)
       call surface_grid_points_mapping(sys%gr%mesh, sys%st, dt_bounds)
 
-      ! ! Restart stuff
-
-      !! We need the following FFT initialization for the CPML
-      ! if (sys%hm%bc%bc_ab_type(idim) == OPTION__MAXWELLABSORBINGBOUNDARIES__CPML) fft_check = .true.
-
-      ! if (fft_check) then
-      !   sys%hm%cube%cube = .true.
-      !   !   ! Documentation in cube.F90
-      !   call parse_variable(sys%namespace, 'FFTLibrary', FFTLIB_FFTW, fft_library)
-      !   call cube_init(sys%hm%cube, sys%sys%gr%mesh%idx%ll, sys%sys%gr%sb, fft_type=FFT_COMPLEX, fft_library=fft_library,&
-      !     nn_out=ll, dont_optimize=.true., mpi_grp=sys%gr%mesh%mpi_grp, need_partition=.true., &
-      !     spacing=sys%gr%mesh%spacing)
-      !   call rs_state_to_cube_map(sys%gr, sys%hm, sys%st)
-      !   if (sys%hm%cube%parallel_in_domains) then
-      !     call mesh_cube_parallel_map_init(sys%hm%mesh_cube_map, sys%gr%der%mesh, sys%hm%cube)
-      !   end if
-      ! end if
-
       if (parse_is_defined(sys%namespace, 'UserDefinedInitialMaxwellStates')) then
         call states_mxll_read_user_def(sys%gr%mesh, sys%st, rs_state_init, sys%namespace)
         call messages_print_stress(stdout, "Setting initial EM field inside box")
@@ -791,11 +773,9 @@ contains
         units_from_atomic(units_out%energy, sys%hm%energy),    &
         M_ZERO
       call messages_info(1)
-        write(*,*) 'iter', iter, td%max_iter
 
       etime = loct_clock()
       propagation_mxll: do iter = td%iter, td%max_iter
-        write(*,*) 'iter', iter
 
         stopping = clean_stop(sys%mc%master_comm)
         call profiling_in(prof, "TIME_STEP")
@@ -880,6 +860,7 @@ contains
       SAFE_DEALLOCATE_A(rs_state_init)
 
       call states_mxll_end(sys%st)
+      call td_write_mxll_end(write_handler)
 
     end select
 

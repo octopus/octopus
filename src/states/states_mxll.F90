@@ -87,18 +87,14 @@ module states_mxll_oct_m
     integer, public              :: nst              !< Number of states in each irreducible subspace
     logical, public              :: packed
 
-    type(batch_t)       :: rsb
-    type(batch_t)       :: rs_transb
-    type(batch_t)       :: rs_longb
-    
-    CMPLX, allocatable               :: rs_state_plane_waves(:,:)
-    CMPLX, allocatable               :: rs_state(:,:)
-    CMPLX, allocatable               :: rs_state_trans(:,:)
-    CMPLX, allocatable               :: rs_state_long(:,:)
+    CMPLX, allocatable           :: rs_state_plane_waves(:,:)
+    CMPLX, allocatable           :: rs_state(:,:)
+    CMPLX, allocatable           :: rs_state_trans(:,:)
+    CMPLX, allocatable           :: rs_state_long(:,:)
     
     logical                      :: rs_current_density_restart = .false.
-    CMPLX, allocatable               :: rs_current_density_restart_t1(:,:)
-    CMPLX, allocatable               :: rs_current_density_restart_t2(:,:)
+    CMPLX, allocatable           :: rs_current_density_restart_t1(:,:)
+    CMPLX, allocatable           :: rs_current_density_restart_t2(:,:)
 
     FLOAT, pointer               :: ep(:)
     FLOAT, pointer               :: mu(:)
@@ -301,9 +297,9 @@ contains
         st%selected_points_rs_state_trans(:,il) = M_z0
       end do
     else
-      SAFE_ALLOCATE(st%selected_points_coordinate(1:st%d%dim,1))
-      SAFE_ALLOCATE(st%selected_points_rs_state(1:st%d%dim,1))
-      SAFE_ALLOCATE(st%selected_points_rs_state_trans(1:st%d%dim,1))
+      SAFE_ALLOCATE(st%selected_points_coordinate(1:st%d%dim, 1))
+      SAFE_ALLOCATE(st%selected_points_rs_state(1:st%d%dim, 1))
+      SAFE_ALLOCATE(st%selected_points_rs_state_trans(1:st%d%dim, 1))
       st%selected_points_coordinate(:,:) = M_ZERO
       st%selected_points_rs_state(:,:) = M_z0
       st%selected_points_rs_state_trans(:,:) = M_z0

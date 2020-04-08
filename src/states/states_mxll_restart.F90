@@ -502,7 +502,6 @@ contains
 
        call zrestart_read_mesh_function(restart, restart_file(idim, ist), gr%mesh, &
             zff(:,idim), err)
-       !call batch_set_state(st%rsb, (/ist, idim/), gr%mesh%np, zff(:,idim))
 
 
        if (err == 0) then
