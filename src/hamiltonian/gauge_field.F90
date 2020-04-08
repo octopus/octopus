@@ -19,35 +19,21 @@
 #include "global.h"
 
 module gauge_field_oct_m
-  use derivatives_oct_m
-  use geometry_oct_m
   use global_oct_m
   use grid_oct_m
-  use io_oct_m
-  use lalg_basic_oct_m
-  use logrid_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
-  use mpi_oct_m
   use parser_oct_m
   use profiling_oct_m
-  use projector_oct_m
-  use ps_oct_m
   use restart_oct_m
   use simul_box_oct_m
-  use species_oct_m
-  use splines_oct_m
   use states_oct_m
   use states_dim_oct_m
-  use submesh_oct_m
   use symmetries_oct_m
-  use symmetrizer_oct_m
   use symm_op_oct_m
-  use tdfunction_oct_m
   use unit_oct_m
   use unit_system_oct_m
-  use varinfo_oct_m
 
   implicit none
 
@@ -175,7 +161,7 @@ contains
       if(sb%kpoints%use_symmetries) then
         do iop = 1, symmetries_number(sb%symm)
           if(iop == symmetries_identity_index(sb%symm)) cycle
-          if(.not. symm_op_invariant_cart(sb%symm%ops(iop), this%vecpot, CNST(1e-5))) then
+          if(.not. symm_op_invariant_cart(sb%symm%ops(iop), this%vecpot_kick, CNST(1e-5))) then
             message(1) = "The GaugeVectorField breaks (at least) one of the symmetries used to reduce the k-points."
             message(2) = "Set SymmetryBreakDir equal to GaugeVectorField."
             call messages_fatal(2)
@@ -283,13 +269,13 @@ contains
     POP_SUB(gauge_field_get_vec_pot_acc)
   end subroutine gauge_field_get_vec_pot_acc
 
-
   ! ---------------------------------------------------------
   subroutine gauge_field_propagate(this, dt, time)
     type(gauge_field_t),  intent(inout) :: this
     FLOAT,                intent(in)    :: dt
     FLOAT,                intent(in)    :: time
-
+    
+    logical, save :: warning_shown = .false.
     integer :: idim
 
     PUSH_SUB(gauge_field_propagate)
@@ -308,17 +294,18 @@ contains
 
     !In the case of a kick, the induced field could not be higher than the initial kick
     do idim = 1, this%ndim
-      if(this%vecpot_kick(idim) /= M_ZERO .and.  &
-         abs(this%vecpot(idim))> abs(this%vecpot_kick(idim))*1.01 .and. &
-          .not. this%kicktime > M_ZERO ) then
-        write(message(1),'(a)') 'It seems that the gauge-field is diverging.'
-        write(message(2),'(a)') 'You should probably check the propagation parameters.'
-        call messages_fatal(2)
+      if(.not. warning_shown .and. this%vecpot_kick(idim) /= M_ZERO .and.  &
+         abs(this%vecpot(idim))> abs(this%vecpot_kick(idim))*1.01 .and. .not. this%kicktime > M_ZERO ) then
+
+        warning_shown = .true.
+
+        write(message(1),'(a)') 'It seems that the gauge-field might be diverging. You should probably check'
+        write(message(2),'(a)') 'the simulation parameters, in particular the number of k-points.'
+        call messages_warning(2)
       end if
     end do
     POP_SUB(gauge_field_propagate)
   end subroutine gauge_field_propagate
-
 
   ! ---------------------------------------------------------
   subroutine gauge_field_propagate_vel(this, dt)

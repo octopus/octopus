@@ -134,6 +134,23 @@ rout // ine]),
 	    break
 	  fi
        done
+
+       if test x"$acx_fpp_ok" = xyes; then
+         for PPC_WORKAROUND in "" " -Dvector=vector"; do
+           acx_fpp_ok=yes
+           FCCPP="$FCCPP$PPC_WORKAROUND"
+           AC_MSG_CHECKING([whether $FCCPP treats vector as a predefined macro])
+
+           ACX_GREP_FCCPP([vector int], AC_LANG_PROGRAM([],[
+vector int]),
+	     [], [acx_fpp_ok=no; AC_MSG_RESULT([yes])])
+           if test x"$acx_fpp_ok" = xyes; then
+             AC_MSG_RESULT([no])
+	     break
+	   fi
+         done
+       fi
+
        if test x"$acx_fpp_ok" = xyes; then
 	  break
        fi

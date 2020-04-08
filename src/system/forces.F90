@@ -33,14 +33,12 @@ module forces_oct_m
   use grid_oct_m
   use hamiltonian_oct_m
   use hamiltonian_base_oct_m
-  use index_oct_m
   use io_oct_m
   use kpoints_oct_m
   use lalg_basic_oct_m
   use lasers_oct_m
   use lda_u_oct_m
   use linear_response_oct_m
-  use loct_math_oct_m
   use math_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
@@ -56,13 +54,11 @@ module forces_oct_m
   use states_dim_oct_m
   use symm_op_oct_m
   use symmetrizer_oct_m
-  use types_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use utils_oct_m
   use v_ks_oct_m
   use vdw_ts_oct_m
-
 
   implicit none
 
@@ -281,6 +277,7 @@ contains
     integer :: j, iatom, idir
     FLOAT :: x(MAX_DIM), time, global_force(1:MAX_DIM)
     FLOAT, allocatable :: force(:, :), force_loc(:, :), force_nl(:, :), force_u(:, :)
+    FLOAT, allocatable :: force_nlcc(: ,:)
     FLOAT, allocatable :: force_scf(:, :)
     type(profile_t), save :: forces_prof
 
@@ -299,6 +296,7 @@ contains
       geo%atom(iatom)%f_nl(1:gr%sb%dim) = M_ZERO
       geo%atom(iatom)%f_u(1:gr%sb%dim) = M_ZERO
       geo%atom(iatom)%f_fields(1:gr%sb%dim) = M_ZERO
+      geo%atom(iatom)%f_nlcc(1:gr%sb%dim) = M_ZERO
       geo%atom(iatom)%f_scf(1:gr%sb%dim) = M_ZERO
     end do
 
@@ -329,6 +327,7 @@ contains
     SAFE_ALLOCATE(force_nl(1:gr%mesh%sb%dim, 1:geo%natoms))
     SAFE_ALLOCATE(force_u(1:gr%mesh%sb%dim, 1:geo%natoms)) 
     SAFE_ALLOCATE(force_scf(1:gr%mesh%sb%dim, 1:geo%natoms))
+    SAFE_ALLOCATE(force_nlcc(1:gr%mesh%sb%dim, 1:geo%natoms))
 
     if (states_are_real(st) ) then 
       call dforces_from_potential(gr, geo, hm, st, force, force_loc, force_nl, force_u)
@@ -336,6 +335,11 @@ contains
       call zforces_from_potential(gr, geo, hm, st, force, force_loc, force_nl, force_u)
     end if
 
+    if(associated(st%rho_core)) then
+      call forces_from_nlcc(gr, geo, hm, st, force_nlcc)
+    else 
+      force_nlcc(:, :) = M_ZERO
+    end if
     if(present(vhxc_old)) then
       call forces_from_scf(gr, geo, hm, st, force_scf, vhxc_old)
     else
@@ -348,14 +352,17 @@ contains
       call forces_set_total_to_zero(geo, force_nl)
       call forces_set_total_to_zero(geo, force_u)
       call forces_set_total_to_zero(geo, force_scf)
+      call forces_set_total_to_zero(geo, force_nlcc)
     end if
 
     do iatom = 1, geo%natoms
       do idir = 1, gr%mesh%sb%dim
-        geo%atom(iatom)%f(idir) = geo%atom(iatom)%f(idir) + force(idir, iatom) + force_scf(idir, iatom)
+        geo%atom(iatom)%f(idir) = geo%atom(iatom)%f(idir) + force(idir, iatom) &
+            + force_scf(idir, iatom) + force_nlcc(idir, iatom)
         geo%atom(iatom)%f_loc(idir) = force_loc(idir, iatom)
         geo%atom(iatom)%f_nl(idir) = force_nl(idir, iatom)
         geo%atom(iatom)%f_u(idir) = force_u(idir, iatom)
+        geo%atom(iatom)%f_nlcc(idir) = force_nlcc(idir, iatom)
         geo%atom(iatom)%f_scf(idir) = force_scf(idir, iatom)
       end do
     end do
@@ -364,8 +371,9 @@ contains
     SAFE_DEALLOCATE_A(force_loc)
     SAFE_DEALLOCATE_A(force_nl)
     SAFE_DEALLOCATE_A(force_u)
+    SAFE_DEALLOCATE_A(force_nlcc)
     SAFE_DEALLOCATE_A(force_scf)
- 
+
     !\todo forces due to the magnetic fields (static and time-dependent)
     if(present(t)) then
       do j = 1, hm%ep%no_lasers
@@ -488,9 +496,11 @@ contains
 
 
     iunit2 = io_open(trim(dir)//'/forces', action='write', position='asis')
-    write(iunit2,'(a)') ' # Total force (x,y,z) Ion-Ion (x,y,z) VdW (x,y,z) Local (x,y,z) NL (x,y,z) Fields (x,y,z) Hubbard(x,y,z) SCF(x,y,z)'
+    write(iunit2,'(a)') &
+      ' # Total force (x,y,z) Ion-Ion (x,y,z) VdW (x,y,z) Local (x,y,z) NL (x,y,z)' // &
+      ' Fields (x,y,z) Hubbard(x,y,z) SCF(x,y,z) NLCC(x,y,z)'
     do iatom = 1, geo%natoms
-       write(iunit2,'(i4,a10,24e15.6)') iatom, trim(species_label(geo%atom(iatom)%species)), &
+       write(iunit2,'(i4,a10,27e15.6)') iatom, trim(species_label(geo%atom(iatom)%species)), &
                  (units_from_atomic(units_out%force, geo%atom(iatom)%f(idir)), idir=1, sb%dim), &
                  (units_from_atomic(units_out%force, geo%atom(iatom)%f_ii(idir)), idir=1, sb%dim), &
                  (units_from_atomic(units_out%force, geo%atom(iatom)%f_vdw(idir)), idir=1, sb%dim), &
@@ -498,7 +508,8 @@ contains
                  (units_from_atomic(units_out%force, geo%atom(iatom)%f_nl(idir)), idir=1, sb%dim), &
                  (units_from_atomic(units_out%force, geo%atom(iatom)%f_fields(idir)), idir=1, sb%dim), &
                  (units_from_atomic(units_out%force, geo%atom(iatom)%f_u(idir)), idir=1, sb%dim), &
-                 (units_from_atomic(units_out%force, geo%atom(iatom)%f_scf(idir)), idir=1, sb%dim)
+                 (units_from_atomic(units_out%force, geo%atom(iatom)%f_scf(idir)), idir=1, sb%dim), &
+                 (units_from_atomic(units_out%force, geo%atom(iatom)%f_nlcc(idir)), idir=1, sb%dim)
     end do
     call io_close(iunit2) 
 
@@ -506,6 +517,42 @@ contains
 
   end subroutine forces_write_info
 
+ ! ----------------------------------------------------------------------
+ ! This routine add the contribution to the forces from the nonlinear core correction
+ ! see Eq. 9 of Kronik et al., J. Chem. Phys. 115, 4322 (2001)
+subroutine forces_from_nlcc(gr, geo, hm, st, force_nlcc)
+  type(grid_t),                   intent(inout) :: gr
+  type(geometry_t),               intent(inout) :: geo
+  type(hamiltonian_t),            intent(in)    :: hm
+  type(states_t),                 intent(inout) :: st
+  FLOAT,                          intent(out)   :: force_nlcc(:, :)
+
+  integer :: is, iatom, idir
+  FLOAT, allocatable :: drho(:,:)
+
+  PUSH_SUB(forces_from_nlcc)
+
+  SAFE_ALLOCATE(drho(1:gr%mesh%np, 1:gr%mesh%sb%dim))
+
+  force_nlcc = M_ZERO
+
+  do iatom = geo%atoms_dist%start, geo%atoms_dist%end
+    call species_get_nlcc_grad(geo%atom(iatom)%species, geo%atom(iatom)%x, gr%mesh, drho)
+
+    do idir = 1, gr%mesh%sb%dim
+      do is = 1, hm%d%spin_channels
+        force_nlcc(idir, iatom) = force_nlcc(idir, iatom) &
+                       -dmf_dotp(gr%mesh, drho(:,idir), hm%vxc(1:gr%mesh%np, is))/st%d%spin_channels
+      end do
+    end do
+  end do
+
+  SAFE_DEALLOCATE_A(drho)
+
+  if(geo%atoms_dist%parallel) call dforces_gather(geo, force_nlcc)
+
+  POP_SUB(forces_from_nlcc)
+end subroutine forces_from_nlcc
 
  ! Implementation of the term from Chan et al.,  Phys. Rev. B 47, 4771 (1993).
  ! Here we make the approximation that the "atomic densities" are just the one 

@@ -27,9 +27,8 @@
     type(grid_t),              intent(in)    :: gr
     type(mpi_grp_t), optional, intent(in)    :: grp !< the group that shares the same data, must contain the domains group
 
-    integer :: is, err, idir, ispin, ik, ib
+    integer :: is, err, idir, ik, ib
     character(len=MAX_PATH_LEN) :: fname
-    FLOAT,         dimension(:),   pointer :: xpot
     FLOAT, allocatable :: v0(:,:), nxc(:), potential(:)
     FLOAT, allocatable :: current_kpt(:, :)
     FLOAT, allocatable :: density_kpt(:), density_tmp(:,:)

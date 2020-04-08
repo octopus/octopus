@@ -279,18 +279,18 @@ contains
 
     end select
 
-    call batch_pack_was_modified(ffb)
-
     POP_SUB(X(boundaries_set_batch).zero_boundaries)
   end subroutine zero_boundaries
 
 
   ! ---------------------------------------------------------
   subroutine multiresolution()
+#ifndef SINGLE_PRECISION
     integer :: ist, ip
     integer :: ii, jj, kk, ix, iy, iz, dx, dy, dz, i_lev
     FLOAT :: weight
     R_TYPE, allocatable :: ff(:)
+#endif
 
     PUSH_SUB(X(boundaries_set_batch).multiresolution)
 

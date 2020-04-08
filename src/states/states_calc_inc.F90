@@ -82,10 +82,15 @@ contains
     if(bof) then
       write(message(1),'(a,i6)') "The cholesky_serial orthogonalization failed with error code ", ierr
       message(2) = "There may be a linear dependence, a zero vector, or maybe a library problem."
-      call messages_warning(2)
+      message(3) = "Using the Gram-Schimdt orthogonalization instead."
+      call messages_warning(3)
     end if
-
-    call X(states_trsm)(st, mesh, ik, ss)
+  
+    if(.not. bof) then
+      call X(states_trsm)(st, mesh, ik, ss)
+    else
+      call mgs()
+    end if
 
     SAFE_DEALLOCATE_A(ss)
 
@@ -420,7 +425,7 @@ subroutine X(states_trsm)(st, mesh, ik, ss)
 end subroutine X(states_trsm)
 
 ! ---------------------------------------------------------
-subroutine X(states_orthogonalize_single)(st, mesh, nst, iqn, phi, normalize, mask, overlap, norm, Theta_fi, beta_ij)
+subroutine X(states_orthogonalize_single)(st, mesh, nst, iqn, phi, normalize, mask, overlap, norm, Theta_fi, beta_ij, against_all)
   type(states_t),    intent(in)    :: st
   type(mesh_t),      intent(in)    :: mesh
   integer,           intent(in)    :: nst
@@ -432,12 +437,14 @@ subroutine X(states_orthogonalize_single)(st, mesh, nst, iqn, phi, normalize, ma
   FLOAT,   optional, intent(out)   :: norm
   FLOAT,   optional, intent(in)    :: theta_fi
   R_TYPE,  optional, intent(in)    :: beta_ij(:)   !< beta_ij(nst)
+  logical, optional, intent(in)    :: against_all
 
-  integer :: ist, idim, ibind
+  integer :: ist, idim, length_ss, ibind
   FLOAT   :: nrm2
   R_TYPE, allocatable  :: ss(:), psi(:, :)
   type(profile_t), save :: prof
   type(profile_t), save :: reduce_prof
+  logical :: against_all_
   type(batch_t), pointer :: batch
   
   call profiling_in(prof, "GRAM_SCHMIDT")
@@ -445,13 +452,31 @@ subroutine X(states_orthogonalize_single)(st, mesh, nst, iqn, phi, normalize, ma
 
   ASSERT(nst <= st%nst)
   ASSERT(.not. st%parallel_in_states)
+  ! if against_all is set to true, phi is orthogonalized to all other states except nst+1
+  ! (nst + 1 is chosen because this routine is usually called with nst=ist-1 in a loop)
+  against_all_ = optional_default(against_all, .false.)
 
   SAFE_ALLOCATE(psi(1:mesh%np, 1:st%d%dim))
-  SAFE_ALLOCATE(ss(1:nst))
+  length_ss = nst
+  if(against_all_) then
+    length_ss = st%nst
+  end if
+  SAFE_ALLOCATE(ss(1:length_ss))
+  ! Check length of optional arguments
+  if(present(mask)) then
+    ASSERT(ubound(mask, dim=1) >= length_ss)
+  end if
+  if(present(overlap)) then
+    ASSERT(ubound(overlap, dim=1) >= length_ss)
+  end if
+  if(present(beta_ij)) then
+    ASSERT(ubound(beta_ij, dim=1) >= length_ss)
+  end if
 
   ss = M_ZERO
 
-  do ist = 1, nst
+  do ist = 1, st%nst
+    if(skip_this_iteration(ist, nst, against_all_)) cycle
     if(present(mask)) then
       if(mask(ist)) cycle
     end if
@@ -475,23 +500,25 @@ subroutine X(states_orthogonalize_single)(st, mesh, nst, iqn, phi, normalize, ma
     
   if(mesh%parallel_in_domains) then
     call profiling_in(reduce_prof, "GRAM_SCHMIDT_REDUCE")
-    call comm_allreduce(mesh%mpi_grp%comm, ss, dim = nst)
+    call comm_allreduce(mesh%mpi_grp%comm, ss, dim = length_ss)
     call profiling_out(reduce_prof)
   end if
 
   if(present(mask)) then
-    do ist = 1, nst
+    do ist = 1, st%nst
+      if(skip_this_iteration(ist, nst, against_all_)) cycle
       mask(ist) = (abs(ss(ist)) <= M_EPSILON)
     end do
   end if
 
-  if(present(beta_ij)) ss(1:nst) = ss(1:nst)*beta_ij(1:nst)
+  if(present(beta_ij)) ss(1:length_ss) = ss(1:length_ss)*beta_ij(1:length_ss)
   
   if(present(theta_fi)) then
     if(theta_fi /= M_ONE) phi(1:mesh%np, 1:st%d%dim) = theta_fi*phi(1:mesh%np, 1:st%d%dim)
   end if
 
-  do ist = 1, nst
+  do ist = 1, st%nst
+    if(skip_this_iteration(ist, nst, against_all_)) cycle
     if(present(mask)) then
       if(mask(ist)) cycle
     end if
@@ -518,7 +545,7 @@ subroutine X(states_orthogonalize_single)(st, mesh, nst, iqn, phi, normalize, ma
   end if
 
   if(present(overlap)) then
-    overlap(1:nst) = ss(1:nst)
+    overlap(1:length_ss) = ss(1:length_ss)
   end if
 
   if(present(norm)) then
@@ -532,6 +559,22 @@ subroutine X(states_orthogonalize_single)(st, mesh, nst, iqn, phi, normalize, ma
 
   POP_SUB(X(states_orthogonalize_single))
   call profiling_out(prof)
+
+  contains
+
+    logical function skip_this_iteration(ist, nst, against_all_states)
+      integer, intent(in) :: ist, nst
+      logical, intent(in) :: against_all_states
+
+      skip_this_iteration = .false.
+      if(.not.against_all_states) then
+        ! orthogonalize against previous states only
+        if(ist > nst) skip_this_iteration = .true.
+      else
+        ! orthogonalize against all other states besides nst + 1
+        if(ist == nst + 1) skip_this_iteration = .true.
+      end if
+    end function skip_this_iteration
 end subroutine X(states_orthogonalize_single)
 
 ! ---------------------------------------------------------

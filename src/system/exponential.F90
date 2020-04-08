@@ -23,13 +23,10 @@ module exponential_oct_m
   use batch_oct_m
   use batch_ops_oct_m
   use blas_oct_m
-  use cube_function_oct_m
   use derivatives_oct_m
   use global_oct_m
-  use hardware_oct_m
   use hamiltonian_oct_m
   use hamiltonian_base_oct_m
-  use fourier_space_oct_m
   use lalg_adv_oct_m
   use lalg_basic_oct_m
   use loct_math_oct_m
@@ -40,7 +37,6 @@ module exponential_oct_m
   use states_oct_m
   use states_calc_oct_m
   use types_oct_m
-  use varinfo_oct_m
   use xc_oct_m
 
   implicit none
@@ -65,6 +61,10 @@ module exponential_oct_m
     FLOAT       :: lanczos_tol !< tolerance for the Lanczos method
     integer     :: exp_order   !< order to which the propagator is expanded
     integer     :: arnoldi_gs  !< Orthogonalization scheme used for Arnoldi
+    ! these are variables needed for temporary storage -> avoid allocation in each time step
+    type(batch_t) :: psi1b, hpsi1b
+    logical     :: batches_initialized, batches_packed
+    integer     :: tmp_nst, tmp_nst_linear
   end type exponential_t
 
 contains
@@ -187,6 +187,11 @@ contains
                               te%arnoldi_gs)
     end if
 
+    te%batches_initialized = .false.
+    te%batches_packed = .false.
+    te%tmp_nst = -1
+    te%tmp_nst_linear = -1
+
     POP_SUB(exponential_init)
   end subroutine exponential_init
 
@@ -195,6 +200,18 @@ contains
     type(exponential_t), intent(inout) :: te
 
     PUSH_SUB(exponential_end)
+
+    ! deallocate temporary batches and arrays
+    if(te%batches_initialized) then
+      te%psi1b%nst = te%tmp_nst
+      te%psi1b%nst_linear = te%tmp_nst_linear
+      call batch_end(te%hpsi1b, copy=.false.)
+      te%hpsi1b%nst = te%tmp_nst
+      te%hpsi1b%nst_linear = te%tmp_nst_linear
+      call batch_end(te%psi1b, copy=.false.)
+      te%batches_initialized = .false.
+      te%batches_packed = .false.
+    end if
 
     POP_SUB(exponential_end)
   end subroutine exponential_end
@@ -210,6 +227,11 @@ contains
     teo%lanczos_tol = tei%lanczos_tol
     teo%exp_order   = tei%exp_order
     teo%arnoldi_gs  = tei%arnoldi_gs 
+
+    teo%batches_initialized = .false.
+    teo%batches_packed = .false.
+    teo%tmp_nst = -1
+    teo%tmp_nst_linear = -1
 
     POP_SUB(exponential_copy)
   end subroutine exponential_copy
@@ -535,7 +557,7 @@ contains
 
         ! zpsi = nrm * V * expo(1:iter, 1) = nrm * V * expo * V^(T) * zpsi
         do idim = 1, hm%d%dim
-           call blas_gemv('N', der%mesh%np, iter, M_z1*beta, v(1,idim,1), der%mesh%np*hm%d%dim, expo(1,1), 1, M_z0, zpsi(1,idim), 1)
+          call blas_gemv('N', der%mesh%np, iter, M_z1*beta, v(1,idim,1), der%mesh%np*hm%d%dim, expo(1,1), 1, M_z0, zpsi(1,idim), 1)
         end do
 
       end if
@@ -589,7 +611,8 @@ contains
           end if
 
           do idim = 1, hm%d%dim
-            call blas_gemv('N', der%mesh%np, iter, deltat*M_z1*beta, v(1,idim,1), der%mesh%np*hm%d%dim, expo(1,1), 1, M_z1, zpsi(1,idim), 1)
+            call blas_gemv('N', der%mesh%np, iter, deltat*M_z1*beta, v(1,idim,1), &
+                           der%mesh%np*hm%d%dim, expo(1,1), 1, M_z1, zpsi(1,idim), 1)
           end do
 
         end if
@@ -628,6 +651,7 @@ contains
 
     ASSERT(batch_type(psib) == TYPE_CMPLX)
     ASSERT(present(psib2) .eqv. present(deltat2))
+
     
     if(present(Imdeltat) .and. present(psib2)) then
       ASSERT(present(Imdeltat2))
@@ -711,38 +735,23 @@ contains
     
     subroutine taylor_series_batch()
       CMPLX :: zfact, zfact2
-      CMPLX, allocatable :: psi1(:, :, :), hpsi1(:, :, :)
       integer :: iter
       logical :: zfact_is_real
-      integer :: st_start, st_end
-      type(batch_t) :: psi1b, hpsi1b
       type(profile_t), save :: prof
-      logical :: copy_at_end
 
       PUSH_SUB(exponential_apply_batch.taylor_series_batch)
       call profiling_in(prof, "EXP_TAYLOR_BATCH")
 
-      SAFE_ALLOCATE(psi1 (1:der%mesh%np_part, 1:hm%d%dim, 1:psib%nst))
-      SAFE_ALLOCATE(hpsi1(1:der%mesh%np, 1:hm%d%dim, 1:psib%nst))
-
-      st_start = psib%states(1)%ist
-      st_end = psib%states(psib%nst)%ist
+      if(hamiltonian_apply_packed(hm, der%mesh)) then
+        call batch_pack(psib)
+        if(present(psib2)) call batch_pack(psib2, copy = .false.)
+      end if
+      
+      call initialize_temporary_batches()
 
       zfact = M_z1
       zfact2 = M_z1
       zfact_is_real = .true.
-
-      call batch_init(psi1b, hm%d%dim, st_start, st_end, psi1)
-      call batch_init(hpsi1b, hm%d%dim, st_start, st_end, hpsi1)
-
-      if(hamiltonian_apply_packed(hm, der%mesh)) then
-        ! unpack at end with copying only if the status on entry is unpacked
-        copy_at_end = batch_status(psib) == BATCH_NOT_PACKED
-        call batch_pack(psib)
-        if(present(psib2)) call batch_pack(psib2, copy = .false.)
-        call batch_pack(psi1b, copy = .false.)
-        call batch_pack(hpsi1b, copy = .false.)
-      end if
       
       if(present(psib2)) call batch_copy_data(der%mesh%np, psib, psib2)
 
@@ -762,41 +771,95 @@ contains
         !  the code stops in ZAXPY below without saying why.
 
         if(iter /= 1) then
-          call zhamiltonian_apply_batch(hm, der, psi1b, hpsi1b, ik, set_phase = .not.phase_correction)
+          call zhamiltonian_apply_batch(hm, der, te%psi1b, te%hpsi1b, ik, set_phase = .not.phase_correction)
         else
-          call zhamiltonian_apply_batch(hm, der, psib, hpsi1b, ik, set_phase = .not.phase_correction)
+          call zhamiltonian_apply_batch(hm, der, psib, te%hpsi1b, ik, set_phase = .not.phase_correction)
         end if
         
         if(zfact_is_real) then
-          call batch_axpy(der%mesh%np, real(zfact, REAL_PRECISION), hpsi1b, psib)
-          if(present(psib2)) call batch_axpy(der%mesh%np, real(zfact2, REAL_PRECISION), hpsi1b, psib2)
+          call batch_axpy(der%mesh%np, real(zfact, REAL_PRECISION), te%hpsi1b, psib)
+          if(present(psib2)) call batch_axpy(der%mesh%np, real(zfact2, REAL_PRECISION), te%hpsi1b, psib2)
         else
-          call batch_axpy(der%mesh%np, zfact, hpsi1b, psib)
-          if(present(psib2)) call batch_axpy(der%mesh%np, zfact2, hpsi1b, psib2)
+          call batch_axpy(der%mesh%np, zfact, te%hpsi1b, psib)
+          if(present(psib2)) call batch_axpy(der%mesh%np, zfact2, te%hpsi1b, psib2)
         end if
 
-        if(iter /= te%exp_order) call batch_copy_data(der%mesh%np, hpsi1b, psi1b)
+        if(iter /= te%exp_order) call batch_copy_data(der%mesh%np, te%hpsi1b, te%psi1b)
 
       end do
 
       if(hamiltonian_apply_packed(hm, der%mesh)) then
-        call batch_unpack(psi1b, copy = .false.)
-        call batch_unpack(hpsi1b, copy = .false.)
-        if(present(psib2)) call batch_unpack(psib2, copy=copy_at_end)
-        call batch_unpack(psib, copy=copy_at_end)
+        if(present(psib2)) call batch_unpack(psib2)
+        call batch_unpack(psib)
       end if
 
-      call batch_end(hpsi1b)
-      call batch_end(psi1b)
-
       call profiling_count_operations(psib%nst*hm%d%dim*dble(der%mesh%np)*te%exp_order*CNST(6.0))
-
-      SAFE_DEALLOCATE_A(psi1)
-      SAFE_DEALLOCATE_A(hpsi1)
       
       call profiling_out(prof)
       POP_SUB(exponential_apply_batch.taylor_series_batch)
+
     end subroutine taylor_series_batch
+
+    subroutine initialize_temporary_batches()
+      logical :: reinitialize
+      type(profile_t), save :: prof
+
+      call profiling_in(prof, "EXP_TEMP_REALLOC")
+      
+      ! This routine initializes temporary batches. If their size changes,
+      ! they are reinitialized.
+      if(.not. te%batches_initialized) then
+        call init_batches()
+      else
+        if(.not.batch_is_packed(psib)) then
+          reinitialize = te%psi1b%nst_linear /= psib%nst_linear
+        else
+          reinitialize = any(te%psi1b%pack%size /= psib%pack%size)
+        end if
+        if (reinitialize) then
+          call end_batches()
+          call init_batches()
+        else
+          ! override previous values, is ok because it is used packed
+          te%psi1b%nst = psib%nst
+          te%hpsi1b%nst = psib%nst
+          te%psi1b%nst_linear = psib%nst_linear
+          te%hpsi1b%nst_linear = psib%nst_linear
+        end if
+      end if
+
+      call profiling_out(prof)
+    end subroutine initialize_temporary_batches
+
+    subroutine init_batches()
+      call batch_copy(psib, te%psi1b, copy_data = .false., fill_zeros = .false.)
+      call batch_copy(psib, te%hpsi1b, copy_data = .false., fill_zeros = .false.)
+      ! pack the batch -> store on device for GPU version, avoids data transfers
+      if(hamiltonian_apply_packed(hm, der%mesh)) then
+        te%batches_packed = .true.
+        call batch_pack(te%psi1b, copy = .false.)
+        call batch_pack(te%hpsi1b, copy = .false.)
+      end if
+      te%tmp_nst = te%psi1b%nst
+      te%tmp_nst_linear = te%psi1b%nst_linear
+
+      te%batches_initialized = .true.
+    end subroutine init_batches
+
+    subroutine end_batches()
+      ! deallocate temporary batches and arrays
+      if(te%batches_packed) te%batches_packed = .false.
+
+      te%psi1b%nst = te%tmp_nst
+      te%psi1b%nst_linear = te%tmp_nst_linear
+      call batch_end(te%hpsi1b, copy = .false.)
+      
+      te%hpsi1b%nst = te%tmp_nst
+      te%hpsi1b%nst_linear = te%tmp_nst_linear
+      call batch_end(te%psi1b, copy = .false.)
+
+      te%batches_initialized = .false.
+    end subroutine end_batches
 
   end subroutine exponential_apply_batch
 

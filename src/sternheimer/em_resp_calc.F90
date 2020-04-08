@@ -33,9 +33,7 @@ module em_resp_calc_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use mpi_oct_m
-  use parser_oct_m
   use pert_oct_m
-  use poisson_oct_m
   use profiling_oct_m
   use states_oct_m
   use states_block_oct_m

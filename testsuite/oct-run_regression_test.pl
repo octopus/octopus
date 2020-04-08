@@ -514,7 +514,7 @@ sub run_match_new {
     $params =~ s/\\,/_COMMA_/g;
     my @par = split(/,/, $params);
     for ($params=0; $params <= $#par; $params++) {
-        $par[$params] =~ s/_COMMA_/,/g;
+        $par[$params] =~ s/_COMMA_/\\,/g;
         $par[$params] =~ s/^\s*//;
         $par[$params] =~ s/\s*$//;
     }

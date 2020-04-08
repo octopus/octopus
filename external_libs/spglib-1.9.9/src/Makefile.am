@@ -44,7 +44,7 @@ symmetry.h \
 version.h
 
 libsymspg_a_SOURCES = $(spglib_c) $(spglib_h)
-pkginclude_HEADERS = $(spglib_h)
+noinst_HEADERS = $(spglib_h)
 
 check_PROGRAMS = spglib_test
 spglib_test_SOURCES = test.c $(spglib_c) $(spglib_h)

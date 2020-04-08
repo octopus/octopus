@@ -38,7 +38,6 @@ module accel_oct_m
   use clfft
 #endif
   use global_oct_m
-  use io_oct_m
   use iso_c_binding
   use loct_oct_m
   use messages_oct_m
@@ -252,10 +251,11 @@ contains
     type(mpi_grp_t),  intent(inout) :: base_grp
 
     logical  :: disable, default, run_benchmark
-    integer  :: device_type
-    integer  :: idevice, iplatform, ndevices, ret_devices, nplatforms, iplat
+    integer  :: idevice, iplatform
 #ifdef HAVE_OPENCL
+    integer  :: device_type
     integer :: cl_status, idev
+    integer  :: ndevices, ret_devices, nplatforms, iplat
     character(len=256) :: device_name
     type(cl_platform_id) :: platform_id
     type(cl_program) :: prog
@@ -346,7 +346,11 @@ contains
     call messages_print_stress(stdout, "GPU acceleration")
 
 #ifdef HAVE_CUDA
-    call cuda_init(accel%context%cuda_context, accel%device%cuda_device)
+    call cuda_init(accel%context%cuda_context, accel%device%cuda_device, idevice, base_grp%rank)
+#ifdef HAVE_MPI
+    write(message(1), '(A, I5.5, A, I5.5)') "Rank ", base_grp%rank, " uses device number ", idevice
+    call messages_info(1, all_nodes = .true.)
+#endif
 
     ! no shared mem support in our cuda interface (for the moment)
     accel%shared_mem = .true.
@@ -605,8 +609,13 @@ contains
     end subroutine select_device
 
     subroutine device_info()
-      integer(8) :: val, val2
-      integer :: major, minor, version
+#ifdef HAVE_OPENCL
+      integer(8) :: val
+#endif
+#ifdef HAVE_CUDA
+      integer :: version
+#endif
+      integer :: major, minor
       character(len=256) :: val_str
       
       PUSH_SUB(accel_init.device_info)
@@ -781,16 +790,17 @@ contains
 
       if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "ReleaseCommandQueue")
       call clReleaseContext(accel%context%cl_context, cl_status)
-
+#endif
+      
       if(buffer_alloc_count /= 0) then
-        call messages_write('OpenCL:')
+        call messages_write('Accel:')
         call messages_write(real(allocated_mem, REAL_PRECISION), fmt = 'f12.1', units = unit_megabytes, align_left = .true.)
         call messages_write(' in ')
         call messages_write(buffer_alloc_count)
         call messages_write(' buffers were not deallocated.')
-        call messages_warning()
+        call messages_fatal()
       end if
-#endif
+
     end if
 
     POP_SUB(accel_end)
@@ -837,7 +847,9 @@ contains
     integer,            intent(in)    :: size
 
     integer(8) :: fsize
+#ifdef HAVE_OPENCL
     integer :: ierr
+#endif
 
     PUSH_SUB(accel_create_buffer_4)
 
@@ -873,7 +885,9 @@ contains
     integer(8),         intent(in)    :: size
 
     integer(8) :: fsize
+#ifdef HAVE_OPENCL
     integer :: ierr
+#endif
 
     PUSH_SUB(accel_create_buffer_8)
 
@@ -905,7 +919,9 @@ contains
   subroutine accel_release_buffer(this)
     type(accel_mem_t), intent(inout) :: this
 
+#ifdef HAVE_OPENCL
     integer :: ierr
+#endif
 
     PUSH_SUB(accel_release_buffer)
 
@@ -949,7 +965,9 @@ contains
   ! -----------------------------------------
 
   subroutine accel_finish()
+#ifdef HAVE_OPENCL
     integer :: ierr
+#endif
 
     ! no push_sub, called too frequently
     
@@ -969,7 +987,9 @@ contains
     integer,              intent(in)    :: narg
     type(accel_mem_t),    intent(in)    :: buffer
 
+#ifdef HAVE_OPENCL
     integer :: ierr
+#endif
 
     ! no push_sub, called too frequently
 #ifdef HAVE_OPENCL
@@ -991,7 +1011,9 @@ contains
     type(type_t),         intent(in)    :: type
     integer,              intent(in)    :: size
 
+#ifdef HAVE_OPENCL
     integer :: ierr
+#endif
     integer(8) :: size_in_bytes
 
     PUSH_SUB(accel_set_kernel_arg_local)
@@ -1027,7 +1049,10 @@ contains
     integer,              intent(in)    :: globalsizes(:)
     integer,              intent(in)    :: localsizes(:)
 
-    integer :: dim, ierr
+    integer :: dim
+#ifdef HAVE_OPENCL
+    integer :: ierr
+#endif
     integer(8) :: gsizes(1:3)
     integer(8) :: lsizes(1:3)
 
@@ -1081,7 +1106,9 @@ contains
     type(accel_kernel_t), intent(inout) :: kernel
 
     integer(8) :: workgroup_size8
-    integer    :: ierr
+#ifdef HAVE_OPENCL
+    integer :: ierr
+#endif
 
 #ifdef HAVE_OPENCL
     call clGetKernelWorkGroupInfo(kernel%kernel, accel%device%cl_device, CL_KERNEL_WORK_GROUP_SIZE, workgroup_size8, ierr)

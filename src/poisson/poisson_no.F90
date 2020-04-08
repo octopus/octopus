@@ -20,17 +20,9 @@
 
 module poisson_no_oct_m
   use cube_oct_m
-  use geometry_oct_m
   use global_oct_m
-  use mesh_function_oct_m
   use mesh_oct_m
   use messages_oct_m
-  use mpi_oct_m
-  use parser_oct_m
-  use profiling_oct_m
-  use simul_box_oct_m
-  use unit_oct_m
-  use unit_system_oct_m
 
   implicit none
   private

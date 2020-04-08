@@ -23,9 +23,6 @@ module oscillator_strength_oct_m
   use io_oct_m
   use kick_oct_m
   use lalg_adv_oct_m
-  use loct_oct_m
-  use loct_math_oct_m
-  use parser_oct_m
   use messages_oct_m
   use minimizer_oct_m
   use profiling_oct_m

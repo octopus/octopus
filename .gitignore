@@ -25,6 +25,10 @@ semantic.cache
 *.gcno
 *.gcda
 
+# new dependencies files
+*.dirstamp
+src/.fortran_dependencies/
+
 # /
 /bin
 /lib

@@ -29,10 +29,8 @@ module scf_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
-  use output_oct_m
   use hamiltonian_oct_m
   use io_oct_m
-  use io_function_oct_m
   use kpoints_oct_m
   use lcao_oct_m
   use lda_u_oct_m
@@ -40,17 +38,15 @@ module scf_oct_m
   use lda_u_mixer_oct_m
   use loct_oct_m
   use magnetic_oct_m
-  use math_oct_m
   use mesh_oct_m
-  use mesh_batch_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use mix_oct_m
   use modelmb_exchange_syms_oct_m
   use mpi_oct_m
-  use mpi_lib_oct_m
   use multigrid_oct_m
   use multicomm_oct_m
+  use output_oct_m
   use parser_oct_m
   use partial_charges_oct_m
   use preconditioners_oct_m
@@ -61,11 +57,11 @@ module scf_oct_m
   use smear_oct_m
   use species_oct_m
   use states_oct_m
-  use states_calc_oct_m
   use states_dim_oct_m
   use states_group_oct_m
   use states_io_oct_m
   use states_restart_oct_m
+  use stress_oct_m
   use symmetries_oct_m
   use types_oct_m
   use unit_oct_m
@@ -74,9 +70,8 @@ module scf_oct_m
   use v_ks_oct_m
   use varinfo_oct_m
   use vdw_ts_oct_m
-  use xc_functl_oct_m
+!  use xc_functl_oct_m
   use XC_F90(lib_m)
-  use stress_oct_m
   
   implicit none
 
@@ -120,19 +115,21 @@ module scf_oct_m
     integer :: mixdim1
     logical :: forced_finish !< remember if 'touch stop' was triggered earlier.
     type(lda_u_mixer_t) :: lda_u_mix
+    type(grid_t), pointer :: gr
   end type scf_t
 
 contains
 
   ! ---------------------------------------------------------
-  subroutine scf_init(scf, gr, geo, st, mc, hm, conv_force)
-    type(scf_t),         intent(inout) :: scf
-    type(grid_t),        intent(inout) :: gr
-    type(geometry_t),    intent(in)    :: geo
-    type(states_t),      intent(in)    :: st
-    type(multicomm_t),   intent(in)    :: mc
-    type(hamiltonian_t), intent(inout) :: hm
-    FLOAT,   optional,   intent(in)    :: conv_force
+  subroutine scf_init(scf, gr, geo, st, mc, hm, ks, conv_force)
+    type(scf_t),          intent(inout) :: scf
+    type(grid_t), target, intent(inout) :: gr
+    type(geometry_t),     intent(in)    :: geo
+    type(states_t),       intent(in)    :: st
+    type(multicomm_t),    intent(in)    :: mc
+    type(hamiltonian_t),  intent(inout) :: hm
+    type(v_ks_t),         intent(in)    :: ks
+    FLOAT,   optional,    intent(in)    :: conv_force
 
     FLOAT :: rmin
     integer :: mixdefault, ierr
@@ -363,6 +360,7 @@ contains
 
     !If we use LDA+U, we also have do mix it
     if(scf%mix_field /= OPTION__MIXFIELD__STATES) then
+      call lda_u_mixer_init(hm%lda_u, scf%lda_u_mix, st)
       call lda_u_mixer_init_auxmixer(hm%lda_u, scf%lda_u_mix, scf%smix, st)
     end if
     call mix_get_field(scf%smix, scf%mixfield)
@@ -378,7 +376,7 @@ contains
 
 
     ! now the eigensolver stuff
-    call eigensolver_init(scf%eigens, gr, st)
+    call eigensolver_init(scf%eigens, gr, st, ks%xc)
 
     if(preconditioner_is_multigrid(scf%eigens%pre)) then
       SAFE_ALLOCATE(gr%mgrid_prec)
@@ -481,15 +479,22 @@ contains
 
     scf%forced_finish = .false.
 
+    scf%gr => gr
+    
     POP_SUB(scf_init)
   end subroutine scf_init
 
 
   ! ---------------------------------------------------------
   subroutine scf_end(scf)
-    type(scf_t), intent(inout) :: scf
-
+    type(scf_t),  intent(inout) :: scf
+    
     PUSH_SUB(scf_end)
+
+    if(preconditioner_is_multigrid(scf%eigens%pre)) then
+      call multigrid_end(scf%gr%mgrid_prec)
+      SAFE_DEALLOCATE_P(scf%gr%mgrid_prec)
+    end if
 
     call eigensolver_end(scf%eigens)
     if(scf%mix_field /= OPTION__MIXFIELD__NONE) call mix_end(scf%smix)
@@ -557,20 +562,6 @@ contains
 
     verbosity_ = VERB_FULL
     if(present(verbosity)) verbosity_ = verbosity
-
-    if(ks%theory_level == CLASSICAL) then
-      ! calculate forces
-      if(scf%calc_force) call forces_calculate(gr, geo, hm, st, ks)
-
-      if(gs_run_) then 
-        ! output final information
-        call scf_write_static(STATIC_DIR, "info")
-        call output_all(outp, gr, geo, st, hm, ks, STATIC_DIR)
-      end if
-
-      POP_SUB(scf_run)
-      return
-    end if
 
     if(scf%lcao_restricted) then
       call lcao_init(lcao, gr, geo, st)
@@ -660,9 +651,7 @@ contains
 
     call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy)
     !If we use LDA+U, we also have do mix it
-    if(scf%mix_field /= OPTION__MIXFIELD__STATES) then
-      call lda_u_mixer_init(hm%lda_u, scf%lda_u_mix, st)
-    end if
+    if(scf%mix_field /= OPTION__MIXFIELD__STATES) call lda_u_mixer_set_vin(hm%lda_u, scf%lda_u_mix)
 
     evsum_in = states_eigenvalues_sum(st)
 
@@ -1136,7 +1125,7 @@ contains
       character(len=*), intent(in) :: dir, fname
 
       type(partial_charges_t) :: partial_charges
-      integer :: iunit, idir, iatom, ii
+      integer :: iunit, iatom
       FLOAT, allocatable :: hirshfeld_charges(:)
 
       PUSH_SUB(scf_run.scf_write_static)

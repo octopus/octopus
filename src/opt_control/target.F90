@@ -26,7 +26,6 @@ module target_oct_m
   use epot_oct_m
   use excited_states_oct_m
   use fft_oct_m
-  use forces_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m

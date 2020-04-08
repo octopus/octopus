@@ -24,8 +24,6 @@ module geometry_oct_m
   use distributed_oct_m
   use global_oct_m
   use io_oct_m
-  use loct_pointer_oct_m
-  use loct_math_oct_m
   use messages_oct_m
   use multicomm_oct_m
   use mpi_oct_m
@@ -34,7 +32,6 @@ module geometry_oct_m
   use read_coords_oct_m
   use space_oct_m
   use species_oct_m
-  use string_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use varinfo_oct_m
@@ -44,7 +41,6 @@ module geometry_oct_m
   private
   public ::                          &
     geometry_t,                      &
-    geometry_nullify,                &
     geometry_init,                   &
     geometry_init_xyz,               &
     geometry_init_species,           &
@@ -65,73 +61,28 @@ module geometry_oct_m
     geometry_get_positions,          &
     geometry_set_positions
 
-
-  integer, parameter, public :: &
-    INTERACTION_COULOMB = 1,    &
-    INTERACTION_LJ      = 2
-
-  integer, parameter, public :: &
-    LJ_EPSILON = 1,             &
-    LJ_SIGMA   = 2
-
   type geometry_t
     type(space_t), pointer :: space
     integer                :: natoms
     type(atom_t), pointer  :: atom(:)
-
     integer :: ncatoms              !< For QM+MM calculations
     type(atom_classical_t), pointer :: catom(:)
-
     integer :: nspecies
     type(species_t), pointer :: species(:)
-
     logical :: only_user_def        !< Do we want to treat only user-defined species?
     logical :: species_time_dependent !< For time-dependent user defined species
-
     FLOAT :: kinetic_energy         !< the ion kinetic energy
-
     logical :: nlpp                 !< does any species have non-local pp?
     logical :: nlcc                 !< does any species have non-local core corrections?
-
     type(distributed_t) :: atoms_dist
-
-    integer, pointer :: ionic_interaction_type(:, :)
-    FLOAT,   pointer :: ionic_interaction_parameter(:, :, :)
-
     logical          :: reduced_coordinates !< If true the coordinates are stored in
                                             !! reduced coordinates and need to be converted.
-
     !> variables for passing info from XSF input to simul_box_init
     integer :: periodic_dim
     FLOAT :: lsize(MAX_DIM)
-    
   end type geometry_t
 
 contains
-
-  ! ---------------------------------------------------------
-  subroutine geometry_nullify(this)
-    type(geometry_t), intent(inout) :: this
-
-    PUSH_SUB(geometry_nullify)
-
-    nullify(this%space, this%atom, this%catom, this%species)
-    this%natoms=0
-    this%ncatoms=0
-    this%nspecies=0
-    this%only_user_def=.false.
-    this%species_time_dependent=.false.
-    this%kinetic_energy=M_ZERO
-    this%nlpp=.false.
-    this%nlcc=.false.
-    call distributed_nullify(this%atoms_dist, 0)
-    nullify(this%ionic_interaction_type, this%ionic_interaction_parameter)
-    this%reduced_coordinates=.false.
-    this%periodic_dim=0
-    this%lsize=M_ZERO
-
-    POP_SUB(geometry_nullify)
-  end subroutine geometry_nullify
 
   ! ---------------------------------------------------------
   subroutine geometry_init(geo, space, print_info)
@@ -319,107 +270,8 @@ contains
       geo%nlpp = (geo%nlpp .or. species_is_ps(geo%species(i)))
     end do
 
-    call geometry_init_interaction(geo, print_info=print_info)
-
     POP_SUB(geometry_init_species)
   end subroutine geometry_init_species
-
-  ! ---------------------------------------------------------
-
-  subroutine geometry_init_interaction(geo, print_info)
-    type(geometry_t),  intent(inout) :: geo
-    logical, optional, intent(in)    :: print_info
-
-    logical :: print_info_
-    integer :: nrow, irow, idx1, idx2, ispecies
-    type(block_t) :: blk
-    character(len=LABEL_LEN)  :: label1, label2
-
-    PUSH_SUB(geometry_init_interaction)
-
-    print_info_ = .true.
-    if(present(print_info)) then
-      print_info_ = print_info
-    end if
-
-    SAFE_ALLOCATE(geo%ionic_interaction_type(1:geo%nspecies, 1:geo%nspecies))
-    nullify(geo%ionic_interaction_parameter)
-
-    ! coulomb interaction by default
-    geo%ionic_interaction_type = INTERACTION_COULOMB
-
-    !%Variable IonicInteraction
-    !%Type block
-    !%Section System::Species
-    !%Description
-    !% This block defines the type of classical interaction between
-    !% ions. Each line represents the interaction between two types of
-    !% species. The first two columns contain the species names, the
-    !% next column is the type of interaction as defined below. The
-    !% next columns are the parameters for the interaction (if
-    !% any). Pairs not specified interact through Coulomb`s law.
-    !%
-    !% Note: In most cases there is no need to specify this block,
-    !% since Coulomb interaction will be used by default.
-    !%Option coulomb 1
-    !% Particles interact according to Coulomb`s law. The interaction
-    !% strength is given by the charge of the species. There are no
-    !% parameters.
-    !%Option lennard_jones 2
-    !% (Experimental) The Lennard-Jones 12-6 model potential. It has
-    !% the form <math>V(r) = 4 \varepsilon \left[\left(\frac{\sigma}{r}\right)^{12} -
-    !% \left(\frac{\sigma}{r}\right)^6\right]</math>.  The next 2 columns contain the
-    !% <math>\varepsilon</math> and <math>\sigma</math> (given in the
-    !% corresponding input file units).
-    !%End
-
-    if(parse_block('IonicInteraction', blk) == 0) then
-      call messages_experimental('non-Coulombic ionic interaction')
-      nrow = parse_block_n(blk)
-
-      !for the moment we consider two parameters for lj 12 6
-      SAFE_ALLOCATE(geo%ionic_interaction_parameter(1:2, 1:geo%nspecies, 1:geo%nspecies))
-
-      do irow = 0, nrow - 1
-        ! get the labels
-        call parse_block_string(blk, irow, 0, label1)
-        call parse_block_string(blk, irow, 1, label2)
-
-        ! and the index that corresponds to each species
-        do ispecies = 1, geo%nspecies
-          if(species_label(geo%species(ispecies)) == label1) idx1 = ispecies
-          if(species_label(geo%species(ispecies)) == label2) idx2 = ispecies
-        end do
-
-        ! get the type of interaction
-        call parse_block_integer(blk, irow, 2, geo%ionic_interaction_type(idx1, idx2))
-
-        ! the interaction is symmetrical
-        geo%ionic_interaction_type(idx2, idx1) = geo%ionic_interaction_type(idx1, idx2)
-
-        select case(geo%ionic_interaction_type(idx1, idx2))
-        case(INTERACTION_COULOMB)
-          ! nothing to do
-        case(INTERACTION_LJ)
-          call parse_block_float(blk, irow, 3, geo%ionic_interaction_parameter(LJ_EPSILON, idx1, idx2), unit = units_inp%energy)
-          call parse_block_float(blk, irow, 4, geo%ionic_interaction_parameter(LJ_SIGMA, idx1, idx2), unit = units_inp%length)
-
-          ! interaction is symmetric
-          geo%ionic_interaction_parameter(1:2, idx2, idx1) = geo%ionic_interaction_parameter(1:2, idx1, idx2)
-
-          if(print_info_) then
-            message(1) = 'Info: Interaction between '//trim(label1)//' and '//trim(label2)// &
-              ' is given by the Lennard-Jones potential.'
-            call messages_info(1)
-          end if
-
-        end select
-
-      end do
-    end if
-
-    POP_SUB(geometry_init_interaction)
-  end subroutine geometry_init_interaction
 
   ! ---------------------------------------------------------
 
@@ -443,8 +295,6 @@ contains
 
     call distributed_end(geo%atoms_dist)
 
-    SAFE_DEALLOCATE_P(geo%ionic_interaction_type)
-    SAFE_DEALLOCATE_P(geo%ionic_interaction_parameter)
     SAFE_DEALLOCATE_P(geo%atom)
     geo%natoms=0
     SAFE_DEALLOCATE_P(geo%catom)
@@ -755,9 +605,6 @@ contains
     geo_out%kinetic_energy    = geo_in%kinetic_energy
     geo_out%nlpp              = geo_in%nlpp
     geo_out%nlcc              = geo_in%nlcc
-
-    call loct_pointer_copy(geo_out%ionic_interaction_type, geo_in%ionic_interaction_type)
-    call loct_pointer_copy(geo_out%ionic_interaction_parameter, geo_in%ionic_interaction_parameter)
 
     call distributed_copy(geo_in%atoms_dist, geo_out%atoms_dist)
 

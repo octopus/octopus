@@ -108,42 +108,6 @@ subroutine X(shellsort2)(a, x)
   POP_SUB(X(shellsort2))
 end subroutine X(shellsort2)
 
-! ---------------------------------------------------------
-!> sort the eigenvectors according to eigenvalues
-!! with increasing absolute value
-subroutine X(matrix_sort)(np, matrix, eigenvals)
-  integer, intent(in)    :: np
-  R_TYPE,  intent(inout) :: matrix(:, :)
-  R_TYPE,  intent(inout) :: eigenvals(:)
-
-  integer              :: i
-  R_TYPE, allocatable  :: unsorted_matrix(:, :), unsorted_eigenvals(:)
-  FLOAT, allocatable   :: abs_e(:)
-  integer, allocatable :: index(:)
-
-  PUSH_SUB(X(matrix_sort))
-
-  allocate( abs_e(1:np) )
-  allocate( index(1:np) )
-  allocate( unsorted_matrix(1:np, 1:np) )
-  allocate( unsorted_eigenvals(1:np) )
-
-  unsorted_matrix(:, :) = matrix(:, :)
-  unsorted_eigenvals(:) = eigenvals(:)
-  abs_e(:) = abs(unsorted_eigenvals(:))
-  call sort(abs_e, index)
-  do i=1, np
-    eigenvals(i) = unsorted_eigenvals(index(i))
-    matrix(:, i) = unsorted_matrix(:, index(i))
-  end do
-  deallocate(abs_e)
-  deallocate(index)
-  deallocate(unsorted_matrix)
-  deallocate(unsorted_eigenvals)
-
-  POP_SUB(X(matrix_sort))
-end subroutine X(matrix_sort)
-
 
 !! Local Variables:
 !! mode: f90

@@ -24,11 +24,11 @@ module phonons_fd_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
-  use output_oct_m
   use hamiltonian_oct_m
   use mesh_oct_m
   use messages_oct_m
   use multicomm_oct_m
+  use output_oct_m
   use parser_oct_m
   use profiling_oct_m
   use restart_oct_m
@@ -37,7 +37,7 @@ module phonons_fd_oct_m
   use states_restart_oct_m
   use system_oct_m
   use unit_system_oct_m
-  use utils_oct_m 
+  use utils_oct_m
   use v_ks_oct_m
   use vibrations_oct_m
 
@@ -151,7 +151,7 @@ contains
 
     mesh => gr%mesh
 
-    call scf_init(scf, gr, geo, st, mc, hm)
+    call scf_init(scf, gr, geo, st, mc, hm, ks)
     SAFE_ALLOCATE(forces0(1:geo%natoms, 1:mesh%sb%dim))
     SAFE_ALLOCATE(forces (1:geo%natoms, 1:mesh%sb%dim))
     forces = M_ZERO

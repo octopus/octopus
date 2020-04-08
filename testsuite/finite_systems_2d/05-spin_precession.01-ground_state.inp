@@ -23,12 +23,14 @@ TheoryLevel = independent_particles
 SpinComponents = spinors
 
 ConvAbsDens = 1e-10
+EigensolverTolerance = 1e-11
+EigensolverMaxiter = 250
+MaximumIter = 300
 
 %InitialSpins
  0.5 |  0.0 |  0.0
 %
 
-EigenSolverMaxIter = 250
 
 Debug = trace
 

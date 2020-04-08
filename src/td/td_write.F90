@@ -19,8 +19,7 @@
 #include "global.h"
 
 module td_write_oct_m
-  use io_function_oct_m
-  use iso_c_binding
+  use blas_oct_m
   use comm_oct_m
   use current_oct_m
   use excited_states_oct_m
@@ -30,13 +29,14 @@ module td_write_oct_m
   use grid_oct_m
   use output_oct_m
   use hamiltonian_oct_m
+  use io_function_oct_m
   use io_oct_m
   use ion_dynamics_oct_m
+  use iso_c_binding
   use kick_oct_m
   use lasers_oct_m
   use lalg_adv_oct_m
   use lda_u_oct_m
-  use loct_oct_m
   use loct_math_oct_m
   use magnetic_oct_m
   use math_oct_m
@@ -882,9 +882,6 @@ contains
     ! now write down the rest
     write(filename, '(a,a,i7.7)') trim(outp%iter_dir),"td.", iter  ! name of directory
 
-    ! this is required if st%X(psi) is used
-    call states_sync(st)
-
     call output_all(outp, gr, geo, st, hm, ks, filename)
     if(present(dt)) then
       call output_scalar_pot(outp, gr, geo, hm, filename, iter*dt)
@@ -1024,9 +1021,6 @@ contains
     PUSH_SUB(td_write_angular)
 
     call pert_init(angular_momentum, PERTURBATION_MAGNETIC, gr, geo)
-
-    ! this is required if st%X(psi) is used
-    call states_sync(st)
 
     do idir = 1, 3
        call pert_setup_dir(angular_momentum, idir)
@@ -1503,9 +1497,6 @@ contains
 
     PUSH_SUB(td_write_populations)
 
-    ! this is required if st%X(psi) is used
-    call states_sync(st)
-
     SAFE_ALLOCATE(dotprodmatrix(1:writ%gs_st%nst, 1:st%nst, 1:st%d%nik))
     call zstates_matrix(mesh, writ%gs_st, st, dotprodmatrix)
 
@@ -1598,9 +1589,6 @@ contains
       call write_iter_nl(out_acc)
       call td_write_print_header_end(out_acc)
     end if
-
-    ! this is required if st%X(psi) is used
-    call states_sync(st)
 
     call td_calc_tacc(gr, geo, st, hm, acc, dt*iter)
 
@@ -2190,9 +2178,6 @@ contains
 
     end if
 
-    ! this is required if st%X(psi) is used
-    call states_sync(st)
-
     SAFE_ALLOCATE(projections(1:st%nst, gs_st%st_start:gs_st%st_end, 1:st%d%nik))
     projections(:,:,:) = M_Z0
     call calc_projections(gr, st, gs_st, projections)
@@ -2323,9 +2308,6 @@ contains
         if(st%occ(ist, ik)>M_EPSILON) gs_nst = ist
       end do
     end do
-
-    ! this is required if st%X(psi) is used
-    call states_sync(st)
 
     SAFE_ALLOCATE(projections(1:gs_nst, 1:st%nst))
      

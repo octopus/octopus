@@ -24,7 +24,6 @@
 module opt_control_state_oct_m
   use geometry_oct_m
   use global_oct_m
-  use loct_pointer_oct_m
   use messages_oct_m
   use profiling_oct_m
   use species_oct_m

@@ -19,7 +19,6 @@
 #include "global.h"
 
 module permutations_oct_m
-
   use global_oct_m
   use loct_pointer_oct_m
   use math_oct_m

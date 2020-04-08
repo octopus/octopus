@@ -6,10 +6,10 @@ BoxShape = parallelepiped
 
 ExperimentalFeatures = yes
 
-EigenSolver = cg_new
-EigensolverMaxIter = 50
+EigenSolver = cg
+ConvRelDens = 5e-5
 EigensolverTolerance = 1e-8
-ConvRelDens = 1.0e-6
+CGOrthogonalizeAll = yes
 
 a = 7.8809
 
@@ -18,7 +18,7 @@ a = 7.8809
 %
 DFTULevel = dft_u_empirical
 
-PseudopotentialSet=hscv_pbe
+PseudopotentialSet=hscv_lda
 
 %LatticeParameters
   a | a | a

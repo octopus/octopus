@@ -214,11 +214,6 @@ contains
         call messages_write('  or contact the octopus developers for details.')
         call messages_new_line()
         call messages_info()
-
-      else
-
-        
-
       end if
       
       open(unit = iunit_out, file = 'exec/messages', action = 'write')

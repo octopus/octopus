@@ -38,7 +38,9 @@ module propagator_rk_oct_m
   use profiling_oct_m
   use propagator_base_oct_m
   use species_oct_m
+#ifdef HAVE_SPARSKIT
   use sparskit_oct_m
+#endif
   use states_oct_m
   use v_ks_oct_m
   use xc_oct_m

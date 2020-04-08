@@ -19,7 +19,6 @@
 #include "global.h"
 
 module local_write_oct_m
-  use box_union_oct_m
   use iso_c_binding
   use geometry_oct_m
   use global_oct_m
@@ -32,9 +31,6 @@ module local_write_oct_m
   use mesh_oct_m
   use messages_oct_m
   use mpi_oct_m
-  use mpi_debug_oct_m
-  use mpi_lib_oct_m
-  use multicomm_oct_m
   use parser_oct_m
   use poisson_oct_m
   use profiling_oct_m

@@ -35,13 +35,8 @@ Spacing = 0.75
 
 XCFunctional = lda_x + lda_c_pw
 
-LCAOStart = lcao_states
-EigensolverMaxIter = 300
 ConvRelDens = 1e-6
+EigensolverTolerance = 1e-7
 
-Preconditioner = no
 
-MixField = potential
-
-FilterPotentials = filter_none
 

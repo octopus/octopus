@@ -19,39 +19,33 @@
 #include "global.h"
 
 module test_oct_m
-  use global_oct_m
   use batch_oct_m
   use batch_ops_oct_m
   use boundaries_oct_m
   use calc_mode_par_oct_m
-  use command_line_oct_m
   use density_oct_m
   use derivatives_oct_m
   use epot_oct_m
-  use fft_oct_m
+  use global_oct_m
   use hamiltonian_oct_m
-  use io_oct_m
   use ion_interaction_oct_m
-  use mesh_interpolation_oct_m
   use mesh_function_oct_m
+  use mesh_interpolation_oct_m
+  use messages_oct_m
+  use multicomm_oct_m
   use orbitalbasis_oct_m
   use orbitalset_oct_m
   use parser_oct_m
   use poisson_oct_m
   use profiling_oct_m
   use projector_oct_m
-  use restart_oct_m
   use simul_box_oct_m
   use states_oct_m
   use states_calc_oct_m
   use states_dim_oct_m
   use system_oct_m
   use types_oct_m
-  use unit_system_oct_m
-  use utils_oct_m
   use v_ks_oct_m
-  use messages_oct_m
-  use multicomm_oct_m
   use XC_F90(lib_m)
   use xc_oct_m
 
@@ -293,7 +287,6 @@ contains
     call states_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
     if(sys%st%d%pack_states) call states_pack(sys%st)
 
-
     SAFE_ALLOCATE(epsib)
     call batch_copy(sys%st%group%psib(1, 1), epsib, copy_data = .true.)
 
@@ -329,7 +322,9 @@ contains
       end if
     end do
 
-    call batch_sync(epsib)
+    if(batch_is_packed(epsib)) then
+      call batch_unpack(epsib, force = .true.)
+    end if
 
     do itime = 1, epsib%nst
       if(states_are_real(sys%st)) then 
@@ -339,7 +334,6 @@ contains
       end if
       call messages_info(1)
     end do
-
 
     SAFE_DEALLOCATE_A(dweight)
     SAFE_DEALLOCATE_A(zweight)
@@ -397,12 +391,12 @@ contains
 
     call states_allocate_wfns(sys%st, sys%gr%mesh)
     call states_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
-    if(sys%st%d%pack_states) call states_pack(sys%st)
 
     !Initialize external potential
     call simul_box_init(sb, sys%geo, sys%space)
     call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, sys%ks%xc_family, &
-             sys%ks%xc_flags, family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin))
+             family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin))
+    if(sys%st%d%pack_states .and. hamiltonian_apply_packed(hm, sys%gr%mesh)) call states_pack(sys%st)
     call hamiltonian_epot_generate(hm, sys%gr, sys%geo, sys%st)
     call density_calc(sys%st, sys%gr, sys%st%rho)
     call v_ks_calc(sys%ks, hm, sys%st, sys%geo)
@@ -426,12 +420,10 @@ contains
       end if
     end do
 
-    if(hamiltonian_apply_packed(hm, sys%gr%der%mesh)) then
-      call batch_unpack(hpsib)
+    if(batch_is_packed(hpsib)) then
+      call batch_unpack(hpsib, force = .true.)
     end if
-
-    call batch_sync(hpsib)
-
+    
     do itime = 1, hpsib%nst
       if(states_are_real(sys%st)) then 
         write(message(1),'(a,i1,3x, f12.6)') "Norm state  ", itime, dmf_nrm2(sys%gr%mesh, sys%st%d%dim, hpsib%states(itime)%dpsi)
@@ -440,7 +432,6 @@ contains
       end if
       call messages_info(1)
     end do
-
 
     call batch_end(hpsib, copy = .false.)
     SAFE_DEALLOCATE_P(hpsib)

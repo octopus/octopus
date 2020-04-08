@@ -22,37 +22,29 @@ module hamiltonian_base_oct_m
   use accel_oct_m
   use batch_oct_m
   use batch_ops_oct_m
-  use boundaries_oct_m
   use blas_oct_m
   use comm_oct_m
   use derivatives_oct_m
   use epot_oct_m
   use geometry_oct_m
   use global_oct_m
-  use grid_oct_m
   use hardware_oct_m
-  use io_oct_m
-  use kb_projector_oct_m
   use hgh_projector_oct_m
-  use lalg_basic_oct_m
+  use kb_projector_oct_m
   use math_oct_m
   use mesh_oct_m
-  use mesh_function_oct_m
   use messages_oct_m
   use mpi_oct_m
   use nl_operator_oct_m
-  use parser_oct_m
   use profiling_oct_m
   use projector_oct_m
   use projector_matrix_oct_m
   use ps_oct_m
   use simul_box_oct_m
-  use species_oct_m
   use states_oct_m
   use states_dim_oct_m
   use submesh_oct_m
   use types_oct_m
-  use varinfo_oct_m
 
   implicit none
 
@@ -85,7 +77,8 @@ module hamiltonian_base_oct_m
     zhamiltonian_base_phase,                   &
     dhamiltonian_base_nlocal_force,            &
     zhamiltonian_base_nlocal_force,            &
-    projection_t
+    projection_t,                              &
+    hamiltonian_base_projector_self_overlap
 
   !> This object stores and applies an electromagnetic potential that
   !! can be represented by different types of potentials.
@@ -122,16 +115,16 @@ module hamiltonian_base_oct_m
     type(accel_mem_t)                    :: buff_invmap
     type(accel_mem_t)                    :: buff_projector_phases
     type(accel_mem_t)                    :: buff_mix
-    CMPLX, pointer     :: phase(:, :)
-    CMPLX, allocatable :: phase_corr(:,:)
-    type(accel_mem_t) :: buff_phase
-    integer            :: buff_phase_qn_start
+    CMPLX, pointer                       :: phase(:, :)
+    CMPLX, allocatable                   :: phase_corr(:,:)
+    type(accel_mem_t)                    :: buff_phase
+    integer                              :: buff_phase_qn_start
+    logical                              :: projector_self_overlap  !< if .true. some projectors overlap with themselves
   end type hamiltonian_base_t
 
   type projection_t
     FLOAT, allocatable     :: dprojection(:, :)
     CMPLX, allocatable     :: zprojection(:, :)
-    type(accel_mem_t)     :: buff_projection
   end type projection_t
 
   integer, parameter, public ::          &
@@ -150,6 +143,10 @@ module hamiltonian_base_oct_m
     FIELD_UNIFORM_VECTOR_POTENTIAL = 4,    &
     FIELD_UNIFORM_MAGNETIC_FIELD   = 8
   
+  ! declare module wide to be retained over several applications of the hamiltonian
+  type(accel_mem_t), target, private :: buff_projection
+  logical, private :: projection_buffer_initialized
+  integer, private :: projection_buffer_size
 
   type(profile_t), save :: prof_vnlpsi_start, prof_vnlpsi_finish, prof_magnetic, prof_vlpsi, prof_gather, prof_scatter, &
     prof_matelement, prof_matelement_gather, prof_matelement_reduce
@@ -172,6 +169,11 @@ contains
     this%apply_projector_matrices = .false.
     this%nprojector_matrices = 0
 
+    projection_buffer_initialized = .false.
+    projection_buffer_size = -1
+
+    this%projector_self_overlap = .false.
+    
     POP_SUB(hamiltonian_base_init)
   end subroutine hamiltonian_base_init
 
@@ -183,6 +185,11 @@ contains
 
     if(allocated(this%potential) .and. accel_is_enabled()) then
       call accel_release_buffer(this%potential_opencl)
+    end if
+
+    ! deallocate buffer on GPU
+    if (projection_buffer_initialized .and. accel_is_enabled()) then
+      call accel_release_buffer(buff_projection)
     end if
     
     SAFE_DEALLOCATE_A(this%potential)
@@ -379,6 +386,7 @@ contains
     SAFE_ALLOCATE(region_count(1:epot%natoms))
     SAFE_ALLOCATE(atom_counted(1:epot%natoms))
 
+    this%projector_self_overlap = .false.
     atom_counted = .false.
     order = -1
 
@@ -528,6 +536,8 @@ contains
             end do
           end do
 
+          this%projector_self_overlap = this%projector_self_overlap .or. epot%proj(iatom)%sphere%overlap
+
         else if(projector_is(epot%proj(iatom), PROJ_HGH)) then
 
           this%projector_mix = .true.
@@ -569,6 +579,8 @@ contains
               
             end do
           end do
+
+          this%projector_self_overlap = this%projector_self_overlap .or. epot%proj(iatom)%sphere%overlap
           
         else
           cycle          
@@ -738,6 +750,14 @@ contains
       .or. allocated(this%uniform_magnetic_field)
     
   end function hamiltonian_base_has_magnetic
+
+  ! ----------------------------------------------------------------------------------
+
+  logical pure function hamiltonian_base_projector_self_overlap(this) result(projector_self_overlap)
+    type(hamiltonian_base_t), intent(in) :: this
+    
+    projector_self_overlap = this%projector_self_overlap
+  end function hamiltonian_base_projector_self_overlap
 
 #include "undef.F90"
 #include "real.F90"

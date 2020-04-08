@@ -20,8 +20,7 @@
 
 module output_oct_m
   use basins_oct_m
-  use batch_oct_m
-  use comm_oct_m 
+  use comm_oct_m
   use cube_function_oct_m
   use cube_oct_m
   use current_oct_m
@@ -49,19 +48,15 @@ module output_oct_m
   use lda_u_io_oct_m
   use linear_response_oct_m
   use loct_oct_m
-  use loct_math_oct_m
   use magnetic_oct_m
   use mesh_oct_m
-  use mesh_batch_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use modelmb_density_matrix_oct_m
-  use modelmb_exchange_syms_oct_m
   use mpi_oct_m
   use orbitalset_oct_m
   use output_me_oct_m
   use parser_oct_m
-  use par_vec_oct_m
   use periodic_copy_oct_m
   use profiling_oct_m
   use simul_box_oct_m
@@ -80,7 +75,6 @@ module output_oct_m
   use varinfo_oct_m
   use v_ks_oct_m
   use vtk_oct_m
-  use vdw_ts_oct_m
 #if defined(HAVE_BERKELEYGW)
   use wfn_rho_vxc_io_m
 #endif
@@ -896,7 +890,7 @@ contains
     type(grid_t),              intent(in)    :: gr
     type(mpi_grp_t), optional, intent(in)    :: grp !< the group that shares the same data, must contain the domains group
 
-    integer :: is, ispin, ierr, ip
+    integer :: is, ierr, ip
     character(len=MAX_PATH_LEN) :: fname
     type(unit_t) :: fn_unit
     FLOAT, allocatable :: energy_density(:, :)
@@ -913,10 +907,14 @@ contains
       call states_calc_quantities(gr%der, st, .true., kinetic_energy_density = energy_density)
 
       ! the external potential energy density
-      forall(ip = 1:gr%fine%mesh%np, is = 1:st%d%nspin) energy_density(ip, is) = energy_density(ip, is) + st%rho(ip, is)*hm%ep%vpsl(ip)
+      forall(ip = 1:gr%fine%mesh%np, is = 1:st%d%nspin)
+        energy_density(ip, is) = energy_density(ip, is) + st%rho(ip, is)*hm%ep%vpsl(ip)
+      end forall
 
       ! the hartree energy density
-      forall(ip = 1:gr%fine%mesh%np, is = 1:st%d%nspin) energy_density(ip, is) = energy_density(ip, is) + CNST(0.5)*st%rho(ip, is)*hm%vhartree(ip)
+      forall(ip = 1:gr%fine%mesh%np, is = 1:st%d%nspin)
+        energy_density(ip, is) = energy_density(ip, is) + CNST(0.5)*st%rho(ip, is)*hm%vhartree(ip)
+      end forall
 
       ! the XC energy density
       SAFE_ALLOCATE(ex_density(1:gr%mesh%np))
@@ -924,9 +922,12 @@ contains
 
       ASSERT(.not. gr%have_fine_mesh)
 
-      call xc_get_vxc(gr%fine%der, ks%xc, st, st%rho, st%d%ispin, -minval(st%eigenval(st%nst,:)), st%qtot, ex_density = ex_density, ec_density = ec_density)
-      forall(ip = 1:gr%fine%mesh%np, is = 1:st%d%nspin) energy_density(ip, is) = energy_density(ip, is) + ex_density(ip) + ec_density(ip)
-      
+      call xc_get_vxc(gr%fine%der, ks%xc, st, st%rho, st%d%ispin, -minval(st%eigenval(st%nst,:)), &
+                      st%qtot, ex_density = ex_density, ec_density = ec_density)
+      forall(ip = 1:gr%fine%mesh%np, is = 1:st%d%nspin)
+        energy_density(ip, is) = energy_density(ip, is) + ex_density(ip) + ec_density(ip)
+      end forall
+
       SAFE_DEALLOCATE_A(ex_density)
       SAFE_DEALLOCATE_A(ec_density)
       
@@ -1323,7 +1324,7 @@ contains
 
     ! deallocate everything
     call cube_function_free_fs(cube, cf)
-    call dcube_function_free_rs(cube, cf)
+    call zcube_function_free_rs(cube, cf)
     call cube_end(cube)
     
     if(states_are_real(st)) then

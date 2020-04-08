@@ -1,0 +1,49 @@
+CalculationMode = td
+
+PeriodicDimensions = 3
+
+a = 7.653
+
+Spacing = a/16
+
+BoxShape = parallelepiped
+
+Lsize = a/2
+
+%Coordinates
+ 'Al' | 0.0 | 0.0 | 0.0
+ 'Al' | a/2 | a/2 | 0.0
+ 'Al' | a/2 | 0.0 | a/2 
+ 'Al' | 0.0 | a/2 | a/2
+%
+
+%KPointsGrid
+  4  | 1 | 1
+ 1/2 | 0 | 0
+%
+
+PseudopotentialSet = pseudodojo_lda
+
+SmearingFunction = fermi_dirac
+Smearing = 0.1*eV
+
+ExtraStates = 2
+
+ExperimentalFeatures = yes
+
+FromScratch = yes
+
+%Velocities
+  'Al' | 1.0 | 0.0 | 0.0
+  'Al' | 1.0 | 0.0 | 0.0
+  'Al' | 1.0 | 0.0 | 0.0
+  'Al' | 1.0 | 0.0 | 0.0
+%
+
+%GaugeVectorField
+ c | 0.0 | 0.0
+%
+
+TDMaxSteps = 150
+
+TDOutput = energy + geometry + total_current + gauge_field
