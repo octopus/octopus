@@ -18,54 +18,25 @@
 !!
 
 ! ---------------------------------------------------------
-subroutine X(xc_KLI_solve) (mesh, gr, hm, st, is, oep, first)
+subroutine X(xc_KLI_solve) (mesh, st, is, oep)
   type(mesh_t),   intent(in)    :: mesh
-  type(grid_t),   intent(inout) :: gr
-  type(hamiltonian_t), intent(in)    :: hm
   type(states_t), intent(in)    :: st
   integer,        intent(in)    :: is
   type(xc_oep_t), intent(inout) :: oep
-  logical,        intent(in)    :: first
 
   integer :: ist, ip, jst, eigen_n, kssi, kssj, proc
   FLOAT, allocatable :: rho_sigma(:), v_bar_S(:), sqphi(:, :, :), dd(:)
   FLOAT, allocatable :: Ma(:,:), xx(:,:), yy(:,:)
-  FLOAT :: single_electron_correction
-  R_TYPE, allocatable :: psi(:, :), bb(:,:)
-  R_TYPE, allocatable :: phi1(:,:,:)
+  R_TYPE, allocatable :: psi(:, :)
   
   call profiling_in(C_PROFILING_XC_KLI, 'XC_KLI')
-
-  if((st%parallel_in_states) .and. (oep%has_photons)) &
-    call messages_not_implemented("Photonic KLI not parallel in states") 
-
+  
   PUSH_SUB(X(xc_KLI_solve))
   ! some intermediate quantities
   ! vxc contains the Slater part!
   SAFE_ALLOCATE(rho_sigma(1:mesh%np))
   SAFE_ALLOCATE(sqphi(1:mesh%np, 1:st%d%dim, 1:st%nst))
   SAFE_ALLOCATE(psi(1:mesh%np, 1:st%d%dim))
-  single_electron_correction = M_ONE
-
-  if(.not. st%parallel_in_states) then
-    if ((oep%eigen_n == 0) .AND. (st%occ(st%st_start, is) == 1) .AND. (min(st%d%nspin, 2) == 1)) &
-    single_electron_correction = 2.0 ! 0.5*0.5 for single electron so that coulomb x-kli cancels coulombic Hartree and vks - v0 = 0 for a single electron! - but we get the correct orbitals for our photonic potential
-  end if
-
-  if (oep%has_photons) then
-    SAFE_ALLOCATE(phi1(1:gr%mesh%np,1:st%d%dim,1:st%nst))
-    SAFE_ALLOCATE(bb(1:gr%mesh%np, 1:1))
-    oep%pt%ex = M_ZERO
-
-    if(.not. lr_is_allocated(oep%pt%lr)) then
-      call lr_allocate(oep%pt%lr, st, gr%mesh)
-      ! initialize to something non-zero
-      oep%pt%lr%X(dl_psi)(:,:, :, :) = M_ZERO !M_ONE
-    end if
-
-    if (.not. first) &
-    call X(xc_oep_pt_phi)(gr, hm, st, is, oep, phi1)
-  end if
 
   do ist = st%st_start, st%st_end
     call states_get_state(st, mesh, ist, is, psi)
@@ -92,22 +63,10 @@ subroutine X(xc_KLI_solve) (mesh, gr, hm, st, is, oep, first)
 
   do ist = st%st_start, st%st_end
     call states_get_state(st, mesh, ist, is, psi)
-    if (oep%has_photons) then
-      if (ist>(oep%eigen_n + 1)) EXIT ! included to guarantee that the photonic KLI finishes correctly but the parallel in states feature of the normal KLI works still
-      bb(:,1) = oep%X(lxc)(1:gr%mesh%np, ist, is)
-      if (ist/=(oep%eigen_n + 1)) &
-      bb(:,1) = bb(:,1) - oep%uxc_bar(ist, is)*R_CONJ(psi(:, 1))
-      bb(:,1) = bb(:,1)*single_electron_correction
-      if (.not.first) then
-        call X(xc_oep_pt_rhs)(gr, st, is, oep, phi1, ist, bb)
-      end if
-      oep%vxc(:, is) = oep%vxc(:, is) + oep%socc*st%occ(ist, is)*bb(:,1)*psi(:,1)
-    else
-      do ip = 1, mesh%np
-        oep%vxc(ip, is) = oep%vxc(ip, is) + &
-        oep%socc*st%occ(ist, is)*R_REAL(oep%X(lxc)(ip, ist, is)*psi(ip, 1))*single_electron_correction
-      end do
-    end if
+    
+    do ip = 1, mesh%np
+      oep%vxc(ip, 1) = oep%vxc(ip, 1) + oep%socc*st%occ(ist, is)*R_REAL(oep%X(lxc)(ip, ist, is)*psi(ip, 1))
+    end do
   end do
 
   do ip = 1, mesh%np
@@ -124,7 +83,7 @@ subroutine X(xc_KLI_solve) (mesh, gr, hm, st, is, oep, first)
   end if
 #endif
   
-  if((oep%level == XC_OEP_SLATER).and.(.not.oep%has_photons)) then
+  if(oep%level == XC_OEP_SLATER) then
     SAFE_DEALLOCATE_A(rho_sigma)
     SAFE_DEALLOCATE_A(sqphi)
     call profiling_out(C_PROFILING_XC_KLI)
@@ -173,11 +132,7 @@ subroutine X(xc_KLI_solve) (mesh, gr, hm, st, is, oep, first)
           Ma(ist, jst) = - dmf_dotp(mesh, dd, sqphi(:, 1, kssj) )
         end do j_loop
         Ma(ist, ist) = M_ONE + Ma(ist, ist)
-        if (oep%has_photons) then
-          yy(ist, 1) = v_bar_S(kssi)
-        else
-          yy(ist, 1) = v_bar_S(kssi) - oep%uxc_bar(kssi,is)
-        end if
+        yy(ist, 1) = v_bar_S(kssi) - oep%uxc_bar(kssi,is)
       end if
     end do i_loop
 
@@ -211,10 +166,6 @@ subroutine X(xc_KLI_solve) (mesh, gr, hm, st, is, oep, first)
     SAFE_DEALLOCATE_A(xx)
     SAFE_DEALLOCATE_A(Ma)
     SAFE_DEALLOCATE_A(yy)
-    if (oep%has_photons) then
-      SAFE_DEALLOCATE_A(phi1)
-      SAFE_DEALLOCATE_A(bb)
-    end if
 
   end if linear_equation
   ! The previous stuff is only needed if eigen_n>0.

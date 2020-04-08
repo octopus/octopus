@@ -590,24 +590,17 @@ contains
           message(1) = 'Unable to read density. Density will be calculated from states.'
           call messages_warning(1)
         else
-          if (.not. (restart_has_flag(restart_load, RESTART_FLAG_VHXC))) &
-            call v_ks_calc(ks, hm, st, geo)
+          call v_ks_calc(ks, hm, st, geo)
         end if
       end if
 
       if (restart_has_flag(restart_load, RESTART_FLAG_VHXC)) then
-        write(message(1), '(a)') "Info: Reading Vhxc."
-        call messages_info(1)
         call hamiltonian_load_vhxc(restart_load, hm, gr%mesh, ierr)
         if (ierr /= 0) then
           message(1) = 'Unable to read Vhxc. Vhxc will be calculated from states.'
           call messages_warning(1)
         else
-        call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
-          if (ks%oep%level == 5) then
-            ks%oep%vxc(:,1) = hm%vhxc(:,1) - hm%vhartree(:)
-          end if
-          call v_ks_calc(ks, hm, st, geo)
+          call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
         end if
       end if
 
@@ -1027,25 +1020,6 @@ contains
       ! output final information
       call scf_write_static(STATIC_DIR, "info")
       call output_all(outp, gr, geo, st, hm, ks, STATIC_DIR)
-
-!       if(mpi_grp_is_root(mpi_world)) then
-        if (ks%oep%level == 5) then
-          if (ks%oep%has_photons) then
-          !test
-          write(message(1), '(a)') "Info: Starting to print correlator."
-          call messages_info(1)
-          call io_mkdir(STATIC_DIR)
-          call dio_function_output(outp%how, STATIC_DIR, "correlator", gr%mesh, ks%oep%pt%correlator(:,1), &
-            units_out%length, ierr, geo = geo)
-
-!           call dio_function_output(outp%how, "./", "correlator", gr%mesh, ks%oep%pt%correlator(:,1), &
-!               unit_one, ierr)
-          write(message(1), '(a)') "Info: Finished to print correlator."
-          call messages_info(1)
-          !test
-          end if
-        end if
-!       end if
     end if
 
     if(simul_box_is_periodic(gr%sb) .and. st%d%nik > st%d%nspin) then
@@ -1236,13 +1210,6 @@ contains
         end if
         ! otherwise, these values are uninitialized, and unknown.
 
-        if (ks%oep%has_photons) then
-          write(iunit, '(a)') 'Pt-Observable:'
-          write(iunit, '(6x, a, es15.8,a,es15.8,a)') 'pt_number = ', ks%oep%pt%pt_number
-          write(iunit, '(6x, a, es15.8,a,es15.8,a)') 'pt_exchange = ', ks%oep%pt%ex
-          write(iunit,'(1x)')
-        end if
-
         if(scf%calc_force) call forces_write_info(iunit, geo, gr%sb, dir)
 
         if(scf%calc_stress) then
@@ -1377,14 +1344,10 @@ contains
         write(iunit, '(1x,a)', advance = 'no') label
         label = 'rel_ev'
         write(iunit, '(1x,a)', advance = 'no') label
-        if (scf%conv_abs_force > M_ZERO) then
-          label = 'force_diff'
-          write(iunit, '(1x,a)', advance = 'no') label
-        end if
-        if (ks%oep%level == 5) then
-          label = 'OEP norm2ss'
-          write(iunit, '(1x,a)', advance = 'no') label
-        end if
+         if (scf%conv_abs_force > M_ZERO) then
+           label = 'force_diff'
+           write(iunit, '(1x,a)', advance = 'no') label
+         end if
         write(iunit,'(a)') ''
         call io_close(iunit)
       end if
@@ -1411,9 +1374,6 @@ contains
         if (scf%conv_abs_force > M_ZERO) then
           write(iunit, '(es13.5)', advance = 'no') units_from_atomic(units_out%force, scf%abs_force)
         end if
-        if (ks%oep%level == 5) then
-          write(iunit, '(es13.5)', advance = 'no') ks%oep%norm2ss
-        end if 
         write(iunit,'(a)') ''
         call io_close(iunit)
       end if

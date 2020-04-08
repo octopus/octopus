@@ -125,4 +125,4 @@ subspace.o : subspace.F90 subspace_inc.F90 preconditioners.o
 system.o : system.F90 v_ks.o output.o live_config.o energy_calc.o elf.o 
 v_ks.o : v_ks.F90 photon_mode.o xc_oep.o xc_ks_inversion.o magnetic.o energy_calc.o current.o 
 xc_ks_inversion.o : xc_ks_inversion.F90 eigensolver.o 
-xc_oep.o : xc_oep.F90 xc_oep_qed_inc.F90 xc_oep_inc.F90 xc_oep_sic_inc.F90 xc_oep_x_inc.F90 xc_kli_inc.F90 xc_kli_pauli_inc.F90 photon_mode.o linear_solver.o
+xc_oep.o : xc_oep.F90 xc_oep_inc.F90 xc_oep_sic_inc.F90 xc_oep_x_inc.F90 xc_kli_inc.F90 xc_kli_pauli_inc.F90 photon_mode.o linear_solver.o
