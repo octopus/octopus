@@ -278,7 +278,7 @@ contains
     if(.not.varinfo_valid_option('SpinComponents', st%d%ispin)) call messages_input_error('SpinComponents')
     call messages_print_var_option(stdout, 'SpinComponents', st%d%ispin)
     ! Use of spinors requires complex wavefunctions.
-    if (st%d%ispin == SPINORS) st%priv%wfs_type = TYPE_CMPLX
+    if (st%d%ispin == SPINORS) call states_set_complex(st)
 
     if(st%d%ispin /= UNPOLARIZED .and. gr%sb%kpoints%use_time_reversal) then
       message(1) = "Time reversal symmetry is only implemented for unpolarized spins."
@@ -482,7 +482,7 @@ contains
     ! but not if it is Gamma-point only
     if(simul_box_is_periodic(gr%sb)) then
       if(.not. (kpoints_number(gr%sb%kpoints) == 1 .and. kpoints_point_is_gamma(gr%sb%kpoints, 1))) then
-        st%priv%wfs_type = TYPE_CMPLX
+        call states_set_complex(st)
       end if
     end if
 
@@ -2374,7 +2374,7 @@ contains
     integer,           intent(out) :: n_pairs
     integer,           intent(out) :: n_occ(:)   !< nik
     integer,           intent(out) :: n_unocc(:) !< nik
-    logical, pointer,  intent(out) :: is_included(:,:,:) !< (max(n_occ), max(n_unocc), st%d%nik)
+    logical, allocatable, intent(out) :: is_included(:,:,:) !< (max(n_occ), max(n_unocc), st%d%nik)
     logical,           intent(out) :: is_frac_occ !< are there fractional occupations?
 
     integer :: ik, ist, ast, n_filled, n_partially_filled, n_half_filled

@@ -541,16 +541,20 @@ contains
         call drestart_read_binary(restart, "lda_u_occ", occsize, docc, err) 
         if (err /= 0) ierr = ierr + 1
         call dlda_u_set_occupations(this, docc)
-        call dlda_u_update_potential(this, st)
         SAFE_DEALLOCATE_A(docc)
       else
         SAFE_ALLOCATE(zocc(1:occsize))
         call zrestart_read_binary(restart, "lda_u_occ", occsize, zocc, err)
         if (err /= 0) ierr = ierr + 1
         call zlda_u_set_occupations(this, zocc)
-        call zlda_u_update_potential(this, st)
         SAFE_DEALLOCATE_A(zocc)
       end if
+    end if
+
+    if (states_are_real(st)) then
+      call dlda_u_update_potential(this, st)
+    else
+      call zlda_u_update_potential(this, st)
     end if
 
     if (debug%info) then

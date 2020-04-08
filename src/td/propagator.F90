@@ -134,7 +134,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine propagator_init(gr, st, tr, have_fields, family_is_mgga)
+  subroutine propagator_init(gr, st, tr, have_fields, family_is_mgga_with_exc)
     type(grid_t),        intent(in)    :: gr
     type(states_t),      intent(in)    :: st
     type(propagator_t),  intent(inout) :: tr
@@ -142,7 +142,7 @@ contains
     !! that must be propagated (currently ions
     !! or a gauge field).
     logical,             intent(in)    :: have_fields 
-    logical,             intent(in)    :: family_is_mgga
+    logical,             intent(in)    :: family_is_mgga_with_exc
 
     PUSH_SUB(propagator_init)
     
@@ -310,6 +310,10 @@ contains
 #endif
     case(PROP_MAGNUS)
       call messages_experimental("Magnus propagator")
+      if (family_is_mgga_with_exc) then
+        message(1) = "Magnus propagator with MGGA"
+        call messages_fatal(1)
+      end if
       SAFE_ALLOCATE(tr%vmagnus(1:gr%mesh%np, 1:st%d%nspin, 1:2))
     case(PROP_QOCT_TDDFT_PROPAGATOR)
       call messages_experimental("QOCT+TDDFT propagator")
@@ -339,9 +343,9 @@ contains
 
     select case(tr%method)
     case(PROP_CFMAGNUS4)
-      call potential_interpolation_init(tr%vksold, gr%mesh%np, st%d%nspin, family_is_mgga, order = 4)
+      call potential_interpolation_init(tr%vksold, gr%mesh%np, st%d%nspin, family_is_mgga_with_exc, order = 4)
     case default
-      call potential_interpolation_init(tr%vksold, gr%mesh%np, st%d%nspin, family_is_mgga)
+      call potential_interpolation_init(tr%vksold, gr%mesh%np, st%d%nspin, family_is_mgga_with_exc)
     end select
 
     call exponential_init(tr%te) ! initialize propagator

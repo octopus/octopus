@@ -105,7 +105,7 @@ module casida_oct_m
     type(restart_t)   :: restart_load
     type(restart_t)   :: restart_dump
     
-    logical, pointer  :: is_included(:,:,:) !< (i, a, k) is in the basis?
+    logical, allocatable :: is_included(:,:,:) !< (i, a, k) is in the basis?
     integer           :: n_pairs        !< number of pairs to take into account
     type(states_pair_t), pointer :: pair(:)
     integer, pointer  :: index(:,:,:)   !< index(pair(j)%i, pair(j)%a, pair(j)%kk) = j

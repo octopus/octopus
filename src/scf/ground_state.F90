@@ -120,7 +120,7 @@ contains
       ! setup Hamiltonian
       call messages_write('Info: Setting up Hamiltonian.')
       call messages_info()
-      call system_h_setup(sys, hm, calc_eigenval = .false.)
+      call system_h_setup(sys, hm, calc_eigenval = .false., calc_current = .false.)
     end if
 
     call restart_init(restart_dump, RESTART_GS, RESTART_TYPE_DUMP, sys%mc, ierr, mesh=sys%gr%mesh)
