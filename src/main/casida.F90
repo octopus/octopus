@@ -744,7 +744,7 @@ contains
       end do
     end if
 
-    SAFE_DEALLOCATE_P(cas%is_included)
+    SAFE_DEALLOCATE_A(cas%is_included)
 
     call restart_init(cas%restart_dump, RESTART_CASIDA, RESTART_TYPE_DUMP, sys%mc, ierr)
     call restart_init(cas%restart_load, RESTART_CASIDA, RESTART_TYPE_LOAD, sys%mc, ierr)
