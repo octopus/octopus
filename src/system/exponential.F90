@@ -266,7 +266,6 @@ contains
 
     phase_correction = .false.
     if(associated(hm%hm_base%phase)) phase_correction = .true.
-    if(accel_is_enabled()) phase_correction = .false.
 
     ! If we want to use imaginary time, timestep = i*deltat
     ! Otherwise, timestep is simply equal to deltat.

@@ -102,11 +102,6 @@ subroutine X(hamiltonian_elec_apply_batch) (hm, namespace, mesh, psib, hpsib, te
   !and for electronic wavefunctions, we get set_phase from the has_phase flag
   set_phase = .not. psib%has_phase
 
-  ! OpenCL is not supported for the phase correction at the moment
-  if (.not. set_phase) then
-    if(psib%status() == BATCH_DEVICE_PACKED) set_phase = .true.
-  end if
-
   ASSERT(psib%nst == hpsib%nst)
   ASSERT(psib%ik >= hm%d%kpt%start .and. psib%ik <= hm%d%kpt%end)
 

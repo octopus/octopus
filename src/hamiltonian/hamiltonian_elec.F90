@@ -545,10 +545,8 @@ contains
       PUSH_SUB(hamiltonian_elec_init.init_phase)
 
       SAFE_ALLOCATE(hm%hm_base%phase(1:gr%mesh%np_part, hm%d%kpt%start:hm%d%kpt%end))
-      if(.not.accel_is_enabled()) then
-        SAFE_ALLOCATE(hm%hm_base%phase_corr(gr%mesh%np+1:gr%mesh%np_part, hm%d%kpt%start:hm%d%kpt%end))
-        hm%hm_base%phase_corr = M_ONE
-      end if
+      SAFE_ALLOCATE(hm%hm_base%phase_corr(gr%mesh%np+1:gr%mesh%np_part, hm%d%kpt%start:hm%d%kpt%end))
+      hm%hm_base%phase_corr = M_ONE
 
       if(gr%der%boundaries%spiralBC) then
         sp = gr%mesh%np
@@ -590,25 +588,23 @@ contains
           hm%hm_base%phase(ip, ik) = exp(-M_zI * sum(gr%mesh%x(ip, 1:gr%sb%dim) * kpoint(1:gr%sb%dim)))
         end forall
 
-        if(.not.accel_is_enabled()) then
-          ! loop over boundary points
-          sp = gr%mesh%np
-          if(gr%mesh%parallel_in_domains) sp = gr%mesh%np + gr%mesh%vp%np_ghost
-          do ip = sp + 1, gr%mesh%np_part
-            !translate to a global point
-            ip_global = ip
+        ! loop over boundary points
+        sp = gr%mesh%np
+        if(gr%mesh%parallel_in_domains) sp = gr%mesh%np + gr%mesh%vp%np_ghost
+        do ip = sp + 1, gr%mesh%np_part
+          !translate to a global point
+          ip_global = ip
 #ifdef HAVE_MPI
-            if(gr%mesh%parallel_in_domains) ip_global = gr%mesh%vp%bndry(ip - sp - 1 + gr%mesh%vp%xbndry)
+          if(gr%mesh%parallel_in_domains) ip_global = gr%mesh%vp%bndry(ip - sp - 1 + gr%mesh%vp%xbndry)
 #endif
-            ! get corresponding inner point
-            ip_inner = mesh_periodic_point(gr%mesh, ip_global, ip)
+          ! get corresponding inner point
+          ip_inner = mesh_periodic_point(gr%mesh, ip_global, ip)
 
-            ! compute phase correction from global coordinate (opposite sign!)
-            x_global = mesh_x_global(gr%mesh, ip_inner)
-            hm%hm_base%phase_corr(ip, ik) = hm%hm_base%phase(ip, ik)* &
-              exp(M_zI * sum(x_global(1:gr%sb%dim) * kpoint(1:gr%sb%dim)))
-          end do
-        end if
+          ! compute phase correction from global coordinate (opposite sign!)
+          x_global = mesh_x_global(gr%mesh, ip_inner)
+          hm%hm_base%phase_corr(ip, ik) = hm%hm_base%phase(ip, ik)* &
+            exp(M_zI * sum(x_global(1:gr%sb%dim) * kpoint(1:gr%sb%dim)))
+        end do
       end do
 
       if(accel_is_enabled()) then
@@ -942,7 +938,6 @@ contains
       integer :: ik, imat, nmat, max_npoints, offset, idim
       integer :: ip, ip_global, ip_inner, sp
       FLOAT   :: kpoint(1:MAX_DIM), x_global(1:MAX_DIM)
-      logical :: compute_phase_correction
       integer :: ndim
 
       PUSH_SUB(hamiltonian_elec_update.build_phase)
@@ -967,11 +962,8 @@ contains
           end if
         end if
 
-        compute_phase_correction = .not.accel_is_enabled()
         if(.not. allocated(this%hm_base%phase_corr)) then
-          if(compute_phase_correction) then
-            SAFE_ALLOCATE(this%hm_base%phase_corr(mesh%np+1:mesh%np_part, this%d%kpt%start:this%d%kpt%end))
-          end if
+          SAFE_ALLOCATE(this%hm_base%phase_corr(mesh%np+1:mesh%np_part, this%d%kpt%start:this%d%kpt%end))
         end if
 
         kpoint(1:mesh%sb%dim) = M_ZERO
@@ -985,28 +977,26 @@ contains
             this%hm_base%phase(ip, ik) = exp(-M_zI*sum(mesh%x(ip, 1:mesh%sb%dim)*kpoint(1:mesh%sb%dim)))
           end do
 
-          if(compute_phase_correction) then
-            ! loop over boundary points
-            sp = mesh%np
-            if(mesh%parallel_in_domains) sp = mesh%np + mesh%vp%np_ghost
-            !$omp parallel do schedule(static) private(ip_global, ip_inner, x_global)
-            do ip = sp + 1, mesh%np_part
-              !translate to a global point
-              ip_global = ip
+          ! loop over boundary points
+          sp = mesh%np
+          if(mesh%parallel_in_domains) sp = mesh%np + mesh%vp%np_ghost
+          !$omp parallel do schedule(static) private(ip_global, ip_inner, x_global)
+          do ip = sp + 1, mesh%np_part
+            !translate to a global point
+            ip_global = ip
 #ifdef HAVE_MPI
-              if(mesh%parallel_in_domains) ip_global = mesh%vp%bndry(ip - sp - 1 + mesh%vp%xbndry)
+            if(mesh%parallel_in_domains) ip_global = mesh%vp%bndry(ip - sp - 1 + mesh%vp%xbndry)
 #endif
-              ! get corresponding inner point
-              ip_inner = mesh_periodic_point(mesh, ip_global, ip)
+            ! get corresponding inner point
+            ip_inner = mesh_periodic_point(mesh, ip_global, ip)
 
-              ! compute phase correction from global coordinate (opposite sign!)
-              x_global = mesh_x_global(mesh, ip_inner)
+            ! compute phase correction from global coordinate (opposite sign!)
+            x_global = mesh_x_global(mesh, ip_inner)
 
-              this%hm_base%phase_corr(ip, ik) = M_zI * sum(x_global(1:mesh%sb%dim) * kpoint(1:mesh%sb%dim))
-              this%hm_base%phase_corr(ip, ik) = exp(this%hm_base%phase_corr(ip, ik))*this%hm_base%phase(ip, ik)
-            end do
-          end if
-
+            this%hm_base%phase_corr(ip, ik) = M_zI * sum(x_global(1:mesh%sb%dim) * kpoint(1:mesh%sb%dim))
+            this%hm_base%phase_corr(ip, ik) = exp(this%hm_base%phase_corr(ip, ik))*this%hm_base%phase(ip, ik)
+          end do
+          
         end do
 
         if(accel_is_enabled()) then
