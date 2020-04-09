@@ -290,8 +290,8 @@ subroutine X(batch_axpy_function)(np, aa, xx, psi, nst)
 
   case(BATCH_DEVICE_PACKED)
 
-    call accel_create_buffer(aa_buffer, ACCEL_MEM_READ_ONLY, R_TYPE_VAL, xx%nst) 
-    call accel_write_buffer(aa_buffer, xx%nst, aa)
+    call accel_create_buffer(aa_buffer, ACCEL_MEM_READ_ONLY, R_TYPE_VAL, nst_) 
+    call accel_write_buffer(aa_buffer, nst_, aa)
 
     np_padded = pad_pow2(np)
 
