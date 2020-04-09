@@ -22,7 +22,6 @@ Earth.CelestialBodyMass = 5.97237e24
 %Earth.CelestialBodyInitialVelocity
  4431.136612956525 | -29497.611635546345 | 0.343475566161544
 %
-Earth.TDSystemPropagator = verlet
 
 Moon.CelestialBodyMass = 7.342e22
 %Moon.CelestialBodyInitialPosition
@@ -31,7 +30,6 @@ Moon.CelestialBodyMass = 7.342e22
 %Moon.CelestialBodyInitialVelocity
  3484.6397238565924 | -29221.007409082802 | 82.53526338876684
 %
-Moon.TDSystemPropagator = verlet
 
 Sun.CelestialBodyMass = 1.98855e30
 %Sun.CelestialBodyInitialPosition
@@ -40,11 +38,7 @@ Sun.CelestialBodyMass = 1.98855e30
 %Sun.CelestialBodyInitialVelocity
  0.0 | 0.0 | 0.0
 %
-Sun.TDSystemPropagator = verlet
 
-sampling = 24 # Time-steps per day
-days = 3
-TDTimeStep = 24*3600/sampling
-TDMaxSteps = days*sampling
+TDMaxSteps = 0
 
 Debug = interaction_graph

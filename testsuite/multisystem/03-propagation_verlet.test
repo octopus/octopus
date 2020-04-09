@@ -7,7 +7,7 @@ Enabled    : Yes
 
 Processors: 1
 
-Input: 02-propagation_verlet.01-two_body.inp
+Input: 03-propagation_verlet.01-two_body.inp
 
 match ; Sun   pos x (t=3 days) ; LINEFIELD(Sun/td.general/coordinates, -1, 3) ; -6.059705463907e+02
 match ; Sun   pos y (t=3 days) ; LINEFIELD(Sun/td.general/coordinates, -1, 4) ; -1.121078585538e+02
@@ -23,7 +23,7 @@ match ; Earth vel y (t=3 days) ; LINEFIELD(Earth/td.general/coordinates, -1, 7) 
 match ; Earth vel z (t=3 days) ; LINEFIELD(Earth/td.general/coordinates, -1, 8) ;  3.256197008856e-01
 
 
-Input: 02-propagation_verlet.02-three_body.inp
+Input: 03-propagation_verlet.02-three_body.inp
 
 match ; Sun   pos x (t=3 days) ; LINEFIELD(Sun/td.general/coordinates, -1, 3) ; -6.134351620199e+02
 match ; Sun   pos y (t=3 days) ; LINEFIELD(Sun/td.general/coordinates, -1, 4) ; -1.134689251424e+02
@@ -44,12 +44,6 @@ match ; Moon  vel x (t=3 days) ; LINEFIELD(Moon/td.general/coordinates, -1, 6) ;
 match ; Moon  vel y (t=3 days) ; LINEFIELD(Moon/td.general/coordinates, -1, 7) ; -2.960708948803e+04
 match ; Moon  vel z (t=3 days) ; LINEFIELD(Moon/td.general/coordinates, -1, 8) ;  8.458630158791e+01
 
-match ; Sun-Earth interaction  ; GREPCOUNT(interaction_graph.dot, 'Sun -> Earth') ; 1
-match ; Sun-Moon interaction   ; GREPCOUNT(interaction_graph.dot, 'Sun -> Moon') ; 1
-match ; Earth-Sun interaction  ; GREPCOUNT(interaction_graph.dot, 'Earth -> Sun') ; 1
-match ; Earth-Moon interaction ; GREPCOUNT(interaction_graph.dot, 'Earth -> Moon') ; 1
-match ; Moon-Sun interaction   ; GREPCOUNT(interaction_graph.dot, 'Moon -> Sun') ; 1
-match ; Moon-Earth interaction ; GREPCOUNT(interaction_graph.dot, 'Moon -> Earth') ; 1
 
 
 
