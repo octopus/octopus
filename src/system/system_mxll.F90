@@ -171,31 +171,6 @@ contains
 
   end function system_mxll_init
 
-  !----------------------------------------------------------
-  subroutine system_mxll_end(sys)
-    type(system_mxll_t), intent(inout) :: sys
-
-    PUSH_SUB(system_mxll_end)
-
-    call hamiltonian_mxll_end(sys%hm)
-
-    call multicomm_end(sys%mc)
-
-    if(associated(sys%st)) then
-      call states_mxll_end(sys%st)
-      SAFE_DEALLOCATE_P(sys%st)
-    end if
-
-    call simul_box_end(sys%gr%sb)
-    call grid_end(sys%gr)
-
-    call space_end(sys%space)
-
-    SAFE_DEALLOCATE_P(sys%gr)
-
-    POP_SUB(system_mxll_end)
-  end subroutine system_mxll_end
-
 
   ! ---------------------------------------------------------
   subroutine system_mxll_add_interaction_partner(this, partner)
@@ -425,6 +400,22 @@ contains
       interaction => iter%get_next_interaction()
       SAFE_DEALLOCATE_P(interaction)
     end do
+
+    call hamiltonian_mxll_end(sys%hm)
+
+    call multicomm_end(sys%mc)
+
+    if(associated(sys%st)) then
+      call states_mxll_end(sys%st)
+      SAFE_DEALLOCATE_P(sys%st)
+    end if
+
+    call simul_box_end(sys%gr%sb)
+    call grid_end(sys%gr)
+
+    call space_end(sys%space)
+
+    SAFE_DEALLOCATE_P(sys%gr)
 
     POP_SUB(system_mxll_finalize)
   end subroutine system_mxll_finalize
