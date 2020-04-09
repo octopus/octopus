@@ -222,9 +222,9 @@ contains
 
     select case(operation)
     case (VERLET_UPDATE_POS)
-      this%acc(1:this%space%dim) = this%tot_force(1:this%space%dim)
+      this%acc(1:this%space%dim) = this%tot_force(1:this%space%dim) / this%mass
       this%pos(1:this%space%dim) = this%pos(1:this%space%dim) + this%prop%dt * this%vel(1:this%space%dim) &
-                                 + M_HALF * this%prop%dt**2 * this%tot_force(1:this%space%dim)
+                                 + M_HALF * this%prop%dt**2 * this%tot_force(1:this%space%dim) / this%mass
 
       call this%quantities(POSITION)%clock%increment()
 
@@ -232,7 +232,7 @@ contains
 
     case (VERLET_COMPUTE_VEL)
       this%vel(1:this%space%dim) = this%vel(1:this%space%dim) &
-                                 + M_HALF * this%prop%dt * (this%acc(1:this%space%dim) + this%tot_force(1:this%space%dim))
+        + M_HALF * this%prop%dt * (this%acc(1:this%space%dim) + this%tot_force(1:this%space%dim) / this%mass)
 
       call this%quantities(VELOCITY)%clock%increment()
 
@@ -241,7 +241,7 @@ contains
                                  + M_ONE/CNST(6.0) * this%prop%dt**2  &
                                  * (M_FOUR*this%acc(1:this%space%dim) - this%prev_acc(1:this%space%dim, 1))
       this%prev_acc(1:this%space%dim, 1) = this%acc(1:this%space%dim)
-      this%acc(1:this%space%dim) = this%tot_force(1:this%space%dim)
+      this%acc(1:this%space%dim) = this%tot_force(1:this%space%dim)/this%mass
 
       if (.not. this%prop%predictor_corrector) then
         call this%quantities(POSITION)%clock%increment()
@@ -250,21 +250,21 @@ contains
     case (BEEMAN_PREDICT_VEL)
       this%vel(1:this%space%dim) = this%vel(1:this%space%dim)  &
                                  + M_ONE/CNST(6.0) * this%prop%dt * (CNST(5.0) * this%acc(1:this%space%dim) &
-                                 + M_TWO * this%tot_force(1:this%space%dim) - this%prev_acc(1:this%space%dim, 1))
+                                 + M_TWO * this%tot_force(1:this%space%dim)/this%mass - this%prev_acc(1:this%space%dim, 1))
 
       call this%quantities(VELOCITY)%clock%increment()
 
     case( BEEMAN_CORRECT_POS)
       this%pos(1:this%space%dim) = this%save_pos(1:this%space%dim) + this%prop%dt * this%save_vel(1:this%space%dim) &
                                  + M_ONE/CNST(6.0) * this%prop%dt**2  &
-                                 * (M_TWO * this%acc(1:this%space%dim) + this%tot_force(1:this%space%dim))
+                                 * (M_TWO * this%acc(1:this%space%dim) + this%tot_force(1:this%space%dim)/this%mass)
 
       ! We set it to the propagation time to avoid double increment
       call this%quantities(POSITION)%clock%set_time(this%prop%clock)
 
     case (BEEMAN_CORRECT_VEL)
       this%vel(1:this%space%dim) = this%save_vel(1:this%space%dim) &
-                                 + M_HALF * this%prop%dt * (this%acc(1:this%space%dim) + this%tot_force(1:this%space%dim))
+                                 + M_HALF * this%prop%dt * (this%acc(1:this%space%dim) + this%tot_force(1:this%space%dim)/this%mass)
 
       ! We set it to the propagation time to avoid double increment
       call this%quantities(VELOCITY)%clock%set_time(this%prop%clock)
@@ -286,13 +286,13 @@ contains
 
     ! Here we put the criterion that acceleration change is below the tolerance
     converged = .false.
-    if(sum((this%prev_tot_force(1:this%space%dim) -this%tot_force(1:this%space%dim))**2) < tol**2) then
+    if ( (sum((this%prev_tot_force(1:this%space%dim) - this%tot_force(1:this%space%dim))**2)/ this%mass) < tol**2) then
       converged = .true.
     end if 
 
     if (debug%info) then
       write(message(1), '(a, e12.6, a, e12.6)') "Debug: -- Change in acceleration  ", &
-          sqrt(sum((this%prev_tot_force(1:this%space%dim) - this%tot_force(1:this%space%dim))**2)), " and tolerance ", tol
+        sqrt(sum((this%prev_tot_force(1:this%space%dim) - this%tot_force(1:this%space%dim))**2))/this%mass, " and tolerance ", tol
       call messages_info(1)
     end if
 
@@ -518,7 +518,6 @@ contains
         call messages_fatal(1)
       end select
     end do
-    this%tot_force(1:this%space%dim) = this%tot_force(1:this%space%dim) / this%mass
 
     POP_SUB(celestial_body_update_interactions_finish)
   end subroutine celestial_body_update_interactions_finish
