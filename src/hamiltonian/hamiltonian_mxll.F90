@@ -458,9 +458,9 @@ contains
       endif
     end if
 
-    call psib%copy_to(hpsib, copy_data=.true.)
+    call psib%copy_data_to(der%mesh%np_part, hpsib)
     call zderivatives_batch_curl(der, hpsib)
-    hpsib%zff(:,1,:) = hm%rs_sign * P_c * hpsib%zff(:,1,:)
+    call batch_scal(der%mesh%np_part, hm%rs_sign * P_c, hpsib)
   
     call profiling_out(prof_hamiltonian_mxll)
     POP_SUB(hamiltonian_mxll_apply_batch)
