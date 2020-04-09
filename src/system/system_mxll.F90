@@ -401,21 +401,21 @@ contains
       SAFE_DEALLOCATE_P(interaction)
     end do
 
-    call hamiltonian_mxll_end(sys%hm)
+    call hamiltonian_mxll_end(this%hm)
 
-    call multicomm_end(sys%mc)
+    call multicomm_end(this%mc)
 
-    if(associated(sys%st)) then
-      call states_mxll_end(sys%st)
-      SAFE_DEALLOCATE_P(sys%st)
+    if(associated(this%st)) then
+      call states_mxll_end(this%st)
+      SAFE_DEALLOCATE_P(this%st)
     end if
 
-    call simul_box_end(sys%gr%sb)
-    call grid_end(sys%gr)
+    call simul_box_end(this%gr%sb)
+    call grid_end(this%gr)
 
-    call space_end(sys%space)
+    call space_end(this%space)
 
-    SAFE_DEALLOCATE_P(sys%gr)
+    SAFE_DEALLOCATE_P(this%gr)
 
     POP_SUB(system_mxll_finalize)
   end subroutine system_mxll_finalize

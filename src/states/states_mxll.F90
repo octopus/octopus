@@ -18,6 +18,7 @@
 #include "global.h"
 
 module states_mxll_oct_m
+  use accel_oct_m
   use blacs_proc_grid_oct_m
   use batch_oct_m
   use batch_ops_oct_m
@@ -199,7 +200,7 @@ contains
     PUSH_SUB(states_mxll_null)
 
     call states_elec_dim_null(st%d)
-    call distributed_nullify(st%dist) 
+    call distributed_nullify(st%dist)
     st%wfs_type = TYPE_CMPLX
     st%d%orth_method = 0
     st%parallel_in_states = .false.
@@ -219,7 +220,9 @@ contains
     type(grid_t),                intent(in)    :: gr
     type(geometry_t),            intent(in)    :: geo
     type(block_t)        :: blk
+
     integer :: idim, nlines, ncols, il
+    logical :: defaultl
     FLOAT   :: pos(MAX_DIM)
 
     PUSH_SUB(states_mxll_init)
@@ -250,6 +253,29 @@ contains
     
     st%d%block_size = 1    
     call distributed_nullify(st%d%kpt, st%d%nik)
+
+    !%Variable StatesPack
+    !%Type logical
+    !%Section Execution::Optimization
+    !%Description
+    !% When set to yes, Maxwell states are stored in packed mode, which improves
+    !% performance 
+    !%
+    !% If OpenCL is used and this variable is set to yes, Octopus
+    !% will store the Maxwell states in device (GPU) memory. If
+    !% there is not enough memory to store all the states,
+    !% execution will stop with an error.
+    !%
+    !% The default is yes except when using OpenCL.
+    !%End
+
+    defaultl = .true.
+    if(accel_is_enabled()) then
+      defaultl = .false.
+    end if
+    call parse_variable(namespace, 'StatesPack', defaultl, st%d%pack_states)
+
+    call messages_print_var_value(stdout, 'StatesPack', st%d%pack_states)
 
     !%Variable RiemannSilbersteinSign
     !%Type integer
