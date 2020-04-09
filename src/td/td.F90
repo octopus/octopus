@@ -756,11 +756,9 @@ contains
         call td_write_mxll_free_data(write_handler, sys%namespace, sys%gr, sys%st, sys%hm, sys%geo, sys%outp, 0, td%dt)
       end if
 
-      !call td_check_trotter(td, sys, h)
       td%iter = td%iter + 1
 
-!      call restart_init(restart_mxll_dump, sys%namespace, RESTART_MAXWELL, RESTART_TYPE_DUMP, sys%mc, ierr, &
-!        mesh=sys%gr%mesh)
+      ! TODO: call restart_init
 
       call messages_print_stress(stdout, "Time-Dependent Simulation")
 
@@ -835,13 +833,7 @@ contains
           call td_write_mxll_free_data(write_handler, sys%namespace, sys%gr, sys%st, sys%hm, sys%geo, sys%outp, iter, td%dt)
         end if
 
-        if (mod(iter, sys%outp%restart_write_interval) == 0 .or. iter == td%max_iter .or. stopping) then ! restart
-!          call td_dump_mxll(restart_mxll_dump, sys%gr, sys%st, sys%hm, td, iter, ierr)
-          if (ierr /= 0) then
-            message(1) = "Unable to write time-dependent restart information."
-            call messages_warning(1)
-          end if
-        end if
+        ! TODO: call td_dump_mxll
 
         call profiling_out(prof)
         if (stopping) exit
@@ -850,7 +842,7 @@ contains
 
       ! if(st%d%pack_states .and. hamiltonian_apply_packed(hm, sys%gr%mesh)) call states_unpack(st)
 
-!      call restart_end(restart_dump)
+      ! TODO: call restart_end(restart_dump)
 
       ! free memory
       SAFE_DEALLOCATE_A(rs_current_density_ext_t1)
