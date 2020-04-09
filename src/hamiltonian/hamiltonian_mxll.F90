@@ -458,7 +458,8 @@ contains
       endif
     end if
 
-    call zderivatives_curl(der, psib%zff(:, 1, :), hpsib%zff(:, 1, :))
+    call psib%copy_to(hpsib, copy_data=.true.)
+    call zderivatives_batch_curl(der, hpsib)
     hpsib%zff(:,1,:) = hm%rs_sign * P_c * hpsib%zff(:,1,:)
   
     call profiling_out(prof_hamiltonian_mxll)
