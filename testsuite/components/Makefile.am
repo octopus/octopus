@@ -87,9 +87,7 @@ dist_share_DATA =                                  \
 	25-subspace.test                           \
 	26-batch_ops.01-jellium.inp                \
 	26-batch_ops.test                          \
-        27-celestial_dynamics.01-three_body.inp    \
-        27-celestial_dynamics.test                 \
-        28-clock.01.inp                            \
-        28-clock.test
+        27-clock.01.inp                            \
+        27-clock.test
 
 CLEANFILES = *~ *.bak
