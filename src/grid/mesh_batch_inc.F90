@@ -571,6 +571,10 @@ subroutine X(mesh_batch_mf_dotp)(mesh, aa, psi, dot, reduce, nst)
     call accel_release_buffer(psi_buffer)
     call accel_release_buffer(dot_buffer)
 
+    do ist=1,nst_
+      dot(ist) = dot(ist) * mesh%volume_element
+    end do
+
   end select
 
   if(mesh%parallel_in_domains .and. optional_default(reduce, .true.)) then
