@@ -74,6 +74,8 @@ module system_abst_oct_m
     procedure(system_update_quantity),                deferred :: update_quantity
     procedure(system_update_exposed_quantity),        deferred :: update_exposed_quantity
     procedure(system_set_pointers_to_interaction),    deferred :: set_pointers_to_interaction
+    procedure(system_update_interactions_start),      deferred :: update_interactions_start
+    procedure(system_update_interactions_finish),     deferred :: update_interactions_finish
   end type system_abst_t
 
   abstract interface
@@ -150,6 +152,18 @@ module system_abst_oct_m
       class(system_abst_t),   target,   intent(inout) :: this
       class(interaction_abst_t),        intent(inout) :: inter
     end subroutine system_set_pointers_to_interaction
+
+    ! ---------------------------------------------------------
+    subroutine system_update_interactions_start(this)
+      import system_abst_t
+      class(system_abst_t), intent(inout) :: this
+    end subroutine system_update_interactions_start
+
+    ! ---------------------------------------------------------
+    subroutine system_update_interactions_finish(this)
+      import system_abst_t
+      class(system_abst_t), intent(inout) :: this
+    end subroutine system_update_interactions_finish
 
   end interface
 
@@ -385,6 +399,9 @@ contains
 
     PUSH_SUB(system_update_interactions)
 
+    ! Some systems might need to perform some specific operations before the update
+    call this%update_interactions_start()
+
     !Loop over all interactions
     all_updated = .true.
     call iter%start(this%interactions)
@@ -422,6 +439,9 @@ contains
         all_updated = interaction%update(clock) .and. all_updated
       end if
     end do
+
+    ! Some systems might need to perform some specific operations after the update
+    call this%update_interactions_finish()
 
     POP_SUB(system_update_interactions)
   end function system_update_interactions

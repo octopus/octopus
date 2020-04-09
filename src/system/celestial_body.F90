@@ -72,6 +72,8 @@ module celestial_body_oct_m
     procedure :: update_quantity => celestial_body_update_quantity
     procedure :: update_exposed_quantity => celestial_body_update_exposed_quantity
     procedure :: set_pointers_to_interaction => celestial_set_pointers_to_interaction
+    procedure :: update_interactions_start => celestial_body_update_interactions_start
+    procedure :: update_interactions_finish => celestial_body_update_interactions_finish
     final :: celestial_body_finalize
   end type celestial_body_t
 
@@ -216,8 +218,6 @@ contains
     class(celestial_body_t), intent(inout) :: this
     integer,                 intent(in)    :: operation
 
-    type(interaction_iterator_t) :: iter
-
     PUSH_SUB(celestial_body_do_td)
 
     select case(operation)
@@ -229,22 +229,6 @@ contains
       call this%quantities(POSITION)%clock%increment()
 
     case (VERLET_COMPUTE_ACC)
-      ! Use as SCF criterium
-      this%prev_tot_force(1:this%space%dim) = this%tot_force(1:this%space%dim)
-
-      ! We sum the forces from the different partners
-      this%tot_force(1:this%space%dim) = M_ZERO
-      call iter%start(this%interactions)
-      do while (iter%has_next())
-        select type (interaction => iter%get_next_interaction())
-        type is (interaction_gravity_t)
-          this%tot_force(1:this%space%dim) = this%tot_force(1:this%space%dim) + interaction%force(1:this%space%dim)
-        class default
-          message(1) = "Unknown interaction by the celestial body " + this%namespace%get()
-          call messages_fatal(1)
-        end select
-      end do
-      this%tot_force(1:this%space%dim) = this%tot_force(1:this%space%dim) / this%mass
 
     case (VERLET_COMPUTE_VEL)
       this%vel(1:this%space%dim) = this%vel(1:this%space%dim) &
@@ -501,6 +485,43 @@ contains
 
     POP_SUB(celestial_set_pointers_to_interaction)
   end subroutine celestial_set_pointers_to_interaction
+
+  ! ---------------------------------------------------------
+  subroutine celestial_body_update_interactions_start(this)
+    class(celestial_body_t), intent(inout) :: this
+
+    PUSH_SUB(celestial_body_update_interactions_start)
+
+    ! Store previous force, as it is used as SCF criterium
+    this%prev_tot_force(1:this%space%dim) = this%tot_force(1:this%space%dim)
+
+    POP_SUB(celestial_body_update_interactions_start)
+  end subroutine celestial_body_update_interactions_start
+
+  ! ---------------------------------------------------------
+  subroutine celestial_body_update_interactions_finish(this)
+    class(celestial_body_t), intent(inout) :: this
+
+    type(interaction_iterator_t) :: iter
+
+    PUSH_SUB(celestial_body_update_interactions_finish)
+
+    ! Compute the total force acting on the celestial body
+    this%tot_force(1:this%space%dim) = M_ZERO
+    call iter%start(this%interactions)
+    do while (iter%has_next())
+      select type (interaction => iter%get_next_interaction())
+      type is (interaction_gravity_t)
+        this%tot_force(1:this%space%dim) = this%tot_force(1:this%space%dim) + interaction%force(1:this%space%dim)
+      class default
+        message(1) = "Unknown interaction by the celestial body " + this%namespace%get()
+        call messages_fatal(1)
+      end select
+    end do
+    this%tot_force(1:this%space%dim) = this%tot_force(1:this%space%dim) / this%mass
+
+    POP_SUB(celestial_body_update_interactions_finish)
+  end subroutine celestial_body_update_interactions_finish
 
   ! ---------------------------------------------------------
   subroutine celestial_body_finalize(this)
