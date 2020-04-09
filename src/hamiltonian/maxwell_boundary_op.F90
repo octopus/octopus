@@ -202,7 +202,7 @@ contains
     !%Option maxwell_lossy_layer 8
     !% follows ...
     !%End
-    if(parse_block(namespace, 'MaxwellBoundaryConditions', blk) == 0) then
+    if(parse_block(namespace, 'MaxwellBoundaryConditions', blk) == 0) then ! memleak in parse_block
 
       call messages_print_stress(stdout, trim('Maxwell boundary conditions:'), namespace=namespace)
 
@@ -979,7 +979,7 @@ contains
       end if
     end do
     bc%plane_waves_points_number = ip_in
-    SAFE_ALLOCATE(bc%plane_waves_points_map(1:ip_in))
+    SAFE_ALLOCATE(bc%plane_waves_points_map(1:ip_in)) ! memleak
 
     ! zero points mapping
     ip_in = 0
@@ -1431,7 +1431,7 @@ contains
     !% Follows!
     !%End
 
-    if(parse_block(namespace, 'UserDefinedMaxwellIncidentWaves', blk) == 0) then
+    if(parse_block(namespace, 'UserDefinedMaxwellIncidentWaves', blk) == 0) then ! memleak in parse_block
 
       call messages_print_stress(stdout, trim('Substitution of the electromagnetic incident waves'), namespace=namespace)
 
@@ -1439,16 +1439,16 @@ contains
       nlines = parse_block_n(blk)
 
       bc%plane_waves_number = nlines
-      SAFE_ALLOCATE(bc%plane_waves_modus(nlines))
+      SAFE_ALLOCATE(bc%plane_waves_modus(nlines)) ! memleak
       SAFE_ALLOCATE(bc%plane_waves_e_field_string(MAX_DIM, nlines))
-      SAFE_ALLOCATE(bc%plane_waves_e_field(MAX_DIM, nlines))
-      SAFE_ALLOCATE(bc%plane_waves_k_vector(MAX_DIM, nlines))
-      SAFE_ALLOCATE(bc%plane_waves_v_vector(MAX_DIM, nlines))
-      SAFE_ALLOCATE(bc%plane_waves_mx_function(nlines))
-      SAFE_ALLOCATE(bc%plane_waves_mx_phase(nlines))
-      SAFE_ALLOCATE(bc%plane_waves(nlines))
-      SAFE_ALLOCATE(bc%plane_waves_oam(nlines))
-      SAFE_ALLOCATE(bc%plane_waves_sam(nlines))
+      SAFE_ALLOCATE(bc%plane_waves_e_field(MAX_DIM, nlines)) ! memleak
+      SAFE_ALLOCATE(bc%plane_waves_k_vector(MAX_DIM, nlines)) ! memleak
+      SAFE_ALLOCATE(bc%plane_waves_v_vector(MAX_DIM, nlines)) ! memleak
+      SAFE_ALLOCATE(bc%plane_waves_mx_function(nlines)) ! memleak
+      SAFE_ALLOCATE(bc%plane_waves_mx_phase(nlines)) ! memleak
+      SAFE_ALLOCATE(bc%plane_waves(nlines)) ! memleak
+      SAFE_ALLOCATE(bc%plane_waves_oam(nlines)) ! memleak
+      SAFE_ALLOCATE(bc%plane_waves_sam(nlines)) ! memleak
 
       ! read all lines
       do il = 1, nlines

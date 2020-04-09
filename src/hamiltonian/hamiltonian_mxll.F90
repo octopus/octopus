@@ -235,11 +235,11 @@ contains
     hm%der => gr%der
     hm%rs_sign = st%rs_sign
 
-    SAFE_ALLOCATE(hm%vector_potential(1:gr%mesh%np_part,1:st%d%dim))
-    SAFE_ALLOCATE(hm%energy_density(1:gr%mesh%np_part))
-    SAFE_ALLOCATE(hm%energy_density_plane_waves(1:gr%mesh%np_part))
-    SAFE_ALLOCATE(hm%e_energy_density(1:gr%mesh%np_part))
-    SAFE_ALLOCATE(hm%b_energy_density(1:gr%mesh%np_part))
+    SAFE_ALLOCATE(hm%vector_potential(1:gr%mesh%np_part,1:st%d%dim)) ! memleak
+    SAFE_ALLOCATE(hm%energy_density(1:gr%mesh%np_part)) ! memleak
+    SAFE_ALLOCATE(hm%energy_density_plane_waves(1:gr%mesh%np_part)) ! memleak
+    SAFE_ALLOCATE(hm%e_energy_density(1:gr%mesh%np_part)) ! memleak
+    SAFE_ALLOCATE(hm%b_energy_density(1:gr%mesh%np_part)) ! memleak
 
     hm%vector_potential = M_ZERO
     hm%energy_density = M_ZERO
@@ -251,7 +251,7 @@ contains
     hm%ma_mx_coupling_apply = .false.
     hm%ma_mx_coupling  = .false.
 
-    SAFE_ALLOCATE(hm%cube%fft)
+    SAFE_ALLOCATE(hm%cube%fft) ! memleak
 
     !%Variable MaxwellHamiltonianOperator
     !%Type integer

@@ -59,7 +59,6 @@ module system_mxll_oct_m
   type, extends(system_abst_t) :: system_mxll_t
     type(states_mxll_t), pointer :: st    !< the states
     type(hamiltonian_mxll_t)     :: hm
-!    type(space_t)                :: space
     type(geometry_t)             :: geo
     type(grid_t),        pointer :: gr    !< the mesh
     type(output_t)               :: outp  !< the output
@@ -103,7 +102,7 @@ contains
     sys%namespace = namespace
 
     SAFE_ALLOCATE(sys%gr)
-    SAFE_ALLOCATE(sys%st)
+    SAFE_ALLOCATE(sys%st) ! memleak
 
     call messages_obsolete_variable(sys%namespace, 'SystemName')
 
@@ -123,16 +122,17 @@ contains
     sys%geo%reduced_coordinates = .false.
     sys%geo%periodic_dim = 0
     sys%geo%lsize = M_ZERO
-
     
-    call grid_init_stage_0(sys%gr, sys%namespace, sys%geo, sys%space)
+    call grid_init_stage_0(sys%gr, sys%namespace, sys%geo, sys%space)  ! memleak in kpoints_init, symmetries_init
     call states_mxll_init(sys%st, sys%namespace, sys%gr, sys%geo)
 
-    call grid_init_stage_1(sys%gr, sys%namespace, sys%geo)
+    call grid_init_stage_1(sys%gr, sys%namespace, sys%geo) ! memleak in kpoints_init, double_grid_init
+                                             ! sencil_allocate, derivatives_init, mesh_init_stage_2 
     
     call parallel_mxll_init(sys)
 
-    call grid_init_stage_2(sys%gr, sys%namespace, sys%mc, sys%geo)
+    call grid_init_stage_2(sys%gr, sys%namespace, sys%mc, sys%geo) ! memleak in mem_init_stage_3,
+                                                                   ! nl_operator_build, mesh_cube_map
 
     call output_mxll_init(sys%outp, sys%namespace, sys%gr%sb)
 
