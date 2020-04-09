@@ -960,16 +960,21 @@ contains
       call sys%init_clocks(sys%prop%dt, smallest_algo_dt)
     end do
 
+    ! Set initial conditions
+    call iter%start(systems)
+    do while (iter%has_next())
+      sys => iter%get_next_system()
+      call sys%initial_conditions(.true.)
+    end do
+
     ! Update all the interactions at the initial time
     call iter%start(systems)
     do while (iter%has_next())
       sys => iter%get_next_system()
-
       all_updated = sys%update_interactions(sys%clock)
-
       if (.not. all_updated) then
         message(1) = "Unable to update interactions when initializing the propagation."
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=sys%namespace)
       end if
     end do
 

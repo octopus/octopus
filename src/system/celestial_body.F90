@@ -61,6 +61,7 @@ module celestial_body_oct_m
   contains
     procedure :: add_interaction_partner => celestial_body_add_interaction_partner
     procedure :: has_interaction => celestial_body_has_interaction
+    procedure :: initial_conditions => celestial_body_initial_conditions
     procedure :: do_td_operation => celestial_body_do_td
     procedure :: write_td_info => celestial_body_write_td_info
     procedure :: td_write_init => celestial_body_td_write_init
@@ -85,9 +86,6 @@ contains
     class(celestial_body_t), pointer    :: sys
     type(namespace_t),       intent(in) :: namespace
 
-    integer :: n_rows, idir
-    type(block_t) :: blk
-
     PUSH_SUB(celestial_body_init)
 
     SAFE_ALLOCATE(sys)
@@ -106,41 +104,6 @@ contains
     !%End
     call parse_variable(namespace, 'CelestialBodyMass', M_ONE, sys%mass)
     call messages_print_var_value(stdout, 'CelestialBodyMass', sys%mass)
-
-    !%Variable CelestialBodyInitialPosition
-    !%Type block
-    !%Section CelestialDynamics
-    !%Description
-    !% Initial position of celestial body, in Km.
-    !%End
-    sys%pos = M_ZERO
-    if (parse_block(namespace, 'CelestialBodyInitialPosition', blk) == 0) then
-      n_rows = parse_block_n(blk)
-      if (n_rows > 1) call  messages_input_error('CelestialBodyInitialPosition')
-
-      do idir = 1, sys%space%dim
-        call parse_block_float(blk, 0, idir - 1, sys%pos(idir))
-      end do
-      call parse_block_end(blk)
-    end if
-    call messages_print_var_value(stdout, 'CelestialBodyInitialPosition', sys%pos(1:sys%space%dim))
-
-    !%Variable CelestialBodyInitialVelocity
-    !%Type block
-    !%Section CelestialDynamics
-    !%Description
-    !% Initial velocity of celestial body in Km/s.
-    !%End
-    sys%vel = M_ZERO
-    if (parse_block(namespace, 'CelestialBodyInitialVelocity', blk) == 0) then
-      n_rows = parse_block_n(blk)
-      if (n_rows > 1) call  messages_input_error('CelestialBodyInitialVelocity')
-      do idir = 1, sys%space%dim
-        call parse_block_float(blk, 0, idir - 1, sys%vel(idir))
-      end do
-      call parse_block_end(blk)
-    end if
-    call messages_print_var_value(stdout, 'CelestialBodyInitialVelocity', sys%vel(1:sys%space%dim))
 
     sys%acc = M_ZERO
     sys%prev_acc = M_ZERO
@@ -194,6 +157,59 @@ contains
 
     POP_SUB(celestial_body_has_interaction)
   end function celestial_body_has_interaction
+
+  ! ---------------------------------------------------------
+  subroutine celestial_body_initial_conditions(this, from_scratch)
+    class(celestial_body_t), intent(inout) :: this
+    logical,                 intent(in)    :: from_scratch
+
+    integer :: n_rows, idir
+    type(block_t) :: blk
+
+    PUSH_SUB(celestial_body_initial_conditions)
+
+    if (.not. from_scratch) then
+      message(1) = "Celestial mechanics is currently only allowed from scratch"
+      call messages_fatal(1, namespace=this%namespace)
+    end if
+
+    !%Variable CelestialBodyInitialPosition
+    !%Type block
+    !%Section CelestialDynamics
+    !%Description
+    !% Initial position of celestial body, in Km.
+    !%End
+    this%pos = M_ZERO
+    if (parse_block(this%namespace, 'CelestialBodyInitialPosition', blk) == 0) then
+      n_rows = parse_block_n(blk)
+      if (n_rows > 1) call  messages_input_error('CelestialBodyInitialPosition')
+
+      do idir = 1, this%space%dim
+        call parse_block_float(blk, 0, idir - 1, this%pos(idir))
+      end do
+      call parse_block_end(blk)
+    end if
+    call messages_print_var_value(stdout, 'CelestialBodyInitialPosition', this%pos(1:this%space%dim))
+
+    !%Variable CelestialBodyInitialVelocity
+    !%Type block
+    !%Section CelestialDynamics
+    !%Description
+    !% Initial velocity of celestial body in Km/s.
+    !%End
+    this%vel = M_ZERO
+    if (parse_block(this%namespace, 'CelestialBodyInitialVelocity', blk) == 0) then
+      n_rows = parse_block_n(blk)
+      if (n_rows > 1) call  messages_input_error('CelestialBodyInitialVelocity')
+      do idir = 1, this%space%dim
+        call parse_block_float(blk, 0, idir - 1, this%vel(idir))
+      end do
+      call parse_block_end(blk)
+    end if
+    call messages_print_var_value(stdout, 'CelestialBodyInitialVelocity', this%vel(1:this%space%dim))
+
+    POP_SUB(celestial_body_initial_conditions)
+  end subroutine celestial_body_initial_conditions
 
   ! ---------------------------------------------------------
   subroutine celestial_body_do_td(this, operation)

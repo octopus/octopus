@@ -66,6 +66,7 @@ module system_abst_oct_m
     procedure :: update_interactions => system_update_interactions
     procedure(system_add_interaction_partner),        deferred :: add_interaction_partner
     procedure(system_has_interaction),                deferred :: has_interaction
+    procedure(system_initial_conditions),             deferred :: initial_conditions
     procedure(system_do_td_op),                       deferred :: do_td_operation
     procedure(system_write_td_info),                  deferred :: write_td_info
     procedure(system_is_tolerance_reached),           deferred :: is_tolerance_reached
@@ -90,6 +91,13 @@ module system_abst_oct_m
       class(system_abst_t),      intent(in) :: this
       class(interaction_abst_t), intent(in) :: interaction
     end function system_has_interaction
+
+    ! ---------------------------------------------------------
+    subroutine system_initial_conditions(this, from_scratch)
+      import system_abst_t
+      class(system_abst_t), intent(inout) :: this
+      logical,              intent(in)    :: from_scratch
+    end subroutine system_initial_conditions
 
     ! ---------------------------------------------------------
     subroutine system_do_td_op(this, operation)
