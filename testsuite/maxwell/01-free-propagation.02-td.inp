@@ -4,9 +4,6 @@ CalculationMode                   = td
   'Maxwell' | maxwell
 %
 
-
-DisableAccel = yes
-
 Maxwell.ParStates                 = no
 
 pi=3.14159265359
@@ -46,7 +43,7 @@ MaxwellTDOutput                   = maxwell_energy + fields
 
 # Time step variables
 TDTimeStep                        = 1 / ( sqrt(c^2/dx_mx^2 + c^2/dx_mx^2 + c^2/dx_mx^2) )
-TDMaxSteps                        = 50
+TDMaxSteps                        = 30
 
 # laser propagates in x direction
 k_1_x       =  0.707107

@@ -7,8 +7,6 @@
   'Maxwell' | maxwell
 %
 
- DisableAccel = yes
-
  Maxwell.ParDomains = auto
  Maxwell.ParStates  = no
 
@@ -58,7 +56,7 @@
 
  MaxwellOutput = electric_field + magnetic_field + maxwell_energy_density
 
- MaxwellOutputInterval = 10
+ MaxwellOutputInterval = 50
  MaxwellTDOutput       = maxwell_energy + fields
 
  %MaxwellFieldsCoordinate

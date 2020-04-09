@@ -21,7 +21,6 @@ Precision  : 1.0e-6
 
 match ; Tot. Maxwell energy [step 10] ; LINEFIELD(Maxwell/td.general/maxwell_energy,  16, 3) ; 2.177979370847e-02
 match ; Tot. Maxwell energy [step 30] ; LINEFIELD(Maxwell/td.general/maxwell_energy,  36, 3) ; 3.895910293354e+00
-match ; Tot. Maxwell energy [step 50] ; LINEFIELD(Maxwell/td.general/maxwell_energy,  56, 3) ; 2.563228386753e+01
 
 Precision  : 1.0e-6
 
