@@ -95,7 +95,7 @@ module pes_flux_oct_m
     FLOAT, pointer   :: kcoords_sph(:,:,:)
     integer          :: kgrid                          !< how is the grid in k: polar/cartesian
 
-    ! Surface 
+    ! Surface relates quantities
     integer, public  :: surf_shape                     !< shape of the surface (= cube/sphere/planes)
     integer          :: nsrfcpnts                      !< total number of surface points
     integer          :: nsrfcpnts_start, nsrfcpnts_end !< for cubic surface: number of surface points on node
@@ -110,7 +110,9 @@ module pes_flux_oct_m
     FLOAT            :: radius
     integer, pointer :: face_idx_range(:,:)            !< face_idx_start(nface,1:2) 1 (2) start (end) idx of face nface in rcoords(:,:)
 
-    CMPLX, pointer   :: expkr(:,:,:,:)                 !< for cubic surface: Fourier basis on a face of the cube
+    
+    CMPLX, pointer   :: bvk_phase(:,:)                 !< for cubic surface:
+    CMPLX, pointer   :: expkr(:,:,:,:)                 !< for cubic surface: Exponential tabulated on the cube face
     CMPLX, pointer   :: expg(:,:,:)                    !< for cubic surface: Fourier basis on a face of the cube
     FLOAT, pointer   :: sinc(:,:,:,:)                  !< for cubic surface: sync function for Fourier components parallel to cube faces
     FLOAT, pointer   :: LLr(:,:)                       !< for cubic surface: coordinates of the face edges
@@ -1451,9 +1453,11 @@ contains
             select case (pdim)
               case (1)
               
+!               this%ll(1) = sb%kpoints%full%npoints
               do ik1 = 1, this%ll(1)
-                kvec(1) = this%klinear(ik1,1) 
+                kvec(1) = this%klinear(ik1,1)
                 kvec(1:pdim) = matmul(sb%klattice_primitive(1:pdim,1:pdim),kvec(1:pdim))
+!                 kvec(1:mdim) = kpoints_get_point(sb%kpoints, ik1)
                 call fill_non_periodic_dimension(this)               
               end do
 
@@ -1949,10 +1953,14 @@ contains
     type(states_elec_t), intent(in)    :: st
 
     integer            :: stst, stend, kptst, kptend, sdim, mdim
-    integer            :: ist, ik, isdim, imdim
+    integer            :: ist, ik, isdim, imdim, j1, j2, jvec(1:2)
     integer            :: isp, ikp, ikp_start, ikp_end
     integer            :: ik_map
-      
+    
+    integer            :: ikp1, ikp2, fdim, pdim 
+    CMPLX              :: tmp
+    FLOAT              :: Jac(1:2,1:2), jdet, kpoint(1:3), vec(1:3), lvec(1:3)
+    
     PUSH_SUB(pes_flux_integrate_cub_tabulate_direct_a) 
 
     if (kpoints_have_zero_weight_path(mesh%sb%kpoints)) then
@@ -1963,10 +1971,24 @@ contains
       kptend    = 1
     end if
 
-    mdim      = mesh%sb%dim
+    mdim = mesh%sb%dim
+    pdim = mesh%sb%periodic_dim
 
     ikp_start = this%nkpnts_start
     ikp_end   = this%nkpnts_end
+    
+    
+      if(this%surf_shape == M_PLANES) then
+        fdim = mdim - 1
+        ! This is not general but should work in the only case where is relevant
+        !i.e. when the system is semiperiodic in <=2 dimensions
+        Jac(1:fdim, 1:fdim) = mesh%sb%rlattice_primitive(1:fdim, 1:fdim) !The Jacobian on the surface
+        jdet = lalg_determinant(fdim, Jac, invert = .false.)
+print *, "jdet =", jdet
+print *, "mesh%sb%rlattice_primitive(1:fdim, 1:fdim) ", mesh%sb%rlattice_primitive(1:fdim, 1:fdim) 
+        this%srfcnrml(:,1: this%nsrfcpnts ) = this%srfcnrml(:,1:this%nsrfcpnts )*jdet
+      end if
+    
     
     
     if (.true.) then
@@ -1983,9 +2005,53 @@ contains
           end do
         end do
       end do
+
+
+      SAFE_ALLOCATE(this%bvk_phase(ikp_start:ikp_end,st%d%kpt%start:st%d%kpt%end))
+
+      this%bvk_phase(:,:) = M_z0
+      vec(:) = M_ZERO
+
+      do ik = st%d%kpt%start, st%d%kpt%end
+        kpoint(1:mdim) = kpoints_get_point(mesh%sb%kpoints, ik)
+        if (kpoints_have_zero_weight_path(mesh%sb%kpoints)) then
+          ik_map = ik
+        else
+          ik_map = 1
+        end if
+        do ikp = ikp_start, ikp_end
+          vec(1:pdim) = this%kcoords_cub(1:pdim, ikp, ik_map) + kpoint(1:pdim)
+          do j1 = 0, mesh%sb%kpoints%nik_axis(1)-1
+            do j2 = 0, mesh%sb%kpoints%nik_axis(2)-1
+              jvec(1:2)=(/j1,j2/)
+              lvec(1:pdim)=matmul(mesh%sb%rlattice(1:pdim,1:2),jvec(1:2))
+              tmp = sum(lvec(1:pdim)*vec(1:pdim))
+              this%bvk_phase(ikp,ik) =  this%bvk_phase(ikp,ik) &
+                                     +  exp(M_zI * tmp)
+              
+            end do
+          end do
+
+      end do
+    end do
+    this%bvk_phase(:,:) = this%bvk_phase(:,:) * M_ONE/product(mesh%sb%kpoints%nik_axis(1:pdim))
+      
+
+    if(debug%info .and. mpi_grp_is_root(mpi_world)) then
+      write(225,*) "ik, ikp, this%bvk_phase(ikp,ik)"
+      do ik = st%d%kpt%start, st%d%kpt%end
+        do ikp = ikp_start, ikp_end
+          write(225,*) ik, ikp, this%bvk_phase(ikp,ik)
+        end do 
+      end do
+      flush(225)
+    end if
+      
+
+      
           
     else
-    !some smart mapping  
+    !do some smart mapping to exploit symmetries
       
     end if
     
@@ -2153,7 +2219,7 @@ contains
 
 !             vec = this%kcoords_cub(n_dir, ikp, ik) * this%rcoords(n_dir, isp_start)
 !             phase(ikp, ik)  = vphase(ikp, ik) * exp(M_zI * vec )/sqrt(M_TWO * M_PI)
-            phase(ikp, ik)  = vphase(ikp, ik)
+            phase(ikp, ik)  = vphase(ikp, ik) *  this%bvk_phase(ikp,ik)
           end do
           
           if(itstep /= tdstep_on_node) cycle ! cannot skip before otherwise we do not accumulate the Volkov phase
