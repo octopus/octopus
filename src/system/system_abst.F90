@@ -70,7 +70,7 @@ module system_abst_oct_m
     procedure(system_has_interaction),                deferred :: has_interaction
     procedure(system_initial_conditions),             deferred :: initial_conditions
     procedure(system_do_td_op),                       deferred :: do_td_operation
-    procedure(system_write_td_info),                  deferred :: write_td_info
+    procedure(system_iteration_info),                 deferred :: iteration_info
     procedure(system_is_tolerance_reached),           deferred :: is_tolerance_reached
     procedure(system_store_current_status),           deferred :: store_current_status
     procedure(system_update_quantity),                deferred :: update_quantity
@@ -78,6 +78,9 @@ module system_abst_oct_m
     procedure(system_set_pointers_to_interaction),    deferred :: set_pointers_to_interaction
     procedure(system_update_interactions_start),      deferred :: update_interactions_start
     procedure(system_update_interactions_finish),     deferred :: update_interactions_finish
+    procedure(system_output_start),                   deferred :: output_start
+    procedure(system_output_write),                   deferred :: output_write
+    procedure(system_output_finish),                  deferred :: output_finish
   end type system_abst_t
 
   abstract interface
@@ -111,10 +114,10 @@ module system_abst_oct_m
     end subroutine system_do_td_op
 
     ! ---------------------------------------------------------
-    subroutine system_write_td_info(this)
+    subroutine system_iteration_info(this)
       import system_abst_t
       class(system_abst_t), intent(in) :: this
-    end subroutine system_write_td_info
+    end subroutine system_iteration_info
 
     ! ---------------------------------------------------------
     logical function system_is_tolerance_reached(this, tol)
@@ -167,6 +170,24 @@ module system_abst_oct_m
       class(system_abst_t), intent(inout) :: this
     end subroutine system_update_interactions_finish
 
+    ! ---------------------------------------------------------
+    subroutine system_output_start(this)
+      import system_abst_t
+      class(system_abst_t), intent(inout) :: this
+    end subroutine system_output_start
+
+    ! ---------------------------------------------------------
+    subroutine system_output_write(this, iter)
+      import system_abst_t
+      class(system_abst_t), intent(inout) :: this
+      integer,              intent(in)    :: iter
+    end subroutine system_output_write
+
+    ! ---------------------------------------------------------
+    subroutine system_output_finish(this)
+      import system_abst_t
+      class(system_abst_t), intent(inout) :: this
+    end subroutine system_output_finish
   end interface
 
   !> This class extends the list iterator and adds one method to get the
@@ -509,8 +530,11 @@ contains
     ! System-specific and propagator-specific initialization step
     call this%do_td_operation(this%prop%start_step)
 
-    ! Write information for initial time
-    call this%write_td_info()
+    ! Start output
+    call this%output_start()
+
+    ! Write information for first iteration
+    call this%iteration_info()
 
     POP_SUB(system_propagation_start)
   end subroutine system_propagation_start
@@ -520,6 +544,9 @@ contains
     class(system_abst_t),      intent(inout) :: this
 
     PUSH_SUB(system_propagation_finish)
+
+    ! Finish output
+    call this%output_finish()
 
     ! System-specific and propagator-specific finalization step
     call this%do_td_operation(this%prop%final_step)

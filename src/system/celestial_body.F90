@@ -63,10 +63,10 @@ module celestial_body_oct_m
     procedure :: has_interaction => celestial_body_has_interaction
     procedure :: initial_conditions => celestial_body_initial_conditions
     procedure :: do_td_operation => celestial_body_do_td
-    procedure :: write_td_info => celestial_body_write_td_info
-    procedure :: td_write_init => celestial_body_td_write_init
-    procedure :: td_write_iter => celestial_body_td_write_iter
-    procedure :: td_write_end => celestial_body_td_write_end
+    procedure :: iteration_info => celestial_body_iteration_info
+    procedure :: output_start => celestial_body_output_start
+    procedure :: output_write => celestial_body_output_write
+    procedure :: output_finish => celestial_body_output_finish
     procedure :: is_tolerance_reached => celestial_body_is_tolerance_reached
     procedure :: store_current_status => celestial_body_store_current_status
     procedure :: update_quantity => celestial_body_update_quantity
@@ -325,13 +325,13 @@ contains
    end subroutine celestial_body_store_current_status
 
   ! ---------------------------------------------------------
-  subroutine celestial_body_write_td_info(this)
+  subroutine celestial_body_iteration_info(this)
     class(celestial_body_t), intent(in) :: this
 
     integer :: idir
     character(len=20) :: fmt
 
-    PUSH_SUB(celestial_body_write_td_info)
+    PUSH_SUB(celestial_body_iteration_info)
 
     write(message(1),'(2X,A,1X,A)') "Celestial body:", trim(this%namespace%get())
 
@@ -344,26 +344,42 @@ contains
     write(message(7),'(4x,A,e14.6)') 'Simulation time: ', this%clock%get_sim_time()
     call messages_info(7)
 
-    POP_SUB(celestial_body_write_td_info)
-  end subroutine celestial_body_write_td_info
+    POP_SUB(celestial_body_iteration_info)
+  end subroutine celestial_body_iteration_info
 
   ! ---------------------------------------------------------
-  subroutine celestial_body_td_write_init(this, dt)
+  subroutine celestial_body_output_start(this)
     class(celestial_body_t), intent(inout) :: this
-    FLOAT,                   intent(in)    :: dt
 
-    PUSH_SUB(celestial_body_td_write_init)
+    PUSH_SUB(celestial_body_output_start)
 
+    ! Create output handle
     call io_mkdir('td.general', this%namespace)
     if (mpi_grp_is_root(mpi_world)) then
-      call write_iter_init(this%output_handle, 0, dt, trim(io_workpath("td.general/coordinates", this%namespace)))
+      call write_iter_init(this%output_handle, 0, this%prop%dt, trim(io_workpath("td.general/coordinates", this%namespace)))
     end if
 
-    POP_SUB(celestial_body_td_write_init)
-  end subroutine celestial_body_td_write_init
+    ! Output info for first iteration
+    call this%output_write(0)
+
+    POP_SUB(celestial_body_output_start)
+  end subroutine celestial_body_output_start
 
   ! ---------------------------------------------------------
-  subroutine celestial_body_td_write_iter(this, iter)
+  subroutine celestial_body_output_finish(this)
+    class(celestial_body_t), intent(inout) :: this
+
+    PUSH_SUB(celestial_body_output_finish)
+
+    if (mpi_grp_is_root(mpi_world)) then
+      call write_iter_end(this%output_handle)
+    end if
+
+    POP_SUB(celestial_body_output_finish)
+  end subroutine celestial_body_output_finish
+
+  ! ---------------------------------------------------------
+  subroutine celestial_body_output_write(this, iter)
     class(celestial_body_t), intent(inout) :: this
     integer,                 intent(in)    :: iter
 
@@ -372,7 +388,7 @@ contains
 
     if(.not.mpi_grp_is_root(mpi_world)) return ! only first node outputs
 
-    PUSH_SUB(celestial_body_td_write_iter)
+    PUSH_SUB(celestial_body_output_write)
 
     if(iter == 0) then
       ! header
@@ -415,21 +431,8 @@ contains
     call write_iter_double(this%output_handle, this%tot_force, this%space%dim)
     call write_iter_nl(this%output_handle)
     
-    POP_SUB(celestial_body_td_write_iter)
-  end subroutine celestial_body_td_write_iter
-
-  ! ---------------------------------------------------------
-  subroutine celestial_body_td_write_end(this)
-    class(celestial_body_t), intent(inout) :: this
-
-    PUSH_SUB(celestial_body_td_write_end)
-
-    if (mpi_grp_is_root(mpi_world)) then
-      call write_iter_end(this%output_handle)
-    end if
-
-    POP_SUB(celestial_body_td_write_end)
-  end subroutine celestial_body_td_write_end
+    POP_SUB(celestial_body_output_write)
+  end subroutine celestial_body_output_write
 
   ! ---------------------------------------------------------
   subroutine celestial_body_update_quantity(this, iq, clock)

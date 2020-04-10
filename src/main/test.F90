@@ -973,24 +973,6 @@ contains
       call sys%propagation_start()
     end do
 
-    call iter%start(systems)
-    do while (iter%has_next())
-      sys => iter%get_next_system()
-
-      ! Initialize output
-      select type(sys)
-      type is (celestial_body_t)
-
-        ! Initialize output and write data at time zero
-        call sys%td_write_init(sys%prop%dt)
-        call sys%td_write_iter(0)
-
-      class default
-        message(1) = "Unknow system type."
-        call messages_fatal(1)
-      end select
-    end do
-
     ! The full TD loop
     call messages_print_stress(stdout, "Propagation", namespace=global_namespace)
 
@@ -1028,17 +1010,11 @@ contains
       do while (iter%has_next())
         sys => iter%get_next_system()
 
+        ! Print information about the current iteration and write output
         if(sys%prop%step_is_done()) then
           call sys%prop%rewind()
-          call sys%write_td_info()
-
-          select type (sys)
-          type is (celestial_body_t)
-            call sys%td_write_iter(it)
-          class default
-            message(1) = "Unknow system type."
-            call messages_fatal(1)
-          end select
+          call sys%output_write(it)
+          call sys%iteration_info()
         end if
 
         ! Fixme: should be changed to final propagation time
@@ -1052,17 +1028,6 @@ contains
     call iter%start(systems)
     do while (iter%has_next())
       sys => iter%get_next_system()
-
-      select type (sys)
-      type is (celestial_body_t)
-
-        call sys%td_write_end()
-
-      class default
-        message(1) = "Unknow system type."
-        call messages_fatal(1)
-      end select
-
       call sys%propagation_finish()
     end do
 
