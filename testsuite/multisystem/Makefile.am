@@ -29,6 +29,9 @@ dist_share_DATA =                                  \
 	02-interaction_graph.01-three_body.inp     \
 	03-propagation_verlet.test                 \
 	03-propagation_verlet.01-two_body.inp      \
-	03-propagation_verlet.02-three_body.inp
+	03-propagation_verlet.02-three_body.inp    \
+	04-propagation_beeman.test                 \
+	04-propagation_beeman.01-two_body.inp      \
+	04-propagation_beeman.02-three_body.inp
 
 CLEANFILES = *~ *.bak

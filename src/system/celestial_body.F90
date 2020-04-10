@@ -249,7 +249,7 @@ contains
 
     case (BEEMAN_PREDICT_VEL)
       this%vel(1:this%space%dim) = this%vel(1:this%space%dim)  &
-                                 + M_ONE/CNST(6.0) * this%prop%dt * (this%acc(1:this%space%dim) &
+                                 + M_ONE/CNST(6.0) * this%prop%dt * (CNST(5.0) * this%acc(1:this%space%dim) &
                                  + M_TWO * this%tot_force(1:this%space%dim) - this%prev_acc(1:this%space%dim, 1))
 
       call this%quantities(VELOCITY)%clock%increment()
