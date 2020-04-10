@@ -635,7 +635,9 @@ contains
     type(bc_mxll_t),   intent(inout) :: bc
     PUSH_SUB(bc_mxll_end)
 
-    SAFE_DEALLOCATE_P(bc%mask)
+    if (associated(bc%mask)) then
+      SAFE_DEALLOCATE_P(bc%mask)
+    end if
 
     POP_SUB(bc_mxll_end)
   end subroutine bc_mxll_end
