@@ -204,6 +204,7 @@ contains
     pdim   = mesh%sb%periodic_dim
 
     this%surf_interp = .false.
+    this%avoid_ab = .true.
 
     do il = 1, hm%ep%no_lasers
       if(laser_kind(hm%ep%lasers(il)) /= E_FIELD_VECTOR_POTENTIAL) then
@@ -281,21 +282,9 @@ contains
       call messages_print_var_value(stdout, 'PES_Flux_Lmax', this%lmax)
     end if
 
-    this%avoid_ab = .false.
+
     if(this%surf_shape == M_CUBIC .or. this%surf_shape == M_PLANES) then
       
-      if(hm%bc%abtype /= NOT_ABSORBING) then
-        !%Variable PES_Flux_AvoidAB
-        !%Type logical
-        !%Default yes
-        !%Section Time-Dependent::PhotoElectronSpectrum
-        !%Description
-        !% For <tt>PES_Flux_Shape = cub</tt>, checks whether surface points are inside the
-        !% absorbing zone and discards them if set to yes (default).
-        !%End
-        call parse_variable(namespace, 'PES_Flux_AvoidAB', .true., this%avoid_ab)
-        call messages_print_var_value(stdout, 'PES_Flux_AvoidAB', this%avoid_ab)
-      end if
 
       !%Variable PES_Flux_Lsize
       !%Type block
@@ -1323,7 +1312,7 @@ contains
             ikp = ikp + 1
 !             kact = ikk * this%dk 
             kact = sign(1,ikk)*this%klinear(abs(ikk),1)
-            this%kcoords_cub(1, ikp, kptst:kptend+1) = kact
+            this%kcoords_cub(1, ikp, 1) = kact
           end do
 
         else !mdim = 2,3 
