@@ -52,6 +52,9 @@ contains
 
     SAFE_ALLOCATE(this)
 
+    this%start_step = VERLET_START
+    this%final_step = VERLET_FINISH
+
     call this%add(VERLET_UPDATE_POS)
     call this%add(UPDATE_INTERACTIONS)
     call this%add(VERLET_COMPUTE_ACC)

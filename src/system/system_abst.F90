@@ -64,6 +64,8 @@ module system_abst_oct_m
     procedure :: update_exposed_quantities => system_update_exposed_quantities
     procedure :: init_propagator => system_init_propagator
     procedure :: update_interactions => system_update_interactions
+    procedure :: propagation_start => system_propagation_start
+    procedure :: propagation_finish => system_propagation_finish
     procedure(system_add_interaction_partner),        deferred :: add_interaction_partner
     procedure(system_has_interaction),                deferred :: has_interaction
     procedure(system_initial_conditions),             deferred :: initial_conditions
@@ -490,6 +492,42 @@ contains
   end subroutine system_init_propagator
 
   ! ---------------------------------------------------------
+  subroutine system_propagation_start(this)
+    class(system_abst_t),      intent(inout) :: this
+
+    logical :: all_updated
+
+    PUSH_SUB(system_propagation_start)
+
+    ! Update interactions at initial time
+    all_updated = this%update_interactions(this%clock)
+    if (.not. all_updated) then
+      message(1) = "Unable to update interactions when initializing the propagation."
+      call messages_fatal(1, namespace=this%namespace)
+    end if
+
+    ! System-specific and propagator-specific initialization step
+    call this%do_td_operation(this%prop%start_step)
+
+    ! Write information for initial time
+    call this%write_td_info()
+
+    POP_SUB(system_propagation_start)
+  end subroutine system_propagation_start
+
+  ! ---------------------------------------------------------
+  subroutine system_propagation_finish(this)
+    class(system_abst_t),      intent(inout) :: this
+
+    PUSH_SUB(system_propagation_finish)
+
+    ! System-specific and propagator-specific finalization step
+    call this%do_td_operation(this%prop%final_step)
+
+    POP_SUB(system_propagation_finish)
+  end subroutine system_propagation_finish
+
+    ! ---------------------------------------------------------
   function system_iterator_get_next(this) result(value)
     class(system_iterator_t), intent(inout) :: this
     class(system_abst_t),     pointer       :: value

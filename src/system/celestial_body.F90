@@ -51,7 +51,7 @@ module celestial_body_oct_m
     FLOAT, public :: pos(1:MAX_DIM)
     FLOAT, public :: vel(1:MAX_DIM)
     FLOAT, public :: acc(1:MAX_DIM)
-    FLOAT, public :: prev_acc(1:MAX_DIM,1) !< A storage of the prior times. At the moment we only can store one time 
+    FLOAT, public, allocatable :: prev_acc(:,:) !< A storage of the prior times.
     FLOAT, public :: save_pos(1:MAX_DIM)   !< A storage for the SCF loops
     FLOAT, public :: save_vel(1:MAX_DIM)   !< A storage for the SCF loops
     FLOAT, public :: tot_force(1:MAX_DIM)
@@ -106,10 +106,6 @@ contains
     !%End
     call parse_variable(namespace, 'CelestialBodyMass', M_ONE, sys%mass)
     call messages_print_var_value(stdout, 'CelestialBodyMass', sys%mass)
-
-    sys%acc = M_ZERO
-    sys%prev_acc = M_ZERO
-    sys%tot_force = M_ZERO
 
     sys%quantities(POSITION)%required = .true.
     sys%quantities(VELOCITY)%required = .true.
@@ -218,30 +214,47 @@ contains
     class(celestial_body_t), intent(inout) :: this
     integer,                 intent(in)    :: operation
 
+    integer :: ii
+
     PUSH_SUB(celestial_body_do_td)
 
     select case(operation)
-    case (VERLET_UPDATE_POS)
+    case (VERLET_START)
+      SAFE_ALLOCATE(this%prev_acc(1:this%space%dim, 1))
       this%acc(1:this%space%dim) = this%tot_force(1:this%space%dim) / this%mass
+
+    case (VERLET_FINISH, BEEMAN_FINISH)
+      SAFE_DEALLOCATE_A(this%prev_acc)
+
+    case (VERLET_UPDATE_POS)
       this%pos(1:this%space%dim) = this%pos(1:this%space%dim) + this%prop%dt * this%vel(1:this%space%dim) &
-                                 + M_HALF * this%prop%dt**2 * this%tot_force(1:this%space%dim) / this%mass
+                                 + M_HALF * this%prop%dt**2 * this%acc(1:this%space%dim)
 
       call this%quantities(POSITION)%clock%increment()
 
     case (VERLET_COMPUTE_ACC)
+      do ii = 1, size(this%prev_acc, dim=2) - 1
+        this%prev_acc(1:this%space%dim, ii + 1) = this%prev_acc(1:this%space%dim, ii)
+      end do
+      this%prev_acc(1:this%space%dim, 1) = this%acc(1:this%space%dim)
+      this%acc(1:this%space%dim) = this%tot_force(1:this%space%dim) / this%mass
 
     case (VERLET_COMPUTE_VEL)
       this%vel(1:this%space%dim) = this%vel(1:this%space%dim) &
-        + M_HALF * this%prop%dt * (this%acc(1:this%space%dim) + this%tot_force(1:this%space%dim) / this%mass)
+        + M_HALF * this%prop%dt * (this%prev_acc(1:this%space%dim, 1) + this%acc(1:this%space%dim))
 
       call this%quantities(VELOCITY)%clock%increment()
+
+
+    case (BEEMAN_START)
+      SAFE_ALLOCATE(this%prev_acc(1:this%space%dim, 2))
+      this%acc(1:this%space%dim) = this%tot_force(1:this%space%dim) / this%mass
+      this%prev_acc(1:this%space%dim, 1) = this%acc(1:this%space%dim)
 
     case (BEEMAN_PREDICT_POS)
       this%pos(1:this%space%dim) = this%pos(1:this%space%dim) + this%prop%dt * this%vel(1:this%space%dim) &
                                  + M_ONE/CNST(6.0) * this%prop%dt**2  &
                                  * (M_FOUR*this%acc(1:this%space%dim) - this%prev_acc(1:this%space%dim, 1))
-      this%prev_acc(1:this%space%dim, 1) = this%acc(1:this%space%dim)
-      this%acc(1:this%space%dim) = this%tot_force(1:this%space%dim)/this%mass
 
       if (.not. this%prop%predictor_corrector) then
         call this%quantities(POSITION)%clock%increment()
@@ -249,22 +262,22 @@ contains
 
     case (BEEMAN_PREDICT_VEL)
       this%vel(1:this%space%dim) = this%vel(1:this%space%dim)  &
-                                 + M_ONE/CNST(6.0) * this%prop%dt * (CNST(5.0) * this%acc(1:this%space%dim) &
-                                 + M_TWO * this%tot_force(1:this%space%dim)/this%mass - this%prev_acc(1:this%space%dim, 1))
+        + M_ONE/CNST(6.0) * this%prop%dt * ( M_TWO * this%acc(1:this%space%dim) + &
+        CNST(5.0) * this%prev_acc(1:this%space%dim, 1) - this%prev_acc(1:this%space%dim, 2))
 
       call this%quantities(VELOCITY)%clock%increment()
 
-    case( BEEMAN_CORRECT_POS)
+    case (BEEMAN_CORRECT_POS)
       this%pos(1:this%space%dim) = this%save_pos(1:this%space%dim) + this%prop%dt * this%save_vel(1:this%space%dim) &
                                  + M_ONE/CNST(6.0) * this%prop%dt**2  &
-                                 * (M_TWO * this%acc(1:this%space%dim) + this%tot_force(1:this%space%dim)/this%mass)
+                                 * (this%acc(1:this%space%dim) + M_TWO * this%prev_acc(1:this%space%dim, 1))
 
       ! We set it to the propagation time to avoid double increment
       call this%quantities(POSITION)%clock%set_time(this%prop%clock)
 
     case (BEEMAN_CORRECT_VEL)
       this%vel(1:this%space%dim) = this%save_vel(1:this%space%dim) &
-                                 + M_HALF * this%prop%dt * (this%acc(1:this%space%dim) + this%tot_force(1:this%space%dim)/this%mass)
+                                 + M_HALF * this%prop%dt * (this%acc(1:this%space%dim) + this%prev_acc(1:this%space%dim, 1))
 
       ! We set it to the propagation time to avoid double increment
       call this%quantities(VELOCITY)%clock%set_time(this%prop%clock)

@@ -919,7 +919,7 @@ contains
 
     type(namespace_t) :: global_namespace
     integer :: it, internal_loop
-    logical :: any_td_step_done, all_done_max_td_steps, all_updated
+    logical :: any_td_step_done, all_done_max_td_steps
     integer, parameter :: MAX_PROPAGATOR_STEPS = 1000
     FLOAT :: smallest_algo_dt
     
@@ -967,23 +967,15 @@ contains
       call sys%initial_conditions(.true.)
     end do
 
-    ! Update all the interactions at the initial time
     call iter%start(systems)
     do while (iter%has_next())
       sys => iter%get_next_system()
-      all_updated = sys%update_interactions(sys%clock)
-      if (.not. all_updated) then
-        message(1) = "Unable to update interactions when initializing the propagation."
-        call messages_fatal(1, namespace=sys%namespace)
-      end if
+      call sys%propagation_start()
     end do
 
     call iter%start(systems)
     do while (iter%has_next())
       sys => iter%get_next_system()
-
-      ! Write information for initial time
-      call sys%write_td_info()
 
       ! Initialize output
       select type(sys)
@@ -1060,6 +1052,7 @@ contains
     call iter%start(systems)
     do while (iter%has_next())
       sys => iter%get_next_system()
+
       select type (sys)
       type is (celestial_body_t)
 
@@ -1069,6 +1062,8 @@ contains
         message(1) = "Unknow system type."
         call messages_fatal(1)
       end select
+
+      call sys%propagation_finish()
     end do
 
     ! Finalize systems
