@@ -130,19 +130,10 @@ contains
         SAFE_ALLOCATE(this%omega_array(1:this%nmodes))
         SAFE_ALLOCATE(this%lambda_array(1:this%nmodes))
         SAFE_ALLOCATE(this%pol_array(1:this%nmodes,3))
-        if(ncols > 5) then
-          this%has_q0_p0 = .true.
-          SAFE_ALLOCATE(this%q0_array(1:this%nmodes))
-          SAFE_ALLOCATE(this%p0_array(1:this%nmodes))
-        end if
       end if
       call MPI_Bcast(this%omega_array(1), this%nmodes, MPI_FLOAT, 0, mpi_world%comm, ierr)
       call MPI_Bcast(this%lambda_array(1), this%nmodes, MPI_FLOAT, 0, mpi_world%comm, ierr)
       call MPI_Bcast(this%pol_array(1,1), this%nmodes*3, MPI_FLOAT, 0, mpi_world%comm, ierr)
-      if(this%has_q0_p0) then
-        call MPI_Bcast(this%q0_array(1), this%nmodes, MPI_FLOAT, 0, mpi_world%comm, ierr)
-        call MPI_Bcast(this%p0_array(1), this%nmodes, MPI_FLOAT, 0, mpi_world%comm, ierr)
-      end if
 #endif
     end if
 

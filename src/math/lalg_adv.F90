@@ -24,7 +24,9 @@ module lalg_adv_oct_m
   use global_oct_m
   use lapack_oct_m
   use messages_oct_m
+  use mpi_oct_m 
   use profiling_oct_m
+  use scalapack_oct_m 
   use sort_oct_m
   use utils_oct_m
 #ifdef HAVE_ELPA
