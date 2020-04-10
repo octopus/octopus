@@ -489,7 +489,7 @@ subroutine X(pulay_extrapolation)(this, d2, d3, vin, vout, vnew, iter_used, f, d
       if(j > i) a(j, i) = a(i, j)
     end do
   end do
-  if (all(abs(a) < 1.0E-8)) then
+  if (all(abs(a) < CNST(1.0E-8))) then
     ! residuals are too small. Do not mix.
     vnew = vout
     POP_SUB(X(pulay_extrapolation))

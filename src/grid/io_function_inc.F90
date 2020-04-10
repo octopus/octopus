@@ -220,12 +220,12 @@ subroutine X(io_function_input_global)(filename, namespace, mesh, ff, ierr, map)
       SAFE_ALLOCATE(x_out(1:cube%rs_n_global(1), 1:1))
       
       do ii = 1, int(dims(1))
-        x_in(ii,:) = (/ real(ii-1, REAL_PRECISION)*(real(cube%rs_n_global(1)-1, REAL_PRECISION)/(dims(1)-1)) /)
+        x_in(ii,:) = (/ TOFLOAT(ii-1)*(TOFLOAT(cube%rs_n_global(1)-1)/(dims(1)-1)) /)
       end do
 
       
       do ii = 1, cube%rs_n_global(1)
-        x_out(ii,1) = real(ii-1, REAL_PRECISION)
+        x_out(ii,1) = TOFLOAT(ii-1)
       end do
         
 ! TODO: find out why this was called with ndim 2 as a first argument, in the mesh%sb%dim 1 case
@@ -242,14 +242,14 @@ subroutine X(io_function_input_global)(filename, namespace, mesh, ff, ierr, map)
       do ii = 1, int(dims(2))
         do jj = 1, int(dims(1))
           x_in((ii-1)*dims(1) + jj,:) = & 
-            (/ real(jj-1, REAL_PRECISION)*(real(cube%rs_n_global(1)-1, REAL_PRECISION)/(dims(1)-1)),&
-               real(ii-1, REAL_PRECISION)*(real(cube%rs_n_global(2)-1, REAL_PRECISION)/(dims(2)-1)) /)
+            (/ TOFLOAT(jj-1)*(TOFLOAT(cube%rs_n_global(1)-1)/(dims(1)-1)),&
+               TOFLOAT(ii-1)*(TOFLOAT(cube%rs_n_global(2)-1)/(dims(2)-1)) /)
         end do
       end do
       
       do ii = 1, cube%rs_n_global(2)
         do jj = 1, cube%rs_n_global(1)
-          x_out((ii-1)*cube%rs_n_global(1) + jj,:) = (/ real(jj-1, REAL_PRECISION), real(ii-1, REAL_PRECISION) /)
+          x_out((ii-1)*cube%rs_n_global(1) + jj,:) = (/ TOFLOAT(jj-1), TOFLOAT(ii-1) /)
         end do
       end do
       call X(mf_interpolate_points)(2, int(dims(1)*dims(2), FC_INTEGER_SIZE), x_in(:,:),&
@@ -265,9 +265,9 @@ subroutine X(io_function_input_global)(filename, namespace, mesh, ff, ierr, map)
         do jj = 1, int(dims(2))
           do kk = 1, int(dims(1))
             x_in((ii-1)*dims(1)*dims(2) + (jj-1)*dims(1) + kk,:) = &
-              (/ real(kk-1, REAL_PRECISION)*(real(cube%rs_n_global(1)-1, REAL_PRECISION)/(dims(1)-1)) , &
-                 real(jj-1, REAL_PRECISION)*(real(cube%rs_n_global(2)-1, REAL_PRECISION)/(dims(2)-1)) , &
-                 real(ii-1, REAL_PRECISION)*(real(cube%rs_n_global(3)-1, REAL_PRECISION)/(dims(3)-1)) /)
+              (/ TOFLOAT(kk-1)*(TOFLOAT(cube%rs_n_global(1)-1)/(dims(1)-1)) , &
+                 TOFLOAT(jj-1)*(TOFLOAT(cube%rs_n_global(2)-1)/(dims(2)-1)) , &
+                 TOFLOAT(ii-1)*(TOFLOAT(cube%rs_n_global(3)-1)/(dims(3)-1)) /)
           end do
         end do
       end do
@@ -276,7 +276,7 @@ subroutine X(io_function_input_global)(filename, namespace, mesh, ff, ierr, map)
         do jj = 1, cube%rs_n_global(2)
           do kk = 1, cube%rs_n_global(1)
             x_out((ii-1)*cube%rs_n_global(1)*cube%rs_n_global(2) + (jj-1)*cube%rs_n_global(1) + kk,:) = &
-              (/ real(kk-1, REAL_PRECISION), real(jj-1, REAL_PRECISION), real(ii-1, REAL_PRECISION) /)
+              (/ TOFLOAT(kk-1), TOFLOAT(jj-1), TOFLOAT(ii-1) /)
             end do
           end do
         end do
@@ -1412,7 +1412,7 @@ contains
           if(.not. write_real) then
             write(iunit,'(2f25.15)') aimag(units_from_atomic(unit, cf%X(RS)(ix2, iy2, iz2)))
           else
-            write(iunit,'(2f25.15)') real(units_from_atomic(unit, cf%X(RS)(ix2, iy2, iz2)), REAL_PRECISION)
+            write(iunit,'(2f25.15)') TOFLOAT(units_from_atomic(unit, cf%X(RS)(ix2, iy2, iz2)))
           end if
 #else
           write(iunit,'(2f25.15)') units_from_atomic(unit, cf%X(RS)(ix2, iy2, iz2))
@@ -1765,9 +1765,9 @@ end function X(interpolate_isolevel)
 #if defined(R_TCOMPLEX)
     if(status == NF90_NOERR) then
       if (transpose) then
-        call transpose3(real(cf%X(RS), REAL_PRECISION), xx)
+        call transpose3(TOFLOAT(cf%X(RS)), xx)
       else
-        xx = real(cf%X(RS), REAL_PRECISION)
+        xx = TOFLOAT(cf%X(RS))
       end if
       xx = units_from_atomic(unit, xx)
       call write_variable(ncid, data_id, status, sb_dim, xx)

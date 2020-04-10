@@ -46,9 +46,9 @@ contains
     integer, intent(in) :: itype
     integer, intent(in) :: nd
     integer, intent(out) :: nrange
-    real(kind=8), dimension(0:nd), intent(out) :: a,x
+    FLOAT, dimension(0:nd), intent(out) :: a,x
 
-    real(kind=8), dimension(:), allocatable :: y
+    FLOAT, dimension(:), allocatable :: y
     integer :: i,nt,ni
 
     !Only itype=8,14,16,20,24,30,40,50,60,100

@@ -151,7 +151,7 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
       B = bb%ff_device, offB = 0_8, ldb = int(bb%pack_size(1), 8), beta = R_TOTYPE(M_ZERO), &
       C = dot_buffer, offC = 0_8, ldc = int(aa%nst, 8))
 
-    call profiling_count_operations(dble(mesh%np)*aa%nst*bb%nst*(R_ADD + 2*R_MUL))
+    call profiling_count_operations(TOFLOAT(mesh%np)*aa%nst*bb%nst*(R_ADD + 2*R_MUL))
 
     call accel_finish()
     call profiling_out(prof_gemmcl)
@@ -173,9 +173,9 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
 
   if(aa%status() /= BATCH_DEVICE_PACKED) then
     if(mesh%use_curvilinear) then
-      call profiling_count_operations(dble(mesh%np)*aa%nst*bb%nst*(R_ADD + 2*R_MUL))
+      call profiling_count_operations(TOFLOAT(mesh%np)*aa%nst*bb%nst*(R_ADD + 2*R_MUL))
     else
-      call profiling_count_operations(dble(mesh%np)*aa%nst*bb%nst*(R_ADD + R_MUL))
+      call profiling_count_operations(TOFLOAT(mesh%np)*aa%nst*bb%nst*(R_ADD + R_MUL))
     end if
   end if
 
@@ -290,9 +290,9 @@ subroutine X(mesh_batch_dotp_self)(mesh, aa, dot, reduce)
   end if
 
   if(mesh%use_curvilinear) then
-    call profiling_count_operations(dble(mesh%np)*aa%nst**2*(R_ADD + 2*R_MUL))
+    call profiling_count_operations(TOFLOAT(mesh%np)*aa%nst**2*(R_ADD + 2*R_MUL))
   else
-    call profiling_count_operations(dble(mesh%np)*aa%nst**2*(R_ADD + R_MUL))
+    call profiling_count_operations(TOFLOAT(mesh%np)*aa%nst**2*(R_ADD + R_MUL))
   end if
 
   if(use_blas) call profiling_out(profgemm)
@@ -440,7 +440,7 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
     call profiling_out(profcomm)
   end if
   
-  call profiling_count_operations(aa%nst*dble(mesh%np)*(R_ADD + R_MUL)*types_get_size(aa%type())/types_get_size(TYPE_FLOAT))
+  call profiling_count_operations(aa%nst*TOFLOAT(mesh%np)*(R_ADD + R_MUL)*types_get_size(aa%type())/types_get_size(TYPE_FLOAT))
 
   call profiling_out(prof)
   POP_SUB(X(mesh_batch_dotp_vector))
@@ -873,10 +873,10 @@ subroutine X(mesh_batch_orthogonalization)(mesh, nst, psib, phib,  &
     !Here we do not call mesh_batch_nrm2 which is too slow
     call X(mesh_batch_dotp_vector)(mesh, phib, phib, nrm2)
     if(present(norm)) then
-      norm(1:phib%nst) = sqrt(real(nrm2(1:phib%nst), REAL_PRECISION))
+      norm(1:phib%nst) = sqrt(TOFLOAT(nrm2(1:phib%nst)))
     end if
     if(normalize_) then
-      call batch_scal(mesh%np, M_ONE/sqrt(real(nrm2, REAL_PRECISION)), phib, a_full =.false.)
+      call batch_scal(mesh%np, M_ONE/sqrt(TOFLOAT(nrm2)), phib, a_full =.false.)
     end if
     SAFE_DEALLOCATE_A(nrm2)
   end if

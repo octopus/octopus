@@ -261,7 +261,7 @@ program dielectric_function
     ww = (kk-1)*spectrum%energy_step + spectrum%min_energy
     write(out_file, '(e15.6)', advance='no') ww
     do idir = 1, space%dim
-      write(out_file, '(2e15.6)', advance='no') real(invdielectric(idir, kk), REAL_PRECISION), aimag(invdielectric(idir, kk))
+      write(out_file, '(2e15.6)', advance='no') TOFLOAT(invdielectric(idir, kk)), aimag(invdielectric(idir, kk))
     end do
     write(out_file, '()')
   end do
@@ -273,7 +273,7 @@ program dielectric_function
     ww = (kk-1)*spectrum%energy_step + spectrum%min_energy
     write(out_file, '(e15.6)', advance='no') ww
     do idir = 1, space%dim
-      write(out_file, '(2e15.6)', advance='no') real(dielectric(idir, kk), REAL_PRECISION), aimag(dielectric(idir, kk))
+      write(out_file, '(2e15.6)', advance='no') TOFLOAT(dielectric(idir, kk)), aimag(dielectric(idir, kk))
     end do
     write(out_file, '()')
   end do
@@ -286,7 +286,7 @@ program dielectric_function
     ww = (kk-1)*spectrum%energy_step + spectrum%min_energy
     write(out_file, '(e15.6)', advance='no') ww
     do idir = 1, space%dim
-      write(out_file, '(2e15.6)', advance='no') real(chi(idir, kk), REAL_PRECISION), aimag(chi(idir, kk))
+      write(out_file, '(2e15.6)', advance='no') TOFLOAT(chi(idir, kk)), aimag(chi(idir, kk))
     end do
     write(out_file, '()')
   end do

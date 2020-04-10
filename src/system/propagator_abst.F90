@@ -23,6 +23,8 @@ module propagator_abst_oct_m
   use global_oct_m
   use linked_list_oct_m
   use messages_oct_m
+  use namespace_oct_m
+  use parser_oct_m
   use profiling_oct_m
 
   implicit none
@@ -41,6 +43,7 @@ module propagator_abst_oct_m
 
     integer, public :: algo_steps
     FLOAT, public   :: dt
+    integer, public :: max_td_steps
 
     !< Options related to predictor-corrector propagators
     logical, public :: predictor_corrector = .false.
@@ -54,7 +57,7 @@ module propagator_abst_oct_m
     type(clock_t), public :: clock
 
   contains
-    !Below are the list of operations that needs to be implemented
+    ! Below are the list of operations that needs to be implemented
     procedure :: get_td_operation => propagator_get_tdop
     procedure :: step_is_done => propagator_step_is_done
     procedure :: next => propagator_next
@@ -62,6 +65,7 @@ module propagator_abst_oct_m
     procedure :: finished => propagator_finished
     procedure :: save_scf_start => propagator_save_scf_start
     procedure :: rewind_scf_loop => propagator_rewind_scf_loop
+    procedure :: parse_td_variables => propagator_parse_td_variables
   end type propagator_abst_t
 
   ! Known propagation operations
@@ -79,6 +83,12 @@ module propagator_abst_oct_m
     BEEMAN_PREDICT_VEL           = 10,  &
     BEEMAN_CORRECT_POS           = 11,  &
     BEEMAN_CORRECT_VEL           = 12
+
+  ! Known multisystem propagators
+  integer, public, parameter ::        &
+    PROP_VERLET                  = 1,  &
+    PROP_BEEMAN                  = 2,  &
+    PROP_BEEMAN_SCF              = 3
 
 contains
 
@@ -142,7 +152,7 @@ contains
     
     PUSH_SUB(propagator_save_scf_start)
 
-    !Save the current iteration state (START_SCF_LOOP) and move to next step
+    ! Save the current iteration state (START_SCF_LOOP) and move to next step
     this%scf_start = this%iter
     call this%next()
     this%scf_count = 0
@@ -156,7 +166,7 @@ contains
 
     PUSH_SUB(propagator_rewind_scf_loop)
 
-    !Reset the iteration state to the beginning of the loop (START_SCF_LOOP) and move to next step
+    ! Reset the iteration state to the beginning of the loop (START_SCF_LOOP) and move to next step
     this%iter = this%scf_start
     call this%next()
     this%scf_count = this%scf_count + 1
@@ -202,6 +212,24 @@ contains
 
     PUSH_SUB(propagator_step_debug_message)
   end function propagator_step_debug_message
+
+  !--------------------------------------------------------
+  subroutine propagator_parse_td_variables(this, namespace)
+    class(propagator_abst_t), intent(inout) :: this
+    type(namespace_t),        intent(in)    :: namespace
+
+    PUSH_SUB(propagator_parse_td_variables)
+
+    ! This variable is also defined (and properly documented) in td/td.F90.
+    ! This is temporary, until all the propagators are moved to the new framework.
+    call parse_variable(namespace, 'TDTimeStep', CNST(10.0), this%dt)
+
+    ! This variable is also defined (and properly documented) in td/td.F90.
+    ! This is temporary, until all the propagators are moved to the new framework.
+    call parse_variable(namespace, 'TDMaxSteps', 1000, this%max_td_steps)
+
+    POP_SUB(propagator_parse_td_variables)
+  end subroutine propagator_parse_td_variables
 
 end module propagator_abst_oct_m
 

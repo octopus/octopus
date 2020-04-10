@@ -20,15 +20,9 @@
 ! Preprocessor directives
 ! ------------------------------------------------------------------
 
-#if   TYPE == 1
-#  define TYPE1 real(4)
-#  define TYPE2 real(4)
-#elif TYPE == 2
+#if TYPE == 2
 #  define TYPE1 real(8)
 #  define TYPE2 real(8)
-#elif TYPE == 3
-#  define TYPE1 complex(4)
-#  define TYPE2 real(4)
 #elif TYPE == 4
 #  define TYPE1 complex(8)
 #  define TYPE2 real(8)

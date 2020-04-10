@@ -346,8 +346,7 @@
           call states_elec_get_state(psi, gr%mesh, ist, ik, zpsi)
           do idim = 1, gr%sb%dim
             opsi(1:gr%mesh%np, 1) = tg%grad_local_pot(1, 1:gr%mesh%np, idim)*zpsi(1:gr%mesh%np, 1)
-            acc(idim) = acc(idim) + real( psi%occ(ist, ik) * &
-                zmf_dotp(gr%mesh, psi%d%dim, opsi, zpsi), REAL_PRECISION )
+            acc(idim) = acc(idim) + TOFLOAT( psi%occ(ist, ik) * zmf_dotp(gr%mesh, psi%d%dim, opsi, zpsi))
             tg%acc(time+1, idim) = tg%acc(time+1, idim) + psi%occ(ist, ik)*zmf_dotp(gr%mesh, psi%d%dim, opsi, zpsi)
           end do
         end do

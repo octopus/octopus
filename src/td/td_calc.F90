@@ -122,7 +122,7 @@ subroutine td_calc_tacc(namespace, gr, geo, st, hm, acc, time)
           terms = TERM_NON_LOCAL_POTENTIAL)
 
         do idim = 1, st%d%dim
-          x(j) = x(j) - 2*st%occ(ist, ik)*real(zmf_dotp(gr%mesh, hzpsi(1:gr%mesh%np, idim), vnl_xzpsi(:, idim)), REAL_PRECISION)
+          x(j) = x(j) - 2*st%occ(ist, ik)*TOFLOAT(zmf_dotp(gr%mesh, hzpsi(1:gr%mesh%np, idim), vnl_xzpsi(:, idim)))
         end do
       end do
 
@@ -138,7 +138,7 @@ subroutine td_calc_tacc(namespace, gr, geo, st, hm, acc, time)
           terms = TERM_NON_LOCAL_POTENTIAL)
 
         do idim = 1, st%d%dim
-          x(j) = x(j) + 2*st%occ(ist, ik)*real(zmf_dotp(gr%mesh, zpsi(:, idim), vnl_xzpsi(:, idim)), REAL_PRECISION)
+          x(j) = x(j) + 2*st%occ(ist, ik)*TOFLOAT(zmf_dotp(gr%mesh, zpsi(:, idim), vnl_xzpsi(:, idim)))
         end do
       end do
       SAFE_DEALLOCATE_A(xzpsi)

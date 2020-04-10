@@ -588,11 +588,11 @@ contains
                     pmat%zmix(imat - 1 + ic, imat - 1 + jc, 2) = hgh_p%h(ic, jc) - M_HALF*mm*hgh_p%k(ic, jc)
      
                     if(mm < ll) then
-                      pmat%zmix(imat - 1 + ic, imat + 3 - 1 + jc, 3) = M_HALF*hgh_p%k(ic, jc)*sqrt(real(ll*(ll+1)-mm*(mm+1)))
+                      pmat%zmix(imat - 1 + ic, imat + 3 - 1 + jc, 3) = M_HALF*hgh_p%k(ic, jc)*sqrt(TOFLOAT(ll*(ll+1)-mm*(mm+1)))
                     end if
 
                     if(-mm < ll) then
-                      pmat%zmix(imat - 1 + ic, imat - 3 - 1 + jc, 4) = M_HALF*hgh_p%k(ic, jc)*sqrt(real(ll*(ll+1)-mm*(mm-1)))
+                      pmat%zmix(imat - 1 + ic, imat - 3 - 1 + jc, 4) = M_HALF*hgh_p%k(ic, jc)*sqrt(TOFLOAT(ll*(ll+1)-mm*(mm-1)))
                     end if
                   end do
                 end do
@@ -816,7 +816,6 @@ contains
     ! check if we only want a phase correction for the boundary points
     phase_correction = .false.
     if(associated(hm_base%phase)) phase_correction = .true.
-    if(accel_is_enabled()) phase_correction = .false.
 
     !We apply the phase only to np points, and the phase for the np+1 to np_part points
     !will be treated as a phase correction in the Hamiltonian
@@ -842,7 +841,6 @@ contains
     ! check if we only want a phase correction for the boundary points
     phase_correction = .false.
     if(associated(hm_base%phase)) phase_correction = .true.
-    if(accel_is_enabled()) phase_correction = .false.
 
     !We apply the phase only to np points, and the phase for the np+1 to np_part points
     !will be treated as a phase correction in the Hamiltonian

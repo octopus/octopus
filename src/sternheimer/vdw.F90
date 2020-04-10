@@ -291,20 +291,20 @@ contains
 
         call pert_setup_dir(perturbation, dir)
         call zsternheimer_solve(sh, sys, lr(dir, :), 1,  omega, perturbation, &
-             restart_dump, em_rho_tag(real(omega),dir), em_wfs_tag(dir,1))
+             restart_dump, em_rho_tag(TOFLOAT(omega),dir), em_wfs_tag(dir,1))
       end do
 
       call zcalc_polarizability_finite(sys, lr(:,:), 1, perturbation, alpha(:,:), ndir = ndir)
 
       get_pol = M_ZERO
       do dir = 1, ndir
-        get_pol = get_pol + real(alpha(dir, dir), REAL_PRECISION)
+        get_pol = get_pol + TOFLOAT(alpha(dir, dir))
       end do
       do dir = ndir+1, sys%gr%mesh%sb%dim
-        get_pol = get_pol + real(alpha(ndir, ndir), REAL_PRECISION)
+        get_pol = get_pol + TOFLOAT(alpha(ndir, ndir))
       end do
 
-      get_pol = get_pol / real(sys%gr%mesh%sb%dim, REAL_PRECISION)
+      get_pol = get_pol / TOFLOAT(sys%gr%mesh%sb%dim)
 
       call pert_end(perturbation)
       POP_SUB(vdw_run.get_pol)

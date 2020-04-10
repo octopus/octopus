@@ -379,7 +379,7 @@ contains
     logical                      :: stopping_tmp
 #endif
     integer                      :: iter, ierr, scsteps
-    real(8)                      :: etime
+    FLOAT                        :: etime
     type(profile_t),        save :: prof
     type(restart_t)              :: restart_load, restart_dump
 
@@ -1003,7 +1003,7 @@ contains
 
         do iqn = st%d%kpt%start, st%d%kpt%end
           if(states_are_real(st)) then
-            call states_elec_rotate(stin, namespace, gr%mesh, real(rotation_matrix, REAL_PRECISION), iqn)
+            call states_elec_rotate(stin, namespace, gr%mesh, TOFLOAT(rotation_matrix), iqn)
           else
             call states_elec_rotate(stin, namespace, gr%mesh, rotation_matrix, iqn)
           end if

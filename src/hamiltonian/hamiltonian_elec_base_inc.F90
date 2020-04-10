@@ -263,7 +263,7 @@ subroutine X(hamiltonian_elec_base_phase)(this, mesh, np, conjugate, psib, src)
   PUSH_SUB(X(hamiltonian_elec_base_phase))
   call profiling_in(phase_prof, "PBC_PHASE_APPLY")
 
-  call profiling_count_operations(R_MUL*dble(np)*psib%nst_linear)
+  call profiling_count_operations(R_MUL*TOFLOAT(np)*psib%nst_linear)
 
   ASSERT(np <= mesh%np_part)
 
@@ -374,7 +374,7 @@ subroutine X(hamiltonian_elec_base_phase_spiral)(this, der, psib)
   PUSH_SUB(X(hamiltonian_elec_base_phase_spiral))
   call profiling_in(phase_prof, "PBC_PHASE_SPIRAL")
 
-  call profiling_count_operations(R_MUL*dble(der%mesh%np_part-der%mesh%np)*psib%nst_linear)
+  call profiling_count_operations(R_MUL*TOFLOAT(der%mesh%np_part-der%mesh%np)*psib%nst_linear)
 
 
 
@@ -1721,6 +1721,7 @@ contains
       call accel_read_buffer(buff_proj, 4*this%full_projection_size*psib%pack_size_real(1), proj)
       call comm_allreduce(mesh%vp%comm, proj)
       call accel_write_buffer(buff_proj, 4*this%full_projection_size*psib%pack_size_real(1), proj)
+      SAFE_DEALLOCATE_A(proj)
     end if
 
     if(this%projector_mix) then

@@ -1,4 +1,4 @@
-!! Copyright (C) 2020 M. Oliveira
+!! Copyright (C) 2020 M. Oliveira, Heiko Appel
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -31,18 +31,18 @@ module interaction_abst_oct_m
     interaction_abst_end, &
     interaction_iterator_t
 
-  !> An interaction is a unidirectional relationship beween two systems. One of the
+  !> An interaction is a unidirectional relationship between two systems. One of the
   !! systems owns the interaction and feels it`s effects. The other system is
-  !! refered to as the interaction partner.
+  !! referred to as the interaction partner.
   type, abstract :: interaction_abst_t
     private
     !> The interaction requires access to some quantities to be evaluated, both
-    !> form the system and form the partner.
+    !> from the system and from the partner.
     integer,              public :: n_system_quantities  !< Number of quantities needed from the system
     integer, allocatable, public :: system_quantities(:) !< Identifiers of the quantities needed from the system
 
     integer,              public :: n_partner_quantities !< Number of quantities needed from the partner
-    integer, allocatable, public :: partner_quantities(:)!< Identifiers of the quantities needed from the parner
+    integer, allocatable, public :: partner_quantities(:)!< Identifiers of the quantities needed from the partner
 
     type(clock_t), public :: clock !< Clock storing the time at which the interaction was last updated.
   contains

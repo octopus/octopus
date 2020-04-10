@@ -1,0 +1,50 @@
+CalculationMode = test
+
+ExperimentalFeatures = yes
+
+TestMode = density_calc
+TestRepetitions = 3000
+TestType = $test_type
+
+Dimensions = $dimensions
+PeriodicDimensions = $periodic_dimensions
+DerivativesOrder = 4
+
+number_gridpoints = $number_gridpoints
+l1 = 5
+l2 = l1
+l3 = l1
+Spacing = l1*2 * (1 / number_gridpoints ) ^ (1./Dimensions)
+#Spacing = (l1*l2*l3*8 / number_gridpoints ) ^ (1./Dimensions)
+
+%Lsize
+ l1 | l2 | l3
+%
+BoxShape = parallelepiped
+
+number_kpoints = $number_kpoints
+
+%KPointsGrid
+ number_kpoints | 1 | 1
+%
+
+SpinComponents = $spin_components
+
+electrons_per_state = $electrons_per_state
+number_states = $number_states
+N_electrons = electrons_per_state*number_states
+
+%Species
+"foo" | species_soft_coulomb | softening | 1.0 | valence | N_electrons
+%
+SpeciesProjectorSphereThreshold = 1.0
+
+%Coordinates
+"foo" | 0 | 0 | 0
+%
+
+StatesPack = $states_pack
+#StatesBlockSize ?
+
+ProfilingMode = prof_time
+ProfilingOutputYAML = yes

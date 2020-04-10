@@ -506,9 +506,9 @@ contains
     ! no PUSH_SUB, called too often
 
     if (present(ep_element)) then
-      electric_field_vector(:) = sqrt(M_TWO/ep_element) * real(rs_state_vector(:))
+      electric_field_vector(:) = sqrt(M_TWO/ep_element) * TOFLOAT(rs_state_vector(:))
     else
-      electric_field_vector(:) = sqrt(M_TWO/P_ep) * real(rs_state_vector(:))
+      electric_field_vector(:) = sqrt(M_TWO/P_ep) * TOFLOAT(rs_state_vector(:))
     end if
 
   end subroutine get_electric_field_vector
@@ -554,9 +554,9 @@ contains
      
     do ip = 1, np_
       if (present(ep_field)) then
-        electric_field(ip, :) = sqrt(M_TWO/ep_field(ip)) * real(rs_aux(ip, :), REAL_PRECISION)
+        electric_field(ip, :) = sqrt(M_TWO/ep_field(ip)) * TOFLOAT(rs_aux(ip, :))
       else 
-        electric_field(ip,:) = sqrt(M_TWO/P_ep) * real(rs_aux(ip, :), REAL_PRECISION)
+        electric_field(ip,:) = sqrt(M_TWO/P_ep) * TOFLOAT(rs_aux(ip, :))
       end if
     end do
 
@@ -613,9 +613,9 @@ contains
     ! no PUSH_SUB, called too often
 
     if (present(ep_element)) then
-      current_element = sqrt(M_TWO*ep_element) * real(rs_current_element, REAL_PRECISION)
+      current_element = sqrt(M_TWO*ep_element) * TOFLOAT(rs_current_element)
     else
-      current_element = sqrt(M_TWO*P_ep) * real(rs_current_element, REAL_PRECISION)
+      current_element = sqrt(M_TWO*P_ep) * TOFLOAT(rs_current_element)
     end if
 
   end subroutine get_current_element
@@ -630,9 +630,9 @@ contains
     ! no PUSH_SUB, called too often
 
     if (present(ep_element)) then
-      current_vector(:) = sqrt(M_TWO*ep_element) * real(rs_current_vector(:), REAL_PRECISION)
+      current_vector(:) = sqrt(M_TWO*ep_element) * TOFLOAT(rs_current_vector(:))
     else
-      current_vector(:) = sqrt(M_TWO*P_ep) * real(rs_current_vector(:), REAL_PRECISION)
+      current_vector(:) = sqrt(M_TWO*P_ep) * TOFLOAT(rs_current_vector(:))
     end if
 
   end subroutine get_current_vector
@@ -654,9 +654,9 @@ contains
 
     do ip = 1, np_
       if (present(ep_field)) then
-        current_field(ip, :) = sqrt(M_TWO*ep_field(ip)) * real(rs_current_field(ip, :), REAL_PRECISION)
+        current_field(ip, :) = sqrt(M_TWO*ep_field(ip)) * TOFLOAT(rs_current_field(ip, :))
       else
-        current_field(ip, :) = sqrt(M_TWO*P_ep) * real(rs_current_field(ip, :), REAL_PRECISION)
+        current_field(ip, :) = sqrt(M_TWO*P_ep) * TOFLOAT(rs_current_field(ip, :))
       end if
     end do
 
@@ -747,13 +747,13 @@ contains
       do ip = 1, gr%mesh%np
         poynting_vector(ip, :) = M_ONE/mu_field(ip) * sqrt(M_TWO/ep_field(ip)) &
                               * sqrt(M_TWO*mu_field(ip)) &
-                              * dcross_product(real(rs_aux(ip, :), REAL_PRECISION), rs_sign*aimag(rs_aux(ip, :)))
+                              * dcross_product(TOFLOAT(rs_aux(ip, :)), rs_sign*aimag(rs_aux(ip, :)))
       end do
     else
       do ip = 1, gr%mesh%np
         poynting_vector(ip,:) = M_ONE/st%mu(ip) * sqrt(M_TWO/st%ep(ip)) &
                               * sqrt(M_TWO*st%mu(ip)) &
-                              * dcross_product(real(rs_aux(ip, :), REAL_PRECISION), rs_sign*aimag(rs_aux(ip, :)))
+                              * dcross_product(TOFLOAT(rs_aux(ip, :)), rs_sign*aimag(rs_aux(ip, :)))
       end do
     end if
 
@@ -774,7 +774,7 @@ contains
 
     do ip = 1, gr%mesh%np
       poynting_vector(ip, :) = M_ONE/P_mu * sqrt(M_TWO/P_ep) * sqrt(M_TWO*P_mu) &
-               & * dcross_product(real(st%rs_state_plane_waves(ip,:), REAL_PRECISION), &
+               & * dcross_product(TOFLOAT(st%rs_state_plane_waves(ip,:)), &
                & rs_sign*aimag(st%rs_state_plane_waves(ip,:)))
     end do
 

@@ -149,7 +149,7 @@ contains
     FLOAT :: energy
     type(distributed_t) :: dist_kpt
     type(profile_t), save :: prof
-    FLOAT, parameter :: SINGUL_CNST = 7.7955541794415 !The constant is 4*pi*(3/(4*pi))^1/3
+    FLOAT, parameter :: SINGUL_CNST = CNST(7.7955541794415) !The constant is 4*pi*(3/(4*pi))^1/3
  
     PUSH_SUB(singularity_correction)
 

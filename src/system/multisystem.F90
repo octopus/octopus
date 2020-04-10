@@ -21,17 +21,22 @@
 module multisystem_oct_m
   use celestial_body_oct_m
   use global_oct_m
+  use io_oct_m
   use linked_list_oct_m
+  use loct_oct_m
   use messages_oct_m
+  use mpi_oct_m
   use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
   use system_oct_m
+  use system_abst_oct_m
   implicit none
 
   private
-  public ::           &
-    multisystem_init, &
+  public ::                        &
+    multisystem_init,              &
+    multisystem_init_interactions, &
     multisystem_end
 
   integer, parameter ::         &
@@ -41,6 +46,7 @@ module multisystem_oct_m
   
 contains
 
+  ! ---------------------------------------------------------------------------------------
   subroutine multisystem_init(systems, global_namespace)
     type(linked_list_t), intent(inout) :: systems
     type(namespace_t),   intent(in)  :: global_namespace
@@ -77,6 +83,9 @@ contains
         case (SYSTEM_ELECTRONIC)
           sys => system_init(namespace_t(system_name))
           call systems%add(sys)
+        case (SYSTEM_CELESTIAL_BODY)
+          sys => celestial_body_t(namespace_t(system_name))
+          call systems%add(sys)
         case default
           call messages_input_error('Systems')
         end select
@@ -90,6 +99,51 @@ contains
     POP_SUB(multisystem_init)
   end subroutine multisystem_init
 
+
+  ! ---------------------------------------------------------------------------------------
+  subroutine multisystem_init_interactions(systems, global_namespace)
+    type(linked_list_t), intent(inout) :: systems
+    type(namespace_t),   intent(in)    :: global_namespace
+
+    class(system_abst_t), pointer :: sys1, sys2
+    type(system_iterator_t) :: iter1, iter2
+    integer :: iunit_out
+
+    PUSH_SUB(multisystem_init_interactions)
+
+    if (debug%interaction_graph .and. mpi_grp_is_root(mpi_world)) then
+      iunit_out = io_open('interaction_graph.dot', global_namespace, action='write')
+      write(iunit_out, '(a)') 'digraph {'
+    end if
+
+    call iter1%start(systems)
+    do while (iter1%has_next())
+      sys1 => iter1%get_next_system()
+      call iter2%start(systems)
+      do while (iter2%has_next())
+        sys2 => iter2%get_next_system()
+        !No self interaction
+        if(.not.associated(sys1, sys2)) then
+          call sys1%add_interaction_partner(sys2)
+
+          !Debug information in form of a DOT graph
+          if(debug%interaction_graph .and. mpi_grp_is_root(mpi_world)) then
+            write(iunit_out, '(2x,a)') trim(sys1%namespace%get()) + ' -> ' + trim(sys2%namespace%get()) + ';'
+          end if
+        end if
+      end do
+    end do
+
+    if (debug%interaction_graph .and. mpi_grp_is_root(mpi_world)) then
+      write(iunit_out, '(a)') '}'
+      call io_close(iunit_out)
+    end if
+
+    POP_SUB(multisystem_init_interactions)
+
+  end subroutine multisystem_init_interactions
+
+  ! ---------------------------------------------------------------------------------------
   subroutine multisystem_end(systems)
     type(linked_list_t), intent(inout) :: systems
 

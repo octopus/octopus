@@ -294,7 +294,7 @@
             call states_elec_get_state(psi, gr%mesh, ist, ik, zpsi)
             opsi(1:gr%mesh%np, 1) = tg%grad_local_pot(iatom, 1:gr%mesh%np, idim)*zpsi(1:gr%mesh%np, 1)
             geo%atom(iatom)%f(idim) = geo%atom(iatom)%f(idim) &
-              + real(psi%occ(ist, ik)*zmf_dotp(gr%mesh, psi%d%dim, opsi, zpsi), REAL_PRECISION)
+              + TOFLOAT(psi%occ(ist, ik)*zmf_dotp(gr%mesh, psi%d%dim, opsi, zpsi))
           end do
         end do
       end do

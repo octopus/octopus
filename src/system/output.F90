@@ -860,7 +860,7 @@ contains
       call basins_analyze(basins, gr%mesh, ff(:), st%rho, CNST(0.01))
 
       call dio_function_output(outp%how, dir, trim(filename), namespace, gr%mesh, &
-        real(basins%map, REAL_PRECISION), unit_one, ierr, geo = geo, grp = mpi_grp)
+        TOFLOAT(basins%map), unit_one, ierr, geo = geo, grp = mpi_grp)
       ! this quantity is dimensionless
 
       write(fname,'(4a)') trim(dir), '/', trim(filename), '.info'
@@ -968,8 +968,8 @@ contains
 
       ASSERT(.not. gr%have_fine_mesh)
 
-      call xc_get_vxc(gr%fine%der, ks%xc, st, hm%psolver, namespace, st%rho, st%d%ispin, &
-        -minval(st%eigenval(st%nst,:)), st%qtot, hm%exxop, ex_density = ex_density, ec_density = ec_density)
+      call xc_get_vxc(gr%fine%der, ks%xc, st, hm%psolver, namespace, st%rho, st%d%ispin, hm%exxop, &
+        ex_density = ex_density, ec_density = ec_density)
       forall(ip = 1:gr%fine%mesh%np, is = 1:st%d%nspin)
         energy_density(ip, is) = energy_density(ip, is) + ex_density(ip) + ec_density(ip)
       end forall
@@ -1259,8 +1259,7 @@ contains
     SAFE_ALLOCATE(vxc(1:gr%mesh%np, 1:st%d%nspin))
     vxc(:,:) = M_ZERO
     ! we should not include core rho here. that is why we do not just use hm%vxc
-    call xc_get_vxc(gr%der, ks%xc, st, hm%psolver, namespace, st%rho, st%d%ispin, &
-      -minval(st%eigenval(st%nst, :)), st%qtot, hm%exxop, vxc)
+    call xc_get_vxc(gr%der, ks%xc, st, hm%psolver, namespace, st%rho, st%d%ispin, hm%exxop, vxc)
 
     message(1) = "BerkeleyGW output: vxc.dat"
     if(bgw%calc_exchange) message(1) = trim(message(1)) // ", x.dat"

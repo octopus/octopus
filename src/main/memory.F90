@@ -37,7 +37,7 @@ contains
   subroutine memory_run(sys)
     type(system_t),      intent(inout) :: sys
 
-    real(8) :: mesh_global, mesh_local, wfns
+    FLOAT :: mesh_global, mesh_local, wfns
 
     PUSH_SUB(memory_run)
 

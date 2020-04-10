@@ -244,7 +244,7 @@ contains
       ff(1:cs%space%dim) = M_TWO * energy * tm_sq(1:cs%space%dim)
 
       do istep = 1, nsteps
-        omega = cs%min_energy + real(istep-1, REAL_PRECISION)*cs%energy_step
+        omega = cs%min_energy + TOFLOAT(istep-1)*cs%energy_step
         spectrum(1:cs%space%dim+1, istep) = spectrum(1:cs%space%dim+1, istep) + &
           ff(1:cs%space%dim+1)*cs%br/((omega-energy)**2 + cs%br**2)/M_PI ! Lorentzian
       end do
@@ -261,7 +261,7 @@ contains
     write(iunit, '(a14)') '<f>'
 
     do istep = 1, nsteps
-      write(iunit, '(99es14.6)') units_from_atomic(units_out%energy, cs%min_energy + real(istep - 1, REAL_PRECISION) &
+      write(iunit, '(99es14.6)') units_from_atomic(units_out%energy, cs%min_energy + TOFLOAT(istep - 1) &
         *cs%energy_step), (units_from_atomic(unit_one/units_out%energy, spectrum(idir, istep)), idir = 1, cs%space%dim+1)
     end do
 

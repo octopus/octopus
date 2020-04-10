@@ -178,7 +178,7 @@ contains
               current(ip, idir, 1) = current(ip, idir, 1) + ww*aimag(conjg(psi(ip, 1))*gpsi(ip, 1))
               current(ip, idir, 2) = current(ip, idir, 2) + ww*aimag(conjg(psi(ip, 2))*gpsi(ip, 2))
               c_tmp = conjg(psi(ip, 1))*gpsi(ip, 2) - psi(ip, 2)*conjg(gpsi(ip, 1))
-              current(ip, idir, 3) = current(ip, idir, 3) + ww* real(c_tmp)
+              current(ip, idir, 3) = current(ip, idir, 3) + ww*TOFLOAT(c_tmp)
               current(ip, idir, 4) = current(ip, idir, 4) + ww*aimag(c_tmp)
             end do
             !$omp end parallel do
@@ -366,7 +366,7 @@ contains
                     ww*aimag(conjg(psi(ip, 2))*hrpsi(ip, 2) - conjg(psi(ip, 2))*rhpsi(ip, 2))
                   c_tmp = conjg(psi(ip, 1))*hrpsi(ip, 2) - conjg(psi(ip, 1))*rhpsi(ip, 2) &
                     -psi(ip, 2)*conjg(hrpsi(ip, 1)) - psi(ip, 2)*conjg(rhpsi(ip, 1))
-                  current(ip, idir, 3) = current(ip, idir, 3) + ww* real(c_tmp)
+                  current(ip, idir, 3) = current(ip, idir, 3) + ww*TOFLOAT(c_tmp)
                   current(ip, idir, 4) = current(ip, idir, 4) + ww*aimag(c_tmp)
                 end do
                 !$omp end parallel do
@@ -501,7 +501,7 @@ contains
                   current(ip, idir, 2) = current(ip, idir, 2) + &
                     ww*aimag(conjg(psi(ip, 2))*gpsi(ip, idir, 2))
                   c_tmp = conjg(psi(ip, 1))*gpsi(ip, idir, 2) - psi(ip, 2)*conjg(gpsi(ip, idir, 1))
-                  current(ip, idir, 3) = current(ip, idir, 3) + ww* real(c_tmp)
+                  current(ip, idir, 3) = current(ip, idir, 3) + ww*TOFLOAT(c_tmp)
                   current(ip, idir, 4) = current(ip, idir, 4) + ww*aimag(c_tmp)
                 end do
                 !$omp end parallel do
@@ -907,7 +907,7 @@ contains
         do ip = 1, mesh%np
           exp_arg = st%external_current_omega(jn) * time + tdf(st%external_current_td_phase(jn),time)
           amp(1:st%d%dim) = st%external_current_amplitude(ip, 1:st%d%dim, jn)*tdf(st%external_current_td_function(jn), time)
-          j_vector(1:st%d%dim) = real(amp(1:st%d%dim) * exp(-M_zI*exp_arg))
+          j_vector(1:st%d%dim) = TOFLOAT(amp(1:st%d%dim) * exp(-M_zI*exp_arg))
           current(ip, 1:st%d%dim) = current(ip, 1:st%d%dim) + j_vector(1:st%d%dim)
         end do
       end if

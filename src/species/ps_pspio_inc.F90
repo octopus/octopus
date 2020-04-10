@@ -197,7 +197,7 @@
         ! Spin-dependent pseudopotentials are not supported, so we need to fix the occupations
         ! if we want to have a spin-dependent atomic density.      
         x = ps%conf%occ(ps%conf%l(ist), 1)
-        ps%conf%occ(ist, 1) = min(x, real(2*ps%conf%l(ist)+1, REAL_PRECISION))
+        ps%conf%occ(ist, 1) = min(x, TOFLOAT(2*ps%conf%l(ist)+1))
         ps%conf%occ(ist, 2) = x - ps%conf%occ(ps%conf%l(ist), 1)
       end if
 
@@ -321,7 +321,7 @@
       l = fpspio_qn_get_l(fpspio_projector_get_qn(kb_projector))
       j = fpspio_qn_get_j(fpspio_projector_get_qn(kb_projector))
       ikbc = 1
-      if (j == real(l, REAL_PRECISION) - M_HALF) ikbc = 2
+      if (j == TOFLOAT(l) - M_HALF) ikbc = 2
 
       ps%h(l, ikbc, ikbc) = fpspio_projector_get_energy(kb_projector)
 

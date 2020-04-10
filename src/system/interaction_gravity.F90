@@ -1,4 +1,4 @@
-!! Copyright (C) 2020 M. Oliveira
+!! Copyright (C) 2020 M. Oliveira, Heiko Appel
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -72,7 +72,7 @@ contains
     this%dim = dim
     this%partner => partner
 
-    !Gravity interaction needs two quantities from each system: the position and the mass
+    ! Gravity interaction needs two quantities from each system: the position and the mass
     this%n_system_quantities = 2
     this%n_partner_quantities = 2
     SAFE_ALLOCATE(this%system_quantities(this%n_system_quantities))
@@ -104,7 +104,7 @@ contains
     allowed_to_update = this%partner%update_exposed_quantities(clock, this%n_partner_quantities, this%partner_quantities)
 
     if (allowed_to_update) then
-      !We can now compute the interaction from the updated pointers
+      ! We can now compute the interaction from the updated pointers
       ASSERT(associated(this%partner_pos))
       ASSERT(associated(this%system_pos))
       ASSERT(associated(this%partner_mass))

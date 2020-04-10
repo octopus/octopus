@@ -99,7 +99,7 @@
           do iqn = tg%st%d%kpt%start, tg%st%d%kpt%end
             
             if(states_are_real(tg%st)) then
-              call states_elec_rotate(tmp_st, namespace, gr%mesh, real(rotation_matrix, REAL_PRECISION), iqn)
+              call states_elec_rotate(tmp_st, namespace, gr%mesh, TOFLOAT(rotation_matrix), iqn)
             else
               call states_elec_rotate(tmp_st, namespace, gr%mesh, rotation_matrix, iqn)
             end if
@@ -446,7 +446,7 @@
         call states_elec_get_state(psi_in, gr%mesh, 1, 1, zpsi)
 
         do ip = 1, gr%mesh%np
-          zpsi(ip, 1) = sqrt(tg%rho(ip))*exp(M_zI*atan2(aimag(zpsi(ip, 1)), real(zpsi(ip, 1))))
+          zpsi(ip, 1) = sqrt(tg%rho(ip))*exp(M_zI*atan2(aimag(zpsi(ip, 1)), TOFLOAT(zpsi(ip, 1))))
         end do
 
         call states_elec_set_state(chi_out, gr%mesh, 1, 1, zpsi)

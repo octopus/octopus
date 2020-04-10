@@ -194,7 +194,7 @@ contains
  
           do is = 1, sphere%np
             !There is a factor of 1/2 in phase_spiral
-            cosqr = real(phase_spiral(is), REAL_PRECISION)
+            cosqr = TOFLOAT(phase_spiral(is))
             sinqr = aimag(phase_spiral(is))
             lmm(1,ia) = lmm(1,ia)+md(sphere%map(is),1)*cosqr - md(sphere%map(is),2)*sinqr
             lmm(2,ia) = lmm(2,ia)+md(sphere%map(is),1)*sinqr + md(sphere%map(is),2)*cosqr
