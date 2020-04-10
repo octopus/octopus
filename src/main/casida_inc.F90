@@ -20,9 +20,9 @@
 !!
 
 subroutine X(oscillator_strengths)(cas, mesh, st)
-  type(casida_t), intent(inout) :: cas
-  type(mesh_t), intent(in) :: mesh
-  type(states_t), intent(in) :: st
+  type(casida_t),   intent(inout) :: cas
+  type(mesh_t),        intent(in) :: mesh
+  type(states_elec_t), intent(in) :: st
 
   FLOAT, allocatable :: deltav(:)
   R_TYPE, allocatable :: xx(:), psi_a(:)
@@ -45,15 +45,19 @@ subroutine X(oscillator_strengths)(cas, mesh, st)
     ! matrix element
     do ia = 1, cas%n_pairs
 
-      call states_get_state(st, mesh, 1, cas%pair(ia)%i, cas%pair(ia)%kk, zf)
-      call states_get_state(st, mesh, 1, cas%pair(ia)%a, cas%pair(ia)%kk, psi_a)
+      call states_elec_get_state(st, mesh, 1, cas%pair(ia)%i, cas%pair(ia)%kk, zf)
+      call states_elec_get_state(st, mesh, 1, cas%pair(ia)%a, cas%pair(ia)%kk, psi_a)
 
       do ip = 1, mesh%np
         zf(ip) = exp(M_zI*dot_product(cas%qvector(1:mesh%sb%dim), mesh%x(ip, 1:mesh%sb%dim)))*aimag(zf(ip))*psi_a(ip)
       end do
 
-      zx(ia) = zmf_integrate(mesh, zf)
+      zx(ia) = zmf_integrate(mesh, zf, reduce = .false.)
     end do
+
+    if(mesh%parallel_in_domains) then
+      call comm_allreduce(mesh%mpi_grp%comm, zx)
+    end if
 
     ! intensity
     do ia = 1, cas%n_pairs
@@ -83,15 +87,20 @@ subroutine X(oscillator_strengths)(cas, mesh, st)
           zx(:) = M_ZERO
           zf(:) = M_ZERO
 
-          call states_get_state(st, mesh, 1, cas%pair(ia)%i, cas%pair(ia)%kk, zf)
-          call states_get_state(st, mesh, 1, cas%pair(ia)%a, cas%pair(ia)%kk, psi_a)
+          call states_elec_get_state(st, mesh, 1, cas%pair(ia)%i, cas%pair(ia)%kk, zf)
+          call states_elec_get_state(st, mesh, 1, cas%pair(ia)%a, cas%pair(ia)%kk, psi_a)
 
           do ia = 1, cas%n_pairs
             forall(ip = 1:mesh%np)
               zf(ip) = exp(M_zI*dot_product(qvect(1:mesh%sb%dim), mesh%x(ip, 1:mesh%sb%dim)))*aimag(zf(ip))*psi_a(ip)
             end forall
-            zx(ia) = zmf_integrate(mesh, zf)
+            zx(ia) = zmf_integrate(mesh, zf, reduce = .false.)
           end do
+
+          if(mesh%parallel_in_domains) then
+            call comm_allreduce(mesh%mpi_grp%comm, zx)
+          end if
+          
 
           ! intensities
           do ia = 1, cas%n_pairs
@@ -145,11 +154,11 @@ end subroutine X(oscillator_strengths)
 
 ! ---------------------------------------------------------
 function X(ks_matrix_elements) (cas, st, mesh, dv) result(xx)
-  type(casida_t), intent(in) :: cas
-  type(states_t), intent(in) :: st
-  type(mesh_t),   intent(in) :: mesh
-  FLOAT,          intent(in) :: dv(:)
-  R_TYPE :: xx(cas%n_pairs)
+  type(casida_t),      intent(in) :: cas
+  type(states_elec_t), intent(in) :: st
+  type(mesh_t),        intent(in) :: mesh
+  FLOAT,               intent(in) :: dv(:)
+  R_TYPE                          :: xx(cas%n_pairs)
 
   R_TYPE, allocatable :: ff(:)
   R_TYPE, allocatable :: psii(:, :), psia(:, :)
@@ -164,15 +173,19 @@ function X(ks_matrix_elements) (cas, st, mesh, dv) result(xx)
   SAFE_ALLOCATE(psia(1:mesh%np, 1:st%d%dim))
 
   do ia = 1, cas%n_pairs
-    call states_get_state(st, mesh, cas%pair(ia)%i, cas%pair(ia)%kk, psii)
-    call states_get_state(st, mesh, cas%pair(ia)%a, cas%pair(ia)%kk, psia)
+    call states_elec_get_state(st, mesh, cas%pair(ia)%i, cas%pair(ia)%kk, psii)
+    call states_elec_get_state(st, mesh, cas%pair(ia)%a, cas%pair(ia)%kk, psia)
 
     forall(ip = 1:mesh%np) 
       ff(ip) = dv(ip)*sum(R_CONJ(psii(ip, 1:st%d%dim))*psia(ip, 1:st%d%dim))
     end forall
 
-    xx(ia) = X(mf_integrate)(mesh, ff)
+    xx(ia) = X(mf_integrate)(mesh, ff, reduce = .false.)
   end do
+
+   if(mesh%parallel_in_domains) then
+     call comm_allreduce(mesh%mpi_grp%comm, xx)
+   end if
 
   SAFE_DEALLOCATE_A(ff)
 
@@ -223,11 +236,11 @@ end function X(transition_matrix_element)
 
 ! ---------------------------------------------------------
 subroutine X(transition_density) (cas, st, mesh, ia, n0I)
-  type(casida_t), intent(in)  :: cas
-  type(states_t), intent(in)  :: st
-  type(mesh_t),   intent(in)  :: mesh
-  integer,        intent(in)  :: ia
-  R_TYPE,         intent(out) :: n0I(:)
+  type(casida_t),      intent(in)  :: cas
+  type(states_elec_t), intent(in)  :: st
+  type(mesh_t),        intent(in)  :: mesh
+  integer,             intent(in)  :: ia
+  R_TYPE,              intent(out) :: n0I(:)
 
   integer :: ip, jb, idim, block_size, sp, ep
   R_TYPE, allocatable :: xx(:), psi(:, :, :, :)
@@ -245,7 +258,7 @@ subroutine X(transition_density) (cas, st, mesh, ia, n0I)
   do sp = 1, mesh%np, block_size
     ep = min(sp + block_size - 1, mesh%np)
 
-    call states_get_points(st, sp, ep, psi)
+    call states_elec_get_points(st, sp, ep, psi)
 
     do ip = sp, ep
       do jb = 1, cas%n_pairs
@@ -288,7 +301,7 @@ subroutine X(get_transition_densities) (cas, sys)
       write(intstr,'(i1)') len(trim(adjustl(intstr)))
       write(filename,'(a,a,i'//trim(intstr)//')') trim(theory_name(cas)), '_rho_n0',ia
       call X(io_function_output)(sys%outp%how, CASIDA_DIR, trim(filename), &
-        sys%gr%mesh, n0I, fn_unit, ierr, geo = sys%geo)
+        sys%namespace, sys%gr%mesh, n0I, fn_unit, ierr, geo = sys%geo)
     end if
   end do
 
@@ -299,37 +312,35 @@ end subroutine X(get_transition_densities)
 ! -----------------------------------------------------------------------------
 
 subroutine X(casida_get_rho)(st, mesh, ii, ia, kk, rho) 
-  type(states_t), intent(in)  :: st
-  type(mesh_t),   intent(in)  :: mesh
-  integer,        intent(in)  :: ii
-  integer,        intent(in)  :: ia
-  integer,        intent(in)  :: kk
-  R_TYPE,         intent(out) :: rho(:)
+  type(states_elec_t), intent(in)  :: st
+  type(mesh_t),        intent(in)  :: mesh
+  integer,             intent(in)  :: ii
+  integer,             intent(in)  :: ia
+  integer,             intent(in)  :: kk
+  R_TYPE,              intent(out) :: rho(:)
 
-  R_TYPE, pointer :: psi_i(:), psi_a(:)
   integer :: ip, idim, iblock, ablock, ilin, alin
   type(profile_t), save :: prof
 
   PUSH_SUB(X(casida_get_rho))
   call profiling_in(prof, 'CASIDA_GET_RHO')
 
-  ! For performance reasons we don`t use states_get_states, but we access the states directly
+  ! For performance reasons we don`t use states_elec_get_states, but we access the states directly
 
   iblock = st%group%iblock(ii, kk)
   ablock = st%group%iblock(ia, kk)
 
   ! FIXME: need to take into account spinor dimension here, not just 1
   idim = 1
-  ilin = batch_inv_index(st%group%psib(iblock, kk), (/ii, idim/))
-  alin = batch_inv_index(st%group%psib(ablock, kk), (/ia, idim/))
+  ilin = st%group%psib(iblock, kk)%inv_index((/ii, idim/))
+  alin = st%group%psib(ablock, kk)%inv_index((/ia, idim/))
 
-  ASSERT(.not. batch_is_packed(st%group%psib(iblock, kk)))
-  ASSERT(.not. batch_is_packed(st%group%psib(ablock, kk)))
+  ASSERT(.not. st%group%psib(iblock, kk)%is_packed())
+  ASSERT(.not. st%group%psib(ablock, kk)%is_packed())
 
-  psi_i => st%group%psib(iblock, kk)%states_linear(ilin)%X(psi)
-  psi_a => st%group%psib(ablock, kk)%states_linear(alin)%X(psi)
-
-  forall(ip = 1:mesh%np) rho(ip) = R_CONJ(psi_i(ip))*psi_a(ip)
+  do ip = 1, mesh%np
+    rho(ip) = R_CONJ(st%group%psib(iblock, kk)%X(ff_linear)(ip, ilin))*st%group%psib(ablock, kk)%X(ff_linear)(ip, alin)
+  end do
 
   call profiling_out(prof)
   POP_SUB(X(casida_get_rho))
@@ -338,9 +349,8 @@ end subroutine X(casida_get_rho)
 ! -----------------------------------------------------------------------------
 
 !> one-particle matrix elements of perturbation
-subroutine X(casida_calc_lr_hmat1)(sys, hm, pert, hvar, lr_hmat1, is_saved, st_start, st_end, ik)
-  type(system_t),      intent(in)    :: sys
-  type(hamiltonian_t), intent(inout) :: hm
+subroutine X(casida_calc_lr_hmat1)(sys, pert, hvar, lr_hmat1, is_saved, st_start, st_end, ik)
+  type(system_t),      intent(inout) :: sys
   type(pert_t),        intent(in)    :: pert
   FLOAT,               intent(in)    :: hvar(:,:,:)
   R_TYPE,              intent(out)   :: lr_hmat1(:,:,:)
@@ -360,15 +370,15 @@ subroutine X(casida_calc_lr_hmat1)(sys, hm, pert, hvar, lr_hmat1, is_saved, st_s
   ! could use batches?
   ! FIXME: parallelize in states
 
-  ispin = states_dim_get_spin_index(sys%st%d, ik)
+  ispin = states_elec_dim_get_spin_index(sys%st%d, ik)
 
   do ist = st_start, st_end
-    call states_get_state(sys%st, sys%gr%mesh, ist, ik, psi(:, :, ist))
+    call states_elec_get_state(sys%st, sys%gr%mesh, ist, ik, psi(:, :, ist))
   end do
 
   do ist = st_start, st_end
     if(all(is_saved(ist, ist:st_end, ik))) cycle
-    call X(pert_apply)(pert, sys%gr, sys%geo, hm, ik, psi(:, :, ist), pert_psi(:, :))
+    call X(pert_apply)(pert, sys%namespace, sys%gr, sys%geo, sys%hm, ik, psi(:, :, ist), pert_psi(:, :))
     do idim = 1, sys%st%d%dim
       pert_psi(:, idim) = pert_psi(:, idim) + hvar(:, ispin, 1) * psi(:, idim, ist)
     end do
@@ -388,10 +398,10 @@ end subroutine X(casida_calc_lr_hmat1)
 
 !> two-particle matrix elements of perturbation
 subroutine X(casida_lr_hmat2)(cas, st, lr_hmat1, ik)
-  type(casida_t), intent(inout) :: cas
-  type(states_t), intent(in)    :: st
-  R_TYPE,         intent(in)    :: lr_hmat1(:,:,:)
-  integer,        intent(in)    :: ik
+  type(casida_t),      intent(inout) :: cas
+  type(states_elec_t), intent(in)    :: st
+  R_TYPE,              intent(in)    :: lr_hmat1(:,:,:)
+  integer,             intent(in)    :: ik
 
   integer :: ia, jb
 
@@ -424,15 +434,15 @@ end subroutine X(casida_lr_hmat2)
 ! -----------------------------------------------------------------------------
 
 subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file, is_forces)
-  type(casida_t),      intent(inout) :: cas
-  type(hamiltonian_t), intent(in)    :: hm
-  type(states_t),      intent(in)    :: st
-  type(v_ks_t),        intent(in)    :: ks
-  type(mesh_t),        intent(in)    :: mesh
-  R_TYPE,              intent(out)   :: matrix(:,:)
-  FLOAT,               intent(in)    :: xc(:,:,:)
-  character(len=*),    intent(in)    :: restart_file
-  logical,   optional, intent(in)    :: is_forces
+  type(casida_t),           intent(inout) :: cas
+  type(hamiltonian_elec_t), intent(in)    :: hm
+  type(states_elec_t),      intent(in)    :: st
+  type(v_ks_t),             intent(in)    :: ks
+  type(mesh_t),             intent(in)    :: mesh
+  R_TYPE,                   intent(out)   :: matrix(:,:)
+  FLOAT,                    intent(in)    :: xc(:,:,:)
+  character(len=*),         intent(in)    :: restart_file
+  logical, optional,        intent(in)    :: is_forces
 
   integer :: ia, jb, iunit, ia_iter, ia_length, jb_tmp, ii
   integer :: ia_local, jb_local
@@ -572,7 +582,7 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
         if(.not. is_forces_ .and. abs(coeff_vh) > M_EPSILON) then
           X(pot)(1:mesh%np) = M_ZERO
           if(hm%theory_level /= INDEPENDENT_PARTICLES) then
-            call X(poisson_solve)(psolver, X(pot), rho_j, all_nodes=.false.)
+            call X(poisson_solve)(hm%psolver, X(pot), rho_j, all_nodes=.false.)
           end if
         end if
 
@@ -722,6 +732,89 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
 contains
 
   ! ---------------------------------------------------------
+  !> calculates the matrix elements <i(p),a(p)|v|j(q),b(q)> and/or <i(p),a(p)|xc|j(q),b(q)>
+  subroutine X(K_term)(pp, qq, saved, mtxel_vh, mtxel_xc)
+    type(states_pair_t),               intent(in)    :: pp
+    type(states_pair_t),               intent(in)    :: qq
+    type(casida_save_pot_t),           intent(inout) :: saved
+    R_TYPE,                  optional, intent(out)   :: mtxel_vh
+    R_TYPE,                  optional, intent(out)   :: mtxel_xc
+
+    integer :: pi, qi, pa, qa, pk, qk
+    R_TYPE, allocatable :: rho_i(:), rho_j(:), integrand(:)
+    FLOAT :: coeff_vh
+    type(profile_t), save :: prof
+
+    PUSH_SUB(X(casida_get_matrix).X(K_term))
+    call profiling_in(prof, 'CASIDA_K')
+    
+    if(cas%herm_conj) then
+      pi = qq%i
+      pa = qq%a
+      pk = qq%kk
+
+      qi = pp%i
+      qa = pp%a
+      qk = pp%kk
+    else
+      pi = pp%i
+      pa = pp%a
+      pk = pp%kk
+
+      qi = qq%i
+      qa = qq%a
+      qk = qq%kk
+    end if
+
+    SAFE_ALLOCATE(rho_i(1:mesh%np))
+    SAFE_ALLOCATE(rho_j(1:mesh%np))
+    SAFE_ALLOCATE(integrand(1:mesh%np))
+
+    call X(casida_get_rho)(st, mesh, pa, pi, pk, rho_i)
+    call X(casida_get_rho)(st, mesh, qi, qa, qk, rho_j)
+
+    !  first the Hartree part
+    if(present(mtxel_vh)) then
+      coeff_vh = - cas%kernel_lrc_alpha / (M_FOUR * M_PI)
+      if(.not. cas%triplet) coeff_vh = coeff_vh + M_ONE
+      if (ks%sic_type == SIC_ADSIC) coeff_vh = coeff_vh*(M_ONE - M_ONE/st%qtot)
+      if(abs(coeff_vh) > M_EPSILON) then
+        if(qi /= saved%qi  .or.   qa /= saved%qa .or.  qk /= saved%qk) then
+          saved%X(pot)(1:mesh%np) = M_ZERO
+          if (hm%theory_level /= INDEPENDENT_PARTICLES) then
+            call X(poisson_solve)(hm%psolver, saved%X(pot), rho_j, all_nodes=.false.)
+          end if
+          saved%qi = qi
+          saved%qa = qa
+          saved%qk = qk
+        end if
+        ! value of pot is retained between calls
+        mtxel_vh = coeff_vh * X(mf_dotp)(mesh, rho_i(:), saved%X(pot)(:))
+
+      else
+        mtxel_vh = M_ZERO
+      end if
+    end if
+
+    if(present(mtxel_xc)) then
+      integrand(1:mesh%np) = rho_i(1:mesh%np)*rho_j(1:mesh%np)*xc(1:mesh%np, pk, qk)
+      mtxel_xc = X(mf_integrate)(mesh, integrand)
+    end if
+
+    if(cas%herm_conj) then
+      if(present(mtxel_vh)) mtxel_vh = R_CONJ(mtxel_vh)
+      if(present(mtxel_xc)) mtxel_xc = R_CONJ(mtxel_xc)
+    end if
+
+    SAFE_DEALLOCATE_A(rho_i)
+    SAFE_DEALLOCATE_A(rho_j)
+    SAFE_DEALLOCATE_A(integrand)
+
+    call profiling_out(prof)
+    POP_SUB(X(casida_get_matrix).X(K_term))
+  end subroutine X(K_term)
+
+  ! ---------------------------------------------------------
   ! this routine is now legacy and could be removed?
   subroutine load_saved(matrix, is_saved, restart_file)
     R_TYPE,           intent(out) :: matrix(:,:)
@@ -805,12 +898,11 @@ subroutine X(write_K_term)(cas, mat_val, iunit, ia, jb)
 end subroutine X(write_K_term)
 
 ! ---------------------------------------------------------
-subroutine X(casida_forces)(cas, sys, mesh, st, hm)
-  type(casida_t), intent(inout) :: cas
-  type(system_t), intent(inout) :: sys
-  type(mesh_t), intent(in) :: mesh
-  type(states_t), intent(inout) :: st
-  type(hamiltonian_t), intent(inout) :: hm
+subroutine X(casida_forces)(cas, sys, mesh, st)
+  type(casida_t),      intent(inout) :: cas
+  type(system_t),      intent(inout) :: sys
+  type(mesh_t),           intent(in) :: mesh
+  type(states_elec_t), intent(inout) :: st
   
   integer :: ip, iatom, idir, is1, is2, ierr, ik, ia
   FLOAT, allocatable :: ddl_rho(:,:), kxc(:,:,:,:)
@@ -834,7 +926,7 @@ subroutine X(casida_forces)(cas, sys, mesh, st, hm)
     SAFE_ALLOCATE(kxc(1:mesh%np, 1:st%d%nspin, 1:st%d%nspin, 1:st%d%nspin))
     kxc = M_ZERO
     ! not spin polarized so far
-    call xc_get_kxc(sys%ks%xc, mesh, cas%rho, st%d%ispin, kxc(:, :, :, :))
+    call xc_get_kxc(sys%ks%xc, mesh, sys%namespace, cas%rho, st%d%ispin, kxc(:, :, :, :))
   end if
   
   message(1) = "Reading vib_modes density for calculating excited-state forces."
@@ -863,7 +955,7 @@ subroutine X(casida_forces)(cas, sys, mesh, st, hm)
   SAFE_ALLOCATE(cas%X(mat2)(1:cas%n_pairs, 1:cas%n_pairs))
   SAFE_ALLOCATE(cas%X(w2)(1:cas%n_pairs))
 
-  call restart_init(restart_vib, RESTART_VIB_MODES, RESTART_TYPE_LOAD, sys%mc, ierr, mesh = sys%gr%mesh)
+  call restart_init(restart_vib, sys%namespace, RESTART_VIB_MODES, RESTART_TYPE_LOAD, sys%mc, ierr, mesh = sys%gr%mesh)
 
   do iatom = 1, sys%geo%natoms
     do idir = 1, mesh%sb%dim
@@ -882,7 +974,7 @@ subroutine X(casida_forces)(cas, sys, mesh, st, hm)
         end if
         ddl_rho = TOFLOAT(zdl_rho)
       end if
-      call X(casida_get_lr_hmat1)(cas, sys, hm, iatom, idir, ddl_rho, lr_hmat1)
+      call X(casida_get_lr_hmat1)(cas, sys, iatom, idir, ddl_rho, lr_hmat1)
       
       cas%X(lr_hmat2) = M_ZERO
       ! use them to make two-particle matrix elements (as for eigenvalues)
@@ -898,7 +990,8 @@ subroutine X(casida_forces)(cas, sys, mesh, st, hm)
         write(restart_filename,'(a,i6.6,a,i1)') 'lr_kernel_', iatom, '_', idir
         if(cas%triplet) restart_filename = trim(restart_filename)//'_triplet'
         
-        call X(casida_get_matrix)(cas, hm, st, sys%ks, mesh, cas%X(mat2), lr_fxc, restart_filename, is_forces = .true.)
+        call X(casida_get_matrix)(cas, sys%hm, st, sys%ks, mesh, cas%X(mat2), lr_fxc, restart_filename, &
+          is_forces = .true.)
         cas%X(mat2) = cas%X(mat2) * casida_matrix_factor(cas, st)
       else
         cas%X(mat2) = M_ZERO
@@ -929,7 +1022,7 @@ subroutine X(casida_forces)(cas, sys, mesh, st, hm)
   SAFE_DEALLOCATE_P(cas%X(w2))
   
   if(cas%calc_forces_scf) then
-    call forces_calculate(sys%gr, sys%geo, hm, st, sys%ks)
+    call forces_calculate(sys%gr, sys%namespace, sys%geo, sys%hm, st, sys%ks)
     do ia = 1, cas%n_pairs
       do iatom = 1, sys%geo%natoms
         do idir = 1, sys%gr%sb%dim
@@ -944,10 +1037,9 @@ subroutine X(casida_forces)(cas, sys, mesh, st, hm)
 end subroutine X(casida_forces)
 
 ! ---------------------------------------------------------
-subroutine X(casida_get_lr_hmat1)(cas, sys, hm, iatom, idir, dl_rho, lr_hmat1)
+subroutine X(casida_get_lr_hmat1)(cas, sys, iatom, idir, dl_rho, lr_hmat1)
   type(casida_t),      intent(in)     :: cas
   type(system_t),      intent(inout)  :: sys
-  type(hamiltonian_t), intent(inout)  :: hm
   integer,             intent(in)     :: iatom
   integer,             intent(in)     :: idir
   FLOAT,               intent(in)     :: dl_rho(:,:)
@@ -1021,7 +1113,7 @@ subroutine X(casida_get_lr_hmat1)(cas, sys, hm, iatom, idir, dl_rho, lr_hmat1)
     return
   end if
 
-  call pert_init(ionic_pert, PERTURBATION_IONIC, sys%gr, sys%geo)
+  call pert_init(ionic_pert, sys%namespace, PERTURBATION_IONIC, sys%gr, sys%geo)
   call pert_setup_atom(ionic_pert, iatom)
   call pert_setup_dir(ionic_pert, idir)
 
@@ -1031,9 +1123,9 @@ subroutine X(casida_get_lr_hmat1)(cas, sys, hm, iatom, idir, dl_rho, lr_hmat1)
   ! FIXME: do this only for states called for in CasidaKohnShamStates
   do ik = 1, cas%nik
     ! occ-occ matrix elements
-    call X(casida_calc_lr_hmat1)(sys, hm, ionic_pert, hvar, lr_hmat1, is_saved, 1, cas%n_occ(ik), ik)
+    call X(casida_calc_lr_hmat1)(sys, ionic_pert, hvar, lr_hmat1, is_saved, 1, cas%n_occ(ik), ik)
     ! unocc-unocc matrix elements
-    call X(casida_calc_lr_hmat1)(sys, hm, ionic_pert, hvar, lr_hmat1, is_saved, cas%n_occ(ik) + 1, cas%nst, ik)
+    call X(casida_calc_lr_hmat1)(sys, ionic_pert, hvar, lr_hmat1, is_saved, cas%n_occ(ik) + 1, cas%nst, ik)
   end do
 
   SAFE_DEALLOCATE_A(hvar)
@@ -1057,11 +1149,32 @@ subroutine X(casida_get_lr_hmat1)(cas, sys, hm, iatom, idir, dl_rho, lr_hmat1)
 
 end subroutine X(casida_get_lr_hmat1)
 
+! -----------------------------------------------------
+
+subroutine X(casida_save_pot_init)(this, mesh)
+  type(casida_save_pot_t), intent(out)   :: this
+  type(mesh_t),            intent(in)    :: mesh
+  
+  SAFE_ALLOCATE(this%X(pot)(1:mesh%np))
+  this%qi = -1
+  this%qa = -1
+  this%qk = -1
+
+end subroutine X(casida_save_pot_init)
+    
+! -----------------------------------------------------
+
+subroutine X(casida_save_pot_end)(this)
+  type(casida_save_pot_t), intent(inout)   :: this
+
+  SAFE_DEALLOCATE_A(this%X(pot))
+
+end subroutine X(casida_save_pot_end)
 
 ! ---------------------------------------------------------
 subroutine X(casida_solve)(cas, st)
-  type(casida_t), intent(inout) :: cas
-  type(states_t), intent(in)    :: st
+  type(casida_t),      intent(inout) :: cas
+  type(states_elec_t), intent(in)    :: st
 
   FLOAT :: eig_diff
   FLOAT, allocatable :: occ_diffs(:)
@@ -1347,8 +1460,8 @@ subroutine X(casida_write)(cas, sys)
 
   if(mpi_grp_is_root(mpi_world)) then
     ! output excitation energies and oscillator strengths
-    call io_mkdir(CASIDA_DIR)
-    iunit = io_open(CASIDA_DIR//trim(theory_name(cas)), action='write')
+    call io_mkdir(CASIDA_DIR, sys%namespace)
+    iunit = io_open(CASIDA_DIR//trim(theory_name(cas)), sys%namespace, action='write')
 
     if(cas%type == CASIDA_EPS_DIFF) then
       write(iunit, '(2a4)', advance='no') 'From', '  To'
@@ -1382,12 +1495,12 @@ subroutine X(casida_write)(cas, sys)
     end do
     call io_close(iunit)
   
-    if(cas%qcalc) call qcasida_write(cas)
+    if(cas%qcalc) call qcasida_write(cas, sys%namespace)
   
     if (.not.(cas%print_exst == "0" .or. cas%print_exst == "none")) then
       if(cas%type /= CASIDA_EPS_DIFF .or. cas%calc_forces) then
         dir_name = CASIDA_DIR//trim(theory_name(cas))//'_excitations'
-        call io_mkdir(trim(dir_name))
+        call io_mkdir(trim(dir_name), sys%namespace)
       end if
       
       do ia = 1, cas%n_pairs+cas%pt_nmodes
@@ -1396,7 +1509,7 @@ subroutine X(casida_write)(cas, sys)
           
           ! output eigenvectors
           if(cas%type /= CASIDA_EPS_DIFF) then
-            iunit = io_open(trim(dir_name)//'/'//trim(str), action='write')
+            iunit = io_open(trim(dir_name)//'/'//trim(str), sys%namespace, action='write')
             ! First, a little header
             write(iunit,'(a,es14.5)') '# Energy ['// trim(units_abbrev(units_out%energy)) // '] = ', &
               units_from_atomic(units_out%energy, cas%w(cas%ind(ia)))
@@ -1440,7 +1553,7 @@ subroutine X(casida_write)(cas, sys)
           end if
           
           if(cas%calc_forces .and. cas%type /= CASIDA_CASIDA) then
-            iunit = io_open(trim(dir_name)//'/forces_'//trim(str)//'.xsf', action='write')
+            iunit = io_open(trim(dir_name)//'/forces_'//trim(str)//'.xsf', sys%namespace, action='write')
             call write_xsf_geometry(iunit, sys%geo, sys%gr%mesh, forces = cas%forces(:, :, cas%ind(ia)))
             call io_close(iunit)
           end if
@@ -1458,7 +1571,7 @@ subroutine X(casida_write)(cas, sys)
   if(cas%has_photons) then
     ! compute and write norms
     if(mpi_grp_is_root(mpi_world)) then
-      iunit = io_open(CASIDA_DIR//trim(theory_name(cas))//"_norms", action='write')
+      iunit = io_open(CASIDA_DIR//trim(theory_name(cas))//"_norms", sys%namespace, action='write')
       ! first, a header line
       write(iunit, '(6x)', advance='no')
       write(iunit, '(1x,a15)', advance='no') 'E [' // trim(units_abbrev(units_out%energy)) // ']'

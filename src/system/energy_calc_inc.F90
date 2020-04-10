@@ -19,10 +19,11 @@
 
 ! ---------------------------------------------------------
 !> calculates the eigenvalues of the orbitals
-subroutine X(calculate_eigenvalues)(hm, der, st)
-  type(hamiltonian_t), intent(in)    :: hm
-  type(derivatives_t), intent(inout) :: der
-  type(states_t),      intent(inout) :: st
+subroutine X(calculate_eigenvalues)(namespace, hm, der, st)
+  type(namespace_t),        intent(in)    :: namespace
+  type(hamiltonian_elec_t), intent(in)    :: hm
+  type(derivatives_t),      intent(in)    :: der
+  type(states_elec_t),      intent(inout) :: st
 
   R_TYPE, allocatable :: eigen(:, :)
 
@@ -36,7 +37,7 @@ subroutine X(calculate_eigenvalues)(hm, der, st)
   st%eigenval = M_ZERO
 
   SAFE_ALLOCATE(eigen(st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
-  call X(calculate_expectation_values)(hm, der, st, eigen)
+  call X(calculate_expectation_values)(namespace, hm, der, st, eigen)
 
   st%eigenval(st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end) = &
     real(eigen(st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end), REAL_PRECISION)
@@ -48,17 +49,17 @@ subroutine X(calculate_eigenvalues)(hm, der, st)
   POP_SUB(X(calculate_eigenvalues))
 end subroutine X(calculate_eigenvalues)
 
-subroutine X(calculate_expectation_values)(hm, der, st, eigen, terms)
-  type(hamiltonian_t), intent(in)    :: hm
-  type(derivatives_t), intent(inout) :: der
-  type(states_t),      intent(inout) :: st
-  R_TYPE,              intent(out)   :: eigen(st%st_start:, st%d%kpt%start:) !< (:st%st_end, :st%d%kpt%end)
-  integer, optional,   intent(in)    :: terms
+subroutine X(calculate_expectation_values)(namespace, hm, der, st, eigen, terms)
+  type(namespace_t),        intent(in)    :: namespace
+  type(hamiltonian_elec_t), intent(in)    :: hm
+  type(derivatives_t),      intent(in)    :: der
+  type(states_elec_t),      intent(inout) :: st
+  R_TYPE,                   intent(out)   :: eigen(st%st_start:, st%d%kpt%start:) !< (:st%st_end, :st%d%kpt%end)
+  integer, optional,        intent(in)    :: terms
 
   integer :: ik, minst, maxst, ib
-  type(batch_t) :: hpsib
+  type(wfs_elec_t) :: hpsib
   type(profile_t), save :: prof
-  logical :: copy_at_end
 
   PUSH_SUB(X(calculate_expectation_values))
   
@@ -67,40 +68,41 @@ subroutine X(calculate_expectation_values)(hm, der, st, eigen, terms)
   do ik = st%d%kpt%start, st%d%kpt%end
     do ib = st%group%block_start, st%group%block_end
 
-      minst = states_block_min(st, ib)
-      maxst = states_block_max(st, ib)
+      minst = states_elec_block_min(st, ib)
+      maxst = states_elec_block_max(st, ib)
 
-      call batch_copy(st%group%psib(ib, ik), hpsib, fill_zeros = .false.)
+      if(hamiltonian_elec_apply_packed(hm)) then
+        call st%group%psib(ib, ik)%do_pack()
+      end if
+      
+      call st%group%psib(ib, ik)%copy_to(hpsib)
 
-      copy_at_end = .false.
-      if(hamiltonian_apply_packed(hm, der%mesh)) then
-        ! unpack at end only if the status on entry is unpacked
-        copy_at_end = .not. batch_is_packed(st%group%psib(ib, ik))
-        call batch_pack(st%group%psib(ib, ik))
-        call batch_pack(hpsib, copy = .false.)
+      call X(hamiltonian_elec_apply_batch)(hm, namespace, der%mesh, st%group%psib(ib, ik), hpsib, terms = terms)
+      call X(mesh_batch_dotp_vector)(der%mesh, st%group%psib(ib, ik), hpsib, eigen(minst:maxst, ik), reduce = .false.)        
+
+      if(hamiltonian_elec_apply_packed(hm)) then
+        call st%group%psib(ib, ik)%do_unpack(copy = .false.)
       end if
 
-      call X(hamiltonian_apply_batch)(hm, der, st%group%psib(ib, ik), hpsib, ik, terms = terms)
-      call X(mesh_batch_dotp_vector)(der%mesh, st%group%psib(ib, ik), hpsib, eigen(minst:maxst, ik))        
-      if(hamiltonian_apply_packed(hm, der%mesh)) then
-        call batch_unpack(st%group%psib(ib, ik), copy = .false.)
-      end if
-
-      call batch_end(hpsib, copy = copy_at_end)
+      call hpsib%end()
 
     end do
   end do
+
+  if(der%mesh%parallel_in_domains) call comm_allreduce(der%mesh%mpi_grp%comm, &
+                   eigen(st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
 
   call profiling_out(prof)
   POP_SUB(X(calculate_expectation_values))
 end subroutine X(calculate_expectation_values)
 
 ! ---------------------------------------------------------
-FLOAT function X(energy_calc_electronic)(hm, der, st, terms) result(energy)
-  type(hamiltonian_t), intent(in)    :: hm
-  type(derivatives_t), intent(inout) :: der
-  type(states_t),      intent(inout) :: st
-  integer,             intent(in)    :: terms
+FLOAT function X(energy_calc_electronic)(namespace, hm, der, st, terms) result(energy)
+  type(namespace_t),        intent(in)    :: namespace
+  type(hamiltonian_elec_t), intent(in)    :: hm
+  type(derivatives_t),      intent(in)    :: der
+  type(states_elec_t),      intent(inout) :: st
+  integer,                  intent(in)    :: terms
 
   R_TYPE, allocatable  :: tt(:, :)
  
@@ -108,9 +110,9 @@ FLOAT function X(energy_calc_electronic)(hm, der, st, terms) result(energy)
 
   SAFE_ALLOCATE(tt(st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
 
-  call X(calculate_expectation_values)(hm, der, st, tt, terms = terms)
+  call X(calculate_expectation_values)(namespace, hm, der, st, tt, terms = terms)
 
-  energy = states_eigenvalues_sum(st, real(tt, REAL_PRECISION))
+  energy = states_elec_eigenvalues_sum(st, real(tt, REAL_PRECISION))
 
   SAFE_DEALLOCATE_A(tt)
   POP_SUB(X(energy_calc_electronic))

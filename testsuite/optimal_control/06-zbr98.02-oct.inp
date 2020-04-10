@@ -1,5 +1,6 @@
 CalculationMode = opt_control
 ExperimentalFeatures = yes
+StatesPack = yes
 
 FromScratch = yes
 Dimensions = 1
@@ -100,6 +101,5 @@ OCTTargetOperator = oct_tg_gstransformation
 
 OCTScheme  = oct_zbr98
 OCTDoubleCheck = no
-
 
 

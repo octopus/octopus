@@ -1,0 +1,31 @@
+ExperimentalFeatures = yes
+
+CalculationMode = gs
+
+Dimensions = 1
+DerivativesOrder = 1
+
+BoxShape = parallelepiped
+lsize = 5
+spacing = 0.1
+
+%Species
+ "Al3P" | species_user_defined | potential_formula  |  "-13/sqrt(x^2+1)" | valence | 10
+%
+
+%Coordinates
+"Al3P" | 0 
+%
+
+SpinComponents = spin_polarized
+
+XCFunctional = oep_x
+OEPLevel = oep_kli
+
+ParKPoints = no
+ConvAbsEv = 5e-7
+ConvAbsDens = 5e-7
+
+
+
+StatesPack = yes

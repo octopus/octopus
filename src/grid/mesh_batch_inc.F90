@@ -18,8 +18,8 @@
 
 subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
   type(mesh_t),      intent(in)    :: mesh
-  type(batch_t),     intent(in)    :: aa
-  type(batch_t),     intent(in)    :: bb
+  class(batch_t),    intent(in)    :: aa
+  class(batch_t),    intent(in)    :: bb
   R_TYPE,            intent(inout) :: dot(:, :)
   logical, optional, intent(in)    :: symm         !< for the moment it is ignored
   logical, optional, intent(in)    :: reduce
@@ -44,8 +44,7 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
 #endif
   conj = .false.
 
-  ASSERT(aa%dim == bb%dim)
-  ASSERT(batch_status(aa) == batch_status(bb))
+  call aa%check_compatibility_with(bb, only_check_dim = .true.)
 
   SAFE_ALLOCATE(dd(1:aa%nst, 1:bb%nst))
   ! This has to be set to zero by hand since NaN * 0 = NaN.
@@ -53,18 +52,18 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
 
   use_blas = .false.
   
-  select case(batch_status(aa))
+  select case(aa%status())
   case(BATCH_NOT_PACKED)
-    use_blas = associated(aa%X(psicont)) .and. associated(bb%X(psicont)) .and. (.not. mesh%use_curvilinear) .and. (aa%dim == 1)
+    use_blas = associated(aa%X(ff)) .and. associated(bb%X(ff)) .and. (.not. mesh%use_curvilinear) .and. (aa%dim == 1)
 
     if(use_blas) then
       call profiling_in(profgemm, "DOTP_BATCH_GEMM")
 
-      ldaa = size(aa%X(psicont), dim = 1)
-      ldbb = size(bb%X(psicont), dim = 1)
+      ldaa = size(aa%X(ff), dim = 1)
+      ldbb = size(bb%X(ff), dim = 1)
 
       call lalg_gemmt(aa%nst, bb%nst, mesh%np, R_TOTYPE(mesh%volume_element), &
-        aa%X(psicont), bb%X(psicont), R_TOTYPE(M_ZERO), dd)
+        aa%X(ff), bb%X(ff), R_TOTYPE(M_ZERO), dd)
 
     else
 
@@ -77,13 +76,13 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
           if(mesh%use_curvilinear) then
 
             do ist = 1, aa%nst
-              indb = batch_ist_idim_to_linear(aa, (/ist, idim/))
+              indb = aa%ist_idim_to_linear((/ist, idim/))
               do jst = 1, bb%nst
-                jndb = batch_ist_idim_to_linear(bb, (/jst, idim/))
+                jndb = bb%ist_idim_to_linear((/jst, idim/))
 
                 ss = M_ZERO
                 do ip = sp, ep
-                  ss = ss + mesh%vol_pp(ip)*R_CONJ(aa%states_linear(indb)%X(psi)(ip))*bb%states_linear(jndb)%X(psi)(ip)
+                  ss = ss + mesh%vol_pp(ip)*R_CONJ(aa%X(ff_linear)(ip, indb))*bb%X(ff_linear)(ip, jndb)
                 end do
                 dd(ist, jst) = dd(ist, jst) + ss
 
@@ -93,12 +92,12 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
           else
 
             do ist = 1, aa%nst
-              indb = batch_ist_idim_to_linear(aa, (/ist, idim/))
+              indb = aa%ist_idim_to_linear((/ist, idim/))
               do jst = 1, bb%nst
-                jndb = batch_ist_idim_to_linear(bb, (/jst, idim/))
+                jndb = bb%ist_idim_to_linear((/jst, idim/))
 
                 dd(ist, jst) = dd(ist, jst) + mesh%volume_element*&
-                  blas_dot(ep - sp + 1, aa%states_linear(indb)%X(psi)(sp), 1, bb%states_linear(jndb)%X(psi)(sp), 1)
+                  blas_dot(ep - sp + 1, aa%X(ff_linear)(sp, indb), 1, bb%X(ff_linear)(sp, jndb), 1)
               end do
             end do
 
@@ -115,12 +114,12 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
       conj = .true.
       call profiling_in(profgemm, "DOTP_BATCH_GEMM")
 
-      ldaa = aa%pack%size(1)
-      ldbb = bb%pack%size(1)
+      ldaa = aa%pack_size(1)
+      ldbb = bb%pack_size(1)
       call blas_gemm(transa = 'n', transb = 'c', m = aa%nst, n = bb%nst, k = mesh%np, &
         alpha = R_TOTYPE(mesh%volume_element), &
-        a = aa%pack%X(psi)(1, 1), lda = ldaa, &
-        b = bb%pack%X(psi)(1, 1), ldb = ldbb, &
+        a = aa%X(ff_pack)(1, 1), lda = ldaa, &
+        b = bb%X(ff_pack)(1, 1), ldb = ldbb, &
         beta = R_TOTYPE(M_ZERO), c = dd(1, 1), ldc = aa%nst)
       
     else
@@ -130,8 +129,8 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
           tmp1 = M_ZERO
           tmp2 = M_ZERO
           do ip = 1, mesh%np
-            tmp1 = tmp1 + R_CONJ(aa%pack%X(psi)(2*ist - 1, ip))*bb%pack%X(psi)(2*jst - 1, ip)
-            tmp2 = tmp2 + R_CONJ(aa%pack%X(psi)(2*ist    , ip))*bb%pack%X(psi)(2*jst    , ip)
+            tmp1 = tmp1 + R_CONJ(aa%X(ff_pack)(2*ist - 1, ip))*bb%X(ff_pack)(2*jst - 1, ip)
+            tmp2 = tmp2 + R_CONJ(aa%X(ff_pack)(2*ist    , ip))*bb%X(ff_pack)(2*jst    , ip)
           end do
           dd(ist, jst) = mesh%volume_element*(tmp1 + tmp2)
         end do
@@ -148,8 +147,8 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
     
     call X(accel_gemm)(transA = CUBLAS_OP_N, transB = CUBLAS_OP_T, &
       M = int(aa%nst, 8), N = int(bb%nst, 8), K = int(mesh%np, 8), alpha = R_TOTYPE(M_ONE), &
-      A = aa%pack%buffer, offA = 0_8, lda = int(aa%pack%size(1), 8), &
-      B = bb%pack%buffer, offB = 0_8, ldb = int(bb%pack%size(1), 8), beta = R_TOTYPE(M_ZERO), &
+      A = aa%ff_device, offA = 0_8, lda = int(aa%pack_size(1), 8), &
+      B = bb%ff_device, offB = 0_8, ldb = int(bb%pack_size(1), 8), beta = R_TOTYPE(M_ZERO), &
       C = dot_buffer, offC = 0_8, ldc = int(aa%nst, 8))
 
     call profiling_count_operations(dble(mesh%np)*aa%nst*bb%nst*(R_ADD + 2*R_MUL))
@@ -172,7 +171,7 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
     
   end select
 
-  if(batch_status(aa) /= BATCH_DEVICE_PACKED) then
+  if(aa%status() /= BATCH_DEVICE_PACKED) then
     if(mesh%use_curvilinear) then
       call profiling_count_operations(dble(mesh%np)*aa%nst*bb%nst*(R_ADD + 2*R_MUL))
     else
@@ -191,9 +190,9 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
 #endif
 
   if(conj) then
-    forall(ist = 1:aa%nst, jst = 1:bb%nst) dot(aa%states(ist)%ist, bb%states(jst)%ist) = R_CONJ(dd(ist, jst))
+    forall(ist = 1:aa%nst, jst = 1:bb%nst) dot(aa%ist(ist), bb%ist(jst)) = R_CONJ(dd(ist, jst))
   else
-    forall(ist = 1:aa%nst, jst = 1:bb%nst) dot(aa%states(ist)%ist, bb%states(jst)%ist) = dd(ist, jst)
+    forall(ist = 1:aa%nst, jst = 1:bb%nst) dot(aa%ist(ist), bb%ist(jst)) = dd(ist, jst)
   end if
 
   SAFE_DEALLOCATE_A(dd)
@@ -206,7 +205,7 @@ end subroutine X(mesh_batch_dotp_matrix)
 
 subroutine X(mesh_batch_dotp_self)(mesh, aa, dot, reduce)
   type(mesh_t),      intent(in)    :: mesh
-  type(batch_t),     intent(in)    :: aa
+  class(batch_t),    intent(in)    :: aa
   R_TYPE,            intent(inout) :: dot(:, :)
   logical, optional, intent(in)    :: reduce
 
@@ -221,7 +220,7 @@ subroutine X(mesh_batch_dotp_self)(mesh, aa, dot, reduce)
   ! some limitations of the current implementation
   ASSERT(ubound(dot, dim = 1) >= aa%nst .and. ubound(dot, dim = 2) >= aa%nst)
 
-  if(batch_status(aa) /= BATCH_NOT_PACKED) then
+  if(aa%status() /= BATCH_NOT_PACKED) then
     call X(mesh_batch_dotp_matrix)(mesh, aa, aa, dot, reduce)
     POP_SUB(X(mesh_batch_dotp_self))
     return
@@ -230,7 +229,7 @@ subroutine X(mesh_batch_dotp_self)(mesh, aa, dot, reduce)
   reduce_ = .true.
   if(present(reduce)) reduce_ = reduce
 
-  use_blas = associated(aa%X(psicont)) .and. (.not. mesh%use_curvilinear)
+  use_blas = associated(aa%X(ff)) .and. (.not. mesh%use_curvilinear)
 
   SAFE_ALLOCATE(dd(1:aa%nst, 1:aa%nst))
   ! This has to be set to zero by hand since NaN * 0 = NaN.
@@ -241,13 +240,13 @@ subroutine X(mesh_batch_dotp_self)(mesh, aa, dot, reduce)
   if(use_blas) then
     call profiling_in(profgemm, "BATCH_HERK")
 
-    lda = size(aa%X(psicont), dim = 1)*aa%dim
+    lda = size(aa%X(ff), dim = 1)*aa%dim
 
-    call blas_herk('l', 'c', aa%nst, mesh%np, mesh%vol_pp(1), aa%X(psicont)(1, 1, 1), &
+    call blas_herk('l', 'c', aa%nst, mesh%np, mesh%vol_pp(1), aa%X(ff)(1, 1, 1), &
       lda, M_ZERO, dd(1, 1), ubound(dd, dim = 1))
 
     if(aa%dim == 2) then
-      call blas_herk('l', 'c', aa%nst, mesh%np, mesh%vol_pp(1), aa%X(psicont)(1, 2, 1), &
+      call blas_herk('l', 'c', aa%nst, mesh%np, mesh%vol_pp(1), aa%X(ff)(1, 2, 1), &
         lda, M_ONE, dd(1, 1), ubound(dd, dim = 1))
     end if
 
@@ -262,12 +261,12 @@ subroutine X(mesh_batch_dotp_self)(mesh, aa, dot, reduce)
         if(mesh%use_curvilinear) then
 
           do ist = 1, aa%nst
-            indb = batch_ist_idim_to_linear(aa, (/ist, idim/))
+            indb = aa%ist_idim_to_linear((/ist, idim/))
             do jst = 1, ist
-              jndb = batch_ist_idim_to_linear(aa, (/jst, idim/))
+              jndb = aa%ist_idim_to_linear((/jst, idim/))
               ss = M_ZERO
               do ip = sp, ep
-                ss = ss + mesh%vol_pp(ip)*R_CONJ(aa%states_linear(indb)%X(psi)(ip))*aa%states_linear(jndb)%X(psi)(ip)
+                ss = ss + mesh%vol_pp(ip)*R_CONJ(aa%X(ff_linear)(ip, indb))*aa%X(ff_linear)(ip, jndb)
               end do
               dd(ist, jst) = dd(ist, jst) + ss
 
@@ -277,11 +276,11 @@ subroutine X(mesh_batch_dotp_self)(mesh, aa, dot, reduce)
         else
 
           do ist = 1, aa%nst
-            indb = batch_ist_idim_to_linear(aa, (/ist, idim/))
+            indb = aa%ist_idim_to_linear((/ist, idim/))
             do jst = 1, ist
-              jndb = batch_ist_idim_to_linear(aa, (/jst, idim/))
+              jndb = aa%ist_idim_to_linear((/jst, idim/))
               dd(ist, jst) = dd(ist, jst) + mesh%volume_element*&
-                blas_dot(ep - sp + 1, aa%states_linear(indb)%X(psi)(sp), 1, aa%states_linear(jndb)%X(psi)(sp), 1)
+                blas_dot(ep - sp + 1, aa%X(ff_linear)(sp, indb), 1, aa%X(ff_linear)(sp, jndb), 1)
             end do
           end do
 
@@ -306,8 +305,8 @@ subroutine X(mesh_batch_dotp_self)(mesh, aa, dot, reduce)
 
   forall(ist = 1:aa%nst)
     forall(jst = 1:aa%nst) 
-      dot(aa%states(ist)%ist, aa%states(jst)%ist) = dd(ist, jst)
-      dot(aa%states(jst)%ist, aa%states(ist)%ist) = R_CONJ(dd(ist, jst))
+      dot(aa%ist(ist), aa%ist(jst)) = dd(ist, jst)
+      dot(aa%ist(jst), aa%ist(ist)) = R_CONJ(dd(ist, jst))
     end forall
   end forall
 
@@ -321,14 +320,14 @@ end subroutine X(mesh_batch_dotp_self)
 
 subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
   type(mesh_t),      intent(in)    :: mesh
-  type(batch_t),     intent(in)    :: aa
-  type(batch_t),     intent(in)    :: bb
+  class(batch_t),    intent(in)    :: aa
+  class(batch_t),    intent(in)    :: bb
   R_TYPE,            intent(inout) :: dot(:)
   logical, optional, intent(in)    :: reduce
   logical, optional, intent(in)    :: cproduct
 
   integer :: ist, indb, idim, ip, status
-  logical :: reduce_, cproduct_
+  logical :: cproduct_
   type(profile_t), save :: prof, profcomm
   R_TYPE, allocatable :: tmp(:), cltmp(:, :)
   type(accel_mem_t)  :: dot_buffer
@@ -336,24 +335,20 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
   PUSH_SUB(X(mesh_batch_dotp_vector))
   call profiling_in(prof, "DOTPV_BATCH")
 
-  reduce_ = .true.
-  if(present(reduce)) reduce_ = reduce
-  
   cproduct_ = optional_default(cproduct, .false.)
   
-  ASSERT(aa%nst == bb%nst)
-  ASSERT(aa%dim == bb%dim)
+  call aa%check_compatibility_with(bb)
 
-  status = batch_status(aa)
-  ASSERT(batch_status(bb) == status)
+  status = aa%status()
+  ASSERT(bb%status() == status)
 
   select case(status)
   case(BATCH_NOT_PACKED)
     do ist = 1, aa%nst
       dot(ist) = M_ZERO
       do idim = 1, aa%dim
-        indb = batch_ist_idim_to_linear(aa, (/ist, idim/))
-        dot(ist) = dot(ist) + X(mf_dotp)(mesh, aa%states_linear(indb)%X(psi), bb%states_linear(indb)%X(psi),& 
+        indb = aa%ist_idim_to_linear((/ist, idim/))
+        dot(ist) = dot(ist) + X(mf_dotp)(mesh, aa%X(ff_linear)(:, indb), bb%X(ff_linear)(:, indb),& 
            reduce = .false., dotu = cproduct_)
       end do
     end do
@@ -369,14 +364,14 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
         !$omp parallel do private(ip, ist) reduction(+:tmp)
         do ip = 1, mesh%np
           do ist = 1, aa%nst_linear
-            tmp(ist) = tmp(ist) + mesh%vol_pp(ip)*R_CONJ(aa%pack%X(psi)(ist, ip))*bb%pack%X(psi)(ist, ip)
+            tmp(ist) = tmp(ist) + mesh%vol_pp(ip)*R_CONJ(aa%X(ff_pack)(ist, ip))*bb%X(ff_pack)(ist, ip)
           end do
         end do
       else
         !$omp parallel do private(ip, ist) reduction(+:tmp)
         do ip = 1, mesh%np
           do ist = 1, aa%nst_linear
-            tmp(ist) = tmp(ist) + mesh%vol_pp(ip)*aa%pack%X(psi)(ist, ip)*bb%pack%X(psi)(ist, ip)
+            tmp(ist) = tmp(ist) + mesh%vol_pp(ip)*aa%X(ff_pack)(ist, ip)*bb%X(ff_pack)(ist, ip)
           end do
         end do
       end if
@@ -385,14 +380,14 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
         !$omp parallel do private(ip, ist) reduction(+:tmp)
         do ip = 1, mesh%np
           do ist = 1, aa%nst_linear
-            tmp(ist) = tmp(ist) + R_CONJ(aa%pack%X(psi)(ist, ip))*bb%pack%X(psi)(ist, ip)
+            tmp(ist) = tmp(ist) + R_CONJ(aa%X(ff_pack)(ist, ip))*bb%X(ff_pack)(ist, ip)
           end do
         end do
       else
         !$omp parallel do private(ip, ist) reduction(+:tmp)
         do ip = 1, mesh%np
           do ist = 1, aa%nst_linear
-            tmp(ist) = tmp(ist) + aa%pack%X(psi)(ist, ip)*bb%pack%X(psi)(ist, ip)
+            tmp(ist) = tmp(ist) + aa%X(ff_pack)(ist, ip)*bb%X(ff_pack)(ist, ip)
           end do
         end do
       end if
@@ -401,7 +396,7 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
     do ist = 1, aa%nst
       dot(ist) = M_ZERO
       do idim = 1, aa%dim
-        indb = batch_ist_idim_to_linear(aa, (/ist, idim/))
+        indb = aa%ist_idim_to_linear((/ist, idim/))
         dot(ist) = dot(ist) + mesh%volume_element*tmp(indb)
       end do
     end do
@@ -410,18 +405,21 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
 
   case(BATCH_DEVICE_PACKED)
 
-    call accel_create_buffer(dot_buffer, ACCEL_MEM_WRITE_ONLY, R_TYPE_VAL, aa%pack%size(1))
+    call accel_create_buffer(dot_buffer, ACCEL_MEM_WRITE_ONLY, R_TYPE_VAL, aa%pack_size(1))
 
     do ist = 1, aa%nst_linear
+      call accel_set_stream(ist)
       call X(accel_dot)(n = int(mesh%np, 8), &
-        x = aa%pack%buffer, offx = int(ist - 1, 8), incx = int(aa%pack%size(1), 8), &
-        y = bb%pack%buffer, offy = int(ist - 1, 8), incy = int(bb%pack%size(1), 8), &
+        x = aa%ff_device, offx = int(ist - 1, 8), incx = int(aa%pack_size(1), 8), &
+        y = bb%ff_device, offy = int(ist - 1, 8), incy = int(bb%pack_size(1), 8), &
         res = dot_buffer, offres = int(ist - 1, 8))
     end do
+    call accel_synchronize_all_streams()
+    call accel_set_stream(1)
 
-    SAFE_ALLOCATE(cltmp(1:aa%pack%size(1), 1))
+    SAFE_ALLOCATE(cltmp(1:aa%pack_size(1), 1))
 
-    call accel_read_buffer(dot_buffer, aa%pack%size(1), cltmp)
+    call accel_read_buffer(dot_buffer, aa%pack_size(1), cltmp)
 
     call accel_release_buffer(dot_buffer)
 
@@ -429,20 +427,20 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
     do ist = 1, aa%nst
       dot(ist) = M_ZERO
       do idim = 1, aa%dim
-        indb = batch_ist_idim_to_linear(aa, (/ist, idim/))
+        indb = aa%ist_idim_to_linear((/ist, idim/))
         dot(ist) = dot(ist) + mesh%volume_element*cltmp(indb, 1)
       end do
     end do
 
   end select
 
-  if(mesh%parallel_in_domains .and. reduce_) then
+  if(mesh%parallel_in_domains .and. optional_default(reduce, .true.)) then
     call profiling_in(profcomm, "DOTPV_BATCH_REDUCE")
     call comm_allreduce(mesh%mpi_grp%comm, dot, dim = aa%nst)
     call profiling_out(profcomm)
   end if
   
-  call profiling_count_operations(aa%nst*dble(mesh%np)*(R_ADD + R_MUL)*types_get_size(batch_type(aa))/types_get_size(TYPE_FLOAT))
+  call profiling_count_operations(aa%nst*dble(mesh%np)*(R_ADD + R_MUL)*types_get_size(aa%type())/types_get_size(TYPE_FLOAT))
 
   call profiling_out(prof)
   POP_SUB(X(mesh_batch_dotp_vector))
@@ -455,7 +453,7 @@ end subroutine X(mesh_batch_dotp_vector)
 
 subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
   type(mesh_t),      intent(in)    :: mesh            !< The mesh descriptor.
-  type(batch_t),     intent(inout) :: aa              !< A batch which contains the mesh functions whose points will be exchanged.
+  class(batch_t),    intent(inout) :: aa              !< A batch which contains the mesh functions whose points will be exchanged.
   integer, optional, intent(in)    :: forward_map(:)  !< A map which gives the destination of the value each point.
   logical, optional, intent(in)    :: backward_map    !< A map which gives the source of the value of each point.
   logical :: packed_on_entry
@@ -471,10 +469,10 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
   PUSH_SUB(X(mesh_batch_exchange_points))
 
   ASSERT(present(backward_map) .neqv. present(forward_map))
-  ASSERT(batch_type(aa) == R_TYPE_VAL)
-  packed_on_entry = batch_status(aa) == BATCH_NOT_PACKED
+  ASSERT(aa%type() == R_TYPE_VAL)
+  packed_on_entry = aa%status() == BATCH_NOT_PACKED
   if (packed_on_entry) then
-    call batch_unpack(aa, force=.true.)
+    call aa%do_unpack(force=.true.)
   end if
 
   if(.not. mesh%parallel_in_domains) then
@@ -569,7 +567,7 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
         ipart = partno_inner(ip)
         INCR(send_count(ipart), 1)
         pos = send_disp(ipart) + send_count(ipart)
-        forall(ist = 1:nstl) send_buffer(ist, pos) = aa%states_linear(ist)%X(psi)(ip)
+        forall(ist = 1:nstl) send_buffer(ist, pos) = aa%X(ff_linear)(ip, ist)
       end do
       ! Then boundary points
       do ip = 1, np_bndry
@@ -577,7 +575,7 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
         ipart = partno_bndry(ip)
         INCR(send_count(ipart), 1)
         pos = send_disp(ipart) + send_count(ipart)
-        forall(ist = 1:nstl) send_buffer(ist, pos) = aa%states_linear(ist)%X(psi)(ip)
+        forall(ist = 1:nstl) send_buffer(ist, pos) = aa%X(ff_linear)(ip, ist)
       end do
 
       SAFE_DEALLOCATE_A(partno_bndry)
@@ -600,7 +598,7 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
           ipart = mesh%vp%part_vec(ipg)
           INCR(recv_count(ipart), 1)
           pos = recv_disp(ipart) + recv_count(ipart)
-          forall(ist = 1:nstl) aa%states_linear(ist)%X(psi)(ip) = recv_buffer(ist, pos)
+          forall(ist = 1:nstl) aa%X(ff_linear)(ip, ist) = recv_buffer(ist, pos)
         end if
       end do
 
@@ -624,7 +622,7 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
         ipart = mesh%vp%part_local(ip)
         INCR(send_count(ipart), 1)
         pos = mesh%vp%send_disp(ipart) + send_count(ipart)
-        forall(ist = 1:nstl) send_buffer(ist, pos) = aa%states_linear(ist)%X(psi)(ip) 
+        forall(ist = 1:nstl) send_buffer(ist, pos) = aa%X(ff_linear)(ip, ist) 
       end do
       
       send_count_nstl = send_count * nstl
@@ -643,7 +641,7 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
         ipart = mesh%vp%part_local_rev(ip)
         INCR(recv_count(ipart), 1)
         pos = mesh%vp%recv_disp(ipart) + recv_count(ipart)
-        forall(ist = 1:nstl) aa%states_linear(ist)%X(psi)(ip) = recv_buffer(ist, pos)
+        forall(ist = 1:nstl) aa%X(ff_linear)(ip, ist) = recv_buffer(ist, pos)
       end do
 
     end if
@@ -660,7 +658,7 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
   end if
 
   if (packed_on_entry) then
-    call batch_pack(aa)
+    call aa%do_pack()
   end if
   POP_SUB(X(mesh_batch_exchange_points))
 end subroutine X(mesh_batch_exchange_points)
@@ -669,7 +667,7 @@ end subroutine X(mesh_batch_exchange_points)
 !> This function should not be called directly, but through mesh_batch_nrm2.
 subroutine X(priv_mesh_batch_nrm2)(mesh, aa, nrm2)
   type(mesh_t),            intent(in)    :: mesh
-  type(batch_t),           intent(in)    :: aa
+  class(batch_t),          intent(in)    :: aa
   FLOAT,                   intent(out)   :: nrm2(:)
 
   integer :: ist, idim, indb, ip
@@ -681,13 +679,13 @@ subroutine X(priv_mesh_batch_nrm2)(mesh, aa, nrm2)
   PUSH_SUB(X(priv_mesh_batch_nrm2))
   call profiling_in(prof, 'MESH_BATCH_NRM2')
 
-  select case(batch_status(aa))
+  select case(aa%status())
   case(BATCH_NOT_PACKED)
     do ist = 1, aa%nst
       nrm2(ist) = M_ZERO
       do idim = 1, aa%dim
-        indb = batch_ist_idim_to_linear(aa, (/ist, idim/))
-        nrm2(ist) = hypot(nrm2(ist), X(mf_nrm2)(mesh, aa%states_linear(indb)%X(psi), reduce = .false.))
+        indb = aa%ist_idim_to_linear((/ist, idim/))
+        nrm2(ist) = hypot(nrm2(ist), X(mf_nrm2)(mesh, aa%X(ff_linear)(:, indb), reduce = .false.))
       end do
     end do
 
@@ -701,9 +699,10 @@ subroutine X(priv_mesh_batch_nrm2)(mesh, aa, nrm2)
     
     if(.not. mesh%use_curvilinear) then
 
+      !$omp parallel do private(a0)
       do ip = 1, mesh%np
         do ist = 1, aa%nst_linear
-          a0 = aa%pack%X(psi)(ist, ip)
+          a0 = aa%X(ff_pack)(ist, ip)
           if(abs(a0) <= M_EPSILON) cycle
           if(scal(ist) < abs(a0)) then
             ssq(ist) = M_ONE + ssq(ist)*(scal(ist)/abs(a0))**2
@@ -716,9 +715,10 @@ subroutine X(priv_mesh_batch_nrm2)(mesh, aa, nrm2)
 
     else
 
+      !$omp parallel do private(a0)
       do ip = 1, mesh%np
         do ist = 1, aa%nst_linear
-          a0 = aa%pack%X(psi)(ist, ip)
+          a0 = aa%X(ff_pack)(ist, ip)
           if(a0 == R_TOTYPE(M_ZERO)) cycle
           if(scal(ist) < abs(a0)) then
             ssq(ist) =  mesh%vol_pp(ip)*M_ONE + ssq(ist)*(scal(ist)/abs(a0))**2
@@ -734,8 +734,8 @@ subroutine X(priv_mesh_batch_nrm2)(mesh, aa, nrm2)
     do ist = 1, aa%nst
       nrm2(ist) = M_ZERO
       do idim = 1, aa%dim
-        indb = batch_ist_idim_to_linear(aa, (/ist, idim/))
-         nrm2(ist) = hypot(nrm2(ist), scal(indb)*sqrt(mesh%volume_element*ssq(indb)))
+        indb = aa%ist_idim_to_linear((/ist, idim/))
+        nrm2(ist) = hypot(nrm2(ist), scal(indb)*sqrt(mesh%volume_element*ssq(indb)))
       end do
     end do
 
@@ -743,25 +743,26 @@ subroutine X(priv_mesh_batch_nrm2)(mesh, aa, nrm2)
 
     ASSERT(.not. mesh%use_curvilinear)
 
-    SAFE_ALLOCATE(ssq(1:aa%pack%size(1)))
+    SAFE_ALLOCATE(ssq(1:aa%pack_size(1)))
 
-    call accel_create_buffer(nrm2_buffer, ACCEL_MEM_WRITE_ONLY, TYPE_FLOAT, aa%pack%size(1))
+    call accel_create_buffer(nrm2_buffer, ACCEL_MEM_WRITE_ONLY, TYPE_FLOAT, aa%pack_size(1))
 
     do ist = 1, aa%nst_linear
-
-      call X(accel_nrm2)(N = int(mesh%np, 8), X = aa%pack%buffer, offx = int(ist - 1, 8), incx = int(aa%pack%size(1), 8), &
+      call accel_set_stream(ist)
+      call X(accel_nrm2)(N = int(mesh%np, 8), X = aa%ff_device, offx = int(ist - 1, 8), incx = int(aa%pack_size(1), 8), &
         res = nrm2_buffer, offres = int(ist - 1, 8))
-      
     end do
+    call accel_synchronize_all_streams()
+    call accel_set_stream(1)
 
-    call accel_read_buffer(nrm2_buffer, aa%pack%size(1), ssq)
+    call accel_read_buffer(nrm2_buffer, aa%pack_size(1), ssq)
 
     call accel_release_buffer(nrm2_buffer)
 
     do ist = 1, aa%nst
       nrm2(ist) = M_ZERO
       do idim = 1, aa%dim
-        indb = batch_ist_idim_to_linear(aa, (/ist, idim/))
+        indb = aa%ist_idim_to_linear((/ist, idim/))
         nrm2(ist) = hypot(nrm2(ist), sqrt(mesh%volume_element)*ssq(indb))
       end do
     end do
@@ -775,6 +776,117 @@ subroutine X(priv_mesh_batch_nrm2)(mesh, aa, nrm2)
   call profiling_out(prof)
   POP_SUB(X(priv_mesh_batch_nrm2))
 end subroutine X(priv_mesh_batch_nrm2)
+
+! ---------------------------------------------------------
+!> Orthonormalizes states of phib to the orbitals of nst batches of psi.
+!! It also permits doing only the orthogonalization (no normalization).
+subroutine X(mesh_batch_orthogonalization)(mesh, nst, psib, phib,  &
+  normalize, overlap, norm, gs_scheme)
+  type(mesh_t),      intent(in)    :: mesh
+  integer,           intent(in)    :: nst
+  class(batch_t),    intent(in)    :: psib(:)   !< psi(nst)
+  class(batch_t),    intent(inout) :: phib      
+  logical, optional, intent(in)    :: normalize
+  R_TYPE,  optional, intent(out)   :: overlap(:,:) !< (nst, phib%nst)
+  R_TYPE,  optional, intent(out)   :: norm(:)
+  integer, optional, intent(in)    :: gs_scheme
+
+  logical :: normalize_
+  integer :: ist, is
+  R_TYPE, allocatable   :: nrm2(:)
+  R_TYPE, allocatable  :: ss(:,:), ss_full(:,:)
+  type(profile_t), save :: prof
+  type(profile_t), save :: reduce_prof
+  logical :: drcgs
+  integer :: nsteps
+
+  call profiling_in(prof, "BATCH_GRAM_SCHMIDT")
+  PUSH_SUB(X(mesh_batch_orthogonalization))
+
+  SAFE_ALLOCATE(ss(1:phib%nst, 1:nst))
+  ss = R_TOTYPE(M_ZERO)
+
+  do ist = 1, nst
+    call phib%check_compatibility_with(psib(ist))
+  end do
+
+  drcgs = .false.
+  nsteps = 1
+  if(present(gs_scheme)) then
+    if(gs_scheme == OPTION__ARNOLDIORTHOGONALIZATION__DRCGS) then
+      drcgs = .true.
+      nsteps = 2
+      SAFE_ALLOCATE(ss_full(1:phib%nst, 1:nst))
+      ss_full = R_TOTYPE(M_ZERO)
+    end if
+  end if
+
+  do is = 1, nsteps
+    if(nst>=1 .and. drcgs) then
+      call X(mesh_batch_dotp_vector)(mesh, psib(nst), phib, ss(1:phib%nst,1))
+      call batch_axpy(mesh%np, -ss(1:phib%nst,1), psib(nst), phib, a_full = .false.)
+      if(present(overlap)) ss_full(1:phib%nst, nst) = ss_full(1:phib%nst, nst) + ss(1:phib%nst, 1)
+    end if
+    ss = R_TOTYPE(M_ZERO)
+
+    !TODO: We should reuse phib here for improved performances
+    do ist = 1, nst
+      call X(mesh_batch_dotp_vector)(mesh, psib(ist), phib, ss(1:phib%nst,ist), reduce = .false.) 
+    end do
+
+    if(mesh%parallel_in_domains) then
+      call profiling_in(reduce_prof, "BATCH_GRAM_SCHMIDT_REDUCE")
+      call comm_allreduce(mesh%mpi_grp%comm, ss, dim = (/phib%nst, nst/))
+      call profiling_out(reduce_prof)
+    end if
+   
+    !TODO: We should have a routine batch_gemv for improved performances
+    do ist = 1, nst
+      call batch_axpy(mesh%np, -ss(1:phib%nst,ist), psib(ist), phib, a_full = .false.)
+    end do
+
+    !We accumulate the overlap
+    if(drcgs .and. present(overlap)) then
+      do ist = 1, nst
+        ss_full(1:phib%nst, ist) = ss_full(1:phib%nst, ist) + ss(1:phib%nst, ist)
+      end do 
+    end if
+  end do
+
+  !We have a transpose here because this helps for the Lanczos implementation
+  !which is the only routine using this one at the moment
+  !Indeed, Lanczos acts on phib%nst arrays of dimension nst, whereas the code would return 
+  !an array of dim (phib%nst, nst)
+  !For an orthogalization, it is more natural to have for each state the overlap with the others
+  !which is what the code outputs now.
+  if(present(overlap)) then
+    if(drcgs) then
+      overlap(1:nst, 1:phib%nst) = transpose(ss_full(1:phib%nst, 1:nst))
+    else
+      overlap(1:nst, 1:phib%nst) = transpose(ss(1:phib%nst, 1:nst))
+    end if
+  end if
+
+  normalize_ = optional_default(normalize, .false.)
+  if(present(norm) .or. normalize_) then
+    SAFE_ALLOCATE(nrm2(1:phib%nst))
+    !Here we do not call mesh_batch_nrm2 which is too slow
+    call X(mesh_batch_dotp_vector)(mesh, phib, phib, nrm2)
+    if(present(norm)) then
+      norm(1:phib%nst) = sqrt(real(nrm2(1:phib%nst), REAL_PRECISION))
+    end if
+    if(normalize_) then
+      call batch_scal(mesh%np, M_ONE/sqrt(real(nrm2, REAL_PRECISION)), phib, a_full =.false.)
+    end if
+    SAFE_DEALLOCATE_A(nrm2)
+  end if
+
+  SAFE_DEALLOCATE_A(ss)
+  SAFE_DEALLOCATE_A(ss_full)
+
+  POP_SUB(X(mesh_batch_orthogonalization))
+  call profiling_out(prof)
+end subroutine X(mesh_batch_orthogonalization)
 
 
 !! Local Variables:

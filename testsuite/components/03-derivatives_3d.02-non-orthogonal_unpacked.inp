@@ -1,0 +1,35 @@
+CalculationMode = test
+TestMode = derivatives
+
+StatesPack = no
+
+PeriodicDimensions = 3
+
+a = 6.74065308785213
+
+%LatticeParameters
+  a | a | a
+%
+
+%LatticeVectors
+ 0.  | 0.5 | 0.5
+ 0.5 | 0.  | 0.5
+ 0.5 | 0.5 | 0.0
+%
+
+%ReducedCoordinates
+ "C" |   0.0    | 0.0     | 0.0
+ "C" |   1/4    | 1/4     | 1/4
+%
+
+Spacing = a/30
+
+StatesBlockSize = 2
+
+TestRepetitions = 1
+
+TestMaxBlockSize = 32
+
+
+
+StatesPack = yes

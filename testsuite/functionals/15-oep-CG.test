@@ -1,0 +1,23 @@
+# -*- coding: utf-8 mode: shell-script -*-
+
+Test       : XC Functionals 3D
+Program    : octopus
+TestGroups : short-run, functionals
+Enabled    : Yes
+
+Input: 15-oep-CG.01-kli.inp
+match ; SCF convergence                          ; GREPCOUNT(static/info, 'SCF converged') ; 1
+match ; energy Total                             ; GREPFIELD(static/info, 'Total       =', 3) ; -48.9653545
+match ; eigenvalue 1 up                          ; GREPFIELD(static/info, '  1   up', 3)      ; -5.756954
+match ; eigenvalue 1 dn                          ; GREPFIELD(static/info, '  1   dn', 3)      ; -5.756954
+match ; eigenvalue 5 up                          ; GREPFIELD(static/info, '  5   up', 3)      ; -0.405334
+match ; eigenvalue 5 dn                          ; GREPFIELD(static/info, '  5   dn', 3)      ; -0.405334
+
+Input: 15-oep-CG.02-oep-bb.inp
+match ; SCF convergence                          ; GREPCOUNT(static/info, 'SCF converged') ; 1
+match ; energy Total                             ; GREPFIELD(static/info, 'Total       =', 3) ; -48.9675620
+match ; eigenvalue 1 up                          ; GREPFIELD(static/info, '  1   up', 3)      ; -5.808809
+match ; eigenvalue 1 dn                          ; GREPFIELD(static/info, '  1   dn', 3)      ; -5.808808
+match ; eigenvalue 5 up                          ; GREPFIELD(static/info, '  5   up', 3)      ; -0.409571
+match ; eigenvalue 5 dn                          ; GREPFIELD(static/info, '  5   dn', 3)      ; -0.409571
+

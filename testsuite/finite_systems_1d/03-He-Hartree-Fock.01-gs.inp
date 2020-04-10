@@ -1,0 +1,31 @@
+calculationMode = gs
+
+Dimensions = 1
+
+Radius = 7
+Spacing = 0.05
+
+# local potential v(x)=-2/(1+x^2)^(1/2) (Z_He=2)
+d=1.628
+%Species
+  "1dhelium" | species_user_defined | potential_formula | "-2/(1+x^2)^(1/2)" | valence | 2
+%
+
+%Coordinates
+  "1dhelium" | 0 
+%
+
+MaximumIter = 500
+
+ExtraStates = 6
+
+EigensolverTolerance = 1e-8
+ConvRelDens = 1e-8
+
+TheoryLevel = hartree_fock
+
+ExperimentalFeatures = yes
+
+PoissonSolver = direct_sum
+
+StatesPack = yes

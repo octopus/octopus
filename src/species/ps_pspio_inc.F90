@@ -17,8 +17,9 @@
 !!
 
   ! ---------------------------------------------------------
-  subroutine ps_pspio_init(ps, label, z, lmax, lloc, ispin, filename)
+  subroutine ps_pspio_init(ps, namespace, label, z, lmax, lloc, ispin, filename)
     type(ps_t),        intent(out)   :: ps
+    type(namespace_t), intent(in)    :: namespace
     character(len=10), intent(in)    :: label
     integer,           intent(inout) :: lmax
     integer,           intent(in)    :: lloc, ispin
@@ -50,7 +51,7 @@
 
         if (idir == size(psp_dir)) then
           message(1) = "Pseudopotential file '" // trim(filename) // " not found"
-          call messages_fatal(1)
+          call messages_fatal(1, namespace=namespace)
         end if
       end do
     end if
@@ -60,8 +61,8 @@
     call messages_info(2)
 
     ! Init pspio data structure and parse file
-    call check_error(fpspio_pspdata_alloc(pspdata))
-    call check_error(fpspio_pspdata_read(pspdata, PSPIO_FMT_UNKNOWN, filename2))
+    call check_error(fpspio_pspdata_alloc(pspdata), namespace)
+    call check_error(fpspio_pspdata_read(pspdata, PSPIO_FMT_UNKNOWN, filename2), namespace)
 
     ! General info
     ps%label = label
@@ -75,7 +76,7 @@
     call messages_info(1)
 
     ! Mesh
-    call ps_pspio_read_mesh(ps, pspdata)
+    call ps_pspio_read_mesh(ps, pspdata, namespace)
 
     ! XC
     call ps_pspio_read_xc(ps, pspdata)
@@ -91,11 +92,11 @@
 
     ! If we do not have KB projectors, then we read the pseudopotentials
     if (.not. has_kb) then
-      call ps_pspio_read_potentials(ps, pspdata)
+      call ps_pspio_read_potentials(ps, pspdata, namespace)
     end if
 
     !No variable description, as it is already in ps.F90
-    call parse_variable('SpeciesProjectorSphereThreshold', CNST(0.001), ps%projectors_sphere_threshold)
+    call parse_variable(namespace, 'SpeciesProjectorSphereThreshold', CNST(0.001), ps%projectors_sphere_threshold)
     if(ps%projectors_sphere_threshold <= M_ZERO) call messages_input_error('SpeciesProjectorSphereThreshold')
     ps%has_long_range = .true.
     ps%is_separated = .false.
@@ -107,7 +108,7 @@
 
 #else
     message(1) = 'PSPIO selected for pseudopotential parsing, but the code was compiled witout PSPIO support.'
-    call messages_fatal(1)
+    call messages_fatal(1, namespace=namespace)
 #endif
 
     POP_SUB(ps_pspio_init)
@@ -131,9 +132,10 @@
   end subroutine ps_pspio_read_info
 
   ! ---------------------------------------------------------
-  subroutine ps_pspio_read_mesh(ps, pspdata)
+  subroutine ps_pspio_read_mesh(ps, pspdata, namespace)
     type(ps_t),             intent(inout) :: ps
     type(fpspio_pspdata_t), intent(in)    :: pspdata
+    type(namespace_t),      intent(in)    :: namespace
 
     integer :: ip
     type(fpspio_mesh_t) :: mesh
@@ -148,7 +150,7 @@
     if(any(abs(r_tmp(2:ps%g%nrval)) < M_EPSILON)) then
       ! only the first point is allowed to be zero
       message(1) = "Illegal zero values in PSPIO radial grid"
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
     if (abs(r_tmp(1)) <= M_EPSILON) then
       ip = 1
@@ -355,14 +357,15 @@
   end subroutine ps_pspio_read_kb_projectors
 
   ! ---------------------------------------------------------
-  subroutine ps_pspio_read_potentials(ps, pspdata)
+  subroutine ps_pspio_read_potentials(ps, pspdata, namespace)
     type(ps_t),             intent(inout) :: ps
     type(fpspio_pspdata_t), intent(in)    :: pspdata
+    type(namespace_t),      intent(in)    :: namespace
 
     PUSH_SUB(ps_pspio_read_potentials)
 
     message(1) = "Not yet implemented"
-    call messages_fatal(1)
+    call messages_fatal(1, namespace=namespace)
 
     POP_SUB(ps_pspio_read_potentials)
   end subroutine ps_pspio_read_potentials
@@ -373,7 +376,6 @@
     type(fpspio_pspdata_t), intent(in)    :: pspdata
 
     integer :: ir, nrc
-    FLOAT, parameter :: threshold = CNST(0.5e-7)
     type(fpspio_xc_t) :: xc
     FLOAT, allocatable :: rho(:)
 
@@ -410,13 +412,14 @@
   end subroutine ps_pspio_read_xc
 
   ! ---------------------------------------------------------
-  subroutine check_error(ierr)
-    integer, intent(in) :: ierr
+  subroutine check_error(ierr, namespace)
+    integer,           intent(in) :: ierr
+    type(namespace_t), intent(in) :: namespace
 
     if (ierr /= PSPIO_SUCCESS) then
       call fpspio_error_flush()
       message(1) = "PSPIO error"
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
 
   end subroutine check_error

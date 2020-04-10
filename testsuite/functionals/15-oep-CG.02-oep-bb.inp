@@ -1,0 +1,43 @@
+ExperimentalFeatures = yes
+
+CalculationMode = gs
+
+Dimensions = 1
+DerivativesOrder = 1
+
+BoxShape = parallelepiped
+lsize = 5
+spacing = 0.1
+
+%Species
+ "Al3P" | species_user_defined | potential_formula  |  "-13/sqrt(x^2+1)" | valence | 10
+%
+
+%Coordinates
+"Al3P" | 0 
+%
+
+%RestartOptions
+  restart_gs | "restart" | restart_states+restart_rho+restart_vhxc
+%
+
+SpinComponents = spin_polarized
+
+XCFunctional = oep_x
+OEPLevel = oep_full
+
+OEPMixing = 0.5
+OEPMixingScheme = oep_mixing_scheme_bb
+ParKPoints = no
+
+MixingScheme = linear
+MixField = potential
+
+LinearSolver = cg
+ConvAbsEv = 5e-7
+ConvAbsDens = 5e-7
+EigenSolverTolerance = 5e-8
+LRTolFinalTol = 5e-7
+LRConvAbsDens = 5e-7
+CGEnergyChangeThreshold = 1e-4
+StatesPack = yes

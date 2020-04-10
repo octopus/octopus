@@ -41,16 +41,12 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
 #endif
 #ifndef SINGLE_PRECISION
   integer :: nri_loc, ini
-  R_TYPE,  pointer :: pfi(:), pfo(:)
 #endif
   
   PUSH_SUB(X(nl_operator_operate_batch))
 
-  ASSERT(batch_status(fi) == batch_status(fo))
-  ASSERT(batch_type(fi) == R_TYPE_VAL)
-  ASSERT(batch_type(fo) == R_TYPE_VAL)
-
-  ASSERT(fi%nst_linear == fo%nst_linear)
+  call fi%check_compatibility_with(fo) 
+  ASSERT(fi%type() == R_TYPE_VAL)
 
   points_ = OP_ALL
   if(present(points)) points_ = points
@@ -65,11 +61,11 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
   if(present(ghost_update)) ghost_update_ = ghost_update
 
   if(op%mesh%parallel_in_domains .and. ghost_update_) then
-    ASSERT(.not. batch_is_packed(fi))
+    ASSERT(.not. fi%is_packed())
     
     do ist = 1, fi%nst_linear
 #ifdef HAVE_MPI
-      call X(vec_ghost_update)(op%mesh%vp, fi%states_linear(ist)%X(psi)(:))
+      call X(vec_ghost_update)(op%mesh%vp, fi%X(ff_linear)(:, ist))
 #endif
     end do
   end if
@@ -89,7 +85,7 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
   if(nri > 0) then
     if(.not.op%const_w) then
       call operate_non_const_weights()
-    else if(accel_is_enabled() .and. batch_is_packed(fi) .and. batch_is_packed(fo)) then
+    else if(fi%status() == BATCH_DEVICE_PACKED) then
       use_opencl = .true.
       call operate_opencl()
     else if(X(function_global) == OP_FORTRAN) then
@@ -99,7 +95,7 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
 ! for the moment this is not implemented
 #ifndef SINGLE_PRECISION
 
-      !$omp parallel private(ini, nri_loc, ist, pfi, pfo)
+      !$omp parallel private(ini, nri_loc, ist)
 #ifdef HAVE_OPENMP
       call multicomm_divide_range_omp(nri, ini, nri_loc)
 #else 
@@ -107,23 +103,21 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
       nri_loc = nri
 #endif
       
-      if(batch_is_packed(fi) .and. batch_is_packed(fo)) then
+      if(fi%status() == BATCH_PACKED) then
         
-        ASSERT(ubound(fi%pack%X(psi), dim = 2) == op%mesh%np_part)
-        ASSERT(ubound(fo%pack%X(psi), dim = 2) >= op%mesh%np)
+        ASSERT(ubound(fi%X(ff_pack), dim = 2) >= op%mesh%np_part)
+        ASSERT(ubound(fo%X(ff_pack), dim = 2) >= op%mesh%np)
         
         call X(operate_ri_vec)(op%stencil%size, wre(1), nri_loc, ri(1, ini), imin(ini), imax(ini), &
-          fi%pack%X(psi)(1, 1), log2(fi%pack%size_real(1)), fo%pack%X(psi)(1, 1))
+          fi%X(ff_pack)(1, 1), log2(fi%pack_size_real(1)), fo%X(ff_pack)(1, 1))
       else
         do ist = 1, fi%nst_linear
 
-          ASSERT(ubound(fi%states_linear(ist)%X(psi), dim = 1) == op%mesh%np_part)
-          ASSERT(ubound(fo%states_linear(ist)%X(psi), dim = 1) >= op%mesh%np)
+          ASSERT(ubound(fi%X(ff_linear), dim=1) == op%mesh%np_part)
+          ASSERT(ubound(fo%X(ff_linear), dim=1) >= op%mesh%np)
           
-          pfi => fi%states_linear(ist)%X(psi)(:)
-          pfo => fo%states_linear(ist)%X(psi)(:)
-          
-          call X(operate_ri_vec)(op%stencil%size, wre(1), nri_loc, ri(1, ini), imin(ini), imax(ini), pfi(1), logldf, pfo(1))
+          call X(operate_ri_vec)(op%stencil%size, wre(1), nri_loc, ri(1, ini), imin(ini), imax(ini), &
+            fi%X(ff_linear)(1, ist), logldf, fo%X(ff_linear)(1, ist))
         end do
       end if
       !$omp end parallel
@@ -185,7 +179,7 @@ contains
 
     nn = op%stencil%size
 
-    select case(batch_status(fi))
+    select case(fi%status())
 
     case(BATCH_DEVICE_PACKED)
 
@@ -197,7 +191,7 @@ contains
       do ll = 1, nri
         do ii = imin(ll) + 1, imax(ll)
           do ist = 1, fi%nst_linear
-            fo%states_linear(ist)%X(psi)(ii) = sum(wre(1:nn)*fi%states_linear(ist)%X(psi)(ii + ri(1:nn, ll)))
+            fo%X(ff_linear)(ii, ist) = sum(wre(1:nn)*fi%X(ff_linear)(ii + ri(1:nn, ll), ist))
           end do
         end do
       end do
@@ -205,12 +199,11 @@ contains
 
     case(BATCH_PACKED)
 
-      ASSERT(allocated(fo%pack%X(psi)))
       !$omp parallel do private(ll, ist, ii)
       do ll = 1, nri
         do ii = imin(ll) + 1, imax(ll)
           do ist = 1, fi%nst_linear
-            fo%pack%X(psi)(ist, ii) = sum(wre(1:nn)*fi%pack%X(psi)(ist, ii + ri(1:nn, ll)))
+            fo%X(ff_pack)(ist, ii) = sum(wre(1:nn)*fi%X(ff_pack)(ist, ii + ri(1:nn, ll)))
           end do
         end do
       end do
@@ -232,7 +225,7 @@ contains
     factor_ = M_ONE
     if(present(factor)) factor_ = factor
 
-    select case(batch_status(fi))
+    select case(fi%status())
 
     case(BATCH_DEVICE_PACKED)
 
@@ -244,7 +237,7 @@ contains
       do ll = 1, nri
         nn = op%nn(ll)
         forall(ist = 1:fi%nst_linear, ii = imin(ll) + 1:imax(ll))
-          fo%states_linear(ist)%X(psi)(ii) = factor_*sum(op%w(1:nn, ii)*fi%states_linear(ist)%X(psi)(ii + ri(1:nn, ll)))
+          fo%X(ff_linear)(ii, ist) = factor_*sum(op%w(1:nn, ii)*fi%X(ff_linear)(ii + ri(1:nn, ll), ist))
         end forall
       end do
       !$omp end parallel do
@@ -255,7 +248,7 @@ contains
       do ll = 1, nri
         nn = op%nn(ll)
         forall(ist = 1:fi%nst_linear, ii = imin(ll) + 1:imax(ll))
-          fo%pack%X(psi)(ist, ii) = factor_*sum(op%w(1:nn, ii)*fi%pack%X(psi)(ist, ii + ri(1:nn, ll)))
+          fo%X(ff_pack)(ist, ii) = factor_*sum(op%w(1:nn, ii)*fi%X(ff_pack)(ist, ii + ri(1:nn, ll)))
         end forall
       end do
       !$omp end parallel do
@@ -276,29 +269,35 @@ contains
     PUSH_SUB(X(nl_operator_operate_batch).operate_opencl)
     call profiling_in(prof, "CL_NL_OPERATOR")
 
+    ASSERT(accel_buffer_is_allocated(fi%ff_device))
+    ASSERT(accel_buffer_is_allocated(fo%ff_device))
+    
     kernel_operate = op%kernel
 
     call accel_create_buffer(buff_weights, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, op%stencil%size)
 
     call accel_write_buffer(buff_weights, op%stencil%size, wre)
 
-    ASSERT(fi%pack%size_real(1) == fo%pack%size_real(1))
+    ASSERT(fi%pack_size_real(1) == fo%pack_size_real(1))
 
-    eff_size = fi%pack%size_real(1)
+    eff_size = fi%pack_size_real(1)
 
     select case(function_opencl)
     case(OP_INVMAP)
       ASSERT(points_ == OP_ALL)
-     
+      ASSERT(accel_buffer_is_allocated(op%buff_ri))
+      ASSERT(accel_buffer_is_allocated(op%buff_imin))
+      ASSERT(accel_buffer_is_allocated(op%buff_imax))
+      
       call accel_set_kernel_arg(kernel_operate, 0, op%stencil%size)
       call accel_set_kernel_arg(kernel_operate, 1, nri)
       call accel_set_kernel_arg(kernel_operate, 2, op%buff_ri)
       call accel_set_kernel_arg(kernel_operate, 3, op%buff_imin)
       call accel_set_kernel_arg(kernel_operate, 4, op%buff_imax)
       call accel_set_kernel_arg(kernel_operate, 5, buff_weights)
-      call accel_set_kernel_arg(kernel_operate, 6, fi%pack%buffer)
+      call accel_set_kernel_arg(kernel_operate, 6, fi%ff_device)
       call accel_set_kernel_arg(kernel_operate, 7, log2(eff_size))
-      call accel_set_kernel_arg(kernel_operate, 8, fo%pack%buffer)
+      call accel_set_kernel_arg(kernel_operate, 8, fo%ff_device)
       call accel_set_kernel_arg(kernel_operate, 9, log2(eff_size))
 
       bsize = accel_kernel_workgroup_size(kernel_operate)
@@ -307,14 +306,16 @@ contains
       call accel_kernel_run(kernel_operate, (/eff_size, pnri/), (/eff_size, bsize/eff_size/))
 
     case(OP_MAP)
+      ASSERT(accel_buffer_is_allocated(op%buff_ri))
+      ASSERT(accel_buffer_is_allocated(op%buff_map))
 
       call accel_set_kernel_arg(kernel_operate, 0, op%mesh%np)
       call accel_set_kernel_arg(kernel_operate, 1, op%buff_ri)
       call accel_set_kernel_arg(kernel_operate, 2, op%buff_map)
       call accel_set_kernel_arg(kernel_operate, 3, buff_weights)
-      call accel_set_kernel_arg(kernel_operate, 4, fi%pack%buffer)
+      call accel_set_kernel_arg(kernel_operate, 4, fi%ff_device)
       call accel_set_kernel_arg(kernel_operate, 5, log2(eff_size))
-      call accel_set_kernel_arg(kernel_operate, 6, fo%pack%buffer)
+      call accel_set_kernel_arg(kernel_operate, 6, fo%ff_device)
       call accel_set_kernel_arg(kernel_operate, 7, log2(eff_size))
 
       iarg = 7
@@ -348,7 +349,7 @@ contains
         bsize = accel_kernel_workgroup_size(kernel_operate)
       end if
       
-      if(bsize < fi%pack%size_real(1)) then
+      if(bsize < fi%pack_size_real(1)) then
         message(1) = "The value of StatesBlockSize is too large for this OpenCL implementation."
         call messages_fatal(1)
       end if
@@ -374,14 +375,17 @@ contains
       
     case(OP_NOMAP)
       ASSERT(points_ == OP_ALL)
-
+      ASSERT(accel_buffer_is_allocated(op%buff_stencil))
+      ASSERT(accel_buffer_is_allocated(op%buff_xyz_to_ip))
+      ASSERT(accel_buffer_is_allocated(op%buff_ip_to_xyz))
+      
       call accel_set_kernel_arg(kernel_operate, 0, op%mesh%np)
       call accel_set_kernel_arg(kernel_operate, 1, op%buff_stencil)
       call accel_set_kernel_arg(kernel_operate, 2, op%buff_xyz_to_ip)
       call accel_set_kernel_arg(kernel_operate, 3, op%buff_ip_to_xyz)
       call accel_set_kernel_arg(kernel_operate, 4, buff_weights)
-      call accel_set_kernel_arg(kernel_operate, 5, fi%pack%buffer)
-      call accel_set_kernel_arg(kernel_operate, 6, fo%pack%buffer)
+      call accel_set_kernel_arg(kernel_operate, 5, fi%ff_device)
+      call accel_set_kernel_arg(kernel_operate, 6, fo%ff_device)
       call accel_set_kernel_arg(kernel_operate, 7, log2(eff_size))
 
       if(accel_use_shared_mem()) then
@@ -394,7 +398,7 @@ contains
         bsize = accel_kernel_workgroup_size(kernel_operate)
       end if
 
-      if(bsize < fi%pack%size_real(1)) then
+      if(bsize < fi%pack_size_real(1)) then
         call messages_write('The value of StatesBlockSize is too large for this OpenCL implementation.')
         call messages_fatal()
       end if
@@ -430,7 +434,12 @@ contains
       end select
     end if
     
-    call accel_finish()
+    ! when doing the inner points the synchronization is done
+    ! in X(ghost_update_batch_finish) after a Waitall call to
+    ! overlap communication and computation
+    if(points_ /= OP_INNER) then
+      call accel_finish()
+    end if
 
     call accel_release_buffer(buff_weights)
 
@@ -445,7 +454,7 @@ end subroutine X(nl_operator_operate_batch)
 subroutine X(nl_operator_operate)(op, fi, fo, ghost_update, profile, points)
   R_TYPE,              intent(inout) :: fi(:)  !< fi(op%np_part)
   type(nl_operator_t), intent(in)    :: op
-  R_TYPE,  target,     intent(out)   :: fo(:)  !< fo(op%np). target for batch_add_state
+  R_TYPE,  target,     intent(out)   :: fo(:)
   logical, optional,   intent(in)    :: ghost_update
   logical, optional,   intent(in)    :: profile
   integer, optional,   intent(in)    :: points
@@ -454,16 +463,13 @@ subroutine X(nl_operator_operate)(op, fi, fo, ghost_update, profile, points)
 
   PUSH_SUB(X(nl_operator_operate))
 
-  call batch_init     (batch_fi, 1)
-  call batch_add_state(batch_fi, fi)
-
-  call batch_init     (batch_fo, 1)
-  call batch_add_state(batch_fo, fo)
+  call batch_init(batch_fi, fi)
+  call batch_init(batch_fo, fo)
 
   call X(nl_operator_operate_batch)(op, batch_fi, batch_fo, ghost_update, profile, points)
 
-  call batch_end(batch_fi)
-  call batch_end(batch_fo)
+  call batch_fi%end()
+  call batch_fo%end()
 
   POP_SUB(X(nl_operator_operate))
 end subroutine X(nl_operator_operate)

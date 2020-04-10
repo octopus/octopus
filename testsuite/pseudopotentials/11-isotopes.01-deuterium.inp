@@ -12,3 +12,4 @@ Radius = 6.0
 Debug = info
 
 ExperimentalFeatures = yes
+StatesPack = yes

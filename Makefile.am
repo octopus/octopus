@@ -35,7 +35,7 @@ EXTRA_DIST =     \
 	debian/README.Debian debian/rules
 
 DISTCLEANFILES = \
-	ChangeLog config.log config.status
+	config.log config.status
 
 DEB_DIR = deb-work
 

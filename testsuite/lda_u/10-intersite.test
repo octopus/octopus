@@ -1,0 +1,47 @@
+# -*- coding: utf-8 mode: shell-script -*-
+
+Test       : Hubbard forces and intersite interaction
+Program    : octopus
+TestGroups : short-run, finite_systems_3d, lda_u
+Enabled    : Yes
+
+Processors : 1
+Input      : 10-intersite.01-Na2.inp
+
+match ; SCF convergence    ; GREPCOUNT(static/info, 'SCF converged') ; 1
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ;  -0.32776453
+match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ;   0.16666667
+match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ;  -0.29343905
+match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ;   0.45971414
+match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ;  -0.20237345
+match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ;  -0.05891340
+match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;   0.18419387
+match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ;  -0.94175534
+match ; Hubbard energy     ; GREPFIELD(static/info, 'Hubbard     =', 3) ;   0.06470273
+
+match ; Max abs force ; GREPFIELD(static/info, 'Max abs force', 6) ; 0.009330
+match ;   Total force ; GREPFIELD(static/info, 'Total force', 5)   ; 0.000000
+
+match ; Ueff 3d Na1 ; LINEFIELD(static/effectiveU, -10, 4) ; 0.224314
+match ; Ueff 3d Na2 ; LINEFIELD(static/effectiveU, -9, 4) ;  0.224314
+
+match ; V Na1-Na2 ;  GREPFIELD(static/info, '1        Na  3s 2 3s', 7); 0.077567
+
+Processors : 4
+Input      : 10-intersite.02-graphite.inp
+
+#Units are in eV_angstrom
+Precision : 0.002
+match ; SCF convergence    ; GREPCOUNT(static/info, 'SCF converged') ; 1
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ;  -597.37055186
+match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ;  -389.65192243
+match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ;  -113.93962823
+match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ;   156.80224203
+match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ;  -194.96051888
+match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ;  -27.29431678
+match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;   386.92507718
+match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ;  -543.70305661
+match ; Hubbard energy     ; GREPFIELD(static/info, 'Hubbard     =', 3) ;   14.51196369
+
+match ; V C1-C2 ;  GREPFIELD(static/info, '1         C  2p 1 2p  2.470', 7); 2.494068
+

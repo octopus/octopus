@@ -21,5 +21,4 @@ TotalStates = 128
 SCFCalculatePartialCharges = yes
 
 ExperimentalFeatures = yes
-
-DisableAccel = yes
+StatesPack = yes

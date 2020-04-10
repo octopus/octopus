@@ -26,6 +26,7 @@ UseFineMesh = yes
 ExperimentalFeatures = yes
 
 ProfilingMode = prof_time
+ProfilingOutputYAML = yes
 
 LCAOAlternative = yes
 
@@ -39,3 +40,4 @@ ConvRelDens = 1e-6
 FilterPotentials = filter_none
 
 MixField = density
+StatesPack = yes

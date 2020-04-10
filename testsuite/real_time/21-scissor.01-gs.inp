@@ -1,0 +1,12 @@
+CalculationMode = gs
+
+%Coordinates
+'Na'  | -1.4646408*angstrom | 0 | 0 | yes
+'Na'  |  1.4646408*angstrom | 0 | 0 | yes
+%
+
+FromScratch = yes
+
+Spacing = 0.32*angstrom
+Radius = 6.0*angstrom
+StatesPack = yes

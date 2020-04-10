@@ -21,7 +21,7 @@ subroutine X(pnfft_forward)(pnfft, in, out)
   R_TYPE,           intent(in)  :: in(:,:,:)
   CMPLX,            intent(out) :: out(:,:,:)
 
-  integer :: i1, i2, i3
+!  integer :: i1, i2, i3
 
   PUSH_SUB(X(pnfft_forward))
 
@@ -48,8 +48,10 @@ subroutine X(pnfft_forward)(pnfft, in, out)
 
   pnfft%f_hat(:,:,:) = in(:,:,:)
 
+#ifdef HAVE_PNFFT
   call pnfft_trafo(pnfft%plan)
-
+#endif
+  
   out(:,:,:) = pnfft%f(:,:,:)
 
 
@@ -73,7 +75,7 @@ subroutine X(pnfft_backward)(pnfft, in, out)
   CMPLX,            intent(in)  :: in (:,:,:)
   R_TYPE,           intent(out) :: out(:,:,:)
 
-  integer :: i1, i2, i3
+!  integer :: i1, i2, i3
 
   PUSH_SUB(X(pnfft_backward))
 
@@ -95,9 +97,10 @@ subroutine X(pnfft_backward)(pnfft, in, out)
 
   pnfft%f(:,:,:) = in(:,:,:)
 
-
+#ifdef HAVE_PNFFT
   call pnfft_adj(pnfft%plan)
-
+#endif
+  
   out(:,:,:) = pnfft%f_hat(:,:,:)
 
 !   do i1 = 1,pnfft%N_local(1)

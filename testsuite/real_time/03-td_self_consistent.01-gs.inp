@@ -22,4 +22,5 @@ Radius = 6
 MixField = density
 
 ConvRelDens = 1e-7
-EingensolverTolerance = 1e-8
+EigensolverTolerance = 1e-8
+StatesPack = yes

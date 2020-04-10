@@ -43,7 +43,9 @@ module accel_blas_oct_m
     daccel_trsm,                   &
     zaccel_trsm,                   &
     daccel_gemm,                   &
-    zaccel_gemm
+    zaccel_gemm,                   &
+    daccel_gemv,                   &
+    zaccel_gemv
 
   integer, parameter, public ::                      &
     CUBLAS_DIAG_NON_UNIT = 0,                        &
@@ -211,6 +213,47 @@ module accel_blas_oct_m
     end subroutine cuda_blas_zgemm
   end interface
 
+
+  ! GEMV
+  interface
+    subroutine cuda_blas_dgemv(handle, transa, m, n, alpha, A, lda, x, incx, beta, y, incy)
+      use iso_c_binding
+      
+      implicit none
+      
+      type(c_ptr),  intent(in)    :: handle
+      integer,      intent(in)    :: transa
+      integer(8),   intent(in)    :: m
+      integer(8),   intent(in)    :: n
+      type(c_ptr),  intent(in)    :: alpha
+      type(c_ptr),  intent(in)    :: A
+      integer(8),   intent(in)    :: lda
+      type(c_ptr),  intent(in)    :: x
+      integer(8),   intent(in)    :: incx
+      type(c_ptr),  intent(in)    :: beta
+      type(c_ptr),  intent(inout) :: y
+      integer(8),   intent(in)    :: incy       
+    end subroutine cuda_blas_dgemv
+
+    subroutine cuda_blas_zgemv(handle, transa, m, n, alpha, A, lda, x, incx, beta, y, incy)
+      use iso_c_binding
+      
+      implicit none
+
+      type(c_ptr),  intent(in)    :: handle
+      integer,      intent(in)    :: transa
+      integer(8),   intent(in)    :: m
+      integer(8),   intent(in)    :: n
+      type(c_ptr),  intent(in)    :: alpha
+      type(c_ptr),  intent(in)    :: A
+      integer(8),   intent(in)    :: lda
+      type(c_ptr),  intent(in)    :: x
+      integer(8),   intent(in)    :: incx
+      type(c_ptr),  intent(in)    :: beta
+      type(c_ptr),  intent(inout) :: y
+      integer(8),   intent(in)    :: incy       
+    end subroutine cuda_blas_zgemv
+  end interface
   ! SYRK/HERK
   interface
     subroutine cuda_blas_dsyrk(handle, uplo, trans, n, k, alpha, A, lda, beta, C, ldc)

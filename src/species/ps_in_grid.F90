@@ -23,6 +23,7 @@ module ps_in_grid_oct_m
   use global_oct_m
   use logrid_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use profiling_oct_m
 
   implicit none
@@ -40,6 +41,7 @@ module ps_in_grid_oct_m
     first_point_extrapolate
 
   type ps_in_grid_t
+    ! Components are public by default
     type(logrid_t) :: g                !< log grid where the pseudos are defined
 
     FLOAT          :: zval             !< valence charge
@@ -48,15 +50,15 @@ module ps_in_grid_oct_m
     FLOAT, pointer :: vps(:, :)        !< the pseudopotential (l=0 .. no_l_channels-1)
     FLOAT, pointer :: KB(:,:)          !< Kleinman-Bylander projectors
     FLOAT, pointer :: dkbcos(:)        !< Kleinman-Bylander cosine
-    FLOAT, pointer :: dknorm(:)        !< Kleinman-Bylander norm
+    FLOAT, pointer, private :: dknorm(:)        !< Kleinman-Bylander norm
     FLOAT, pointer :: kb_radius(:)     !< radius of KB projectors
 
     integer        :: so_no_l_channels
     FLOAT, pointer :: so_vps(:,:)      !< spin-orbit components (l=1 .. so_no_l_channels)
-    FLOAT, pointer :: so_KB(:,:)       !< Kleinman-Bylander projectors
-    FLOAT, pointer :: so_dkbcos(:)     !< Kleinman-Bylander cosine
-    FLOAT, pointer :: so_dknorm(:)     !< Kleinman-Bylander norm
-    FLOAT, pointer :: so_kb_radius(:)  !< radius of KB projectors
+    FLOAT, pointer, private :: so_KB(:,:)       !< Kleinman-Bylander projectors
+    FLOAT, pointer, private :: so_dkbcos(:)     !< Kleinman-Bylander cosine
+    FLOAT, pointer, private :: so_dknorm(:)     !< Kleinman-Bylander norm
+    FLOAT, pointer, private :: so_kb_radius(:)  !< radius of KB projectors
     
     FLOAT, pointer :: vlocal(:)        !< local part of the pseudopotential
     FLOAT, pointer :: rphi(:, :,:)     !< pseudo wavefunctions
@@ -137,10 +139,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine ps_in_grid_vlocal(ps, l_loc, rcore)
+  subroutine ps_in_grid_vlocal(ps, l_loc, rcore, namespace)
     type(ps_in_grid_t), intent(inout) :: ps
     integer,            intent(in)    :: l_loc
     FLOAT,              intent(in)    :: rcore
+    type(namespace_t),  intent(in)    :: namespace
 
     integer :: ir
     FLOAT :: a, b, qtot
@@ -154,7 +157,7 @@ contains
     else if(l_loc == -1) then
       if(ps%g%flavor /= LOGRID_PSF) then
         message(1) = "For the moment, Vanderbilt local potentials are only possible with tm grids."
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
 
       a = CNST(1.82) / rcore
@@ -309,8 +312,9 @@ contains
 
   ! ---------------------------------------------------------
   !> checks normalization of the pseudo wavefunctions
-  subroutine ps_in_grid_check_rphi(ps)
+  subroutine ps_in_grid_check_rphi(ps, namespace)
     type(ps_in_grid_t), intent(in) :: ps
+    type(namespace_t),  intent(in) :: namespace
     
     integer :: l
     FLOAT   :: nrm
@@ -324,7 +328,7 @@ contains
       if (nrm > CNST(1.0e-5)) then
         write(message(1), '(a,i2,a)') "Eigenstate for l = ", l-1, ' is not normalized.'
         write(message(2), '(a, f12.6,a)') '(abs(1 - norm) = ', nrm, ')'
-        call messages_warning(2)
+        call messages_warning(2, namespace=namespace)
       end if
     end do
 

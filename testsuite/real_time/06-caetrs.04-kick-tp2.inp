@@ -43,3 +43,4 @@ ParDomains = no
 ParStates = 5
 
 
+StatesPack = yes

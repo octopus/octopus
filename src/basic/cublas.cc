@@ -35,6 +35,7 @@
 typedef int cublasHandle_t;
 typedef int CUdeviceptr;
 typedef std::complex<double> cuDoubleComplex;
+typedef int cudaStream_t;
 #endif
 
 #define CUBLAS_SAFE_CALL(x) cublas_safe_call(#x, x)
@@ -87,11 +88,12 @@ static cublasStatus_t cublas_safe_call(const char * call, cublasStatus_t safe_ca
 
 #endif
 
-extern "C" void FC_FUNC_(cublas_init, CUBLAS_INIT)(cublasHandle_t ** handle){
+extern "C" void FC_FUNC_(cublas_init, CUBLAS_INIT)(cublasHandle_t ** handle, cudaStream_t ** stream){
 #ifdef HAVE_CUDA
   *handle = new cublasHandle_t;
   CUBLAS_SAFE_CALL(cublasCreate(*handle));
   CUBLAS_SAFE_CALL(cublasSetPointerMode(**handle, CUBLAS_POINTER_MODE_DEVICE));
+  CUBLAS_SAFE_CALL(cublasSetStream(**handle, **stream));
 #endif
 }
 
@@ -160,6 +162,30 @@ extern "C" void FC_FUNC_(cuda_blas_zgemm, CUDA_BLAS_ZGEMM)
 #endif
 }
 
+extern "C" void FC_FUNC_(cuda_blas_dgemv, CUDA_BLAS_DGEMV)
+  (cublasHandle_t ** handle, fint * transa, fint8 * m, fint8 * n, 
+   CUdeviceptr ** alpha, CUdeviceptr ** A, fint8 * lda, CUdeviceptr ** x, fint8 * incx, 
+   CUdeviceptr ** beta, CUdeviceptr ** y, fint8 * incy){
+  
+#ifdef HAVE_CUDA
+  CUBLAS_SAFE_CALL(cublasDgemv(**handle, (cublasOperation_t) *transa, *m, *n,
+			       (double *) ** alpha, (double *) **A, *lda, (double *) **x, *incx,
+			       (double *) ** beta, (double *) **y, *incy));
+#endif
+}
+
+extern "C" void FC_FUNC_(cuda_blas_zgemv, CUDA_BLAS_ZGEMV)
+  (cublasHandle_t ** handle, fint * transa, fint8 * m, fint8 * n, 
+   CUdeviceptr ** alpha, CUdeviceptr ** A, fint8 * lda, CUdeviceptr ** x, fint8 * incx, 
+   CUdeviceptr ** beta, CUdeviceptr ** y, fint8 * incy){
+  
+#ifdef HAVE_CUDA
+  CUBLAS_SAFE_CALL(cublasZgemv(**handle, (cublasOperation_t) *transa, *m, *n, 
+			       (cuDoubleComplex *) **alpha, (cuDoubleComplex *) **A, *lda, (cuDoubleComplex *) **x, *incx,
+			       (cuDoubleComplex *) **beta, (cuDoubleComplex *) **y, *incy));
+#endif
+}
+
 extern "C" void FC_FUNC_(cuda_blas_dsyrk, CUDA_BLAS_DSYRK)
   (cublasHandle_t ** handle, fint * uplo, fint * trans, fint8 * n, fint8 * k,
    CUdeviceptr **alpha, CUdeviceptr ** A, fint8 * lda,
@@ -207,5 +233,11 @@ extern "C" void FC_FUNC_(cuda_blas_ztrsm, CUDA_BLAS_ZTRSM)
   CUBLAS_SAFE_CALL(cublasZtrsm(**handle, (cublasSideMode_t) *side, (cublasFillMode_t) *uplo,
 			       (cublasOperation_t) *trans, (cublasDiagType_t) *diag,
 			       *m, *n, (cuDoubleComplex *) **alpha, (cuDoubleComplex *) **A, *lda, (cuDoubleComplex *) **B, *ldb));
+#endif
+}
+
+extern "C" void FC_FUNC_(cublas_set_stream, CUBLAS_SET_STREAM)(cublasHandle_t ** handle, cudaStream_t ** stream){
+#ifdef HAVE_CUDA
+  CUBLAS_SAFE_CALL(cublasSetStream(**handle, **stream));
 #endif
 }

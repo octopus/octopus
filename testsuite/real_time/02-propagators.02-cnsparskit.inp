@@ -33,6 +33,4 @@ TDPolarizationDirection = 1
 
 TDEnergyUpdateIter = 1
 
-
-FilterPotentials = filter_none
-
+StatesPack = yes

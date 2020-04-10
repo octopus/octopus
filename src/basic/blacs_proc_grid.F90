@@ -38,11 +38,12 @@ module blacs_proc_grid_oct_m
     blacs_proc_grid_null
 
   type blacs_proc_grid_t
+    ! Components are public by default
     integer          :: context       !< The blacs context, -1 is object is null.
     integer          :: nprocs        !< Number of processors.
     integer          :: nprow         !< Number of processors per row.
     integer          :: npcol         !< Number of processors per column.
-    integer          :: iam           !< Process indentifier.
+    integer, private :: iam           !< Process indentifier.
     integer          :: myrow         !< The row of the processor in the processor grid.
     integer          :: mycol         !< The column of the processor in the processor grid.
     integer, pointer :: usermap(:, :) !< The index of each processor in the grid.

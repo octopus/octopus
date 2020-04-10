@@ -312,8 +312,8 @@ contains
 #ifdef HAVE_LIBFM
     get_optional_libraries = trim(get_optional_libraries)//' libfm'
 #endif
-#ifdef HAVE_LIBISF
-    get_optional_libraries = trim(get_optional_libraries)//' libisf'
+#if (defined HAVE_LIBISF) || (defined HAVE_PSOLVER)
+    get_optional_libraries = trim(get_optional_libraries)//' psolver'
 #endif
 #ifdef HAVE_LIBVDWXC
     get_optional_libraries = trim(get_optional_libraries)//' libvdwxc'

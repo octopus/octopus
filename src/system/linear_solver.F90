@@ -24,19 +24,21 @@ module linear_solver_oct_m
   use derivatives_oct_m
   use global_oct_m
   use grid_oct_m
-  use hamiltonian_oct_m
+  use hamiltonian_elec_oct_m
   use lalg_basic_oct_m
   use linear_response_oct_m
-  use parser_oct_m
   use mesh_oct_m
   use mesh_batch_oct_m
   use mesh_function_oct_m
   use messages_oct_m
+  use namespace_oct_m
+  use parser_oct_m
   use profiling_oct_m
   use preconditioners_oct_m
   use smear_oct_m
   use solvers_oct_m
-  use states_oct_m
+  use states_elec_oct_m
+  use wfs_elec_oct_m
 
   implicit none
 
@@ -54,22 +56,25 @@ module linear_solver_oct_m
        linear_solver_obsolete_variables
 
   type linear_solver_t
-     integer                :: solver         
-     type(preconditioner_t) :: pre
-     integer                :: max_iter
+    private
+    integer,                public :: solver
+    type(preconditioner_t), public :: pre
+    integer                        :: max_iter
   end type linear_solver_t
 
   type(profile_t), save :: prof, prof_batch
 
   type linear_solver_args_t
-    type(linear_solver_t), pointer :: ls
-    type(hamiltonian_t),   pointer :: hm
-    type(grid_t),          pointer :: gr
-    type(states_t),        pointer :: st
-    integer                        :: ist
-    integer                        :: ik
-    FLOAT                          :: dshift
-    CMPLX                          :: zshift
+    private
+    type(namespace_t),        pointer :: namespace
+    type(linear_solver_t),    pointer :: ls
+    type(hamiltonian_elec_t), pointer :: hm
+    type(grid_t),             pointer :: gr
+    type(states_elec_t),      pointer :: st
+    integer                           :: ist
+    integer                           :: ik
+    FLOAT                             :: dshift
+    CMPLX                             :: zshift
   end type linear_solver_args_t
 
   type(linear_solver_args_t) :: args
@@ -77,8 +82,9 @@ module linear_solver_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine linear_solver_init(this, gr, states_are_real, def_solver)
+  subroutine linear_solver_init(this, namespace, gr, states_are_real, def_solver)
     type(linear_solver_t),  intent(out)   :: this
+    type(namespace_t),      intent(in)    :: namespace
     type(grid_t),           intent(in)    :: gr
     logical,                intent(in)    :: states_are_real !< for choosing solver
     integer(8), optional,   intent(in)    :: def_solver
@@ -146,7 +152,7 @@ contains
       end if
     end if
 
-    call parse_variable("LinearSolver", defsolver_, fsolver)
+    call parse_variable(namespace, "LinearSolver", defsolver_, fsolver)
 
     ! set up pointer for dot product and norm in QMR solvers
     call mesh_init_mesh_aux(gr%mesh)
@@ -154,7 +160,7 @@ contains
     !the last 2 digits select the linear solver
     this%solver = mod(fsolver, 100)
 
-    call preconditioner_init(this%pre, gr)
+    call preconditioner_init(this%pre, namespace, gr)
 
     !%Variable LinearSolverMaxIter
     !%Type integer
@@ -164,10 +170,10 @@ contains
     !% Maximum number of iterations the linear solver does, even if
     !% convergence is not achieved.
     !%End
-    call parse_variable("LinearSolverMaxIter", 1000, this%max_iter)
+    call parse_variable(namespace, "LinearSolverMaxIter", 1000, this%max_iter)
 
     write(message(1),'(a)') 'Linear Solver'
-    call messages_print_stress(stdout, trim(message(1)))
+    call messages_print_stress(stdout, trim(message(1)), namespace=namespace)
     
     ! solver 
     select case(this%solver)
@@ -201,7 +207,7 @@ contains
 
     call messages_info(1)
     
-    call messages_print_stress(stdout)
+    call messages_print_stress(stdout, namespace=namespace)
 
     if(this%solver == OPTION__LINEARSOLVER__MULTIGRID) &
       call messages_experimental("Multigrid linear solver")
@@ -237,14 +243,15 @@ contains
 
   ! ----------------------------------------------------------
   
-  subroutine linear_solver_obsolete_variables(old_prefix, new_prefix)
+  subroutine linear_solver_obsolete_variables(namespace, old_prefix, new_prefix)
+    type(namespace_t),   intent(in)    :: namespace
     character(len=*),    intent(in)    :: old_prefix
     character(len=*),    intent(in)    :: new_prefix
     
-    call messages_obsolete_variable(trim(old_prefix)//"LinearSolver", trim(new_prefix)//"LinearSolver")
-    call messages_obsolete_variable(trim(old_prefix)//"LinearSolverMaxIter", trim(new_prefix)//"LinearSolverMaxIter")
+    call messages_obsolete_variable(namespace, trim(old_prefix)//"LinearSolver", trim(new_prefix)//"LinearSolver")
+    call messages_obsolete_variable(namespace, trim(old_prefix)//"LinearSolverMaxIter", trim(new_prefix)//"LinearSolverMaxIter")
 
-    call preconditioner_obsolete_variables(old_prefix, new_prefix)
+    call preconditioner_obsolete_variables(namespace, old_prefix, new_prefix)
 
   end subroutine linear_solver_obsolete_variables
 

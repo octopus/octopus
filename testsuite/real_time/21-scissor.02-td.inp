@@ -1,0 +1,29 @@
+CalculationMode = td
+
+%Coordinates
+'Na'  | -1.4646408*angstrom | 0 | 0 | yes
+'Na'  |  1.4646408*angstrom | 0 | 0 | yes
+%
+
+FromScratch = yes
+
+Spacing = 0.32*angstrom
+Radius = 6.0*angstrom
+
+TDMaxSteps = 50
+
+TDPropagator = aetrs
+
+TDDeltaStrength = 0.01/angstrom
+
+%TDPolarization
+ 1/sqrt(2) | -1/sqrt(2) | 0
+ 1/sqrt(2) |  1/sqrt(2) | 0
+ 1/sqrt(2) |  0         | 1/sqrt(2)
+%
+   
+TDPolarizationDirection = 1
+TDPolarizationEquivAxes = 3
+
+TDScissor = 0.2
+StatesPack = yes

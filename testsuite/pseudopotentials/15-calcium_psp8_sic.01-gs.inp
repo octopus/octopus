@@ -21,3 +21,4 @@ FromScratch = yes
 
 SICCorrection = sic_amaldi
 
+StatesPack = yes

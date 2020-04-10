@@ -22,6 +22,7 @@ module atomic_oct_m
   use global_oct_m
   use logrid_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use profiling_oct_m
   use XC_F90(lib_m)
 
@@ -48,6 +49,7 @@ module atomic_oct_m
   integer, parameter :: VALCONF_STRING_LENGTH = 80
 
   type valconf_t
+    ! Components are public by default
     integer           :: z
     character(len=3)  :: symbol
     integer           :: type     !< 0 for the most normal valence configuration, 1 for semicore.

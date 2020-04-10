@@ -22,3 +22,4 @@ XCFunctional = gga_c_pw91
 
 FilterPotentials = filter_none
 
+StatesPack = yes

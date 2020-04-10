@@ -42,11 +42,12 @@ module ode_solver_oct_m
     ODE_MAXVAL =  ODE_PD89
 
   type ode_solver_t
-    integer :: solver_type     !< what solver to use (see ODE_* variables above)_oct_m
-    integer :: nsteps          !< how many steps to use
-    integer :: nsize           !< how many odes to solve simultaneously
+    private
+    integer, public :: solver_type     !< what solver to use (see ODE_* variables above)_oct_m
+    integer, public :: nsteps          !< how many steps to use
+    integer, public :: nsize           !< how many odes to solve simultaneously
+    FLOAT,   public :: tmax, tmin      !< integrate ODE from tmin to tmax
     integer :: vsize           !< vector size of ode method (used internally)
-    FLOAT   :: tmax, tmin      !< integrate ODE from tmin to tmax
     logical :: adaptive_steps  !< should we use adaptive steps?
     logical :: full_solution   !< if true the solution will be returned for all t, otherwise only at the endpoint t=tmax.
     FLOAT, pointer :: a(:,:), b(:), c(:), e(:) !< coefficients for the ode solver

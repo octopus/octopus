@@ -27,10 +27,12 @@ module poisson_isf_oct_m
   use messages_oct_m
   use mesh_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
   use scaling_function_oct_m
   use sgfft_oct_m
+  use submesh_oct_m
 
   implicit none
   
@@ -52,6 +54,7 @@ module poisson_isf_oct_m
   ! Datatype to store kernel values to solve Poisson equation
   ! on different communicators (configurations).
   type isf_cnf_t
+    private
     real(8), pointer  :: kernel(:, :, :)
     integer           :: nfft1, nfft2, nfft3
     type(mpi_grp_t)   :: mpi_grp
@@ -59,21 +62,24 @@ module poisson_isf_oct_m
   end type isf_cnf_t
 
   type poisson_isf_t
+    private
     integer         :: all_nodes_comm
     type(isf_cnf_t) :: cnf(1:N_CNF)
   end type poisson_isf_t
 
   integer, parameter :: order_scaling_function = 8 
 
+
 contains
 
   ! ---------------------------------------------------------
-  subroutine poisson_isf_init(this, mesh, cube, all_nodes_comm, init_world)
-    type(poisson_isf_t), intent(out)   :: this
-    type(mesh_t),        intent(in)    :: mesh
-    type(cube_t),        intent(inout) :: cube
-    integer,             intent(in)    :: all_nodes_comm
-    logical, optional,   intent(in)    :: init_world 
+  subroutine poisson_isf_init(this, namespace, mesh, cube, all_nodes_comm, init_world)
+    type(poisson_isf_t),       intent(out)   :: this
+    type(namespace_t), target, intent(in)    :: namespace
+    type(mesh_t),              intent(in)    :: mesh
+    type(cube_t),              intent(inout) :: cube
+    integer,                   intent(in)    :: all_nodes_comm
+    logical, optional,         intent(in)    :: init_world 
 
     integer :: n1, n2, n3
     integer :: i_cnf
@@ -137,7 +143,7 @@ contains
     !% How many nodes to use to solve the Poisson equation. A value of
     !% 0, the default, implies that all available nodes are used.
     !%End
-    call parse_variable('PoissonSolverNodes', default_nodes, nodes)
+    call parse_variable(namespace, 'PoissonSolverNodes', default_nodes, nodes)
 
     this%all_nodes_comm = all_nodes_comm
 
@@ -207,13 +213,14 @@ contains
   end subroutine poisson_isf_init
 
   ! ---------------------------------------------------------
-  subroutine poisson_isf_solve(this, mesh, cube, pot, rho, all_nodes)
+  subroutine poisson_isf_solve(this, mesh, cube, pot, rho, all_nodes, sm)
     type(poisson_isf_t), intent(in)    :: this
     type(mesh_t),        intent(in)    :: mesh
     type(cube_t),        intent(in)    :: cube
     FLOAT,               intent(out)   :: pot(:)
     FLOAT,               intent(in)    :: rho(:)
     logical,             intent(in)    :: all_nodes
+    type(submesh_t),     optional,  intent(in)    :: sm  !< If present pot and rho are assumed to come from it
 
     integer :: i_cnf, nn(1:3)
     type(cube_function_t) :: rho_cf
@@ -223,10 +230,14 @@ contains
     call cube_function_null(rho_cf)
     call dcube_function_alloc_RS(cube, rho_cf)
 
-    if(mesh%parallel_in_domains) then
-      call dmesh_to_cube(mesh, rho, cube, rho_cf, local=.true.)
+    if(present(sm)) then
+      call dsubmesh_to_cube(sm, rho, cube, rho_cf)
     else
-      call dmesh_to_cube(mesh, rho, cube, rho_cf)
+      if(mesh%parallel_in_domains) then
+        call dmesh_to_cube(mesh, rho, cube, rho_cf, local=.true.)
+      else
+        call dmesh_to_cube(mesh, rho, cube, rho_cf)
+      end if
     end if
 
     ! Choose configuration.
@@ -273,10 +284,14 @@ contains
 #endif
     end if
 
-    if(mesh%parallel_in_domains) then
-      call dcube_to_mesh(cube, rho_cf, mesh, pot, local=.true.)
+    if(present(sm)) then
+      call dcube_to_submesh(cube, rho_cf, sm, pot)
     else
-       call dcube_to_mesh(cube, rho_cf, mesh, pot)
+      if(mesh%parallel_in_domains) then
+        call dcube_to_mesh(cube, rho_cf, mesh, pot, local=.true.)
+      else
+        call dcube_to_mesh(cube, rho_cf, mesh, pot)
+      end if
     end if
     
     call dcube_function_free_RS(cube, rho_cf)
@@ -2053,7 +2068,7 @@ contains
     dr_gauss = 1.0e-08_8
     acc_gauss = 1.0e-08_8
     
-    iunit = io_open(trim(conf%share)//'/gequad.data', action = 'read', status = 'old', die = .true.)
+    iunit = io_open(trim(conf%share)//'/gequad.data', namespace_t(""), action = 'read', status = 'old', die = .true.)
 
     do i = 1, n_gauss
       read(iunit, *) idx, p_gauss(i), w_gauss(i)

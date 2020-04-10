@@ -8,6 +8,20 @@ Enabled    : Yes
 Input: 11-classical.01-ground_state.inp
 match ; Total energy ; GREPFIELD(static/info, 'Total       =', 3) ; 0.89379037
 
-
 Input: 11-classical.02-oct.inp
 match ; J1 2nd iteration  ; GREPFIELD(opt-control/convergence, '##        2   ', 4) ; -1.03679212
+match ; J1 Laser CP e(t=0.0) ; LINEFIELD(opt-control/laser.bestJ1/cp,  2, 2) ; 8.04312948E-002
+match ; J1 Laser CP e(t=0.5) ; LINEFIELD(opt-control/laser.bestJ1/cp, 52, 2) ; 6.00613544E-002
+match ; J1 Laser CP e(t=1.0) ; LINEFIELD(opt-control/laser.bestJ1/cp, -1, 2) ; 8.04312948E-002
+match ; J1 Laser Fluence ; GREPFIELD(opt-control/laser.bestJ1/Fluence, 'Fluence', 3) ; 5.00000000E-003
+match ; J1 Laser theta 1 ; LINEFIELD(opt-control/laser.bestJ1/theta, 1, 2) ; 1.14666041E-001
+match ; J1 Laser theta 2 ; LINEFIELD(opt-control/laser.bestJ1/theta, 2, 2) ; 4.73059685E-001
+
+Input: 11-classical.03-oct_taylor.inp
+match ; J1 2nd iteration  ; GREPFIELD(opt-control/convergence, '##        2   ', 4) ; -1.03679212
+match ; J1 Laser CP e(t=0.0) ; LINEFIELD(opt-control/laser.bestJ1/cp,  2, 2) ; 8.04312948E-002
+match ; J1 Laser CP e(t=0.5) ; LINEFIELD(opt-control/laser.bestJ1/cp, 52, 2) ; 6.00613544E-002
+match ; J1 Laser CP e(t=1.0) ; LINEFIELD(opt-control/laser.bestJ1/cp, -1, 2) ; 8.04312948E-002
+match ; J1 Laser Fluence ; GREPFIELD(opt-control/laser.bestJ1/Fluence, 'Fluence', 3) ; 5.00000000E-003
+match ; J1 Laser theta 1 ; LINEFIELD(opt-control/laser.bestJ1/theta, 1, 2) ; 1.14666041E-001
+match ; J1 Laser theta 2 ; LINEFIELD(opt-control/laser.bestJ1/theta, 2, 2) ; 4.73059685E-001

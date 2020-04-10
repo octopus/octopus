@@ -59,3 +59,4 @@ TDPropagationTime = Tf
 
 FilterPotentials = filter_none
 
+StatesPack = yes

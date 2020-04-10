@@ -30,3 +30,4 @@ TDOutput = energy + angular
 MagneticGaugeCorrection = gipaw
 
 TDEnergyUpdateIter = 25
+StatesPack = yes

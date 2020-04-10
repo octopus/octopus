@@ -34,6 +34,9 @@ match ; Eigenvalue [  k=2, n=8   ] ; GREPFIELD(static/info, '#k =   2', 3, 9) ; 
 match ; Eigenvalue [  k=2, n=16  ] ; GREPFIELD(static/info, '#k =   2', 3, 17) ; 0.407338
 match ; Eigenvalue [  k=2, n=17  ] ; GREPFIELD(static/info, '#k =   2', 3, 18) ; 0.419124
 
+match ; Direct gap ; GREPFIELD(static/info, 'Direct gap', 7, 0) ; 0.2395
+match ; Indirect gap ; GREPFIELD(static/info, 'Indirect gap', 10, 0) ; 0.2153
+
 #No check for k-points higher than 2, as they might not belong to the IBZ
 
 Input      : 07-tb09.02-gs_nosymm.inp

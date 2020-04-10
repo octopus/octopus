@@ -19,7 +19,7 @@
 AC_PREREQ(2.59)
 # Note: the version string is written into ETSF_IO files, so when you update
 # this, update the results for test periodic_systems/09-etsf_io.test too.
-AC_INIT([Octopus],[9.2],[octopus-devel@tddft.org],[octopus])
+AC_INIT([Octopus],[selene],[octopus-devel@tddft.org],[octopus])
 AC_CONFIG_SRCDIR([src/basic/global.F90])
 AC_CONFIG_AUX_DIR([build-aux])
 AM_INIT_AUTOMAKE([subdir-objects])
@@ -122,6 +122,11 @@ if test -n "${enable_openmp_simd}" -a x"${enable_openmp_simd}" != x"no"; then
 fi
 
 
+
+AC_ARG_ENABLE(nvtx, AS_HELP_STRING([--enable-nvtx], [NVTX profiling support for Cuda version]))
+if test x"${enable_nvtx}" == x"yes" ; then
+  AC_DEFINE(HAVE_NVTX, 1, [defined if nvtx support is enabled])
+fi
 
 AC_ARG_ENABLE(cuda, AS_HELP_STRING([--enable-cuda], [Cuda support (experimental)]))
 
@@ -332,9 +337,20 @@ ACX_ELPA
 dnl check for Libfm
 ACX_LIBFM
 
-dnl check for ISF included from version 1.7.6 of BigDFT
-ACX_ISF
-AM_CONDITIONAL(COMPILE_ISF, test x${HAVE_COMP_ISF} = x1)
+dnl Check for PSOlver library.
+dnl PSolver depends on LibYAML and on Futile, so we first check for those one.
+AC_LANG_PUSH(C)
+ACX_YAML
+AC_LANG_POP(C)
+ACX_FUTILE
+ACX_PSOLVER
+
+dnl If PSolver was not found, we check for older versions of the library (1.7.x),
+dnl which we named ISF
+if test "x$acx_psolver_ok" = "xno"; then
+  ACX_ISF
+fi
+AM_CONDITIONAL(COMPILE_LIBYAML, test "x${HAVE_ISF}" == "x1")
 
 dnl check for PSPIO
 ACX_PSPIO
@@ -349,8 +365,6 @@ ACX_PATH_METIS
 ACX_PATH_PARMETIS
 AC_LANG_POP(C)
 AM_CONDITIONAL(COMPILE_METIS, test x${HAVE_COMP_METIS} = x1)
-
-ACX_YAML
 
 dnl performance analysis using the likwid marker API
 ACX_LIKWID
@@ -428,6 +442,7 @@ AC_CONFIG_FILES([Makefile
   testsuite/real_time/Makefile
   testsuite/lda_u/Makefile
   testsuite/linear_response/Makefile
+  testsuite/multisystem/Makefile
   testsuite/optimal_control/Makefile
   testsuite/periodic_systems/Makefile
   testsuite/photo_electron/Makefile

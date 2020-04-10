@@ -25,9 +25,7 @@ noinst_HEADERS =                          \
 	include/integer.F90               \
 	include/real.F90                  \
 	include/complex.F90               \
-	include/real_single.F90           \
 	include/complex.F90               \
-	include/complex_single.F90        \
 	include/undef.F90                 \
 	include/vectors.h                 \
 	include/fortran_types.h
@@ -42,6 +40,7 @@ include/config_F90.h: $(top_builddir)/config.h
 # Sources in basic
 basic_f_srcs =                                 \
 	basic/accel.F90                        \
+	basic/alloc_cache.F90                  \
 	basic/blacs.F90                        \
 	basic/blacs_proc_grid.F90              \
 	basic/calc_mode_par.F90                \
@@ -50,13 +49,15 @@ basic_f_srcs =                                 \
 	basic/cuda.F90                         \
 	basic/debug.F90                        \
 	basic/distributed.F90                  \
+	basic/gdlib.F90                        \
 	basic/global.F90                       \
 	basic/hardware.F90                     \
-	basic/ialist.F90                       \
 	basic/iihash.F90                       \
 	basic/io_binary_f.F90                  \
 	basic/io_csv_f.F90                     \
 	basic/io.F90                           \
+	basic/linked_list.F90                  \
+	basic/list_node.F90                    \
 	basic/loct.F90                         \
 	basic/loct_pointer.F90                 \
 	basic/lookup.F90                       \
@@ -65,8 +66,11 @@ basic_f_srcs =                                 \
 	basic/mpi.F90                          \
 	basic/mpi_lib.F90                      \
 	basic/multicomm.F90                    \
+	basic/namespace.F90                    \
+	basic/nvtx.F90                         \
 	basic/parser.F90                       \
 	basic/profiling.F90                    \
+	basic/clock.F90             \
 	basic/sort.F90                         \
 	basic/space.F90                        \
 	basic/string.F90                       \
@@ -75,16 +79,20 @@ basic_f_srcs =                                 \
 	basic/unit_system.F90                  \
 	basic/utils.F90                        \
 	basic/varinfo.F90                      \
+	basic/walltimer.F90                    \
 	basic/write_iter.F90
 
 basic_c_srcs =                                 \
+	basic/alloc_cache_low.cc               \
 	basic/cublas.cc                        \
 	basic/cuda_low.cc                      \
 	basic/getopt_f.c                       \
+	basic/iihash_low.cc                    \
 	basic/io_binary.c                      \
 	basic/io_csv.c                         \
+	basic/nvtx_low.cc                      \
 	basic/oct_f.c                          \
-	basic/oct_gdlib_f.c                    \
+	basic/gdlib_f.c                        \
 	basic/recipes.c                        \
 	basic/signals.c                        \
 	basic/sort_low.cc                      \
@@ -139,6 +147,7 @@ math_f_srcs =                                 \
 	math/math.F90                         \
 	math/matrix.F90                       \
 	math/matrix_ops.F90                   \
+	math/maxwell_function.F90             \
 	math/metis.F90                        \
 	math/minimizer.F90                    \
 	math/nfft.F90                         \
@@ -158,7 +167,8 @@ math_f_srcs =                                 \
 	math/splines.F90                      \
 	math/symm_op.F90                      \
 	math/tdfunction.F90                   \
-	math/young.F90
+	math/young.F90                        \
+        math/ylm_wannier.F90
 
 math_c_srcs =                                 \
 	math/checksum.c                       \
@@ -188,7 +198,7 @@ noinst_HEADERS +=                             \
 	math/root_solver_inc.F90              \
 	math/sparskit_inc.F90                 \
 	math/solvers_inc.F90                  \
-	math/symm_op_inc.F90
+	math/symm_op_inc.F90        
 
 # Sources in species
 species_f_srcs =                                 \
@@ -260,7 +270,9 @@ ions_srcs = $(ions_f_srcs) $(ions_c_srcs)
 
 # Sources in grid
 grid_f_srcs =                                 \
+	grid/allocate_hardware_aware_f.F90    \
 	grid/basins.F90                       \
+	grid/basis_set_abst.F90               \
 	grid/batch.F90                        \
 	grid/batch_ops.F90                    \
 	grid/boundaries.F90                   \
@@ -308,6 +320,7 @@ grid_f_srcs =                                 \
 	grid/vtk.F90
 
 grid_c_srcs =                                 \
+	grid/allocate_hardware_aware.cc       \
 	grid/hilbert.c                        \
 	grid/operate.c
 
@@ -339,6 +352,7 @@ noinst_HEADERS +=                             \
 
 # Sources in poisson
 poisson_f_srcs =                                 \
+	poisson/dressed_interaction.F90          \
 	poisson/poisson_cg.F90                   \
 	poisson/poisson_corrections.F90          \
 	poisson/poisson_cutoff.F90               \
@@ -346,9 +360,9 @@ poisson_f_srcs =                                 \
 	poisson/poisson_fft.F90                  \
 	poisson/poisson_fmm.F90                  \
 	poisson/poisson_isf.F90                  \
-	poisson/poisson_libisf.F90               \
 	poisson/poisson_multigrid.F90            \
 	poisson/poisson_no.F90                   \
+	poisson/poisson_psolver.F90              \
 	poisson/scaling_function.F90
 
 poisson_c_srcs =                                 \
@@ -360,8 +374,9 @@ noinst_HEADERS +=                                \
 	poisson/lazy_8_inc.F90                   \
 	poisson/poisson_inc.F90                  \
 	poisson/poisson_direct_sm_inc.F90        \
-	poisson/poisson_init_direct_inc.F90      \
-	poisson/solver_1d_solve_inc.F90
+	poisson/poisson_init_inc.F90             \
+	poisson/poisson_direct_inc.F90           \
+        poisson/poisson_fft_inc.F90
 
 # Sources in states
 states_f_srcs =                                 \
@@ -374,14 +389,18 @@ states_f_srcs =                                 \
 	states/opt_control_state.F90            \
 	states/physics_op.F90                   \
 	states/smear.F90                        \
-	states/states_block.F90                 \
-	states/states_calc.F90                  \
-	states/states_dim.F90                   \
-	states/states.F90                       \
-	states/states_group.F90                 \
-	states/states_io.F90                    \
-	states/states_parallel.F90              \
-	states/states_restart.F90
+	states/states_elec_block.F90            \
+	states/states_elec_calc.F90             \
+	states/states_elec_dim.F90              \
+	states/states_abst.F90                  \
+	states/states_elec.F90                  \
+	states/states_elec_group.F90            \
+	states/states_elec_io.F90               \
+	states/states_elec_parallel.F90         \
+	states/states_elec_restart.F90          \
+	states/states_mxll.F90                  \
+	states/states_mxll_restart.F90          \
+	states/wfs_elec.F90
 
 states_srcs = $(states_f_srcs)
 
@@ -392,10 +411,11 @@ noinst_HEADERS +=                               \
 	states/modelmb_density_matrix_inc.F90   \
 	states/modelmb_exchange_syms_inc.F90    \
 	states/physics_op_inc.F90               \
-	states/states_block_inc.F90             \
-	states/states_calc_inc.F90              \
-	states/states_inc.F90                   \
-	states/states_parallel_inc.F90
+	states/states_elec_block_inc.F90        \
+	states/states_elec_calc_inc.F90         \
+	states/states_elec_inc.F90              \
+	states/states_elec_parallel_inc.F90     \
+	states/wfs_elec_inc.F90
 
 # Sources in hamiltonian
 hamiltonian_f_srcs =                                 \
@@ -404,10 +424,13 @@ hamiltonian_f_srcs =                                 \
 	hamiltonian/boundary_op.F90                  \
 	hamiltonian/energy.F90                       \
 	hamiltonian/epot.F90                         \
+        hamiltonian/exchange_operator.F90            \
 	hamiltonian/functionals.F90                  \
 	hamiltonian/gauge_field.F90                  \
-	hamiltonian/hamiltonian_base.F90             \
-	hamiltonian/hamiltonian.F90                  \
+        hamiltonian/hamiltonian_mxll.F90             \
+	hamiltonian/hamiltonian_abst.F90             \
+	hamiltonian/hamiltonian_elec_base.F90        \
+	hamiltonian/hamiltonian_elec.F90             \
 	hamiltonian/hgh_projector.F90                \
 	hamiltonian/hirshfeld.F90                    \
 	hamiltonian/ion_interaction.F90              \
@@ -417,6 +440,7 @@ hamiltonian_f_srcs =                                 \
 	hamiltonian/lda_u.F90                        \
 	hamiltonian/lda_u_io.F90                     \
 	hamiltonian/libvdwxc.F90                     \
+	hamiltonian/maxwell_boundary_op.F90           \
 	hamiltonian/oct_exchange.F90                 \
 	hamiltonian/pcm.F90                          \
 	hamiltonian/pcm_eom.F90                      \
@@ -426,6 +450,7 @@ hamiltonian_f_srcs =                                 \
 	hamiltonian/scdm.F90                         \
 	hamiltonian/scf_tol.F90                      \
 	hamiltonian/scissor.F90                      \
+	hamiltonian/singularity.F90                  \
 	hamiltonian/species_pot.F90                  \
 	hamiltonian/vdw_ts.F90                       \
 	hamiltonian/xc.F90
@@ -437,10 +462,11 @@ hamiltonian_srcs = $(hamiltonian_f_srcs) $(hamiltonian_c_srcs)
 
 noinst_HEADERS +=                                    \
         hamiltonian/dft_u_noncollinear_inc.F90       \
+        hamiltonian/exchange_operator_inc.F90        \
         hamiltonian/functionals_list.F90             \
         hamiltonian/fxc_inc.F90                      \
-	hamiltonian/hamiltonian_base_inc.F90         \
-	hamiltonian/hamiltonian_inc.F90              \
+	hamiltonian/hamiltonian_elec_base_inc.F90         \
+	hamiltonian/hamiltonian_elec_inc.F90              \
 	hamiltonian/hgh_projector_inc.F90            \
 	hamiltonian/kb_projector_inc.F90             \
 	hamiltonian/kxc_inc.F90                      \
@@ -455,6 +481,7 @@ noinst_HEADERS +=                                    \
 # Sources in system
 system_f_srcs =                                 \
 	system/current.F90                      \
+	system/celestial_body.F90               \
 	system/dos.F90                          \
 	system/eigen_cg.F90                     \
 	system/eigen_lobpcg.F90                 \
@@ -464,17 +491,24 @@ system_f_srcs =                                 \
 	system/energy_calc.F90                  \
 	system/exponential.F90                  \
 	system/forces.F90                       \
+	system/interaction_abst.F90             \
+	system/interaction_gravity.F90          \
 	system/linear_solver.F90                \
 	system/magnetic.F90                     \
+	system/multisystem.F90                  \
 	system/output.F90                       \
 	system/output_me.F90                    \
 	system/partial_charges.F90              \
 	system/pert.F90                         \
-	system/photon_mode.F90                 \
-        system/preconditioners.F90              \
+	system/photon_mode.F90                  \
+	system/preconditioners.F90              \
+	system/propagator_abst.F90              \
+	system/quantity.F90                     \
 	system/stress.F90                       \
 	system/subspace.F90                     \
 	system/system.F90                       \
+	system/system_abst.F90                  \
+	system/system_mxll.F90                  \
 	system/v_ks.F90                         \
 	system/xc_ks_inversion.F90              \
 	system/xc_oep.F90
@@ -496,6 +530,7 @@ noinst_HEADERS +=                               \
 	system/output_linear_response_inc.F90   \
 	system/output_me_inc.F90                \
 	system/output_modelmb_inc.F90           \
+	system/output_mxll_inc.F90              \
 	system/output_states_inc.F90            \
 	system/pert_inc.F90                     \
 	system/preconditioners_inc.F90          \
@@ -503,6 +538,7 @@ noinst_HEADERS +=                               \
 	system/xc_kli_inc.F90                   \
 	system/xc_kli_pauli_inc.F90             \
 	system/xc_oep_inc.F90                   \
+	system/xc_oep_qed_inc.F90               \
 	system/xc_oep_sic_inc.F90               \
 	system/xc_oep_x_inc.F90
 
@@ -514,7 +550,8 @@ scf_f_srcs =                                 \
 	scf/mix.F90                          \
 	scf/mixing_metric.F90                \
 	scf/rdmft.F90                        \
-	scf/scf.F90
+	scf/scf.F90                          \
+        scf/unocc.F90
 
 scf_srcs = $(scf_f_srcs)
 
@@ -532,6 +569,7 @@ td_f_srcs =                                 \
 	td/pes_spm.F90                      \
 	td/potential_interpolation.F90      \
 	td/propagator_base.F90              \
+	td/propagator_beeman.F90            \
 	td/propagator_cn.F90                \
 	td/propagator_etrs.F90              \
 	td/propagator_expmid.F90            \
@@ -539,10 +577,13 @@ td_f_srcs =                                 \
 	td/propagator_magnus.F90            \
 	td/propagator_qoct.F90              \
 	td/propagator_rk.F90                \
+	td/propagator_verlet.F90            \
 	td/spectrum.F90                     \
 	td/td_calc.F90                      \
 	td/td.F90                           \
-	td/td_write.F90
+	td/td_write.F90                     \
+        td/propagation_ops_abst.F90         \
+        td/propagation_ops_elec.F90
 
 td_srcs = $(td_f_srcs)
 
@@ -613,18 +654,11 @@ all_c_srcs = $(basic_c_srcs) $(math_c_srcs) $(species_c_srcs) $(ions_c_srcs) \
 
 all_srcs = $(all_f_srcs) $(all_c_srcs)
 
-include/options.h: $(all_f_srcs) $(noinst_HEADERS)
-	$(top_srcdir)/build/mk_varinfo.pl -s $(top_srcdir) -b $(top_builddir)
-
-include/defaults.h: $(all_f_srcs) $(noinst_HEADERS)
-	$(top_srcdir)/build/mk_varinfo.pl -s $(top_srcdir) -b $(top_builddir)
-
 bin_PROGRAMS = octopus
 
 octopus_f_srcs =                             \
 	main/invert_ks.F90                   \
 	main/memory.F90                      \
-	main/unocc.F90                       \
 	main/static_pol.F90                  \
 	main/geom_opt.F90                    \
 	main/phonons_fd.F90                  \
@@ -660,7 +694,10 @@ EXTRA_PROGRAMS = oct-propagation_spectrum \
                  oct-convert \
                  oct-local_multipoles \
                  oct-conductivity \
-                 oct-floquet
+                 oct-floquet \
+                 oct-spin_susceptibility \
+                 oct-wannier90 \
+                 oct-unfold
 
 bin_PROGRAMS += @UTILITY_PROGRAMS@
 
@@ -744,6 +781,50 @@ oct_floquet_SOURCES = $(td_srcs) $(scf_srcs) $(system_srcs) $(hamiltonian_srcs) 
 			utils/floquet.F90
 oct_floquet_LINK = $(FCLINK)
 oct_floquet_LDADD = $(all_LIBS)
+oct_spin_susceptibility_SOURCES = $(all_srcs) utils/spin_susceptibility.F90
+oct_spin_susceptibility_LINK = $(FCLINK)
+oct_spin_susceptibility_LDADD = $(all_LIBS)
+
+
+oct_unfold_SOURCES    = $(td_srcs) $(scf_srcs) $(system_srcs) $(hamiltonian_srcs) \
+                        $(basis_set_srcs) $(poisson_srcs) $(states_srcs) $(grid_srcs) \
+                        $(ions_srcs) $(species_srcs) $(math_srcs) $(basic_srcs) \
+                        utils/unfold.F90
+oct_unfold_LINK = $(FCLINK)
+oct_unfold_LDADD = $(all_LIBS)
+
+utils_f_srcs = \
+	utils/casida_spectrum.F90        \
+	utils/centergeom.F90             \
+	utils/conductivity.F90           \
+	utils/convert.F90                \
+	utils/dielectric_function.F90    \
+	utils/floquet.F90                \
+	utils/harmonic_spectrum.F90      \
+	utils/help.F90                   \
+	utils/infrared.F90               \
+	utils/local_multipoles.F90       \
+	utils/local_write.F90            \
+	utils/oscillator_strength.F90    \
+	utils/photoelectron_spectrum.F90 \
+	utils/propagation_spectrum.F90   \
+	utils/unfold.F90                 \
+	utils/vibrational.F90            \
+	utils/xyzanim.F90
+
+
+include/options.h: $(all_f_srcs) $(octopus_f_srcs) $(utils_f_srcs) $(noinst_HEADERS)
+	$(top_srcdir)/build/mk_varinfo.pl -s $(top_srcdir) -b $(top_builddir)
+
+include/defaults.h: $(all_f_srcs) $(octopus_f_srcs) $(utils_f_srcs) $(noinst_HEADERS)
+	$(top_srcdir)/build/mk_varinfo.pl -s $(top_srcdir) -b $(top_builddir)
+
+oct_wannier90_SOURCES = $(system_srcs) $(hamiltonian_srcs) $(basis_set_srcs) \
+                        $(poisson_srcs) $(states_srcs) $(grid_srcs) \
+                        $(ions_srcs) $(species_srcs) $(math_srcs) $(basic_srcs) \
+                        utils/wannier90_interface.F90 
+oct_wannier90_LINK = $(FCLINK)
+oct_wannier90_LDADD = $(all_LIBS)
 
 
 # debug files from MacOS gcc with -g

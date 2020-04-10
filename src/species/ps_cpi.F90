@@ -24,6 +24,7 @@ module ps_cpi_oct_m
   use io_oct_m
   use logrid_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use profiling_oct_m
   use ps_cpi_file_oct_m
   use ps_in_grid_oct_m
@@ -39,18 +40,20 @@ module ps_cpi_oct_m
     ps_cpi_process
 
   type ps_cpi_t
-    type(ps_cpi_file_t), pointer :: cpi_file
-    type(ps_in_grid_t),  pointer :: ps_grid
+    ! Components are public by default
+    type(ps_cpi_file_t), pointer, private :: cpi_file
+    type(ps_in_grid_t),  pointer          :: ps_grid
 
-    type(valconf_t),     pointer :: conf    !< what to do with this?
+    type(valconf_t),     pointer, private :: conf    !< what to do with this?
   end type ps_cpi_t
 
 contains
 
   ! ---------------------------------------------------------
-  subroutine ps_cpi_init(ps_cpi, filename)
-    type(ps_cpi_t),   intent(inout) :: ps_cpi
-    character(len=*), intent(in)    :: filename
+  subroutine ps_cpi_init(ps_cpi, filename, namespace)
+    type(ps_cpi_t),    intent(inout) :: ps_cpi
+    character(len=*),  intent(in)    :: filename
+    type(namespace_t), intent(in)    :: namespace
 
     integer :: iunit
     logical :: found
@@ -65,10 +68,10 @@ contains
     inquire(file = filename, exist = found)
     if(.not.found) then
       call messages_write("Pseudopotential file '" // trim(filename) // "' not found")
-      call messages_fatal()
+      call messages_fatal(namespace=namespace)
     end if
     
-    iunit = io_open(filename, action='read', form='formatted', status='old')
+    iunit = io_open(filename, namespace, action='read', form='formatted', status='old')
     call ps_cpi_file_read(iunit, ps_cpi%cpi_file)
     call io_close(iunit)
 
@@ -120,17 +123,18 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine ps_cpi_process(ps_cpi, lloc)
-    type(ps_cpi_t), intent(inout) :: ps_cpi
-    integer,        intent(in)    :: lloc
+  subroutine ps_cpi_process(ps_cpi, lloc, namespace)
+    type(ps_cpi_t),    intent(inout) :: ps_cpi
+    integer,           intent(in)    :: lloc
+    type(namespace_t), intent(in)    :: namespace
 
     PUSH_SUB(ps_cpi_process)
 
     ! check norm of rphi
-    call ps_in_grid_check_rphi(ps_cpi%ps_grid)
+    call ps_in_grid_check_rphi(ps_cpi%ps_grid, namespace)
 
     ! Fix the local potential. Final argument is the core radius
-    call ps_in_grid_vlocal(ps_cpi%ps_grid, lloc, M_THREE)
+    call ps_in_grid_vlocal(ps_cpi%ps_grid, lloc, M_THREE, namespace)
 
     ! Calculate kb cosines and norms
     call ps_in_grid_kb_cosines(ps_cpi%ps_grid, lloc)

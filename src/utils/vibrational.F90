@@ -25,6 +25,7 @@
     use global_oct_m
     use io_oct_m
     use messages_oct_m
+    use namespace_oct_m
     use parser_oct_m
     use profiling_oct_m
     use simul_box_oct_m
@@ -45,20 +46,24 @@
     FLOAT :: ww, curtime, vaftime, deltat
     integer :: ifreq, max_freq
     integer :: skip
-
+    type(namespace_t) :: default_namespace
+    
     ! Initialize stuff
     call global_init(is_serial = .true.)		 
 
     call getopt_init(ierr)
     call getopt_end()
 
-    call messages_init()
+    call parser_init()
+    default_namespace = namespace_t("")
+    
+    call messages_init(default_namespace)
 
-    call io_init()
+    call io_init(default_namespace)
 
-    call unit_system_init()
+    call unit_system_init(default_namespace)
 
-    call spectrum_init(spectrum, &
+    call spectrum_init(spectrum, default_namespace, &
       default_energy_step = units_to_atomic(unit_invcm, CNST(0.2)), &
       default_max_energy  = units_to_atomic(unit_invcm, CNST(5000.0)))
  
@@ -73,20 +78,20 @@
     !% time step used to calculate the vibrational spectrum.
     !%End
 
-    call messages_obsolete_variable('PropagationSpectrumTimeStepFactor', 'VibrationalSpectrumTimeStepFactor')
-    call parse_variable('VibrationalSpectrumTimeStepFactor', 10, skip)
+    call messages_obsolete_variable(default_namespace, 'PropagationSpectrumTimeStepFactor', 'VibrationalSpectrumTimeStepFactor')
+    call parse_variable(default_namespace, 'VibrationalSpectrumTimeStepFactor', 10, skip)
     if(skip <= 0) call messages_input_error('VibrationalSpectrumTimeStepFactor')
 
-    max_freq = 1 + nint(spectrum%max_energy/spectrum%energy_step)
+    max_freq = spectrum_nenergy_steps(spectrum)
 
     if (spectrum%end_time < M_ZERO) spectrum%end_time = huge(spectrum%end_time)
 
-    call space_init(space)
-    call geometry_init(geo, space)
-    call simul_box_init(sb, geo, space)
+    call space_init(space, default_namespace)
+    call geometry_init(geo, default_namespace, space)
+    call simul_box_init(sb, default_namespace, geo, space)
 
     ! Opens the coordinates files.
-    iunit = io_open('td.general/coordinates', action='read')
+    iunit = io_open('td.general/coordinates', default_namespace, action='read')
 
     call io_skip_header(iunit)
 
@@ -131,7 +136,7 @@
     SAFE_ALLOCATE(velocities(1:nvel, 1:ntime))
 
     ! Opens the coordinates files.
-    iunit = io_open('td.general/coordinates', action='read')
+    iunit = io_open('td.general/coordinates', default_namespace, action='read')
 
     call io_skip_header(iunit)
 
@@ -182,7 +187,7 @@
     !% the velocity autocorrelation function. The default is the total
     !% propagation time.
     !%End
-    call parse_variable('VibrationalSpectrumTime', ntime*deltat, vaftime)
+    call parse_variable(default_namespace, 'VibrationalSpectrumTime', ntime*deltat, vaftime)
 
     nvaf = int(vaftime/deltat)
 
@@ -199,7 +204,7 @@
     call calculate_vaf(vaf)
 
    !print the vaf
-    iunit = io_open('td.general/velocity_autocorrelation', action='write')
+    iunit = io_open('td.general/velocity_autocorrelation', default_namespace, action='write')
 
 800 FORMAT(80('#'))      
     write(unit = iunit, iostat = ierr, fmt = 800) 
@@ -219,23 +224,21 @@
 
     ftvaf = M_ONE
 
-    call batch_init(vafb, 1)
-    call batch_add_state(vafb, vaf)
+    call batch_init(vafb, vaf)
 
     call spectrum_signal_damp(spectrum%damp, spectrum%damp_factor, 1, nvaf, M_ZERO, deltat, vafb)
 
-    call batch_init(ftvafb, 1)
-    call batch_add_state(ftvafb, ftvaf)
+    call batch_init(ftvafb, ftvaf)
 
     call spectrum_fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_COS, spectrum%noise, &
-      1, nvaf, M_ZERO, deltat, vafb, 1, max_freq, spectrum%energy_step, ftvafb)
+      1, nvaf, M_ZERO, deltat, vafb, spectrum%min_energy, spectrum%max_energy, spectrum%energy_step, ftvafb)
 
-    call batch_end(vafb)
-    call batch_end(ftvafb)
+    call vafb%end()
+    call ftvafb%end()
 
 
     !and print the spectrum
-    iunit = io_open('td.general/vibrational_spectrum', action='write')
+    iunit = io_open('td.general/vibrational_spectrum', default_namespace, action='write')
 
     write(unit = iunit, iostat = ierr, fmt = 800) 
     write(unit = iunit, iostat = ierr, fmt = '(8a)')  '# HEADER'
@@ -243,7 +246,7 @@
     write(unit = iunit, iostat = ierr, fmt = 800 ) 
 
     do ifreq = 1, max_freq
-      ww = spectrum%energy_step*(ifreq - 1)
+      ww = spectrum%energy_step*(ifreq - 1) + spectrum%min_energy
       write(unit = iunit, iostat = ierr, fmt = '(2e20.10)') units_from_atomic(unit_invcm, ww), ftvaf(ifreq)
     end do
 
@@ -261,6 +264,8 @@
 
     call io_end()
     call messages_end()
+
+    call parser_end()
     call global_end()
 
   contains
@@ -272,7 +277,7 @@
       PUSH_SUB(calculate_vaf)
 
       write (message(1), '(a)') "Read velocities from '"// &
-        trim(io_workpath('td.general/coordinates'))//"'"
+        trim(io_workpath('td.general/coordinates', default_namespace))//"'"
       call messages_info(1)
 
       !calculating the vaf, formula from

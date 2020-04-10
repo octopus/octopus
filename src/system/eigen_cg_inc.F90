@@ -18,34 +18,36 @@
 
 ! ---------------------------------------------------------
 !> conjugate-gradients method.
-subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, diff, shift, orthogonalize_to_all, &
-  conjugate_direction, additional_terms)
-  type(grid_t),           intent(in)    :: gr
-  type(states_t),         intent(inout) :: st
-  type(hamiltonian_t),    intent(in)    :: hm
-  type(preconditioner_t), intent(in)    :: pre
-  type(xc_t),             intent(in)    :: xc
-  FLOAT,                  intent(in)    :: tol
-  integer,                intent(inout) :: niter
-  integer,                intent(inout) :: converged
-  integer,                intent(in)    :: ik
-  FLOAT,        optional, intent(out)   :: diff(:) !< (1:st%nst)
-  FLOAT,pointer, optional, intent(in)   :: shift(:,:)
-  logical, optional,      intent(in)    :: orthogonalize_to_all
-  integer, optional,      intent(in)    :: conjugate_direction
-  logical, optional,      intent(in)    :: additional_terms
+subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, converged, ik, diff, orthogonalize_to_all, &
+  conjugate_direction, additional_terms, energy_change_threshold, shift)
+  type(namespace_t),        intent(in)    :: namespace
+  type(grid_t),             intent(in)    :: gr
+  type(states_elec_t),      intent(inout) :: st
+  type(hamiltonian_elec_t), intent(in)    :: hm
+  type(preconditioner_t),   intent(in)    :: pre
+  type(xc_t),               intent(in)    :: xc
+  FLOAT,                    intent(in)    :: tol
+  integer,                  intent(inout) :: niter
+  integer,                  intent(inout) :: converged
+  integer,                  intent(in)    :: ik
+  FLOAT,                    intent(out)   :: diff(:) !< (1:st%nst)
+  logical,                  intent(in)    :: orthogonalize_to_all
+  integer,                  intent(in)    :: conjugate_direction
+  logical,                  intent(in)    :: additional_terms
+  FLOAT,                    intent(in)    :: energy_change_threshold
+  FLOAT, pointer, optional, intent(in)   :: shift(:,:)
 
-  R_TYPE, allocatable :: h_psi(:,:), g(:,:), g0(:,:),  cg(:,:), h_cg(:,:), psi(:, :), psi2(:, :), g_prev(:,:)
-  R_TYPE   :: es(2), a0, b0, gg, gg0, gg1, gamma, theta, norma
-  FLOAT    :: cg0, e0, res, alpha, beta, dot, old_res, old_energy, first_delta_e
+  R_TYPE, allocatable :: h_psi(:,:), g(:,:), g0(:,:),  cg(:,:), h_cg(:,:), psi(:, :), psi2(:, :), g_prev(:,:), psi_j(:,:)
+  R_TYPE   :: es(2), a0, b0, gg, gg0, gg1, gamma, theta, norma, cg_phi
+  FLOAT    :: cg0, e0, res, alpha, beta, dot, old_res, old_energy, first_delta_e, lam, lam_conj
   FLOAT    :: stheta, stheta2, ctheta, ctheta2
-  FLOAT, allocatable :: chi(:, :), omega(:, :), fxc(:, :, :)
+  FLOAT, allocatable :: chi(:, :), omega(:, :), fxc(:, :, :), lam_sym(:)
   FLOAT    :: integral_hartree, integral_xc, tmp
-  integer  :: ist, iter, maxter, idim, ip, isp, ixc
+  integer  :: ist, jst, iter, maxter, idim, ip, isp, ixc, ib
   R_TYPE   :: sb(3)
   logical  :: fold_ ! use folded spectrum operator (H-shift)^2
-  logical  :: orthogonalize_to_all_, additional_terms_, add_xc_term
-  integer  :: conjugate_direction_
+  logical  :: add_xc_term
+  type(states_elec_group_t) :: hpsi_j
 
   PUSH_SUB(X(eigensolver_cg2))
 
@@ -57,12 +59,8 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
     ASSERT(associated(shift))
   end if
 
-  ! get the optional arguments for CG options
-  orthogonalize_to_all_ = optional_default(orthogonalize_to_all, .false.)
-  conjugate_direction_ = optional_default(conjugate_direction, int(OPTION__CGDIRECTION__FLETCHER, 4))
   ! do we add the XC term? needs derivatives of the XC functional
-  additional_terms_ = optional_default(additional_terms, .false.)
-  add_xc_term = additional_terms_
+  add_xc_term = additional_terms
   if(st%d%ispin == UNPOLARIZED) then
     isp = 1
   else
@@ -85,23 +83,38 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
   niter = 0
   old_res = 10*tol
 
-  SAFE_ALLOCATE(psi(1:gr%mesh%np_part, 1:st%d%dim))
-  SAFE_ALLOCATE(h_psi(1:gr%mesh%np_part, 1:st%d%dim))
+  SAFE_ALLOCATE(  psi(1:gr%mesh%np_part, 1:st%d%dim))
   SAFE_ALLOCATE(   cg(1:gr%mesh%np_part, 1:st%d%dim))
   SAFE_ALLOCATE(    g(1:gr%mesh%np_part, 1:st%d%dim))
-  SAFE_ALLOCATE(   g0(1:gr%mesh%np_part, 1:st%d%dim))
-  SAFE_ALLOCATE(g_prev(1:gr%mesh%np_part, 1:st%d%dim))
-  SAFE_ALLOCATE( h_cg(1:gr%mesh%np_part, 1:st%d%dim))
-  SAFE_ALLOCATE(  chi(1:gr%mesh%np_part, 1:st%d%dim))
-  SAFE_ALLOCATE(omega(1:gr%mesh%np_part, 1:st%d%dim))
-  if(st%d%ispin == UNPOLARIZED) then
-    SAFE_ALLOCATE(fxc(1:gr%mesh%np, 1:1, 1:1))
-  else if(st%d%ispin == SPIN_POLARIZED) then
-    SAFE_ALLOCATE(fxc(1:gr%mesh%np, 1:2, 1:2))
+  SAFE_ALLOCATE(   g0(1:gr%mesh%np,      1:st%d%dim))
+  SAFE_ALLOCATE(g_prev(1:gr%mesh%np,     1:st%d%dim))
+  if(additional_terms) then
+    SAFE_ALLOCATE(  chi(1:gr%mesh%np_part, 1:st%d%dim))
+    SAFE_ALLOCATE(omega(1:gr%mesh%np_part, 1:st%d%dim))
+    if(st%d%ispin == UNPOLARIZED) then
+      SAFE_ALLOCATE(fxc(1:gr%mesh%np, 1:1, 1:1))
+    else if(st%d%ispin == SPIN_POLARIZED) then
+      SAFE_ALLOCATE(fxc(1:gr%mesh%np, 1:2, 1:2))
+    end if
   end if
   if(fold_) then
-    SAFE_ALLOCATE( psi2(1:gr%mesh%np_part, 1:st%d%dim))
+    SAFE_ALLOCATE( psi2(1:gr%mesh%np, 1:st%d%dim))
+    SAFE_ALLOCATE(h_psi(1:gr%mesh%np_part, 1:st%d%dim))
+    SAFE_ALLOCATE( h_cg(1:gr%mesh%np_part, 1:st%d%dim))
+  else
+    SAFE_ALLOCATE(h_psi(1:gr%mesh%np, 1:st%d%dim))
+    SAFE_ALLOCATE( h_cg(1:gr%mesh%np, 1:st%d%dim))
   end if
+  
+  if(hm%theory_level == RDMFT) then
+    SAFE_ALLOCATE(psi_j(1:gr%mesh%np, 1:st%d%dim))
+    SAFE_ALLOCATE(lam_sym(1:st%nst))
+    call states_elec_group_copy(st%d, st%group, hpsi_j, copy_data=.false.)
+    do ib = hpsi_j%block_start, hpsi_j%block_end
+      call X(hamiltonian_elec_apply_batch) (hm, namespace, gr%mesh, st%group%psib(ib, ik), hpsi_j%psib(ib, ik))
+    end do
+  end if
+
   h_psi = R_TOTYPE(M_ZERO)
   cg    = R_TOTYPE(M_ZERO)
   g     = R_TOTYPE(M_ZERO)
@@ -112,11 +125,11 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
   ! get derivative once here -> the density does not change in the loop
   if(add_xc_term) then
     fxc = M_ZERO
-    call xc_get_fxc(xc, gr%mesh, st%rho, st%d%ispin, fxc)
+    call xc_get_fxc(xc, gr%mesh, namespace, st%rho, st%d%ispin, fxc)
   end if
 
   ! Set the diff to zero, since it is intent(out)
-  if(present(diff)) diff(1:st%nst) = M_ZERO
+  diff(1:st%nst) = M_ZERO
 
   ! Start of main loop, which runs over all the eigenvectors searched
   ASSERT(converged >= 0)
@@ -124,26 +137,23 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
   ! The steps in this loop follow closely the algorithm from
   ! Payne et al. (1992), Rev. Mod. Phys. 64, 4, section V.B
   eigenfunction_loop : do ist = converged + 1, st%nst
-    h_psi = R_TOTYPE(M_ZERO)
-    cg    = R_TOTYPE(M_ZERO)
-    g     = R_TOTYPE(M_ZERO)
-    g0    = R_TOTYPE(M_ZERO)
-    h_cg  = R_TOTYPE(M_ZERO)
-    g_prev = R_TOTYPE(M_ZERO)
     gg1   = R_TOTYPE(M_ZERO)
-
-    call states_get_state(st, gr%mesh, ist, ik, psi)
+    
+    call states_elec_get_state(st, gr%mesh, ist, ik, psi)
 
     ! Orthogonalize starting eigenfunctions to those already calculated...
-    if(ist > 1) call X(states_orthogonalize_single)(st, gr%mesh, ist - 1, ik, psi, normalize = .true.)
+    if(ist > 1) call X(states_elec_orthogonalize_single)(st, gr%mesh, ist - 1, ik, psi, normalize = .true.)
 
     ! Calculate starting gradient: |hpsi> = H|psi>
-    call X(hamiltonian_apply)(hm, gr%der, psi, h_psi, ist, ik)
+    call X(hamiltonian_elec_apply_single)(hm, namespace, gr%mesh, psi, h_psi, ist, ik)
 
     if(fold_) then
-      call X(hamiltonian_apply)(hm, gr%der, h_psi, psi2, ist, ik)
+      call X(hamiltonian_elec_apply_single)(hm, namespace, gr%mesh, h_psi, psi2, ist, ik)
       ! h_psi = (H-shift)^2 psi
-      h_psi = psi2 - M_TWO*shift(ist,ik)*h_psi + shift(ist,ik)**2*psi
+      do idim = 1, st%d%dim
+        h_psi(1:gr%mesh%np, idim) = psi2(1:gr%mesh%np, idim) - M_TWO*shift(ist,ik)*h_psi(1:gr%mesh%np, idim) &
+                                  + shift(ist,ik)**2*psi(1:gr%mesh%np, idim)
+      end do
     end if
 
     ! Calculates starting eigenvalue: e(p) = <psi(p)|H|psi>
@@ -154,7 +164,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
     ! Starts iteration for this band
     iter_loop: do iter = 1, maxter
       ! need to save g from previous iteration for Polak-Ribiere method
-      if(conjugate_direction_ == OPTION__CGDIRECTION__POLAK) then
+      if(conjugate_direction == OPTION__CGDIRECTION__POLAK) then
         if(iter /= 1) then
           g_prev = g
         else
@@ -167,20 +177,54 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
         g(ip, idim) = h_psi(ip, idim) - st%eigenval(ist, ik)*psi(ip, idim)
       end forall
 
+      if (hm%theory_level == RDMFT) then
+        ! For RDMFT, the gradient of the total energy functional differs from
+        ! the DFT and HF cases, as the lagrange multiplier matrix lambda cannot
+        ! be diagonalized together with the Hamiltonian. This is because the
+        ! orbitals of the minimization are not the eigenstates of the
+        ! single-body Hamiltonian, but of the systems 1RDM.
+        ! The functional to be minimized here is:
+        !  F = E[psi_i]-sum_ij lam_ij (<psi_i|psi_j> - delta_ij) + const.
+        ! The respective gradient reads:
+        !   dF/dpsi_i= dE/dphi_i - sum_j lam_ij |psi_j>= H|psi_i> - sum_j lam_ij |psi_j>
+        ! We get the expression for lam_ij from the gradient with respect to
+        ! psi*: lam_ij = <psi_i|dE/dpsi_j^*> = <psi_i|H|psi_j>
+        ! NB: lam_ij != lam_ji until SCF convergence!
+        do jst = 1, st%nst
+          if (jst == ist) then
+            lam_sym(jst) = M_TWO*st%eigenval(jst, ik)
+          else
+            call states_elec_get_state(st, gr%mesh, jst, ik, psi_j)
+            do idim = 1, st%d%dim
+              call batch_get_state(hpsi_j%psib(hpsi_j%iblock(jst, ik), ik), (/jst, idim/), gr%mesh%np, h_cg(:, idim))
+            end do
+
+            ! calculate <phi_j|H|phi_i> = lam_ji and <phi_i|H|phi_j> = lam_ij
+            lam = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, psi_j, h_psi))
+            lam_conj = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, psi, h_cg))
+            lam_sym(jst) = lam + lam_conj
+
+            do idim = 1, st%d%dim
+              call lalg_axpy(gr%mesh%np, -lam_conj, psi_j(:, idim), g(:, idim))
+            end do
+          end if
+        end do
+      end if
+
       ! PTA92, eq. 5.12
       ! Orthogonalize to all states -> not needed for good convergence
       ! uncomment the following line for exactly following PTA92
-      !call X(states_orthogonalize_single)(st, gr%mesh, ist - 1, ik, g, normalize = .false., against_all=.true.)
+      !call X(states_elec_orthogonalize_single)(st, gr%mesh, ist - 1, ik, g, normalize = .false., against_all=.true.)
 
       ! PTA92, eq. 5.17
       ! Approximate inverse preconditioner
-      call  X(preconditioner_apply)(pre, gr, hm, ik, g(:,:), g0(:,:))
+      call  X(preconditioner_apply)(pre, namespace, gr, hm, g(:,:), g0(:,:))
 
       ! PTA92, eq. 5.18
       dot = X(mf_dotp) (gr%mesh, st%d%dim, psi, g0)
       ! orthogonalize against previous or all states, depending on the optional argument orthogonalize_to_all
-      call X(states_orthogonalize_single)(st, gr%mesh, ist - 1, ik, g0, normalize = .false., &
-        against_all=orthogonalize_to_all_)
+      call X(states_elec_orthogonalize_single)(st, gr%mesh, ist - 1, ik, g0, normalize = .false., &
+        against_all=orthogonalize_to_all)
 
       do idim = 1, st%d%dim
         call lalg_axpy(gr%mesh%np, -dot, psi(:, idim), g0(:, idim))
@@ -188,7 +232,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
 
       ! dot products needed for conjugate gradient
       gg = X(mf_dotp) (gr%mesh, st%d%dim, g0, g, reduce = .false.)
-      if(iter /= 1 .and. conjugate_direction_ == OPTION__CGDIRECTION__POLAK) then
+      if(iter /= 1 .and. conjugate_direction == OPTION__CGDIRECTION__POLAK) then
         ! only needed for Polak-Ribiere
         gg1 = X(mf_dotp) (gr%mesh, st%d%dim, g0, g_prev, reduce = .false.)
       end if
@@ -220,7 +264,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
           call lalg_copy(gr%mesh%np, g0(:, idim), cg(:, idim))
         end do
       else
-        select case (conjugate_direction_)
+        select case (conjugate_direction)
         case (OPTION__CGDIRECTION__FLETCHER)
           ! PTA eq. 5.20
           gamma = gg/gg0        ! (Fletcher-Reeves)
@@ -244,21 +288,23 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
         ! the corresponding coefficients are then divided by cg0
         norma =  X(mf_dotp) (gr%mesh, st%d%dim, psi, cg)
         do idim = 1, st%d%dim
-          forall (ip = 1:gr%mesh%np)
-            cg(ip, idim) = cg(ip, idim) - norma*psi(ip, idim)
-          end forall
+          call lalg_axpy(gr%mesh%np, -norma, psi(1:gr%mesh%np, idim), cg(:, idim))
         end do
+        
 
         call profiling_count_operations(st%d%dim*gr%mesh%np*(2*R_ADD + 2*R_MUL))
       end if
 
       ! cg contains now the conjugate gradient
-      call X(hamiltonian_apply)(hm, gr%der, cg, h_cg, ist, ik)
+      call X(hamiltonian_elec_apply_single)(hm, namespace, gr%mesh, cg, h_cg, ist, ik)
 
       if(fold_) then
-         call X(hamiltonian_apply)(hm, gr%der, h_cg, psi2, ist, ik)
-         ! h_psi = (H-shift)^2 psi
-         h_cg = psi2 - M_TWO*shift(ist,ik)*h_cg + shift(ist,ik)**2*cg
+        call X(hamiltonian_elec_apply_single)(hm, namespace, gr%mesh, h_cg, psi2, ist, ik)
+        ! h_psi = (H-shift)^2 psi
+        do idim = 1, st%d%dim
+          h_cg(1:gr%mesh%np, idim) = psi2(1:gr%mesh%np, idim) - M_TWO*shift(ist,ik)*h_cg(1:gr%mesh%np, idim) &
+                                 + shift(ist,ik)**2*cg(1:gr%mesh%np, idim)
+        end do
       end if
 
       ! Line minimization (eq. 5.23 to 5.38)
@@ -284,7 +330,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
       e0 = st%eigenval(ist, ik)
       alpha = M_TWO * R_REAL(e0 - b0)
 
-      if (additional_terms_) then
+      if (additional_terms) then
         ! more terms here, see PTA92 eqs 5.31, 5.32, 5.33, 5.36
         ! Hartree term
         tmp = M_TWO/cg0
@@ -293,7 +339,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
             chi(ip, idim) = tmp * R_REAL(R_CONJ(cg(ip, idim)) * psi(ip, idim))
           end forall
         end do
-        call dpoisson_solve(psolver, omega(:, 1), chi(:, 1), all_nodes = .false.)
+        call dpoisson_solve(hm%psolver, omega(:, 1), chi(:, 1), all_nodes = .false.)
         integral_hartree = dmf_dotp(gr%mesh, st%d%dim, chi, omega)
 
         ! exchange term
@@ -309,8 +355,19 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
           (integral_hartree + integral_xc) / gr%sb%rcell_volume**2
       end if
 
-
       beta = R_REAL(a0) * M_TWO
+
+      ! For RDMFT, we get a different formula for the line minimization, which turns out to
+      ! only change the beta of the original expression.
+      ! beta -> beta + beta_rdmft, with beta_rdmft= - sum_j (lam_ji <cg_i|phi_k> + c.c.)
+      if(hm%theory_level == RDMFT) then
+        do jst = 1, st%nst
+          call states_elec_get_state(st, gr%mesh, jst, ik, psi_j)
+          cg_phi = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, psi_j, cg))
+          beta = beta - M_TWO * cg_phi / cg0 * lam_sym(jst)
+        end do
+      end if
+
       theta = atan(beta/alpha)*M_HALF
       stheta = sin(theta)
       ctheta = cos(theta)
@@ -340,7 +397,13 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
       call profiling_count_operations(st%d%dim*gr%mesh%np*(2*R_ADD + 4*R_MUL))
 
       st%eigenval(ist, ik) = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, psi, h_psi))
-      res = X(states_residue)(gr%mesh, st%d%dim, h_psi, st%eigenval(ist, ik), psi)
+      res = X(states_elec_residue)(gr%mesh, st%d%dim, h_psi, st%eigenval(ist, ik), psi)
+
+      if (hm%theory_level == RDMFT) then
+        do idim = 1, st%d%dim
+          call batch_set_state(hpsi_j%psib(hpsi_j%iblock(ist, ik), ik), (/ist, idim/), gr%mesh%np, h_psi(:, idim))
+        end do
+      end if
 
       ! consider change in energy
       if(iter == 1) then
@@ -356,7 +419,7 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
 
       if(iter > 1) then
         ! This criterion is discussed in Sec. V.B.6
-        if(abs(st%eigenval(ist, ik) - old_energy) < first_delta_e*CNST(1e-1)) then
+        if(abs(st%eigenval(ist, ik) - old_energy) < first_delta_e*energy_change_threshold) then
           exit iter_loop
         end if
       else
@@ -381,21 +444,19 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
 
     ! if the folded operator was used, compute the actual eigenvalue
     if(fold_) then
-      call X(hamiltonian_apply)(hm, gr%der, psi, h_psi, ist, ik)
+      call X(hamiltonian_elec_apply_single)(hm, namespace, gr%mesh, psi, h_psi, ist, ik)
       st%eigenval(ist, ik) = X(mf_dotp) (gr%mesh, st%d%dim, psi, h_psi, reduce = .true.)
-      res = X(states_residue)(gr%mesh, st%d%dim, h_psi, st%eigenval(ist, ik), psi)
+      res = X(states_elec_residue)(gr%mesh, st%d%dim, h_psi, st%eigenval(ist, ik), psi)
     end if
 
     ! one could orthogonalize against all states here, but it turns out not
     ! to accelerate convergence
-    call X(states_orthogonalize_single)(st, gr%mesh, ist - 1, ik, psi, normalize = .true.)
-    call states_set_state(st, gr%mesh, ist, ik, psi)
+    call X(states_elec_orthogonalize_single)(st, gr%mesh, ist - 1, ik, psi, normalize = .true.)
+    call states_elec_set_state(st, gr%mesh, ist, ik, psi)
 
     niter = niter + iter + 1
 
-    if(present(diff)) then
-      diff(ist) = res
-    end if
+    diff(ist) = res
 
     if(mpi_grp_is_root(mpi_world) .and. .not. debug%info) then
       call loct_progress_bar(st%lnst*(ik - 1) +  ist, st%lnst*st%d%kpt%nlocal)
@@ -413,24 +474,29 @@ subroutine X(eigensolver_cg2) (gr, st, hm, xc, pre, tol, niter, converged, ik, d
   SAFE_DEALLOCATE_A(chi)
   SAFE_DEALLOCATE_A(omega)
   SAFE_DEALLOCATE_A(fxc)
-  if(fold_) then
-    SAFE_DEALLOCATE_A(psi2)
+  SAFE_DEALLOCATE_A(psi2)
+  if(hm%theory_level == RDMFT) then
+    SAFE_DEALLOCATE_A(psi_j)
+    SAFE_DEALLOCATE_A(lam_sym)
+    call states_elec_group_end(hpsi_j, st%d)
   end if
+
   POP_SUB(X(eigensolver_cg2))
 end subroutine X(eigensolver_cg2)
 
 
 ! ---------------------------------------------------------
 !> The algorithm is essentially taken from Jiang et al. Phys. Rev. B 68, 165337 (2003).
-subroutine X(eigensolver_cg2_new) (gr, st, hm, tol, niter, converged, ik, diff)
-  type(grid_t),        intent(in)    :: gr
-  type(states_t),      intent(inout) :: st
-  type(hamiltonian_t), intent(in)    :: hm
-  FLOAT,               intent(in)    :: tol
-  integer,             intent(inout) :: niter
-  integer,             intent(inout) :: converged
-  integer,             intent(in)    :: ik
-  FLOAT,     optional, intent(out)   :: diff(:) !< (1:st%nst)
+subroutine X(eigensolver_cg2_new) (namespace, gr, st, hm, tol, niter, converged, ik, diff)
+  type(namespace_t),        intent(in)    :: namespace
+  type(grid_t),             intent(in)    :: gr
+  type(states_elec_t),      intent(inout) :: st
+  type(hamiltonian_elec_t), intent(in)    :: hm
+  FLOAT,                    intent(in)    :: tol
+  integer,                  intent(inout) :: niter
+  integer,                  intent(inout) :: converged
+  integer,                  intent(in)    :: ik
+  FLOAT,          optional, intent(out)   :: diff(:) !< (1:st%nst)
 
   integer :: nst, dim, ist, maxter, i, conv, ip, idim
   R_TYPE, allocatable :: psi(:,:), phi(:, :), hcgp(:, :), cg(:, :), sd(:, :), cgp(:, :)
@@ -465,13 +531,13 @@ subroutine X(eigensolver_cg2_new) (gr, st, hm, tol, niter, converged, ik, diff)
   conv = converged
   states: do ist = conv + 1, nst
 
-    call states_get_state(st, gr%mesh, ist, ik, psi)
+    call states_elec_get_state(st, gr%mesh, ist, ik, psi)
 
     ! Orthogonalize starting eigenfunctions to those already calculated...
-    if(ist > 1) call X(states_orthogonalize_single)(st, gr%mesh, ist - 1, ik, psi, normalize = .true.)
+    if(ist > 1) call X(states_elec_orthogonalize_single)(st, gr%mesh, ist - 1, ik, psi, normalize = .true.)
 
     ! Calculate starting gradient: |hpsi> = H|psi>
-    call X(hamiltonian_apply)(hm, gr%der, psi, phi, ist, ik)
+    call X(hamiltonian_elec_apply_single)(hm, namespace, gr%mesh, psi, phi, ist, ik)
     niter = niter + 1
 
     ! Initial settings for scalar variables.
@@ -501,7 +567,7 @@ subroutine X(eigensolver_cg2_new) (gr, st, hm, tol, niter, converged, ik, diff)
       lambda = X(mf_dotp)(gr%mesh, dim, psi, phi)
 
       ! Check convergence
-      res = X(states_residue)(gr%mesh, dim, phi, lambda, psi)
+      res = X(states_elec_residue)(gr%mesh, dim, phi, lambda, psi)
 
       if(debug%info) then
         norm = X(mf_nrm2)(gr%mesh, dim, phi)
@@ -523,7 +589,7 @@ subroutine X(eigensolver_cg2_new) (gr, st, hm, tol, niter, converged, ik, diff)
         end do
       end do
 
-      if(ist > 1) call X(states_orthogonalize_single)(st, gr%mesh, ist - 1, ik, sd, normalize = .false., mask = orthogonal)
+      if(ist > 1) call X(states_elec_orthogonalize_single)(st, gr%mesh, ist - 1, ik, sd, normalize = .false., mask = orthogonal)
 
       ! Get conjugate-gradient vector
       dump = X(mf_nrm2)(gr%mesh, dim, sd)**2
@@ -546,7 +612,7 @@ subroutine X(eigensolver_cg2_new) (gr, st, hm, tol, niter, converged, ik, diff)
 
       norm = X(mf_nrm2)(gr%mesh, dim, cgp)
 
-      call X(hamiltonian_apply)(hm, gr%der, cgp, hcgp, ist, ik)
+      call X(hamiltonian_elec_apply_single)(hm, namespace, gr%mesh, cgp, hcgp, ist, ik)
 
       niter = niter + 1
 
@@ -578,7 +644,7 @@ subroutine X(eigensolver_cg2_new) (gr, st, hm, tol, niter, converged, ik, diff)
 
     end do band
 
-    call states_set_state(st, gr%mesh, ist, ik, psi)
+    call states_elec_set_state(st, gr%mesh, ist, ik, psi)
 
     st%eigenval(ist, ik) = lambda
 

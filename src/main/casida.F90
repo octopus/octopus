@@ -29,7 +29,7 @@ module casida_oct_m
   use forces_oct_m
   use gauss_legendre_oct_m
   use global_oct_m
-  use hamiltonian_oct_m
+  use hamiltonian_elec_oct_m
   use io_oct_m
   use io_function_oct_m
   use kpoints_oct_m
@@ -41,6 +41,7 @@ module casida_oct_m
   use messages_oct_m
   use mpi_oct_m
   use multicomm_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use pert_oct_m
   use phonons_lr_oct_m
@@ -49,9 +50,10 @@ module casida_oct_m
   use restart_oct_m
   use simul_box_oct_m
   use sort_oct_m
-  use states_oct_m
-  use states_dim_oct_m
-  use states_restart_oct_m
+  use states_abst_oct_m
+  use states_elec_oct_m
+  use states_elec_dim_oct_m
+  use states_elec_restart_oct_m
   use sternheimer_oct_m
   use system_oct_m
   use unit_oct_m
@@ -84,26 +86,27 @@ module casida_oct_m
     CASIDA_CASIDA       = 16
 
   type casida_t
+    private
     integer :: type !< CASIDA_EPS_DIFF | CASIDA_PETERSILKA | CASIDA_TAMM_DANCOFF |
                     !< CASIDA_VARIATIONAL | CASIDA_CASIDA
 
-    logical           :: states_are_real
-    integer, pointer  :: n_occ(:)       !< number of occupied states
-    integer, pointer  :: n_unocc(:)     !< number of unoccupied states
-    integer           :: nst            !< total number of states
-    integer           :: nik
-    integer           :: sb_dim         !< number of spatial dimensions
-    integer           :: el_per_state
-    character(len=80) :: trandens
-    character(len=80) :: print_exst     !< excited states for which Casida coefficients will be printed
-    FLOAT             :: weight_thresh  !< threshold for the Casida coefficients to be printed
-    logical           :: triplet        !< use triplet kernel?
-    logical           :: calc_forces    !< calculate excited-state forces
-    logical           :: calc_forces_kernel    !< calculate excited-state forces with kernel
-    logical           :: calc_forces_scf       !< calculate excited-state forces with SCF forces
-    logical           :: herm_conj      !< use Hermitian conjugate of matrix
-    type(restart_t)   :: restart_load
-    type(restart_t)   :: restart_dump
+    logical              :: states_are_real
+    integer, allocatable :: n_occ(:)       !< number of occupied states
+    integer, allocatable :: n_unocc(:)     !< number of unoccupied states
+    integer              :: nst            !< total number of states
+    integer              :: nik
+    integer              :: sb_dim         !< number of spatial dimensions
+    integer              :: el_per_state
+    character(len=80)    :: trandens
+    character(len=80)    :: print_exst     !< excited states for which Casida coefficients will be printed
+    FLOAT                :: weight_thresh  !< threshold for the Casida coefficients to be printed
+    logical              :: triplet        !< use triplet kernel?
+    logical              :: calc_forces    !< calculate excited-state forces
+    logical              :: calc_forces_kernel    !< calculate excited-state forces with kernel
+    logical              :: calc_forces_scf       !< calculate excited-state forces with SCF forces
+    logical              :: herm_conj      !< use Hermitian conjugate of matrix
+    type(restart_t)      :: restart_load
+    type(restart_t)      :: restart_dump
     
     logical, allocatable :: is_included(:,:,:) !< (i, a, k) is in the basis?
     integer           :: n_pairs        !< number of pairs to take into account
@@ -156,15 +159,15 @@ module casida_oct_m
     type(blacs_proc_grid_t) :: proc_grid    !< BLACS process grid type
     integer           :: desc(BLACS_DLEN)   !< descriptor for distributed matrix
     integer           :: darray             !< MPI IO type
-
   end type casida_t
 
   type casida_save_pot_t
+    private
     integer :: qi                    !< previous mtxel calculated in K_term
     integer :: qa                    !< previous mtxel calculated in K_term
     integer :: qk                    !< previous mtxel calculated in K_term
-    FLOAT,   pointer  :: dpot(:)     !< previous exchange potential calculated in K_term
-    CMPLX,   pointer  :: zpot(:)     !< previous exchange potential calculated in K_term    
+    FLOAT, allocatable :: dpot(:)    !< previous exchange potential calculated in K_term
+    CMPLX, allocatable :: zpot(:)    !< previous exchange potential calculated in K_term    
   end type casida_save_pot_t
 
   type(profile_t), save :: prof
@@ -200,9 +203,8 @@ contains
   end subroutine casida_run_init
 
   ! ---------------------------------------------------------
-  subroutine casida_run(sys, hm, fromScratch)
+  subroutine casida_run(sys, fromScratch)
     type(system_t),      intent(inout) :: sys
-    type(hamiltonian_t), intent(inout) :: hm
     logical,             intent(inout) :: fromScratch
 
     type(casida_t) :: cas
@@ -229,9 +231,9 @@ contains
     message(1) = 'Info: Starting Casida linear-response calculation.'
     call messages_info(1)
 
-    call restart_init(gs_restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
+    call restart_init(gs_restart, sys%namespace, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
     if(ierr == 0) then
-      call states_look_and_load(gs_restart, sys%st, sys%gr)
+      call states_elec_look_and_load(gs_restart, sys%namespace, sys%st, sys%gr)
       call restart_end(gs_restart)
     else
       message(1) = "Previous gs calculation is required."
@@ -245,7 +247,7 @@ contains
     SAFE_ALLOCATE(cas%n_occ(1:sys%st%d%nik))
     SAFE_ALLOCATE(cas%n_unocc(1:sys%st%d%nik))
 
-    call states_count_pairs(sys%st, cas%n_pairs, cas%n_occ, cas%n_unocc, cas%is_included, is_frac_occ)
+    call states_elec_count_pairs(sys%st, sys%namespace, cas%n_pairs, cas%n_occ, cas%n_unocc, cas%is_included, is_frac_occ)
     if(is_frac_occ) then
       call messages_not_implemented("Casida with partial occupations")
       ! Formulas are in Casida 1995 reference. The occupations are not used at all here currently.
@@ -268,7 +270,7 @@ contains
     ! setup Hamiltonian, without recalculating eigenvalues (use the ones from the restart information)
     message(1) = 'Info: Setting up Hamiltonian.'
     call messages_info(1)
-    call system_h_setup(sys, hm, calc_eigenval=.false.)
+    call system_h_setup(sys, calc_eigenval=.false.)
 
     !%Variable CasidaTheoryLevel
     !%Type flag
@@ -304,7 +306,7 @@ contains
     !% Singapore, 1995).
     !%End
 
-    call parse_variable('CasidaTheoryLevel', CASIDA_EPS_DIFF + CASIDA_PETERSILKA + CASIDA_CASIDA, theorylevel)
+    call parse_variable(sys%namespace, 'CasidaTheoryLevel', CASIDA_EPS_DIFF + CASIDA_PETERSILKA + CASIDA_CASIDA, theorylevel)
 
     if (states_are_complex(sys%st)) then
       if((bitand(theorylevel, CASIDA_VARIATIONAL) /= 0 &
@@ -322,11 +324,11 @@ contains
     !%Description
     !% Activate the photon Casida
     !%End
-    call parse_variable('Photons', .false., cas%has_photons)
+    call parse_variable(sys%namespace, 'Photons', .false., cas%has_photons)
     cas%pt_nmodes = 0
     if (cas%has_photons) then
       if(cas%has_photons) call messages_experimental('Photons = yes')  
-      call photon_mode_init(cas%pt, sys%gr)
+      call photon_mode_init(cas%pt, sys%namespace, sys%gr)
       write(message(1), '(a,i7,a)') 'Happy to have Casida with ', cas%pt%nmodes, ' photon modes.'
       call messages_info(1)
       cas%pt_nmodes = cas%pt%nmodes
@@ -344,9 +346,9 @@ contains
     !% This variable is a string in list form, <i>i.e.</i> expressions such as "1,2-5,8-15" are
     !% valid.
     !%End
-    call parse_variable('CasidaTransitionDensities', "0", cas%trandens)
+    call parse_variable(sys%namespace, 'CasidaTransitionDensities', "0", cas%trandens)
 
-    if(cas%trandens /= "0") call io_function_read_how(sys%gr%sb, sys%outp%how)
+    if(cas%trandens /= "0") call io_function_read_how(sys%gr%sb, sys%namespace, sys%outp%how)
 
     !%Variable CasidaMomentumTransfer
     !%Type block
@@ -358,7 +360,7 @@ contains
     !% using an exponential operator instead of the normal dipole one.
     !%End
 
-    if(parse_block('CasidaMomentumTransfer', blk)==0) then
+    if(parse_block(sys%namespace, 'CasidaMomentumTransfer', blk)==0) then
       do idir = 1, cas%sb_dim
         call parse_block_float(blk, 0, idir - 1, cas%qvector(idir))
         cas%qvector(idir) = units_to_atomic(unit_one / units_inp%length, cas%qvector(idir))
@@ -381,7 +383,7 @@ contains
       !% K. Atkinson, <i>J. Austral. Math. Soc.</i> <b>23</b>, 332 (1982)], and this
       !% variable determines the order of the scheme.
       !%End
-      call parse_variable('CasidaQuadratureOrder', 5, cas%avg_order)
+      call parse_variable(sys%namespace, 'CasidaQuadratureOrder', 5, cas%avg_order)
     else
       cas%qvector(:) = M_ZERO
       cas%qcalc = .false.
@@ -397,7 +399,7 @@ contains
     !% effect for a spin-polarized calculation.
     !%End
     if(sys%st%d%ispin == UNPOLARIZED) then
-      call parse_variable('CasidaCalcTriplet', .false., cas%triplet)
+      call parse_variable(sys%namespace, 'CasidaCalcTriplet', .false., cas%triplet)
     else
       cas%triplet = .false.
     end if
@@ -417,7 +419,7 @@ contains
     !% lower diagonal. Numerical issues may cause small differences however. Use this variable to
     !% calculate the Hermitian conjugate of the usual matrix, for testing.
     !%End
-    call parse_variable('CasidaHermitianConjugate', .false., cas%herm_conj)
+    call parse_variable(sys%namespace, 'CasidaHermitianConjugate', .false., cas%herm_conj)
 
     !%Variable CasidaUseScalapackLayout
     !%Type logical
@@ -432,7 +434,7 @@ contains
     !% ParOther strategy should be used because the diagonalization dominates
     !% the run time of the computation.
     !%End
-    call parse_variable('CasidaUseScalapackLayout', .false., cas%use_scalapack)
+    call parse_variable(sys%namespace, 'CasidaUseScalapackLayout', .false., cas%use_scalapack)
 #ifndef HAVE_SCALAPACK
     if(cas%use_scalapack) then
       message(1) = "ScaLAPACK layout requested, but code not compiled with ScaLAPACK"
@@ -450,7 +452,7 @@ contains
     !% This variable is a string in list form, <i>i.e.</i> expressions such as "1,2-5,8-15" are
     !% valid.
     !%End
-    call parse_variable('CasidaPrintExcitations', "all", cas%print_exst)
+    call parse_variable(sys%namespace, 'CasidaPrintExcitations', "all", cas%print_exst)
     if(cas%use_scalapack) then
       ! do not print excited states -> too many files generated!
       cas%print_exst = "none"
@@ -470,7 +472,7 @@ contains
     !% If a negative value (default) is set, all coefficients will be printed.
     !% For many case, a 0.01 value is a valid option.
     !%End
-    call parse_variable('CasidaWeightThreshold', -M_ONE, cas%weight_thresh)
+    call parse_variable(sys%namespace, 'CasidaWeightThreshold', -M_ONE, cas%weight_thresh)
     if (cas%weight_thresh > M_ONE) then
       message(1) = 'Casida coefficients have values between 0 and 1'
       message(2) = 'Threshold values reset to default value'
@@ -485,7 +487,7 @@ contains
     !%Description
     !% (Experimental) Enable calculation of excited-state forces. Requires previous <tt>vib_modes</tt> calculation.
     !%End
-    call parse_variable('CasidaCalcForces', .false., cas%calc_forces)
+    call parse_variable(sys%namespace, 'CasidaCalcForces', .false., cas%calc_forces)
     if(cas%calc_forces) then
       call messages_experimental("Excited-state forces calculation")
 
@@ -496,7 +498,7 @@ contains
       !%Description
       !% If false, the derivative of the kernel will not be included in the excited-state force calculation.
       !%End
-      call parse_variable('CasidaCalcForcesKernel', .true., cas%calc_forces_kernel)
+      call parse_variable(sys%namespace, 'CasidaCalcForcesKernel', .true., cas%calc_forces_kernel)
 
       !%Variable CasidaCalcForcesSCF
       !%Type logical
@@ -506,7 +508,7 @@ contains
       !% If true, the ground-state forces will be included in the excited-state forces, so they are total forces.
       !% If false, the excited-state forces that are produced are only the gradients of the excitation energy.
       !%End
-      call parse_variable('CasidaCalcForcesSCF', .false., cas%calc_forces_scf)
+      call parse_variable(sys%namespace,'CasidaCalcForcesSCF', .false., cas%calc_forces_scf)
 
       if(cas%use_scalapack) then
         message(1) = "Info: Forces calculation not compatible with ScaLAPACK layout."
@@ -546,7 +548,7 @@ contains
       message(1) = "Info: Approximating resonance energies through KS eigenvalue differences"
       call messages_info(1)
       cas%type = CASIDA_EPS_DIFF
-      call casida_work(sys, hm, cas)
+      call casida_work(sys, cas)
     end if
 
     if (sys%st%d%ispin /= SPINORS) then
@@ -556,7 +558,7 @@ contains
         message(1) = "Info: Calculating matrix elements in the Tamm-Dancoff approximation"
         call messages_info(1)
         cas%type = CASIDA_TAMM_DANCOFF
-        call casida_work(sys, hm, cas)
+        call casida_work(sys, cas)
       end if
 
       if(bitand(theorylevel, CASIDA_VARIATIONAL) /= 0) then
@@ -564,14 +566,14 @@ contains
         message(1) = "Info: Calculating matrix elements with the CV(2)-DFT theory"
         call messages_info(1)
         cas%type = CASIDA_VARIATIONAL
-        call casida_work(sys, hm, cas)
+        call casida_work(sys, cas)
       end if
 
       if(bitand(theorylevel, CASIDA_CASIDA) /= 0) then
         message(1) = "Info: Calculating matrix elements with the full Casida method"
         call messages_info(1)
         cas%type = CASIDA_CASIDA
-        call casida_work(sys, hm, cas)
+        call casida_work(sys, cas)
       end if
 
       ! Doing this first, if doing the others later, takes longer, because we would use
@@ -580,7 +582,7 @@ contains
         message(1) = "Info: Calculating resonance energies via the Petersilka approximation"
         call messages_info(1)
         cas%type = CASIDA_PETERSILKA
-        call casida_work(sys, hm, cas)
+        call casida_work(sys, cas)
       end if
 
     end if
@@ -746,8 +748,8 @@ contains
 
     SAFE_DEALLOCATE_A(cas%is_included)
 
-    call restart_init(cas%restart_dump, RESTART_CASIDA, RESTART_TYPE_DUMP, sys%mc, ierr)
-    call restart_init(cas%restart_load, RESTART_CASIDA, RESTART_TYPE_LOAD, sys%mc, ierr)
+    call restart_init(cas%restart_dump, sys%namespace, RESTART_CASIDA, RESTART_TYPE_DUMP, sys%mc, ierr)
+    call restart_init(cas%restart_load, sys%namespace, RESTART_CASIDA, RESTART_TYPE_LOAD, sys%mc, ierr)
 
     cas%kernel_saved = .false.
 
@@ -761,7 +763,7 @@ contains
 
     PUSH_SUB(casida_type_end)
 
-    ASSERT(associated(cas%pair))
+    !ASSERT(allocated(cas%pair))
     SAFE_DEALLOCATE_P(cas%pair)
     SAFE_DEALLOCATE_P(cas%index)
     if(cas%states_are_real) then
@@ -783,8 +785,8 @@ contains
       SAFE_DEALLOCATE_P(cas%qf_avg)
     end if
 
-    SAFE_DEALLOCATE_P(cas%n_occ)
-    SAFE_DEALLOCATE_P(cas%n_unocc)
+    SAFE_DEALLOCATE_A(cas%n_occ)
+    SAFE_DEALLOCATE_A(cas%n_unocc)
 
     if(cas%calc_forces) then
       if(cas%states_are_real) then
@@ -814,12 +816,11 @@ contains
   ! ---------------------------------------------------------
   !> this subroutine calculates electronic excitation energies using
   !! the matrix formulation of M. Petersilka, or of M. Casida
-  subroutine casida_work(sys, hm, cas)
+  subroutine casida_work(sys, cas)
     type(system_t), target, intent(inout) :: sys
-    type(hamiltonian_t),    intent(inout) :: hm
     type(casida_t),         intent(inout) :: cas
 
-    type(states_t), pointer :: st
+    type(states_elec_t), pointer :: st
     type(mesh_t),   pointer :: mesh
 
     FLOAT, allocatable :: rho_spin(:, :)
@@ -857,7 +858,7 @@ contains
       SAFE_ALLOCATE(cas%fxc(1:mesh%np, 1:st%d%nspin, 1:st%d%nspin))
       cas%fxc = M_ZERO
 
-      call states_total_density(st, mesh, cas%rho)
+      call states_elec_total_density(st, mesh, cas%rho)
       if(cas%triplet) then
         SAFE_ALLOCATE(rho_spin(1:mesh%np, 1:2))
         SAFE_ALLOCATE(fxc_spin(1:mesh%np, 1:2, 1:2))
@@ -866,17 +867,17 @@ contains
         rho_spin(:, 1) = M_HALF * cas%rho(:, 1)
         rho_spin(:, 2) = M_HALF * cas%rho(:, 1)
 
-        call xc_get_fxc(sys%ks%xc, mesh, rho_spin, SPIN_POLARIZED, fxc_spin)
+        call xc_get_fxc(sys%ks%xc, mesh, sys%namespace, rho_spin, SPIN_POLARIZED, fxc_spin)
         cas%fxc(:, 1, 1) = M_HALF * (fxc_spin(:, 1, 1) - fxc_spin(:, 1, 2))
 
         SAFE_DEALLOCATE_A(rho_spin)
         SAFE_DEALLOCATE_A(fxc_spin)
       else
-        call xc_get_fxc(sys%ks%xc, mesh, cas%rho, st%d%ispin, cas%fxc)
+        call xc_get_fxc(sys%ks%xc, mesh, sys%namespace, cas%rho, st%d%ispin, cas%fxc)
       end if
 
       if (sys%ks%sic_type == SIC_ADSIC) then
-        call fxc_add_adsic(sys%ks, st, mesh, cas)
+        call fxc_add_adsic(sys%namespace, sys%ks, st, mesh, cas)
       end if
 
     end if
@@ -889,10 +890,10 @@ contains
       call solve_eps_diff()
     case(CASIDA_TAMM_DANCOFF,CASIDA_VARIATIONAL,CASIDA_CASIDA,CASIDA_PETERSILKA)
       if(cas%states_are_real) then
-        call dcasida_get_matrix(cas, hm, st, sys%ks, mesh, cas%dmat, cas%fxc, restart_filename)
+        call dcasida_get_matrix(cas, sys%hm, st, sys%ks, mesh, cas%dmat, cas%fxc, restart_filename)
         call dcasida_solve(cas, st)
       else
-        call zcasida_get_matrix(cas, hm, st, sys%ks, mesh, cas%zmat, cas%fxc, restart_filename)
+        call zcasida_get_matrix(cas, sys%hm, st, sys%ks, mesh, cas%zmat, cas%fxc, restart_filename)
         call zcasida_solve(cas, st)
       end if
     end select
@@ -908,9 +909,9 @@ contains
 
     if(cas%calc_forces) then
       if(cas%states_are_real) then
-        call dcasida_forces(cas, sys, mesh, st, hm)
+        call dcasida_forces(cas, sys, mesh, st)
       else
-        call zcasida_forces(cas, sys, mesh, st, hm)
+        call zcasida_forces(cas, sys, mesh, st)
       end if
     end if
 
@@ -964,11 +965,12 @@ contains
     end subroutine solve_eps_diff
 
     ! ---------------------------------------------------------
-    subroutine fxc_add_adsic(ks, st, mesh, cas)
-      type(v_ks_t),   intent(in)    :: ks
-      type(states_t), intent(in)    :: st
-      type(mesh_t),   intent(in)    :: mesh
-      type(casida_t), intent(inout) :: cas
+    subroutine fxc_add_adsic(namespace, ks, st, mesh, cas)
+      type(namespace_t),   intent(in)    :: namespace
+      type(v_ks_t),        intent(in)    :: ks
+      type(states_elec_t), intent(in)    :: st
+      type(mesh_t),        intent(in)    :: mesh
+      type(casida_t),      intent(inout) :: cas
 
       FLOAT, allocatable :: rho(:, :)
       FLOAT, allocatable :: fxc_sic(:,:,:)
@@ -978,11 +980,11 @@ contains
       !Check spin and triplets
       if (st%d%ispin /= UNPOLARIZED) then
         message(1) = "Casida calculation with ADSIC not implemented for spin-polarized calculations."
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
       if (cas%triplet) then
         message(1) = "Casida calculation with ADSIC not implemented for triplet excitations."
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
 
       SAFE_ALLOCATE(fxc_sic(1:mesh%np, 1:st%d%nspin, 1:st%d%nspin))
@@ -990,7 +992,7 @@ contains
       fxc_sic = M_ZERO
       rho = cas%rho/st%qtot
 
-      call xc_get_fxc(ks%xc, mesh, rho, 1, fxc_sic)
+      call xc_get_fxc(ks%xc, mesh, namespace, rho, 1, fxc_sic)
 
       cas%fxc = cas%fxc - fxc_sic/st%qtot
 
@@ -1004,8 +1006,8 @@ contains
 
   ! ---------------------------------------------------------
   FLOAT function casida_matrix_factor(cas, st)
-    type(casida_t), intent(in)    :: cas
-    type(states_t), intent(in)    :: st
+    type(casida_t),      intent(in)    :: cas
+    type(states_elec_t), intent(in)    :: st
     
     PUSH_SUB(casida_matrix_factor)
     
@@ -1024,8 +1026,9 @@ contains
   end function casida_matrix_factor
 
   ! ---------------------------------------------------------
-  subroutine qcasida_write(cas)
-    type(casida_t), intent(in) :: cas
+  subroutine qcasida_write(cas, namespace)
+    type(casida_t),    intent(in) :: cas
+    type(namespace_t), intent(in) :: namespace
 
     integer :: iunit, ia
 
@@ -1033,8 +1036,8 @@ contains
 
     PUSH_SUB(qcasida_write)
 
-    call io_mkdir(CASIDA_DIR)
-    iunit = io_open(CASIDA_DIR//'q'//trim(theory_name(cas)), action='write')
+    call io_mkdir(CASIDA_DIR, namespace)
+    iunit = io_open(CASIDA_DIR//'q'//trim(theory_name(cas)), namespace, action='write')
     write(iunit, '(a1,a14,1x,a24,1x,a24,1x,a10,3es15.8,a2)') '#','E' , '|<f|exp(iq.r)|i>|^2', &
                                                              '<|<f|exp(iq.r)|i>|^2>','; q = (',cas%qvector(1:cas%sb_dim),')'
     write(iunit, '(a1,a14,1x,a24,1x,a24,1x,10x,a15)')        '#', trim(units_abbrev(units_out%energy)), &
@@ -1082,20 +1085,15 @@ contains
   end function theory_name
 
   logical function isnt_degenerate(cas, st, ia, jb)
-    type(casida_t), intent(in) :: cas
-    type(states_t), intent(in) :: st
-    integer,        intent(in) :: ia
-    integer,        intent(in) :: jb
-
-    type(states_pair_t), pointer :: pp, qq
+    type(casida_t),      intent(in) :: cas
+    type(states_elec_t), intent(in) :: st
+    integer,             intent(in) :: ia
+    integer,             intent(in) :: jb
 
     PUSH_SUB(isnt_degenerate)
 
-    pp => cas%pair(ia)
-    qq => cas%pair(jb)
-
-    isnt_degenerate = (abs((st%eigenval(pp%a, pp%kk) - st%eigenval(pp%i, pp%kk)) &
-      - (st%eigenval(qq%a, qq%kk) - st%eigenval(qq%i, qq%kk))) > CNST(1e-8))
+    isnt_degenerate = (abs((st%eigenval(cas%pair(ia)%a, cas%pair(ia)%kk) - st%eigenval(cas%pair(ia)%i, cas%pair(ia)%kk)) &
+      - (st%eigenval(cas%pair(jb)%a, cas%pair(jb)%kk) - st%eigenval(cas%pair(jb)%i, cas%pair(jb)%kk))) > CNST(1e-8))
 
     POP_SUB(isnt_degenerate)
   end function isnt_degenerate

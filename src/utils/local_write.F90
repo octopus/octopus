@@ -23,7 +23,7 @@ module local_write_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
-  use hamiltonian_oct_m
+  use hamiltonian_elec_oct_m
   use io_oct_m
   use io_function_oct_m
   use kick_oct_m
@@ -31,11 +31,12 @@ module local_write_oct_m
   use mesh_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use poisson_oct_m
   use profiling_oct_m
   use species_oct_m
-  use states_oct_m
+  use states_elec_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use varinfo_oct_m
@@ -87,8 +88,9 @@ contains
   end function local_write_check_hm
 
   ! ---------------------------------------------------------
-  subroutine local_write_init(writ, nd, lab, iter, dt)
+  subroutine local_write_init(writ, namespace, nd, lab, iter, dt)
     type(local_write_t), intent(out)   :: writ
+    type(namespace_t),   intent(in)    :: namespace
     integer,             intent(in)    :: nd 
     character(len=15),   intent(in)    :: lab(:)
     integer,             intent(in)    :: iter
@@ -130,7 +132,7 @@ contains
 
     default = 2**(LOCAL_OUT_MULTIPOLES - 1) 
 
-    call parse_variable('LDOutput', default, flags)
+    call parse_variable(namespace, 'LDOutput', default, flags)
 
     if(.not.varinfo_valid_option('LDOutput', flags, is_flag = .true.)) call messages_input_error('LDOutput')
 
@@ -139,7 +141,7 @@ contains
       writ%out(iout,:)%write = (bitand(flags, 2**(iout - 1)) /= 0)
     end do
 
-    call messages_obsolete_variable('LDOutputHow', 'LDOutputFormat')
+    call messages_obsolete_variable(namespace, 'LDOutputHow', 'LDOutputFormat')
     
     !%Variable LDOutputFormat
     !%Type flag
@@ -149,7 +151,7 @@ contains
     !% Describes the format of the output files (see <tt>LDOutput</tt>).
     !% It can take the same values as <tt>OutputFormat</tt> flag.
     !%End
-    call parse_variable('LDOutputFormat', 0, writ%how)
+    call parse_variable(namespace, 'LDOutputFormat', 0, writ%how)
     if(.not.varinfo_valid_option('OutputFormat', writ%how, is_flag=.true.)) then
       call messages_input_error('LDOutputFormat')
     end if
@@ -163,41 +165,43 @@ contains
     !% during a time-dependent simulation. Must be non-negative.
     !%End
 
-    call parse_variable('LDMultipoleLmax', 1, writ%lmax)
+    call parse_variable(namespace, 'LDMultipoleLmax', 1, writ%lmax)
     if (writ%lmax < 0) then
       write(message(1), '(a,i6,a)') "Input: '", writ%lmax, "' is not a valid LDMultipoleLmax."
       message(2) = '(Must be LDMultipoleLmax >= 0 )'
       call messages_fatal(2)
     end if
 
-    call io_mkdir('local.general')
+    call io_mkdir('local.general', namespace)
 
     if(mpi_grp_is_root(mpi_world)) then
       do id = 1, nd
         if(writ%out(LOCAL_OUT_MULTIPOLES, id)%write) then 
-          call io_mkdir('local.general/multipoles')
+          call io_mkdir('local.general/multipoles', namespace)
           call write_iter_init(writ%out(LOCAL_OUT_MULTIPOLES,id)%handle, &
             iter, units_from_atomic(units_out%time, dt), &
-          trim(io_workpath("local.general/multipoles/"//trim(lab(id))//".multipoles")))
+          trim(io_workpath("local.general/multipoles/"//trim(lab(id))//".multipoles", namespace)))
         end if
 
         if(writ%out(LOCAL_OUT_POTENTIAL, id)%write) then
-          call io_mkdir('local.general/potential')
+          call io_mkdir('local.general/potential', namespace)
           call write_iter_init(writ%out(LOCAL_OUT_POTENTIAL,id)%handle, first, &
-          units_from_atomic(units_out%time, dt), trim(io_workpath("local.general/potential/"//trim(lab(id))//".potential")))
+          units_from_atomic(units_out%time, dt), &
+          trim(io_workpath("local.general/potential/"//trim(lab(id))//".potential", namespace)))
         end if
 
         if(writ%out(LOCAL_OUT_DENSITY, id)%write) then
-          call io_mkdir('local.general/densities')
+          call io_mkdir('local.general/densities', namespace)
           call write_iter_init(writ%out(LOCAL_OUT_DENSITY,id)%handle, first, &
-            units_from_atomic(units_out%time, dt), trim(io_workpath("local.general/densities/"//trim(lab(id))//".densities")))
+            units_from_atomic(units_out%time, dt), &
+            trim(io_workpath("local.general/densities/"//trim(lab(id))//".densities", namespace)))
         end if
 
         if(writ%out(LOCAL_OUT_ENERGY, id)%write) then 
-          call io_mkdir('local.general/energy')
+          call io_mkdir('local.general/energy', namespace)
           call write_iter_init(writ%out(LOCAL_OUT_ENERGY,id)%handle, &
             iter, units_from_atomic(units_out%time, dt), &
-          trim(io_workpath("local.general/energy/"//trim(lab(id))//".energy")))
+          trim(io_workpath("local.general/energy/"//trim(lab(id))//".energy", namespace)))
         end if
       end do
     end if
@@ -227,23 +231,24 @@ contains
   end subroutine local_write_end
 
   ! ---------------------------------------------------------
-  subroutine local_write_iter(writ, nd, lab, ions_inside, inside, center, gr, st, & 
+  subroutine local_write_iter(writ, namespace, nd, lab, ions_inside, inside, center, gr, st, & 
                               hm, ks, geo, kick, iter, l_start, ldoverwrite)
-    type(local_write_t),    intent(inout) :: writ
-    integer,                intent(in)    :: nd 
-    character(len=15),      intent(in)    :: lab(:)
-    logical,                intent(in)    :: ions_inside(:,:)
-    logical,                intent(in)    :: inside(:,:)
-    FLOAT  ,                intent(in)    :: center(:,:)
-    type(grid_t),           intent(inout) :: gr
-    type(states_t),         intent(inout) :: st
-    type(hamiltonian_t),    intent(inout) :: hm
-    type(v_ks_t),           intent(inout) :: ks
-    type(geometry_t),       intent(inout) :: geo
-    type(kick_t),           intent(inout) :: kick
-    integer,                intent(in)    :: iter
-    integer,                intent(in)    :: l_start
-    logical,                intent(in)    :: ldoverwrite
+    type(local_write_t),      intent(inout) :: writ
+    type(namespace_t),        intent(in)    :: namespace
+    integer,                  intent(in)    :: nd 
+    character(len=15),        intent(in)    :: lab(:)
+    logical,                  intent(in)    :: ions_inside(:,:)
+    logical,                  intent(in)    :: inside(:,:)
+    FLOAT  ,                  intent(in)    :: center(:,:)
+    type(grid_t),             intent(in)    :: gr
+    type(states_elec_t),      intent(inout) :: st
+    type(hamiltonian_elec_t), intent(inout) :: hm
+    type(v_ks_t),             intent(inout) :: ks
+    type(geometry_t),         intent(inout) :: geo
+    type(kick_t),             intent(inout) :: kick
+    integer,                  intent(in)    :: iter
+    integer,                  intent(in)    :: l_start
+    logical,                  intent(in)    :: ldoverwrite
 
     type(profile_t), save :: prof
     integer :: id
@@ -254,7 +259,7 @@ contains
     if(any(writ%out(LOCAL_OUT_MULTIPOLES,:)%write)) then
       if(.not.ldoverwrite)then
       end if
-      call local_write_multipole(writ%out(LOCAL_OUT_MULTIPOLES, :), nd, lab, ions_inside, inside, center, & 
+      call local_write_multipole(writ%out(LOCAL_OUT_MULTIPOLES, :), namespace, nd, lab, ions_inside, inside, center, & 
                         gr, geo, st, writ%lmax, kick, iter, l_start, ldoverwrite, writ%how)
       if(mpi_grp_is_root(mpi_world)) then
         do id = 1, nd
@@ -264,12 +269,12 @@ contains
     end if
 
     if(any(writ%out(LOCAL_OUT_DENSITY,:)%write).or.any(writ%out(LOCAL_OUT_POTENTIAL,:)%write)) &
-      call local_write_density(writ%out(LOCAL_OUT_DENSITY, :), writ%out(LOCAL_OUT_POTENTIAL,:), & 
+      call local_write_density(writ%out(LOCAL_OUT_DENSITY, :), namespace, writ%out(LOCAL_OUT_POTENTIAL,:), & 
                                nd, lab, inside, &
                                gr, geo, st, hm, ks, iter, writ%how)
     
     if(any(writ%out(LOCAL_OUT_ENERGY, :)%write)) then
-      call local_write_energy(writ%out(LOCAL_OUT_ENERGY, :), nd, lab, inside, &
+      call local_write_energy(writ%out(LOCAL_OUT_ENERGY, :), namespace, nd, lab, inside, &
                                gr, geo, st, hm, ks, iter, l_start, ldoverwrite)
       if(mpi_grp_is_root(mpi_world)) then
         do id = 1, nd
@@ -283,20 +288,21 @@ contains
   end subroutine local_write_iter
 
   ! ---------------------------------------------------------
-  subroutine local_write_density(out_dens, out_pot, nd, lab, inside, & 
+  subroutine local_write_density(out_dens, namespace, out_pot, nd, lab, inside, & 
                                 gr, geo, st, hm, ks, iter, how)
-    type(local_write_prop_t),      intent(inout) :: out_dens(:)
-    type(local_write_prop_t),      intent(inout) :: out_pot(:)
+    type(local_write_prop_t), intent(inout) :: out_dens(:)
+    type(namespace_t),        intent(in)    :: namespace
+    type(local_write_prop_t), intent(inout) :: out_pot(:)
     integer,                  intent(in)    :: nd 
     character(len=15),        intent(in)    :: lab(:)
     logical,                  intent(in)    :: inside(:,:)
-    type(grid_t),         intent(inout) :: gr
-    type(geometry_t),     intent(inout) :: geo
-    type(states_t),       intent(inout) :: st
-    type(hamiltonian_t),  intent(inout) :: hm
-    type(v_ks_t),         intent(inout) :: ks
-    integer,              intent(in) :: iter
-    integer(8),           intent(in) :: how
+    type(grid_t),             intent(in)    :: gr
+    type(geometry_t),         intent(inout) :: geo
+    type(states_elec_t),      intent(inout) :: st
+    type(hamiltonian_elec_t), intent(inout) :: hm
+    type(v_ks_t),             intent(inout) :: ks
+    integer,                  intent(in) :: iter
+    integer(8),               intent(in) :: how
 
     integer            :: id, is, ix, ierr
     character(len=120) :: folder, out_name
@@ -320,27 +326,27 @@ contains
         if (out_dens(id)%write) then
           folder = 'local.general/densities/'//trim(lab(id))//'.densities/'
           write(out_name, '(a,a1,i0,a1,i7.7)')trim(lab(id)),'.',is,'.',iter
-          call dio_function_output(how, &
-            trim(folder), trim(out_name), gr%mesh, tmp_rho(1:gr%mesh%np), units_out%length, ierr, geo = geo)
+          call dio_function_output(how,  trim(folder), trim(out_name), namespace, &
+            gr%mesh, tmp_rho(1:gr%mesh%np), units_out%length, ierr, geo = geo)
         end if
         if (out_pot(id)%write) then
         !Computes Hartree potential just for n[r], r belongs to id domain.
           tmp_vh = M_ZERO
-          call dpoisson_solve(psolver, tmp_vh, tmp_rho)
+          call dpoisson_solve(hm%psolver, tmp_vh, tmp_rho)
           folder = 'local.general/potential/'//trim(lab(id))//'.potential/'
           write(out_name, '(a,i0,a1,i7.7)')'vh.',is,'.',iter
-          call dio_function_output(how, &
-            trim(folder), trim(out_name), gr%mesh, tmp_vh, units_out%length, ierr, geo = geo)
+          call dio_function_output(how, trim(folder), trim(out_name), namespace, &
+            gr%mesh, tmp_vh, units_out%length, ierr, geo = geo)
         !Computes XC potential
           st%rho(:,is) = M_ZERO
           do ix = 1, gr%mesh%np
             if (inside(ix, id)) st%rho(ix, is) = st_rho(ix)
           end do
-          call v_ks_calc(ks, hm, st, geo, calc_eigenval = .false. , calc_berry = .false. , calc_energy = .false.)
+          call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval = .false. , calc_berry = .false. , calc_energy = .false.)
           folder = 'local.general/potential/'//trim(lab(id))//'.potential/'
           write(out_name, '(a,i0,a1,i7.7)')'vxc.',is,'.',iter
-          call dio_function_output(how, &
-            trim(folder), trim(out_name), gr%mesh, hm%vxc(:,is), units_out%length, ierr, geo = geo)
+          call dio_function_output(how, trim(folder), trim(out_name), namespace, &
+            gr%mesh, hm%vxc(:,is), units_out%length, ierr, geo = geo)
           st%rho(:,is) = st_rho(:)
         end if
       end do
@@ -349,17 +355,17 @@ contains
     if (any(out_pot(:)%write)) then
       do is = 1, st%d%nspin
       !Computes Hartree potential
-        call dpoisson_solve(psolver, hm%vhartree, st%rho(1:gr%mesh%np, is))
+        call dpoisson_solve(hm%psolver, hm%vhartree, st%rho(1:gr%mesh%np, is))
         folder = 'local.general/potential/'
         write(out_name, '(a,i0,a1,i7.7)')'global-vh.',is,'.',iter
-        call dio_function_output(how, &
-          trim(folder), trim(out_name), gr%mesh, hm%vhartree, units_out%length, ierr, geo = geo)
+        call dio_function_output(how, trim(folder), trim(out_name), namespace, &
+          gr%mesh, hm%vhartree, units_out%length, ierr, geo = geo)
       !Computes global XC potential
-        call v_ks_calc(ks, hm, st, geo, calc_eigenval = .false. , calc_berry = .false. , calc_energy = .false.)
+        call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval = .false. , calc_berry = .false. , calc_energy = .false.)
         folder = 'local.general/potential/'
         write(out_name, '(a,i0,a1,i7.7)')'global-vxc.',is,'.',iter
-        call dio_function_output(how, &
-          trim(folder), trim(out_name), gr%mesh, hm%vxc(:,is), units_out%length, ierr, geo = geo)
+        call dio_function_output(how, trim(folder), trim(out_name), namespace, &
+          gr%mesh, hm%vxc(:,is), units_out%length, ierr, geo = geo)
       end do
     end if
 
@@ -370,20 +376,21 @@ contains
   end subroutine local_write_density
 
   ! ---------------------------------------------------------
-  subroutine local_write_energy(out_energy, nd, lab, inside, & 
+  subroutine local_write_energy(out_energy, namespace, nd, lab, inside, & 
                                 gr, geo, st, hm, ks, iter, l_start, start)
-    type(local_write_prop_t),      intent(inout) :: out_energy(:)
+    type(local_write_prop_t), intent(inout) :: out_energy(:)
+    type(namespace_t),        intent(in)    :: namespace
     integer,                  intent(in)    :: nd 
     character(len=15),        intent(in)    :: lab(:)
     logical,                  intent(in)    :: inside(:,:)
-    type(grid_t),         intent(inout) :: gr
-    type(geometry_t),     intent(inout) :: geo
-    type(states_t),       intent(inout) :: st
-    type(hamiltonian_t),  intent(inout) :: hm
-    type(v_ks_t),         intent(inout) :: ks
-    integer,              intent(in) :: iter
-    integer,              intent(in) :: l_start
-    logical,              intent(in) :: start
+    type(grid_t),             intent(in)    :: gr
+    type(geometry_t),         intent(inout) :: geo
+    type(states_elec_t),      intent(inout) :: st
+    type(hamiltonian_elec_t), intent(inout) :: hm
+    type(v_ks_t),             intent(inout) :: ks
+    integer,                  intent(in) :: iter
+    integer,                  intent(in) :: l_start
+    logical,                  intent(in) :: start
 
     integer :: id, ii, is, ix, jd
     character(len=120) :: aux
@@ -445,9 +452,9 @@ contains
     ! TODO: Make new files for each nspin value. 
     do is = 1, st%d%nspin
       !Compute Hartree potential
-      call dpoisson_solve(psolver, hm%vhartree, st%rho(1:gr%mesh%np, is))
+      call dpoisson_solve(hm%psolver, hm%vhartree, st%rho(1:gr%mesh%np, is))
       !Compute XC potential
-      call v_ks_calc(ks, hm, st, geo, calc_eigenval = .false. , calc_berry = .false. , calc_energy = .false.)
+      call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval = .false. , calc_berry = .false. , calc_energy = .false.)
  ! 
       st_rho(:) = st%rho(:, is)
       hm_vxc(:) = hm%vxc(:, is)
@@ -471,7 +478,7 @@ contains
         do ix = 1, gr%mesh%np 
           if (inside(ix, id)) st%rho(ix, is) = st_rho(ix)
         end do
-        call v_ks_calc(ks, hm, st, geo, calc_eigenval = .false. , calc_berry = .false. , calc_energy = .false.)
+        call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval = .false. , calc_berry = .false. , calc_energy = .false.)
         tmp_rhoi(1:gr%mesh%np) = st%rho(1:gr%mesh%np, is)
       !eh = Int[n(id)*v_h(id)]
         leh = dmf_integrate(gr%mesh, tmp_rhoi*hm%vhartree(1:gr%mesh%np)) 
@@ -491,7 +498,7 @@ contains
             do ix = 1, gr%mesh%np 
               if (inside(ix, jd)) st%rho(ix, is) = st_rho(ix)
             end do
-            call v_ks_calc(ks, hm, st, geo, calc_eigenval = .false. , calc_berry = .false. , calc_energy = .false.)
+            call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval = .false. , calc_berry = .false. , calc_energy = .false.)
             leh = dmf_integrate(gr%mesh, tmp_rhoi*hm%vhartree(1:gr%mesh%np)) 
           !exc = Int[n(id)*v_xc(jd)]
             lexc = dmf_integrate(gr%mesh, tmp_rhoi*hm%vxc(1:gr%mesh%np, is))
@@ -516,10 +523,10 @@ contains
   end subroutine local_write_energy
 
   ! ---------------------------------------------------------
-  subroutine local_write_multipole(out_multip, nd, lab, ions_inside, inside, center, & 
+  subroutine local_write_multipole(out_multip, namespace, nd, lab, ions_inside, inside, center, & 
                                 gr, geo, st, lmax, kick, iter, l_start, start, how)
-
     type(local_write_prop_t), intent(inout) :: out_multip(:)
+    type(namespace_t),           intent(in)    :: namespace
     integer,                  intent(in)    :: nd 
     character(len=15),        intent(in)    :: lab(:)
     logical,                  intent(in)    :: ions_inside(:,:)
@@ -527,7 +534,7 @@ contains
     FLOAT,                    intent(in)    :: center(:,:)
     type(grid_t),             intent(in)    :: gr
     type(geometry_t),         intent(in)    :: geo
-    type(states_t),           intent(in)    :: st
+    type(states_elec_t),      intent(in)    :: st
     integer,                  intent(in)    :: lmax
     type(kick_t),             intent(in)    :: kick
     integer,                  intent(in)    :: iter
@@ -627,7 +634,7 @@ contains
     !% Describes if the ionic dipole has to be take into account
     !% when computing the multipoles.
     !%End
-    call parse_variable('LDIonicDipole', .true., use_ionic_dipole)
+    call parse_variable(namespace, 'LDIonicDipole', .true., use_ionic_dipole)
     if (use_ionic_dipole) then
       call local_geometry_dipole(nd, ions_inside, geo, center, ionic_dipole)
       do is = 1, st%d%nspin
@@ -661,7 +668,7 @@ contains
       !FIXME: to include spin larger than 1.
       is = 1
       do id = 1, nd
-        call out_bld_multipoles(multipole(2:4, is, id), center(:,id), lab(id), iter)
+        call out_bld_multipoles(namespace, multipole(2:4, is, id), center(:,id), lab(id), iter)
       end do
     end if
 
@@ -709,11 +716,12 @@ contains
   end subroutine local_geometry_dipole
 
   ! ---------------------------------------------------------
-  subroutine out_bld_multipoles(multipoles, center, label, iter)
-    FLOAT,         intent(in) :: multipoles(:)
-    FLOAT,         intent(in) :: center(:)
-    character(15), intent(in) :: label
-    integer,       intent(in) :: iter
+  subroutine out_bld_multipoles(namespace, multipoles, center, label, iter)
+    type(namespace_t), intent(in) :: namespace
+    FLOAT,             intent(in) :: multipoles(:)
+    FLOAT,             intent(in) :: center(:)
+    character(15),     intent(in) :: label
+    integer,           intent(in) :: iter
    
     integer             :: ll, out_bld
     character(len=80)   :: filename, folder
@@ -722,9 +730,9 @@ contains
     PUSH_SUB(out_bld_multipoles)
     
     write(folder,'(a,a)')'local.general/multipoles/',trim(label)
-    call io_mkdir(folder)
+    call io_mkdir(folder, namespace)
     write(filename,'(a,a,a,a,i7.7,a)')trim(folder),'/',trim(label),'.',iter,'.bld'
-    out_bld = io_open(file=trim(filename), action='write')
+    out_bld = io_open(trim(filename), namespace, action='write')
 
     write(out_bld,'(a,a,a,i7)')'.comment ** Arrow for the dipole moment centered at the center of mass for ', &
                         trim(label), ' domain and iteration number: ',iter

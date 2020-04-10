@@ -44,6 +44,7 @@ Usage: oct-run_regression_test.pl [options]
     -l        copy output log to current directory
     -m        run matches only (assumes there are work directories)
     -r        print a report into a YAML files
+    -G        deviceID offset for CUDA run
 
 Exit codes:
     0         all tests passed
@@ -89,7 +90,7 @@ if (not @ARGV) { usage; }
 
 $opt_f = "";
 $opt_r = "";
-getopts("nlvhD:c:f:spm:r:");
+getopts("nlvhD:c:f:spm:r:G:");
 
 # avoid warnings 'used only once: possible typo'
 $useless = $opt_h;
@@ -160,6 +161,14 @@ $enabled = ""; # FIXME: should Enabled be optional?
 $options_required = "";
 $options_required_mpi = "";
 $options_are_mpi = 0;
+
+# Handle GPU offset
+$offset_GPU = defined $opt_G ? $opt_G : -1;
+if($offset_GPU >= 0) {
+    $command_env = "OCT_PARSE_ENV=1 OCT_AccelDevice=$offset_GPU";
+} else {
+    $command_env = "";
+}
 
 # This variable counts the number of failed testcases.
 $failures = 0;
@@ -310,8 +319,8 @@ while ($_ = <TESTSUITE>) {
         }
       
 
-        if ( $_ =~ /^Util\s*:\s*(.*)\s*$/) {
-            $np = "serial";
+        if ( $_ =~ /^Util\s*:\s*(.*)\s*$/ || $_ =~ /^MPIUtil\s*:\s*(.*)\s*$/) {
+            if( $_ =~ /^Util\s*:\s*(.*)\s*$/) {$np = "serial";}
             $command = "$exec_directory/$1";
             if( ! -x "$command") {
                 $command = "$exec_directory/../utils/$1";
@@ -322,6 +331,19 @@ while ($_ = <TESTSUITE>) {
                 die255("Cannot find utility '$1'.");
             }
         }
+
+        elsif ( $_ =~ /^MPIUtil\s*:\s*(.*)\s*$/) {
+            $command = "$exec_directory/$1";
+            if( ! -x "$command") {
+                $command = "$exec_directory/../utils/$1";
+            }
+            $report{$testname}{"util"} = $1;
+        
+            if( ! -x "$command") {
+                die255("Cannot find utility '$1'.");
+            }
+        }
+
 
         elsif ( $_ =~ /^Processors\s*:\s*(.*)\s*$/) {
             # FIXME: enforce this is "serial" or numeric
@@ -383,9 +405,9 @@ while ($_ = <TESTSUITE>) {
                         $specify_np = "-n $np";
                         $my_nslots = "";
                     }
-                    $command_line = "cd $workdir; $my_nslots $mpiexec $specify_np $machinelist $aexec $command > out";
+                    $command_line = "cd $workdir; $command_env $my_nslots $mpiexec $specify_np $machinelist $aexec $command > out";
                 } else {
-                    $command_line = "cd $workdir; $aexec $command > out ";
+                    $command_line = "cd $workdir; $command_env $aexec $command > out ";
                 }
 
                 # MPI implementations generally permit using more tasks than actual cores, and running tests this way makes it likely for developers to find race conditions.
@@ -543,6 +565,16 @@ sub run_match_new {
             $shell_command = "awk -v n=$line_num '(NR==n+$par[1]+1) {printf \$$par[2]}' $par[0]";
         } else {
             $shell_command = "awk '(NR==$par[1]) {printf \$$par[2]}' $par[0]";
+        }
+
+     
+    } elsif ($func eq "LINEFIELD_ABS") { # function LINE(filename, line, field_re, field_im)
+        check_num_args(4, 4, $#par, $func);
+        if ($par[1] < 0) { # negative number means from end of file
+            $line_num = "`wc -l $par[0] | awk '{print \$1}'`";
+            $shell_command = "awk -v n=$line_num '(NR==n+$par[1]+1) {printf sqrt(\$$par[2]*\$$par[2] + \$$par[3]*\$$par[3])}' $par[0]";
+        } else {
+            $shell_command = "awk '(NR==$par[1]) {printf sqrt(\$$par[2]*\$$par[2] + \$$par[3]*\$$par[3]) }' $par[0]";
         }
 
     } elsif ($func eq "GREP") { # function GREP(filename, 're', column <, [offset>])
