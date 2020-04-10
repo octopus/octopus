@@ -269,14 +269,14 @@ contains
 
     !%Variable PES_Flux_Lmax
     !%Type integer
-    !%Default 1
+    !%Default 80
     !%Section Time-Dependent::PhotoElectronSpectrum
     !%Description
     !% Maximum order of the spherical harmonic to be integrated on an equidistant spherical 
     !% grid (to be changed to Gauss-Legendre quadrature).
     !%End
     if(this%surf_shape == M_SPHERICAL) then
-      call parse_variable(namespace, 'PES_Flux_Lmax', 1, this%lmax)
+      call parse_variable(namespace, 'PES_Flux_Lmax', 80, this%lmax)
       if(this%lmax < 1) call messages_input_error('PES_Flux_Lmax', 'must be > 0')
       call messages_print_var_value(stdout, 'PES_Flux_Lmax', this%lmax)
     end if
@@ -1311,9 +1311,6 @@ contains
         this%nkpnts_end   = this%nkpnts
 
 
-        ! store in the additional kpoint dim the gauge independent grid for final 
-        ! momentum representation (i.e. the one at the Gamma point)
-!         cSAFE_ALLOCATE(this%kcoords_cub(1:mdim, this%nkpnts_start:this%nkpnts_end, kptst:kptend+1))
         SAFE_ALLOCATE(this%kcoords_cub(1:mdim, this%nkpnts_start:this%nkpnts_end, 1)) 
         
         this%kcoords_cub = M_ZERO
