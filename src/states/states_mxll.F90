@@ -230,7 +230,7 @@ contains
     st%fromScratch = .true. ! this will be reset if restart_read is called
     call states_mxll_null(st)
     
-    st%d%dim = MAX_DIM
+    st%d%dim = 3 ! check if this should be MAX_DIM
     st%nst   = 1
     st%d%ispin = UNPOLARIZED
     st%d%nspin = 1
@@ -377,6 +377,8 @@ contains
     SAFE_DEALLOCATE_A(st%rs_state_long)
     SAFE_DEALLOCATE_A(st%rs_current_density_restart_t1)
     SAFE_DEALLOCATE_A(st%rs_current_density_restart_t2)
+    SAFE_DEALLOCATE_P(st%user_def_e_field)
+    SAFE_DEALLOCATE_P(st%user_def_b_field)
 
     if (allocated(st%rs_state_const)) then
       SAFE_DEALLOCATE_A(st%rs_state_const)

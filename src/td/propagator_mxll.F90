@@ -530,6 +530,8 @@ contains
 
     PUSH_SUB(exponential_mxll_apply)
 
+    print *,'st%d%dim',st%d%dim
+    
     call zbatch_init(ffbatch, 1, 1, st%d%dim, gr%mesh%np_part)
 
     if (st%d%pack_states) call ffbatch%do_pack()
