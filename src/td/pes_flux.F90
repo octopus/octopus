@@ -1313,7 +1313,8 @@ contains
 
         ! store in the additional kpoint dim the gauge independent grid for final 
         ! momentum representation (i.e. the one at the Gamma point)
-        SAFE_ALLOCATE(this%kcoords_cub(1:mdim, this%nkpnts_start:this%nkpnts_end, kptst:kptend+1)) 
+!         cSAFE_ALLOCATE(this%kcoords_cub(1:mdim, this%nkpnts_start:this%nkpnts_end, kptst:kptend+1))
+        SAFE_ALLOCATE(this%kcoords_cub(1:mdim, this%nkpnts_start:this%nkpnts_end, 1)) 
         
         this%kcoords_cub = M_ZERO
 
@@ -1330,28 +1331,23 @@ contains
 
         else !mdim = 2,3 
           thetak = M_PI / M_TWO
-          do ikpt = kptst, kptend+1
-            if (ikpt == kptend+1) then
-              kpoint(1:sb%dim) = M_ZERO
-            else
-              kpoint(1:sb%dim) = kpoints_get_point(sb%kpoints, ikpt)
-            end if
-            ikp = 0            
-            do ikk = 1, this%nk
-              do ith = 0, this%nstepsthetak
-                if(mdim == 3) thetak = ith * Dthetak + this%thetak_rng(1)
-                do iph = 0, this%nstepsphik - 1
-                  ikp = ikp + 1
-                  phik = iph * Dphik + this%phik_rng(1)
-                  kact = this%klinear(ikk,1)
-                                this%kcoords_cub(1, ikp, ikpt) = kact * cos(phik) * sin(thetak) + kpoint(1)
-                                this%kcoords_cub(2, ikp, ikpt) = kact * sin(phik) * sin(thetak) + kpoint(2)
-                  if(mdim == 3) this%kcoords_cub(3, ikp, ikpt) = kact * cos(thetak)
-                  if(mdim == 3 .and. (thetak < M_EPSILON .or. abs(thetak-M_PI) < M_EPSILON)) exit
-                end do
+
+          ikp = 0            
+          do ikk = 1, this%nk
+            do ith = 0, this%nstepsthetak
+              if(mdim == 3) thetak = ith * Dthetak + this%thetak_rng(1)
+              do iph = 0, this%nstepsphik - 1
+                ikp = ikp + 1
+                phik = iph * Dphik + this%phik_rng(1)
+                kact = this%klinear(ikk,1)
+                              this%kcoords_cub(1, ikp,1) = kact * cos(phik) * sin(thetak) 
+                              this%kcoords_cub(2, ikp,1) = kact * sin(phik) * sin(thetak) 
+                if(mdim == 3) this%kcoords_cub(3, ikp,1) = kact * cos(thetak)
+                if(mdim == 3 .and. (thetak < M_EPSILON .or. abs(thetak-M_PI) < M_EPSILON)) exit
               end do
             end do
           end do
+            
         end if
       end if
 
