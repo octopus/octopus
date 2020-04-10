@@ -704,7 +704,6 @@ contains
       sys%hm%propagation_apply = .true.
 
       if (parse_is_defined(sys%namespace, 'UserDefinedMaxwellIncidentWaves') .and. (td%tr_mxll%bc_plane_waves)) then
-        SAFE_ALLOCATE(sys%st%rs_state_plane_waves(1:sys%gr%mesh%np_part, 1:sys%st%d%dim))
         sys%st%rs_state_plane_waves(:,:) = M_z0
       end if
 
@@ -851,7 +850,7 @@ contains
       SAFE_DEALLOCATE_A(rs_charge_density_ext_t2)
       SAFE_DEALLOCATE_A(rs_state_init)
 
-      call states_mxll_end(sys%st)
+!      call states_mxll_end(sys%st)
       call td_write_mxll_end(write_handler)
 
     end select

@@ -530,8 +530,6 @@ contains
 
     PUSH_SUB(exponential_mxll_apply)
 
-    print *,'st%d%dim',st%d%dim
-    
     call zbatch_init(ffbatch, 1, 1, st%d%dim, gr%mesh%np_part)
 
     if (st%d%pack_states) call ffbatch%do_pack()
@@ -1488,13 +1486,12 @@ contains
     CMPLX, optional,     intent(in)  :: rs_field_plane_waves(:,:)
     FLOAT, optional,     intent(out) :: mx_energy_plane_waves
 
-    integer            :: ip, ip_in, dim
+    integer            :: ip, ip_in
     FLOAT, allocatable :: energy_density(:), energy_density_plane_waves(:), tmp(:), tmp_pw(:)
     FLOAT, allocatable :: e_energy_density(:), tmp_e(:)
     FLOAT, allocatable :: b_energy_density(:), tmp_b(:)
+    
     PUSH_SUB(energy_mxll_calc)
-
-    dim = st%d%dim
 
     SAFE_ALLOCATE(energy_density(1:gr%mesh%np))
     SAFE_ALLOCATE(energy_density_plane_waves(1:gr%mesh%np))
@@ -1505,11 +1502,10 @@ contains
     SAFE_ALLOCATE(tmp_b(1:gr%mesh%np))
     SAFE_ALLOCATE(tmp_pw(1:gr%mesh%np))
 
-
     call energy_density_calc(gr, st, rs_field, energy_density, &
-                                     e_energy_density, b_energy_density,       &
-                                     hm%plane_waves, &
-                                     rs_field_plane_waves, energy_density_plane_waves)
+         e_energy_density, b_energy_density,       &
+         hm%plane_waves, &
+         rs_field_plane_waves, energy_density_plane_waves)
 
     tmp    = M_ZERO
     tmp_e  = M_ZERO
@@ -1530,10 +1526,6 @@ contains
     mx_b_energy           = dmf_integrate(gr%mesh, tmp_b)
     if (present(rs_field_plane_waves) .and. present(mx_energy_plane_waves))  &
        mx_energy_plane_waves = dmf_integrate(gr%mesh, tmp_pw)
-
-    tmp   = M_ZERO
-    tmp_e = M_ZERO
-    tmp_b = M_ZERO
 
     if (present(mx_energy_boundary)) then
       do ip_in = 1, st%boundary_points_number

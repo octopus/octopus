@@ -230,7 +230,7 @@ contains
     st%fromScratch = .true. ! this will be reset if restart_read is called
     call states_mxll_null(st)
     
-    st%d%dim = 3 ! check if this should be MAX_DIM
+    st%d%dim = MAX_DIM
     st%nst   = 1
     st%d%ispin = UNPOLARIZED
     st%d%nspin = 1
@@ -352,6 +352,9 @@ contains
 
     SAFE_ALLOCATE(st%rs_state_long(1:mesh%np_part, 1:st%d%dim))
     st%rs_state_long(:,:) = M_z0
+
+    SAFE_ALLOCATE(st%rs_state_plane_waves(1:mesh%np_part, 1:st%d%dim))
+    st%rs_state_plane_waves(:,:) = M_z0
 
     SAFE_ALLOCATE(st%rs_current_density_restart_t1(1:mesh%np_part, 1:st%d%dim))
     st%rs_current_density_restart_t1 = M_z0
