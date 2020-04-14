@@ -378,7 +378,7 @@ subroutine X(mf_interpolate_points) (ndim, npoints_in, x_in, f_in, npoints_out, 
   FLOAT,   intent(in)  :: x_out(:,:)
   R_TYPE,  intent(out) :: f_out(:)   !< (npoints_out)
 
-  real(8) :: pp(MAX_DIM)
+  FLOAT :: pp(MAX_DIM)
   integer :: ip
   type(qshep_t) :: interp
 #ifndef R_TCOMPLEX
@@ -433,9 +433,9 @@ subroutine X(mf_interpolate_on_plane)(mesh, plane, ff, f_in_plane)
 
   integer :: iu, iv, ip
   R_DOUBLE, allocatable :: f_global(:)
-  real(8) :: pp(3)
+  FLOAT :: pp(3)
   type(qshep_t) :: interp
-  real(8), allocatable :: xglobal(:, :)
+  FLOAT, allocatable :: xglobal(:, :)
 
   PUSH_SUB(X(mf_interpolate_on_plane))
 
@@ -482,9 +482,9 @@ subroutine X(mf_interpolate_on_line)(mesh, line, ff, f_in_line)
 
   integer :: iu, ip
   R_DOUBLE, allocatable :: f_global(:)
-  real(8) :: pp(2)
+  FLOAT :: pp(2)
   type(qshep_t) :: interp
-  real(8), allocatable :: xglobal(:, :)
+  FLOAT , allocatable :: xglobal(:, :)
 
   PUSH_SUB(X(mf_interpolate_on_line))
 

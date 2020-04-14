@@ -169,7 +169,7 @@ contains
       do idir = 1, gr%sb%dim
         ! default grid_spacing is determined from lsize and the size of the image
         if(grid_spacing(idir) < M_ZERO) then
-          grid_spacing(idir) = M_TWO*gr%sb%lsize(idir)/real(gr%sb%image_size(idir), REAL_PRECISION)
+          grid_spacing(idir) = M_TWO*gr%sb%lsize(idir)/TOFLOAT(gr%sb%image_size(idir))
         end if
       end do
     end if

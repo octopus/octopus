@@ -1241,9 +1241,7 @@ end subroutine X(bi_conjugate_gradients)
 #if defined(R_TREAL)
            v(i) = v(i) + ddotprod(P(:, k, i), w(:, k))
 #else
-           v(i) = v(i) + cmplx( ddotprod(P(:, k, i), R_REAL(w(:, k)) ), &
-                                ddotprod(P(:, k, i), R_AIMAG(w(:, k))), &
-                                REAL_PRECISION )
+           v(i) = v(i) + TOCMPLX(ddotprod(P(:, k, i), R_REAL(w(:, k))), ddotprod(P(:, k, i), R_AIMAG(w(:, k)))) 
 #endif
          end do
        end do

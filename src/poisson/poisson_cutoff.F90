@@ -172,7 +172,7 @@ contains
 
     if ( abs(x) < M_EPSILON ) then
       ! Simpson rule for the G_x = 0 contribution -log(r)
-      dr = rmax/real(nr, REAL_PRECISION)
+      dr = rmax/TOFLOAT(nr)
       sum = M_ZERO
       do j = 1, nr - 1, 2
         r = j*dr

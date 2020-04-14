@@ -1156,9 +1156,9 @@ contains
     logical,            intent(out) :: in_box(:)
     type(namespace_t),  intent(in)  :: namespace
 
-    real(8), parameter :: DELTA = CNST(1e-12)
+    FLOAT, parameter :: DELTA = CNST(1e-12)
     FLOAT :: rr, re, im, dist2, radius
-    real(8) :: llimit(MAX_DIM), ulimit(MAX_DIM)
+    FLOAT :: llimit(MAX_DIM), ulimit(MAX_DIM)
     FLOAT, allocatable :: xx(:, :)
     integer :: ip, idir, iatom, ilist
     integer, allocatable :: nlist(:)

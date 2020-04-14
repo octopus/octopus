@@ -903,7 +903,7 @@ contains
       do ip = 1, sys%gr%mesh%np
         do id = 1, nd
           if (inside(ip, id)) then 
-            dble_domain_map(id, ip) = DBLE(id)
+            dble_domain_map(id, ip) = TOFLOAT(id)
             domain_mesh(ip) = domain_mesh(ip) + dble_domain_map(id, ip)
           end if
         end do

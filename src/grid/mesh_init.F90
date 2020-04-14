@@ -67,7 +67,7 @@ subroutine mesh_init_stage_1(mesh, sb, cv, spacing, enlarge)
   integer :: idir, jj, delta
   FLOAT   :: x(MAX_DIM), chi(MAX_DIM), spacing_new(-1:1)
   logical :: out
-  real(8), parameter :: DELTA_ = CNST(1e-12)
+  FLOAT, parameter :: DELTA_ = CNST(1e-12)
 
   PUSH_SUB(mesh_init_stage_1)
   call profiling_in(mesh_init_prof, "MESH_INIT")
@@ -95,7 +95,7 @@ subroutine mesh_init_stage_1(mesh, sb, cv, spacing, enlarge)
     out = .false.
     do while(.not.out)
       jj = jj + 1
-      chi(idir) = real(jj, REAL_PRECISION)*mesh%spacing(idir)
+      chi(idir) = TOFLOAT(jj)*mesh%spacing(idir)
       if ( mesh%use_curvilinear ) then
         call curvilinear_chi2x(sb, cv, chi(1:sb%dim), x(1:sb%dim))
         out = x(idir) > sb%lsize(idir) + DELTA_
@@ -123,7 +123,7 @@ subroutine mesh_init_stage_1(mesh, sb, cv, spacing, enlarge)
     ! one we selected. We choose the size that has the spacing closest
     ! to the requested one.
     do delta = -1, 1
-      spacing_new(delta) = CNST(2.0)*sb%lsize(idir)/real(2*mesh%idx%nr(2, idir) + 1 - delta, REAL_PRECISION)
+      spacing_new(delta) = CNST(2.0)*sb%lsize(idir)/TOFLOAT(2*mesh%idx%nr(2, idir) + 1 - delta)
       spacing_new(delta) = abs(spacing_new(delta) - spacing(idir))
     end do
 
@@ -132,7 +132,7 @@ subroutine mesh_init_stage_1(mesh, sb, cv, spacing, enlarge)
     ASSERT(delta >= -1) 
     ASSERT(delta <=  1) 
 
-    mesh%spacing(idir) = CNST(2.0)*sb%lsize(idir)/real(2*mesh%idx%nr(2, idir) + 1 - delta, REAL_PRECISION)
+    mesh%spacing(idir) = CNST(2.0)*sb%lsize(idir)/TOFLOAT(2*mesh%idx%nr(2, idir) + 1 - delta)
 
     ! we need to adjust the grid by adding or removing one point
     if(delta == -1) then
@@ -181,7 +181,7 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil, namespace)
   integer :: nr(1:2, 1:MAX_DIM), res, n_mod
   logical, allocatable :: in_box(:)
   FLOAT,   allocatable :: xx(:, :)
-  real(8), parameter :: DELTA = CNST(1e-12)
+  FLOAT  , parameter :: DELTA = CNST(1e-12)
   integer :: start_z, end_z
   type(profile_t), save :: prof
 #if defined(HAVE_MPI) && defined(HAVE_MPI2)
@@ -242,11 +242,11 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil, namespace)
   ! We label the points inside the mesh
 
   do iz = start_z, end_z
-    chi(3) = real(iz, REAL_PRECISION) * mesh%spacing(3)
+    chi(3) = TOFLOAT(iz) * mesh%spacing(3)
     do iy = mesh%idx%nr(1,2), mesh%idx%nr(2,2)
-      chi(2) = real(iy, REAL_PRECISION) * mesh%spacing(2)
+      chi(2) = TOFLOAT(iy) * mesh%spacing(2)
       do ix = mesh%idx%nr(1,1), mesh%idx%nr(2,1)
-        chi(1) = real(ix, REAL_PRECISION) * mesh%spacing(1)
+        chi(1) = TOFLOAT(ix) * mesh%spacing(1)
         call curvilinear_chi2x(sb, cv, chi(:), xx(:, ix))
       end do
 
@@ -317,11 +317,11 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil, namespace)
   if(sb%mr_flag) then
     ! Calculate the resolution for each point and label the enlargement points
     do iz = mesh%idx%nr(1,3), mesh%idx%nr(2,3)
-      chi(3) = real(iz, REAL_PRECISION) * mesh%spacing(3)
+      chi(3) = TOFLOAT(iz) * mesh%spacing(3)
       do iy = mesh%idx%nr(1,2), mesh%idx%nr(2,2)
-        chi(2) = real(iy, REAL_PRECISION) * mesh%spacing(2)
+        chi(2) = TOFLOAT(iy) * mesh%spacing(2)
         do ix = mesh%idx%nr(1,1), mesh%idx%nr(2,1)
-          chi(1) = real(ix, REAL_PRECISION) * mesh%spacing(1)
+          chi(1) = TOFLOAT(ix) * mesh%spacing(1)
            ! skip if not inner point
           if(.not.btest(mesh%idx%lxyz_inv(ix, iy, iz), INNER_POINT)) cycle
           res = -1
@@ -607,11 +607,11 @@ contains
           do izb = mesh%idx%nr(1,3), mesh%idx%nr(2,3), bsize(3)
 
             do ix = ixb, min(ixb + bsize(1) - 1, mesh%idx%nr(2,1))
-              chi(1) = real(ix, REAL_PRECISION) * mesh%spacing(1)
+              chi(1) = TOFLOAT(ix) * mesh%spacing(1)
               do iy = iyb, min(iyb + bsize(2) - 1, mesh%idx%nr(2,2))
-                chi(2) = real(iy, REAL_PRECISION) * mesh%spacing(2)
+                chi(2) = TOFLOAT(iy) * mesh%spacing(2)
                 do iz = izb, min(izb + bsize(3) - 1, mesh%idx%nr(2,3))
-                  chi(3) = real(iz, REAL_PRECISION) * mesh%spacing(3)
+                  chi(3) = TOFLOAT(iz) * mesh%spacing(3)
 
                   if(btest(mesh%idx%lxyz_inv(ix, iy, iz), INNER_POINT)) then
                     iin = iin + 1
@@ -692,9 +692,9 @@ contains
 #ifdef HAVE_MPI
         if(.not. mesh%parallel_in_domains) then
 #endif
-          chi(1) = real(ix, REAL_PRECISION)*mesh%spacing(1)
-          chi(2) = real(iy, REAL_PRECISION)*mesh%spacing(2)
-          chi(3) = real(iz, REAL_PRECISION)*mesh%spacing(3)
+          chi(1) = TOFLOAT(ix)*mesh%spacing(1)
+          chi(2) = TOFLOAT(iy)*mesh%spacing(2)
+          chi(3) = TOFLOAT(iz)*mesh%spacing(3)
 
           call curvilinear_chi2x(mesh%sb, mesh%cv, chi, xx)
           mesh%x(il, 1:MAX_DIM) = xx(1:MAX_DIM)
@@ -757,9 +757,9 @@ contains
 #ifdef HAVE_MPI
             if(.not. mesh%parallel_in_domains) then
 #endif
-              chi(1) = real(ix, REAL_PRECISION)*mesh%spacing(1)
-              chi(2) = real(iy, REAL_PRECISION)*mesh%spacing(2)
-              chi(3) = real(iz, REAL_PRECISION)*mesh%spacing(3)
+              chi(1) = TOFLOAT(ix)*mesh%spacing(1)
+              chi(2) = TOFLOAT(iy)*mesh%spacing(2)
+              chi(3) = TOFLOAT(iz)*mesh%spacing(3)
 
               call curvilinear_chi2x(mesh%sb, mesh%cv, chi, xx)
               mesh%x(il, 1:MAX_DIM) = xx(1:MAX_DIM)
@@ -997,7 +997,7 @@ contains
     FLOAT,   allocatable :: pos(:), ww(:), vol_tmp(:, :, :)
     integer, allocatable :: posi(:)
     integer :: n_mod, i_lev, nr(1:2, 1:MAX_DIM)
-    real(8), parameter :: DELTA = CNST(1e-12)
+    FLOAT, parameter :: DELTA = CNST(1e-12)
  
 #if defined(HAVE_MPI)
     integer :: kk

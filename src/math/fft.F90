@@ -1054,8 +1054,8 @@ contains
 
     PUSH_SUB(fft_operation_count)
 
-    fullsize = product(dble(fft%fs_n(1:3)))
-    call profiling_count_operations(5.0_8*fullsize*log(fullsize)/log(2.0_8))
+    fullsize = product(TOFLOAT(fft%fs_n(1:3)))
+    call profiling_count_operations(CNST(5.0)*fullsize*log(fullsize)/log(M_TWO))
 
     POP_SUB(fft_operation_count)
   end subroutine fft_operation_count

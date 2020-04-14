@@ -31,7 +31,7 @@ module linked_list_oct_m
 
   !---------------------------------------------------------------------------
   !> This class implements a linked list of unlimited polymorphic values. This
-  !> allows the storeage of any type of data. Iterating over the list is done
+  !> allows the storage of any type of data. Iterating over the list is done
   !> using the associated list_counter_t. There are two ways of iterating. The
   !> first is by using a "do while" construct:
   !>

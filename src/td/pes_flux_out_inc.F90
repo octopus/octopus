@@ -454,7 +454,7 @@ subroutine pes_flux_map_from_states_elec_pln(this, restart, st, ll, pesP, krng, 
                                                  + abs(psiG2(ig))**2 * weight
 
                   pesP(ip(1),ip(2),ip(3), 3) = pesP(ip(1),ip(2),ip(3), 3) &
-                                                 + real(psiG1(ig)*conjg(psiG2(ig)), REAL_PRECISION) * weight
+                                                 + TOFLOAT(psiG1(ig)*conjg(psiG2(ig))) * weight
                                                
                   pesP(ip(1),ip(2),ip(3), 4) = pesP(ip(1),ip(2),ip(3), 4) &
                                                  + aimag(psiG1(ig)*conjg(psiG2(ig))) * weight
@@ -670,7 +670,7 @@ subroutine pes_flux_map_from_states_elec_sph(this, restart, st, ll, pesP, krng, 
                                              + abs(psiG2(i1,i2))**2 * weight
 
               pesP(ip(1),ip(2),ip(3), 3) = pesP(ip(1),ip(2),ip(3), 3) &
-                                             + real(psiG1(i1,i2)*conjg(psiG2(i1,i2)), REAL_PRECISION) * weight
+                                             + TOFLOAT(psiG1(i1,i2)*conjg(psiG2(i1,i2))) * weight
                                              
               pesP(ip(1),ip(2),ip(3), 3) = pesP(ip(1),ip(2),ip(3), 3) &
                                                + aimag(psiG1(i1,i2)*conjg(psiG2(i1,i2))) * weight

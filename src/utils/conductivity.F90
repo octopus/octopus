@@ -263,7 +263,7 @@
          ivel = 1
          do ii = 1, geo%natoms
            do jj = 1, space%dim
-             vel0(jj) = vel0(jj) + velocities(ivel, iter)/dble(geo%natoms)
+             vel0(jj) = vel0(jj) + velocities(ivel, iter)/TOFLOAT(geo%natoms)
              ivel = ivel + 1
            end do
          end do
@@ -275,7 +275,7 @@
        ivel = 1
        do ii = 1, geo%natoms
          do jj = 1, space%dim
-           velcm(jj) = velcm(jj) + velocities(ivel, iter)/dble(geo%natoms)
+           velcm(jj) = velcm(jj) + velocities(ivel, iter)/TOFLOAT(geo%natoms)
            current(jj) = current(jj) + species_mass(geo%atom(ii)%species)/sb%rcell_volume*(velocities(ivel, iter) - vel0(jj))
            ivel = ivel + 1
          end do
@@ -376,9 +376,9 @@
     do ifreq = 1, energy_steps
     ww = (ifreq-1)*spectrum%energy_step + spectrum%min_energy
     write(out_file, '(7e15.6)') ww,                                         &
-         real(invdielectric(1, ifreq), REAL_PRECISION), aimag(invdielectric(1, ifreq)), &
-         real(invdielectric(2, ifreq), REAL_PRECISION), aimag(invdielectric(2, ifreq)), &
-         real(invdielectric(3, ifreq), REAL_PRECISION), aimag(invdielectric(3, ifreq))
+         TOFLOAT(invdielectric(1, ifreq)), aimag(invdielectric(1, ifreq)), &
+         TOFLOAT(invdielectric(2, ifreq)), aimag(invdielectric(2, ifreq)), &
+         TOFLOAT(invdielectric(3, ifreq)), aimag(invdielectric(3, ifreq))
     end do
     call io_close(out_file)
 

@@ -216,6 +216,7 @@ extern "C" void FC_FUNC_(cuda_build_program, CUDA_BUILD_PROGRAM)(map<string, CUm
   }
   
   delete [] log;
+  delete [] opts;
 
   // Obtain PTX from the program.
   size_t ptxSize;

@@ -872,7 +872,7 @@ contains
       call messages_write(volume_hits + volume_misses, fmt = 'f18.1', units = unit_gigabytes, align_left = .true., &
         new_line = .true.)
       call messages_write('    Hit ratio                =')
-      call messages_write(hits/dble(hits + misses)*100, fmt='(f6.1)', align_left = .true.)
+      call messages_write(hits/TOFLOAT(hits + misses)*100, fmt='(f6.1)', align_left = .true.)
       call messages_write('%', new_line = .true.)
       call messages_write('    Volume hit ratio         =')
       call messages_write(volume_hits/(volume_hits + volume_misses)*100, fmt='(f6.1)', align_left = .true.)
@@ -908,7 +908,7 @@ contains
       
       if(buffer_alloc_count /= 0) then
         call messages_write('Accel:')
-        call messages_write(real(allocated_mem, REAL_PRECISION), fmt = 'f12.1', units = unit_megabytes, align_left = .true.)
+        call messages_write(TOFLOAT(allocated_mem), fmt = 'f12.1', units = unit_megabytes, align_left = .true.)
         call messages_write(' in ')
         call messages_write(buffer_alloc_count)
         call messages_write(' buffers were not deallocated.')
@@ -1138,8 +1138,8 @@ contains
     size_in_bytes = int(size, 8)*types_get_size(type)
 
     if(size_in_bytes > accel%local_memory_size) then
-      write(message(1), '(a,f12.6,a)') "CL Error: requested local memory: ", dble(size_in_bytes)/1024.0, " Kb"
-      write(message(2), '(a,f12.6,a)') "          available local memory: ", dble(accel%local_memory_size)/1024.0, " Kb"
+      write(message(1), '(a,f12.6,a)') "CL Error: requested local memory: ", TOFLOAT(size_in_bytes)/1024.0, " Kb"
+      write(message(2), '(a,f12.6,a)') "          available local memory: ", TOFLOAT(accel%local_memory_size)/1024.0, " Kb"
       call messages_fatal(2)
     else if(size_in_bytes <= 0) then
       write(message(1), '(a,i10)') "CL Error: invalid local memory size: ", size_in_bytes
@@ -1654,8 +1654,8 @@ contains
     integer :: itime
     integer, parameter :: times = 10
     integer :: size
-    real(8) :: time, stime
-    real(8) :: read_bw, write_bw
+    FLOAT   :: time, stime
+    FLOAT   :: read_bw, write_bw
     type(accel_mem_t) :: buff
     FLOAT, allocatable :: data(:)
 
@@ -1679,9 +1679,9 @@ contains
         call accel_write_buffer(buff, size, data)
         call accel_finish()
       end do
-      time = (loct_clock() - stime)/dble(times)
+      time = (loct_clock() - stime)/TOFLOAT(times)
 
-      write_bw = dble(size)*8.0_8/time
+      write_bw = TOFLOAT(size)*CNST(8.0)/time
 
       stime = loct_clock()
       do itime = 1, times
@@ -1689,12 +1689,12 @@ contains
       end do
       call accel_finish()
 
-      time = (loct_clock() - stime)/dble(times)
-      read_bw = dble(size)*8.0_8/time
+      time = (loct_clock() - stime)/TOFLOAT(times)
+      read_bw = TOFLOAT(size)*CNST(8.0)/time
 
-      call messages_write(size*8.0_8/1024.0**2)
-      call messages_write(write_bw/1024.0**2, fmt = '(f10.1)')
-      call messages_write(read_bw/1024.0**2, fmt = '(f10.1)')
+      call messages_write(size*CNST(8.0)/CNST(1024.0)**2)
+      call messages_write(write_bw/CNST(1024.0)**2, fmt = '(f10.1)')
+      call messages_write(read_bw/CNST(1024.0)**2, fmt = '(f10.1)')
       call messages_info()
 
       call accel_release_buffer(buff)

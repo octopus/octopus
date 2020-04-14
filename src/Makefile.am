@@ -503,6 +503,8 @@ system_f_srcs =                                 \
 	system/photon_mode.F90                  \
 	system/preconditioners.F90              \
 	system/propagator_abst.F90              \
+        system/propagator_beeman.F90            \
+        system/propagator_verlet.F90            \
 	system/quantity.F90                     \
 	system/stress.F90                       \
 	system/subspace.F90                     \
@@ -569,7 +571,6 @@ td_f_srcs =                                 \
 	td/pes_spm.F90                      \
 	td/potential_interpolation.F90      \
 	td/propagator_base.F90              \
-	td/propagator_beeman.F90            \
 	td/propagator_cn.F90                \
 	td/propagator_etrs.F90              \
 	td/propagator_expmid.F90            \
@@ -577,7 +578,6 @@ td_f_srcs =                                 \
 	td/propagator_magnus.F90            \
 	td/propagator_qoct.F90              \
 	td/propagator_rk.F90                \
-	td/propagator_verlet.F90            \
 	td/spectrum.F90                     \
 	td/td_calc.F90                      \
 	td/td.F90                           \

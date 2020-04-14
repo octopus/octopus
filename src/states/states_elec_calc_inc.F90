@@ -171,7 +171,7 @@ contains
     call pblas_herk(uplo = 'U', trans = 'C', n = st%nst, k = total_np, &
       alpha = R_TOTYPE(mesh%vol_pp(1)), a = psi(1, 1, st%st_start), ia = 1, ja = 1, desca = psi_desc(1), &
       beta = R_TOTYPE(M_ZERO), c = ss(1, 1), ic = 1, jc = 1, descc = ss_desc(1))
-    call profiling_count_operations(dble(mesh%np)*dble(nst)**2*(R_ADD + R_MUL))
+    call profiling_count_operations(TOFLOAT(mesh%np*nst)**2*(R_ADD + R_MUL))
     call profiling_out(prof_herk)
 
     call profiling_in(prof_cholesky, "SCALAPACK_CHOLESKY")
@@ -458,7 +458,7 @@ subroutine X(states_elec_trsm)(st, namespace, mesh, ik, ss)
 
   end if
 
-  call profiling_count_operations(mesh%np*dble(st%nst)*(st%nst + 1)*CNST(0.5)*(R_ADD + R_MUL))
+  call profiling_count_operations(mesh%np*TOFLOAT(st%nst*(st%nst + 1))*CNST(0.5)*(R_ADD + R_MUL))
 
 
   call profiling_out(prof)
@@ -1631,7 +1631,7 @@ subroutine X(states_elec_calc_overlap)(st, mesh, ik, overlap)
         n = int(st%nst, 8), k = int(size*st%d%dim, 8), &
         alpha = mesh%volume_element, &
         A = psi_buffer, offa = 0_8, lda = int(st%nst, 8), &
-        beta = 1.0_8, &
+        beta = M_ONE, &
         C = overlap_buffer, offc = 0_8, ldc = int(st%nst, 8))
       call accel_finish()
     end do
@@ -1850,7 +1850,7 @@ subroutine X(states_elec_me_two_body) (st, namespace, gr, psolver, st_min, st_ma
   integer,             intent(out)             :: kindex(:,:)
   integer,             intent(out)             :: lindex(:,:)
   R_TYPE,              intent(out)             :: twoint(:)  !
-  CMPLX,     optional, intent(in)              :: phase(:,:)
+  CMPLX,     optional, intent(in)              :: phase(:,st%d%kpt%start:)
   type(singularity_t), optional,intent(in)  :: singularity
   logical, optional, intent(in)             :: exc_k
 
@@ -1898,7 +1898,8 @@ subroutine X(states_elec_me_two_body) (st, namespace, gr, psolver, st_min, st_ma
 
   if(present(singularity)) then
     call fourier_space_op_nullify(coulb)
-    call poisson_build_kernel(psolver, namespace, gr%sb, coulb, qq)
+    qq = M_ZERO
+    call poisson_build_kernel(psolver, namespace, gr%sb, coulb, qq, M_ZERO)
   end if
 
   do ist_global = 1, nst_tot
@@ -1927,7 +1928,7 @@ subroutine X(states_elec_me_two_body) (st, namespace, gr, psolver, st_min, st_ma
                          - kpoints_get_point(gr%sb%kpoints, jkpoint, absolute_coordinates=.false.)
         ! In case of k-points, the poisson solver must contains k-q 
         ! in the Coulomb potential, and must be changed for each q point
-        call poisson_build_kernel(psolver, namespace, gr%sb, coulb, qq, &
+        call poisson_build_kernel(psolver, namespace, gr%sb, coulb, qq, M_ZERO, &
                   -(gr%sb%kpoints%full%npoints-npath)*gr%sb%rcell_volume*(singularity%Fk(jkpoint)-singularity%FF))
       end if
 

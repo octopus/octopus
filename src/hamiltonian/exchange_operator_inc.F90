@@ -97,7 +97,8 @@ subroutine X(exchange_operator_apply)(this, namespace, der, st_d, psib, hpsib, r
   use_external_kernel = (st_d%nik > st_d%spin_channels .or. this%cam_omega > M_EPSILON)
   if(use_external_kernel) then
     call fourier_space_op_nullify(coulb)
-    call poisson_build_kernel(this%psolver, namespace, der%mesh%sb, coulb, qq)
+    qq = M_ZERO
+    call poisson_build_kernel(this%psolver, namespace, der%mesh%sb, coulb, qq, this%cam_omega)
   end if
 
 
@@ -120,7 +121,7 @@ subroutine X(exchange_operator_apply)(this, namespace, der, st_d, psib, hpsib, r
       ! In case of k-points, the poisson solver must contains k-q
       ! in the Coulomb potential, and must be changed for each q point
       if(use_external_kernel) then
-        call poisson_build_kernel(this%psolver, namespace, der%mesh%sb, coulb, qq, &
+        call poisson_build_kernel(this%psolver, namespace, der%mesh%sb, coulb, qq, this%cam_omega, &
                   -(der%mesh%sb%kpoints%full%npoints-npath)*der%mesh%sb%rcell_volume  &
                      *(this%singul%Fk(ik2)-this%singul%FF))
       end if

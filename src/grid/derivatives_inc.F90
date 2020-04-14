@@ -346,7 +346,7 @@ subroutine X(derivatives_test)(this, namespace, repetitions, min_blocksize, max_
   type(batch_t), allocatable :: gradffb(:)
   integer :: blocksize, itime
   logical :: packstates
-  real(8) :: stime, etime
+  FLOAT   :: stime, etime
   character(len=20) :: type
   FLOAT :: norm
 
@@ -432,7 +432,7 @@ subroutine X(derivatives_test)(this, namespace, repetitions, min_blocksize, max_
     do itime = 1, repetitions
       call X(derivatives_batch_perform)(this%lapl, this, ffb, opffb, set_bc = .false., factor = CNST(0.5))
     end do
-    etime = (loct_clock() - stime)/dble(repetitions)
+    etime = (loct_clock() - stime)/TOFLOAT(repetitions)
 
     call batch_get_state(opffb, blocksize, this%mesh%np, res)
 
@@ -492,7 +492,7 @@ subroutine X(derivatives_test)(this, namespace, repetitions, min_blocksize, max_
     do itime = 1, repetitions
       call X(derivatives_batch_grad)(this, ffb, gradffb, set_bc=.false.)
     end do
-    etime = (loct_clock() - stime)/dble(repetitions)
+    etime = (loct_clock() - stime)/TOFLOAT(repetitions)
 
     do idir = 1, this%mesh%sb%dim
       call batch_get_state(gradffb(idir), blocksize, this%mesh%np, resgrad(:, idir))

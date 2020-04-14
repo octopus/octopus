@@ -1004,7 +1004,7 @@ contains
 
     do ie = 1, no_e
       call pcm_eps(pcm, eps(ie), (ie-1)*spectrum%energy_step + spectrum%min_energy)
-      sigma(ie, 1:3, 1:nspin) = sigma(ie, 1:3, 1:nspin) * REAL(eps(ie), REAL_PRECISION) + sigmap(ie, 1:3, 1:nspin) *AIMAG(eps(ie))
+      sigma(ie, 1:3, 1:nspin) = sigma(ie, 1:3, 1:nspin) * TOFLOAT(eps(ie)) + sigmap(ie, 1:3, 1:nspin) *AIMAG(eps(ie))
     end do
 
     SAFE_DEALLOCATE_A(sigmap)
@@ -1035,7 +1035,7 @@ contains
 
     do ie = 1, no_e
       call pcm_eps(pcm, eps(ie), (ie-1)*spectrum%energy_step + spectrum%min_energy)
-      sigma(ie, 1:3, 1:nspin) = sigma(ie, 1:3, 1:nspin) / sqrt( CNST(0.5) * ( ABS(eps(ie)) + REAL(eps(ie), REAL_PRECISION) ) )
+      sigma(ie, 1:3, 1:nspin) = sigma(ie, 1:3, 1:nspin) / sqrt( CNST(0.5) * ( ABS(eps(ie)) + TOFLOAT(eps(ie)) ) )
     end do
 
     SAFE_DEALLOCATE_A(eps)
@@ -1247,8 +1247,8 @@ contains
       case(SPECTRUM_DAMP_LORENTZIAN)
         damp(it)= exp(-jj * dt * spectrum%damp_factor)
       case(SPECTRUM_DAMP_POLYNOMIAL)
-        damp(it) = M_ONE - M_THREE * (real(jj) / ntiter)**2 &
-          + M_TWO * (real(jj) / ntiter)**3
+        damp(it) = M_ONE - M_THREE * (TOFLOAT(jj) / ntiter)**2 &
+          + M_TWO * (TOFLOAT(jj) / ntiter)**3
       case(SPECTRUM_DAMP_GAUSSIAN)
         damp(it)= exp(-(jj * dt)**2 * spectrum%damp_factor**2)
       end select
@@ -1376,7 +1376,7 @@ contains
       sum1 = sum1 + spectrum%energy_step*sp
       sum2 = sum2 + spectrum%energy_step*sp*energy**2
 
-      resp(ie) = real(sp)
+      resp(ie) = TOFLOAT(sp)
       imsp(ie) = aimag(sp)
     end do
 
@@ -1493,9 +1493,9 @@ contains
       ww = ie * energy_step_
     end if
     xx = ie * energy_step_
-    minhsval = real(funcw_(ie))
+    minhsval = TOFLOAT(funcw_(ie))
     do while(ww <= bb)
-      hsval = real(funcw_(ie))
+      hsval = TOFLOAT(funcw_(ie))
       if(hsval < minhsval) then
         minhsval = hsval
         xx = ww
@@ -1706,7 +1706,7 @@ contains
     do istep = 0, time_steps - 1
        nn(:) = vv(:)-pos(:,istep)
        nn(:) = nn(:)/sqrt(sum(nn(:)**2 ))
-       tret(istep) = ddot_product(vv(:),real(pos(:,istep),REAL_PRECISION))/P_C 
+       tret(istep) = ddot_product(vv(:), TOFLOAT(pos(:,istep)))/P_C 
        PP(:,istep) = zcross_product(nn, zcross_product(nn, acc(:,istep))) 
 !       write (*,*) istep, Real(PP(:,istep)),"acc", Real (acc(:,istep))
     end do
@@ -1897,7 +1897,7 @@ contains
     else
 
       SAFE_ALLOCATE(racc(0:time_steps))
-      racc = real(ddipole, REAL_PRECISION)
+      racc = TOFLOAT(ddipole)
 
       no_e = spectrum_nenergy_steps(spectrum)
       SAFE_ALLOCATE(sps(1:no_e))
@@ -2000,7 +2000,7 @@ contains
     else
 
       SAFE_ALLOCATE(racc(0:time_steps))
-      racc = real(acc, REAL_PRECISION)
+      racc = TOFLOAT(acc)
 
       no_e = spectrum_nenergy_steps(spectrum)
       SAFE_ALLOCATE(sps(1:no_e))
@@ -2102,7 +2102,7 @@ contains
     else
 
       SAFE_ALLOCATE(rcur(0:time_steps))
-      rcur = real(cur, REAL_PRECISION)
+      rcur = TOFLOAT(cur)
 
       no_e = spectrum_nenergy_steps(spectrum)
       SAFE_ALLOCATE(sps(1:no_e))
@@ -2583,7 +2583,7 @@ contains
 
           eidt = exp(M_zI * energy * time_step)
           ez = exp(M_zI * energy * ( (time_start-1)*time_step - t0) )
-          cosz = real(ez, REAL_PRECISION)
+          cosz = TOFLOAT(ez)
           do itime = time_start, time_end
             do ii = 1, time_function%nst_linear
               energy_function%dff_linear(ienergy, ii) = &
@@ -2591,7 +2591,7 @@ contains
                   time_function%dff_linear(itime, ii) * cosz
             end do
             ez = ez * eidt
-            cosz = real(ez, REAL_PRECISION)
+            cosz = TOFLOAT(ez)
           end do
 
         case(SPECTRUM_TRANSFORM_LAPLACE)
@@ -2602,7 +2602,7 @@ contains
             do ii = 1, time_function%nst_linear
               energy_function%dff_linear(ienergy, ii) = &
                 energy_function%dff_linear(ienergy, ii) + &
-                real( time_function%dff_linear(itime, ii) * ez, REAL_PRECISION)
+                TOFLOAT( time_function%dff_linear(itime, ii) * ez)
             end do
             ez = ez * eidt
           end do
@@ -2757,7 +2757,7 @@ contains
       if (symmetrize) then
         do idir = 1, 3
           do jdir = idir + 1, 3
-            pp(idir, jdir) = (pp(idir, jdir) + pp(jdir, idir) )/2.
+            pp(idir, jdir) = (pp(idir, jdir) + pp(jdir, idir) )/M_TWO
             pp(jdir, idir) = pp(idir, jdir)
           end do 
         end do
@@ -2771,7 +2771,7 @@ contains
       write(out_file,'(e20.8)', advance = 'no') units_from_atomic(units_out%energy, ((ie-1) * energy_step + min_energy))
       do idir = 3, 1, -1
         if (symmetrize) then
-          write(out_file,'(2e20.8)', advance = 'no') real(w(idir))
+          write(out_file,'(2e20.8)', advance = 'no') TOFLOAT(w(idir))
         else
           write(out_file,'(2e20.8)', advance = 'no') w(idir)
         end if
@@ -2786,7 +2786,7 @@ contains
         if (symmetrize) then
           do idir = 1, 3
             do jdir = idir + 1, 3
-              pp2(idir, jdir) = (pp2(idir, jdir) + pp2(jdir, idir) )/2.
+              pp2(idir, jdir) = (pp2(idir, jdir) + pp2(jdir, idir) )/M_TWO
               pp2(jdir, idir) = pp2(idir, jdir)
             end do 
           end do
@@ -2799,7 +2799,7 @@ contains
         write(out_file_t,'(e20.8)', advance = 'no') units_from_atomic(units_out%energy, (ie * energy_step + min_energy))
         do idir = 3, 1, -1
           if (symmetrize) then
-            write(out_file_t,'(2e20.8)', advance = 'no') real(w(idir))
+            write(out_file_t,'(2e20.8)', advance = 'no') TOFLOAT(w(idir))
           else
             write(out_file_t,'(2e20.8)', advance = 'no') w(idir)
           end if

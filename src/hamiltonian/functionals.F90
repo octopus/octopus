@@ -290,7 +290,7 @@ contains
       call messages_obsolete_variable(namespace, 'SoftInteraction1D_alpha', 'Interaction1DScreening')
       call parse_variable(namespace, 'Interaction1DScreening', M_ONE, alpha)
 #ifdef HAVE_LIBXC4
-      parameters(1) = real(interact_1d, REAL_PRECISION)
+      parameters(1) = TOFLOAT(interact_1d)
       parameters(2) = alpha
       call XC_F90(func_set_ext_params)(functl%conf, parameters(1))
 #else

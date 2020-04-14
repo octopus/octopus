@@ -97,7 +97,7 @@ contains
     REAL_DOUBLE, allocatable :: coords(:)
     REAL_DOUBLE :: energy
 
-    real (8), allocatable :: mass(:)
+    FLOAT, allocatable :: mass(:)
     integer :: iatom, imass
     type(restart_t) :: restart_load
 
@@ -138,8 +138,8 @@ contains
     !Minimize
     select case(g_opt%method)
     case(MINMETHOD_NMSIMPLEX)
-      call minimize_multidim_nograd(g_opt%method, g_opt%size, coords, real(g_opt%step, 8),&
-        real(g_opt%toldr, 8), g_opt%max_iter, &
+      call minimize_multidim_nograd(g_opt%method, g_opt%size, coords, TOFLOAT(g_opt%step),&
+        TOFLOAT(g_opt%toldr), g_opt%max_iter, &
         calc_point_ng, write_iter_info_ng, energy, ierr)
     case(MINMETHOD_FIRE)
 
@@ -157,13 +157,13 @@ contains
       end do
 
       !TODO: add variable to use Euler integrator
-      call minimize_fire(g_opt%size, coords, real(g_opt%step, 8), real(g_opt%tolgrad, 8), &
+      call minimize_fire(g_opt%size, coords, TOFLOAT(g_opt%step), TOFLOAT(g_opt%tolgrad), &
         g_opt%max_iter, calc_point, write_iter_info, energy, ierr, mass, integrator=g_opt%fire_integrator)
       SAFE_DEALLOCATE_A(mass)
 
     case default
-      call minimize_multidim(g_opt%method, g_opt%size, coords, real(g_opt%step, 8),&
-        real(g_opt%line_tol, 8), real(g_opt%tolgrad, 8), real(g_opt%toldr, 8), g_opt%max_iter, &
+      call minimize_multidim(g_opt%method, g_opt%size, coords, TOFLOAT(g_opt%step),&
+        TOFLOAT(g_opt%line_tol), TOFLOAT(g_opt%tolgrad), TOFLOAT(g_opt%toldr), g_opt%max_iter, &
         calc_point, write_iter_info, energy, ierr)
     end select
 
@@ -200,7 +200,7 @@ contains
       integer :: iter, iatom
       character(len=100) :: filename
       FLOAT :: default_toldr
-      real(8) :: default_step
+      FLOAT :: default_step
       type(read_coords_info) :: xyz
 
       PUSH_SUB(geom_opt_run.init_)
@@ -798,7 +798,7 @@ contains
     REAL_DOUBLE, intent(in) :: coords(size)
 
     PUSH_SUB(write_iter_info_ng)
-    call write_iter_info(geom_iter, size, energy, maxdx, real(-M_ONE, 8), coords)
+    call write_iter_info(geom_iter, size, energy, maxdx, -M_ONE, coords)
 
     POP_SUB(write_iter_info_ng)
   end subroutine write_iter_info_ng

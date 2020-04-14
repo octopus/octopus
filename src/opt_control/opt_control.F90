@@ -391,12 +391,12 @@ contains
 
       select case(oct%algorithm)
       case(OPTION__OCTSCHEME__OCT_BFGS)
-        call minimize_multidim(MINMETHOD_BFGS2, dof, x, step, real(0.1, 8), &
-          real(oct_iterator_tolerance(iterator), 8), real(oct_iterator_tolerance(iterator), 8), &
+        call minimize_multidim(MINMETHOD_BFGS2, dof, x, step, CNST(0.1), &
+          TOFLOAT(oct_iterator_tolerance(iterator)), TOFLOAT(oct_iterator_tolerance(iterator)), &
           maxiter, opt_control_cg_calc, opt_control_cg_write_info, minvalue, ierr)
       case(OPTION__OCTSCHEME__OCT_CG)
-        call minimize_multidim(MINMETHOD_FR_CG, dof, x, step, real(0.1, 8), &
-          real(oct_iterator_tolerance(iterator), 8), real(oct_iterator_tolerance(iterator), 8), &
+        call minimize_multidim(MINMETHOD_FR_CG, dof, x, step, CNST(0.1), &
+          TOFLOAT(oct_iterator_tolerance(iterator)), TOFLOAT(oct_iterator_tolerance(iterator)), &
           maxiter, opt_control_cg_calc, opt_control_cg_write_info, minvalue, ierr)
       end select
 
@@ -466,7 +466,7 @@ contains
       maxiter = oct_iterator_maxiter(iterator)
 
       call minimize_multidim_nograd(MINMETHOD_NMSIMPLEX, dim, x, step, &
-        real(oct_iterator_tolerance(iterator), 8), maxiter, &
+        TOFLOAT(oct_iterator_tolerance(iterator)), maxiter, &
         opt_control_direct_calc, opt_control_direct_message_info, minvalue, ierr)
 
       if(ierr /= 0) then

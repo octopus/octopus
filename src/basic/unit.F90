@@ -51,7 +51,7 @@ module unit_oct_m
 
   type unit_t
     ! Components are public by default
-    real(8)           :: factor
+    FLOAT             :: factor
     character(len=20) :: abbrev !< common abbreviation of the unit name
     character(len=50) :: name   !< common name
   end type unit_t
@@ -69,13 +69,11 @@ module unit_oct_m
   end interface operator (**)
 
   interface units_to_atomic
-    module procedure dunits_to_atomic, zunits_to_atomic, &
-      dunits_to_atomic_4, zunits_to_atomic_4
+    module procedure dunits_to_atomic, zunits_to_atomic
   end interface units_to_atomic
 
   interface units_from_atomic
-    module procedure dunits_from_atomic, zunits_from_atomic, &
-      dunits_from_atomic_4, zunits_from_atomic_4
+    module procedure dunits_from_atomic, zunits_from_atomic
   end interface units_from_atomic
   
   interface sqrt
@@ -86,9 +84,9 @@ contains
 
   !-----------------------------------------------
 
-  real(8) elemental pure function dunits_to_atomic(this, val) result(res)
+  FLOAT elemental pure function dunits_to_atomic(this, val) result(res)
     type(unit_t), intent(in) :: this
-    real(8),      intent(in) :: val
+    FLOAT,        intent(in) :: val
 
     res = val*this%factor
 
@@ -96,9 +94,9 @@ contains
  
   !-----------------------------------------------
 
-  complex(8) elemental pure function zunits_to_atomic(this, val) result(res)
+  CMPLX elemental pure function zunits_to_atomic(this, val) result(res)
     type(unit_t), intent(in) :: this
-    complex(8),   intent(in) :: val
+    CMPLX,        intent(in) :: val
 
     res = val*this%factor
 
@@ -106,9 +104,9 @@ contains
 
   !-----------------------------------------------
   
-  real(8) elemental pure function dunits_from_atomic(this, val) result(res)
+  FLOAT elemental pure function dunits_from_atomic(this, val) result(res)
     type(unit_t), intent(in) :: this
-    real(8),      intent(in) :: val
+    FLOAT,      intent(in) :: val
 
     res = val/this%factor
 
@@ -116,58 +114,15 @@ contains
 
   !-----------------------------------------------
   
-  complex(8) elemental pure function zunits_from_atomic(this, val) result(res)
+  CMPLX elemental pure function zunits_from_atomic(this, val) result(res)
     type(unit_t), intent(in) :: this
-    complex(8),   intent(in) :: val
+    CMPLX,   intent(in) :: val
 
     res = val/this%factor
 
   end function zunits_from_atomic
 
   !-----------------------------------------------
-  !> now the single-precision functions
-  !-----------------------------------------------
-
-  real(4) elemental pure function dunits_to_atomic_4(this, val) result(res)
-    type(unit_t), intent(in) :: this
-    real(4),      intent(in) :: val
-
-    res = real(real(val, 8)*this%factor, 4)
-
-  end function dunits_to_atomic_4
- 
-  !-----------------------------------------------
-
-  complex(4) elemental pure function zunits_to_atomic_4(this, val) result(res)
-    type(unit_t), intent(in) :: this
-    complex(4),   intent(in) :: val
-
-    res = cmplx(cmplx(val, kind = 8)*this%factor, kind = 4)
-
-  end function zunits_to_atomic_4
-
-  !-----------------------------------------------
-  
-  real(4) elemental pure function dunits_from_atomic_4(this, val) result(res)
-    type(unit_t), intent(in) :: this
-    real(4),      intent(in) :: val
-
-    res = real(real(val, 8)/this%factor, 4)
-
-  end function dunits_from_atomic_4
-
-  !-----------------------------------------------
-  
-  complex(4) elemental pure function zunits_from_atomic_4(this, val) result(res)
-    type(unit_t), intent(in) :: this
-    complex(4),   intent(in) :: val
-
-    res = cmplx(cmplx(val, kind = 8)/this%factor, kind = 4)
-
-  end function zunits_from_atomic_4
-
-  !-----------------------------------------------
-
 
   character(len=20) pure function units_abbrev(this) result(abbrev)
     type(unit_t), intent(in) :: this
