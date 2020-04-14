@@ -296,7 +296,7 @@ subroutine X(batch_axpy_function)(np, aa, xx, psi, nst)
     np_padded = pad_pow2(np)
 
     call accel_create_buffer(psi_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, np_padded * xx%dim)
-    do idim=1, xx%dim
+    do idim= 1, xx%dim
       call accel_write_buffer(psi_buffer, np, psi(1:np,idim), offset=(idim-1)*np_padded)
     end do
 

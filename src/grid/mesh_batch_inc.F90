@@ -541,7 +541,7 @@ subroutine X(mesh_batch_mf_dotp)(mesh, aa, psi, dot, reduce, nst)
     call accel_create_buffer(dot_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, aa%nst)
     call accel_create_buffer(psi_buffer, ACCEL_MEM_READ_ONLY, R_TYPE_VAL, np_padded * aa%dim)
 
-    do idim=1, aa%dim
+    do idim= 1, aa%dim
       call accel_write_buffer(psi_buffer, mesh%np, psi(1:mesh%np,idim), offset=(idim-1)*np_padded)
     end do
        
@@ -571,7 +571,7 @@ subroutine X(mesh_batch_mf_dotp)(mesh, aa, psi, dot, reduce, nst)
     call accel_release_buffer(psi_buffer)
     call accel_release_buffer(dot_buffer)
 
-    do ist=1,nst_
+    do ist = 1, nst_
       dot(ist) = dot(ist) * mesh%volume_element
     end do
 
