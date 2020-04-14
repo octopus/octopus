@@ -994,7 +994,7 @@ contains
     end do
 
     ! The full TD loop
-    call messages_print_stress(stdout, "Propagation", namespace=global_namespace)
+    call messages_print_stress(stdout, "Multi-system propagation", namespace=global_namespace)
 
     all_done_max_td_steps = .false.
     it = 0
