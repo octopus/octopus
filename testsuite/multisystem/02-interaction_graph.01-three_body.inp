@@ -3,7 +3,7 @@ ExperimentalFeatures = yes
 
 TestMode = celestial_dynamics
 
-Dimensions = 2
+Dimensions = 3
 
 %Systems
  "Sun"   | celestial_body
@@ -12,35 +12,33 @@ Dimensions = 2
 %
 
 #Initial conditions are taken from https://ssd.jpl.nasa.gov/horizons.cgi#top.
+# initial condition at time:
+# 2458938.500000000 = A.D. 2020-Mar-30 00:00:00.0000 TDB
 
 Earth.CelestialBodyMass = 5.97237e24
 %Earth.CelestialBodyInitialPosition
- 149598023000.0 | 0.0
+ -147364661998.16476 | -24608859261.610123 | 1665165.2801353487
 %
 %Earth.CelestialBodyInitialVelocity
- 0.0 | 29780.0
+ 4431.136612956525 | -29497.611635546345 | 0.343475566161544
 %
 
-Moon.TDSystemPropagator = beeman_scf
 Moon.CelestialBodyMass = 7.342e22
 %Moon.CelestialBodyInitialPosition
- 149982422000.0 | 0.0
+ -147236396732.81906 | -24234200672.857853 | -11062799.286082389
 %
 %Moon.CelestialBodyInitialVelocity
- 0.0 | 30902.0
+ 3484.6397238565924 | -29221.007409082802 | 82.53526338876684
 %
 
 Sun.CelestialBodyMass = 1.98855e30
 %Sun.CelestialBodyInitialPosition
- 0.0 | 0.0
+ 0.0 | 0.0 | 0.0
 %
 %Sun.CelestialBodyInitialVelocity
- 0.0 | 0.0
+ 0.0 | 0.0 | 0.0
 %
 
-sampling = 20 # Time-steps per day
-days = 365
-TDTimeStep = 24*3600/sampling
-TDMaxSteps = days*sampling
+TDMaxSteps = 0
 
 Debug = interaction_graph

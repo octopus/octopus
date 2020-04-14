@@ -936,53 +936,49 @@ contains
 
     global_namespace = namespace_t("")
 
-
-    ! Initialize systems
+    ! Initialize systems and interactions
     call multisystem_init(systems, global_namespace)
-
     call multisystem_init_interactions(systems, global_namespace)
 
-    all_done_max_td_steps = .false.
-    it = 0
+    ! Initialize all propagators and find the smallest time-step
     smallest_algo_dt = CNST(1e10)
-
-    ! Loop over systems
     call iter%start(systems)
     do while (iter%has_next())
       sys => iter%get_next_system()
 
-      !Initialize the propagator
+      ! Initialize the propagator
       call sys%init_propagator()
 
-      !Find the smallest dt
+      ! Find the smallest dt
       smallest_algo_dt = min(smallest_algo_dt, sys%prop%dt/sys%prop%algo_steps)
+    end do
+
+    ! Initialize all the clocks
+    call iter%start(systems)
+    do while (iter%has_next())
+      sys => iter%get_next_system()
+      call sys%init_clocks(sys%prop%dt, smallest_algo_dt)
+    end do
+
+    ! Set initial conditions
+    call iter%start(systems)
+    do while (iter%has_next())
+      sys => iter%get_next_system()
+      call sys%initial_conditions(.true.)
     end do
 
     call iter%start(systems)
     do while (iter%has_next())
       sys => iter%get_next_system()
-
-      ! Initialize the system clocks
-      call sys%init_clocks(sys%prop%dt, smallest_algo_dt)
-
-      call sys%prop%rewind()
-
-      ! Initialize output
-      select type(sys)
-      type is (celestial_body_t)
-
-        ! Initialize output and write data at time zero
-        call sys%td_write_init(sys%prop%dt)
-        call sys%td_write_iter(0)
-
-      class default
-        message(1) = "Unknow system type."
-        call messages_fatal(1)
-      end select
+      call sys%propagation_start()
     end do
 
     ! The full TD loop
     call messages_print_stress(stdout, "Propagation", namespace=global_namespace)
+
+    all_done_max_td_steps = .false.
+    it = 0
+
     do while(.not. all_done_max_td_steps)
 
       it = it + 1
@@ -1014,17 +1010,11 @@ contains
       do while (iter%has_next())
         sys => iter%get_next_system()
 
+        ! Print information about the current iteration and write output
         if(sys%prop%step_is_done()) then
           call sys%prop%rewind()
-          call sys%write_td_info()
-
-          select type (sys)
-          type is (celestial_body_t)
-            call sys%td_write_iter(it)
-          class default
-            message(1) = "Unknow system type."
-            call messages_fatal(1)
-          end select
+          call sys%output_write(it)
+          call sys%iteration_info()
         end if
 
         ! Fixme: should be changed to final propagation time
@@ -1038,15 +1028,7 @@ contains
     call iter%start(systems)
     do while (iter%has_next())
       sys => iter%get_next_system()
-      select type (sys)
-      type is (celestial_body_t)
-
-        call sys%td_write_end()
-
-      class default
-        message(1) = "Unknow system type."
-        call messages_fatal(1)
-      end select
+      call sys%propagation_finish()
     end do
 
     ! Finalize systems
