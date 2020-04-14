@@ -22,6 +22,7 @@ module td_oct_m
   use boundaries_oct_m
   use boundary_op_oct_m
   use calc_mode_par_oct_m
+  use celestial_body_oct_m
   use density_oct_m
   use energy_calc_oct_m
   use epot_oct_m
@@ -38,11 +39,13 @@ module td_oct_m
   use lasers_oct_m
   use lda_u_oct_m
   use lda_u_io_oct_m
+  use linked_list_oct_m
   use loct_oct_m
   use messages_oct_m
   use modelmb_exchange_syms_oct_m
   use mpi_oct_m
   use multicomm_oct_m
+  use multisystem_oct_m
   use namespace_oct_m
   use parser_oct_m
   use pes_oct_m
@@ -61,6 +64,7 @@ module td_oct_m
   use states_elec_calc_oct_m
   use states_elec_restart_oct_m
   use system_oct_m
+  use system_abst_oct_m
   use td_write_oct_m
   use types_oct_m
   use unit_oct_m
@@ -79,6 +83,7 @@ module td_oct_m
     td_run_init,          &
     td_init,              &
     td_end,               &
+    multisys_td_run,      &
     transform_states
 
   !> Parameters.
@@ -924,6 +929,129 @@ contains
     end subroutine td_read_coordinates
 
   end subroutine td_run
+
+
+  ! ---------------------------------------------------------
+  subroutine multisys_td_run(systems, fromScratch)
+    type(linked_list_t), intent(inout) :: systems
+    logical,             intent(inout) :: fromScratch
+
+    type(namespace_t) :: global_namespace
+    integer :: it, internal_loop
+    logical :: any_td_step_done, all_done_max_td_steps
+    integer, parameter :: MAX_PROPAGATOR_STEPS = 1000
+    FLOAT :: smallest_algo_dt
+
+    type(system_iterator_t) :: iter
+    class(system_abst_t), pointer :: sys
+
+    PUSH_SUB(multisys_td_run)
+
+    call messages_write('Info: Running Multi-System time evolution')
+    call messages_new_line()
+    call messages_new_line()
+    call messages_info()
+
+    ! this should eventually be moved up to run.F90 when all systems
+    ! are derived classes from system_abst
+    global_namespace = namespace_t("")
+    call multisystem_init_interactions(systems, global_namespace)
+
+    all_done_max_td_steps = .false.
+    it = 0
+
+    ! Initialize all propagators and find the smallest time-step
+    smallest_algo_dt = CNST(1e10)
+    call iter%start(systems)
+    do while (iter%has_next())
+      sys => iter%get_next_system()
+
+      ! Initialize the propagator
+      call sys%init_propagator()
+
+      ! Find the smallest dt
+      smallest_algo_dt = min(smallest_algo_dt, sys%prop%dt/sys%prop%algo_steps)
+    end do
+
+    ! Initialize all the clocks
+    call iter%start(systems)
+    do while (iter%has_next())
+      sys => iter%get_next_system()
+      call sys%init_clocks(sys%prop%dt, smallest_algo_dt)
+    end do
+
+    ! Set initial conditions
+    call iter%start(systems)
+    do while (iter%has_next())
+      sys => iter%get_next_system()
+      call sys%initial_conditions(.true.)
+    end do
+
+    call iter%start(systems)
+    do while (iter%has_next())
+      sys => iter%get_next_system()
+      call sys%propagation_start()
+    end do
+
+    ! The full TD loop
+    call messages_print_stress(stdout, "Propagation", namespace=global_namespace)
+
+    all_done_max_td_steps = .false.
+    it = 0
+
+    do while(.not. all_done_max_td_steps)
+
+      it = it + 1
+
+      any_td_step_done = .false.
+      internal_loop = 1
+
+      do while(.not. any_td_step_done .and. internal_loop < MAX_PROPAGATOR_STEPS)
+
+        any_td_step_done = .false.
+
+        call iter%start(systems)
+        do while (iter%has_next())
+          sys => iter%get_next_system()
+
+          call sys%dt_operation()
+
+          ! We check the exit condition
+          any_td_step_done = any_td_step_done .or. sys%prop%step_is_done()
+        end do
+
+        INCR(internal_loop, 1)
+      end do
+
+      all_done_max_td_steps = .true.
+
+      call iter%start(systems)
+      do while (iter%has_next())
+        sys => iter%get_next_system()
+
+        ! Print information about the current iteration and write output
+        if(sys%prop%step_is_done()) then
+          call sys%prop%rewind()
+          call sys%output_write(it)
+          call sys%iteration_info()
+        end if
+
+        ! Fixme: should be changed to final propagation time
+        all_done_max_td_steps = all_done_max_td_steps .and. (sys%clock%get_sim_time() > sys%prop%max_td_steps*sys%prop%dt)
+      end do
+     write (message(1), '(a)') repeat ('-', 71)
+     call messages_info(1)
+
+    end do
+
+    call iter%start(systems)
+    do while (iter%has_next())
+      sys => iter%get_next_system()
+      call sys%propagation_finish()
+    end do
+
+    POP_SUB(multisys_td_run)
+  end subroutine multisys_td_run
 
 
   ! ---------------------------------------------------------
