@@ -61,8 +61,8 @@ module maxwell_boundary_op_oct_m
     FLOAT             :: mask_width
     FLOAT             :: mask_alpha
     integer           :: mask_points_number(MAX_DIM)
-    integer, pointer  :: mask_points_map(:,:)
-    FLOAT,   pointer  :: mask(:,:)
+    integer, allocatable  :: mask_points_map(:,:)
+    FLOAT,   allocatable  :: mask(:,:)
 
     integer           :: der_bndry_mask_points_number
     integer, pointer  :: der_bndry_mask_points_map(:)
@@ -635,8 +635,8 @@ contains
     type(bc_mxll_t),   intent(inout) :: bc
     PUSH_SUB(bc_mxll_end)
 
-    if (associated(bc%mask)) then
-      SAFE_DEALLOCATE_P(bc%mask)
+    if (allocated(bc%mask)) then
+      SAFE_DEALLOCATE_A(bc%mask)
     end if
 
     POP_SUB(bc_mxll_end)
