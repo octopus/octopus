@@ -26,7 +26,6 @@ module celestial_body_oct_m
   use interaction_gravity_oct_m
   use io_oct_m
   use iso_c_binding
-  use linked_list_oct_m
   use messages_oct_m
   use mpi_oct_m
   use namespace_oct_m
@@ -48,14 +47,14 @@ module celestial_body_oct_m
     private
 
     FLOAT :: mass
-    FLOAT, public :: pos(1:MAX_DIM)
-    FLOAT, public :: vel(1:MAX_DIM)
-    FLOAT, public :: acc(1:MAX_DIM)
-    FLOAT, public, allocatable :: prev_acc(:,:) !< A storage of the prior times.
-    FLOAT, public :: save_pos(1:MAX_DIM)   !< A storage for the SCF loops
-    FLOAT, public :: save_vel(1:MAX_DIM)   !< A storage for the SCF loops
-    FLOAT, public :: tot_force(1:MAX_DIM)
-    FLOAT, public :: prev_tot_force(1:MAX_DIM) !< Used for the SCF convergence criterium
+    FLOAT :: pos(1:MAX_DIM)
+    FLOAT :: vel(1:MAX_DIM)
+    FLOAT :: acc(1:MAX_DIM)
+    FLOAT, allocatable :: prev_acc(:,:) !< A storage of the prior times.
+    FLOAT :: save_pos(1:MAX_DIM)   !< A storage for the SCF loops
+    FLOAT :: save_vel(1:MAX_DIM)   !< A storage for the SCF loops
+    FLOAT :: tot_force(1:MAX_DIM)
+    FLOAT :: prev_tot_force(1:MAX_DIM) !< Used for the SCF convergence criterium
 
     type(c_ptr) :: output_handle
   contains
