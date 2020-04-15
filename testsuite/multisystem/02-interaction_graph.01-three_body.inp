@@ -1,7 +1,5 @@
-CalculationMode = test
+CalculationMode = td
 ExperimentalFeatures = yes
-
-TestMode = celestial_dynamics
 
 Dimensions = 3
 

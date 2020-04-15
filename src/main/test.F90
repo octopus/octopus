@@ -23,7 +23,6 @@ module test_oct_m
   use batch_ops_oct_m
   use boundaries_oct_m
   use calc_mode_par_oct_m
-  use celestial_body_oct_m
   use clock_oct_m
   use density_oct_m
   use derivatives_oct_m
@@ -34,13 +33,11 @@ module test_oct_m
   use hamiltonian_elec_oct_m
   use ion_interaction_oct_m
   use io_oct_m
-  use linked_list_oct_m
   use mesh_batch_oct_m
   use mesh_function_oct_m
   use mesh_interpolation_oct_m
   use messages_oct_m
   use multicomm_oct_m
-  use multisystem_oct_m
   use namespace_oct_m
   use orbitalbasis_oct_m
   use orbitalset_oct_m
@@ -48,8 +45,6 @@ module test_oct_m
   use poisson_oct_m
   use profiling_oct_m
   use projector_oct_m
-  use propagator_beeman_oct_m
-  use propagator_verlet_oct_m
   use simul_box_oct_m
   use states_abst_oct_m
   use states_elec_oct_m
@@ -57,7 +52,6 @@ module test_oct_m
   use states_elec_dim_oct_m
   use subspace_oct_m
   use system_oct_m
-  use system_abst_oct_m
   use types_oct_m
   use v_ks_oct_m
   use wfs_elec_oct_m
@@ -123,8 +117,6 @@ contains
     !%Option batch_ops 13
     !% Tests the batch operations
     !%Calculation of the density.
-    !%Option celestial_dynamics 17
-    !% Test of celestial dynamics using multisystems
     !%Option clock 18
     !% Tests for clock
     !%End
@@ -227,8 +219,6 @@ contains
       call test_subspace_diagonalization(param, namespace)
     case(OPTION__TESTMODE__BATCH_OPS)
       call test_batch_ops(param, namespace)
-    case(OPTION__TESTMODE__CELESTIAL_DYNAMICS)
-      call test_celestial_dynamics(param)
     case(OPTION__TESTMODE__CLOCK)
       call test_clock(param)
     end select
@@ -911,131 +901,6 @@ contains
     POP_SUB(test_prints_info_batch)
 
   end subroutine test_prints_info_batch
-
-  ! ---------------------------------------------------------
-
-  subroutine test_celestial_dynamics(param)
-    type(test_parameters_t), intent(in) :: param
-
-    type(namespace_t) :: global_namespace
-    integer :: it, internal_loop
-    logical :: any_td_step_done, all_done_max_td_steps
-    integer, parameter :: MAX_PROPAGATOR_STEPS = 1000
-    FLOAT :: smallest_algo_dt
-    
-    type(linked_list_t) :: systems
-    type(system_iterator_t) :: iter
-    class(system_abst_t), pointer :: sys
-
-    PUSH_SUB(test_celestial_dynamics)
-
-    call messages_write('Info: Testing celestial dynamics using multisystems')
-    call messages_new_line()
-    call messages_new_line()
-    call messages_info()
-
-    global_namespace = namespace_t("")
-
-    ! Initialize systems and interactions
-    call multisystem_init(systems, global_namespace)
-    call multisystem_init_interactions(systems, global_namespace)
-
-    ! Initialize all propagators and find the smallest time-step
-    smallest_algo_dt = CNST(1e10)
-    call iter%start(systems)
-    do while (iter%has_next())
-      sys => iter%get_next_system()
-
-      ! Initialize the propagator
-      call sys%init_propagator()
-
-      ! Find the smallest dt
-      smallest_algo_dt = min(smallest_algo_dt, sys%prop%dt/sys%prop%algo_steps)
-    end do
-
-    ! Initialize all the clocks
-    call iter%start(systems)
-    do while (iter%has_next())
-      sys => iter%get_next_system()
-      call sys%init_clocks(sys%prop%dt, smallest_algo_dt)
-    end do
-
-    ! Set initial conditions
-    call iter%start(systems)
-    do while (iter%has_next())
-      sys => iter%get_next_system()
-      call sys%initial_conditions(.true.)
-    end do
-
-    call iter%start(systems)
-    do while (iter%has_next())
-      sys => iter%get_next_system()
-      call sys%propagation_start()
-    end do
-
-    ! The full TD loop
-    call messages_print_stress(stdout, "Propagation", namespace=global_namespace)
-
-    all_done_max_td_steps = .false.
-    it = 0
-
-    do while(.not. all_done_max_td_steps)
-
-      it = it + 1
-
-      any_td_step_done = .false.
-      internal_loop = 1
-
-      do while(.not. any_td_step_done .and. internal_loop < MAX_PROPAGATOR_STEPS)
-
-        any_td_step_done = .false.
-
-        call iter%start(systems)
-        do while (iter%has_next())
-          sys => iter%get_next_system()
-
-          call sys%dt_operation()
-
-          ! We check the exit condition
-          any_td_step_done = any_td_step_done .or. sys%prop%step_is_done()
-        end do
-
-        INCR(internal_loop, 1)
-      end do
-
-
-      all_done_max_td_steps = .true.
-
-      call iter%start(systems)
-      do while (iter%has_next())
-        sys => iter%get_next_system()
-
-        ! Print information about the current iteration and write output
-        if(sys%prop%step_is_done()) then
-          call sys%prop%rewind()
-          call sys%output_write(it)
-          call sys%iteration_info()
-        end if
-
-        ! Fixme: should be changed to final propagation time
-        all_done_max_td_steps = all_done_max_td_steps .and. (sys%clock%get_sim_time() > sys%prop%max_td_steps*sys%prop%dt)
-      end do
-     write (message(1), '(a)') repeat ('-', 71)
-     call messages_info(1)
-
-    end do
-
-    call iter%start(systems)
-    do while (iter%has_next())
-      sys => iter%get_next_system()
-      call sys%propagation_finish()
-    end do
-
-    ! Finalize systems
-    call multisystem_end(systems)
-
-    POP_SUB(test_celestial_dynamics)
-  end subroutine test_celestial_dynamics
 
 
   ! ---------------------------------------------------------
