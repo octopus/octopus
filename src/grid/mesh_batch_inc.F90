@@ -446,6 +446,151 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
   POP_SUB(X(mesh_batch_dotp_vector))
 end subroutine X(mesh_batch_dotp_vector)
 
+! --------------------------------------------------------------------------
+
+subroutine X(mesh_batch_mf_dotp)(mesh, aa, psi, dot, reduce, nst)
+  type(mesh_t),      intent(in)    :: mesh
+  class(batch_t),    intent(in)    :: aa
+  R_TYPE,            intent(in)    :: psi(:,:) 
+  R_TYPE,            intent(inout) :: dot(:)
+  logical, optional, intent(in)    :: reduce
+  integer, optional, intent(in)    :: nst
+
+  integer :: ist, indb, idim, ip, nst_
+  type(profile_t), save :: prof, profcomm
+  R_TYPE, allocatable :: phi(:, :)
+
+  ! Variables related to the GPU:
+  type(accel_mem_t) :: psi_buffer
+  type(accel_mem_t) :: dot_buffer
+  integer :: wgsize, np_padded
+  integer :: local_sizes(3)
+  integer :: global_sizes(3)
+
+  PUSH_SUB(X(mesh_batch_mf_dotp))
+  call profiling_in(prof, "DOTPV_MF_BATCH")
+
+  ASSERT(aa%dim == ubound(psi,dim=2))
+
+  nst_ = aa%nst
+  if(present(nst)) nst_ = nst 
+
+  select case(aa%status())
+  case(BATCH_NOT_PACKED)
+    do ist = 1, nst_
+      dot(ist) = M_ZERO
+      do idim = 1, aa%dim
+        indb = aa%ist_idim_to_linear((/ist, idim/))
+        dot(ist) = dot(ist) + X(mf_dotp)(mesh, aa%X(ff_linear)(:, indb), psi(1:mesh%np,idim),& 
+           reduce = .false.)
+      end do
+    end do
+
+  case(BATCH_PACKED)
+
+    SAFE_ALLOCATE(phi(1:mesh%np, aa%dim))
+
+    if(aa%dim == 1) then
+      !Here we compute the complex conjuguate of the dot product first and then
+      !we take the conjugate at the end
+
+      ! Note: this is to avoid taking the complex conjugate of the whole batch, but rather that of
+      ! the single function only.
+      ! In the aa%dim>1 case, that is taken care of by the mf_dotp function.
+
+      if(mesh%use_curvilinear) then
+        !$omp parallel do
+        do ip = 1, mesh%np
+          phi(ip, 1) = mesh%vol_pp(ip)*R_CONJ(psi(ip, 1))
+        end do
+      else
+        !$omp parallel do
+        do ip = 1, mesh%np
+          phi(ip, 1) = R_CONJ(psi(ip, 1))
+        end do
+      end if
+
+      call blas_gemv('N', nst_, mesh%np, R_TOTYPE(mesh%volume_element), aa%X(ff_pack)(1,1), & 
+               ubound(aa%X(ff_pack), dim=1), phi(1,1), 1, R_TOTYPE(M_ZERO), dot(1), 1)
+
+      do ist = 1, nst_
+        dot(ist) = R_CONJ(dot(ist))
+      end do
+
+    else
+
+      ! Note: curvilinear coordinates are handled inside the mf_dotp function!
+  
+      dot(1:nst_) = M_ZERO
+      do ist = 1, nst_
+        call batch_get_state(aa, ist, mesh%np, phi)
+        dot(ist) = X(mf_dotp)(mesh, aa%dim, phi(1:mesh%np, 1:aa%dim), psi(1:mesh%np, 1:aa%dim),&
+               reduce = .false.)
+      end do
+
+    end if
+
+    SAFE_DEALLOCATE_A(phi)
+
+  case(BATCH_DEVICE_PACKED)
+
+    ASSERT(.not. mesh%use_curvilinear)
+
+    np_padded = pad_pow2(mesh%np)
+
+    call accel_create_buffer(dot_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, aa%nst)
+    call accel_create_buffer(psi_buffer, ACCEL_MEM_READ_ONLY, R_TYPE_VAL, np_padded * aa%dim)
+
+    do idim= 1, aa%dim
+      call accel_write_buffer(psi_buffer, mesh%np, psi(1:mesh%np,idim), offset=(idim-1)*np_padded)
+    end do
+       
+    wgsize = accel_kernel_workgroup_size(X(kernel_batch_dotp))
+
+    global_sizes = (/ pad(aa%nst, wgsize),  1, 1 /)
+    local_sizes  = (/ wgsize,               1, 1 /)
+   
+    ASSERT(accel_buffer_is_allocated(aa%ff_device))
+    ASSERT(accel_buffer_is_allocated(psi_buffer))
+    ASSERT(accel_buffer_is_allocated(dot_buffer))
+
+    call accel_set_kernel_arg(X(kernel_batch_dotp), 0, mesh%np)
+    call accel_set_kernel_arg(X(kernel_batch_dotp), 1, nst_)
+    call accel_set_kernel_arg(X(kernel_batch_dotp), 2, aa%dim)
+    call accel_set_kernel_arg(X(kernel_batch_dotp), 3, aa%ff_device)
+    call accel_set_kernel_arg(X(kernel_batch_dotp), 4, log2(aa%pack_size(1)))
+    call accel_set_kernel_arg(X(kernel_batch_dotp), 5, psi_buffer)
+    call accel_set_kernel_arg(X(kernel_batch_dotp), 6, log2(np_padded))
+    call accel_set_kernel_arg(X(kernel_batch_dotp), 7, dot_buffer)
+
+    call accel_kernel_run(X(kernel_batch_dotp), global_sizes, local_sizes)
+    call accel_finish() 
+
+    call accel_read_buffer(dot_buffer, nst_, dot)
+
+    call accel_release_buffer(psi_buffer)
+    call accel_release_buffer(dot_buffer)
+
+    do ist = 1, nst_
+      dot(ist) = dot(ist) * mesh%volume_element
+    end do
+
+  end select
+
+  if(mesh%parallel_in_domains .and. optional_default(reduce, .true.)) then
+    call profiling_in(profcomm, "DOTPV_MF_BATCH_REDUCE")
+    call comm_allreduce(mesh%mpi_grp%comm, dot, dim = nst_)
+    call profiling_out(profcomm)
+  end if
+  
+  call profiling_count_operations(nst_*dble(mesh%np)*(R_ADD + R_MUL)*types_get_size(aa%type())/types_get_size(TYPE_FLOAT))
+
+  call profiling_out(prof)
+  POP_SUB(X(mesh_batch_mf_dotp))
+end subroutine X(mesh_batch_mf_dotp)
+
+
+
 !--------------------------------------------------------------------------------------
 
 !> This functions exchanges points of a mesh according to a certain

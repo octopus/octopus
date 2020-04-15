@@ -190,6 +190,10 @@ module accel_oct_m
   type(accel_kernel_t), public, target, save :: dkernel_dot_matrix
   type(accel_kernel_t), public, target, save :: zkernel_dot_matrix
   type(accel_kernel_t), public, target, save :: zkernel_dot_matrix_spinors
+  type(accel_kernel_t), public, target, save :: dkernel_batch_axpy
+  type(accel_kernel_t), public, target, save :: zkernel_batch_axpy
+  type(accel_kernel_t), public, target, save :: dkernel_batch_dotp
+  type(accel_kernel_t), public, target, save :: zkernel_batch_dotp
   type(accel_kernel_t), public, target, save :: dzmul
   type(accel_kernel_t), public, target, save :: zzmul
   type(accel_kernel_t), public, target, save :: set_one
@@ -580,6 +584,10 @@ contains
     call accel_kernel_start_call(kernel_vpsi_spinors, 'vpsi.cl', "vpsi_spinors")
     call accel_kernel_start_call(kernel_daxpy, 'axpy.cl', "daxpy", flags = '-DRTYPE_DOUBLE')
     call accel_kernel_start_call(kernel_zaxpy, 'axpy.cl', "zaxpy", flags = '-DRTYPE_COMPLEX')
+    call accel_kernel_start_call(dkernel_batch_axpy, 'axpy.cl', "dbatch_axpy_function", flags = '-lineinfo -DRTYPE_DOUBLE')
+    call accel_kernel_start_call(zkernel_batch_axpy, 'axpy.cl', "zbatch_axpy_function", flags = '-lineinfo -DRTYPE_COMPLEX')
+    call accel_kernel_start_call(dkernel_batch_dotp, 'mesh_batch_single.cl', "dbatch_mf_dotp", flags = '-lineinfo')
+    call accel_kernel_start_call(zkernel_batch_dotp, 'mesh_batch_single.cl', "zbatch_mf_dotp", flags = '-lineinfo')
     call accel_kernel_start_call(dpack, 'pack.cl', "dpack")
     call accel_kernel_start_call(zpack, 'pack.cl', "zpack")
     call accel_kernel_start_call(dunpack, 'pack.cl', "dunpack")
@@ -593,6 +601,8 @@ contains
     call accel_kernel_start_call(dkernel_dot_matrix, 'mesh_batch.cl', "ddot_matrix")
     call accel_kernel_start_call(zkernel_dot_matrix, 'mesh_batch.cl', "zdot_matrix")
     call accel_kernel_start_call(zkernel_dot_matrix_spinors, 'mesh_batch.cl', "zdot_matrix_spinors")
+
+    
     call accel_kernel_start_call(dzmul, 'mul.cl', "dzmul", flags = '-DRTYPE_DOUBLE')
     call accel_kernel_start_call(zzmul, 'mul.cl', "zzmul", flags = '-DRTYPE_COMPLEX')
 
