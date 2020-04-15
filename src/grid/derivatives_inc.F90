@@ -829,7 +829,7 @@ subroutine X(derivatives_batch_curl_from_gradient)(der, ffb, gradb)
 
   ASSERT(der%dim==3)
   ASSERT(size(gradb) == der%dim)
-!  SSERT(modulo(ffb%nst_linear, der%dim) == 0)    restore this assert later
+  ASSERT(modulo(ffb%nst_linear, der%dim) == 0)
   do ist = 1, 3
     ASSERT(ffb%status() == gradb(ist)%status())
   end do
