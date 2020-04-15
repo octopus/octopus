@@ -233,7 +233,7 @@ contains
       call this%quantities(POSITION)%clock%increment()
 
     case (VERLET_COMPUTE_ACC)
-      do ii = 1, size(this%prev_acc, dim=2) - 1
+      do ii = size(this%prev_acc, dim=2) - 1, 1, -1
         this%prev_acc(1:this%space%dim, ii + 1) = this%prev_acc(1:this%space%dim, ii)
       end do
       this%prev_acc(1:this%space%dim, 1) = this%acc(1:this%space%dim)
