@@ -97,6 +97,7 @@ module maxwell_boundary_op_oct_m
     integer           :: mirror_points_number(3)
     integer, pointer  :: mirror_points_map(:,:)
 
+    logical           :: do_plane_waves
     integer           :: plane_waves_points_number
     integer,  pointer :: plane_waves_points_map(:)
     integer           :: plane_waves_number
@@ -332,6 +333,7 @@ contains
         bounds(1, idim) = ( gr%mesh%idx%nr(2, idim) - 2 * gr%mesh%idx%enlarge(idim) ) * gr%mesh%spacing(idim)
         bounds(2, idim) = ( gr%mesh%idx%nr(2, idim)                                         ) * gr%mesh%spacing(idim)
         plane_waves_check = .true.
+        bc%do_plane_waves = .true.
       else if (bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__MAXWELL_MEDIUM) then
         !%Variable MaxwellMediumWidth
         !%Type float
@@ -637,6 +639,19 @@ contains
 
     if (allocated(bc%mask)) then
       SAFE_DEALLOCATE_A(bc%mask)
+    end if
+
+    if (bc%do_plane_waves) then
+      SAFE_DEALLOCATE_P(bc%plane_waves_modus)
+      SAFE_DEALLOCATE_P(bc%plane_waves_e_field_string)
+      SAFE_DEALLOCATE_P(bc%plane_waves_e_field)
+      SAFE_DEALLOCATE_P(bc%plane_waves_k_vector)
+      SAFE_DEALLOCATE_P(bc%plane_waves_v_vector)
+      SAFE_DEALLOCATE_P(bc%plane_waves_mx_function)
+      SAFE_DEALLOCATE_P(bc%plane_waves_mx_phase)
+      SAFE_DEALLOCATE_P(bc%plane_waves)
+      SAFE_DEALLOCATE_P(bc%plane_waves_oam)
+      SAFE_DEALLOCATE_P(bc%plane_waves_sam)
     end if
 
     POP_SUB(bc_mxll_end)
@@ -1441,16 +1456,16 @@ contains
       nlines = parse_block_n(blk)
 
       bc%plane_waves_number = nlines
-      SAFE_ALLOCATE(bc%plane_waves_modus(nlines)) ! memleak
+      SAFE_ALLOCATE(bc%plane_waves_modus(nlines))
       SAFE_ALLOCATE(bc%plane_waves_e_field_string(MAX_DIM, nlines))
-      SAFE_ALLOCATE(bc%plane_waves_e_field(MAX_DIM, nlines)) ! memleak
-      SAFE_ALLOCATE(bc%plane_waves_k_vector(MAX_DIM, nlines)) ! memleak
-      SAFE_ALLOCATE(bc%plane_waves_v_vector(MAX_DIM, nlines)) ! memleak
-      SAFE_ALLOCATE(bc%plane_waves_mx_function(nlines)) ! memleak
-      SAFE_ALLOCATE(bc%plane_waves_mx_phase(nlines)) ! memleak
-      SAFE_ALLOCATE(bc%plane_waves(nlines)) ! memleak
-      SAFE_ALLOCATE(bc%plane_waves_oam(nlines)) ! memleak
-      SAFE_ALLOCATE(bc%plane_waves_sam(nlines)) ! memleak
+      SAFE_ALLOCATE(bc%plane_waves_e_field(MAX_DIM, nlines))
+      SAFE_ALLOCATE(bc%plane_waves_k_vector(MAX_DIM, nlines))
+      SAFE_ALLOCATE(bc%plane_waves_v_vector(MAX_DIM, nlines))
+      SAFE_ALLOCATE(bc%plane_waves_mx_function(nlines))
+      SAFE_ALLOCATE(bc%plane_waves_mx_phase(nlines))
+      SAFE_ALLOCATE(bc%plane_waves(nlines))
+      SAFE_ALLOCATE(bc%plane_waves_oam(nlines))
+      SAFE_ALLOCATE(bc%plane_waves_sam(nlines))
 
       ! read all lines
       do il = 1, nlines
