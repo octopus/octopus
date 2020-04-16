@@ -844,19 +844,6 @@ contains
 
 
   ! ---------------------------------------------------------
-  FLOAT function controlfunction_dotp(xx, yy) result(res)
-    FLOAT, intent(in) :: xx(:)
-    FLOAT, intent(in) :: yy(:)
-
-    PUSH_SUB(controlfunction_dotp)
-    res = sum(xx(:) * yy(:))
-
-    POP_SUB(controlfunction_dotp)
-  end function controlfunction_dotp
-  ! ---------------------------------------------------------
-
-
-  ! ---------------------------------------------------------
   subroutine controlfunction_apply_envelope(cp)
     type(controlfunction_t), intent(inout) :: cp
     integer :: ipar, iter

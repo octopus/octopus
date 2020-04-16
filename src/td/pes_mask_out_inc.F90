@@ -839,10 +839,10 @@ subroutine pes_mask_output_full_mapM(pesK, file, namespace, Lk, ll, how, sb, pme
         sqrt(units_out%energy)**sb%dim)
     end if        
       
-!   else
-!     write(message(1), '(a)') 'Writing ASCII format file: '
-!     call messages_info(1)
-!     call out_ascii()
+   else
+     write(message(1), '(a)') 'Writing ASCII format file: '
+     call messages_info(1)
+     call out_ascii()
   end if
   
   call cube_end(cube)

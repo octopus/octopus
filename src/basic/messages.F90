@@ -121,6 +121,21 @@ module messages_oct_m
 
   type(debug_t), save :: debug
   
+  !> from signals.c
+  interface
+    subroutine get_signal_description(signum, signame)
+      implicit none
+      integer, intent(in) :: signum
+      character(len=*), intent(out) :: signame
+    end subroutine get_signal_description
+
+    subroutine trap_segfault()
+      implicit none
+    end subroutine trap_segfault
+  end interface
+
+
+
 contains
 
   ! ---------------------------------------------------------
@@ -223,8 +238,6 @@ contains
       close(iunit_out)
  
     end if
-
-    call debug_end(debug)
   
   end subroutine messages_end
 
@@ -366,10 +379,7 @@ contains
     type(namespace_t), optional, intent(in) :: namespace
 
     integer :: il, no_lines_
-    logical :: have_to_write
-#ifdef HAVE_MPI
-    logical :: all_nodes_
-#endif
+    logical :: have_to_write, all_nodes_
     
     no_lines_ = current_line
     if(present(no_lines)) no_lines_ = no_lines
@@ -378,13 +388,11 @@ contains
 
     have_to_write = mpi_grp_is_root(mpi_world)
 
-#ifdef HAVE_MPI
     all_nodes_ = .false.
     if(present(all_nodes)) then
       have_to_write = have_to_write .or. all_nodes
       all_nodes_ = all_nodes
     end if
-#endif
 
     if(have_to_write) then
 

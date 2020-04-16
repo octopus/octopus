@@ -30,9 +30,7 @@ module nl_operator_oct_m
   use mesh_oct_m
   use messages_oct_m
   use mpi_oct_m
-#ifdef HAVE_OPENMP
   use multicomm_oct_m
-#endif
   use namespace_oct_m
   use operate_f_oct_m
   use par_vec_oct_m
@@ -272,21 +270,6 @@ contains
 
     POP_SUB(nl_operator_global_end)
   end subroutine nl_operator_global_end
-
-  ! ---------------------------------------------------------
-
-  character(len=8) function op_function_name(id) result(str)
-    integer, intent(in) :: id
-
-    PUSH_SUB(op_function_name)
-    
-    str = 'unknown'
-    if(id == OP_FORTRAN) str = 'Fortran'
-    if(id == OP_VEC)     str = 'Vector'
-    
-    POP_SUB(op_function_name)
-  end function op_function_name
-
 
   ! ---------------------------------------------------------
   subroutine nl_operator_init(op, label)
@@ -932,33 +915,6 @@ contains
   ! End of private routines.
   ! ---------------------------------------------------------
 #endif
-
-
-  ! ---------------------------------------------------------
-  subroutine nl_operator_matrix_to_op(op_ref, op, aa, bb)
-    FLOAT, intent(in)                :: aa(:, :)
-    FLOAT, optional, intent(in)      :: bb(:, :)
-    type(nl_operator_t), intent(in)  :: op_ref
-    type(nl_operator_t), intent(out) :: op
-
-    integer :: ip, jp, index
-
-    PUSH_SUB(nl_operator_matrix_to_op)
-
-    ASSERT(associated(op_ref%index))
-
-    call nl_operator_copy(op, op_ref)
-    do ip = 1, op%np
-      do jp = 1, op%stencil%size
-        index = nl_operator_get_index(op, jp, ip)
-        if(index <= op%np) &
-          op%w(jp, ip) = aa(ip, index)
-      end do
-    end do
-
-    POP_SUB(nl_operator_matrix_to_op)
-  end subroutine nl_operator_matrix_to_op
-
 
   ! ---------------------------------------------------------
   subroutine nl_operator_end(op)

@@ -527,15 +527,15 @@ contains
   end subroutine pnfft_messages_debug
 
   !---------------------------------------------------------------------------------
-  integer function pnfft_idx_3to1(pnfft, ix , iy, iz) result(idx)
-    type(pnfft_t),  intent(in) :: pnfft
-    integer,        intent(in) :: ix 
-    integer,        intent(in) :: iy 
-    integer,        intent(in) :: iz 
-
-    idx =  (ix-1)*pnfft%M(2)*pnfft%M(3) + (iy-1)*pnfft%M(3) + (iz-1) + 1
-
-  end function pnfft_idx_3to1
+!  integer function pnfft_idx_3to1(pnfft, ix , iy, iz) result(idx)
+!    type(pnfft_t),  intent(in) :: pnfft
+!    integer,        intent(in) :: ix 
+!    integer,        intent(in) :: iy 
+!    integer,        intent(in) :: iz 
+!
+!    idx =  (ix-1)*pnfft%M(2)*pnfft%M(3) + (iy-1)*pnfft%M(3) + (iz-1) + 1
+!
+!  end function pnfft_idx_3to1
 
   #include "undef.F90"
   #include "real.F90"

@@ -247,10 +247,6 @@ contains
   end subroutine partition_transfer_end
 
 #include "undef.F90"
-#include "integer.F90"
-#include "partition_transfer_inc.F90"
-
-#include "undef.F90"
 #include "real.F90"
 #include "partition_transfer_inc.F90"
 

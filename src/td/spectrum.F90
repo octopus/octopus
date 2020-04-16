@@ -1713,7 +1713,7 @@ contains
 
     call spectrum_hsfunction_ar_init(dt, istart, iend, time_steps, PP, pos, tret)
     call spectrum_hs(spectrum, namespace, out_file, 'a', w0)
-    call spectrum_hsfunction_end()
+    call spectrum_hsfunction_ar_end()
 
     SAFE_DEALLOCATE_A(acc)
     SAFE_DEALLOCATE_A(PP)
@@ -1805,7 +1805,7 @@ contains
 
     call spectrum_hsfunction_ar_init(dt, istart, iend, time_steps, PP, dipole,tret)
     call spectrum_hs(spectrum, namespace, out_file, 'a', w0)
-    call spectrum_hsfunction_end()
+    call spectrum_hsfunction_ar_end()
 
     SAFE_DEALLOCATE_A(dipole)
     SAFE_DEALLOCATE_A(ddipole)

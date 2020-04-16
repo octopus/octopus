@@ -96,12 +96,7 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
 #ifndef SINGLE_PRECISION
 
       !$omp parallel private(ini, nri_loc, ist)
-#ifdef HAVE_OPENMP
       call multicomm_divide_range_omp(nri, ini, nri_loc)
-#else 
-      ini = 1
-      nri_loc = nri
-#endif
       
       if(fi%status() == BATCH_PACKED) then
         

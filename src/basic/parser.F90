@@ -500,17 +500,6 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine oct_parse_double4(name, def4, res4)
-    character(len=*), intent(in) :: name
-    real(4), intent(in)          :: def4
-    real(4), intent(out)         :: res4
-
-    real(8) :: res8
-    call oct_parse_double(name, real(def4, 8), res8)
-    res4 = real(res8, kind=4)
-  end subroutine oct_parse_double4
-
-  ! ---------------------------------------------------------
 
   subroutine oct_parse_double4_unit(namespace, name, def4, res4, unit)
     type(namespace_t),      intent(in)  :: namespace

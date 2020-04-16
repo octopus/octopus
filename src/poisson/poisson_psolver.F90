@@ -57,9 +57,7 @@ module poisson_psolver_oct_m
     poisson_psolver_t,              &
     poisson_psolver_init,           &
     poisson_psolver_end,            &
-#ifdef HAVE_PSOLVER
     poisson_psolver_reinit,         &
-#endif
     poisson_psolver_global_solve,   &
     poisson_psolver_parallel_solve, &
     poisson_psolver_get_dims

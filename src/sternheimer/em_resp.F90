@@ -1034,9 +1034,6 @@ contains
       call out_susceptibility()
     end if
 
-!      call out_projections()
-!      This routine does not give any useful information.
-
     call out_wfn_and_densities()
 
     POP_SUB(em_resp_output)
@@ -1337,74 +1334,6 @@ contains
       call io_close(iunit)      
       POP_SUB(em_resp_output.out_susceptibility)
     end subroutine out_susceptibility
-
-    ! ---------------------------------------------------------
-    subroutine out_projections()
-      CMPLX   :: proj
-      FLOAT, allocatable :: dpsi(:, :)
-      CMPLX, allocatable :: zpsi(:, :)
-      integer :: ist, ivar, ik, idir, sigma
-      character(len=80) :: fname
-
-      PUSH_SUB(em_resp_output.out_projections)
-
-      do ik = st%d%kpt%start, st%d%kpt%end
-        do idir = 1, gr%sb%dim
-
-          write(fname, '(2a,i1,2a)') trim(dirname), '/projection-k', ik, '-', index2axis(idir)
-          iunit = io_open(trim(fname), namespace, action='write')
-
-          if (.not.em_vars%ok(ifactor)) write(iunit, '(a)') "# WARNING: not converged"
-
-          write(iunit, '(a)', advance='no') '# state '
-          do ivar = 1, st%nst
-            do sigma = 1, em_vars%nsigma
-
-              if( sigma == em_vars%nsigma .and. ivar == st%nst) then 
-                write(iunit, '(i3)', advance='yes') (3 - 2*sigma)*ivar
-              else 
-                write(iunit, '(i3)', advance='no') (3 - 2*sigma)*ivar
-              end if
-
-            end do
-          end do
-
-          do ist = 1, st%nst
-            write(iunit, '(i3)', advance='no') ist
-
-            do ivar = 1, st%nst
-              do sigma = 1, em_vars%nsigma
-
-                if(states_are_complex(st)) then
-                  SAFE_ALLOCATE(zpsi(1:gr%mesh%np, 1:st%d%dim))
-                  call states_elec_get_state(st, gr%mesh, ist, ik, zpsi)
-                  proj = zmf_dotp(gr%mesh, st%d%dim, zpsi, em_vars%lr(idir, sigma, ifactor)%zdl_psi(:, :, ivar, ik))
-                  SAFE_DEALLOCATE_A(zpsi)
-                else
-                  SAFE_ALLOCATE(dpsi(1:gr%mesh%np, 1:st%d%dim))
-                  call states_elec_get_state(st, gr%mesh, ist, ik, dpsi)
-                  proj = dmf_dotp(gr%mesh, st%d%dim, dpsi, em_vars%lr(idir, sigma, ifactor)%ddl_psi(:, :, ivar, ik))
-                  SAFE_DEALLOCATE_A(dpsi)
-                end if
-                  
-                if( sigma == em_vars%nsigma .and. ivar == st%nst) then 
-                  write(iunit, '(f12.6)', advance='yes') abs(proj)
-                else 
-                  write(iunit, '(f12.6,a)', advance='no') abs(proj), ' '
-                end if
-
-              end do
-            end do
-
-          end do
-          call io_close(iunit)
-
-        end do ! dir
-      end do !ik
-
-      POP_SUB(em_resp_output.out_projections)
-
-    end subroutine out_projections
 
 
     ! ---------------------------------------------------------

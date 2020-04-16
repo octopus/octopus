@@ -408,7 +408,7 @@ subroutine X(states_elec_trsm)(st, namespace, mesh, ik, ss)
 
     if(st%d%dim > 1) call messages_not_implemented('Opencl states_elec_trsm for spinors', namespace=namespace)
 
-    block_size = batch_points_block_size(st%group%psib(st%group%block_start, ik))
+    block_size = batch_points_block_size()
 
     call accel_create_buffer(psicopy_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*block_size)
 
@@ -1471,7 +1471,7 @@ subroutine X(states_elec_rotate)(st, namespace, mesh, uu, ik)
 
     if(st%d%dim > 1) call messages_not_implemented('Opencl states_elec_rotate for spinors', namespace=namespace)
 
-    block_size = batch_points_block_size(st%group%psib(st%group%block_start, ik))
+    block_size = batch_points_block_size()
 
     call accel_create_buffer(uu_buffer, ACCEL_MEM_READ_ONLY, R_TYPE_VAL, product(ubound(uu)))
     call accel_write_buffer(uu_buffer, product(ubound(uu)), uu)
@@ -1606,7 +1606,7 @@ subroutine X(states_elec_calc_overlap)(st, mesh, ik, overlap)
 
     ! we need to use a temporary array
 
-    block_size = batch_points_block_size(st%group%psib(st%group%block_start, ik))
+    block_size = batch_points_block_size()
 
     call accel_create_buffer(psi_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*st%d%dim*block_size)
     if(st%parallel_in_states) then

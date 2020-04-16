@@ -851,18 +851,6 @@ contains
   end subroutine ddmixfield_set_vout2
 
   ! --------------------------------------------------------------
-  subroutine mixfield_get_dvnew(mixfield, vnew)
-    type(mixfield_t),   intent(in) :: mixfield
-    FLOAT,          intent(inout)  :: vnew(:,:)
-
-    PUSH_SUB(mixfield_get_dvnew)
-
-    vnew(1:mixfield%d1, 1:mixfield%d3) = mixfield%dvnew(1:mixfield%d1, 1, 1:mixfield%d3)
-
-    POP_SUB(mixfield_get_dvnew)
-  end subroutine mixfield_get_dvnew
-
-  ! --------------------------------------------------------------
   subroutine ddmixfield_get_vnew(mixfield, re, im)
     type(mixfield_t),   intent(in) :: mixfield
     FLOAT,          intent(inout)  :: re(:,:), im(:,:)
