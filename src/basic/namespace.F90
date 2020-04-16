@@ -51,13 +51,14 @@ contains
     character(len=*),                    intent(in) :: name
     type(namespace_t), optional, target, intent(in) :: parent
 
-    integer :: total_len
+    integer :: total_len, parent_len
 
     ! Calculate total length of namespace, including the parent
     total_len = len_trim(name)
     if (present(parent)) then
-      if (parent%len() > 0) then
-        total_len = total_len + parent%len() + 1
+      parent_len = parent%len()
+      if (parent_len > 0) then
+        total_len = total_len + parent_len + 1
       end if
     end if
 
@@ -118,10 +119,13 @@ contains
     class(namespace_t), intent(in) :: this
     integer :: namespace_len
 
+    integer :: parent_len
+
     namespace_len = len_trim(this%name)
     if (associated(this%parent)) then
-      if (this%parent%len() > 0) then
-        namespace_len = namespace_len + this%parent%len() + 1
+      parent_len = this%parent%len()
+      if (parent_len > 0) then
+        namespace_len = namespace_len + parent_len + 1
       end if
     end if
 
