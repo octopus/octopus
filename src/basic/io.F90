@@ -68,8 +68,7 @@ contains
   !> If the argument defaults is present and set to true, then the routine
   !! will not try to read anything from the inp file, but set everything
   !! to the default values.
-  subroutine io_init(namespace, defaults)
-    type(namespace_t), intent(in)    :: namespace
+  subroutine io_init(defaults)
     logical, optional, intent(in)    :: defaults
 
     character(len=MAX_PATH_LEN) :: filename
@@ -106,7 +105,7 @@ contains
     !% be changed by setting this variable: if you give it a name (other than "-")
     !% the output stream is printed in that file instead.
     !%End
-    call parse_variable(namespace, 'stdout', '-', filename)
+    call parse_variable(global_namespace, 'stdout', '-', filename)
     stdout = 6
     if(trim(filename) /= '-') then
       close(stdout)
@@ -122,7 +121,7 @@ contains
     !% be changed by setting this variable: if you give it a name (other than "-")
     !% the output stream is printed in that file instead.
     !%End
-    call parse_variable(namespace, 'stderr', '-', filename)
+    call parse_variable(global_namespace, 'stderr', '-', filename)
     stderr = 0
     if(trim(filename) /= '-') then
       close(stderr)
@@ -156,7 +155,7 @@ contains
     !% Furthermore, some of the debug information (see <tt>Debug</tt>) is also written to <tt>WorkDir</tt> and
     !% the non-absolute paths defined in <tt>OutputIterDir</tt> are relative to <tt>WorkDir</tt>.
     !%End
-    call parse_variable(namespace, 'WorkDir', '.', work_dir)
+    call parse_variable(global_namespace, 'WorkDir', '.', work_dir)
     ! ... and if necessary create workdir (will not harm if work_dir is already there)
     if (work_dir /= '.') call loct_mkdir(trim(work_dir))
 
@@ -169,7 +168,7 @@ contains
     !% flushed to <tt>messages.stdout</tt> and <tt>messages.stderr</tt>, if this variable is
     !% set to yes.
     !%End
-    call parse_variable(namespace, 'FlushMessages', .false., flush_messages)
+    call parse_variable(global_namespace, 'FlushMessages', .false., flush_messages)
 
     ! delete files so that we start writing to empty ones
     if(flush_messages) then
@@ -178,7 +177,7 @@ contains
     end if
 
     if(debug%info) then
-      call io_mkdir('debug', namespace)
+      call io_mkdir('debug', global_namespace)
     end if
 
     if(debug%trace_file) then
@@ -203,7 +202,7 @@ contains
       !% reversing the file creation of the node hooks, to run the master first followed
       !% by a compute node.
       !%End
-      call parse_variable(namespace, 'MPIDebugHook', .false., mpi_debug_hook)
+      call parse_variable(global_namespace, 'MPIDebugHook', .false., mpi_debug_hook)
       if (mpi_debug_hook) then
         call loct_gettimeofday(sec, usec)
         call epoch_time_diff(sec,usec)

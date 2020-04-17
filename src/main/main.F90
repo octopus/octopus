@@ -50,9 +50,9 @@ program octopus
 
   call parser_init()
   
-  call messages_init(global_namespace)
+  call messages_init()
 
-  call walltimer_init(global_namespace)
+  call walltimer_init()
   
   !%Variable ReportMemory
   !%Type logical
@@ -120,7 +120,7 @@ program octopus
   if(.not.varinfo_valid_option('CalculationMode', inp_calc_mode)) call messages_input_error(global_namespace, 'CalculationMode')
 
   ! Now we can initialize the I/O
-  call io_init(global_namespace)
+  call io_init()
 
   call calc_mode_par_init()
   

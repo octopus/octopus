@@ -104,8 +104,8 @@ program wannier90_interface
   call global_init()
   call parser_init()
 
-  call messages_init(global_namespace)
-  call io_init(global_namespace)
+  call messages_init()
+  call io_init()
 
   call calc_mode_par_init()
 

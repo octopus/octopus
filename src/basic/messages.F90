@@ -139,12 +139,11 @@ module messages_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine messages_init(namespace)
-    type(namespace_t), intent(in) :: namespace
+  subroutine messages_init()
     
     logical :: trap_signals
 
-    call messages_obsolete_variable(namespace, 'DevelVersion', 'ExperimentalFeatures')
+    call messages_obsolete_variable(global_namespace, 'DevelVersion', 'ExperimentalFeatures')
 
     !%Variable ExperimentalFeatures
     !%Type logical
@@ -157,11 +156,11 @@ contains
     !% See details on
     !% <a href=http://octopus-code.org/experimental_features>wiki page</a>.
     !%End
-    call parse_variable(namespace, 'ExperimentalFeatures', .false., conf%devel_version)
+    call parse_variable(global_namespace, 'ExperimentalFeatures', .false., conf%devel_version)
     
-    call messages_obsolete_variable(namespace, 'DebugLevel', 'Debug')
+    call messages_obsolete_variable(global_namespace, 'DebugLevel', 'Debug')
 
-    call debug_init(debug, namespace)
+    call debug_init(debug, global_namespace)
     
     warnings = 0
     experimentals = 0
@@ -177,7 +176,7 @@ contains
     !% variable is enabled if <tt>Debug</tt> is set to trace mode
     !% (<tt>trace</tt>, <tt>trace_term</tt> or <tt>trace_file</tt>).
     !%End
-    call parse_variable(namespace, 'DebugTrapSignals', debug%trace, trap_signals)
+    call parse_variable(global_namespace, 'DebugTrapSignals', debug%trace, trap_signals)
 
     if (trap_signals) call trap_segfault()
 

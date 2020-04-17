@@ -93,9 +93,9 @@ program oct_unfold
   call parser_init()
   call calc_mode_par_init()
 
-  call messages_init(global_namespace)
+  call messages_init()
 
-  call io_init(global_namespace)
+  call io_init()
   call profiling_init(global_namespace)
 
   call print_header()

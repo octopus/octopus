@@ -1168,7 +1168,7 @@ program oscillator_strength
   ! Initialize stuff
   call global_init(is_serial = .true.)
   call parser_init()
-  call io_init(global_namespace, defaults = .true.)
+  call io_init(defaults = .true.)
 
   select case(run_mode)
   case(GENERATE_NTHORDER_SIGNAL)

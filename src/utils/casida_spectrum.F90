@@ -56,8 +56,8 @@ program casida_spectrum
   call getopt_end()
 
   call parser_init()
-  call messages_init(global_namespace)
-  call io_init(global_namespace)
+  call messages_init()
+  call io_init()
   call unit_system_init(global_namespace)
   call space_init(cs%space, global_namespace)
 
