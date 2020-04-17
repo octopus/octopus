@@ -1260,8 +1260,7 @@ contains
       end do
     end do
 
-    SAFE_ALLOCATE(st%surface_grid_points_map(1:2,1:st%dim,1:iy_max,1:iz_max,1:nn_max))
-    SAFE_ALLOCATE(st%surface_grid_points_map(1:2,1:st%dim,1:ix_max,1:iz_max,1:nn_max))
+    ! originally there were three allocated of the same pointer here
     SAFE_ALLOCATE(st%surface_grid_points_map(1:2,1:st%dim,1:ix_max,1:iy_max,1:nn_max))
 
     nn(:,:,:,:) = 0
