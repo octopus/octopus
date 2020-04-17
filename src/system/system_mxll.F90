@@ -403,10 +403,8 @@ contains
 
     call multicomm_end(this%mc)
 
-    if(associated(this%st)) then
-      call states_mxll_end(this%st)
-      SAFE_DEALLOCATE_P(this%st)
-    end if
+    call states_mxll_end(this%st)
+    SAFE_DEALLOCATE_P(this%st)
 
     call simul_box_end(this%gr%sb)
     call grid_end(this%gr)

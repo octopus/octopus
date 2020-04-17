@@ -850,7 +850,6 @@ contains
       SAFE_DEALLOCATE_A(rs_charge_density_ext_t2)
       SAFE_DEALLOCATE_A(rs_state_init)
 
-!      call states_mxll_end(sys%st)
       call td_write_mxll_end(write_handler)
 
     end select
