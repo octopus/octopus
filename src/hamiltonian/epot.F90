@@ -178,7 +178,7 @@ contains
     if(family_is_mgga(xc_family) .and. filter /= PS_FILTER_NONE) &
       call messages_not_implemented("FilterPotentials different from filter_none with MGGA", namespace=namespace)
 
-    if(filter == PS_FILTER_TS) call spline_filter_mask_init(namespace)
+    if(filter == PS_FILTER_TS) call spline_filter_mask_init()
     do ispec = 1, geo%nspecies
       call species_pot_init(geo%species(ispec), namespace, mesh_gcutoff(gr%mesh), filter)
     end do
