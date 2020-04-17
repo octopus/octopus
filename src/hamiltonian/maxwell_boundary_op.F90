@@ -203,7 +203,7 @@ contains
     !%Option maxwell_lossy_layer 8
     !% follows ...
     !%End
-    if(parse_block(namespace, 'MaxwellBoundaryConditions', blk) == 0) then ! memleak in parse_block
+    if(parse_block(namespace, 'MaxwellBoundaryConditions', blk) == 0) then
 
       call messages_print_stress(stdout, trim('Maxwell boundary conditions:'), namespace=namespace)
 
@@ -244,6 +244,8 @@ contains
         write(message(1),'(a,I1,a,a)') 'Maxwell boundary condition in direction ', icol, ': ', trim(string)
         call messages_info(1)
       end do
+
+      call parse_block_end(blk)
 
       call messages_print_stress(stdout, namespace=namespace)
     end if
@@ -291,6 +293,7 @@ contains
     do icol=1, ncols
       call parse_block_integer(blk, 0, icol-1, bc%bc_ab_type(icol))
     end do
+    call parse_block_end(blk)
 
 
     do idim = 1, 3
@@ -652,6 +655,7 @@ contains
       SAFE_DEALLOCATE_P(bc%plane_waves)
       SAFE_DEALLOCATE_P(bc%plane_waves_oam)
       SAFE_DEALLOCATE_P(bc%plane_waves_sam)
+      SAFE_DEALLOCATE_P(bc%plane_waves_points_map)
     end if
 
     POP_SUB(bc_mxll_end)
@@ -1448,7 +1452,7 @@ contains
     !% Follows!
     !%End
 
-    if(parse_block(namespace, 'UserDefinedMaxwellIncidentWaves', blk) == 0) then ! memleak in parse_block
+    if(parse_block(namespace, 'UserDefinedMaxwellIncidentWaves', blk) == 0) then
 
       call messages_print_stress(stdout, trim('Substitution of the electromagnetic incident waves'), namespace=namespace)
 
@@ -1599,6 +1603,8 @@ contains
           bc%plane_waves_sam(il) = sam
          end if
       end do
+
+      call parse_block_end(blk)
 
       call messages_print_stress(stdout, namespace=namespace)
 
