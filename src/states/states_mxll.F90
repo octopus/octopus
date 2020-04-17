@@ -322,6 +322,7 @@ contains
         st%selected_points_rs_state(:,il)  = M_z0
         st%selected_points_rs_state_trans(:,il) = M_z0
       end do
+    call parse_block_end(blk)
     else
       SAFE_ALLOCATE(st%selected_points_coordinate(1:st%d%dim, 1))
       SAFE_ALLOCATE(st%selected_points_rs_state(1:st%d%dim, 1))
@@ -329,8 +330,7 @@ contains
       st%selected_points_coordinate(:,:) = M_ZERO
       st%selected_points_rs_state(:,:) = M_z0
       st%selected_points_rs_state_trans(:,:) = M_z0
-   end if
-   call parse_block_end(blk)
+    end if
 
     POP_SUB(states_mxll_init)
       
