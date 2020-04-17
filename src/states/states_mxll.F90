@@ -229,8 +229,10 @@ contains
 
     st%fromScratch = .true. ! this will be reset if restart_read is called
     call states_mxll_null(st)
-    
-    st%dim = MAX_DIM
+
+    ASSERT(MAX_DIM >= gr%sb%dim)
+    ASSERT(gr%sb%dim == 3)
+    st%dim = gr%sb%dim
     st%nst = 1
     st%nik = 1
 

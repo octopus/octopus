@@ -499,11 +499,11 @@ contains
 
     if (hm%operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE .and. &
          all(hm%bc%bc_ab_type(:) /= OPTION__MAXWELLABSORBINGBOUNDARIES__CPML)) then
-
+      ! This part is already batchified
       call hamiltonian_mxll_apply_batch(hm, namespace, hm%der, psib, hpsib)
 
     else
-
+      ! This part uses the old non-batch implementation
       SAFE_ALLOCATE(rs_aux_in(1:mesh%np_part, 1:3))
       SAFE_ALLOCATE(rs_aux_out(1:mesh%np_part, 1:3))
       do ii = 1, 3

@@ -532,17 +532,17 @@ contains
 
     PUSH_SUB(exponential_mxll_apply)
 
-    call zbatch_init(ffbatch, 1, 1, gr%der%dim, gr%mesh%np_part)
+    call zbatch_init(ffbatch, 1, 1, st%dim, gr%mesh%np_part)
 
-    if (st%pack_states) call ffbatch%do_pack()
-
-    do istate = 1, gr%der%dim
+    do istate = 1, st%dim
       call batch_set_state(ffbatch, istate, gr%mesh%np_part, ff(:, istate))
     end do
 
+    if (st%pack_states) call ffbatch%do_pack()
+
     call exponential_apply_batch(tr%te, namespace, gr%mesh, hm, ffbatch, dt)
 
-    do istate = 1, gr%der%dim
+    do istate = 1, st%dim
       call batch_get_state(ffbatch, istate, gr%mesh%np_part, ff(:, istate))
     end do
 
