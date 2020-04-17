@@ -289,8 +289,9 @@ contains
 
   ! ---------------------------------------------------------
   character(len=MAX_PATH_LEN) function io_workpath(path, namespace) result(wpath)
-    character(len=*),  intent(in) :: path
-    type(namespace_t),    intent(in) :: namespace
+    character(len=*),            intent(in) :: path
+    type(namespace_t), optional, intent(in) :: namespace
+
     logical :: absolute_path
 
     PUSH_SUB(io_workpath)
@@ -305,13 +306,12 @@ contains
       ! we do not change absolute path names
       wpath = trim(path)
     else
-      if(namespace%get('/') == "") then
-        write(wpath, '(3a)') trim(work_dir), "/", trim(path)
-      else
-        ! inamespaceert namespace into path
-        write(wpath, '(5a)') trim(work_dir), "/", trim(namespace%get('/')), &
-          "/",  trim(path)
+      wpath = trim(work_dir)
+      if (present(namespace)) then
+        ! insert namespace into path
+        if (namespace%len() > 0) wpath = trim(wpath) + "/" + trim(namespace%get('/'))
       end if
+      wpath = trim(wpath) + "/" + trim(path)
     end if
 
     POP_SUB(io_workpath)
@@ -320,9 +320,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine io_mkdir(fname, namespace, parents)
-    character(len=*),  intent(in) :: fname
-    type(namespace_t),    intent(in) :: namespace
-    logical, optional, intent(in) :: parents
+    character(len=*),            intent(in) :: fname
+    type(namespace_t), optional, intent(in) :: namespace
+    logical,           optional, intent(in) :: parents
 
     logical :: parents_
     integer :: last_slash, pos, length
@@ -333,14 +333,14 @@ contains
     if (present(parents)) parents_ = parents
 
     if (.not. parents_) then
-      call loct_mkdir(trim(io_workpath("", namespace)))
-      call loct_mkdir(trim(io_workpath(fname, namespace)))
+      call loct_mkdir(trim(io_workpath("", namespace=namespace)))
+      call loct_mkdir(trim(io_workpath(fname, namespace=namespace)))
     else
       last_slash = max(index(fname, "/", .true.), len_trim(fname))
       pos = 1
       length = index(fname, '/') - 1
       do while (pos < last_slash)
-        call loct_mkdir(trim(io_workpath(fname(1:pos+length-1), namespace)))
+        call loct_mkdir(trim(io_workpath(fname(1:pos+length-1), namespace=namespace)))
         pos = pos + length + 1
         length = index(fname(pos:), "/") - 1
         if (length < 1) length = len_trim(fname(pos:))
@@ -354,12 +354,12 @@ contains
 
   ! ---------------------------------------------------------
   subroutine io_rm(fname, namespace)
-    character(len=*),  intent(in) :: fname
-    type(namespace_t),    intent(in) :: namespace
+    character(len=*),            intent(in) :: fname
+    type(namespace_t), optional, intent(in) :: namespace
 
     PUSH_SUB(io_rm)
 
-    call loct_rm(trim(io_workpath(fname, namespace)))
+    call loct_rm(trim(io_workpath(fname, namespace=namespace)))
 
     POP_SUB(io_rm)
   end subroutine io_rm
@@ -367,8 +367,8 @@ contains
 
   ! ---------------------------------------------------------
   integer function io_open(file, namespace, action, status, form, position, die, recl, grp) result(iunit)
-    character(len=*), intent(in) :: file, action
-    type(namespace_t),intent(in) :: namespace
+    character(len=*), intent(in)           :: file, action
+    type(namespace_t),intent(in), optional :: namespace
     character(len=*), intent(in), optional :: status, form, position
     logical,          intent(in), optional :: die
     integer,          intent(in), optional :: recl
@@ -412,7 +412,7 @@ contains
         return
       end if
 
-      file_ = io_workpath(file, namespace)
+      file_ = io_workpath(file, namespace=namespace)
 
       if(present(recl)) then
         open(unit=iunit, file=trim(file_), status=trim(status_), form=trim(form_), &
