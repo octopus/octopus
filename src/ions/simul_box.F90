@@ -160,7 +160,7 @@ contains
 
     call read_misc()                       ! Miscellaneous stuff.
     call read_box()                        ! Parameters defining the simulation box.
-    call simul_box_lookup_init(sb, geo) ! memleak
+    call simul_box_lookup_init(sb, geo)
     call simul_box_build_lattice(sb, namespace)       ! Build lattice vectors.
     call simul_box_atoms_in_box(sb, geo, namespace, .true.)   ! Put all the atoms inside the box.
 
@@ -170,7 +170,7 @@ contains
 
     ! we need k-points for periodic systems
     only_gamma_kpoint = (sb%periodic_dim == 0)
-    call kpoints_init(sb%kpoints, namespace, sb%symm, sb%dim, sb%rlattice, sb%klattice, only_gamma_kpoint) ! memleak
+    call kpoints_init(sb%kpoints, namespace, sb%symm, sb%dim, sb%rlattice, sb%klattice, only_gamma_kpoint)
 
     call simul_box_symmetry_check(sb, geo, sb%kpoints, sb%dim, namespace)
 

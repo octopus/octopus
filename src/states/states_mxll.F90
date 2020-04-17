@@ -407,6 +407,14 @@ contains
     SAFE_DEALLOCATE_A(st%plane_waves_delta_energy)
     SAFE_DEALLOCATE_A(st%plane_waves_energy_via_flux_calc)
 
+    SAFE_DEALLOCATE_P(st%surface_grid_center)
+    SAFE_DEALLOCATE_P(st%surface_grid_points_number)
+    SAFE_DEALLOCATE_P(st%surface_grid_points_map)
+    SAFE_DEALLOCATE_P(st%inner_points_map)
+    SAFE_DEALLOCATE_P(st%boundary_points_map)
+    SAFE_DEALLOCATE_P(st%ep)
+    SAFE_DEALLOCATE_P(st%mu)
+
 #ifdef HAVE_SCALAPACK
     call blacs_proc_grid_end(st%dom_st_proc_grid)
 #endif

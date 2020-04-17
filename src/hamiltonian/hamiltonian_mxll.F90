@@ -235,11 +235,11 @@ contains
     hm%der => gr%der
     hm%rs_sign = st%rs_sign
 
-    SAFE_ALLOCATE(hm%vector_potential(1:gr%mesh%np_part,1:st%d%dim)) ! memleak
-    SAFE_ALLOCATE(hm%energy_density(1:gr%mesh%np_part)) ! memleak
-    SAFE_ALLOCATE(hm%energy_density_plane_waves(1:gr%mesh%np_part)) ! memleak
-    SAFE_ALLOCATE(hm%e_energy_density(1:gr%mesh%np_part)) ! memleak
-    SAFE_ALLOCATE(hm%b_energy_density(1:gr%mesh%np_part)) ! memleak
+    SAFE_ALLOCATE(hm%vector_potential(1:gr%mesh%np_part,1:st%d%dim))
+    SAFE_ALLOCATE(hm%energy_density(1:gr%mesh%np_part))
+    SAFE_ALLOCATE(hm%energy_density_plane_waves(1:gr%mesh%np_part))
+    SAFE_ALLOCATE(hm%e_energy_density(1:gr%mesh%np_part))
+    SAFE_ALLOCATE(hm%b_energy_density(1:gr%mesh%np_part))
 
     hm%vector_potential = M_ZERO
     hm%energy_density = M_ZERO
@@ -250,8 +250,6 @@ contains
     hm%mx_ma_coupling  = .false.
     hm%ma_mx_coupling_apply = .false.
     hm%ma_mx_coupling  = .false.
-
-    SAFE_ALLOCATE(hm%cube%fft) ! memleak
 
     !%Variable MaxwellHamiltonianOperator
     !%Type integer
@@ -332,8 +330,11 @@ contains
 
     nullify(hm%operators)
 
+    SAFE_DEALLOCATE_P(hm%vector_potential)
     SAFE_DEALLOCATE_P(hm%energy_density)
-    SAFE_DEALLOCATE_P(hm%cube%fft)
+    SAFE_DEALLOCATE_P(hm%energy_density_plane_waves)
+    SAFE_DEALLOCATE_P(hm%e_energy_density)
+    SAFE_DEALLOCATE_P(hm%b_energy_density)
 
     call bc_mxll_end(hm%bc)
 

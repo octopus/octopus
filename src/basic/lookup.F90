@@ -63,7 +63,7 @@ contains
 
     this%nobjs = nobjs
     this%dim = dim
-    SAFE_ALLOCATE(this%pos(1:this%dim, 1:this%nobjs))  ! memleak
+    SAFE_ALLOCATE(this%pos(1:this%dim, 1:this%nobjs))
     
     this%pos(1:this%dim, 1:this%nobjs) = pos(1:this%dim, 1:this%nobjs)
 

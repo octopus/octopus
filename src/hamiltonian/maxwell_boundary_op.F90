@@ -658,6 +658,9 @@ contains
       SAFE_DEALLOCATE_P(bc%plane_waves_points_map)
     end if
 
+    SAFE_DEALLOCATE_P(bc%der_bndry_mask)
+    SAFE_DEALLOCATE_P(bc%der_bndry_mask_points_map)
+
     POP_SUB(bc_mxll_end)
   end subroutine bc_mxll_end
 

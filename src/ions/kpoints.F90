@@ -307,7 +307,7 @@ contains
 
     if(only_gamma) then
       this%method = KPOINTS_GAMMA
-      call read_MP(gamma_only = .true.) ! memleak
+      call read_MP(gamma_only = .true.)
       POP_SUB(kpoints_init)
       return
     end if

@@ -156,7 +156,7 @@ contains
     !%Option lossy_layer 8
     !% follows ...
     !%End
-    if(parse_block(namespace, 'MaxwellBoundaryConditions', blk) == 0) then ! memleak
+    if(parse_block(namespace, 'MaxwellBoundaryConditions', blk) == 0) then
 
       call messages_print_stress(stdout, trim('Maxwell boundary conditions:'))
 
@@ -217,7 +217,9 @@ contains
         end if
       end do
 
-      call messages_print_stress(stdout)
+     call parse_block_end(blk)
+
+     call messages_print_stress(stdout)
 
     end if
 
@@ -560,8 +562,8 @@ contains
 
     PUSH_SUB(set_medium_rs_state)
 
-    SAFE_ALLOCATE(st%ep(1:gr%mesh%np_part)) ! memleak
-    SAFE_ALLOCATE(st%mu(1:gr%mesh%np_part)) ! memleak
+    SAFE_ALLOCATE(st%ep(1:gr%mesh%np_part))
+    SAFE_ALLOCATE(st%mu(1:gr%mesh%np_part))
     st%ep = P_ep
     st%mu = P_mu
     if (hm%medium_box) then
@@ -982,8 +984,8 @@ contains
       end if
     end do
     bc%der_bndry_mask_points_number = ip_in
-    SAFE_ALLOCATE(bc%der_bndry_mask(1:ip_in)) ! memleak
-    SAFE_ALLOCATE(bc%der_bndry_mask_points_map(1:ip_in)) ! memleak
+    SAFE_ALLOCATE(bc%der_bndry_mask(1:ip_in))
+    SAFE_ALLOCATE(bc%der_bndry_mask_points_map(1:ip_in))
 
     ip_in=0
     do ip=1, mesh%np
@@ -1069,9 +1071,9 @@ contains
       end if
     end do
     st%inner_points_number = ip_in
-    SAFE_ALLOCATE(st%inner_points_map(1:ip_in)) ! memleak
+    SAFE_ALLOCATE(st%inner_points_map(1:ip_in))
     st%boundary_points_number = ip_bd
-    SAFE_ALLOCATE(st%boundary_points_map(1:ip_bd)) ! memleak
+    SAFE_ALLOCATE(st%boundary_points_map(1:ip_bd))
 
     ! inner and boundary points mapping
     ip_in=0
@@ -1116,8 +1118,8 @@ contains
     ix_max  = st%surface_grid_rows_number(1)
     st%surface_grid_rows_number(2) = 3
     iy_max  = st%surface_grid_rows_number(2)
-    st%surface_grid_rows_number(3) = 3 ! memleak
-    iz_max  = st%surface_grid_rows_number(3) ! memleak
+    st%surface_grid_rows_number(3) = 3
+    iz_max  = st%surface_grid_rows_number(3)
 
     delta(1) = M_TWO * abs(bounds(1,1)) / float(ix_max)
     delta(2) = M_TWO * abs(bounds(1,2)) / float(iy_max)
@@ -1258,9 +1260,9 @@ contains
       end do
     end do
 
-    SAFE_ALLOCATE(st%surface_grid_points_map(1:2,1:st%d%dim,1:iy_max,1:iz_max,1:nn_max)) ! memleak
-    SAFE_ALLOCATE(st%surface_grid_points_map(1:2,1:st%d%dim,1:ix_max,1:iz_max,1:nn_max)) ! memleak
-    SAFE_ALLOCATE(st%surface_grid_points_map(1:2,1:st%d%dim,1:ix_max,1:iy_max,1:nn_max)) ! memleak
+    SAFE_ALLOCATE(st%surface_grid_points_map(1:2,1:st%d%dim,1:iy_max,1:iz_max,1:nn_max))
+    SAFE_ALLOCATE(st%surface_grid_points_map(1:2,1:st%d%dim,1:ix_max,1:iz_max,1:nn_max))
+    SAFE_ALLOCATE(st%surface_grid_points_map(1:2,1:st%d%dim,1:ix_max,1:iy_max,1:nn_max))
 
     nn(:,:,:,:) = 0
 
