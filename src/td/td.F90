@@ -688,12 +688,12 @@ contains
       sys%st%plane_waves_delta_energy = M_ZERO
       sys%st%plane_waves_energy_via_flux_calc = M_ZERO
 
-      SAFE_ALLOCATE(rs_current_density_ext_t1(1:sys%gr%mesh%np_part,1:sys%st%d%dim))
-      SAFE_ALLOCATE(rs_current_density_ext_t2(1:sys%gr%mesh%np_part,1:sys%st%d%dim))
+      SAFE_ALLOCATE(rs_current_density_ext_t1(1:sys%gr%mesh%np_part,1:sys%st%dim))
+      SAFE_ALLOCATE(rs_current_density_ext_t2(1:sys%gr%mesh%np_part,1:sys%st%dim))
       SAFE_ALLOCATE(rs_charge_density_ext_t1(1:sys%gr%mesh%np_part))
       SAFE_ALLOCATE(rs_charge_density_ext_t2(1:sys%gr%mesh%np_part))
 
-      SAFE_ALLOCATE(rs_state_init(1:sys%gr%mesh%np_part, 1:sys%st%d%dim))
+      SAFE_ALLOCATE(rs_state_init(1:sys%gr%mesh%np_part, 1:sys%st%dim))
       rs_state_init(:,:) = M_z0
 
       td%energy_update_iter = 1
@@ -1287,9 +1287,9 @@ contains
     end if
 
     if (td%tr_mxll%bc_plane_waves) then
-      zff_dim = 2 * st%d%dim
+      zff_dim = 2 * st%dim
     else
-      zff_dim = 1 * st%d%dim
+      zff_dim = 1 * st%dim
     end if
     if (pml_check) then
       zff_dim = zff_dim + 18
@@ -1299,30 +1299,30 @@ contains
     zff = M_z0
 
     if (td%tr_mxll%bc_plane_waves) then
-      zff(1:gr%mesh%np,         1:st%d%dim)   = st%rs_state(1:gr%mesh%np,1:st%d%dim)
-      zff(1:gr%mesh%np,st%d%dim+1:st%d%dim+st%d%dim) = st%rs_state_plane_waves(1:gr%mesh%np,1:st%d%dim)
+      zff(1:gr%mesh%np,         1:st%dim)   = st%rs_state(1:gr%mesh%np,1:st%dim)
+      zff(1:gr%mesh%np,st%dim+1:st%dim+st%dim) = st%rs_state_plane_waves(1:gr%mesh%np,1:st%dim)
       if (pml_check) then
         id = 0
         do id1=1, 3
           do id2=1, 3
             id = id+1
             do ip_in=1, hm%bc%pml_points_number
-              zff(ip_in, 2*st%d%dim+  id) = hm%bc%pml_conv_plus(ip_in,id1,id2)
-              zff(ip_in, 2*st%d%dim+9+id) = hm%bc%pml_conv_minus(ip_in,id1,id2)
+              zff(ip_in, 2*st%dim+  id) = hm%bc%pml_conv_plus(ip_in,id1,id2)
+              zff(ip_in, 2*st%dim+9+id) = hm%bc%pml_conv_minus(ip_in,id1,id2)
             end do
           end do
         end do
       end if
     else
-      zff(1:gr%mesh%np, 1:st%d%dim) = st%rs_state(1:gr%mesh%np,1:st%d%dim)
+      zff(1:gr%mesh%np, 1:st%dim) = st%rs_state(1:gr%mesh%np,1:st%dim)
       if (pml_check) then
         id = 0
         do id1=1, 3
           do id2=1, 3
             id = id+1
             do ip_in=1, hm%bc%pml_points_number
-              zff(ip_in, st%d%dim+  id) = hm%bc%pml_conv_plus(ip_in,id1,id2)
-              zff(ip_in, st%d%dim+9+id) = hm%bc%pml_conv_minus(ip_in,id1,id2)
+              zff(ip_in, st%dim+  id) = hm%bc%pml_conv_plus(ip_in,id1,id2)
+              zff(ip_in, st%dim+9+id) = hm%bc%pml_conv_minus(ip_in,id1,id2)
             end do
           end do
         end do

@@ -3643,7 +3643,7 @@ contains
     FLOAT, allocatable :: dtmp(:,:)
     character(len=80)  :: aux
 
-    SAFE_ALLOCATE(dtmp(1:gr%mesh%np,1:st%d%dim))
+    SAFE_ALLOCATE(dtmp(1:gr%mesh%np,1:st%dim))
 
     call get_poynting_vector(gr, st, st%rs_state, st%rs_sign, dtmp, ep_field=st%ep, mu_field=st%mu, &
       mean_value=field)

@@ -157,7 +157,7 @@ contains
       ! for parallelization strategy)
       index_range(1) = sys%gr%mesh%np_global  ! Number of points in mesh
       index_range(2) = sys%st%nst             ! Number of states
-      index_range(3) = sys%st%d%nik           ! Number of k-points
+      index_range(3) = sys%st%nik             ! Number of k-points
       index_range(4) = 100000                 ! Some large number
 
       ! create index and domain communicators

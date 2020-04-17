@@ -81,8 +81,10 @@ module states_mxll_oct_m
 
   type :: states_mxll_t
     ! Components are public by default
-    type(states_elec_dim_t)      :: d
+    integer                      :: dim
+    integer                      :: nik
     integer                      :: rs_sign
+    logical                      :: pack_states
     logical                      :: parallel_in_states !< Am I parallel in states?
     type(type_t), public         :: wfs_type         !< complex (TYPE_CMPLX)
     integer, public              :: nst              !< Number of states in each irreducible subspace
@@ -173,7 +175,7 @@ module states_mxll_oct_m
     FLOAT,               pointer :: external_current_phase(:)
 
     !> used for the user-defined wavefunctions (they are stored as formula strings)
-    !! (st%d%dim, st%nst, st%d%nik)
+    !! (st%dim, st%nst, st%nik)
     character(len=1024), allocatable :: user_def_states(:,:,:)
     logical                     :: fromScratch
     type(mpi_grp_t)             :: mpi_grp
@@ -199,10 +201,8 @@ contains
 
     PUSH_SUB(states_mxll_null)
 
-    call states_elec_dim_null(st%d)
     call distributed_nullify(st%dist)
     st%wfs_type = TYPE_CMPLX
-    st%d%orth_method = 0
     st%parallel_in_states = .false.
 #ifdef HAVE_SCALAPACK
     call blacs_proc_grid_nullify(st%dom_st_proc_grid)
@@ -230,15 +230,12 @@ contains
     st%fromScratch = .true. ! this will be reset if restart_read is called
     call states_mxll_null(st)
     
-    st%d%dim = MAX_DIM
-    st%nst   = 1
-    st%d%ispin = UNPOLARIZED
-    st%d%nspin = 1
-    st%d%spin_channels = 1
-    call states_elec_choose_kpoints(st%d, gr%sb, namespace)
+    st%dim = MAX_DIM
+    st%nst = 1
+    st%nik = 1
 
-    SAFE_ALLOCATE(st%user_def_e_field(1:st%d%dim))
-    SAFE_ALLOCATE(st%user_def_b_field(1:st%d%dim))
+    SAFE_ALLOCATE(st%user_def_e_field(1:st%dim))
+    SAFE_ALLOCATE(st%user_def_b_field(1:st%dim))
 
     st%st_start = 1
     st%st_end = st%nst
@@ -251,9 +248,6 @@ contains
     st%parallel_in_states = .false.
     st%packed = .false.
     
-    st%d%block_size = 1    
-    call distributed_nullify(st%d%kpt, st%d%nik)
-
     !%Variable StatesPack
     !%Type logical
     !%Section Execution::Optimization
@@ -273,9 +267,9 @@ contains
     if(accel_is_enabled()) then
       defaultl = .false.
     end if
-    call parse_variable(namespace, 'StatesPack', defaultl, st%d%pack_states)
+    call parse_variable(namespace, 'StatesPack', defaultl, st%pack_states)
 
-    call messages_print_var_value(stdout, 'StatesPack', st%d%pack_states)
+    call messages_print_var_value(stdout, 'StatesPack', st%pack_states)
 
     !%Variable RiemannSilbersteinSign
     !%Type integer
@@ -306,16 +300,16 @@ contains
     if(parse_block(namespace, 'MaxwellFieldsCoordinate', blk) == 0) then
       nlines = parse_block_n(blk)
       st%selected_points_number = nlines
-      SAFE_ALLOCATE(st%selected_points_coordinate(1:st%d%dim,1:nlines))
-      SAFE_ALLOCATE(st%selected_points_rs_state(1:st%d%dim,1:nlines))
-      SAFE_ALLOCATE(st%selected_points_rs_state_trans(1:st%d%dim,1:nlines))
+      SAFE_ALLOCATE(st%selected_points_coordinate(1:st%dim,1:nlines))
+      SAFE_ALLOCATE(st%selected_points_rs_state(1:st%dim,1:nlines))
+      SAFE_ALLOCATE(st%selected_points_rs_state_trans(1:st%dim,1:nlines))
       do il=1, nlines
         ncols = parse_block_cols(blk,0)
         if (ncols < 3 .or. ncols > 3) then
             message(1) = 'MaxwellFieldCoordinate must have 3 columns.'
             call messages_fatal(1, namespace=namespace)
         end if
-        do idim=1, st%d%dim
+        do idim=1, st%dim
           call parse_block_float(blk, il-1, idim-1, pos(idim), units_inp%length)
         end do
         st%selected_points_coordinate(:,il) = pos
@@ -324,9 +318,9 @@ contains
       end do
     call parse_block_end(blk)
     else
-      SAFE_ALLOCATE(st%selected_points_coordinate(1:st%d%dim, 1))
-      SAFE_ALLOCATE(st%selected_points_rs_state(1:st%d%dim, 1))
-      SAFE_ALLOCATE(st%selected_points_rs_state_trans(1:st%d%dim, 1))
+      SAFE_ALLOCATE(st%selected_points_coordinate(1:st%dim, 1))
+      SAFE_ALLOCATE(st%selected_points_rs_state(1:st%dim, 1))
+      SAFE_ALLOCATE(st%selected_points_rs_state_trans(1:st%dim, 1))
       st%selected_points_coordinate(:,:) = M_ZERO
       st%selected_points_rs_state(:,:) = M_z0
       st%selected_points_rs_state_trans(:,:) = M_z0
@@ -345,22 +339,22 @@ contains
 
     PUSH_SUB(states_mxll_allocate)
 
-    SAFE_ALLOCATE(st%rs_state(1:mesh%np_part, 1:st%d%dim))
+    SAFE_ALLOCATE(st%rs_state(1:mesh%np_part, 1:st%dim))
     st%rs_state(:,:) = M_z0
 
-    SAFE_ALLOCATE(st%rs_state_trans(1:mesh%np_part, 1:st%d%dim))
+    SAFE_ALLOCATE(st%rs_state_trans(1:mesh%np_part, 1:st%dim))
     st%rs_state_trans(:,:) = M_z0
 
-    SAFE_ALLOCATE(st%rs_state_long(1:mesh%np_part, 1:st%d%dim))
+    SAFE_ALLOCATE(st%rs_state_long(1:mesh%np_part, 1:st%dim))
     st%rs_state_long(:,:) = M_z0
 
-    SAFE_ALLOCATE(st%rs_state_plane_waves(1:mesh%np_part, 1:st%d%dim))
+    SAFE_ALLOCATE(st%rs_state_plane_waves(1:mesh%np_part, 1:st%dim))
     st%rs_state_plane_waves(:,:) = M_z0
 
-    SAFE_ALLOCATE(st%rs_current_density_restart_t1(1:mesh%np_part, 1:st%d%dim))
+    SAFE_ALLOCATE(st%rs_current_density_restart_t1(1:mesh%np_part, 1:st%dim))
     st%rs_current_density_restart_t1 = M_z0
 
-    SAFE_ALLOCATE(st%rs_current_density_restart_t2(1:mesh%np_part, 1:st%d%dim))
+    SAFE_ALLOCATE(st%rs_current_density_restart_t2(1:mesh%np_part, 1:st%dim))
     st%rs_current_density_restart_t2 = M_z0
 
     POP_SUB(states_mxll_allocate)
@@ -372,7 +366,6 @@ contains
 
     PUSH_SUB(states_mxll_end)
 
-    call states_elec_dim_end(st%d)
     SAFE_DEALLOCATE_A(st%rs_state)
     SAFE_DEALLOCATE_A(st%rs_state_trans)
     SAFE_DEALLOCATE_A(st%selected_points_coordinate)
@@ -725,7 +718,7 @@ contains
       if (mesh%parallel_in_domains) then
         ztmp(:) = rs_state(pos_index_local,:)
 #ifdef HAVE_MPI
-        call MPI_Bcast(ztmp, st%d%dim, MPI_CMPLX, rankmin, mesh%mpi_grp%comm, mpi_err)
+        call MPI_Bcast(ztmp, st%dim, MPI_CMPLX, rankmin, mesh%mpi_grp%comm, mpi_err)
         call MPI_Barrier(mesh%mpi_grp%comm, mpi_err)
 #endif
       else
@@ -796,7 +789,7 @@ contains
       end do
       mean_value(:) = mean_value(:) * gr%mesh%volume_element
       if(gr%mesh%parallel_in_domains) then
-        do idir=1, st%d%dim
+        do idir=1, st%dim
           call comm_allreduce(gr%mesh%mpi_grp%comm, mean_value(idir))
         end do
       end if
@@ -832,7 +825,7 @@ contains
       end do
       mean_value(:) = mean_value(:) * gr%mesh%volume_element
       if(gr%mesh%parallel_in_domains) then
-        do idir = 1, st%d%dim
+        do idir = 1, st%dim
           call comm_allreduce(gr%mesh%mpi_grp%comm, mean_value(idir))
         end do
       end if

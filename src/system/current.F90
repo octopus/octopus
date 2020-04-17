@@ -838,21 +838,21 @@ contains
 
         if (st%external_current_modus(il) == OPTION__USERDEFINEDMAXWELLEXTERNALCURRENT__EXTERNAL_CURRENT_PARSER) then
           ! parse formula string
-          do idir = 1, st%d%dim
+          do idir = 1, st%dim
             call parse_block_string(blk, il - 1, idir, st%external_current_string(idir, il))
             call conv_to_C_string(st%external_current_string(idir, il))
           end do
         else if (st%external_current_modus(il) == OPTION__USERDEFINEDMAXWELLEXTERNALCURRENT__EXTERNAL_CURRENT_TD_FUNCTION) then
           do ip = 1, mesh%np
             call mesh_r(mesh, ip, rr, coords = xx)
-            do idir = 1, st%d%dim
+            do idir = 1, st%dim
               call parse_block_string(blk, il - 1, idir, st%external_current_string(idir, il))
               call conv_to_C_string(st%external_current_string(idir, il))
-              call parse_expression(j_vector(idir), dummy(idir), st%d%dim, xx, rr, M_ZERO, &
+              call parse_expression(j_vector(idir), dummy(idir), st%dim, xx, rr, M_ZERO, &
                 st%external_current_string(idir, il))
               j_vector(idir) = units_to_atomic(units_inp%energy/(units_inp%length**2), j_vector(idir))
             end do
-            st%external_current_amplitude(ip, 1:st%d%dim, il) = j_vector(1:st%d%dim)
+            st%external_current_amplitude(ip, 1:st%dim, il) = j_vector(1:st%dim)
           end do
           call parse_block_float(blk, il-1, 4, omega, unit_one/units_inp%time)
           st%external_current_omega(il) = omega
@@ -894,21 +894,21 @@ contains
       if (st%external_current_modus(jn) == OPTION__USERDEFINEDMAXWELLEXTERNALCURRENT__EXTERNAL_CURRENT_PARSER) then
         do ip = 1, mesh%np
           call mesh_r(mesh, ip, rr, coords = xx)
-          do idir = 1, st%d%dim
+          do idir = 1, st%dim
             tt = time
-            call parse_expression(j_vector(idir), dummy(idir), st%d%dim, xx, rr, tt, &
+            call parse_expression(j_vector(idir), dummy(idir), st%dim, xx, rr, tt, &
               & trim(st%external_current_string(idir,jn)))
             j_vector(idir) = units_to_atomic(units_inp%energy/(units_inp%length**2), j_vector(idir))
           end do
-          current(ip, 1:st%d%dim) = current(ip, 1:st%d%dim) + j_vector(1:st%d%dim)
+          current(ip, 1:st%dim) = current(ip, 1:st%dim) + j_vector(1:st%dim)
         end do
 
       else if(st%external_current_modus(jn) == OPTION__USERDEFINEDMAXWELLEXTERNALCURRENT__EXTERNAL_CURRENT_TD_FUNCTION) then
         do ip = 1, mesh%np
           exp_arg = st%external_current_omega(jn) * time + tdf(st%external_current_td_phase(jn),time)
-          amp(1:st%d%dim) = st%external_current_amplitude(ip, 1:st%d%dim, jn)*tdf(st%external_current_td_function(jn), time)
-          j_vector(1:st%d%dim) = TOFLOAT(amp(1:st%d%dim) * exp(-M_zI*exp_arg))
-          current(ip, 1:st%d%dim) = current(ip, 1:st%d%dim) + j_vector(1:st%d%dim)
+          amp(1:st%dim) = st%external_current_amplitude(ip, 1:st%dim, jn)*tdf(st%external_current_td_function(jn), time)
+          j_vector(1:st%dim) = TOFLOAT(amp(1:st%dim) * exp(-M_zI*exp_arg))
+          current(ip, 1:st%dim) = current(ip, 1:st%dim) + j_vector(1:st%dim)
         end do
       end if
     end do

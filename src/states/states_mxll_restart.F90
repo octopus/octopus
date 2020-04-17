@@ -78,8 +78,8 @@ contains
 
     PUSH_SUB(states_mxll_read_user_def)
 
-    SAFE_ALLOCATE(rs_state(1:mesh%np_part,1:st%d%dim))
-    SAFE_ALLOCATE(rs_state_add(1:mesh%np_part,1:st%d%dim))
+    SAFE_ALLOCATE(rs_state(1:mesh%np_part,1:st%dim))
+    SAFE_ALLOCATE(rs_state_add(1:mesh%np_part,1:st%dim))
 
     ! Set electromagnetic field equal to zero in the whole simulation box.
     rs_state(:,:) = M_ZERO
@@ -172,11 +172,11 @@ contains
             rr = sqrt(sum(xx(:)**2))
             ! parse user-defined expressions
             if (maxwell_field == OPTION__USERDEFINEDINITIALMAXWELLSTATES__ELECTRIC_FIELD) then
-              call parse_expression(e_value, dummy, st%d%dim, xx, rr, M_ZERO, &
+              call parse_expression(e_value, dummy, st%dim, xx, rr, M_ZERO, &
                                     st%user_def_e_field(idim))
               b_value = M_ZERO
             else if (maxwell_field == OPTION__USERDEFINEDINITIALMAXWELLSTATES__MAGNETIC_FIELD) then
-              call parse_expression(b_value, dummy, st%d%dim, xx, rr, M_ZERO, &
+              call parse_expression(b_value, dummy, st%dim, xx, rr, M_ZERO, &
                                     st%user_def_b_field(idim))
               e_value = M_ZERO
             end if

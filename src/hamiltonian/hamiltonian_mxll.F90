@@ -65,10 +65,7 @@ module hamiltonian_mxll_oct_m
     maxwell_helmholtz_decomposition_long_field
 
    type, extends(hamiltonian_abst_t) :: hamiltonian_mxll_t
-    !> The Hamiltonian must know what are the "dimensions" of the spaces,
-    !! in order to be able to operate on the states.
-    type(states_elec_dim_t)       :: d
-
+    integer                        :: dim
     !> absorbing boundaries
     logical :: adjoint
 
@@ -83,7 +80,7 @@ module hamiltonian_mxll_oct_m
 
     type(bc_mxll_t)                :: bc
     type(derivatives_t), pointer   :: der !< pointer to derivatives
-    type(states_mxll_t), pointer   :: st
+    type(states_mxll_t), pointer   ::  st
 
     integer                        :: rs_sign
 
@@ -227,7 +224,7 @@ contains
        
     call hamiltonian_mxll_null(hm)
 
-    call states_elec_dim_copy(hm%d, st%d)
+    hm%dim = st%dim
 
     ASSERT(associated(gr%der%lapl))
 
@@ -235,7 +232,7 @@ contains
     hm%der => gr%der
     hm%rs_sign = st%rs_sign
 
-    SAFE_ALLOCATE(hm%vector_potential(1:gr%mesh%np_part,1:st%d%dim))
+    SAFE_ALLOCATE(hm%vector_potential(1:gr%mesh%np_part,1:st%dim))
     SAFE_ALLOCATE(hm%energy_density(1:gr%mesh%np_part))
     SAFE_ALLOCATE(hm%energy_density_plane_waves(1:gr%mesh%np_part))
     SAFE_ALLOCATE(hm%e_energy_density(1:gr%mesh%np_part))
@@ -271,9 +268,9 @@ contains
     call parse_variable(namespace, 'MaxwellHamiltonianOperator', OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE, hm%operator)
 
     if (hm%operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE_GAUSS) then
-      hm%d%dim = hm%d%dim+1
+      hm%dim = hm%dim+1
     else if (hm%operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE_MEDIUM) then
-      hm%d%dim = 2*hm%d%dim
+      hm%dim = 2*hm%dim
     end if
 
     !%Variable MaxwellExternalCurrent
@@ -337,8 +334,6 @@ contains
     SAFE_DEALLOCATE_P(hm%b_energy_density)
 
     call bc_mxll_end(hm%bc)
-
-    call states_elec_dim_end(hm%d) 
 
     POP_SUB(hamiltonian_mxll_end)
   end subroutine hamiltonian_mxll_end
@@ -1049,7 +1044,7 @@ contains
     field_old = transverse_field
     call zderivatives_curl(gr%der, transverse_field(:,:), ztmp(:,:), set_bc = .false.)
     ! Apply poisson equation to solve helmholtz decomposition integral
-    do idim = 1, st%d%dim
+    do idim = 1, st%dim
       call zpoisson_solve(poisson, tmp_poisson(:), ztmp(:, idim), .true.)
       ztmp(1:gr%mesh%np_part, idim) = M_ONE / (M_FOUR * M_PI) * tmp_poisson(1:gr%mesh%np_part)
     end do

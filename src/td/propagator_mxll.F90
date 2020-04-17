@@ -182,7 +182,7 @@ contains
           tr%bc_add_ab_region = .true.
           hm%bc_constant = .true.
           hm%bc_add_ab_region = .true.
-          SAFE_ALLOCATE(st%rs_state_const(1:st%d%dim))
+          SAFE_ALLOCATE(st%rs_state_const(1:st%dim))
           st%rs_state_const = M_z0
           call td_function_mxll_init(st, namespace, hm)
         else if (hm%bc%bc_type(icol) == OPTION__MAXWELLBOUNDARYCONDITIONS__MIRROR_PEC) then
@@ -534,7 +534,7 @@ contains
 
     call zbatch_init(ffbatch, 1, 1, gr%der%dim, gr%mesh%np_part)
 
-    if (st%d%pack_states) call ffbatch%do_pack()
+    if (st%pack_states) call ffbatch%do_pack()
 
     do istate = 1, gr%der%dim
       call batch_set_state(ffbatch, istate, gr%mesh%np_part, ff(:, istate))
@@ -576,7 +576,7 @@ contains
       end do
     end if
 
-    do idim=1, st%d%dim
+    do idim=1, st%dim
       if (hm%bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__MEDIUM) then
         do ip_in=1, hm%bc%medium_points_number(idim)
           ip = hm%bc%medium_points_map(ip_in,idim)
@@ -596,11 +596,11 @@ contains
     type(hamiltonian_mxll_t), intent(in)    :: hm
     type(states_mxll_t),      intent(inout) :: st
 
-    integer :: ipx, ipy, ipz, idx, np(st%d%dim), idim
+    integer :: ipx, ipy, ipz, idx, np(st%dim), idim
 
     PUSH_SUB(rs_state_to_cube_map)
 
-    do idim=1, st%d%dim
+    do idim=1, st%dim
       ASSERT(hm%cube%rs_n(idim) == hm%cube%fs_n(idim))
       np(idim) = hm%cube%rs_n(idim)
     end do
@@ -931,7 +931,7 @@ contains
         call get_magnetic_field_state(field, gr%mesh, st%rs_sign, vector_potential, st%mu, gr%mesh%np_part)
         dtmp = vector_potential
         call dderivatives_curl(gr%der, dtmp, vector_potential, set_bc = .false.)
-        do idim=1, st%d%dim
+        do idim=1, st%dim
           call dpoisson_solve(poisson_solver, dtmp(:,idim), vector_potential(:,idim), .true.)
         end do
         vector_potential = M_ONE / (M_FOUR * M_PI) * vector_potential
@@ -1129,8 +1129,8 @@ contains
     st%surface_grid_element(2) = delta(1) * delta(3)
     st%surface_grid_element(3) = delta(1) * delta(2)
 
-    SAFE_ALLOCATE(st%surface_grid_center(1:2, 1:st%d%dim, 1:ix_max, 1:iy_max))
-    SAFE_ALLOCATE(st%surface_grid_points_number(1:st%d%dim, 1:ix_max, 1:iy_max))
+    SAFE_ALLOCATE(st%surface_grid_center(1:2, 1:st%dim, 1:ix_max, 1:iy_max))
+    SAFE_ALLOCATE(st%surface_grid_points_number(1:st%dim, 1:ix_max, 1:iy_max))
     SAFE_ALLOCATE(nn(1:2,1:3,1:3,1:3))
 
     st%surface_grid_center(1, 1, :, :) = -bounds(1,1)
@@ -1260,9 +1260,9 @@ contains
       end do
     end do
 
-    SAFE_ALLOCATE(st%surface_grid_points_map(1:2,1:st%d%dim,1:iy_max,1:iz_max,1:nn_max))
-    SAFE_ALLOCATE(st%surface_grid_points_map(1:2,1:st%d%dim,1:ix_max,1:iz_max,1:nn_max))
-    SAFE_ALLOCATE(st%surface_grid_points_map(1:2,1:st%d%dim,1:ix_max,1:iy_max,1:nn_max))
+    SAFE_ALLOCATE(st%surface_grid_points_map(1:2,1:st%dim,1:iy_max,1:iz_max,1:nn_max))
+    SAFE_ALLOCATE(st%surface_grid_points_map(1:2,1:st%dim,1:ix_max,1:iz_max,1:nn_max))
+    SAFE_ALLOCATE(st%surface_grid_points_map(1:2,1:st%dim,1:ix_max,1:iy_max,1:nn_max))
 
     nn(:,:,:,:) = 0
 
@@ -1433,27 +1433,27 @@ contains
 
     PUSH_SUB(energy_density_calc)
 
-    SAFE_ALLOCATE(ztmp(1:gr%mesh%np_part,1:st%d%dim))
+    SAFE_ALLOCATE(ztmp(1:gr%mesh%np_part,1:st%dim))
 
     ztmp(:,:) = rs_field(:,:)
 
     energy_dens(:) = M_ZERO
     do ip=1, gr%mesh%np
-      do idim=1, st%d%dim
+      do idim=1, st%dim
         energy_dens(ip) = energy_dens(ip) + conjg(ztmp(ip,idim)) * ztmp(ip,idim)
       end do
     end do
 
     e_energy_dens(:) = M_ZERO
     do ip=1, gr%mesh%np
-      do idim=1, st%d%dim
+      do idim=1, st%dim
         e_energy_dens(ip) = e_energy_dens(ip) + real(ztmp(ip,idim))**2
       end do
     end do
 
     b_energy_dens(:) = M_ZERO
     do ip=1, gr%mesh%np
-      do idim=1, st%d%dim
+      do idim=1, st%dim
         b_energy_dens(ip) = b_energy_dens(ip) + aimag(ztmp(ip,idim))**2
       end do
     end do
@@ -1462,7 +1462,7 @@ contains
       ztmp(:,:) = rs_field_plane_waves(:,:)
       energy_dens_plane_waves(:) = M_ZERO
       do ip=1, gr%mesh%np
-        do idim=1, st%d%dim
+        do idim=1, st%dim
           energy_dens_plane_waves(ip) = energy_dens_plane_waves(ip) + conjg(ztmp(ip,idim)) * ztmp(ip,idim)
         end do
       end do
@@ -1568,14 +1568,14 @@ contains
 
     PUSH_SUB(energy_rate_calc)
 
-    SAFE_ALLOCATE(poynting_vector(1:gr%mesh%np,1:st%d%dim))
-    SAFE_ALLOCATE(tmp_global(1:gr%mesh%np_global,1:st%d%dim))
+    SAFE_ALLOCATE(poynting_vector(1:gr%mesh%np,1:st%dim))
+    SAFE_ALLOCATE(tmp_global(1:gr%mesh%np_global,1:st%dim))
 
     call get_poynting_vector(gr, st, st%rs_state, st%rs_sign, &
                                      poynting_vector, ep_field=st%ep, mu_field=st%mu)
 
     if (gr%mesh%parallel_in_domains) then
-      do idim=1, st%d%dim
+      do idim=1, st%dim
 #if defined(HAVE_MPI)
         call vec_allgather(gr%mesh%vp, tmp_global(:,idim), poynting_vector(:,idim))
         call MPI_Barrier(gr%mesh%vp%comm, mpi_err)
@@ -1590,7 +1590,7 @@ contains
     iz_max = st%surface_grid_rows_number(3)
     ii_max = max(ix_max,iy_max,iz_max)
 
-    SAFE_ALLOCATE(tmp_surf(1:2,1:st%d%dim,1:ii_max,1:ii_max,1:st%d%dim))
+    SAFE_ALLOCATE(tmp_surf(1:2,1:st%dim,1:ii_max,1:ii_max,1:st%dim))
 
     tmp_surf = M_ZERO
     tmp_sum  = M_ZERO
@@ -1687,13 +1687,13 @@ contains
 
     PUSH_SUB(energy_rate_calc_plane_waves)
 
-    SAFE_ALLOCATE(poynting_vector(1:gr%mesh%np,1:st%d%dim))
-    SAFE_ALLOCATE(tmp_global(1:gr%mesh%np_global,1:st%d%dim))
+    SAFE_ALLOCATE(poynting_vector(1:gr%mesh%np,1:st%dim))
+    SAFE_ALLOCATE(tmp_global(1:gr%mesh%np_global,1:st%dim))
 
     call get_poynting_vector_plane_waves(gr, st, st%rs_sign, poynting_vector)
 
     if (gr%mesh%parallel_in_domains) then
-      do idim=1, st%d%dim
+      do idim=1, st%dim
 #if defined(HAVE_MPI)
         call vec_allgather(gr%mesh%vp, tmp_global(:,idim), poynting_vector(:,idim))
         call MPI_Barrier(gr%mesh%vp%comm, mpi_err)
@@ -1708,7 +1708,7 @@ contains
     iz_max = st%surface_grid_rows_number(3)
     ii_max = max(ix_max,iy_max,iz_max)
 
-    SAFE_ALLOCATE(tmp_surf(1:2,1:st%d%dim,1:ii_max,1:ii_max,1:st%d%dim))
+    SAFE_ALLOCATE(tmp_surf(1:2,1:st%dim,1:ii_max,1:ii_max,1:st%dim))
 
     tmp_surf = M_ZERO
     tmp_sum  = M_ZERO
@@ -1800,14 +1800,14 @@ contains
 
     PUSH_SUB(poynting_vector_through_box_surfaces)
 
-    SAFE_ALLOCATE(poynting_vector(1:gr%mesh%np,1:st%d%dim))
-    SAFE_ALLOCATE(tmp_global(1:gr%mesh%np_global,1:st%d%dim))
+    SAFE_ALLOCATE(poynting_vector(1:gr%mesh%np,1:st%dim))
+    SAFE_ALLOCATE(tmp_global(1:gr%mesh%np_global,1:st%dim))
 
     call get_poynting_vector(gr, st, st%rs_state, st%rs_sign, &
                                      poynting_vector, ep_field=st%ep, mu_field=st%mu)
 
     if (gr%mesh%parallel_in_domains) then
-      do idim=1, st%d%dim
+      do idim=1, st%dim
 #if defined(HAVE_MPI)
         call vec_allgather(gr%mesh%vp, tmp_global(:,idim), poynting_vector(:,idim))
         call MPI_Barrier(gr%mesh%vp%comm, mpi_err)
@@ -1822,7 +1822,7 @@ contains
     iz_max = st%surface_grid_rows_number(3)
     ii_max = max(ix_max,iy_max,iz_max)
 
-    SAFE_ALLOCATE(tmp_surf(1:2,1:st%d%dim,1:ii_max,1:ii_max,1:st%d%dim))
+    SAFE_ALLOCATE(tmp_surf(1:2,1:st%dim,1:ii_max,1:ii_max,1:st%dim))
 
     tmp_surf = M_ZERO
     poynting_box_surface = M_ZERO
@@ -1904,13 +1904,13 @@ contains
 
     PUSH_SUB(poynting_vector_through_box_surfaces_plane_waves)
 
-    SAFE_ALLOCATE(poynting_vector(1:gr%mesh%np,1:st%d%dim))
-    SAFE_ALLOCATE(tmp_global(1:gr%mesh%np_global,1:st%d%dim))
+    SAFE_ALLOCATE(poynting_vector(1:gr%mesh%np,1:st%dim))
+    SAFE_ALLOCATE(tmp_global(1:gr%mesh%np_global,1:st%dim))
 
     call get_poynting_vector_plane_waves(gr, st,  st%rs_sign, poynting_vector)
 
     if (gr%mesh%parallel_in_domains) then
-      do idim=1, st%d%dim
+      do idim=1, st%dim
 #if defined(HAVE_MPI)
         call vec_allgather(gr%mesh%vp, tmp_global(:,idim), poynting_vector(:,idim))
         call MPI_Barrier(gr%mesh%vp%comm, mpi_err)
@@ -1925,7 +1925,7 @@ contains
     iz_max = st%surface_grid_rows_number(3)
     ii_max = max(ix_max,iy_max,iz_max)
 
-    SAFE_ALLOCATE(tmp_surf(1:2,1:st%d%dim,1:ii_max,1:ii_max,1:st%d%dim))
+    SAFE_ALLOCATE(tmp_surf(1:2,1:st%dim,1:ii_max,1:ii_max,1:st%dim))
 
     tmp_surf = M_ZERO
     poynting_box_surface = M_ZERO
@@ -2010,10 +2010,10 @@ contains
 
     PUSH_SUB(fields_through_box_surfaces)
 
-    SAFE_ALLOCATE(e_field(1:gr%mesh%np,1:st%d%dim))
-    SAFE_ALLOCATE(b_field(1:gr%mesh%np,1:st%d%dim))
-    SAFE_ALLOCATE(e_field_global(1:gr%mesh%np_global,1:st%d%dim))
-    SAFE_ALLOCATE(b_field_global(1:gr%mesh%np_global,1:st%d%dim))
+    SAFE_ALLOCATE(e_field(1:gr%mesh%np,1:st%dim))
+    SAFE_ALLOCATE(b_field(1:gr%mesh%np,1:st%dim))
+    SAFE_ALLOCATE(e_field_global(1:gr%mesh%np_global,1:st%dim))
+    SAFE_ALLOCATE(b_field_global(1:gr%mesh%np_global,1:st%dim))
 
     if (.not. hm%ma_mx_coupling) then
       call get_electric_field_state(st%rs_state_trans+st%rs_state_long, gr%mesh, e_field, st%ep, gr%mesh%np)
@@ -2025,7 +2025,7 @@ contains
     end if
 
     if (gr%mesh%parallel_in_domains) then
-      do idim=1, st%d%dim
+      do idim=1, st%dim
 #if defined(HAVE_MPI)
         call vec_allgather(gr%mesh%vp, e_field_global(:,idim), e_field(:,idim))
         call MPI_Barrier(gr%mesh%vp%comm, mpi_err)
@@ -2043,8 +2043,8 @@ contains
     iz_max = st%surface_grid_rows_number(3)
     ii_max = max(ix_max,iy_max,iz_max)
 
-    SAFE_ALLOCATE(e_surf(1:2,1:st%d%dim,1:ii_max,1:ii_max,1:st%d%dim))
-    SAFE_ALLOCATE(b_surf(1:2,1:st%d%dim,1:ii_max,1:ii_max,1:st%d%dim))
+    SAFE_ALLOCATE(e_surf(1:2,1:st%dim,1:ii_max,1:ii_max,1:st%dim))
+    SAFE_ALLOCATE(b_surf(1:2,1:st%dim,1:ii_max,1:ii_max,1:st%dim))
 
     e_surf = M_ZERO
     b_surf = M_ZERO
@@ -2158,16 +2158,16 @@ contains
 
     PUSH_SUB(fields_through_box_surfaces_plane_waves)
 
-    SAFE_ALLOCATE(e_field(1:gr%mesh%np,1:st%d%dim))
-    SAFE_ALLOCATE(b_field(1:gr%mesh%np,1:st%d%dim))
-    SAFE_ALLOCATE(e_field_global(1:gr%mesh%np_global,1:st%d%dim))
-    SAFE_ALLOCATE(b_field_global(1:gr%mesh%np_global,1:st%d%dim))
+    SAFE_ALLOCATE(e_field(1:gr%mesh%np,1:st%dim))
+    SAFE_ALLOCATE(b_field(1:gr%mesh%np,1:st%dim))
+    SAFE_ALLOCATE(e_field_global(1:gr%mesh%np_global,1:st%dim))
+    SAFE_ALLOCATE(b_field_global(1:gr%mesh%np_global,1:st%dim))
 
     call get_electric_field_state(st%rs_state_plane_waves, gr%mesh, e_field, st%ep, gr%mesh%np)
     call get_magnetic_field_state(st%rs_state_plane_waves, gr%mesh, st%rs_sign, b_field, st%mu, gr%mesh%np)
 
     if (gr%mesh%parallel_in_domains) then
-      do idim=1, st%d%dim
+      do idim=1, st%dim
 #if defined(HAVE_MPI)
         call vec_allgather(gr%mesh%vp, e_field_global(:,idim), e_field(:,idim))
         call MPI_Barrier(gr%mesh%vp%comm, mpi_err)
@@ -2185,8 +2185,8 @@ contains
     iz_max = st%surface_grid_rows_number(3)
     ii_max = max(ix_max,iy_max,iz_max)
 
-    SAFE_ALLOCATE(e_surf(1:2,1:st%d%dim,1:ii_max,1:ii_max,1:st%d%dim))
-    SAFE_ALLOCATE(b_surf(1:2,1:st%d%dim,1:ii_max,1:ii_max,1:st%d%dim))
+    SAFE_ALLOCATE(e_surf(1:2,1:st%dim,1:ii_max,1:ii_max,1:st%dim))
+    SAFE_ALLOCATE(b_surf(1:2,1:st%dim,1:ii_max,1:ii_max,1:st%dim))
 
     e_surf = M_ZERO
     b_surf = M_ZERO
@@ -3027,10 +3027,10 @@ contains
           message(2) = 'seven columns.'
           call messages_fatal(2)
         end if
-        do idim=1, st%d%dim
+        do idim = 1, st%dim
           call parse_block_float( blk, il - 1, idim-1, e_field(idim))
         end do
-        do idim=1, st%d%dim
+        do idim = 1, st%dim
           call parse_block_float( blk, il - 1, idim+2, b_field(idim))
         end do
         call parse_block_string( blk, il - 1, 6, mxf_expression)

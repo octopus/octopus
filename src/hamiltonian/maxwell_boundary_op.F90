@@ -316,7 +316,7 @@ contains
       call messages_print_stress(stdout, trim(str), namespace=namespace)
     end if
 
-    do idim = 1, st%d%dim
+    do idim = 1, st%dim
       if (bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__MAXWELL_ZERO) then
         bounds(1, idim) = ( gr%mesh%idx%nr(2, idim) - gr%mesh%idx%enlarge(idim) ) * gr%mesh%spacing(idim)
         bounds(2, idim) = ( gr%mesh%idx%nr(2, idim)                                     ) * gr%mesh%spacing(idim)
@@ -1099,8 +1099,8 @@ contains
         bc%medium_bdry_number(idim) = ip_bd
       end if
     end do
-    SAFE_ALLOCATE(bc%medium_aux_ep(1:ip_in, 1:st%d%dim, 3))
-    SAFE_ALLOCATE(bc%medium_aux_mu(1:ip_in, 1:st%d%dim, 3))
+    SAFE_ALLOCATE(bc%medium_aux_ep(1:ip_in, 1:st%dim, 3))
+    SAFE_ALLOCATE(bc%medium_aux_mu(1:ip_in, 1:st%dim, 3))
     SAFE_ALLOCATE(bc%medium_points_map(1:ip_in_max, 3))
     SAFE_ALLOCATE(bc%medium_bdry_map(1:ip_bd_max, 3))
 
