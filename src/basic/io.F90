@@ -271,7 +271,6 @@ contains
     end do
 
     POP_SUB(io_assign)
-
   end subroutine io_assign
 
 
@@ -285,7 +284,6 @@ contains
       lun_is_free(lun) = .true.
 
     POP_SUB(io_free)
-
   end subroutine io_free
 
 
@@ -300,9 +298,7 @@ contains
     ! use the logical to avoid problems with the string length
     absolute_path = .false.
     if(len(path) > 0) then
-      if(path(1:1)  ==  '/') then
-        absolute_path = .true.
-      end if
+      absolute_path = path(1:1) == '/'
     end if
 
     if(absolute_path) then
@@ -319,7 +315,6 @@ contains
     end if
 
     POP_SUB(io_workpath)
-
   end function io_workpath
 
 
@@ -448,7 +443,6 @@ contains
 #endif
 
     POP_SUB(io_open)
-
   end function io_open
 
 
@@ -483,7 +477,6 @@ contains
 #endif
 
     POP_SUB(io_close)
-
   end subroutine io_close
 
 
@@ -516,7 +509,6 @@ contains
     write(iunit,'(a)') '********           ********'
 
     POP_SUB(io_status)
-
   end subroutine io_status
 
 
@@ -555,8 +547,8 @@ contains
     end if
 
     call io_close(iunit)
-    POP_SUB(io_dump_file)
 
+    POP_SUB(io_dump_file)
   end subroutine io_dump_file
 
 
@@ -579,7 +571,6 @@ contains
     end if
 
     POP_SUB(io_get_extension)
-
   end function io_get_extension
 
 
@@ -624,7 +615,6 @@ contains
     end if
 
     POP_SUB(io_debug_on_the_fly)
-
   end subroutine io_debug_on_the_fly
 
 
@@ -707,7 +697,6 @@ contains
     end if
 
     POP_SUB(iopar_backspace)
-
   end subroutine iopar_backspace
 
 
@@ -759,7 +748,6 @@ contains
     backspace(iunit)
 
     POP_SUB(io_skip_header)
-
   end subroutine io_skip_header
 
   ! ---------------------------------------------------------
@@ -801,7 +789,6 @@ contains
     io_close_count = io_close_count + iio - open_count * 100
 
   end subroutine io_incr_counters
-
 
 end module io_oct_m
 
