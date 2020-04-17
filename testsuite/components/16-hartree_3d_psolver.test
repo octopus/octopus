@@ -10,9 +10,13 @@ Precision : 0.005
 Input: 16-hartree_3d_psolver.01-psolver.inp
 if (available psolver); then
     match ; PSolver       ; GREPFIELD(hartree_results, 'Hartree test (abs.) =', 5) ; 0.00035845
+else
+    match; Error;      GREPCOUNT(err, 'PSolver'); 1    
 endif
 
 Input: 16-hartree_3d_psolver.02-psolver.inp
 if (available psolver); then
     match ; PSolver       ; GREPFIELD(hartree_results, 'Hartree test (abs.) =', 5) ; 0.00035845
+else
+    match; Error;      GREPCOUNT(err, 'PSolver'); 1    
 endif
