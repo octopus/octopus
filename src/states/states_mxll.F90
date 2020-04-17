@@ -237,8 +237,8 @@ contains
     st%d%spin_channels = 1
     call states_elec_choose_kpoints(st%d, gr%sb, namespace)
 
-    SAFE_ALLOCATE(st%user_def_e_field(1:st%d%dim)) ! memleak
-    SAFE_ALLOCATE(st%user_def_b_field(1:st%d%dim)) ! memleak
+    SAFE_ALLOCATE(st%user_def_e_field(1:st%d%dim))
+    SAFE_ALLOCATE(st%user_def_b_field(1:st%d%dim))
 
     st%st_start = 1
     st%st_end = st%nst
@@ -303,7 +303,7 @@ contains
     !%End
 
     st%selected_points_number = 1
-    if(parse_block(namespace, 'MaxwellFieldsCoordinate', blk) == 0) then ! memleak in parse_block
+    if(parse_block(namespace, 'MaxwellFieldsCoordinate', blk) == 0) then
       nlines = parse_block_n(blk)
       st%selected_points_number = nlines
       SAFE_ALLOCATE(st%selected_points_coordinate(1:st%d%dim,1:nlines))
@@ -329,7 +329,8 @@ contains
       st%selected_points_coordinate(:,:) = M_ZERO
       st%selected_points_rs_state(:,:) = M_z0
       st%selected_points_rs_state_trans(:,:) = M_z0
-    end if
+   end if
+   call parse_block_end(blk)
 
     POP_SUB(states_mxll_init)
       

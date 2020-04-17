@@ -1000,7 +1000,7 @@ contains
       end if
     end do
     bc%plane_waves_points_number = ip_in
-    SAFE_ALLOCATE(bc%plane_waves_points_map(1:ip_in)) ! memleak
+    SAFE_ALLOCATE(bc%plane_waves_points_map(1:ip_in))
 
     ! zero points mapping
     ip_in = 0
