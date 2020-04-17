@@ -7,5 +7,8 @@ Enabled    : Yes
 
 Precision : 0.005
 Input: 06-hartree_3d_isf.01-isf.inp
-match ; ISF           ; GREPFIELD(hartree_results, 'Hartree test (abs.) =', 5) ; 0.00035845
-errormatch; Error;      GREPCOUNT(err, 'LIBISF'); 1
+if (available ifs); then
+    match ; ISF           ; GREPFIELD(hartree_results, 'Hartree test (abs.) =', 5) ; 0.00035845
+else
+    match; Error;      GREPCOUNT(err, 'LIBISF'); 1
+endif
