@@ -53,8 +53,12 @@ contains
 
     integer :: total_len, parent_len
 
-    ! Calculate total length of namespace, including the parent
     total_len = len_trim(name)
+
+    ! We do not allow the creation of empty namespaces, as that might lead to ambiguous paths
+    ASSERT(total_len /= 0)
+
+    ! Calculate total length of namespace, including the parent
     if (present(parent)) then
       parent_len = parent%len()
       if (parent_len > 0) then

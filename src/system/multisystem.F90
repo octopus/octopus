@@ -77,6 +77,9 @@ contains
 
       do isys = 1, parse_block_n(blk)
         call parse_block_string(blk, isys - 1, 0, system_name)
+        if (len_trim(system_name) == 0) then
+          call messages_input_error(namespace, 'Systems', 'All systems must have a name.')
+        end if
         call parse_block_integer(blk, isys - 1, 1, system_type)
 
         select case (system_type)
