@@ -124,7 +124,6 @@ module poisson_oct_m
     type(poisson_psolver_t) :: psolver_solver
     type(poisson_no_t) :: no_solver
     integer :: nslaves
-    FLOAT :: theta !< cmplxscl
     logical, public :: is_dressed
     type(dressed_interaction_t), public :: dressed
     type(poisson_fmm_t)  :: params_fmm
@@ -146,14 +145,13 @@ module poisson_oct_m
 contains
 
   !-----------------------------------------------------------------
-  subroutine poisson_init(this, namespace, der, mc, qtot, label, theta, solver, verbose, force_serial, force_cmplx)
+  subroutine poisson_init(this, namespace, der, mc, qtot, label, solver, verbose, force_serial, force_cmplx)
     type(poisson_t),             intent(out) :: this
     type(namespace_t),           intent(in)  :: namespace
     type(derivatives_t), target, intent(in)  :: der
     type(multicomm_t),           intent(in)  :: mc
     FLOAT,                       intent(in)  :: qtot !< total charge
     character(len=*),  optional, intent(in)  :: label
-    FLOAT,             optional, intent(in)  :: theta !< cmplxscl
     integer,           optional, intent(in)  :: solver
     logical,           optional, intent(in)  :: verbose
     logical,           optional, intent(in)  :: force_serial
@@ -167,8 +165,6 @@ contains
     if(this%method /= POISSON_NULL) return ! already initialized
 
     PUSH_SUB(poisson_init)
-
-    this%theta = optional_default(theta, M_ZERO)
 
     if(optional_default(verbose,.true.)) then
       str = "Hartree"
@@ -283,8 +279,6 @@ contains
         default_solver = POISSON_CG_CORRECTED
       end select
     end if
-
-    if(abs(this%theta) > M_EPSILON .and. der%mesh%sb%dim == 1) default_solver = POISSON_DIRECT_SUM
 
     if (this%is_dressed) default_solver = POISSON_DIRECT_SUM
 
@@ -419,10 +413,6 @@ contains
             call messages_fatal(1)
           end if
         end select
-
-        if(abs(this%theta) > M_EPSILON .and. this%method /= POISSON_DIRECT_SUM) then
-          call messages_not_implemented('Complex scaled 1D soft Coulomb with Poisson solver other than direct_sum')
-        end if
 
         if(der%mesh%use_curvilinear .and. this%method /= POISSON_DIRECT_SUM) then
           message(1) = 'If curvilinear coordinates are used in 1D, then the only working'
@@ -788,7 +778,6 @@ contains
     else
       call zpoisson_solve_real_and_imag_separately(this, pot, rho, all_nodes_value, kernel = kernel)
     end if
-    if(abs(this%theta) > M_EPSILON) pot = pot * exp(-M_zI * this%theta)
 
     POP_SUB(zpoisson_solve)
   end subroutine zpoisson_solve
@@ -965,7 +954,6 @@ contains
     PUSH_SUB(poisson_init_sm)
 
     this%is_dressed = .false.
-    this%theta = M_ZERO
 
     this%nslaves = 0
     this%der => der
