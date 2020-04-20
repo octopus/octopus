@@ -83,6 +83,7 @@ module pnfft_oct_m
     FLOAT,               public   :: norm       !> Normalization  
 
 
+    integer               :: comm
 ! Data 
     type(C_PTR)           :: plan            !> pnfft plan
 
@@ -287,6 +288,8 @@ contains
          PNFFT_TRANSPOSED_F_HAT, local_N, local_N_start, lower_border, upper_border)
 #endif
     
+    pnfft%comm = mpi_comm
+
     pnfft%lower_border = lower_border
     pnfft%upper_border = upper_border
     pnfft%N_local(1:3)   = local_N(1:3) 
@@ -502,7 +505,7 @@ contains
         call io_mkdir('debug/PNFFT', namespace)
       end if
 #ifdef HAVE_MPI
-      call MPI_Barrier(mpi_world%comm, ierr)
+      call MPI_Barrier(pnfft%comm, ierr)
 #endif
       
       nn = mpi_world%rank
