@@ -442,26 +442,13 @@ contains
 !    SAxFE_ALLOCATE(zin(b(1):b(2),b(3):b(4),b(5):b(6)))
     allocate(zin(b(1):b(2),b(3):b(4),b(5):b(6)))
     zin = in
-    call nfft_forward1(nfft, zin, out)
+    call znfft_forward(nfft, zin, out)
 
     deallocate(zin)
 !     SAxFE_DEALLOCATE_A(zin)
 
     POP_SUB(dnfft_forward)
   end subroutine dnfft_forward
-
-  !--------------------------------------------
-  subroutine znfft_forward(nfft, in, out)
-    type(nfft_t), intent(in)  :: nfft
-    CMPLX,        intent(in)  :: in(:,:,:)
-    CMPLX,        intent(out) :: out(:,:,:)
-
-    PUSH_SUB(znfft_forward)
-
-    call nfft_forward1(nfft, in, out)
-
-    POP_SUB(znfft_forward)
-  end subroutine znfft_forward
 
   !--------------------------------------------
   subroutine dnfft_backward(nfft, in, out)
@@ -483,7 +470,7 @@ contains
 
     allocate(zout(b(1):b(2),b(3):b(4),b(5):b(6)))
 
-    call nfft_backward1(nfft, in, zout)
+    call znfft_backward(nfft, in, zout)
     out = zout
     deallocate(zout)
 
@@ -491,27 +478,14 @@ contains
   end subroutine dnfft_backward
 
   !--------------------------------------------
-  subroutine znfft_backward(nfft, in, out)
-    type(nfft_t), intent(in)  :: nfft
-    CMPLX,        intent(in)  :: in (:,:,:)
-    CMPLX,        intent(out) :: out(:,:,:)
-
-    PUSH_SUB(znfft_backward)
-
-    call nfft_backward1(nfft, in, out)
-
-    POP_SUB(znfft_backward)
-  end subroutine znfft_backward
-
-  !--------------------------------------------
-  subroutine nfft_forward1(nfft, in, out)
+  subroutine znfft_forward(nfft, in, out)
     type(nfft_t), intent(in)  :: nfft
     CMPLX,        intent(in)  :: in(:,:,:)
     CMPLX,        intent(out) :: out(:,:,:)
 
     integer :: ix, iy, iz
 
-    PUSH_SUB(nfft_forward1)
+    PUSH_SUB(znfft_forward)
 
     do ix = 1, nfft%N(1)
       do iy = 1, nfft%N(2)
@@ -531,18 +505,18 @@ contains
       end do
     end do
 
-    POP_SUB(nfft_forward1)
-  end subroutine nfft_forward1
+    POP_SUB(znfft_forward)
+  end subroutine znfft_forward
 
   ! ---------------------------------------------------------
-  subroutine nfft_backward1(nfft, in, out)
+  subroutine znfft_backward(nfft, in, out)
     type(nfft_t), intent(in)  :: nfft
     CMPLX,        intent(in)  :: in (:,:,:)
     CMPLX,        intent(out) :: out(:,:,:)
 
     integer :: ix, iy, iz
 
-    PUSH_SUB(nfft_backward1)
+    PUSH_SUB(znfft_backward)
 
     do ix = 1, nfft%M(1)
       do iy = 1, nfft%M(2)
@@ -564,8 +538,8 @@ contains
 
     out = out/nfft%norm
 
-    POP_SUB(nfft_backward1)
-  end subroutine nfft_backward1
+    POP_SUB(znfft_backward)
+  end subroutine znfft_backward
 
 end module nfft_oct_m
 
