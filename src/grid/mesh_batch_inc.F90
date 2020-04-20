@@ -48,7 +48,7 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
 
   SAFE_ALLOCATE(dd(1:aa%nst, 1:bb%nst))
   ! This has to be set to zero by hand since NaN * 0 = NaN.
-  dd(1:aa%nst, 1:bb%nst) = R_TOTYPE(CNST(0.0))
+  dd(1:aa%nst, 1:bb%nst) = R_TOTYPE(M_ZERO)
 
   use_blas = .false.
   
@@ -151,7 +151,7 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
       B = bb%ff_device, offB = 0_8, ldb = int(bb%pack_size(1), 8), beta = R_TOTYPE(M_ZERO), &
       C = dot_buffer, offC = 0_8, ldc = int(aa%nst, 8))
 
-    call profiling_count_operations(TOFLOAT(mesh%np)*aa%nst*bb%nst*(R_ADD + 2*R_MUL))
+    call profiling_count_operations(TOFLOAT(mesh%np)*aa%nst*bb%nst*(R_ADD + R_MUL))
 
     call accel_finish()
     call profiling_out(prof_gemmcl)
@@ -173,9 +173,9 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
 
   if(aa%status() /= BATCH_DEVICE_PACKED) then
     if(mesh%use_curvilinear) then
-      call profiling_count_operations(TOFLOAT(mesh%np)*aa%nst*bb%nst*(R_ADD + 2*R_MUL))
+      call profiling_count_operations(TOFLOAT(mesh%np)*aa%nst*bb%nst*aa%dim*(R_ADD + 2*R_MUL))
     else
-      call profiling_count_operations(TOFLOAT(mesh%np)*aa%nst*bb%nst*(R_ADD + R_MUL))
+      call profiling_count_operations(TOFLOAT(mesh%np)*aa%nst*bb%nst*aa%dim*(R_ADD + R_MUL))
     end if
   end if
 
@@ -290,9 +290,9 @@ subroutine X(mesh_batch_dotp_self)(mesh, aa, dot, reduce)
   end if
 
   if(mesh%use_curvilinear) then
-    call profiling_count_operations(TOFLOAT(mesh%np)*aa%nst**2*(R_ADD + 2*R_MUL))
+    call profiling_count_operations(TOFLOAT(mesh%np)*aa%nst**2*aa%dim*(R_ADD + 2*R_MUL))
   else
-    call profiling_count_operations(TOFLOAT(mesh%np)*aa%nst**2*(R_ADD + R_MUL))
+    call profiling_count_operations(TOFLOAT(mesh%np)*aa%nst**2*aa%dim*(R_ADD + R_MUL))
   end if
 
   if(use_blas) call profiling_out(profgemm)
@@ -440,7 +440,7 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
     call profiling_out(profcomm)
   end if
   
-  call profiling_count_operations(aa%nst*TOFLOAT(mesh%np)*(R_ADD + R_MUL)*types_get_size(aa%type())/types_get_size(TYPE_FLOAT))
+  call profiling_count_operations(aa%nst_linear*TOFLOAT(mesh%np)*(R_ADD + R_MUL))
 
   call profiling_out(prof)
   POP_SUB(X(mesh_batch_dotp_vector))
@@ -583,7 +583,7 @@ subroutine X(mesh_batch_mf_dotp)(mesh, aa, psi, dot, reduce, nst)
     call profiling_out(profcomm)
   end if
   
-  call profiling_count_operations(nst_*dble(mesh%np)*(R_ADD + R_MUL)*types_get_size(aa%type())/types_get_size(TYPE_FLOAT))
+  call profiling_count_operations(nst_*aa%dim*TOFLOAT(mesh%np)*(R_ADD + R_MUL))
 
   call profiling_out(prof)
   POP_SUB(X(mesh_batch_mf_dotp))

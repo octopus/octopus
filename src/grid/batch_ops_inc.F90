@@ -98,7 +98,7 @@ subroutine X(batch_axpy_const)(np, aa, xx, yy)
     end do
   end select
 
-  call profiling_count_operations(xx%nst*np*(R_ADD + R_MUL)*types_get_size(xx%type())/types_get_size(TYPE_FLOAT))
+  call profiling_count_operations(xx%nst_linear*np*(R_ADD + R_MUL))
 
   call profiling_out(axpy_const_prof)
   POP_SUB(X(batch_axpy_const))
@@ -188,7 +188,7 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy, a_start, a_full)
     if(yy%type() == TYPE_CMPLX) then
       !$omp parallel do private(ip, ist)
       do ip = 1, np
-        do ist = 1, yy%pack_size(1)
+        do ist = 1, yy%nst_linear
           yy%zff_pack(ist, ip) = aa_linear(ist)*xx%zff_pack(ist, ip) + yy%zff_pack(ist, ip)
         end do
       end do
@@ -196,7 +196,7 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy, a_start, a_full)
 #ifdef R_TREAL
       !$omp parallel do private(ip, ist)
       do ip = 1, np
-        do ist = 1, yy%pack_size(1)
+        do ist = 1, yy%nst_linear
           yy%dff_pack(ist, ip) = aa_linear(ist)*xx%dff_pack(ist, ip) + yy%dff_pack(ist, ip)
         end do
       end do
@@ -217,7 +217,7 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy, a_start, a_full)
 
   SAFE_DEALLOCATE_A(aa_linear)
 
-  call profiling_count_operations(xx%nst*np*(R_ADD + R_MUL)*types_get_size(xx%type())/types_get_size(TYPE_FLOAT))
+  call profiling_count_operations(xx%nst_linear*np*(R_ADD + R_MUL))
 
   call profiling_out(axpy_vec_prof)
   POP_SUB(X(batch_axpy_vec))
@@ -542,7 +542,7 @@ subroutine X(batch_xpay_vec)(np, xx, aa, yy, a_start, a_full)
     if(yy%type() == TYPE_CMPLX) then
       !$omp parallel do private(ip, ist)
       do ip = 1, np
-        do ist = 1, yy%pack_size(1)
+        do ist = 1, yy%nst_linear
           yy%zff_pack(ist, ip) = xx%zff_pack(ist, ip) + aa_linear(ist)*yy%zff_pack(ist, ip)
         end do
       end do
@@ -550,7 +550,7 @@ subroutine X(batch_xpay_vec)(np, xx, aa, yy, a_start, a_full)
 #ifdef R_TREAL
       !$omp parallel do private(ip, ist)
       do ip = 1, np
-        do ist = 1, yy%pack_size(1)
+        do ist = 1, yy%nst_linear
           yy%dff_pack(ist, ip) = xx%dff_pack(ist, ip) + aa_linear(ist)*yy%dff_pack(ist, ip)
         end do
       end do
