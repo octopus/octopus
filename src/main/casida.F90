@@ -33,6 +33,7 @@ module casida_oct_m
   use io_function_oct_m
   use kpoints_oct_m
   use lalg_adv_oct_m
+  use lda_u_oct_m
   use loct_oct_m
   use linear_response_oct_m
   use mesh_oct_m
@@ -193,6 +194,15 @@ contains
     if(kpoints_number(sys%gr%sb%kpoints) > 1) then
       ! Hartree matrix elements may not be correct, not tested anyway. --DAS
       call messages_not_implemented("Casida with k-points")
+    end if
+    if (family_is_mgga_with_exc(sys%hm%xc)) then
+      call messages_not_implemented("Casida with MGGA and non-local terms")
+    end if
+    if(sys%hm%lda_u_level /= DFT_U_NONE) then
+      call messages_not_implemented("Casida with DFT+U")
+    end if
+    if(sys%hm%theory_level == HARTREE_FOCK) then
+      call messages_not_implemented("Casida for Hartree-Fock")
     end if
 
     message(1) = 'Info: Starting Casida linear-response calculation.'
