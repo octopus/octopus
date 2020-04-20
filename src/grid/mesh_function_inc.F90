@@ -173,13 +173,13 @@ R_TYPE function X(mf_dotp_1)(mesh, f1, f2, reduce, dotu, np) result(dotp)
 #endif
       !$omp parallel do reduction(+:dotp)
       do ip = 1, np_
-        dotp = dotp + mesh%vol_pp(ip)*f1(ip)*f2(ip)
+        dotp = dotp + mesh%vol_pp(ip)*R_CONJ(f1(ip))*f2(ip)
       end do
 #ifdef R_TCOMPLEX
     else
       !$omp parallel do reduction(+:dotp)
       do ip = 1, np_
-        dotp = dotp + mesh%vol_pp(ip)*R_CONJ(f1(ip))*f2(ip)
+        dotp = dotp + mesh%vol_pp(ip)*f1(ip)*f2(ip)
       end do
     end if
 #endif
