@@ -23,7 +23,7 @@ MoveIons = yes
 
 TDPropagator = etrs
 TDExponentialMethod = lanczos
-TDExponentialOrder = 24
+TDExpOrder = 24
 TDLanczosTol = 2.0e-4
 
 TDMaxSteps = 20
