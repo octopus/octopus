@@ -178,8 +178,10 @@ contains
 
         if (this%symmetries_compute) then
           call symmetries_finite_init(geo%natoms, typs(1), position(1, 1), verbosity, point_group)
-          call symmetries_finite_get_group_name(point_group, this%group_name)
-          call symmetries_finite_get_group_elements(point_group, this%group_elements)
+          if(point_group > -1) then
+            call symmetries_finite_get_group_name(point_group, this%group_name)
+            call symmetries_finite_get_group_elements(point_group, this%group_elements)
+          end if
           call symmetries_finite_end()
         end if
         SAFE_DEALLOCATE_A(position)
