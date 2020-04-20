@@ -113,7 +113,7 @@ contains
     !%End
     call parse_variable(namespace, 'RootSolver', ROOT_NEWTON, rs%solver_type)
     if( rs%solver_type /= ROOT_NEWTON .and. rs%solver_type /= ROOT_WATTERSTROM ) then
-      call messages_input_error('RootSolver')
+      call messages_input_error(namespace, 'RootSolver')
     end if
 
     !%Variable RootSolverMaxIter

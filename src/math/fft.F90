@@ -226,7 +226,9 @@ contains
     !%  plan but with a substantially increased planning time.
     !%End
     call parse_variable(namespace, 'FFTPreparePlan', FFTW_MEASURE, fft_prepare_plan)
-    if(.not. varinfo_valid_option('FFTPreparePlan', fft_prepare_plan)) call messages_input_error('FFTPreparePlan')
+    if(.not. varinfo_valid_option('FFTPreparePlan', fft_prepare_plan)) then
+      call messages_input_error(namespace, 'FFTPreparePlan')
+    end if
 
     !%Variable FFTLibrary
     !%Type integer

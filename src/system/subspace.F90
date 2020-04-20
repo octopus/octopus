@@ -112,7 +112,9 @@ contains
 
       call parse_variable(namespace, 'SubspaceDiagonalization', default, this%method)
 
-      if(.not.varinfo_valid_option('SubspaceDiagonalization', this%method)) call messages_input_error('SubspaceDiagonalization')
+      if(.not.varinfo_valid_option('SubspaceDiagonalization', this%method)) then
+        call messages_input_error(namespace, 'SubspaceDiagonalization')
+      end if
     end if
 
     call messages_print_var_option(stdout, 'SubspaceDiagonalization', this%method)

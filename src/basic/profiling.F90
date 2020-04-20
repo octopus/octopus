@@ -221,7 +221,7 @@ contains
 
     call parse_variable(namespace, 'ProfilingMode', 0, prof_vars%mode)
     if(.not.varinfo_valid_option('ProfilingMode', prof_vars%mode)) then
-      call messages_input_error('ProfilingMode')
+      call messages_input_error(namespace, 'ProfilingMode')
     end if
 
     in_profiling_mode = (prof_vars%mode > 0)

@@ -183,10 +183,10 @@ contains
     default = OP_VEC
 
     call parse_variable(namespace, 'OperateDouble', default, dfunction_global)
-    if(.not.varinfo_valid_option('OperateDouble', dfunction_global)) call messages_input_error('OperateDouble')
+    if(.not.varinfo_valid_option('OperateDouble', dfunction_global)) call messages_input_error(namespace, 'OperateDouble')
 
     call parse_variable(namespace, 'OperateComplex', default, zfunction_global)
-    if(.not.varinfo_valid_option('OperateComplex', zfunction_global)) call messages_input_error('OperateComplex')
+    if(.not.varinfo_valid_option('OperateComplex', zfunction_global)) call messages_input_error(namespace, 'OperateComplex')
 
 
     !%Variable OperateSingle
@@ -216,10 +216,12 @@ contains
     !%End
     
     call parse_variable(namespace, 'OperateSingle', OP_FORTRAN, sfunction_global)
-    if(.not.varinfo_valid_option('OperateSingle', sfunction_global)) call messages_input_error('OperateSingle')
+    if(.not.varinfo_valid_option('OperateSingle', sfunction_global)) call messages_input_error(namespace, 'OperateSingle')
     
     call parse_variable(namespace, 'OperateComplexSingle', OP_FORTRAN, cfunction_global)
-    if(.not.varinfo_valid_option('OperateComplexSingle', cfunction_global)) call messages_input_error('OperateComplexSingle')
+    if(.not.varinfo_valid_option('OperateComplexSingle', cfunction_global)) then
+      call messages_input_error(namespace, 'OperateComplexSingle')
+    end if
 
     if(accel_is_enabled()) then
 

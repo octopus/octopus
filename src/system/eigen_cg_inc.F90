@@ -273,7 +273,7 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
         case (OPTION__CGDIRECTION__POLAK)
           gamma = (gg - gg1)/gg0   ! (Polack-Ribiere)
         case default
-          call messages_input_error('Conjugate Direction')
+          call messages_input_error(namespace, 'Conjugate Direction')
         end select
         ! save for next iteration
         gg0 = gg

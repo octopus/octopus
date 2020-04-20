@@ -79,7 +79,6 @@ program oct_unfold
   integer       :: ierr, run_mode, file_gvec, jdim
   FLOAT         :: lparams(MAX_DIM), rlattice_pc(MAX_DIM, MAX_DIM), klattice_pc(MAX_DIM, MAX_DIM)
   FLOAT         :: volume_element_pc
-  type(namespace_t) :: default_namespace
   type(block_t) :: blk
   integer       :: nhighsympoints, nsegments
   integer       :: icol, idir, ncols
@@ -92,26 +91,25 @@ program oct_unfold
   ! the usual initializations
   call global_init(is_serial = .false.)
   call parser_init()
-  default_namespace = namespace_t("")
   call calc_mode_par_init()
 
-  call messages_init(default_namespace)
+  call messages_init()
 
-  call io_init(default_namespace)
-  call profiling_init(default_namespace)
+  call io_init()
+  call profiling_init(global_namespace)
 
   call print_header()
   call messages_print_stress(stdout, "Unfolding Band-structure")
   call messages_print_stress(stdout)
 
   call messages_experimental("oct-unfold utility")
-  call fft_all_init(default_namespace)
-  call unit_system_init(default_namespace)
-  call restart_module_init(default_namespace)
+  call fft_all_init(global_namespace)
+  call unit_system_init(global_namespace)
+  call restart_module_init(global_namespace)
 
   call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
-  sys => system_init(default_namespace)
-  call simul_box_init(sb, default_namespace, sys%geo, sys%space)
+  sys => system_init(global_namespace)
+  call simul_box_init(sb, global_namespace, sys%geo, sys%space)
 
   if(sb%periodic_dim == 0) then
     message(1) = "oct-unfold can only be used for periodic ystems."
@@ -140,9 +138,9 @@ program oct_unfold
   !%Option unfold_run bit(2)
   !% Perform the actual unfolding, based on the states obtained from the previous unocc run.
   !%End
-  call parse_variable(default_namespace, 'UnfoldMode', 0, run_mode)
+  call parse_variable(global_namespace, 'UnfoldMode', 0, run_mode)
   if( .not. varinfo_valid_option('UnfoldMode', run_mode)) then
-    call messages_input_error("UnfoldMode must be set to a value different from 0.")
+    call messages_input_error(global_namespace, "UnfoldMode must be set to a value different from 0.")
   end if
 
   !%Variable UnfoldLatticeParameters
@@ -153,7 +151,7 @@ program oct_unfold
   !% The lattice parameters of the primitive cell, on which unfolding is performed. 
   !%End
   lparams(:) = M_ONE
-  if(parse_block(default_namespace, 'UnfoldLatticeParameters', blk) == 0) then
+  if(parse_block(global_namespace, 'UnfoldLatticeParameters', blk) == 0) then
     do idim = 1, sb%dim
       call parse_block_float(blk, 0, idim-1, lparams(idim))
     end do
@@ -172,7 +170,7 @@ program oct_unfold
   rlattice_pc = M_ZERO
   forall(idim = 1:sb%dim) rlattice_pc(idim, idim) = M_ONE
 
-  if(parse_block(default_namespace, 'UnfoldLatticeVectors', blk) == 0) then
+  if(parse_block(global_namespace, 'UnfoldLatticeVectors', blk) == 0) then
     do idim = 1, sb%dim
       do jdim = 1, sb%dim
         call parse_block_float(blk, idim-1,  jdim-1, rlattice_pc(jdim, idim))
@@ -190,7 +188,7 @@ program oct_unfold
     end forall
   end do
 
-  call reciprocal_lattice(rlattice_pc, klattice_pc, volume_element_pc, sb%dim, default_namespace)
+  call reciprocal_lattice(rlattice_pc, klattice_pc, volume_element_pc, sb%dim, global_namespace)
   klattice_pc = klattice_pc * M_TWO * M_PI
 
 
@@ -201,7 +199,7 @@ program oct_unfold
   !% Specifies the k-point path for which the unfolding need to be done.
   !% The syntax is identical to <tt>KPointsPath</tt>.
   !%End
-  if(parse_block(default_namespace, 'UnfoldKPointsPath', blk) /= 0) then
+  if(parse_block(global_namespace, 'UnfoldKPointsPath', blk) /= 0) then
     write(message(1),'(a)') 'Error while reading UnfoldPointsPath.'
     call messages_fatal(1)
   end if
@@ -260,7 +258,7 @@ program oct_unfold
   else if(run_mode == OPTION__UNFOLDMODE__UNFOLD_RUN) then
 
     !Sanity check
-    file_gvec = io_open('unfold_gvec.dat', default_namespace, action='read')
+    file_gvec = io_open('unfold_gvec.dat', global_namespace, action='read')
     read(file_gvec, *)
     read(file_gvec, *) ik
     if(ik /= path_kpoints_grid%npoints) then
@@ -271,15 +269,15 @@ program oct_unfold
  
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
 
-    call restart_init(restart, default_namespace, RESTART_UNOCC, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
-    if(ierr == 0) call states_elec_load(restart, default_namespace, sys%st, sys%gr, ierr, label = ": unfold")
+    call restart_init(restart, global_namespace, RESTART_UNOCC, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
+    if(ierr == 0) call states_elec_load(restart, global_namespace, sys%st, sys%gr, ierr, label = ": unfold")
     if(ierr /= 0) then
       message(1) = 'Unable to read unocc wavefunctions.'
       call messages_fatal(1)
     end if
     call restart_end(restart)  
 
-    call cube_init(zcube, sys%gr%mesh%idx%ll, sb, default_namespace, &
+    call cube_init(zcube, sys%gr%mesh%idx%ll, sb, global_namespace, &
       fft_type = FFT_COMPLEX, dont_optimize = .true.)
     call cube_function_null(cf)
     call zcube_function_alloc_rs(zcube, cf)
@@ -303,7 +301,7 @@ program oct_unfold
   call simul_box_end(sb)
   call fft_all_end()
   SAFE_DEALLOCATE_P(sys)
-  call profiling_end(default_namespace)
+  call profiling_end(global_namespace)
   call io_end()
   call print_date("Calculation ended on ")
   call messages_end()
@@ -321,8 +319,8 @@ contains
     PUSH_SUB(unfold_setup)
 
     if(mpi_grp_is_root(mpi_world)) then
-      file_gvec = io_open('unfold_gvec.dat', default_namespace, action='write')
-      file_kpts = io_open('unfold_kpt.dat', default_namespace, action='write')
+      file_gvec = io_open('unfold_gvec.dat', global_namespace, action='write')
+      file_kpts = io_open('unfold_kpt.dat', global_namespace, action='write')
       write(file_kpts,'(a)')  '%KpointsReduced'
       write(file_gvec,'(a)')  '#Created by oct-unfold'
       write(file_gvec,'(i5)') path_kpoints_grid%npoints
@@ -377,7 +375,7 @@ contains
     !% If you specify 0, the resolution will be set to be 1/1000 points between <tt>UnfoldMinEnergy</tt>
     !% and <tt>UnfoldMaxEnergy</tt> 
     !%End
-    call parse_variable(default_namespace, 'UnfoldEnergyStep', M_ZERO, de)
+    call parse_variable(global_namespace, 'UnfoldEnergyStep', M_ZERO, de)
     if(de < M_ZERO) then
       message(1) = "UnfoldEnergyStep must be positive"
       call messages_fatal(1)
@@ -390,7 +388,7 @@ contains
     !% Specifies the start of the energy range for the unfolded band structure.
     !% The default value correspond to the samllest eigenvalue.
     !%End
-    call parse_variable(default_namespace, 'UnfoldMinEnergy', minval(st%eigenval(:, :)), eigmin)
+    call parse_variable(global_namespace, 'UnfoldMinEnergy', minval(st%eigenval(:, :)), eigmin)
 
     !%Variable UnfoldMaxEnergy
     !%Type float
@@ -399,7 +397,7 @@ contains
     !% Specifies the end of the energy range for the unfolded band structure.
     !% The default value correspond to the largest eigenvalue.
     !%End
-    call parse_variable(default_namespace, 'UnfoldMaxEnergy', maxval(st%eigenval(:, :)), eigmax)
+    call parse_variable(global_namespace, 'UnfoldMaxEnergy', maxval(st%eigenval(:, :)), eigmax)
  
     if(de == M_ZERO) then
       de = (eigmax - eigmin) / CNST(1000)
@@ -414,7 +412,7 @@ contains
 
     SAFE_ALLOCATE(gvec_abs(1:sb%periodic_dim, 1:st%d%nik))
     gvec_abs = 0
-    file_gvec = io_open('./unfold_gvec.dat', default_namespace, action='read')
+    file_gvec = io_open('./unfold_gvec.dat', global_namespace, action='read')
     read(file_gvec,*)
     read(file_gvec,*)
     do ik = 1, st%d%nik
@@ -481,7 +479,7 @@ contains
 
       if(mpi_grp_is_root(gr%mesh%mpi_grp)) then
         write(filename,"(a13,i3.3,a4)") "./static/ake_",ik,".dat"
-        file_ake = io_open(trim(filename), default_namespace, action='write')
+        file_ake = io_open(trim(filename), global_namespace, action='write')
         write(file_ake, '(a)') '#Energy Ak(E)'
         write(file_ake, '(a, i5)') '#Number of points in energy window ',  nenergy 
       end if
@@ -555,7 +553,7 @@ contains
 #endif  
 
     if(mpi_grp_is_root(mpi_world)) then
-      file_ake = io_open("static/ake.dat", default_namespace, action='write')
+      file_ake = io_open("static/ake.dat", global_namespace, action='write')
       write(file_ake, '(a)') '#Energy Ak(E)'
       write(file_ake, '(a, i5)') '#Number of points in energy window ',  nenergy 
       do ik = 1, st%d%nik

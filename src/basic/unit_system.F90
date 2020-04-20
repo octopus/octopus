@@ -166,7 +166,7 @@ contains
     cinp = UNITS_ATOMIC
     
     call parse_variable(namespace, 'UnitsOutput', UNITS_ATOMIC, cc)
-    if(.not.varinfo_valid_option('Units', cc, is_flag = .true.)) call messages_input_error('UnitsOutput')
+    if(.not.varinfo_valid_option('Units', cc, is_flag = .true.)) call messages_input_error(namespace, 'UnitsOutput')
     cout = cc
 
     unit_one%factor = M_ONE
@@ -244,7 +244,9 @@ contains
 
     call parse_variable(namespace, 'UnitsXYZFiles', OPTION__UNITSXYZFILES__ANGSTROM_UNITS, xyz_units)
 
-    if(.not.varinfo_valid_option('UnitsXYZFiles', xyz_units)) call messages_input_error('UnitsXYZFiles', 'Invalid option')
+    if(.not.varinfo_valid_option('UnitsXYZFiles', xyz_units)) then
+      call messages_input_error(namespace, 'UnitsXYZFiles', 'Invalid option')
+    end if
 
     select case(xyz_units)
 
@@ -278,7 +280,8 @@ contains
     case (UNITS_EVA)
       call unit_system_init_eV_Ang(uu)
     case default
-      call messages_input_error('Units')
+      message(1) = "Unknown units in unit_system_get"
+      call messages_fatal(1)
     end select
 
     POP_SUB(unit_system_get)

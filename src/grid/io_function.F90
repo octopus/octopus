@@ -204,7 +204,7 @@ contains
     !%End
     call parse_variable(namespace, 'OutputFormat', 0, how)
     if(.not.varinfo_valid_option('OutputFormat', how, is_flag=.true.)) then
-      call messages_input_error('OutputFormat')
+      call messages_input_error(namespace, 'OutputFormat')
     end if
 
     if(how  ==  0 .and. .not. optional_default(ignore_error, .false.)) then

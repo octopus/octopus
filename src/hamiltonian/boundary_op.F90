@@ -103,7 +103,7 @@ contains
     !%End
     call parse_variable(namespace, 'AbsorbingBoundaries', NOT_ABSORBING, this%abtype)
     if(.not.varinfo_valid_option('AbsorbingBoundaries', this%abtype, is_flag = .true.)) then
-      call messages_input_error('AbsorbingBoundaries')
+      call messages_input_error(namespace, 'AbsorbingBoundaries')
     end if
 
     if(this%abtype == EXTERIOR) &

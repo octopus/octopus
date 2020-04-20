@@ -220,7 +220,7 @@ contains
     ! the user knows what he wants, give her that
     if(parse_is_defined(namespace, 'TheoryLevel')) then
       call parse_variable(namespace, 'TheoryLevel', KOHN_SHAM_DFT, ks%theory_level)
-      if(.not.varinfo_valid_option('TheoryLevel', ks%theory_level)) call messages_input_error('TheoryLevel')
+      if(.not.varinfo_valid_option('TheoryLevel', ks%theory_level)) call messages_input_error(namespace, 'TheoryLevel')
 
       parsed_theory_level = .true.
     end if
@@ -336,7 +336,7 @@ contains
 
       ! In principle we do not need to parse. However we do it for consistency
       call parse_variable(namespace, 'TheoryLevel', default, ks%theory_level)
-      if(.not.varinfo_valid_option('TheoryLevel', ks%theory_level)) call messages_input_error('TheoryLevel')
+      if(.not.varinfo_valid_option('TheoryLevel', ks%theory_level)) call messages_input_error(namespace, 'TheoryLevel')
      
     end if
 
@@ -384,7 +384,7 @@ contains
         !% C. Legrand <i>et al.</i>, <i>J. Phys. B</i> <b>35</b>, 1115 (2002). 
         !%End
         call parse_variable(namespace, 'SICCorrection', sic_none, ks%sic_type)
-        if(.not. varinfo_valid_option('SICCorrection', ks%sic_type)) call messages_input_error('SICCorrection')
+        if(.not. varinfo_valid_option('SICCorrection', ks%sic_type)) call messages_input_error(namespace, 'SICCorrection')
 
         ! Perdew-Zunger corrections
         if(ks%sic_type == SIC_PZ) ks%xc_family = ior(ks%xc_family, XC_FAMILY_OEP)

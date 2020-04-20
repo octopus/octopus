@@ -243,7 +243,7 @@ contains
     !% wavefunctions on the region <i>r</i> > <i>R1</i>. This mode employs a step masking function by default.
     !%End
     call parse_variable(namespace, 'PESMaskMode', PES_MASK_MODE_MASK, mask%mode)
-    if(.not.varinfo_valid_option('PESMaskMode', mask%mode)) call messages_input_error('PESMaskMode')
+    if(.not.varinfo_valid_option('PESMaskMode', mask%mode)) call messages_input_error(namespace, 'PESMaskMode')
     call messages_print_var_option(stdout, "PESMaskMode", mask%mode)
     
     select case(mask%mode)
@@ -301,7 +301,7 @@ contains
     call parse_variable(namespace, 'PESMaskPlaneWaveProjection', PW_MAP_FFT, mask%pw_map_how)
     
     if(.not.varinfo_valid_option('PESMaskPlaneWaveProjection', mask%pw_map_how)) then
-      call messages_input_error('PESMaskPlaneWaveProjection')
+      call messages_input_error(namespace, 'PESMaskPlaneWaveProjection')
     end if
     
     call messages_print_var_option(stdout, "PESMaskPlaneWaveProjection", mask%pw_map_how)
@@ -570,7 +570,7 @@ contains
     !%Error function. Not Implemented.
     !%End
     call parse_variable(namespace, 'PESMaskShape', defaultMask, mask%shape)
-    if(.not.varinfo_valid_option('PESMaskShape', mask%shape)) call messages_input_error('PESMaskShape')
+    if(.not.varinfo_valid_option('PESMaskShape', mask%shape)) call messages_input_error(namespace, 'PESMaskShape')
     call messages_print_var_option(stdout, "PESMaskShape", mask%shape)
     
     !%Variable PESMaskSize

@@ -683,9 +683,9 @@ contains
   ! this function returns the full name, possibly including the namespace
   ! of the current parser
   function parse_get_full_name(namespace, varname) result(full_name)
-    type(namespace_t), intent(in) :: namespace
-    character(len=*),  intent(in) :: varname
-    character(len=len(varname)+namespace%len()+1) :: full_name
+    type(namespace_t), intent(in)  :: namespace
+    character(len=*),  intent(in)  :: varname
+    character(len=:),  allocatable :: full_name
 
     ! try first the variable prefixed by namespace
     full_name = trim(namespace%get()) // "." // trim(varname)

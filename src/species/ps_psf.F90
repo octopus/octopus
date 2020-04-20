@@ -85,9 +85,9 @@ contains
     end if
     
     if(ascii) then
-      iunit = io_open(fullpath, namespace, action='read', form='formatted', status='old')
+      iunit = io_open(fullpath, action='read', form='formatted', status='old')
     else
-      iunit = io_open(fullpath, namespace, action='read', form='unformatted', status='old')
+      iunit = io_open(fullpath, action='read', form='unformatted', status='old')
     end if
     call ps_psf_file_read(iunit, ascii, pstm%psf_file, namespace)
     call io_close(iunit)

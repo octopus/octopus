@@ -131,7 +131,7 @@ contains
 
     call parse_variable(namespace, 'OutputMatrixElements', 0, this%what)
     if(.not.varinfo_valid_option('OutputMatrixElements', this%what, is_flag=.true.)) then
-      call messages_input_error('OutputMatrixElements')
+      call messages_input_error(namespace, 'OutputMatrixElements')
     end if
 
     if(st%parallel_in_states) then

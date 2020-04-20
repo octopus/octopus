@@ -134,7 +134,7 @@ contains
   !% However increasing this value increases the number of grid points covered by the orbitals and directly affect performances.
   !%End
   call parse_variable(namespace, 'AOThreshold', CNST(0.01), this%threshold)
-  if(this%threshold <= M_ZERO) call messages_input_error('AOThreshold')
+  if(this%threshold <= M_ZERO) call messages_input_error(namespace, 'AOThreshold')
   call messages_print_var_value(stdout, 'AOThreshold', this%threshold)
 
   !%Variable AONormalize

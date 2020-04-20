@@ -172,13 +172,13 @@ contains
     !% The filter of E. L. Briggs, D. J. Sullivan, and J. Bernholc, <i>Phys. Rev. B</i> <b>54</b>, 14362 (1996).
     !%End
     call parse_variable(namespace, 'FilterPotentials', PS_FILTER_TS, filter)
-    if(.not.varinfo_valid_option('FilterPotentials', filter)) call messages_input_error('FilterPotentials')
+    if(.not.varinfo_valid_option('FilterPotentials', filter)) call messages_input_error(namespace, 'FilterPotentials')
     call messages_print_var_option(stdout, "FilterPotentials", filter)
 
     if(family_is_mgga(xc_family) .and. filter /= PS_FILTER_NONE) &
       call messages_not_implemented("FilterPotentials different from filter_none with MGGA", namespace=namespace)
 
-    if(filter == PS_FILTER_TS) call spline_filter_mask_init(namespace)
+    if(filter == PS_FILTER_TS) call spline_filter_mask_init()
     do ispec = 1, geo%nspecies
       call species_pot_init(geo%species(ispec), namespace, mesh_gcutoff(gr%mesh), filter)
     end do
@@ -324,7 +324,7 @@ contains
       !%End
       call parse_variable(namespace, 'StaticMagneticField2DGauge', 0, gauge_2d)
       if(.not.varinfo_valid_option('StaticMagneticField2DGauge', gauge_2d)) &
-        call messages_input_error('StaticMagneticField2DGauge')
+        call messages_input_error(namespace, 'StaticMagneticField2DGauge')
 
       SAFE_ALLOCATE(ep%B_field(1:3))
       do idir = 1, 3
@@ -332,13 +332,13 @@ contains
       end do
       select case(gr%sb%dim)
       case(1)
-        call messages_input_error('StaticMagneticField')
+        call messages_input_error(namespace, 'StaticMagneticField')
       case(2)
         if(gr%sb%periodic_dim == 2) then
           message(1) = "StaticMagneticField cannot be applied in a 2D, 2D-periodic system."
           call messages_fatal(1, namespace=namespace)
         end if
-        if(ep%B_field(1)**2 + ep%B_field(2)**2 > M_ZERO) call messages_input_error('StaticMagneticField')
+        if(ep%B_field(1)**2 + ep%B_field(2)**2 > M_ZERO) call messages_input_error(namespace, 'StaticMagneticField')
       case(3)
         ! Consider cross-product below: if grx(1:sb%periodic_dim) is used, it is not ok.
         ! Therefore, if idir is periodic, B_field for all other directions must be zero.
@@ -422,7 +422,9 @@ contains
     !% Spin-orbit.
     !%End
     call parse_variable(namespace, 'RelativisticCorrection', NOREL, ep%reltype)
-    if(.not.varinfo_valid_option('RelativisticCorrection', ep%reltype)) call messages_input_error('RelativisticCorrection')
+    if(.not.varinfo_valid_option('RelativisticCorrection', ep%reltype)) then
+      call messages_input_error(namespace, 'RelativisticCorrection')
+    end if
     if (ispin /= SPINORS .and. ep%reltype == SPIN_ORBIT) then
       message(1) = "The spin-orbit term can only be applied when using spinors."
       call messages_fatal(1, namespace=namespace)
@@ -458,7 +460,7 @@ contains
     !%End
     call parse_variable(namespace, 'IgnoreExternalIons', .false., ep%ignore_external_ions)
     if(ep%ignore_external_ions) then
-      if(gr%sb%periodic_dim > 0) call messages_input_error('IgnoreExternalIons')
+      if(gr%sb%periodic_dim > 0) call messages_input_error(namespace, 'IgnoreExternalIons')
     end if
 
     !%Variable ForceTotalEnforce
@@ -844,7 +846,8 @@ contains
           if(abs(rr - rc) < r_small) rr = rc + sign(r_small, rr - rc)
           ep%Vclassical(ip) = ep%Vclassical(ip) - geo%catom(ia)%charge * (rr**4 - rc**4) / (rr**5 - rc**5)
         case default
-          call messages_input_error('ClassicalPotential')
+          message(1) = 'Unknown type of classical potential in epot_generate_classical'
+          call messages_fatal(1)
         end select
       end do
     end do

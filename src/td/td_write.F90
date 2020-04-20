@@ -299,7 +299,7 @@ contains
 
     call parse_variable(namespace, 'TDOutput', default, flags)
 
-    if(.not.varinfo_valid_option('TDOutput', flags, is_flag = .true.)) call messages_input_error('TDOutput')
+    if(.not.varinfo_valid_option('TDOutput', flags, is_flag = .true.)) call messages_input_error(namespace, 'TDOutput')
 
     do iout = 1, OUT_MAX
       writ%out(iout)%write = (bitand(flags, 2**(iout - 1)) /= 0)
@@ -714,8 +714,9 @@ contains
     if(hm%lda_u_level == DFT_U_ACBN0) default = default + 2**(OUT_DFTU_EFFECTIVE_U - 1)
     call parse_variable(namespace, 'TDOutputDFTU', default, flags)
 
-    if(.not.varinfo_valid_option('TDOutputDFTU', flags, is_flag = .true.)) &
-      call messages_input_error('TDOutputDFTU')
+    if(.not.varinfo_valid_option('TDOutputDFTU', flags, is_flag = .true.)) then
+      call messages_input_error(namespace, 'TDOutputDFTU')
+    end if
 
     do iout = 1, OUT_DFTU_MAX
       writ%out_dftu(iout)%write = (iand(flags, 2**(iout - 1)) /= 0)

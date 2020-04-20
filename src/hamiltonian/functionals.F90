@@ -148,7 +148,7 @@ contains
           functl%family = XC_FAMILY_HYB_GGA
 
         case default
-          call messages_input_error('XCFunctional', 'Unknown functional')
+          call messages_input_error(namespace, 'XCFunctional', 'Unknown functional')
 
         end select
       end if

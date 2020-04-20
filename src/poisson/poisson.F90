@@ -287,7 +287,7 @@ contains
     else
       this%method = solver
     end if
-    if(.not.varinfo_valid_option('PoissonSolver', this%method)) call messages_input_error('PoissonSolver')
+    if(.not.varinfo_valid_option('PoissonSolver', this%method)) call messages_input_error(namespace, 'PoissonSolver')
     if(optional_default(verbose,.true.)) then
       select case(this%method)
       case (POISSON_DIRECT_SUM)
@@ -369,7 +369,7 @@ contains
       end select
 
       call parse_variable(namespace, 'PoissonFFTKernel', default_kernel, this%kernel)
-      if(.not.varinfo_valid_option('PoissonFFTKernel', this%kernel)) call messages_input_error('PoissonFFTKernel')
+      if(.not.varinfo_valid_option('PoissonFFTKernel', this%kernel)) call messages_input_error(namespace, 'PoissonFFTKernel')
 
       if(optional_default(verbose,.true.)) &
         call messages_print_var_option(stdout, "PoissonFFTKernel", this%kernel)

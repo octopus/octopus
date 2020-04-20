@@ -113,7 +113,7 @@ contains
       this%method = SMEAR_FIXED_OCC
     else
       call parse_variable(namespace, 'SmearingFunction', SMEAR_SEMICONDUCTOR, this%method)
-      if(.not. varinfo_valid_option('SmearingFunction', this%method)) call messages_input_error('SmearingFunction')
+      if(.not. varinfo_valid_option('SmearingFunction', this%method)) call messages_input_error(namespace, 'SmearingFunction')
       call messages_print_var_option(stdout, 'SmearingFunction', this%method)
     end if
 
