@@ -223,7 +223,7 @@ contains
 
     integer :: idim, nlines, ncols, il
     logical :: defaultl
-    FLOAT   :: pos(MAX_DIM)
+    FLOAT, allocatable   :: pos(:)
 
     PUSH_SUB(states_mxll_init)
 
@@ -298,6 +298,7 @@ contains
     !%
     !%End
 
+    SAFE_ALLOCATE(pos(1:st%dim))
     st%selected_points_number = 1
     if(parse_block(namespace, 'MaxwellFieldsCoordinate', blk) == 0) then
       nlines = parse_block_n(blk)
@@ -327,6 +328,8 @@ contains
       st%selected_points_rs_state(:,:) = M_z0
       st%selected_points_rs_state_trans(:,:) = M_z0
     end if
+
+    SAFE_DEALLOCATE_A(pos)
 
     POP_SUB(states_mxll_init)
       
@@ -707,7 +710,7 @@ contains
 
     integer :: ip, pos_index_local, pos_index_global, rankmin
     FLOAT   :: dmin
-    CMPLX   :: ztmp(MAX_DIM)
+    CMPLX   :: ztmp(mesh%sb%dim)
     CMPLX, allocatable :: ztmp_global(:)
 
     PUSH_SUB(get_rs_state_at_point)
@@ -715,7 +718,7 @@ contains
     SAFE_ALLOCATE(ztmp_global(mesh%np_global))
 
     do ip = 1, st%selected_points_number
-      call mesh_nearest_point_infos(mesh, pos(:,ip), dmin, rankmin, pos_index_local, pos_index_global)
+       call mesh_nearest_point_infos(mesh, pos(:,ip), dmin, rankmin, pos_index_local, pos_index_global)
 !      pos_index = mesh_nearest_point(mesh, pos(:,ip), dmin, rankmin)
       if (mesh%parallel_in_domains) then
         ztmp(:) = rs_state(pos_index_local,:)

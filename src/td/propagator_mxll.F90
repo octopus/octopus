@@ -2015,7 +2015,9 @@ contains
     SAFE_ALLOCATE(b_field_global(1:gr%mesh%np_global,1:st%dim))
 
     if (.not. hm%ma_mx_coupling) then
-      call get_electric_field_state(st%rs_state_trans+st%rs_state_long, gr%mesh, e_field, st%ep, gr%mesh%np)
+      ! TODO: change this (trans+long)
+      call get_electric_field_state(st%rs_state_trans+st%rs_state_long, gr%mesh, e_field, &
+        st%ep, gr%mesh%np)
       call get_magnetic_field_state(st%rs_state_trans+st%rs_state_long, gr%mesh, st%rs_sign, b_field, &
         st%mu, gr%mesh%np)
     else
@@ -3166,9 +3168,10 @@ contains
     CMPLX                      :: rs_state(:,:)
 
     integer                    :: ip, ip_in, wn
-    FLOAT                      :: x_prop(MAX_DIM), rr, vv(MAX_DIM), k_vector(MAX_DIM), k_vector_abs, nn
-    FLOAT                      :: e0(MAX_DIM), e_field(MAX_DIM), b_field(MAX_DIM)
-    CMPLX                      :: rs_state_add(MAX_DIM)
+    FLOAT                      :: x_prop(mesh%sb%dim), rr, vv(mesh%sb%dim), k_vector(mesh%sb%dim)
+    FLOAT                      :: k_vector_abs, nn
+    FLOAT                      :: e0(mesh%sb%dim), e_field(mesh%sb%dim), b_field(mesh%sb%dim)
+    CMPLX                      :: rs_state_add(mesh%sb%dim)
 
     PUSH_SUB(plane_waves_boundaries_calculation)
 
@@ -3178,15 +3181,15 @@ contains
           ip = hm%bc%plane_waves_points_map(ip_in)
             if (wn == 1) rs_state(ip,:) = M_Z0
             nn           = sqrt(st%ep(ip)/P_ep*st%mu(ip)/P_mu)
-            vv(:)        = hm%bc%plane_waves_v_vector(:,wn)
-            k_vector(:)  = hm%bc%plane_waves_k_vector(:,wn)
-            k_vector_abs = sqrt(sum(k_vector(:)**2))
-            x_prop(:)    = mesh%x(ip,:) - vv(:) * (time - time_delay)
-            rr           = sqrt(sum(x_prop(:)**2))
+            vv(:)        = hm%bc%plane_waves_v_vector(1:mesh%sb%dim, wn)
+            k_vector(:)  = hm%bc%plane_waves_k_vector(1:mesh%sb%dim, wn)
+            k_vector_abs = sqrt(sum(k_vector(1:mesh%sb%dim)**2))
+            x_prop(1:mesh%sb%dim) = mesh%x(ip,1:mesh%sb%dim) - vv(1:mesh%sb%dim) * (time - time_delay)
+            rr           = sqrt(sum(x_prop(1:mesh%sb%dim)**2))
             if (hm%bc%plane_waves_modus(wn) == &
                 OPTION__USERDEFINEDMAXWELLINCIDENTWAVES__PLANE_WAVE_MX_FUNCTION) then
-              e0(:)      = hm%bc%plane_waves_e_field(:,wn)
-              e_field(:) = e0(:) * mxf(hm%bc%plane_waves_mx_function(wn), x_prop(:))
+              e0(1:mesh%sb%dim)      = hm%bc%plane_waves_e_field(1:mesh%sb%dim, wn)
+              e_field(1:mesh%sb%dim) = e0(1:mesh%sb%dim) * mxf(hm%bc%plane_waves_mx_function(wn), x_prop(1:mesh%sb%dim))
             end if
             b_field(1:3) = M_ONE/P_c * M_ONE/k_vector_abs * dcross_product(k_vector,e_field)
             call build_rs_vector(e_field, b_field, st%rs_sign, rs_state_add, st%ep(ip), st%mu(ip))
@@ -3253,9 +3256,9 @@ contains
     CMPLX,                intent(inout) :: rs_state(:,:)
 
     integer              :: ip, wn, idim, np
-    FLOAT                :: x_prop(MAX_DIM), rr, vv(MAX_DIM), k_vector(MAX_DIM), k_vector_abs, nn
-    FLOAT                :: e0(MAX_DIM), e_field(MAX_DIM), dummy(MAX_DIM), b_field(MAX_DIM)
-    CMPLX                :: rs_state_add(MAX_DIM)
+    FLOAT                :: x_prop(gr%sb%dim), rr, vv(gr%sb%dim), k_vector(gr%sb%dim), k_vector_abs, nn
+    FLOAT                :: e0(gr%sb%dim), e_field(gr%sb%dim), b_field(gr%sb%dim), dummy(gr%sb%dim)
+    CMPLX                :: rs_state_add(st%dim)
 
     PUSH_SUB(plane_waves_in_box_calculation)
 

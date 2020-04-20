@@ -476,56 +476,62 @@ contains
     FLOAT,       intent(in) :: x(:)
 
     FLOAT :: r, xx, limit_1, limit_2, limit_3, limit_4
-!    FLOAT :: phi, rad
+    integer :: xdim
 
     ! no push_sub because it is called too frequently
+
+    xdim = size(x)
 
     select case(f%mode)
     case (MXF_CONST_WAVE)
 
-      y = f%a0 * cos( sum(f%k_vector(:)*(x(:) - f%r0(:))) )
+      y = f%a0 * cos( sum(f%k_vector(1:xdim)*(x(:) - f%r0(1:xdim))) )
 
     case (MXF_CONST_PHASE)
 
-      y = f%a0 * sum(f%k_vector(:)*(x(:) - f%r0(:))) 
+      y = f%a0 * sum(f%k_vector(1:xdim)*(x(:) - f%r0(1:xdim)))
 
     case (MXF_GAUSSIAN_WAVE)
 
-      r = exp( - ( ( sum(f%k_vector(:)*(x(:) - f%r0(:))) / sqrt(sum(f%k_vector(:)**2)) )**2 / (M_TWO*f%width**2) ) )
-      y = f%a0 * r * cos( sum(f%k_vector(:)*(x(:) - f%r0(:))) )
+       r = exp( - ( ( sum(f%k_vector(1:xdim)*(x(:) - f%r0(1:xdim))) &
+            / sqrt(sum(f%k_vector(1:xdim)**2)) )**2 / (M_TWO*f%width**2) ) )
+      y = f%a0 * r * cos( sum(f%k_vector(1:xdim)*(x(:) - f%r0(1:xdim))) )
 
     case (MXF_COSINOIDAL_WAVE)
 
       r = M_ZERO
-      if(abs( sum( f%k_vector(:)*(x(:) - f%r0(:))/sqrt(sum(f%k_vector(:)**2)) ) ) <= f%width) then
-        r = - cos((M_Pi/M_TWO) * ((sum(f%k_vector(:)*(x(:) - f%r0(:))) / sqrt(sum(f%k_vector(:)**2)) - M_TWO*f%width) / f%width))
-        r = r * cos( sum(f%k_vector(:)*(x(:) - f%r0(:))) )
+      if(abs( sum( f%k_vector(1:xdim)*(x(:) - f%r0(1:xdim))/sqrt(sum(f%k_vector(1:xdim)**2)) ) ) <= f%width) then
+         r = - cos((M_Pi/M_TWO) * ((sum(f%k_vector(1:xdim)*(x(:) - f%r0(1:xdim))) &
+              / sqrt(sum(f%k_vector(1:xdim)**2)) - M_TWO*f%width) / f%width))
+        r = r * cos( sum(f%k_vector(1:xdim)*(x(:) - f%r0(1:xdim))) )
       end if
       y = f%a0 * r
 
     case (MXF_LOGISTIC_WAVE)
 
-      r = M_ONE/(M_ONE + exp(f%gr*(sum(f%k_vector(:)*(x(:) - f%r0(:)))/sqrt(sum(f%k_vector(:)**2)) - f%width/M_TWO))) &
-          + M_ONE/(M_ONE + exp(-f%gr*(sum(f%k_vector(:)*(x(:) - f%r0(:)))/sqrt(sum(f%k_vector(:)**2)) + f%width/M_TWO))) - M_ONE
-      y = f%a0 * r * cos( sum(f%k_vector(:)*(x(:) - f%r0(:))) )
+       r = M_ONE/(M_ONE + exp(f%gr*(sum(f%k_vector(1:xdim)*(x(:) - f%r0(1:xdim))) &
+            / sqrt(sum(f%k_vector(1:xdim)**2)) - f%width/M_TWO))) &
+            + M_ONE/(M_ONE + exp(-f%gr*(sum(f%k_vector(1:xdim)*(x(:) - f%r0(1:xdim))) &
+            / sqrt(sum(f%k_vector(1:xdim)**2)) + f%width/M_TWO))) - M_ONE
+      y = f%a0 * r * cos( sum(f%k_vector(1:xdim)*(x(:) - f%r0(1:xdim))) )
 
     case (MXF_TRAPEZOIDAL_WAVE)
 
-      xx = sum(f%k_vector(:)*(x(:) - f%r0(:)))/sqrt(sum(f%k_vector(:)**2))
+      xx = sum(f%k_vector(1:xdim)*(x(:) - f%r0(1:xdim)))/sqrt(sum(f%k_vector(1:xdim)**2))
       limit_1 = - f%width/M_TWO - M_ONE/f%gr
       limit_2 = - f%width/M_TWO
       limit_3 =   f%width/M_TWO
       limit_4 =   f%width/M_TWO + M_ONE/f%gr
       if ( ( xx > limit_1 ) .and. ( xx <= limit_2 ) ) then
-        r = M_ONE + f%gr * (sum(f%k_vector(:)*(x(:) - f%r0(:)))/sqrt(sum(f%k_vector(:)**2)) + f%width/M_TWO)
+        r = M_ONE + f%gr * (sum(f%k_vector(1:xdim)*(x(:) - f%r0(1:xdim)))/sqrt(sum(f%k_vector(1:xdim)**2)) + f%width/M_TWO)
       else if ( ( xx > limit_2 ) .and. ( xx <= limit_3 ) ) then
         r = M_ONE
       else if ( ( xx > limit_3 ) .and. ( xx <= limit_4 ) ) then
-        r = M_ONE - f%gr * (sum(f%k_vector(:)*(x(:) - f%r0(:)))/sqrt(sum(f%k_vector(:)**2)) - f%width/M_TWO)
+        r = M_ONE - f%gr * (sum(f%k_vector(1:xdim)*(x(:) - f%r0(1:xdim)))/sqrt(sum(f%k_vector(1:xdim)**2)) - f%width/M_TWO)
       else
         r = M_ZERO
       end if
-      y = f%a0 * r * cos( sum(f%k_vector(:)*(x(:) - f%r0(:))) )
+      y = f%a0 * r * cos( sum(f%k_vector(1:xdim)*(x(:) - f%r0(1:xdim))) )
 
    ! case (MXF_BESSEL_WAVE)
 

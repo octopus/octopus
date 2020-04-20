@@ -3718,7 +3718,7 @@ contains
     FLOAT,               intent(in)    :: dt
 
     integer :: idir
-    FLOAT :: field(MAX_DIM)
+    FLOAT :: field(gr%sb%dim)
     character(len=80) :: aux
 
     if(.not.mpi_grp_is_root(mpi_world)) return ! only first node outputs
@@ -3782,23 +3782,23 @@ contains
     call write_iter_start(out_fields)
 
     ! Output of electric field at selected point
-    call get_electric_field_vector(st%selected_points_rs_state(:,1),field)
-    field = units_from_atomic(units_out%energy/units_out%length, field)
-    call write_iter_double(out_fields, field, gr%mesh%sb%dim)
+    call get_electric_field_vector(st%selected_points_rs_state(:,1), field(1:st%dim))
+    field(1:st%dim) = units_from_atomic(units_out%energy/units_out%length, field(1:st%dim))
+    call write_iter_double(out_fields, field(1:st%dim), gr%mesh%sb%dim)
     ! Output of magnetic field at selected point
-    call get_magnetic_field_vector(st%selected_points_rs_state(:,1), st%rs_sign, field)
-    field = units_from_atomic(unit_one/units_out%length**2, field)
-    call write_iter_double(out_fields, field, gr%mesh%sb%dim)
+    call get_magnetic_field_vector(st%selected_points_rs_state(:,1), st%rs_sign, field(1:st%dim))
+    field(1:st%dim) = units_from_atomic(unit_one/units_out%length**2, field(1:st%dim))
+    call write_iter_double(out_fields, field(1:st%dim), gr%mesh%sb%dim)
 
     ! Output of transverse electric field at selected point
-    call get_electric_field_vector(st%selected_points_rs_state_trans(:,1),field)
-    field = units_from_atomic(units_out%energy/units_out%length, field)
-    call write_iter_double(out_fields, field, gr%mesh%sb%dim)
+    call get_electric_field_vector(st%selected_points_rs_state_trans(:,1), field(1:st%dim))
+    field(1:st%dim) = units_from_atomic(units_out%energy/units_out%length, field(1:st%dim))
+    call write_iter_double(out_fields, field(1:st%dim), gr%mesh%sb%dim)
     ! Output of transverse magnetic field at selected point
     call get_magnetic_field_vector(st%selected_points_rs_state_trans(:,1), &
-                                           st%rs_sign, field)
-    field = units_from_atomic(unit_one/units_out%length**2, field)
-    call write_iter_double(out_fields, field, gr%mesh%sb%dim)
+         st%rs_sign, field(1:st%dim))
+    field(1:st%dim) = units_from_atomic(unit_one/units_out%length**2, field(1:st%dim))
+    call write_iter_double(out_fields, field(1:st%dim), gr%mesh%sb%dim)
 
     call write_iter_nl(out_fields)
 
