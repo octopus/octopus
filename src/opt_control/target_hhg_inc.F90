@@ -362,7 +362,7 @@
     if(time  ==  max_time) then
       tg%acc(1, 1:gr%sb%dim) = M_HALF * (tg%acc(1, 1:gr%sb%dim) + tg%acc(max_time+1, 1:gr%sb%dim))
       do ia = 1, gr%sb%dim
-        call zfft_forward1(tg%fft_handler, tg%acc(1:max_time, ia), tg%vel(1:max_time, ia))
+        call zfft_forward(tg%fft_handler, tg%acc(1:max_time, ia), tg%vel(1:max_time, ia))
       end do
       tg%vel = tg%vel * tg%dt
       do iw = 1, max_time
@@ -371,7 +371,7 @@
         tg%acc(iw, 1:gr%sb%dim) = tg%vel(iw, 1:gr%sb%dim) * tg%alpha(iw) * exp(M_zI * (iw-1) * dw * M_HALF * dt)
       end do
       do ia = 1, gr%sb%dim
-        call zfft_backward1(tg%fft_handler, tg%acc(1:max_time, ia), tg%gvec(1:max_time, ia))
+        call zfft_backward(tg%fft_handler, tg%acc(1:max_time, ia), tg%gvec(1:max_time, ia))
       end do
       tg%gvec(max_time + 1, 1:gr%sb%dim) = tg%gvec(1, 1:gr%sb%dim)
       tg%gvec = tg%gvec * (M_TWO * M_PI/ tg%dt)
