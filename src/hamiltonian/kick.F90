@@ -856,12 +856,11 @@ contains
 
   ! ---------------------------------------------------------
   !
-  subroutine kick_function_get(mesh, kick, kick_function, iq, theta, to_interpolate)
+  subroutine kick_function_get(mesh, kick, kick_function, iq, to_interpolate)
     type(mesh_t),         intent(in)    :: mesh
     type(kick_t),         intent(in)    :: kick
     CMPLX,                intent(out)   :: kick_function(:)
     integer,              intent(in)    :: iq
-    FLOAT, optional,      intent(in)    :: theta
     logical, optional,    intent(in)    :: to_interpolate
 
     integer :: ip, im
@@ -949,13 +948,12 @@ contains
 
   ! ---------------------------------------------------------
   !
-  subroutine kick_pcm_function_get(mesh, kick, psolver, pcm, kick_pcm_function, theta)
+  subroutine kick_pcm_function_get(mesh, kick, psolver, pcm, kick_pcm_function)
     type(mesh_t),         intent(in)    :: mesh
     type(kick_t),         intent(in)    :: kick
     type(poisson_t),      intent(in)    :: psolver
     type(pcm_t),          intent(inout) :: pcm
     CMPLX,                intent(out)   :: kick_pcm_function(:)
-    FLOAT, optional,      intent(in)    :: theta
 
     CMPLX, allocatable :: kick_function_interpolate(:)
     FLOAT, allocatable :: kick_function_real(:)
@@ -991,14 +989,13 @@ contains
   ! ---------------------------------------------------------
   !> Applies the delta-function electric field \f$ E(t) = E_0 \Delta(t) \f$
   !! where \f$ E_0 = \frac{- k \hbar}{e} \f$ k = kick\%delta_strength.
-  subroutine kick_apply(mesh, st, ions, geo, kick, psolver, theta, pcm)
+  subroutine kick_apply(mesh, st, ions, geo, kick, psolver, pcm)
     type(mesh_t),          intent(in)    :: mesh
     type(states_elec_t),   intent(inout) :: st
     type(ion_dynamics_t),  intent(in)    :: ions
     type(geometry_t),      intent(inout) :: geo
     type(kick_t),          intent(in)    :: kick
     type(poisson_t),       intent(in)    :: psolver
-    FLOAT, optional,       intent(in)    :: theta
     type(pcm_t), optional, intent(inout) :: pcm
 
     integer :: iqn, ist, idim, ip, ispin, iatom
@@ -1018,13 +1015,13 @@ contains
 
       SAFE_ALLOCATE(kick_function(1:mesh%np))
       if(kick%delta_strength_mode /= KICK_MAGNON_MODE .or. kick%nqvec == 1) then
-        call kick_function_get(mesh, kick, kick_function, 1, theta)
+        call kick_function_get(mesh, kick, kick_function, 1)
       end if
 
       ! PCM - computing polarization due to kick
       if( present(pcm) ) then
         SAFE_ALLOCATE(kick_pcm_function(1:mesh%np))
-        call kick_pcm_function_get(mesh, kick, psolver, pcm, kick_pcm_function, theta)
+        call kick_pcm_function_get(mesh, kick, psolver, pcm, kick_pcm_function)
         kick_function = kick_function + kick_pcm_function
       end if
 
