@@ -510,7 +510,7 @@ contains
     if(present(kick)) then
       write(out_file, '(a15,i2)')      '# nspin        ', nspin
       call kick_write(kick, out_file)
-      select case(kick%delta_strength_mode)
+      select case(kick_get_type(kick))
       case (KICK_SPIN_MODE)
         spins_triplet = .true.
         spins_singlet = .false.
@@ -735,7 +735,7 @@ contains
     end do
     
     ! The formulae below are only correct in this particular case.
-    if(kick%delta_strength_mode == KICK_DENSITY_MODE .and. spectrum%transform == SPECTRUM_TRANSFORM_SIN) then
+    if(kick_get_type(kick) == KICK_DENSITY_MODE .and. spectrum%transform == SPECTRUM_TRANSFORM_SIN) then
       ewsum = sum(sf(1, 1:nspin))
       polsum = M_ZERO
 
@@ -755,7 +755,7 @@ contains
     write(out_file, '(a,i8)')    '# Number of time steps = ', time_steps
     call spectrum_write_info(spectrum, out_file)
     write(out_file, '(a)') '#%'
-    if(kick%delta_strength_mode == KICK_DENSITY_MODE .and. spectrum%transform == SPECTRUM_TRANSFORM_SIN) then
+    if(kick_get_type(kick) == KICK_DENSITY_MODE .and. spectrum%transform == SPECTRUM_TRANSFORM_SIN) then
       write(out_file, '(a,f16.6)') '# Electronic sum rule       = ', ewsum
       write(out_file, '(a,f16.6,1x,a)') '# Static polarizability (from sum rule) = ', &
         units_from_atomic(units_out%length**3, polsum), trim(units_abbrev(units_out%length))
@@ -2672,7 +2672,7 @@ contains
     spins_singlet = .true.
     spins_triplet = .false.
     if(present(kick)) then
-      select case(kick%delta_strength_mode)
+      select case(kick_get_type(kick))
       case (KICK_SPIN_MODE)
         spins_triplet = .true.
         spins_singlet = .false.

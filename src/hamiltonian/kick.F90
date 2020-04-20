@@ -84,7 +84,7 @@ module kick_oct_m
     !> The time which the kick is applied (normally, this is zero)
     FLOAT             :: time
     !> The strength, and strength "mode".
-    integer           :: delta_strength_mode
+    integer, private  :: delta_strength_mode
     FLOAT             :: delta_strength
     !> In case we use a normal dipole kick:
     FLOAT             :: pol(MAX_DIM, MAX_DIM)
