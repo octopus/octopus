@@ -129,7 +129,7 @@ contains
     !%Type block
     !%Section Time-Dependent::Propagation
     !%Description
-    !% Follows
+    !% Defines boundary conditions for the electromagnetic field propagation.
     !%
     !% Example:
     !%
@@ -137,24 +137,23 @@ contains
     !% <br>&nbsp;&nbsp;   zero | mirror_pec | consant
     !% <br>%</tt>
     !%
-    !% Description follows
     !%
     !%Option zero 0
-    !% follows ...
+    !% Boundaries are set to zero.
     !%Option constant 2
-    !% follows ...
+    !% Boundaries are set to a constant.
     !%Option mirror_pec 3
-    !% follows ...
+    !% Perfect electric conductor.
     !%Option mirror_pmc 4
-    !% follows ...
+    !% Perfect magnetic conductor.
     !%Option plane_waves 5
-    !% follows ...
+    !% Boundaries feed in plane waves.
     !%Option periodic 6
-    !% follows ...
+    !% Periodic boundary conditions (not yet implemented).
     !%Option medium 7
-    !% follows ...
+    !% Boundaries as linear medium (not yet implemented).
     !%Option lossy_layer 8
-    !% follows ...
+    !% Boundaries as a lossy medium (not yet implemented).
     !%End
     if(parse_block(namespace, 'MaxwellBoundaryConditions', blk) == 0) then
 
@@ -227,7 +226,7 @@ contains
     !%Type block
     !%Section Time-Dependent::Propagation
     !%Description
-    !% Follows
+    !% Defines parameters for the box.
     !%
     !% Example:
     !%
@@ -235,12 +234,13 @@ contains
     !% <br>&nbsp;&nbsp;   center_x | center_y | center_z | x_length | y_length | z_length | epsilon_factor | mu_factor | sigma_e | sigma_m | edged/smooth
     !% <br>%</tt>
     !%
-    !% Description about MaxwellMediumBox follows
+    !% Position of center (three components) and length (three components), followed by permittivity
+    !% factor, electric conductivity and magnetic conductivity, and finally type of edge.
     !%
     !%Option edged 1
-    !% Follows
+    !% Medium box edges are steep.
     !%Option smooth 2
-    !% Follows
+    !% Medium box edged and softened.
     !%End
     if(parse_block(namespace, 'MaxwellMediumBox', blk) == 0) then
 
@@ -318,13 +318,11 @@ contains
     !%Default no
     !%Section Time-Dependent::Propagation
     !%Description
-    !% follows
+    !% Whether to perform  apriximations to the ETRS propagator.
     !%Option no 0
-    !% follows
-    !%Option no_etrs 1
-    !% follows
-    !%Option const_steps 2
-    !% follows
+    !% No approximations.
+    !%Option const_steps 1
+    !% Use constant current density..
     !%End
     call parse_variable(namespace, 'MaxwellTDETRSApprox', OPTION__MAXWELLTDETRSAPPROX__NO, tr%tr_etrs_approx)
     call messages_print_var_option(stdout, 'MaxwellTDETRSApprox', tr%tr_etrs_approx)
@@ -3000,7 +2998,7 @@ contains
     !%Type block
     !%Section MaxwellStates
     !%Description
-    !% Follows
+    !% Define parameters of spatially constant field.
     !%
     !% Example:
     !%
@@ -3008,7 +3006,8 @@ contains
     !% <br>&nbsp;&nbsp;   plane_wave_parser      | E_x | E_y | E_z | B_x | B_y | B_z | "tdf_function"
     !% <br>%</tt>
     !%
-    !% Description about UserDefinedConstantSpacialMaxwellField follows
+    !% This block defines three components of E field, three components of B field, and reference to
+    !% TD function.
     !%
     !%End
 
