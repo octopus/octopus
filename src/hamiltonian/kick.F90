@@ -55,7 +55,8 @@ module kick_oct_m
     kick_read,            &
     kick_write,           &
     kick_apply,           &
-    kick_function_get
+    kick_function_get,    &
+    kick_get_type
 
 
   integer, public, parameter ::        &
@@ -1214,6 +1215,13 @@ contains
 
     POP_SUB(kick_apply)
   end subroutine kick_apply
+
+  pure integer function kick_get_type(kick) result(kick_type)
+    type(kick_t),    intent(in) :: kick
+
+    kick_type = kick%delta_strength_mode
+ 
+  end function kick_get_type
 
 end module kick_oct_m
 
