@@ -293,16 +293,30 @@ contains
     type(namespace_t), optional, intent(in) :: namespace
 
     logical :: absolute_path
+    integer :: total_len
 
     PUSH_SUB(io_workpath)
 
     ! use the logical to avoid problems with the string length
     absolute_path = .false.
-    if(len(path) > 0) then
+    if (len_trim(path) > 0) then
       absolute_path = path(1:1) == '/'
     end if
 
-    if(absolute_path) then
+    ! check that the path is not longer than the maximum allowed
+    total_len = len_trim(path)
+    if (.not. absolute_path) then
+      total_len = total_len + len_trim(work_dir) + 1
+      if (present(namespace)) then
+        if (namespace%len() > 0) total_len = total_len + namespace%len() + 1
+      end if
+    end if
+    if (total_len > MAX_PATH_LEN) then
+      write(message(1),"(A,I5)") "Path is longer than the maximum path length of ", MAX_PATH_LEN
+      call messages_fatal(1, namespace=namespace)
+    end if
+
+    if (absolute_path) then
       ! we do not change absolute path names
       wpath = trim(path)
     else
