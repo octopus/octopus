@@ -121,6 +121,10 @@ contains
     !%Section Output
     !%Description
     !% Determines if projected dos are computed or not.
+    !% At the moment, the PDOS is computed from the bare pseudo-atomic orbitals, directly taken from 
+    !% the pseudopotentials. The orbitals are not orthonormalized, in order to preserve their 
+    !% atomic orbitals character. As a consequence, the sum of the different PDOS does not integrate 
+    !% to the total DOS.
     !%End
     call parse_variable(namespace, 'DOSComputePDOS', .false., this%computepdos)
 
