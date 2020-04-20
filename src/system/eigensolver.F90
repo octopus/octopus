@@ -191,7 +191,7 @@ contains
     call messages_obsolete_variable(namespace, 'EigensolverSubspaceDiag', 'SubspaceDiagonalization')
 
     default_iter = 25
-    default_tol = CNST(1e-6)
+    default_tol = CNST(1e-7)
 
     select case(eigens%es_type)
     case(RS_CG_NEW)
@@ -322,7 +322,7 @@ contains
     !%Type float
     !%Section SCF::Eigensolver
     !%Description
-    !% This is the tolerance for the eigenvectors. The default is 1e-6,
+    !% This is the tolerance for the eigenvectors. The default is 1e-7,
     !% except for the ARPACK solver for which it is 0.
     !%End
     call parse_variable(namespace, 'EigensolverTolerance', default_tol, eigens%tolerance)
