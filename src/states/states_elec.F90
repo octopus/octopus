@@ -1603,6 +1603,9 @@ contains
                 call zmf_random(mesh, zpsi(:, id), normalized = normalized)
               end if
             end do
+            ! Note that mf_random normalizes each spin channel independently to 1.
+            ! Therefore we need to renormalize the spinor:
+            call zmf_normalize(mesh, 1, zpsi)
             if(.not. state_kpt_is_local(st, ist, ik)) cycle
             call states_elec_set_state(st, mesh, ist,  ik, zpsi)
           end do
