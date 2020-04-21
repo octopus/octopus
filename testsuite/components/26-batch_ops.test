@@ -15,4 +15,67 @@ match ; Nrm2 norm state  1; GREPFIELD(out, 'Nrm2 norm state  1', 5) ; 0.100000E+
 match ; Nrm2 norm state  2; GREPFIELD(out, 'Nrm2 norm state  2', 5) ; 0.100000E+01
 match ; Nrm2 norm state  3; GREPFIELD(out, 'Nrm2 norm state  3', 5) ; 0.100000E+01
 match ; Nrm2 norm state  4; GREPFIELD(out, 'Nrm2 norm state  4', 5) ; 0.100000E+01
+match ; Dotp states  1  1; GREPFIELD(out, 'Dotp states  1  1', 5) ;    0.100000E+01
+match ; Dotp states  1  2; GREPFIELD(out, 'Dotp states  1  2', 5) ;    0.750042E+00
+match ; Dotp states  1  3; GREPFIELD(out, 'Dotp states  1  3', 5) ;    0.751174E+00
+match ; Dotp states  1  4; GREPFIELD(out, 'Dotp states  1  4', 5) ;    0.750082E+00
+match ; Dotp states  2  1; GREPFIELD(out, 'Dotp states  2  1', 5) ;    0.750042E+00
+match ; Dotp states  2  2; GREPFIELD(out, 'Dotp states  2  2', 5) ;    0.100000E+01
+match ; Dotp states  2  3; GREPFIELD(out, 'Dotp states  2  3', 5) ;    0.750395E+00
+match ; Dotp states  2  4; GREPFIELD(out, 'Dotp states  2  4', 5) ;    0.748918E+00
+match ; Dotp states  3  1; GREPFIELD(out, 'Dotp states  3  1', 5) ;    0.751174E+00
+match ; Dotp states  3  2; GREPFIELD(out, 'Dotp states  3  2', 5) ;    0.750395E+00
+match ; Dotp states  3  3; GREPFIELD(out, 'Dotp states  3  3', 5) ;    0.100000E+01
+match ; Dotp states  3  4; GREPFIELD(out, 'Dotp states  3  4', 5) ;    0.749549E+00
+match ; Dotp states  4  1; GREPFIELD(out, 'Dotp states  4  1', 5) ;    0.750082E+00
+match ; Dotp states  4  2; GREPFIELD(out, 'Dotp states  4  2', 5) ;    0.748918E+00
+match ; Dotp states  4  3; GREPFIELD(out, 'Dotp states  4  3', 5) ;    0.749549E+00
+match ; Dotp states  4  4; GREPFIELD(out, 'Dotp states  4  4', 5) ;    0.100000E+01
 
+
+
+Processors: 1
+Input: 26-batch_ops.02-jellium-complex.inp
+match ; Norm state  1; GREPFIELD(out, 'Norm state  1', 4) ; 0.150000E+01
+match ; Norm state  2; GREPFIELD(out, 'Norm state  2', 4) ; 0.150000E+01
+match ; Norm state  3; GREPFIELD(out, 'Norm state  3', 4) ; 0.150000E+01
+match ; Norm state  4; GREPFIELD(out, 'Norm state  4', 4) ; 0.150000E+01
+match ; Nrm2 norm state  1; GREPFIELD(out, 'Nrm2 norm state  1', 5) ; 0.100000E+01
+match ; Nrm2 norm state  2; GREPFIELD(out, 'Nrm2 norm state  2', 5) ; 0.100000E+01
+match ; Nrm2 norm state  3; GREPFIELD(out, 'Nrm2 norm state  3', 5) ; 0.100000E+01
+match ; Nrm2 norm state  4; GREPFIELD(out, 'Nrm2 norm state  4', 5) ; 0.100000E+01
+match ; Dotp states  1  1; GREPFIELD(out, 'Dotp states  1  1', 5) ;    0.100000E+01
+match ; Dotp states  1  2; GREPFIELD(out, 'Dotp states  1  2', 5) ;    0.750042E+00
+match ; Dotp states  1  3; GREPFIELD(out, 'Dotp states  1  3', 5) ;    0.751174E+00
+match ; Dotp states  1  4; GREPFIELD(out, 'Dotp states  1  4', 5) ;    0.750082E+00
+match ; Dotp states  2  1; GREPFIELD(out, 'Dotp states  2  1', 5) ;    0.750042E+00
+match ; Dotp states  2  2; GREPFIELD(out, 'Dotp states  2  2', 5) ;    0.100000E+01
+match ; Dotp states  2  3; GREPFIELD(out, 'Dotp states  2  3', 5) ;    0.750395E+00
+match ; Dotp states  2  4; GREPFIELD(out, 'Dotp states  2  4', 5) ;    0.748918E+00
+match ; Dotp states  3  1; GREPFIELD(out, 'Dotp states  3  1', 5) ;    0.751174E+00
+match ; Dotp states  3  2; GREPFIELD(out, 'Dotp states  3  2', 5) ;    0.750395E+00
+match ; Dotp states  3  3; GREPFIELD(out, 'Dotp states  3  3', 5) ;    0.100000E+01
+match ; Dotp states  3  4; GREPFIELD(out, 'Dotp states  3  4', 5) ;    0.749549E+00
+match ; Dotp states  4  1; GREPFIELD(out, 'Dotp states  4  1', 5) ;    0.750082E+00
+match ; Dotp states  4  2; GREPFIELD(out, 'Dotp states  4  2', 5) ;    0.748918E+00
+match ; Dotp states  4  3; GREPFIELD(out, 'Dotp states  4  3', 5) ;    0.749549E+00
+match ; Dotp states  4  4; GREPFIELD(out, 'Dotp states  4  4', 5) ;    0.100000E+01
+match ; Imag Dotp states  1  1; GREPFIELD(out, 'Dotp states  1  1', 6) ;    0.000000E+00
+match ; Imag Dotp states  1  2; GREPFIELD(out, 'Dotp states  1  2', 6) ;    0.000000E+00
+match ; Imag Dotp states  1  3; GREPFIELD(out, 'Dotp states  1  3', 6) ;    0.000000E+00
+match ; Imag Dotp states  1  4; GREPFIELD(out, 'Dotp states  1  4', 6) ;    0.000000E+00
+match ; Imag Dotp states  2  1; GREPFIELD(out, 'Dotp states  2  1', 6) ;    0.000000E+00
+match ; Imag Dotp states  2  2; GREPFIELD(out, 'Dotp states  2  2', 6) ;    0.000000E+00
+match ; Imag Dotp states  2  3; GREPFIELD(out, 'Dotp states  2  3', 6) ;    0.000000E+00
+match ; Imag Dotp states  2  4; GREPFIELD(out, 'Dotp states  2  4', 6) ;    0.000000E+00
+match ; Imag Dotp states  3  1; GREPFIELD(out, 'Dotp states  3  1', 6) ;    0.000000E+00
+match ; Imag Dotp states  3  2; GREPFIELD(out, 'Dotp states  3  2', 6) ;    0.000000E+00
+match ; Imag Dotp states  3  3; GREPFIELD(out, 'Dotp states  3  3', 6) ;    0.000000E+00
+match ; Imag Dotp states  3  4; GREPFIELD(out, 'Dotp states  3  4', 6) ;    0.000000E+00
+match ; Imag Dotp states  4  1; GREPFIELD(out, 'Dotp states  4  1', 6) ;    0.000000E+00
+match ; Imag Dotp states  4  2; GREPFIELD(out, 'Dotp states  4  2', 6) ;    0.000000E+00
+match ; Imag Dotp states  4  3; GREPFIELD(out, 'Dotp states  4  3', 6) ;    0.000000E+00
+match ; Imag Dotp states  4  4; GREPFIELD(out, 'Dotp states  4  4', 6) ;    0.000000E+00
+
+Processors: 1
+Input: 26-batch_ops.03-jellium-spinor.inp

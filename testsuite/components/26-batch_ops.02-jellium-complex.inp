@@ -28,4 +28,5 @@ jradius = r_s * (N_electrons)^(1.0/3.0)
 "jellium" | 0 | 0 | 0
 %
 
+ForceComplex = yes
 StatesPack = yes
