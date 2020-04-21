@@ -18,7 +18,6 @@ Spacing = 0.25*angstrom
 %
 
 EigenSolver = plan
-EigenSolverTolerance = 1e-5
 
 FilterPotentials = filter_none
 
