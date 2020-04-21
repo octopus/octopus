@@ -27,7 +27,6 @@
 #define R_TYPE_IOBINARY TYPE_INT_32
 #define R_TOTYPE(x) (x)
 
-#define R_ABS(x)    abs(x)
 #define R_CONJ(x)   (x)
 #define R_REAL(x)   (x)
 #define R_AIMAG(x)  (M_ZERO)

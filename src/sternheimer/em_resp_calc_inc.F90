@@ -178,7 +178,7 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
 
             do ip = 1, gr%mesh%np
               lr%X(dl_de)(ip, is) = lr%X(dl_de)(ip, is) + &
-                dl_rho(ip) * ik_weight * sum(R_ABS(gpsi(ip, 1:gr%mesh%sb%dim))**2) + &
+                dl_rho(ip) * ik_weight * sum(abs(gpsi(ip, 1:gr%mesh%sb%dim))**2) + &
                 rho(ip) * ik_weight * &
                 sum(R_CONJ(gpsi(ip, 1:gr%mesh%sb%dim))*gdl_psi(ip, 1:gr%mesh%sb%dim) + &
                 gpsi(ip, 1:gr%mesh%sb%dim) * R_CONJ(gdl_psi_m(ip, 1:gr%mesh%sb%dim)))
@@ -188,7 +188,7 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
 
             do ip = 1, gr%mesh%np
               lr%X(dl_de)(ip, is) = lr%X(dl_de)(ip, is) + &
-                dl_rho(ip) * ik_weight * sum(R_ABS(gpsi(ip, 1:gr%mesh%sb%dim))**2) + &
+                dl_rho(ip) * ik_weight * sum(abs(gpsi(ip, 1:gr%mesh%sb%dim))**2) + &
                 rho(ip) * ik_weight * M_TWO * &
                 (sum(R_CONJ(gpsi(ip, 1:gr%mesh%sb%dim)) * gdl_psi(ip, 1:gr%mesh%sb%dim)))
             end do
