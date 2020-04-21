@@ -688,7 +688,7 @@ contains
     message(1) = 'Info: initial state (xx)'
     call messages_info(1)
     call test_prints_info_batch(sys%st, sys%gr, xx, string="xx")
-    
+
     call xx%end()
 
     if(bitand(ops, OPTION__TESTBATCHOPS__OPS_AXPY) /= 0) then
@@ -933,10 +933,10 @@ contains
 
     if(states_are_real(st)) then
       SAFE_ALLOCATE(dpsi(gr%mesh%np, st%d%dim))
-      write(message(1), '("States are real.")')
+      write(message(1), '("States are real with dim = ",I2)') st%d%dim
     else
       SAFE_ALLOCATE(zpsi(gr%mesh%np, st%d%dim))
-      write(message(1), '("States are complex.")')
+      write(message(1), '("States are complex with dim = ",I2)') st%d%dim
     end if
     call messages_info(1)
 
