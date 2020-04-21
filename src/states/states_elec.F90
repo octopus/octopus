@@ -1598,9 +1598,9 @@ contains
           do ist = ist_start, ist_end
             do id = 1, st%d%dim
               if(st%randomization == PAR_INDEPENDENT) then
-                call zmf_random(mesh, zpsi(:, id), mesh%vp%xlocal-1, normalized = normalized)
+                call zmf_random(mesh, zpsi(:, id), mesh%vp%xlocal-1, normalized = .false.)
               else
-                call zmf_random(mesh, zpsi(:, id), normalized = normalized)
+                call zmf_random(mesh, zpsi(:, id), normalized = .false.)
               end if
             end do
             ! Note that mf_random normalizes each spin channel independently to 1.
