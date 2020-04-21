@@ -110,7 +110,7 @@ subroutine X(hamiltonian_elec_base_local_sub)(potential, mesh, std, ispin, psib,
 
     call accel_finish()
 
-    call profiling_count_operations((R_MUL*psib%nst)*mesh%np*psib%dim)
+    call profiling_count_operations((R_MUL*psib%nst_linear)*mesh%np)
     call profiling_count_transfers(mesh%np, M_ONE)
     call profiling_count_transfers(mesh%np*psib%nst, R_TOTYPE(M_ONE))
 
@@ -743,7 +743,7 @@ subroutine X(hamiltonian_elec_base_nlocal_start)(this, mesh, std, bnd, psib, pro
     ind(imat) = iprojection
     iprojection = iprojection + nprojs
     call profiling_count_operations(nprojs*(R_ADD + R_MUL)*npoints + nst*nprojs)
-    if(allocated(this%projector_matrices)) then
+    if(allocated(this%projector_phases)) then
       call profiling_count_operations(R_MUL*npoints*nst)
     end if
   end do
@@ -1081,7 +1081,7 @@ subroutine X(hamiltonian_elec_base_nlocal_finish)(this, mesh, bnd, std, projecti
               !$omp end parallel do
             end do
           end if
-          call profiling_count_operations(nst*npoints*(R_ADD+R_MUL)*2)
+          call profiling_count_operations(nst*npoints*(R_ADD+R_MUL))
         end if
       end if
       call profiling_out(prof_scatter)
