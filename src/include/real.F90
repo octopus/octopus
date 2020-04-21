@@ -20,7 +20,6 @@
 
 #define R_TYPE      FLOAT
 #define R_BASE      FLOAT
-#define R_SINGLE    real(4)
 #define R_DOUBLE    real(8)
 #define R_MPITYPE   MPI_FLOAT
 #define R_TYPE_VAL  TYPE_FLOAT

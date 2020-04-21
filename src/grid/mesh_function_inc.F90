@@ -327,8 +327,6 @@ R_TYPE function X(mf_moment) (mesh, ff, idir, order) result(rr)
 
 end function X(mf_moment)
 
-#ifndef SINGLE_PRECISION
-
 ! ---------------------------------------------------------
 !> This subroutine fills a function with randon values.
 subroutine X(mf_random)(mesh, ff, shift, seed, normalized)
@@ -622,7 +620,6 @@ R_TYPE function X(mf_line_integral_vector) (mesh, ff, line) result(dd)
   POP_SUB(X(mf_line_integral_vector))
 end function X(mf_line_integral_vector)
 
-#endif
 
 ! -----------------------------------------------------------------------------
 !> This routine calculates the multipoles of a function ff,

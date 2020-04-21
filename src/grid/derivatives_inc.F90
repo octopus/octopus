@@ -360,17 +360,9 @@ subroutine X(derivatives_test)(this, namespace, repetitions, min_blocksize, max_
   SAFE_ALLOCATE(curlff(1:this%mesh%np, 1:this%mesh%sb%dim))
 
 #ifdef R_TREAL
-#ifdef SINGLE_PRECISION
-  type = 'real single'
-#else
   type = 'real'
-#endif
-#else
-#ifdef SINGLE_PRECISION
-  type = 'complex single'
 #else
   type = 'complex'
-#endif
 #endif
 
   ! Note: here we need to use a constant function or anything that
