@@ -164,7 +164,7 @@ contains
   subroutine curv_gygi_chi2x(sb, cv, rs, chi, x)
     type(simul_box_t), target, intent(in)   :: sb
     type(curv_gygi_t), target, intent(in)   :: cv
-    type(root_solver_t), target, intent(in) :: rs
+    type(root_solver_t), intent(in)         :: rs
     FLOAT,                     intent(in)  :: chi(:)  !< chi(sb%dim)
     FLOAT,                     intent(out) :: x(:)    !< x(sb%dim)
 
