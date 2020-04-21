@@ -263,6 +263,11 @@ contains
     call messages_new_line()
     call messages_info()
 
+    if(param%type == OPTION__TESTTYPE__REAL) then
+      message(1) = "TestMode = projector cannot be used with TestType = real"
+      call messages_fatal(1)
+    end if 
+
     sys => system_init(namespace)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh, wfs_type = TYPE_CMPLX)
@@ -553,6 +558,12 @@ contains
     call messages_new_line()
     call messages_new_line()
     call messages_info()
+
+    if(param%type == OPTION__TESTTYPE__REAL) then
+      message(1) = "TestMode = exp_apply cannot be used with TestType = real"
+      call messages_fatal(1)
+    end if
+
 
     sys => system_init(namespace)
 
