@@ -383,6 +383,12 @@ contains
       return
     end if
 
+    !We don't want to compute the bandgap in case there is no extra states
+    if(ceiling(st%qtot/st%smear%el_per_state) == st%nst) then
+      POP_SUB(states_elec_write_gaps)
+      return
+    end if
+
     homo = -M_HUGE
     homok = -1
     lumo =  M_HUGE 
