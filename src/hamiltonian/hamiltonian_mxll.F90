@@ -815,12 +815,12 @@ contains
       SAFE_ALLOCATE(tmp_partial(np_part))
 
       call zderivatives_partial(der, psi(:,field_dir), tmp_partial(:), pml_dir, set_bc = .false.)
-      do ip_in = 1, hm%bc%pml_points_number
-        ip       = hm%bc%pml_points_map(ip_in)
-        pml_c(:) = hm%bc%pml_c(ip_in, :)
-        pml_a(:) = hm%bc%pml_a(ip_in, :)
-        pml_b(:) = hm%bc%pml_b(ip_in, :)
-        pml_g(:) = hm%bc%pml_conv_plus(ip_in, pml_dir,:)
+      do ip_in = 1, hm%bc%pml%points_number
+        ip       = hm%bc%pml%points_map(ip_in)
+        pml_c(:) = hm%bc%pml%c(ip_in, :)
+        pml_a(:) = hm%bc%pml%a(ip_in, :)
+        pml_b(:) = hm%bc%pml%b(ip_in, :)
+        pml_g(:) = hm%bc%pml%conv_plus(ip_in, pml_dir,:)
         pml(ip)  = rs_sign * pml_c(pml_dir) * tmp_partial(ip) &
                  + rs_sign * pml_c(pml_dir) * TOFLOAT(pml_a(pml_dir)) * TOFLOAT(tmp_partial(ip)) &
                  + rs_sign * M_zI * pml_c(pml_dir) * aimag(pml_a(pml_dir)) * aimag(tmp_partial(ip)) &
@@ -860,13 +860,13 @@ contains
 
       call zderivatives_partial(der, psi(:,field_dir  ), tmp_partial(:,1), pml_dir, set_bc = .false.)
       call zderivatives_partial(der, psi(:,field_dir+3), tmp_partial(:,2), pml_dir, set_bc = .false.)
-      do ip_in = 1, hm%bc%pml_points_number
-        ip         = hm%bc%pml_points_map(ip_in)
-        pml_c(:)   = hm%bc%pml_c(ip_in, :)
-        pml_a(:)   = hm%bc%pml_a(ip_in, :)
-        pml_b(:)   = hm%bc%pml_b(ip_in, :)
-        pml_g_p(:) = hm%bc%pml_conv_plus(ip_in, pml_dir, :)
-        pml_g_m(:) = hm%bc%pml_conv_minus(ip_in, pml_dir, :)
+      do ip_in = 1, hm%bc%pml%points_number
+        ip         = hm%bc%pml%points_map(ip_in)
+        pml_c(:)   = hm%bc%pml%c(ip_in, :)
+        pml_a(:)   = hm%bc%pml%a(ip_in, :)
+        pml_b(:)   = hm%bc%pml%b(ip_in, :)
+        pml_g_p(:) = hm%bc%pml%conv_plus(ip_in, pml_dir, :)
+        pml_g_m(:) = hm%bc%pml%conv_minus(ip_in, pml_dir, :)
         pml(ip,1)  = pml_c(pml_dir) * tmp_partial(ip, 1) &
                    + pml_c(pml_dir) * TOFLOAT(pml_a(pml_dir)) * TOFLOAT(tmp_partial(ip, 1)) &
                    + M_zI * pml_c(pml_dir) * aimag(pml_a(pml_dir)) * aimag(tmp_partial(ip, 1)) &
@@ -903,13 +903,13 @@ contains
     do idim = 1, 3
       if ( (hm%bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__MAXWELL_MEDIUM) .and. &
            (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RIEMANN_SILBERSTEIN) ) then
-        do ip_in = 1, hm%bc%medium_points_number(idim)
-          ip          = hm%bc%medium_points_map(ip_in, idim)
-          cc          = hm%bc%medium_c(ip_in, idim)/P_c
-          aux_ep(:)   = hm%bc%medium_aux_ep(ip_in, :, idim)
-          aux_mu(:)   = hm%bc%medium_aux_mu(ip_in, :, idim)
-          sigma_e     = hm%bc%medium_sigma_e(ip_in, idim)
-          sigma_m     = hm%bc%medium_sigma_m(ip_in, idim)
+        do ip_in = 1, hm%bc%mxmedium%points_number(idim)
+          ip          = hm%bc%mxmedium%points_map(ip_in, idim)
+          cc          = hm%bc%mxmedium%c(ip_in, idim)/P_c
+          aux_ep(:)   = hm%bc%mxmedium%aux_ep(ip_in, :, idim)
+          aux_mu(:)   = hm%bc%mxmedium%aux_mu(ip_in, :, idim)
+          sigma_e     = hm%bc%mxmedium%sigma_e(ip_in, idim)
+          sigma_m     = hm%bc%mxmedium%sigma_m(ip_in, idim)
           ff_plus(1)  = psi(ip, 1)
           ff_plus(2)  = psi(ip, 2)
           ff_plus(3)  = psi(ip, 3)

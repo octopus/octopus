@@ -576,10 +576,10 @@ contains
 
     do idim=1, st%dim
       if (hm%bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__MEDIUM) then
-        do ip_in=1, hm%bc%medium_points_number(idim)
-          ip = hm%bc%medium_points_map(ip_in,idim)
-          st%ep(ip) = hm%bc%medium_ep(ip_in,idim)
-          st%mu(ip) = hm%bc%medium_mu(ip_in,idim)
+        do ip_in=1, hm%bc%mxmedium%points_number(idim)
+          ip = hm%bc%mxmedium%points_map(ip_in,idim)
+          st%ep(ip) = hm%bc%mxmedium%ep(ip_in,idim)
+          st%mu(ip) = hm%bc%mxmedium%mu(ip_in,idim)
         end do
       end if
     end do
@@ -2489,69 +2489,69 @@ contains
 
       ! calculation g(1,2)
       call zderivatives_partial(gr%der, ff_rs_state_pml(:,2), tmp_partial(:), 1, set_bc = .false.)
-      do ip_in=1, hm%bc%pml_points_number
-        ip       = hm%bc%pml_points_map(ip_in)
-        pml_a(:) = hm%bc%pml_a(ip_in,:)
-        pml_b(:) = hm%bc%pml_b(ip_in,:)
-        pml_g(:) = hm%bc%pml_conv_plus(ip_in,1,:)
+      do ip_in=1, hm%bc%pml%points_number
+        ip       = hm%bc%pml%points_map(ip_in)
+        pml_a(:) = hm%bc%pml%a(ip_in,:)
+        pml_b(:) = hm%bc%pml%b(ip_in,:)
+        pml_g(:) = hm%bc%pml%conv_plus(ip_in,1,:)
         pml_g(2) = real(pml_a(1)) * real(tmp_partial(ip)) + real(pml_b(1)) * real(pml_g(2)) + &
                    M_zI * ( aimag(pml_a(1)) * aimag(tmp_partial(ip)) + aimag(pml_b(1)) * aimag(pml_g(2)) )
-        hm%bc%pml_conv_plus(ip_in,1,:) = pml_g(:)
+        hm%bc%pml%conv_plus(ip_in,1,:) = pml_g(:)
       end do
       ! calculation g(2,1)
       call zderivatives_partial(gr%der, ff_rs_state_pml(:,1), tmp_partial(:), 2, set_bc = .false.)
-      do ip_in=1, hm%bc%pml_points_number
-        ip       = hm%bc%pml_points_map(ip_in)
-        pml_a(:) = hm%bc%pml_a(ip_in,:)
-        pml_b(:) = hm%bc%pml_b(ip_in,:)
-        pml_g(:) = hm%bc%pml_conv_plus(ip_in,2,:)
+      do ip_in=1, hm%bc%pml%points_number
+        ip       = hm%bc%pml%points_map(ip_in)
+        pml_a(:) = hm%bc%pml%a(ip_in,:)
+        pml_b(:) = hm%bc%pml%b(ip_in,:)
+        pml_g(:) = hm%bc%pml%conv_plus(ip_in,2,:)
         pml_g(1) = real(pml_a(2)) * real(tmp_partial(ip)) + real(pml_b(2)) * real(pml_g(1)) + &
                    M_zI * ( aimag(pml_a(2)) * aimag(tmp_partial(ip)) + aimag(pml_b(2)) * aimag(pml_g(1)) )
-        hm%bc%pml_conv_plus(ip_in,2,:) = pml_g(:)
+        hm%bc%pml%conv_plus(ip_in,2,:) = pml_g(:)
       end do
       ! calculation g(1,3)
       call zderivatives_partial(gr%der, ff_rs_state_pml(:,3), tmp_partial(:), 1, set_bc = .false.)
-      do ip_in=1, hm%bc%pml_points_number
-        ip       = hm%bc%pml_points_map(ip_in)
-        pml_a(:) = hm%bc%pml_a(ip_in,:)
-        pml_b(:) = hm%bc%pml_b(ip_in,:)
-        pml_g(:) = hm%bc%pml_conv_plus(ip_in,1,:)
+      do ip_in=1, hm%bc%pml%points_number
+        ip       = hm%bc%pml%points_map(ip_in)
+        pml_a(:) = hm%bc%pml%a(ip_in,:)
+        pml_b(:) = hm%bc%pml%b(ip_in,:)
+        pml_g(:) = hm%bc%pml%conv_plus(ip_in,1,:)
         pml_g(3) = real(pml_a(1)) * real(tmp_partial(ip)) + real(pml_b(1)) * real(pml_g(3)) + &
                    M_zI * ( aimag(pml_a(1)) * aimag(tmp_partial(ip)) + aimag(pml_b(1)) * aimag(pml_g(3)) )
-        hm%bc%pml_conv_plus(ip_in,1,:) = pml_g(:)
+        hm%bc%pml%conv_plus(ip_in,1,:) = pml_g(:)
       end do
       ! calculation g(3,1)
       call zderivatives_partial(gr%der, ff_rs_state_pml(:,1), tmp_partial(:), 3, set_bc = .false.)
-      do ip_in=1, hm%bc%pml_points_number
-        ip       = hm%bc%pml_points_map(ip_in)
-        pml_a(:) = hm%bc%pml_a(ip_in,:)
-        pml_b(:) = hm%bc%pml_b(ip_in,:)
-        pml_g(:) = hm%bc%pml_conv_plus(ip_in,3,:)
+      do ip_in=1, hm%bc%pml%points_number
+        ip       = hm%bc%pml%points_map(ip_in)
+        pml_a(:) = hm%bc%pml%a(ip_in,:)
+        pml_b(:) = hm%bc%pml%b(ip_in,:)
+        pml_g(:) = hm%bc%pml%conv_plus(ip_in,3,:)
         pml_g(1) = real(pml_a(3)) * real(tmp_partial(ip)) + real(pml_b(3)) * real(pml_g(1)) + &
                    M_zI * ( aimag(pml_a(3)) * aimag(tmp_partial(ip)) + aimag(pml_b(3)) * aimag(pml_g(1)) )
-        hm%bc%pml_conv_plus(ip_in,3,:) = pml_g(:)
+        hm%bc%pml%conv_plus(ip_in,3,:) = pml_g(:)
       end do
       ! calculation g(2,3)
       call zderivatives_partial(gr%der, ff_rs_state_pml(:,3), tmp_partial(:), 2, set_bc = .false.)
-      do ip_in=1, hm%bc%pml_points_number
-        ip       = hm%bc%pml_points_map(ip_in)
-        pml_a(:) = hm%bc%pml_a(ip_in,:)
-        pml_b(:) = hm%bc%pml_b(ip_in,:)
-        pml_g(:) = hm%bc%pml_conv_plus(ip_in,2,:)
+      do ip_in=1, hm%bc%pml%points_number
+        ip       = hm%bc%pml%points_map(ip_in)
+        pml_a(:) = hm%bc%pml%a(ip_in,:)
+        pml_b(:) = hm%bc%pml%b(ip_in,:)
+        pml_g(:) = hm%bc%pml%conv_plus(ip_in,2,:)
         pml_g(3) = real(pml_a(2)) * real(tmp_partial(ip)) + real(pml_b(2)) * real(pml_g(3)) + &
                    M_zI * ( aimag(pml_a(2)) * aimag(tmp_partial(ip)) + aimag(pml_b(2)) * aimag(pml_g(3)) )
-        hm%bc%pml_conv_plus(ip_in,2,:) = pml_g(:)
+        hm%bc%pml%conv_plus(ip_in,2,:) = pml_g(:)
       end do
       ! calculation g(3,2)
       call zderivatives_partial(gr%der, ff_rs_state_pml(:,2), tmp_partial(:), 3, set_bc = .false.)
-      do ip_in=1, hm%bc%pml_points_number
-        ip       = hm%bc%pml_points_map(ip_in)
-        pml_a(:) = hm%bc%pml_a(ip_in,:)
-        pml_b(:) = hm%bc%pml_b(ip_in,:)
-        pml_g(:) = hm%bc%pml_conv_plus(ip_in,3,:)
+      do ip_in=1, hm%bc%pml%points_number
+        ip       = hm%bc%pml%points_map(ip_in)
+        pml_a(:) = hm%bc%pml%a(ip_in,:)
+        pml_b(:) = hm%bc%pml%b(ip_in,:)
+        pml_g(:) = hm%bc%pml%conv_plus(ip_in,3,:)
         pml_g(2) = real(pml_a(3)) * real(tmp_partial(ip)) + real(pml_b(3)) * real(pml_g(2)) + &
                    M_zI * ( aimag(pml_a(3)) * aimag(tmp_partial(ip)) + aimag(pml_b(3)) * aimag(pml_g(2)) )
-        hm%bc%pml_conv_plus(ip_in,3,:) = pml_g(:)
+        hm%bc%pml%conv_plus(ip_in,3,:) = pml_g(:)
       end do
 
       SAFE_DEALLOCATE_A(tmp_partial)
@@ -2563,98 +2563,98 @@ contains
       ! calculation g(1,2)
       call zderivatives_partial(gr%der, ff_rs_state_pml(:,2), tmp_partial_2(:,1), 1, set_bc = .false.)
       call zderivatives_partial(gr%der, ff_rs_state_pml(:,5), tmp_partial_2(:,2), 1, set_bc = .false.)
-      do ip_in=1, hm%bc%pml_points_number
-        ip         = hm%bc%pml_points_map(ip_in)
-        pml_a(:)   = hm%bc%pml_a(ip_in,:)
-        pml_b(:)   = hm%bc%pml_b(ip_in,:)
-        pml_g_p(:) = hm%bc%pml_conv_plus(ip_in,1,:)
-        pml_g_m(:) = hm%bc%pml_conv_minus(ip_in,1,:)
+      do ip_in=1, hm%bc%pml%points_number
+        ip         = hm%bc%pml%points_map(ip_in)
+        pml_a(:)   = hm%bc%pml%a(ip_in,:)
+        pml_b(:)   = hm%bc%pml%b(ip_in,:)
+        pml_g_p(:) = hm%bc%pml%conv_plus(ip_in,1,:)
+        pml_g_m(:) = hm%bc%pml%conv_minus(ip_in,1,:)
         pml_g_p(2) = real(pml_a(1)) * real(tmp_partial_2(ip,1)) + real(pml_b(1)) * real(pml_g_p(2)) + &
                      M_zI * ( aimag(pml_a(1)) * aimag(tmp_partial_2(ip,1)) + aimag(pml_b(1)) * aimag(pml_g_p(2)) )
         pml_g_m(2) = real(pml_a(1)) * real(tmp_partial_2(ip,2)) + real(pml_b(1)) * real(pml_g_m(2)) + &
                      M_zI * ( aimag(pml_a(1)) * aimag(tmp_partial_2(ip,2)) + aimag(pml_b(1)) * aimag(pml_g_m(2)) )
-        hm%bc%pml_conv_plus(ip_in,1,:) = pml_g_p(:)
-        hm%bc%pml_conv_minus(ip_in,1,:) = pml_g_m(:)
+        hm%bc%pml%conv_plus(ip_in,1,:) = pml_g_p(:)
+        hm%bc%pml%conv_minus(ip_in,1,:) = pml_g_m(:)
       end do
       ! calculation g(2,1)
       call zderivatives_partial(gr%der, ff_rs_state_pml(:,1), tmp_partial_2(:,1), 2, set_bc = .false.)
       call zderivatives_partial(gr%der, ff_rs_state_pml(:,4), tmp_partial_2(:,2), 2, set_bc = .false.)
-      do ip_in=1, hm%bc%pml_points_number
-        ip         = hm%bc%pml_points_map(ip_in)
-        pml_a(:)   = hm%bc%pml_a(ip_in,:)
-        pml_b(:)   = hm%bc%pml_b(ip_in,:)
-        pml_g_p(:) = hm%bc%pml_conv_plus(ip_in,2,:)
-        pml_g_m(:) = hm%bc%pml_conv_minus(ip_in,2,:)
+      do ip_in=1, hm%bc%pml%points_number
+        ip         = hm%bc%pml%points_map(ip_in)
+        pml_a(:)   = hm%bc%pml%a(ip_in,:)
+        pml_b(:)   = hm%bc%pml%b(ip_in,:)
+        pml_g_p(:) = hm%bc%pml%conv_plus(ip_in,2,:)
+        pml_g_m(:) = hm%bc%pml%conv_minus(ip_in,2,:)
         pml_g_p(1) = real(pml_a(2)) * real(tmp_partial_2(ip,1)) + real(pml_b(2)) * real(pml_g_p(1)) + &
                      M_zI * ( aimag(pml_a(2)) * aimag(tmp_partial_2(ip,1)) + aimag(pml_b(2)) * aimag(pml_g_p(1)) )
         pml_g_m(1) = real(pml_a(2)) * real(tmp_partial_2(ip,2)) + real(pml_b(2)) * real(pml_g_m(1)) + &
                      M_zI * ( aimag(pml_a(2)) * aimag(tmp_partial_2(ip,2)) + aimag(pml_b(2)) * aimag(pml_g_m(1)) )
-        hm%bc%pml_conv_plus(ip_in,2,:) = pml_g_p(:)
-        hm%bc%pml_conv_minus(ip_in,2,:) = pml_g_m(:)
+        hm%bc%pml%conv_plus(ip_in,2,:) = pml_g_p(:)
+        hm%bc%pml%conv_minus(ip_in,2,:) = pml_g_m(:)
       end do
       ! calculation g(1,3)
       call zderivatives_partial(gr%der, ff_rs_state_pml(:,3), tmp_partial_2(:,1), 1, set_bc = .false.)
       call zderivatives_partial(gr%der, ff_rs_state_pml(:,6), tmp_partial_2(:,2), 1, set_bc = .false.)
-      do ip_in=1, hm%bc%pml_points_number
-        ip         = hm%bc%pml_points_map(ip_in)
-        pml_a(:)   = hm%bc%pml_a(ip_in,:)
-        pml_b(:)   = hm%bc%pml_b(ip_in,:)
-        pml_g_p(:) = hm%bc%pml_conv_plus(ip_in,1,:)
-        pml_g_m(:) = hm%bc%pml_conv_minus(ip_in,1,:)
+      do ip_in=1, hm%bc%pml%points_number
+        ip         = hm%bc%pml%points_map(ip_in)
+        pml_a(:)   = hm%bc%pml%a(ip_in,:)
+        pml_b(:)   = hm%bc%pml%b(ip_in,:)
+        pml_g_p(:) = hm%bc%pml%conv_plus(ip_in,1,:)
+        pml_g_m(:) = hm%bc%pml%conv_minus(ip_in,1,:)
         pml_g_p(3) = real(pml_a(1)) * real(tmp_partial_2(ip,1)) + real(pml_b(1)) * real(pml_g_p(3)) + &
                      M_zI * ( aimag(pml_a(1)) * aimag(tmp_partial_2(ip,1)) + aimag(pml_b(1)) * aimag(pml_g_p(3)) )
         pml_g_m(3) = real(pml_a(1)) * real(tmp_partial_2(ip,2)) + real(pml_b(1)) * real(pml_g_m(3)) + &
                      M_zI * ( aimag(pml_a(1)) * aimag(tmp_partial_2(ip,2)) + aimag(pml_b(1)) * aimag(pml_g_m(3)) )
-        hm%bc%pml_conv_plus(ip_in,1,:) = pml_g_p(:)
-        hm%bc%pml_conv_minus(ip_in,1,:) = pml_g_m(:)
+        hm%bc%pml%conv_plus(ip_in,1,:) = pml_g_p(:)
+        hm%bc%pml%conv_minus(ip_in,1,:) = pml_g_m(:)
       end do
       ! calculation g(3,1)
       call zderivatives_partial(gr%der, ff_rs_state_pml(:,1), tmp_partial_2(:,1), 3, set_bc = .false.)
       call zderivatives_partial(gr%der, ff_rs_state_pml(:,4), tmp_partial_2(:,2), 3, set_bc = .false.)
-      do ip_in=1, hm%bc%pml_points_number
-        ip         = hm%bc%pml_points_map(ip_in)
-        pml_a(:)   = hm%bc%pml_a(ip_in,:)
-        pml_b(:)   = hm%bc%pml_b(ip_in,:)
-        pml_g_p(:) = hm%bc%pml_conv_plus(ip_in,3,:)
-        pml_g_m(:) = hm%bc%pml_conv_minus(ip_in,3,:)
+      do ip_in=1, hm%bc%pml%points_number
+        ip         = hm%bc%pml%points_map(ip_in)
+        pml_a(:)   = hm%bc%pml%a(ip_in,:)
+        pml_b(:)   = hm%bc%pml%b(ip_in,:)
+        pml_g_p(:) = hm%bc%pml%conv_plus(ip_in,3,:)
+        pml_g_m(:) = hm%bc%pml%conv_minus(ip_in,3,:)
         pml_g_p(1) = real(pml_a(3)) * real(tmp_partial_2(ip,1)) + real(pml_b(3)) * real(pml_g_p(1)) + &
                      M_zI * ( aimag(pml_a(3)) * aimag(tmp_partial_2(ip,1)) + aimag(pml_b(3)) * aimag(pml_g_p(1)) )
         pml_g_m(1) = real(pml_a(3)) * real(tmp_partial_2(ip,2)) + real(pml_b(3)) * real(pml_g_m(1)) + &
                      M_zI * ( aimag(pml_a(3)) * aimag(tmp_partial_2(ip,2)) + aimag(pml_b(3)) * aimag(pml_g_m(1)) )
-        hm%bc%pml_conv_plus(ip_in,3,:) = pml_g_p(:)
-        hm%bc%pml_conv_minus(ip_in,3,:) = pml_g_m(:)
+        hm%bc%pml%conv_plus(ip_in,3,:) = pml_g_p(:)
+        hm%bc%pml%conv_minus(ip_in,3,:) = pml_g_m(:)
       end do
       ! calculation g(2,3)
       call zderivatives_partial(gr%der, ff_rs_state_pml(:,3), tmp_partial_2(:,1), 2, set_bc = .false.)
       call zderivatives_partial(gr%der, ff_rs_state_pml(:,6), tmp_partial_2(:,2), 2, set_bc = .false.)
-      do ip_in=1, hm%bc%pml_points_number
-        ip         = hm%bc%pml_points_map(ip_in)
-        pml_a(:)   = hm%bc%pml_a(ip_in,:)
-        pml_b(:)   = hm%bc%pml_b(ip_in,:)
-        pml_g_p(:) = hm%bc%pml_conv_plus(ip_in,2,:)
-        pml_g_m(:) = hm%bc%pml_conv_minus(ip_in,2,:)
+      do ip_in=1, hm%bc%pml%points_number
+        ip         = hm%bc%pml%points_map(ip_in)
+        pml_a(:)   = hm%bc%pml%a(ip_in,:)
+        pml_b(:)   = hm%bc%pml%b(ip_in,:)
+        pml_g_p(:) = hm%bc%pml%conv_plus(ip_in,2,:)
+        pml_g_m(:) = hm%bc%pml%conv_minus(ip_in,2,:)
         pml_g_p(3) = real(pml_a(2)) * real(tmp_partial_2(ip,1)) + real(pml_b(2)) * real(pml_g_p(3)) + &
                      M_zI * ( aimag(pml_a(2)) * aimag(tmp_partial_2(ip,1)) + aimag(pml_b(2)) * aimag(pml_g_p(3)) )
         pml_g_m(3) = real(pml_a(2)) * real(tmp_partial_2(ip,2)) + real(pml_b(2)) * real(pml_g_m(3)) + &
                      M_zI * ( aimag(pml_a(2)) * aimag(tmp_partial_2(ip,2)) + aimag(pml_b(2)) * aimag(pml_g_m(3)) )
-        hm%bc%pml_conv_plus(ip_in,2,:) = pml_g_p(:)
-        hm%bc%pml_conv_minus(ip_in,2,:) = pml_g_m(:)
+        hm%bc%pml%conv_plus(ip_in,2,:) = pml_g_p(:)
+        hm%bc%pml%conv_minus(ip_in,2,:) = pml_g_m(:)
       end do
       ! calculation g(3,2)
       call zderivatives_partial(gr%der, ff_rs_state_pml(:,2), tmp_partial_2(:,1), 3, set_bc = .false.)
       call zderivatives_partial(gr%der, ff_rs_state_pml(:,5), tmp_partial_2(:,2), 3, set_bc = .false.)
-      do ip_in=1, hm%bc%pml_points_number
-        ip         = hm%bc%pml_points_map(ip_in)
-        pml_a(:)   = hm%bc%pml_a(ip_in,:)
-        pml_b(:)   = hm%bc%pml_b(ip_in,:)
-        pml_g_p(:) = hm%bc%pml_conv_plus(ip_in,3,:)
-        pml_g_m(:) = hm%bc%pml_conv_minus(ip_in,3,:)
+      do ip_in=1, hm%bc%pml%points_number
+        ip         = hm%bc%pml%points_map(ip_in)
+        pml_a(:)   = hm%bc%pml%a(ip_in,:)
+        pml_b(:)   = hm%bc%pml%b(ip_in,:)
+        pml_g_p(:) = hm%bc%pml%conv_plus(ip_in,3,:)
+        pml_g_m(:) = hm%bc%pml%conv_minus(ip_in,3,:)
         pml_g_p(2) = real(pml_a(3)) * real(tmp_partial_2(ip,1)) + real(pml_b(3)) * real(pml_g_p(2)) + &
                      M_zI * ( aimag(pml_a(3)) * aimag(tmp_partial_2(ip,1)) + aimag(pml_b(3)) * aimag(pml_g_p(2)) )
         pml_g_m(2) = real(pml_a(3)) * real(tmp_partial_2(ip,2)) + real(pml_b(3)) * real(pml_g_m(2)) + &
                      M_zI * ( aimag(pml_a(3)) * aimag(tmp_partial_2(ip,2)) + aimag(pml_b(3)) * aimag(pml_g_m(2)) )
-        hm%bc%pml_conv_plus(ip_in,3,:) = pml_g_p(:)
-        hm%bc%pml_conv_minus(ip_in,3,:) = pml_g_m(:)
+        hm%bc%pml%conv_plus(ip_in,3,:) = pml_g_p(:)
+        hm%bc%pml%conv_minus(ip_in,3,:) = pml_g_m(:)
       end do
 
       SAFE_DEALLOCATE_A(tmp_partial_2)
@@ -2692,14 +2692,14 @@ contains
     call dderivatives_partial(gr%der, tmp_b(:,2), tmp_partial_b(:), 1, set_bc = .false.)
     tmp_partial_e(:) = sqrt(P_ep/M_TWO) * tmp_partial_e(:)
     tmp_partial_b(:) = sqrt(M_ONE/(M_TWO*P_mu)) * tmp_partial_b(:)
-    do ip_in=1, hm%bc%pml_points_number
-      ip       = hm%bc%pml_points_map(ip_in)
-      pml_a(:) = hm%bc%pml_a(ip_in,:)
-      pml_b(:) = hm%bc%pml_b(ip_in,:)
-      pml_g(:) = hm%bc%pml_conv_plus(ip_in,1,:)
+    do ip_in=1, hm%bc%pml%points_number
+      ip       = hm%bc%pml%points_map(ip_in)
+      pml_a(:) = hm%bc%pml%a(ip_in,:)
+      pml_b(:) = hm%bc%pml%b(ip_in,:)
+      pml_g(:) = hm%bc%pml%conv_plus(ip_in,1,:)
       pml_g(2) = real(pml_a(1)) * tmp_partial_e(ip) + real(pml_b(1)) * real(pml_g(2)) + &
                  M_zI * ( aimag(pml_a(1)) * tmp_partial_b(ip) + aimag(pml_b(1)) * aimag(pml_g(2)) )
-      hm%bc%pml_conv_plus(ip_in,1,:) = pml_g(:)
+      hm%bc%pml%conv_plus(ip_in,1,:) = pml_g(:)
     end do
 
     ! calculation g(2,1)
@@ -2707,14 +2707,14 @@ contains
     call dderivatives_partial(gr%der, tmp_b(:,1), tmp_partial_b(:), 2, set_bc = .false.)
     tmp_partial_e(:) = sqrt(P_ep/M_TWO) * tmp_partial_e(:)
     tmp_partial_b(:) = sqrt(M_ONE/(M_TWO*P_mu)) * tmp_partial_b(:)
-    do ip_in=1, hm%bc%pml_points_number
-      ip       = hm%bc%pml_points_map(ip_in)
-      pml_a(:) = hm%bc%pml_a(ip_in,:)
-      pml_b(:) = hm%bc%pml_b(ip_in,:)
-      pml_g(:) = hm%bc%pml_conv_plus(ip_in,2,:)
+    do ip_in=1, hm%bc%pml%points_number
+      ip       = hm%bc%pml%points_map(ip_in)
+      pml_a(:) = hm%bc%pml%a(ip_in,:)
+      pml_b(:) = hm%bc%pml%b(ip_in,:)
+      pml_g(:) = hm%bc%pml%conv_plus(ip_in,2,:)
       pml_g(1) = real(pml_a(2)) * tmp_partial_e(ip) + real(pml_b(2)) * real(pml_g(1)) + &
                  M_zI * ( aimag(pml_a(2)) * tmp_partial_b(ip) + aimag(pml_b(2)) * aimag(pml_g(1)) )
-      hm%bc%pml_conv_plus(ip_in,2,:) = pml_g(:)
+      hm%bc%pml%conv_plus(ip_in,2,:) = pml_g(:)
     end do
 
     ! calculation g(1,3)
@@ -2722,14 +2722,14 @@ contains
     call dderivatives_partial(gr%der, tmp_b(:,3), tmp_partial_b(:), 1, set_bc = .false.)
     tmp_partial_e(:) = sqrt(P_ep/M_TWO) * tmp_partial_e(:)
     tmp_partial_b(:) = sqrt(M_ONE/(M_TWO*P_mu)) * tmp_partial_b(:)
-    do ip_in=1, hm%bc%pml_points_number
-      ip       = hm%bc%pml_points_map(ip_in)
-      pml_a(:) = hm%bc%pml_a(ip_in,:)
-      pml_b(:) = hm%bc%pml_b(ip_in,:)
-      pml_g(:) = hm%bc%pml_conv_plus(ip_in,1,:)
+    do ip_in=1, hm%bc%pml%points_number
+      ip       = hm%bc%pml%points_map(ip_in)
+      pml_a(:) = hm%bc%pml%a(ip_in,:)
+      pml_b(:) = hm%bc%pml%b(ip_in,:)
+      pml_g(:) = hm%bc%pml%conv_plus(ip_in,1,:)
       pml_g(3) = real(pml_a(1)) * tmp_partial_e(ip) + real(pml_b(1)) * real(pml_g(3)) + &
                  M_zI * ( aimag(pml_a(1)) * tmp_partial_b(ip) + aimag(pml_b(1)) * aimag(pml_g(3)) )
-      hm%bc%pml_conv_plus(ip_in,1,:) = pml_g(:)
+      hm%bc%pml%conv_plus(ip_in,1,:) = pml_g(:)
     end do
 
     ! calculation g(3,1)
@@ -2737,14 +2737,14 @@ contains
     call dderivatives_partial(gr%der, tmp_b(:,1), tmp_partial_b(:), 3, set_bc = .false.)
     tmp_partial_e(:) = sqrt(P_ep/M_TWO) * tmp_partial_e(:)
     tmp_partial_b(:) = sqrt(M_ONE/(M_TWO*P_mu)) * tmp_partial_b(:)
-    do ip_in=1, hm%bc%pml_points_number
-      ip       = hm%bc%pml_points_map(ip_in)
-      pml_a(:) = hm%bc%pml_a(ip_in,:)
-      pml_b(:) = hm%bc%pml_b(ip_in,:)
-      pml_g(:) = hm%bc%pml_conv_plus(ip_in,3,:)
+    do ip_in=1, hm%bc%pml%points_number
+      ip       = hm%bc%pml%points_map(ip_in)
+      pml_a(:) = hm%bc%pml%a(ip_in,:)
+      pml_b(:) = hm%bc%pml%b(ip_in,:)
+      pml_g(:) = hm%bc%pml%conv_plus(ip_in,3,:)
       pml_g(1) = real(pml_a(3)) * tmp_partial_e(ip) + real(pml_b(3)) * real(pml_g(1)) + &
                  M_zI * ( aimag(pml_a(3)) * tmp_partial_b(ip) + aimag(pml_b(3)) * aimag(pml_g(1)) )
-      hm%bc%pml_conv_plus(ip_in,3,:) = pml_g(:)
+      hm%bc%pml%conv_plus(ip_in,3,:) = pml_g(:)
     end do
 
     ! calculation g(2,3)
@@ -2752,14 +2752,14 @@ contains
     call dderivatives_partial(gr%der, tmp_b(:,3), tmp_partial_b(:), 2, set_bc = .false.)
     tmp_partial_e(:) = sqrt(P_ep/M_TWO) * tmp_partial_e(:)
     tmp_partial_b(:) = sqrt(M_ONE/(M_TWO*P_mu)) * tmp_partial_b(:)
-    do ip_in=1, hm%bc%pml_points_number
-      ip       = hm%bc%pml_points_map(ip_in)
-      pml_a(:) = hm%bc%pml_a(ip_in,:)
-      pml_b(:) = hm%bc%pml_b(ip_in,:)
-      pml_g(:) = hm%bc%pml_conv_plus(ip_in,2,:)
+    do ip_in=1, hm%bc%pml%points_number
+      ip       = hm%bc%pml%points_map(ip_in)
+      pml_a(:) = hm%bc%pml%a(ip_in,:)
+      pml_b(:) = hm%bc%pml%b(ip_in,:)
+      pml_g(:) = hm%bc%pml%conv_plus(ip_in,2,:)
       pml_g(3) = real(pml_a(2)) * tmp_partial_e(ip) + real(pml_b(2)) * real(pml_g(3)) + &
                  M_zI * ( aimag(pml_a(2)) * tmp_partial_b(ip) + aimag(pml_b(2)) * aimag(pml_g(3)) )
-      hm%bc%pml_conv_plus(ip_in,2,:) = pml_g(:)
+      hm%bc%pml%conv_plus(ip_in,2,:) = pml_g(:)
     end do
 
     ! calculation g(3,2)
@@ -2767,14 +2767,14 @@ contains
     call dderivatives_partial(gr%der, tmp_b(:,2), tmp_partial_b(:), 3, set_bc = .false.)
     tmp_partial_e(:) = sqrt(P_ep/M_TWO) * tmp_partial_e(:)
     tmp_partial_b(:) = sqrt(M_ONE/(M_TWO*P_mu)) * tmp_partial_b(:)
-    do ip_in=1, hm%bc%pml_points_number
-      ip       = hm%bc%pml_points_map(ip_in)
-      pml_a(:) = hm%bc%pml_a(ip_in,:)
-      pml_b(:) = hm%bc%pml_b(ip_in,:)
-      pml_g(:) = hm%bc%pml_conv_plus(ip_in,3,:)
+    do ip_in=1, hm%bc%pml%points_number
+      ip       = hm%bc%pml%points_map(ip_in)
+      pml_a(:) = hm%bc%pml%a(ip_in,:)
+      pml_b(:) = hm%bc%pml%b(ip_in,:)
+      pml_g(:) = hm%bc%pml%conv_plus(ip_in,3,:)
       pml_g(2) = real(pml_a(3)) * tmp_partial_e(ip) + real(pml_b(3)) * real(pml_g(2)) + &
                  M_zI * ( aimag(pml_a(3)) * tmp_partial_b(ip) + aimag(pml_b(3)) * aimag(pml_g(2)) )
-      hm%bc%pml_conv_plus(ip_in,3,:) = pml_g(:)
+      hm%bc%pml%conv_plus(ip_in,3,:) = pml_g(:)
     end do
 
     SAFE_DEALLOCATE_A(tmp_e)

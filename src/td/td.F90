@@ -1305,9 +1305,9 @@ contains
         do id1=1, 3
           do id2=1, 3
             id = id+1
-            do ip_in=1, hm%bc%pml_points_number
-              zff(ip_in, 2*st%dim+  id) = hm%bc%pml_conv_plus(ip_in,id1,id2)
-              zff(ip_in, 2*st%dim+9+id) = hm%bc%pml_conv_minus(ip_in,id1,id2)
+            do ip_in=1, hm%bc%pml%points_number
+              zff(ip_in, 2*st%dim+  id) = hm%bc%pml%conv_plus(ip_in,id1,id2)
+              zff(ip_in, 2*st%dim+9+id) = hm%bc%pml%conv_minus(ip_in,id1,id2)
             end do
           end do
         end do
@@ -1319,9 +1319,9 @@ contains
         do id1=1, 3
           do id2=1, 3
             id = id+1
-            do ip_in=1, hm%bc%pml_points_number
-              zff(ip_in, st%dim+  id) = hm%bc%pml_conv_plus(ip_in,id1,id2)
-              zff(ip_in, st%dim+9+id) = hm%bc%pml_conv_minus(ip_in,id1,id2)
+            do ip_in=1, hm%bc%pml%points_number
+              zff(ip_in, st%dim+  id) = hm%bc%pml%conv_plus(ip_in,id1,id2)
+              zff(ip_in, st%dim+9+id) = hm%bc%pml%conv_minus(ip_in,id1,id2)
             end do
           end do
         end do
