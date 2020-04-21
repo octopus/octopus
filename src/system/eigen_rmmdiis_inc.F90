@@ -91,7 +91,7 @@ subroutine X(eigensolver_rmmdiis) (namespace, gr, st, hm, pre, tol, niter, conve
     if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm, me)
 
     !This is the Rayleigh quotient
-    do ist=minst, maxst
+    do ist = minst, maxst
       st%eigenval(ist, ik) = R_REAL(me(1, ist - minst + 1))/R_REAL(me(2, ist - minst + 1))
     end do
 
@@ -318,7 +318,7 @@ subroutine X(eigensolver_rmmdiis) (namespace, gr, st, hm, pre, tol, niter, conve
     if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm, me)
 
     !This is the Rayleigh quotient
-    do ist=minst, maxst
+    do ist = minst, maxst
       st%eigenval(ist, ik) = R_REAL(me(1, ist - minst + 1))/R_REAL(me(2, ist - minst + 1))
     end do
 
@@ -425,7 +425,7 @@ subroutine X(eigensolver_rmmdiis_min) (namespace, gr, st, hm, pre, niter, conver
       if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm, me1)
 
       !This is the Rayleigh quotient
-      do ist=minst, maxst
+      do ist = minst, maxst
         st%eigenval(ist, ik) = R_REAL(me1(1, ist - minst + 1)/me1(2, ist - minst + 1))
       end do
  

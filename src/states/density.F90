@@ -653,15 +653,15 @@ contains
 
     PUSH_SUB(states_elec_total_density)
 
-    do ip = 1, mesh%np
-      do is = 1, st%d%nspin
+    do is = 1, st%d%nspin
+      do ip = 1, mesh%np
         total_rho(ip, is) = st%rho(ip, is)
       end do
     end do
 
     if(associated(st%rho_core)) then
-      do ip = 1, mesh%np
-        do is = 1, st%d%spin_channels
+      do is = 1, st%d%spin_channels
+        do ip = 1, mesh%np
           total_rho(ip, is) = total_rho(ip, is) + st%rho_core(ip)/st%d%spin_channels
         end do
       end do
@@ -669,8 +669,8 @@ contains
 
     ! Add, if it exists, the frozen density from the inner orbitals.
     if(associated(st%frozen_rho)) then
-      do ip = 1, mesh%np
-        do is = 1, st%d%nspin
+      do is = 1, st%d%nspin
+        do ip = 1, mesh%np
           total_rho(ip, is) = total_rho(ip, is) + st%frozen_rho(ip, is)
         end do
       end do

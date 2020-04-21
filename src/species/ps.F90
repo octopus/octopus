@@ -1215,7 +1215,7 @@ contains
           if (is_diagonal(ps_xml%nchannels, ps_xml%dij(ll, :, :)) .or. &
               pseudo_has_total_angular_momentum(ps_xml%pseudo)) then
             matrix = CNST(0.0)
-            do ic=1, ps_xml%nchannels
+            do ic = 1, ps_xml%nchannels
               eigenvalues(ic) = ps_xml%dij(ll, ic, ic)
               matrix(ic, ic) = CNST(1.0)
             end do

@@ -292,8 +292,8 @@ contains
     call sort(this%map, order)
 
     do ip = 1, this%np_part
- this%x(ip, 0:sb%dim) = xtmp(order(ip), 0:sb%dim)
-end do
+      this%x(ip, 0:sb%dim) = xtmp(order(ip), 0:sb%dim)
+    end do
 
     !check whether points overlap
 

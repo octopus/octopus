@@ -110,7 +110,7 @@ subroutine X(oscillator_strengths)(cas, mesh, st)
 
       ! normalize: for integral over sphere one would multiply by pi/N, but since
       !            we want the average, the integral must be divided by 4*pi
-      do ia=1, cas%n_pairs
+      do ia = 1, cas%n_pairs
         cas%qf_avg(ia) = cas%qf_avg(ia) / (4*cas%avg_order)
       end do
 
@@ -807,9 +807,9 @@ subroutine X(casida_forces)(cas, sys, mesh, st)
       end do
 
       if (cas%type /= CASIDA_EPS_DIFF .and. cas%calc_forces_kernel) then
-        do ip = 1, mesh%np
+        do is2 = 1, st%d%nspin
           do is1 = 1, st%d%nspin
-            do is2 = 1, st%d%nspin
+            do ip = 1, mesh%np
               lr_fxc(ip, is1, is2) = sum(kxc(ip, is1, is2, :) * ddl_rho(ip, :))
             end do
           end do

@@ -1347,7 +1347,7 @@ contains
         do i1 = 1,n01
           karray(i1+n1h) = kernel(i1,i2,i3)
         end do
-        do i1=2,n01
+        do i1 = 2,n01
           karray(n1h-i1+1+nd1-nfft1) = kernel(i1,i2,i3)
         end do
         do i1 = 1,n1h
@@ -1355,14 +1355,14 @@ contains
           karrayhalf(2,i1,i2+n2h,i3+n3h) = karray(2*i1)
         end do
       end do
-      do i2=2,n02
+      do i2 = 2,n02
         do i1 = 1,nd1h
           karrayhalf(:,i1,n2h-i2+1+nd2-nfft2,i3+n3h) = &
             karrayhalf(:,i1,i2+n2h,i3+n3h)
         end do
       end do
     end do
-    do i3=2,n03
+    do i3 = 2,n03
       do i2 = 1,nd2
         do i1 = 1,nd1h
           karrayhalf(:,i1,i2,n3h-i3+1+nd3-nfft3) = karrayhalf(:,i1,i2,i3+n3h)

@@ -116,8 +116,8 @@ contains
 
     cv%npos = geo%natoms
     SAFE_ALLOCATE(cv%pos(1:cv%npos, 1:sb%dim))
-    do ipos=1, cv%npos
-      do idir = 1, sb%dim
+    do idir = 1, sb%dim
+      do ipos = 1, cv%npos
         cv%pos(ipos, idir) = geo%atom(ipos)%x(idir)
       end do
     end do

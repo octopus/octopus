@@ -454,7 +454,7 @@ end subroutine X(bi_conjugate_gradients)
         end if
         call op(q, p)
         do ip = 1, np
-            p(ip) = alpha*p(ip)
+          p(ip) = alpha*p(ip)
         end do
 
         epsilon = dotu(q, p)
@@ -465,7 +465,7 @@ end subroutine X(bi_conjugate_gradients)
         end if
         beta = epsilon/delta
         do ip = 1, np
-            v(ip) = -beta*v(ip) + p(ip)
+          v(ip) = -beta*v(ip) + p(ip)
         end do
         oldrho = rho
 
@@ -474,7 +474,7 @@ end subroutine X(bi_conjugate_gradients)
         call prec(v, z)
         tmp = M_ONE/alpha
         do ip = 1, np
-            z(ip) = tmp*z(ip)
+          z(ip) = tmp*z(ip)
         end do
 
         xsi = nrm2(z)

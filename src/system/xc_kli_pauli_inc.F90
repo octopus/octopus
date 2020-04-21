@@ -37,9 +37,9 @@ subroutine xc_kli_pauli_solve(mesh, namespace, st, oep)
   SAFE_ALLOCATE(n(1:mesh%np))
   SAFE_ALLOCATE(lambda(1:mesh%np))
   rho(1:mesh%np, 1:4) = st%rho(1:mesh%np, 1:4)
-  do ip = 1,mesh%np
-    do is = 1, 2
-      if (rho(ip,is)  <  CNST(1e-20)) rho(ip,is) = CNST(1e-20)
+  do is = 1, 2
+    do ip = 1,mesh%np
+      if (rho(ip, is)  <  CNST(1e-20)) rho(ip, is) = CNST(1e-20)
     end do
   end do
   n(1:mesh%np) = rho(1:mesh%np,1) + rho(1:mesh%np,2)
@@ -186,9 +186,9 @@ subroutine xc_kli_pauli_solve(mesh, namespace, st, oep)
         t_vi(1:mesh%np,2,:) = p_i(1:mesh%np,1,:)
         t_vi(1:mesh%np,3,:) =-p_i(1:mesh%np,3,:) 
         t_vi(1:mesh%np,4,:) =-p_i(1:mesh%np,4,:)
-        do ip = 1, mesh%np
-          do is = 1, st%d%nspin
-            t_vi(ip,is,:) = t_vi(ip,is,:)*delta_v(:)
+        do is = 1, st%d%nspin
+          do ip = 1, mesh%np
+            t_vi(ip, is, :) = t_vi(ip, is, :)*delta_v(:)
           end do
         end do
 
@@ -202,8 +202,8 @@ subroutine xc_kli_pauli_solve(mesh, namespace, st, oep)
 
         !
         rhov = M_ZERO
-        do ip = 1, mesh%np
-          do ist = 1, eigen_n
+        do ist = 1, eigen_n
+          do ip = 1, mesh%np
             rhov(ip) = rhov(ip) + sum(rho(ip,:)*t_vi(ip,:,ist))
           end do
         end do

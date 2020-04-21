@@ -730,7 +730,7 @@ contains
     ! --- l=1 ---
     grad_matrix = M_ONE
     grad_matrix(1,1) = -r*sin(x(1))
-    do m=2, n-1
+    do m = 2, n-1
       grad_matrix(m,1) = M_ZERO
     end do
 

@@ -786,7 +786,7 @@ contains
     do idim = 1, sb%dim
       norm = sqrt(sum(sb%rlattice_primitive(1:sb%dim, idim)**2))
       sb%lsize(idim) = sb%lsize(idim) * norm
-      do jdim=1, sb%dim
+      do jdim = 1, sb%dim
         sb%rlattice_primitive(jdim, idim) = sb%rlattice_primitive(jdim, idim) / norm
         sb%rlattice(jdim, idim) = sb%rlattice_primitive(jdim, idim) * M_TWO*sb%lsize(idim)
       end do

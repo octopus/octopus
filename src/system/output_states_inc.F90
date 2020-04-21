@@ -53,8 +53,8 @@ subroutine output_states(outp, namespace, dir, st, gr, geo, hm)
     SAFE_ALLOCATE(polarization(1:gr%fine%mesh%np, 1:gr%sb%dim))
 
     do is = 1, st%d%nspin
-      do ip = 1, gr%fine%mesh%np
-        do idir = 1, gr%sb%dim
+      do idir = 1, gr%sb%dim
+        do ip = 1, gr%fine%mesh%np
           polarization(ip, idir) = st%rho(ip, is)*gr%fine%mesh%x(ip, idir)
         end do
       end do

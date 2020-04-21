@@ -1631,7 +1631,7 @@ contains
       if(iop == symmetries_identity_index(symm) .and. &
             .not. time_reversal) cycle
 
-      do ik=kpt_dist%start, kpt_dist%end
+      do ik = kpt_dist%start, kpt_dist%end
         kmap(ik) = ik
       end do
 

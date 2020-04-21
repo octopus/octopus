@@ -185,7 +185,7 @@ program oct_unfold
   end if
 
   do idim = 1, sb%dim
-    do jdim=1, sb%dim
+    do jdim = 1, sb%dim
       rlattice_pc(jdim, idim) = rlattice_pc(jdim, idim) * lparams(idim)
     end do
   end do

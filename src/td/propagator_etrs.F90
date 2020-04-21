@@ -345,7 +345,7 @@ contains
          tr%vksold%v_old(:, :, 1:3), time, tr%vksold%v_old(:, :, 0))
       call interpolate( (/time - dt, time - M_TWO*dt, time - M_THREE*dt/), &
          tr%vksold%vtau_old(:, :, 1:3), time, tr%vksold%vtau_old(:, :, 0))
-      do ispin=1, st%d%nspin
+      do ispin = 1, st%d%nspin
         do ip = 1, gr%mesh%np
           vold(ip, ispin) =  CNST(0.5)*dt*(hm%vhxc(ip, ispin) - vold(ip, ispin))
           vtauold(ip, ispin) =  CNST(0.5)*dt*(hm%vtau(ip, ispin) - vtauold(ip, ispin))

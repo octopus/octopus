@@ -114,8 +114,8 @@ contains
     call stencil_allocate(stu, st1%size + st2%size)
 
     ! copy the first stencil
-    do idir = 1, dim
-      do ii = 1, st1%size
+    do ii = 1, st1%size
+      do idir = 1, dim
         stu%points(idir, ii) = st1%points(idir, ii)
       end do
     end do

@@ -1283,7 +1283,7 @@ subroutine X(hamiltonian_elec_base_nlocal_force)(this, mesh, st, iqn, ndim, psi1
       if(allocated(this%projector_phases)) then
         do ip = 1, npoints
           do ist = 1, nst
-            do idir=0, ndim
+            do idir = 0, ndim
               psi(idir, ist, ip) = this%projector_phases(ip, imat, psi1b%linear_to_idim(ist), psi1b%ik)*psi(idir, ist, ip)
             end do
           end do

@@ -352,8 +352,8 @@ contains
     end do
     
     do iz = 1, nfs(3)
-      do iy=1, nfs(2)
-        do ix=1, nfs(1)
+      do iy = 1, nfs(2)
+        do ix = 1, nfs(1)
           fft_Coulb_FS(ix, iy, iz) = M_FOUR*M_PI*fft_Coulb_FS(ix, iy, iz)
         end do
       end do
@@ -466,8 +466,8 @@ contains
     end do
 
     do iz = 1, cube%fs_n_global(3)
-      do iy=1, cube%fs_n_global(2)
-        do ix=1, cube%fs_n_global(1)
+      do iy = 1, cube%fs_n_global(2)
+        do ix = 1, cube%fs_n_global(1)
           fft_Coulb_FS(ix, iy, iz) = M_FOUR*M_PI*fft_Coulb_FS(ix, iy, iz)
         end do
       end do
@@ -575,8 +575,8 @@ contains
     end do
 
     do iz = 1, cube%fs_n_global(3)
-      do iy=1, cube%fs_n_global(2)
-        do ix=1, cube%fs_n_global(1)
+      do iy = 1, cube%fs_n_global(2)
+        do ix = 1, cube%fs_n_global(1)
           fft_Coulb_FS(ix, iy, iz) = M_FOUR*M_PI*fft_Coulb_FS(ix, iy, iz)
         end do
       end do
@@ -664,8 +664,8 @@ contains
     end do
 
     do iz = 1, cube%fs_n(3)
-      do iy=1, cube%fs_n(2)
-        do ix=1, cube%fs_n(1)
+      do iy = 1, cube%fs_n(2)
+        do ix = 1, cube%fs_n(1)
           fft_Coulb_FS(ix, iy, iz) = M_FOUR*M_PI*fft_Coulb_FS(ix, iy, iz)
         end do
       end do

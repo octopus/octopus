@@ -419,11 +419,11 @@ program photoelectron_spectrum
 
   ! Convert the grid units
   if (need_pmesh) then    
-    do i1 = 1, llp(1)
-      do i2 = 1, llp(2)
-        do i3 = 1, llp(3)
-          do ii = 1,3
-            pmesh(i1,i2,i3,ii) = units_from_atomic(sqrt(units_out%energy), pmesh(i1,i2,i3,ii))
+    do ii = 1,3
+      do i3 = 1, llp(3)
+        do i2 = 1, llp(2)
+          do i1 = 1, llp(1)
+            pmesh(i1, i2, i3, ii) = units_from_atomic(sqrt(units_out%energy), pmesh(i1, i2, i3, ii))
           end do
         end do
       end do
@@ -686,11 +686,11 @@ program photoelectron_spectrum
       if(bitand(pesout%what, OPTION__PHOTOELECTRONSPECTRUMOUTPUT__ARPES) /= 0) then
         call messages_print_stress(stdout, "ARPES")
 
-        do i1 = 1, llp(1)
+        do i3 = 1, llp(3)
           do i2 = 1, llp(2)
-            do i3 = 1, llp(3)
-              pmesh(i1,i2,i3,dim) = units_from_atomic(units_out%energy, &
-                sign(M_ONE,pmesh(i1,i2,i3,dim)) * sum( pmesh(i1,i2,i3,1:dim)**2 )/M_TWO)
+            do i1 = 1, llp(1)
+              pmesh(i1, i2, i3, dim) = units_from_atomic(units_out%energy, &
+                sign(M_ONE,pmesh( i1, i2, i3, dim)) * sum( pmesh(i1, i2, i3, 1:dim)**2 )/M_TWO)
             end do
           end do
         end do
