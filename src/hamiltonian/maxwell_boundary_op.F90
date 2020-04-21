@@ -166,9 +166,8 @@ contains
     type(geometry_t),         intent(in)    :: geo
     FLOAT, optional,          intent(in)    :: dt
 
-    integer             :: idim, ab_shape_dim, nlines, icol, ncols 
+    integer             :: idim, nlines, icol, ncols
     FLOAT               :: bounds(1:2,MAX_DIM), ab_bounds(1:2,MAX_DIM)
-    FLOAT               :: zero_width
     type(block_t)       :: blk
     character(len=1024) :: string
     character(len=50)   :: str
