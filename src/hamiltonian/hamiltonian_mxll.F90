@@ -901,7 +901,7 @@ contains
     PUSH_SUB(maxwell_medium_boundaries_calculation)
 
     do idim = 1, 3
-      if ( (hm%bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__MAXWELL_MEDIUM) .and. &
+      if ( (hm%bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__MEDIUM) .and. &
            (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RIEMANN_SILBERSTEIN) ) then
         do ip_in = 1, hm%bc%mxmedium%points_number(idim)
           ip          = hm%bc%mxmedium%points_map(ip_in, idim)

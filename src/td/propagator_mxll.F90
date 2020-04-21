@@ -172,10 +172,11 @@ contains
       end if
       do icol=1, ncols
         call parse_block_integer(blk, 0, icol-1, hm%bc%bc_type(icol))
-        if (hm%bc%bc_type(icol) == OPTION__MAXWELLBOUNDARYCONDITIONS__ZERO) then
+        select case (hm%bc%bc_type(icol))
+          case (OPTION__MAXWELLBOUNDARYCONDITIONS__ZERO)
           string = 'Zero'
           tr%bc_zero = .true.
-        else if (hm%bc%bc_type(icol) == OPTION__MAXWELLBOUNDARYCONDITIONS__CONSTANT) then
+        case (OPTION__MAXWELLBOUNDARYCONDITIONS__CONSTANT)
           string = 'Constant'
           tr%bc_constant = .true.
           tr%bc_add_ab_region = .true.
@@ -183,20 +184,19 @@ contains
           hm%bc_add_ab_region = .true.
           SAFE_ALLOCATE(st%rs_state_const(1:st%dim))
           st%rs_state_const = M_z0
-          call td_function_mxll_init(st, namespace, hm)
-        else if (hm%bc%bc_type(icol) == OPTION__MAXWELLBOUNDARYCONDITIONS__MIRROR_PEC) then
+        case (OPTION__MAXWELLBOUNDARYCONDITIONS__MIRROR_PEC)
           string = 'PEC Mirror'
           tr%bc_mirror_pec = .true.
           hm%bc_mirror_pec = .true.
-        else if (hm%bc%bc_type(icol) == OPTION__MAXWELLBOUNDARYCONDITIONS__MIRROR_PMC) then
+        case (OPTION__MAXWELLBOUNDARYCONDITIONS__MIRROR_PMC)
           string = 'PMC Mirror'
           tr%bc_mirror_pmc = .true.
           hm%bc_mirror_pmc = .true.
-        else if (hm%bc%bc_type(icol) == OPTION__MAXWELLBOUNDARYCONDITIONS__PERIODIC) then
+        case (OPTION__MAXWELLBOUNDARYCONDITIONS__PERIODIC)
           string = 'Periodic'
           tr%bc_periodic = .true.
           hm%bc_periodic = .true.
-        else if (hm%bc%bc_type(icol) == OPTION__MAXWELLBOUNDARYCONDITIONS__PLANE_WAVES) then
+        case (OPTION__MAXWELLBOUNDARYCONDITIONS__PLANE_WAVES)
           string = 'Plane waves'
           plane_waves_set = .true.
           tr%bc_plane_waves = .true.
@@ -204,9 +204,9 @@ contains
           hm%plane_waves = .true.
           hm%bc_plane_waves = .true.
           hm%bc_add_ab_region = .true.
-        else if (hm%bc%bc_type(icol) == OPTION__MAXWELLBOUNDARYCONDITIONS__MEDIUM) then
+        case (OPTION__MAXWELLBOUNDARYCONDITIONS__MEDIUM)
           string = 'Medium boundary'
-        end if
+        end select
         write(message(1),'(a,I1,a,a)') 'Maxwell boundary condition in direction ', icol, ': ', trim(string)
         call messages_info(1)
         if (plane_waves_set .and. .not. (parse_is_defined(namespace, 'UserDefinedMaxwellIncidentWaves')) ) then
@@ -217,8 +217,7 @@ contains
       end do
 
      call parse_block_end(blk)
-
-     call messages_print_stress(stdout)
+     call messages_print_stress(stdout, namespace=namespace)
 
     end if
 

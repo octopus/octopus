@@ -39,7 +39,7 @@
  MaxwellHamiltonianOperator = faraday_ampere
 
  %MaxwellBoundaryConditions
-  maxwell_plane_waves | maxwell_plane_waves | maxwell_plane_waves
+  plane_waves | plane_waves | plane_waves
  %
 
  %MaxwellAbsorbingBoundaries

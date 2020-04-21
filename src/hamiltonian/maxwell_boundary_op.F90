@@ -178,84 +178,6 @@ contains
     PUSH_SUB(bc_mxll_init)
 
     bc%ab_user_def = .false.
-
-    !%Variable MaxwellBoundaryConditions
-    !%Type block
-    !%Section Time-Dependent::Propagation
-    !%Description
-    !% Follows
-    !%
-    !% Example:
-    !%
-    !% <tt>%UserDefinedMaxwellIncidentWaves
-    !% <br>&nbsp;&nbsp;   maxwell_zero | maxwell_mirror_pec | maxwell_consant 
-    !% <br>%</tt>
-    !%
-    !% Description follows
-    !%
-    !%Option maxwell_zero 0
-    !% follows ...
-    !%Option maxwell_constant 2
-    !% follows ...
-    !%Option maxwell_mirror_pec 3
-    !% follows ...
-    !%Option maxwell_mirror_pmc 4
-    !% follows ...
-    !%Option maxwell_plane_waves 5
-    !% follows ...
-    !%Option maxwell_periodic 6
-    !% follows ...
-    !%Option maxwell_medium 7
-    !% follows ...
-    !%Option maxwell_lossy_layer 8
-    !% follows ...
-    !%End
-    if(parse_block(namespace, 'MaxwellBoundaryConditions', blk) == 0) then
-
-      call messages_print_stress(stdout, trim('Maxwell boundary conditions:'), namespace=namespace)
-
-      ! find out how many lines (i.e. states) the block has
-      nlines = parse_block_n(blk)
-      if (nlines /= 1) then
-        message(1) = 'MaxwellBoundaryConditions has to consist of one line!'
-        call messages_fatal(1, namespace=namespace)
-      end if
-      ncols = parse_block_cols(blk, 0)
-      if (ncols /= 3) then
-        message(1) = 'MaxwellBoundaryConditions has to consist of three columns!'
-        call messages_fatal(1, namespace=namespace)
-      end if
-      do icol = 1, ncols
-        call parse_block_integer(blk, 0, icol-1, bc%bc_type(icol))
-        select case (bc%bc_type(icol))
-          case (OPTION__MAXWELLBOUNDARYCONDITIONS__MAXWELL_ZERO)
-          string = 'Zero'
-        case (OPTION__MAXWELLBOUNDARYCONDITIONS__MAXWELL_CONSTANT)
-          string = 'Constant'
-        case (OPTION__MAXWELLBOUNDARYCONDITIONS__MAXWELL_MIRROR_PEC)
-          string = 'PEC Mirror'
-        case (OPTION__MAXWELLBOUNDARYCONDITIONS__MAXWELL_MIRROR_PMC)
-          string = 'PMC Mirror'
-        case (OPTION__MAXWELLBOUNDARYCONDITIONS__MAXWELL_PERIODIC)
-          string = 'Periodic'
-        case (OPTION__MAXWELLBOUNDARYCONDITIONS__MAXWELL_PLANE_WAVES)
-          string = 'Plane waves'
-          if (.not. (parse_is_defined(namespace, 'UserDefinedMaxwellIncidentWaves')) ) then
-            write(message(1),'(a)') 'Input: Maxwell boundary condition option is set to "maxwell_plane_waves".'
-            write(message(2),'(a)') 'Input: User defined Maxwell plane waves have to be defined!'
-            call messages_fatal(2, namespace=namespace)
-          end if
-        case (OPTION__MAXWELLBOUNDARYCONDITIONS__MAXWELL_MEDIUM)
-          string = 'Medium boundary'
-        end select
-        write(message(1),'(a,I1,a,a)') 'Maxwell boundary condition in direction ', icol, ': ', trim(string)
-        call messages_info(1)
-      end do
-
-      call parse_block_end(blk)
-
-      call messages_print_stress(stdout, namespace=namespace)
-    end if
     
     !%Variable MaxwellAbsorbingBoundaries
     !%Type block
@@ -310,10 +232,10 @@ contains
       if (bc%bc_ab_type(idim) == OPTION__MAXWELLABSORBINGBOUNDARIES__CPML) then
         ab_pml_check = .true.
       end if
-      if (bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__MAXWELL_CONSTANT) then
+      if (bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__CONSTANT) then
         constant_check = .true.
       end if
-      if (bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__MAXWELL_ZERO) then
+      if (bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__ZERO) then
         zero_check = .true.
       end if
     end do
@@ -324,28 +246,28 @@ contains
     end if
 
     do idim = 1, st%dim
-      if (bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__MAXWELL_ZERO) then
+      if (bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__ZERO) then
         bounds(1, idim) = ( gr%mesh%idx%nr(2, idim) - gr%mesh%idx%enlarge(idim) ) * gr%mesh%spacing(idim)
         bounds(2, idim) = ( gr%mesh%idx%nr(2, idim)                                     ) * gr%mesh%spacing(idim)
-      else if (bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__MAXWELL_CONSTANT) then
+      else if (bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__CONSTANT) then
         bounds(1, idim) = ( gr%mesh%idx%nr(2, idim) - 2 * gr%mesh%idx%enlarge(idim) ) * gr%mesh%spacing(idim)
         bounds(2, idim) = ( gr%mesh%idx%nr(2, idim)                                         ) * gr%mesh%spacing(idim)
-      else if (bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__MAXWELL_MIRROR_PEC) then
+      else if (bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__MIRROR_PEC) then
         bounds(1, idim) = ( gr%mesh%idx%nr(2, idim) - gr%mesh%idx%enlarge(idim) ) * gr%mesh%spacing(idim)
         bounds(2, idim) = ( gr%mesh%idx%nr(2, idim)                                     ) * gr%mesh%spacing(idim)
-      else if (bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__MAXWELL_MIRROR_PMC) then
+      else if (bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__MIRROR_PMC) then
         bounds(1, idim) = ( gr%mesh%idx%nr(2, idim) - gr%mesh%idx%enlarge(idim) ) * gr%mesh%spacing(idim)
         bounds(2, idim) = ( gr%mesh%idx%nr(2, idim)                                     ) * gr%mesh%spacing(idim)
-      else if (bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__MAXWELL_PERIODIC) then
+      else if (bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__PERIODIC) then
         bounds(1, idim) = ( gr%mesh%idx%nr(2, idim) - 2 * gr%mesh%idx%enlarge(idim) ) * gr%mesh%spacing(idim)
         bounds(2, idim) = ( gr%mesh%idx%nr(2, idim)                                         ) * gr%mesh%spacing(idim)
-      else if (bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__MAXWELL_PLANE_WAVES) then
+      else if (bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__PLANE_WAVES) then
         bounds(1, idim) = ( gr%mesh%idx%nr(2, idim) - 2 * gr%mesh%idx%enlarge(idim) ) * gr%mesh%spacing(idim)
         bounds(2, idim) = ( gr%mesh%idx%nr(2, idim)                                         ) * gr%mesh%spacing(idim)
         plane_waves_check = .true.
         bc%do_plane_waves = .true.
 
-      else if (bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__MAXWELL_MEDIUM) then
+      else if (bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__MEDIUM) then
         !%Variable MaxwellMediumWidth
         !%Type float
         !%Default 0.0 a.u.
@@ -745,7 +667,7 @@ contains
       if (bc%bc_ab_type(idim) == AB_CPML) then
         pml_check = .true.
       end if
-      if (bc%bc_ab_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__MAXWELL_MEDIUM) then
+      if (bc%bc_ab_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__MEDIUM) then
         medium_check = .true.
       end if
     end do
@@ -1090,7 +1012,7 @@ contains
 
     ip_in_max = 0
     do idim = 1, 3
-      if (bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__MAXWELL_ZERO) then
+      if (bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__ZERO) then
         ! allocate zero points map
         ip_in = 0
         do ip = 1, mesh%np
@@ -1107,7 +1029,7 @@ contains
     SAFE_ALLOCATE(bc%zero_points_map(1:ip_in_max, 3))
 
     do idim = 1, 3
-      if (bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__MAXWELL_ZERO) then
+      if (bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__ZERO) then
         ! zero points mapping
         ip_in = 0
         do ip = 1, mesh%np
@@ -1139,7 +1061,7 @@ contains
     ip_in_max = 0
     ip_bd_max = 0
     do idim = 1, 3
-      if (bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__MAXWELL_MEDIUM) then
+      if (bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__MEDIUM) then
         ! allocate pml points map
         ip_in = 0
         ip_bd = 0
@@ -1165,7 +1087,7 @@ contains
     ip_in = 0
     ip_bd = 0
     do idim = 1, 3
-      if (bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__MAXWELL_MEDIUM) then
+      if (bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__MEDIUM) then
         do ip = 1, mesh%np
           call maxwell_box_point_info(bc, mesh, ip, bounds, geo, point_info)
           call maxwell_boundary_point_info(mesh, ip, bounds, boundary_info)
