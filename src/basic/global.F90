@@ -56,6 +56,8 @@ module global_oct_m
     character(len=20)  :: version     !< version number
     character(len=256) :: cc
     character(len=256) :: cflags
+    character(len=256) :: cxx
+    character(len=256) :: cxxflags
     character(len=256) :: fc
     character(len=256) :: fcflags
     integer            :: target_states_block_size
@@ -189,6 +191,9 @@ contains
     ! not indented to have the whole line in case it is long
     conf%cflags     = &
 CFLAGS
+    conf%cxx        = CXX
+    conf%cxxflags   = &
+CXXFLAGS
     conf%fc         = FC
     conf%fcflags    = &
 FCFLAGS
