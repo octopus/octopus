@@ -408,7 +408,7 @@ subroutine X(mf_interpolate_points) (ndim, npoints_in, x_in, f_in, npoints_out, 
     call messages_fatal(1)
 #else
     call spline_init(interp1d)
-    call spline_fit(npoints_in, R_REAL(x_in(:, 1)), f_in, interp1d)
+    call spline_fit(npoints_in, x_in(:, 1), f_in, interp1d)
     do ip = 1, npoints_out
       f_out(ip) = spline_eval(interp1d, x_out(ip, 1))
     end do
