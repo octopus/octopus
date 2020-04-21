@@ -168,7 +168,7 @@ contains
 
     integer             :: idim, ab_shape_dim, nlines, icol, ncols 
     FLOAT               :: bounds(1:2,MAX_DIM), ab_bounds(1:2,MAX_DIM)
-    FLOAT               :: mask_width, pml_width, zero_width
+    FLOAT               :: zero_width
     type(block_t)       :: blk
     character(len=1024) :: string
     character(len=50)   :: str
@@ -344,6 +344,7 @@ contains
         bounds(2, idim) = ( gr%mesh%idx%nr(2, idim)                                         ) * gr%mesh%spacing(idim)
         plane_waves_check = .true.
         bc%do_plane_waves = .true.
+
       else if (bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__MAXWELL_MEDIUM) then
         !%Variable MaxwellMediumWidth
         !%Type float
@@ -392,109 +393,22 @@ contains
         call bc_mxll_generate_medium(bc, gr, bounds, geo)
       end if
 
-      if(bc%bc_ab_type(idim) /= AB_NOT_ABSORBING) then
+      if (bc%bc_ab_type(idim) /= AB_NOT_ABSORBING) then
 
         call messages_print_var_option(stdout, "MaxwellAbsorbingBoundaries", bc%bc_ab_type(idim))
 
         if (bc%bc_ab_type(idim) == AB_MASK_ZERO) then
-          !%Variable MaxwellABZeroWidth
-          !%Type float
-          !%Default 0.4 a.u.
-          !%Section Time-Dependent::Absorbing Boundaries
-          !%Description
-          !% Width of the region used to apply the absorbing boundaries.
-          !%End
-          zero_width = ab_bounds(2,idim)-ab_bounds(1,idim)
-          call parse_variable(namespace, 'MaxwellABZeroWidth', zero_width, zero_width, units_inp%length)
-          bc%zero_width = zero_width
-
-          if ( zero_width < (gr%der%order*gr%mesh%spacing(1)) .or. &
-               zero_width < (gr%der%order*gr%mesh%spacing(2)) .or. &
-               zero_width < (gr%der%order*gr%mesh%spacing(3)) ) then
-            zero_width = max(gr%der%order*gr%mesh%spacing(1), &
-                                gr%der%order*gr%mesh%spacing(2), &
-                                gr%der%order*gr%mesh%spacing(2))
-            write(message(1),'(a)') 'Zero absorbing width has to be larger or equal than derivatives order times spacing!'
-            write(message(2),'(a,es10.3)') 'Zero absorbing width is set to: ', zero_width
-            call messages_info(2)
-          end if
+           call bc_mxll_zero_init(bc, gr, namespace, bounds, ab_bounds, idim)
         end if
 
         if (bc%bc_ab_type(idim) == AB_MASK) then
-
-          if (gr%mesh%sb%box_shape == SPHERE) then
-            ab_shape_dim = 1
-          else if(gr%mesh%sb%box_shape == PARALLELEPIPED) then
-            ab_shape_dim = sb%dim
-            ab_bounds(1, idim) = bounds(1, idim)
-            ab_bounds(2, idim) = bounds(1, idim)
-          end if
-
-          !%Variable MaxwellABMaskWidth
-          !%Type float
-          !%Default 0.4 a.u.
-          !%Section Time-Dependent::Absorbing Boundaries
-          !%Description
-          !% Width of the region used to apply the absorbing boundaries.
-          !%End
-          mask_width = ab_bounds(2, idim) - ab_bounds(1, idim)
-          call parse_variable(namespace, 'MaxwellABMaskWidth', mask_width, mask_width, units_inp%length)
-          bc%mask_width = mask_width
-          if ( mask_width < (gr%der%order*gr%mesh%spacing(1)) .or. &
-               mask_width < (gr%der%order*gr%mesh%spacing(2)) .or. &
-               mask_width < (gr%der%order*gr%mesh%spacing(3)) ) then
-            mask_width = max(gr%der%order*gr%mesh%spacing(1), &
-                                gr%der%order*gr%mesh%spacing(2), &
-                                gr%der%order*gr%mesh%spacing(2))
-            write(message(1),'(a)') 'Mask absorbing width has to be larger or equal than derivatives order times spacing!'
-            write(message(2),'(a,es10.3)') 'Mask absorbing width is set to: ', mask_width
-            call messages_info(2)
-          end if
-          !%Variable MaxwellABMaskAlpha
-          !%Type float
-          !%Default 0.4 a.u.
-          !%Section Time-Dependent::Absorbing Boundaries
-          !%Description
-          !% Width of the region used to apply the absorbing boundaries.
-          !%End
-          call parse_variable(namespace, 'MaxwellABMaskWidth', M_TWO, bc%mask_alpha, units_inp%length)
-          ab_bounds(1, idim) = ab_bounds(2, idim) - mask_width
+          call bc_mxll_mask_init(bc, gr, sb, namespace, bounds, ab_bounds, idim)
         end if
 
         if (bc%bc_ab_type(idim) == AB_CPML) then
-
-          if (gr%mesh%sb%box_shape == SPHERE) then
-            ab_shape_dim = 1
-          else if(gr%mesh%sb%box_shape == PARALLELEPIPED) then
-            ab_shape_dim = sb%dim
-            ab_bounds(1, idim) = bounds(1, idim)
-            ab_bounds(2, idim) = bounds(1, idim)
-          end if
-
-          !%Variable MaxwellABPMLWidth
-          !%Type float
-          !%Default 0.4 a.u.
-          !%Section Time-Dependent::Absorbing Boundaries
-          !%Description
-          !% Width of the region used to apply the absorbing boundaries.
-          !%End
-          pml_width = ab_bounds(2,idim) - ab_bounds(1,idim)
-          call parse_variable(namespace, 'MaxwellABPMLWidth', pml_width, pml_width, units_inp%length)
-          bc%pml%width = pml_width
-          if (parse_is_defined(namespace, 'UserDefinedMaxwellIncidentWaves')) then
-            if ( pml_width < (gr%der%order*gr%mesh%spacing(1)) .or. &
-                 pml_width < (gr%der%order*gr%mesh%spacing(2)) .or. &
-                 pml_width < (gr%der%order*gr%mesh%spacing(3)) ) then
-              pml_width = max(gr%der%order*gr%mesh%spacing(1), &
-                                  gr%der%order*gr%mesh%spacing(2), &
-                                  gr%der%order*gr%mesh%spacing(2))
-              write(message(1),'(a)') 'PML absorbing width has to be larger or equal than derivatives order times spacing!'
-              write(message(2),'(a,es10.3)') 'PML absorbing width is set to: ', pml_width
-              call messages_info(2)
-            end if
-          end if
-          ab_bounds(1,idim) = ab_bounds(2,idim) - pml_width
+           call bc_mxll_pml_init(bc, gr, sb, namespace, bounds, ab_bounds, idim)
         end if
+
       end if
 
       if (bc%bc_ab_type(idim) == AB_MASK) then
@@ -559,43 +473,6 @@ contains
 
     ! initialization of surfaces
     call maxwell_surfaces_init(gr%mesh, st, bounds)
-
-    !%Variable MaxwellABPMLKappaMax
-    !%Type float
-    !%Default 0.4
-    !%Section Time-Dependent::Absorbing Boundaries
-    !%Description
-    !% Follwos
-    !%End
-    call parse_variable(namespace, 'MaxwellABPMLKappaMax', CNST(2.0), bc%pml%kappa_max, unit_one)
-
-    !%Variable MaxwellABPMLAlphaMax
-    !%Type float
-    !%Default 0.4
-    !%Section Time-Dependent::Absorbing Boundaries
-    !%Description
-    !% Follwos
-    !%End
-    call parse_variable(namespace, 'MaxwellABPMLAlphaMax', CNST(1.0), bc%pml%alpha_max, unit_one)
-
-    !%Variable MaxwellABPMLPower
-    !%Type float
-    !%Default 0.4
-    !%Section Time-Dependent::Absorbing Boundaries
-    !%Description
-    !% Follwos
-    !%End
-    call parse_variable(namespace, 'MaxwellABPMLPower', CNST(3.5), bc%pml%power, unit_one)
-
-    !%Variable MaxwellABPMLReflectionError
-    !%Type float
-    !%Default 0.4
-    !%Section Time-Dependent::Absorbing Boundaries
-    !%Description
-    !% Follwos
-    !%End
-    call parse_variable(namespace, 'MaxwellABPMLReflectionError', CNST(0.1), bc%pml%refl_error, unit_one)
-
 
     ! mapping of mask boundary points
     if (ab_mask_check) then
@@ -670,6 +547,180 @@ contains
 
     POP_SUB(bc_mxll_end)
   end subroutine bc_mxll_end
+
+
+  ! ---------------------------------------------------------
+  subroutine bc_mxll_zero_init(bc, gr, namespace, bounds, ab_bounds, idim)
+    type(bc_mxll_t),     intent(inout) :: bc
+    type(grid_t),        intent(in) :: gr
+    type(namespace_t),   intent(in) :: namespace
+    FLOAT,               intent(inout) :: bounds(:,:), ab_bounds(:,:)
+    integer,             intent(in) :: idim
+
+    FLOAT               :: zero_width
+
+    !%Variable MaxwellABZeroWidth
+    !%Type float
+    !%Default 0.4 a.u.
+    !%Section Time-Dependent::Absorbing Boundaries
+    !%Description
+    !% Width of the region used to apply the absorbing boundaries.
+    !%End
+    zero_width = ab_bounds(2,idim)-ab_bounds(1,idim)
+    call parse_variable(namespace, 'MaxwellABZeroWidth', zero_width, zero_width, units_inp%length)
+    bc%zero_width = zero_width
+
+    if ( zero_width < (gr%der%order*gr%mesh%spacing(1)) .or. &
+         zero_width < (gr%der%order*gr%mesh%spacing(2)) .or. &
+         zero_width < (gr%der%order*gr%mesh%spacing(3)) ) then
+       zero_width = max(gr%der%order*gr%mesh%spacing(1), &
+            gr%der%order*gr%mesh%spacing(2), &
+            gr%der%order*gr%mesh%spacing(2))
+       write(message(1),'(a)') 'Zero absorbing width has to be larger or equal than derivatives order times spacing!'
+       write(message(2),'(a,es10.3)') 'Zero absorbing width is set to: ', zero_width
+       call messages_info(2)
+    end if
+
+  end subroutine bc_mxll_zero_init
+
+
+  ! ---------------------------------------------------------
+  subroutine bc_mxll_mask_init(bc, gr, sb, namespace, bounds, ab_bounds, idim)
+    type(bc_mxll_t),     intent(inout) :: bc
+    type(grid_t),        intent(in) :: gr
+    type(simul_box_t),   intent(in) :: sb
+    type(namespace_t),   intent(in) :: namespace
+    FLOAT,                intent(inout) :: bounds(:,:), ab_bounds(:,:)
+    integer,             intent(in) :: idim
+
+    FLOAT               :: mask_width
+    integer             :: ab_shape_dim
+
+    if (gr%mesh%sb%box_shape == SPHERE) then
+       ab_shape_dim = 1
+    else if(gr%mesh%sb%box_shape == PARALLELEPIPED) then
+       ab_shape_dim = sb%dim
+       ab_bounds(1, idim) = bounds(1, idim)
+       ab_bounds(2, idim) = bounds(1, idim)
+    end if
+
+    !%Variable MaxwellABMaskWidth
+    !%Type float
+    !%Default 0.4 a.u.
+    !%Section Time-Dependent::Absorbing Boundaries
+    !%Description
+    !% Width of the region used to apply the absorbing boundaries.
+    !%End
+
+    mask_width = ab_bounds(2, idim) - ab_bounds(1, idim)
+    call parse_variable(namespace, 'MaxwellABMaskWidth', mask_width, mask_width, units_inp%length)
+    bc%mask_width = mask_width
+
+    if ( mask_width < (gr%der%order*gr%mesh%spacing(1)) .or. &
+         mask_width < (gr%der%order*gr%mesh%spacing(2)) .or. &
+         mask_width < (gr%der%order*gr%mesh%spacing(3)) ) then
+       mask_width = max(gr%der%order*gr%mesh%spacing(1), &
+            gr%der%order*gr%mesh%spacing(2), &
+            gr%der%order*gr%mesh%spacing(2))
+       write(message(1),'(a)') 'Mask absorbing width has to be larger or equal than derivatives order times spacing!'
+       write(message(2),'(a,es10.3)') 'Mask absorbing width is set to: ', mask_width
+       call messages_info(2)
+    end if
+
+    !%Variable MaxwellABMaskAlpha
+    !%Type float
+    !%Default 0.4 a.u.
+    !%Section Time-Dependent::Absorbing Boundaries
+    !%Description
+    !% Width of the region used to apply the absorbing boundaries.
+    !%End
+    call parse_variable(namespace, 'MaxwellABMaskWidth', M_TWO, bc%mask_alpha, units_inp%length)
+    ab_bounds(1, idim) = ab_bounds(2, idim) - mask_width
+
+  end subroutine bc_mxll_mask_init
+
+
+  ! ---------------------------------------------------------
+  subroutine bc_mxll_pml_init(bc, gr, sb, namespace, bounds, ab_bounds, idim)
+    type(bc_mxll_t),     intent(inout) :: bc
+    type(grid_t),        intent(in) :: gr
+    type(simul_box_t),   intent(in) :: sb
+    type(namespace_t),   intent(in) :: namespace
+    FLOAT,               intent(inout) :: bounds(:,:), ab_bounds(:,:)
+    integer,             intent(in) :: idim
+
+    FLOAT               :: pml_width
+    integer             :: ab_shape_dim
+
+    if (gr%mesh%sb%box_shape == SPHERE) then
+       ab_shape_dim = 1
+    else if (gr%mesh%sb%box_shape == PARALLELEPIPED) then
+       ab_shape_dim = sb%dim
+       ab_bounds(1, idim) = bounds(1, idim)
+       ab_bounds(2, idim) = bounds(1, idim)
+    end if
+
+    !%Variable MaxwellABPMLWidth
+    !%Type float
+    !%Default 0.4 a.u.
+    !%Section Time-Dependent::Absorbing Boundaries
+    !%Description
+    !% Width of the region used to apply the absorbing boundaries.
+    !%End
+    pml_width = ab_bounds(2,idim) - ab_bounds(1,idim)
+    call parse_variable(namespace, 'MaxwellABPMLWidth', pml_width, pml_width, units_inp%length)
+    bc%pml%width = pml_width
+    if (parse_is_defined(namespace, 'UserDefinedMaxwellIncidentWaves')) then
+       if ( pml_width < (gr%der%order*gr%mesh%spacing(1)) .or. &
+            pml_width < (gr%der%order*gr%mesh%spacing(2)) .or. &
+            pml_width < (gr%der%order*gr%mesh%spacing(3)) ) then
+          pml_width = max(gr%der%order*gr%mesh%spacing(1), &
+               gr%der%order*gr%mesh%spacing(2), &
+               gr%der%order*gr%mesh%spacing(2))
+          write(message(1),'(a)') 'PML absorbing width has to be larger or equal than derivatives order times spacing!'
+          write(message(2),'(a,es10.3)') 'PML absorbing width is set to: ', pml_width
+          call messages_info(2)
+       end if
+    end if
+    ab_bounds(1,idim) = ab_bounds(2,idim) - pml_width
+
+    !%Variable MaxwellABPMLKappaMax
+    !%Type float
+    !%Default 0.4
+    !%Section Time-Dependent::Absorbing Boundaries
+    !%Description
+    !% Follwos
+    !%End
+    call parse_variable(namespace, 'MaxwellABPMLKappaMax', CNST(2.0), bc%pml%kappa_max, unit_one)
+
+    !%Variable MaxwellABPMLAlphaMax
+    !%Type float
+    !%Default 0.4
+    !%Section Time-Dependent::Absorbing Boundaries
+    !%Description
+    !% Follwos
+    !%End
+    call parse_variable(namespace, 'MaxwellABPMLAlphaMax', CNST(1.0), bc%pml%alpha_max, unit_one)
+
+    !%Variable MaxwellABPMLPower
+    !%Type float
+    !%Default 0.4
+    !%Section Time-Dependent::Absorbing Boundaries
+    !%Description
+    !% Follwos
+    !%End
+    call parse_variable(namespace, 'MaxwellABPMLPower', CNST(3.5), bc%pml%power, unit_one)
+
+    !%Variable MaxwellABPMLReflectionError
+    !%Type float
+    !%Default 0.4
+    !%Section Time-Dependent::Absorbing Boundaries
+    !%Description
+    !% Follwos
+    !%End
+    call parse_variable(namespace, 'MaxwellABPMLReflectionError', CNST(0.1), bc%pml%refl_error, unit_one)
+  end subroutine bc_mxll_pml_init
+
 
   ! ---------------------------------------------------------
   subroutine bc_mxll_write_info(bc, mesh, namespace)
