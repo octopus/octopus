@@ -1603,10 +1603,11 @@ contains
                 call zmf_random(mesh, zpsi(:, id), normalized = .false.)
               end if
             end do
+            ! We need to generate the wave functions even if not using them in order to be consistent with the random seed in parallel runs.
+            if(.not. state_kpt_is_local(st, ist, ik)) cycle
             ! Note that mf_random normalizes each spin channel independently to 1.
             ! Therefore we need to renormalize the spinor:
             if(normalized) call zmf_normalize(mesh, st%d%dim, zpsi)
-            if(.not. state_kpt_is_local(st, ist, ik)) cycle
             call states_elec_set_state(st, mesh, ist,  ik, zpsi)
           end do
         end do
