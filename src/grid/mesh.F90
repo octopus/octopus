@@ -408,7 +408,7 @@ contains
     dmin_global = M_HUGE
     if (mesh%parallel_in_domains) then
       do ipart=1, mesh%vp%npart
-        do ip=1, mesh%vp%np_local_vec(ipart)
+        do ip = 1, mesh%vp%np_local_vec(ipart)
           ip_global = mesh%vp%local_vec(mesh%vp%xlocal_vec(ipart) + ip - 1)
           do idim = 1, mesh%sb%dim
             xx(idim) = mesh%idx%lxyz(ip_global,idim) * mesh%spacing(idim)
@@ -423,7 +423,7 @@ contains
         end do
       end do
     else
-      do ip=1, mesh%np
+      do ip = 1, mesh%np
         do idim = 1, mesh%sb%dim
           xx(idim) = mesh%idx%lxyz(ip,idim) * mesh%spacing(idim)
         end do
@@ -920,14 +920,18 @@ contains
       destpoint = destpoint - TOFLOAT(int(lsize)/2)
 
       !convert to proper reduced coordinates
-      forall(idim = 1:3) destpoint(idim) = destpoint(idim)/lsize(idim)
+      do idim = 1, 3
+        destpoint(idim) = destpoint(idim)/lsize(idim)
+      end do
 
       ! iterate over all points that go to this point by a symmetry operation
       do iop = 1, nops
         srcpoint = symm_op_apply_red(mesh%sb%symm%ops(iop), destpoint) 
 
         !We now come back to what should be an integer, if the symmetric point beloings to the grid
-        forall(idim = 1:3) srcpoint(idim) = srcpoint(idim)*lsize(idim)
+        do idim = 1, 3
+          srcpoint(idim) = srcpoint(idim)*lsize(idim)
+        end do
 
         ! move back to reference to origin at corner of cell
         srcpoint = srcpoint + TOFLOAT(int(lsize)/2)

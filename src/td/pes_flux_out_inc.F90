@@ -416,9 +416,9 @@ subroutine pes_flux_map_from_states_elec_pln(this, restart, st, ll, pesP, krng, 
           call pes_flux_map_from_state_1(restart, itot, this%nkpnts, psiG1)
         
         
-          do i1=1, ll(1)
-            do i2=1, ll(2)
-              do i3=1, ll(3)
+          do i1 = 1, ll(1)
+            do i2 = 1, ll(2)
+              do i3 = 1, ll(3)
                 do igpt = 1, this%ngpt
                   ip(1:3) = Lp(i1, i2, i3, ik, 1:3) 
                   ig = flatten_indices(i1,i2,i3, igpt, ll, this%ngpt) 
@@ -440,9 +440,9 @@ subroutine pes_flux_map_from_states_elec_pln(this, restart, st, ll, pesP, krng, 
         itot = idim + (ist-1)*st%d%dim + (ik-1)*st%d%dim* st%nst
         call pes_flux_map_from_state_1(restart, itot, this%nkpnts, psiG2)
             
-        do i1=1, ll(1)
-          do i2=1, ll(2)
-            do i3=1, ll(3)
+        do i1 = 1, ll(1)
+          do i2 = 1, ll(2)
+            do i3 = 1, ll(3)
               do igpt = 1, this%ngpt
                 ip(1:3) = Lp(i1, i2, i3, ik, 1:3) 
                 ig = flatten_indices(i1,i2,i3, igpt, ll, this%ngpt) 
@@ -637,8 +637,8 @@ subroutine pes_flux_map_from_states_elec_sph(this, restart, st, ll, pesP, krng, 
           itot = idim + (ist-1)*st%d%dim + (ik-1)*st%d%dim* st%nst
           call pes_flux_map_from_state_2(restart, itot, this%nkpnts, psiG1)
         
-          do i1=1, this%nk
-            do i2=1, this%nstepsomegak
+          do i1 = 1, this%nk
+            do i2 = 1, this%nstepsomegak
               
                 ip(1:3) = Lp(i1, i2, 1, ik, 1:3) 
                 if (ip(1) < 0) cycle
@@ -657,8 +657,8 @@ subroutine pes_flux_map_from_states_elec_sph(this, restart, st, ll, pesP, krng, 
         itot = idim + (ist-1)*st%d%dim + (ik-1)*st%d%dim* st%nst
         call pes_flux_map_from_state_2(restart, itot, this%nkpnts, psiG2)
             
-        do i1=1, this%nk
-          do i2=1, this%nstepsomegak
+        do i1 = 1, this%nk
+          do i2 = 1, this%nstepsomegak
             
               ip(1:3) = Lp(i1, i2, 1, ik, 1:3) 
               if (ip(1) < 0) cycle

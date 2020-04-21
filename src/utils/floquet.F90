@@ -235,11 +235,11 @@ contains
         do ist=st%st_start,st%st_end
           if(state_kpt_is_local(st, ist, ik)) then
             call states_elec_get_state(st, mesh, ist, ik,temp_state1 )
-            do idim=1,st%d%dim
+            do idim = 1,st%d%dim
               psi(ist,idim,1:mesh%np) =  temp_state1(1:mesh%np,idim)
             end do
             call states_elec_get_state(hm_st, mesh, ist, ik,temp_state1 )
-            do idim=1,st%d%dim
+            do idim = 1,st%d%dim
               hpsi(ist,idim,1:mesh%np) =temp_state1(1:mesh%np,idim)
             end do
           end if
@@ -272,7 +272,7 @@ contains
                 HFloquet(ik_count,ii+1:ii+nst,jj+1:jj+nst) + hmss(1:nst,1:nst)*exp(-(in-im)*M_zI*omega*it*dt)
               ! diagonal term
               if(in==im) then
-                 do ist=1,nst
+                 do ist = 1,nst
                     HFloquet(ik_count,ii+ist,ii+ist) = HFloquet(ik_count,ii+ist,ii+ist) + in*omega
                  end do
               end if
@@ -332,7 +332,7 @@ contains
       file=987254
       file = io_open(filename, sys%namespace, action = 'write')
       do ik=1,nik
-        do ist=1,lim_nst
+        do ist = 1,lim_nst
           write(file,'(e12.6, 1x)',advance='no') bands(ik,ist)
         end do
         write(file,'(1x)')
@@ -358,7 +358,7 @@ contains
         filename='trivial_floquet_bands'
         file = io_open(filename, sys%namespace, action = 'write')
         do ik=1,nik
-          do ist=1,lim_nst
+          do ist = 1,lim_nst
             write(file,'(e12.6, 1x)',advance='no') bands(ik,ist)
           end do
           write(file,'(1x)')

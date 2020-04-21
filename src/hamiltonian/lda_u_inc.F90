@@ -1097,7 +1097,7 @@ subroutine X(compute_coulomb_integrals) (this, namespace, mesh, der, psolver)
         ijst=ijst+1
 
         !$omp parallel do
-        do ip=1,np_sphere
+        do ip = 1,np_sphere
           nn(ip)  = TOFLOAT(os%X(orb)(ip,1,ist))*TOFLOAT(os%X(orb)(ip,1,jst))
         end do
         !$omp end parallel do    
@@ -1113,7 +1113,7 @@ subroutine X(compute_coulomb_integrals) (this, namespace, mesh, der, psolver)
             if(klst > ijst) cycle
 
             !$omp parallel do
-            do ip=1,np_sphere
+            do ip = 1,np_sphere
               tmp(ip) = vv(ip)*TOFLOAT(os%X(orb)(ip,1,kst))*TOFLOAT(os%X(orb)(ip,1,lst))
             end do
             !$omp end parallel do
@@ -1207,7 +1207,7 @@ subroutine X(compute_periodic_coulomb_integrals)(this, namespace, der, mc)
       ijst=ijst+1
 
       !$omp parallel do
-      do ip=1,np
+      do ip = 1,np
         nn(ip)  = TOFLOAT(os%X(orb)(ip,1,ist))*TOFLOAT(os%X(orb)(ip,1,jst))
       end do
       !$omp end parallel do    
@@ -1223,7 +1223,7 @@ subroutine X(compute_periodic_coulomb_integrals)(this, namespace, der, mc)
           if(klst > ijst) cycle
 
           !$omp parallel do
-          do ip=1,np
+          do ip = 1,np
             tmp(ip) = vv(ip)*TOFLOAT(os%X(orb)(ip,1,lst))*TOFLOAT(os%X(orb)(ip,1,kst))
           end do
           !$omp end parallel do
@@ -1434,9 +1434,9 @@ end subroutine X(compute_periodic_coulomb_integrals)
      !
      !
      if(simul_box_is_periodic(mesh%sb) .and. .not. this%basis%submeshforperiodic) then
-       forall(is = 1:mesh%np)
+       do is = 1, mesh%np
          epsi(is,1) = mesh%x(is,idir)*psi(is,1)
-       end forall
+       end do
      else
        !$omp parallel do 
        do is = 1, os%sphere%np

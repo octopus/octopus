@@ -86,8 +86,10 @@
 
           rotation_matrix = M_z0
 
-          forall(ist = 1:tmp_st%nst) rotation_matrix(ist, ist) = CNST(1.0)
-          
+          do ist = 1, tmp_st%nst
+            rotation_matrix(ist, ist) = CNST(1.0)
+          end do
+
           do ist = 1, tg%st%nst
             do jst = 1, parse_block_cols(blk, ist - 1)
               call parse_block_cmplx(blk, ist - 1, jst - 1, rotation_matrix(jst, ist))

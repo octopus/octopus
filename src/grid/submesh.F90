@@ -281,18 +281,22 @@ contains
     end if
 
     ! now order points for better locality
-    
+
     SAFE_ALLOCATE(order(1:this%np_part))
     SAFE_ALLOCATE(this%x(1:this%np_part, 0:sb%dim))
 
-    forall(ip = 1:this%np_part) order(ip) = ip
+    do ip = 1, this%np_part
+      order(ip) = ip
+    end do
 
     call sort(this%map, order)
 
-    forall(ip = 1:this%np_part) this%x(ip, 0:sb%dim) = xtmp(order(ip), 0:sb%dim)
+    do ip = 1, this%np_part
+ this%x(ip, 0:sb%dim) = xtmp(order(ip), 0:sb%dim)
+end do
 
     !check whether points overlap
-    
+
     this%overlap = .false.
     do ip = 1, this%np_part - 1
       if(this%map(ip) == this%map(ip + 1)) then
@@ -521,9 +525,11 @@ contains
     integer :: is
 
     PUSH_SUB(submesh_get_inv)
-    
+
     map_inv(1:this%mesh%np_part) = 0
-    forall (is = 1:this%np) map_inv(this%map(is)) = is
+    do is = 1, this%np
+      map_inv(this%map(is)) = is
+    end do
 
     POP_SUB(submesh_get_inv)
   end subroutine submesh_get_inv

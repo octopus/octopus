@@ -65,9 +65,13 @@ subroutine X(vtk_out_cf)(filename, namespace, fieldname, ierr, cf_in, cube, spac
   call cube_function_null(cf_out)
   call X(cube_function_alloc_RS) (cube, cf_out)
 
-  forall(i1 = 1:cube%rs_n_global(1), i2 = 1:cube%rs_n_global(2), i3 = 1:cube%rs_n_global(3)) 
-    cf_out%X(RS)(i1,i2,i3) = units_from_atomic(unit, cf_in%X(RS)(i1,i2,i3))
-  end forall
+  do i1 = 1, cube%rs_n_global(1)
+    do i2 = 1, cube%rs_n_global(2)
+      do i3 = 1, cube%rs_n_global(3)
+        cf_out%X(RS)(i1,i2,i3) = units_from_atomic(unit, cf_in%X(RS)(i1,i2,i3))
+      end do
+    end do
+  end do
 
   ! Paraview likes BigEndian binaries
   call io_binary_write(io_workpath(filename, namespace), np, R_REAL(cf_out%X(RS)(:,:,:)),&
@@ -145,9 +149,15 @@ subroutine X(vtk_out_cf_vector)(filename, namespace, fieldname, ierr, cf_in, vec
 
   SAFE_ALLOCATE(cfout(1:vector_dim, 1:cube%rs_n_global(1), 1:cube%rs_n_global(2), 1:cube%rs_n_global(3)))
 
-  forall(ivd = 1:vector_dim, i1 = 1:cube%rs_n_global(1), i2 = 1:cube%rs_n_global(2), i3 = 1:cube%rs_n_global(3)) 
-    cfout(ivd, i1,i2,i3) = R_REAL(units_from_atomic(unit, cf_in(ivd)%X(RS)(i1,i2,i3)))
-  end forall
+  do ivd=1, vector_dim
+    do i1 = 1, cube%rs_n_global(1)
+      do i2 = 1, cube%rs_n_global(2)
+        do i3 = 1, cube%rs_n_global(3)
+          cfout(ivd, i1,i2,i3) = R_REAL(units_from_atomic(unit, cf_in(ivd)%X(RS)(i1,i2,i3)))
+        end do
+      end do
+    end do
+  end do
 
   ! Paraview likes BigEndian binaries
   call io_binary_write(io_workpath(filename, namespace), vector_dim*np, cfout(:, :, :, :), ierr, &
@@ -163,10 +173,16 @@ subroutine X(vtk_out_cf_vector)(filename, namespace, fieldname, ierr, cf_in, vec
 
   call io_close(iunit)
 
-  forall(ivd = 1:vector_dim, i1 = 1:cube%rs_n_global(1), i2 = 1:cube%rs_n_global(2), i3 = 1:cube%rs_n_global(3)) 
-    cfout(ivd, i1,i2,i3) = R_AIMAG(units_from_atomic(unit, cf_in(ivd)%X(RS)(i1,i2,i3)))
-  end forall
-  
+  do ivd=1, vector_dim
+    do i1 = 1, cube%rs_n_global(1)
+      do i2 = 1, cube%rs_n_global(2)
+        do i3 = 1, cube%rs_n_global(3)
+          cfout(ivd, i1,i2,i3) = R_AIMAG(units_from_atomic(unit, cf_in(ivd)%X(RS)(i1,i2,i3)))
+        end do
+      end do
+    end do
+  end do
+
   call io_binary_write(io_workpath(filename, namespace), vector_dim*np, cfout(:, :, :, :), ierr, &
     nohead = .true., fendian = is_little_endian())
 
@@ -240,14 +256,18 @@ subroutine X(vtk_out_cf_structured)(filename, namespace, fieldname, ierr, cf_in,
     call cube_function_null(cf_out)
     call X(cube_function_alloc_RS) (cube, cf_out)
 
-    forall(i1 = 1:cube%rs_n_global(1), i2 = 1:cube%rs_n_global(2), i3 = 1:cube%rs_n_global(3)) 
-      cf_out%X(RS)(i1,i2,i3) = units_from_atomic(unit, cf_in%X(RS)(i1,i2,i3))
-    end forall
+    do i1 = 1, cube%rs_n_global(1)
+      do i2 = 1, cube%rs_n_global(2)
+        do i3 = 1, cube%rs_n_global(3)
+          cf_out%X(RS)(i1,i2,i3) = units_from_atomic(unit, cf_in%X(RS)(i1,i2,i3))
+        end do
+      end do
+    end do
 
 
-    do i3 =1 , cube%rs_n_global(3)
-      do i2 =1 , cube%rs_n_global(2)
-        do i1 =1 , cube%rs_n_global(1)
+    do i3 = 1, cube%rs_n_global(3)
+      do i2 = 1, cube%rs_n_global(2)
+        do i1 = 1, cube%rs_n_global(1)
           write(iunit, '(1f12.6)') R_REAL(cf_out%X(RS)(i1,i2,i3))
         end do
       end do
@@ -299,9 +319,13 @@ subroutine X(vtk_out_cf_structured)(filename, namespace, fieldname, ierr, cf_in,
     call cube_function_null(cf_out)
     call X(cube_function_alloc_RS) (cube, cf_out)
 
-    forall(i1 = 1:cube%rs_n_global(1), i2 = 1:cube%rs_n_global(2), i3 = 1:cube%rs_n_global(3)) 
-      cf_out%X(RS)(i1,i2,i3) = units_from_atomic(unit, cf_in%X(RS)(i1,i2,i3))
-    end forall
+    do i1 = 1, cube%rs_n_global(1)
+      do i2 = 1, cube%rs_n_global(2)
+        do i3 = 1, cube%rs_n_global(3)
+          cf_out%X(RS)(i1,i2,i3) = units_from_atomic(unit, cf_in%X(RS)(i1,i2,i3))
+        end do
+      end do
+    end do
 
 
     call io_binary_write(io_workpath(filename, namespace), np, R_REAL(cf_out%X(RS)(:,:,:)),&

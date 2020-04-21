@@ -317,7 +317,7 @@ contains
     if(this%debug) then
       call libvdwxc_write_array(workbuffer, 'dedsigma')
     end if
-    do ii=1, this%mesh%np
+    do ii = 1, this%mesh%np
       dedgd(ii, :, 1) = dedgd(ii, :, 1) + M_TWO * workbuffer(ii) * gradrho(ii, :, 1)
     end do
 

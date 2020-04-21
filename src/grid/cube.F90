@@ -329,7 +329,7 @@ contains
     cube%Lrs(:,:) = M_ZERO
     
     !! Real space coordinates 
-    do idim=1,3 
+    do idim = 1,3
       if (tp_enlarge(idim) > M_ONE ) then
         do ii = 2, nn(idim) - 1 
           cube%Lrs(ii, idim) = (ii - int(nn(idim)/2) -1) * spacing(idim)
@@ -350,7 +350,7 @@ contains
       SAFE_ALLOCATE(cube%Lfs(1:maxn, 1:3))
       cube%Lfs(:,:) = M_ZERO
 
-      do idim=1,3
+      do idim = 1,3
         temp = M_TWO * M_PI / (nn(idim) * spacing(idim))
 !temp = M_PI / (nn * spacing(1))
         do ii = 1, nn(idim)

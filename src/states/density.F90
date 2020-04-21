@@ -140,7 +140,9 @@ contains
     ispin = states_elec_dim_get_spin_index(this%st%d, psib%ik)
 
     SAFE_ALLOCATE(weight(1:psib%nst))
-    forall(ist = 1:psib%nst) weight(ist) = this%st%d%kweights(psib%ik)*this%st%occ(psib%ist(ist), psib%ik)
+    do ist = 1, psib%nst
+      weight(ist) = this%st%d%kweights(psib%ik)*this%st%occ(psib%ist(ist), psib%ik)
+    end do
 
     if (.not. this%gr%have_fine_mesh) then 
 
@@ -300,7 +302,9 @@ contains
       ! some debugging output that I will keep here for the moment, XA
       !      call dio_function_output(1, "./", "n_fine", this%gr%fine%mesh, frho, unit_one, ierr)
       !      call dio_function_output(1, "./", "n_coarse", this%gr%mesh, crho, unit_one, ierr)
-      !        forall(ip = 1:this%gr%fine%mesh%np) this%density(ip, ispin) = this%density(ip, ispin) + frho(ip)
+      !        do ip = 1, this%gr%fine%mesh%np
+      !            this%density(ip, ispin) = this%density(ip, ispin) + frho(ip)
+      !        end do
 
       SAFE_DEALLOCATE_A(psi)
       SAFE_DEALLOCATE_A(fpsi)
@@ -649,23 +653,29 @@ contains
 
     PUSH_SUB(states_elec_total_density)
 
-    forall(ip = 1:mesh%np, is = 1:st%d%nspin)
-      total_rho(ip, is) = st%rho(ip, is)
-    end forall
+    do ip = 1, mesh%np
+      do is = 1, st%d%nspin
+        total_rho(ip, is) = st%rho(ip, is)
+      end do
+    end do
 
     if(associated(st%rho_core)) then
-      forall(ip = 1:mesh%np, is = 1:st%d%spin_channels)
-        total_rho(ip, is) = total_rho(ip, is) + st%rho_core(ip)/st%d%spin_channels
-      end forall
+      do ip = 1, mesh%np
+        do is = 1, st%d%spin_channels
+          total_rho(ip, is) = total_rho(ip, is) + st%rho_core(ip)/st%d%spin_channels
+        end do
+      end do
     end if
 
     ! Add, if it exists, the frozen density from the inner orbitals.
     if(associated(st%frozen_rho)) then
-      forall(ip = 1:mesh%np, is = 1:st%d%nspin)
-        total_rho(ip, is) = total_rho(ip, is) + st%frozen_rho(ip, is)
-      end forall
+      do ip = 1, mesh%np
+        do is = 1, st%d%nspin
+          total_rho(ip, is) = total_rho(ip, is) + st%frozen_rho(ip, is)
+        end do
+      end do
     end if
-  
+
     POP_SUB(states_elec_total_density)
   end subroutine states_elec_total_density
 

@@ -585,7 +585,9 @@ contains
 
     filename = trim(dir)//'/'//trim(fname)//".vtk"
 
-    forall (ii = 1:3) dk(ii)= units_from_atomic(units_out%length, mesh%spacing(ii))
+    do ii = 1, 3
+      dk(ii)= units_from_atomic(units_out%length, mesh%spacing(ii))
+    end do
 
     call X(vtk_out_cf_vector)(filename, namespace, fname, ierr, cf, vector_dim, cube, dk, unit)
 
@@ -1472,11 +1474,13 @@ contains
     FLOAT :: dk(3), pnt(3)
     integer :: i, i1, i2, i3 
     FLOAT, ALLOCATABLE :: points(:,:,:,:)
-    
+
     PUSH_SUB(X(io_function_output_global).out_vtk)
 
-    forall (i = 1:3) dk(i)= units_from_atomic(units_out%length, mesh%spacing(i))
-    
+    do i = 1, 3
+      dk(i)= units_from_atomic(units_out%length, mesh%spacing(i))
+    end do
+
     call cube_init(cube, mesh%idx%ll, mesh%sb, namespace, spacing = dk )
     call cube_function_null(cf)
     call X(cube_function_alloc_RS) (cube, cf)

@@ -647,7 +647,7 @@ contains
     character (LEN=100)  :: v_string
 
     string_length = len(inp_string)
-    do i=1, string_length - 1
+    do i = 1, string_length - 1
        if(inp_string(i:i+1) == arraychar//"[") then
           m = 0
           if(inp_string(i+3:i+3) == ",") m = 1

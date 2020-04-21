@@ -112,8 +112,10 @@ contains
         call species_atom_density_np(this%mesh, this%mesh%sb, this%geo%atom(iatom), namespace, &
           pos, this%st%d%nspin, atom_density)
 
-        forall(ip = 1:this%mesh%np) this%total_density(ip) = this%total_density(ip) + sum(atom_density(ip, 1:st%d%nspin))
-      
+        do ip = 1, this%mesh%np
+          this%total_density(ip) = this%total_density(ip) + sum(atom_density(ip, 1:st%d%nspin))
+        end do
+
         do ip = 1, this%mesh%np
           rr = sqrt(sum((this%mesh%x(ip, 1:this%mesh%sb%dim) - pos(1:this%mesh%sb%dim))**2))
           atom_density_acc(ip) = atom_density_acc(ip) + sum(atom_density(ip, 1:this%st%d%nspin))*rr**3  

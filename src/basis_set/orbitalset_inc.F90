@@ -37,9 +37,9 @@ subroutine X(orbitalset_get_coefficients)(os, ndim, psi, ik, has_phase, basisfro
             .or. os%submeshforperiodic) then
       SAFE_ALLOCATE(spsi(1:os%sphere%np, 1:ndim))
       do idim = 1, ndim
-        forall(ip=1:os%sphere%np)
+        do ip = 1, os%sphere%np
           spsi(ip,idim) = psi(os%sphere%map(ip), idim)
-        end forall
+        end do
       end do
     end if
   end if
@@ -306,9 +306,9 @@ subroutine X(orbitalset_add_to_batch)(os, ndim, psib, basisfromstates, weight)
             sorb(:) = R_TOTYPE(M_ZERO)
             do iorb = 1, os%norbs
               tmp = weight(iorb,ist)
-              forall (ip = 1:os%sphere%np)
+              do ip = 1, os%sphere%np
                 sorb(ip) = sorb(ip) + os%X(orb)(ip,idim,iorb)*tmp
-              end forall
+              end do
             end do
             do ip = 1,os%sphere%np
               psib%X(ff_linear)(os%sphere%map(ip), ist) = &
@@ -362,9 +362,9 @@ subroutine X(orbitalset_add_to_batch)(os, ndim, psib, basisfromstates, weight)
             sorb(:) = R_TOTYPE(M_ZERO)
             do iorb = 1, os%norbs
               tmp = weight(iorb,ist)
-              forall (ip = 1:os%sphere%np)
+              do ip = 1, os%sphere%np
                 sorb(ip) = sorb(ip) + os%eorb_submesh(ip, idim, iorb, psib%ik)*tmp
-              end forall
+              end do
             end do
             do ip = 1,os%sphere%np
               psib%zff_pack(ist,os%sphere%map(ip)) = psib%zff_pack(ist,os%sphere%map(ip)) &
@@ -413,9 +413,9 @@ subroutine X(orbitalset_add_to_batch)(os, ndim, psib, basisfromstates, weight)
             sorb(:) = R_TOTYPE(M_ZERO)
             do iorb = 1, os%norbs
               tmp = weight(iorb,ist)
-              forall (ip = 1:os%sphere%np)
+              do ip = 1, os%sphere%np
                 sorb(ip) = sorb(ip) + os%X(orb)(ip,idim,iorb)*tmp
-              end forall
+              end do
             end do
             do ip = 1,os%sphere%np
               psib%X(ff_pack)(ist,os%sphere%map(ip)) = psib%X(ff_pack)(ist,os%sphere%map(ip)) &

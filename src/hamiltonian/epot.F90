@@ -272,15 +272,15 @@ contains
         ! however retains the sign because we also consider protons to
         ! have +1 charge when calculating the force.
         SAFE_ALLOCATE(ep%v_static(1:gr%mesh%np))
-        forall(ip = 1:gr%mesh%np)
+        do ip = 1, gr%mesh%np
           ep%v_static(ip) = sum(gr%mesh%x(ip, gr%sb%periodic_dim + 1:gr%sb%dim) * ep%E_field(gr%sb%periodic_dim + 1:gr%sb%dim))
-        end forall
+        end do
         ! The following is needed to make interpolations.
         ! It is used by PCM.
         SAFE_ALLOCATE(ep%v_ext(1:gr%mesh%np_part))
-        forall(ip = 1:gr%mesh%np_part)
+        do ip = 1, gr%mesh%np_part
           ep%v_ext(ip) = sum(gr%mesh%x(ip, gr%sb%periodic_dim + 1:gr%sb%dim) * ep%E_field(gr%sb%periodic_dim + 1:gr%sb%dim))
-        end forall
+        end do
       end if
     end if
 
@@ -655,7 +655,9 @@ contains
       SAFE_ALLOCATE(tmp(1:gr%mesh%np_part))
       if(poisson_solver_is_iterative(ep%poisson_solver)) tmp(1:mesh%np) = M_ZERO
       call dpoisson_solve(ep%poisson_solver, tmp, density)
-      forall(ip = 1:mesh%np) ep%vpsl(ip) = ep%vpsl(ip) + tmp(ip)
+      do ip = 1, mesh%np
+        ep%vpsl(ip) = ep%vpsl(ip) + tmp(ip)
+      end do
       SAFE_DEALLOCATE_A(tmp)
 
     end if
@@ -736,7 +738,9 @@ contains
 
     if(ep%local_potential_precalculated) then
 
-      forall(ip = 1:der%mesh%np) vpsl(ip) = vpsl(ip) + ep%local_potential(ip, iatom)
+      do ip = 1, der%mesh%np
+        vpsl(ip) = vpsl(ip) + ep%local_potential(ip, iatom)
+      end do
     else
 
       !Local potential, we can get it by solving the Poisson equation
@@ -749,7 +753,9 @@ contains
         call species_get_density(geo%atom(iatom)%species, namespace, geo%atom(iatom)%x, der%mesh, rho)
 
         if(present(density)) then
-          forall(ip = 1:der%mesh%np) density(ip) = density(ip) + rho(ip)
+          do ip = 1, der%mesh%np
+            density(ip) = density(ip) + rho(ip)
+          end do
         else
 
           SAFE_ALLOCATE(vl(1:der%mesh%np))
@@ -773,7 +779,9 @@ contains
       end if
 
       if(allocated(vl)) then
-        forall(ip = 1:der%mesh%np) vpsl(ip) = vpsl(ip) + vl(ip)
+        do ip = 1, der%mesh%np
+          vpsl(ip) = vpsl(ip) + vl(ip)
+        end do
         SAFE_DEALLOCATE_A(vl)
       end if
 
@@ -806,7 +814,9 @@ contains
       species_is_ps(geo%atom(iatom)%species)) then
       SAFE_ALLOCATE(rho(1:der%mesh%np))
       call species_get_nlcc(geo%atom(iatom)%species, geo%atom(iatom)%x, der%mesh, rho)
-      forall(ip = 1:der%mesh%np) rho_core(ip) = rho_core(ip) + rho(ip)
+      do ip = 1, der%mesh%np
+        rho_core(ip) = rho_core(ip) + rho(ip)
+      end do
       SAFE_DEALLOCATE_A(rho)
     end if
 

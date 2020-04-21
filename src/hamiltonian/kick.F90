@@ -938,10 +938,10 @@ contains
           end do
         end do
       else
-        forall(ip = 1:np)
+        do ip = 1, np
           kick_function(ip) = sum(mesh%x(ip, 1:mesh%sb%dim) * &
             kick%pol(1:mesh%sb%dim, kick%pol_dir))
-        end forall
+        end do
       end if
     end if
 
@@ -1060,9 +1060,11 @@ contains
 
             select case (kick%delta_strength_mode)
             case (KICK_DENSITY_MODE)
-              forall(idim = 1:st%d%dim, ip = 1:mesh%np)
-                psi(ip, idim) = exp(M_zI*kick%delta_strength*kick_function(ip))*psi(ip, idim)
-               end forall
+              do idim = 1, st%d%dim
+                do ip = 1, mesh%np
+                  psi(ip, idim) = exp(M_zI*kick%delta_strength*kick_function(ip))*psi(ip, idim)
+                end do
+              end do
 
             case (KICK_SPIN_MODE)
               ispin = states_elec_dim_get_spin_index(st%d, iqn)

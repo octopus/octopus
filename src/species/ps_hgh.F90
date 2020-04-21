@@ -460,7 +460,7 @@ contains
     PUSH_SUB(projectorr_vector)
 
     SAFE_ALLOCATE(projectorr_vector(1:size(r)))
-    do j=1, size(r)
+    do j = 1, size(r)
       projectorr_vector(j) = projectorr_scalar(r(j), p, i, l)
     end do
 

@@ -190,7 +190,7 @@ contains
     if(target_type(tg) == oct_tg_velocity .or. target_type(tg) == oct_tg_hhgnew) then
        SAFE_ALLOCATE(x_initial(1:sys%geo%natoms, 1:gr%mesh%sb%dim))
        vel_target_ = .true.
-       do iatom=1, sys%geo%natoms
+       do iatom = 1, sys%geo%natoms
           sys%geo%atom(iatom)%f(1:MAX_DIM) = M_ZERO
           sys%geo%atom(iatom)%v(1:MAX_DIM) = M_ZERO
           x_initial(iatom, 1:gr%mesh%sb%dim) = sys%geo%atom(iatom)%x(1:gr%mesh%sb%dim)
@@ -256,7 +256,7 @@ contains
     call messages_info(1)
 
     if(vel_target_) then
-       do iatom=1, sys%geo%natoms
+       do iatom = 1, sys%geo%natoms
           sys%geo%atom(iatom)%x(1:gr%mesh%sb%dim) = x_initial(iatom, 1:gr%mesh%sb%dim)
        end do
        SAFE_DEALLOCATE_A(x_initial)
@@ -1035,17 +1035,23 @@ contains
 
       call states_elec_get_state(psi, gr%mesh, 1, 1, zpsi)
       call states_elec_get_state(chi, gr%mesh, 1, 1, zchi)
-      
+
       d1 = zmf_dotp(gr%mesh, psi%d%dim, zpsi, zchi)
-      forall(j = 1:no_parameters) d(j) = aimag(d1*dl(j)) / controlfunction_alpha(cp, j)
+      do j = 1, no_parameters
+        d(j) = aimag(d1*dl(j)) / controlfunction_alpha(cp, j)
+      end do
 
       SAFE_DEALLOCATE_A(zpsi)
       SAFE_DEALLOCATE_A(zchi)
-      
+
     elseif(gradients_) then
-      forall(j = 1:no_parameters) d(j) = M_TWO * aimag(dl(j))
+      do j = 1, no_parameters
+        d(j) = M_TWO * aimag(dl(j))
+      end do
     else
-      forall(j = 1:no_parameters) d(j) = aimag(dl(j)) / controlfunction_alpha(cp, j) 
+      do j = 1, no_parameters
+        d(j) = aimag(dl(j)) / controlfunction_alpha(cp, j)
+      end do
     end if
 
     ! This is for the classical target.

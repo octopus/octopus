@@ -347,7 +347,9 @@ subroutine X(sternheimer_solve)(                           &
     abs_dens = M_ZERO
 
     do ispin = 1, st%d%nspin
-      forall(ip = 1:mesh%np) tmp(ip) = dl_rhoin(ip, ispin, 1) - dl_rhotmp(ip, ispin, 1)
+      do ip = 1, mesh%np
+        tmp(ip) = dl_rhoin(ip, ispin, 1) - dl_rhotmp(ip, ispin, 1)
+      end do
       abs_dens = hypot(abs_dens, TOFLOAT(X(mf_nrm2)(mesh, tmp)))
     end do
     rel_dens = abs_dens / st%qtot

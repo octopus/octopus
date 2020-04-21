@@ -1239,7 +1239,7 @@ contains
     SAFE_ALLOCATE(tmp_global(1:gr%mesh%np_part_global,1:st%d%dim))
 
 !    if (gr%mesh%parallel_in_domains) then
-!      do idim=1, st%d%dim
+!      do idim = 1, st%d%dim
 !#if defined(HAVE_MPI)
 !        call vec_allgather(gr%mesh%vp, tmp_global(:,idim), field(:,idim))
 !        call MPI_Barrieri(gr%mesh%vp%comm, mpi_err)

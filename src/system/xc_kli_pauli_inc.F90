@@ -88,7 +88,9 @@ subroutine xc_kli_pauli_solve(mesh, namespace, st, oep)
   ! Combine them to obtain Slater part
   SAFE_ALLOCATE(rhov(1:mesh%np))
   rhov = M_ZERO
-  forall (ip = 1:mesh%np) rhov(ip) = sum(rho(ip,1:4)*t_v(ip,1:4))
+  do ip = 1, mesh%np
+    rhov(ip) = sum(rho(ip,1:4)*t_v(ip,1:4))
+  end do
   rhov(1:mesh%np) = rhov(1:mesh%np)/lambda(1:mesh%np)
   SAFE_DEALLOCATE_A(t_v)
 
@@ -96,12 +98,14 @@ subroutine xc_kli_pauli_solve(mesh, namespace, st, oep)
   t_rho(1:mesh%np,1) = rho(1:mesh%np,2)
   t_rho(1:mesh%np,2) = rho(1:mesh%np,1)
   t_rho(1:mesh%np,3:4) = -rho(1:mesh%np,3:4)
-  forall (ip = 1:mesh%np) vloc(ip,1:4) = (vloc(ip,1:4) + t_rho(ip,1:4)*rhov(ip))/n(ip)
+  do ip = 1, mesh%np
+    vloc(ip,1:4) = (vloc(ip,1:4) + t_rho(ip,1:4)*rhov(ip))/n(ip)
+  end do
 
 
   select case (oep%level)
   case (XC_OEP_SLATER)
-    
+
     oep%vxc = vloc
 
   case (XC_OEP_KLI)
@@ -165,14 +169,14 @@ subroutine xc_kli_pauli_solve(mesh, namespace, st, oep)
 
         ! delta_v^KLI
         delta_v = M_ZERO
-        do ist=1,eigen_n
+        do ist = 1,eigen_n
           do is = 1,st%d%nspin
             delta_v(ist) = delta_v(ist)+ dmf_dotp(mesh,p_i(1:mesh%np,is,ist),v_m1(1:mesh%np,is), reduce = .false.)
           end do
         end do
         if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm,  delta_v, dim = eigen_n)
 
-        do ist=1,eigen_n
+        do ist = 1,eigen_n
           kssi = oep%eigen_index(ist)
           delta_v(ist) = delta_v(ist) - TOFLOAT(sum(oep%uxc_bar(kssi,:)))
         end do
@@ -182,7 +186,11 @@ subroutine xc_kli_pauli_solve(mesh, namespace, st, oep)
         t_vi(1:mesh%np,2,:) = p_i(1:mesh%np,1,:)
         t_vi(1:mesh%np,3,:) =-p_i(1:mesh%np,3,:) 
         t_vi(1:mesh%np,4,:) =-p_i(1:mesh%np,4,:)
-        forall (ip=1:mesh%np,is=1:st%d%nspin) t_vi(ip,is,:) = t_vi(ip,is,:)*delta_v(:) 
+        do ip = 1, mesh%np
+          do is = 1, st%d%nspin
+            t_vi(ip,is,:) = t_vi(ip,is,:)*delta_v(:)
+          end do
+        end do
 
         vloc = M_ZERO
         do ip = 1, mesh%np
@@ -201,7 +209,9 @@ subroutine xc_kli_pauli_solve(mesh, namespace, st, oep)
         end do
         rhov = rhov/lambda
 
-        forall (ip = 1:mesh%np) vloc(ip,:) = (vloc(ip,:) + t_rho(ip,:)*rhov(ip))/n(ip)
+        do ip = 1, mesh%np
+          vloc(ip,:) = (vloc(ip,:) + t_rho(ip,:)*rhov(ip))/n(ip)
+        end do
         !
         do is = 1, 4 
           reached_threshold(is) = dmf_nrm2(mesh,(vs(1:mesh%np,is) + vloc(1:mesh%np,is) - v_m1(1:mesh%np,is))) 

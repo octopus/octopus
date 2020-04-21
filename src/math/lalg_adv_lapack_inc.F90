@@ -93,7 +93,9 @@ subroutine X(geneigensolve)(n, a, b, e, bof, err_code)
   SAFE_ALLOCATE(diag(1:n))
 
   ! store the diagonal of b  
-  forall(ii = 1:n) diag(ii) = b(ii, ii)
+  do ii = 1, n
+    diag(ii) = b(ii, ii)
+  end do
 
   lwork = 5*n ! get this from workspace query
   SAFE_ALLOCATE(work(1:lwork))
@@ -266,10 +268,10 @@ subroutine X(eigensolve_nonh)(n, a, e, err_code, side, sort_eigenvectors)
     e_copy = e
     a_copy = a
     call sort(re, ind)
-    forall(ii = 1:n)
+    do ii = 1, n
       e(ii) = e_copy(ind(ii))
       a(1:n, ii) = a_copy(1:n, ind(ii))
-    end forall
+    end do
     SAFE_DEALLOCATE_A(e_copy)
     SAFE_DEALLOCATE_A(a_copy)
     SAFE_DEALLOCATE_A(re)

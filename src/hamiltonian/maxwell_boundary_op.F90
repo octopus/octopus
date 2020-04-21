@@ -658,7 +658,7 @@ contains
     pml_check = .false.
     medium_check = .false.
 
-    do idim=1, 3
+    do idim = 1, 3
       if (bc%bc_ab_type(idim) == AB_MASK) then
         mask_check = .true.
       end if

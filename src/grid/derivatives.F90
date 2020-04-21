@@ -683,16 +683,22 @@ contains
       ! i indexes the point in the stencil
       do i = 1, op(1)%stencil%size
         if(mesh%use_curvilinear) then
-          forall(j = 1:dim) x(j) = mesh%x(p + op(1)%ri(i, op(1)%rimap(p)), j) - mesh%x(p, j)
+          do j = 1, dim
+            x(j) = mesh%x(p + op(1)%ri(i, op(1)%rimap(p)), j) - mesh%x(p, j)
+          end do
         else
-          forall(j = 1:dim) x(j) = TOFLOAT(op(1)%stencil%points(j, i))*mesh%spacing(j)
+          do j = 1, dim
+            x(j) = TOFLOAT(op(1)%stencil%points(j, i))*mesh%spacing(j)
+          end do
           ! TODO : this internal if clause is inefficient - the condition is determined globally
           if (mesh%sb%nonorthogonal .and. .not. optional_default(force_orthogonal, .false.))  & 
               x(1:dim) = matmul(mesh%sb%rlattice_primitive(1:dim,1:dim), x(1:dim))
         end if
                          
 ! NB: these masses are applied on the cartesian directions. Should add a check for non-orthogonal axes
-        forall(j = 1:dim) x(j) = x(j)*sqrt(masses(j))
+        do j = 1, dim
+          x(j) = x(j)*sqrt(masses(j))
+        end do
 
         ! calculate powers
         do j = 1, dim

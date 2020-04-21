@@ -133,9 +133,9 @@ contains
       this%oct_rho = M_ZERO
       do jst = 1, this%oct_st%nst
         call states_elec_get_state(this%oct_st, mesh, jst, 1, psi2)
-        forall (ip = 1:mesh%np)
+        do ip = 1, mesh%np
           this%oct_rho(ip, 1) = this%oct_rho(ip, 1) + this%oct_st%occ(jst, 1)*aimag(conjg(psi2(ip, 1))*psi(ip, 1, jst, 1))
-        end forall
+        end do
       end do
       call dpoisson_solve(psolver, this%oct_pot(:, 1), this%oct_rho(:, 1), all_nodes = .false.)
 
@@ -147,9 +147,9 @@ contains
       do ik = 1, 2
         do jst = 1, this%oct_st%nst
           call states_elec_get_state(this%oct_st, mesh, jst, ik, psi2)
-          forall (ip = 1:mesh%np)
+          do ip = 1, mesh%np
             this%oct_rho(ip, ik) = this%oct_rho(ip, ik) + this%oct_st%occ(jst, ik) * aimag(conjg(psi2(ip, 1))*psi(ip, 1, jst, ik))
-          end forall
+          end do
         end do
       end do
 

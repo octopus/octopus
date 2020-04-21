@@ -850,15 +850,15 @@ contains
 
         SAFE_ALLOCATE(ks%calc%total_density(1:ks%gr%fine%mesh%np))
 
-        forall(ip = 1:ks%gr%fine%mesh%np)
+        do ip = 1, ks%gr%fine%mesh%np
           ks%calc%total_density(ip) = sum(ks%calc%density(ip, 1:hm%d%spin_channels))
-        end forall
+        end do
 
         ! remove non-local core corrections
         if(associated(st%rho_core)) then
-          forall(ip = 1:ks%gr%fine%mesh%np)
+          do ip = 1, ks%gr%fine%mesh%np
             ks%calc%total_density(ip) = ks%calc%total_density(ip) - st%rho_core(ip)*ks%calc%amaldi_factor
-          end forall
+          end do
         end if
       else
         ks%calc%total_density_alloc = .false.
@@ -921,7 +921,9 @@ contains
 
       rho(:, 1) = ks%calc%total_density / st%qtot
       call dpoisson_solve(hm%psolver_fine, vh_sic, rho(:,1))
-      forall(ip = 1:ks%gr%mesh%np) ks%calc%vxc(ip,:) = ks%calc%vxc(ip,:) - vh_sic(ip)
+      do ip = 1, ks%gr%mesh%np
+        ks%calc%vxc(ip,:) = ks%calc%vxc(ip,:) - vh_sic(ip)
+      end do
 
       SAFE_DEALLOCATE_P(vxc_sic)
       SAFE_DEALLOCATE_P(vh_sic)                                
@@ -1175,24 +1177,36 @@ contains
 
 
       ! Build Hartree + XC potential
-     
-      forall(ip = 1:ks%gr%mesh%np) hm%vhxc(ip, 1) = hm%vxc(ip, 1) + hm%vhartree(ip)
+
+      do ip = 1, ks%gr%mesh%np
+        hm%vhxc(ip, 1) = hm%vxc(ip, 1) + hm%vhartree(ip)
+      end do
       if(associated(hm%vberry)) then
-        forall(ip = 1:ks%gr%mesh%np) hm%vhxc(ip, 1) = hm%vhxc(ip, 1) + hm%vberry(ip, 1)
+        do ip = 1, ks%gr%mesh%np
+          hm%vhxc(ip, 1) = hm%vhxc(ip, 1) + hm%vberry(ip, 1)
+        end do
       end if
 
       if(hm%d%ispin > UNPOLARIZED) then
-        forall(ip = 1:ks%gr%mesh%np) hm%vhxc(ip, 2) = hm%vxc(ip, 2) + hm%vhartree(ip)
+        do ip = 1, ks%gr%mesh%np
+          hm%vhxc(ip, 2) = hm%vxc(ip, 2) + hm%vhartree(ip)
+        end do
         if(associated(hm%vberry)) then
-          forall(ip = 1:ks%gr%mesh%np) hm%vhxc(ip, 2) = hm%vhxc(ip, 2) + hm%vberry(ip, 2)
+          do ip = 1, ks%gr%mesh%np
+            hm%vhxc(ip, 2) = hm%vhxc(ip, 2) + hm%vberry(ip, 2)
+          end do
         end if
       end if
-      
+
       if(hm%d%ispin == SPINORS) then
-        forall(ispin = 3:4, ip = 1:ks%gr%mesh%np) hm%vhxc(ip, ispin) = hm%vxc(ip, ispin)
+        do ispin=3, 4
+          do ip = 1, ks%gr%mesh%np
+            hm%vhxc(ip, ispin) = hm%vxc(ip, ispin)
+          end do
+        end do
       end if
 
-      
+
       ! Note: this includes hybrids calculated with the Fock operator instead of OEP 
       if(ks%theory_level == HARTREE .or. ks%theory_level == HARTREE_FOCK .or. ks%theory_level == RDMFT) then
 

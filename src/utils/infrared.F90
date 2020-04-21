@@ -148,8 +148,9 @@
         time(iter) =  units_to_atomic(units_out%time, time(iter))
 
         !dipole moment has unit of charge*length, charge has the same unit in both systems
-        forall(ii= 1: 3) dipole(iter, ii) = units_to_atomic(units_out%length, dipole(iter, ii)) 
-
+        do ii = 1, 3
+          dipole(iter, ii) = units_to_atomic(units_out%length, dipole(iter, ii))
+        end do
 
         if (ierr /= 0) then 
           iter = iter - 1 !last iteration is not valid

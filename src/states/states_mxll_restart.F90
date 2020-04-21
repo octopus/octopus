@@ -236,7 +236,7 @@ contains
 
       end do
 
-      do ip=1, mesh%np
+      do ip = 1, mesh%np
         user_def_rs_state(ip,:) = rs_state(ip,:)
       end do
 

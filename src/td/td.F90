@@ -1109,13 +1109,15 @@ contains
         ! FIXME: rotation matrix should be R_TYPE
         SAFE_ALLOCATE(rotation_matrix(1:stin%nst, 1:stin%nst))
         SAFE_ALLOCATE(psi(1:gr%mesh%np, 1:st%d%dim))
-        
+
         rotation_matrix = M_z0
-        forall(ist = 1:stin%nst) rotation_matrix(ist, ist) = CNST(1.0)
-        
+        do ist = 1, stin%nst
+          rotation_matrix(ist, ist) = CNST(1.0)
+        end do
+
         do ist = 1, st%nst
           ncols = parse_block_cols(blk, ist-1)
-          if(ncols /= stin%nst) then            
+          if(ncols /= stin%nst) then
             write(message(1),'(a,i6,a,i6,3a,i6,a)') "Number of columns (", ncols, ") in row ", ist, " of block ", &
               trim(block_name), " must equal number of states (", stin%nst, ") read from gs restart."
             call messages_fatal(1, namespace=namespace)

@@ -1521,9 +1521,9 @@ contains
             end if
             if(.not. state_kpt_is_local(st, ist, ik)) cycle
             if(states_are_complex(st)) then !Gamma point
-              forall(ip=1:mesh%np) 
+              do ip = 1, mesh%np
                 zpsi(ip,1) = cmplx(dpsi(ip,1), M_ZERO)
-              end forall
+              end do
               call states_elec_set_state(st, mesh, ist,  ik, zpsi)
             else
               call states_elec_set_state(st, mesh, ist,  ik, dpsi)
@@ -1556,9 +1556,9 @@ contains
                 call dmf_random(mesh, dpsi(:, 1), normalized = normalized)
                 if(.not. state_kpt_is_local(st, ist, ik)) cycle
               end if
-              forall(ip=1:mesh%np)
+              do ip = 1, mesh%np
                 zpsi(ip,1) = cmplx(dpsi(ip,1), M_ZERO)
-              end forall
+              end do
               call states_elec_set_state(st, mesh, ist,  ik, zpsi)
             else
               if(st%randomization == PAR_INDEPENDENT) then
@@ -2045,9 +2045,9 @@ contains
 
 
     if(associated(st%rho_core) .and. nlcc .and. (present(density_laplacian) .or. present(density_gradient))) then
-       forall(ii=1:der%mesh%np)
+       do ii = 1, der%mesh%np
          wf_psi(ii, 1) = st%rho_core(ii)/st%d%spin_channels
-       end forall
+       end do
 
        call boundaries_set(der%boundaries, wf_psi(:, 1))
 

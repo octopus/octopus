@@ -716,7 +716,7 @@ contains
           if(occ_response_ .and. ist2 /= ist) cycle
 
           call states_elec_get_state(st, sys%gr%mesh, ist2, ik, psi2)
-          
+
           do ii = 1, ndir
             call pert_setup_dir(dipole, ii)
 
@@ -727,16 +727,22 @@ contains
                 if(ist == ist2) then
                   ppsi = M_ZERO ! will put in eigenvalue directly later
                 else
-                  forall (idim = 1:st%d%dim, ip = 1:np) ppsi(ip, idim) = kdotp_lr(ii)%X(dl_psi)(ip, idim, ist, ik)
+                  do idim = 1, st%d%dim
+                    do ip = 1, np
+                      ppsi(ip, idim) = kdotp_lr(ii)%X(dl_psi)(ip, idim, ist, ik)
+                    end do
+                  end do
                 end if
               else
                 call X(pert_apply)(dipole, sys%namespace, sys%gr, sys%geo, sys%hm, ik, psi1, ppsi)
               end if
 
               isigma = 1
-              forall (idim = 1:st%d%dim, ip = 1:np)
-                ppsi(ip, idim) = ppsi(ip, idim) + hvar(ip, ispin, isigma, idim, ii, ifreq)*psi1(ip, idim)
-              end forall
+              do idim = 1, st%d%dim
+                do ip = 1, np
+                  ppsi(ip, idim) = ppsi(ip, idim) + hvar(ip, ispin, isigma, idim, ii, ifreq)*psi1(ip, idim)
+                end do
+              end do
 
               me010(ist2, ist, ii, ifreq, ik) = X(mf_dotp)(mesh, st%d%dim, psi2, ppsi)
 
@@ -862,14 +868,14 @@ subroutine X(em_resp_calc_eigenvalues)(sys, dl_eig)
 
   do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
     do ist = sys%st%st_start, sys%st%st_end
-        
+
       call states_elec_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
-        
+
       do idir = 1, sys%gr%sb%periodic_dim
         do idim = 1, sys%st%d%dim
-          forall(ip = 1:sys%gr%mesh%np) 
+          do ip = 1, sys%gr%mesh%np
             integrand(ip) = exp(M_zI*(M_PI/sys%gr%mesh%sb%lsize(idir))*sys%gr%mesh%x(ip, idir)) * abs(psi(ip, idim))**2
-          end forall
+          end do
           dl_eig(ist, ik, idir) = dl_eig(ist, ik, idir) + &
             (sys%gr%mesh%sb%lsize(idir)/M_PI) * aimag(zmf_integrate(sys%gr%mesh, integrand))
         end do

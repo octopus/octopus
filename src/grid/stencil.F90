@@ -114,8 +114,12 @@ contains
     call stencil_allocate(stu, st1%size + st2%size)
 
     ! copy the first stencil
-    forall (idir = 1:dim, ii = 1:st1%size) stu%points(idir, ii) = st1%points(idir, ii)
-    
+    do idir = 1, dim
+      do ii = 1, st1%size
+        stu%points(idir, ii) = st1%points(idir, ii)
+      end do
+    end do
+
     nstu = st1%size
 
     do ii = 1, st2%size
@@ -134,7 +138,7 @@ contains
         nstu = nstu + 1
         stu%points(1:dim, nstu) = st2%points(1:dim, ii)
       end if
-      
+
     end do
 
     stu%points(dim + 1:MAX_DIM, 1:nstu) = 0

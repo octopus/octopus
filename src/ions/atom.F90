@@ -223,7 +223,7 @@ contains
     write(unit=frmt, fmt="(a5,i2.2,a4,i2.2,a6)") "(6x,a", LABEL_LEN, ",2x,", dim_,"f12.6)"
     read(unit=unit, fmt=frmt) dum, (tmp(i), i=1, dim_)
 
-    do i=1, dim_
+    do i = 1, dim_
       this%x(i) = units_to_atomic(units_out%length_xyz_file, tmp(i))
     end do
  
@@ -306,7 +306,7 @@ contains
     write(unit=frmt, fmt="(a10,i2.2,a15)") "(6x,a1,2x,", dim_, "f12.6,a3,f12.6)"
     read(unit=unit, fmt=frmt) dum, (tmp, i=1, dim_)
 
-    do i=1, dim_
+    do i = 1, dim_
       this%x(i) = units_to_atomic(units_out%length_xyz_file, tmp(i))
     end do
 

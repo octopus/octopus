@@ -244,7 +244,7 @@ subroutine X(modelmb_density_matrix_write)(gr, st, wf, mm, denmat, namespace)
         do ll = 1, mb_1part%npt
           call hypercube_i_to_x(mb_1part%hypercube_1part, ndim1part, mb_1part%nr_1part, &
             mb_1part%enlarge_1part(1), ll, ix_1part)
-          do idir=1,ndim1part
+          do idir = 1,ndim1part
             write(iunit,'(es11.3)', ADVANCE='no') ix_1part(idir)*mb_1part%h_1part(idir)+mb_1part%origin(idir)
           end do
           write(iunit,'(es11.3,es11.3)') evectors(ll,jj) 
@@ -261,10 +261,10 @@ subroutine X(modelmb_density_matrix_write)(gr, st, wf, mm, denmat, namespace)
         do ll = 1, mb_1part%npt
           call hypercube_i_to_x(mb_1part%hypercube_1part, ndim1part, mb_1part%nr_1part, &
             mb_1part%enlarge_1part(1), ll, ix_1part_p)
-          do idir=1,ndim1part
+          do idir = 1,ndim1part
             write(iunit,'(es11.3)', ADVANCE='no') ix_1part(idir)*mb_1part%h_1part(idir)+mb_1part%origin(idir)
           end do
-          do idir=1,ndim1part
+          do idir = 1,ndim1part
             write(iunit,'(es11.3)', ADVANCE='no') ix_1part_p(idir)*mb_1part%h_1part(idir)+mb_1part%origin(idir)
           end do
           write(iunit,'(es11.3,es11.3)') densmatr(jj,ll)
@@ -279,7 +279,7 @@ subroutine X(modelmb_density_matrix_write)(gr, st, wf, mm, denmat, namespace)
       do jj = 1, mb_1part%npt
         call hypercube_i_to_x(mb_1part%hypercube_1part, ndim1part, mb_1part%nr_1part, &
           mb_1part%enlarge_1part(1), jj, ix_1part)
-        do idir=1,ndim1part
+        do idir = 1,ndim1part
           write(iunit,'(es11.3)', ADVANCE='no') ix_1part(idir)*mb_1part%h_1part(idir)+mb_1part%origin(idir)
         end do
         write(iunit,'(es18.10)') real(densmatr(jj,jj))

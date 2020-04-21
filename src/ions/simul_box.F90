@@ -755,7 +755,9 @@ contains
         !%End
         sb%rlattice_primitive = M_ZERO
         sb%nonorthogonal = .false.
-        forall(idim = 1:sb%dim) sb%rlattice_primitive(idim, idim) = M_ONE
+        do idim = 1, sb%dim
+          sb%rlattice_primitive(idim, idim) = M_ONE
+        end do
 
         if (parse_block(namespace, 'LatticeVectors', blk) == 0) then 
           do idim = 1, sb%dim
@@ -784,10 +786,10 @@ contains
     do idim = 1, sb%dim
       norm = sqrt(sum(sb%rlattice_primitive(1:sb%dim, idim)**2))
       sb%lsize(idim) = sb%lsize(idim) * norm
-      forall(jdim = 1:sb%dim)
+      do jdim=1, sb%dim
         sb%rlattice_primitive(jdim, idim) = sb%rlattice_primitive(jdim, idim) / norm
         sb%rlattice(jdim, idim) = sb%rlattice_primitive(jdim, idim) * M_TWO*sb%lsize(idim)
-      end forall
+      end do
     end do
     
     call reciprocal_lattice(sb%rlattice, sb%klattice, sb%rcell_volume, sb%dim, namespace)
@@ -1182,9 +1184,9 @@ contains
 
     select case(sb%box_shape)
     case(SPHERE)
-      forall(ip = 1:npoints)
+      do ip = 1, npoints
         in_box(ip) = sum(xx(1:sb%dim, ip)**2) <= (sb%rsize+DELTA)**2
-      end forall
+      end do
 
     case(CYLINDER)
       do ip = 1, npoints
@@ -1252,9 +1254,9 @@ contains
       ulimit(1:sb%dim) =  sb%lsize(1:sb%dim) + DELTA
       ulimit(1:sb%periodic_dim)  = sb%lsize(1:sb%periodic_dim) - DELTA
 
-      forall(ip = 1:npoints)
+      do ip = 1, npoints
         in_box(ip) = all(xx(1:sb%dim, ip) >= llimit(1:sb%dim) .and. xx(1:sb%dim, ip) <= ulimit(1:sb%dim))
-      end forall
+      end do
 
 #if defined(HAVE_GDLIB)
 ! Why the minus sign for y? Explanation: http://biolinx.bios.niu.edu/bios546/gd_mod.htm

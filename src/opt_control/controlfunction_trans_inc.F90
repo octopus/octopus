@@ -29,7 +29,9 @@
 
     select case(par%current_representation)
     case(ctr_rt)
-      forall(j = 1: par%dim) par%theta(j) = tdf(par%f(1), j)
+      do j = 1, par%dim
+        par%theta(j) = tdf(par%f(1), j)
+      end do
 
     case(ctr_fourier_series_h)
       n = par%dim
@@ -38,7 +40,9 @@
       SAFE_ALLOCATE(ep(1:n))
       SAFE_ALLOCATE(x(1:dof))
 
-      forall(j = 1: n) ep(j) = tdf(par%f(1), j)
+      do j = 1, n
+        ep(j) = tdf(par%f(1), j)
+      end do
       e = matmul(par%utransf, ep)
       call cartesian2hyperspherical(e, x(1:n-1))
 
@@ -53,7 +57,9 @@
       SAFE_ALLOCATE(ep(1:n))
       SAFE_ALLOCATE(x(1:dof))
 
-      forall(j = 1: n) ep(j) = tdf(par%f(1), j)
+      do j = 1, n
+        ep(j) = tdf(par%f(1), j)
+      end do
       SAFE_ALLOCATE(y(1:n-1))
       y = matmul(par%utransf, ep(2:n))
       call cartesian2hyperspherical(y, x(1:n-2))
@@ -64,7 +70,9 @@
       SAFE_DEALLOCATE_A(x)
 
     case(ctr_fourier_series)
-      forall(j = 1: par%dim) par%theta(j) = tdf(par%f(1), j)
+      do j = 1, par%dim
+        par%theta(j) = tdf(par%f(1), j)
+      end do
 
     case(ctr_zero_fourier_series)
       ! In this case, the transformation is (n = par%dim):
@@ -79,7 +87,9 @@
       ! the coefficients of the sines
 
       SAFE_ALLOCATE(e(1:par%dim))
-      forall(j = 1: par%dim) e(j) = tdf(par%f(1), j)
+      do j = 1, par%dim
+        e(j) = tdf(par%f(1), j)
+      end do
 
       do j = 2, par%dim
         par%theta(j-1) = e(j)
@@ -242,7 +252,9 @@
 
       SAFE_ALLOCATE(par%u(1:par%dim, 1:par%dim))
       par%u = M_ZERO
-      forall(mm = 1:par%dim) par%u(mm, mm) = M_ONE
+      do mm=1, par%dim
+        par%u(mm, mm) = M_ONE
+      end do
 
       if( cf_common%mode  ==  controlfunction_mode_f ) then
 
@@ -368,8 +380,12 @@
       SAFE_ALLOCATE(par%utransfi(1:n-1, 1:n-1))
       par%utransf  = M_ZERO
       par%utransfi = M_ZERO
-      forall(mm = 1:n-1) par%utransf(mm, mm) = M_ONE
-      forall(mm = 1:n-1) par%utransfi(mm, mm) = M_ONE
+      do mm=1, n-1
+        par%utransf(mm, mm) = M_ONE
+      end do
+      do mm=1, n-1
+        par%utransfi(mm, mm) = M_ONE
+      end do
 
       if( cf_common%mode  ==  controlfunction_mode_f ) then
 

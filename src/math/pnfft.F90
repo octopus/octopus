@@ -402,7 +402,7 @@ contains
     
     
     
-    do idir=1,3  
+    do idir = 1,3
       len(:) = (maxval(X(:,idir))-minval(X(:,idir)))*eps
       cc(:) = (minval(X(:,idir))+maxval(X(:,idir)))/M_TWO
     end do
@@ -455,7 +455,7 @@ contains
     end do
 
 
-!     do j=1,pnfft%local_M
+!     do j = 1,pnfft%local_M
 !       do t=1,3
 !         pnfft%x_lin(t,j) = (pnfft%upper_border(t) - pnfft%lower_border(t)) * rand(0) + pnfft%lower_border(t)
 !       end do
@@ -467,9 +467,9 @@ contains
 
     SAFE_ALLOCATE( dX(1:maxval(pnfft%M(:))-1, 1:3))
 
-     
-    ! Set the normalization factor  
-    do idir=1,3 
+
+    ! Set the normalization factor
+    do idir = 1,3
       do ii = 1, size(X(:,idir))-1
         dX(ii,idir)= abs(X(ii+1, idir)-X(ii, idir))
 !         dX(ii,2)= abs(x2_(ii+1)-x2_(ii))

@@ -168,9 +168,9 @@ subroutine X(exchange_operator_apply)(this, namespace, der, st_d, psib, hpsib, r
           !Accumulate the result
           call profiling_in(prof2, "EXCHANGE_ACCUMULATE")
           do idim = 1, st_d%dim
-            forall(ip = 1:der%mesh%np)
+            do ip = 1, der%mesh%np
               hpsi(ip, idim) = hpsi(ip, idim) - ff*psi2(ip, idim)*pot(ip)
-            end forall
+            end do
           end do 
           call profiling_out(prof2)
 
@@ -245,9 +245,9 @@ subroutine X(exchange_operator_hartree_apply) (this, namespace, der, st_d, exx_c
       call states_elec_get_state(this%st, der%mesh, ist, ik2, psi2)
 
       do idim = 1, this%st%d%dim
-        forall(ip = 1:der%mesh%np)
+        do ip = 1, der%mesh%np
           rho(ip) = rho(ip) + R_CONJ(psi2(ip, idim))*psi(ip, idim)
-        end forall
+        end do
       end do
 
       call X(poisson_solve)(this%psolver, pot, rho, all_nodes = .false.)
@@ -256,15 +256,15 @@ subroutine X(exchange_operator_hartree_apply) (this, namespace, der, st_d, exx_c
       if(st_d%ispin == UNPOLARIZED) ff = M_HALF*ff
 
       do idim = 1, this%st%d%dim
-        forall(ip = 1:der%mesh%np)
+        do ip = 1, der%mesh%np
           hpsi(ip, idim) = hpsi(ip, idim) - exx_coef*ff*psi2(ip, idim)*pot(ip)
-        end forall
+        end do
       end do
 
     end do
 
     call batch_set_state(hpsib, ibatch, der%mesh%np, hpsi)
-    
+
   end do
 
   SAFE_DEALLOCATE_A(psi)

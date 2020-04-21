@@ -351,10 +351,14 @@ contains
       end do
     end do
     
-    forall(iz=1:nfs(3), iy=1:nfs(2), ix=1:nfs(1))
-      fft_Coulb_FS(ix, iy, iz) = M_FOUR*M_PI*fft_Coulb_FS(ix, iy, iz)
-    end forall
-    
+    do iz = 1, nfs(3)
+      do iy=1, nfs(2)
+        do ix=1, nfs(1)
+          fft_Coulb_FS(ix, iy, iz) = M_FOUR*M_PI*fft_Coulb_FS(ix, iy, iz)
+        end do
+      end do
+    end do
+
     ! get periodic Coulomb potential in real space
     call dfft_backward(fullcube%fft, fft_Coulb_FS, fft_Coulb_RS)
 
@@ -461,9 +465,13 @@ contains
 
     end do
 
-    forall(iz=1:cube%fs_n_global(3), iy=1:cube%fs_n_global(2), ix=1:cube%fs_n_global(1))
-      fft_Coulb_FS(ix, iy, iz) = M_FOUR*M_PI*fft_Coulb_FS(ix, iy, iz)
-    end forall
+    do iz = 1, cube%fs_n_global(3)
+      do iy=1, cube%fs_n_global(2)
+        do ix=1, cube%fs_n_global(1)
+          fft_Coulb_FS(ix, iy, iz) = M_FOUR*M_PI*fft_Coulb_FS(ix, iy, iz)
+        end do
+      end do
+    end do
 
     call dfourier_space_op_init(coulb, cube, fft_Coulb_FS)
 
@@ -566,9 +574,13 @@ contains
       if( mesh%sb%periodic_dim == 0 ) call spline_end(cylinder_cutoff_f)
     end do
 
-    forall(iz=1:cube%fs_n_global(3), iy=1:cube%fs_n_global(2), ix=1:cube%fs_n_global(1))
-      fft_Coulb_FS(ix, iy, iz) = M_FOUR*M_PI*fft_Coulb_FS(ix, iy, iz)
-    end forall
+    do iz = 1, cube%fs_n_global(3)
+      do iy=1, cube%fs_n_global(2)
+        do ix=1, cube%fs_n_global(1)
+          fft_Coulb_FS(ix, iy, iz) = M_FOUR*M_PI*fft_Coulb_FS(ix, iy, iz)
+        end do
+      end do
+    end do
 
     call dfourier_space_op_init(coulb, cube, fft_Coulb_FS)
 
@@ -651,9 +663,13 @@ contains
       end do
     end do
 
-    forall(iz=1:cube%fs_n(3), iy=1:cube%fs_n(2), ix=1:cube%fs_n(1))
-      fft_Coulb_FS(ix, iy, iz) = M_FOUR*M_PI*fft_Coulb_FS(ix, iy, iz)
-    end forall
+    do iz = 1, cube%fs_n(3)
+      do iy=1, cube%fs_n(2)
+        do ix=1, cube%fs_n(1)
+          fft_Coulb_FS(ix, iy, iz) = M_FOUR*M_PI*fft_Coulb_FS(ix, iy, iz)
+        end do
+      end do
+    end do
 
     call dfourier_space_op_init(coulb, cube, fft_coulb_fs, in_device = (kernel /= POISSON_FFT_KERNEL_CORRECTED))
 

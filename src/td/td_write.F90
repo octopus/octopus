@@ -1368,9 +1368,9 @@ contains
       SAFE_ALLOCATE(integrand(1:gr%mesh%np))
       integrand = M_ZERO
       do is = 1, st%d%nspin
-        forall(ip = 1:gr%mesh%np)
+        do ip = 1, gr%mesh%np
           integrand(ip) = integrand(ip) + st%rho(ip, is) * exp(-M_zI*sum(gr%mesh%x(ip,:)*kick%qvector(:,1)))
-        end forall
+        end do
       end do
       ftchd = zmf_integrate(gr%mesh, integrand)
       SAFE_DEALLOCATE_A(integrand)
@@ -2188,21 +2188,21 @@ contains
 
     ! this complicated stuff here is a workaround for a PGI compiler bug in versions before 9.0-3
     call gauge_field_get_vec_pot(hm%ep%gfield, temp)
-    forall(idir = 1:gr%mesh%sb%dim)
+    do idir = 1, gr%mesh%sb%dim
       temp(idir) = units_from_atomic(units_out%energy, temp(idir))
-    end forall
+    end do
     call write_iter_double(out_gauge, temp, gr%mesh%sb%dim)
 
     call gauge_field_get_vec_pot_vel(hm%ep%gfield, temp)
-    forall(idir = 1:gr%mesh%sb%dim)
+    do idir = 1, gr%mesh%sb%dim
       temp(idir) = units_from_atomic(units_out%energy / units_out%time, temp(idir))
-    end forall
+    end do
     call write_iter_double(out_gauge, temp, gr%mesh%sb%dim)
 
     call gauge_field_get_vec_pot_acc(hm%ep%gfield, temp)
-    forall(idir = 1:gr%mesh%sb%dim)
+    do idir = 1, gr%mesh%sb%dim
       temp(idir) = units_from_atomic(units_out%energy / units_out%time**2, temp(idir))
-    end forall
+    end do
     call write_iter_double(out_gauge, temp, gr%mesh%sb%dim)
 
     call write_iter_nl(out_gauge)
@@ -2595,11 +2595,11 @@ contains
       do ist=gs_st%st_start,gs_st%st_end
         if(state_kpt_is_local(gs_st, ist, ik)) then
           call states_elec_get_state(st, mesh, ist, ik,temp_state )
-          do idim=1,gs_st%d%dim
+          do idim = 1,gs_st%d%dim
             psi(ist,idim,1:mesh%np) =  temp_state(1:mesh%np,idim)
           end do
           call states_elec_get_state(gs_st, mesh, ist, ik,temp_state )
-          do idim=1,gs_st%d%dim
+          do idim = 1,gs_st%d%dim
             gs_psi(ist,idim,1:mesh%np) =  temp_state(1:mesh%np,idim)
           end do
         end if
@@ -2626,7 +2626,7 @@ contains
 
       ! write to file 
       if(mpi_world%rank==0) then
-        do ist=1,gs_st%nst
+        do ist = 1,gs_st%nst
           do jst=1,gs_st%nst
             write(file,'(I3,1x,I3,1x,e12.6,1x,e12.6,2x)') ist, jst, proj(ist,jst)
           end do
@@ -2772,11 +2772,11 @@ contains
         do ist=st%st_start,st%st_end
           if(state_kpt_is_local(st, ist, ik)) then
             call states_elec_get_state(st, mesh, ist, ik,temp_state1 )
-            do idim=1,st%d%dim
+            do idim = 1,st%d%dim
               psi(ist,idim,1:mesh%np) =  temp_state1(1:mesh%np,idim)
             end do
             call states_elec_get_state(hm_st, mesh, ist, ik,temp_state1 )
-            do idim=1,st%d%dim
+            do idim = 1,st%d%dim
               hpsi(ist,idim,1:mesh%np) =temp_state1(1:mesh%np,idim)
             end do
           end if
@@ -2809,7 +2809,7 @@ contains
                 HFloquet(ik_count,ii+1:ii+nst,jj+1:jj+nst) + hmss(1:nst,1:nst)*exp(-(in-im)*M_zI*omega*it*dt)
               ! diagonal term
               if(in==im) then
-                 do ist=1,nst
+                 do ist = 1,nst
                     HFloquet(ik_count,ii+ist,ii+ist) = HFloquet(ik_count,ii+ist,ii+ist) + in*omega
                  end do
               end if
@@ -2868,7 +2868,7 @@ contains
       file=987254
       file = io_open(filename, namespace, action = 'write')
       do ik=1,nik
-        do ist=1,lim_nst
+        do ist = 1,lim_nst
           write(file,'(e12.6, 1x)',advance='no') bands(ik,ist)
         end do
         write(file,'(1x)')
@@ -2894,7 +2894,7 @@ contains
         filename='trivial_floquet_bands'
         file = io_open(filename, namespace, action = 'write')
         do ik=1,nik
-          do ist=1,lim_nst
+          do ist = 1,lim_nst
             write(file,'(e12.6, 1x)',advance='no') bands(ik,ist)
           end do
           write(file,'(1x)')

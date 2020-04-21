@@ -283,7 +283,7 @@ contains
     ! write direct lattice vectors (in angstrom)
     write(w90_win,'(a)') 'begin unit_cell_cart'
     write(w90_win,'(a)') 'Ang'
-    do idim=1,3
+    do idim = 1,3
       write(w90_win,'(f13.8,f13.8,f13.8)') units_from_atomic(unit_angstrom, sb%rlattice(1:3,idim))
     end do
     write(w90_win,'(a)') 'end unit_cell_cart'
@@ -430,7 +430,7 @@ contains
 
       do ik = 1, nik
         kvec(:) = sys%gr%sb%kpoints%reduced%point(:, ik)
-        do ist=1, w90_num_bands
+        do ist = 1, w90_num_bands
           call states_elec_get_state(sys%st, sys%gr%der%mesh, ist, ik, psi)
           smear=M_HALF * loct_erfc((sys%st%eigenval(ist, ik) - scdm_mu) / scdm_sigma)
           ! NOTE: here check for domain parallelization
@@ -590,7 +590,7 @@ contains
       if(io  == iostat_end) exit !End of file
       if(dummy =='begin' .and. dummy1 == 'exclude_bands') then
         read(w90_nnkp, *) w90_num_exclude
-        do ii=1, w90_num_exclude
+        do ii = 1, w90_num_exclude
           read(w90_nnkp, *) itemp
           exclude_list(itemp) = .true.
         end do
@@ -660,7 +660,7 @@ contains
             SAFE_ALLOCATE(w90_spin_proj_axis(w90_nproj, 3))
           end if
 
-          do ii=1, w90_nproj
+          do ii = 1, w90_nproj
              read(w90_nnkp, *) w90_proj_centers(ii, 1:3), w90_proj_lmr(ii, 1:3)
              ! skip a line for now
              read(w90_nnkp, *) dummyr(1:7)
@@ -1022,7 +1022,7 @@ contains
       
         ! make transpose table of submesh points for use in pwscf routine
         SAFE_ALLOCATE(rr(1:3,orbitals(iw)%sphere%np))
-        do ip=1,orbitals(iw)%sphere%np
+        do ip = 1,orbitals(iw)%sphere%np
           rr(1:3,ip) = orbitals(iw)%sphere%x(ip,1:3)
         end do
       
@@ -1034,7 +1034,7 @@ contains
                               rr, orbitals(iw)%sphere%np)
         if(w90_proj_lmr(iw,3) == 1) then
           ! apply radial function
-          do ip=1,orbitals(iw)%sphere%np
+          do ip = 1,orbitals(iw)%sphere%np
             ylm(ip) = ylm(ip)*M_TWO*exp(-orbitals(iw)%sphere%x(ip,0))
           end do
         else
@@ -1063,18 +1063,18 @@ contains
         !This will not work for spin-polarized calculations
         kpoint(1:sb%dim) = kpoints_get_point(sb%kpoints, ik)
       
-        forall(ip=1:mesh%np)
+        do ip = 1, mesh%np
           phase(ip) = exp(-M_zI* sum(mesh%x(ip, 1:sb%dim) * kpoint(1:sb%dim)))
-        end forall
+        end do
       
         do ist = 1, st%nst
           if(exclude_list(ist)) cycle
           call states_elec_get_state(st, mesh, ist, ik, psi)
           do idim = 1, st%d%dim
             !The minus sign is here is for the wrong convention of Octopus
-            forall(ip=1:mesh%np)
+            do ip = 1, mesh%np
               psi(ip, idim) = psi(ip, idim)*phase(ip)
-            end forall
+            end do
           end do
       
           do iw = 1, w90_nproj
@@ -1219,10 +1219,10 @@ contains
           if(exclude_list(iw2)) cycle
           call states_elec_get_state(st, mesh, iw2, ik, psi)
           !The minus sign is here is for the wrong convention of Octopus
-          forall(ip=1:mesh%np)
+          do ip = 1, mesh%np
             zwn(ip) = zwn(ip) + Umnk(band_index(iw2), iw, ik)/w90_num_kpts * psi(ip,1) * &
                       exp(-M_zI* sum((mesh%x(ip, 1:sb%dim)-centers(1:sb%dim, iw)) * kpoint(1:sb%dim)))
-          end forall
+          end do
         end do!ik   
       end do!iw2
 
@@ -1230,7 +1230,7 @@ contains
       !Following what Wannier90 is doing, we fix the global phase by setting the max to be real
       ipmax = 0
       wmodmax = M_z0
-      do ip=1, mesh%np
+      do ip = 1, mesh%np
         wmod = TOFLOAT(zwn(ip)*conjg(zwn(ip)))
         if(wmod > wmodmax) then
           ipmax = ip
@@ -1240,9 +1240,9 @@ contains
       call lalg_scal(mesh%np, sqrt(wmodmax)/zwn(ipmax), zwn)
      
 
-      forall(ip=1:mesh%np)
+      do ip = 1, mesh%np
         dwn(ip) = TOFLOAT(zwn(ip))
-      end forall
+      end do
         
       call dio_function_output(how, 'wannier', trim(fname), global_namespace, mesh, &
           dwn,  unit_one, ierr, geo = geo, grp = st%dom_st_kpt_mpi_grp)

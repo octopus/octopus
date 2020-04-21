@@ -175,9 +175,11 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
       end if
 
       ! PTA92, eq. 5.10
-      forall (idim = 1:st%d%dim, ip = 1:gr%mesh%np)
-        g(ip, idim) = h_psi(ip, idim) - st%eigenval(ist, ik)*psi(ip, idim)
-      end forall
+      do idim = 1, st%d%dim
+        do ip = 1, gr%mesh%np
+          g(ip, idim) = h_psi(ip, idim) - st%eigenval(ist, ik)*psi(ip, idim)
+        end do
+      end do
 
       if (hm%theory_level == RDMFT) then
         ! For RDMFT, the gradient of the total energy functional differs from
@@ -280,9 +282,9 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
 
         ! PTA92, eq. 5.19
         do idim = 1, st%d%dim
-          forall (ip = 1:gr%mesh%np)
+          do ip = 1, gr%mesh%np
             cg(ip, idim) = gamma*cg(ip, idim) + g0(ip, idim)
-          end forall
+          end do
         end do
 
         ! PTA92, eq. 5.21
@@ -337,9 +339,9 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
         ! Hartree term
         tmp = M_TWO/cg0
         do idim = 1, st%d%dim
-          forall (ip = 1:gr%mesh%np)
+          do ip = 1, gr%mesh%np
             chi(ip, idim) = tmp * R_REAL(R_CONJ(cg(ip, idim)) * psi(ip, idim))
-          end forall
+          end do
         end do
         call dpoisson_solve(hm%psolver, omega(:, 1), chi(:, 1), all_nodes = .false.)
         integral_hartree = dmf_dotp(gr%mesh, st%d%dim, chi, omega)
@@ -390,10 +392,10 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
 
       ! PTA92, eq. 5.38
       do idim = 1, st%d%dim
-        forall (ip = 1:gr%mesh%np)
+        do ip = 1, gr%mesh%np
           psi(ip, idim) = a0*psi(ip, idim) + b0*cg(ip, idim)
           h_psi(ip, idim) = a0*h_psi(ip, idim) + b0*h_cg(ip, idim)
-        end forall
+        end do
       end do
 
       call profiling_count_operations(st%d%dim*gr%mesh%np*(2*R_ADD + 4*R_MUL))

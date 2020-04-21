@@ -730,8 +730,10 @@ contains
     ! --- l=1 ---
     grad_matrix = M_ONE
     grad_matrix(1,1) = -r*sin(x(1))
-    forall(m = 2:n-1) grad_matrix(m,1) = M_ZERO
-    
+    do m=2, n-1
+      grad_matrix(m,1) = M_ZERO
+    end do
+
     ! --- l=2..(n-1) ---
     do l=2, n-1
        do m=1, n-1
@@ -953,8 +955,8 @@ contains
           vv = dot_product(v,v)
           uv = dot_product(u,v)
         
-          do i=1,3
-            do j=1,3
+          do i = 1,3
+            do j = 1,3
           
               R(i,j) = ddelta(i,j) - M_TWO * u(i)*u(j)/uu - M_TWO * v(i)*v(j)/vv &
               + CNST(4)*uv * v(i)*u(j) /(uu*vv)
@@ -971,7 +973,7 @@ contains
     else 
 
       R = M_ZERO
-      do i=1,dim
+      do i = 1,dim
         R(i,i) = M_ONE 
       end do
 

@@ -124,7 +124,7 @@ subroutine X(get_atomic_orbital) (geo, mesh, sm, iatom, ii, ll, jj, os, orbind, 
         call X(atomic_orbital_get_submesh)(spec, sm, ii, ll, mm, 1, &
                                          os%X(orb)(1:sm%np,1,orbind))
         coeff = sqrt((ll+mm+M_ONE)/(M_TWO*ll+M_ONE)) 
-        do is=1,sm%np
+        do is = 1,sm%np
           os%X(orb)(is,1,orbind) = coeff*os%X(orb)(is,1,orbind)
         end do
       else
@@ -134,7 +134,7 @@ subroutine X(get_atomic_orbital) (geo, mesh, sm, iatom, ii, ll, jj, os, orbind, 
         call X(atomic_orbital_get_submesh)(spec, sm, ii, ll, mm+1, 1, &
                                          os%X(orb)(1:sm%np,2,orbind))
         coeff = sqrt((ll-mm)/(M_TWO*ll+M_ONE))                           
-        do is=1,sm%np
+        do is = 1,sm%np
           os%X(orb)(is,2,orbind) = coeff*os%X(orb)(is,2,orbind)
         end do
       else
@@ -145,14 +145,14 @@ subroutine X(get_atomic_orbital) (geo, mesh, sm, iatom, ii, ll, jj, os, orbind, 
       call X(atomic_orbital_get_submesh)(spec, sm, ii, ll, mm, 1, &
                                         os%X(orb)(1:sm%np,2,orbind))
       coeff = -sqrt((ll+mm)/(M_TWO*ll+M_ONE))                           
-      do is=1,sm%np
+      do is = 1,sm%np
         os%X(orb)(is,2,orbind) = coeff*os%X(orb)(is,2,orbind)
       end do
       if(mm > -ll) then
         call X(atomic_orbital_get_submesh)(spec, sm, ii, ll, mm-1, 1, &
                                          os%X(orb)(1:sm%np,1,orbind))
         coeff = sqrt((ll-mm+M_ONE)/(M_TWO*ll+M_ONE))      
-        do is=1,sm%np
+        do is = 1,sm%np
           os%X(orb)(is,1,orbind) = coeff*os%X(orb)(is,1,orbind)
         end do
       else
@@ -196,8 +196,10 @@ end subroutine X(get_atomic_orbital)
 
     if(species_represents_real_atom(species) .and. submesh%mesh%sb%dim == 3) then
       ps => species_ps(species)
-      
-      forall(ip = 1:submesh%np) phi(ip) = submesh%x(ip, 0)
+
+      do ip = 1, submesh%np
+        phi(ip) = submesh%x(ip, 0)
+      end do
 
       if(species_is_ps(species)) then
         if(.not. derivative_) then

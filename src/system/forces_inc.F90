@@ -89,7 +89,9 @@ subroutine X(forces_from_local_potential)(gr, namespace, geo, ep, gdensity, forc
     vloc(1:gr%mesh%np) = M_ZERO
     call epot_local_potential(ep, namespace, gr%der, gr%dgrid, geo, iatom, vloc)
 
-    forall(ip = 1:gr%mesh%np) zvloc(ip) = vloc(ip)
+    do ip = 1, gr%mesh%np
+      zvloc(ip) = vloc(ip)
+    end do
 
     do idir = 1, gr%mesh%sb%dim
       force_tmp(idir, iatom) = -X(mf_dotp)(gr%mesh, zvloc, gdensity(:, idir), reduce = .false.)
