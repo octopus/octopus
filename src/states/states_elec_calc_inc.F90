@@ -458,7 +458,7 @@ subroutine X(states_elec_trsm)(st, namespace, mesh, ik, ss)
 
   end if
 
-  call profiling_count_operations(mesh%np*TOFLOAT(st%nst*(st%nst + 1))*CNST(0.5)*(R_ADD + R_MUL))
+  call profiling_count_operations(mesh%np*TOFLOAT(st%nst*(st%nst + 1))*st%d%dim*CNST(0.5)*(R_ADD + R_MUL))
 
 
   call profiling_out(prof)
@@ -1462,7 +1462,7 @@ subroutine X(states_elec_rotate)(st, namespace, mesh, uu, ik)
 
     end do
 
-    call profiling_count_operations((R_ADD + R_MUL)*st%nst*(st%nst - CNST(1.0))*mesh%np)
+    call profiling_count_operations((R_ADD + R_MUL)*st%nst*st%d%dim*(st%nst - CNST(1.0))*mesh%np)
 
     SAFE_DEALLOCATE_A(psinew)
     SAFE_DEALLOCATE_A(psicopy)
@@ -1590,7 +1590,7 @@ subroutine X(states_elec_calc_overlap)(st, mesh, ik, overlap)
     end do
 #endif
 
-    call profiling_count_operations((R_ADD + R_MUL)*CNST(0.5)*st%nst*(st%nst - CNST(1.0))*mesh%np)
+    call profiling_count_operations((R_ADD + R_MUL)*CNST(0.5)*st%nst*st%d%dim*(st%nst - CNST(1.0))*mesh%np)
 
     if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm, overlap, dim = (/st%nst, st%nst/))
 
@@ -1644,7 +1644,7 @@ subroutine X(states_elec_calc_overlap)(st, mesh, ik, overlap)
 
     call accel_release_buffer(psi_buffer)
 
-    call profiling_count_operations((R_ADD + R_MUL)*CNST(0.5)*st%nst*(st%nst - CNST(1.0))*mesh%np)
+    call profiling_count_operations((R_ADD + R_MUL)*CNST(0.5)*st%nst*st%d%dim*(st%nst - CNST(1.0))*mesh%np)
 
     call accel_read_buffer(overlap_buffer, st%nst*st%nst, overlap)
 
@@ -1767,7 +1767,7 @@ subroutine X(states_elec_calc_projections)(st, gs_st, namespace, mesh, ik, proj,
 
   end if
   
-  call profiling_count_operations((R_ADD + R_MUL)*gs_nst_*(st%nst - CNST(1.0))*mesh%np)
+  call profiling_count_operations((R_ADD + R_MUL)*gs_nst_*st%d%dim*(st%nst - CNST(1.0))*mesh%np)
   
   if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm, proj, dim = (/gs_nst_, st%nst/))
   
