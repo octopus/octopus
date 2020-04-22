@@ -49,8 +49,6 @@
     type(space_t)     :: space
     type(simul_box_t) :: sb
     type(spectrum_t) :: spectrum
-    type(grid_t)     :: gr
-    type(states_elec_t) :: st
     type(block_t)     :: blk
     type(batch_t) :: currb, ftcurrb, heatcurrb, ftheatcurrb
     FLOAT :: ww, curtime, deltat, velcm(1:MAX_DIM), vel0(1:MAX_DIM), current(1:MAX_DIM), integral(1:2), v0
@@ -58,7 +56,8 @@
     integer :: skip
     logical :: from_forces
     character(len=120) :: header
-    
+    FLOAT :: excess_charge, val_charge, qtot    
+
     ! Initialize stuff
     call global_init(is_serial = .true.) 
 
@@ -110,8 +109,10 @@
     call geometry_init(geo, global_namespace, space)
     call simul_box_init(sb, global_namespace, geo, space)
 
-    call grid_init_stage_0(gr, global_namespace, geo, space)
-    call states_elec_init(st, global_namespace, gr, geo)
+    !We need the total charge
+    call parse_variable(global_namespace, 'ExcessCharge', M_ZERO, excess_charge)
+    call geometry_val_charge(geo, val_charge)
+    qtot = -(val_charge + excess_charge)
 
     if(from_forces) then
 
@@ -279,10 +280,10 @@
          end do
        end do
         
-       integral(1) = integral(1) + deltat/vel0(1)*(vel0(1)*st%qtot/sb%rcell_volume + current(1))
-       integral(2) = integral(2) + deltat/vel0(1)*(vel0(1)*st%qtot/sb%rcell_volume - total_current(1, iter)/sb%rcell_volume)
+       integral(1) = integral(1) + deltat/vel0(1)*(vel0(1)*qtot/sb%rcell_volume + current(1))
+       integral(2) = integral(2) + deltat/vel0(1)*(vel0(1)*qtot/sb%rcell_volume - total_current(1, iter)/sb%rcell_volume)
 
-       curr(iter, 1:space%dim) = vel0(1:space%dim)*st%qtot/sb%rcell_volume + current(1:space%dim)
+       curr(iter, 1:space%dim) = vel0(1:space%dim)*qtot/sb%rcell_volume + current(1:space%dim)
        
      else
        curr(iter, 1:space%dim)    = total_current(1:space%dim, iter)/sb%rcell_volume
