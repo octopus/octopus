@@ -1491,6 +1491,10 @@ contains
     CMPLX, allocatable :: zpsi(:,  :), zpsi2(:)
     integer :: ikpoint, ip
 
+    logical :: normalized_
+
+    normalized_ = optional_default(normalized, .true.)
+
     PUSH_SUB(states_elec_generate_random)
  
     ist_start = optional_default(ist_start_, 1)
@@ -1598,12 +1602,16 @@ contains
           do ist = ist_start, ist_end
             do id = 1, st%d%dim
               if(st%randomization == PAR_INDEPENDENT) then
-                call zmf_random(mesh, zpsi(:, id), mesh%vp%xlocal-1, normalized = normalized)
+                call zmf_random(mesh, zpsi(:, id), mesh%vp%xlocal-1, normalized = .false.)
               else
-                call zmf_random(mesh, zpsi(:, id), normalized = normalized)
+                call zmf_random(mesh, zpsi(:, id), normalized = .false.)
               end if
             end do
+            ! We need to generate the wave functions even if not using them in order to be consistent with the random seed in parallel runs.
             if(.not. state_kpt_is_local(st, ist, ik)) cycle
+            ! Note that mf_random normalizes each spin channel independently to 1.
+            ! Therefore we need to renormalize the spinor:
+            if(normalized_) call zmf_normalize(mesh, st%d%dim, zpsi)
             call states_elec_set_state(st, mesh, ist,  ik, zpsi)
           end do
         end do
