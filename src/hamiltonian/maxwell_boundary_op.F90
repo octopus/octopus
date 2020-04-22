@@ -170,7 +170,7 @@ contains
     FLOAT               :: bounds(1:2,MAX_DIM), ab_bounds(1:2,MAX_DIM)
     type(block_t)       :: blk
     character(len=1024) :: string
-    character(len=50)   :: str
+    character(len=50)   :: str, ab_type_str
     logical             :: plane_waves_check = .false., ab_mask_check = .false., ab_pml_check = .false.
     logical             :: constant_check = .false., zero_check = .false.
 
@@ -225,18 +225,16 @@ contains
 
 
     do idim = 1, 3
-      if (bc%bc_ab_type(idim) == OPTION__MAXWELLABSORBINGBOUNDARIES__MASK) then
+      select case (bc%bc_ab_type(idim))
+      case (OPTION__MAXWELLABSORBINGBOUNDARIES__MASK)
         ab_mask_check = .true.
-      end if
-      if (bc%bc_ab_type(idim) == OPTION__MAXWELLABSORBINGBOUNDARIES__CPML) then
+      case (OPTION__MAXWELLABSORBINGBOUNDARIES__CPML)
         ab_pml_check = .true.
-      end if
-      if (bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__CONSTANT) then
+      case (OPTION__MAXWELLBOUNDARYCONDITIONS__CONSTANT)
         constant_check = .true.
-      end if
-      if (bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__ZERO) then
+      case (OPTION__MAXWELLBOUNDARYCONDITIONS__ZERO)
         zero_check = .true.
-      end if
+      end select
     end do
 
     if (ab_mask_check .or. ab_pml_check) then
@@ -245,28 +243,26 @@ contains
     end if
 
     do idim = 1, st%dim
-      if (bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__ZERO) then
-        bounds(1, idim) = ( gr%mesh%idx%nr(2, idim) - gr%mesh%idx%enlarge(idim) ) * gr%mesh%spacing(idim)
-        bounds(2, idim) = ( gr%mesh%idx%nr(2, idim)                                     ) * gr%mesh%spacing(idim)
-      else if (bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__CONSTANT) then
-        bounds(1, idim) = ( gr%mesh%idx%nr(2, idim) - 2 * gr%mesh%idx%enlarge(idim) ) * gr%mesh%spacing(idim)
-        bounds(2, idim) = ( gr%mesh%idx%nr(2, idim)                                         ) * gr%mesh%spacing(idim)
-      else if (bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__MIRROR_PEC) then
-        bounds(1, idim) = ( gr%mesh%idx%nr(2, idim) - gr%mesh%idx%enlarge(idim) ) * gr%mesh%spacing(idim)
-        bounds(2, idim) = ( gr%mesh%idx%nr(2, idim)                                     ) * gr%mesh%spacing(idim)
-      else if (bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__MIRROR_PMC) then
-        bounds(1, idim) = ( gr%mesh%idx%nr(2, idim) - gr%mesh%idx%enlarge(idim) ) * gr%mesh%spacing(idim)
-        bounds(2, idim) = ( gr%mesh%idx%nr(2, idim)                                     ) * gr%mesh%spacing(idim)
-      else if (bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__PERIODIC) then
-        bounds(1, idim) = ( gr%mesh%idx%nr(2, idim) - 2 * gr%mesh%idx%enlarge(idim) ) * gr%mesh%spacing(idim)
-        bounds(2, idim) = ( gr%mesh%idx%nr(2, idim)                                         ) * gr%mesh%spacing(idim)
-      else if (bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__PLANE_WAVES) then
-        bounds(1, idim) = ( gr%mesh%idx%nr(2, idim) - 2 * gr%mesh%idx%enlarge(idim) ) * gr%mesh%spacing(idim)
-        bounds(2, idim) = ( gr%mesh%idx%nr(2, idim)                                         ) * gr%mesh%spacing(idim)
+      select case (bc%bc_type(idim))
+      case (OPTION__MAXWELLBOUNDARYCONDITIONS__ZERO, OPTION__MAXWELLBOUNDARYCONDITIONS__MIRROR_PEC, &
+           OPTION__MAXWELLBOUNDARYCONDITIONS__MIRROR_PMC)
+
+        bounds(1, idim) = (gr%mesh%idx%nr(2, idim) - gr%mesh%idx%enlarge(idim))*gr%mesh%spacing(idim)
+        bounds(2, idim) = (gr%mesh%idx%nr(2, idim)) * gr%mesh%spacing(idim)
+
+      case (OPTION__MAXWELLBOUNDARYCONDITIONS__CONSTANT, OPTION__MAXWELLBOUNDARYCONDITIONS__PERIODIC)
+
+        bounds(1, idim) = (gr%mesh%idx%nr(2, idim) - 2*gr%mesh%idx%enlarge(idim))*gr%mesh%spacing(idim)
+        bounds(2, idim) = (gr%mesh%idx%nr(2, idim)) * gr%mesh%spacing(idim)
+
+      case (OPTION__MAXWELLBOUNDARYCONDITIONS__PLANE_WAVES)
+
+        bounds(1, idim) = (gr%mesh%idx%nr(2, idim) - 2*gr%mesh%idx%enlarge(idim))*gr%mesh%spacing(idim)
+        bounds(2, idim) = (gr%mesh%idx%nr(2, idim)) * gr%mesh%spacing(idim)
         plane_waves_check = .true.
         bc%do_plane_waves = .true.
 
-      else if (bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__MEDIUM) then
+      case (OPTION__MAXWELLBOUNDARYCONDITIONS__MEDIUM)
         !%Variable MaxwellMediumWidth
         !%Type float
         !%Default 0.0 a.u.
@@ -274,7 +270,7 @@ contains
         !%Description
         !% Width of the boundary region with medium
         !%End
-        call parse_variable(namespace, 'MaxwellMediumWidth', M_ZERO, bc%mxmedium%width, units_inp%length)
+         call parse_variable(namespace, 'MaxwellMediumWidth', M_ZERO, bc%mxmedium%width, units_inp%length)
         bounds(1,idim) = ( gr%mesh%idx%nr(2, idim) - gr%mesh%idx%enlarge(idim) ) * gr%mesh%spacing(idim)
         bounds(1,idim) = bounds(1,idim) - bc%mxmedium%width
         bounds(2,idim) = ( gr%mesh%idx%nr(2, idim) ) * gr%mesh%spacing(idim)
@@ -312,82 +308,70 @@ contains
         call parse_variable(namespace, 'MaxwellMagneticSigma', M_ONE, bc%mxmedium%sigma_m_factor, unit_one)
         call maxwell_medium_points_mapping(bc, gr%mesh, st, bounds, geo)
         call bc_mxll_generate_medium(bc, gr, bounds, geo)
-      end if
+
+      end select
 
       if (bc%bc_ab_type(idim) /= AB_NOT_ABSORBING) then
 
         call messages_print_var_option(stdout, "MaxwellAbsorbingBoundaries", bc%bc_ab_type(idim))
 
-        if (bc%bc_ab_type(idim) == AB_MASK_ZERO) then
-           call bc_mxll_zero_init(bc, gr, namespace, bounds, ab_bounds, idim)
-        end if
+        select case (bc%bc_ab_type(idim))
+        case (AB_MASK_ZERO)
+          call bc_mxll_zero_init(bc, gr, namespace, bounds, ab_bounds, idim)
 
-        if (bc%bc_ab_type(idim) == AB_MASK) then
+        case (AB_MASK)
           call bc_mxll_mask_init(bc, gr, sb, namespace, bounds, ab_bounds, idim)
-        end if
 
-        if (bc%bc_ab_type(idim) == AB_CPML) then
+        case (AB_CPML)
            call bc_mxll_pml_init(bc, gr, sb, namespace, bounds, ab_bounds, idim)
-        end if
+        end select
 
       end if
 
-      if (bc%bc_ab_type(idim) == AB_MASK) then
-        bounds(1, idim) = ab_bounds(1, idim)
-        bounds(2, idim) = bounds(2, idim)
-        bc%bc_bounds(:,idim) = bounds(:,idim)
-      else if (bc%bc_ab_type(idim) == AB_CPML) then
+      select case (bc%bc_ab_type(idim))
+      case (AB_MASK, AB_CPML, AB_MASK_ZERO)
         bounds(1, idim) = ab_bounds(1, idim)
         bounds(2, idim) = bounds(2, idim)
         bc%bc_bounds(:, idim) = bounds(:, idim)
-      else if (bc%bc_ab_type(idim) == AB_MASK_ZERO) then
-        bounds(1, idim) = ab_bounds(1, idim)
-        bounds(2, idim) = bounds(2, idim)
+      case default
         bc%bc_bounds(:, idim) = bounds(:, idim)
-      else
-        bc%bc_bounds(:, idim) = bounds(:, idim)
-      end if
+      end select
 
       if (gr%mesh%sb%box_shape == PARALLELEPIPED) then
-        if (bc%bc_ab_type(idim) == AB_CPML) then
-          string = "  PML Lower bound = "
-            write(string,'(a,a,i1,a,es10.3,3a)') trim(string), "  dim ", idim, ":",&
-                  units_from_atomic(units_inp%length, ab_bounds(1, idim) ), ' [', trim(units_abbrev(units_inp%length)),   ']'
-          write(message(1),'(a)') trim(string)
-          string = "  PML Upper bound = "
-            write(string,'(a,a,i1,a,es10.3,3a)') trim(string), "  dim ", idim, ":",&
-                  units_from_atomic(units_inp%length, ab_bounds(2, idim) ), ' [', trim(units_abbrev(units_inp%length)),   ']'
-          write(message(2),'(a)') trim(string) 
-          call messages_info(2)
-        else if (bc%bc_ab_type(idim) == AB_MASK) then
-          string = "  Mask Lower bound = "
-            write(string,'(a,a,i1,a,es10.3,3a)') trim(string), "  dim ", idim, ":",&
-                  units_from_atomic(units_inp%length, ab_bounds(1, idim) ), ' [', trim(units_abbrev(units_inp%length)),   ']'
-          write(message(1),'(a)') trim(string)
-          string = "  Mask Upper bound = "
-            write(string,'(a,a,i1,a,es10.3,3a)') trim(string), "  dim ", idim, ":",&
-                  units_from_atomic(units_inp%length, ab_bounds(2, idim) ), ' [', trim(units_abbrev(units_inp%length)),   ']'
-          write(message(2),'(a)') trim(string) 
-          call messages_info(2)
-        else if (bc%bc_ab_type(idim) == AB_MASK_ZERO) then
-          string = "  Zero Lower bound = "
-            write(string,'(a,a,i1,a,es10.3,3a)') trim(string), "  dim ", idim, ":",&
-                  units_from_atomic(units_inp%length, ab_bounds(1, idim) ), ' [', trim(units_abbrev(units_inp%length)),   ']'
-          write(message(1),'(a)') trim(string)
-          string = "  Zero Upper bound = "
-            write(string,'(a,a,i1,a,es10.3,3a)') trim(string), "  dim ", idim, ":",&
-                  units_from_atomic(units_inp%length, ab_bounds(2, idim) ), ' [', trim(units_abbrev(units_inp%length)),   ']'
-          write(message(2),'(a)') trim(string) 
-          call messages_info(2)
-        end if
+
+        select case (bc%bc_ab_type(idim))
+        case(AB_CPML)
+          ab_type_str = "  PML "
+        case (AB_MASK)
+          ab_type_str = "  Mask "
+        case (AB_MASK_ZERO)
+          ab_type_str = "  Zero "
+        end select
+
+        string = ab_type_str//"Lower bound = "
+        write(string,'(a,a,i1,a,es10.3,3a)') trim(string), "  dim ", idim, ":",&
+             units_from_atomic(units_inp%length, ab_bounds(1, idim) ), ' [', &
+             trim(units_abbrev(units_inp%length)), ']'
+        write(message(1),'(a)') trim(string)
+
+        string = ab_type_str//"Upper bound = "
+        write(string,'(a,a,i1,a,es10.3,3a)') trim(string), "  dim ", idim, ":",&
+             units_from_atomic(units_inp%length, ab_bounds(2, idim) ), ' [', &
+             trim(units_abbrev(units_inp%length)), ']'
+
+        write(message(2),'(a)') trim(string)
+        call messages_info(2)
+
       else
-        write(message(1),'(a,es10.3,3a)') & 
+
+         write(message(1),'(a,es10.3,3a)') &
           "  Lower bound = ", units_from_atomic(units_inp%length, ab_bounds(1, idim) ),&
           ' [', trim(units_abbrev(units_inp%length)), ']'
         write(message(2),'(a,es10.3,3a)') & 
           "  Upper bound = ", units_from_atomic(units_inp%length, ab_bounds(2, idim) ),&
           ' [', trim(units_abbrev(units_inp%length)), ']'
         call messages_info(2)
+
       end if
 
     end do
