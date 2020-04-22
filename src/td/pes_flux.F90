@@ -113,11 +113,13 @@ module pes_flux_oct_m
     
     CMPLX, pointer   :: bvk_phase(:,:)                 !< for cubic surface:
     CMPLX, pointer   :: expkr(:,:,:,:)                 !< for cubic surface: Exponential tabulated on the cube face
+    CMPLX, pointer   :: expkr_perp(:,:)                !< for cubic surface: Exponential tabulated on the direction perpendicular to the face
     CMPLX, pointer   :: expg(:,:,:)                    !< for cubic surface: Fourier basis on a face of the cube
     FLOAT, pointer   :: sinc(:,:,:,:)                  !< for cubic surface: sync function for Fourier components parallel to cube faces
     FLOAT, pointer   :: LLr(:,:)                       !< for cubic surface: coordinates of the face edges
     integer, pointer :: NN(:,:)                        !< for cubic surface: number of points on each face mapping coord
-
+    integer, pointer :: Lkpuvz_inv(:,:,:)              !< map a point on the momentum mesh into its components u,v,z (u,v parametric on face
+                                                       !< and z perpendicular)
 
     ! Surface and time integration 
     integer          :: tdsteps                        !< = sys%outp%restart_write_interval (M_PLANES/M_CUBIC)
@@ -146,6 +148,7 @@ module pes_flux_oct_m
     logical          :: parallel_in_momentum           !< whether we are parallelizing over the k-mesh  
     logical          :: arpes_grid
     logical          :: surf_interp                    !< interpolate points on the surface
+    logical          :: use_symmetry              
 
     integer          :: par_strategy                   !< parallelization strategy 
     integer          :: dim                            !< simulation box dimensions
@@ -205,6 +208,7 @@ contains
 
     this%surf_interp = .false.
     this%avoid_ab = .true.
+
 
     do il = 1, hm%ep%no_lasers
       if(laser_kind(hm%ep%lasers(il)) /= E_FIELD_VECTOR_POTENTIAL) then
@@ -385,33 +389,31 @@ contains
         call messages_print_var_value(stdout, 'PES_Flux_Radius', this%radius)
       end if
 
-    end if
-
-    !%Variable PES_Flux_StepsThetaR
-    !%Type integer
-    !%Default: 2 <tt>PES_Flux_Lmax</tt> + 1
-    !%Section Time-Dependent::PhotoElectronSpectrum
-    !%Description
-    !% Number of steps in <math>\theta</math> (<math>0 \le \theta \le \pi</math>) for the spherical surface.
-    !%End
-    if(this%surf_shape == M_SPHERICAL) then
+      !%Variable PES_Flux_StepsThetaR
+      !%Type integer
+      !%Default: 2 <tt>PES_Flux_Lmax</tt> + 1
+      !%Section Time-Dependent::PhotoElectronSpectrum
+      !%Description
+      !% Number of steps in <math>\theta</math> (<math>0 \le \theta \le \pi</math>) for the spherical surface.
+      !%End
       call parse_variable(namespace, 'PES_Flux_StepsThetaR', 2*this%lmax + 1, nstepsthetar)
       if(nstepsthetar < 0) call messages_input_error('PES_Flux_StepsThetaR')
       call messages_print_var_value(stdout, "PES_Flux_StepsThetaR", nstepsthetar)
-    end if
 
-    !%Variable PES_Flux_StepsPhiR
-    !%Type integer
-    !%Default: 2 <tt>PES_Flux_Lmax</tt> + 1
-    !%Section Time-Dependent::PhotoElectronSpectrum
-    !%Description
-    !% Number of steps in <math>\phi</math> (<math>0 \le \phi \le 2 \pi</math>) for the spherical surface.
-    !%End
-    if(this%surf_shape == M_SPHERICAL) then
+      !%Variable PES_Flux_StepsPhiR
+      !%Type integer
+      !%Default: 2 <tt>PES_Flux_Lmax</tt> + 1
+      !%Section Time-Dependent::PhotoElectronSpectrum
+      !%Description
+      !% Number of steps in <math>\phi</math> (<math>0 \le \phi \le 2 \pi</math>) for the spherical surface.
+      !%End
       call parse_variable(namespace, 'PES_Flux_StepsPhiR', 2*this%lmax + 1, nstepsphir)
       if(nstepsphir < 0) call messages_input_error('PES_Flux_StepsPhiR')
       call messages_print_var_value(stdout, "PES_Flux_StepsPhiR", nstepsphir)
+
     end if
+
+
     
     
     if(this%surf_interp)  call mesh_interpolation_init(this%interp, mesh)
@@ -473,7 +475,6 @@ contains
         call messages_input_error('PES_Flux_Parallelization', "Cannot combine pf_surface and pf_momentum")
     end if  
 
-    ! Quite verbose pretty output
     write(message(1),'(a)') 'Input: [PES_Flux_Parallelization = '
     if (bitand(this%par_strategy, OPTION__PES_FLUX_PARALLELIZATION__PF_NONE) /= 0) then
       write(message(1),'(a,x,a)') trim(message(1)), 'pf_none '
@@ -519,6 +520,26 @@ contains
     ! Generate the reciprocal space mesh grid
     call pes_flux_reciprocal_mesh_gen(this, namespace, mesh%sb, st, mesh%mpi_grp%comm)
 
+
+    !%Variable PES_Flux_UseSymmetries
+    !%Type logical
+    !%Section Time-Dependent::PhotoElectronSpectrum
+    !%Description
+    !% Use surface and momentum grid symmetries to speed up calculation and 
+    !% lower memory footprint. 
+    !% By default available only when the surface shape matches the grid symmetry i.e.:
+    !% PES_Flux_Shape = m_cub or m_pln and PES_Flux_Momenutum_Grid = m_cartesian
+    !% or 
+    !% PES_Flux_Shape = m_sph and PES_Flux_Momenutum_Grid = m_polar
+    !%End
+    this%use_symmetry = .false.
+!     if ((this%surf_shape == M_CUBIC .or. this%surf_shape == M_PLANES) &
+!          .and. this%kgrid == M_CARTESIAN) this%use_symmetry = .true.
+    if (this%surf_shape == M_SPHERICAL .and. this%kgrid == M_POLAR) this%use_symmetry = .true.
+    call parse_variable(namespace, 'PES_Flux_UseSymmetries', this%use_symmetry, this%use_symmetry)
+    call messages_print_var_value(stdout, 'PES_Flux_UseSymmetries', this%use_symmetry)
+    
+    
 
     ! get the values of the spherical harmonics for the surface points for M_SPHERICAL
     if(this%surf_shape == M_SPHERICAL) then
@@ -677,6 +698,11 @@ contains
       SAFE_DEALLOCATE_P(this%NN)      
       
       SAFE_DEALLOCATE_P(this%expkr)
+      SAFE_DEALLOCATE_P(this%expkr_perp)
+      SAFE_DEALLOCATE_P(this%bvk_phase)      
+
+      SAFE_DEALLOCATE_P(this%Lkpuvz_inv)      
+      
     end if
 
     SAFE_DEALLOCATE_P(this%srfcnrml)
@@ -739,13 +765,23 @@ contains
     !% PES_Flux_ARPES_grid, PES_Flux_EnergyGrid.
     !% This is the default choice for PES_Flux_Shape = sph or cub.
     !%End
-
+    
     ! default values
-    if (this%surf_shape == M_SPHERICAL .or. this%surf_shape == M_CUBIC) then
-      this%kgrid = M_POLAR
-    else
-      this%kgrid = M_CARTESIAN
-    end if
+    select case (this%surf_shape)
+      case (M_SPHERICAL)
+        this%kgrid = M_POLAR
+      case (M_PLANES)
+        this%kgrid = M_CARTESIAN
+      case (M_CUBIC)
+        this%kgrid = M_CARTESIAN
+        if (mdim == 1)  this%kgrid = M_POLAR
+    end select
+    
+!     if (this%surf_shape == M_SPHERICAL .or. this%surf_shape == M_CUBIC) then
+!       this%kgrid = M_POLAR
+!     else
+!       this%kgrid = M_CARTESIAN
+!     end if
     
     call parse_variable(namespace, 'PES_Flux_Momenutum_Grid', this%kgrid, this%kgrid)
     if(.not.varinfo_valid_option('PES_Flux_Momenutum_Grid', this%kgrid, is_flag = .true.)) &
@@ -1393,7 +1429,7 @@ contains
 
         SAFE_ALLOCATE(this%kcoords_cub(1:mdim, this%nkpnts_start:this%nkpnts_end, 1))
 
-        
+        SAFE_ALLOCATE(this%Lkpuvz_inv(this%ll(1),this%ll(2),this%ll(3)))
       
         do idir = 1, mdim
           do ikk = 1, this%ll(idir)  
@@ -1417,7 +1453,7 @@ contains
                 ikp = ikp + 1 
                 kvec(1) = this%klinear(ik1,1)
                 this%kcoords_cub(1:mdim, ikp, ikpt) =  kvec(1:mdim)
-              
+                this%Lkpuvz_inv(ik1,ik2,ik3) = ikp
 
               end do
             end do
@@ -1435,11 +1471,9 @@ contains
             select case (pdim)
               case (1)
               
-!               this%ll(1) = sb%kpoints%full%npoints
               do ik1 = 1, this%ll(1)
                 kvec(1) = this%klinear(ik1,1)
                 kvec(1:pdim) = matmul(sb%klattice_primitive(1:pdim,1:pdim),kvec(1:pdim))
-!                 kvec(1:mdim) = kpoints_get_point(sb%kpoints, ik1)
                 call fill_non_periodic_dimension(this)               
               end do
 
@@ -1600,6 +1634,9 @@ contains
       end if
       
       this%kcoords_cub(1:mdim, ikp, ikpt) =  kvec(1:mdim)
+      
+      this%Lkpuvz_inv(ik1,ik2,ikk) = ikp
+      
       
     end subroutine fill_non_periodic_dimension
                    
@@ -1939,7 +1976,7 @@ contains
     integer            :: isp, ikp, ikp_start, ikp_end
     integer            :: ik_map
     
-    integer            :: ikp1, ikp2, fdim, pdim 
+    integer            :: ikp1, ikp2, fdim, pdim, idir,ndir
     CMPLX              :: tmp
     FLOAT              :: Jac(1:2,1:2), jdet, kpoint(1:3), vec(1:3), lvec(1:3)
     
@@ -1966,14 +2003,17 @@ contains
         !i.e. when the system is semiperiodic in <=2 dimensions
         Jac(1:fdim, 1:fdim) = mesh%sb%rlattice_primitive(1:fdim, 1:fdim) !The Jacobian on the surface
         jdet = lalg_determinant(fdim, Jac, invert = .false.)
+
+if(debug%info .and. mpi_grp_is_root(mpi_world)) then
 print *, "jdet =", jdet
 print *, "mesh%sb%rlattice_primitive(1:fdim, 1:fdim) ", mesh%sb%rlattice_primitive(1:fdim, 1:fdim) 
+end if
         this%srfcnrml(:,1: this%nsrfcpnts ) = this%srfcnrml(:,1:this%nsrfcpnts )*jdet
       end if
     
     
     
-    if (.true.) then
+    if (.not. this%use_symmetry .or. kpoints_have_zero_weight_path(mesh%sb%kpoints)) then
       
       SAFE_ALLOCATE(this%expkr(1:this%nsrfcpnts,ikp_start:ikp_end,kptst:kptend,1))
 
@@ -1981,7 +2021,7 @@ print *, "mesh%sb%rlattice_primitive(1:fdim, 1:fdim) ", mesh%sb%rlattice_primiti
         do ikp = ikp_start, ikp_end
           do isp = 1, this%nsrfcpnts 
             this%expkr(isp,ikp,ik,1) = exp(-M_zI * sum(this%rcoords(1:mdim,isp) &
-                                                * this%kcoords_cub(1:mdim, ikp, ik)) ) &                                                
+                                                * this%kcoords_cub(1:mdim, ikp, ik)) ) &
                                                 * (M_TWO*M_PI)**(-mdim/M_TWO)
       
           end do
@@ -1989,58 +2029,111 @@ print *, "mesh%sb%rlattice_primitive(1:fdim, 1:fdim) ", mesh%sb%rlattice_primiti
       end do
 
 
-      SAFE_ALLOCATE(this%bvk_phase(ikp_start:ikp_end,st%d%kpt%start:st%d%kpt%end))
+      
+    else !do something smart to exploit symmetries
 
-      this%bvk_phase(:,:) = M_z0
-      vec(:) = M_ZERO
+      ndir = mdim
+      if(this%surf_shape == M_PLANES) ndir = mdim - 1 
+      
+      SAFE_ALLOCATE(this%expkr(1:this%nsrfcpnts,maxval(this%ll(1:ndir)),kptst:kptend,1:ndir))
 
-      do ik = st%d%kpt%start, st%d%kpt%end
-        kpoint(1:mdim) = kpoints_get_point(mesh%sb%kpoints, ik)
-        if (kpoints_have_zero_weight_path(mesh%sb%kpoints)) then
-          ik_map = ik
-        else
-          ik_map = 1
-        end if
-        do ikp = ikp_start, ikp_end
-          vec(1:pdim) = this%kcoords_cub(1:pdim, ikp, ik_map) + kpoint(1:pdim)
-          do j1 = 0, mesh%sb%kpoints%nik_axis(1)-1
-            do j2 = 0, mesh%sb%kpoints%nik_axis(2)-1
-              jvec(1:2)=(/j1,j2/)
-              lvec(1:pdim)=matmul(mesh%sb%rlattice(1:pdim,1:2),jvec(1:2))
-              tmp = sum(lvec(1:pdim)*vec(1:pdim))
-              this%bvk_phase(ikp,ik) =  this%bvk_phase(ikp,ik) &
-                                     +  exp(M_zI * tmp)
-              
+      do ik = kptst, kptend !should only be ik=1
+        do idir = 1, ndir
+          do ikp = 1, this%ll(idir)
+            do isp = 1, this%nsrfcpnts 
+              this%expkr(isp,ikp,ik,idir) = exp(-M_zI * this%rcoords(idir,isp) &
+                                                  * this%klinear(ikp, idir) ) & 
+                                                  * (M_TWO*M_PI)**(-M_ONE/M_TWO)
+    
             end do
           end do
-
+        end do
       end do
+
+      SAFE_ALLOCATE(this%expkr_perp(maxval(this%ll(1:ndir)),1:ndir))
+
+      do idir = 1, ndir
+        isp = this%face_idx_range(idir*2, 1)
+        do ikp = 1, this%ll(idir)
+          this%expkr_perp(ikp,idir) = exp(-M_zI * this%rcoords(idir,isp) &
+                                            * this%klinear(ikp, idir) ) & 
+                                            * (M_TWO*M_PI)**(-M_ONE/M_TWO)
+
+
+        end do
+      end do
+      
+    end if
+    
+    
+    !Tabulate the Born-Von Karman phase 
+    SAFE_ALLOCATE(this%bvk_phase(ikp_start:ikp_end,st%d%kpt%start:st%d%kpt%end))
+
+    this%bvk_phase(:,:) = M_z0
+    vec(:) = M_ZERO
+
+    do ik = st%d%kpt%start, st%d%kpt%end
+      kpoint(1:mdim) = kpoints_get_point(mesh%sb%kpoints, ik)
+      if (kpoints_have_zero_weight_path(mesh%sb%kpoints)) then
+        ik_map = ik
+      else
+        ik_map = 1
+      end if
+      do ikp = ikp_start, ikp_end
+        vec(1:pdim) = this%kcoords_cub(1:pdim, ikp, ik_map) + kpoint(1:pdim)
+        do j1 = 0, mesh%sb%kpoints%nik_axis(1)-1
+          do j2 = 0, mesh%sb%kpoints%nik_axis(2)-1
+            jvec(1:2)=(/j1,j2/)
+            lvec(1:pdim)=matmul(mesh%sb%rlattice(1:pdim,1:2),jvec(1:2))
+            tmp = sum(lvec(1:pdim)*vec(1:pdim))
+            this%bvk_phase(ikp,ik) =  this%bvk_phase(ikp,ik) &
+                                   +  exp(M_zI * tmp)
+            
+          end do
+        end do
+
     end do
-    this%bvk_phase(:,:) = this%bvk_phase(:,:) * M_ONE/product(mesh%sb%kpoints%nik_axis(1:pdim))
-      
+  end do
+  this%bvk_phase(:,:) = this%bvk_phase(:,:) * M_ONE/product(mesh%sb%kpoints%nik_axis(1:pdim))
+    
 
-    if(debug%info .and. mpi_grp_is_root(mpi_world)) then
-      write(225,*) "ik, ikp, this%bvk_phase(ikp,ik)"
-      do ik = st%d%kpt%start, st%d%kpt%end
-        do ikp = ikp_start, ikp_end
-          write(225,*) ik, ikp, this%bvk_phase(ikp,ik)
-        end do 
-      end do
-      flush(225)
-    end if
-      
-
-      
-          
-    else
-    !do some smart mapping to exploit symmetries
-      
-    end if
+  if(debug%info .and. mpi_grp_is_root(mpi_world)) then
+    write(225,*) "ik, ikp, this%bvk_phase(ikp,ik)"
+    do ik = st%d%kpt%start, st%d%kpt%end
+      do ikp = ikp_start, ikp_end
+        write(225,*) ik, ikp, this%bvk_phase(ikp,ik)
+      end do 
+    end do
+    flush(225)
+  end if
+    
     
     
     POP_SUB(pes_flux_integrate_cub_tabulate_direct_a)  
           
   end subroutine pes_flux_integrate_cub_tabulate_direct_a
+
+
+  ! ---------------------------------------------------------
+  pure function get_ikp(this, ikpu, ikpv, ikpz, n_dir) result(ikp)
+    type(pes_flux_t),        intent(in)  :: this
+    integer,                 intent(in)  :: ikpu
+    integer,                 intent(in)  :: ikpv
+    integer,                 intent(in)  :: ikpz
+    integer,                 intent(in)  :: n_dir
+    integer                              :: ikp
+    
+    select case (n_dir)
+      case (1)
+        ikp = this%Lkpuvz_inv(ikpz,ikpu,ikpv)
+      case (2)
+        ikp = this%Lkpuvz_inv(ikpu,ikpz,ikpv)
+      case (3)
+        ikp = this%Lkpuvz_inv(ikpu,ikpv,ikpz)
+        
+    end select
+
+  end function get_ikp
 
   ! ---------------------------------------------------------
   subroutine pes_flux_integrate_cub_direct_a(this, mesh, st, dt)
@@ -2065,6 +2158,10 @@ print *, "mesh%sb%rlattice_primitive(1:fdim, 1:fdim) ", mesh%sb%rlattice_primiti
     
     integer            :: tdstep_on_node
     integer            :: ng, ig, nfp
+    
+    !Symmetry helpers
+    integer            :: ikpu, ikpv, ikpz, dir_on_face(1:3)
+    CMPLX              :: face_int_gwf, face_int_wf
     
     type(profile_t), save :: prof_init
       
@@ -2136,9 +2233,17 @@ print *, "mesh%sb%rlattice_primitive(1:fdim, 1:fdim) ", mesh%sb%rlattice_primiti
 ! print *,ifc, isp_start, isp_end
       ! get the direction normal to the surface 
       n_dir = 0 
+      imdim = 1
       do idir = 1, mdim
-        if(abs(this%srfcnrml(idir, isp_start)) >= M_EPSILON) n_dir = idir
+        if(abs(this%srfcnrml(idir, isp_start)) >= M_EPSILON) then
+          n_dir = idir
+        else 
+          dir_on_face(imdim)=idir
+          imdim = imdim + 1
+        end if
       end do 
+      dir_on_face(mdim)=n_dir
+      
 
       itstep = tdstep_on_node
       do ik = kptst, kptend
@@ -2150,19 +2255,48 @@ print *, "mesh%sb%rlattice_primitive(1:fdim, 1:fdim) ", mesh%sb%rlattice_primiti
         
         do ist = stst, stend
           do isdim = 1, sdim
-        
-            do ikp = ikp_start , ikp_end
               
-              gwfpw(ikp) = &
-                sum(this%gwf(ist, isdim, ik, isp_start:isp_end, itstep, n_dir) &
-                  * this%expkr(isp_start:isp_end,ikp,ik_map,1))
+            if (.not. this%use_symmetry .or. kpoints_have_zero_weight_path(mesh%sb%kpoints)) then
+
+              do ikp = ikp_start , ikp_end
+            
+                gwfpw(ikp) = &
+                  sum(this%gwf(ist, isdim, ik, isp_start:isp_end, itstep, n_dir) &
+                    * this%expkr(isp_start:isp_end,ikp,ik_map,1))
 
 
-              wfpw(ikp) = &
-                sum(this%wf(ist, isdim, ik, isp_start:isp_end, itstep)        &
-                  * this%expkr(isp_start:isp_end,ikp,ik_map,1))
+                wfpw(ikp) = &
+                  sum(this%wf(ist, isdim, ik, isp_start:isp_end, itstep)        &
+                    * this%expkr(isp_start:isp_end,ikp,ik_map,1))
+
+              end do 
+
+            else 
+              
+              do ikpu = 1, this%ll(dir_on_face(1))
+                do ikpv = 1, this%ll(dir_on_face(2))
+                  
+                  
+                  face_int_gwf = sum(this%gwf(ist, isdim, ik, isp_start:isp_end, itstep, n_dir) &
+                               * this%expkr(isp_start:isp_end,ikpu,ik_map,dir_on_face(1)) &
+                               * this%expkr(isp_start:isp_end,ikpv,ik_map,dir_on_face(2)))
+
+                  face_int_wf  = sum(this%wf(ist, isdim, ik, isp_start:isp_end, itstep) &
+                               * this%expkr(isp_start:isp_end,ikpu,ik_map,dir_on_face(1)) &
+                               * this%expkr(isp_start:isp_end,ikpv,ik_map,dir_on_face(2)))
+                  
+                  do ikpz = 1, this%ll(dir_on_face(3))
+                     gwfpw(get_ikp(this,ikpu,ikpv,ikpz,n_dir)) = face_int_wf &
+                                                               * this%expkr_perp(ikpz,n_dir)  
+                  end do
+                  
+                end do
+              end do
+              
+
+              
+            end if
         
-            end do 
             
             gwfpw(:) = gwfpw(:) * this%srfcnrml(n_dir, isp_start) ! surface area element ds
             wfpw(:)  = wfpw(:)  * this%srfcnrml(n_dir, isp_start) ! surface area element ds
