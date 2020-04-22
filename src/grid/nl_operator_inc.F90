@@ -39,9 +39,7 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
 #else
   integer, parameter :: logldf = 1
 #endif
-#ifndef SINGLE_PRECISION
   integer :: nri_loc, ini
-#endif
   
   PUSH_SUB(X(nl_operator_operate_batch))
 
@@ -93,8 +91,6 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
     else
       
 ! for the moment this is not implemented
-#ifndef SINGLE_PRECISION
-
       !$omp parallel private(ini, nri_loc, ist)
       call multicomm_divide_range_omp(nri, ini, nri_loc)
       
@@ -116,7 +112,6 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
         end do
       end if
       !$omp end parallel
-#endif
     end if
 
     ! count operations
