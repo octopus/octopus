@@ -205,6 +205,7 @@ contains
     !%Option mask_zero 7
     !% Absorbing boundary region is set to zero
     !%End
+
     if(parse_block(namespace, 'MaxwellAbsorbingBoundaries', blk) == 0) then
       ! find out how many lines (i.e. states) the block has
       nlines = parse_block_n(blk)
@@ -212,19 +213,23 @@ contains
         message(1) = 'MaxwellAbsorbingBounaries has to consist of one line!'
         call messages_fatal(1, namespace=namespace)
       end if
+
       ncols = parse_block_cols(blk, 0)
       if (ncols /= 3) then
         message(1) = 'MaxwellAbsorbingBoundaries has to consist of three columns!'
         call messages_fatal(1, namespace=namespace)
       end if
     end if
+
     do icol=1, ncols
       call parse_block_integer(blk, 0, icol-1, bc%bc_ab_type(icol))
     end do
+
     call parse_block_end(blk)
 
 
     do idim = 1, 3
+
       select case (bc%bc_ab_type(idim))
       case (OPTION__MAXWELLABSORBINGBOUNDARIES__MASK)
         ab_mask_check = .true.
@@ -235,15 +240,19 @@ contains
       case (OPTION__MAXWELLBOUNDARYCONDITIONS__ZERO)
         zero_check = .true.
       end select
+
     end do
 
     if (ab_mask_check .or. ab_pml_check) then
+
       write(str, '(a,i5)') 'Maxwell Absorbing Boundaries'
       call messages_print_stress(stdout, trim(str), namespace=namespace)
+
     end if
 
     do idim = 1, st%dim
       select case (bc%bc_type(idim))
+
       case (OPTION__MAXWELLBOUNDARYCONDITIONS__ZERO, OPTION__MAXWELLBOUNDARYCONDITIONS__MIRROR_PEC, &
            OPTION__MAXWELLBOUNDARYCONDITIONS__MIRROR_PMC)
 
@@ -263,49 +272,7 @@ contains
         bc%do_plane_waves = .true.
 
       case (OPTION__MAXWELLBOUNDARYCONDITIONS__MEDIUM)
-        !%Variable MaxwellMediumWidth
-        !%Type float
-        !%Default 0.0 a.u.
-        !%Section Time-Dependent::Absorbing Boundaries
-        !%Description
-        !% Width of the boundary region with medium
-        !%End
-         call parse_variable(namespace, 'MaxwellMediumWidth', M_ZERO, bc%mxmedium%width, units_inp%length)
-        bounds(1,idim) = ( gr%mesh%idx%nr(2, idim) - gr%mesh%idx%enlarge(idim) ) * gr%mesh%spacing(idim)
-        bounds(1,idim) = bounds(1,idim) - bc%mxmedium%width
-        bounds(2,idim) = ( gr%mesh%idx%nr(2, idim) ) * gr%mesh%spacing(idim)
-        !%Variable MaxwellEpsilonFactor
-        !%Type float
-        !%Default 1.0.
-        !%Section Time-Dependent::Absorbing Boundaries
-        !%Description
-        !% Maxwell epsilon factor
-        !%End
-        call parse_variable(namespace, 'MaxwellEpsilonFactor', M_ONE, bc%mxmedium%ep_factor, unit_one)
-        !%Variable MaxwellMuFactor
-        !%Type float
-        !%Default 1.0.
-        !%Section Time-Dependent::Absorbing Boundaries
-        !%Description
-        !% Maxwell mu factor
-        !%End
-        call parse_variable(namespace, 'MaxwellMuFactor', M_ZERO, bc%mxmedium%mu_factor, unit_one)
-        !%Variable MaxwellElectricSigma
-        !%Type float
-        !%Default 1.0.
-        !%Section Time-Dependent::Absorbing Boundaries
-        !%Description
-        !% Maxwell electric sigma
-        !%End
-        call parse_variable(namespace, 'MaxwellElectricSigma', M_ZERO, bc%mxmedium%sigma_e_factor, unit_one)
-        !%Variable MaxwellMagneticSigma
-        !%Type float
-        !%Default 1.0.
-        !%Section Time-Dependent::Absorbing Boundaries
-        !%Description
-        !% Maxwell magnetic sigma
-        !%End
-        call parse_variable(namespace, 'MaxwellMagneticSigma', M_ONE, bc%mxmedium%sigma_m_factor, unit_one)
+        call bc_mxll_medium_init(bc, gr, namespace, bounds, idim)
         call maxwell_medium_points_mapping(bc, gr%mesh, st, bounds, geo)
         call bc_mxll_generate_medium(bc, gr, bounds, geo)
 
@@ -452,6 +419,65 @@ contains
 
     POP_SUB(bc_mxll_end)
   end subroutine bc_mxll_end
+
+
+  ! ---------------------------------------------------------
+  subroutine bc_mxll_medium_init(bc, gr, namespace, bounds, idim)
+    type(bc_mxll_t),     intent(inout) :: bc
+    type(grid_t),        intent(in) :: gr
+    type(namespace_t),   intent(in) :: namespace
+    FLOAT,               intent(inout) :: bounds(:,:)
+    integer,             intent(in) :: idim
+
+    !%Variable MaxwellMediumWidth
+    !%Type float
+    !%Default 0.0 a.u.
+    !%Section Time-Dependent::Absorbing Boundaries
+    !%Description
+    !% Width of the boundary region with medium
+    !%End
+    call parse_variable(namespace, 'MaxwellMediumWidth', M_ZERO, bc%mxmedium%width, units_inp%length)
+    bounds(1,idim) = ( gr%mesh%idx%nr(2, idim) - gr%mesh%idx%enlarge(idim) ) * gr%mesh%spacing(idim)
+    bounds(1,idim) = bounds(1,idim) - bc%mxmedium%width
+    bounds(2,idim) = ( gr%mesh%idx%nr(2, idim) ) * gr%mesh%spacing(idim)
+
+    !%Variable MaxwellEpsilonFactor
+    !%Type float
+    !%Default 1.0.
+    !%Section Time-Dependent::Absorbing Boundaries
+    !%Description
+    !% Maxwell epsilon factor
+    !%End
+    call parse_variable(namespace, 'MaxwellEpsilonFactor', M_ONE, bc%mxmedium%ep_factor, unit_one)
+
+    !%Variable MaxwellMuFactor
+    !%Type float
+    !%Default 1.0.
+    !%Section Time-Dependent::Absorbing Boundaries
+    !%Description
+    !% Maxwell mu factor
+    !%End
+    call parse_variable(namespace, 'MaxwellMuFactor', M_ZERO, bc%mxmedium%mu_factor, unit_one)
+
+    !%Variable MaxwellElectricSigma
+    !%Type float
+    !%Default 1.0.
+    !%Section Time-Dependent::Absorbing Boundaries
+    !%Description
+    !% Maxwell electric sigma
+    !%End
+
+    call parse_variable(namespace, 'MaxwellElectricSigma', M_ZERO, bc%mxmedium%sigma_e_factor, unit_one)
+    !%Variable MaxwellMagneticSigma
+    !%Type float
+    !%Default 1.0.
+    !%Section Time-Dependent::Absorbing Boundaries
+    !%Description
+    !% Maxwell magnetic sigma
+    !%End
+    call parse_variable(namespace, 'MaxwellMagneticSigma', M_ONE, bc%mxmedium%sigma_m_factor, unit_one)
+
+  end subroutine bc_mxll_medium_init
 
 
   ! ---------------------------------------------------------
