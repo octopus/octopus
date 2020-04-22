@@ -668,7 +668,7 @@ contains
       select case (ft_method)
       case (FAST_FOURIER)
         call profiling_in(prof_fftw, "CONVERT_FFTW")
-        call dfft_forward1(fft, read_ft, out_fft)
+        call dfft_forward(fft, read_ft, out_fft)
         call profiling_out(prof_fftw)
         ! Should the value be multiplied by dt ??? as in standard discrete Fourier Transform ?
         point_tmp(read_count, 0:time_steps) = AIMAG(out_fft(0:time_steps)) * dt

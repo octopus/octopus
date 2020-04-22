@@ -560,7 +560,7 @@ contains
     ! better if we take the average of those two values.
     f%val(1) = M_HALF*(f%val(1)+f%val(f%niter+1))
     f%val(f%niter+1) = f%val(1)
-    call dfft_forward1(f%fft_handler, f%val(1:f%niter), tmp)
+    call dfft_forward(f%fft_handler, f%val(1:f%niter), tmp)
     tmp = tmp * f%dt * sqrt(M_ONE/(f%final_time-f%init_time))
     f%mode = TDF_FOURIER_SERIES
     SAFE_ALLOCATE(f%valww(1:2*(f%nfreqs-1)+1))
@@ -595,7 +595,7 @@ contains
       tmp(j) = TOCMPLX((sqrt(M_TWO)/M_TWO)*f%valww(j), -(sqrt(M_TWO)/M_TWO)*f%valww(j+f%nfreqs-1))
     end do
     SAFE_ALLOCATE(f%val(1:f%niter+1))
-    call dfft_backward1(f%fft_handler, tmp, f%val(1:f%niter))
+    call dfft_backward(f%fft_handler, tmp, f%val(1:f%niter))
     f%val(f%niter+1) = f%val(1)
     f%val = f%val * f%niter * sqrt(M_ONE/(f%final_time-f%init_time))
     f%mode = TDF_NUMERICAL
