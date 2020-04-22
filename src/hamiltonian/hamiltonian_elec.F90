@@ -35,6 +35,7 @@ module hamiltonian_elec_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_abst_oct_m
+  use kick_oct_m
   use kpoints_oct_m
   use lalg_basic_oct_m
   use lasers_oct_m
@@ -421,6 +422,12 @@ contains
     if(hm%lda_u_level /= DFT_U_NONE) then
       call messages_experimental('DFT+U')
       call lda_u_init(hm%lda_u, namespace, hm%lda_u_level, gr, geo, st, hm%psolver)
+
+      !In the present implementation of DFT+U, in case of spinors, we have off-diagonal terms
+      !in spin space which break the assumption of the generalized Bloch theorem
+      if(kick_get_type(hm%ep%kick) == KICK_MAGNON_MODE .and. gr%der%boundaries%spiral) then
+        call messages_not_implemented("DFT+U with generalized Bloch theorem and magnon kick")
+      end if 
     end if
  
 

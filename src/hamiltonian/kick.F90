@@ -55,7 +55,8 @@ module kick_oct_m
     kick_read,            &
     kick_write,           &
     kick_apply,           &
-    kick_function_get
+    kick_function_get,    &
+    kick_get_type
 
 
   integer, public, parameter ::        &
@@ -83,7 +84,7 @@ module kick_oct_m
     !> The time which the kick is applied (normally, this is zero)
     FLOAT             :: time
     !> The strength, and strength "mode".
-    integer           :: delta_strength_mode
+    integer, private  :: delta_strength_mode
     FLOAT             :: delta_strength
     !> In case we use a normal dipole kick:
     FLOAT             :: pol(MAX_DIM, MAX_DIM)
@@ -1213,6 +1214,13 @@ contains
 
     POP_SUB(kick_apply)
   end subroutine kick_apply
+
+  pure integer function kick_get_type(kick) result(kick_type)
+    type(kick_t),    intent(in) :: kick
+
+    kick_type = kick%delta_strength_mode
+ 
+  end function kick_get_type
 
 end module kick_oct_m
 
