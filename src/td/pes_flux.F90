@@ -1484,7 +1484,9 @@ contains
                   kvec(1:2) = (/this%klinear(ik1,1), this%klinear(ik2,2)/)
                   kvec(1:pdim) = matmul(sb%klattice_primitive(1:pdim,1:pdim),kvec(1:pdim))
                   call fill_non_periodic_dimension(this)
-
+                  
+                  this%Lkpuvz_inv(ik1,ik2,ikk-nkmin+1) = ikp
+                  
                   
                 end do
               end do
@@ -1634,8 +1636,6 @@ contains
       end if
       
       this%kcoords_cub(1:mdim, ikp, ikpt) =  kvec(1:mdim)
-      
-      this%Lkpuvz_inv(ik1,ik2,ikk) = ikp
       
       
     end subroutine fill_non_periodic_dimension
@@ -1976,7 +1976,7 @@ contains
     integer            :: isp, ikp, ikp_start, ikp_end
     integer            :: ik_map
     
-    integer            :: ikp1, ikp2, fdim, pdim, idir,ndir
+    integer            :: ikp1, ikp2, fdim, idir,pdim, nfaces, ifc, n_dir
     CMPLX              :: tmp
     FLOAT              :: Jac(1:2,1:2), jdet, kpoint(1:3), vec(1:3), lvec(1:3)
     
@@ -2032,13 +2032,15 @@ end if
       
     else !do something smart to exploit symmetries
 
-      ndir = mdim
-      if(this%surf_shape == M_PLANES) ndir = mdim - 1 
+      nfaces = mdim*2
+      if(this%surf_shape == M_PLANES) nfaces = 2 ! We only have two planes 
       
-      SAFE_ALLOCATE(this%expkr(1:this%nsrfcpnts,maxval(this%ll(1:ndir)),kptst:kptend,1:ndir))
+      
+      SAFE_ALLOCATE(this%expkr(1:this%nsrfcpnts,maxval(this%ll(1:mdim)),kptst:kptend,1:mdim))
+      this%expkr(:,:,:,:) = M_z1
 
       do ik = kptst, kptend !should only be ik=1
-        do idir = 1, ndir
+        do idir = 1, mdim
           do ikp = 1, this%ll(idir)
             do isp = 1, this%nsrfcpnts 
               this%expkr(isp,ikp,ik,idir) = exp(-M_zI * this%rcoords(idir,isp) &
@@ -2050,13 +2052,20 @@ end if
         end do
       end do
 
-      SAFE_ALLOCATE(this%expkr_perp(maxval(this%ll(1:ndir)),1:ndir))
+      SAFE_ALLOCATE(this%expkr_perp(maxval(this%ll(1:mdim)),1:mdim))
+      this%expkr_perp(:,:) = M_z1
 
-      do idir = 1, ndir
-        isp = this%face_idx_range(idir*2, 1)
-        do ikp = 1, this%ll(idir)
-          this%expkr_perp(ikp,idir) = exp(-M_zI * this%rcoords(idir,isp) &
-                                            * this%klinear(ikp, idir) ) & 
+      do ifc = 1, nint((nfaces+0.5)/2)
+        isp = this%face_idx_range(ifc, 1)
+      
+        n_dir = 0 
+        do idir = 1, mdim
+          if(abs(this%srfcnrml(idir, this%face_idx_range(ifc, 1))) >= M_EPSILON) n_dir = idir
+        end do 
+
+        do ikp = 1, this%ll(n_dir)
+          this%expkr_perp(ikp,n_dir) = exp(-M_zI * this%rcoords(n_dir,isp) &
+                                            * this%klinear(ikp, n_dir) ) & 
                                             * (M_TWO*M_PI)**(-M_ONE/M_TWO)
 
 
@@ -2286,8 +2295,11 @@ end if
                                * this%expkr(isp_start:isp_end,ikpv,ik_map,dir_on_face(2)))
                   
                   do ikpz = 1, this%ll(dir_on_face(3))
-                     gwfpw(get_ikp(this,ikpu,ikpv,ikpz,n_dir)) = face_int_wf &
+                     gwfpw(get_ikp(this,ikpu,ikpv,ikpz,n_dir)) = face_int_gwf &
                                                                * this%expkr_perp(ikpz,n_dir)  
+                     wfpw(get_ikp(this,ikpu,ikpv,ikpz,n_dir))  = face_int_wf &
+                                                               * this%expkr_perp(ikpz,n_dir)  
+
                   end do
                   
                 end do
