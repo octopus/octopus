@@ -644,6 +644,8 @@ contains
     FLOAT, allocatable :: tmp(:)
     FLOAT, allocatable :: ddot(:,:)
     CMPLX, allocatable :: zdot(:,:)
+    FLOAT, allocatable :: ddotv(:)
+    CMPLX, allocatable :: zdotv(:)
 
     PUSH_SUB(test_density_calc)
 
@@ -661,11 +663,17 @@ contains
     !% Tests batch_nrm2 operation
     !%Option ops_dotp_matrix bit(4)
     !% Tests X(mesh_batch_dotp_matrix)
+    !%Option ops_dotp_self bit(5)
+    !% Tests X(mesh_batch_dotp_self)
+    !%Option ops_dotp_vector bit(6)
+    !% Tests X(mesh_batch_dotp_vector)
     !%End
     ops = OPTION__TESTBATCHOPS__OPS_AXPY &
         + OPTION__TESTBATCHOPS__OPS_SCAL &
         + OPTION__TESTBATCHOPS__OPS_NRM2 &
-        + OPTION__TESTBATCHOPS__OPS_DOTP_MATRIX
+        + OPTION__TESTBATCHOPS__OPS_DOTP_MATRIX &
+        + OPTION__TESTBATCHOPS__OPS_DOTP_SELF &
+        + OPTION__TESTBATCHOPS__OPS_DOTP_VECTOR
 
     call parse_variable(namespace, 'TestBatchOps', ops, ops)
 
@@ -701,7 +709,7 @@ contains
       do itime = 1, param%repetitions
         call batch_axpy(sys%gr%mesh%np, CNST(0.1), xx, yy)
       end do
-      call test_prints_info_batch(sys%st, sys%gr, yy)
+      call test_prints_info_batch(sys%st, sys%gr, yy, string="axpy")
 
       call xx%end()
       call yy%end()
@@ -717,7 +725,7 @@ contains
       do itime = 1, param%repetitions
         call batch_scal(sys%gr%mesh%np, CNST(0.1), yy)
       end do
-      call test_prints_info_batch(sys%st, sys%gr, yy)
+      call test_prints_info_batch(sys%st, sys%gr, yy, string = "scal")
 
       call xx%end()
       call yy%end()
@@ -762,7 +770,7 @@ contains
 
         do ist = 1, nst
           do jst = 1, nst
-            write(message(jst+nst*(ist-1)), '(a,2i3,3x,e13.6)') 'Dotp states', ist, jst, ddot(ist,jst)
+            write(message(jst+nst*(ist-1)), '(a,2i3,3x,e13.6)') 'Dotp_matrix states', ist, jst, ddot(ist,jst)
           end do
         end do
         call messages_info(nst*nst)
@@ -772,7 +780,7 @@ contains
         call zmesh_batch_dotp_matrix(sys%gr%mesh, xx, yy, zdot)
         do ist = 1, nst
           do jst = 1, nst
-            write(message(jst+nst*(ist-1)), '(a,2i3,3x,2e14.6)') 'Dotp states', ist, jst, zdot(ist,jst)
+            write(message(jst+nst*(ist-1)), '(a,2i3,3x,2e14.6)') 'Dotp_matrix states', ist, jst, zdot(ist,jst)
           end do
         end do
         call messages_info(nst*nst)
@@ -782,6 +790,76 @@ contains
       call xx%end()
       call yy%end()    
     end if
+
+    if(bitand(ops, OPTION__TESTBATCHOPS__OPS_DOTP_VECTOR) /= 0) then
+    
+      message(1) = 'Info: Testing dotp_vector'
+      call messages_info(1)
+
+      call sys%st%group%psib(1, 1)%copy_to(xx, copy_data = .true.)
+      call sys%st%group%psib(1, 1)%copy_to(yy, copy_data = .true.)
+
+      nst = sys%st%group%psib(1, 1)%nst
+
+      if(states_are_real(sys%st)) then
+        SAFE_ALLOCATE(ddotv(nst))
+        call dmesh_batch_dotp_vector(sys%gr%mesh, xx, yy, ddotv)
+
+        do ist = 1, nst
+          write(message(ist), '(a,i3,3x,e13.6)') 'Dotp_vector state', ist, ddotv(ist)
+        end do
+        call messages_info(nst)
+        SAFE_DEALLOCATE_A(ddotv)
+      else
+        SAFE_ALLOCATE(zdotv(nst))
+        call zmesh_batch_dotp_vector(sys%gr%mesh, xx, yy, zdotv)
+        do ist = 1, nst
+          write(message(ist), '(a,i3,3x,2e14.6)') 'Dotp_vector state', ist, zdotv(ist)
+        end do
+        call messages_info(nst)
+        SAFE_DEALLOCATE_A(zdotv)
+      end if
+  
+      call xx%end()
+      call yy%end()    
+    end if
+
+
+    if(bitand(ops, OPTION__TESTBATCHOPS__OPS_DOTP_SELF) /= 0) then
+    
+      message(1) = 'Info: Testing dotp_self'
+      call messages_info(1)
+
+      call sys%st%group%psib(1, 1)%copy_to(xx, copy_data = .true.)
+
+      nst = sys%st%group%psib(1, 1)%nst
+
+      if(states_are_real(sys%st)) then
+        SAFE_ALLOCATE(ddot(nst, nst))
+        call dmesh_batch_dotp_self(sys%gr%mesh, xx, ddot)
+
+        do ist = 1, nst
+          do jst = 1, nst
+            write(message(jst+nst*(ist-1)), '(a,2i3,3x,e13.6)') 'Dotp_self states', ist, jst, ddot(ist,jst)
+          end do
+        end do
+        call messages_info(nst*nst)
+        SAFE_DEALLOCATE_A(ddot)
+      else
+        SAFE_ALLOCATE(zdot(nst, nst))
+        call zmesh_batch_dotp_self(sys%gr%mesh, xx, zdot)
+        do ist = 1, nst
+          do jst = 1, nst
+            write(message(jst+nst*(ist-1)), '(a,2i3,3x,2e14.6)') 'Dotp_self states', ist, jst, zdot(ist,jst)
+          end do
+        end do
+        call messages_info(nst*nst)
+        SAFE_DEALLOCATE_A(zdot)
+      end if
+  
+      call xx%end()
+    end if
+
 
     call states_elec_deallocate_wfns(sys%st)
     SAFE_DEALLOCATE_P(sys)
@@ -942,8 +1020,8 @@ contains
 
     do itime = 1, psib%nst
       if(states_are_real(st)) then
-        write(message(1),'(a,i1,3x,e13.6)') "Norm state "//trim(string_)//" ", itime, dmf_nrm2(gr%mesh, st%d%dim, dpsi)
         call batch_get_state(psib, itime, gr%mesh%np, dpsi)
+        write(message(1),'(a,i1,3x,e13.6)') "Norm state "//trim(string_)//" ", itime, dmf_nrm2(gr%mesh, st%d%dim, dpsi)
       else
         call batch_get_state(psib, itime, gr%mesh%np, zpsi)
         write(message(1),'(a,i1,3x,e13.6)') "Norm state "//trim(string_)//" ", itime, zmf_nrm2(gr%mesh, st%d%dim, zpsi)
