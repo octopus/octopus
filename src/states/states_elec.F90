@@ -1491,6 +1491,10 @@ contains
     CMPLX, allocatable :: zpsi(:,  :), zpsi2(:)
     integer :: ikpoint, ip
 
+    logical :: normalized_
+
+    normalized_ = optional_default(normalized, .true.)
+
     PUSH_SUB(states_elec_generate_random)
  
     ist_start = optional_default(ist_start_, 1)
@@ -1607,7 +1611,7 @@ contains
             if(.not. state_kpt_is_local(st, ist, ik)) cycle
             ! Note that mf_random normalizes each spin channel independently to 1.
             ! Therefore we need to renormalize the spinor:
-            if(normalized) call zmf_normalize(mesh, st%d%dim, zpsi)
+            if(normalized_) call zmf_normalize(mesh, st%d%dim, zpsi)
             call states_elec_set_state(st, mesh, ist,  ik, zpsi)
           end do
         end do
