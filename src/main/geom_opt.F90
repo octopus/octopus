@@ -205,6 +205,14 @@ contains
 
       PUSH_SUB(geom_opt_run.init_)
 
+      if (sys%gr%sb%periodic_dim > 0) then
+        call messages_experimental('Geometry optimization for periodic systems')
+
+        message(1) = "Optimization of cell parameters during geometry optimization"
+        message(2) = "of periodic systems is currently not implemented."
+        call messages_warning(2)
+      end if
+
       call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
 
       ! shortcuts
