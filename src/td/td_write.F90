@@ -605,17 +605,19 @@ contains
           trim(io_workpath("td.general/velocity", namespace)))
 
       if(writ%out(OUT_LASER)%write) then
-        if(iter .eq. 0) then
-          call write_iter_init(writ%out(OUT_LASER)%handle, first, &
-            units_from_atomic(units_out%time, dt),  &
+        ! The laser file is written for the full propagation in one go, so that
+        ! the user can check that the laser is correct and as intended before letting
+        ! the code run for a possibly large period of time. This is done even after
+        ! a restart, so that it takes into account any changes to max_iter.
+        call io_rm("td.general/laser", namespace=namespace)
+        call write_iter_init(writ%out(OUT_LASER)%handle, 0, &
+          units_from_atomic(units_out%time, dt),  &
           trim(io_workpath("td.general/laser", namespace)))
-          do ii = 0, max_iter
-            call td_write_laser(writ%out(OUT_LASER)%handle, gr, hm, dt, ii)
-          end do
-          call write_iter_end(writ%out(OUT_LASER)%handle)
-        end if
+        do ii = 0, max_iter
+          call td_write_laser(writ%out(OUT_LASER)%handle, gr, hm, dt, ii)
+        end do
+        call write_iter_end(writ%out(OUT_LASER)%handle)
       end if
-
 
       if(writ%out(OUT_ENERGY)%write) &
         call write_iter_init(writ%out(OUT_ENERGY)%handle, first, &
