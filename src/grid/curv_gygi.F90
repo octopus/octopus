@@ -161,20 +161,17 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine curv_gygi_chi2x(sb, cv, chi, x)
-    type(simul_box_t), target, intent(in)  :: sb
-    type(curv_gygi_t), target, intent(in)  :: cv
+  subroutine curv_gygi_chi2x(sb, cv, rs, chi, x)
+    type(simul_box_t), target, intent(in)   :: sb
+    type(curv_gygi_t), target, intent(in)   :: cv
+    type(root_solver_t), intent(in)         :: rs
     FLOAT,                     intent(in)  :: chi(:)  !< chi(sb%dim)
     FLOAT,                     intent(out) :: x(:)    !< x(sb%dim)
 
     integer :: i
     logical :: conv
-    type(root_solver_t) :: rs
 
     ! no push_sub, called too frequently
-
-    call root_solver_init(rs, sb%dim,  &
-      solver_type = ROOT_NEWTON, maxiter = 500, abs_tolerance = CNST(1.0e-10))
 
     sb_p            => sb
     cv_p            => cv

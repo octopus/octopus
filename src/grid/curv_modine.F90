@@ -137,6 +137,8 @@ contains
     type(geometry_t),            intent(in)  :: geo
     FLOAT,                       intent(in)  :: spacing(:)
 
+    type(root_solver_t) :: rs
+
     PUSH_SUB(curv_modine_init)
 
     !%Variable CurvModineXBar
@@ -200,6 +202,10 @@ contains
     cv%Jlocal(:) = cv%Jlocal(1)
     cv%Jrange(:) = cv%Jrange(1)
 
+    ! initialize root solver for the optimization
+    call root_solver_init(rs, namespace, sb%dim, &
+        solver_type = ROOT_NEWTON, maxiter = 500, abs_tolerance = CNST(1.0e-10))
+
     call find_atom_points()
     call optimize()
 
@@ -224,7 +230,7 @@ contains
       SAFE_ALLOCATE(cv%chi_atoms(1:sb%dim, 1:geo%natoms))
       do jj = 1, 10  ! \warning: make something better
         do iatom = 1, geo%natoms
-          call curv_modine_x2chi(sb, cv, geo%atom(iatom)%x, cv%chi_atoms(:, iatom))
+          call curv_modine_x2chi(sb, cv, rs, geo%atom(iatom)%x, cv%chi_atoms(:, iatom))
         end do
         cv%csi(:,:) = cv%chi_atoms(:,:)
       end do
@@ -239,14 +245,10 @@ contains
 
     subroutine optimize()
       logical :: conv
-      type(root_solver_t) :: rs
       integer :: iatom, idim, index
       FLOAT, allocatable :: my_csi(:), start_csi(:)
 
       PUSH_SUB(curv_modine_init.optimize)
-
-      call root_solver_init(rs, sb%dim, &
-        solver_type = ROOT_NEWTON, maxiter = 500, abs_tolerance = CNST(1.0e-10))
 
       sb_p  => sb
       cv_p  => cv
@@ -453,19 +455,16 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine curv_modine_x2chi(sb, cv, xx, chi)
-    type(simul_box_t),   target, intent(in)  :: sb
-    type(curv_modine_t), target, intent(in)  :: cv
+  subroutine curv_modine_x2chi(sb, cv, rs, xx, chi)
+    type(simul_box_t),   target, intent(in)     :: sb
+    type(curv_modine_t), target, intent(in)     :: cv
+    type(root_solver_t), target, intent(inout)  :: rs
     FLOAT,                       intent(in)  :: xx(:)   !< xx(sb%dim)
     FLOAT,                       intent(out) :: chi(:)  !< chi(sb%dim)
 
     logical :: conv
-    type(root_solver_t) :: rs
 
     PUSH_SUB(curv_modine_x2chi)
-
-    call root_solver_init(rs, sb%dim,  &
-      solver_type = ROOT_NEWTON, maxiter = 500, abs_tolerance = CNST(1.0e-10))
 
     sb_p  => sb
     cv_p  => cv
