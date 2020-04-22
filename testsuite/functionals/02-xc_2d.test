@@ -13,7 +13,7 @@ match ; Hartree eigenvalues sum                  ; GREPFIELD(static/info, 'Eigen
 match ; Hartree kinetic energy                   ; GREPFIELD(static/info, 'Kinetic     =', 3) ; 0.31633274
 match ; Hartree external energy                  ; GREPFIELD(static/info, 'External    =', 3) ; 0.47821569
 match ; Hartree eigenvalue 1 up                  ; GREPFIELD(static/info, '  1   up', 3) ; 0.606973
-match ; Hartree eigenvalue 2 up                  ; GREPFIELD(static/info, '  2   up', 3) ; 0.821707
+match ; Hartree eigenvalue 2 up                  ; GREPFIELD(static/info, '  2   up', 3) ; 0.821602
 match ; Hartree eigenvalue 1 dn                  ; GREPFIELD(static/info, '  1   dn', 3) ; 1.156249
 match ; Hartree eigenvalue 2 dn                  ; GREPFIELD(static/info, '  2   dn', 3) ; 1.221872
 

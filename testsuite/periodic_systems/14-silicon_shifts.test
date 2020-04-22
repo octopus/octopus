@@ -63,7 +63,7 @@ match ; Projections [step 100] ; LINEFIELD(td.general/projections, -1, 4) ;-3.35
 Input      : 14-silicon_shifts.04-delayed_kick.inp
 
 Precision : 3e-4
-match ; Total current [step  100] ; LINEFIELD(td.general/gauge_field, -1, 3) ; 2.993089558398e+00
+match ; Total current [step  100] ; LINEFIELD(td.general/gauge_field, -1, 3) ; 2.9934295463625
 
 
 
