@@ -56,7 +56,7 @@ subroutine X(oep_sic) (xcs, gr, psolver, namespace, st, is, oep, ex, ec, exxop)
       call states_elec_get_state(st, gr%mesh, ist, is, psi)
 
       ! get orbital density
-      rho(1:gr%mesh%np, 1) = oep%socc*st%occ(ist, is)*psi(1:gr%mesh%np, 1)*R_CONJ(psi(1:gr%mesh%np, 1))
+      rho(1:gr%mesh%np, 1) = oep%socc*st%occ(ist, is)*R_REAL(psi(1:gr%mesh%np, 1)*R_CONJ(psi(1:gr%mesh%np, 1)))
 
       ! initialize before calling get_vxc
       vxc = M_ZERO
@@ -76,8 +76,7 @@ subroutine X(oep_sic) (xcs, gr, psolver, namespace, st, is, oep, ex, ec, exxop)
       call dpoisson_solve(psolver, vxc(:, 1), rho(:, 1), all_nodes=.false.)
 
       ! The exchange energy.
-      ex_ = ex_ - M_HALF*oep%sfact*oep%socc*st%occ(ist, is)* &
-        dmf_dotp(gr%mesh, vxc(1:gr%mesh%np, 1), psi(1:gr%mesh%np, 1)*R_CONJ(psi(1:gr%mesh%np, 1)))
+      ex_ = ex_ - M_HALF*oep%sfact*dmf_dotp(gr%mesh, vxc(1:gr%mesh%np, 1), rho(1:gr%mesh%np, 1))
 
       oep%X(lxc)(1:gr%mesh%np, ist, is) = oep%X(lxc)(1:gr%mesh%np, ist, is) - &
         vxc(1:gr%mesh%np, 1)*R_CONJ(psi(1:gr%mesh%np, 1))
