@@ -134,10 +134,6 @@ module maxwell_boundary_op_oct_m
     FLOAT,    pointer :: plane_waves_e_field(:,:)
     type(mxf_t), pointer :: plane_waves_mx_function(:)
     type(mxf_t), pointer :: plane_waves_mx_phase(:)
-    integer,  pointer :: plane_waves_oam(:)
-    integer,  pointer :: plane_waves_sam(:)
-
-    logical           :: bessel_beam = .false.
 
     FLOAT             :: zero_width
     integer           :: zero_points_number(MAX_DIM)
@@ -425,8 +421,6 @@ contains
       SAFE_DEALLOCATE_P(bc%plane_waves_mx_function)
       SAFE_DEALLOCATE_P(bc%plane_waves_mx_phase)
       SAFE_DEALLOCATE_P(bc%plane_waves)
-      SAFE_DEALLOCATE_P(bc%plane_waves_oam)
-      SAFE_DEALLOCATE_P(bc%plane_waves_sam)
       SAFE_DEALLOCATE_P(bc%plane_waves_points_map)
     end if
 
@@ -1404,7 +1398,6 @@ contains
 
     type(block_t)        :: blk
     integer              :: il, nlines, ncols, ierr
-    integer              :: oam, sam
     FLOAT                :: k_vector(MAX_DIM), e_field(MAX_DIM), vv(MAX_DIM), xx(MAX_DIM), rr, dummy(MAX_DIM), test, test_limit!, angle, sigma
     character(len=1024)  :: k_string(MAX_DIM)
     character(len=1024)  :: mxf_expression
@@ -1429,7 +1422,6 @@ contains
     !% <br>&nbsp;&nbsp;   plane_wave_parser      | "k2x" | "k2y" | "k2z" | "E2x" | "E2y" | "E2z" | no_plane_wave
     !% <br>&nbsp;&nbsp;   plane_wave_gauss       | "k3x" | "k3y" | "k3z" | "E3x" | "E3y" | "E3z" | "width"           | "shift" | plane_wave
     !% <br>&nbsp;&nbsp;   plane_wave_mx_function | "k4x" | "k4y" | "k4z" | "E4x" | "E4y" | "E4z" | mx_envelope_name  | phase   | plane_wave
-    !% <br>&nbsp;&nbsp;   bessel_mx_function      | "k5x" | "k5y" | "k5z" | "E5x" | "E5y" | "E5z" | "angle" | "orbital_momentum" | "sigma" | mx_envelope_name | phase
     !% <br>%</tt>
     !%
     !% Description about UserDefinedMaxwellIncidentWaves follows
@@ -1438,8 +1430,6 @@ contains
     !% Parser input modus
     !%Option plane_wave_mx_function 1
     !% The incident wave envelope is defined by an mx_function
-    !%Option bessel_mx_function 4
-    !% Follows!
     !%End
 
     if(parse_block(namespace, 'UserDefinedMaxwellIncidentWaves', blk) == 0) then
@@ -1458,8 +1448,6 @@ contains
       SAFE_ALLOCATE(bc%plane_waves_mx_function(nlines))
       SAFE_ALLOCATE(bc%plane_waves_mx_phase(nlines))
       SAFE_ALLOCATE(bc%plane_waves(nlines))
-      SAFE_ALLOCATE(bc%plane_waves_oam(nlines))
-      SAFE_ALLOCATE(bc%plane_waves_sam(nlines))
 
       ! read all lines
       do il = 1, nlines
@@ -1554,43 +1542,6 @@ contains
           bc%plane_waves_k_vector(:,il) = k_vector(:)
           bc%plane_waves_v_vector(:,il) = k_vector(:) / Sqrt(sum(k_vector(:)**2)) * P_c
 
-        else if (bc%plane_waves_modus(il) == OPTION__USERDEFINEDMAXWELLINCIDENTWAVES__BESSEL_MX_FUNCTION) then
-
-          bc%bessel_beam = .true.
-
-          call parse_block_float(blk, il - 1, 1, e_field(1))
-          call parse_block_float(blk, il - 1, 2, e_field(2))
-          call parse_block_float(blk, il - 1, 3, e_field(3))
-          call parse_block_float(blk, il - 1, 4, k_vector(1))
-          call parse_block_float(blk, il - 1, 5, k_vector(2))
-          call parse_block_float(blk, il - 1, 6, k_vector(3))
-          call parse_block_integer(blk, il - 1,  7, oam)
-          call parse_block_integer(blk, il - 1,  8, sam)
-
-          write(message(1), '(a,i2) ') 'Substituting electromagnetic incident wave ', il
-          write(message(3), '(a)'    ) 'with the expression: '
-          call messages_info(2)
-          write(message(1), '(a,es9.2)')     '  E-field(x) amplitude       = ', e_field(1)
-          write(message(2), '(a,es9.2)')     '  E-field(y) amplitude       = ', e_field(2)
-          write(message(3), '(a,es9.2)')     '  E-field(z) amplitude       = ', e_field(3)
-          !write(message(4), '(2a)'    )      '  Maxwell wave function name = ', trim(mxf_expression)
-          call messages_info(3)
-          !call mxf_read(bc%plane_waves_mx_function(il), trim(mxf_expression), ierr)
-          !if (ierr /= 0) then            
-          !  write(message(1),'(3A)') 'Error in the "', trim(mxf_expression), &
-          !    '" field defined in the UserDefinedMaxwellIncidentWaves block'
-          !  call messages_fatal(1, namespace=namespace)
-          !end if
-          e_field  = units_to_atomic(units_inp%energy/units_inp%length, e_field)
-
-          bc%plane_waves_e_field(:, il)  = e_field(:)
-          bc%plane_waves_k_vector(:, il) = k_vector(:)
-
-          bc%plane_waves_v_vector(:, il) = M_ZERO 
-          bc%plane_waves_v_vector(3, il) = sqrt(k_vector(1)**2 + k_vector(2)**2)*P_c/k_vector(2)
-
-          bc%plane_waves_oam(il) = oam
-          bc%plane_waves_sam(il) = sam
          end if
       end do
 

@@ -3266,35 +3266,26 @@ contains
       k_vector(:)  = hm%bc%plane_waves_k_vector(:,wn)
       k_vector_abs = sqrt(sum(k_vector(:)**2))
       e0(:)      = hm%bc%plane_waves_e_field(:,wn)
-      if (hm%bc%bessel_beam) then
-        do ip = 1, gr%mesh%np
-          if (wn==1) rs_state(ip,:) = M_Z0
-          nn           = sqrt(st%ep(ip)/P_ep*st%mu(ip)/P_mu)
-          call build_rs_vector(e_field, b_field, st%rs_sign, rs_state_add, st%ep(ip), st%mu(ip))
-          rs_state(ip,:) =  rs_state(ip,:) + rs_state_add(:)
-        end do
-      else
-        do ip = 1, gr%mesh%np
-          if (wn==1) rs_state(ip,:) = M_Z0
-          nn           = sqrt(st%ep(ip)/P_ep*st%mu(ip)/P_mu)
-          x_prop(:)    = gr%mesh%x(ip,:) - vv(:) * time
-          rr           = sqrt(sum(x_prop(:)**2))
-          if (bc%plane_waves_modus(wn) == OPTION__USERDEFINEDMAXWELLINCIDENTWAVES__PLANE_WAVE_PARSER) then
-            do idim=1, gr%mesh%sb%dim
-               call parse_expression(e_field(idim), dummy(idim), gr%mesh%sb%dim, x_prop, rr, M_ZERO, &
+      do ip = 1, gr%mesh%np
+        if (wn==1) rs_state(ip,:) = M_Z0
+        nn           = sqrt(st%ep(ip)/P_ep*st%mu(ip)/P_mu)
+        x_prop(:)    = gr%mesh%x(ip,:) - vv(:) * time
+        rr           = sqrt(sum(x_prop(:)**2))
+        if (bc%plane_waves_modus(wn) == OPTION__USERDEFINEDMAXWELLINCIDENTWAVES__PLANE_WAVE_PARSER) then
+          do idim=1, gr%mesh%sb%dim
+            call parse_expression(e_field(idim), dummy(idim), gr%mesh%sb%dim, x_prop, rr, M_ZERO, &
                  bc%plane_waves_e_field_string(idim,wn))
-               e_field(idim) = units_to_atomic(units_inp%energy/units_inp%length, e_field(idim))
-            end do
-          else if (bc%plane_waves_modus(wn) == &
-            OPTION__USERDEFINEDMAXWELLINCIDENTWAVES__PLANE_WAVE_MX_FUNCTION) then
-            e0(:)      = bc%plane_waves_e_field(:,wn)
-            e_field(:) = e0(:) * mxf(bc%plane_waves_mx_function(wn), x_prop(:))
-          end if
-          b_field(1:3) = M_ONE/(P_c * k_vector_abs) * dcross_product(k_vector, e_field)
-          call build_rs_vector(e_field, b_field, st%rs_sign, rs_state_add, st%ep(ip), st%mu(ip))
-          rs_state(ip,:) = rs_state(ip,:) + rs_state_add(:)
-        end do
-      end if
+            e_field(idim) = units_to_atomic(units_inp%energy/units_inp%length, e_field(idim))
+          end do
+        else if (bc%plane_waves_modus(wn) == &
+             OPTION__USERDEFINEDMAXWELLINCIDENTWAVES__PLANE_WAVE_MX_FUNCTION) then
+           e0(:)      = bc%plane_waves_e_field(:,wn)
+           e_field(:) = e0(:) * mxf(bc%plane_waves_mx_function(wn), x_prop(:))
+        end if
+        b_field(1:3) = M_ONE/(P_c * k_vector_abs) * dcross_product(k_vector, e_field)
+        call build_rs_vector(e_field, b_field, st%rs_sign, rs_state_add, st%ep(ip), st%mu(ip))
+        rs_state(ip,:) = rs_state(ip,:) + rs_state_add(:)
+      end do
     end do
 
     POP_SUB(plane_waves_in_box_calculation)

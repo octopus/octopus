@@ -101,7 +101,6 @@ contains
 
     type(block_t) :: blk
     integer :: nrows, ncols, i, function_type, idim
-!    integer :: oam, sam
     character(len=100) :: row_name, function_expression
     FLOAT :: a0, r0(MAX_DIM), gr, width, k_vector(MAX_DIM)
 
@@ -251,12 +250,6 @@ contains
           call parse_block_float(blk, i-1, 8, gr, units_inp%length)
           call parse_block_float(blk, i-1, 9, width, units_inp%length)
           call mxf_init_trapezoidal_wave(f, a0, k_vector, r0, gr, width)
-        !case(MXF_BESSEL_WAVE)
-        !  call parse_block_float(blk, i-1, 2, k_vector(1), unit_one/units_inp%length)
-        !  call parse_block_float(blk, i-1, 3, k_vector(2), units_inp%length)
-        !  call parse_block_integer(blk, i-1, 4, order, unit_one)
-        !  call parse_block_integer(blk, i-1, 5, sam, unit_one)
-        !  call mxf_init_bessel_wave(f, a0, k_vector, oam, sam)
         case (MXF_FROM_EXPR)
           call parse_block_string(blk, i-1, 2, function_expression)
           call mxf_init_fromexpr(f, trim(function_expression))
@@ -431,29 +424,6 @@ contains
 
 
   !------------------------------------------------------------
-  !subroutine mxf_init_bessel_wave(f, a0, k_vector, order)
-  !  type(mxf_t), intent(inout) :: f
-  !  FLOAT,       intent(in)    :: a0, k_vector(3)
-  !  integer,     intent(in)    :: order
-
-  !  P USH_SUB(mxf_init_bessel_wave)
-
-  !  f%mode = MXF_BESSEL_WAVE
-  !  f%a0 = a0
-  !  f%k_vector = k_vector
-  !  f%order = order
-  !  !f%oam = r0
-  !  !f%sam = gr
-
-  !  nullify(f%val)
-  !  nullify(f%valww)
-
-  !  P OP_SUB(mxf_init_bessel_wave)
-  !end subroutine
-  !------------------------------------------------------------
-
-
-  !------------------------------------------------------------
   subroutine mxf_init_fromexpr(f, expression)
     type(mxf_t),      intent(inout) :: f
     character(len=*), intent(in)    :: expression
@@ -532,12 +502,6 @@ contains
         r = M_ZERO
       end if
       y = f%a0 * r * cos( sum(f%k_vector(1:xdim)*(x(:) - f%r0(1:xdim))) )
-
-   ! case (MXF_BESSEL_WAVE)
-
-   !   rad = sqrt(x(1)**2 + x(2)**2)
-   !   phi = atan2(x(2), x(1))
-   !   r   = loct_bessel(order, f%k_vector(1)*rad) * exp(M_zI*(f%k_vector(2)*x(3) + order*phi))
 
     case default
 
