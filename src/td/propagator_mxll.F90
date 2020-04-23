@@ -901,7 +901,7 @@ contains
 
     else
 
-      transverse_field(:,:) = field
+      transverse_field(1:np,:) = field
 
     end if
 
@@ -946,29 +946,25 @@ contains
     type(mesh_t),        intent(in)    :: mesh
     type(hamiltonian_mxll_t), intent(in)    :: hm
 
-    integer :: ip, ip_in, point_info, idim
-    FLOAT   :: bounds(2,MAX_DIM), xx(MAX_DIM)
-    FLOAT   :: ddv(MAX_DIM), tmp(MAX_DIM), width(MAX_DIM)
+    integer :: ip, ip_in, point_info, idim, dim
+    FLOAT   :: bounds(2, mesh%sb%dim), xx(mesh%sb%dim)
+    FLOAT   :: ddv(mesh%sb%dim), tmp(mesh%sb%dim), width(mesh%sb%dim)
     FLOAT, allocatable :: mask(:)
 
     PUSH_SUB(derivatives_boundary_mask)
 
-    if (hm%bc_zero) then
-      bounds(1,:) = ( mesh%idx%nr(2,:) - 2 * mesh%idx%enlarge(:) ) * mesh%spacing(:)
-      bounds(2,:) = ( mesh%idx%nr(2,:) -     mesh%idx%enlarge(:) ) * mesh%spacing(:)
-    else if (hm%bc_constant) then
-      bounds(1,:) = ( mesh%idx%nr(2,:) - 2 * mesh%idx%enlarge(:) ) * mesh%spacing(:)
-      bounds(2,:) = ( mesh%idx%nr(2,:) -     mesh%idx%enlarge(:) ) * mesh%spacing(:)
-    else if (hm%bc_plane_waves) then
-      bounds(1,:) = ( mesh%idx%nr(2,:) - 2 * mesh%idx%enlarge(:) ) * mesh%spacing(:)
-      bounds(2,:) = ( mesh%idx%nr(2,:) -     mesh%idx%enlarge(:) ) * mesh%spacing(:)
+    dim = mesh%sb%dim
+
+    if (hm%bc_zero .or. hm%bc_constant .or. hm%bc_plane_waves) then
+      bounds(1,1:dim) = ( mesh%idx%nr(2,1:dim) - 2 * mesh%idx%enlarge(1:dim) ) * mesh%spacing(1:dim)
+      bounds(2,1:dim) = ( mesh%idx%nr(2,1:dim) -     mesh%idx%enlarge(1:dim) ) * mesh%spacing(1:dim)
     end if
 
     ip_in=0
     do ip=1, mesh%np
-      xx(:) = mesh%x(ip,:)
-      if ( (abs(xx(1))<=bounds(2,1)) .and. (abs(xx(2))<=bounds(2,2)) .and. (abs(xx(3))<=bounds(2,3)) ) then
-        if ( (abs(xx(1))>bounds(1,1)) .or. (abs(xx(2))>bounds(1,2)) .or. (abs(xx(3))>bounds(1,3)) ) then
+      xx(1:dim) = mesh%x(ip,1:dim)
+      if ((abs(xx(1))<=bounds(2,1)) .and. (abs(xx(2))<=bounds(2,2)) .and. (abs(xx(3))<=bounds(2,3))) then
+        if ((abs(xx(1))>bounds(1,1)) .or. (abs(xx(2))>bounds(1,2)) .or. (abs(xx(3))>bounds(1,3))) then
           point_info = 1
         else
           point_info = 0
@@ -986,9 +982,9 @@ contains
 
     ip_in=0
     do ip=1, mesh%np
-      xx(:) = mesh%x(ip,:)
-      if ( (abs(xx(1))<=bounds(2,1)) .and. (abs(xx(2))<=bounds(2,2)) .and. (abs(xx(3))<=bounds(2,3)) ) then
-        if ( (abs(xx(1))>bounds(1,1)) .or. (abs(xx(2))>bounds(1,2)) .or. (abs(xx(3))>bounds(1,3)) ) then
+      xx(1:dim) = mesh%x(ip,1:dim)
+      if ((abs(xx(1))<=bounds(2,1)) .and. (abs(xx(2))<=bounds(2,2)) .and. (abs(xx(3))<=bounds(2,3))) then
+        if ((abs(xx(1))>bounds(1,1)) .or. (abs(xx(2))>bounds(1,2)) .or. (abs(xx(3))>bounds(1,3))) then
           point_info = 1
         else
           point_info = 0
@@ -1010,7 +1006,7 @@ contains
     do ip=1, mesh%np
       tmp = M_ONE
       mask(ip) = M_ONE
-      ddv(:) = abs(mesh%x(ip,:)) - bounds(1,:)
+      ddv(1:dim) = abs(mesh%x(ip,1:dim)) - bounds(1,1:dim)
       do idim=1, mesh%sb%dim
         if(ddv(idim) >= M_ZERO ) then
           if (ddv(idim)  <=  width(idim)) then
@@ -1043,7 +1039,7 @@ contains
     FLOAT,               intent(in)    :: bounds(:,:)
 
     integer :: ip, ip_in, ip_bd, point_info
-    FLOAT   :: xx(3)
+    FLOAT   :: xx(mesh%sb%dim)
 
     PUSH_SUB(inner_and_outer_points_mapping)
 
@@ -1052,8 +1048,8 @@ contains
     ip_bd=0
     do ip=1, mesh%np
       xx(1:mesh%sb%dim) = mesh%x(ip, 1:mesh%sb%dim)
-      if ( (abs(xx(1))<=bounds(2,1)) .and. (abs(xx(2))<=bounds(2,2)) .and. (abs(xx(3))<=bounds(2,3)) ) then
-        if ( (abs(xx(1))>bounds(1,1)) .or. (abs(xx(2))>bounds(1,2)) .or. (abs(xx(3))>bounds(1,3)) ) then
+      if ((abs(xx(1))<=bounds(2,1)) .and. (abs(xx(2))<=bounds(2,2)) .and. (abs(xx(3))<=bounds(2,3))) then
+        if ((abs(xx(1))>bounds(1,1)) .or. (abs(xx(2))>bounds(1,2)) .or. (abs(xx(3))>bounds(1,3))) then
           point_info = 1
         else
           point_info = 0
@@ -1077,8 +1073,8 @@ contains
     ip_bd=0
     do ip=1, mesh%np
       xx(1:mesh%sb%dim) = mesh%x(ip, 1:mesh%sb%dim)
-      if ( (abs(xx(1))<=bounds(2,1)) .and. (abs(xx(2))<=bounds(2,2)) .and. (abs(xx(3))<=bounds(2,3)) ) then
-        if ( (abs(xx(1))>bounds(1,1)) .or. (abs(xx(2))>bounds(1,2)) .or. (abs(xx(3))>bounds(1,3)) ) then
+      if ((abs(xx(1))<=bounds(2,1)) .and. (abs(xx(2))<=bounds(2,2)) .and. (abs(xx(3))<=bounds(2,3))) then
+        if ((abs(xx(1))>bounds(1,1)) .or. (abs(xx(2))>bounds(1,2)) .or. (abs(xx(3))>bounds(1,3))) then
           point_info = 1
         else
           point_info = 0
@@ -2792,7 +2788,7 @@ contains
     integer,             intent(in)    :: nr_of_boxes
 
     integer :: il, ip, ip_in, ip_in_max, ip_bd, ip_bd_max, ipp, idim
-    FLOAT   :: bounds(2,3), xx(MAX_DIM), xxp(MAX_DIM), dd, dd_max, dd_min
+    FLOAT   :: bounds(2,gr%sb%dim), xx(gr%sb%dim), xxp(gr%sb%dim), dd, dd_max, dd_min
     FLOAT, allocatable  :: tmp(:), tmp_grad(:,:)
 
     PUSH_SUB(generate_medium_boxes)
@@ -2862,56 +2858,61 @@ contains
         if (hm%medium_box_shape(il) == OPTION__MAXWELLMEDIUMBOX__SMOOTH) then
           xx(:) = gr%mesh%x(ip,:)
           dd_min = M_HUGE
+
           do ip_bd=1, hm%medium_box_bdry_number(il)
             ipp = hm%medium_box_bdry_map(ip_bd,il)
             xxp(:) = gr%mesh%x(ipp,:)
             dd = sqrt((xx(1)-xxp(1))**2+(xx(2)-xxp(2))**2+(xx(3)-xxp(3))**2)
             if (dd < dd_min) dd_min=dd
           end do
+
           hm%medium_box_ep(ip_in,il) = P_ep &
-                                                     + ( ( P_ep * hm%medium_box_ep_factor(il) - P_ep )  &
-                                                         * M_ONE/(M_ONE + exp( -M_FIVE/dd_max * (dd_min-M_TWO*dd_max)) ) )
+               + ( ( P_ep * hm%medium_box_ep_factor(il) - P_ep )  &
+               * M_ONE/(M_ONE + exp( -M_FIVE/dd_max * (dd_min-M_TWO*dd_max)) ) )
           hm%medium_box_mu(ip_in,il) = P_mu &
-                                                     + ( ( P_mu * hm%medium_box_mu_factor(il) - P_mu ) &
-                                                     * M_ONE/(M_ONE + exp( -M_FIVE/dd_max * (dd_min-M_TWO*dd_max)) ) )
+               + ( ( P_mu * hm%medium_box_mu_factor(il) - P_mu ) &
+               * M_ONE/(M_ONE + exp( -M_FIVE/dd_max * (dd_min-M_TWO*dd_max)) ) )
           hm%medium_box_c(ip_in,il)  = &
             M_ONE/sqrt(hm%medium_box_ep(ip_in,il)*hm%medium_box_mu(ip_in,il))
           hm%medium_box_sigma_e(ip_in,il) = hm%medium_box_sigma_e_factor(il) &
-                                                          * M_ONE/(M_ONE + exp( -M_FIVE/dd_max * (dd_min-M_TWO*dd_max)) )
+               * M_ONE/(M_ONE + exp( -M_FIVE/dd_max * (dd_min-M_TWO*dd_max)) )
           hm%medium_box_sigma_m(ip_in,il) = hm%medium_box_sigma_m(ip_in,il) &
-                                                          * M_ONE/(M_ONE + exp( -M_FIVE/dd_max * (dd_min-M_TWO*dd_max)) )
+               * M_ONE/(M_ONE + exp( -M_FIVE/dd_max * (dd_min-M_TWO*dd_max)) )
+
         else if (hm%medium_box_shape(il) == OPTION__MAXWELLMEDIUMBOX__EDGED) then
+
           hm%medium_box_ep(ip_in,il) = P_ep * hm%medium_box_ep_factor(il)
           hm%medium_box_mu(ip_in,il) = P_mu * hm%medium_box_mu_factor(il)
           hm%medium_box_c(ip_in,il)  = &
             M_ONE/sqrt(hm%medium_box_ep(ip_in,il)*hm%medium_box_mu(ip_in,il))
           hm%medium_box_sigma_e(ip_in,il) = hm%medium_box_sigma_e_factor(il)
           hm%medium_box_sigma_m(ip_in,il) = hm%medium_box_sigma_m(ip_in,il)
+
         end if
       end do
 
       tmp = P_ep
       do  ip_in=1, hm%medium_box_points_number(il)
-        ip = hm%medium_box_points_map(ip_in,il)
-        tmp(ip) =  hm%medium_box_ep(ip_in,il)
+        ip = hm%medium_box_points_map(ip_in, il)
+        tmp(ip) =  hm%medium_box_ep(ip_in, il)
       end do
       call dderivatives_grad(gr%der, tmp, tmp_grad, set_bc = .false.)
       do ip_in=1, hm%medium_box_points_number(il)
-        ip = hm%medium_box_points_map(ip_in,il)
-        hm%medium_box_aux_ep(ip_in,:,il) = &
-          tmp_grad(ip,:)/(M_FOUR * hm%medium_box_ep(ip_in,il))
+        ip = hm%medium_box_points_map(ip_in, il)
+        hm%medium_box_aux_ep(ip_in, :, il) = &
+          tmp_grad(ip, :)/(M_FOUR * hm%medium_box_ep(ip_in, il))
       end do
 
       tmp = P_mu
       do  ip_in=1, hm%medium_box_points_number(il)
-        ip = hm%medium_box_points_map(ip_in,il)
-        tmp(ip) =  hm%medium_box_mu(ip_in,il)
+        ip = hm%medium_box_points_map(ip_in, il)
+        tmp(ip) =  hm%medium_box_mu(ip_in, il)
       end do
       call dderivatives_grad(gr%der, tmp, tmp_grad, set_bc = .false.)
       do ip_in=1, hm%medium_box_points_number(il)
-        ip = hm%medium_box_points_map(ip_in,il)
-        hm%medium_box_aux_mu(ip_in,:,il) = &
-          tmp_grad(ip,:)/(M_FOUR * hm%medium_box_mu(ip_in,il))
+        ip = hm%medium_box_points_map(ip_in, il)
+        hm%medium_box_aux_mu(ip_in, :, il) = &
+          tmp_grad(ip, :)/(M_FOUR * hm%medium_box_mu(ip_in, il))
       end do
 
       ! print information about the medium box -- get from Renes version in maxwell_propagator.F90
@@ -2988,7 +2989,7 @@ contains
 
     type(block_t)        :: blk
     integer              :: il, nlines, idim, ncols, ierr
-    FLOAT                :: e_field(MAX_DIM), b_field(MAX_DIM)
+    FLOAT                :: e_field(st%dim), b_field(st%dim)
     character(len=1024)  :: mxf_expression
 
     PUSH_SUB(td_function_init)
@@ -3014,7 +3015,7 @@ contains
       st%rs_state_const_external = .true.
       nlines = parse_block_n(blk)
       SAFE_ALLOCATE(st%rs_state_const_td_function(nlines))
-      SAFE_ALLOCATE(st%rs_state_const_amp(MAX_DIM,nlines))
+      SAFE_ALLOCATE(st%rs_state_const_amp(st%dim, nlines))
       ! read all lines
       do il = 1, nlines
         e_field = M_ZERO
@@ -3111,7 +3112,7 @@ contains
     CMPLX                          :: rs_state(:,:)
 
     integer                    :: ip, ip_in, idim
-    FLOAT                      :: e_field(3), b_field(3)
+    FLOAT                      :: e_field(st%dim), b_field(st%dim)
 
     PUSH_SUB(mirror_pec_boundaries_calculation)
 
@@ -3137,7 +3138,7 @@ contains
     CMPLX                          :: rs_state(:,:)
 
     integer                    :: ip, ip_in, idim
-    FLOAT                      :: e_field(3), b_field(3)
+    FLOAT                      :: e_field(st%dim), b_field(st%dim)
 
     PUSH_SUB(mirror_pmc_boundaries_calculation)
 
