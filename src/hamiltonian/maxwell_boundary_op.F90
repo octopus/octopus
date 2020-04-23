@@ -427,6 +427,14 @@ contains
     SAFE_DEALLOCATE_P(bc%der_bndry_mask)
     SAFE_DEALLOCATE_P(bc%der_bndry_mask_points_map)
 
+    if (associated(bc%zero_points_map)) then
+      SAFE_DEALLOCATE_P(bc%zero_points_map)
+    end if
+
+    if (associated(bc%zero)) then
+      SAFE_DEALLOCATE_P(bc%zero)
+    end if
+
     POP_SUB(bc_mxll_end)
   end subroutine bc_mxll_end
 
