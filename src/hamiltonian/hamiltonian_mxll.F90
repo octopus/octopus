@@ -248,7 +248,7 @@ contains
     hm%ma_mx_coupling_apply = .false.
     hm%ma_mx_coupling  = .false.
 
-    !%Variable MaxwellHamiltonianOperator
+    !%Variable HamiltonianOperator
     !%Type integer
     !%Default riemann_silberstein
     !%Section Hamiltonian
@@ -265,11 +265,11 @@ contains
     !%Option faraday_ampere_gauss_medium 4
     !% The propagation operation is done by 4x4 matrices also with Gauss laws constraint in medium
     !%End
-    call parse_variable(namespace, 'MaxwellHamiltonianOperator', OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE, hm%operator)
+    call parse_variable(namespace, 'HamiltonianOperator', OPTION__HAMILTONIANOPERATOR__FARADAY_AMPERE, hm%operator)
 
-    if (hm%operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE_GAUSS) then
+    if (hm%operator == OPTION__HAMILTONIANOPERATOR__FARADAY_AMPERE_GAUSS) then
       hm%dim = hm%dim+1
-    else if (hm%operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE_MEDIUM) then
+    else if (hm%operator == OPTION__HAMILTONIANOPERATOR__FARADAY_AMPERE_MEDIUM) then
       hm%dim = 2*hm%dim
     end if
 
@@ -295,14 +295,14 @@ contains
     !% The Maxwell Operator e.g. the curl operation can be obtained by
     !% two different methods, the finid-difference or the fast fourier
     !% transform.
-    !%Option riemann_silberstein 1
+    !%Option RS 1
     !% Medium calculation directly via Hamiltonian
-    !%Option electric_magnetic_fields 2
+    !%Option EM 2
     !% Medium calculation via curl of electric field and magnetic field
     !%End
-    default_propagator = OPTION__MAXWELLMEDIUMCALCULATION__RIEMANN_SILBERSTEIN
+    default_propagator = OPTION__MAXWELLMEDIUMCALCULATION__RS
     call parse_variable(namespace, 'MaxwellMediumCalculation', default_propagator, hm%medium_calculation)
-    if (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__ELECTRIC_MAGNETIC_FIELDS) then
+    if (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__EM) then
       call messages_not_implemented("Calculation from E and B field not implemented yet.", namespace=namespace)
     end if
 
@@ -497,7 +497,7 @@ contains
 
     call profiling_in(prof_hamiltonian_mxll, "MAXWELLHAMILTONIAN")
 
-    if (hm%operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE .and. &
+    if (hm%operator == OPTION__HAMILTONIANOPERATOR__FARADAY_AMPERE .and. &
          all(hm%bc%bc_ab_type(:) /= OPTION__MAXWELLABSORBINGBOUNDARIES__CPML)) then
       ! This part is already batchified
       call hamiltonian_mxll_apply_batch(hm, namespace, hm%der, psib, hpsib)
@@ -547,7 +547,7 @@ contains
     !===========================================================================================================
     ! Maxwell Hamiltonian - Hamiltonian operation in vacuum via partial derivatives:
 
-    if (hm%operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE) then
+    if (hm%operator == OPTION__HAMILTONIANOPERATOR__FARADAY_AMPERE) then
 
       SAFE_ALLOCATE(tmp(np_part,2))
       oppsi       = M_z0
@@ -600,7 +600,7 @@ contains
     !==============================================================================================================================
     ! Maxwell Hamiltonian - Hamiltonian operation in medium via partial derivatives:
 
-    else if (hm%operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE_MEDIUM) then
+    else if (hm%operator == OPTION__HAMILTONIANOPERATOR__FARADAY_AMPERE_MEDIUM) then
 
       SAFE_ALLOCATE(tmp(np_part,4))
       oppsi       = M_z0
@@ -659,7 +659,7 @@ contains
     !==============================================================================================================================
     ! Maxwell Hamiltonian - Hamiltonian operation in vacuum with Gauss condition via partial derivatives:
 
-    else if (hm%operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE_GAUSS) then
+    else if (hm%operator == OPTION__HAMILTONIANOPERATOR__FARADAY_AMPERE_GAUSS) then
 
       SAFE_ALLOCATE(tmp(np_part,3))
       oppsi       = M_z0
@@ -691,7 +691,7 @@ contains
     !==============================================================================================================================
     ! Maxwell Hamiltonian - Hamiltonian operation in medium with Gauss condition via partial derivatives:
 
-    else if (hm%operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE_GAUSS_MEDIUM) then
+    else if (hm%operator == OPTION__HAMILTONIANOPERATOR__FARADAY_AMPERE_GAUSS_MEDIUM) then
 
       SAFE_ALLOCATE(tmp(np_part,3))
       oppsi       = M_z0
@@ -758,7 +758,7 @@ contains
 
     if ( (hm%bc%bc_ab_type(dir1) == OPTION__MAXWELLABSORBINGBOUNDARIES__CPML) .and. &
           hm%cpml_hamiltonian ) then
-      if (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RIEMANN_SILBERSTEIN) then
+      if (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RS) then
         call maxwell_pml_calculation_via_riemann_silberstein(hm, der, psi, dir1, dir2, tmp(:))
       end if
     end if
@@ -780,9 +780,9 @@ contains
 
     if ( (hm%bc%bc_ab_type(dir1) == OPTION__MAXWELLABSORBINGBOUNDARIES__CPML) .and. &
           hm%cpml_hamiltonian ) then
-      if (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RIEMANN_SILBERSTEIN) then
+      if (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RS) then
         call maxwell_pml_calculation_via_riemann_silberstein_medium(hm, der, psi, dir1, dir2, tmp(:,:))
-!      else if (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__ELECTRIC_MAGNETIC_FIELDS) then
+!      else if (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__EM) then
 !        call maxwell_pml_calculation_via_e_b_fields_medium(hm, der, psi, dir1, dir2, tmp(:,:))
       end if
     end if
@@ -902,7 +902,7 @@ contains
 
     do idim = 1, 3
       if ( (hm%bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__MEDIUM) .and. &
-           (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RIEMANN_SILBERSTEIN) ) then
+           (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RS) ) then
         do ip_in = 1, hm%bc%mxmedium%points_number(idim)
           ip          = hm%bc%mxmedium%points_map(ip_in, idim)
           cc          = hm%bc%mxmedium%c(ip_in, idim)/P_c
@@ -967,7 +967,7 @@ contains
     np_part = der%mesh%np_part
 
     if (hm%medium_box .and. &
-         (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RIEMANN_SILBERSTEIN) ) then
+         (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RS) ) then
       do il = 1, hm%medium_box_number
         do ip_in = 1, hm%medium_box_points_number(il)
           ip           = hm%medium_box_points_map(ip_in, il)

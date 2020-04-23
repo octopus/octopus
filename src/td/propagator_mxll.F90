@@ -209,7 +209,7 @@ contains
         end select
         write(message(1),'(a,I1,a,a)') 'Maxwell boundary condition in direction ', icol, ': ', trim(string)
         call messages_info(1)
-        if (plane_waves_set .and. .not. (parse_is_defined(namespace, 'UserDefinedMaxwellIncidentWaves')) ) then
+        if (plane_waves_set .and. .not. (parse_is_defined(namespace, 'MaxwellIncidentWaves')) ) then
           write(message(1),'(a)') 'Input: Maxwell boundary condition option is set to "plane_waves".'
           write(message(2),'(a)') 'Input: User defined Maxwell plane waves have to be defined!'
           call messages_fatal(2)
@@ -412,9 +412,9 @@ contains
       end if
     end do
 
-    if (hm%operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE_MEDIUM) then
+    if (hm%operator == OPTION__HAMILTONIANOPERATOR__FARADAY_AMPERE_MEDIUM) then
       ff_dim = 6
-    else if (hm%operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE_GAUSS) then
+    else if (hm%operator == OPTION__HAMILTONIANOPERATOR__FARADAY_AMPERE_GAUSS) then
       ff_dim = 4
     else
       ff_dim = 3
@@ -631,10 +631,10 @@ contains
     CMPLX,               intent(in)    :: rs_state(:,:)
     CMPLX,               intent(inout) :: ff_rs_state(:,:)
 
-    if (hm%operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE_MEDIUM) then
+    if (hm%operator == OPTION__HAMILTONIANOPERATOR__FARADAY_AMPERE_MEDIUM) then
       message(1) = "Maxwell solver in linear media not yet implemented"
       call messages_fatal(1)
-    else if (hm%operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE_GAUSS) then
+    else if (hm%operator == OPTION__HAMILTONIANOPERATOR__FARADAY_AMPERE_GAUSS) then
       call transform_rs_state_to_4x4_rs_state_forward(rs_state, ff_rs_state)
     else
       ff_rs_state(:,1:3) = rs_state(:,1:3)
@@ -649,9 +649,9 @@ contains
     CMPLX,               intent(in)    :: ff_rs_state(:,:)
     CMPLX,               intent(inout) :: rs_state(:,:)
 
-    if (hm%operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE_MEDIUM) then
+    if (hm%operator == OPTION__HAMILTONIANOPERATOR__FARADAY_AMPERE_MEDIUM) then
       call transform_rs_state_to_6x6_rs_state_backward(ff_rs_state, rs_state)
-    else if (hm%operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE_MEDIUM) then
+    else if (hm%operator == OPTION__HAMILTONIANOPERATOR__FARADAY_AMPERE_MEDIUM) then
       call transform_rs_state_to_4x4_rs_state_backward(ff_rs_state, rs_state)
     else
       rs_state(:,1:3) = ff_rs_state(:,1:3)
@@ -668,9 +668,9 @@ contains
     CMPLX,               intent(in)    :: rs_current_density(:,:)
     CMPLX,               intent(inout) :: ff_density(:,:)
 
-    if (hm%operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE_MEDIUM) then
+    if (hm%operator == OPTION__HAMILTONIANOPERATOR__FARADAY_AMPERE_MEDIUM) then
       call transform_rs_densities_to_6x6_rs_densities_forward(rs_charge_density, rs_current_density, ff_density)
-    else if (hm%operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE_MEDIUM) then
+    else if (hm%operator == OPTION__HAMILTONIANOPERATOR__FARADAY_AMPERE_MEDIUM) then
       call transform_rs_densities_to_4x4_rs_densities_forward(rs_charge_density, rs_current_density, ff_density)
     else
       ff_density(:,1:3) = rs_current_density(:,1:3)
@@ -687,9 +687,9 @@ contains
     CMPLX,               intent(inout) :: rs_charge_density(:)
     CMPLX,               intent(inout) :: rs_current_density(:,:)
 
-    if (hm%operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE_MEDIUM) then
+    if (hm%operator == OPTION__HAMILTONIANOPERATOR__FARADAY_AMPERE_MEDIUM) then
       call transform_rs_densities_to_6x6_rs_densities_backward(ff_density, rs_charge_density, rs_current_density)
-    else if (hm%operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE_MEDIUM) then
+    else if (hm%operator == OPTION__HAMILTONIANOPERATOR__FARADAY_AMPERE_MEDIUM) then
       call transform_rs_densities_to_4x4_rs_densities_backward(ff_density, rs_charge_density, rs_current_density)
     else
       rs_current_density(:,1:3) = ff_density(:,1:3)
@@ -2452,9 +2452,9 @@ contains
 
     PUSH_SUB(cpml_conv_function_update)
 
-    if (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RIEMANN_SILBERSTEIN) then
+    if (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RS) then
       call cpml_conv_function_update_via_riemann_silberstein(hm, gr, ff_rs_state_pml, ff_dim)
-    else if (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__ELECTRIC_MAGNETIC_FIELDS) then
+    else if (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__EM) then
       call cpml_conv_function_update_via_e_b_fields(hm, gr, ff_rs_state_pml, ff_dim)
     end if
 
@@ -3186,7 +3186,7 @@ contains
             x_prop(1:mesh%sb%dim) = mesh%x(ip,1:mesh%sb%dim) - vv(1:mesh%sb%dim) * (time - time_delay)
             rr           = sqrt(sum(x_prop(1:mesh%sb%dim)**2))
             if (hm%bc%plane_waves_modus(wn) == &
-                OPTION__USERDEFINEDMAXWELLINCIDENTWAVES__PLANE_WAVE_MX_FUNCTION) then
+                OPTION__MAXWELLINCIDENTWAVES__PLANE_WAVE_MX_FUNCTION) then
               e0(1:mesh%sb%dim)      = hm%bc%plane_waves_e_field(1:mesh%sb%dim, wn)
               e_field(1:mesh%sb%dim) = e0(1:mesh%sb%dim) * mxf(hm%bc%plane_waves_mx_function(wn), x_prop(1:mesh%sb%dim))
             end if
@@ -3221,9 +3221,9 @@ contains
 
     PUSH_SUB(plane_waves_propagation)
 
-    if (hm%operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE_MEDIUM) then
+    if (hm%operator == OPTION__HAMILTONIANOPERATOR__FARADAY_AMPERE_MEDIUM) then
       ff_dim = 6
-    else if (hm%operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE_GAUSS) then
+    else if (hm%operator == OPTION__HAMILTONIANOPERATOR__FARADAY_AMPERE_GAUSS) then
       ff_dim = 4
     else
       ff_dim = 3
@@ -3272,14 +3272,14 @@ contains
         nn           = sqrt(st%ep(ip)/P_ep*st%mu(ip)/P_mu)
         x_prop(:)    = gr%mesh%x(ip,:) - vv(:) * time
         rr           = sqrt(sum(x_prop(:)**2))
-        if (bc%plane_waves_modus(wn) == OPTION__USERDEFINEDMAXWELLINCIDENTWAVES__PLANE_WAVE_PARSER) then
+        if (bc%plane_waves_modus(wn) == OPTION__MAXWELLINCIDENTWAVES__PLANE_WAVE_PARSER) then
           do idim=1, gr%mesh%sb%dim
             call parse_expression(e_field(idim), dummy(idim), gr%mesh%sb%dim, x_prop, rr, M_ZERO, &
                  bc%plane_waves_e_field_string(idim,wn))
             e_field(idim) = units_to_atomic(units_inp%energy/units_inp%length, e_field(idim))
           end do
         else if (bc%plane_waves_modus(wn) == &
-             OPTION__USERDEFINEDMAXWELLINCIDENTWAVES__PLANE_WAVE_MX_FUNCTION) then
+             OPTION__MAXWELLINCIDENTWAVES__PLANE_WAVE_MX_FUNCTION) then
            e0(:)      = bc%plane_waves_e_field(:,wn)
            e_field(:) = e0(:) * mxf(bc%plane_waves_mx_function(wn), x_prop(:))
         end if

@@ -703,7 +703,7 @@ contains
       call external_current_init(sys%st, sys%namespace, sys%gr%mesh)
       sys%hm%propagation_apply = .true.
 
-      if (parse_is_defined(sys%namespace, 'UserDefinedMaxwellIncidentWaves') .and. (td%tr_mxll%bc_plane_waves)) then
+      if (parse_is_defined(sys%namespace, 'MaxwellIncidentWaves') .and. (td%tr_mxll%bc_plane_waves)) then
         sys%st%rs_state_plane_waves(:,:) = M_z0
       end if
 

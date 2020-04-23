@@ -36,7 +36,7 @@
 
 # ----- Maxwell calculation variables -------------------------------------------------------------
 
- MaxwellHamiltonianOperator = faraday_ampere
+ HamiltonianOperator = faraday_ampere
 
  %MaxwellBoundaryConditions
   plane_waves | plane_waves | plane_waves
@@ -79,7 +79,7 @@
  pw     = 10.0
  ps     = - 5 * 5.0
 
- %UserDefinedMaxwellIncidentWaves
+ %MaxwellIncidentWaves
    plane_wave_mx_function | 0 | 0 | Ez | "plane_waves_function" | plane_waves
  %
 

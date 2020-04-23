@@ -601,7 +601,7 @@ contains
     pml_width = ab_bounds(2,idim) - ab_bounds(1,idim)
     call parse_variable(namespace, 'MaxwellABPMLWidth', pml_width, pml_width, units_inp%length)
     bc%pml%width = pml_width
-    if (parse_is_defined(namespace, 'UserDefinedMaxwellIncidentWaves')) then
+    if (parse_is_defined(namespace, 'MaxwellIncidentWaves')) then
        if ( pml_width < (gr%der%order*gr%mesh%spacing(1)) .or. &
             pml_width < (gr%der%order*gr%mesh%spacing(2)) .or. &
             pml_width < (gr%der%order*gr%mesh%spacing(3)) ) then
@@ -1414,25 +1414,25 @@ contains
 
     test_limit = CNST(10.0e-9)
 
-    !%Variable UserDefinedMaxwellIncidentWaves
+    !%Variable MaxwellIncidentWaves
     !%Type block
     !%Section MaxwellStates
     !%Description
     !% The initial electromagnetic fields can be set by the user 
-    !% with the <tt>UserDefinedMaxwellIncidentWaves</tt> block variable.
+    !% with the <tt>MaxwellIncidentWaves</tt> block variable.
     !% The electromagnetic fields have to fulfill the 
     !% Maxwells equations in vacuum.
     !%
     !% Example:
     !%
-    !% <tt>%UserDefinedMaxwellIncidentWaves
+    !% <tt>%MaxwellIncidentWaves
     !% <br>&nbsp;&nbsp;   plane_wave_parser      | "k1x" | "k1y" | "k1z" | "E1x" | "E1z" | "E1x" | plane_wave
     !% <br>&nbsp;&nbsp;   plane_wave_parser      | "k2x" | "k2y" | "k2z" | "E2x" | "E2y" | "E2z" | no_plane_wave
     !% <br>&nbsp;&nbsp;   plane_wave_gauss       | "k3x" | "k3y" | "k3z" | "E3x" | "E3y" | "E3z" | "width"           | "shift" | plane_wave
     !% <br>&nbsp;&nbsp;   plane_wave_mx_function | "k4x" | "k4y" | "k4z" | "E4x" | "E4y" | "E4z" | mx_envelope_name  | phase   | plane_wave
     !% <br>%</tt>
     !%
-    !% Description about UserDefinedMaxwellIncidentWaves follows
+    !% Description about MaxwellIncidentWaves follows
     !%
     !%Option plane_wave_parser 0
     !% Parser input modus
@@ -1440,7 +1440,7 @@ contains
     !% The incident wave envelope is defined by an mx_function
     !%End
 
-    if(parse_block(namespace, 'UserDefinedMaxwellIncidentWaves', blk) == 0) then
+    if(parse_block(namespace, 'MaxwellIncidentWaves', blk) == 0) then
 
       call messages_print_stress(stdout, trim('Substitution of the electromagnetic incident waves'), namespace=namespace)
 
@@ -1462,7 +1462,7 @@ contains
         ! Check that number of columns is five or six.
         ncols = parse_block_cols(blk, il - 1)
         if ((ncols /= 6) .and. (ncols /= 8) .and. (ncols /= 10) .and. (ncols /= 9)) then
-          message(1) = 'Each line in the UserDefinedMaxwellIncidentWaves block must have'
+          message(1) = 'Each line in the MaxwellIncidentWaves block must have'
           message(2) = 'six, eight, nine or ten columns.'
           call messages_fatal(2, namespace=namespace)
         end if
@@ -1471,7 +1471,7 @@ contains
         call parse_block_integer(blk, il - 1, 0, bc%plane_waves_modus(il))
 
         ! parse formula string
-        if (bc%plane_waves_modus(il) == OPTION__USERDEFINEDMAXWELLINCIDENTWAVES__PLANE_WAVE_PARSER) then
+        if (bc%plane_waves_modus(il) == OPTION__MAXWELLINCIDENTWAVES__PLANE_WAVE_PARSER) then
 
           call parse_block_string( blk, il - 1, 1, k_string(1))
           call parse_block_string( blk, il - 1, 2, k_string(2))
@@ -1511,7 +1511,7 @@ contains
           bc%plane_waves_k_vector(:,il) = k_vector(:)
           bc%plane_waves_v_vector(:,il) = vv(:)
 
-        else if (bc%plane_waves_modus(il) == OPTION__USERDEFINEDMAXWELLINCIDENTWAVES__PLANE_WAVE_MX_FUNCTION) then
+        else if (bc%plane_waves_modus(il) == OPTION__MAXWELLINCIDENTWAVES__PLANE_WAVE_MX_FUNCTION) then
           call parse_block_float( blk, il - 1, 1, e_field(1))
           call parse_block_float( blk, il - 1, 2, e_field(2))
           call parse_block_float( blk, il - 1, 3, e_field(3))
@@ -1529,7 +1529,7 @@ contains
           call mxf_read(bc%plane_waves_mx_function(il), namespace, trim(mxf_expression), ierr)
           if (ierr /= 0) then            
             write(message(1),'(3A)') 'Error in the ""', trim(mxf_expression), &
-              '"" field defined in the UserDefinedMaxwellIncidentWaves block'
+              '"" field defined in the MaxwellIncidentWaves block'
             call messages_fatal(1, namespace=namespace)
           end if
           e_field  = units_to_atomic(units_inp%energy/units_inp%length, e_field)
