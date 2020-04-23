@@ -2056,11 +2056,10 @@ end if
       this%expkr_perp(:,:) = M_z1
 
       do ifc = 1, nint((nfaces+0.5)/2)
-        isp = this%face_idx_range(ifc, 1)
+        isp = this%face_idx_range(ifc*2, 1)
       
-        n_dir = 0 
         do idir = 1, mdim
-          if(abs(this%srfcnrml(idir, this%face_idx_range(ifc, 1))) >= M_EPSILON) n_dir = idir
+          if(abs(this%srfcnrml(idir, isp)) >= M_EPSILON) n_dir = idir
         end do 
 
         do ikp = 1, this%ll(n_dir)
@@ -2075,47 +2074,49 @@ end if
     end if
     
     
-    !Tabulate the Born-Von Karman phase 
-    SAFE_ALLOCATE(this%bvk_phase(ikp_start:ikp_end,st%d%kpt%start:st%d%kpt%end))
+    if(simul_box_is_periodic(mesh%sb)) then
+      !Tabulate the Born-Von Karman phase 
+      SAFE_ALLOCATE(this%bvk_phase(ikp_start:ikp_end,st%d%kpt%start:st%d%kpt%end))
 
-    this%bvk_phase(:,:) = M_z0
-    vec(:) = M_ZERO
+      this%bvk_phase(:,:) = M_z0
+      vec(:) = M_ZERO
 
-    do ik = st%d%kpt%start, st%d%kpt%end
-      kpoint(1:mdim) = kpoints_get_point(mesh%sb%kpoints, ik)
-      if (kpoints_have_zero_weight_path(mesh%sb%kpoints)) then
-        ik_map = ik
-      else
-        ik_map = 1
-      end if
-      do ikp = ikp_start, ikp_end
-        vec(1:pdim) = this%kcoords_cub(1:pdim, ikp, ik_map) + kpoint(1:pdim)
-        do j1 = 0, mesh%sb%kpoints%nik_axis(1)-1
-          do j2 = 0, mesh%sb%kpoints%nik_axis(2)-1
-            jvec(1:2)=(/j1,j2/)
-            lvec(1:pdim)=matmul(mesh%sb%rlattice(1:pdim,1:2),jvec(1:2))
-            tmp = sum(lvec(1:pdim)*vec(1:pdim))
-            this%bvk_phase(ikp,ik) =  this%bvk_phase(ikp,ik) &
-                                   +  exp(M_zI * tmp)
+      do ik = st%d%kpt%start, st%d%kpt%end
+        kpoint(1:mdim) = kpoints_get_point(mesh%sb%kpoints, ik)
+        if (kpoints_have_zero_weight_path(mesh%sb%kpoints)) then
+          ik_map = ik
+        else
+          ik_map = 1
+        end if
+        do ikp = ikp_start, ikp_end
+          vec(1:pdim) = this%kcoords_cub(1:pdim, ikp, ik_map) + kpoint(1:pdim)
+          do j1 = 0, mesh%sb%kpoints%nik_axis(1)-1
+            do j2 = 0, mesh%sb%kpoints%nik_axis(2)-1
+              jvec(1:2)=(/j1,j2/)
+              lvec(1:pdim)=matmul(mesh%sb%rlattice(1:pdim,1:2),jvec(1:2))
+              tmp = sum(lvec(1:pdim)*vec(1:pdim))
+              this%bvk_phase(ikp,ik) =  this%bvk_phase(ikp,ik) &
+                                     +  exp(M_zI * tmp)
             
+            end do
           end do
+
         end do
-
-    end do
-  end do
-  this%bvk_phase(:,:) = this%bvk_phase(:,:) * M_ONE/product(mesh%sb%kpoints%nik_axis(1:pdim))
+      end do
+      this%bvk_phase(:,:) = this%bvk_phase(:,:) * M_ONE/product(mesh%sb%kpoints%nik_axis(1:pdim))
     
 
-  if(debug%info .and. mpi_grp_is_root(mpi_world)) then
-    write(225,*) "ik, ikp, this%bvk_phase(ikp,ik)"
-    do ik = st%d%kpt%start, st%d%kpt%end
-      do ikp = ikp_start, ikp_end
-        write(225,*) ik, ikp, this%bvk_phase(ikp,ik)
-      end do 
-    end do
-    flush(225)
-  end if
+      if(debug%info .and. mpi_grp_is_root(mpi_world)) then
+        write(225,*) "ik, ikp, this%bvk_phase(ikp,ik)"
+        do ik = st%d%kpt%start, st%d%kpt%end
+          do ikp = ikp_start, ikp_end
+            write(225,*) ik, ikp, this%bvk_phase(ikp,ik)
+          end do 
+        end do
+        flush(225)
+      end if
     
+    end if
     
     
     POP_SUB(pes_flux_integrate_cub_tabulate_direct_a)  
@@ -2169,7 +2170,7 @@ end if
     integer            :: ng, ig, nfp
     
     !Symmetry helpers
-    integer            :: ikpu, ikpv, ikpz, dir_on_face(1:3)
+    integer            :: ikpu, ikpv, ikpz, dir_on_face(1:2)
     CMPLX              :: face_int_gwf, face_int_wf
     
     type(profile_t), save :: prof_init
@@ -2239,9 +2240,7 @@ end if
       wfpw = M_z0
       gwfpw = M_z0
 
-! print *,ifc, isp_start, isp_end
-      ! get the direction normal to the surface 
-      n_dir = 0 
+      ! get the directions normal to the surface and parallel to it
       imdim = 1
       do idir = 1, mdim
         if(abs(this%srfcnrml(idir, isp_start)) >= M_EPSILON) then
@@ -2251,8 +2250,6 @@ end if
           imdim = imdim + 1
         end if
       end do 
-      dir_on_face(mdim)=n_dir
-      
 
       itstep = tdstep_on_node
       do ik = kptst, kptend
@@ -2294,10 +2291,10 @@ end if
                                * this%expkr(isp_start:isp_end,ikpu,ik_map,dir_on_face(1)) &
                                * this%expkr(isp_start:isp_end,ikpv,ik_map,dir_on_face(2)))
                   
-                  do ikpz = 1, this%ll(dir_on_face(3))
+                  do ikpz = 1, this%ll(n_dir)
                      gwfpw(get_ikp(this,ikpu,ikpv,ikpz,n_dir)) = face_int_gwf &
                                                                * this%expkr_perp(ikpz,n_dir)  
-                     wfpw(get_ikp(this,ikpu,ikpv,ikpz,n_dir))  = face_int_wf &
+                     wfpw( get_ikp(this,ikpu,ikpv,ikpz,n_dir)) = face_int_wf &
                                                                * this%expkr_perp(ikpz,n_dir)  
 
                   end do
@@ -2341,13 +2338,16 @@ end if
           
           kpoint(1:mdim) = kpoints_get_point(mesh%sb%kpoints, ik)
           do ikp = ikp_start, ikp_end
-!             vec = sum((this%kcoords_cub(1:mdim, ikp, ik_map) - kpoint(1:mdim) - this%veca(1:mdim, itstep) / P_c)**2)
             vec = sum((this%kcoords_cub(1:mdim, ikp, ik_map) - this%veca(1:mdim, itstep) / P_c)**2)
             vphase(ikp, ik) = vphase(ikp, ik) * exp(M_zI * vec * dt / M_TWO)
 
-!             vec = this%kcoords_cub(n_dir, ikp, ik) * this%rcoords(n_dir, isp_start)
-!             phase(ikp, ik)  = vphase(ikp, ik) * exp(M_zI * vec )/sqrt(M_TWO * M_PI)
-            phase(ikp, ik)  = vphase(ikp, ik) *  this%bvk_phase(ikp,ik)
+
+            if(simul_box_is_periodic(mesh%sb)) then
+              phase(ikp, ik)  = vphase(ikp, ik) *  this%bvk_phase(ikp,ik)
+            else 
+              phase(ikp, ik)  = vphase(ikp, ik) 
+            end if
+
           end do
           
           if(itstep /= tdstep_on_node) cycle ! cannot skip before otherwise we do not accumulate the Volkov phase
@@ -2364,7 +2364,6 @@ end if
                 
               Jk_cub(ist, isdim, ik, ikp_start:ikp_end) = Jk_cub(ist, isdim, ik,ikp_start:ikp_end) +  &
                 phase(ikp_start:ikp_end, ik) * ( wfpw(ikp_start:ikp_end) * &
-!                    (M_TWO * this%veca(n_dir, itstep) / P_c  + kpoint(n_dir) - this%kcoords_cub(n_dir, ikp_start:ikp_end, ik_map)) + &
                    (M_TWO * this%veca(n_dir, itstep) / P_c  - this%kcoords_cub(n_dir, ikp_start:ikp_end, ik_map)) + &
                     M_zI * gwfpw(ikp_start:ikp_end) )
                             
