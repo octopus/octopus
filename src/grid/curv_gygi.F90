@@ -116,8 +116,12 @@ contains
 
     cv%npos = geo%natoms
     SAFE_ALLOCATE(cv%pos(1:cv%npos, 1:sb%dim))
-    forall(ipos = 1:cv%npos, idir = 1:sb%dim) cv%pos(ipos, idir) = geo%atom(ipos)%x(idir)
-    
+    do idir = 1, sb%dim
+      do ipos = 1, cv%npos
+        cv%pos(ipos, idir) = geo%atom(ipos)%x(idir)
+      end do
+    end do
+
     POP_SUB(curv_gygi_init)
   end subroutine curv_gygi_init
 

@@ -968,7 +968,7 @@ contains
     end do
     norm = norm/M_THREE
     srnrm = sqrt(norm)
-    do i=1,n
+    do i = 1,n
       g(i) = g(i)/srnrm
     end do
     

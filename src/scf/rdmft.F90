@@ -406,9 +406,9 @@ contains
             dpsi = M_ZERO
             do ist = 1, st%nst
               call states_elec_get_state(st, gr%mesh, ist, 1, dpsi2)
-              forall(ip = 1:gr%mesh%np)
+              do ip = 1, gr%mesh%np
                 dpsi(ip,1) = dpsi(ip,1) + rdm%vecnat(ist, iorb)*dpsi2(ip,1)
-              end forall
+              end do
             end do
             call states_elec_set_state(states_save, gr%mesh, iorb, 1, dpsi)
           end do

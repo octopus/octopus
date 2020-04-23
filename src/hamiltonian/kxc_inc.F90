@@ -152,10 +152,12 @@ contains
 
     PUSH_SUB(xc_get_kxc.lda_process)
 
-    forall(i = 1:mesh%np) kxc(i,1,1,1) = kxc(i,1,1,1) + dedd(i,1)
+    do i = 1, mesh%np
+      kxc(i,1,1,1) = kxc(i,1,1,1) + dedd(i,1)
+    end do
 
     if(ispin == SPIN_POLARIZED) then
-      forall(i = 1:mesh%np)
+      do i = 1, mesh%np
         kxc(i,1,1,2) = kxc(i,1,1,2) + dedd(i,2)
         kxc(i,1,2,1) = kxc(i,1,2,1) + dedd(i,2)
         kxc(i,1,2,2) = kxc(i,1,2,2) + dedd(i,3)
@@ -163,7 +165,7 @@ contains
         kxc(i,2,1,2) = kxc(i,2,1,2) + dedd(i,3)
         kxc(i,2,2,1) = kxc(i,2,2,1) + dedd(i,3)
         kxc(i,2,2,2) = kxc(i,2,2,2) + dedd(i,4)
-      end forall
+      end do
     end if
 
     POP_SUB(xc_get_kxc.lda_process)

@@ -119,13 +119,13 @@ subroutine X(project_psi_batch)(mesh, bnd, pj, npj, dim, psib, ppsib)
         do idim = 1, dim
           bind = psib%ist_idim_to_linear((/ist, idim/))
           if(associated(pj(ipj)%phase)) then
-            forall (is = 1:ns) 
+            do is = 1, ns
               lpsi(is, idim) = psib%X(ff_linear)(pj(ipj)%sphere%map(is), bind)*pj(ipj)%phase(is, 1, psib%ik)
-            end forall
+            end do
           else
-            forall (is = 1:ns) 
+            do is = 1, ns
               lpsi(is, idim) = psib%X(ff_linear)(pj(ipj)%sphere%map(is), bind)
-            end forall
+            end do
           end if
         end do
 
@@ -133,18 +133,18 @@ subroutine X(project_psi_batch)(mesh, bnd, pj, npj, dim, psib, ppsib)
         do idim = 1, dim
           bind = psib%ist_idim_to_linear((/ist, idim/))
           if(associated(pj(ipj)%phase)) then
-            forall (is = 1:ns) 
+            do is = 1, ns
               lpsi(is, idim) = psib%X(ff_pack)(bind, pj(ipj)%sphere%map(is))*pj(ipj)%phase(is, 1, psib%ik)
-            end forall
+            end do
           else
-            forall (is = 1:ns) 
+            do is = 1, ns
               lpsi(is, idim) = psib%X(ff_pack)(bind, pj(ipj)%sphere%map(is))
-            end forall
+            end do
           end if
         end do
 
       end select
-        
+
       ! apply the projectors for each angular momentum component
       do ll = 0, pj(ipj)%lmax
         if (ll == pj(ipj)%lloc) cycle
@@ -232,15 +232,15 @@ subroutine X(project_psi_batch)(mesh, bnd, pj, npj, dim, psib, ppsib)
         do idim = 1, dim
           bind = psib%ist_idim_to_linear((/ist, idim/))
           if(associated(pj(ipj)%phase)) then
-            forall (is = 1:ns)
+            do is = 1, ns
               ppsib%X(ff_linear)(pj(ipj)%sphere%map(is), bind) = &
                 ppsib%X(ff_linear)(pj(ipj)%sphere%map(is), bind) + lpsi(is, idim)*conjg(pj(ipj)%phase(is, 1, psib%ik))
-            end forall
+            end do
           else
-            forall (is = 1:ns) 
+            do is = 1, ns
               ppsib%X(ff_linear)(pj(ipj)%sphere%map(is), bind) = &
                 ppsib%X(ff_linear)(pj(ipj)%sphere%map(is), bind) + lpsi(is, idim)
-            end forall
+            end do
           end if
         end do
 
@@ -248,20 +248,20 @@ subroutine X(project_psi_batch)(mesh, bnd, pj, npj, dim, psib, ppsib)
         do idim = 1, dim
           bind = psib%ist_idim_to_linear((/ist, idim/))
           if(associated(pj(ipj)%phase)) then
-            forall (is = 1:ns)
+            do is = 1, ns
               ppsib%X(ff_pack)(bind, pj(ipj)%sphere%map(is)) = &
                 ppsib%X(ff_pack)(bind, pj(ipj)%sphere%map(is)) + lpsi(is, idim)*conjg(pj(ipj)%phase(is, 1, psib%ik))
-            end forall
+            end do
           else
-            forall (is = 1:ns) 
+            do is = 1, ns
               ppsib%X(ff_pack)(bind, pj(ipj)%sphere%map(is)) = &
                 ppsib%X(ff_pack)(bind, pj(ipj)%sphere%map(is)) + lpsi(is, idim)
-            end forall
+            end do
           end if
         end do
-        
+
       end select
-        
+
     end do ! ipj
   end do ! ist
   !$omp end do nowait

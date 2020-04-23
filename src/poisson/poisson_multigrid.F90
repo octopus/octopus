@@ -208,13 +208,17 @@ contains
     call correct_rho(this%corrector, der, rho, res, vh_correction)
     call lalg_scal(der%mesh%np, -M_FOUR*M_PI, res)
 
-    forall (ip = 1:der%mesh%np) cor(ip) = pot(ip) - vh_correction(ip)
+    do ip = 1, der%mesh%np
+      cor(ip) = pot(ip) - vh_correction(ip)
+    end do
 
     do iter = 1, this%maxcycles
 
       call poisson_multigrid_cycle(this, der, cor, res)
       call dderivatives_lapl(der, cor, err)
-      forall (ip = 1:der%mesh%np) err(ip) = res(ip) - err(ip)
+      do ip = 1, der%mesh%np
+        err(ip) = res(ip) - err(ip)
+      end do
       resnorm =  dmf_nrm2(der%mesh, err)
 
       if(resnorm < this%threshold) exit
@@ -232,7 +236,9 @@ contains
       call messages_warning(2)
     end if
 
-    forall (ip = 1:der%mesh%np) pot(ip) = cor(ip) + vh_correction(ip)
+    do ip = 1, der%mesh%np
+      pot(ip) = cor(ip) + vh_correction(ip)
+    end do
 
     SAFE_DEALLOCATE_A(vh_correction)
     SAFE_DEALLOCATE_A(res)
@@ -262,21 +268,25 @@ contains
       SAFE_ALLOCATE(cor(1:der%mesh%np_part))
       SAFE_ALLOCATE(cres(1:der%coarser%mesh%np_part))
       SAFE_ALLOCATE(ccor(1:der%coarser%mesh%np_part))
-     
+
       call multigrid_relax(this, der%mesh, der, pot, rho, this%presteps)
-      
+
       call dderivatives_lapl(der, pot, res)
-      forall (ip = 1:der%mesh%np) res(ip) = rho(ip) - res(ip)
-      
+      do ip = 1, der%mesh%np
+        res(ip) = rho(ip) - res(ip)
+      end do
+
       call dmultigrid_fine2coarse(der%to_coarser, der, der%coarser%mesh, res, cres, this%restriction_method)
-      
+
       ccor = M_ZERO
       call poisson_multigrid_cycle(this, der%coarser, ccor, cres)
 
       cor = M_ZERO
       call dmultigrid_coarse2fine(der%to_coarser, der%coarser, der%mesh, ccor, cor)
 
-      forall (ip = 1:der%mesh%np) pot(ip) = pot(ip) + cor(ip)
+      do ip = 1, der%mesh%np
+        pot(ip) = pot(ip) + cor(ip)
+      end do
 
       SAFE_DEALLOCATE_A(cor)
       SAFE_DEALLOCATE_A(cres)
@@ -284,12 +294,14 @@ contains
 
       call multigrid_relax(this, der%mesh, der, pot, rho, this%poststeps)
 
-    else    
+    else
 
       do iter = 1, this%maxcycles
         call multigrid_relax(this, der%mesh, der, pot, rho, this%presteps + this%poststeps)
         call dderivatives_lapl(der, pot, res)
-        forall (ip = 1:der%mesh%np) res(ip) = rho(ip) - res(ip)
+        do ip = 1, der%mesh%np
+          res(ip) = rho(ip) - res(ip)
+        end do
         resnorm = dmf_nrm2(der%mesh, res)
         if(resnorm < this%threshold) exit
       end do

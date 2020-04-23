@@ -212,9 +212,9 @@ subroutine X(derivatives_grad)(der, ff, op_ff, ghost_update, set_bc)
 
   ! Grad_xyw = Bt Grad_uvw, see Chelikowsky after Eq. 10
   if (simul_box_is_periodic(der%mesh%sb) .and. der%mesh%sb%nonorthogonal ) then
-    forall (ip = 1:der%mesh%np)
+    do ip = 1, der%mesh%np
       op_ff(ip, 1:der%dim) = matmul(der%mesh%sb%klattice_primitive(1:der%dim, 1:der%dim),op_ff(ip, 1:der%dim))
-    end forall
+    end do
   end if
 
   call profiling_out(gradient_prof)
@@ -242,9 +242,9 @@ subroutine X(derivatives_div)(der, ff, op_ff, ghost_update, set_bc)
   ! div_xyw (F)= div_uvw (BF), where B
   if (simul_box_is_periodic(der%mesh%sb) .and. der%mesh%sb%nonorthogonal ) then
     SAFE_ALLOCATE(ff_uvw(1:der%mesh%np_part, 1:der%dim))
-    forall (ip = 1:der%mesh%np_part)
+    do ip = 1, der%mesh%np_part
       ff_uvw(ip, 1:der%dim) = matmul(transpose(der%mesh%sb%klattice_primitive(1:der%dim, 1:der%dim)),ff(ip, 1:der%dim))
-    end forall
+    end do
   else
     ff_uvw => ff
   end if
@@ -256,7 +256,9 @@ subroutine X(derivatives_div)(der, ff, op_ff, ghost_update, set_bc)
   do idir = 2, der%dim
     call X(derivatives_perform) (der%grad(idir), der, ff_uvw(:, idir), tmp, ghost_update, set_bc)
 
-    forall(ii = 1:der%mesh%np) op_ff(ii) = op_ff(ii) + tmp(ii)
+    do ii = 1, der%mesh%np
+      op_ff(ii) = op_ff(ii) + tmp(ii)
+    end do
   end do
 
   SAFE_DEALLOCATE_A(tmp)
@@ -303,25 +305,41 @@ subroutine X(derivatives_curl)(der, ff, op_ff, ghost_update, set_bc)
   select case(der%dim)
   case(3)
     call X(derivatives_perform) (der%grad(3), der, ff(:,1), tmp, ghost_update, set_bc)
-    forall(ii = 1:np) op_ff(ii, 2) = op_ff(ii, 2) + tmp(ii)
+    do ii = 1, np
+      op_ff(ii, 2) = op_ff(ii, 2) + tmp(ii)
+    end do
     call X(derivatives_perform) (der%grad(2), der, ff(:,1), tmp, .false., .false.)
-    forall(ii = 1:np) op_ff(ii, 3) = op_ff(ii, 3) - tmp(ii)
+    do ii = 1, np
+      op_ff(ii, 3) = op_ff(ii, 3) - tmp(ii)
+    end do
 
     call X(derivatives_perform) (der%grad(3), der, ff(:,2), tmp, ghost_update, set_bc)
-    forall(ii = 1:np) op_ff(ii, 1) = op_ff(ii, 1) - tmp(ii)
+    do ii = 1, np
+      op_ff(ii, 1) = op_ff(ii, 1) - tmp(ii)
+    end do
     call X(derivatives_perform) (der%grad(1), der, ff(:,2), tmp, .false., .false.)
-    forall(ii = 1:np) op_ff(ii, 3) = op_ff(ii, 3) + tmp(ii)
+    do ii = 1, np
+      op_ff(ii, 3) = op_ff(ii, 3) + tmp(ii)
+    end do
 
     call X(derivatives_perform) (der%grad(2), der, ff(:,3), tmp, ghost_update, set_bc)
-    forall(ii = 1:np) op_ff(ii, 1) = op_ff(ii, 1) + tmp(ii)
+    do ii = 1, np
+      op_ff(ii, 1) = op_ff(ii, 1) + tmp(ii)
+    end do
     call X(derivatives_perform) (der%grad(1), der, ff(:,3), tmp, .false., .false.)
-    forall(ii = 1:np) op_ff(ii, 2) = op_ff(ii, 2) - tmp(ii)
+    do ii = 1, np
+      op_ff(ii, 2) = op_ff(ii, 2) - tmp(ii)
+    end do
 
   case(2)
     call X(derivatives_perform) (der%grad(2), der, ff(:,1), tmp, ghost_update, set_bc)
-    forall(ii = 1:np) op_ff(ii, 1) = op_ff(ii, 1) - tmp(ii)
+    do ii = 1, np
+      op_ff(ii, 1) = op_ff(ii, 1) - tmp(ii)
+    end do
     call X(derivatives_perform) (der%grad(1), der, ff(:,2), tmp, .false., .false.)
-    forall(ii = 1:np) op_ff(ii, 1) = op_ff(ii, 1) + tmp(ii)
+    do ii = 1, np
+      op_ff(ii, 1) = op_ff(ii, 1) + tmp(ii)
+    end do
   end select
 
   SAFE_DEALLOCATE_A(tmp)
@@ -381,7 +399,9 @@ subroutine X(derivatives_test)(this, namespace, repetitions, min_blocksize, max_
 #endif
 
 
-  forall(ip = 1:this%mesh%np_part) ff(ip) = bb*exp(-aa*sum(this%mesh%x(ip, 1:this%mesh%sb%dim)**2)) + cc
+  do ip = 1, this%mesh%np_part
+    ff(ip) = bb*exp(-aa*sum(this%mesh%x(ip, 1:this%mesh%sb%dim)**2)) + cc
+  end do
   do ip = 1, this%mesh%np
     do idir = 1, this%mesh%sb%dim
       gradff(ip, idir) = -M_TWO*aa*bb*this%mesh%x(ip, idir)*exp(-aa*sum(this%mesh%x(ip, :)**2))
@@ -431,11 +451,11 @@ subroutine X(derivatives_test)(this, namespace, repetitions, min_blocksize, max_
     call ffb%end()
     call opffb%end()
 
-    forall(ip = 1:this%mesh%np)
+    do ip = 1, this%mesh%np
       res(ip) = CNST(2.0)*res(ip) - &
         (M_FOUR*aa**2*bb*sum(this%mesh%x(ip, :)**2)*exp(-aa*sum(this%mesh%x(ip, :)**2)) &
         - this%mesh%sb%dim*M_TWO*aa*bb*exp(-aa*sum(this%mesh%x(ip, :)**2)))
-    end forall
+    end do
 
     write(message(1), '(3a,i3,a,es17.10,a,f8.3)') &
       'Laplacian ', trim(type),  &
@@ -520,9 +540,11 @@ subroutine X(derivatives_test)(this, namespace, repetitions, min_blocksize, max_
 
   call X(derivatives_grad)(this, ff, opff, set_bc = .false.)
 
-  forall(idir = 1:this%mesh%sb%dim, ip = 1:this%mesh%np)
-    opff(ip, idir) = opff(ip, idir) - (-M_TWO*aa*bb*this%mesh%x(ip, idir)*exp(-aa*sum(this%mesh%x(ip, :)**2)))
-  end forall
+  do idir = 1, this%mesh%sb%dim
+    do ip = 1, this%mesh%np
+      opff(ip, idir) = opff(ip, idir) - (-M_TWO*aa*bb*this%mesh%x(ip, idir)*exp(-aa*sum(this%mesh%x(ip, :)**2)))
+    end do
+  end do
 
   message(1) = ''
   call messages_info(1)

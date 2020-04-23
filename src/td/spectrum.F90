@@ -729,7 +729,9 @@ contains
     if (abs(kick%delta_strength) < CNST(1e-12)) kick%delta_strength = M_ONE
     do ie = 1, no_e
       energy = (ie-1) * spectrum%energy_step + spectrum%min_energy
-      forall(isp = 1:nspin) sf(ie, isp) = sum(sigma(ie, 1:3, isp)*kick%pol(1:3, kick%pol_dir))
+      do isp = 1, nspin
+        sf(ie, isp) = sum(sigma(ie, 1:3, isp)*kick%pol(1:3, kick%pol_dir))
+      end do
       sf(ie, 1:nspin) = -sf(ie, 1:nspin) * (energy * M_TWO) / (M_PI * kick%delta_strength)
       sigma(ie, 1:3, 1:nspin) = -sigma(ie, 1:3, 1:nspin)*(M_FOUR*M_PI*energy/P_c)/kick%delta_strength
     end do

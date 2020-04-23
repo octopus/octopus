@@ -44,7 +44,7 @@ subroutine flip_sign_Lkpt_idx( dim, nk, idx)
        idx(ii,idir) = nk(idir) - idx_tmp(ii,idir) + 1 
      end do
      
-!          do ii=1, nk(idir)
+!          do ii = 1, nk(idir)
 !            print *,idir, ii, "idx = ", idx(ii,idir),"idx_tmp =", idx_tmp(ii,idir),mod(nk(idir),2)
 !          end do
    end do
@@ -158,7 +158,7 @@ subroutine pes_mask_pmesh(namespace, dim, kpoints, ll, LG, pmesh, idxZero, krng,
   end do  
   
   if(debug%info) then
-    do idir=1, dim
+    do idir = 1, dim
       print *, "*** direction =", idir  
       do j1 = 1, ll(idir)
         print *,j1, "LG = ",LG(j1,idir),"LG_ = ",LG_(j1,idir), "idx = ", idx(j1,idir), "idx_inv = ", idx_inv(j1,idir)
@@ -348,9 +348,9 @@ subroutine pes_mask_map_from_states(restart, st, ll, pesK, krng, Lp, istin)
           itot = ist + (ik-1) * st%nst +  (idim-1) * st%nst * st%d%kpt%nglobal
           call pes_mask_map_from_state(restart, itot, ll, psiG1)
         
-          do i1=1, ll(1)
-            do i2=1, ll(2)
-              do i3=1, ll(3)
+          do i1 = 1, ll(1)
+            do i2 = 1, ll(2)
+              do i3 = 1, ll(3)
                 ip(1:3) = Lp(i1, i2, i3, ik, 1:3) 
               
                   pesK(ip(1),ip(2),ip(3), ispin) = pesK(ip(1),ip(2),ip(3), ispin) &
@@ -369,9 +369,9 @@ subroutine pes_mask_map_from_states(restart, st, ll, pesK, krng, Lp, istin)
         itot = ist + (ik-1) * st%nst +  (idim-1) * st%nst * st%d%kpt%nglobal
         call pes_mask_map_from_state(restart, itot, ll, psiG2)
             
-        do i1=1, ll(1)
-          do i2=1, ll(2)
-            do i3=1, ll(3)
+        do i1 = 1, ll(1)
+          do i2 = 1, ll(2)
+            do i3 = 1, ll(3)
               ip(1:3) = Lp(i1, i2, i3, ik, 1:3) 
             
                 pesK(ip(1),ip(2),ip(3), 1) = pesK(ip(1),ip(2),ip(3), 1) &
@@ -2047,7 +2047,7 @@ subroutine pes_mask_read_info(dir, namespace, dim, Emax, Estep, ll, Lk,RR)
   SAFE_ALLOCATE(Lk(1:maxval(ll(:)), 1:3))
   Lk = M_ZERO
 
-  do ii=1, maxval(ll(:))
+  do ii = 1, maxval(ll(:))
     do idim = 1, dim
       read(iunit, '(2x,es19.12)', advance='no') Lk(ii, idim)
     end do
@@ -2092,7 +2092,7 @@ subroutine pes_mask_write_info(mask, dir, namespace)
   end do 
   write(iunit, '(1x)')
      
-  do ii=1, maxval(mask%ll(:))
+  do ii = 1, maxval(mask%ll(:))
     do idim = 1, mask%mesh%sb%dim
       write(iunit, '(2x,es19.12)', advance='no')  mask%Lk(ii, idim)
     end do

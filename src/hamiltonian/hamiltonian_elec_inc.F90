@@ -504,9 +504,11 @@ subroutine X(vborders) (mesh, hm, psi, hpsi)
   PUSH_SUB(X(vborders))
 
   if(hm%bc%abtype == IMAGINARY_ABSORBING) then
-    forall(ip = 1:mesh%np) hpsi(ip) = hpsi(ip) + M_zI*hm%bc%mf(ip)*psi(ip)
+    do ip = 1, mesh%np
+      hpsi(ip) = hpsi(ip) + M_zI*hm%bc%mf(ip)*psi(ip)
+    end do
   end if
-   
+
   POP_SUB(X(vborders))
 end subroutine X(vborders)
 
@@ -546,18 +548,18 @@ subroutine X(h_mgga_terms) (hm, mesh, psib, hpsib)
     do idir = 1, mesh%sb%dim
       call batch_get_state(gradb(idir), ii, mesh%np, grad(:, idir))
     end do
-    
+
     ! Grad_xyw = Bt Grad_uvw, see Chelikowsky after Eq. 10
     if (simul_box_is_periodic(mesh%sb) .and. mesh%sb%nonorthogonal ) then
-      forall (ip = 1:mesh%np)
+      do ip = 1, mesh%np
         grad(ip, 1:hm%der%dim) = matmul(mesh%sb%klattice_primitive(1:hm%der%dim, 1:hm%der%dim),grad(ip, 1:hm%der%dim))
-      end forall
+      end do
     end if
 
     do idir = 1, mesh%sb%dim
       grad(1:mesh%np, idir) = grad(1:mesh%np, idir)*hm%vtau(1:mesh%np, ispin)
     end do
-    
+
     call X(derivatives_div)(hm%der, grad, diverg)
 
     call batch_set_state(divb, ii, mesh%np, diverg)

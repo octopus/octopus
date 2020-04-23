@@ -170,11 +170,11 @@ contains
         SAFE_ALLOCATE(position(1:3, natoms))
         SAFE_ALLOCATE(typs(1:natoms))
 
-        forall(iatom = 1:geo%natoms)
+        do iatom = 1, geo%natoms
           position(1:3, iatom) = M_ZERO
           position(1:dim4syms, iatom) = geo%atom(iatom)%x(1:dim4syms)
           typs(iatom) = species_index(geo%atom(iatom)%species)
-        end forall
+        end do
 
         if (this%symmetries_compute) then
           call symmetries_finite_init(geo%natoms, typs(1), position(1, 1), verbosity, point_group)

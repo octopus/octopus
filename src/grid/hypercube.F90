@@ -58,8 +58,10 @@ contains
     SAFE_ALLOCATE(this%boxdim(1:ndim + 1))
     SAFE_ALLOCATE(npoints(1:ndim))
 
-    forall (ii = 1:ndim) npoints(ii) = nr(2,ii) - nr(1,ii) + 1
-    
+    do ii = 1, ndim
+      npoints(ii) = nr(2,ii) - nr(1,ii) + 1
+    end do
+
     !number of points in each box
     this%boxdim = 1
 

@@ -184,9 +184,9 @@ subroutine X(bgw_vmtxel)(bgw, namespace, dir, st, gr, ifmax)
   SAFE_ALLOCATE(vmtxel(1:nmat))
   SAFE_ALLOCATE(rvec(1:gr%mesh%np))
 
-  forall(ip = 1:gr%mesh%np) 
+  do ip = 1, gr%mesh%np
     rvec(ip) = dot_product(gr%mesh%x(ip, 1:3), bgw%vmtxel_polarization(1:3))
-  end forall
+  end do
 
   do ik = st%d%kpt%start, st%d%kpt%end, st%d%nspin
     do is = 1, st%d%nspin

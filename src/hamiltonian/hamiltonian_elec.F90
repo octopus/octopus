@@ -586,14 +586,14 @@ contains
           call accel_write_buffer(hm%hm_base%buff_phase_spiral, (gr%mesh%np_part-sp)*2, hm%hm_base%phase_spiral)
         endif
       end if
-      
+
 
       kpoint(1:gr%sb%dim) = M_ZERO
       do ik = hm%d%kpt%start, hm%d%kpt%end
         kpoint(1:gr%sb%dim) = kpoints_get_point(gr%sb%kpoints, states_elec_dim_get_kpoint_index(hm%d, ik))
-        forall (ip = 1:gr%mesh%np_part)
+        do ip = 1, gr%mesh%np_part
           hm%hm_base%phase(ip, ik) = exp(-M_zI * sum(gr%mesh%x(ip, 1:gr%sb%dim) * kpoint(1:gr%sb%dim)))
-        end forall
+        end do
 
         ! loop over boundary points
         sp = gr%mesh%np

@@ -609,21 +609,21 @@ contains
       if(.not. present(phase_correction)) then
         ! do not apply phase correction; phase is set in another step
         do ist = 1, ffb%nst_linear
-          forall (ip = 1:boundaries%nper)
+          do ip = 1, boundaries%nper
             ffb%X(ff_linear)(boundaries%per_points(POINT_BOUNDARY, ip), ist) = &
               ffb%X(ff_linear)(boundaries%per_points(POINT_INNER, ip), ist)
-          end forall
+          end do
         end do
       else
         ! apply phase correction when setting the BCs -> avoids unnecessary memory access
         ASSERT(lbound(phase_correction, 1) == 1)
         ASSERT(ubound(phase_correction, 1) == boundaries%mesh%np_part - boundaries%mesh%np)
         do ist = 1, ffb%nst_linear
-          forall (ip = 1:boundaries%nper)
+          do ip = 1, boundaries%nper
             ffb%X(ff_linear)(boundaries%per_points(POINT_BOUNDARY, ip), ist) = &
               ffb%X(ff_linear)(boundaries%per_points(POINT_INNER, ip), ist) * &
               phase_correction(boundaries%per_points(POINT_BOUNDARY, ip)-boundaries%mesh%np)
-          end forall
+          end do
         end do
       end if
 
@@ -635,7 +635,9 @@ contains
         do ip = 1, boundaries%nper
           ip_bnd = boundaries%per_points(POINT_BOUNDARY, ip)
           ip_inn = boundaries%per_points(POINT_INNER, ip)
-          forall(ist = 1:ffb%nst_linear) ffb%X(ff_pack)(ist, ip_bnd) = ffb%X(ff_pack)(ist, ip_inn)
+          do ist = 1, ffb%nst_linear
+            ffb%X(ff_pack)(ist, ip_bnd) = ffb%X(ff_pack)(ist, ip_inn)
+          end do
         end do
       else
         ! apply phase correction when setting the BCs -> avoids unnecessary memory access
@@ -645,9 +647,9 @@ contains
         do ip = 1, boundaries%nper
           ip_bnd = boundaries%per_points(POINT_BOUNDARY, ip)
           ip_inn = boundaries%per_points(POINT_INNER, ip)
-          forall(ist = 1:ffb%nst_linear)
+          do ist = 1, ffb%nst_linear
             ffb%X(ff_pack)(ist, ip_bnd) = ffb%X(ff_pack)(ist, ip_inn) * phase_correction(ip_bnd-boundaries%mesh%np)
-          end forall
+          end do
         end do
       end if
 

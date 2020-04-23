@@ -140,18 +140,18 @@ contains
         gr%mgrid_prec%level(1)%mesh, a(:,idim), r1, FULLWEIGHT)
       ! r1 has the opposite sign of r2 to avoid an unnecessary operation in the first step
 
-      forall (ip = 1:mesh1%np)
+      do ip = 1, mesh1%np
         d1(ip) = -CNST(4.0)*step*r1(ip)
-      end forall
+      end do
 
       ! pre-smoothing
       do j = 1, pre%npre
         call X(derivatives_lapl)(gr%mgrid_prec%level(1)%der, d1, q1)
 
-        forall (ip = 1:mesh1%np)
+        do ip = 1, mesh1%np
           q1(ip) = CNST(-0.5)*q1(ip) + r1(ip)
           d1(ip) = d1(ip) - CNST(4.0)*step*q1(ip)
-        end forall
+        end do
       end do
 
       call X(derivatives_lapl)(gr%mgrid_prec%level(1)%der, d1, q1)
@@ -163,55 +163,59 @@ contains
       call X(multigrid_fine2coarse)(gr%mgrid_prec%level(2)%tt, gr%mgrid_prec%level(1)%der, &
         gr%mgrid_prec%level(2)%mesh, q1, r2, FULLWEIGHT)
 
-      forall (ip = 1:mesh2%np) d2(ip) = CNST(16.0)*step*r2(ip)
+      do ip = 1, mesh2%np
+        d2(ip) = CNST(16.0)*step*r2(ip)
+      end do
 
       ! Jacobi steps on coarsest grid
       do j = 1, pre%nmiddle
         call X(derivatives_lapl)(gr%mgrid_prec%level(2)%der, d2, q2)
 
-        forall (ip = 1:mesh2%np)
+        do ip = 1, mesh2%np
           q2(ip) = CNST(-0.5)*q2(ip) - r2(ip)
           d2(ip) = d2(ip) - CNST(16.0)*step*q2(ip)
-        end forall
+        end do
       end do
 
       ! back to level 1
       call X(multigrid_coarse2fine)(gr%mgrid_prec%level(2)%tt, gr%mgrid_prec%level(2)%der, &
         gr%mgrid_prec%level(1)%mesh, d2, t1)
 
-      forall (ip = 1:mesh1%np)
+      do ip = 1, mesh1%np
         d1(ip) = d1(ip) - t1(ip)
-      end forall
+      end do
 
       ! post-smoothing
       do j = 1, pre%npost
         call X(derivatives_lapl)(gr%mgrid_prec%level(1)%der, d1, q1)
 
-        forall (ip = 1:mesh1%np)
+        do ip = 1, mesh1%np
           q1(ip) = CNST(-0.5)*q1(ip) + r1(ip)
           d1(ip) = d1(ip) - CNST(4.0)*step*q1(ip)
-        end forall
+        end do
       end do
 
       ! and finally back to level 0
       call X(multigrid_coarse2fine)(gr%mgrid_prec%level(1)%tt ,gr%mgrid_prec%level(1)%der, &
         gr%mgrid_prec%level(0)%mesh, d1, q0)
 
-      forall (ip = 1:mesh0%np) d0(ip) = - q0(ip)
+      do ip = 1, mesh0%np
+         d0(ip) = - q0(ip)
+      end do
 
       ! post-smoothing
       do j = 1, pre%npost
         call X(derivatives_lapl)(gr%mgrid_prec%level(0)%der, d0, q0)
 
-        forall (ip = 1:mesh0%np)
+        do ip = 1, mesh0%np
           q0(ip) = CNST(-0.5)*q0(ip) - a(ip, idim)
           d0(ip) = d0(ip) - step*q0(ip)
-        end forall
+        end do
       end do
 
-      forall (ip = 1:mesh0%np)
+      do ip = 1, mesh0%np
         b(ip, idim) = -d0(ip)
-      end forall
+      end do
 
     end do
 

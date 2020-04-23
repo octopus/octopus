@@ -539,7 +539,9 @@ contains
             do mm = -ll, ll
               kb_p =>  epot%proj(iatom)%kb_p(ll, mm)
               do ic = 1, kb_p%n_c
-                forall(ip = 1:pmat%npoints) pmat%dprojectors(ip, imat) = kb_p%p(ip, ic)
+                do ip = 1, pmat%npoints
+                  pmat%dprojectors(ip, imat) = kb_p%p(ip, ic)
+                end do
                 pmat%scal(imat) = kb_p%e(ic)*mesh%vol_pp(1)
                 INCR(imat, 1)
               end do
@@ -603,30 +605,34 @@ contains
                   end do
                 end do
               end if
-              
+
               do ic = 1, 3
                 if(epot%reltype == SPIN_ORBIT) then
-                  forall(ip = 1:pmat%npoints) pmat%zprojectors(ip, imat) = hgh_p%zp(ip, ic)
+                  do ip = 1, pmat%npoints
+                    pmat%zprojectors(ip, imat) = hgh_p%zp(ip, ic)
+                  end do
                 else
-                  forall(ip = 1:pmat%npoints) pmat%dprojectors(ip, imat) = hgh_p%dp(ip, ic)
+                  do ip = 1, pmat%npoints
+                    pmat%dprojectors(ip, imat) = hgh_p%dp(ip, ic)
+                  end do
                 end if
                 pmat%scal(imat) = mesh%volume_element
                 INCR(imat, 1)
               end do
-              
+
             end do
           end do
 
           this%projector_self_overlap = this%projector_self_overlap .or. epot%proj(iatom)%sphere%overlap
-          
+
         else
-          cycle          
+          cycle
         end if
 
-        forall(ip = 1:pmat%npoints)
+        do ip = 1, pmat%npoints
           pmat%map(ip) = epot%proj(iatom)%sphere%map(ip)
           pmat%position(1:3, ip) = epot%proj(iatom)%sphere%x(ip, 1:3)
-        end forall
+        end do
 
         INCR(this%full_projection_size, pmat%nprojs)
 

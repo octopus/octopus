@@ -1013,8 +1013,10 @@ contains
           hato(2:ps_hgh%g%nrval) = ps_hgh%rphi(2:ps_hgh%g%nrval, l)/ps_hgh%g%rofi(2:ps_hgh%g%nrval)
           hato(1) = hato(2)
 
-          forall(ip = 1:ps_hgh%g%nrval) dens(ip) = dens(ip) + ps%conf%occ(l, is)*hato(ip)**2/(M_FOUR*M_PI)
-          
+          do ip = 1, ps_hgh%g%nrval
+            dens(ip) = dens(ip) + ps%conf%occ(l, is)*hato(ip)**2/(M_FOUR*M_PI)
+          end do
+
           call spline_fit(ps_hgh%g%nrval, ps_hgh%g%rofi, hato, ps%ur(l, is))
           call spline_fit(ps_hgh%g%nrval, ps_hgh%g%r2ofi, hato, ps%ur_sq(l, is))
         end do
@@ -1077,8 +1079,10 @@ contains
           hato(2:) = ps_grid%rphi(2:, l, 1+is)/g%rofi(2:)
           hato(1)  = first_point_extrapolate(g%rofi, hato)
 
-          forall(ip = 1:g%nrval) dens(ip) = dens(ip) + ps%conf%occ(l, is)*hato(ip)**2/(M_FOUR*M_PI)
-          
+          do ip = 1, g%nrval
+            dens(ip) = dens(ip) + ps%conf%occ(l, is)*hato(ip)**2/(M_FOUR*M_PI)
+          end do
+
           call spline_fit(g%nrval, g%rofi, hato, ps%ur(l, is))
           call spline_fit(g%nrval, g%r2ofi, hato, ps%ur_sq(l, is))
 
@@ -1211,16 +1215,16 @@ contains
           if (is_diagonal(ps_xml%nchannels, ps_xml%dij(ll, :, :)) .or. &
               pseudo_has_total_angular_momentum(ps_xml%pseudo)) then
             matrix = CNST(0.0)
-            forall(ic = 1:ps_xml%nchannels)
+            do ic = 1, ps_xml%nchannels
               eigenvalues(ic) = ps_xml%dij(ll, ic, ic)
               matrix(ic, ic) = CNST(1.0)
-            end forall
+            end do
           else
             ! diagonalize the coefficient matrix
             matrix(1:ps_xml%nchannels, 1:ps_xml%nchannels) = ps_xml%dij(ll, 1:ps_xml%nchannels, 1:ps_xml%nchannels)
             call lalg_eigensolve(ps_xml%nchannels, matrix, eigenvalues)
           end if
-          
+
           do ic = 1, ps_xml%nchannels
             
             do ip = 1, ps%g%nrval

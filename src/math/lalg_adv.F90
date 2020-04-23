@@ -297,7 +297,9 @@ contains
 
       call lalg_eigensolve(nn, evectors, evalues)
 
-      forall(ii = 1:nn) zevalues(ii) = (exp(pp*evalues(ii)) - M_z1) / (pp*evalues(ii))
+      do ii = 1, nn
+        zevalues(ii) = (exp(pp*evalues(ii)) - M_z1) / (pp*evalues(ii))
+      end do
 
       do ii = 1, nn
         ex(1:nn, ii) = zevalues(1:nn)*conjg(evectors(ii, 1:nn))
@@ -313,13 +315,15 @@ contains
       evectors(1:nn, 1:nn) = aa(1:nn, 1:nn)
 
       call lalg_eigensolve_nonh(nn, evectors, zevalues)
-      
-      forall(ii = 1:nn) zevalues(ii) = (exp(pp*zevalues(ii)) - M_z1) / (pp*zevalues(ii))
+
+      do ii = 1, nn
+        zevalues(ii) = (exp(pp*zevalues(ii)) - M_z1) / (pp*zevalues(ii))
+      end do
 
       ex(1:nn, 1:nn) = evectors(1:nn, 1:nn)
 
       deter = lalg_inverter(nn, evectors)
-      
+
       do ii = 1, nn
         evectors(1:nn, ii) = zevalues(1:nn)*evectors(1:nn, ii)
       end do
@@ -368,7 +372,9 @@ contains
     call lalg_eigensolve_nonh(n, zeigenvec, zeigenval)
 
     unit = M_z0
-    forall(i = 1:n) unit(i, i) = M_z1
+    do i = 1, n
+      unit(i, i) = M_z1
+    end do
 
     do i = 1, n
       do alpha = 1, n

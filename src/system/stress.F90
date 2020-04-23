@@ -158,15 +158,15 @@ contains
          
          SAFE_ALLOCATE(rho_total(1:gr%fine%mesh%np))
          
-         forall(ip = 1:gr%fine%mesh%np)
+         do ip = 1, gr%fine%mesh%np
             rho_total(ip) = sum(rho(ip, 1:hm%d%spin_channels))
-         end forall
+         end do
          
          ! remove non-local core corrections
          if(associated(st%rho_core)) then
-            forall(ip = 1:gr%fine%mesh%np)
+            do ip = 1, gr%fine%mesh%np
                rho_total(ip) = rho_total(ip) - st%rho_core(ip)
-            end forall
+            end do
          end if
       else
          total_density_alloc = .false.

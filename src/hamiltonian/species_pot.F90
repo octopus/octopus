@@ -586,8 +586,10 @@ contains
 
       call submesh_init(sphere, mesh%sb, mesh, pos, spline_cutoff_radius(ps%nlr, threshold))
       SAFE_ALLOCATE(rho_sphere(1:sphere%np))
-      
-      forall(ip = 1:sphere%np) rho_sphere(ip) = sphere%x(ip, 0)
+
+      do ip = 1, sphere%np
+        rho_sphere(ip) = sphere%x(ip, 0)
+      end do
       if(sphere%np > 0) call spline_eval_vec(ps%nlr, sphere%np, rho_sphere)
 
       rho(1:mesh%np) = M_ZERO
@@ -955,7 +957,9 @@ contains
 
             ! Note that as the spec%user_def is in input units, we have to convert
             ! the units back and forth
-            forall(idim = 1:mesh%sb%dim) xx(idim) = units_from_atomic(units_inp%length, xx(idim))
+            do idim = 1, mesh%sb%dim
+              xx(idim) = units_from_atomic(units_inp%length, xx(idim))
+            end do
             r = units_from_atomic(units_inp%length, r)
             zpot = species_userdef_pot(species, mesh%sb%dim, xx, r)
             vl(ip) = vl(ip) + units_to_atomic(units_inp%energy, TOFLOAT(zpot))

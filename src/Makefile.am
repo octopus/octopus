@@ -833,7 +833,7 @@ clean-local: clean-fdep
 
 
 FORTRAN_CPP=@FCCPP@ @CPPFLAGS@ $(AM_CPPFLAGS)
-PERL_ARGS="@DEBUG@" "@F90_ACCEPTS_LINE_NUMBERS@" "@F90_FORALL@"
+PERL_ARGS="@DEBUG@" "@F90_ACCEPTS_LINE_NUMBERS@"
 HEADERS_DEP=include/config_F90.h include/options.h include/defaults.h
 
 EXTRA_DIST = fdep/fortran_dependencies.mk \

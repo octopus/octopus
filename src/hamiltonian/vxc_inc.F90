@@ -950,7 +950,9 @@ subroutine xc_density_correction_calc(xcs, der, psolver, namespace, nspin, densi
   SAFE_ALLOCATE(nxc(1:der%mesh%np))
   SAFE_ALLOCATE(lrvxc(1:der%mesh%np_part))
 
-  forall(ip = 1:der%mesh%np) lrvxc(ip) = CNST(-1.0)/(CNST(4.0)*M_PI)*refvx(ip)
+  do ip = 1, der%mesh%np
+    lrvxc(ip) = CNST(-1.0)/(CNST(4.0)*M_PI)*refvx(ip)
+  end do
   call dderivatives_lapl(der, lrvxc, nxc)
 
   if(debug%info) then
@@ -1084,10 +1086,10 @@ subroutine xc_density_correction_calc(xcs, der, psolver, namespace, nspin, densi
       der%mesh, lrvxc, unit_one, ierr)
   end if
 
-  forall(ip = 1:der%mesh%np) 
+  do ip = 1, der%mesh%np
     vxc(ip, 1:nspin) = vxc(ip, 1:nspin) + lrvxc(ip)
     refvx(ip) = lrvxc(ip)
-  end forall
+  end do
 
   maxdd = -HUGE(maxdd)
   mindd =  HUGE(maxdd)

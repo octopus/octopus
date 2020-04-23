@@ -298,7 +298,7 @@ contains
             message(1) = 'MaxwellFieldCoordinate must have 3 columns.'
             call messages_fatal(1, namespace=namespace)
         end if
-        do idim=1, st%d%dim
+        do idim = 1, st%d%dim
           call parse_block_float(blk, il-1, idim-1, pos(idim), units_inp%length)
         end do
         st%selected_points_coordinate(:,il) = pos
@@ -799,7 +799,7 @@ contains
     ztmp_rs(1:gr%mesh%np,:) =  rs_state(1:gr%mesh%np,:)
 
     ztmp(:) = TOCMPLX(M_ZERO,M_ZERO)
-    do idim=1, gr%sb%dim
+    do idim = 1, gr%sb%dim
       ztmp(1:gr%mesh%np) = ztmp(1:gr%mesh%np) + &
                                    abs(rs_state_old(1:gr%mesh%np, idim)-ztmp_rs(1:gr%mesh%np, idim))
       d = zmf_nrm2(gr%mesh, ztmp)

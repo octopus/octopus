@@ -986,7 +986,11 @@ FLOAT function X(states_elec_residue)(mesh, dim, hf, ee, ff) result(rr)
 
   SAFE_ALLOCATE(res(1:mesh%np, 1:dim))
 
-  forall (idim = 1:dim, ip = 1:mesh%np) res(ip, idim) = hf(ip, idim) - ee*ff(ip, idim)
+  do idim = 1, dim
+    do ip = 1, mesh%np
+      res(ip, idim) = hf(ip, idim) - ee*ff(ip, idim)
+    end do
+  end do
 
   call profiling_count_operations(dim*mesh%np*(R_ADD + R_MUL))
 
@@ -1055,7 +1059,9 @@ subroutine X(states_elec_calc_momentum)(st, der, momentum)
       ! since psi contains only u_k
       kpoint = M_ZERO
       kpoint(1:der%mesh%sb%dim) = kpoints_get_point(der%mesh%sb%kpoints, states_elec_dim_get_kpoint_index(st%d, ik))
-      forall(idir = 1:der%mesh%sb%periodic_dim) momentum(idir, ist, ik) = momentum(idir, ist, ik) + kpoint(idir)
+      do idir = 1, der%mesh%sb%periodic_dim
+        momentum(idir, ist, ik) = momentum(idir, ist, ik) + kpoint(idir)
+      end do
 
     end do
 

@@ -1177,7 +1177,7 @@ contains
 
     total_length = M_ZERO
     !We first compute the total length of the k-point path
-    do is=1, nsegments
+    do is = 1, nsegments
       ! We need to work in abolute coordinates to get the correct path length
       call kpoints_to_absolute(klattice, highsympoints(1:dim,is), kpt1(:), dim)
       call kpoints_to_absolute(klattice, highsympoints(1:dim,is+1), kpt2(:), dim)
@@ -1190,7 +1190,7 @@ contains
     accumulated_length = M_ZERO
     kpt_ind = 0
     !Now we generate the points
-    do is=1, nsegments
+    do is = 1, nsegments
       ! We need to work in abolute coordinates to get the correct path length
       call kpoints_to_absolute(klattice, highsympoints(1:dim,is), kpt1(:), dim)
       call kpoints_to_absolute(klattice, highsympoints(1:dim,is+1), kpt2(:), dim)
@@ -1256,7 +1256,9 @@ contains
     SAFE_ALLOCATE(reduced(1:dim, 1:nkpoints))
 
     dw = M_ONE / nkpoints
-    forall(ik = 1:nkpoints) kweight(ik) = dw   
+    do ik=1, nkpoints
+      kweight(ik) = dw
+    end do
 
     nreduced = 0
 
@@ -1373,7 +1375,7 @@ contains
 
       dmin = CNST(1e10)
       do ig1 = 1, 27
-        do ii=1, grid%dim
+        do ii = 1, grid%dim
           vec(ii) = Gvec_cart(ii,ig1)-grid%point(ii,ik)
         end do
         d = real(sum(vec(1:grid%dim)**2),4) !Conversion to simple precision
@@ -1383,7 +1385,7 @@ contains
           ig2 = ig1
         end if
       end do
-      do ii=1, grid%dim
+      do ii = 1, grid%dim
         kpt(ii) = grid%red_point(ii,ik) - Gvec(ii,ig2)
       end do
       call kpoints_to_absolute(klattice,kpt(1:grid%dim),grid%point1BZ(1:grid%dim,ik),grid%dim) 
@@ -1629,7 +1631,9 @@ contains
       if(iop == symmetries_identity_index(symm) .and. &
             .not. time_reversal) cycle
 
-      forall(ik=kpt_dist%start:kpt_dist%end)  kmap(ik) = ik
+      do ik = kpt_dist%start, kpt_dist%end
+        kmap(ik) = ik
+      end do
 
       do ik = kpt_dist%start, kpt_dist%end
         !We apply the symmetry

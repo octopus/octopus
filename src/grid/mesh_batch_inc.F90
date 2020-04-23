@@ -164,11 +164,15 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
 
     call accel_release_buffer(dot_buffer)
 
-    forall(ist = 1:aa%nst, jst = 1:bb%nst) dd(ist, jst) = mesh%volume_element*dd(ist, jst)
+    do ist = 1, aa%nst
+      do jst = 1, bb%nst
+        dd(ist, jst) = mesh%volume_element*dd(ist, jst)
+      end do
+    end do
 
   case default
     ASSERT(.false.)
-    
+
   end select
 
   if(aa%status() /= BATCH_DEVICE_PACKED) then
@@ -190,9 +194,17 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
 #endif
 
   if(conj) then
-    forall(ist = 1:aa%nst, jst = 1:bb%nst) dot(aa%ist(ist), bb%ist(jst)) = R_CONJ(dd(ist, jst))
+    do jst = 1, bb%nst
+      do ist = 1, aa%nst
+        dot(aa%ist(ist), bb%ist(jst)) = R_CONJ(dd(ist, jst))
+      end do
+    end do
   else
-    forall(ist = 1:aa%nst, jst = 1:bb%nst) dot(aa%ist(ist), bb%ist(jst)) = dd(ist, jst)
+    do jst = 1, bb%nst
+      do ist = 1, aa%nst
+        dot(aa%ist(ist), bb%ist(jst)) = dd(ist, jst)
+      end do
+    end do
   end if
 
   SAFE_DEALLOCATE_A(dd)
@@ -303,12 +315,12 @@ subroutine X(mesh_batch_dotp_self)(mesh, aa, dot, reduce)
     call profiling_out(profcomm)
   end if
 
-  forall(ist = 1:aa%nst)
-    forall(jst = 1:aa%nst) 
+  do jst = 1, aa%nst
+    do ist = 1, aa%nst
       dot(aa%ist(ist), aa%ist(jst)) = dd(ist, jst)
       dot(aa%ist(jst), aa%ist(ist)) = R_CONJ(dd(ist, jst))
-    end forall
-  end forall
+    end do
+  end do
 
   SAFE_DEALLOCATE_A(dd)
 
@@ -712,7 +724,9 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
         ipart = partno_inner(ip)
         INCR(send_count(ipart), 1)
         pos = send_disp(ipart) + send_count(ipart)
-        forall(ist = 1:nstl) send_buffer(ist, pos) = aa%X(ff_linear)(ip, ist)
+        do ist = 1, nstl
+          send_buffer(ist, pos) = aa%X(ff_linear)(ip, ist)
+        end do
       end do
       ! Then boundary points
       do ip = 1, np_bndry
@@ -720,7 +734,9 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
         ipart = partno_bndry(ip)
         INCR(send_count(ipart), 1)
         pos = send_disp(ipart) + send_count(ipart)
-        forall(ist = 1:nstl) send_buffer(ist, pos) = aa%X(ff_linear)(ip, ist)
+        do ist = 1, nstl
+          send_buffer(ist, pos) = aa%X(ff_linear)(ip, ist)
+        end do
       end do
 
       SAFE_DEALLOCATE_A(partno_bndry)
@@ -743,13 +759,15 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
           ipart = mesh%vp%part_vec(ipg)
           INCR(recv_count(ipart), 1)
           pos = recv_disp(ipart) + recv_count(ipart)
-          forall(ist = 1:nstl) aa%X(ff_linear)(ip, ist) = recv_buffer(ist, pos)
+          do ist = 1, nstl
+            aa%X(ff_linear)(ip, ist) = recv_buffer(ist, pos)
+          end do
         end if
       end do
 
       SAFE_DEALLOCATE_A(send_disp)
       SAFE_DEALLOCATE_A(recv_disp)
-    
+
     else ! backward map
 
       recv_count = mesh%vp%recv_count
@@ -767,9 +785,11 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
         ipart = mesh%vp%part_local(ip)
         INCR(send_count(ipart), 1)
         pos = mesh%vp%send_disp(ipart) + send_count(ipart)
-        forall(ist = 1:nstl) send_buffer(ist, pos) = aa%X(ff_linear)(ip, ist) 
+        do ist = 1, nstl
+          send_buffer(ist, pos) = aa%X(ff_linear)(ip, ist)
+        end do
       end do
-      
+
       send_count_nstl = send_count * nstl
       send_disp_nstl = mesh%vp%send_disp * nstl
       recv_count_nstl = recv_count * nstl
@@ -786,7 +806,9 @@ subroutine X(mesh_batch_exchange_points)(mesh, aa, forward_map, backward_map)
         ipart = mesh%vp%part_local_rev(ip)
         INCR(recv_count(ipart), 1)
         pos = mesh%vp%recv_disp(ipart) + recv_count(ipart)
-        forall(ist = 1:nstl) aa%X(ff_linear)(ip, ist) = recv_buffer(ist, pos)
+        do ist = 1, nstl
+          aa%X(ff_linear)(ip, ist) = recv_buffer(ist, pos)
+        end do
       end do
 
     end if

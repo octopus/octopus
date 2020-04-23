@@ -141,9 +141,11 @@
     vl_grad(:,:) = M_ZERO
     call epot_local_potential(ep, namespace, gr%der, gr%dgrid, geo, 1, vl)
     call dderivatives_grad(gr%der, vl, vl_grad)
-    forall(ist=1:gr%mesh%np, jst=1:gr%sb%dim)
-      tg%grad_local_pot(1, ist, jst) = vl_grad(ist, jst)
-    end forall
+    do jst=1, gr%sb%dim
+      do ist = 1, gr%mesh%np
+        tg%grad_local_pot(1, ist, jst) = vl_grad(ist, jst)
+      end do
+    end do
     ! Note that the calculation of the gradient of the potential
     ! is wrong at the borders of the box, since it assumes zero boundary
     ! conditions. The best way to solve this problems is to define the 

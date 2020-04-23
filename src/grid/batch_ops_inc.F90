@@ -317,7 +317,7 @@ subroutine X(batch_axpy_function)(np, aa, xx, psi, nst)
     call accel_kernel_run(X(kernel_batch_axpy), global_sizes, local_sizes)
     call accel_finish()
 
-    do idim=1, xx%dim
+    do idim = 1, xx%dim
       call accel_read_buffer(psi_buffer, np, psi(1:np,idim), offset=(idim-1)*np_padded)
     end do
 

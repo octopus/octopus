@@ -953,14 +953,18 @@ contains
       call states_elec_calc_quantities(gr%der, st, .true., kinetic_energy_density = energy_density)
 
       ! the external potential energy density
-      forall(ip = 1:gr%fine%mesh%np, is = 1:st%d%nspin)
-        energy_density(ip, is) = energy_density(ip, is) + st%rho(ip, is)*hm%ep%vpsl(ip)
-      end forall
+      do is = 1, st%d%nspin
+        do ip = 1, gr%fine%mesh%np
+          energy_density(ip, is) = energy_density(ip, is) + st%rho(ip, is)*hm%ep%vpsl(ip)
+        end do
+      end do
 
       ! the hartree energy density
-      forall(ip = 1:gr%fine%mesh%np, is = 1:st%d%nspin)
-        energy_density(ip, is) = energy_density(ip, is) + CNST(0.5)*st%rho(ip, is)*hm%vhartree(ip)
-      end forall
+      do is = 1, st%d%nspin
+        do ip = 1, gr%fine%mesh%np
+          energy_density(ip, is) = energy_density(ip, is) + CNST(0.5)*st%rho(ip, is)*hm%vhartree(ip)
+        end do
+      end do
 
       ! the XC energy density
       SAFE_ALLOCATE(ex_density(1:gr%mesh%np))
@@ -970,13 +974,15 @@ contains
 
       call xc_get_vxc(gr%fine%der, ks%xc, st, hm%psolver, namespace, st%rho, st%d%ispin, hm%exxop, &
         ex_density = ex_density, ec_density = ec_density)
-      forall(ip = 1:gr%fine%mesh%np, is = 1:st%d%nspin)
-        energy_density(ip, is) = energy_density(ip, is) + ex_density(ip) + ec_density(ip)
-      end forall
+      do is = 1, st%d%nspin
+        do ip = 1, gr%fine%mesh%np
+          energy_density(ip, is) = energy_density(ip, is) + ex_density(ip) + ec_density(ip)
+        end do
+      end do
 
       SAFE_DEALLOCATE_A(ex_density)
       SAFE_DEALLOCATE_A(ec_density)
-      
+
       select case(st%d%ispin)
       case(UNPOLARIZED)
         write(fname, '(a)') 'energy_density'

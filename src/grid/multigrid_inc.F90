@@ -42,7 +42,9 @@
     SAFE_ALLOCATE(points(1:2*order_))
     SAFE_ALLOCATE(factor(1:2*order_))
 
-    forall(ii = 1:2*order_) points(ii) = ii
+    do ii = 1, 2*order_
+      points(ii) = ii
+    end do
 
     call interpolation_coefficients(2*order_, points, order_ + M_HALF, factor)
 

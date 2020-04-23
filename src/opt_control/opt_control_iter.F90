@@ -409,9 +409,9 @@ contains
     if(iterator%ctr_iter == 0) then
        write(iterator%velocities_iunit,'(100("#"))')
        write(iterator%velocities_iunit,'("#  iter")',advance='no')
-       do i=1, n_atoms
+       do i = 1, n_atoms
           write(atoms_str,'(i2.2)') i
-          do j=1, dim
+          do j = 1, dim
              write(dim_str,'(i1)') j
              temp_str = "v[" // atoms_str // "," // dim_str // "]"
              write(iterator%velocities_iunit,'(a16)',advance='no') trim(temp_str)
@@ -423,8 +423,8 @@ contains
     
     ! write data
     write(iterator%velocities_iunit,'(i7)',advance='no') iterator%ctr_iter
-    do i=1, n_atoms
-       do j=1, dim
+    do i = 1, n_atoms
+       do j = 1, dim
           write(iterator%velocities_iunit,'(4(" "),(f12.10))',advance='no') &
                sys%geo%atom(i)%v(j)
        end do

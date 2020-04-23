@@ -277,7 +277,7 @@ contains
     smix%iter = 0
 
     smix%nauxmixfield = 0
-    do ii=1,MAX_AUXMIXFIELD
+    do ii = 1,MAX_AUXMIXFIELD
       nullify(smix%auxmixfield(ii)%p)   
     end do
 
@@ -376,7 +376,7 @@ contains
     call mixfield_end(smix, smix%mixfield)
 
     smix%nauxmixfield = 0
-    do ii=1,MAX_AUXMIXFIELD
+    do ii = 1,MAX_AUXMIXFIELD
       nullify(smix%auxmixfield(ii)%p)
     end do
 

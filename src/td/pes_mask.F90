@@ -644,7 +644,9 @@ contains
         xx = M_ZERO
         xx(1:sb%dim) = mesh%x(ip, 1:sb%dim)
         r = units_from_atomic(units_inp%length, sqrt(sum(xx(1:sb%dim)**2)))
-        forall(idim = 1:sb%dim) xx(idim) = units_from_atomic(units_inp%length, xx(idim))
+        do idim = 1, sb%dim
+          xx(idim) = units_from_atomic(units_inp%length, xx(idim))
+        end do
         call parse_expression(ufn_re, ufn_im, sb%dim, xx, r, M_ZERO, user_def_expr)
         mask%ufn(ip) = ufn_re
       end do
@@ -817,8 +819,8 @@ contains
     PUSH_SUB(pes_mask_generate_Lk)
 
     dim = mask%mesh%sb%dim
-    
-    do ii=1, maxval(mask%ll(:))    
+
+    do ii = 1, maxval(mask%ll(:))
       mask%Lk(ii,1:dim)= matmul(sb%klattice_primitive(1:dim,1:dim), mask%cube%Lfs(ii,1:dim))
     end do
 

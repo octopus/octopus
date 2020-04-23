@@ -168,7 +168,9 @@ program oct_unfold
   !% Lattice vectors of the primitive cell on which the unfolding is performed. 
   !%End
   rlattice_pc = M_ZERO
-  forall(idim = 1:sb%dim) rlattice_pc(idim, idim) = M_ONE
+  do idim = 1, sb%dim
+    rlattice_pc(idim, idim) = M_ONE
+  end do
 
   if(parse_block(global_namespace, 'UnfoldLatticeVectors', blk) == 0) then
     do idim = 1, sb%dim
@@ -183,9 +185,9 @@ program oct_unfold
   end if
 
   do idim = 1, sb%dim
-    forall(jdim = 1:sb%dim)
+    do jdim = 1, sb%dim
       rlattice_pc(jdim, idim) = rlattice_pc(jdim, idim) * lparams(idim)
-    end forall
+    end do
   end do
 
   call reciprocal_lattice(rlattice_pc, klattice_pc, volume_element_pc, sb%dim, global_namespace)

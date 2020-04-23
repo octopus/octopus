@@ -619,10 +619,12 @@ contains
     do ist = st_start, st_end
       iev = iihash_lookup(all_ev_inv, ist, found)
       ASSERT(found)
-     
-      forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np) 
-        res(ip, idim, ist) = h_psi(ip, idim, ist) - eval(iev)*psi(ip, idim, ist)
-      end forall
+
+      do idim = 1, st%d%dim
+        do ip = 1, gr%mesh%np
+          res(ip, idim, ist) = h_psi(ip, idim, ist) - eval(iev)*psi(ip, idim, ist)
+        end do
+      end do
     end do
 
     POP_SUB(X(lobpcg).X(lobpcg_res))

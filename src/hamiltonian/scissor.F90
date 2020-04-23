@@ -124,11 +124,11 @@ contains
     SAFE_ALLOCATE(phase(1:gr%mesh%np))
     ! We apply the phase to these states, as we need it for the projectors later
     do ik=this%gs_st%d%kpt%start, this%gs_st%d%kpt%end
-      
+
       kpoint(1:gr%sb%dim) = kpoints_get_point(gr%sb%kpoints, states_elec_dim_get_kpoint_index(d, ik))
-      forall (ip = 1:gr%mesh%np)
+      do ip = 1, gr%mesh%np
         phase(ip) = exp(-M_zI * sum(gr%mesh%x(ip, 1:gr%sb%dim) * kpoint(1:gr%sb%dim)))
-      end forall
+      end do
 
       do ist=this%gs_st%st_start, this%gs_st%st_end
         call states_elec_get_state(this%gs_st, gr%mesh, ist, ik, temp_state )

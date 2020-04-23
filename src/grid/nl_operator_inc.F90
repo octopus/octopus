@@ -220,15 +220,17 @@ contains
     case(BATCH_DEVICE_PACKED)
 
       ASSERT(.false.)
-      
+
     case(BATCH_NOT_PACKED)
-      
+
       !$omp parallel do private(ll, ist, ii, nn)
       do ll = 1, nri
         nn = op%nn(ll)
-        forall(ist = 1:fi%nst_linear, ii = imin(ll) + 1:imax(ll))
-          fo%X(ff_linear)(ii, ist) = factor_*sum(op%w(1:nn, ii)*fi%X(ff_linear)(ii + ri(1:nn, ll), ist))
-        end forall
+        do ist = 1, fi%nst_linear
+          do ii = imin(ll) + 1, imax(ll)
+            fo%X(ff_linear)(ii, ist) = factor_*sum(op%w(1:nn, ii)*fi%X(ff_linear)(ii + ri(1:nn, ll), ist))
+          end do
+        end do
       end do
       !$omp end parallel do
 
@@ -237,14 +239,16 @@ contains
       !$omp parallel do private(ll, ist, ii, nn)
       do ll = 1, nri
         nn = op%nn(ll)
-        forall(ist = 1:fi%nst_linear, ii = imin(ll) + 1:imax(ll))
-          fo%X(ff_pack)(ist, ii) = factor_*sum(op%w(1:nn, ii)*fi%X(ff_pack)(ist, ii + ri(1:nn, ll)))
-        end forall
+        do ist = 1, fi%nst_linear
+          do ii = imin(ll) + 1, imax(ll)
+            fo%X(ff_pack)(ist, ii) = factor_*sum(op%w(1:nn, ii)*fi%X(ff_pack)(ist, ii + ri(1:nn, ll)))
+          end do
+        end do
       end do
       !$omp end parallel do
-      
+
     end select
-      
+
     POP_SUB(X(nl_operator_operate_batch).operate_non_const_weights)
   end subroutine operate_non_const_weights
 

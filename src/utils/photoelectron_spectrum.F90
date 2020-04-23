@@ -419,24 +419,30 @@ program photoelectron_spectrum
 
   ! Convert the grid units
   if (need_pmesh) then    
-    forall (i1=1:llp(1), i2=1:llp(2), i3=1:llp(3), ii = 1:3)
-      pmesh(i1,i2,i3,ii) = units_from_atomic(sqrt(units_out%energy), pmesh(i1,i2,i3,ii))
-    end forall
+    do ii = 1,3
+      do i3 = 1, llp(3)
+        do i2 = 1, llp(2)
+          do i1 = 1, llp(1)
+            pmesh(i1, i2, i3, ii) = units_from_atomic(sqrt(units_out%energy), pmesh(i1, i2, i3, ii))
+          end do
+        end do
+      end do
+    end do
   end if
 
   if (resolve_states) then
     do ist = st_range(1), st_range(2)
-      
+
       select case (pes_method)
       case (OPTION__PHOTOELECTRONSPECTRUM__PES_MASK)
         call pes_mask_map_from_states(restart, st, llg, pesP, krng, Lp, ist)
       case (OPTION__PHOTOELECTRONSPECTRUM__PES_FLUX)
         call pes_flux_map_from_states(pflux, restart, st, llg, pesP, krng, Lp, ist)      
       end select
-        
+
       call output_spin_pes()
     end do
-    
+
   else
     ! Read the data
     ist = 0 
@@ -449,7 +455,7 @@ program photoelectron_spectrum
     end select
 
     call output_spin_pes()
-    
+
   end if
 
 
@@ -680,10 +686,14 @@ program photoelectron_spectrum
       if(bitand(pesout%what, OPTION__PHOTOELECTRONSPECTRUMOUTPUT__ARPES) /= 0) then
         call messages_print_stress(stdout, "ARPES")
 
-        forall (i1=1:llp(1), i2=1:llp(2), i3=1:llp(3))
-          pmesh(i1,i2,i3,dim) = units_from_atomic(units_out%energy, &
-            sign(M_ONE,pmesh(i1,i2,i3,dim)) * sum( pmesh(i1,i2,i3,1:dim)**2 )/M_TWO)
-        end forall
+        do i3 = 1, llp(3)
+          do i2 = 1, llp(2)
+            do i1 = 1, llp(1)
+              pmesh(i1, i2, i3, dim) = units_from_atomic(units_out%energy, &
+                sign(M_ONE,pmesh( i1, i2, i3, dim)) * sum( pmesh(i1, i2, i3, 1:dim)**2 )/M_TWO)
+            end do
+          end do
+        end do
 
         how = io_function_fill_how("VTK")
 

@@ -192,12 +192,14 @@ contains
       ASSERT(der%mesh%sb%dim == 3)
 
       SAFE_ALLOCATE(weight(1:psib%nst))
-      forall(ist = 1:psib%nst) weight(ist) = st%d%kweights(ik)*st%occ(psib%ist(ist), ik)
+      do ist = 1, psib%nst
+        weight(ist) = st%d%kweights(ik)*st%occ(psib%ist(ist), ik)
+      end do
 
-      
+
       call accel_create_buffer(buff_weight, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, psib%nst)
       call accel_write_buffer(buff_weight, psib%nst, weight)
-      
+
       call accel_create_buffer(buff_current, ACCEL_MEM_WRITE_ONLY, TYPE_FLOAT, der%mesh%np*3)
      
       call accel_kernel_start_call(kernel, 'density.cl', 'current_accumulate')

@@ -582,7 +582,9 @@ contains
         do ist = st1, st2
           do idim = 1, st%d%dim
             call states_elec_get_state(hm%inh_st, gr%mesh, idim, ist, ik, inhpsi)
-            forall(ip = 1:gr%mesh%np) rhs1(ip, idim, ist, ik) = rhs1(ip, idim, ist, ik) + dt * inhpsi(ip)
+            do ip = 1, gr%mesh%np
+              rhs1(ip, idim, ist, ik) = rhs1(ip, idim, ist, ik) + dt * inhpsi(ip)
+            end do
           end do
         end do
       end do
@@ -825,7 +827,9 @@ contains
             SAFE_ALLOCATE(inhpsi(1:gr%mesh%np))
             do idim = 1, st%d%dim
               call states_elec_get_state(hm%inh_st, gr%mesh, idim, ist, ik, inhpsi)
-              forall(ip = 1:gr%mesh%np) rhs1(ip, idim, ist, ik) = rhs1(ip, idim, ist, ik) + M_zI * inhpsi(ip)
+              do ip = 1, gr%mesh%np
+                rhs1(ip, idim, ist, ik) = rhs1(ip, idim, ist, ik) + M_zI * inhpsi(ip)
+              end do
             end do
             SAFE_DEALLOCATE_A(inhpsi)
           end if
@@ -863,7 +867,9 @@ contains
             SAFE_ALLOCATE(inhpsi(1:gr%mesh%np))
             do idim = 1, st%d%dim
               call states_elec_get_state(hm%inh_st, gr%mesh, idim, ist, ik, inhpsi)
-              forall(ip = 1:gr%mesh%np) rhs2(ip, idim, ist, ik) = rhs2(ip, idim, ist, ik) + M_zI * inhpsi(ip)
+              do ip = 1, gr%mesh%np
+                rhs2(ip, idim, ist, ik) = rhs2(ip, idim, ist, ik) + M_zI * inhpsi(ip)
+              end do
             end do
             SAFE_DEALLOCATE_A(inhpsi)
           end if
