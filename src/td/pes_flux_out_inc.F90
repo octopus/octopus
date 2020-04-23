@@ -828,7 +828,7 @@ subroutine pes_flux_out_energy(this, pesK, file, namespace, ll, pmesh, Ekin, dim
   case (M_CUBIC)
     call messages_not_implemented("Energy-resolved PES for the flux method with cubic surfaces", namespace=namespace)
 
-  case (M_PLANES)
+  case (M_PLANE)
     call pes_flux_out_energy_pln(pesK, file, namespace, ll, pmesh, Ekin, dim)
   
   end select
@@ -1024,7 +1024,7 @@ subroutine pes_flux_out_polar_ascii(this, st, namespace, dt, dim)
   FLOAT, allocatable :: spctrsum(:,:,:,:)
   FLOAT              :: weight
   
-  ! M_PLANES debug
+  ! M_PLANE debug
   integer            :: itot
   character(len=80)  :: filename
 
@@ -1414,7 +1414,7 @@ subroutine pes_flux_dump(restart, this, mesh, st, ierr)
     end do
   end do
 
-  if(this%surf_shape == M_PLANES) then
+  if(this%surf_shape == M_PLANE) then
     root(P_STRATEGY_MAX) = 0
     root(P_STRATEGY_KPOINTS) = -1
     do ik = 1, st%d%nik
@@ -1440,7 +1440,7 @@ subroutine pes_flux_dump(restart, this, mesh, st, ierr)
   if(this%surf_shape == M_SPHERICAL) then
     call zrestart_write_binary(restart, 'pesflux4', this%nk * this%nstepsomegak, this%conjgphase_prev_sph, err)
   else 
-    if (this%surf_shape /= M_PLANES) &
+    if (this%surf_shape /= M_PLANE) &
       call zrestart_write_binary(restart, 'pesflux4', this%nkpnts, this%conjgphase_prev_cub(:,:), err)
   end if
   if(err /= 0) ierr = ierr + 2
@@ -1520,7 +1520,7 @@ subroutine pes_flux_load(restart, this, mesh, st, ierr)
   end do
 
 
-  if(this%surf_shape == M_PLANES) then
+  if(this%surf_shape == M_PLANE) then
     do ik = 1, st%d%nik
       write(filename,'(a,i5.5)') "pesflux4-kpt", ik      
     
@@ -1541,7 +1541,7 @@ subroutine pes_flux_load(restart, this, mesh, st, ierr)
   if(this%surf_shape == M_SPHERICAL) then
     call zrestart_read_binary(restart, 'pesflux4', this%nk * this%nstepsomegak, this%conjgphase_prev_sph, err)
   else
-    if (this%surf_shape /= M_PLANES) &
+    if (this%surf_shape /= M_PLANE) &
       call zrestart_read_binary(restart, 'pesflux4', this%nkpnts, this%conjgphase_prev_cub(:,:), err)
   end if
   if(err /= 0) ierr = ierr + 2

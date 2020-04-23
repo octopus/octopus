@@ -122,7 +122,7 @@ module pes_flux_oct_m
                                                        !< and z perpendicular)
 
     ! Surface and time integration 
-    integer          :: tdsteps                        !< = sys%outp%restart_write_interval (M_PLANES/M_CUBIC)
+    integer          :: tdsteps                        !< = sys%outp%restart_write_interval (M_PLANE/M_CUBIC)
                                                        !< = mesh%mpi_grp%size (M_SPHERICAL)
     integer          :: max_iter                       !< td%max_iter
     integer          :: save_iter                      !< sys%outp%restart_write_interval
@@ -159,7 +159,7 @@ module pes_flux_oct_m
   integer, parameter ::   &
     M_CUBIC      = 1,     &
     M_SPHERICAL  = 2,     &
-    M_PLANES     = 3
+    M_PLANE     = 3
 
   integer, parameter ::   &
     M_POLAR      = 1,     &
@@ -237,12 +237,12 @@ contains
     !% are interpolated by trilinear interpolation (default for 3D).
     !%Option pln 3
     !% This option is for periodic systems. 
-    !% Constructs planes perpendicular to the non-periodic dimension 
-    !% symmetrically placed at positive and negative values of <tt>PES_Flux_Lsize</tt>.
+    !% Constructs a plane perpendicular to the non-periodic dimension 
+    !% at <tt>PES_Flux_Lsize</tt>.
     !%End
     default_shape = M_SPHERICAL
     if(mdim <= 2) default_shape = M_CUBIC
-    if(simul_box_is_periodic(mesh%sb)) default_shape = M_PLANES
+    if(simul_box_is_periodic(mesh%sb)) default_shape = M_PLANE
     
     call parse_variable(namespace, 'PES_Flux_Shape', default_shape, this%surf_shape)
     if(.not.varinfo_valid_option('PES_Flux_Shape', this%surf_shape, is_flag = .true.)) &
@@ -287,7 +287,7 @@ contains
     end if
 
 
-    if(this%surf_shape == M_CUBIC .or. this%surf_shape == M_PLANES) then
+    if(this%surf_shape == M_CUBIC .or. this%surf_shape == M_PLANE) then
       
 
       !%Variable PES_Flux_Lsize
@@ -421,7 +421,7 @@ contains
     ! -----------------------------------------------------------------
     ! Get the surface points
     ! -----------------------------------------------------------------
-    if(this%surf_shape == M_CUBIC .or. this%surf_shape == M_PLANES) then
+    if(this%surf_shape == M_CUBIC .or. this%surf_shape == M_PLANE) then
       call pes_flux_getcube(this, mesh, hm, border, offset, fc_ptdens)
     else
       ! equispaced grid in theta & phi (Gauss-Legendre would optimize to nstepsthetar = this%lmax & nstepsphir = 2*this%lmax + 1):
@@ -533,7 +533,7 @@ contains
     !% PES_Flux_Shape = m_sph and PES_Flux_Momenutum_Grid = m_polar
     !%End
     this%use_symmetry = .false.
-!     if ((this%surf_shape == M_CUBIC .or. this%surf_shape == M_PLANES) &
+!     if ((this%surf_shape == M_CUBIC .or. this%surf_shape == M_PLANE) &
 !          .and. this%kgrid == M_CARTESIAN) this%use_symmetry = .true.
     if (this%surf_shape == M_SPHERICAL .and. this%kgrid == M_POLAR) this%use_symmetry = .true.
     call parse_variable(namespace, 'PES_Flux_UseSymmetries', this%use_symmetry, this%use_symmetry)
@@ -572,7 +572,7 @@ contains
     this%save_iter = save_iter
     this%itstep    = 0
 
-!     if(this%surf_shape == M_CUBIC .or. this%surf_shape == M_PLANES) then
+!     if(this%surf_shape == M_CUBIC .or. this%surf_shape == M_PLANE) then
 !       this%tdsteps = save_iter
 !     else
 !       this%tdsteps = 1
@@ -770,7 +770,7 @@ contains
     select case (this%surf_shape)
       case (M_SPHERICAL)
         this%kgrid = M_POLAR
-      case (M_PLANES)
+      case (M_PLANE)
         this%kgrid = M_CARTESIAN
       case (M_CUBIC)
         this%kgrid = M_CARTESIAN
@@ -1516,6 +1516,21 @@ contains
           end do
         end if
         flush(229)
+
+        
+        if(mdim == 3) then
+          write(230,*) "#   ik1, ik2, ik3,  this%Lkpuvz_inv(ik1,ik2,ik3) "
+          do ik1 = 1, this%ll(1)
+            do ik2 = 1, this%ll(2)
+              do ik3 = 1, this%ll(3)
+                write(230,*) ik1, ik2, ik3,  this%Lkpuvz_inv(ik1,ik2,ik3) 
+              end do
+            end do
+          end do
+            
+          flush(230)
+        end if
+        
       end if
       
       if (this%arpes_grid) then
@@ -1698,7 +1713,7 @@ contains
           do isdim = 1, sdim
             call states_elec_get_state(st, mesh, isdim, ist, ik, psi)
             
-            if(this%surf_shape == M_CUBIC .or. this%surf_shape == M_PLANES) then
+            if(this%surf_shape == M_CUBIC .or. this%surf_shape == M_PLANE) then
               ! Apply the phase containing kpoint only
               kpoint(1:mdim) = kpoints_get_point(mesh%sb%kpoints, states_elec_dim_get_kpoint_index(st%d, ik))
 
@@ -1760,7 +1775,7 @@ contains
       SAFE_DEALLOCATE_A(gpsi)
 
       if(this%itstep == this%tdsteps .or. mod(iter, this%save_iter) == 0 .or. iter == this%max_iter .or. stopping) then
-        if(this%surf_shape == M_CUBIC .or. this%surf_shape == M_PLANES) then
+        if(this%surf_shape == M_CUBIC .or. this%surf_shape == M_PLANE) then
           call pes_flux_integrate_cub(this, mesh, st, dt)
         else
           call pes_flux_integrate_sph(this, mesh, st, dt)
@@ -1997,9 +2012,9 @@ contains
     ikp_end   = this%nkpnts_end
     
     
-      if(this%surf_shape == M_PLANES) then
+      if(this%surf_shape == M_PLANE) then
         fdim = mdim - 1
-        ! This is not general but should work in the only case where is relevant
+        ! This is not general but should work in the specific case where it is relevant
         !i.e. when the system is semiperiodic in <=2 dimensions
         Jac(1:fdim, 1:fdim) = mesh%sb%rlattice_primitive(1:fdim, 1:fdim) !The Jacobian on the surface
         jdet = lalg_determinant(fdim, Jac, invert = .false.)
@@ -2033,7 +2048,7 @@ end if
     else !do something smart to exploit symmetries
 
       nfaces = mdim*2
-      if(this%surf_shape == M_PLANES) nfaces = 2 ! We only have two planes 
+      if(this%surf_shape == M_PLANE) nfaces = 2 ! We only have two planes 
       
       
       SAFE_ALLOCATE(this%expkr(1:this%nsrfcpnts,maxval(this%ll(1:mdim)),kptst:kptend,1:mdim))
@@ -2055,12 +2070,13 @@ end if
       SAFE_ALLOCATE(this%expkr_perp(maxval(this%ll(1:mdim)),1:mdim))
       this%expkr_perp(:,:) = M_z1
 
-      do ifc = 1, nint((nfaces+0.5)/2)
-        isp = this%face_idx_range(ifc*2, 1)
-      
+      do ifc = 1, nfaces, 2
+        isp = this%face_idx_range(ifc, 1)
         do idir = 1, mdim
           if(abs(this%srfcnrml(idir, isp)) >= M_EPSILON) n_dir = idir
         end do 
+
+print *, ifc, this%srfcnrml(:, isp)      
 
         do ikp = 1, this%ll(n_dir)
           this%expkr_perp(ikp,n_dir) = exp(-M_zI * this%rcoords(n_dir,isp) &
@@ -2075,7 +2091,7 @@ end if
     
     
     if(simul_box_is_periodic(mesh%sb)) then
-      !Tabulate the Born-Von Karman phase 
+      !Tabulate the Born-von Karman phase 
       SAFE_ALLOCATE(this%bvk_phase(ikp_start:ikp_end,st%d%kpt%start:st%d%kpt%end))
 
       this%bvk_phase(:,:) = M_z0
@@ -2221,7 +2237,7 @@ end if
 
     
     nfaces = mdim*2
-    if(this%surf_shape == M_PLANES) nfaces = 2 ! We only have two planes 
+    if(this%surf_shape == M_PLANE) nfaces = 1 ! We only have two planes 
           
 
     do ifc = 1, nfaces
@@ -2668,9 +2684,10 @@ end if
       
       mindim  = 1 
       factor = M_TWO
-      if(this%surf_shape == M_PLANES) then
+      if(this%surf_shape == M_PLANE) then
         mindim = mdim  ! We only have two planes along the non periodic dimension 
-        factor = M_ONE
+        ! this is due to the fact that for semiperiodic systems we multiply border by two to prenvet the creation of surfaces at the edges
+        factor = M_ONE 
       end if
       
       
@@ -2765,7 +2782,7 @@ print *, "this%LLr(mdim,:) = ", this%LLr(mdim,:)
       ! Surface points are on the mesh
       
       nfaces = mdim*2
-      if(this%surf_shape == M_PLANES) nfaces = 2 ! We only have two planes 
+      if(this%surf_shape == M_PLANE) nfaces = 2 ! We only have two planes 
 
       in_ab = .false.
 
@@ -2799,7 +2816,11 @@ print *, "this%LLr(mdim,:) = ", this%LLr(mdim,:)
         if(all(abs(xx(1:mdim)) <= border(1:mdim)) .and. .not. in_ab) then
           ! check whether the point is close to any border
           do imdim = 1, mdim
-            dd = border(imdim) - abs(xx(imdim))
+            if(this%surf_shape == M_PLANE) then
+              dd = border(imdim) - xx(imdim)
+            else
+              dd = border(imdim) - abs(xx(imdim))
+            end if
             if(dd < mesh%spacing(imdim)/M_TWO) then
               nsurfaces = nsurfaces + 1
               which_surface(ip_global) = int(sign(M_ONE, xx(imdim))) * imdim  ! +-x=+-1, +-y=+-2, +-z=+-3
@@ -2834,7 +2855,7 @@ print *, "this%LLr(mdim,:) = ", this%LLr(mdim,:)
       isp = 0
       nface = 0
       do idir = mdim, 1, -1 ! Start counting from z to simplify implementation for semiperiodic systems (pln)
-        do pm = -1, 1, 2 
+        do pm = 1, -1, -2 
           nface = nface + 1
           this%face_idx_range(nface,1) = isp + 1
         
