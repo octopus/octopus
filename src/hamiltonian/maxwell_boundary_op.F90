@@ -166,7 +166,7 @@ contains
     type(geometry_t),         intent(in)    :: geo
     FLOAT, optional,          intent(in)    :: dt
 
-    integer             :: idim, nlines, icol, ncols
+    integer             :: idim, nlines, icol, ncols, ab_shape_dim
     FLOAT               :: bounds(1:2,MAX_DIM), ab_bounds(1:2,MAX_DIM)
     type(block_t)       :: blk
     character(len=1024) :: string
@@ -276,7 +276,18 @@ contains
         call maxwell_medium_points_mapping(bc, gr%mesh, st, bounds, geo)
         call bc_mxll_generate_medium(bc, gr, bounds, geo)
 
-      end select
+     end select
+
+      if (gr%mesh%sb%box_shape == SPHERE) then
+        ab_shape_dim = 1
+      else if (gr%mesh%sb%box_shape == PARALLELEPIPED) then
+        ab_shape_dim = sb%dim
+        ab_bounds(1, idim) = bounds(1, idim)
+        ab_bounds(2, idim) = bounds(1, idim)
+      else
+        message(1) = "Box shape for Maxwell propagation not supported yet"
+        call messages_fatal(1, namespace=namespace)
+      end if
 
       if (bc%bc_ab_type(idim) /= AB_NOT_ABSORBING) then
 
@@ -308,26 +319,31 @@ contains
 
         select case (bc%bc_ab_type(idim))
         case(AB_CPML)
-          ab_type_str = "  PML "
+          ab_type_str = "PML"
         case (AB_MASK)
-          ab_type_str = "  Mask "
+          ab_type_str = "Mask"
         case (AB_MASK_ZERO)
-          ab_type_str = "  Zero "
+          ab_type_str = "Zero"
+        case default
+          ab_type_str = ""
         end select
 
-        string = ab_type_str//"Lower bound = "
-        write(string,'(a,a,i1,a,es10.3,3a)') trim(string), "  dim ", idim, ":",&
-             units_from_atomic(units_inp%length, ab_bounds(1, idim) ), ' [', &
-             trim(units_abbrev(units_inp%length)), ']'
-        write(message(1),'(a)') trim(string)
+        if (bc%bc_ab_type(idim) == AB_CPML .or. bc%bc_ab_type(idim) == AB_MASK .or. &
+             bc%bc_ab_type(idim) == AB_MASK_ZERO) then
+          string = trim(ab_type_str)//" Lower bound = "
+          write(string,'(a,a,i1,a,es10.3,3a)') trim(string), "  dim ", idim, ":",&
+               units_from_atomic(units_inp%length, ab_bounds(1, idim) ), ' [', &
+               trim(units_abbrev(units_inp%length)), ']'
+          write(message(1),'(a)') trim(string)
 
-        string = ab_type_str//"Upper bound = "
-        write(string,'(a,a,i1,a,es10.3,3a)') trim(string), "  dim ", idim, ":",&
-             units_from_atomic(units_inp%length, ab_bounds(2, idim) ), ' [', &
-             trim(units_abbrev(units_inp%length)), ']'
+          string = trim(ab_type_str)//" Upper bound = "
+          write(string,'(a,a,i1,a,es10.3,3a)') trim(string), "  dim ", idim, ":",&
+               units_from_atomic(units_inp%length, ab_bounds(2, idim) ), ' [', &
+               trim(units_abbrev(units_inp%length)), ']'
 
-        write(message(2),'(a)') trim(string)
-        call messages_info(2)
+          write(message(2),'(a)') trim(string)
+          call messages_info(2)
+        end if
 
       else
 
@@ -525,15 +541,6 @@ contains
     integer,             intent(in) :: idim
 
     FLOAT               :: mask_width
-    integer             :: ab_shape_dim
-
-    if (gr%mesh%sb%box_shape == SPHERE) then
-       ab_shape_dim = 1
-    else if(gr%mesh%sb%box_shape == PARALLELEPIPED) then
-       ab_shape_dim = sb%dim
-       ab_bounds(1, idim) = bounds(1, idim)
-       ab_bounds(2, idim) = bounds(1, idim)
-    end if
 
     !%Variable MaxwellABMaskWidth
     !%Type float
@@ -581,15 +588,6 @@ contains
     integer,             intent(in) :: idim
 
     FLOAT               :: pml_width
-    integer             :: ab_shape_dim
-
-    if (gr%mesh%sb%box_shape == SPHERE) then
-       ab_shape_dim = 1
-    else if (gr%mesh%sb%box_shape == PARALLELEPIPED) then
-       ab_shape_dim = sb%dim
-       ab_bounds(1, idim) = bounds(1, idim)
-       ab_bounds(2, idim) = bounds(1, idim)
-    end if
 
     !%Variable MaxwellABPMLWidth
     !%Type float
