@@ -14,7 +14,7 @@ cCell = 8
  aCell | bCell | cCell
 %
 
-Spacing = 0.5
+Spacing = +0.5
 
 r_s = 4.0
 N_electrons = 8
