@@ -114,7 +114,7 @@ module lalg_adv_oct_m
   end interface lapack_geev
 
   interface lalg_least_squares
-    module procedure dlalg_least_squares_vec, zlalg_least_squares_vec
+    module procedure dleast_squares_vec, zleast_squares_vec
   end interface lalg_least_squares
 
 contains

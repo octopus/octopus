@@ -71,11 +71,13 @@ end subroutine X(cholesky)
 ! ---------------------------------------------------------
 !> Computes all the eigenvalues and the eigenvectors of a real symmetric or complex Hermitian
 !! generalized definite eigenproblem, of the form \f$ Ax=\lambda Bx \f$. B is also positive definite.
-subroutine X(geneigensolve)(n, a, b, e, bof, err_code)
+subroutine X(geneigensolve)(n, a, b, e, preserve_mat, bof, err_code)
   integer,           intent(in)    :: n
   R_TYPE,            intent(inout) :: a(:,:)   !< (n,n)
   R_TYPE,            intent(inout) :: b(:,:)   !< (n,n)
   FLOAT,             intent(out)   :: e(:)     !< (n)
+  logical,           intent(in)    :: preserve_mat !< If true, the matrix a and b on exit are the same
+                                                   !< as on input
   logical, optional, intent(inout) :: bof      !< Bomb on failure.
   integer, optional, intent(out)   :: err_code
 
@@ -83,19 +85,27 @@ subroutine X(geneigensolve)(n, a, b, e, bof, err_code)
 #ifdef R_TCOMPLEX
   FLOAT, allocatable :: rwork(:)
 #endif
-  R_TYPE, allocatable :: work(:), diag(:)
+  R_TYPE, allocatable :: work(:), diaga(:), diagb(:)
 
   call profiling_in(eigensolver_prof, "DENSE_EIGENSOLVER")
   PUSH_SUB(X(geneigensolve))
 
   ASSERT(n > 0)
 
-  SAFE_ALLOCATE(diag(1:n))
-
+  SAFE_ALLOCATE(diagb(1:n))
   ! store the diagonal of b  
+  ! TODO: change this to be done only if preserve_mat is true
   do ii = 1, n
-    diag(ii) = b(ii, ii)
+    diagb(ii) = b(ii, ii)
   end do
+
+  if(preserve_mat) then
+    SAFE_ALLOCATE(diaga(1:n))
+    ! store the diagonal of a  
+    do ii = 1, n
+      diaga(ii) = a(ii, ii)
+    end do
+  end if
 
   lwork = 5*n ! get this from workspace query
   SAFE_ALLOCATE(work(1:lwork))
@@ -113,10 +123,21 @@ subroutine X(geneigensolve)(n, a, b, e, bof, err_code)
     do jj = 1, ii - 1
       b(jj, ii) = R_CONJ(b(ii, jj))
     end do
-    b(ii, ii) = diag(ii)
+    b(ii, ii) = diagb(ii)
   end do
+  SAFE_DEALLOCATE_A(diagb) 
 
-  SAFE_DEALLOCATE_A(diag)
+  if(preserve_mat) then
+    ! a was destroyed, so we rebuild it
+    do ii = 1, n
+      do jj = 1, ii - 1
+        a(jj, ii) = R_CONJ(a(ii, jj))
+      end do
+      a(ii, ii) = diaga(ii)
+    end do
+
+    SAFE_DEALLOCATE_A(diaga)
+  end if
 
   if(info /= 0) then
     if(optional_default(bof, .true.)) then
@@ -282,31 +303,48 @@ subroutine X(eigensolve_nonh)(n, a, e, err_code, side, sort_eigenvectors)
 end subroutine X(eigensolve_nonh)
 
 
-#ifdef R_TREAL
 ! ---------------------------------------------------------
 !> Computes the k lowest eigenvalues and the eigenvectors of a real symmetric or complex Hermitian
 !! generalized definite eigenproblem, of the form  A*x=(lambda)*B*x. B is also positive definite.
-subroutine dlowest_geneigensolve(k, n, a, b, e, v, bof, err_code)
+subroutine X(lowest_geneigensolve)(k, n, a, b, e, v, preserve_mat, bof, err_code)
   integer,           intent(in)    :: k, n
-  FLOAT,             intent(inout) :: a(:,:)   !< (n, n)
-  FLOAT,             intent(inout) :: b(:,:)   !< (n, n)
+  R_TYPE,            intent(inout) :: a(:,:)   !< (n, n)
+  R_TYPE,            intent(inout) :: b(:,:)   !< (n, n)
   FLOAT,             intent(out)   :: e(:)     !< (n)
-  FLOAT,             intent(out)   :: v(:,:)   !< (n, n)
+  R_TYPE,            intent(out)   :: v(:,:)   !< (n, n)
+  logical,           intent(in)    :: preserve_mat !< If true, the matrix a and b on exit are the same
+                                                   !< as on input
   logical, optional, intent(inout) :: bof      !< Bomb on failure.
   integer, optional, intent(out)   :: err_code
 
-  integer            :: m, iwork(5*n), ifail(n), info, lwork ! allocate me
+  integer            :: m, iwork(5*n), ifail(n), info, lwork, ii, jj ! allocate me
   FLOAT              :: abstol
-  FLOAT, allocatable :: work(:)
-  
-  PUSH_SUB(dlowest_geneigensolve)
+  R_TYPE, allocatable :: work(:), diaga(:), diagb(:)
+#ifndef R_TREAL
+  FLOAT              :: rwork(7*n)
+#endif
+  PUSH_SUB(X(lowest_geneigensolve))
 
   ASSERT(n > 0)
 
   abstol = 2*sfmin()
 
+  if(preserve_mat) then
+    SAFE_ALLOCATE(diaga(1:n))
+    SAFE_ALLOCATE(diagb(1:n))
+  
+    ! store the diagonal of a and b  
+    do ii = 1, n
+      diaga(ii) = a(ii, ii)
+      diagb(ii) = b(ii, ii)
+    end do
+  end if
+
+
   ! Work size query.
   SAFE_ALLOCATE(work(1:1))
+
+#ifdef R_TREAL
   call X(sygvx)(1, 'V', 'I', 'U', n, a(1, 1), lead_dim(a), b(1, 1), lead_dim(b), M_ZERO, M_ZERO, &
     1, k, abstol, m, e(1), v(1, 1), lead_dim(v), work(1), -1, iwork(1), ifail(1), info)
   if(info /= 0) then
@@ -322,11 +360,43 @@ subroutine dlowest_geneigensolve(k, n, a, b, e, v, bof, err_code)
   call X(sygvx)(1, 'V', 'I', 'U', n, a(1, 1), lead_dim(a), b(1, 1), lead_dim(b), M_ZERO, M_ZERO, &
     1, k, abstol, m, e(1), v(1, 1), lead_dim(v), work(1), lwork, iwork(1), ifail(1), info)
 
+#else
+  call X(hegvx)(1, 'V', 'I', 'U', n, a(1, 1), lead_dim(a), b(1, 1), lead_dim(b), M_ZERO, M_ZERO, &
+      1, k, abstol, m, e(1), v(1, 1), lead_dim(v), work(1), -1, rwork(1), iwork(1), ifail(1), info)
+    if(info /= 0) then
+      write(message(1),'(3a,i5)') 'In zlowest_geneigensolve, LAPACK ', &
+        TOSTRING(X(hegvx)), ' workspace query returned error message ', info
+      call messages_fatal(1)
+    end if
+    lwork = int(real(work(1)))
+  SAFE_DEALLOCATE_A(work)
+  
+  SAFE_ALLOCATE(work(1:lwork))
+  call X(hegvx)(1, 'V', 'I', 'U', n, a(1, 1), lead_dim(a), b(1, 1), lead_dim(b), M_ZERO, M_ZERO, &
+      1, k, abstol, m, e(1), v(1, 1), lead_dim(v), work(1), lwork, rwork(1), iwork(1), ifail(1), info)
+#endif
+
+  if(preserve_mat) then
+    ! b was destroyed, so we rebuild it
+    do ii = 1, n
+      do jj = 1, ii - 1
+        a(jj, ii) = R_CONJ(a(ii, jj))
+        b(jj, ii) = R_CONJ(b(ii, jj))
+      end do
+      a(ii, ii) = diaga(ii)
+      b(ii, ii) = diagb(ii)
+    end do
+  
+    SAFE_DEALLOCATE_A(diaga)
+    SAFE_DEALLOCATE_A(diagb)
+  end if
+
+
   SAFE_DEALLOCATE_A(work)
 
   if(info /= 0) then
     if(optional_default(bof, .true.)) then
-      write(message(1),'(3a,i5)') 'In dlowest_geneigensolve, LAPACK ', &
+      write(message(1),'(3a,i5)') 'In lowest_geneigensolve, LAPACK ', &
         TOSTRING(X(sygvx)), ' returned error message ', info
 !        INFO    (output) INTEGER
 !*          = 0:  successful exit
@@ -361,233 +431,109 @@ subroutine dlowest_geneigensolve(k, n, a, b, e, v, bof, err_code)
     err_code = info
   end if
 
-  POP_SUB(dlowest_geneigensolve)
-end subroutine dlowest_geneigensolve
-
-#else
+  POP_SUB(X(lowest_geneigensolve))
+end subroutine X(lowest_geneigensolve)
 
 ! ---------------------------------------------------------
-!> Computes the k lowest eigenvalues and the eigenvectors of a complex
-!! generalized Hermitian-definite eigenproblem, of the form  A*x=(lambda)*B*x.
-!! Here A and B are assumed to be Hermitian and B is also positive definite.
-subroutine zlowest_geneigensolve(k, n, a, b, e, v, bof, err_code)
-  integer,           intent(in)    :: k, n
-  CMPLX,             intent(inout) :: a(:,:)   !< (n,n)
-  CMPLX,             intent(inout) :: b(:,:)   !< (n,n)
-  FLOAT,             intent(out)   :: e(:)     !< (n)
-  CMPLX,             intent(out)   :: v(:,:)   !< (n)
-  logical, optional, intent(inout) :: bof      !< Bomb on failure.
-  integer, optional, intent(out)   :: err_code
-
-  integer            :: m, iwork(5*n), ifail(n), info, lwork
-  FLOAT              :: abstol
-  FLOAT              :: rwork(7*n)
-  CMPLX, allocatable :: work(:)
-
-  PUSH_SUB(zlowest_geneigensolve)
-
-  ASSERT(n > 0)
-
-  abstol = 2*sfmin()
-
-  ! Work size query.
-  SAFE_ALLOCATE(work(1:1))
-  call X(hegvx)(1, 'V', 'I', 'U', n, a(1, 1), lead_dim(a), b(1, 1), lead_dim(b), M_ZERO, M_ZERO, &
-    1, k, abstol, m, e(1), v(1, 1), lead_dim(v), work(1), -1, rwork(1), iwork(1), ifail(1), info)
-  if(info /= 0) then
-    write(message(1),'(3a,i5)') 'In zlowest_geneigensolve, LAPACK ', &
-      TOSTRING(X(hegvx)), ' workspace query returned error message ', info
-    call messages_fatal(1)
-  end if  
-  lwork = int(real(work(1)))
-  SAFE_DEALLOCATE_A(work)
-
-  SAFE_ALLOCATE(work(1:lwork))
-  call X(hegvx)(1, 'V', 'I', 'U', n, a(1, 1), lead_dim(a), b(1, 1), lead_dim(b), M_ZERO, M_ZERO, &
-    1, k, abstol, m, e(1), v(1, 1), lead_dim(v), work(1), lwork, rwork(1), iwork(1), ifail(1), info)
-  SAFE_DEALLOCATE_A(work)
-
-  if(info /= 0) then
-    if(optional_default(bof, .true.)) then
-      write(message(1),'(3a,i5)') 'In zlowest_geneigensolve, LAPACK ', &
-        TOSTRING(X(hegvx)), ' returned error message ', info
-!        INFO    (output) INTEGER
-!*          = 0:  successful exit
-!*          < 0:  if INFO = -i, the i-th argument had an illegal value
-!*          > 0:  DPOTRF or DSYEVX returned an error code:
-!*             <= N:  if INFO = i, DSYEVX failed to converge;
-!*                    i eigenvectors failed to converge.  Their indices
-!*                    are stored in array IFAIL.
-!*             > N:   if INFO = N + i, for 1 <= i <= N, then the leading
-!*                    minor of order i of B is not positive definite.
-!*                    The factorization of B could not be completed and
-!*                    no eigenvalues or eigenvectors were computed.
-      if(info < 0) then
-        write(message(2), '(a,i5,a)') 'Argument number ', -info, ' had an illegal value.'
-      else if(info <= n) then
-        write(message(2), *) info, ' eigenvectors failed to converge: ', ifail(1:info)
-      else
-        write(message(2), '(a,i5,a)') 'The leading minor of order ', info - n, ' of B is not positive definite.'
-      end if
-      call messages_fatal(2)      
-    else
-      if(present(bof)) then
-        bof = .true.
-      end if
-    end if
-  else
-    if(present(bof)) then
-      bof = .false.
-    end if
-  end if
-  if(present(err_code)) then
-    err_code = info
-  end if
-
-  POP_SUB(zlowest_geneigensolve)
-end subroutine zlowest_geneigensolve
-#endif
-
-#ifdef R_TREAL
-! ---------------------------------------------------------
-!> Computes all eigenvalues and eigenvectors of a real symmetric square matrix A.
-subroutine deigensolve(n, a, e, bof, err_code)
+!> Computes all eigenvalues and eigenvectors of a real symmetric  or hermitian square matrix A.
+subroutine X(eigensolve)(n, a, e, bof, err_code)
   integer, intent(in)              :: n
-  FLOAT,   intent(inout)           :: a(:,:)   !< (n,n)
+  R_TYPE,  intent(inout)           :: a(:,:)   !< (n,n)
   FLOAT,   intent(out)             :: e(:)     !< (n)
   logical, optional, intent(inout) :: bof      !< Bomb on failure.
   integer, optional, intent(out)   :: err_code
 
-  integer            :: info, lwork
-  FLOAT, allocatable :: work(:)
-
-  PUSH_SUB(deigensolve)
-  call profiling_in(eigensolver_prof, "DENSE_EIGENSOLVER")
-
-  ASSERT(n > 0)
-
-  lwork = 6*n ! query?
-  SAFE_ALLOCATE(work(1:lwork))
-  call lapack_syev('V', 'U', n, a(1, 1), lead_dim(a), e(1), work(1), lwork, info)
-  SAFE_DEALLOCATE_A(work)
-
-  if(info /= 0) then
-    if(optional_default(bof, .true.)) then
-      write(message(1),'(3a,i5)') 'In deigensolve, LAPACK ', TOSTRING(X(syev)), ' returned error message ', info
-!*  INFO    (output) INTEGER
-!*          = 0:  successful exit
-!*          < 0:  if INFO = -i, the i-th argument had an illegal value
-!*          > 0:  if INFO = i, the algorithm failed to converge; i
-!*                off-diagonal elements of an intermediate tridiagonal
-!*                form did not converge to zero.
-      if(info < 0) then
-        write(message(2), '(a,i5,a)') 'Argument number ', -info, ' had an illegal value.'
-      else
-        write(message(2), '(i5,a)') info, ' off-diagonal elements of an intermediate tridiagonal did not converge to zero.'
-      end if
-      call messages_fatal(2)
-    else
-      if(present(bof)) then
-        bof = .true.
-      end if
-    end if
-  else
-    if(present(bof)) then
-      bof = .false.
-    end if
-  end if
-  if(present(err_code)) then
-    err_code = info
-  end if
-
-  call profiling_out(eigensolver_prof)
-  POP_SUB(deigensolve)
-end subroutine deigensolve
-
-#else
-
-! ---------------------------------------------------------
-!> Computes all eigenvalues and eigenvectors of a complex Hermitian square matrix A.
-subroutine zeigensolve(n, a, e, bof, err_code)
-  integer,           intent(in)    :: n
-  CMPLX,             intent(inout) :: a(:,:)   !< (n,n)
-  FLOAT,             intent(out)   :: e(:)     !< (n)
-  logical, optional, intent(inout) :: bof      !< Bomb on failure.
-  integer, optional, intent(out)   :: err_code
-
-  integer            :: info, lwork
-  CMPLX, allocatable :: work(:)
+  integer             :: info, lwork
+  R_TYPE, allocatable :: work(:)
+#ifndef R_TREAL
   FLOAT, allocatable :: rwork(:)
-
-  PUSH_SUB(zeigensolve)
-  call profiling_in(eigensolver_prof, "DENSE_EIGENSOLVER")
-
-  ASSERT(n > 0)
-
-  lwork = 6*n ! query?
-  SAFE_ALLOCATE(work(1:lwork))
-  SAFE_ALLOCATE(rwork(1:max(1, 3*n-2)))
-  call lapack_heev('V','U', n, a(1, 1), lead_dim(a), e(1), work(1), lwork, rwork(1), info)
-  SAFE_DEALLOCATE_A(work)
-  SAFE_DEALLOCATE_A(rwork)
-
-  if(info /= 0) then
-    if(optional_default(bof, .true.)) then
-      write(message(1),'(3a,i5)') 'In zeigensolve, LAPACK ', TOSTRING(X(heev)), ' returned error message ', info
-!*  INFO    (output) INTEGER
-!*          = 0:  successful exit
-!*          < 0:  if INFO = -i, the i-th argument had an illegal value
-!*          > 0:  if INFO = i, the algorithm failed to converge; i
-!*                off-diagonal elements of an intermediate tridiagonal
-!*                form did not converge to zero.
-      if(info < 0) then
-        write(message(2), '(a,i5,a)') 'Argument number ', -info, ' had an illegal value.'
-      else
-        write(message(2), '(i5,a)') info, ' off-diagonal elements of an intermediate tridiagonal did not converge to zero.'
-      end if
-      call messages_fatal(2)
-    else
-      if(present(bof)) then
-        bof = .true.
-      end if
-    end if
-  else
-    if(present(bof)) then
-      bof = .false.
-    end if
-  end if
-  if(present(err_code)) then
-    err_code = info
-  end if
-
-  call profiling_out(eigensolver_prof)
-  POP_SUB(zeigensolve)
-end subroutine zeigensolve
 #endif
 
+  PUSH_SUB(X(eigensolve))
+  call profiling_in(eigensolver_prof, "DENSE_EIGENSOLVER")
+
+  ASSERT(n > 0)
+
+  lwork = 6*n ! query?
+  SAFE_ALLOCATE(work(1:lwork))
 #ifdef R_TREAL
+  call lapack_syev('V', 'U', n, a(1, 1), lead_dim(a), e(1), work(1), lwork, info)
+#else
+  SAFE_ALLOCATE(rwork(1:max(1, 3*n-2)))
+  call lapack_heev('V','U', n, a(1, 1), lead_dim(a), e(1), work(1), lwork, rwork(1), info)
+  SAFE_DEALLOCATE_A(rwork)
+#endif
+  SAFE_DEALLOCATE_A(work)
+
+  if(info /= 0) then
+    if(optional_default(bof, .true.)) then
+      write(message(1),'(3a,i5)') 'In eigensolve, LAPACK ', TOSTRING(X(syev)), ' returned error message ', info
+!*  INFO    (output) INTEGER
+!*          = 0:  successful exit
+!*          < 0:  if INFO = -i, the i-th argument had an illegal value
+!*          > 0:  if INFO = i, the algorithm failed to converge; i
+!*                off-diagonal elements of an intermediate tridiagonal
+!*                form did not converge to zero.
+      if(info < 0) then
+        write(message(2), '(a,i5,a)') 'Argument number ', -info, ' had an illegal value.'
+      else
+        write(message(2), '(i5,a)') info, ' off-diagonal elements of an intermediate tridiagonal did not converge to zero.'
+      end if
+      call messages_fatal(2)
+    else
+      if(present(bof)) then
+        bof = .true.
+      end if
+    end if
+  else
+    if(present(bof)) then
+      bof = .false.
+    end if
+  end if
+  if(present(err_code)) then
+    err_code = info
+  end if
+
+  call profiling_out(eigensolver_prof)
+  POP_SUB(X(eigensolve))
+end subroutine X(eigensolve)
+
+
 ! ---------------------------------------------------------
-!> Computes the k lowest eigenvalues and the eigenvectors of a real
+!> Computes the k lowest eigenvalues and the eigenvectors of a 
 !! standard symmetric-definite eigenproblem, of the form  A*x=(lambda)*x.
 !! Here A is assumed to be symmetric.
-subroutine dlowest_eigensolve(k, n, a, e, v)
-  integer, intent(in)  :: k, n
-  FLOAT,   intent(in)  :: a(:,:) !< (n, n)
-  FLOAT,   intent(out) :: e(:)   !< (n)
-  FLOAT,   intent(out) :: v(:,:) !< (n, k)
+subroutine X(lowest_eigensolve)(k, n, a, e, v, preserve_mat)
+  integer, intent(in)    :: k, n
+  R_TYPE,  intent(inout) :: a(:,:) !< (n, n)
+  FLOAT,   intent(out)   :: e(:)   !< (n)
+  R_TYPE,  intent(out)   :: v(:,:) !< (n, k)
+  logical, intent(in)    :: preserve_mat !< If true, the matrix a and b on exit are the same
+                                         !< as on input
 
-  integer            :: m, iwork(5*n), ifail(n), info, lwork
-  FLOAT              :: abstol
-  FLOAT, allocatable :: work(:)
+  integer             :: m, iwork(5*n), ifail(n), info, lwork, ii, jj
+  FLOAT               :: abstol
+  R_TYPE, allocatable :: work(:), diaga(:)
   
-  PUSH_SUB(dlowest_eigensolve)
+  PUSH_SUB(X(lowest_eigensolve))
 
   ASSERT(n > 0)
 
   abstol = 2*sfmin()
 
+  if(preserve_mat) then
+    SAFE_ALLOCATE(diaga(1:n))
+
+    ! store the diagonal of a and b  
+    do ii = 1, n
+      diaga(ii) = a(ii, ii)
+    end do
+  end if
+
+
   ! Work size query.
   SAFE_ALLOCATE(work(1:1))
+#ifdef R_TREAL
   call X(syevx)('V', 'I', 'U', n, a(1, 1), n, M_ZERO, M_ZERO, &
     1, k, abstol, m, e(1), v(1, 1), n, work(1), -1, iwork(1), ifail(1), info)
   if(info /= 0) then
@@ -601,11 +547,41 @@ subroutine dlowest_eigensolve(k, n, a, e, v)
   SAFE_ALLOCATE(work(1:lwork))
   call X(syevx)('V', 'I', 'U', n, a(1, 1), n, M_ZERO, M_ZERO, &
     1, k, abstol, m, e(1), v(1, 1), n, work(1), lwork, iwork(1), ifail(1), info)
+#else
+  call X(heevx)('V', 'I', 'U', n, a(1, 1), n, M_ZERO, M_ZERO, &
+    1, k, abstol, m, e(1), v(1, 1), n, work(1), -1, iwork(1), ifail(1), info)
+  if(info /= 0) then
+    write(message(1),'(3a,i5)') 'In zlowest_eigensolve, LAPACK ', &
+      TOSTRING(X(heevx)), ' workspace query returned error message ', info
+    call messages_fatal(1)
+  end if
+  lwork = int(work(1))
+  SAFE_DEALLOCATE_A(work)
+  
+  SAFE_ALLOCATE(work(1:lwork))
+  call X(heevx)('V', 'I', 'U', n, a(1, 1), n, M_ZERO, M_ZERO, &
+      1, k, abstol, m, e(1), v(1, 1), n, work(1), lwork, iwork(1), ifail(1), info)
+ 
+#endif
+
+  if(preserve_mat) then
+    ! b was destroyed, so we rebuild it
+    do ii = 1, n
+      do jj = 1, ii - 1
+        a(jj, ii) = R_CONJ(a(ii, jj))
+      end do
+      a(ii, ii) = diaga(ii)
+    end do
+  
+    SAFE_DEALLOCATE_A(diaga)
+  end if
+
+
   SAFE_DEALLOCATE_A(work)
 
   if(info /= 0) then
     write(message(1),'(3a,i5)') &
-      'In dlowest_eigensolve, LAPACK ', TOSTRING(X(syevx)), ' returned error message ', info
+      'In lowest_eigensolve, LAPACK ', TOSTRING(X(syevx)), ' returned error message ', info
 !    http://www.netlib.org/lapack/explore-3.1.1-html/dsyevx.f.html
 !*  INFO    (output) INTEGER
 !*          = 0:  successful exit
@@ -620,68 +596,8 @@ subroutine dlowest_eigensolve(k, n, a, e, v)
     call messages_fatal(2)
   end if
 
-  POP_SUB(dlowest_eigensolve)
-end subroutine dlowest_eigensolve
-
-#else
-
-! ---------------------------------------------------------
-!> Computes the k lowest eigenvalues and the eigenvectors of a complex
-!! standard Hermitian-definite eigenproblem, of the form  A*x=(lambda)*x.
-!! Here A is assumed to be Hermitian.
-subroutine zlowest_eigensolve(k, n, a, e, v)
-  integer, intent(in)  :: k, n
-  CMPLX,   intent(in)  :: a(:,:) !< (n, n)
-  FLOAT,   intent(out) :: e(:)   !< (n)
-  CMPLX,   intent(out) :: v(:,:) !< (n, k)
-
-  integer            :: m, iwork(5*n), ifail(n), info, lwork
-  FLOAT              :: abstol
-  CMPLX, allocatable :: work(:)
-   
-  PUSH_SUB(zlowest_eigensolve)
-
-  ASSERT(n > 0)
-
-  abstol = 2*sfmin()
-
-  ! Work size query.
-  SAFE_ALLOCATE(work(1:1))
-  call X(heevx)('V', 'I', 'U', n, a(1, 1), n, M_ZERO, M_ZERO, &
-    1, k, abstol, m, e(1), v(1, 1), n, work(1), -1, iwork(1), ifail(1), info)
-  if(info /= 0) then
-    write(message(1),'(3a,i5)') 'In zlowest_eigensolve, LAPACK ', &
-      TOSTRING(X(heevx)), ' workspace query returned error message ', info
-    call messages_fatal(1)
-  end if  
-  lwork = int(work(1))
-  SAFE_DEALLOCATE_A(work)
-
-  SAFE_ALLOCATE(work(1:lwork))
-  call X(heevx)('V', 'I', 'U', n, a(1, 1), n, M_ZERO, M_ZERO, &
-    1, k, abstol, m, e(1), v(1, 1), n, work(1), lwork, iwork(1), ifail(1), info)
-  SAFE_DEALLOCATE_A(work)
-
-  if(info /= 0) then
-    write(message(1),'(3a,i5)') &
-      'In zlowest_eigensolve, LAPACK ', TOSTRING(X(heevx)), ' returned error message ', info
-!    http://www.netlib.org/lapack/explore-3.1.1-html/zheevx.f.html
-!*  INFO    (output) INTEGER
-!*          = 0:  successful exit
-!*          < 0:  if INFO = -i, the i-th argument had an illegal value
-!*          > 0:  if INFO = i, then i eigenvectors failed to converge.
-!*                Their indices are stored in array IFAIL.
-    if(info < 0) then
-      write(message(2), '(a,i5,a)') 'Argument number ', -info, ' had an illegal value.'
-    else
-      write(message(2), *) info, ' eigenvectors failed to converge: ', ifail(1:info)
-    end if
-    call messages_fatal(2)
-  end if
-
-  POP_SUB(zlowest_eigensolve)
-end subroutine zlowest_eigensolve
-#endif
+  POP_SUB(X(lowest_eigensolve))
+end subroutine X(lowest_eigensolve)
 
 ! ---------------------------------------------------------
 !> Invert a real symmetric or complex Hermitian square matrix a
@@ -1263,21 +1179,21 @@ end subroutine X(invert_upper_triangular)
 
 
 
-
-subroutine X(lalg_least_squares_vec)(nn, aa, bb, xx)
+subroutine X(least_squares_vec)(nn, aa, bb, xx)
   integer, intent(in)    :: nn
   R_TYPE,  intent(inout) :: aa(:, :)
   R_TYPE,  intent(in)    :: bb(:)
   R_TYPE,  intent(out)   :: xx(:)
 
-#ifdef R_TREAL
   R_TYPE :: dlwork
   R_TYPE, allocatable :: work(:)
   integer :: rank, info
-#endif
-  R_TYPE, allocatable :: ss(:)
+  FLOAT, allocatable :: ss(:)
+#ifndef R_TREAL
+  FLOAT, allocatable :: rwork(:)
+#endif 
   
-  interface
+  interface 
     subroutine dgelss(m, n, nrhs, a, lda, b, ldb, s, rcond, rank, work, lwork, info)
       integer, intent(in)    :: m
       integer, intent(in)    :: n
@@ -1295,6 +1211,28 @@ subroutine X(lalg_least_squares_vec)(nn, aa, bb, xx)
     end subroutine dgelss
   end interface
 
+  interface
+    subroutine zgelss(m, n, nrhs, a, lda, b, ldb, s, rcond, rank, work, lwork, rwork, info)
+      integer, intent(in)    :: m
+      integer, intent(in)    :: n
+      integer, intent(in)    :: nrhs
+      CMPLX,   intent(inout) :: a
+      integer, intent(in)    :: lda
+      CMPLX,   intent(inout) :: b
+      integer, intent(in)    :: ldb
+      FLOAT,   intent(out)   :: s
+      FLOAT,   intent(in)    :: rcond
+      integer, intent(out)   :: rank
+      CMPLX,   intent(out)   :: work
+      integer, intent(in)    :: lwork
+      FLOAT,   intent(out)   :: rwork
+      integer, intent(out)   :: info
+    end subroutine zgelss
+  end interface
+
+  PUSH_SUB(X(least_squares_vec))
+
+
   xx(1:nn) = bb(1:nn)
 
   SAFE_ALLOCATE(ss(1:nn))
@@ -1302,18 +1240,42 @@ subroutine X(lalg_least_squares_vec)(nn, aa, bb, xx)
 ! MJV 2016 11 09 : TODO: this is callable with complex, but does nothing!!!
 #ifdef R_TREAL
   
-  call dgelss(m = nn, n = nn, nrhs = 1, a = aa(1, 1), lda = nn, b = xx(1), ldb = nn, &
-    s = ss(1), rcond = CNST(-1.0), rank = rank, work = dlwork, lwork = -1, info = info)
+  call dgelss(nn, nn, 1, aa(1, 1), lead_dim(aa), xx(1), nn, ss(1), CNST(-1.0), rank, dlwork, -1, info)
 
   SAFE_ALLOCATE(work(1:int(dlwork)))
 
-  call dgelss(m = nn, n = nn, nrhs = 1, a = aa(1, 1), lda = nn, b = xx(1), ldb = nn, &
-    s = ss(1), rcond = CNST(-1.0), rank = rank, work = work(1), lwork = int(dlwork), info = info)
+  call dgelss(nn, nn, 1, aa(1, 1), lead_dim(aa), xx(1), nn, ss(1), CNST(-1.0), rank, work(1), int(dlwork), info)
 #else
+  SAFE_ALLOCATE(rwork(1:5*nn))
+  call zgelss(nn, nn, 1, aa(1, 1), lead_dim(aa), xx(1), nn, ss(1), CNST(-1.0), rank, dlwork, -1, rwork(1), info)
 
+  SAFE_ALLOCATE(work(1:int(dlwork)))
+
+  call zgelss(nn, nn, 1, aa(1, 1), lead_dim(aa), xx(1), nn, ss(1), CNST(-1.0), rank, work(1), int(dlwork), rwork(1), info)
+  SAFE_DEALLOCATE_A(rwork)
 #endif
 
-end subroutine X(lalg_least_squares_vec)
+  if(info /= 0) then
+    write(message(1), '(5a,i5)') &
+      'In ', TOSTRING(X(lalg_least_squares_vec)), ', LAPACK ', TOSTRING(X(gelss)), ' returned error mess  age ', info
+  !https://www.netlib.org/lapack/lapack-3.1.1/html/zgelss.f.html
+  !*  INFO    (output) INTEGER
+  !*          = 0:  successful exit
+  !*          < 0:  if INFO = -i, the i-th argument had an illegal value.
+  !*          > 0:  the algorithm for computing the SVD failed to converge;
+  !*                if INFO = i, i off-diagonal elements of an intermediate
+  !*                bidiagonal form did not converge to zero.
+    if(info < 0) then
+      write(message(2), '(a,i5,a)') 'Argument number ', -info, ' had an illegal value.'
+    else
+      write(message(2), '(a,i5,a)') 'Off-diagonal element ', info, ' of an intermediate bidiagonal form did not converge to zero.'
+    end if
+    call messages_fatal(2)
+  end if
+
+  POP_SUB(X(least_squares_vec))
+
+end subroutine X(least_squares_vec)
 
 !! Local Variables:
 !! mode: f90

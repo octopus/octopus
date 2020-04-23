@@ -197,24 +197,24 @@ module lapack_oct_m
     subroutine dsyevx(jobz, range, uplo, n, a, lda, &
       vl, vu, il, iu, abstol, m, w, z, ldz, work, lwork, iwork, ifail, info)
       implicit none
-      integer,      intent(in)  :: n, lda, il, iu, ldz, lwork
-      character(1), intent(in)  :: jobz, range, uplo
-      integer,      intent(out) :: m, iwork, ifail, info
-      FLOAT,        intent(in)  :: vl, vu, abstol
-      FLOAT,        intent(in)  :: a
-      FLOAT,        intent(out) :: w, z, work
+      integer,      intent(in)    :: n, lda, il, iu, ldz, lwork
+      character(1), intent(in)    :: jobz, range, uplo
+      integer,      intent(out)   :: m, iwork, ifail, info
+      FLOAT,        intent(in)    :: vl, vu, abstol
+      FLOAT,        intent(inout) :: a
+      FLOAT,        intent(out)   :: w, z, work
     end subroutine dsyevx
 
     subroutine zheevx(jobz, range, uplo, n, a, lda, &
       vl, vu, il, iu, abstol, m, w, z, ldz, work, lwork, iwork, ifail, info)
       implicit none
-      integer,      intent(in)  :: n, lda, il, iu, ldz, lwork
-      character(1), intent(in)  :: jobz, range, uplo
-      integer,      intent(out) :: m, iwork, ifail, info
-      FLOAT,        intent(in)  :: vl, vu, abstol
-      FLOAT,        intent(out) :: w
-      CMPLX,        intent(in)  :: a
-      CMPLX,        intent(out) :: z, work
+      integer,      intent(in)    :: n, lda, il, iu, ldz, lwork
+      character(1), intent(in)    :: jobz, range, uplo
+      integer,      intent(out)   :: m, iwork, ifail, info
+      FLOAT,        intent(in)    :: vl, vu, abstol
+      FLOAT,        intent(out)   :: w
+      CMPLX,        intent(inout) :: a
+      CMPLX,        intent(out)   :: z, work
     end subroutine zheevx
   end interface
 
@@ -225,14 +225,18 @@ module lapack_oct_m
   interface lapack_geqrf
     subroutine dgeqrf( m, n, a, lda, tau, work, lwork, info )
       implicit none
-      integer   info, lda, lwork, m, n
-      real(8)   a, tau, work
+      integer, intent(in)    :: lda, lwork, m, n
+      real(8), intent(inout) :: a
+      real(8), intent(out)   :: tau, work
+      integer, intent(out)   :: info
     end subroutine dgeqrf
 
     subroutine zgeqrf( m, n, a, lda, tau, work, lwork, info )
       implicit none
-      integer            info, lda, lwork, m, n
-      complex(8)         a, tau, work
+      integer, intent(in)       :: lda, lwork, m, n
+      complex(8), intent(inout) :: a
+      complex(8), intent(out)   :: tau, work
+      integer, intent(out)      :: info
     end subroutine zgeqrf
   end interface lapack_geqrf
   
@@ -248,14 +252,20 @@ module lapack_oct_m
   interface lapack_orgqr 
     subroutine dorgqr( m, n, k, a, lda, tau, work, lwork, info )
       implicit none
-      integer   info, k, lda, lwork, m, n
-      real(8)   a, tau, work
+      integer, intent(in)    :: k, lda, lwork, m, n
+      real(8), intent(in)    :: tau
+      real(8), intent(inout) :: a
+      real(8), intent(out)   :: work
+      integer, intent(out)   :: info
     end subroutine dorgqr
     
     subroutine zungqr( m, n, k, a, lda, tau, work, lwork, info )
       implicit none
-      integer            info, k, lda, lwork, m, n
-      complex(8)         a, tau, work
+      integer,    intent(in)    :: k, lda, lwork, m, n
+      complex(8), intent(in)    :: tau
+      complex(8), intent(inout) :: a
+      complex(8), intent(out)   :: work
+      integer,    intent(out)   :: info
     end subroutine zungqr
   end interface lapack_orgqr
 

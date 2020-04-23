@@ -201,8 +201,8 @@ subroutine X(eigensolver_rmmdiis) (namespace, gr, st, hm, pre, tol, niter, conve
         ii = ist - minst + 1
 
         failed(ii) = .false.
-        call lalg_lowest_geneigensolve(1, iter, mm(:, :, 1, ii), mm(:, :, 2, ii), eval(:, ii), evec(:, :, ii), bof = failed(ii), &
-                                       err_code = err)
+        call lalg_lowest_geneigensolve(1, iter, mm(:, :, 1, ii), mm(:, :, 2, ii), eval(:, ii),  &
+                   evec(:, :, ii), .false., bof = failed(ii), err_code = err)
         if( err < 0 .or. err > iter ) then
           failed(ii) = .true.
           last(ii) = iter - 1
