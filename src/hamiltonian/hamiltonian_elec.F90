@@ -192,7 +192,7 @@ module hamiltonian_elec_oct_m
     RDMFT                 = 7
 
   type(profile_t), save :: prof_hamiltonian, prof_kinetic_start, prof_kinetic_finish
-  type(profile_t), save :: prof_exx_scdm, prof_exx
+  type(profile_t), save :: prof_exx
 
 contains
 

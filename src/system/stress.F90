@@ -57,9 +57,6 @@ module stress_oct_m
   public ::                    &
     stress_calculate
 
-
-  type(profile_t), save :: prof_comm
-
   integer, parameter ::             &
     CMD_FINISH = 1,                 &
     CMD_POISSON_SOLVE = 2
