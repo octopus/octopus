@@ -639,7 +639,7 @@ contains
     type(namespace_t),       intent(in) :: namespace
 
     type(system_t), pointer :: sys
-    integer :: itime, ops
+    integer :: itime, ops, ops_default
     type(wfs_elec_t) :: xx, yy
     FLOAT, allocatable :: tmp(:)
 
@@ -658,10 +658,10 @@ contains
     !%Option ops_nrm2 bit(3)
     !% Tests batch_nrm2 operation
     !%End
-    ops = OPTION__TESTBATCHOPS__OPS_AXPY &
-        + OPTION__TESTBATCHOPS__OPS_SCAL &
-        + OPTION__TESTBATCHOPS__OPS_NRM2
-    call parse_variable(namespace, 'TestBatchOps', ops, ops)
+    ops_default = OPTION__TESTBATCHOPS__OPS_AXPY &
+                + OPTION__TESTBATCHOPS__OPS_SCAL &
+                + OPTION__TESTBATCHOPS__OPS_NRM2
+    call parse_variable(namespace, 'TestBatchOps', ops_default, ops)
 
     call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
 

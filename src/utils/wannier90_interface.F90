@@ -68,7 +68,7 @@ program wannier90_interface
 
   implicit none
 
-  integer              :: w90_what, w90_mode
+  integer              :: w90_what, w90_mode, w90_what_default
 
   integer              :: ierr
   integer              :: dim, idim
@@ -177,8 +177,8 @@ program wannier90_interface
   !%Option w90_eig bit(4)
   !% Eigenvalues. See Wannier90 documentation for more details.
   !%End
-  w90_what = OPTION__WANNIER90FILES__W90_MMN + OPTION__WANNIER90FILES__W90_AMN + OPTION__WANNIER90FILES__W90_EIG
-  call parse_variable(global_namespace, 'Wannier90Files', w90_what, w90_what)
+  w90_what_default = OPTION__WANNIER90FILES__W90_MMN + OPTION__WANNIER90FILES__W90_AMN + OPTION__WANNIER90FILES__W90_EIG
+  call parse_variable(global_namespace, 'Wannier90Files', w90_what_default, w90_what)
 
   !%Variable Wannier90UseTD
   !%Type logical

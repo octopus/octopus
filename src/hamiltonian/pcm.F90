@@ -1013,12 +1013,12 @@ contains
         call messages_write(' to ')
         call messages_write(pcm%tess_nn)
         call messages_new_line()
-        call messages_write('in order to fit them into the mesh.')        
+        call messages_write('in order to fit them into the mesh.')
         call messages_new_line()
-        call messages_write('This may produce unexpected results. ')        
+        call messages_write('This may produce unexpected results. ')
         call messages_warning(namespace=namespace)
       end if
-
+      default_nn = pcm%tess_nn
 
       !%Variable PCMChargeSmearNN
       !%Type integer
@@ -1032,7 +1032,7 @@ contains
       !% The default value is such that the neighbor mesh contains points in a radius 
       !% equal to the width used for the gaussian smearing.
       !%End
-      call parse_variable(namespace, 'PCMChargeSmearNN', pcm%tess_nn, pcm%tess_nn)
+      call parse_variable(namespace, 'PCMChargeSmearNN', default_nn, pcm%tess_nn)
       call messages_print_var_value(stdout, "PCMChargeSmearNN", pcm%tess_nn)
       
       call pcm_poisson_sanity_check(pcm, grid%mesh)

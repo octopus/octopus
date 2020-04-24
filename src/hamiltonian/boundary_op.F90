@@ -211,8 +211,7 @@ contains
       !% shape use ABShape. 
       !%End
 !       call messages_obsolete_variable('ABWidth', 'ABShape')
-      abwidth = bounds(2)-bounds(1)
-      call parse_variable(namespace, 'ABWidth', abwidth, abwidth, units_inp%length)
+      call parse_variable(namespace, 'ABWidth', bounds(2)-bounds(1), abwidth, units_inp%length)
       bounds(1) = bounds(2) - abwidth
       
       write(message(1),'(a,es10.3,3a)') & 

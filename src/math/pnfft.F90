@@ -117,7 +117,7 @@ contains
     !%Description
     !% Cut-off parameter of the window function. 
     !%End
-    call parse_variable(namespace, 'PNFFTCutoff', pnfft%mm, pnfft%mm)
+    call parse_variable(namespace, 'PNFFTCutoff', 6, pnfft%mm)
 
     !%Variable PNFFTOversampling
     !%Type float
@@ -126,7 +126,7 @@ contains
     !%Description
     !% PNFFT oversampling factor (sigma). This will rule the size of the FFT under the hood.
     !%End
-    call parse_variable(namespace, 'PNFFTOversampling', pnfft%sigma, pnfft%sigma)
+    call parse_variable(namespace, 'PNFFTOversampling', M_TWO, pnfft%sigma)
 
     POP_SUB(pnfft_guru_options)
   end subroutine pnfft_guru_options
