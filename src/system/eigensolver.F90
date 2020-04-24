@@ -160,8 +160,7 @@ contains
     !% Kresse and Furthm&uuml;ller [<i>Phys. Rev. B</i> <b>54</b>, 11169
     !% (1996)]. This eigensolver requires almost no orthogonalization
     !% so it can be considerably faster than the other options for
-    !% large systems; however it might suffer stability problems. To
-    !% improve its performance a large number of <tt>ExtraStates</tt>
+    !% large systems. To improve its performance a large number of <tt>ExtraStates</tt>
     !% are required (around 10-20% of the number of occupied states).
     !% Note: with <tt>unocc</tt>, you will need to stop the calculation
     !% by hand, since the highest states will probably never converge.
@@ -279,7 +278,11 @@ contains
       
     case(RS_LOBPCG)
     case(RS_RMMDIIS)
-      default_iter = 3
+      if(eigens%es_type == RS_RMMDIIS) then
+        default_iter = 10
+      else
+        default_iter = 3
+      end if
 
       !%Variable EigensolverMinimizationIter
       !%Type integer
@@ -335,8 +338,9 @@ contains
     !% Determines the maximum number of iterations that the
     !% eigensolver will perform if the desired tolerance is not
     !% achieved. The default is 25 iterations for all eigensolvers
-    !% except for <tt>rmdiis</tt>, which performs only 3 iterations (only
-    !% increase it if you know what you are doing).
+    !% except for <tt>rmdiis</tt>, which performs only 10 iterations.
+    !% Increasing this value for <tt>rmdiis</tt> increases the convergence speed,
+    !% at the cost of an increased memory footprint.
     !%End
     call parse_variable(namespace, 'EigensolverMaxIter', default_iter, eigens%es_maxiter)
     if(eigens%es_maxiter < 1) call messages_input_error(namespace, 'EigensolverMaxIter')

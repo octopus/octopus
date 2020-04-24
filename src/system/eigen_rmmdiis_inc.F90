@@ -1,4 +1,5 @@
 !! Copyright (C) 2009 X. Andrade
+!! Copyright (C) 2020 N. Tancogne-Dejean
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -86,21 +87,26 @@ subroutine X(eigensolver_rmmdiis) (namespace, gr, st, hm, pre, tol, niter, conve
     call X(hamiltonian_elec_apply_batch)(hm, namespace, gr%mesh, psib(1)%batch, resb(1)%batch)
     nops = nops + bsize
 
+    !me(1) = <psi|H|psi>
     call X(mesh_batch_dotp_vector)(gr%mesh, psib(1)%batch, resb(1)%batch, me(1, :), reduce = .false.)
+    !me(2) = <psi|psi>
     call X(mesh_batch_dotp_vector)(gr%mesh, psib(1)%batch, psib(1)%batch, me(2, :), reduce = .false.)
     if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm, me)
 
-    !This is the Rayleigh quotient
+    !This is the Rayleigh quotient R = <psi||H|psi>/<psi|psi>
     do ist = minst, maxst
       st%eigenval(ist, ik) = R_REAL(me(1, ist - minst + 1))/R_REAL(me(2, ist - minst + 1))
     end do
 
+    !resb is now the residue (H-\epsilon)|psi>
     call batch_axpy(gr%mesh%np, -st%eigenval(:, ik), psib(1)%batch, resb(1)%batch)
 
     done = 0
 
+    !We compute the norm of the residue
     call X(mesh_batch_dotp_vector)(gr%mesh, resb(1)%batch, resb(1)%batch, nrmsq)
 
+    !If the norm is smaller than the tolerance, we are done
     do ii = 1, bsize
       if(sqrt(abs(R_REAL(nrmsq(ii)))) < tol) done(ii) = 1
     end do
@@ -113,30 +119,55 @@ subroutine X(eigensolver_rmmdiis) (namespace, gr, st, hm, pre, tol, niter, conve
 
     call psib(1)%batch%copy_to(psib(2)%batch)
 
-    ! get lambda 
+    ! We now find the new direction to perform the minimization.
+    ! In order to do so, we first approximate the new direction |\delta\psi> to do the minimization,
+    ! based on the value of the residue.
+    ! Then we construct the new approximate state |\phi> = |\psi> + \lambda |\delta\psi> = |\psi> + \lambda K|R>.
+    ! For this, we need to find \lambda, which we define as the value minimizing the residue associated 
+    ! with \phi.
+
+    !We find the new direction from the residual vector, see Kresse and Furthmueller
+    ! Computational Materials Science 6 (1996) 15-50, Eq. 50 and discussion above
+    !psib(2) is now \delta\psi> = K|R>
     call X(preconditioner_apply_batch)(pre, namespace, gr, hm, resb(1)%batch, psib(2)%batch)
 
     call psib(1)%batch%copy_to(resb(2)%batch)
 
+    !resb(2) is now H\delta\psi> 
     call X(hamiltonian_elec_apply_batch)(hm, namespace, gr%mesh, psib(2)%batch, resb(2)%batch)
     nops = nops + bsize
 
+    !Here we have the following quantities
+    ! fr(1) is <\delta\psi|\delta\psi>
     call X(mesh_batch_dotp_vector)(gr%mesh, psib(2)%batch, psib(2)%batch, fr(1, :), reduce = .false.)
+    ! fr(2) is <\psi|\delta\psi>
     call X(mesh_batch_dotp_vector)(gr%mesh, psib(1)%batch, psib(2)%batch, fr(2, :), reduce = .false.)
+    ! fr(3) is <\delta\psi|H|\delta\psi>
     call X(mesh_batch_dotp_vector)(gr%mesh, psib(2)%batch, resb(2)%batch, fr(3, :), reduce = .false.)
+    ! fr(4) is <\psi|H|\delta\psi>
     call X(mesh_batch_dotp_vector)(gr%mesh, psib(1)%batch, resb(2)%batch, fr(4, :), reduce = .false.)
 
     if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm, fr)
 
+    !The residue of the new state \phi reads as
+    !  R(\phi) = ( <\psi + \lambda\delta\psi | H | \psi + \lambda\delta\psi >)/
+    !            (<\psi + \lambda\delta\psi |\psi + \lambda\delta\psi >)
+    ! By taking the derivative of it w.r.t. \lambda, we arrive to second-order polynomial that 
+    ! gives the value of \lambda that minimize R(\phi)
+    ! The equation as the form of A\lambda^2 + B\lambda + C
+    ! where A = fr(3) * fr(2) - fr(4) * fr(1) 
+    !       B = fr(3) * me(2) - me(1) * fr(1)
+    !       C = fr(4) * me(2) - me(1) * fr(2)
+
     do ist = minst, maxst
       ii = ist - minst + 1
 
-      ca = R_REAL(fr(1, ii))*R_REAL(fr(4, ii)) - R_REAL(fr(3, ii))*R_REAL(fr(2, ii))
+      ca = R_REAL(fr(3, ii))*R_REAL(fr(2, ii)) - R_REAL(fr(4, ii))*R_REAL(fr(1, ii))
       cb = R_REAL(me(2, ii))*R_REAL(fr(3, ii)) - R_REAL(me(1, ii))*R_REAL(fr(1, ii))
-      cc = R_REAL(me(1, ii))*R_REAL(fr(2, ii)) - R_REAL(fr(4, ii))*R_REAL(me(2, ii))
+      cc = R_REAL(me(2, ii))*R_REAL(fr(4, ii)) - R_REAL(fr(2, ii))*R_REAL(me(1, ii))
 
-      !This is - the solution of ca*x^2+cb*x+cc
-      lambda(ist) = CNST(2.0)*cc/(cb + sqrt(cb**2 - CNST(4.0)*ca*cc))
+      !This is the solution of ca*x^2+cb*x+cc using Mueller formula
+      lambda(ist) = - M_TWO * cc / (cb + sqrt(cb**2 - CNST(4.0) * ca * cc))
 
       ! restrict the value of lambda to be between 0.1 and 1.0
       if(abs(lambda(ist)) > CNST(1.0)) lambda(ist) = lambda(ist)/abs(lambda(ist))
@@ -154,6 +185,7 @@ subroutine X(eigensolver_rmmdiis) (namespace, gr, st, hm, pre, tol, niter, conve
       end if
 
       ! predict by jacobi
+      ! Here we compute the new trial wavefunction using a fixed \lambda found earlier
       call batch_xpay(gr%mesh%np, psib(iter - 1)%batch, lambda, psib(iter)%batch)
 
       if(iter > 2) then
@@ -164,8 +196,22 @@ subroutine X(eigensolver_rmmdiis) (namespace, gr, st, hm, pre, tol, niter, conve
       call X(hamiltonian_elec_apply_batch)(hm, namespace, gr%mesh, psib(iter)%batch, resb(iter)%batch)
       nops = nops + bsize
 
+      ! According to Kresse and Furthmueller, Computational Materials Science 6 (1996) 15-50 
+      ! we update st%eigenval here.
+      if(iter == 2) then
+        call X(mesh_batch_dotp_vector)(gr%mesh, psib(iter)%batch, resb(iter)%batch, me(1, 1:bsize), reduce = .false.)
+        call X(mesh_batch_dotp_vector)(gr%mesh, psib(iter)%batch, psib(iter)%batch, me(2, 1:bsize), reduce = .false.)
+        if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm, me)
+        do ist = minst, maxst
+          st%eigenval(ist, ik) = R_REAL(me(1, ist - minst + 1))/R_REAL(me(2, ist - minst + 1))
+        end do
+      end if
+
+      !We compute the new residue
       call batch_axpy(gr%mesh%np, -st%eigenval(:, ik), psib(iter)%batch, resb(iter)%batch)
 
+      !We now perform the direct inversion in the iterative subspace (DIIS)
+      !which is solved as an Hermitian eigenvalue problem
       call profiling_in(prof_iter, 'RMMDIIS_MATRIX')
       ! calculate the matrix elements between iterations
       do jter = 1, iter
@@ -174,12 +220,11 @@ subroutine X(eigensolver_rmmdiis) (namespace, gr, st, hm, pre, tol, niter, conve
           if(jter < iter - 1 .and. kter < iter - 1) then
             ! it was calculated on the previous iteration
             ! in parallel this was already reduced, so we set it to zero in non-root ranks
-            if(gr%mesh%parallel_in_domains .and. gr%mesh%mpi_grp%rank /= 0) mm(jter, kter, 1:2, 1:bsize) = CNST(0.0)
+            if(gr%mesh%parallel_in_domains .and. gr%mesh%mpi_grp%rank /= 0) mm(jter, kter, 1, 1:bsize) = CNST(0.0)
             cycle
           end if
 
           call X(mesh_batch_dotp_vector)(gr%mesh, resb(jter)%batch, resb(kter)%batch, mm(jter, kter, 1, :), reduce = .false.)
-          call X(mesh_batch_dotp_vector)(gr%mesh, psib(jter)%batch, psib(kter)%batch, mm(jter, kter, 2, :), reduce = .false.)
 
         end do
       end do
@@ -188,11 +233,19 @@ subroutine X(eigensolver_rmmdiis) (namespace, gr, st, hm, pre, tol, niter, conve
       ! symmetrize
       do jter = 1, iter
         do kter = jter + 1, iter
-          mm(jter, kter, 1:2, 1:bsize) = R_CONJ(mm(kter, jter, 1:2, 1:bsize))
+          mm(jter, kter, 1, 1:bsize) = R_CONJ(mm(kter, jter, 1, 1:bsize))
         end do
       end do
 
       if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm, mm)
+
+      !Due to numerical errors, lapack sometimes finds the overlap matrix to not be
+      !definite positive. Here we impose it to be only ones, as this represent 
+      !what the numbers are, up to numerical precision.
+      mm(1:iter, 1:iter, 2, 1:bsize) = M_ONE
+      do jter = 1, iter
+        mm(jter,jter,2,1:bsize) = M_ONE + M_EPSILON
+      end do
 
       SAFE_ALLOCATE(evec(1:iter, 1:1, 1:bsize))
       SAFE_ALLOCATE(eval(1:iter, 1:bsize))
@@ -202,7 +255,7 @@ subroutine X(eigensolver_rmmdiis) (namespace, gr, st, hm, pre, tol, niter, conve
 
         failed(ii) = .false.
         call lalg_lowest_geneigensolve(1, iter, mm(:, :, 1, ii), mm(:, :, 2, ii), eval(:, ii),  &
-                   evec(:, :, ii), preserve_mat=.false., bof = failed(ii), err_code = err)
+                   evec(:, :, ii), preserve_mat=.true., bof = failed(ii), err_code = err)
         if( err < 0 .or. err > iter ) then
           failed(ii) = .true.
           last(ii) = iter - 1
@@ -219,6 +272,7 @@ subroutine X(eigensolver_rmmdiis) (namespace, gr, st, hm, pre, tol, niter, conve
 
       call profiling_in(prof_lc, "RMMDIIS_LC")
 
+      !Here we contruct the linear combination of the states, see Eq. 68 
       call batch_scal(gr%mesh%np, evec(iter, 1, :), psib(iter)%batch, a_start = minst)
 
       do jj = 1, iter - 1

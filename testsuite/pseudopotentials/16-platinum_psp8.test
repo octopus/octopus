@@ -43,5 +43,5 @@ match ; Eigenvalue   [11]; GREPFIELD(static/info, '11   --', 3);  0.082535
 match ; Occupation   [11]; GREPFIELD(static/info, '11   --', 4);  0.000000
 match ; Eigenvalue   [12]; GREPFIELD(static/info, '12   --', 3);  0.082535
 match ; Occupation   [12]; GREPFIELD(static/info, '12   --', 4);  0.000000
-match ; Eigenvalue   [13]; GREPFIELD(static/info, '13   --', 3);  0.082535
+match ; Eigenvalue   [13]; GREPFIELD(static/info, '13   --', 3);  0.591059
 match ; Occupation   [13]; GREPFIELD(static/info, '13   --', 4);  0.000000
