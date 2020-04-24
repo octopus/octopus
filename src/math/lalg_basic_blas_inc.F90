@@ -656,7 +656,7 @@ subroutine FNAME(gemmt_1)(m, n, k, alpha, a, b, beta, c)
   ! no PUSH_SUB, called too often
 
   ASSERT(ubound(a, dim=1) >= k)
-  ASSERT(ubound(a, dim=2) == m)
+  ASSERT(ubound(a, dim=2) >= m)
   ASSERT(ubound(b, dim=1) >= k)
   ASSERT(ubound(b, dim=2) >= n)
   ASSERT(ubound(c, dim=1) >= m)
