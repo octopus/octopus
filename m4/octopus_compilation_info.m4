@@ -34,14 +34,17 @@ AC_MSG_NOTICE([collecting compilation info...])
 hash=$($folder/build/git_commit_hash.sh 2> /dev/null)
 date=`date`
 truecc=$($folder/build/true_compiler.sh $CC 2> /dev/null)
+truecxx=$($folder/build/true_compiler.sh $CXX 2> /dev/null)
 truefc=$($folder/build/true_compiler.sh $FC 2> /dev/null)
 
 AC_DEFINE_UNQUOTED([GIT_COMMIT], ["$hash"], [git commit hash])
 AC_DEFINE_UNQUOTED([BUILD_TIME], ["$date"], [date when configure was launched])
 AC_DEFINE_UNQUOTED([CC], ["$CC $truecc"], [C compiler])
+AC_DEFINE_UNQUOTED([CXX], ["$CXX $truecxx"], [C++ compiler])
 AC_DEFINE_UNQUOTED([FC], ["$FC $truefc"], [Fortran compiler])
 # 132 characters is max in std fortran, and two are for the quotes
 AC_DEFINE_UNQUOTED([CFLAGS], ["${CFLAGS:0:130}"], [C compiler])
+AC_DEFINE_UNQUOTED([CXXFLAGS], ["${CXXFLAGS:0:130}"], [C++ compiler])
 AC_DEFINE_UNQUOTED([FCFLAGS], ["${FCFLAGS:0:130}"], [Fortran compiler])
 
 GIT_COMMIT=$hash
