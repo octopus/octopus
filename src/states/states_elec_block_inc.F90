@@ -137,7 +137,9 @@ subroutine X(states_elec_blockt_mul)(mesh, st, psi1_start, psi2_start, &
           SAFE_ALLOCATE(res_local(1:xpsi1_count(rank), 1:sendcnt))
 
           call profiling_in(C_PROFILING_BLOCKT_MM, 'BLOCKT_MM')
-          call lalg_gemmt(xpsi1_count(rank), sendcnt, mesh%np*st%d%dim, R_TOTYPE(mesh%vol_pp(1)), &
+          !Due to the definition of the gemmt routine, the dim is set to 1 and the number of 
+          !grid points to np*dim. Otherwise the code won't work for spinors
+          call lalg_gemmt(xpsi1_count(rank), 1, sendcnt, 1, mesh%np*st%d%dim, R_TOTYPE(mesh%vol_pp(1)), &
             psi1_block, sendbuf, R_TOTYPE(M_ZERO), res_local)
           call profiling_out(C_PROFILING_BLOCKT_MM)
 
@@ -331,7 +333,7 @@ subroutine X(states_elec_block_matr_mul_add)(mesh, st, alpha, psi_start, res_sta
           matr_col_offset+1:matr_col_offset+xres_count(rank))
         call profiling_out(C_PROFILING_BLOCK_MATR_CP)
         call profiling_in(C_PROFILING_BLOCK_MATR_MM, 'BLOCK_MATR_MM')
-        call lalg_gemm(mesh%np * st%d%dim, xres_count(rank), sendcnt, alpha, &
+        call lalg_gemm(mesh%np, st%d%dim, xres_count(rank), sendcnt, alpha, &
           sendbuf, matr_block, R_TOTYPE(M_ONE), res_block)
         call profiling_out(C_PROFILING_BLOCK_MATR_MM)
       end if
@@ -366,7 +368,9 @@ subroutine X(states_elec_block_matr_mul_add)(mesh, st, alpha, psi_start, res_sta
     ! matr_block is needed because matr may be an assumed-shape array.
     SAFE_ALLOCATE(matr_block(1:psi_col, 1:matr_col))
     matr_block = matr
-    call lalg_gemm(mesh%np * st%d%dim, matr_col, psi_col, alpha, &
+    
+    ASSERT(matr_col == res_col)
+    call lalg_gemm(mesh%np, st%d%dim, matr_col, psi_col, alpha, &
       psi_block, matr_block, beta, res_block)
     SAFE_DEALLOCATE_A(matr_block)
 

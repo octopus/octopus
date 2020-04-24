@@ -145,8 +145,6 @@ module lalg_basic_oct_m
   interface lalg_symm
     module procedure symm_1_2
     module procedure symm_1_4
-    module procedure symm_2_2
-    module procedure symm_2_4
   end interface lalg_symm
 
   !> Matrix-matrix multiplication.
