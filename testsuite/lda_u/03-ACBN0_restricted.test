@@ -9,9 +9,9 @@ Input      : 03-ACBN0_restricted.01-lif.inp
 
 #Copied from 02-ACBN0.test
 match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
-match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ;  -24.29697036
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ;  -24.296661245
 match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ;  -14.42250723
-match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ;  -4.4945515
+match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ;  -4.494249705
 match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ;   8.26566924
 match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ;  -4.37608960
 match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ;  -0.49327115
@@ -42,9 +42,9 @@ Input      : 03-ACBN0_restricted.02-lif_unpacked.inp
 #Copied from 02-ACBN0.test
 match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
 
-match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ;  -24.29697036
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ;  -24.296661245
 match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ;  -14.42250723
-match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ;  -4.4945515
+match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ;  -4.494249705
 match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ;   8.26566924
 match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ;  -4.37608960
 match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ;  -0.49327115
