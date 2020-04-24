@@ -180,13 +180,16 @@ contains
 
 #ifdef HAVE_PNFFT
     call pnfft_init()
-    
+#endif
+
     pnfft%np(1:3) = 1
     
     call pfft_decompose(mpi_grp%size, pnfft%np(1), pnfft%np(2))
     
-    
+#ifdef HAVE_PNFFT    
     ierror = pnfft_create_procmesh(2, mpi_grp%comm,  pnfft%np, comm)        
+#else
+    ierror = 0
 #endif
     
     if (ierror /= 0) then
@@ -328,6 +331,10 @@ contains
     cf_hat = pnfft_get_f_hat(pnfft%plan)
     cf     = pnfft_get_f(pnfft%plan)
     cx     = pnfft_get_x(pnfft%plan)
+#else
+    cf_hat = C_NULL_PTR
+    cf     = C_NULL_PTR
+    cx     = C_NULL_PTR
 #endif
     
     ! Convert data pointers to Fortran format
