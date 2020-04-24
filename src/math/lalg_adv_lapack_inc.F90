@@ -345,11 +345,11 @@ subroutine X(lowest_geneigensolve)(k, n, a, b, e, v, preserve_mat, bof, err_code
   SAFE_ALLOCATE(work(1:1))
 
 #ifdef R_TREAL
-  call X(sygvx)(1, 'V', 'I', 'U', n, a(1, 1), lead_dim(a), b(1, 1), lead_dim(b), M_ZERO, M_ZERO, &
+  call dsygvx(1, 'V', 'I', 'U', n, a(1, 1), lead_dim(a), b(1, 1), lead_dim(b), M_ZERO, M_ZERO, &
     1, k, abstol, m, e(1), v(1, 1), lead_dim(v), work(1), -1, iwork(1), ifail(1), info)
   if(info /= 0) then
     write(message(1),'(3a,i5)') 'In dlowest_geneigensolve, LAPACK ', &
-      TOSTRING(X(sygvx)), ' workspace query returned error message ', info
+      TOSTRING(dsygvx), ' workspace query returned error message ', info
     call messages_fatal(1)
   end if  
   lwork = int(work(1))
@@ -357,22 +357,22 @@ subroutine X(lowest_geneigensolve)(k, n, a, b, e, v, preserve_mat, bof, err_code
 
   SAFE_ALLOCATE(work(1:lwork))
 
-  call X(sygvx)(1, 'V', 'I', 'U', n, a(1, 1), lead_dim(a), b(1, 1), lead_dim(b), M_ZERO, M_ZERO, &
+  call dsygvx(1, 'V', 'I', 'U', n, a(1, 1), lead_dim(a), b(1, 1), lead_dim(b), M_ZERO, M_ZERO, &
     1, k, abstol, m, e(1), v(1, 1), lead_dim(v), work(1), lwork, iwork(1), ifail(1), info)
 
 #else
-  call X(hegvx)(1, 'V', 'I', 'U', n, a(1, 1), lead_dim(a), b(1, 1), lead_dim(b), M_ZERO, M_ZERO, &
+  call zhegvx(1, 'V', 'I', 'U', n, a(1, 1), lead_dim(a), b(1, 1), lead_dim(b), M_ZERO, M_ZERO, &
       1, k, abstol, m, e(1), v(1, 1), lead_dim(v), work(1), -1, rwork(1), iwork(1), ifail(1), info)
     if(info /= 0) then
       write(message(1),'(3a,i5)') 'In zlowest_geneigensolve, LAPACK ', &
-        TOSTRING(X(hegvx)), ' workspace query returned error message ', info
+        TOSTRING(zhegvx), ' workspace query returned error message ', info
       call messages_fatal(1)
     end if
     lwork = int(real(work(1)))
   SAFE_DEALLOCATE_A(work)
   
   SAFE_ALLOCATE(work(1:lwork))
-  call X(hegvx)(1, 'V', 'I', 'U', n, a(1, 1), lead_dim(a), b(1, 1), lead_dim(b), M_ZERO, M_ZERO, &
+  call zhegvx(1, 'V', 'I', 'U', n, a(1, 1), lead_dim(a), b(1, 1), lead_dim(b), M_ZERO, M_ZERO, &
       1, k, abstol, m, e(1), v(1, 1), lead_dim(v), work(1), lwork, rwork(1), iwork(1), ifail(1), info)
 #endif
 
@@ -396,8 +396,13 @@ subroutine X(lowest_geneigensolve)(k, n, a, b, e, v, preserve_mat, bof, err_code
 
   if(info /= 0) then
     if(optional_default(bof, .true.)) then
-      write(message(1),'(3a,i5)') 'In lowest_geneigensolve, LAPACK ', &
-        TOSTRING(X(sygvx)), ' returned error message ', info
+#ifdef R_TREAL
+      write(message(1),'(3a,i5)') 'In dlowest_geneigensolve, LAPACK ', &
+        TOSTRING(dsygvx), ' returned error message ', info
+#else
+      write(message(1),'(3a,i5)') 'In zlowest_geneigensolve, LAPACK ', &
+        TOSTRING(zhegvx), ' returned error message ', info
+#endif
 !        INFO    (output) INTEGER
 !*          = 0:  successful exit
 !*          < 0:  if INFO = -i, the i-th argument had an illegal value
@@ -467,7 +472,11 @@ subroutine X(eigensolve)(n, a, e, bof, err_code)
 
   if(info /= 0) then
     if(optional_default(bof, .true.)) then
-      write(message(1),'(3a,i5)') 'In eigensolve, LAPACK ', TOSTRING(X(syev)), ' returned error message ', info
+#ifdef R_TREAL
+      write(message(1),'(3a,i5)') 'In eigensolve, LAPACK ', TOSTRING(dsyev), ' returned error message ', info
+#else
+      write(message(1),'(3a,i5)') 'In eigensolve, LAPACK ', TOSTRING(zheev), ' returned error message   ', info
+#endif
 !*  INFO    (output) INTEGER
 !*          = 0:  successful exit
 !*          < 0:  if INFO = -i, the i-th argument had an illegal value
@@ -534,32 +543,32 @@ subroutine X(lowest_eigensolve)(k, n, a, e, v, preserve_mat)
   ! Work size query.
   SAFE_ALLOCATE(work(1:1))
 #ifdef R_TREAL
-  call X(syevx)('V', 'I', 'U', n, a(1, 1), n, M_ZERO, M_ZERO, &
+  call dsyevx('V', 'I', 'U', n, a(1, 1), n, M_ZERO, M_ZERO, &
     1, k, abstol, m, e(1), v(1, 1), n, work(1), -1, iwork(1), ifail(1), info)
   if(info /= 0) then
     write(message(1),'(3a,i5)') 'In dlowest_eigensolve, LAPACK ', &
-      TOSTRING(X(syevx)), ' workspace query returned error message ', info
+      TOSTRING(dsyevx), ' workspace query returned error message ', info
     call messages_fatal(1)
   end if
   lwork = int(work(1))
   SAFE_DEALLOCATE_A(work)
 
   SAFE_ALLOCATE(work(1:lwork))
-  call X(syevx)('V', 'I', 'U', n, a(1, 1), n, M_ZERO, M_ZERO, &
+  call dsyevx('V', 'I', 'U', n, a(1, 1), n, M_ZERO, M_ZERO, &
     1, k, abstol, m, e(1), v(1, 1), n, work(1), lwork, iwork(1), ifail(1), info)
 #else
-  call X(heevx)('V', 'I', 'U', n, a(1, 1), n, M_ZERO, M_ZERO, &
+  call zheevx('V', 'I', 'U', n, a(1, 1), n, M_ZERO, M_ZERO, &
     1, k, abstol, m, e(1), v(1, 1), n, work(1), -1, iwork(1), ifail(1), info)
   if(info /= 0) then
     write(message(1),'(3a,i5)') 'In zlowest_eigensolve, LAPACK ', &
-      TOSTRING(X(heevx)), ' workspace query returned error message ', info
+      TOSTRING(zheevx), ' workspace query returned error message ', info
     call messages_fatal(1)
   end if
   lwork = int(work(1))
   SAFE_DEALLOCATE_A(work)
   
   SAFE_ALLOCATE(work(1:lwork))
-  call X(heevx)('V', 'I', 'U', n, a(1, 1), n, M_ZERO, M_ZERO, &
+  call zheevx('V', 'I', 'U', n, a(1, 1), n, M_ZERO, M_ZERO, &
       1, k, abstol, m, e(1), v(1, 1), n, work(1), lwork, iwork(1), ifail(1), info)
  
 #endif
@@ -580,8 +589,13 @@ subroutine X(lowest_eigensolve)(k, n, a, e, v, preserve_mat)
   SAFE_DEALLOCATE_A(work)
 
   if(info /= 0) then
+#ifdef R_TREAL
     write(message(1),'(3a,i5)') &
-      'In lowest_eigensolve, LAPACK ', TOSTRING(X(syevx)), ' returned error message ', info
+      'In dlowest_eigensolve, LAPACK ', TOSTRING(dsyevx), ' returned error message ', info
+#else
+    write(message(1),'(3a,i5)') &
+      'In zlowest_eigensolve, LAPACK ', TOSTRING(zheevx), ' returned error message ', info
+#endif
 !    http://www.netlib.org/lapack/explore-3.1.1-html/dsyevx.f.html
 !*  INFO    (output) INTEGER
 !*          = 0:  successful exit
@@ -606,25 +620,6 @@ R_TYPE function X(determinant)(n, a, invert) result(d)
   R_TYPE,   intent(inout)       :: a(:,:) !< (n,n)
   logical, intent(in), optional :: invert
 
-  interface
-    subroutine X(getrf) (m, n, a, lda, ipiv, info)
-      implicit none
-      integer,      intent(in)    :: m, n, lda
-      R_TYPE,        intent(inout) :: a         !< a(lda, n)
-      integer,      intent(out)   :: ipiv       !< ipiv(min(m,n)
-      integer,      intent(out)   :: info
-    end subroutine X(getrf)
-
-    subroutine X(getri) (n, a, lda, ipiv, work, lwork, info )
-      implicit none
-      integer,      intent(in)    :: n, lda, lwork
-      R_TYPE,       intent(inout) :: a       !< a(lda, n)
-      integer,      intent(in)    :: ipiv    !< ipiv(n)
-      R_TYPE,       intent(inout) :: work    !< work(lwork)
-      integer,      intent(out)   :: info
-    end subroutine X(getri)
-  end interface
-
   integer :: info, i
   integer, allocatable :: ipiv(:)
   R_TYPE, allocatable :: work(:)
@@ -636,7 +631,7 @@ R_TYPE function X(determinant)(n, a, invert) result(d)
   SAFE_ALLOCATE(work(1:n)) ! query?
   SAFE_ALLOCATE(ipiv(1:n))
 
-  call X(getrf)(n, n, a(1, 1), n, ipiv(1), info)
+  call lapack_getrf(n, n, a(1, 1), n, ipiv(1), info)
   if(info < 0) then
     write(message(1), '(5a, i5)') 'In ', TOSTRING(X(determinant)), ', LAPACK ', TOSTRING(X(getrf)), ' returned info = ', info
     call messages_fatal(1)
@@ -652,7 +647,7 @@ R_TYPE function X(determinant)(n, a, invert) result(d)
   end do
 
   if(optional_default(invert, .true.)) then
-    call X(getri)(n, a(1, 1), n, ipiv(1), work(1), n, info)
+    call lapack_getri(n, a(1, 1), n, ipiv(1), work(1), n, info)
     if(info /= 0) then
       write(message(1), '(5a, i5)') 'In ', TOSTRING(X(determinant)), ', LAPACK ', TOSTRING(X(getri)), ' returned info = ', info
 !    http://www.netlib.org/lapack/explore-3.1.1-html/zgetri.f.html
@@ -683,28 +678,6 @@ subroutine X(sym_inverter)(uplo, n, a)
   integer, intent(in)           :: n
   R_TYPE,  intent(inout)        :: a(:,:) !< (n,n)
 
-  interface
-    subroutine X(sytrf) (uplo, n, a, lda, ipiv, work, lwork, info)
-      implicit none
-      character(1), intent(in)    :: uplo
-      integer,      intent(in)    :: n, lda, lwork
-      R_TYPE,       intent(inout) :: a
-      integer,      intent(out)   :: ipiv
-      R_TYPE,       intent(inout) :: work
-      integer,      intent(out)   :: info
-    end subroutine X(sytrf)
-
-    subroutine X(sytri) (uplo, n, a, lda, ipiv, work, info)
-      implicit none
-      character(1), intent(in)    :: uplo
-      integer,      intent(in)    :: n, lda
-      R_TYPE,       intent(inout) :: a
-      integer,      intent(in)    :: ipiv
-      R_TYPE,       intent(inout) :: work
-      integer,      intent(out)   :: info
-    end subroutine X(sytri)
-  end interface
-
   integer :: info
   integer, allocatable :: ipiv(:)
   R_TYPE, allocatable :: work(:)
@@ -716,13 +689,13 @@ subroutine X(sym_inverter)(uplo, n, a)
   SAFE_ALLOCATE(work(1:n)) ! query?
   SAFE_ALLOCATE(ipiv(1:n))
 
-  call X(sytrf)(uplo, n, a(1, 1), lead_dim(a), ipiv(1), work(1), n, info)
+  call lapack_sytrf(uplo, n, a(1, 1), lead_dim(a), ipiv(1), work(1), n, info)
   if(info < 0) then
     write(message(1), '(5a, i5)') 'In ', TOSTRING(X(sym_inverter)), ', LAPACK ', TOSTRING(X(sytrf)), ' returned info = ', info
     call messages_fatal(1)
   end if
 
-  call X(sytri)(uplo, n, a(1, 1), lead_dim(a), ipiv(1), work(1), info)
+  call lapack_sytri(uplo, n, a(1, 1), lead_dim(a), ipiv(1), work(1), info)
   if(info /= 0) then
     write(message(1), '(5a, i5)') 'In ', TOSTRING(X(sym_inverter)), ', LAPACK ', TOSTRING(X(sytri)), ' returned info = ', info
 !    http://www.netlib.org/lapack/explore-3.1.1-html/dsytri.f.html
@@ -1193,43 +1166,6 @@ subroutine X(least_squares_vec)(nn, aa, bb, xx)
   FLOAT, allocatable :: rwork(:)
 #endif 
   
-  interface 
-    subroutine dgelss(m, n, nrhs, a, lda, b, ldb, s, rcond, rank, work, lwork, info)
-      integer, intent(in)    :: m
-      integer, intent(in)    :: n
-      integer, intent(in)    :: nrhs
-      FLOAT,   intent(inout) :: a
-      integer, intent(in)    :: lda
-      FLOAT,   intent(inout) :: b
-      integer, intent(in)    :: ldb
-      FLOAT,   intent(out)   :: s
-      FLOAT,   intent(in)    :: rcond
-      integer, intent(out)   :: rank 
-      FLOAT,   intent(out)   :: work
-      integer, intent(in)    :: lwork
-      integer, intent(out)   :: info 
-    end subroutine dgelss
-  end interface
-
-  interface
-    subroutine zgelss(m, n, nrhs, a, lda, b, ldb, s, rcond, rank, work, lwork, rwork, info)
-      integer, intent(in)    :: m
-      integer, intent(in)    :: n
-      integer, intent(in)    :: nrhs
-      CMPLX,   intent(inout) :: a
-      integer, intent(in)    :: lda
-      CMPLX,   intent(inout) :: b
-      integer, intent(in)    :: ldb
-      FLOAT,   intent(out)   :: s
-      FLOAT,   intent(in)    :: rcond
-      integer, intent(out)   :: rank
-      CMPLX,   intent(out)   :: work
-      integer, intent(in)    :: lwork
-      FLOAT,   intent(out)   :: rwork
-      integer, intent(out)   :: info
-    end subroutine zgelss
-  end interface
-
   PUSH_SUB(X(least_squares_vec))
 
 
@@ -1240,18 +1176,18 @@ subroutine X(least_squares_vec)(nn, aa, bb, xx)
 ! MJV 2016 11 09 : TODO: this is callable with complex, but does nothing!!!
 #ifdef R_TREAL
   
-  call dgelss(nn, nn, 1, aa(1, 1), lead_dim(aa), xx(1), nn, ss(1), CNST(-1.0), rank, dlwork, -1, info)
+  call lapack_gelss(nn, nn, 1, aa(1, 1), lead_dim(aa), xx(1), nn, ss(1), CNST(-1.0), rank, dlwork, -1, info)
 
   SAFE_ALLOCATE(work(1:int(dlwork)))
 
-  call dgelss(nn, nn, 1, aa(1, 1), lead_dim(aa), xx(1), nn, ss(1), CNST(-1.0), rank, work(1), int(dlwork), info)
+  call lapack_gelss(nn, nn, 1, aa(1, 1), lead_dim(aa), xx(1), nn, ss(1), CNST(-1.0), rank, work(1), int(dlwork), info)
 #else
   SAFE_ALLOCATE(rwork(1:5*nn))
-  call zgelss(nn, nn, 1, aa(1, 1), lead_dim(aa), xx(1), nn, ss(1), CNST(-1.0), rank, dlwork, -1, rwork(1), info)
+  call lapack_gelss(nn, nn, 1, aa(1, 1), lead_dim(aa), xx(1), nn, ss(1), CNST(-1.0), rank, dlwork, -1, rwork(1), info)
 
   SAFE_ALLOCATE(work(1:int(dlwork)))
 
-  call zgelss(nn, nn, 1, aa(1, 1), lead_dim(aa), xx(1), nn, ss(1), CNST(-1.0), rank, work(1), int(dlwork), rwork(1), info)
+  call lapack_gelss(nn, nn, 1, aa(1, 1), lead_dim(aa), xx(1), nn, ss(1), CNST(-1.0), rank, work(1), int(dlwork), rwork(1), info)
   SAFE_DEALLOCATE_A(rwork)
 #endif
 

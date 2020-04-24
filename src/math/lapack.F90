@@ -344,6 +344,124 @@ module lapack_oct_m
     end subroutine zhegvx
   end interface lapack_hegvx
 
+  interface lapack_gelss
+    subroutine dgelss(m, n, nrhs, a, lda, b, ldb, s, rcond, rank, work, lwork, info)
+      integer, intent(in)    :: m
+      integer, intent(in)    :: n
+      integer, intent(in)    :: nrhs
+      FLOAT,   intent(inout) :: a
+      integer, intent(in)    :: lda
+      FLOAT,   intent(inout) :: b
+      integer, intent(in)    :: ldb
+      FLOAT,   intent(out)   :: s
+      FLOAT,   intent(in)    :: rcond
+      integer, intent(out)   :: rank
+      FLOAT,   intent(out)   :: work
+      integer, intent(in)    :: lwork
+      integer, intent(out)   :: info
+    end subroutine dgelss
+
+    subroutine zgelss(m, n, nrhs, a, lda, b, ldb, s, rcond, rank, work, lwork, rwork, info)
+      integer, intent(in)    :: m
+      integer, intent(in)    :: n
+      integer, intent(in)    :: nrhs
+      CMPLX,   intent(inout) :: a
+      integer, intent(in)    :: lda
+      CMPLX,   intent(inout) :: b
+      integer, intent(in)    :: ldb
+      FLOAT,   intent(out)   :: s
+      FLOAT,   intent(in)    :: rcond
+      integer, intent(out)   :: rank
+      CMPLX,   intent(out)   :: work
+      integer, intent(in)    :: lwork
+      FLOAT,   intent(out)   :: rwork
+      integer, intent(out)   :: info
+    end subroutine zgelss
+  end interface lapack_gelss
+
+  interface lapack_getrf
+    subroutine dgetrf (m, n, a, lda, ipiv, info)
+      implicit none
+      integer,      intent(in)    :: m, n, lda
+      FLOAT,        intent(inout) :: a         !< a(lda, n)
+      integer,      intent(out)   :: ipiv       !< ipiv(min(m,n)
+      integer,      intent(out)   :: info
+    end subroutine dgetrf
+
+    subroutine zgetrf (m, n, a, lda, ipiv, info)
+      implicit none
+      integer,      intent(in)    :: m, n, lda
+      CMPLX,        intent(inout) :: a         !< a(lda, n)
+      integer,      intent(out)   :: ipiv       !< ipiv(min(m,n)
+      integer,      intent(out)   :: info
+    end subroutine zgetrf
+  end interface lapack_getrf
+
+  interface lapack_getri
+    subroutine dgetri(n, a, lda, ipiv, work, lwork, info )
+      implicit none
+      integer,      intent(in)    :: n, lda, lwork
+      FLOAT,        intent(inout) :: a       !< a(lda, n)
+      integer,      intent(in)    :: ipiv    !< ipiv(n)
+      FLOAT,        intent(inout) :: work    !< work(lwork)
+      integer,      intent(out)   :: info
+    end subroutine dgetri
+
+    subroutine zgetri(n, a, lda, ipiv, work, lwork, info )
+      implicit none
+      integer,      intent(in)    :: n, lda, lwork
+      CMPLX,        intent(inout) :: a       !< a(lda, n)
+      integer,      intent(in)    :: ipiv    !< ipiv(n)
+      CMPLX,        intent(inout) :: work    !< work(lwork)
+      integer,      intent(out)   :: info
+    end subroutine zgetri
+  end interface lapack_getri
+
+  interface lapack_sytrf
+    subroutine dsytrf(uplo, n, a, lda, ipiv, work, lwork, info)
+      implicit none
+      character(1), intent(in)    :: uplo
+      integer,      intent(in)    :: n, lda, lwork
+      FLOAT,        intent(inout) :: a
+      integer,      intent(out)   :: ipiv
+      FLOAT,        intent(inout) :: work
+      integer,      intent(out)   :: info
+    end subroutine dsytrf
+
+    subroutine zsytrf(uplo, n, a, lda, ipiv, work, lwork, info)
+      implicit none
+      character(1), intent(in)    :: uplo
+      integer,      intent(in)    :: n, lda, lwork
+      CMPLX,        intent(inout) :: a
+      integer,      intent(out)   :: ipiv
+      CMPLX,        intent(inout) :: work
+      integer,      intent(out)   :: info
+    end subroutine zsytrf
+  end interface lapack_sytrf
+
+  interface lapack_sytri
+    subroutine dsytri (uplo, n, a, lda, ipiv, work, info)
+      implicit none
+      character(1), intent(in)    :: uplo
+      integer,      intent(in)    :: n, lda
+      FLOAT,        intent(inout) :: a
+      integer,      intent(in)    :: ipiv
+      FLOAT,        intent(inout) :: work
+      integer,      intent(out)   :: info
+    end subroutine dsytri
+
+    subroutine zsytri (uplo, n, a, lda, ipiv, work, info)
+      implicit none
+      character(1), intent(in)    :: uplo
+      integer,      intent(in)    :: n, lda
+      CMPLX,        intent(inout) :: a
+      integer,      intent(in)    :: ipiv
+      CMPLX,        intent(inout) :: work
+      integer,      intent(out)   :: info
+    end subroutine zsytri
+  end interface lapack_sytri
+
+
 end module lapack_oct_m
 
 !! Local Variables:
