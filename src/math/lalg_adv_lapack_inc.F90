@@ -85,25 +85,18 @@ subroutine X(geneigensolve)(n, a, b, e, preserve_mat, bof, err_code)
 #ifdef R_TCOMPLEX
   FLOAT, allocatable :: rwork(:)
 #endif
-  R_TYPE, allocatable :: work(:), diaga(:), diagb(:)
+  R_TYPE, allocatable :: work(:), diag(:)
 
   call profiling_in(eigensolver_prof, "DENSE_EIGENSOLVER")
   PUSH_SUB(X(geneigensolve))
 
   ASSERT(n > 0)
 
-  SAFE_ALLOCATE(diagb(1:n))
-  ! store the diagonal of b  
-  ! TODO: change this to be done only if preserve_mat is true
-  do ii = 1, n
-    diagb(ii) = b(ii, ii)
-  end do
-
   if(preserve_mat) then
-    SAFE_ALLOCATE(diaga(1:n))
-    ! store the diagonal of a  
+    SAFE_ALLOCATE(diag(1:n))
+    ! store the diagonal of b  
     do ii = 1, n
-      diaga(ii) = a(ii, ii)
+      diag(ii) = b(ii, ii)
     end do
   end if
 
@@ -118,25 +111,16 @@ subroutine X(geneigensolve)(n, a, b, e, preserve_mat, bof, err_code)
 #endif
   SAFE_DEALLOCATE_A(work)
 
-  ! b was destroyed, so we rebuild it
-  do ii = 1, n
-    do jj = 1, ii - 1
-      b(jj, ii) = R_CONJ(b(ii, jj))
-    end do
-    b(ii, ii) = diagb(ii)
-  end do
-  SAFE_DEALLOCATE_A(diagb) 
-
   if(preserve_mat) then
-    ! a was destroyed, so we rebuild it
+    ! b was destroyed, so we rebuild it
     do ii = 1, n
       do jj = 1, ii - 1
-        a(jj, ii) = R_CONJ(a(ii, jj))
+        b(jj, ii) = R_CONJ(b(ii, jj))
       end do
-      a(ii, ii) = diaga(ii)
+      b(ii, ii) = diag(ii)
     end do
 
-    SAFE_DEALLOCATE_A(diaga)
+    SAFE_DEALLOCATE_A(diag)
   end if
 
   if(info /= 0) then
