@@ -790,9 +790,11 @@ contains
 
         integer :: ip, ip_in, idim
 
-        do ip_in = 1, bc%mask_points_number(idim)
-          ip          = bc%mask_points_map(ip_in, idim)
-          io_func(ip) = mask_func(ip_in, idim)
+        do idim = 1, 3
+          do ip_in = 1, bc%mask_points_number(idim)
+            ip          = bc%mask_points_map(ip_in, idim)
+            io_func(ip) = mask_func(ip_in, idim)
+          end do
         end do
 
       end subroutine get_mask_io_function
