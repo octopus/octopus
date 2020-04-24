@@ -26,7 +26,7 @@
     type(td_t),        intent(in)    :: td
     type(restart_t),   intent(in)    :: restart
 
-    integer :: ierr, ip
+    integer :: ierr, nik, dim
 
     PUSH_SUB(target_init_excited)
 
@@ -36,7 +36,7 @@
     tg%move_ions = ion_dynamics_ions_move(td%ions)
     tg%dt = td%dt
 
-    call states_elec_look(restart, ip, ip, tg%st%nst, ierr)
+    call states_elec_look(restart, nik, dim, tg%st%nst, ierr)
     if (ierr /= 0) then
       message(1) = "Unable to read states information."
       call messages_fatal(1)

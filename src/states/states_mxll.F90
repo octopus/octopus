@@ -425,6 +425,8 @@ contains
 
     PUSH_SUB(build_rs_state)
 
+    np_ = optional_default(np, mesh%np)
+
     do ip = 1, np_
       if (present(ep_field) .and. present(mu_field)) then
         rs_state(ip, :) = sqrt(ep_field(ip)/M_TWO) * e_field(ip, :) & 

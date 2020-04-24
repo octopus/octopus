@@ -73,7 +73,6 @@ module pfft_oct_m
 
   private
 
-#ifdef HAVE_PFFT
   public ::                    &
     pfft_decompose,            &
     pfft_prepare_plan_r2c,     &
@@ -127,7 +126,7 @@ contains
   ! ---------------------------------------------------------
   !> Octopus subroutine to prepare a PFFT plan real to complex
   subroutine pfft_prepare_plan_r2c(plan, n, in, out, sign, flags, mpi_comm)
-    type(C_PTR),   intent(out)   :: plan       !< The plan that is created by PFFT
+    type(C_PTR),      intent(out)   :: plan       !< The plan that is created by PFFT
     integer,          intent(in)    :: n(:)       !< The size of the global matrix
     FLOAT,   pointer, intent(inout) :: in(:,:,:)  !< The input matrix that is going to be used to do the transform
     CMPLX,   pointer, intent(inout) :: out(:,:,:) !< The output matrix that is going to be used to do the transform
@@ -138,16 +137,23 @@ contains
     
     integer(C_INTPTR_T) :: tmp_n(3)
     type(profile_t), save   :: prof
+
     PUSH_SUB(pfft_prepare_plan_r2c)
     call profiling_in(prof,"PFFT_PLAN_R2C")
 
+#ifdef HAVE_PFFT
     ASSERT(sign == PFFT_FORWARD)
+#endif
 
     tmp_n(1:3) = n(3:1:-1)
 
+#ifdef HAVE_PFFT
     plan = pfft_plan_dft_r2c_3d(tmp_n,in,out,mpi_comm,sign,&
       PFFT_TRANSPOSED_OUT + PFFT_MEASURE + PFFT_DESTROY_INPUT + PFFT_TUNE) 
-    
+#else
+    plan = C_NULL_PTR
+#endif
+
     call profiling_out(prof)
     POP_SUB(pfft_prepare_plan_r2c)
   end subroutine pfft_prepare_plan_r2c
@@ -169,14 +175,20 @@ contains
     PUSH_SUB(pfft_prepare_plan_c2r)
     call profiling_in(prof,"PFFT_PLAN_C2R")
 
+#ifdef HAVE_PFFT
     ASSERT(sign == PFFT_BACKWARD)
+#endif
 
     tmp_n(1:3) = n(3:1:-1)
 
+#ifdef HAVE_PFFT
     plan = pfft_plan_dft_c2r_3d(tmp_n,in,out,mpi_comm, sign, &
       PFFT_TRANSPOSED_IN + PFFT_MEASURE + PFFT_DESTROY_INPUT + PFFT_TUNE) 
     !call PDFFT(plan_dft_c2r_3d) (plan, tmp_n(1), in(1,1,1), out(1,1,1), mpi_comm, sign, &
     !     PFFT_TRANSPOSED_IN + PFFT_MEASURE + PFFT_DESTROY_INPUT + PFFT_TUNE) 
+#else
+    plan = C_NULL_PTR
+#endif
 
     call profiling_out(prof)
     POP_SUB(pfft_prepare_plan_c2r)
@@ -195,13 +207,16 @@ contains
                                                   !! FFTPreparePlan. Default value is FFTW_MEASURE
     integer,          intent(in)    :: mpi_comm   !< MPI communicator
 
+#ifdef HAVE_PFFT
     integer(C_INT) :: pfft_flags
+#endif
     integer(C_INTPTR_T) :: tmp_n(3)
 
     PUSH_SUB(pfft_prepare_plan_c2c)
 
     tmp_n(1:3) = n(3:1:-1)
 
+#ifdef HAVE_PFFT
     if (sign == PFFT_FORWARD) then
       pfft_flags = PFFT_TRANSPOSED_OUT
     else
@@ -210,6 +225,9 @@ contains
 
     plan = pfft_plan_dft_3d(tmp_n,in,out,mpi_comm, sign, pfft_flags)
     !call PDFFT(plan_dft_3d) (plan, tmp_n(1), in(1,1,1), out(1,1,1), mpi_comm, sign, pfft_flags)
+#else
+    plan = C_NULL_PTR
+#endif
 
     POP_SUB(pfft_prepare_plan_c2c)
   end subroutine pfft_prepare_plan_c2c
@@ -237,15 +255,20 @@ contains
     ! the array order is the C array order
     tmp_n(1:3) = rs_n_global(3:1:-1)
 
+    tmp_alloc_size = 0
     if (is_real) then
+#ifdef HAVE_PFFT
        tmp_alloc_size = pfft_local_size_dft_r2c_3d(tmp_n, mpi_comm, PFFT_TRANSPOSED_OUT, &
          tmp_rs_n, tmp_rs_istart, tmp_fs_n, tmp_fs_istart) 
+#endif
        !call PDFFT(local_size_dft_r2c_3d)(tmp_alloc_size, tmp_n(1), mpi_comm, PFFT_TRANSPOSED_OUT, &
        !       tmp_rs_n(1), tmp_rs_istart(1), tmp_fs_n(1), tmp_fs_istart(1)) 
        fs_n_global(1) = rs_n_global(1)/2 + 1
-    else
+     else
+#ifdef HAVE_PFFT
        tmp_alloc_size = pfft_local_size_dft_3d(tmp_n,mpi_comm, PFFT_TRANSPOSED_OUT, &
          tmp_rs_n,tmp_rs_istart,tmp_fs_n,tmp_fs_istart)
+#endif
        !call PDFFT(local_size_dft_3d)(tmp_alloc_size, tmp_n(1), mpi_comm, PFFT_TRANSPOSED_OUT, &
        !             tmp_rs_n(1), tmp_rs_istart(1), tmp_fs_n(1), tmp_fs_istart(1))
     end if
@@ -258,8 +281,6 @@ contains
 
     POP_SUB(pfft_get_dims)
   end subroutine pfft_get_dims
-
-#endif
 
 end module pfft_oct_m
 

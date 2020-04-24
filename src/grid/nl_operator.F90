@@ -126,7 +126,6 @@ module nl_operator_oct_m
 
   integer, public, parameter :: OP_ALL = 3, OP_INNER = 1, OP_OUTER = 2
 
-  logical :: initialized = .false.
   logical :: compact_boundaries
 
   interface

@@ -54,7 +54,7 @@ program photoelectron_spectrum
     FLOAT       :: pvec(3)        
   end type pesoutput_t  
 
-  integer              :: ierr, integrate
+  integer              :: ierr, integrate, what_default
   integer              :: dim, dir, idim, pdim, ngpt
   integer(8)           :: how
   integer              :: llp(3), llg(3)   !< The size of the g-point and p-point cubic grids 
@@ -190,7 +190,7 @@ program photoelectron_spectrum
   center = (/0,0,0/)
   pvec = (/1,0,0/)
 
-  pesout%what = OPTION__PHOTOELECTRONSPECTRUMOUTPUT__ENERGY_TOT 
+  what_default = OPTION__PHOTOELECTRONSPECTRUMOUTPUT__ENERGY_TOT 
   pesout%pvec = pvec
 
   have_zweight_path = kpoints_have_zero_weight_path(sb%kpoints)
@@ -208,7 +208,7 @@ program photoelectron_spectrum
       pol = (/0,1,0/) 
       pvec = (/0,0,1/)
       
-      pesout%what = OPTION__PHOTOELECTRONSPECTRUMOUTPUT__VELOCITY_MAP_CUT 
+      what_default = OPTION__PHOTOELECTRONSPECTRUMOUTPUT__VELOCITY_MAP_CUT 
       pesout%pol = (/0,1,0/) 
       pesout%pvec = (/0,0,1/)
     end if
@@ -217,7 +217,7 @@ program photoelectron_spectrum
       ! write the full ARPES in vtk format (this could be a big file)
       pol = (/0,0,1/) 
       
-      pesout%what = OPTION__PHOTOELECTRONSPECTRUMOUTPUT__ARPES
+      what_default = OPTION__PHOTOELECTRONSPECTRUMOUTPUT__ARPES
       pesout%pol = (/0,0,1/) 
     end if
     
@@ -227,7 +227,7 @@ program photoelectron_spectrum
       pol = (/0,0,1/) 
       pvec = (/0,1,0/)
 
-      pesout%what = OPTION__PHOTOELECTRONSPECTRUMOUTPUT__ARPES_CUT
+      what_default = OPTION__PHOTOELECTRONSPECTRUMOUTPUT__ARPES_CUT
       pesout%pol = (/0,0,1/) 
       pesout%pvec = (/0,1,0/)
     end if 
@@ -281,7 +281,7 @@ program photoelectron_spectrum
   !%Option arpes_cut bit(8)
   !% ARPES cut on a plane following a zero-weight path in reciprocal space.
   !%End
-  call parse_variable(global_namespace,'PhotoelectronSpectrumOutput', pesout%what, pesout%what)
+  call parse_variable(global_namespace,'PhotoelectronSpectrumOutput', what_default, pesout%what)
   
   ! TODO: I think it would be better to move these options in the
   ! input file to have more flexibility to combine and to keep
