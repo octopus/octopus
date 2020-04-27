@@ -6,7 +6,7 @@ Radius = 7
 Spacing = 0.05
 
 # local potential v(x)=-2/(1+x^2)^(1/2) (Z_He=2)
-d=1.628
+#d=1.628
 %Species
   "1dhelium" | species_user_defined | potential_formula | "-2/(1+x^2)^(1/2)" | valence | 2
 %

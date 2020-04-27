@@ -53,9 +53,9 @@ PhotoElectronSpectrum = pes_flux
 PES_Flux_Kmax = 2.5
 PES_Flux_DeltaK = 0.01
 PES_Flux_Shape = cub
-%PES_Flux_Lsize
-  20 | 0 | 0
-%
+#%PES_Flux_Lsize
+#  20 | 0 | 0
+#%
 
 ##########################
 #LASER

@@ -36,8 +36,8 @@ OCTTargetOperator = oct_tg_gstransformation
 
 OCTScheme  = oct_zbr98
 OCTDoubleCheck = No	
-gamma1 = 0.1
-gamma2 = 80
+#gamma1 = 0.1
+#gamma2 = 80
 
 #----------------------------
 # Laser field = Initial guess

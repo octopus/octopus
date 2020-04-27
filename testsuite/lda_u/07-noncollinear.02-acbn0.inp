@@ -43,15 +43,6 @@ FromScratch = no
 ParDomains = no
 
 SpinComponents = spinors
-GuessMagnetDensity = user_defined
-%AtomsMagnetDirection
- 8.0 | 0.0 | 0.0
--8.0 | 0.0 | 0.0
- 0.0 | 0.0 | 0.0 
- 0.0 | 0.0 | 0.0 
-%
-
-LCAOStart= lcao_states
 
 %KPointsGrid
 2 | 2 | 1

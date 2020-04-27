@@ -22,6 +22,6 @@ MixField = density
 
 # check different algorithms for this test
 ParStates = auto
-ParDomain = no
+ParDomains = no
 StatesOrthogonalization = cholesky_serial
 SubspaceDiagonalization = standard
