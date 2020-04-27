@@ -45,7 +45,9 @@ match ; Plane pos 295 Z  ; LINEFIELD(static/density.x\=0, 294, 2) ;  2.645886042
 Precision : 0.000000001
 match ; Plane value 10   ; LINEFIELD(static/density.x\=0, 9, 3)   ; 2.2347505445645253e-05
 match ; Plane value 30   ; LINEFIELD(static/density.x\=0, 29, 3)  ; 0.0001897651429879145
+Precision: 1.3e-09
 match ; Plane value 295  ; LINEFIELD(static/density.x\=0, 294, 3) ; 0.00606672446448198
+Precision : 0.000000001
 match ; Plane value 10 Grad-y v0 ; LINEFIELD(static/grad_v0-y.x\=0,   9, 3) ; -1.42667157278682E+001
 
 
@@ -112,7 +114,7 @@ match ; Convert to dx (line 29355) ; LINEFIELD(restart/gs/density.dx, 9048, 1) ;
 # Convert the density from obf to dx by performing two scalar operations. This utility runs in parallel.
 Program : oct-convert
 Input : 05-output.03-convert-op.inp
-Precision : 1.0e-9
-match ; Convert to dx (header)     ; GREPFIELD(convert/density.dx, 'origin', 2, 0) ; -5.000000
-match ;  Convert to dx (line 513)    ; LINEFIELD(convert/density.dx, 671, 1) ; 0.000244202526628
-match ;  Convert to dx (line 29355)  ; LINEFIELD(convert/density.dx, 9048, 1) ; 7.281647378e-06
+Precision: 3e-09
+match ; Convert to dx (line 513)   ; LINEFIELD(convert/density.dx, 671, 1) ; 0.000244202526628
+Precision: 2e-09
+match ; Convert to dx (line 29355) ; LINEFIELD(convert/density.dx, 9048, 1) ; 7.281647378e-06

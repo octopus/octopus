@@ -5,6 +5,8 @@ ExperimentalFeatures = yes
 
 EigenSolver = rmmdiis
 ConvRelDens = 1.0e-7
+EigensolverTolerance = 1e-8
+MaximumIter = 100
 
 a = 7.8809
 %Species

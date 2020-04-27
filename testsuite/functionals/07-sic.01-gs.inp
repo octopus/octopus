@@ -22,6 +22,8 @@ EigenSolver = cg_new
 
 Mixing = 0.1
 ConvRelDens = 5e-6
+EigensolverTolerance = 1e-7
+MaximumIter = 100
 
 MeshPartitionPackage = metis
 StatesPack = yes

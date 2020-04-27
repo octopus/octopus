@@ -13,7 +13,7 @@ match ; eigenvalue [1]                ;  GREPFIELD(static/info, '1   --', 3)    
 match ; eigenvalue [2]                ;  GREPFIELD(static/info, '2   --', 3)            ;  -5.579994
 match ; eigenvalue [3]                ;  GREPFIELD(static/info, '3   --', 3)            ;  -5.575194 
 match ; eigenvalue [4]                ;  GREPFIELD(static/info, '4   --', 3)            ;  -5.574328
-match ; electrons-solvent int. energy ;  GREPFIELD(static/info, 'E_e-solvent =', 3)     ;  -27.049517175
+match ; electrons-solvent int. energy ; GREPFIELD(static/info, 'E_e-solvent =', 3)      ; -27.076436095
 match ; nuclei-solvent int. energy    ;  GREPFIELD(static/info, 'E_n-solvent =', 3)     ;  23.86066947
 match ; molecule-solvent int. energy  ;  GREPFIELD(static/info, 'E_M-solvent =', 3)     ;  -3.21579859
 match ; electronic pol. charge        ;  GREPFIELD(pcm/pcm_info.out, '       9   ', 7)  ;  -7.84093311
@@ -44,7 +44,7 @@ match ;  eigenvalue [1]                 ; GREPFIELD(static/info, '1   --', 3) ; 
 match ;  eigenvalue [2]                 ; GREPFIELD(static/info, '2   --', 3) ; -5.836664
 match ;  eigenvalue [3]                 ; GREPFIELD(static/info, '3   --', 3) ; -5.834888
 match ;  eigenvalue [4]                 ; GREPFIELD(static/info, '4   --', 3) ; -5.834099
-match ;  electrons-solvent int. energy  ; GREPFIELD(static/info, 'E_e-solvent =', 3) ; -27.04940705
+match ;  electrons-solvent int. energy  ; GREPFIELD(static/info, 'E_e-solvent =', 3) ; -27.049517175
 match ;  nuclei-solvent int. energy     ; GREPFIELD(static/info, 'E_n-solvent =', 3) ; 23.83884243
 match ;  molecule-solvent int. energy   ; GREPFIELD(static/info, 'E_M-solvent =', 3) ; -3.21056462
 match ;  electronic pol. charge         ; GREPFIELD(pcm/pcm_info.out, '       9   ', 7) ; -7.83953776

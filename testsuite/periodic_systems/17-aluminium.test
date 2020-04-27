@@ -47,7 +47,8 @@ match ; Eigenvalue      [ k = 3, n = 4 ] ; GREPFIELD(static/info, '#k =   3', 3,
 match ; Eigenvalue      [ k = 3, n = 5 ] ; GREPFIELD(static/info, '#k =   3', 3, 5) ; 0.095649
 match ; Eigenvalue      [ k = 3, n = 6 ] ; GREPFIELD(static/info, '#k =   3', 3, 6) ; 0.095664
 match ; Eigenvalue      [ k = 3, n = 7 ] ; GREPFIELD(static/info, '#k =   3', 3, 7) ; 0.095664
-match ; Eigenvalue      [ k = 3, n = 8 ] ; GREPFIELD(static/info, '#k =   3', 3, 8) ; 0.597249
+Precision: 0.13
+match ; Eigenvalue      [ k = 3, n = 8 ] ; GREPFIELD(static/info, '#k =   3', 3, 8) ; 0.483081
 
 match ; Eigenvalue      [ k = 4, n = 1 ] ; GREPFIELD(static/info, '#k =   4', 3, 1) ; 0.016464
 match ; Eigenvalue      [ k = 4, n = 2 ] ; GREPFIELD(static/info, '#k =   4', 3, 2) ; 0.016464
@@ -56,7 +57,8 @@ match ; Eigenvalue      [ k = 4, n = 4 ] ; GREPFIELD(static/info, '#k =   4', 3,
 match ; Eigenvalue      [ k = 4, n = 5 ] ; GREPFIELD(static/info, '#k =   4', 3, 5) ; 0.095649
 match ; Eigenvalue      [ k = 4, n = 6 ] ; GREPFIELD(static/info, '#k =   4', 3, 6) ; 0.095649
 match ; Eigenvalue      [ k = 4, n = 7 ] ; GREPFIELD(static/info, '#k =   4', 3, 7) ; 0.095649
-match ; Eigenvalue      [ k = 4, n = 8 ] ; GREPFIELD(static/info, '#k =   4', 3, 8) ; 0.597249
+Precision: 0.101
+match ; Eigenvalue      [ k = 4, n = 8 ] ; GREPFIELD(static/info, '#k =   4', 3, 8) ; 0.5061835
 
 Input      : 17-aluminium.02-td.inp
 
@@ -88,7 +90,9 @@ Util : oct-conductivity
 Input      : 17-aluminium.03-conductivity.inp
 
 match ; conductivity  energy 0 ; LINEFIELD(td.general/conductivity, 5, 1) ; 0.000000E+00
+Precision: 0.00025
 match ; Re cond xx energy 0 ; LINEFIELD(td.general/conductivity, 5, 2) ; 0.8229720145E-02
+Precision: 0.0001
 match ; Im cond xx energy 0 ; LINEFIELD(td.general/conductivity, 5, 3) ; 0.000000E+00
 match ; Re cond yy energy 0 ; LINEFIELD(td.general/conductivity, 5, 4) ; -0.2244449363E-04
 match ; Im cond yy energy 0 ; LINEFIELD(td.general/conductivity, 5, 5) ; 0.000000E+00
