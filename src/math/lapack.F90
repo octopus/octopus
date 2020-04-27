@@ -403,7 +403,7 @@ module lapack_oct_m
       integer,      intent(in)    :: n, lda, lwork
       FLOAT,        intent(inout) :: a       !< a(lda, n)
       integer,      intent(in)    :: ipiv    !< ipiv(n)
-      FLOAT,        intent(inout) :: work    !< work(lwork)
+      FLOAT,        intent(out)   :: work    !< work(lwork)
       integer,      intent(out)   :: info
     end subroutine dgetri
 
@@ -412,7 +412,7 @@ module lapack_oct_m
       integer,      intent(in)    :: n, lda, lwork
       CMPLX,        intent(inout) :: a       !< a(lda, n)
       integer,      intent(in)    :: ipiv    !< ipiv(n)
-      CMPLX,        intent(inout) :: work    !< work(lwork)
+      CMPLX,        intent(out)   :: work    !< work(lwork)
       integer,      intent(out)   :: info
     end subroutine zgetri
   end interface lapack_getri
@@ -424,7 +424,7 @@ module lapack_oct_m
       integer,      intent(in)    :: n, lda, lwork
       FLOAT,        intent(inout) :: a
       integer,      intent(out)   :: ipiv
-      FLOAT,        intent(inout) :: work
+      FLOAT,        intent(out)   :: work
       integer,      intent(out)   :: info
     end subroutine dsytrf
 
@@ -434,7 +434,7 @@ module lapack_oct_m
       integer,      intent(in)    :: n, lda, lwork
       CMPLX,        intent(inout) :: a
       integer,      intent(out)   :: ipiv
-      CMPLX,        intent(inout) :: work
+      CMPLX,        intent(out)   :: work
       integer,      intent(out)   :: info
     end subroutine zsytrf
   end interface lapack_sytrf
@@ -446,7 +446,7 @@ module lapack_oct_m
       integer,      intent(in)    :: n, lda
       FLOAT,        intent(inout) :: a
       integer,      intent(in)    :: ipiv
-      FLOAT,        intent(inout) :: work
+      FLOAT,        intent(out)   :: work
       integer,      intent(out)   :: info
     end subroutine dsytri
 
@@ -456,7 +456,7 @@ module lapack_oct_m
       integer,      intent(in)    :: n, lda
       CMPLX,        intent(inout) :: a
       integer,      intent(in)    :: ipiv
-      CMPLX,        intent(inout) :: work
+      CMPLX,        intent(out)   :: work
       integer,      intent(out)   :: info
     end subroutine zsytri
   end interface lapack_sytri
