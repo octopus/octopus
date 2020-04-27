@@ -28,7 +28,6 @@
 #define R_TOTYPE(x) real(x, REAL_PRECISION)
 #define R_TOPREC(x) real(x, REAL_PRECISION)
 
-#define R_ABS(x)    abs(x)
 #define R_CONJ(x)   (x)
 #define R_REAL(x)   (x)
 #define R_AIMAG(x)  (M_ZERO)

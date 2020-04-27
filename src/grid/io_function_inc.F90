@@ -1123,9 +1123,9 @@ contains
         case(2)
           out_vec(iy) = R_AIMAG(fu) ! imaginary part
         case(3)
-          out_vec(iy) = R_ABS(fu)   ! absolute value
+          out_vec(iy) = abs(fu)   ! absolute value
         end select
-        
+
       end do
 
       ! now we write to the disk
