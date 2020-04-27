@@ -680,7 +680,7 @@ subroutine FNAME(gemmt_2)(m1, m2, n1, n2, k, alpha, a, b, beta, c)
   ASSERT(ubound(a, dim=3) == m1)
   ASSERT(ubound(b, dim=1) >= k)
   ASSERT(ubound(b, dim=2) == n2)
-  ASSERT(ubound(b, dim=3) == n1)
+  ASSERT(ubound(b, dim=3) >= n1)
   ASSERT(ubound(c, dim=1) >= m1*m2)
   ASSERT(ubound(c, dim=2) >= n1*n2)
 
