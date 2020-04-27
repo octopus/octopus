@@ -518,7 +518,8 @@ subroutine X(lobpcg)(namespace, gr, st, hm, st_start, st_end, psi, constr_start,
 
     call profiling_in(C_PROFILING_LOBPCG_ESOLVE, 'LOBPCG_ESOLVE')
     no_bof = .false.
-    call lalg_lowest_geneigensolve(nst, nst+blks*nuc, gram_h, gram_i, eval, ritz_vec, bof = no_bof)
+    call lalg_lowest_geneigensolve(nst, nst+blks*nuc, gram_h, gram_i, eval, ritz_vec, &
+               preserve_mat=.false., bof = no_bof)
     call profiling_out(C_PROFILING_LOBPCG_ESOLVE)
 
     if(no_bof) then
