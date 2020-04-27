@@ -54,7 +54,7 @@ Processors : 4
 Input      : 01-propagators.05-etrs_chebyshev.inp
 Precision  : 1e-10
 match ; Energy [step  0] ; LINEFIELD(td.general/energy, -21, 3) ; -1.060766055107e+01
-match ; Energy [step 20] ; LINEFIELD(td.general/energy, -1, 3) ; -1.059387293795e+01
+match ; Energy [step 20] ; LINEFIELD(td.general/energy, -1, 3) ; -10.593872938005
 Precision  : 2e-10
 match ; Multipoles [step  0] ; LINEFIELD(td.general/multipoles, -21, 4) ; 0.0
 match ; Multipoles [step 20] ; LINEFIELD(td.general/multipoles,  -1, 4) ; -1.269362690211e-01
