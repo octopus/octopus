@@ -421,7 +421,7 @@ contains
     external_potentials_present = associated(hm%ep%v_static) .or. &
 				  associated(hm%ep%E_field)  .or. &
 				  associated(hm%ep%lasers)
-
+    
     kick_present = hm%ep%kick%delta_strength /= M_ZERO
 
     call pcm_init(hm%pcm, geo, gr, st%qtot, st%val_charge, external_potentials_present, kick_present )  !< initializes PCM  
@@ -741,6 +741,8 @@ contains
 
     end do
 
+
+
     ! the lasers
     if (present(time) .or. this%time_zero) then
 
@@ -778,7 +780,7 @@ contains
         call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_UNIFORM_VECTOR_POTENTIAL, .false.)
         call gauge_field_get_vec_pot(this%ep%gfield, aa)
         this%hm_base%uniform_vector_potential(1:mesh%sb%dim) = this%hm_base%uniform_vector_potential(1:mesh%sb%dim)  &
-          - aa(1:mesh%sb%dim)/P_c
+             - aa(1:mesh%sb%dim)/P_c
       end if
 
       ! the electric field for a periodic system through the gauge field
@@ -787,11 +789,16 @@ contains
           this%hm_base%uniform_vector_potential(1:mesh%sb%periodic_dim) - time_*this%ep%e_field(1:mesh%sb%periodic_dim)
       end if
 
-
-      ! thermal gradient 
-
+      ! thermal gradient
+      if(thermal_gradient_is_applied(this%ep%tfield)) then
+         call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_UNIFORM_VECTOR_POTENTIAL,.false.)
+         call thermal_gradient_get_vec_pot(this%ep%tfield, aa)
+         this%hm_base%uniform_thermal_potential(1:mesh%sb%dim) = this%hm_base%uniform_thermal_potential(1:mesh%sb%dim)  &
+          - aa(1:mesh%sb%dim) !!check if needs a factor later.
+      end if
       
    end if
+  
 
     ! the vector potential of a static magnetic field
     if(associated(this%ep%a_static)) then
@@ -1390,6 +1397,19 @@ contains
           this%hm_base%uniform_vector_potential(1:mesh%sb%periodic_dim) - time_*this%ep%e_field(1:mesh%sb%periodic_dim)
       end if
 
+      ! the thermal gradient
+      if(thermal_gradient_is_applied(this%ep%tfield)) then
+        call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_UNIFORM_VECTOR_POTENTIAL, .false.)
+        call thermal_gradient_get_vec_pot(this%ep%tfield, aa)
+        write(*,*)"thermal gradient 1", this%ep%tfield
+        stop
+        this%hm_base%uniform_thermal_potential(1:mesh%sb%dim) = this%hm_base%uniform_thermal_potential(1:mesh%sb%dim)  &
+             - aa(1:mesh%sb%dim) !!check if needs a factor later.
+
+      end if
+
+
+      
     end do
 
     ! the vector potential of a static magnetic field

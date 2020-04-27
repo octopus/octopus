@@ -67,7 +67,7 @@ module thermal_gradient_oct_m
     FLOAT   :: wp2
     integer :: ndim
     logical :: with_thermal_gradient
-    integer :: dynamics
+ !   integer :: dynamics
     FLOAT   :: kicktime 
   end type thermal_gradient_t
 
@@ -100,33 +100,6 @@ contains
     this%force = M_ZERO
     this%ndim = sb%dim
 
-    !%Variable GaugeFieldDynamics
-    !%Type integer
-    !%Default polarization
-    !%Section Hamiltonian
-    !%Description
-    !% This variable select the dynamics of the thermal gradient used to
-    !% apply a finite electric field to periodic systems in
-    !% time-dependent runs.
-    !%Option none 0
-    !% The thermal gradient does not have dynamics. The induced polarization field is zero.
-    !%Option polarization 1
-    !% The thermal gradient follows the dynamic described in
-    !% Bertsch et al, Phys. Rev. B 62 7998 (2000).
-    !%End
-
-    call parse_variable('GaugeFieldDynamics', OPTION__GAUGEFIELDDYNAMICS__POLARIZATION, this%dynamics)
-
-    !%Variable GaugeFieldPropagate
-    !%Type logical
-    !%Default no
-    !%Section Hamiltonian
-    !%Description
-    !% Propagate the thermal gradient with initial condition set by GaugeVectorField or zero if not specified
-    !%End
-
-    call parse_variable('GaugeFieldPropagate', .false., this%with_thermal_gradient)
-
     !%Variable ThermalGradient
     !%Type block
     !%Section Hamiltonian
@@ -140,7 +113,7 @@ contains
     !% must be set in the same direction.
     !%End
     ! Read the thermal gradient
-
+ 
     if(parse_block('ThermalGradient', blk) == 0) then
 
       this%with_thermal_gradient = .true.
@@ -159,8 +132,8 @@ contains
         do iop = 1, symmetries_number(sb%symm)
           if(iop == symmetries_identity_index(sb%symm)) cycle
           if(.not. symm_op_invariant_cart(sb%symm%ops(iop), this%vecpot, CNST(1e-5))) then
-            message(1) = "The GaugeVectorField breaks (at least) one of the symmetries used to reduce the k-points."
-            message(2) = "Set SymmetryBreakDir equal to GaugeVectorField."
+            message(1) = "ThermalGradient breaks (at least) one of the symmetries used to reduce the k-points."
+            !message(2) = "Set SymmetryBreakDir equal to GaugeVectorField."
             call messages_fatal(2)
           end if
         end do
@@ -168,16 +141,9 @@ contains
 
     end if
 
-    !%Variable GaugeFieldDelay
-    !%Type float
-    !%Default 0.
-    !%Section Hamiltonian
-    !%Description
-    !% The application of the thermal gradient acts as a probe of the system. For dynamical
-    !% systems one can apply this probe with a delay relative to the start of the simulation.
-    !%End
 
-    call parse_variable('GaugeFieldDelay', M_ZERO, this%kicktime)
+    this%kicktime = M_ZERO
+    !call parse_variable('GaugeFieldDelay', M_ZERO, this%kicktime)
 
     if(abs(this%kicktime) <= M_EPSILON) then
        this%vecpot(1:this%ndim) = this%vecpot_kick(1:this%ndim)
@@ -296,7 +262,7 @@ contains
 
         warning_shown = .true.
 
-        write(message(1),'(a)') 'It seems that the gauge-field might be diverging. You should probably check'
+        write(message(1),'(a)') 'It seems that the thermal-field might be diverging. You should probably check'
         write(message(2),'(a)') 'the simulation parameters, in particular the number of k-points.'
         call messages_warning(2)
       end if
@@ -439,25 +405,27 @@ contains
 
     PUSH_SUB(thermal_gradient_get_force)
 
+    this%force(1:gr%sb%dim) = M_ZERO
+    
 
-    select case(this%dynamics)
-    case(OPTION__GAUGEFIELDDYNAMICS__NONE)
-      this%force(1:gr%sb%dim) = M_ZERO 
+!    select case(this%dynamics)
+!    case(OPTION__GAUGEFIELDDYNAMICS__NONE)
+!      this%force(1:gr%sb%dim) = M_ZERO 
 
-    case(OPTION__GAUGEFIELDDYNAMICS__POLARIZATION)
-      istot = 1
-      if (st%d%nspin > 1) istot = 2
-      do idir = 1, gr%sb%periodic_dim
-        this%force(idir) = M_ZERO
-        do ispin = 1, istot                      
-          this%force(idir) = this%force(idir) - &
-                               CNST(4.0)*M_PI*P_c/gr%sb%rcell_volume*dmf_integrate(gr%mesh, st%current(:, idir, ispin))
-        end do
-      end do
+    !case(OPTION__GAUGEFIELDDYNAMICS__POLARIZATION)
+    !  istot = 1
+    ! !  if (st%d%nspin > 1) istot = 2
+    !   do idir = 1, gr%sb%periodic_dim
+    !     this%force(idir) = M_ZERO
+    !     do ispin = 1, istot                      
+    !       this%force(idir) = this%force(idir) - &
+    !                            CNST(4.0)*M_PI*P_c/gr%sb%rcell_volume*dmf_integrate(gr%mesh, st%current(:, idir, ispin))
+    !     end do
+    !   end do
 
-    case default
-      ASSERT(.false.)
-    end select
+!    case default
+!      ASSERT(.false.)
+!    end select
 
     POP_SUB(thermal_gradient_get_force)
   end subroutine thermal_gradient_get_force

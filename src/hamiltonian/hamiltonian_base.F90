@@ -92,6 +92,7 @@ module hamiltonian_base_oct_m
     FLOAT,                    allocatable :: Impotential(:, :)
     FLOAT,                    allocatable :: uniform_magnetic_field(:)
     FLOAT,                    allocatable :: uniform_vector_potential(:)
+    FLOAT,                    allocatable :: uniform_thermal_potential(:)
     FLOAT,                    allocatable :: vector_potential(:, :)
     integer                               :: nprojector_matrices
     logical                               :: apply_projector_matrices
@@ -135,11 +136,12 @@ module hamiltonian_base_oct_m
     TERM_MGGA                =  32,      &
     TERM_DFT_U               =  64 
 
-  integer, parameter, public ::            &
-    FIELD_POTENTIAL                = 1,    &
-    FIELD_VECTOR_POTENTIAL         = 2,    &
-    FIELD_UNIFORM_VECTOR_POTENTIAL = 4,    &
-    FIELD_UNIFORM_MAGNETIC_FIELD   = 8
+  integer, parameter, public ::             &
+    FIELD_POTENTIAL                 = 1,    &
+    FIELD_VECTOR_POTENTIAL          = 2,    &
+    FIELD_UNIFORM_VECTOR_POTENTIAL  = 4,    &
+    FIELD_UNIFORM_THERMAL_POTENTIAL = 5,    & 
+    FIELD_UNIFORM_MAGNETIC_FIELD    = 8
   
   ! declare module wide to be retained over several applications of the hamiltonian
   type(accel_mem_t), target, private :: buff_projection
@@ -192,6 +194,7 @@ contains
     SAFE_DEALLOCATE_A(this%Impotential)
     SAFE_DEALLOCATE_A(this%vector_potential)
     SAFE_DEALLOCATE_A(this%uniform_vector_potential)
+    SAFE_DEALLOCATE_A(this%uniform_thermal_potential)
     SAFE_DEALLOCATE_A(this%uniform_magnetic_field)
     call hamiltonian_base_destroy_proj(this)
 
@@ -211,6 +214,7 @@ contains
     if(allocated(this%potential))                this%potential = M_ZERO
     if(allocated(this%Impotential))              this%Impotential = M_ZERO
     if(allocated(this%uniform_vector_potential)) this%uniform_vector_potential = M_ZERO
+    if(allocated(this%uniform_thermal_potential)) this%uniform_thermal_potential = M_ZERO
     if(allocated(this%vector_potential))         this%vector_potential = M_ZERO
     if(allocated(this%uniform_magnetic_field))   this%uniform_magnetic_field = M_ZERO
 
@@ -246,6 +250,13 @@ contains
       if(.not. allocated(this%uniform_vector_potential)) then
         SAFE_ALLOCATE(this%uniform_vector_potential(1:mesh%sb%dim))
         this%uniform_vector_potential = M_ZERO
+      end if
+    end if
+
+    if(bitand(FIELD_UNIFORM_THERMAL_POTENTIAL, field) /= 0) then 
+      if(.not. allocated(this%uniform_thermal_potential)) then
+        SAFE_ALLOCATE(this%uniform_thermal_potential(1:mesh%sb%dim))
+        this%uniform_thermal_potential = M_ZERO
       end if
     end if
 
