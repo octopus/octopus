@@ -183,9 +183,9 @@ module hamiltonian_mxll_oct_m
   integer, public, parameter ::      &
     FARADAY_AMPERE_OLD          = 0, &
     FARADAY_AMPERE              = 1, &
-    FARADAT_AMPERE_MEDIUM       = 2, &
-    FARADAT_AMPERE_GAUSS        = 3, &
-    FARADAT_AMPERE_GUASS_MEDIUM = 4
+    FARADAY_AMPERE_MEDIUM       = 2, &
+    FARADAY_AMPERE_GAUSS        = 3, &
+    FARADAY_AMPERE_GAUSS_MEDIUM = 4
 
 contains
 
@@ -265,11 +265,11 @@ contains
     !%Option faraday_ampere_gauss_medium 4
     !% The propagation operation is done by 4x4 matrices also with Gauss laws constraint in medium
     !%End
-    call parse_variable(namespace, 'HamiltonianOperator', OPTION__HAMILTONIANOPERATOR__FARADAY_AMPERE, hm%operator)
+    call parse_variable(namespace, 'HamiltonianOperator', FARADAY_AMPERE, hm%operator)
 
-    if (hm%operator == OPTION__HAMILTONIANOPERATOR__FARADAY_AMPERE_GAUSS) then
+    if (hm%operator == FARADAY_AMPERE_GAUSS) then
       hm%dim = hm%dim+1
-    else if (hm%operator == OPTION__HAMILTONIANOPERATOR__FARADAY_AMPERE_MEDIUM) then
+    else if (hm%operator == FARADAY_AMPERE_MEDIUM) then
       hm%dim = 2*hm%dim
     end if
 
@@ -497,7 +497,7 @@ contains
 
     call profiling_in(prof_hamiltonian_mxll, "MAXWELLHAMILTONIAN")
 
-    if (hm%operator == OPTION__HAMILTONIANOPERATOR__FARADAY_AMPERE .and. &
+    if (hm%operator == FARADAY_AMPERE .and. &
          all(hm%bc%bc_ab_type(:) /= OPTION__MAXWELLABSORBINGBOUNDARIES__CPML)) then
       ! This part is already batchified
       call hamiltonian_mxll_apply_batch(hm, namespace, hm%der, psib, hpsib)
@@ -547,7 +547,7 @@ contains
     !===========================================================================================================
     ! Maxwell Hamiltonian - Hamiltonian operation in vacuum via partial derivatives:
 
-    if (hm%operator == OPTION__HAMILTONIANOPERATOR__FARADAY_AMPERE) then
+    if (hm%operator == FARADAY_AMPERE) then
 
       SAFE_ALLOCATE(tmp(np_part,2))
       oppsi       = M_z0
@@ -600,7 +600,7 @@ contains
     !==============================================================================================================================
     ! Maxwell Hamiltonian - Hamiltonian operation in medium via partial derivatives:
 
-    else if (hm%operator == OPTION__HAMILTONIANOPERATOR__FARADAY_AMPERE_MEDIUM) then
+    else if (hm%operator == FARADAY_AMPERE_MEDIUM) then
 
       SAFE_ALLOCATE(tmp(np_part,4))
       oppsi       = M_z0
@@ -659,7 +659,7 @@ contains
     !==============================================================================================================================
     ! Maxwell Hamiltonian - Hamiltonian operation in vacuum with Gauss condition via partial derivatives:
 
-    else if (hm%operator == OPTION__HAMILTONIANOPERATOR__FARADAY_AMPERE_GAUSS) then
+    else if (hm%operator == FARADAY_AMPERE_GAUSS) then
 
       SAFE_ALLOCATE(tmp(np_part,3))
       oppsi       = M_z0
@@ -691,7 +691,7 @@ contains
     !==============================================================================================================================
     ! Maxwell Hamiltonian - Hamiltonian operation in medium with Gauss condition via partial derivatives:
 
-    else if (hm%operator == OPTION__HAMILTONIANOPERATOR__FARADAY_AMPERE_GAUSS_MEDIUM) then
+    else if (hm%operator == FARADAY_AMPERE_GAUSS_MEDIUM) then
 
       SAFE_ALLOCATE(tmp(np_part,3))
       oppsi       = M_z0

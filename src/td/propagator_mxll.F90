@@ -412,9 +412,9 @@ contains
       end if
     end do
 
-    if (hm%operator == OPTION__HAMILTONIANOPERATOR__FARADAY_AMPERE_MEDIUM) then
+    if (hm%operator == FARADAY_AMPERE_MEDIUM) then
       ff_dim = 6
-    else if (hm%operator == OPTION__HAMILTONIANOPERATOR__FARADAY_AMPERE_GAUSS) then
+    else if (hm%operator == FARADAY_AMPERE_GAUSS) then
       ff_dim = 4
     else
       ff_dim = 3
@@ -631,10 +631,10 @@ contains
     CMPLX,               intent(in)    :: rs_state(:,:)
     CMPLX,               intent(inout) :: ff_rs_state(:,:)
 
-    if (hm%operator == OPTION__HAMILTONIANOPERATOR__FARADAY_AMPERE_MEDIUM) then
+    if (hm%operator == FARADAY_AMPERE_MEDIUM) then
       message(1) = "Maxwell solver in linear media not yet implemented"
       call messages_fatal(1)
-    else if (hm%operator == OPTION__HAMILTONIANOPERATOR__FARADAY_AMPERE_GAUSS) then
+    else if (hm%operator == FARADAY_AMPERE_GAUSS) then
       call transform_rs_state_to_4x4_rs_state_forward(rs_state, ff_rs_state)
     else
       ff_rs_state(:,1:3) = rs_state(:,1:3)
@@ -649,9 +649,9 @@ contains
     CMPLX,               intent(in)    :: ff_rs_state(:,:)
     CMPLX,               intent(inout) :: rs_state(:,:)
 
-    if (hm%operator == OPTION__HAMILTONIANOPERATOR__FARADAY_AMPERE_MEDIUM) then
+    if (hm%operator == FARADAY_AMPERE_MEDIUM) then
       call transform_rs_state_to_6x6_rs_state_backward(ff_rs_state, rs_state)
-    else if (hm%operator == OPTION__HAMILTONIANOPERATOR__FARADAY_AMPERE_MEDIUM) then
+    else if (hm%operator == FARADAY_AMPERE_MEDIUM) then
       call transform_rs_state_to_4x4_rs_state_backward(ff_rs_state, rs_state)
     else
       rs_state(:,1:3) = ff_rs_state(:,1:3)
@@ -668,9 +668,9 @@ contains
     CMPLX,               intent(in)    :: rs_current_density(:,:)
     CMPLX,               intent(inout) :: ff_density(:,:)
 
-    if (hm%operator == OPTION__HAMILTONIANOPERATOR__FARADAY_AMPERE_MEDIUM) then
+    if (hm%operator == FARADAY_AMPERE_MEDIUM) then
       call transform_rs_densities_to_6x6_rs_densities_forward(rs_charge_density, rs_current_density, ff_density)
-    else if (hm%operator == OPTION__HAMILTONIANOPERATOR__FARADAY_AMPERE_MEDIUM) then
+    else if (hm%operator == FARADAY_AMPERE_MEDIUM) then
       call transform_rs_densities_to_4x4_rs_densities_forward(rs_charge_density, rs_current_density, ff_density)
     else
       ff_density(:,1:3) = rs_current_density(:,1:3)
@@ -687,9 +687,9 @@ contains
     CMPLX,               intent(inout) :: rs_charge_density(:)
     CMPLX,               intent(inout) :: rs_current_density(:,:)
 
-    if (hm%operator == OPTION__HAMILTONIANOPERATOR__FARADAY_AMPERE_MEDIUM) then
+    if (hm%operator == FARADAY_AMPERE_MEDIUM) then
       call transform_rs_densities_to_6x6_rs_densities_backward(ff_density, rs_charge_density, rs_current_density)
-    else if (hm%operator == OPTION__HAMILTONIANOPERATOR__FARADAY_AMPERE_MEDIUM) then
+    else if (hm%operator == FARADAY_AMPERE_MEDIUM) then
       call transform_rs_densities_to_4x4_rs_densities_backward(ff_density, rs_charge_density, rs_current_density)
     else
       rs_current_density(:,1:3) = ff_density(:,1:3)
@@ -3221,9 +3221,9 @@ contains
 
     PUSH_SUB(plane_waves_propagation)
 
-    if (hm%operator == OPTION__HAMILTONIANOPERATOR__FARADAY_AMPERE_MEDIUM) then
+    if (hm%operator == FARADAY_AMPERE_MEDIUM) then
       ff_dim = 6
-    else if (hm%operator == OPTION__HAMILTONIANOPERATOR__FARADAY_AMPERE_GAUSS) then
+    else if (hm%operator == FARADAY_AMPERE_GAUSS) then
       ff_dim = 4
     else
       ff_dim = 3
