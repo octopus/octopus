@@ -93,7 +93,7 @@ subroutine X(eigensolver_rmmdiis) (namespace, gr, st, hm, pre, tol, niter, conve
     call X(mesh_batch_dotp_vector)(gr%mesh, psib(1)%batch, psib(1)%batch, me(2, :), reduce = .false.)
     if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm, me)
 
-    !This is the Rayleigh quotient R = <psi||H|psi>/<psi|psi>
+    !This is the Rayleigh quotient defined as <psi||H|psi>/<psi|psi>
     do ist = minst, maxst
       st%eigenval(ist, ik) = R_REAL(me(1, ist - minst + 1))/R_REAL(me(2, ist - minst + 1))
     end do
