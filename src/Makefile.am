@@ -742,7 +742,7 @@ oct_help_LDADD = $(all_LIBS)
 oct_floquet_observables_SOURCES = $(td_srcs) $(scf_srcs) $(system_srcs) $(hamiltonian_srcs) $(basis_set_srcs) \
 			$(poisson_srcs) $(states_srcs) $(grid_srcs) \
 			$(ions_srcs) $(species_srcs) $(math_srcs) $(basic_srcs) \
-			utils/floquet.F90
+			utils/floquet_observables.F90
 oct_floquet_observables_LINK = $(FCLINK)
 oct_floquet_observables_LDADD = $(all_LIBS)
 

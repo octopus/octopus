@@ -126,7 +126,7 @@ program floquet_observables
   call system_init(sys)
   
   call hamiltonian_init(hm, sys%gr, sys%geo, sys%st, sys%ks%theory_level, sys%ks%xc_family, &
-                        sys%ks%xc_flags, family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin))
+                        family_is_mgga_with_exc(sys%ks%xc, sys%st%d%nspin))
 
   call floquet_init(sys,hm%F,sys%st%d%dim)
   bare_st => sys%st
@@ -407,6 +407,7 @@ program floquet_observables
     call messages_write('Calculate Floquet forces.')
     call messages_info()
 
+    call get_FBZ_st(dressed_st, FBZ_st)   
     call calc_floquet_forces()
   end if
 
@@ -1367,7 +1368,7 @@ contains
     character(len=512)  ::  str3, str4
     type(unit_t) :: fn_unit
     
-    integer :: how
+    integer(8) :: how
     
     PUSH_SUB(out_floquet_wfs)
 
@@ -1890,7 +1891,7 @@ contains
     filename = FLOQUET_DIR//'/floquet_forces'
     iunit = io_open(filename, action='write')
 
-    call forces_calculate(gr, geo, hm, dressed_st)
+    call forces_calculate(gr, geo, hm, dressed_st, sys%ks)
 
     if(mpi_grp_is_root(mpi_world)) then
        write(iunit,'(3a)') 'Floquet-forces on the ions [', trim(units_abbrev(units_out%force)), "]"
