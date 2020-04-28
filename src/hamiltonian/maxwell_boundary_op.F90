@@ -494,7 +494,7 @@ contains
 
     !%Variable MaxwellMuFactor
     !%Type float
-    !%Default 1.0.
+    !%Default 0.
     !%Section Time-Dependent::Absorbing Boundaries
     !%Description
     !% Maxwell mu factor
@@ -503,7 +503,7 @@ contains
 
     !%Variable MaxwellElectricSigma
     !%Type float
-    !%Default 1.0.
+    !%Default 0.
     !%Section Time-Dependent::Absorbing Boundaries
     !%Description
     !% Maxwell electric sigma
@@ -512,7 +512,7 @@ contains
     call parse_variable(namespace, 'MaxwellElectricSigma', M_ZERO, bc%mxmedium%sigma_e_factor, unit_one)
     !%Variable MaxwellMagneticSigma
     !%Type float
-    !%Default 1.0.
+    !%Default 0.
     !%Section Time-Dependent::Absorbing Boundaries
     !%Description
     !% Maxwell magnetic sigma
@@ -570,7 +570,7 @@ contains
 
     !%Variable MaxwellABMaskWidth
     !%Type float
-    !%Default 0.4 a.u.
+    !%Default 0
     !%Section Time-Dependent::Absorbing Boundaries
     !%Description
     !% Width of the region used to apply the absorbing boundaries.
@@ -617,7 +617,7 @@ contains
 
     !%Variable MaxwellABPMLWidth
     !%Type float
-    !%Default 0.4 a.u.
+    !%Default 0
     !%Section Time-Dependent::Absorbing Boundaries
     !%Description
     !% Width of the region used to apply the absorbing boundaries.
@@ -641,7 +641,7 @@ contains
 
     !%Variable MaxwellABPMLKappaMax
     !%Type float
-    !%Default 0.4
+    !%Default 2.0
     !%Section Time-Dependent::Absorbing Boundaries
     !%Description
     !% Follwos
@@ -650,7 +650,7 @@ contains
 
     !%Variable MaxwellABPMLAlphaMax
     !%Type float
-    !%Default 0.4
+    !%Default 1.0
     !%Section Time-Dependent::Absorbing Boundaries
     !%Description
     !% Follwos
@@ -659,7 +659,7 @@ contains
 
     !%Variable MaxwellABPMLPower
     !%Type float
-    !%Default 0.4
+    !%Default 3.5
     !%Section Time-Dependent::Absorbing Boundaries
     !%Description
     !% Follwos
@@ -668,7 +668,7 @@ contains
 
     !%Variable MaxwellABPMLReflectionError
     !%Type float
-    !%Default 0.4
+    !%Default 0.1
     !%Section Time-Dependent::Absorbing Boundaries
     !%Description
     !% Follwos
