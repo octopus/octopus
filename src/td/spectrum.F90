@@ -1853,25 +1853,25 @@ contains
     ! load dipole from file
     SAFE_ALLOCATE(dipole(0:time_steps))
     SAFE_ALLOCATE(ddipole(0:time_steps))
-    SAFE_ALLOCATE(dd(1:4, 1:nspin))
+    SAFE_ALLOCATE(dd(1:3, 1:nspin))
 
     vv(1:3) = vec(1:3) / sqrt(sum(vec(1:3)**2))  
 
     do istep = 1, time_steps
-      read(iunit, *) trash, dump, dd
+      read(iunit, *) trash, dump, (dump, (dd(idir, ispin), idir = 1, 3), ispin = 1, nspin)
       select case(pol)
       case('x')
-        dipole(istep) = -sum(dd(2, :))
+        dipole(istep) = -sum(dd(1, :))
       case('y')
-        dipole(istep) = -sum(dd(3, :))
+        dipole(istep) = -sum(dd(2, :))
       case('z')
-        dipole(istep) =  sum(dd(4, :))
+        dipole(istep) =  sum(dd(3, :))
       case('+')
-        dipole(istep) = -sum(dd(2, :) + M_zI * dd(3, :)) / sqrt(M_TWO)
+        dipole(istep) = -sum(dd(1, :) + M_zI * dd(2, :)) / sqrt(M_TWO)
       case('-')
-        dipole(istep) = -sum(dd(2, :) - M_zI * dd(3, :)) / sqrt(M_TWO)
+        dipole(istep) = -sum(dd(1, :) - M_zI * dd(2, :)) / sqrt(M_TWO)
       case('v')
-        dipole(istep) = -sum(vv(1)*dd(2, :) + vv(2)*dd(3, :) + vv(3)*dd(4, :))
+        dipole(istep) = -sum(vv(1)*dd(1, :) + vv(2)*dd(2, :) + vv(3)*dd(3, :))
       end select
       dipole(istep) = units_to_atomic(units_out%length, dipole(istep))
     end do
