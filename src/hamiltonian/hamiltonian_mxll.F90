@@ -817,10 +817,10 @@ contains
       call zderivatives_partial(der, psi(:,field_dir), tmp_partial(:), pml_dir, set_bc = .false.)
       do ip_in = 1, hm%bc%pml%points_number
         ip       = hm%bc%pml%points_map(ip_in)
-        pml_c(:) = hm%bc%pml%c(ip_in, :)
-        pml_a(:) = hm%bc%pml%a(ip_in, :)
-        pml_b(:) = hm%bc%pml%b(ip_in, :)
-        pml_g(:) = hm%bc%pml%conv_plus(ip_in, pml_dir,:)
+        pml_c(1:3) = hm%bc%pml%c(ip_in, 1:3)
+        pml_a(1:3) = hm%bc%pml%a(ip_in, 1:3)
+        pml_b(1:3) = hm%bc%pml%b(ip_in, 1:3)
+        pml_g(1:3) = hm%bc%pml%conv_plus(ip_in, pml_dir, 1:3)
         pml(ip)  = rs_sign * pml_c(pml_dir) * tmp_partial(ip) &
                  + rs_sign * pml_c(pml_dir) * TOFLOAT(pml_a(pml_dir)) * TOFLOAT(tmp_partial(ip)) &
                  + rs_sign * M_zI * pml_c(pml_dir) * aimag(pml_a(pml_dir)) * aimag(tmp_partial(ip)) &
@@ -862,21 +862,21 @@ contains
       call zderivatives_partial(der, psi(:,field_dir+3), tmp_partial(:,2), pml_dir, set_bc = .false.)
       do ip_in = 1, hm%bc%pml%points_number
         ip         = hm%bc%pml%points_map(ip_in)
-        pml_c(:)   = hm%bc%pml%c(ip_in, :)
-        pml_a(:)   = hm%bc%pml%a(ip_in, :)
-        pml_b(:)   = hm%bc%pml%b(ip_in, :)
-        pml_g_p(:) = hm%bc%pml%conv_plus(ip_in, pml_dir, :)
-        pml_g_m(:) = hm%bc%pml%conv_minus(ip_in, pml_dir, :)
-        pml(ip,1)  = pml_c(pml_dir) * tmp_partial(ip, 1) &
-                   + pml_c(pml_dir) * TOFLOAT(pml_a(pml_dir)) * TOFLOAT(tmp_partial(ip, 1)) &
-                   + M_zI * pml_c(pml_dir) * aimag(pml_a(pml_dir)) * aimag(tmp_partial(ip, 1)) &
-                   + pml_c(pml_dir) * TOFLOAT(pml_b(pml_dir)) * TOFLOAT(pml_g_p(field_dir)) &
-                   + M_zI * pml_c(pml_dir) * aimag(pml_b(pml_dir)) * aimag(pml_g_p(field_dir))
-        pml(ip,2)  = pml_c(pml_dir) * tmp_partial(ip, 2) &
-                   + pml_c(pml_dir) * TOFLOAT(pml_a(pml_dir)) * TOFLOAT(tmp_partial(ip, 2)) &
-                   + M_zI * pml_c(pml_dir) * aimag(pml_a(pml_dir)) * aimag(tmp_partial(ip, 2)) &
-                   + pml_c(pml_dir) * TOFLOAT(pml_b(pml_dir)) * TOFLOAT(pml_g_m(field_dir)) &
-                   + M_zI * pml_c(pml_dir) * aimag(pml_b(pml_dir)) * aimag(pml_g_m(field_dir))
+        pml_c(1:3)   = hm%bc%pml%c(ip_in, 1:3)
+        pml_a(1:3)   = hm%bc%pml%a(ip_in, 1:3)
+        pml_b(1:3)   = hm%bc%pml%b(ip_in, 1:3)
+        pml_g_p(1:3) = hm%bc%pml%conv_plus(ip_in, pml_dir, 1:3)
+        pml_g_m(1:3) = hm%bc%pml%conv_minus(ip_in, pml_dir, 1:3)
+        pml(ip, 1)   = pml_c(pml_dir) * tmp_partial(ip, 1) &
+                     + pml_c(pml_dir) * TOFLOAT(pml_a(pml_dir)) * TOFLOAT(tmp_partial(ip, 1)) &
+                     + M_zI * pml_c(pml_dir) * aimag(pml_a(pml_dir)) * aimag(tmp_partial(ip, 1)) &
+                     + pml_c(pml_dir) * TOFLOAT(pml_b(pml_dir)) * TOFLOAT(pml_g_p(field_dir)) &
+                     + M_zI * pml_c(pml_dir) * aimag(pml_b(pml_dir)) * aimag(pml_g_p(field_dir))
+        pml(ip, 2)   = pml_c(pml_dir) * tmp_partial(ip, 2) &
+                     + pml_c(pml_dir) * TOFLOAT(pml_a(pml_dir)) * TOFLOAT(tmp_partial(ip, 2)) &
+                     + M_zI * pml_c(pml_dir) * aimag(pml_a(pml_dir)) * aimag(tmp_partial(ip, 2)) &
+                     + pml_c(pml_dir) * TOFLOAT(pml_b(pml_dir)) * TOFLOAT(pml_g_m(field_dir)) &
+                     + M_zI * pml_c(pml_dir) * aimag(pml_b(pml_dir)) * aimag(pml_g_m(field_dir))
       end do
 
     end if
@@ -972,8 +972,8 @@ contains
         do ip_in = 1, hm%medium_box_points_number(il)
           ip           = hm%medium_box_points_map(ip_in, il)
           cc           = hm%medium_box_c(ip_in,il)/P_c
-          aux_ep(:)    = hm%medium_box_aux_ep(ip_in, :, il)
-          aux_mu(:)    = hm%medium_box_aux_mu(ip_in, :, il)
+          aux_ep(1:3)  = hm%medium_box_aux_ep(ip_in, 1:3, il)
+          aux_mu(1:3)  = hm%medium_box_aux_mu(ip_in, 1:3, il)
           sigma_e      = hm%medium_box_sigma_e(ip_in, il)
           sigma_m      = hm%medium_box_sigma_m(ip_in, il)
           ff_plus(1)   = psi(ip, 1)
@@ -982,8 +982,8 @@ contains
           ff_minus(1)  = psi(ip, 4)
           ff_minus(2)  = psi(ip, 5)
           ff_minus(3)  = psi(ip, 6)
-          aux_ep       = dcross_product(aux_ep,TOFLOAT(ff_plus+ff_minus))
-          aux_mu       = dcross_product(aux_mu,aimag(ff_plus-ff_minus))
+          aux_ep       = dcross_product(aux_ep, TOFLOAT(ff_plus+ff_minus))
+          aux_mu       = dcross_product(aux_mu, aimag(ff_plus-ff_minus))
           oppsi(ip, 1) = oppsi(ip,1)*cc                                          &
                        - cc * aux_ep(1) - cc * M_zI * aux_mu(1)                  &
                        - M_zI * sigma_e * TOFLOAT(ff_plus(1) + ff_minus(1))         &
@@ -1026,9 +1026,6 @@ contains
     CMPLX,                    intent(inout) :: transverse_field(:,:)
 
     integer            :: idim, ip, ip_in
-!    integer            :: rankmin, ip_local, ip_global, ii, jj, kk
-!    FLOAT              :: pos(3), dmin
-!    CMPLX              :: surface_integral(3)
     CMPLX, allocatable :: field_old(:,:), ztmp(:,:), tmp_poisson(:)
 
     PUSH_SUB(maxwell_helmholtz_decomposition_trans_field)
