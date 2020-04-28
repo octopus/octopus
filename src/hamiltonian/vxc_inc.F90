@@ -767,7 +767,7 @@ contains
       parameters(1) = alpha
       call XC_F90(func_set_ext_params)(functl(FUNC_C)%conf, parameters)
 #elif defined HAVE_LIBXC4
-      call messages_not_implemented("MVORB with PBE0 and libxc 4 ", namespace=namespace)
+      call messages_not_implemented("MVORB with PBE0 requires libxc 3 or libxc 5", namespace=namespace)
 #else
       call XC_F90(hyb_gga_xc_pbeh_set_params)(functl(FUNC_C)%conf, alpha)
 #endif
