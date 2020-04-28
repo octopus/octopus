@@ -270,18 +270,19 @@ contains
         call maxwell_medium_points_mapping(bc, gr%mesh, st, bounds, geo)
         call bc_mxll_generate_medium(bc, gr, bounds, geo)
 
-     end select
+      end select
 
-      if (gr%mesh%sb%box_shape == SPHERE) then
+      select case (gr%mesh%sb%box_shape)
+      case(SPHERE)
         ab_shape_dim = 1
-      else if (gr%mesh%sb%box_shape == PARALLELEPIPED) then
+      case (PARALLELEPIPED)
         ab_shape_dim = sb%dim
         ab_bounds(1, idim) = bounds(1, idim)
         ab_bounds(2, idim) = bounds(1, idim)
-      else
+      case default
         message(1) = "Box shape for Maxwell propagation not supported yet"
         call messages_fatal(1, namespace=namespace)
-      end if
+      end select
 
       if (bc%bc_ab_type(idim) /= MXLL_AB_NOT_ABSORBING) then
 
