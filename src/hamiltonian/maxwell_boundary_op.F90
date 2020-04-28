@@ -224,7 +224,7 @@ contains
       end if
     end if
 
-    do icol=1, ncols
+    do icol = 1, ncols
       call parse_block_integer(blk, 0, icol-1, bc%bc_ab_type(icol))
     end do
 
@@ -681,7 +681,7 @@ contains
     pml_check = .false.
     medium_check = .false.
 
-    do idim=1, 3
+    do idim = 1, 3
       if (bc%bc_ab_type(idim) == MXLL_AB_MASK) then
         mask_check = .true.
       end if
@@ -892,7 +892,7 @@ contains
     SAFE_ALLOCATE(bc%mask(1:ip_in_max, idim))
     SAFE_ALLOCATE(bc%mask_points_map(1:ip_in_max, idim))
 
-    do idim = 1,3
+    do idim = 1, 3
       if (bc%bc_ab_type(idim) == MXLL_AB_MASK) then
         ! mask points mapping
         ip_in = 0
@@ -1338,7 +1338,7 @@ contains
         if ((point_info /= 0) .and. (abs(gr%mesh%x(ip, idim)) <= bounds(1, idim))) then
           xx(:) = gr%mesh%x(ip, :)
           dd_min = M_HUGE
-          do ip_bd=1, bc%mxmedium%bdry_number(idim)
+          do ip_bd = 1, bc%mxmedium%bdry_number(idim)
             ipp = bc%mxmedium%bdry_map(ip_bd, idim)
             xxp(:) = gr%mesh%x(ipp, :)
             dd = sqrt((xx(1) - xxp(1))**2 + (xx(2) - xxp(2))**2 + (xx(3) - xxp(3))**2)
@@ -1358,7 +1358,7 @@ contains
 
     do idim = 1, 3
       tmp = P_mu
-      do  ip = 1, gr%mesh%np_part
+      do ip = 1, gr%mesh%np_part
         call maxwell_box_point_info(bc, gr%mesh, ip, bounds, geo, point_info)
         if ((point_info == 1) .and. (abs(gr%mesh%x(ip, idim)) <= bounds(1, idim))) then
           xx(:) = gr%mesh%x(ip, :)
@@ -1382,7 +1382,7 @@ contains
     end do
 
     do idim = 1, 3
-      do ip_in=1, bc%mxmedium%points_number(idim)
+      do ip_in = 1, bc%mxmedium%points_number(idim)
         ip = bc%mxmedium%points_map(ip_in,idim)
         xx(:) = gr%mesh%x(ip,:)
         dd_min = M_HUGE
