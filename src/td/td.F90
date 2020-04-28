@@ -58,6 +58,7 @@ module td_oct_m
   use states_restart_oct_m
   use system_oct_m
   use td_write_oct_m
+  use thermal_gradient_oct_m
   use types_oct_m
   use unit_oct_m
   use unit_system_oct_m
@@ -299,8 +300,9 @@ contains
     call messages_print_var_value(stdout, 'TDScissor', td%scissor)
 
     call propagator_init(sys%gr, sys%st, td%tr, &
-      ion_dynamics_ions_move(td%ions) .or. gauge_field_is_applied(hm%ep%gfield), &
-          hm%family_is_mgga_with_exc)
+         ion_dynamics_ions_move(td%ions) .or. gauge_field_is_applied(hm%ep%gfield) &
+         .or. thermal_gradient_is_applied(hm%ep%tfield), &
+         hm%family_is_mgga_with_exc)
     if(hm%ep%no_lasers>0.and.mpi_grp_is_root(mpi_world)) then
       call messages_print_stress(stdout, "Time-dependent external fields")
       call laser_write_info(hm%ep%lasers, stdout, td%dt, td%max_iter)
@@ -405,6 +407,16 @@ contains
       call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = td%dt*td%iter)
     end if
 
+   
+    !if (thermal_gradient_is_applied(hm%ep%tfield)) then
+      !if the thermal gradient is applied, we need to tell v_ks to calculate the current
+      !call v_ks_calculate_current(sys%ks, .true.)
+
+      ! initialize the vector field and update the hamiltonian
+      !call gauge_field_init_vec_pot(hm%ep%gfield, gr%sb, st)
+      !call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = td%dt*td%iter)
+    !end if
+
     call init_wfs()
 
     if(td%iter >= td%max_iter) then
@@ -440,6 +452,8 @@ contains
     if(td%iter == 0) call td_run_zero_iter()
 
     if (gauge_field_is_applied(hm%ep%gfield)) call gauge_field_get_force(hm%ep%gfield, gr, st)
+
+    !if (thermal_gradient_is_applied(hm%ep%tfield)) call thermal_gradient_get_force(hm%ep%tfield, gr, st)
 
     !call td_check_trotter(td, sys, h)
     td%iter = td%iter + 1
@@ -1073,7 +1087,9 @@ contains
       else
         call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = td%dt*td%iter)
       end if
-    end if
+   end if
+
+   ! thermal gradient restart - add this later. 
 
     if (debug%info) then
       message(1) = "Debug: Reading td restart done."
