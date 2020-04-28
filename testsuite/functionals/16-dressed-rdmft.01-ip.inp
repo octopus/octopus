@@ -36,7 +36,7 @@ DressedOmega = om
 
 Extrastates = 5
 
-Eigensolver = cg_new
+Eigensolver = cg
 EigensolverTolerance = 1e-14
 EigensolverMaxIter = 300
 
