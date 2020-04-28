@@ -18,3 +18,4 @@ Eigensolver = plan
 FilterPotentials = filter_none
 
 MixField = density
+StatesRandomization = par_independent
