@@ -99,6 +99,8 @@ program floquet_observables
 
   integer              :: iter
   FLOAT                :: time, time_step
+  
+  logical              :: FBZ_st_initialized
 
   call getopt_init(ierr)
   if(ierr /= 0) then
@@ -107,6 +109,7 @@ program floquet_observables
     call messages_fatal(2)
   end if
 
+  FBZ_st_initialized = .false.
 
   call global_init()
   
@@ -453,6 +456,13 @@ contains
     type(states_t), intent(in)  :: dressed_st
     type(states_t), intent(out) :: FBZ_st
     PUSH_SUB(get_FBZ_st)
+    
+    if (FBZ_st_initialized) then
+      POP_SUB(get_FBZ_st)
+      return
+    end if
+    
+    
     if(.not.hm%F%FBZ_solver .and. hm%F%boson == OPTION__FLOQUETBOSON__CLASSICAL_FLOQUET) then
       ! this triggers FBZ allocation                                                                                                                                   
       hm%F%FBZ_solver = .true.
@@ -500,8 +510,11 @@ contains
    
  
       call floquet_calc_FBZ_coefficients(hm, sys, FBZ_st, bare_st, time)
+      
+      FBZ_st_initialized = .true.
 
     end if
+    
     POP_SUB(get_FBZ_st)
   end subroutine get_FBZ_st 
 
