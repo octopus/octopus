@@ -66,6 +66,7 @@ testprog4="AC_LANG_PROGRAM([],[
   call xc_f03_version(major, minor, micro)]
   write(*,*) flags)"
 
+dnl Note that the f03 suffix of the Fortran 2003 interface has been changed to f90 in Libxc 5.
 testprog5="AC_LANG_PROGRAM([],[
   use xc_f90_lib_m
   implicit none
