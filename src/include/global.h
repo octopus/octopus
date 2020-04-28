@@ -176,7 +176,13 @@
 #define PREC(x)   	 d ## x
 #define ZPREC(x)   	 z ## x
 #define CNST(x)   	 x ## _8
+#ifdef HAVE_LIBXC5
 #define XC_F90(x)      xc_f90_ ## x
+#define XC_SIZE_T c_size_t
+#else
+#define XC_F90(x)      xc_f03_ ## x
+#define XC_SIZE_T 4
+#endif
 
 #define   TOFLOAT(x) real(x, REAL_PRECISION)
 #define   TOCMPLX(x, y) cmplx(x, y, REAL_PRECISION)
