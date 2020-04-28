@@ -1627,6 +1627,7 @@ contains
       do ik=FBZ_st%d%kpt%start,FBZ_st%d%kpt%end
   
         do ia=FBZ_st%st_start,FBZ_st%st_end
+          if (FBZ_st%eigenval(ia,ik) == M_HUGE) cycle ! skip garbage
           !print *,'test info', ik, ia, FBZ_st%d%kpt%start, FBZ_st%d%kpt%end,FBZ_st%st_start,FBZ_st%st_end, FBZ_st%eigenval(ia,ik)
           call states_get_state(FBZ_st, mesh, ia, ik, u_m)
           call floquet_td_state(hm%F,mesh,u_m,FBZ_st%eigenval(ia,ik),time,Fpsi_a)
@@ -1754,6 +1755,7 @@ contains
     SAFE_ALLOCATE(norms(1:st_full%nst,1:Fdim))
     SAFE_ALLOCATE(state(1:sys%gr%mesh%np,1:st_full%d%dim))
     SAFE_ALLOCATE(state_reshape(1:sys%gr%mesh%np,1:spindim,1:Fdim))
+    st_filtered%eigenval(:,:) = M_HUGE !set to some nonsense value to rise flags
 
     do ik=st_full%d%kpt%start,st_full%d%kpt%end
        norms = M_ZERO
