@@ -5,7 +5,7 @@ Program    : octopus
 TestGroups : short-run, components
 Enabled    : Yes
 
-Processors: 1
+Processors: 2
 Input: 26-batch_ops.01-jellium.inp
 match ; Norm state  1; GREPFIELD(out, 'Norm state  1', 4) ; 0.150000E+01
 match ; Norm state  2; GREPFIELD(out, 'Norm state  2', 4) ; 0.150000E+01

@@ -1515,7 +1515,10 @@ contains
         do ist = ist_start, ist_end
           if (states_are_real(st).or.kpoints_point_is_gamma(sb%kpoints, ikpoint)) then
             if(st%randomization == PAR_INDEPENDENT) then
-              call dmf_random(mesh, dpsi(:, 1), mesh%vp%xlocal-1, normalized = normalized)
+              call dmf_random(mesh, dpsi(:, 1), &
+                pre_shift = mesh%vp%xlocal-1, &
+                post_shift = mesh%vp%np_global - mesh%vp%xlocal - mesh%np + 1, &
+                normalized = normalized)
             else
               call dmf_random(mesh, dpsi(:, 1), normalized = normalized)
             end if
@@ -1530,7 +1533,10 @@ contains
             end if
           else
             if(st%randomization == PAR_INDEPENDENT) then
-              call zmf_random(mesh, zpsi(:, 1), mesh%vp%xlocal-1, normalized = normalized)
+              call zmf_random(mesh, zpsi(:, 1), &
+                pre_shift = mesh%vp%xlocal-1, &
+                post_shift = mesh%vp%np_global - mesh%vp%xlocal - mesh%np + 1, &
+                normalized = normalized)
             else
               call zmf_random(mesh, zpsi(:, 1), normalized = normalized)
             end if
@@ -1551,7 +1557,10 @@ contains
           do ist = ist_start, ist_end
             if(kpoints_point_is_gamma(sb%kpoints, ikpoint)) then
               if(st%randomization == PAR_INDEPENDENT) then
-                call dmf_random(mesh, dpsi(:, 1), mesh%vp%xlocal-1, normalized = normalized)
+                call dmf_random(mesh, dpsi(:, 1), &
+                  pre_shift = mesh%vp%xlocal-1, &
+                  post_shift = mesh%vp%np_global - mesh%vp%xlocal - mesh%np + 1, &
+                  normalized = normalized)
               else
                 call dmf_random(mesh, dpsi(:, 1), normalized = normalized)
                 if(.not. state_kpt_is_local(st, ist, ik)) cycle
@@ -1562,7 +1571,10 @@ contains
               call states_elec_set_state(st, mesh, ist,  ik, zpsi)
             else
               if(st%randomization == PAR_INDEPENDENT) then
-                call zmf_random(mesh, zpsi(:, 1), mesh%vp%xlocal-1, normalized = normalized)
+                call zmf_random(mesh, zpsi(:, 1), &
+                  pre_shift = mesh%vp%xlocal-1, &
+                  post_shift = mesh%vp%np_global - mesh%vp%xlocal - mesh%np + 1, &
+                  normalized = normalized)
               else
                 call zmf_random(mesh, zpsi(:, 1), normalized = normalized)
                 if(.not. state_kpt_is_local(st, ist, ik)) cycle
@@ -1602,7 +1614,10 @@ contains
           do ist = ist_start, ist_end
             do id = 1, st%d%dim
               if(st%randomization == PAR_INDEPENDENT) then
-                call zmf_random(mesh, zpsi(:, id), mesh%vp%xlocal-1, normalized = .false.)
+                call zmf_random(mesh, zpsi(:, id), &
+                  pre_shift = mesh%vp%xlocal-1, &
+                  post_shift = mesh%vp%np_global - mesh%vp%xlocal - mesh%np + 1, &
+                  normalized = .false.)
               else
                 call zmf_random(mesh, zpsi(:, id), normalized = .false.)
               end if

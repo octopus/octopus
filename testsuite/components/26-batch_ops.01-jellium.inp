@@ -1,7 +1,7 @@
 CalculationMode = test
 
 TestMode = batch_ops
-TestBatchOps = ops_axpy + ops_scal + ops_nrm2
+TestBatchOps = ops_axpy + ops_scal + ops_nrm2 + ops_dotp_matrix
 TestRepetitions = 5
 
 PeriodicDimensions = 3
