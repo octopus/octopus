@@ -543,12 +543,8 @@ contains
     call parse_variable(namespace, 'MaxwellABZeroWidth', zero_width, zero_width, units_inp%length)
     bc%zero_width = zero_width
 
-    if ( zero_width < (gr%der%order*gr%mesh%spacing(1)) .or. &
-         zero_width < (gr%der%order*gr%mesh%spacing(2)) .or. &
-         zero_width < (gr%der%order*gr%mesh%spacing(3)) ) then
-       zero_width = max(gr%der%order*gr%mesh%spacing(1), &
-            gr%der%order*gr%mesh%spacing(2), &
-            gr%der%order*gr%mesh%spacing(2))
+    if (any(zero_width < gr%der%order*gr%mesh%spacing(1:3))) then
+       zero_width = gr%der%order * max(gr%mesh%spacing(1), gr%mesh%spacing(2), gr%mesh%spacing(3))
        write(message(1),'(a)') 'Zero absorbing width has to be larger or equal than derivatives order times spacing!'
        write(message(2),'(a,es10.3)') 'Zero absorbing width is set to: ', zero_width
        call messages_info(2)
@@ -580,12 +576,8 @@ contains
     call parse_variable(namespace, 'MaxwellABMaskWidth', mask_width, mask_width, units_inp%length)
     bc%mask_width = mask_width
 
-    if ( mask_width < (gr%der%order*gr%mesh%spacing(1)) .or. &
-         mask_width < (gr%der%order*gr%mesh%spacing(2)) .or. &
-         mask_width < (gr%der%order*gr%mesh%spacing(3)) ) then
-       mask_width = max(gr%der%order*gr%mesh%spacing(1), &
-            gr%der%order*gr%mesh%spacing(2), &
-            gr%der%order*gr%mesh%spacing(2))
+    if (any(mask_width < gr%der%order*gr%mesh%spacing(1:3))) then
+       mask_width = gr%der%order * max(gr%mesh%spacing(1), gr%mesh%spacing(2), gr%mesh%spacing(3))
        write(message(1),'(a)') 'Mask absorbing width has to be larger or equal than derivatives order times spacing!'
        write(message(2),'(a,es10.3)') 'Mask absorbing width is set to: ', mask_width
        call messages_info(2)
@@ -626,12 +618,8 @@ contains
     call parse_variable(namespace, 'MaxwellABPMLWidth', pml_width, pml_width, units_inp%length)
     bc%pml%width = pml_width
     if (parse_is_defined(namespace, 'MaxwellIncidentWaves')) then
-       if ( pml_width < (gr%der%order*gr%mesh%spacing(1)) .or. &
-            pml_width < (gr%der%order*gr%mesh%spacing(2)) .or. &
-            pml_width < (gr%der%order*gr%mesh%spacing(3)) ) then
-          pml_width = max(gr%der%order*gr%mesh%spacing(1), &
-               gr%der%order*gr%mesh%spacing(2), &
-               gr%der%order*gr%mesh%spacing(2))
+       if (any(pml_width < gr%der%order*gr%mesh%spacing(1:3))) then
+          pml_width = gr%der%order * max(gr%mesh%spacing(1), gr%mesh%spacing(2), gr%mesh%spacing(3))
           write(message(1),'(a)') 'PML absorbing width has to be larger or equal than derivatives order times spacing!'
           write(message(2),'(a,es10.3)') 'PML absorbing width is set to: ', pml_width
           call messages_info(2)
@@ -1730,8 +1718,8 @@ contains
       else if (mesh%sb%box_shape == PARALLELEPIPED) then
 
         ! Limits of boundary region
-        if ( (abs(xx(1)) <= bounds(2, 1)) .and. (abs(xx(2)) <= bounds(2, 2)) .and. (abs(xx(3)) <= bounds(2, 3)) ) then
-          if ( (abs(xx(1)) > bounds(1, 1)) .or. (abs(xx(2)) > bounds(1, 2)) .or. (abs(xx(3)) > bounds(1, 3)) ) then
+        if (all(abs(xx(1:3)) <= bounds(2, 1:3))) then
+          if (any(abs(xx(1:3)) > bounds(1, 1:3))) then
             point_info = 1
           else
             point_info = 0
@@ -1765,9 +1753,9 @@ contains
 
     xx = M_ZERO
     xx(1:mesh%sb%dim) = mesh%x(ip, 1:mesh%sb%dim)
-    if ( abs(xx(1)) == bounds(1, 1) .and. (abs(xx(2)) <= bounds(1, 2) .and. abs(xx(3)) <= bounds(1, 3)) .or. &
-         abs(xx(2)) == bounds(1, 2) .and. (abs(xx(1)) <= bounds(1, 1) .and. abs(xx(3)) <= bounds(1, 3)) .or. &
-         abs(xx(3)) == bounds(1, 3) .and. (abs(xx(1)) <= bounds(1, 1) .and. abs(xx(2)) <= bounds(1, 2)) ) then
+    if ( abs(xx(1)) == bounds(1, 1) .and. (all(abs(xx(2:3)) <= bounds(1, 2:3))) .or. &
+         abs(xx(2)) == bounds(1, 2) .and. (all(abs(xx(1:3:2)) <= bounds(1, 1:3:2))) .or. &
+         abs(xx(3)) == bounds(1, 3) .and. (all(abs(xx(1:2)) <= bounds(1, 1:2))) ) then
       boundary_info = 1
     else
       boundary_info = 0
