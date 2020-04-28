@@ -48,8 +48,9 @@ module maxwell_boundary_op_oct_m
   public ::                    &
     bc_mxll_init,              &
     bc_mxll_end,               &   
-    bc_mxll_write_info,        &
-    bc_mxll_t
+    bc_mxll_nullify,           &
+    bc_mxll_t,                 &
+    bc_mxll_write_info
 
   type pml
     FLOAT             :: width
@@ -112,8 +113,8 @@ module maxwell_boundary_op_oct_m
     integer, pointer  :: der_bndry_mask_points_map(:)
     FLOAT,   pointer  :: der_bndry_mask(:)
 
-    type(pml)         :: pml
-    type(mxmedium)    :: mxmedium
+    type(pml)         :: pml       !< attributes of PML absorbing boundaries
+    type(mxmedium)    :: mxmedium  !< attributes of linear medium boundaries
 
     integer           :: constant_points_number
     integer, pointer  :: constant_points_map(:)
@@ -142,13 +143,21 @@ module maxwell_boundary_op_oct_m
 
   end type bc_mxll_t
 
-  integer, public, parameter ::       &
-    AB_NOT_ABSORBING        = 0,         &
-    AB_MASK                 = 1,         &
-    AB_MAXWELL_MASK         = 2,         &
-    AB_UPML                 = 3,         &
-    AB_CPML                 = 4,         &
-    AB_MASK_ZERO            = 7
+  integer, public, parameter ::   &
+    MXLL_BC_ZERO          = 0,    &
+    MXLL_BC_CONSTANT      = 1,    &
+    MXLL_BC_MIRROR_PEC    = 2,    &
+    MXLL_BC_MIRROR_PMC    = 3,    &
+    MXLL_BC_PLANE_WAVES   = 4,    &
+    MXLL_BC_PERIODIC      = 5,    &
+    MXLL_BC_MEDIUM        = 6
+
+  integer, public, parameter ::   &
+    MXLL_AB_NOT_ABSORBING = 0,    &
+    MXLL_AB_MASK          = 1,    &
+    MXLL_AB_MAXWELL_MASK  = 2,    &
+    MXLL_AB_CPML          = 3,    &
+    MXLL_AB_MASK_ZERO     = 7
 
 contains
 
@@ -191,13 +200,11 @@ contains
     !%Option not_absorbing 0
     !% No absorbing boundaries.
     !%Option mask 1
-    !% A mask the same as for the matter wavefunctions is applied to the Maxwell states at the boundaries.
+    !% A mask equal to the wavefunctions mask is applied to the Maxwell states at the boundaries
     !%Option maxwell_mask 2
-    !% A different mask than for the matter to apply on Maxwell states
-    !%Option upml 3
-    !% UPML
-    !%Option cpml 4
-    !% CPML
+    !% A different mask than the wavefunctions mask is applied on Maxwell states
+    !%Option cpml 3
+    !% Perfectly matched layer absorbing boundary.
     !%Option mask_zero 7
     !% Absorbing boundary region is set to zero
     !%End
@@ -225,18 +232,10 @@ contains
 
 
     do idim = 1, 3
-
-      select case (bc%bc_ab_type(idim))
-      case (OPTION__MAXWELLABSORBINGBOUNDARIES__MASK)
-        ab_mask_check = .true.
-      case (OPTION__MAXWELLABSORBINGBOUNDARIES__CPML)
-        ab_pml_check = .true.
-      case (OPTION__MAXWELLBOUNDARYCONDITIONS__CONSTANT)
-        constant_check = .true.
-      case (OPTION__MAXWELLBOUNDARYCONDITIONS__ZERO)
-        zero_check = .true.
-      end select
-
+      if (bc%bc_ab_type(idim) == MXLL_AB_MASK) ab_mask_check = .true.
+      if (bc%bc_ab_type(idim) == MXLL_AB_CPML) ab_pml_check = .true.
+      if (bc%bc_type(idim) == MXLL_BC_CONSTANT) constant_check = .true.
+      if (bc%bc_type(idim) == MXLL_BC_ZERO) zero_check = .true.
     end do
 
     if (ab_mask_check .or. ab_pml_check) then
@@ -249,25 +248,24 @@ contains
     do idim = 1, st%dim
       select case (bc%bc_type(idim))
 
-      case (OPTION__MAXWELLBOUNDARYCONDITIONS__ZERO, OPTION__MAXWELLBOUNDARYCONDITIONS__MIRROR_PEC, &
-           OPTION__MAXWELLBOUNDARYCONDITIONS__MIRROR_PMC)
+      case (MXLL_BC_ZERO, MXLL_BC_MIRROR_PEC, MXLL_BC_MIRROR_PMC)
 
         bounds(1, idim) = (gr%mesh%idx%nr(2, idim) - gr%mesh%idx%enlarge(idim))*gr%mesh%spacing(idim)
         bounds(2, idim) = (gr%mesh%idx%nr(2, idim)) * gr%mesh%spacing(idim)
 
-      case (OPTION__MAXWELLBOUNDARYCONDITIONS__CONSTANT, OPTION__MAXWELLBOUNDARYCONDITIONS__PERIODIC)
+      case (MXLL_BC_CONSTANT, MXLL_BC_PERIODIC)
 
         bounds(1, idim) = (gr%mesh%idx%nr(2, idim) - 2*gr%mesh%idx%enlarge(idim))*gr%mesh%spacing(idim)
         bounds(2, idim) = (gr%mesh%idx%nr(2, idim)) * gr%mesh%spacing(idim)
 
-      case (OPTION__MAXWELLBOUNDARYCONDITIONS__PLANE_WAVES)
+      case (MXLL_BC_PLANE_WAVES)
 
         bounds(1, idim) = (gr%mesh%idx%nr(2, idim) - 2*gr%mesh%idx%enlarge(idim))*gr%mesh%spacing(idim)
         bounds(2, idim) = (gr%mesh%idx%nr(2, idim)) * gr%mesh%spacing(idim)
         plane_waves_check = .true.
         bc%do_plane_waves = .true.
 
-      case (OPTION__MAXWELLBOUNDARYCONDITIONS__MEDIUM)
+      case (MXLL_BC_MEDIUM)
         call bc_mxll_medium_init(bc, gr, namespace, bounds, idim)
         call maxwell_medium_points_mapping(bc, gr%mesh, st, bounds, geo)
         call bc_mxll_generate_medium(bc, gr, bounds, geo)
@@ -285,25 +283,25 @@ contains
         call messages_fatal(1, namespace=namespace)
       end if
 
-      if (bc%bc_ab_type(idim) /= AB_NOT_ABSORBING) then
+      if (bc%bc_ab_type(idim) /= MXLL_AB_NOT_ABSORBING) then
 
         call messages_print_var_option(stdout, "MaxwellAbsorbingBoundaries", bc%bc_ab_type(idim))
 
         select case (bc%bc_ab_type(idim))
-        case (AB_MASK_ZERO)
+        case (MXLL_AB_MASK_ZERO)
           call bc_mxll_zero_init(bc, gr, namespace, bounds, ab_bounds, idim)
 
-        case (AB_MASK)
+        case (MXLL_AB_MASK)
           call bc_mxll_mask_init(bc, gr, sb, namespace, bounds, ab_bounds, idim)
 
-        case (AB_CPML)
+        case (MXLL_AB_CPML)
            call bc_mxll_pml_init(bc, gr, sb, namespace, bounds, ab_bounds, idim)
         end select
 
       end if
 
       select case (bc%bc_ab_type(idim))
-      case (AB_MASK, AB_CPML, AB_MASK_ZERO)
+      case (MXLL_AB_MASK, MXLL_AB_CPML, MXLL_AB_MASK_ZERO)
         bounds(1, idim) = ab_bounds(1, idim)
         bounds(2, idim) = bounds(2, idim)
         bc%bc_bounds(:, idim) = bounds(:, idim)
@@ -314,18 +312,18 @@ contains
       if (gr%mesh%sb%box_shape == PARALLELEPIPED) then
 
         select case (bc%bc_ab_type(idim))
-        case(AB_CPML)
+        case(MXLL_AB_CPML)
           ab_type_str = "PML"
-        case (AB_MASK)
+        case (MXLL_AB_MASK)
           ab_type_str = "Mask"
-        case (AB_MASK_ZERO)
+        case (MXLL_AB_MASK_ZERO)
           ab_type_str = "Zero"
         case default
           ab_type_str = ""
         end select
 
-        if (bc%bc_ab_type(idim) == AB_CPML .or. bc%bc_ab_type(idim) == AB_MASK .or. &
-             bc%bc_ab_type(idim) == AB_MASK_ZERO) then
+        if (bc%bc_ab_type(idim) == MXLL_AB_CPML .or. bc%bc_ab_type(idim) == MXLL_AB_MASK .or. &
+             bc%bc_ab_type(idim) == MXLL_AB_MASK_ZERO) then
           string = trim(ab_type_str)//" Lower bound = "
           write(string,'(a,a,i1,a,es10.3,3a)') trim(string), "  dim ", idim, ":",&
                units_from_atomic(units_inp%length, ab_bounds(1, idim) ), ' [', &
@@ -402,6 +400,31 @@ contains
 
     POP_SUB(bc_mxll_init)
   end subroutine bc_mxll_init
+
+
+  ! ---------------------------------------------------------
+  subroutine bc_mxll_nullify(bc)
+    type(bc_mxll_t),   intent(inout) :: bc
+    PUSH_SUB(bc_mxll_nullify)
+
+    nullify(bc%constant_points_map)
+    nullify(bc%constant_rs_state)
+    nullify(bc%mirror_points_map)
+    nullify(bc%plane_waves_points_map)
+    nullify(bc%plane_waves_modus)
+    nullify(bc%plane_waves)
+    nullify(bc%plane_waves_e_field_string)
+    nullify(bc%plane_waves_k_vector)
+    nullify(bc%plane_waves_v_vector)
+    nullify(bc%plane_waves_e_field)
+    nullify(bc%plane_waves_mx_function)
+    nullify(bc%plane_waves_mx_phase)
+    nullify(bc%zero_points_map)
+    nullify(bc%zero)
+
+    POP_SUB(bc_mxll_nullify)
+  end subroutine bc_mxll_nullify
+
 
   ! ---------------------------------------------------------
   subroutine bc_mxll_end(bc)
@@ -670,13 +693,13 @@ contains
     medium_check = .false.
 
     do idim=1, 3
-      if (bc%bc_ab_type(idim) == AB_MASK) then
+      if (bc%bc_ab_type(idim) == MXLL_AB_MASK) then
         mask_check = .true.
       end if
-      if (bc%bc_ab_type(idim) == AB_CPML) then
+      if (bc%bc_ab_type(idim) == MXLL_AB_CPML) then
         pml_check = .true.
       end if
-      if (bc%bc_ab_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__MEDIUM) then
+      if (bc%bc_ab_type(idim) == MXLL_BC_MEDIUM) then
         medium_check = .true.
       end if
     end do
@@ -864,7 +887,7 @@ contains
 
     ip_in_max = 1
     do idim = 1, 3
-      if (bc%bc_ab_type(idim) == AB_MASK) then
+      if (bc%bc_ab_type(idim) == MXLL_AB_MASK) then
         ! allocate mask points map
         ip_in = 0
         do ip = 1, mesh%np
@@ -881,7 +904,7 @@ contains
     SAFE_ALLOCATE(bc%mask_points_map(1:ip_in_max, idim))
 
     do idim = 1,3
-      if (bc%bc_ab_type(idim) == AB_MASK) then
+      if (bc%bc_ab_type(idim) == MXLL_AB_MASK) then
         ! mask points mapping
         ip_in = 0
         do ip = 1, mesh%np
@@ -1021,7 +1044,7 @@ contains
 
     ip_in_max = 0
     do idim = 1, 3
-      if (bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__ZERO) then
+      if (bc%bc_type(idim) == MXLL_BC_ZERO) then
         ! allocate zero points map
         ip_in = 0
         do ip = 1, mesh%np
@@ -1038,7 +1061,7 @@ contains
     SAFE_ALLOCATE(bc%zero_points_map(1:ip_in_max, 3))
 
     do idim = 1, 3
-      if (bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__ZERO) then
+      if (bc%bc_type(idim) == MXLL_BC_ZERO) then
         ! zero points mapping
         ip_in = 0
         do ip = 1, mesh%np
@@ -1070,7 +1093,7 @@ contains
     ip_in_max = 0
     ip_bd_max = 0
     do idim = 1, 3
-      if (bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__MEDIUM) then
+      if (bc%bc_type(idim) == MXLL_BC_MEDIUM) then
         ! allocate pml points map
         ip_in = 0
         ip_bd = 0
@@ -1096,7 +1119,7 @@ contains
     ip_in = 0
     ip_bd = 0
     do idim = 1, 3
-      if (bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__MEDIUM) then
+      if (bc%bc_type(idim) == MXLL_BC_MEDIUM) then
         do ip = 1, mesh%np
           call maxwell_box_point_info(bc, mesh, ip, bounds, geo, point_info)
           call maxwell_boundary_point_info(mesh, ip, bounds, boundary_info)

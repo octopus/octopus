@@ -140,20 +140,18 @@ contains
     !%
     !%Option zero 0
     !% Boundaries are set to zero.
-    !%Option constant 2
+    !%Option constant 1
     !% Boundaries are set to a constant.
-    !%Option mirror_pec 3
+    !%Option mirror_pec 2
     !% Perfect electric conductor.
-    !%Option mirror_pmc 4
+    !%Option mirror_pmc 3
     !% Perfect magnetic conductor.
-    !%Option plane_waves 5
+    !%Option plane_waves 4
     !% Boundaries feed in plane waves.
-    !%Option periodic 6
+    !%Option periodic 5
     !% Periodic boundary conditions (not yet implemented).
-    !%Option medium 7
+    !%Option medium 6
     !% Boundaries as linear medium (not yet implemented).
-    !%Option lossy_layer 8
-    !% Boundaries as a lossy medium (not yet implemented).
     !%End
     if(parse_block(namespace, 'MaxwellBoundaryConditions', blk) == 0) then
 
@@ -173,10 +171,10 @@ contains
       do icol=1, ncols
         call parse_block_integer(blk, 0, icol-1, hm%bc%bc_type(icol))
         select case (hm%bc%bc_type(icol))
-          case (OPTION__MAXWELLBOUNDARYCONDITIONS__ZERO)
+          case (MXLL_BC_ZERO)
           string = 'Zero'
           tr%bc_zero = .true.
-        case (OPTION__MAXWELLBOUNDARYCONDITIONS__CONSTANT)
+        case (MXLL_BC_CONSTANT)
           string = 'Constant'
           tr%bc_constant = .true.
           tr%bc_add_ab_region = .true.
@@ -184,19 +182,19 @@ contains
           hm%bc_add_ab_region = .true.
           SAFE_ALLOCATE(st%rs_state_const(1:st%dim))
           st%rs_state_const = M_z0
-        case (OPTION__MAXWELLBOUNDARYCONDITIONS__MIRROR_PEC)
+        case (MXLL_BC_MIRROR_PEC)
           string = 'PEC Mirror'
           tr%bc_mirror_pec = .true.
           hm%bc_mirror_pec = .true.
-        case (OPTION__MAXWELLBOUNDARYCONDITIONS__MIRROR_PMC)
+        case (MXLL_BC_MIRROR_PMC)
           string = 'PMC Mirror'
           tr%bc_mirror_pmc = .true.
           hm%bc_mirror_pmc = .true.
-        case (OPTION__MAXWELLBOUNDARYCONDITIONS__PERIODIC)
+        case (MXLL_BC_PERIODIC)
           string = 'Periodic'
           tr%bc_periodic = .true.
           hm%bc_periodic = .true.
-        case (OPTION__MAXWELLBOUNDARYCONDITIONS__PLANE_WAVES)
+        case (MXLL_BC_PLANE_WAVES)
           string = 'Plane waves'
           plane_waves_set = .true.
           tr%bc_plane_waves = .true.
@@ -204,7 +202,7 @@ contains
           hm%plane_waves = .true.
           hm%bc_plane_waves = .true.
           hm%bc_add_ab_region = .true.
-        case (OPTION__MAXWELLBOUNDARYCONDITIONS__MEDIUM)
+        case (MXLL_BC_MEDIUM)
           string = 'Medium boundary'
         end select
         write(message(1),'(a,I1,a,a)') 'Maxwell boundary condition in direction ', icol, ': ', trim(string)
@@ -574,7 +572,7 @@ contains
     end if
 
     do idim=1, st%dim
-      if (hm%bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__MEDIUM) then
+      if (hm%bc%bc_type(idim) == MXLL_BC_MEDIUM) then
         do ip_in=1, hm%bc%mxmedium%points_number(idim)
           ip = hm%bc%mxmedium%points_map(ip_in,idim)
           st%ep(ip) = hm%bc%mxmedium%ep(ip_in,idim)
@@ -3117,7 +3115,7 @@ contains
     PUSH_SUB(mirror_pec_boundaries_calculation)
 
     do idim = 1, 3
-      if (bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__MIRROR_PEC) then
+      if (bc%bc_type(idim) == MXLL_BC_MIRROR_PEC) then
         do ip_in = 1, bc%mirror_points_number(idim)
           ip         = bc%mirror_points_map(ip_in,idim)
           e_field(:) = M_ZERO
@@ -3143,7 +3141,7 @@ contains
     PUSH_SUB(mirror_pmc_boundaries_calculation)
 
     do idim=1, 3
-      if (bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__MIRROR_PMC) then
+      if (bc%bc_type(idim) == MXLL_BC_MIRROR_PMC) then
         do ip_in=1, bc%mirror_points_number(idim)
           ip         = bc%mirror_points_map(ip_in,idim)
           b_field(:) = M_ZERO

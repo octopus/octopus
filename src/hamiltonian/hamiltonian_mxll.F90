@@ -314,6 +314,8 @@ contains
     call parse_variable(namespace, 'TimeZero', .false., hm%time_zero)
     if(hm%time_zero) call messages_experimental('TimeZero')
 
+    call bc_mxll_nullify(hm%bc)
+
     call profiling_out(prof)
     POP_SUB(hamiltonian_mxll_init)
   end subroutine hamiltonian_mxll_init
@@ -901,7 +903,7 @@ contains
     PUSH_SUB(maxwell_medium_boundaries_calculation)
 
     do idim = 1, 3
-      if ( (hm%bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__MEDIUM) .and. &
+      if ( (hm%bc%bc_type(idim) == MXLL_BC_MEDIUM) .and. &
            (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RS) ) then
         do ip_in = 1, hm%bc%mxmedium%points_number(idim)
           ip          = hm%bc%mxmedium%points_map(ip_in, idim)
