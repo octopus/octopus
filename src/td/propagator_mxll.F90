@@ -648,8 +648,9 @@ contains
     CMPLX,               intent(inout) :: rs_state(:,:)
 
     if (hm%operator == FARADAY_AMPERE_MEDIUM) then
-      call transform_rs_state_to_6x6_rs_state_backward(ff_rs_state, rs_state)
-    else if (hm%operator == FARADAY_AMPERE_MEDIUM) then
+      message(1) = "Maxwell solver in linear media not yet implemented"
+      call messages_fatal(1)
+    else if (hm%operator == FARADAY_AMPERE_GAUSS) then
       call transform_rs_state_to_4x4_rs_state_backward(ff_rs_state, rs_state)
     else
       rs_state(:,1:3) = ff_rs_state(:,1:3)
@@ -667,8 +668,9 @@ contains
     CMPLX,               intent(inout) :: ff_density(:,:)
 
     if (hm%operator == FARADAY_AMPERE_MEDIUM) then
-      call transform_rs_densities_to_6x6_rs_densities_forward(rs_charge_density, rs_current_density, ff_density)
-    else if (hm%operator == FARADAY_AMPERE_MEDIUM) then
+      message(1) = "Maxwell solver in linear media not yet implemented"
+      call messages_fatal(1)
+    else if (hm%operator == FARADAY_AMPERE_GAUSS) then
       call transform_rs_densities_to_4x4_rs_densities_forward(rs_charge_density, rs_current_density, ff_density)
     else
       ff_density(:,1:3) = rs_current_density(:,1:3)
@@ -686,8 +688,9 @@ contains
     CMPLX,               intent(inout) :: rs_current_density(:,:)
 
     if (hm%operator == FARADAY_AMPERE_MEDIUM) then
-      call transform_rs_densities_to_6x6_rs_densities_backward(ff_density, rs_charge_density, rs_current_density)
-    else if (hm%operator == FARADAY_AMPERE_MEDIUM) then
+      message(1) = "Maxwell solver in linear media not yet implemented"
+      call messages_fatal(1)
+    else if (hm%operator == FARADAY_AMPERE_GAUSS) then
       call transform_rs_densities_to_4x4_rs_densities_backward(ff_density, rs_charge_density, rs_current_density)
     else
       rs_current_density(:,1:3) = ff_density(:,1:3)
@@ -702,13 +705,13 @@ contains
     CMPLX, intent(in)    :: rs_state_3x3_minus(:,:)
     CMPLX, intent(inout) :: rs_state_6x6(:,:)
 
+    integer :: ii
+
     ! no push_sub, called to frequently
-    rs_state_6x6(:,1) = rs_state_3x3_plus(:,1)
-    rs_state_6x6(:,2) = rs_state_3x3_plus(:,2)
-    rs_state_6x6(:,3) = rs_state_3x3_plus(:,3)
-    rs_state_6x6(:,4) = rs_state_3x3_minus(:,1)
-    rs_state_6x6(:,5) = rs_state_3x3_minus(:,2)
-    rs_state_6x6(:,6) = rs_state_3x3_minus(:,3)
+    do ii = 1, 3
+      rs_state_6x6(:, ii) = rs_state_3x3_plus(:, ii)
+      rs_state_6x6(:, ii+3) = rs_state_3x3_plus(:, ii)
+    end do
 
   end subroutine transform_rs_state_to_6x6_rs_state_forward
 
@@ -718,10 +721,12 @@ contains
     CMPLX, intent(in)    :: rs_state_6x6(:,:)
     CMPLX, intent(inout) :: rs_state(:,:)
 
+    integer :: ii
+
     ! no push_sub, called to frequently
-    rs_state(:,1) = M_HALF * real(rs_state_6x6(:,1)+rs_state_6x6(:,4)) + M_HALF * M_zI * aimag(rs_state_6x6(:,1)-rs_state_6x6(:,4))
-    rs_state(:,2) = M_HALF * real(rs_state_6x6(:,2)+rs_state_6x6(:,5)) + M_HALF * M_zI * aimag(rs_state_6x6(:,2)-rs_state_6x6(:,5))
-    rs_state(:,3) = M_HALF * real(rs_state_6x6(:,3)+rs_state_6x6(:,6)) + M_HALF * M_zI * aimag(rs_state_6x6(:,3)-rs_state_6x6(:,6))
+    do ii = 1, 3
+      rs_state(:, ii) = M_HALF * (rs_state_6x6(:, ii) + conjg(rs_state_6x6(:, ii+3)))
+    end do
 
   end subroutine transform_rs_state_to_6x6_rs_state_backward
 
@@ -732,13 +737,13 @@ contains
     CMPLX, intent(in)    :: rs_current_density(:,:)
     CMPLX, intent(inout) :: rs_density_6x6(:,:)
 
+    integer :: ii
+
     ! no push_sub, called to frequently
-    rs_density_6x6(:,1) = rs_current_density(:,1)
-    rs_density_6x6(:,2) = rs_current_density(:,2)
-    rs_density_6x6(:,3) = rs_current_density(:,3)
-    rs_density_6x6(:,4) = rs_current_density(:,1)
-    rs_density_6x6(:,5) = rs_current_density(:,2)
-    rs_density_6x6(:,6) = rs_current_density(:,3)
+    do ii = 1, 3
+      rs_density_6x6(:, ii) = rs_current_density(:, ii)
+      rs_density_6x6(:, ii+3) = rs_current_density(:, ii)
+    end do
 
   end subroutine transform_rs_densities_to_6x6_rs_densities_forward
 
@@ -749,10 +754,12 @@ contains
     CMPLX, intent(inout) :: rs_charge_density(:)
     CMPLX, intent(inout) :: rs_current_density(:,:)
 
+    integer :: ii
+
     ! no push_sub, called to frequently
-    rs_current_density(:,1) = M_HALF * real( rs_density_6x6(:,1) + rs_density_6x6(:,4) )
-    rs_current_density(:,2) = M_HALF * real( rs_density_6x6(:,2) + rs_density_6x6(:,5) )
-    rs_current_density(:,3) = M_HALF * real( rs_density_6x6(:,3) + rs_density_6x6(:,6) )
+    do ii = 1, 3
+       rs_current_density(:, ii) = M_HALF * real(rs_density_6x6(:, ii) + rs_density_6x6(:, ii+3))
+    end do
 
   end subroutine transform_rs_densities_to_6x6_rs_densities_backward
 
@@ -763,10 +770,10 @@ contains
     CMPLX, intent(inout) :: rs_state_4x4(:,:)
 
     ! no push_sub, called to frequently
-    rs_state_4x4(:,1) = - M_z1 * rs_state_3x3(:,1) + M_zI * rs_state_3x3(:,2)
-    rs_state_4x4(:,2) =   M_z1 * rs_state_3x3(:,3)
-    rs_state_4x4(:,3) =   M_z1 * rs_state_3x3(:,3)
-    rs_state_4x4(:,4) =   M_z1 * rs_state_3x3(:,1) + M_zI * rs_state_3x3(:,2)
+    rs_state_4x4(:,1) = M_z1 * (-rs_state_3x3(:,1) + rs_state_3x3(:,2))
+    rs_state_4x4(:,2) = M_z1 * rs_state_3x3(:,3)
+    rs_state_4x4(:,3) = M_z1 * rs_state_3x3(:,3)
+    rs_state_4x4(:,4) = M_z1 * (rs_state_3x3(:,1) + rs_state_3x3(:,2))
 
   end subroutine transform_rs_state_to_4x4_rs_state_forward
 
@@ -777,9 +784,9 @@ contains
     CMPLX, intent(inout) :: rs_state_3x3(:,:)
 
     ! no push_sub, called to frequently
-    rs_state_3x3(:,1) = - M_z1 * M_HALF * rs_state_4x4(:,1) + M_z1 * M_HALF * rs_state_4x4(:,4)
-    rs_state_3x3(:,2) = - M_zI * M_HALF * rs_state_4x4(:,1) - M_zI * M_HALF * rs_state_4x4(:,4)
-    rs_state_3x3(:,3) =   M_z1 * M_HALF * rs_state_4x4(:,2) + M_z1 * M_HALF * rs_state_4x4(:,3)
+    rs_state_3x3(:,1) = M_z1 * M_HALF * (-rs_state_4x4(:,1) + rs_state_4x4(:,4))
+    rs_state_3x3(:,2) = M_zI * M_HALF * (-rs_state_4x4(:,1) - rs_state_4x4(:,4))
+    rs_state_3x3(:,3) = M_z1 * M_HALF * (rs_state_4x4(:,2) + rs_state_4x4(:,3))
 
   end subroutine transform_rs_state_to_4x4_rs_state_backward
 
@@ -791,10 +798,10 @@ contains
     CMPLX, intent(inout) :: rs_density_4x4(:,:)
 
     ! no push_sub, called to frequently
-    rs_density_4x4(:,1) = - M_z1 * rs_current_density(:,1) + M_zI * rs_current_density(:,2)
-    rs_density_4x4(:,2) =   M_z1 * rs_current_density(:,3) - M_z1 * rs_charge_density(:)
-    rs_density_4x4(:,3) =   M_z1 * rs_current_density(:,3) + M_z1 * rs_charge_density(:)
-    rs_density_4x4(:,4) =   M_z1 * rs_current_density(:,1) + M_zI * rs_current_density(:,2)
+    rs_density_4x4(:,1) = M_z1 * (-rs_current_density(:,1) + rs_current_density(:,2))
+    rs_density_4x4(:,2) = M_z1 * (rs_current_density(:,3) - rs_charge_density(:))
+    rs_density_4x4(:,3) = M_z1 * (rs_current_density(:,3) + rs_charge_density(:))
+    rs_density_4x4(:,4) = M_z1 * (rs_current_density(:,1) + rs_current_density(:,2))
 
   end subroutine transform_rs_densities_to_4x4_rs_densities_forward
 
@@ -806,10 +813,10 @@ contains
     CMPLX, intent(inout) :: rs_current_density(:,:)
 
     ! no push_sub, called to frequently
-    rs_charge_density(:)    = - M_z1 * M_HALF * rs_density_4x4(:,2) + M_z1 * M_HALF * rs_density_4x4(:,3)
-    rs_current_density(:,1) = - M_z1 * M_HALF * rs_density_4x4(:,1) + M_z1 * M_HALF * rs_density_4x4(:,4)
-    rs_current_density(:,2) = - M_zI * M_HALF * rs_density_4x4(:,1) - M_zI * M_HALF * rs_density_4x4(:,4)
-    rs_current_density(:,3) = - M_z1 * M_HALF * rs_density_4x4(:,2) + M_z1 * M_HALF * rs_density_4x4(:,3)
+    rs_charge_density(:)    = M_z1 * M_HALF * (-rs_density_4x4(:,2) + rs_density_4x4(:,3))
+    rs_current_density(:,1) = M_z1 * M_HALF * (-rs_density_4x4(:,1) + rs_density_4x4(:,4))
+    rs_current_density(:,2) = M_zI * M_HALF * (-rs_density_4x4(:,1) - rs_density_4x4(:,4))
+    rs_current_density(:,3) = M_z1 * M_HALF * (-rs_density_4x4(:,2) + rs_density_4x4(:,3))
 
   end subroutine transform_rs_densities_to_4x4_rs_densities_backward
 
