@@ -382,18 +382,10 @@ contains
     SAFE_DEALLOCATE_P(st%user_def_e_field)
     SAFE_DEALLOCATE_P(st%user_def_b_field)
 
-    if (allocated(st%rs_state_const)) then
-      SAFE_DEALLOCATE_A(st%rs_state_const)
-    end if
-    if (allocated(st%rs_state_const_td_function)) then
-      SAFE_DEALLOCATE_A(st%rs_state_const_td_function)
-    end if
-    if (allocated(st%rs_state_const_amp)) then
-      SAFE_DEALLOCATE_A(st%rs_state_const_amp)
-    end if
-    if (allocated(st%rs_state_plane_waves)) then
-      SAFE_DEALLOCATE_A(st%rs_state_plane_waves)
-    end if
+    SAFE_DEALLOCATE_A(st%rs_state_const)
+    SAFE_DEALLOCATE_A(st%rs_state_const_td_function)
+    SAFE_DEALLOCATE_A(st%rs_state_const_amp)
+    SAFE_DEALLOCATE_A(st%rs_state_plane_waves)
 
     SAFE_DEALLOCATE_A(st%energy_rate)
     SAFE_DEALLOCATE_A(st%delta_energy)
@@ -794,9 +786,7 @@ contains
       end do
       mean_value(:) = mean_value(:) * gr%mesh%volume_element
       if(gr%mesh%parallel_in_domains) then
-        do idir=1, st%dim
-          call comm_allreduce(gr%mesh%mpi_grp%comm, mean_value(idir))
-        end do
+        call comm_allreduce(gr%mesh%mpi_grp%comm, mean_value(:))
       end if
     end if
 
@@ -830,9 +820,7 @@ contains
       end do
       mean_value(:) = mean_value(:) * gr%mesh%volume_element
       if(gr%mesh%parallel_in_domains) then
-        do idir = 1, st%dim
-          call comm_allreduce(gr%mesh%mpi_grp%comm, mean_value(idir))
-        end do
+        call comm_allreduce(gr%mesh%mpi_grp%comm, mean_value(:))
       end if
     end if
 
