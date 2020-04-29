@@ -787,7 +787,7 @@ contains
     CMPLX,                         intent(inout) :: rs_state_matter(:,:)
     type(geometry_t),    optional, intent(in)    :: geo
 
-    CMPLX, allocatable :: tmp_pot_ma_gr(:,:), tmp_pot_mx_gr(:,:), tmp_grad_mx_gr(:,:)
+    CMPLX, allocatable :: tmp_pot_mx_gr(:,:), tmp_grad_mx_gr(:,:)
 
     SAFE_ALLOCATE(tmp_pot_mx_gr(1:gr_mxll%mesh%np_part,1))
     SAFE_ALLOCATE(tmp_grad_mx_gr(1:gr_mxll%mesh%np,1:gr_mxll%sb%dim))
@@ -805,7 +805,6 @@ contains
       st_mxll%rs_sign, rs_state_matter(1:gr_mxll%mesh%np,:), gr_mxll%mesh, st_mxll%ep(1:gr_mxll%mesh%np), &
       st_mxll%mu(1:gr_mxll%mesh%np), gr_mxll%mesh%np)
 
-    SAFE_DEALLOCATE_A(tmp_pot_ma_gr)
     SAFE_DEALLOCATE_A(tmp_pot_mx_gr)
     SAFE_DEALLOCATE_A(tmp_grad_mx_gr)
 
