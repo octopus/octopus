@@ -70,13 +70,10 @@ module propagator_mxll_oct_m
   implicit none
 
   private
-  public ::                                          &
-    propagator_mxll_init,                         &
-    propagation_mxll_etrs,                        &
-    transform_rs_state_forward,              &
-    transform_rs_state_backward,             &
-    transform_rs_densities_forward,          &
-    transform_rs_densities_backward,         &
+  public ::                                  &
+    propagator_mxll_init,                    &
+    propagation_mxll_etrs,                   &
+    transform_rs_state,                      &
     rs_state_to_cube_map,                    &
     calculate_matter_longitudinal_field,     &
     get_vector_pot_and_transverse_field,     &
@@ -655,82 +652,6 @@ contains
     end if
 
   end subroutine transform_rs_state
-
-
-  ! ---------------------------------------------------------
-  subroutine transform_rs_state_forward(hm, rs_state, ff_rs_state)
-    type(hamiltonian_mxll_t), intent(in)    :: hm
-    CMPLX,               intent(in)    :: rs_state(:,:)
-    CMPLX,               intent(inout) :: ff_rs_state(:,:)
-
-    if (hm%operator == FARADAY_AMPERE_MEDIUM) then
-      message(1) = "Maxwell solver in linear media not yet implemented"
-      call messages_fatal(1)
-    else if (hm%operator == FARADAY_AMPERE_GAUSS) then
-      call transform_rs_state_to_4x4_rs_state_forward(rs_state, ff_rs_state)
-    else
-      ff_rs_state(:,1:3) = rs_state(:,1:3)
-    end if
-
-  end subroutine transform_rs_state_forward
-
-
-  ! ---------------------------------------------------------
-  subroutine transform_rs_state_backward(hm, ff_rs_state, rs_state)
-    type(hamiltonian_mxll_t), intent(in)    :: hm
-    CMPLX,               intent(in)    :: ff_rs_state(:,:)
-    CMPLX,               intent(inout) :: rs_state(:,:)
-
-    if (hm%operator == FARADAY_AMPERE_MEDIUM) then
-      message(1) = "Maxwell solver in linear media not yet implemented"
-      call messages_fatal(1)
-    else if (hm%operator == FARADAY_AMPERE_GAUSS) then
-      call transform_rs_state_to_4x4_rs_state_backward(ff_rs_state, rs_state)
-    else
-      rs_state(:,1:3) = ff_rs_state(:,1:3)
-    end if
-
-  end subroutine transform_rs_state_backward
-
-
-  ! -------------------------------------------------------
-  subroutine transform_rs_densities_forward(hm, rs_charge_density, rs_current_density, ff_density)
-
-    type(hamiltonian_mxll_t), intent(in)    :: hm
-    CMPLX,               intent(in)    :: rs_charge_density(:)
-    CMPLX,               intent(in)    :: rs_current_density(:,:)
-    CMPLX,               intent(inout) :: ff_density(:,:)
-
-    if (hm%operator == FARADAY_AMPERE_MEDIUM) then
-      message(1) = "Maxwell solver in linear media not yet implemented"
-      call messages_fatal(1)
-    else if (hm%operator == FARADAY_AMPERE_GAUSS) then
-      call transform_rs_densities_to_4x4_rs_densities_forward(rs_charge_density, rs_current_density, ff_density)
-    else
-      ff_density(:,1:3) = rs_current_density(:,1:3)
-    end if
-
-  end subroutine transform_rs_densities_forward
-
-
-  ! -------------------------------------------------------
-  subroutine transform_rs_densities_backward(hm, ff_density, rs_charge_density, rs_current_density)
-
-    type(hamiltonian_mxll_t), intent(in)    :: hm
-    CMPLX,               intent(in)    :: ff_density(:,:)
-    CMPLX,               intent(inout) :: rs_charge_density(:)
-    CMPLX,               intent(inout) :: rs_current_density(:,:)
-
-    if (hm%operator == FARADAY_AMPERE_MEDIUM) then
-      message(1) = "Maxwell solver in linear media not yet implemented"
-      call messages_fatal(1)
-    else if (hm%operator == FARADAY_AMPERE_GAUSS) then
-      call transform_rs_densities_to_4x4_rs_densities_backward(ff_density, rs_charge_density, rs_current_density)
-    else
-      rs_current_density(:,1:3) = ff_density(:,1:3)
-    end if
-
-  end subroutine transform_rs_densities_backward
 
 
   !----------------------------------------------------------
@@ -2407,7 +2328,7 @@ contains
       ff_points = size(ff_rs_state(:,1))
       ff_dim    = size(ff_rs_state(1,:))
       SAFE_ALLOCATE(ff_rs_state_plane_waves(1:ff_points,1:ff_dim))
-      call transform_rs_state_forward(hm, st%rs_state_plane_waves, ff_rs_state_plane_waves)
+      call transform_rs_state(hm, st%rs_state_plane_waves, ff_rs_state_plane_waves, RS_TRANS_FORWARD)
       ff_rs_state_pml = ff_rs_state - ff_rs_state_plane_waves
       SAFE_DEALLOCATE_A(ff_rs_state_plane_waves)
     else if (tr%bc_constant .and. hm%spatial_constant_apply) then
@@ -2415,7 +2336,7 @@ contains
       SAFE_ALLOCATE(rs_state_constant(1,1:3))
       SAFE_ALLOCATE(ff_rs_state_constant(1,1:ff_dim))
       rs_state_constant(1,:) = st%rs_state_const(:)
-      call transform_rs_state_forward(hm, rs_state_constant, ff_rs_state_constant)
+      call transform_rs_state(hm, rs_state_constant, ff_rs_state_constant, RS_TRANS_FORWARD)
       do ip=1, gr%mesh%np_part
         ff_rs_state_pml(ip,:) = ff_rs_state(ip,:) - ff_rs_state_constant(1,:)
       end do
@@ -2455,7 +2376,7 @@ contains
       hm%cpml_hamiltonian = .false.
       call plane_waves_propagation(hm, st, gr, tr, time, dt, time_delay)
       SAFE_ALLOCATE(ff_rs_state_plane_waves(1:ff_points,1:ff_dim))
-      call transform_rs_state_forward(hm, st%rs_state_plane_waves, ff_rs_state_plane_waves)
+      call transform_rs_state(hm, st%rs_state_plane_waves, ff_rs_state_plane_waves, RS_TRANS_FORWARD)
       do ip_in=1, hm%bc%plane_waves_points_number
         ip = hm%bc%plane_waves_points_map(ip_in)
         ff_rs_state(ip,:) = ff_rs_state_pml(ip,:) + ff_rs_state_plane_waves(ip,:)
@@ -2469,7 +2390,7 @@ contains
       SAFE_ALLOCATE(rs_state_constant(1,1:ff_dim))
       SAFE_ALLOCATE(ff_rs_state_constant(1,1:ff_dim))
       rs_state_constant(1,:) = st%rs_state_const(:)
-      call transform_rs_state_forward(hm, rs_state_constant, ff_rs_state_constant)
+      call transform_rs_state(hm, rs_state_constant, ff_rs_state_constant, RS_TRANS_BACKWARD)
       do ip_in=1, hm%bc%constant_points_number
         ip = hm%bc%constant_points_map(ip_in)
         ff_rs_state(ip,:) = ff_rs_state_pml(ip,:) + ff_rs_state_constant(1,:)
@@ -3270,12 +3191,12 @@ contains
 
     SAFE_ALLOCATE(ff_rs_state(1:gr%mesh%np_part,ff_dim))
 
-    call transform_rs_state_forward(hm, st%rs_state_plane_waves, ff_rs_state)
+    call transform_rs_state(hm, st%rs_state_plane_waves, ff_rs_state, RS_TRANS_FORWARD)
 
     ! Time evolution of RS plane waves state without any coupling with H(inter_time)
     call hamiltonian_mxll_update(hm, time=time)
     !call exponential_apply(tr%te, gr%mesh, hm, ff_rs_state, 1, 1, dt, time)
-    call transform_rs_state_backward(hm, ff_rs_state, st%rs_state_plane_waves)
+    call transform_rs_state(hm, st%rs_state_plane_waves, ff_rs_state, RS_TRANS_BACKWARD)
     call plane_waves_boundaries_calculation(hm, st, gr%mesh, time+dt, time_delay, st%rs_state_plane_waves)
 
     SAFE_DEALLOCATE_A(ff_rs_state)
