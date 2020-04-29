@@ -1828,7 +1828,7 @@ contains
     FLOAT,             intent(in)    :: vec(:)
     FLOAT,   optional, intent(in)    :: w0
 
-    integer :: istep, trash, iunit, nspin, time_steps, istart, iend, ntiter, lmax, no_e, ie
+    integer :: istep, trash, iunit, nspin, time_steps, istart, iend, ntiter, lmax, no_e, ie, idir, ispin
     FLOAT :: dt, dump, vv(MAX_DIM)  
     type(kick_t) :: kick
     FLOAT, allocatable :: dd(:,:)
