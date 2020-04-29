@@ -1783,12 +1783,10 @@ subroutine X(states_elec_calc_projections)(st, gs_st, namespace, mesh, ik, proj,
 end subroutine X(states_elec_calc_projections)
 
 ! ---------------------------------------------------------
-subroutine X(states_elec_me_one_body)(st, namespace, dir, gr, geo, nspin, vhxc, nint, iindex, jindex, oneint)
+subroutine X(states_elec_me_one_body)(st, namespace, gr, nspin, vhxc, nint, iindex, jindex, oneint)
   type(states_elec_t), intent(inout) :: st
   type(namespace_t),   intent(in)    :: namespace
-  character(len=*),    intent(in)    :: dir
   type(grid_t),        intent(in)    :: gr
-  type(geometry_t),    intent(in)    :: geo
   integer,             intent(in)    :: nspin
   FLOAT,               intent(in)    :: vhxc(1:gr%mesh%np, nspin)
   integer,             intent(in)    :: nint

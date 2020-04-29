@@ -114,7 +114,7 @@ contains
 
     ! Read info about, and prepare, the control functions
     call controlfunction_mod_init(sys%hm%ep, sys%namespace, td%dt, td%max_iter, oct%mode_fixed_fluence)
-    call controlfunction_init(par, sys%namespace, td%dt, td%max_iter)
+    call controlfunction_init(par, td%dt, td%max_iter)
     call controlfunction_set(par, sys%hm%ep)
       ! This prints the initial control parameters, exactly as described in the inp file,
       ! that is, without applying any envelope or filter.

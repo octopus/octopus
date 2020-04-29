@@ -226,10 +226,9 @@ contains
   end subroutine magnetic_local_moments
 
   ! ---------------------------------------------------------
-  subroutine magnetic_total_magnetization(mesh, st, boundaries, qq, trans_mag)
+  subroutine magnetic_total_magnetization(mesh, st, qq, trans_mag)
     type(mesh_t),        intent(in)  :: mesh
     type(states_elec_t), intent(in)  :: st
-    type(boundaries_t),  intent(in)  :: boundaries
     FLOAT,               intent(in)  :: qq(:)
     CMPLX,               intent(out) :: trans_mag(6)
 

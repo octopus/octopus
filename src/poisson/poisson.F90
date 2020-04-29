@@ -605,7 +605,6 @@ contains
     ! Create the cube
     if (need_cube) then
       call cube_init(this%cube, box, der%mesh%sb, namespace, fft_type = fft_type, &
-                   verbose = optional_default(verbose,.true.), &
                      need_partition=.not.der%mesh%parallel_in_domains)
       if (this%cube%parallel_in_domains .and. this%method == POISSON_FFT) then
         call mesh_cube_parallel_map_init(this%mesh_cube_map, der%mesh, this%cube)
@@ -981,8 +980,8 @@ contains
       !TODO: Add support for domain parrallelization
       ASSERT(.not. der%mesh%parallel_in_domains)
       call submesh_get_cube_dim(sm, box, der%dim)
-      call submesh_init_cube_map(sm, box, der%dim)
-      call cube_init(this%cube, box, der%mesh%sb, namespace, fft_type = FFT_NONE, verbose = .false., &
+      call submesh_init_cube_map(sm, der%dim)
+      call cube_init(this%cube, box, der%mesh%sb, namespace, fft_type = FFT_NONE, &
                      need_partition=.not.der%mesh%parallel_in_domains)
       call poisson_isf_init(this%isf_solver, namespace, der%mesh, this%cube, mpi_world%comm, init_world = this%all_nodes_default)
     end select
@@ -1345,7 +1344,7 @@ contains
         coulb%qq(1:sb%periodic_dim) = qq(1:sb%periodic_dim)
         !We must define the singularity if we specify a q vector and we do not use the short-range Coulomb potential
         coulb%singularity = optional_default(singul, M_ZERO)
-        call poisson_fft_get_kernel(this%fft_solver, namespace, this%der%mesh, this%cube, coulb, this%kernel, &
+        call poisson_fft_get_kernel(namespace, this%der%mesh, this%cube, coulb, this%kernel, &
           this%poisson_soft_coulomb_param)
       end if
     case default

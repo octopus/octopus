@@ -89,7 +89,7 @@ module cube_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine cube_init(cube, nn, sb, namespace, fft_type, fft_library, dont_optimize, nn_out, verbose, &
+  subroutine cube_init(cube, nn, sb, namespace, fft_type, fft_library, dont_optimize, nn_out, &
                        mpi_grp, need_partition, spacing, tp_enlarge, blocksize)
     type(cube_t),      intent(out) :: cube
     integer,           intent(in)  :: nn(3)
@@ -100,7 +100,6 @@ contains
     logical, optional, intent(in)  :: dont_optimize !< if true, do not optimize grid for FFT
     integer, optional, intent(out) :: nn_out(3) !< What are the FFT dims?
                                                 !! If optimized, may be different from input nn.
-    logical, optional, intent(in)  :: verbose   !< Print info to the screen.
     type(mpi_grp_t), optional, intent(in) :: mpi_grp !< The mpi group to be use for cube parallelization
     logical, optional, intent(in)  :: need_partition !< Should we calculate and store the cube partition?
     FLOAT, optional, intent(in)    :: spacing(3)

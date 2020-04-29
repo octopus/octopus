@@ -75,7 +75,6 @@ module hamiltonian_elec_oct_m
     hamiltonian_elec_end,                 &
     dhamiltonian_elec_apply_single,       &
     zhamiltonian_elec_apply_single,       &
-    dhamiltonian_elec_apply_all,          &
     zhamiltonian_elec_apply_all,          &
     dhamiltonian_elec_apply_batch,        &
     zhamiltonian_elec_apply_batch,        &
@@ -99,7 +98,6 @@ module hamiltonian_elec_oct_m
     zhamiltonian_elec_apply_atom,         &
     hamiltonian_elec_dump_vhxc,           &
     hamiltonian_elec_load_vhxc,           &
-    zoct_exchange_operator,               &
     hamiltonian_elec_set_vhxc
 
   type, extends(hamiltonian_abst_t) :: hamiltonian_elec_t
@@ -509,7 +507,7 @@ contains
     need_exchange_ = optional_default(need_exchange, .false.)
     if (hm%theory_level == HARTREE_FOCK .or. hm%theory_level == HARTREE &
           .or. hm%theory_level == RDMFT .or. need_exchange_) then
-      call exchange_operator_init(hm%exxop, namespace, st, gr%sb, gr%der, mc, gr%mesh, M_ONE, M_ZERO, M_ZERO)
+      call exchange_operator_init(hm%exxop, namespace, st, gr%sb, gr%der, mc, M_ONE, M_ZERO, M_ZERO)
     end if
 
     if (hm%apply_packed .and. accel_is_enabled()) then
@@ -1593,7 +1591,53 @@ contains
 
   end function hamiltonian_elec_needs_current
 
+  ! ---------------------------------------------------------
+  subroutine zhamiltonian_elec_apply_all(hm, namespace, mesh, st, hst)
+    type(hamiltonian_elec_t), intent(inout) :: hm
+    type(namespace_t),        intent(in)    :: namespace
+    type(mesh_t),             intent(in)    :: mesh
+    type(states_elec_t),      intent(inout) :: st
+    type(states_elec_t),      intent(inout) :: hst
+
+    integer :: ik, ib, ist
+    CMPLX, allocatable :: psi(:, :)
+    CMPLX, allocatable :: psiall(:, :, :, :)
   
+    PUSH_SUB(zhamiltonian_elec_apply_all)
+
+    do ik = st%d%kpt%start, st%d%kpt%end
+      do ib = st%group%block_start, st%group%block_end
+        call zhamiltonian_elec_apply_batch(hm, namespace, mesh, st%group%psib(ib, ik), hst%group%psib(ib, ik))
+      end do
+    end do
+
+    if(oct_exchange_enabled(hm%oct_exchange)) then
+
+      SAFE_ALLOCATE(psiall(mesh%np_part, 1:hst%d%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
+
+      call states_elec_get_state(st, mesh, psiall)
+    
+      call oct_exchange_prepare(hm%oct_exchange, mesh, psiall, hm%xc, hm%psolver, namespace)
+
+      SAFE_DEALLOCATE_A(psiall)
+    
+      SAFE_ALLOCATE(psi(mesh%np_part, 1:hst%d%dim))
+    
+      do ik = 1, st%d%nik
+        do ist = 1, st%nst
+          call states_elec_get_state(hst, mesh, ist, ik, psi)
+          call oct_exchange_operator(hm%oct_exchange, namespace, mesh, psi, ist, ik)
+          call states_elec_set_state(hst, mesh, ist, ik, psi)
+        end do
+      end do
+
+      SAFE_DEALLOCATE_A(psi)
+    
+    end if
+
+    POP_SUB(zhamiltonian_elec_apply_all)
+  end subroutine zhamiltonian_elec_apply_all
+
 
 #include "undef.F90"
 #include "real.F90"

@@ -16,8 +16,7 @@
 !! 02110-1301, USA.
 !!
 
-subroutine xc_get_vxc(der, xcs, st, psolver, namespace, rho, ispin, &
-    exx_op, vxc, ex, ec, deltaxc, vtau, ex_density, ec_density)
+subroutine xc_get_vxc(der, xcs, st, psolver, namespace, rho, ispin, vxc, ex, ec, deltaxc, vtau, ex_density, ec_density)
   type(derivatives_t),    intent(in)    :: der             !< Discretization and the derivative operators and details
   type(xc_t), target,     intent(inout) :: xcs             !< Details about the xc functional used
   type(states_elec_t),    intent(in)    :: st              !< State of the system (wavefunction,eigenvalues...)
@@ -25,7 +24,6 @@ subroutine xc_get_vxc(der, xcs, st, psolver, namespace, rho, ispin, &
   type(namespace_t),      intent(in)    :: namespace
   FLOAT,                  intent(in)    :: rho(:, :)       !< Electronic density 
   integer,                intent(in)    :: ispin           !< Number of spin channels 
-  type(exchange_operator_t), intent(in) :: exx_op
   FLOAT, optional,        intent(inout) :: vxc(:,:)        !< XC potential
   FLOAT, optional,        intent(inout) :: ex              !< Exchange energy.
   FLOAT, optional,        intent(inout) :: ec              !< Correlation energy.

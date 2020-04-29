@@ -371,7 +371,7 @@ contains
       ! equispaced grid in theta & phi (Gauss-Legendre would optimize to nstepsthetar = this%lmax & nstepsphir = 2*this%lmax + 1):
       ! nstepsthetar = M_TWO * this%lmax + 1
       ! nstepsphir   = M_TWO * this%lmax + 1
-      call pes_flux_getsphere(this, mesh, nstepsthetar, nstepsphir, offset)
+      call pes_flux_getsphere(this, mesh, nstepsthetar, nstepsphir)
     end if
 
     ! distribute the surface points on nodes,
@@ -1649,11 +1649,10 @@ contains
   end subroutine pes_flux_getcube
 
   ! ---------------------------------------------------------
-  subroutine pes_flux_getsphere(this, mesh, nstepsthetar, nstepsphir, offset)
+  subroutine pes_flux_getsphere(this, mesh, nstepsthetar, nstepsphir)
     type(pes_flux_t), intent(inout) :: this
     type(mesh_t),     intent(in)    :: mesh
     integer,          intent(inout) :: nstepsthetar, nstepsphir
-    FLOAT,            intent(in)    :: offset(1:MAX_DIM)
     
     integer :: mdim
     integer :: isp, ith, iph

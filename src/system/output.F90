@@ -157,14 +157,13 @@ module output_oct_m
   
 contains
 
-  subroutine output_init(outp, namespace, sb, st, nst, ks, states_are_real)
+  subroutine output_init(outp, namespace, sb, st, nst, ks)
     type(output_t),            intent(out)   :: outp
     type(namespace_t),         intent(in)    :: namespace
     type(simul_box_t),         intent(in)    :: sb
     type(states_elec_t),       intent(in)    :: st
     integer,                   intent(in)    :: nst
     type(v_ks_t),              intent(inout) :: ks
-    logical,                   intent(in)    :: states_are_real
 
     type(block_t) :: blk
     FLOAT :: norm
@@ -972,7 +971,7 @@ contains
 
       ASSERT(.not. gr%have_fine_mesh)
 
-      call xc_get_vxc(gr%fine%der, ks%xc, st, hm%psolver, namespace, st%rho, st%d%ispin, hm%exxop, &
+      call xc_get_vxc(gr%fine%der, ks%xc, st, hm%psolver, namespace, st%rho, st%d%ispin, &
         ex_density = ex_density, ec_density = ec_density)
       do is = 1, st%d%nspin
         do ip = 1, gr%fine%mesh%np
@@ -1265,7 +1264,7 @@ contains
     SAFE_ALLOCATE(vxc(1:gr%mesh%np, 1:st%d%nspin))
     vxc(:,:) = M_ZERO
     ! we should not include core rho here. that is why we do not just use hm%vxc
-    call xc_get_vxc(gr%der, ks%xc, st, hm%psolver, namespace, st%rho, st%d%ispin, hm%exxop, vxc)
+    call xc_get_vxc(gr%der, ks%xc, st, hm%psolver, namespace, st%rho, st%d%ispin, vxc)
 
     message(1) = "BerkeleyGW output: vxc.dat"
     if(bgw%calc_exchange) message(1) = trim(message(1)) // ", x.dat"

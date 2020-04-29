@@ -150,7 +150,7 @@ contains
     ! processes that are on the same column of the partition map than
     ! the local process. Note that this implies that there are always
     ! mpi_grp_in%size possible receivers.
-    call iihash_init(map_out, mpi_grp_in%size)
+    call iihash_init(map_out)
     do ipart = 1, grp2%size
       if (mpi_grp_in%size >= mpi_grp_out%size) then
         do ip = 1, n12

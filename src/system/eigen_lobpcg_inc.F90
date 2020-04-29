@@ -171,7 +171,6 @@ subroutine X(lobpcg)(namespace, gr, st, hm, st_start, st_end, psi, constr_start,
   integer, allocatable :: lall_constr(:)
 #endif
 
-  integer           :: hash_table_size
   logical           :: no_bof, found
   logical           :: explicit_gram
   R_TYPE            :: beta
@@ -288,8 +287,7 @@ subroutine X(lobpcg)(namespace, gr, st, hm, st_start, st_end, psi, constr_start,
   ! all_ev_inv: {1, ..., st%nst} -> {1, ..., nst} (the reverse of all_ev).
   SAFE_ALLOCATE(all_ev(1:nst))
   all_ev = uc
-  hash_table_size = max(3, st%nst) ! Minimum size of hash table is 3.
-  call iihash_init(all_ev_inv, hash_table_size)
+  call iihash_init(all_ev_inv)
   do ist = 1, nst
     call iihash_insert(all_ev_inv, all_ev(ist), ist)
   end do

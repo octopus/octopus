@@ -30,18 +30,14 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
   logical :: use_blas, conj
   type(accel_mem_t) :: dot_buffer
   type(profile_t), save :: prof_copy, prof_gemmcl, prof, profgemm
-#ifdef HAVE_MPI
   logical :: reduce_
   type(profile_t), save :: profcomm
-#endif
   
   PUSH_SUB(X(mesh_batch_dotp_matrix))
   call profiling_in(prof, "DOTP_BATCH")
 
-#ifdef HAVE_MPI
   reduce_ = .true.
   if(present(reduce)) reduce_ = reduce
-#endif
   conj = .false.
 
   call aa%check_compatibility_with(bb, only_check_dim = .true.)
@@ -185,13 +181,11 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
 
   if(use_blas) call profiling_out(profgemm)
 
-#ifdef HAVE_MPI
   if(mesh%parallel_in_domains .and. reduce_) then
     call profiling_in(profcomm, "DOTP_BATCH_REDUCE")
     call comm_allreduce(mesh%mpi_grp%comm, dd)
     call profiling_out(profcomm)
   end if
-#endif
 
   if(conj) then
     do jst = 1, bb%nst

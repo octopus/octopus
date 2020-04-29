@@ -124,7 +124,7 @@ contains
           
           rerho = M_ZERO
           if(species_type(species) == SPECIES_JELLIUM_CHARGE_DENSITY) then
-             if(volume_in_volume(sb, volume, xx, rr)) rerho = M_ONE
+             if(volume_in_volume(sb, volume, xx)) rerho = M_ONE
           else
              call parse_expression(rerho, imrho, sb%dim, xx, rr, M_ZERO, trim(species_rho_string(species)))
           end if
@@ -299,9 +299,8 @@ contains
   ! A non periodized version of the routine species_atom_density
   ! This is used for the Hirshfeld routines
   ! TODO: implement it for other approaches than pseudo potentials.
- subroutine species_atom_density_np(mesh, sb, atom, namespace, pos,  spin_channels, rho)
+ subroutine species_atom_density_np(mesh, atom, namespace, pos,  spin_channels, rho)
     type(mesh_t),         intent(in)    :: mesh
-    type(simul_box_t),    intent(in)    :: sb
     type(atom_t), target, intent(in)    :: atom
     type(namespace_t),    intent(in)    :: namespace
     FLOAT,                intent(in)    :: pos(:) !< (Max dim)
@@ -727,7 +726,7 @@ contains
 
           rerho = M_ZERO
           if(species_type(species) == SPECIES_JELLIUM_CHARGE_DENSITY) then
-            if(volume_in_volume(mesh%sb, volume, xx, rr)) rerho = M_ONE
+            if(volume_in_volume(mesh%sb, volume, xx)) rerho = M_ONE
           else
             call parse_expression(rerho, imrho1, mesh%sb%dim, xx, rr, M_ZERO, trim(species_rho_string(species)))
           end if

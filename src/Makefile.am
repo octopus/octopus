@@ -471,7 +471,6 @@ noinst_HEADERS +=                                    \
 	hamiltonian/kxc_inc.F90                      \
 	hamiltonian/lasers_inc.F90                   \
 	hamiltonian/lda_u_inc.F90                    \
-	hamiltonian/oct_exchange_inc.F90             \
 	hamiltonian/projector_inc.F90                \
 	hamiltonian/scdm_inc.F90                     \
 	hamiltonian/scissor_inc.F90                  \

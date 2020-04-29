@@ -28,7 +28,6 @@ module simul_box_oct_m
   use io_oct_m
   use kpoints_oct_m
   use lalg_basic_oct_m
-!  use loct_oct_m
   use lookup_oct_m
   use math_oct_m
   use messages_oct_m
@@ -172,7 +171,7 @@ contains
     only_gamma_kpoint = (sb%periodic_dim == 0)
     call kpoints_init(sb%kpoints, namespace, sb%symm, sb%dim, sb%rlattice, sb%klattice, only_gamma_kpoint)
 
-    call simul_box_symmetry_check(sb, geo, sb%kpoints, sb%dim, namespace)
+    call simul_box_symmetry_check(sb, geo, sb%dim, namespace)
 
     POP_SUB(simul_box_init)
 
@@ -1646,10 +1645,9 @@ contains
 
 
     ! ---------------------------------------------------------
-  subroutine simul_box_symmetry_check(this, geo, kpoints, dim, namespace)
+  subroutine simul_box_symmetry_check(this, geo, dim, namespace)
     type(simul_box_t),  intent(in) :: this
     type(geometry_t),   intent(in) :: geo
-    type(kpoints_t),    intent(in) :: kpoints
     integer,            intent(in) :: dim
     type(namespace_t),  intent(in) :: namespace
 

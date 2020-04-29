@@ -900,8 +900,7 @@ contains
 
     SAFE_ALLOCATE(psi(1:mesh%np))
 
-    call cube_init(cube, mesh%idx%ll, mesh%sb, global_namespace, verbose = .false., &
-                     need_partition=.not.mesh%parallel_in_domains)
+    call cube_init(cube, mesh%idx%ll, mesh%sb, global_namespace, need_partition=.not.mesh%parallel_in_domains)
     call cube_function_null(cf)
     call zcube_function_alloc_RS(cube, cf)
 

@@ -100,14 +100,13 @@ contains
     POP_SUB(exchange_operator_nullify)
   end subroutine exchange_operator_nullify
  
-  subroutine exchange_operator_init(this, namespace, st, sb, der, mc, mesh, omega, alpha, beta)
+  subroutine exchange_operator_init(this, namespace, st, sb, der, mc, omega, alpha, beta)
     type(exchange_operator_t), intent(inout) :: this
     type(namespace_t), target, intent(in)    :: namespace
     type(states_elec_t),       intent(in)    :: st
     type(simul_box_t),         intent(in)    :: sb
     type(derivatives_t),       intent(in)    :: der
     type(multicomm_t),         intent(in)    :: mc
-    type(mesh_t),              intent(in)    :: mesh
     FLOAT,                     intent(in)    :: omega, alpha, beta
 
     PUSH_SUB(exchange_operator_init)

@@ -571,7 +571,7 @@ contains
       if(this%use_symmetries) then
         message(1) = "Checking if the generated full k-point grid is symmetric";
         call messages_info(1)
-        call kpoints_check_symmetries(this%full, symm, dim, klattice, this%use_time_reversal, namespace)
+        call kpoints_check_symmetries(this%full, symm, dim, this%use_time_reversal, namespace)
       end if
 
       call kpoints_grid_copy(this%full, this%reduced)
@@ -718,8 +718,8 @@ contains
       ! For the output of band-structures
       SAFE_ALLOCATE(this%coord_along_path(1:nkpoints))
 
-      call kpoints_path_generate(dim, klattice, nkpoints, nsegments, resolution, &
-               nhighsympoints, highsympoints, path_kpoints_grid%point, this%coord_along_path)
+      call kpoints_path_generate(dim, klattice, nkpoints, nsegments, resolution, highsympoints, path_kpoints_grid%point, &
+        this%coord_along_path)
 
       SAFE_DEALLOCATE_A(resolution)
       SAFE_DEALLOCATE_A(highsympoints)
@@ -1157,14 +1157,12 @@ contains
 
   ! --------------------------------------------------------------------------------------------  
   !> Generate the k-point along a path
-  subroutine kpoints_path_generate(dim, klattice, nkpoints, nsegments, resolution, &
-               nhighsympoints, highsympoints, kpoints, coord)
+  subroutine kpoints_path_generate(dim, klattice, nkpoints, nsegments, resolution, highsympoints, kpoints, coord)
     integer,           intent(in)  :: dim
     FLOAT,             intent(in)  :: klattice(:,:)
     integer,           intent(in)  :: nkpoints
     integer,           intent(in)  :: nsegments
     integer,           intent(in)  :: resolution(:)
-    integer,           intent(in)  :: nhighsympoints
     FLOAT,             intent(in)  :: highsympoints(:,:)
     FLOAT,             intent(out) :: kpoints(:, :) 
     FLOAT,             intent(out) :: coord(:)
@@ -1600,11 +1598,10 @@ contains
   
 
   !--------------------------------------------------------
-  subroutine kpoints_check_symmetries(grid, symm, dim, klattice, time_reversal, namespace)
+  subroutine kpoints_check_symmetries(grid, symm, dim, time_reversal, namespace)
     type(kpoints_grid_t), intent(in) :: grid
     type(symmetries_t),   intent(in) :: symm    
     integer,              intent(in) :: dim
-    FLOAT,                intent(in) :: klattice(:,:)
     logical,              intent(in) :: time_reversal
     type(namespace_t),    intent(in) :: namespace
     
