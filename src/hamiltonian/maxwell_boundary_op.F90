@@ -695,8 +695,11 @@ contains
 
     if (mask_check) then
       SAFE_ALLOCATE(tmp(mesh%np))
-      call get_mask_io_function(bc%mask, bc, tmp)
-      call write_files("maxwell_mask", tmp)
+      do idim = 1, 3
+        tmp(:) = M_ZERO
+        call get_mask_io_function(bc%mask, bc, tmp, idim)
+        call write_files("maxwell_mask", tmp)
+      end do
       SAFE_DEALLOCATE_A(tmp)
     else if (pml_check) then
       SAFE_ALLOCATE(tmp(mesh%np))
@@ -809,12 +812,13 @@ contains
 
       end subroutine get_pml_io_function
 
-      subroutine get_mask_io_function(mask_func, bc, io_func)
+      subroutine get_mask_io_function(mask_func, bc, io_func, idim)
         FLOAT,              intent(in)    :: mask_func(:,:)
         type(bc_mxll_t),    intent(in)    :: bc
         FLOAT,              intent(inout) :: io_func(:)
+        integer,            intent(in)    :: idim
 
-        integer :: ip, ip_in, idim
+        integer :: ip, ip_in
 
         do ip_in = 1, bc%mask_points_number(idim)
           ip          = bc%mask_points_map(ip_in, idim)

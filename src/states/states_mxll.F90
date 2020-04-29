@@ -468,6 +468,8 @@ contains
 
     PUSH_SUB(build_rs_state)
 
+    np_ = optional_default(np, mesh%np)
+
     do ip = 1, np_
       if (present(ep_field) .and. present(mu_field)) then
         rs_state(ip, :) = sqrt(ep_field(ip)/M_TWO) * e_field(ip, :) & 
@@ -760,7 +762,7 @@ contains
     FLOAT,          optional, intent(in)    :: mu_field(:)
     FLOAT,          optional, intent(inout) :: mean_value(:)
 
-    integer            :: ip, ip_in, idir
+    integer            :: ip, ip_in
 
     PUSH_SUB(get_poynting_vector)
 
@@ -802,7 +804,7 @@ contains
     FLOAT,                    intent(inout) :: poynting_vector(:,:)
     FLOAT,          optional, intent(inout) :: mean_value(:)
 
-    integer            :: ip, ip_in, idir
+    integer            :: ip, ip_in
 
     PUSH_SUB(get_poynting_vector_plane_waves)
 

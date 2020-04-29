@@ -187,6 +187,8 @@ contains
 
     PUSH_SUB(system_mxll_has_interaction)
 
+    system_mxll_has_interaction = .false.
+
     POP_SUB(system_mxll_has_interaction)
   end function system_mxll_has_interaction
 
