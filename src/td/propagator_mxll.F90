@@ -94,6 +94,11 @@ module propagator_mxll_oct_m
     td_function_mxll_init,                   &
     plane_waves_in_box_calculation
 
+  integer, public, parameter ::   &
+     RS_TRANS_FORWARD = 1,        &
+     RS_TRANS_BACKWARD = 2
+
+
 contains
 
   ! ---------------------------------------------------------
@@ -446,7 +451,7 @@ contains
       inter_time = time + inter_dt * (ii-1)
 
       ! transformation of RS state into 3x3 or 4x4 representation
-      ! call transform_rs_state_forward(hm, rs_state, ff_rs_state)
+      call transform_rs_state(hm, rs_state, ff_rs_state, RS_TRANS_FORWARD)
 
       if ((hm%ma_mx_coupling_apply) .or. hm%current_density_ext_flag) then
 
@@ -461,7 +466,7 @@ contains
           call pml_propagation_stage_1(hm, gr, st, tr, ff_rs_state, ff_rs_state_pml)
           hm%cpml_hamiltonian = .true.
         end if
-        call exponential_mxll_apply(hm, namespace, gr, st, tr, inter_dt, rs_state)
+        call exponential_mxll_apply(hm, namespace, gr, st, tr, inter_dt, ff_rs_state)
 
         if (pml_check) then
           hm%cpml_hamiltonian = .false.
@@ -476,7 +481,7 @@ contains
       end if
 
       ! back tranformation of RS state representation
-!      call transform_rs_state_backward(hm, ff_rs_state, rs_state)
+      call transform_rs_state(hm, rs_state, ff_rs_state, RS_TRANS_BACKWARD)
 
       if (tr%bc_constant) then
         ! Propagation dt with H(inter_time+inter_dt) for constant boundaries
@@ -621,6 +626,35 @@ contains
 
     POP_SUB(rs_state_to_cube_map)
   end subroutine rs_state_to_cube_map
+
+
+  ! ---------------------------------------------------------
+  subroutine transform_rs_state(hm, rs_state, ff_rs_state, sign)
+    type(hamiltonian_mxll_t), intent(in)    :: hm
+    CMPLX,               intent(inout)      :: rs_state(:,:)
+    CMPLX,               intent(inout)      :: ff_rs_state(:,:)
+    integer,             intent(in)         :: sign
+
+    ASSERT(sign == RS_TRANS_FORWARD .or. sign == RS_TRANS_BACKWARD)
+
+    if (hm%operator == FARADAY_AMPERE_MEDIUM) then
+      message(1) = "Maxwell solver in linear media not yet implemented"
+      call messages_fatal(1)
+    else if (hm%operator == FARADAY_AMPERE_GAUSS) then
+      if (sign == RS_TRANS_FORWARD) then
+         call transform_rs_state_to_4x4_rs_state_forward(rs_state, ff_rs_state)
+      else
+        call transform_rs_state_to_4x4_rs_state_backward(ff_rs_state, rs_state)
+      end if
+    else
+      if (sign == RS_TRANS_FORWARD) then
+        ff_rs_state(:, 1:3) = rs_state(:, 1:3)
+      else
+        rs_state(:, 1:3) = ff_rs_state(:, 1:3)
+      end if
+    end if
+
+  end subroutine transform_rs_state
 
 
   ! ---------------------------------------------------------
