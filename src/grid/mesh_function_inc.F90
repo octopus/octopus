@@ -331,16 +331,19 @@ end function X(mf_moment)
 
 ! ---------------------------------------------------------
 !> This subroutine fills a function with randon values.
-subroutine X(mf_random)(mesh, ff, shift, seed, normalized)
+subroutine X(mf_random)(mesh, ff, shift_pre, shift_post, seed, normalized)
   type(mesh_t),      intent(in)  :: mesh
   R_TYPE,            intent(out) :: ff(:)
-  integer, optional, intent(in)  :: shift
+  integer, optional, intent(in)  :: shift_pre
+  integer, optional, intent(in)  :: shift_post
   integer, optional, intent(in)  :: seed
   logical, optional, intent(in)  :: normalized !< whether generate states should have norm 1, true by default
   
   integer, save :: iseed = 123
   R_BASE  :: rr
   type(profile_t), save :: prof
+
+  integer :: shift_pre_, shift_post_, initial_seed, used_seed
 
   PUSH_SUB(X(mf_random))
 
@@ -350,12 +353,43 @@ subroutine X(mf_random)(mesh, ff, shift, seed, normalized)
     iseed = iseed + seed
   end if
 
-  if(present(shift)) then
+  shift_pre_ = 0
+  shift_post_ = 0
+  initial_seed = iseed
+
+  if(present(shift_pre)) then
+    shift_pre_ = shift_pre
+  
     !We skip shift times the seed 
-    call shiftseed(iseed, shift)
+    call shiftseed(iseed, shift_pre)
+
+#ifdef R_TCOMPLEX
+    !For complex functions, we need to shift twice!
+    call shiftseed(iseed, shift_pre)
+#endif    
   end if
 
+  used_seed = iseed
+
   call quickrnd(iseed, mesh%np, ff(1:mesh%np))
+
+  if(present(shift_post)) then
+    shift_post_ = shift_post
+  
+    !We skip shift times the seed 
+    call shiftseed(iseed, shift_post)
+
+#ifdef R_TCOMPLEX
+    !For complex functions, we need to shift twice!
+    call shiftseed(iseed, shift_post)
+#endif    
+  end if
+
+
+  write(message(1), '("MF_RANDOM: np = ",I10,", shift = ",2I10,", seeds = ",3I10)') &
+    mesh%np, shift_pre_, shift_post_, initial_seed, used_seed, iseed
+  call messages_info(1, all_nodes = .true.)
+
 
   if(optional_default(normalized, .true.)) then
     rr = X(mf_nrm2)(mesh, ff)

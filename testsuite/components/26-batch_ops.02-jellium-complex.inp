@@ -29,4 +29,4 @@ jradius = r_s * (N_electrons)^(1.0/3.0)
 %
 
 ForceComplex = yes
-StatesPack = yes
+StatesPack = no

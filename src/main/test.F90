@@ -58,6 +58,16 @@ module test_oct_m
   use XC_F90(lib_m)
   use xc_oct_m
 
+  ! Modules used temporarily for debugging:
+  use mpi_oct_m
+  use mesh_oct_m
+  use index_oct_m
+  use io_function_oct_m
+  use unit_oct_m
+  use unit_system_oct_m
+ 
+  use par_vec_oct_m
+
   implicit none
 
   type test_parameters_t
@@ -75,7 +85,6 @@ contains
   ! ---------------------------------------------------------
   subroutine test_run(namespace)
     type(namespace_t),       intent(in)    :: namespace
-
     type(test_parameters_t) :: param
     integer :: test_mode
 
@@ -647,6 +656,15 @@ contains
     FLOAT, allocatable :: ddotv(:)
     CMPLX, allocatable :: zdotv(:)
 
+    FLOAT, allocatable :: dpsi(:,:)
+    FLOAT, allocatable :: dpsi_global(:,:)
+    CMPLX, allocatable :: zpsi(:,:)
+
+    integer :: ip, ierr
+    integer :: index(3)
+
+    type(unit_t) :: fn_unit
+
     PUSH_SUB(test_density_calc)
 
     !%Variable TestBatchOps
@@ -693,9 +711,60 @@ contains
 
     call sys%st%group%psib(1, 1)%copy_to(xx, copy_data = .true.)
 
+
+
     message(1) = 'Info: initial state (xx)'
     call messages_info(1)
     call test_prints_info_batch(sys%st, sys%gr, xx, string="xx")
+
+   
+    fn_unit = sqrt(units_out%length**(-sys%gr%mesh%sb%dim))
+
+    do ip = 1, sys%gr%mesh%vp%np_global
+      call index_to_coords(sys%gr%mesh%idx, ip, index)
+      write(900+mpi_world%rank, '("mesh_x_global(",I7,") = ",3f14.6," index = ",3i7)') &
+        ip , mesh_x_global(sys%gr%mesh, ip), index
+    end do
+
+    if(states_are_real(sys%st)) then
+      SAFE_ALLOCATE(dpsi(1:sys%gr%mesh%np,1:sys%st%d%dim))
+      SAFE_ALLOCATE(dpsi_global(1:sys%gr%mesh%vp%np_global, 1:sys%st%d%dim))
+
+      call batch_get_state(xx, 1, sys%gr%mesh%np, dpsi)
+      call dio_function_output(sys%outp%how, ".", "wfn1", sys%namespace, sys%gr%mesh, dpsi(:,1), fn_unit, ierr)
+
+      call batch_get_state(xx, 2, sys%gr%mesh%np, dpsi)
+      call dio_function_output(sys%outp%how, ".", "wfn2", sys%namespace, sys%gr%mesh, dpsi(:,1), fn_unit, ierr)
+
+      do ip = 1, sys%gr%mesh%np
+        write(987+mpi_world%rank, '("mesh_x_global(",I7,") = ",3f14.6," psi = ",e13.6)') &
+          ip + sys%gr%mesh%vp%xlocal - 1, mesh_x_global(sys%gr%mesh, ip + sys%gr%mesh%vp%xlocal-1), dpsi(ip,1)
+      end do
+    
+#if defined (HAVE_MPI)
+      call vec_gather(sys%gr%mesh%vp, 0, dpsi(:,1), dpsi_global(:,1))
+
+      do ip = 1, sys%gr%mesh%vp%np_global
+        write(950+mpi_world%rank, '("mesh_x_global(",I7,") = ",3f14.6," psi = ",e13.6)') &
+          ip , mesh_x_global(sys%gr%mesh, ip), dpsi_global(ip,1)
+      end do
+
+      !Result: dpsi_global from a parallel run agrees with dpsi in serial runs for state 1.
+      !        results differ for state 2. => something is wrong in states_elec_generate_random() !!
+
+#endif
+
+
+      call batch_get_state(xx, 3, sys%gr%mesh%np, dpsi)
+      call dio_function_output(sys%outp%how, ".", "wfn3", sys%namespace, sys%gr%mesh, dpsi(:,1), fn_unit, ierr)
+
+      call batch_get_state(xx, 4, sys%gr%mesh%np, dpsi)
+      call dio_function_output(sys%outp%how, ".", "wfn4", sys%namespace, sys%gr%mesh, dpsi(:,1), fn_unit, ierr)
+
+      SAFE_DEALLOCATE_A(dpsi_global)    
+      SAFE_DEALLOCATE_A(dpsi)    
+    end if
+
 
     call xx%end()
 
@@ -998,7 +1067,7 @@ contains
     type(states_elec_t),     intent(in)    :: st
     type(grid_t),            intent(in)    :: gr
     class(batch_t),          intent(inout) :: psib
-    character(*), optional, intent(in)    :: string      
+    character(*), optional,  intent(in)    :: string      
 
     integer :: itime
     CMPLX, allocatable :: zpsi(:, :)
