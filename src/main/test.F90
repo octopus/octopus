@@ -639,9 +639,12 @@ contains
     type(namespace_t),       intent(in) :: namespace
 
     type(system_t), pointer :: sys
-    integer :: itime, ops, ops_default
+    integer :: itime, ops, ops_default, ist, jst, nst
     type(wfs_elec_t) :: xx, yy
     FLOAT, allocatable :: tmp(:)
+    FLOAT, allocatable :: ddot(:,:)
+    CMPLX, allocatable :: zdot(:,:)
+
 
     PUSH_SUB(test_density_calc)
 
@@ -657,10 +660,14 @@ contains
     !% Tests batch_scal operation
     !%Option ops_nrm2 bit(3)
     !% Tests batch_nrm2 operation
+    !%Option ops_dotp_matrix bit(4)
+    !% Tests X(mesh_batch_dotp_matrix)
     !%End
     ops_default = OPTION__TESTBATCHOPS__OPS_AXPY &
                 + OPTION__TESTBATCHOPS__OPS_SCAL &
-                + OPTION__TESTBATCHOPS__OPS_NRM2
+                + OPTION__TESTBATCHOPS__OPS_NRM2 &
+                + OPTION__TESTBATCHOPS__OPS_DOTP_MATRIX
+
     call parse_variable(namespace, 'TestBatchOps', ops_default, ops)
 
     call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
@@ -730,6 +737,44 @@ contains
       call xx%end()
       call yy%end()
     end if
+
+    if(bitand(ops, OPTION__TESTBATCHOPS__OPS_DOTP_MATRIX) /= 0) then
+    
+      message(1) = 'Info: Testing dotp_matrix'
+      call messages_info(1)
+
+      call sys%st%group%psib(1, 1)%copy_to(xx, copy_data = .true.)
+      call sys%st%group%psib(1, 1)%copy_to(yy, copy_data = .true.)
+
+      nst = sys%st%group%psib(1, 1)%nst
+
+      if(states_are_real(sys%st)) then
+        SAFE_ALLOCATE(ddot(nst, nst))
+        call dmesh_batch_dotp_matrix(sys%gr%mesh, xx, yy, ddot)
+
+        do ist = 1, nst
+          do jst = 1, nst
+            write(message(jst+nst*(ist-1)), '(a,2i3,3x,e13.6)') 'Dotp_matrix states', ist, jst, ddot(ist,jst)
+          end do
+        end do
+        call messages_info(nst*nst)
+        SAFE_DEALLOCATE_A(ddot)
+      else
+        SAFE_ALLOCATE(zdot(nst, nst))
+        call zmesh_batch_dotp_matrix(sys%gr%mesh, xx, yy, zdot)
+        do ist = 1, nst
+          do jst = 1, nst
+            write(message(jst+nst*(ist-1)), '(a,2i3,3x,2e14.6)') 'Dotp_matrix states', ist, jst, zdot(ist,jst)
+          end do
+        end do
+        call messages_info(nst*nst)
+        SAFE_DEALLOCATE_A(zdot)
+      end if
+  
+      call xx%end()
+      call yy%end()    
+    end if
+  
 
     call states_elec_deallocate_wfns(sys%st)
     SAFE_DEALLOCATE_P(sys)

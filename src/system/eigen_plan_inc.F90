@@ -158,7 +158,9 @@ subroutine X(eigensolver_plan) (namespace, gr, st, hm, pre, tol, niter, converge
         xx = X(mf_nrm2)(gr%mesh, dim, vv(:, :, ist))
         if(xx  <=  M_EPSILON) then
           if(st%randomization == PAR_INDEPENDENT) then
-            call X(mf_random)(gr%mesh, vv(:, 1, ist),gr%mesh%vp%xlocal-1)
+            call X(mf_random)(gr%mesh, vv(:, 1, ist), & 
+              pre_shift = gr%mesh%vp%xlocal-1, & 
+              post_shift = gr%mesh%vp%np_global - gr%mesh%vp%xlocal - gr%mesh%np + 1)
           else 
             call X(mf_random)(gr%mesh, vv(:, 1, ist))
           end if
