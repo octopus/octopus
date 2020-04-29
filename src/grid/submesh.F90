@@ -767,9 +767,8 @@ contains
   end subroutine submesh_get_cube_dim
 
   !------------------------------------------------------------
-  subroutine submesh_init_cube_map(sm, db, dim)
+  subroutine submesh_init_cube_map(sm, dim)
     type(submesh_t),   intent(inout)  :: sm
-    integer,           intent(in)     :: db(:)
     integer,           intent(in)     :: dim
 
     integer :: ip, idir

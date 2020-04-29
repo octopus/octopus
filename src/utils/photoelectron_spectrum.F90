@@ -390,7 +390,7 @@ program photoelectron_spectrum
     ! declinations of the different surfaces
     SAFE_ALLOCATE(Ekin(1:llp(1),1:llp(2),1:llp(3)))
     Ekin = M_ZERO
-    call pes_flux_pmesh(pflux, global_namespace, dim, sb%kpoints, llg, Lg, pmesh, idxZero, krng, Lp, Ekin)
+    call pes_flux_pmesh(pflux, global_namespace, dim, sb%kpoints, llg, pmesh, idxZero, krng, Lp, Ekin)
   end select
    
   
@@ -565,8 +565,7 @@ program photoelectron_spectrum
           call pes_mask_output_power_totalM(pesP_out,outfile('./PES_energy',ist, ispin, 'sum'), &
                                             global_namespace, Lg, llp, dim, Emax, Estep, interpolate = .true.)
         case (OPTION__PHOTOELECTRONSPECTRUM__PES_FLUX)
-          call pes_flux_out_energy(pflux, pesP_out, outfile('./PES_energy',ist, ispin, 'sum'), global_namespace,&
-                                   llp, pmesh, Ekin)                                     
+          call pes_flux_out_energy(pflux, pesP_out, outfile('./PES_energy',ist, ispin, 'sum'), global_namespace, llp, Ekin)
         end select 
         
       end if

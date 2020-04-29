@@ -466,9 +466,9 @@ contains
      end if
 
      if (states_are_real(st)) then
-       call dorbitalbasis_build_empty(this%basis, geo, gr%mesh, st%d%kpt, st%d%dim, this%maxnorbs)
+       call dorbitalbasis_build_empty(this%basis, gr%mesh, st%d%kpt, st%d%dim, this%maxnorbs)
      else
-       call zorbitalbasis_build_empty(this%basis, geo, gr%mesh, st%d%kpt, st%d%dim, this%maxnorbs)
+       call zorbitalbasis_build_empty(this%basis, gr%mesh, st%d%kpt, st%d%dim, this%maxnorbs)
      end if
 
      this%max_np = gr%mesh%np

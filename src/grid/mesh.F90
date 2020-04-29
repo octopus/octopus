@@ -900,7 +900,7 @@ contains
     lsize(1:3) = TOFLOAT(mesh%idx%ll(1:3))
     offset(1:3) = TOFLOAT(mesh%idx%nr(1, 1:3) + mesh%idx%enlarge(1:3))
 
-    nops = symmetries_number(mesh%sb%symm)
+    nops = symmetries_number(sb%symm)
 
     do ip = 1, mesh%np
       !We use floating point coordinates to check if the symmetric point 
@@ -926,7 +926,7 @@ contains
 
       ! iterate over all points that go to this point by a symmetry operation
       do iop = 1, nops
-        srcpoint = symm_op_apply_red(mesh%sb%symm%ops(iop), destpoint) 
+        srcpoint = symm_op_apply_red(sb%symm%ops(iop), destpoint) 
 
         !We now come back to what should be an integer, if the symmetric point beloings to the grid
         do idim = 1, 3
@@ -937,7 +937,7 @@ contains
         srcpoint = srcpoint + TOFLOAT(int(lsize)/2)
 
         ! apply periodic boundary conditions in periodic directions 
-        do idim = 1, mesh%sb%periodic_dim
+        do idim = 1, sb%periodic_dim
           if(nint(srcpoint(idim)) < 0 .or. nint(srcpoint(idim)) >= lsize(idim)) then
             srcpoint(idim) = modulo(srcpoint(idim)+M_HALF*SYMPREC, lsize(idim))
           end if

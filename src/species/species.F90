@@ -1753,7 +1753,7 @@ contains
     spec%sc_alpha = -CNST(1.0)
     spec%jthick = -CNST(1.0)
     
-    call iihash_init(read_parameters, 11)
+    call iihash_init(read_parameters)
     
     icol = read_data
     do

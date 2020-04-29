@@ -220,7 +220,7 @@ contains
     case(OPTION__TESTMODE__BATCH_OPS)
       call test_batch_ops(param, namespace)
     case(OPTION__TESTMODE__CLOCK)
-      call test_clock(param)
+      call test_clock()
     end select
 
     POP_SUB(test_run)
@@ -904,8 +904,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine test_clock(param)
-    type(test_parameters_t), intent(in) :: param
+  subroutine test_clock()
 
     type(clock_t) :: test_clock_a, test_clock_b
 

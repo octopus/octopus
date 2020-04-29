@@ -240,7 +240,7 @@ program oct_unfold
   SAFE_ALLOCATE(coord_along_path(1:nkpoints))
 
   call kpoints_path_generate(sb%dim, klattice_pc, nkpoints, nsegments, resolution, &
-           nhighsympoints, highsympoints, path_kpoints_grid%point, coord_along_path)
+           highsympoints, path_kpoints_grid%point, coord_along_path)
 
   SAFE_DEALLOCATE_A(resolution)
   SAFE_DEALLOCATE_A(highsympoints)

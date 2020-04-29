@@ -569,7 +569,7 @@ contains
     do ik = kp1, kp2
       do ist = st1, st2
         if(oct_exchange_enabled(hm%oct_exchange)) then
-          call zoct_exchange_operator(hm%oct_exchange, namespace, gr%mesh, rhs1(:, :, ist, ik), ist, ik)
+          call oct_exchange_operator(hm%oct_exchange, namespace, gr%mesh, rhs1(:, :, ist, ik), ist, ik)
         end if
       end do
     end do
@@ -1251,7 +1251,7 @@ contains
             j = j + np
           end do
           opzpsi = M_z0
-          call zoct_exchange_operator(hm_p%oct_exchange, namespace_p, mesh_p, opzpsi, ist, ik)
+          call oct_exchange_operator(hm_p%oct_exchange, namespace_p, mesh_p, opzpsi, ist, ik)
 
           do idim = 1, dim
             yre(jj:jj+np-1) = yre(jj:jj+np-1) + TOFLOAT(M_zI * dt_op * M_HALF * opzpsi(1:np, idim))
@@ -1347,7 +1347,7 @@ contains
             j = j + np
           end do
           opzpsi = M_z0
-          call zoct_exchange_operator(hm_p%oct_exchange, namespace_p, mesh_p, opzpsi, ist, ik)
+          call oct_exchange_operator(hm_p%oct_exchange, namespace_p, mesh_p, opzpsi, ist, ik)
 
           do idim = 1, dim
             yre(jj:jj+np-1) = yre(jj:jj+np-1) + TOFLOAT(M_zI * dt_op * M_HALF * opzpsi(1:np, idim))

@@ -129,7 +129,6 @@ module td_write_oct_m
     type(states_elec_t) :: gs_st    
     integer        :: n_excited_states  !< number of excited states onto which the projections are calculated.
     type(excited_states_t), pointer :: excited_st(:) !< The excited states.
-    type(partial_charges_t) :: partial_charges
     integer :: compute_interval     !< Compute every compute_interval
   end type td_write_t
 
@@ -689,10 +688,6 @@ contains
       call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval=.false., time = iter*dt)
     end if
 
-    if(writ%out(OUT_PARTIAL_CHARGES)%write) then
-      call partial_charges_init(writ%partial_charges)
-    end if
-
     if(writ%out(OUT_N_EX)%write .and. writ%compute_interval > 0) then
       call io_mkdir(outp%iter_dir, namespace)
     end if
@@ -766,10 +761,6 @@ contains
       call states_elec_end(writ%gs_st)
     end if
 
-    if(writ%out(OUT_PARTIAL_CHARGES)%write) then
-      call partial_charges_end(writ%partial_charges)
-    end if
-
     POP_SUB(td_write_end)
   end subroutine td_write_end
 
@@ -817,11 +808,11 @@ contains
     end if
 
     if (writ%out(OUT_FLOQUET)%write) then
-      call td_write_floquet(writ%out(OUT_FLOQUET)%handle, namespace, hm, gr, st, iter)
+      call td_write_floquet(namespace, hm, gr, st, iter)
     end if
 
     if(writ%out(OUT_KP_PROJ)%write) &
-      call td_write_proj_kp(writ%out(OUT_KP_PROJ)%handle,hm, gr, st, writ%gs_st, namespace, iter)
+      call td_write_proj_kp(gr, st, writ%gs_st, namespace, iter)
 
     if(writ%out(OUT_COORDS)%write) &
       call td_write_coordinates(writ%out(OUT_COORDS)%handle, gr, geo, iter)
@@ -869,11 +860,11 @@ contains
     end if
     
     if(writ%out(OUT_TOTAL_HEAT_CURRENT)%write) then
-      call td_write_total_heat_current(writ%out(OUT_TOTAL_HEAT_CURRENT)%handle, hm, gr, geo, st, iter)
+      call td_write_total_heat_current(writ%out(OUT_TOTAL_HEAT_CURRENT)%handle, hm, gr, st, iter)
     end if
     
     if(writ%out(OUT_PARTIAL_CHARGES)%write) then
-      call td_write_partial_charges(writ%out(OUT_PARTIAL_CHARGES)%handle, namespace, writ%partial_charges, gr%fine%mesh, st, &
+      call td_write_partial_charges(writ%out(OUT_PARTIAL_CHARGES)%handle, namespace, gr%fine%mesh, st, &
         geo, iter)
     end if
     
@@ -883,8 +874,9 @@ contains
     end if
 
     !LDA+U outputs
-    if(writ%out_dftu(OUT_DFTU_EFFECTIVE_U)%write) &
+    if(writ%out_dftu(OUT_DFTU_EFFECTIVE_U)%write) then
       call td_write_effective_u(writ%out_dftu(OUT_DFTU_EFFECTIVE_U)%handle, hm%lda_u, iter)
+    end if
 
     call profiling_out(prof)
     POP_SUB(td_write_iter)
@@ -892,9 +884,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_data(writ, dt)
+  subroutine td_write_data(writ)
     type(td_write_t),     intent(inout) :: writ
-    FLOAT, optional,      intent(in)    :: dt
 
     integer :: iout
     type(profile_t), save :: prof
@@ -917,8 +908,7 @@ contains
   end subroutine td_write_data
 
   ! ---------------------------------------------------------
-  subroutine td_write_output(writ, namespace, gr, st, hm, ks, outp, geo, iter, dt)
-    type(td_write_t),         intent(inout) :: writ
+  subroutine td_write_output(namespace, gr, st, hm, ks, outp, geo, iter, dt)
     type(namespace_t),        intent(in)    :: namespace
     type(grid_t),             intent(in)    :: gr
     type(states_elec_t),      intent(inout) :: st
@@ -1074,7 +1064,7 @@ contains
     SAFE_ALLOCATE(tm(1:6,1:kick%nqvec))
 
     do iq = 1, kick%nqvec
-      call magnetic_total_magnetization(gr%mesh, st, gr%der%boundaries, kick%qvector(:,iq), tm(1:6,iq))
+      call magnetic_total_magnetization(gr%mesh, st, kick%qvector(:,iq), tm(1:6,iq))
     end do
 
     if(mpi_grp_is_root(mpi_world)) then ! only first node outputs
@@ -2542,9 +2532,7 @@ contains
   end subroutine calc_projections
 
 
-  subroutine td_write_proj_kp(out_proj_kp, hm,gr, st, gs_st, namespace, iter)
-    type(c_ptr),         intent(inout) :: out_proj_kp
-    type(hamiltonian_elec_t), intent(inout) :: hm
+  subroutine td_write_proj_kp(gr, st, gs_st, namespace, iter)
     type(grid_t),        intent(in)    :: gr
     type(states_elec_t), intent(in)    :: st
     type(states_elec_t), intent(inout) :: gs_st
@@ -2634,20 +2622,18 @@ contains
         call io_close(file)
       end if
 
-  end do! ik            
+    end do! ik
 
-  SAFE_DEALLOCATE_A(proj)
-  SAFE_DEALLOCATE_A(psi)
-  SAFE_DEALLOCATE_A(gs_psi)
-  SAFE_DEALLOCATE_A(temp_state)
+    SAFE_DEALLOCATE_A(proj)
+    SAFE_DEALLOCATE_A(psi)
+    SAFE_DEALLOCATE_A(gs_psi)
+    SAFE_DEALLOCATE_A(temp_state)
      
-  POP_SUB(td_write_proj_kp)
-
+    POP_SUB(td_write_proj_kp)
   end subroutine td_write_proj_kp
 
   !---------------------------------------
-  subroutine td_write_floquet(out_floquet, namespace, hm, gr, st, iter)
-    type(c_ptr),              intent(inout) :: out_floquet
+  subroutine td_write_floquet(namespace, hm, gr, st, iter)
     type(namespace_t),        intent(in)    :: namespace
     type(hamiltonian_elec_t), intent(inout) :: hm
     type(grid_t),             intent(in)    :: gr
@@ -3013,13 +2999,12 @@ contains
 
   ! ---------------------------------------------------------
   
-  subroutine td_write_total_heat_current(write_obj, hm, gr, geo, st, iter)
-    type(c_ptr),         intent(inout) :: write_obj
+  subroutine td_write_total_heat_current(write_obj, hm, gr, st, iter)
+    type(c_ptr),              intent(inout) :: write_obj
     type(hamiltonian_elec_t), intent(inout) :: hm
-    type(grid_t),        intent(in)    :: gr
-    type(geometry_t),    intent(in)    :: geo
+    type(grid_t),             intent(in)    :: gr
     type(states_elec_t),      intent(in)    :: st
-    integer,             intent(in)    :: iter
+    integer,                  intent(in)    :: iter
 
     integer :: idir, ispin
     character(len=50) :: aux
@@ -3069,10 +3054,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_partial_charges(out_partial_charges, namespace, partial_charges, mesh, st, geo, iter)
+  subroutine td_write_partial_charges(out_partial_charges, namespace, mesh, st, geo, iter)
     type(c_ptr),             intent(inout) :: out_partial_charges
     type(namespace_t),       intent(in)    :: namespace
-    type(partial_charges_t), intent(in)    :: partial_charges
     type(mesh_t),            intent(in)    :: mesh
     type(states_elec_t),     intent(in)    :: st
     type(geometry_t),        intent(in)    :: geo
@@ -3086,7 +3070,7 @@ contains
 
     SAFE_ALLOCATE(hirshfeld_charges(1:geo%natoms))
 
-    call partial_charges_calculate(partial_charges, namespace, mesh, st, geo, hirshfeld_charges = hirshfeld_charges)
+    call partial_charges_calculate(namespace, mesh, st, geo, hirshfeld_charges = hirshfeld_charges)
         
     if(mpi_grp_is_root(mpi_world)) then
 

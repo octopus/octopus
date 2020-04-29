@@ -25,7 +25,6 @@ module partial_charges_oct_m
   use mesh_oct_m
   use messages_oct_m
   use namespace_oct_m
-  use parser_oct_m
   use profiling_oct_m
   use states_elec_oct_m
 
@@ -33,33 +32,13 @@ module partial_charges_oct_m
 
   private
 
-  type partial_charges_t
-    private
-    integer :: dummy
-  end type partial_charges_t
-
   public ::                             &
-    partial_charges_t,                            &
-    partial_charges_init,                         &
-    partial_charges_end,                          &
     partial_charges_calculate
 
 contains
 
-  subroutine partial_charges_init(this)
-    type(partial_charges_t), intent(out)   :: this
-
-    PUSH_SUB(partial_charges_init)
-
-    this%dummy = 0
-    
-    POP_SUB(partial_charges_init)
-  end subroutine partial_charges_init
-
   !----------------------------------------------
-
-  subroutine partial_charges_calculate(this, namespace, mesh, st, geo, hirshfeld_charges)
-    type(partial_charges_t), intent(in)    :: this
+  subroutine partial_charges_calculate(namespace, mesh, st, geo, hirshfeld_charges)
     type(namespace_t),       intent(in)    :: namespace
     type(mesh_t),            intent(in)    :: mesh
     type(states_elec_t),     intent(in)    :: st
@@ -88,16 +67,6 @@ contains
     POP_SUB(partial_charges_calculate)
 
   end subroutine partial_charges_calculate
-
-  ! ---------------------------------------------------------
-
-  subroutine partial_charges_end(this)
-    type(partial_charges_t), intent(inout) :: this
-
-    PUSH_SUB(partial_charges_end)
-
-    POP_SUB(partial_charges_end)
-  end subroutine partial_charges_end
 
 end module partial_charges_oct_m
 
