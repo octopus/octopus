@@ -258,6 +258,7 @@ subroutine X(eigensolver_rmmdiis) (namespace, gr, st, hm, pre, tol, niter, conve
             mm(jter,jter,2,1:bsize) = M_ONE + M_EPSILON
           end do
 
+          failed(ii) = .false.
           call lalg_lowest_geneigensolve(1, iter, mm(:, :, 1, ii), mm(:, :, 2, ii), eval(:, ii),  &
                    evec(:, :, ii), preserve_mat=.true., bof = failed(ii), err_code = err)
 
@@ -269,6 +270,8 @@ subroutine X(eigensolver_rmmdiis) (namespace, gr, st, hm, pre, tol, niter, conve
             evec(1:iter - 1, 1, ii) = CNST(0.0)
             evec(iter, 1, ii) = CNST(1.0)
             cycle
+          else
+            failed(ii) = .false.
           end if
         else !In this case we did not reach the tolerance
           failed(ii) = .false.
