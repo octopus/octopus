@@ -91,9 +91,9 @@ subroutine X(oscillator_strengths)(cas, mesh, st)
           call states_elec_get_state(st, mesh, 1, cas%pair(ia)%a, cas%pair(ia)%kk, psi_a)
 
           do ia = 1, cas%n_pairs
-            forall(ip = 1:mesh%np)
+            do ip = 1, mesh%np
               zf(ip) = exp(M_zI*dot_product(qvect(1:mesh%sb%dim), mesh%x(ip, 1:mesh%sb%dim)))*aimag(zf(ip))*psi_a(ip)
-            end forall
+            end do
             zx(ia) = zmf_integrate(mesh, zf, reduce = .false.)
           end do
 
@@ -113,7 +113,9 @@ subroutine X(oscillator_strengths)(cas, mesh, st)
 
       ! normalize: for integral over sphere one would multiply by pi/N, but since
       !            we want the average, the integral must be divided by 4*pi
-      forall(ia = 1:cas%n_pairs) cas%qf_avg(ia) = cas%qf_avg(ia) / (4*cas%avg_order)
+      do ia = 1, cas%n_pairs
+        cas%qf_avg(ia) = cas%qf_avg(ia) / (4*cas%avg_order)
+      end do
 
       ! and finalize
       SAFE_DEALLOCATE_A(gaus_leg_points)
@@ -176,9 +178,9 @@ function X(ks_matrix_elements) (cas, st, mesh, dv) result(xx)
     call states_elec_get_state(st, mesh, cas%pair(ia)%i, cas%pair(ia)%kk, psii)
     call states_elec_get_state(st, mesh, cas%pair(ia)%a, cas%pair(ia)%kk, psia)
 
-    forall(ip = 1:mesh%np) 
+    do ip = 1, mesh%np
       ff(ip) = dv(ip)*sum(R_CONJ(psii(ip, 1:st%d%dim))*psia(ip, 1:st%d%dim))
-    end forall
+    end do
 
     xx(ia) = X(mf_integrate)(mesh, ff, reduce = .false.)
   end do
@@ -981,12 +983,16 @@ subroutine X(casida_forces)(cas, sys, mesh, st)
       do ik = 1, cas%nik
         call X(casida_lr_hmat2)(cas, st, lr_hmat1, ik)
       end do
-      
+
       if (cas%type /= CASIDA_EPS_DIFF .and. cas%calc_forces_kernel) then
-        forall(ip = 1:mesh%np, is1 = 1:st%d%nspin, is2 = 1:st%d%nspin)
-          lr_fxc(ip, is1, is2) = sum(kxc(ip, is1, is2, :) * ddl_rho(ip, :))
-        end forall
-        
+        do is2 = 1, st%d%nspin
+          do is1 = 1, st%d%nspin
+            do ip = 1, mesh%np
+              lr_fxc(ip, is1, is2) = sum(kxc(ip, is1, is2, :) * ddl_rho(ip, :))
+            end do
+          end do
+        end do
+
         write(restart_filename,'(a,i6.6,a,i1)') 'lr_kernel_', iatom, '_', idir
         if(cas%triplet) restart_filename = trim(restart_filename)//'_triplet'
         

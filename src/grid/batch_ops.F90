@@ -21,6 +21,7 @@
 module batch_ops_oct_m
   use accel_oct_m
   use batch_oct_m
+  use blas_oct_m
   use iso_c_binding
   use global_oct_m
   use lalg_basic_oct_m
@@ -42,7 +43,9 @@ module batch_ops_oct_m
     batch_get_points,               &
     batch_set_points,               &
     batch_points_block_size,        &
-    batch_mul
+    batch_mul,                      &
+    dbatch_axpy_function,                 &
+    zbatch_axpy_function
 
   interface batch_axpy
     module procedure dbatch_axpy_const
@@ -256,8 +259,7 @@ end subroutine batch_set_points_cl
 
 ! -------------------------
 
-integer pure function batch_points_block_size(this) result(block_size)
-  class(batch_t),       intent(in)    :: this
+integer pure function batch_points_block_size() result(block_size)
   
   block_size = 61440
 

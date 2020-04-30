@@ -157,14 +157,13 @@ module output_oct_m
   
 contains
 
-  subroutine output_init(outp, namespace, sb, st, nst, ks, states_are_real)
+  subroutine output_init(outp, namespace, sb, st, nst, ks)
     type(output_t),            intent(out)   :: outp
     type(namespace_t),         intent(in)    :: namespace
     type(simul_box_t),         intent(in)    :: sb
     type(states_elec_t),       intent(in)    :: st
     integer,                   intent(in)    :: nst
     type(v_ks_t),              intent(inout) :: ks
-    logical,                   intent(in)    :: states_are_real
 
     type(block_t) :: blk
     FLOAT :: norm
@@ -320,7 +319,7 @@ contains
     end if
 
     if(.not.varinfo_valid_option('Output', outp%what, is_flag=.true.)) then
-      call messages_input_error('Output')
+      call messages_input_error(namespace, 'Output')
     end if
 
     if(bitand(outp%what, OPTION__OUTPUT__MMB_WFS) /= 0) then
@@ -597,7 +596,7 @@ contains
     call parse_variable(namespace, 'Output_KPT', 0_8, outp%whatBZ)
 
     if(.not.varinfo_valid_option('Output_KPT', outp%whatBZ, is_flag=.true.)) then
-      call messages_input_error('Output_KPT')
+      call messages_input_error(namespace, 'Output_KPT')
     end if
 
     if(bitand(outp%whatBZ, OPTION__OUTPUT_KPT__CURRENT_KPT) /= 0) then
@@ -953,14 +952,18 @@ contains
       call states_elec_calc_quantities(gr%der, st, .true., kinetic_energy_density = energy_density)
 
       ! the external potential energy density
-      forall(ip = 1:gr%fine%mesh%np, is = 1:st%d%nspin)
-        energy_density(ip, is) = energy_density(ip, is) + st%rho(ip, is)*hm%ep%vpsl(ip)
-      end forall
+      do is = 1, st%d%nspin
+        do ip = 1, gr%fine%mesh%np
+          energy_density(ip, is) = energy_density(ip, is) + st%rho(ip, is)*hm%ep%vpsl(ip)
+        end do
+      end do
 
       ! the hartree energy density
-      forall(ip = 1:gr%fine%mesh%np, is = 1:st%d%nspin)
-        energy_density(ip, is) = energy_density(ip, is) + CNST(0.5)*st%rho(ip, is)*hm%vhartree(ip)
-      end forall
+      do is = 1, st%d%nspin
+        do ip = 1, gr%fine%mesh%np
+          energy_density(ip, is) = energy_density(ip, is) + CNST(0.5)*st%rho(ip, is)*hm%vhartree(ip)
+        end do
+      end do
 
       ! the XC energy density
       SAFE_ALLOCATE(ex_density(1:gr%mesh%np))
@@ -968,15 +971,17 @@ contains
 
       ASSERT(.not. gr%have_fine_mesh)
 
-      call xc_get_vxc(gr%fine%der, ks%xc, st, hm%psolver, namespace, st%rho, st%d%ispin, hm%exxop, &
+      call xc_get_vxc(gr%fine%der, ks%xc, st, hm%psolver, namespace, st%rho, st%d%ispin, &
         ex_density = ex_density, ec_density = ec_density)
-      forall(ip = 1:gr%fine%mesh%np, is = 1:st%d%nspin)
-        energy_density(ip, is) = energy_density(ip, is) + ex_density(ip) + ec_density(ip)
-      end forall
+      do is = 1, st%d%nspin
+        do ip = 1, gr%fine%mesh%np
+          energy_density(ip, is) = energy_density(ip, is) + ex_density(ip) + ec_density(ip)
+        end do
+      end do
 
       SAFE_DEALLOCATE_A(ex_density)
       SAFE_DEALLOCATE_A(ec_density)
-      
+
       select case(st%d%ispin)
       case(UNPOLARIZED)
         write(fname, '(a)') 'energy_density'
@@ -1259,7 +1264,7 @@ contains
     SAFE_ALLOCATE(vxc(1:gr%mesh%np, 1:st%d%nspin))
     vxc(:,:) = M_ZERO
     ! we should not include core rho here. that is why we do not just use hm%vxc
-    call xc_get_vxc(gr%der, ks%xc, st, hm%psolver, namespace, st%rho, st%d%ispin, hm%exxop, vxc)
+    call xc_get_vxc(gr%der, ks%xc, st, hm%psolver, namespace, st%rho, st%d%ispin, vxc)
 
     message(1) = "BerkeleyGW output: vxc.dat"
     if(bgw%calc_exchange) message(1) = trim(message(1)) // ", x.dat"

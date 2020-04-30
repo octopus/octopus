@@ -147,11 +147,10 @@ end subroutine X(xc_oep_pt_rhs)
 
 
 ! ---------------------------------------------------------
-subroutine X(xc_oep_pt_inhomog) (gr, st, is, oep, phi1, ist, ss)
+subroutine X(xc_oep_pt_inhomog) (gr, st, is, phi1, ist, ss)
   type(grid_t),        intent(in)    :: gr
   type(states_elec_t), intent(in)    :: st
   integer,             intent(in)    :: is
-  type(xc_oep_t),      intent(in)    :: oep
   R_TYPE,              intent(in)    :: phi1(:,:,:)
   integer,             intent(in)    :: ist
   FLOAT,               intent(inout) :: ss(:)
@@ -173,6 +172,7 @@ subroutine X(xc_oep_pt_inhomog) (gr, st, is, oep, phi1, ist, ss)
   
   SAFE_DEALLOCATE_A(psiii)
   SAFE_DEALLOCATE_A(rhs)
+
   POP_SUB(X(xc_oep_pt_inhomog))
 end subroutine X(xc_oep_pt_inhomog)
 

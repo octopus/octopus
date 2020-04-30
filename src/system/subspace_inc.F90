@@ -435,7 +435,7 @@ subroutine X(subspace_diag_hamiltonian)(namespace, mesh, st, hm, ik, hmss)
     else
 
       ! we have to copy the blocks to a temporary array
-      block_size = batch_points_block_size(st%group%psib(st%group%block_start, ik))
+      block_size = batch_points_block_size()
 
       call accel_create_buffer(psi_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*st%d%dim*block_size)
       call accel_create_buffer(hpsi_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*st%d%dim*block_size)

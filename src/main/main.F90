@@ -39,7 +39,6 @@ program octopus
 
   character(len=256) :: config_str
   integer :: inp_calc_mode, ierr
-  type(namespace_t) :: default_namespace
   type(block_t) :: blk
 
   call getopt_init(ierr)
@@ -50,11 +49,10 @@ program octopus
   call global_init()
 
   call parser_init()
-  default_namespace = namespace_t("")
   
-  call messages_init(default_namespace)
+  call messages_init()
 
-  call walltimer_init(default_namespace)
+  call walltimer_init()
   
   !%Variable ReportMemory
   !%Type logical
@@ -67,7 +65,7 @@ program octopus
   !% generally it is a lower bound to the actual memory <tt>Octopus</tt> is
   !% using.
   !%End
-  call parse_variable(default_namespace, 'ReportMemory', .false., conf%report_memory)
+  call parse_variable(global_namespace, 'ReportMemory', .false., conf%report_memory)
 
   ! need to find out calc_mode already here since some of the variables here (e.g.
   ! periodic dimensions) can be different for the subsystems
@@ -112,28 +110,28 @@ program octopus
   !%Option recipe 99
   !% Prints out a tasty recipe.
   !%End
-  if(parse_block(default_namespace, 'CalculationMode', blk) == 0) then
+  if(parse_block(global_namespace, 'CalculationMode', blk) == 0) then
     call messages_write('The datasets mode has been deprecated,', new_line = .true.)
     call messages_write('please use several Octopus runs.')
     call messages_fatal()
   end if
 
-  call parse_variable(default_namespace, 'CalculationMode', CM_GS, inp_calc_mode)
-  if(.not.varinfo_valid_option('CalculationMode', inp_calc_mode)) call messages_input_error('CalculationMode')
+  call parse_variable(global_namespace, 'CalculationMode', CM_GS, inp_calc_mode)
+  if(.not.varinfo_valid_option('CalculationMode', inp_calc_mode)) call messages_input_error(global_namespace, 'CalculationMode')
 
   ! Now we can initialize the I/O
-  call io_init(default_namespace)
+  call io_init()
 
   call calc_mode_par_init()
   
   ! now we declare octopus as running
   call messages_switch_status('running')
   
-  call profiling_init(default_namespace)
+  call profiling_init(global_namespace)
   
   call print_header()
 
-#if !defined(HAVE_LIBXC4)
+#if !defined(HAVE_LIBXC4) && !defined(HAVE_LIBXC5)
   call messages_write('You have compiled Octopus with version 3 of Libxc.', new_line = .true.)
   call messages_write('Support for this version of Libxc has been deprecated and', new_line = .true.)
   call messages_write('will be removed in one of the next major releases of Octopus.', new_line = .true.)
@@ -141,7 +139,7 @@ program octopus
 #endif
   
   ! now we really start
-  call run(default_namespace, inp_calc_mode)
+  call run(global_namespace, inp_calc_mode)
   
 #if defined(HAVE_MPI)
   ! wait for all processors to finish
@@ -152,7 +150,7 @@ program octopus
   call messages_switch_status('finished')
   call io_end()
   
-  call profiling_end(default_namespace)
+  call profiling_end(global_namespace)
   
   call calc_mode_par_end()
 

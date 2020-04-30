@@ -252,7 +252,7 @@ contains
     call messages_obsolete_variable(namespace, 'TDEvolutionMethod', 'TDPropagator')
 
     call parse_variable(namespace, 'TDPropagator', PROP_ETRS, tr%method)
-    if(.not.varinfo_valid_option('TDPropagator', tr%method)) call messages_input_error('TDPropagator')
+    if(.not.varinfo_valid_option('TDPropagator', tr%method)) call messages_input_error(namespace, 'TDPropagator')
 
     select case(tr%method)
     case(PROP_ETRS)
@@ -324,7 +324,7 @@ contains
     case(PROP_CFMAGNUS4)
       call messages_experimental("Commutator-Free Magnus propagator")
     case default
-      call messages_input_error('TDPropagator')
+      call messages_input_error(namespace, 'TDPropagator')
     end select
     call messages_print_var_option(stdout, 'TDPropagator', tr%method)
 
@@ -375,7 +375,7 @@ contains
     call parse_variable(namespace, 'TDStepsWithSelfConsistency', 0, tr%scf_propagation_steps)
 
     if(tr%scf_propagation_steps == -1) tr%scf_propagation_steps = HUGE(tr%scf_propagation_steps)
-    if(tr%scf_propagation_steps < 0) call messages_input_error('TDStepsWithSelfConsistency', 'Cannot be negative')
+    if(tr%scf_propagation_steps < 0) call messages_input_error(namespace, 'TDStepsWithSelfConsistency', 'Cannot be negative')
 
     if(tr%scf_propagation_steps /= 0) then
       call messages_experimental('TDStepsWithSelfConsistency')

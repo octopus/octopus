@@ -239,9 +239,9 @@ contains
       else !In the case of the isolated system, we still use the submesh 
         do im = 1, os%norbs
           do idim = 1, os%ndim
-            forall(is=1:ns)
+            do is = 1, ns
               os%eorb_submesh(is,idim,im,iq) = os%zorb(is,idim,im)*os%phase(is, iq)
-            end forall
+            end do
           end do
         end do
       endif

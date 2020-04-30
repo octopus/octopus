@@ -171,7 +171,6 @@ subroutine X(lobpcg)(namespace, gr, st, hm, st_start, st_end, psi, constr_start,
   integer, allocatable :: lall_constr(:)
 #endif
 
-  integer           :: hash_table_size
   logical           :: no_bof, found
   logical           :: explicit_gram
   R_TYPE            :: beta
@@ -288,8 +287,7 @@ subroutine X(lobpcg)(namespace, gr, st, hm, st_start, st_end, psi, constr_start,
   ! all_ev_inv: {1, ..., st%nst} -> {1, ..., nst} (the reverse of all_ev).
   SAFE_ALLOCATE(all_ev(1:nst))
   all_ev = uc
-  hash_table_size = max(3, st%nst) ! Minimum size of hash table is 3.
-  call iihash_init(all_ev_inv, hash_table_size)
+  call iihash_init(all_ev_inv)
   do ist = 1, nst
     call iihash_insert(all_ev_inv, all_ev(ist), ist)
   end do
@@ -518,7 +516,8 @@ subroutine X(lobpcg)(namespace, gr, st, hm, st_start, st_end, psi, constr_start,
 
     call profiling_in(C_PROFILING_LOBPCG_ESOLVE, 'LOBPCG_ESOLVE')
     no_bof = .false.
-    call lalg_lowest_geneigensolve(nst, nst+blks*nuc, gram_h, gram_i, eval, ritz_vec, bof = no_bof)
+    call lalg_lowest_geneigensolve(nst, nst+blks*nuc, gram_h, gram_i, eval, ritz_vec, &
+               preserve_mat=.false., bof = no_bof)
     call profiling_out(C_PROFILING_LOBPCG_ESOLVE)
 
     if(no_bof) then
@@ -619,10 +618,12 @@ contains
     do ist = st_start, st_end
       iev = iihash_lookup(all_ev_inv, ist, found)
       ASSERT(found)
-     
-      forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np) 
-        res(ip, idim, ist) = h_psi(ip, idim, ist) - eval(iev)*psi(ip, idim, ist)
-      end forall
+
+      do idim = 1, st%d%dim
+        do ip = 1, gr%mesh%np
+          res(ip, idim, ist) = h_psi(ip, idim, ist) - eval(iev)*psi(ip, idim, ist)
+        end do
+      end do
     end do
 
     POP_SUB(X(lobpcg).X(lobpcg_res))
@@ -666,20 +667,6 @@ contains
 #endif
     POP_SUB(X(lobpcg).X(lobpcg_unconv_ev))
   end subroutine X(lobpcg_unconv_ev)
-
-
-  ! ---------------------------------------------------------
-  !> Returns a mask with mask(i) = .false. for eigenvector i unconverged.
-  subroutine X(lobpcg_conv_mask)(mask)
-    logical, intent(out) :: mask(:)
-
-    PUSH_SUB(X(lobpcg).X(lobpcg_conv_mask))
-
-    mask     = .true.
-    mask(uc(1:nuc)) = .false.
-
-    POP_SUB(X(lobpcg).X(lobpcg_conv_mask))
-  end subroutine X(lobpcg_conv_mask)
 
 
   ! ---------------------------------------------------------

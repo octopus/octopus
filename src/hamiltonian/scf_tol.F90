@@ -151,8 +151,9 @@ contains
     else
       call parse_variable(namespace, 'LRTolScheme', SCF_TOL_ADAPTIVE, this%scheme)
     end if
-    if(.not.varinfo_valid_option('LRTolScheme', this%scheme)) &
-      call messages_input_error('LRTolScheme')
+    if(.not.varinfo_valid_option('LRTolScheme', this%scheme)) then
+      call messages_input_error(namespace, 'LRTolScheme')
+    end if
 
     !%Variable LRTolInitTol
     !%Type float

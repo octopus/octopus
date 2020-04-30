@@ -57,7 +57,9 @@ module lasers_oct_m
     laser_set_phi,                &
     laser_set_f_value,            &
     laser_carrier_frequency,      &
+    dvlaser_operator_linear,      &
     zvlaser_operator_linear,      &
+    dvlaser_operator_quadratic,   &
     zvlaser_operator_quadratic
 
 
@@ -630,9 +632,17 @@ contains
 
     if(present(time)) then
       amp = TOFLOAT(tdf(laser%f, time)*exp(M_zI*(laser%omega*time + tdf(laser%phi, time))))
-      forall(idir = 1:mesh%sb%dim, ip = 1:mesh%np) aa(ip, idir) = aa(ip, idir) + amp*laser%a(ip, idir)
+      do idir = 1, mesh%sb%dim
+        do ip = 1, mesh%np
+          aa(ip, idir) = aa(ip, idir) + amp*laser%a(ip, idir)
+        end do
+      end do
     else
-      forall(idir = 1:mesh%sb%dim, ip = 1:mesh%np) aa(ip, idir) = aa(ip, idir) + laser%a(ip, idir)
+      do idir = 1, mesh%sb%dim
+        do ip = 1, mesh%np
+          aa(ip, idir) = aa(ip, idir) + laser%a(ip, idir)
+        end do
+      end do
     end if
 
     POP_SUB(laser_vector_potential)

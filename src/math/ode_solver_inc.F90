@@ -18,11 +18,11 @@
 
 ! ---------------------------------------------------------
 subroutine X(ode_solver_run)(os, func, startval, solutionp, solutionvec)
-  type(ode_solver_t), intent(inout) :: os
-  R_TYPE,             intent(in)    :: startval(:)
+  type(ode_solver_t), intent(in) :: os
+  R_TYPE,             intent(in) :: startval(:)
   !> values of the solution only at the endpoint of the interval
-  R_TYPE,             intent(out)   :: solutionp(:)
-  R_TYPE, optional,   intent(out)   :: solutionvec(:,:) !< full solution for all t
+  R_TYPE,             intent(out) :: solutionp(:)
+  R_TYPE, optional,   intent(out) :: solutionvec(:,:) !< full solution for all t
 
   interface
     subroutine func(size, t, z, res)
@@ -39,23 +39,6 @@ subroutine X(ode_solver_run)(os, func, startval, solutionp, solutionvec)
 
   ! initialize array
   solutionp = M_ZERO
-
-  ! setup coefficients
-  select case(os%solver_type)
-  case(ODE_RK4)
-    call ode_rk4_coeff(os)
-  case(ODE_FB78)
-    call ode_fb78_coeff(os)
-  case(ODE_VR89)
-    call ode_vr89_coeff(os)
-  case(ODE_PD89)
-    call ode_pd89_coeff(os)
-  case default
-    write(message(1), '(a,i4,a)') "Input: '", os%solver_type, &
-      "' is not a valid ODE solver"
-    message(2) = '( ODE solver =  ode_rk4 | ode_fb7 | ode_vr8 | ode_pd8 )'
-    call messages_fatal(2)
-  end select
 
   ! start stepping
   if(present(solutionvec)) then

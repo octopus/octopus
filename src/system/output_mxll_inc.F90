@@ -339,7 +339,7 @@
       fn_unit = unit_one
       SAFE_ALLOCATE(dtmp(1:gr%mesh%np, 1:st%d%dim))
       call get_electric_field_state(st%rs_transb, gr%mesh, dtmp, st%ep(1:gr%mesh%np), gr%mesh%np)
-      do idim=1, st%d%dim
+      do idim = 1, st%d%dim
         write(fname, '(2a)') 'e_field_trans-', index2axis(idim)
         call dio_function_output(outp%how, dir, fname, namespace, gr%mesh, dtmp(:, idim), fn_unit, ierr, geo = geo)
       end do
@@ -351,7 +351,7 @@
       fn_unit = unit_one
       SAFE_ALLOCATE(dtmp(1:gr%mesh%np,1:st%d%dim))
       call get_magnetic_field_state(st%rs_transb, gr%mesh, st%rs_sign, dtmp, st%ep(1:gr%mesh%np), gr%mesh%np)
-      do idim=1, st%d%dim
+      do idim = 1, st%d%dim
         write(fname, '(2a)') 'b_field_trans-', index2axis(idim)
         call dio_function_output(outp%how, dir, fname, namespace, gr%mesh, dtmp(:, idim), fn_unit, ierr, geo = geo)
       end do

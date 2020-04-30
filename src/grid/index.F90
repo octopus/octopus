@@ -69,8 +69,12 @@ contains
 
     ! No PUSH SUB, called too often
 
-    forall (idir = 1:idx%dim) ix2(idir) = ix(idir)
-    forall (idir = idx%dim + 1:MAX_DIM) ix2(idir) = 0
+    do idir = 1, idx%dim
+      ix2(idir) = ix(idir)
+    end do
+    do idir=idx%dim + 1, MAX_DIM
+      ix2(idir) = 0
+    end do
 
     if(.not. idx%is_hypercube) then
       index = idx%lxyz_inv(ix2(1), ix2(2), ix2(3))
@@ -95,7 +99,9 @@ contains
 
     if(.not. idx%is_hypercube) then
       do ip = 1, npoints
-        forall (idir = 1:idx%dim) ix2(idir) = ix(idir, ip)
+        do idir = 1, idx%dim
+          ix2(idir) = ix(idir, ip)
+        end do
         index(ip) = idx%lxyz_inv(ix2(1), ix2(2), ix2(3))
       end do
     else
@@ -120,7 +126,9 @@ contains
     ! undefined on exit).
     ix = 0
     if(.not. idx%is_hypercube) then
-      forall (idir = 1:idx%dim) ix(idir) = idx%lxyz(ip, idir)
+      do idir = 1, idx%dim
+        ix(idir) = idx%lxyz(ip, idir)
+      end do
     else
       call hypercube_i_to_x(idx%hypercube, idx%dim, idx%nr, idx%enlarge(1), ip, ix)
     end if
@@ -314,8 +322,12 @@ contains
       ! Compute lxyz_inv from lxyz
       if (ierr == 0) then
         do ip = 1, np
-          forall (idir = 1:idx%dim) ix(idir) = idx%lxyz(ip, idir)
-          forall (idir = idx%dim + 1:MAX_DIM) ix(idir) = 0
+          do idir = 1, idx%dim
+            ix(idir) = idx%lxyz(ip, idir)
+          end do
+          do idir=idx%dim + 1, MAX_DIM
+            ix(idir) = 0
+          end do
           idx%lxyz_inv(ix(1), ix(2), ix(3)) = ip
         end do
       end if

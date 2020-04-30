@@ -113,7 +113,7 @@ contains
     end if
 
     call parse_variable(namespace, 'Preconditioner', default, this%which)
-    if(.not.varinfo_valid_option('Preconditioner', this%which)) call messages_input_error('Preconditioner')
+    if(.not.varinfo_valid_option('Preconditioner', this%which)) call messages_input_error(namespace, 'Preconditioner')
     call messages_print_var_option(stdout, 'Preconditioner', this%which)
 
     select case(this%which)
@@ -150,7 +150,7 @@ contains
 
       ! check for correct interval of alpha
       if (alpha < CNST(0.5) .or. alpha > CNST(1.0)) then
-        call messages_input_error('PreconditionerFilterFactor')
+        call messages_input_error(namespace, 'PreconditionerFilterFactor')
       end if
 
       ns = this%op%stencil%size

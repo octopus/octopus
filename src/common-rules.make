@@ -112,7 +112,7 @@ fc_verbose_0 = @echo "  FC       $@";
 .F90.o:
 	$(cpp_verbose)@FCCPP@ @CPPFLAGS@ $(AM_CPPFLAGS) -I. $< | \
 	  $(top_srcdir)/build/preprocess.pl - \
-	  "@DEBUG@" "@F90_ACCEPTS_LINE_NUMBERS@" "@F90_FORALL@" > $*_oct.f90
+	  "@DEBUG@" "@F90_ACCEPTS_LINE_NUMBERS@" > $*_oct.f90
 	$(fc_verbose)@FC@ @FCFLAGS@ $(FCFLAGS_MODS) -c @FCFLAGS_f90@ -o $@ $*_oct.f90
 	@rm -f $*_oct.f90
 
@@ -122,7 +122,7 @@ fc_verbose_0 = @echo "  FC       $@";
 .F90_oct.f90:
 	$(cpp_verbose)@FCCPP@ @CPPFLAGS@ $(AM_CPPFLAGS) -I. $< | \
 	  $(top_srcdir)/build/preprocess.pl - \
-	  "@DEBUG@" "@F90_ACCEPTS_LINE_NUMBERS@" "@F90_FORALL@" > $*_oct.f90
+	  "@DEBUG@" "@F90_ACCEPTS_LINE_NUMBERS@" > $*_oct.f90
 
 
 # ---------------------------------------------------------------

@@ -83,20 +83,19 @@ contains
     this%coulb%singularity = M_ZERO
     this%coulb%mu = M_ZERO
 
-    call poisson_fft_get_kernel(this, namespace, mesh, cube, this%coulb, kernel, soft_coulb_param, fullcube) 
+    call poisson_fft_get_kernel(namespace, mesh, cube, this%coulb, kernel, soft_coulb_param, fullcube) 
 
     POP_SUB(poisson_fft_init)
   end subroutine poisson_fft_init
 
-  subroutine poisson_fft_get_kernel(this, namespace, mesh, cube, coulb, kernel, soft_coulb_param, fullcube)
-    type(poisson_fft_t), intent(in)    :: this
-    type(namespace_t),   intent(in)    :: namespace
-    type(mesh_t),        intent(in)    :: mesh
-    type(cube_t),        intent(in)    :: cube
+  subroutine poisson_fft_get_kernel(namespace, mesh, cube, coulb, kernel, soft_coulb_param, fullcube)
+    type(namespace_t),        intent(in)    :: namespace
+    type(mesh_t),             intent(in)    :: mesh
+    type(cube_t),             intent(in)    :: cube
     type(fourier_space_op_t), intent(inout) :: coulb
-    integer,             intent(in)    :: kernel
-    FLOAT, optional,     intent(in)    :: soft_coulb_param
-    type(cube_t), optional, intent(in) :: fullcube !< needed for Hockney kernel 
+    integer,                  intent(in)    :: kernel
+    FLOAT,        optional,   intent(in)    :: soft_coulb_param
+    type(cube_t), optional,   intent(in)    :: fullcube !< needed for Hockney kernel 
 
     PUSH_SUB(poisson_fft_get_kernel)
 
@@ -126,9 +125,9 @@ contains
       ASSERT(present(soft_coulb_param))
       select case(kernel)
       case(POISSON_FFT_KERNEL_SPH)
-        call poisson_fft_build_1d_0d(this, namespace, mesh, cube, coulb, soft_coulb_param)
+        call poisson_fft_build_1d_0d(namespace, mesh, cube, coulb, soft_coulb_param)
       case(POISSON_FFT_KERNEL_NOCUT)
-        call poisson_fft_build_1d_1d(this, namespace, mesh, cube, coulb, soft_coulb_param)
+        call poisson_fft_build_1d_1d(mesh, cube, coulb, soft_coulb_param)
       case default
         message(1) = "Invalid Poisson FFT kernel for 1D."
         call messages_fatal(1)
@@ -137,11 +136,11 @@ contains
     case(2)
       select case(kernel)
       case(POISSON_FFT_KERNEL_SPH)
-        call poisson_fft_build_2d_0d(this, namespace, mesh, cube, coulb)
+        call poisson_fft_build_2d_0d(namespace, mesh, cube, coulb)
       case(POISSON_FFT_KERNEL_CYL)
-        call poisson_fft_build_2d_1d(this, namespace, mesh, cube, coulb)
+        call poisson_fft_build_2d_1d(namespace, mesh, cube, coulb)
       case(POISSON_FFT_KERNEL_NOCUT)
-        call poisson_fft_build_2d_2d(this, mesh, cube, coulb)
+        call poisson_fft_build_2d_2d(mesh, cube, coulb)
       case default
         message(1) = "Invalid Poisson FFT kernel for 2D."
         call messages_fatal(1)
@@ -150,19 +149,19 @@ contains
     case(3)
       select case(kernel)
       case(POISSON_FFT_KERNEL_SPH, POISSON_FFT_KERNEL_CORRECTED)
-        call poisson_fft_build_3d_0d(this, namespace,  mesh, cube, kernel, coulb)
+        call poisson_fft_build_3d_0d(namespace,  mesh, cube, kernel, coulb)
 
       case(POISSON_FFT_KERNEL_CYL)
-        call poisson_fft_build_3d_1d(this, namespace, mesh, cube, coulb)
+        call poisson_fft_build_3d_1d(namespace, mesh, cube, coulb)
 
       case(POISSON_FFT_KERNEL_PLA)
-        call poisson_fft_build_3d_2d(this, namespace, mesh, cube, coulb)
+        call poisson_fft_build_3d_2d(namespace, mesh, cube, coulb)
 
       case(POISSON_FFT_KERNEL_NOCUT)
-        call poisson_fft_build_3d_3d(this, mesh, cube, coulb)
+        call poisson_fft_build_3d_3d(mesh, cube, coulb)
 
       case(POISSON_FFT_KERNEL_HOCKNEY)
-        call poisson_fft_build_3d_3d_hockney(this, namespace, mesh, cube, coulb, fullcube)
+        call poisson_fft_build_3d_3d_hockney(mesh, cube, coulb, fullcube)
 
       case default
         message(1) = "Invalid Poisson FFT kernel for 3D."
@@ -224,8 +223,7 @@ contains
   end subroutine poisson_fft_gg_transform
 
   !-----------------------------------------------------------------
-  subroutine poisson_fft_build_3d_3d(this, mesh, cube, coulb)
-    type(poisson_fft_t),      intent(in)    :: this
+  subroutine poisson_fft_build_3d_3d(mesh, cube, coulb)
     type(mesh_t),             intent(in)    :: mesh
     type(cube_t),             intent(in)    :: cube
     type(fourier_space_op_t), intent(inout) :: coulb
@@ -296,9 +294,7 @@ contains
   !! in a small box while respecting the periodicity of a larger box
   !! A. Damle, L. Lin, L. Ying, JCTC, 2015
   !! DOI: 10.1021/ct500985f, supplementary info  
-  subroutine poisson_fft_build_3d_3d_hockney(this, namespace, mesh, cube, coulb, fullcube)
-    type(poisson_fft_t),      intent(in)    :: this
-    type(namespace_t),        intent(in)    :: namespace
+  subroutine poisson_fft_build_3d_3d_hockney(mesh, cube, coulb, fullcube)
     type(mesh_t),             intent(in)    :: mesh
     type(cube_t),             intent(in)    :: cube
     type(fourier_space_op_t), intent(inout) :: coulb
@@ -351,10 +347,14 @@ contains
       end do
     end do
     
-    forall(iz=1:nfs(3), iy=1:nfs(2), ix=1:nfs(1))
-      fft_Coulb_FS(ix, iy, iz) = M_FOUR*M_PI*fft_Coulb_FS(ix, iy, iz)
-    end forall
-    
+    do iz = 1, nfs(3)
+      do iy = 1, nfs(2)
+        do ix = 1, nfs(1)
+          fft_Coulb_FS(ix, iy, iz) = M_FOUR*M_PI*fft_Coulb_FS(ix, iy, iz)
+        end do
+      end do
+    end do
+
     ! get periodic Coulomb potential in real space
     call dfft_backward(fullcube%fft, fft_Coulb_FS, fft_Coulb_RS)
 
@@ -403,8 +403,7 @@ contains
 
   !-----------------------------------------------------------------
   !> C. A. Rozzi et al., Phys. Rev. B 73, 205119 (2006), Table I
-  subroutine poisson_fft_build_3d_2d(this, namespace, mesh, cube, coulb)
-    type(poisson_fft_t),      intent(in)    :: this
+  subroutine poisson_fft_build_3d_2d(namespace, mesh, cube, coulb)
     type(namespace_t),        intent(in)    :: namespace
     type(mesh_t),             intent(in)    :: mesh
     type(cube_t),             intent(in)    :: cube
@@ -461,9 +460,13 @@ contains
 
     end do
 
-    forall(iz=1:cube%fs_n_global(3), iy=1:cube%fs_n_global(2), ix=1:cube%fs_n_global(1))
-      fft_Coulb_FS(ix, iy, iz) = M_FOUR*M_PI*fft_Coulb_FS(ix, iy, iz)
-    end forall
+    do iz = 1, cube%fs_n_global(3)
+      do iy = 1, cube%fs_n_global(2)
+        do ix = 1, cube%fs_n_global(1)
+          fft_Coulb_FS(ix, iy, iz) = M_FOUR*M_PI*fft_Coulb_FS(ix, iy, iz)
+        end do
+      end do
+    end do
 
     call dfourier_space_op_init(coulb, cube, fft_Coulb_FS)
 
@@ -475,8 +478,7 @@ contains
 
   !-----------------------------------------------------------------
   !> C. A. Rozzi et al., Phys. Rev. B 73, 205119 (2006), Table I
-  subroutine poisson_fft_build_3d_1d(this, namespace, mesh, cube, coulb)
-    type(poisson_fft_t),      intent(in)    :: this
+  subroutine poisson_fft_build_3d_1d(namespace, mesh, cube, coulb)
     type(namespace_t),        intent(in)    :: namespace
     type(mesh_t),             intent(in)    :: mesh
     type(cube_t),             intent(in)    :: cube
@@ -566,9 +568,13 @@ contains
       if( mesh%sb%periodic_dim == 0 ) call spline_end(cylinder_cutoff_f)
     end do
 
-    forall(iz=1:cube%fs_n_global(3), iy=1:cube%fs_n_global(2), ix=1:cube%fs_n_global(1))
-      fft_Coulb_FS(ix, iy, iz) = M_FOUR*M_PI*fft_Coulb_FS(ix, iy, iz)
-    end forall
+    do iz = 1, cube%fs_n_global(3)
+      do iy = 1, cube%fs_n_global(2)
+        do ix = 1, cube%fs_n_global(1)
+          fft_Coulb_FS(ix, iy, iz) = M_FOUR*M_PI*fft_Coulb_FS(ix, iy, iz)
+        end do
+      end do
+    end do
 
     call dfourier_space_op_init(coulb, cube, fft_Coulb_FS)
 
@@ -582,8 +588,7 @@ contains
 
   !-----------------------------------------------------------------
   !> C. A. Rozzi et al., Phys. Rev. B 73, 205119 (2006), Table I
-  subroutine poisson_fft_build_3d_0d(this, namespace, mesh, cube, kernel, coulb)
-    type(poisson_fft_t),      intent(in)    :: this
+  subroutine poisson_fft_build_3d_0d(namespace, mesh, cube, kernel, coulb)
     type(namespace_t),        intent(in)    :: namespace
     type(mesh_t),             intent(in)    :: mesh
     type(cube_t),             intent(in)    :: cube
@@ -651,9 +656,13 @@ contains
       end do
     end do
 
-    forall(iz=1:cube%fs_n(3), iy=1:cube%fs_n(2), ix=1:cube%fs_n(1))
-      fft_Coulb_FS(ix, iy, iz) = M_FOUR*M_PI*fft_Coulb_FS(ix, iy, iz)
-    end forall
+    do iz = 1, cube%fs_n(3)
+      do iy = 1, cube%fs_n(2)
+        do ix = 1, cube%fs_n(1)
+          fft_Coulb_FS(ix, iy, iz) = M_FOUR*M_PI*fft_Coulb_FS(ix, iy, iz)
+        end do
+      end do
+    end do
 
     call dfourier_space_op_init(coulb, cube, fft_coulb_fs, in_device = (kernel /= POISSON_FFT_KERNEL_CORRECTED))
 
@@ -665,8 +674,7 @@ contains
 
   !-----------------------------------------------------------------
   !> A. Castro et al., Phys. Rev. B 80, 033102 (2009)
-  subroutine poisson_fft_build_2d_0d(this, namespace, mesh, cube, coulb)
-    type(poisson_fft_t),      intent(in)    :: this
+  subroutine poisson_fft_build_2d_0d(namespace, mesh, cube, coulb)
     type(namespace_t),        intent(in)    :: namespace
     type(mesh_t),             intent(in)    :: mesh
     type(cube_t),             intent(in)    :: cube
@@ -731,8 +739,7 @@ contains
 
   !-----------------------------------------------------------------
   !> A. Castro et al., Phys. Rev. B 80, 033102 (2009)
-  subroutine poisson_fft_build_2d_1d(this, namespace, mesh, cube, coulb)
-    type(poisson_fft_t),      intent(in)    :: this
+  subroutine poisson_fft_build_2d_1d(namespace, mesh, cube, coulb)
     type(namespace_t),        intent(in)    :: namespace
     type(mesh_t),             intent(in)    :: mesh
     type(cube_t),             intent(in)    :: cube
@@ -783,8 +790,7 @@ contains
 
   !-----------------------------------------------------------------
   !> A. Castro et al., Phys. Rev. B 80, 033102 (2009)
-  subroutine poisson_fft_build_2d_2d(this, mesh, cube, coulb)
-    type(poisson_fft_t),      intent(in)    :: this
+  subroutine poisson_fft_build_2d_2d(mesh, cube, coulb)
     type(mesh_t),             intent(in)    :: mesh
     type(cube_t),             intent(in)    :: cube
     type(fourier_space_op_t), intent(inout) :: coulb
@@ -820,9 +826,7 @@ contains
 
 
   !-----------------------------------------------------------------
-  subroutine poisson_fft_build_1d_1d(this, namespace, mesh, cube, coulb, poisson_soft_coulomb_param)
-    type(poisson_fft_t),      intent(in)    :: this
-    type(namespace_t),        intent(in)    :: namespace
+  subroutine poisson_fft_build_1d_1d(mesh, cube, coulb, poisson_soft_coulomb_param)
     type(mesh_t),             intent(in)    :: mesh
     type(cube_t),             intent(in)    :: cube
     type(fourier_space_op_t), intent(inout) :: coulb
@@ -855,8 +859,7 @@ contains
 
 
   !-----------------------------------------------------------------
-  subroutine poisson_fft_build_1d_0d(this, namespace, mesh, cube, coulb, poisson_soft_coulomb_param)
-    type(poisson_fft_t),      intent(in)    :: this
+  subroutine poisson_fft_build_1d_0d(namespace, mesh, cube, coulb, poisson_soft_coulomb_param)
     type(namespace_t),        intent(in)    :: namespace
     type(mesh_t),             intent(in)    :: mesh
     type(cube_t),             intent(in)    :: cube

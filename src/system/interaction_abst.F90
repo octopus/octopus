@@ -78,7 +78,7 @@ contains
 
     PUSH_SUB(interaction_init_clock)
 
-    this%clock = clock_t(label, dt, algo_dt)
+    this%clock = clock_t(label, dt, algo_dt, initial_tick=-1)
 
     POP_SUB(interaction_init_clock)
   end subroutine interaction_init_clock

@@ -395,17 +395,16 @@ contains
           !% Width of the region used to apply the absorbing boundaries.
           !%End
           zero_width = ab_bounds(2,idim)-ab_bounds(1,idim)
-          call parse_variable(namespace, 'MaxwellABZeroWidth', zero_width, zero_width, units_inp%length)
-          bc%zero_width = zero_width
+          call parse_variable(namespace, 'MaxwellABZeroWidth', zero_width, bc%zero_width, units_inp%length)
 
-          if ( zero_width < (gr%der%order*gr%mesh%spacing(1)) .or. &
-               zero_width < (gr%der%order*gr%mesh%spacing(2)) .or. &
-               zero_width < (gr%der%order*gr%mesh%spacing(3)) ) then
-            zero_width = max(gr%der%order*gr%mesh%spacing(1), &
+          if ( bc%zero_width < (gr%der%order*gr%mesh%spacing(1)) .or. &
+               bc%zero_width < (gr%der%order*gr%mesh%spacing(2)) .or. &
+               bc%zero_width < (gr%der%order*gr%mesh%spacing(3)) ) then
+            bc%zero_width = max(gr%der%order*gr%mesh%spacing(1), &
                                 gr%der%order*gr%mesh%spacing(2), &
                                 gr%der%order*gr%mesh%spacing(2))
             write(message(1),'(a)') 'Zero absorbing width has to be larger or equal than derivatives order times spacing!'
-            write(message(2),'(a,es10.3)') 'Zero absorbing width is set to: ', zero_width
+            write(message(2),'(a,es10.3)') 'Zero absorbing width is set to: ', bc%zero_width
             call messages_info(2)
           end if
         end if
@@ -428,16 +427,15 @@ contains
           !% Width of the region used to apply the absorbing boundaries.
           !%End
           mask_width = ab_bounds(2, idim) - ab_bounds(1, idim)
-          call parse_variable(namespace, 'MaxwellABMaskWidth', mask_width, mask_width, units_inp%length)
-          bc%mask_width = mask_width
-          if ( mask_width < (gr%der%order*gr%mesh%spacing(1)) .or. &
-               mask_width < (gr%der%order*gr%mesh%spacing(2)) .or. &
-               mask_width < (gr%der%order*gr%mesh%spacing(3)) ) then
-            mask_width = max(gr%der%order*gr%mesh%spacing(1), &
+          call parse_variable(namespace, 'MaxwellABMaskWidth', mask_width, bc%mask_width, units_inp%length)
+          if ( bc%mask_width < (gr%der%order*gr%mesh%spacing(1)) .or. &
+               bc%mask_width < (gr%der%order*gr%mesh%spacing(2)) .or. &
+               bc%mask_width < (gr%der%order*gr%mesh%spacing(3)) ) then
+            bc%mask_width = max(gr%der%order*gr%mesh%spacing(1), &
                                 gr%der%order*gr%mesh%spacing(2), &
                                 gr%der%order*gr%mesh%spacing(2))
             write(message(1),'(a)') 'Mask absorbing width has to be larger or equal than derivatives order times spacing!'
-            write(message(2),'(a,es10.3)') 'Mask absorbing width is set to: ', mask_width
+            write(message(2),'(a,es10.3)') 'Mask absorbing width is set to: ', bc%mask_width
             call messages_info(2)
           end if
           !%Variable MaxwellABMaskAlpha
@@ -469,21 +467,20 @@ contains
           !% Width of the region used to apply the absorbing boundaries.
           !%End
           pml_width = ab_bounds(2,idim) - ab_bounds(1,idim)
-          call parse_variable(namespace, 'MaxwellABPMLWidth', pml_width, pml_width, units_inp%length)
-          bc%pml_width = pml_width
+          call parse_variable(namespace, 'MaxwellABPMLWidth', pml_width, bc%pml_width, units_inp%length)
           if (parse_is_defined(namespace, 'UserDefinedMaxwellIncidentWaves')) then
-            if ( pml_width < (gr%der%order*gr%mesh%spacing(1)) .or. &
-                 pml_width < (gr%der%order*gr%mesh%spacing(2)) .or. &
-                 pml_width < (gr%der%order*gr%mesh%spacing(3)) ) then
-              pml_width = max(gr%der%order*gr%mesh%spacing(1), &
+            if ( bc%pml_width < (gr%der%order*gr%mesh%spacing(1)) .or. &
+                 bc%pml_width < (gr%der%order*gr%mesh%spacing(2)) .or. &
+                 bc%pml_width < (gr%der%order*gr%mesh%spacing(3)) ) then
+              bc%pml_width = max(gr%der%order*gr%mesh%spacing(1), &
                                   gr%der%order*gr%mesh%spacing(2), &
                                   gr%der%order*gr%mesh%spacing(2))
               write(message(1),'(a)') 'PML absorbing width has to be larger or equal than derivatives order times spacing!'
-              write(message(2),'(a,es10.3)') 'PML absorbing width is set to: ', pml_width
+              write(message(2),'(a,es10.3)') 'PML absorbing width is set to: ', bc%pml_width
               call messages_info(2)
             end if
           end if
-          ab_bounds(1,idim) = ab_bounds(2,idim) - pml_width
+          ab_bounds(1,idim) = ab_bounds(2,idim) - bc%pml_width
         end if
       end if
 
@@ -658,7 +655,7 @@ contains
     pml_check = .false.
     medium_check = .false.
 
-    do idim=1, 3
+    do idim = 1, 3
       if (bc%bc_ab_type(idim) == AB_MASK) then
         mask_check = .true.
       end if
@@ -793,9 +790,11 @@ contains
 
         integer :: ip, ip_in, idim
 
-        do ip_in = 1, bc%mask_points_number(idim)
-          ip          = bc%mask_points_map(ip_in, idim)
-          io_func(ip) = mask_func(ip_in, idim)
+        do idim = 1, 3
+          do ip_in = 1, bc%mask_points_number(idim)
+            ip          = bc%mask_points_map(ip_in, idim)
+            io_func(ip) = mask_func(ip_in, idim)
+          end do
         end do
 
       end subroutine get_mask_io_function

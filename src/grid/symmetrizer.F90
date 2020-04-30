@@ -94,7 +94,9 @@ contains
       destpoint = destpoint - TOFLOAT(int(lsize)/2)
 
       !convert to proper reduced coordinates
-      forall(idir = 1:3) destpoint(idir) = destpoint(idir)/lsize(idir)
+      do idir = 1, 3
+        destpoint(idir) = destpoint(idir)/lsize(idir)
+      end do
 
       ! iterate over all points that go to this point by a symmetry operation
       do iop = 1, nops

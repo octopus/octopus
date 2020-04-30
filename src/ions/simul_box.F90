@@ -28,7 +28,6 @@ module simul_box_oct_m
   use io_oct_m
   use kpoints_oct_m
   use lalg_basic_oct_m
-!  use loct_oct_m
   use lookup_oct_m
   use math_oct_m
   use messages_oct_m
@@ -172,7 +171,7 @@ contains
     only_gamma_kpoint = (sb%periodic_dim == 0)
     call kpoints_init(sb%kpoints, namespace, sb%symm, sb%dim, sb%rlattice, sb%klattice, only_gamma_kpoint)
 
-    call simul_box_symmetry_check(sb, geo, sb%kpoints, sb%dim, namespace)
+    call simul_box_symmetry_check(sb, geo, sb%dim, namespace)
 
     POP_SUB(simul_box_init)
 
@@ -213,8 +212,9 @@ contains
       else
         sb%periodic_dim = geo%periodic_dim
       end if
-      if ((sb%periodic_dim < 0) .or. (sb%periodic_dim > MAX_DIM) .or. (sb%periodic_dim > sb%dim)) &
-        call messages_input_error('PeriodicDimensions')
+      if ((sb%periodic_dim < 0) .or. (sb%periodic_dim > MAX_DIM) .or. (sb%periodic_dim > sb%dim)) then
+        call messages_input_error(namespace, 'PeriodicDimensions')
+      end if
 
       if(sb%periodic_dim > 0 .and. sb%periodic_dim < sb%dim) then
         call messages_experimental('Support for mixed periodicity systems')
@@ -258,7 +258,7 @@ contains
           call parse_block_float(blk, 0, idir - 1, sb%hr_area%center(idir))
         end do
 
-        if (sb%hr_area%num_areas /= 1) call messages_input_error('MultiResolutionArea')
+        if (sb%hr_area%num_areas /= 1) call messages_input_error(namespace, 'MultiResolutionArea')
 
         ! the radii
         SAFE_ALLOCATE(sb%hr_area%radius(1:sb%hr_area%num_radii))
@@ -350,16 +350,16 @@ contains
         default_boxshape = MINIMUM
       end if
       call parse_variable(namespace, 'BoxShape', default_boxshape, sb%box_shape)
-      if(.not.varinfo_valid_option('BoxShape', sb%box_shape)) call messages_input_error('BoxShape')
+      if(.not.varinfo_valid_option('BoxShape', sb%box_shape)) call messages_input_error(namespace, 'BoxShape')
       select case(sb%box_shape)
       case(SPHERE, MINIMUM, BOX_USDEF)
-        if(sb%dim > 1 .and. simul_box_is_periodic(sb)) call messages_input_error('BoxShape')
+        if(sb%dim > 1 .and. simul_box_is_periodic(sb)) call messages_input_error(namespace, 'BoxShape')
       case(CYLINDER)
         if(sb%dim == 2) then
           message(1) = "BoxShape = cylinder is not meaningful in 2D. Use sphere if you want a circle."
           call messages_fatal(1, namespace=namespace)
         end if
-        if(sb%periodic_dim > 1) call messages_input_error('BoxShape')
+        if(sb%periodic_dim > 1) call messages_input_error(namespace, 'BoxShape')
       end select
 
       ! ignore box_shape in 1D
@@ -367,7 +367,7 @@ contains
         sb%box_shape = SPHERE
 
       ! Cannot use images in 1D or 3D
-      if(sb%dim /= 2 .and. sb%box_shape == BOX_IMAGE) call messages_input_error('BoxShape')
+      if(sb%dim /= 2 .and. sb%box_shape == BOX_IMAGE) call messages_input_error(namespace, 'BoxShape')
 
       if(sb%dim > 3 .and. sb%box_shape /= HYPERCUBE) then
         message(1) = "For more than 3 dimensions, you can only use the hypercubic box."
@@ -392,7 +392,7 @@ contains
       select case(sb%box_shape)
       case(SPHERE, CYLINDER)
         call parse_variable(namespace, 'Radius', def_rsize, sb%rsize, units_inp%length)
-        if(sb%rsize < M_ZERO) call messages_input_error('radius')
+        if(sb%rsize < M_ZERO) call messages_input_error(namespace, 'radius')
         if(def_rsize>M_ZERO) call messages_check_def(sb%rsize, .false., def_rsize, 'radius', units_out%length)
       case(MINIMUM)
 
@@ -404,7 +404,7 @@ contains
 
         default=sb%rsize
         call parse_variable(namespace, 'radius', default, sb%rsize, units_inp%length)
-        if(sb%rsize < M_ZERO .and. def_rsize < M_ZERO) call messages_input_error('Radius')
+        if(sb%rsize < M_ZERO .and. def_rsize < M_ZERO) call messages_input_error(namespace, 'Radius')
       end select
 
       if(sb%box_shape == CYLINDER) then
@@ -454,7 +454,7 @@ contains
           sb%lsize(:) = geo%lsize(:)
         else if(parse_block(namespace, 'Lsize', blk) == 0) then
           if(parse_block_cols(blk,0) < sb%dim .and. .not. parse_is_defined(namespace, 'LatticeVectors')) &
-              call messages_input_error('Lsize')
+              call messages_input_error(namespace, 'Lsize')
           do idir = 1, sb%dim
             call parse_block_float(blk, 0, idir - 1, sb%lsize(idir), units_inp%length)
             if(def_rsize > M_ZERO .and. sb%periodic_dim < idir) &
@@ -464,7 +464,7 @@ contains
         else if ((parse_is_defined(namespace, 'Lsize'))) then
           call parse_variable(namespace, 'Lsize', -M_ONE, sb%lsize(1), units_inp%length)
           if(abs(sb%lsize(1)+M_ONE)  <=  M_EPSILON) then
-            call messages_input_error('Lsize')
+            call messages_input_error(namespace, 'Lsize')
           end if
           if(def_rsize > M_ZERO .and. sb%periodic_dim < sb%dim) &
             call messages_check_def(sb%lsize(1), .false., def_rsize, 'Lsize', units_out%length)
@@ -754,7 +754,9 @@ contains
         !%End
         sb%rlattice_primitive = M_ZERO
         sb%nonorthogonal = .false.
-        forall(idim = 1:sb%dim) sb%rlattice_primitive(idim, idim) = M_ONE
+        do idim = 1, sb%dim
+          sb%rlattice_primitive(idim, idim) = M_ONE
+        end do
 
         if (parse_block(namespace, 'LatticeVectors', blk) == 0) then 
           do idim = 1, sb%dim
@@ -783,10 +785,10 @@ contains
     do idim = 1, sb%dim
       norm = sqrt(sum(sb%rlattice_primitive(1:sb%dim, idim)**2))
       sb%lsize(idim) = sb%lsize(idim) * norm
-      forall(jdim = 1:sb%dim)
+      do jdim = 1, sb%dim
         sb%rlattice_primitive(jdim, idim) = sb%rlattice_primitive(jdim, idim) / norm
         sb%rlattice(jdim, idim) = sb%rlattice_primitive(jdim, idim) * M_TWO*sb%lsize(idim)
-      end forall
+      end do
     end do
     
     call reciprocal_lattice(sb%rlattice, sb%klattice, sb%rcell_volume, sb%dim, namespace)
@@ -1181,9 +1183,9 @@ contains
 
     select case(sb%box_shape)
     case(SPHERE)
-      forall(ip = 1:npoints)
+      do ip = 1, npoints
         in_box(ip) = sum(xx(1:sb%dim, ip)**2) <= (sb%rsize+DELTA)**2
-      end forall
+      end do
 
     case(CYLINDER)
       do ip = 1, npoints
@@ -1251,9 +1253,9 @@ contains
       ulimit(1:sb%dim) =  sb%lsize(1:sb%dim) + DELTA
       ulimit(1:sb%periodic_dim)  = sb%lsize(1:sb%periodic_dim) - DELTA
 
-      forall(ip = 1:npoints)
+      do ip = 1, npoints
         in_box(ip) = all(xx(1:sb%dim, ip) >= llimit(1:sb%dim) .and. xx(1:sb%dim, ip) <= ulimit(1:sb%dim))
-      end forall
+      end do
 
 #if defined(HAVE_GDLIB)
 ! Why the minus sign for y? Explanation: http://biolinx.bios.niu.edu/bios546/gd_mod.htm
@@ -1643,10 +1645,9 @@ contains
 
 
     ! ---------------------------------------------------------
-  subroutine simul_box_symmetry_check(this, geo, kpoints, dim, namespace)
+  subroutine simul_box_symmetry_check(this, geo, dim, namespace)
     type(simul_box_t),  intent(in) :: this
     type(geometry_t),   intent(in) :: geo
-    type(kpoints_t),    intent(in) :: kpoints
     integer,            intent(in) :: dim
     type(namespace_t),  intent(in) :: namespace
 

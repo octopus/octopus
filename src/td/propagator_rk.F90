@@ -569,7 +569,7 @@ contains
     do ik = kp1, kp2
       do ist = st1, st2
         if(oct_exchange_enabled(hm%oct_exchange)) then
-          call zoct_exchange_operator(hm%oct_exchange, namespace, gr%mesh, rhs1(:, :, ist, ik), ist, ik)
+          call oct_exchange_operator(hm%oct_exchange, namespace, gr%mesh, rhs1(:, :, ist, ik), ist, ik)
         end if
       end do
     end do
@@ -582,7 +582,9 @@ contains
         do ist = st1, st2
           do idim = 1, st%d%dim
             call states_elec_get_state(hm%inh_st, gr%mesh, idim, ist, ik, inhpsi)
-            forall(ip = 1:gr%mesh%np) rhs1(ip, idim, ist, ik) = rhs1(ip, idim, ist, ik) + dt * inhpsi(ip)
+            do ip = 1, gr%mesh%np
+              rhs1(ip, idim, ist, ik) = rhs1(ip, idim, ist, ik) + dt * inhpsi(ip)
+            end do
           end do
         end do
       end do
@@ -825,7 +827,9 @@ contains
             SAFE_ALLOCATE(inhpsi(1:gr%mesh%np))
             do idim = 1, st%d%dim
               call states_elec_get_state(hm%inh_st, gr%mesh, idim, ist, ik, inhpsi)
-              forall(ip = 1:gr%mesh%np) rhs1(ip, idim, ist, ik) = rhs1(ip, idim, ist, ik) + M_zI * inhpsi(ip)
+              do ip = 1, gr%mesh%np
+                rhs1(ip, idim, ist, ik) = rhs1(ip, idim, ist, ik) + M_zI * inhpsi(ip)
+              end do
             end do
             SAFE_DEALLOCATE_A(inhpsi)
           end if
@@ -863,7 +867,9 @@ contains
             SAFE_ALLOCATE(inhpsi(1:gr%mesh%np))
             do idim = 1, st%d%dim
               call states_elec_get_state(hm%inh_st, gr%mesh, idim, ist, ik, inhpsi)
-              forall(ip = 1:gr%mesh%np) rhs2(ip, idim, ist, ik) = rhs2(ip, idim, ist, ik) + M_zI * inhpsi(ip)
+              do ip = 1, gr%mesh%np
+                rhs2(ip, idim, ist, ik) = rhs2(ip, idim, ist, ik) + M_zI * inhpsi(ip)
+              end do
             end do
             SAFE_DEALLOCATE_A(inhpsi)
           end if
@@ -1245,7 +1251,7 @@ contains
             j = j + np
           end do
           opzpsi = M_z0
-          call zoct_exchange_operator(hm_p%oct_exchange, namespace_p, mesh_p, opzpsi, ist, ik)
+          call oct_exchange_operator(hm_p%oct_exchange, namespace_p, mesh_p, opzpsi, ist, ik)
 
           do idim = 1, dim
             yre(jj:jj+np-1) = yre(jj:jj+np-1) + TOFLOAT(M_zI * dt_op * M_HALF * opzpsi(1:np, idim))
@@ -1341,7 +1347,7 @@ contains
             j = j + np
           end do
           opzpsi = M_z0
-          call zoct_exchange_operator(hm_p%oct_exchange, namespace_p, mesh_p, opzpsi, ist, ik)
+          call oct_exchange_operator(hm_p%oct_exchange, namespace_p, mesh_p, opzpsi, ist, ik)
 
           do idim = 1, dim
             yre(jj:jj+np-1) = yre(jj:jj+np-1) + TOFLOAT(M_zI * dt_op * M_HALF * opzpsi(1:np, idim))

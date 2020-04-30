@@ -47,9 +47,9 @@ module multisystem_oct_m
 contains
 
   ! ---------------------------------------------------------------------------------------
-  subroutine multisystem_init(systems, global_namespace)
+  subroutine multisystem_init(systems, namespace)
     type(linked_list_t), intent(inout) :: systems
-    type(namespace_t),   intent(in)  :: global_namespace
+    type(namespace_t),   intent(in)  :: namespace
 
     integer :: isys, system_type
     character(len=128) :: system_name
@@ -73,26 +73,29 @@ contains
     !%Option celestial_body 3
     !% A celestial body. Used for testing purposes only.
     !%End
-    if(parse_block(global_namespace, 'Systems', blk) == 0) then
+    if(parse_block(namespace, 'Systems', blk) == 0) then
 
       do isys = 1, parse_block_n(blk)
         call parse_block_string(blk, isys - 1, 0, system_name)
+        if (len_trim(system_name) == 0) then
+          call messages_input_error(namespace, 'Systems', 'All systems must have a name.')
+        end if
         call parse_block_integer(blk, isys - 1, 1, system_type)
 
         select case (system_type)
         case (SYSTEM_ELECTRONIC)
-          sys => system_init(namespace_t(system_name))
+          sys => system_init(namespace_t(system_name, parent=namespace))
           call systems%add(sys)
         case (SYSTEM_CELESTIAL_BODY)
-          sys => celestial_body_t(namespace_t(system_name))
+          sys => celestial_body_t(namespace_t(system_name, parent=namespace))
           call systems%add(sys)
         case default
-          call messages_input_error('Systems')
+          call messages_input_error(namespace, 'Systems')
         end select
       end do
       call parse_block_end(blk)
     else
-      sys => system_init(global_namespace)
+      sys => system_init(namespace)
       call systems%add(sys)
     end if
 
@@ -101,9 +104,9 @@ contains
 
 
   ! ---------------------------------------------------------------------------------------
-  subroutine multisystem_init_interactions(systems, global_namespace)
+  subroutine multisystem_init_interactions(systems, namespace)
     type(linked_list_t), intent(inout) :: systems
-    type(namespace_t),   intent(in)    :: global_namespace
+    type(namespace_t),   intent(in)    :: namespace
 
     class(system_abst_t), pointer :: sys1, sys2
     type(system_iterator_t) :: iter1, iter2
@@ -112,7 +115,7 @@ contains
     PUSH_SUB(multisystem_init_interactions)
 
     if (debug%interaction_graph .and. mpi_grp_is_root(mpi_world)) then
-      iunit_out = io_open('interaction_graph.dot', global_namespace, action='write')
+      iunit_out = io_open('interaction_graph.dot', namespace, action='write')
       write(iunit_out, '(a)') 'digraph {'
     end if
 

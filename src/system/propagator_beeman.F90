@@ -53,6 +53,9 @@ contains
 
     this%predictor_corrector = predictor_corrector
 
+    this%start_step = BEEMAN_START
+    this%final_step = BEEMAN_FINISH
+
     if(predictor_corrector) then
 
       call this%add(STORE_CURRENT_STATUS)

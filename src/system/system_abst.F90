@@ -29,8 +29,8 @@ module system_abst_oct_m
   use parser_oct_m
   use profiling_oct_m
   use propagator_abst_oct_m
-  use propagator_verlet_oct_m
   use propagator_beeman_oct_m
+  use propagator_verlet_oct_m
   use quantity_oct_m
   use space_oct_m
   use varinfo_oct_m
@@ -63,15 +63,24 @@ module system_abst_oct_m
     procedure :: reset_clocks => system_reset_clocks
     procedure :: update_exposed_quantities => system_update_exposed_quantities
     procedure :: init_propagator => system_init_propagator
+    procedure :: update_interactions => system_update_interactions
+    procedure :: propagation_start => system_propagation_start
+    procedure :: propagation_finish => system_propagation_finish
     procedure(system_add_interaction_partner),        deferred :: add_interaction_partner
     procedure(system_has_interaction),                deferred :: has_interaction
+    procedure(system_initial_conditions),             deferred :: initial_conditions
     procedure(system_do_td_op),                       deferred :: do_td_operation
-    procedure(system_write_td_info),                  deferred :: write_td_info
+    procedure(system_iteration_info),                 deferred :: iteration_info
     procedure(system_is_tolerance_reached),           deferred :: is_tolerance_reached
     procedure(system_store_current_status),           deferred :: store_current_status
     procedure(system_update_quantity),                deferred :: update_quantity
     procedure(system_update_exposed_quantity),        deferred :: update_exposed_quantity
     procedure(system_set_pointers_to_interaction),    deferred :: set_pointers_to_interaction
+    procedure(system_update_interactions_start),      deferred :: update_interactions_start
+    procedure(system_update_interactions_finish),     deferred :: update_interactions_finish
+    procedure(system_output_start),                   deferred :: output_start
+    procedure(system_output_write),                   deferred :: output_write
+    procedure(system_output_finish),                  deferred :: output_finish
   end type system_abst_t
 
   abstract interface
@@ -91,6 +100,13 @@ module system_abst_oct_m
     end function system_has_interaction
 
     ! ---------------------------------------------------------
+    subroutine system_initial_conditions(this, from_scratch)
+      import system_abst_t
+      class(system_abst_t), intent(inout) :: this
+      logical,              intent(in)    :: from_scratch
+    end subroutine system_initial_conditions
+
+    ! ---------------------------------------------------------
     subroutine system_do_td_op(this, operation)
       import system_abst_t
       class(system_abst_t), intent(inout) :: this
@@ -98,10 +114,10 @@ module system_abst_oct_m
     end subroutine system_do_td_op
 
     ! ---------------------------------------------------------
-    subroutine system_write_td_info(this)
+    subroutine system_iteration_info(this)
       import system_abst_t
       class(system_abst_t), intent(in) :: this
-    end subroutine system_write_td_info
+    end subroutine system_iteration_info
 
     ! ---------------------------------------------------------
     logical function system_is_tolerance_reached(this, tol)
@@ -142,6 +158,36 @@ module system_abst_oct_m
       class(interaction_abst_t),        intent(inout) :: inter
     end subroutine system_set_pointers_to_interaction
 
+    ! ---------------------------------------------------------
+    subroutine system_update_interactions_start(this)
+      import system_abst_t
+      class(system_abst_t), intent(inout) :: this
+    end subroutine system_update_interactions_start
+
+    ! ---------------------------------------------------------
+    subroutine system_update_interactions_finish(this)
+      import system_abst_t
+      class(system_abst_t), intent(inout) :: this
+    end subroutine system_update_interactions_finish
+
+    ! ---------------------------------------------------------
+    subroutine system_output_start(this)
+      import system_abst_t
+      class(system_abst_t), intent(inout) :: this
+    end subroutine system_output_start
+
+    ! ---------------------------------------------------------
+    subroutine system_output_write(this, iter)
+      import system_abst_t
+      class(system_abst_t), intent(inout) :: this
+      integer,              intent(in)    :: iter
+    end subroutine system_output_write
+
+    ! ---------------------------------------------------------
+    subroutine system_output_finish(this)
+      import system_abst_t
+      class(system_abst_t), intent(inout) :: this
+    end subroutine system_output_finish
   end interface
 
   !> This class extends the list iterator and adds one method to get the
@@ -158,10 +204,8 @@ contains
   subroutine system_dt_operation(this)
     class(system_abst_t),     intent(inout) :: this
 
-    integer :: tdop, iq, q_id
+    integer :: tdop
     logical :: all_updated
-    class(interaction_abst_t), pointer :: interaction
-    type(interaction_iterator_t) :: iter
 
     PUSH_SUB(system_dt_operation)
 
@@ -183,43 +227,8 @@ contains
       ! We increment by one algorithmic step
       call this%prop%clock%increment()
 
-      ! Loop over all interactions
-      all_updated = .true.
-      call iter%start(this%interactions)
-      do while (iter%has_next())
-        interaction => iter%get_next_interaction()
-
-        if (.not. interaction%clock == this%prop%clock) then
-          ! Update the system quantities that will be needed for computing the interaction
-          do iq = 1, interaction%n_system_quantities
-            ! Get requested quantity ID
-            q_id = interaction%system_quantities(iq)
-
-            ! All needed quantities must have been marked as required. If not, then fix your code!
-            ASSERT(this%quantities(q_id)%required)
-
-            ! We do not need to update the protected quantities, the propagator takes care of that
-            if (this%quantities(q_id)%protected) cycle
-
-            if (.not. this%quantities(q_id)%clock == this%prop%clock) then
-              ! The requested quantity is not at the requested time, so we try to update it
-
-              ! Sanity check: it should never happen that the quantity is in advance
-              ! with respect to the requested time.
-              if (this%quantities(q_id)%clock > this%prop%clock) then
-                message(1) = "The quantity clock is in advance compared to the requested clock."
-                call messages_fatal(1)
-              end if
-
-              call this%update_quantity(q_id, this%prop%clock)
-            end if
-
-          end do
-
-          ! We can now try to update the interaction
-          all_updated = interaction%update(this%prop%clock) .and. all_updated
-        end if
-      end do
+      ! Try to update all the interactions
+      all_updated = this%update_interactions(this%prop%clock)
 
       ! Move to next propagator step if all interactions have been
       ! updated. Otherwise try again later.
@@ -244,7 +253,7 @@ contains
 
     case (END_SCF_LOOP)
       ! Here we first check if we did the maximum number of steps.
-      ! Otherwise, we need check the tolerance
+      ! Otherwise, we need check the tolerance 
       if(this%prop%scf_count == this%prop%max_scf_count) then
         if (debug%info) then
           message(1) = "Debug: -- Max SCF Iter reached for " + trim(this%namespace%get())
@@ -253,7 +262,7 @@ contains
         this%prop%inside_scf = .false.
         call this%prop%next()
       else
-        ! We reset the pointer to the beginning of the scf loop
+        ! We reset the pointer to the begining of the scf loop
         if(this%is_tolerance_reached(this%prop%scf_tol)) then
           if (debug%info) then
             message(1) = "Debug: -- SCF tolerance reached for " + trim(this%namespace%get())
@@ -403,6 +412,64 @@ contains
   end function system_update_exposed_quantities
 
   ! ---------------------------------------------------------
+  logical function system_update_interactions(this, clock) result(all_updated)
+    class(system_abst_t),      intent(inout) :: this
+    type(clock_t),             intent(in)    :: clock !< Requested time for the update
+
+    integer :: iq, q_id
+    class(interaction_abst_t), pointer :: interaction
+    type(interaction_iterator_t) :: iter
+
+    PUSH_SUB(system_update_interactions)
+
+    ! Some systems might need to perform some specific operations before the update
+    call this%update_interactions_start()
+
+    !Loop over all interactions
+    all_updated = .true.
+    call iter%start(this%interactions)
+    do while (iter%has_next())
+      interaction => iter%get_next_interaction()
+
+      if (.not. interaction%clock == clock) then
+        ! Update the system quantities that will be needed for computing the interaction
+        do iq = 1, interaction%n_system_quantities
+          ! Get requested quantity ID
+          q_id = interaction%system_quantities(iq)
+
+          ! All needed quantities must have been marked as required. If not, then fix your code!
+          ASSERT(this%quantities(q_id)%required)
+
+          ! We do not need to update the protected quantities, the propagator takes care of that
+          if (this%quantities(q_id)%protected) cycle
+
+          if (.not. this%quantities(q_id)%clock == clock) then
+            ! The requested quantity is not at the requested time, so we try to update it
+
+            ! Sanity check: it should never happen that the quantity is in advance
+            ! with respect to the requested time.
+            if (this%quantities(q_id)%clock > clock) then
+              message(1) = "The quantity clock is in advance compared to the requested clock."
+              call messages_fatal(1)
+            end if
+
+            call this%update_quantity(q_id, clock)
+          end if
+
+        end do
+
+        ! We can now try to update the interaction
+        all_updated = interaction%update(clock) .and. all_updated
+      end if
+    end do
+
+    ! Some systems might need to perform some specific operations after the update
+    call this%update_interactions_finish()
+
+    POP_SUB(system_update_interactions)
+  end function system_update_interactions
+
+  ! ---------------------------------------------------------
   subroutine system_init_propagator(this)
     class(system_abst_t),      intent(inout) :: this
 
@@ -428,7 +495,7 @@ contains
     !% (Experimental) Beeman propagator with predictor-corrector scheme.
     !%End
     call parse_variable(this%namespace, 'TDSystemPropagator', PROP_VERLET, prop)
-    if(.not.varinfo_valid_option('TDSystemPropagator', prop)) call messages_input_error('TDSystemPropagator')
+    if(.not.varinfo_valid_option('TDSystemPropagator', prop)) call messages_input_error(this%namespace, 'TDSystemPropagator')
     call messages_print_var_option(stdout, 'TDSystemPropagator', prop)
 
     select case(prop)
@@ -440,10 +507,54 @@ contains
       this%prop => propagator_beeman_t(this%namespace, .true.)
     end select
 
+    call this%prop%rewind()
+
     POP_SUB(system_init_propagator)
   end subroutine system_init_propagator
 
   ! ---------------------------------------------------------
+  subroutine system_propagation_start(this)
+    class(system_abst_t),      intent(inout) :: this
+
+    logical :: all_updated
+
+    PUSH_SUB(system_propagation_start)
+
+    ! Update interactions at initial time
+    all_updated = this%update_interactions(this%clock)
+    if (.not. all_updated) then
+      message(1) = "Unable to update interactions when initializing the propagation."
+      call messages_fatal(1, namespace=this%namespace)
+    end if
+
+    ! System-specific and propagator-specific initialization step
+    call this%do_td_operation(this%prop%start_step)
+
+    ! Start output
+    call this%output_start()
+
+    ! Write information for first iteration
+    call this%iteration_info()
+
+    POP_SUB(system_propagation_start)
+  end subroutine system_propagation_start
+
+  ! ---------------------------------------------------------
+  subroutine system_propagation_finish(this)
+    class(system_abst_t),      intent(inout) :: this
+
+    PUSH_SUB(system_propagation_finish)
+
+    ! Finish output
+    call this%output_finish()
+
+    ! System-specific and propagator-specific finalization step
+    call this%do_td_operation(this%prop%final_step)
+
+    POP_SUB(system_propagation_finish)
+  end subroutine system_propagation_finish
+
+    ! ---------------------------------------------------------
   function system_iterator_get_next(this) result(value)
     class(system_iterator_t), intent(inout) :: this
     class(system_abst_t),     pointer       :: value

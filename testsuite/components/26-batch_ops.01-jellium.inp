@@ -1,7 +1,7 @@
 CalculationMode = test
 
 TestMode = batch_ops
-TestBatchOps = ops_axpy + ops_scal + ops_nrm2
+TestBatchOps = ops_axpy + ops_scal + ops_nrm2 + ops_dotp_matrix
 TestRepetitions = 5
 
 PeriodicDimensions = 3
@@ -14,7 +14,7 @@ cCell = 8
  aCell | bCell | cCell
 %
 
-Spacing = 0.5
+Spacing = +0.5
 
 r_s = 4.0
 N_electrons = 8

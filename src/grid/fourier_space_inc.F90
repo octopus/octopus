@@ -30,7 +30,7 @@ subroutine X(cube_function_rs2fs)(cube, cf)
   ASSERT(cube%fft%library /= FFTLIB_NONE)
 
   if(cf%in_device_memory) then
-    call X(fft_forward_cl)(cube%fft, cf%real_space_buffer, cf%fourier_space_buffer)
+    call X(fft_forward)(cube%fft, cf%real_space_buffer, cf%fourier_space_buffer)
   else
     ASSERT(associated(cf%X(rs)))
     ASSERT(associated(cf%fs))
@@ -52,7 +52,7 @@ subroutine X(cube_function_fs2rs)(cube, cf)
   ASSERT(cube%fft%library /= FFTLIB_NONE)
 
   if(cf%in_device_memory) then
-    call X(fft_backward_cl)(cube%fft, cf%fourier_space_buffer, cf%real_space_buffer)
+    call X(fft_backward)(cube%fft, cf%fourier_space_buffer, cf%real_space_buffer)
   else
     ASSERT(associated(cf%X(rs)))
     ASSERT(associated(cf%fs))

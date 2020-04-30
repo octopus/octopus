@@ -272,7 +272,7 @@ contains
     !% directions at different points. This vector is always in 3D regardless of <tt>Dimensions</tt>.
     !%End
     call parse_variable(namespace, 'SpinComponents', UNPOLARIZED, st%d%ispin)
-    if(.not.varinfo_valid_option('SpinComponents', st%d%ispin)) call messages_input_error('SpinComponents')
+    if(.not.varinfo_valid_option('SpinComponents', st%d%ispin)) call messages_input_error(namespace, 'SpinComponents')
     call messages_print_var_option(stdout, 'SpinComponents', st%d%ispin)
     ! Use of spinors requires complex wavefunctions.
     if (st%d%ispin == SPINORS) call states_set_complex(st)
@@ -732,23 +732,18 @@ contains
 
       ncols = parse_block_cols(blk, 0)
       if(ncols > st%nst) then
-        message(1) = "Too many columns in block Occupations."
-        call messages_warning(1, namespace=namespace)
-        call messages_input_error("Occupations")
+        call messages_input_error(namespace, "Occupations", "Too many columns in block Occupations.")
       end if
 
       nrows = parse_block_n(blk)
       if(nrows /= st%d%nik) then
-        message(1) = "Wrong number of rows in block Occupations."
-        call messages_warning(1, namespace=namespace)
-        call messages_input_error("Occupations")
+        call messages_input_error(namespace, "Occupations", "Wrong number of rows in block Occupations.")
       end if
 
       do ik = 1, st%d%nik - 1
         if(parse_block_cols(blk, ik) /= ncols) then
-          message(1) = "All rows in block Occupations must have the same number of columns."
-          call messages_warning(1, namespace=namespace)
-          call messages_input_error("Occupations")
+          call messages_input_error(namespace, "Occupations", &
+            "All rows in block Occupations must have the same number of columns.")
         end if
       end do
 
@@ -950,7 +945,7 @@ contains
         do j = 1, 3
           call parse_block_float(blk, i-1, j-1, st%spin(j, i, 1))
         end do
-        if( abs(sum(st%spin(1:3, i, 1)**2) - M_FOURTH) > CNST(1.0e-6)) call messages_input_error('InitialSpins')
+        if( abs(sum(st%spin(1:3, i, 1)**2) - M_FOURTH) > CNST(1.0e-6)) call messages_input_error(namespace, 'InitialSpins')
       end do
       call parse_block_end(blk)
       st%fixed_spins = .true.
@@ -1308,7 +1303,9 @@ contains
     
     call parse_variable(namespace, 'StatesOrthogonalization', default, st%d%orth_method)
 
-    if(.not.varinfo_valid_option('StatesOrthogonalization', st%d%orth_method)) call messages_input_error('StatesOrthogonalization')
+    if(.not.varinfo_valid_option('StatesOrthogonalization', st%d%orth_method)) then
+      call messages_input_error(namespace, 'StatesOrthogonalization')
+    end if
     call messages_print_var_option(stdout, 'StatesOrthogonalization', st%d%orth_method)
 
     !%Variable StatesCLDeviceMemory
@@ -1494,6 +1491,10 @@ contains
     CMPLX, allocatable :: zpsi(:,  :), zpsi2(:)
     integer :: ikpoint, ip
 
+    logical :: normalized_
+
+    normalized_ = optional_default(normalized, .true.)
+
     PUSH_SUB(states_elec_generate_random)
  
     ist_start = optional_default(ist_start_, 1)
@@ -1514,22 +1515,28 @@ contains
         do ist = ist_start, ist_end
           if (states_are_real(st).or.kpoints_point_is_gamma(sb%kpoints, ikpoint)) then
             if(st%randomization == PAR_INDEPENDENT) then
-              call dmf_random(mesh, dpsi(:, 1), mesh%vp%xlocal-1, normalized = normalized)
+              call dmf_random(mesh, dpsi(:, 1), &
+                pre_shift = mesh%vp%xlocal-1, &
+                post_shift = mesh%vp%np_global - mesh%vp%xlocal - mesh%np + 1, &
+                normalized = normalized)
             else
               call dmf_random(mesh, dpsi(:, 1), normalized = normalized)
             end if
             if(.not. state_kpt_is_local(st, ist, ik)) cycle
             if(states_are_complex(st)) then !Gamma point
-              forall(ip=1:mesh%np) 
+              do ip = 1, mesh%np
                 zpsi(ip,1) = cmplx(dpsi(ip,1), M_ZERO)
-              end forall
+              end do
               call states_elec_set_state(st, mesh, ist,  ik, zpsi)
             else
               call states_elec_set_state(st, mesh, ist,  ik, dpsi)
             end if
           else
             if(st%randomization == PAR_INDEPENDENT) then
-              call zmf_random(mesh, zpsi(:, 1), mesh%vp%xlocal-1, normalized = normalized)
+              call zmf_random(mesh, zpsi(:, 1), &
+                pre_shift = mesh%vp%xlocal-1, &
+                post_shift = mesh%vp%np_global - mesh%vp%xlocal - mesh%np + 1, &
+                normalized = normalized)
             else
               call zmf_random(mesh, zpsi(:, 1), normalized = normalized)
             end if
@@ -1550,18 +1557,24 @@ contains
           do ist = ist_start, ist_end
             if(kpoints_point_is_gamma(sb%kpoints, ikpoint)) then
               if(st%randomization == PAR_INDEPENDENT) then
-                call dmf_random(mesh, dpsi(:, 1), mesh%vp%xlocal-1, normalized = normalized)
+                call dmf_random(mesh, dpsi(:, 1), &
+                  pre_shift = mesh%vp%xlocal-1, &
+                  post_shift = mesh%vp%np_global - mesh%vp%xlocal - mesh%np + 1, &
+                  normalized = normalized)
               else
                 call dmf_random(mesh, dpsi(:, 1), normalized = normalized)
                 if(.not. state_kpt_is_local(st, ist, ik)) cycle
               end if
-              forall(ip=1:mesh%np)
+              do ip = 1, mesh%np
                 zpsi(ip,1) = cmplx(dpsi(ip,1), M_ZERO)
-              end forall
+              end do
               call states_elec_set_state(st, mesh, ist,  ik, zpsi)
             else
               if(st%randomization == PAR_INDEPENDENT) then
-                call zmf_random(mesh, zpsi(:, 1), mesh%vp%xlocal-1, normalized = normalized)
+                call zmf_random(mesh, zpsi(:, 1), &
+                  pre_shift = mesh%vp%xlocal-1, &
+                  post_shift = mesh%vp%np_global - mesh%vp%xlocal - mesh%np + 1, &
+                  normalized = normalized)
               else
                 call zmf_random(mesh, zpsi(:, 1), normalized = normalized)
                 if(.not. state_kpt_is_local(st, ist, ik)) cycle
@@ -1601,12 +1614,19 @@ contains
           do ist = ist_start, ist_end
             do id = 1, st%d%dim
               if(st%randomization == PAR_INDEPENDENT) then
-                call zmf_random(mesh, zpsi(:, id), mesh%vp%xlocal-1, normalized = normalized)
+                call zmf_random(mesh, zpsi(:, id), &
+                  pre_shift = mesh%vp%xlocal-1, &
+                  post_shift = mesh%vp%np_global - mesh%vp%xlocal - mesh%np + 1, &
+                  normalized = .false.)
               else
-                call zmf_random(mesh, zpsi(:, id), normalized = normalized)
+                call zmf_random(mesh, zpsi(:, id), normalized = .false.)
               end if
             end do
+            ! We need to generate the wave functions even if not using them in order to be consistent with the random seed in parallel runs.
             if(.not. state_kpt_is_local(st, ist, ik)) cycle
+            ! Note that mf_random normalizes each spin channel independently to 1.
+            ! Therefore we need to renormalize the spinor:
+            if(normalized_) call zmf_normalize(mesh, st%d%dim, zpsi)
             call states_elec_set_state(st, mesh, ist,  ik, zpsi)
           end do
         end do
@@ -2040,9 +2060,9 @@ contains
 
 
     if(associated(st%rho_core) .and. nlcc .and. (present(density_laplacian) .or. present(density_gradient))) then
-       forall(ii=1:der%mesh%np)
+       do ii = 1, der%mesh%np
          wf_psi(ii, 1) = st%rho_core(ii)/st%d%spin_channels
-       end forall
+       end do
 
        call boundaries_set(der%boundaries, wf_psi(:, 1))
 

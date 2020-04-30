@@ -76,7 +76,7 @@ contains
       6400, 6480, 6750, 6912, 7200, 7500, 7680, 8000, 8192 /)
     integer :: i
 
-    loop_data: do i=1,ndata1024
+    loop_data: do i = 1,ndata1024
       if (n <= idata(i)) then
         n_next = idata(i)
         return
@@ -220,7 +220,7 @@ contains
       nfft=nd1*n2
       mm=nd1*nd2
 
-      do i=1,ic-1
+      do i = 1,ic-1
         call fftstp(mm,nfft,nd3,mm,nd3,z(1,1,inzee),z(1,1,3-inzee), &
           trig,after(i),now(i),before(i),isign)
         inzee=3-inzee
@@ -237,7 +237,7 @@ contains
       nfft=nd3*n1
       mm=nd3*nd1
 
-      do i=1,ic-1
+      do i = 1,ic-1
         call fftstp(mm,nfft,nd2,mm,nd2,z(1,1,inzee),z(1,1,3-inzee), &
           trig,after(i),now(i),before(i),isign)
         inzee=3-inzee
@@ -252,7 +252,7 @@ contains
       nfft=nd2*n3
       mm=nd2*nd3
 
-      do i=1,ic-1
+      do i = 1,ic-1
         call fftstp(mm,nfft,nd1,mm,nd1,z(1,1,inzee),z(1,1,3-inzee), &
           trig,after(i),now(i),before(i),isign)
         inzee=3-inzee
@@ -557,7 +557,7 @@ contains
     do i = 1, 149
       if (n == idata(1,i)) then
         ic=0
-        do j=1,6
+        do j = 1,6
           itt=idata(1+j,i)
           if (itt > 1) then
             ic=ic+1
@@ -677,7 +677,7 @@ contains
               nin2=nin1+atb
               nout1=nout1+atn
               nout2=nout1+after
-              do j=1,nfft
+              do j = 1,nfft
                 r1=zin(1,j,nin1)
                 s1=zin(2,j,nin1)
                 r2=zin(2,j,nin2)
@@ -696,7 +696,7 @@ contains
               nin2=nin1+atb
               nout1=nout1+atn
               nout2=nout1+after
-              do j=1,nfft
+              do j = 1,nfft
                 r1=zin(1,j,nin1)
                 s1=zin(2,j,nin1)
                 r2=zin(2,j,nin2)
@@ -738,7 +738,7 @@ contains
               nin2=nin1+atb
               nout1=nout1+atn
               nout2=nout1+after
-              do j=1,nfft
+              do j = 1,nfft
                 r1=zin(1,j,nin1)
                 s1=zin(2,j,nin1)
                 r=zin(1,j,nin2)
@@ -782,7 +782,7 @@ contains
               nin2=nin1+atb
               nout1=nout1+atn
               nout2=nout1+after
-              do j=1,nfft
+              do j = 1,nfft
                 r1=zin(1,j,nin1)
                 s1=zin(2,j,nin1)
                 r=zin(1,j,nin2)
@@ -807,7 +807,7 @@ contains
             nin2=nin1+atb
             nout1=nout1+atn
             nout2=nout1+after
-            do j=1,nfft
+            do j = 1,nfft
               r1=zin(1,j,nin1)
               s1=zin(2,j,nin1)
               r=zin(1,j,nin2)
@@ -3705,7 +3705,7 @@ contains
 
     !Calculating array of phases for HalFFT decoding
     twopion=8.d0*datan(1.0_8)/real(n3,8)
-    do i3=1,n3/2
+    do i3 = 1,n3/2
       cosinarr(1,i3)=dcos(twopion*(i3-1))
       cosinarr(2,i3)=-dsin(twopion*(i3-1))
     end do
@@ -3726,7 +3726,7 @@ contains
     do j2=1,md2/nproc
       !this condition ensures that we manage only the interesting part for the FFT
       if (iproc*(md2/nproc)+j2 <= n2/2) then
-        do i1=1,(n1/2),lot
+        do i1 = 1,(n1/2),lot
           ma=i1
           mb=min(i1+(lot-1),(n1/2))
           nfft=mb-ma+1
@@ -3737,7 +3737,7 @@ contains
           !performing FFT
           !input: I1,I3,J2,(Jp2)
           inzee=1
-          do i=1,ic3
+          do i = 1,ic3
             call fftstp(lot,nfft,n3/2,lot,n3/2,zw(1,1,inzee),zw(1,1,3-inzee), &
               btrig3,after3(i),now3(i),before3(i),1)
             inzee=3-inzee
@@ -3785,7 +3785,7 @@ contains
           stop
         end if
 
-        do j=1,n2/2,lot
+        do j = 1,n2/2,lot
           ma=j
           mb=min(j+(lot-1),n2/2)
           nfft=mb-ma+1
@@ -3802,7 +3802,7 @@ contains
           !performing FFT
           !input: I2,I1,j3,(jp3)
           inzee=1
-          do i=1,ic1-1
+          do i = 1,ic1-1
             call fftstp(lot,nfft,n1,lot,n1,zw(1,1,inzee),zw(1,1,3-inzee), &
               btrig1,after1(i),now1(i),before1(i),1)
             inzee=3-inzee
@@ -3825,7 +3825,7 @@ contains
           stop
         end if
 
-        do j=1,n1,lot
+        do j = 1,n1,lot
           ma=j
           mb=min(j+(lot-1),n1)
           nfft=mb-ma+1
@@ -3838,7 +3838,7 @@ contains
           !performing FFT
           !input: i1,I2,j3,(jp3)
           inzee=1
-          do i=1,ic2
+          do i = 1,ic2
             call fftstp(lot,nfft,n2,lot,n2,zw(1,1,inzee),zw(1,1,3-inzee), &
               btrig2,after2(i),now2(i),before2(i),1)
             inzee=3-inzee
@@ -3852,7 +3852,7 @@ contains
 
           !transform along y axis
           !input: i1,i2,j3,(jp3)
-          do i=1,ic2
+          do i = 1,ic2
             call fftstp(lot,nfft,n2,lot,n2,zw(1,1,inzee),zw(1,1,3-inzee), &
               ftrig2,after2(i),now2(i),before2(i),-1)
             inzee=3-inzee
@@ -3867,7 +3867,7 @@ contains
         !transform along x axis
         !input: I2,i1,j3,(jp3)
         lot=ncache/(4*n1)
-        do j=1,n2/2,lot
+        do j = 1,n2/2,lot
           ma=j
           mb=min(j+(lot-1),n2/2)
           nfft=mb-ma+1
@@ -3917,7 +3917,7 @@ contains
     do j2=1,md2/nproc
       !this condition ensures that we manage only the interesting part for the FFT
       if (iproc*(md2/nproc)+j2 <= n2/2) then
-        do i1=1,(n1/2),lot
+        do i1 = 1,(n1/2),lot
           ma=i1
           mb=min(i1+(lot-1),(n1/2))
           nfft=mb-ma+1
@@ -3930,7 +3930,7 @@ contains
           !performing FFT
           !input: I1,i3,J2,(Jp2)           
           inzee=1
-          do i=1,ic3
+          do i = 1,ic3
             call fftstp(lot,nfft,n3/2,lot,n3/2,zw(1,1,inzee),zw(1,1,3-inzee), &
               ftrig3,after3(i),now3(i),before3(i),-1)
             inzee=3-inzee
@@ -3996,7 +3996,7 @@ contains
     integer :: j,j1,i2,j2
 
     !case i2=1
-    do j=1,nfft
+    do j = 1,nfft
       j1=n1/2+1-abs(n1/2+2-jS-j)!this stands for j1=min(jS-1+j,n1+3-jS-j)
       zw(1,j,1)=zw(1,j,1)*pot(j1,1)
       zw(2,j,1)=zw(2,j,1)*pot(j1,1)
@@ -4004,7 +4004,7 @@ contains
 
     !generic case
     do i2=2,n2/2
-      do j=1,nfft
+      do j = 1,nfft
         j1=n1/2+1-abs(n1/2+2-jS-j)
         j2=n2+2-i2
         zw(1,j,i2)=zw(1,j,i2)*pot(j1,i2)
@@ -4015,7 +4015,7 @@ contains
     end do
 
     !case i2=n2/2+1
-    do j=1,nfft
+    do j = 1,nfft
       j1=n1/2+1-abs(n1/2+2-jS-j)
       j2=n2/2+1
       zw(1,j,j2)=zw(1,j,j2)*pot(j1,j2)
@@ -4094,7 +4094,7 @@ contains
     !in principle we can relax this condition
     
     do i3 = 1, n3/4
-      do i1=1,nfft
+      do i1 = 1,nfft
 	zw(1,i1,i3)=0.0_8
         zw(2,i1,i3)=0.0_8
       end do
@@ -4231,7 +4231,7 @@ contains
     integer :: i3,i,indA,indB
     real(8) ::  a,b,c,d,cp,sp,re,ie,ro,io,rh,ih
 
-    do i3=1,n3/2
+    do i3 = 1,n3/2
       indA=i3
       indB=n3/2+2-i3
       cp=cosinarr(1,i3)
@@ -4345,8 +4345,8 @@ contains
     integer :: i3,i1
     real(8) :: pot1
 
-    do i3=1,n3/4
-      do i1=1,nfft
+    do i3 = 1,n3/4
+      do i1 = 1,nfft
         pot1 = scal*zw(1,i1,i3)
         zf(i1, 2*i3 - 1) = pot1 
         pot1 = scal*zw(2, i1, i3)
@@ -4461,7 +4461,7 @@ subroutine kernelfft(n1,n2,n3,nd1,nd2,nd3,nproc,iproc,zf,zr,comm)
   
   !Calculating array of phases for HalFFT decoding
   twopion=8.d0*datan(1.0_8)/real(n3,8)
-  do i3=1,n3/2
+  do i3 = 1,n3/2
      cosinarr(1,i3)=dcos(twopion*(i3-1))
      cosinarr(2,i3)=-dsin(twopion*(i3-1))
   end do
@@ -4474,7 +4474,7 @@ subroutine kernelfft(n1,n2,n3,nd1,nd2,nd3,nproc,iproc,zf,zr,comm)
   do j2=1,nd2/nproc
      !this condition ensures that we manage only the interesting part for the FFT
      !        if (iproc*(nd2/nproc)+j2 <= n2) then
-     do i1=1,n1,lot
+     do i1 = 1,n1,lot
         ma=i1
         mb=min(i1+(lot-1),n1)
         nfft=mb-ma+1
@@ -4485,7 +4485,7 @@ subroutine kernelfft(n1,n2,n3,nd1,nd2,nd3,nproc,iproc,zf,zr,comm)
         
         !performing FFT
         inzee=1
-        do i=1,ic3
+        do i = 1,ic3
            call fftstp(lot,nfft,n3/2,lot,n3/2,zw(1,1,inzee),zw(1,1,3-inzee), &
                 trig3,after3(i),now3(i),before3(i),1)
            inzee=3-inzee
@@ -4523,7 +4523,7 @@ subroutine kernelfft(n1,n2,n3,nd1,nd2,nd3,nproc,iproc,zf,zr,comm)
         lot=ncache/(4*n1)
         if (lot < 1) stop 'kernelfft:enlarge ncache for x'
         
-        do j=1,n2,lot
+        do j = 1,n2,lot
            ma=j
            mb=min(j+(lot-1),n2)
            nfft=mb-ma+1
@@ -4540,7 +4540,7 @@ subroutine kernelfft(n1,n2,n3,nd1,nd2,nd3,nproc,iproc,zf,zr,comm)
            !performing FFT
            !input: I2,I1,j3,(jp3)          
            inzee=1
-           do i=1,ic1-1
+           do i = 1,ic1-1
               call fftstp(lot,nfft,n1,lot,n1,zw(1,1,inzee),zw(1,1,3-inzee), &
                    trig1,after1(i),now1(i),before1(i),1)
               inzee=3-inzee
@@ -4556,7 +4556,7 @@ subroutine kernelfft(n1,n2,n3,nd1,nd2,nd3,nproc,iproc,zf,zr,comm)
         lot=ncache/(4*n2)
         if (lot < 1) stop 'kernelfft:enlarge ncache for y'
 
-        do j=1,n1,lot
+        do j = 1,n1,lot
            ma=j
            mb=min(j+(lot-1),n1)
            nfft=mb-ma+1
@@ -4569,7 +4569,7 @@ subroutine kernelfft(n1,n2,n3,nd1,nd2,nd3,nproc,iproc,zf,zr,comm)
            !performing FFT
            !input: i1,I2,j3,(jp3)
            inzee=1
-           do i=1,ic2-1
+           do i = 1,ic2-1
               call fftstp(lot,nfft,n2,lot,n2,zw(1,1,inzee),zw(1,1,3-inzee), &
                    trig2,after2(i),now2(i),before2(i),1)
               inzee=3-inzee

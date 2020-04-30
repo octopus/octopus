@@ -123,21 +123,23 @@
         call messages_fatal(3)
       end if
     end if
-          
+
       SAFE_ALLOCATE(tg%grad_local_pot(1:geo%natoms, 1:gr%mesh%np, 1:gr%sb%dim))
       SAFE_ALLOCATE(vl(1:gr%mesh%np_part))
       SAFE_ALLOCATE(vl_grad(1:gr%mesh%np, 1:gr%sb%dim))
       SAFE_ALLOCATE(tg%rho(1:gr%mesh%np))
 
       ! calculate gradient of each species potential
-      do iatom=1, geo%natoms
+      do iatom = 1, geo%natoms
         vl(:) = M_ZERO
         vl_grad(:,:) = M_ZERO
         call epot_local_potential(ep, namespace, gr%der, gr%dgrid, geo, iatom, vl)
         call dderivatives_grad(gr%der, vl, vl_grad)
-        forall(ist=1:gr%mesh%np, jst=1:gr%sb%dim)
-          tg%grad_local_pot(iatom, ist, jst) = vl_grad(ist, jst)
-        end forall
+        do ist = 1, gr%mesh%np
+          do jst=1, gr%sb%dim
+            tg%grad_local_pot(iatom, ist, jst) = vl_grad(ist, jst)
+          end do
+        end do
       end do
       SAFE_DEALLOCATE_A(vl)
       SAFE_DEALLOCATE_A(vl_grad)
@@ -205,7 +207,9 @@
     PUSH_SUB(target_j1_velocity)
 
     SAFE_ALLOCATE(x(1:geo%natoms, 1:geo%space%dim))
-    forall(i=1: geo%natoms) x(i, 1:geo%space%dim) = geo%atom(i)%v(1:geo%space%dim)
+    do i = 1, geo%natoms
+      x(i, 1:geo%space%dim) = geo%atom(i)%v(1:geo%space%dim)
+    end do
 
     f_re = M_ZERO
     dummy(:) = M_ZERO
@@ -242,13 +246,15 @@
     end do
 
     SAFE_ALLOCATE(x(1:geo%natoms, 1:geo%space%dim))
-    forall(ip=1: geo%natoms) x(ip, 1:geo%space%dim) = geo%atom(ip)%v(1:geo%space%dim)
-      
+    do ip = 1, geo%natoms
+      x(ip, 1:geo%space%dim) = geo%atom(ip)%v(1:geo%space%dim)
+    end do
+
     !calculate dF/dn, which is the time-independent part of the inhomogenous term for the propagation of Chi
     df_dv = M_ZERO
     dummy(:) = M_ZERO
     tg%rho(:) = M_ZERO
-    do ist=1, geo%natoms
+    do ist = 1, geo%natoms
       do jst=1, gr%sb%dim
         temp_string = tg%vel_der_array(ist, jst)
         call parse_array(temp_string, x, 'v')

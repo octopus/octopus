@@ -89,7 +89,9 @@ subroutine X(forces_from_local_potential)(gr, namespace, geo, ep, gdensity, forc
     vloc(1:gr%mesh%np) = M_ZERO
     call epot_local_potential(ep, namespace, gr%der, gr%dgrid, geo, iatom, vloc)
 
-    forall(ip = 1:gr%mesh%np) zvloc(ip) = vloc(ip)
+    do ip = 1, gr%mesh%np
+      zvloc(ip) = vloc(ip)
+    end do
 
     do idir = 1, gr%mesh%sb%dim
       force_tmp(idir, iatom) = -X(mf_dotp)(gr%mesh, zvloc, gdensity(:, idir), reduce = .false.)
@@ -110,34 +112,6 @@ subroutine X(forces_from_local_potential)(gr, namespace, geo, ep, gdensity, forc
 
   POP_SUB(X(forces_from_local_potential))
 end subroutine X(forces_from_local_potential)
-
-
-!---------------------------------------------------------------------------
-subroutine X(total_force_from_local_potential)(gr, ep, gdensity, force)
-  type(grid_t),                   intent(in)    :: gr
-  type(epot_t),                   intent(in)    :: ep
-  R_TYPE,                         intent(in)    :: gdensity(:, :)
-  R_TYPE,                         intent(inout) :: force(:)
-
-  R_TYPE, pointer     :: zvloc(:)
-  integer             :: idir
-  R_TYPE              :: force_tmp(1:MAX_DIM)
- 
-  PUSH_SUB(X(total_force_from_local_potential))
-  SAFE_ALLOCATE(zvloc(1:gr%mesh%np))
-  
-  zvloc(1:gr%mesh%np) = ep%vpsl(1:gr%mesh%np)
-  do idir = 1, gr%mesh%sb%dim
-    force_tmp(idir) = X(mf_dotp)(gr%mesh, zvloc, gdensity(:, idir), reduce = .false.)
-  end do
-
-  if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm,  force_tmp, dim = gr%mesh%sb%dim)
-  force(1:gr%mesh%sb%dim) = force(1:gr%mesh%sb%dim) + force_tmp(1:gr%mesh%sb%dim)
-
-  SAFE_DEALLOCATE_P(zvloc)
-  POP_SUB(X(total_force_from_local_potential))
-end subroutine X(total_force_from_local_potential)
-
 
 !---------------------------------------------------------------------------
 !> Ref: Kikuji Hirose, Tomoya Ono, Yoshitaka Fujimoto, and Shigeru Tsukamoto,
@@ -501,7 +475,7 @@ subroutine X(total_force_from_potential)(gr, geo, ep, st, x, lda_u_level)
   end if
 #endif
 
-  call dtotal_force_from_local_potential(gr, ep, grad_rho, x)
+  call total_force_from_local_potential(gr, ep, grad_rho, x)
 
   do iatom = 1, geo%natoms
     do idir = 1, gr%mesh%sb%dim

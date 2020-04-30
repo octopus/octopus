@@ -500,17 +500,6 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine oct_parse_double4(name, def4, res4)
-    character(len=*), intent(in) :: name
-    real(4), intent(in)          :: def4
-    real(4), intent(out)         :: res4
-
-    real(8) :: res8
-    call oct_parse_double(name, real(def4, 8), res8)
-    res4 = real(res8, kind=4)
-  end subroutine oct_parse_double4
-
-  ! ---------------------------------------------------------
 
   subroutine oct_parse_double4_unit(namespace, name, def4, res4, unit)
     type(namespace_t),      intent(in)  :: namespace
@@ -658,7 +647,7 @@ contains
     character (LEN=100)  :: v_string
 
     string_length = len(inp_string)
-    do i=1, string_length - 1
+    do i = 1, string_length - 1
        if(inp_string(i:i+1) == arraychar//"[") then
           m = 0
           if(inp_string(i+3:i+3) == ",") m = 1
@@ -694,9 +683,9 @@ contains
   ! this function returns the full name, possibly including the namespace
   ! of the current parser
   function parse_get_full_name(namespace, varname) result(full_name)
-    type(namespace_t), intent(in) :: namespace
-    character(len=*),  intent(in) :: varname
-    character(len=len(varname)+namespace%len()+1) :: full_name
+    type(namespace_t), intent(in)  :: namespace
+    character(len=*),  intent(in)  :: varname
+    character(len=:),  allocatable :: full_name
 
     ! try first the variable prefixed by namespace
     full_name = trim(namespace%get()) // "." // trim(varname)

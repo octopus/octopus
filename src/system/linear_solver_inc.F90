@@ -327,7 +327,11 @@ subroutine X(linear_solver_bicgstab) (ls, namespace, hm, gr, st, ist, ik, x, y, 
   ! Initial residue
   call X(linear_solver_operator) (hm, namespace, gr, st, ist, ik, shift, x, Hp)
 
-  forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np) r(ip, idim) = y(ip, idim) - Hp(ip, idim)
+  do idim = 1, st%d%dim
+    do ip = 1, gr%mesh%np
+      r(ip, idim) = y(ip, idim) - Hp(ip, idim)
+    end do
+  end do
 
   !re-orthogonalize r, this helps considerably with convergence
   if (occ_response) then
@@ -365,7 +369,11 @@ subroutine X(linear_solver_bicgstab) (ls, namespace, hm, gr, st, ist, ik, x, y, 
       end do
     else
       beta = rho_1/rho_2*alpha/w
-      forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np) p(ip, idim) = r(ip, idim) + beta*(p(ip, idim) - w*Hp(ip, idim))
+      do idim = 1, st%d%dim
+        do ip = 1, gr%mesh%np
+          p(ip, idim) = r(ip, idim) + beta*(p(ip, idim) - w*Hp(ip, idim))
+        end do
+      end do
     end if
 
     ! preconditioning 
@@ -374,7 +382,11 @@ subroutine X(linear_solver_bicgstab) (ls, namespace, hm, gr, st, ist, ik, x, y, 
     
     alpha = rho_1/X(mf_dotp)(gr%mesh, st%d%dim, rs, Hp)
 
-    forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np) s(ip, idim) = r(ip, idim) - alpha*Hp(ip, idim)
+    do idim = 1, st%d%dim
+      do ip = 1, gr%mesh%np
+        s(ip, idim) = r(ip, idim) - alpha*Hp(ip, idim)
+      end do
+    end do
 
     gamma = X(mf_nrm2) (gr%mesh, st%d%dim, s)
 
@@ -391,10 +403,12 @@ subroutine X(linear_solver_bicgstab) (ls, namespace, hm, gr, st, ist, ik, x, y, 
 
     w = X(mf_dotp)(gr%mesh, st%d%dim, Hs, s)/X(mf_dotp) (gr%mesh, st%d%dim, Hs, Hs)
 
-    forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np)
-      x(ip, idim) = x(ip, idim) + alpha*phat(ip, idim) + w*shat(ip, idim)
-      r(ip, idim) = s(ip, idim) - w*Hs(ip, idim)
-    end forall
+    do idim = 1, st%d%dim
+      do ip = 1, gr%mesh%np
+        x(ip, idim) = x(ip, idim) + alpha*phat(ip, idim) + w*shat(ip, idim)
+        r(ip, idim) = s(ip, idim) - w*Hs(ip, idim)
+      end do
+    end do
 
     rho_2 = rho_1
 
@@ -935,7 +949,9 @@ subroutine X(linear_solver_qmr_dotp)(this, namespace, hm, gr, st, xb, bb, shift,
 
     call batch_xpay(gr%mesh%np, ppb, -beta, vvb, a_full = .false.)
 
-    forall (ii = 1:xb%nst) oldrho(ii) = rho(ii)
+    do ii = 1, xb%nst
+      oldrho(ii) = rho(ii)
+    end do
 
     call mesh_batch_nrm2(gr%mesh, vvb, rho)
 
@@ -984,7 +1000,9 @@ subroutine X(linear_solver_qmr_dotp)(this, namespace, hm, gr, st, xb, bb, shift,
     end if
 
     call mesh_batch_nrm2(gr%mesh, res, residue)
-    forall(ii = 1:xb%nst) residue(ii) = residue(ii)/norm_b(ii)
+    do ii = 1, xb%nst
+      residue(ii) = residue(ii)/norm_b(ii)
+    end do
 
     do ii = 1, xb%nst
       if(status(ii) == QMR_NOT_CONVERGED .and. residue(ii) < threshold) then

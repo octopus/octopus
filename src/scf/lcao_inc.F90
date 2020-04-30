@@ -290,7 +290,7 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, namespace, start)
 
   do ik = kstart, kend
     ispin = states_elec_dim_get_spin_index(st%d, ik)
-    call lalg_geneigensolve(this%norbs, hamilt(:, :, ik), overlap(:, :, ispin), ev)
+    call lalg_geneigensolve(this%norbs, hamilt(:, :, ik), overlap(:, :, ispin), ev, preserve_mat=.true.)
 
 #ifdef HAVE_MPI
     ! the eigenvectors are not unique due to phases and degenerate subspaces, but

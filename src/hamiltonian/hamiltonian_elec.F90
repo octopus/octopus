@@ -35,6 +35,7 @@ module hamiltonian_elec_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_abst_oct_m
+  use kick_oct_m
   use kpoints_oct_m
   use lalg_basic_oct_m
   use lasers_oct_m
@@ -74,7 +75,6 @@ module hamiltonian_elec_oct_m
     hamiltonian_elec_end,                 &
     dhamiltonian_elec_apply_single,       &
     zhamiltonian_elec_apply_single,       &
-    dhamiltonian_elec_apply_all,          &
     zhamiltonian_elec_apply_all,          &
     dhamiltonian_elec_apply_batch,        &
     zhamiltonian_elec_apply_batch,        &
@@ -98,7 +98,6 @@ module hamiltonian_elec_oct_m
     zhamiltonian_elec_apply_atom,         &
     hamiltonian_elec_dump_vhxc,           &
     hamiltonian_elec_load_vhxc,           &
-    zoct_exchange_operator,               &
     hamiltonian_elec_set_vhxc
 
   type, extends(hamiltonian_abst_t) :: hamiltonian_elec_t
@@ -191,7 +190,7 @@ module hamiltonian_elec_oct_m
     RDMFT                 = 7
 
   type(profile_t), save :: prof_hamiltonian, prof_kinetic_start, prof_kinetic_finish
-  type(profile_t), save :: prof_exx_scdm, prof_exx
+  type(profile_t), save :: prof_exx
 
 contains
 
@@ -383,15 +382,15 @@ contains
     !%End
     hm%mass_scaling(1:gr%sb%dim) = M_ONE
     if(parse_block(namespace, 'MassScaling', blk) == 0) then
-        ncols = parse_block_cols(blk, 0)
-        if(ncols > gr%sb%dim) then
-          call messages_input_error("MassScaling")
-        end if
-        iline = 1 ! just deal with 1 line - should be generalized
-        do icol = 1, ncols
-          call parse_block_float(blk, iline - 1, icol - 1, hm%mass_scaling(icol))
-        end do
-        call parse_block_end(blk)
+      ncols = parse_block_cols(blk, 0)
+      if(ncols > gr%sb%dim) then
+        call messages_input_error(namespace, "MassScaling")
+      end if
+      iline = 1 ! just deal with 1 line - should be generalized
+      do icol = 1, ncols
+        call parse_block_float(blk, iline - 1, icol - 1, hm%mass_scaling(icol))
+      end do
+      call parse_block_end(blk)
     end if
 
     hm%inh_term = .false.
@@ -421,6 +420,12 @@ contains
     if(hm%lda_u_level /= DFT_U_NONE) then
       call messages_experimental('DFT+U')
       call lda_u_init(hm%lda_u, namespace, hm%lda_u_level, gr, geo, st, hm%psolver)
+
+      !In the present implementation of DFT+U, in case of spinors, we have off-diagonal terms
+      !in spin space which break the assumption of the generalized Bloch theorem
+      if(kick_get_type(hm%ep%kick) == KICK_MAGNON_MODE .and. gr%der%boundaries%spiral) then
+        call messages_not_implemented("DFT+U with generalized Bloch theorem and magnon kick")
+      end if 
     end if
  
 
@@ -502,7 +507,7 @@ contains
     need_exchange_ = optional_default(need_exchange, .false.)
     if (hm%theory_level == HARTREE_FOCK .or. hm%theory_level == HARTREE &
           .or. hm%theory_level == RDMFT .or. need_exchange_) then
-      call exchange_operator_init(hm%exxop, namespace, st, gr%sb, gr%der, mc, gr%mesh, M_ONE, M_ZERO, M_ZERO)
+      call exchange_operator_init(hm%exxop, namespace, st, gr%sb, gr%der, mc, M_ONE, M_ZERO, M_ZERO)
     end if
 
     if (hm%apply_packed .and. accel_is_enabled()) then
@@ -579,14 +584,14 @@ contains
           call accel_write_buffer(hm%hm_base%buff_phase_spiral, (gr%mesh%np_part-sp)*2, hm%hm_base%phase_spiral)
         endif
       end if
-      
+
 
       kpoint(1:gr%sb%dim) = M_ZERO
       do ik = hm%d%kpt%start, hm%d%kpt%end
         kpoint(1:gr%sb%dim) = kpoints_get_point(gr%sb%kpoints, states_elec_dim_get_kpoint_index(hm%d, ik))
-        forall (ip = 1:gr%mesh%np_part)
+        do ip = 1, gr%mesh%np_part
           hm%hm_base%phase(ip, ik) = exp(-M_zI * sum(gr%mesh%x(ip, 1:gr%sb%dim) * kpoint(1:gr%sb%dim)))
-        end forall
+        end do
 
         ! loop over boundary points
         sp = gr%mesh%np
@@ -1586,7 +1591,53 @@ contains
 
   end function hamiltonian_elec_needs_current
 
+  ! ---------------------------------------------------------
+  subroutine zhamiltonian_elec_apply_all(hm, namespace, mesh, st, hst)
+    type(hamiltonian_elec_t), intent(inout) :: hm
+    type(namespace_t),        intent(in)    :: namespace
+    type(mesh_t),             intent(in)    :: mesh
+    type(states_elec_t),      intent(inout) :: st
+    type(states_elec_t),      intent(inout) :: hst
+
+    integer :: ik, ib, ist
+    CMPLX, allocatable :: psi(:, :)
+    CMPLX, allocatable :: psiall(:, :, :, :)
   
+    PUSH_SUB(zhamiltonian_elec_apply_all)
+
+    do ik = st%d%kpt%start, st%d%kpt%end
+      do ib = st%group%block_start, st%group%block_end
+        call zhamiltonian_elec_apply_batch(hm, namespace, mesh, st%group%psib(ib, ik), hst%group%psib(ib, ik))
+      end do
+    end do
+
+    if(oct_exchange_enabled(hm%oct_exchange)) then
+
+      SAFE_ALLOCATE(psiall(mesh%np_part, 1:hst%d%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
+
+      call states_elec_get_state(st, mesh, psiall)
+    
+      call oct_exchange_prepare(hm%oct_exchange, mesh, psiall, hm%xc, hm%psolver, namespace)
+
+      SAFE_DEALLOCATE_A(psiall)
+    
+      SAFE_ALLOCATE(psi(mesh%np_part, 1:hst%d%dim))
+    
+      do ik = 1, st%d%nik
+        do ist = 1, st%nst
+          call states_elec_get_state(hst, mesh, ist, ik, psi)
+          call oct_exchange_operator(hm%oct_exchange, namespace, mesh, psi, ist, ik)
+          call states_elec_set_state(hst, mesh, ist, ik, psi)
+        end do
+      end do
+
+      SAFE_DEALLOCATE_A(psi)
+    
+    end if
+
+    POP_SUB(zhamiltonian_elec_apply_all)
+  end subroutine zhamiltonian_elec_apply_all
+
 
 #include "undef.F90"
 #include "real.F90"

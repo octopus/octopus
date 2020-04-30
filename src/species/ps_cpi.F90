@@ -71,7 +71,7 @@ contains
       call messages_fatal(namespace=namespace)
     end if
     
-    iunit = io_open(filename, namespace, action='read', form='formatted', status='old')
+    iunit = io_open(filename, action='read', form='formatted', status='old')
     call ps_cpi_file_read(iunit, ps_cpi%cpi_file)
     call io_close(iunit)
 

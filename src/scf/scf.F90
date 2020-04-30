@@ -319,7 +319,7 @@ contains
     if(hm%theory_level == INDEPENDENT_PARTICLES) mixdefault = OPTION__MIXFIELD__NONE
 
     call parse_variable(namespace, 'MixField', mixdefault, scf%mix_field)
-    if(.not.varinfo_valid_option('MixField', scf%mix_field)) call messages_input_error('MixField')
+    if(.not.varinfo_valid_option('MixField', scf%mix_field)) call messages_input_error(namespace, 'MixField')
     call messages_print_var_option(stdout, 'MixField', scf%mix_field, "what to mix during SCF cycles")
 
     if (scf%mix_field == OPTION__MIXFIELD__POTENTIAL .and. hm%theory_level == INDEPENDENT_PARTICLES) then
@@ -904,7 +904,7 @@ contains
           end if
 
           if(hm%lda_u_level /= DFT_U_NONE) then
-            call lda_u_dump(restart_dump, hm%lda_u, st, ierr, iter=iter)
+            call lda_u_dump(restart_dump, hm%lda_u, st, ierr)
             if (ierr /= 0) then
               message(1) = 'Unable to write LDA+U information.'
               call messages_warning(1)
@@ -1134,7 +1134,6 @@ contains
     subroutine scf_write_static(dir, fname)
       character(len=*), intent(in) :: dir, fname
 
-      type(partial_charges_t) :: partial_charges
       integer :: iunit, iatom
       FLOAT, allocatable :: hirshfeld_charges(:)
 
@@ -1239,9 +1238,7 @@ contains
       if(scf%calc_partial_charges) then
         SAFE_ALLOCATE(hirshfeld_charges(1:geo%natoms))
 
-        call partial_charges_init(partial_charges)
-        call partial_charges_calculate(partial_charges, namespace, gr%fine%mesh, st, geo, hirshfeld_charges = hirshfeld_charges)
-        call partial_charges_end(partial_charges)
+        call partial_charges_calculate(namespace, gr%fine%mesh, st, geo, hirshfeld_charges = hirshfeld_charges)
 
         if(mpi_grp_is_root(mpi_world)) then
 

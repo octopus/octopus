@@ -83,6 +83,7 @@ module pnfft_oct_m
     FLOAT,               public   :: norm       !> Normalization  
 
 
+    integer               :: comm
 ! Data 
     type(C_PTR)           :: plan            !> pnfft plan
 
@@ -116,7 +117,7 @@ contains
     !%Description
     !% Cut-off parameter of the window function. 
     !%End
-    call parse_variable(namespace, 'PNFFTCutoff', pnfft%mm, pnfft%mm)
+    call parse_variable(namespace, 'PNFFTCutoff', 6, pnfft%mm)
 
     !%Variable PNFFTOversampling
     !%Type float
@@ -125,7 +126,7 @@ contains
     !%Description
     !% PNFFT oversampling factor (sigma). This will rule the size of the FFT under the hood.
     !%End
-    call parse_variable(namespace, 'PNFFTOversampling', pnfft%sigma, pnfft%sigma)
+    call parse_variable(namespace, 'PNFFTOversampling', M_TWO, pnfft%sigma)
 
     POP_SUB(pnfft_guru_options)
   end subroutine pnfft_guru_options
@@ -179,13 +180,16 @@ contains
 
 #ifdef HAVE_PNFFT
     call pnfft_init()
-    
+#endif
+
     pnfft%np(1:3) = 1
     
     call pfft_decompose(mpi_grp%size, pnfft%np(1), pnfft%np(2))
     
-    
+#ifdef HAVE_PNFFT    
     ierror = pnfft_create_procmesh(2, mpi_grp%comm,  pnfft%np, comm)        
+#else
+    ierror = 0
 #endif
     
     if (ierror /= 0) then
@@ -287,6 +291,8 @@ contains
          PNFFT_TRANSPOSED_F_HAT, local_N, local_N_start, lower_border, upper_border)
 #endif
     
+    pnfft%comm = mpi_comm
+
     pnfft%lower_border = lower_border
     pnfft%upper_border = upper_border
     pnfft%N_local(1:3)   = local_N(1:3) 
@@ -325,6 +331,10 @@ contains
     cf_hat = pnfft_get_f_hat(pnfft%plan)
     cf     = pnfft_get_f(pnfft%plan)
     cx     = pnfft_get_x(pnfft%plan)
+#else
+    cf_hat = C_NULL_PTR
+    cf     = C_NULL_PTR
+    cx     = C_NULL_PTR
 #endif
     
     ! Convert data pointers to Fortran format
@@ -399,7 +409,7 @@ contains
     
     
     
-    do idir=1,3  
+    do idir = 1,3
       len(:) = (maxval(X(:,idir))-minval(X(:,idir)))*eps
       cc(:) = (minval(X(:,idir))+maxval(X(:,idir)))/M_TWO
     end do
@@ -452,7 +462,7 @@ contains
     end do
 
 
-!     do j=1,pnfft%local_M
+!     do j = 1,pnfft%local_M
 !       do t=1,3
 !         pnfft%x_lin(t,j) = (pnfft%upper_border(t) - pnfft%lower_border(t)) * rand(0) + pnfft%lower_border(t)
 !       end do
@@ -464,9 +474,9 @@ contains
 
     SAFE_ALLOCATE( dX(1:maxval(pnfft%M(:))-1, 1:3))
 
-     
-    ! Set the normalization factor  
-    do idir=1,3 
+
+    ! Set the normalization factor
+    do idir = 1,3
       do ii = 1, size(X(:,idir))-1
         dX(ii,idir)= abs(X(ii+1, idir)-X(ii, idir))
 !         dX(ii,2)= abs(x2_(ii+1)-x2_(ii))
@@ -502,7 +512,7 @@ contains
         call io_mkdir('debug/PNFFT', namespace)
       end if
 #ifdef HAVE_MPI
-      call MPI_Barrier(mpi_world%comm, ierr)
+      call MPI_Barrier(pnfft%comm, ierr)
 #endif
       
       nn = mpi_world%rank
@@ -527,15 +537,15 @@ contains
   end subroutine pnfft_messages_debug
 
   !---------------------------------------------------------------------------------
-  integer function pnfft_idx_3to1(pnfft, ix , iy, iz) result(idx)
-    type(pnfft_t),  intent(in) :: pnfft
-    integer,        intent(in) :: ix 
-    integer,        intent(in) :: iy 
-    integer,        intent(in) :: iz 
-
-    idx =  (ix-1)*pnfft%M(2)*pnfft%M(3) + (iy-1)*pnfft%M(3) + (iz-1) + 1
-
-  end function pnfft_idx_3to1
+!  integer function pnfft_idx_3to1(pnfft, ix , iy, iz) result(idx)
+!    type(pnfft_t),  intent(in) :: pnfft
+!    integer,        intent(in) :: ix 
+!    integer,        intent(in) :: iy 
+!    integer,        intent(in) :: iz 
+!
+!    idx =  (ix-1)*pnfft%M(2)*pnfft%M(3) + (iy-1)*pnfft%M(3) + (iz-1) + 1
+!
+!  end function pnfft_idx_3to1
 
   #include "undef.F90"
   #include "real.F90"

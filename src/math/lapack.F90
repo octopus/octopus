@@ -42,15 +42,6 @@ module lapack_oct_m
   !!
   !!  This is the block version of the algorithm, calling Level 3 BLAS.
   interface lapack_potrf
-    subroutine spotrf(uplo, n, a, lda, info)
-      implicit none
-      character(1), intent(in)    :: uplo
-      integer,      intent(in)    :: n
-      real(4),      intent(inout) :: a
-      integer,      intent(in)    :: lda
-      integer,      intent(out)   :: info
-    end subroutine spotrf
-
     subroutine dpotrf(uplo, n, a, lda, info)
       implicit none
       character(1), intent(in)    :: uplo
@@ -59,15 +50,6 @@ module lapack_oct_m
       integer,      intent(in)    :: lda
       integer,      intent(out)   :: info
     end subroutine dpotrf
-
-    subroutine cpotrf(uplo, n, a, lda, info)
-      implicit none
-      character(1), intent(in)    :: uplo
-      integer,      intent(in)    :: n
-      complex(4),   intent(inout) :: a
-      integer,      intent(in)    :: lda
-      integer,      intent(out)   :: info
-    end subroutine cpotrf
 
     subroutine zpotrf(uplo, n, a, lda, info)
       implicit none
@@ -85,15 +67,6 @@ module lapack_oct_m
   !!  Here A and B are assumed to be symmetric and B is also
   !!  positive definite.
   interface lapack_sygv
-    subroutine ssygv(itype, jobz, uplo, n, a, lda, b, ldb, w, work, lwork, info)
-      implicit none
-      character(1), intent(in)    :: jobz, uplo
-      integer,      intent(in)    :: itype, n, lda, ldb, lwork
-      real(4),      intent(inout) :: a, b    !< a(lda,n), b(ldb,n)
-      real(4),      intent(out)   :: w, work !< w(n), work(lwork)
-      integer,      intent(out)   :: info
-    end subroutine ssygv
-
     subroutine dsygv(itype, jobz, uplo, n, a, lda, b, ldb, w, work, lwork, info)
       implicit none
       character(1), intent(in)    :: jobz, uplo
@@ -110,16 +83,6 @@ module lapack_oct_m
   !!  Here A and B are assumed to be Hermitian and B is also
   !!  positive definite.
   interface lapack_hegv
-    subroutine chegv(itype, jobz, uplo, n, a, lda, b, ldb, w, work, lwork, rwork, info)
-      implicit none
-      character(1), intent(in)    :: jobz, uplo
-      integer,      intent(in)    :: n, itype, lda, ldb, lwork
-      complex(4),   intent(inout) :: a, b     !< a(lda,n), b(ldb,n)
-      real(4),      intent(out)   :: w, rwork !< w(n), rwork(max(1,3*n-2))
-      complex(4),   intent(out)   :: work     !< work(lwork)
-      integer,      intent(out)   :: info
-    end subroutine chegv
-
     subroutine zhegv(itype, jobz, uplo, n, a, lda, b, ldb, w, work, lwork, rwork, info)
       implicit none
       character(1), intent(in)    :: jobz, uplo
@@ -148,17 +111,6 @@ module lapack_oct_m
   !!  The computed eigenvectors are normalized to have Euclidean norm
   !!  equal to 1 and largest component real.
   interface
-    subroutine sgeev(jobvl, jobvr, n, a, lda, wr, wi, vl, ldvl, vr, ldvr, work, lwork, rwork, info)
-      implicit none
-      character(1), intent(in)    :: jobvl, jobvr
-      integer,      intent(in)    :: n, lda, ldvl, ldvr, lwork
-      real(4),      intent(inout) :: a !< a(lda,n)
-      real(4),      intent(out)   :: wr, wi, vl, vr !< wr(n), wi(n), vl(ldvl,n), vl(ldvr,n)
-      real(4),      intent(out)   :: rwork !< rwork(max(1,2n))
-      real(4),      intent(out)   :: work  !< work(lwork)
-      integer,      intent(out)   :: info
-    end subroutine sgeev
-
     subroutine dgeev(jobvl, jobvr, n, a, lda, wr, wi, vl, ldvl, vr, ldvr, work, lwork, rwork, info)
       implicit none
       character(1), intent(in)    :: jobvl, jobvr
@@ -169,17 +121,6 @@ module lapack_oct_m
       real(8),      intent(out)   :: work  !< work(lwork)
       integer,      intent(out)   :: info
     end subroutine dgeev
-
-    subroutine cgeev(jobvl, jobvr, n, a, lda, w, vl, ldvl, vr, ldvr, work, lwork, rwork, info)
-      implicit none
-      character(1), intent(in)    :: jobvl, jobvr
-      integer,      intent(in)    :: n, lda, ldvl, ldvr, lwork
-      complex(4),   intent(inout) :: a !< a(lda,n)
-      complex(4),   intent(out)   :: w, vl, vr !< w(n), vl(ldvl,n), vl(ldvr,n)
-      real(4),      intent(out)   :: rwork !< rwork(max(1,2n))
-      complex(4),   intent(out)   :: work  !< work(lwork)
-      integer,      intent(out)   :: info
-    end subroutine cgeev
 
     subroutine zgeev(jobvl, jobvr, n, a, lda, w, vl, ldvl, vr, ldvr, work, lwork, rwork, info)
       implicit none
@@ -228,15 +169,6 @@ module lapack_oct_m
   !>  Computes all eigenvalues and, optionally, eigenvectors of a
   !!  real symmetric matrix A.
   interface lapack_syev
-    subroutine ssyev(jobz, uplo, n, a, lda, w, work, lwork, info)
-      implicit none
-      character(1), intent(in)    :: jobz, uplo
-      integer,      intent(in)    :: n, lda, lwork
-      real(4),      intent(inout) :: a       !< a(lda,n)
-      real(4),      intent(out)   :: w, work !< w(n), work(lwork)
-      integer,      intent(out)   :: info
-    end subroutine ssyev
-
     subroutine dsyev(jobz, uplo, n, a, lda, w, work, lwork, info)
       implicit none
       character(1), intent(in)    :: jobz, uplo
@@ -250,16 +182,6 @@ module lapack_oct_m
   !>  Computes all eigenvalues and, optionally, eigenvectors of a
   !!  complex Hermitian matrix A.
   interface lapack_heev
-    subroutine cheev(jobz, uplo, n, a, lda, w, work, lwork, rwork, info)
-      implicit none
-      character(1), intent(in)    :: jobz, uplo
-      integer,      intent(in)    :: n, lda, lwork
-      complex(4),   intent(inout) :: a        !< a(lda,n)
-      real(4),      intent(out)   :: w, rwork !< w(n), rwork(max(1,3*n-2))
-      complex(4),   intent(out)   :: work     !< work(lwork)
-      integer,      intent(out)   :: info
-    end subroutine cheev
-
     subroutine zheev(jobz, uplo, n, a, lda, w, work, lwork, rwork, info)
       implicit none
       character(1), intent(in)    :: jobz, uplo
@@ -275,24 +197,24 @@ module lapack_oct_m
     subroutine dsyevx(jobz, range, uplo, n, a, lda, &
       vl, vu, il, iu, abstol, m, w, z, ldz, work, lwork, iwork, ifail, info)
       implicit none
-      integer,      intent(in)  :: n, lda, il, iu, ldz, lwork
-      character(1), intent(in)  :: jobz, range, uplo
-      integer,      intent(out) :: m, iwork, ifail, info
-      FLOAT,        intent(in)  :: vl, vu, abstol
-      FLOAT,        intent(in)  :: a
-      FLOAT,        intent(out) :: w, z, work
+      integer,      intent(in)    :: n, lda, il, iu, ldz, lwork
+      character(1), intent(in)    :: jobz, range, uplo
+      integer,      intent(out)   :: m, iwork, ifail, info
+      FLOAT,        intent(in)    :: vl, vu, abstol
+      FLOAT,        intent(inout) :: a
+      FLOAT,        intent(out)   :: w, z, work
     end subroutine dsyevx
 
     subroutine zheevx(jobz, range, uplo, n, a, lda, &
       vl, vu, il, iu, abstol, m, w, z, ldz, work, lwork, iwork, ifail, info)
       implicit none
-      integer,      intent(in)  :: n, lda, il, iu, ldz, lwork
-      character(1), intent(in)  :: jobz, range, uplo
-      integer,      intent(out) :: m, iwork, ifail, info
-      FLOAT,        intent(in)  :: vl, vu, abstol
-      FLOAT,        intent(out) :: w
-      CMPLX,        intent(in)  :: a
-      CMPLX,        intent(out) :: z, work
+      integer,      intent(in)    :: n, lda, il, iu, ldz, lwork
+      character(1), intent(in)    :: jobz, range, uplo
+      integer,      intent(out)   :: m, iwork, ifail, info
+      FLOAT,        intent(in)    :: vl, vu, abstol
+      FLOAT,        intent(out)   :: w
+      CMPLX,        intent(inout) :: a
+      CMPLX,        intent(out)   :: z, work
     end subroutine zheevx
   end interface
 
@@ -301,28 +223,20 @@ module lapack_oct_m
   !!  A = Q R.
   !! \f]
   interface lapack_geqrf
-    subroutine sgeqrf( m, n, a, lda, tau, work, lwork, info )
-      implicit none
-      integer            info, lda, lwork, m, n
-      real(4)            a, tau, work
-    end subroutine sgeqrf
-
     subroutine dgeqrf( m, n, a, lda, tau, work, lwork, info )
       implicit none
-      integer            info, lda, lwork, m, n
-      double precision   a, tau, work
+      integer, intent(in)    :: lda, lwork, m, n
+      real(8), intent(inout) :: a
+      real(8), intent(out)   :: tau, work
+      integer, intent(out)   :: info
     end subroutine dgeqrf
 
-    subroutine cgeqrf( m, n, a, lda, tau, work, lwork, info )
-      implicit none
-      integer            info, lda, lwork, m, n
-      complex(4)         a, tau, work
-    end subroutine cgeqrf
-    
     subroutine zgeqrf( m, n, a, lda, tau, work, lwork, info )
       implicit none
-      integer            info, lda, lwork, m, n
-      complex(8)         a, tau, work
+      integer, intent(in)       :: lda, lwork, m, n
+      complex(8), intent(inout) :: a
+      complex(8), intent(out)   :: tau, work
+      integer, intent(out)      :: info
     end subroutine zgeqrf
   end interface lapack_geqrf
   
@@ -338,27 +252,21 @@ module lapack_oct_m
   interface lapack_orgqr 
     subroutine dorgqr( m, n, k, a, lda, tau, work, lwork, info )
       implicit none
-      integer            info, k, lda, lwork, m, n
-      double precision   a, tau, work
+      integer, intent(in)    :: k, lda, lwork, m, n
+      real(8), intent(in)    :: tau
+      real(8), intent(inout) :: a
+      real(8), intent(out)   :: work
+      integer, intent(out)   :: info
     end subroutine dorgqr
     
     subroutine zungqr( m, n, k, a, lda, tau, work, lwork, info )
       implicit none
-      integer            info, k, lda, lwork, m, n
-      complex(8)         a, tau, work
+      integer,    intent(in)    :: k, lda, lwork, m, n
+      complex(8), intent(in)    :: tau
+      complex(8), intent(inout) :: a
+      complex(8), intent(out)   :: work
+      integer,    intent(out)   :: info
     end subroutine zungqr
-
-    subroutine sorgqr( m, n, k, a, lda, tau, work, lwork, info )
-      implicit none
-      integer            info, k, lda, lwork, m, n
-      real               a, tau, work
-    end subroutine sorgqr
-
-    subroutine cungqr( m, n, k, a, lda, tau, work, lwork, info )
-      implicit none
-      integer            info, k, lda, lwork, m, n
-      complex(4)         a, tau, work
-    end subroutine cungqr
   end interface lapack_orgqr
 
   !>  Computes selected eigenvalues, and optionally, eigenvectors
@@ -396,35 +304,6 @@ module lapack_oct_m
       integer,             intent(out)   :: ifail  !< ifail(1:n)
       integer,             intent(out)   :: info
     end subroutine dsygvx
-
-    subroutine ssygvx(itype, jobz, range, uplo, n, a, lda, b, ldb, vl, vu, il, iu, abstol, &
-      m, w, z, ldz, work, lwork, iwork, ifail, info)
-      implicit none
-
-      integer,             intent(in)    :: itype !< Specifies the problem: 1: A*x = l*B*x 2:  A*B*x = l*x 3: B*A*x = l*x
-      character(len=1),    intent(in)    :: jobz  !< N: Compute eigenvalues only; V: Compute eigenvalues and eigenvectors.
-      character(len=1),    intent(in)    :: range !< A: all eigenval V: all eigenval in (VL,VU] I: IL-th through IU-th eigenval
-      character(len=1),    intent(in)    :: uplo  !< U: Upper triangle of A and B stored L: Lower triangle of A and B stored
-      integer,             intent(in)    :: n     !< The order of the matrix pencil (A,B)
-      real(4),             intent(inout) :: a     !< a(:) On entry, the symmetric matrix A. On exit, destroyed
-      integer,             intent(in)    :: lda   !< The leading dimension of the array A
-      real(4),             intent(inout) :: b     !< b(:)
-      integer,             intent(in)    :: ldb
-      real(4),             intent(in)    :: vl
-      real(4),             intent(in)    :: vu
-      integer,             intent(in)    :: il
-      integer,             intent(in)    :: iu
-      real(4),             intent(in)    :: abstol
-      integer,             intent(out)   :: m
-      real(4),             intent(out)   :: w
-      real(4),             intent(out)   :: z
-      integer,             intent(in)    :: ldz
-      real(4),             intent(out)   :: work   !< work(:)
-      integer,             intent(in)    :: lwork
-      integer,             intent(out)   :: iwork  !< iwork(1:5*n)
-      integer,             intent(out)   :: ifail  !< ifail(1:n)
-      integer,             intent(out)   :: info
-    end subroutine ssygvx
   end interface lapack_sygvx
 
   !>  Computes selected eigenvalues, and optionally, eigenvectors
@@ -463,37 +342,125 @@ module lapack_oct_m
       integer,             intent(out)   :: ifail !< ifail(1:n)
       integer,             intent(out)   :: info
     end subroutine zhegvx
-
-    subroutine chegvx(itype, jobz, range, uplo, n, a, lda, b, ldb, vl, vu, il, iu, abstol, &
-      m, w, z, ldz, work, lwork, rwork, iwork, ifail, info)
-      implicit none
-
-      integer,             intent(in)    :: itype
-      character(len=1),    intent(in)    :: jobz
-      character(len=1),    intent(in)    :: range
-      character(len=1),    intent(in)    :: uplo
-      integer,             intent(in)    :: n
-      complex(4),          intent(inout) :: a
-      integer,             intent(in)    :: lda
-      complex(4),          intent(inout) :: b
-      integer,             intent(in)    :: ldb
-      real(4),             intent(in)    :: vl
-      real(4),             intent(in)    :: vu
-      integer,             intent(in)    :: il
-      integer,             intent(in)    :: iu
-      real(4),             intent(in)    :: abstol
-      integer,             intent(out)   :: m
-      real(4),             intent(out)   :: w
-      complex(4),          intent(out)   :: z
-      integer,             intent(in)    :: ldz
-      complex(4),          intent(out)   :: work
-      integer,             intent(in)    :: lwork
-      real(4),             intent(out)   :: rwork !< rwork(1:7*n)
-      integer,             intent(out)   :: iwork !< iwork(1:5*n)
-      integer,             intent(out)   :: ifail !< ifail(1:n)
-      integer,             intent(out)   :: info
-    end subroutine chegvx
   end interface lapack_hegvx
+
+  interface lapack_gelss
+    subroutine dgelss(m, n, nrhs, a, lda, b, ldb, s, rcond, rank, work, lwork, info)
+      integer, intent(in)    :: m
+      integer, intent(in)    :: n
+      integer, intent(in)    :: nrhs
+      FLOAT,   intent(inout) :: a
+      integer, intent(in)    :: lda
+      FLOAT,   intent(inout) :: b
+      integer, intent(in)    :: ldb
+      FLOAT,   intent(out)   :: s
+      FLOAT,   intent(in)    :: rcond
+      integer, intent(out)   :: rank
+      FLOAT,   intent(out)   :: work
+      integer, intent(in)    :: lwork
+      integer, intent(out)   :: info
+    end subroutine dgelss
+
+    subroutine zgelss(m, n, nrhs, a, lda, b, ldb, s, rcond, rank, work, lwork, rwork, info)
+      integer, intent(in)    :: m
+      integer, intent(in)    :: n
+      integer, intent(in)    :: nrhs
+      CMPLX,   intent(inout) :: a
+      integer, intent(in)    :: lda
+      CMPLX,   intent(inout) :: b
+      integer, intent(in)    :: ldb
+      FLOAT,   intent(out)   :: s
+      FLOAT,   intent(in)    :: rcond
+      integer, intent(out)   :: rank
+      CMPLX,   intent(out)   :: work
+      integer, intent(in)    :: lwork
+      FLOAT,   intent(out)   :: rwork
+      integer, intent(out)   :: info
+    end subroutine zgelss
+  end interface lapack_gelss
+
+  interface lapack_getrf
+    subroutine dgetrf (m, n, a, lda, ipiv, info)
+      implicit none
+      integer,      intent(in)    :: m, n, lda
+      FLOAT,        intent(inout) :: a         !< a(lda, n)
+      integer,      intent(out)   :: ipiv       !< ipiv(min(m,n)
+      integer,      intent(out)   :: info
+    end subroutine dgetrf
+
+    subroutine zgetrf (m, n, a, lda, ipiv, info)
+      implicit none
+      integer,      intent(in)    :: m, n, lda
+      CMPLX,        intent(inout) :: a         !< a(lda, n)
+      integer,      intent(out)   :: ipiv       !< ipiv(min(m,n)
+      integer,      intent(out)   :: info
+    end subroutine zgetrf
+  end interface lapack_getrf
+
+  interface lapack_getri
+    subroutine dgetri(n, a, lda, ipiv, work, lwork, info )
+      implicit none
+      integer,      intent(in)    :: n, lda, lwork
+      FLOAT,        intent(inout) :: a       !< a(lda, n)
+      integer,      intent(in)    :: ipiv    !< ipiv(n)
+      FLOAT,        intent(out)   :: work    !< work(lwork)
+      integer,      intent(out)   :: info
+    end subroutine dgetri
+
+    subroutine zgetri(n, a, lda, ipiv, work, lwork, info )
+      implicit none
+      integer,      intent(in)    :: n, lda, lwork
+      CMPLX,        intent(inout) :: a       !< a(lda, n)
+      integer,      intent(in)    :: ipiv    !< ipiv(n)
+      CMPLX,        intent(out)   :: work    !< work(lwork)
+      integer,      intent(out)   :: info
+    end subroutine zgetri
+  end interface lapack_getri
+
+  interface lapack_sytrf
+    subroutine dsytrf(uplo, n, a, lda, ipiv, work, lwork, info)
+      implicit none
+      character(1), intent(in)    :: uplo
+      integer,      intent(in)    :: n, lda, lwork
+      FLOAT,        intent(inout) :: a
+      integer,      intent(out)   :: ipiv
+      FLOAT,        intent(out)   :: work
+      integer,      intent(out)   :: info
+    end subroutine dsytrf
+
+    subroutine zsytrf(uplo, n, a, lda, ipiv, work, lwork, info)
+      implicit none
+      character(1), intent(in)    :: uplo
+      integer,      intent(in)    :: n, lda, lwork
+      CMPLX,        intent(inout) :: a
+      integer,      intent(out)   :: ipiv
+      CMPLX,        intent(out)   :: work
+      integer,      intent(out)   :: info
+    end subroutine zsytrf
+  end interface lapack_sytrf
+
+  interface lapack_sytri
+    subroutine dsytri (uplo, n, a, lda, ipiv, work, info)
+      implicit none
+      character(1), intent(in)    :: uplo
+      integer,      intent(in)    :: n, lda
+      FLOAT,        intent(inout) :: a
+      integer,      intent(in)    :: ipiv
+      FLOAT,        intent(out)   :: work
+      integer,      intent(out)   :: info
+    end subroutine dsytri
+
+    subroutine zsytri (uplo, n, a, lda, ipiv, work, info)
+      implicit none
+      character(1), intent(in)    :: uplo
+      integer,      intent(in)    :: n, lda
+      CMPLX,        intent(inout) :: a
+      integer,      intent(in)    :: ipiv
+      CMPLX,        intent(out)   :: work
+      integer,      intent(out)   :: info
+    end subroutine zsytri
+  end interface lapack_sytri
+
 
 end module lapack_oct_m
 

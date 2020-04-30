@@ -131,7 +131,7 @@ contains
 
     call parse_variable(namespace, 'OutputMatrixElements', 0, this%what)
     if(.not.varinfo_valid_option('OutputMatrixElements', this%what, is_flag=.true.)) then
-      call messages_input_error('OutputMatrixElements')
+      call messages_input_error(namespace, 'OutputMatrixElements')
     end if
 
     if(st%parallel_in_states) then
@@ -309,14 +309,14 @@ contains
 
       if (states_are_real(st)) then
         SAFE_ALLOCATE(doneint(1:id))
-        call dstates_elec_me_one_body(st, namespace, dir, gr, geo, hm%d%nspin, hm%vhxc, id, iindex(:,1), jindex(:,1), doneint)
+        call dstates_elec_me_one_body(st, namespace, gr, hm%d%nspin, hm%vhxc, id, iindex(:,1), jindex(:,1), doneint)
         do ll = 1, id
           write(iunit, *) iindex(ll,1), jindex(ll,1), doneint(ll)
         enddo
         SAFE_DEALLOCATE_A(doneint)
       else
         SAFE_ALLOCATE(zoneint(1:id))
-        call zstates_elec_me_one_body(st, namespace, dir, gr, geo, hm%d%nspin, hm%vhxc, id, iindex(:,1), jindex(:,1), zoneint)
+        call zstates_elec_me_one_body(st, namespace, gr, hm%d%nspin, hm%vhxc, id, iindex(:,1), jindex(:,1), zoneint)
         do ll = 1, id
           write(iunit, *) iindex(ll,1), jindex(ll,1), zoneint(ll)
         enddo

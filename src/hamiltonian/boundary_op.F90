@@ -103,7 +103,7 @@ contains
     !%End
     call parse_variable(namespace, 'AbsorbingBoundaries', NOT_ABSORBING, this%abtype)
     if(.not.varinfo_valid_option('AbsorbingBoundaries', this%abtype, is_flag = .true.)) then
-      call messages_input_error('AbsorbingBoundaries')
+      call messages_input_error(namespace, 'AbsorbingBoundaries')
     end if
 
     if(this%abtype == EXTERIOR) &
@@ -186,7 +186,9 @@ contains
             xx = M_ZERO
             xx(1:MAX_DIM) = mesh%x(ip, 1:MAX_DIM)
             rr = units_from_atomic(units_inp%length, sqrt(sum(xx(1:mesh%sb%dim)**2)))
-            forall(imdim = 1:mesh%sb%dim) xx(imdim) = units_from_atomic(units_inp%length, xx(imdim))
+            do imdim = 1, mesh%sb%dim
+              xx(imdim) = units_from_atomic(units_inp%length, xx(imdim))
+            end do
             call parse_expression(ufn_re, ufn_im, mesh%sb%dim, xx, rr, M_ZERO, user_def_expr)
             this%ab_ufn(ip) = ufn_re
           end do
@@ -209,8 +211,7 @@ contains
       !% shape use ABShape. 
       !%End
 !       call messages_obsolete_variable('ABWidth', 'ABShape')
-      abwidth = bounds(2)-bounds(1)
-      call parse_variable(namespace, 'ABWidth', abwidth, abwidth, units_inp%length)
+      call parse_variable(namespace, 'ABWidth', bounds(2)-bounds(1), abwidth, units_inp%length)
       bounds(1) = bounds(2) - abwidth
       
       write(message(1),'(a,es10.3,3a)') & 

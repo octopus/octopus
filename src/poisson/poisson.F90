@@ -124,7 +124,6 @@ module poisson_oct_m
     type(poisson_psolver_t) :: psolver_solver
     type(poisson_no_t) :: no_solver
     integer :: nslaves
-    FLOAT :: theta !< cmplxscl
     logical, public :: is_dressed
     type(dressed_interaction_t), public :: dressed
     type(poisson_fmm_t)  :: params_fmm
@@ -146,14 +145,13 @@ module poisson_oct_m
 contains
 
   !-----------------------------------------------------------------
-  subroutine poisson_init(this, namespace, der, mc, qtot, label, theta, solver, verbose, force_serial, force_cmplx)
+  subroutine poisson_init(this, namespace, der, mc, qtot, label, solver, verbose, force_serial, force_cmplx)
     type(poisson_t),             intent(out) :: this
     type(namespace_t),           intent(in)  :: namespace
     type(derivatives_t), target, intent(in)  :: der
     type(multicomm_t),           intent(in)  :: mc
     FLOAT,                       intent(in)  :: qtot !< total charge
     character(len=*),  optional, intent(in)  :: label
-    FLOAT,             optional, intent(in)  :: theta !< cmplxscl
     integer,           optional, intent(in)  :: solver
     logical,           optional, intent(in)  :: verbose
     logical,           optional, intent(in)  :: force_serial
@@ -167,8 +165,6 @@ contains
     if(this%method /= POISSON_NULL) return ! already initialized
 
     PUSH_SUB(poisson_init)
-
-    this%theta = optional_default(theta, M_ZERO)
 
     if(optional_default(verbose,.true.)) then
       str = "Hartree"
@@ -284,8 +280,6 @@ contains
       end select
     end if
 
-    if(abs(this%theta) > M_EPSILON .and. der%mesh%sb%dim == 1) default_solver = POISSON_DIRECT_SUM
-
     if (this%is_dressed) default_solver = POISSON_DIRECT_SUM
 
     if(.not.present(solver)) then
@@ -293,7 +287,7 @@ contains
     else
       this%method = solver
     end if
-    if(.not.varinfo_valid_option('PoissonSolver', this%method)) call messages_input_error('PoissonSolver')
+    if(.not.varinfo_valid_option('PoissonSolver', this%method)) call messages_input_error(namespace, 'PoissonSolver')
     if(optional_default(verbose,.true.)) then
       select case(this%method)
       case (POISSON_DIRECT_SUM)
@@ -375,7 +369,7 @@ contains
       end select
 
       call parse_variable(namespace, 'PoissonFFTKernel', default_kernel, this%kernel)
-      if(.not.varinfo_valid_option('PoissonFFTKernel', this%kernel)) call messages_input_error('PoissonFFTKernel')
+      if(.not.varinfo_valid_option('PoissonFFTKernel', this%kernel)) call messages_input_error(namespace, 'PoissonFFTKernel')
 
       if(optional_default(verbose,.true.)) &
         call messages_print_var_option(stdout, "PoissonFFTKernel", this%kernel)
@@ -419,10 +413,6 @@ contains
             call messages_fatal(1)
           end if
         end select
-
-        if(abs(this%theta) > M_EPSILON .and. this%method /= POISSON_DIRECT_SUM) then
-          call messages_not_implemented('Complex scaled 1D soft Coulomb with Poisson solver other than direct_sum')
-        end if
 
         if(der%mesh%use_curvilinear .and. this%method /= POISSON_DIRECT_SUM) then
           message(1) = 'If curvilinear coordinates are used in 1D, then the only working'
@@ -615,7 +605,6 @@ contains
     ! Create the cube
     if (need_cube) then
       call cube_init(this%cube, box, der%mesh%sb, namespace, fft_type = fft_type, &
-                   verbose = optional_default(verbose,.true.), &
                      need_partition=.not.der%mesh%parallel_in_domains)
       if (this%cube%parallel_in_domains .and. this%method == POISSON_FFT) then
         call mesh_cube_parallel_map_init(this%mesh_cube_map, der%mesh, this%cube)
@@ -788,7 +777,6 @@ contains
     else
       call zpoisson_solve_real_and_imag_separately(this, pot, rho, all_nodes_value, kernel = kernel)
     end if
-    if(abs(this%theta) > M_EPSILON) pot = pot * exp(-M_zI * this%theta)
 
     POP_SUB(zpoisson_solve)
   end subroutine zpoisson_solve
@@ -965,7 +953,6 @@ contains
     PUSH_SUB(poisson_init_sm)
 
     this%is_dressed = .false.
-    this%theta = M_ZERO
 
     this%nslaves = 0
     this%der => der
@@ -993,8 +980,8 @@ contains
       !TODO: Add support for domain parrallelization
       ASSERT(.not. der%mesh%parallel_in_domains)
       call submesh_get_cube_dim(sm, box, der%dim)
-      call submesh_init_cube_map(sm, box, der%dim)
-      call cube_init(this%cube, box, der%mesh%sb, namespace, fft_type = FFT_NONE, verbose = .false., &
+      call submesh_init_cube_map(sm, der%dim)
+      call cube_init(this%cube, box, der%mesh%sb, namespace, fft_type = FFT_NONE, &
                      need_partition=.not.der%mesh%parallel_in_domains)
       call poisson_isf_init(this%isf_solver, namespace, der%mesh, this%cube, mpi_world%comm, init_world = this%all_nodes_default)
     end select
@@ -1357,7 +1344,7 @@ contains
         coulb%qq(1:sb%periodic_dim) = qq(1:sb%periodic_dim)
         !We must define the singularity if we specify a q vector and we do not use the short-range Coulomb potential
         coulb%singularity = optional_default(singul, M_ZERO)
-        call poisson_fft_get_kernel(this%fft_solver, namespace, this%der%mesh, this%cube, coulb, this%kernel, &
+        call poisson_fft_get_kernel(namespace, this%der%mesh, this%cube, coulb, this%kernel, &
           this%poisson_soft_coulomb_param)
       end if
     case default
