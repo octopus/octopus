@@ -220,12 +220,12 @@ subroutine X(eigensolver_rmmdiis) (namespace, gr, st, hm, pre, tol, niter, conve
           if(jter < iter - 1 .and. kter < iter - 1) then
             ! it was calculated on the previous iteration
             ! in parallel this was already reduced, so we set it to zero in non-root ranks
-            if(gr%mesh%parallel_in_domains .and. gr%mesh%mpi_grp%rank /= 0) mm(jter, kter, 1, 1:bsize) = CNST(0.0)
+            if(gr%mesh%parallel_in_domains .and. gr%mesh%mpi_grp%rank /= 0) mm(jter, kter, 1:2, 1:bsize) = CNST(0.0)
             cycle
           end if
 
           call X(mesh_batch_dotp_vector)(gr%mesh, resb(jter)%batch, resb(kter)%batch, mm(jter, kter, 1, :), reduce = .false.)
-
+          call X(mesh_batch_dotp_vector)(gr%mesh, psib(jter)%batch, psib(kter)%batch, mm(jter, kter, 2, :), reduce = .false.)
         end do
       end do
       call profiling_out(prof_iter)
@@ -233,19 +233,11 @@ subroutine X(eigensolver_rmmdiis) (namespace, gr, st, hm, pre, tol, niter, conve
       ! symmetrize
       do jter = 1, iter
         do kter = jter + 1, iter
-          mm(jter, kter, 1, 1:bsize) = R_CONJ(mm(kter, jter, 1, 1:bsize))
+          mm(jter, kter, 1:2, 1:bsize) = R_CONJ(mm(kter, jter, 1:2, 1:bsize))
         end do
       end do
 
       if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm, mm)
-
-      !Due to numerical errors, lapack sometimes finds the overlap matrix to not be
-      !definite positive. Here we impose it to be only ones, as this represent 
-      !what the numbers are, up to numerical precision.
-      mm(1:iter, 1:iter, 2, 1:bsize) = M_ONE
-      do jter = 1, iter
-        mm(jter,jter,2,1:bsize) = M_ONE + M_EPSILON
-      end do
 
       SAFE_ALLOCATE(evec(1:iter, 1:1, 1:bsize))
       SAFE_ALLOCATE(eval(1:iter, 1:bsize))
@@ -257,12 +249,27 @@ subroutine X(eigensolver_rmmdiis) (namespace, gr, st, hm, pre, tol, niter, conve
         call lalg_lowest_geneigensolve(1, iter, mm(:, :, 1, ii), mm(:, :, 2, ii), eval(:, ii),  &
                    evec(:, :, ii), preserve_mat=.true., bof = failed(ii), err_code = err)
         if( err < 0 .or. err > iter ) then
-          failed(ii) = .true.
-          last(ii) = iter - 1
+
+          !Due to numerical errors, lapack sometimes finds the overlap matrix to not be
+          !definite positive. Here we impose it to be only ones, as this represent 
+          !what the numbers are, up to numerical precision.
+          mm(1:iter, 1:iter, 2, 1:bsize) = M_ONE
+          do jter = 1, iter
+            mm(jter,jter,2,1:bsize) = M_ONE + M_EPSILON
+          end do
+
+          call lalg_lowest_geneigensolve(1, iter, mm(:, :, 1, ii), mm(:, :, 2, ii), eval(:, ii),  &
+                   evec(:, :, ii), preserve_mat=.true., bof = failed(ii), err_code = err)
+
+          !We should never fall into this case, as we impose B the be definite positive here
+          if(err < 0 .or. err > iter) then
+            failed(ii) = .true.
+            last(ii) = iter - 1
      
-          evec(1:iter - 1, 1, ii) = CNST(0.0)
-          evec(iter, 1, ii) = CNST(1.0)
-          cycle
+            evec(1:iter - 1, 1, ii) = CNST(0.0)
+            evec(iter, 1, ii) = CNST(1.0)
+            cycle
+          end if
         else !In this case we did not reach the tolerance
           failed(ii) = .false.
         end if
