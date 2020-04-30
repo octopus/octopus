@@ -773,7 +773,7 @@ contains
 
     PUSH_SUB(casida_type_end)
 
-    !ASSERT(allocated(cas%pair))
+    !SSERT(allocated(cas%pair))
     SAFE_DEALLOCATE_P(cas%pair)
     SAFE_DEALLOCATE_P(cas%index)
     if(cas%states_are_real) then
