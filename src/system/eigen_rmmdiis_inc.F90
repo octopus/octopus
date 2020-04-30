@@ -282,7 +282,7 @@ subroutine X(eigensolver_rmmdiis) (namespace, gr, st, hm, pre, tol, niter, conve
 
       call profiling_in(prof_lc, "RMMDIIS_LC")
 
-      !Here we contruct the linear combination of the states, see Eq. 68 
+      !Here we construct the linear combination of the states, see Eq. 68 
       call batch_scal(gr%mesh%np, evec(iter, 1, :), psib(iter)%batch, a_start = minst)
 
       do jj = 1, iter - 1
