@@ -110,7 +110,7 @@ contains
     SAFE_ALLOCATE(procmap(0:mpi_grp%size - 1))
     call MPI_Allgather(this%iam, 1, MPI_INTEGER, procmap(0), 1, MPI_INTEGER, comm, mpi_err)
 
-    !ASSERT(this%nprocs == mpi_grp%size)
+    !SSERT(this%nprocs == mpi_grp%size)
     ASSERT(this%iam == procmap(mpi_grp%rank))
 
     dims = 1

@@ -708,7 +708,7 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
 #ifdef HAVE_SCALAPACK
     ! add transpose of matrix to get full matrix
     SAFE_ALLOCATE(buffer_transpose(1:cas%nb_rows,1:cas%nb_cols))
-    buffer_transpose(1:cas%nb_rows,1:cas%nb_cols) = cas%X(mat)(1:cas%nb_rows,1:cas%nb_cols)
+    buffer_transpose(1:cas%nb_rows,1:cas%nb_cols) = matrix(1:cas%nb_rows,1:cas%nb_cols)
     ! set diagonal to zero and add transpose of buffer to matrix to get full matrix
     do jb_local = 1, cas%nb_rows
       jb = get_global_row(cas, jb_local)
@@ -990,6 +990,7 @@ subroutine X(casida_forces)(cas, sys, mesh, st)
         write(restart_filename,'(a,i6.6,a,i1)') 'lr_kernel_', iatom, '_', idir
         if(cas%triplet) restart_filename = trim(restart_filename)//'_triplet'
         
+        cas%kernel_saved = .false.
         call X(casida_get_matrix)(cas, sys%hm, st, sys%ks, mesh, cas%X(mat2), lr_fxc, restart_filename, &
           is_forces = .true.)
         cas%X(mat2) = cas%X(mat2) * casida_matrix_factor(cas, st)

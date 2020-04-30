@@ -927,6 +927,8 @@ contains
       SAFE_DEALLOCATE_P(cas%rho)
     end if
 
+    cas%kernel_saved = .false.
+
     POP_SUB(casida_work)
 
   contains
