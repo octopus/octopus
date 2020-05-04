@@ -1149,7 +1149,6 @@ contains
 
       parallelized_in_atoms = .true.
 
-      atom_rho = M_ZERO
       rho = M_ZERO
       do ia = geo%atoms_dist%start, geo%atoms_dist%end
         call lcao_atom_density(this, namespace, st, gr, sb, geo, ia, 2, atom_rho(1:gr%fine%mesh%np, 1:2))
