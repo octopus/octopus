@@ -30,6 +30,10 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
   logical :: use_blas, conj
   type(accel_mem_t) :: dot_buffer
   type(profile_t), save :: prof_copy, prof_gemmcl, prof, profgemm
+  integer :: wgsize, sqrt_wgsize
+  integer :: local_sizes(3)
+  integer :: global_sizes(3)
+
   logical :: reduce_
   type(profile_t), save :: profcomm
   
@@ -137,28 +141,83 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
   case(BATCH_DEVICE_PACKED)
     ASSERT(.not. mesh%use_curvilinear)
 
-    call accel_create_buffer(dot_buffer, ACCEL_MEM_WRITE_ONLY, R_TYPE_VAL, aa%nst*bb%nst)
+    if(aa%dim==1) then
+ 
+      call accel_create_buffer(dot_buffer, ACCEL_MEM_WRITE_ONLY, R_TYPE_VAL, aa%nst*bb%nst)
 
-    call profiling_in(prof_gemmcl, "DOTP_BATCH_CL_GEMM")
-    
-    call X(accel_gemm)(transA = CUBLAS_OP_N, transB = CUBLAS_OP_T, &
-      M = int(aa%nst, 8), N = int(bb%nst, 8), K = int(mesh%np, 8), alpha = R_TOTYPE(M_ONE), &
-      A = aa%ff_device, offA = 0_8, lda = int(aa%pack_size(1), 8), &
-      B = bb%ff_device, offB = 0_8, ldb = int(bb%pack_size(1), 8), beta = R_TOTYPE(M_ZERO), &
-      C = dot_buffer, offC = 0_8, ldc = int(aa%nst, 8))
+      call profiling_in(prof_gemmcl, "DOTP_BATCH_CL_GEMM")
+      
+      call X(accel_gemm)(transA = CUBLAS_OP_N, transB = CUBLAS_OP_T, &
+        M = int(aa%nst, 8), N = int(bb%nst, 8), K = int(mesh%np, 8), alpha = R_TOTYPE(M_ONE), &
+        A = aa%ff_device, offA = 0_8, lda = int(aa%pack_size(1), 8), &
+        B = bb%ff_device, offB = 0_8, ldb = int(bb%pack_size(1), 8), beta = R_TOTYPE(M_ZERO), &
+        C = dot_buffer, offC = 0_8, ldc = int(aa%nst, 8))
+  
+      call profiling_count_operations(TOFLOAT(mesh%np)*aa%nst*bb%nst*(R_ADD + R_MUL))
+  
+      call accel_finish()
+      call profiling_out(prof_gemmcl)
+  
+      call profiling_in(prof_copy, 'DOTP_BATCH_COPY')
+      call accel_read_buffer(dot_buffer, aa%nst*bb%nst, dd)
+      call profiling_count_transfers(aa%nst*bb%nst, dd(1, 1))
+      call accel_finish()
+      call profiling_out(prof_copy)
+  
+      call accel_release_buffer(dot_buffer)
 
-    call profiling_count_operations(TOFLOAT(mesh%np)*aa%nst*bb%nst*(R_ADD + R_MUL))
+      write(message(1),'(a)') 'mesh_batch_dotp_matrix: finished reading dot_buffer.'
+      call messages_info(1)
 
-    call accel_finish()
-    call profiling_out(prof_gemmcl)
+    else
 
-    call profiling_in(prof_copy, 'DOTP_BATCH_COPY')
-    call accel_read_buffer(dot_buffer, aa%nst*bb%nst, dd)
-    call profiling_count_transfers(aa%nst*bb%nst, dd(1, 1))
-    call accel_finish()
-    call profiling_out(prof_copy)
+      ASSERT(R_TYPE_VAL == TYPE_CMPLX)
 
-    call accel_release_buffer(dot_buffer)
+      call accel_create_buffer(dot_buffer, ACCEL_MEM_WRITE_ONLY, R_TYPE_VAL, aa%nst*bb%nst)
+
+      wgsize = accel_kernel_workgroup_size(zkernel_dot_matrix_spinors)
+      sqrt_wgsize = int(sqrt(M_ONE * wgsize))
+
+      write(message(1), '(a,2I6)') "kernel wgsize = ",wgsize, sqrt_wgsize
+      call messages_info(1)
+
+      global_sizes = (/ pad(aa%nst, sqrt_wgsize),  pad(bb%nst, sqrt_wgsize), 1 /)
+      local_sizes  = (/ sqrt_wgsize,               sqrt_wgsize, 1 /)
+     
+      ASSERT(accel_buffer_is_allocated(aa%ff_device))
+      ASSERT(accel_buffer_is_allocated(bb%ff_device))
+      ASSERT(accel_buffer_is_allocated(dot_buffer))
+
+      call profiling_in(prof_gemmcl, "DOTP_BATCH_CL_KERNEL")
+
+      call accel_set_kernel_arg(zkernel_dot_matrix_spinors, 0, mesh%np)
+      call accel_set_kernel_arg(zkernel_dot_matrix_spinors, 1, aa%nst)
+      call accel_set_kernel_arg(zkernel_dot_matrix_spinors, 2, bb%nst)
+      call accel_set_kernel_arg(zkernel_dot_matrix_spinors, 3, aa%ff_device)
+      call accel_set_kernel_arg(zkernel_dot_matrix_spinors, 4, log2(aa%pack_size(1)))
+      call accel_set_kernel_arg(zkernel_dot_matrix_spinors, 5, bb%ff_device)
+      call accel_set_kernel_arg(zkernel_dot_matrix_spinors, 6, log2(bb%pack_size(1)))
+      call accel_set_kernel_arg(zkernel_dot_matrix_spinors, 7, dot_buffer)
+      call accel_set_kernel_arg(zkernel_dot_matrix_spinors, 8, aa%nst)
+
+
+      call accel_kernel_run(zkernel_dot_matrix_spinors, global_sizes, local_sizes)
+  
+      call accel_finish()
+      call profiling_count_operations(TOFLOAT(aa%nst*bb%nst*(mesh%np*(R_ADD + R_MUL)) + R_ADD )) ! check !!
+
+
+      call profiling_out(prof_gemmcl)
+  
+      call profiling_in(prof_copy, 'DOTP_BATCH_COPY')
+      call accel_read_buffer(dot_buffer, aa%nst*bb%nst, dd)
+      call profiling_count_transfers(aa%nst*bb%nst, dd(1, 1))
+      call accel_finish()
+      call profiling_out(prof_copy)
+  
+      call accel_release_buffer(dot_buffer)
+
+    end if
 
     do ist = 1, aa%nst
       do jst = 1, bb%nst
@@ -310,7 +369,7 @@ subroutine X(mesh_batch_dotp_self)(mesh, aa, dot, reduce)
   end if
 
   do jst = 1, aa%nst
-    do ist = 1, aa%nst
+    do ist = jst, aa%nst
       dot(aa%ist(ist), aa%ist(jst)) = dd(ist, jst)
       dot(aa%ist(jst), aa%ist(ist)) = R_CONJ(dd(ist, jst))
     end do

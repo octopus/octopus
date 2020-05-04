@@ -28,8 +28,8 @@ jradius = r_s * (N_electrons)^(1.0/3.0)
 "jellium" | 0 | 0 | 0
 %
 
-StatesPack = no
-Output = wfs
-OutputFormat = plane_x + plane_y + plane_z + axis_x
+StatesBlockSize = 4
+SpinComponents = spinors
+StatesPack = yes
 
 Debug = info + trace_file
