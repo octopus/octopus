@@ -2134,6 +2134,7 @@ print *, ifc, this%srfcnrml(:, isp)
     
     end if
     
+    print *, "tabulation done"
     
     POP_SUB(pes_flux_integrate_cub_tabulate_direct_a)  
           
