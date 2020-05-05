@@ -255,14 +255,14 @@ contains
       hm%dim = 2*hm%dim
     end if
 
-    !%Variable MaxwellExternalCurrent
+    !%Variable ExternalCurrent
     !%Type logical
     !%Default no
     !%Section Hamiltonian
     !%Description
-    !% Description follows
+    !% If an external current density will be used.
     !%End
-    call parse_variable(namespace, 'MaxwellExternalCurrent', .false., hm%current_density_ext_flag)
+    call parse_variable(namespace, 'ExternalCurrent', .false., hm%current_density_ext_flag)
 
     hm%plane_waves_apply = .false.
     hm%spatial_constant_apply = .false.
@@ -271,12 +271,12 @@ contains
 
     !%Variable MaxwellMediumCalculation
     !%Type integer
-    !%Default current
+    !%Default RS
     !%Section Hamiltonian
     !%Description
-    !% The Maxwell Operator e.g. the curl operation can be obtained by
-    !% two different methods, the finid-difference or the fast fourier
-    !% transform.
+    !% For linear media the calculation of the Maxwell Operator acting on the RS state can be done
+    !% directly using the Riemann-Silberstein representation or by calculating the curl of the 
+    !% electric and magnetic fields.
     !%Option RS 1
     !% Medium calculation directly via Hamiltonian
     !%Option EM 2
@@ -438,9 +438,9 @@ contains
       endif
     end if
 
-    call psib%copy_data_to(der%mesh%np_part, hpsib)
+    call psib%copy_data_to(der%mesh%np, hpsib)
     call zderivatives_batch_curl(der, hpsib)
-    call batch_scal(der%mesh%np_part, hm%rs_sign * P_c, hpsib)
+    call batch_scal(der%mesh%np, hm%rs_sign * P_c, hpsib)
   
     call profiling_out(prof_hamiltonian_mxll)
     POP_SUB(hamiltonian_mxll_apply_batch)
@@ -479,8 +479,6 @@ contains
 
     PUSH_SUB(zhamiltonian_mxll_apply)
 
-    call profiling_in(prof_hamiltonian_mxll, "MAXWELLHAMILTONIAN")
-
     if (hm%operator == FARADAY_AMPERE .and. &
          all(hm%bc%bc_ab_type(:) /= OPTION__MAXWELLABSORBINGBOUNDARIES__CPML)) then
       ! This part is already batchified
@@ -488,21 +486,19 @@ contains
 
     else
       ! This part uses the old non-batch implementation
-      SAFE_ALLOCATE(rs_aux_in(1:mesh%np_part, 1:3))
-      SAFE_ALLOCATE(rs_aux_out(1:mesh%np_part, 1:3))
+      SAFE_ALLOCATE(rs_aux_in(1:hm%der%mesh%np_part, 1:3))
+      SAFE_ALLOCATE(rs_aux_out(1:hm%der%mesh%np_part, 1:3))
       do ii = 1, 3
-         call batch_get_state(psib, ii, mesh%np_part, rs_aux_in(:, ii))
+        call batch_get_state(psib, ii, hm%der%mesh%np_part, rs_aux_in(:, ii))
       end do
       call maxwell_hamiltonian_apply_fd(hm, hm%der, rs_aux_in, rs_aux_out)
       do ii = 1, 3
-         call batch_set_state(hpsib, ii, mesh%np_part, rs_aux_out(:, ii))
+        call batch_set_state(hpsib, ii, hm%der%mesh%np_part, rs_aux_out(:, ii))
       end do
       SAFE_DEALLOCATE_A(rs_aux_in)
       SAFE_DEALLOCATE_A(rs_aux_out)
       
     end if
-
-    call profiling_out(prof_hamiltonian_mxll)
 
     POP_SUB(zhamiltonian_mxll_apply)
   end subroutine zhamiltonian_mxll_apply
