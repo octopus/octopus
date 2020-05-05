@@ -41,6 +41,7 @@ module test_oct_m
   use namespace_oct_m
   use orbitalbasis_oct_m
   use orbitalset_oct_m
+  use output_oct_m
   use parser_oct_m
   use poisson_oct_m
   use profiling_oct_m
@@ -116,9 +117,10 @@ contains
     !% Tests the subspace diagonalization
     !%Option batch_ops 13
     !% Tests the batch operations
-    !%Calculation of the density.
     !%Option clock 18
     !% Tests for clock
+    !%Option output_test 20
+    !% Tests wave function output
     !%End
     call parse_variable(namespace, 'TestMode', OPTION__TESTMODE__HARTREE, test_mode)
 
@@ -219,12 +221,49 @@ contains
       call test_subspace_diagonalization(param, namespace)
     case(OPTION__TESTMODE__BATCH_OPS)
       call test_batch_ops(param, namespace)
+    case(OPTION__TESTMODE__OUTPUT_TEST)
+      call test_output(param, namespace)
     case(OPTION__TESTMODE__CLOCK)
       call test_clock()
     end select
 
     POP_SUB(test_run)
   end subroutine test_run
+
+  ! ---------------------------------------------------------
+  subroutine test_output(param, namespace)
+    type(test_parameters_t), intent(in) :: param
+    type(namespace_t),       intent(in) :: namespace
+
+    type(system_t), pointer :: sys
+    integer :: itime, ops, ops_default, ist, jst, nst
+    type(wfs_elec_t) :: xx, yy
+
+    PUSH_SUB(test_output)
+
+    call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
+
+    call messages_write('Info: Testing wave function output')
+    call messages_new_line()
+    call messages_new_line()
+    call messages_info()
+
+    sys => system_init(namespace)
+
+    call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
+    call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
+    if(sys%st%d%pack_states) call sys%st%pack()
+
+    call output_states(sys%outp, namespace, ".", sys%st, sys%gr, sys%geo, sys%hm)
+
+
+    call states_elec_deallocate_wfns(sys%st)
+    SAFE_DEALLOCATE_P(sys)
+
+    POP_SUB(test_output)
+
+  end subroutine test_output
+
 
   ! ---------------------------------------------------------
   subroutine test_hartree(param, namespace)
