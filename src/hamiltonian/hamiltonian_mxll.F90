@@ -479,8 +479,7 @@ contains
 
     PUSH_SUB(zhamiltonian_mxll_apply)
 
-    if (hm%operator == FARADAY_AMPERE .and. &
-         all(hm%bc%bc_ab_type(:) /= OPTION__MAXWELLABSORBINGBOUNDARIES__CPML)) then
+    if (hm%operator == FARADAY_AMPERE .and. all(hm%bc%bc_ab_type(:) /= MXLL_AB_CPML)) then
       ! This part is already batchified
       call hamiltonian_mxll_apply_batch(hm, namespace, hm%der, psib, hpsib)
 
@@ -524,10 +523,12 @@ contains
     rs_sign = hm%rs_sign
 
 
-    !===========================================================================================================
+    select case (hm%operator)
+
+    !=================================================================================================
     ! Maxwell Hamiltonian - Hamiltonian operation in vacuum via partial derivatives:
 
-    if (hm%operator == FARADAY_AMPERE) then
+    case (FARADAY_AMPERE)
 
       SAFE_ALLOCATE(tmp(np_part,2))
       oppsi       = M_z0
@@ -537,7 +538,7 @@ contains
         kappa_psi => hm%st%kappa_psi 
       end if
 
-      !----------------------------------------------------------------------------------------------------------
+      !-----------------------------------------------------------------------------------------------
       ! Riemann-Silberstein vector component 1 calculation:
       tmp = M_z0
       call zderivatives_partial(der, psi(:,3), tmp(:,1), 2, set_bc = .false.)
@@ -547,7 +548,7 @@ contains
       call maxwell_pml_hamiltonian(hm, der, psi, 3, 2, tmp(:,2))
       oppsi(1:np_part,1) = ( tmp(1:np_part,1)-tmp(1:np_part,2) )
 
-      !----------------------------------------------------------------------------------------------------------------------------
+      !-----------------------------------------------------------------------------------------------
       ! Riemann-Silberstein vector component 2 calculation:
       tmp = M_z0
       call zderivatives_partial(der, psi(:,1), tmp(:,1), 3, set_bc = .false.)
@@ -557,7 +558,7 @@ contains
       call maxwell_pml_hamiltonian(hm, der, psi, 1, 3, tmp(:,2))
       oppsi(1:np_part,2) = ( tmp(1:np_part,1)-tmp(1:np_part,2) )
 
-      !----------------------------------------------------------------------------------------------------------------------------
+      !-----------------------------------------------------------------------------------------------
       ! Riemann-Silberstein vector component 3 calculation:
       tmp = M_z0
       call zderivatives_partial(der, psi(:,2), tmp(:,1), 1, set_bc = .false.)
@@ -577,15 +578,15 @@ contains
       SAFE_DEALLOCATE_A(tmp)
 
 
-    !==============================================================================================================================
+    !=================================================================================================
     ! Maxwell Hamiltonian - Hamiltonian operation in medium via partial derivatives:
 
-    else if (hm%operator == FARADAY_AMPERE_MEDIUM) then
+    case (FARADAY_AMPERE_MEDIUM)
 
       SAFE_ALLOCATE(tmp(np_part,4))
       oppsi       = M_z0
 
-      !----------------------------------------------------------------------------------------------------------------------------
+      !-----------------------------------------------------------------------------------------------
       ! Riemann-Silberstein vector component 1 calculation:
       tmp = M_z0
       call zderivatives_partial(der, psi(:,3), tmp(:,1), 2, set_bc = .false.)
@@ -598,7 +599,7 @@ contains
       oppsi(1:np_part,1) =   ( tmp(1:np_part,1)-tmp(1:np_part,3) )
       oppsi(1:np_part,4) = - ( tmp(1:np_part,2)-tmp(1:np_part,4) )
 
-      !----------------------------------------------------------------------------------------------------------------------------
+      !-----------------------------------------------------------------------------------------------
       ! Riemann-Silberstein vector component 2 calculation:
       tmp = M_z0
       call zderivatives_partial(der, psi(:,1), tmp(:,1), 3, set_bc = .false.)
@@ -611,7 +612,7 @@ contains
       oppsi(1:np_part,2) =   ( tmp(1:np_part,1)-tmp(1:np_part,3) )
       oppsi(1:np_part,5) = - ( tmp(1:np_part,2)-tmp(1:np_part,4) )
 
-      !----------------------------------------------------------------------------------------------------------------------------
+      !-----------------------------------------------------------------------------------------------
       ! Riemann-Silberstein vector component 3 calculation:
       tmp = M_z0
       call zderivatives_partial(der, psi(:,2), tmp(:,1), 1, set_bc = .false.)
@@ -627,19 +628,19 @@ contains
 
       SAFE_DEALLOCATE_A(tmp)
 
-      !----------------------------------------------------------------------------------------------------------------------------
+      !-----------------------------------------------------------------------------------------------
       ! Riemann-Silberstein vector calculation if medium boundaries is set:
       call maxwell_medium_boundaries_calculation(hm, psi, oppsi)
 
-      !----------------------------------------------------------------------------------------------------------------------------
+      !-----------------------------------------------------------------------------------------------
       ! Riemann-Silberstein vector calculation for medium boxes:
       call maxwell_medium_boxes_calculation(hm, der, psi, oppsi)
 
 
-    !==============================================================================================================================
+    !=================================================================================================
     ! Maxwell Hamiltonian - Hamiltonian operation in vacuum with Gauss condition via partial derivatives:
 
-    else if (hm%operator == FARADAY_AMPERE_GAUSS) then
+    case (FARADAY_AMPERE_GAUSS)
 
       SAFE_ALLOCATE(tmp(np_part,3))
       oppsi       = M_z0
@@ -668,10 +669,10 @@ contains
       SAFE_DEALLOCATE_A(tmp)
 
 
-    !==============================================================================================================================
+    !=================================================================================================
     ! Maxwell Hamiltonian - Hamiltonian operation in medium with Gauss condition via partial derivatives:
 
-    else if (hm%operator == FARADAY_AMPERE_GAUSS_MEDIUM) then
+    case (FARADAY_AMPERE_GAUSS_MEDIUM)
 
       SAFE_ALLOCATE(tmp(np_part,3))
       oppsi       = M_z0
@@ -719,12 +720,13 @@ contains
 
       SAFE_DEALLOCATE_A(tmp)
 
-    end if
+    end select
 
     POP_SUB(maxwell_hamiltonian_apply_fd)
   end subroutine maxwell_hamiltonian_apply_fd
 
 
+  ! ---------------------------------------------------------
   !> Maxwell Hamiltonian is updated for the PML calculation
   subroutine maxwell_pml_hamiltonian(hm, der, psi, dir1, dir2, tmp)
     type(hamiltonian_mxll_t), intent(in)    :: hm
@@ -736,8 +738,7 @@ contains
 
     PUSH_SUB(maxwell_pml_hamiltonian)
 
-    if ( (hm%bc%bc_ab_type(dir1) == OPTION__MAXWELLABSORBINGBOUNDARIES__CPML) .and. &
-          hm%cpml_hamiltonian ) then
+    if ( (hm%bc%bc_ab_type(dir1) == MXLL_AB_CPML) .and. hm%cpml_hamiltonian ) then
       if (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RS) then
         call maxwell_pml_calculation_via_riemann_silberstein(hm, der, psi, dir1, dir2, tmp(:))
       end if
@@ -758,8 +759,7 @@ contains
 
     PUSH_SUB(maxwell_pml_hamiltonian_medium)
 
-    if ( (hm%bc%bc_ab_type(dir1) == OPTION__MAXWELLABSORBINGBOUNDARIES__CPML) .and. &
-          hm%cpml_hamiltonian ) then
+    if ( (hm%bc%bc_ab_type(dir1) == MXLL_AB_CPML) .and. hm%cpml_hamiltonian ) then
       if (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RS) then
         call maxwell_pml_calculation_via_riemann_silberstein_medium(hm, der, psi, dir1, dir2, tmp(:,:))
 !      else if (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__EM) then
@@ -1050,6 +1050,8 @@ contains
 
     CMPLX, allocatable :: ztmp(:), tmp_poisson(:)        
 
+    PUSH_SUB(maxwell_helmholtz_decomposition_long_field)
+
     SAFE_ALLOCATE(ztmp(1:gr%mesh%np_part))
     SAFE_ALLOCATE(tmp_poisson(1:gr%mesh%np_part))
 
@@ -1065,6 +1067,8 @@ contains
     SAFE_DEALLOCATE_A(ztmp)
     SAFE_DEALLOCATE_A(tmp_poisson)
 
+    POP_SUB(maxwell_helmholtz_decomposition_long_field)
+
   end subroutine maxwell_helmholtz_decomposition_long_field
 
   ! ---------------------------------------------------------
@@ -1078,7 +1082,7 @@ contains
     FLOAT,                       intent(in)    :: vmagnus(:, :, :)
     logical,           optional, intent(in)    :: set_phase
 
-    write(message(1),'(a)') 'hamiltonian_mxll_magnus_apply not implemeted'
+    write(message(1),'(a)') 'dhamiltonian_mxll_magnus_apply not implemeted'
     call messages_fatal(1, namespace=namespace)
 
   end subroutine dhamiltonian_mxll_magnus_apply
@@ -1094,7 +1098,7 @@ contains
     FLOAT,                       intent(in)    :: vmagnus(:, :, :)
     logical,           optional, intent(in)    :: set_phase
 
-    write(message(1),'(a)') 'hamiltonian_mxll_magnus_apply not implemeted'
+    write(message(1),'(a)') 'zhamiltonian_mxll_magnus_apply not implemeted'
     call messages_fatal(1, namespace=namespace)
 
   end subroutine zhamiltonian_mxll_magnus_apply
