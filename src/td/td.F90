@@ -735,13 +735,14 @@ contains
       call hamiltonian_mxll_update(sys%hm, time = td%iter*td%dt)
 
       ! calculate Maxwell energy density
-      call energy_density_calc(sys%gr, sys%st, sys%st%rs_state, sys%hm%energy_density(:), sys%hm%e_energy_density(:), &
-        sys%hm%b_energy_density(:), sys%hm%plane_waves, sys%st%rs_state_plane_waves, sys%hm%energy_density_plane_waves(:))
+      call energy_density_calc(sys%gr, sys%st, sys%st%rs_state, sys%hm%energy%energy_density(:), &
+           sys%hm%energy%e_energy_density(:), sys%hm%energy%b_energy_density(:), sys%hm%plane_waves, &
+           sys%st%rs_state_plane_waves, sys%hm%energy%energy_density_plane_waves(:))
 
       ! calculate Maxwell energy
       call energy_mxll_calc(sys%gr, sys%st, sys%hm, sys%st%rs_state, &
-        sys%hm%energy, sys%hm%e_energy, sys%hm%b_energy, sys%hm%energy_boundaries, &
-        sys%st%rs_state_plane_waves, sys%hm%energy_plane_waves)
+           sys%hm%energy%energy, sys%hm%energy%e_energy, sys%hm%energy%b_energy, &
+           sys%hm%energy%boundaries, sys%st%rs_state_plane_waves, sys%hm%energy%energy_plane_waves)
 
       sys%st%rs_state_trans(:,:) = sys%st%rs_state
 
@@ -767,7 +768,7 @@ contains
 
       write(message(1), '(i8,1x,f13.6,2x,f16.6,6x,f13.6)') 0,                  &
         units_from_atomic(units_out%time, M_ZERO),                         &
-        units_from_atomic(units_out%energy, sys%hm%energy),    &
+        units_from_atomic(units_out%energy, sys%hm%energy%energy),    &
         M_ZERO
       call messages_info(1)
 
@@ -801,13 +802,14 @@ contains
         sys%st%rs_state_trans(:,:) = sys%st%rs_state
 
         ! calculate Maxwell energy density
-        call energy_density_calc(sys%gr, sys%st, sys%st%rs_state, sys%hm%energy_density, sys%hm%e_energy_density, &
-          sys%hm%b_energy_density, sys%hm%plane_waves, sys%st%rs_state_plane_waves, &
-          sys%hm%energy_density_plane_waves(:))
+        call energy_density_calc(sys%gr, sys%st, sys%st%rs_state, sys%hm%energy%energy_density,&
+             sys%hm%energy%e_energy_density, sys%hm%energy%b_energy_density, sys%hm%plane_waves,&
+             sys%st%rs_state_plane_waves, sys%hm%energy%energy_density_plane_waves(:))
 
         ! calculate Maxwell energy
-        call energy_mxll_calc(sys%gr, sys%st, sys%hm, sys%st%rs_state, sys%hm%energy, sys%hm%e_energy, sys%hm%b_energy,&
-          sys%hm%energy_boundaries, sys%st%rs_state_plane_waves, sys%hm%energy_plane_waves)
+        call energy_mxll_calc(sys%gr, sys%st, sys%hm, sys%st%rs_state, sys%hm%energy%energy,&
+             sys%hm%energy%e_energy, sys%hm%energy%b_energy, sys%hm%energy%boundaries, &
+             sys%st%rs_state_plane_waves, sys%hm%energy%energy_plane_waves)
 
 
         ! calculate Maxwell energy rate -- not necessary
@@ -819,7 +821,7 @@ contains
 
         write(message(1), '(i8,1x,f13.6,2x,f16.6,6x,f13.6)') iter,           &
           units_from_atomic(units_out%time, iter*td%dt),                     &
-          units_from_atomic(units_out%energy, sys%hm%energy),    &
+          units_from_atomic(units_out%energy, sys%hm%energy%energy),    &
           loct_clock() - etime
         call messages_info(1)
         etime = loct_clock()

@@ -23,6 +23,7 @@ module hamiltonian_mxll_oct_m
   use batch_ops_oct_m
   use cube_oct_m
   use derivatives_oct_m
+  use energy_mxll_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_abst_oct_m
@@ -142,25 +143,8 @@ module hamiltonian_mxll_oct_m
     !> maxwell hamiltonian_mxll
     integer                        :: operator
     logical                        :: current_density_ext_flag
-    FLOAT                          :: energy
-    FLOAT                          :: energy_boundaries
-    FLOAT                          :: e_energy
-    FLOAT                          :: b_energy
-    FLOAT                          :: energy_plane_waves
-    FLOAT                          :: e_energy_plane_waves
-    FLOAT                          :: b_energy_plane_waves
 
-    FLOAT                          :: energy_pml
-    FLOAT                          :: energy_mask
-    FLOAT, pointer                 :: energy_density(:)
-    FLOAT, pointer                 :: energy_density_plane_waves(:)
-    FLOAT, pointer                 :: e_energy_density(:)
-    FLOAT, pointer                 :: b_energy_density(:)
-    FLOAT                          :: energy_trans
-    FLOAT                          :: energy_long
-    FLOAT                          :: e_energy_trans
-    FLOAT                          :: b_energy_trans
-    FLOAT                          :: energy_incident_waves
+    type(energy_mxll_t)            :: energy
 
     logical                        :: cpml_hamiltonian = .false.
 
@@ -199,9 +183,7 @@ contains
     
     hm%current_density_ext_flag = .false.
 
-    nullify(hm%energy_density)
-    nullify(hm%e_energy_density)
-    nullify(hm%b_energy_density)
+    call energy_mxll_nullify(hm%energy)
 
     POP_SUB(hamiltonian_mxll_null)
   end subroutine hamiltonian_mxll_null
@@ -233,15 +215,15 @@ contains
     hm%rs_sign = st%rs_sign
 
     SAFE_ALLOCATE(hm%vector_potential(1:gr%mesh%np_part,1:st%dim))
-    SAFE_ALLOCATE(hm%energy_density(1:gr%mesh%np_part))
-    SAFE_ALLOCATE(hm%energy_density_plane_waves(1:gr%mesh%np_part))
-    SAFE_ALLOCATE(hm%e_energy_density(1:gr%mesh%np_part))
-    SAFE_ALLOCATE(hm%b_energy_density(1:gr%mesh%np_part))
+    SAFE_ALLOCATE(hm%energy%energy_density(1:gr%mesh%np_part))
+    SAFE_ALLOCATE(hm%energy%energy_density_plane_waves(1:gr%mesh%np_part))
+    SAFE_ALLOCATE(hm%energy%e_energy_density(1:gr%mesh%np_part))
+    SAFE_ALLOCATE(hm%energy%b_energy_density(1:gr%mesh%np_part))
 
     hm%vector_potential = M_ZERO
-    hm%energy_density = M_ZERO
-    hm%e_energy_density = M_ZERO
-    hm%b_energy_density = M_ZERO
+    hm%energy%energy_density = M_ZERO
+    hm%energy%e_energy_density = M_ZERO
+    hm%energy%b_energy_density = M_ZERO
 
     hm%mx_ma_coupling_apply = .false.
     hm%mx_ma_coupling  = .false.
@@ -250,7 +232,7 @@ contains
 
     !%Variable HamiltonianOperator
     !%Type integer
-    !%Default riemann_silberstein
+    !%Default faraday_ampere
     !%Section Hamiltonian
     !%Description
     !% With this variable the the Maxwell Hamiltonian operator can be selected
@@ -330,10 +312,10 @@ contains
     nullify(hm%operators)
 
     SAFE_DEALLOCATE_P(hm%vector_potential)
-    SAFE_DEALLOCATE_P(hm%energy_density)
-    SAFE_DEALLOCATE_P(hm%energy_density_plane_waves)
-    SAFE_DEALLOCATE_P(hm%e_energy_density)
-    SAFE_DEALLOCATE_P(hm%b_energy_density)
+    SAFE_DEALLOCATE_P(hm%energy%energy_density)
+    SAFE_DEALLOCATE_P(hm%energy%energy_density_plane_waves)
+    SAFE_DEALLOCATE_P(hm%energy%e_energy_density)
+    SAFE_DEALLOCATE_P(hm%energy%b_energy_density)
 
     call bc_mxll_end(hm%bc)
 

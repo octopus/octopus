@@ -277,8 +277,8 @@
 
     ! Maxell energy density
     if (iand(outp%what, OPTION__MAXWELLOUTPUT__MAXWELL_ENERGY_DENSITY) /= 0) then
-      call dio_function_output(outp%how, dir, "maxwell_energy_density", namespace, gr%mesh, hm%energy_density(:), &
-        units_out%energy/units_out%length**3, ierr, geo = geo)
+       call dio_function_output(outp%how, dir, "maxwell_energy_density", namespace, gr%mesh,&
+            hm%energy%energy_density(:), units_out%energy/units_out%length**3, ierr, geo = geo)
     end if
 
     POP_SUB(output_energy_density_mxll)

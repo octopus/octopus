@@ -3476,15 +3476,15 @@ contains
     end if
 
     call write_iter_start(out_maxwell_energy)
-    call write_iter_double(out_maxwell_energy, units_from_atomic(units_out%energy, hm%energy), 1)
-    call write_iter_double(out_maxwell_energy, units_from_atomic(units_out%energy, hm%e_energy), 1)
-    call write_iter_double(out_maxwell_energy, units_from_atomic(units_out%energy, hm%b_energy), 1)
+    call write_iter_double(out_maxwell_energy, units_from_atomic(units_out%energy, hm%energy%energy), 1)
+    call write_iter_double(out_maxwell_energy, units_from_atomic(units_out%energy, hm%energy%e_energy), 1)
+    call write_iter_double(out_maxwell_energy, units_from_atomic(units_out%energy, hm%energy%b_energy), 1)
     call write_iter_double(out_maxwell_energy, units_from_atomic(units_out%energy, &
-                           hm%energy+hm%energy_boundaries), 1)
-    call write_iter_double(out_maxwell_energy, units_from_atomic(units_out%energy, hm%energy_boundaries), 1)
-    call write_iter_double(out_maxwell_energy, units_from_atomic(units_out%energy, hm%energy_trans), 1)
-    call write_iter_double(out_maxwell_energy, units_from_atomic(units_out%energy, hm%energy_long), 1)
-    call write_iter_double(out_maxwell_energy, units_from_atomic(units_out%energy, hm%energy_plane_waves), 1)
+         hm%energy%energy+hm%energy%boundaries), 1)
+    call write_iter_double(out_maxwell_energy, units_from_atomic(units_out%energy, hm%energy%boundaries), 1)
+    call write_iter_double(out_maxwell_energy, units_from_atomic(units_out%energy, hm%energy%energy_trans), 1)
+    call write_iter_double(out_maxwell_energy, units_from_atomic(units_out%energy, hm%energy%energy_long), 1)
+    call write_iter_double(out_maxwell_energy, units_from_atomic(units_out%energy, hm%energy%energy_plane_waves), 1)
     call write_iter_nl(out_maxwell_energy)
 
     POP_SUB(td_write_maxwell_energy)

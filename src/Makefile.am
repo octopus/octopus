@@ -423,6 +423,7 @@ hamiltonian_f_srcs =                                 \
 	hamiltonian/born_charges.F90                 \
 	hamiltonian/boundary_op.F90                  \
 	hamiltonian/energy.F90                       \
+	hamiltonian/energy_mxll.F90                  \
 	hamiltonian/epot.F90                         \
         hamiltonian/exchange_operator.F90            \
 	hamiltonian/functionals.F90                  \
