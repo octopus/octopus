@@ -368,8 +368,8 @@ subroutine X(mesh_batch_dotp_self)(mesh, aa, dot, reduce)
     call profiling_out(profcomm)
   end if
 
-  do jst = 1, aa%nst
-    do ist = jst, aa%nst
+  do ist = 1, aa%nst
+    do jst = 1, ist
       dot(aa%ist(ist), aa%ist(jst)) = dd(ist, jst)
       dot(aa%ist(jst), aa%ist(ist)) = R_CONJ(dd(ist, jst))
     end do

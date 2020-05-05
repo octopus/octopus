@@ -832,20 +832,20 @@ contains
 
         do ist = 1, nst
           do jst = 1, nst
-            write(message(jst+nst*(ist-1)), '(a,2i3,3x,e13.6)') 'Dotp_self states', ist, jst, ddot(ist,jst)
+            write(message(jst), '(a,2i3,3x,e13.6)') 'Dotp_self states', ist, jst, ddot(ist,jst)
           end do
+          call messages_info(nst*nst)
         end do
-        call messages_info(nst*nst)
         SAFE_DEALLOCATE_A(ddot)
       else
         SAFE_ALLOCATE(zdot(nst, nst))
         call zmesh_batch_dotp_self(sys%gr%mesh, xx, zdot)
         do ist = 1, nst
           do jst = 1, nst
-            write(message(jst+nst*(ist-1)), '(a,2i3,3x,2e14.6)') 'Dotp_self states', ist, jst, zdot(ist,jst)
+            write(message(jst), '(a,2i3,3x,2e14.6)') 'Dotp_self states', ist, jst, zdot(ist,jst)
           end do
+          call messages_info(nst*nst)
         end do
-        call messages_info(nst*nst)
         SAFE_DEALLOCATE_A(zdot)
       end if
   
