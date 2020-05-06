@@ -48,6 +48,7 @@ module run_oct_m
   use restart_oct_m
   use static_pol_oct_m
   use system_abst_oct_m
+  use system_factory_oct_m
   use system_oct_m
   use td_oct_m
   use test_oct_m
@@ -131,6 +132,7 @@ contains
 
     type(linked_list_t) :: systems
     type(system_t), pointer :: sys
+    type(system_factory_t) :: factory
     type(profile_t), save :: calc_mode_prof
     logical :: fromScratch
 
@@ -173,7 +175,7 @@ contains
       ! We are running in multi-system mode
 
       ! Initialize systems
-      call multisystem_init(systems, namespace)
+      call multisystem_init(systems, namespace, factory)
 
       ! Run mode
       select case(calc_mode_id)

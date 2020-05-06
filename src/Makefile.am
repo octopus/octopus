@@ -508,6 +508,8 @@ system_f_srcs =                                 \
 	system/subspace.F90                     \
 	system/system.F90                       \
 	system/system_abst.F90                  \
+	system/system_factory.F90               \
+	system/system_factory_abst.F90          \
 	system/system_mxll.F90                  \
 	system/v_ks.F90                         \
 	system/xc_ks_inversion.F90              \

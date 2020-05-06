@@ -1,4 +1,4 @@
-!! Copyright (C) 2019 M. Oliveira
+!! Copyright (C) 2019-2020 M. Oliveira
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -19,7 +19,6 @@
 #include "global.h"
 
 module multisystem_oct_m
-  use celestial_body_oct_m
   use global_oct_m
   use io_oct_m
   use linked_list_oct_m
@@ -30,6 +29,7 @@ module multisystem_oct_m
   use parser_oct_m
   use profiling_oct_m
   use system_abst_oct_m
+  use system_factory_abst_oct_m
   implicit none
 
   private
@@ -37,18 +37,14 @@ module multisystem_oct_m
     multisystem_init,              &
     multisystem_init_interactions, &
     multisystem_end
-
-  integer, parameter ::         &
-    SYSTEM_ELECTRONIC     = 1,  &
-    SYSTEM_MAXWELL        = 2,  &
-    SYSTEM_CELESTIAL_BODY = 3
   
 contains
 
   ! ---------------------------------------------------------------------------------------
-  subroutine multisystem_init(systems, namespace)
-    type(linked_list_t), intent(inout) :: systems
-    type(namespace_t),   intent(in)  :: namespace
+  subroutine multisystem_init(systems, namespace, factory)
+    type(linked_list_t),          intent(inout) :: systems
+    type(namespace_t),            intent(in)    :: namespace
+    class(system_factory_abst_t), intent(in)    :: factory
 
     integer :: isys, system_type
     character(len=128) :: system_name
@@ -81,13 +77,11 @@ contains
         end if
         call parse_block_integer(blk, isys - 1, 1, system_type)
 
-        select case (system_type)
-        case (SYSTEM_CELESTIAL_BODY)
-          sys => celestial_body_t(namespace_t(system_name, parent=namespace))
-          call systems%add(sys)
-        case default
+        sys => factory%create(namespace, system_name, system_type)
+        if (.not. associated(sys)) then
           call messages_input_error(namespace, 'Systems', 'Unknown system type.')
-        end select
+        end if
+        call systems%add(sys)
       end do
       call parse_block_end(blk)
     else
