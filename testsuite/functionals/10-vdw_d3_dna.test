@@ -14,31 +14,31 @@ match ; SCF convergence    ; GREPCOUNT(static/info, 'SCF converged') ; 1
 Precision: 0.0001
 match ; van der Waals energy ; GREPFIELD(static/info, 'vanderWaals =', 3) ; 0.0
 Precision: 0.001
-match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -329.28257245
-match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -83.47132466
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -329.28334973
+match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -83.47000604
 Precision: 0.0002
-match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ; 366.09329973
+match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ;  366.09546109
 Precision: 0.0001
 match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; 92.35785409
-match ; Int[n*v_xc]        ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -118.43291419
-match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -79.57936642
-match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ; -10.92934991
-match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;  234.93636157
-match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ; -932.16185355
+match ; Int[n*v_xc]        ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -118.43318816
+match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -79.57955979
+match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ; -10.92936505
+match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;  234.93707281
+match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ; -932.16451712
 
 Precision: 0.0003
-match ; Eigenvalue  10     ; GREPFIELD(static/info, ' 10   --', 3) ; -0.814245
-match ; Eigenvalue  20     ; GREPFIELD(static/info, ' 20   --', 3) ; -0.659529
-match ; Eigenvalue  30     ; GREPFIELD(static/info, ' 30   --', 3) ; -0.517997
-match ; Eigenvalue  40     ; GREPFIELD(static/info, ' 40   --', 3) ; -0.433791
-match ; Eigenvalue  50     ; GREPFIELD(static/info, ' 50   --', 3) ; -0.360360
-match ; Eigenvalue  60     ; GREPFIELD(static/info, ' 60   --', 3) ; -0.318675
-match ; Eigenvalue  70     ; GREPFIELD(static/info, ' 70   --', 3) ; -0.287191
-match ; Eigenvalue  80     ; GREPFIELD(static/info, ' 80   --', 3) ; -0.191609
-match ; Eigenvalue  90     ; GREPFIELD(static/info, ' 90   --', 3) ; -0.161034
-match ; Eigenvalue 100     ; GREPFIELD(static/info, '100   --', 3) ; -0.007998
-match ; Eigenvalue 110     ; GREPFIELD(static/info, '110   --', 3) ;  0.056585
-match ; Eigenvalue 120     ; GREPFIELD(static/info, '120   --', 3) ;  0.132666
+match ; Eigenvalue  10     ; GREPFIELD(static/info, ' 10   --', 3) ; -0.814233
+match ; Eigenvalue  20     ; GREPFIELD(static/info, ' 20   --', 3) ; -0.659524
+match ; Eigenvalue  30     ; GREPFIELD(static/info, ' 30   --', 3) ; -0.517995
+match ; Eigenvalue  40     ; GREPFIELD(static/info, ' 40   --', 3) ; -0.433786
+match ; Eigenvalue  50     ; GREPFIELD(static/info, ' 50   --', 3) ; -0.360357
+match ; Eigenvalue  60     ; GREPFIELD(static/info, ' 60   --', 3) ; -0.318669
+match ; Eigenvalue  70     ; GREPFIELD(static/info, ' 70   --', 3) ; -0.287185
+match ; Eigenvalue  80     ; GREPFIELD(static/info, ' 80   --', 3) ; -0.191597
+match ; Eigenvalue  90     ; GREPFIELD(static/info, ' 90   --', 3) ; -0.161030
+match ; Eigenvalue 100     ; GREPFIELD(static/info, '100   --', 3) ; -0.007953
+match ; Eigenvalue 110     ; GREPFIELD(static/info, '110   --', 3) ;  0.059382
+match ; Eigenvalue 120     ; GREPFIELD(static/info, '120   --', 3) ;  0.132542
 
 Precision: 0.0001
 match ; Force 10 (x)   ; GREPFIELD(static/info, '10         N', 3) ;  0.887203E-02
@@ -85,44 +85,44 @@ Input      : 10-vdw_d3_dna.02-gs_d3.inp
 Precision: 0.0001
 
 # This energy value is taken from the test code provide by the dftd3 library
-match ; van der Waals energy ; GREPFIELD(static/info, 'vanderWaals =', 3) ; -1.168774970708E-01
+match ; van der Waals energy ; GREPFIELD(static/info, 'vanderWaals =', 3) ; -0.11687748
 
 
 Precision: 0.002
-match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -329.40037585
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -329.3979201
 Precision: 0.0001
 match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; 92.35785409
 Precision: 0.0005
-match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -83.47180670
+match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -83.470772192
 Precision: 0.003
-match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ; 366.09375224
+match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ; 366.09234278
 Precision: 0.0004
-match ; Int[n*v_xc]        ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -118.43294993
+match ; Int[n*v_xc]        ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -118.43279202
 Precision: 0.0003
-match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -79.57939205
+match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -79.57927736
 Precision: 0.0001
-match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ; -10.92935140
+match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ; -10.92934667
 Precision: 0.002
-match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ; 234.93644382
+match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ; 234.93566419
 Precision: 0.004
-match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ; -932.16236120
+match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ; -932.16029147
 
 Precision: 0.0001
 
-match ; Eigenvalue  10     ; GREPFIELD(static/info, ' 10   --', 3) ; -0.814249
-match ; Eigenvalue  20     ; GREPFIELD(static/info, ' 20   --', 3) ; -0.659531
-match ; Eigenvalue  30     ; GREPFIELD(static/info, ' 30   --', 3) ; -0.518000
-match ; Eigenvalue  40     ; GREPFIELD(static/info, ' 40   --', 3) ; -0.433793
-match ; Eigenvalue  50     ; GREPFIELD(static/info, ' 50   --', 3) ; -0.360362
-match ; Eigenvalue  60     ; GREPFIELD(static/info, ' 60   --', 3) ; -0.318678
-match ; Eigenvalue  70     ; GREPFIELD(static/info, ' 70   --', 3) ; -0.287193
-match ; Eigenvalue  80     ; GREPFIELD(static/info, ' 80   --', 3) ; -0.191613
-match ; Eigenvalue  90     ; GREPFIELD(static/info, ' 90   --', 3) ; -0.161037
-match ; Eigenvalue 100     ; GREPFIELD(static/info, '100   --', 3) ; -0.007995
+match ; Eigenvalue  10     ; GREPFIELD(static/info, ' 10   --', 3) ; -0.814241
+match ; Eigenvalue  20     ; GREPFIELD(static/info, ' 20   --', 3) ; -0.659527
+match ; Eigenvalue  30     ; GREPFIELD(static/info, ' 30   --', 3) ; -0.517996
+match ; Eigenvalue  40     ; GREPFIELD(static/info, ' 40   --', 3) ; -0.433789
+match ; Eigenvalue  50     ; GREPFIELD(static/info, ' 50   --', 3) ; -0.360358
+match ; Eigenvalue  60     ; GREPFIELD(static/info, ' 60   --', 3) ; -0.318673
+match ; Eigenvalue  70     ; GREPFIELD(static/info, ' 70   --', 3) ; -0.287188
+match ; Eigenvalue  80     ; GREPFIELD(static/info, ' 80   --', 3) ; -0.191605
+match ; Eigenvalue  90     ; GREPFIELD(static/info, ' 90   --', 3) ; -0.161031
+match ; Eigenvalue 100     ; GREPFIELD(static/info, '100   --', 3) ; -0.007979
 Precision: 0.002
-match ; Eigenvalue 110     ; GREPFIELD(static/info, '110   --', 3) ;  0.056585
+match ; Eigenvalue 110     ; GREPFIELD(static/info, '110   --', 3) ;  0.05738
 Precision: 0.007
-match ; Eigenvalue 120     ; GREPFIELD(static/info, '120   --', 3) ;  0.131269
+match ; Eigenvalue 120     ; GREPFIELD(static/info, '120   --', 3) ;  0.131867
 
 Precision: 0.0001
 
