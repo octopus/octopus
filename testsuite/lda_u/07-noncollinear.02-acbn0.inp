@@ -40,7 +40,6 @@ PseudopotentialSet=hscv_lda
 Spacing = 0.5
 
 FromScratch = no
-ParDomains = no
 
 SpinComponents = spinors
 GuessMagnetDensity = user_defined
