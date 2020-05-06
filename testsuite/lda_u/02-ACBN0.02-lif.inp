@@ -27,8 +27,6 @@ PseudopotentialSet = hscv_lda
 Spacing = 0.4
 
 FromScratch = yes
-ParStates = no
-ParDomains = no
 
 SpinComponents = polarized
 GuessMagnetDensity = paramagnetic

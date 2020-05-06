@@ -31,7 +31,6 @@ DFTULevel = dft_u_acbn0
 Spacing = 0.5
 
 FromScratch = yes
-ParDomains = no
 
 SpinComponents = polarized
 GuessMagnetDensity = user_defined
