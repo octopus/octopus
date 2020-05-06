@@ -30,7 +30,7 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
   logical :: use_blas, conj
   type(accel_mem_t) :: dot_buffer
   type(profile_t), save :: prof_copy, prof_gemmcl, prof, profgemm
-  integer :: wgsize, sqrt_wgsize
+  integer :: wgsize
   integer :: local_sizes(3)
   integer :: global_sizes(3)
 
@@ -166,9 +166,6 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
   
       call accel_release_buffer(dot_buffer)
 
-      write(message(1),'(a)') 'mesh_batch_dotp_matrix: finished reading dot_buffer.'
-      call messages_info(1)
-
     else
 
       ASSERT(R_TYPE_VAL == TYPE_CMPLX)
@@ -176,13 +173,9 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
       call accel_create_buffer(dot_buffer, ACCEL_MEM_WRITE_ONLY, R_TYPE_VAL, aa%nst*bb%nst)
 
       wgsize = accel_kernel_workgroup_size(zkernel_dot_matrix_spinors)
-      sqrt_wgsize = int(sqrt(M_ONE * wgsize))
 
-      write(message(1), '(a,2I6)') "kernel wgsize = ",wgsize, sqrt_wgsize
-      call messages_info(1)
-
-      global_sizes = (/ pad(aa%nst, sqrt_wgsize),  pad(bb%nst, sqrt_wgsize), 1 /)
-      local_sizes  = (/ sqrt_wgsize,               sqrt_wgsize, 1 /)
+      global_sizes = (/ pad(aa%nst, wgsize/bb%nst),  bb%nst, 1 /)
+      local_sizes  = (/ wgsize/bb%nst,               bb%nst, 1 /)
      
       ASSERT(accel_buffer_is_allocated(aa%ff_device))
       ASSERT(accel_buffer_is_allocated(bb%ff_device))

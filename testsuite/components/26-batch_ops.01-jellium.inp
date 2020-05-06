@@ -14,7 +14,7 @@ cCell = 8
  aCell | bCell | cCell
 %
 
-Spacing = 0.5
+Spacing = +0.5
 
 r_s = 4.0
 N_electrons = 8
@@ -28,4 +28,5 @@ jradius = r_s * (N_electrons)^(1.0/3.0)
 "jellium" | 0 | 0 | 0
 %
 
+# explicitly test the unpacked version of the routine (packed are tested in the other input files)
 StatesPack = no

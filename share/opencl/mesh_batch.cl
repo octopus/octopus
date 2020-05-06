@@ -59,7 +59,6 @@ __kernel void zdot_matrix(const int np,
   dot[ist + lddot*jst] = tmp;
 }
 
-
 __kernel void zdot_matrix_spinors(const int np,
           const int nst_xx,
           const int nst_yy,
@@ -86,9 +85,6 @@ __kernel void zdot_matrix_spinors(const int np,
   }
   dot[ist + lddot*jst] = tmp1 + tmp2;
 }
-
-
-
 
 /*
  Local Variables:
