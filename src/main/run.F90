@@ -130,11 +130,9 @@ contains
     integer,           intent(in) :: cm
 
     type(linked_list_t) :: systems
-    type(list_iterator_t) :: iter
-    class(*), pointer :: sys
+    type(system_t), pointer :: sys
     type(profile_t), save :: calc_mode_prof
     logical :: fromScratch
-    logical :: all_sys_abstract
 
     PUSH_SUB(run)
 
@@ -171,175 +169,159 @@ contains
       return
     end if
 
-    ! Initialize systems
-    call multisystem_init(systems, namespace)
+    if (parse_is_defined(namespace, "Systems")) then
+      ! We are running in multi-system mode
 
-    ! Find out if all defined systems in the input file have
-    ! a multi-system implementation derived from system_abst_t
-    all_sys_abstract = .true.
-    call iter%start(systems)
-    do while (iter%has_next())
-      sys => iter%get_next()
-      select type (sys)
-      class is (system_abst_t)
-      class default
-        all_sys_abstract = .false.
-      end select
-    end do
+      ! Initialize systems
+      call multisystem_init(systems, namespace)
 
-    if(all_sys_abstract) then
+      ! Run mode
       select case(calc_mode_id)
-      case(CM_TD)
+      case (CM_TD)
         call multisys_td_run(systems, fromScratch)
+      case default
+        call messages_not_implemented("CalculationMode /= td for multisystems")
       end select
+
+      ! Finalize systems
+      call multisystem_end(systems)
+
     else
-      ! Loop over systems
-      call iter%start(systems)
-      do while (iter%has_next())
-        sys => iter%get_next()
-        select type (sys)
-        type is (system_t)
+      ! Fall back to old behaviour
+      sys => system_init(namespace)
 
-          if (sys%hm%pcm%run_pcm) then
-            select case (calc_mode_id)
-            case (CM_GS)
-              if (sys%hm%pcm%epsilon_infty /= sys%hm%pcm%epsilon_0 .and. sys%hm%pcm%tdlevel /= PCM_TD_EQ) then
-                message(1) = 'Non-equilbrium PCM is not active in a time-independent run.'
-                message(2) = 'You set epsilon_infty /= epsilon_0, but epsilon_infty is not relevant for CalculationMode = gs.'
-                message(3) = 'By definition, the ground state is in equilibrium with the solvent.'
-                message(4) = 'Therefore, the only relevant dielectric constant is the static one.'
-                message(5) = 'Nevertheless, the dynamical PCM response matrix is evaluated for benchamarking purposes.'
-                call messages_warning(5)
-              end if
-            case (CM_TD)
-              call messages_experimental("PCM for CalculationMode = td")
-            case default
-              call messages_not_implemented("PCM for CalculationMode /= gs or td")
-            end select
-
-            if ( (sys%mc%par_strategy /= P_STRATEGY_SERIAL).and.(sys%mc%par_strategy /= P_STRATEGY_STATES) ) then
-              call messages_experimental('Parallel in domain calculations with PCM')
-            end if
+      if (sys%hm%pcm%run_pcm) then
+        select case (calc_mode_id)
+        case (CM_GS)
+          if (sys%hm%pcm%epsilon_infty /= sys%hm%pcm%epsilon_0 .and. sys%hm%pcm%tdlevel /= PCM_TD_EQ) then
+            message(1) = 'Non-equilbrium PCM is not active in a time-independent run.'
+            message(2) = 'You set epsilon_infty /= epsilon_0, but epsilon_infty is not relevant for CalculationMode = gs.'
+            message(3) = 'By definition, the ground state is in equilibrium with the solvent.'
+            message(4) = 'Therefore, the only relevant dielectric constant is the static one.'
+            message(5) = 'Nevertheless, the dynamical PCM response matrix is evaluated for benchamarking purposes.'
+            call messages_warning(5)
           end if
-
-          call messages_print_stress(stdout, 'Approximate memory requirements')
-          call memory_run(sys)
-          call messages_print_stress(stdout)
-
-          if(calc_mode_id /= CM_DUMMY) then
-            message(1) = "Info: Generating external potential"
-            call messages_info(1)
-            call hamiltonian_elec_epot_generate(sys%hm, sys%namespace, sys%gr, sys%geo, sys%st)
-            message(1) = "      done."
-            call messages_info(1)
-          end if
-
-          if(sys%ks%theory_level /= INDEPENDENT_PARTICLES) then
-            call poisson_async_init(sys%hm%psolver, sys%mc)
-            ! slave nodes do not call the calculation routine
-            if(multicomm_is_slave(sys%mc))then
-              !for the moment we only have one type of slave
-              call poisson_slave_work(sys%hm%psolver)
-            end if
-          end if
-
-          if(.not. multicomm_is_slave(sys%mc)) then
-            call messages_write('Info: Octopus initialization completed.', new_line = .true.)
-            call messages_write('Info: Starting calculation mode.')
-            call messages_info()
-
-            !%Variable FromScratch
-            !%Type logical
-            !%Default false
-            !%Section Execution
-            !%Description
-            !% When this variable is set to true, <tt>Octopus</tt> will perform a
-            !% calculation from the beginning, without looking for restart
-            !% information.
-            !%End
-
-            call parse_variable(namespace, 'FromScratch', .false., fromScratch)
-
-            call profiling_in(calc_mode_prof, "CALC_MODE")
-
-            select case(calc_mode_id)
-            case(CM_GS)
-              call ground_state_run(sys, fromScratch)
-            case(CM_UNOCC)
-              call unocc_run(sys, fromScratch)
-            case(CM_TD)
-              if(sys%gr%sb%kpoints%use_symmetries) &
-                call messages_experimental("KPoints symmetries with CalculationMode = td")
-              call td_run(sys, fromScratch)
-            case(CM_LR_POL)
-              if(sys%gr%sb%kpoints%use_symmetries) &
-                call messages_experimental("KPoints symmetries with CalculationMode = em_resp")
-              select case(get_resp_method(sys%namespace))
-              case(FD)
-                call static_pol_run(sys, fromScratch)
-              case(LR)
-                call em_resp_run(sys, fromScratch)
-              end select
-            case(CM_VDW)
-              if(sys%gr%sb%kpoints%use_symmetries) &
-                call messages_experimental("KPoints symmetries with CalculationMode = vdw")
-              call vdW_run(sys, fromScratch)
-            case(CM_GEOM_OPT)
-              if(sys%gr%sb%kpoints%use_symmetries) &
-                call messages_experimental("KPoints symmetries with CalculationMode = go")
-              call geom_opt_run(sys, fromScratch)
-            case(CM_PHONONS_LR)
-              if(sys%gr%sb%kpoints%use_symmetries) &
-                call messages_experimental("KPoints symmetries with CalculationMode = vib_modes")
-              select case(get_resp_method(sys%namespace))
-              case(FD)
-                call phonons_run(sys)
-              case(LR)
-                call phonons_lr_run(sys, fromscratch)
-              end select
-            case(CM_OPT_CONTROL)
-              if(sys%gr%sb%kpoints%use_symmetries) &
-                call messages_experimental("KPoints symmetries with CalculationMode = opt_control")
-              call opt_control_run(sys)
-            case(CM_CASIDA)
-              if(sys%gr%sb%kpoints%use_symmetries) &
-                call messages_experimental("KPoints symmetries with CalculationMode = casida")
-              call casida_run(sys, fromScratch)
-            case(CM_ONE_SHOT)
-              message(1) = "CalculationMode = one_shot is obsolete. Please use gs with MaximumIter = 0."
-              call messages_fatal(1)
-            case(CM_KDOTP)
-              if(sys%gr%sb%kpoints%use_symmetries) &
-                call messages_experimental("KPoints symmetries with CalculationMode = kdotp")
-              call kdotp_lr_run(sys, fromScratch)
-            case(CM_DUMMY)
-            case(CM_INVERTKDS)
-              if(sys%gr%sb%kpoints%use_symmetries) &
-                call messages_experimental("KPoints symmetries with CalculationMode = invert_ks")
-              call invert_ks_run(sys)
-            case(CM_PULPO_A_FEIRA)
-              ASSERT(.false.) !this is handled before, if we get here, it is an error
-            end select
-
-            call profiling_out(calc_mode_prof)
-          end if
-
-          if(sys%ks%theory_level /= INDEPENDENT_PARTICLES) call poisson_async_end(sys%hm%psolver, sys%mc)
-
-        class default
-          message(1) = "Unknow system type."
-          call messages_fatal(1)
+        case (CM_TD)
+          call messages_experimental("PCM for CalculationMode = td")
+        case default
+          call messages_not_implemented("PCM for CalculationMode /= gs or td")
         end select
-      end do
-    end if
 
-    ! Finalize systems
-    call multisystem_end(systems)
+        if ( (sys%mc%par_strategy /= P_STRATEGY_SERIAL).and.(sys%mc%par_strategy /= P_STRATEGY_STATES) ) then
+          call messages_experimental('Parallel in domain calculations with PCM')
+        end if
+      end if
+
+      call messages_print_stress(stdout, 'Approximate memory requirements')
+      call memory_run(sys)
+      call messages_print_stress(stdout)
+
+      if(calc_mode_id /= CM_DUMMY) then
+        message(1) = "Info: Generating external potential"
+        call messages_info(1)
+        call hamiltonian_elec_epot_generate(sys%hm, sys%namespace, sys%gr, sys%geo, sys%st)
+        message(1) = "      done."
+        call messages_info(1)
+      end if
+
+      if(sys%ks%theory_level /= INDEPENDENT_PARTICLES) then
+        call poisson_async_init(sys%hm%psolver, sys%mc)
+        ! slave nodes do not call the calculation routine
+        if(multicomm_is_slave(sys%mc))then
+          !for the moment we only have one type of slave
+          call poisson_slave_work(sys%hm%psolver)
+        end if
+      end if
+
+      if(.not. multicomm_is_slave(sys%mc)) then
+        call messages_write('Info: Octopus initialization completed.', new_line = .true.)
+        call messages_write('Info: Starting calculation mode.')
+        call messages_info()
+
+        !%Variable FromScratch
+        !%Type logical
+        !%Default false
+        !%Section Execution
+        !%Description
+        !% When this variable is set to true, <tt>Octopus</tt> will perform a
+        !% calculation from the beginning, without looking for restart
+        !% information.
+        !%End
+
+        call parse_variable(namespace, 'FromScratch', .false., fromScratch)
+
+        call profiling_in(calc_mode_prof, "CALC_MODE")
+
+        select case(calc_mode_id)
+        case(CM_GS)
+          call ground_state_run(sys, fromScratch)
+        case(CM_UNOCC)
+          call unocc_run(sys, fromScratch)
+        case(CM_TD)
+          if(sys%gr%sb%kpoints%use_symmetries) &
+            call messages_experimental("KPoints symmetries with CalculationMode = td")
+          call td_run(sys, fromScratch)
+        case(CM_LR_POL)
+          if(sys%gr%sb%kpoints%use_symmetries) &
+            call messages_experimental("KPoints symmetries with CalculationMode = em_resp")
+          select case(get_resp_method(sys%namespace))
+          case(FD)
+            call static_pol_run(sys, fromScratch)
+          case(LR)
+            call em_resp_run(sys, fromScratch)
+          end select
+        case(CM_VDW)
+          if(sys%gr%sb%kpoints%use_symmetries) &
+            call messages_experimental("KPoints symmetries with CalculationMode = vdw")
+          call vdW_run(sys, fromScratch)
+        case(CM_GEOM_OPT)
+          if(sys%gr%sb%kpoints%use_symmetries) &
+            call messages_experimental("KPoints symmetries with CalculationMode = go")
+          call geom_opt_run(sys, fromScratch)
+        case(CM_PHONONS_LR)
+          if(sys%gr%sb%kpoints%use_symmetries) &
+            call messages_experimental("KPoints symmetries with CalculationMode = vib_modes")
+          select case(get_resp_method(sys%namespace))
+          case(FD)
+            call phonons_run(sys)
+          case(LR)
+            call phonons_lr_run(sys, fromscratch)
+          end select
+        case(CM_OPT_CONTROL)
+          if(sys%gr%sb%kpoints%use_symmetries) &
+            call messages_experimental("KPoints symmetries with CalculationMode = opt_control")
+          call opt_control_run(sys)
+        case(CM_CASIDA)
+          if(sys%gr%sb%kpoints%use_symmetries) &
+            call messages_experimental("KPoints symmetries with CalculationMode = casida")
+          call casida_run(sys, fromScratch)
+        case(CM_ONE_SHOT)
+          message(1) = "CalculationMode = one_shot is obsolete. Please use gs with MaximumIter = 0."
+          call messages_fatal(1)
+        case(CM_KDOTP)
+          if(sys%gr%sb%kpoints%use_symmetries) &
+            call messages_experimental("KPoints symmetries with CalculationMode = kdotp")
+          call kdotp_lr_run(sys, fromScratch)
+        case(CM_DUMMY)
+        case(CM_INVERTKDS)
+          if(sys%gr%sb%kpoints%use_symmetries) &
+            call messages_experimental("KPoints symmetries with CalculationMode = invert_ks")
+          call invert_ks_run(sys)
+        case(CM_PULPO_A_FEIRA)
+          ASSERT(.false.) !this is handled before, if we get here, it is an error
+        end select
+
+        call profiling_out(calc_mode_prof)
+      end if
+
+      if(sys%ks%theory_level /= INDEPENDENT_PARTICLES) call poisson_async_end(sys%hm%psolver, sys%mc)
+
+      SAFE_DEALLOCATE_P(sys)
+    end if
 
     call fft_all_end()
 
     call accel_end()
-
 
 #ifdef HAVE_MPI
     call mpi_debug_statistics()

@@ -29,7 +29,6 @@ module multisystem_oct_m
   use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
-  use system_oct_m
   use system_abst_oct_m
   implicit none
 
@@ -67,13 +66,13 @@ contains
     !% The second column should be the system type. See below for a list of
     !% available system types.
     !%Option electronic 1
-    !% An electronic system.
+    !% An electronic system. (NOT IMPLEMENTED)
     !%Option maxwell 2
-    !% A maxwell system.
+    !% A maxwell system. (NOT IMPLEMENTED)
     !%Option celestial_body 3
     !% A celestial body. Used for testing purposes only.
     !%End
-    if(parse_block(namespace, 'Systems', blk) == 0) then
+    if (parse_block(namespace, 'Systems', blk) == 0) then
 
       do isys = 1, parse_block_n(blk)
         call parse_block_string(blk, isys - 1, 0, system_name)
@@ -83,20 +82,17 @@ contains
         call parse_block_integer(blk, isys - 1, 1, system_type)
 
         select case (system_type)
-        case (SYSTEM_ELECTRONIC)
-          sys => system_init(namespace_t(system_name, parent=namespace))
-          call systems%add(sys)
         case (SYSTEM_CELESTIAL_BODY)
           sys => celestial_body_t(namespace_t(system_name, parent=namespace))
           call systems%add(sys)
         case default
-          call messages_input_error(namespace, 'Systems')
+          call messages_input_error(namespace, 'Systems', 'Unknown system type.')
         end select
       end do
       call parse_block_end(blk)
     else
-      sys => system_init(namespace)
-      call systems%add(sys)
+      message(1) = "Input error while reading block Systems."
+      call messages_fatal(1, namespace=namespace)
     end if
 
     POP_SUB(multisystem_init)
@@ -150,14 +146,14 @@ contains
   subroutine multisystem_end(systems)
     type(linked_list_t), intent(inout) :: systems
 
-    type(list_iterator_t) :: iter
-    class(*), pointer :: sys
+    type(system_iterator_t) :: iter
+    class(system_abst_t), pointer :: sys
 
     PUSH_SUB(multisystem_end)
 
     call iter%start(systems)
     do while (iter%has_next())
-      sys => iter%get_next()
+      sys => iter%get_next_system()
       SAFE_DEALLOCATE_P(sys)
     end do
 
