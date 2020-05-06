@@ -100,61 +100,6 @@ end subroutine X(lcao_atomic_orbital)
 
 ! ---------------------------------------------------------
 
-subroutine X(lcao_simple)(this, namespace, st, gr, geo, start)
-  type(lcao_t),        intent(inout) :: this
-  type(namespace_t),   intent(in)    :: namespace
-  type(states_elec_t), intent(inout) :: st
-  type(grid_t),        intent(in)    :: gr
-  type(geometry_t),    intent(in)    :: geo
-  integer, optional,   intent(in)    :: start
-
-  integer :: lcao_start, ist, iqn, iorb, ispin
-  R_TYPE, allocatable :: orbital(:, :)
-
-  PUSH_SUB(X(lcao_simple))
-
-  lcao_start = optional_default(start, 1)
-
-  call messages_write('Info: Initializing states using atomic orbitals.')
-  call messages_info()
-
-  SAFE_ALLOCATE(orbital(1:gr%mesh%np, 1:st%d%dim))
-
-  call st%set_zero()
-  
-  do iqn = st%d%kpt%start, st%d%kpt%end
-    ispin = states_elec_dim_get_spin_index(st%d, iqn)
-
-    ist = 0
-    do iorb = 1, this%norbs
-      ist = ist + 1
-      if(ist > st%nst) ist = 1
-
-      if(ist < st%st_start) cycle
-      if(ist > st%st_end) cycle
-      if(ist < lcao_start) cycle
-
-      call states_elec_get_state(st, gr%mesh, ist, iqn, orbital)
-      call X(lcao_atomic_orbital)(this, iorb, gr%mesh, st, geo, orbital, ispin, add = .true.)
-      call states_elec_set_state(st, gr%mesh, ist, iqn, orbital)
-      
-    end do
-
-    ! if we don't have all states we can't orthogonalize right now
-    if(st%nst <= this%norbs) then
-      call X(states_elec_orthogonalization_full)(st, namespace, gr%mesh, iqn)
-    end if
-
-  end do
-
-
-  SAFE_DEALLOCATE_A(orbital)
-
-  POP_SUB(X(lcao_simple))
-end subroutine X(lcao_simple)
-
-! ---------------------------------------------------------
-
 subroutine X(lcao_wf)(this, st, gr, geo, hm, namespace, start)
   type(lcao_t),             intent(inout) :: this
   type(states_elec_t),      intent(inout) :: st
@@ -169,6 +114,7 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, namespace, start)
   FLOAT, allocatable :: ev(:)
   R_TYPE, allocatable :: hamilt(:, :, :), lcaopsi(:, :, :), lcaopsi2(:, :), zeropsi(:)
   integer :: kstart, kend, ispin
+  integer :: spin_channels
 
 #ifdef LCAO_DEBUG
   integer :: iunit_h, iunit_s, iunit_e, ierr
@@ -192,13 +138,17 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, namespace, start)
 
   lcao_start = optional_default(start, 1)
 
+  !In case of spinors, everything is taken care of by st%d%dim
+  spin_channels = st%d%spin_channels
+  if(st%d%ispin == SPINORS) spin_channels = 1
+
   ! Allocation of variables
 
-  SAFE_ALLOCATE(lcaopsi(1:gr%mesh%np_part, 1:st%d%dim, 1:st%d%spin_channels))
+  SAFE_ALLOCATE(lcaopsi(1:gr%mesh%np_part, 1:st%d%dim, 1:spin_channels))
   SAFE_ALLOCATE(lcaopsi2(1:gr%mesh%np, 1:st%d%dim))
   SAFE_ALLOCATE(hpsi(1:gr%mesh%np, 1:st%d%dim, kstart:kend))
   SAFE_ALLOCATE(hamilt(1:this%norbs, 1:this%norbs, kstart:kend))
-  SAFE_ALLOCATE(overlap(1:this%norbs, 1:this%norbs, 1:st%d%spin_channels))
+  SAFE_ALLOCATE(overlap(1:this%norbs, 1:this%norbs, 1:spin_channels))
 
   ie = 0
   maxmtxel = this%norbs * (this%norbs + 1)/2
@@ -221,10 +171,9 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, namespace, start)
   end if
 #endif
 
-  ! FIXME: these loops should not be over st%d%spin_channels but rather 1 unless spin-polarized in which case 2.
   do n1 = 1, this%norbs
     
-    do ispin = 1, st%d%spin_channels
+    do ispin = 1, spin_channels
       call X(get_ao)(this, st, gr%mesh, geo, n1, ispin, lcaopsi(:, :, ispin), use_psi = .true.)
 
 #ifdef LCAO_DEBUG
@@ -243,7 +192,7 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, namespace, start)
     end do
 
     do n2 = n1, this%norbs
-      do ispin = 1, st%d%spin_channels
+      do ispin = 1, spin_channels
 
         call X(get_ao)(this, st, gr%mesh, geo, n2, ispin, lcaopsi2, use_psi = .true.)
 
@@ -339,21 +288,16 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, namespace, start)
 
   ! Change of basis
   do n2 = 1, this%norbs
-    do ispin = 1, st%d%spin_channels
-      
-      call X(get_ao)(this, st, gr%mesh, geo, n2, ispin, lcaopsi2, use_psi = .false.)
+    call X(get_ao)(this, st, gr%mesh, geo, n2, ispin, lcaopsi2, use_psi = .false.)
 
-      do ik = kstart, kend
-        if(ispin /= states_elec_dim_get_spin_index(st%d, ik)) cycle
-        do idim = 1, st%d%dim
-          do n1 = max(lcao_start, st%st_start), min(this%norbs, st%st_end)
-            call states_elec_get_state(st, gr%mesh, idim, n1, ik, lcaopsi(:, 1, 1))
-            call lalg_axpy(gr%mesh%np, hamilt(n2, n1, ik), lcaopsi2(:, idim), lcaopsi(:, 1, 1))
-            call states_elec_set_state(st, gr%mesh, idim, n1, ik, lcaopsi(:, 1, 1))
-          end do
+    do ik = kstart, kend
+      do idim = 1, st%d%dim
+        do n1 = max(lcao_start, st%st_start), min(this%norbs, st%st_end)
+          call states_elec_get_state(st, gr%mesh, idim, n1, ik, lcaopsi(:, 1, 1))
+          call lalg_axpy(gr%mesh%np, hamilt(n2, n1, ik), lcaopsi2(:, idim), lcaopsi(:, 1, 1))
+          call states_elec_set_state(st, gr%mesh, idim, n1, ik, lcaopsi(:, 1, 1))
         end do
       end do
-      
     end do
   end do
 
