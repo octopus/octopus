@@ -27,17 +27,19 @@ module system_factory_abst_oct_m
 
   type, abstract :: system_factory_abst_t
   contains
-    procedure(system_factory_abst_create), nopass, deferred :: create
+    procedure(system_factory_abst_create), deferred :: create
   end type system_factory_abst_t
 
   abstract interface
-    function system_factory_abst_create(namespace, name, type) result(system)
+    function system_factory_abst_create(this, namespace, name, type) result(system)
+      import :: system_factory_abst_t
       import system_abst_t
       import namespace_t
-      type(namespace_t),    intent(in) :: namespace
-      character(len=*),     intent(in) :: name
-      integer,              intent(in) :: type
-      class(system_abst_t), pointer    :: system
+      class(system_factory_abst_t), intent(in) :: this
+      type(namespace_t),            intent(in) :: namespace
+      character(len=*),             intent(in) :: name
+      integer,                      intent(in) :: type
+      class(system_abst_t),         pointer    :: system
     end function system_factory_abst_create
   end interface
 

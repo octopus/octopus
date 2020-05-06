@@ -933,7 +933,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine multisys_td_run(systems, fromScratch)
-    type(linked_list_t), intent(inout) :: systems
+    type(multisystem_t), intent(inout) :: systems
     logical,             intent(inout) :: fromScratch
 
     integer :: it, internal_loop
@@ -953,14 +953,14 @@ contains
 
     ! this should eventually be moved up to run.F90 when all systems
     ! are derived classes from system_abst
-    call multisystem_init_interactions(systems, global_namespace)
+    call systems%init_interactions()
 
     all_done_max_td_steps = .false.
     it = 0
 
     ! Initialize all propagators and find the smallest time-step
     smallest_algo_dt = CNST(1e10)
-    call iter%start(systems)
+    call iter%start(systems%list)
     do while (iter%has_next())
       sys => iter%get_next_system()
 
@@ -972,20 +972,20 @@ contains
     end do
 
     ! Initialize all the clocks
-    call iter%start(systems)
+    call iter%start(systems%list)
     do while (iter%has_next())
       sys => iter%get_next_system()
       call sys%init_clocks(sys%prop%dt, smallest_algo_dt)
     end do
 
     ! Set initial conditions
-    call iter%start(systems)
+    call iter%start(systems%list)
     do while (iter%has_next())
       sys => iter%get_next_system()
       call sys%initial_conditions(.true.)
     end do
 
-    call iter%start(systems)
+    call iter%start(systems%list)
     do while (iter%has_next())
       sys => iter%get_next_system()
       call sys%propagation_start()
@@ -1008,7 +1008,7 @@ contains
 
         any_td_step_done = .false.
 
-        call iter%start(systems)
+        call iter%start(systems%list)
         do while (iter%has_next())
           sys => iter%get_next_system()
 
@@ -1023,7 +1023,7 @@ contains
 
       all_done_max_td_steps = .true.
 
-      call iter%start(systems)
+      call iter%start(systems%list)
       do while (iter%has_next())
         sys => iter%get_next_system()
 
@@ -1042,7 +1042,7 @@ contains
 
     end do
 
-    call iter%start(systems)
+    call iter%start(systems%list)
     do while (iter%has_next())
       sys => iter%get_next_system()
       call sys%propagation_finish()

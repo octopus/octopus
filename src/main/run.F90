@@ -130,7 +130,7 @@ contains
     type(namespace_t), intent(in) :: namespace
     integer,           intent(in) :: cm
 
-    type(linked_list_t) :: systems
+    class(multisystem_t), pointer :: systems
     type(system_t), pointer :: sys
     type(system_factory_t) :: factory
     type(profile_t), save :: calc_mode_prof
@@ -175,7 +175,7 @@ contains
       ! We are running in multi-system mode
 
       ! Initialize systems
-      call multisystem_init(systems, namespace, factory)
+      systems => multisystem_t(namespace, factory)
 
       ! Run mode
       select case(calc_mode_id)
@@ -186,7 +186,7 @@ contains
       end select
 
       ! Finalize systems
-      call multisystem_end(systems)
+      SAFE_DEALLOCATE_P(systems)
 
     else
       ! Fall back to old behaviour

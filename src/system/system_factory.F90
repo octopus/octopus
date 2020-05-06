@@ -22,6 +22,7 @@ module system_factory_oct_m
   use celestial_body_oct_m
   use global_oct_m
   use messages_oct_m
+  use multisystem_oct_m
   use namespace_oct_m
   use system_oct_m
   use system_abst_oct_m
@@ -35,25 +36,29 @@ module system_factory_oct_m
   integer, parameter ::         &
     SYSTEM_ELECTRONIC     = 1,  &
     SYSTEM_MAXWELL        = 2,  &
-    SYSTEM_CELESTIAL_BODY = 3
+    SYSTEM_CELESTIAL_BODY = 3,  &
+    SYSTEM_MULTISYSTEM    = 4
 
   type, extends(system_factory_abst_t) :: system_factory_t
   contains
-    procedure, nopass :: create => system_factory_create
+    procedure :: create => system_factory_create
   end type system_factory_t
 
 contains
 
   ! ---------------------------------------------------------------------------------------
-  function system_factory_create(namespace, name, type) result(system)
-    type(namespace_t),    intent(in) :: namespace
-    character(len=*),     intent(in) :: name
-    integer,              intent(in) :: type
-    class(system_abst_t), pointer    :: system
+  function system_factory_create(this, namespace, name, type) result(system)
+    class(system_factory_t), intent(in) :: this
+    type(namespace_t),       intent(in) :: namespace
+    character(len=*),        intent(in) :: name
+    integer,                 intent(in) :: type
+    class(system_abst_t),    pointer    :: system
 
     PUSH_SUB(system_factory_create)
 
     select case (type)
+    case (SYSTEM_MULTISYSTEM)
+      system => multisystem_t(namespace_t(name, parent=namespace), this)
     case (SYSTEM_CELESTIAL_BODY)
       system => celestial_body_t(namespace_t(name, parent=namespace))
     case default
