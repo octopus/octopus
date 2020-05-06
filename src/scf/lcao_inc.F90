@@ -22,7 +22,7 @@
 !> This routine fills state psi with an atomic orbital -- provided
 !! by the pseudopotential structure in geo.
 ! ---------------------------------------------------------
-subroutine X(lcao_atomic_orbital) (this, iorb, mesh, st, geo, psi, spin_channel, add)
+subroutine X(lcao_atomic_orbital) (this, iorb, mesh, st, geo, psi, spin_channel)
   type(lcao_t),             intent(in)    :: this
   integer,                  intent(in)    :: iorb
   type(mesh_t),             intent(in)    :: mesh
@@ -30,7 +30,6 @@ subroutine X(lcao_atomic_orbital) (this, iorb, mesh, st, geo, psi, spin_channel,
   type(geometry_t), target, intent(in)    :: geo
   R_TYPE,                   intent(inout) :: psi(:, :)
   integer,                  intent(in)    :: spin_channel
-  logical, optional,        intent(in)    :: add
 
   type(species_t), pointer :: spec
   integer :: idim, iatom, jj, ispin, ii, ll, mm
@@ -69,9 +68,7 @@ subroutine X(lcao_atomic_orbital) (this, iorb, mesh, st, geo, psi, spin_channel,
   if(.not. this%complex_ylms) then
     SAFE_ALLOCATE(dorbital(1:sphere%np))
     call datomic_orbital_get_submesh(spec, sphere, ii, ll, mm, ispin, dorbital)
-    if(.not. optional_default(add, .false.)) psi(1:mesh%np, idim) = CNST(0.0)
     call submesh_add_to_mesh(sphere, dorbital, psi(:, idim))
-
     SAFE_DEALLOCATE_A(dorbital)
   else
 #endif
@@ -79,8 +76,6 @@ subroutine X(lcao_atomic_orbital) (this, iorb, mesh, st, geo, psi, spin_channel,
     SAFE_ALLOCATE(orbital(1:sphere%np))
 
     call X(atomic_orbital_get_submesh)(spec, sphere, ii, ll, mm, ispin, orbital)
-    
-    if(.not. optional_default(add, .false.)) psi(1:mesh%np, idim) = CNST(0.0)
     call submesh_add_to_mesh(sphere, orbital, psi(:, idim))
     
     SAFE_DEALLOCATE_A(orbital)
