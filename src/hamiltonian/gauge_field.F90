@@ -442,7 +442,7 @@ contains
     type(grid_t),         intent(in)    :: gr
     type(states_elec_t),  intent(in)    :: st
 
-    integer :: idir,ispin,istot
+    integer :: idir, ispin
 
     PUSH_SUB(gauge_field_get_force)
 
@@ -452,11 +452,9 @@ contains
       this%force(1:gr%sb%dim) = M_ZERO 
 
     case(OPTION__GAUGEFIELDDYNAMICS__POLARIZATION)
-      istot = 1
-      if (st%d%nspin > 1) istot = 2
       do idir = 1, gr%sb%periodic_dim
         this%force(idir) = M_ZERO
-        do ispin = 1, istot                      
+        do ispin = 1, st%d%spin_channels
           this%force(idir) = this%force(idir) - &
                                CNST(4.0)*M_PI*P_c/gr%sb%rcell_volume*dmf_integrate(gr%mesh, st%current(:, idir, ispin))
         end do
