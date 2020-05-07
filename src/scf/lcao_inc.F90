@@ -283,14 +283,17 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, namespace, start)
 
   ! Change of basis
   do n2 = 1, this%norbs
-    call X(get_ao)(this, st, gr%mesh, geo, n2, ispin, lcaopsi2, use_psi = .false.)
+    do ispin = 1, spin_channels
+      call X(get_ao)(this, st, gr%mesh, geo, n2, ispin, lcaopsi2, use_psi = .false.)
 
-    do ik = kstart, kend
-      do idim = 1, st%d%dim
-        do n1 = max(lcao_start, st%st_start), min(this%norbs, st%st_end)
-          call states_elec_get_state(st, gr%mesh, idim, n1, ik, lcaopsi(:, 1, 1))
-          call lalg_axpy(gr%mesh%np, hamilt(n2, n1, ik), lcaopsi2(:, idim), lcaopsi(:, 1, 1))
-          call states_elec_set_state(st, gr%mesh, idim, n1, ik, lcaopsi(:, 1, 1))
+      do ik = kstart, kend
+        if(ispin /= states_elec_dim_get_spin_index(st%d, ik)) cycle
+        do idim = 1, st%d%dim
+          do n1 = max(lcao_start, st%st_start), min(this%norbs, st%st_end)
+            call states_elec_get_state(st, gr%mesh, idim, n1, ik, lcaopsi(:, 1, 1))
+            call lalg_axpy(gr%mesh%np, hamilt(n2, n1, ik), lcaopsi2(:, idim), lcaopsi(:, 1, 1))
+            call states_elec_set_state(st, gr%mesh, idim, n1, ik, lcaopsi(:, 1, 1))
+          end do
         end do
       end do
     end do
@@ -316,7 +319,7 @@ subroutine X(init_orbitals)(this, st, gr, geo, start)
   type(geometry_t),    intent(in)    :: geo
   integer, optional,   intent(in)    :: start
 
-  integer :: iorb, ispin, ist, ik, size
+  integer :: iorb, ispin, ist, ik, size, spin_channels
   integer :: nst, kstart, kend, lcao_start
   R_TYPE, allocatable :: ao(:, :)
 
@@ -372,10 +375,13 @@ subroutine X(init_orbitals)(this, st, gr, geo, start)
     write(message(1), '(a, i5, a)') "Info: Single-precision storage for ", size, " extra orbitals will be allocated."
     call messages_info(1)
 
-    SAFE_ALLOCATE(this%X(buff)(1:gr%mesh%np, 1:st%d%dim, iorb:this%norbs, 1:st%d%spin_channels))
+    spin_channels = 1
+    if(st%d%ispin == SPIN_POLARIZED) spin_channels = 2
+
+    SAFE_ALLOCATE(this%X(buff)(1:gr%mesh%np, 1:st%d%dim, iorb:this%norbs, 1:spin_channels))
 
     do iorb = iorb, this%norbs
-      do ispin = 1, st%d%spin_channels
+      do ispin = 1, spin_channels
         call X(lcao_atomic_orbital)(this, iorb, gr%mesh, st, geo, ao, ispin)
         this%X(buff)(1:gr%mesh%np, 1:st%d%dim, iorb, ispin) = ao(1:gr%mesh%np, 1:st%d%dim)
       end do
