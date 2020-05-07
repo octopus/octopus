@@ -21,12 +21,6 @@ ExcessCharge = 1
 SpinComponents = non_collinear
 RelativisticCorrection = spin_orbit
 
-GuessMagnetDensity = user_defined
-%AtomsMagnetDirection
- 0.0 | 0.0 | 1.0 
- 0.0 | 0.0 | 1.0
-%
-
 ExperimentalFeatures = yes
 ExtraStates = 5
 LCAOStart = lcao_none

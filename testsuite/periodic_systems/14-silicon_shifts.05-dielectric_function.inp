@@ -55,18 +55,6 @@ ParDomains = auto
 ParKPoints = no
 CurrentDensity = gradient_corrected
 
-Iau  = (sqrt(10^11)/sqrt(3.509470*10^16)) #Conservion in a.u.
-omega = 0.5
-Tpulse = 210
-
-%TDExternalFields
-  vector_potential | 1.0 | 0.0 | 0.0 | omega | "envelope_sin2"
-%
-
-%TDFunctions
-  "envelope_sin2" | tdf_from_expr | "-Iau/omega*c*sin(pi*t/Tpulse)^2*(1-step(t-Tpulse))"
-%
-
 %GaugeVectorField
   10 | 0 | 0
 %
