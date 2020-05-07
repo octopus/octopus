@@ -262,7 +262,7 @@ subroutine X(eigensolver_rmmdiis) (namespace, gr, st, hm, pre, tol, niter, conve
           call lalg_lowest_geneigensolve(1, iter, mm(:, :, 1, ii), mm(:, :, 2, ii), eval(:, ii),  &
                    evec(:, :, ii), preserve_mat=.true., bof = failed(ii), err_code = err)
 
-          !We should never fall into this case, as we impose B the be definite positive here
+          !We should never fall into this case, as we impose B to be definite positive here
           if(err < 0 .or. err > iter) then
             failed(ii) = .true.
             last(ii) = iter - 1
