@@ -88,8 +88,6 @@ dist_share_DATA =                                  \
 	26-batch_ops.01-jellium.inp                \
 	26-batch_ops.test                          \
 	27-clock.01.inp                            \
-	27-clock.test                              \
-	28-output_test.01-jellium.inp              \
-	28-output_test.test
+	27-clock.test
 
 CLEANFILES = *~ *.bak
