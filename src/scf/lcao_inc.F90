@@ -283,17 +283,18 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, namespace, start)
 
   ! Change of basis
   do n2 = 1, this%norbs
+    !n2 fixes the spinor dimension, as we have two orbitals per spinor dimensions.
+    !Otherwise we use hamilt(n2,n1,ik) twice, which is not what we want to do
+    idim = this%ddim(n2)
     do ispin = 1, spin_channels
       call X(get_ao)(this, st, gr%mesh, geo, n2, ispin, lcaopsi2, use_psi = .false.)
 
       do ik = kstart, kend
         if(ispin /= states_elec_dim_get_spin_index(st%d, ik)) cycle
-        do idim = 1, st%d%dim
-          do n1 = max(lcao_start, st%st_start), min(this%norbs, st%st_end)
-            call states_elec_get_state(st, gr%mesh, idim, n1, ik, lcaopsi(:, 1, 1))
-            call lalg_axpy(gr%mesh%np, hamilt(n2, n1, ik), lcaopsi2(:, idim), lcaopsi(:, 1, 1))
-            call states_elec_set_state(st, gr%mesh, idim, n1, ik, lcaopsi(:, 1, 1))
-          end do
+        do n1 = max(lcao_start, st%st_start), min(this%norbs, st%st_end)
+          call states_elec_get_state(st, gr%mesh, idim, n1, ik, lcaopsi(:, 1, 1))
+          call lalg_axpy(gr%mesh%np, hamilt(n2, n1, ik), lcaopsi2(:, idim), lcaopsi(:, 1, 1))
+          call states_elec_set_state(st, gr%mesh, idim, n1, ik, lcaopsi(:, 1, 1))
         end do
       end do
     end do
