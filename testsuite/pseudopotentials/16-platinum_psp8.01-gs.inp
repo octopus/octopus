@@ -22,7 +22,5 @@ SmearingFunction = fermi_dirac
 
 EigenSolver = rmmdiis
 
-PreconditionerFilterFactor=0.6
-
 ConvRelDens = 1e-07
 StatesPack = yes
