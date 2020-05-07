@@ -41,7 +41,6 @@ module test_oct_m
   use namespace_oct_m
   use orbitalbasis_oct_m
   use orbitalset_oct_m
-  use output_oct_m
   use parser_oct_m
   use poisson_oct_m
   use profiling_oct_m
