@@ -385,7 +385,6 @@ contains
     type(system_t), pointer :: sys
     type(wfs_elec_t), pointer :: hpsib
     integer :: itime, terms
-    type(simul_box_t) :: sb
 
     PUSH_SUB(test_hamiltonian)
 
@@ -421,7 +420,6 @@ contains
     call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
 
     !Initialize external potential
-    call simul_box_init(sb, sys%namespace, sys%geo, sys%space)
     if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call sys%st%pack()
     call hamiltonian_elec_epot_generate(sys%hm, sys%namespace, sys%gr, sys%geo, sys%st)
     call density_calc(sys%st, sys%gr, sys%st%rho)
@@ -455,7 +453,6 @@ contains
 
     call hpsib%end(copy = .false.)
     SAFE_DEALLOCATE_P(hpsib)
-    call simul_box_end(sb)
     call states_elec_deallocate_wfns(sys%st)
     SAFE_DEALLOCATE_P(sys)
 
