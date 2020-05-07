@@ -221,7 +221,7 @@ contains
       SAFE_DEALLOCATE_A(copy_occ)
     end if
 
-    call states_elec_fermi(sys%st, sys%namespace, sys%gr%mesh) ! occupations
+    if(calc_eigenval_) call states_elec_fermi(sys%st, sys%namespace, sys%gr%mesh) ! occupations
     call energy_calc_total(sys%namespace, sys%hm, sys%gr, sys%st)
 
     POP_SUB(system_h_setup)
