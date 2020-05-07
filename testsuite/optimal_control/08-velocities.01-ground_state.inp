@@ -67,9 +67,6 @@ stime  = 100.0
 TDPropagationTime = stime
 TDPropagator = crank_nicolson
 
-# For the TD runs:
-#totaltime = 500.0
-
 TDOutput = multipoles + laser + geometry
 
 # --------------
@@ -90,15 +87,6 @@ OCTControlFunctionRepresentation = control_zero_fourier_series_h
 
 OCTInitialState = oct_is_groundstate
 OCTTargetOperator = oct_tg_velocity
-
-#%OCTVelocityTarget 
-#"((v[1,1]-v[2,1])*1836.15)^2"
-#%
-
-#%OCTVelocityDerivatives
-#" 2*(v[1,1]-v[2,1])*1836.15^2" | "0" | "0"
-#"-2*(v[1,1]-v[2,1])*1836.15^2" | "0" | "0"
-#%
 
 #-----------------------------
 # Laser field = Initial guess
