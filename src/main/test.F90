@@ -116,7 +116,6 @@ contains
     !% Tests the subspace diagonalization
     !%Option batch_ops 13
     !% Tests the batch operations
-    !%Calculation of the density.
     !%Option clock 18
     !% Tests for clock
     !%End
