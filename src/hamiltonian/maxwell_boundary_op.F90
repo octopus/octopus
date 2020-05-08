@@ -52,13 +52,11 @@ module maxwell_boundary_op_oct_m
     bc_mxll_t,                 &
     bc_mxll_write_info
 
-  type pml
+  type pml_t
     FLOAT             :: width
     integer           :: points_number
     integer, pointer  :: points_map(:)
     integer, pointer  :: points_map_inv(:)
-    FLOAT             :: kappa_max
-    FLOAT             :: alpha_max
     FLOAT             :: power
     FLOAT             :: refl_error
     FLOAT,   pointer  :: kappa(:,:)
@@ -74,9 +72,9 @@ module maxwell_boundary_op_oct_m
     CMPLX,   pointer  :: conv_minus(:,:,:)
     CMPLX,   pointer  :: conv_plus_old(:,:,:)
     CMPLX,   pointer  :: conv_minus_old(:,:,:)
-  end type pml
+  end type pml_t
 
-  type mxmedium
+  type mxmedium_t
     FLOAT             :: width
     FLOAT             :: ep_factor
     FLOAT             :: mu_factor
@@ -93,7 +91,7 @@ module maxwell_boundary_op_oct_m
     FLOAT,   pointer  :: aux_mu(:,:,:)
     integer           :: bdry_number(MAX_DIM)
     integer, pointer  :: bdry_map(:,:)
-  end type mxmedium
+  end type mxmedium_t
  
   type bc_mxll_t
 
@@ -103,8 +101,8 @@ module maxwell_boundary_op_oct_m
     logical           :: ab_user_def
     FLOAT,   pointer  :: ab_ufn(:)
 
+    FLOAT             :: ab_width
     FLOAT             :: mask_width
-    FLOAT             :: mask_alpha
     integer           :: mask_points_number(MAX_DIM)
     integer, allocatable  :: mask_points_map(:,:)
     FLOAT,   allocatable  :: mask(:,:)
@@ -113,8 +111,8 @@ module maxwell_boundary_op_oct_m
     integer, pointer  :: der_bndry_mask_points_map(:)
     FLOAT,   pointer  :: der_bndry_mask(:)
 
-    type(pml)         :: pml       !< attributes of PML absorbing boundaries
-    type(mxmedium)    :: mxmedium  !< attributes of linear medium boundaries
+    type(pml_t)       :: pml       !< attributes of PML absorbing boundaries
+    type(mxmedium_t)  :: mxmedium  !< attributes of linear medium boundaries
 
     integer           :: constant_points_number
     integer, pointer  :: constant_points_map(:)
@@ -195,7 +193,7 @@ contains
     !% <br>&nbsp;&nbsp;   cpml | cpml | cpml
     !% <br>%</tt>
     !%
-    !% Description follows
+    !% Type of absorbing boundaries for Maxwell propagation.
     !%
     !%Option not_absorbing 0
     !% No absorbing boundaries.
@@ -204,7 +202,7 @@ contains
     !%Option maxwell_mask 2
     !% A different mask than the wavefunctions mask is applied on Maxwell states
     !%Option cpml 3
-    !% Perfectly matched layer absorbing boundary.
+    !% Perfectly matched layer absorbing boundary
     !%Option mask_zero 7
     !% Absorbing boundary region is set to zero
     !%End
@@ -258,6 +256,11 @@ contains
         bounds(1, idim) = (gr%mesh%idx%nr(2, idim) - 2*gr%mesh%idx%enlarge(idim))*gr%mesh%spacing(idim)
         bounds(2, idim) = (gr%mesh%idx%nr(2, idim)) * gr%mesh%spacing(idim)
 
+        if (bc%bc_type(idim) == MXLL_BC_PERIODIC .and. sb%nonorthogonal) then
+          message(1) = "Maxwell propagation does not work for non-orthogonal cells in periodic systems"
+          call messages_fatal(1, namespace=namespace)
+        end if
+
       case (MXLL_BC_PLANE_WAVES)
 
         bounds(1, idim) = (gr%mesh%idx%nr(2, idim) - 2*gr%mesh%idx%enlarge(idim))*gr%mesh%spacing(idim)
@@ -275,6 +278,10 @@ contains
       select case (gr%mesh%sb%box_shape)
       case(SPHERE)
         ab_shape_dim = 1
+        if (sb%periodic_dim /= 0) then
+          message(1) = "Sphere box shape can only work for non-periodic systems"
+          call messages_fatal(1, namespace=namespace)
+        end if
       case (PARALLELEPIPED)
         ab_shape_dim = sb%dim
         ab_bounds(1, idim) = bounds(1, idim)
@@ -290,13 +297,24 @@ contains
 
         select case (bc%bc_ab_type(idim))
         case (MXLL_AB_MASK_ZERO)
-          call bc_mxll_zero_init(bc, gr, namespace, bounds, ab_bounds, idim)
+          if (bc%bc_type(idim) == MXLL_BC_PERIODIC) then
+            message(1) = "Zero absorbing boundary conditions do not work in periodic directions"
+            call messages_fatal(1, namespace=namespace)
+          end if
+
+          call bc_mxll_ab_bounds_init(bc, gr, namespace, bounds, ab_bounds, idim)
+          bc%zero_width = bc%ab_width
 
         case (MXLL_AB_MASK)
-          call bc_mxll_mask_init(bc, gr, sb, namespace, bounds, ab_bounds, idim)
+          call bc_mxll_ab_bounds_init(bc, gr, namespace, bounds, ab_bounds, idim)
+          bc%mask_width = bc%ab_width
 
         case (MXLL_AB_CPML)
-           call bc_mxll_pml_init(bc, gr, sb, namespace, bounds, ab_bounds, idim)
+           call bc_mxll_pml_init(bc, gr, namespace, bounds, ab_bounds, idim)
+
+        case default
+          message(1) = "Absorbing boundary type not implemented for Maxwell propagation"
+          call messages_fatal(1, namespace=namespace)
         end select
 
       end if
@@ -388,7 +406,7 @@ contains
     end if
 
     if (ab_pml_check) then
-      call bc_mxll_generate_pml(bc, gr, ab_bounds, dt)
+      call bc_mxll_generate_pml(bc%pml, gr, ab_bounds, dt)
     end if
 
     !call bc_generate_zero(bc, gr%mesh, ab_bounds)
@@ -432,32 +450,24 @@ contains
     type(bc_mxll_t),   intent(inout) :: bc
     PUSH_SUB(bc_mxll_end)
 
-    if (allocated(bc%mask)) then
-      SAFE_DEALLOCATE_A(bc%mask)
-    end if
+    SAFE_DEALLOCATE_A(bc%mask)
 
-    if (bc%do_plane_waves) then
-      SAFE_DEALLOCATE_P(bc%plane_waves_modus)
-      SAFE_DEALLOCATE_P(bc%plane_waves_e_field_string)
-      SAFE_DEALLOCATE_P(bc%plane_waves_e_field)
-      SAFE_DEALLOCATE_P(bc%plane_waves_k_vector)
-      SAFE_DEALLOCATE_P(bc%plane_waves_v_vector)
-      SAFE_DEALLOCATE_P(bc%plane_waves_mx_function)
-      SAFE_DEALLOCATE_P(bc%plane_waves_mx_phase)
-      SAFE_DEALLOCATE_P(bc%plane_waves)
-      SAFE_DEALLOCATE_P(bc%plane_waves_points_map)
-    end if
+    SAFE_DEALLOCATE_P(bc%plane_waves_modus)
+    SAFE_DEALLOCATE_P(bc%plane_waves_e_field_string)
+    SAFE_DEALLOCATE_P(bc%plane_waves_e_field)
+    SAFE_DEALLOCATE_P(bc%plane_waves_k_vector)
+    SAFE_DEALLOCATE_P(bc%plane_waves_v_vector)
+    SAFE_DEALLOCATE_P(bc%plane_waves_mx_function)
+    SAFE_DEALLOCATE_P(bc%plane_waves_mx_phase)
+    SAFE_DEALLOCATE_P(bc%plane_waves)
+    SAFE_DEALLOCATE_P(bc%plane_waves_points_map)
 
     SAFE_DEALLOCATE_P(bc%der_bndry_mask)
     SAFE_DEALLOCATE_P(bc%der_bndry_mask_points_map)
 
-    if (associated(bc%zero_points_map)) then
-      SAFE_DEALLOCATE_P(bc%zero_points_map)
-    end if
+    SAFE_DEALLOCATE_P(bc%zero_points_map)
 
-    if (associated(bc%zero)) then
-      SAFE_DEALLOCATE_P(bc%zero)
-    end if
+    SAFE_DEALLOCATE_P(bc%zero)
 
     POP_SUB(bc_mxll_end)
   end subroutine bc_mxll_end
@@ -466,42 +476,44 @@ contains
   ! ---------------------------------------------------------
   subroutine bc_mxll_medium_init(bc, gr, namespace, bounds, idim)
     type(bc_mxll_t),     intent(inout) :: bc
-    type(grid_t),        intent(in) :: gr
-    type(namespace_t),   intent(in) :: namespace
+    type(grid_t),        intent(in)    :: gr
+    type(namespace_t),   intent(in)    :: namespace
     FLOAT,               intent(inout) :: bounds(:,:)
-    integer,             intent(in) :: idim
+    integer,             intent(in)    :: idim
 
-    !%Variable MaxwellMediumWidth
+    PUSH_SUB(bc_mxll_medium_init)
+
+    !%Variable MediumWidth
     !%Type float
     !%Default 0.0 a.u.
     !%Section Time-Dependent::Absorbing Boundaries
     !%Description
     !% Width of the boundary region with medium
     !%End
-    call parse_variable(namespace, 'MaxwellMediumWidth', M_ZERO, bc%mxmedium%width, units_inp%length)
+    call parse_variable(namespace, 'MediumWidth', M_ZERO, bc%mxmedium%width, units_inp%length)
     bounds(1,idim) = ( gr%mesh%idx%nr(2, idim) - gr%mesh%idx%enlarge(idim) ) * gr%mesh%spacing(idim)
     bounds(1,idim) = bounds(1,idim) - bc%mxmedium%width
     bounds(2,idim) = ( gr%mesh%idx%nr(2, idim) ) * gr%mesh%spacing(idim)
 
-    !%Variable MaxwellEpsilonFactor
+    !%Variable MediumEpsilonFactor
     !%Type float
     !%Default 1.0.
     !%Section Time-Dependent::Absorbing Boundaries
     !%Description
     !% Maxwell epsilon factor
     !%End
-    call parse_variable(namespace, 'MaxwellEpsilonFactor', M_ONE, bc%mxmedium%ep_factor, unit_one)
+    call parse_variable(namespace, 'MediumEpsilonFactor', M_ONE, bc%mxmedium%ep_factor, unit_one)
 
-    !%Variable MaxwellMuFactor
+    !%Variable MediumMuFactor
     !%Type float
     !%Default 0.
     !%Section Time-Dependent::Absorbing Boundaries
     !%Description
     !% Maxwell mu factor
     !%End
-    call parse_variable(namespace, 'MaxwellMuFactor', M_ZERO, bc%mxmedium%mu_factor, unit_one)
+    call parse_variable(namespace, 'MediumMuFactor', M_ZERO, bc%mxmedium%mu_factor, unit_one)
 
-    !%Variable MaxwellElectricSigma
+    !%Variable MediumElectricSigma
     !%Type float
     !%Default 0.
     !%Section Time-Dependent::Absorbing Boundaries
@@ -509,159 +521,95 @@ contains
     !% Maxwell electric sigma
     !%End
 
-    call parse_variable(namespace, 'MaxwellElectricSigma', M_ZERO, bc%mxmedium%sigma_e_factor, unit_one)
-    !%Variable MaxwellMagneticSigma
+    call parse_variable(namespace, 'MediumElectricSigma', M_ZERO, bc%mxmedium%sigma_e_factor, unit_one)
+    !%Variable MediumMagneticSigma
     !%Type float
-    !%Default 0.
+    !%Default 1.
     !%Section Time-Dependent::Absorbing Boundaries
     !%Description
     !% Maxwell magnetic sigma
     !%End
-    call parse_variable(namespace, 'MaxwellMagneticSigma', M_ONE, bc%mxmedium%sigma_m_factor, unit_one)
+    call parse_variable(namespace, 'MediumMagneticSigma', M_ONE, bc%mxmedium%sigma_m_factor, unit_one)
+
+    POP_SUB(bc_mxll_medium_init)
 
   end subroutine bc_mxll_medium_init
 
 
   ! ---------------------------------------------------------
-  subroutine bc_mxll_zero_init(bc, gr, namespace, bounds, ab_bounds, idim)
+  subroutine bc_mxll_ab_bounds_init(bc, gr, namespace, bounds, ab_bounds, idim)
     type(bc_mxll_t),     intent(inout) :: bc
-    type(grid_t),        intent(in) :: gr
-    type(namespace_t),   intent(in) :: namespace
+    type(grid_t),        intent(in)    :: gr
+    type(namespace_t),   intent(in)    :: namespace
     FLOAT,               intent(inout) :: bounds(:,:), ab_bounds(:,:)
-    integer,             intent(in) :: idim
+    integer,             intent(in)    :: idim
 
-    FLOAT               :: zero_width
+    FLOAT               :: width
 
-    !%Variable MaxwellABZeroWidth
+    PUSH_SUB(bc_mxll_ab_bounds_init)
+
+    !%Variable MaxwellABWidth
     !%Type float
     !%Default 0.4 a.u.
     !%Section Time-Dependent::Absorbing Boundaries
     !%Description
     !% Width of the region used to apply the absorbing boundaries.
     !%End
-    zero_width = ab_bounds(2,idim)-ab_bounds(1,idim)
-    call parse_variable(namespace, 'MaxwellABZeroWidth', zero_width, zero_width, units_inp%length)
-    bc%zero_width = zero_width
 
-    if (any(zero_width < gr%der%order*gr%mesh%spacing(1:3))) then
-       zero_width = gr%der%order * max(gr%mesh%spacing(1), gr%mesh%spacing(2), gr%mesh%spacing(3))
-       write(message(1),'(a)') 'Zero absorbing width has to be larger or equal than derivatives order times spacing!'
-       write(message(2),'(a,es10.3)') 'Zero absorbing width is set to: ', zero_width
+    width = bounds(2, idim) - bounds(1, idim)
+    call parse_variable(namespace, 'MaxwellABWidth', width, width, units_inp%length)
+    bc%ab_width = width
+
+    if (any(width < gr%der%order*gr%mesh%spacing(1:3))) then
+       width = gr%der%order * maxval(gr%mesh%spacing(1:3))
+       write(message(1),'(a)') 'Absorbing boundary width has to be larger or equal than derivatives order times spacing!'
+       write(message(2),'(a,es10.3)') 'Absorbing boundary width is set to: ', width
        call messages_info(2)
     end if
 
-  end subroutine bc_mxll_zero_init
+    ab_bounds(1, idim) = ab_bounds(2, idim) - width
+
+    POP_SUB(bc_mxll_ab_bounds_init)
+
+  end subroutine bc_mxll_ab_bounds_init
 
 
   ! ---------------------------------------------------------
-  subroutine bc_mxll_mask_init(bc, gr, sb, namespace, bounds, ab_bounds, idim)
+  subroutine bc_mxll_pml_init(bc, gr, namespace, bounds, ab_bounds, idim)
     type(bc_mxll_t),     intent(inout) :: bc
-    type(grid_t),        intent(in) :: gr
-    type(simul_box_t),   intent(in) :: sb
-    type(namespace_t),   intent(in) :: namespace
-    FLOAT,                intent(inout) :: bounds(:,:), ab_bounds(:,:)
-    integer,             intent(in) :: idim
-
-    FLOAT               :: mask_width
-
-    !%Variable MaxwellABMaskWidth
-    !%Type float
-    !%Default 0
-    !%Section Time-Dependent::Absorbing Boundaries
-    !%Description
-    !% Width of the region used to apply the absorbing boundaries.
-    !%End
-
-    mask_width = ab_bounds(2, idim) - ab_bounds(1, idim)
-    call parse_variable(namespace, 'MaxwellABMaskWidth', mask_width, mask_width, units_inp%length)
-    bc%mask_width = mask_width
-
-    if (any(mask_width < gr%der%order*gr%mesh%spacing(1:3))) then
-       mask_width = gr%der%order * max(gr%mesh%spacing(1), gr%mesh%spacing(2), gr%mesh%spacing(3))
-       write(message(1),'(a)') 'Mask absorbing width has to be larger or equal than derivatives order times spacing!'
-       write(message(2),'(a,es10.3)') 'Mask absorbing width is set to: ', mask_width
-       call messages_info(2)
-    end if
-
-    !%Variable MaxwellABMaskAlpha
-    !%Type float
-    !%Default 0.4 a.u.
-    !%Section Time-Dependent::Absorbing Boundaries
-    !%Description
-    !% Width of the region used to apply the absorbing boundaries.
-    !%End
-    call parse_variable(namespace, 'MaxwellABMaskWidth', M_TWO, bc%mask_alpha, units_inp%length)
-    ab_bounds(1, idim) = ab_bounds(2, idim) - mask_width
-
-  end subroutine bc_mxll_mask_init
-
-
-  ! ---------------------------------------------------------
-  subroutine bc_mxll_pml_init(bc, gr, sb, namespace, bounds, ab_bounds, idim)
-    type(bc_mxll_t),     intent(inout) :: bc
-    type(grid_t),        intent(in) :: gr
-    type(simul_box_t),   intent(in) :: sb
-    type(namespace_t),   intent(in) :: namespace
+    type(grid_t),        intent(in)    :: gr
+    type(namespace_t),   intent(in)    :: namespace
     FLOAT,               intent(inout) :: bounds(:,:), ab_bounds(:,:)
-    integer,             intent(in) :: idim
+    integer,             intent(in)    :: idim
 
     FLOAT               :: pml_width
 
-    !%Variable MaxwellABPMLWidth
-    !%Type float
-    !%Default 0
-    !%Section Time-Dependent::Absorbing Boundaries
-    !%Description
-    !% Width of the region used to apply the absorbing boundaries.
-    !%End
-    pml_width = ab_bounds(2,idim) - ab_bounds(1,idim)
-    call parse_variable(namespace, 'MaxwellABPMLWidth', pml_width, pml_width, units_inp%length)
-    bc%pml%width = pml_width
-    if (parse_is_defined(namespace, 'MaxwellIncidentWaves')) then
-       if (any(pml_width < gr%der%order*gr%mesh%spacing(1:3))) then
-          pml_width = gr%der%order * max(gr%mesh%spacing(1), gr%mesh%spacing(2), gr%mesh%spacing(3))
-          write(message(1),'(a)') 'PML absorbing width has to be larger or equal than derivatives order times spacing!'
-          write(message(2),'(a,es10.3)') 'PML absorbing width is set to: ', pml_width
-          call messages_info(2)
-       end if
-    end if
-    ab_bounds(1,idim) = ab_bounds(2,idim) - pml_width
+    PUSH_SUB(bc_mxll_pml_init)
 
-    !%Variable MaxwellABPMLKappaMax
-    !%Type float
-    !%Default 2.0
-    !%Section Time-Dependent::Absorbing Boundaries
-    !%Description
-    !% Follwos
-    !%End
-    call parse_variable(namespace, 'MaxwellABPMLKappaMax', CNST(2.0), bc%pml%kappa_max, unit_one)
-
-    !%Variable MaxwellABPMLAlphaMax
-    !%Type float
-    !%Default 1.0
-    !%Section Time-Dependent::Absorbing Boundaries
-    !%Description
-    !% Follwos
-    !%End
-    call parse_variable(namespace, 'MaxwellABPMLAlphaMax', CNST(1.0), bc%pml%alpha_max, unit_one)
+    call bc_mxll_ab_bounds_init(bc, gr, namespace, bounds, ab_bounds, idim)
+    bc%pml%width = bc%ab_width
 
     !%Variable MaxwellABPMLPower
     !%Type float
     !%Default 3.5
     !%Section Time-Dependent::Absorbing Boundaries
     !%Description
-    !% Follwos
+    !% Exponential of the polynomial profile for the non-physical conductivity of the PML.
+    !% Should be between 2 and 4
     !%End
     call parse_variable(namespace, 'MaxwellABPMLPower', CNST(3.5), bc%pml%power, unit_one)
 
     !%Variable MaxwellABPMLReflectionError
     !%Type float
-    !%Default 0.1
+    !%Default 1.0e-16
     !%Section Time-Dependent::Absorbing Boundaries
     !%Description
-    !% Follwos
+    !% Tolerated reflection error for the PML
     !%End
-    call parse_variable(namespace, 'MaxwellABPMLReflectionError', CNST(0.1), bc%pml%refl_error, unit_one)
+    call parse_variable(namespace, 'MaxwellABPMLReflectionError', CNST(1.0e-16), bc%pml%refl_error, unit_one)
+    
+    POP_SUB(bc_mxll_pml_init)
+
   end subroutine bc_mxll_pml_init
 
 
@@ -674,12 +622,15 @@ contains
     integer :: err, idim
     FLOAT, allocatable :: tmp(:)
     logical :: mask_check, pml_check, medium_check
+    character(1) :: dim_label(3)
 
     PUSH_SUB(bc_mxll_write_info)
 
     mask_check = .false.
     pml_check = .false.
     medium_check = .false.
+
+    dim_label = (/'x', 'y', 'z'/)
 
     do idim = 1, 3
       if (bc%bc_ab_type(idim) == MXLL_AB_MASK) then
@@ -703,56 +654,30 @@ contains
       SAFE_DEALLOCATE_A(tmp)
     else if (pml_check) then
       SAFE_ALLOCATE(tmp(mesh%np))
-      ! sigma for electric field dim = 1
-      tmp(:) = M_ONE
-      call get_pml_io_function(bc%pml%sigma_e(:, 1), bc, tmp)
-      call write_files("maxwell_sigma_e-x", tmp)
-      ! sigma for electric field dim = 2
-      tmp(:) = M_ONE
-      call get_pml_io_function(bc%pml%sigma_e(:, 2), bc, tmp)
-      call write_files("maxwell_sigma_e-y", tmp)
-      ! sigma for electric field dim = 3
-      tmp(:) = M_ONE
-      call get_pml_io_function(bc%pml%sigma_e(:, 3), bc, tmp)
-      call write_files("maxwell_sigma_e-z", tmp)
-      ! sigma for magnetic field dim = 1
-      tmp(:) = M_ZERO
-      call get_pml_io_function(bc%pml%sigma_m(:, 1), bc, tmp)
-      call write_files("maxwell_sigma_m-x", tmp)
-      ! sigma for magnetic dim = 2
-      tmp(:) = M_ZERO
-      call get_pml_io_function(bc%pml%sigma_m(:, 2), bc, tmp)
-      call write_files("maxwell_sigma_m-y", tmp)
-      ! sigma for magnetic = 3
-      tmp(:) = M_ZERO
-      call get_pml_io_function(bc%pml%sigma_m(:, 3), bc, tmp)
-      call write_files("maxwell_sigma_m-z", tmp)
-      ! pml_a for electric field dim = 1
-      tmp(:) = M_ZERO
-      call get_pml_io_function(TOFLOAT(bc%pml%a(:, 1)), bc, tmp)
-      call write_files("maxwell_sigma_pml_a_e-x", tmp)
-      ! pml_a for electric field dim = 2
-      tmp(:) = M_ZERO
-      call get_pml_io_function(TOFLOAT(bc%pml%a(:, 2)), bc, tmp)
-      call write_files("maxwell_sigma_pml_a_e-y", tmp)
-      ! pml_a for electric field dim = 3
-      tmp(:) = M_ZERO
-      call get_pml_io_function(TOFLOAT(bc%pml%a(:, 3)), bc, tmp)
-      call write_files("maxwell_sigma_pml_a_e-z", tmp)
-      ! pml_a for magnetic field dim = 1
-      tmp(:) = M_ZERO
-      call get_pml_io_function(aimag(bc%pml%a(:, 1)), bc, tmp)
-      call write_files("maxwell_sigma_pml_a_m-x", tmp)
-      ! pml_a for magnetic field dim = 2
-      tmp(:) = M_ZERO
-      call get_pml_io_function(aimag(bc%pml%a(:, 2)), bc, tmp)
-      call write_files("maxwell_sigma_pml_a_m-y", tmp)
-      ! pml_a for magnetic field dim = 3
-      tmp(:) = M_ZERO
-      call get_pml_io_function(aimag(bc%pml%a(:, 3)), bc, tmp)
-      call write_files("maxwell_sigma_pml_a_m-z", tmp)
+      do idim = 1, 3 
+        ! sigma for electric field dim = idim
+        tmp(:) = M_ONE
+        call get_pml_io_function(bc%pml%sigma_e(:, idim), bc, tmp)
+        call write_files("maxwell_sigma_e-"//dim_label(idim), tmp)
+
+        ! sigma for magnetic dim = idim
+        tmp(:) = M_ZERO
+        call get_pml_io_function(bc%pml%sigma_m(:, 1), bc, tmp)
+        call write_files("maxwell_sigma_m-"//dim_label(idim), tmp)
+
+        ! pml_a for electric field dim = idim
+        tmp(:) = M_ZERO
+        call get_pml_io_function(TOFLOAT(bc%pml%a(:, idim)), bc, tmp)
+        call write_files("maxwell_sigma_pml_a_e-"//dim_label(idim), tmp)
+
+        ! pml_a for magnetic field dim = 1
+        tmp(:) = M_ZERO
+        call get_pml_io_function(aimag(bc%pml%a(:, idim)), bc, tmp)
+        call write_files("maxwell_sigma_pml_a_m-"//dim_label(idim), tmp)
+      end do
       SAFE_DEALLOCATE_A(tmp)
     end if
+   
     if (medium_check) then
       SAFE_ALLOCATE(tmp(mesh%np))
       ! medium epsilon
@@ -767,30 +692,19 @@ contains
       tmp(:) = P_c
       call get_medium_io_function(bc%mxmedium%c, bc, tmp)
       call write_files("maxwell_c", tmp)
-      ! medium epsilon aux field dim = 1
-      tmp(:) = M_ZERO
-      call get_medium_io_function(bc%mxmedium%aux_ep(:, 1, :), bc, tmp)
-      call write_files("maxwell_aux_ep-x", tmp)
-      ! medium epsilon aux field dim = 2
-      tmp(:) = M_ZERO
-      call get_medium_io_function(bc%mxmedium%aux_ep(:, 2, :), bc, tmp)
-      call write_files("maxwell_aux_ep-y", tmp)
-      ! medium epsilon aux field dim = 3
-      tmp(:) = M_ZERO
-      call get_medium_io_function(bc%mxmedium%aux_ep(:, 3, :), bc, tmp)
-      call write_files("maxwell_aux_ep-z", tmp)
-      ! medium mu aux field dim = 1
-      tmp(:) = M_ZERO
-      call get_medium_io_function(bc%mxmedium%aux_mu(:, 1, :), bc, tmp)
-      call write_files("maxwell_aux_mu-x", tmp)
-      ! medium mu aux field dim = 2
-      tmp(:) = M_ZERO
-      call get_medium_io_function(bc%mxmedium%aux_mu(:, 2, :), bc, tmp)
-      call write_files("maxwell_aux_mu-y", tmp)
-      ! medium mu aux field dim = 3
-      tmp(:) = M_ZERO
-      call get_medium_io_function(bc%mxmedium%aux_mu(:, 3, :), bc, tmp)
-      call write_files("maxwell_aux_mu-z", tmp)
+
+      do idim = 1, 3
+        ! medium epsilon aux field dim = idim
+        tmp(:) = M_ZERO
+        call get_medium_io_function(bc%mxmedium%aux_ep(:, idim, :), bc, tmp)
+        call write_files("maxwell_aux_ep-"//dim_label(idim), tmp)
+
+        ! medium mu aux field dim = idim
+        tmp(:) = M_ZERO
+        call get_medium_io_function(bc%mxmedium%aux_mu(:, idim, :), bc, tmp)
+        call write_files("maxwell_aux_mu-"//dim_label(idim), tmp)
+      end do
+     
       SAFE_DEALLOCATE_A(tmp)
     end if
 
@@ -1002,7 +916,7 @@ contains
     ! allocate zero points map
     ip_in = 0
     do ip = 1, mesh%np
-      call maxwell_box_point_info(bc, mesh, ip, bounds, geo, point_info)
+     call maxwell_box_point_info(bc, mesh, ip, bounds, geo, point_info)
       if (point_info == 1) then
         ip_in = ip_in + 1
       end if
@@ -1133,8 +1047,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine bc_mxll_generate_pml(bc, gr, bounds, dt)
-    type(bc_mxll_t),    intent(inout) :: bc
+  subroutine bc_mxll_generate_pml(pml, gr, bounds, dt)
+    type(pml_t),    intent(inout)     :: pml
     type(grid_t),       intent(in)    :: gr
     FLOAT,              intent(in)    :: bounds(:,:)
     FLOAT, optional,    intent(in)    :: dt
@@ -1148,48 +1062,48 @@ contains
     SAFE_ALLOCATE(tmp(gr%mesh%np_part))
     SAFE_ALLOCATE(tmp_grad(gr%mesh%np, 1:gr%mesh%sb%dim))
 
-    SAFE_ALLOCATE(bc%pml%kappa(1:bc%pml%points_number, 1:gr%mesh%sb%dim))
-    SAFE_ALLOCATE(bc%pml%sigma_e(1:bc%pml%points_number, 1:gr%mesh%sb%dim))
-    SAFE_ALLOCATE(bc%pml%sigma_m(1:bc%pml%points_number, 1:gr%mesh%sb%dim))
-    SAFE_ALLOCATE(bc%pml%a(1:bc%pml%points_number, 1:gr%mesh%sb%dim))
-    SAFE_ALLOCATE(bc%pml%b(1:bc%pml%points_number, 1:gr%mesh%sb%dim))
-    SAFE_ALLOCATE(bc%pml%c(1:bc%pml%points_number, 1:3))
-    SAFE_ALLOCATE(bc%pml%mask(1:bc%pml%points_number))
-    SAFE_ALLOCATE(bc%pml%conv_plus(1:bc%pml%points_number, 1:3, 1:3))
-    SAFE_ALLOCATE(bc%pml%conv_minus(1:bc%pml%points_number, 1:3, 1:3))
-    SAFE_ALLOCATE(bc%pml%conv_plus_old(1:bc%pml%points_number, 1:3, 1:3))
-    SAFE_ALLOCATE(bc%pml%conv_minus_old(1:bc%pml%points_number, 1:3, 1:3))
-    SAFE_ALLOCATE(bc%pml%aux_ep(1:bc%pml%points_number, 1:3, 1:3))
-    SAFE_ALLOCATE(bc%pml%aux_mu(1:bc%pml%points_number, 1:3, 1:3))
+    SAFE_ALLOCATE(pml%kappa(1:pml%points_number, 1:gr%mesh%sb%dim))
+    SAFE_ALLOCATE(pml%sigma_e(1:pml%points_number, 1:gr%mesh%sb%dim))
+    SAFE_ALLOCATE(pml%sigma_m(1:pml%points_number, 1:gr%mesh%sb%dim))
+    SAFE_ALLOCATE(pml%a(1:pml%points_number, 1:gr%mesh%sb%dim))
+    SAFE_ALLOCATE(pml%b(1:pml%points_number, 1:gr%mesh%sb%dim))
+    SAFE_ALLOCATE(pml%c(1:pml%points_number, 1:3))
+    SAFE_ALLOCATE(pml%mask(1:pml%points_number))
+    SAFE_ALLOCATE(pml%conv_plus(1:pml%points_number, 1:3, 1:3))
+    SAFE_ALLOCATE(pml%conv_minus(1:pml%points_number, 1:3, 1:3))
+    SAFE_ALLOCATE(pml%conv_plus_old(1:pml%points_number, 1:3, 1:3))
+    SAFE_ALLOCATE(pml%conv_minus_old(1:pml%points_number, 1:3, 1:3))
+    SAFE_ALLOCATE(pml%aux_ep(1:pml%points_number, 1:3, 1:3))
+    SAFE_ALLOCATE(pml%aux_mu(1:pml%points_number, 1:3, 1:3))
 
-    bc%pml%kappa                 = M_ONE
-    bc%pml%sigma_e               = M_ZERO
-    bc%pml%sigma_m               = M_ZERO
-    bc%pml%a                     = M_z0
-    bc%pml%b                     = M_z0
-    bc%pml%c                     = M_ZERO
-    bc%pml%mask                  = M_ONE
-    bc%pml%conv_plus             = M_z0
-    bc%pml%conv_minus            = M_z0
-    bc%pml%conv_plus_old         = M_z0
-    bc%pml%conv_minus_old        = M_z0
+    pml%kappa                 = M_ONE
+    pml%sigma_e               = M_ZERO
+    pml%sigma_m               = M_ZERO
+    pml%a                     = M_z0
+    pml%b                     = M_z0
+    pml%c                     = M_ZERO
+    pml%mask                  = M_ONE
+    pml%conv_plus             = M_z0
+    pml%conv_minus            = M_z0
+    pml%conv_plus_old         = M_z0
+    pml%conv_minus_old        = M_z0
 
     width(:) = bounds(2, :) - bounds(1, :)
 
     ! PML variables for all boundary points
-    do ip_in = 1, bc%pml%points_number
-      ip = bc%pml%points_map(ip_in)
+    do ip_in = 1, pml%points_number
+      ip = pml%points_map(ip_in)
       ddv(:) = abs(gr%mesh%x(ip, :)) - bounds(1, :)
       do idim = 1, gr%mesh%sb%dim
         if (ddv(idim) >= M_ZERO) then
-          gg     = (ddv(idim)/bc%pml%width)**bc%pml%power
-          hh     = (M_ONE-ddv(idim)/bc%pml%width)**bc%pml%power
-          kk     = M_ONE ! + (bc%pml%kappa_max - M_ONE) * gg
-          ss_max = -(bc%pml%power + M_ONE)*P_c*P_ep*log(bc%pml%refl_error)/(M_TWO * bc%pml%width)
+          gg     = (ddv(idim)/pml%width)**pml%power
+          hh     = (M_ONE-ddv(idim)/pml%width)**pml%power
+          kk     = M_ONE ! + (pml%kappa_max - M_ONE) * gg
+          ss_max = -(pml%power + M_ONE)*P_c*P_ep*log(pml%refl_error)/(M_TWO * pml%width)
           ss_e   = gg * ss_max
           ss_m   = gg * ss_max ! * P_mu/P_ep
-          ll_e   = ss_e*kk ! + kk**2*bc%pml%alpha_max*hh
-          ll_m   = ss_m*kk ! + kk**2*bc%pml%alpha_max*hh
+          ll_e   = ss_e*kk ! + kk**2*pml%alpha_max*hh
+          ll_m   = ss_m*kk ! + kk**2*pml%alpha_max*hh
           bb_e   = exp(-(ss_e/(P_ep))*dt)
           bb_m   = exp(-(ss_m/(P_ep))*dt)
 !          aa_e   = (ss_e/ll_e)*(bb_e - 1)
@@ -1198,19 +1112,19 @@ contains
           aa_m   = (bb_m - 1)
           if (ll_e == M_ZERO) aa_e = M_ZERO
           if (ll_m == M_ZERO) aa_m = M_ZERO
-          bc%pml%sigma_e(ip_in, idim) = ss_e
-          bc%pml%sigma_m(ip_in, idim) = ss_m
-          bc%pml%a(ip_in, idim)       = aa_e + M_zI * aa_m
-          bc%pml%b(ip_in, idim)       = bb_e + M_zI * bb_m
-          bc%pml%kappa(ip_in, idim)   = kk
-          bc%pml%mask(ip_in)          = bc%pml%mask(ip_in) * (M_ONE - sin(ddv(idim)*M_PI/(M_TWO*(width(idim))))**2)
+          pml%sigma_e(ip_in, idim) = ss_e
+          pml%sigma_m(ip_in, idim) = ss_m
+          pml%a(ip_in, idim)       = aa_e + M_zI * aa_m
+          pml%b(ip_in, idim)       = bb_e + M_zI * bb_m
+          pml%kappa(ip_in, idim)   = kk
+          pml%mask(ip_in)          = pml%mask(ip_in) * (M_ONE - sin(ddv(idim)*M_PI/(M_TWO*(width(idim))))**2)
         else
-          bc%pml%kappa(ip_in, idim)   = M_ONE
-          bc%pml%sigma_e(ip_in, idim) = M_ZERO
-          bc%pml%sigma_m(ip_in, idiM) = M_ZERO
-          bc%pml%a(ip_in, idim)       = M_z0
-          bc%pml%b(ip_in, idim)       = M_z0
-          bc%pml%mask(ip_in)          = M_ONE
+          pml%kappa(ip_in, idim)   = M_ONE
+          pml%sigma_e(ip_in, idim) = M_ZERO
+          pml%sigma_m(ip_in, idiM) = M_ZERO
+          pml%a(ip_in, idim)       = M_z0
+          pml%b(ip_in, idim)       = M_z0
+          pml%mask(ip_in)          = M_ONE
         end if
       end do
     end do
@@ -1218,35 +1132,35 @@ contains
     ! PML auxiliary epsilon for all boundary points
     do idim = 1, gr%mesh%sb%dim
       tmp = P_ep
-      do ip_in = 1, bc%pml%points_number
-        ip = bc%pml%points_map(ip_in)
-        tmp(ip) = P_ep / bc%pml%kappa(ip_in, idim)
+      do ip_in = 1, pml%points_number
+        ip = pml%points_map(ip_in)
+        tmp(ip) = P_ep / pml%kappa(ip_in, idim)
       end do
       call dderivatives_grad(gr%der, tmp, tmp_grad, set_bc = .false.)
-      do ip_in = 1, bc%pml%points_number
-        ip = bc%pml%points_map(ip_in)
-        bc%pml%aux_ep(ip_in, :, idim) = tmp_grad(ip, :)/(M_FOUR*P_ep*bc%pml%kappa(ip_in, idim))
+      do ip_in = 1, pml%points_number
+        ip = pml%points_map(ip_in)
+        pml%aux_ep(ip_in, :, idim) = tmp_grad(ip, :)/(M_FOUR*P_ep*pml%kappa(ip_in, idim))
       end do
     end do
 
     ! PML auxiliary mu
     do idim = 1, gr%mesh%sb%dim
       tmp = P_mu
-      do ip_in = 1, bc%pml%points_number
-        ip = bc%pml%points_map(ip_in)
-        tmp(ip) = P_mu / bc%pml%kappa(ip_in, idim)
+      do ip_in = 1, pml%points_number
+        ip = pml%points_map(ip_in)
+        tmp(ip) = P_mu / pml%kappa(ip_in, idim)
       end do
       call dderivatives_grad(gr%der, tmp, tmp_grad, set_bc = .false.)
-      do ip_in = 1, bc%pml%points_number
-        ip = bc%pml%points_map(ip_in)
-        bc%pml%aux_mu(ip_in, :, idim) = tmp_grad(ip, :)/(M_FOUR*P_mu*bc%pml%kappa(ip_in, idim))
+      do ip_in = 1, pml%points_number
+        ip = pml%points_map(ip_in)
+        pml%aux_mu(ip_in, :, idim) = tmp_grad(ip, :)/(M_FOUR*P_mu*pml%kappa(ip_in, idim))
       end do
     end do
 
     ! PML auxiliary c for all boundary points
     do idim = 1, gr%mesh%sb%dim
-      do ip_in = 1, bc%pml%points_number
-        bc%pml%c(ip_in, idim) = P_c/bc%pml%kappa(ip_in, idim)
+      do ip_in = 1, pml%points_number
+        pml%c(ip_in, idim) = P_c/pml%kappa(ip_in, idim)
       end do
     end do
 
@@ -1307,7 +1221,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine bc_mxll_generate_medium(bc, gr, bounds, geo)
-    type(bc_mxll_t),         intent(inout) :: bc
+    type(bc_mxll_t),        intent(inout)  :: bc
     type(grid_t),            intent(in)    :: gr
     FLOAT,                   intent(in)    :: bounds(:,:)
     type(geometry_t),        intent(in)    :: geo
@@ -1345,7 +1259,7 @@ contains
           do ip_bd = 1, bc%mxmedium%bdry_number(idim)
             ipp = bc%mxmedium%bdry_map(ip_bd, idim)
             xxp(:) = gr%mesh%x(ipp, :)
-            dd = sqrt((xx(1) - xxp(1))**2 + (xx(2) - xxp(2))**2 + (xx(3) - xxp(3))**2)
+            dd = sqrt(sum((xx(1:3) - xxp(1:3))**2))
             if (dd < dd_min) dd_min = dd
           end do
           tmp(ip) = P_ep * (M_ONE + bc%mxmedium%ep_factor &
@@ -1370,7 +1284,7 @@ contains
           do ip_bd = 1, bc%mxmedium%bdry_number(idim)
             ipp = bc%mxmedium%bdry_map(ip_bd, idim)
             xxp(:) = gr%mesh%x(ipp,:)
-            dd = sqrt((xx(1) - xxp(1))**2 + (xx(2) - xxp(2))**2 + (xx(3) - xxp(3))**2)
+            dd = sqrt(sum((xx(1:3) - xxp(1:3))**2))
             if (dd < dd_min) dd_min = dd
           end do
           tmp(ip) = P_mu * (M_ONE + bc%mxmedium%mu_factor &
