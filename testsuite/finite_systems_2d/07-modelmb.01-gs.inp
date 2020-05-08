@@ -24,7 +24,7 @@ Eigensolver = cg_new
 EigensolverTolerance = 1e-9
 EigensolverMaxIter = 50
 ConvEigenError = yes
-MaximumIter = 200
+MaximumIter = 300
 
 b=0.5
 v = 0.9
