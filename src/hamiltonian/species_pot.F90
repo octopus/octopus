@@ -245,7 +245,7 @@ contains
           pos(1:sb%dim) = periodic_copy_position(pp, sb, icell)
           do ip = 1, mesh%np
             call mesh_r(mesh, ip, rr, origin = pos)
-            rr = max(rr, r_small)
+            rr = max(rr, R_SMALL)
             
             do isp = 1, spin_channels
               if(rr >= spline_range_max(ps%density(isp))) cycle
@@ -267,7 +267,7 @@ contains
           pos(1:sb%dim) = periodic_copy_position(pp, sb, icell)
           do ip = 1, mesh%np
             call mesh_r(mesh, ip, rr, origin = pos)
-            rr = max(rr, r_small)
+            rr = max(rr, R_SMALL)
 
             if(rr >= spline_range_max(ps%vl)) cycle
             
@@ -333,7 +333,7 @@ contains
         do ip = 1, mesh%np
           call mesh_r(mesh, ip, rr, origin = pos)
 
-          rr = max(rr, r_small) 
+          rr = max(rr, R_SMALL) 
            
           do isp = 1, spin_channels
             if(rr >= spline_range_max(ps%density(isp))) cycle
@@ -348,7 +348,7 @@ contains
 
         do ip = 1, mesh%np
           call mesh_r(mesh, ip, rr, origin = pos)
-          rr = max(rr, r_small)
+          rr = max(rr, R_SMALL)
 
           if(rr >= spline_range_max(ps%vl)) cycle
 
@@ -451,7 +451,7 @@ contains
 
       do ip = 1, mesh%np
         call mesh_r(mesh, ip, rr, origin = pos)
-        rr = max(rr, r_small)
+        rr = max(rr, R_SMALL)
 
         do isp = 1, spin_channels
           if(rr >= spline_range_max(ps%density_der(isp))) cycle
@@ -513,7 +513,7 @@ contains
         
           do ip = 1, mesh%np
             call mesh_r(mesh, ip, rr, origin = pos)
-            rr = max(rr, r_small)
+            rr = max(rr, R_SMALL)
 
             do isp = 1, spin_channels
               if(rr >= spline_range_max(ps%density_der(isp))) cycle
@@ -845,7 +845,7 @@ contains
           center(1:mesh%sb%dim) = periodic_copy_position(pp, mesh%sb, icell)
           do ip = 1, mesh%np
             call mesh_r(mesh, ip, rr, origin = center)
-            rr = max(rr, r_small)
+            rr = max(rr, R_SMALL)
             if(rr >= spline_range_max(ps%core_der)) cycle
             spline = spline_eval(ps%core_der, rr)
 

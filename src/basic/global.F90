@@ -65,7 +65,7 @@ module global_oct_m
 
   type(conf_t),      public :: conf
    
-  FLOAT, public, parameter :: r_small = CNST(0.0001)
+  FLOAT, public, parameter :: R_SMALL = CNST(0.0001)
 
   !> some mathematical constants
   FLOAT, public, parameter :: M_Pi        = CNST(3.1415926535897932384626433832795029)

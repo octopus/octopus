@@ -842,7 +842,7 @@ contains
         call mesh_r(mesh, ip, rr, origin=geo%catom(ia)%x)
         select case(ep%classical_pot)
         case(CLASSICAL_POINT)
-          if(rr < r_small) rr = r_small
+          if(rr < R_SMALL) rr = R_SMALL
           ep%Vclassical(ip) = ep%Vclassical(ip) - geo%catom(ia)%charge/rr
         case(CLASSICAL_GAUSSIAN)
           select case(geo%catom(ia)%label(1:1)) ! covalent radii
@@ -853,7 +853,7 @@ contains
           case default
             rc = CNST(0.7) * P_Ang
           end select
-          if(abs(rr - rc) < r_small) rr = rc + sign(r_small, rr - rc)
+          if(abs(rr - rc) < R_SMALL) rr = rc + sign(R_SMALL, rr - rc)
           ep%Vclassical(ip) = ep%Vclassical(ip) - geo%catom(ia)%charge * (rr**4 - rc**4) / (rr**5 - rc**5)
         case default
           message(1) = 'Unknown type of classical potential in epot_generate_classical'
