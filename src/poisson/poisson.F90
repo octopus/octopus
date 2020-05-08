@@ -1061,7 +1061,7 @@ contains
         call mesh_r(mesh, ip, rr, origin = xx(:, nn))
         select case(mesh%sb%dim)
         case(3)
-          if(rr > r_small) then
+          if(rr > R_SMALL) then
             vh_exact(ip) = vh_exact(ip) + (-1)**nn * loct_erf(rr/alpha)/rr
           else
             vh_exact(ip) = vh_exact(ip) + (-1)**nn * (M_TWO/sqrt(M_PI))/alpha
