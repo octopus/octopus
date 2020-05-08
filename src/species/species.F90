@@ -640,7 +640,7 @@ contains
     call read_from_set(spec, read_data)
 
    if(read_data == 0) then
-      message(1) = 'Species '//trim(spec%label)//' not found.'
+      message(1) = 'Species '//trim(spec%label)//' not found in default pseudopotential set.'
       call messages_fatal(1, namespace=namespace)
     end if
 
