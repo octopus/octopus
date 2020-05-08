@@ -21,6 +21,10 @@
 sharedir = $(pkgdatadir)/testsuite/multisystem
 
 dist_share_DATA =                                  \
+	01-nested_systems.test                     \
+	01-nested_systems.01-two_levels.inp        \
+	01-nested_systems.02-three_levels.inp      \
+	01-nested_systems.03-four_levels.inp       \
 	02-interaction_graph.test                  \
 	02-interaction_graph.01-three_body.inp     \
 	03-propagation_verlet.test                 \

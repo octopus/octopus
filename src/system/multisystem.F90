@@ -41,6 +41,15 @@ module multisystem_oct_m
   type, extends(system_abst_t) :: multisystem_t
     type(linked_list_t) :: list
   contains
+    procedure :: dt_operation =>  multisystem_dt_operation
+    procedure :: init_clocks => multisystem_init_clocks
+    procedure :: reset_clocks => multisystem_reset_clocks
+    procedure :: init_propagator => multisystem_init_propagator
+    procedure :: propagation_start => multisystem_propagation_start
+    procedure :: propagation_finish => multisystem_propagation_finish
+    procedure :: has_reached_final_propagation_time => multisystem_has_reached_final_propagation_time
+    procedure :: propagation_step_finish => multisystem_propagation_step_finish
+    procedure :: propagation_step_is_done => multisystem_propagation_step_is_done
     procedure :: init_interactions => multisystem_init_interactions
     procedure :: add_interaction_partner => multisystem_add_interaction_partner
     procedure :: has_interaction => multisystem_has_interaction
@@ -67,7 +76,7 @@ module multisystem_oct_m
 contains
 
   ! ---------------------------------------------------------------------------------------
-  function multisystem_constructor(namespace, factory) result(system)
+  recursive function multisystem_constructor(namespace, factory) result(system)
     type(namespace_t),            intent(in) :: namespace
     class(system_factory_abst_t), intent(in) :: factory
     class(multisystem_t),         pointer    :: system
@@ -97,6 +106,8 @@ contains
     !% A maxwell system. (NOT IMPLEMENTED)
     !%Option celestial_body 3
     !% A celestial body. Used for testing purposes only.
+    !%Option multisystem 4
+    !% A system containing other systems.
     !%End
     if (parse_block(system%namespace, 'Systems', blk) == 0) then
 
@@ -131,7 +142,178 @@ contains
   end function multisystem_constructor
 
   ! ---------------------------------------------------------------------------------------
-  subroutine multisystem_init_interactions(this)
+  recursive subroutine multisystem_dt_operation(this)
+    class(multisystem_t),     intent(inout) :: this
+
+    type(system_iterator_t) :: iter
+    class(system_abst_t), pointer :: system
+
+    PUSH_SUB(multisystem_dt_operation)
+
+    call iter%start(this%list)
+    do while (iter%has_next())
+      system => iter%get_next_system()
+      call system%dt_operation()
+    end do
+
+    POP_SUB(multisystem_dt_operation)
+  end subroutine multisystem_dt_operation
+
+  ! ---------------------------------------------------------------------------------------
+  recursive subroutine multisystem_init_clocks(this, smallest_algo_dt)
+    class(multisystem_t), intent(inout) :: this
+    FLOAT,                intent(in)    :: smallest_algo_dt
+
+    type(system_iterator_t) :: iter
+    class(system_abst_t), pointer :: system
+
+    PUSH_SUB(multisystem_init_clocks)
+
+    call iter%start(this%list)
+    do while (iter%has_next())
+      system => iter%get_next_system()
+      call system%init_clocks(smallest_algo_dt)
+    end do
+
+    POP_SUB(multisystem_init_clocks)
+  end subroutine multisystem_init_clocks
+
+  ! ---------------------------------------------------------------------------------------
+  recursive subroutine multisystem_reset_clocks(this, accumulated_ticks)
+    class(multisystem_t),      intent(inout) :: this
+    integer,                   intent(in)    :: accumulated_ticks
+
+    type(system_iterator_t) :: iter
+    class(system_abst_t), pointer :: system
+
+    PUSH_SUB(multisystem_reset_clocks)
+
+    call iter%start(this%list)
+    do while (iter%has_next())
+      system => iter%get_next_system()
+      call system%reset_clocks(accumulated_ticks)
+    end do
+
+    POP_SUB(multisystem_reset_clocks)
+  end subroutine multisystem_reset_clocks
+
+  ! ---------------------------------------------------------------------------------------
+  recursive subroutine multisystem_init_propagator(this, smallest_algo_dt)
+    class(multisystem_t),      intent(inout) :: this
+    FLOAT,                     intent(inout) :: smallest_algo_dt
+
+    type(system_iterator_t) :: iter
+    class(system_abst_t), pointer :: system
+
+    PUSH_SUB(multisystem_init_propagator)
+
+    call iter%start(this%list)
+    do while (iter%has_next())
+      system => iter%get_next_system()
+      call system%init_propagator(smallest_algo_dt)
+    end do
+
+    POP_SUB(multisystem_init_propagator)
+  end subroutine multisystem_init_propagator
+
+  ! ---------------------------------------------------------------------------------------
+  recursive subroutine multisystem_propagation_start(this)
+    class(multisystem_t),      intent(inout) :: this
+
+    type(system_iterator_t) :: iter
+    class(system_abst_t), pointer :: system
+
+    PUSH_SUB(multisystem_propagation_start)
+
+    call iter%start(this%list)
+    do while (iter%has_next())
+      system => iter%get_next_system()
+      call system%propagation_start()
+    end do
+
+    POP_SUB(multisystem_propagation_start)
+  end subroutine multisystem_propagation_start
+
+  ! ---------------------------------------------------------------------------------------
+  recursive subroutine multisystem_propagation_finish(this)
+    class(multisystem_t),      intent(inout) :: this
+
+    type(system_iterator_t) :: iter
+    class(system_abst_t), pointer :: system
+
+    PUSH_SUB(multisystem_propagation_finish)
+
+    call iter%start(this%list)
+    do while (iter%has_next())
+      system => iter%get_next_system()
+      call system%propagation_finish()
+    end do
+
+    POP_SUB(multisystem_propagation_finish)
+  end subroutine multisystem_propagation_finish
+
+  ! ---------------------------------------------------------------------------------------
+  recursive logical function multisystem_has_reached_final_propagation_time(this)
+    class(multisystem_t),      intent(inout) :: this
+
+    type(system_iterator_t) :: iter
+    class(system_abst_t), pointer :: system
+
+    PUSH_SUB(multisystem_has_reached_final_propagation_time)
+
+    multisystem_has_reached_final_propagation_time = .true.
+    call iter%start(this%list)
+    do while (iter%has_next())
+      system => iter%get_next_system()
+      multisystem_has_reached_final_propagation_time = multisystem_has_reached_final_propagation_time .and. &
+        system%has_reached_final_propagation_time()
+    end do
+
+    POP_SUB(multisystem_has_reached_final_propagation_time)
+  end function multisystem_has_reached_final_propagation_time
+
+  ! ---------------------------------------------------------
+  recursive subroutine multisystem_propagation_step_finish(this, iteration)
+    class(multisystem_t),      intent(inout) :: this
+    integer,                   intent(in)    :: iteration
+
+    type(system_iterator_t) :: iter
+    class(system_abst_t), pointer :: system
+
+    PUSH_SUB(multisystem_propagation_step_finish)
+
+    call iter%start(this%list)
+    do while (iter%has_next())
+      system => iter%get_next_system()
+      if (system%propagation_step_is_done()) then
+        call system%propagation_step_finish(iteration)
+      end if
+    end do
+
+    POP_SUB(multisystem_propagation_step_finish)
+  end subroutine multisystem_propagation_step_finish
+
+  ! ---------------------------------------------------------------------------------------
+  recursive logical function multisystem_propagation_step_is_done(this)
+    class(multisystem_t),      intent(inout) :: this
+
+    type(system_iterator_t) :: iter
+    class(system_abst_t), pointer :: system
+
+    PUSH_SUB(multisystem_propagation_step_is_done)
+
+    multisystem_propagation_step_is_done = .false.
+    call iter%start(this%list)
+    do while (iter%has_next())
+      system => iter%get_next_system()
+      multisystem_propagation_step_is_done = multisystem_propagation_step_is_done .or. system%propagation_step_is_done()
+    end do
+
+    POP_SUB(multisystem_propagation_step_is_done)
+  end function multisystem_propagation_step_is_done
+
+  ! ---------------------------------------------------------------------------------------
+  recursive subroutine multisystem_init_interactions(this)
     class(multisystem_t), intent(inout) :: this
 
     class(system_abst_t), pointer :: sys1, sys2
@@ -202,7 +384,7 @@ contains
   end subroutine multisystem_init_interactions
 
   ! ---------------------------------------------------------
-  subroutine multisystem_add_interaction_partner(this, partner)
+  recursive subroutine multisystem_add_interaction_partner(this, partner)
     class(multisystem_t), target, intent(inout) :: this
     class(system_abst_t),         intent(inout) :: partner
 
@@ -221,7 +403,7 @@ contains
   end subroutine multisystem_add_interaction_partner
 
   ! ---------------------------------------------------------
-  logical function multisystem_has_interaction(this, interaction)
+  recursive logical function multisystem_has_interaction(this, interaction)
     class(multisystem_t),      intent(in) :: this
     class(interaction_abst_t), intent(in) :: interaction
 
@@ -241,7 +423,7 @@ contains
   end function multisystem_has_interaction
 
   ! ---------------------------------------------------------
-  subroutine multisystem_initial_conditions(this, from_scratch)
+  recursive subroutine multisystem_initial_conditions(this, from_scratch)
     class(multisystem_t), intent(inout) :: this
     logical,              intent(in)    :: from_scratch
 
@@ -260,14 +442,14 @@ contains
   end subroutine multisystem_initial_conditions
 
   ! ---------------------------------------------------------
-  subroutine multisystem_do_td_operation(this, operation)
+  recursive subroutine multisystem_do_td_operation(this, operation)
     class(multisystem_t), intent(inout) :: this
     integer,              intent(in)    :: operation
 
     type(system_iterator_t) :: iter
     class(system_abst_t), pointer :: system
 
-    PUSH_SUB(system_of_system_do_td_operation)
+    PUSH_SUB(multisystem_do_td_operation)
 
     call iter%start(this%list)
     do while (iter%has_next())
@@ -275,11 +457,11 @@ contains
       call system%do_td_operation(operation)
     end do
 
-    POP_SUB(system_of_system_do_td_operation)
+    POP_SUB(multisystem_do_td_operation)
   end subroutine multisystem_do_td_operation
 
   ! ---------------------------------------------------------
-  logical function multisystem_is_tolerance_reached(this, tol) result(converged)
+  recursive logical function multisystem_is_tolerance_reached(this, tol) result(converged)
     class(multisystem_t), intent(in)    :: this
     FLOAT,                intent(in)    :: tol
 
@@ -299,7 +481,7 @@ contains
   end function multisystem_is_tolerance_reached
 
   ! ---------------------------------------------------------
-  subroutine multisystem_store_current_status(this)
+  recursive subroutine multisystem_store_current_status(this)
     class(multisystem_t), intent(inout)    :: this
 
     type(system_iterator_t) :: iter
@@ -317,7 +499,7 @@ contains
   end subroutine multisystem_store_current_status
 
    ! ---------------------------------------------------------
-  subroutine multisystem_iteration_info(this)
+  recursive subroutine multisystem_iteration_info(this)
     class(multisystem_t), intent(in) :: this
 
     type(system_iterator_t) :: iter
@@ -353,7 +535,7 @@ contains
   end subroutine multisystem_output_start
 
   ! ---------------------------------------------------------
-  subroutine multisystem_output_finish(this)
+  recursive subroutine multisystem_output_finish(this)
     class(multisystem_t), intent(inout) :: this
 
     type(system_iterator_t) :: iter
@@ -371,7 +553,7 @@ contains
   end subroutine multisystem_output_finish
 
   ! ---------------------------------------------------------
-  subroutine multisystem_output_write(this, iter)
+  recursive subroutine multisystem_output_write(this, iter)
     class(multisystem_t), intent(inout) :: this
     integer,              intent(in)    :: iter
 
@@ -460,7 +642,7 @@ contains
   end subroutine multisystem_update_interactions_finish
 
   ! ---------------------------------------------------------
-  subroutine multisystem_finalizer(this)
+  recursive subroutine multisystem_finalizer(this)
     type(multisystem_t), intent(inout) :: this
 
     type(system_iterator_t) :: iter

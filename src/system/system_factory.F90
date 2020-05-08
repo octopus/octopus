@@ -47,7 +47,7 @@ module system_factory_oct_m
 contains
 
   ! ---------------------------------------------------------------------------------------
-  function system_factory_create(this, namespace, name, type) result(system)
+  recursive function system_factory_create(this, namespace, name, type) result(system)
     class(system_factory_t), intent(in) :: this
     type(namespace_t),       intent(in) :: namespace
     character(len=*),        intent(in) :: name
