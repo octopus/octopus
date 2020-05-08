@@ -92,6 +92,19 @@ module maxwell_boundary_op_oct_m
     integer           :: bdry_number(MAX_DIM)
     integer, pointer  :: bdry_map(:,:)
   end type mxmedium_t
+
+  type plane_wave_t
+     integer             :: points_number
+    integer,  pointer    :: points_map(:)
+    integer              :: number
+    integer,  pointer    :: modus(:)
+    character(len=1024), pointer :: e_field_string(:,:)
+    FLOAT,    pointer    :: k_vector(:,:)
+    FLOAT,    pointer    :: v_vector(:,:)
+    FLOAT,    pointer    :: e_field(:,:)
+    type(mxf_t), pointer :: mx_function(:)
+    type(mxf_t), pointer :: mx_phase(:)
+  end type plane_wave_t
  
   type bc_mxll_t
 
@@ -122,16 +135,7 @@ module maxwell_boundary_op_oct_m
     integer, pointer  :: mirror_points_map(:,:)
 
     logical           :: do_plane_waves
-    integer           :: plane_waves_points_number
-    integer,  pointer :: plane_waves_points_map(:)
-    integer           :: plane_waves_number
-    integer,  pointer :: plane_waves_modus(:)
-    character(len=1024), pointer :: plane_waves_e_field_string(:,:)
-    FLOAT,    pointer :: plane_waves_k_vector(:,:)
-    FLOAT,    pointer :: plane_waves_v_vector(:,:)
-    FLOAT,    pointer :: plane_waves_e_field(:,:)
-    type(mxf_t), pointer :: plane_waves_mx_function(:)
-    type(mxf_t), pointer :: plane_waves_mx_phase(:)
+    type(plane_wave_t) :: plane_wave
 
     FLOAT             :: zero_width
     integer           :: zero_points_number(MAX_DIM)
@@ -428,14 +432,14 @@ contains
     nullify(bc%constant_points_map)
     nullify(bc%constant_rs_state)
     nullify(bc%mirror_points_map)
-    nullify(bc%plane_waves_points_map)
-    nullify(bc%plane_waves_modus)
-    nullify(bc%plane_waves_e_field_string)
-    nullify(bc%plane_waves_k_vector)
-    nullify(bc%plane_waves_v_vector)
-    nullify(bc%plane_waves_e_field)
-    nullify(bc%plane_waves_mx_function)
-    nullify(bc%plane_waves_mx_phase)
+    nullify(bc%plane_wave%points_map)
+    nullify(bc%plane_wave%modus)
+    nullify(bc%plane_wave%e_field_string)
+    nullify(bc%plane_wave%k_vector)
+    nullify(bc%plane_wave%v_vector)
+    nullify(bc%plane_wave%e_field)
+    nullify(bc%plane_wave%mx_function)
+    nullify(bc%plane_wave%mx_phase)
     nullify(bc%zero_points_map)
     nullify(bc%zero)
 
@@ -450,14 +454,14 @@ contains
 
     SAFE_DEALLOCATE_A(bc%mask)
 
-    SAFE_DEALLOCATE_P(bc%plane_waves_modus)
-    SAFE_DEALLOCATE_P(bc%plane_waves_e_field_string)
-    SAFE_DEALLOCATE_P(bc%plane_waves_e_field)
-    SAFE_DEALLOCATE_P(bc%plane_waves_k_vector)
-    SAFE_DEALLOCATE_P(bc%plane_waves_v_vector)
-    SAFE_DEALLOCATE_P(bc%plane_waves_mx_function)
-    SAFE_DEALLOCATE_P(bc%plane_waves_mx_phase)
-    SAFE_DEALLOCATE_P(bc%plane_waves_points_map)
+    SAFE_DEALLOCATE_P(bc%plane_wave%modus)
+    SAFE_DEALLOCATE_P(bc%plane_wave%e_field_string)
+    SAFE_DEALLOCATE_P(bc%plane_wave%e_field)
+    SAFE_DEALLOCATE_P(bc%plane_wave%k_vector)
+    SAFE_DEALLOCATE_P(bc%plane_wave%v_vector)
+    SAFE_DEALLOCATE_P(bc%plane_wave%mx_function)
+    SAFE_DEALLOCATE_P(bc%plane_wave%mx_phase)
+    SAFE_DEALLOCATE_P(bc%plane_wave%points_map)
 
     SAFE_DEALLOCATE_P(bc%der_bndry_mask)
     SAFE_DEALLOCATE_P(bc%der_bndry_mask_points_map)
@@ -918,8 +922,8 @@ contains
         ip_in = ip_in + 1
       end if
     end do
-    bc%plane_waves_points_number = ip_in
-    SAFE_ALLOCATE(bc%plane_waves_points_map(1:ip_in))
+    bc%plane_wave%points_number = ip_in
+    SAFE_ALLOCATE(bc%plane_wave%points_map(1:ip_in))
 
     ! zero points mapping
     ip_in = 0
@@ -927,7 +931,7 @@ contains
       call maxwell_box_point_info(bc, mesh, ip, bounds, geo, point_info)
       if (point_info == 1) then
         ip_in = ip_in + 1
-        bc%plane_waves_points_map(ip_in) = ip
+        bc%plane_wave%points_map(ip_in) = ip
       end if
     end do
 
@@ -1374,14 +1378,14 @@ contains
       ! find out how many lines (i.e. states) the block has
       nlines = parse_block_n(blk)
 
-      bc%plane_waves_number = nlines
-      SAFE_ALLOCATE(bc%plane_waves_modus(nlines))
-      SAFE_ALLOCATE(bc%plane_waves_e_field_string(MAX_DIM, nlines))
-      SAFE_ALLOCATE(bc%plane_waves_e_field(MAX_DIM, nlines))
-      SAFE_ALLOCATE(bc%plane_waves_k_vector(MAX_DIM, nlines))
-      SAFE_ALLOCATE(bc%plane_waves_v_vector(MAX_DIM, nlines))
-      SAFE_ALLOCATE(bc%plane_waves_mx_function(nlines))
-      SAFE_ALLOCATE(bc%plane_waves_mx_phase(nlines))
+      bc%plane_wave%number = nlines
+      SAFE_ALLOCATE(bc%plane_wave%modus(nlines))
+      SAFE_ALLOCATE(bc%plane_wave%e_field_string(MAX_DIM, nlines))
+      SAFE_ALLOCATE(bc%plane_wave%e_field(MAX_DIM, nlines))
+      SAFE_ALLOCATE(bc%plane_wave%k_vector(MAX_DIM, nlines))
+      SAFE_ALLOCATE(bc%plane_wave%v_vector(MAX_DIM, nlines))
+      SAFE_ALLOCATE(bc%plane_wave%mx_function(nlines))
+      SAFE_ALLOCATE(bc%plane_wave%mx_phase(nlines))
 
       ! read all lines
       do il = 1, nlines
@@ -1393,34 +1397,34 @@ contains
         end if
 
         ! check input modus e.g. parser of defined functions
-        call parse_block_integer(blk, il - 1, 0, bc%plane_waves_modus(il))
+        call parse_block_integer(blk, il - 1, 0, bc%plane_wave%modus(il))
 
         ! parse formula string
-        if (bc%plane_waves_modus(il) == OPTION__MAXWELLINCIDENTWAVES__PLANE_WAVE_PARSER) then
+        if (bc%plane_wave%modus(il) == OPTION__MAXWELLINCIDENTWAVES__PLANE_WAVE_PARSER) then
 
           call parse_block_string( blk, il - 1, 1, k_string(1))
           call parse_block_string( blk, il - 1, 2, k_string(2))
           call parse_block_string( blk, il - 1, 3, k_string(3))
-          call parse_block_string( blk, il - 1, 4, bc%plane_waves_e_field_string(1, il))
-          call parse_block_string( blk, il - 1, 5, bc%plane_waves_e_field_string(2, il))
-          call parse_block_string( blk, il - 1, 6, bc%plane_waves_e_field_string(3, il))
+          call parse_block_string( blk, il - 1, 4, bc%plane_wave%e_field_string(1, il))
+          call parse_block_string( blk, il - 1, 5, bc%plane_wave%e_field_string(2, il))
+          call parse_block_string( blk, il - 1, 6, bc%plane_wave%e_field_string(3, il))
 
           write(message(1), '(a,i2,a) ') 'Substituting electromagnetic incident wave ', il, ' with the expressions: '
           call messages_info(1)
           write(message(1), '(6a)')     '  Wave vector k(x)   = ', trim(k_string(1))
           write(message(2), '(2a)')     '  Wave vector k(y)   = ', trim(k_string(2))
           write(message(3), '(2a)')     '  Wave vector k(z)   = ', trim(k_string(3))
-          write(message(4), '(2a)')     '  E-field(x) for t_0 = ', trim(bc%plane_waves_e_field_string(1, il))
-          write(message(5), '(2a)')     '  E-field(y) for t_0 = ', trim(bc%plane_waves_e_field_string(2, il))
-          write(message(6), '(2a)')     '  E-field(z) for t_0 = ', trim(bc%plane_waves_e_field_string(3, il))
+          write(message(4), '(2a)')     '  E-field(x) for t_0 = ', trim(bc%plane_wave%e_field_string(1, il))
+          write(message(5), '(2a)')     '  E-field(y) for t_0 = ', trim(bc%plane_wave%e_field_string(2, il))
+          write(message(6), '(2a)')     '  E-field(z) for t_0 = ', trim(bc%plane_wave%e_field_string(3, il))
           call messages_info(6)
 
           call conv_to_C_string(k_string(1))
           call conv_to_C_string(k_string(2))
           call conv_to_C_string(k_string(3))
-          call conv_to_C_string(bc%plane_waves_e_field_string(1, il))
-          call conv_to_C_string(bc%plane_waves_e_field_string(2, il))
-          call conv_to_C_string(bc%plane_waves_e_field_string(3, il))
+          call conv_to_C_string(bc%plane_wave%e_field_string(1, il))
+          call conv_to_C_string(bc%plane_wave%e_field_string(2, il))
+          call conv_to_C_string(bc%plane_wave%e_field_string(3, il))
 
           xx(:) = M_ZERO
           rr    = M_ZERO
@@ -1432,10 +1436,10 @@ contains
           k_vector(3) = units_to_atomic(unit_one/units_inp%length, k_vector(3))
 
           vv(:)    = k_vector(:) / sqrt(sum(k_vector(:)**2)) * P_c
-          bc%plane_waves_k_vector(:,il) = k_vector(:)
-          bc%plane_waves_v_vector(:,il) = vv(:)
+          bc%plane_wave%k_vector(:,il) = k_vector(:)
+          bc%plane_wave%v_vector(:,il) = vv(:)
 
-        else if (bc%plane_waves_modus(il) == OPTION__MAXWELLINCIDENTWAVES__PLANE_WAVE_MX_FUNCTION) then
+        else if (bc%plane_wave%modus(il) == OPTION__MAXWELLINCIDENTWAVES__PLANE_WAVE_MX_FUNCTION) then
           call parse_block_float( blk, il - 1, 1, e_field(1))
           call parse_block_float( blk, il - 1, 2, e_field(2))
           call parse_block_float( blk, il - 1, 3, e_field(3))
@@ -1449,14 +1453,14 @@ contains
           write(message(3), '(a,es9.2)')     '  E-field(z) amplitude       = ', e_field(3)
           write(message(4), '(2a)'    )      '  Maxwell wave function name = ', trim(mxf_expression)
           call messages_info(4)
-          call mxf_read(bc%plane_waves_mx_function(il), namespace, trim(mxf_expression), ierr)
+          call mxf_read(bc%plane_wave%mx_function(il), namespace, trim(mxf_expression), ierr)
           if (ierr /= 0) then            
             write(message(1),'(3A)') 'Error in the ""', trim(mxf_expression), &
               '"" field defined in the MaxwellIncidentWaves block'
             call messages_fatal(1, namespace=namespace)
           end if
           e_field  = units_to_atomic(units_inp%energy/units_inp%length, e_field)
-          k_vector(:) = bc%plane_waves_mx_function(il)%k_vector(:)
+          k_vector(:) = bc%plane_wave%mx_function(il)%k_vector(:)
 
           test = ddot_product(k_vector, e_field)
           if (abs(test) > test_limit) then
@@ -1469,9 +1473,9 @@ contains
             call messages_fatal(1, namespace=namespace)
           end if
 
-          bc%plane_waves_e_field(:,il)  = e_field(:)
-          bc%plane_waves_k_vector(:,il) = k_vector(:)
-          bc%plane_waves_v_vector(:,il) = k_vector(:) / Sqrt(sum(k_vector(:)**2)) * P_c
+          bc%plane_wave%e_field(:,il)  = e_field(:)
+          bc%plane_wave%k_vector(:,il) = k_vector(:)
+          bc%plane_wave%v_vector(:,il) = k_vector(:) / Sqrt(sum(k_vector(:)**2)) * P_c
 
          end if
       end do
