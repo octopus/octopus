@@ -1000,7 +1000,7 @@ contains
     if(use_stored_orbitals) then
       ASSERT(.not. gr%have_fine_mesh)
    
-      !There is no periodic copies here, so this won't work for periodic systems
+      !There is no periodic copies here, so this will not work for periodic systems
       ASSERT(.not. sb%periodic_dim > 0)
 
       if(.not. this%alternative) then
