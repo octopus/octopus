@@ -640,8 +640,9 @@ contains
     call read_from_set(spec, read_data)
 
    if(read_data == 0) then
-      message(1) = 'Species '//trim(spec%label)//' not found in default pseudopotential set.'
-      call messages_fatal(1, namespace=namespace)
+      call messages_write( 'Species '//trim(spec%label)//' not found in default pseudopotential set.', new_line=.true. )
+      call messages_write('( '//trim(get_set_directory(default_pseudopotential_set_id))//' )')
+      call messages_fatal(namespace=namespace)
     end if
 
     POP_SUB(species_read)
@@ -1987,7 +1988,9 @@ contains
         call read_from_set(spec, set_read_data)
 
         if(set_read_data == 0) then
-          call messages_write('Species '//trim(spec%label)//' is not defined in the requested pseudopotential set.')
+          call messages_write('Species '//trim(spec%label)//' is not defined in the requested pseudopotential set.', &
+                              new_line=.true.)
+          call messages_write('( '//trim(get_set_directory(spec%pseudopotential_set_id))//' )')
           call messages_fatal(namespace=namespace)
         end if
         
