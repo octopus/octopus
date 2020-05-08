@@ -80,7 +80,7 @@
  ps     = - 5 * 5.0
 
  %MaxwellIncidentWaves
-   plane_wave_mx_function | 0 | 0 | Ez | "plane_waves_function" | plane_waves
+   plane_wave_mx_function | 0 | 0 | Ez | "plane_waves_function"
  %
 
  %MaxwellFunctions

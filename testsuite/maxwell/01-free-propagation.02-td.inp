@@ -64,8 +64,8 @@ phi         =  0
 gr          =  0.3
 
 %MaxwellIncidentWaves
-  plane_wave_mx_function | 0 | 0 | E_1_z | "plane_waves_function_1" | plane_waves
-  plane_wave_mx_function | 0 | 0 | E_2_z | "plane_waves_function_2" | plane_waves
+  plane_wave_mx_function | 0 | 0 | E_1_z | "plane_waves_function_1"
+  plane_wave_mx_function | 0 | 0 | E_2_z | "plane_waves_function_2"
 %
 
 %MaxwellFunctions

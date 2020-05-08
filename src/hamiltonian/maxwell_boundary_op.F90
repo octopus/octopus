@@ -126,7 +126,6 @@ module maxwell_boundary_op_oct_m
     integer,  pointer :: plane_waves_points_map(:)
     integer           :: plane_waves_number
     integer,  pointer :: plane_waves_modus(:)
-    integer,  pointer :: plane_waves(:)
     character(len=1024), pointer :: plane_waves_e_field_string(:,:)
     FLOAT,    pointer :: plane_waves_k_vector(:,:)
     FLOAT,    pointer :: plane_waves_v_vector(:,:)
@@ -431,7 +430,6 @@ contains
     nullify(bc%mirror_points_map)
     nullify(bc%plane_waves_points_map)
     nullify(bc%plane_waves_modus)
-    nullify(bc%plane_waves)
     nullify(bc%plane_waves_e_field_string)
     nullify(bc%plane_waves_k_vector)
     nullify(bc%plane_waves_v_vector)
@@ -459,7 +457,6 @@ contains
     SAFE_DEALLOCATE_P(bc%plane_waves_v_vector)
     SAFE_DEALLOCATE_P(bc%plane_waves_mx_function)
     SAFE_DEALLOCATE_P(bc%plane_waves_mx_phase)
-    SAFE_DEALLOCATE_P(bc%plane_waves)
     SAFE_DEALLOCATE_P(bc%plane_waves_points_map)
 
     SAFE_DEALLOCATE_P(bc%der_bndry_mask)
@@ -1356,10 +1353,10 @@ contains
     !% Example:
     !%
     !% <tt>%MaxwellIncidentWaves
-    !% <br>&nbsp;&nbsp;   plane_wave_parser      | "k1x" | "k1y" | "k1z" | "E1x" | "E1z" | "E1x" | plane_wave
-    !% <br>&nbsp;&nbsp;   plane_wave_parser      | "k2x" | "k2y" | "k2z" | "E2x" | "E2y" | "E2z" | no_plane_wave
-    !% <br>&nbsp;&nbsp;   plane_wave_gauss       | "k3x" | "k3y" | "k3z" | "E3x" | "E3y" | "E3z" | "width"           | "shift" | plane_wave
-    !% <br>&nbsp;&nbsp;   plane_wave_mx_function | "k4x" | "k4y" | "k4z" | "E4x" | "E4y" | "E4z" | mx_envelope_name  | phase   | plane_wave
+    !% <br>&nbsp;&nbsp;   plane_wave_parser      | "k1x" | "k1y" | "k1z" | "E1x" | "E1z" | "E1x"
+    !% <br>&nbsp;&nbsp;   plane_wave_parser      | "k2x" | "k2y" | "k2z" | "E2x" | "E2y" | "E2z"
+    !% <br>&nbsp;&nbsp;   plane_wave_gauss       | "k3x" | "k3y" | "k3z" | "E3x" | "E3y" | "E3z" | "width" | "shift"
+    !% <br>&nbsp;&nbsp;   plane_wave_mx_function | "E4x" | "E4y" | "E4z" | mx_envelope_name
     !% <br>%</tt>
     !%
     !% Description about MaxwellIncidentWaves follows
@@ -1385,16 +1382,14 @@ contains
       SAFE_ALLOCATE(bc%plane_waves_v_vector(MAX_DIM, nlines))
       SAFE_ALLOCATE(bc%plane_waves_mx_function(nlines))
       SAFE_ALLOCATE(bc%plane_waves_mx_phase(nlines))
-      SAFE_ALLOCATE(bc%plane_waves(nlines))
 
       ! read all lines
       do il = 1, nlines
         ! Check that number of columns is five or six.
         ncols = parse_block_cols(blk, il - 1)
-        if ((ncols /= 6) .and. (ncols /= 8) .and. (ncols /= 10) .and. (ncols /= 9)) then
-          message(1) = 'Each line in the MaxwellIncidentWaves block must have'
-          message(2) = 'six, eight, nine or ten columns.'
-          call messages_fatal(2, namespace=namespace)
+        if ((ncols /= 5) .and. (ncols /= 7) .and. (ncols /= 9)) then
+          message(1) = 'Each line in the MaxwellIncidentWaves block must have five, seven or nine columns.'
+          call messages_fatal(1, namespace=namespace)
         end if
 
         ! check input modus e.g. parser of defined functions
@@ -1409,7 +1404,6 @@ contains
           call parse_block_string( blk, il - 1, 4, bc%plane_waves_e_field_string(1, il))
           call parse_block_string( blk, il - 1, 5, bc%plane_waves_e_field_string(2, il))
           call parse_block_string( blk, il - 1, 6, bc%plane_waves_e_field_string(3, il))
-          call parse_block_integer(blk, il - 1, 7, bc%plane_waves(il))
 
           write(message(1), '(a,i2,a) ') 'Substituting electromagnetic incident wave ', il, ' with the expressions: '
           call messages_info(1)
@@ -1446,7 +1440,6 @@ contains
           call parse_block_float( blk, il - 1, 2, e_field(2))
           call parse_block_float( blk, il - 1, 3, e_field(3))
           call parse_block_string( blk, il - 1, 4, mxf_expression)
-          call parse_block_integer(blk, il - 1, 5, bc%plane_waves(il))
 
           write(message(1), '(a,i2) ') 'Substituting electromagnetic incident wave ', il
           write(message(3), '(a)'    ) 'with the expression: '
