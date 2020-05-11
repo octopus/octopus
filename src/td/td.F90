@@ -965,17 +965,14 @@ contains
       sys => iter%get_next_system()
 
       ! Initialize the propagator
-      call sys%init_propagator()
-
-      ! Find the smallest dt
-      smallest_algo_dt = min(smallest_algo_dt, sys%prop%dt/sys%prop%algo_steps)
+      call sys%init_propagator(smallest_algo_dt)
     end do
 
     ! Initialize all the clocks
     call iter%start(systems%list)
     do while (iter%has_next())
       sys => iter%get_next_system()
-      call sys%init_clocks(sys%prop%dt, smallest_algo_dt)
+      call sys%init_clocks(smallest_algo_dt)
     end do
 
     ! Set initial conditions
@@ -1015,7 +1012,10 @@ contains
           call sys%dt_operation()
 
           ! We check the exit condition
-          any_td_step_done = any_td_step_done .or. sys%prop%step_is_done()
+          if(sys%propagation_step_is_done()) then
+            call sys%propagation_step_finish(it)
+            any_td_step_done = .true.
+          end if
         end do
 
         INCR(internal_loop, 1)
@@ -1026,16 +1026,7 @@ contains
       call iter%start(systems%list)
       do while (iter%has_next())
         sys => iter%get_next_system()
-
-        ! Print information about the current iteration and write output
-        if(sys%prop%step_is_done()) then
-          call sys%prop%rewind()
-          call sys%output_write(it)
-          call sys%iteration_info()
-        end if
-
-        ! Fixme: should be changed to final propagation time
-        all_done_max_td_steps = all_done_max_td_steps .and. (sys%clock%get_sim_time() > sys%prop%max_td_steps*sys%prop%dt)
+        all_done_max_td_steps = all_done_max_td_steps .and. sys%has_reached_final_propagation_time()
       end do
      write (message(1), '(a)') repeat ('-', 71)
      call messages_info(1)
