@@ -1828,7 +1828,7 @@ contains
     FLOAT,             intent(in)    :: vec(:)
     FLOAT,   optional, intent(in)    :: w0
 
-    integer :: istep, trash, iunit, nspin, time_steps, istart, iend, ntiter, lmax, no_e, ie
+    integer :: istep, trash, iunit, nspin, time_steps, istart, iend, ntiter, lmax, no_e, ie, idir, ispin
     FLOAT :: dt, dump, vv(MAX_DIM)  
     type(kick_t) :: kick
     FLOAT, allocatable :: dd(:,:)
@@ -1858,7 +1858,7 @@ contains
     vv(1:3) = vec(1:3) / sqrt(sum(vec(1:3)**2))  
 
     do istep = 1, time_steps
-      read(iunit, *) trash, dump, dump, dd
+      read(iunit, *) trash, dump, (dump, (dd(idir, ispin), idir = 1, 3), ispin = 1, nspin)
       select case(pol)
       case('x')
         dipole(istep) = -sum(dd(1, :))
