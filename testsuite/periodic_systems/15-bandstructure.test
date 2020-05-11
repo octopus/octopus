@@ -100,12 +100,14 @@ match ; w90.eig 2 ; LINEFIELD(15-bandstructure.04-wannier90.eig, 2, 3) ; 0.42118
 match ; w90.eig 3 ; LINEFIELD(15-bandstructure.04-wannier90.eig, 3, 3) ; 0.421189E+01
 
 match ; w90.amn 4-5 kpt64; LINEFIELD_ABS(15-bandstructure.04-wannier90.amn, -4, 4, 5) ; 0.423034E-15
-match ; w90.amn 4-6 kpt64; LINEFIELD_ABS(15-bandstructure.04-wannier90.amn, -3, 4, 5) ; 0.436629E-07
-match ; w90.amn 4-7 kpt64; LINEFIELD_ABS(15-bandstructure.04-wannier90.amn, -2, 4, 5) ; 0.482453
-match ; w90.amn 4-8 kpt64; LINEFIELD_ABS(15-bandstructure.04-wannier90.amn, -1, 4, 5) ; 0.482453
+Precision: 0.0004
+match ; w90.amn 4-6 kpt64; LINEFIELD_ABS(15-bandstructure.04-wannier90.amn, -3, 4, 5) ; 0.000364739023
+match ; w90.amn 4-7 kpt64; LINEFIELD_ABS(15-bandstructure.04-wannier90.amn, -2, 4, 5) ; 0.48227149999999996
+match ; w90.amn 4-8 kpt64; LINEFIELD_ABS(15-bandstructure.04-wannier90.amn, -1, 4, 5) ; 0.4826355
 
 match ; w90.mmn 4-1 kpt64; LINEFIELD_ABS(15-bandstructure.04-wannier90.mmn, -4, 1, 2) ; 0.109168E-13
 match ; w90.mmn 4-2 kpt64; LINEFIELD_ABS(15-bandstructure.04-wannier90.mmn, -3, 1, 2) ; 0.230028E-13
-match ; w90.mmn 4-3 kpt64; LINEFIELD_ABS(15-bandstructure.04-wannier90.mmn, -2, 1, 2) ; 0.273650E-07
+Precision: 0.0002
+match ; w90.mmn 4-3 kpt64; LINEFIELD_ABS(15-bandstructure.04-wannier90.mmn, -2, 1, 2) ; 0.0001320108825
+Precision: 0.0001
 match ; w90.mmn 4-4 kpt64; LINEFIELD_ABS(15-bandstructure.04-wannier90.mmn, -1, 1, 2) ; 0.975592
-

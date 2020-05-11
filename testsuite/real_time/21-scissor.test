@@ -30,10 +30,10 @@ match ; Energy      4 ; LINEFIELD(cross_section_tensor, -61, 1) ; 4.0
 match ; Sigma       4 ; LINEFIELD(cross_section_tensor, -61, 2) ; 0.24052490E+00
 
 match ; Energy      6 ; LINEFIELD(cross_section_tensor, -41, 1) ; 6.0
-match ; Sigma       6 ; LINEFIELD(cross_section_tensor, -41, 2) ; 0.47723058E+00
+match ; Sigma       6 ; LINEFIELD(cross_section_tensor, -41, 2) ; 0.477230815
 
 match ; Energy      8 ; LINEFIELD(cross_section_tensor, -21, 1) ; 8.0
-match ; Sigma       8 ; LINEFIELD(cross_section_tensor, -21, 2) ; 0.70892057E+00
+match ; Sigma       8 ; LINEFIELD(cross_section_tensor, -21, 2) ; 0.708920915
 
 match ; Energy     10 ; LINEFIELD(cross_section_tensor, -1, 1) ; 10.0
-match ; Sigma      10 ; LINEFIELD(cross_section_tensor, -1, 2) ; 0.87345625E+00
+match ; Sigma      10 ; LINEFIELD(cross_section_tensor, -1, 2) ; 0.873456695

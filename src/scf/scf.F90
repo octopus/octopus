@@ -153,6 +153,9 @@ contains
     !% has not been achieved. -1 means unlimited.
     !% 0 means just do LCAO (or read from restart), compute the eigenvalues and energy,
     !% and stop, without updating the wavefunctions or density.
+    !%
+    !% If convergence criteria are set, the SCF loop will only stop once the criteria
+    !% are fulfilled for two consecutive iterations.
     !%End
     call parse_variable(namespace, 'MaximumIter', 200, scf%max_iter)
 
@@ -180,6 +183,9 @@ contains
     !% one SCF iteration is smaller than this value.
     !%
     !%A zero value (the default) means do not use this criterion.
+    !%
+    !% If this criterion is used, the SCF loop will only stop once it is
+    !% fulfilled for two consecutive iterations.
     !%End
     call parse_variable(namespace, 'ConvEnergy', M_ZERO, scf%conv_energy_diff, unit = units_inp%energy)
     
@@ -193,12 +199,15 @@ contains
     !% <math>\varepsilon = \int {\rm d}^3r \left| \rho^{out}(\bf r) -\rho^{inp}(\bf r) \right|</math>.
     !%
     !% A zero value (the default) means do not use this criterion.
+    !%
+    !% If this criterion is used, the SCF loop will only stop once it is
+    !% fulfilled for two consecutive iterations.
     !%End
     call parse_variable(namespace, 'ConvAbsDens', M_ZERO, scf%conv_abs_dens)
 
     !%Variable ConvRelDens
     !%Type float
-    !%Default 1e-5
+    !%Default 1e-6
     !%Section SCF::Convergence
     !%Description
     !% Relative convergence of the density: 
@@ -211,8 +220,11 @@ contains
     !% If you reduce this value, you should also reduce
     !% <tt>EigensolverTolerance</tt> to a value of roughly 1/10 of
     !% <tt>ConvRelDens</tt> to avoid convergence problems.
+    !%
+    !% If this criterion is used, the SCF loop will only stop once it is
+    !% fulfilled for two consecutive iterations.
     !%End
-    call parse_variable(namespace, 'ConvRelDens', CNST(1e-5), scf%conv_rel_dens)
+    call parse_variable(namespace, 'ConvRelDens', CNST(1e-6), scf%conv_rel_dens)
 
     !%Variable ConvAbsEv
     !%Type float
@@ -225,6 +237,9 @@ contains
     !% \sum_{j=1}^{N_{occ}} \varepsilon_j^{inp} \right| </math>
     !%
     !% A zero value (the default) means do not use this criterion.
+    !%
+    !% If this criterion is used, the SCF loop will only stop once it is
+    !% fulfilled for two consecutive iterations.
     !%End
     call parse_variable(namespace, 'ConvAbsEv', M_ZERO, scf%conv_abs_ev, unit = units_inp%energy)
 
@@ -239,6 +254,9 @@ contains
     !% {\left| \sum_{j=1}^{N_{occ}} \varepsilon_j^{out} \right|} </math>
     !%
     !%A zero value (the default) means do not use this criterion.
+    !%
+    !% If this criterion is used, the SCF loop will only stop once it is
+    !% fulfilled for two consecutive iterations.
     !%End
     call parse_variable(namespace, 'ConvRelEv', M_ZERO, scf%conv_rel_ev, unit = units_inp%energy)
 
@@ -254,6 +272,9 @@ contains
     !% zero value means do not use this criterion. The default is
     !% zero, except for geometry optimization, which sets a default of
     !% 1e-8 H/b.
+    !%
+    !% If this criterion is used, the SCF loop will only stop once it is
+    !% fulfilled for two consecutive iterations.
     !%End
     call parse_variable(namespace, 'ConvForce', optional_default(conv_force, M_ZERO), scf%conv_abs_force, unit = units_inp%force)
 
@@ -286,6 +307,9 @@ contains
     !%Description
     !% If true, the calculation will not be considered converged unless all states have
     !% individual errors less than <tt>EigensolverTolerance</tt>.
+    !%
+    !% If this criterion is used, the SCF loop will only stop once it is
+    !% fulfilled for two consecutive iterations.
     !%End
     call parse_variable(namespace, 'ConvEigenError', .false., scf%conv_eigen_error)
 
@@ -536,7 +560,7 @@ contains
     type(restart_t), optional, intent(in)    :: restart_load
     type(restart_t), optional, intent(in)    :: restart_dump
 
-    logical :: finish, gs_run_, berry_conv
+    logical :: finish, converged_current, converged_last, gs_run_, berry_conv
     integer :: iter, is, iatom, nspin, ierr, iberry, idir, verbosity_, ib, iqn
     FLOAT :: evsum_out, evsum_in, forcetmp, dipole(MAX_DIM), dipole_prev(MAX_DIM)
     FLOAT :: etime, itime
@@ -693,6 +717,7 @@ contains
       end if
       call messages_info(1)
     end if
+    converged_current = .false.
 
     ! SCF cycle
     itime = loct_clock()
@@ -822,7 +847,8 @@ contains
       scf%eigens%current_rel_dens_error = scf%rel_dens
 
       ! are we finished?
-      finish = scf%check_conv .and. &
+      converged_last = converged_current
+      converged_current = scf%check_conv .and. &
         (scf%conv_abs_dens  <= M_ZERO .or. scf%abs_dens  <= scf%conv_abs_dens)  .and. &
         (scf%conv_rel_dens  <= M_ZERO .or. scf%rel_dens  <= scf%conv_rel_dens)  .and. &
         (scf%conv_abs_force <= M_ZERO .or. scf%abs_force <= scf%conv_abs_force) .and. &
@@ -830,6 +856,9 @@ contains
         (scf%conv_rel_ev    <= M_ZERO .or. scf%rel_ev    <= scf%conv_rel_ev)    .and. &
         (scf%conv_energy_diff <= M_ZERO .or. abs(scf%energy_diff) <= scf%conv_energy_diff) .and. &
         (.not. scf%conv_eigen_error .or. all(scf%eigens%converged == st%nst))
+      ! only finish if the convergence criterion is fulfilled in two
+      ! consecutive iterations
+      finish = converged_last .and. converged_current
 
       etime = loct_clock() - itime
       itime = etime + itime
