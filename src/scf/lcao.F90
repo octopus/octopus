@@ -56,6 +56,7 @@ module lcao_oct_m
   use states_elec_dim_oct_m
   use states_elec_io_oct_m
   use submesh_oct_m
+  use symmetrizer_oct_m
   use system_oct_m
   use unit_oct_m
   use unit_system_oct_m
@@ -1071,6 +1072,7 @@ contains
     FLOAT :: rr, rnd, phi, theta, mag(1:3), lmag, n1, n2
     FLOAT, allocatable :: atom_rho(:,:)
     logical :: parallelized_in_atoms
+    type(symmetrizer_t) :: symmetrizer
 
 
     PUSH_SUB(lcao_guess_density)
@@ -1322,6 +1324,18 @@ contains
 
     write(message(1),'(a,f13.6)')'Info: Renormalized total charge = ', rr
     call messages_info(1)
+
+    if(st%symmetrize_density) then
+      call symmetrizer_init(symmetrizer, gr%fine%mesh)
+
+      do is = 1, st%d%nspin
+        call dsymmetrizer_apply(symmetrizer, gr%fine%mesh%np, field = rho(:, is), &
+                                 symmfield = atom_rho(:, 1))
+        rho(1:gr%fine%mesh%np, is) = atom_rho(1:gr%fine%mesh%np, 1)
+      end do
+
+      call symmetrizer_end(symmetrizer)
+    end if
 
     SAFE_DEALLOCATE_A(atom_rho)
     POP_SUB(lcao_guess_density)
