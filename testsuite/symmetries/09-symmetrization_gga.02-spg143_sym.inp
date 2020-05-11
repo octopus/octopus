@@ -16,8 +16,8 @@ LCAOStart = lcao_states
 FilterPotentials = filter_none
 ExtraStates = 2
 
-ConvRelDens = 1e-7
-EigensolverTolerance = 1e-8
+ConvRelDens = 5e-5
+EigensolverTolerance = 1e-7
 
 XCFunctional = gga_x_pbe + gga_c_pbe
 
