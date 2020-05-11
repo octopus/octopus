@@ -2048,7 +2048,7 @@ end if
     else !do something smart to exploit symmetries
 
       nfaces = mdim*2
-      if(this%surf_shape == M_PLANE) nfaces = 2 
+      if(this%surf_shape == M_PLANE) nfaces = 1 
       
       
       SAFE_ALLOCATE(this%expkr(1:this%nsrfcpnts,maxval(this%ll(1:mdim)),kptst:kptend,1:mdim))
@@ -2236,7 +2236,7 @@ end if
 
     
     nfaces = mdim*2
-    if(this%surf_shape == M_PLANE) nfaces = 1 ! We only have two planes 
+    if(this%surf_shape == M_PLANE) nfaces = 1 
           
 
     do ifc = 1, nfaces
@@ -2782,7 +2782,7 @@ print *, "this%LLr(mdim,:) = ", this%LLr(mdim,:)
       ! Surface points are on the mesh
       
       nfaces = mdim*2
-      if(this%surf_shape == M_PLANE) nfaces = 2 ! We only have two planes 
+      if(this%surf_shape == M_PLANE) nfaces = 2 
 
       in_ab = .false.
 
