@@ -217,7 +217,7 @@ contains
       description = "Unknown step for "
     end select
 
-    PUSH_SUB(propagator_step_debug_message)
+    POP_SUB(propagator_step_debug_message)
   end function propagator_step_debug_message
 
   !--------------------------------------------------------
