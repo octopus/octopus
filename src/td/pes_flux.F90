@@ -2048,7 +2048,7 @@ end if
     else !do something smart to exploit symmetries
 
       nfaces = mdim*2
-      if(this%surf_shape == M_PLANE) nfaces = 2 ! We only have two planes 
+      if(this%surf_shape == M_PLANE) nfaces = 2 
       
       
       SAFE_ALLOCATE(this%expkr(1:this%nsrfcpnts,maxval(this%ll(1:mdim)),kptst:kptend,1:mdim))
@@ -2067,19 +2067,19 @@ end if
         end do
       end do
 
-      SAFE_ALLOCATE(this%expkr_perp(maxval(this%ll(1:mdim)),1:mdim))
+      SAFE_ALLOCATE(this%expkr_perp(maxval(this%ll(1:mdim)),nfaces))
       this%expkr_perp(:,:) = M_z1
 
-      do ifc = 1, nfaces, 2
+      do ifc = 1, nfaces
         isp = this%face_idx_range(ifc, 1)
         do idir = 1, mdim
           if(abs(this%srfcnrml(idir, isp)) >= M_EPSILON) n_dir = idir
         end do 
 
-print *, ifc, this%srfcnrml(:, isp)      
+! print *, ifc, this%srfcnrml(:, isp), this%rcoords(n_dir,isp), n_dir
 
         do ikp = 1, this%ll(n_dir)
-          this%expkr_perp(ikp,n_dir) = exp(-M_zI * this%rcoords(n_dir,isp) &
+          this%expkr_perp(ikp,ifc) = exp(-M_zI * this%rcoords(n_dir,isp) &
                                             * this%klinear(ikp, n_dir) ) & 
                                             * (M_TWO*M_PI)**(-M_ONE/M_TWO)
 
@@ -2133,9 +2133,7 @@ print *, ifc, this%srfcnrml(:, isp)
       end if
     
     end if
-    
-    print *, "tabulation done"
-    
+            
     POP_SUB(pes_flux_integrate_cub_tabulate_direct_a)  
           
   end subroutine pes_flux_integrate_cub_tabulate_direct_a
@@ -2298,7 +2296,7 @@ print *, ifc, this%srfcnrml(:, isp)
               
               do ikpu = 1, this%ll(dir_on_face(1))
                 do ikpv = 1, this%ll(dir_on_face(2))
-                  
+              
                   
                   face_int_gwf = sum(this%gwf(ist, isdim, ik, isp_start:isp_end, itstep, n_dir) &
                                * this%expkr(isp_start:isp_end,ikpu,ik_map,dir_on_face(1)) &
@@ -2309,10 +2307,11 @@ print *, ifc, this%srfcnrml(:, isp)
                                * this%expkr(isp_start:isp_end,ikpv,ik_map,dir_on_face(2)))
                   
                   do ikpz = 1, this%ll(n_dir)
+
                      gwfpw(get_ikp(this,ikpu,ikpv,ikpz,n_dir)) = face_int_gwf &
-                                                               * this%expkr_perp(ikpz,n_dir)  
+                                                               * this%expkr_perp(ikpz,ifc)  
                      wfpw( get_ikp(this,ikpu,ikpv,ikpz,n_dir)) = face_int_wf &
-                                                               * this%expkr_perp(ikpz,n_dir)  
+                                                               * this%expkr_perp(ikpz,ifc)  
 
                   end do
                   
