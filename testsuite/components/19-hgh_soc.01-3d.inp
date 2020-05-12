@@ -21,3 +21,5 @@ TestRepetitions = 10
 
 StatesBlockSize = 4
 StatesPack = yes
+
+AllowCPUonly = yes

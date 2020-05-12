@@ -76,3 +76,5 @@ TDPropagationTime = ntot*tc
 OutputInterval = 1000
 RestartWrite = no
 StatesPack = yes
+
+AllowCPUonly = yes

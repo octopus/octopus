@@ -74,3 +74,5 @@ TDExpOrder = 20
 TDPropagationTime = ntot*tc
 
 StatesPack = yes
+
+AllowCPUonly = yes

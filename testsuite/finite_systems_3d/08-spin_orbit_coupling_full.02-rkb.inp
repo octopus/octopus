@@ -37,3 +37,5 @@ FilterPotentials = filter_none
 
 MixField = density
 StatesPack = yes
+
+AllowCPUonly = yes

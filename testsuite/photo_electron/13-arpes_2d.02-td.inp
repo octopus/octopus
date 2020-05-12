@@ -104,3 +104,5 @@ TDOutput = multipoles + energy + laser
 OutputInterval = 500
 RestartWriteInterval = 500
 StatesPack = yes
+
+AllowCPUonly = yes

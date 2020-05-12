@@ -20,3 +20,5 @@ Radius = 20
 Spacing = 0.7
 
 StatesPack = yes
+
+AllowCPUonly = yes

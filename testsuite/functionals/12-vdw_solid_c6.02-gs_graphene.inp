@@ -41,3 +41,5 @@ VDWCorrection = vdw_ts
 VDW_ts_cutoff = 40
 
 StatesPack = yes
+
+AllowCPUonly = yes

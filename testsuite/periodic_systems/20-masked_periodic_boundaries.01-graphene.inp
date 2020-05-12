@@ -39,3 +39,5 @@ ConvAbsEv = 1e-5
  " abs(z) < 1 "
 %
 StatesPack = yes
+
+AllowCPUonly = yes

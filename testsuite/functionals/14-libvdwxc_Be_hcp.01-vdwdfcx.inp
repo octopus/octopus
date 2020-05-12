@@ -23,3 +23,5 @@ EigensolverTolerance = 1e-7
  'Be' | -1.0818682070416414 | 0.6246169005631896 | 0.0
 %
 StatesPack = yes
+
+AllowCPUonly = yes
