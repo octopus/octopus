@@ -291,7 +291,7 @@ subroutine X(fft_forward_3d)(fft, in, out, norm)
     if(scale) then
       ! multiply by 1/(N1*N2*N2)
       scaling_factor = M_ONE/(fft_array(slot)%rs_n_global(1)*fft_array(slot)%rs_n_global(2)*fft_array(slot)%rs_n_global(3))
-      !$omp parallel do private(jj,ii)
+      !$omp parallel do private(jj,ii) collapse(3)
       do kk = 1, fft_array(slot)%rs_n(3)
         do jj = 1, fft_array(slot)%rs_n(2)
           do ii = 1, fft_array(slot)%rs_n(1)

@@ -285,12 +285,14 @@ contains
     SAFE_ALLOCATE(order(1:this%np_part))
     SAFE_ALLOCATE(this%x(1:this%np_part, 0:sb%dim))
 
+    !$omp parallel do
     do ip = 1, this%np_part
       order(ip) = ip
     end do
 
     call sort(this%map, order)
 
+    !$omp parallel do
     do ip = 1, this%np_part
       this%x(ip, 0:sb%dim) = xtmp(order(ip), 0:sb%dim)
     end do

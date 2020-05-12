@@ -987,6 +987,7 @@ FLOAT function X(states_elec_residue)(mesh, dim, hf, ee, ff) result(rr)
   SAFE_ALLOCATE(res(1:mesh%np, 1:dim))
 
   do idim = 1, dim
+    !$omp parallel do
     do ip = 1, mesh%np
       res(ip, idim) = hf(ip, idim) - ee*ff(ip, idim)
     end do

@@ -117,6 +117,7 @@ contains
       rho = M_ZERO
       do icell = 1, periodic_copy_num(pp)
         yy(1:sb%dim) = periodic_copy_position(pp, sb, icell)
+        !$omp parallel do private(rr, xx, rerho)
         do ip = 1, mesh%np
           call mesh_r(mesh, ip, rr, origin = atom%x, coords = xx)
           xx(1:sb%dim) = xx(1:sb%dim) + yy(1:sb%dim)
@@ -129,7 +130,8 @@ contains
              call parse_expression(rerho, imrho, sb%dim, xx, rr, M_ZERO, trim(species_rho_string(species)))
           end if
           rho(ip, 1) = rho(ip, 1) + rerho
-       end do
+        end do
+        !$omp end parallel do
       end do
 
       if(species_type(species) == SPECIES_JELLIUM_CHARGE_DENSITY) then
@@ -168,6 +170,7 @@ contains
         ! This probably should be done inside the mesh_function_oct_m module.
  
         if (mesh%use_curvilinear) then
+          !$omp parallel do private(rr)
           do ip = 1, mesh%np
             call mesh_r(mesh, ip, rr, origin = atom%x)
             if(rr <= species_jradius(species)) then
@@ -175,7 +178,9 @@ contains
                 (mesh%vol_pp(ip)*TOFLOAT(in_points*spin_channels))
             end if
           end do
+         !$omp end parallel do
         else
+          !$omp parallel do private(rr)
           do ip = 1, mesh%np
             call mesh_r(mesh, ip, rr, origin = atom%x)
             if(rr <= species_jradius(species)) then
@@ -183,6 +188,7 @@ contains
                 (mesh%vol_pp(1)*TOFLOAT(in_points*spin_channels))
             end if
           end do
+          !$omp end parallel do
         end if
       end if
 
@@ -206,6 +212,7 @@ contains
         ! This probably should be done inside the mesh_function_oct_m module.
 
         if (mesh%use_curvilinear) then
+          !$omp parallel do private(rr)
           do ip = 1, mesh%np
             rr = abs( mesh%x( ip, 3 ) )
             if( rr <= species_jthick(species)/M_TWO ) then
@@ -213,7 +220,9 @@ contains
                 (mesh%vol_pp(ip)*TOFLOAT(in_points*spin_channels))
             end if
           end do
+          !$omp end parallel do
         else
+          !$omp parallel do private(rr)
           do ip = 1, mesh%np
             rr = abs( mesh%x( ip, 3 ) )
             if( rr <= species_jthick(species)/M_TWO ) then
@@ -221,6 +230,7 @@ contains
                 (mesh%vol_pp(1)*TOFLOAT(in_points*spin_channels))
             end if
           end do
+          !$omp end parallel do
         end if
       end if
 
@@ -243,9 +253,10 @@ contains
 
         do icell = 1, periodic_copy_num(pp)
           pos(1:sb%dim) = periodic_copy_position(pp, sb, icell)
+          !$omp parallel do private(rr, isp)
           do ip = 1, mesh%np
             call mesh_r(mesh, ip, rr, origin = pos)
-            rr = max(rr, R_SMALL)
+            rr = max(rr, r_small)
             
             do isp = 1, spin_channels
               if(rr >= spline_range_max(ps%density(isp))) cycle
@@ -253,6 +264,7 @@ contains
             end do
             
           end do
+          !$omp end parallel do
         end do
   
         call periodic_copy_end(pp)
@@ -265,9 +277,10 @@ contains
       
         do icell = 1, periodic_copy_num(pp)
           pos(1:sb%dim) = periodic_copy_position(pp, sb, icell)
+          !$omp parallel do private(rr, isp)
           do ip = 1, mesh%np
             call mesh_r(mesh, ip, rr, origin = pos)
-            rr = max(rr, R_SMALL)
+            rr = max(rr, r_small)
 
             if(rr >= spline_range_max(ps%vl)) cycle
             
@@ -276,6 +289,7 @@ contains
             end do
               
           end do
+          !$omp end parallel do
         end do
   
         call periodic_copy_end(pp)
@@ -307,7 +321,7 @@ contains
     integer,              intent(in)    :: spin_channels
     FLOAT,                intent(inout) :: rho(:, :) !< (mesh%np, spin_channels)
     integer :: isp, ip
-    FLOAT :: rr, nrm, rmax
+    FLOAT :: rr, nrm, rmax, r_small
     type(species_t), pointer :: species
     type(ps_t), pointer :: ps
 
@@ -326,14 +340,16 @@ contains
         ASSERT(associated(ps%density))
 
         rmax = CNST(0.0)
+        r_small = M_ZERO
 
         do isp = 1, spin_channels
           rmax = max(rmax, spline_cutoff_radius(ps%density(isp), ps%projectors_sphere_threshold))
         end do
+        !$omp parallel do private(rr, isp)
         do ip = 1, mesh%np
           call mesh_r(mesh, ip, rr, origin = pos)
 
-          rr = max(rr, R_SMALL) 
+          rr = max(rr, r_small) 
            
           do isp = 1, spin_channels
             if(rr >= spline_range_max(ps%density(isp))) cycle
@@ -341,14 +357,15 @@ contains
           end do
 
         end do
-
+        !$omp end parallel do
       else
 
         !we use the square root of the short-range local potential, just to put something that looks like a density
 
+        !$omp parallel do private(rr, isp)
         do ip = 1, mesh%np
           call mesh_r(mesh, ip, rr, origin = pos)
-          rr = max(rr, R_SMALL)
+          rr = max(rr, r_small)
 
           if(rr >= spline_range_max(ps%vl)) cycle
 
@@ -357,6 +374,7 @@ contains
           end do
 
         end do
+        !$omp end parallel do
 
         ! normalize
         nrm = CNST(0.0)
@@ -439,7 +457,7 @@ contains
     FLOAT,                intent(inout) :: drho(:, :) !< (mesh%np, spin_channels)
 
     integer :: isp, ip
-    FLOAT :: rr
+    FLOAT :: rr, r_small
     type(ps_t), pointer :: ps
 
     PUSH_SUB(species_atom_density_derivative_np)
@@ -449,16 +467,18 @@ contains
 
     if(ps_has_density(ps)) then
 
+      r_small = M_ZERO
+      !$omp parallel do private(rr, isp)
       do ip = 1, mesh%np
         call mesh_r(mesh, ip, rr, origin = pos)
-        rr = max(rr, R_SMALL)
+        rr = max(rr, r_small)
 
         do isp = 1, spin_channels
           if(rr >= spline_range_max(ps%density_der(isp))) cycle
           drho(ip, isp) = drho(ip, isp) + spline_eval(ps%density_der(isp), rr)
         end do
-
       end do
+      !$omp end parallel do
     else
       call messages_write('The pseudopotential for')
       call messages_write(species_label(atom%species))
@@ -511,9 +531,10 @@ contains
         do icell = 1, periodic_copy_num(pp)
           pos(1:sb%dim) = periodic_copy_position(pp, sb, icell)
         
+          !$omp parallel do private(rr, spline, idir, isp)
           do ip = 1, mesh%np
             call mesh_r(mesh, ip, rr, origin = pos)
-            rr = max(rr, R_SMALL)
+            rr = max(rr, r_small)
 
             do isp = 1, spin_channels
               if(rr >= spline_range_max(ps%density_der(isp))) cycle
@@ -524,6 +545,7 @@ contains
               end do
            end do
           end do
+          !$omp end parallel do
         end do
   
         call periodic_copy_end(pp)
@@ -584,9 +606,11 @@ contains
       call submesh_init(sphere, mesh%sb, mesh, pos, spline_cutoff_radius(ps%nlr, threshold))
       SAFE_ALLOCATE(rho_sphere(1:sphere%np))
 
+      !$omp parallel do
       do ip = 1, sphere%np
         rho_sphere(ip) = sphere%x(ip, 0)
       end do
+      !$omp end parallel do
       if(sphere%np > 0) call spline_eval_vec(ps%nlr, sphere%np, rho_sphere)
 
       rho(1:mesh%np) = M_ZERO
@@ -595,6 +619,7 @@ contains
       ! renormalize so that the long range potential is exact
       norm_factor = abs(species_zval(species)/dsm_integrate(mesh, sphere, rho_sphere))
       
+      !No OpenMP here because of possible reduction
       do ip = 1, sphere%np
         rho(sphere%map(ip)) = rho(sphere%map(ip)) + norm_factor*rho_sphere(ip)
       end do
@@ -717,6 +742,7 @@ contains
       rho = M_ZERO
       do icell = 1, periodic_copy_num(pp)
         yy(1:mesh%sb%dim) = periodic_copy_position(pp, mesh%sb, icell)
+        !$omp parallel do private(rr, xx, rerho)
         do ip = 1, mesh%np
           call mesh_r(mesh, ip, rr, origin = pos, coords = xx)
           xx(1:mesh%sb%dim) = xx(1:mesh%sb%dim) + yy(1:mesh%sb%dim)
@@ -730,6 +756,7 @@ contains
           end if
           rho(ip) = rho(ip) - rerho
         end do
+        !$omp end parallel do
       end do
 
       if(species_type(species) == SPECIES_JELLIUM_CHARGE_DENSITY) then
@@ -843,9 +870,10 @@ contains
         call periodic_copy_init(pp, mesh%sb, pos, range = spline_cutoff_radius(ps%core_der, ps%projectors_sphere_threshold))
         do icell = 1, periodic_copy_num(pp)
           center(1:mesh%sb%dim) = periodic_copy_position(pp, mesh%sb, icell)
+          !$omp parallel do private(rr, spline, idir)
           do ip = 1, mesh%np
             call mesh_r(mesh, ip, rr, origin = center)
-            rr = max(rr, R_SMALL)
+            rr = max(rr, r_small)
             if(rr >= spline_range_max(ps%core_der)) cycle
             spline = spline_eval(ps%core_der, rr)
 
@@ -853,6 +881,7 @@ contains
               rho_core_grad(ip, idir) = rho_core_grad(ip, idir) - spline*(mesh%x(ip, idir)-center(idir))/rr
             end do
           end do
+          !$omp end parallel do
         end do
         call periodic_copy_end(pp)
       end if
@@ -935,11 +964,13 @@ contains
         vl = M_ZERO
         do icell = 1, periodic_copy_num(pp)
           x_atom_per(1:mesh%sb%dim) = periodic_copy_position(pp, mesh%sb, icell)
+          !$omp parallel do private(r, r2)
           do ip = 1, mesh%np
             call mesh_r(mesh, ip, r, origin = x_atom_per, coords = xx)
             r2 = r*r
             vl(ip) = vl(ip) -species_zval(species)/sqrt(r2+species_sc_alpha(species))
           end do
+          !$omp end parallel do
         end do
         call periodic_copy_end(pp)
 
@@ -984,6 +1015,7 @@ contains
         a2 = species_z(species)/species_jradius(species)
         Rb2= species_jradius(species)**2
         
+        !$omp parallel do private(xx, r)
         do ip = 1, mesh%np
           
           xx(1:mesh%sb%dim) = mesh%x(ip, 1:mesh%sb%dim) - x_atom(1:mesh%sb%dim)
@@ -996,10 +1028,12 @@ contains
           end if
           
         end do
+        !$omp end parallel do
       
       case(SPECIES_JELLIUM_SLAB)
         a1 = M_TWO *M_PI * species_z(species)/ (M_FOUR *mesh%sb%lsize(1) *mesh%sb%lsize(2) )
 
+        !$omp parallel do private(r)
         do ip = 1, mesh%np
 
           r = abs( mesh%x(ip, 3 ) )
@@ -1011,6 +1045,7 @@ contains
           end if
 
         end do
+        !$omp end parallel do
 
       case(SPECIES_PSEUDO, SPECIES_PSPIO)
        
@@ -1018,6 +1053,7 @@ contains
 
         ps => species_ps(species)
 
+        !$omp parallel do private(r2)
         do ip = 1, mesh%np
           r2 = sum((mesh%x(ip, 1:mesh%sb%dim) - x_atom(1:mesh%sb%dim))**2)
           if(r2 < spline_range_max(ps%vlr_sq)) then
@@ -1026,6 +1062,7 @@ contains
             vl(ip) = P_PROTON_CHARGE*species_zval(species)/sqrt(r2)
           end if
         end do
+        !$omp end parallel do
 
         nullify(ps)
         

@@ -225,6 +225,7 @@ contains
 
       call accel_read_buffer(buff_current, der%mesh%np*3, current_tmp)
 
+      !$omp parallel do private(idir)
       do ip = 1, der%mesh%np
         do idir = 1, der%mesh%sb%dim
           current_kpt(ip, idir, ik) = current_kpt(ip, idir, ik) + current_tmp(idir, ip)

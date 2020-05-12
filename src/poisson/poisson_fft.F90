@@ -202,7 +202,7 @@ contains
     FLOAT,             intent(in)    :: temp(:)
     type(simul_box_t), intent(in)    :: sb
     FLOAT,             intent(in)    :: qq(:)
-    FLOAT,             intent(inout) :: gg(:)
+    FLOAT,             intent(out)   :: gg(:)
     FLOAT,             intent(out)   :: modg2
 
 !    integer :: idir
@@ -247,6 +247,7 @@ contains
 
     temp(1:3) = M_TWO*M_PI/(db(1:3)*mesh%spacing(1:3))
 
+    !$omp parallel do private(ixx, modg2, iy, iz, gg)
     do ix = 1, cube%fs_n_global(1)
       ixx(1) = pad_feq(ix, db(1), .true.)
       do iy = 1, cube%fs_n_global(2)
@@ -329,6 +330,7 @@ contains
     db(1:3) = fullcube%rs_n_global(1:3)
     temp(1:3) = M_TWO*M_PI/(db(1:3)*mesh%spacing(1:3))
     
+    !$omp parallel do private(ixx, modg2, iy, iz, gg)
     do ix = 1, nfs(1)
       ixx(1) = pad_feq(ix, db(1), .true.)
       do iy = 1, nfs(2)
@@ -339,7 +341,7 @@ contains
           call poisson_fft_gg_transform(ixx, temp, mesh%sb, coulb%qq, gg, modg2)
           
           if(abs(modg2) > M_EPSILON) then
-            fft_Coulb_FS(ix, iy, iz) = M_ONE/modg2
+            fft_Coulb_FS(ix, iy, iz) = M_FOUR*M_PI/modg2
           else
             fft_Coulb_FS(ix, iy, iz) = M_ZERO
           end if
@@ -347,14 +349,6 @@ contains
       end do
     end do
     
-    do iz = 1, nfs(3)
-      do iy = 1, nfs(2)
-        do ix = 1, nfs(1)
-          fft_Coulb_FS(ix, iy, iz) = M_FOUR*M_PI*fft_Coulb_FS(ix, iy, iz)
-        end do
-      end do
-    end do
-
     ! get periodic Coulomb potential in real space
     call dfft_backward(fullcube%fft, fft_Coulb_FS, fft_Coulb_RS)
 
@@ -438,6 +432,7 @@ contains
 
     temp(1:3) = M_TWO*M_PI/(db(1:3)*mesh%spacing(1:3))
 
+    !$omp parallel do private(ixx, modg2, gz, gpar, iy, iz, gg)
     do ix = 1, cube%fs_n_global(1)
       ixx(1) = pad_feq(ix, db(1), .true.)
       do iy = 1, cube%fs_n_global(2)
@@ -460,6 +455,7 @@ contains
 
     end do
 
+    !$omp parallel do collapse(3)
     do iz = 1, cube%fs_n_global(3)
       do iy = 1, cube%fs_n_global(2)
         do ix = 1, cube%fs_n_global(1)
@@ -713,6 +709,7 @@ contains
     end do
     call spline_fit(npoints, x, y, besselintf)
 
+    !$omp parallel do private(ixx, vec, ix)
     do iy = 1, cube%fs_n_global(2)
       ixx(2) = pad_feq(iy, db(2), .true.)
       do ix = 1, cube%fs_n_global(1)
@@ -763,12 +760,14 @@ contains
 
     ! First, the term ix = 0 => gx = 0.
     fft_coulb_fs(1, 1, 1) = -M_FOUR * r_c * (log(r_c)-M_ONE)
+    !$omp parallel do private(ixx, gy)
     do iy = 2, cube%fs_n_global(2)
       ixx(2) = pad_feq(iy, db(2), .true.)
       gy = temp(2)*ixx(2)
       fft_coulb_fs(1, iy, 1) = -M_FOUR * poisson_cutoff_intcoslog(r_c, gy, M_ONE )
     end do
 
+    !$omp parallel do private(ixx, gx, gy, iy)
     do ix = 2, cube%fs_n_global(1)
       ixx(1) = pad_feq(ix, db(1), .true.)
       gx = temp(1)*ixx(1)
@@ -807,7 +806,8 @@ contains
     SAFE_ALLOCATE(fft_Coulb_FS(1:cube%fs_n_global(1), 1:cube%fs_n_global(2), 1:cube%fs_n_global(3)))
     fft_Coulb_FS = M_ZERO
     temp(1:2) = M_TWO*M_PI/(db(1:2)*mesh%spacing(1:2))
-
+   
+    !$omp parallel do private(ixx, vec, ix)
     do iy = 1, cube%fs_n_global(2)
       ixx(2) = pad_feq(iy, db(2), .true.)
       do ix = 1, cube%fs_n_global(1)
@@ -842,6 +842,7 @@ contains
     fft_coulb_fs = M_ZERO
 
     ! Fourier transform of Soft Coulomb interaction.
+    !$omp parallel do private(ixx, g)
     do ix = 1, cube%fs_n_global(1)
       ixx = pad_feq(ix, cube%rs_n_global(1), .true.)
       g = (ixx + coulb%qq(1))*M_PI/mesh%sb%lsize(1)
@@ -882,6 +883,7 @@ contains
     temp(1:1) = M_TWO*M_PI/(box(1:1)*mesh%spacing(1:1))
 
     ! Fourier transform of Soft Coulomb interaction.
+    !$omp parallel do private(ixx, g)
     do ix = 1, cube%fs_n_global(1)
       ixx(1) = pad_feq(ix, box(1), .true.)
       g = temp(1)*ixx(1)

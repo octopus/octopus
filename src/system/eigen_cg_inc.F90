@@ -176,6 +176,7 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
 
       ! PTA92, eq. 5.10
       do idim = 1, st%d%dim
+        !$omp parallel do
         do ip = 1, gr%mesh%np
           g(ip, idim) = h_psi(ip, idim) - st%eigenval(ist, ik)*psi(ip, idim)
         end do
@@ -282,6 +283,7 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
 
         ! PTA92, eq. 5.19
         do idim = 1, st%d%dim
+          !$omp parallel do
           do ip = 1, gr%mesh%np
             cg(ip, idim) = gamma*cg(ip, idim) + g0(ip, idim)
           end do
@@ -339,6 +341,7 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
         ! Hartree term
         tmp = M_TWO/cg0
         do idim = 1, st%d%dim
+          !$omp parallel do
           do ip = 1, gr%mesh%np
             chi(ip, idim) = tmp * R_REAL(R_CONJ(cg(ip, idim)) * psi(ip, idim))
           end do
@@ -392,6 +395,7 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
 
       ! PTA92, eq. 5.38
       do idim = 1, st%d%dim
+        !$omp parallel do
         do ip = 1, gr%mesh%np
           psi(ip, idim) = a0*psi(ip, idim) + b0*cg(ip, idim)
           h_psi(ip, idim) = a0*h_psi(ip, idim) + b0*h_cg(ip, idim)
@@ -561,6 +565,7 @@ subroutine X(eigensolver_cg2_new) (namespace, gr, st, hm, tol, niter, converged,
 
       if( i >1 ) then ! Get H|psi> (through the linear formula)
         do idim = 1, st%d%dim
+          !$omp parallel do
           do ip = 1, gr%mesh%np
             phi(ip, idim) = ctheta*phi(ip, idim) + stheta*hcgp(ip, idim)
           end do
@@ -588,6 +593,7 @@ subroutine X(eigensolver_cg2_new) (namespace, gr, st, hm, tol, niter, converged,
 
       ! Get steepest descent vector
       do idim = 1, st%d%dim
+        !$omp parallel do
         do ip = 1, gr%mesh%np
           sd(ip, idim) = lambda*psi(ip, idim) - phi(ip, idim)
         end do
@@ -601,6 +607,7 @@ subroutine X(eigensolver_cg2_new) (namespace, gr, st, hm, tol, niter, converged,
       mu    = dump
 
       do idim = 1, st%d%dim
+        !$omp parallel do
         do ip = 1, gr%mesh%np
           cg(ip, idim) = sd(ip, idim) + gamma*cg(ip, idim)
         end do
@@ -609,6 +616,7 @@ subroutine X(eigensolver_cg2_new) (namespace, gr, st, hm, tol, niter, converged,
       dot = X(mf_dotp)(gr%mesh, dim, psi, cg)
 
       do idim = 1, st%d%dim
+        !$omp parallel do
         do ip = 1, gr%mesh%np
           cgp(ip, idim) = cg(ip, idim) - dot*psi(ip, idim)
         end do
@@ -641,6 +649,7 @@ subroutine X(eigensolver_cg2_new) (namespace, gr, st, hm, tol, niter, converged,
       stheta = stheta/norm
 
       do idim = 1, st%d%dim
+        !$omp parallel do
         do ip = 1, gr%mesh%np
           psi(ip, idim) = ctheta*psi(ip, idim) + stheta*cgp(ip, idim)
         end do

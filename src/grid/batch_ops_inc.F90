@@ -837,7 +837,7 @@ subroutine X(batch_get_state1)(this, ist, np, psi)
 
       ! and convert to complex on the cpu
       
-      !omp parallel do
+      !$omp parallel do
       do ip = 1, np
         psi(ip) = dpsi(ip)
       end do
@@ -913,7 +913,7 @@ subroutine X(batch_get_points)(this, sp, ep, psi)
   case(BATCH_NOT_PACKED)
 
     if(this%type() == TYPE_FLOAT) then
-      
+      !$omp parallel do private(ist, idim) 
       do ii = 1, this%nst_linear
         ist = this%linear_to_ist(ii)
         idim = this%linear_to_idim(ii)
@@ -921,7 +921,7 @@ subroutine X(batch_get_points)(this, sp, ep, psi)
       end do
 
     else
-
+      !$omp parallel do private(ist, idim)
       do ii = 1, this%nst_linear
         ist = this%linear_to_ist(ii)
         idim = this%linear_to_idim(ii)
@@ -934,7 +934,7 @@ subroutine X(batch_get_points)(this, sp, ep, psi)
 
     if(this%type() == TYPE_FLOAT) then
 
-      !$omp parallel do private(ip, ii, ist, idim)
+      !$omp parallel do private(ip, ii, ist, idim) collapse(2)
       do ip = sp, ep
         do ii = 1, this%nst_linear
           ist = this%linear_to_ist(ii)
@@ -946,7 +946,7 @@ subroutine X(batch_get_points)(this, sp, ep, psi)
 
     else
 
-      !$omp parallel do private(ip, ii, ist, idim)
+      !$omp parallel do private(ip, ii, ist, idim) collapse(2)
       do ip = sp, ep
         do ii = 1, this%nst_linear
           ist = this%linear_to_ist(ii)
@@ -991,6 +991,7 @@ subroutine X(batch_set_points)(this, sp, ep, psi)
 
     if(this%type() == TYPE_FLOAT) then
 
+      !$omp parallel do private(ist,idim)
       do ii = 1, this%nst_linear
         ist = this%linear_to_ist(ii)
         idim = this%linear_to_idim(ii)
@@ -998,7 +999,7 @@ subroutine X(batch_set_points)(this, sp, ep, psi)
       end do
 
     else
-
+      !$omp parallel do private(ist,idim)
       do ii = 1, this%nst_linear
         ist = this%linear_to_ist(ii)
         idim = this%linear_to_idim(ii)

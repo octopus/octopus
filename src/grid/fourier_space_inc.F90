@@ -90,6 +90,7 @@ subroutine X(fourier_space_op_init)(this, cube, op, in_device)
   if(cube%fft%library /= FFTLIB_ACCEL .or. .not. optional_default(in_device, .true.)) then
     this%in_device_memory = .false.
     SAFE_ALLOCATE(this%X(op)(1:cube%fs_n(1), 1:cube%fs_n(2), 1:cube%fs_n(3)))
+    !$omp parallel do collapse(3)
     do kk = 1,cube%fs_n(3)
       do jj = 1,cube%fs_n(2)
         do ii = 1,cube%fs_n(1)
@@ -105,7 +106,7 @@ subroutine X(fourier_space_op_init)(this, cube, op, in_device)
     size = product(cube%fs_n(1:3))
 
     SAFE_ALLOCATE(op_linear(1:size))
-
+    !$omp parallel do collapse(3) private(ii_linear)
     do kk = 1, cube%fs_n(3)
       do jj = 1, cube%fs_n(2)
         do ii = 1, cube%fs_n(1)
@@ -155,7 +156,7 @@ subroutine X(fourier_space_op_apply)(this, cube, cf)
     !Note that the function in fourier space returned by PFFT is transposed
     ! Probably in this case this%X(op) should be also transposed
     if(this%real_op) then
-      !$omp parallel do private(ii, jj, kk)
+      !$omp parallel do private(ii, jj, kk) collapse(3)
       do ii = 1, cube%fs_n(1)
         do jj = 1, cube%fs_n(2)
           do kk = 1, cube%fs_n(3)
@@ -165,7 +166,7 @@ subroutine X(fourier_space_op_apply)(this, cube, cf)
       end do
       !$omp end parallel do
     else
-      !$omp parallel do private(ii, jj, kk)
+      !$omp parallel do private(ii, jj, kk) collapse(3)
       do ii = 1, cube%fs_n(1)
         do jj = 1, cube%fs_n(2)
           do kk = 1, cube%fs_n(3)
@@ -177,7 +178,7 @@ subroutine X(fourier_space_op_apply)(this, cube, cf)
     end if
   else if(cube%fft%library == FFTLIB_FFTW .or. .not. this%in_device_memory) then
     if(this%real_op) then
-      !$omp parallel do private(ii, jj, kk)
+      !$omp parallel do private(ii, jj, kk) collapse(3)
       do kk = 1, cube%fs_n(3)
         do jj = 1, cube%fs_n(2)
           do ii = 1, cube%fs_n(1)
@@ -187,7 +188,7 @@ subroutine X(fourier_space_op_apply)(this, cube, cf)
       end do
       !$omp end parallel do
     else
-      !$omp parallel do private(ii, jj, kk)
+      !$omp parallel do private(ii, jj, kk) collapse(3)
       do kk = 1, cube%fs_n(3)
         do jj = 1, cube%fs_n(2)
           do ii = 1, cube%fs_n(1)

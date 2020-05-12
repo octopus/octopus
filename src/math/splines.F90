@@ -554,6 +554,7 @@ contains
     call oct_spline_x(spl1%spl, spl1%acc, x(1))
     call oct_spline_y(spl1%spl, spl1%acc, y(1))
 
+    !$omp parallel do
     do i = 1, npoints
       y2(i) = spline_eval(spl2, x(i))
     end do
@@ -586,6 +587,7 @@ contains
     call oct_spline_x(spl%spl, spl%acc, x(1))
     call oct_spline_y(spl%spl, spl%acc, y(1))
     call oct_spline_end(spl%spl, spl%acc)
+    !$omp parallel do
     do i = 1, npoints
       y(i) = a*y(i)
     end do
@@ -637,6 +639,7 @@ contains
 
     call oct_spline_x(spl1%spl, spl1%acc, x(1))
     call oct_spline_y(spl1%spl, spl1%acc, y(1))
+    !$omp parallel do
     do i = 1, npoints
       y(i) = y(i)*oct_spline_eval(x(i), spl2%spl, spl2%acc)
     end do
@@ -686,6 +689,7 @@ contains
       dg = gmax/(np-1)
       SAFE_ALLOCATE(xw(1:np))
       SAFE_ALLOCATE(yw(1:np))
+      !$omp parallel do private(g)
       do i = 1, np
         g = (i-1)*dg
         xw(i) = g
@@ -693,6 +697,7 @@ contains
     end if
 
     ! The first point, xw(1) = 0.0 and it has to be treated separately.
+    !$omp parallel do
     do j = 1, npoints
       y2(j) = CNST(4.0)*M_PI*y(j)*x(j)**2
     end do
@@ -701,6 +706,7 @@ contains
     yw(1) = oct_spline_eval_integ_full(aux%spl, aux%acc)
     call spline_end(aux)
 
+    !$omp parallel do private(aux, j, y2)
     do i = 2, np
       do j = 1, npoints
         y2(j) = (CNST(4.0)*M_PI/xw(i))*y(j)*x(j)*sin(xw(i)*x(j))
@@ -761,14 +767,15 @@ contains
       dg = gmax/(np-1)
       SAFE_ALLOCATE(xw(1:np))
       SAFE_ALLOCATE(yw(1:np))
+      !$omp parallel do private(g)
       do i = 1, np
         g = real(i-1, 8)*dg
         xw(i) = g
       end do
     end if
 
+    !$omp parallel do private(j, aux, y2)
     do i = 1, np
-      !$omp parallel do
       do j = 1, npoints
         y2(j) = y(j) * x(j)**2 * loct_sph_bessel(l, x(j)*xw(i))
       end do
@@ -889,6 +896,7 @@ contains
     call oct_spline_y(spl%spl, spl%acc, y(1))
     call oct_spline_end(spl%spl, spl%acc)
 
+    !$omp parallel do
     do i = npoints, 1, -1
       y(i) = max(y(i),M_ZERO)
     end do
@@ -924,6 +932,7 @@ contains
   
     ASSERT(splb%x_limit(2) >= splb%x_limit(1))
 
+    !$omp parallel do private(aa)
     do i = npoints, 1, -1
       if(x(i) > splb%x_limit(2)) then
         aa = M_ZERO
@@ -964,6 +973,7 @@ contains
       SAFE_ALLOCATE(y(1:npoints))
       call oct_spline_x(dspl%spl, dspl%acc, x(1))
     end if
+    !$omp parallel do
     do i = 1, npoints
       y(i) = oct_spline_eval_der(x(i), spl%spl, spl%acc)
     end do
@@ -998,6 +1008,7 @@ contains
       SAFE_ALLOCATE(y(1:npoints))
       call oct_spline_x(dspl%spl, dspl%acc, x(1))
     end if
+    !$omp parallel do
     do i = 1, npoints
       y(i) = oct_spline_eval_der2(x(i), spl%spl, spl%acc)
     end do

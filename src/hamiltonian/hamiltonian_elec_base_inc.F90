@@ -119,6 +119,7 @@ subroutine X(hamiltonian_elec_base_local_sub)(potential, mesh, std, ispin, psib,
     select case(std%ispin)
     case(UNPOLARIZED, SPIN_POLARIZED)
       if(pot_is_cmplx)then
+        !$omp parallel do private(vv, Imvv, ist)
         do ip = 1, mesh%np
           vv = potential(ip, ispin)
           Imvv = Impotential(ip, ispin)
@@ -183,6 +184,7 @@ subroutine X(hamiltonian_elec_base_local_sub)(potential, mesh, std, ispin, psib,
     select case(std%ispin)
     case(UNPOLARIZED, SPIN_POLARIZED)
       if(pot_is_cmplx)then
+        !$omp parallel do collapse(2)
         do ist = 1, psib%nst
           do ip = 1, mesh%np
             vpsib%X(ff)(ip, 1, ist) = vpsib%X(ff)(ip, 1, ist) + &
@@ -191,7 +193,7 @@ subroutine X(hamiltonian_elec_base_local_sub)(potential, mesh, std, ispin, psib,
         end do
         call profiling_count_operations(2*((R_ADD+R_MUL)*psib%nst)*mesh%np)
       else
-        !$omp parallel do private(ip)
+        !$omp parallel do private(ip) collapse(2)
         do ist = 1, psib%nst
           do ip = 1, mesh%np
             vpsib%X(ff)(ip, 1, ist) = vpsib%X(ff)(ip, 1, ist) + &
@@ -784,7 +786,7 @@ subroutine X(hamiltonian_elec_base_nlocal_start)(this, mesh, std, bnd, psib, pro
     else
        if(.not. bnd%spiral) then 
         if(psib%status() == BATCH_PACKED) then
-          !$omp parallel do private(ist)
+          !$omp parallel do private(ist) collapse(2)
           do ip = 1, npoints
             do ist = 1, nst
               lpsi(ist, ip) = psib%X(ff_pack)(ist, pmat%map(ip))*this%projector_phases(ip, imat, 1, psib%ik)
@@ -793,8 +795,8 @@ subroutine X(hamiltonian_elec_base_nlocal_start)(this, mesh, std, bnd, psib, pro
 
         else
 
+          !$omp parallel do collapse(2)
           do ist = 1, nst
-            !$omp parallel do
             do ip = 1, npoints
               lpsi(ist, ip) = psib%X(ff_linear)(pmat%map(ip), ist)*this%projector_phases(ip, imat, 1, psib%ik)
             end do
@@ -842,7 +844,7 @@ subroutine X(hamiltonian_elec_base_nlocal_start)(this, mesh, std, bnd, psib, pro
       SAFE_ALLOCATE(tmp_proj(1:nprojs, 1:nst))
       call blas_gemm('C', 'T', nprojs, nst, npoints, &
           M_z1, pmat%zprojectors(1, 1), npoints, lpsi(1, 1), nst, M_z0, tmp_proj(1,1), nprojs)
-      !$omp parallel do private(iproj, ist)
+      !$omp parallel do private(iproj, ist) collapse(2)
       do iproj = 1, nprojs
         do ist = 1, nst
           projection%X(projection)(ist, iprojection + iproj) = tmp_proj(iproj, ist)
@@ -857,7 +859,7 @@ subroutine X(hamiltonian_elec_base_nlocal_start)(this, mesh, std, bnd, psib, pro
       call profiling_count_operations(nreal*nprojs*M_TWO*npoints)
     end if
 
-    !$omp parallel do private(iproj, ist)
+    !$omp parallel do private(iproj, ist) collapse(2)
     do iproj = 1, nprojs
       do ist = 1, nst
         projection%X(projection)(ist, iprojection + iproj) = projection%X(projection)(ist, iprojection + iproj)*pmat%scal(iproj)
@@ -1002,7 +1004,7 @@ subroutine X(hamiltonian_elec_base_nlocal_finish)(this, mesh, bnd, std, projecti
       if(.not. allocated(this%projector_phases)) then    
         ! and copy the points from the local buffer to its position
         if(vpsib%status() == BATCH_PACKED) then
-          !$omp parallel do private(ip, ist) if(.not. this%projector_self_overlap)
+          !$omp parallel do private(ip, ist) if(.not. this%projector_self_overlap) collapse(2)
           do ip = 1, npoints
             do ist = 1, nst
               vpsib%X(ff_pack)(ist, pmat%map(ip)) = vpsib%X(ff_pack)(ist, pmat%map(ip)) + psi(ist, ip)
@@ -1010,12 +1012,11 @@ subroutine X(hamiltonian_elec_base_nlocal_finish)(this, mesh, bnd, std, projecti
           end do
           !$omp end parallel do
         else
+          !$omp parallel do if(.not. this%projector_self_overlap) collapse(2)
           do ist = 1, nst
-            !$omp parallel do if(.not. this%projector_self_overlap)
             do ip = 1, npoints
               vpsib%X(ff_linear)(pmat%map(ip), ist) = vpsib%X(ff_linear)(pmat%map(ip), ist) + psi(ist, ip)
             end do
-            !$omp end parallel do
           end do
         end if
         call profiling_count_operations(nst*npoints*R_ADD)
@@ -1033,13 +1034,12 @@ subroutine X(hamiltonian_elec_base_nlocal_finish)(this, mesh, bnd, std, projecti
             end do
             !$omp end parallel do
           else
+            !$omp parallel do if(.not. this%projector_self_overlap) collapse(2)
             do ist = 1, nst
-              !$omp parallel do if(.not. this%projector_self_overlap)
               do ip = 1, npoints
                 vpsib%X(ff_linear)(pmat%map(ip), ist) = vpsib%X(ff_linear)(pmat%map(ip), ist) &
                     + psi(ist, ip)*conjg(this%projector_phases(ip, imat, 1, vpsib%ik))
               end do
-              !$omp end parallel do
             end do
           end if
           call profiling_count_operations(nst*npoints*(R_ADD+R_MUL))
