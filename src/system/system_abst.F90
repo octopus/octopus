@@ -30,6 +30,7 @@ module system_abst_oct_m
   use profiling_oct_m
   use propagator_abst_oct_m
   use propagator_beeman_oct_m
+  use propagator_exp_mid_oct_m
   use propagator_verlet_oct_m
   use quantity_oct_m
   use space_oct_m
@@ -493,6 +494,10 @@ contains
     !% (Experimental) Beeman propagator without predictor-corrector.
     !%Option beeman_scf 3
     !% (Experimental) Beeman propagator with predictor-corrector scheme.
+    !%Option exp_mid 4
+    !% (Experimental) Exponential midpoint propagator without predictor-corrector.
+    !%Option exp_mid_scf 5
+    !% (Experimental) Exponential midpoint propagator with predictor-corrector scheme.
     !%End
     call parse_variable(this%namespace, 'TDSystemPropagator', PROP_VERLET, prop)
     if(.not.varinfo_valid_option('TDSystemPropagator', prop)) call messages_input_error(this%namespace, 'TDSystemPropagator')
@@ -505,6 +510,10 @@ contains
       this%prop => propagator_beeman_t(this%namespace, .false.)
     case(PROP_BEEMAN_SCF)
       this%prop => propagator_beeman_t(this%namespace, .true.)
+    case(PROP_EXPMID)
+      this%prop => propagator_exp_mid_t(this%namespace, .false.)
+    case(PROP_EXPMID_SCF)
+      this%prop => propagator_exp_mid_t(this%namespace, .true.)
     end select
 
     call this%prop%rewind()
