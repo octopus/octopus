@@ -501,8 +501,9 @@ system_f_srcs =                                 \
 	system/photon_mode.F90                  \
 	system/preconditioners.F90              \
 	system/propagator_abst.F90              \
-        system/propagator_beeman.F90            \
-        system/propagator_verlet.F90            \
+	system/propagator_beeman.F90            \
+	system/propagator_exp_mid.F90           \
+	system/propagator_verlet.F90            \
 	system/quantity.F90                     \
 	system/stress.F90                       \
 	system/subspace.F90                     \
