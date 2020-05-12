@@ -6,15 +6,28 @@ TestGroups : long-run, photo_electron
 Enabled    : Yes
 
 
-# Na groundstate
+# Na sphere groundstate
 Processors : 2
-Input      : 09-flux_3d.01-Na_gs.inp
+Input      : 09-flux_3d.01-Na_gs_sph.inp
 
-# Na photoemission
+# Na sphere photoemission
 # Processors : 2
 Precision  : 2.0e-11
-Input      : 09-flux_3d.02-Na_td.inp
+Input      : 09-flux_3d.02-Na_td_sph.inp
 match ; PES [val  1] ; LINEFIELD(td.general/PES_flux.power.sum, 140, 2) ; 1.966368393e-07
 match ; PES [val  2] ; LINEFIELD(td.general/PES_flux.power.sum, 142, 2) ; 3.959502463e-07
 match ; PES [val  3] ; LINEFIELD(td.general/PES_flux.power.sum, 145, 2) ; 1.561889764e-07
+
+
+# Na cube groundstate
+Processors : 2
+Input      : 09-flux_3d.03-Na_gs_cub.inp
+
+# Na cube photoemission
+# Processors : 2
+Precision  : 2.0e-11
+Input      : 09-flux_3d.04-Na_td_cub.inp
+match ; PES [val  1] ; LINEFIELD(td.general/PES_flux.distribution.out, 9432, 4) ; 0.7235990632E-004
+match ; PES [val  2] ; LINEFIELD(td.general/PES_flux.distribution.out, 9434, 4) ; 0.3931059481E-004
+match ; PES [val  3] ; LINEFIELD(td.general/PES_flux.distribution.out, 9436, 4) ; 0.7235990632E-004
 
