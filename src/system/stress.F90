@@ -106,7 +106,7 @@ contains
     call stress_from_kinetic_energy_electron(gr%der, hm, st, stress, stress_KE)
 
     ! Stress from Hartree energy
-    call stress_from_Hartree(st, hm, stress, stress_Hartree)
+    call stress_from_Hartree(hm, stress, stress_Hartree)
 
     ! Stress from exchange-correlation energy
     call stress_from_xc(gr%der, hm, stress, stress_xc)
@@ -396,13 +396,13 @@ contains
   end subroutine stress_from_kinetic_energy_electron
   
 ! -------------------------------------------------------
-  subroutine stress_from_Hartree(st, hm, stress, stress_Hartree)
-    type(states_elec_t),  intent(inout) :: st
-    type(hamiltonian_elec_t),  intent(in)    :: hm
-    FLOAT,                intent(inout) :: stress(:, :)
-    FLOAT,                intent(out)   :: stress_Hartree(3, 3) ! temporal
-    FLOAT                               :: stress_l(3, 3)
-    type(cube_t),    pointer            :: cube
+  subroutine stress_from_Hartree(hm, stress, stress_Hartree)
+    type(hamiltonian_elec_t), intent(in)    :: hm
+    FLOAT,                    intent(inout) :: stress(:, :)
+    FLOAT,                    intent(out)   :: stress_Hartree(3, 3) ! temporal
+
+    FLOAT :: stress_l(3, 3)
+    type(cube_t), pointer :: cube
     integer :: idir, jdir, ii, jj, kk
     FLOAT :: ss
     type(profile_t), save :: prof
@@ -593,7 +593,7 @@ contains
     vloc = M_ZERO
     rvloc = M_ZERO    
     do iatom = 1, geo%natoms
-       call epot_local_pseudopotential_SR(hm%ep, gr%der, gr%dgrid, hm%geo, iatom, vloc, rvloc)
+       call epot_local_pseudopotential_SR(gr%der, gr%dgrid, hm%geo, iatom, vloc, rvloc)
     end do
 
     energy_ps_SR = dmf_dotp(gr%mesh, vloc, rho_total(:))
@@ -679,8 +679,7 @@ contains
   end subroutine stress_from_pseudo
       
   ! -------------------------------------------------------
-  subroutine epot_local_pseudopotential_SR(ep, der, dgrid, geo, iatom, vpsl, rvpsl)
-    type(epot_t),             intent(inout) :: ep
+  subroutine epot_local_pseudopotential_SR(der, dgrid, geo, iatom, vpsl, rvpsl)
     type(derivatives_t),      intent(in)    :: der
     type(double_grid_t),      intent(in)    :: dgrid
     type(geometry_t),         intent(in)    :: geo

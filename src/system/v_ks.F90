@@ -459,7 +459,7 @@ contains
         !%End
         call parse_variable(namespace, 'VDWSelfConsistent', .true., ks%vdw_self_consistent)
 
-        call vdw_ts_init(ks%vdw_ts, namespace, geo, gr%fine%der)
+        call vdw_ts_init(ks%vdw_ts, namespace, geo)
 
       case(OPTION__VDWCORRECTION__VDW_D3)
         ks%vdw_self_consistent = .false.
@@ -910,7 +910,7 @@ contains
           vxc_sic = M_ZERO
 
           rho(:, ispin) = ks%calc%density(:, ispin) / qsp(ispin)
-          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%psolver_fine, namespace, rho, st%d%ispin, hm%exxop, vxc_sic)
+          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%psolver_fine, namespace, rho, st%d%ispin, vxc_sic)
 
           ks%calc%vxc = ks%calc%vxc - vxc_sic
         end do
@@ -966,19 +966,19 @@ contains
       ! Get the *local* XC term
       if(ks%calc%calc_energy) then
         if (family_is_mgga_with_exc(hm%xc)) then
-          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%psolver_fine, namespace, ks%calc%density, st%d%ispin, hm%exxop, &
+          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%psolver_fine, namespace, ks%calc%density, st%d%ispin, &
             ks%calc%vxc, ex = ks%calc%energy%exchange, ec = ks%calc%energy%correlation, deltaxc = ks%calc%energy%delta_xc, &
             vtau = ks%calc%vtau)
         else
-          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%psolver_fine, namespace, ks%calc%density, st%d%ispin, hm%exxop, &
+          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%psolver_fine, namespace, ks%calc%density, st%d%ispin, &
             ks%calc%vxc, ex = ks%calc%energy%exchange, ec = ks%calc%energy%correlation, deltaxc = ks%calc%energy%delta_xc)
         end if
       else
         if (family_is_mgga_with_exc(hm%xc)) then
-          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%psolver_fine, namespace, ks%calc%density, st%d%ispin, hm%exxop, &
+          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%psolver_fine, namespace, ks%calc%density, st%d%ispin, &
             ks%calc%vxc, vtau = ks%calc%vtau)
         else
-          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%psolver_fine, namespace, ks%calc%density, st%d%ispin, hm%exxop, &
+          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%psolver_fine, namespace, ks%calc%density, st%d%ispin, &
             ks%calc%vxc)
         end if
       end if
@@ -1292,7 +1292,7 @@ contains
 
 
     !> PCM reaction field due to the electronic density
-    if (hm%pcm%run_pcm .and. pcm_update(hm%pcm,hm%current_time)) then
+    if (hm%pcm%run_pcm .and. pcm_update(hm%pcm)) then
       ! Currently this PCM section seems to be inconsistent when one has a fine mesh
 
       !> Generates the real-space PCM potential due to electrons during the SCF calculation.

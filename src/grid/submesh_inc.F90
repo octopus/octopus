@@ -519,11 +519,9 @@ subroutine X(submesh_batch_dotp_matrix)(this, mm, ss, dot, reduce)
     
   end if
 
-#if defined(HAVE_MPI)
   if(optional_default(reduce, .true.) .and. this%mesh%parallel_in_domains) then
     call comm_allreduce(this%mesh%mpi_grp%comm, dot, dim = (/mm%nst, ss%nst/))
   end if
-#endif
 
   POP_SUB(X(submesh_batch_dotp_matrix))
 end subroutine X(submesh_batch_dotp_matrix)

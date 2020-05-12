@@ -473,7 +473,7 @@ subroutine pes_mask_output_states(namespace, st, gr, geo, dir, outp, mask)
 
         cf%zRs=M_z0
 
-        call pes_mask_K_to_X(mask,mesh,mask%k(:,:,:, idim, ist, ik),cf%zRs)
+        call pes_mask_K_to_X(mask, mask%k(:,:,:, idim, ist, ik),cf%zRs)
 
         call pes_mask_cube_to_mesh(mask, cf, PsiAB(:, idim, ist, ik))        
 
@@ -1941,7 +1941,7 @@ subroutine pes_mask_output(mask, mesh, st, outp, namespace, file, gr, geo, iter)
           call states_elec_get_state(st, mesh, idim, ist, ik, psi)
           call pes_mask_mesh_to_cube(mask, psi, cf1)
           cf1%zRs = (M_ONE - mask%cM%zRs**10) * cf1%zRs ! mask^10 is practically a box function
-          call pes_mask_X_to_K(mask,mesh,cf1%zRs,cf1%Fs)
+          call pes_mask_X_to_K(mask, cf1%zRs, cf1%Fs)
           wfAk(:,:,:,idim, ist, ik) = cf1%Fs
         end do
       end do
@@ -2313,7 +2313,7 @@ subroutine pes_mask_restart_map(mask, namespace, st, RR)
     do ist = st%st_start, st%st_end
       do idim = 1, st%d%dim
         cf1%zRs = M_z0
-        call pes_mask_K_to_X(mask, mask%mesh, mask%k(:,:,:, idim, ist, ik), cf1%zRs)
+        call pes_mask_K_to_X(mask, mask%k(:,:,:, idim, ist, ik), cf1%zRs)
         call states_elec_get_state(st, mask%mesh, idim, ist, ik, psi)
         call pes_mask_mesh_to_cube(mask, psi, cf2)
         cf2%zRs = cf1%zRs + cf2%zRs ! the whole pes orbital in real space 
@@ -2321,7 +2321,7 @@ subroutine pes_mask_restart_map(mask, namespace, st, RR)
         call pes_mask_cube_to_mesh(mask, cf1, psi)
         call states_elec_set_state(st, mask%mesh, idim, ist, ik, psi)
         cf2%zRs = cf2%zRs * (mask%cM%zRs-M_old) ! modify the k-orbital in B 
-        call pes_mask_X_to_K(mask, mask%mesh, cf2%zRs, cf1%Fs)
+        call pes_mask_X_to_K(mask, cf2%zRs, cf1%Fs)
         mask%k(:,:,:, idim, ist, ik) = mask%k(:,:,:, idim, ist, ik) - cf1%Fs
       end do
     end do

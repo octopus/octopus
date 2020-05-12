@@ -40,8 +40,7 @@ module oct_exchange_oct_m
     oct_exchange_prepare,            &
     oct_exchange_set,                &
     oct_exchange_remove,             &
-    doct_exchange_operator,          &
-    zoct_exchange_operator
+    oct_exchange_operator
 
   type oct_exchange_t
     private
@@ -182,13 +181,53 @@ contains
     POP_SUB(oct_exchange_remove)
   end subroutine oct_exchange_remove
 
-#include "undef.F90"
-#include "real.F90"
-#include "oct_exchange_inc.F90"
+  ! ---------------------------------------------------------
+  subroutine oct_exchange_operator(this, namespace, mesh, hpsi, ist, ik)
+    type(oct_exchange_t), intent(in)    :: this
+    type(namespace_t),    intent(in)    :: namespace
+    type(mesh_t),         intent(in)    :: mesh
+    CMPLX,                intent(inout) :: hpsi(:, :)
+    integer,              intent(in)    :: ist
+    integer,              intent(in)    :: ik
 
-#include "undef.F90"
-#include "complex.F90"
-#include "oct_exchange_inc.F90"
+    integer :: ik2
+    CMPLX, allocatable :: psi(:, :), psi2(:, :)
+    integer :: ip
+
+    PUSH_SUB(oct_exchange_operator)
+
+    SAFE_ALLOCATE(psi(1:mesh%np, 1:this%oct_st%d%dim))
+    SAFE_ALLOCATE(psi2(1:mesh%np, 1:this%oct_st%d%dim))
+
+    select case(this%oct_st%d%ispin)
+    case(UNPOLARIZED)
+      ASSERT(this%oct_st%d%nik  ==  1)
+      call states_elec_get_state(this%oct_st, mesh, ist, 1, psi2)
+      do ip = 1, mesh%np
+        hpsi(ip, 1) = hpsi(ip, 1) + M_TWO*M_zI*psi2(ip, 1)*(this%oct_pot(ip, 1) + this%oct_fxc(ip, 1, 1)*this%oct_rho(ip, 1))
+      end do
+
+    case(SPIN_POLARIZED)
+      ASSERT(this%oct_st%d%nik  ==  2)
+
+      call states_elec_get_state(this%oct_st, mesh, ist, ik, psi2)
+
+      do ik2 = 1, 2
+        do ip = 1, mesh%np
+          hpsi(ip, 1) = hpsi(ip, 1) + M_TWO * M_zI * this%oct_st%occ(ist, ik) * &
+            psi2(ip, 1) * (this%oct_pot(ip, ik2) + this%oct_fxc(ip, ik, ik2)*this%oct_rho(ip, ik2))
+        end do
+      end do
+
+    case(SPINORS)
+      call messages_not_implemented("Function oct_exchange_operator for spinors", &
+        namespace=namespace)
+    end select
+
+    SAFE_DEALLOCATE_A(psi)
+    SAFE_DEALLOCATE_A(psi2)
+    POP_SUB(oct_exchange_operator)
+  end subroutine oct_exchange_operator
 
 end module oct_exchange_oct_m
 

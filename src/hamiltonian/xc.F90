@@ -26,6 +26,7 @@ module xc_oct_m
   use global_oct_m
   use io_oct_m
   use io_function_oct_m
+  use iso_c_binding
   use lalg_basic_oct_m
   use lalg_adv_oct_m
   use libvdwxc_oct_m

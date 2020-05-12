@@ -603,7 +603,7 @@ contains
     case(FFTLIB_NFFT)
      call nfft_copy_info(this%nfft,fft_array(jj)%nfft) !copy default parameters set in the calling routine 
      call nfft_init(fft_array(jj)%nfft, nfft_options, fft_array(jj)%rs_n_global, &
-                    fft_dim, fft_array(jj)%rs_n_global , type, optimize = .true.)
+                    fft_dim, fft_array(jj)%rs_n_global, optimize = .true.)
 
     case (FFTLIB_PFFT)
 #ifdef HAVE_PFFT     

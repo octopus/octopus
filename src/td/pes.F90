@@ -242,7 +242,7 @@ contains
 
     if(pes%calc_mask) call pes_mask_output (pes%mask, mesh, st, outp, namespace, "td.general/PESM", gr, geo,iter)
 
-    if(pes%calc_flux) call pes_flux_output(pes%flux, mesh, mesh%sb, st, namespace, dt)
+    if(pes%calc_flux) call pes_flux_output(pes%flux, mesh, st, namespace, dt)
 
     POP_SUB(pes_output)
   end subroutine pes_output
@@ -293,12 +293,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine pes_load(pes, namespace, restart, st, mesh, ierr)
+  subroutine pes_load(pes, namespace, restart, st, ierr)
     type(pes_t),         intent(inout) :: pes
     type(namespace_t),   intent(in)    :: namespace
     type(restart_t),     intent(in)    :: restart
     type(states_elec_t), intent(inout) :: st
-    type(mesh_t),        intent(in)    :: mesh
     integer,             intent(out)   :: ierr
 
     PUSH_SUB(pes_load)
@@ -321,7 +320,7 @@ contains
     end if
 
     if(pes%calc_flux) then
-      call pes_flux_load(restart, pes%flux, mesh, st, ierr)
+      call pes_flux_load(restart, pes%flux, st, ierr)
     end if
 
     if (pes%calc_spm) then

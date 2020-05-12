@@ -49,8 +49,6 @@ OCTDoubleCheck = no
 #-----------------------------
 
 ampl = 0.06
-t0 = stime/2
-tau0 = stime/2
 freq = (2*pi/stime)*5
 %TDExternalFields
 electric_field | 1 | 0 | 0 | freq | "envelope_function"

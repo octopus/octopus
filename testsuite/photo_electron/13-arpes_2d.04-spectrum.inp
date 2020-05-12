@@ -51,21 +51,11 @@ y0 = 0.0
 wpr = 52/27.211
 II = 1.0E9             # intensity
 EE = sqrt(II/3.51e+16) # Electric field peak amplitude
-AApr = EE * 137/wpr    # Vector potential amplitude
 TT = 10*femtosecond    # Pulse envelope
 tcpr=2*pi/wpr          # field cycle
 npr = TT/tcpr
 Tpr = tcpr*npr
 
-
-
-%TDExternalFields
-  vector_potential | 1  | 0  | 0 | wpr |"probe"
-%
-
-%TDFunctions
-  "probe"  | tdf_from_expr | 'AApr*sin(wpr*(t)/(2*npr))^2*step(Tpr-(t))*step(t)'
-%
 
 TDTimeStep = 0.2
 TDPropagationTime = Tpr
@@ -77,9 +67,6 @@ Lmin = 30
 
 AbsorbingBoundaries = cap
 ABCapHeight = -1.0
-%ABShape
- Lmin | LL | "abs(y)"
-%
 
 PhotoElectronSpectrum = pes_flux
 PES_Flux_Lsize = Lmin

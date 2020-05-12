@@ -1120,11 +1120,10 @@ contains
   !---------------------------------------------------------
   !> Project the wavefunction on plane waves
   !---------------------------------------------------------
-  subroutine pes_mask_X_to_K(mask,mesh,wfin,wfout)
-    type(pes_mask_t), intent(in)  :: mask
-    type(mesh_t),     intent(in)  :: mesh
-    CMPLX,              intent(inout):: wfin(:,:,:)
-    CMPLX,             intent(out):: wfout(:,:,:)
+  subroutine pes_mask_X_to_K(mask, wfin, wfout)
+    type(pes_mask_t), intent(in)    :: mask
+    CMPLX,            intent(inout) :: wfin(:,:,:)
+    CMPLX,            intent(out)   :: wfout(:,:,:)
     
     type(profile_t), save :: prof
     type(cube_function_t) :: cf_tmp
@@ -1184,11 +1183,10 @@ contains
   end subroutine pes_mask_X_to_K
   
   ! ------------------------------------------------
-  subroutine pes_mask_K_to_X(mask,mesh,wfin,wfout)
-    type(pes_mask_t), intent(in)  :: mask
-    type(mesh_t),     intent(in)  :: mesh
-    CMPLX,            intent(inout)  :: wfin(:,:,:)
-    CMPLX,            intent(out) :: wfout(:,:,:)
+  subroutine pes_mask_K_to_X(mask, wfin, wfout)
+    type(pes_mask_t), intent(in)    :: mask
+    CMPLX,            intent(inout) :: wfin(:,:,:)
+    CMPLX,            intent(out)   :: wfout(:,:,:)
     
     type(profile_t), save :: prof
     type(cube_function_t) :: cf_tmp
@@ -1356,7 +1354,7 @@ contains
             case(PES_MASK_MODE_MASK)
               
               cf1%zRs = (M_ONE - mask%cM%zRs) * cf1%zRs                               ! cf1 =(1-M)*\Psi_A(x,t2)
-              call pes_mask_X_to_K(mask,mesh,cf1%zRs,cf2%Fs)                          ! cf2 = \tilde{\Psi}_A(k,t2)
+              call pes_mask_X_to_K(mask, cf1%zRs, cf2%Fs)                             ! cf2 = \tilde{\Psi}_A(k,t2)
 
 
               if ( mask%filter_k ) then ! apply a filter to the Fourier transform to remove unwanted energies
@@ -1376,14 +1374,14 @@ contains
               if(mask%back_action .eqv. .true.) then
                 
                 ! Apply Back-action to wavefunction in A
-                call pes_mask_K_to_X(mask,mesh,cf1%Fs,cf2%zRs)                       ! cf2 = \Psi_B(x,t2)
+                call pes_mask_K_to_X(mask, cf1%Fs, cf2%zRs)                       ! cf2 = \Psi_B(x,t2)
                 call pes_mask_cube_to_mesh(mask, cf2, mf)
                 psi(1:mask%mesh%np) = psi(1:mask%mesh%np) + mf(1:mask%mesh%np)
                 call states_elec_set_state(st, mask%mesh, idim, ist, ik, psi)
                 
                 ! Apply correction to wavefunction in B
                 cf2%zRs= (mask%cM%zRs) * cf2%zRs                                     ! cf2 = M*\Psi_B(x,t1)
-                call pes_mask_X_to_K(mask,mesh,cf2%zRs,cf1%Fs)
+                call pes_mask_X_to_K(mask, cf2%zRs, cf1%Fs)
                 
                 mask%k(:,:,:, idim, ist, ik) = mask%k(:,:,:, idim, ist, ik) - cf1%Fs
                 
@@ -1397,7 +1395,7 @@ contains
               
               
               cf1%zRs = (M_ONE-mask%cM%zRs) * cf1%zRs
-              call pes_mask_X_to_K(mask,mesh,cf1%zRs,cf2%Fs) 
+              call pes_mask_X_to_K(mask, cf1%zRs, cf2%Fs) 
               
               mask%k(:,:,:, idim, ist, ik) = cf2%Fs(:,:,:)
               

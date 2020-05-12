@@ -585,12 +585,12 @@ contains
         if (st%modelmbparticles%nparticle > 0) then
           call modelmb_sym_all_states (gr, st)
         end if
-        call td_write_output(write_handler, sys%namespace, gr, st, sys%hm, sys%ks, sys%outp, geo, iter, td%dt)
+        call td_write_output(sys%namespace, gr, st, sys%hm, sys%ks, sys%outp, geo, iter, td%dt)
       end if
 
       if (mod(iter, sys%outp%restart_write_interval) == 0 .or. iter == td%max_iter .or. stopping) then ! restart
         !if(iter == td%max_iter) sys%outp%iter = ii - 1
-        call td_write_data(write_handler, td%dt)
+        call td_write_data(write_handler)
         call td_dump(restart_dump, sys%namespace, gr, st, sys%hm, td, iter, ierr)
         if (ierr /= 0) then
           message(1) = "Unable to write time-dependent restart information."
@@ -881,7 +881,7 @@ contains
       call propagator_run_zero_iter(sys%hm, gr, td%tr)
       if (sys%outp%output_interval > 0) then
         call td_write_data(write_handler)
-        call td_write_output(write_handler, sys%namespace, gr, st, sys%hm, sys%ks, sys%outp, geo, 0)
+        call td_write_output(sys%namespace, gr, st, sys%hm, sys%ks, sys%outp, geo, 0)
       end if
 
       POP_SUB(td_run.td_run_zero_iter)
@@ -1192,7 +1192,7 @@ contains
     if (err /= 0) ierr = ierr + 1 
 
     if(hm%lda_u_level /= DFT_U_NONE) then
-      call lda_u_dump(restart, hm%lda_u, st, ierr, iter=iter)
+      call lda_u_dump(restart, hm%lda_u, st, ierr)
       if (err /= 0) ierr = ierr + 1
     end if
 
@@ -1208,7 +1208,7 @@ contains
     end if
 
     if(gr%der%boundaries%spiralBC) then
-      call states_elec_dump_spin(restart, st, gr, err)
+      call states_elec_dump_spin(restart, st, err)
       if(err /= 0) ierr = ierr + 8
     end if
 
@@ -1263,7 +1263,7 @@ contains
 
     ! read PES restart
     if (td%pesv%calc_spm .or. td%pesv%calc_mask .or. td%pesv%calc_flux) then
-      call pes_load(td%pesv, namespace, restart, st, gr%mesh, err)
+      call pes_load(td%pesv, namespace, restart, st, err)
       if (err /= 0) ierr = ierr + 4
     end if
 
@@ -1278,7 +1278,7 @@ contains
     end if
 
     if(gr%der%boundaries%spiralBC) then
-      call states_elec_load_spin(restart, st, gr, err)
+      call states_elec_load_spin(restart, st, err)
       !To ensure back compatibility, if the file is not present, we use the 
       !current states to get the spins
       if(err /= 0) call states_elec_fermi(st, namespace, gr%mesh)

@@ -130,10 +130,10 @@ contains
   end subroutine volume_read_from_block
 
 
-  logical function volume_in_volume(sb, vol, xx, rr) result(in_vol)
+  logical function volume_in_volume(sb, vol, xx) result(in_vol)
     type(simul_box_t), intent(in) :: sb
     type(volume_t),    intent(in) :: vol
-    FLOAT,             intent(in) :: xx(:), rr
+    FLOAT,             intent(in) :: xx(:)
 
     logical :: in_partial_volume
     integer :: i

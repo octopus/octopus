@@ -3141,9 +3141,8 @@ contains
 
   ! -----------------------------------------------------------------------------
   !> Update pcm potential
-  logical function pcm_update(this, time) result(update)
+  logical function pcm_update(this) result(update)
     type(pcm_t), intent(inout) :: this
-    FLOAT,       intent(in)    :: time
 
     this%iter = this%iter + 1 
     update = this%iter <= 6 .or. mod(this%iter, this%update_iter) == 0

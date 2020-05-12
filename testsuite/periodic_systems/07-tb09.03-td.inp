@@ -43,8 +43,6 @@ TDPropagator = aetrs
 TDTimeStep = 0.02
 TDMaxSteps = 20
 
-ParDomains = no
-
 TDEnergyUpdateIter = 5
 
 FilterPotentials = filter_none

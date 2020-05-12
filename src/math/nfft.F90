@@ -70,7 +70,6 @@ module nfft_oct_m
 
     integer           :: N(3)       !> size of the nfft bandwidths
     integer           :: M(3)          !> Number of the nfft nodes
-    integer           :: is_real    !> is the fft real or complex
     integer           :: dim        !> the dimension
     integer           :: fftN(3)    !> size of the fft used
     FLOAT, public     :: norm       !> Normalization
@@ -160,13 +159,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine nfft_init(nfft, nfft_options, N, dim, M, is_real, optimize)
+  subroutine nfft_init(nfft, nfft_options, N, dim, M, optimize)
     type(nfft_t),      intent(inout) :: nfft
     type(nfft_t),      intent(in)    :: nfft_options
     integer,           intent(inout) :: N(3) !> nfft bandwidths
     integer,           intent(inout) :: M(3) !> nfft nodes
     integer,           intent(in)    :: dim
-    integer,           intent(in)    :: is_real
     logical, optional, intent(in)    :: optimize
 
     integer :: ii, my_N(3)
@@ -313,7 +311,6 @@ contains
 
     out%N = in%N
     out%M = in%M
-    out%is_real= in%is_real
     out%dim = in%dim
     out%fftN = in%fftN
     out%norm = in%norm

@@ -992,13 +992,16 @@ contains
 
     use_stored_orbitals = species_is_ps(geo%atom(iatom)%species) &
       .and. states_are_real(st) .and. spin_channels == 1 .and. lcao_is_available(this) &
-      .and. st%d%dim == 1 .and. .not. gr%have_fine_mesh
+      .and. st%d%dim == 1 .and. .not. gr%have_fine_mesh .and. .not. sb%periodic_dim > 0
 
     ps => species_ps(geo%atom(iatom)%species)
 
     ! we can use the orbitals we already have calculated
     if(use_stored_orbitals) then
       ASSERT(.not. gr%have_fine_mesh)
+   
+      !There is no periodic copies here, so this will not work for periodic systems
+      ASSERT(.not. sb%periodic_dim > 0)
 
       if(.not. this%alternative) then
         
@@ -1149,7 +1152,6 @@ contains
 
       parallelized_in_atoms = .true.
 
-      atom_rho = M_ZERO
       rho = M_ZERO
       do ia = geo%atoms_dist%start, geo%atoms_dist%end
         call lcao_atom_density(this, namespace, st, gr, sb, geo, ia, 2, atom_rho(1:gr%fine%mesh%np, 1:2))

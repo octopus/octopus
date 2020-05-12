@@ -17,13 +17,12 @@
 !!
 
 
-subroutine X(lda_u_apply)(this, d, mesh, sb, psib, hpsib)
+subroutine X(lda_u_apply)(this, d, mesh, psib, hpsib)
   type(lda_u_t),           intent(in)    :: this
   type(mesh_t),            intent(in)    :: mesh
   type(wfs_elec_t),        intent(in)    :: psib
   type(wfs_elec_t),        intent(inout) :: hpsib
   type(states_elec_dim_t), intent(in)    :: d
-  type(simul_box_t),       intent(in)    :: sb
 
   integer :: ibatch, ios, imp, im, ispin, bind1, bind2, inn, ios2
   R_TYPE, allocatable :: dot(:,:,:,:), reduced(:,:,:), psi(:,:)

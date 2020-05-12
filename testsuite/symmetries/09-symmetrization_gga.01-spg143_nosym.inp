@@ -16,15 +16,15 @@ LCAOStart = lcao_states
 FilterPotentials = filter_none
 ExtraStates = 2
 
-ConvRelDens = 1e-7
-EigensolverTolerance = 1e-8
+ConvRelDens = 5e-5
+EigensolverTolerance = 1e-7
 
 XCFunctional = gga_x_pbe + gga_c_pbe
 
 %KpointsGrid
  4 | 4 | 4 
 %
-KPointsUseSymmetries = yes
+KPointsUseSymmetries = no
 %ReducedCoordinates
 "Na" | 1.7000000000E-01 | 1.5000000000E-01 | 1.1000000000E-01
 "Na" | 9.8000000000E-01 | 8.3000000000E-01 | 1.1000000000E-01

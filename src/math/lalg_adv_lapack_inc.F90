@@ -615,7 +615,7 @@ R_TYPE function X(determinant)(n, a, invert) result(d)
   SAFE_ALLOCATE(work(1:n)) ! query?
   SAFE_ALLOCATE(ipiv(1:n))
 
-  call lapack_getrf(n, n, a(1, 1), n, ipiv(1), info)
+  call lapack_getrf(n, n, a(1, 1), lead_dim(a), ipiv(1), info)
   if(info < 0) then
     write(message(1), '(5a, i5)') 'In ', TOSTRING(X(determinant)), ', LAPACK ', TOSTRING(X(getrf)), ' returned info = ', info
     call messages_fatal(1)
@@ -631,7 +631,7 @@ R_TYPE function X(determinant)(n, a, invert) result(d)
   end do
 
   if(optional_default(invert, .true.)) then
-    call lapack_getri(n, a(1, 1), n, ipiv(1), work(1), n, info)
+    call lapack_getri(n, a(1, 1), lead_dim(a), ipiv(1), work(1), n, info)
     if(info /= 0) then
       write(message(1), '(5a, i5)') 'In ', TOSTRING(X(determinant)), ', LAPACK ', TOSTRING(X(getri)), ' returned info = ', info
 !    http://www.netlib.org/lapack/explore-3.1.1-html/zgetri.f.html
@@ -808,8 +808,9 @@ subroutine zlinsyssolve(n, nrhs, a, b, x)
 
   equed = 'N'
 
-  call X(gesvx) ("N", "N", n, nrhs, a(1, 1), n, af(1, 1), n, ipiv(1), equed, r(1), c(1), b(1, 1), n, x(1, 1), n, &
-    rcond, ferr(1), berr(1), work(1), rwork(1), info)
+  call X(gesvx) ("N", "N", n, nrhs, a(1, 1), lead_dim(a), af(1, 1), lead_dim(af), &
+                  ipiv(1), equed, r(1), c(1), b(1, 1), lead_dim(b), x(1, 1), lead_dim(x), &
+                  rcond, ferr(1), berr(1), work(1), rwork(1), info)
   if(info /= 0) then
     write(message(1), '(3a, i5)') 'In zlinsyssolve, LAPACK ', TOSTRING(X(gesvx)), ' returned info = ', info
 !    http://www.netlib.org/lapack/explore-3.1.1-html/zgesvx.f.html
@@ -890,8 +891,8 @@ subroutine dsingular_value_decomp(m, n, a, u, vt, sg_values)
 
   SAFE_ALLOCATE(work(1:lwork)) ! query?
 
-  call X(gesvd)( &
-    'A', 'A', m, n, a(1, 1), m, sg_values(1), u(1, 1), m, vt(1, 1), n, work(1), lwork, info )
+  call X(gesvd)( 'A', 'A', m, n, a(1, 1), lead_dim(a), sg_values(1), u(1, 1), lead_dim(u), vt(1, 1), &
+                 lead_dim(vt), work(1), lwork, info )
 
   if(info /= 0) then
     write(message(1), '(3a, i7)') 'In dsingular_value_decomp, LAPACK ', TOSTRING(X(gesvd)), ' returned info = ', info
@@ -1007,8 +1008,8 @@ subroutine zsingular_value_decomp(m, n, a, u, vt, sg_values)
   SAFE_ALLOCATE(work(1:lwork)) ! query?
   SAFE_ALLOCATE(rwork(1:5*min(m, n)))
 
-  call X(gesvd)( &
-    'A', 'A', m, n, a(1, 1), m, sg_values(1), u(1, 1), m, vt(1, 1), n, work(1), lwork, rwork(1), info )
+  call X(gesvd)( 'A', 'A', m, n, a(1, 1), lead_dim(a), sg_values(1), u(1, 1), lead_dim(u), &
+                 vt(1, 1), lead_dim(vt), work(1), lwork, rwork(1), info )
 
   if(info /= 0) then
     write(message(1), '(3a, i5)') 'In zsingular_value_decomp, LAPACK ', TOSTRING(X(gesvd)), ' returned info = ', info
@@ -1112,7 +1113,7 @@ subroutine X(invert_upper_triangular)(n, a)
 
   ASSERT(n > 0)
 
-  call X(trtri)('U', 'N', n, a(1, 1), n, info)
+  call X(trtri)('U', 'N', n, a(1, 1), lead_dim(a), info)
 
   if(info /= 0) then
     write(message(1), '(5a,i5)') &

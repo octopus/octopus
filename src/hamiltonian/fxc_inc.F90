@@ -83,8 +83,8 @@ subroutine xc_get_fxc(xcs, mesh, namespace, rho, ispin, fxc, zfxc)
       if(spinors_fxc) l_vdedd = M_ZERO
       select case(functl(ixc)%family)
       case(XC_FAMILY_LDA)
-        call XC_F90(lda_fxc)(functl(ixc)%conf, 1, l_dens(1), l_dedd(1))
-        if(spinors_fxc)  call XC_F90(lda_vxc)(functl(ixc)%conf, 1, l_dens(1), l_vdedd(1))
+        call XC_F90(lda_fxc)(functl(ixc)%conf, int(1, XC_SIZE_T), l_dens, l_dedd)
+        if(spinors_fxc)  call XC_F90(lda_vxc)(functl(ixc)%conf, int(1, XC_SIZE_T), l_dens, l_vdedd)
         
       case default
         cycle

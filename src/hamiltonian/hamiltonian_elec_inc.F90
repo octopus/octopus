@@ -233,7 +233,7 @@ subroutine X(hamiltonian_elec_apply_batch) (hm, namespace, mesh, psib, hpsib, te
   end if
 
   if(iand(TERM_DFT_U, terms_) /= 0 .and. hm%lda_u_level /= DFT_U_NONE) then
-    call X(lda_u_apply)(hm%lda_u, hm%d, mesh, mesh%sb, epsib, hpsib)
+    call X(lda_u_apply)(hm%lda_u, hm%d, mesh, epsib, hpsib)
   end if  
 
   if(apply_phase .and. set_phase) then
@@ -339,53 +339,6 @@ subroutine X(hamiltonian_elec_apply_single) (hm, namespace, mesh, psi, hpsi, ist
 
   POP_SUB(X(hamiltonian_elec_apply_single))
 end subroutine X(hamiltonian_elec_apply_single)
-
-! ---------------------------------------------------------
-subroutine X(hamiltonian_elec_apply_all) (hm, namespace, mesh, st, hst)
-  type(hamiltonian_elec_t), intent(inout) :: hm
-  type(namespace_t),        intent(in)    :: namespace
-  type(mesh_t),             intent(in)    :: mesh
-  type(states_elec_t),      intent(inout) :: st
-  type(states_elec_t),      intent(inout) :: hst
-
-  integer :: ik, ib, ist
-  R_TYPE, allocatable :: psi(:, :)
-  CMPLX,  allocatable :: psiall(:, :, :, :)
-  
-  PUSH_SUB(X(hamiltonian_elec_apply_all))
-
-  do ik = st%d%kpt%start, st%d%kpt%end
-    do ib = st%group%block_start, st%group%block_end
-      call X(hamiltonian_elec_apply_batch)(hm, namespace, mesh, st%group%psib(ib, ik), hst%group%psib(ib, ik))
-    end do
-  end do
-
-  if(oct_exchange_enabled(hm%oct_exchange)) then
-
-    SAFE_ALLOCATE(psiall(mesh%np_part, 1:hst%d%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
-
-    call states_elec_get_state(st, mesh, psiall)
-    
-    call oct_exchange_prepare(hm%oct_exchange, mesh, psiall, hm%xc, hm%psolver, namespace)
-
-    SAFE_DEALLOCATE_A(psiall)
-    
-    SAFE_ALLOCATE(psi(mesh%np_part, 1:hst%d%dim))
-    
-    do ik = 1, st%d%nik
-      do ist = 1, st%nst
-        call states_elec_get_state(hst, mesh, ist, ik, psi)
-        call X(oct_exchange_operator)(hm%oct_exchange, namespace, mesh, psi, ist, ik)
-        call states_elec_set_state(hst, mesh, ist, ik, psi)
-      end do
-    end do
-
-    SAFE_DEALLOCATE_A(psi)
-    
-  end if
-
-  POP_SUB(X(hamiltonian_elec_apply_all))
-end subroutine X(hamiltonian_elec_apply_all)
 
 ! ---------------------------------------------------------
 

@@ -540,9 +540,8 @@ contains
   !! to be initialized, either by calling controlfunction_init, or
   !! by copying another initialized variable through
   !! controlfunction_copy.
-  subroutine controlfunction_init(cp, namespace, dt, ntiter)
+  subroutine controlfunction_init(cp, dt, ntiter)
     type(controlfunction_t), intent(inout) :: cp
-    type(namespace_t),       intent(in)    :: namespace
     FLOAT,                   intent(in)    :: dt
     integer,                 intent(in)    :: ntiter
 
@@ -634,7 +633,7 @@ contains
     end if
 
     ! Construct the transformation matrix, if needed.
-    call controlfunction_trans_matrix(cp, namespace)
+    call controlfunction_trans_matrix(cp)
 
     POP_SUB(controlfunction_init)
   end subroutine controlfunction_init
@@ -1493,9 +1492,8 @@ contains
 
   !> controlfunction_der computes the derivative of a controlfunction with respect
   !! to one of its degrees of freedom.
-  subroutine controlfunction_der(par, namespace, depsilon, i)
+  subroutine controlfunction_der(par, depsilon, i)
     type(controlfunction_t), intent(in)    :: par
-    type(namespace_t),       intent(in)    :: namespace
     type(tdf_t),             intent(inout) :: depsilon
     integer,                 intent(in)    :: i
 
@@ -1516,9 +1514,8 @@ contains
 
   !> controlfunction_gradient computes the (minus the) gradient of the
   !! J functional with respect to the parameters.
-  subroutine controlfunction_gradient(par, namespace, par_output, grad)
+  subroutine controlfunction_gradient(par, par_output, grad)
     type(controlfunction_t), intent(in)    :: par, par_output
-    type(namespace_t),       intent(in)    :: namespace
     FLOAT,                   intent(inout) :: grad(:)
 
     integer :: jj
@@ -1535,7 +1532,7 @@ contains
     case(ctr_fourier_series, ctr_zero_fourier_series)
       do jj = 1, par%dof
         call tdf_copy(depsilon, par%f(1))
-        call controlfunction_der(par, namespace, depsilon, jj)
+        call controlfunction_der(par, depsilon, jj)
         grad(jj) = M_TWO * controlfunction_alpha(par, 1) * sum(par%u(jj, :)*par%theta(:)) &
                  - tdf_dot_product(par_output%f(1), depsilon)
         call tdf_end(depsilon)
@@ -1544,7 +1541,7 @@ contains
     case(ctr_fourier_series_h, ctr_zero_fourier_series_h)
       do jj = 1, par%dof
         call tdf_copy(depsilon, par%f(1))
-        call controlfunction_der(par, namespace, depsilon, jj)
+        call controlfunction_der(par, depsilon, jj)
         grad(jj) = - tdf_dot_product(par_output%f(1), depsilon)
         call tdf_end(depsilon)
       end do

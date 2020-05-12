@@ -29,8 +29,6 @@ lz = 4.0*angstrom
 KPointsUseSymmetries = yes
 SymmetrizeDensity = yes
 
-ParDomains = no
-
 %KPointsGrid
   2 | 2 | 1
 %
