@@ -56,3 +56,4 @@ ExperimentalFeatures = yes
 AOThreshold = 0.1
 
 StatesPack = yes
+AllowCPUonly = yes
