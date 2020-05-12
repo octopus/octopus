@@ -559,7 +559,7 @@ contains
 
     else 
       
-      call pes_flux_integrate_cub_tabulate_direct_a(this, mesh, st)
+      call pes_flux_integrate_cub_tabulate(this, mesh, st)
 !       if (mesh%sb%dim >1 ) call pes_flux_tabulate_cub_pw(this, mesh, st)
     end if
 
@@ -1794,194 +1794,9 @@ contains
   end subroutine pes_flux_calc
 
 
-  ! ---------------------------------------------------------
-  subroutine pes_flux_integrate_cub(this, mesh, st, dt)
-    type(pes_flux_t),    intent(inout) :: this
-    type(mesh_t),        intent(in)    :: mesh
-    type(states_elec_t), intent(inout) :: st
-    FLOAT,               intent(in)    :: dt
-     
-    PUSH_SUB(pes_flux_integrate_cub)
-
-
-    call pes_flux_integrate_cub_direct_a(this, mesh, st, dt)
-    
-!     if (mesh%sb%dim == 1) then
-! !     if (.true.) then
-!       call pes_flux_integrate_cub_direct(this, mesh, st, dt)
-!     else
-!       call pes_flux_integrate_cub_pw(this, mesh, st, dt)
-!     end if
-  
-    POP_SUB(pes_flux_integrate_cub)
-  end subroutine pes_flux_integrate_cub  
 
   ! ---------------------------------------------------------
-  subroutine pes_flux_integrate_cub_direct(this, mesh, st, dt)
-    type(pes_flux_t),    intent(inout) :: this
-    type(mesh_t),        intent(in)    :: mesh
-    type(states_elec_t), intent(inout) :: st
-    FLOAT,               intent(in)    :: dt
-
-    integer            :: stst, stend, kptst, kptend, sdim, mdim
-    integer            :: ist, ik, isdim, imdim
-    integer            :: isp, ikp, itstep
-    integer            :: idir
-    CMPLX, allocatable :: Jk_cub(:,:,:,:), spctramp_cub(:,:,:,:)
-    CMPLX, allocatable :: conjgplanewf_cub(:,:)
-    CMPLX, allocatable :: conjgphase_cub(:,:,:)
-    FLOAT, allocatable :: k_dot_aux(:)
-    integer            :: ikp_start, ikp_end, isp_start, isp_end
-    FLOAT              :: vec, kpoint(1:3)
-
-    type(profile_t), save :: prof_init
-      
-    PUSH_SUB(pes_flux_integrate_cub_direct)
-
-    ! this routine is parallelized over surface points since the number of 
-    ! states is in most cases less than the number of surface points
-
-    call profiling_in(prof_init, 'PES_FLUX_INTEGRATE_CUB_DIRECT') 
-
-    if (debug%info) then
-      call messages_write("Debug: calculating pes_flux cub surface integral (direct form)")
-      call messages_info()
-    end if
-
-
-    stst      = st%st_start
-    stend     = st%st_end
-    kptst     = st%d%kpt%start
-    kptend    = st%d%kpt%end
-    sdim      = st%d%dim
-    mdim      = mesh%sb%dim
-
-    ikp_start = this%nkpnts_start
-    ikp_end   = this%nkpnts_end
-    isp_start = this%nsrfcpnts_start
-    isp_end   = this%nsrfcpnts_end
-
-
-    SAFE_ALLOCATE(k_dot_aux(1:this%nkpnts))
-
-    SAFE_ALLOCATE(Jk_cub(stst:stend, 1:sdim, kptst:kptend, 1:this%nkpnts))
-    SAFE_ALLOCATE(spctramp_cub(stst:stend, 1:sdim, kptst:kptend, 1:this%nkpnts))
-    spctramp_cub = M_z0
-
-    if(.not. this%usememory) then
-      SAFE_ALLOCATE(conjgplanewf_cub(1:this%nkpnts, kptst:kptend))
-    end if
-
-    SAFE_ALLOCATE(conjgphase_cub(1:this%nkpnts, 0:this%tdsteps, kptst:kptend))
-    conjgphase_cub = M_z0
-
-    ! calculate Volkov phase using the previous time step
-    conjgphase_cub(:, 0,:) = this%conjgphase_prev_cub(:,:)
-
-    do ik = kptst, kptend
-      
-      kpoint(:) = M_ZERO
-      if(simul_box_is_periodic(mesh%sb)) then
-        kpoint(1:mdim) = kpoints_get_point(mesh%sb%kpoints, ik)
-      end if
-
-      ! integrate over time
-      do itstep = 1, this%itstep
-
-        do ikp = ikp_start, ikp_end
-          vec = sum((this%kcoords_cub(1:mdim, ikp, ik) - kpoint(1:mdim) - this%veca(1:mdim, itstep) / P_c)**2)
-          conjgphase_cub(ikp, itstep, ik) = conjgphase_cub(ikp, itstep - 1, ik) & 
-                                            * exp(M_zI * vec * dt / M_TWO)
-        end do
-        if (this%parallel_in_momentum) call comm_allreduce(mesh%mpi_grp%comm, conjgphase_cub(:,itstep,ik))
-      end do
-
-    end do
-
-    this%conjgphase_prev_cub(:,:) = conjgphase_cub(:, this%itstep,:)
-
-
-    ! integrate over time & surface (on node)
-    do isp = isp_start, isp_end
-      do idir = 1, mdim
-        ! calculate flux only along the surface normal
-        if(abs(this%srfcnrml(idir, isp)) <= M_EPSILON) cycle
-
-        Jk_cub = M_z0
-
-        do ik = kptst, kptend
-  
-          kpoint(:) = M_ZERO
-          if(simul_box_is_periodic(mesh%sb)) then
-            kpoint(1:mdim) = kpoints_get_point(mesh%sb%kpoints, ik)
-          end if
-          
-
-          if(.not. this%usememory) then
-            k_dot_aux(:) = M_ZERO
-            do imdim = 1, mdim
-              k_dot_aux(:) = k_dot_aux(:) + this%kcoords_cub(imdim, :, ik) * this%rcoords(imdim, isp)
-            end do
-            conjgplanewf_cub(:,ik) = exp(-M_zI * k_dot_aux(:)) / (M_TWO * M_PI)**(mdim/M_TWO)
-          end if
-
-          do ist = stst, stend
-            do isdim = 1, sdim
-
-              ! integrate over time
-              do itstep = 1, this%itstep
-                Jk_cub(ist, isdim, ik, 1:this%nkpnts) = &
-                  Jk_cub(ist, isdim, ik, 1:this%nkpnts) + conjgphase_cub(1:this%nkpnts, itstep, ik) * &
-                  (this%wf(ist, isdim, ik, isp, itstep) * &
-                   (M_TWO * (this%veca(idir, itstep) / P_c + kpoint(idir)) - this%kcoords_cub(idir, 1:this%nkpnts, ik)) + &
-                    this%gwf(ist, isdim, ik, isp, itstep, idir) * M_zI)
-              end do
-
-              ! Add the phase contribute at the surface point isp
-              if(this%usememory) then
-                Jk_cub(ist, isdim, ik, 1:this%nkpnts) = &
-                  Jk_cub(ist, isdim, ik, 1:this%nkpnts) * this%conjgplanewf_cub(1:this%nkpnts, isp, ik)
-              else
-                Jk_cub(ist, isdim, ik, 1:this%nkpnts) = &
-                  Jk_cub(ist, isdim, ik, 1:this%nkpnts) * conjgplanewf_cub(1:this%nkpnts, ik)
-              end if
-
-            end do ! spin-dimension loop
-          end do ! states loop
-          
-        end do ! kpoint loop 
-        spctramp_cub(:,:,:,:) = spctramp_cub(:,:,:,:) + Jk_cub(:,:,:,:) * this%srfcnrml(idir, isp) / M_TWO
-        
-      end do ! dimension loop
-    end do ! surface point loop
-
-    if(this%parallel_in_momentum) then
-      do ist = stst, stend
-        do isdim = 1, sdim
-          do ik = kptst, kptend
-            call comm_allreduce(mesh%mpi_grp%comm, spctramp_cub(ist, isdim, ik, :))
-          end do
-        end do
-      end do
-    end if
-
-    this%spctramp_cub = this%spctramp_cub + spctramp_cub
-
-    SAFE_DEALLOCATE_A(k_dot_aux)
-    SAFE_DEALLOCATE_A(Jk_cub)
-    SAFE_DEALLOCATE_A(spctramp_cub)
-    SAFE_DEALLOCATE_A(conjgplanewf_cub)
-    SAFE_DEALLOCATE_A(conjgphase_cub)
-
-    call profiling_out(prof_init)
-
-    POP_SUB(pes_flux_integrate_cub_direct)
-  end subroutine pes_flux_integrate_cub_direct
-
-
-
-  ! ---------------------------------------------------------
-  subroutine pes_flux_integrate_cub_tabulate_direct_a(this,mesh,st)
+  subroutine pes_flux_integrate_cub_tabulate(this,mesh,st)
     type(pes_flux_t),    intent(inout) :: this
     type(mesh_t),        intent(in)    :: mesh
     type(states_elec_t), intent(in)    :: st
@@ -1995,7 +1810,7 @@ contains
     CMPLX              :: tmp
     FLOAT              :: Jac(1:2,1:2), jdet, kpoint(1:3), vec(1:3), lvec(1:3)
     
-    PUSH_SUB(pes_flux_integrate_cub_tabulate_direct_a) 
+    PUSH_SUB(pes_flux_integrate_cub_tabulate) 
 
     if (kpoints_have_zero_weight_path(mesh%sb%kpoints)) then
       kptst     = st%d%kpt%start
@@ -2019,10 +1834,11 @@ contains
         Jac(1:fdim, 1:fdim) = mesh%sb%rlattice_primitive(1:fdim, 1:fdim) !The Jacobian on the surface
         jdet = lalg_determinant(fdim, Jac, invert = .false.)
 
-if(debug%info .and. mpi_grp_is_root(mpi_world)) then
-print *, "jdet =", jdet
-print *, "mesh%sb%rlattice_primitive(1:fdim, 1:fdim) ", mesh%sb%rlattice_primitive(1:fdim, 1:fdim) 
-end if
+        if(debug%info .and. mpi_grp_is_root(mpi_world)) then
+          print *, "jdet =", jdet
+          print *, "mesh%sb%rlattice_primitive(1:fdim, 1:fdim) ", mesh%sb%rlattice_primitive(1:fdim, 1:fdim) 
+        end if
+        
         this%srfcnrml(:,1: this%nsrfcpnts ) = this%srfcnrml(:,1:this%nsrfcpnts )*jdet
       end if
     
@@ -2134,9 +1950,9 @@ end if
     
     end if
             
-    POP_SUB(pes_flux_integrate_cub_tabulate_direct_a)  
+    POP_SUB(pes_flux_integrate_cub_tabulate)  
           
-  end subroutine pes_flux_integrate_cub_tabulate_direct_a
+  end subroutine pes_flux_integrate_cub_tabulate
 
 
   ! ---------------------------------------------------------
@@ -2161,7 +1977,7 @@ end if
   end function get_ikp
 
   ! ---------------------------------------------------------
-  subroutine pes_flux_integrate_cub_direct_a(this, mesh, st, dt)
+  subroutine pes_flux_integrate_cub(this, mesh, st, dt)
     type(pes_flux_t),    intent(inout) :: this
     type(mesh_t),        intent(in)    :: mesh
     type(states_elec_t), intent(inout) :: st
@@ -2190,12 +2006,12 @@ end if
     
     type(profile_t), save :: prof_init
       
-    PUSH_SUB(pes_flux_integrate_cub_direct_a)
+    PUSH_SUB(pes_flux_integrate_cub)
 
     ! this routine is parallelized over surface points since the number of 
     ! states is in most cases less than the number of surface points
 
-    call profiling_in(prof_init, 'PES_FLUX_INTEGRATE_CUB_DIRECT_A') 
+    call profiling_in(prof_init, 'pes_flux_integrate_cub') 
 
     if (debug%info) then
       call messages_write("Debug: calculating pes_flux cub surface integral (accelerated direct expression)")
@@ -2420,8 +2236,8 @@ end if
 
     call profiling_out(prof_init)
 
-    POP_SUB(pes_flux_integrate_cub_direct_a)
-  end subroutine pes_flux_integrate_cub_direct_a
+    POP_SUB(pes_flux_integrate_cub)
+  end subroutine pes_flux_integrate_cub
 
 
 
