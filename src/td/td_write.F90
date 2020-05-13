@@ -3254,7 +3254,8 @@ contains
     default = 2**(OUT_MAXWELL_ENERGY - 1)
     call parse_variable(namespace, 'MaxwellTDOutput', default, flags)
 
-    if(.not.varinfo_valid_option('MaxwellTDOutput', flags, is_flag = .true.)) call messages_input_error(namespace, 'MaxwellTDOutput')
+    if(.not.varinfo_valid_option('MaxwellTDOutput', flags, is_flag = .true.)) &
+        call messages_input_error(namespace, 'MaxwellTDOutput')
 
     do iout = 1, 5
       out_flag(iout) = (iand(flags, 2**(iout - 1)) /= 0)
