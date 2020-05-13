@@ -912,6 +912,7 @@ subroutine X(priv_mesh_batch_nrm2)(mesh, aa, nrm2)
     
     if(.not. mesh%use_curvilinear) then
 
+      ! do not use openmp here because the logic of the loop is sequential
       do ip = 1, mesh%np
         do ist = 1, aa%nst_linear
           a0 = aa%X(ff_pack)(ist, ip)
@@ -927,6 +928,7 @@ subroutine X(priv_mesh_batch_nrm2)(mesh, aa, nrm2)
 
     else
 
+      ! do not use openmp here because the logic of the loop is sequential
       do ip = 1, mesh%np
         do ist = 1, aa%nst_linear
           a0 = aa%X(ff_pack)(ist, ip)
