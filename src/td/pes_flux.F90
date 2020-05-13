@@ -133,7 +133,6 @@ module pes_flux_oct_m
     FLOAT, pointer   :: veca(:,:)                      !< vector potential
     CMPLX, pointer   :: conjgphase_prev_cub(:,:)       !< Volkov phase for all k-points from previous time step
     CMPLX, pointer   :: conjgphase_prev_sph(:,:)
-    CMPLX, pointer   :: conjgplanewf_cub(:,:,:)        !< plane wave factor
     CMPLX, pointer   :: spctramp_cub(:,:,:,:)          !< spectral amplitude
     CMPLX, pointer   :: spctramp_sph(:,:,:,:,:)
 
@@ -560,7 +559,6 @@ contains
     else 
       
       call pes_flux_integrate_cub_tabulate(this, mesh, st)
-!       if (mesh%sb%dim >1 ) call pes_flux_tabulate_cub_pw(this, mesh, st)
     end if
 
 
@@ -571,21 +569,7 @@ contains
     this%max_iter  = max_iter
     this%save_iter = save_iter
     this%itstep    = 0
-
-!     if(this%surf_shape == M_CUBIC .or. this%surf_shape == M_PLANE) then
-!       this%tdsteps = save_iter
-!     else
-!       this%tdsteps = 1
-! #if defined(HAVE_MPI)
-!       if(mesh%parallel_in_domains) this%tdsteps = mesh%mpi_grp%size
-! #endif
-!     end if
-
-!     if (mesh%sb%dim == 1) then
-!       this%tdsteps = save_iter
-!     else
     this%tdsteps = 1
-!     end if
     
     if (bitand(this%par_strategy, OPTION__PES_FLUX_PARALLELIZATION__PF_TIME) /= 0) then
 #if defined(HAVE_MPI)
@@ -593,20 +577,6 @@ contains
 #endif
     end if
    
-    ! -----------------------------------------------------------------
-    ! Other stuff
-    ! -----------------------------------------------------------------
-    !%Variable PES_Flux_UseMemory
-    !%Type logical
-    !%Section Time-Dependent::PhotoElectronSpectrum
-    !%Description
-    !% Use memory to tabulate Volkov plane-wave components on the surface.
-    !% This option speeds up calculations by precomputing plane-wave phases
-    !% on the suface. 
-    !% By default true when <tt>PES_Flux_Shape = cub</tt>.
-    !%End
-    call parse_variable(namespace, 'PES_Flux_UseMemory', .false., this%usememory)
-    call messages_print_var_value(stdout, "PES_Flux_UseMemory", this%usememory)            
 
     SAFE_ALLOCATE(this%wf(stst:stend, 1:sdim, kptst:kptend, 0:this%nsrfcpnts, 1:this%tdsteps))
     this%wf = M_z0
@@ -631,27 +601,6 @@ contains
       SAFE_ALLOCATE(this%conjgphase_prev_cub(1:this%nkpnts, kptst:kptend))
       this%conjgphase_prev_cub = M_z1
 
-      if(this%usememory) then
-        SAFE_ALLOCATE(k_dot_aux(1:this%nkpnts))
-        SAFE_ALLOCATE(this%conjgplanewf_cub(1:this%nkpnts, this%nsrfcpnts_start:this%nsrfcpnts_end, kptst:kptend))
-        this%conjgplanewf_cub = M_z0
-
-        do ik = kptst, kptend
-          do isp = this%nsrfcpnts_start, this%nsrfcpnts_end
-
-            k_dot_aux = M_ZERO
-            do imdim = 1, mdim
-              k_dot_aux(:) = k_dot_aux(:) + this%kcoords_cub(imdim, :, ik) * this%rcoords(imdim, isp)
-            end do
-
-            this%conjgplanewf_cub(:, isp, ik) = exp(-M_zI * k_dot_aux(:)) / (M_TWO * M_PI)**(mdim/M_TWO)
-
-          end do
-        end do
-
-        SAFE_DEALLOCATE_A(k_dot_aux)
-
-      end if
     end if
 
     call messages_write('Info: Total number of surface points = ')
@@ -684,9 +633,6 @@ contains
       SAFE_DEALLOCATE_P(this%kcoords_cub)
       SAFE_DEALLOCATE_P(this%conjgphase_prev_cub)
       SAFE_DEALLOCATE_P(this%spctramp_cub)
-      if(this%usememory) then
-        SAFE_DEALLOCATE_P(this%conjgplanewf_cub)
-      end if
 
       SAFE_DEALLOCATE_P(this%srfcpnt)
       SAFE_DEALLOCATE_P(this%rankmin)
@@ -1827,20 +1773,20 @@ contains
     ikp_end   = this%nkpnts_end
     
     
-      if(this%surf_shape == M_PLANE) then
-        fdim = mdim - 1
-        ! This is not general but should work in the specific case where it is relevant
-        !i.e. when the system is semiperiodic in <=2 dimensions
-        Jac(1:fdim, 1:fdim) = mesh%sb%rlattice_primitive(1:fdim, 1:fdim) !The Jacobian on the surface
-        jdet = lalg_determinant(fdim, Jac, invert = .false.)
+    if(this%surf_shape == M_PLANE) then
+      fdim = mdim - 1
+      ! This is not general but should work in the specific case where it is relevant
+      !i.e. when the system is semiperiodic in <=2 dimensions
+      Jac(1:fdim, 1:fdim) = mesh%sb%rlattice_primitive(1:fdim, 1:fdim) !The Jacobian on the surface
+      jdet = lalg_determinant(fdim, Jac, invert = .false.)
 
-        if(debug%info .and. mpi_grp_is_root(mpi_world)) then
-          print *, "jdet =", jdet
-          print *, "mesh%sb%rlattice_primitive(1:fdim, 1:fdim) ", mesh%sb%rlattice_primitive(1:fdim, 1:fdim) 
-        end if
-        
-        this%srfcnrml(:,1: this%nsrfcpnts ) = this%srfcnrml(:,1:this%nsrfcpnts )*jdet
+      if(debug%info .and. mpi_grp_is_root(mpi_world)) then
+        print *, "jdet =", jdet
+        print *, "mesh%sb%rlattice_primitive(1:fdim, 1:fdim) ", mesh%sb%rlattice_primitive(1:fdim, 1:fdim) 
       end if
+      
+      this%srfcnrml(:,1: this%nsrfcpnts ) = this%srfcnrml(:,1:this%nsrfcpnts )*jdet
+    end if
     
     
     
@@ -1988,9 +1934,6 @@ contains
     integer            :: isp, ikp, itstep
     integer            :: idir, n_dir, nfaces
     CMPLX, allocatable :: Jk_cub(:,:,:,:), spctramp_cub(:,:,:,:)
-    CMPLX, allocatable :: conjgplanewf_cub(:,:)
-    CMPLX, allocatable :: conjgphase_cub(:,:,:)
-    FLOAT, allocatable :: k_dot_aux(:)
     integer            :: ikp_start, ikp_end, isp_start, isp_end
     FLOAT              :: vec, kpoint(1:3), k_dot_r, expkr 
     integer            :: ifc
@@ -2508,7 +2451,6 @@ contains
       
       
       this%nsrfcpnts = 0 
-print *, mdim, mindim
       
       do ndir = mdim, mindim, -1
         area = M_ONE
@@ -2518,7 +2460,6 @@ print *, mdim, mindim
         end do
         
         npface = int(fc_ptdens * area) ! number of points on the face
-print *, "npface =", npface,  "border(:)=",  border(:)        
 
         idim = 1 
         do idir=1, mdim
@@ -2534,10 +2475,6 @@ print *, "npface =", npface,  "border(:)=",  border(:)
       
       this%NN(1:mdim,:)  = NN(1:mdim,:)
       
-      
-print *,  this%nsrfcpnts, NN(mdim,:)
-
-print *, "this%LLr(mdim,:) = ", this%LLr(mdim,:)
       
       ASSERT(this%nsrfcpnts > 0) !at this point should be satisfied otherwise the point density is way too small
 
@@ -2696,7 +2633,6 @@ print *, "this%LLr(mdim,:) = ", this%LLr(mdim,:)
 
           this%face_idx_range(nface,2) = isp
         
-!           print *, idir, pm, "this%face_idx_range=",  this%face_idx_range(nface,:)
         end do      
       end do
       
@@ -2712,7 +2648,6 @@ print *, "this%LLr(mdim,:) = ", this%LLr(mdim,:)
           if(abs(this%srfcnrml(idir, isp_start)) >= M_EPSILON) n_dir = idir
         end do 
       
-! print *, n_dir,  isp_start, isp_start, this%nsrfcpnts
         !retrieve the spacing on the face
         dRS(:) = M_ZERO
         idim = 1
@@ -2745,20 +2680,11 @@ print *, "this%LLr(mdim,:) = ", this%LLr(mdim,:)
           if(dRS(idir) > M_ZERO) this%NN(n_dir,idir) = int(this%LLr(n_dir,idir)/dRS(idir))
         end do        
 
-!         LL(:) = RSmax(:) - RSmin(:)
-!         do idir = 1, fdim
-!           NN(idir) = int(LL(idir)/dS(idir))+1
-!         end do
-
-
-! print *, ifc, this%LLr(n_dir,:), dRS(:), this%NN(n_dir,:), isp_end - isp_start+1
       end do
       
       
     end if
     
-!     print *, this%LLr(:,:), this%NN(:,:), dS(1,1)
-!     print *, ifc, this%LLr, dS, this%NN, isp_end - isp_start+1
 
     SAFE_DEALLOCATE_A(which_surface)
 
