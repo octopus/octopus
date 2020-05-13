@@ -81,8 +81,7 @@ module states_mxll_oct_m
 
   type :: states_mxll_t
     ! Components are public by default
-    integer                      :: dim
-    integer                      :: nik
+    integer                      :: dim         !< Space dimension 
     integer                      :: rs_sign
     logical                      :: pack_states
     logical                      :: parallel_in_states !< Am I parallel in states?
@@ -175,12 +174,10 @@ module states_mxll_oct_m
     FLOAT,               pointer :: external_current_phase(:)
 
     !> used for the user-defined wavefunctions (they are stored as formula strings)
-    !! (st%dim, st%nst, st%nik)
     character(len=1024), allocatable :: user_def_states(:,:,:)
     logical                     :: fromScratch
     type(mpi_grp_t)             :: mpi_grp
     type(mpi_grp_t)             :: dom_st_mpi_grp
-    type(mpi_grp_t)             :: dom_st_kpt_mpi_grp !< The MPI group related to the domains-states-kpoints "cube".
 
 #ifdef HAVE_SCALAPACK
     type(blacs_proc_grid_t)     :: dom_st_proc_grid
@@ -234,7 +231,6 @@ contains
     ASSERT(gr%sb%dim == 3)
     st%dim = gr%sb%dim
     st%nst = 1
-    st%nik = 1
 
     SAFE_ALLOCATE(st%user_def_e_field(1:st%dim))
     SAFE_ALLOCATE(st%user_def_b_field(1:st%dim))
@@ -254,13 +250,7 @@ contains
     !%Type logical
     !%Section Execution::Optimization
     !%Description
-    !% When set to yes, Maxwell states are stored in packed mode, which improves
-    !% performance 
-    !%
-    !% If OpenCL is used and this variable is set to yes, Octopus
-    !% will store the Maxwell states in device (GPU) memory. If
-    !% there is not enough memory to store all the states,
-    !% execution will stop with an error.
+    !% Similarly as with electronic states, When set to yes, Maxwell states are stored in packed mode.
     !%
     !% The default is yes except when using OpenCL.
     !%End
@@ -306,13 +296,13 @@ contains
       SAFE_ALLOCATE(st%selected_points_coordinate(1:st%dim,1:nlines))
       SAFE_ALLOCATE(st%selected_points_rs_state(1:st%dim,1:nlines))
       SAFE_ALLOCATE(st%selected_points_rs_state_trans(1:st%dim,1:nlines))
-      do il=1, nlines
+      do il = 1, nlines
         ncols = parse_block_cols(blk,0)
         if (ncols < 3 .or. ncols > 3) then
             message(1) = 'MaxwellFieldCoordinate must have 3 columns.'
             call messages_fatal(1, namespace=namespace)
         end if
-        do idim=1, st%dim
+        do idim = 1, st%dim
           call parse_block_float(blk, il-1, idim-1, pos(idim), units_inp%length)
         end do
         st%selected_points_coordinate(:,il) = pos
@@ -712,7 +702,7 @@ contains
     SAFE_ALLOCATE(ztmp_global(mesh%np_global))
 
     do ip = 1, st%selected_points_number
-       call mesh_nearest_point_infos(mesh, pos(:,ip), dmin, rankmin, pos_index_local, pos_index_global)
+      call mesh_nearest_point_infos(mesh, pos(:,ip), dmin, rankmin, pos_index_local, pos_index_global)
 !      pos_index = mesh_nearest_point(mesh, pos(:,ip), dmin, rankmin)
       if (mesh%parallel_in_domains) then
         ztmp(:) = rs_state(pos_index_local,:)
@@ -755,7 +745,7 @@ contains
   subroutine get_poynting_vector(gr, st, rs_state, rs_sign, poynting_vector, ep_field, mu_field, mean_value)
     type(grid_t),             intent(in)    :: gr
     type(states_mxll_t),      intent(in)    :: st
-    CMPLX,                  intent(in)      :: rs_state(:,:)
+    CMPLX,                    intent(in)    :: rs_state(:,:)
     integer,                  intent(in)    :: rs_sign
     FLOAT,                    intent(inout) :: poynting_vector(:,:)
     FLOAT,          optional, intent(in)    :: ep_field(:)
@@ -768,27 +758,30 @@ contains
 
     if (present(ep_field) .and. present(mu_field)) then
       do ip = 1, gr%mesh%np
-        poynting_vector(ip, :) = M_ONE/mu_field(ip) * sqrt(M_TWO/ep_field(ip)) &
-                              * sqrt(M_TWO*mu_field(ip)) &
-                              * dcross_product(TOFLOAT(rs_state(ip, :)), rs_sign*aimag(rs_state(ip,:)))
+        poynting_vector(ip, 1:3) = M_ONE/mu_field(ip) * sqrt(M_TWO/ep_field(ip)) &
+                                * sqrt(M_TWO*mu_field(ip)) &
+                                * dcross_product(TOFLOAT(rs_state(ip, 1:3)), &
+                                rs_sign*aimag(rs_state(ip,1:3)))
       end do
     else
       do ip = 1, gr%mesh%np
-        poynting_vector(ip,:) = M_ONE/st%mu(ip) * sqrt(M_TWO/st%ep(ip)) &
-                              * sqrt(M_TWO*st%mu(ip)) &
-                              * dcross_product(TOFLOAT(rs_state(ip, :)), rs_sign*aimag(rs_state(ip,:)))
+        poynting_vector(ip, 1:3) = M_ONE/st%mu(ip) * sqrt(M_TWO/st%ep(ip)) &
+                                * sqrt(M_TWO*st%mu(ip)) &
+                                * dcross_product(TOFLOAT(rs_state(ip, 1:3)), &
+                                rs_sign*aimag(rs_state(ip, 1:3)))
       end do
     end if
 
     if (present (mean_value)) then
+      ASSERT(.not. gr%mesh%use_curvilinear)
       mean_value = M_ZERO
       do ip_in = 1, st%inner_points_number
         ip = st%inner_points_map(ip_in)
-        mean_value(:)   = mean_value(:) + poynting_vector(ip,:)
+        mean_value(1:3)   = mean_value(1:3) + poynting_vector(ip, 1:3)
       end do
-      mean_value(:) = mean_value(:) * gr%mesh%volume_element
+      mean_value(1:3) = mean_value(1:3) * gr%mesh%volume_element
       if(gr%mesh%parallel_in_domains) then
-        call comm_allreduce(gr%mesh%mpi_grp%comm, mean_value(:))
+        call comm_allreduce(gr%mesh%mpi_grp%comm, mean_value(1:3))
       end if
     end if
 
