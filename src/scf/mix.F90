@@ -40,7 +40,6 @@ module mix_oct_m
 
   private
   public ::                     &
-    mix_set_mixing,             &
     mix_t,                      &
     mix_init,                   &
     mix_clear,                  &
@@ -382,24 +381,6 @@ contains
 
     POP_SUB(mix_end)
   end subroutine mix_end
-
-
-  ! ---------------------------------------------------------
-  subroutine mix_set_mixing(smix, newmixing)
-    type(mix_t), intent(inout) :: smix
-    FLOAT, intent(in):: newmixing
-
-    PUSH_SUB(mix_set_mixing)
-    
-    if(smix%scheme == OPTION__MIXINGSCHEME__LINEAR) then
-      smix%coeff = newmixing
-    else
-    !  message(1) = "Mixing can only be adjusted in linear mixing scheme."
-    !  call messages_fatal(1)
-    end if
-    
-    POP_SUB(mix_set_mixing)
-  end subroutine mix_set_mixing
 
 
   ! ---------------------------------------------------------
