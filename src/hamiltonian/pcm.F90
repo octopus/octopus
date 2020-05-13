@@ -350,7 +350,7 @@ contains
     !%End
     call parse_variable(namespace, 'PCMEpsilonModel', PCM_DEBYE_MODEL, pcm%which_eps)
     call messages_print_var_value(stdout, "PCMEpsilonModel", pcm%which_eps)
-    if (.not. varinfo_valid_option('PCMEpsilonModel', pcm%which_eps)) call messages_input_error('PCMEpsilonModel')
+    if (.not. varinfo_valid_option('PCMEpsilonModel', pcm%which_eps)) call messages_input_error(namespace, 'PCMEpsilonModel')
 
     if (pcm%tdlevel == PCM_TD_EOM .and. pcm%which_eps == PCM_DRUDE_MODEL) &
       call messages_experimental("Drude-Lorentz EOM-PCM is experimental")
@@ -1013,12 +1013,12 @@ contains
         call messages_write(' to ')
         call messages_write(pcm%tess_nn)
         call messages_new_line()
-        call messages_write('in order to fit them into the mesh.')        
+        call messages_write('in order to fit them into the mesh.')
         call messages_new_line()
-        call messages_write('This may produce unexpected results. ')        
+        call messages_write('This may produce unexpected results. ')
         call messages_warning(namespace=namespace)
       end if
-
+      default_nn = pcm%tess_nn
 
       !%Variable PCMChargeSmearNN
       !%Type integer
@@ -1032,7 +1032,7 @@ contains
       !% The default value is such that the neighbor mesh contains points in a radius 
       !% equal to the width used for the gaussian smearing.
       !%End
-      call parse_variable(namespace, 'PCMChargeSmearNN', pcm%tess_nn, pcm%tess_nn)
+      call parse_variable(namespace, 'PCMChargeSmearNN', default_nn, pcm%tess_nn)
       call messages_print_var_value(stdout, "PCMChargeSmearNN", pcm%tess_nn)
       
       call pcm_poisson_sanity_check(pcm, grid%mesh)
@@ -3141,9 +3141,8 @@ contains
 
   ! -----------------------------------------------------------------------------
   !> Update pcm potential
-  logical function pcm_update(this, time) result(update)
+  logical function pcm_update(this) result(update)
     type(pcm_t), intent(inout) :: this
-    FLOAT,       intent(in)    :: time
 
     this%iter = this%iter + 1 
     update = this%iter <= 6 .or. mod(this%iter, this%update_iter) == 0

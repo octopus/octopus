@@ -18,37 +18,31 @@
 
 
 ! Wrapper function
-subroutine pes_flux_pmesh(this, namespace, dim, kpoints, ll, LG, pmesh, idxZero, krng, Lp, Ekin)
+subroutine pes_flux_pmesh(this, namespace, dim, kpoints, ll, pmesh, idxZero, krng, Lp, Ekin)
   type(pes_flux_t),  intent(in)    :: this
   type(namespace_t), intent(in)    :: namespace
   integer,           intent(in)    :: dim
-  type(kpoints_t),   intent(inout) :: kpoints 
-  integer,           intent(in)    :: ll(:)            
-  FLOAT,             intent(in)    :: LG(:,:)           
-  FLOAT,             intent(out)   :: pmesh(:,:,:,:)    
-  integer,           intent(out)   :: idxZero(:)                
-  integer,           intent(in)    :: krng(:)             
-  integer,  pointer, intent(inout) :: Lp(:,:,:,:,:) 
-  FLOAT,  optional,  intent(out)   :: Ekin(:,:,:)  
-  
+  type(kpoints_t),   intent(inout) :: kpoints
+  integer,           intent(in)    :: ll(:)
+  FLOAT,             intent(out)   :: pmesh(:,:,:,:)
+  integer,           intent(out)   :: idxZero(:)
+  integer,           intent(in)    :: krng(:)
+  integer,  pointer, intent(inout) :: Lp(:,:,:,:,:)
+  FLOAT,   optional, intent(out)   :: Ekin(:,:,:)
 
   PUSH_SUB(pes_flux_pmesh)
 
-
-  select case (this%shape)
-  
+  select case (this%shape) 
   case (M_SPHERICAL)
-    call pes_flux_pmesh_sph(this, dim, kpoints, ll, LG, pmesh, idxZero, krng, Lp)
+    call pes_flux_pmesh_sph(this, pmesh, idxZero, krng, Lp)
   
   case (M_CUBIC)
   ! not implemented
 
   case (M_PLANES)
-    call pes_flux_pmesh_pln(this, namespace, dim, kpoints, ll, LG, pmesh, idxZero, krng, Lp, Ekin)
+    call pes_flux_pmesh_pln(this, namespace, dim, kpoints, ll, pmesh, idxZero, krng, Lp, Ekin)
   
   end select
-  
-
 
   POP_SUB(pes_flux_pmesh)  
 end subroutine pes_flux_pmesh
@@ -70,7 +64,7 @@ subroutine pes_flux_map_from_states(this, restart, st, ll, pesP, krng, Lp, istin
   select case (this%shape)
   
   case (M_SPHERICAL)
-    call pes_flux_map_from_states_elec_sph(this, restart, st, ll, pesP, krng, Lp, istin)
+    call pes_flux_map_from_states_elec_sph(this, restart, st, pesP, krng, Lp, istin)
   
   case (M_CUBIC)
 
@@ -138,13 +132,12 @@ end function flatten_indices
 
 !< Generate the momentum-space mesh (p) and the arrays mapping the 
 !< the mask and the kpoint meshes in p.
-subroutine pes_flux_pmesh_pln(this, namespace, dim, kpoints, ll, LG, pmesh, idxZero, krng, Lp, Ekin)
+subroutine pes_flux_pmesh_pln(this, namespace, dim, kpoints, ll, pmesh, idxZero, krng, Lp, Ekin)
   type(pes_flux_t),  intent(in)    :: this
   type(namespace_t), intent(in)    :: namespace
   integer,           intent(in)    :: dim
   type(kpoints_t),   intent(inout) :: kpoints 
   integer,           intent(in)    :: ll(:)             !< ll(1:dim): the dimensions of the gpoint-mesh
-  FLOAT,             intent(in)    :: LG(:,:)           !< LG(1:maxval(ll),1:dim): the  gpoints  
   FLOAT,             intent(out)   :: pmesh(:,:,:,:)    !< pmesh(i1,i2,i3,1:dim): contains the positions of point
                                                         !< in the final mesh in momentum space "p" combining the 
   integer,           intent(out) :: idxZero(:)          !< The triplet identifying the zero of the coordinates           
@@ -416,9 +409,9 @@ subroutine pes_flux_map_from_states_elec_pln(this, restart, st, ll, pesP, krng, 
           call pes_flux_map_from_state_1(restart, itot, this%nkpnts, psiG1)
         
         
-          do i1=1, ll(1)
-            do i2=1, ll(2)
-              do i3=1, ll(3)
+          do i1 = 1, ll(1)
+            do i2 = 1, ll(2)
+              do i3 = 1, ll(3)
                 do igpt = 1, this%ngpt
                   ip(1:3) = Lp(i1, i2, i3, ik, 1:3) 
                   ig = flatten_indices(i1,i2,i3, igpt, ll, this%ngpt) 
@@ -440,9 +433,9 @@ subroutine pes_flux_map_from_states_elec_pln(this, restart, st, ll, pesP, krng, 
         itot = idim + (ist-1)*st%d%dim + (ik-1)*st%d%dim* st%nst
         call pes_flux_map_from_state_1(restart, itot, this%nkpnts, psiG2)
             
-        do i1=1, ll(1)
-          do i2=1, ll(2)
-            do i3=1, ll(3)
+        do i1 = 1, ll(1)
+          do i2 = 1, ll(2)
+            do i3 = 1, ll(3)
               do igpt = 1, this%ngpt
                 ip(1:3) = Lp(i1, i2, i3, ik, 1:3) 
                 ig = flatten_indices(i1,i2,i3, igpt, ll, this%ngpt) 
@@ -508,32 +501,23 @@ end subroutine pes_flux_map_from_state_1
 
 
 
-subroutine pes_flux_pmesh_sph(this, dim, kpoints, ll, LG, pmesh, idxZero, krng, Lp)
+subroutine pes_flux_pmesh_sph(this, pmesh, idxZero, krng, Lp)
   type(pes_flux_t),  intent(in)    :: this
-  integer,           intent(in)    :: dim
-  type(kpoints_t),   intent(inout) :: kpoints 
-  integer,           intent(in)    :: ll(:)             
-  FLOAT,             intent(in)    :: LG(:,:)           
   FLOAT,             intent(out)   :: pmesh(:,:,:,:)    
-  integer,           intent(out) :: idxZero(:)             
-  integer,           intent(in)  :: krng(:)                                                                     
-  integer, pointer,  intent(out) :: Lp(:,:,:,:,:)       
-                                                       
-                                                        
+  integer,           intent(out)   :: idxZero(:)             
+  integer,           intent(in)    :: krng(:)                                                                     
+  integer, pointer,  intent(out)   :: Lp(:,:,:,:,:)
 
   integer            :: iomk
   integer            :: ikk, ith, iph
   FLOAT              :: phik, thetak, kact, kvec(1:3)
-  
   integer            :: ip1, ip2, ip3
-  
 
   PUSH_SUB(pes_flux_pmesh_sph)
-                                   
-  SAFE_ALLOCATE(Lp(1:this%nk, 1:this%nstepsomegak, 1, krng(1):krng(2), 1:3))                                 
 
-  idxZero(1:3) =(/0,0,0/) 
-  
+  SAFE_ALLOCATE(Lp(1:this%nk, 1:this%nstepsomegak, 1, krng(1):krng(2), 1:3))
+
+  idxZero(1:3) = (/0,0,0/)
   
   do ikk = 1, this%nk 
     kact = ikk * this%dk
@@ -584,15 +568,14 @@ end subroutine pes_flux_pmesh_sph
 
 
 
-subroutine pes_flux_map_from_states_elec_sph(this, restart, st, ll, pesP, krng, Lp, istin)
-  type(pes_flux_t),   intent(in) :: this
-  type(restart_t),    intent(in) :: restart
-  type(states_elec_t),intent(in) :: st
-  integer,            intent(in) :: ll(:)
-  FLOAT, target,     intent(out) :: pesP(:,:,:,:)
-  integer,           intent(in)  :: krng(:) 
-  integer,  dimension(1:this%nk,1:this%nstepsomegak,1,krng(1):krng(2),1:3), intent(in) :: Lp
-  integer, optional, intent(in)  :: istin 
+subroutine pes_flux_map_from_states_elec_sph(this, restart, st, pesP, krng, Lp, istin)
+  type(pes_flux_t),    intent(in)  :: this
+  type(restart_t),     intent(in)  :: restart
+  type(states_elec_t), intent(in)  :: st
+  FLOAT, target,       intent(out) :: pesP(:,:,:,:)
+  integer,             intent(in)  :: krng(:) 
+  integer,             intent(in)  :: Lp(1:this%nk,1:this%nstepsomegak,1,krng(1):krng(2),1:3)
+  integer, optional,   intent(in)  :: istin 
 
   integer :: ik, ist, idim, itot, nkpt, ispin
   integer :: i1, i2, ip(1:3)
@@ -637,8 +620,8 @@ subroutine pes_flux_map_from_states_elec_sph(this, restart, st, ll, pesP, krng, 
           itot = idim + (ist-1)*st%d%dim + (ik-1)*st%d%dim* st%nst
           call pes_flux_map_from_state_2(restart, itot, this%nkpnts, psiG1)
         
-          do i1=1, this%nk
-            do i2=1, this%nstepsomegak
+          do i1 = 1, this%nk
+            do i2 = 1, this%nstepsomegak
               
                 ip(1:3) = Lp(i1, i2, 1, ik, 1:3) 
                 if (ip(1) < 0) cycle
@@ -657,8 +640,8 @@ subroutine pes_flux_map_from_states_elec_sph(this, restart, st, ll, pesP, krng, 
         itot = idim + (ist-1)*st%d%dim + (ik-1)*st%d%dim* st%nst
         call pes_flux_map_from_state_2(restart, itot, this%nkpnts, psiG2)
             
-        do i1=1, this%nk
-          do i2=1, this%nstepsomegak
+        do i1 = 1, this%nk
+          do i2 = 1, this%nstepsomegak
             
               ip(1:3) = Lp(i1, i2, 1, ik, 1:3) 
               if (ip(1) < 0) cycle
@@ -721,13 +704,12 @@ end subroutine pes_flux_map_from_state_2
 
 
 ! ---------------------------------------------------------
-subroutine pes_flux_out_energy(this, pesK, file, namespace, ll, pmesh, Ekin)
+subroutine pes_flux_out_energy(this, pesK, file, namespace, ll, Ekin)
   type(pes_flux_t),  intent(in) :: this
   FLOAT,             intent(in) :: pesK(:,:,:)
   character(len=*),  intent(in) :: file
   type(namespace_t), intent(in) :: namespace
   integer,           intent(in) :: ll(:)  
-  FLOAT,             intent(in) :: pmesh(:,:,:,:)  
   FLOAT,             intent(in) :: Ekin(:,:,:)
 
 
@@ -743,7 +725,7 @@ subroutine pes_flux_out_energy(this, pesK, file, namespace, ll, pmesh, Ekin)
     call messages_not_implemented("Energy-resolved PES for the flux method with cubic surfaces", namespace=namespace)
 
   case (M_PLANES)
-    call pes_flux_out_energy_pln(pesK, file, namespace, ll, pmesh, Ekin)
+    call pes_flux_out_energy_pln(pesK, file, namespace, ll, Ekin)
   
   end select
 
@@ -753,12 +735,11 @@ end subroutine pes_flux_out_energy
 
 
 ! ---------------------------------------------------------
-subroutine pes_flux_out_energy_pln(arpes, file,namespace, ll, pmesh, Ekin)
+subroutine pes_flux_out_energy_pln(arpes, file, namespace, ll, Ekin)
   FLOAT,             intent(in) :: arpes(:,:,:)
   character(len=*),  intent(in) :: file
   type(namespace_t), intent(in) :: namespace
   integer,           intent(in) :: ll(:)  
-  FLOAT,             intent(in) :: pmesh(:,:,:,:)  
   FLOAT,             intent(in) :: Ekin(:,:,:)
   
   integer :: iunit, ie
@@ -801,10 +782,9 @@ end subroutine pes_flux_out_energy_pln
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 ! ---------------------------------------------------------
-subroutine pes_flux_output(this, mesh, sb, st, namespace, dt)
+subroutine pes_flux_output(this, mesh, st, namespace, dt)
   type(pes_flux_t), intent(inout)    :: this
   type(mesh_t),        intent(in)    :: mesh
-  type(simul_box_t),   intent(in)    :: sb
   type(states_elec_t), intent(in)    :: st
   type(namespace_t),   intent(in)    :: namespace
   FLOAT,               intent(in)    :: dt
@@ -1274,10 +1254,9 @@ subroutine pes_flux_dump(restart, this, mesh, st, ierr)
 end subroutine pes_flux_dump
 
 ! ---------------------------------------------------------
-subroutine pes_flux_load(restart, this, mesh, st, ierr)
+subroutine pes_flux_load(restart, this, st, ierr)
   type(restart_t),     intent(in)    :: restart
   type(pes_flux_t),    intent(inout) :: this
-  type(mesh_t),        intent(in)    :: mesh
   type(states_elec_t), intent(in)    :: st
   integer,             intent(out)   :: ierr
 

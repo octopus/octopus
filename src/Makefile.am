@@ -192,7 +192,6 @@ noinst_HEADERS +=                             \
 	math/math_inc.F90                     \
 	math/matrix_inc.F90                   \
 	math/matrix_ops_inc.F90               \
-	math/nfft_inc.F90                     \
 	math/ode_solver_inc.F90               \
 	math/pnfft_inc.F90                    \
 	math/root_solver_inc.F90              \
@@ -473,7 +472,6 @@ noinst_HEADERS +=                                    \
 	hamiltonian/kxc_inc.F90                      \
 	hamiltonian/lasers_inc.F90                   \
 	hamiltonian/lda_u_inc.F90                    \
-	hamiltonian/oct_exchange_inc.F90             \
 	hamiltonian/projector_inc.F90                \
 	hamiltonian/scdm_inc.F90                     \
 	hamiltonian/scissor_inc.F90                  \
@@ -504,8 +502,9 @@ system_f_srcs =                                 \
 	system/photon_mode.F90                  \
 	system/preconditioners.F90              \
 	system/propagator_abst.F90              \
-        system/propagator_verlet.F90            \
-        system/propagator_beeman.F90            \
+	system/propagator_beeman.F90            \
+	system/propagator_exp_mid.F90           \
+	system/propagator_verlet.F90            \
 	system/quantity.F90                     \
 	system/stress.F90                       \
 	system/subspace.F90                     \
@@ -836,7 +835,7 @@ clean-local: clean-fdep
 
 
 FORTRAN_CPP=@FCCPP@ @CPPFLAGS@ $(AM_CPPFLAGS)
-PERL_ARGS="@DEBUG@" "@F90_ACCEPTS_LINE_NUMBERS@" "@F90_FORALL@"
+PERL_ARGS="@DEBUG@" "@F90_ACCEPTS_LINE_NUMBERS@"
 HEADERS_DEP=include/config_F90.h include/options.h include/defaults.h
 
 EXTRA_DIST = fdep/fortran_dependencies.mk \

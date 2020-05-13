@@ -204,7 +204,7 @@ contains
     !%End
     call parse_variable(namespace, 'OutputFormat', 0, how)
     if(.not.varinfo_valid_option('OutputFormat', how, is_flag=.true.)) then
-      call messages_input_error('OutputFormat')
+      call messages_input_error(namespace, 'OutputFormat')
     end if
 
     if(how  ==  0 .and. .not. optional_default(ignore_error, .false.)) then
@@ -339,10 +339,12 @@ contains
 
     SAFE_ALLOCATE(forces(1:geo%natoms, 1:mesh%sb%dim))
     SAFE_ALLOCATE(center(1:geo%natoms, 1:mesh%sb%dim))
-    forall(iatom = 1:geo%natoms, idir = 1:mesh%sb%dim)
-      forces(iatom, idir) = units_from_atomic(units_out%force, geo%atom(iatom)%f(idir))
-      center(iatom, idir) = units_from_atomic(units_out%length, geo%atom(iatom)%x(idir))
-    end forall
+    do iatom = 1, geo%natoms
+      do idir = 1, mesh%sb%dim
+        forces(iatom, idir) = units_from_atomic(units_out%force, geo%atom(iatom)%f(idir))
+        center(iatom, idir) = units_from_atomic(units_out%length, geo%atom(iatom)%x(idir))
+      end do
+    end do
     write(iunit, '(a)')'.comment : force vectors in ['//trim(units_abbrev(units_out%force))//']'
     write(iunit, *)
     write(iunit, '(a)')'.color red'
@@ -389,9 +391,9 @@ contains
     call simul_box_write_short_info(mesh%sb, iunit)
 
     ! xyz-style labels and positions:
-    do iatom=1, geo%natoms
+    do iatom = 1, geo%natoms
       write(iunit, '(10a)', advance='no') geo%atom(iatom)%label
-      do idir=1, 3
+      do idir = 1, 3
         if(idir <= mesh%sb%dim) then
           position = geo%atom(iatom)%x(idir)
         else
@@ -434,9 +436,11 @@ contains
 
     if(write_forces_) then
       SAFE_ALLOCATE(forces(1:geo%natoms, 1:mesh%sb%dim))
-      forall(iatom = 1:geo%natoms, idir = 1:mesh%sb%dim)
-        forces(iatom, idir) = units_from_atomic(units_out%force, geo%atom(iatom)%f(idir))
-      end forall
+      do iatom = 1, geo%natoms
+        do idir = 1, mesh%sb%dim
+          forces(iatom, idir) = units_from_atomic(units_out%force, geo%atom(iatom)%f(idir))
+        end do
+      end do
       call write_xsf_geometry(iunit, geo, mesh, forces = forces)
       SAFE_DEALLOCATE_A(forces)
     else

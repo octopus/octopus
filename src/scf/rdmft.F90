@@ -406,9 +406,9 @@ contains
             dpsi = M_ZERO
             do ist = 1, st%nst
               call states_elec_get_state(st, gr%mesh, ist, 1, dpsi2)
-              forall(ip = 1:gr%mesh%np)
+              do ip = 1, gr%mesh%np
                 dpsi(ip,1) = dpsi(ip,1) + rdm%vecnat(ist, iorb)*dpsi2(ip,1)
-              end forall
+              end do
             end do
             call states_elec_set_state(states_save, gr%mesh, iorb, 1, dpsi)
           end do
@@ -999,7 +999,7 @@ contains
     end if
  
     call lalg_eigensolve(st%nst, fo, rdm%evalues)
-    call assign_eigfunctions(rdm, st, gr, fo)
+    call assign_eigfunctions(rdm, st, fo)
     call sum_integrals(rdm) ! to calculate rdm%Coul and rdm%Exch with the new rdm%vecnat 
     call rdm_derivatives(rdm, namespace, hm, st, gr)
     call total_energy_rdm(rdm, st%occ(:,1), energy)
@@ -1171,10 +1171,9 @@ contains
   ! ----------------------------------------
   
   ! finds the new states after the minimization of the orbitals (Piris method)
-  subroutine assign_eigfunctions(rdm, st, gr, lambda)
+  subroutine assign_eigfunctions(rdm, st, lambda)
     type(rdm_t),         intent(inout) :: rdm
     type(states_elec_t), intent(inout) :: st
-    type(grid_t),        intent(in)    :: gr
     FLOAT,               intent(in)    :: lambda(:, :)
     
     integer :: iorb, jorb, ist

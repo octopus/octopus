@@ -126,7 +126,7 @@ contains
 
     if(ks_inv%method < XC_INV_METHOD_TWO_PARTICLE &
       .or. ks_inv%method > XC_INV_METHOD_ITER_GODBY) then
-      call messages_input_error('InvertKSmethod')
+      call messages_input_error(namespace, 'InvertKSmethod')
       call messages_fatal(1, namespace=namespace)
     end if
 
@@ -143,7 +143,7 @@ contains
     !%End
     call messages_obsolete_variable(namespace, 'KS_Inversion_Level', 'KSInversionLevel')
     call parse_variable(namespace, 'KSInversionLevel', XC_KS_INVERSION_ADIABATIC, ks_inv%level)
-    if(.not.varinfo_valid_option('KSInversionLevel', ks_inv%level)) call messages_input_error('KSInversionLevel')
+    if(.not.varinfo_valid_option('KSInversionLevel', ks_inv%level)) call messages_input_error(namespace, 'KSInversionLevel')
 
     !%Variable KSInversionAsymptotics
     !%Type integer
@@ -427,7 +427,7 @@ contains
     !%End
     call parse_variable(namespace, 'InvertKSVerbosity', 0, verbosity)  
     if(verbosity < 0 .or. verbosity > 2) then
-      call messages_input_error('InvertKSVerbosity')
+      call messages_input_error(namespace, 'InvertKSVerbosity')
       call messages_fatal(1, namespace=namespace)
     end if
 

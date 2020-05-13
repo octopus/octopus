@@ -585,7 +585,9 @@ contains
 
     filename = trim(dir)//'/'//trim(fname)//".vtk"
 
-    forall (ii = 1:3) dk(ii)= units_from_atomic(units_out%length, mesh%spacing(ii))
+    do ii = 1, 3
+      dk(ii)= units_from_atomic(units_out%length, mesh%spacing(ii))
+    end do
 
     call X(vtk_out_cf_vector)(filename, namespace, fname, ierr, cf, vector_dim, cube, dk, unit)
 
@@ -1121,9 +1123,9 @@ contains
         case(2)
           out_vec(iy) = R_AIMAG(fu) ! imaginary part
         case(3)
-          out_vec(iy) = R_ABS(fu)   ! absolute value
+          out_vec(iy) = abs(fu)   ! absolute value
         end select
-        
+
       end do
 
       ! now we write to the disk
@@ -1472,11 +1474,13 @@ contains
     FLOAT :: dk(3), pnt(3)
     integer :: i, i1, i2, i3 
     FLOAT, ALLOCATABLE :: points(:,:,:,:)
-    
+
     PUSH_SUB(X(io_function_output_global).out_vtk)
 
-    forall (i = 1:3) dk(i)= units_from_atomic(units_out%length, mesh%spacing(i))
-    
+    do i = 1, 3
+      dk(i)= units_from_atomic(units_out%length, mesh%spacing(i))
+    end do
+
     call cube_init(cube, mesh%idx%ll, mesh%sb, namespace, spacing = dk )
     call cube_function_null(cf)
     call X(cube_function_alloc_RS) (cube, cf)
@@ -1600,53 +1604,6 @@ subroutine X(io_function_output_global_BZ) (how, dir, fname, namespace, mesh, ff
     POP_SUB(X(io_function_output_global_BZ).out_plane)
   end subroutine out_plane
 end subroutine X(io_function_output_global_BZ)
-
-! -----------------------------------------------
-
-logical pure function X(inside_isolevel)(ff, ip, isosurface_value) result(inside)
-  R_TYPE,          intent(in) :: ff(:)
-  integer,         intent(in) :: ip
-  FLOAT,           intent(in) :: isosurface_value
-
-#ifdef R_TREAL
-  inside = ff(ip) > isosurface_value
-#else
-  inside = abs(ff(ip)) > isosurface_value
-#endif  
-
-end function X(inside_isolevel)
-
-! -----------------------------------------------
-
-function X(interpolate_isolevel)(mesh, ff, isosurface_value, ip1, ip2) result(pos)
-  type(mesh_t),    intent(in) :: mesh
-  R_TYPE,          intent(in) :: ff(:)
-  FLOAT,           intent(in) :: isosurface_value
-  integer,         intent(in) :: ip1
-  integer,         intent(in) :: ip2
-  FLOAT                       :: pos(1:3)
-
-  FLOAT :: v1, v2, x1(MAX_DIM), x2(MAX_DIM)
-  
-#ifdef R_TREAL
-  v1 = ff(ip1)
-  v2 = ff(ip2)
-#else
-  v1 = abs(ff(ip1))
-  v2 = abs(ff(ip2))
-#endif
-  x1(:) = mesh_x_global(mesh, ip1)
-  x2(:) = mesh_x_global(mesh, ip2)
-  
-  if(abs(v2 - v1) > M_EPSILON) then
-    pos(1:3) = x1(1:3) + (isosurface_value - v1)*(x2(1:3) - x1(1:3))/(v2 - v1)
-  else
-    ! this should never happen, but just to be sure
-    pos(1:3) = CNST(0.5)*(x1(1:3) + x2(1:3))
-  end if
-
-end function X(interpolate_isolevel)
- 
 
 #if defined(HAVE_NETCDF)
   ! --------------------------------------------------------- 

@@ -23,7 +23,6 @@ module test_oct_m
   use batch_ops_oct_m
   use boundaries_oct_m
   use calc_mode_par_oct_m
-  use celestial_body_oct_m
   use clock_oct_m
   use density_oct_m
   use derivatives_oct_m
@@ -34,13 +33,11 @@ module test_oct_m
   use hamiltonian_elec_oct_m
   use ion_interaction_oct_m
   use io_oct_m
-  use linked_list_oct_m
   use mesh_batch_oct_m
   use mesh_function_oct_m
   use mesh_interpolation_oct_m
   use messages_oct_m
   use multicomm_oct_m
-  use multisystem_oct_m
   use namespace_oct_m
   use orbitalbasis_oct_m
   use orbitalset_oct_m
@@ -48,8 +45,6 @@ module test_oct_m
   use poisson_oct_m
   use profiling_oct_m
   use projector_oct_m
-  use propagator_beeman_oct_m
-  use propagator_verlet_oct_m
   use simul_box_oct_m
   use states_abst_oct_m
   use states_elec_oct_m
@@ -57,7 +52,6 @@ module test_oct_m
   use states_elec_dim_oct_m
   use subspace_oct_m
   use system_oct_m
-  use system_abst_oct_m
   use types_oct_m
   use v_ks_oct_m
   use wfs_elec_oct_m
@@ -122,9 +116,6 @@ contains
     !% Tests the subspace diagonalization
     !%Option batch_ops 13
     !% Tests the batch operations
-    !%Calculation of the density.
-    !%Option celestial_dynamics 17
-    !% Test of celestial dynamics using multisystems
     !%Option clock 18
     !% Tests for clock
     !%End
@@ -227,10 +218,8 @@ contains
       call test_subspace_diagonalization(param, namespace)
     case(OPTION__TESTMODE__BATCH_OPS)
       call test_batch_ops(param, namespace)
-    case(OPTION__TESTMODE__CELESTIAL_DYNAMICS)
-      call test_celestial_dynamics(param)
     case(OPTION__TESTMODE__CLOCK)
-      call test_clock(param)
+      call test_clock()
     end select
 
     POP_SUB(test_run)
@@ -395,7 +384,6 @@ contains
     type(system_t), pointer :: sys
     type(wfs_elec_t), pointer :: hpsib
     integer :: itime, terms
-    type(simul_box_t) :: sb
 
     PUSH_SUB(test_hamiltonian)
 
@@ -431,7 +419,6 @@ contains
     call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
 
     !Initialize external potential
-    call simul_box_init(sb, sys%namespace, sys%geo, sys%space)
     if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call sys%st%pack()
     call hamiltonian_elec_epot_generate(sys%hm, sys%namespace, sys%gr, sys%geo, sys%st)
     call density_calc(sys%st, sys%gr, sys%st%rho)
@@ -465,7 +452,6 @@ contains
 
     call hpsib%end(copy = .false.)
     SAFE_DEALLOCATE_P(hpsib)
-    call simul_box_end(sb)
     call states_elec_deallocate_wfns(sys%st)
     SAFE_DEALLOCATE_P(sys)
 
@@ -649,11 +635,16 @@ contains
     type(namespace_t),       intent(in) :: namespace
 
     type(system_t), pointer :: sys
-    integer :: itime, ops
+    integer :: itime, ops, ops_default, ist, jst, nst
     type(wfs_elec_t) :: xx, yy
     FLOAT, allocatable :: tmp(:)
+    FLOAT, allocatable :: ddotv(:)
+    CMPLX, allocatable :: zdotv(:)
+    FLOAT, allocatable :: ddot(:,:)
+    CMPLX, allocatable :: zdot(:,:)
 
-    PUSH_SUB(test_density_calc)
+
+    PUSH_SUB(test_batch_ops)
 
     !%Variable TestBatchOps
     !%Type flag
@@ -667,11 +658,21 @@ contains
     !% Tests batch_scal operation
     !%Option ops_nrm2 bit(3)
     !% Tests batch_nrm2 operation
+    !%Option ops_dotp_matrix bit(4)
+    !% Tests X(mesh_batch_dotp_matrix)
+    !%Option ops_dotp_self bit(5)
+    !% Tests X(mesh_batch_dotp_self)
+    !%Option ops_dotp_vector bit(6)
+    !% Tests X(mesh_batch_dotp_vector)
     !%End
-    ops = OPTION__TESTBATCHOPS__OPS_AXPY &
-        + OPTION__TESTBATCHOPS__OPS_SCAL &
-        + OPTION__TESTBATCHOPS__OPS_NRM2
-    call parse_variable(namespace, 'TestBatchOps', ops, ops)
+    ops_default = OPTION__TESTBATCHOPS__OPS_AXPY &
+                + OPTION__TESTBATCHOPS__OPS_SCAL &
+                + OPTION__TESTBATCHOPS__OPS_NRM2 &
+                + OPTION__TESTBATCHOPS__OPS_DOTP_MATRIX &
+                + OPTION__TESTBATCHOPS__OPS_DOTP_SELF &
+                + OPTION__TESTBATCHOPS__OPS_DOTP_VECTOR
+
+    call parse_variable(namespace, 'TestBatchOps', ops_default, ops)
 
     call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
 
@@ -696,7 +697,7 @@ contains
       do itime = 1, param%repetitions
         call batch_axpy(sys%gr%mesh%np, CNST(0.1), xx, yy)
       end do
-      call test_prints_info_batch(sys%st, sys%gr, yy)
+      call test_prints_info_batch(sys%st, sys%gr, yy, string = "axpy")
 
       call xx%end()
       call yy%end()
@@ -712,7 +713,7 @@ contains
       do itime = 1, param%repetitions
         call batch_scal(sys%gr%mesh%np, CNST(0.1), yy)
       end do
-      call test_prints_info_batch(sys%st, sys%gr, yy)
+      call test_prints_info_batch(sys%st, sys%gr, yy, string="scal")
 
       call xx%end()
       call yy%end()
@@ -741,10 +742,116 @@ contains
       call yy%end()
     end if
 
+    if(bitand(ops, OPTION__TESTBATCHOPS__OPS_DOTP_MATRIX) /= 0) then
+    
+      message(1) = 'Info: Testing dotp_matrix'
+      call messages_info(1)
+
+      call sys%st%group%psib(1, 1)%copy_to(xx, copy_data = .true.)
+      call sys%st%group%psib(1, 1)%copy_to(yy, copy_data = .true.)
+
+      nst = sys%st%group%psib(1, 1)%nst
+
+      if(states_are_real(sys%st)) then
+        SAFE_ALLOCATE(ddot(nst, nst))
+        call dmesh_batch_dotp_matrix(sys%gr%mesh, xx, yy, ddot)
+
+        do ist = 1, nst
+          do jst = 1, nst
+            write(message(jst), '(a,2i3,3x,e13.6)') 'Dotp_matrix states', ist, jst, ddot(ist,jst)
+          end do
+          call messages_info(nst)
+        end do
+        SAFE_DEALLOCATE_A(ddot)
+      else
+        SAFE_ALLOCATE(zdot(nst, nst))
+        call zmesh_batch_dotp_matrix(sys%gr%mesh, xx, yy, zdot)
+
+        do ist = 1, nst
+          do jst = 1, nst
+            write(message(jst), '(a,2i3,3x,2e14.6)') 'Dotp_matrix states', ist, jst, zdot(ist,jst)
+          end do
+          call messages_info(nst)
+        end do
+        SAFE_DEALLOCATE_A(zdot)
+      end if
+  
+      call xx%end()
+      call yy%end()    
+    end if
+  
+    if(bitand(ops, OPTION__TESTBATCHOPS__OPS_DOTP_VECTOR) /= 0) then
+    
+      message(1) = 'Info: Testing dotp_vector'
+      call messages_info(1)
+
+      call sys%st%group%psib(1, 1)%copy_to(xx, copy_data = .true.)
+      call sys%st%group%psib(1, 1)%copy_to(yy, copy_data = .true.)
+
+      nst = sys%st%group%psib(1, 1)%nst
+
+      if(states_are_real(sys%st)) then
+        SAFE_ALLOCATE(ddotv(nst))
+        call dmesh_batch_dotp_vector(sys%gr%mesh, xx, yy, ddotv)
+
+        do ist = 1, nst
+          write(message(ist), '(a,i3,3x,e13.6)') 'Dotp_vector state', ist, ddotv(ist)
+        end do
+        call messages_info(nst)
+        SAFE_DEALLOCATE_A(ddotv)
+      else
+        SAFE_ALLOCATE(zdotv(nst))
+        call zmesh_batch_dotp_vector(sys%gr%mesh, xx, yy, zdotv)
+        do ist = 1, nst
+          write(message(ist), '(a,i3,3x,2e14.6)') 'Dotp_vector state', ist, zdotv(ist)
+        end do
+        call messages_info(nst)
+        SAFE_DEALLOCATE_A(zdotv)
+      end if
+  
+      call xx%end()
+      call yy%end()    
+    end if
+
+    if(bitand(ops, OPTION__TESTBATCHOPS__OPS_DOTP_SELF) /= 0) then
+    
+      message(1) = 'Info: Testing dotp_self'
+      call messages_info(1)
+
+      call sys%st%group%psib(1, 1)%copy_to(xx, copy_data = .true.)
+
+      nst = sys%st%group%psib(1, 1)%nst
+
+      if(states_are_real(sys%st)) then
+        SAFE_ALLOCATE(ddot(nst, nst))
+        call dmesh_batch_dotp_self(sys%gr%mesh, xx, ddot)
+
+        do ist = 1, nst
+          do jst = 1, nst
+            write(message(jst), '(a,2i3,3x,e13.6)') 'Dotp_self states', ist, jst, ddot(ist,jst)
+          end do
+          call messages_info(nst*nst)
+        end do
+        SAFE_DEALLOCATE_A(ddot)
+      else
+        SAFE_ALLOCATE(zdot(nst, nst))
+        call zmesh_batch_dotp_self(sys%gr%mesh, xx, zdot)
+        do ist = 1, nst
+          do jst = 1, nst
+            write(message(jst), '(a,2i3,3x,2e14.6)') 'Dotp_self states', ist, jst, zdot(ist,jst)
+          end do
+          call messages_info(nst*nst)
+        end do
+        SAFE_DEALLOCATE_A(zdot)
+      end if
+  
+      call xx%end()
+    end if
+
     call states_elec_deallocate_wfns(sys%st)
     SAFE_DEALLOCATE_P(sys)
 
-    POP_SUB(test_density_calc)
+    POP_SUB(test_batch_ops)
   end subroutine test_batch_ops
 
 
@@ -874,14 +981,19 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine test_prints_info_batch(st, gr, psib)
+  subroutine test_prints_info_batch(st, gr, psib, string)
     type(states_elec_t), intent(in)    :: st
     type(grid_t),        intent(in)    :: gr
     class(batch_t),      intent(inout) :: psib
+    character(*), optional,  intent(in)    :: string      
 
     integer :: itime
     CMPLX, allocatable :: zpsi(:, :)
     FLOAT, allocatable :: dpsi(:, :)
+
+    character(80)      :: string_
+
+    string_ = optional_default(string, "")
 
     PUSH_SUB(test_prints_info_batch)
 
@@ -894,10 +1006,10 @@ contains
     do itime = 1, psib%nst
       if(states_are_real(st)) then
         call batch_get_state(psib, itime, gr%mesh%np, dpsi)
-        write(message(1),'(a,i1,3x,e13.6)') "Norm state  ", itime, dmf_nrm2(gr%mesh, st%d%dim, dpsi)
+        write(message(1),'(a,i1,3x,e13.6)') "Norm state "//trim(string_)//" ", itime, dmf_nrm2(gr%mesh, st%d%dim, dpsi)
       else
         call batch_get_state(psib, itime, gr%mesh%np, zpsi)
-        write(message(1),'(a,i1,3x,e13.6)') "Norm state  ", itime, zmf_nrm2(gr%mesh, st%d%dim, zpsi)
+        write(message(1),'(a,i1,3x,e13.6)') "Norm state "//trim(string_)//" ", itime, zmf_nrm2(gr%mesh, st%d%dim, zpsi)
       end if
       call messages_info(1)
     end do
@@ -912,150 +1024,9 @@ contains
 
   end subroutine test_prints_info_batch
 
-  ! ---------------------------------------------------------
-
-  subroutine test_celestial_dynamics(param)
-    type(test_parameters_t), intent(in) :: param
-
-    type(namespace_t) :: global_namespace
-    integer :: it, internal_loop
-    logical :: any_td_step_done, all_done_max_td_steps
-    integer, parameter :: MAX_PROPAGATOR_STEPS = 1000
-    FLOAT :: smallest_algo_dt
-    
-    type(linked_list_t) :: systems
-    type(system_iterator_t) :: iter
-    class(system_abst_t), pointer :: sys
-
-    PUSH_SUB(test_celestial_dynamics)
-
-    call messages_write('Info: Testing celestial dynamics using multisystems')
-    call messages_new_line()
-    call messages_new_line()
-    call messages_info()
-
-    global_namespace = namespace_t("")
-
-    ! Initialize systems
-    call multisystem_init(systems, global_namespace)
-
-    call multisystem_init_interactions(systems, global_namespace)
-
-    all_done_max_td_steps = .false.
-    it = 0
-    smallest_algo_dt = CNST(1e10)
-
-    ! Loop over systems
-    call iter%start(systems)
-    do while (iter%has_next())
-      sys => iter%get_next_system()
-
-      !Initialize the propagator
-      call sys%init_propagator()
-
-      !Find the smallest dt
-      smallest_algo_dt = min(smallest_algo_dt, sys%prop%dt/sys%prop%algo_steps)
-
-    end do
-
-    call iter%start(systems)
-    do while (iter%has_next())
-      sys => iter%get_next_system()
-
-      !Initialize the system clocks
-      call sys%init_clocks(sys%prop%dt, smallest_algo_dt)
-
-      call sys%prop%rewind()
-
-      !Iniatialize output
-      select type(sys)
-      type is (celestial_body_t)
-
-        !Initialize output and write data at time zero
-        call sys%td_write_init(sys%prop%dt)
-        call sys%td_write_iter(0)
-
-      class default
-        message(1) = "Unknow system type."
-        call messages_fatal(1)
-      end select
-    end do
-
-    !The full TD loop
-    do while(.not. all_done_max_td_steps)
-
-      it = it + 1
-
-      any_td_step_done = .false.
-      internal_loop = 1
-
-      do while(.not. any_td_step_done .and. internal_loop < MAX_PROPAGATOR_STEPS)
-
-        any_td_step_done = .false.
-
-        call iter%start(systems)
-        do while (iter%has_next())
-          sys => iter%get_next_system()
-
-          call sys%dt_operation()
-
-          !We check the exit condition
-          any_td_step_done = any_td_step_done .or. sys%prop%step_is_done()
-        end do
-
-        INCR(internal_loop, 1)
-      end do
-
-
-      all_done_max_td_steps = .true.
-
-      call iter%start(systems)
-      do while (iter%has_next())
-        sys => iter%get_next_system()
-
-        if(sys%prop%step_is_done()) then
-          call sys%prop%rewind()
-          call sys%write_td_info()
-
-          select type (sys)
-          type is (celestial_body_t)
-            call sys%td_write_iter(it)
-          class default
-            message(1) = "Unknow system type."
-            call messages_fatal(1)
-          end select
-        end if
-
-        ! Fixme: should be changed to final propagation time
-        all_done_max_td_steps = all_done_max_td_steps .and. (sys%clock%get_sim_time() > sys%prop%max_td_steps*sys%prop%dt)
-      end do
-
-    end do
-
-    call iter%start(systems)
-    do while (iter%has_next())
-      sys => iter%get_next_system()
-      select type (sys)
-      type is (celestial_body_t)
-
-        call sys%td_write_end()
-
-      class default
-        message(1) = "Unknow system type."
-        call messages_fatal(1)
-      end select
-    end do
-
-    ! Finalize systems
-    call multisystem_end(systems)
-
-    POP_SUB(test_celestial_dynamics)
-  end subroutine test_celestial_dynamics
-
 
   ! ---------------------------------------------------------
-  subroutine test_clock(param)
-    type(test_parameters_t), intent(in) :: param
+  subroutine test_clock()
 
     type(clock_t) :: test_clock_a, test_clock_b
 

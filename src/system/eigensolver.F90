@@ -160,8 +160,7 @@ contains
     !% Kresse and Furthm&uuml;ller [<i>Phys. Rev. B</i> <b>54</b>, 11169
     !% (1996)]. This eigensolver requires almost no orthogonalization
     !% so it can be considerably faster than the other options for
-    !% large systems; however it might suffer stability problems. To
-    !% improve its performance a large number of <tt>ExtraStates</tt>
+    !% large systems. To improve its performance a large number of <tt>ExtraStates</tt>
     !% are required (around 10-20% of the number of occupied states).
     !% Note: with <tt>unocc</tt>, you will need to stop the calculation
     !% by hand, since the highest states will probably never converge.
@@ -192,7 +191,7 @@ contains
     call messages_obsolete_variable(namespace, 'EigensolverSubspaceDiag', 'SubspaceDiagonalization')
 
     default_iter = 25
-    default_tol = CNST(1e-6)
+    default_tol = CNST(1e-7)
 
     select case(eigens%es_type)
     case(RS_CG_NEW)
@@ -273,7 +272,7 @@ contains
       !% It must satisfy <tt>EigensolverImaginaryTime > 0</tt>.
       !%End
       call parse_variable(namespace, 'EigensolverImaginaryTime', CNST(10.0), eigens%imag_time)
-      if(eigens%imag_time <= M_ZERO) call messages_input_error('EigensolverImaginaryTime')
+      if(eigens%imag_time <= M_ZERO) call messages_input_error(namespace, 'EigensolverImaginaryTime')
       
       call exponential_init(eigens%exponential_operator, namespace)
       
@@ -301,7 +300,7 @@ contains
       call messages_experimental("preconditioned steepest descent (PSD) eigensolver")
 
     case default
-      call messages_input_error('Eigensolver')
+      call messages_input_error(namespace, 'Eigensolver')
     end select
 
     call messages_print_stress(stdout, 'Eigensolver', namespace=namespace)
@@ -323,7 +322,7 @@ contains
     !%Type float
     !%Section SCF::Eigensolver
     !%Description
-    !% This is the tolerance for the eigenvectors. The default is 1e-6,
+    !% This is the tolerance for the eigenvectors. The default is 1e-7,
     !% except for the ARPACK solver for which it is 0.
     !%End
     call parse_variable(namespace, 'EigensolverTolerance', default_tol, eigens%tolerance)
@@ -335,11 +334,12 @@ contains
     !% Determines the maximum number of iterations that the
     !% eigensolver will perform if the desired tolerance is not
     !% achieved. The default is 25 iterations for all eigensolvers
-    !% except for <tt>rmdiis</tt>, which performs only 3 iterations (only
-    !% increase it if you know what you are doing).
+    !% except for <tt>rmdiis</tt>, which performs only 3 iterations.
+    !% Increasing this value for <tt>rmdiis</tt> increases the convergence speed,
+    !% at the cost of an increased memory footprint.
     !%End
     call parse_variable(namespace, 'EigensolverMaxIter', default_iter, eigens%es_maxiter)
-    if(eigens%es_maxiter < 1) call messages_input_error('EigensolverMaxIter')
+    if(eigens%es_maxiter < 1) call messages_input_error(namespace, 'EigensolverMaxIter')
 
     if(eigens%es_maxiter > default_iter) then
       call messages_write('You have specified a large number of eigensolver iterations (')

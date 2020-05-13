@@ -9,10 +9,10 @@ ExperimentalFeatures = yes
 # 
 D = 0.1994
 beta = 1.189
-r0 = 1.821
+#r0 = 1.821
 # The atomic masses are:
-mH = 1.00794
-mO = 15.9994
+#mH = 1.00794
+#mO = 15.9994
 mu = 0.948204436
 # mu is the reduced mass (mH*mO)/(mH+mO).
 # The harmonic frequency is:
@@ -24,7 +24,7 @@ omega = beta*sqrt(2*D/mu)
 # E[nu] = -D + \hbar* [ omega*(nu+0.5) - Delta*(nu+0.5)^2 ] 
 # 
 # where Delta is the anharmonicity constant:
-Delta = omega^2 / (4*D)
+#Delta = omega^2 / (4*D)
 # The numerical value is .00040895133 Ha
 #
 # Therefore, the eigenenergies are given by:

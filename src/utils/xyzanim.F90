@@ -40,7 +40,6 @@ program xyzanim
   type(simul_box_t) :: sb
   type(geometry_t)  :: geo
   type(space_t)     :: space
-  type(namespace_t) :: default_namespace
   
   ! Initialize stuff
   call global_init(is_serial = .true.)
@@ -50,11 +49,10 @@ program xyzanim
   call getopt_end()
 
   call parser_init()
-  default_namespace = namespace_t("")
   
-  call messages_init(default_namespace)
-  call io_init(default_namespace)
-  call unit_system_init(default_namespace)
+  call messages_init()
+  call io_init()
+  call unit_system_init(global_namespace)
 
   ! Sets the filenames
   coords_file = 'td.general/coordinates'
@@ -67,7 +65,7 @@ program xyzanim
   !% Sampling rate of the animation. The animation will be constructed using
   !% the iteration numbers that are multiples of <tt>AnimationSampling<tt>.
   !%End
-  call parse_variable(default_namespace, 'AnimationSampling', 100, sampling)
+  call parse_variable(global_namespace, 'AnimationSampling', 100, sampling)
   if(sampling < 1) then
     message(1) = 'Sampling rate (AnimationSampling) should be bigger than 0'
     call messages_fatal(1)
@@ -80,16 +78,16 @@ program xyzanim
   !%Description
   !% If true, each iteration written will be in a separate file.
   !%End
-  call parse_variable(default_namespace, 'AnimationMultiFiles', .false., multifiles)
+  call parse_variable(global_namespace, 'AnimationMultiFiles', .false., multifiles)
 
-  call space_init(space, default_namespace)
-  call geometry_init(geo, default_namespace, space)
-  call simul_box_init(sb, default_namespace, geo, space)
+  call space_init(space, global_namespace)
+  call geometry_init(geo, global_namespace, space)
+  call simul_box_init(sb, global_namespace, geo, space)
 
   record_length = 100 + geo%space%dim*geo%natoms*3*20
 
   ! Opens the coordinates file
-  coords_unit = io_open(coords_file, default_namespace, action='read', recl = record_length)
+  coords_unit = io_open(coords_file, global_namespace, action='read', recl = record_length)
 
   call io_skip_header(coords_unit)
   ierr = 0
@@ -104,13 +102,13 @@ program xyzanim
     if(mod(iter, sampling) == 0) then
       write(comment, '(i10,f20.6)') iter, time
       if(.not.multifiles)then
-        call io_mkdir('td.general', default_namespace)
-        call geometry_write_xyz(geo, 'td.general/movie', default_namespace, &
+        call io_mkdir('td.general', global_namespace)
+        call geometry_write_xyz(geo, 'td.general/movie', global_namespace, &
           append = .true., comment = trim(comment))
       else
-        call io_mkdir('td.general/movie/', default_namespace)
+        call io_mkdir('td.general/movie/', global_namespace)
         write(coords_file,'(i7.7)')iter
-        call geometry_write_xyz(geo,'td.general/movie/geo-' + trim(coords_file), default_namespace, &
+        call geometry_write_xyz(geo,'td.general/movie/geo-' + trim(coords_file), global_namespace, &
           append = .false.)
       end if
     end if

@@ -460,6 +460,8 @@ contains
 
     call io_close(iunit)
 
+    call pes_out_interpolator_end(cube_f, interp)
+
     SAFE_DEALLOCATE_A(idx)
     SAFE_DEALLOCATE_A(Lk_)
 
@@ -586,12 +588,6 @@ contains
 
     POP_SUB(pes_out_interpolator_end)
   end subroutine pes_out_interpolator_end
-
-
-
-
-
-
 
 end module pes_out_oct_m
 

@@ -79,7 +79,7 @@
       else
         message(1) = '"OCTOptimizeHarmonicSpectrum" has to be specified as a block.'
         call messages_info(1)
-        call messages_input_error('OCTOptimizeHarmonicSpectrum')
+        call messages_input_error(namespace, 'OCTOptimizeHarmonicSpectrum')
       end if
     else
       write(message(1), '(a)') 'If "OCTTargetMode = oct_targetmode_hhg", you must supply an'
@@ -141,9 +141,11 @@
     vl_grad(:,:) = M_ZERO
     call epot_local_potential(ep, namespace, gr%der, gr%dgrid, geo, 1, vl)
     call dderivatives_grad(gr%der, vl, vl_grad)
-    forall(ist=1:gr%mesh%np, jst=1:gr%sb%dim)
-      tg%grad_local_pot(1, ist, jst) = vl_grad(ist, jst)
-    end forall
+    do jst=1, gr%sb%dim
+      do ist = 1, gr%mesh%np
+        tg%grad_local_pot(1, ist, jst) = vl_grad(ist, jst)
+      end do
+    end do
     ! Note that the calculation of the gradient of the potential
     ! is wrong at the borders of the box, since it assumes zero boundary
     ! conditions. The best way to solve this problems is to define the 
@@ -362,7 +364,7 @@
     if(time  ==  max_time) then
       tg%acc(1, 1:gr%sb%dim) = M_HALF * (tg%acc(1, 1:gr%sb%dim) + tg%acc(max_time+1, 1:gr%sb%dim))
       do ia = 1, gr%sb%dim
-        call zfft_forward1(tg%fft_handler, tg%acc(1:max_time, ia), tg%vel(1:max_time, ia))
+        call zfft_forward(tg%fft_handler, tg%acc(1:max_time, ia), tg%vel(1:max_time, ia))
       end do
       tg%vel = tg%vel * tg%dt
       do iw = 1, max_time
@@ -371,7 +373,7 @@
         tg%acc(iw, 1:gr%sb%dim) = tg%vel(iw, 1:gr%sb%dim) * tg%alpha(iw) * exp(M_zI * (iw-1) * dw * M_HALF * dt)
       end do
       do ia = 1, gr%sb%dim
-        call zfft_backward1(tg%fft_handler, tg%acc(1:max_time, ia), tg%gvec(1:max_time, ia))
+        call zfft_backward(tg%fft_handler, tg%acc(1:max_time, ia), tg%gvec(1:max_time, ia))
       end do
       tg%gvec(max_time + 1, 1:gr%sb%dim) = tg%gvec(1, 1:gr%sb%dim)
       tg%gvec = tg%gvec * (M_TWO * M_PI/ tg%dt)

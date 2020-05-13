@@ -312,22 +312,22 @@ subroutine X(submesh_batch_add_matrix)(this, factor, ss, mm)
         jdim = min(idim, ss%dim)
         do jst = 1, ss%nst
           if(ss%type() == TYPE_FLOAT) then
-            forall(is = 1:this%np)
+            do is = 1, this%np
               mm%X(ff)(this%map(is), idim, ist) = &
                 mm%X(ff)(this%map(is), idim, ist) + factor(jst, ist)*ss%dff(is, jdim, jst)
-            end forall
+            end do
           else
-            
+
 #ifdef R_TCOMPLEX
-            forall(is = 1:this%np)
+            do is = 1, this%np
               mm%X(ff)(this%map(is), idim, ist) = &
                 mm%X(ff)(this%map(is), idim, ist) + factor(jst, ist)*ss%zff(is, jdim, jst)
-            end forall
+            end do
 #else
             message(1) = "Internal error: cannot call dsubmesh_batch_add_matrix with complex batch ss"
             call messages_fatal(1)
 #endif
-            
+
           end if
         end do
       end do
@@ -339,25 +339,25 @@ subroutine X(submesh_batch_add_matrix)(this, factor, ss, mm)
     do ist =  1, min(mm%nst, ubound(factor, 2))
       do idim = 1, mm%dim
         ii = mm%ist_idim_to_linear((/ist, idim/))
-        
+
         ! FIXME: this line should instead be assert(mm%dim == ss%dim)!!
         jdim = min(idim, ss%dim)
         do jst = 1, ss%nst
           if(ss%type() == TYPE_FLOAT) then
-            forall(is = 1:this%np)
+            do is = 1, this%np
               mm%X(ff_pack)(ii, this%map(is)) = mm%X(ff_pack)(ii, this%map(is)) + factor(jst, ist)*ss%dff(is, jdim, jst)
-            end forall
+            end do
           else
-            
+
 #ifdef R_TCOMPLEX
-            forall(is = 1:this%np)
+            do is = 1, this%np
               mm%X(ff_pack)(ii, this%map(is)) = mm%X(ff_pack)(ii, this%map(is)) + factor(jst, ist)*ss%zff(is, jdim, jst)
-            end forall
+            end do
 #else
             message(1) = "Internal error: cannot call dsubmesh_batch_add_matrix with complex batch ss"
             call messages_fatal(1)
 #endif
-            
+
           end if
         end do
       end do
@@ -402,23 +402,23 @@ subroutine X(submesh_batch_add)(this, ss, mm)
 
       if(ss%type() == TYPE_FLOAT) then
 
-        forall(is = 1:this%np)
+        do is = 1, this%np
           mm%X(ff)(this%map(is), idim, ist) = &
             mm%X(ff)(this%map(is), idim, ist) + ss%dff(is, jdim, ist)
-        end forall
-        
+        end do
+
       else
 
-#ifdef R_TCOMPLEX        
-        forall(is = 1:this%np)
+#ifdef R_TCOMPLEX
+        do is = 1, this%np
           mm%X(ff)(this%map(is), idim, ist) = &
             mm%X(ff)(this%map(is), idim, ist) + ss%zff(is, jdim, ist)
-        end forall
+        end do
 #else
         message(1) = "Internal error: cannot call dsubmesh_batch_add with complex batch ss"
         call messages_fatal(1)
 #endif
-        
+
       end if
     end do
   end do
@@ -519,11 +519,9 @@ subroutine X(submesh_batch_dotp_matrix)(this, mm, ss, dot, reduce)
     
   end if
 
-#if defined(HAVE_MPI)
   if(optional_default(reduce, .true.) .and. this%mesh%parallel_in_domains) then
     call comm_allreduce(this%mesh%mpi_grp%comm, dot, dim = (/mm%nst, ss%nst/))
   end if
-#endif
 
   POP_SUB(X(submesh_batch_dotp_matrix))
 end subroutine X(submesh_batch_dotp_matrix)

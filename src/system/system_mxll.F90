@@ -68,16 +68,23 @@ module system_mxll_oct_m
   contains
     procedure :: add_interaction_partner => system_mxll_add_interaction_partner
     procedure :: has_interaction => system_mxll_has_interaction
+    procedure :: initial_conditions => system_mxll_initial_conditions
     procedure :: do_td_operation => system_mxll_do_td
-    procedure :: write_td_info => system_mxll_write_td_info
-    procedure :: td_write_init => system_mxll_td_write_init
-    procedure :: td_write_iter => system_mxll_td_write_iter
-    procedure :: td_write_end => system_mxll_td_write_end
+    procedure :: iteration_info => system_mxll_iteration_info
     procedure :: is_tolerance_reached => system_mxll_is_tolerance_reached
     procedure :: store_current_status => system_mxll_store_current_status
     procedure :: update_quantity => system_mxll_update_quantity
     procedure :: update_exposed_quantity => system_mxll_update_exposed_quantity
     procedure :: set_pointers_to_interaction => system_mxll_set_pointers_to_interaction
+    procedure :: update_interactions_start => system_mxll_update_interactions_start
+    procedure :: update_interactions_finish => system_mxll_update_interactions_finish
+    procedure :: output_start => system_mxll_output_start
+    procedure :: output_write => system_mxll_output_write
+    procedure :: output_finish => system_mxll_output_finish
+    procedure :: write_td_info => system_mxll_write_td_info
+    procedure :: td_write_init => system_mxll_td_write_init
+    procedure :: td_write_iter => system_mxll_td_write_iter
+    procedure :: td_write_end => system_mxll_td_write_end
     final :: system_mxll_finalize
   end type system_mxll_t
 
@@ -193,6 +200,12 @@ contains
   end function system_mxll_has_interaction
 
   ! ---------------------------------------------------------
+  subroutine system_mxll_initial_conditions(this, from_scratch)
+    class(system_mxll_t), intent(inout) :: this
+    logical,              intent(in)    :: from_scratch
+  end subroutine system_mxll_initial_conditions
+
+  ! ---------------------------------------------------------
   subroutine system_mxll_do_td(this, operation)
     class(system_mxll_t), intent(inout) :: this
     integer,              intent(in)    :: operation
@@ -223,6 +236,11 @@ contains
   end subroutine system_mxll_do_td
 
   ! ---------------------------------------------------------
+  subroutine system_mxll_iteration_info(this)
+    class(system_mxll_t), intent(in) :: this
+  end subroutine system_mxll_iteration_info
+
+  ! ---------------------------------------------------------
   logical function system_mxll_is_tolerance_reached(this, tol) result(converged)
     class(system_mxll_t),   intent(in)    :: this
     FLOAT,                  intent(in)    :: tol
@@ -234,14 +252,16 @@ contains
     POP_SUB(system_mxll_is_tolerance_reached)
    end function system_mxll_is_tolerance_reached
 
-   ! ---------------------------------------------------------
-   subroutine system_mxll_store_current_status(this)
-     class(system_mxll_t),   intent(inout)    :: this
+  ! ---------------------------------------------------------
+  subroutine system_mxll_store_current_status(this)
+    class(system_mxll_t),   intent(inout)    :: this
 
-     PUSH_SUB(system_mxll_store_current_status)
+    PUSH_SUB(system_mxll_store_current_status)
 
-     POP_SUB(system_mxll_store_current_status)
-   end subroutine system_mxll_store_current_status
+    POP_SUB(system_mxll_store_current_status)
+  end subroutine system_mxll_store_current_status
+
+
 
   ! ---------------------------------------------------------
   subroutine system_mxll_write_td_info(this)
@@ -383,6 +403,32 @@ contains
 
     POP_SUB(system_mxll_set_pointers_to_interaction)
   end subroutine system_mxll_set_pointers_to_interaction
+
+  ! ---------------------------------------------------------
+  subroutine system_mxll_update_interactions_start(this)
+    class(system_mxll_t), intent(inout) :: this
+  end subroutine system_mxll_update_interactions_start
+
+  ! ---------------------------------------------------------
+  subroutine system_mxll_update_interactions_finish(this)
+    class(system_mxll_t), intent(inout) :: this
+  end subroutine system_mxll_update_interactions_finish
+
+  ! ---------------------------------------------------------
+  subroutine system_mxll_output_start(this)
+    class(system_mxll_t), intent(inout) :: this
+  end subroutine system_mxll_output_start
+
+  ! ---------------------------------------------------------
+  subroutine system_mxll_output_write(this, iter)
+    class(system_mxll_t), intent(inout) :: this
+    integer,              intent(in)    :: iter
+  end subroutine system_mxll_output_write
+
+  ! ---------------------------------------------------------
+  subroutine system_mxll_output_finish(this)
+    class(system_mxll_t), intent(inout) :: this
+  end subroutine system_mxll_output_finish
 
   ! ---------------------------------------------------------
   subroutine system_mxll_finalize(this)

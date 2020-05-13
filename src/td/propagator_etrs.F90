@@ -345,18 +345,22 @@ contains
          tr%vksold%v_old(:, :, 1:3), time, tr%vksold%v_old(:, :, 0))
       call interpolate( (/time - dt, time - M_TWO*dt, time - M_THREE*dt/), &
          tr%vksold%vtau_old(:, :, 1:3), time, tr%vksold%vtau_old(:, :, 0))
-      forall(ispin = 1:st%d%nspin, ip = 1:gr%mesh%np)
-        vold(ip, ispin) =  CNST(0.5)*dt*(hm%vhxc(ip, ispin) - vold(ip, ispin))
-        vtauold(ip, ispin) =  CNST(0.5)*dt*(hm%vtau(ip, ispin) - vtauold(ip, ispin))
-      end forall      
+      do ispin = 1, st%d%nspin
+        do ip = 1, gr%mesh%np
+          vold(ip, ispin) =  CNST(0.5)*dt*(hm%vhxc(ip, ispin) - vold(ip, ispin))
+          vtauold(ip, ispin) =  CNST(0.5)*dt*(hm%vtau(ip, ispin) - vtauold(ip, ispin))
+        end do
+      end do
     else
       call potential_interpolation_set(tr%vksold, gr%mesh%np, st%d%nspin, 1, hm%vhxc)
       call interpolate( (/time - dt, time - M_TWO*dt, time - M_THREE*dt/), &
          tr%vksold%v_old(:, :, 1:3), time, tr%vksold%v_old(:, :, 0))
 
-      forall(ispin = 1:st%d%nspin, ip = 1:gr%mesh%np)
-        vold(ip, ispin) =  CNST(0.5)*dt*(hm%vhxc(ip, ispin) - vold(ip, ispin))
-      end forall
+      do ispin = 1, st%d%nspin
+        do ip = 1, gr%mesh%np
+          vold(ip, ispin) =  CNST(0.5)*dt*(hm%vhxc(ip, ispin) - vold(ip, ispin))
+        end do
+      end do
     end if
 
     ! copy vold to a cl buffer
@@ -401,17 +405,17 @@ contains
           do ip = 1, gr%mesh%np
             vv = vold(ip, ispin)
             phase = TOCMPLX(cos(vv), -sin(vv))
-            forall(ist = 1:st%group%psib(ib, ik)%nst_linear)
+            do ist = 1, st%group%psib(ib, ik)%nst_linear
               st%group%psib(ib, ik)%zff_linear(ip, ist) = st%group%psib(ib, ik)%zff_linear(ip, ist)*phase
-            end forall
+            end do
           end do
         case(BATCH_PACKED)
           do ip = 1, gr%mesh%np
             vv = vold(ip, ispin)
             phase = TOCMPLX(cos(vv), -sin(vv))
-            forall(ist = 1:st%group%psib(ib, ik)%nst_linear)
+            do ist = 1, st%group%psib(ib, ik)%nst_linear
               st%group%psib(ib, ik)%zff_pack(ist, ip) = st%group%psib(ib, ik)%zff_pack(ist, ip)*phase
-            end forall
+            end do
           end do
         case(BATCH_DEVICE_PACKED)
           call accel_set_kernel_arg(kernel_phase, 0, pnp*(ispin - 1))

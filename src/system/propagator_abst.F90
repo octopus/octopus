@@ -41,6 +41,9 @@ module propagator_abst_oct_m
     type(list_iterator_t) :: scf_start
     integer               :: current_ops
 
+    integer, public       :: start_step
+    integer, public       :: final_step
+
     integer, public :: algo_steps
     FLOAT, public   :: dt
     integer, public :: max_td_steps
@@ -57,7 +60,7 @@ module propagator_abst_oct_m
     type(clock_t), public :: clock
 
   contains
-    !Below are the list of operations that needs to be implemented
+    ! Below are the list of operations that needs to be implemented
     procedure :: get_td_operation => propagator_get_tdop
     procedure :: step_is_done => propagator_step_is_done
     procedure :: next => propagator_next
@@ -71,24 +74,37 @@ module propagator_abst_oct_m
   ! Known propagation operations
   integer, public, parameter ::        &
     FINISHED                     =  0,  &
-    VERLET_UPDATE_POS            =  1,  &
-    VERLET_COMPUTE_ACC           =  2,  &
-    VERLET_COMPUTE_VEL           =  3,  &
-    SYNC                         =  4,  &
-    UPDATE_INTERACTIONS          =  5,  &
-    START_SCF_LOOP               =  6,  &
-    END_SCF_LOOP                 =  7,  &
-    STORE_CURRENT_STATUS         =  8,  &
-    BEEMAN_PREDICT_POS           =  9,  &
-    BEEMAN_PREDICT_VEL           = 10,  &
-    BEEMAN_CORRECT_POS           = 11,  &
-    BEEMAN_CORRECT_VEL           = 12
+    VERLET_START                 =  1,  &
+    VERLET_FINISH                =  2,  &
+    VERLET_UPDATE_POS            =  3,  &
+    VERLET_COMPUTE_ACC           =  4,  &
+    VERLET_COMPUTE_VEL           =  5,  &
+    SYNC                         =  6,  &
+    UPDATE_INTERACTIONS          =  7,  &
+    START_SCF_LOOP               =  8,  &
+    END_SCF_LOOP                 =  9,  &
+    STORE_CURRENT_STATUS         = 10,  &
+    BEEMAN_START                 = 11,  &
+    BEEMAN_FINISH                = 12,  &
+    BEEMAN_PREDICT_POS           = 13,  &
+    BEEMAN_PREDICT_VEL           = 14,  &
+    BEEMAN_CORRECT_POS           = 15,  &
+    BEEMAN_CORRECT_VEL           = 16,  &
+    EXPMID_START                 = 17,  &
+    EXPMID_FINISH                = 18,  &
+    EXPMID_PREDICT_DT_2          = 19,  &
+    EXPMID_PREDICT_DT            = 20,  &
+    EXPMID_CORRECT_DT_2          = 21,  &
+    UPDATE_HAMILTONIAN           = 22
 
   ! Known multisystem propagators
   integer, public, parameter ::        &
     PROP_VERLET                  = 1,  &
     PROP_BEEMAN                  = 2,  &
-    PROP_BEEMAN_SCF              = 3
+    PROP_BEEMAN_SCF              = 3,  &
+    PROP_EXPMID                  = 4,  &
+    PROP_EXPMID_SCF              = 5
+
 
 contains
 
@@ -152,7 +168,7 @@ contains
     
     PUSH_SUB(propagator_save_scf_start)
 
-    !Save the current iteration state (START_SCF_LOOP) and move to next step
+    ! Save the current iteration state (START_SCF_LOOP) and move to next step
     this%scf_start = this%iter
     call this%next()
     this%scf_count = 0
@@ -166,7 +182,7 @@ contains
 
     PUSH_SUB(propagator_rewind_scf_loop)
 
-    !Reset the iteration state to the beginning of the loop (START_SCF_LOOP) and move to next step
+    ! Reset the iteration state to the beginning of the loop (START_SCF_LOOP) and move to next step
     this%iter = this%scf_start
     call this%next()
     this%scf_count = this%scf_count + 1

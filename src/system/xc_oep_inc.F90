@@ -82,7 +82,7 @@ subroutine X(xc_oep_calc)(oep, namespace, xcs, apply_sic_pz, gr, hm, st, ex, ec,
 
     ! SIC a la PZ is handled here
     if(apply_sic_pz) then
-      call X(oep_sic) (xcs, gr, hm%psolver, namespace, st, is, oep, ex, ec, hm%exxop)
+      call X(oep_sic) (xcs, gr, hm%psolver, namespace, st, is, oep, ex, ec)
     end if
     ! calculate uxc_bar for the occupied states
 
@@ -236,7 +236,7 @@ subroutine X(xc_oep_solve) (namespace, gr, hm, st, is, vxc, oep)
       ! ss = ss + 2*dl_psi*psi
       call lalg_axpy(gr%mesh%np, M_TWO, R_REAL(oep%lr%X(dl_psi)(1:gr%mesh%np, 1, ist, is)*psi(:, 1)), ss(:))
       if (oep%has_photons) then
-        call X(xc_oep_pt_inhomog)(gr, st, is, oep, phi1, ist, ss)
+        call X(xc_oep_pt_inhomog)(gr, st, is, phi1, ist, ss)
       end if
     end do
 

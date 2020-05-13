@@ -223,10 +223,12 @@ contains
 
     call parse_variable(namespace, 'DerivativesStencil', default_stencil, der%stencil_type)
     
-    if(.not.varinfo_valid_option('DerivativesStencil', der%stencil_type)) call messages_input_error('DerivativesStencil')
+    if(.not.varinfo_valid_option('DerivativesStencil', der%stencil_type)) then
+      call messages_input_error(namespace, 'DerivativesStencil')
+    end if
     call messages_print_var_option(stdout, "DerivativesStencil", der%stencil_type)
 
-    if(use_curvilinear  .and.  der%stencil_type < DER_CUBE) call messages_input_error('DerivativesStencil')
+    if(use_curvilinear  .and.  der%stencil_type < DER_CUBE) call messages_input_error(namespace, 'DerivativesStencil')
     if(der%stencil_type == DER_VARIATIONAL) then
       call parse_variable(namespace, 'DerivativesLaplacianFilter', M_ONE, der%lapl_cutoff)
     end if
@@ -272,7 +274,7 @@ contains
     call parse_variable(namespace, 'ParallelizationOfDerivatives', NON_BLOCKING, der%comm_method)
     
     if(.not. varinfo_valid_option('ParallelizationOfDerivatives', der%comm_method)) then
-      call messages_input_error('ParallelizationOfDerivatives')
+      call messages_input_error(namespace, 'ParallelizationOfDerivatives')
     end if
 
     call messages_obsolete_variable(namespace, 'OverlapDerivatives', 'ParallelizationOfDerivatives')
@@ -423,20 +425,6 @@ contains
     POP_SUB(derivatives_get_stencil_grad)
 
   end subroutine derivatives_get_stencil_grad
-
-
-  ! ---------------------------------------------------------
-  subroutine derivatives_update(der, namespace, mesh)
-    type(derivatives_t),    intent(inout) :: der
-    type(namespace_t),      intent(in)    :: namespace
-    type(mesh_t),   target, intent(in)    :: mesh
-    
-    call derivatives_get_stencil_lapl(der)
-    call derivatives_get_stencil_grad(der)
-    
-    call derivatives_build(der, namespace, mesh)
-    
-  end subroutine derivatives_update
 
   ! ---------------------------------------------------------
   subroutine derivatives_build(der, namespace, mesh)
@@ -695,16 +683,22 @@ contains
       ! i indexes the point in the stencil
       do i = 1, op(1)%stencil%size
         if(mesh%use_curvilinear) then
-          forall(j = 1:dim) x(j) = mesh%x(p + op(1)%ri(i, op(1)%rimap(p)), j) - mesh%x(p, j)
+          do j = 1, dim
+            x(j) = mesh%x(p + op(1)%ri(i, op(1)%rimap(p)), j) - mesh%x(p, j)
+          end do
         else
-          forall(j = 1:dim) x(j) = TOFLOAT(op(1)%stencil%points(j, i))*mesh%spacing(j)
+          do j = 1, dim
+            x(j) = TOFLOAT(op(1)%stencil%points(j, i))*mesh%spacing(j)
+          end do
           ! TODO : this internal if clause is inefficient - the condition is determined globally
           if (mesh%sb%nonorthogonal .and. .not. optional_default(force_orthogonal, .false.))  & 
               x(1:dim) = matmul(mesh%sb%rlattice_primitive(1:dim,1:dim), x(1:dim))
         end if
                          
 ! NB: these masses are applied on the cartesian directions. Should add a check for non-orthogonal axes
-        forall(j = 1:dim) x(j) = x(j)*sqrt(masses(j))
+        do j = 1, dim
+          x(j) = x(j)*sqrt(masses(j))
+        end do
 
         ! calculate powers
         do j = 1, dim

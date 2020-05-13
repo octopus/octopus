@@ -265,7 +265,7 @@ contains
 
 
     if(.not.varinfo_valid_option('OCTTargetOperator', tg%type)) &
-      call messages_input_error('OCTTargetOperator')
+      call messages_input_error(namespace, 'OCTTargetOperator')
 
     call states_elec_copy(tg%st, stin)
     call states_elec_deallocate_wfns(tg%st)
@@ -489,9 +489,9 @@ contains
         do ist = inh%st_start, inh%st_end
           do idim = 1, inh%d%dim
             call states_elec_get_state(psi, gr%mesh, idim, ist, ik, zpsi)
-            forall(ip = 1:gr%mesh%np)
+            do ip = 1, gr%mesh%np
               zpsi(ip) = -psi%occ(ist, ik)*M_TWO*sum(tg%grad_local_pot(1, ip, 1:gr%sb%dim)*gvec(1:gr%sb%dim))*zpsi(ip)
-            end forall
+            end do
             call states_elec_set_state(inh, gr%mesh, idim, ist, ik, zpsi)
           end do
         end do
@@ -503,9 +503,9 @@ contains
         do ist = inh%st_start, inh%st_end
           do idim = 1, inh%d%dim
             call states_elec_get_state(psi, gr%mesh, idim, ist, ik, zpsi)
-            forall(ip = 1:gr%mesh%np)
+            do ip = 1, gr%mesh%np
               zpsi(ip) = -psi%occ(ist, ik)*tg%rho(ip)*zpsi(ip)
-            end forall
+            end do
             call states_elec_set_state(inh, gr%mesh, idim, ist, ik, zpsi)
           end do
         end do

@@ -142,7 +142,9 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
     call states_elec_get_state(st, gr%mesh, ist, ik, psi)
 
     ! Orthogonalize starting eigenfunctions to those already calculated...
-    if(ist > 1) call X(states_elec_orthogonalize_single)(st, gr%mesh, ist - 1, ik, psi, normalize = .true.)
+    if(ist > 1) then
+      call X(states_elec_orthogonalize_single_batch)(st, gr%mesh, ist - 1, ik, psi, normalize = .true.)
+    end if
 
     ! Calculate starting gradient: |hpsi> = H|psi>
     call X(hamiltonian_elec_apply_single)(hm, namespace, gr%mesh, psi, h_psi, ist, ik)
@@ -173,9 +175,11 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
       end if
 
       ! PTA92, eq. 5.10
-      forall (idim = 1:st%d%dim, ip = 1:gr%mesh%np)
-        g(ip, idim) = h_psi(ip, idim) - st%eigenval(ist, ik)*psi(ip, idim)
-      end forall
+      do idim = 1, st%d%dim
+        do ip = 1, gr%mesh%np
+          g(ip, idim) = h_psi(ip, idim) - st%eigenval(ist, ik)*psi(ip, idim)
+        end do
+      end do
 
       if (hm%theory_level == RDMFT) then
         ! For RDMFT, the gradient of the total energy functional differs from
@@ -223,8 +227,8 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
       ! PTA92, eq. 5.18
       dot = X(mf_dotp) (gr%mesh, st%d%dim, psi, g0)
       ! orthogonalize against previous or all states, depending on the optional argument orthogonalize_to_all
-      call X(states_elec_orthogonalize_single)(st, gr%mesh, ist - 1, ik, g0, normalize = .false., &
-        against_all=orthogonalize_to_all)
+      call X(states_elec_orthogonalize_single_batch)(st, gr%mesh, ist - 1, ik, g0, normalize = .false., &
+          against_all=orthogonalize_to_all)
 
       do idim = 1, st%d%dim
         call lalg_axpy(gr%mesh%np, -dot, psi(:, idim), g0(:, idim))
@@ -271,16 +275,16 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
         case (OPTION__CGDIRECTION__POLAK)
           gamma = (gg - gg1)/gg0   ! (Polack-Ribiere)
         case default
-          call messages_input_error('Conjugate Direction')
+          call messages_input_error(namespace, 'Conjugate Direction')
         end select
         ! save for next iteration
         gg0 = gg
 
         ! PTA92, eq. 5.19
         do idim = 1, st%d%dim
-          forall (ip = 1:gr%mesh%np)
+          do ip = 1, gr%mesh%np
             cg(ip, idim) = gamma*cg(ip, idim) + g0(ip, idim)
-          end forall
+          end do
         end do
 
         ! PTA92, eq. 5.21
@@ -335,9 +339,9 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
         ! Hartree term
         tmp = M_TWO/cg0
         do idim = 1, st%d%dim
-          forall (ip = 1:gr%mesh%np)
+          do ip = 1, gr%mesh%np
             chi(ip, idim) = tmp * R_REAL(R_CONJ(cg(ip, idim)) * psi(ip, idim))
-          end forall
+          end do
         end do
         call dpoisson_solve(hm%psolver, omega(:, 1), chi(:, 1), all_nodes = .false.)
         integral_hartree = dmf_dotp(gr%mesh, st%d%dim, chi, omega)
@@ -388,10 +392,10 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
 
       ! PTA92, eq. 5.38
       do idim = 1, st%d%dim
-        forall (ip = 1:gr%mesh%np)
+        do ip = 1, gr%mesh%np
           psi(ip, idim) = a0*psi(ip, idim) + b0*cg(ip, idim)
           h_psi(ip, idim) = a0*h_psi(ip, idim) + b0*h_cg(ip, idim)
-        end forall
+        end do
       end do
 
       call profiling_count_operations(st%d%dim*gr%mesh%np*(2*R_ADD + 4*R_MUL))
@@ -451,7 +455,7 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
 
     ! one could orthogonalize against all states here, but it turns out not
     ! to accelerate convergence
-    call X(states_elec_orthogonalize_single)(st, gr%mesh, ist - 1, ik, psi, normalize = .true.)
+    call X(states_elec_orthogonalize_single_batch)(st, gr%mesh, ist - 1, ik, psi, normalize = .true.)
     call states_elec_set_state(st, gr%mesh, ist, ik, psi)
 
     niter = niter + iter + 1

@@ -94,7 +94,7 @@ contains
     !% Start in a user-defined state.
     !%End
     call parse_variable(sys%namespace, 'OCTInitialState', oct_is_groundstate, istype)
-    if(.not.varinfo_valid_option('OCTInitialState', istype)) call messages_input_error('OCTInitialState')    
+    if(.not.varinfo_valid_option('OCTInitialState', istype)) call messages_input_error(sys%namespace, 'OCTInitialState')    
 
     select case(istype)
     case(oct_is_groundstate) 

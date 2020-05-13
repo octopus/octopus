@@ -205,6 +205,14 @@ contains
 
       PUSH_SUB(geom_opt_run.init_)
 
+      if (sys%gr%sb%periodic_dim > 0) then
+        call messages_experimental('Geometry optimization for periodic systems')
+
+        message(1) = "Optimization of cell parameters during geometry optimization"
+        message(2) = "of periodic systems is currently not implemented."
+        call messages_warning(2)
+      end if
+
       call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
 
       ! shortcuts
@@ -284,7 +292,7 @@ contains
       !% Ref: E. Bitzek, P. Koskinen, F. Gahler, M. Moseler, and P. Gumbsch, <i>Phys. Rev. Lett.</i> <b>97</b>, 170201 (2006).
       !%End
       call parse_variable(sys%namespace, 'GOMethod', MINMETHOD_FIRE, g_opt%method)
-      if(.not.varinfo_valid_option('GOMethod', g_opt%method)) call messages_input_error('GOMethod')
+      if(.not.varinfo_valid_option('GOMethod', g_opt%method)) call messages_input_error(sys%namespace, 'GOMethod')
       call messages_print_var_option(stdout, "GOMethod", g_opt%method)
 
       !%Variable GOTolerance
@@ -320,7 +328,7 @@ contains
       end if
       call parse_variable(sys%namespace, 'GOMinimumMove', default_toldr, g_opt%toldr, units_inp%length)
 
-      if(g_opt%method == MINMETHOD_NMSIMPLEX .and. g_opt%toldr <= M_ZERO) call messages_input_error('GOMinimumMove')
+      if(g_opt%method == MINMETHOD_NMSIMPLEX .and. g_opt%toldr <= M_ZERO) call messages_input_error(sys%namespace, 'GOMinimumMove')
       
       !%Variable GOStep
       !%Type float
@@ -417,7 +425,7 @@ contains
       !% This is, of course, inconsistent, and may lead to very strange behavior.
       !%End
       call parse_variable(sys%namespace, 'GOObjective', MINWHAT_ENERGY, g_opt%what2minimize)
-      if(.not.varinfo_valid_option('GOObjective', g_opt%what2minimize)) call messages_input_error('GOObjective')
+      if(.not.varinfo_valid_option('GOObjective', g_opt%what2minimize)) call messages_input_error(sys%namespace, 'GOObjective')
       call messages_print_var_option(stdout, "GOObjective", g_opt%what2minimize)
 
 

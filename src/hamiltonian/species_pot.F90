@@ -124,7 +124,7 @@ contains
           
           rerho = M_ZERO
           if(species_type(species) == SPECIES_JELLIUM_CHARGE_DENSITY) then
-             if(volume_in_volume(sb, volume, xx, rr)) rerho = M_ONE
+             if(volume_in_volume(sb, volume, xx)) rerho = M_ONE
           else
              call parse_expression(rerho, imrho, sb%dim, xx, rr, M_ZERO, trim(species_rho_string(species)))
           end if
@@ -245,7 +245,7 @@ contains
           pos(1:sb%dim) = periodic_copy_position(pp, sb, icell)
           do ip = 1, mesh%np
             call mesh_r(mesh, ip, rr, origin = pos)
-            rr = max(rr, r_small)
+            rr = max(rr, R_SMALL)
             
             do isp = 1, spin_channels
               if(rr >= spline_range_max(ps%density(isp))) cycle
@@ -267,7 +267,7 @@ contains
           pos(1:sb%dim) = periodic_copy_position(pp, sb, icell)
           do ip = 1, mesh%np
             call mesh_r(mesh, ip, rr, origin = pos)
-            rr = max(rr, r_small)
+            rr = max(rr, R_SMALL)
 
             if(rr >= spline_range_max(ps%vl)) cycle
             
@@ -299,16 +299,15 @@ contains
   ! A non periodized version of the routine species_atom_density
   ! This is used for the Hirshfeld routines
   ! TODO: implement it for other approaches than pseudo potentials.
- subroutine species_atom_density_np(mesh, sb, atom, namespace, pos,  spin_channels, rho)
+ subroutine species_atom_density_np(mesh, atom, namespace, pos,  spin_channels, rho)
     type(mesh_t),         intent(in)    :: mesh
-    type(simul_box_t),    intent(in)    :: sb
     type(atom_t), target, intent(in)    :: atom
     type(namespace_t),    intent(in)    :: namespace
     FLOAT,                intent(in)    :: pos(:) !< (Max dim)
     integer,              intent(in)    :: spin_channels
     FLOAT,                intent(inout) :: rho(:, :) !< (mesh%np, spin_channels)
     integer :: isp, ip
-    FLOAT :: rr, nrm, rmax, r_small
+    FLOAT :: rr, nrm, rmax
     type(species_t), pointer :: species
     type(ps_t), pointer :: ps
 
@@ -327,7 +326,6 @@ contains
         ASSERT(associated(ps%density))
 
         rmax = CNST(0.0)
-        r_small = M_ZERO
 
         do isp = 1, spin_channels
           rmax = max(rmax, spline_cutoff_radius(ps%density(isp), ps%projectors_sphere_threshold))
@@ -335,7 +333,7 @@ contains
         do ip = 1, mesh%np
           call mesh_r(mesh, ip, rr, origin = pos)
 
-          rr = max(rr, r_small) 
+          rr = max(rr, R_SMALL) 
            
           do isp = 1, spin_channels
             if(rr >= spline_range_max(ps%density(isp))) cycle
@@ -350,7 +348,7 @@ contains
 
         do ip = 1, mesh%np
           call mesh_r(mesh, ip, rr, origin = pos)
-          rr = max(rr, r_small)
+          rr = max(rr, R_SMALL)
 
           if(rr >= spline_range_max(ps%vl)) cycle
 
@@ -441,7 +439,7 @@ contains
     FLOAT,                intent(inout) :: drho(:, :) !< (mesh%np, spin_channels)
 
     integer :: isp, ip
-    FLOAT :: rr, r_small
+    FLOAT :: rr
     type(ps_t), pointer :: ps
 
     PUSH_SUB(species_atom_density_derivative_np)
@@ -451,10 +449,9 @@ contains
 
     if(ps_has_density(ps)) then
 
-      r_small = M_ZERO
       do ip = 1, mesh%np
         call mesh_r(mesh, ip, rr, origin = pos)
-        rr = max(rr, r_small)
+        rr = max(rr, R_SMALL)
 
         do isp = 1, spin_channels
           if(rr >= spline_range_max(ps%density_der(isp))) cycle
@@ -516,7 +513,7 @@ contains
         
           do ip = 1, mesh%np
             call mesh_r(mesh, ip, rr, origin = pos)
-            rr = max(rr, r_small)
+            rr = max(rr, R_SMALL)
 
             do isp = 1, spin_channels
               if(rr >= spline_range_max(ps%density_der(isp))) cycle
@@ -586,8 +583,10 @@ contains
 
       call submesh_init(sphere, mesh%sb, mesh, pos, spline_cutoff_radius(ps%nlr, threshold))
       SAFE_ALLOCATE(rho_sphere(1:sphere%np))
-      
-      forall(ip = 1:sphere%np) rho_sphere(ip) = sphere%x(ip, 0)
+
+      do ip = 1, sphere%np
+        rho_sphere(ip) = sphere%x(ip, 0)
+      end do
       if(sphere%np > 0) call spline_eval_vec(ps%nlr, sphere%np, rho_sphere)
 
       rho(1:mesh%np) = M_ZERO
@@ -688,7 +687,7 @@ contains
       startval(dim+1) = beta
 
       ! solve equation
-      call root_solver_init(rs, dim+1, &
+      call root_solver_init(rs, namespace, dim+1, &
         solver_type=ROOT_NEWTON, maxiter=500, abs_tolerance=CNST(1.0e-10))
       call droot_solver_run(rs, func, x, conv, startval=startval)
 
@@ -725,7 +724,7 @@ contains
 
           rerho = M_ZERO
           if(species_type(species) == SPECIES_JELLIUM_CHARGE_DENSITY) then
-            if(volume_in_volume(mesh%sb, volume, xx, rr)) rerho = M_ONE
+            if(volume_in_volume(mesh%sb, volume, xx)) rerho = M_ONE
           else
             call parse_expression(rerho, imrho1, mesh%sb%dim, xx, rr, M_ZERO, trim(species_rho_string(species)))
           end if
@@ -846,7 +845,7 @@ contains
           center(1:mesh%sb%dim) = periodic_copy_position(pp, mesh%sb, icell)
           do ip = 1, mesh%np
             call mesh_r(mesh, ip, rr, origin = center)
-            rr = max(rr, r_small)
+            rr = max(rr, R_SMALL)
             if(rr >= spline_range_max(ps%core_der)) cycle
             spline = spline_eval(ps%core_der, rr)
 
@@ -955,7 +954,9 @@ contains
 
             ! Note that as the spec%user_def is in input units, we have to convert
             ! the units back and forth
-            forall(idim = 1:mesh%sb%dim) xx(idim) = units_from_atomic(units_inp%length, xx(idim))
+            do idim = 1, mesh%sb%dim
+              xx(idim) = units_from_atomic(units_inp%length, xx(idim))
+            end do
             r = units_from_atomic(units_inp%length, r)
             zpot = species_userdef_pot(species, mesh%sb%dim, xx, r)
             vl(ip) = vl(ip) + units_to_atomic(units_inp%energy, TOFLOAT(zpot))

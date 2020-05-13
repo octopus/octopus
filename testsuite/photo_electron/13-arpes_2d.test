@@ -35,7 +35,7 @@ Precision : 1e-7
 
 match ; ARPES [energy 1] ; LINEFIELD(PES_ARPES.path, 77, 4) ; 1.770000000000E+00
 match ; ARPES [kpath  1] ; LINEFIELD(PES_ARPES.path, 77, 1) ; 3.882395023933E-01
-match ; ARPES [val    1] ; LINEFIELD(PES_ARPES.path, 77, 5) ; 2.303415755408E-16
+match ; ARPES [val    1] ; LINEFIELD(PES_ARPES.path, 77, 5) ; 2.8197961744189998e-05
 
 match ; ARPES [energy 2] ; LINEFIELD(PES_ARPES.path, 119, 4) ; 1.750000000000E+00
 match ; ARPES [kpath  2] ; LINEFIELD(PES_ARPES.path, 119, 1) ; 6.460026123303E-01

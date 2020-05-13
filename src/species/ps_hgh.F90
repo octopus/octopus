@@ -92,7 +92,7 @@ contains
 
     PUSH_SUB(hgh_init)
 
-    iunit = io_open(trim(filename), namespace, action='read', form='formatted', status='old')
+    iunit = io_open(trim(filename), action='read', form='formatted', status='old')
     i = load_params(iunit, psp)
     if(i /= 0) then
       call messages_write('Error reading hgh file')
@@ -460,7 +460,7 @@ contains
     PUSH_SUB(projectorr_vector)
 
     SAFE_ALLOCATE(projectorr_vector(1:size(r)))
-    do j=1, size(r)
+    do j = 1, size(r)
       projectorr_vector(j) = projectorr_scalar(r(j), p, i, l)
     end do
 

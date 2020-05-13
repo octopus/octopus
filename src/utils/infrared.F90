@@ -45,7 +45,6 @@
     FLOAT :: dw, max_energy
     integer :: ifreq, idir
     integer, parameter :: max_freq = 10000
-    type(namespace_t) :: default_namespace
 
     ! Initialize stuff
     call global_init(is_serial = .true.)
@@ -55,28 +54,27 @@
     call getopt_end()
 
     call parser_init()
-    default_namespace = namespace_t("")
     
-    call messages_init(default_namespace)
+    call messages_init()
 
-    call io_init(default_namespace)
+    call io_init()
 
-    call unit_system_init(default_namespace)
+    call unit_system_init(global_namespace)
 
     !These variables are documented in src/td/spectrum.F90
-    call parse_variable(default_namespace, 'TDMaxSteps', 1500, max_iter)
-    call parse_variable(default_namespace, 'PropagationSpectrumStartTime',  M_ZERO, start_time, units_inp%time)
-    call parse_variable(default_namespace, 'PropagationSpectrumEndTime',  -M_ONE, end_time, units_inp%time)
-    call parse_variable(default_namespace, 'PropagationSpectrumMaxEnergy', &
+    call parse_variable(global_namespace, 'TDMaxSteps', 1500, max_iter)
+    call parse_variable(global_namespace, 'PropagationSpectrumStartTime',  M_ZERO, start_time, units_inp%time)
+    call parse_variable(global_namespace, 'PropagationSpectrumEndTime',  -M_ONE, end_time, units_inp%time)
+    call parse_variable(global_namespace, 'PropagationSpectrumMaxEnergy', &
       units_from_atomic(units_inp%energy, units_to_atomic(unit_invcm, CNST(10000.0))), max_energy, units_inp%energy)
 
     dw = max_energy/(max_freq-M_ONE) !Initializes the wavevector step dw
 
     if (end_time < M_ZERO) end_time = huge(end_time)
 
-    call space_init(space, default_namespace)
-    call geometry_init(geo, default_namespace, space)
-    call simul_box_init(sb, default_namespace, geo, space)
+    call space_init(space, global_namespace)
+    call geometry_init(geo, global_namespace, space)
+    call simul_box_init(sb, global_namespace, geo, space)
 
       SAFE_ALLOCATE(dipole(0:max_iter+1, 1:3))
 
@@ -89,7 +87,7 @@
       end do
 
       !and print the spectrum
-      iunit = io_open('td.general/infrared', default_namespace, action='write')
+      iunit = io_open('td.general/infrared', global_namespace, action='write')
 
 100   FORMAT(100('#'))
 
@@ -133,7 +131,7 @@
       PUSH_SUB(read_dipole)
 
       ! Opens the coordinates files.
-      iunit = io_open('td.general/multipoles', default_namespace, action='read')
+      iunit = io_open('td.general/multipoles', global_namespace, action='read')
 
       call io_skip_header(iunit)
 
@@ -150,8 +148,9 @@
         time(iter) =  units_to_atomic(units_out%time, time(iter))
 
         !dipole moment has unit of charge*length, charge has the same unit in both systems
-        forall(ii= 1: 3) dipole(iter, ii) = units_to_atomic(units_out%length, dipole(iter, ii)) 
-
+        do ii = 1, 3
+          dipole(iter, ii) = units_to_atomic(units_out%length, dipole(iter, ii))
+        end do
 
         if (ierr /= 0) then 
           iter = iter - 1 !last iteration is not valid
@@ -175,7 +174,7 @@
       end_iter = iter - 1
 
       write (message(1), '(a)') "Read dipole moment from '"// &
-        trim(io_workpath('td.general/multipoles', default_namespace))//"'."
+        trim(io_workpath('td.general/multipoles', global_namespace))//"'."
       call messages_info(1)
 
       POP_SUB(read_dipole)

@@ -133,18 +133,26 @@ contains
     FLOAT, optional,   intent(in)    :: vtau(:, :)
 
     integer :: i, ispin, ip
-    
+
     PUSH_SUB(potential_interpolation_run_zero_iter)
 
-    forall(i = 1:interpolation_steps, ispin = 1:nspin, ip = 1:np)
-      potential_interpolation%v_old(ip, ispin, i) = vhxc(ip, ispin)
-    end forall
-    
+    do i = 1, interpolation_steps
+      do ispin = 1, nspin
+        do ip = 1, np
+          potential_interpolation%v_old(ip, ispin, i) = vhxc(ip, ispin)
+        end do
+      end do
+    end do
+
    if(present(vtau)) then
-      forall(i = 1:interpolation_steps, ispin = 1:nspin, ip = 1:np)
-        potential_interpolation%vtau_old(ip, ispin, i) = vtau(ip, ispin)
-      end forall
-    end if 
+      do i = 1, interpolation_steps
+        do ispin = 1, nspin
+          do ip = 1, np
+            potential_interpolation%vtau_old(ip, ispin, i) = vtau(ip, ispin)
+          end do
+        end do
+      end do
+    end if
 
     POP_SUB(potential_interpolation_run_zero_iter)
   end subroutine potential_interpolation_run_zero_iter

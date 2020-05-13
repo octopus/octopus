@@ -112,7 +112,7 @@ contains
     if(sys%st%symmetrize_density) call mesh_check_symmetries(sys%gr%mesh, sys%gr%sb)
 
     call v_ks_nullify(sys%ks)
-    call output_init(sys%outp, sys%namespace, sys%gr%sb, sys%st, sys%st%nst, sys%ks, states_are_real(sys%st))
+    call output_init(sys%outp, sys%namespace, sys%gr%sb, sys%st, sys%st%nst, sys%ks)
     call states_elec_densities_init(sys%st, sys%gr, sys%geo)
     call states_elec_exec_init(sys%st, sys%namespace, sys%mc)
     call elf_init(sys%namespace)
@@ -221,7 +221,7 @@ contains
       SAFE_DEALLOCATE_A(copy_occ)
     end if
 
-    call states_elec_fermi(sys%st, sys%namespace, sys%gr%mesh) ! occupations
+    if(calc_eigenval_) call states_elec_fermi(sys%st, sys%namespace, sys%gr%mesh) ! occupations
     call energy_calc_total(sys%namespace, sys%hm, sys%gr, sys%st)
 
     POP_SUB(system_h_setup)

@@ -24,6 +24,14 @@ dist_share_DATA =                                  \
 	01-carbon_hydrogen.test                    \
 	01-carbon_hydrogen.01-gs.inp               \
 	01-carbon_hydrogen.02-td.inp               \
-	01-carbon_hydrogen.03-td_restart.inp
+	01-carbon_hydrogen.03-td_restart.inp       \
+	02-interaction_graph.test                  \
+	02-interaction_graph.01-three_body.inp     \
+	03-propagation_verlet.test                 \
+	03-propagation_verlet.01-two_body.inp      \
+	03-propagation_verlet.02-three_body.inp    \
+	04-propagation_beeman.test                 \
+	04-propagation_beeman.01-two_body.inp      \
+	04-propagation_beeman.02-three_body.inp
 
 CLEANFILES = *~ *.bak

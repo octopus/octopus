@@ -253,7 +253,9 @@ subroutine X(mesh_to_cube)(mesh, mf, cube, cf, local)
 
       ip = mesh%cube_map%map(MCM_POINT, im)
       nn = mesh%cube_map%map(MCM_COUNT, im)
-      forall(ii = 0:nn - 1) cf%X(rs)(ix, iy, iz + ii) = gmf(ip + ii)
+      do ii = 0, nn - 1
+        cf%X(rs)(ix, iy, iz + ii) = gmf(ip + ii)
+      end do
     end do
     !$omp end parallel do
 
@@ -343,7 +345,9 @@ subroutine X(cube_to_mesh) (cube, cf, mesh, mf, local)
       ip = mesh%cube_map%map(MCM_POINT, im)
       nn = mesh%cube_map%map(MCM_COUNT, im)
 
-      forall(ii = 0:nn - 1) gmf(ip + ii) = cf%X(rs)(ix, iy, iz + ii)
+      do ii = 0, nn - 1
+        gmf(ip + ii) = cf%X(rs)(ix, iy, iz + ii)
+      end do
     end do
     !$omp end parallel do
 
@@ -446,15 +450,21 @@ subroutine X(mesh_to_cube_parallel)(mesh, mf, cube, cf, map)
     max_x = cube%rs_istart(1) + cube%rs_n(1)
     max_y = cube%rs_istart(2) + cube%rs_n(2)
     max_z = cube%rs_istart(3) + cube%rs_n(3)
-  
+
     ! Initialize to zero the input matrix
-    forall(iz = 1:cube%rs_n(3), iy = 1:cube%rs_n(2), ix = 1:cube%rs_n(1)) cf%X(rs)(ix, iy, iz) = M_ZERO
+    do iz = 1, cube%rs_n(3)
+      do iy = 1, cube%rs_n(2)
+        do ix = 1, cube%rs_n(1)
+          cf%X(rs)(ix, iy, iz) = M_ZERO
+        end do
+      end do
+    end do
 
     ! Do the actual transform, only for the output values
     do im = 1, mesh%cube_map%nmap
       ip = mesh%cube_map%map(MCM_POINT, im)
       nn = mesh%cube_map%map(MCM_COUNT, im)
-    
+
       ix = mesh%cube_map%map(1, im) + cube%center(1)
       if (ix >= min_x .and. ix < max_x) then
         iy = mesh%cube_map%map(2, im) + cube%center(2)
@@ -537,7 +547,9 @@ subroutine X(cube_to_mesh_parallel) (cube, cf, mesh, mf, map)
 
       ixyz(1:3) = mesh%cube_map%map(1:3, im) + cube%center(1:3)
 
-      forall(ii = 0:nn - 1) mf(ip + ii) = gcf(ixyz(1), ixyz(2), ixyz(3) + ii)
+      do ii = 0, nn - 1
+        mf(ip + ii) = gcf(ixyz(1), ixyz(2), ixyz(3) + ii)
+      end do
     end do
 
     SAFE_DEALLOCATE_A(gcf)

@@ -147,7 +147,6 @@ module td_write_oct_m
     type(states_elec_t) :: gs_st    
     integer        :: n_excited_states  !< number of excited states onto which the projections are calculated.
     type(excited_states_t), pointer :: excited_st(:) !< The excited states.
-    type(partial_charges_t) :: partial_charges
     integer :: compute_interval     !< Compute every compute_interval
   end type td_write_t
 
@@ -317,7 +316,7 @@ contains
 
     call parse_variable(namespace, 'TDOutput', default, flags)
 
-    if(.not.varinfo_valid_option('TDOutput', flags, is_flag = .true.)) call messages_input_error('TDOutput')
+    if(.not.varinfo_valid_option('TDOutput', flags, is_flag = .true.)) call messages_input_error(namespace, 'TDOutput')
 
     do iout = 1, OUT_MAX
       writ%out(iout)%write = (bitand(flags, 2**(iout - 1)) /= 0)
@@ -623,17 +622,19 @@ contains
           trim(io_workpath("td.general/velocity", namespace)))
 
       if(writ%out(OUT_LASER)%write) then
-        if(iter .eq. 0) then
-          call write_iter_init(writ%out(OUT_LASER)%handle, first, &
-            units_from_atomic(units_out%time, dt),  &
+        ! The laser file is written for the full propagation in one go, so that
+        ! the user can check that the laser is correct and as intended before letting
+        ! the code run for a possibly large period of time. This is done even after
+        ! a restart, so that it takes into account any changes to max_iter.
+        call io_rm("td.general/laser", namespace=namespace)
+        call write_iter_init(writ%out(OUT_LASER)%handle, 0, &
+          units_from_atomic(units_out%time, dt),  &
           trim(io_workpath("td.general/laser", namespace)))
-          do ii = 0, max_iter
-            call td_write_laser(writ%out(OUT_LASER)%handle, gr, hm, dt, ii)
-          end do
-          call write_iter_end(writ%out(OUT_LASER)%handle)
-        end if
+        do ii = 0, max_iter
+          call td_write_laser(writ%out(OUT_LASER)%handle, gr, hm, dt, ii)
+        end do
+        call write_iter_end(writ%out(OUT_LASER)%handle)
       end if
-
 
       if(writ%out(OUT_ENERGY)%write) &
         call write_iter_init(writ%out(OUT_ENERGY)%handle, first, &
@@ -705,10 +706,6 @@ contains
       call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval=.false., time = iter*dt)
     end if
 
-    if(writ%out(OUT_PARTIAL_CHARGES)%write) then
-      call partial_charges_init(writ%partial_charges)
-    end if
-
     if(writ%out(OUT_N_EX)%write .and. writ%compute_interval > 0) then
       call io_mkdir(outp%iter_dir, namespace)
     end if
@@ -732,8 +729,9 @@ contains
     if(hm%lda_u_level == DFT_U_ACBN0) default = default + 2**(OUT_DFTU_EFFECTIVE_U - 1)
     call parse_variable(namespace, 'TDOutputDFTU', default, flags)
 
-    if(.not.varinfo_valid_option('TDOutputDFTU', flags, is_flag = .true.)) &
-      call messages_input_error('TDOutputDFTU')
+    if(.not.varinfo_valid_option('TDOutputDFTU', flags, is_flag = .true.)) then
+      call messages_input_error(namespace, 'TDOutputDFTU')
+    end if
 
     do iout = 1, OUT_DFTU_MAX
       writ%out_dftu(iout)%write = (iand(flags, 2**(iout - 1)) /= 0)
@@ -779,10 +777,6 @@ contains
     if(writ%out(OUT_PROJ)%write.or.writ%out(OUT_POPULATIONS)%write &
        .or. writ%out(OUT_N_EX)%write) then
       call states_elec_end(writ%gs_st)
-    end if
-
-    if(writ%out(OUT_PARTIAL_CHARGES)%write) then
-      call partial_charges_end(writ%partial_charges)
     end if
 
     POP_SUB(td_write_end)
@@ -832,11 +826,11 @@ contains
     end if
 
     if (writ%out(OUT_FLOQUET)%write) then
-      call td_write_floquet(writ%out(OUT_FLOQUET)%handle, namespace, hm, gr, st, iter)
+      call td_write_floquet(namespace, hm, gr, st, iter)
     end if
 
     if(writ%out(OUT_KP_PROJ)%write) &
-      call td_write_proj_kp(writ%out(OUT_KP_PROJ)%handle,hm, gr, st, writ%gs_st, namespace, iter)
+      call td_write_proj_kp(gr, st, writ%gs_st, namespace, iter)
 
     if(writ%out(OUT_COORDS)%write) &
       call td_write_coordinates(writ%out(OUT_COORDS)%handle, gr, geo, iter)
@@ -884,11 +878,11 @@ contains
     end if
     
     if(writ%out(OUT_TOTAL_HEAT_CURRENT)%write) then
-      call td_write_total_heat_current(writ%out(OUT_TOTAL_HEAT_CURRENT)%handle, hm, gr, geo, st, iter)
+      call td_write_total_heat_current(writ%out(OUT_TOTAL_HEAT_CURRENT)%handle, hm, gr, st, iter)
     end if
     
     if(writ%out(OUT_PARTIAL_CHARGES)%write) then
-      call td_write_partial_charges(writ%out(OUT_PARTIAL_CHARGES)%handle, namespace, writ%partial_charges, gr%fine%mesh, st, &
+      call td_write_partial_charges(writ%out(OUT_PARTIAL_CHARGES)%handle, namespace, gr%fine%mesh, st, &
         geo, iter)
     end if
     
@@ -898,8 +892,9 @@ contains
     end if
 
     !LDA+U outputs
-    if(writ%out_dftu(OUT_DFTU_EFFECTIVE_U)%write) &
+    if(writ%out_dftu(OUT_DFTU_EFFECTIVE_U)%write) then
       call td_write_effective_u(writ%out_dftu(OUT_DFTU_EFFECTIVE_U)%handle, hm%lda_u, iter)
+    end if
 
     call profiling_out(prof)
     POP_SUB(td_write_iter)
@@ -907,9 +902,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_data(writ, dt)
+  subroutine td_write_data(writ)
     type(td_write_t),     intent(inout) :: writ
-    FLOAT, optional,      intent(in)    :: dt
 
     integer :: iout
     type(profile_t), save :: prof
@@ -932,8 +926,7 @@ contains
   end subroutine td_write_data
 
   ! ---------------------------------------------------------
-  subroutine td_write_output(writ, namespace, gr, st, hm, ks, outp, geo, iter, dt)
-    type(td_write_t),         intent(inout) :: writ
+  subroutine td_write_output(namespace, gr, st, hm, ks, outp, geo, iter, dt)
     type(namespace_t),        intent(in)    :: namespace
     type(grid_t),             intent(in)    :: gr
     type(states_elec_t),      intent(inout) :: st
@@ -1089,7 +1082,7 @@ contains
     SAFE_ALLOCATE(tm(1:6,1:kick%nqvec))
 
     do iq = 1, kick%nqvec
-      call magnetic_total_magnetization(gr%mesh, st, gr%der%boundaries, kick%qvector(:,iq), tm(1:6,iq))
+      call magnetic_total_magnetization(gr%mesh, st, kick%qvector(:,iq), tm(1:6,iq))
     end do
 
     if(mpi_grp_is_root(mpi_world)) then ! only first node outputs
@@ -1383,9 +1376,9 @@ contains
       SAFE_ALLOCATE(integrand(1:gr%mesh%np))
       integrand = M_ZERO
       do is = 1, st%d%nspin
-        forall(ip = 1:gr%mesh%np)
+        do ip = 1, gr%mesh%np
           integrand(ip) = integrand(ip) + st%rho(ip, is) * exp(-M_zI*sum(gr%mesh%x(ip,:)*kick%qvector(:,1)))
-        end forall
+        end do
       end do
       ftchd = zmf_integrate(gr%mesh, integrand)
       SAFE_DEALLOCATE_A(integrand)
@@ -2203,21 +2196,21 @@ contains
 
     ! this complicated stuff here is a workaround for a PGI compiler bug in versions before 9.0-3
     call gauge_field_get_vec_pot(hm%ep%gfield, temp)
-    forall(idir = 1:gr%mesh%sb%dim)
+    do idir = 1, gr%mesh%sb%dim
       temp(idir) = units_from_atomic(units_out%energy, temp(idir))
-    end forall
+    end do
     call write_iter_double(out_gauge, temp, gr%mesh%sb%dim)
 
     call gauge_field_get_vec_pot_vel(hm%ep%gfield, temp)
-    forall(idir = 1:gr%mesh%sb%dim)
+    do idir = 1, gr%mesh%sb%dim
       temp(idir) = units_from_atomic(units_out%energy / units_out%time, temp(idir))
-    end forall
+    end do
     call write_iter_double(out_gauge, temp, gr%mesh%sb%dim)
 
     call gauge_field_get_vec_pot_acc(hm%ep%gfield, temp)
-    forall(idir = 1:gr%mesh%sb%dim)
+    do idir = 1, gr%mesh%sb%dim
       temp(idir) = units_from_atomic(units_out%energy / units_out%time**2, temp(idir))
-    end forall
+    end do
     call write_iter_double(out_gauge, temp, gr%mesh%sb%dim)
 
     call write_iter_nl(out_gauge)
@@ -2557,9 +2550,7 @@ contains
   end subroutine calc_projections
 
 
-  subroutine td_write_proj_kp(out_proj_kp, hm,gr, st, gs_st, namespace, iter)
-    type(c_ptr),         intent(inout) :: out_proj_kp
-    type(hamiltonian_elec_t), intent(inout) :: hm
+  subroutine td_write_proj_kp(gr, st, gs_st, namespace, iter)
     type(grid_t),        intent(in)    :: gr
     type(states_elec_t), intent(in)    :: st
     type(states_elec_t), intent(inout) :: gs_st
@@ -2610,11 +2601,11 @@ contains
       do ist=gs_st%st_start,gs_st%st_end
         if(state_kpt_is_local(gs_st, ist, ik)) then
           call states_elec_get_state(st, mesh, ist, ik,temp_state )
-          do idim=1,gs_st%d%dim
+          do idim = 1,gs_st%d%dim
             psi(ist,idim,1:mesh%np) =  temp_state(1:mesh%np,idim)
           end do
           call states_elec_get_state(gs_st, mesh, ist, ik,temp_state )
-          do idim=1,gs_st%d%dim
+          do idim = 1,gs_st%d%dim
             gs_psi(ist,idim,1:mesh%np) =  temp_state(1:mesh%np,idim)
           end do
         end if
@@ -2641,7 +2632,7 @@ contains
 
       ! write to file 
       if(mpi_world%rank==0) then
-        do ist=1,gs_st%nst
+        do ist = 1,gs_st%nst
           do jst=1,gs_st%nst
             write(file,'(I3,1x,I3,1x,e12.6,1x,e12.6,2x)') ist, jst, proj(ist,jst)
           end do
@@ -2649,20 +2640,18 @@ contains
         call io_close(file)
       end if
 
-  end do! ik            
+    end do! ik
 
-  SAFE_DEALLOCATE_A(proj)
-  SAFE_DEALLOCATE_A(psi)
-  SAFE_DEALLOCATE_A(gs_psi)
-  SAFE_DEALLOCATE_A(temp_state)
+    SAFE_DEALLOCATE_A(proj)
+    SAFE_DEALLOCATE_A(psi)
+    SAFE_DEALLOCATE_A(gs_psi)
+    SAFE_DEALLOCATE_A(temp_state)
      
-  POP_SUB(td_write_proj_kp)
-
+    POP_SUB(td_write_proj_kp)
   end subroutine td_write_proj_kp
 
   !---------------------------------------
-  subroutine td_write_floquet(out_floquet, namespace, hm, gr, st, iter)
-    type(c_ptr),              intent(inout) :: out_floquet
+  subroutine td_write_floquet(namespace, hm, gr, st, iter)
     type(namespace_t),        intent(in)    :: namespace
     type(hamiltonian_elec_t), intent(inout) :: hm
     type(grid_t),             intent(in)    :: gr
@@ -2787,11 +2776,11 @@ contains
         do ist=st%st_start,st%st_end
           if(state_kpt_is_local(st, ist, ik)) then
             call states_elec_get_state(st, mesh, ist, ik,temp_state1 )
-            do idim=1,st%d%dim
+            do idim = 1,st%d%dim
               psi(ist,idim,1:mesh%np) =  temp_state1(1:mesh%np,idim)
             end do
             call states_elec_get_state(hm_st, mesh, ist, ik,temp_state1 )
-            do idim=1,st%d%dim
+            do idim = 1,st%d%dim
               hpsi(ist,idim,1:mesh%np) =temp_state1(1:mesh%np,idim)
             end do
           end if
@@ -2824,7 +2813,7 @@ contains
                 HFloquet(ik_count,ii+1:ii+nst,jj+1:jj+nst) + hmss(1:nst,1:nst)*exp(-(in-im)*M_zI*omega*it*dt)
               ! diagonal term
               if(in==im) then
-                 do ist=1,nst
+                 do ist = 1,nst
                     HFloquet(ik_count,ii+ist,ii+ist) = HFloquet(ik_count,ii+ist,ii+ist) + in*omega
                  end do
               end if
@@ -2883,7 +2872,7 @@ contains
       file=987254
       file = io_open(filename, namespace, action = 'write')
       do ik=1,nik
-        do ist=1,lim_nst
+        do ist = 1,lim_nst
           write(file,'(e12.6, 1x)',advance='no') bands(ik,ist)
         end do
         write(file,'(1x)')
@@ -2909,7 +2898,7 @@ contains
         filename='trivial_floquet_bands'
         file = io_open(filename, namespace, action = 'write')
         do ik=1,nik
-          do ist=1,lim_nst
+          do ist = 1,lim_nst
             write(file,'(e12.6, 1x)',advance='no') bands(ik,ist)
           end do
           write(file,'(1x)')
@@ -3028,13 +3017,12 @@ contains
 
   ! ---------------------------------------------------------
   
-  subroutine td_write_total_heat_current(write_obj, hm, gr, geo, st, iter)
-    type(c_ptr),         intent(inout) :: write_obj
+  subroutine td_write_total_heat_current(write_obj, hm, gr, st, iter)
+    type(c_ptr),              intent(inout) :: write_obj
     type(hamiltonian_elec_t), intent(inout) :: hm
-    type(grid_t),        intent(in)    :: gr
-    type(geometry_t),    intent(in)    :: geo
+    type(grid_t),             intent(in)    :: gr
     type(states_elec_t),      intent(in)    :: st
-    integer,             intent(in)    :: iter
+    integer,                  intent(in)    :: iter
 
     integer :: idir, ispin
     character(len=50) :: aux
@@ -3084,10 +3072,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_partial_charges(out_partial_charges, namespace, partial_charges, mesh, st, geo, iter)
+  subroutine td_write_partial_charges(out_partial_charges, namespace, mesh, st, geo, iter)
     type(c_ptr),             intent(inout) :: out_partial_charges
     type(namespace_t),       intent(in)    :: namespace
-    type(partial_charges_t), intent(in)    :: partial_charges
     type(mesh_t),            intent(in)    :: mesh
     type(states_elec_t),     intent(in)    :: st
     type(geometry_t),        intent(in)    :: geo
@@ -3101,7 +3088,7 @@ contains
 
     SAFE_ALLOCATE(hirshfeld_charges(1:geo%natoms))
 
-    call partial_charges_calculate(partial_charges, namespace, mesh, st, geo, hirshfeld_charges = hirshfeld_charges)
+    call partial_charges_calculate(namespace, mesh, st, geo, hirshfeld_charges = hirshfeld_charges)
         
     if(mpi_grp_is_root(mpi_world)) then
 
@@ -3267,7 +3254,7 @@ contains
     default = 2**(OUT_MAXWELL_ENERGY - 1)
     call parse_variable(namespace, 'MaxwellTDOutput', default, flags)
 
-    if(.not.varinfo_valid_option('MaxwellTDOutput', flags, is_flag = .true.)) call messages_input_error('MaxwellTDOutput')
+    if(.not.varinfo_valid_option('MaxwellTDOutput', flags, is_flag = .true.)) call messages_input_error(namespace, 'MaxwellTDOutput')
 
     do iout = 1, 5
       out_flag(iout) = (iand(flags, 2**(iout - 1)) /= 0)

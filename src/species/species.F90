@@ -640,8 +640,9 @@ contains
     call read_from_set(spec, read_data)
 
    if(read_data == 0) then
-      message(1) = 'Species '//trim(spec%label)//' not found.'
-      call messages_fatal(1, namespace=namespace)
+      call messages_write( 'Species '//trim(spec%label)//' not found in default pseudopotential set.', new_line=.true. )
+      call messages_write('( '//trim(get_set_directory(default_pseudopotential_set_id))//' )')
+      call messages_fatal(namespace=namespace)
     end if
 
     POP_SUB(species_read)
@@ -852,7 +853,7 @@ contains
         call messages_info(3)
       end if
     case default
-      call messages_input_error('Species', 'Unknown species type')
+      call messages_input_error(namespace, 'Species', 'Unknown species type')
     end select
 
     if(.not. species_is_ps(spec)) then
@@ -1365,7 +1366,7 @@ contains
       gylm = M_ZERO
       call grylmr(x(1), x(2), x(3), l, lm, ylm, grylm = gylm)
       uv = uvr0*ylm
-      if(r >= r_small) then
+      if(r >= R_SMALL) then
         duv(1:3) = duvr0*ylm*x(1:3)/r + uvr0*gylm(1:3)
       else
         if(l == 1) then
@@ -1744,7 +1745,7 @@ contains
     case(SPECIES_PSPIO) ! a pseudopotential file to be handled by the pspio library
 
     case default
-      call messages_input_error('Species', "Unknown type for species '"//trim(spec%label)//"'")
+      call messages_input_error(namespace, 'Species', "Unknown type for species '"//trim(spec%label)//"'")
     end select
 
     spec%mass = -CNST(1.0)
@@ -1753,7 +1754,7 @@ contains
     spec%sc_alpha = -CNST(1.0)
     spec%jthick = -CNST(1.0)
     
-    call iihash_init(read_parameters, 11)
+    call iihash_init(read_parameters)
     
     icol = read_data
     do
@@ -1776,12 +1777,12 @@ contains
         call parse_block_integer(blk, row, icol + 1, spec%user_lmax)
 
         if(spec%type /= SPECIES_PSEUDO .and. spec%type /= SPECIES_PSPIO) then
-          call messages_input_error('Species', &
+          call messages_input_error(namespace, 'Species', &
             "The 'lmax' parameter in species "//trim(spec%label)//" can only be used with pseudopotential species")
         end if
         
         if(spec%user_lmax < 0) then
-          call messages_input_error('Species', &
+          call messages_input_error(namespace, 'Species', &
                                     "The 'lmax' parameter in species "//trim(spec%label)//" cannot be negative")
         end if
 
@@ -1790,12 +1791,12 @@ contains
         call parse_block_integer(blk, row, icol + 1, spec%user_llocal)
 
         if(spec%type /= SPECIES_PSEUDO .and. spec%type /= SPECIES_PSPIO) then
-          call messages_input_error('Species', &
+          call messages_input_error(namespace, 'Species', &
             "The 'lloc' parameter in species "//trim(spec%label)//" can only be used with pseudopotential species")
         end if
 
         if(spec%user_llocal < 0) then
-          call messages_input_error('Species', &
+          call messages_input_error(namespace, 'Species', &
                                     "The 'lloc' parameter in species "//trim(spec%label)//" cannot be negative")
         end if
 
@@ -1804,12 +1805,12 @@ contains
         call parse_block_integer(blk, row, icol + 1, spec%hubbard_l)
 
         if(spec%type /= SPECIES_PSEUDO .and. spec%type /= SPECIES_PSPIO) then
-          call messages_input_error('Species', &
+          call messages_input_error(namespace, 'Species', &
             "The 'hubbard_l' parameter in species "//trim(spec%label)//" can only be used with pseudopotential species")
         end if
 
         if(spec%hubbard_l < 0) then
-          call messages_input_error('Species', &
+          call messages_input_error(namespace, 'Species', &
                                     "The 'hubbard_l' parameter in species "//trim(spec%label)//" cannot be negative")
         end if
 
@@ -1826,7 +1827,7 @@ contains
         call parse_block_float(blk, row, icol + 1, spec%hubbard_j)
 
         if(abs(spec%hubbard_j-spec%hubbard_l) /= M_HALF) then
-          call messages_input_error('Species', "The 'hubbard_j' parameter in species "// &
+          call messages_input_error(namespace, 'Species', "The 'hubbard_j' parameter in species "// &
                                     trim(spec%label)//" can only be hubbard_l +/- 1/2")
         end if
 
@@ -1844,17 +1845,17 @@ contains
         call check_duplication(OPTION__SPECIES__JELLIUM_RADIUS)
         call parse_block_float(blk, row, icol + 1, spec%jradius)
         spec%jradius = units_to_atomic(units_inp%length, spec%jradius)
-        if(spec%jradius <= M_ZERO) call messages_input_error('Species', 'jellium_radius must be positive')
+        if(spec%jradius <= M_ZERO) call messages_input_error(namespace, 'Species', 'jellium_radius must be positive')
         if(spec%type /= SPECIES_JELLIUM) then
-          call messages_input_error('Species', 'jellium_radius can only be used with species_jellium')
+          call messages_input_error(namespace, 'Species', 'jellium_radius can only be used with species_jellium')
         end if
         
       case(OPTION__SPECIES__GAUSSIAN_WIDTH)
         call check_duplication(OPTION__SPECIES__GAUSSIAN_WIDTH)
         call parse_block_float(blk, row, icol + 1, spec%sigma)
-        if(spec%sigma <= M_ZERO) call messages_input_error('Species', 'gaussian_width must be positive')
+        if(spec%sigma <= M_ZERO) call messages_input_error(namespace, 'Species', 'gaussian_width must be positive')
         if(spec%type /= SPECIES_FULL_GAUSSIAN) then
-          call messages_input_error('Species', 'gaussian_width can only be used with species_full_gaussian')
+          call messages_input_error(namespace, 'Species', 'gaussian_width can only be used with species_full_gaussian')
         end if
 
       case(OPTION__SPECIES__SOFTENING)
@@ -1862,7 +1863,7 @@ contains
         call parse_block_float(blk, row, icol + 1, spec%sc_alpha)
         spec%sc_alpha = units_to_atomic(units_inp%length, spec%sc_alpha)**2
         if(spec%type /= SPECIES_SOFT_COULOMB) then
-          call messages_input_error('Species', 'softening can only be used with species_soft_coulomb')
+          call messages_input_error(namespace, 'Species', 'softening can only be used with species_soft_coulomb')
         end if
 
       case(OPTION__SPECIES__FILE)
@@ -1886,7 +1887,7 @@ contains
         call conv_to_C_string(spec%potential_formula)
 
         if(spec%type /= SPECIES_USDEF) then
-          call messages_input_error('Species', 'potential_formula can only be used with species_user_defined')
+          call messages_input_error(namespace, 'Species', 'potential_formula can only be used with species_user_defined')
         end if
 
       case(OPTION__SPECIES__VOLUME)
@@ -1895,7 +1896,7 @@ contains
         call conv_to_C_string(spec%density_formula)
 
         if(spec%type /= SPECIES_JELLIUM_CHARGE_DENSITY) then
-          call messages_input_error('Species', 'volume can only be used with species_jellium_charge_density')
+          call messages_input_error(namespace, 'Species', 'volume can only be used with species_jellium_charge_density')
         end if
 
       case(OPTION__SPECIES__DENSITY_FORMULA)
@@ -1904,20 +1905,20 @@ contains
         call conv_to_C_string(spec%density_formula)
               
         if(spec%type /= SPECIES_CHARGE_DENSITY) then
-          call messages_input_error('Species', 'density_formula can only be used with species_charge_density')
+          call messages_input_error(namespace, 'Species', 'density_formula can only be used with species_charge_density')
         end if
 
       case(OPTION__SPECIES__THICKNESS)
         call check_duplication(OPTION__SPECIES__THICKNESS)
         call parse_block_float(blk, row, icol + 1, spec%jthick) ! thickness of the jellium slab
 
-        if(spec%jthick <= M_ZERO) call messages_input_error('Species', &
+        if(spec%jthick <= M_ZERO) call messages_input_error(namespace, 'Species', &
           'the value of the thickness parameter in species '//trim(spec%label)//' must be positive.')
 
         spec%jthick = units_to_atomic(units_inp%length, spec%jthick) ! units conversion
 
         if(spec%type /= SPECIES_JELLIUM_SLAB) then
-          call messages_input_error('Species', 'thickness can only be used with species_jellium_slab')
+          call messages_input_error(namespace, 'Species', 'thickness can only be used with species_jellium_slab')
         end if
         
       case(OPTION__SPECIES__VDW_RADIUS)
@@ -1925,7 +1926,7 @@ contains
         call parse_block_float(blk, row, icol + 1, spec%vdw_radius, unit = units_inp%length)
 
       case default
-        call messages_input_error('Species', "Unknown parameter in species '"//trim(spec%label)//"'")
+        call messages_input_error(namespace, 'Species', "Unknown parameter in species '"//trim(spec%label)//"'")
         
       end select
 
@@ -1934,39 +1935,39 @@ contains
     ! CHECK THAT WHAT WE PARSED MAKES SENSE
     
     if(spec%type == SPECIES_SOFT_COULOMB .and. .not. parameter_defined(OPTION__SPECIES__SOFTENING)) then
-      call messages_input_error('Species', &
+      call messages_input_error(namespace, 'Species', &
         "The 'softening' parameter is missing for species "//trim(spec%label))
     end if
 
     if(spec%type == SPECIES_USDEF .and. .not. parameter_defined(OPTION__SPECIES__POTENTIAL_FORMULA)) then
-      call messages_input_error('Species', &
+      call messages_input_error(namespace, 'Species', &
         "The 'potential_formula' parameter is missing for species '"//trim(spec%label)//"'")
     end if
 
     if(spec%type == SPECIES_CHARGE_DENSITY .and. .not. parameter_defined(OPTION__SPECIES__DENSITY_FORMULA)) then
-      call messages_input_error('Species', &
+      call messages_input_error(namespace, 'Species', &
         "The 'density_formula' parameter is missing for species '"//trim(spec%label)//"'")
     end if
     
     if(spec%type == SPECIES_FROM_FILE &
       .and. .not. (parameter_defined(OPTION__SPECIES__FILE) .or. parameter_defined(OPTION__SPECIES__DB_FILE))) then
-      call messages_input_error('Species', &
+      call messages_input_error(namespace, 'Species', &
         "The 'file' or 'db_file' parameter is missing for species '"//trim(spec%label)//"'")
     end if
 
     if(spec%type == SPECIES_JELLIUM_SLAB .and. .not. parameter_defined(OPTION__SPECIES__THICKNESS)) then
-      call messages_input_error('Species', &
+      call messages_input_error(namespace, 'Species', &
         "The 'thickness' parameter is missing for species '"//trim(spec%label)//"'")
     end if
 
     if(spec%type == SPECIES_JELLIUM_CHARGE_DENSITY .and. .not. parameter_defined(OPTION__SPECIES__VOLUME)) then
-      call messages_input_error('Species', &
+      call messages_input_error(namespace, 'Species', &
         "The 'volume' parameter is missing for species '"//trim(spec%label)//"'")
     end if
 
     if(parameter_defined(OPTION__SPECIES__LMAX) .and. parameter_defined(OPTION__SPECIES__LLOC)) then
       if(spec%user_llocal > spec%user_lmax) then
-        call messages_input_error('Species', &
+        call messages_input_error(namespace, 'Species', &
           "the 'lloc' parameter cannot be larger than the 'lmax' parameter in species "//trim(spec%label))
       end if
     end if
@@ -1987,7 +1988,9 @@ contains
         call read_from_set(spec, set_read_data)
 
         if(set_read_data == 0) then
-          call messages_write('Species '//trim(spec%label)//' is not defined in the requested pseudopotential set.')
+          call messages_write('Species '//trim(spec%label)//' is not defined in the requested pseudopotential set.', &
+                              new_line=.true.)
+          call messages_write('( '//trim(get_set_directory(spec%pseudopotential_set_id))//' )')
           call messages_fatal(namespace=namespace)
         end if
         
@@ -2053,7 +2056,7 @@ contains
           spec%type == SPECIES_FROM_FILE) then
           spec%z_val = CNST(0.0)
         else
-          call messages_input_error('Species', &
+          call messages_input_error(namespace, 'Species', &
             "The 'valence' parameter is missing for species '"//trim(spec%label)//"'")
         end if
       end if
@@ -2086,7 +2089,7 @@ contains
       PUSH_SUB(read_from_block.check_duplication)
 
       if(parameter_defined(param)) then
-        call messages_input_error('Species', "Duplicated parameter in species '"//trim(spec%label)//"'")
+        call messages_input_error(namespace, 'Species', "Duplicated parameter in species '"//trim(spec%label)//"'")
       end if
 
       call iihash_insert(read_parameters, int(-param), 1)

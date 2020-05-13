@@ -68,6 +68,32 @@ __kernel void X(xpay_vec)(const int np,
 
 }
 
+/* The X(batch_axpy_function) kernels should be called on a global grid of (np, ndim, 1) */
+
+__kernel void X(batch_axpy_function)(
+    const int np,  //< number of mesh points
+    const int nst, //< number of states
+    const int ndim, //< number of spin components
+    __global const rtype * __restrict xx, const int ldxx, //< batch of states
+    __global const rtype * __restrict aa,                 //< buffer of weights
+    __global rtype * __restrict yy, const int ldyy        //< single state accumulating the result
+) {
+
+  int ip   = get_global_id(0);
+  int idim = get_global_id(1);
+
+  rtype  tmp = 0.0;
+
+  if(ip   >= np) return;
+  if(idim >= ndim) return;
+
+  for(int ist=0; ist<nst; ist++) {
+     tmp += MUL(aa[ist], xx[idim + ndim*ist + (ip<<ldxx)]);
+  }
+  yy[ip + (idim<<ldyy)] += tmp;
+}
+
+
 /*
  Local Variables:
  mode: c

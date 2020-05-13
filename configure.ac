@@ -151,17 +151,6 @@ fi
 
 AM_CONDITIONAL(COMPILE_OPENCL, test x"${enable_opencl}" == x"yes")
 
-dnl workaround for xlf compilers
-ac_enable_f90_forall=yes
-AC_ARG_ENABLE(f90-forall, AS_HELP_STRING([--disable-f90-forall], [Workaround for buggy xlf compilers]), 
-        [ac_enable_f90_forall=${enableval}])
-if test x"${ac_enable_f90_forall}" = x"no"; then
-  F90_FORALL=no
-else
-  F90_FORALL=yes
-fi
-AC_SUBST(F90_FORALL)
-  
 dnl check for C MPI
 if test x"$enable_mpi" == x"yes"; then
   AC_CHECK_HEADER(mpi.h,,AC_MSG_ERROR([cannot find mpi.h]))

@@ -495,12 +495,11 @@ contains
  
 
   ! ---------------------------------------------------------
-  subroutine lda_u_dump(restart, this, st, ierr, iter)
+  subroutine lda_u_dump(restart, this, st, ierr)
     type(restart_t),      intent(in)  :: restart
     type(lda_u_t),        intent(in)  :: this
     type(states_elec_t),  intent(in)  :: st
     integer,              intent(out) :: ierr
-    integer, optional,    intent(in)  :: iter
 
     integer :: err, occsize, ios, ncount
     FLOAT, allocatable :: Ueff(:), docc(:), Veff(:)

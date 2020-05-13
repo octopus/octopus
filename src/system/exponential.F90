@@ -147,10 +147,10 @@ contains
       !% wrong.
       !%End
       call parse_variable(namespace, 'TDLanczosTol', CNST(1e-5), te%lanczos_tol)
-      if (te%lanczos_tol <= M_ZERO) call messages_input_error('TDLanczosTol')
+      if (te%lanczos_tol <= M_ZERO) call messages_input_error(namespace, 'TDLanczosTol')
 
     case default
-      call messages_input_error('TDExponentialMethod')
+      call messages_input_error(namespace, 'TDExponentialMethod')
     end select
     call messages_print_var_option(stdout, 'TDExponentialMethod', te%exp_method)
 
@@ -165,7 +165,7 @@ contains
       !% it is the Lanczos-subspace dimension.
       !%End
       call parse_variable(namespace, 'TDExpOrder', DEFAULT__TDEXPORDER, te%exp_order)
-      if (te%exp_order < 2) call messages_input_error('TDExpOrder')
+      if (te%exp_order < 2) call messages_input_error(namespace, 'TDExpOrder')
 
     end if
 
@@ -266,7 +266,6 @@ contains
 
     phase_correction = .false.
     if(associated(hm%hm_base%phase)) phase_correction = .true.
-    if(accel_is_enabled()) phase_correction = .false.
 
     ! If we want to use imaginary time, timestep = i*deltat
     ! Otherwise, timestep is simply equal to deltat.

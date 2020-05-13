@@ -1284,10 +1284,9 @@ contains
   ! ---------------------------------------------------------
   ! This is needed as for the generalized Bloch theorem we need to label 
   ! the states from the expectation value of Sz computed from the GS.
-  subroutine states_elec_dump_spin(restart, st, gr, ierr)
+  subroutine states_elec_dump_spin(restart, st, ierr)
     type(restart_t),      intent(in)  :: restart
     type(states_elec_t),  intent(in)  :: st
-    type(grid_t),         intent(in)  :: gr
     integer,              intent(out) :: ierr
 
     integer :: iunit_spin
@@ -1342,10 +1341,9 @@ contains
   !! <0 => Fatal error, or nothing read
   !! =0 => read all wavefunctions
   !! >0 => could only read ierr wavefunctions
-  subroutine states_elec_load_spin(restart, st, gr, ierr)
+  subroutine states_elec_load_spin(restart, st, ierr)
     type(restart_t),            intent(in)    :: restart
     type(states_elec_t),        intent(inout) :: st
-    type(grid_t),               intent(in)    :: gr
     integer,                    intent(out)   :: ierr
 
     integer              :: spin_file, err, ik, ist

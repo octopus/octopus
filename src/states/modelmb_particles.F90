@@ -229,11 +229,11 @@ contains
       
       ncols = parse_block_cols(blk, 0)
       if(ncols /= 5 ) then
-        call messages_input_error("DescribeParticlesModelmb")
+        call messages_input_error(namespace, "DescribeParticlesModelmb")
       end if
       nline = parse_block_n(blk)
       if (nline /= this%nparticle) then
-        call messages_input_error("DescribeParticlesModelmb")
+        call messages_input_error(namespace, "DescribeParticlesModelmb")
       end if
       
       do ipart = 1, this%nparticle

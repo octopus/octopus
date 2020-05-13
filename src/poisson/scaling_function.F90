@@ -130,59 +130,6 @@ contains
   end subroutine scf_recursion
   !!***
 
-  !!****h* BigDFT/for_trans_8
-  !! NAME
-  !!   for_trans_8
-  !!
-  !! FUNCTION
-  !!   forward wavelet transform
-  !!   nd: length of data set
-  !!   nt length of data in data set to be transformed
-  !!   m filter length (m has to be even!)
-  !!   x input data, y output data
-  !!
-  !! SOURCE
-  !!
-  subroutine for_trans_8(nd,nt,x,y)
-    integer, intent(in) :: nd,nt
-    real(kind=8), intent(in) :: x(0:nd-1)
-    real(kind=8), intent(out) :: y(0:nd-1)
-
-    !Local variables
-    integer :: i,j,ind
-
-#include "lazy_8_inc.F90"
-
-    do i=0,nt/2-1
-      y(     i)=0.d0
-      y(nt/2+i)=0.d0
-
-      do j=-m+1,m
-
-        ! periodically wrap index if necessary
-        ind=j+2*i
-        loop99: do
-          if (ind < 0) then 
-            ind=ind+nt
-            cycle loop99
-          end if
-          if (ind >= nt) then 
-            ind=ind-nt
-            cycle loop99
-          end if
-          exit loop99
-        end do loop99
-
-        y(     i)=y(     i)+cht(j)*x(ind)
-        y(nt/2+i)=y(nt/2+i)+cgt(j)*x(ind)
-      end do
-
-    end do
-
-  end subroutine for_trans_8
-  !!***
-
-
   !!****h* BigDFT/back_trans_8
   !! NAME
   !!   back_trans_8

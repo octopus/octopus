@@ -220,7 +220,7 @@ contains
     ! the user knows what he wants, give her that
     if(parse_is_defined(namespace, 'TheoryLevel')) then
       call parse_variable(namespace, 'TheoryLevel', KOHN_SHAM_DFT, ks%theory_level)
-      if(.not.varinfo_valid_option('TheoryLevel', ks%theory_level)) call messages_input_error('TheoryLevel')
+      if(.not.varinfo_valid_option('TheoryLevel', ks%theory_level)) call messages_input_error(namespace, 'TheoryLevel')
 
       parsed_theory_level = .true.
     end if
@@ -336,7 +336,7 @@ contains
 
       ! In principle we do not need to parse. However we do it for consistency
       call parse_variable(namespace, 'TheoryLevel', default, ks%theory_level)
-      if(.not.varinfo_valid_option('TheoryLevel', ks%theory_level)) call messages_input_error('TheoryLevel')
+      if(.not.varinfo_valid_option('TheoryLevel', ks%theory_level)) call messages_input_error(namespace, 'TheoryLevel')
      
     end if
 
@@ -384,7 +384,7 @@ contains
         !% C. Legrand <i>et al.</i>, <i>J. Phys. B</i> <b>35</b>, 1115 (2002). 
         !%End
         call parse_variable(namespace, 'SICCorrection', sic_none, ks%sic_type)
-        if(.not. varinfo_valid_option('SICCorrection', ks%sic_type)) call messages_input_error('SICCorrection')
+        if(.not. varinfo_valid_option('SICCorrection', ks%sic_type)) call messages_input_error(namespace, 'SICCorrection')
 
         ! Perdew-Zunger corrections
         if(ks%sic_type == SIC_PZ) ks%xc_family = ior(ks%xc_family, XC_FAMILY_OEP)
@@ -459,7 +459,7 @@ contains
         !%End
         call parse_variable(namespace, 'VDWSelfConsistent', .true., ks%vdw_self_consistent)
 
-        call vdw_ts_init(ks%vdw_ts, namespace, geo, gr%fine%der)
+        call vdw_ts_init(ks%vdw_ts, namespace, geo)
 
       case(OPTION__VDWCORRECTION__VDW_D3)
         ks%vdw_self_consistent = .false.
@@ -850,15 +850,15 @@ contains
 
         SAFE_ALLOCATE(ks%calc%total_density(1:ks%gr%fine%mesh%np))
 
-        forall(ip = 1:ks%gr%fine%mesh%np)
+        do ip = 1, ks%gr%fine%mesh%np
           ks%calc%total_density(ip) = sum(ks%calc%density(ip, 1:hm%d%spin_channels))
-        end forall
+        end do
 
         ! remove non-local core corrections
         if(associated(st%rho_core)) then
-          forall(ip = 1:ks%gr%fine%mesh%np)
+          do ip = 1, ks%gr%fine%mesh%np
             ks%calc%total_density(ip) = ks%calc%total_density(ip) - st%rho_core(ip)*ks%calc%amaldi_factor
-          end forall
+          end do
         end if
       else
         ks%calc%total_density_alloc = .false.
@@ -910,7 +910,7 @@ contains
           vxc_sic = M_ZERO
 
           rho(:, ispin) = ks%calc%density(:, ispin) / qsp(ispin)
-          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%psolver_fine, namespace, rho, st%d%ispin, hm%exxop, vxc_sic)
+          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%psolver_fine, namespace, rho, st%d%ispin, vxc_sic)
 
           ks%calc%vxc = ks%calc%vxc - vxc_sic
         end do
@@ -921,7 +921,9 @@ contains
 
       rho(:, 1) = ks%calc%total_density / st%qtot
       call dpoisson_solve(hm%psolver_fine, vh_sic, rho(:,1))
-      forall(ip = 1:ks%gr%mesh%np) ks%calc%vxc(ip,:) = ks%calc%vxc(ip,:) - vh_sic(ip)
+      do ip = 1, ks%gr%mesh%np
+        ks%calc%vxc(ip,:) = ks%calc%vxc(ip,:) - vh_sic(ip)
+      end do
 
       SAFE_DEALLOCATE_P(vxc_sic)
       SAFE_DEALLOCATE_P(vh_sic)                                
@@ -964,19 +966,19 @@ contains
       ! Get the *local* XC term
       if(ks%calc%calc_energy) then
         if (family_is_mgga_with_exc(hm%xc)) then
-          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%psolver_fine, namespace, ks%calc%density, st%d%ispin, hm%exxop, &
+          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%psolver_fine, namespace, ks%calc%density, st%d%ispin, &
             ks%calc%vxc, ex = ks%calc%energy%exchange, ec = ks%calc%energy%correlation, deltaxc = ks%calc%energy%delta_xc, &
             vtau = ks%calc%vtau)
         else
-          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%psolver_fine, namespace, ks%calc%density, st%d%ispin, hm%exxop, &
+          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%psolver_fine, namespace, ks%calc%density, st%d%ispin, &
             ks%calc%vxc, ex = ks%calc%energy%exchange, ec = ks%calc%energy%correlation, deltaxc = ks%calc%energy%delta_xc)
         end if
       else
         if (family_is_mgga_with_exc(hm%xc)) then
-          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%psolver_fine, namespace, ks%calc%density, st%d%ispin, hm%exxop, &
+          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%psolver_fine, namespace, ks%calc%density, st%d%ispin, &
             ks%calc%vxc, vtau = ks%calc%vtau)
         else
-          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%psolver_fine, namespace, ks%calc%density, st%d%ispin, hm%exxop, &
+          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%psolver_fine, namespace, ks%calc%density, st%d%ispin, &
             ks%calc%vxc)
         end if
       end if
@@ -1175,24 +1177,36 @@ contains
 
 
       ! Build Hartree + XC potential
-     
-      forall(ip = 1:ks%gr%mesh%np) hm%vhxc(ip, 1) = hm%vxc(ip, 1) + hm%vhartree(ip)
+
+      do ip = 1, ks%gr%mesh%np
+        hm%vhxc(ip, 1) = hm%vxc(ip, 1) + hm%vhartree(ip)
+      end do
       if(associated(hm%vberry)) then
-        forall(ip = 1:ks%gr%mesh%np) hm%vhxc(ip, 1) = hm%vhxc(ip, 1) + hm%vberry(ip, 1)
+        do ip = 1, ks%gr%mesh%np
+          hm%vhxc(ip, 1) = hm%vhxc(ip, 1) + hm%vberry(ip, 1)
+        end do
       end if
 
       if(hm%d%ispin > UNPOLARIZED) then
-        forall(ip = 1:ks%gr%mesh%np) hm%vhxc(ip, 2) = hm%vxc(ip, 2) + hm%vhartree(ip)
+        do ip = 1, ks%gr%mesh%np
+          hm%vhxc(ip, 2) = hm%vxc(ip, 2) + hm%vhartree(ip)
+        end do
         if(associated(hm%vberry)) then
-          forall(ip = 1:ks%gr%mesh%np) hm%vhxc(ip, 2) = hm%vhxc(ip, 2) + hm%vberry(ip, 2)
+          do ip = 1, ks%gr%mesh%np
+            hm%vhxc(ip, 2) = hm%vhxc(ip, 2) + hm%vberry(ip, 2)
+          end do
         end if
       end if
-      
+
       if(hm%d%ispin == SPINORS) then
-        forall(ispin = 3:4, ip = 1:ks%gr%mesh%np) hm%vhxc(ip, ispin) = hm%vxc(ip, ispin)
+        do ispin=3, 4
+          do ip = 1, ks%gr%mesh%np
+            hm%vhxc(ip, ispin) = hm%vxc(ip, ispin)
+          end do
+        end do
       end if
 
-      
+
       ! Note: this includes hybrids calculated with the Fock operator instead of OEP 
       if(ks%theory_level == HARTREE .or. ks%theory_level == HARTREE_FOCK .or. ks%theory_level == RDMFT) then
 
@@ -1278,7 +1292,7 @@ contains
 
 
     !> PCM reaction field due to the electronic density
-    if (hm%pcm%run_pcm .and. pcm_update(hm%pcm,hm%current_time)) then
+    if (hm%pcm%run_pcm .and. pcm_update(hm%pcm)) then
       ! Currently this PCM section seems to be inconsistent when one has a fine mesh
 
       !> Generates the real-space PCM potential due to electrons during the SCF calculation.

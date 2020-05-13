@@ -97,7 +97,7 @@
 
     !No variable description, as it is already in ps.F90
     call parse_variable(namespace, 'SpeciesProjectorSphereThreshold', CNST(0.001), ps%projectors_sphere_threshold)
-    if(ps%projectors_sphere_threshold <= M_ZERO) call messages_input_error('SpeciesProjectorSphereThreshold')
+    if(ps%projectors_sphere_threshold <= M_ZERO) call messages_input_error(namespace, 'SpeciesProjectorSphereThreshold')
     ps%has_long_range = .true.
     ps%is_separated = .false.
 

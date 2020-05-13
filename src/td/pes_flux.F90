@@ -201,7 +201,7 @@ contains
     
     call parse_variable(namespace, 'PES_Flux_Shape', default_shape, this%shape)
     if(.not.varinfo_valid_option('PES_Flux_Shape', this%shape, is_flag = .true.)) &
-      call messages_input_error('PES_Flux_Shape')
+      call messages_input_error(namespace, 'PES_Flux_Shape')
     if(this%shape == M_SPHERICAL .and. mdim /= 3) then
       message(1) = 'Spherical grid works only in 3d.'
       call messages_fatal(1, namespace=namespace)
@@ -237,7 +237,7 @@ contains
     !%End
     if(this%shape == M_SPHERICAL) then
       call parse_variable(namespace, 'PES_Flux_Lmax', 1, this%lmax)
-      if(this%lmax < 1) call messages_input_error('PES_Flux_Lmax', 'must be > 0')
+      if(this%lmax < 1) call messages_input_error(namespace, 'PES_Flux_Lmax', 'must be > 0')
       call messages_print_var_value(stdout, 'PES_Flux_Lmax', this%lmax)
     end if
 
@@ -315,7 +315,7 @@ contains
       !%End
       if(parse_is_defined(namespace, 'PES_Flux_Radius')) then
         call parse_variable(namespace, 'PES_Flux_Radius', M_ZERO, this%radius)
-        if(this%radius <= M_ZERO) call messages_input_error('PES_Flux_Radius')
+        if(this%radius <= M_ZERO) call messages_input_error(namespace, 'PES_Flux_Radius')
         call messages_print_var_value(stdout, 'PES_Flux_Radius', this%radius)
       else
         select case(mesh%sb%box_shape)
@@ -344,7 +344,7 @@ contains
     !%End
     if(this%shape == M_SPHERICAL) then
       call parse_variable(namespace, 'PES_Flux_StepsThetaR', 2*this%lmax + 1, nstepsthetar)
-      if(nstepsthetar < 0) call messages_input_error('PES_Flux_StepsThetaR')
+      if(nstepsthetar < 0) call messages_input_error(namespace, 'PES_Flux_StepsThetaR')
       call messages_print_var_value(stdout, "PES_Flux_StepsThetaR", nstepsthetar)
     end if
 
@@ -357,7 +357,7 @@ contains
     !%End
     if(this%shape == M_SPHERICAL) then
       call parse_variable(namespace, 'PES_Flux_StepsPhiR', 2*this%lmax + 1, nstepsphir)
-      if(nstepsphir < 0) call messages_input_error('PES_Flux_StepsPhiR')
+      if(nstepsphir < 0) call messages_input_error(namespace, 'PES_Flux_StepsPhiR')
       call messages_print_var_value(stdout, "PES_Flux_StepsPhiR", nstepsphir)
     end if
 
@@ -371,7 +371,7 @@ contains
       ! equispaced grid in theta & phi (Gauss-Legendre would optimize to nstepsthetar = this%lmax & nstepsphir = 2*this%lmax + 1):
       ! nstepsthetar = M_TWO * this%lmax + 1
       ! nstepsphir   = M_TWO * this%lmax + 1
-      call pes_flux_getsphere(this, mesh, nstepsthetar, nstepsphir, offset)
+      call pes_flux_getsphere(this, mesh, nstepsthetar, nstepsphir)
     end if
 
     ! distribute the surface points on nodes,
@@ -591,7 +591,7 @@ contains
       !%End
       call parse_variable(namespace, 'PES_Flux_Kmax', M_ONE, kmax)
       call messages_print_var_value(stdout, "PES_Flux_Kmax", kmax)
-      if(kmax <= M_ZERO) call messages_input_error('PES_Flux_Kmax')
+      if(kmax <= M_ZERO) call messages_input_error(namespace, 'PES_Flux_Kmax')
 
       !%Variable PES_Flux_DeltaK
       !%Type float
@@ -601,7 +601,7 @@ contains
       !% Spacing of the k-mesh in |k| (equidistant).
       !%End
       call parse_variable(namespace, 'PES_Flux_DeltaK', CNST(0.002), this%dk)
-      if(this%dk <= M_ZERO) call messages_input_error('PES_Flux_DeltaK')
+      if(this%dk <= M_ZERO) call messages_input_error(namespace, 'PES_Flux_DeltaK')
       call messages_print_var_value(stdout, "PES_Flux_DeltaK", this%dk)
 
       !%Variable PES_Flux_StepsThetaK
@@ -612,7 +612,7 @@ contains
       !% Number of steps in <math>\theta</math> (<math>0 \le \theta \le \pi</math>) for the spherical grid in k.
       !%End
       call parse_variable(namespace, 'PES_Flux_StepsThetaK', 45, this%nstepsthetak)
-      if(this%nstepsthetak < 0) call messages_input_error('PES_Flux_StepsThetaK')
+      if(this%nstepsthetak < 0) call messages_input_error(namespace, 'PES_Flux_StepsThetaK')
 
       !%Variable PES_Flux_StepsPhiK
       !%Type integer
@@ -622,7 +622,7 @@ contains
       !% Number of steps in <math>\phi</math> (<math>0 \le \phi \le 2 \pi</math>) for the spherical grid in k.
       !%End
       call parse_variable(namespace, 'PES_Flux_StepsPhiK', 90, this%nstepsphik)
-      if(this%nstepsphik < 0) call messages_input_error('PES_Flux_StepsPhiK')
+      if(this%nstepsphik < 0) call messages_input_error(namespace, 'PES_Flux_StepsPhiK')
       if(this%nstepsphik == 0) this%nstepsphik = 1
 
       select case(mdim)
@@ -1649,11 +1649,10 @@ contains
   end subroutine pes_flux_getcube
 
   ! ---------------------------------------------------------
-  subroutine pes_flux_getsphere(this, mesh, nstepsthetar, nstepsphir, offset)
+  subroutine pes_flux_getsphere(this, mesh, nstepsthetar, nstepsphir)
     type(pes_flux_t), intent(inout) :: this
     type(mesh_t),     intent(in)    :: mesh
     integer,          intent(inout) :: nstepsthetar, nstepsphir
-    FLOAT,            intent(in)    :: offset(1:MAX_DIM)
     
     integer :: mdim
     integer :: isp, ith, iph

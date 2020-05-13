@@ -18,7 +18,7 @@
 
 ! ---------------------------------------------------------
 subroutine X(root_solver_run)(rs, func, root, success, startval, coeff)
-  type(root_solver_t), intent(inout) :: rs
+  type(root_solver_t), intent(in) :: rs
   R_TYPE,                intent(out)  :: root(:)        !< roots we are searching
   logical,               intent(out)  :: success
   R_TYPE, optional,      intent(in)   :: startval(:)    !< start value for the search

@@ -40,8 +40,6 @@ PseudopotentialSet=hscv_pbe
 Spacing = 0.5
 
 FromScratch = yes
-ParStates = no
-ParDomains = no
 
 SpinComponents = polarized
 GuessMagnetDensity = user_defined

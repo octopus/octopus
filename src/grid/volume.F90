@@ -116,7 +116,7 @@ contains
         case(OPTION__VOLUME__VOL_SLAB)
           n_par = 1 ! thickness of the slab
         case default
-          call messages_input_error('Species', "Unknown type for volume")
+          call messages_input_error(namespace, 'Species', "Unknown type for volume")
         end select
 
         do j = 1, n_par
@@ -125,15 +125,15 @@ contains
 
       end do
     else
-      call messages_input_error('Volume')
+      call messages_input_error(namespace, 'Volume')
     end if
   end subroutine volume_read_from_block
 
 
-  logical function volume_in_volume(sb, vol, xx, rr) result(in_vol)
+  logical function volume_in_volume(sb, vol, xx) result(in_vol)
     type(simul_box_t), intent(in) :: sb
     type(volume_t),    intent(in) :: vol
-    FLOAT,             intent(in) :: xx(:), rr
+    FLOAT,             intent(in) :: xx(:)
 
     logical :: in_partial_volume
     integer :: i

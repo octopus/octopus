@@ -571,7 +571,7 @@ contains
       if(this%use_symmetries) then
         message(1) = "Checking if the generated full k-point grid is symmetric";
         call messages_info(1)
-        call kpoints_check_symmetries(this%full, symm, dim, klattice, this%use_time_reversal, namespace)
+        call kpoints_check_symmetries(this%full, symm, dim, this%use_time_reversal, namespace)
       end if
 
       call kpoints_grid_copy(this%full, this%reduced)
@@ -718,8 +718,8 @@ contains
       ! For the output of band-structures
       SAFE_ALLOCATE(this%coord_along_path(1:nkpoints))
 
-      call kpoints_path_generate(dim, klattice, nkpoints, nsegments, resolution, &
-               nhighsympoints, highsympoints, path_kpoints_grid%point, this%coord_along_path)
+      call kpoints_path_generate(dim, klattice, nkpoints, nsegments, resolution, highsympoints, path_kpoints_grid%point, &
+        this%coord_along_path)
 
       SAFE_DEALLOCATE_A(resolution)
       SAFE_DEALLOCATE_A(highsympoints)
@@ -1157,14 +1157,12 @@ contains
 
   ! --------------------------------------------------------------------------------------------  
   !> Generate the k-point along a path
-  subroutine kpoints_path_generate(dim, klattice, nkpoints, nsegments, resolution, &
-               nhighsympoints, highsympoints, kpoints, coord)
+  subroutine kpoints_path_generate(dim, klattice, nkpoints, nsegments, resolution, highsympoints, kpoints, coord)
     integer,           intent(in)  :: dim
     FLOAT,             intent(in)  :: klattice(:,:)
     integer,           intent(in)  :: nkpoints
     integer,           intent(in)  :: nsegments
     integer,           intent(in)  :: resolution(:)
-    integer,           intent(in)  :: nhighsympoints
     FLOAT,             intent(in)  :: highsympoints(:,:)
     FLOAT,             intent(out) :: kpoints(:, :) 
     FLOAT,             intent(out) :: coord(:)
@@ -1177,7 +1175,7 @@ contains
 
     total_length = M_ZERO
     !We first compute the total length of the k-point path
-    do is=1, nsegments
+    do is = 1, nsegments
       ! We need to work in abolute coordinates to get the correct path length
       call kpoints_to_absolute(klattice, highsympoints(1:dim,is), kpt1(:), dim)
       call kpoints_to_absolute(klattice, highsympoints(1:dim,is+1), kpt2(:), dim)
@@ -1190,7 +1188,7 @@ contains
     accumulated_length = M_ZERO
     kpt_ind = 0
     !Now we generate the points
-    do is=1, nsegments
+    do is = 1, nsegments
       ! We need to work in abolute coordinates to get the correct path length
       call kpoints_to_absolute(klattice, highsympoints(1:dim,is), kpt1(:), dim)
       call kpoints_to_absolute(klattice, highsympoints(1:dim,is+1), kpt2(:), dim)
@@ -1256,7 +1254,9 @@ contains
     SAFE_ALLOCATE(reduced(1:dim, 1:nkpoints))
 
     dw = M_ONE / nkpoints
-    forall(ik = 1:nkpoints) kweight(ik) = dw   
+    do ik=1, nkpoints
+      kweight(ik) = dw
+    end do
 
     nreduced = 0
 
@@ -1373,7 +1373,7 @@ contains
 
       dmin = CNST(1e10)
       do ig1 = 1, 27
-        do ii=1, grid%dim
+        do ii = 1, grid%dim
           vec(ii) = Gvec_cart(ii,ig1)-grid%point(ii,ik)
         end do
         d = real(sum(vec(1:grid%dim)**2),4) !Conversion to simple precision
@@ -1383,7 +1383,7 @@ contains
           ig2 = ig1
         end if
       end do
-      do ii=1, grid%dim
+      do ii = 1, grid%dim
         kpt(ii) = grid%red_point(ii,ik) - Gvec(ii,ig2)
       end do
       call kpoints_to_absolute(klattice,kpt(1:grid%dim),grid%point1BZ(1:grid%dim,ik),grid%dim) 
@@ -1598,11 +1598,10 @@ contains
   
 
   !--------------------------------------------------------
-  subroutine kpoints_check_symmetries(grid, symm, dim, klattice, time_reversal, namespace)
+  subroutine kpoints_check_symmetries(grid, symm, dim, time_reversal, namespace)
     type(kpoints_grid_t), intent(in) :: grid
     type(symmetries_t),   intent(in) :: symm    
     integer,              intent(in) :: dim
-    FLOAT,                intent(in) :: klattice(:,:)
     logical,              intent(in) :: time_reversal
     type(namespace_t),    intent(in) :: namespace
     
@@ -1629,7 +1628,9 @@ contains
       if(iop == symmetries_identity_index(symm) .and. &
             .not. time_reversal) cycle
 
-      forall(ik=kpt_dist%start:kpt_dist%end)  kmap(ik) = ik
+      do ik = kpt_dist%start, kpt_dist%end
+        kmap(ik) = ik
+      end do
 
       do ik = kpt_dist%start, kpt_dist%end
         !We apply the symmetry

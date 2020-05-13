@@ -146,10 +146,10 @@ contains
     phase = M_ZERO
     do idir = 1, mesh%sb%dim
       if(gvector(idir) == 0) cycle
-      forall(ip = 1:mesh%np)
+      do ip = 1, mesh%np
         phase(ip) = phase(ip) + exp(-M_zI*gvector(idir)*(M_PI/mesh%sb%lsize(idir))*mesh%x(ip, idir))
         ! factor of two removed from exp since actual lattice vector is 2*lsize
-      end forall
+      end do
     end do
 
     do ist = 1, nst
@@ -158,16 +158,16 @@ contains
         call states_elec_get_state(st, mesh, ist2, ik2, psi2)
         matrix(ist, ist2) = M_Z0
         do idim = 1, st%d%dim ! spinor components
-            
-          forall(ip = 1:mesh%np)
+
+          do ip = 1, mesh%np
             tmp(ip) = conjg(psi(ip, idim))*phase(ip)*psi2(ip, idim)
-          end forall
-          
+          end do
+
           matrix(ist, ist2) = matrix(ist, ist2) + zmf_integrate(mesh, tmp)
         end do
       end do !ist2
     end do !ist
-      
+
     SAFE_DEALLOCATE_A(tmp)
     SAFE_DEALLOCATE_A(phase)
     SAFE_DEALLOCATE_A(psi)
