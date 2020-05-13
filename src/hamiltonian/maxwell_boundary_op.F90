@@ -557,9 +557,8 @@ contains
     !% Width of the region used to apply the absorbing boundaries.
     !%End
 
-    width = bounds(2, idim) - bounds(1, idim)
-    call parse_variable(namespace, 'MaxwellABWidth', width, width, units_inp%length)
-    bc%ab_width = width
+    width = 2*gr%der%order
+    call parse_variable(namespace, 'MaxwellABWidth', width, bc%ab_width, units_inp%length)
 
     if (any(width < gr%der%order*gr%mesh%spacing(1:3))) then
        width = gr%der%order * maxval(gr%mesh%spacing(1:3))
@@ -582,8 +581,6 @@ contains
     type(namespace_t),   intent(in)    :: namespace
     FLOAT,               intent(inout) :: bounds(:,:), ab_bounds(:,:)
     integer,             intent(in)    :: idim
-
-    FLOAT               :: pml_width
 
     PUSH_SUB(bc_mxll_pml_init)
 
