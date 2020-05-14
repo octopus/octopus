@@ -933,16 +933,12 @@ contains
 
   ! ---------------------------------------------------------
   subroutine multisys_td_run(systems, fromScratch)
-    type(linked_list_t), intent(inout) :: systems
+    type(multisystem_t), intent(inout) :: systems
     logical,             intent(inout) :: fromScratch
 
     integer :: it, internal_loop
-    logical :: any_td_step_done, all_done_max_td_steps
     integer, parameter :: MAX_PROPAGATOR_STEPS = 1000
     FLOAT :: smallest_algo_dt
-
-    type(system_iterator_t) :: iter
-    class(system_abst_t), pointer :: sys
 
     PUSH_SUB(multisys_td_run)
 
@@ -953,100 +949,41 @@ contains
 
     ! this should eventually be moved up to run.F90 when all systems
     ! are derived classes from system_abst
-    call multisystem_init_interactions(systems, global_namespace)
-
-    all_done_max_td_steps = .false.
-    it = 0
+    call systems%init_interactions()
 
     ! Initialize all propagators and find the smallest time-step
     smallest_algo_dt = CNST(1e10)
-    call iter%start(systems)
-    do while (iter%has_next())
-      sys => iter%get_next_system()
-
-      ! Initialize the propagator
-      call sys%init_propagator()
-
-      ! Find the smallest dt
-      smallest_algo_dt = min(smallest_algo_dt, sys%prop%dt/sys%prop%algo_steps)
-    end do
+    call systems%init_propagator(smallest_algo_dt)
 
     ! Initialize all the clocks
-    call iter%start(systems)
-    do while (iter%has_next())
-      sys => iter%get_next_system()
-      call sys%init_clocks(sys%prop%dt, smallest_algo_dt)
-    end do
+    call systems%init_clocks(smallest_algo_dt)
 
     ! Set initial conditions
-    call iter%start(systems)
-    do while (iter%has_next())
-      sys => iter%get_next_system()
-      call sys%initial_conditions(.true.)
-    end do
+    call systems%initial_conditions(.true.)
 
-    call iter%start(systems)
-    do while (iter%has_next())
-      sys => iter%get_next_system()
-      call sys%propagation_start()
-    end do
+    call systems%propagation_start()
 
     ! The full TD loop
-    call messages_print_stress(stdout, "Multi-system propagation", namespace=global_namespace)
+    call messages_print_stress(stdout, "Multi-system propagation", namespace=systems%namespace)
 
-    all_done_max_td_steps = .false.
     it = 0
 
-    do while(.not. all_done_max_td_steps)
+    do while (.not. systems%has_reached_final_propagation_time())
 
       it = it + 1
 
-      any_td_step_done = .false.
       internal_loop = 1
-
-      do while(.not. any_td_step_done .and. internal_loop < MAX_PROPAGATOR_STEPS)
-
-        any_td_step_done = .false.
-
-        call iter%start(systems)
-        do while (iter%has_next())
-          sys => iter%get_next_system()
-
-          call sys%dt_operation()
-
-          ! We check the exit condition
-          any_td_step_done = any_td_step_done .or. sys%prop%step_is_done()
-        end do
-
-        INCR(internal_loop, 1)
+      do while (.not. systems%propagation_step_is_done() .and. internal_loop < MAX_PROPAGATOR_STEPS)
+        call systems%dt_operation()
+        internal_loop = internal_loop + 1
       end do
+      call systems%propagation_step_finish(it)
 
-      all_done_max_td_steps = .true.
-
-      call iter%start(systems)
-      do while (iter%has_next())
-        sys => iter%get_next_system()
-
-        ! Print information about the current iteration and write output
-        if(sys%prop%step_is_done()) then
-          call sys%prop%rewind()
-          call sys%output_write(it)
-          call sys%iteration_info()
-        end if
-
-        ! Fixme: should be changed to final propagation time
-        all_done_max_td_steps = all_done_max_td_steps .and. (sys%clock%get_sim_time() > sys%prop%max_td_steps*sys%prop%dt)
-      end do
-     write (message(1), '(a)') repeat ('-', 71)
-     call messages_info(1)
-
+      write (message(1), '(a)') repeat ('-', 71)
+      call messages_info(1)
     end do
 
-    call iter%start(systems)
-    do while (iter%has_next())
-      sys => iter%get_next_system()
-      call sys%propagation_finish()
-    end do
+    call systems%propagation_finish()
 
     POP_SUB(multisys_td_run)
   end subroutine multisys_td_run
