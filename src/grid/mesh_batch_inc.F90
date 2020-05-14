@@ -884,7 +884,7 @@ subroutine X(priv_mesh_batch_nrm2)(mesh, aa, nrm2)
   FLOAT,                   intent(out)   :: nrm2(:)
 
   integer :: ist, idim, indb, ip
-  R_TYPE :: a0
+  FLOAT :: a0
   FLOAT, allocatable :: scal(:), ssq(:)
   type(accel_mem_t)  :: nrm2_buffer
   type(profile_t), save :: prof
@@ -915,13 +915,13 @@ subroutine X(priv_mesh_batch_nrm2)(mesh, aa, nrm2)
       ! do not use openmp here because the logic of the loop is sequential
       do ip = 1, mesh%np
         do ist = 1, aa%nst_linear
-          a0 = aa%X(ff_pack)(ist, ip)
-          if(abs(a0) <= M_EPSILON) cycle
-          if(scal(ist) < abs(a0)) then
-            ssq(ist) = M_ONE + ssq(ist)*(scal(ist)/abs(a0))**2
-            scal(ist) = abs(a0)
+          a0 = abs(aa%X(ff_pack)(ist, ip))
+          if(a0 <= M_EPSILON) cycle
+          if(scal(ist) < a0) then
+            ssq(ist) = M_ONE + ssq(ist)*(scal(ist)/a0)**2
+            scal(ist) = a0
           else
-            ssq(ist) = ssq(ist) + (abs(a0)/scal(ist))**2
+            ssq(ist) = ssq(ist) + (a0/scal(ist))**2
           end if
         end do
       end do
@@ -931,13 +931,13 @@ subroutine X(priv_mesh_batch_nrm2)(mesh, aa, nrm2)
       ! do not use openmp here because the logic of the loop is sequential
       do ip = 1, mesh%np
         do ist = 1, aa%nst_linear
-          a0 = aa%X(ff_pack)(ist, ip)
-          if(a0 == R_TOTYPE(M_ZERO)) cycle
-          if(scal(ist) < abs(a0)) then
-            ssq(ist) =  mesh%vol_pp(ip)*M_ONE + ssq(ist)*(scal(ist)/abs(a0))**2
-            scal(ist) = abs(a0)
+          a0 = abs(aa%X(ff_pack)(ist, ip))
+          if(a0 < M_EPSILON) cycle
+          if(scal(ist) < a0) then
+            ssq(ist) =  mesh%vol_pp(ip)*M_ONE + ssq(ist)*(scal(ist)/a0)**2
+            scal(ist) = a0
           else
-            ssq(ist) = ssq(ist) + mesh%vol_pp(ip)*(abs(a0)/scal(ist))**2
+            ssq(ist) = ssq(ist) + mesh%vol_pp(ip)*(a0/scal(ist))**2
           end if
         end do
       end do
