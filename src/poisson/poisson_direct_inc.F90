@@ -153,7 +153,7 @@ subroutine poisson_solve_direct(this, pot, rho)
           aa4 = prefactor*rho(ip + 3)*this%der%mesh%vol_pp(ip + 3)**(M_ONE - M_ONE/dim_ele)
         end if
 
-        !$omp parallel do reduction(+:aa1,aa2,aa3,aa4)
+        !$omp parallel do reduction(+:aa1,aa2,aa3,aa4) private(yy)
         do jp = 1, this%der%mesh%np
           yy(1:dim_ele) = this%der%mesh%x(jp, 1:dim_ele)
           if (ip     /= jp .or. include_diag) then
@@ -184,7 +184,7 @@ subroutine poisson_solve_direct(this, pot, rho)
           aa4 = M_ZERO
         end if
 
-        !$omp parallel do reduction(+:aa1,aa2,aa3,aa4)
+        !$omp parallel do reduction(+:aa1,aa2,aa3,aa4) private(yy)
         do jp = 1, this%der%mesh%np
           yy(1:dim_ele) = this%der%mesh%x(jp, 1:dim_ele)
           if (ip     /= jp .or. include_diag) aa1 = aa1 + rho(jp)/sqrt(sum((xx1(1:dim_eff) - yy(1:dim_eff))**2))

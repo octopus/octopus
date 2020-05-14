@@ -912,7 +912,7 @@ subroutine X(priv_mesh_batch_nrm2)(mesh, aa, nrm2)
     
     if(.not. mesh%use_curvilinear) then
 
-      !$omp parallel do private(a0)
+      ! do not use openmp here because the logic of the loop is sequential
       do ip = 1, mesh%np
         do ist = 1, aa%nst_linear
           a0 = aa%X(ff_pack)(ist, ip)
@@ -928,7 +928,7 @@ subroutine X(priv_mesh_batch_nrm2)(mesh, aa, nrm2)
 
     else
 
-      !$omp parallel do private(a0)
+      ! do not use openmp here because the logic of the loop is sequential
       do ip = 1, mesh%np
         do ist = 1, aa%nst_linear
           a0 = aa%X(ff_pack)(ist, ip)
@@ -951,6 +951,9 @@ subroutine X(priv_mesh_batch_nrm2)(mesh, aa, nrm2)
         nrm2(ist) = hypot(nrm2(ist), scal(indb)*sqrt(mesh%volume_element*ssq(indb)))
       end do
     end do
+
+    SAFE_DEALLOCATE_A(scal)
+    SAFE_DEALLOCATE_A(ssq)
 
   case(BATCH_DEVICE_PACKED)
 
