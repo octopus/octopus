@@ -112,7 +112,7 @@ module hamiltonian_elec_base_oct_m
     integer,                  allocatable, public :: projector_to_atom(:)
     integer                                       :: nregions
     integer,                  allocatable         :: regions(:)
-    type(accel_mem_t)                             :: potential_opencl
+    type(accel_mem_t)                    , public :: potential_opencl
     type(accel_mem_t)                             :: buff_offsets
     type(accel_mem_t)                             :: buff_matrices
     type(accel_mem_t)                             :: buff_maps
@@ -283,34 +283,11 @@ contains
     type(hamiltonian_elec_base_t), intent(inout) :: this
     type(mesh_t),             intent(in)    :: mesh
 
-    integer :: ispin
-    integer :: offset
+    integer :: idir, ip
 
     PUSH_SUB(hamiltonian_elec_base_update)
 
     if(allocated(this%uniform_vector_potential) .and. allocated(this%vector_potential)) then
-      call unify_vector_potentials()
-    end if
-
-    if(allocated(this%potential) .and. accel_is_enabled()) then
-
-      offset = 0
-      do ispin = 1, this%nspin
-        call accel_write_buffer(this%potential_opencl, mesh%np, this%potential(:, ispin), offset = offset)
-        offset = offset + accel_padded_size(mesh%np)
-      end do
-
-    end if
-
-    POP_SUB(hamiltonian_elec_base_update)
-
-  contains
-
-    subroutine unify_vector_potentials()
-      integer :: idir, ip
-
-      PUSH_SUB(hamiltonian_elec_base_update.unify_vector_potentials)
-      
       ! copy the uniform vector potential onto the non-uniform one
       do idir = 1, mesh%sb%dim
         !$omp parallel do schedule(static)
@@ -319,12 +296,10 @@ contains
             this%vector_potential(idir, ip) + this%uniform_vector_potential(idir)
         end do
       end do
-      
-      ! and deallocate
       SAFE_DEALLOCATE_A(this%uniform_vector_potential)
-      POP_SUB(hamiltonian_elec_base_update.unify_vector_potentials)      
-    end subroutine unify_vector_potentials
+    end if
 
+    POP_SUB(hamiltonian_elec_base_update)
   end subroutine hamiltonian_elec_base_update
   
   !--------------------------------------------------------
