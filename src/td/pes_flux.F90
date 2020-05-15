@@ -532,8 +532,8 @@ contains
     !% PES_Flux_Shape = m_sph and PES_Flux_Momenutum_Grid = m_polar
     !%End
     this%use_symmetry = .false.
-!     if ((this%surf_shape == M_CUBIC .or. this%surf_shape == M_PLANE) &
-!          .and. this%kgrid == M_CARTESIAN) this%use_symmetry = .true.
+    if ((this%surf_shape == M_CUBIC .or. this%surf_shape == M_PLANE) &
+         .and. this%kgrid == M_CARTESIAN) this%use_symmetry = .true.
     if (this%surf_shape == M_SPHERICAL .and. this%kgrid == M_POLAR) this%use_symmetry = .true.
     call parse_variable(namespace, 'PES_Flux_UseSymmetries', this%use_symmetry, this%use_symmetry)
     call messages_print_var_value(stdout, 'PES_Flux_UseSymmetries', this%use_symmetry)
