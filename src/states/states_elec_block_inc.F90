@@ -137,8 +137,6 @@ subroutine X(states_elec_blockt_mul)(mesh, st, psi1_start, psi2_start, &
           SAFE_ALLOCATE(res_local(1:xpsi1_count(rank), 1:sendcnt))
 
           call profiling_in(C_PROFILING_BLOCKT_MM, 'BLOCKT_MM')
-          !Due to the definition of the gemmt routine, the dim is set to 1 and the number of 
-          !grid points to np*dim. Otherwise the code won't work for spinors
           call blas_gemm('C', 'N', xpsi1_count(rank), sendcnt, mesh%np*st%d%dim, &
                R_TOTYPE(mesh%vol_pp(1)), psi1_block(1, 1, 1), mesh%np*st%d%dim, &
                sendbuf(1, 1, 1), mesh%np*st%d%dim, R_TOTYPE(M_ZERO), res_local(1, 1), xpsi1_count(rank))
