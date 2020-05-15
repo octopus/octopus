@@ -1,5 +1,5 @@
 Test       : vdW-DF-cx with libvdwxc - H2O
-Options    : libvdwxc
+# Options    : libvdwxc
 Program    : octopus
 TestGroups : short-run, functionals
 Enabled    : Yes

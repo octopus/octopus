@@ -1,7 +1,7 @@
 # -*- coding: utf-8 mode: shell-script -*-
 
 Test       : Propagators (requiring SPARSKIT)
-Options    : sparskit
+# Options    : sparskit
 Program    : octopus
 TestGroups : short-run, real_time
 Enabled    : Yes

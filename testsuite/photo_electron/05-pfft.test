@@ -1,7 +1,7 @@
 # -*- coding: utf-8 mode: shell-script -*-
 
 Test         : Photoelectron - PFFT
-Options_skip : pfft
+# Options_skip : pfft
 Program      : octopus
 TestGroups   : short-run, photo_electron
 Enabled      : Yes

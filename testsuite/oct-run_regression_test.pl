@@ -159,11 +159,9 @@ if(!$opt_s) {
 $np = 2;
 $enabled = ""; # FIXME: should Enabled be optional?
 $options_required = "";
-$options_skip = "";
 $options_required_mpi = "";
 $options_are_mpi = 0;
 $expect_error = 0; # check for controlled failure 
-$match_error = 0;  # flag to switch to alternative matches for failling tests
 $error_match_done = 1;   # check that at least one error-match has been done. 
 
 # Handle GPU offset
@@ -252,7 +250,7 @@ sub check_conditions {
 }
 
 
-# Ser test_succeeded flag to 'TRUE'. Only change to 'FALSE' if a test fails.
+# Set test_succeeded flag to 'TRUE'. Only change to 'FALSE' if a test fails.
 $test_succeeded = 1;
 
 $pwd = get_env("PWD");
@@ -336,14 +334,6 @@ while ($_ = <TESTSUITE>) {
         # note: we could implement Options by baking this into the script via configure...
         $report{$testname}{"options"} = $options_required;
         
-    } elsif ( $_ =~ /^Options_skip\s*:\s*(.*)\s*$/) {
-
-        # This should become obsolete when Options_arguments are working.
-
-        $options_skip = $1;
-        # note: we could implement Options by baking this into the script via configure...
-        $report{$testname}{"options_skip"} = $options_skip;
-        
     } elsif ( $_ =~ /^Options_MPI\s*:\s*(.*)\s*$/) {
         if ($is_parallel && $np ne "serial") {
             $options_required_mpi = $1;
@@ -409,26 +399,6 @@ while ($_ = <TESTSUITE>) {
                 #         skip_exit();
                 #     }
                 # }
-            }
-        }
-
-        # options_skip should become obsolete
-        if(length($options_skip) > 0) {
-            # check if the executable was compiled with the required options
-            foreach my $option (split(/;/, $options_skip)){
-                if(" $options_available " !~ " $option ") {
-
-                    $expect_error = 1;
-
-                    print "\nSkipping test: executable does not have the required option '$option'";
-                    if($options_are_mpi) {
-                        print " for MPI";
-                    }
-                    print ".\n";
-                    print "Executable: $command\n";
-                    print "Available options: $options_available\n\n";
-                    skip_exit();
-                }
             }
         }
 

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 mode: shell-script -*-
 
 Test       : Photoelectron - NFFT
-Options    : nfft
+# Options    : nfft
 Program    : octopus
 TestGroups : short-run, photo_electron
 Enabled    : Yes

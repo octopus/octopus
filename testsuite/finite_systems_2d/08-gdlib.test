@@ -1,7 +1,7 @@
 # -*- coding: utf-8 mode: shell-script -*-
 
 Test       : gdlib: particle in an octopus
-Options    : gdlib
+# Options    : gdlib
 Program    : octopus
 TestGroups : short-run, finite_systems_2d
 Enabled    : Yes
