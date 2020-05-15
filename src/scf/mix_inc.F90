@@ -144,7 +144,7 @@ subroutine X(broyden_extrapolation)(this, coeff, d1, d2, d3, vin, vnew, iter_use
   
   FLOAT, parameter :: w0 = CNST(0.01), ww = M_FIVE
   integer  :: i, j, k, l
-  R_TYPE    :: gamma, determinant
+  R_TYPE    :: gamma
   R_TYPE, allocatable :: beta(:, :), work(:)
 
   PUSH_SUB(X(broyden_extrapolation))
@@ -186,7 +186,7 @@ subroutine X(broyden_extrapolation)(this, coeff, d1, d2, d3, vin, vnew, iter_use
   end do
   
   ! invert matrix beta
-  determinant = lalg_inverter(iter_used, beta)
+  call lalg_inverter(iter_used, beta)
   
   do i = 1, iter_used
     work(i) = M_ZERO
@@ -468,7 +468,7 @@ subroutine X(pulay_extrapolation)(this, d2, d3, vin, vout, vnew, iter_used, f, d
   R_TYPE,  intent(out) :: vnew(:, :, :)
   
   integer :: i, j, k, l
-  R_TYPE :: alpha, determinant
+  R_TYPE :: alpha
   R_TYPE, allocatable :: a(:, :)
   
   PUSH_SUB(X(pulay_extrapolation))
@@ -496,7 +496,7 @@ subroutine X(pulay_extrapolation)(this, d2, d3, vin, vout, vnew, iter_used, f, d
     return
   end if
   
-  determinant = lalg_inverter(iter_used, a)
+  call lalg_inverter(iter_used, a)
   
   ! compute new vector
   vnew = vin

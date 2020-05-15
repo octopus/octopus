@@ -599,10 +599,56 @@ end subroutine X(lowest_eigensolve)
 
 ! ---------------------------------------------------------
 !> Invert a real symmetric or complex Hermitian square matrix a
-R_TYPE function X(determinant)(n, a, invert) result(d)
+R_TYPE function X(determinant)(n, a, preserve_mat) result(d)
   integer, intent(in)           :: n
-  R_TYPE,   intent(inout)       :: a(:,:) !< (n,n)
-  logical, intent(in), optional :: invert
+  R_TYPE, target, intent(inout) :: a(:,:) !< (n,n)
+  logical, intent(in)           :: preserve_mat
+
+  integer :: info, i
+  integer, allocatable :: ipiv(:)
+  R_TYPE, pointer :: tmp_a(:,:)
+
+  ! No PUSH_SUB, called too often
+
+  ASSERT(n > 0)
+
+  SAFE_ALLOCATE(ipiv(1:n))
+
+  if(preserve_mat) then
+    SAFE_ALLOCATE(tmp_a(1:n, 1:n))
+    tmp_a(1:n, 1:n) = a(1:n, 1:n)
+  else
+    tmp_a => a
+  end if
+
+  call lapack_getrf(n, n, tmp_a(1, 1), lead_dim(tmp_a), ipiv(1), info)
+  if(info < 0) then
+    write(message(1), '(5a, i5)') 'In ', TOSTRING(X(determinant)), ', LAPACK ', TOSTRING(X(getrf)), ' returned info = ', info
+    call messages_fatal(1)
+  end if
+
+  d = M_ONE
+  do i = 1, n
+    if(ipiv(i) /= i) then
+      d = - d*tmp_a(i, i)
+    else
+      d = d*tmp_a(i, i)
+    end if
+  end do
+
+  SAFE_DEALLOCATE_A(ipiv)
+  if(preserve_mat) then
+    SAFE_DEALLOCATE_P(tmp_a)
+  end if
+
+end function X(determinant)
+
+! ---------------------------------------------------------
+!> Invert a real symmetric or complex Hermitian square matrix a
+subroutine X(inverter)(n, a, det)
+  integer,           intent(in)     :: n
+  R_TYPE,            intent(inout)  :: a(:,:) !< (n,n)
+  R_TYPE,  optional, intent(out)    :: det
 
   integer :: info, i
   integer, allocatable :: ipiv(:)
@@ -621,38 +667,39 @@ R_TYPE function X(determinant)(n, a, invert) result(d)
     call messages_fatal(1)
   end if
 
-  d = M_ONE
-  do i = 1, n
-    if(ipiv(i) /= i) then
-      d = - d*a(i, i)
-    else
-      d = d*a(i, i)
-    end if
-  end do
+  if(present(det)) then
+    det = M_ONE
+    do i = 1, n
+      if(ipiv(i) /= i) then
+        det = - det*a(i, i)
+      else
+        det = det*a(i, i)
+      end if
+    end do
+  end if
 
-  if(optional_default(invert, .true.)) then
-    call lapack_getri(n, a(1, 1), lead_dim(a), ipiv(1), work(1), n, info)
-    if(info /= 0) then
-      write(message(1), '(5a, i5)') 'In ', TOSTRING(X(determinant)), ', LAPACK ', TOSTRING(X(getri)), ' returned info = ', info
+
+  call lapack_getri(n, a(1, 1), lead_dim(a), ipiv(1), work(1), n, info)
+  if(info /= 0) then
+    write(message(1), '(5a, i5)') 'In ', TOSTRING(X(determinant)), ', LAPACK ', TOSTRING(X(getri)), ' returned info = ', info
 !    http://www.netlib.org/lapack/explore-3.1.1-html/zgetri.f.html
 !*  INFO    (output) INTEGER
 !*          = 0:  successful exit
 !*          < 0:  if INFO = -i, the i-th argument had an illegal value
 !*          > 0:  if INFO = i, U(i,i) is exactly zero; the matrix is
 !*                singular and its inverse could not be computed.
-    if(info < 0) then
-      write(message(2), '(a,i5,a)') 'Argument number ', -info, ' had an illegal value.'
-    else
-      write(message(2), '(a,i5,a)') 'Diagonal element ', info, ' of U is 0; matrix is singular.'
-    end if
-    call messages_fatal(2)
-    end if
+  if(info < 0) then
+    write(message(2), '(a,i5,a)') 'Argument number ', -info, ' had an illegal value.'
+  else
+    write(message(2), '(a,i5,a)') 'Diagonal element ', info, ' of U is 0; matrix is singular.'
+  end if
+  call messages_fatal(2)
   end if
 
   SAFE_DEALLOCATE_A(work)
   SAFE_DEALLOCATE_A(ipiv)
 
-end function X(determinant)
+end subroutine X(inverter)
 
 
 ! ---------------------------------------------------------

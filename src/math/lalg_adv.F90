@@ -71,14 +71,12 @@ module lalg_adv_oct_m
     module procedure deigensolve, zeigensolve
   end interface lalg_eigensolve
 
-  !> Note that lalg_determinant and lalg_inverter are just wrappers
-  !! over the same routine.
   interface lalg_determinant
     module procedure ddeterminant, zdeterminant
   end interface lalg_determinant
 
   interface lalg_inverter
-    module procedure ddeterminant, zdeterminant
+    module procedure dinverter, zinverter
   end interface lalg_inverter
 
   interface lalg_sym_inverter
@@ -202,7 +200,6 @@ contains
 
     CMPLX, allocatable :: evectors(:, :), zevalues(:)
     FLOAT, allocatable :: evalues(:)
-    CMPLX :: deter
     
     integer :: ii
 
@@ -239,7 +236,7 @@ contains
 
       ex(1:nn, 1:nn) = evectors(1:nn, 1:nn)
 
-      deter = lalg_inverter(nn, evectors)
+      call lalg_inverter(nn, evectors)
       
       do ii = 1, nn
         evectors(1:nn, ii) = zevalues(1:nn)*evectors(1:nn, ii)
@@ -281,7 +278,6 @@ contains
 
     CMPLX, allocatable :: evectors(:, :), zevalues(:)
     FLOAT, allocatable :: evalues(:)
-    CMPLX :: deter
     
     integer :: ii
 
@@ -322,7 +318,7 @@ contains
 
       ex(1:nn, 1:nn) = evectors(1:nn, 1:nn)
 
-      deter = lalg_inverter(nn, evectors)
+      call lalg_inverter(nn, evectors)
 
       do ii = 1, nn
         evectors(1:nn, ii) = zevalues(1:nn)*evectors(1:nn, ii)

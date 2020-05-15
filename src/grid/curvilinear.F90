@@ -230,10 +230,10 @@ contains
     select case(cv%method)
     case(CURV_METHOD_UNIFORM)
       Jac(1:sb%dim, 1:sb%dim) = sb%rlattice_primitive(1:sb%dim, 1:sb%dim)
-      jdet = lalg_determinant(sb%dim, Jac, invert = .false.)      
+      jdet = lalg_determinant(sb%dim, Jac, preserve_mat = .false.)      
     case(CURV_METHOD_GYGI)
       call curv_gygi_jacobian(sb, cv%gygi, x, dummy, Jac)
-      jdet = M_ONE/lalg_determinant(sb%dim, Jac, invert = .false.)
+      jdet = M_ONE/lalg_determinant(sb%dim, Jac, preserve_mat = .false.)
     case(CURV_METHOD_BRIGGS)
       call curv_briggs_jacobian_inv(sb, cv%briggs, chi, Jac)
       jdet = M_ONE
@@ -242,7 +242,7 @@ contains
       end do
     case(CURV_METHOD_MODINE)
       call curv_modine_jacobian_inv(sb, cv%modine, chi, dummy, Jac)
-      jdet = M_ONE*lalg_determinant(sb%dim, Jac, invert = .false.)
+      jdet = M_ONE*lalg_determinant(sb%dim, Jac, preserve_mat = .false.)
     end select
 
     SAFE_DEALLOCATE_A(Jac)
