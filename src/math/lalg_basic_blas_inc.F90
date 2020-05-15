@@ -698,8 +698,6 @@ subroutine FNAME(symm_1)(m, n, side, alpha, a, b, beta, c)
   TYPE1,        intent(in)    :: alpha, beta, a(:, :), b(:, :)
   TYPE1,        intent(inout) :: c(:, :) !c(m, n)
 
-  integer :: lda
-
   ! no push_sub, called too frequently
   !The size specified are for the matrix C
   ASSERT(ubound(c, dim=1) >= m)
@@ -728,8 +726,6 @@ subroutine FNAME(trmm_1)(m, n, uplo, transa, side, alpha, a, b)
   TYPE1,        intent(in)    :: alpha
   TYPE1,        intent(in)    :: a(:, :) !< a(m, m), upper triangular matrix.
   TYPE1,        intent(inout) :: b(:, :) !< b(m, n).
-
-  integer :: lda
 
   ! no push_sub, called too frequently
 
