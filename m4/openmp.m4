@@ -64,8 +64,10 @@ AC_DEFUN([AX_OPENMP],
           fi
         done])])
   case $ac_cv_prog_[]_AC_LANG_ABBREV[]_openmp in #(
-    "none needed" | unsupported)
+    unsupported)
       ;; #(
+    "none needed" )
+      AC_DEFINE(HAVE_OPENMP,1,[Define if OpenMP is enabled]) ;; #(
     *)
       OPENMP_[]_AC_LANG_PREFIX[]FLAGS=$ac_cv_prog_[]_AC_LANG_ABBREV[]_openmp 
       AC_DEFINE(HAVE_OPENMP,1,[Define if OpenMP is enabled]) ;;
