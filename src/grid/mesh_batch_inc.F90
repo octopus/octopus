@@ -62,7 +62,7 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
       ldaa = size(aa%X(ff), dim = 1)
       ldbb = size(bb%X(ff), dim = 1)
 
-      call lalg_gemmt(aa%nst, bb%nst, mesh%np, R_TOTYPE(mesh%volume_element), &
+      call lalg_gemmt(aa%nst, aa%dim, bb%nst, bb%dim, mesh%np, R_TOTYPE(mesh%volume_element), &
         aa%X(ff), bb%X(ff), R_TOTYPE(M_ZERO), dd)
 
     else
