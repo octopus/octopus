@@ -1937,7 +1937,7 @@ contains
     integer            :: ikp_start, ikp_end, isp_start, isp_end
     FLOAT              :: vec, kpoint(1:3), k_dot_r, expkr 
     integer            :: ifc
-    CMPLX, allocatable :: wfpw_node(:,:,:,:), gwfpw_node(:,:,:,:),wfpw(:), gwfpw(:)
+    CMPLX, allocatable :: wfpw(:), gwfpw(:)
     CMPLX, allocatable :: phase(:,:),vphase(:,:)
     
     integer            :: tdstep_on_node
@@ -1996,6 +1996,9 @@ contains
     
     nfaces = mdim*2
     if(this%surf_shape == M_PLANE) nfaces = 1 
+
+    SAFE_ALLOCATE( wfpw(ikp_start:ikp_end))
+    SAFE_ALLOCATE(gwfpw(ikp_start:ikp_end))
           
 
     do ifc = 1, nfaces
@@ -2004,12 +2007,6 @@ contains
       isp_end   = this%face_idx_range(ifc, 2)
       
       nfp = isp_end - isp_start + 1 ! faces can have a different number of points
-
-      SAFE_ALLOCATE( wfpw_node(stst:stend, 1:sdim, kptst:kptend, ikp_start:ikp_end))
-      SAFE_ALLOCATE(gwfpw_node(stst:stend, 1:sdim, kptst:kptend, ikp_start:ikp_end))
-
-      SAFE_ALLOCATE( wfpw(ikp_start:ikp_end))
-      SAFE_ALLOCATE(gwfpw(ikp_start:ikp_end))
 
       wfpw = M_z0
       gwfpw = M_z0
@@ -2025,76 +2022,7 @@ contains
         end if
       end do 
 
-      itstep = tdstep_on_node
-      do ik = kptst, kptend
-        if (kpoints_have_zero_weight_path(mesh%sb%kpoints)) then
-          ik_map = ik 
-        else
-          ik_map = 1
-        end if
-        
-        do ist = stst, stend
-          do isdim = 1, sdim
-              
-            if (.not. this%use_symmetry .or. kpoints_have_zero_weight_path(mesh%sb%kpoints)) then
-
-              do ikp = ikp_start , ikp_end
-            
-                gwfpw(ikp) = &
-                  sum(this%gwf(ist, isdim, ik, isp_start:isp_end, itstep, n_dir) &
-                    * this%expkr(isp_start:isp_end,ikp,ik_map,1))
-
-
-                wfpw(ikp) = &
-                  sum(this%wf(ist, isdim, ik, isp_start:isp_end, itstep)        &
-                    * this%expkr(isp_start:isp_end,ikp,ik_map,1))
-
-              end do 
-
-            else 
-              
-              do ikpu = 1, this%ll(dir_on_face(1))
-                do ikpv = 1, this%ll(dir_on_face(2))
-              
-                  
-                  face_int_gwf = sum(this%gwf(ist, isdim, ik, isp_start:isp_end, itstep, n_dir) &
-                               * this%expkr(isp_start:isp_end,ikpu,ik_map,dir_on_face(1)) &
-                               * this%expkr(isp_start:isp_end,ikpv,ik_map,dir_on_face(2)))
-
-                  face_int_wf  = sum(this%wf(ist, isdim, ik, isp_start:isp_end, itstep) &
-                               * this%expkr(isp_start:isp_end,ikpu,ik_map,dir_on_face(1)) &
-                               * this%expkr(isp_start:isp_end,ikpv,ik_map,dir_on_face(2)))
-                  
-                  do ikpz = 1, this%ll(n_dir)
-
-                     gwfpw(get_ikp(this,ikpu,ikpv,ikpz,n_dir)) = face_int_gwf &
-                                                               * this%expkr_perp(ikpz,ifc)  
-                     wfpw( get_ikp(this,ikpu,ikpv,ikpz,n_dir)) = face_int_wf &
-                                                               * this%expkr_perp(ikpz,ifc)  
-
-                  end do
-                  
-                end do
-              end do
-              
-
-              
-            end if
-        
-            
-            gwfpw(:) = gwfpw(:) * this%srfcnrml(n_dir, isp_start) ! surface area element ds
-            wfpw(:)  = wfpw(:)  * this%srfcnrml(n_dir, isp_start) ! surface area element ds
-            
-            if(itstep == tdstep_on_node) then
-              gwfpw_node(ist, isdim, ik, :) = gwfpw(:)
-               wfpw_node(ist, isdim, ik, :) = wfpw(:)
-            end if              
-            
-
-          end do 
-        end do 
-      end do 
-
+!       itstep = tdstep_on_node
 
       ! get the previous Volkov phase
       vphase(ikp_start:ikp_end,:) = this%conjgphase_prev_cub(ikp_start:ikp_end,:)
@@ -2130,13 +2058,57 @@ contains
           do ist = stst, stend
             do isdim = 1, sdim
               
-              ! communicate the current surface integrals
-              if(itstep == tdstep_on_node) then
-                gwfpw(:) = gwfpw_node(ist, isdim, ik, :)
-                 wfpw(:) =  wfpw_node(ist, isdim, ik, :)
-              end if
+              
+              ! calculate the surface integrals
+              if (.not. this%use_symmetry .or. kpoints_have_zero_weight_path(mesh%sb%kpoints)) then
 
-                
+                do ikp = ikp_start , ikp_end
+            
+                  gwfpw(ikp) = &
+                    sum(this%gwf(ist, isdim, ik, isp_start:isp_end, itstep, n_dir) &
+                      * this%expkr(isp_start:isp_end,ikp,ik_map,1))
+
+
+                  wfpw(ikp) = &
+                    sum(this%wf(ist, isdim, ik, isp_start:isp_end, itstep)        &
+                      * this%expkr(isp_start:isp_end,ikp,ik_map,1))
+
+                end do 
+
+              else 
+              
+                do ikpu = 1, this%ll(dir_on_face(1))
+                  do ikpv = 1, this%ll(dir_on_face(2))
+              
+                  
+                    face_int_gwf = sum(this%gwf(ist, isdim, ik, isp_start:isp_end, itstep, n_dir) &
+                                 * this%expkr(isp_start:isp_end,ikpu,ik_map,dir_on_face(1)) &
+                                 * this%expkr(isp_start:isp_end,ikpv,ik_map,dir_on_face(2)))
+
+                    face_int_wf  = sum(this%wf(ist, isdim, ik, isp_start:isp_end, itstep) &
+                                 * this%expkr(isp_start:isp_end,ikpu,ik_map,dir_on_face(1)) &
+                                 * this%expkr(isp_start:isp_end,ikpv,ik_map,dir_on_face(2)))
+                  
+                    do ikpz = 1, this%ll(n_dir)
+
+                       gwfpw(get_ikp(this,ikpu,ikpv,ikpz,n_dir)) = face_int_gwf &
+                                                                 * this%expkr_perp(ikpz,ifc)  
+                       wfpw( get_ikp(this,ikpu,ikpv,ikpz,n_dir)) = face_int_wf &
+                                                                 * this%expkr_perp(ikpz,ifc)  
+
+                    end do
+                  
+                  end do
+                end do
+              
+
+              
+              end if
+              
+              gwfpw(:) = gwfpw(:) * this%srfcnrml(n_dir, isp_start) ! surface area element ds
+              wfpw(:)  = wfpw(:)  * this%srfcnrml(n_dir, isp_start) ! surface area element ds
+
+              ! Sum it up  
               Jk_cub(ist, isdim, ik, ikp_start:ikp_end) = Jk_cub(ist, isdim, ik,ikp_start:ikp_end) +  &
                 phase(ikp_start:ikp_end, ik) * ( wfpw(ikp_start:ikp_end) * &
                    (M_TWO * this%veca(n_dir, itstep) / P_c  - this%kcoords_cub(n_dir, ikp_start:ikp_end, ik_map)) + &
@@ -2153,13 +2125,8 @@ contains
     spctramp_cub(:,:,:,:) = spctramp_cub(:,:,:,:) + Jk_cub(:,:,:,:) * M_HALF 
         
         
-        
-    SAFE_DEALLOCATE_A(gwfpw)
-    SAFE_DEALLOCATE_A(wfpw)
-    SAFE_DEALLOCATE_A(gwfpw_node)
-    SAFE_DEALLOCATE_A(wfpw_node)
-        
     end do ! face loop 
+
 
 
     this%conjgphase_prev_cub(ikp_start:ikp_end,:) = vphase(ikp_start:ikp_end,:)
@@ -2171,6 +2138,9 @@ contains
 
 
     this%spctramp_cub = this%spctramp_cub + spctramp_cub
+
+    SAFE_DEALLOCATE_A(gwfpw)
+    SAFE_DEALLOCATE_A(wfpw)
 
     SAFE_DEALLOCATE_A(Jk_cub)
     SAFE_DEALLOCATE_A(spctramp_cub)
