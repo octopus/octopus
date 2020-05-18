@@ -1236,7 +1236,7 @@ contains
       hm%ep%vdw_forces(1:ks%gr%sb%dim, 1:ks%calc%geo%natoms) = CNST(0.0)      
     end if
 
-    if(ks%calc%time_present) then
+    if(ks%calc%time_present .or. hm%time_zero) then
       call hamiltonian_elec_update(hm, ks%gr%mesh, namespace, time = ks%calc%time)
     else
       call hamiltonian_elec_update_pot(hm, ks%gr%mesh)

@@ -165,7 +165,7 @@ module hamiltonian_elec_oct_m
     type(lda_u_t) :: lda_u
     integer       :: lda_u_level
 
-    logical, private :: time_zero
+    logical, public :: time_zero
 
     type(exchange_operator_t), public :: exxop
     type(namespace_t), pointer :: namespace
