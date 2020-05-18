@@ -722,6 +722,12 @@ subroutine dlinsyssolve(n, nrhs, a, b, x)
   ! no PUSH_SUB, called too often
 
   ASSERT(n > 0)
+  ASSERT(ubound(a, dim=1) >= n)
+  ASSERT(ubound(a, dim=2) >= n)
+  ASSERT(ubound(b, dim=1) >= n)
+  ASSERT(ubound(b, dim=2) >= nrhs)
+  ASSERT(ubound(x, dim=1) >= n)
+  ASSERT(ubound(x, dim=2) >= nrhs)
 
   SAFE_ALLOCATE(ipiv(1:n))
   SAFE_ALLOCATE(iwork(1:n)) ! query?
@@ -732,8 +738,8 @@ subroutine dlinsyssolve(n, nrhs, a, b, x)
   SAFE_ALLOCATE(c(1:n))
   SAFE_ALLOCATE(af(1:n, 1:n))
 
-  call X(gesvx) ("N", "N", n, nrhs, a(1, 1), n, af(1, 1), n, ipiv(1), equed, r(1), c(1), b(1, 1), n, x(1, 1), n, &
-    rcond, ferr(1), berr(1), work(1), iwork(1), info)
+  call X(gesvx) ("N", "N", n, nrhs, a(1, 1), lead_dim(a), af(1, 1), n, ipiv(1), equed, r(1), c(1), &
+    b(1, 1), lead_dim(b), x(1, 1), lead_dim(x), rcond, ferr(1), berr(1), work(1), iwork(1), info)
 
   if(info /= 0) then
     write(message(1), '(3a, i5)') 'In dlinsyssolve, LAPACK ', TOSTRING(X(gesvx)), ' returned info = ', info
