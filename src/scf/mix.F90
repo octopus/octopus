@@ -266,7 +266,7 @@ contains
     !%Section SCF::Mixing
     !%Description
     !% When this variable is set to a value different than 1 (the
-    !% defaul) a combined mixing scheme will be used, with MixInterval
+    !% default) a combined mixing scheme will be used, with MixInterval
     !% - 1 steps of linear mixing followed by 1 step of the selected
     !% mixing. For the moment this variable only works with DIIS mixing.
     !%End

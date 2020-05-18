@@ -358,7 +358,7 @@ subroutine X(mixing_diis)(this, vin, vout, vnew, iter)
   SAFE_ALLOCATE(rhs(1:size + 1))
 
   do ii = 1, size
-    do jj = 1, size
+    do jj = ii, size
 
       aa(ii, jj) = CNST(0.0)
       do kk = 1, d2
@@ -367,7 +367,7 @@ subroutine X(mixing_diis)(this, vin, vout, vnew, iter)
                            this%mixfield%X(df)(:, kk, ll, ii), reduce = .false.)
         end do
       end do
-      
+      aa(jj, ii) = R_CONJ(aa(ii, jj))
     end do
   end do
   if(this%der%mesh%parallel_in_domains) call comm_allreduce(this%der%mesh%mpi_grp%comm,  aa)
