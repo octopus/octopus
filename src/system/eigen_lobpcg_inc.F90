@@ -716,7 +716,6 @@ contains
     integer, intent(in)    :: nidx
     integer, intent(in)    :: idx(:)
     
-    R_TYPE              :: det
     R_TYPE, allocatable :: tmp1(:, :), tmp2(:, :), tmp3(:, :)
     type(profile_t), save :: prof
 
@@ -729,7 +728,7 @@ contains
 
     call states_elec_blockt_mul(gr%mesh, st, constr_start, constr_start, &
       constr, constr, tmp1, xpsi1 = all_constr, xpsi2 = all_constr)
-    det = lalg_inverter(nconstr, tmp1, invert = .true.)
+    call lalg_inverter(nconstr, tmp1)
     call states_elec_blockt_mul(gr%mesh, st, constr_start, vs_start, &
       constr, vs, tmp2, xpsi1 = all_constr, xpsi2 = idx(1:nidx))
     call lalg_gemm(nconstr, nidx, nconstr, R_TOTYPE(M_ONE), tmp1, tmp2, R_TOTYPE(M_ZERO), tmp3)

@@ -104,7 +104,7 @@ contains
     call berry_phase_matrix(st, mesh, noccst, ik, ik, gvector, matrix)
       
     if(noccst > 0) then
-      det = lalg_determinant(noccst, matrix(1:noccst, 1:noccst), invert = .false.) ** st%smear%el_per_state
+      det = lalg_determinant(noccst, matrix(1:noccst, 1:noccst), preserve_mat=.false.) ** st%smear%el_per_state
     else
       det = M_ONE
     end if

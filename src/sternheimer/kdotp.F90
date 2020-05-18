@@ -511,7 +511,6 @@ contains
 
     character(len=80) :: filename, tmp
     integer :: iunit, ik, ist, ik2, ispin
-    FLOAT :: determinant
 
     PUSH_SUB(kdotp_write_eff_mass)
 
@@ -545,7 +544,7 @@ contains
         tmp = int2str(ist)
         write(iunit,'(a, a, a, f12.8, a, a)') 'State #', trim(tmp), ', Energy = ', &
           units_from_atomic(units_out%energy, st%eigenval(ist, ik)), ' ', units_abbrev(units_out%energy)
-        determinant = lalg_inverter(gr%sb%periodic_dim, kdotp_vars%eff_mass_inv(:, :, ist, ik), invert = .true.)
+        call lalg_inverter(gr%sb%periodic_dim, kdotp_vars%eff_mass_inv(:, :, ist, ik))
         call output_tensor(iunit, kdotp_vars%eff_mass_inv(:, :, ist, ik), gr%sb%periodic_dim, unit_one)
       end do
 
