@@ -3,7 +3,7 @@
 Test         : Photoelectron - PFFT
 # Options_skip : pfft
 Program      : octopus
-TestGroups   : short-run, photo_electron
+TestGroups   : long-run, photo_electron
 Enabled      : Yes
 
 # Note: the discrepancy between the numbers in test 02 and 03 
@@ -14,12 +14,8 @@ Enabled      : Yes
 # Ground state
 Processors : 4
 Input      : 05-pfft.01-gs.inp
-if (available pfft); then
-    match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
-    match ; Total energy   ; GREPFIELD(static/info, 'Total       =', 3) ;  -0.49919533
-else
-    match; Error; GREPCOUNT(err, 'PFFT but that library was not linked'); 1
-endif
+match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
+match ; Total energy   ; GREPFIELD(static/info, 'Total       =', 3) ;  -0.49919533
 
 # Hydrogen PES spectrum mask-method
 # This test basically checks the forward transform
