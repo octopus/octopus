@@ -343,6 +343,7 @@ R_TYPE function X(states_elec_mpdotp_g)(namespace, mesh, st1, st2, mat) result(d
       if(i1 > 0) then
         dotp = dotp * (lalg_determinant(i1, bb(1:i1, 1:i1), preserve_mat = .false.)) ** st1%d%kweights(ik)
       end if
+      SAFE_DEALLOCATE_A(bb)
 
     end do
   case(SPIN_POLARIZED, SPINORS)
