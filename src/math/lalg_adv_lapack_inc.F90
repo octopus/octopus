@@ -722,6 +722,12 @@ subroutine dlinsyssolve(n, nrhs, a, b, x)
   ! no PUSH_SUB, called too often
 
   ASSERT(n > 0)
+  ASSERT(ubound(a, dim=1) >= n)
+  ASSERT(ubound(a, dim=2) >= n)
+  ASSERT(ubound(b, dim=1) >= n)
+  ASSERT(ubound(b, dim=2) >= nrhs)
+  ASSERT(ubound(x, dim=1) >= n)
+  ASSERT(ubound(x, dim=2) >= nrhs)
 
   SAFE_ALLOCATE(ipiv(1:n))
   SAFE_ALLOCATE(iwork(1:n)) ! query?
