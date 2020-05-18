@@ -124,14 +124,14 @@ module td_write_oct_m
 
   integer, parameter ::   &
     OUT_MAXWELL_ENERGY          = 1, &
-    OUT_FIELDS                  = 2, &
-    OUT_POYNTING                = 3, &
-    OUT_E_FIELD_SURF_X          = 4, &
-    OUT_E_FIELD_SURF_Y          = 5, &
-    OUT_E_FIELD_SURF_Z          = 6, &
-    OUT_B_FIELD_SURF_X          = 7, &
-    OUT_B_FIELD_SURF_Y          = 8, &
-    OUT_B_FIELD_SURF_Z          = 9, &
+    OUT_MAXWELL_FIELDS          = 2, &
+    OUT_MEAN_POYNTING           = 3, &
+    OUT_E_FIELD_SURFACE_X       = 4, &
+    OUT_E_FIELD_SURFACE_Y       = 5, &
+    OUT_E_FIELD_SURFACE_Z       = 6, &
+    OUT_B_FIELD_SURFACE_X       = 7, &
+    OUT_B_FIELD_SURFACE_Y       = 8, &
+    OUT_B_FIELD_SURFACE_Z       = 9, &
     OUT_MAXWELL_MAX             = 9
 
 
@@ -3230,7 +3230,7 @@ contains
 
     !%Variable MaxwellTDOutput
     !%Type flag
-    !%Default energy
+    !%Default maxwell_energy
     !%Section Time-Dependent::TD Output
     !%Description
     !% Defines what should be output during the time-dependent
@@ -3240,7 +3240,7 @@ contains
     !% details of the TD run.
     !%Option maxwell_energy 1
     !% Output of the electromagnetic field energy into the folder <tt>td.general/maxwell</tt>.
-    !%Option fields 2
+    !%Option maxwell_fields 2
     !% Output of the electromagnetic field at the origin of the simulation box into the
     !% folder <tt>td.general/fields</tt>
     !%Option mean_poynting 4
@@ -3293,43 +3293,43 @@ contains
         units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/maxwell_energy", namespace)))
     end if
 
-    if (writ%out(OUT_FIELDS)%write) then
-       call write_iter_init(writ%out(OUT_FIELDS)%handle, first, &
+    if (writ%out(OUT_MAXWELL_FIELDS)%write) then
+       call write_iter_init(writ%out(OUT_MAXWELL_FIELDS)%handle, first, &
         units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/fields", namespace)))
     end if
 
-    if (writ%out(OUT_POYNTING)%write) then
-       call write_iter_init(writ%out(OUT_POYNTING)%handle, first, &
+    if (writ%out(OUT_MEAN_POYNTING)%write) then
+       call write_iter_init(writ%out(OUT_MEAN_POYNTING)%handle, first, &
         units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/mean_poynting_vector", namespace)))
     end if
 
-    if (writ%out(OUT_E_FIELD_SURF_X)%write) then
-       call write_iter_init(writ%out(OUT_E_FIELD_SURF_X)%handle, first, &
+    if (writ%out(OUT_E_FIELD_SURFACE_X)%write) then
+       call write_iter_init(writ%out(OUT_E_FIELD_SURFACE_X)%handle, first, &
         units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/electric_field_surface-x", namespace)))
     end if
 
-    if (writ%out(OUT_E_FIELD_SURF_Y)%write) then
-       call write_iter_init(writ%out(OUT_E_FIELD_SURF_Y)%handle, first, &
+    if (writ%out(OUT_E_FIELD_SURFACE_Y)%write) then
+       call write_iter_init(writ%out(OUT_E_FIELD_SURFACE_Y)%handle, first, &
         units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/electric_field_surface-y", namespace)))
     end if
 
-    if (writ%out(OUT_E_FIELD_SURF_Z)%write) then
-       call write_iter_init(writ%out(OUT_E_FIELD_SURF_Z)%handle, first, &
+    if (writ%out(OUT_E_FIELD_SURFACE_Z)%write) then
+       call write_iter_init(writ%out(OUT_E_FIELD_SURFACE_Z)%handle, first, &
         units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/electric_field_surface-z", namespace)))
     end if
 
-    if (writ%out(OUT_B_FIELD_SURF_X)%write) then
-       call write_iter_init(writ%out(OUT_B_FIELD_SURF_X)%handle, first, &
+    if (writ%out(OUT_B_FIELD_SURFACE_X)%write) then
+       call write_iter_init(writ%out(OUT_B_FIELD_SURFACE_X)%handle, first, &
         units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/magnetic_field_surface-x", namespace)))
     end if
 
-    if (writ%out(OUT_B_FIELD_SURF_Y)%write) then
-       call write_iter_init(writ%out(OUT_B_FIELD_SURF_Y)%handle, first, &
+    if (writ%out(OUT_B_FIELD_SURFACE_Y)%write) then
+       call write_iter_init(writ%out(OUT_B_FIELD_SURFACE_Y)%handle, first, &
         units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/magnetic_field_surface-y", namespace)))
     end if
 
-    if (writ%out(OUT_B_FIELD_SURF_Z)%write) then
-       call write_iter_init(writ%out(OUT_B_FIELD_SURF_Z)%handle, first, &
+    if (writ%out(OUT_B_FIELD_SURFACE_Z)%write) then
+       call write_iter_init(writ%out(OUT_B_FIELD_SURFACE_Z)%handle, first, &
         units_from_atomic(units_out%time, dt), trim(io_workpath("td.general/magnetic_field_surface-z", namespace)))
     end if
 
@@ -3359,8 +3359,8 @@ contains
   subroutine td_write_mxll_iter(writ, gr, st, hm, dt, iter)
     type(td_write_t),              intent(inout) :: writ
     type(grid_t),                  intent(inout) :: gr
-    type(states_mxll_t),                intent(inout) :: st
-    type(hamiltonian_mxll_t),           intent(inout) :: hm
+    type(states_mxll_t),           intent(inout) :: st
+    type(hamiltonian_mxll_t),      intent(inout) :: hm
     FLOAT,                         intent(in)    :: dt
     integer,                       intent(in)    :: iter
 
@@ -3379,36 +3379,36 @@ contains
 !      end if
     end if
 
-    if (writ%out(OUT_FIELDS)%write) then
-      call td_write_fields(writ%out(OUT_FIELDS)%handle, st, gr, iter, dt)
+    if (writ%out(OUT_MAXWELL_FIELDS)%write) then
+      call td_write_fields(writ%out(OUT_MAXWELL_FIELDS)%handle, st, gr, iter, dt)
     end if
 
-    if (writ%out(OUT_POYNTING)%write) then
-      call td_write_poynting_vector(writ%out(OUT_POYNTING)%handle, st, gr, iter, dt, hm%plane_waves)
+    if (writ%out(OUT_MEAN_POYNTING)%write) then
+      call td_write_poynting_vector(writ%out(OUT_MEAN_POYNTING)%handle, st, gr, iter, dt, hm%plane_waves)
     end if
 
-    if (writ%out(OUT_E_FIELD_SURF_X)%write) then
-      call td_write_electric_field_box_surface(writ%out(OUT_E_FIELD_SURF_X)%handle, hm, st, 1, iter)
+    if (writ%out(OUT_E_FIELD_SURFACE_X)%write) then
+      call td_write_electric_field_box_surface(writ%out(OUT_E_FIELD_SURFACE_X)%handle, hm, st, 1, iter)
     end if
 
-    if (writ%out(OUT_E_FIELD_SURF_Y)%write) then
-      call td_write_electric_field_box_surface(writ%out(OUT_E_FIELD_SURF_Y)%handle, hm, st, 2, iter)
+    if (writ%out(OUT_E_FIELD_SURFACE_Y)%write) then
+      call td_write_electric_field_box_surface(writ%out(OUT_E_FIELD_SURFACE_Y)%handle, hm, st, 2, iter)
     end if
 
-    if (writ%out(OUT_E_FIELD_SURF_Z)%write) then
-      call td_write_electric_field_box_surface(writ%out(OUT_E_FIELD_SURF_Z)%handle, hm, st, 3, iter)
+    if (writ%out(OUT_E_FIELD_SURFACE_Z)%write) then
+      call td_write_electric_field_box_surface(writ%out(OUT_E_FIELD_SURFACE_Z)%handle, hm, st, 3, iter)
     end if
 
-    if (writ%out(OUT_B_FIELD_SURF_X)%write) then
-      call td_write_magnetic_field_box_surface(writ%out(OUT_B_FIELD_SURF_X)%handle, hm, st, 1, iter)
+    if (writ%out(OUT_B_FIELD_SURFACE_X)%write) then
+      call td_write_magnetic_field_box_surface(writ%out(OUT_B_FIELD_SURFACE_X)%handle, hm, st, 1, iter)
     end if
 
-    if (writ%out(OUT_B_FIELD_SURF_Y)%write) then
-      call td_write_magnetic_field_box_surface(writ%out(OUT_B_FIELD_SURF_Y)%handle, hm, st, 2, iter)
+    if (writ%out(OUT_B_FIELD_SURFACE_Y)%write) then
+      call td_write_magnetic_field_box_surface(writ%out(OUT_B_FIELD_SURFACE_Y)%handle, hm, st, 2, iter)
     end if
 
-    if (writ%out(OUT_B_FIELD_SURF_Z)%write) then
-      call td_write_magnetic_field_box_surface(writ%out(OUT_B_FIELD_SURF_Z)%handle, hm, st, 3, iter)
+    if (writ%out(OUT_B_FIELD_SURFACE_Z)%write) then
+      call td_write_magnetic_field_box_surface(writ%out(OUT_B_FIELD_SURFACE_Z)%handle, hm, st, 3, iter)
     end if
 
     call profiling_out(prof)
@@ -3420,8 +3420,8 @@ contains
   ! ---------------------------------------------------------
   subroutine td_write_maxwell_energy(out_maxwell_energy, hm, st, iter)
     type(c_ptr),                   intent(inout) :: out_maxwell_energy
-    type(hamiltonian_mxll_t),           intent(in)    :: hm
-    type(states_mxll_t),                intent(in)    :: st
+    type(hamiltonian_mxll_t),      intent(in)    :: hm
+    type(states_mxll_t),           intent(in)    :: st
     integer,                       intent(in)    :: iter
 
     integer :: ii
@@ -3482,8 +3482,8 @@ contains
   ! ---------------------------------------------------------
   subroutine td_write_electric_field_box_surface(out_field_surf, hm, st, dim, iter)
     type(c_ptr),                   intent(inout) :: out_field_surf
-    type(hamiltonian_mxll_t),           intent(in)    :: hm
-    type(states_mxll_t),                intent(in)    :: st
+    type(hamiltonian_mxll_t),      intent(in)    :: hm
+    type(states_mxll_t),           intent(in)    :: st
     integer,                       intent(in)    :: dim
     integer,                       intent(in)    :: iter
 
@@ -3519,10 +3519,10 @@ contains
 
       ! units
       call write_iter_string(out_field_surf, '#[Iter n.]')
-      call write_iter_header(out_field_surf, '[' // trim(units_abbrev(unit_one)) // ']')
+      call write_iter_header(out_field_surf, '[' // trim(units_abbrev(units_out%time)) // ']')
 
       do ii = 1, n_columns
-        call write_iter_header(out_field_surf, '[' // trim(units_abbrev(unit_one)) // ']')
+        call write_iter_header(out_field_surf, '[' // trim(units_abbrev(units_out%energy/units_out%length)) // ']')
       end do
       call write_iter_nl(out_field_surf)
 
@@ -3530,18 +3530,30 @@ contains
     end if
 
     call write_iter_start(out_field_surf)
-    call write_iter_double(out_field_surf, units_from_atomic(unit_one, st%electric_field_box_surface(1,1,dim)), 1)
-    call write_iter_double(out_field_surf, units_from_atomic(unit_one, st%electric_field_box_surface(2,1,dim)), 1)
-    call write_iter_double(out_field_surf, units_from_atomic(unit_one, st%electric_field_box_surface(1,2,dim)), 1)
-    call write_iter_double(out_field_surf, units_from_atomic(unit_one, st%electric_field_box_surface(2,2,dim)), 1)
-    call write_iter_double(out_field_surf, units_from_atomic(unit_one, st%electric_field_box_surface(1,3,dim)), 1)
-    call write_iter_double(out_field_surf, units_from_atomic(unit_one, st%electric_field_box_surface(2,3,dim)), 1)
-    call write_iter_double(out_field_surf, units_from_atomic(unit_one, st%electric_field_box_surface_plane_waves(1,1,dim)), 1)
-    call write_iter_double(out_field_surf, units_from_atomic(unit_one, st%electric_field_box_surface_plane_waves(2,1,dim)), 1)
-    call write_iter_double(out_field_surf, units_from_atomic(unit_one, st%electric_field_box_surface_plane_waves(1,2,dim)), 1)
-    call write_iter_double(out_field_surf, units_from_atomic(unit_one, st%electric_field_box_surface_plane_waves(2,2,dim)), 1)
-    call write_iter_double(out_field_surf, units_from_atomic(unit_one, st%electric_field_box_surface_plane_waves(1,3,dim)), 1)
-    call write_iter_double(out_field_surf, units_from_atomic(unit_one, st%electric_field_box_surface_plane_waves(2,3,dim)), 1)
+    call write_iter_double(out_field_surf, units_from_atomic(units_out%energy/units_out%length, &
+         st%electric_field_box_surface(1,1,dim)), 1)
+    call write_iter_double(out_field_surf, units_from_atomic(units_out%energy/units_out%length, &
+         st%electric_field_box_surface(2,1,dim)), 1)
+    call write_iter_double(out_field_surf, units_from_atomic(units_out%energy/units_out%length, &
+         st%electric_field_box_surface(1,2,dim)), 1)
+    call write_iter_double(out_field_surf, units_from_atomic(units_out%energy/units_out%length, &
+         st%electric_field_box_surface(2,2,dim)), 1)
+    call write_iter_double(out_field_surf, units_from_atomic(units_out%energy/units_out%length, &
+         st%electric_field_box_surface(1,3,dim)), 1)
+    call write_iter_double(out_field_surf, units_from_atomic(units_out%energy/units_out%length, &
+         st%electric_field_box_surface(2,3,dim)), 1)
+    call write_iter_double(out_field_surf, units_from_atomic(units_out%energy/units_out%length, &
+         st%electric_field_box_surface_plane_waves(1,1,dim)), 1)
+    call write_iter_double(out_field_surf, units_from_atomic(units_out%energy/units_out%length, &
+         st%electric_field_box_surface_plane_waves(2,1,dim)), 1)
+    call write_iter_double(out_field_surf, units_from_atomic(units_out%energy/units_out%length, &
+         st%electric_field_box_surface_plane_waves(1,2,dim)), 1)
+    call write_iter_double(out_field_surf, units_from_atomic(units_out%energy/units_out%length, &
+         st%electric_field_box_surface_plane_waves(2,2,dim)), 1)
+    call write_iter_double(out_field_surf, units_from_atomic(units_out%energy/units_out%length, &
+         st%electric_field_box_surface_plane_waves(1,3,dim)), 1)
+    call write_iter_double(out_field_surf, units_from_atomic(units_out%energy/units_out%length, &
+         st%electric_field_box_surface_plane_waves(2,3,dim)), 1)
     call write_iter_nl(out_field_surf)
 
     POP_SUB(td_write_electric_field_box_surface)
@@ -3551,8 +3563,8 @@ contains
   ! ---------------------------------------------------------
   subroutine td_write_magnetic_field_box_surface(out_field_surf, hm, st, dim, iter)
     type(c_ptr),                   intent(inout) :: out_field_surf
-    type(hamiltonian_mxll_t),           intent(in)    :: hm
-    type(states_mxll_t),                intent(in)    :: st
+    type(hamiltonian_mxll_t),      intent(in)    :: hm
+    type(states_mxll_t),           intent(in)    :: st
     integer,                       intent(in)    :: dim
     integer,                       intent(in)    :: iter
 
@@ -3588,10 +3600,10 @@ contains
 
       ! units
       call write_iter_string(out_field_surf, '#[Iter n.]')
-      call write_iter_header(out_field_surf, '[' // trim(units_abbrev(unit_one)) // ']')
+      call write_iter_header(out_field_surf, '[' // trim(units_abbrev(units_out%time)) // ']')
 
       do ii = 1, n_columns
-        call write_iter_header(out_field_surf, '[' // trim(units_abbrev(unit_one)) // ']')
+        call write_iter_header(out_field_surf, '[' // trim(units_abbrev(unit_one/units_out%length**2)) // ']')
       end do
       call write_iter_nl(out_field_surf)
 
@@ -3599,18 +3611,30 @@ contains
     end if
 
     call write_iter_start(out_field_surf)
-    call write_iter_double(out_field_surf, units_from_atomic(unit_one, st%magnetic_field_box_surface(1,1,dim)), 1)
-    call write_iter_double(out_field_surf, units_from_atomic(unit_one, st%magnetic_field_box_surface(2,1,dim)), 1)
-    call write_iter_double(out_field_surf, units_from_atomic(unit_one, st%magnetic_field_box_surface(1,2,dim)), 1)
-    call write_iter_double(out_field_surf, units_from_atomic(unit_one, st%magnetic_field_box_surface(2,2,dim)), 1)
-    call write_iter_double(out_field_surf, units_from_atomic(unit_one, st%magnetic_field_box_surface(1,3,dim)), 1)
-    call write_iter_double(out_field_surf, units_from_atomic(unit_one, st%magnetic_field_box_surface(2,3,dim)), 1)
-    call write_iter_double(out_field_surf, units_from_atomic(unit_one, st%magnetic_field_box_surface_plane_waves(1,1,dim)), 1)
-    call write_iter_double(out_field_surf, units_from_atomic(unit_one, st%magnetic_field_box_surface_plane_waves(2,1,dim)), 1)
-    call write_iter_double(out_field_surf, units_from_atomic(unit_one, st%magnetic_field_box_surface_plane_waves(1,2,dim)), 1)
-    call write_iter_double(out_field_surf, units_from_atomic(unit_one, st%magnetic_field_box_surface_plane_waves(2,2,dim)), 1)
-    call write_iter_double(out_field_surf, units_from_atomic(unit_one, st%magnetic_field_box_surface_plane_waves(1,3,dim)), 1)
-    call write_iter_double(out_field_surf, units_from_atomic(unit_one, st%magnetic_field_box_surface_plane_waves(2,3,dim)), 1)
+    call write_iter_double(out_field_surf, units_from_atomic(unit_one/units_out%length**2, &
+         st%magnetic_field_box_surface(1,1,dim)), 1)
+    call write_iter_double(out_field_surf, units_from_atomic(unit_one/units_out%length**2, &
+         st%magnetic_field_box_surface(2,1,dim)), 1)
+    call write_iter_double(out_field_surf, units_from_atomic(unit_one/units_out%length**2, &
+         st%magnetic_field_box_surface(1,2,dim)), 1)
+    call write_iter_double(out_field_surf, units_from_atomic(unit_one/units_out%length**2, &
+         st%magnetic_field_box_surface(2,2,dim)), 1)
+    call write_iter_double(out_field_surf, units_from_atomic(unit_one/units_out%length**2, &
+         st%magnetic_field_box_surface(1,3,dim)), 1)
+    call write_iter_double(out_field_surf, units_from_atomic(unit_one/units_out%length**2, &
+         st%magnetic_field_box_surface(2,3,dim)), 1)
+    call write_iter_double(out_field_surf, units_from_atomic(unit_one/units_out%length**2, &
+         st%magnetic_field_box_surface_plane_waves(1,1,dim)), 1)
+    call write_iter_double(out_field_surf, units_from_atomic(unit_one/units_out%length**2, &
+         st%magnetic_field_box_surface_plane_waves(2,1,dim)), 1)
+    call write_iter_double(out_field_surf, units_from_atomic(unit_one/units_out%length**2, &
+         st%magnetic_field_box_surface_plane_waves(1,2,dim)), 1)
+    call write_iter_double(out_field_surf, units_from_atomic(unit_one/units_out%length**2, &
+         st%magnetic_field_box_surface_plane_waves(2,2,dim)), 1)
+    call write_iter_double(out_field_surf, units_from_atomic(unit_one/units_out%length**2, &
+         st%magnetic_field_box_surface_plane_waves(1,3,dim)), 1)
+    call write_iter_double(out_field_surf, units_from_atomic(unit_one/units_out%length**2, &
+         st%magnetic_field_box_surface_plane_waves(2,3,dim)), 1)
     call write_iter_nl(out_field_surf)
 
     POP_SUB(td_write_magnetic_field_box_surface)
@@ -3620,7 +3644,7 @@ contains
  ! ---------------------------------------------------------
   subroutine td_write_poynting_vector(out_poynting, st, gr, iter, dt, plane_wave_flag)
     type(c_ptr),         intent(inout) :: out_poynting
-    type(states_mxll_t),      intent(in)    :: st
+    type(states_mxll_t), intent(in)    :: st
     type(grid_t),        intent(in)    :: gr
     integer,             intent(in)    :: iter
     FLOAT,               intent(in)    :: dt
@@ -3630,6 +3654,10 @@ contains
     FLOAT              :: field(MAX_DIM), field_2(MAX_DIM)
     FLOAT, allocatable :: dtmp(:,:)
     character(len=80)  :: aux
+
+    PUSH_SUB(td_write_poynting_vector)
+
+    if(.not.mpi_grp_is_root(mpi_world)) return ! only first node outputs
 
     SAFE_ALLOCATE(dtmp(1:gr%mesh%np,1:st%dim))
 
@@ -3641,10 +3669,6 @@ contains
     end if
 
     SAFE_DEALLOCATE_A(dtmp)
-
-    if(.not.mpi_grp_is_root(mpi_world)) return ! only first node outputs
-
-    PUSH_SUB(td_write_poynting_vector)
 
     if(iter == 0) then
       call td_write_print_header_init(out_poynting)

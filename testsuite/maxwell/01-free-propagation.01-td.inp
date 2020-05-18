@@ -57,7 +57,7 @@
  MaxwellOutput = electric_field + magnetic_field + maxwell_energy_density
 
  MaxwellOutputInterval = 50
- MaxwellTDOutput       = maxwell_energy + fields
+ MaxwellTDOutput       = maxwell_energy + maxwell_fields
 
  %MaxwellFieldsCoordinate
    0.00 | 0.00 | 0.00
