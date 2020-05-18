@@ -1211,9 +1211,7 @@ subroutine X(least_squares_vec)(nn, aa, bb, xx)
 
   SAFE_ALLOCATE(ss(1:nn))
 
-! MJV 2016 11 09 : TODO: this is callable with complex, but does nothing!!!
 #ifdef R_TREAL
-  
   call lapack_gelss(nn, nn, 1, aa(1, 1), lead_dim(aa), xx(1), nn, ss(1), CNST(-1.0), rank, dlwork, -1, info)
 
   SAFE_ALLOCATE(work(1:int(dlwork)))
@@ -1228,6 +1226,8 @@ subroutine X(least_squares_vec)(nn, aa, bb, xx)
   call lapack_gelss(nn, nn, 1, aa(1, 1), lead_dim(aa), xx(1), nn, ss(1), CNST(-1.0), rank, work(1), int(dlwork), rwork(1), info)
   SAFE_DEALLOCATE_A(rwork)
 #endif
+
+  SAFE_DEALLOCATE_A(ss)
 
   if(info /= 0) then
     write(message(1), '(5a,i5)') &
