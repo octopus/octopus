@@ -1703,9 +1703,9 @@ contains
                 end if
               end do
               if(mesh%parallel_in_domains) then
-                call comm_allreduce(mesh%mpi_grp%comm, this%wf(ist, isdim, ik, :, this%itstep))
+                call comm_allreduce(mesh%mpi_grp%comm, this%wf(ist, isdim, ik, 1:this%nsrfcpnts, this%itstep))
                 do imdim = 1, mdim
-                  call comm_allreduce(mesh%mpi_grp%comm, this%gwf(ist, isdim, ik, :, this%itstep, imdim))
+                  call comm_allreduce(mesh%mpi_grp%comm, this%gwf(ist, isdim, ik, 1:this%nsrfcpnts, this%itstep, imdim))
                 end do
               end if
             end if
