@@ -379,7 +379,7 @@ subroutine X(mixing_diis)(this, vin, vout, vnew, iter)
   rhs(1:size) = CNST(0.0)
   rhs(size + 1) = CNST(-1.0)
 
-  call lalg_least_squares(size + 1, aa, rhs, alpha)
+  call lalg_least_squares(size + 1, aa, rhs, alpha, preserve_mat=.false.)
 
   sumalpha = sum(alpha(1:size))
   alpha = alpha/sumalpha
