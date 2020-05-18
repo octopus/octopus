@@ -1659,7 +1659,7 @@ contains
           do isdim = 1, sdim
             call states_elec_get_state(st, mesh, isdim, ist, ik, psi)
             
-            if(this%surf_shape == M_CUBIC .or. this%surf_shape == M_PLANE) then
+            if(this%surf_shape == M_PLANE) then
               ! Apply the phase containing kpoint only
               kpoint(1:mdim) = kpoints_get_point(mesh%sb%kpoints, states_elec_dim_get_kpoint_index(st%d, ik))
 
@@ -1667,10 +1667,6 @@ contains
               do ip = 1, mesh%np_part
                 psi(ip) = exp(-M_zI*sum(mesh%x(ip, 1:mdim)*kpoint(1:mdim)))*psi(ip) 
               end do
-              
-              
-!               psi(1: mesh%np_part) = hm%hm_base%phase(1: mesh%np_part, ik) * psi(1: mesh%np_part)
-!               call states_elec_set_phase(st%d, psi, hm%hm_base%phase(1: mesh%np_part, ik), mesh%np_part, .false.)
             end if
             
             call zderivatives_grad(gr%der, psi, gpsi, .true.)
