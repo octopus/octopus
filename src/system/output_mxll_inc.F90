@@ -336,7 +336,7 @@
 
     ! transverse component of the electric field
     if (iand(outp%what, OPTION__MAXWELLOUTPUT__TRANS_ELECTRIC_FIELD) /= 0) then
-      fn_unit = unit_one
+      fn_unit = units_out%energy/units_out%length
       SAFE_ALLOCATE(dtmp(1:gr%mesh%np, 1:st%dim))
       call get_electric_field_state(st%rs_state_trans, gr%mesh, dtmp, st%ep(1:gr%mesh%np), gr%mesh%np)
       do idim=1, st%dim
@@ -348,7 +348,7 @@
 
     ! transverse component of the magnetic field
     if(iand(outp%what, OPTION__MAXWELLOUTPUT__TRANS_MAGNETIC_FIELD) /= 0) then
-      fn_unit = unit_one
+      fn_unit = unit_one/units_out%length**2
       SAFE_ALLOCATE(dtmp(1:gr%mesh%np,1:st%dim))
       call get_magnetic_field_state(st%rs_state_trans, gr%mesh, st%rs_sign, dtmp, st%ep(1:gr%mesh%np), gr%mesh%np)
       do idim=1, st%dim
@@ -380,7 +380,7 @@
 
     ! longitudinal component of the electric field
     if (iand(outp%what, OPTION__MAXWELLOUTPUT__LONG_ELECTRIC_FIELD) /= 0) then
-      fn_unit = unit_one
+      fn_unit = units_out%energy/units_out%length
       SAFE_ALLOCATE(dtmp(1:gr%mesh%np,1:st%dim))
       call get_electric_field_state(st%rs_state_long, gr%mesh, dtmp, st%ep(1:gr%mesh%np), gr%mesh%np)
       do idim = 1, st%dim
@@ -392,7 +392,7 @@
 
     ! longitudinal component of the magnetic field
     if (iand(outp%what, OPTION__MAXWELLOUTPUT__LONG_MAGNETIC_FIELD) /= 0) then
-      fn_unit = unit_one
+      fn_unit = unit_one/units_out%length**2
       SAFE_ALLOCATE(dtmp(1:gr%mesh%np,1:st%dim))
       call get_magnetic_field_state(st%rs_state_long, gr%mesh, st%rs_sign, dtmp, st%mu(1:gr%mesh%np), gr%mesh%np)
       do idim = 1, st%dim
@@ -423,7 +423,7 @@
 
     ! divergence of the electric field
     if (iand(outp%what, OPTION__MAXWELLOUTPUT__DIV_ELECTRIC_FIELD) /= 0) then
-      fn_unit = unit_one
+      fn_unit = units_out%length**(-gr%mesh%sb%dim)
       SAFE_ALLOCATE(dtmp_1(1:gr%mesh%np_part, 1:st%dim))
       SAFE_ALLOCATE(dtmp_2(1:gr%mesh%np))
       dtmp_1 = M_ZERO
@@ -436,6 +436,7 @@
 
     ! divergence of the magnetic field
     if (iand(outp%what, OPTION__MAXWELLOUTPUT__DIV_MAGNETIC_FIELD) /= 0) then
+      ! unit does not matter, should be zero
       fn_unit = unit_one
       SAFE_ALLOCATE(dtmp_1(1:gr%mesh%np_part, 1:st%dim))
       SAFE_ALLOCATE(dtmp_2(1:gr%mesh%np))
@@ -576,9 +577,9 @@
     ! charge density calculated by the divergence of the electric field
     if (iand(outp%what, OPTION__MAXWELLOUTPUT__CHARGE_DENSITY) /= 0) then
       fn_unit = unit_one
-      SAFE_ALLOCATE(dtmp_1(1:gr%mesh%np_part,1:st%dim))
+      SAFE_ALLOCATE(dtmp_1(1:gr%mesh%np,1:st%dim))
       SAFE_ALLOCATE(dtmp_2(1:gr%mesh%np))
-      call get_electric_field_state(st%rs_state, gr%mesh, dtmp_1, st%ep, gr%mesh%np_part)
+      call get_electric_field_state(st%rs_state, gr%mesh, dtmp_1, st%ep, gr%mesh%np)
       call get_divergence_field(gr, dtmp_1, dtmp_2, .true.)
       call dio_function_output(outp%how, dir, "charge_density", namespace, gr%mesh, dtmp_2(:), fn_unit, ierr, geo=geo)
       SAFE_DEALLOCATE_A(dtmp_1)
