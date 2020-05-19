@@ -114,8 +114,6 @@ module pes_flux_oct_m
     CMPLX, pointer   :: bvk_phase(:,:)                 !< for cubic surface:
     CMPLX, pointer   :: expkr(:,:,:,:)                 !< for cubic surface: Exponential tabulated on the cube face
     CMPLX, pointer   :: expkr_perp(:,:)                !< for cubic surface: Exponential tabulated on the direction perpendicular to the face
-    CMPLX, pointer   :: expg(:,:,:)                    !< for cubic surface: Fourier basis on a face of the cube
-    FLOAT, pointer   :: sinc(:,:,:,:)                  !< for cubic surface: sync function for Fourier components parallel to cube faces
     FLOAT, pointer   :: LLr(:,:)                       !< for cubic surface: coordinates of the face edges
     integer, pointer :: NN(:,:)                        !< for cubic surface: number of points on each face mapping coord
     integer, pointer :: Lkpuvz_inv(:,:,:)              !< map a point on the momentum mesh into its components u,v,z (u,v parametric on face
@@ -140,8 +138,6 @@ module pes_flux_oct_m
                                                        !< mesh. Used when working with semi-periodic systems 
     integer, public  :: ngpt                           !< Number of free Gpoints use to increase resoltion                        
 
-    logical          :: usememory                      !< whether conjgplanewf should be kept in memory
-    logical          :: avoid_ab
     type(mesh_interpolation_t) :: interp
       
     logical          :: parallel_in_momentum           !< whether we are parallelizing over the k-mesh  
@@ -206,7 +202,6 @@ contains
     pdim   = mesh%sb%periodic_dim
 
     this%surf_interp = .false.
-    this%avoid_ab = .true.
 
 
     do il = 1, hm%ep%no_lasers
@@ -638,8 +633,6 @@ contains
       SAFE_DEALLOCATE_P(this%rankmin)
       
       SAFE_DEALLOCATE_P(this%face_idx_range)
-      SAFE_DEALLOCATE_P(this%expg)
-      SAFE_DEALLOCATE_P(this%sinc)
       SAFE_DEALLOCATE_P(this%LLr)
       SAFE_DEALLOCATE_P(this%NN)      
       
@@ -2522,14 +2515,12 @@ contains
         xx(1:MAX_DIM) = mesh%x(ip_local, 1:MAX_DIM) - offset(1:MAX_DIM)
 
         ! eventually check whether we are in absorbing zone
-        if(this%avoid_ab) then
-          select case(hm%bc%abtype)
-          case(MASK_ABSORBING)
-            in_ab = (hm%bc%mf(ip_local) /= M_ONE)
-          case(IMAGINARY_ABSORBING)
-            in_ab = (hm%bc%mf(ip_local) /= M_ZERO)
-          end select
-        end if
+        select case(hm%bc%abtype)
+        case(MASK_ABSORBING)
+          in_ab = (hm%bc%mf(ip_local) /= M_ONE)
+        case(IMAGINARY_ABSORBING)
+          in_ab = (hm%bc%mf(ip_local) /= M_ZERO)
+        end select
 
         ! check whether the point is inside the cube
         if(all(abs(xx(1:mdim)) <= border(1:mdim)) .and. .not. in_ab) then
