@@ -1538,9 +1538,7 @@ subroutine X(states_elec_calc_overlap)(st, mesh, ik, overlap)
   R_TYPE,              intent(out)   :: overlap(:, :)
 
   integer :: ip, ib, jb, block_size, sp, size
-#ifndef R_TREAL
   integer :: ist, jst
-#endif
   type(profile_t), save :: prof
   FLOAT :: vol
   R_TYPE, allocatable :: psi(:, :, :)
@@ -1587,14 +1585,6 @@ subroutine X(states_elec_calc_overlap)(st, mesh, ik, overlap)
         c = overlap(1, 1), ldc = ubound(overlap, dim = 1))
 
     end do
-
-#ifndef R_TREAL
-    do jst = 1, st%nst
-      do ist = 1, jst
-        overlap(ist, jst) = conjg(overlap(ist, jst))
-      end do
-    end do
-#endif
 
     call profiling_count_operations((R_ADD + R_MUL)*CNST(0.5)*st%nst*st%d%dim*(st%nst - CNST(1.0))*mesh%np)
 
@@ -1656,14 +1646,6 @@ subroutine X(states_elec_calc_overlap)(st, mesh, ik, overlap)
 
     call accel_finish()
 
-#ifndef R_TREAL
-    do jst = 1, st%nst
-      do ist = 1, jst
-        overlap(ist, jst) = conjg(overlap(ist, jst))
-      end do
-    end do
-#endif
-
     if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm, overlap, dim = (/st%nst, st%nst/))
 
     call accel_release_buffer(overlap_buffer)
@@ -1684,6 +1666,13 @@ subroutine X(states_elec_calc_overlap)(st, mesh, ik, overlap)
 
     if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm, overlap, dim = (/st%nst, st%nst/))
   end if
+
+  do jst = 1, st%nst
+    do ist = jst, st%nst
+      overlap(ist, jst) = R_CONJ(overlap(jst, ist))
+    end do
+  end do
+
 
   ! Debug output
   if(debug%info .and. mpi_grp_is_root(mpi_world)) then
