@@ -1190,11 +1190,12 @@ end subroutine X(invert_upper_triangular)
 
 
 
-subroutine X(least_squares_vec)(nn, aa, bb, xx)
-  integer, intent(in)    :: nn
-  R_TYPE,  intent(inout) :: aa(:, :)
-  R_TYPE,  intent(in)    :: bb(:)
-  R_TYPE,  intent(out)   :: xx(:)
+subroutine X(least_squares_vec)(nn, aa, bb, xx, preserve_mat)
+  integer, intent(in)            :: nn
+  R_TYPE,  intent(inout), target :: aa(:, :)
+  R_TYPE,  intent(in)            :: bb(:)
+  R_TYPE,  intent(out)           :: xx(:)
+  logical, intent(in)            :: preserve_mat
 
   R_TYPE :: dlwork
   R_TYPE, allocatable :: work(:)
@@ -1203,31 +1204,41 @@ subroutine X(least_squares_vec)(nn, aa, bb, xx)
 #ifndef R_TREAL
   FLOAT, allocatable :: rwork(:)
 #endif 
+  R_TYPE, pointer :: tmp_aa(:,:)
   
   PUSH_SUB(X(least_squares_vec))
 
+  if(preserve_mat) then
+    SAFE_ALLOCATE(tmp_aa(1:nn, 1:nn))
+    tmp_aa(1:nn, 1:nn) = aa(1:nn, 1:nn)
+  else
+    tmp_aa => aa
+  end if
 
   xx(1:nn) = bb(1:nn)
 
   SAFE_ALLOCATE(ss(1:nn))
 
-! MJV 2016 11 09 : TODO: this is callable with complex, but does nothing!!!
 #ifdef R_TREAL
-  
-  call lapack_gelss(nn, nn, 1, aa(1, 1), lead_dim(aa), xx(1), nn, ss(1), CNST(-1.0), rank, dlwork, -1, info)
+  call lapack_gelss(nn, nn, 1, tmp_aa(1, 1), lead_dim(tmp_aa), xx(1), nn, ss(1), CNST(-1.0), rank, dlwork, -1, info)
 
   SAFE_ALLOCATE(work(1:int(dlwork)))
 
-  call lapack_gelss(nn, nn, 1, aa(1, 1), lead_dim(aa), xx(1), nn, ss(1), CNST(-1.0), rank, work(1), int(dlwork), info)
+  call lapack_gelss(nn, nn, 1, tmp_aa(1, 1), lead_dim(tmp_aa), xx(1), nn, ss(1), CNST(-1.0), rank, work(1), int(dlwork), info)
 #else
   SAFE_ALLOCATE(rwork(1:5*nn))
-  call lapack_gelss(nn, nn, 1, aa(1, 1), lead_dim(aa), xx(1), nn, ss(1), CNST(-1.0), rank, dlwork, -1, rwork(1), info)
+  call lapack_gelss(nn, nn, 1, tmp_aa(1, 1), lead_dim(tmp_aa), xx(1), nn, ss(1), CNST(-1.0), rank, dlwork, -1, rwork(1), info)
 
   SAFE_ALLOCATE(work(1:int(dlwork)))
 
-  call lapack_gelss(nn, nn, 1, aa(1, 1), lead_dim(aa), xx(1), nn, ss(1), CNST(-1.0), rank, work(1), int(dlwork), rwork(1), info)
+  call lapack_gelss(nn, nn, 1, tmp_aa(1, 1), lead_dim(tmp_aa), xx(1), nn, ss(1), CNST(-1.0), rank, work(1), int(dlwork), rwork(1), info)
   SAFE_DEALLOCATE_A(rwork)
 #endif
+
+  SAFE_DEALLOCATE_A(ss)
+  if(preserve_mat) then
+    SAFE_DEALLOCATE_P(tmp_aa)
+  end if
 
   if(info /= 0) then
     write(message(1), '(5a,i5)') &
