@@ -75,6 +75,7 @@ module hamiltonian_elec_base_oct_m
     hamiltonian_elec_base_clear,                    &
     hamiltonian_elec_base_build_proj,               &
     hamiltonian_elec_base_update,                   &
+    hamiltonian_elec_base_accel_copy,               &
     dhamiltonian_elec_base_phase,                   &
     zhamiltonian_elec_base_phase,                   &
     dhamiltonian_elec_base_phase_spiral,            &
@@ -112,7 +113,7 @@ module hamiltonian_elec_base_oct_m
     integer,                  allocatable, public :: projector_to_atom(:)
     integer                                       :: nregions
     integer,                  allocatable         :: regions(:)
-    type(accel_mem_t)                    , public :: potential_opencl
+    type(accel_mem_t)                             :: potential_opencl
     type(accel_mem_t)                             :: buff_offsets
     type(accel_mem_t)                             :: buff_matrices
     type(accel_mem_t)                             :: buff_maps
@@ -301,6 +302,29 @@ contains
 
     POP_SUB(hamiltonian_elec_base_update)
   end subroutine hamiltonian_elec_base_update
+
+
+  !--------------------------------------------------------
+
+  subroutine hamiltonian_elec_base_accel_copy(this, mesh)
+    type(hamiltonian_elec_base_t), intent(inout) :: this
+    type(mesh_t),             intent(in)    :: mesh
+    
+    integer :: offset, ispin
+
+    PUSH_SUB(hamiltonian_elec_base_accel_copy)
+
+    if(allocated(this%potential) .and. accel_is_enabled()) then
+      offset = 0
+      do ispin = 1, this%nspin
+        call accel_write_buffer(this%potential_opencl, mesh%np, this%potential(:, ispin), offset = offset)
+        offset = offset + accel_padded_size(mesh%np)
+      end do
+    end if
+
+    POP_SUB(hamiltonian_elec_base_accel_copy)
+  end subroutine hamiltonian_elec_base_accel_copy
+
   
   !--------------------------------------------------------
 

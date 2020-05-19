@@ -1239,7 +1239,7 @@ contains
     if(ks%calc%time_present .or. hm%time_zero) then
       call hamiltonian_elec_update(hm, ks%gr%mesh, namespace, time = ks%calc%time)
     else
-      call hamiltonian_elec_update_pot(hm, ks%gr%mesh)
+      call hamiltonian_elec_update_pot(hm, ks%gr%mesh, accel_copy=.true.)
     end if
 
 
