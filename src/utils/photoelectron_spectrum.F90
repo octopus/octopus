@@ -55,9 +55,9 @@ program photoelectron_spectrum
   end type pesoutput_t  
 
   integer              :: ierr, integrate
-  integer              :: dim, dir, idim, pdim, ngpt
+  integer              :: dim, dir, idim, pdim
   integer(8)           :: how
-  integer              :: llp(3), llg(3)   !< The size of the g-point and p-point cubic grids 
+  integer              :: llp(3), llpp(3)  !< The size of the p-point cubic grids 
   FLOAT                :: Emax, Emin, Estep, uEstep,uEspan(2), pol(3)
   FLOAT                :: uThstep, uThspan(2), uPhstep, uPhspan(2), pvec(3)
   FLOAT                :: center(3)
@@ -123,8 +123,7 @@ program photoelectron_spectrum
 
   !Initialize variables
   llp(:) = 1 
-  llg(:) = 1
-  ngpt = 1
+  llpp(:) = 1
 
   need_pmesh = .false. 
   dim    = sb%dim   ! The dimensionality dim = [1,2,3]
@@ -143,8 +142,7 @@ program photoelectron_spectrum
     ! Note that Lg(:,:) is allocated inside pes_mask_read_info
     call pes_mask_read_info("td.general/", default_namespace, dim, Emax, Estep, llp(:), Lg, RR)
     ! Keep a copy the original dimensions vector
-    ! For periodic systems llg represents the extension on the g-point grid
-    llg(1:dim) = llp(1:dim) 
+    llpp(1:dim) = llp(1:dim) 
 
     call messages_write('Read PES_MASK info file.')
     call messages_info()
@@ -164,8 +162,7 @@ program photoelectron_spectrum
     call parse_variable(default_namespace, 'PES_Flux_Shape', option, pflux%surf_shape)
     call pes_flux_reciprocal_mesh_gen(pflux, default_namespace, sb, st, 0, post = .true.)
     
-    llg(1:dim) = pflux%ll(1:dim)
-    ngpt = pflux%ngpt
+    llpp(1:dim) = pflux%ll(1:dim)
     need_pmesh = .true.
     
   
@@ -368,16 +365,15 @@ program photoelectron_spectrum
   
  
   if (use_zweight_path) then
-    llp(1:dim) = llg(1:dim)
-    llp(kpth_dir) = llg(kpth_dir) * nkpt    
+    llp(1:dim) = llpp(1:dim)
+    llp(kpth_dir) = llpp(kpth_dir) * nkpt    
   else
-    llp(1:dim) = llg(1:dim)  
+    llp(1:dim) = llpp(1:dim)  
   endif  
-  llp(1:pdim) = llp(1:pdim) * ngpt
   
   if (debug%info) then
     print *, "llp(:)= ", llp(:) 
-    print *, "llg(:)= ", llg(:) 
+    print *, "llpp(:)= ", llpp(:) 
   end if
   
   SAFE_ALLOCATE(pmesh(1:llp(1),1:llp(2),1:llp(3),1:3 + 1))
@@ -385,15 +381,15 @@ program photoelectron_spectrum
 
   select case (pes_method)
   case (OPTION__PHOTOELECTRONSPECTRUM__PES_MASK)
-    SAFE_ALLOCATE(Lp(1:llg(1),1:llg(2),1:llg(3),krng(1):krng(2),1:3))
-    call pes_mask_pmesh(default_namespace, dim, sb%kpoints, llg, Lg, pmesh, idxZero, krng, Lp)
+    SAFE_ALLOCATE(Lp(1:llpp(1),1:llpp(2),1:llpp(3),krng(1):krng(2),1:3))
+    call pes_mask_pmesh(default_namespace, dim, sb%kpoints, llpp, Lg, pmesh, idxZero, krng, Lp)
 
   case (OPTION__PHOTOELECTRONSPECTRUM__PES_FLUX)
     ! Lp is allocated inside pes_flux_pmesh to comply with the 
     ! declinations of the different surfaces
     SAFE_ALLOCATE(Ekin(1:llp(1),1:llp(2),1:llp(3)))
     Ekin = M_ZERO
-    call pes_flux_pmesh(pflux, default_namespace, dim, sb%kpoints, llg, Lg, pmesh, idxZero, krng, Lp, Ekin)
+    call pes_flux_pmesh(pflux, default_namespace, dim, sb%kpoints, llpp, pmesh, idxZero, krng, Lp, Ekin)
   end select
    
   
@@ -432,9 +428,9 @@ program photoelectron_spectrum
       
       select case (pes_method)
       case (OPTION__PHOTOELECTRONSPECTRUM__PES_MASK)
-        call pes_mask_map_from_states(restart, st, llg, pesP, krng, Lp, ist)
+        call pes_mask_map_from_states(restart, st, llpp, pesP, krng, Lp, ist)
       case (OPTION__PHOTOELECTRONSPECTRUM__PES_FLUX)
-        call pes_flux_map_from_states(pflux, restart, st, llg, pesP, krng, Lp, ist)      
+        call pes_flux_map_from_states(pflux, restart, st, llpp, pesP, krng, Lp, ist)      
       end select
         
       call output_spin_pes()
@@ -446,9 +442,9 @@ program photoelectron_spectrum
 
     select case (pes_method)
     case (OPTION__PHOTOELECTRONSPECTRUM__PES_MASK)
-      call pes_mask_map_from_states(restart, st, llg, pesP, krng, Lp)
+      call pes_mask_map_from_states(restart, st, llpp, pesP, krng, Lp)
     case (OPTION__PHOTOELECTRONSPECTRUM__PES_FLUX)
-      call pes_flux_map_from_states(pflux, restart, st, llg, pesP, krng, Lp)      
+      call pes_flux_map_from_states(pflux, restart, st, llpp, pesP, krng, Lp)      
     end select
 
     call output_spin_pes()

@@ -111,7 +111,7 @@ module pes_flux_oct_m
     integer, pointer :: face_idx_range(:,:)            !< face_idx_start(nface,1:2) 1 (2) start (end) idx of face nface in rcoords(:,:)
 
     
-    CMPLX, pointer   :: bvk_phase(:,:)                 !< for cubic surface:
+    CMPLX, pointer   :: bvk_phase(:,:)                 !< for cubic surface: Born-von Karman phase
     CMPLX, pointer   :: expkr(:,:,:,:)                 !< for cubic surface: Exponential tabulated on the cube face
     CMPLX, pointer   :: expkr_perp(:,:)                !< for cubic surface: Exponential tabulated on the direction perpendicular to the face
     FLOAT, pointer   :: LLr(:,:)                       !< for cubic surface: coordinates of the face edges
@@ -136,7 +136,6 @@ module pes_flux_oct_m
 
     integer, public  :: ll(3)                          !< the dimensions of a cubic mesh containing the momentum-space
                                                        !< mesh. Used when working with semi-periodic systems 
-    integer, public  :: ngpt                           !< Number of free Gpoints use to increase resoltion                        
 
     type(mesh_interpolation_t) :: interp
       
@@ -154,7 +153,7 @@ module pes_flux_oct_m
   integer, parameter ::   &
     M_CUBIC      = 1,     &
     M_SPHERICAL  = 2,     &
-    M_PLANE     = 3
+    M_PLANE      = 3
 
   integer, parameter ::   &
     M_POLAR      = 1,     &
@@ -1026,32 +1025,9 @@ contains
 
     else 
       ! Cartesian
+      
+      dk(1:mdim) = M_ONE/sb%kpoints%nik_axis(1:mdim)
 
-      !%Variable PES_Flux_Gpoint_Upsample
-      !%Type integer
-      !%Section Time-Dependent::PhotoElectronSpectrum
-      !%Description
-      !% Increase resolution in momentum by adding Gpoints in between adjacent
-      !% Kpoints. For each additional Gpoint G an entire Kpoint grid centered at 
-      !% G is added to the momentum grid. 
-      !%End
-      call parse_variable(namespace, 'PES_Flux_Gpoint_Upsample', 1, this%ngpt)
-      call messages_print_var_value(stdout, "PES_Flux_Gpoint_Upsample", this%ngpt)
-      
-      SAFE_ALLOCATE(gpoints(1:mdim,1:this%ngpt))
-      SAFE_ALLOCATE(gpoints_reduced(1:mdim,1:this%ngpt)) 
-      
-      gpoints(:,:) = M_ZERO
-      gpoints_reduced(:,:) = M_ZERO
-      
-      dk(1:mdim) = M_ONE/(sb%kpoints%nik_axis(1:mdim) * this%ngpt)
-      do ig =2, this%ngpt
-        gpoints_reduced(1:pdim, ig) = gpoints_reduced(1:pdim, ig-1) + dk(1:pdim)
-        call kpoints_to_absolute(sb%klattice, gpoints_reduced(1:pdim, ig), gpoints(1:pdim, ig), pdim)
-        print *, ig," gpoints_reduced(1:pdim, ig) =", gpoints_reduced(1:pdim, ig)
-        print *, ig," gpoints(1:pdim, ig) =", gpoints(1:pdim, ig)
-      end do 
-      
       
       !%Variable PES_Flux_ARPES_grid
       !%Type logical
@@ -1121,7 +1097,7 @@ contains
       end if      
       
       ! Total number of points
-      this%nkpnts = product(this%ll(1:mdim))*this%ngpt
+      this%nkpnts = product(this%ll(1:mdim))
       
 
     end if    

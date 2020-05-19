@@ -18,13 +18,12 @@
 
 
 ! Wrapper function
-subroutine pes_flux_pmesh(this, namespace, dim, kpoints, ll, LG, pmesh, idxZero, krng, Lp, Ekin)
+subroutine pes_flux_pmesh(this, namespace, dim, kpoints, ll, pmesh, idxZero, krng, Lp, Ekin)
   type(pes_flux_t),  intent(in)    :: this
   type(namespace_t), intent(in)    :: namespace
   integer,           intent(in)    :: dim
   type(kpoints_t),   intent(inout) :: kpoints 
   integer,           intent(in)    :: ll(:)            
-  FLOAT,             intent(in)    :: LG(:,:)           
   FLOAT,             intent(out)   :: pmesh(:,:,:,:)    
   integer,           intent(out)   :: idxZero(:)                
   integer,           intent(in)    :: krng(:)             
@@ -38,13 +37,13 @@ subroutine pes_flux_pmesh(this, namespace, dim, kpoints, ll, LG, pmesh, idxZero,
   select case (this%kgrid)
   
   case (M_POLAR)
-    call pes_flux_pmesh_sph(this, dim, kpoints, ll, LG, pmesh, idxZero, krng, Lp)
+    call pes_flux_pmesh_sph(this, dim, kpoints, ll, pmesh, idxZero, krng, Lp)
   
   case (M_CARTESIAN)
     if (kpoints_have_zero_weight_path(kpoints)) then
-      call pes_flux_pmesh_pln(this, namespace, dim, kpoints, ll, LG, pmesh, idxZero, krng, Lp, Ekin)
+      call pes_flux_pmesh_pln(this, namespace, dim, kpoints, ll, pmesh, idxZero, krng, Lp, Ekin)
     else
-      call pes_flux_pmesh_cub(this, namespace, dim, kpoints, ll, LG, pmesh, idxZero, krng, Lp, Ekin)
+      call pes_flux_pmesh_cub(this, namespace, dim, kpoints, ll, pmesh, idxZero, krng, Lp, Ekin)
     end if
   
   end select
@@ -124,15 +123,13 @@ subroutine flip_sign_Lkpt_idx( dim, nk, idx, do_nothing)
 end subroutine flip_sign_Lkpt_idx
 
 ! ---------------------------------------------------------
-integer pure function flatten_indices(i1,i2,i3,igpt, ll, ngpt) result(ii)
+integer pure function flatten_indices(i1,i2,i3,ll) result(ii)
   integer, intent(in) :: i1
   integer, intent(in) :: i2
   integer, intent(in) :: i3
-  integer, intent(in) :: igpt
   integer, intent(in) :: ll(:)
-  integer, intent(in) :: ngpt
   
-  ii = (i3-1)*ll(1)*ll(2)*ngpt + (i2-1)*ll(1)*ngpt + (i1-1)*ngpt + igpt 
+  ii = (i3-1)*ll(1)*ll(2) + (i2-1)*ll(1) + (i1-1) + 1
   
 end function flatten_indices
 
@@ -140,13 +137,12 @@ end function flatten_indices
 
 !< Generate the momentum-space mesh (p) and the arrays mapping the 
 !< the mask and the kpoint meshes in p.
-subroutine pes_flux_pmesh_pln(this, namespace, dim, kpoints, ll, LG, pmesh, idxZero, krng, Lp, Ekin)
+subroutine pes_flux_pmesh_pln(this, namespace, dim, kpoints, ll, pmesh, idxZero, krng, Lp, Ekin)
   type(pes_flux_t),  intent(in)    :: this
   type(namespace_t), intent(in)    :: namespace
   integer,           intent(in)    :: dim
   type(kpoints_t),   intent(inout) :: kpoints 
   integer,           intent(in)    :: ll(:)             !< ll(1:dim): the dimensions of the gpoint-mesh
-  FLOAT,             intent(in)    :: LG(:,:)           !< LG(1:maxval(ll),1:dim): the  gpoints  
   FLOAT,             intent(out)   :: pmesh(:,:,:,:)    !< pmesh(i1,i2,i3,1:dim): contains the positions of point
                                                         !< in the final mesh in momentum space "p" combining the 
   integer,           intent(out) :: idxZero(:)          !< The triplet identifying the zero of the coordinates           
@@ -163,16 +159,13 @@ subroutine pes_flux_pmesh_pln(this, namespace, dim, kpoints, ll, LG, pmesh, idxZ
 
 
   integer :: ik, j1, j2, j3, nk(1:3), ip1, ip2, ip3, idir, err
-  FLOAT :: kpt(1:3),GG(1:3)
+  FLOAT :: kpt(1:3)
 
   integer, allocatable :: Lkpt(:,:), idx(:,:), idx_inv(:,:), ikidx(:,:)
-  FLOAT, allocatable   :: LG_(:,:)
 
-  integer :: nkpt, kpth_dir, ig, igpt
+  integer :: nkpt, kpth_dir, ikp
   FLOAT :: zero_thr
   
-  logical :: use_zweight_path
-
 
   PUSH_SUB(pes_flux_pmesh_pln)
         
@@ -192,30 +185,16 @@ subroutine pes_flux_pmesh_pln(this, namespace, dim, kpoints, ll, LG, pmesh, idxZ
       
   zero_thr = M_EPSILON    
 
-  use_zweight_path = (krng(1)>1) ! a dirty way to check whether we want to use the path or not 
-      
-  if ( kpoints_have_zero_weight_path(kpoints) .and. use_zweight_path) then     
-    ! supporting paths only along the kx and ky directions in 
-    ! reciprocal space
-    
-    kpth_dir = 1
-    
-    nk(:) = 1  
-    nk(kpth_dir) = nkpt
-    do ik = 1 , nkpt
-      Lkpt(krng(1)+ik-1,kpth_dir) = ik
-      kpt(1:dim) = kpoints_get_point(kpoints, krng(1) + ik -1) 
-    end do
+  
+  kpth_dir = 1
+  
+  nk(:) = 1  
+  nk(kpth_dir) = nkpt
+  do ik = 1 , nkpt
+    Lkpt(krng(1)+ik-1,kpth_dir) = ik
+    kpt(1:dim) = kpoints_get_point(kpoints, krng(1) + ik -1) 
+  end do
         
-        
-  else  
-    
-    call kpoints_grid_generate(dim, kpoints%nik_axis(1:dim), kpoints%full%nshifts, &
-            kpoints%full%shifts(1:dim,1:kpoints%full%nshifts),  kpoints%full%red_point, &
-            Lkpt(:,1:dim))
-
-
-  end if
   SAFE_ALLOCATE(ikidx(maxval(nk(1:3)),1:3))
   call flip_sign_Lkpt_idx(dim, nk(:), ikidx(:,:), do_nothing = .true.)
   
@@ -240,67 +219,50 @@ subroutine pes_flux_pmesh_pln(this, namespace, dim, kpoints, ll, LG, pmesh, idxZ
   err = -1
   
   ! Generate the p-space mesh and populate Lp.
-  ! The grid is filled combining G-points and K-points according to the following sketch: 
-  ! 
-  !          x        x        x
-  !
-  !       o  o  o
-  !       o  x  o     x        x
-  !       o  o  o
-  !
-  !       (G = x and Kpt = o)
-  ! 
-  ! The grid represents the final momentum p =  Kpt -G. 
   ! The lower left corner correspond to the minimum value of p and the lowest 
   ! index-touple value (ip1,ip2,ip3) = (1,1,1). 
   do ik = krng(1),krng(2)
-    kpt(1:dim) = kpoints_get_point(kpoints, ik) 
     do j1 = 1, ll(1) 
       do j2 = 1, ll(2) 
         do j3 = 1, ll(3) 
-          do igpt = 1, this%ngpt
           
-            GG(:) = M_ZERO 
-            ig = flatten_indices(j1,j2,j3, igpt, ll, this%ngpt) 
+          kpt(:) = M_ZERO 
+          ikp = flatten_indices(j1,j2,j3,ll)
 
-            GG(1:dim) = this%kcoords_cub(1:dim, ig, ik)
-          
-            ip1 = (j1 - 1) * nk(1) + ikidx(Lkpt(ik,1), 1)
-            ip2 = (j2 - 1) * nk(2) + ikidx(Lkpt(ik,2), 2)
-            ip3 = (j3 - 1) * nk(3) + ikidx(Lkpt(ik,3), 3)
-          
-            Lp(j1,j2,j3,ik,1:3) =  (/ip1,ip2,ip3/)
-          
-            ! The final momentum corresponds to p = K-G. 
-            ! I have to subtract G only along the periodic dimensions
-!             pmesh(ip1, ip2, ip3, 1:this%pdim) = kpt(1:this%pdim) - GG(1:this%pdim)
-!             pmesh(ip1, ip2, ip3, dim)         = GG(dim)
-            pmesh(ip1, ip2, ip3, 1:dim)         = GG(1:dim)
+          kpt(1:dim) = this%kcoords_cub(1:dim, ikp, ik)
+        
+          ip1 = (j1 - 1) * nk(1) + ikidx(Lkpt(ik,1), 1)
+          ip2 = (j2 - 1) * nk(2) + ikidx(Lkpt(ik,2), 2)
+          ip3 = (j3 - 1) * nk(3) + ikidx(Lkpt(ik,3), 3)
+        
+          Lp(j1,j2,j3,ik,1:3) =  (/ip1,ip2,ip3/)
+        
+          ! The final momentum corresponds to p = K. 
+          pmesh(ip1, ip2, ip3, 1:dim)         = kpt(1:dim)
 
-            pmesh(ip1, ip2, ip3, dim+1)       = pmesh(ip1, ip2, ip3, dim+1) + 1 
-          
-          
-            if (present(Ekin)) Ekin(ip1, ip2, ip3) = sign(M_ONE,pmesh(ip1,ip2,ip3,dim)) &
-                                                     * sum(pmesh(ip1,ip2,ip3,1:dim)**2)/M_TWO
+          pmesh(ip1, ip2, ip3, dim+1)       = pmesh(ip1, ip2, ip3, dim+1) + 1 
+        
+        
+          if (present(Ekin)) Ekin(ip1, ip2, ip3) = sign(M_ONE,pmesh(ip1,ip2,ip3,dim)) &
+                                                   * sum(pmesh(ip1,ip2,ip3,1:dim)**2)/M_TWO
 
-            if (debug%info) then
-              print *,j1,j2,j3,ik, "pmesh = ",pmesh(ip1, ip2, ip3, :), "Ekin=", Ekin(ip1, ip2, ip3)
-            end if
+          if (debug%info) then
+            print *,j1,j2,j3,ik, "pmesh = ",pmesh(ip1, ip2, ip3, :), "Ekin=", Ekin(ip1, ip2, ip3)
+          end if
 
-            ! Sanity checks
-            if (sum(pmesh(ip1, ip2, ip3, 1:dim-1)**2)<=zero_thr) then
-              err = err + 1 
-              !Find the indices identifying the center of the coordinates 
-              idxZero(1:3) = (/ip1,ip2,ip3/)
-            end if
-          
-            if (pmesh(ip1, ip2, ip3, dim+1) > 1 ) then
-              write(message(1),'(a)')'This condition should never happen something bad is going on.'
-              call messages_fatal(1, namespace=namespace)
-              err = -2 
-            end if
+          ! Sanity checks
+          if (sum(pmesh(ip1, ip2, ip3, 1:dim-1)**2)<=zero_thr) then
+            err = err + 1 
+            !Find the indices identifying the center of the coordinates 
+            idxZero(1:3) = (/ip1,ip2,ip3/)
+          end if
+        
+          if (pmesh(ip1, ip2, ip3, dim+1) > 1 ) then
+            write(message(1),'(a)')'This condition should never happen something bad is going on.'
+            call messages_fatal(1, namespace=namespace)
+            err = -2 
+          end if
       
-          end do
 
         end do 
       end do 
@@ -308,49 +270,13 @@ subroutine pes_flux_pmesh_pln(this, namespace, dim, kpoints, ll, LG, pmesh, idxZ
     
   end do
   
-  if ( kpoints_have_zero_weight_path(kpoints)) then 
-  ! With a path we just need to get the correct the zero index on the in-plane direction  
-  ! perpendicular to the path since is along this direction that we are going 
-  ! to slice with pes_flux_output_full_mapM_cut. Since on this direction we only 
-  ! have G points I simply need to look for the zero index of the G-grid.
-  ! Note that the G-grid must always include the (0,0,0) point. 
-    do ik = krng(1),krng(2)
-      do j1 = 1, ll(1) 
-        do j2 = 1, ll(2) 
-          do j3 = 1, ll(3) 
-            do igpt = 1, this%ngpt
-              
-              ig = flatten_indices(j1,j2,j3, igpt, ll, this%ngpt) 
-              GG(1:dim) = this%kcoords_cub(1:dim, ig, ik)
-              if (sum(GG(1:dim-1)**2)<=M_EPSILON) idxZero(1:3) = (/j1,j2,j3/)
-            end do
-          end do
-        end do
-      end do
-    end do
-    
-  else   
-    
-    if (err == -1) then
-      call messages_write('Illformed momentum-space mesh: could not find p = 0 coordinate.')
-      call messages_fatal(namespace=namespace)
-    end if 
-
-    if (err > 1) then
-      call messages_write('More than one point with p = 0 coordinate.')
-      call messages_new_line()
-      call messages_write('This can happen only if the kpoint mesh does not contain gamma.')
-      call messages_warning(namespace=namespace)
-    end if 
-
-  end if
 
   if(debug%info) then
     print * ,"idxZero(1:3)=", idxZero(1:3)
   end if
 
   if (err == -2) then
-    call messages_write('Illformed momentum-space mesh: two or more points with the same p.')
+    call messages_write('Malformed momentum-space mesh: two or more points with the same p.')
     call messages_fatal(namespace=namespace)
   end if 
   
@@ -382,7 +308,7 @@ subroutine pes_flux_map_from_states_elec_pln(this, restart, st, ll, pesP, krng, 
   integer :: idone, ntodo
   CMPLX   :: psiG1(1:this%nkpnts), psiG2(1:this%nkpnts)
   FLOAT   :: weight 
-  integer :: istart, iend, nst, ig, igpt
+  integer :: istart, iend, nst, iflt
 
   PUSH_SUB(pes_flux_map_from_states_elec_pln)
 
@@ -407,7 +333,7 @@ subroutine pes_flux_map_from_states_elec_pln(this, restart, st, ll, pesP, krng, 
     do ist = istart, iend
 
       if (st%d%kweights(ik) < M_EPSILON) then
-        ! we have a zero-weight path
+        ! we have a zero-weifltht path
         ! the st%occ(ist, ik) factor is already in psiG[1,2]
         weight = M_ONE !/nkpt
       else
@@ -424,14 +350,12 @@ subroutine pes_flux_map_from_states_elec_pln(this, restart, st, ll, pesP, krng, 
           do i1=1, ll(1)
             do i2=1, ll(2)
               do i3=1, ll(3)
-                do igpt = 1, this%ngpt
-                  ip(1:3) = Lp(i1, i2, i3, ik, 1:3) 
-                  ig = flatten_indices(i1,i2,i3, igpt, ll, this%ngpt) 
-              
-                    pesP(ip(1),ip(2),ip(3), ispin) = pesP(ip(1),ip(2),ip(3), ispin) &
-                                                   + abs(psiG1(ig))**2 * weight 
+                ip(1:3) = Lp(i1, i2, i3, ik, 1:3) 
+                iflt = flatten_indices(i1,i2,i3, ll) 
+            
+                pesP(ip(1),ip(2),ip(3), ispin) = pesP(ip(1),ip(2),ip(3), ispin) &
+                                               + abs(psiG1(iflt))**2 * weight 
                 
-                end do
               end do
             end do
           end do
@@ -448,22 +372,20 @@ subroutine pes_flux_map_from_states_elec_pln(this, restart, st, ll, pesP, krng, 
         do i1=1, ll(1)
           do i2=1, ll(2)
             do i3=1, ll(3)
-              do igpt = 1, this%ngpt
-                ip(1:3) = Lp(i1, i2, i3, ik, 1:3) 
-                ig = flatten_indices(i1,i2,i3, igpt, ll, this%ngpt) 
-            
-                  pesP(ip(1),ip(2),ip(3), 1) = pesP(ip(1),ip(2),ip(3), 1) &
-                                                 + abs(psiG1(ig))**2 * weight 
+              ip(1:3) = Lp(i1, i2, i3, ik, 1:3) 
+              iflt = flatten_indices(i1,i2,i3, ll) 
+          
+              pesP(ip(1),ip(2),ip(3), 1) = pesP(ip(1),ip(2),ip(3), 1) &
+                                             + abs(psiG1(iflt))**2 * weight 
 
-                  pesP(ip(1),ip(2),ip(3), 2) = pesP(ip(1),ip(2),ip(3), 2) &
-                                                 + abs(psiG2(ig))**2 * weight
+              pesP(ip(1),ip(2),ip(3), 2) = pesP(ip(1),ip(2),ip(3), 2) &
+                                             + abs(psiG2(iflt))**2 * weight
 
-                  pesP(ip(1),ip(2),ip(3), 3) = pesP(ip(1),ip(2),ip(3), 3) &
-                                                 + real(psiG1(ig)*conjg(psiG2(ig)), REAL_PRECISION) * weight
-                                               
-                  pesP(ip(1),ip(2),ip(3), 4) = pesP(ip(1),ip(2),ip(3), 4) &
-                                                 + aimag(psiG1(ig)*conjg(psiG2(ig))) * weight
-              end do
+              pesP(ip(1),ip(2),ip(3), 3) = pesP(ip(1),ip(2),ip(3), 3) &
+                                             + real(psiG1(iflt)*conjg(psiG2(iflt)), REAL_PRECISION) * weight
+                                           
+              pesP(ip(1),ip(2),ip(3), 4) = pesP(ip(1),ip(2),ip(3), 4) &
+                                             + aimag(psiG1(iflt)*conjg(psiG2(iflt))) * weight
             end do
           end do
         end do
@@ -512,13 +434,12 @@ end subroutine pes_flux_map_from_state_1
 ! CUBE (parallelepiped in spirit)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-subroutine pes_flux_pmesh_cub(this, namespace, dim, kpoints, ll, LG, pmesh, idxZero, krng, Lp, Ekin)
+subroutine pes_flux_pmesh_cub(this, namespace, dim, kpoints, ll, pmesh, idxZero, krng, Lp, Ekin)
   type(pes_flux_t),  intent(in)    :: this
   type(namespace_t), intent(in)    :: namespace
   integer,           intent(in)    :: dim
   type(kpoints_t),   intent(inout) :: kpoints 
   integer,           intent(in)    :: ll(:)             !< ll(1:dim): the dimensions of the gpoint-mesh
-  FLOAT,             intent(in)    :: LG(:,:)           !< LG(1:maxval(ll),1:dim): the  gpoints  
   FLOAT,             intent(out)   :: pmesh(:,:,:,:)    !< pmesh(i1,i2,i3,1:dim): contains the positions of point
                                                         !< in the final mesh in momentum space "p" combining the 
   integer,           intent(out) :: idxZero(:)          !< The triplet identifying the zero of the coordinates           
@@ -584,12 +505,11 @@ end subroutine pes_flux_pmesh_cub
 
 
 
-subroutine pes_flux_pmesh_sph(this, dim, kpoints, ll, LG, pmesh, idxZero, krng, Lp)
+subroutine pes_flux_pmesh_sph(this, dim, kpoints, ll, pmesh, idxZero, krng, Lp)
   type(pes_flux_t),  intent(in)    :: this
   integer,           intent(in)    :: dim
   type(kpoints_t),   intent(inout) :: kpoints 
   integer,           intent(in)    :: ll(:)             
-  FLOAT,             intent(in)    :: LG(:,:)           
   FLOAT,             intent(out)   :: pmesh(:,:,:,:)    
   integer,           intent(out) :: idxZero(:)             
   integer,           intent(in)  :: krng(:)                                                                     
