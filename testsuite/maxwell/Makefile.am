@@ -20,9 +20,9 @@
 
 sharedir = $(pkgdatadir)/testsuite/maxwell
 
-dist_share_DATA =                      \
-	01-free-propagation.test       \
-	01-free-propagation.01-td.inp  \
-        01-free-propagation.02-td.inp
+dist_share_DATA =                              \
+	01-free-propagation.test               \
+	01-free-propagation.01-1_pulse_td.inp  \
+        01-free-propagation.02-2_pulses_td.inp
 
 CLEANFILES = *~ *.bak
