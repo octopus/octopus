@@ -1029,7 +1029,7 @@ contains
     type(mesh_t),             intent(in)    :: mesh
     logical,                  intent(in)    :: accel_copy
 
-    integer :: ispin, ip, offset
+    integer :: ispin, ip
 
     PUSH_SUB(hamiltonian_elec_update_pot)
 
