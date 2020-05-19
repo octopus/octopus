@@ -90,7 +90,7 @@ if (not @ARGV) { usage; }
 
 $opt_f = "";
 $opt_r = "";
-getopts("nlvhD:c:f:spm:r:G:");
+getopts("nlvhD:c:f:spmr:G:");
 
 # avoid warnings 'used only once: possible typo'
 $useless = $opt_h;
@@ -194,7 +194,7 @@ if (!$opt_m) {
     $scriptname = "$workdir/matches.sh";
     open(SCRIPT, ">$scriptname") or die255("Could not create '$scriptname'.");
     print SCRIPT "#\!/usr/bin/env bash\n\n";
-    print SCRIPT "perl $pwd/$0 -m -D $exec_directory -f $pwd/$opt_f\n";
+    print SCRIPT "perl $0 -m -D $exec_directory -f $opt_f\n";
     close(SCRIPT);
     chmod 0755, $scriptname;
       
