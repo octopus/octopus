@@ -672,7 +672,7 @@ contains
     type(block_t)     :: blk
       
     FLOAT             :: Emin, Emax, DE , kvec(1:3) 
-    integer           :: NBZ(1:2), nkp_out, nkmin, nkmax
+    integer           :: nkp_out, nkmin, nkmax
     
     integer             :: ig
     FLOAT, allocatable  :: gpoints(:,:), gpoints_reduced(:,:)
@@ -1068,53 +1068,6 @@ contains
       
                 
       
-    
-      !%Variable PES_Flux_BZones
-      !%Type block
-      !%Section Time-Dependent::PhotoElectronSpectrum
-      !%Description
-      !% The block <tt>PES_Flux_BZones</tt> specifies the number of Brillouin
-      !% zones along each periodic dimensions. This value will be used 
-      !% to generate the mesh in reciprocal space.
-      !%
-      !% <tt><br>%PES_Flux_EnergyGrid
-      !% <br>&nbsp;&nbsp; NBZx | NBZy  
-      !% <br>%</tt>
-      !%
-      !% The option can also be specified with the same value for each direction
-      !% as <tt>PES_Flux_BZones = NBZ</tt>. 
-      !% By default <tt>PES_Flux_BZones = 2</tt>; this means that we will have,
-      !% on top of the 1st zone, two additional zones at positive and negative 
-      !% reciprocal lattice translation for each periodic dimension. 
-      !%End
-    
-      NBZ(:) = 1
-      if (.not. kpoints_have_zero_weight_path(sb%kpoints)) NBZ(1:pdim) = 2
-      if(parse_block(namespace, 'PES_Flux_BZones', blk) == 0) then
-
-        call parse_block_integer(blk, 0, 0, NBZ(1))
-        call parse_block_integer(blk, 0, 1, NBZ(2))
-
-        call parse_block_end(blk)
-
-      else
-        call parse_variable(namespace, 'PES_Flux_BZones', maxval(NBZ(:)), NBZ(1))
-        NBZ(:) = NBZ(1)
-
-      end if
-
-      ! If we are using a path in reciprocal space 
-      ! we do not need to replicate the BZ in directions 
-      ! perpendicular to the path
-      if (kpoints_have_zero_weight_path(sb%kpoints) .and. any(NBZ(:)> 1) ) then
-        call messages_write("Using a path in reciprocal space with PES_Flux_BZones > 1.")
-        call messages_new_line()
-        call messages_write("This may cause unphysical results if the path crosses the 1st BZ boundary.")
-        call messages_warning(namespace=namespace)
-!         call get_kpath_perp_direction(sb%kpoints, idim)
-!         if (idim > 0 ) NBZ(idim) = 1
-      end if 
-
 
 
       this%ll(:) = 1
@@ -1135,7 +1088,6 @@ contains
 
         ! This information is needed for postprocessing the data
       
-        this%ll(1:pdim) = (NBZ(1:pdim)-1)*2+1
         this%ll(mdim)   = this%nk 
       
 
@@ -1336,31 +1288,7 @@ contains
     
             kvec(1:mdim) = - kpoints_get_point(sb%kpoints, ikpt)             
             call fill_non_periodic_dimension(this)
-    
-!             ! loop over periodic directions
-!             select case (pdim)
-!               case (1)
-!               do ibz1 = -(NBZ(1)-1), (NBZ(1)-1)
-!                 do ig = 1, this%ngpt
-!                   kvec(1) = ibz1 * sb%klattice(1, 1) + gpoints(1,ig)
-!                   call fill_non_periodic_dimension(this)
-!                 end do
-!               end do
-!
-!               case (2)
-!
-!               do ibz2 = -(NBZ(2)-1), (NBZ(2)-1)
-!                 do ibz1 = -(NBZ(1)-1), (NBZ(1)-1)
-!                   do ig = 1, this%ngpt
-!                     kvec(1:2) = ibz1 * sb%klattice(1:2, 1) + ibz2 * sb%klattice(1:2, 2) &
-!                               + gpoints(1:2,ig)
-!                     call fill_non_periodic_dimension(this)
-!                   end do
-!                 end do
-!               end do
-!
-!             end select
-    
+        
           end do
         end do
 
