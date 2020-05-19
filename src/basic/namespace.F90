@@ -111,7 +111,7 @@ contains
     name = ""
     if (associated(this%parent)) then
       if (this%parent%len() > 0) then
-        name = trim(this%parent%get()) // delimiter_
+        name = trim(this%parent%get(delimiter_)) // delimiter_
       end if
     end if
     name = trim(name)//this%name

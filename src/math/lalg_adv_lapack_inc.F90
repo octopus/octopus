@@ -599,10 +599,56 @@ end subroutine X(lowest_eigensolve)
 
 ! ---------------------------------------------------------
 !> Invert a real symmetric or complex Hermitian square matrix a
-R_TYPE function X(determinant)(n, a, invert) result(d)
+R_TYPE function X(determinant)(n, a, preserve_mat) result(d)
   integer, intent(in)           :: n
-  R_TYPE,   intent(inout)       :: a(:,:) !< (n,n)
-  logical, intent(in), optional :: invert
+  R_TYPE, target, intent(inout) :: a(:,:) !< (n,n)
+  logical, intent(in)           :: preserve_mat
+
+  integer :: info, i
+  integer, allocatable :: ipiv(:)
+  R_TYPE, pointer :: tmp_a(:,:)
+
+  ! No PUSH_SUB, called too often
+
+  ASSERT(n > 0)
+
+  SAFE_ALLOCATE(ipiv(1:n))
+
+  if(preserve_mat) then
+    SAFE_ALLOCATE(tmp_a(1:n, 1:n))
+    tmp_a(1:n, 1:n) = a(1:n, 1:n)
+  else
+    tmp_a => a
+  end if
+
+  call lapack_getrf(n, n, tmp_a(1, 1), lead_dim(tmp_a), ipiv(1), info)
+  if(info < 0) then
+    write(message(1), '(5a, i5)') 'In ', TOSTRING(X(determinant)), ', LAPACK ', TOSTRING(X(getrf)), ' returned info = ', info
+    call messages_fatal(1)
+  end if
+
+  d = M_ONE
+  do i = 1, n
+    if(ipiv(i) /= i) then
+      d = - d*tmp_a(i, i)
+    else
+      d = d*tmp_a(i, i)
+    end if
+  end do
+
+  SAFE_DEALLOCATE_A(ipiv)
+  if(preserve_mat) then
+    SAFE_DEALLOCATE_P(tmp_a)
+  end if
+
+end function X(determinant)
+
+! ---------------------------------------------------------
+!> Invert a real symmetric or complex Hermitian square matrix a
+subroutine X(inverter)(n, a, det)
+  integer,           intent(in)     :: n
+  R_TYPE,            intent(inout)  :: a(:,:) !< (n,n)
+  R_TYPE,  optional, intent(out)    :: det
 
   integer :: info, i
   integer, allocatable :: ipiv(:)
@@ -621,38 +667,39 @@ R_TYPE function X(determinant)(n, a, invert) result(d)
     call messages_fatal(1)
   end if
 
-  d = M_ONE
-  do i = 1, n
-    if(ipiv(i) /= i) then
-      d = - d*a(i, i)
-    else
-      d = d*a(i, i)
-    end if
-  end do
+  if(present(det)) then
+    det = M_ONE
+    do i = 1, n
+      if(ipiv(i) /= i) then
+        det = - det*a(i, i)
+      else
+        det = det*a(i, i)
+      end if
+    end do
+  end if
 
-  if(optional_default(invert, .true.)) then
-    call lapack_getri(n, a(1, 1), lead_dim(a), ipiv(1), work(1), n, info)
-    if(info /= 0) then
-      write(message(1), '(5a, i5)') 'In ', TOSTRING(X(determinant)), ', LAPACK ', TOSTRING(X(getri)), ' returned info = ', info
+
+  call lapack_getri(n, a(1, 1), lead_dim(a), ipiv(1), work(1), n, info)
+  if(info /= 0) then
+    write(message(1), '(5a, i5)') 'In ', TOSTRING(X(determinant)), ', LAPACK ', TOSTRING(X(getri)), ' returned info = ', info
 !    http://www.netlib.org/lapack/explore-3.1.1-html/zgetri.f.html
 !*  INFO    (output) INTEGER
 !*          = 0:  successful exit
 !*          < 0:  if INFO = -i, the i-th argument had an illegal value
 !*          > 0:  if INFO = i, U(i,i) is exactly zero; the matrix is
 !*                singular and its inverse could not be computed.
-    if(info < 0) then
-      write(message(2), '(a,i5,a)') 'Argument number ', -info, ' had an illegal value.'
-    else
-      write(message(2), '(a,i5,a)') 'Diagonal element ', info, ' of U is 0; matrix is singular.'
-    end if
-    call messages_fatal(2)
-    end if
+  if(info < 0) then
+    write(message(2), '(a,i5,a)') 'Argument number ', -info, ' had an illegal value.'
+  else
+    write(message(2), '(a,i5,a)') 'Diagonal element ', info, ' of U is 0; matrix is singular.'
+  end if
+  call messages_fatal(2)
   end if
 
   SAFE_DEALLOCATE_A(work)
   SAFE_DEALLOCATE_A(ipiv)
 
-end function X(determinant)
+end subroutine X(inverter)
 
 
 ! ---------------------------------------------------------
@@ -722,6 +769,12 @@ subroutine dlinsyssolve(n, nrhs, a, b, x)
   ! no PUSH_SUB, called too often
 
   ASSERT(n > 0)
+  ASSERT(ubound(a, dim=1) >= n)
+  ASSERT(ubound(a, dim=2) >= n)
+  ASSERT(ubound(b, dim=1) >= n)
+  ASSERT(ubound(b, dim=2) >= nrhs)
+  ASSERT(ubound(x, dim=1) >= n)
+  ASSERT(ubound(x, dim=2) >= nrhs)
 
   SAFE_ALLOCATE(ipiv(1:n))
   SAFE_ALLOCATE(iwork(1:n)) ! query?
@@ -732,8 +785,8 @@ subroutine dlinsyssolve(n, nrhs, a, b, x)
   SAFE_ALLOCATE(c(1:n))
   SAFE_ALLOCATE(af(1:n, 1:n))
 
-  call X(gesvx) ("N", "N", n, nrhs, a(1, 1), n, af(1, 1), n, ipiv(1), equed, r(1), c(1), b(1, 1), n, x(1, 1), n, &
-    rcond, ferr(1), berr(1), work(1), iwork(1), info)
+  call X(gesvx) ("N", "N", n, nrhs, a(1, 1), lead_dim(a), af(1, 1), n, ipiv(1), equed, r(1), c(1), &
+    b(1, 1), lead_dim(b), x(1, 1), lead_dim(x), rcond, ferr(1), berr(1), work(1), iwork(1), info)
 
   if(info /= 0) then
     write(message(1), '(3a, i5)') 'In dlinsyssolve, LAPACK ', TOSTRING(X(gesvx)), ' returned info = ', info
@@ -1137,11 +1190,12 @@ end subroutine X(invert_upper_triangular)
 
 
 
-subroutine X(least_squares_vec)(nn, aa, bb, xx)
-  integer, intent(in)    :: nn
-  R_TYPE,  intent(inout) :: aa(:, :)
-  R_TYPE,  intent(in)    :: bb(:)
-  R_TYPE,  intent(out)   :: xx(:)
+subroutine X(least_squares_vec)(nn, aa, bb, xx, preserve_mat)
+  integer, intent(in)            :: nn
+  R_TYPE,  intent(inout), target :: aa(:, :)
+  R_TYPE,  intent(in)            :: bb(:)
+  R_TYPE,  intent(out)           :: xx(:)
+  logical, intent(in)            :: preserve_mat
 
   R_TYPE :: dlwork
   R_TYPE, allocatable :: work(:)
@@ -1150,31 +1204,41 @@ subroutine X(least_squares_vec)(nn, aa, bb, xx)
 #ifndef R_TREAL
   FLOAT, allocatable :: rwork(:)
 #endif 
+  R_TYPE, pointer :: tmp_aa(:,:)
   
   PUSH_SUB(X(least_squares_vec))
 
+  if(preserve_mat) then
+    SAFE_ALLOCATE(tmp_aa(1:nn, 1:nn))
+    tmp_aa(1:nn, 1:nn) = aa(1:nn, 1:nn)
+  else
+    tmp_aa => aa
+  end if
 
   xx(1:nn) = bb(1:nn)
 
   SAFE_ALLOCATE(ss(1:nn))
 
-! MJV 2016 11 09 : TODO: this is callable with complex, but does nothing!!!
 #ifdef R_TREAL
-  
-  call lapack_gelss(nn, nn, 1, aa(1, 1), lead_dim(aa), xx(1), nn, ss(1), CNST(-1.0), rank, dlwork, -1, info)
+  call lapack_gelss(nn, nn, 1, tmp_aa(1, 1), lead_dim(tmp_aa), xx(1), nn, ss(1), CNST(-1.0), rank, dlwork, -1, info)
 
   SAFE_ALLOCATE(work(1:int(dlwork)))
 
-  call lapack_gelss(nn, nn, 1, aa(1, 1), lead_dim(aa), xx(1), nn, ss(1), CNST(-1.0), rank, work(1), int(dlwork), info)
+  call lapack_gelss(nn, nn, 1, tmp_aa(1, 1), lead_dim(tmp_aa), xx(1), nn, ss(1), CNST(-1.0), rank, work(1), int(dlwork), info)
 #else
   SAFE_ALLOCATE(rwork(1:5*nn))
-  call lapack_gelss(nn, nn, 1, aa(1, 1), lead_dim(aa), xx(1), nn, ss(1), CNST(-1.0), rank, dlwork, -1, rwork(1), info)
+  call lapack_gelss(nn, nn, 1, tmp_aa(1, 1), lead_dim(tmp_aa), xx(1), nn, ss(1), CNST(-1.0), rank, dlwork, -1, rwork(1), info)
 
   SAFE_ALLOCATE(work(1:int(dlwork)))
 
-  call lapack_gelss(nn, nn, 1, aa(1, 1), lead_dim(aa), xx(1), nn, ss(1), CNST(-1.0), rank, work(1), int(dlwork), rwork(1), info)
+  call lapack_gelss(nn, nn, 1, tmp_aa(1, 1), lead_dim(tmp_aa), xx(1), nn, ss(1), CNST(-1.0), rank, work(1), int(dlwork), rwork(1), info)
   SAFE_DEALLOCATE_A(rwork)
 #endif
+
+  SAFE_DEALLOCATE_A(ss)
+  if(preserve_mat) then
+    SAFE_DEALLOCATE_P(tmp_aa)
+  end if
 
   if(info /= 0) then
     write(message(1), '(5a,i5)') &

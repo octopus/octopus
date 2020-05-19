@@ -218,19 +218,11 @@ contains
     !% guess density and a new KS potential.
     !% Using the LCAO density as a new guess density may improve the convergence, but can
     !% also slow it down or yield wrong results (especially for spin-polarized calculations).
-    !%Option lcao_simple 4
-    !% States are initialized using atomic orbitals. This produces a
-    !% less optimal starting point, but it is faster and uses less
-    !% memory than other methods.
     !%End
     call parse_variable(namespace, 'LCAOStart', mode_default, this%mode)
     if(.not.varinfo_valid_option('LCAOStart', this%mode)) call messages_input_error(namespace, 'LCAOStart')
 
     call messages_print_var_option(stdout, 'LCAOStart', this%mode)
-
-    if(this%mode == OPTION__LCAOSTART__LCAO_SIMPLE) then
-      call messages_experimental('LCAOStart = lcao_simple')
-    end if
 
     if(this%mode == OPTION__LCAOSTART__LCAO_NONE) then
       POP_SUB(lcao_init)
@@ -469,8 +461,6 @@ contains
         this%norbs = this%maxorbs
       end if
 
-      if(this%mode == OPTION__LCAOSTART__LCAO_SIMPLE) this%norbs = this%maxorbs
-      
       ASSERT(this%norbs <= this%maxorbs)
 
       SAFE_ALLOCATE(this%cst(1:this%norbs, 1:st%d%spin_channels))
@@ -722,9 +712,7 @@ contains
 
     call lcao_init(lcao, sys%namespace, sys%gr, sys%geo, sys%st)
 
-    if(lcao%mode /= OPTION__LCAOSTART__LCAO_SIMPLE) then
-      call lcao_init_orbitals(lcao, sys%st, sys%gr, sys%geo, start = st_start)
-    end if
+    call lcao_init_orbitals(lcao, sys%st, sys%gr, sys%geo, start = st_start)
 
     if (.not. present(st_start)) then
       call lcao_guess_density(lcao, sys%namespace, sys%st, sys%gr, sys%gr%sb, sys%geo, sys%st%qtot, sys%st%d%nspin, &
@@ -759,17 +747,9 @@ contains
         call messages_info(1)
       end if
 
-      if(lcao%mode == OPTION__LCAOSTART__LCAO_SIMPLE) then
-        if (states_are_real(sys%st)) then
-          call dlcao_simple(lcao, sys%namespace, sys%st, sys%gr, sys%geo, start = st_start)
-        else
-          call zlcao_simple(lcao, sys%namespace, sys%st, sys%gr, sys%geo, start = st_start)
-        end if
-      else
-        call lcao_wf(lcao, sys%st, sys%gr, sys%geo, sys%hm, sys%namespace, start = st_start)
-      end if
+      call lcao_wf(lcao, sys%st, sys%gr, sys%geo, sys%hm, sys%namespace, start = st_start)
 
-      if (lcao%mode /= OPTION__LCAOSTART__LCAO_SIMPLE .and. .not. present(st_start)) then
+      if (.not. present(st_start)) then
         call states_elec_fermi(sys%st, sys%namespace, sys%gr%mesh)
         call states_elec_write_eigenvalues(stdout, min(sys%st%nst, lcao%norbs), sys%st, sys%gr%sb)
 

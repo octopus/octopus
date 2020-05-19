@@ -111,14 +111,10 @@ dnl and with OpenMP threads.
 dnl these are the --enable/--disable possible in octopus
 AC_ARG_ENABLE(debug, AS_HELP_STRING([--disable-debug], [debug mode]), [DEBUG=${enableval}])
 AC_ARG_ENABLE(openmp, AS_HELP_STRING([--enable-openmp], [Multi-threaded parallel version using OpenMP from Fortran]))
-AC_ARG_ENABLE(openmp_simd, AS_HELP_STRING([--enable-openmp_simd], [OpenMP SIMD from Fortran]))
 AC_ARG_ENABLE(opencl, AS_HELP_STRING([--enable-opencl], [OpenCL support (experimental)]))
 
 if test -n "${enable_openmp}" -a x"${enable_openmp}" != x"no"; then
   HAVE_OPENMP=1
-fi
-if test -n "${enable_openmp_simd}" -a x"${enable_openmp_simd}" != x"no"; then
-  HAVE_OPENMP_SIMD=1
 fi
 
 
@@ -231,11 +227,6 @@ AC_SUBST([F90_MODULE_FLAG])
 if test "${HAVE_OPENMP}"; then
   AX_OPENMP(,AC_MSG_ERROR([Fortran compiler does not support OpenMP]))
   FCFLAGS="$FCFLAGS $OPENMP_FCFLAGS"
-fi
-
-if test "${HAVE_OPENMP_SIMD}"; then
-  AX_OPENMP_SIMD(,AC_MSG_ERROR([Fortran compiler does not support OpenMP SIMD]))
-  FCFLAGS="$FCFLAGS $OPENMP_SIMD_FCFLAGS"
 fi
 
 

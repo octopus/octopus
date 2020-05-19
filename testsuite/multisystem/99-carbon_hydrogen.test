@@ -3,9 +3,9 @@
 Test       : Carbon and Hydrogen multisystem
 Program    : octopus
 TestGroups : long-run, multisystem
-Enabled    : Yes
+Enabled    : No
 
-Input: 01-carbon_hydrogen.01-gs.inp
+Input: 99-carbon_hydrogen.01-gs.inp
 match ; Carbon SCF convergence ; GREPCOUNT(Carbon/static/info, 'SCF converged') ; 1
 match ; Hydrogen SCF convergence ; GREPCOUNT(Hydrogen/static/info, 'SCF converged') ; 1
 match ; Hydrogen Total energy       ; GREPFIELD(Hydrogen/static/info, 'Total       =', 3) ; -0.47347615
@@ -15,7 +15,7 @@ match ; Warning Hydrogen ; GREPCOUNT(messages.stderr, '** In namespace Hydrogen:
 match ; Stressed message Hydrogen ; GREPCOUNT(messages.stdout, '* States Hydrogen *') ; 1
 match ; Stressed message Carbon ; GREPCOUNT(messages.stdout, '* States Carbon *') ; 1
 
-Input: 01-carbon_hydrogen.02-td.inp
+Input: 99-carbon_hydrogen.02-td.inp
 match ; Hydrogen Energy [step  1] ; LINEFIELD(Hydrogen/td.general/energy, -20, 3) ; -4.734313582395e-01
 match ; Hydrogen Energy [step 10] ; LINEFIELD(Hydrogen/td.general/energy, -11, 3) ; -4.734313582404e-01
 match ; Hydrogen Energy [step 20] ; LINEFIELD(Hydrogen/td.general/energy,  -1, 3) ; -4.734313582406e-01
@@ -23,7 +23,7 @@ match ; Carbon Energy [step  1] ; LINEFIELD(Carbon/td.general/energy, -20, 3) ; 
 match ; Carbon Energy [step 10] ; LINEFIELD(Carbon/td.general/energy, -11, 3) ; -5.375178967791e+00
 match ; Carbon Energy [step 20] ; LINEFIELD(Carbon/td.general/energy,  -1, 3) ; -5.375178967584e+00
 
-Input: 01-carbon_hydrogen.03-td_restart.inp
+Input: 99-carbon_hydrogen.03-td_restart.inp
 match ; Hydrogen Energy [step 30] ; LINEFIELD(Hydrogen/td.general/energy, -11, 3) ; -4.734313582390e-01
 match ; Hydrogen Energy [step 40] ; LINEFIELD(Hydrogen/td.general/energy,  -1, 3) ; -4.734313582367e-01
 match ; Carbon Energy [step 30] ; LINEFIELD(Carbon/td.general/energy, -11, 3) ; -5.375178967481e+00

@@ -461,7 +461,7 @@ contains
 
     ! And now, perform the necessary transformation.
     ip(1:3, 1:3) = kick%pol(1:3, 1:3)
-    dump = lalg_inverter(3, ip)
+    call lalg_inverter(3, ip)
     do is = 1, nspin
       do ie = 1, energy_steps
         sigma(:, :, ie, is) = matmul( transpose(ip), matmul(sigmap(:, :, ie, is), ip) )

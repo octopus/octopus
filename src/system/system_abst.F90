@@ -67,6 +67,9 @@ module system_abst_oct_m
     procedure :: update_interactions => system_update_interactions
     procedure :: propagation_start => system_propagation_start
     procedure :: propagation_finish => system_propagation_finish
+    procedure :: has_reached_final_propagation_time => system_has_reached_final_propagation_time
+    procedure :: propagation_step_finish => system_propagation_step_finish
+    procedure :: propagation_step_is_done => system_propagation_step_is_done
     procedure(system_add_interaction_partner),        deferred :: add_interaction_partner
     procedure(system_has_interaction),                deferred :: has_interaction
     procedure(system_initial_conditions),             deferred :: initial_conditions
@@ -298,9 +301,9 @@ contains
   end subroutine system_dt_operation
 
   ! ---------------------------------------------------------
-  subroutine system_init_clocks(this, dt, smallest_algo_dt)
+  subroutine system_init_clocks(this, smallest_algo_dt)
     class(system_abst_t), intent(inout) :: this
-    FLOAT,                intent(in)    :: dt, smallest_algo_dt
+    FLOAT,                intent(in)    :: smallest_algo_dt
 
     type(interaction_iterator_t) :: iter
     class(interaction_abst_t), pointer :: interaction
@@ -308,21 +311,21 @@ contains
     PUSH_SUB(system_init_clocks)
 
     ! Internal clock
-    this%clock = clock_t(this%namespace%get(), dt, smallest_algo_dt)
+    this%clock = clock_t(this%namespace%get(), this%prop%dt, smallest_algo_dt)
 
     ! Propagator clock
-    this%prop%clock = clock_t(this%namespace%get(), dt/this%prop%algo_steps, smallest_algo_dt)
+    this%prop%clock = clock_t(this%namespace%get(), this%prop%dt/this%prop%algo_steps, smallest_algo_dt)
 
     ! Interaction clocks
     call iter%start(this%interactions)
     do while (iter%has_next())
       interaction => iter%get_next_interaction()
-      call interaction%init_clock(this%namespace%get(), dt, smallest_algo_dt)
+      call interaction%init_clock(this%namespace%get(), this%prop%dt, smallest_algo_dt)
     end do
 
     ! Required quantities clocks
     where (this%quantities%required)
-      this%quantities%clock = clock_t(this%namespace%get(), dt, smallest_algo_dt)
+      this%quantities%clock = clock_t(this%namespace%get(), this%prop%dt, smallest_algo_dt)
     end where
 
     POP_SUB(system_init_clocks)
@@ -471,8 +474,9 @@ contains
   end function system_update_interactions
 
   ! ---------------------------------------------------------
-  subroutine system_init_propagator(this)
+  subroutine system_init_propagator(this, smallest_algo_dt)
     class(system_abst_t),      intent(inout) :: this
+    FLOAT,                     intent(inout) :: smallest_algo_dt
 
     integer :: prop
 
@@ -517,6 +521,10 @@ contains
     end select
 
     call this%prop%rewind()
+
+    ! Check if this propagators dt is smaller then the current smallest dt.
+    ! If so, replace the current smallest dt by the one from this propagator.
+    smallest_algo_dt = min(smallest_algo_dt, this%prop%dt/this%prop%algo_steps)
 
     POP_SUB(system_init_propagator)
   end subroutine system_init_propagator
@@ -563,7 +571,47 @@ contains
     POP_SUB(system_propagation_finish)
   end subroutine system_propagation_finish
 
-    ! ---------------------------------------------------------
+  ! ---------------------------------------------------------
+  logical function system_has_reached_final_propagation_time(this)
+    class(system_abst_t),      intent(inout) :: this
+
+    PUSH_SUB(system_has_reached_final_propagation_time)
+
+    ! Fixme: should be changed to final propagation time
+    system_has_reached_final_propagation_time = (this%clock%get_sim_time() > this%prop%max_td_steps*this%prop%dt)
+
+    POP_SUB(system_has_reached_final_propagation_time)
+  end function system_has_reached_final_propagation_time
+
+  ! ---------------------------------------------------------
+  subroutine system_propagation_step_finish(this, iteration)
+    class(system_abst_t),      intent(inout) :: this
+    integer,                   intent(in)    :: iteration
+
+    PUSH_SUB(system_propagation_step_finish)
+
+    ! Print information about the current iteration and write output
+    call this%output_write(iteration)
+    call this%iteration_info()
+
+    ! Reset propagator for next step
+    call this%prop%rewind()
+
+    POP_SUB(system_propagation_step_finish)
+  end subroutine system_propagation_step_finish
+
+  ! ---------------------------------------------------------
+  logical function system_propagation_step_is_done(this)
+    class(system_abst_t),      intent(inout) :: this
+
+    PUSH_SUB(system_propagation_step_is_done)
+
+    system_propagation_step_is_done = this%prop%step_is_done()
+
+    POP_SUB(system_propagation_step_is_done)
+  end function system_propagation_step_is_done
+
+  ! ---------------------------------------------------------
   function system_iterator_get_next(this) result(value)
     class(system_iterator_t), intent(inout) :: this
     class(system_abst_t),     pointer       :: value
