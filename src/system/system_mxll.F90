@@ -599,6 +599,8 @@ contains
 
     PUSH_SUB(system_mxll_finalize)
 
+    deallocate(this%prop)
+
     ! free memory
     SAFE_DEALLOCATE_A(this%rs_current_density_ext_t1)
     SAFE_DEALLOCATE_A(this%rs_current_density_ext_t2)
