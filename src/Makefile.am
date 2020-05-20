@@ -822,8 +822,8 @@ include/options.h: $(all_f_srcs) $(octopus_f_srcs) $(utils_f_srcs) $(noinst_HEAD
 include/defaults.h: $(all_f_srcs) $(octopus_f_srcs) $(utils_f_srcs) $(noinst_HEADERS)
 	$(top_srcdir)/build/mk_varinfo.pl -s $(top_srcdir) -b $(top_builddir)
 
-oct_wannier90_SOURCES = $(system_srcs) $(hamiltonian_srcs) $(basis_set_srcs) \
-                        $(poisson_srcs) $(states_srcs) $(grid_srcs) \
+oct_wannier90_SOURCES = $(td_srcs) $(scf_srcs) $(system_srcs) $(hamiltonian_srcs) \
+                        $(basis_set_srcs) $(poisson_srcs) $(states_srcs) $(grid_srcs) \
                         $(ions_srcs) $(species_srcs) $(math_srcs) $(basic_srcs) \
                         utils/wannier90_interface.F90 
 oct_wannier90_LINK = $(FCLINK)
