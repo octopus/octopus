@@ -247,15 +247,6 @@ contains
     st%parallel_in_states = .false.
     st%packed = .false.
 
-    !%Variable StatesPack
-    !%Type logical
-    !%Section Execution::Optimization
-    !%Description
-    !% Similarly as with electronic states, When set to yes, Maxwell states are stored in packed mode.
-    !%
-    !% The default is yes except when using OpenCL.
-    !%End
-
     defaultl = .true.
     if(accel_is_enabled()) then
       defaultl = .false.
