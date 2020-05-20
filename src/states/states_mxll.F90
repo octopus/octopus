@@ -49,7 +49,7 @@ module states_mxll_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use varinfo_oct_m
-  
+
   implicit none
 
   private
@@ -81,7 +81,7 @@ module states_mxll_oct_m
 
   type :: states_mxll_t
     ! Components are public by default
-    integer                      :: dim         !< Space dimension 
+    integer                      :: dim         !< Space dimension
     integer                      :: rs_sign
     logical                      :: pack_states
     logical                      :: parallel_in_states !< Am I parallel in states?
@@ -93,7 +93,7 @@ module states_mxll_oct_m
     CMPLX, allocatable           :: rs_state(:,:)
     CMPLX, allocatable           :: rs_state_trans(:,:)
     CMPLX, allocatable           :: rs_state_long(:,:)
-    
+
     logical                      :: rs_current_density_restart = .false.
     CMPLX, allocatable           :: rs_current_density_restart_t1(:,:)
     CMPLX, allocatable           :: rs_current_density_restart_t2(:,:)
@@ -221,6 +221,7 @@ contains
     integer :: idim, nlines, ncols, il
     logical :: defaultl
     FLOAT, allocatable   :: pos(:)
+    integer :: ix_max, iy_max, iz_max
 
     PUSH_SUB(states_mxll_init)
 
@@ -245,7 +246,7 @@ contains
     call mpi_grp_init(st%mpi_grp, -1)
     st%parallel_in_states = .false.
     st%packed = .false.
-    
+
     !%Variable StatesPack
     !%Type logical
     !%Section Execution::Optimization
@@ -282,7 +283,7 @@ contains
     !%Description
     !%
     !% <tt>%Coordinates
-    !% <br>&nbsp;&nbsp;    -1.0 | 2.0 |  4.0 
+    !% <br>&nbsp;&nbsp;    -1.0 | 2.0 |  4.0
     !% <br>&npsp;&nbsp;     0.0 | 1.0 | -2.0
     !% <br>%</tt>
     !%
@@ -321,16 +322,25 @@ contains
 
     SAFE_DEALLOCATE_A(pos)
 
+    st%surface_grid_rows_number(1) = 3
+    ix_max  = st%surface_grid_rows_number(1)
+    st%surface_grid_rows_number(2) = 3
+    iy_max  = st%surface_grid_rows_number(2)
+    st%surface_grid_rows_number(3) = 3
+    iz_max  = st%surface_grid_rows_number(3)
+
+    SAFE_ALLOCATE(st%surface_grid_center(1:2, 1:st%dim, 1:ix_max, 1:iy_max))
+    SAFE_ALLOCATE(st%surface_grid_points_number(1:st%dim, 1:ix_max, 1:iy_max))
+
     POP_SUB(states_mxll_init)
-      
+
   end subroutine states_mxll_init
-  
+
   ! ---------------------------------------------------------
   !> Allocates the Maxwell states defined within a states_mxll_t structure.
   subroutine states_mxll_allocate(st, mesh)
     type(states_mxll_t),    intent(inout)   :: st
     type(mesh_t),           intent(in)      :: mesh
-
 
     PUSH_SUB(states_mxll_allocate)
 
@@ -394,7 +404,6 @@ contains
     SAFE_DEALLOCATE_P(st%boundary_points_map)
     SAFE_DEALLOCATE_P(st%ep)
     SAFE_DEALLOCATE_P(st%mu)
-
 #ifdef HAVE_SCALAPACK
     call blacs_proc_grid_end(st%dom_st_proc_grid)
 #endif
@@ -404,7 +413,7 @@ contains
 
     POP_SUB(states_mxll_end)
   end subroutine states_mxll_end
-  
+
 
   !----------------------------------------------------------
   subroutine build_rs_element(e_element, b_element, rs_sign, rs_element, ep_element, mu_element)
@@ -420,7 +429,7 @@ contains
       rs_element = sqrt(ep_element/M_TWO) * e_element + M_zI * rs_sign * sqrt(M_ONE/(M_TWO*mu_element)) * b_element
     else
       rs_element = sqrt(P_ep/M_TWO) * e_element + M_zI * rs_sign * sqrt(M_ONE/(M_TWO*P_mu)) * b_element
-    end if 
+    end if
 
   end subroutine build_rs_element
 
@@ -462,12 +471,12 @@ contains
 
     do ip = 1, np_
       if (present(ep_field) .and. present(mu_field)) then
-        rs_state(ip, :) = sqrt(ep_field(ip)/M_TWO) * e_field(ip, :) & 
+        rs_state(ip, :) = sqrt(ep_field(ip)/M_TWO) * e_field(ip, :) &
                        + M_zI * rs_sign * sqrt(M_ONE/(M_TWO*mu_field(ip))) * b_field(ip, :)
       else
         rs_state(ip, :) = sqrt(P_ep/M_TWO) * e_field(ip, :) &
                        + M_zI * rs_sign * sqrt(M_ONE/(M_TWO*P_mu)) * b_field(ip, :)
-      end if 
+      end if
     end do
 
     POP_SUB(build_rs_state)
@@ -520,7 +529,7 @@ contains
 
     ! no PUSH_SUB, called too often
     np_ = optional_default(np, mesh%np)
- 
+
     do ip = 1, np_
       if (present(ep_field)) then
         rs_current_state(ip, :) = M_ONE/sqrt(M_TWO*ep_field(ip)) * current_state(ip, :)
@@ -558,7 +567,7 @@ contains
 
     ! no PUSH_SUB, called too often
 
-    if (present(mu_element)) then    
+    if (present(mu_element)) then
       magnetic_field_vector(:) = sqrt(M_TWO*mu_element) * rs_sign * aimag(rs_state_vector(:))
     else
       magnetic_field_vector(:) = sqrt(M_TWO*P_mu) * rs_sign * aimag(rs_state_vector(:))
@@ -580,11 +589,11 @@ contains
     PUSH_SUB(get_electric_field_state)
 
     np_ = optional_default(np, mesh%np)
-     
+
     do ip = 1, np_
       if (present(ep_field)) then
         electric_field(ip, :) = sqrt(M_TWO/ep_field(ip)) * TOFLOAT(rs_state(ip, :))
-      else 
+      else
         electric_field(ip,:) = sqrt(M_TWO/P_ep) * TOFLOAT(rs_state(ip, :))
       end if
     end do
@@ -608,7 +617,7 @@ contains
     PUSH_SUB(get_magnetic_field_state)
 
     np_ = optional_default(np, mesh%np)
-    
+
     do ip = 1, np_
       if (present(mu_field)) then
         magnetic_field(ip, :) = sqrt(M_TWO*mu_field(ip)) * rs_sign * aimag(rs_state(ip, :))
@@ -667,7 +676,7 @@ contains
     integer :: ip, np_
 
     PUSH_SUB(get_current_state)
-    
+
     np_ = optional_default(np, mesh%np)
 
     do ip = 1, np_
