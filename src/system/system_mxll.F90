@@ -1,4 +1,4 @@
-!! Copyright (C) 2019-2020 F. Bonafe, H. Appel, R. Jestaedt
+!! Copyright (C) 2019-2020 Franco Bonafe, Heiko Appel, Rene Jestaedt
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -21,6 +21,7 @@
 module system_mxll_oct_m
   use calc_mode_par_oct_m
   use clock_oct_m
+  use current_oct_m
   use distributed_oct_m
   use geometry_oct_m
   use global_oct_m
@@ -28,6 +29,8 @@ module system_mxll_oct_m
   use hamiltonian_mxll_oct_m
   use interaction_abst_oct_m
   use iso_c_binding
+  use loct_oct_m
+  use maxwell_boundary_op_oct_m
   use mesh_oct_m
   use messages_oct_m
   use mpi_oct_m
@@ -38,14 +41,22 @@ module system_mxll_oct_m
   use poisson_oct_m
   use profiling_oct_m
   use propagator_abst_oct_m
+  use propagator_base_oct_m
+  use propagator_mxll_oct_m
   use quantity_oct_m
+  use restart_oct_m
   use simul_box_oct_m
   use sort_oct_m
   use space_oct_m
   use system_abst_oct_m
   use states_mxll_oct_m
+  use states_mxll_restart_oct_m
   use system_oct_m
-  
+  use td_write_oct_m
+  use unit_oct_m
+  use unit_system_oct_m
+
+
   implicit none
 
   private
@@ -64,7 +75,19 @@ module system_mxll_oct_m
     type(output_t)               :: outp  !< the output
     type(multicomm_t)            :: mc    !< index and domain communicators
 
-    type(c_ptr) :: output_handle
+    type(propagator_mxll_t)      :: tr_mxll   !< contains the details of the Maxwell time-evolution
+    type(td_write_t)             :: write_handler
+    type(c_ptr)                  :: output_handle
+
+    CMPLX, allocatable           :: rs_current_density_ext_t1(:,:), rs_current_density_ext_t2(:,:)
+    CMPLX, allocatable           :: rs_charge_density_ext_t1(:), rs_charge_density_ext_t2(:)
+    CMPLX, allocatable           :: rs_state_init(:,:)
+    FLOAT                        :: bc_bounds(2,MAX_DIM), dt_bounds(2,MAX_DIM)
+    FLOAT                        :: etime
+    integer                      :: energy_update_iter
+    integer                      :: mxll_td_relax_iter
+    integer                      :: mxll_ks_relax_iter
+
   contains
     procedure :: add_interaction_partner => system_mxll_add_interaction_partner
     procedure :: has_interaction => system_mxll_has_interaction
@@ -81,10 +104,6 @@ module system_mxll_oct_m
     procedure :: output_start => system_mxll_output_start
     procedure :: output_write => system_mxll_output_write
     procedure :: output_finish => system_mxll_output_finish
-    procedure :: write_td_info => system_mxll_write_td_info
-    procedure :: td_write_init => system_mxll_td_write_init
-    procedure :: td_write_iter => system_mxll_td_write_iter
-    procedure :: td_write_end => system_mxll_td_write_end
     final :: system_mxll_finalize
   end type system_mxll_t
 
@@ -102,7 +121,8 @@ contains
     type(profile_t), save :: prof
 
     PUSH_SUB(system_mxll_init)
-    call profiling_in(prof,"SYSTEM_INIT")
+
+    call profiling_in(prof,"SYSTEM_MXLL_INIT")
 
     SAFE_ALLOCATE(sys)
 
@@ -112,7 +132,6 @@ contains
     SAFE_ALLOCATE(sys%st)
 
     call messages_obsolete_variable(sys%namespace, 'SystemName')
-
     call space_init(sys%space, sys%namespace)
 
     ! The geometry needs to be nullified in order to be able to call grid_init_stage_*
@@ -129,32 +148,23 @@ contains
     sys%geo%reduced_coordinates = .false.
     sys%geo%periodic_dim = 0
     sys%geo%lsize = M_ZERO
-    
+
     call grid_init_stage_0(sys%gr, sys%namespace, sys%geo, sys%space)
     call states_mxll_init(sys%st, sys%namespace, sys%gr, sys%geo)
-
     call grid_init_stage_1(sys%gr, sys%namespace, sys%geo)
-
     call parallel_mxll_init(sys)
-
     call grid_init_stage_2(sys%gr, sys%namespace, sys%mc, sys%geo)
-
     call output_mxll_init(sys%outp, sys%namespace, sys%gr%sb)
-
     call hamiltonian_mxll_init(sys%hm, sys%namespace, sys%gr, sys%st)
-    
     call profiling_out(prof)
 
-    ! Initialize the propagator
-    !call sys%init_propagator()
-
-    POP_SUB(system_mxll_init)    
+    POP_SUB(system_mxll_init)
 
   contains
 
     ! ---------------------------------------------------------
     subroutine parallel_mxll_init(sys)
-      type(system_mxll_t), intent(inout) :: sys      
+      type(system_mxll_t), intent(inout) :: sys
 
       integer :: index_range(4)
 
@@ -203,6 +213,150 @@ contains
   subroutine system_mxll_initial_conditions(this, from_scratch)
     class(system_mxll_t), intent(inout) :: this
     logical,              intent(in)    :: from_scratch
+
+    integer :: inter_steps_default
+    integer :: relax_iter_default
+
+    PUSH_SUB(system_mxll_initial_conditions)
+    !%Variable TDMaxwellTDRelaxationSteps
+    !%Type integer
+    !%Default 100
+    !%Section Time-Dependent::Propagation
+    !%Description
+    !% follwos ...
+    !%End
+    relax_iter_default = 0
+    call parse_variable(this%namespace, 'TDMaxwellTDRelaxationSteps', relax_iter_default, this%mxll_td_relax_iter)
+
+    !%Variable TDMaxwellKSRelaxationSteps
+    !%Type integer
+    !%Default 100
+    !%Section Time-Dependent::Propagation
+    !%Description
+    !% follwos ...
+    !%End
+    relax_iter_default = 0
+    call parse_variable(this%namespace, 'TDMaxwellKSRelaxationSteps', relax_iter_default, this%mxll_ks_relax_iter)
+
+    ! maxwell delay time
+    this%tr_mxll%delay_time = this%mxll_ks_relax_iter * this%prop%dt
+
+    if ( (this%mxll_td_relax_iter /= 0) .and. (this%mxll_ks_relax_iter /= 0) ) then
+      if ( .not. ( (this%mxll_td_relax_iter < this%mxll_ks_relax_iter) ) ) then
+        call messages_write('TDMaxwellTDRelaxationSteps ')
+        call messages_write(' has to be smaller than ')
+        call messages_write(' TDMaxwellKSRelaxationSteps. ')
+        call messages_write(' TDMaxwellTDRelaxationSteps ')
+        call messages_write(' and ')
+        call messages_write(' TDMaxwellKSRelaxationSteps ')
+        call messages_write(' have to be smaller than TDMaxSteps.')
+        call messages_fatal()
+      end if
+    end if
+
+    !%Variable MaxwellTDIntervalSteps
+    !%Type integer
+    !%Section Time-Dependent::Propagation
+    !%Description
+    !% This variable determines how many intervall steps the Maxwell field propagation
+    !% does until it reaches the matter time step. In case that MaxwellTDIntervalSteps is
+    !% equal to one, the Maxwell time step is equal to the matter one. The default value is 1.
+    !%End
+    inter_steps_default = 1
+    call parse_variable(this%namespace, 'MaxwellTDIntervalSteps', inter_steps_default, this%tr_mxll%inter_steps)
+
+    if (this%tr_mxll%inter_steps < 1) then
+      call messages_write('MaxwellTDIntervalSteps hast to be larger than 0 !')
+      call messages_fatal()
+    end if
+
+    SAFE_ALLOCATE(this%st%energy_rate(1:this%prop%max_td_steps))
+    SAFE_ALLOCATE(this%st%delta_energy(1:this%prop%max_td_steps))
+    SAFE_ALLOCATE(this%st%energy_via_flux_calc(1:this%prop%max_td_steps))
+    SAFE_ALLOCATE(this%st%trans_energy_rate(1:this%prop%max_td_steps))
+    SAFE_ALLOCATE(this%st%trans_delta_energy(1:this%prop%max_td_steps))
+    SAFE_ALLOCATE(this%st%trans_energy_via_flux_calc(1:this%prop%max_td_steps))
+    SAFE_ALLOCATE(this%st%plane_waves_energy_rate(1:this%prop%max_td_steps))
+    SAFE_ALLOCATE(this%st%plane_waves_delta_energy(1:this%prop%max_td_steps))
+    SAFE_ALLOCATE(this%st%plane_waves_energy_via_flux_calc(1:this%prop%max_td_steps))
+    this%st%energy_rate = M_ZERO
+    this%st%delta_energy = M_ZERO
+    this%st%energy_via_flux_calc = M_ZERO
+    this%st%trans_energy_rate = M_ZERO
+    this%st%trans_delta_energy = M_ZERO
+    this%st%trans_energy_via_flux_calc = M_ZERO
+    this%st%plane_waves_energy_rate = M_ZERO
+    this%st%plane_waves_delta_energy = M_ZERO
+    this%st%plane_waves_energy_via_flux_calc = M_ZERO
+
+    SAFE_ALLOCATE(this%rs_current_density_ext_t1(1:this%gr%mesh%np_part,1:this%st%dim))
+    SAFE_ALLOCATE(this%rs_current_density_ext_t2(1:this%gr%mesh%np_part,1:this%st%dim))
+    SAFE_ALLOCATE(this%rs_charge_density_ext_t1(1:this%gr%mesh%np_part))
+    SAFE_ALLOCATE(this%rs_charge_density_ext_t2(1:this%gr%mesh%np_part))
+
+    SAFE_ALLOCATE(this%rs_state_init(1:this%gr%mesh%np_part, 1:this%st%dim))
+    this%rs_state_init(:,:) = M_z0
+
+    this%energy_update_iter = 1
+
+    call propagator_mxll_init(this%gr, this%namespace, this%st, this%hm, this%tr_mxll)
+    call states_mxll_allocate(this%st, this%gr%mesh)
+    call external_current_init(this%st, this%namespace, this%gr%mesh)
+    this%hm%propagation_apply = .true.
+
+    if (parse_is_defined(this%namespace, 'MaxwellIncidentWaves') .and. (this%tr_mxll%bc_plane_waves)) then
+      this%st%rs_state_plane_waves(:,:) = M_z0
+    end if
+
+    this%hm%plane_waves_apply = .true.
+    this%hm%spatial_constant_apply = .true.
+    call bc_mxll_init(this%hm%bc, this%namespace, this%gr, this%st, this%gr%sb, this%geo, this%prop%dt/this%tr_mxll%inter_steps)
+    this%bc_bounds(:,:) = this%hm%bc%bc_bounds(:,:)
+    call inner_and_outer_points_mapping(this%gr%mesh, this%st, this%bc_bounds)
+    this%dt_bounds(2,:) = this%bc_bounds(1,:)
+    this%dt_bounds(1,:) = this%bc_bounds(1,:) - this%gr%der%order * this%gr%mesh%spacing(:)
+    call surface_grid_points_mapping(this%gr%mesh, this%st, this%dt_bounds)
+
+    if (parse_is_defined(this%namespace, 'UserDefinedInitialMaxwellStates')) then
+      call states_mxll_read_user_def(this%gr%mesh, this%st, this%rs_state_init, this%namespace)
+      call messages_print_stress(stdout, "Setting initial EM field inside box")
+      this%st%rs_state(:,:) = this%st%rs_state + this%rs_state_init
+      if (this%tr_mxll%bc_plane_waves) then
+        this%st%rs_state_plane_waves(:,:) = this%rs_state_init
+      end if
+      if (this%tr_mxll%bc_constant) &
+        this%st%rs_state_const(:) = this%rs_state_init(this%gr%mesh%idx%lxyz_inv(0,0,0),:)
+      call constant_boundaries_calculation(this%tr_mxll%bc_constant, this%hm%bc, this%hm, this%st, this%st%rs_state)
+    end if
+
+    if (parse_is_defined(this%namespace, 'UserDefinedInitialMaxwellStates')) then
+      SAFE_DEALLOCATE_A(this%rs_state_init)
+    end if
+
+    call hamiltonian_mxll_update(this%hm, time = M_ZERO)
+
+    ! calculate Maxwell energy density
+    call energy_density_calc(this%gr, this%st, this%st%rs_state, this%hm%energy%energy_density(:), &
+         this%hm%energy%e_energy_density(:), this%hm%energy%b_energy_density(:), this%hm%plane_waves, &
+         this%st%rs_state_plane_waves, this%hm%energy%energy_density_plane_waves(:))
+
+    ! calculate Maxwell energy
+    call energy_mxll_calc(this%gr, this%st, this%hm, this%st%rs_state, &
+         this%hm%energy%energy, this%hm%energy%e_energy, this%hm%energy%b_energy, &
+         this%hm%energy%boundaries, this%st%rs_state_plane_waves, this%hm%energy%energy_plane_waves)
+
+    this%st%rs_state_trans(:,:) = this%st%rs_state
+
+    call td_write_mxll_init(this%write_handler, this%namespace, this%gr, this%st, &
+                            this%hm, 0, this%prop%max_td_steps, this%prop%dt)
+    call get_rs_state_at_point(this%st%selected_points_rs_state(:,:), this%st%rs_state, &
+                               this%st%selected_points_coordinate(:,:),&
+      this%st, this%gr%mesh)
+    call td_write_mxll_iter(this%write_handler, this%gr, this%st, this%hm, this%prop%dt, 0)
+    call td_write_mxll_free_data(this%write_handler, this%namespace, this%gr, &
+                                 this%st, this%hm, this%geo, this%outp, 0, this%prop%dt)
+
+    POP_SUB(system_mxll_initial_conditions)
   end subroutine system_mxll_initial_conditions
 
   ! ---------------------------------------------------------
@@ -210,22 +364,86 @@ contains
     class(system_mxll_t), intent(inout) :: this
     integer,              intent(in)    :: operation
 
+    type(profile_t), save :: prof
+    logical :: stopping
+
     PUSH_SUB(system_mxll_do_td)
 
     select case(operation)
     case (VERLET_UPDATE_POS)
-
     case (VERLET_COMPUTE_ACC)
-
     case (VERLET_COMPUTE_VEL)
-
     case (BEEMAN_PREDICT_POS)
-
     case (BEEMAN_PREDICT_VEL)
-
-    case( BEEMAN_CORRECT_POS)
-
+    case (BEEMAN_CORRECT_POS)
     case (BEEMAN_CORRECT_VEL)
+
+    case (EXPMID_START)
+      this%etime = loct_clock()
+    case (EXPMID_FINISH)
+    case (EXPMID_PREDICT_DT_2)  ! predict: psi(t+dt/2) = 0.5*(U_H(dt) psi(t) + psi(t)) or via extrapolation
+    case (UPDATE_INTERACTIONS)
+    case (UPDATE_HAMILTONIAN)   ! update: H(t+dt/2) from psi(t+dt/2)
+    case (EXPMID_PREDICT_DT)    ! predict: psi(t+dt) = U_H(t+dt/2) psi(t)
+
+      call profiling_in(prof, "SYSTEM_MXLL_DO_TD")
+      stopping = clean_stop(this%mc%master_comm)
+
+      ! Propagation
+
+      ! calculation of external RS density at time (time-dt)
+      this%rs_current_density_ext_t1 = M_z0
+      if (this%hm%current_density_ext_flag) then
+        call get_rs_density_ext(this%st, this%gr%mesh, this%clock%get_sim_time()-this%prop%dt, this%rs_current_density_ext_t1)
+      end if
+
+      ! calculation of external RS density at time (time)
+      this%rs_current_density_ext_t2 = M_z0
+      if (this%hm%current_density_ext_flag) then
+        call get_rs_density_ext(this%st, this%gr%mesh, this%clock%get_sim_time(), this%rs_current_density_ext_t2)
+      end if
+
+      this%rs_charge_density_ext_t1 = M_z0
+      this%rs_charge_density_ext_t2 = M_z0
+
+      ! Propagation dt with H_maxwell
+      call mxll_propagation_step(this%hm, this%namespace, this%gr, this%st, this%tr_mxll, this%st%rs_state, &
+                               this%clock%get_sim_time()-this%prop%dt, this%prop%dt)
+
+      this%st%rs_state_trans(:,:) = this%st%rs_state
+
+      ! calculate Maxwell energy density
+      call energy_density_calc(this%gr, this%st, this%st%rs_state, this%hm%energy%energy_density, &
+           this%hm%energy%e_energy_density, this%hm%energy%b_energy_density, this%hm%plane_waves, &
+           this%st%rs_state_plane_waves, this%hm%energy%energy_density_plane_waves(:))
+
+      ! calculate Maxwell energy
+      call energy_mxll_calc(this%gr, this%st, this%hm, this%st%rs_state, this%hm%energy%energy, &
+           this%hm%energy%e_energy, this%hm%energy%b_energy, this%hm%energy%boundaries, &
+           this%st%rs_state_plane_waves, this%hm%energy%energy_plane_waves)
+
+      ! get RS state values for selected points
+      call get_rs_state_at_point(this%st%selected_points_rs_state(:,:), this%st%rs_state, this%st%selected_points_coordinate(:,:), &
+        this%st, this%gr%mesh)
+
+      write(message(1), '(i8,1x,f13.6,2x,f16.6,6x,f13.6)') this%clock%get_tick(), &
+        units_from_atomic(units_out%time, this%clock%get_sim_time()),             &
+        units_from_atomic(units_out%energy, this%hm%energy%energy),               &
+        loct_clock() - this%etime
+      call messages_info(1)
+      this%etime = loct_clock()
+
+      call td_write_mxll_iter(this%write_handler, this%gr, this%st, this%hm, this%prop%dt, this%clock%get_tick())
+
+      ! write data
+      if ((this%outp%output_interval > 0 .and. mod(this%clock%get_tick(), this%outp%output_interval) == 0) .or. &
+        this%clock%get_tick() == this%prop%max_td_steps .or. stopping) then
+        call td_write_mxll_free_data(this%write_handler, this%namespace, this%gr, this%st, this%hm, this%geo, this%outp, &
+        this%clock%get_tick(), this%prop%dt)
+      end if
+
+      call profiling_out(prof)
+      ! if (stopping) exit
 
     case default
       message(1) = "Unsupported TD operation."
@@ -260,85 +478,6 @@ contains
 
     POP_SUB(system_mxll_store_current_status)
   end subroutine system_mxll_store_current_status
-
-
-
-  ! ---------------------------------------------------------
-  subroutine system_mxll_write_td_info(this)
-    class(system_mxll_t), intent(in) :: this
-
-    PUSH_SUB(system_mxll_write_td_info)
-
-    POP_SUB(system_mxll_write_td_info)
-  end subroutine system_mxll_write_td_info
-
-  ! ---------------------------------------------------------
-  subroutine system_mxll_td_write_init(this, dt)
-    class(system_mxll_t), intent(inout) :: this
-    FLOAT,                intent(in)    :: dt
-
-    PUSH_SUB(system_mxll_td_write_init)
-
-
-    POP_SUB(system_mxll_td_write_init)
-  end subroutine system_mxll_td_write_init
-
-  ! ---------------------------------------------------------
-  subroutine system_mxll_td_write_iter(this, iter)
-    class(system_mxll_t), intent(inout) :: this
-    integer,              intent(in)    :: iter
-
-    integer :: idir
-    character(len=50) :: aux
-
-    if(.not.mpi_grp_is_root(mpi_world)) return ! only first node outputs
-
-    PUSH_SUB(system_mxll_td_write_iter)
-
-    if(iter == 0) then
-      ! header
-      call write_iter_clear(this%output_handle)
-      call write_iter_string(this%output_handle,'################################################################################')
-      call write_iter_nl(this%output_handle)
-      call write_iter_string(this%output_handle,'# HEADER')
-      call write_iter_nl(this%output_handle)
-
-      ! first line: column names
-      call write_iter_header_start(this%output_handle)
-
-      do idir = 1, this%space%dim
-        write(aux, '(a2,i3,a1)') 'x(', idir, ')'
-        call write_iter_header(this%output_handle, aux)
-      end do
-      do idir = 1, this%space%dim
-        write(aux, '(a2,i3,a1)') 'v(', idir, ')'
-        call write_iter_header(this%output_handle, aux)
-      end do
-      call write_iter_nl(this%output_handle)
-
-
-      call write_iter_string(this%output_handle,'################################################################################')
-      call write_iter_nl(this%output_handle)
-    end if
-
-    call write_iter_start(this%output_handle)
-    call write_iter_nl(this%output_handle)
-
-    POP_SUB(system_mxll_td_write_iter)
-  end subroutine system_mxll_td_write_iter
-
-  ! ---------------------------------------------------------
-  subroutine system_mxll_td_write_end(this)
-    class(system_mxll_t), intent(inout) :: this
-
-    PUSH_SUB(system_mxll_td_write_end)
-
-    if (mpi_grp_is_root(mpi_world)) then
-      call write_iter_end(this%output_handle)
-    end if
-
-    POP_SUB(system_mxll_td_write_end)
-  end subroutine system_mxll_td_write_end
 
   ! ---------------------------------------------------------
   subroutine system_mxll_update_quantity(this, iq, clock)
@@ -393,41 +532,62 @@ contains
     class(interaction_abst_t),        intent(inout) :: inter
 
     PUSH_SUB(system_mxll_set_pointers_to_interaction)
-
-!    select type(inter)
-!    type is(interaction_gravity_t)
-!    class default
-!      message(1) = "Unsupported interaction."
-!      call messages_fatal(1)
-!    end select
-
     POP_SUB(system_mxll_set_pointers_to_interaction)
   end subroutine system_mxll_set_pointers_to_interaction
 
   ! ---------------------------------------------------------
   subroutine system_mxll_update_interactions_start(this)
     class(system_mxll_t), intent(inout) :: this
+
+    PUSH_SUB(system_mxll_update_interactions_start)
+    POP_SUB(system_mxll_update_interactions_start)
   end subroutine system_mxll_update_interactions_start
 
   ! ---------------------------------------------------------
   subroutine system_mxll_update_interactions_finish(this)
     class(system_mxll_t), intent(inout) :: this
+
+    PUSH_SUB(system_mxll_update_interactions_finish)
+    POP_SUB(system_mxll_update_interactions_finish)
   end subroutine system_mxll_update_interactions_finish
 
   ! ---------------------------------------------------------
   subroutine system_mxll_output_start(this)
     class(system_mxll_t), intent(inout) :: this
+
+    PUSH_SUB(system_mxll_output_start)
+
+    write(message(1), '(a10,1x,a10,1x,a20,1x,a18)') 'Iter ', 'Time ',  'Maxwell energy', 'Elapsed Time'
+    call messages_info(1)
+    call messages_print_stress(stdout)
+
+    write(message(1), '(i8,1x,f13.6,2x,f16.6,6x,f13.6)') 0,           &
+        units_from_atomic(units_out%time, M_ZERO),                    &
+        units_from_atomic(units_out%energy, this%hm%energy%energy),   &
+        M_ZERO
+    call messages_info(1)
+
+    POP_SUB(system_mxll_output_start)
   end subroutine system_mxll_output_start
 
   ! ---------------------------------------------------------
   subroutine system_mxll_output_write(this, iter)
     class(system_mxll_t), intent(inout) :: this
     integer,              intent(in)    :: iter
+
+    PUSH_SUB(system_mxll_output_write)
+    POP_SUB(system_mxll_output_write)
   end subroutine system_mxll_output_write
 
   ! ---------------------------------------------------------
   subroutine system_mxll_output_finish(this)
     class(system_mxll_t), intent(inout) :: this
+
+    PUSH_SUB(system_mxll_output_finish)
+
+    call td_write_mxll_end(this%write_handler)
+
+    POP_SUB(system_mxll_output_finish)
   end subroutine system_mxll_output_finish
 
   ! ---------------------------------------------------------
@@ -439,7 +599,12 @@ contains
 
     PUSH_SUB(system_mxll_finalize)
 
-    !deallocate(this%prop)
+    ! free memory
+    SAFE_DEALLOCATE_A(this%rs_current_density_ext_t1)
+    SAFE_DEALLOCATE_A(this%rs_current_density_ext_t2)
+    SAFE_DEALLOCATE_A(this%rs_charge_density_ext_t1)
+    SAFE_DEALLOCATE_A(this%rs_charge_density_ext_t2)
+    SAFE_DEALLOCATE_A(this%rs_state_init)
 
     call iter%start(this%interactions)
     do while (iter%has_next())
@@ -465,7 +630,6 @@ contains
 
     POP_SUB(system_mxll_finalize)
   end subroutine system_mxll_finalize
-
 
 end module system_mxll_oct_m
 
