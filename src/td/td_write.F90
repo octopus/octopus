@@ -3436,11 +3436,7 @@ contains
 
     ierr = 0
 
-    do idim=1, 3
-      if (hm%bc%bc_ab_type(idim) == OPTION__MAXWELLABSORBINGBOUNDARIES__CPML) then
-        pml_check = .true.
-      end if
-    end do
+    pml_check = any(hm%bc%bc_ab_type(1:3) == OPTION__MAXWELLABSORBINGBOUNDARIES__CPML)
 
     if (debug%info) then
       message(1) = "Debug: Writing td_maxwell restart."
@@ -3460,30 +3456,30 @@ contains
     zff = M_z0
 
     if (bc_plane_waves) then
-      zff(1:gr%mesh%np,         1:st%dim)   = st%rs_state(1:gr%mesh%np,1:st%dim)
-      zff(1:gr%mesh%np,st%dim+1:st%dim+st%dim) = st%rs_state_plane_waves(1:gr%mesh%np,1:st%dim)
+      zff(1:gr%mesh%np, 1:st%dim)   = st%rs_state(1:gr%mesh%np, 1:st%dim)
+      zff(1:gr%mesh%np, st%dim+1:st%dim+st%dim) = st%rs_state_plane_waves(1:gr%mesh%np, 1:st%dim)
       if (pml_check) then
         id = 0
-        do id1=1, 3
-          do id2=1, 3
+        do id1 = 1, 3
+          do id2 = 1, 3
             id = id+1
-            do ip_in=1, hm%bc%pml%points_number
-              zff(ip_in, 2*st%dim+  id) = hm%bc%pml%conv_plus(ip_in,id1,id2)
-              zff(ip_in, 2*st%dim+9+id) = hm%bc%pml%conv_minus(ip_in,id1,id2)
+            do ip_in = 1, hm%bc%pml%points_number
+              zff(ip_in, 2*st%dim+id) = hm%bc%pml%conv_plus(ip_in, id1, id2)
+              zff(ip_in, 2*st%dim+9+id) = hm%bc%pml%conv_minus(ip_in, id1, id2)
             end do
           end do
         end do
-      end if
+       end if
     else
-      zff(1:gr%mesh%np, 1:st%dim) = st%rs_state(1:gr%mesh%np,1:st%dim)
+      zff(1:gr%mesh%np, 1:st%dim) = st%rs_state(1:gr%mesh%np, 1:st%dim)
       if (pml_check) then
         id = 0
-        do id1=1, 3
-          do id2=1, 3
+        do id1 = 1, 3
+          do id2 = 1, 3
             id = id+1
-            do ip_in=1, hm%bc%pml%points_number
-              zff(ip_in, st%dim+  id) = hm%bc%pml%conv_plus(ip_in,id1,id2)
-              zff(ip_in, st%dim+9+id) = hm%bc%pml%conv_minus(ip_in,id1,id2)
+            do ip_in = 1, hm%bc%pml%points_number
+              zff(ip_in, st%dim+id) = hm%bc%pml%conv_plus(ip_in, id1, id2)
+              zff(ip_in, st%dim+9+id) = hm%bc%pml%conv_minus(ip_in, id1, id2)
             end do
           end do
         end do
