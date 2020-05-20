@@ -2,6 +2,7 @@
 
  CalculationMode   = td
  RestartWrite = no
+ ExperimentalFeatures = yes
 
 %Systems
   'Maxwell' | maxwell
@@ -61,6 +62,7 @@
 
 # ----- Time step variables -----------------------------------------------------------------------
 
+ TDSystemPropagator = exp_mid
  TDTimeStep                        = 0.002
  TDMaxSteps                        = 100
 
