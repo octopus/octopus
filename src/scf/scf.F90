@@ -883,7 +883,7 @@ contains
         call mixing(scf%smix)
         call mixfield_get_vnew(scf%mixfield, hm%vhxc)
         call lda_u_mixer_get_vnew(hm%lda_u, scf%lda_u_mix, st)
-        call hamiltonian_elec_update(hm, gr%mesh, namespace)
+        call hamiltonian_elec_update_pot(hm, gr%mesh, accel_copy=.true.)
         
       case(OPTION__MIXFIELD__STATES)
 

@@ -92,6 +92,7 @@ module hamiltonian_elec_oct_m
     hamiltonian_elec_epot_generate,       &
     hamiltonian_elec_needs_current,       &
     hamiltonian_elec_update,              &
+    hamiltonian_elec_update_pot,          &
     hamiltonian_elec_update2,             &
     hamiltonian_elec_get_time,            &
     hamiltonian_elec_apply_packed,        &
@@ -164,7 +165,7 @@ module hamiltonian_elec_oct_m
     type(lda_u_t) :: lda_u
     integer       :: lda_u_level
 
-    logical, private :: time_zero
+    logical, public :: time_zero
 
     type(exchange_operator_t), public :: exxop
     type(namespace_t), pointer :: namespace
@@ -816,49 +817,7 @@ contains
     call hamiltonian_elec_base_allocate(this%hm_base, mesh, FIELD_POTENTIAL, &
       complex_potential = this%bc%abtype == IMAGINARY_ABSORBING)
 
-
-    do ispin = 1, this%d%nspin
-      if(ispin <= 2) then
-        !$omp parallel do simd schedule(static)
-        do ip = 1, mesh%np
-          this%hm_base%potential(ip, ispin) = this%vhxc(ip, ispin) + this%ep%vpsl(ip)
-        end do
-
-        !> Adds PCM contributions
-        if (this%pcm%run_pcm) then
-          if (this%pcm%solute) then
-            !$omp parallel do simd schedule(static)
-            do ip = 1, mesh%np
-              this%hm_base%potential(ip, ispin) = this%hm_base%potential(ip, ispin) + &
-                this%pcm%v_e_rs(ip) + this%pcm%v_n_rs(ip)
-            end do
-          end if
-          if (this%pcm%localf) then
-            !$omp parallel do simd schedule(static)
-            do ip = 1, mesh%np
-              this%hm_base%potential(ip, ispin) = this%hm_base%potential(ip, ispin) + &
-                this%pcm%v_ext_rs(ip)
-            end do
-          end if 
-        end if
-
-        if(this%bc%abtype == IMAGINARY_ABSORBING) then
-          !$omp parallel do simd schedule(static)
-          do ip = 1, mesh%np
-            this%hm_base%Impotential(ip, ispin) = this%hm_base%Impotential(ip, ispin) + this%bc%mf(ip)
-          end do
-        end if
-
-      else !Spinors 
-        !$omp parallel do simd schedule(static)
-        do ip = 1, mesh%np
-          this%hm_base%potential(ip, ispin) = this%vhxc(ip, ispin)
-        end do
-          
-      end if
-
-
-    end do
+    call hamiltonian_elec_update_pot(this, mesh, accel_copy=.false.)
 
     ! the lasers
     if (present(time) .or. this%time_zero) then
@@ -921,6 +880,9 @@ contains
         end do
       end do
     end if
+
+    !The electric field was added to the KS potential
+    call hamiltonian_elec_base_accel_copy_pot(this%hm_base, mesh)
 
     ! and the static magnetic field
     if(associated(this%ep%b_field)) then
@@ -1059,6 +1021,67 @@ contains
 
   end subroutine hamiltonian_elec_update
 
+
+  !----------------------------------------------------------------
+  ! Update the KS potential of the electronic Hamiltonian
+  subroutine hamiltonian_elec_update_pot(this, mesh, accel_copy)
+    type(hamiltonian_elec_t), intent(inout) :: this
+    type(mesh_t),             intent(in)    :: mesh
+    logical,                  intent(in)    :: accel_copy
+
+    integer :: ispin, ip
+
+    PUSH_SUB(hamiltonian_elec_update_pot)
+
+    do ispin = 1, this%d%nspin
+      if(ispin <= 2) then
+        !$omp parallel do simd schedule(static)
+        do ip = 1, mesh%np
+          this%hm_base%potential(ip, ispin) = this%vhxc(ip, ispin) + this%ep%vpsl(ip)
+        end do
+
+        !> Adds PCM contributions
+        if (this%pcm%run_pcm) then
+          if (this%pcm%solute) then
+            !$omp parallel do simd schedule(static)
+            do ip = 1, mesh%np
+              this%hm_base%potential(ip, ispin) = this%hm_base%potential(ip, ispin) + &
+                this%pcm%v_e_rs(ip) + this%pcm%v_n_rs(ip)
+            end do
+          end if
+          if (this%pcm%localf) then
+            !$omp parallel do simd schedule(static)
+            do ip = 1, mesh%np
+              this%hm_base%potential(ip, ispin) = this%hm_base%potential(ip, ispin) + &
+                this%pcm%v_ext_rs(ip)
+            end do
+          end if 
+        end if
+
+        if(this%bc%abtype == IMAGINARY_ABSORBING) then
+          !$omp parallel do simd schedule(static)
+          do ip = 1, mesh%np
+            this%hm_base%Impotential(ip, ispin) = this%hm_base%Impotential(ip, ispin) + this%bc%mf(ip)
+          end do
+        end if
+
+      else !Spinors 
+        !$omp parallel do simd schedule(static)
+        do ip = 1, mesh%np
+          this%hm_base%potential(ip, ispin) = this%vhxc(ip, ispin)
+        end do
+          
+      end if
+
+    end do
+
+    if(accel_copy) then
+      call hamiltonian_elec_base_accel_copy_pot(this%hm_base, mesh)
+    end if
+
+    POP_SUB(hamiltonian_elec_update_pot)
+
+  end subroutine hamiltonian_elec_update_pot
 
   ! ---------------------------------------------------------
   subroutine hamiltonian_elec_epot_generate(this, namespace, gr, geo, st, time)
@@ -1347,48 +1370,7 @@ contains
     call hamiltonian_elec_base_allocate(this%hm_base, mesh, FIELD_POTENTIAL, &
       complex_potential = this%bc%abtype == IMAGINARY_ABSORBING)
 
-
-    do ispin = 1, this%d%nspin
-      if(ispin <= 2) then
-        !$omp parallel do simd schedule(static)
-        do ip = 1, mesh%np
-          this%hm_base%potential(ip, ispin) = this%vhxc(ip, ispin) + this%ep%vpsl(ip)
-        end do
-        !> Adds PCM contributions
-        if (this%pcm%run_pcm) then
-          if (this%pcm%solute) then
-            !$omp parallel do simd schedule(static)
-            do ip = 1, mesh%np
-              this%hm_base%potential(ip, ispin) = this%hm_base%potential(ip, ispin) + &
-                this%pcm%v_e_rs(ip) + this%pcm%v_n_rs(ip)
-            end do
-          end if
-          if (this%pcm%localf) then
-            !$omp parallel do simd schedule(static)
-            do ip = 1, mesh%np
-              this%hm_base%potential(ip, ispin) = this%hm_base%potential(ip, ispin) + &
-                this%pcm%v_ext_rs(ip)
-            end do
-          end if
-        end if
-
-        if(this%bc%abtype == IMAGINARY_ABSORBING) then
-          !$omp parallel do simd schedule(static)
-          do ip = 1, mesh%np
-            this%hm_base%Impotential(ip, ispin) = this%hm_base%Impotential(ip, ispin) + this%bc%mf(ip)
-          end do
-        end if
-
-      else !Spinors
-        !$omp parallel do simd schedule(static)
-        do ip = 1, mesh%np
-          this%hm_base%potential(ip, ispin) = this%vhxc(ip, ispin)
-        end do
-      end if
-
-
-    end do
-
+    call hamiltonian_elec_update_pot(this, mesh, accel_copy=.false.)
 
     do itime = 1, 2
       time_ = time(itime)
@@ -1458,6 +1440,9 @@ contains
         end do
       end do
     end if
+
+    !The electric field is added to the KS potential
+    call hamiltonian_elec_base_accel_copy_pot(this%hm_base, mesh)
 
     ! and the static magnetic field
     if(associated(this%ep%b_field)) then
