@@ -17,12 +17,12 @@ match ; Tot. Maxwell energy [step 100] ; LINEFIELD(Maxwell/td.general/maxwell_en
 
 # two cosinoidal pulses
 Input      : 01-free-propagation.02-2_pulses_td.inp
-Precision  : 1.0e-6
+Precision  : 1.0e-5
 
 match ; Tot. Maxwell energy [step 10] ; LINEFIELD(Maxwell/td.general/maxwell_energy,  16, 3) ; 2.177979370847e-02
 match ; Tot. Maxwell energy [step 30] ; LINEFIELD(Maxwell/td.general/maxwell_energy,  36, 3) ; 3.895910293354e+00
 
-Precision  : 1.0e-6
+Precision  : 1.0e-5
 
 # E-field-x axis_x
 match ; Ex  (x=-10,y=  0,z=  0) [step 10] ; LINEFIELD(Maxwell/output_iter/td.0000010/e_field-x\.y=0\,z=0,  12, 2) ; 6.68960276015822E-030
