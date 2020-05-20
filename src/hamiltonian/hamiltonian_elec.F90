@@ -882,7 +882,7 @@ contains
     end if
 
     !The electric field was added to the KS potential
-    call hamiltonian_elec_base_accel_copy(this%hm_base, mesh)
+    call hamiltonian_elec_base_accel_copy_pot(this%hm_base, mesh)
 
     ! and the static magnetic field
     if(associated(this%ep%b_field)) then
@@ -1076,7 +1076,7 @@ contains
     end do
 
     if(accel_copy) then
-      call hamiltonian_elec_base_accel_copy(this%hm_base, mesh)
+      call hamiltonian_elec_base_accel_copy_pot(this%hm_base, mesh)
     end if
 
     POP_SUB(hamiltonian_elec_update_pot)
@@ -1442,7 +1442,7 @@ contains
     end if
 
     !The electric field is added to the KS potential
-    call hamiltonian_elec_base_accel_copy(this%hm_base, mesh)
+    call hamiltonian_elec_base_accel_copy_pot(this%hm_base, mesh)
 
     ! and the static magnetic field
     if(associated(this%ep%b_field)) then

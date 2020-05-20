@@ -75,7 +75,7 @@ module hamiltonian_elec_base_oct_m
     hamiltonian_elec_base_clear,                    &
     hamiltonian_elec_base_build_proj,               &
     hamiltonian_elec_base_update,                   &
-    hamiltonian_elec_base_accel_copy,               &
+    hamiltonian_elec_base_accel_copy_pot,           &
     dhamiltonian_elec_base_phase,                   &
     zhamiltonian_elec_base_phase,                   &
     dhamiltonian_elec_base_phase_spiral,            &
@@ -306,13 +306,13 @@ contains
 
   !--------------------------------------------------------
 
-  subroutine hamiltonian_elec_base_accel_copy(this, mesh)
+  subroutine hamiltonian_elec_base_accel_copy_pot(this, mesh)
     type(hamiltonian_elec_base_t), intent(inout) :: this
     type(mesh_t),             intent(in)    :: mesh
     
     integer :: offset, ispin
 
-    PUSH_SUB(hamiltonian_elec_base_accel_copy)
+    PUSH_SUB(hamiltonian_elec_base_accel_copy_pot)
 
     if(allocated(this%potential) .and. accel_is_enabled()) then
       offset = 0
@@ -322,8 +322,8 @@ contains
       end do
     end if
 
-    POP_SUB(hamiltonian_elec_base_accel_copy)
-  end subroutine hamiltonian_elec_base_accel_copy
+    POP_SUB(hamiltonian_elec_base_accel_copy_pot)
+  end subroutine hamiltonian_elec_base_accel_copy_pot
 
   
   !--------------------------------------------------------
