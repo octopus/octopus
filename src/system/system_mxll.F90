@@ -216,24 +216,38 @@ contains
 
     integer :: inter_steps_default
     integer :: relax_iter_default
+    FLOAT   :: courant
 
     PUSH_SUB(system_mxll_initial_conditions)
+
+    courant = M_ONE/(P_c * sqrt(M_ONE/this%gr%mesh%spacing(1)**2 + M_ONE/this%gr%mesh%spacing(2)**2 + &
+         M_ONE/this%gr%mesh%spacing(3)**2) )
+
+    if(this%prop%dt > M_TWO * courant) then
+      write(message(1),'(a,es9.2)') 'Time step seems too large, check this value'
+      call messages_warning(1, namespace=this%namespace)
+    end if
+
     !%Variable TDMaxwellTDRelaxationSteps
     !%Type integer
-    !%Default 100
+    !%Default 0
     !%Section Time-Dependent::Propagation
     !%Description
-    !% follwos ...
+    !% Time steps needed to relax the Maxwell states in the presence of a matter system, to avoid
+    !% spurious relaxation effects. After these steps, the Maxwell-matter coupling can be switched on.
+    !% of the relaxation dynamics.
     !%End
     relax_iter_default = 0
     call parse_variable(this%namespace, 'TDMaxwellTDRelaxationSteps', relax_iter_default, this%mxll_td_relax_iter)
 
     !%Variable TDMaxwellKSRelaxationSteps
     !%Type integer
-    !%Default 100
+    !%Default 0
     !%Section Time-Dependent::Propagation
     !%Description
-    !% follwos ...
+    !% Time steps in which the coupled Maxwell-matter system  relax the Maxwell states evolves under
+    !% free dynamics conditions. After these many steps, the external fields and currents are
+    !% switched on. The full requested simulation effectively states after this value.
     !%End
     relax_iter_default = 0
     call parse_variable(this%namespace, 'TDMaxwellKSRelaxationSteps', relax_iter_default, this%mxll_ks_relax_iter)
@@ -426,7 +440,7 @@ contains
       call get_rs_state_at_point(this%st%selected_points_rs_state(:,:), this%st%rs_state, this%st%selected_points_coordinate(:,:), &
         this%st, this%gr%mesh)
 
-      write(message(1), '(i8,1x,f13.6,2x,f16.6,6x,f13.6)') this%clock%get_tick(), &
+      write(message(1), '(i8,1x,f13.6,2x,f13.6,6x,f13.6)') this%clock%get_tick(), &
         units_from_atomic(units_out%time, this%clock%get_sim_time()),             &
         units_from_atomic(units_out%energy, this%hm%energy%energy),               &
         loct_clock() - this%etime
@@ -492,7 +506,6 @@ contains
 
     select case (iq)
     case (MASS)
-      !The celestial body has a mass, but it is not necessary to update it, as it does not change with time.
       call this%quantities(iq)%clock%set_time(clock)
     case default
       message(1) = "Incompatible quantity."
@@ -514,10 +527,6 @@ contains
     ASSERT(.not. this%quantities(iq)%protected)
 
     select case (iq)
-    case (MASS)
-      !The celestial body has a mass, but it does not require any update, as it does not change with time.
-      updated = .true.
-      call this%quantities(iq)%clock%set_time(this%clock)
     case default
       message(1) = "Incompatible quantity."
       call messages_fatal(1)
@@ -529,7 +538,7 @@ contains
   ! ---------------------------------------------------------
   subroutine system_mxll_set_pointers_to_interaction(this, inter)
     class(system_mxll_t), target,  intent(inout) :: this
-    class(interaction_abst_t),        intent(inout) :: inter
+    class(interaction_abst_t),     intent(inout) :: inter
 
     PUSH_SUB(system_mxll_set_pointers_to_interaction)
     POP_SUB(system_mxll_set_pointers_to_interaction)
@@ -561,10 +570,8 @@ contains
     call messages_info(1)
     call messages_print_stress(stdout)
 
-    write(message(1), '(i8,1x,f13.6,2x,f16.6,6x,f13.6)') 0,           &
-        units_from_atomic(units_out%time, M_ZERO),                    &
-        units_from_atomic(units_out%energy, this%hm%energy%energy),   &
-        M_ZERO
+    write(message(1), '(i8,1x,f13.6,2x,f13.6,6x,f13.6)') 0, M_ZERO,   &
+        units_from_atomic(units_out%energy, this%hm%energy%energy), M_ZERO
     call messages_info(1)
 
     POP_SUB(system_mxll_output_start)
