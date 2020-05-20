@@ -72,13 +72,11 @@ module propagator_mxll_oct_m
   private
   public ::                                  &
     propagator_mxll_init,                    &
-    propagation_mxll_etrs,                   &
+    mxll_propagation_step,                   &
     transform_rs_state,                      &
     rs_state_to_cube_map,                    &
     calculate_matter_longitudinal_field,     &
     get_vector_pot_and_transverse_field,     &
-    inner_and_outer_points_mapping,          &
-    surface_grid_points_mapping,             &
     energy_density_calc,                     &
     energy_mxll_calc,                        &
     energy_rate_calc,                        &
@@ -380,7 +378,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine propagation_mxll_etrs(hm, namespace, gr, st, tr, rs_state, time, dt)
+  subroutine mxll_propagation_step(hm, namespace, gr, st, tr, rs_state, time, dt)
     type(hamiltonian_mxll_t),        intent(inout) :: hm
     type(namespace_t),           intent(in)    :: namespace
     type(grid_t),               intent(inout) :: gr
@@ -396,13 +394,13 @@ contains
     CMPLX, allocatable :: ff_rs_state_pml(:,:)
     logical            :: pml_check = .false.
 
-    PUSH_SUB(propagation_mxll_etrs)
+    PUSH_SUB(mxll_propagation_step)
 
 
 
     if (tr%plane_waves_in_box) then
       call plane_waves_in_box_calculation(hm%bc, time+dt, gr, st, hm, rs_state)
-      POP_SUB(propagation_mxll_etrs)
+      POP_SUB(mxll_propagation_step)
       return
     end if
 
@@ -510,8 +508,8 @@ contains
       SAFE_DEALLOCATE_A(ff_rs_state_pml)
     end if
 
-    POP_SUB(propagation_mxll_etrs)
-  end subroutine propagation_mxll_etrs
+    POP_SUB(mxll_propagation_step)
+  end subroutine mxll_propagation_step
 
 
   ! ---------------------------------------------------------
@@ -990,379 +988,6 @@ contains
     POP_SUB(derivatives_boundary_mask)
   end subroutine derivatives_boundary_mask
 
-
-  ! ---------------------------------------------------------
-  subroutine inner_and_outer_points_mapping(mesh, st, bounds)
-    type(mesh_t),        intent(in)    :: mesh
-    type(states_mxll_t),      intent(inout) :: st
-    FLOAT,               intent(in)    :: bounds(:,:)
-
-    integer :: ip, ip_in, ip_bd, point_info
-    FLOAT   :: xx(mesh%sb%dim)
-
-    PUSH_SUB(inner_and_outer_points_mapping)
-
-    ! allocate inner and boundary points points map
-    ip_in=0
-    ip_bd=0
-    do ip=1, mesh%np
-      xx(1:mesh%sb%dim) = mesh%x(ip, 1:mesh%sb%dim)
-      if ((abs(xx(1))<=bounds(2,1)) .and. (abs(xx(2))<=bounds(2,2)) .and. (abs(xx(3))<=bounds(2,3))) then
-        if ((abs(xx(1))>bounds(1,1)) .or. (abs(xx(2))>bounds(1,2)) .or. (abs(xx(3))>bounds(1,3))) then
-          point_info = 1
-        else
-          point_info = 0
-        end if
-      else
-        point_info = -1
-      end if
-      if (point_info == 0) then
-        ip_in = ip_in + 1
-      else
-        ip_bd = ip_bd + 1
-      end if
-    end do
-    st%inner_points_number = ip_in
-    SAFE_ALLOCATE(st%inner_points_map(1:ip_in))
-    st%boundary_points_number = ip_bd
-    SAFE_ALLOCATE(st%boundary_points_map(1:ip_bd))
-
-    ! inner and boundary points mapping
-    ip_in=0
-    ip_bd=0
-    do ip=1, mesh%np
-      xx(1:mesh%sb%dim) = mesh%x(ip, 1:mesh%sb%dim)
-      if ((abs(xx(1))<=bounds(2,1)) .and. (abs(xx(2))<=bounds(2,2)) .and. (abs(xx(3))<=bounds(2,3))) then
-        if ((abs(xx(1))>bounds(1,1)) .or. (abs(xx(2))>bounds(1,2)) .or. (abs(xx(3))>bounds(1,3))) then
-          point_info = 1
-        else
-          point_info = 0
-        end if
-      else
-        point_info = -1
-      end if
-      if (point_info == 0) then
-        ip_in = ip_in + 1
-        st%inner_points_map(ip_in) = ip
-      else
-        ip_bd = ip_bd + 1
-        st%boundary_points_map(ip_bd) = ip
-      end if
-    end do
-
-    POP_SUB(inner_and_outer_points_mapping)
-  end subroutine inner_and_outer_points_mapping
-
-
-  ! ---------------------------------------------------------
-  subroutine surface_grid_points_mapping(mesh, st, bounds)
-    type(mesh_t),        intent(in)    :: mesh
-    type(states_mxll_t),      intent(inout) :: st
-    FLOAT,               intent(in)    :: bounds(:,:)
-
-    integer :: ix, ix_max, iix, iy, iy_max, iiy, iz, iz_max, iiz, idx1, idx2, ip_global, nn_max
-    integer, allocatable :: nn(:,:,:,:)
-    FLOAT   :: rr(3), delta(3), vec(2), min_1(3), max_1(3), min_2(3), max_2(3)
-
-    PUSH_SUB(surface_grid_points_mapping)
-
-    st%surface_grid_rows_number(1) = 3
-    ix_max  = st%surface_grid_rows_number(1)
-    st%surface_grid_rows_number(2) = 3
-    iy_max  = st%surface_grid_rows_number(2)
-    st%surface_grid_rows_number(3) = 3
-    iz_max  = st%surface_grid_rows_number(3)
-
-    delta(1) = M_TWO * abs(bounds(1,1)) / float(ix_max)
-    delta(2) = M_TWO * abs(bounds(1,2)) / float(iy_max)
-    delta(3) = M_TWO * abs(bounds(1,3)) / float(iz_max)
-
-    st%surface_grid_element(1) = delta(2) * delta(3)
-    st%surface_grid_element(2) = delta(1) * delta(3)
-    st%surface_grid_element(3) = delta(1) * delta(2)
-
-    SAFE_ALLOCATE(st%surface_grid_center(1:2, 1:st%dim, 1:ix_max, 1:iy_max))
-    SAFE_ALLOCATE(st%surface_grid_points_number(1:st%dim, 1:ix_max, 1:iy_max))
-    SAFE_ALLOCATE(nn(1:2,1:3,1:3,1:3))
-
-    st%surface_grid_center(1, 1, :, :) = -bounds(1,1)
-    do iy=1, iy_max
-      do iz=1, iz_max
-        rr(2) = -bounds(1,2) + delta(2)/M_TWO + (iy-1) * delta(2)
-        rr(3) = -bounds(1,3) + delta(3)/M_TWO + (iz-1) * delta(3)
-        st%surface_grid_center(1, 2, iy, iz) = rr(2)
-        st%surface_grid_center(1, 3, iy, iz) = rr(3)
-      end do
-    end do
-    st%surface_grid_center(2, 1, :, :) = bounds(1,1)
-    do iy=1, iy_max
-      do iz=1, iz_max
-        rr(2) = -bounds(1,2) + delta(2)/M_TWO + (iy-1) * delta(2)
-        rr(3) = -bounds(1,3) + delta(3)/M_TWO + (iz-1) * delta(3)
-        st%surface_grid_center(2, 2, iy, iz) = rr(2)
-        st%surface_grid_center(2, 3, iy, iz) = rr(3)
-      end do
-    end do
-
-    st%surface_grid_center(1, 2, :, :) = -bounds(1,2)
-    do ix=1, ix_max
-      do iz=1, iz_max
-        rr(1) = -bounds(1,1) + delta(1)/M_TWO + (ix-1) * delta(1)
-        rr(3) = -bounds(1,3) + delta(3)/M_TWO + (iz-1) * delta(3)
-        st%surface_grid_center(1, 1, ix, iz) = rr(1)
-        st%surface_grid_center(1, 3, ix, iz) = rr(3)
-      end do
-    end do
-    st%surface_grid_center(2, 2, :, :) = bounds(1,2)
-    do ix=1, ix_max
-      do iz=1, iz_max
-        rr(1) = -bounds(1,2) + delta(1)/M_TWO + (ix-1) * delta(1)
-        rr(3) = -bounds(1,3) + delta(3)/M_TWO + (iz-1) * delta(3)
-        st%surface_grid_center(2, 1, ix, iz) = rr(1)
-        st%surface_grid_center(2, 3, ix, iz) = rr(3)
-      end do
-    end do
-
-    st%surface_grid_center(1, 3, :, :) = -bounds(1,3)
-    do ix=1, ix_max
-      do iy=1, iy_max
-        rr(1) = -bounds(1,1) + delta(1)/M_TWO + (ix-1) * delta(1)
-        rr(2) = -bounds(1,2) + delta(2)/M_TWO + (iy-1) * delta(2)
-        st%surface_grid_center(1, 1, ix, iy) = rr(1)
-        st%surface_grid_center(1, 2, ix, iy) = rr(2)
-      end do
-    end do
-    st%surface_grid_center(2, 3, :, :) = bounds(1,3)
-    do ix=1, ix_max
-      do iy=1, iy_max
-        rr(1) = -bounds(1,2) + delta(1)/M_TWO + (ix-1) * delta(1)
-        rr(2) = -bounds(1,2) + delta(2)/M_TWO + (iy-1) * delta(2)
-        st%surface_grid_center(2, 1, ix, iy) = rr(1)
-        st%surface_grid_center(2, 2, ix, iy) = rr(2)
-      end do
-    end do
-
-    st%surface_grid_points_number(:,:,:) = 0
-
-    nn_max = 0
-
-    do iy=1, iy_max
-      do iz=1, iz_max
-        min_1(iy) = -bounds(1,2) + (iy-1) * delta(2)
-        max_1(iy) = -bounds(1,2) + iy * delta(2)
-        min_2(iz) = -bounds(1,3) + (iz-1) * delta(3)
-        max_2(iz) = -bounds(1,3) + iz * delta(3)
-      end do
-    end do
-    do iiy = mesh%idx%nr(1,2), mesh%idx%nr(2,2)
-      do iiz = mesh%idx%nr(1,3), mesh%idx%nr(2,3)
-        vec(1) = iiy * mesh%spacing(2)
-        vec(2) = iiz * mesh%spacing(3)
-        call get_surface_indices(vec, min_1, max_1, min_2, max_2, idx1, idx2)
-        if ((idx1 /= 0) .and. (idx2 /= 0)) then
-          st%surface_grid_points_number(1,idx1,idx2) = st%surface_grid_points_number(1,idx1,idx2)+1
-          if (nn_max < st%surface_grid_points_number(1,idx1,idx2)) then
-            nn_max = st%surface_grid_points_number(1,idx1,idx2)
-          end if
-        end if
-      end do
-    end do
-
-    do ix=1, ix_max
-      do iz=1, iz_max
-        min_1(ix) = -bounds(1,1) + (ix-1) * delta(1)
-        max_1(ix) = -bounds(1,1) + ix * delta(1)
-        min_2(iz) = -bounds(1,3) + (iz-1) * delta(3)
-        max_2(iz) = -bounds(1,3) + iz * delta(3)
-      end do
-    end do
-    do iix = mesh%idx%nr(1,1), mesh%idx%nr(2,1)
-      do iiz = mesh%idx%nr(1,3), mesh%idx%nr(2,3)
-        vec(1)     = iix * mesh%spacing(1)
-        vec(2)     = iiz * mesh%spacing(3)
-        call get_surface_indices(vec, min_1, max_1, min_2, max_2, idx1, idx2)
-        if ((idx1 /= 0) .and. (idx2 /= 0)) then
-          st%surface_grid_points_number(2,idx1,idx2) = st%surface_grid_points_number(2,idx1,idx2)+1
-          if (nn_max < st%surface_grid_points_number(2,idx1,idx2)) then
-            nn_max = st%surface_grid_points_number(2,idx1,idx2)
-          end if
-        end if
-      end do
-    end do
-
-    do ix=1, ix_max
-      do iy=1, iy_max
-        min_1(ix) = -bounds(1,1) + (ix-1) * delta(1)
-        max_1(ix) = -bounds(1,1) + ix * delta(1)
-        min_2(iy) = -bounds(1,2) + (iy-1) * delta(2)
-        max_2(iy) = -bounds(1,2) + iy * delta(2)
-      end do
-    end do
-    do iix = mesh%idx%nr(1,1), mesh%idx%nr(2,1)
-      do iiy = mesh%idx%nr(1,2), mesh%idx%nr(2,2)
-        vec(1)     = iix * mesh%spacing(1)
-        vec(2)     = iiy * mesh%spacing(2)
-        call get_surface_indices(vec, min_1, max_1, min_2, max_2, idx1, idx2)
-        if ((idx1 /= 0) .and. (idx2 /= 0)) then
-          st%surface_grid_points_number(3,idx1,idx2) = st%surface_grid_points_number(3,idx1,idx2)+1
-          if (nn_max < st%surface_grid_points_number(3,idx1,idx2)) then
-            nn_max = st%surface_grid_points_number(3,idx1,idx2)
-          end if
-        end if
-      end do
-    end do
-
-    ! originally there were three allocated of the same pointer here
-    SAFE_ALLOCATE(st%surface_grid_points_map(1:2,1:st%dim,1:ix_max,1:iy_max,1:nn_max))
-
-    nn(:,:,:,:) = 0
-
-    do iy=1, iy_max
-      do iz=1, iz_max
-        min_1(iy) = -bounds(1,2) + (iy-1) * delta(2)
-        max_1(iy) = -bounds(1,2) + iy * delta(2)
-        min_2(iz) = -bounds(1,3) + (iz-1) * delta(3)
-        max_2(iz) = -bounds(1,3) + iz * delta(3)
-      end do
-    end do
-    do iiy = mesh%idx%nr(1,2), mesh%idx%nr(2,2)
-      do iiz = mesh%idx%nr(1,3), mesh%idx%nr(2,3)
-        vec(1) = iiy * mesh%spacing(2)
-        vec(2) = iiz * mesh%spacing(3)
-        call get_surface_indices(vec, min_1, max_1, min_2, max_2, idx1, idx2)
-        if ((idx1 /= 0) .and. (idx2 /= 0)) then
-          nn(1, 1, idx1, idx2) = nn(1, 1, idx1, idx2) + 1
-          rr(1) = -bounds(1,1)
-          rr(2) = iiy * mesh%spacing(2)
-          rr(3) = iiz * mesh%spacing(3)
-          iix = int(-bounds(1,1)/mesh%spacing(1))
-          ip_global = mesh%idx%lxyz_inv(iix,iiy,iiz)
-          st%surface_grid_points_map(1, 1, idx1, idx2, nn(1, 1, idx1, idx2)) = ip_global
-          nn(2, 1, idx1, idx2) = nn(2, 1, idx1, idx2) + 1
-          rr(1) = bounds(1,1)
-          rr(2) = iiy * mesh%spacing(2)
-          rr(3) = iiz * mesh%spacing(3)
-          iix = int(bounds(1,1)/mesh%spacing(1))
-          ip_global = mesh%idx%lxyz_inv(iix,iiy,iiz)
-          st%surface_grid_points_map(2, 1, idx1, idx2, nn(2, 1, idx1, idx2)) = ip_global
-        end if
-      end do
-    end do
-
-    do ix=1, ix_max
-      do iz=1, iz_max
-        min_1(ix) = -bounds(1,1) + (ix-1) * delta(1)
-        max_1(ix) = -bounds(1,1) + ix * delta(1)
-        min_2(iz) = -bounds(1,3) + (iz-1) * delta(3)
-        max_2(iz) = -bounds(1,3) + iz * delta(3)
-      end do
-    end do
-    do iix = mesh%idx%nr(1,1), mesh%idx%nr(2,1)
-      do iiz = mesh%idx%nr(1,3), mesh%idx%nr(2,3)
-        vec(1) = iix * mesh%spacing(1)
-        vec(2) = iiz * mesh%spacing(3)
-        call get_surface_indices(vec, min_1, max_1, min_2, max_2, idx1, idx2)
-        if ((idx1 /= 0) .and. (idx2 /= 0)) then
-          nn(1, 2, idx1, idx2) = nn(1, 2, idx1, idx2) + 1
-          rr(1) = iix * mesh%spacing(1)
-          rr(2) = -bounds(1,2)
-          rr(3) = iiz * mesh%spacing(3)
-          iiy = int(-bounds(1,2)/mesh%spacing(2))
-          ip_global = mesh%idx%lxyz_inv(iix,iiy,iiz)
-          st%surface_grid_points_map(1, 2, idx1, idx2, nn(1, 2, idx1, idx2)) = ip_global
-          nn(2, 2, idx1, idx2) = nn(2, 2, idx1, idx2) + 1
-          rr(1) = iix * mesh%spacing(1)
-          rr(2) = bounds(1,2)
-          rr(3) = iiz * mesh%spacing(3)
-          iiy = int(bounds(1,2)/mesh%spacing(2))
-          ip_global = mesh%idx%lxyz_inv(iix,iiy,iiz)
-          st%surface_grid_points_map(2, 2, idx1, idx2, nn(2, 2, idx1, idx2)) = ip_global
-        end if
-      end do
-    end do
-
-    do ix=1, ix_max
-      do iy=1, iy_max
-        min_1(ix) = -bounds(1,1) + (ix-1) * delta(1)
-        max_1(ix) = -bounds(1,1) + ix * delta(1)
-        min_2(iy) = -bounds(1,2) + (iy-1) * delta(2)
-        max_2(iy) = -bounds(1,2) + iy * delta(2)
-      end do
-    end do
-    do iix = mesh%idx%nr(1,1), mesh%idx%nr(2,1)
-      do iiy = mesh%idx%nr(1,2), mesh%idx%nr(2,2)
-        vec(1) = iix * mesh%spacing(1)
-        vec(2) = iiy * mesh%spacing(2)
-        call get_surface_indices(vec, min_1, max_1, min_2, max_2, idx1, idx2)
-        if ((idx1 /= 0) .and. (idx2 /= 0)) then
-          nn(1, 3, idx1, idx2) = nn(1, 3, idx1, idx2) + 1
-          rr(1) = iix * mesh%spacing(1)
-          rr(2) = iiy * mesh%spacing(2)
-          rr(3) = -bounds(1,3)
-          iiz = int(-bounds(1,3)/mesh%spacing(3))
-          ip_global = mesh%idx%lxyz_inv(iix,iiy,iiz)
-          st%surface_grid_points_map(1, 3, idx1, idx2, nn(1, 3, idx1, idx2)) = ip_global
-          nn(2, 3, idx1, idx2) = nn(2, 3, idx1, idx2) + 1
-          rr(1) = iix * mesh%spacing(1)
-          rr(2) = iiy * mesh%spacing(2)
-          rr(3) = bounds(1,3)
-          iiz = int(bounds(1,3)/mesh%spacing(3))
-          ip_global = mesh%idx%lxyz_inv(iix,iiy,iiz)
-          st%surface_grid_points_map(2, 3, idx1, idx2, nn(2, 3, idx1, idx2)) = ip_global
-        end if
-      end do
-    end do
-
-    SAFE_DEALLOCATE_A(nn)
-
-    POP_SUB(surface_grid_points_mapping)
-
-    contains
-
-      subroutine get_surface_indices(vec, min_1, max_1, min_2, max_2, index_1, index_2)
-        FLOAT,   intent(in)  :: vec(:)
-        FLOAT,   intent(in)  :: min_1(:)
-        FLOAT,   intent(in)  :: max_1(:)
-        FLOAT,   intent(in)  :: min_2(:)
-        FLOAT,   intent(in)  :: max_2(:)
-        integer, intent(out) :: index_1
-        integer, intent(out) :: index_2
-
-        if ( ((vec(1) >= min_1(1)) .and. (vec(1) <= max_1(1))) .and. ((vec(2) >= min_2(1)) .and. (vec(2) <= max_2(1))) ) then
-          index_1 = 1
-          index_2 = 1
-        else if ( ((vec(1) >= min_1(2)) .and. (vec(1) <= max_1(2))) .and. ((vec(2) >= min_2(1)) .and. (vec(2) <= max_2(1))) ) then
-          index_1 = 2
-          index_2 = 1
-        else if ( ((vec(1) >= min_1(3)) .and. (vec(1) <= max_1(3))) .and. ((vec(2) >= min_2(1)) .and. (vec(2) <= max_2(1))) ) then
-          index_1 = 3
-          index_2 = 1
-        else if ( ((vec(1) >= min_1(1)) .and. (vec(1) <= max_1(1))) .and. ((vec(2) >= min_2(2)) .and. (vec(2) <= max_2(2))) ) then
-          index_1 = 1
-          index_2 = 2
-        else if ( ((vec(1) >= min_1(2)) .and. (vec(1) <= max_1(2))) .and. ((vec(2) >= min_2(2)) .and. (vec(2) <= max_2(2))) ) then
-          index_1 = 2
-          index_2 = 2
-        else if ( ((vec(1) >= min_1(3)) .and. (vec(1) <= max_1(3))) .and. ((vec(2) >= min_2(2)) .and. (vec(2) <= max_2(2))) ) then
-          index_1 = 3
-          index_2 = 2
-        else if ( ((vec(1) >= min_1(1)) .and. (vec(1) <= max_1(1))) .and. ((vec(2) >= min_2(3)) .and. (vec(2) <= max_2(3))) ) then
-          index_1 = 1
-          index_2 = 3
-        else if ( ((vec(1) >= min_1(2)) .and. (vec(1) <= max_1(2))) .and. ((vec(2) >= min_2(3)) .and. (vec(2) <= max_2(3))) ) then
-          index_1 = 2
-          index_2 = 3
-        else if ( ((vec(1) >= min_1(3)) .and. (vec(1) <= max_1(3))) .and. ((vec(2) >= min_2(3)) .and. (vec(2) <= max_2(3))) ) then
-          index_1 = 3
-          index_2 = 3
-        else
-          index_1 = 0
-          index_2 = 0
-        end if
-
-      end subroutine get_surface_indices
-
-  end subroutine surface_grid_points_mapping
 
 
   !----------------------------------------------------------
