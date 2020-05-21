@@ -30,7 +30,7 @@ subroutine X(eigensolver_evolution)(namespace, mesh, st, hm, te, tol, niter, con
   FLOAT,                            intent(out)   :: diff(:) !< (1:st%nst)
   FLOAT,                            intent(in)    :: tau
 
-  integer :: ib, minst, maxst, ist, iter, maxiter, conv, convb, matvec, i
+  integer :: ib, minst, maxst, ist, iter, maxiter, conv, convb, matvec
   R_TYPE, allocatable :: c(:, :), zeig(:), res(:)
   FLOAT, allocatable :: eig(:), norm(:)
   type(wfs_elec_t) :: hpsib
