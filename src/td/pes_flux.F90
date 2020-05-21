@@ -451,18 +451,22 @@ contains
 
     this%par_strategy = OPTION__PES_FLUX_PARALLELIZATION__PF_NONE
     if(mesh%parallel_in_domains) then
+
       if(this%surf_shape == M_SPHERICAL) then
         this%par_strategy = OPTION__PES_FLUX_PARALLELIZATION__PF_TIME  &
                           + OPTION__PES_FLUX_PARALLELIZATION__PF_SURFACE
       else 
-        this%par_strategy = OPTION__PES_FLUX_PARALLELIZATION__PF_TIME    
-        if(mesh%sb%dim == 1) this%par_strategy = OPTION__PES_FLUX_PARALLELIZATION__PF_NONE
+        this%par_strategy = OPTION__PES_FLUX_PARALLELIZATION__PF_SURFACE    
+        if(mesh%sb%dim == 1) this%par_strategy = OPTION__PES_FLUX_PARALLELIZATION__PF_TIME  
       end if
+
+      call parse_variable(namespace, 'PES_Flux_Parallelization', this%par_strategy, this%par_strategy)
+      if(.not.varinfo_valid_option('PES_Flux_Parallelization', this%par_strategy, is_flag = .true.)) &
+        call messages_input_error('PES_Flux_Parallelization')
+
     end if
-    call parse_variable(namespace, 'PES_Flux_Parallelization', this%par_strategy, this%par_strategy)
-    if(.not.varinfo_valid_option('PES_Flux_Parallelization', this%par_strategy, is_flag = .true.)) &
-      call messages_input_error('PES_Flux_Parallelization')
-      
+    
+    !Sanity check  
     if (bitand(this%par_strategy, OPTION__PES_FLUX_PARALLELIZATION__PF_SURFACE) /= 0 .and. &
         bitand(this%par_strategy, OPTION__PES_FLUX_PARALLELIZATION__PF_MOMENTUM) /= 0) then
         call messages_input_error('PES_Flux_Parallelization', "Cannot combine pf_surface and pf_momentum")
@@ -489,7 +493,11 @@ contains
     ! distribute the surface points on nodes,
     ! since mesh domains may have different numbers of surface points.
     if (bitand(this%par_strategy, OPTION__PES_FLUX_PARALLELIZATION__PF_SURFACE) /= 0) then
+      
       call pes_flux_distribute(1, this%nsrfcpnts, this%nsrfcpnts_start, this%nsrfcpnts_end, mesh%mpi_grp%comm)
+      
+      if (this%surf_shape /= M_SPHERICAL) call pes_flux_distribute_facepnts_cub(this, mesh)
+      
       if(debug%info) then
 #if defined(HAVE_MPI)
         call MPI_Barrier(mpi_world%comm, mpi_err)
@@ -566,9 +574,7 @@ contains
     this%tdsteps = 1
     
     if (bitand(this%par_strategy, OPTION__PES_FLUX_PARALLELIZATION__PF_TIME) /= 0) then
-#if defined(HAVE_MPI)
       if(mesh%parallel_in_domains) this%tdsteps = mesh%mpi_grp%size
-#endif
     end if
    
 
@@ -1726,6 +1732,7 @@ contains
       this%expkr_perp(:,:) = M_z1
 
       do ifc = 1, nfaces
+        if (this%face_idx_range(ifc, 1)<0) cycle ! this face have no local surface point
         isp = this%face_idx_range(ifc, 1)
         do idir = 1, mdim
           if(abs(this%srfcnrml(idir, isp)) >= M_EPSILON) n_dir = idir
@@ -1816,6 +1823,62 @@ contains
   end function get_ikp
 
   ! ---------------------------------------------------------
+  subroutine pes_flux_distribute_facepnts_cub(this, mesh)
+    type(pes_flux_t), intent(inout) :: this
+    type(mesh_t),        intent(in) :: mesh  
+
+    
+    integer :: mdim, nfaces, ifc, ifp_start, ifp_end
+      
+    PUSH_SUB(pes_flux_distribute_facepnts_cub)
+
+    mdim      = mesh%sb%dim
+
+    nfaces = mdim*2
+    if(this%surf_shape == M_PLANE) nfaces = 1 
+    
+    do ifc = 1, nfaces
+    
+      ifp_start = this%face_idx_range(ifc, 1)
+      ifp_end   = this%face_idx_range(ifc, 2)
+        
+        
+      if(this%nsrfcpnts_start <= ifp_end) then ! the local domain could be in this face
+        
+        if(this%nsrfcpnts_start >= ifp_start) then 
+          if (this%nsrfcpnts_start <= ifp_end) then
+            this%face_idx_range(ifc, 1) =  this%nsrfcpnts_start
+          else
+            this%face_idx_range(ifc, 1:2) = -1  ! the local domain is not in this face
+          end if
+        end if
+        
+        if(this%nsrfcpnts_end   <= ifp_end  ) then 
+          if (this%nsrfcpnts_end >= ifp_start) then
+            this%face_idx_range(ifc, 2) =  this%nsrfcpnts_end
+          else 
+             this%face_idx_range(ifc, 1:2) = -1  ! the local domain is not in this face
+          end if
+        end if
+        
+      else 
+
+        this%face_idx_range(ifc, 1:2) = -1  ! the local domain is not in this face
+
+      end if
+      
+      if(debug%info) then     
+        print *, mpi_world%rank, ifc, ifp_start, ifp_end, this%face_idx_range(ifc, 1:2), this%nsrfcpnts_start, this%nsrfcpnts_end
+      end if
+
+    end do
+    
+    
+    POP_SUB(pes_flux_distribute_facepnts_cub)      
+  end subroutine pes_flux_distribute_facepnts_cub
+
+
+  ! ---------------------------------------------------------
   subroutine pes_flux_integrate_cub(this, mesh, st, dt)
     type(pes_flux_t),    intent(inout) :: this
     type(mesh_t),        intent(in)    :: mesh
@@ -1844,9 +1907,8 @@ contains
       
     PUSH_SUB(pes_flux_integrate_cub)
 
-    ! this routine is parallelized over surface points since the number of 
-    ! states is in most cases less than the number of surface points
-
+    ! this routine is parallelized over time steps and surface points 
+    
     call profiling_in(prof_init, 'pes_flux_integrate_cub') 
 
     if (debug%info) then
@@ -1871,8 +1933,6 @@ contains
 
     ikp_start = this%nkpnts_start
     ikp_end   = this%nkpnts_end
-    isp_start = this%nsrfcpnts_start
-    isp_end   = this%nsrfcpnts_end
 
 
 
@@ -1896,9 +1956,13 @@ contains
 
     do ifc = 1, nfaces
       
+      if (this%face_idx_range(ifc, 1)<0) cycle ! this face have no local surface point
+      
+      
       isp_start = this%face_idx_range(ifc, 1)
       isp_end   = this%face_idx_range(ifc, 2)
-      
+
+  
       nfp = isp_end - isp_start + 1 ! faces can have a different number of points
 
       wfpw = M_z0
@@ -1915,7 +1979,6 @@ contains
         end if
       end do 
 
-!       itstep = tdstep_on_node
 
       ! get the previous Volkov phase
       vphase(ikp_start:ikp_end,:) = this%conjgphase_prev_cub(ikp_start:ikp_end,:)
@@ -1946,7 +2009,7 @@ contains
 
           end do
           
-          if(itstep /= tdstep_on_node) cycle ! cannot skip before otherwise we do not accumulate the Volkov phase
+          if(itstep /= tdstep_on_node) cycle
 
           do ist = stst, stend
             do isdim = 1, sdim
@@ -1998,15 +2061,23 @@ contains
               
               end if
               
-              gwfpw(:) = gwfpw(:) * this%srfcnrml(n_dir, isp_start) ! surface area element ds
-              wfpw(:)  = wfpw(:)  * this%srfcnrml(n_dir, isp_start) ! surface area element ds
+              gwfpw(ikp_start:ikp_end) = gwfpw(ikp_start:ikp_end) * this%srfcnrml(n_dir, isp_start) ! surface area element ds
+              wfpw(ikp_start:ikp_end)  = wfpw(ikp_start:ikp_end)  * this%srfcnrml(n_dir, isp_start) ! surface area element ds
 
-              ! Sum it up  
-              Jk_cub(ist, isdim, ik, ikp_start:ikp_end) = Jk_cub(ist, isdim, ik,ikp_start:ikp_end) +  &
-                phase(ikp_start:ikp_end, ik) * ( wfpw(ikp_start:ikp_end) * &
-                   (M_TWO * this%veca(n_dir, itstep) / P_c  - this%kcoords_cub(n_dir, ikp_start:ikp_end, ik_map)) + &
-                    M_zI * gwfpw(ikp_start:ikp_end) )
+              
+              
+
+                ! Sum it up  
+                Jk_cub(ist, isdim, ik, ikp_start:ikp_end) = Jk_cub(ist, isdim, ik,ikp_start:ikp_end) +  &
+                  phase(ikp_start:ikp_end, ik) * ( wfpw(ikp_start:ikp_end) * &
+                     (M_TWO * this%veca(n_dir, itstep) / P_c  - this%kcoords_cub(n_dir, ikp_start:ikp_end, ik_map)) + &
+                      M_zI * gwfpw(ikp_start:ikp_end) )
+
                             
+              if(mesh%parallel_in_domains .and. bitand(this%par_strategy, OPTION__PES_FLUX_PARALLELIZATION__PF_SURFACE) /= 0) then
+                call comm_allreduce(mesh%mpi_grp%comm, Jk_cub(ist, isdim, ik, ikp_start:ikp_end))
+              end if
+
 
           end do ! isdim
         end do ! ist     
@@ -2019,7 +2090,6 @@ contains
         
         
     end do ! face loop 
-
 
 
     this%conjgphase_prev_cub(ikp_start:ikp_end,:) = vphase(ikp_start:ikp_end,:)
@@ -2072,7 +2142,7 @@ contains
 
     PUSH_SUB(pes_flux_integrate_sph)
 
-    ! this routine is parallelized over time steps
+    ! this routine is parallelized over time steps and surface points
 
     if (debug%info) then
       call messages_write("Debug: calculating pes_flux sph surface integral")
@@ -2128,7 +2198,7 @@ contains
               end do
             end do
 
-            if(mesh%parallel_in_domains) then
+            if(mesh%parallel_in_domains .and. bitand(this%par_strategy, OPTION__PES_FLUX_PARALLELIZATION__PF_SURFACE) /= 0) then
               call comm_allreduce(mesh%mpi_grp%comm, s1_act)
               call comm_allreduce(mesh%mpi_grp%comm, s2_act)
             end if
@@ -2250,7 +2320,7 @@ contains
     end if
     SAFE_DEALLOCATE_A(phase_act)
 
-    if(mesh%parallel_in_domains) then
+    if(mesh%parallel_in_domains .and. bitand(this%par_strategy, OPTION__PES_FLUX_PARALLELIZATION__PF_TIME) /= 0) then
       call comm_allreduce(mesh%mpi_grp%comm, this%conjgphase_prev_sph)
       call comm_allreduce(mesh%mpi_grp%comm, spctramp_sph)
     end if
@@ -2610,6 +2680,8 @@ contains
 
     POP_SUB(pes_flux_getsphere)
   end subroutine pes_flux_getsphere
+
+
 
 
   ! ---------------------------------------------------------
