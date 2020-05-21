@@ -343,7 +343,7 @@ contains
       SAFE_ALLOCATE(hzpsi1(1:mesh%np,      1:hm%d%dim))
 
       zfact = M_z1
-      zfact_is_real = abs(deltat-real(deltat)) < M_EPSILON
+      zfact_is_real = abs(timestep-real(timestep)) < M_EPSILON
 
       do idim = 1, hm%d%dim
         call lalg_copy(mesh%np, zpsi(:, idim), zpsi1(:, idim))

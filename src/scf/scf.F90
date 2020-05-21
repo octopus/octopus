@@ -412,7 +412,7 @@ contains
     !setting to work in the current framework
     if(scf%eigens%es_type == RS_EVO) then
       if(scf%mix_field /= OPTION__MIXFIELD__DENSITY) then
-        message(1) = "Evolution eigensolver is only compatible with MixingField = density."
+        message(1) = "Evolution eigensolver is only compatible with MixField = density."
         call messages_fatal(1)
       end if
       if(mix_coefficient(scf%smix) /= M_ONE) then
