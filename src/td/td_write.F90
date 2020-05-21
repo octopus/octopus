@@ -3428,7 +3428,7 @@ contains
     integer,                    intent(out) :: ierr
     logical,                    intent(in)  :: bc_plane_waves
 
-    integer :: err, zff_dim, idim, id, id1, id2, ip_in
+    integer :: err, zff_dim, id, id1, id2, ip_in
     logical :: pml_check
     CMPLX, allocatable :: zff(:,:)
 

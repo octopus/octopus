@@ -525,6 +525,7 @@ contains
 
     ! We are not allowed to update protected quantities!
     ASSERT(.not. this%quantities(iq)%protected)
+    updated = .true.
 
     select case (iq)
     case default
