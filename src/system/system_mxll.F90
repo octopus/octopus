@@ -61,7 +61,8 @@ module system_mxll_oct_m
 
   private
   public ::               &
-    system_mxll_t
+    system_mxll_t,        &
+    system_mxll_init
 
   integer, parameter, public ::           &
     MULTIGRID_MX_TO_MA_EQUAL   = 1,       &
@@ -108,15 +109,30 @@ module system_mxll_oct_m
   end type system_mxll_t
 
   interface system_mxll_t
-    procedure system_mxll_init
+    procedure system_mxll_constructor
   end interface system_mxll_t
 
 contains
 
   ! ---------------------------------------------------------
-  function system_mxll_init(namespace) result(sys)
-    class(system_mxll_t), pointer    :: sys
-    type(namespace_t),    intent(in) :: namespace
+  function system_mxll_constructor(namespace) result(sys)
+    class(system_mxll_t), pointer  :: sys
+    type(namespace_t),  intent(in) :: namespace
+
+    PUSH_SUB(system_mxll_constructor)
+
+    SAFE_ALLOCATE(sys)
+
+    call system_mxll_init(sys, namespace)
+
+    POP_SUB(system_mxll_constructor)
+  end function system_mxll_constructor
+
+
+  ! ---------------------------------------------------------
+  subroutine system_mxll_init(this, namespace)
+    class(system_mxll_t), intent(inout) :: this
+    type(namespace_t),    intent(in)    :: namespace
 
     type(profile_t), save :: prof
 
@@ -124,38 +140,36 @@ contains
 
     call profiling_in(prof,"SYSTEM_MXLL_INIT")
 
-    SAFE_ALLOCATE(sys)
+    this%namespace = namespace
 
-    sys%namespace = namespace
+    SAFE_ALLOCATE(this%gr)
+    SAFE_ALLOCATE(this%st)
 
-    SAFE_ALLOCATE(sys%gr)
-    SAFE_ALLOCATE(sys%st)
-
-    call messages_obsolete_variable(sys%namespace, 'SystemName')
-    call space_init(sys%space, sys%namespace)
+    call messages_obsolete_variable(this%namespace, 'SystemName')
+    call space_init(this%space, this%namespace)
 
     ! The geometry needs to be nullified in order to be able to call grid_init_stage_*
 
-    nullify(sys%geo%space, sys%geo%atom, sys%geo%catom, sys%geo%species)
-    sys%geo%natoms = 0
-    sys%geo%ncatoms = 0
-    sys%geo%nspecies = 0
-    sys%geo%only_user_def = .false.
-    sys%geo%kinetic_energy = M_ZERO
-    sys%geo%nlpp = .false.
-    sys%geo%nlcc = .false.
-    call distributed_nullify(sys%geo%atoms_dist, 0)
-    sys%geo%reduced_coordinates = .false.
-    sys%geo%periodic_dim = 0
-    sys%geo%lsize = M_ZERO
+    nullify(this%geo%space, this%geo%atom, this%geo%catom, this%geo%species)
+    this%geo%natoms = 0
+    this%geo%ncatoms = 0
+    this%geo%nspecies = 0
+    this%geo%only_user_def = .false.
+    this%geo%kinetic_energy = M_ZERO
+    this%geo%nlpp = .false.
+    this%geo%nlcc = .false.
+    call distributed_nullify(this%geo%atoms_dist, 0)
+    this%geo%reduced_coordinates = .false.
+    this%geo%periodic_dim = 0
+    this%geo%lsize = M_ZERO
 
-    call grid_init_stage_0(sys%gr, sys%namespace, sys%geo, sys%space)
-    call states_mxll_init(sys%st, sys%namespace, sys%gr, sys%geo)
-    call grid_init_stage_1(sys%gr, sys%namespace, sys%geo)
-    call parallel_mxll_init(sys)
-    call grid_init_stage_2(sys%gr, sys%namespace, sys%mc, sys%geo)
-    call output_mxll_init(sys%outp, sys%namespace, sys%gr%sb)
-    call hamiltonian_mxll_init(sys%hm, sys%namespace, sys%gr, sys%st)
+    call grid_init_stage_0(this%gr, this%namespace, this%geo, this%space)
+    call states_mxll_init(this%st, this%namespace, this%gr, this%geo)
+    call grid_init_stage_1(this%gr, this%namespace, this%geo)
+    call parallel_mxll_init(this)
+    call grid_init_stage_2(this%gr, this%namespace, this%mc, this%geo)
+    call output_mxll_init(this%outp, this%namespace, this%gr%sb)
+    call hamiltonian_mxll_init(this%hm, this%namespace, this%gr, this%st)
     call profiling_out(prof)
 
     this%quantities(E_FIELD)%required = .true.
@@ -187,7 +201,7 @@ contains
       POP_SUB(system_mxll_init.parallel_init)
     end subroutine parallel_mxll_init
 
-  end function system_mxll_init
+  end subroutine system_mxll_init
 
 
   ! ---------------------------------------------------------
