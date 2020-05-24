@@ -158,6 +158,9 @@ contains
     call hamiltonian_mxll_init(sys%hm, sys%namespace, sys%gr, sys%st)
     call profiling_out(prof)
 
+    this%quantities(E_FIELD)%required = .true.
+    this%quantities(B_FIELD)%required = .true.
+
     POP_SUB(system_mxll_init)
 
   contains
