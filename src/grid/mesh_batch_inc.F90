@@ -945,7 +945,7 @@ subroutine X(priv_mesh_batch_nrm2)(mesh, aa, nrm2)
           a0 = abs(aa%X(ff_pack)(ist, ip))
           if(a0 < M_EPSILON) cycle
           if(scal(ist, ithread) < a0) then
-            ssq(ist, ithread) =  mesh%vol_pp(ip)*M_ONE + ssq(ist, ithread)*(scal(ist, ithread)/a0)**2
+            ssq(ist, ithread) =  mesh%vol_pp(ip) + ssq(ist, ithread)*(scal(ist, ithread)/a0)**2
             scal(ist, ithread) = a0
           else
             ssq(ist, ithread) = ssq(ist, ithread) + mesh%vol_pp(ip)*(a0/scal(ist, ithread))**2
