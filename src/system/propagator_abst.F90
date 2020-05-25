@@ -216,6 +216,14 @@ contains
       description = "Correction step  - Computing position for"
     case (BEEMAN_CORRECT_VEL)
       description = "Correction step  - Computing velocity for"
+    case (EXPMID_PREDICT_DT_2)
+      description = "Predict state at dt/2 for"
+    case (EXPMID_PREDICT_DT)
+      description = "Predict state at dt for"
+    case (EXPMID_CORRECT_DT_2)
+      description = "Correct state at dt/2 for"
+    case (UPDATE_HAMILTONIAN)
+      description = "Updating Hamiltonian for"
     case default
       description = "Unknown step for "
     end select
