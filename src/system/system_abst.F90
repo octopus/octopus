@@ -307,7 +307,7 @@ contains
 
     ! Required quantities clocks
     where (this%quantities%required)
-      this%quantities%clock = clock_t(this%namespace%get(), this%prop%dt, smallest_algo_dt)
+      this%quantities%clock = clock_t(this%namespace%get(), this%prop%dt/this%prop%algo_steps, smallest_algo_dt)
     end where
 
     POP_SUB(system_init_clocks)
