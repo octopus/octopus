@@ -927,7 +927,8 @@ subroutine X(priv_mesh_batch_nrm2)(mesh, aa, nrm2)
 
       do ip = sp, sp + np - 1
         do ist = 1, aa%nst_linear
-          a0 = abs(aa%X(ff_pack)(ist, ip))
+          ! first add real part
+          a0 = abs(R_REAL(aa%X(ff_pack)(ist, ip)))
           if(a0 <= M_EPSILON) cycle
           if(scal(ist, ithread) < a0) then
             ssq(ist, ithread) = M_ONE + ssq(ist, ithread)*(scal(ist, ithread)/a0)**2
@@ -935,6 +936,17 @@ subroutine X(priv_mesh_batch_nrm2)(mesh, aa, nrm2)
           else
             ssq(ist, ithread) = ssq(ist, ithread) + (a0/scal(ist, ithread))**2
           end if
+#ifdef R_TCOMPLEX
+          ! then add imaginary part for complex numbers
+          a0 = abs(R_AIMAG(aa%X(ff_pack)(ist, ip)))
+          if(a0 <= M_EPSILON) cycle
+          if(scal(ist, ithread) < a0) then
+            ssq(ist, ithread) = M_ONE + ssq(ist, ithread)*(scal(ist, ithread)/a0)**2
+            scal(ist, ithread) = a0
+          else
+            ssq(ist, ithread) = ssq(ist, ithread) + (a0/scal(ist, ithread))**2
+          end if
+#endif
         end do
       end do
 
