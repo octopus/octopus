@@ -373,14 +373,8 @@ contains
 
     this%st%rs_state_trans(:,:) = this%st%rs_state
 
-    call td_write_mxll_init(this%write_handler, this%namespace, this%gr, this%st, &
-                            this%hm, 0, this%prop%max_td_steps, this%prop%dt)
     call get_rs_state_at_point(this%st%selected_points_rs_state(:,:), this%st%rs_state, &
-                               this%st%selected_points_coordinate(:,:),&
-      this%st, this%gr%mesh)
-    call td_write_mxll_iter(this%write_handler, this%gr, this%st, this%hm, this%prop%dt, 0)
-    call td_write_mxll_free_data(this%write_handler, this%namespace, this%gr, &
-                                 this%st, this%hm, this%geo, this%outp, 0, this%prop%dt)
+      this%st%selected_points_coordinate(:,:), this%st, this%gr%mesh)
 
     POP_SUB(system_mxll_initial_conditions)
   end subroutine system_mxll_initial_conditions
@@ -391,7 +385,6 @@ contains
     integer,              intent(in)    :: operation
 
     type(profile_t), save :: prof
-    logical :: stopping
 
     PUSH_SUB(system_mxll_do_td)
 
@@ -401,6 +394,10 @@ contains
       SAFE_ALLOCATE(this%rs_current_density_ext_t2(1:this%gr%mesh%np_part,1:this%st%dim))
       SAFE_ALLOCATE(this%rs_charge_density_ext_t1(1:this%gr%mesh%np_part))
       SAFE_ALLOCATE(this%rs_charge_density_ext_t2(1:this%gr%mesh%np_part))
+
+      ! This variable is used to compute the elapsed time during the time-step.
+      ! This is incorrect when there is more than one system, as the operations for the different systems
+      ! are intermingled. Therefore it needs to be changed (maybe have the propagator handle it?)
       this%etime = loct_clock()
 
     case (EXPMID_FINISH)
@@ -416,7 +413,6 @@ contains
     case (EXPMID_PREDICT_DT)    ! predict: psi(t+dt) = U_H(t+dt/2) psi(t)
 
       call profiling_in(prof, "SYSTEM_MXLL_DO_TD")
-      stopping = clean_stop(this%mc%master_comm)
 
       ! Propagation
 
@@ -457,17 +453,7 @@ contains
 
       this%etime = loct_clock()
 
-      call td_write_mxll_iter(this%write_handler, this%gr, this%st, this%hm, this%prop%dt, this%clock%get_tick())
-
-      ! write data
-      if ((this%outp%output_interval > 0 .and. mod(this%clock%get_tick(), this%outp%output_interval) == 0) .or. &
-        this%clock%get_tick() == this%prop%max_td_steps .or. stopping) then
-        call td_write_mxll_free_data(this%write_handler, this%namespace, this%gr, this%st, this%hm, this%geo, this%outp, &
-        this%clock%get_tick(), this%prop%dt)
-      end if
-
       call profiling_out(prof)
-      ! if (stopping) exit
 
     case default
       message(1) = "Unsupported TD operation."
@@ -584,6 +570,13 @@ contains
 
     PUSH_SUB(system_mxll_output_start)
 
+    call td_write_mxll_init(this%write_handler, this%namespace, this%gr, this%st, &
+                            this%hm, 0, this%prop%max_td_steps, this%prop%dt)
+    call td_write_mxll_iter(this%write_handler, this%gr, this%st, this%hm, this%prop%dt, 0)
+    call td_write_mxll_free_data(this%write_handler, this%namespace, this%gr, &
+                                 this%st, this%hm, this%geo, this%outp, 0, this%prop%dt)
+
+    ! Currently we print this header here, but this needs to be changed.
     write(message(1), '(a10,1x,a10,1x,a20,1x,a18)') 'Iter ', 'Time ',  'Maxwell energy', 'Elapsed Time'
     call messages_info(1)
     call messages_print_stress(stdout)
@@ -596,7 +589,20 @@ contains
     class(system_mxll_t), intent(inout) :: this
     integer,              intent(in)    :: iter
 
+    logical :: stopping
+
     PUSH_SUB(system_mxll_output_write)
+
+    stopping = clean_stop(this%mc%master_comm)
+
+    call td_write_mxll_iter(this%write_handler, this%gr, this%st, this%hm, this%prop%dt, iter)
+
+    if ((this%outp%output_interval > 0 .and. mod(iter, this%outp%output_interval) == 0) .or. &
+      iter == this%prop%max_td_steps .or. stopping) then
+      call td_write_mxll_free_data(this%write_handler, this%namespace, this%gr, this%st, this%hm, this%geo, this%outp, &
+        iter, this%prop%dt)
+    end if
+
     POP_SUB(system_mxll_output_write)
   end subroutine system_mxll_output_write
 
