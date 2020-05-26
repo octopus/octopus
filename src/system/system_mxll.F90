@@ -455,11 +455,6 @@ contains
       call get_rs_state_at_point(this%st%selected_points_rs_state(:,:), this%st%rs_state, this%st%selected_points_coordinate(:,:), &
         this%st, this%gr%mesh)
 
-      write(message(1), '(i8,1x,f13.6,2x,f13.6,6x,f13.6)') this%clock%get_tick(), &
-        units_from_atomic(units_out%time, this%clock%get_sim_time()),             &
-        units_from_atomic(units_out%energy, this%hm%energy%energy),               &
-        loct_clock() - this%etime
-      call messages_info(1)
       this%etime = loct_clock()
 
       call td_write_mxll_iter(this%write_handler, this%gr, this%st, this%hm, this%prop%dt, this%clock%get_tick())
@@ -485,6 +480,13 @@ contains
   ! ---------------------------------------------------------
   subroutine system_mxll_iteration_info(this)
     class(system_mxll_t), intent(in) :: this
+
+    write(message(1), '(i8,1x,f13.6,2x,f13.6,6x,f13.6)') this%clock%get_tick(), &
+      units_from_atomic(units_out%time, this%clock%get_sim_time()),             &
+      units_from_atomic(units_out%energy, this%hm%energy%energy),               &
+      loct_clock() - this%etime
+    call messages_info(1)
+
   end subroutine system_mxll_iteration_info
 
   ! ---------------------------------------------------------
@@ -585,10 +587,6 @@ contains
     write(message(1), '(a10,1x,a10,1x,a20,1x,a18)') 'Iter ', 'Time ',  'Maxwell energy', 'Elapsed Time'
     call messages_info(1)
     call messages_print_stress(stdout)
-
-    write(message(1), '(i8,1x,f13.6,2x,f13.6,6x,f13.6)') 0, M_ZERO,   &
-        units_from_atomic(units_out%energy, this%hm%energy%energy), M_ZERO
-    call messages_info(1)
 
     POP_SUB(system_mxll_output_start)
   end subroutine system_mxll_output_start
