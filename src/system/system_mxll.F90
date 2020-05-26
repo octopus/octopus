@@ -320,11 +320,6 @@ contains
     this%st%plane_waves_delta_energy = M_ZERO
     this%st%plane_waves_energy_via_flux_calc = M_ZERO
 
-    SAFE_ALLOCATE(this%rs_current_density_ext_t1(1:this%gr%mesh%np_part,1:this%st%dim))
-    SAFE_ALLOCATE(this%rs_current_density_ext_t2(1:this%gr%mesh%np_part,1:this%st%dim))
-    SAFE_ALLOCATE(this%rs_charge_density_ext_t1(1:this%gr%mesh%np_part))
-    SAFE_ALLOCATE(this%rs_charge_density_ext_t2(1:this%gr%mesh%np_part))
-
     SAFE_ALLOCATE(this%rs_state_init(1:this%gr%mesh%np_part, 1:this%st%dim))
     this%rs_state_init(:,:) = M_z0
 
@@ -401,20 +396,23 @@ contains
     PUSH_SUB(system_mxll_do_td)
 
     select case(operation)
-    case (VERLET_UPDATE_POS)
-    case (VERLET_COMPUTE_ACC)
-    case (VERLET_COMPUTE_VEL)
-    case (BEEMAN_PREDICT_POS)
-    case (BEEMAN_PREDICT_VEL)
-    case (BEEMAN_CORRECT_POS)
-    case (BEEMAN_CORRECT_VEL)
-
     case (EXPMID_START)
+      SAFE_ALLOCATE(this%rs_current_density_ext_t1(1:this%gr%mesh%np_part,1:this%st%dim))
+      SAFE_ALLOCATE(this%rs_current_density_ext_t2(1:this%gr%mesh%np_part,1:this%st%dim))
+      SAFE_ALLOCATE(this%rs_charge_density_ext_t1(1:this%gr%mesh%np_part))
+      SAFE_ALLOCATE(this%rs_charge_density_ext_t2(1:this%gr%mesh%np_part))
       this%etime = loct_clock()
+
     case (EXPMID_FINISH)
+      SAFE_DEALLOCATE_A(this%rs_current_density_ext_t1)
+      SAFE_DEALLOCATE_A(this%rs_current_density_ext_t2)
+      SAFE_DEALLOCATE_A(this%rs_charge_density_ext_t1)
+      SAFE_DEALLOCATE_A(this%rs_charge_density_ext_t2)
+
     case (EXPMID_PREDICT_DT_2)  ! predict: psi(t+dt/2) = 0.5*(U_H(dt) psi(t) + psi(t)) or via extrapolation
-    case (UPDATE_INTERACTIONS)
+      ! Empty for the moment
     case (UPDATE_HAMILTONIAN)   ! update: H(t+dt/2) from psi(t+dt/2)
+      ! Empty for the moment
     case (EXPMID_PREDICT_DT)    ! predict: psi(t+dt) = U_H(t+dt/2) psi(t)
 
       call profiling_in(prof, "SYSTEM_MXLL_DO_TD")
@@ -627,10 +625,6 @@ contains
     deallocate(this%prop)
 
     ! free memory
-    SAFE_DEALLOCATE_A(this%rs_current_density_ext_t1)
-    SAFE_DEALLOCATE_A(this%rs_current_density_ext_t2)
-    SAFE_DEALLOCATE_A(this%rs_charge_density_ext_t1)
-    SAFE_DEALLOCATE_A(this%rs_charge_density_ext_t2)
     SAFE_DEALLOCATE_A(this%rs_state_init)
 
     call iter%start(this%interactions)
