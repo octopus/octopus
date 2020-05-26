@@ -234,7 +234,7 @@ contains
     !% at <tt>PES_Flux_Lsize</tt>.
     !%End
     default_shape = M_SPHERICAL
-    if(mdim <= 2) default_shape = M_CUBIC
+    if(mesh%sb%box_shape == PARALLELEPIPED .or. mdim <= 2) default_shape = M_CUBIC
     if(simul_box_is_periodic(mesh%sb)) default_shape = M_PLANE
     
     call parse_variable(namespace, 'PES_Flux_Shape', default_shape, this%surf_shape)
@@ -406,8 +406,6 @@ contains
 
     end if
 
-
-    
     
     if(this%surf_interp)  call mesh_interpolation_init(this%interp, mesh)
 
@@ -720,23 +718,13 @@ contains
         this%kgrid = M_CARTESIAN
         if (mdim == 1)  this%kgrid = M_POLAR
     end select
-    
-!     if (this%surf_shape == M_SPHERICAL .or. this%surf_shape == M_CUBIC) then
-!       this%kgrid = M_POLAR
-!     else
-!       this%kgrid = M_CARTESIAN
-!     end if
-    
+        
     call parse_variable(namespace, 'PES_Flux_Momenutum_Grid', this%kgrid, this%kgrid)
     if(.not.varinfo_valid_option('PES_Flux_Momenutum_Grid', this%kgrid, is_flag = .true.)) &
       call messages_input_error('PES_Flux_Momenutum_Grid')
     call messages_print_var_option(stdout, 'PES_Flux_Momenutum_Grid', this%kgrid)
 
 
-!     if(this%surf_shape == M_SPHERICAL .and. mdim /= 3) then
-!       message(1) = 'Spherical grid works only in 3d.'
-!       call messages_fatal(1, namespace=namespace)
-!     end if
     
     !Check availability of the calculation requested
     if (this%surf_shape == M_SPHERICAL) then
@@ -752,9 +740,6 @@ contains
     end if
     
     if (this%surf_shape == M_CUBIC) then
-!       if (this%kgrid == M_CARTESIAN .and. .not. simul_box_is_periodic(sb)) then
-!         call messages_not_implemented('Cartesian momentum grid with cubic surface for finite systems')
-!       end if
       if (simul_box_is_periodic(sb)) then
         call messages_not_implemented('Use of cubic surface for periodic systems (use pln)')                
       end if
@@ -2073,11 +2058,6 @@ contains
                      (M_TWO * this%veca(n_dir, itstep) / P_c  - this%kcoords_cub(n_dir, ikp_start:ikp_end, ik_map)) + &
                       M_zI * gwfpw(ikp_start:ikp_end) )
 
-                            
-              if(mesh%parallel_in_domains .and. bitand(this%par_strategy, OPTION__PES_FLUX_PARALLELIZATION__PF_SURFACE) /= 0) then
-                call comm_allreduce(mesh%mpi_grp%comm, Jk_cub(ist, isdim, ik, ikp_start:ikp_end))
-              end if
-
 
           end do ! isdim
         end do ! ist     
@@ -2095,9 +2075,11 @@ contains
     this%conjgphase_prev_cub(ikp_start:ikp_end,:) = vphase(ikp_start:ikp_end,:)
 
 
-    if(mesh%parallel_in_domains .and. bitand(this%par_strategy, OPTION__PES_FLUX_PARALLELIZATION__PF_TIME) /= 0) then
+    if(mesh%parallel_in_domains .and.(     bitand(this%par_strategy, OPTION__PES_FLUX_PARALLELIZATION__PF_TIME)    /= 0 &
+                                      .or. bitand(this%par_strategy, OPTION__PES_FLUX_PARALLELIZATION__PF_SURFACE) /= 0 )) then
       call comm_allreduce(mesh%mpi_grp%comm, spctramp_cub)
     end if
+
 
 
     this%spctramp_cub = this%spctramp_cub + spctramp_cub
