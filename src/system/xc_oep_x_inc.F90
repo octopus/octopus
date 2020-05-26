@@ -202,7 +202,7 @@ subroutine X(oep_x) (namespace, der, psolver, st, is, jdm, lxc, ex, exx_coef, F_
 
           ex = ex - exx_coef* M_HALF * rr * &
               st%occ(ist, isp) * socc*st%occ(jst, isp) * &
-              R_REAL(X(mf_dotp)(der%mesh, psi(1:der%mesh%np), wf_ist(:)*F_ij(:)))
+              R_REAL(X(mf_dotp)(der%mesh, rho_ij(:), F_ij(:)))
         end do
 
         if(st%node(ist) == st%mpi_grp%rank) then
