@@ -1001,13 +1001,12 @@ contains
     ! Set initial conditions
     call systems%initial_conditions(.true.)
 
+    call messages_print_stress(stdout, "Multi-system propagation", namespace=systems%namespace)
+
     call systems%propagation_start()
 
     ! The full TD loop
-    call messages_print_stress(stdout, "Multi-system propagation", namespace=systems%namespace)
-
     it = 0
-
     do while (.not. systems%has_reached_final_propagation_time())
 
       it = it + 1
