@@ -40,6 +40,7 @@ module propagator_etrs_oct_m
   use propagator_base_oct_m
   use states_dim_oct_m
   use states_oct_m
+  use thermal_gradient_oct_m
   use types_oct_m
   use v_ks_oct_m
 
@@ -131,6 +132,10 @@ contains
 
     if(gauge_field_is_applied(hm%ep%gfield)) then
       call gauge_field_propagate(hm%ep%gfield, dt, time)
+   end if
+   
+    if(thermal_gradient_is_applied(hm%ep%tfield)) then
+      call thermal_gradient_propagate(hm%ep%tfield, dt, time)
     end if
 
     if(hm%theory_level /= INDEPENDENT_PARTICLES) then
@@ -233,6 +238,10 @@ contains
 
     if(gauge_field_is_applied(hm%ep%gfield)) then
       call gauge_field_propagate(hm%ep%gfield, dt, time)
+    end if
+
+    if(thermal_gradient_is_applied(hm%ep%tfield)) then
+      call thermal_gradient_propagate(hm%ep%tfield, dt, time)
     end if
 
     if(hm%theory_level /= INDEPENDENT_PARTICLES) then
@@ -419,6 +428,10 @@ contains
 
     if(gauge_field_is_applied(hm%ep%gfield)) then
       call gauge_field_propagate(hm%ep%gfield, dt, time)
+    end if
+
+    if(thermal_gradient_is_applied(hm%ep%tfield)) then
+      call thermal_gradient_propagate(hm%ep%tfield, dt, time)
     end if
 
     call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = time)

@@ -99,7 +99,7 @@ contains
     this%vecpot_kick = M_ZERO
     this%force = M_ZERO
     this%ndim = sb%dim
-
+    
     !%Variable GaugeFieldDynamics
     !%Type integer
     !%Default polarization
@@ -291,7 +291,7 @@ contains
 
     this%vecpot(1:this%ndim) = this%vecpot(1:this%ndim) + dt * this%vecpot_vel(1:this%ndim) + &
       M_HALF * dt**2 * this%force(1:this%ndim)
-
+    
     !In the case of a kick, the induced field could not be higher than the initial kick
     do idim = 1, this%ndim
       if(.not. warning_shown .and. this%vecpot_kick(idim) /= M_ZERO .and.  &
@@ -441,7 +441,6 @@ contains
     integer :: idir,ispin,istot
 
     PUSH_SUB(gauge_field_get_force)
-
 
     select case(this%dynamics)
     case(OPTION__GAUGEFIELDDYNAMICS__NONE)

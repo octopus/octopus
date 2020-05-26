@@ -49,6 +49,7 @@ module propagator_oct_m
   use scf_oct_m
   use sparskit_oct_m
   use states_oct_m
+  use thermal_gradient_oct_m
   use v_ks_oct_m
   use varinfo_oct_m
   use xc_oct_m
@@ -567,6 +568,10 @@ contains
       call gauge_field_propagate(hm%ep%gfield, dt, time)
     end if
 
+    if(thermal_gradient_is_applied(hm%ep%tfield) .and. .not. propagator_ions_are_propagated(tr)) then
+      call thermal_gradient_propagate(hm%ep%tfield, dt, time)
+    end if
+
     if(generate .or. geometry_species_time_dependent(geo)) then
       call hamiltonian_epot_generate(hm, gr, geo, st, time = abs(nt*dt))
     end if
@@ -589,6 +594,11 @@ contains
     if(gauge_field_is_applied(hm%ep%gfield)) then
       call gauge_field_get_force(hm%ep%gfield, gr, st)
       call gauge_field_propagate_vel(hm%ep%gfield, dt)
+   end if
+   
+    if(thermal_gradient_is_applied(hm%ep%tfield)) then
+      call thermal_gradient_get_force(hm%ep%tfield, gr, st)
+      call thermal_gradient_propagate_vel(hm%ep%tfield, dt)
     end if
 
     !We update the occupation matrices
@@ -650,6 +660,7 @@ contains
     ! now calculate the eigenfunctions
     call scf_run(scf, mc, gr, geo, st, ks, hm, outp, &
       gs_run = .false., verbosity = VERB_COMPACT, iters_done = scsteps)
+
 
     if(gauge_field_is_applied(hm%ep%gfield)) then
       call gauge_field_propagate(hm%ep%gfield, dt, iter*dt)

@@ -463,7 +463,6 @@ contains
 
     check_varinfo = .true.
     if(present(check_varinfo_)) check_varinfo = check_varinfo_
-
     if(check_varinfo) call parse_check_varinfo(name)
     parse_block = oct_parse_block(name, blk)
 
@@ -676,7 +675,7 @@ contains
 
   subroutine parse_check_varinfo(varname)
     character(len=*), intent(in) :: varname
-    
+
     if(.not. varinfo_exists(varname)) then
       write(stderr,'(a)') "*** Fatal Internal Error (description follows)"
       write(stderr,'(a)') 'Attempting to parse undocumented variable '//trim(varname)//'.'

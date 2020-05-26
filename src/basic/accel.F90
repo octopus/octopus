@@ -277,26 +277,26 @@ contains
     !% try to initialize and use an accelerator device. By setting this
     !% variable to <tt>yes</tt> you force Octopus not to use an accelerator even it is available.
     !%End
-    call messages_obsolete_variable('DisableOpenCL', 'DisableAccel')
-#ifdef HAVE_ACCEL
-    default = .false.
-#else
-    default = .true.
-#endif
-    call parse_variable('DisableAccel', default, disable)
-    accel%enabled = .not. disable
+!     call messages_obsolete_variable('DisableOpenCL', 'DisableAccel')
+! #ifdef HAVE_ACCEL
+!     default = .false.
+! #else
+!     default = .true.
+! #endif
+!     call parse_variable('DisableAccel', default, disable)
+!     accel%enabled = .not. disable
     
-#ifndef HAVE_ACCEL
-    if(accel%enabled) then
-      message(1) = 'Octopus was compiled without OpenCL or Cuda support.'
-      call messages_fatal(1)
-    end if
-#endif
+! #ifndef HAVE_ACCEL
+!     if(accel%enabled) then
+!       message(1) = 'Octopus was compiled without OpenCL or Cuda support.'
+!       call messages_fatal(1)
+!     end if
+! #endif
 
-    if(.not. accel_is_enabled()) then
-      POP_SUB(accel_init)
-      return
-    end if
+!     if(.not. accel_is_enabled()) then
+!       POP_SUB(accel_init)
+!       return
+!     end if
 
     !%Variable OpenCLPlatform
     !%Type integer

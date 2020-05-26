@@ -57,6 +57,7 @@ module td_write_oct_m
   use states_dim_oct_m
   use states_restart_oct_m
   use td_calc_oct_m
+  use thermal_gradient_oct_m
   use types_oct_m
   use unit_oct_m
   use unit_system_oct_m

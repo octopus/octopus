@@ -253,7 +253,7 @@ contains
       end if
     end if
 
-    if(bitand(FIELD_UNIFORM_THERMAL_POTENTIAL, field) /= 0) then 
+    if(bitand(FIELD_UNIFORM_THERMAL_POTENTIAL, field) /= 0) then
       if(.not. allocated(this%uniform_thermal_potential)) then
         SAFE_ALLOCATE(this%uniform_thermal_potential(1:mesh%sb%dim))
         this%uniform_thermal_potential = M_ZERO
@@ -293,7 +293,12 @@ contains
     PUSH_SUB(hamiltonian_base_update)
 
     if(allocated(this%uniform_vector_potential) .and. allocated(this%vector_potential)) then
-      call unify_vector_potentials()
+       call unify_vector_potentials()
+    end if
+ 
+    
+    if(allocated(this%uniform_thermal_potential) .and. allocated(this%vector_potential)) then
+       call unify_thermal_potentials()
     end if
 
     if(allocated(this%potential) .and. accel_is_enabled()) then
@@ -325,6 +330,22 @@ contains
       SAFE_DEALLOCATE_A(this%uniform_vector_potential)
       POP_SUB(hamiltonian_base_update.unify_vector_potentials)      
     end subroutine unify_vector_potentials
+
+    subroutine unify_thermal_potentials()
+      integer :: idir, ip
+
+      PUSH_SUB(hamiltonian_base_update.unify_thermal_potentials)
+      
+      ! copy the uniform vector potential onto the non-uniform one
+      forall (idir = 1:mesh%sb%dim, ip = 1:mesh%np) 
+        this%vector_potential(idir, ip) = &
+          this%vector_potential(idir, ip) + this%uniform_thermal_potential(idir)
+      end forall
+      
+      ! and deallocate
+      SAFE_DEALLOCATE_A(this%uniform_thermal_potential)
+      POP_SUB(hamiltonian_base_update.unify_thermal_potentials)      
+    end subroutine unify_thermal_potentials
 
   end subroutine hamiltonian_base_update
   

@@ -271,7 +271,7 @@ contains
     integer,optional, intent(out):: ierr
     
     type(c_ptr) :: handle, name, type, default, section, desc
-    
+
     handle = c_null_ptr
     if(present(ierr)) ierr = -1
     do 
@@ -317,7 +317,6 @@ contains
     type(c_ptr) :: handle
 
     handle = c_null_ptr
-
     call varinfo_search_var(var, handle)
 
     exists = c_associated(handle)

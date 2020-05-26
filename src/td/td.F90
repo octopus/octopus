@@ -408,14 +408,14 @@ contains
     end if
 
    
-    !if (thermal_gradient_is_applied(hm%ep%tfield)) then
+    if (thermal_gradient_is_applied(hm%ep%tfield)) then
       !if the thermal gradient is applied, we need to tell v_ks to calculate the current
       !call v_ks_calculate_current(sys%ks, .true.)
 
       ! initialize the vector field and update the hamiltonian
-      !call gauge_field_init_vec_pot(hm%ep%gfield, gr%sb, st)
-      !call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = td%dt*td%iter)
-    !end if
+      call thermal_gradient_init_vec_pot(hm%ep%tfield, gr%sb, st)
+      call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = td%dt*td%iter)
+    end if
 
     call init_wfs()
 

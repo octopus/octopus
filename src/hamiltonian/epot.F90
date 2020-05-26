@@ -486,7 +486,9 @@ contains
     ep%vdw_forces = M_ZERO
 
     call gauge_field_nullify(ep%gfield)
-
+    call thermal_gradient_nullify(ep%tfield)
+    !call gauge_field_nullify(ep%tfield)
+    
     nullify(ep%local_potential)
     ep%local_potential_precalculated = .false.
     

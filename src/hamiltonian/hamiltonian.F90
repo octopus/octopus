@@ -300,8 +300,9 @@ contains
     !Static magnetic field or rashba spin-orbit interaction requires complex wavefunctions
     if (associated(hm%ep%B_field) .or. &
       gauge_field_is_applied(hm%ep%gfield) .or. &
+      thermal_gradient_is_applied(hm%ep%tfield) .or. &
       parse_is_defined('RashbaSpinOrbitCoupling')) call states_set_complex(st)
-
+    
     call parse_variable('CalculateSelfInducedMagneticField', .false., hm%self_induced_magnetic)
     !%Variable CalculateSelfInducedMagneticField
     !%Type logical
@@ -421,7 +422,7 @@ contains
     external_potentials_present = associated(hm%ep%v_static) .or. &
 				  associated(hm%ep%E_field)  .or. &
 				  associated(hm%ep%lasers)
-    
+
     kick_present = hm%ep%kick%delta_strength /= M_ZERO
 
     call pcm_init(hm%pcm, geo, gr, st%qtot, st%val_charge, external_potentials_present, kick_present )  !< initializes PCM  
@@ -707,7 +708,6 @@ contains
     call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_POTENTIAL, &
       complex_potential = this%bc%abtype == IMAGINARY_ABSORBING)
 
-
     do ispin = 1, this%d%nspin
       if(ispin <= 2) then
         forall (ip = 1:mesh%np) this%hm_base%potential(ip, ispin) = this%vhxc(ip, ispin) + this%ep%vpsl(ip)
@@ -791,10 +791,12 @@ contains
 
       ! thermal gradient
       if(thermal_gradient_is_applied(this%ep%tfield)) then
-         call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_UNIFORM_VECTOR_POTENTIAL,.false.)
+         call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_UNIFORM_THERMAL_POTENTIAL,.false.)
          call thermal_gradient_get_vec_pot(this%ep%tfield, aa)
+         !this%hm_base%uniform_vector_potential(1:mesh%sb%dim) = this%hm_base%uniform_vector_potential(1:mesh%sb%dim)  &
+         !    - aa(1:mesh%sb%dim)
          this%hm_base%uniform_thermal_potential(1:mesh%sb%dim) = this%hm_base%uniform_thermal_potential(1:mesh%sb%dim)  &
-          - aa(1:mesh%sb%dim) !!check if needs a factor later.
+              - aa(1:mesh%sb%dim) !!check if needs a factor later.
       end if
       
    end if
@@ -835,24 +837,24 @@ contains
 
       if(simul_box_is_periodic(mesh%sb) .or. allocated(this%hm_base%uniform_vector_potential)) then
 
-        call profiling_in(prof_phases, 'UPDATE_PHASES')
+         call profiling_in(prof_phases, 'UPDATE_PHASES')
+
         ! now regenerate the phases for the pseudopotentials
         do iatom = 1, this%ep%natoms
           call projector_init_phases(this%ep%proj(iatom), mesh%sb, this%d, &
-            vec_pot = this%hm_base%uniform_vector_potential, vec_pot_var = this%hm_base%vector_potential)
+               vec_pot = this%hm_base%uniform_vector_potential, vec_pot_var = this%hm_base%vector_potential)
         end do
 
         call profiling_out(prof_phases)
       end if
 
       if(allocated(this%hm_base%uniform_vector_potential)) then
-        if(.not. associated(this%hm_base%phase)) then
+         if(.not. associated(this%hm_base%phase)) then
           SAFE_ALLOCATE(this%hm_base%phase(1:mesh%np_part, this%d%kpt%start:this%d%kpt%end))
           if(accel_is_enabled()) then
             call accel_create_buffer(this%hm_base%buff_phase, ACCEL_MEM_READ_ONLY, TYPE_CMPLX, mesh%np_part*this%d%kpt%nlocal)
           end if
         end if
-
         compute_phase_correction = .not.accel_is_enabled()
         if(.not. allocated(this%hm_base%phase_corr)) then
           if(compute_phase_correction) then
@@ -890,7 +892,7 @@ contains
             end do
           end if
 
-        end do
+       end do
         if(accel_is_enabled()) then
           call accel_write_buffer(this%hm_base%buff_phase, mesh%np_part*this%d%kpt%nlocal, this%hm_base%phase)
         end if
@@ -902,8 +904,79 @@ contains
         end if
 
 
+     end if
+
+      if(simul_box_is_periodic(mesh%sb) .or. allocated(this%hm_base%uniform_thermal_potential)) then
+
+         call profiling_in(prof_phases, 'UPDATE_PHASES')
+
+        ! now regenerate the phases for the pseudopotentials
+        do iatom = 1, this%ep%natoms
+          call projector_init_phases(this%ep%proj(iatom), mesh%sb, this%d, &
+               vec_pot = this%hm_base%uniform_thermal_potential, vec_pot_var = this%hm_base%vector_potential)
+        end do
+
+        call profiling_out(prof_phases)
       end if
 
+      if(allocated(this%hm_base%uniform_thermal_potential)) then
+         if(.not. associated(this%hm_base%phase)) then
+          SAFE_ALLOCATE(this%hm_base%phase(1:mesh%np_part, this%d%kpt%start:this%d%kpt%end))
+          if(accel_is_enabled()) then
+            call accel_create_buffer(this%hm_base%buff_phase, ACCEL_MEM_READ_ONLY, TYPE_CMPLX, mesh%np_part*this%d%kpt%nlocal)
+          end if
+        end if
+        compute_phase_correction = .not.accel_is_enabled()
+        if(.not. allocated(this%hm_base%phase_corr)) then
+          if(compute_phase_correction) then
+            SAFE_ALLOCATE(this%hm_base%phase_corr(mesh%np+1:mesh%np_part, this%d%kpt%start:this%d%kpt%end))
+            this%hm_base%phase_corr = M_ONE
+          end if
+        end if
+
+        kpoint(1:mesh%sb%dim) = M_ZERO
+        do ik = this%d%kpt%start, this%d%kpt%end
+          kpoint(1:mesh%sb%dim) = kpoints_get_point(mesh%sb%kpoints, states_dim_get_kpoint_index(this%d, ik))
+
+          forall (ip = 1:mesh%np_part)
+            this%hm_base%phase(ip, ik) = exp(-M_zI*sum(mesh%x(ip, 1:mesh%sb%dim)*(kpoint(1:mesh%sb%dim) &
+              + this%hm_base%uniform_thermal_potential(1:mesh%sb%dim))))
+          end forall
+          if(compute_phase_correction) then
+            ! loop over boundary points
+            sp = mesh%np
+            if(mesh%parallel_in_domains) sp = mesh%np + mesh%vp%np_ghost
+            do ip = sp + 1, mesh%np_part
+              !translate to a global point
+              ip_global = ip
+#ifdef HAVE_MPI
+              if(mesh%parallel_in_domains) ip_global = mesh%vp%bndry(ip - sp - 1 + mesh%vp%xbndry)
+#endif
+              ! get corresponding inner point
+              ip_inner = mesh_periodic_point(mesh, ip_global)
+
+              ! compute phase correction from global coordinate (opposite sign!)
+              x_global = mesh_x_global(mesh, ip_inner)
+              this%hm_base%phase_corr(ip, ik) = this%hm_base%phase(ip, ik)* &
+                exp(M_zI * sum(x_global(1:mesh%sb%dim) * (kpoint(1:mesh%sb%dim) &
+                  + this%hm_base%uniform_thermal_potential(1:mesh%sb%dim))))
+            end do
+          end if
+
+       end do
+        if(accel_is_enabled()) then
+          call accel_write_buffer(this%hm_base%buff_phase, mesh%np_part*this%d%kpt%nlocal, this%hm_base%phase)
+        end if
+
+        ! We rebuild the phase for the orbital projection, similarly to the one of the pseudopotentials
+        if(this%lda_u_level /= DFT_U_NONE) then
+          call lda_u_build_phase_correction(this%lda_u, mesh%sb, this%d, &
+               vec_pot = this%hm_base%uniform_thermal_potential, vec_pot_var = this%hm_base%vector_potential)
+        end if
+
+
+     end if
+     
       max_npoints = this%hm_base%max_npoints
       nmat = this%hm_base%nprojector_matrices
 
@@ -1321,7 +1394,6 @@ contains
     call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_POTENTIAL, &
       complex_potential = this%bc%abtype == IMAGINARY_ABSORBING)
 
-
     do ispin = 1, this%d%nspin
       if(ispin <= 2) then
         forall (ip = 1:mesh%np) this%hm_base%potential(ip, ispin) = this%vhxc(ip, ispin) + this%ep%vpsl(ip)
@@ -1398,14 +1470,13 @@ contains
       end if
 
       ! the thermal gradient
+      !write(*,*)"thermal_gradient_is_applied(this%ep%tfield)", thermal_gradient_is_applied(this%ep%tfield)
+      !stop
       if(thermal_gradient_is_applied(this%ep%tfield)) then
-        call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_UNIFORM_VECTOR_POTENTIAL, .false.)
+        call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_UNIFORM_THERMAL_POTENTIAL, .false.)
         call thermal_gradient_get_vec_pot(this%ep%tfield, aa)
-        write(*,*)"thermal gradient 1", this%ep%tfield
-        stop
         this%hm_base%uniform_thermal_potential(1:mesh%sb%dim) = this%hm_base%uniform_thermal_potential(1:mesh%sb%dim)  &
              - aa(1:mesh%sb%dim) !!check if needs a factor later.
-
       end if
 
 
