@@ -129,8 +129,7 @@ module pes_flux_oct_m
     CMPLX, pointer   :: wf(:,:,:,:,:)                  !< wavefunction
     CMPLX, pointer   :: gwf(:,:,:,:,:,:)               !< gradient of wavefunction
     FLOAT, pointer   :: veca(:,:)                      !< vector potential
-    CMPLX, pointer   :: conjgphase_prev_cub(:,:)       !< Volkov phase for all k-points from previous time step
-    CMPLX, pointer   :: conjgphase_prev_sph(:,:)
+    CMPLX, pointer   :: conjgphase_prev(:,:)           !< Volkov phase for all k-points from previous time step
     CMPLX, pointer   :: spctramp_cub(:,:,:,:)          !< spectral amplitude
     CMPLX, pointer   :: spctramp_sph(:,:,:,:,:)
 
@@ -516,7 +515,7 @@ contains
       if(this%nsrfcpnts > 0) flush(223)
     end if
 
-    ! Generate the reciprocal space mesh grid
+    ! Generate the momentum space mesh grid
     call pes_flux_reciprocal_mesh_gen(this, namespace, mesh%sb, st, mesh%mpi_grp%comm)
 
 
@@ -571,10 +570,13 @@ contains
     this%itstep    = 0
     this%tdsteps = 1
     
-    if (bitand(this%par_strategy, OPTION__PES_FLUX_PARALLELIZATION__PF_TIME) /= 0) then
-      if(mesh%parallel_in_domains) this%tdsteps = mesh%mpi_grp%size
+    if (mesh%parallel_in_domains .and. bitand(this%par_strategy, OPTION__PES_FLUX_PARALLELIZATION__PF_TIME) /= 0) then
+      this%tdsteps = mesh%mpi_grp%size
     end if
    
+    ! -----------------------------------------------------------------
+    ! Allocations 
+    ! -----------------------------------------------------------------
 
     SAFE_ALLOCATE(this%wf(stst:stend, 1:sdim, kptst:kptend, 0:this%nsrfcpnts, 1:this%tdsteps))
     this%wf = M_z0
@@ -589,17 +591,17 @@ contains
       SAFE_ALLOCATE(this%spctramp_sph(stst:stend, 1:sdim, kptst:kptend, 1:this%nk, 1:this%nstepsomegak))
       this%spctramp_sph = M_z0
 
-      SAFE_ALLOCATE(this%conjgphase_prev_sph(1:this%nk, 1:this%nstepsomegak))
-      this%conjgphase_prev_sph = M_z1
+      SAFE_ALLOCATE(this%conjgphase_prev(1:this%nk, 1:this%nstepsomegak))
 
     else
       SAFE_ALLOCATE(this%spctramp_cub(stst:stend, 1:sdim, kptst:kptend, 1:this%nkpnts))
       this%spctramp_cub = M_z0
 
-      SAFE_ALLOCATE(this%conjgphase_prev_cub(1:this%nkpnts, kptst:kptend))
-      this%conjgphase_prev_cub = M_z1
+      SAFE_ALLOCATE(this%conjgphase_prev(1:this%nkpnts, kptst:kptend))
 
     end if
+
+    this%conjgphase_prev = M_z1
 
     call messages_write('Info: Total number of surface points = ')
     call messages_write(this%nsrfcpnts)
@@ -624,12 +626,12 @@ contains
       SAFE_DEALLOCATE_P(this%ylm_k)
       SAFE_DEALLOCATE_P(this%j_l)
       SAFE_DEALLOCATE_P(this%ylm_r)
-      SAFE_DEALLOCATE_P(this%conjgphase_prev_sph)
+      SAFE_DEALLOCATE_P(this%conjgphase_prev)
       SAFE_DEALLOCATE_P(this%spctramp_sph)
       SAFE_DEALLOCATE_P(this%klinear)
     else
       SAFE_DEALLOCATE_P(this%kcoords_cub)
-      SAFE_DEALLOCATE_P(this%conjgphase_prev_cub)
+      SAFE_DEALLOCATE_P(this%conjgphase_prev)
       SAFE_DEALLOCATE_P(this%spctramp_cub)
 
       SAFE_DEALLOCATE_P(this%srfcpnt)
@@ -1966,7 +1968,7 @@ contains
 
 
       ! get the previous Volkov phase
-      vphase(ikp_start:ikp_end,:) = this%conjgphase_prev_cub(ikp_start:ikp_end,:)
+      vphase(ikp_start:ikp_end,:) = this%conjgphase_prev(ikp_start:ikp_end,:)
       
       Jk_cub(:, :, :, :) = M_z0
 
@@ -2072,7 +2074,7 @@ contains
     end do ! face loop 
 
 
-    this%conjgphase_prev_cub(ikp_start:ikp_end,:) = vphase(ikp_start:ikp_end,:)
+    this%conjgphase_prev(ikp_start:ikp_end,:) = vphase(ikp_start:ikp_end,:)
 
 
     if(mesh%parallel_in_domains .and.(     bitand(this%par_strategy, OPTION__PES_FLUX_PARALLELIZATION__PF_TIME)    /= 0 &
@@ -2207,7 +2209,7 @@ contains
     ! get the previous Volkov phase
     SAFE_ALLOCATE(phase_act(ikk_start:ikk_end, 1:this%nstepsomegak))
     if(ikk_start > 0) then
-      phase_act(ikk_start:ikk_end, :) = this%conjgphase_prev_sph(ikk_start:ikk_end, :)
+      phase_act(ikk_start:ikk_end, :) = this%conjgphase_prev(ikk_start:ikk_end, :)
     else
       phase_act(ikk_start:ikk_end, :) = M_z0
     end if
@@ -2295,15 +2297,15 @@ contains
     SAFE_DEALLOCATE_A(integ22_t)
 
     ! save the Volkov phase and the spectral amplitude
-    this%conjgphase_prev_sph = M_z0
+    this%conjgphase_prev = M_z0
 
     if(ikk_start > 0) then
-      this%conjgphase_prev_sph(ikk_start:ikk_end, :) = phase_act(ikk_start:ikk_end, :)
+      this%conjgphase_prev(ikk_start:ikk_end, :) = phase_act(ikk_start:ikk_end, :)
     end if
     SAFE_DEALLOCATE_A(phase_act)
 
     if(mesh%parallel_in_domains .and. bitand(this%par_strategy, OPTION__PES_FLUX_PARALLELIZATION__PF_TIME) /= 0) then
-      call comm_allreduce(mesh%mpi_grp%comm, this%conjgphase_prev_sph)
+      call comm_allreduce(mesh%mpi_grp%comm, this%conjgphase_prev)
       call comm_allreduce(mesh%mpi_grp%comm, spctramp_sph)
     end if
 
