@@ -488,8 +488,6 @@ contains
 
     select type(inter)
     type is(interaction_gravity_t)
-      this%quantities(POSITION)%required = .true.
-      this%quantities(MASS)%required = .true.
       inter%partner_mass => this%mass
       inter%partner_pos => this%pos
     class default

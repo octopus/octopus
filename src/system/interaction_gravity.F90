@@ -73,14 +73,18 @@ contains
     this%partner => partner
 
     ! Gravity interaction needs two quantities from each system: the position and the mass
+    ! From the sytem:
     this%n_system_quantities = 2
-    this%n_partner_quantities = 2
     SAFE_ALLOCATE(this%system_quantities(this%n_system_quantities))
-    SAFE_ALLOCATE(this%partner_quantities(this%n_partner_quantities))
     this%system_quantities(1) = POSITION
     this%system_quantities(2) = MASS
+    ! From the partner:
+    this%n_partner_quantities = 2
+    SAFE_ALLOCATE(this%partner_quantities(this%n_partner_quantities))
     this%partner_quantities(1) = POSITION
     this%partner_quantities(2) = MASS
+    this%partner%quantities(POSITION)%required = .true.
+    this%partner%quantities(MASS)%required = .true.
 
     call partner%set_pointers_to_interaction(this)
 
