@@ -19,9 +19,9 @@
 ##
 
 SUBDIRS = \
-	performance      \
-	components       \
-	error_tests       \
+	performance       \
+	components        \
+	errors            \
 	finite_systems_1d \
 	finite_systems_2d \
 	finite_systems_3d \
