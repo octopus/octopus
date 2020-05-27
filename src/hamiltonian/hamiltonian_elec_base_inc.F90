@@ -1426,7 +1426,7 @@ subroutine X(hamiltonian_elec_base_nlocal_position_commutator)(this, mesh, std, 
   integer, allocatable :: ind(:)
   R_TYPE :: aa, bb, cc, dd
   R_TYPE, allocatable :: projections(:, :, :)
-  R_TYPE, allocatable :: psi(:, :, :)
+  R_TYPE, allocatable :: psi(:, :, :), lpsi(:,:)
   CMPLX :: phase(2)
   type(projector_matrix_t), pointer :: pmat
   type(profile_t), save :: prof, reduce_prof
@@ -1469,7 +1469,7 @@ subroutine X(hamiltonian_elec_base_nlocal_position_commutator)(this, mesh, std, 
     !    call profiling_count_operations(nprojs*(R_ADD + R_MUL)*npoints + nst*nprojs)
   end do
 
-  !$omp parallel do private(imat, pmat, iprojection, npoints, nprojs, iproj, ist, aa, bb, cc, dd, ip, phase)
+  !$omp parallel do private(imat, pmat, iprojection, npoints, nprojs, iproj, ist, aa, bb, cc, dd, ip, phase, lpsi)
   do imat = 1, this%nprojector_matrices
     pmat => this%projector_matrices(imat)
     iprojection = ind(imat)
@@ -1478,98 +1478,65 @@ subroutine X(hamiltonian_elec_base_nlocal_position_commutator)(this, mesh, std, 
 
     if(npoints == 0) cycle
 
+    SAFE_ALLOCATE(lpsi(1:npoints, 1:nst))
     if(.not. allocated(this%projector_phases)) then
-      do iproj = 1, nprojs
-
-        if(pmat%is_cmplx) then
-
-          do ist = 1, nst
-            aa = CNST(0.0)
-            bb = CNST(0.0)
-            cc = CNST(0.0)
-            dd = CNST(0.0)
-            do ip = 1, npoints
-              aa = aa + R_CONJ(pmat%zprojectors(ip, iproj))*psib%X(ff_pack)(ist, pmat%map(ip))
-              bb = bb + R_CONJ(pmat%zprojectors(ip, iproj))*pmat%position(1, ip)*psib%X(ff_pack)(ist, pmat%map(ip))
-              cc = cc + R_CONJ(pmat%zprojectors(ip, iproj))*pmat%position(2, ip)*psib%X(ff_pack)(ist, pmat%map(ip))
-              dd = dd + R_CONJ(pmat%zprojectors(ip, iproj))*pmat%position(3, ip)*psib%X(ff_pack)(ist, pmat%map(ip))
-            end do
-            projections(ist, iprojection + iproj, 0) = pmat%scal(iproj)*aa
-            projections(ist, iprojection + iproj, 1) = pmat%scal(iproj)*bb
-            projections(ist, iprojection + iproj, 2) = pmat%scal(iproj)*cc
-            projections(ist, iprojection + iproj, 3) = pmat%scal(iproj)*dd
-          end do
-
-        else
-          do ist = 1, nst
-            aa = CNST(0.0)
-            bb = CNST(0.0)
-            cc = CNST(0.0)
-            dd = CNST(0.0)
-            do ip = 1, npoints
-              aa = aa + pmat%dprojectors(ip, iproj)*psib%X(ff_pack)(ist, pmat%map(ip))
-              bb = bb + pmat%dprojectors(ip, iproj)*pmat%position(1, ip)*psib%X(ff_pack)(ist, pmat%map(ip))
-              cc = cc + pmat%dprojectors(ip, iproj)*pmat%position(2, ip)*psib%X(ff_pack)(ist, pmat%map(ip))
-              dd = dd + pmat%dprojectors(ip, iproj)*pmat%position(3, ip)*psib%X(ff_pack)(ist, pmat%map(ip))
-            end do
-            projections(ist, iprojection + iproj, 0) = pmat%scal(iproj)*aa
-            projections(ist, iprojection + iproj, 1) = pmat%scal(iproj)*bb
-            projections(ist, iprojection + iproj, 2) = pmat%scal(iproj)*cc
-            projections(ist, iprojection + iproj, 3) = pmat%scal(iproj)*dd
-          end do
-
-        end if
+      do ist = 1, nst
+        do ip = 1, npoints
+          lpsi(ip, ist) = psib%X(ff_pack)(ist, pmat%map(ip))
+        end do
       end do
-
     else
-
-      do iproj = 1, nprojs
-
-        if(pmat%is_cmplx) then
-
-          do ist = 1, nst
-            aa = CNST(0.0)
-            bb = CNST(0.0)
-            cc = CNST(0.0)
-            dd = CNST(0.0)
-            do ip = 1, npoints
-              phase(1) = this%projector_phases(ip, imat, psib%linear_to_idim(ist), psib%ik)
-              aa = aa + R_CONJ(pmat%zprojectors(ip, iproj))*psib%X(ff_pack)(ist, pmat%map(ip))*phase(1)
-              bb = bb + R_CONJ(pmat%zprojectors(ip, iproj))*pmat%position(1, ip)*psib%X(ff_pack)(ist, pmat%map(ip))*phase(1)
-              cc = cc + R_CONJ(pmat%zprojectors(ip, iproj))*pmat%position(2, ip)*psib%X(ff_pack)(ist, pmat%map(ip))*phase(1)
-              dd = dd + R_CONJ(pmat%zprojectors(ip, iproj))*pmat%position(3, ip)*psib%X(ff_pack)(ist, pmat%map(ip))*phase(1)
-            end do
-            projections(ist, iprojection + iproj, 0) = pmat%scal(iproj)*aa
-            projections(ist, iprojection + iproj, 1) = pmat%scal(iproj)*bb
-            projections(ist, iprojection + iproj, 2) = pmat%scal(iproj)*cc
-            projections(ist, iprojection + iproj, 3) = pmat%scal(iproj)*dd
-          end do
-
-        else
-
-          do ist = 1, nst
-            aa = CNST(0.0)
-            bb = CNST(0.0)
-            cc = CNST(0.0)
-            dd = CNST(0.0)
-            do ip = 1, npoints
-              phase(1) = this%projector_phases(ip, imat, psib%linear_to_idim(ist), psib%ik)
-              aa = aa + pmat%dprojectors(ip, iproj)*psib%X(ff_pack)(ist, pmat%map(ip))*phase(1)
-              bb = bb + pmat%dprojectors(ip, iproj)*pmat%position(1, ip)*psib%X(ff_pack)(ist, pmat%map(ip))*phase(1)
-              cc = cc + pmat%dprojectors(ip, iproj)*pmat%position(2, ip)*psib%X(ff_pack)(ist, pmat%map(ip))*phase(1)
-              dd = dd + pmat%dprojectors(ip, iproj)*pmat%position(3, ip)*psib%X(ff_pack)(ist, pmat%map(ip))*phase(1)
-            end do
-            projections(ist, iprojection + iproj, 0) = pmat%scal(iproj)*aa
-            projections(ist, iprojection + iproj, 1) = pmat%scal(iproj)*bb
-            projections(ist, iprojection + iproj, 2) = pmat%scal(iproj)*cc
-            projections(ist, iprojection + iproj, 3) = pmat%scal(iproj)*dd
-          end do
-   
-        end if
-
+      do ist = 1, nst
+        do ip = 1, npoints
+          lpsi(ip, ist) = psib%X(ff_pack)(ist, pmat%map(ip)) &
+                            *this%projector_phases(ip, imat, psib%linear_to_idim(ist), psib%ik)
+        end do
       end do
     end if
 
+    do iproj = 1, nprojs
+
+      if(pmat%is_cmplx) then
+
+        do ist = 1, nst
+          aa = CNST(0.0)
+          bb = CNST(0.0)
+          cc = CNST(0.0)
+          dd = CNST(0.0)
+          do ip = 1, npoints
+            aa = aa + R_CONJ(pmat%zprojectors(ip, iproj))*lpsi(ip, ist)
+            bb = bb + R_CONJ(pmat%zprojectors(ip, iproj))*pmat%position(1, ip)*lpsi(ip, ist)
+            cc = cc + R_CONJ(pmat%zprojectors(ip, iproj))*pmat%position(2, ip)*lpsi(ip, ist)
+            dd = dd + R_CONJ(pmat%zprojectors(ip, iproj))*pmat%position(3, ip)*lpsi(ip, ist)
+          end do
+          projections(ist, iprojection + iproj, 0) = pmat%scal(iproj)*aa
+          projections(ist, iprojection + iproj, 1) = pmat%scal(iproj)*bb
+          projections(ist, iprojection + iproj, 2) = pmat%scal(iproj)*cc
+          projections(ist, iprojection + iproj, 3) = pmat%scal(iproj)*dd
+        end do
+
+      else
+        do ist = 1, nst
+          aa = CNST(0.0)
+          bb = CNST(0.0)
+          cc = CNST(0.0)
+          dd = CNST(0.0)
+          do ip = 1, npoints
+            aa = aa + pmat%dprojectors(ip, iproj)*lpsi(ip, ist)
+            bb = bb + pmat%dprojectors(ip, iproj)*pmat%position(1, ip)*lpsi(ip, ist)
+            cc = cc + pmat%dprojectors(ip, iproj)*pmat%position(2, ip)*lpsi(ip, ist)
+            dd = dd + pmat%dprojectors(ip, iproj)*pmat%position(3, ip)*lpsi(ip, ist)
+          end do
+          projections(ist, iprojection + iproj, 0) = pmat%scal(iproj)*aa
+          projections(ist, iprojection + iproj, 1) = pmat%scal(iproj)*bb
+          projections(ist, iprojection + iproj, 2) = pmat%scal(iproj)*cc
+          projections(ist, iprojection + iproj, 3) = pmat%scal(iproj)*dd
+        end do
+
+      end if
+    end do
+
+    SAFE_DEALLOCATE_A(lpsi)
   end do
 
   ! reduce the projections
