@@ -457,7 +457,7 @@ contains
   end subroutine celestial_body_update_quantity
 
  ! ---------------------------------------------------------
- logical function celestial_body_update_exposed_quantity(this, iq, clock) result(updated)
+ subroutine celestial_body_update_exposed_quantity(this, iq, clock)
     class(celestial_body_t),   intent(inout) :: this
     integer,                   intent(in)    :: iq
     class(clock_t),            intent(in)    :: clock
@@ -470,7 +470,6 @@ contains
     select case (iq)
     case (MASS)
       ! The celestial body has a mass, but it does not require any update, as it does not change with time.
-      updated = .true.
       call this%quantities(iq)%clock%set_time(this%clock)
     case default
       message(1) = "Incompatible quantity."
@@ -478,7 +477,7 @@ contains
     end select
 
     POP_SUB(celestial_body_update_exposed_quantity)
-  end function celestial_body_update_exposed_quantity
+  end subroutine celestial_body_update_exposed_quantity
 
   ! ---------------------------------------------------------
   subroutine celestial_set_pointers_to_interaction(this, inter)

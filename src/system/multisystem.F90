@@ -587,7 +587,7 @@ contains
   end subroutine multisystem_update_quantity
 
   ! ---------------------------------------------------------
-  logical function multisystem_update_exposed_quantity(this, iq, clock) result(updated)
+  subroutine multisystem_update_exposed_quantity(this, iq, clock)
     class(multisystem_t), intent(inout) :: this
     integer,              intent(in)    :: iq
     class(clock_t),       intent(in)    :: clock
@@ -596,10 +596,10 @@ contains
 
     ! At the moment multitystems cannot expose quantities.
     ! All the quantities are directly exposed by the subsystems
-    updated = .false.
+    ASSERT(.false.)
 
     POP_SUB(multisystem_update_exposed_quantity)
-  end function multisystem_update_exposed_quantity
+  end subroutine multisystem_update_exposed_quantity
 
   ! ---------------------------------------------------------
   subroutine multisystem_set_pointers_to_interaction(this, inter)

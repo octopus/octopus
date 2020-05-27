@@ -146,13 +146,13 @@ module system_abst_oct_m
     end subroutine system_update_quantity
 
     ! ---------------------------------------------------------
-    logical function system_update_exposed_quantity(this, iq, clock)
+    subroutine system_update_exposed_quantity(this, iq, clock)
       import system_abst_t
       import clock_t
       class(system_abst_t),      intent(inout) :: this
       integer,                   intent(in)    :: iq
       class(clock_t),            intent(in)    :: clock
-    end function system_update_exposed_quantity
+    end subroutine system_update_exposed_quantity
 
     ! ---------------------------------------------------------
     subroutine system_set_pointers_to_interaction(this, inter)
@@ -405,7 +405,7 @@ contains
             all_updated = .false.
           else
             ! This is not a protected quantity and we are the right time, so we update it
-            all_updated = this%update_exposed_quantity(q_id, clock) .and. all_updated
+            call this%update_exposed_quantity(q_id, clock)
           end if
         end if
       end do
