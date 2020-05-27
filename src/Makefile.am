@@ -543,7 +543,8 @@ noinst_HEADERS +=                               \
 	system/xc_oep_inc.F90                   \
 	system/xc_oep_qed_inc.F90               \
 	system/xc_oep_sic_inc.F90               \
-	system/xc_oep_x_inc.F90
+	system/xc_oep_x_inc.F90                 \
+        system/xc_slater_inc.F90
 
 # Sources in scf
 scf_f_srcs =                                 \

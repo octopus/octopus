@@ -67,6 +67,7 @@ module xc_oep_oct_m
     XC_OEP_NONE   = 1,           &
     XC_OEP_SLATER = 2,           &
     XC_OEP_KLI    = 3,           &
+    XC_OEP_SLATER_FAST = 4,      &
     XC_OEP_FULL   = 5,           &
     OEP_MIXING_SCHEME_CONST = 1, &
     OEP_MIXING_SCHEME_BB    = 2, &
@@ -129,11 +130,14 @@ contains
     !%Option oep_none 1
     !% Do not solve OEP equation.
     !%Option oep_slater 2
-    !% Slater approximation.
+    !% Slater approximation. This option is deprecated and will be replaced by the oep_slater_fast option.
     !%Option oep_kli 3
     !% Krieger-Li-Iafrate (KLI) approximation. For spinors, the iterative solution is controlled by the variables
     !% in section <tt>Linear Response::Solver</tt>, and the default for <tt>LRMaximumIter</tt> is set to 50.
     !% Ref: JB Krieger, Y Li, GJ Iafrate, <i>Phys. Lett. A</i> <b>146</b>, 256 (1990).
+    !%Option oep_slater_fast 4
+    !% The same as ope_slater but reimplemented following PRB 98, 035140 (2018). 
+    !% This is faster than the oep_slater option.
     !%Option oep_full 5
     !% (Experimental) Full solution of OEP equation using the Sternheimer approach.
     !% The linear solver will be controlled by the variables in section <tt>Linear Response::Solver</tt>,
@@ -408,6 +412,7 @@ contains
 #include "xc_oep_sic_inc.F90"
 #include "xc_oep_inc.F90"
 #include "xc_oep_qed_inc.F90"
+#include "xc_slater_inc.F90"
 
 #include "undef.F90"
 #include "complex.F90"
@@ -416,6 +421,7 @@ contains
 #include "xc_oep_sic_inc.F90"
 #include "xc_oep_inc.F90"
 #include "xc_oep_qed_inc.F90"
+#include "xc_slater_inc.F90"
 
 #include "undef.F90"
 

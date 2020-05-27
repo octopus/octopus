@@ -43,6 +43,11 @@ subroutine X(xc_oep_calc)(oep, namespace, xcs, apply_sic_pz, gr, hm, st, ex, ec,
 
   if(oep%level == XC_OEP_NONE) return
 
+  if(oep%level == XC_OEP_SLATER_FAST) then
+    call  X(xc_slater_calc)(oep, namespace, hm%psolver, xcs, gr, st, ex, ec, vxc)
+    return
+  end if
+
   call profiling_in(C_PROFILING_XC_OEP, 'XC_OEP')
   PUSH_SUB(X(xc_oep_calc))
 
@@ -110,7 +115,9 @@ subroutine X(xc_oep_calc)(oep, namespace, xcs, apply_sic_pz, gr, hm, st, ex, ec,
 
   if (st%d%ispin==SPINORS) then
     call xc_KLI_Pauli_solve(gr%mesh, namespace, st, oep)
-    vxc(1:gr%mesh%np,:) = oep%vxc(1:gr%mesh%np,:)
+    if(present(vxc)) then
+      vxc(1:gr%mesh%np,:) = oep%vxc(1:gr%mesh%np,:)
+    end if
     ! full OEP not implemented!
   else
     spin2: do is = 1, nspin_
@@ -122,12 +129,16 @@ subroutine X(xc_oep_calc)(oep, namespace, xcs, apply_sic_pz, gr, hm, st, ex, ec,
         if(oep%level /= XC_OEP_FULL .or. first) then
           oep%vxc = M_ZERO
           call X(xc_KLI_solve) (namespace, gr%mesh, gr, hm, st, is, oep, first)
-          vxc(1:gr%mesh%np, is) = vxc(1:gr%mesh%np, is) + oep%vxc(1:gr%mesh%np, 1)
+          if(present(vxc)) then
+            vxc(1:gr%mesh%np, is) = vxc(1:gr%mesh%np, is) + oep%vxc(1:gr%mesh%np, 1)
+          end if
         end if
         ! if asked, solve the full OEP equation
         if(oep%level == XC_OEP_FULL .and. (.not. first)) then
           call X(xc_oep_solve)(namespace, gr, hm, st, is, vxc(:,is), oep)
-          vxc(1:gr%mesh%np, is) = vxc(1:gr%mesh%np, is) + oep%vxc(1:gr%mesh%np, is)
+          if(present(vxc)) then
+            vxc(1:gr%mesh%np, is) = vxc(1:gr%mesh%np, is) + oep%vxc(1:gr%mesh%np, is)
+          end if
         end if
         if (is == nspin_) first = .false.
       end if
