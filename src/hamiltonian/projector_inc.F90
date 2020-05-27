@@ -279,8 +279,9 @@ end subroutine X(project_psi_batch)
 
 !------------------------------------------------------------------------------
 !> X(projector_matrix_element) calculates <psia|projector|psib>
-R_TYPE function X(projector_matrix_element)(pj, dim, ik, psia, psib) result(apb)
+R_TYPE function X(projector_matrix_element)(pj, bnd, dim, ik, psia, psib) result(apb)
   type(projector_t), target, intent(in)    :: pj
+  type(boundaries_t),        intent(in)    :: bnd
   integer,                   intent(in)    :: dim
   integer,                   intent(in)    :: ik
   R_TYPE,                    intent(in)    :: psia(:, :)  !< psia(1:mesh%np, dim)
@@ -294,6 +295,7 @@ R_TYPE function X(projector_matrix_element)(pj, dim, ik, psia, psib) result(apb)
   PUSH_SUB(X(projector_matrix_element))
 
   call profiling_in(prof, "PROJ_MAT_ELEM")
+  ASSERT(.not. bnd%spiral)
 
   ns = pj%sphere%np
 
@@ -306,7 +308,7 @@ R_TYPE function X(projector_matrix_element)(pj, dim, ik, psia, psib) result(apb)
   do idim = 1, dim
     if(associated(pj%phase)) then
       do is = 1, ns
-        lpsi(is, idim) = psib(pj%sphere%map(is), idim)*pj%phase(is, idim, ik)
+        lpsi(is, idim) = psib(pj%sphere%map(is), idim)*pj%phase(is, 1, ik)
       end do
     else
       do is = 1, ns
@@ -321,7 +323,7 @@ R_TYPE function X(projector_matrix_element)(pj, dim, ik, psia, psib) result(apb)
   do idim = 1, dim
     if(associated(pj%phase)) then
       do is = 1, ns
-        plpsi(is, idim) = R_CONJ(psia(pj%sphere%map(is), idim))*plpsi(is, idim)*conjg(pj%phase(is, idim, ik))
+        plpsi(is, idim) = R_CONJ(psia(pj%sphere%map(is), idim))*plpsi(is, idim)*conjg(pj%phase(is, 1, ik))
       end do
     else
       do is = 1, ns
@@ -387,9 +389,10 @@ end subroutine X(project_sphere)
 
 !------------------------------------------------------------------------------
 !> This function calculates |cpsi> += [x, V_nl] |psi>
-subroutine X(projector_commute_r)(pj, mesh, dim, idir, ik, psi, cpsi)
+subroutine X(projector_commute_r)(pj, mesh, bnd, dim, idir, ik, psi, cpsi)
   type(projector_t), target, intent(in)     :: pj
   type(mesh_t),              intent(in)     :: mesh
+  type(boundaries_t),        intent(in)     :: bnd
   integer,                   intent(in)     :: dim
   integer,                   intent(in)     :: idir
   integer,                   intent(in)     :: ik
@@ -405,6 +408,8 @@ subroutine X(projector_commute_r)(pj, mesh, dim, idir, ik, psi, cpsi)
   PUSH_SUB(X(projector_commute_r))
   call profiling_in(prof, "PROJ_COMMUTE")
 
+  ASSERT(.not. bnd%spiral)
+
   if(pj%type /= PROJ_NONE) then
 
     ns = pj%sphere%np
@@ -417,7 +422,7 @@ subroutine X(projector_commute_r)(pj, mesh, dim, idir, ik, psi, cpsi)
 
     if(associated(pj%phase)) then
       do idim = 1, dim
-        lpsi(1:ns, idim) = psi(map(1:ns), idim)*pj%phase(1:ns, idim, ik)
+        lpsi(1:ns, idim) = psi(map(1:ns), idim)*pj%phase(1:ns, 1, ik)
       end do
     else
       do idim = 1, dim
@@ -441,7 +446,7 @@ subroutine X(projector_commute_r)(pj, mesh, dim, idir, ik, psi, cpsi)
     if(associated(pj%phase)) then
       do idim = 1, dim
         cpsi(map(1:ns), idim) = cpsi(map(1:ns), idim) + &
-          (xplpsi(1:ns, idim) - pxlpsi(1:ns, idim)) * R_CONJ(pj%phase(1:ns, idim, ik))
+          (xplpsi(1:ns, idim) - pxlpsi(1:ns, idim)) * R_CONJ(pj%phase(1:ns, 1, ik))
       end do
     else
       do idim = 1, dim
@@ -460,11 +465,12 @@ end subroutine X(projector_commute_r)
 
 !------------------------------------------------------------------------------
 !> This function calculates |cpsi> += [x, V_nl] |psi>
-subroutine X(projector_commute_r_allatoms_alldir)(pj, geo, mesh, dim, ik, psi, cpsi)
+subroutine X(projector_commute_r_allatoms_alldir)(pj, geo, mesh, dim, bnd, ik, psi, cpsi)
   type(projector_t), target, intent(in)     :: pj(:)
   type(geometry_t),          intent(in)     :: geo
   type(mesh_t),              intent(in)     :: mesh
   integer,                   intent(in)     :: dim
+  type(boundaries_t),        intent(in)     :: bnd
   integer,                   intent(in)     :: ik
   R_TYPE,                    intent(in)     :: psi(:, :)
   R_TYPE,                    intent(inout)  :: cpsi(:,:,:)
@@ -478,6 +484,8 @@ subroutine X(projector_commute_r_allatoms_alldir)(pj, geo, mesh, dim, ik, psi, c
 
   PUSH_SUB(X(projector_commute_r_allatoms_alldir))
   call profiling_in(prof, "PROJ_COMMUTE_ALL")
+
+  ASSERT(.not. bnd%spiral)
 
   do iatom = 1, geo%natoms
     if(species_is_ps(geo%atom(iatom)%species) .and. pj(iatom)%type /= PROJ_NONE) then
@@ -496,7 +504,7 @@ subroutine X(projector_commute_r_allatoms_alldir)(pj, geo, mesh, dim, ik, psi, c
 
       if(phase) then
         do idim = 1, dim 
-          lpsi(1:ns, idim) = psi(map(1:ns), idim)*pj(iatom)%phase(1:ns, idim, ik) 
+          lpsi(1:ns, idim) = psi(map(1:ns), idim)*pj(iatom)%phase(1:ns, 1, ik) 
         end do
       else
         do idim = 1, dim 
@@ -522,7 +530,7 @@ subroutine X(projector_commute_r_allatoms_alldir)(pj, geo, mesh, dim, ik, psi, c
         if(phase) then
           do idim = 1, dim
            cpsi(map(1:ns), idir, idim) = cpsi(map(1:ns), idir, idim) + &
-             (xplpsi(1:ns, idim) - pxlpsi(1:ns, idim)) * R_CONJ(pj(iatom)%phase(1:ns, idim, ik))
+             (xplpsi(1:ns, idim) - pxlpsi(1:ns, idim)) * R_CONJ(pj(iatom)%phase(1:ns, 1, ik))
           end do
         else
           do idim = 1, dim
@@ -577,7 +585,7 @@ subroutine X(r_project_psi)(pj, mesh, dim, ik, psi, cpsi)
 
     if(associated(pj%phase)) then
       do idim = 1, dim
-        lpsi(1:ns, idim) = psi(map(1:ns), idim)*pj%phase(1:ns, idim, ik)
+        lpsi(1:ns, idim) = psi(map(1:ns), idim)*pj%phase(1:ns, 1, ik)
       end do
     else
       do idim = 1, dim
@@ -601,7 +609,7 @@ subroutine X(r_project_psi)(pj, mesh, dim, ik, psi, cpsi)
        do idim = 1, dim
           do ip = 1, ns
              cpsi(map(ip), 1:sb_dim+1, idim) = cpsi(map(ip), 1:sb_dim+1, idim) + &
-                  xplpsi_t(ip, 1:sb_dim+1, idim) * R_CONJ(pj%phase(ip, idim, ik))
+                  xplpsi_t(ip, 1:sb_dim+1, idim) * R_CONJ(pj%phase(ip, 1, ik))
           end do
        end do
    else

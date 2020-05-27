@@ -1214,10 +1214,11 @@ end subroutine X(hamiltonian_elec_base_nlocal_finish)
 
 ! ---------------------------------------------------------------------------------------
 
-subroutine X(hamiltonian_elec_base_nlocal_force)(this, mesh, st, iqn, ndim, psi1b, psi2b, force)
+subroutine X(hamiltonian_elec_base_nlocal_force)(this, mesh, st, bnd, iqn, ndim, psi1b, psi2b, force)
   type(hamiltonian_elec_base_t), target, intent(in)    :: this
   type(mesh_t),                          intent(in)    :: mesh
   type(states_elec_t),                   intent(in)    :: st
+  type(boundaries_t),                    intent(in)    :: bnd
   integer,                               intent(in)    :: iqn
   integer,                               intent(in)    :: ndim
   type(wfs_elec_t),                      intent(in)    :: psi1b
@@ -1241,6 +1242,8 @@ subroutine X(hamiltonian_elec_base_nlocal_force)(this, mesh, st, iqn, ndim, psi1
   ASSERT(psi1b%status() == psi2b(1)%status())
   ASSERT(.not. (psi1b%status() == BATCH_DEVICE_PACKED))
   
+  ASSERT(.not.bnd%spiral)
+
   nst = psi1b%nst_linear
 #ifdef R_TCOMPLEX
   nreal = 2*nst
@@ -1290,7 +1293,7 @@ subroutine X(hamiltonian_elec_base_nlocal_force)(this, mesh, st, iqn, ndim, psi1
         do ip = 1, npoints
           do ist = 1, nst
             do idir = 0, ndim
-              psi(idir, ist, ip) = this%projector_phases(ip, imat, psi1b%linear_to_idim(ist), psi1b%ik)*psi(idir, ist, ip)
+              psi(idir, ist, ip) = this%projector_phases(ip, imat, 1, psi1b%ik)*psi(idir, ist, ip)
             end do
           end do
         end do
@@ -1420,10 +1423,11 @@ end subroutine X(hamiltonian_elec_base_nlocal_force)
 
 ! ---------------------------------------------------------------------------------------
 
-subroutine X(hamiltonian_elec_base_nlocal_position_commutator)(this, mesh, std, psib, commpsib)
+subroutine X(hamiltonian_elec_base_nlocal_position_commutator)(this, mesh, std, bnd, psib, commpsib)
   type(hamiltonian_elec_base_t), target, intent(in)    :: this
   type(mesh_t),                          intent(in)    :: mesh
   type(states_elec_dim_t),               intent(in)    :: std
+  type(boundaries_t),                    intent(in)    :: bnd
   type(wfs_elec_t),                      intent(in)    :: psib
   type(wfs_elec_t),                      intent(inout) :: commpsib(:)
 
@@ -1433,7 +1437,7 @@ subroutine X(hamiltonian_elec_base_nlocal_position_commutator)(this, mesh, std, 
   R_TYPE :: aa, bb, cc, dd
   R_TYPE, allocatable :: projections(:, :, :)
   R_TYPE, allocatable :: psi(:, :, :), lpsi(:,:)
-  CMPLX :: phase(2)
+  CMPLX :: phase
   type(projector_matrix_t), pointer :: pmat
   type(profile_t), save :: prof, reduce_prof
   integer :: wgsize, size
@@ -1447,6 +1451,7 @@ subroutine X(hamiltonian_elec_base_nlocal_position_commutator)(this, mesh, std, 
   call profiling_in(prof, "COMMUTATOR")
 
   ASSERT(psib%is_packed())
+  ASSERT(.not.bnd%spiral)
 
   nst = psib%nst_linear
 #ifdef R_TCOMPLEX
@@ -1497,7 +1502,7 @@ subroutine X(hamiltonian_elec_base_nlocal_position_commutator)(this, mesh, std, 
       do ist = 1, nst
         do ip = 1, npoints
           lpsi(ip, ist) = psib%X(ff_pack)(ist, pmat%map(ip)) &
-                            *this%projector_phases(ip, imat, psib%linear_to_idim(ist), psib%ik)
+                            *this%projector_phases(ip, imat, 1, psib%ik)
         end do
       end do
     end if
@@ -1626,9 +1631,9 @@ subroutine X(hamiltonian_elec_base_nlocal_position_commutator)(this, mesh, std, 
         do idir = 0, 3
           !$omp parallel do private(ip, ist, phase)
           do ip = 1, npoints
-            phase(1:std%dim) = conjg(this%projector_phases(ip, imat, 1:std%dim, psib%ik))
+            phase = conjg(this%projector_phases(ip, imat, 1, psib%ik))
             do ist = 1, nst
-              psi(ist, ip, idir) = phase(psib%linear_to_idim(ist))*psi(ist, ip, idir)
+              psi(ist, ip, idir) = phase*psi(ist, ip, idir)
             end do
           end do
           !$omp end parallel do

@@ -203,8 +203,8 @@ contains
 
     ns = this%sphere%np
     ndim = sb%dim
-    stdim = std%dim
-    if(bnd%spiralBC) stdim = stdim + 1
+    stdim = 1
+    if(bnd%spiralBC) stdim = 3
 
 
     if(.not. associated(this%phase) .and. ns > 0) then
