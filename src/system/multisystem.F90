@@ -63,7 +63,7 @@ module multisystem_oct_m
     procedure :: store_current_status => multisystem_store_current_status
     procedure :: update_quantity => multisystem_update_quantity
     procedure :: update_exposed_quantity => multisystem_update_exposed_quantity
-    procedure :: set_pointers_to_interaction => multisystem_set_pointers_to_interaction
+    procedure :: update_interaction_quantities => multisystem_update_interaction_quantities
     procedure :: update_interactions_start => multisystem_update_interactions_start
     procedure :: update_interactions_finish => multisystem_update_interactions_finish
     final :: multisystem_finalizer
@@ -602,18 +602,18 @@ contains
   end subroutine multisystem_update_exposed_quantity
 
   ! ---------------------------------------------------------
-  subroutine multisystem_set_pointers_to_interaction(this, inter)
-    class(multisystem_t), target, intent(inout) :: this
+  subroutine multisystem_update_interaction_quantities(this, inter)
+    class(multisystem_t),         intent(inout) :: this
     class(interaction_abst_t),    intent(inout) :: inter
 
-    PUSH_SUB(multisystem_set_pointers_to_interaction)
+    PUSH_SUB(multisystem_update_interaction_quantities)
 
     ! At the moment multitystems cannot have interations.
     ! All the interactions are directly handled by the subsystems
     ASSERT(.false.)
 
-    POP_SUB(multisystem_set_pointers_to_interaction)
-  end subroutine multisystem_set_pointers_to_interaction
+    POP_SUB(multisystem_udpate_interaction_quantities)
+  end subroutine multisystem_update_interaction_quantities
 
   ! ---------------------------------------------------------
   subroutine multisystem_update_interactions_start(this)

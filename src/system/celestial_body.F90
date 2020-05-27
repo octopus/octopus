@@ -70,7 +70,7 @@ module celestial_body_oct_m
     procedure :: store_current_status => celestial_body_store_current_status
     procedure :: update_quantity => celestial_body_update_quantity
     procedure :: update_exposed_quantity => celestial_body_update_exposed_quantity
-    procedure :: set_pointers_to_interaction => celestial_set_pointers_to_interaction
+    procedure :: update_interaction_quantities => celestial_body_update_interaction_quantities
     procedure :: update_interactions_start => celestial_body_update_interactions_start
     procedure :: update_interactions_finish => celestial_body_update_interactions_finish
     final :: celestial_body_finalize
@@ -480,23 +480,23 @@ contains
   end subroutine celestial_body_update_exposed_quantity
 
   ! ---------------------------------------------------------
-  subroutine celestial_set_pointers_to_interaction(this, inter)
-    class(celestial_body_t), target,  intent(inout) :: this
+  subroutine celestial_body_update_interaction_quantities(this, inter)
+    class(celestial_body_t),          intent(inout) :: this
     class(interaction_abst_t),        intent(inout) :: inter
 
-    PUSH_SUB(celestial_set_pointers_to_interaction)
+    PUSH_SUB(celestial_body_update_interaction_quantities)
 
     select type(inter)
-    type is(interaction_gravity_t)
-      inter%partner_mass => this%mass
-      inter%partner_pos => this%pos
+    type is (interaction_gravity_t)
+      inter%partner_mass = this%mass
+      inter%partner_pos = this%pos
     class default
       message(1) = "Unsupported interaction."
       call messages_fatal(1)
     end select
 
-    POP_SUB(celestial_set_pointers_to_interaction)
-  end subroutine celestial_set_pointers_to_interaction
+    POP_SUB(celestial_body_update_interaction_quantities)
+  end subroutine celestial_body_update_interaction_quantities
 
   ! ---------------------------------------------------------
   subroutine celestial_body_update_interactions_start(this)

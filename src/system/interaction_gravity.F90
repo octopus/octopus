@@ -43,8 +43,8 @@ module interaction_gravity_oct_m
     FLOAT, pointer :: system_mass
     FLOAT, pointer :: system_pos(:)
 
-    FLOAT, pointer :: partner_mass
-    FLOAT, pointer :: partner_pos(:)
+    FLOAT :: partner_mass
+    FLOAT, allocatable :: partner_pos(:)
 
   contains
     procedure :: update => interaction_gravity_update
@@ -85,8 +85,7 @@ contains
     this%partner_quantities(2) = MASS
     this%partner%quantities(POSITION)%required = .true.
     this%partner%quantities(MASS)%required = .true.
-
-    call partner%set_pointers_to_interaction(this)
+    SAFE_ALLOCATE(this%partner_pos(dim))
 
     POP_SUB(interaction_gravity_init)
   end function interaction_gravity_init
@@ -108,12 +107,10 @@ contains
     allowed_to_update = this%partner%update_exposed_quantities(clock, this%n_partner_quantities, this%partner_quantities)
 
     if (allowed_to_update) then
-      ! We can now compute the interaction from the updated pointers
-      ASSERT(associated(this%partner_pos))
-      ASSERT(associated(this%system_pos))
-      ASSERT(associated(this%partner_mass))
-      ASSERT(associated(this%system_mass))
+      ! Get the partner quantities
+      call this%partner%update_interaction_quantities(this)
 
+      ! We can now compute the interaction from the updated quantities
       dist3 = sum((this%partner_pos(1:this%dim) - this%system_pos(1:this%dim))**2)**(M_THREE/M_TWO)
 
       this%force(1:this%dim) = (this%partner_pos(1:this%dim) - this%system_pos(1:this%dim)) &
@@ -150,8 +147,7 @@ contains
     this%force = M_ZERO
     nullify(this%system_mass)
     nullify(this%system_pos)
-    nullify(this%partner_mass)
-    nullify(this%partner_pos)
+    SAFE_DEALLOCATE_A(this%partner_pos)
 
     call interaction_abst_end(this)
 

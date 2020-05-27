@@ -79,7 +79,7 @@ module system_abst_oct_m
     procedure(system_store_current_status),           deferred :: store_current_status
     procedure(system_update_quantity),                deferred :: update_quantity
     procedure(system_update_exposed_quantity),        deferred :: update_exposed_quantity
-    procedure(system_set_pointers_to_interaction),    deferred :: set_pointers_to_interaction
+    procedure(system_update_interaction_quantities),  deferred :: update_interaction_quantities
     procedure(system_update_interactions_start),      deferred :: update_interactions_start
     procedure(system_update_interactions_finish),     deferred :: update_interactions_finish
     procedure(system_output_start),                   deferred :: output_start
@@ -155,12 +155,12 @@ module system_abst_oct_m
     end subroutine system_update_exposed_quantity
 
     ! ---------------------------------------------------------
-    subroutine system_set_pointers_to_interaction(this, inter)
+    subroutine system_update_interaction_quantities(this, inter)
       import system_abst_t
       import interaction_abst_t
-      class(system_abst_t),   target,   intent(inout) :: this
+      class(system_abst_t),             intent(inout) :: this
       class(interaction_abst_t),        intent(inout) :: inter
-    end subroutine system_set_pointers_to_interaction
+    end subroutine system_update_interaction_quantities
 
     ! ---------------------------------------------------------
     subroutine system_update_interactions_start(this)
