@@ -1476,6 +1476,8 @@ subroutine X(hamiltonian_elec_base_nlocal_position_commutator)(this, mesh, std, 
     npoints = pmat%npoints
     nprojs = pmat%nprojs
 
+    if(npoints == 0) cycle
+
     SAFE_ALLOCATE(lpsi(1:npoints, 1:nst))
     if(.not. allocated(this%projector_phases)) then
       do ist = 1, nst
@@ -1486,13 +1488,11 @@ subroutine X(hamiltonian_elec_base_nlocal_position_commutator)(this, mesh, std, 
     else
       do ist = 1, nst
         do ip = 1, npoints
-          phase(1) = this%projector_phases(ip, imat, psib%linear_to_idim(ist), psib%ik)
-          lpsi(ip, ist) = psib%X(ff_pack)(ist, pmat%map(ip))*phase(1)
+          lpsi(ip, ist) = psib%X(ff_pack)(ist, pmat%map(ip)) &
+                            *this%projector_phases(ip, imat, psib%linear_to_idim(ist), psib%ik)
         end do
       end do
     end if
-
-    if(npoints == 0) cycle
 
     do iproj = 1, nprojs
 
