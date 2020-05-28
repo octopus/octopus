@@ -75,6 +75,7 @@ module hamiltonian_elec_base_oct_m
     hamiltonian_elec_base_clear,                    &
     hamiltonian_elec_base_build_proj,               &
     hamiltonian_elec_base_update,                   &
+    hamiltonian_elec_base_accel_copy_pot,           &
     dhamiltonian_elec_base_phase,                   &
     zhamiltonian_elec_base_phase,                   &
     dhamiltonian_elec_base_phase_spiral,            &
@@ -283,34 +284,11 @@ contains
     type(hamiltonian_elec_base_t), intent(inout) :: this
     type(mesh_t),             intent(in)    :: mesh
 
-    integer :: ispin
-    integer :: offset
+    integer :: idir, ip
 
     PUSH_SUB(hamiltonian_elec_base_update)
 
     if(allocated(this%uniform_vector_potential) .and. allocated(this%vector_potential)) then
-      call unify_vector_potentials()
-    end if
-
-    if(allocated(this%potential) .and. accel_is_enabled()) then
-
-      offset = 0
-      do ispin = 1, this%nspin
-        call accel_write_buffer(this%potential_opencl, mesh%np, this%potential(:, ispin), offset = offset)
-        offset = offset + accel_padded_size(mesh%np)
-      end do
-
-    end if
-
-    POP_SUB(hamiltonian_elec_base_update)
-
-  contains
-
-    subroutine unify_vector_potentials()
-      integer :: idir, ip
-
-      PUSH_SUB(hamiltonian_elec_base_update.unify_vector_potentials)
-      
       ! copy the uniform vector potential onto the non-uniform one
       do idir = 1, mesh%sb%dim
         !$omp parallel do schedule(static)
@@ -319,13 +297,34 @@ contains
             this%vector_potential(idir, ip) + this%uniform_vector_potential(idir)
         end do
       end do
-      
-      ! and deallocate
       SAFE_DEALLOCATE_A(this%uniform_vector_potential)
-      POP_SUB(hamiltonian_elec_base_update.unify_vector_potentials)      
-    end subroutine unify_vector_potentials
+    end if
 
+    POP_SUB(hamiltonian_elec_base_update)
   end subroutine hamiltonian_elec_base_update
+
+
+  !--------------------------------------------------------
+
+  subroutine hamiltonian_elec_base_accel_copy_pot(this, mesh)
+    type(hamiltonian_elec_base_t), intent(inout) :: this
+    type(mesh_t),             intent(in)    :: mesh
+    
+    integer :: offset, ispin
+
+    PUSH_SUB(hamiltonian_elec_base_accel_copy_pot)
+
+    if(allocated(this%potential) .and. accel_is_enabled()) then
+      offset = 0
+      do ispin = 1, this%nspin
+        call accel_write_buffer(this%potential_opencl, mesh%np, this%potential(:, ispin), offset = offset)
+        offset = offset + accel_padded_size(mesh%np)
+      end do
+    end if
+
+    POP_SUB(hamiltonian_elec_base_accel_copy_pot)
+  end subroutine hamiltonian_elec_base_accel_copy_pot
+
   
   !--------------------------------------------------------
 

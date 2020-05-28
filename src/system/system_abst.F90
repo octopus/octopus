@@ -578,7 +578,7 @@ contains
     PUSH_SUB(system_has_reached_final_propagation_time)
 
     ! Fixme: should be changed to final propagation time
-    system_has_reached_final_propagation_time = (this%clock%get_sim_time() > this%prop%max_td_steps*this%prop%dt)
+    system_has_reached_final_propagation_time = (this%clock%get_sim_time() >= this%prop%max_td_steps*this%prop%dt)
 
     POP_SUB(system_has_reached_final_propagation_time)
   end function system_has_reached_final_propagation_time

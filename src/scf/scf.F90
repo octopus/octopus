@@ -408,6 +408,23 @@ contains
     ! now the eigensolver stuff
     call eigensolver_init(scf%eigens, namespace, gr, st, geo, mc)
 
+    !The evolution operator is a very specific propagation that requires a specific 
+    !setting to work in the current framework
+    if(scf%eigens%es_type == RS_EVO) then
+      if(scf%mix_field /= OPTION__MIXFIELD__DENSITY) then
+        message(1) = "Evolution eigensolver is only compatible with MixField = density."
+        call messages_fatal(1)
+      end if
+      if(mix_coefficient(scf%smix) /= M_ONE) then
+        message(1) = "Evolution eigensolver is only compatible with Mixing = 1."
+        call messages_fatal(1)
+      end if
+      if(mix_scheme(scf%smix) /= OPTION__MIXINGSCHEME__LINEAR) then
+        message(1) = "Evolution eigensolver is only compatible with MixingScheme = linear."
+        call messages_fatal(1)
+      end if
+    end if
+
     !%Variable SCFinLCAO
     !%Type logical
     !%Default no
@@ -883,7 +900,7 @@ contains
         call mixing(scf%smix)
         call mixfield_get_vnew(scf%mixfield, hm%vhxc)
         call lda_u_mixer_get_vnew(hm%lda_u, scf%lda_u_mix, st)
-        call hamiltonian_elec_update(hm, gr%mesh, namespace)
+        call hamiltonian_elec_update_pot(hm, gr%mesh, accel_copy=.true.)
         
       case(OPTION__MIXFIELD__STATES)
 

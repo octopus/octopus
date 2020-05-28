@@ -139,6 +139,21 @@ contains
 
     call ion_dynamics_init(td%ions, sys%namespace, sys%geo)
 
+    if(ion_dynamics_ions_move(td%ions)) then
+      if(sys%gr%sb%kpoints%use_symmetries) then
+        message(1) = "KPoints symmetries cannot be used with moving ions."
+        message(2) = "Please set KPointsSymmetries = no."
+        call messages_fatal(2, namespace=sys%namespace)
+      end if
+      if(sys%st%symmetrize_density) then
+        message(1) = "Symmetrization of the density cannot be used with moving ions."
+        message(2) = "Please set SymmetrizeDensity = no."
+        call messages_fatal(2, namespace=sys%namespace)
+      end if
+    end if
+
+    td%iter = 0
+
     !%Variable TDIonicTimeScale
     !%Type float
     !%Default 1.0

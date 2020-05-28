@@ -94,6 +94,7 @@ contains
       !% Selects the method to perform subspace diagonalization. The
       !% default is <tt>standard</tt>, unless states parallelization is used,
       !% when the default is <tt>scalapack</tt>.
+      !% Note that this variable is not parsed in the case of the evolution eigensolver.
       !%Option none 0
       !% No subspace diagonalization. WARNING: this will generally give incorrect results.
       !%Option standard 1

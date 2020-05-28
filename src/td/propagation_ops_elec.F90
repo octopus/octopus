@@ -296,10 +296,10 @@ contains
           !propagate the state to dt/2 and dt, simultaneously, with H(time - dt)
           if (hamiltonian_elec_inh_term(hm)) then
             call exponential_apply_batch(te, namespace, gr%mesh, hm, st%group%psib(ib, ik), dt, psib2 = zpsib_dt, &
-              deltat2 = M_TWO*dt, inh_psib = hm%inh_st%group%psib(ib, ik))
+              deltat2 = dt2, inh_psib = hm%inh_st%group%psib(ib, ik))
           else
             call exponential_apply_batch(te, namespace, gr%mesh, hm, st%group%psib(ib, ik), dt, psib2 = zpsib_dt, &
-              deltat2 = M_TWO*dt)
+              deltat2 = dt2)
           end if
           call hamiltonian_elec_base_unset_phase_corr(hm%hm_base, gr%mesh, st%group%psib(ib, ik))
           call hamiltonian_elec_base_unset_phase_corr(hm%hm_base, gr%mesh, zpsib_dt)
