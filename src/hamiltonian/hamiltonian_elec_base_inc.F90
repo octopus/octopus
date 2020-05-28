@@ -633,8 +633,10 @@ subroutine X(hamiltonian_elec_base_nlocal_start)(this, mesh, std, bnd, psib, pro
 
   integer :: block_size
   integer :: size_unfolded
+
+  if(.not. this%has_non_local_potential) return
   
-  if(.not. this%apply_projector_matrices) return
+  ASSERT(this%apply_projector_matrices)
 
   call profiling_in(prof_vnlpsi_start, "VNLPSI_MAT_BRA")
   PUSH_SUB(X(hamiltonian_elec_base_nlocal_start))
@@ -891,7 +893,9 @@ subroutine X(hamiltonian_elec_base_nlocal_finish)(this, mesh, bnd, std, projecti
   type(profile_t), save :: reduce_prof
   CMPLX, allocatable :: tmp_proj(:, :, :)
 
-  if(.not. this%apply_projector_matrices) return
+  if(.not. this%has_non_local_potential) return
+
+  ASSERT(this%apply_projector_matrices)
 
   call profiling_in(prof_vnlpsi_finish, "VNLPSI_MAT_KET")
   PUSH_SUB(X(hamiltonian_elec_base_nlocal_finish))
@@ -1226,7 +1230,9 @@ subroutine X(hamiltonian_elec_base_nlocal_force)(this, mesh, st, iqn, ndim, psi1
   type(projector_matrix_t), pointer :: pmat
   CMPLX, allocatable :: tmp_proj(:, :, :)
 
-  if(.not. this%apply_projector_matrices) return
+  if(.not. this%has_non_local_potential) return
+
+  ASSERT(this%apply_projector_matrices)
     
   call profiling_in(prof_matelement, "VNLPSI_MAT_ELEM")
   PUSH_SUB(X(hamiltonian_elec_base_nlocal_force))
@@ -1433,7 +1439,9 @@ subroutine X(hamiltonian_elec_base_nlocal_position_commutator)(this, mesh, std, 
   integer :: wgsize, size
   CMPLX, allocatable :: tmp_proj(:, :, :)
 
-  if(.not. this%apply_projector_matrices) return
+  if(.not. this%has_non_local_potential) return
+
+  ASSERT(this%apply_projector_matrices)
 
   PUSH_SUB(X(hamiltonian_elec_base_nlocal_position_commutator))
   call profiling_in(prof, "COMMUTATOR")
