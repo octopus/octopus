@@ -1,0 +1,109 @@
+!! Copyright (C) 2020 M. Oliveira, Heiko Appel
+!!
+!! This program is free software; you can redistribute it and/or modify
+!! it under the terms of the GNU General Public License as published by
+!! the Free Software Foundation; either version 2, or (at your option)
+!! any later version.
+!!
+!! This program is distributed in the hope that it will be useful,
+!! but WITHOUT ANY WARRANTY; without even the implied warranty of
+!! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!! GNU General Public License for more details.
+!!
+!! You should have received a copy of the GNU General Public License
+!! along with this program; if not, write to the Free Software
+!! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+!! 02110-1301, USA.
+!!
+#include "global.h"
+
+module interaction_with_partner_oct_m
+  use clock_oct_m
+  use global_oct_m
+  use interaction_abst_oct_m
+  use interaction_partner_oct_m
+  use messages_oct_m
+  use profiling_oct_m
+  implicit none
+
+  private
+  public ::                      &
+    interaction_with_partner_t,  &
+    interaction_with_partner_end
+
+  !> Some interactions involve two system. In this case the interaction is a unidirectional relationship between those two systems.
+  !! One of the systems owns the interaction and feels it`s effects. The other
+  !! system is referred to as the interaction partner.
+  type, extends(interaction_abst_t), abstract :: interaction_with_partner_t
+    private
+    class(interaction_partner_t), public, pointer :: partner
+
+    integer,              public :: n_partner_quantities  !< Number of quantities needed from the partner
+    integer, allocatable, public :: partner_quantities(:) !< Identifiers of the quantities needed from the partner
+  contains
+    procedure :: update => interaction_with_partner_update
+  end type interaction_with_partner_t
+
+contains
+
+  ! ---------------------------------------------------------
+  logical function interaction_with_partner_update(this, clock) result(updated)
+    class(interaction_with_partner_t), intent(inout) :: this
+    class(clock_t),                    intent(in)    :: clock
+
+    logical :: allowed_to_update
+
+    PUSH_SUB(interaction_with_partner_update)
+
+    ! We should only try to update the interaction if it is not yet at the desired time
+    ASSERT(.not. (this%clock == clock))
+
+    allowed_to_update = this%partner%update_exposed_quantities(clock, this%n_partner_quantities, this%partner_quantities)
+
+    if (allowed_to_update) then
+      ! Get the partner quantities
+      call this%partner%update_interaction_quantities(this)
+
+      ! We can now compute the interaction from the updated quantities
+      call this%calculate()
+
+      ! Update was successful, so set new interaction time
+      updated = .true.
+      call this%clock%set_time(clock)
+
+      if (debug%info) then
+        write(message(1), '(a,a)') "Debug: -- Updated interaction with ", trim(this%partner%namespace%get())
+        write(message(2), '(a,i3,a,i3)') "Debug: ---- clocks are ", clock%get_tick(), " and ", this%partner%clock%get_tick()
+        call messages_info(2)
+      end if
+    else
+      if (debug%info) then
+        write(message(1), '(a,a)') "Debug: -- Cannot update yet the interaction with ", trim(this%partner%namespace%get())
+        write(message(2), '(a,i3,a,i3)') "Debug: ---- clocks are ", clock%get_tick(), " and ", this%partner%clock%get_tick()
+        call messages_info(2)
+      end if
+      updated = .false.
+    end if
+
+    POP_SUB(interaction_with_partner_update)
+  end function interaction_with_partner_update
+
+  ! ---------------------------------------------------------
+  subroutine interaction_with_partner_end(this)
+    class(interaction_with_partner_t), intent(inout) :: this
+
+    PUSH_SUB(interaction_with_partner_end)
+
+    SAFE_DEALLOCATE_A(this%partner_quantities)
+    call interaction_abst_end(this)
+
+    POP_SUB(interaction_with_partner_end)
+
+  end subroutine interaction_with_partner_end
+
+end module interaction_with_partner_oct_m
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:
