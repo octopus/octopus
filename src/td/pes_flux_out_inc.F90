@@ -888,10 +888,36 @@ subroutine pes_flux_out_cartesian_ascii(this, st, namespace, dim)
   
   if(mpi_grp_is_root(mpi_world)) then
     iunit = io_open('td.general/PES_flux.distribution.out', namespace, action='write', position='rewind')
-    if (mdim == 3) write(iunit, '(a19)') '# kz, ky, kx, spectrum'
-    if (mdim == 2) write(iunit, '(a19)') '# ky, kx, spectrum'
-    if (mdim == 1) write(iunit, '(a19)') '# kx, spectrum'
+    write(iunit, '(a)') '##################################################'                                        
+    if (mdim == 3) then 
+      write(iunit, '(a1,a18,2x,a18,2x,a18,2x,a18)') '#', &
+                                        str_center("kz", 18), str_center("ky", 18),&
+                                        str_center("kx", 18),  str_center("P(kz,ky,kx)", 18)
+      write(iunit, '(a1,a18,2x,a18,2x,a18)') '#', &
+                                        str_center('[hbar/'//trim(units_abbrev(units_out%length)) // ']', 18), &
+                                        str_center('[hbar/'//trim(units_abbrev(units_out%length)) // ']', 18), &
+                                        str_center('[hbar/'//trim(units_abbrev(units_out%length)) // ']', 18)    
+    end if
     
+    if (mdim == 2) then 
+      write(iunit, '(a1,a18,2x,a18,2x,a18)') '#', &
+                                      str_center("ky", 18), str_center("kx", 18),&
+                                      str_center("P(ky,kx)", 18)
+      write(iunit, '(a1,a18,2x,a18)') '#', &
+                                        str_center('[hbar/'//trim(units_abbrev(units_out%length)) // ']', 18), &
+                                        str_center('[hbar/'//trim(units_abbrev(units_out%length)) // ']', 18)    
+
+    end if  
+                                      
+  
+    if (mdim == 1) then
+      write(iunit, '(a1,a18,2x,a18)') '#', &
+                                      str_center("kx", 18),  str_center("P(kx)", 18)
+      write(iunit, '(a1,a18)') '#', &
+                                        str_center('[hbar/'//trim(units_abbrev(units_out%length)) // ']', 18)    
+                                      
+    end if
+    write(iunit, '(a)') '##################################################'
     
     
     ikpt = 1
@@ -903,7 +929,8 @@ subroutine pes_flux_out_cartesian_ascii(this, st, namespace, dim)
           ikp = ikp + 1 
           
           do idir = mdim, 1, -1
-            write(iunit, '(1x,e18.10E3)', advance='no') this%kcoords_cub(idir, ikp, ikpt)
+            write(iunit, '(1x,e18.10E3)', advance='no') & 
+              units_from_atomic(unit_one/units_out%length,this%kcoords_cub(idir, ikp, ikpt))
           end do
           write(iunit, '(1x,e18.10E3)', advance='no') spctrout_cub(ikp)
           write(iunit, '(1x)', advance='yes')
@@ -983,15 +1010,11 @@ subroutine pes_flux_out_polar_ascii(this, st, namespace, dim)
             iomk = 0
 
             do ith = 0, this%nstepsthetak
-!               thetak = ith * M_PI / this%nstepsthetak
               thetak = ith * Dthetak + this%thetak_rng(1)
 
               if(ith == 0 .or. ith == this%nstepsthetak) then
-!                 weight = (M_ONE - cos(M_PI / this%nstepsthetak / M_TWO)) * M_TWO * M_PI
                 weight = (M_ONE - cos(Dthetak / M_TWO)) * Lphik
               else
-!                 weight = abs(cos(thetak - M_PI / this%nstepsthetak / M_TWO) - cos(thetak + M_PI / this%nstepsthetak / M_TWO)) &
-!                   * M_TWO * M_PI / this%nstepsphik
                 weight = abs(cos(thetak - Dthetak / M_TWO) - cos(thetak + Dthetak / M_TWO)) * Dphik
               end if
 
@@ -1000,7 +1023,6 @@ subroutine pes_flux_out_polar_ascii(this, st, namespace, dim)
                 spctrsum(ist, isdim, ik, ikk) = spctrsum(ist, isdim, ik, ikk) + &
                   abs(this%spctramp_sph(ist, isdim, ik, ikk, iomk))**M_TWO * weight
 
-!                 if(ith == 0 .or. ith == this%nstepsthetak) exit
                 if(thetak < M_EPSILON .or. abs(thetak-M_PI) < M_EPSILON) exit
               end do
             end do
@@ -1024,7 +1046,6 @@ subroutine pes_flux_out_polar_ascii(this, st, namespace, dim)
             end do
      
           case(2)
-!             weight = M_TWO * M_PI / this%nstepsphik
             weight = Lphik / this%nstepsphik
 
             ikp = 0
@@ -1040,15 +1061,11 @@ subroutine pes_flux_out_polar_ascii(this, st, namespace, dim)
             ikp  = 0
             do ikk = 1, this%nk
               do ith = 0, this%nstepsthetak
-!                 thetak = ith * M_PI / this%nstepsthetak 
                 thetak = ith * Dthetak + this%thetak_rng(1)
      
                 if(ith == 0 .or. ith == this%nstepsthetak) then
-!                   weight = (M_ONE - cos(M_PI / this%nstepsthetak / M_TWO)) * M_TWO * M_PI
                   weight = (M_ONE - cos(Dthetak / M_TWO)) * Lphik
                 else
-!                   weight = abs(cos(thetak - M_PI / this%nstepsthetak / M_TWO) - cos(thetak + M_PI / this%nstepsthetak / M_TWO)) &
-!                     * M_TWO * M_PI / this%nstepsphik
                   weight = abs(cos(thetak - Dthetak / M_TWO) - cos(thetak + Dthetak / M_TWO)) * Dphik  
                 end if
      
@@ -1056,7 +1073,6 @@ subroutine pes_flux_out_polar_ascii(this, st, namespace, dim)
                   ikp = ikp + 1
                   spctrsum(ist, isdim, ik, ikk) = spctrsum(ist, isdim, ik, ikk) + &
                     abs(this%spctramp_cub(ist, isdim, ik, ikp))**M_TWO * weight
-!                   if(ith == 0 .or. ith == this%nstepsthetak) exit
                   if(thetak < M_EPSILON .or. abs(thetak-M_PI) < M_EPSILON) exit
                 end do
               end do
@@ -1093,38 +1109,51 @@ subroutine pes_flux_out_polar_ascii(this, st, namespace, dim)
   if(mpi_grp_is_root(mpi_world)) then
     iunittwo = io_open('td.general/PES_flux.distribution.out', namespace, action='write', position='rewind')
     iunitone = io_open('td.general/'//'PES_flux.power.sum', namespace, action='write', position='rewind')
-    write(iunitone, '(a19)') '# E, total spectrum'
+    write(iunitone, '(a)') '##################################################'                                        
+    write(iunittwo, '(a)') '##################################################'                                        
+    
+!     write(iunitone, '(a19)') '# E, total spectrum'
+    write(iunitone, '(a1,a18,2x,a18)') '#', str_center("E", 18), str_center("P(E)", 18)
+    write(iunitone, '(a1,a18)') '#', str_center('['//trim(units_abbrev(units_out%energy)) // ']', 18)    
+    write(iunitone, '(a)') '##################################################'
 
     if (this%surf_shape==M_SPHERICAL) then
-      write(iunittwo, '(a29)') '# k, theta, phi, distribution'
+!       write(iunittwo, '(a29)') '# k, theta, phi, distribution'
+      write(iunittwo, '(a1,a18,2x,a18,2x,a18,2x,a18)') '#', &
+                                        str_center("p", 18), str_center("theta", 18),&
+                                        str_center("phi", 18),  str_center("P(p,theta,phi)", 18)
+      write(iunittwo, '(a1,a18,2x,a18,2x,a18)') '#', &
+                                        str_center('[hbar/'//trim(units_abbrev(units_out%length)) // ']', 18), &
+                                        str_center('[None]', 18), &
+                                        str_center('[None]', 18)    
+     write(iunittwo, '(a)') '##################################################'                                        
+                                        
       do ikk = 1, this%nk 
         kact = this%klinear(ikk,1)
         iomk = 0
 
         do ith = 0, this%nstepsthetak
-!           thetak = ith * M_PI / this%nstepsthetak
           thetak = ith * Dthetak + this%thetak_rng(1)
 
           do iph = 0, this%nstepsphik - 1
             iomk = iomk + 1
-!             phik = iph * M_TWO * M_PI / this%nstepsphik
             phik = iph * Dphik + this%phik_rng(1)
             if(iph == 0) iomk_save = iomk
-            write(iunittwo,'(4(1x,e18.10E3))') kact, thetak, phik, spctrout_sph(ikk, iomk)
+            write(iunittwo,'(4(1x,e18.10E3))') & 
+              units_from_atomic(unit_one/units_out%length,kact), thetak, phik, spctrout_sph(ikk, iomk)
 
             ! just repeat the result for output
             if(this%nstepsphik > 1 .and. iph == (this%nstepsphik - 1)) &
-!               write(iunittwo,'(4(1x,e18.10E3))') kact, thetak, M_TWO * M_PI, spctrout_sph(ikk, iomk_save)
-              write(iunittwo,'(4(1x,e18.10E3))') kact, thetak, Lphik, spctrout_sph(ikk, iomk_save)
+              write(iunittwo,'(4(1x,e18.10E3))') &
+                units_from_atomic(unit_one/units_out%length,kact), thetak, Lphik, spctrout_sph(ikk, iomk_save)
 
             ! just repeat the result for output and exit
-!             if(ith == 0 .or. ith == this%nstepsthetak) then
             if(thetak < M_EPSILON .or. abs(thetak-M_PI) < M_EPSILON) then
               if(this%nstepsphik > 1) then
                 do iphi = 1, this%nstepsphik
-!                   phik = iphi * M_TWO * M_PI / this%nstepsphik
                   phik = iph * Dphik + this%phik_rng(1)
-                  write(iunittwo,'(4(1x,e18.10E3))') kact, thetak, phik, spctrout_sph(ikk, iomk)
+                  write(iunittwo,'(4(1x,e18.10E3))') &
+                    units_from_atomic(unit_one/units_out%length,kact), thetak, phik, spctrout_sph(ikk, iomk)
                 end do
               end if
               exit
@@ -1134,11 +1163,13 @@ subroutine pes_flux_out_polar_ascii(this, st, namespace, dim)
           if(this%nstepsphik > 1 .or. ith == this%nstepsthetak) write(iunittwo, '(1x)', advance='yes')
         end do
         write(iunitone, '(2(1x,e18.10E3))', advance='no') &
-          kact**M_TWO / M_TWO, sum(sum(sum(spctrsum(:,:,:,ikk),1),1),1) * kact
+          units_from_atomic(units_out%energy,kact**M_TWO / M_TWO), sum(sum(sum(spctrsum(:,:,:,ikk),1),1),1) &
+          * units_from_atomic(unit_one/units_out%length,kact)
         do ik = 1, st%d%nik
           do ist = 1, st%nst
             do isdim = 1, st%d%dim
-              write(iunitone, '(1x,e18.10E3)', advance='no') spctrsum(ist, isdim, ik, ikk) * kact
+              write(iunitone, '(1x,e18.10E3)', advance='no') spctrsum(ist, isdim, ik, ikk) &
+                * units_from_atomic(unit_one/units_out%length,kact)
             end do
           end do
         end do
@@ -1150,20 +1181,29 @@ subroutine pes_flux_out_polar_ascii(this, st, namespace, dim)
       
       select case(mdim)
       case(1)
-        write(iunittwo, '(a17)') '# k, distribution'
+!         write(iunittwo, '(a17)') '# k, distribution'
+        write(iunittwo, '(a1,a18,2x,a18)') '#', &
+                                          str_center("p", 18), str_center("P(p)", 18)
+        write(iunittwo, '(a1,a18)') '#', str_center('[hbar/'//trim(units_abbrev(units_out%length)) // ']', 18)
+        write(iunittwo, '(a)') '##################################################'                                        
+                                          
+
         do ikp = 1, this%nkpnts
-          write(iunittwo, '(2(1x,e18.10E3))') this%kcoords_cub(1, ikp, 1), spctrout_cub(ikp)
+          write(iunittwo, '(2(1x,e18.10E3))') &
+            units_from_atomic(unit_one/units_out%length,this%kcoords_cub(1, ikp, 1)), spctrout_cub(ikp)
         end do
 
         do ikk = 1, this%nk
           kact = this%kcoords_cub(1, this%nk + ikk, 1)
           write(iunitone, '(2(1x,e18.10E3))', advance='no') &
-            kact**M_TWO / M_TWO, sum(sum(sum(spctrsum(:,:,:,ikk),1),1),1) * kact
+            units_from_atomic(units_out%energy,kact**M_TWO / M_TWO), sum(sum(sum(spctrsum(:,:,:,ikk),1),1),1) &
+            * units_from_atomic(unit_one/units_out%length,kact)
           
           do ik = 1, st%d%nik
             do ist = 1, st%nst
               do isdim = 1, st%d%dim
-                write(iunitone, '(1x,e18.10E3)', advance='no') spctrsum(ist, isdim, ik, ikk) * kact
+                write(iunitone, '(1x,e18.10E3)', advance='no') spctrsum(ist, isdim, ik, ikk) &
+                  * units_from_atomic(unit_one/units_out%length,kact)
               end do
             end do
           end do
@@ -1171,7 +1211,13 @@ subroutine pes_flux_out_polar_ascii(this, st, namespace, dim)
         end do
 
       case(2)
-        write(iunittwo, '(a22)') '# k, phi, distribution'
+!         write(iunittwo, '(a22)') '# k, phi, distribution'
+        write(iunittwo, '(a1,a18,2x,a18,2x,a18)') '#', &
+                                          str_center("p", 18), str_center("theta", 18), str_center("P(p,theta)", 18)
+        write(iunittwo, '(a1,a18,2x,a18)') '#', &
+                                          str_center('[hbar/'//trim(units_abbrev(units_out%length)) // ']', 18), &
+                                          str_center('[None]', 18)                                            
+        write(iunittwo, '(a)') '##################################################'                                        
         ikp = 0
         do ikk = 1, this%nk
           kact = this%klinear(ikk,1)
@@ -1180,19 +1226,22 @@ subroutine pes_flux_out_polar_ascii(this, st, namespace, dim)
             ikp = ikp + 1
             if(iph == 0) ikp_save = ikp
             phik = iph * M_TWO * M_PI / this%nstepsphik
-            write(iunittwo,'(3(1x,e18.10E3))') kact, phik, spctrout_cub(ikp)
+            write(iunittwo,'(3(1x,e18.10E3))') units_from_atomic(unit_one/units_out%length,kact), phik, spctrout_cub(ikp)
           end do
           ! just repeat the result for output
-          write(iunittwo,'(3(1x,e18.10E3))') kact, M_TWO * M_PI, spctrout_cub(ikp_save)
+          write(iunittwo,'(3(1x,e18.10E3))') &
+            units_from_atomic(unit_one/units_out%length,kact), M_TWO * M_PI, spctrout_cub(ikp_save)
           write(iunittwo, '(1x)', advance='yes')
 
           write(iunitone, '(2(1x,e18.10E3))', advance='no') &
-            kact**M_TWO / M_TWO, sum(sum(sum(spctrsum(:,:,:,ikk),1),1),1) * kact
+            units_from_atomic(units_out%energy,kact**M_TWO / M_TWO), sum(sum(sum(spctrsum(:,:,:,ikk),1),1),1) &
+            * units_from_atomic(unit_one/units_out%length,kact)
           
           do ik = 1, st%d%nik
             do ist = 1, st%nst
               do isdim = 1, st%d%dim
-                write(iunitone, '(1x,e18.10E3)', advance='no') spctrsum(ist, isdim, ik, ikk) * kact
+                write(iunitone, '(1x,e18.10E3)', advance='no') spctrsum(ist, isdim, ik, ikk) &
+                  * units_from_atomic(unit_one/units_out%length,kact)
               end do
             end do
           end do
@@ -1200,34 +1249,41 @@ subroutine pes_flux_out_polar_ascii(this, st, namespace, dim)
         end do
 
       case(3)
-        write(iunittwo, '(a29)') '# k, theta, phi, distribution'
+!         write(iunittwo, '(a29)') '# k, theta, phi, distribution'
+        write(iunittwo, '(a1,a18,2x,a18,2x,a18,2x,a18)') '#', &
+                                          str_center("p", 18), str_center("theta", 18),&
+                                          str_center("phi", 18),  str_center("P(p,theta,phi)", 18)
+        write(iunittwo, '(a1,a18,2x,a18,2x,a18)') '#', &
+                                          str_center('[hbar/'//trim(units_abbrev(units_out%length)) // ']', 18), &
+                                          str_center('[None]', 18), &
+                                          str_center('[None]', 18)                                            
+        write(iunittwo, '(a)') '##################################################'                                        
+        
         ikp    = 0
         do ikk = 1, this%nk
           kact = this%klinear(ikk,1)
 
           do ith = 0, this%nstepsthetak
-!             thetak = ith * M_PI / this%nstepsthetak
             thetak = ith * Dthetak + this%thetak_rng(1) 
 
             do iph = 0, this%nstepsphik - 1
               ikp = ikp + 1
 
-!               phik = iph * M_TWO * M_PI / this%nstepsphik
               phik = iph * Dphik + this%phik_rng(1)
               if(iph == 0) ikp_save = ikp
-              write(iunittwo,'(4(1x,e18.10E3))') kact, thetak, phik, spctrout_cub(ikp)
+              write(iunittwo,'(4(1x,e18.10E3))') units_from_atomic(unit_one/units_out%length,kact), thetak, phik, spctrout_cub(ikp)
 
               ! just repeat the result for output
               if(iph == (this%nstepsphik - 1)) &
-!                 write(iunittwo,'(4(1x,e18.10E3))') kact, thetak, M_TWO * M_PI, spctrout_cub(ikp_save)
-                write(iunittwo,'(4(1x,e18.10E3))') kact, thetak, Lphik, spctrout_cub(ikp_save)
+                write(iunittwo,'(4(1x,e18.10E3))') &
+                  units_from_atomic(unit_one/units_out%length,kact), thetak, Lphik, spctrout_cub(ikp_save)
 
               ! just repeat the result for output and exit
-!               if(ith == 0 .or. ith == this%nstepsthetak) then
               if(thetak < M_EPSILON .or. abs(thetak-M_PI) < M_EPSILON) then  
                 do iphi = 1, this%nstepsphik
                   phik = iphi * M_TWO * M_PI / this%nstepsphik
-                  write(iunittwo,'(4(1x,e18.10E3))') kact, thetak, phik, spctrout_cub(ikp)
+                  write(iunittwo,'(4(1x,e18.10E3))') &
+                    units_from_atomic(unit_one/units_out%length, kact), thetak, phik, spctrout_cub(ikp)
                 end do
                 exit
               end if
@@ -1236,11 +1292,13 @@ subroutine pes_flux_out_polar_ascii(this, st, namespace, dim)
             write(iunittwo, '(1x)', advance='yes')
           end do
           write(iunitone, '(2(1x,e18.10E3))', advance='no') &
-            kact**M_TWO / M_TWO, sum(sum(sum(spctrsum(:,:,:,ikk),1),1),1) * kact
+            units_from_atomic(units_out%energy, kact**M_TWO / M_TWO), sum(sum(sum(spctrsum(:,:,:,ikk),1),1),1) &
+            * units_from_atomic(unit_one/units_out%length,kact)
           do ik = 1, st%d%nik
             do ist = 1, st%nst
               do isdim = 1, st%d%dim
-                write(iunitone, '(1x,e18.10E3)', advance='no') spctrsum(ist, isdim, ik, ikk) * kact
+                write(iunitone, '(1x,e18.10E3)', advance='no') spctrsum(ist, isdim, ik, ikk) &
+                * units_from_atomic(unit_one/units_out%length,kact)
               end do
             end do
           end do
