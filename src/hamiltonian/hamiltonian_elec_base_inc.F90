@@ -634,7 +634,7 @@ subroutine X(hamiltonian_elec_base_nlocal_start)(this, mesh, std, bnd, psib, pro
   integer :: block_size
   integer :: size_unfolded
 
-  if(this%local_potential) return
+  if(.not. this%has_non_local_potential) return
   
   ASSERT(this%apply_projector_matrices)
 
@@ -893,7 +893,7 @@ subroutine X(hamiltonian_elec_base_nlocal_finish)(this, mesh, bnd, std, projecti
   type(profile_t), save :: reduce_prof
   CMPLX, allocatable :: tmp_proj(:, :, :)
 
-  if(this%local_potential) return
+  if(.not. this%has_non_local_potential) return
 
   ASSERT(this%apply_projector_matrices)
 
@@ -1230,7 +1230,7 @@ subroutine X(hamiltonian_elec_base_nlocal_force)(this, mesh, st, iqn, ndim, psi1
   type(projector_matrix_t), pointer :: pmat
   CMPLX, allocatable :: tmp_proj(:, :, :)
 
-  if(this%local_potential) return
+  if(.not. this%has_non_local_potential) return
 
   ASSERT(this%apply_projector_matrices)
     
@@ -1439,7 +1439,7 @@ subroutine X(hamiltonian_elec_base_nlocal_position_commutator)(this, mesh, std, 
   integer :: wgsize, size
   CMPLX, allocatable :: tmp_proj(:, :, :)
 
-  if(this%local_potential) return
+  if(.not. this%has_non_local_potential) return
 
   ASSERT(this%apply_projector_matrices)
 
