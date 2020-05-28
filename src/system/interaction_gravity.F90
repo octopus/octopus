@@ -21,7 +21,8 @@
 module interaction_gravity_oct_m
   use clock_oct_m
   use global_oct_m
-  use interaction_abst_oct_m
+  use interaction_with_partner_oct_m
+  use interaction_partner_oct_m
   use messages_oct_m
   use profiling_oct_m
   use quantity_oct_m
@@ -33,12 +34,10 @@ module interaction_gravity_oct_m
   public ::                &
     interaction_gravity_t
 
-  type, extends(interaction_abst_t) :: interaction_gravity_t
+  type, extends(interaction_with_partner_t) :: interaction_gravity_t
     integer :: dim
 
     FLOAT :: force(MAX_DIM)
-
-    class(system_abst_t), pointer :: partner
 
     FLOAT, pointer :: system_mass
     FLOAT, pointer :: system_pos(:)
@@ -47,7 +46,7 @@ module interaction_gravity_oct_m
     FLOAT, allocatable :: partner_pos(:)
 
   contains
-    procedure :: update => interaction_gravity_update
+    procedure :: calculate => interaction_gravity_calculate
     procedure :: end => interaction_gravity_end
     final :: interaction_gravity_finalize
   end type interaction_gravity_t
@@ -61,9 +60,9 @@ contains
   ! ---------------------------------------------------------
 
   function interaction_gravity_init(dim, partner) result(this)
-    integer,                      intent(in)    :: dim
-    class(system_abst_t), target, intent(inout) :: partner
-    class(interaction_gravity_t), pointer       :: this
+    integer,                              intent(in)    :: dim
+    class(interaction_partner_t), target, intent(inout) :: partner
+    class(interaction_gravity_t),         pointer       :: this
 
     PUSH_SUB(interaction_gravity_init)
 
@@ -91,51 +90,21 @@ contains
   end function interaction_gravity_init
 
   ! ---------------------------------------------------------
-  logical function interaction_gravity_update(this, clock) result(updated)
+  subroutine interaction_gravity_calculate(this)
     class(interaction_gravity_t), intent(inout) :: this
-    class(clock_t),               intent(in)    :: clock
 
-    logical :: allowed_to_update
     FLOAT, parameter :: GG = CNST(6.67430e-11)
     FLOAT :: dist3
 
-    PUSH_SUB(interaction_gravity_update)
+    PUSH_SUB(interaction_gravity_calculate)
 
-    ! We should only try to update the interaction if it is not yet at the desired time
-    ASSERT(.not. (this%clock == clock))
+    dist3 = sum((this%partner_pos(1:this%dim) - this%system_pos(1:this%dim))**2)**(M_THREE/M_TWO)
 
-    allowed_to_update = this%partner%update_exposed_quantities(clock, this%n_partner_quantities, this%partner_quantities)
+    this%force(1:this%dim) = (this%partner_pos(1:this%dim) - this%system_pos(1:this%dim)) &
+      / dist3 * (GG * this%system_mass * this%partner_mass)
 
-    if (allowed_to_update) then
-      ! Get the partner quantities
-      call this%partner%update_interaction_quantities(this)
-
-      ! We can now compute the interaction from the updated quantities
-      dist3 = sum((this%partner_pos(1:this%dim) - this%system_pos(1:this%dim))**2)**(M_THREE/M_TWO)
-
-      this%force(1:this%dim) = (this%partner_pos(1:this%dim) - this%system_pos(1:this%dim)) &
-        / dist3 * (GG * this%system_mass * this%partner_mass)
-
-      ! Update was successful, so set new interaction time
-      updated = .true.
-      call this%clock%set_time(clock)
-
-      if (debug%info) then
-        write(message(1), '(a,a)') "Debug: -- Updated interaction with ", trim(this%partner%namespace%get())
-        write(message(2), '(a,i3,a,i3)') "Debug: ---- clocks are ", clock%get_tick(), " and ", this%partner%clock%get_tick()
-        call messages_info(2)
-      end if
-    else
-      if (debug%info) then
-        write(message(1), '(a,a)') "Debug: -- Cannot update yet the interaction with ", trim(this%partner%namespace%get())
-        write(message(2), '(a,i3,a,i3)') "Debug: ---- clocks are ", clock%get_tick(), " and ", this%partner%clock%get_tick()
-        call messages_info(2)
-      end if
-      updated = .false.
-    end if
-
-    POP_SUB(interaction_gravity_update)
-  end function interaction_gravity_update
+    POP_SUB(interaction_gravity_calculate)
+  end subroutine interaction_gravity_calculate
 
   ! ---------------------------------------------------------
   subroutine interaction_gravity_end(this)
@@ -149,7 +118,7 @@ contains
     nullify(this%system_pos)
     SAFE_DEALLOCATE_A(this%partner_pos)
 
-    call interaction_abst_end(this)
+    call interaction_with_partner_end(this)
 
     POP_SUB(interaction_gravity_end)
   end subroutine interaction_gravity_end

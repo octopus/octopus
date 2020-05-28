@@ -23,6 +23,7 @@ module system_abst_oct_m
   use clock_oct_m
   use global_oct_m
   use interaction_abst_oct_m
+  use interaction_partner_oct_m
   use messages_oct_m
   use namespace_oct_m
   use linked_list_oct_m
@@ -42,22 +43,15 @@ module system_abst_oct_m
     system_abst_t,        &
     system_iterator_t
 
-  type, abstract :: system_abst_t
+  type, extends(interaction_partner_t), abstract :: system_abst_t
     private
-    type(namespace_t),   public :: namespace
     type(space_t), public :: space
 
     class(propagator_abst_t), pointer, public :: prop
-    type(clock_t), public :: clock
 
     integer :: accumulated_loop_ticks
 
-    type(linked_list_t), public :: interactions !< List we all the interactions of this system with other systems
-
-
-    type(quantity_t), public :: quantities(MAX_QUANTITIES) !< Array of all possible quantities.
-                                                           !< The elements of the array are accessed using the
-                                                           !< quantity`s identifiers.
+    type(linked_list_t), public :: interactions !< List we all the interactions of this system
   contains
     procedure :: dt_operation =>  system_dt_operation
     procedure :: init_clocks => system_init_clocks
@@ -78,8 +72,6 @@ module system_abst_oct_m
     procedure(system_is_tolerance_reached),           deferred :: is_tolerance_reached
     procedure(system_store_current_status),           deferred :: store_current_status
     procedure(system_update_quantity),                deferred :: update_quantity
-    procedure(system_update_exposed_quantity),        deferred :: update_exposed_quantity
-    procedure(system_update_interaction_quantities),  deferred :: update_interaction_quantities
     procedure(system_update_interactions_start),      deferred :: update_interactions_start
     procedure(system_update_interactions_finish),     deferred :: update_interactions_finish
     procedure(system_output_start),                   deferred :: output_start
@@ -144,23 +136,6 @@ module system_abst_oct_m
       integer,                   intent(in)    :: iq
       class(clock_t),            intent(in)    :: clock
     end subroutine system_update_quantity
-
-    ! ---------------------------------------------------------
-    subroutine system_update_exposed_quantity(this, iq, clock)
-      import system_abst_t
-      import clock_t
-      class(system_abst_t),      intent(inout) :: this
-      integer,                   intent(in)    :: iq
-      class(clock_t),            intent(in)    :: clock
-    end subroutine system_update_exposed_quantity
-
-    ! ---------------------------------------------------------
-    subroutine system_update_interaction_quantities(this, inter)
-      import system_abst_t
-      import interaction_abst_t
-      class(system_abst_t),             intent(inout) :: this
-      class(interaction_abst_t),        intent(inout) :: inter
-    end subroutine system_update_interaction_quantities
 
     ! ---------------------------------------------------------
     subroutine system_update_interactions_start(this)
