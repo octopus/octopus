@@ -56,6 +56,7 @@ PES_Flux_Shape = cub
 %PES_Flux_Lsize
   20 | 0 | 0
 %
+PES_Flux_RuntimeOutput = yes
 
 ##########################
 #LASER

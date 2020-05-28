@@ -39,6 +39,7 @@ PES_Flux_Kmin = -2.0
 PES_Flux_Kmax = 2.0
 PES_Flux_DeltaK = 0.1
 
+PES_Flux_RuntimeOutput = yes
 
 ##########################
 #LASER

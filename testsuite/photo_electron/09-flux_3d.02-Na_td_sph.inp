@@ -40,6 +40,8 @@ PES_Flux_StepsPhiK = 30
 PES_Flux_Radius = 15
 PES_Flux_Lmax = 4
 
+PES_Flux_RuntimeOutput = yes
+
 ##########################
 #LASER
 ##########################

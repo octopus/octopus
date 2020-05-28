@@ -142,6 +142,7 @@ module pes_flux_oct_m
     logical          :: arpes_grid
     logical          :: surf_interp                    !< interpolate points on the surface
     logical          :: use_symmetry              
+    logical          :: runtime_output              
 
     integer          :: par_strategy                   !< parallelization strategy 
     integer          :: dim                            !< simulation box dimensions
@@ -558,7 +559,19 @@ contains
     else 
       
       call pes_flux_integrate_cub_tabulate(this, mesh, st)
+
     end if
+
+
+    !%Variable PES_Flux_RuntimeOutput
+    !%Type logical
+    !%Section Time-Dependent::PhotoElectronSpectrum
+    !%Description
+    !% Write output in ascii format at runtime. 
+    !%  
+    !%End
+    call parse_variable(namespace, 'PES_Flux_RuntimeOutput', .false., this%runtime_output)
+    call messages_print_var_value(stdout, 'PES_Flux_RuntimeOutput', this%runtime_output)
 
 
 
@@ -1021,20 +1034,22 @@ contains
       
       dk(1:mdim) = M_ONE/sb%kpoints%nik_axis(1:mdim)
 
-      
-      !%Variable PES_Flux_ARPES_grid
-      !%Type logical
-      !%Section Time-Dependent::PhotoElectronSpectrum
-      !%Description
-      !% Use a curvilinear momentum space grid that compensates the transformation 
-      !% used to obtain ARPES. With this choice ARPES data is laid out on a Cartesian
-      !% regular grid.
-      !% By default true when <tt>PES_Flux_Shape = pln</tt>.
-      !%End
-      this%arpes_grid = kpoints_have_zero_weight_path(sb%kpoints)
-      call parse_variable(namespace, 'PES_Flux_ARPES_grid', this%arpes_grid, this%arpes_grid)
-      call messages_print_var_value(stdout, "PES_Flux_ARPES_grid", this%arpes_grid)       
-      
+      this%arpes_grid = .false.
+      if(simul_box_is_periodic(sb)) then
+        !%Variable PES_Flux_ARPES_grid
+        !%Type logical
+        !%Section Time-Dependent::PhotoElectronSpectrum
+        !%Description
+        !% Use a curvilinear momentum space grid that compensates the transformation 
+        !% used to obtain ARPES. With this choice ARPES data is laid out on a Cartesian
+        !% regular grid.
+        !% By default true when <tt>PES_Flux_Shape = pln</tt> and a <tt>KPointsPath</tt>
+        !% is specified.
+        !%End
+        this%arpes_grid = kpoints_have_zero_weight_path(sb%kpoints)
+        call parse_variable(namespace, 'PES_Flux_ARPES_grid', this%arpes_grid, this%arpes_grid)
+        call messages_print_var_value(stdout, "PES_Flux_ARPES_grid", this%arpes_grid)       
+      end if      
                 
       
 
