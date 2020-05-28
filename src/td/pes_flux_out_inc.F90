@@ -818,22 +818,21 @@ end subroutine pes_flux_out_energy_pln
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !! OUTPUT ON THE RUN
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine pes_flux_output(this, mesh, sb, st, namespace, dt)
+subroutine pes_flux_output(this, mesh, sb, st, namespace)
   type(pes_flux_t), intent(inout)    :: this
   type(mesh_t),        intent(in)    :: mesh
   type(simul_box_t),   intent(in)    :: sb
   type(states_elec_t), intent(in)    :: st
   type(namespace_t),   intent(in)    :: namespace
-  FLOAT,               intent(in)    :: dt
 
   PUSH_SUB(pes_flux_output)
   select case (this%kgrid)
   
   case (M_POLAR)
-    call  pes_flux_out_polar_ascii(this, st, namespace, dt, sb%dim)
+    call  pes_flux_out_polar_ascii(this, st, namespace, sb%dim)
   
   case (M_CARTESIAN)
-    call pes_flux_out_cartesian_ascii(this, st, namespace, dt, sb%dim)
+    call pes_flux_out_cartesian_ascii(this, st, namespace, sb%dim)
     
   case default
     !empty      
@@ -844,11 +843,10 @@ subroutine pes_flux_output(this, mesh, sb, st, namespace, dt)
 end subroutine pes_flux_output
 
 
-subroutine pes_flux_out_cartesian_ascii(this, st, namespace, dt, dim)
+subroutine pes_flux_out_cartesian_ascii(this, st, namespace, dim)
   type(pes_flux_t), intent(inout)    :: this
   type(states_elec_t), intent(in)    :: st
   type(namespace_t),   intent(in)    :: namespace
-  FLOAT,               intent(in)    :: dt
   integer,             intent(in)    :: dim
   
   
@@ -875,7 +873,7 @@ subroutine pes_flux_out_cartesian_ascii(this, st, namespace, dt, dim)
       do isdim = 1, sdim
 
       spctrout_cub(1:this%nkpnts) = spctrout_cub(1:this%nkpnts) + &
-        abs(this%spctramp_cub(ist, isdim, ik, 1:this%nkpnts))**M_TWO * dt**M_TWO
+        abs(this%spctramp_cub(ist, isdim, ik, 1:this%nkpnts))**M_TWO
         
       end do 
     end do
@@ -926,11 +924,10 @@ end subroutine pes_flux_out_cartesian_ascii
 
 
 ! ---------------------------------------------------------
-subroutine pes_flux_out_polar_ascii(this, st, namespace, dt, dim)
+subroutine pes_flux_out_polar_ascii(this, st, namespace, dim)
   type(pes_flux_t), intent(inout)    :: this
   type(states_elec_t), intent(in)    :: st
   type(namespace_t),   intent(in)    :: namespace
-  FLOAT,               intent(in)    :: dt
   integer,             intent(in)    :: dim
 
   integer            :: stst, stend, kptst, kptend, sdim, mdim
@@ -944,7 +941,6 @@ subroutine pes_flux_out_polar_ascii(this, st, namespace, dt, dim)
   FLOAT, allocatable :: spctrsum(:,:,:,:)
   FLOAT              :: weight
   
-  ! M_PLANE debug
   integer            :: itot
   character(len=80)  :: filename
 
@@ -1002,7 +998,7 @@ subroutine pes_flux_out_polar_ascii(this, st, namespace, dt, dim)
               do iph = 0, this%nstepsphik - 1
                 iomk = iomk + 1
                 spctrsum(ist, isdim, ik, ikk) = spctrsum(ist, isdim, ik, ikk) + &
-                  abs(this%spctramp_sph(ist, isdim, ik, ikk, iomk))**M_TWO * dt**M_TWO * weight
+                  abs(this%spctramp_sph(ist, isdim, ik, ikk, iomk))**M_TWO * weight
 
 !                 if(ith == 0 .or. ith == this%nstepsthetak) exit
                 if(thetak < M_EPSILON .or. abs(thetak-M_PI) < M_EPSILON) exit
@@ -1011,7 +1007,7 @@ subroutine pes_flux_out_polar_ascii(this, st, namespace, dt, dim)
           end do
           ! distribution
           spctrout_sph(1:this%nk, 1:this%nstepsomegak) = spctrout_sph(1:this%nk, 1:this%nstepsomegak) + &
-            abs(this%spctramp_sph(ist, isdim, ik, 1:this%nk, 1:this%nstepsomegak))**M_TWO * dt**M_TWO
+            abs(this%spctramp_sph(ist, isdim, ik, 1:this%nk, 1:this%nstepsomegak))**M_TWO
 
         case default !planes or cub
 
@@ -1024,7 +1020,7 @@ subroutine pes_flux_out_polar_ascii(this, st, namespace, dt, dim)
               ikk = ikk + 1
               spctrsum(ist, isdim, ik, ikk) = spctrsum(ist, isdim, ik, ikk) + &
                 (abs(this%spctramp_cub(ist, isdim, ik, ikp))**M_TWO + &
-                 abs(this%spctramp_cub(ist, isdim, ik, this%nkpnts + 1 - ikp))**M_TWO) * dt**M_TWO * weight
+                 abs(this%spctramp_cub(ist, isdim, ik, this%nkpnts + 1 - ikp))**M_TWO) * weight
             end do
      
           case(2)
@@ -1036,7 +1032,7 @@ subroutine pes_flux_out_polar_ascii(this, st, namespace, dt, dim)
               do iph = 0, this%nstepsphik - 1
                 ikp = ikp + 1
                 spctrsum(ist, isdim, ik, ikk) = spctrsum(ist, isdim, ik, ikk) + & 
-                  abs(this%spctramp_cub(ist, isdim, ik, ikp))**M_TWO * dt**M_TWO * weight
+                  abs(this%spctramp_cub(ist, isdim, ik, ikp))**M_TWO * weight
               end do
             end do
      
@@ -1059,7 +1055,7 @@ subroutine pes_flux_out_polar_ascii(this, st, namespace, dt, dim)
                 do iph = 0, this%nstepsphik - 1
                   ikp = ikp + 1
                   spctrsum(ist, isdim, ik, ikk) = spctrsum(ist, isdim, ik, ikk) + &
-                    abs(this%spctramp_cub(ist, isdim, ik, ikp))**M_TWO * dt**M_TWO * weight
+                    abs(this%spctramp_cub(ist, isdim, ik, ikp))**M_TWO * weight
 !                   if(ith == 0 .or. ith == this%nstepsthetak) exit
                   if(thetak < M_EPSILON .or. abs(thetak-M_PI) < M_EPSILON) exit
                 end do
@@ -1069,7 +1065,7 @@ subroutine pes_flux_out_polar_ascii(this, st, namespace, dt, dim)
           
           ! distribution
           spctrout_cub(1:this%nkpnts) = spctrout_cub(1:this%nkpnts) + &
-            abs(this%spctramp_cub(ist, isdim, ik, 1:this%nkpnts))**M_TWO * dt**M_TWO
+            abs(this%spctramp_cub(ist, isdim, ik, 1:this%nkpnts))**M_TWO
 
         end select
       end do

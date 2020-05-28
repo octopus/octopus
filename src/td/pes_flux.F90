@@ -2084,7 +2084,7 @@ contains
 
 
 
-    this%spctramp_cub = this%spctramp_cub + spctramp_cub
+    this%spctramp_cub = this%spctramp_cub + spctramp_cub*dt
 
     SAFE_DEALLOCATE_A(gwfpw)
     SAFE_DEALLOCATE_A(wfpw)
@@ -2309,7 +2309,7 @@ contains
       call comm_allreduce(mesh%mpi_grp%comm, spctramp_sph)
     end if
 
-    this%spctramp_sph(:,:,:,1:this%nk,:) = this%spctramp_sph(:,:,:,1:this%nk,:) + spctramp_sph(:,:,:,1:this%nk,:)
+    this%spctramp_sph(:,:,:,1:this%nk,:) = this%spctramp_sph(:,:,:,1:this%nk,:) + spctramp_sph(:,:,:,1:this%nk,:)*dt
     SAFE_DEALLOCATE_A(spctramp_sph)
 
     POP_SUB(pes_flux_integrate_sph)
