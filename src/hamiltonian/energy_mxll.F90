@@ -42,6 +42,7 @@ module energy_mxll_oct_m
     FLOAT                          :: b_energy_plane_waves
 
     FLOAT, pointer                 :: energy_density(:)
+    ! TODO: check allocation and setting to zero of energy_density_plane_waves
     FLOAT, pointer                 :: energy_density_plane_waves(:)
     FLOAT, pointer                 :: e_energy_density(:)
     FLOAT, pointer                 :: b_energy_density(:)
@@ -79,6 +80,8 @@ contains
 
     POP_SUB(energy_nullify)
   end subroutine energy_mxll_nullify
+
+  !TODO: add _allocate and _end subroutines 
 
 end module energy_mxll_oct_m
 

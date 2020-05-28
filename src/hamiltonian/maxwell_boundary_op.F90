@@ -191,7 +191,7 @@ contains
     !%Type block
     !%Section Time-Dependent::Propagation
     !%Description
-    !% Follows
+    !% Type of absorbing boundaries used for Maxwell propagation.
     !%
     !% Example:
     !%
@@ -504,36 +504,36 @@ contains
     !%Default 1.0.
     !%Section Time-Dependent::Absorbing Boundaries
     !%Description
-    !% Maxwell epsilon factor
+    !% Medium electric susceptibility.
     !%End
     call parse_variable(namespace, 'MediumEpsilonFactor', M_ONE, bc%mxmedium%ep_factor, unit_one)
 
     !%Variable MediumMuFactor
     !%Type float
-    !%Default 0.
+    !%Default 1.0
     !%Section Time-Dependent::Absorbing Boundaries
     !%Description
-    !% Maxwell mu factor
+    !% Medium magnetic susceptibility.
     !%End
-    call parse_variable(namespace, 'MediumMuFactor', M_ZERO, bc%mxmedium%mu_factor, unit_one)
+    call parse_variable(namespace, 'MediumMuFactor', M_ONE, bc%mxmedium%mu_factor, unit_one)
 
     !%Variable MediumElectricSigma
     !%Type float
     !%Default 0.
     !%Section Time-Dependent::Absorbing Boundaries
     !%Description
-    !% Maxwell electric sigma
+    !% Electric conductivity of the linear medium.
     !%End
 
     call parse_variable(namespace, 'MediumElectricSigma', M_ZERO, bc%mxmedium%sigma_e_factor, unit_one)
     !%Variable MediumMagneticSigma
     !%Type float
-    !%Default 1.
+    !%Default 0.
     !%Section Time-Dependent::Absorbing Boundaries
     !%Description
-    !% Maxwell magnetic sigma
+    !% Magnetic conductivity of the linear medium.
     !%End
-    call parse_variable(namespace, 'MediumMagneticSigma', M_ONE, bc%mxmedium%sigma_m_factor, unit_one)
+    call parse_variable(namespace, 'MediumMagneticSigma', M_ZERO, bc%mxmedium%sigma_m_factor, unit_one)
 
     POP_SUB(bc_mxll_medium_init)
 
@@ -554,10 +554,10 @@ contains
 
     !%Variable MaxwellABWidth
     !%Type float
-    !%Default 0.4 a.u.
     !%Section Time-Dependent::Absorbing Boundaries
     !%Description
-    !% Width of the region used to apply the absorbing boundaries.
+    !% Width of the region used to apply the absorbing boundaries. The default value is twice the derivative
+    !% order.
     !%End
 
     width = 2*gr%der%order
@@ -1308,7 +1308,7 @@ contains
         do ip_bd = 1, bc%mxmedium%bdry_number(idim)
           ipp = bc%mxmedium%bdry_map(ip_bd, idim)
           xxp(:) = gr%mesh%x(ipp, :)
-          dd = sqrt((xx(1) - xxp(1))**2 + (xx(2) - xxp(2))**2 + (xx(3) - xxp(3))**2)
+          dd = sqrt(sum((xx(1:3) - xxp(1:3))**2))
           if (dd < dd_min) dd_min = dd
         end do
         bc%mxmedium%ep(ip_in, idim) = P_ep * (M_ONE+bc%mxmedium%ep_factor &

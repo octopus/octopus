@@ -403,7 +403,7 @@ contains
     integer,      intent(out)   :: imin_global
 
     integer              :: ip, ip_global, idim, ipart
-    FLOAT                :: dd, xx(MAX_DIM)
+    FLOAT                :: dd, xx(3)
 
     dmin_global = M_HUGE
     if (mesh%parallel_in_domains) then

@@ -117,6 +117,7 @@ module hamiltonian_mxll_oct_m
     logical                        :: spatial_constant
     logical                        :: spatial_constant_apply
 
+    ! TODO: add medium object file
     integer                        :: medium_calculation
 
     logical                        :: medium_box = .false.
@@ -230,7 +231,7 @@ contains
     hm%ma_mx_coupling_apply = .false.
     hm%ma_mx_coupling  = .false.
 
-    !%Variable HamiltonianOperator
+    !%Variable MaxwellHamiltonianOperator
     !%Type integer
     !%Default faraday_ampere
     !%Section Hamiltonian
@@ -247,7 +248,7 @@ contains
     !%Option faraday_ampere_gauss_medium 4
     !% The propagation operation is done by 4x4 matrices also with Gauss laws constraint in medium
     !%End
-    call parse_variable(namespace, 'HamiltonianOperator', FARADAY_AMPERE, hm%operator)
+    call parse_variable(namespace, 'MaxwellHamiltonianOperator', FARADAY_AMPERE, hm%operator)
 
     if (hm%operator == FARADAY_AMPERE_GAUSS) then
       hm%dim = hm%dim+1
@@ -486,13 +487,13 @@ contains
     else
       ! This part uses the old non-batch implementation
       SAFE_ALLOCATE(rs_aux_in(1:hm%der%mesh%np_part, 1:3))
-      SAFE_ALLOCATE(rs_aux_out(1:hm%der%mesh%np_part, 1:3))
+      SAFE_ALLOCATE(rs_aux_out(1:hm%der%mesh%np, 1:3))
       do ii = 1, 3
-        call batch_get_state(psib, ii, hm%der%mesh%np_part, rs_aux_in(:, ii))
+        call batch_get_state(psib, ii, hm%der%mesh%np, rs_aux_in(:, ii))
       end do
       call maxwell_hamiltonian_apply_fd(hm, hm%der, rs_aux_in, rs_aux_out)
       do ii = 1, 3
-        call batch_set_state(hpsib, ii, hm%der%mesh%np_part, rs_aux_out(:, ii))
+        call batch_set_state(hpsib, ii, hm%der%mesh%np, rs_aux_out(:, ii))
       end do
       SAFE_DEALLOCATE_A(rs_aux_in)
       SAFE_DEALLOCATE_A(rs_aux_out)
@@ -1082,8 +1083,7 @@ contains
     FLOAT,                       intent(in)    :: vmagnus(:, :, :)
     logical,           optional, intent(in)    :: set_phase
 
-    write(message(1),'(a)') 'dhamiltonian_mxll_magnus_apply not implemeted'
-    call messages_fatal(1, namespace=namespace)
+    call messages_not_implemented ('dhamiltonian_mxll_magnus_apply', namespace=namespace)
 
   end subroutine dhamiltonian_mxll_magnus_apply
 

@@ -3262,6 +3262,7 @@ contains
       out_flag(iout) = (iand(flags, 2**(iout - 1)) /= 0)
     end do
 
+    ! TODO: Improve the way the output option labels are handled
     do iout = 1, 3
       writ%out(iout)%write = out_flag(iout)
     end do

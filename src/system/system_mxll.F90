@@ -346,6 +346,7 @@ contains
     if (parse_is_defined(this%namespace, 'UserDefinedInitialMaxwellStates')) then
       call states_mxll_read_user_def(this%gr%mesh, this%st, this%rs_state_init, this%namespace)
       call messages_print_stress(stdout, "Setting initial EM field inside box")
+      ! TODO: add consistency check that initial state fulfills Gauss laws
       this%st%rs_state(:,:) = this%st%rs_state + this%rs_state_init
       if (this%tr_mxll%bc_plane_waves) then
         this%st%rs_state_plane_waves(:,:) = this%rs_state_init
@@ -508,8 +509,8 @@ contains
     ASSERT(.not. this%quantities(iq)%protected)
 
     select case (iq)
-    case (MASS)
-      call this%quantities(iq)%clock%set_time(clock)
+    !case (MASS)
+    !  call this%quantities(iq)%clock%set_time(clock)
     case default
       message(1) = "Incompatible quantity."
       call messages_fatal(1)

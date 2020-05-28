@@ -86,7 +86,7 @@ module states_mxll_oct_m
     logical                      :: pack_states
     logical                      :: parallel_in_states !< Am I parallel in states?
     type(type_t), public         :: wfs_type         !< complex (TYPE_CMPLX)
-    integer, public              :: nst              !< Number of states in each irreducible subspace
+    integer, public              :: nst          !< Number of RS states, currently set to 1, we keep it for future uses
     logical, public              :: packed
 
     CMPLX, allocatable           :: rs_state_plane_waves(:,:)

@@ -576,8 +576,8 @@
 
     ! charge density calculated by the divergence of the electric field
     if (iand(outp%what, OPTION__MAXWELLOUTPUT__CHARGE_DENSITY) /= 0) then
-      fn_unit = unit_one
-      SAFE_ALLOCATE(dtmp_1(1:gr%mesh%np,1:st%dim))
+      fn_unit = units_out%length**(-gr%mesh%sb%dim)
+      SAFE_ALLOCATE(dtmp_1(1:gr%mesh%np_part,1:st%dim))
       SAFE_ALLOCATE(dtmp_2(1:gr%mesh%np))
       call get_electric_field_state(st%rs_state, gr%mesh, dtmp_1, st%ep, gr%mesh%np)
       call get_divergence_field(gr, dtmp_1, dtmp_2, .true.)
