@@ -22,6 +22,7 @@ Earth.CelestialBodyMass = 5.97237e24
 Earth.TDSystemPropagator = exp_mid
 
 Sun.CelestialBodyMass = 1.98855e30
+# move away from origin because we divide by the position
 %Sun.CelestialBodyInitialPosition
  0.0+0.1 | 0.0+0.1 | 0.0+0.1
 %
