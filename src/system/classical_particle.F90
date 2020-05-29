@@ -369,17 +369,16 @@ contains
       call this%quantities(VELOCITY)%clock%increment()
       call this%prop%clock%increment()
 
-    ! commented out: SCF version does not yet work
-    !case (EXPMID_CORRECT_DT_2)
-    !  ! only correct for dt/2 if not converged yet
-    !  if(.not. this%is_tolerance_reached(this%prop%scf_tol)) then
-    !    this%pos(1:sdim) = CNST(0.5)*(this%pos(1:sdim) + &
-    !                                  this%save_pos(1:sdim))
-    !    this%vel(1:sdim) = CNST(0.5)*(this%vel(1:sdim) + &
-    !                                  this%save_vel(1:sdim))
-    !    call this%quantities(POSITION)%clock%increment()
-    !    call this%quantities(VELOCITY)%clock%increment()
-    !  end if
+    case (EXPMID_CORRECT_DT_2)
+      ! only correct for dt/2 if not converged yet
+      if(.not. this%is_tolerance_reached(this%prop%scf_tol)) then
+        this%pos(1:sdim) = CNST(0.5)*(this%pos(1:sdim) + &
+                                      this%save_pos(1:sdim))
+        this%vel(1:sdim) = CNST(0.5)*(this%vel(1:sdim) + &
+                                      this%save_vel(1:sdim))
+        call this%quantities(POSITION)%clock%increment()
+        call this%quantities(VELOCITY)%clock%increment()
+      end if
 
     case default
       message(1) = "Unsupported TD operation."
