@@ -22,10 +22,8 @@ module interaction_partner_oct_m
   use clock_oct_m
   use global_oct_m
   use interaction_abst_oct_m
-  use messages_oct_m
   use namespace_oct_m
   use quantity_oct_m
-  use profiling_oct_m
   implicit none
 
   private
