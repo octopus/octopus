@@ -300,7 +300,7 @@ contains
     converged = .false.
     if ( (sum((this%prev_tot_force(1:this%space%dim) - this%tot_force(1:this%space%dim))**2)/ this%mass) < tol**2) then
       converged = .true.
-    end if 
+    end if
 
     if (debug%info) then
       write(message(1), '(a, e12.6, a, e12.6)') "Debug: -- Change in acceleration  ", &
@@ -309,19 +309,19 @@ contains
     end if
 
     POP_SUB(celestial_body_is_tolerance_reached)
-   end function celestial_body_is_tolerance_reached
+  end function celestial_body_is_tolerance_reached
 
-   ! ---------------------------------------------------------
-   subroutine celestial_body_store_current_status(this)
-     class(celestial_body_t),   intent(inout)    :: this
+  ! ---------------------------------------------------------
+  subroutine celestial_body_store_current_status(this)
+    class(celestial_body_t),   intent(inout)    :: this
 
-     PUSH_SUB(celestial_body_store_current_status) 
+    PUSH_SUB(celestial_body_store_current_status) 
 
-     this%save_pos(1:this%space%dim) = this%pos(1:this%space%dim)
-     this%save_vel(1:this%space%dim) = this%vel(1:this%space%dim)
+    this%save_pos(1:this%space%dim) = this%pos(1:this%space%dim)
+    this%save_vel(1:this%space%dim) = this%vel(1:this%space%dim)
 
-     POP_SUB(celestial_body_store_current_status)
-   end subroutine celestial_body_store_current_status
+    POP_SUB(celestial_body_store_current_status)
+  end subroutine celestial_body_store_current_status
 
   ! ---------------------------------------------------------
   subroutine celestial_body_iteration_info(this)
@@ -456,8 +456,8 @@ contains
     POP_SUB(celestial_body_update_quantity)
   end subroutine celestial_body_update_quantity
 
- ! ---------------------------------------------------------
- subroutine celestial_body_update_exposed_quantity(this, iq, requested_time)
+  ! ---------------------------------------------------------
+  subroutine celestial_body_update_exposed_quantity(this, iq, requested_time)
     class(celestial_body_t),   intent(inout) :: this
     integer,                   intent(in)    :: iq
     class(clock_t),            intent(in)    :: requested_time
