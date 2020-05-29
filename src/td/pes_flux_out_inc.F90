@@ -511,9 +511,9 @@ subroutine pes_flux_pmesh_sph(this, dim, kpoints, ll, pmesh, idxZero, krng, Lp)
   type(kpoints_t),   intent(inout) :: kpoints 
   integer,           intent(in)    :: ll(:)             
   FLOAT,             intent(out)   :: pmesh(:,:,:,:)    
-  integer,           intent(out) :: idxZero(:)             
-  integer,           intent(in)  :: krng(:)                                                                     
-  integer, pointer,  intent(out) :: Lp(:,:,:,:,:)       
+  integer,           intent(out)   :: idxZero(:)             
+  integer,           intent(in)    :: krng(:)                                                                     
+  integer, pointer,  intent(out)   :: Lp(:,:,:,:,:)       
                                                        
                                                         
 
@@ -739,18 +739,19 @@ subroutine pes_flux_out_energy(this, pesK, file, namespace, ll, pmesh, Ekin, dim
 
   PUSH_SUB(pes_flux_out_energy)
 
-  select case (this%surf_shape)
+  select case (this%kgrid)
   
-  case (M_SPHERICAL)
-    call messages_not_implemented("Energy-resolved PES for the flux method with spherical surfaces", namespace=namespace)
-  ! not needed
+  case (M_POLAR)
+    call messages_not_implemented("Energy-resolved PES for the flux method polar momentum grids", namespace=namespace)
+!     call  pes_flux_out_polar_ascii(this, st, namespace, dim, efile = file)
   
-  case (M_CUBIC)
-    call messages_not_implemented("Energy-resolved PES for the flux method with cubic surfaces", namespace=namespace)
-
-  case (M_PLANE)
-    call pes_flux_out_energy_pln(pesK, file, namespace, ll, pmesh, Ekin, dim)
-  
+  case (M_CARTESIAN)
+    if (this%surf_shape == M_CUBIC) then
+      call pes_flux_out_energy_pln(pesK, file, namespace, ll, pmesh, Ekin, dim)
+    else 
+      call messages_not_implemented("Energy-resolved PES for the flux method with cartesian momentum grids", namespace=namespace)
+    end if
+    
   end select
 
 
@@ -810,7 +811,106 @@ subroutine pes_flux_out_energy_pln(arpes, file,namespace, ll, pmesh, Ekin, dim)
 end subroutine pes_flux_out_energy_pln
 
 
+! ---------------------------------------------------------
+subroutine pes_flux_out_vmap(this, pesK, file, namespace, ll, pmesh, dim)
+  type(pes_flux_t), intent(inout)    :: this
+  FLOAT,             intent(in) :: pesK(:,:,:)
+  character(len=*),  intent(in) :: file
+  type(namespace_t), intent(in) :: namespace
+  integer,           intent(in) :: ll(:)  
+  FLOAT,             intent(in) :: pmesh(:,:,:,:)  
+  integer,           intent(in) :: dim
+  
+  PUSH_SUB(pes_flux_out_vmap)
+  
+  select case (this%kgrid)
 
+    case (M_POLAR)
+
+    case (M_CARTESIAN)
+      if (this%surf_shape == M_CUBIC) &
+        call pes_flux_out_vmap_cub(pesK, file, namespace, ll, pmesh, dim)
+      
+  end select
+  
+  
+  POP_SUB(pes_flux_out_vmap)
+end subroutine pes_flux_out_vmap
+
+
+
+! ---------------------------------------------------------
+subroutine pes_flux_out_vmap_cub(pesK, file, namespace, ll, pmesh, dim)
+  FLOAT,             intent(in) :: pesK(:,:,:)
+  character(len=*),  intent(in) :: file
+  type(namespace_t), intent(in) :: namespace
+  integer,           intent(in) :: ll(:)  
+  FLOAT,             intent(in) :: pmesh(:,:,:,:)  
+  integer,           intent(in) :: dim
+  
+  integer :: ik1,ik2,ik3, idir, idim
+  integer :: iunit
+  
+  PUSH_SUB(pes_flux_out_vmap_cub)
+
+  iunit = io_open(file, namespace, action='write', position='rewind')
+  write(iunit, '(a)') '##################################################'                                        
+  if (dim == 3) then 
+    write(iunit, '(a1,a18,2x,a18,2x,a18,2x,a18)') '#', &
+                                      str_center("kz", 18), str_center("ky", 18),&
+                                      str_center("kx", 18),  str_center("P(kz,ky,kx)", 18)
+    write(iunit, '(a1,a18,2x,a18,2x,a18)') '#', &
+                                      str_center('[hbar/'//trim(units_abbrev(units_out%length)) // ']', 18), &
+                                      str_center('[hbar/'//trim(units_abbrev(units_out%length)) // ']', 18), &
+                                      str_center('[hbar/'//trim(units_abbrev(units_out%length)) // ']', 18)    
+  end if
+  
+  if (dim == 2) then 
+    write(iunit, '(a1,a18,2x,a18,2x,a18)') '#', &
+                                    str_center("ky", 18), str_center("kx", 18),&
+                                    str_center("P(ky,kx)", 18)
+    write(iunit, '(a1,a18,2x,a18)') '#', &
+                                      str_center('[hbar/'//trim(units_abbrev(units_out%length)) // ']', 18), &
+                                      str_center('[hbar/'//trim(units_abbrev(units_out%length)) // ']', 18)    
+
+  end if  
+                                    
+
+  if (dim == 1) then
+    write(iunit, '(a1,a18,2x,a18)') '#', &
+                                    str_center("kx", 18),  str_center("P(kx)", 18)
+    write(iunit, '(a1,a18)') '#', &
+                                      str_center('[hbar/'//trim(units_abbrev(units_out%length)) // ']', 18)    
+                                    
+  end if
+  write(iunit, '(a)') '##################################################'
+  
+  
+
+  do ik3 = 1, ll(3)
+    do ik2 = 1, ll(2)
+      do ik1 = 1, ll(1)
+        
+        do idir = dim, 1, -1
+          write(iunit, '(1x,e18.10E3)', advance='no') & 
+            units_from_atomic(unit_one/units_out%length,pmesh(ik1,ik2,ik3, idir))
+        end do
+        write(iunit, '(1x,e18.10E3)', advance='no') pesK(ik1,ik2,ik3)
+        write(iunit, '(1x)', advance='yes')
+        
+      end do
+      write(iunit, '(1x)', advance='yes')
+    end do
+    write(iunit, '(1x)', advance='yes')
+  end do
+  
+  call io_close(iunit)
+  
+  
+
+  POP_SUB(pes_flux_out_vmap_cub)
+    
+end subroutine pes_flux_out_vmap_cub
 
 
 
@@ -835,8 +935,9 @@ subroutine pes_flux_output(this, mesh, sb, st, namespace)
   select case (this%kgrid)
   
   case (M_POLAR)
-    call  pes_flux_out_polar_ascii(this, st, namespace, sb%dim, io_workpath("td.general/", namespace), &
-                                   energy_resolved = .true., momentum_resolved = .true.)
+    call  pes_flux_out_polar_ascii(this, st, namespace, sb%dim,&
+                                  mfile = io_workpath("td.general/PES_flux.distribution.out", namespace), &
+                                  efile = io_workpath("td.general/PES_flux.power.sum", namespace))
   
   case (M_CARTESIAN)
     call pes_flux_out_cartesian_ascii(this, st, namespace, sb%dim, io_workpath("td.general/", namespace))
@@ -850,6 +951,7 @@ subroutine pes_flux_output(this, mesh, sb, st, namespace)
 end subroutine pes_flux_output
 
 
+! ---------------------------------------------------------
 subroutine pes_flux_out_cartesian_ascii(this, st, namespace, dim, path )
   type(pes_flux_t), intent(inout)    :: this
   type(states_elec_t), intent(in)    :: st
@@ -860,7 +962,7 @@ subroutine pes_flux_out_cartesian_ascii(this, st, namespace, dim, path )
   integer            :: stst, stend, kptst, kptend, sdim, mdim, idir
   integer            :: iunit
   integer            :: ik, ist, isdim, ikp, ikpt, ik1, ik2, ik3
-  FLOAT, allocatable :: spctrout_cub(:)
+  FLOAT, allocatable ::  spctrout(:,:,:), pmesh(:,:,:,:)
   
   PUSH_SUB(pes_flux_out_cartesian_ascii)
   
@@ -871,16 +973,30 @@ subroutine pes_flux_out_cartesian_ascii(this, st, namespace, dim, path )
   sdim   = st%d%dim
   mdim   = dim
 
-  SAFE_ALLOCATE(spctrout_cub(1:this%nkpnts))
-  spctrout_cub = M_ZERO
+  SAFE_ALLOCATE(spctrout(1:this%ll(1), 1:this%ll(2), 1:this%ll(3)))
+  SAFE_ALLOCATE(pmesh(1:this%ll(1), 1:this%ll(2), 1:this%ll(3),1:dim))
+  spctrout = M_ZERO
 
   ! calculate spectra & total distribution
   do ik = kptst, kptend
     do ist = stst, stend
       do isdim = 1, sdim
 
-      spctrout_cub(1:this%nkpnts) = spctrout_cub(1:this%nkpnts) + &
-        abs(this%spctramp_cub(ist, isdim, ik, 1:this%nkpnts))**M_TWO
+        ikp = 0
+
+        do ik3 = 1, this%ll(3)
+          do ik2 = 1, this%ll(2)
+            do ik1 = 1, this%ll(1)
+              ikp = ikp + 1 
+
+              spctrout(ik1,ik2,ik3) = spctrout(ik1,ik2,ik3) + &
+                abs(this%spctramp_cub(ist, isdim, ik, ikp))**M_TWO
+              pmesh(ik1,ik2,ik3, 1:dim) =  this%kcoords_cub(1:dim, ikp, 1)
+                
+            end do
+          end do
+        end do
+                  
         
       end do 
     end do
@@ -888,83 +1004,88 @@ subroutine pes_flux_out_cartesian_ascii(this, st, namespace, dim, path )
   
   if(st%parallel_in_states .or. st%d%kpt%parallel) then
 #if defined(HAVE_MPI)
-      call comm_allreduce(st%st_kpt_mpi_grp%comm, spctrout_cub)
+      call comm_allreduce(st%st_kpt_mpi_grp%comm, spctrout)
 #endif
   end if
   
   
   if(mpi_grp_is_root(mpi_world)) then
-    iunit = io_open(trim(path)//'PES_flux.distribution.out', namespace, action='write', position='rewind')
-    write(iunit, '(a)') '##################################################'                                        
-    if (mdim == 3) then 
-      write(iunit, '(a1,a18,2x,a18,2x,a18,2x,a18)') '#', &
-                                        str_center("kz", 18), str_center("ky", 18),&
-                                        str_center("kx", 18),  str_center("P(kz,ky,kx)", 18)
-      write(iunit, '(a1,a18,2x,a18,2x,a18)') '#', &
-                                        str_center('[hbar/'//trim(units_abbrev(units_out%length)) // ']', 18), &
-                                        str_center('[hbar/'//trim(units_abbrev(units_out%length)) // ']', 18), &
-                                        str_center('[hbar/'//trim(units_abbrev(units_out%length)) // ']', 18)    
-    end if
-    
-    if (mdim == 2) then 
-      write(iunit, '(a1,a18,2x,a18,2x,a18)') '#', &
-                                      str_center("ky", 18), str_center("kx", 18),&
-                                      str_center("P(ky,kx)", 18)
-      write(iunit, '(a1,a18,2x,a18)') '#', &
-                                        str_center('[hbar/'//trim(units_abbrev(units_out%length)) // ']', 18), &
-                                        str_center('[hbar/'//trim(units_abbrev(units_out%length)) // ']', 18)    
+    call pes_flux_out_vmap_cub(spctrout, io_workpath("td.general/PES_flux.distribution.out", namespace), &
+                               namespace, this%ll(:), pmesh, mdim)
 
-    end if  
-                                      
-  
-    if (mdim == 1) then
-      write(iunit, '(a1,a18,2x,a18)') '#', &
-                                      str_center("kx", 18),  str_center("P(kx)", 18)
-      write(iunit, '(a1,a18)') '#', &
-                                        str_center('[hbar/'//trim(units_abbrev(units_out%length)) // ']', 18)    
-                                      
-    end if
-    write(iunit, '(a)') '##################################################'
-    
-    
-    ikpt = 1
-    ikp = 0
-
-    do ik3 = 1, this%ll(3)
-      do ik2 = 1, this%ll(2)
-        do ik1 = 1, this%ll(1)
-          ikp = ikp + 1 
-          
-          do idir = mdim, 1, -1
-            write(iunit, '(1x,e18.10E3)', advance='no') & 
-              units_from_atomic(unit_one/units_out%length,this%kcoords_cub(idir, ikp, ikpt))
-          end do
-          write(iunit, '(1x,e18.10E3)', advance='no') spctrout_cub(ikp)
-          write(iunit, '(1x)', advance='yes')
-          
-        end do
-        write(iunit, '(1x)', advance='yes')
-      end do
-      write(iunit, '(1x)', advance='yes')
-    end do
-    
-    call io_close(iunit)
+!     iunit = io_open(trim(path)//'PES_flux.distribution.out', namespace, action='write', position='rewind')
+!     write(iunit, '(a)') '##################################################'
+!     if (mdim == 3) then
+!       write(iunit, '(a1,a18,2x,a18,2x,a18,2x,a18)') '#', &
+!                                         str_center("kz", 18), str_center("ky", 18),&
+!                                         str_center("kx", 18),  str_center("P(kz,ky,kx)", 18)
+!       write(iunit, '(a1,a18,2x,a18,2x,a18)') '#', &
+!                                         str_center('[hbar/'//trim(units_abbrev(units_out%length)) // ']', 18), &
+!                                         str_center('[hbar/'//trim(units_abbrev(units_out%length)) // ']', 18), &
+!                                         str_center('[hbar/'//trim(units_abbrev(units_out%length)) // ']', 18)
+!     end if
+!
+!     if (mdim == 2) then
+!       write(iunit, '(a1,a18,2x,a18,2x,a18)') '#', &
+!                                       str_center("ky", 18), str_center("kx", 18),&
+!                                       str_center("P(ky,kx)", 18)
+!       write(iunit, '(a1,a18,2x,a18)') '#', &
+!                                         str_center('[hbar/'//trim(units_abbrev(units_out%length)) // ']', 18), &
+!                                         str_center('[hbar/'//trim(units_abbrev(units_out%length)) // ']', 18)
+!
+!     end if
+!
+!
+!     if (mdim == 1) then
+!       write(iunit, '(a1,a18,2x,a18)') '#', &
+!                                       str_center("kx", 18),  str_center("P(kx)", 18)
+!       write(iunit, '(a1,a18)') '#', &
+!                                         str_center('[hbar/'//trim(units_abbrev(units_out%length)) // ']', 18)
+!
+!     end if
+!     write(iunit, '(a)') '##################################################'
+!
+!
+!     ikpt = 1
+!     ikp = 0
+!
+!     do ik3 = 1, this%ll(3)
+!       do ik2 = 1, this%ll(2)
+!         do ik1 = 1, this%ll(1)
+!           ikp = ikp + 1
+!
+!           do idir = mdim, 1, -1
+!             write(iunit, '(1x,e18.10E3)', advance='no') &
+!               units_from_atomic(unit_one/units_out%length,this%kcoords_cub(idir, ikp, ikpt))
+!           end do
+!           write(iunit, '(1x,e18.10E3)', advance='no') spctrout(ik1,ik2,ik3)
+!           write(iunit, '(1x)', advance='yes')
+!
+!         end do
+!         write(iunit, '(1x)', advance='yes')
+!       end do
+!       write(iunit, '(1x)', advance='yes')
+!     end do
+!
+!     call io_close(iunit)
   end if
   
-  SAFE_DEALLOCATE_A(spctrout_cub)
+   SAFE_DEALLOCATE_A(spctrout)
+  SAFE_DEALLOCATE_A(pmesh)
+  
   
   POP_SUB(pes_flux_out_cartesian_ascii)
 end subroutine pes_flux_out_cartesian_ascii
 
 
 ! ---------------------------------------------------------
-subroutine pes_flux_out_polar_ascii(this, st, namespace, dim, path, energy_resolved, momentum_resolved)
+subroutine pes_flux_out_polar_ascii(this, st, namespace, dim, efile, mfile)
   type(pes_flux_t), intent(inout)    :: this
   type(states_elec_t), intent(in)    :: st
   type(namespace_t),   intent(in)    :: namespace
   integer,             intent(in)    :: dim
-  character(len=*),           intent(in)    :: path
-  logical, optional,   intent(in)    :: energy_resolved, momentum_resolved
+  character(len=*), optional,   intent(in)    :: efile
+  character(len=*), optional,   intent(in)    :: mfile
     
   integer            :: stst, stend, kptst, kptend, sdim, mdim
   integer            :: ist, ik, isdim
@@ -976,9 +1097,10 @@ subroutine pes_flux_out_polar_ascii(this, st, namespace, dim, path, energy_resol
   FLOAT, allocatable :: spctrout_cub(:), spctrout_sph(:,:)
   FLOAT, allocatable :: spctrsum(:,:,:,:)
   FLOAT              :: weight
+  logical           :: energy_resolved, momentum_resolved
+
   
   integer            :: itot
-  character(len=80)  :: filename
 
   PUSH_SUB(pes_flux_out_polar_ascii)
 
@@ -989,6 +1111,15 @@ subroutine pes_flux_out_polar_ascii(this, st, namespace, dim, path, energy_resol
   sdim   = st%d%dim
   mdim   = dim
 
+  energy_resolved   = .false.
+  momentum_resolved = .false.
+  if (present(efile)) energy_resolved   = .true.
+  if (present(mfile)) momentum_resolved = .true.
+   
+  if (.not. energy_resolved .and. .not. momentum_resolved) then
+    POP_SUB(pes_flux_out_polar_ascii)
+    return    
+  end if
 
   SAFE_ALLOCATE(spctrsum(1:st%nst, 1:sdim, 1:st%d%nik, 1:this%nk))
   spctrsum = M_ZERO
@@ -1119,7 +1250,8 @@ subroutine pes_flux_out_polar_ascii(this, st, namespace, dim, path, energy_resol
   if(mpi_grp_is_root(mpi_world)) then
     
     if(energy_resolved) then 
-      iunitone = io_open(trim(path)//'/PES_flux.power.sum', namespace, action='write', position='rewind')
+!       iunitone = io_open(trim(path)//'/PES_flux.power.sum', namespace, action='write', position='rewind')
+      iunitone = io_open(trim(efile), namespace, action='write', position='rewind')
       write(iunitone, '(a)') '##################################################'                                        
       write(iunitone, '(a1,a18,2x,a18)') '#', str_center("E", 18), str_center("P(E)", 18)
       write(iunitone, '(a1,a18)') '#', str_center('['//trim(units_abbrev(units_out%energy)) // ']', 18)    
@@ -1127,7 +1259,8 @@ subroutine pes_flux_out_polar_ascii(this, st, namespace, dim, path, energy_resol
     end if
 
     if(momentum_resolved) then
-      iunittwo = io_open(trim(path)//'/PES_flux.distribution.out', namespace, action='write', position='rewind')
+!       iunittwo = io_open(trim(path)//'/PES_flux.distribution.out', namespace, action='write', position='rewind')
+      iunittwo = io_open(trim(mfile), namespace, action='write', position='rewind')
       write(iunittwo, '(a)') '##################################################'                               
     end if         
 

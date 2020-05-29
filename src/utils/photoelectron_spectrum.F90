@@ -275,7 +275,7 @@ program photoelectron_spectrum
   !% Ionization probability integrated on spherical cuts: (theta, phi).
   !%Option velocity_map bit(6)
   !% Full momentum-resolved ionization probability: (px, py, pz).     
-  !% The output format can be controlled with OutputHow and can be vtk or ncdf.  
+  !% The output format can be controlled with <tt>OutputHow<\tt> and can be vtk, ncdf or ascii.  
   !%Option arpes bit(7)
   !% Full ARPES for semi-periodic systems (vtk).
   !%Option arpes_cut bit(8)
@@ -662,15 +662,26 @@ program photoelectron_spectrum
         call io_function_read_how(sb, default_namespace, how, ignore_error = .true.)
         call messages_print_stress(stdout, "Full velocity map")
         
+        if ( .not. (bitand(how, OPTION__OUTPUTFORMAT__NETCDF) /= 0) .and. &
+             .not. (bitand(how, OPTION__OUTPUTFORMAT__VTK)    /= 0) .and. &
+             .not. (bitand(how, OPTION__OUTPUTFORMAT__ASCII)  /= 0) ) then
+             message(1) = 'User must specify the format with "OutputFormat".'
+             message(2) = 'Available options are: necdf, vtk, ascii.'
+             call messages_fatal(2)
+             
+        end if
+        
         filename = outfile('./PES_velocity_map', ist, ispin)
         if (need_pmesh) then
           !force vtk output
-          how = io_function_fill_how("VTK")
-           
-!           call pes_mask_output_full_mapM(pesP_out, filename, default_namespace, Lg, llp, how, sb, pmesh)
-          call pes_out_velocity_map(pesP_out, filename, default_namespace, Lg, llp, how, sb, pmesh)
+!           how = io_function_fill_how("VTK")
+          
+          if(bitand(how, OPTION__OUTPUTFORMAT__ASCII)  /= 0) then
+             call pes_flux_out_vmap(pflux, pesP_out, filename, default_namespace, llp, pmesh, sb%dim)
+          else            
+            call pes_out_velocity_map(pesP_out, filename, default_namespace, Lg, llp, how, sb, pmesh)
+          end if
         else
-!           call pes_mask_output_full_mapM(pesP_out, filename, default_namespace, Lg, llp, how, sb)
           call pes_out_velocity_map(pesP_out, filename, default_namespace, Lg, llp, how, sb)
         end if
         

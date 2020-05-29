@@ -65,7 +65,8 @@ module pes_flux_oct_m
     pes_flux_reciprocal_mesh_gen, &
     pes_flux_pmesh,            &
     pes_flux_map_from_states,  &
-    pes_flux_out_energy
+    pes_flux_out_energy,       &
+    pes_flux_out_vmap
 
   type pes_flux_t
     private
