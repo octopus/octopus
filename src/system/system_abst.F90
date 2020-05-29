@@ -351,10 +351,16 @@ contains
     select type (interaction)
     class is (interaction_with_partner_t)
 
-      if ((this%clock < clock .and. this%clock%is_earlier_with_step(clock)) .or. this%prop%inside_scf) then
+      if (this%clock > clock) then
+        ! This system is ahead of the requested time. The interaction is allowed to be updated,
+        ! but using the old quantities. Therefore we do not update the quantities here.
+        all_updated = .true.
+
+      else if ((this%clock < clock .and. this%clock%is_earlier_with_step(clock)) .or. this%prop%inside_scf) then
         ! We have to wait, either because this is not the best moment to update the quantities or
         ! because we are inside an SCF cycle and therefore are not allowed to expose any quantities.
         all_updated = .false.
+
       else
         !This is the best moment to update the quantities
 
