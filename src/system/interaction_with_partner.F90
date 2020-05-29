@@ -58,12 +58,9 @@ contains
     ! We should only try to update the interaction if it is not yet at the desired time
     ASSERT(.not. (this%clock == clock))
 
-    allowed_to_update = this%partner%update_exposed_quantities(clock, this%n_partner_quantities, this%partner_quantities)
+    allowed_to_update = this%partner%update_exposed_quantities(clock, this)
 
     if (allowed_to_update) then
-      ! Get the partner quantities
-      call this%partner%update_interaction_quantities(this)
-
       ! We can now compute the interaction from the updated quantities
       call this%calculate()
 

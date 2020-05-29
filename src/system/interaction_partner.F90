@@ -52,13 +52,13 @@ module interaction_partner_oct_m
   abstract interface
 
     ! ---------------------------------------------------------
-    logical function interaction_partner_update_exposed_quantities(this, clock, n_quantities, quantities_id)
+    logical function interaction_partner_update_exposed_quantities(this, clock, interaction)
       import interaction_partner_t
       import clock_t
+      import interaction_abst_t
       class(interaction_partner_t), intent(inout) :: this
       type(clock_t),                intent(in)    :: clock
-      integer,                      intent(in)    :: n_quantities
-      integer,                      intent(in)    :: quantities_id(:)
+      class(interaction_abst_t),    intent(inout) :: interaction
     end function interaction_partner_update_exposed_quantities
 
     ! ---------------------------------------------------------

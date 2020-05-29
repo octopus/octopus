@@ -24,6 +24,7 @@ module system_abst_oct_m
   use global_oct_m
   use interaction_abst_oct_m
   use interaction_partner_oct_m
+  use interaction_with_partner_oct_m
   use messages_oct_m
   use namespace_oct_m
   use linked_list_oct_m
@@ -338,54 +339,64 @@ contains
   end subroutine system_reset_clocks
 
   ! ---------------------------------------------------------
-  logical function system_update_exposed_quantities(this, clock, n_quantities, quantities_id) result(all_updated)
+  logical function system_update_exposed_quantities(this, clock, interaction) result(all_updated)
     class(system_abst_t),      intent(inout) :: this
     type(clock_t),             intent(in)    :: clock
-    integer,                   intent(in)    :: n_quantities
-    integer,                   intent(in)    :: quantities_id(:)
+    class(interaction_abst_t), intent(inout) :: interaction
 
     integer :: iq, q_id
 
     PUSH_SUB(system_update_exposed_quantities)
 
-    if ((this%clock < clock .and. this%clock%is_earlier_with_step(clock)) .or. this%prop%inside_scf) then
-      ! We have to wait, either because this is not the best moment to update the quantities or
-      ! because we are inside an SCF cycle and therefore are not allowed to expose any quantities.
-      all_updated = .false.
-    else
-      !This is the best moment to update the quantities
+    select type (interaction)
+    class is (interaction_with_partner_t)
 
-      all_updated = .true.
-      do iq = 1, n_quantities
-        ! Get the requested quantity ID
-        q_id = quantities_id(iq)
+      if ((this%clock < clock .and. this%clock%is_earlier_with_step(clock)) .or. this%prop%inside_scf) then
+        ! We have to wait, either because this is not the best moment to update the quantities or
+        ! because we are inside an SCF cycle and therefore are not allowed to expose any quantities.
+        all_updated = .false.
+      else
+        !This is the best moment to update the quantities
 
-        ! All needed quantities must have been marked as required. If not, then fix your code!
-        ASSERT(this%quantities(q_id)%required)
+        all_updated = .true.
+        do iq = 1, interaction%n_partner_quantities
+          ! Get the requested quantity ID
+          q_id = interaction%partner_quantities(iq)
 
-        if (.not. (this%quantities(q_id)%clock == clock .or. &
-          (this%quantities(q_id)%clock < clock .and. this%quantities(q_id)%clock%is_later_with_step(clock)))) then
-          ! The quantity is not at the requested time nor at the best possible time, so we try to update it
+          ! All needed quantities must have been marked as required. If not, then fix your code!
+          ASSERT(this%quantities(q_id)%required)
 
-          ! Sanity check: it can never happen that the quantity is in advance with respect to the
-          ! requested time.
-          if (this%quantities(q_id)%clock > clock) then
-            message(1) = "The partner quantity is in advance compared to the requested clock."
-            call messages_fatal(1)
+          if (.not. (this%quantities(q_id)%clock == clock .or. &
+            (this%quantities(q_id)%clock < clock .and. this%quantities(q_id)%clock%is_later_with_step(clock)))) then
+            ! The quantity is not at the requested time nor at the best possible time, so we try to update it
+
+            ! Sanity check: it can never happen that the quantity is in advance with respect to the
+            ! requested time.
+            if (this%quantities(q_id)%clock > clock) then
+              message(1) = "The partner quantity is in advance compared to the requested clock."
+              call messages_fatal(1)
+            end if
+
+            if (this%quantities(q_id)%protected) then
+              ! If this quantity is protected, then we are not allowed to update it, as that is done by the propagation.
+              ! So we have to wait until the quantity is at the right time.
+              all_updated = .false.
+            else
+              ! This is not a protected quantity and we are the right time, so we update it
+              call this%update_exposed_quantity(q_id, clock)
+            end if
           end if
+        end do
 
-          if (this%quantities(q_id)%protected) then
-            ! If this quantity is protected, then we are not allowed to update it, as that is done by the propagation.
-            ! So we have to wait until the quantity is at the right time.
-            all_updated = .false.
-          else
-            ! This is not a protected quantity and we are the right time, so we update it
-            call this%update_exposed_quantity(q_id, clock)
-          end if
-        end if
-      end do
+        ! If the quantities have been updated, we copy them to the interaction
+        if (all_updated) call this%update_interaction_quantities(interaction)
+      end if
 
-    end if
+    class default
+      message(1) = "A system can only expose quantities to an interaction as a partner."
+      call messages_fatal(1, namespace=this%namespace)
+    end select
+
 
     POP_SUB(system_update_exposed_quantities)
   end function system_update_exposed_quantities
