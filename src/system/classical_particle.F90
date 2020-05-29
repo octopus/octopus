@@ -58,7 +58,7 @@ module classical_particle_oct_m
     FLOAT :: prev_tot_force(1:MAX_DIM) !< Used for the SCF convergence criterium
     FLOAT, allocatable :: prev_pos(:, :) !< Used for extrapolation
     FLOAT, allocatable :: prev_vel(:, :) !< Used for extrapolation
-    FLOAT :: hamiltonian_components(1:MAX_DIM)
+    FLOAT :: hamiltonian_elements(1:MAX_DIM)
 
     type(c_ptr) :: output_handle
   contains
@@ -335,7 +335,7 @@ contains
       call this%quantities(VELOCITY)%clock%increment()
 
     case (UPDATE_HAMILTONIAN)
-      this%hamiltonian_components(1:sdim) = this%tot_force(1:sdim) / (this%mass * this%pos(1:sdim))
+      this%hamiltonian_elements(1:sdim) = this%tot_force(1:sdim) / (this%mass * this%pos(1:sdim))
 
     case (EXPMID_PREDICT_DT)
       SAFE_ALLOCATE(tmp_pos(1:sdim, 2))
@@ -355,7 +355,7 @@ contains
         factor = factor * this%prop%dt / ii
         ! apply hamiltonian
         tmp_pos(1:sdim, 2) = tmp_vel(1:sdim, 1)
-        tmp_vel(1:sdim, 2) = this%hamiltonian_components(1:sdim) * tmp_pos(1:sdim, 1)
+        tmp_vel(1:sdim, 2) = this%hamiltonian_elements(1:sdim) * tmp_pos(1:sdim, 1)
         ! swap temporary variables
         tmp_pos(1:sdim, 1) = tmp_pos(1:sdim, 2)
         tmp_vel(1:sdim, 1) = tmp_vel(1:sdim, 2)
