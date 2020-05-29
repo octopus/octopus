@@ -46,37 +46,37 @@ module interaction_partner_oct_m
   contains
     procedure(interaction_partner_update_exposed_quantities),      deferred :: update_exposed_quantities
     procedure(interaction_partner_update_exposed_quantity),        deferred :: update_exposed_quantity
-    procedure(interaction_partner_update_interaction_quantities),  deferred :: update_interaction_quantities
+    procedure(interaction_partner_copy_quantities_to_interaction), deferred :: copy_quantities_to_interaction
   end type interaction_partner_t
 
   abstract interface
 
     ! ---------------------------------------------------------
-    logical function interaction_partner_update_exposed_quantities(this, clock, interaction)
+    logical function interaction_partner_update_exposed_quantities(this, requested_time, interaction)
       import interaction_partner_t
       import clock_t
       import interaction_abst_t
       class(interaction_partner_t), intent(inout) :: this
-      type(clock_t),                intent(in)    :: clock
+      type(clock_t),                intent(in)    :: requested_time
       class(interaction_abst_t),    intent(inout) :: interaction
     end function interaction_partner_update_exposed_quantities
 
     ! ---------------------------------------------------------
-    subroutine interaction_partner_update_exposed_quantity(this, iq, clock)
+    subroutine interaction_partner_update_exposed_quantity(this, iq, requested_time)
       import interaction_partner_t
       import clock_t
       class(interaction_partner_t),      intent(inout) :: this
       integer,                           intent(in)    :: iq
-      class(clock_t),                    intent(in)    :: clock
+      class(clock_t),                    intent(in)    :: requested_time
     end subroutine interaction_partner_update_exposed_quantity
 
     ! ---------------------------------------------------------
-    subroutine interaction_partner_update_interaction_quantities(this, inter)
+    subroutine interaction_partner_copy_quantities_to_interaction(this, interaction)
       import interaction_partner_t
       import interaction_abst_t
       class(interaction_partner_t),     intent(inout) :: this
-      class(interaction_abst_t),        intent(inout) :: inter
-    end subroutine interaction_partner_update_interaction_quantities
+      class(interaction_abst_t),        intent(inout) :: interaction
+    end subroutine interaction_partner_copy_quantities_to_interaction
 
   end interface
 

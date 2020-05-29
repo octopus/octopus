@@ -39,7 +39,7 @@ module interaction_abst_oct_m
     type(clock_t), public :: clock !< Clock storing the time at which the interaction was last updated.
   contains
     procedure :: init_clock => interaction_init_clock
-    procedure(interaction_update), deferred :: update
+    procedure(interaction_update),    deferred :: update
     procedure(interaction_calculate), deferred :: calculate
   end type interaction_abst_t
 
@@ -52,11 +52,11 @@ module interaction_abst_oct_m
   end type interaction_iterator_t
 
   abstract interface
-    logical function interaction_update(this, clock)
+    logical function interaction_update(this, requested_time)
       import interaction_abst_t
       import clock_t
       class(interaction_abst_t), intent(inout) :: this
-      class(clock_t),            intent(in)    :: clock
+      class(clock_t),            intent(in)    :: requested_time
     end function interaction_update
 
     subroutine interaction_calculate(this)

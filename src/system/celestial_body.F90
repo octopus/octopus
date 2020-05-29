@@ -70,7 +70,7 @@ module celestial_body_oct_m
     procedure :: store_current_status => celestial_body_store_current_status
     procedure :: update_quantity => celestial_body_update_quantity
     procedure :: update_exposed_quantity => celestial_body_update_exposed_quantity
-    procedure :: update_interaction_quantities => celestial_body_update_interaction_quantities
+    procedure :: copy_quantities_to_interaction => celestial_body_copy_quantities_to_interaction
     procedure :: update_interactions_start => celestial_body_update_interactions_start
     procedure :: update_interactions_finish => celestial_body_update_interactions_finish
     final :: celestial_body_finalize
@@ -434,10 +434,10 @@ contains
   end subroutine celestial_body_output_write
 
   ! ---------------------------------------------------------
-  subroutine celestial_body_update_quantity(this, iq, clock)
+  subroutine celestial_body_update_quantity(this, iq, requested_time)
     class(celestial_body_t),   intent(inout) :: this
     integer,                   intent(in)    :: iq
-    class(clock_t),            intent(in)    :: clock
+    class(clock_t),            intent(in)    :: requested_time
 
     PUSH_SUB(celestial_body_update_quantity)
 
@@ -447,7 +447,7 @@ contains
     select case (iq)
     case (MASS)
       ! The celestial body has a mass, but it is not necessary to update it, as it does not change with time.
-      call this%quantities(iq)%clock%set_time(clock)
+      call this%quantities(iq)%clock%set_time(requested_time)
     case default
       message(1) = "Incompatible quantity."
       call messages_fatal(1)
@@ -457,10 +457,10 @@ contains
   end subroutine celestial_body_update_quantity
 
  ! ---------------------------------------------------------
- subroutine celestial_body_update_exposed_quantity(this, iq, clock)
+ subroutine celestial_body_update_exposed_quantity(this, iq, requested_time)
     class(celestial_body_t),   intent(inout) :: this
     integer,                   intent(in)    :: iq
-    class(clock_t),            intent(in)    :: clock
+    class(clock_t),            intent(in)    :: requested_time
 
     PUSH_SUB(celestial_body_update_exposed_quantity)
 
@@ -480,23 +480,23 @@ contains
   end subroutine celestial_body_update_exposed_quantity
 
   ! ---------------------------------------------------------
-  subroutine celestial_body_update_interaction_quantities(this, inter)
+  subroutine celestial_body_copy_quantities_to_interaction(this, interaction)
     class(celestial_body_t),          intent(inout) :: this
-    class(interaction_abst_t),        intent(inout) :: inter
+    class(interaction_abst_t),        intent(inout) :: interaction
 
-    PUSH_SUB(celestial_body_update_interaction_quantities)
+    PUSH_SUB(celestial_body_copy_quantities_to_interaction)
 
-    select type(inter)
+    select type (interaction)
     type is (interaction_gravity_t)
-      inter%partner_mass = this%mass
-      inter%partner_pos = this%pos
+      interaction%partner_mass = this%mass
+      interaction%partner_pos = this%pos
     class default
       message(1) = "Unsupported interaction."
       call messages_fatal(1)
     end select
 
-    POP_SUB(celestial_body_update_interaction_quantities)
-  end subroutine celestial_body_update_interaction_quantities
+    POP_SUB(celestial_body_copy_quantities_to_interaction)
+  end subroutine celestial_body_copy_quantities_to_interaction
 
   ! ---------------------------------------------------------
   subroutine celestial_body_update_interactions_start(this)

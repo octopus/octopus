@@ -63,7 +63,7 @@ module multisystem_oct_m
     procedure :: store_current_status => multisystem_store_current_status
     procedure :: update_quantity => multisystem_update_quantity
     procedure :: update_exposed_quantity => multisystem_update_exposed_quantity
-    procedure :: update_interaction_quantities => multisystem_update_interaction_quantities
+    procedure :: copy_quantities_to_interaction => multisystem_copy_quantities_to_interaction
     procedure :: update_interactions_start => multisystem_update_interactions_start
     procedure :: update_interactions_finish => multisystem_update_interactions_finish
     final :: multisystem_finalizer
@@ -572,10 +572,10 @@ contains
   end subroutine multisystem_output_write
 
   ! ---------------------------------------------------------
-  subroutine multisystem_update_quantity(this, iq, clock)
+  subroutine multisystem_update_quantity(this, iq, requested_time)
     class(multisystem_t), intent(inout) :: this
     integer,              intent(in)    :: iq
-    class(clock_t),       intent(in)    :: clock
+    class(clock_t),       intent(in)    :: requested_time
 
     PUSH_SUB(multisystem_update_quantity)
 
@@ -587,10 +587,10 @@ contains
   end subroutine multisystem_update_quantity
 
   ! ---------------------------------------------------------
-  subroutine multisystem_update_exposed_quantity(this, iq, clock)
+  subroutine multisystem_update_exposed_quantity(this, iq, requested_time)
     class(multisystem_t), intent(inout) :: this
     integer,              intent(in)    :: iq
-    class(clock_t),       intent(in)    :: clock
+    class(clock_t),       intent(in)    :: requested_time
 
     PUSH_SUB(multisystem_update_exposed_quantity)
 
@@ -602,18 +602,18 @@ contains
   end subroutine multisystem_update_exposed_quantity
 
   ! ---------------------------------------------------------
-  subroutine multisystem_update_interaction_quantities(this, inter)
+  subroutine multisystem_copy_quantities_to_interaction(this, interaction)
     class(multisystem_t),         intent(inout) :: this
-    class(interaction_abst_t),    intent(inout) :: inter
+    class(interaction_abst_t),    intent(inout) :: interaction
 
-    PUSH_SUB(multisystem_update_interaction_quantities)
+    PUSH_SUB(multisystem_copy_quantities_to_interaction)
 
     ! At the moment multitystems cannot have interations.
     ! All the interactions are directly handled by the subsystems
     ASSERT(.false.)
 
-    POP_SUB(multisystem_udpate_interaction_quantities)
-  end subroutine multisystem_update_interaction_quantities
+    POP_SUB(multisystem_copy_quantities_to_interaction)
+  end subroutine multisystem_copy_quantities_to_interaction
 
   ! ---------------------------------------------------------
   subroutine multisystem_update_interactions_start(this)

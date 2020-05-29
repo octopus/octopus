@@ -31,9 +31,10 @@ module interaction_with_partner_oct_m
     interaction_with_partner_t,  &
     interaction_with_partner_end
 
-  !> Some interactions involve two system. In this case the interaction is a unidirectional relationship between those two systems.
-  !! One of the systems owns the interaction and feels it`s effects. The other
-  !! system is referred to as the interaction partner.
+  !> Some interactions involve two systems. In this case the interaction is a
+  !! unidirectional relationship between those two systems. One of the systems
+  !! owns the interaction and feels its effects. The other system is referred to
+  !! as the interaction partner.
   type, extends(interaction_abst_t), abstract :: interaction_with_partner_t
     private
     class(interaction_partner_t), public, pointer :: partner
@@ -47,18 +48,18 @@ module interaction_with_partner_oct_m
 contains
 
   ! ---------------------------------------------------------
-  logical function interaction_with_partner_update(this, clock) result(updated)
+  logical function interaction_with_partner_update(this, requested_time) result(updated)
     class(interaction_with_partner_t), intent(inout) :: this
-    class(clock_t),                    intent(in)    :: clock
+    class(clock_t),                    intent(in)    :: requested_time
 
     logical :: allowed_to_update
 
     PUSH_SUB(interaction_with_partner_update)
 
-    ! We should only try to update the interaction if it is not yet at the desired time
-    ASSERT(.not. (this%clock == clock))
+    ! We should only try to update the interaction if it is not yet at the requested time
+    ASSERT(.not. (this%clock == requested_time))
 
-    allowed_to_update = this%partner%update_exposed_quantities(clock, this)
+    allowed_to_update = this%partner%update_exposed_quantities(requested_time, this)
 
     if (allowed_to_update) then
       ! We can now compute the interaction from the updated quantities
@@ -66,17 +67,19 @@ contains
 
       ! Update was successful, so set new interaction time
       updated = .true.
-      call this%clock%set_time(clock)
+      call this%clock%set_time(requested_time)
 
       if (debug%info) then
         write(message(1), '(a,a)') "Debug: -- Updated interaction with ", trim(this%partner%namespace%get())
-        write(message(2), '(a,i3,a,i3)') "Debug: ---- clocks are ", clock%get_tick(), " and ", this%partner%clock%get_tick()
+        write(message(2), '(a,i3,a,i3)') "Debug: ---- requested time is ", requested_time%get_tick(), &
+          " and partner time is ", this%partner%clock%get_tick()
         call messages_info(2)
       end if
     else
       if (debug%info) then
         write(message(1), '(a,a)') "Debug: -- Cannot update yet the interaction with ", trim(this%partner%namespace%get())
-        write(message(2), '(a,i3,a,i3)') "Debug: ---- clocks are ", clock%get_tick(), " and ", this%partner%clock%get_tick()
+        write(message(2), '(a,i3,a,i3)') "Debug: ---- requested time is ", requested_time%get_tick(), &
+          " and partner time is ", this%partner%clock%get_tick()
         call messages_info(2)
       end if
       updated = .false.

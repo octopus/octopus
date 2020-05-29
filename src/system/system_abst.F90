@@ -52,7 +52,7 @@ module system_abst_oct_m
 
     integer :: accumulated_loop_ticks
 
-    type(linked_list_t), public :: interactions !< List we all the interactions of this system
+    type(linked_list_t), public :: interactions !< List with all the interactions of this system
   contains
     procedure :: dt_operation =>  system_dt_operation
     procedure :: init_clocks => system_init_clocks
@@ -130,12 +130,12 @@ module system_abst_oct_m
     end subroutine system_store_current_status
 
     ! ---------------------------------------------------------
-    subroutine system_update_quantity(this, iq, clock)
+    subroutine system_update_quantity(this, iq, requested_time)
       import system_abst_t
       import clock_t
       class(system_abst_t),      intent(inout) :: this
       integer,                   intent(in)    :: iq
-      class(clock_t),            intent(in)    :: clock
+      class(clock_t),            intent(in)    :: requested_time
     end subroutine system_update_quantity
 
     ! ---------------------------------------------------------
@@ -339,9 +339,9 @@ contains
   end subroutine system_reset_clocks
 
   ! ---------------------------------------------------------
-  logical function system_update_exposed_quantities(this, clock, interaction) result(all_updated)
+  logical function system_update_exposed_quantities(this, requested_time, interaction) result(all_updated)
     class(system_abst_t),      intent(inout) :: this
-    type(clock_t),             intent(in)    :: clock
+    type(clock_t),             intent(in)    :: requested_time
     class(interaction_abst_t), intent(inout) :: interaction
 
     logical :: ahead_in_time
@@ -352,7 +352,7 @@ contains
     select type (interaction)
     class is (interaction_with_partner_t)
 
-      if ((this%clock < clock .and. this%clock%is_earlier_with_step(clock)) .or. this%prop%inside_scf) then
+      if ((this%clock < requested_time .and. this%clock%is_earlier_with_step(requested_time)) .or. this%prop%inside_scf) then
         ! We have to wait, either because this is not the best moment to update the quantities or
         ! because we are inside an SCF cycle and therefore are not allowed to expose any quantities.
         all_updated = .false.
@@ -364,9 +364,7 @@ contains
           ! Get the requested quantity ID
           q_id = interaction%partner_quantities(iq)
 
-          if (this%quantities(q_id)%clock > clock) then
-            ahead_in_time = .true.
-          end if
+          if (this%quantities(q_id)%clock > requested_time) ahead_in_time = .true.
         end do
 
         if (ahead_in_time) then
@@ -384,14 +382,15 @@ contains
             ! All needed quantities must have been marked as required. If not, then fix your code!
             ASSERT(this%quantities(q_id)%required)
 
-            if (.not. (this%quantities(q_id)%clock == clock .or. &
-              (this%quantities(q_id)%clock < clock .and. this%quantities(q_id)%clock%is_later_with_step(clock)))) then
+            if (.not. (this%quantities(q_id)%clock == requested_time .or. &
+              (this%quantities(q_id)%clock < requested_time .and. &
+              this%quantities(q_id)%clock%is_later_with_step(requested_time)))) then
               ! The quantity is not at the requested time nor at the best possible time, so we try to update it
 
               ! Sanity check: it can never happen that the quantity is in advance with respect to the
               ! requested time.
-              if (this%quantities(q_id)%clock > clock) then
-                message(1) = "The partner quantity is in advance compared to the requested clock."
+              if (this%quantities(q_id)%clock > requested_time) then
+                message(1) = "The partner quantity is in advance compared to the requested time."
                 call messages_fatal(1)
               end if
 
@@ -401,13 +400,13 @@ contains
                 all_updated = .false.
               else
                 ! This is not a protected quantity and we are the right time, so we update it
-                call this%update_exposed_quantity(q_id, clock)
+                call this%update_exposed_quantity(q_id, requested_time)
               end if
             end if
           end do
 
           ! If the quantities have been updated, we copy them to the interaction
-          if (all_updated) call this%update_interaction_quantities(interaction)
+          if (all_updated) call this%copy_quantities_to_interaction(interaction)
         end if
       end if
 
@@ -421,9 +420,9 @@ contains
   end function system_update_exposed_quantities
 
   ! ---------------------------------------------------------
-  logical function system_update_interactions(this, clock) result(all_updated)
+  logical function system_update_interactions(this, requested_time) result(all_updated)
     class(system_abst_t),      intent(inout) :: this
-    type(clock_t),             intent(in)    :: clock !< Requested time for the update
+    type(clock_t),             intent(in)    :: requested_time !< Requested time for the update
 
     integer :: iq, q_id
     class(interaction_abst_t), pointer :: interaction
@@ -440,7 +439,7 @@ contains
     do while (iter%has_next())
       interaction => iter%get_next_interaction()
 
-      if (.not. interaction%clock == clock) then
+      if (.not. interaction%clock == requested_time) then
         ! Update the system quantities that will be needed for computing the interaction
         do iq = 1, interaction%n_system_quantities
           ! Get requested quantity ID
@@ -452,23 +451,23 @@ contains
           ! We do not need to update the protected quantities, the propagator takes care of that
           if (this%quantities(q_id)%protected) cycle
 
-          if (.not. this%quantities(q_id)%clock == clock) then
+          if (.not. this%quantities(q_id)%clock == requested_time) then
             ! The requested quantity is not at the requested time, so we try to update it
 
             ! Sanity check: it should never happen that the quantity is in advance
             ! with respect to the requested time.
-            if (this%quantities(q_id)%clock > clock) then
-              message(1) = "The quantity clock is in advance compared to the requested clock."
+            if (this%quantities(q_id)%clock > requested_time) then
+              message(1) = "The quantity clock is in advance compared to the requested time."
               call messages_fatal(1)
             end if
 
-            call this%update_quantity(q_id, clock)
+            call this%update_quantity(q_id, requested_time)
           end if
 
         end do
 
         ! We can now try to update the interaction
-        all_updated = interaction%update(clock) .and. all_updated
+        all_updated = interaction%update(requested_time) .and. all_updated
       end if
     end do
 
