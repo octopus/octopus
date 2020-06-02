@@ -82,6 +82,8 @@ contains
       call messages_not_implemented("PCM for CalculationMode /= gs or td")
     end if
 
+    if (sys%gr%sb%kpoints%use_symmetries) call messages_experimental("KPoints symmetries with CalculationMode = em_resp")
+
     call init_()
 
     ! load wavefunctions

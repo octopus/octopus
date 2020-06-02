@@ -103,6 +103,10 @@ contains
       call messages_not_implemented("PCM for CalculationMode /= gs or td")
     end if
 
+    if (sys%gr%sb%kpoints%use_symmetries) then
+      call messages_experimental("KPoints symmetries with CalculationMode = opt_control")
+    end if
+
     ! Creates a directory where the optimal control stuff will be written. The name of the directory
     ! is stored in the preprocessor macro OCT_DIR, which should be defined in src/include/global.h
     call io_mkdir(OCT_DIR, sys%namespace)

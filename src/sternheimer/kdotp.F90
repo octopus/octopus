@@ -110,6 +110,10 @@ contains
       call messages_not_implemented('Commutator of Fock operator')
     end if
 
+    if (sys%gr%sb%kpoints%use_symmetries) then
+      call messages_experimental("KPoints symmetries with CalculationMode = kdotp")
+    end if
+
     pdim = sys%gr%sb%periodic_dim
 
     if(.not. simul_box_is_periodic(sys%gr%sb)) then

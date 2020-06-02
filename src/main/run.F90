@@ -240,12 +240,8 @@ contains
         case(CM_UNOCC)
           call unocc_run(sys, fromScratch)
         case(CM_TD)
-          if(sys%gr%sb%kpoints%use_symmetries) &
-            call messages_experimental("KPoints symmetries with CalculationMode = td")
           call td_run(sys, fromScratch)
         case(CM_LR_POL)
-          if(sys%gr%sb%kpoints%use_symmetries) &
-            call messages_experimental("KPoints symmetries with CalculationMode = em_resp")
           select case(get_resp_method(sys%namespace))
           case(FD)
             call static_pol_run(sys, fromScratch)
@@ -253,16 +249,10 @@ contains
             call em_resp_run(sys, fromScratch)
           end select
         case(CM_VDW)
-          if(sys%gr%sb%kpoints%use_symmetries) &
-            call messages_experimental("KPoints symmetries with CalculationMode = vdw")
           call vdW_run(sys, fromScratch)
         case(CM_GEOM_OPT)
-          if(sys%gr%sb%kpoints%use_symmetries) &
-            call messages_experimental("KPoints symmetries with CalculationMode = go")
           call geom_opt_run(sys, fromScratch)
         case(CM_PHONONS_LR)
-          if(sys%gr%sb%kpoints%use_symmetries) &
-            call messages_experimental("KPoints symmetries with CalculationMode = vib_modes")
           select case(get_resp_method(sys%namespace))
           case(FD)
             call phonons_run(sys)
@@ -270,24 +260,16 @@ contains
             call phonons_lr_run(sys, fromscratch)
           end select
         case(CM_OPT_CONTROL)
-          if(sys%gr%sb%kpoints%use_symmetries) &
-            call messages_experimental("KPoints symmetries with CalculationMode = opt_control")
           call opt_control_run(sys)
         case(CM_CASIDA)
-          if(sys%gr%sb%kpoints%use_symmetries) &
-            call messages_experimental("KPoints symmetries with CalculationMode = casida")
           call casida_run(sys, fromScratch)
         case(CM_ONE_SHOT)
           message(1) = "CalculationMode = one_shot is obsolete. Please use gs with MaximumIter = 0."
           call messages_fatal(1)
         case(CM_KDOTP)
-          if(sys%gr%sb%kpoints%use_symmetries) &
-            call messages_experimental("KPoints symmetries with CalculationMode = kdotp")
           call kdotp_lr_run(sys, fromScratch)
         case(CM_DUMMY)
         case(CM_INVERTKDS)
-          if(sys%gr%sb%kpoints%use_symmetries) &
-            call messages_experimental("KPoints symmetries with CalculationMode = invert_ks")
           call invert_ks_run(sys)
         case(CM_PULPO_A_FEIRA)
           ASSERT(.false.) !this is handled before, if we get here, it is an error

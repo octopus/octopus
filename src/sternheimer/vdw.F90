@@ -78,6 +78,8 @@ contains
       call messages_not_implemented('Van der Waals calculation for periodic system')
     end if
 
+    if (sys%gr%sb%kpoints%use_symmetries) call messages_experimental("KPoints symmetries with CalculationMode = vdw")
+
     call input()
     call init_()
     call sternheimer_init(sh, sys, wfs_are_cplx = .true.)

@@ -61,6 +61,10 @@ contains
       call messages_not_implemented("PCM for CalculationMode /= gs or td")
     end if
 
+    if (sys%gr%sb%kpoints%use_symmetries) then
+      call messages_experimental("KPoints symmetries with CalculationMode = invert_ks")
+    end if
+
     ! initialize KS inversion module
     call xc_ks_inversion_write_info(sys%ks%ks_inversion, stdout)
 

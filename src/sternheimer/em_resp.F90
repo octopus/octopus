@@ -153,6 +153,10 @@ contains
     gr => sys%gr
     ndim = sys%gr%sb%dim
 
+    if (gr%sb%kpoints%use_symmetries) then
+      call messages_experimental("em_resp with k-points symmetries")
+    end if
+
     if(gr%sb%kpoints%reduced%npoints /= gr%sb%kpoints%full%npoints) then
       call messages_experimental('em_resp with reduced k-grid')
     end if

@@ -108,6 +108,10 @@ contains
       call messages_not_implemented("PCM for CalculationMode /= gs or td")
     end if
 
+    if (sys%gr%sb%kpoints%use_symmetries) then
+      call messages_experimental("KPoints symmetries with CalculationMode = go")
+    end if
+
     call init_(fromscratch)
 
     ! load wavefunctions
