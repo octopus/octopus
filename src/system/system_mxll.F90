@@ -499,7 +499,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine system_mxll_update_quantity(this, iq, clock)
-    class(system_mxll_t),   intent(inout) :: this
+    class(system_mxll_t),      intent(inout) :: this
     integer,                   intent(in)    :: iq
     class(clock_t),            intent(in)    :: clock
 
@@ -509,8 +509,6 @@ contains
     ASSERT(.not. this%quantities(iq)%protected)
 
     select case (iq)
-    !case (MASS)
-    !  call this%quantities(iq)%clock%set_time(clock)
     case default
       message(1) = "Incompatible quantity."
       call messages_fatal(1)
@@ -521,7 +519,7 @@ contains
 
  ! ---------------------------------------------------------
  logical function system_mxll_update_exposed_quantity(this, iq, clock) result(updated)
-    class(system_mxll_t),   intent(inout) :: this
+    class(system_mxll_t),      intent(inout) :: this
     integer,                   intent(in)    :: iq
     class(clock_t),            intent(in)    :: clock
 
