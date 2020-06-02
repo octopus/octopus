@@ -103,142 +103,133 @@ subroutine xc_kli_pauli_solve(mesh, namespace, st, oep)
   end do
 
 
-  select case (oep%level)
-  case (XC_OEP_SLATER)
+  SAFE_ALLOCATE(vs(1:mesh%np, 1:4))
+  vs = vloc ! Slater part
 
-    oep%vxc = vloc
+  ! iteration criteria
+  call scf_tol_init(oep%scftol, namespace, st%qtot, def_maximumiter=50)
 
-  case (XC_OEP_KLI)
+  ! get the HOMO state
+  call xc_oep_AnalyzeEigen(oep, st, 1)
+  eigen_n = oep%eigen_n
+  if (eigen_n == 0) then 
+    oep%vxc = vs
 
-    SAFE_ALLOCATE(vs(1:mesh%np, 1:4))
-    vs = vloc ! Slater part
+  else
 
-    ! iteration criteria
-    call scf_tol_init(oep%scftol, namespace, st%qtot, def_maximumiter=50)
+    ! orbital densities
+    SAFE_ALLOCATE(rho_i(1:mesh%np, 1:st%d%dim,st%d%dim, 1:eigen_n))
+    rho_i = M_Z0
 
-    ! get the HOMO state
-    call xc_oep_AnalyzeEigen(oep, st, 1)
-    eigen_n = oep%eigen_n
-    if (eigen_n == 0) then 
-      oep%vxc = vs
-
-    else
-
-      ! orbital densities
-      SAFE_ALLOCATE(rho_i(1:mesh%np, 1:st%d%dim,st%d%dim, 1:eigen_n))
-      rho_i = M_Z0
-
-      SAFE_ALLOCATE(psii(1:mesh%np))
-      SAFE_ALLOCATE(psij(1:mesh%np))
+    SAFE_ALLOCATE(psii(1:mesh%np))
+    SAFE_ALLOCATE(psij(1:mesh%np))
       
-      do ii = 1, st%d%dim
-        do jj = ii, st%d%dim
-          do ist = 1, eigen_n
-            kssi = oep%eigen_index(ist)
+    do ii = 1, st%d%dim
+      do jj = ii, st%d%dim
+        do ist = 1, eigen_n
+          kssi = oep%eigen_index(ist)
 
-            call states_elec_get_state(st, mesh, ii, kssi, 1, psii)
-            call states_elec_get_state(st, mesh, jj, kssi, 1, psij)
-           
-            rho_i(1:mesh%np,ii,jj,ist) = oep%socc*st%occ(kssi,1)*conjg(psij(1:mesh%np))*psii(1:mesh%np)
-            rho_i(1:mesh%np,jj,ii,ist) = conjg(rho_i(1:mesh%np,ii,jj,ist))
-          end do
+          call states_elec_get_state(st, mesh, ii, kssi, 1, psii)
+          call states_elec_get_state(st, mesh, jj, kssi, 1, psij)
+          
+          rho_i(1:mesh%np,ii,jj,ist) = oep%socc*st%occ(kssi,1)*conjg(psij(1:mesh%np))*psii(1:mesh%np)
+          rho_i(1:mesh%np,jj,ii,ist) = conjg(rho_i(1:mesh%np,ii,jj,ist))
+        end do
+      end do
+    end do
+
+    SAFE_DEALLOCATE_A(psii)
+    SAFE_DEALLOCATE_A(psij)
+      
+    ! arrange them in a 4-vector
+    SAFE_ALLOCATE(p_i(1:mesh%np, 1:4, 1:eigen_n))
+    p_i = M_ZERO
+    p_i(1:mesh%np,1,:) = TOFLOAT(rho_i(1:mesh%np,1,1,:)) 
+    p_i(1:mesh%np,2,:) = TOFLOAT(rho_i(1:mesh%np,2,2,:))  
+    p_i(1:mesh%np,3,:) = M_TWO*TOFLOAT(rho_i(1:mesh%np,1,2,:))  
+    p_i(1:mesh%np,4,:) = M_TWO*aimag(rho_i(1:mesh%np,1,2,:))  
+      
+    SAFE_DEALLOCATE_A(rho_i)
+
+    ! Calculate iteratively response part
+    SAFE_ALLOCATE(v_m1(1:mesh%np, 1:4))
+    SAFE_ALLOCATE(delta_v(1:eigen_n)) 
+    SAFE_ALLOCATE(t_vi(1:mesh%np, 1:4, 1:eigen_n)) 
+
+    vloc = M_ZERO
+    KLI_iteration: do it = 1,oep%scftol%max_iter
+      v_m1 = vs + vloc
+
+      ! delta_v^KLI
+      delta_v = M_ZERO
+      do ist = 1,eigen_n
+        do is = 1,st%d%nspin
+          delta_v(ist) = delta_v(ist)+ dmf_dotp(mesh,p_i(1:mesh%np,is,ist),v_m1(1:mesh%np,is), reduce = .false.)
+        end do
+      end do
+      if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm,  delta_v, dim = eigen_n)
+
+      do ist = 1,eigen_n
+        kssi = oep%eigen_index(ist)
+        delta_v(ist) = delta_v(ist) - TOFLOAT(sum(oep%uxc_bar(kssi,:)))
+      end do
+
+      !
+      t_vi(1:mesh%np,1,:) = p_i(1:mesh%np,2,:) 
+      t_vi(1:mesh%np,2,:) = p_i(1:mesh%np,1,:)
+      t_vi(1:mesh%np,3,:) =-p_i(1:mesh%np,3,:) 
+      t_vi(1:mesh%np,4,:) =-p_i(1:mesh%np,4,:)
+      do is = 1, st%d%nspin
+        do ip = 1, mesh%np
+          t_vi(ip, is, :) = t_vi(ip, is, :)*delta_v(:)
         end do
       end do
 
-      SAFE_DEALLOCATE_A(psii)
-      SAFE_DEALLOCATE_A(psij)
-      
-      ! arrange them in a 4-vector
-      SAFE_ALLOCATE(p_i(1:mesh%np, 1:4, 1:eigen_n))
-      p_i = M_ZERO
-      p_i(1:mesh%np,1,:) = TOFLOAT(rho_i(1:mesh%np,1,1,:)) 
-      p_i(1:mesh%np,2,:) = TOFLOAT(rho_i(1:mesh%np,2,2,:))  
-      p_i(1:mesh%np,3,:) = M_TWO*TOFLOAT(rho_i(1:mesh%np,1,2,:))  
-      p_i(1:mesh%np,4,:) = M_TWO*aimag(rho_i(1:mesh%np,1,2,:))  
-      
-      SAFE_DEALLOCATE_A(rho_i)
-
-      ! Calculate iteratively response part
-      SAFE_ALLOCATE(v_m1(1:mesh%np, 1:4))
-      SAFE_ALLOCATE(delta_v(1:eigen_n)) 
-      SAFE_ALLOCATE(t_vi(1:mesh%np, 1:4, 1:eigen_n)) 
-
       vloc = M_ZERO
-      KLI_iteration: do it = 1,oep%scftol%max_iter
-        v_m1 = vs + vloc
+      do ip = 1, mesh%np
+        vloc(ip,1) = sum(t_vi(ip,2,:) - t_vi(ip,1,:)) 
+        vloc(ip,2) = -vloc(ip,1)
+        vloc(ip,3) = -sum(t_vi(ip,3,:))
+        vloc(ip,4) = -sum(t_vi(ip,4,:))
+      end do
 
-        ! delta_v^KLI
-        delta_v = M_ZERO
-        do ist = 1,eigen_n
-          do is = 1,st%d%nspin
-            delta_v(ist) = delta_v(ist)+ dmf_dotp(mesh,p_i(1:mesh%np,is,ist),v_m1(1:mesh%np,is), reduce = .false.)
-          end do
-        end do
-        if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm,  delta_v, dim = eigen_n)
-
-        do ist = 1,eigen_n
-          kssi = oep%eigen_index(ist)
-          delta_v(ist) = delta_v(ist) - TOFLOAT(sum(oep%uxc_bar(kssi,:)))
-        end do
-
-        !
-        t_vi(1:mesh%np,1,:) = p_i(1:mesh%np,2,:) 
-        t_vi(1:mesh%np,2,:) = p_i(1:mesh%np,1,:)
-        t_vi(1:mesh%np,3,:) =-p_i(1:mesh%np,3,:) 
-        t_vi(1:mesh%np,4,:) =-p_i(1:mesh%np,4,:)
-        do is = 1, st%d%nspin
-          do ip = 1, mesh%np
-            t_vi(ip, is, :) = t_vi(ip, is, :)*delta_v(:)
-          end do
-        end do
-
-        vloc = M_ZERO
-        do ip = 1, mesh%np
-          vloc(ip,1) = sum(t_vi(ip,2,:) - t_vi(ip,1,:)) 
-          vloc(ip,2) = -vloc(ip,1)
-          vloc(ip,3) = -sum(t_vi(ip,3,:))
-          vloc(ip,4) = -sum(t_vi(ip,4,:))
-        end do
-
-        !
-        rhov = M_ZERO
-        do ist = 1, eigen_n
-          do ip = 1, mesh%np
-            rhov(ip) = rhov(ip) + sum(rho(ip,:)*t_vi(ip,:,ist))
-          end do
-        end do
-        rhov = rhov/lambda
-
-        do ip = 1, mesh%np
-          vloc(ip,:) = (vloc(ip,:) + t_rho(ip,:)*rhov(ip))/n(ip)
-        end do
-        !
-        do is = 1, 4 
-          reached_threshold(is) = dmf_nrm2(mesh,(vs(1:mesh%np,is) + vloc(1:mesh%np,is) - v_m1(1:mesh%np,is))) 
-        end do
-        if (all(reached_threshold(:)  <=  oep%scftol%conv_abs_dens)) exit
-
-      end do KLI_iteration
-
-      if (.not. all(reached_threshold(:)  <=  oep%scftol%conv_abs_dens)) &
-        it = it - 1
-      
-      write(message(1), '(a,i4,a,es14.6)') &
-        "Info: After ", it, " iterations, KLI converged to ", maxval(reached_threshold(:))
-      message(2) = ''
-      call messages_info(2)
       !
-      oep%vxc = v_m1
+      rhov = M_ZERO
+      do ist = 1, eigen_n
+        do ip = 1, mesh%np
+          rhov(ip) = rhov(ip) + sum(rho(ip,:)*t_vi(ip,:,ist))
+        end do
+      end do
+      rhov = rhov/lambda
 
-      SAFE_DEALLOCATE_A(vs)
-      SAFE_DEALLOCATE_A(v_m1)
-      SAFE_DEALLOCATE_A(delta_v)
-      SAFE_DEALLOCATE_A(t_vi)
-      SAFE_DEALLOCATE_A(p_i)
+      do ip = 1, mesh%np
+        vloc(ip,:) = (vloc(ip,:) + t_rho(ip,:)*rhov(ip))/n(ip)
+      end do
+      !
+      do is = 1, 4 
+        reached_threshold(is) = dmf_nrm2(mesh,(vs(1:mesh%np,is) + vloc(1:mesh%np,is) - v_m1(1:mesh%np,is))) 
+      end do
+      if (all(reached_threshold(:)  <=  oep%scftol%conv_abs_dens)) exit
 
-    end if
+    end do KLI_iteration
 
-  end select
+    if (.not. all(reached_threshold(:)  <=  oep%scftol%conv_abs_dens)) &
+      it = it - 1
+      
+    write(message(1), '(a,i4,a,es14.6)') &
+      "Info: After ", it, " iterations, KLI converged to ", maxval(reached_threshold(:))
+    message(2) = ''
+    call messages_info(2)
+    !
+    oep%vxc = v_m1
+
+    SAFE_DEALLOCATE_A(vs)
+    SAFE_DEALLOCATE_A(v_m1)
+    SAFE_DEALLOCATE_A(delta_v)
+    SAFE_DEALLOCATE_A(t_vi)
+    SAFE_DEALLOCATE_A(p_i)
+
+  end if
 
   SAFE_DEALLOCATE_A(rho)
   SAFE_DEALLOCATE_A(lambda)

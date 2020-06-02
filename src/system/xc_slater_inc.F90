@@ -85,8 +85,9 @@ subroutine X(slater) (namespace, der, psolver, st, isp, ex, vxc)
 
   PUSH_SUB(X(slater))
 
-  if(der%mesh%sb%kpoints%reduced%npoints > 1) &
+  if(der%mesh%sb%kpoints%reduced%npoints > 1) then
     call messages_not_implemented("exchange operator with k-points", namespace=namespace)
+  end if
 
   socc = M_ONE / st%smear%el_per_state
 

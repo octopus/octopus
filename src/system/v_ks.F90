@@ -172,6 +172,7 @@ contains
     type(dftd3_input) :: d3_input
     character(len=20) :: d3func_def, d3func
     integer :: pseudo_x_functional, pseudo_c_functional
+    logical :: slater
     
     PUSH_SUB(v_ks_init)
 
@@ -396,7 +397,9 @@ contains
       if(bitand(ks%xc_family, XC_FAMILY_OEP) /= 0) then
         if (gr%have_fine_mesh) call messages_not_implemented("OEP functionals with UseFineMesh", namespace=namespace)
 
-        call xc_oep_init(ks%oep, namespace, ks%xc_family, gr, st)
+        slater = .false.
+        if( ks%xc%functional(FUNC_X,1)%id == XC_SLATER_X ) slater = .true.
+        call xc_oep_init(ks%oep, namespace, ks%xc_family, gr, st, slater)
       else
         ks%oep%level = XC_OEP_NONE
       end if
