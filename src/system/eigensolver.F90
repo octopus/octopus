@@ -354,7 +354,7 @@ contains
     end if
 
     if (any(eigens%es_type == (/RS_PLAN, RS_CG, RS_LOBPCG, RS_RMMDIIS, RS_PSD/))) then
-      call preconditioner_init(eigens%pre, namespace, gr)
+      call preconditioner_init(eigens%pre, namespace, gr, geo, mc)
     else
       call preconditioner_null(eigens%pre)
     end if
@@ -410,12 +410,6 @@ contains
     call parse_variable(namespace, 'EigensolverSkipKpoints', .false., eigens%skip_finite_weight_kpoints)
     call messages_print_var_value(stdout,'EigensolverSkipKpoints',  eigens%skip_finite_weight_kpoints)
 
-    if(preconditioner_is_multigrid(eigens%pre)) then
-      SAFE_ALLOCATE(gr%mgrid_prec)
-      call multigrid_init(gr%mgrid_prec, namespace, geo, gr%cv, gr%mesh, gr%der, gr%stencil, mc, used_for_preconditioner = .true.)
-    end if
-
-
     POP_SUB(eigensolver_init)
   end subroutine eigensolver_init
 
@@ -426,12 +420,6 @@ contains
     type(grid_t),        intent(inout) :: gr
 
     PUSH_SUB(eigensolver_end)
-
-    if(preconditioner_is_multigrid(eigens%pre)) then
-      call multigrid_end(gr%mgrid_prec)
-      SAFE_DEALLOCATE_P(gr%mgrid_prec)
-    end if
-
 
     select case(eigens%es_type)
     case(RS_PLAN, RS_CG, RS_LOBPCG, RS_RMMDIIS, RS_PSD)
