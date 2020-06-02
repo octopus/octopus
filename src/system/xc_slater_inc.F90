@@ -213,14 +213,21 @@ subroutine X(slater) (namespace, der, psolver, st, isp, ex, vxc)
             else
               !This is given by Eq. 19 in SI of PRB 98, 035140 (2018)
               if(ist /= jst) then
-                bij(1:der%mesh%np, 1) = bij(1:der%mesh%np, 1) - M_TWO * rr * R_REAL(wf_ist(1:der%mesh%np, 1)*R_CONJ(psi(1:der%mesh%np, 1)) * pot_ij(1:der%mesh%np))
-                bij(1:der%mesh%np, 2) = bij(1:der%mesh%np, 2) - M_TWO * rr * R_REAL(wf_ist(1:der%mesh%np, 2)*R_CONJ(psi(1:der%mesh%np, 2)) * pot_ij(1:der%mesh%np))
+                bij(1:der%mesh%np, 1) = bij(1:der%mesh%np, 1) - M_TWO * rr &
+                      * R_REAL(wf_ist(1:der%mesh%np, 1)*R_CONJ(psi(1:der%mesh%np, 1)) * pot_ij(1:der%mesh%np))
+                bij(1:der%mesh%np, 2) = bij(1:der%mesh%np, 2) - M_TWO * rr &
+                      * R_REAL(wf_ist(1:der%mesh%np, 2)*R_CONJ(psi(1:der%mesh%np, 2)) * pot_ij(1:der%mesh%np))
                 !As we only compute the terms ist >= jst, we get a symmetric form
-                bij(1:der%mesh%np, 3) = bij(1:der%mesh%np, 3) - rr * (wf_ist(1:der%mesh%np, 1)*R_CONJ(psi(1:der%mesh%np, 2)) * pot_ij(1:der%mesh%np) + psi(1:der%mesh%np, 1)*R_CONJ(wf_ist(1:der%mesh%np, 2) * pot_ij(1:der%mesh%np)))
+                bij(1:der%mesh%np, 3) = bij(1:der%mesh%np, 3) - rr * &
+                              ( wf_ist(1:der%mesh%np, 1)*R_CONJ(psi(1:der%mesh%np, 2)) * pot_ij(1:der%mesh%np) &
+                              + psi(1:der%mesh%np, 1)*R_CONJ(wf_ist(1:der%mesh%np, 2) * pot_ij(1:der%mesh%np)))
               else
-                bij(1:der%mesh%np, 1) = bij(1:der%mesh%np, 1) - rr * R_REAL(wf_ist(1:der%mesh%np, 1)*R_CONJ(psi(1:der%mesh%np, 1)) * pot_ij(1:der%mesh%np))
-                bij(1:der%mesh%np, 2) = bij(1:der%mesh%np, 2) - rr * R_REAL(wf_ist(1:der%mesh%np, 2)*R_CONJ(psi(1:der%mesh%np, 2)) * pot_ij(1:der%mesh%np))
-                bij(1:der%mesh%np, 3) = bij(1:der%mesh%np, 3) - rr * wf_ist(1:der%mesh%np, 1)*R_CONJ(psi(1:der%mesh%np, 2)) * pot_ij(1:der%mesh%np)
+                bij(1:der%mesh%np, 1) = bij(1:der%mesh%np, 1) - rr &
+                      * R_REAL(wf_ist(1:der%mesh%np, 1)*R_CONJ(psi(1:der%mesh%np, 1)) * pot_ij(1:der%mesh%np))
+                bij(1:der%mesh%np, 2) = bij(1:der%mesh%np, 2) - rr &
+                      * R_REAL(wf_ist(1:der%mesh%np, 2)*R_CONJ(psi(1:der%mesh%np, 2)) * pot_ij(1:der%mesh%np))
+                bij(1:der%mesh%np, 3) = bij(1:der%mesh%np, 3) - rr &
+                      * wf_ist(1:der%mesh%np, 1)*R_CONJ(psi(1:der%mesh%np, 2)) * pot_ij(1:der%mesh%np)
               end if
               !The last component is simply the complex conjuguate of bij(3), so we do not compute it.
             end if
