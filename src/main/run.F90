@@ -26,10 +26,7 @@ module run_oct_m
   use geom_opt_oct_m
   use global_oct_m
   use ground_state_oct_m
-  use hamiltonian_elec_oct_m
-  use hamiltonian_mxll_oct_m
   use invert_ks_oct_m
-  use linked_list_oct_m
   use messages_oct_m
   use mpi_debug_oct_m
   use memory_oct_m
@@ -49,15 +46,12 @@ module run_oct_m
   use static_pol_oct_m
   use system_abst_oct_m
   use system_factory_oct_m
-  use system_oct_m
-  use system_mxll_oct_m
   use td_oct_m
   use test_oct_m
   use unit_system_oct_m
   use unocc_oct_m
   use varinfo_oct_m
   use vdw_oct_m
-  use xc_oct_m
 
   implicit none
 
@@ -85,7 +79,6 @@ module run_oct_m
     CM_DUMMY              =  17,  &
     CM_INVERTKDS          =  18,  &
     CM_TEST               =  19,  &
-    CM_MAXWELL_FREE       =  20,  &
     CM_PULPO_A_FEIRA      =  99
 
 contains
