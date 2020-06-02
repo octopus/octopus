@@ -902,10 +902,10 @@ contains
   contains
 
     subroutine build_phase()
-      integer :: ik, imat, nmat, max_npoints, offset, idim
+      integer :: ik, imat, nmat, max_npoints, offset, idim, ndim
       integer :: ip, ip_global, ip_inner, sp
       FLOAT   :: kpoint(1:MAX_DIM), x_global(1:MAX_DIM)
-      integer :: ndim
+      integer :: iphase, nphase
 
       PUSH_SUB(hamiltonian_elec_update.build_phase)
 
@@ -984,12 +984,12 @@ contains
       if(associated(this%hm_base%phase) .and. allocated(this%hm_base%projector_matrices)) then
 
         if(.not. allocated(this%hm_base%projector_phases)) then
-          ndim = 1
-          if(this%der%boundaries%spiralBC) ndim = 3
-          SAFE_ALLOCATE(this%hm_base%projector_phases(1:max_npoints, nmat, 1:ndim, this%d%kpt%start:this%d%kpt%end))
+          nphase = 1
+          if(this%der%boundaries%spiralBC) nphase = 3
+          SAFE_ALLOCATE(this%hm_base%projector_phases(1:max_npoints, nmat, 1:nphase, this%d%kpt%start:this%d%kpt%end))
           if(accel_is_enabled()) then
             call accel_create_buffer(this%hm_base%buff_projector_phases, ACCEL_MEM_READ_ONLY, &
-              TYPE_CMPLX, this%hm_base%total_points*this%d%kpt%nlocal)
+              TYPE_CMPLX, this%hm_base%total_points*nphase*this%d%kpt%nlocal)
           end if
         end if
 
@@ -997,20 +997,20 @@ contains
         do ik = this%d%kpt%start, this%d%kpt%end
           do imat = 1, this%hm_base%nprojector_matrices
             iatom = this%hm_base%projector_to_atom(imat)
-            ndim = 1
-            if(this%der%boundaries%spiralBC) ndim = 3
-            do idim = 1, ndim
+            nphase = 1
+            if(this%der%boundaries%spiralBC) nphase = 3
+            do iphase = 1, nphase
               !$omp parallel do schedule(static)
               do ip = 1, this%hm_base%projector_matrices(imat)%npoints
-                this%hm_base%projector_phases(ip, imat, idim, ik) = this%ep%proj(iatom)%phase(ip, idim, ik)
+                this%hm_base%projector_phases(ip, imat, iphase, ik) = this%ep%proj(iatom)%phase(ip, iphase, ik)
               end do
-            end do
 
-            if(accel_is_enabled() .and. this%hm_base%projector_matrices(imat)%npoints > 0) then
-              call accel_write_buffer(this%hm_base%buff_projector_phases, &
-                this%hm_base%projector_matrices(imat)%npoints, this%hm_base%projector_phases(1:, imat, 1, ik), offset = offset)
-            end if
-            offset = offset + this%hm_base%projector_matrices(imat)%npoints
+              if(accel_is_enabled() .and. this%hm_base%projector_matrices(imat)%npoints > 0) then
+                call accel_write_buffer(this%hm_base%buff_projector_phases, &
+                  this%hm_base%projector_matrices(imat)%npoints, this%hm_base%projector_phases(1:, imat, iphase, ik), offset = offset)
+              end if
+              offset = offset + this%hm_base%projector_matrices(imat)%npoints
+            end do
           end do
         end do
 
@@ -1462,7 +1462,7 @@ contains
   contains
 
     subroutine build_phase()
-      integer :: ik, imat, nmat, max_npoints, offset, idim, ndim
+      integer :: ik, imat, nmat, max_npoints, offset, iphase, nphase
       FLOAT   :: kpoint(1:MAX_DIM)
 
       PUSH_SUB(hamiltonian_elec_update2.build_phase)
@@ -1509,12 +1509,12 @@ contains
       if(associated(this%hm_base%phase) .and. allocated(this%hm_base%projector_matrices)) then
 
         if(.not. allocated(this%hm_base%projector_phases)) then
-          ndim = 1
-          if(this%der%boundaries%spiralBC) ndim = 3
-          SAFE_ALLOCATE(this%hm_base%projector_phases(1:max_npoints, nmat, ndim, this%d%kpt%start:this%d%kpt%end))
+          nphase = 1
+          if(this%der%boundaries%spiralBC) nphase = 3
+          SAFE_ALLOCATE(this%hm_base%projector_phases(1:max_npoints, nmat, nphase, this%d%kpt%start:this%d%kpt%end))
           if(accel_is_enabled()) then
             call accel_create_buffer(this%hm_base%buff_projector_phases, ACCEL_MEM_READ_ONLY, &
-              TYPE_CMPLX, this%hm_base%total_points*this%d%kpt%nlocal)
+              TYPE_CMPLX, this%hm_base%total_points*nphase*this%d%kpt%nlocal)
           end if
         end if
 
@@ -1522,20 +1522,20 @@ contains
         do ik = this%d%kpt%start, this%d%kpt%end
           do imat = 1, this%hm_base%nprojector_matrices
             iatom = this%hm_base%projector_to_atom(imat)
-            ndim = 1
-            if(this%der%boundaries%spiralBC) ndim = 3
-            do idim = 1, ndim
+            nphase = 1
+            if(this%der%boundaries%spiralBC) nphase = 3
+            do iphase = 1, nphase
               !$omp parallel do schedule(static)
               do ip = 1, this%hm_base%projector_matrices(imat)%npoints
-                this%hm_base%projector_phases(ip, imat, idim, ik) = this%ep%proj(iatom)%phase(ip, idim, ik)
+                this%hm_base%projector_phases(ip, imat, iphase, ik) = this%ep%proj(iatom)%phase(ip, iphase, ik)
               end do
-            end do
 
-            if(accel_is_enabled() .and. this%hm_base%projector_matrices(imat)%npoints > 0) then
-              call accel_write_buffer(this%hm_base%buff_projector_phases, &
-                this%hm_base%projector_matrices(imat)%npoints, this%hm_base%projector_phases(1:, imat, 1, ik), offset = offset)
-            end if
-            offset = offset + this%hm_base%projector_matrices(imat)%npoints
+              if(accel_is_enabled() .and. this%hm_base%projector_matrices(imat)%npoints > 0) then
+                call accel_write_buffer(this%hm_base%buff_projector_phases, &
+                  this%hm_base%projector_matrices(imat)%npoints, this%hm_base%projector_phases(1:, imat, iphase, ik), offset = offset)
+              end if
+              offset = offset + this%hm_base%projector_matrices(imat)%npoints
+            end do
           end do
         end do
 

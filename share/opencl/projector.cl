@@ -132,6 +132,62 @@ __kernel void projector_bra_phase(const int nmat,
   const int my_warp_size=1;
 #endif
 
+  const int ist = get_global_id(0)/my_warp_size;  // the kernel is to be called for (at least) all ist<nst_linear.
+  const int ipj = get_global_id(1);
+  const int imat = get_global_id(2);
+
+  const int npoints       = offsets[OFFSET_SIZE*imat + 0];
+  const int nprojs        = offsets[OFFSET_SIZE*imat + 1];
+  const int matrix_offset = offsets[OFFSET_SIZE*imat + 2];
+  const int map_offset    = offsets[OFFSET_SIZE*imat + 3];
+  const int scal_offset   = offsets[OFFSET_SIZE*imat + 4];
+
+  if(ipj >= nprojs) return;
+
+  const int nppj = npoints*ipj;
+
+#ifdef CUDA
+  const int slice = npoints%my_warp_size==0 ? npoints/my_warp_size : npoints/my_warp_size+1;
+  const int start = slice * ( get_local_id(0)%my_warp_size ) ;
+  const int end   = min( slice*((get_local_id(0)%my_warp_size)+1), npoints );
+  const int step  = 1;
+#else
+  const int start = 0;
+  const int end = npoints;
+  const int step = 1;
+#endif
+
+  double2 aa = 0.0;
+  for(int ip = start; ip < end; ip+=step){
+    double2 phasepsi = complex_mul(phases[phases_offset + map_offset + ip], psi[((map[map_offset + ip] - 1)<<ldpsi) + ist]);
+    aa += matrix[matrix_offset + ip + nppj]*phasepsi;
+  }
+
+#ifdef CUDA
+  aa = warpReduce2(aa);
+  if(get_local_id(0)%my_warp_size==0) 
+#endif
+    projection[ist + ((scal_offset + ipj)<<ldprojection)] = scal[scal_offset + ipj]*aa;
+
+}
+
+__kernel void projector_bra_phase_spiral(const int nmat,
+				  __global int const * restrict offsets,
+				  __global double const * restrict matrix,
+				  __global int const * restrict map,
+				  __global double const * restrict scal,
+				  __global double2 const * restrict psi, const int ldpsi,
+				  __global double2 * restrict projection, const int ldprojection,
+				  __global double2 const * restrict phases, const int phases_offset
+				  ){
+  
+
+#ifdef CUDA
+  const int my_warp_size = warpSize;
+#else
+  const int my_warp_size=1;
+#endif
+
   const int ist = get_global_id(0)/my_warp_size;
   const int ipj = get_global_id(1);
   const int imat = get_global_id(2);
@@ -170,6 +226,7 @@ __kernel void projector_bra_phase(const int nmat,
     projection[ist + ((scal_offset + ipj)<<ldprojection)] = scal[scal_offset + ipj]*aa;
 
 }
+
 
 __kernel void projector_commutator_bra(const int nmat,
 				       __global int const * restrict offsets,
