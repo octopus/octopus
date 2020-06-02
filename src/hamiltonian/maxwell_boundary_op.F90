@@ -191,15 +191,13 @@ contains
     !%Type block
     !%Section Time-Dependent::Propagation
     !%Description
-    !% Type of absorbing boundaries used for Maxwell propagation.
+    !% Type of absorbing boundaries used for Maxwell propagation in each direction.
     !%
     !% Example:
     !%
     !% <tt>%MaxwellAbsorbingBoundaries
     !% <br>&nbsp;&nbsp;   cpml | cpml | cpml
     !% <br>%</tt>
-    !%
-    !% Type of absorbing boundaries for Maxwell propagation.
     !%
     !%Option not_absorbing 0
     !% No absorbing boundaries.
@@ -504,7 +502,7 @@ contains
     !%Default 1.0.
     !%Section Time-Dependent::Absorbing Boundaries
     !%Description
-    !% Medium electric susceptibility.
+    !% Linear medium electric susceptibility.
     !%End
     call parse_variable(namespace, 'MediumEpsilonFactor', M_ONE, bc%mxmedium%ep_factor, unit_one)
 
@@ -513,7 +511,7 @@ contains
     !%Default 1.0
     !%Section Time-Dependent::Absorbing Boundaries
     !%Description
-    !% Medium magnetic susceptibility.
+    !% Linear medium magnetic susceptibility.
     !%End
     call parse_variable(namespace, 'MediumMuFactor', M_ONE, bc%mxmedium%mu_factor, unit_one)
 
@@ -556,8 +554,8 @@ contains
     !%Type float
     !%Section Time-Dependent::Absorbing Boundaries
     !%Description
-    !% Width of the region used to apply the absorbing boundaries. The default value is twice the derivative
-    !% order.
+    !% Width of the region used to apply the absorbing boundaries. The default value is twice
+    !% the derivative order.
     !%End
 
     width = 2*gr%der%order
