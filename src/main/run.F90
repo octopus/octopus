@@ -39,7 +39,6 @@ module run_oct_m
   use namespace_oct_m
   use opt_control_oct_m
   use parser_oct_m
-  use pcm_oct_m
   use phonons_fd_oct_m
   use phonons_lr_oct_m
   use poisson_oct_m
@@ -194,28 +193,6 @@ contains
     else
       ! Fall back to old behaviour
       sys => system_init(namespace)
-
-      if (sys%hm%pcm%run_pcm) then
-        select case (calc_mode_id)
-        case (CM_GS)
-          if (sys%hm%pcm%epsilon_infty /= sys%hm%pcm%epsilon_0 .and. sys%hm%pcm%tdlevel /= PCM_TD_EQ) then
-            message(1) = 'Non-equilbrium PCM is not active in a time-independent run.'
-            message(2) = 'You set epsilon_infty /= epsilon_0, but epsilon_infty is not relevant for CalculationMode = gs.'
-            message(3) = 'By definition, the ground state is in equilibrium with the solvent.'
-            message(4) = 'Therefore, the only relevant dielectric constant is the static one.'
-            message(5) = 'Nevertheless, the dynamical PCM response matrix is evaluated for benchamarking purposes.'
-            call messages_warning(5)
-          end if
-        case (CM_TD)
-          call messages_experimental("PCM for CalculationMode = td")
-        case default
-          call messages_not_implemented("PCM for CalculationMode /= gs or td")
-        end select
-
-        if ( (sys%mc%par_strategy /= P_STRATEGY_SERIAL).and.(sys%mc%par_strategy /= P_STRATEGY_STATES) ) then
-          call messages_experimental('Parallel in domain calculations with PCM')
-        end if
-      end if
 
       call messages_print_stress(stdout, 'Approximate memory requirements')
       call memory_run(sys)

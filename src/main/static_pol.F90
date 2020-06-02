@@ -78,6 +78,10 @@ contains
 
     PUSH_SUB(static_pol_run)
 
+    if (sys%hm%pcm%run_pcm) then
+      call messages_not_implemented("PCM for CalculationMode /= gs or td")
+    end if
+
     call init_()
 
     ! load wavefunctions

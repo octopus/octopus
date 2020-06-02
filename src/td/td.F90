@@ -137,6 +137,8 @@ contains
 
     PUSH_SUB(td_init)
 
+    if (sys%hm%pcm%run_pcm) call messages_experimental("PCM for CalculationMode = td")
+
     call ion_dynamics_init(td%ions, sys%namespace, sys%geo)
 
     if(ion_dynamics_ions_move(td%ions)) then

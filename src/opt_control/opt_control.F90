@@ -99,6 +99,10 @@ contains
 
     PUSH_SUB(opt_control_run)
 
+    if (sys%hm%pcm%run_pcm) then
+      call messages_not_implemented("PCM for CalculationMode /= gs or td")
+    end if
+
     ! Creates a directory where the optimal control stuff will be written. The name of the directory
     ! is stored in the preprocessor macro OCT_DIR, which should be defined in src/include/global.h
     call io_mkdir(OCT_DIR, sys%namespace)

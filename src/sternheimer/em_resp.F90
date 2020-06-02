@@ -38,6 +38,7 @@ module em_resp_oct_m
   use mpi_oct_m
   use namespace_oct_m
   use parser_oct_m
+  use pcm_oct_m
   use pert_oct_m
   use profiling_oct_m
   use restart_oct_m
@@ -144,6 +145,10 @@ contains
     integer, parameter :: PB = 1, PK2 = 2, PKB = 3, PKE = 4, PE = 5
 
     PUSH_SUB(em_resp_run)
+
+    if (sys%hm%pcm%run_pcm) then
+      call messages_not_implemented("PCM for CalculationMode /= gs or td")
+    end if
 
     gr => sys%gr
     ndim = sys%gr%sb%dim

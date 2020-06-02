@@ -102,6 +102,10 @@ contains
 
     call messages_experimental("k.p perturbation and calculation of effective masses")
 
+    if (sys%hm%pcm%run_pcm) then
+      call messages_not_implemented("PCM for CalculationMode /= gs or td")
+    end if
+
     if(sys%hm%theory_level == HARTREE_FOCK) then
       call messages_not_implemented('Commutator of Fock operator')
     end if
