@@ -2877,24 +2877,4 @@ contains
   end subroutine plane_waves_in_box_calculation
 
 
-  ! ---------------------------------------------------------
-  subroutine complex_matrix_vector_multiplication(mm, nn, matrix, vector, vector_r)
-    integer, intent(in)    :: mm, nn
-    CMPLX,   intent(inout) :: matrix(:,:), vector(:)
-    CMPLX,   intent(inout) :: vector_r(:)
-
-    CMPLX   :: tmp_sum
-    integer :: idx_m, idx_n
-
-    do idx_m=1, mm
-      tmp_sum = M_z0
-      do idx_n=1, nn
-        tmp_sum = tmp_sum + matrix(idx_m,idx_n) * vector(idx_n)
-      end do
-      vector_r(idx_m) = tmp_sum
-    end do
-
-  end subroutine complex_matrix_vector_multiplication
-
-
 end module propagator_mxll_oct_m
