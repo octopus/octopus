@@ -417,7 +417,7 @@ AC_CONFIG_FILES([Makefile
   testsuite/performance/Makefile
   testsuite/performance/tests/Makefile
   testsuite/components/Makefile 
-  testsuite/error_tests/Makefile 
+  testsuite/errors/Makefile 
   testsuite/finite_systems_1d/Makefile 
   testsuite/finite_systems_2d/Makefile
   testsuite/finite_systems_3d/Makefile

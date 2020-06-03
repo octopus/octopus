@@ -2,7 +2,7 @@
 
 Test       : Run_mode
 Program    : octopus
-TestGroups : short-run, error_tests
+TestGroups : short-run, errors
 Enabled    : Yes
 
 

@@ -18,11 +18,13 @@
 ## 02110-1301, USA.
 ##
 
-sharedir = $(pkgdatadir)/testsuite/error_tests
+sharedir = $(pkgdatadir)/testsuite/errors
 
 dist_share_DATA =                     \
     01-run_mode.01-one_shot.inp       \
     01-run_mode.02-one_shot.inp      \
-    01-run_mode.test
+    01-run_mode.test                 \
+    02-scf_errors.01-rdmft.inp       \
+    02-scf_errors.test
 
 CLEANFILES = *~ *.bak

@@ -2,7 +2,7 @@
 
 Test       : SCF errors
 Program    : octopus
-TestGroups : long-run, error_tests
+TestGroups : long-run, errors
 Enabled    : Yes
 
 FailingInput: 02-scf_errors.01-rdmft.inp
