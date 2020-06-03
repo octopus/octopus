@@ -233,14 +233,7 @@ contains
     end if
     call messages_info(3) 
 
-    call linear_solver_init(this%solver, sys%namespace, sys%gr, states_are_real(sys%st), set_default_solver)
-
-    if(this%solver%solver == OPTION__LINEARSOLVER__MULTIGRID .or. preconditioner_is_multigrid(this%solver%pre)) then
-      if(.not. associated(sys%gr%mgrid)) then
-        SAFE_ALLOCATE(sys%gr%mgrid)
-        call multigrid_init(sys%gr%mgrid, sys%namespace, sys%geo, sys%gr%cv, sys%gr%mesh, sys%gr%der, sys%gr%stencil, sys%mc)
-      end if
-    end if
+    call linear_solver_init(this%solver, sys%namespace, sys%gr, states_are_real(sys%st), sys%geo, sys%mc, set_default_solver)
 
     ! will not converge for non-self-consistent calculation unless LRTolScheme = fixed
     if (ham_var == 0) then
