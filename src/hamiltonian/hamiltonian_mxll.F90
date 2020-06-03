@@ -1089,8 +1089,7 @@ contains
     FLOAT,                       intent(in)    :: vmagnus(:, :, :)
     logical,           optional, intent(in)    :: set_phase
 
-    write(message(1),'(a)') 'zhamiltonian_mxll_magnus_apply not implemeted'
-    call messages_fatal(1, namespace=namespace)
+    call messages_not_implemented ('zhamiltonian_mxll_magnus_apply', namespace=namespace)
 
   end subroutine zhamiltonian_mxll_magnus_apply
 
