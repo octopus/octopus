@@ -88,7 +88,8 @@ module derivatives_oct_m
     dderivatives_batch_curl,            &
     zderivatives_batch_curl,            &
     dderivatives_partial,               &
-    zderivatives_partial
+    zderivatives_partial,               &
+    derivatives_make_discretization
 
 
   integer, parameter ::     &
