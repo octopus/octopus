@@ -21,14 +21,18 @@
 module energy_mxll_oct_m
   use global_oct_m
   use messages_oct_m
+  use profiling_oct_m
 
   implicit none
 
   private
 
-  public ::         &
-    energy_mxll_t,  &
-    energy_mxll_nullify  
+  public ::               &
+    energy_mxll_t,        &
+    energy_mxll_nullify,  &
+    energy_mxll_allocate, &
+    energy_mxll_end
+
 
   type energy_mxll_t
     ! Components are public by default
@@ -41,11 +45,10 @@ module energy_mxll_oct_m
     FLOAT                          :: e_energy_plane_waves
     FLOAT                          :: b_energy_plane_waves
 
-    FLOAT, pointer                 :: energy_density(:)
-    ! TODO: check allocation and setting to zero of energy_density_plane_waves
-    FLOAT, pointer                 :: energy_density_plane_waves(:)
-    FLOAT, pointer                 :: e_energy_density(:)
-    FLOAT, pointer                 :: b_energy_density(:)
+    FLOAT, allocatable             :: energy_density(:)
+    FLOAT, allocatable             :: energy_density_plane_waves(:)
+    FLOAT, allocatable             :: e_energy_density(:)
+    FLOAT, allocatable             :: b_energy_density(:)
     FLOAT                          :: energy_trans
     FLOAT                          :: energy_long
     FLOAT                          :: e_energy_trans
@@ -58,7 +61,7 @@ contains
   subroutine energy_mxll_nullify(this)
     type(energy_mxll_t), intent(out) :: this
 
-    PUSH_SUB(energy_nullify)
+    PUSH_SUB(energy_mxll_nullify)
 
      this%energy = M_ZERO
      this%boundaries = M_ZERO
@@ -67,21 +70,48 @@ contains
      this%energy_plane_waves = M_ZERO
      this%e_energy_plane_waves = M_ZERO
      this%b_energy_plane_waves = M_ZERO
-
-     nullify(this%energy_density)
-     nullify(this%energy_density_plane_waves)
-     nullify(this%e_energy_density)
-     nullify(this%b_energy_density)
      this%energy_trans = M_ZERO
      this%energy_long = M_ZERO
      this%e_energy_trans = M_ZERO
      this%b_energy_trans = M_ZERO
      this%energy_incident_waves = M_ZERO
 
-    POP_SUB(energy_nullify)
+    POP_SUB(energy_mxll_nullify)
   end subroutine energy_mxll_nullify
 
-  !TODO: add _allocate and _end subroutines 
+
+  subroutine energy_mxll_allocate(this, np)
+    type(energy_mxll_t), intent(out)   :: this
+    integer,             intent(in)    :: np
+
+    PUSH_SUB(energy_mxll_allocate)
+
+    SAFE_ALLOCATE(this%energy_density(1:np))
+    SAFE_ALLOCATE(this%energy_density_plane_waves(1:np))
+    SAFE_ALLOCATE(this%e_energy_density(1:np))
+    SAFE_ALLOCATE(this%b_energy_density(1:np))
+
+    this%energy_density(:) = M_ZERO
+    this%e_energy_density(:) = M_ZERO
+    this%b_energy_density(:) = M_ZERO
+    this%energy_density_plane_waves(:) = M_ZERO
+
+    POP_SUB(energy_mxll_allocate)
+  end subroutine energy_mxll_allocate
+
+
+  subroutine energy_mxll_end(this)
+    type(energy_mxll_t), intent(out) :: this
+
+    PUSH_SUB(energy_mxll_end)
+
+    SAFE_DEALLOCATE_A(this%energy_density)
+    SAFE_DEALLOCATE_A(this%energy_density_plane_waves)
+    SAFE_DEALLOCATE_A(this%e_energy_density)
+    SAFE_DEALLOCATE_A(this%b_energy_density)
+
+    POP_SUB(energy_mxll_end)
+  end subroutine energy_mxll_end
 
 end module energy_mxll_oct_m
 

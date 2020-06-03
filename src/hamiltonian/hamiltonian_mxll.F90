@@ -204,7 +204,7 @@ contains
     PUSH_SUB(hamiltonian_mxll_init)
 
     call profiling_in(prof, 'HAMILTONIAN_INIT')
-       
+
     call hamiltonian_mxll_null(hm)
 
     hm%dim = st%dim
@@ -216,15 +216,9 @@ contains
     hm%rs_sign = st%rs_sign
 
     SAFE_ALLOCATE(hm%vector_potential(1:gr%mesh%np_part,1:st%dim))
-    SAFE_ALLOCATE(hm%energy%energy_density(1:gr%mesh%np_part))
-    SAFE_ALLOCATE(hm%energy%energy_density_plane_waves(1:gr%mesh%np_part))
-    SAFE_ALLOCATE(hm%energy%e_energy_density(1:gr%mesh%np_part))
-    SAFE_ALLOCATE(hm%energy%b_energy_density(1:gr%mesh%np_part))
+    call energy_mxll_allocate(hm%energy, gr%mesh%np_part)
 
     hm%vector_potential = M_ZERO
-    hm%energy%energy_density = M_ZERO
-    hm%energy%e_energy_density = M_ZERO
-    hm%energy%b_energy_density = M_ZERO
 
     hm%mx_ma_coupling_apply = .false.
     hm%mx_ma_coupling  = .false.
@@ -313,10 +307,7 @@ contains
     nullify(hm%operators)
 
     SAFE_DEALLOCATE_P(hm%vector_potential)
-    SAFE_DEALLOCATE_P(hm%energy%energy_density)
-    SAFE_DEALLOCATE_P(hm%energy%energy_density_plane_waves)
-    SAFE_DEALLOCATE_P(hm%energy%e_energy_density)
-    SAFE_DEALLOCATE_P(hm%energy%b_energy_density)
+    call energy_mxll_end(hm%energy)
 
     call bc_mxll_end(hm%bc)
 

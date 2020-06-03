@@ -1014,22 +1014,22 @@ contains
     ztmp(:,:) = rs_field(:,:)
 
     energy_dens(:) = M_ZERO
-    do ip=1, gr%mesh%np
-      do idim=1, st%dim
+    do ip = 1, gr%mesh%np
+      do idim = 1, st%dim
         energy_dens(ip) = energy_dens(ip) + conjg(ztmp(ip,idim)) * ztmp(ip,idim)
       end do
     end do
 
     e_energy_dens(:) = M_ZERO
-    do ip=1, gr%mesh%np
-      do idim=1, st%dim
+    do ip = 1, gr%mesh%np
+      do idim = 1, st%dim
         e_energy_dens(ip) = e_energy_dens(ip) + real(ztmp(ip,idim))**2
       end do
     end do
 
     b_energy_dens(:) = M_ZERO
-    do ip=1, gr%mesh%np
-      do idim=1, st%dim
+    do ip = 1, gr%mesh%np
+      do idim = 1, st%dim
         b_energy_dens(ip) = b_energy_dens(ip) + aimag(ztmp(ip,idim))**2
       end do
     end do
@@ -1037,8 +1037,8 @@ contains
     if (present(rs_field_plane_waves) .and. present(energy_dens_plane_waves) .and. plane_waves_check) then
       ztmp(:,:) = rs_field_plane_waves(:,:)
       energy_dens_plane_waves(:) = M_ZERO
-      do ip=1, gr%mesh%np
-        do idim=1, st%dim
+      do ip = 1, gr%mesh%np
+        do idim = 1, st%dim
           energy_dens_plane_waves(ip) = energy_dens_plane_waves(ip) + conjg(ztmp(ip,idim)) * ztmp(ip,idim)
         end do
       end do
