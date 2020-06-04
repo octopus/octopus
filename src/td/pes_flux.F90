@@ -1575,7 +1575,7 @@ contains
       this%veca(:, this%itstep) = - this%veca(:, this%itstep)
 
       ! Add the gauge field correction in the perpendicular direction
-      this%veca(mdim, this%itstep) = this%veca(mdim, this%itstep) + this%gauge_field * iter*dt
+      this%veca(mdim, this%itstep) = this%gauge_field * iter*dt
 
 !       this%veca(:, this%itstep) = hm%hm_base%uniform_vector_potential(:)
 
