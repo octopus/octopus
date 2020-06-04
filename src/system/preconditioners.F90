@@ -91,6 +91,7 @@ contains
     FLOAT, allocatable :: rhs(:,:)
     integer :: i, j, k
     logical :: this_one
+    character(len=32) :: name
 
     PUSH_SUB(preconditioner_init)
 
@@ -166,8 +167,9 @@ contains
           if(this_one) rhs(j,1) = M_TWO
         end do
       end do
+      name = "Preconditioner"
       call derivatives_make_discretization(gr%der%dim, gr%der%mesh, gr%der%masses, &
-               polynomials, rhs, 1, this%prec_op(1:1), "Preconditioner", force_orthogonal = .true.)
+               polynomials, rhs, 1, this%prec_op(1:1), name, force_orthogonal = .true.)
       SAFE_DEALLOCATE_A(polynomials)
       SAFE_DEALLOCATE_A(rhs)
 
