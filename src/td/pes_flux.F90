@@ -149,8 +149,6 @@ module pes_flux_oct_m
     integer          :: dim                            !< simulation box dimensions
     integer          :: pdim                           !< periodic dimensions
 
-    FLOAT            :: gauge_field                    !< linear gauge field to correct doping  
-
   end type pes_flux_t
 
   integer, parameter ::   &
@@ -575,21 +573,6 @@ contains
     !%End
     call parse_variable(namespace, 'PES_Flux_RuntimeOutput', .false., this%runtime_output)
     call messages_print_var_value(stdout, 'PES_Flux_RuntimeOutput', this%runtime_output)
-
-
-
-    !%Variable PES_Flux_GaugeFieldCorrection
-    !%Type float
-    !%Section Time-Dependent::PhotoElectronSpectrum
-    !%Description
-    !% Defines the value (in units of c) for an additional, linear in time, gauge-field to 
-    !% correct for the presence of a static field introducing by doping the system.
-    !%End
-    this%gauge_field = M_ZERO
-    if(parse_is_defined(namespace, 'PES_Flux_GaugeFieldCorrection')) then
-      call parse_variable(namespace, 'PES_Flux_GaugeFieldCorrection', M_ZERO, this%gauge_field)
-      call messages_print_var_value(stdout, 'PES_Flux_GaugeFieldCorrection', this%gauge_field)
-    end if
 
 
 
@@ -1573,9 +1556,6 @@ contains
         call laser_field(hm%ep%lasers(il), this%veca(1:mdim, this%itstep), iter*dt)
       end do
       this%veca(:, this%itstep) = - this%veca(:, this%itstep)
-
-      ! Add the gauge field correction in the perpendicular direction
-      this%veca(mdim, this%itstep) = this%gauge_field * iter*dt
 
 !       this%veca(:, this%itstep) = hm%hm_base%uniform_vector_potential(:)
 
