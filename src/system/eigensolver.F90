@@ -46,6 +46,7 @@ module eigensolver_oct_m
   use parser_oct_m
   use preconditioners_oct_m
   use profiling_oct_m
+  use smear_oct_m
   use states_abst_oct_m
   use states_elec_oct_m
   use states_elec_calc_oct_m
@@ -276,6 +277,11 @@ contains
       if(eigens%imag_time <= M_ZERO) call messages_input_error(namespace, 'EigensolverImaginaryTime')
       
       call exponential_init(eigens%exponential_operator, namespace)
+
+      if(st%smear%method /= SMEAR_SEMICONDUCTOR .and. st%smear%method /= SMEAR_FIXED_OCC) then
+        message(1) = "Smearing of occupations is incompatible with imaginary time evolution."
+        call messages_fatal(1)
+      end if
       
     case(RS_LOBPCG)
     case(RS_RMMDIIS)
