@@ -60,9 +60,6 @@ subroutine X(preconditioner_apply)(pre, namespace, gr, hm, a, b, ik, omega)
       batch_ea => batch_a
     end if
 
-   ! do idim = 1, hm%d%dim
-   !   call X(derivatives_perform)(pre%op, gr%der, a(:, idim), b(:, idim))
-   ! end do
      call X(derivatives_batch_perform)(pre%op, gr%der, batch_ea, batch_b, set_bc = .false.)
 
     if(associated(hm%hm_base%phase)) then
