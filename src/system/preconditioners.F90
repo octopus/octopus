@@ -65,8 +65,7 @@ module preconditioners_oct_m
     private
     integer :: which
 
-    type(nl_operator_t) :: prec_op(1)
-    type(nl_operator_t), pointer :: op
+    type(nl_operator_t) :: op
     FLOAT, pointer      :: diag_lapl(:) !< diagonal of the laplacian
     integer             :: npre, npost, nmiddle
 
@@ -83,14 +82,10 @@ contains
     type(geometry_t),       intent(in)     :: geo
     type(multicomm_t),      intent(in)     :: mc
 
-    FLOAT :: alpha, default_alpha
+    FLOAT :: alpha, default_alpha, omega
     FLOAT :: vol
     integer :: default
     integer :: maxp, is, ns, ip, ip2
-    integer, allocatable :: polynomials(:,:)
-    FLOAT, allocatable :: rhs(:,:)
-    integer :: i, j, k
-    logical :: this_one
     character(len=32) :: name
 
     PUSH_SUB(preconditioner_init)
@@ -127,51 +122,11 @@ contains
     if(.not.varinfo_valid_option('Preconditioner', this%which)) call messages_input_error(namespace, 'Preconditioner')
     call messages_print_var_option(stdout, 'Preconditioner', this%which)
 
-    !This is needed because of the make_discretization routine
-    this%op => this%prec_op(1)
-
     select case(this%which)
     case(PRE_FILTER)
       ! the smoothing is performed uing the same stencil as the Laplacian
-      call nl_operator_init(this%op, "Preconditioner")                                             
-      if(gr%mesh%sb%nonorthogonal) then                                                          
-        call stencil_stargeneral_get_arms(this%op%stencil, gr%mesh%sb)        
-        call stencil_stargeneral_get_lapl(this%op%stencil, gr%mesh%sb%dim, 1)
-      else 
-        call stencil_star_get_lapl(this%op%stencil, gr%mesh%sb%dim, 1)
-      end if  
-      call nl_operator_build(gr%mesh, this%op, gr%mesh%np, const_w = .not. gr%mesh%use_curvilinear)
-
-      !Getting the weights of the Laplacian (to first order)
-      !At the moment this code is almost copy-pasted from derivatives_build.
-      if(gr%mesh%sb%nonorthogonal) then
-        this%op%stencil%npoly = this%op%stencil%size &
-           + 1*(2*1-1)*this%op%stencil%stargeneral%narms
-      end if
-      SAFE_ALLOCATE(polynomials(1:gr%der%dim, 1:this%op%stencil%npoly))
-      SAFE_ALLOCATE(rhs(1:this%op%stencil%size, 1:1))
-      if(gr%mesh%sb%nonorthogonal) then
-        call stencil_stargeneral_pol_lapl(this%op%stencil, gr%der%dim, 1, polynomials)
-      else
-        call stencil_star_polynomials_lapl(gr%der%dim, 1, polynomials)
-      end if
-      ! find right-hand side for operator
-      rhs(:,1) = M_ZERO
-      do i = 1, gr%der%dim
-        do j = 1, this%op%stencil%npoly
-          this_one = .true.
-          do k = 1, gr%der%dim
-            if(k == i .and. polynomials(k, j) /= 2) this_one = .false.
-            if(k /= i .and. polynomials(k, j) /= 0) this_one = .false.
-          end do
-          if(this_one) rhs(j,1) = M_TWO
-        end do
-      end do
       name = "Preconditioner"
-      call derivatives_make_discretization(gr%der%dim, gr%der%mesh, gr%der%masses, &
-               polynomials, rhs, 1, this%prec_op(1:1), name, force_orthogonal = .true.)
-      SAFE_DEALLOCATE_A(polynomials)
-      SAFE_DEALLOCATE_A(rhs)
+      call derivatives_get_lapl(gr%der, this%op, name, 1)
 
       !%Variable PreconditionerFilterFactor
       !%Type float
@@ -211,6 +166,9 @@ contains
         maxp = gr%mesh%np
       end if
 
+      !We change the weights to be the one of the kinetic energy operator
+      this%op%w = -M_HALF * this%op%w
+      
       SAFE_ALLOCATE(this%diag_lapl(1:gr%mesh%np))
       call dnl_operator_operate_diag(this%op, this%diag_lapl)
 
@@ -219,19 +177,20 @@ contains
         if(gr%mesh%use_curvilinear) vol = sum(gr%mesh%vol_pp(ip + this%op%ri(1:ns, this%op%rimap(ip))))
 
         !The filter preconditioner is given by two iterations of the Relaxation Jacobi method
-        !This leads to \tilde{\psi} =  \omega D^{-1}(2\psi - \omega D^{-1} \Laplacian \psi),
-        ! where \omega = 2(1-\alpha)
+        !This leads to \tilde{\psi} =  \omega D^{-1}(2\psi - \omega D^{-1} (-0.5\Laplacian) \psi),
+        ! where \omega = 2(1-\alpha), and D is the diagonal part of (-0.5\Laplacian)
         !In order to have this to work in all cases, such as different spacings, nonorthogonal cells, ...
         !We directly apply this formula to renormalize the weights of the Laplacian 
         !and get the correct preconditioner
-        !Note that there is a factor of two because we want to solve 1/2 \Delta \tilde\psi = \psi
+
+        omega = M_TWO * (M_ONE-alpha)
+
         do is = 1, ns
+          this%op%w(is, ip) = - omega / this%diag_lapl(ip) * this%op%w(is, ip)
           if(is == this%op%stencil%center) then
-            this%op%w(is, ip) = M_TWO - M_TWO * (M_ONE-alpha)/this%diag_lapl(ip) * this%op%w(is, ip)
-          else
-            this%op%w(is, ip) = -M_TWO * (M_ONE-alpha)/this%diag_lapl(ip) * this%op%w(is, ip)
+            this%op%w(is, ip) = this%op%w(is, ip) + M_TWO
           end if
-          this%op%w(is, ip) = this%op%w(is, ip) * M_TWO * M_TWO * (M_ONE - alpha) / this%diag_lapl(ip)
+          this%op%w(is, ip) = this%op%w(is, ip) * omega / this%diag_lapl(ip)
           ip2 = ip + this%op%ri(is, this%op%rimap(ip))
           if(gr%mesh%use_curvilinear) this%op%w(is, ip) = this%op%w(is, ip)*(ns*gr%mesh%vol_pp(ip2)/vol)
         end do
