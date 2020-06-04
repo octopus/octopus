@@ -39,3 +39,4 @@ MaximumIter = 1
 
 SCFCalculateStress = yes
 StatesPack = yes
+LCAOStart = lcao_full

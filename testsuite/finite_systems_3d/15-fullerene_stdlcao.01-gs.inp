@@ -85,3 +85,5 @@ MixField = density
 
 ExperimentalFeatures = yes
 StatesPack = yes
+
+LCAOStart = lcao_full
