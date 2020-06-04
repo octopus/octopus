@@ -31,23 +31,16 @@ module interaction_abst_oct_m
     interaction_abst_end, &
     interaction_iterator_t
 
-  !> An interaction is a unidirectional relationship between two systems. One of the
-  !! systems owns the interaction and feels it`s effects. The other system is
-  !! referred to as the interaction partner.
   type, abstract :: interaction_abst_t
     private
-    !> The interaction requires access to some quantities to be evaluated, both
-    !> from the system and from the partner.
+    !> The interaction requires access to some quantities from a system to be evaluated.
     integer,              public :: n_system_quantities  !< Number of quantities needed from the system
     integer, allocatable, public :: system_quantities(:) !< Identifiers of the quantities needed from the system
-
-    integer,              public :: n_partner_quantities !< Number of quantities needed from the partner
-    integer, allocatable, public :: partner_quantities(:)!< Identifiers of the quantities needed from the partner
-
     type(clock_t), public :: clock !< Clock storing the time at which the interaction was last updated.
   contains
     procedure :: init_clock => interaction_init_clock
-    procedure(interaction_update), deferred :: update
+    procedure(interaction_update),    deferred :: update
+    procedure(interaction_calculate), deferred :: calculate
   end type interaction_abst_t
 
   !> This class extends the list iterator and adds one method to get the
@@ -59,12 +52,17 @@ module interaction_abst_oct_m
   end type interaction_iterator_t
 
   abstract interface
-    logical function interaction_update(this, clock)
+    logical function interaction_update(this, requested_time)
       import interaction_abst_t
       import clock_t
       class(interaction_abst_t), intent(inout) :: this
-      class(clock_t),            intent(in)    :: clock
+      class(clock_t),            intent(in)    :: requested_time
     end function interaction_update
+
+    subroutine interaction_calculate(this)
+      import interaction_abst_t
+      class(interaction_abst_t), intent(inout) :: this
+    end subroutine interaction_calculate
   end interface
 
 contains
@@ -90,7 +88,6 @@ contains
     PUSH_SUB(interaction_abst_end)
 
     SAFE_DEALLOCATE_A(this%system_quantities)
-    SAFE_DEALLOCATE_A(this%partner_quantities)
 
     POP_SUB(interaction_abst_end)
 

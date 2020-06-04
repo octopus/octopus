@@ -490,7 +490,9 @@ system_f_srcs =                                 \
 	system/exponential.F90                  \
 	system/forces.F90                       \
 	system/interaction_abst.F90             \
+	system/interaction_partner.F90          \
 	system/interaction_gravity.F90          \
+	system/interaction_with_partner.F90     \
 	system/linear_solver.F90                \
 	system/magnetic.F90                     \
 	system/multisystem.F90                  \
