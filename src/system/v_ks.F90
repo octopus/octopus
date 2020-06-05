@@ -40,6 +40,7 @@ module v_ks_oct_m
   use lda_u_oct_m
   use libvdwxc_oct_m
   use magnetic_oct_m
+  use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use mpi_oct_m
@@ -172,7 +173,6 @@ contains
     type(dftd3_input) :: d3_input
     character(len=20) :: d3func_def, d3func
     integer :: pseudo_x_functional, pseudo_c_functional
-    logical :: slater
     
     PUSH_SUB(v_ks_init)
 
@@ -396,10 +396,7 @@ contains
 
       if(bitand(ks%xc_family, XC_FAMILY_OEP) /= 0) then
         if (gr%have_fine_mesh) call messages_not_implemented("OEP functionals with UseFineMesh", namespace=namespace)
-
-        slater = .false.
-        if( ks%xc%functional(FUNC_X,1)%id == XC_SLATER_X ) slater = .true.
-        call xc_oep_init(ks%oep, namespace, ks%xc_family, gr, st, slater)
+        call xc_oep_init(ks%oep, namespace, ks%xc_family, gr, st)
       else
         ks%oep%level = XC_OEP_NONE
       end if
@@ -993,6 +990,15 @@ contains
       if(ks%theory_level == KOHN_SHAM_DFT) then
         ! The OEP family has to be handled specially
         if(bitand(ks%xc_family, XC_FAMILY_OEP) /= 0) then
+
+          if (ks%xc%functional(FUNC_X,1)%id == XC_OEP_X_SLATER) then
+            if (states_are_real(st)) then
+              call  dxc_slater_calc(namespace, hm%psolver, ks%gr%mesh, st, ks%calc%energy%exchange, vxc = ks%calc%vxc)
+            else
+              call  zxc_slater_calc(namespace, hm%psolver, ks%gr%mesh, st, ks%calc%energy%exchange, vxc = ks%calc%vxc)
+            end if
+          end if
+
           if (states_are_real(st)) then
             call dxc_oep_calc(ks%oep, namespace, ks%xc, (ks%sic_type == SIC_PZ), ks%gr, &
               hm, st, ks%calc%energy%exchange, ks%calc%energy%correlation, vxc = ks%calc%vxc)
@@ -1411,7 +1417,15 @@ contains
 
     POP_SUB(v_ks_calculate_current)
   end subroutine v_ks_calculate_current
- 
+
+#include "undef.F90"
+#include "real.F90"
+#include "xc_slater_inc.F90"
+
+#include "undef.F90"
+#include "complex.F90"
+#include "xc_slater_inc.F90"
+
 end module v_ks_oct_m
 
 !! Local Variables:

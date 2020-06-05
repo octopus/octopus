@@ -43,11 +43,6 @@ subroutine X(xc_oep_calc)(oep, namespace, xcs, apply_sic_pz, gr, hm, st, ex, ec,
 
   if(oep%level == XC_OEP_NONE) return
 
-  if(oep%level == XC_OEP_SLATER_FAST) then
-    call  X(xc_slater_calc)(oep, namespace, hm%psolver, xcs, gr, st, ex, ec, vxc)
-    return
-  end if
-
   call profiling_in(C_PROFILING_XC_OEP, 'XC_OEP')
   PUSH_SUB(X(xc_oep_calc))
 

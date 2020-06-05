@@ -66,7 +66,6 @@ module xc_oep_oct_m
   integer, public, parameter ::  &
     XC_OEP_NONE   = 1,           &
     XC_OEP_KLI    = 3,           &
-    XC_OEP_SLATER_FAST = 4,      &
     XC_OEP_FULL   = 5,           &
     OEP_MIXING_SCHEME_CONST = 1, &
     OEP_MIXING_SCHEME_BB    = 2, &
@@ -105,13 +104,12 @@ module xc_oep_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine xc_oep_init(oep, namespace, family, gr, st, slater)
+  subroutine xc_oep_init(oep, namespace, family, gr, st)
     type(xc_oep_t),      intent(out)   :: oep
     type(namespace_t),   intent(in)    :: namespace
     integer,             intent(in)    :: family
     type(grid_t),        intent(inout) :: gr
     type(states_elec_t), intent(in)    :: st
-    logical,             intent(in)    :: slater
 
     PUSH_SUB(xc_oep_init)
 
@@ -121,32 +119,28 @@ contains
       return
     end if
 
-    if(slater) then
-      oep%level = XC_OEP_SLATER_FAST
-    else
-      !%Variable OEPLevel
-      !%Type integer
-      !%Default oep_kli
-      !%Section Hamiltonian::XC
-      !%Description
-      !% At what level shall <tt>Octopus</tt> handle the optimized effective potential (OEP) equation.
-      !%Option oep_none 1
-      !% Do not solve OEP equation.
-      !%Option oep_kli 3
-      !% Krieger-Li-Iafrate (KLI) approximation. For spinors, the iterative solution is controlled by the variables
-      !% in section <tt>Linear Response::Solver</tt>, and the default for <tt>LRMaximumIter</tt> is set to 50.
-      !% Ref: JB Krieger, Y Li, GJ Iafrate, <i>Phys. Lett. A</i> <b>146</b>, 256 (1990).
-      !%Option oep_full 5
-      !% (Experimental) Full solution of OEP equation using the Sternheimer approach.
-      !% The linear solver will be controlled by the variables in section <tt>Linear Response::Solver</tt>,
-      !% and the iterations for OEP by <tt>Linear Response::SCF in LR calculations</tt> and variable
-      !% <tt>OEPMixing</tt>. Note that default for <tt>LRMaximumIter</tt> is set to 10.
-      !% Ref: S. Kuemmel and J. Perdew, <i>Phys. Rev. Lett.</i> <b>90</b>, 043004 (2003).
-      !%End
-      call messages_obsolete_variable(namespace, 'OEP_Level', 'OEPLevel')
-      call parse_variable(namespace, 'OEPLevel', XC_OEP_KLI, oep%level)
-      if(.not. varinfo_valid_option('OEPLevel', oep%level)) call messages_input_error(namespace, 'OEPLevel')
-    end if
+    !%Variable OEPLevel
+    !%Type integer
+    !%Default oep_kli
+    !%Section Hamiltonian::XC
+    !%Description
+    !% At what level shall <tt>Octopus</tt> handle the optimized effective potential (OEP) equation.
+    !%Option oep_none 1
+    !% Do not solve OEP equation.
+    !%Option oep_kli 3
+    !% Krieger-Li-Iafrate (KLI) approximation. For spinors, the iterative solution is controlled by the variables
+    !% in section <tt>Linear Response::Solver</tt>, and the default for <tt>LRMaximumIter</tt> is set to 50.
+    !% Ref: JB Krieger, Y Li, GJ Iafrate, <i>Phys. Lett. A</i> <b>146</b>, 256 (1990).
+    !%Option oep_full 5
+    !% (Experimental) Full solution of OEP equation using the Sternheimer approach.
+    !% The linear solver will be controlled by the variables in section <tt>Linear Response::Solver</tt>,
+    !% and the iterations for OEP by <tt>Linear Response::SCF in LR calculations</tt> and variable
+    !% <tt>OEPMixing</tt>. Note that default for <tt>LRMaximumIter</tt> is set to 10.
+    !% Ref: S. Kuemmel and J. Perdew, <i>Phys. Rev. Lett.</i> <b>90</b>, 043004 (2003).
+    !%End
+    call messages_obsolete_variable(namespace, 'OEP_Level', 'OEPLevel')
+    call parse_variable(namespace, 'OEPLevel', XC_OEP_KLI, oep%level)
+    if(.not. varinfo_valid_option('OEPLevel', oep%level)) call messages_input_error(namespace, 'OEPLevel')
 
     if(oep%level /= XC_OEP_NONE) then
 
@@ -408,7 +402,6 @@ contains
 #include "xc_oep_sic_inc.F90"
 #include "xc_oep_inc.F90"
 #include "xc_oep_qed_inc.F90"
-#include "xc_slater_inc.F90"
 
 #include "undef.F90"
 #include "complex.F90"
@@ -417,9 +410,6 @@ contains
 #include "xc_oep_sic_inc.F90"
 #include "xc_oep_inc.F90"
 #include "xc_oep_qed_inc.F90"
-#include "xc_slater_inc.F90"
-
-#include "undef.F90"
 
 end module xc_oep_oct_m
 

@@ -46,7 +46,7 @@ module xc_functl_oct_m
   integer, public, parameter ::   &
     XC_KS_INVERSION = 801,        &  !< inversion of Kohn-Sham potential
     XC_OEP_X = 901,               &  !< Exact exchange
-    XC_SLATER_X = 902,            &  !< Slater approximation to the exact exchange
+    XC_OEP_X_SLATER = 902,        &  !< Slater approximation to the exact exchange
     XC_HALF_HARTREE = 917,        &  !< half-Hartree exchange for two electrons (supports complex scaling)
     XC_VDW_C_VDWDF = 918,         &  !< vdw-df correlation from libvdwxc
     XC_VDW_C_VDWDF2 = 919,        &  !< vdw-df2 correlation from libvdwxc
@@ -128,7 +128,7 @@ contains
       if(functl%family == XC_FAMILY_UNKNOWN) then
 
         select case(functl%id)
-        case(XC_OEP_X, XC_SLATER_X)
+        case(XC_OEP_X, XC_OEP_X_SLATER)
           functl%family = XC_FAMILY_OEP
 
         case(XC_KS_INVERSION)

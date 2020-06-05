@@ -17,44 +17,31 @@
 !!
 !!
 ! ---------------------------------------------------------
-subroutine X(xc_slater_calc)(oep, namespace, psolver, xcs, gr, st, ex, ec, vxc)
-  type(xc_oep_t),           intent(inout) :: oep
+subroutine X(xc_slater_calc)(namespace, psolver, mesh, st, ex, vxc)
   type(namespace_t),        intent(in)    :: namespace
   type(poisson_t),          intent(in)    :: psolver
-  type(xc_t),               intent(inout) :: xcs
-  type(grid_t),             intent(in)    :: gr
+  type(mesh_t),             intent(in)    :: mesh
   type(states_elec_t),      intent(inout) :: st
-  FLOAT,                    intent(inout) :: ex, ec
+  FLOAT,                    intent(inout) :: ex
   FLOAT, optional,          intent(inout) :: vxc(:,:) !< vxc(gr%mesh%np, st%d%nspin)
 
   FLOAT :: eig
-  integer :: ixc, isp
+  integer :: isp
   type(profile_t), save :: prof
 
   call profiling_in(prof, 'XC_SLATER')
   PUSH_SUB(X(xc_slater_calc))
 
-  do ixc = 1, 2
-    if(xcs%functional(ixc, 1)%family /= XC_FAMILY_OEP) cycle
-
-    eig = M_ZERO
-    select case(xcs%functional(ixc,1)%id)
-    case(XC_OEP_X)
-      if(st%d%ispin == SPIN_POLARIZED) then
-        !At the moment we treat only spins and not k-points
-        do isp = 1, st%d%nspin
-          call X(slater) (namespace, gr%der, psolver, st, isp, eig, oep%vxc)
-        end do
-      else
-        call X(slater) (namespace, gr%der, psolver, st, 1, eig, oep%vxc)
-      end if
-      ex = ex + eig
-    end select
-  end do
-
-  if(present(vxc)) then
-    vxc(1:gr%mesh%np,:) = oep%vxc(1:gr%mesh%np,:)
+  eig = M_ZERO
+  if(st%d%ispin == SPIN_POLARIZED) then
+    !At the moment we treat only spins and not k-points
+    do isp = 1, st%d%nspin
+      call X(slater) (namespace, mesh, psolver, st, isp, eig, vxc)
+    end do
+  else
+    call X(slater) (namespace, mesh, psolver, st, 1, eig, vxc)
   end if
+  ex = ex + eig
 
   POP_SUB(X(xc_slater_calc))
   call profiling_out(prof)
@@ -63,9 +50,9 @@ end subroutine X(xc_slater_calc)
 !------------------------------------------------------------
 !> This routine is adapted from the X(oep_x) routine
 !------------------------------------------------------------
-subroutine X(slater) (namespace, der, psolver, st, isp, ex, vxc)
+subroutine X(slater) (namespace, mesh, psolver, st, isp, ex, vxc)
   type(namespace_t),           intent(in)    :: namespace
-  type(derivatives_t),         intent(in)    :: der
+  type(mesh_t),                intent(in)    :: mesh
   type(poisson_t),             intent(in)    :: psolver
   type(states_elec_t), target, intent(in)    :: st
   integer,                     intent(in)    :: isp
@@ -85,20 +72,20 @@ subroutine X(slater) (namespace, der, psolver, st, isp, ex, vxc)
 
   PUSH_SUB(X(slater))
 
-  if(der%mesh%sb%kpoints%reduced%npoints > 1) then
+  if(mesh%sb%kpoints%reduced%npoints > 1) then
     call messages_not_implemented("exchange operator with k-points", namespace=namespace)
   end if
 
   socc = M_ONE / st%smear%el_per_state
 
-  SAFE_ALLOCATE(pot_ij(1:der%mesh%np))
-  SAFE_ALLOCATE(rho_ij(1:der%mesh%np))
+  SAFE_ALLOCATE(pot_ij(1:mesh%np))
+  SAFE_ALLOCATE(rho_ij(1:mesh%np))
   SAFE_ALLOCATE(recv_stack(1:st%nst+1))
   SAFE_ALLOCATE(send_stack(1:st%nst+1))
-  SAFE_ALLOCATE(psi(1:der%mesh%np, 1:st%d%dim))
-  SAFE_ALLOCATE(wf_ist(1:der%mesh%np, 1:st%d%dim))
+  SAFE_ALLOCATE(psi(1:mesh%np, 1:st%d%dim))
+  SAFE_ALLOCATE(wf_ist(1:mesh%np, 1:st%d%dim))
   if(st%d%ispin == SPINORS) then
-    SAFE_ALLOCATE(bij(1:der%mesh%np, 1:3))
+    SAFE_ALLOCATE(bij(1:mesh%np, 1:3))
     bij(:,:) = M_ZERO
   end if
 
@@ -151,8 +138,8 @@ subroutine X(slater) (namespace, der, psolver, st, isp, ex, vxc)
         ! send wavefunction
         send_req = 0
         if((send_stack(ist_s) > 0).and.(node_to /= st%mpi_grp%rank)) then
-          call states_elec_get_state(st, der%mesh, send_stack(ist_s), isp, psi)
-          call MPI_Isend(psi, der%mesh%np*st%d%dim, R_MPITYPE, &
+          call states_elec_get_state(st, mesh, send_stack(ist_s), isp, psi)
+          call MPI_Isend(psi, mesh%np*st%d%dim, R_MPITYPE, &
             node_to, send_stack(ist_s), st%mpi_grp%comm, send_req, mpi_err)
         end if
       end if
@@ -164,11 +151,11 @@ subroutine X(slater) (namespace, der, psolver, st, isp, ex, vxc)
       ! receive wavefunction
       if(recv_stack(ist_r) > 0) then
         if(node_fr == st%mpi_grp%rank) then
-          call states_elec_get_state(st, der%mesh, send_stack(ist_r), isp, wf_ist)
+          call states_elec_get_state(st, mesh, send_stack(ist_r), isp, wf_ist)
 #if defined(HAVE_MPI)
         else
           if(st%parallel_in_states) then
-            call MPI_Recv(wf_ist, der%mesh%np*st%d%dim, R_MPITYPE, &
+            call MPI_Recv(wf_ist, mesh%np*st%d%dim, R_MPITYPE, &
               node_fr, recv_stack(ist_r), st%mpi_grp%comm, status, mpi_err)
           end if
 #endif
@@ -190,14 +177,14 @@ subroutine X(slater) (namespace, der, psolver, st, isp, ex, vxc)
           if((st%node(ist) == st%mpi_grp%rank).and.(jst < ist)) cycle
           if((st%occ(ist, isp) <= M_EPSILON).or.(st%occ(jst, isp) <= M_EPSILON)) cycle
 
-          call states_elec_get_state(st, der%mesh, jst, isp, psi)
+          call states_elec_get_state(st, mesh, jst, isp, psi)
           !The co-density is summed over the spin indices before solving the Poisson equation
-          rho_ij(1:der%mesh%np) = R_CONJ(wf_ist(1:der%mesh%np, 1))*psi(1:der%mesh%np, 1)
+          rho_ij(1:mesh%np) = R_CONJ(wf_ist(1:mesh%np, 1))*psi(1:mesh%np, 1)
           do idm = 2, st%d%dim
-            rho_ij(1:der%mesh%np) = rho_ij(1:der%mesh%np) &
-                           + R_CONJ(wf_ist(1:der%mesh%np, idm))*psi(1:der%mesh%np, idm)
+            rho_ij(1:mesh%np) = rho_ij(1:mesh%np) &
+                           + R_CONJ(wf_ist(1:mesh%np, idm))*psi(1:mesh%np, idm)
           end do
-          pot_ij(1:der%mesh%np) = R_TOTYPE(M_ZERO)
+          pot_ij(1:mesh%np) = R_TOTYPE(M_ZERO)
           call X(poisson_solve)(psolver, pot_ij, rho_ij, all_nodes=.false.)
 
           rr = socc * st%occ(ist, isp) * st%occ(jst, isp)
@@ -206,7 +193,7 @@ subroutine X(slater) (namespace, der, psolver, st, isp, ex, vxc)
           !Here we accumulate the result for the potential
           if(present(vxc)) then
             if( st%d%ispin /= SPINORS) then
-              do ip = 1, der%mesh%np
+              do ip = 1, mesh%np
                 !If there is no density at this point, we simply ignore it
                 if(st%rho(ip, isp) < CNST(1e-10)) cycle        
                 vxc(ip, isp) = vxc(ip, isp) - rr * R_REAL(R_CONJ(rho_ij(ip)) * pot_ij(ip)) / st%rho(ip, isp)
@@ -214,27 +201,27 @@ subroutine X(slater) (namespace, der, psolver, st, isp, ex, vxc)
             else
               !This is given by Eq. 19 in SI of PRB 98, 035140 (2018)
               if(ist /= jst) then
-                bij(1:der%mesh%np, 1) = bij(1:der%mesh%np, 1) - M_TWO * rr &
-                      * R_REAL(wf_ist(1:der%mesh%np, 1)*R_CONJ(psi(1:der%mesh%np, 1)) * pot_ij(1:der%mesh%np))
-                bij(1:der%mesh%np, 2) = bij(1:der%mesh%np, 2) - M_TWO * rr &
-                      * R_REAL(wf_ist(1:der%mesh%np, 2)*R_CONJ(psi(1:der%mesh%np, 2)) * pot_ij(1:der%mesh%np))
+                bij(1:mesh%np, 1) = bij(1:mesh%np, 1) - M_TWO * rr &
+                      * R_REAL(wf_ist(1:mesh%np, 1)*R_CONJ(psi(1:mesh%np, 1)) * pot_ij(1:mesh%np))
+                bij(1:mesh%np, 2) = bij(1:mesh%np, 2) - M_TWO * rr &
+                      * R_REAL(wf_ist(1:mesh%np, 2)*R_CONJ(psi(1:mesh%np, 2)) * pot_ij(1:mesh%np))
                 !As we only compute the terms ist >= jst, we get a symmetric form
-                bij(1:der%mesh%np, 3) = bij(1:der%mesh%np, 3) - rr * &
-                              ( wf_ist(1:der%mesh%np, 1)*R_CONJ(psi(1:der%mesh%np, 2)) * pot_ij(1:der%mesh%np) &
-                              + psi(1:der%mesh%np, 1)*R_CONJ(wf_ist(1:der%mesh%np, 2) * pot_ij(1:der%mesh%np)))
+                bij(1:mesh%np, 3) = bij(1:mesh%np, 3) - rr * &
+                              ( wf_ist(1:mesh%np, 1)*R_CONJ(psi(1:mesh%np, 2)) * pot_ij(1:mesh%np) &
+                              + psi(1:mesh%np, 1)*R_CONJ(wf_ist(1:mesh%np, 2) * pot_ij(1:mesh%np)))
               else
-                bij(1:der%mesh%np, 1) = bij(1:der%mesh%np, 1) - rr &
-                      * R_REAL(wf_ist(1:der%mesh%np, 1)*R_CONJ(psi(1:der%mesh%np, 1)) * pot_ij(1:der%mesh%np))
-                bij(1:der%mesh%np, 2) = bij(1:der%mesh%np, 2) - rr &
-                      * R_REAL(wf_ist(1:der%mesh%np, 2)*R_CONJ(psi(1:der%mesh%np, 2)) * pot_ij(1:der%mesh%np))
-                bij(1:der%mesh%np, 3) = bij(1:der%mesh%np, 3) - rr &
-                      * wf_ist(1:der%mesh%np, 1)*R_CONJ(psi(1:der%mesh%np, 2)) * pot_ij(1:der%mesh%np)
+                bij(1:mesh%np, 1) = bij(1:mesh%np, 1) - rr &
+                      * R_REAL(wf_ist(1:mesh%np, 1)*R_CONJ(psi(1:mesh%np, 1)) * pot_ij(1:mesh%np))
+                bij(1:mesh%np, 2) = bij(1:mesh%np, 2) - rr &
+                      * R_REAL(wf_ist(1:mesh%np, 2)*R_CONJ(psi(1:mesh%np, 2)) * pot_ij(1:mesh%np))
+                bij(1:mesh%np, 3) = bij(1:mesh%np, 3) - rr &
+                      * wf_ist(1:mesh%np, 1)*R_CONJ(psi(1:mesh%np, 2)) * pot_ij(1:mesh%np)
               end if
               !The last component is simply the complex conjuguate of bij(3), so we do not compute it.
             end if
           end if
           ! get the contribution (ist, jst) to the exchange energy
-          ex = ex - M_HALF * rr * R_REAL(X(mf_dotp)(der%mesh, rho_ij, pot_ij))
+          ex = ex - M_HALF * rr * R_REAL(X(mf_dotp)(mesh, rho_ij, pot_ij))
         end do
       end if
 
@@ -262,7 +249,7 @@ subroutine X(slater) (namespace, der, psolver, st, isp, ex, vxc)
   !Note that the final potential is real and stored as v_upup, v_downdown, Re(v_updown), and Im(updown)
   !See Eq. 22 in SI of PRB 98, 035140 (2018)
   if(present(vxc) .and. st%d%ispin == SPINORS) then
-    do ip = 1, der%mesh%np
+    do ip = 1, mesh%np
 
       nn = st%rho(ip, 1) + st%rho(ip, 2)
       !If there is no density at this point, we simply ignore it
