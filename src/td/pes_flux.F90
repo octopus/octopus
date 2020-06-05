@@ -48,6 +48,7 @@ module pes_flux_oct_m
   use string_oct_m
   use unit_oct_m
   use unit_system_oct_m
+  use utils_oct_m
   use varinfo_oct_m
 
   implicit none
@@ -686,8 +687,8 @@ contains
     integer           :: kptst, kptend  
     integer           :: isp, ikp, ikpt, ibz1, ibz2
     integer           :: il, ll, mm, idim, idir
-    integer           :: ikk, ith, iph, iomk,ie, ik1, ik2, ik3
-    FLOAT             :: kmax, kmin, kact, thetak, phik
+    integer           :: ikk, ith, iph, iomk,ie, ik1, ik2, ik3, kgrid_block_dim
+    FLOAT             :: kmax(1:MAX_DIM), kmin(1:MAX_DIM), kact, thetak, phik
     type(block_t)     :: blk
       
     FLOAT             :: Emin, Emax, DE , kvec(1:3) 
@@ -804,12 +805,13 @@ contains
       call messages_write(")")
       call messages_info()
     
-      kmax = sqrt(M_TWO*Emax)
+      kmax(:) = sqrt(M_TWO*Emax)
       kmin = sqrt(M_TWO*Emin)
       this%dk = sqrt(M_TWO*DE)
 
     end if 
 
+    kgrid_block_dim = 1
     !ugly hack (since this input variable is properly handled below) but effective 
     call parse_variable(namespace, 'PES_Flux_ARPES_grid', .false., this%arpes_grid)
     if (.not. use_enegy_grid .or. this%arpes_grid) then
@@ -819,48 +821,78 @@ contains
       !%Default 1.0
       !%Section Time-Dependent::PhotoElectronSpectrum
       !%Description
-      !% The maximum value of |k|.
-      !%End
-      call parse_variable(namespace, 'PES_Flux_Kmax', M_ONE, kmax)
-!       call messages_print_var_value(stdout, "PES_Flux_Kmax", kmax)
-      if(kmax <= M_ZERO) call messages_input_error('PES_Flux_Kmax')
+      !% The maximum value of the photoelectron momentum.
+      !% For cartesian momentum grids one can specify a value different 
+      !% for cartesian direction using a block input.
+      !%End      
+      if(parse_block(namespace, 'PES_Flux_Kmax', blk) == 0) then
+        if (this%kgrid == M_CARTESIAN) then
+          do idim = 1, mdim 
+            call parse_block_float(blk, 0, idim-1, kmax(idim))
+          end do
+          kgrid_block_dim = mdim
+        else
+          message(1) = 'Wrong block format for PES_Flux_Kmax and non-cartesian grid'
+          call messages_fatal(1, namespace=namespace)
+        end if
+      else 
+        call parse_variable(namespace, 'PES_Flux_Kmax', M_ONE, kmax(1))
+        kmax(:)=kmax(1)
+      end if
 
       !%Variable PES_Flux_Kmin
       !%Type float
       !%Default 0.0
       !%Section Time-Dependent::PhotoElectronSpectrum
       !%Description
-      !% The minimum value of |k|.
+      !% The minimum value of the photoelectron momentum.
+      !% For cartesian momentum grids one can specify a value different 
+      !% for cartesian direction using a block input.
       !%End
-      call parse_variable(namespace, 'PES_Flux_Kmin', M_ZERO, kmin)
-!       call messages_print_var_value(stdout, "PES_Flux_Kmin", kmin)
-      if(kmax <= M_ZERO) call messages_input_error('PES_Flux_Kmin')
+      if(parse_block(namespace, 'PES_Flux_Kmin', blk) == 0) then
+        if (this%kgrid == M_CARTESIAN) then
+          do idim = 1, mdim 
+            call parse_block_float(blk, 0, idim-1, kmin(idim))
+          end do
+          kgrid_block_dim = mdim
+        else
+          message(1) = 'Wrong block format for PES_Flux_Kmin and non-cartesian grid'
+          call messages_fatal(1, namespace=namespace)
+        end if
+      else 
+        call parse_variable(namespace, 'PES_Flux_Kmin', M_ZERO, kmin(1))
+        kmin(:)=kmin(1)
+      end if
 
 
       !%Variable PES_Flux_DeltaK
       !%Type float
-      !%Default 0.002
+      !%Default 0.02
       !%Section Time-Dependent::PhotoElectronSpectrum
       !%Description
-      !% Spacing of the k-mesh in |k| (equidistant).
+      !% Spacing of the the photoelectron momentum grid.
       !%End
-      call parse_variable(namespace, 'PES_Flux_DeltaK', CNST(0.2), this%dk)
+      call parse_variable(namespace, 'PES_Flux_DeltaK', CNST(0.02), this%dk)
       if(this%dk <= M_ZERO) call messages_input_error('PES_Flux_DeltaK')
-!       call messages_print_var_value(stdout, "PES_Flux_DeltaK", this%dk)
 
-    endif
+    end if
 
-    call messages_write("Momentum linear grid (Pmin, Pmax, DP) [") 
-    call messages_write(trim(units_abbrev(units_out%mass*units_out%velocity)))
-    call messages_write("]:  (")
-    call messages_write(kmin,fmt = '(f8.3)')
-    call messages_write(", ")
-    call messages_write(kmax, fmt = '(f8.3)')
-    call messages_write(", ")
-    call messages_write(this%dk, fmt = '(e9.2)')
-    call messages_write(")")
-    call messages_info()
-
+    do idim = 1, kgrid_block_dim   
+      if (kgrid_block_dim == 1) then
+        call messages_write("Momentum linear grid (Pmin, Pmax, DP) [") 
+      else 
+        call messages_write("Momentum linear grid (Pmin, Pmax, DP) "//index2axis(idim)//"-axis [") 
+      end if
+      call messages_write(trim(units_abbrev(units_out%mass*units_out%velocity)))
+      call messages_write("]:  (")
+      call messages_write(kmin(idim),fmt = '(f8.3)')
+      call messages_write(", ")
+      call messages_write(kmax(idim), fmt = '(f8.3)')
+      call messages_write(", ")
+      call messages_write(this%dk, fmt = '(e9.2)')
+      call messages_write(")")
+      call messages_info()
+    end do
 
 
     
@@ -1018,7 +1050,7 @@ contains
       if(use_enegy_grid) then
         this%nk     = nint(abs(Emax-Emin)/DE)
       else  
-        this%nk     = nint(abs(kmax-kmin)/this%dk)
+        this%nk     = nint(abs(kmax(1)-kmin(1))/this%dk)
       end if
       this%nkpnts = this%nstepsomegak * this%nk
 
@@ -1059,35 +1091,35 @@ contains
 
       if (kpoints_have_zero_weight_path(sb%kpoints)) then
 
-        if (this%arpes_grid) then
-          nkmax = floor(Emax/DE)
-          nkmin = floor(Emin/DE)
+        do idim = 1, mdim 
+          if (this%arpes_grid) then
+            nkmax = floor(Emax/DE)
+            nkmin = floor(Emin/DE)
 
-        else 
-          nkmax = floor(kmax/this%dk)
-          nkmin = floor(kmin/this%dk)
+          else 
+            nkmax = floor(kmax(idim)/this%dk)
+            nkmin = floor(kmin(idim)/this%dk)
       
-        end if
+          end if
   
-        this%nk = abs(nkmax - nkmin) + 1
-
-        ! This information is needed for postprocessing the data
+          this%ll(idim) = abs(nkmax - nkmin) + 1
+        end do
       
-        this%ll(mdim)   = this%nk 
+        this%nk = maxval(this%ll(1:mdim)) 
       
 
-        call messages_write("Number of Brillouin zones = ")
-        do idim = 1 , pdim
-          call messages_write( this%ll(idim) )
-          if (.not. idim == pdim) call messages_write(" x ")        
-        end do 
-        call messages_info()
+!         call messages_write("Number of Brillouin zones = ")
+!         do idim = 1 , pdim
+!           call messages_write( this%ll(idim) )
+!           if (.not. idim == pdim) call messages_write(" x ")
+!         end do
+!         call messages_info()
         
       else
 
         if (.not. this%arpes_grid) then
-          this%nk = floor(abs(kmax - kmin)/this%dk) + 1
-          this%ll(1:mdim) = this%nk 
+          this%ll(1:mdim) = floor(abs(kmax(1:mdim) - kmin(1:mdim))/this%dk) + 1
+          this%nk = maxval(this%ll(1:mdim)) 
           
         else
           
@@ -1095,7 +1127,7 @@ contains
           nkmin = floor(Emin/DE)
           this%nk = abs(nkmax - nkmin) + 1
           
-          this%ll(1:pdim) = floor(abs(kmax - kmin)/this%dk) + 1
+          this%ll(1:pdim) = floor(abs(kmax(1:pdim) - kmin(1:pdim))/this%dk) + 1
           this%ll(mdim) = this%nk
           
         end if
@@ -1128,7 +1160,7 @@ contains
         end do
       else  
         do ikk = 1, this%nk  
-          this%klinear(ikk,1) = ikk * this%dk + kmin
+          this%klinear(ikk,1) = ikk * this%dk + kmin(1)
         end do
       end if
       
@@ -1285,7 +1317,7 @@ contains
       
         do idir = 1, mdim
           do ikk = 1, this%ll(idir)  
-            this%klinear(ikk,idir) = ikk * this%dk + kmin
+            this%klinear(ikk,idir) = ikk * this%dk + kmin(idir)
           end do
         end do
 
