@@ -434,7 +434,7 @@ contains
 
       ! Propagation dt with H_maxwell
       call mxll_propagation_step(this%hm, this%namespace, this%gr, this%st, this%tr_mxll, this%st%rs_state, &
-                               this%clock%get_sim_time()-this%prop%dt, this%prop%dt)
+                               this%clock%get_sim_time(), this%prop%dt)
 
       this%st%rs_state_trans(:,:) = this%st%rs_state
 
