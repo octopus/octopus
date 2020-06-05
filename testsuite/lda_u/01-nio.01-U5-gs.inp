@@ -50,8 +50,6 @@ GuessMagnetDensity = user_defined
  0.0
 %
 
-LCAOStart = lcao_states
-
 %KPointsGrid
 2 | 2 | 2
 %
