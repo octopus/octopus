@@ -111,20 +111,6 @@ contains
 
     PUSH_SUB(propagator_mxll_init)
 
-    !%Variable MaxwellTDPropagator
-    !%Type integer
-    !%Default etrs
-    !%Section Time-Dependent::Propagation
-    !%Description
-    !% There are several time-evolution methods for the Maxwell propagation
-    !% similar to the methods for the time-evolution of Kohn-Sham orbitals.
-    !%Option maxwell_etrs 1
-    !% Enforced time-reversal-symmetry propagation (etrs)
-    !%End
-    default_propagator = OPTION__MAXWELLTDPROPAGATOR__MAXWELL_ETRS
-    call parse_variable(namespace, 'MaxwellTDPropagator', default_propagator, tr%tr_method)
-    call messages_print_var_option(stdout, 'MaxwellTDPropagator', tr%tr_method)
-
     !%Variable MaxwellBoundaryConditions
     !%Type block
     !%Section Time-Dependent::Propagation

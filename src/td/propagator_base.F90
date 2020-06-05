@@ -63,7 +63,6 @@ module propagator_base_oct_m
 
 
   type propagator_mxll_t
-    integer             :: tr_method
     integer             :: op_method
     logical             :: bc_add_ab_region  = .false.
     logical             :: bc_zero           = .false.
