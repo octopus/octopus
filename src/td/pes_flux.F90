@@ -805,8 +805,8 @@ contains
       call messages_write(")")
       call messages_info()
     
-      kmax(:) = sqrt(M_TWO*Emax)
-      kmin = sqrt(M_TWO*Emin)
+      kmax(1:mdim) = sqrt(M_TWO*Emax)
+      kmin(1:mdim) = sqrt(M_TWO*Emin)
       this%dk = sqrt(M_TWO*DE)
 
     end if 
@@ -1091,21 +1091,19 @@ contains
 
       if (kpoints_have_zero_weight_path(sb%kpoints)) then
 
-        do idim = 1, mdim 
-          if (this%arpes_grid) then
-            nkmax = floor(Emax/DE)
-            nkmin = floor(Emin/DE)
+        if (this%arpes_grid) then
+          nkmax = floor(Emax/DE)
+          nkmin = floor(Emin/DE)
 
-          else 
-            nkmax = floor(kmax(idim)/this%dk)
-            nkmin = floor(kmin(idim)/this%dk)
+        else 
+          nkmax = floor(kmax(mdim)/this%dk)
+          nkmin = floor(kmin(mdim)/this%dk)
+    
+        end if
+
+        this%ll(mdim) = abs(nkmax - nkmin) + 1
       
-          end if
-  
-          this%ll(idim) = abs(nkmax - nkmin) + 1
-        end do
-      
-        this%nk = maxval(this%ll(1:mdim)) 
+        this%nk = this%ll(mdim) 
       
 
 !         call messages_write("Number of Brillouin zones = ")
