@@ -24,6 +24,7 @@ module celestial_body_oct_m
   use global_oct_m
   use interaction_abst_oct_m
   use interaction_gravity_oct_m
+  use ghost_interaction_oct_m
   use io_oct_m
   use iso_c_binding
   use messages_oct_m
@@ -121,6 +122,7 @@ contains
     class(celestial_body_t), target, intent(inout) :: this
     class(system_abst_t),            intent(inout) :: partner
 
+    class(ghost_interaction_t), pointer :: ghost
     class(interaction_gravity_t), pointer :: gravity
     type(interaction_gravity_t) :: gravity_t
 
@@ -133,6 +135,9 @@ contains
       gravity%system_mass => this%mass
       gravity%system_pos  => this%pos
       call this%interactions%add(gravity)
+    else
+      ghost => ghost_interaction_t(partner)
+      call this%interactions%add(ghost)
     end if
 
     POP_SUB(celestial_body_add_interaction_partner)
@@ -490,6 +495,8 @@ contains
     type is (interaction_gravity_t)
       interaction%partner_mass = this%mass
       interaction%partner_pos = this%pos
+    type is (ghost_interaction_t)
+      ! Nothing to copy
     class default
       message(1) = "Unsupported interaction."
       call messages_fatal(1)
@@ -525,6 +532,8 @@ contains
       select type (interaction => iter%get_next_interaction())
       type is (interaction_gravity_t)
         this%tot_force(1:this%space%dim) = this%tot_force(1:this%space%dim) + interaction%force(1:this%space%dim)
+      type is (ghost_interaction_t)
+        ! Nothing to do
       class default
         message(1) = "Unknown interaction by the celestial body " + this%namespace%get()
         call messages_fatal(1)

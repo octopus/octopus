@@ -489,6 +489,7 @@ system_f_srcs =                                 \
 	system/energy_calc.F90                  \
 	system/exponential.F90                  \
 	system/forces.F90                       \
+	system/ghost_interaction.F90            \
 	system/interaction_abst.F90             \
 	system/interaction_partner.F90          \
 	system/interaction_gravity.F90          \
