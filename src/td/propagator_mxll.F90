@@ -1773,7 +1773,7 @@ contains
   subroutine mask_absorbing_boundaries(gr, hm, st, tr, time, dt, time_delay, rs_state)
     type(grid_t),               intent(in)    :: gr
     type(hamiltonian_mxll_t),   intent(inout) :: hm
-    type(states_mxll_t),        intent(in)    :: st
+    type(states_mxll_t),        intent(inout) :: st
     type(propagator_mxll_t),    intent(in)    :: tr
     FLOAT,                      intent(in)    :: time
     FLOAT,                      intent(in)    :: dt
@@ -2579,9 +2579,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine mirror_pec_boundaries_calculation(bc, st, rs_state)
-    type(bc_mxll_t)                :: bc
-    type(states_mxll_t)            :: st
-    CMPLX                          :: rs_state(:,:)
+    type(bc_mxll_t),     intent(in)    :: bc
+    type(states_mxll_t), intent(in)    :: st
+    CMPLX,               intent(inout) :: rs_state(:,:)
 
     integer                    :: ip, ip_in, idim
     FLOAT                      :: e_field(st%dim), b_field(st%dim)
@@ -2604,9 +2604,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine mirror_pmc_boundaries_calculation(bc, st, rs_state)
-    type(bc_mxll_t)                :: bc
-    type(states_mxll_t)            :: st
-    CMPLX                          :: rs_state(:,:)
+    type(bc_mxll_t),     intent(in)    :: bc
+    type(states_mxll_t), intent(in)    :: st
+    CMPLX,               intent(inout) :: rs_state(:,:)
 
     integer                    :: ip, ip_in, idim
     FLOAT                      :: e_field(st%dim), b_field(st%dim)
@@ -2629,12 +2629,12 @@ contains
 
   ! ---------------------------------------------------------
   subroutine plane_waves_boundaries_calculation(hm, st, mesh, time, time_delay, rs_state)
-    type(hamiltonian_mxll_t)   :: hm
-    type(states_mxll_t)        :: st
-    type(mesh_t)               :: mesh
-    FLOAT                      :: time
-    FLOAT                      :: time_delay
-    CMPLX                      :: rs_state(:,:)
+    type(hamiltonian_mxll_t), intent(in) :: hm
+    type(states_mxll_t),      intent(in) :: st
+    type(mesh_t),             intent(in) :: mesh
+    FLOAT,                    intent(in) :: time
+    FLOAT,                    intent(in) :: time_delay
+    CMPLX,                    intent(inout) :: rs_state(:,:)
 
     integer                    :: ip, ip_in, wn
     FLOAT                      :: x_prop(mesh%sb%dim), rr, vv(mesh%sb%dim), k_vector(mesh%sb%dim)
@@ -2675,14 +2675,14 @@ contains
   end subroutine plane_waves_boundaries_calculation
 
   ! ---------------------------------------------------------
-  subroutine plane_waves_propagation(hm, st, gr, tr, time, dt, time_delay)
-    type(hamiltonian_mxll_t)   :: hm
-    type(states_mxll_t)        :: st
-    type(grid_t)               :: gr
-    type(propagator_mxll_t) :: tr
-    FLOAT                      :: time
-    FLOAT                      :: dt
-    FLOAT                      :: time_delay
+  subroutine plane_waves_propagation(hm, st, gr, time, dt, time_delay)
+    type(hamiltonian_mxll_t), intent(inout) :: hm
+    type(states_mxll_t),      intent(inout) :: st
+    type(grid_t),             intent(in) :: gr
+    type(propagator_mxll_t),  intent(in) :: tr
+    FLOAT,                    intent(in) :: time
+    FLOAT,                    intent(in) :: dt
+    FLOAT,                    intent(in) :: time_delay
 
     integer            :: ff_dim
     CMPLX, allocatable :: ff_rs_state(:,:)
