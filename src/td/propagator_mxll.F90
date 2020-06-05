@@ -1793,7 +1793,7 @@ contains
 
     if (mask_check) then
       if (tr%bc_plane_waves .and. hm%plane_waves_apply) then
-        call plane_waves_propagation(hm, st, gr, tr, time, dt, time_delay)
+        call plane_waves_propagation(hm, st, gr, time, dt, time_delay)
         rs_state = rs_state - st%rs_state_plane_waves
         call maxwell_mask(hm, rs_state)
         rs_state = rs_state + st%rs_state_plane_waves
@@ -1901,7 +1901,7 @@ contains
       hm%cpml_hamiltonian = .true.
       call exponential_mxll_apply(hm, namespace, gr, st, tr, dt, ff_rs_state_pml)
       hm%cpml_hamiltonian = .false.
-      call plane_waves_propagation(hm, st, gr, tr, time, dt, time_delay)
+      call plane_waves_propagation(hm, st, gr, time, dt, time_delay)
       SAFE_ALLOCATE(ff_rs_state_plane_waves(1:ff_points,1:ff_dim))
       call transform_rs_state(hm, st%rs_state_plane_waves, ff_rs_state_plane_waves, RS_TRANS_FORWARD)
       do ip_in=1, hm%bc%plane_wave%points_number
@@ -2679,7 +2679,6 @@ contains
     type(hamiltonian_mxll_t), intent(inout) :: hm
     type(states_mxll_t),      intent(inout) :: st
     type(grid_t),             intent(in) :: gr
-    type(propagator_mxll_t),  intent(in) :: tr
     FLOAT,                    intent(in) :: time
     FLOAT,                    intent(in) :: dt
     FLOAT,                    intent(in) :: time_delay
