@@ -74,7 +74,6 @@ module propagator_mxll_oct_m
     propagator_mxll_init,                    &
     mxll_propagation_step,                   &
     transform_rs_state,                      &
-    rs_state_to_cube_map,                    &
     calculate_matter_longitudinal_field,     &
     get_vector_pot_and_transverse_field,     &
     energy_density_calc,                     &
@@ -557,42 +556,6 @@ contains
     POP_SUB(set_medium_rs_state)
   end subroutine set_medium_rs_state
 
-  ! ---------------------------------------------------------
-  subroutine rs_state_to_cube_map(gr, hm, st)
-    type(grid_t),             intent(in)    :: gr
-    type(hamiltonian_mxll_t), intent(in)    :: hm
-    type(states_mxll_t),      intent(inout) :: st
-
-    integer :: ipx, ipy, ipz, idx, np(st%dim), idim
-
-    PUSH_SUB(rs_state_to_cube_map)
-
-    do idim = 1, st%dim
-      ASSERT(hm%cube%rs_n(idim) == hm%cube%fs_n(idim))
-      np(idim) = hm%cube%rs_n(idim)
-    end do
-
-    SAFE_ALLOCATE(st%rs_state_fft_map(1:np(1), 1:np(2), 1:np(3)))
-    SAFE_ALLOCATE(st%rs_state_fft_map_inv(1:gr%mesh%np_global, 1:3))
-
-    idx = 0
-    do ipx = 1, np(1)
-      do ipy = 1, np(2)
-        do ipz = 1, np(3)
-          idx = idx + 1
-          st%rs_state_fft_map(ipx, ipy, ipz) = idx
-          st%rs_state_fft_map_inv(idx, 1) = ipx
-          st%rs_state_fft_map_inv(idx, 2) = ipy
-          st%rs_state_fft_map_inv(idx, 3) = ipz
-        end do
-      end do
-    end do
-
-    SAFE_DEALLOCATE_P(st%rs_state_fft_map)
-    SAFE_DEALLOCATE_P(st%rs_state_fft_map_inv)
-
-    POP_SUB(rs_state_to_cube_map)
-  end subroutine rs_state_to_cube_map
 
   ! ---------------------------------------------------------
   subroutine transform_rs_state(hm, rs_state, ff_rs_state, sign)
@@ -831,8 +794,8 @@ contains
       subroutine calculate_vector_potential(poisson_solver, gr, st, tr, field, vector_potential)
         type(poisson_t),            intent(in)    :: poisson_solver
         type(grid_t),               intent(in)    :: gr
-        type(states_mxll_t),             intent(in)    :: st
-        type(propagator_mxll_t), intent(in)    :: tr
+        type(states_mxll_t),        intent(in)    :: st
+        type(propagator_mxll_t),    intent(in)    :: tr
         CMPLX,                      intent(in)    :: field(:,:)
         FLOAT,                      intent(inout) :: vector_potential(:,:)
 
@@ -859,9 +822,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine derivatives_boundary_mask(bc, mesh, hm)
-    type(bc_mxll_t),  intent(inout) :: bc
-    type(mesh_t),        intent(in)    :: mesh
-    type(hamiltonian_mxll_t), intent(in)    :: hm
+    type(bc_mxll_t),  intent(inout)      :: bc
+    type(mesh_t),        intent(in)      :: mesh
+    type(hamiltonian_mxll_t), intent(in) :: hm
 
     integer :: ip, ip_in, point_info, idim, dim
     FLOAT   :: bounds(2, mesh%sb%dim), xx(mesh%sb%dim)
@@ -1950,9 +1913,9 @@ contains
   ! ---------------------------------------------------------
   subroutine cpml_conv_function_update_via_riemann_silberstein(hm, gr, ff_rs_state_pml, ff_dim)
     type(hamiltonian_mxll_t), intent(inout) :: hm
-    type(grid_t),        intent(in)    :: gr
-    CMPLX,               intent(inout) :: ff_rs_state_pml(:,:)
-    integer,             intent(in)    :: ff_dim
+    type(grid_t),        intent(in)         :: gr
+    CMPLX,               intent(inout)      :: ff_rs_state_pml(:,:)
+    integer,             intent(in)         :: ff_dim
 
     integer :: ip, ip_in, np_part, rs_sign
     CMPLX, allocatable :: tmp_partial(:), tmp_partial_2(:,:)
@@ -2147,9 +2110,9 @@ contains
   ! ---------------------------------------------------------
   subroutine cpml_conv_function_update_via_e_b_fields(hm, gr, ff_rs_state_pml, ff_dim)
     type(hamiltonian_mxll_t), intent(inout) :: hm
-    type(grid_t),        intent(in)    :: gr
-    CMPLX,               intent(in)    :: ff_rs_state_pml(:,:)
-    integer,             intent(in)    :: ff_dim
+    type(grid_t),        intent(in)         :: gr
+    CMPLX,               intent(in)         :: ff_rs_state_pml(:,:)
+    integer,             intent(in)         :: ff_dim
 
     integer :: ip, ip_in, np_part
     FLOAT, allocatable :: tmp_e(:,:), tmp_b(:,:), tmp_partial_e(:), tmp_partial_b(:)
@@ -2267,8 +2230,8 @@ contains
   ! ---------------------------------------------------------
   subroutine generate_medium_boxes(hm, gr, nr_of_boxes)
     type(hamiltonian_mxll_t), intent(inout) :: hm
-    type(grid_t),        intent(in)    :: gr
-    integer,             intent(in)    :: nr_of_boxes
+    type(grid_t),        intent(in)         :: gr
+    integer,             intent(in)         :: nr_of_boxes
 
     integer :: il, ip, ip_in, ip_in_max, ip_bd, ip_bd_max, ipp, idim
     FLOAT   :: bounds(2,gr%sb%dim), xx(gr%sb%dim), xxp(gr%sb%dim), dd, dd_max, dd_min
@@ -2520,7 +2483,7 @@ contains
   ! ---------------------------------------------------------
   subroutine spatial_constant_calculation(constant_calc, st, gr, hm, time, dt, delay, rs_state)
     logical,                  intent(in)    :: constant_calc
-    type(states_mxll_t),      intent(inout)    :: st
+    type(states_mxll_t),      intent(inout) :: st
     type(grid_t),             intent(in)    :: gr
     type(hamiltonian_mxll_t), intent(in)    :: hm
     FLOAT,                    intent(in)    :: time
@@ -2629,11 +2592,11 @@ contains
 
   ! ---------------------------------------------------------
   subroutine plane_waves_boundaries_calculation(hm, st, mesh, time, time_delay, rs_state)
-    type(hamiltonian_mxll_t), intent(in) :: hm
-    type(states_mxll_t),      intent(in) :: st
-    type(mesh_t),             intent(in) :: mesh
-    FLOAT,                    intent(in) :: time
-    FLOAT,                    intent(in) :: time_delay
+    type(hamiltonian_mxll_t), intent(in)    :: hm
+    type(states_mxll_t),      intent(in)    :: st
+    type(mesh_t),             intent(in)    :: mesh
+    FLOAT,                    intent(in )   :: time
+    FLOAT,                    intent(in)    :: time_delay
     CMPLX,                    intent(inout) :: rs_state(:,:)
 
     integer                    :: ip, ip_in, wn
@@ -2678,10 +2641,10 @@ contains
   subroutine plane_waves_propagation(hm, st, gr, time, dt, time_delay)
     type(hamiltonian_mxll_t), intent(inout) :: hm
     type(states_mxll_t),      intent(inout) :: st
-    type(grid_t),             intent(in) :: gr
-    FLOAT,                    intent(in) :: time
-    FLOAT,                    intent(in) :: dt
-    FLOAT,                    intent(in) :: time_delay
+    type(grid_t),             intent(in)    :: gr
+    FLOAT,                    intent(in )   :: time
+    FLOAT,                    intent(in)    :: dt
+    FLOAT,                    intent(in)    :: time_delay
 
     integer            :: ff_dim
     CMPLX, allocatable :: ff_rs_state(:,:)
