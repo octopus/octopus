@@ -93,16 +93,15 @@ module propagator_mxll_oct_m
      RS_TRANS_FORWARD = 1,        &
      RS_TRANS_BACKWARD = 2
 
-
 contains
 
   ! ---------------------------------------------------------
   subroutine propagator_mxll_init(gr, namespace, st, hm, tr)
     type(grid_t),                 intent(in)    :: gr
-    type(namespace_t),   intent(in)    :: namespace
-    type(states_mxll_t),               intent(inout) :: st
-    type(hamiltonian_mxll_t),          intent(inout) :: hm
-    type(propagator_mxll_t),   intent(inout) :: tr
+    type(namespace_t),            intent(in)    :: namespace
+    type(states_mxll_t),          intent(inout) :: st
+    type(hamiltonian_mxll_t),     intent(inout) :: hm
+    type(propagator_mxll_t),      intent(inout) :: tr
 
     integer :: default_propagator, il, nlines, ncols, icol, idim
     type(block_t) :: blk
@@ -146,13 +145,11 @@ contains
       ! find out how many lines (i.e. states) the block has
       nlines = parse_block_n(blk)
       if (nlines /= 1) then
-        message(1) = 'MaxwellBoundaryConditions has to consist of one line!'
-        call messages_fatal(1)
+        call messages_input_error(namespace, 'MaxwellBoundaryConditions', 'should consist of one line')
       end if
       ncols = parse_block_cols(blk, 0)
       if (ncols /= 3) then
-        message(1) = 'MaxwellBoundaryConditions has to consist of three columns!'
-        call messages_fatal(1)
+        call messages_input_error(namespace, 'MaxwellBoundaryConditions', 'should consist of three columns')
       end if
       do icol=1, ncols
         call parse_block_integer(blk, 0, icol-1, hm%bc%bc_type(icol))
@@ -196,7 +193,7 @@ contains
         if (plane_waves_set .and. .not. (parse_is_defined(namespace, 'MaxwellIncidentWaves')) ) then
           write(message(1),'(a)') 'Input: Maxwell boundary condition option is set to "plane_waves".'
           write(message(2),'(a)') 'Input: User defined Maxwell plane waves have to be defined!'
-          call messages_fatal(2)
+          call messages_fatal(2, namespace=namespace)
         end if
       end do
 
@@ -242,8 +239,7 @@ contains
       do il=1, nlines
         ncols = parse_block_cols(blk, il-1)
         if (ncols /= 11) then
-          message(1) = 'MaxwellMedium has to consist of eleven columns!'
-          call messages_fatal(1)
+          call messages_input_error(namespace, 'MaxwellMedium', 'should consist of eleven columns')
         end if
         do idim=1,3
           call parse_block_float(blk, il-1, idim-1, hm%medium_box_center(idim,il))
@@ -301,11 +297,11 @@ contains
     !%Default no
     !%Section Time-Dependent::Propagation
     !%Description
-    !% Whether to perform  apriximations to the ETRS propagator.
+    !% Whether to perform  aproximations to the ETRS propagator.
     !%Option no 0
     !% No approximations.
     !%Option const_steps 1
-    !% Use constant current density..
+    !% Use constant current density.
     !%End
     call parse_variable(namespace, 'MaxwellTDETRSApprox', OPTION__MAXWELLTDETRSAPPROX__NO, tr%tr_etrs_approx)
     call messages_print_var_option(stdout, 'MaxwellTDETRSApprox', tr%tr_etrs_approx)
@@ -362,14 +358,13 @@ contains
     POP_SUB(propagator_mxll_init)
   end subroutine propagator_mxll_init
 
-
   ! ---------------------------------------------------------
   subroutine mxll_propagation_step(hm, namespace, gr, st, tr, rs_state, time, dt)
-    type(hamiltonian_mxll_t),        intent(inout) :: hm
-    type(namespace_t),           intent(in)    :: namespace
+    type(hamiltonian_mxll_t),   intent(inout) :: hm
+    type(namespace_t),          intent(in)    :: namespace
     type(grid_t),               intent(inout) :: gr
-    type(states_mxll_t),             intent(inout) :: st
-    type(propagator_mxll_t), intent(inout) :: tr
+    type(states_mxll_t),        intent(inout) :: st
+    type(propagator_mxll_t),    intent(inout) :: tr
     CMPLX,                      intent(inout) :: rs_state(:,:)
     FLOAT,                      intent(in)    :: time
     FLOAT,                      intent(in)    :: dt
@@ -382,15 +377,13 @@ contains
 
     PUSH_SUB(mxll_propagation_step)
 
-
-
     if (tr%plane_waves_in_box) then
       call plane_waves_in_box_calculation(hm%bc, time+dt, gr, st, hm, rs_state)
       POP_SUB(mxll_propagation_step)
       return
     end if
 
-    do idim=1, 3
+    do idim = 1, 3
       if (hm%bc%bc_ab_type(idim) == OPTION__MAXWELLABSORBINGBOUNDARIES__CPML) then
         pml_check = .true.
       end if
@@ -419,14 +412,13 @@ contains
 
     ! first step of Maxwell inhomogeneity propagation with constant current density
     if ((hm%ma_mx_coupling_apply .or. hm%current_density_ext_flag) .and. &
-      (tr%tr_etrs_approx == OPTION__MAXWELLTDETRSAPPROX__CONST_STEPS)) then
+        tr%tr_etrs_approx == OPTION__MAXWELLTDETRSAPPROX__CONST_STEPS) then
 
       message(1) = "Maxwell-matter coupling or external current not implemented yet"
       call messages_fatal(1)
-
     end if
 
-    do ii=1, inter_steps
+    do ii = 1, inter_steps
 
       ! intermediate time
       inter_time = time + inter_dt * (ii-1)
@@ -435,12 +427,10 @@ contains
       call transform_rs_state(hm, rs_state, ff_rs_state, RS_TRANS_FORWARD)
 
       if ((hm%ma_mx_coupling_apply) .or. hm%current_density_ext_flag) then
-
         message(1) = "Maxwell-matter coupling or external current not implemented yet"
         call messages_fatal(1)
 
       else
-
         ! RS state propagation
         call hamiltonian_mxll_update(hm, time=inter_time)
         if (pml_check) then
@@ -451,8 +441,7 @@ contains
 
         if (pml_check) then
           hm%cpml_hamiltonian = .false.
-          call pml_propagation_stage_2(hm, namespace, gr, st, tr, inter_time, inter_dt, delay,&
-            ff_rs_state_pml, ff_rs_state)
+          call pml_propagation_stage_2(hm, namespace, gr, st, tr, inter_time, inter_dt, delay, ff_rs_state_pml, ff_rs_state)
         end if
       end if
 
@@ -497,7 +486,6 @@ contains
     POP_SUB(mxll_propagation_step)
   end subroutine mxll_propagation_step
 
-
   ! ---------------------------------------------------------
   subroutine exponential_mxll_apply(hm, namespace, gr, st, tr, dt, ff)
     type(hamiltonian_mxll_t),   intent(inout) :: hm
@@ -532,11 +520,10 @@ contains
     POP_SUB(exponential_mxll_apply)
   end subroutine exponential_mxll_apply
 
-
   ! ---------------------------------------------------------
   subroutine set_medium_rs_state(st, gr, hm)
     type(states_mxll_t),      intent(inout) :: st
-    type(grid_t),        intent(in)    :: gr
+    type(grid_t),             intent(in)    :: gr
     type(hamiltonian_mxll_t), intent(in)    :: hm
 
     integer :: ip, ip_in, il, idim
@@ -548,21 +535,21 @@ contains
     st%ep = P_ep
     st%mu = P_mu
     if (hm%medium_box) then
-      do il=1, hm%medium_box_number
-        do ip_in=1, hm%medium_box_points_number(il)
-          ip = hm%medium_box_points_map(ip_in,il)
-          st%ep(ip) = hm%medium_box_ep(ip_in,il)
-          st%mu(ip) = hm%medium_box_mu(ip_in,il)
+      do il = 1, hm%medium_box_number
+        do ip_in = 1, hm%medium_box_points_number(il)
+          ip = hm%medium_box_points_map(ip_in, il)
+          st%ep(ip) = hm%medium_box_ep(ip_in, il)
+          st%mu(ip) = hm%medium_box_mu(ip_in, il)
         end do
       end do
     end if
 
-    do idim=1, st%dim
+    do idim = 1, st%dim
       if (hm%bc%bc_type(idim) == MXLL_BC_MEDIUM) then
-        do ip_in=1, hm%bc%mxmedium%points_number(idim)
-          ip = hm%bc%mxmedium%points_map(ip_in,idim)
-          st%ep(ip) = hm%bc%mxmedium%ep(ip_in,idim)
-          st%mu(ip) = hm%bc%mxmedium%mu(ip_in,idim)
+        do ip_in = 1, hm%bc%mxmedium%points_number(idim)
+          ip = hm%bc%mxmedium%points_map(ip_in, idim)
+          st%ep(ip) = hm%bc%mxmedium%ep(ip_in, idim)
+          st%mu(ip) = hm%bc%mxmedium%mu(ip_in, idim)
         end do
       end if
     end do
@@ -570,10 +557,9 @@ contains
     POP_SUB(set_medium_rs_state)
   end subroutine set_medium_rs_state
 
-
   ! ---------------------------------------------------------
   subroutine rs_state_to_cube_map(gr, hm, st)
-    type(grid_t),        intent(in)    :: gr
+    type(grid_t),             intent(in)    :: gr
     type(hamiltonian_mxll_t), intent(in)    :: hm
     type(states_mxll_t),      intent(inout) :: st
 
@@ -581,23 +567,23 @@ contains
 
     PUSH_SUB(rs_state_to_cube_map)
 
-    do idim=1, st%dim
+    do idim = 1, st%dim
       ASSERT(hm%cube%rs_n(idim) == hm%cube%fs_n(idim))
       np(idim) = hm%cube%rs_n(idim)
     end do
 
-    SAFE_ALLOCATE(st%rs_state_fft_map(1:np(1),1:np(2),1:np(3)))
-    SAFE_ALLOCATE(st%rs_state_fft_map_inv(1:gr%mesh%np_global,1:3))
+    SAFE_ALLOCATE(st%rs_state_fft_map(1:np(1), 1:np(2), 1:np(3)))
+    SAFE_ALLOCATE(st%rs_state_fft_map_inv(1:gr%mesh%np_global, 1:3))
 
     idx = 0
-    do ipx=1,np(1)
-      do ipy=1,np(2)
-        do ipz=1,np(3)
-          idx = idx+1
-          st%rs_state_fft_map(ipx,ipy,ipz) = idx
-          st%rs_state_fft_map_inv(idx,1) = ipx
-          st%rs_state_fft_map_inv(idx,2) = ipy
-          st%rs_state_fft_map_inv(idx,3) = ipz
+    do ipx = 1, np(1)
+      do ipy = 1, np(2)
+        do ipz = 1, np(3)
+          idx = idx + 1
+          st%rs_state_fft_map(ipx, ipy, ipz) = idx
+          st%rs_state_fft_map_inv(idx, 1) = ipx
+          st%rs_state_fft_map_inv(idx, 2) = ipy
+          st%rs_state_fft_map_inv(idx, 3) = ipz
         end do
       end do
     end do
@@ -608,13 +594,12 @@ contains
     POP_SUB(rs_state_to_cube_map)
   end subroutine rs_state_to_cube_map
 
-
   ! ---------------------------------------------------------
   subroutine transform_rs_state(hm, rs_state, ff_rs_state, sign)
     type(hamiltonian_mxll_t), intent(in)    :: hm
-    CMPLX,               intent(inout)      :: rs_state(:,:)
-    CMPLX,               intent(inout)      :: ff_rs_state(:,:)
-    integer,             intent(in)         :: sign
+    CMPLX,                    intent(inout)      :: rs_state(:,:)
+    CMPLX,                    intent(inout)      :: ff_rs_state(:,:)
+    integer,                  intent(in)         :: sign
 
     ASSERT(sign == RS_TRANS_FORWARD .or. sign == RS_TRANS_BACKWARD)
 
@@ -637,7 +622,6 @@ contains
 
   end subroutine transform_rs_state
 
-
   !----------------------------------------------------------
   subroutine transform_rs_state_to_6x6_rs_state_forward(rs_state_3x3_plus, rs_state_3x3_minus, rs_state_6x6)
     CMPLX, intent(in)    :: rs_state_3x3_plus(:,:)
@@ -654,7 +638,6 @@ contains
 
   end subroutine transform_rs_state_to_6x6_rs_state_forward
 
-
   !----------------------------------------------------------
   subroutine transform_rs_state_to_6x6_rs_state_backward(rs_state_6x6, rs_state)
     CMPLX, intent(in)    :: rs_state_6x6(:,:)
@@ -668,7 +651,6 @@ contains
     end do
 
   end subroutine transform_rs_state_to_6x6_rs_state_backward
-
 
   !----------------------------------------------------------
   subroutine transform_rs_densities_to_6x6_rs_densities_forward(rs_charge_density, rs_current_density, rs_density_6x6)
@@ -686,7 +668,6 @@ contains
 
   end subroutine transform_rs_densities_to_6x6_rs_densities_forward
 
-
   !----------------------------------------------------------
   subroutine transform_rs_densities_to_6x6_rs_densities_backward(rs_density_6x6, rs_charge_density, rs_current_density)
     CMPLX, intent(in)    :: rs_density_6x6(:,:)
@@ -702,7 +683,6 @@ contains
 
   end subroutine transform_rs_densities_to_6x6_rs_densities_backward
 
-
   !----------------------------------------------------------
   subroutine transform_rs_state_to_4x4_rs_state_forward(rs_state_3x3, rs_state_4x4)
     CMPLX, intent(in)    :: rs_state_3x3(:,:)
@@ -716,7 +696,6 @@ contains
 
   end subroutine transform_rs_state_to_4x4_rs_state_forward
 
-
   !----------------------------------------------------------
   subroutine transform_rs_state_to_4x4_rs_state_backward(rs_state_4x4, rs_state_3x3)
     CMPLX, intent(in)    :: rs_state_4x4(:,:)
@@ -728,7 +707,6 @@ contains
     rs_state_3x3(:,3) = M_z1 * M_HALF * (rs_state_4x4(:,2) + rs_state_4x4(:,3))
 
   end subroutine transform_rs_state_to_4x4_rs_state_backward
-
 
   !----------------------------------------------------------
   subroutine transform_rs_densities_to_4x4_rs_densities_forward(rs_charge_density, rs_current_density, rs_density_4x4)
@@ -744,7 +722,6 @@ contains
 
   end subroutine transform_rs_densities_to_4x4_rs_densities_forward
 
-
   !----------------------------------------------------------
   subroutine transform_rs_densities_to_4x4_rs_densities_backward(rs_density_4x4, rs_charge_density, rs_current_density)
     CMPLX, intent(in)    :: rs_density_4x4(:,:)
@@ -759,15 +736,14 @@ contains
 
   end subroutine transform_rs_densities_to_4x4_rs_densities_backward
 
-
   !----------------------------------------------------------
   subroutine calculate_matter_longitudinal_field(gr_mxll, st_mxll, hm_mxll, gr_elec, st_elec, hm_elec, rs_state_matter, geo)
     type(grid_t),                  intent(in)    :: gr_mxll
-    type(states_mxll_t),                intent(in)    :: st_mxll
-    type(hamiltonian_mxll_t),           intent(in)    :: hm_mxll
+    type(states_mxll_t),           intent(in)    :: st_mxll
+    type(hamiltonian_mxll_t),      intent(in)    :: hm_mxll
     type(grid_t),                  intent(in)    :: gr_elec
-    type(states_elec_t),                intent(in)    :: st_elec
-    type(hamiltonian_elec_t),           intent(in)    :: hm_elec
+    type(states_elec_t),           intent(in)    :: st_elec
+    type(hamiltonian_elec_t),      intent(in)    :: hm_elec
     CMPLX,                         intent(inout) :: rs_state_matter(:,:)
     type(geometry_t),    optional, intent(in)    :: geo
 
@@ -785,9 +761,9 @@ contains
     tmp_grad_mx_gr = - tmp_grad_mx_gr
 
     rs_state_matter = M_z0
-    call build_rs_state(real(tmp_grad_mx_gr(1:gr_mxll%mesh%np,:)), aimag(tmp_grad_mx_gr(1:gr_mxll%mesh%np,:)), &
-      st_mxll%rs_sign, rs_state_matter(1:gr_mxll%mesh%np,:), gr_mxll%mesh, st_mxll%ep(1:gr_mxll%mesh%np), &
-      st_mxll%mu(1:gr_mxll%mesh%np), gr_mxll%mesh%np)
+    call build_rs_state(real(tmp_grad_mx_gr(1:gr_mxll%mesh%np,:)), aimag(tmp_grad_mx_gr(1:gr_mxll%mesh%np,:)), st_mxll%rs_sign, &
+      rs_state_matter(1:gr_mxll%mesh%np,:), gr_mxll%mesh, st_mxll%ep(1:gr_mxll%mesh%np), st_mxll%mu(1:gr_mxll%mesh%np), &
+      gr_mxll%mesh%np)
 
     SAFE_DEALLOCATE_A(tmp_pot_mx_gr)
     SAFE_DEALLOCATE_A(tmp_grad_mx_gr)
@@ -795,17 +771,16 @@ contains
     POP_SUB(calculate_matter_longitudinal_field)
   end subroutine calculate_matter_longitudinal_field
 
-
   !----------------------------------------------------------
-  subroutine get_vector_pot_and_transverse_field(trans_calc_method, gr_mxll, hm_mxll, st_mxll, tr_mxll, &
-    hm, st, tr, poisson_solver, time, field, transverse_field, vector_potential, geo)
+  subroutine get_vector_pot_and_transverse_field(trans_calc_method, gr_mxll, hm_mxll, st_mxll, tr_mxll, hm, st, tr, &
+    poisson_solver, time, field, transverse_field, vector_potential, geo)
     integer,                    intent(in)    :: trans_calc_method
     type(grid_t),               intent(in)    :: gr_mxll
-    type(hamiltonian_mxll_t),        intent(in)    :: hm_mxll
-    type(states_mxll_t),             intent(in)    :: st_mxll
-    type(propagator_mxll_t), intent(in)    :: tr_mxll
-    type(hamiltonian_elec_t),        intent(in)    :: hm
-    type(states_elec_t),             intent(in)    :: st
+    type(hamiltonian_mxll_t),   intent(in)    :: hm_mxll
+    type(states_mxll_t),        intent(in)    :: st_mxll
+    type(propagator_mxll_t),    intent(in)    :: tr_mxll
+    type(hamiltonian_elec_t),   intent(in)    :: hm
+    type(states_elec_t),        intent(in)    :: st
     type(propagator_t),         intent(in)    :: tr
     type(poisson_t),            intent(in)    :: poisson_solver
     FLOAT,                      intent(in)    :: time
@@ -881,7 +856,6 @@ contains
       end subroutine calculate_vector_potential
 
   end subroutine get_vector_pot_and_transverse_field
-
 
   ! ---------------------------------------------------------
   subroutine derivatives_boundary_mask(bc, mesh, hm)
@@ -974,21 +948,18 @@ contains
     POP_SUB(derivatives_boundary_mask)
   end subroutine derivatives_boundary_mask
 
-
-
   !----------------------------------------------------------
-  subroutine energy_density_calc(gr, st, rs_field, energy_dens, &
-                                         e_energy_dens, b_energy_dens, plane_waves_check, &
-                                         rs_field_plane_waves, energy_dens_plane_waves)
-    type(grid_t),      intent(in)    :: gr
-    type(states_mxll_t),    intent(in)    :: st
-    CMPLX,             intent(in)    :: rs_field(:,:)
-    FLOAT,             intent(inout) :: energy_dens(:)
-    FLOAT,             intent(inout) :: e_energy_dens(:)
-    FLOAT,             intent(inout) :: b_energy_dens(:)
-    logical, optional, intent(in)    :: plane_waves_check
-    CMPLX,   optional, intent(in)    :: rs_field_plane_waves(:,:)
-    FLOAT,   optional, intent(inout) :: energy_dens_plane_waves(:)
+  subroutine energy_density_calc(gr, st, rs_field, energy_dens, e_energy_dens, b_energy_dens, plane_waves_check, &
+    rs_field_plane_waves, energy_dens_plane_waves)
+    type(grid_t),        intent(in)    :: gr
+    type(states_mxll_t), intent(in)    :: st
+    CMPLX,               intent(in)    :: rs_field(:,:)
+    FLOAT,               intent(inout) :: energy_dens(:)
+    FLOAT,               intent(inout) :: e_energy_dens(:)
+    FLOAT,               intent(inout) :: b_energy_dens(:)
+    logical,   optional, intent(in)    :: plane_waves_check
+    CMPLX,     optional, intent(in)    :: rs_field_plane_waves(:,:)
+    FLOAT,     optional, intent(inout) :: energy_dens_plane_waves(:)
 
     CMPLX, allocatable :: ztmp(:,:)
     integer            :: idim, ip
@@ -1035,20 +1006,19 @@ contains
     POP_SUB(energy_density_calc)
   end subroutine energy_density_calc
 
-
   !----------------------------------------------------------
-  subroutine energy_mxll_calc(gr, st, hm, rs_field, mx_energy, mx_e_energy, mx_b_energy, &
-                                 mx_energy_boundary, rs_field_plane_waves, mx_energy_plane_waves)
-    type(grid_t),        intent(in)  :: gr
+  subroutine energy_mxll_calc(gr, st, hm, rs_field, mx_energy, mx_e_energy, mx_b_energy, mx_energy_boundary, &
+    rs_field_plane_waves, mx_energy_plane_waves)
+    type(grid_t),             intent(in)  :: gr
     type(states_mxll_t),      intent(in)  :: st
     type(hamiltonian_mxll_t), intent(in)  :: hm
-    CMPLX,               intent(in)  :: rs_field(:,:)
-    FLOAT,               intent(out) :: mx_energy
-    FLOAT,               intent(out) :: mx_e_energy
-    FLOAT,               intent(out) :: mx_b_energy
-    FLOAT, optional,     intent(out) :: mx_energy_boundary
-    CMPLX, optional,     intent(in)  :: rs_field_plane_waves(:,:)
-    FLOAT, optional,     intent(out) :: mx_energy_plane_waves
+    CMPLX,                    intent(in)  :: rs_field(:,:)
+    FLOAT,                    intent(out) :: mx_energy
+    FLOAT,                    intent(out) :: mx_e_energy
+    FLOAT,                    intent(out) :: mx_b_energy
+    FLOAT, optional,          intent(out) :: mx_energy_boundary
+    CMPLX, optional,          intent(in)  :: rs_field_plane_waves(:,:)
+    FLOAT, optional,          intent(out) :: mx_energy_plane_waves
 
     integer            :: ip, ip_in
     FLOAT, allocatable :: energy_density(:), energy_density_plane_waves(:), tmp(:), tmp_pw(:)
@@ -1066,10 +1036,8 @@ contains
     SAFE_ALLOCATE(tmp_b(1:gr%mesh%np))
     SAFE_ALLOCATE(tmp_pw(1:gr%mesh%np))
 
-    call energy_density_calc(gr, st, rs_field, energy_density, &
-         e_energy_density, b_energy_density,       &
-         hm%plane_waves, &
-         rs_field_plane_waves, energy_density_plane_waves)
+    call energy_density_calc(gr, st, rs_field, energy_density, e_energy_density, b_energy_density, hm%plane_waves, &
+      rs_field_plane_waves, energy_density_plane_waves)
 
     tmp    = M_ZERO
     tmp_e  = M_ZERO
@@ -1081,20 +1049,18 @@ contains
       tmp(ip)    = energy_density(ip)
       tmp_e(ip)  = e_energy_density(ip)
       tmp_b(ip)  = b_energy_density(ip)
-      if (present(rs_field_plane_waves) .and. present(mx_energy_plane_waves))  &
-         tmp_pw(ip) = energy_density_plane_waves(ip)
+      if (present(rs_field_plane_waves) .and. present(mx_energy_plane_waves)) tmp_pw(ip) = energy_density_plane_waves(ip)
     end do
 
     mx_energy             = dmf_integrate(gr%mesh, tmp)
     mx_e_energy           = dmf_integrate(gr%mesh, tmp_e)
     mx_b_energy           = dmf_integrate(gr%mesh, tmp_b)
-    if (present(rs_field_plane_waves) .and. present(mx_energy_plane_waves))  &
-       mx_energy_plane_waves = dmf_integrate(gr%mesh, tmp_pw)
+    if (present(rs_field_plane_waves) .and. present(mx_energy_plane_waves)) mx_energy_plane_waves = dmf_integrate(gr%mesh, tmp_pw)
 
     if (present(mx_energy_boundary)) then
       do ip_in = 1, st%boundary_points_number
         ip = st%boundary_points_map(ip_in)
-        tmp(ip)   = energy_density(ip)
+        tmp(ip) = energy_density(ip)
       end do
       mx_energy_boundary = dmf_integrate(gr%mesh, tmp)
     end if
@@ -1111,12 +1077,10 @@ contains
     POP_SUB(energy_mxll_calc)
   end subroutine energy_mxll_calc
 
-
   ! ---------------------------------------------------------
-  subroutine energy_rate_calc(gr, st, iter, dt, energy_rate, &
-                                      delta_energy, energy_via_flux_calc, energy_via_flux_calc_dir)
+  subroutine energy_rate_calc(gr, st, iter, dt, energy_rate, delta_energy, energy_via_flux_calc, energy_via_flux_calc_dir)
     type(grid_t),        intent(in)    :: gr
-    type(states_mxll_t),      intent(in)    :: st
+    type(states_mxll_t), intent(in)    :: st
     integer,             intent(in)    :: iter
     FLOAT,               intent(in)    :: dt
     FLOAT,               intent(out)   :: energy_rate(:)
@@ -1133,8 +1097,7 @@ contains
     SAFE_ALLOCATE(poynting_vector(1:gr%mesh%np,1:st%dim))
     SAFE_ALLOCATE(tmp_global(1:gr%mesh%np_global,1:st%dim))
 
-    call get_poynting_vector(gr, st, st%rs_state, st%rs_sign, &
-                                     poynting_vector, ep_field=st%ep, mu_field=st%mu)
+    call get_poynting_vector(gr, st, st%rs_state, st%rs_sign, poynting_vector, ep_field=st%ep, mu_field=st%mu)
 
     if (gr%mesh%parallel_in_domains) then
       do idim=1, st%dim
@@ -1152,65 +1115,59 @@ contains
     iz_max = st%surface_grid_rows_number(3)
     ii_max = max(ix_max,iy_max,iz_max)
 
-    SAFE_ALLOCATE(tmp_surf(1:2,1:st%dim,1:ii_max,1:ii_max,1:st%dim))
+    SAFE_ALLOCATE(tmp_surf(1:2, 1:st%dim, 1:ii_max, 1:ii_max, 1:st%dim))
 
     tmp_surf = M_ZERO
-    tmp_sum  = M_ZERO
+    tmp_sum = M_ZERO
 
+    do iy = 1, iy_max
+      do iz = 1, iz_max
+        do ip_surf = 1, st%surface_grid_points_number(1, iy, iz)
+          tmp_surf(1, 1, iy, iz, :) = tmp_surf(1, 1, iy, iz, :) + tmp_global(st%surface_grid_points_map(1, 1, iy, iz, ip_surf),:)
+          tmp_surf(2, 1, iy, iz, :) = tmp_surf(2, 1, iy, iz, :) + tmp_global(st%surface_grid_points_map(2, 1, iy, iz, ip_surf),:)
+        end do
+        tmp_surf(1, 1, iy, iz, :) = tmp_surf(1, 1, iy, iz, :) / float(st%surface_grid_points_number(1, iy, iz))
+        tmp_surf(2, 1, iy, iz, :) = tmp_surf(2, 1, iy, iz, :) / float(st%surface_grid_points_number(1, iy, iz))
+      end do
+    end do
     do iy=1, iy_max
       do iz=1, iz_max
-        do ip_surf=1, st%surface_grid_points_number(1,iy,iz)
-          tmp_surf(1,1,iy,iz,:) = tmp_surf(1,1,iy,iz,:) &
-                                + tmp_global(st%surface_grid_points_map(1,1,iy,iz,ip_surf),:)
-          tmp_surf(2,1,iy,iz,:) = tmp_surf(2,1,iy,iz,:) &
-                                + tmp_global(st%surface_grid_points_map(2,1,iy,iz,ip_surf),:)
-        end do
-        tmp_surf(1,1,iy,iz,:) = tmp_surf(1,1,iy,iz,:) / float(st%surface_grid_points_number(1,iy,iz))
-        tmp_surf(2,1,iy,iz,:) = tmp_surf(2,1,iy,iz,:) / float(st%surface_grid_points_number(1,iy,iz))
-      end do
-    end do
-    do iy=1, iy_max
-      do iz=1, iz_max
-        tmp_sum = tmp_sum - tmp_surf(1,1,iy,iz,1) * st%surface_grid_element(1)
-        tmp_sum = tmp_sum + tmp_surf(2,1,iy,iz,1) * st%surface_grid_element(1)
+        tmp_sum = tmp_sum - tmp_surf(1, 1, iy, iz, 1) * st%surface_grid_element(1)
+        tmp_sum = tmp_sum + tmp_surf(2, 1, iy, iz, 1) * st%surface_grid_element(1)
       end do
     end do
 
-    do ix=1, ix_max
-      do iz=1, iz_max
-        do ip_surf=1, st%surface_grid_points_number(2,ix,iz)
-          tmp_surf(1,2,ix,iz,:) = tmp_surf(1,2,ix,iz,:) &
-                                + tmp_global(st%surface_grid_points_map(1,2,ix,iz,ip_surf),:)
-          tmp_surf(2,2,ix,iz,:) = tmp_surf(2,2,ix,iz,:) &
-                                + tmp_global(st%surface_grid_points_map(2,2,ix,iz,ip_surf),:)
+    do ix = 1, ix_max
+      do iz = 1, iz_max
+        do ip_surf = 1, st%surface_grid_points_number(2, ix, iz)
+          tmp_surf(1, 2, ix, iz, :) = tmp_surf(1, 2, ix, iz, :) + tmp_global(st%surface_grid_points_map(1, 2, ix, iz, ip_surf),:)
+          tmp_surf(2, 2, ix, iz, :) = tmp_surf(2, 2, ix, iz, :) + tmp_global(st%surface_grid_points_map(2, 2, ix, iz, ip_surf),:)
         end do
-        tmp_surf(1,2,ix,iz,:) = tmp_surf(1,2,ix,iz,:) / float(st%surface_grid_points_number(2,ix,iz))
-        tmp_surf(2,2,ix,iz,:) = tmp_surf(2,2,ix,iz,:) / float(st%surface_grid_points_number(2,ix,iz))
+        tmp_surf(1, 2, ix, iz, :) = tmp_surf(1, 2, ix, iz, :) / float(st%surface_grid_points_number(2, ix, iz))
+        tmp_surf(2, 2, ix, iz, :) = tmp_surf(2, 2, ix, iz, :) / float(st%surface_grid_points_number(2, ix, iz))
       end do
     end do
-    do ix=1, ix_max
-      do iz=1, iz_max
-        tmp_sum = tmp_sum - tmp_surf(1,2,ix,iz,2) * st%surface_grid_element(2)
-        tmp_sum = tmp_sum + tmp_surf(2,2,ix,iz,2) * st%surface_grid_element(2)
+    do ix = 1, ix_max
+      do iz = 1, iz_max
+        tmp_sum = tmp_sum - tmp_surf(1, 2, ix, iz, 2) * st%surface_grid_element(2)
+        tmp_sum = tmp_sum + tmp_surf(2, 2, ix, iz, 2) * st%surface_grid_element(2)
       end do
     end do
 
-    do ix=1, ix_max
-      do iy=1, iy_max
-        do ip_surf=1, st%surface_grid_points_number(3,ix,iy)
-          tmp_surf(1,3,ix,iy,:) = tmp_surf(1,3,ix,iy,:) &
-                                + tmp_global(st%surface_grid_points_map(1,3,ix,iy,ip_surf),:)
-          tmp_surf(2,3,ix,iy,:) = tmp_surf(2,3,ix,iy,:) &
-                                + tmp_global(st%surface_grid_points_map(2,3,ix,iy,ip_surf),:)
+    do ix = 1, ix_max
+      do iy = 1, iy_max
+        do ip_surf = 1, st%surface_grid_points_number(3,ix,iy)
+          tmp_surf(1, 3, ix, iy, :) = tmp_surf(1, 3, ix, iy, :) + tmp_global(st%surface_grid_points_map(1, 3, ix, iy, ip_surf), :)
+          tmp_surf(2, 3, ix, iy, :) = tmp_surf(2, 3, ix, iy, :) + tmp_global(st%surface_grid_points_map(2, 3, ix, iy, ip_surf), :)
         end do
-        tmp_surf(1,3,ix,iy,:) = tmp_surf(1,3,ix,iy,:) / float(st%surface_grid_points_number(3,ix,iy))
-        tmp_surf(2,3,ix,iy,:) = tmp_surf(2,3,ix,iy,:) / float(st%surface_grid_points_number(3,ix,iy))
+        tmp_surf(1, 3, ix, iy, :) = tmp_surf(1, 3, ix, iy, :) / float(st%surface_grid_points_number(3, ix, iy))
+        tmp_surf(2, 3, ix, iy, :) = tmp_surf(2, 3, ix, iy, :) / float(st%surface_grid_points_number(3, ix, iy))
       end do
     end do
-    do ix=1, ix_max
-      do iy=1, iy_max
-        tmp_sum = tmp_sum - tmp_surf(1,3,ix,iy,3) * st%surface_grid_element(3)
-        tmp_sum = tmp_sum + tmp_surf(2,3,ix,iy,3) * st%surface_grid_element(3)
+    do ix = 1, ix_max
+      do iy = 1, iy_max
+        tmp_sum = tmp_sum - tmp_surf(1, 3, ix, iy, 3) * st%surface_grid_element(3)
+        tmp_sum = tmp_sum + tmp_surf(2, 3, ix, iy, 3) * st%surface_grid_element(3)
       end do
     end do
 
@@ -1230,12 +1187,11 @@ contains
     POP_SUB(energy_rate_calc)
   end subroutine energy_rate_calc
 
-
   ! ---------------------------------------------------------
-  subroutine energy_rate_calc_plane_waves(gr, st, iter, dt, energy_rate, &
-       delta_energy, energy_via_flux_calc, energy_via_flux_calc_dir)
+  subroutine energy_rate_calc_plane_waves(gr, st, iter, dt, energy_rate, delta_energy, energy_via_flux_calc, &
+    energy_via_flux_calc_dir)
     type(grid_t),        intent(in)    :: gr
-    type(states_mxll_t),      intent(in)    :: st
+    type(states_mxll_t), intent(in)    :: st
     integer,             intent(in)    :: iter
     FLOAT,               intent(in)    :: dt
     FLOAT,               intent(out)   :: energy_rate(:)
@@ -1275,60 +1231,54 @@ contains
     tmp_surf = M_ZERO
     tmp_sum  = M_ZERO
 
-    do iy=1, iy_max
-      do iz=1, iz_max
-        do ip_surf=1, st%surface_grid_points_number(1,iy,iz)
-          tmp_surf(1,1,iy,iz,:) = tmp_surf(1,1,iy,iz,:) &
-                                + tmp_global(st%surface_grid_points_map(1,1,iy,iz,ip_surf),:)
-          tmp_surf(2,1,iy,iz,:) = tmp_surf(2,1,iy,iz,:) &
-                                + tmp_global(st%surface_grid_points_map(2,1,iy,iz,ip_surf),:)
+    do iy = 1, iy_max
+      do iz = 1, iz_max
+        do ip_surf = 1, st%surface_grid_points_number(1, iy, iz)
+          tmp_surf(1, 1, iy, iz, :) = tmp_surf(1, 1, iy, iz, :) + tmp_global(st%surface_grid_points_map(1, 1, iy, iz, ip_surf), :)
+          tmp_surf(2, 1, iy, iz, :) = tmp_surf(2, 1, iy, iz, :) + tmp_global(st%surface_grid_points_map(2, 1, iy, iz, ip_surf), :)
         end do
-        tmp_surf(1,1,iy,iz,:) = tmp_surf(1,1,iy,iz,:) / float(st%surface_grid_points_number(1,iy,iz))
-        tmp_surf(2,1,iy,iz,:) = tmp_surf(2,1,iy,iz,:) / float(st%surface_grid_points_number(1,iy,iz))
+        tmp_surf(1, 1, iy, iz, :) = tmp_surf(1, 1, iy, iz, :) / float(st%surface_grid_points_number(1, iy, iz))
+        tmp_surf(2, 1, iy, iz, :) = tmp_surf(2, 1, iy, iz, :) / float(st%surface_grid_points_number(1, iy, iz))
       end do
     end do
-    do iy=1, iy_max
-      do iz=1, iz_max
-        tmp_sum = tmp_sum - tmp_surf(1,1,iy,iz,1) * st%surface_grid_element(1)
-        tmp_sum = tmp_sum + tmp_surf(2,1,iy,iz,1) * st%surface_grid_element(1)
+    do iy = 1, iy_max
+      do iz = 1, iz_max
+        tmp_sum = tmp_sum - tmp_surf(1, 1, iy, iz, 1) * st%surface_grid_element(1)
+        tmp_sum = tmp_sum + tmp_surf(2, 1, iy, iz, 1) * st%surface_grid_element(1)
       end do
     end do
 
-    do ix=1, ix_max
-      do iz=1, iz_max
-        do ip_surf=1, st%surface_grid_points_number(2,ix,iz)
-          tmp_surf(1,2,ix,iz,:) = tmp_surf(1,2,ix,iz,:) &
-                                + tmp_global(st%surface_grid_points_map(1,2,ix,iz,ip_surf),:)
-          tmp_surf(2,2,ix,iz,:) = tmp_surf(2,2,ix,iz,:) &
-                                + tmp_global(st%surface_grid_points_map(2,2,ix,iz,ip_surf),:)
+    do ix = 1, ix_max
+      do iz = 1, iz_max
+        do ip_surf = 1, st%surface_grid_points_number(2, ix, iz)
+          tmp_surf(1, 2, ix, iz, :) = tmp_surf(1, 2, ix, iz, :) + tmp_global(st%surface_grid_points_map(1, 2, ix, iz, ip_surf), :)
+          tmp_surf(2, 2, ix, iz, :) = tmp_surf(2, 2, ix, iz, :) + tmp_global(st%surface_grid_points_map(2, 2, ix, iz, ip_surf), :)
         end do
-        tmp_surf(1,2,ix,iz,:) = tmp_surf(1,2,ix,iz,:) / float(st%surface_grid_points_number(2,ix,iz))
-        tmp_surf(2,2,ix,iz,:) = tmp_surf(2,2,ix,iz,:) / float(st%surface_grid_points_number(2,ix,iz))
+        tmp_surf(1, 2, ix, iz, :) = tmp_surf(1, 2, ix, iz, :) / float(st%surface_grid_points_number(2, ix, iz))
+        tmp_surf(2, 2, ix, iz, :) = tmp_surf(2, 2, ix, iz, :) / float(st%surface_grid_points_number(2, ix, iz))
       end do
     end do
-    do ix=1, ix_max
+    do ix = 1, ix_max
       do iz=1, iz_max
         tmp_sum = tmp_sum - tmp_surf(1,2,ix,iz,2) * st%surface_grid_element(2)
         tmp_sum = tmp_sum + tmp_surf(2,2,ix,iz,2) * st%surface_grid_element(2)
       end do
     end do
 
-    do ix=1, ix_max
-      do iy=1, iy_max
-        do ip_surf=1, st%surface_grid_points_number(3,ix,iy)
-          tmp_surf(1,3,ix,iy,:) = tmp_surf(1,3,ix,iy,:) &
-                                + tmp_global(st%surface_grid_points_map(1,3,ix,iy,ip_surf),:)
-          tmp_surf(2,3,ix,iy,:) = tmp_surf(2,3,ix,iy,:) &
-                                + tmp_global(st%surface_grid_points_map(2,3,ix,iy,ip_surf),:)
+    do ix = 1, ix_max
+      do iy = 1, iy_max
+        do ip_surf = 1, st%surface_grid_points_number(3, ix, iy)
+          tmp_surf(1, 3, ix, iy, :) = tmp_surf(1, 3, ix, iy, :) + tmp_global(st%surface_grid_points_map(1, 3, ix, iy, ip_surf), :)
+          tmp_surf(2, 3, ix, iy, :) = tmp_surf(2, 3, ix, iy, :) + tmp_global(st%surface_grid_points_map(2, 3, ix, iy, ip_surf), :)
         end do
-        tmp_surf(1,3,ix,iy,:) = tmp_surf(1,3,ix,iy,:) / float(st%surface_grid_points_number(3,ix,iy))
-        tmp_surf(2,3,ix,iy,:) = tmp_surf(2,3,ix,iy,:) / float(st%surface_grid_points_number(3,ix,iy))
+        tmp_surf(1, 3, ix, iy, :) = tmp_surf(1, 3, ix, iy, :) / float(st%surface_grid_points_number(3, ix, iy))
+        tmp_surf(2, 3, ix, iy, :) = tmp_surf(2, 3, ix, iy, :) / float(st%surface_grid_points_number(3, ix, iy))
       end do
     end do
-    do ix=1, ix_max
-      do iy=1, iy_max
-        tmp_sum = tmp_sum - tmp_surf(1,3,ix,iy,3) * st%surface_grid_element(3)
-        tmp_sum = tmp_sum + tmp_surf(2,3,ix,iy,3) * st%surface_grid_element(3)
+    do ix = 1, ix_max
+      do iy = 1, iy_max
+        tmp_sum = tmp_sum - tmp_surf(1, 3, ix, iy, 3) * st%surface_grid_element(3)
+        tmp_sum = tmp_sum + tmp_surf(2, 3, ix, iy, 3) * st%surface_grid_element(3)
       end do
     end do
 
@@ -1348,11 +1298,10 @@ contains
     POP_SUB(energy_rate_calc_plane_waves)
   end subroutine energy_rate_calc_plane_waves
 
-
   ! ---------------------------------------------------------
   subroutine poynting_vector_through_box_surfaces(gr, st, iter, dt, poynting_box_surface)
     type(grid_t),        intent(in)    :: gr
-    type(states_mxll_t),      intent(in)    :: st
+    type(states_mxll_t), intent(in)    :: st
     integer,             intent(in)    :: iter
     FLOAT,               intent(in)    :: dt
     FLOAT,               intent(out)   :: poynting_box_surface(:,:,:)
@@ -1365,13 +1314,12 @@ contains
     SAFE_ALLOCATE(poynting_vector(1:gr%mesh%np,1:st%dim))
     SAFE_ALLOCATE(tmp_global(1:gr%mesh%np_global,1:st%dim))
 
-    call get_poynting_vector(gr, st, st%rs_state, st%rs_sign, &
-                                     poynting_vector, ep_field=st%ep, mu_field=st%mu)
+    call get_poynting_vector(gr, st, st%rs_state, st%rs_sign, poynting_vector, ep_field=st%ep, mu_field=st%mu)
 
     if (gr%mesh%parallel_in_domains) then
-      do idim=1, st%dim
+      do idim = 1, st%dim
 #if defined(HAVE_MPI)
-        call vec_allgather(gr%mesh%vp, tmp_global(:,idim), poynting_vector(:,idim))
+        call vec_allgather(gr%mesh%vp, tmp_global(:, idim), poynting_vector(:, idim))
         call MPI_Barrier(gr%mesh%vp%comm, mpi_err)
 #endif
       end do
@@ -1384,65 +1332,59 @@ contains
     iz_max = st%surface_grid_rows_number(3)
     ii_max = max(ix_max,iy_max,iz_max)
 
-    SAFE_ALLOCATE(tmp_surf(1:2,1:st%dim,1:ii_max,1:ii_max,1:st%dim))
+    SAFE_ALLOCATE(tmp_surf(1:2, 1:st%dim, 1:ii_max,1:ii_max, 1:st%dim))
 
     tmp_surf = M_ZERO
     poynting_box_surface = M_ZERO
 
-    do iy=1, iy_max
-      do iz=1, iz_max
-        do ip_surf=1, st%surface_grid_points_number(1,iy,iz)
-          tmp_surf(1,1,iy,iz,:) = tmp_surf(1,1,iy,iz,:) &
-                                + tmp_global(st%surface_grid_points_map(1,1,iy,iz,ip_surf),:)
-          tmp_surf(2,1,iy,iz,:) = tmp_surf(2,1,iy,iz,:) &
-                                + tmp_global(st%surface_grid_points_map(2,1,iy,iz,ip_surf),:)
+    do iy = 1, iy_max
+      do iz = 1, iz_max
+        do ip_surf = 1, st%surface_grid_points_number(1, iy, iz)
+          tmp_surf(1, 1, iy, iz, :) = tmp_surf(1, 1, iy, iz, :) + tmp_global(st%surface_grid_points_map(1, 1, iy, iz, ip_surf), :)
+          tmp_surf(2, 1, iy, iz, :) = tmp_surf(2, 1, iy, iz, :) + tmp_global(st%surface_grid_points_map(2, 1, iy, iz, ip_surf), :)
         end do
-        tmp_surf(1,1,iy,iz,:) = tmp_surf(1,1,iy,iz,:) / float(st%surface_grid_points_number(1,iy,iz))
-        tmp_surf(2,1,iy,iz,:) = tmp_surf(2,1,iy,iz,:) / float(st%surface_grid_points_number(1,iy,iz))
+        tmp_surf(1, 1, iy, iz, :) = tmp_surf(1, 1, iy, iz, :) / float(st%surface_grid_points_number(1, iy, iz))
+        tmp_surf(2, 1, iy, iz, :) = tmp_surf(2, 1, iy, iz, :) / float(st%surface_grid_points_number(1, iy, iz))
       end do
     end do
-    do iy=1, iy_max
-      do iz=1, iz_max
-        poynting_box_surface(1,1,:) = poynting_box_surface(1,1,:) + tmp_surf(1,1,iy,iz,:) * st%surface_grid_element(1)
-        poynting_box_surface(2,1,:) = poynting_box_surface(2,1,:) + tmp_surf(2,1,iy,iz,:) * st%surface_grid_element(1)
+    do iy = 1, iy_max
+      do iz = 1, iz_max
+        poynting_box_surface(1, 1, :) = poynting_box_surface(1, 1, :) + tmp_surf(1, 1, iy, iz, :) * st%surface_grid_element(1)
+        poynting_box_surface(2, 1, :) = poynting_box_surface(2, 1, :) + tmp_surf(2, 1, iy, iz, :) * st%surface_grid_element(1)
       end do
     end do
 
-    do ix=1, ix_max
-      do iz=1, iz_max
-        do ip_surf=1, st%surface_grid_points_number(2,ix,iz)
-          tmp_surf(1,2,ix,iz,:) = tmp_surf(1,2,ix,iz,:) &
-                                + tmp_global(st%surface_grid_points_map(1,2,ix,iz,ip_surf),:)
-          tmp_surf(2,2,ix,iz,:) = tmp_surf(2,2,ix,iz,:) &
-                                + tmp_global(st%surface_grid_points_map(2,2,ix,iz,ip_surf),:)
+    do ix = 1, ix_max
+      do iz = 1, iz_max
+        do ip_surf = 1, st%surface_grid_points_number(2, ix, iz)
+          tmp_surf(1, 2, ix, iz, :) = tmp_surf(1, 2, ix, iz, :) + tmp_global(st%surface_grid_points_map(1, 2, ix, iz, ip_surf), :)
+          tmp_surf(2, 2, ix, iz, :) = tmp_surf(2, 2, ix, iz, :) + tmp_global(st%surface_grid_points_map(2, 2, ix, iz, ip_surf), :)
         end do
-        tmp_surf(1,2,ix,iz,:) = tmp_surf(1,2,ix,iz,:) / float(st%surface_grid_points_number(2,ix,iz))
-        tmp_surf(2,2,ix,iz,:) = tmp_surf(2,2,ix,iz,:) / float(st%surface_grid_points_number(2,ix,iz))
+        tmp_surf(1, 2, ix, iz, :) = tmp_surf(1, 2, ix, iz, :) / float(st%surface_grid_points_number(2, ix, iz))
+        tmp_surf(2, 2, ix, iz, :) = tmp_surf(2, 2, ix, iz, :) / float(st%surface_grid_points_number(2, ix, iz))
       end do
     end do
-    do ix=1, ix_max
-      do iz=1, iz_max
-        poynting_box_surface(1,2,:) = poynting_box_surface(1,2,:) + tmp_surf(1,2,ix,iz,:) * st%surface_grid_element(2)
-        poynting_box_surface(2,2,:) = poynting_box_surface(2,2,:) + tmp_surf(2,2,ix,iz,:) * st%surface_grid_element(2)
+    do ix = 1, ix_max
+      do iz = 1, iz_max
+        poynting_box_surface(1, 2, :) = poynting_box_surface(1, 2, :) + tmp_surf(1, 2, ix, iz, :) * st%surface_grid_element(2)
+        poynting_box_surface(2, 2, :) = poynting_box_surface(2, 2, :) + tmp_surf(2, 2, ix, iz, :) * st%surface_grid_element(2)
       end do
     end do
 
-    do ix=1, ix_max
-      do iy=1, iy_max
-        do ip_surf=1, st%surface_grid_points_number(3,ix,iy)
-          tmp_surf(1,3,ix,iy,:) = tmp_surf(1,3,ix,iy,:) &
-                                + tmp_global(st%surface_grid_points_map(1,3,ix,iy,ip_surf),:)
-          tmp_surf(2,3,ix,iy,:) = tmp_surf(2,3,ix,iy,:) &
-                                + tmp_global(st%surface_grid_points_map(2,3,ix,iy,ip_surf),:)
+    do ix = 1, ix_max
+      do iy = 1, iy_max
+        do ip_surf = 1, st%surface_grid_points_number(3, ix, iy)
+          tmp_surf(1, 3, ix, iy, :) = tmp_surf(1, 3, ix, iy, :) + tmp_global(st%surface_grid_points_map(1, 3, ix, iy, ip_surf), :)
+          tmp_surf(2, 3, ix, iy, :) = tmp_surf(2, 3, ix, iy, :) + tmp_global(st%surface_grid_points_map(2, 3, ix, iy, ip_surf), :)
         end do
-        tmp_surf(1,3,ix,iy,:) = tmp_surf(1,3,ix,iy,:) / float(st%surface_grid_points_number(3,ix,iy))
-        tmp_surf(2,3,ix,iy,:) = tmp_surf(2,3,ix,iy,:) / float(st%surface_grid_points_number(3,ix,iy))
+        tmp_surf(1, 3, ix, iy, :) = tmp_surf(1, 3, ix, iy, :) / float(st%surface_grid_points_number(3, ix, iy))
+        tmp_surf(2, 3, ix, iy, :) = tmp_surf(2, 3, ix, iy, :) / float(st%surface_grid_points_number(3, ix, iy))
       end do
     end do
-    do ix=1, ix_max
-      do iy=1, iy_max
-        poynting_box_surface(1,3,:) = poynting_box_surface(1,3,:) - tmp_surf(1,3,ix,iy,:) * st%surface_grid_element(3)
-        poynting_box_surface(2,3,:) = poynting_box_surface(2,3,:) + tmp_surf(2,3,ix,iy,:) * st%surface_grid_element(3)
+    do ix = 1,  ix_max
+      do iy = 1,  iy_max
+        poynting_box_surface(1, 3, :) = poynting_box_surface(1, 3, :) - tmp_surf(1, 3, ix, iy, :) * st%surface_grid_element(3)
+        poynting_box_surface(2, 3, :) = poynting_box_surface(2, 3, :) + tmp_surf(2, 3, ix, iy, :) * st%surface_grid_element(3)
       end do
     end do
 
@@ -1451,7 +1393,6 @@ contains
 
     POP_SUB(poynting_vector_through_box_surfaces)
   end subroutine poynting_vector_through_box_surfaces
-
 
   ! ---------------------------------------------------------
   subroutine poynting_vector_through_box_surfaces_plane_waves(gr, st, iter, dt, poynting_box_surface)
@@ -1492,60 +1433,54 @@ contains
     tmp_surf = M_ZERO
     poynting_box_surface = M_ZERO
 
-    do iy=1, iy_max
-      do iz=1, iz_max
-        do ip_surf=1, st%surface_grid_points_number(1,iy,iz)
-          tmp_surf(1,1,iy,iz,:) = tmp_surf(1,1,iy,iz,:) &
-                                + tmp_global(st%surface_grid_points_map(1,1,iy,iz,ip_surf),:)
-          tmp_surf(2,1,iy,iz,:) = tmp_surf(2,1,iy,iz,:) &
-                                + tmp_global(st%surface_grid_points_map(2,1,iy,iz,ip_surf),:)
+    do iy = 1, iy_max
+      do iz = 1, iz_max
+        do ip_surf=1, st%surface_grid_points_number(1, iy, iz)
+          tmp_surf(1, 1, iy, iz, :) = tmp_surf(1, 1, iy, iz, :) + tmp_global(st%surface_grid_points_map(1, 1, iy, iz, ip_surf), :)
+          tmp_surf(2, 1, iy, iz, :) = tmp_surf(2, 1, iy, iz, :) + tmp_global(st%surface_grid_points_map(2, 1, iy, iz, ip_surf), :)
         end do
-        tmp_surf(1,1,iy,iz,:) = tmp_surf(1,1,iy,iz,:) / float(st%surface_grid_points_number(1,iy,iz))
-        tmp_surf(2,1,iy,iz,:) = tmp_surf(2,1,iy,iz,:) / float(st%surface_grid_points_number(1,iy,iz))
+        tmp_surf(1, 1, iy, iz, :) = tmp_surf(1, 1, iy, iz, :) / float(st%surface_grid_points_number(1, iy, iz))
+        tmp_surf(2, 1, iy, iz, :) = tmp_surf(2, 1, iy, iz, :) / float(st%surface_grid_points_number(1, iy, iz))
       end do
     end do
-    do iy=1, iy_max
-      do iz=1, iz_max
-        poynting_box_surface(1,1,:) = poynting_box_surface(1,1,:) + tmp_surf(1,1,iy,iz,:) * st%surface_grid_element(1)
-        poynting_box_surface(2,1,:) = poynting_box_surface(2,1,:) + tmp_surf(2,1,iy,iz,:) * st%surface_grid_element(1)
+    do iy = 1, iy_max
+      do iz = 1, iz_max
+        poynting_box_surface(1, 1, :) = poynting_box_surface(1, 1, :) + tmp_surf(1, 1, iy, iz, :) * st%surface_grid_element(1)
+        poynting_box_surface(2, 1, :) = poynting_box_surface(2, 1, :) + tmp_surf(2, 1, iy, iz, :) * st%surface_grid_element(1)
       end do
     end do
 
-    do ix=1, ix_max
-      do iz=1, iz_max
-        do ip_surf=1, st%surface_grid_points_number(2,ix,iz)
-          tmp_surf(1,2,ix,iz,:) = tmp_surf(1,2,ix,iz,:) &
-                                + tmp_global(st%surface_grid_points_map(1,2,ix,iz,ip_surf),:)
-          tmp_surf(2,2,ix,iz,:) = tmp_surf(2,2,ix,iz,:) &
-                                + tmp_global(st%surface_grid_points_map(2,2,ix,iz,ip_surf),:)
+    do ix = 1, ix_max
+      do iz = 1, iz_max
+        do ip_surf=1, st%surface_grid_points_number(2, ix, iz)
+          tmp_surf(1, 2, ix, iz, :) = tmp_surf(1, 2, ix, iz, :) + tmp_global(st%surface_grid_points_map(1, 2, ix, iz, ip_surf), :)
+          tmp_surf(2, 2, ix, iz, :) = tmp_surf(2, 2, ix, iz, :) + tmp_global(st%surface_grid_points_map(2, 2, ix, iz, ip_surf), :)
         end do
-        tmp_surf(1,2,ix,iz,:) = tmp_surf(1,2,ix,iz,:) / float(st%surface_grid_points_number(2,ix,iz))
-        tmp_surf(2,2,ix,iz,:) = tmp_surf(2,2,ix,iz,:) / float(st%surface_grid_points_number(2,ix,iz))
+        tmp_surf(1, 2, ix, iz, :) = tmp_surf(1, 2, ix, iz, :) / float(st%surface_grid_points_number(2, ix, iz))
+        tmp_surf(2, 2, ix, iz, :) = tmp_surf(2, 2, ix, iz, :) / float(st%surface_grid_points_number(2, ix, iz))
       end do
     end do
-    do ix=1, ix_max
-      do iz=1, iz_max
-        poynting_box_surface(1,2,:) = poynting_box_surface(1,2,:) + tmp_surf(1,2,ix,iz,:) * st%surface_grid_element(2)
-        poynting_box_surface(2,2,:) = poynting_box_surface(2,2,:) + tmp_surf(2,2,ix,iz,:) * st%surface_grid_element(2)
+    do ix = 1, ix_max
+      do iz = 1, iz_max
+        poynting_box_surface(1, 2, :) = poynting_box_surface(1, 2, :) + tmp_surf(1, 2, ix, iz, :) * st%surface_grid_element(2)
+        poynting_box_surface(2, 2, :) = poynting_box_surface(2, 2, :) + tmp_surf(2, 2, ix, iz, :) * st%surface_grid_element(2)
       end do
     end do
 
-    do ix=1, ix_max
-      do iy=1, iy_max
-        do ip_surf=1, st%surface_grid_points_number(3,ix,iy)
-          tmp_surf(1,3,ix,iy,:) = tmp_surf(1,3,ix,iy,:) &
-                                + tmp_global(st%surface_grid_points_map(1,3,ix,iy,ip_surf),:)
-          tmp_surf(2,3,ix,iy,:) = tmp_surf(2,3,ix,iy,:) &
-                                + tmp_global(st%surface_grid_points_map(2,3,ix,iy,ip_surf),:)
+    do ix = 1, ix_max
+      do iy = 1, iy_max
+        do ip_surf = 1, st%surface_grid_points_number(3, ix, iy)
+          tmp_surf(1, 3, ix, iy, :) = tmp_surf(1, 3, ix, iy, :) + tmp_global(st%surface_grid_points_map(1, 3, ix, iy, ip_surf), :)
+          tmp_surf(2, 3, ix, iy, :) = tmp_surf(2, 3, ix, iy, :) + tmp_global(st%surface_grid_points_map(2, 3, ix, iy, ip_surf), :)
         end do
-        tmp_surf(1,3,ix,iy,:) = tmp_surf(1,3,ix,iy,:) / float(st%surface_grid_points_number(3,ix,iy))
-        tmp_surf(2,3,ix,iy,:) = tmp_surf(2,3,ix,iy,:) / float(st%surface_grid_points_number(3,ix,iy))
+        tmp_surf(1, 3, ix, iy, :) = tmp_surf(1, 3, ix, iy, :) / float(st%surface_grid_points_number(3, ix, iy))
+        tmp_surf(2, 3, ix, iy, :) = tmp_surf(2, 3, ix, iy, :) / float(st%surface_grid_points_number(3, ix, iy))
       end do
     end do
-    do ix=1, ix_max
-      do iy=1, iy_max
-        poynting_box_surface(1,3,:) = poynting_box_surface(1,3,:) - tmp_surf(1,3,ix,iy,:) * st%surface_grid_element(3)
-        poynting_box_surface(2,3,:) = poynting_box_surface(2,3,:) + tmp_surf(2,3,ix,iy,:) * st%surface_grid_element(3)
+    do ix=1,  ix_max
+      do iy=1,  iy_max
+        poynting_box_surface(1, 3, :) = poynting_box_surface(1, 3, :) - tmp_surf(1, 3, ix, iy, :) * st%surface_grid_element(3)
+        poynting_box_surface(2, 3, :) = poynting_box_surface(2, 3, :) + tmp_surf(2, 3, ix, iy, :) * st%surface_grid_element(3)
       end do
     end do
 
@@ -1555,27 +1490,26 @@ contains
     POP_SUB(poynting_vector_through_box_surfaces_plane_waves)
   end subroutine poynting_vector_through_box_surfaces_plane_waves
 
-
   ! ---------------------------------------------------------
   subroutine fields_through_box_surfaces(gr, st, hm, iter, dt, e_field_box_surface, b_field_box_surface)
-    type(grid_t),        intent(in)    :: gr
+    type(grid_t),             intent(in)    :: gr
     type(states_mxll_t),      intent(in)    :: st
     type(hamiltonian_mxll_t), intent(in)    :: hm
-    integer,             intent(in)    :: iter
-    FLOAT,               intent(in)    :: dt
-    FLOAT,               intent(out)   :: e_field_box_surface(:,:,:)
-    FLOAT,               intent(out)   :: b_field_box_surface(:,:,:)
+    integer,                  intent(in)    :: iter
+    FLOAT,                    intent(in)    :: dt
+    FLOAT,                    intent(out)   :: e_field_box_surface(:,:,:)
+    FLOAT,                    intent(out)   :: b_field_box_surface(:,:,:)
 
     integer             :: idim, ip_surf, ix, ix_max, iy, iy_max, iz, iz_max, ii_max
-    FLOAT,  allocatable :: e_surf(:,:,:,:,:), b_surf(:,:,:,:,:), e_field(:,:), &
-      e_field_global(:,:), b_field(:,:), b_field_global(:,:)
+    FLOAT, allocatable :: e_surf(:,:,:,:,:), b_surf(:,:,:,:,:), e_field(:,:), e_field_global(:,:), b_field(:,:), &
+      b_field_global(:,:)
 
     PUSH_SUB(fields_through_box_surfaces)
 
-    SAFE_ALLOCATE(e_field(1:gr%mesh%np,1:st%dim))
-    SAFE_ALLOCATE(b_field(1:gr%mesh%np,1:st%dim))
-    SAFE_ALLOCATE(e_field_global(1:gr%mesh%np_global,1:st%dim))
-    SAFE_ALLOCATE(b_field_global(1:gr%mesh%np_global,1:st%dim))
+    SAFE_ALLOCATE(e_field(1:gr%mesh%np, 1:st%dim))
+    SAFE_ALLOCATE(b_field(1:gr%mesh%np, 1:st%dim))
+    SAFE_ALLOCATE(e_field_global(1:gr%mesh%np_global, 1:st%dim))
+    SAFE_ALLOCATE(b_field_global(1:gr%mesh%np_global, 1:st%dim))
 
     if (.not. hm%ma_mx_coupling) then
       ! TODO: change this (trans+long)
@@ -1615,84 +1549,72 @@ contains
     e_field_box_surface = M_ZERO
     b_field_box_surface = M_ZERO
 
-    do iy=1, iy_max
-      do iz=1, iz_max
-        do ip_surf=1, st%surface_grid_points_number(1,iy,iz)
-          e_surf(1,1,iy,iz,:) = e_surf(1,1,iy,iz,:) &
-                                + e_field_global(st%surface_grid_points_map(1,1,iy,iz,ip_surf),:)
-          e_surf(2,1,iy,iz,:) = e_surf(2,1,iy,iz,:) &
-                                + e_field_global(st%surface_grid_points_map(2,1,iy,iz,ip_surf),:)
-          b_surf(1,1,iy,iz,:) = b_surf(1,1,iy,iz,:) &
-                                + b_field_global(st%surface_grid_points_map(1,1,iy,iz,ip_surf),:)
-          b_surf(2,1,iy,iz,:) = b_surf(2,1,iy,iz,:) &
-                                + b_field_global(st%surface_grid_points_map(2,1,iy,iz,ip_surf),:)
+    do iy = 1, iy_max
+      do iz = 1, iz_max
+        do ip_surf = 1, st%surface_grid_points_number(1, iy, iz)
+          e_surf(1, 1, iy, iz, :) = e_surf(1, 1, iy, iz, :) + e_field_global(st%surface_grid_points_map(1, 1, iy, iz, ip_surf), :)
+          e_surf(2, 1, iy, iz, :) = e_surf(2, 1, iy, iz, :) + e_field_global(st%surface_grid_points_map(2, 1, iy, iz, ip_surf), :)
+          b_surf(1, 1, iy, iz, :) = b_surf(1, 1, iy, iz, :) + b_field_global(st%surface_grid_points_map(1, 1, iy, iz, ip_surf), :)
+          b_surf(2, 1, iy, iz, :) = b_surf(2, 1, iy, iz, :) + b_field_global(st%surface_grid_points_map(2, 1, iy, iz, ip_surf), :)
         end do
-        e_surf(1,1,iy,iz,:) = e_surf(1,1,iy,iz,:) / float(st%surface_grid_points_number(1,iy,iz))
-        e_surf(2,1,iy,iz,:) = e_surf(2,1,iy,iz,:) / float(st%surface_grid_points_number(1,iy,iz))
-        b_surf(1,1,iy,iz,:) = b_surf(1,1,iy,iz,:) / float(st%surface_grid_points_number(1,iy,iz))
-        b_surf(2,1,iy,iz,:) = b_surf(2,1,iy,iz,:) / float(st%surface_grid_points_number(1,iy,iz))
+        e_surf(1, 1, iy, iz, :) = e_surf(1, 1, iy, iz, :) / float(st%surface_grid_points_number(1, iy, iz))
+        e_surf(2, 1, iy, iz, :) = e_surf(2, 1, iy, iz, :) / float(st%surface_grid_points_number(1, iy, iz))
+        b_surf(1, 1, iy, iz, :) = b_surf(1, 1, iy, iz, :) / float(st%surface_grid_points_number(1, iy, iz))
+        b_surf(2, 1, iy, iz, :) = b_surf(2, 1, iy, iz, :) / float(st%surface_grid_points_number(1, iy, iz))
       end do
     end do
-    do iy=1, iy_max
-      do iz=1, iz_max
-        e_field_box_surface(1,1,:) = e_field_box_surface(1,1,:) + e_surf(1,1,iy,iz,:) * st%surface_grid_element(1)
-        e_field_box_surface(2,1,:) = e_field_box_surface(2,1,:) + e_surf(2,1,iy,iz,:) * st%surface_grid_element(1)
-        b_field_box_surface(1,1,:) = b_field_box_surface(1,1,:) + b_surf(1,1,iy,iz,:) * st%surface_grid_element(1)
-        b_field_box_surface(2,1,:) = b_field_box_surface(2,1,:) + b_surf(2,1,iy,iz,:) * st%surface_grid_element(1)
+    do iy = 1, iy_max
+      do iz = 1, iz_max
+        e_field_box_surface(1, 1, :) = e_field_box_surface(1, 1, :) + e_surf(1, 1, iy, iz, :) * st%surface_grid_element(1)
+        e_field_box_surface(2, 1, :) = e_field_box_surface(2, 1, :) + e_surf(2, 1, iy, iz, :) * st%surface_grid_element(1)
+        b_field_box_surface(1, 1, :) = b_field_box_surface(1, 1, :) + b_surf(1, 1, iy, iz, :) * st%surface_grid_element(1)
+        b_field_box_surface(2, 1, :) = b_field_box_surface(2, 1, :) + b_surf(2, 1, iy, iz, :) * st%surface_grid_element(1)
       end do
     end do
 
-    do ix=1, ix_max
-      do iz=1, iz_max
-        do ip_surf=1, st%surface_grid_points_number(2,ix,iz)
-          e_surf(1,2,ix,iz,:) = e_surf(1,2,ix,iz,:) &
-                              + e_field_global(st%surface_grid_points_map(1,2,ix,iz,ip_surf),:)
-          e_surf(2,2,ix,iz,:) = e_surf(2,2,ix,iz,:) &
-                              + e_field_global(st%surface_grid_points_map(2,2,ix,iz,ip_surf),:)
-          b_surf(1,2,ix,iz,:) = b_surf(1,2,ix,iz,:) &
-                              + b_field_global(st%surface_grid_points_map(1,2,ix,iz,ip_surf),:)
-          b_surf(2,2,ix,iz,:) = b_surf(2,2,ix,iz,:) &
-                              + b_field_global(st%surface_grid_points_map(2,2,ix,iz,ip_surf),:)
+    do ix = 1, ix_max
+      do iz = 1, iz_max
+        do ip_surf = 1, st%surface_grid_points_number(2, ix, iz)
+          e_surf(1, 2, ix, iz, :) = e_surf(1, 2, ix, iz, :) + e_field_global(st%surface_grid_points_map(1, 2, ix, iz, ip_surf), :)
+          e_surf(2, 2, ix, iz, :) = e_surf(2, 2, ix, iz, :) + e_field_global(st%surface_grid_points_map(2, 2, ix, iz, ip_surf), :)
+          b_surf(1, 2, ix, iz, :) = b_surf(1, 2, ix, iz, :) + b_field_global(st%surface_grid_points_map(1, 2, ix, iz, ip_surf), :)
+          b_surf(2, 2, ix, iz, :) = b_surf(2, 2, ix, iz, :) + b_field_global(st%surface_grid_points_map(2, 2, ix, iz, ip_surf), :)
         end do
-        e_surf(1,2,ix,iz,:) = e_surf(1,2,ix,iz,:) / float(st%surface_grid_points_number(2,ix,iz))
-        e_surf(2,2,ix,iz,:) = e_surf(2,2,ix,iz,:) / float(st%surface_grid_points_number(2,ix,iz))
-        b_surf(1,2,ix,iz,:) = b_surf(1,2,ix,iz,:) / float(st%surface_grid_points_number(2,ix,iz))
-        b_surf(2,2,ix,iz,:) = b_surf(2,2,ix,iz,:) / float(st%surface_grid_points_number(2,ix,iz))
+        e_surf(1, 2, ix, iz, :) = e_surf(1, 2, ix, iz, :) / float(st%surface_grid_points_number(2, ix, iz))
+        e_surf(2, 2, ix, iz, :) = e_surf(2, 2, ix, iz, :) / float(st%surface_grid_points_number(2, ix, iz))
+        b_surf(1, 2, ix, iz, :) = b_surf(1, 2, ix, iz, :) / float(st%surface_grid_points_number(2, ix, iz))
+        b_surf(2, 2, ix, iz, :) = b_surf(2, 2, ix, iz, :) / float(st%surface_grid_points_number(2, ix, iz))
       end do
     end do
-    do ix=1, ix_max
-      do iz=1, iz_max
-        e_field_box_surface(1,2,:) = e_field_box_surface(1,2,:) + e_surf(1,2,ix,iz,:) * st%surface_grid_element(2)
-        e_field_box_surface(2,2,:) = e_field_box_surface(2,2,:) + e_surf(2,2,ix,iz,:) * st%surface_grid_element(2)
-        b_field_box_surface(1,2,:) = b_field_box_surface(1,2,:) + b_surf(1,2,ix,iz,:) * st%surface_grid_element(2)
-        b_field_box_surface(2,2,:) = b_field_box_surface(2,2,:) + b_surf(2,2,ix,iz,:) * st%surface_grid_element(2)
+    do ix = 1, ix_max
+      do iz = 1, iz_max
+        e_field_box_surface(1, 2, :) = e_field_box_surface(1, 2, :) + e_surf(1, 2, ix, iz, :) * st%surface_grid_element(2)
+        e_field_box_surface(2, 2, :) = e_field_box_surface(2, 2, :) + e_surf(2, 2, ix, iz, :) * st%surface_grid_element(2)
+        b_field_box_surface(1, 2, :) = b_field_box_surface(1, 2, :) + b_surf(1, 2, ix, iz, :) * st%surface_grid_element(2)
+        b_field_box_surface(2, 2, :) = b_field_box_surface(2, 2, :) + b_surf(2, 2, ix, iz, :) * st%surface_grid_element(2)
       end do
     end do
 
-    do ix=1, ix_max
-      do iy=1, iy_max
-        do ip_surf=1, st%surface_grid_points_number(3,ix,iy)
-          e_surf(1,3,ix,iy,:) = e_surf(1,3,ix,iy,:) &
-                              + e_field_global(st%surface_grid_points_map(1,3,ix,iy,ip_surf),:)
-          e_surf(2,3,ix,iy,:) = e_surf(2,3,ix,iy,:) &
-                              + e_field_global(st%surface_grid_points_map(2,3,ix,iy,ip_surf),:)
-          b_surf(1,3,ix,iy,:) = b_surf(1,3,ix,iy,:) &
-                              + b_field_global(st%surface_grid_points_map(1,3,ix,iy,ip_surf),:)
-          b_surf(2,3,ix,iy,:) = b_surf(2,3,ix,iy,:) &
-                              + b_field_global(st%surface_grid_points_map(2,3,ix,iy,ip_surf),:)
+    do ix = 1, ix_max
+      do iy = 1, iy_max
+        do ip_surf = 1, st%surface_grid_points_number(3, ix, iy)
+          e_surf(1, 3, ix, iy, :) = e_surf(1, 3, ix, iy, :) + e_field_global(st%surface_grid_points_map(1, 3, ix, iy, ip_surf), :)
+          e_surf(2, 3, ix, iy, :) = e_surf(2, 3, ix, iy, :) + e_field_global(st%surface_grid_points_map(2, 3, ix, iy, ip_surf), :)
+          b_surf(1, 3, ix, iy, :) = b_surf(1, 3, ix, iy, :) + b_field_global(st%surface_grid_points_map(1, 3, ix, iy, ip_surf), :)
+          b_surf(2, 3, ix, iy, :) = b_surf(2, 3, ix, iy, :) + b_field_global(st%surface_grid_points_map(2, 3, ix, iy, ip_surf), :)
         end do
-        e_surf(1,3,ix,iy,:) = e_surf(1,3,ix,iy,:) / float(st%surface_grid_points_number(3,ix,iy))
-        e_surf(2,3,ix,iy,:) = e_surf(2,3,ix,iy,:) / float(st%surface_grid_points_number(3,ix,iy))
-        b_surf(1,3,ix,iy,:) = b_surf(1,3,ix,iy,:) / float(st%surface_grid_points_number(3,ix,iy))
-        b_surf(2,3,ix,iy,:) = b_surf(2,3,ix,iy,:) / float(st%surface_grid_points_number(3,ix,iy))
+        e_surf(1, 3, ix, iy, :) = e_surf(1, 3, ix, iy, :) / float(st%surface_grid_points_number(3, ix, iy))
+        e_surf(2, 3, ix, iy, :) = e_surf(2, 3, ix, iy, :) / float(st%surface_grid_points_number(3, ix, iy))
+        b_surf(1, 3, ix, iy, :) = b_surf(1, 3, ix, iy, :) / float(st%surface_grid_points_number(3, ix, iy))
+        b_surf(2, 3, ix, iy, :) = b_surf(2, 3, ix, iy, :) / float(st%surface_grid_points_number(3, ix, iy))
       end do
     end do
-    do ix=1, ix_max
-      do iy=1, iy_max
-        e_field_box_surface(1,3,:) = e_field_box_surface(1,3,:) - e_surf(1,3,ix,iy,:) * st%surface_grid_element(3)
-        e_field_box_surface(2,3,:) = e_field_box_surface(2,3,:) + e_surf(2,3,ix,iy,:) * st%surface_grid_element(3)
-        b_field_box_surface(1,3,:) = b_field_box_surface(1,3,:) - b_surf(1,3,ix,iy,:) * st%surface_grid_element(3)
-        b_field_box_surface(2,3,:) = b_field_box_surface(2,3,:) + b_surf(2,3,ix,iy,:) * st%surface_grid_element(3)
+    do ix = 1, ix_max
+      do iy = 1, iy_max
+        e_field_box_surface(1, 3, :) = e_field_box_surface(1, 3, :) - e_surf(1, 3, ix, iy, :) * st%surface_grid_element(3)
+        e_field_box_surface(2, 3, :) = e_field_box_surface(2, 3, :) + e_surf(2, 3, ix, iy, :) * st%surface_grid_element(3)
+        b_field_box_surface(1, 3, :) = b_field_box_surface(1, 3, :) - b_surf(1, 3, ix, iy, :) * st%surface_grid_element(3)
+        b_field_box_surface(2, 3, :) = b_field_box_surface(2, 3, :) + b_surf(2, 3, ix, iy, :) * st%surface_grid_element(3)
       end do
     end do
 
@@ -1706,26 +1628,25 @@ contains
     POP_SUB(fields_through_box_surfaces)
   end subroutine fields_through_box_surfaces
 
-
   ! ---------------------------------------------------------
   subroutine fields_through_box_surfaces_plane_waves(gr, st, iter, dt, e_field_box_surface, b_field_box_surface)
     type(grid_t),        intent(in)    :: gr
-    type(states_mxll_t),      intent(in)    :: st
+    type(states_mxll_t), intent(in)    :: st
     integer,             intent(in)    :: iter
     FLOAT,               intent(in)    :: dt
     FLOAT,               intent(out)   :: e_field_box_surface(:,:,:)
     FLOAT,               intent(out)   :: b_field_box_surface(:,:,:)
 
     integer             :: idim, ip_surf, ix, ix_max, iy, iy_max, iz, iz_max, ii_max
-    FLOAT,  allocatable :: e_surf(:,:,:,:,:), b_surf(:,:,:,:,:), e_field(:,:), &
-      e_field_global(:,:), b_field(:,:), b_field_global(:,:)
+    FLOAT, allocatable :: e_surf(:,:,:,:,:), b_surf(:,:,:,:,:), e_field(:,:), e_field_global(:,:), b_field(:,:), &
+      b_field_global(:,:)
 
     PUSH_SUB(fields_through_box_surfaces_plane_waves)
 
-    SAFE_ALLOCATE(e_field(1:gr%mesh%np,1:st%dim))
-    SAFE_ALLOCATE(b_field(1:gr%mesh%np,1:st%dim))
-    SAFE_ALLOCATE(e_field_global(1:gr%mesh%np_global,1:st%dim))
-    SAFE_ALLOCATE(b_field_global(1:gr%mesh%np_global,1:st%dim))
+    SAFE_ALLOCATE(e_field(1:gr%mesh%np, 1:st%dim))
+    SAFE_ALLOCATE(b_field(1:gr%mesh%np, 1:st%dim))
+    SAFE_ALLOCATE(e_field_global(1:gr%mesh%np_global, 1:st%dim))
+    SAFE_ALLOCATE(b_field_global(1:gr%mesh%np_global, 1:st%dim))
 
     call get_electric_field_state(st%rs_state_plane_waves, gr%mesh, e_field, st%ep, gr%mesh%np)
     call get_magnetic_field_state(st%rs_state_plane_waves, gr%mesh, st%rs_sign, b_field, st%mu, gr%mesh%np)
@@ -1747,94 +1668,94 @@ contains
     ix_max = st%surface_grid_rows_number(1)
     iy_max = st%surface_grid_rows_number(2)
     iz_max = st%surface_grid_rows_number(3)
-    ii_max = max(ix_max,iy_max,iz_max)
+    ii_max = max(ix_max, iy_max, iz_max)
 
-    SAFE_ALLOCATE(e_surf(1:2,1:st%dim,1:ii_max,1:ii_max,1:st%dim))
-    SAFE_ALLOCATE(b_surf(1:2,1:st%dim,1:ii_max,1:ii_max,1:st%dim))
+    SAFE_ALLOCATE(e_surf(1:2, 1:st%dim, 1:ii_max, 1:ii_max, 1:st%dim))
+    SAFE_ALLOCATE(b_surf(1:2, 1:st%dim, 1:ii_max, 1:ii_max, 1:st%dim))
 
     e_surf = M_ZERO
     b_surf = M_ZERO
     e_field_box_surface = M_ZERO
     b_field_box_surface = M_ZERO
 
-    do iy=1, iy_max
-      do iz=1, iz_max
-        do ip_surf=1, st%surface_grid_points_number(1,iy,iz)
-          e_surf(1,1,iy,iz,:) = e_surf(1,1,iy,iz,:) &
-                                + e_field_global(st%surface_grid_points_map(1,1,iy,iz,ip_surf),:)
-          e_surf(2,1,iy,iz,:) = e_surf(2,1,iy,iz,:) &
-                                + e_field_global(st%surface_grid_points_map(2,1,iy,iz,ip_surf),:)
-          b_surf(1,1,iy,iz,:) = b_surf(1,1,iy,iz,:) &
-                                + b_field_global(st%surface_grid_points_map(1,1,iy,iz,ip_surf),:)
-          b_surf(2,1,iy,iz,:) = b_surf(2,1,iy,iz,:) &
-                                + b_field_global(st%surface_grid_points_map(2,1,iy,iz,ip_surf),:)
+    do iy = 1, iy_max
+      do iz = 1, iz_max
+        do ip_surf = 1, st%surface_grid_points_number(1, iy, iz)
+          e_surf(1, 1, iy, iz, :) = e_surf(1, 1, iy, iz, :) &
+                                + e_field_global(st%surface_grid_points_map(1, 1, iy, iz, ip_surf), :)
+          e_surf(2, 1, iy, iz, :) = e_surf(2, 1, iy, iz, :) &
+                                + e_field_global(st%surface_grid_points_map(2, 1, iy, iz, ip_surf), :)
+          b_surf(1, 1, iy, iz, :) = b_surf(1, 1, iy, iz, :) &
+                                + b_field_global(st%surface_grid_points_map(1, 1, iy, iz, ip_surf), :)
+          b_surf(2, 1, iy, iz, :) = b_surf(2, 1, iy, iz, :) &
+                                + b_field_global(st%surface_grid_points_map(2, 1, iy, iz, ip_surf), :)
         end do
-        e_surf(1,1,iy,iz,:) = e_surf(1,1,iy,iz,:) / float(st%surface_grid_points_number(1,iy,iz))
-        e_surf(2,1,iy,iz,:) = e_surf(2,1,iy,iz,:) / float(st%surface_grid_points_number(1,iy,iz))
-        b_surf(1,1,iy,iz,:) = b_surf(1,1,iy,iz,:) / float(st%surface_grid_points_number(1,iy,iz))
-        b_surf(2,1,iy,iz,:) = b_surf(2,1,iy,iz,:) / float(st%surface_grid_points_number(1,iy,iz))
+        e_surf(1, 1, iy, iz, :) = e_surf(1, 1, iy, iz, :) / float(st%surface_grid_points_number(1, iy, iz))
+        e_surf(2, 1, iy, iz, :) = e_surf(2, 1, iy, iz, :) / float(st%surface_grid_points_number(1, iy, iz))
+        b_surf(1, 1, iy, iz, :) = b_surf(1, 1, iy, iz, :) / float(st%surface_grid_points_number(1, iy, iz))
+        b_surf(2, 1, iy, iz, :) = b_surf(2, 1, iy, iz, :) / float(st%surface_grid_points_number(1, iy, iz))
       end do
     end do
-    do iy=1, iy_max
-      do iz=1, iz_max
-        e_field_box_surface(1,1,:) = e_field_box_surface(1,1,:) + e_surf(1,1,iy,iz,:) * st%surface_grid_element(1)
-        e_field_box_surface(2,1,:) = e_field_box_surface(2,1,:) + e_surf(2,1,iy,iz,:) * st%surface_grid_element(1)
-        b_field_box_surface(1,1,:) = b_field_box_surface(1,1,:) + b_surf(1,1,iy,iz,:) * st%surface_grid_element(1)
-        b_field_box_surface(2,1,:) = b_field_box_surface(2,1,:) + b_surf(2,1,iy,iz,:) * st%surface_grid_element(1)
+    do iy = 1, iy_max
+      do iz = 1, iz_max
+        e_field_box_surface(1, 1, :) = e_field_box_surface(1, 1, :) + e_surf(1, 1, iy, iz, :) * st%surface_grid_element(1)
+        e_field_box_surface(2, 1, :) = e_field_box_surface(2, 1, :) + e_surf(2, 1, iy, iz, :) * st%surface_grid_element(1)
+        b_field_box_surface(1, 1, :) = b_field_box_surface(1, 1, :) + b_surf(1, 1, iy, iz, :) * st%surface_grid_element(1)
+        b_field_box_surface(2, 1, :) = b_field_box_surface(2, 1, :) + b_surf(2, 1, iy, iz, :) * st%surface_grid_element(1)
       end do
     end do
 
-    do ix=1, ix_max
-      do iz=1, iz_max
-        do ip_surf=1, st%surface_grid_points_number(2,ix,iz)
-          e_surf(1,2,ix,iz,:) = e_surf(1,2,ix,iz,:) &
-                              + e_field_global(st%surface_grid_points_map(1,2,ix,iz,ip_surf),:)
-          e_surf(2,2,ix,iz,:) = e_surf(2,2,ix,iz,:) &
-                              + e_field_global(st%surface_grid_points_map(2,2,ix,iz,ip_surf),:)
-          b_surf(1,2,ix,iz,:) = b_surf(1,2,ix,iz,:) &
-                              + b_field_global(st%surface_grid_points_map(1,2,ix,iz,ip_surf),:)
-          b_surf(2,2,ix,iz,:) = b_surf(2,2,ix,iz,:) &
-                              + b_field_global(st%surface_grid_points_map(2,2,ix,iz,ip_surf),:)
+    do ix = 1, ix_max
+      do iz = 1, iz_max
+        do ip_surf = 1, st%surface_grid_points_number(2, ix, iz)
+          e_surf(1, 2, ix, iz, :) = e_surf(1, 2, ix, iz, :) &
+                              + e_field_global(st%surface_grid_points_map(1, 2, ix, iz, ip_surf), :)
+          e_surf(2, 2, ix, iz, :) = e_surf(2, 2, ix, iz, :) &
+                              + e_field_global(st%surface_grid_points_map(2, 2, ix, iz, ip_surf), :)
+          b_surf(1, 2, ix, iz, :) = b_surf(1, 2, ix, iz, :) &
+                              + b_field_global(st%surface_grid_points_map(1, 2, ix, iz, ip_surf), :)
+          b_surf(2, 2, ix, iz, :) = b_surf(2, 2, ix, iz, :) &
+                              + b_field_global(st%surface_grid_points_map(2, 2, ix, iz, ip_surf), :)
         end do
-        e_surf(1,2,ix,iz,:) = e_surf(1,2,ix,iz,:) / float(st%surface_grid_points_number(2,ix,iz))
-        e_surf(2,2,ix,iz,:) = e_surf(2,2,ix,iz,:) / float(st%surface_grid_points_number(2,ix,iz))
-        b_surf(1,2,ix,iz,:) = b_surf(1,2,ix,iz,:) / float(st%surface_grid_points_number(2,ix,iz))
-        b_surf(2,2,ix,iz,:) = b_surf(2,2,ix,iz,:) / float(st%surface_grid_points_number(2,ix,iz))
+        e_surf(1, 2, ix, iz, :) = e_surf(1, 2, ix, iz, :) / float(st%surface_grid_points_number(2, ix, iz))
+        e_surf(2, 2, ix, iz, :) = e_surf(2, 2, ix, iz, :) / float(st%surface_grid_points_number(2, ix, iz))
+        b_surf(1, 2, ix, iz, :) = b_surf(1, 2, ix, iz, :) / float(st%surface_grid_points_number(2, ix, iz))
+        b_surf(2, 2, ix, iz, :) = b_surf(2, 2, ix, iz, :) / float(st%surface_grid_points_number(2, ix, iz))
       end do
     end do
-    do ix=1, ix_max
-      do iz=1, iz_max
-        e_field_box_surface(1,2,:) = e_field_box_surface(1,2,:) + e_surf(1,2,ix,iz,:) * st%surface_grid_element(2)
-        e_field_box_surface(2,2,:) = e_field_box_surface(2,2,:) + e_surf(2,2,ix,iz,:) * st%surface_grid_element(2)
-        b_field_box_surface(1,2,:) = b_field_box_surface(1,2,:) + b_surf(1,2,ix,iz,:) * st%surface_grid_element(2)
-        b_field_box_surface(2,2,:) = b_field_box_surface(2,2,:) + b_surf(2,2,ix,iz,:) * st%surface_grid_element(2)
+    do ix = 1, ix_max
+      do iz = 1, iz_max
+        e_field_box_surface(1, 2, :) = e_field_box_surface(1, 2, :) + e_surf(1, 2, ix, iz, :) * st%surface_grid_element(2)
+        e_field_box_surface(2, 2, :) = e_field_box_surface(2, 2, :) + e_surf(2, 2, ix, iz, :) * st%surface_grid_element(2)
+        b_field_box_surface(1, 2, :) = b_field_box_surface(1, 2, :) + b_surf(1, 2, ix, iz, :) * st%surface_grid_element(2)
+        b_field_box_surface(2, 2, :) = b_field_box_surface(2, 2, :) + b_surf(2, 2, ix, iz, :) * st%surface_grid_element(2)
       end do
     end do
 
-    do ix=1, ix_max
-      do iy=1, iy_max
-        do ip_surf=1, st%surface_grid_points_number(3,ix,iy)
-          e_surf(1,3,ix,iy,:) = e_surf(1,3,ix,iy,:) &
-                              + e_field_global(st%surface_grid_points_map(1,3,ix,iy,ip_surf),:)
-          e_surf(2,3,ix,iy,:) = e_surf(2,3,ix,iy,:) &
-                              + e_field_global(st%surface_grid_points_map(2,3,ix,iy,ip_surf),:)
-          b_surf(1,3,ix,iy,:) = b_surf(1,3,ix,iy,:) &
-                              + b_field_global(st%surface_grid_points_map(1,3,ix,iy,ip_surf),:)
-          b_surf(2,3,ix,iy,:) = b_surf(2,3,ix,iy,:) &
-                              + b_field_global(st%surface_grid_points_map(2,3,ix,iy,ip_surf),:)
+    do ix = 1, ix_max
+      do iy = 1, iy_max
+        do ip_surf = 1, st%surface_grid_points_number(3, ix, iy)
+          e_surf(1, 3, ix, iy, :) = e_surf(1, 3, ix, iy, :) &
+                              + e_field_global(st%surface_grid_points_map(1, 3, ix, iy, ip_surf), :)
+          e_surf(2, 3, ix, iy, :) = e_surf(2, 3, ix, iy, :) &
+                              + e_field_global(st%surface_grid_points_map(2, 3, ix, iy, ip_surf), :)
+          b_surf(1, 3, ix, iy, :) = b_surf(1, 3, ix, iy, :) &
+                              + b_field_global(st%surface_grid_points_map(1, 3, ix, iy, ip_surf), :)
+          b_surf(2, 3, ix, iy, :) = b_surf(2, 3, ix, iy, :) &
+                              + b_field_global(st%surface_grid_points_map(2, 3, ix, iy, ip_surf), :)
         end do
-        e_surf(1,3,ix,iy,:) = e_surf(1,3,ix,iy,:) / float(st%surface_grid_points_number(3,ix,iy))
-        e_surf(2,3,ix,iy,:) = e_surf(2,3,ix,iy,:) / float(st%surface_grid_points_number(3,ix,iy))
-        b_surf(1,3,ix,iy,:) = b_surf(1,3,ix,iy,:) / float(st%surface_grid_points_number(3,ix,iy))
-        b_surf(2,3,ix,iy,:) = b_surf(2,3,ix,iy,:) / float(st%surface_grid_points_number(3,ix,iy))
+        e_surf(1, 3, ix, iy, :) = e_surf(1, 3, ix, iy, :) / float(st%surface_grid_points_number(3, ix, iy))
+        e_surf(2, 3, ix, iy, :) = e_surf(2, 3, ix, iy, :) / float(st%surface_grid_points_number(3, ix, iy))
+        b_surf(1, 3, ix, iy, :) = b_surf(1, 3, ix, iy, :) / float(st%surface_grid_points_number(3, ix, iy))
+        b_surf(2, 3, ix, iy, :) = b_surf(2, 3, ix, iy, :) / float(st%surface_grid_points_number(3, ix, iy))
       end do
     end do
-    do ix=1, ix_max
-      do iy=1, iy_max
-        e_field_box_surface(1,3,:) = e_field_box_surface(1,3,:) - e_surf(1,3,ix,iy,:) * st%surface_grid_element(3)
-        e_field_box_surface(2,3,:) = e_field_box_surface(2,3,:) + e_surf(2,3,ix,iy,:) * st%surface_grid_element(3)
-        b_field_box_surface(1,3,:) = b_field_box_surface(1,3,:) - b_surf(1,3,ix,iy,:) * st%surface_grid_element(3)
-        b_field_box_surface(2,3,:) = b_field_box_surface(2,3,:) + b_surf(2,3,ix,iy,:) * st%surface_grid_element(3)
+    do ix = 1, ix_max
+      do iy = 1, iy_max
+        e_field_box_surface(1, 3, :) = e_field_box_surface(1, 3, :) - e_surf(1, 3, ix, iy, :) * st%surface_grid_element(3)
+        e_field_box_surface(2, 3, :) = e_field_box_surface(2, 3, :) + e_surf(2, 3, ix, iy, :) * st%surface_grid_element(3)
+        b_field_box_surface(1, 3, :) = b_field_box_surface(1, 3, :) - b_surf(1, 3, ix, iy, :) * st%surface_grid_element(3)
+        b_field_box_surface(2, 3, :) = b_field_box_surface(2, 3, :) + b_surf(2, 3, ix, iy, :) * st%surface_grid_element(3)
       end do
     end do
 
@@ -1848,13 +1769,12 @@ contains
     POP_SUB(fields_through_box_surfaces_plane_waves)
   end subroutine fields_through_box_surfaces_plane_waves
 
-
   ! ---------------------------------------------------------
   subroutine mask_absorbing_boundaries(gr, hm, st, tr, time, dt, time_delay, rs_state)
     type(grid_t),               intent(in)    :: gr
-    type(hamiltonian_mxll_t),        intent(inout) :: hm
-    type(states_mxll_t),             intent(in)    :: st
-    type(propagator_mxll_t), intent(in)    :: tr
+    type(hamiltonian_mxll_t),   intent(inout) :: hm
+    type(states_mxll_t),        intent(in)    :: st
+    type(propagator_mxll_t),    intent(in)    :: tr
     FLOAT,                      intent(in)    :: time
     FLOAT,                      intent(in)    :: dt
     FLOAT,                      intent(in)    :: time_delay
@@ -1865,7 +1785,7 @@ contains
 
     PUSH_SUB(mask_absorbing_boundaries)
 
-    do idim=1, 3
+    do idim = 1, 3
       if (hm%bc%bc_ab_type(idim) == OPTION__MAXWELLABSORBINGBOUNDARIES__MASK) then
         mask_check = .true.
       end if
@@ -1897,7 +1817,6 @@ contains
     POP_SUB(mask_absorbing_boundaries)
   end subroutine mask_absorbing_boundaries
 
-
   ! ---------------------------------------------------------
   subroutine maxwell_mask(hm, rs_state)
     type(hamiltonian_mxll_t), intent(in)    :: hm
@@ -1918,7 +1837,6 @@ contains
 
     POP_SUB(maxwell_mask)
   end subroutine maxwell_mask
-
 
   ! ---------------------------------------------------------
   subroutine pml_propagation_stage_1(hm, gr, st, tr, ff_rs_state, ff_rs_state_pml)
@@ -1958,7 +1876,6 @@ contains
 
     POP_SUB(pml_propagation_stage_1)
   end subroutine pml_propagation_stage_1
-
 
   ! ---------------------------------------------------------
   subroutine pml_propagation_stage_2(hm, namespace, gr, st, tr, time, dt, time_delay, ff_rs_state_pml, ff_rs_state)
@@ -2012,7 +1929,6 @@ contains
     POP_SUB(pml_propagation_stage_2)
   end subroutine pml_propagation_stage_2
 
-
   ! ---------------------------------------------------------
   subroutine cpml_conv_function_update(hm, gr, ff_rs_state_pml, ff_dim)
     type(hamiltonian_mxll_t), intent(inout) :: hm
@@ -2030,7 +1946,6 @@ contains
 
     POP_SUB(cpml_conv_function_update)
   end subroutine cpml_conv_function_update
-
 
   ! ---------------------------------------------------------
   subroutine cpml_conv_function_update_via_riemann_silberstein(hm, gr, ff_rs_state_pml, ff_dim)
@@ -2229,7 +2144,6 @@ contains
     POP_SUB(cpml_conv_function_update_via_riemann_silberstein)
   end subroutine cpml_conv_function_update_via_riemann_silberstein
 
-
   ! ---------------------------------------------------------
   subroutine cpml_conv_function_update_via_e_b_fields(hm, gr, ff_rs_state_pml, ff_dim)
     type(hamiltonian_mxll_t), intent(inout) :: hm
@@ -2350,7 +2264,6 @@ contains
     POP_SUB(cpml_conv_function_update_via_e_b_fields)
   end subroutine cpml_conv_function_update_via_e_b_fields
 
-
   ! ---------------------------------------------------------
   subroutine generate_medium_boxes(hm, gr, nr_of_boxes)
     type(hamiltonian_mxll_t), intent(inout) :: hm
@@ -2421,68 +2334,62 @@ contains
       end do
     end do
 
-    do il=1, nr_of_boxes
+    do il = 1, nr_of_boxes
 
-      do ip_in=1, hm%medium_box_points_number(il)
+      do ip_in = 1, hm%medium_box_points_number(il)
         ip = hm%medium_box_points_map(ip_in,il)
         if (hm%medium_box_shape(il) == OPTION__MAXWELLMEDIUMBOX__SMOOTH) then
           xx(:) = gr%mesh%x(ip,:)
           dd_min = M_HUGE
 
-          do ip_bd=1, hm%medium_box_bdry_number(il)
-            ipp = hm%medium_box_bdry_map(ip_bd,il)
+          do ip_bd = 1, hm%medium_box_bdry_number(il)
+            ipp = hm%medium_box_bdry_map(ip_bd, il)
             xxp(:) = gr%mesh%x(ipp,:)
-            dd = sqrt((xx(1)-xxp(1))**2+(xx(2)-xxp(2))**2+(xx(3)-xxp(3))**2)
-            if (dd < dd_min) dd_min=dd
+            dd = sqrt((xx(1) - xxp(1))**2 + (xx(2) - xxp(2))**2 + (xx(3) - xxp(3))**2)
+            if (dd < dd_min) dd_min = dd
           end do
 
-          hm%medium_box_ep(ip_in,il) = P_ep &
-               + ( ( P_ep * hm%medium_box_ep_factor(il) - P_ep )  &
-               * M_ONE/(M_ONE + exp( -M_FIVE/dd_max * (dd_min-M_TWO*dd_max)) ) )
-          hm%medium_box_mu(ip_in,il) = P_mu &
-               + ( ( P_mu * hm%medium_box_mu_factor(il) - P_mu ) &
-               * M_ONE/(M_ONE + exp( -M_FIVE/dd_max * (dd_min-M_TWO*dd_max)) ) )
-          hm%medium_box_c(ip_in,il)  = &
-            M_ONE/sqrt(hm%medium_box_ep(ip_in,il)*hm%medium_box_mu(ip_in,il))
+          hm%medium_box_ep(ip_in,il) = P_ep + ((P_ep * hm%medium_box_ep_factor(il) - P_ep)  &
+            * M_ONE/(M_ONE + exp(-M_FIVE/dd_max * (dd_min - M_TWO*dd_max))))
+          hm%medium_box_mu(ip_in,il) = P_mu + ((P_mu * hm%medium_box_mu_factor(il) - P_mu) &
+            * M_ONE/(M_ONE + exp(-M_FIVE/dd_max * (dd_min - M_TWO*dd_max))))
+          hm%medium_box_c(ip_in,il) = M_ONE/sqrt(hm%medium_box_ep(ip_in, il)*hm%medium_box_mu(ip_in, il))
           hm%medium_box_sigma_e(ip_in,il) = hm%medium_box_sigma_e_factor(il) &
-               * M_ONE/(M_ONE + exp( -M_FIVE/dd_max * (dd_min-M_TWO*dd_max)) )
+            * M_ONE/(M_ONE + exp(-M_FIVE/dd_max * (dd_min - M_TWO*dd_max)) )
           hm%medium_box_sigma_m(ip_in,il) = hm%medium_box_sigma_m(ip_in,il) &
-               * M_ONE/(M_ONE + exp( -M_FIVE/dd_max * (dd_min-M_TWO*dd_max)) )
+            * M_ONE/(M_ONE + exp(-M_FIVE/dd_max * (dd_min - M_TWO*dd_max)) )
 
         else if (hm%medium_box_shape(il) == OPTION__MAXWELLMEDIUMBOX__EDGED) then
 
-          hm%medium_box_ep(ip_in,il) = P_ep * hm%medium_box_ep_factor(il)
-          hm%medium_box_mu(ip_in,il) = P_mu * hm%medium_box_mu_factor(il)
-          hm%medium_box_c(ip_in,il)  = &
-            M_ONE/sqrt(hm%medium_box_ep(ip_in,il)*hm%medium_box_mu(ip_in,il))
-          hm%medium_box_sigma_e(ip_in,il) = hm%medium_box_sigma_e_factor(il)
-          hm%medium_box_sigma_m(ip_in,il) = hm%medium_box_sigma_m(ip_in,il)
+          hm%medium_box_ep(ip_in, il) = P_ep * hm%medium_box_ep_factor(il)
+          hm%medium_box_mu(ip_in, il) = P_mu * hm%medium_box_mu_factor(il)
+          hm%medium_box_c(ip_in, il) = M_ONE/sqrt(hm%medium_box_ep(ip_in, il)*hm%medium_box_mu(ip_in, il))
+          hm%medium_box_sigma_e(ip_in, il) = hm%medium_box_sigma_e_factor(il)
+          hm%medium_box_sigma_m(ip_in, il) = hm%medium_box_sigma_m(ip_in, il)
 
         end if
       end do
 
       tmp = P_ep
-      do  ip_in=1, hm%medium_box_points_number(il)
+      do  ip_in = 1, hm%medium_box_points_number(il)
         ip = hm%medium_box_points_map(ip_in, il)
-        tmp(ip) =  hm%medium_box_ep(ip_in, il)
+        tmp(ip)= hm%medium_box_ep(ip_in, il)
       end do
       call dderivatives_grad(gr%der, tmp, tmp_grad, set_bc = .false.)
-      do ip_in=1, hm%medium_box_points_number(il)
+      do ip_in = 1, hm%medium_box_points_number(il)
         ip = hm%medium_box_points_map(ip_in, il)
-        hm%medium_box_aux_ep(ip_in, :, il) = &
-          tmp_grad(ip, :)/(M_FOUR * hm%medium_box_ep(ip_in, il))
+        hm%medium_box_aux_ep(ip_in, :, il) = tmp_grad(ip, :)/(M_FOUR * hm%medium_box_ep(ip_in, il))
       end do
 
       tmp = P_mu
-      do  ip_in=1, hm%medium_box_points_number(il)
+      do ip_in = 1, hm%medium_box_points_number(il)
         ip = hm%medium_box_points_map(ip_in, il)
-        tmp(ip) =  hm%medium_box_mu(ip_in, il)
+        tmp(ip) = hm%medium_box_mu(ip_in, il)
       end do
       call dderivatives_grad(gr%der, tmp, tmp_grad, set_bc = .false.)
-      do ip_in=1, hm%medium_box_points_number(il)
+      do ip_in = 1, hm%medium_box_points_number(il)
         ip = hm%medium_box_points_map(ip_in, il)
-        hm%medium_box_aux_mu(ip_in, :, il) = &
-          tmp_grad(ip, :)/(M_FOUR * hm%medium_box_mu(ip_in, il))
+        hm%medium_box_aux_mu(ip_in, :, il) = tmp_grad(ip, :)/(M_FOUR * hm%medium_box_mu(ip_in, il))
       end do
 
       ! print information about the medium box -- get from Renes version in maxwell_propagator.F90
@@ -2494,67 +2401,65 @@ contains
     SAFE_DEALLOCATE_A(tmp_grad)
 
     POP_SUB(generate_medium_boxes)
+  contains
 
-    contains
+    logical pure function check_point_in_bounds(xx, bounds) result (check)
+      FLOAT, intent(in) :: xx(:)
+      FLOAT, intent(in) :: bounds(:,:)
 
-      logical pure function check_point_in_bounds(xx, bounds) result (check)
-        FLOAT, intent(in) :: xx(:)
-        FLOAT, intent(in) :: bounds(:,:)
+      check = .false.
+      if ((xx(1) >= bounds(1,1)) .and. (xx(1) <= bounds(2,1)) .and. &
+          (xx(2) >= bounds(1,2)) .and. (xx(2) <= bounds(2,2)) .and. &
+          (xx(3) >= bounds(1,3)) .and. (xx(3) <= bounds(2,3)) ) then
+        check = .true.
+      end if
 
-        check = .false.
-        if ( (xx(1)>=bounds(1,1)) .and. (xx(1)<=bounds(2,1)) .and. &
-             (xx(2)>=bounds(1,2)) .and. (xx(2)<=bounds(2,2)) .and. &
-             (xx(3)>=bounds(1,3)) .and. (xx(3)<=bounds(2,3)) ) then
-          check = .true.
-        end if
+    end function check_point_in_bounds
 
-      end function check_point_in_bounds
+    logical pure function check_point_on_bounds(xx, bounds) result (check)
+      FLOAT, intent(in) :: xx(:)
+      FLOAT, intent(in) :: bounds(:,:)
 
-      logical pure function check_point_on_bounds(xx, bounds) result (check)
-        FLOAT, intent(in) :: xx(:)
-        FLOAT, intent(in) :: bounds(:,:)
+      check = .false.
+      if (xx(1) == bounds(1,1) .and. (xx(2) >= bounds(1,2) .and. xx(3) >= bounds(1,3)) &
+                               .and. (xx(2) <= bounds(2,2) .and. xx(3) <= bounds(2,3)) .or. &
+          xx(2) == bounds(1,2) .and. (xx(1) >= bounds(1,1) .and. xx(3) >= bounds(1,3)) &
+                               .and. (xx(1) <= bounds(2,1) .and. xx(3) <= bounds(2,3)) .or. &
+          xx(3) == bounds(1,3) .and. (xx(1) >= bounds(1,1) .and. xx(2) >= bounds(1,2)) &
+                               .and. (xx(1) <= bounds(2,1) .and. xx(2) <= bounds(2,2)) .or. &
+          xx(1) == bounds(2,1) .and. (xx(2) >= bounds(1,2) .and. xx(3) >= bounds(1,3)) &
+                               .and. (xx(2) <= bounds(2,2) .and. xx(3) <= bounds(2,3)) .or. &
+          xx(2) == bounds(2,2) .and. (xx(1) >= bounds(1,1) .and. xx(3) >= bounds(1,3)) &
+                               .and. (xx(1) <= bounds(2,1) .and. xx(3) <= bounds(2,3)) .or. &
+          xx(3) == bounds(2,3) .and. (xx(1) >= bounds(1,1) .and. xx(2) >= bounds(1,2)) &
+                               .and. (xx(1) <= bounds(2,1) .and. xx(2) <= bounds(2,2)) ) then
+        check = .true.
+      end if
 
-        check = .false.
-        if ( xx(1)==bounds(1,1) .and. (xx(2)>=bounds(1,2) .and. xx(3)>=bounds(1,3)) &
-                                .and. (xx(2)<=bounds(2,2) .and. xx(3)<=bounds(2,3)) .or. &
-             xx(2)==bounds(1,2) .and. (xx(1)>=bounds(1,1) .and. xx(3)>=bounds(1,3)) &
-                                .and. (xx(1)<=bounds(2,1) .and. xx(3)<=bounds(2,3)) .or. &
-             xx(3)==bounds(1,3) .and. (xx(1)>=bounds(1,1) .and. xx(2)>=bounds(1,2)) &
-                                .and. (xx(1)<=bounds(2,1) .and. xx(2)<=bounds(2,2)) .or. &
-             xx(1)==bounds(2,1) .and. (xx(2)>=bounds(1,2) .and. xx(3)>=bounds(1,3)) &
-                                .and. (xx(2)<=bounds(2,2) .and. xx(3)<=bounds(2,3)) .or. &
-             xx(2)==bounds(2,2) .and. (xx(1)>=bounds(1,1) .and. xx(3)>=bounds(1,3)) &
-                                .and. (xx(1)<=bounds(2,1) .and. xx(3)<=bounds(2,3)) .or. &
-             xx(3)==bounds(2,3) .and. (xx(1)>=bounds(1,1) .and. xx(2)>=bounds(1,2)) &
-                                .and. (xx(1)<=bounds(2,1) .and. xx(2)<=bounds(2,2)) ) then
-          check = .true.
-        end if
+    end function check_point_on_bounds
 
-      end function check_point_on_bounds
+    subroutine get_medium_io_function(medium_func, hm, mesh, il, io_func)
+      FLOAT,                    intent(in)    :: medium_func(:)
+      type(hamiltonian_mxll_t), intent(in)    :: hm
+      type(mesh_t),             intent(in)    :: mesh
+      integer,                  intent(in)    :: il
+      FLOAT,                    intent(inout) :: io_func(:)
 
-      subroutine get_medium_io_function(medium_func, hm, mesh, il, io_func)
-        FLOAT,               intent(in)    :: medium_func(:)
-        type(hamiltonian_mxll_t), intent(in)    :: hm
-        type(mesh_t),        intent(in)    :: mesh
-        integer,             intent(in)    :: il
-        FLOAT,               intent(inout) :: io_func(:)
+      integer :: ip, ip_in
 
-        integer :: ip, ip_in
+      do ip_in = 1, hm%medium_box_points_number(il)
+        ip = hm%medium_box_points_map(ip_in, il)
+        io_func(ip) = medium_func(ip_in)
+      end do
 
-        do ip_in=1, hm%medium_box_points_number(il)
-          ip          = hm%medium_box_points_map(ip_in,il)
-          io_func(ip) = medium_func(ip_in)
-        end do
-
-      end subroutine get_medium_io_function
+    end subroutine get_medium_io_function
 
   end subroutine generate_medium_boxes
-
 
   ! ---------------------------------------------------------
   subroutine td_function_mxll_init(st, namespace, hm)
     type(states_mxll_t),      intent(inout) :: st
-    type(namespace_t),   intent(in)    :: namespace
+    type(namespace_t),        intent(in)    :: namespace
     type(hamiltonian_mxll_t), intent(in)    :: hm
 
     type(block_t)        :: blk
@@ -2581,7 +2486,7 @@ contains
     !%
     !%End
 
-    if(parse_block(namespace, 'UserDefinedConstantSpacialMaxwellField', blk) == 0) then
+    if (parse_block(namespace, 'UserDefinedConstantSpacialMaxwellField', blk) == 0) then
       st%rs_state_const_external = .true.
       nlines = parse_block_n(blk)
       SAFE_ALLOCATE(st%rs_state_const_td_function(nlines))
@@ -2612,17 +2517,16 @@ contains
     POP_SUB(td_function_mxll_init)
   end subroutine td_function_mxll_init
 
-
   ! ---------------------------------------------------------
   subroutine spatial_constant_calculation(constant_calc, st, gr, hm, time, dt, delay, rs_state)
-    logical,             intent(in)    :: constant_calc
+    logical,                  intent(in)    :: constant_calc
     type(states_mxll_t),      intent(inout)    :: st
-    type(grid_t),        intent(in)    :: gr
+    type(grid_t),             intent(in)    :: gr
     type(hamiltonian_mxll_t), intent(in)    :: hm
-    FLOAT,               intent(in)    :: time
-    FLOAT,               intent(in)    :: dt
-    FLOAT,               intent(in)    :: delay
-    CMPLX,               intent(inout) :: rs_state(:,:)
+    FLOAT,                    intent(in)    :: time
+    FLOAT,                    intent(in)    :: dt
+    FLOAT,                    intent(in)    :: delay
+    CMPLX,                    intent(inout) :: rs_state(:,:)
 
     integer :: ip, ic, icn
     FLOAT   :: tf_old, tf_new
@@ -2634,12 +2538,12 @@ contains
         icn = size(st%rs_state_const_td_function(:))
         st%rs_state_const(:) = M_z0
         do ic=1, icn
-          tf_old = tdf(st%rs_state_const_td_function(ic),time-delay-dt)
-          tf_new = tdf(st%rs_state_const_td_function(ic),time-delay)
-          forall (ip=1:gr%mesh%np_part)
-            rs_state(ip,:) = rs_state(ip,:) + st%rs_state_const_amp(:,ic) * (tf_new-tf_old)
-          end forall
-          st%rs_state_const(:) = st%rs_state_const(:) + st%rs_state_const_amp(:,ic)
+          tf_old = tdf(st%rs_state_const_td_function(ic), time-delay-dt)
+          tf_new = tdf(st%rs_state_const_td_function(ic), time-delay)
+          do ip = 1, gr%mesh%np_part
+            rs_state(ip,:) = rs_state(ip,:) + st%rs_state_const_amp(:,ic) * (tf_new - tf_old)
+          end do
+          st%rs_state_const(:) = st%rs_state_const(:) + st%rs_state_const_amp(:, ic)
         end do
         st%rs_state_const(:) = st%rs_state_const(:)*tf_new
       end if
@@ -2648,14 +2552,13 @@ contains
     POP_SUB(spatial_constant_calculation)
   end subroutine spatial_constant_calculation
 
-
   ! ---------------------------------------------------------
   subroutine constant_boundaries_calculation(constant_calc, bc, hm, st, rs_state)
-    logical,              intent(in)    :: constant_calc
-    type(bc_mxll_t),   intent(in)    :: bc
+    logical,                   intent(in)    :: constant_calc
+    type(bc_mxll_t),           intent(in)    :: bc
     type(states_mxll_t),       intent(in)    :: st
     type(hamiltonian_mxll_t),  intent(in)    :: hm
-    CMPLX,                intent(inout) :: rs_state(:,:)
+    CMPLX,                     intent(inout) :: rs_state(:,:)
 
     integer :: ip_in, ip
 
@@ -2663,7 +2566,7 @@ contains
 
     if (hm%spatial_constant_apply) then
       if (constant_calc) then
-        do ip_in=1, bc%constant_points_number
+        do ip_in = 1, bc%constant_points_number
           ip = bc%constant_points_map(ip_in)
           rs_state(ip,:) = st%rs_state_const(:)
           bc%constant_rs_state(ip_in,:) = st%rs_state_const(:)
@@ -2673,7 +2576,6 @@ contains
 
     POP_SUB(constant_boundaries_calculation)
   end subroutine constant_boundaries_calculation
-
 
   ! ---------------------------------------------------------
   subroutine mirror_pec_boundaries_calculation(bc, st, rs_state)
@@ -2689,7 +2591,7 @@ contains
     do idim = 1, 3
       if (bc%bc_type(idim) == MXLL_BC_MIRROR_PEC) then
         do ip_in = 1, bc%mirror_points_number(idim)
-          ip         = bc%mirror_points_map(ip_in,idim)
+          ip = bc%mirror_points_map(ip_in, idim)
           e_field(:) = M_ZERO
           call get_magnetic_field_vector(rs_state(ip,:), st%rs_sign, b_field(:), st%mu(ip))
           call build_rs_vector(e_field(:), b_field(:), st%rs_sign, rs_state(ip,:), st%ep(ip), st%mu(ip))
@@ -2699,7 +2601,6 @@ contains
 
     POP_SUB(mirror_pec_boundaries_calculation)
   end subroutine mirror_pec_boundaries_calculation
-
 
   ! ---------------------------------------------------------
   subroutine mirror_pmc_boundaries_calculation(bc, st, rs_state)
@@ -2712,10 +2613,10 @@ contains
 
     PUSH_SUB(mirror_pmc_boundaries_calculation)
 
-    do idim=1, 3
+    do idim = 1, 3
       if (bc%bc_type(idim) == MXLL_BC_MIRROR_PMC) then
-        do ip_in=1, bc%mirror_points_number(idim)
-          ip         = bc%mirror_points_map(ip_in,idim)
+        do ip_in = 1, bc%mirror_points_number(idim)
+          ip = bc%mirror_points_map(ip_in,idim)
           b_field(:) = M_ZERO
           call get_electric_field_vector(rs_state(ip,:), e_field(:), st%ep(ip))
           call build_rs_vector(e_field(:), b_field(:), st%rs_sign, rs_state(ip,:), st%ep(ip), st%mu(ip))
@@ -2725,7 +2626,6 @@ contains
 
     POP_SUB(mirror_pmc_boundaries_calculation)
   end subroutine mirror_pmc_boundaries_calculation
-
 
   ! ---------------------------------------------------------
   subroutine plane_waves_boundaries_calculation(hm, st, mesh, time, time_delay, rs_state)
@@ -2749,20 +2649,19 @@ contains
         do ip_in = 1, hm%bc%plane_wave%points_number
           ip = hm%bc%plane_wave%points_map(ip_in)
             if (wn == 1) rs_state(ip,:) = M_Z0
-            nn           = sqrt(st%ep(ip)/P_ep*st%mu(ip)/P_mu)
-            vv(:)        = hm%bc%plane_wave%v_vector(1:mesh%sb%dim, wn)
-            k_vector(:)  = hm%bc%plane_wave%k_vector(1:mesh%sb%dim, wn)
+            nn = sqrt(st%ep(ip)/P_ep*st%mu(ip)/P_mu)
+            vv(:) = hm%bc%plane_wave%v_vector(1:mesh%sb%dim, wn)
+            k_vector(:) = hm%bc%plane_wave%k_vector(1:mesh%sb%dim, wn)
             k_vector_abs = sqrt(sum(k_vector(1:mesh%sb%dim)**2))
             x_prop(1:mesh%sb%dim) = mesh%x(ip,1:mesh%sb%dim) - vv(1:mesh%sb%dim) * (time - time_delay)
-            rr           = sqrt(sum(x_prop(1:mesh%sb%dim)**2))
-            if (hm%bc%plane_wave%modus(wn) == &
-                OPTION__MAXWELLINCIDENTWAVES__PLANE_WAVE_MX_FUNCTION) then
+            rr = sqrt(sum(x_prop(1:mesh%sb%dim)**2))
+            if (hm%bc%plane_wave%modus(wn) == OPTION__MAXWELLINCIDENTWAVES__PLANE_WAVE_MX_FUNCTION) then
               e0(1:mesh%sb%dim)      = hm%bc%plane_wave%e_field(1:mesh%sb%dim, wn)
               e_field(1:mesh%sb%dim) = e0(1:mesh%sb%dim) * mxf(hm%bc%plane_wave%mx_function(wn), x_prop(1:mesh%sb%dim))
             end if
-            b_field(1:3) = M_ONE/P_c * M_ONE/k_vector_abs * dcross_product(k_vector,e_field)
+            b_field(1:3) = M_ONE/P_c * M_ONE/k_vector_abs * dcross_product(k_vector, e_field)
             call build_rs_vector(e_field, b_field, st%rs_sign, rs_state_add, st%ep(ip), st%mu(ip))
-            rs_state(ip,:) =  rs_state(ip,:) + rs_state_add(:)
+            rs_state(ip, :) =  rs_state(ip, :) + rs_state_add(:)
           end do
         end do
       else
@@ -2775,11 +2674,10 @@ contains
     POP_SUB(plane_waves_boundaries_calculation)
   end subroutine plane_waves_boundaries_calculation
 
-
   ! ---------------------------------------------------------
   subroutine plane_waves_propagation(hm, st, gr, tr, time, dt, time_delay)
-    type(hamiltonian_mxll_t)        :: hm
-    type(states_mxll_t)             :: st
+    type(hamiltonian_mxll_t)   :: hm
+    type(states_mxll_t)        :: st
     type(grid_t)               :: gr
     type(propagator_mxll_t) :: tr
     FLOAT                      :: time
@@ -2791,13 +2689,14 @@ contains
 
     PUSH_SUB(plane_waves_propagation)
 
-    if (hm%operator == FARADAY_AMPERE_MEDIUM) then
+    select case (hm%operator)
+    case (FARADAY_AMPERE_MEDIUM)
       ff_dim = 6
-    else if (hm%operator == FARADAY_AMPERE_GAUSS) then
+    case (FARADAY_AMPERE_GAUSS)
       ff_dim = 4
-    else
+    case default
       ff_dim = 3
-    end if
+    end select
 
     SAFE_ALLOCATE(ff_rs_state(1:gr%mesh%np_part,ff_dim))
 
@@ -2814,15 +2713,14 @@ contains
     POP_SUB(plane_waves_propagation)
   end subroutine plane_waves_propagation
 
-
   ! ---------------------------------------------------------
   subroutine plane_waves_in_box_calculation(bc, time, gr, st, hm, rs_state)
-    type(bc_mxll_t)  , intent(in)    :: bc
-    FLOAT,                intent(in)    :: time
-    type(grid_t),         intent(in)    :: gr
+    type(bc_mxll_t),           intent(in)    :: bc
+    FLOAT,                     intent(in)    :: time
+    type(grid_t),              intent(in)    :: gr
     type(states_mxll_t),       intent(in)    :: st
     type(hamiltonian_mxll_t),  intent(in)    :: hm
-    CMPLX,                intent(inout) :: rs_state(:,:)
+    CMPLX,                     intent(inout) :: rs_state(:,:)
 
     integer              :: ip, wn, idim, np
     FLOAT                :: x_prop(gr%sb%dim), rr, vv(gr%sb%dim), k_vector(gr%sb%dim), k_vector_abs, nn
@@ -2831,28 +2729,28 @@ contains
 
     PUSH_SUB(plane_waves_in_box_calculation)
 
-    np            = gr%mesh%np_part
-    do wn=1, bc%plane_wave%number
-      vv(:)        = hm%bc%plane_wave%v_vector(:,wn)
-      k_vector(:)  = hm%bc%plane_wave%k_vector(:,wn)
+    np = gr%mesh%np_part
+    do wn = 1, bc%plane_wave%number
+      vv(:) = hm%bc%plane_wave%v_vector(:, wn)
+      k_vector(:) = hm%bc%plane_wave%k_vector(:, wn)
       k_vector_abs = sqrt(sum(k_vector(:)**2))
-      e0(:)      = hm%bc%plane_wave%e_field(:,wn)
+      e0(:) = hm%bc%plane_wave%e_field(:, wn)
       do ip = 1, gr%mesh%np
-        if (wn==1) rs_state(ip,:) = M_Z0
-        nn           = sqrt(st%ep(ip)/P_ep*st%mu(ip)/P_mu)
-        x_prop(:)    = gr%mesh%x(ip,:) - vv(:) * time
-        rr           = sqrt(sum(x_prop(:)**2))
-        if (bc%plane_wave%modus(wn) == OPTION__MAXWELLINCIDENTWAVES__PLANE_WAVE_PARSER) then
-          do idim=1, gr%mesh%sb%dim
+        if (wn == 1) rs_state(ip,:) = M_Z0
+        nn = sqrt(st%ep(ip)/P_ep*st%mu(ip)/P_mu)
+        x_prop(:) = gr%mesh%x(ip,:) - vv(:) * time
+        rr = sqrt(sum(x_prop(:)**2))
+        select case (bc%plane_wave%modus(wn))
+        case (OPTION__MAXWELLINCIDENTWAVES__PLANE_WAVE_PARSER)
+          do idim = 1, gr%mesh%sb%dim
             call parse_expression(e_field(idim), dummy(idim), gr%mesh%sb%dim, x_prop, rr, M_ZERO, &
-                 bc%plane_wave%e_field_string(idim,wn))
+              bc%plane_wave%e_field_string(idim,wn))
             e_field(idim) = units_to_atomic(units_inp%energy/units_inp%length, e_field(idim))
           end do
-        else if (bc%plane_wave%modus(wn) == &
-             OPTION__MAXWELLINCIDENTWAVES__PLANE_WAVE_MX_FUNCTION) then
-           e0(:)      = bc%plane_wave%e_field(:,wn)
-           e_field(:) = e0(:) * mxf(bc%plane_wave%mx_function(wn), x_prop(:))
-        end if
+        case (OPTION__MAXWELLINCIDENTWAVES__PLANE_WAVE_MX_FUNCTION)
+          e0(:) = bc%plane_wave%e_field(:,wn)
+          e_field(:) = e0(:) * mxf(bc%plane_wave%mx_function(wn), x_prop(:))
+        end select
         b_field(1:3) = M_ONE/(P_c * k_vector_abs) * dcross_product(k_vector, e_field)
         call build_rs_vector(e_field, b_field, st%rs_sign, rs_state_add, st%ep(ip), st%mu(ip))
         rs_state(ip,:) = rs_state(ip,:) + rs_state_add(:)
@@ -2861,6 +2759,5 @@ contains
 
     POP_SUB(plane_waves_in_box_calculation)
   end subroutine plane_waves_in_box_calculation
-
 
 end module propagator_mxll_oct_m
