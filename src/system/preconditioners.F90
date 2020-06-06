@@ -22,12 +22,14 @@ module preconditioners_oct_m
   use batch_oct_m
   use batch_ops_oct_m
   use derivatives_oct_m
+  use geometry_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_elec_oct_m
   use lalg_basic_oct_m
   use mesh_oct_m
   use messages_oct_m
+  use multicomm_oct_m
   use multigrid_oct_m
   use namespace_oct_m
   use nl_operator_oct_m
@@ -53,7 +55,6 @@ module preconditioners_oct_m
     preconditioner_init,               &
     preconditioner_null,               &
     preconditioner_end,                &
-    preconditioner_is_multigrid,       &
     dpreconditioner_apply,             &
     zpreconditioner_apply,             &
     dpreconditioner_apply_batch,       &
@@ -67,15 +68,19 @@ module preconditioners_oct_m
     type(nl_operator_t) :: op
     FLOAT, pointer      :: diag_lapl(:) !< diagonal of the laplacian
     integer             :: npre, npost, nmiddle
+
+    type(multigrid_t), pointer  :: mgrid  ! multigrid object
   end type preconditioner_t
 
 contains
 
   ! ---------------------------------------------------------
-  subroutine preconditioner_init(this, namespace, gr)
+  subroutine preconditioner_init(this, namespace, gr, geo, mc)
     type(preconditioner_t), intent(out)    :: this
     type(namespace_t),      intent(in)     :: namespace
     type(grid_t),           intent(in)     :: gr
+    type(geometry_t),       intent(in)     :: geo
+    type(multicomm_t),      intent(in)     :: mc
 
     FLOAT :: alpha, default_alpha
     FLOAT :: vol
@@ -212,6 +217,9 @@ contains
       !% preconditioner. The default is 2.
       !%End
       call parse_variable(namespace, 'PreconditionerIterationsPost', 2, this%npost)
+
+      SAFE_ALLOCATE(this%mgrid)
+      call multigrid_init(this%mgrid, namespace, geo, gr%cv, gr%mesh, gr%der, gr%stencil, mc, used_for_preconditioner = .true.)
     end if
 
     POP_SUB(preconditioner_init)
@@ -235,25 +243,23 @@ contains
 
     PUSH_SUB(preconditioner_end)
 
-    select case(this%which)
-    case(PRE_FILTER)
+    select case (this%which)
+    case (PRE_FILTER)
       call nl_operator_end(this%op)
 
-    case(PRE_JACOBI, PRE_MULTIGRID)
+    case (PRE_JACOBI)
       SAFE_DEALLOCATE_P(this%diag_lapl)
+
+    case (PRE_MULTIGRID)
+      SAFE_DEALLOCATE_P(this%diag_lapl)
+      call multigrid_end(this%mgrid)
+      SAFE_DEALLOCATE_P(this%mgrid)
+
     end select
 
     call preconditioner_null(this)
     POP_SUB(preconditioner_end)
   end subroutine preconditioner_end
-
-
-  ! ---------------------------------------------------------
-  logical pure function preconditioner_is_multigrid(this) result(req)
-    type(preconditioner_t), intent(in) :: this
-
-    req = (this%which == PRE_MULTIGRID)
-  end function preconditioner_is_multigrid
 
   ! ---------------------------------------------------------
   subroutine preconditioner_obsolete_variables(namespace, old_prefix, new_prefix)

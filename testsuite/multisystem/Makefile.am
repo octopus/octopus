@@ -20,22 +20,26 @@
 
 sharedir = $(pkgdatadir)/testsuite/multisystem
 
-dist_share_DATA =                                  \
-	01-nested_systems.test                     \
-	01-nested_systems.01-two_levels.inp        \
-	01-nested_systems.02-three_levels.inp      \
-	01-nested_systems.03-four_levels.inp       \
-	02-interaction_graph.test                  \
-	02-interaction_graph.01-three_body.inp     \
-	03-propagation_verlet.test                 \
-	03-propagation_verlet.01-two_body.inp      \
-	03-propagation_verlet.02-three_body.inp    \
-	04-propagation_beeman.test                 \
-	04-propagation_beeman.01-two_body.inp      \
-	04-propagation_beeman.02-three_body.inp    \
-	99-carbon_hydrogen.test                    \
-	99-carbon_hydrogen.01-gs.inp               \
-	99-carbon_hydrogen.02-td.inp               \
+dist_share_DATA =                                                       \
+	01-nested_systems.test                                          \
+	01-nested_systems.01-two_levels.inp                             \
+	01-nested_systems.02-three_levels.inp                           \
+	01-nested_systems.03-four_levels.inp                            \
+	02-interaction_graph.test                                       \
+	02-interaction_graph.01-three_body.inp                          \
+	03-propagation_verlet.test                                      \
+	03-propagation_verlet.01-two_body.inp                           \
+	03-propagation_verlet.02-three_body.inp                         \
+	03-propagation_verlet.03-two_body_different_time_steps.inp      \
+	03-propagation_verlet.04-three_body_different_time_steps.inp    \
+	04-propagation_beeman.test                                      \
+	04-propagation_beeman.01-two_body.inp                           \
+	04-propagation_beeman.02-three_body.inp                         \
+	04-propagation_beeman.03-two_body_different_time_steps.inp      \
+	04-propagation_beeman.04-three_body_different_time_steps.inp    \
+	99-carbon_hydrogen.test                                         \
+	99-carbon_hydrogen.01-gs.inp                                    \
+	99-carbon_hydrogen.02-td.inp                                    \
 	99-carbon_hydrogen.03-td_restart.inp
 
 CLEANFILES = *~ *.bak
