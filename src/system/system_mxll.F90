@@ -24,6 +24,7 @@ module system_mxll_oct_m
   use current_oct_m
   use distributed_oct_m
   use geometry_oct_m
+  use ghost_interaction_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_mxll_oct_m
@@ -102,6 +103,7 @@ module system_mxll_oct_m
     procedure :: set_pointers_to_interaction => system_mxll_set_pointers_to_interaction
     procedure :: update_interactions_start => system_mxll_update_interactions_start
     procedure :: update_interactions_finish => system_mxll_update_interactions_finish
+    procedure :: copy_quantities_to_interaction => system_mxll_copy_quantities_to_interaction
     procedure :: output_start => system_mxll_output_start
     procedure :: output_write => system_mxll_output_write
     procedure :: output_finish => system_mxll_output_finish
@@ -498,10 +500,10 @@ contains
   end subroutine system_mxll_store_current_status
 
   ! ---------------------------------------------------------
-  subroutine system_mxll_update_quantity(this, iq, clock)
+  subroutine system_mxll_update_quantity(this, iq, requested_time)
     class(system_mxll_t),      intent(inout) :: this
     integer,                   intent(in)    :: iq
-    class(clock_t),            intent(in)    :: clock
+    class(clock_t),            intent(in)    :: requested_time
 
     PUSH_SUB(system_mxll_update_quantity)
 
@@ -518,16 +520,15 @@ contains
   end subroutine system_mxll_update_quantity
 
  ! ---------------------------------------------------------
- logical function system_mxll_update_exposed_quantity(this, iq, clock) result(updated)
+ subroutine system_mxll_update_exposed_quantity(this, iq, requested_time)
     class(system_mxll_t),      intent(inout) :: this
     integer,                   intent(in)    :: iq
-    class(clock_t),            intent(in)    :: clock
+    class(clock_t),            intent(in)    :: requested_time
 
     PUSH_SUB(system_mxll_update_exposed_quantity)
 
     ! We are not allowed to update protected quantities!
     ASSERT(.not. this%quantities(iq)%protected)
-    updated = .true.
 
     select case (iq)
     case default
@@ -536,7 +537,7 @@ contains
     end select
 
     POP_SUB(system_mxll_update_exposed_quantity)
-  end function system_mxll_update_exposed_quantity
+  end subroutine system_mxll_update_exposed_quantity
 
   ! ---------------------------------------------------------
   subroutine system_mxll_set_pointers_to_interaction(this, inter)
@@ -562,6 +563,24 @@ contains
     PUSH_SUB(system_mxll_update_interactions_finish)
     POP_SUB(system_mxll_update_interactions_finish)
   end subroutine system_mxll_update_interactions_finish
+
+    ! ---------------------------------------------------------
+  subroutine system_mxll_copy_quantities_to_interaction(this, interaction)
+    class(system_mxll_t),          intent(inout) :: this
+    class(interaction_abst_t),        intent(inout) :: interaction
+
+    PUSH_SUB(system_mxll_copy_quantities_to_interaction)
+
+    select type (interaction)
+    type is (ghost_interaction_t)
+      ! Nothing to copy
+    class default
+      message(1) = "Unsupported interaction."
+      call messages_fatal(1)
+    end select
+
+    POP_SUB(system_mxll_copy_quantities_to_interaction)
+  end subroutine system_mxll_copy_quantities_to_interaction
 
   ! ---------------------------------------------------------
   subroutine system_mxll_output_start(this)
