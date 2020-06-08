@@ -41,3 +41,5 @@ MaximumIter = 1
 ACBN0IntersiteInteraction = yes
 ACBN0IntersiteCutoff = 7
 StatesPack = yes
+
+LCAOStart = lcao_full

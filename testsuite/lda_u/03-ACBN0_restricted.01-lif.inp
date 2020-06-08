@@ -28,8 +28,6 @@ Spacing = 0.4
 
 FromScratch = yes
 
-LCAOStart= lcao_states
-
 nk = 2
 %KPointsGrid
 nk | nk | nk

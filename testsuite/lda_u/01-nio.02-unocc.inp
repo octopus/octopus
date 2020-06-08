@@ -42,7 +42,6 @@ Spacing = 0.5
 FromScratch = yes
 
 SpinComponents = polarized
-LCAOStart = lcao_states
 
 %KPointsPath
  4

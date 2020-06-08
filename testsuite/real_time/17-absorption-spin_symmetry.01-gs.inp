@@ -18,3 +18,4 @@ FilterPotentials = filter_none
 
 MixField = density
 StatesPack = yes
+LCAOStart = lcao_full

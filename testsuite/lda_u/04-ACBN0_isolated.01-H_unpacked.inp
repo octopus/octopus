@@ -9,8 +9,6 @@ Radius = 7
 
 FromScratch = yes
 
-LCAOStart= lcao_states
-
 ExtraStates = 1
 SpinComponents = polarized
 

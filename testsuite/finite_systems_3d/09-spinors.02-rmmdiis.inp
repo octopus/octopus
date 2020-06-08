@@ -19,3 +19,4 @@ Eigensolver = rmmdiis
 FilterPotentials = filter_none
 
 MixField = density
+LCAOStart = lcao_full

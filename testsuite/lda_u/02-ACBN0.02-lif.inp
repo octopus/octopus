@@ -31,8 +31,6 @@ FromScratch = yes
 SpinComponents = polarized
 GuessMagnetDensity = paramagnetic
 
-LCAOStart= lcao_states
-
 nk = 2
 %KPointsGrid
 nk | nk | nk
