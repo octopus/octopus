@@ -221,7 +221,7 @@ contains
 
     case (START_SCF_LOOP)
       ASSERT(this%prop%predictor_corrector)
- 
+
       call this%prop%save_scf_start()
       this%prop%inside_scf = .true.
       this%accumulated_loop_ticks = 0
@@ -233,7 +233,7 @@ contains
 
     case (END_SCF_LOOP)
       ! Here we first check if we did the maximum number of steps.
-      ! Otherwise, we need check the tolerance 
+      ! Otherwise, we need check the tolerance
       if(this%prop%scf_count == this%prop%max_scf_count) then
         if (debug%info) then
           message(1) = "Debug: -- Max SCF Iter reached for " + trim(this%namespace%get())
@@ -260,7 +260,7 @@ contains
           if (debug%info) then
             write(message(1), '(a,i3,a)') "Debug: -- SCF iter ", this%prop%scf_count, " for " + trim(this%namespace%get())
            call messages_info(1)
-         end if 
+         end if
         end if
       end if
 
@@ -484,7 +484,7 @@ contains
 
     integer :: prop
 
-    PUSH_SUB(system_init_propagator) 
+    PUSH_SUB(system_init_propagator)
 
     call messages_experimental('Multisystem propagator framework')
 

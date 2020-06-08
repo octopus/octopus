@@ -27,6 +27,7 @@ module system_factory_oct_m
   use system_oct_m
   use system_abst_oct_m
   use system_factory_abst_oct_m
+  use system_mxll_oct_m
   implicit none
 
   private
@@ -59,6 +60,8 @@ contains
     select case (type)
     case (SYSTEM_MULTISYSTEM)
       system => multisystem_t(namespace_t(name, parent=namespace), this)
+    case (SYSTEM_MAXWELL)
+      system => system_mxll_t(namespace_t(name, parent=namespace))
     case (SYSTEM_CELESTIAL_BODY)
       system => celestial_body_t(namespace_t(name, parent=namespace))
     case default

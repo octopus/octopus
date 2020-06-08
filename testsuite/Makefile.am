@@ -29,6 +29,7 @@ SUBDIRS = \
         symmetries       \
 	linear_response  \
         lda_u            \
+	maxwell          \
 	multisystem      \
 	optimal_control  \
 	periodic_systems \

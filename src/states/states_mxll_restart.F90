@@ -78,8 +78,8 @@ contains
 
     PUSH_SUB(states_mxll_read_user_def)
 
-    SAFE_ALLOCATE(rs_state(1:mesh%np_part,1:st%d%dim))
-    SAFE_ALLOCATE(rs_state_add(1:mesh%np_part,1:st%d%dim))
+    SAFE_ALLOCATE(rs_state(1:mesh%np_part,1:st%dim))
+    SAFE_ALLOCATE(rs_state_add(1:mesh%np_part,1:st%dim))
 
     ! Set electromagnetic field equal to zero in the whole simulation box.
     rs_state(:,:) = M_ZERO
@@ -129,8 +129,6 @@ contains
 
     if(parse_block(namespace, 'UserDefinedInitialMaxwellStates', blk) == 0) then
 
-      !call messages_print_stress(stdout, trim('Substitution of the electromagnetic fields'), namespace=namespace)
-
       ! find out how many lines (i.e. states) the block has
       nlines = parse_block_n(blk)
 
@@ -174,11 +172,11 @@ contains
             rr = sqrt(sum(xx(:)**2))
             ! parse user-defined expressions
             if (maxwell_field == OPTION__USERDEFINEDINITIALMAXWELLSTATES__ELECTRIC_FIELD) then
-              call parse_expression(e_value, dummy, st%d%dim, xx, rr, M_ZERO, &
+              call parse_expression(e_value, dummy, st%dim, xx, rr, M_ZERO, &
                                     st%user_def_e_field(idim))
               b_value = M_ZERO
             else if (maxwell_field == OPTION__USERDEFINEDINITIALMAXWELLSTATES__MAGNETIC_FIELD) then
-              call parse_expression(b_value, dummy, st%d%dim, xx, rr, M_ZERO, &
+              call parse_expression(b_value, dummy, st%dim, xx, rr, M_ZERO, &
                                     st%user_def_b_field(idim))
               e_value = M_ZERO
             end if
@@ -272,7 +270,6 @@ contains
     character(len=MAX_PATH_LEN) :: filename
     character(len=300) :: lines(3)
     logical :: should_write, verbose_
-    CMPLX,  allocatable :: zff_global(:)
 
     PUSH_SUB(states_mxll_dump)
 
@@ -306,7 +303,6 @@ contains
     call restart_write(restart, iunit_wfns, lines, 2, err)
     if (err /= 0) ierr = ierr + 2
 
-    SAFE_ALLOCATE(zff_global(1:gr%mesh%np_global))
 
     itot = 1
     root = 0
@@ -329,16 +325,13 @@ contains
        end if
 
        if (should_write) then
-          call batch_get_state(st%rsb, (/ist, idim/), gr%mesh%np, zff_global)
-          call zrestart_write_mesh_function(restart, filename, gr%mesh, zff_global, err, root = root)
+          call zrestart_write_mesh_function(restart, filename, gr%mesh, zff(:,idim), err, root = root)
           if (err /= 0) err2(2) = err2(2) + 1
        end if
     end do ! zff_dim
 
     if (err2(1) /= 0) ierr = ierr + 8
     if (err2(2) /= 0) ierr = ierr + 16
-
-    SAFE_DEALLOCATE_A(zff_global)
 
     lines(1) = '%'
     call restart_write(restart, iunit_wfns, lines, 1, err) 
@@ -509,7 +502,6 @@ contains
 
        call zrestart_read_mesh_function(restart, restart_file(idim, ist), gr%mesh, &
             zff(:,idim), err)
-       call batch_set_state(st%rsb, (/ist, idim/), gr%mesh%np, zff(:,idim))
 
 
        if (err == 0) then
