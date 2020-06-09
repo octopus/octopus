@@ -25,7 +25,7 @@ dist_doc_DATA = \
 	sections.js \
 	vars_index.html \
 	Atomic_Orbitals.html \
-	CelestialDynamics.html \
+	ClassicalParticles.html \
 	Execution.html \
 	Calculation_Modes.html \
 	Hamiltonian.html \
@@ -58,7 +58,7 @@ States.html: RUN_SCRIPT
 MaxwellStates.html: RUN_SCRIPT
 System.html: RUN_SCRIPT
 Time-Dependent.html: RUN_SCRIPT
-CelestialDynamics.html: RUN_SCRIPT
+ClassicalParticles.html: RUN_SCRIPT
 Utilities.html: RUN_SCRIPT
 
 RUN_SCRIPT:

@@ -105,8 +105,8 @@ contains
     !% An electronic system. (NOT IMPLEMENTED)
     !%Option maxwell 2
     !% A maxwell system. (NOT IMPLEMENTED)
-    !%Option celestial_body 3
-    !% A celestial body. Used for testing purposes only.
+    !%Option classical_particle 3
+    !% A classical particle. Used for testing purposes only.
     !%Option multisystem 4
     !% A system containing other systems.
     !%End
