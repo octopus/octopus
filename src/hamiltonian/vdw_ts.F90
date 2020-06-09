@@ -332,9 +332,11 @@ contains
     integer :: iatom, jatom, ispecies, jspecies, jcopy
     FLOAT :: rr, rr2, rr6,  dffdr0, ee, ff, dee, dffdvra, deabdvra, deabdrab, x_j(1:MAX_DIM) 
     FLOAT, allocatable ::  vol_ratio(:), dvadrr(:), dr0dvra(:), r0ab(:,:), derivative_coeff(:), c6ab(:,:)
+    type(profile_t), save :: prof
 
     PUSH_SUB(vdw_ts_force_calculate)
 
+    call profiling_in(prof, "FORCE_VDW_TS")
 
     SAFE_ALLOCATE(vol_ratio(1:geo%natoms))
     SAFE_ALLOCATE(dvadrr(1:3))
@@ -433,6 +435,8 @@ contains
     SAFE_DEALLOCATE_A(r0ab)
     SAFE_DEALLOCATE_A(derivative_coeff)
     SAFE_DEALLOCATE_A(c6ab)
+
+    call profiling_out(prof)
 
     POP_SUB(vdw_ts_force_calculate)
   end subroutine vdw_ts_force_calculate

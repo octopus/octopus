@@ -1559,6 +1559,7 @@ end subroutine X(compute_periodic_coulomb_integrals)
    R_TYPE, allocatable :: psi(:,:), gpsi(:,:)
    R_TYPE, allocatable :: dot(:,:), gdot(:,:,:), gradn(:,:,:,:)
    FLOAT :: weight
+   type(profile_t), save :: prof
 
    if(this%level == DFT_U_NONE) return
    !In this casem there is no contribution to the force
@@ -1569,6 +1570,8 @@ end subroutine X(compute_periodic_coulomb_integrals)
    end if
 
    PUSH_SUB(X(lda_u_force))
+
+   call profiling_in(prof, "DFT_U_FORCES")
 
    !TODO: Implement
    if(this%intersite) then
@@ -1676,6 +1679,8 @@ end subroutine X(compute_periodic_coulomb_integrals)
    SAFE_DEALLOCATE_A(dot)
    SAFE_DEALLOCATE_A(gdot)
    SAFE_DEALLOCATE_A(gradn)
+
+   call profiling_out(prof)
 
    POP_SUB(X(lda_u_force))
  end subroutine X(lda_u_force)
