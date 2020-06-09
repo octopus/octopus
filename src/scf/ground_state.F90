@@ -120,7 +120,7 @@ contains
     call write_canonicalized_xyz_file("exec", "initial_coordinates", sys%geo, sys%gr%mesh, sys%namespace)
 
     if(sys%ks%theory_level /= RDMFT) then
-      call scf_init(scfv, sys%namespace, sys%gr, sys%geo, sys%st, sys%mc, sys%hm)
+      call scf_init(scfv, sys%namespace, sys%gr, sys%geo, sys%st, sys%mc, sys%hm, sys%ks)
     end if
 
     if (fromScratch .and. sys%ks%theory_level /= RDMFT) then

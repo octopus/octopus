@@ -128,7 +128,7 @@ module scf_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine scf_init(scf, namespace, gr, geo, st, mc, hm, conv_force)
+  subroutine scf_init(scf, namespace, gr, geo, st, mc, hm, ks, conv_force)
     type(scf_t),              intent(inout) :: scf
     type(namespace_t),        intent(in)    :: namespace
     type(grid_t),     target, intent(inout) :: gr
@@ -136,6 +136,7 @@ contains
     type(states_elec_t),      intent(in)    :: st
     type(multicomm_t),        intent(in)    :: mc
     type(hamiltonian_elec_t), intent(inout) :: hm
+    type(v_ks_t),             intent(in)    :: ks
     FLOAT,          optional, intent(in)    :: conv_force
 
     FLOAT :: rmin
@@ -461,7 +462,16 @@ contains
 
     if(scf%calc_force .and. gr%der%boundaries%spiralBC) then
       message(1) = 'Forces cannot be calculated when using spiral boundary conditions.'
-      call messages_fatal(1)
+      write(message(2),'(a)') 'Please use SCFCalculateForces = no.'
+      call messages_fatal(2, namespace=namespace)
+    end if
+    if(scf%calc_force) then
+      if(associated(hm%ep%B_field) .or. associated(hm%ep%A_static)) then
+        write(message(1),'(a)') 'The forces are currently not properly calculated if static'
+        write(message(2),'(a)') 'magnetic fields or static vector potentials are present.'
+        write(message(3),'(a)') 'Please use SCFCalculateForces = no.'
+        call messages_fatal(3, namespace=namespace)
+      end if
     end if
 
     !%Variable SCFCalculateStress
@@ -473,6 +483,19 @@ contains
     !% default is no.
     !%End
     call parse_variable(namespace, 'SCFCalculateStress', .false. , scf%calc_stress)
+    if(scf%calc_stress) then
+      if(ks%theory_level == HARTREE .or. ks%theory_level == HARTREE_FOCK .or. &
+        (ks%theory_level == KOHN_SHAM_DFT .and. bitand(hm%xc%family, XC_FAMILY_LDA) == 0)) then
+        write(message(1),'(a)') 'The stress tensor is currently only properly computed at the DFT-LDA level'
+        write(message(2),'(a)') 'Please use SCFCalculateStress = no.'
+        call messages_fatal(2, namespace=namespace)
+      end if
+      if(ks%vdw_correction /= OPTION__VDWCORRECTION__NONE) then
+        write(message(1),'(a)') 'The stress tensor is currently not properly computed with vdW corrections'
+        write(message(2),'(a)') 'Please use SCFCalculateStress = no.'
+        call messages_fatal(2, namespace=namespace)
+      end if
+    end if 
     
     !%Variable SCFCalculateDipole
     !%Type logical
@@ -1068,7 +1091,7 @@ contains
     end if
 
     ! calculate stress
-    if(scf%calc_stress) call stress_calculate(namespace, gr, hm, st, geo)
+    if(scf%calc_stress) call stress_calculate(namespace, gr, hm, st, geo, ks)
     
     if(scf%max_iter == 0) then
       call energy_calc_eigenvalues(namespace, hm, gr%der, st)
