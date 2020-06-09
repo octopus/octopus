@@ -104,10 +104,12 @@ contains
     !%Option electronic 1
     !% An electronic system. (NOT IMPLEMENTED)
     !%Option maxwell 2
-    !% A maxwell system. (NOT IMPLEMENTED)
+    !% A maxwell system.
     !%Option classical_particle 3
     !% A classical particle. Used for testing purposes only.
-    !%Option multisystem 4
+    !%Option charged_particle 4
+    !% A charged classical particle.
+    !%Option multisystem 5
     !% A system containing other systems.
     !%End
     if (parse_block(system%namespace, 'Systems', blk) == 0) then
