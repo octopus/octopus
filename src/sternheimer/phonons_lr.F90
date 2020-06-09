@@ -98,6 +98,10 @@ contains
     st  => sys%st
     gr  => sys%gr
 
+    if (sys%hm%pcm%run_pcm) then
+      call messages_not_implemented("PCM for CalculationMode /= gs or td")
+    end if
+
     if(simul_box_is_periodic(gr%sb)) then
       call messages_not_implemented('linear-response vib_modes for periodic systems')
     end if

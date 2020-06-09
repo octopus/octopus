@@ -74,6 +74,10 @@ contains
 
     PUSH_SUB(unocc_run)
 
+    if (sys%hm%pcm%run_pcm) then
+      call messages_not_implemented("PCM for CalculationMode /= gs or td")
+    end if
+
     !%Variable MaximumIter
     !%Type integer
     !%Default 50

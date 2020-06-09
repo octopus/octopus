@@ -43,6 +43,7 @@ module casida_oct_m
   use multicomm_oct_m
   use namespace_oct_m
   use parser_oct_m
+  use pcm_oct_m
   use pert_oct_m
   use phonons_lr_oct_m
   use poisson_oct_m
@@ -185,6 +186,10 @@ contains
 
     PUSH_SUB(casida_run)
     call profiling_in(prof, 'CASIDA')
+
+    if (sys%hm%pcm%run_pcm) then
+      call messages_not_implemented("PCM for CalculationMode /= gs or td")
+    end if
 
     if (simul_box_is_periodic(sys%gr%sb)) then
       message(1) = "Casida oscillator strengths will be incorrect in periodic systems."
