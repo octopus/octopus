@@ -47,6 +47,8 @@ module ion_interaction_oct_m
   type ion_interaction_t
     ! Components are public by default
     FLOAT                      :: alpha
+
+    type(distributed_t) :: dist
   end type ion_interaction_t
 
   integer, parameter ::            &
@@ -57,9 +59,10 @@ module ion_interaction_oct_m
   
 contains
 
-  subroutine ion_interaction_init(this, namespace)
+  subroutine ion_interaction_init(this, namespace, geo)
     type(ion_interaction_t), intent(out)   :: this
     type(namespace_t),       intent(in)    :: namespace
+    type(geometry_t),        intent(in)    :: geo
 
     PUSH_SUB(ion_interaction_init)
 
@@ -74,6 +77,10 @@ contains
     !% of the calculation, normally users do not need to modify it.
     !%End
     call parse_variable(namespace, 'EwaldAlpha', CNST(0.21), this%alpha)
+
+    !As the code below is not parallelized with any of k-point, states not domain
+    !we can safely parallelize it over atoms
+    call distributed_init(this%dist, geo%natoms, MPI_COMM_WORLD, "Ions")
     
     POP_SUB(ion_interaction_init)
   end subroutine ion_interaction_init
@@ -86,6 +93,8 @@ contains
     PUSH_SUB(ion_interaction_end)
 
     this%alpha = -CNST(1.0)
+
+    call distributed_end(this%dist)
 
     POP_SUB(ion_interaction_end)
   end subroutine ion_interaction_end
@@ -159,7 +168,7 @@ contains
       end if
       
       ! only interaction inside the cell
-      do iatom = 1, geo%natoms
+      do iatom = this%dist%start, this%dist%end
         if(ignore_external_ions) then
           if(.not. in_box(iatom)) cycle
         end if
@@ -202,8 +211,8 @@ contains
           
         end do !jatom
       end do !iatom
-      
-      do iatom = 1, geo%natoms
+
+      do iatom = this%dist%start, this%dist%end
 
         if(ignore_external_ions) then
           if(.not. in_box(iatom)) cycle
@@ -225,6 +234,9 @@ contains
           
         end do !jatom
       end do !iatom
+
+      call comm_allreduce(this%dist%mpi_grp%comm, energy)
+      call comm_allreduce(this%dist%mpi_grp%comm, force)
       
     end if
 
@@ -269,7 +281,7 @@ contains
     call profiling_in(prof_short, "EWALD_SHORT")
     
     ! the short-range part is calculated directly
-    do iatom = geo%atoms_dist%start, geo%atoms_dist%end
+    do iatom = this%dist%start, this%dist%end
       if (.not. species_represents_real_atom(geo%atom(iatom)%species)) cycle
       zi = species_zval(geo%atom(iatom)%species)
 
@@ -300,10 +312,8 @@ contains
       call periodic_copy_end(pc)
     end do
 
-    if(geo%atoms_dist%parallel) then
-      call comm_allreduce(geo%atoms_dist%mpi_grp%comm, ereal)
-      call comm_allreduce(geo%atoms_dist%mpi_grp%comm, force)
-    end if
+    call comm_allreduce(geo%atoms_dist%mpi_grp%comm, ereal)
+    call comm_allreduce(geo%atoms_dist%mpi_grp%comm, force)
 
     if(present(force_components)) then
       force_components(1:sb%dim, 1:geo%natoms, ION_COMPONENT_REAL) = force(1:sb%dim, 1:geo%natoms)
@@ -507,7 +517,7 @@ contains
     ! First the G = 0 term (charge was calculated previously)
     efourier = M_ZERO
     factor = M_PI/(area_cell)
-    do iatom = 1, geo%natoms
+    do iatom = this%dist%start, this%dist%end
       do jatom = 1, geo%natoms
 ! efourier
         dz_ij = geo%atom(iatom)%x(3)-geo%atom(jatom)%x(3)
@@ -531,8 +541,6 @@ contains
       end do
     end do
 
-
-
     do ix = -ix_max, ix_max
       do iy = -iy_max, iy_max
 
@@ -547,7 +555,7 @@ contains
         gg_abs = sqrt(gg2)
         factor = M_HALF*M_PI/(area_cell*gg_abs)
           
-        do iatom = 1, geo%natoms
+        do iatom = this%dist%start, this%dist%end
           do jatom = iatom, geo%natoms
 ! efourier
             gx = gg(1)*(geo%atom(iatom)%x(1)-geo%atom(jatom)%x(1)) &
@@ -625,6 +633,9 @@ contains
       end do
     end do
 
+    call comm_allreduce(this%dist%mpi_grp%comm, efourier)
+    call comm_allreduce(this%dist%mpi_grp%comm, force)
+
     POP_SUB(Ewald_long_2d)
 
 
@@ -645,7 +656,7 @@ contains
     
     PUSH_SUB(ion_interaction_test)
 
-    call ion_interaction_init(ion_interaction, namespace)
+    call ion_interaction_init(ion_interaction, namespace, geo)
 
     SAFE_ALLOCATE(force(1:sb%dim, 1:geo%natoms))
     SAFE_ALLOCATE(force_components(1:sb%dim, 1:geo%natoms, ION_NUM_COMPONENTS))

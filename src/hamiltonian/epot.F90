@@ -509,7 +509,7 @@ contains
       nullify(ep%poisson_solver)
     end if
 
-    call ion_interaction_init(ep%ion_interaction, namespace)
+    call ion_interaction_init(ep%ion_interaction, namespace, geo)
 
     !%Variable TDGlobalForce
     !%Type string
