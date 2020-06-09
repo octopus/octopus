@@ -480,7 +480,7 @@ noinst_HEADERS +=                                    \
 # Sources in system
 system_f_srcs =                                 \
 	system/current.F90                      \
-	system/celestial_body.F90               \
+	system/classical_particle.F90           \
 	system/dos.F90                          \
 	system/eigen_cg.F90                     \
 	system/eigen_lobpcg.F90                 \

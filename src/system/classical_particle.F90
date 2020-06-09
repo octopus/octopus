@@ -19,7 +19,7 @@
 
 #include "global.h"
 
-module celestial_body_oct_m
+module classical_particle_oct_m
   use clock_oct_m
   use global_oct_m
   use interaction_abst_oct_m
@@ -42,9 +42,9 @@ module celestial_body_oct_m
 
   private
   public ::               &
-    celestial_body_t
+    classical_particle_t
 
-  type, extends(system_abst_t) :: celestial_body_t
+  type, extends(system_abst_t) :: classical_particle_t
     private
 
     FLOAT :: mass
@@ -59,53 +59,53 @@ module celestial_body_oct_m
 
     type(c_ptr) :: output_handle
   contains
-    procedure :: add_interaction_partner => celestial_body_add_interaction_partner
-    procedure :: has_interaction => celestial_body_has_interaction
-    procedure :: initial_conditions => celestial_body_initial_conditions
-    procedure :: do_td_operation => celestial_body_do_td
-    procedure :: iteration_info => celestial_body_iteration_info
-    procedure :: output_start => celestial_body_output_start
-    procedure :: output_write => celestial_body_output_write
-    procedure :: output_finish => celestial_body_output_finish
-    procedure :: is_tolerance_reached => celestial_body_is_tolerance_reached
-    procedure :: store_current_status => celestial_body_store_current_status
-    procedure :: update_quantity => celestial_body_update_quantity
-    procedure :: update_exposed_quantity => celestial_body_update_exposed_quantity
-    procedure :: copy_quantities_to_interaction => celestial_body_copy_quantities_to_interaction
-    procedure :: update_interactions_start => celestial_body_update_interactions_start
-    procedure :: update_interactions_finish => celestial_body_update_interactions_finish
-    final :: celestial_body_finalize
-  end type celestial_body_t
+    procedure :: add_interaction_partner => classical_particle_add_interaction_partner
+    procedure :: has_interaction => classical_particle_has_interaction
+    procedure :: initial_conditions => classical_particle_initial_conditions
+    procedure :: do_td_operation => classical_particle_do_td
+    procedure :: iteration_info => classical_particle_iteration_info
+    procedure :: output_start => classical_particle_output_start
+    procedure :: output_write => classical_particle_output_write
+    procedure :: output_finish => classical_particle_output_finish
+    procedure :: is_tolerance_reached => classical_particle_is_tolerance_reached
+    procedure :: store_current_status => classical_particle_store_current_status
+    procedure :: update_quantity => classical_particle_update_quantity
+    procedure :: update_exposed_quantity => classical_particle_update_exposed_quantity
+    procedure :: copy_quantities_to_interaction => classical_particle_copy_quantities_to_interaction
+    procedure :: update_interactions_start => classical_particle_update_interactions_start
+    procedure :: update_interactions_finish => classical_particle_update_interactions_finish
+    final :: classical_particle_finalize
+  end type classical_particle_t
 
-  interface celestial_body_t
-    procedure celestial_body_init
-  end interface celestial_body_t
+  interface classical_particle_t
+    procedure classical_particle_init
+  end interface classical_particle_t
 
 contains
 
   ! ---------------------------------------------------------
-  function celestial_body_init(namespace) result(sys)
-    class(celestial_body_t), pointer    :: sys
+  function classical_particle_init(namespace) result(sys)
+    class(classical_particle_t), pointer    :: sys
     type(namespace_t),       intent(in) :: namespace
 
-    PUSH_SUB(celestial_body_init)
+    PUSH_SUB(classical_particle_init)
 
     SAFE_ALLOCATE(sys)
 
     sys%namespace = namespace
 
-    call messages_print_stress(stdout, "Celestial Body", namespace=namespace)
+    call messages_print_stress(stdout, "Classical Particle", namespace=namespace)
 
     call space_init(sys%space, namespace)
 
-    !%Variable CelestialBodyMass
+    !%Variable ClassicalParticleMass
     !%Type float
-    !%Section CelestialDynamics
+    !%Section ClassicalParticles
     !%Description
-    !% Mass of celestial body in Kg.
+    !% Mass of classical particle in Kg.
     !%End
-    call parse_variable(namespace, 'CelestialBodyMass', M_ONE, sys%mass)
-    call messages_print_var_value(stdout, 'CelestialBodyMass', sys%mass)
+    call parse_variable(namespace, 'ClassicalParticleMass', M_ONE, sys%mass)
+    call messages_print_var_value(stdout, 'ClassicalParticleMass', sys%mass)
 
     sys%quantities(POSITION)%required = .true.
     sys%quantities(VELOCITY)%required = .true.
@@ -114,19 +114,19 @@ contains
 
     call messages_print_stress(stdout, namespace=namespace)
 
-    POP_SUB(celestial_body_init)
-  end function celestial_body_init
+    POP_SUB(classical_particle_init)
+  end function classical_particle_init
 
   ! ---------------------------------------------------------
-  subroutine celestial_body_add_interaction_partner(this, partner)
-    class(celestial_body_t), target, intent(inout) :: this
+  subroutine classical_particle_add_interaction_partner(this, partner)
+    class(classical_particle_t), target, intent(inout) :: this
     class(system_abst_t),            intent(inout) :: partner
 
     class(ghost_interaction_t), pointer :: ghost
     class(interaction_gravity_t), pointer :: gravity
     type(interaction_gravity_t) :: gravity_t
 
-    PUSH_SUB(celestial_body_add_interaction_partner)
+    PUSH_SUB(classical_particle_add_interaction_partner)
 
     if (partner%has_interaction(gravity_t)) then
       gravity => interaction_gravity_t(this%space%dim, partner)
@@ -140,87 +140,87 @@ contains
       call this%interactions%add(ghost)
     end if
 
-    POP_SUB(celestial_body_add_interaction_partner)
-  end subroutine celestial_body_add_interaction_partner
+    POP_SUB(classical_particle_add_interaction_partner)
+  end subroutine classical_particle_add_interaction_partner
 
   ! ---------------------------------------------------------
-  logical function celestial_body_has_interaction(this, interaction)
-    class(celestial_body_t),   intent(in) :: this
+  logical function classical_particle_has_interaction(this, interaction)
+    class(classical_particle_t),   intent(in) :: this
     class(interaction_abst_t), intent(in) :: interaction
 
-    PUSH_SUB(celestial_body_has_interaction)
+    PUSH_SUB(classical_particle_has_interaction)
 
     select type (interaction)
     type is (interaction_gravity_t)
-      celestial_body_has_interaction = .true.
+      classical_particle_has_interaction = .true.
     class default
-      celestial_body_has_interaction = .false.
+      classical_particle_has_interaction = .false.
     end select
 
-    POP_SUB(celestial_body_has_interaction)
-  end function celestial_body_has_interaction
+    POP_SUB(classical_particle_has_interaction)
+  end function classical_particle_has_interaction
 
   ! ---------------------------------------------------------
-  subroutine celestial_body_initial_conditions(this, from_scratch)
-    class(celestial_body_t), intent(inout) :: this
+  subroutine classical_particle_initial_conditions(this, from_scratch)
+    class(classical_particle_t), intent(inout) :: this
     logical,                 intent(in)    :: from_scratch
 
     integer :: n_rows, idir
     type(block_t) :: blk
 
-    PUSH_SUB(celestial_body_initial_conditions)
+    PUSH_SUB(classical_particle_initial_conditions)
 
     if (.not. from_scratch) then
-      message(1) = "Celestial mechanics is currently only allowed from scratch"
+      message(1) = "Classical particle propagation is currently only allowed from scratch"
       call messages_fatal(1, namespace=this%namespace)
     end if
 
-    !%Variable CelestialBodyInitialPosition
+    !%Variable ClassicalParticleInitialPosition
     !%Type block
-    !%Section CelestialDynamics
+    !%Section ClassicalParticles
     !%Description
-    !% Initial position of celestial body, in Km.
+    !% Initial position of classical particle, in Km.
     !%End
     this%pos = M_ZERO
-    if (parse_block(this%namespace, 'CelestialBodyInitialPosition', blk) == 0) then
+    if (parse_block(this%namespace, 'ClassicalParticleInitialPosition', blk) == 0) then
       n_rows = parse_block_n(blk)
-      if (n_rows > 1) call  messages_input_error(this%namespace, 'CelestialBodyInitialPosition')
+      if (n_rows > 1) call  messages_input_error(this%namespace, 'ClassicalParticleInitialPosition')
 
       do idir = 1, this%space%dim
         call parse_block_float(blk, 0, idir - 1, this%pos(idir))
       end do
       call parse_block_end(blk)
     end if
-    call messages_print_var_value(stdout, 'CelestialBodyInitialPosition', this%pos(1:this%space%dim))
+    call messages_print_var_value(stdout, 'ClassicalParticleInitialPosition', this%pos(1:this%space%dim))
 
-    !%Variable CelestialBodyInitialVelocity
+    !%Variable ClassicalParticleInitialVelocity
     !%Type block
-    !%Section CelestialDynamics
+    !%Section ClassicalParticles
     !%Description
-    !% Initial velocity of celestial body in Km/s.
+    !% Initial velocity of classical particle in Km/s.
     !%End
     this%vel = M_ZERO
-    if (parse_block(this%namespace, 'CelestialBodyInitialVelocity', blk) == 0) then
+    if (parse_block(this%namespace, 'ClassicalParticleInitialVelocity', blk) == 0) then
       n_rows = parse_block_n(blk)
-      if (n_rows > 1) call  messages_input_error(this%namespace, 'CelestialBodyInitialVelocity')
+      if (n_rows > 1) call  messages_input_error(this%namespace, 'ClassicalParticleInitialVelocity')
       do idir = 1, this%space%dim
         call parse_block_float(blk, 0, idir - 1, this%vel(idir))
       end do
       call parse_block_end(blk)
     end if
-    call messages_print_var_value(stdout, 'CelestialBodyInitialVelocity', this%vel(1:this%space%dim))
+    call messages_print_var_value(stdout, 'ClassicalParticleInitialVelocity', this%vel(1:this%space%dim))
 
-    POP_SUB(celestial_body_initial_conditions)
-  end subroutine celestial_body_initial_conditions
+    POP_SUB(classical_particle_initial_conditions)
+  end subroutine classical_particle_initial_conditions
 
   ! ---------------------------------------------------------
-  subroutine celestial_body_do_td(this, operation)
-    class(celestial_body_t), intent(inout) :: this
+  subroutine classical_particle_do_td(this, operation)
+    class(classical_particle_t), intent(inout) :: this
     integer,                 intent(in)    :: operation
 
     integer :: ii
 
-    PUSH_SUB(celestial_body_do_td)
+    PUSH_SUB(classical_particle_do_td)
 
     select case(operation)
     case (VERLET_START)
@@ -291,15 +291,15 @@ contains
       call messages_fatal(1, namespace=this%namespace)
     end select
 
-   POP_SUB(celestial_body_do_td)
-  end subroutine celestial_body_do_td
+   POP_SUB(classical_particle_do_td)
+  end subroutine classical_particle_do_td
 
   ! ---------------------------------------------------------
-  logical function celestial_body_is_tolerance_reached(this, tol) result(converged)
-    class(celestial_body_t),   intent(in)    :: this
+  logical function classical_particle_is_tolerance_reached(this, tol) result(converged)
+    class(classical_particle_t),   intent(in)    :: this
     FLOAT,                     intent(in)    :: tol
 
-    PUSH_SUB(celestial_body_is_tolerance_reached)
+    PUSH_SUB(classical_particle_is_tolerance_reached)
 
     ! Here we put the criterion that acceleration change is below the tolerance
     converged = .false.
@@ -313,31 +313,31 @@ contains
       call messages_info(1)
     end if
 
-    POP_SUB(celestial_body_is_tolerance_reached)
-  end function celestial_body_is_tolerance_reached
+    POP_SUB(classical_particle_is_tolerance_reached)
+  end function classical_particle_is_tolerance_reached
 
   ! ---------------------------------------------------------
-  subroutine celestial_body_store_current_status(this)
-    class(celestial_body_t),   intent(inout)    :: this
+  subroutine classical_particle_store_current_status(this)
+    class(classical_particle_t),   intent(inout)    :: this
 
-    PUSH_SUB(celestial_body_store_current_status) 
+    PUSH_SUB(classical_particle_store_current_status) 
 
     this%save_pos(1:this%space%dim) = this%pos(1:this%space%dim)
     this%save_vel(1:this%space%dim) = this%vel(1:this%space%dim)
 
-    POP_SUB(celestial_body_store_current_status)
-  end subroutine celestial_body_store_current_status
+    POP_SUB(classical_particle_store_current_status)
+  end subroutine classical_particle_store_current_status
 
   ! ---------------------------------------------------------
-  subroutine celestial_body_iteration_info(this)
-    class(celestial_body_t), intent(in) :: this
+  subroutine classical_particle_iteration_info(this)
+    class(classical_particle_t), intent(in) :: this
 
     integer :: idir
     character(len=20) :: fmt
 
-    PUSH_SUB(celestial_body_iteration_info)
+    PUSH_SUB(classical_particle_iteration_info)
 
-    write(message(1),'(2X,A,1X,A)') "Celestial body:", trim(this%namespace%get())
+    write(message(1),'(2X,A,1X,A)') "Classical particle:", trim(this%namespace%get())
 
     write(fmt,'("(4X,A,1X,",I2,"e14.6)")') this%space%dim
     write(message(2),fmt) "Coordinates: ", (this%pos(idir), idir = 1, this%space%dim)
@@ -348,14 +348,14 @@ contains
     write(message(7),'(4x,A,e14.6)') 'Simulation time: ', this%clock%get_sim_time()
     call messages_info(7)
 
-    POP_SUB(celestial_body_iteration_info)
-  end subroutine celestial_body_iteration_info
+    POP_SUB(classical_particle_iteration_info)
+  end subroutine classical_particle_iteration_info
 
   ! ---------------------------------------------------------
-  subroutine celestial_body_output_start(this)
-    class(celestial_body_t), intent(inout) :: this
+  subroutine classical_particle_output_start(this)
+    class(classical_particle_t), intent(inout) :: this
 
-    PUSH_SUB(celestial_body_output_start)
+    PUSH_SUB(classical_particle_output_start)
 
     ! Create output handle
     call io_mkdir('td.general', this%namespace)
@@ -366,25 +366,25 @@ contains
     ! Output info for first iteration
     call this%output_write(0)
 
-    POP_SUB(celestial_body_output_start)
-  end subroutine celestial_body_output_start
+    POP_SUB(classical_particle_output_start)
+  end subroutine classical_particle_output_start
 
   ! ---------------------------------------------------------
-  subroutine celestial_body_output_finish(this)
-    class(celestial_body_t), intent(inout) :: this
+  subroutine classical_particle_output_finish(this)
+    class(classical_particle_t), intent(inout) :: this
 
-    PUSH_SUB(celestial_body_output_finish)
+    PUSH_SUB(classical_particle_output_finish)
 
     if (mpi_grp_is_root(mpi_world)) then
       call write_iter_end(this%output_handle)
     end if
 
-    POP_SUB(celestial_body_output_finish)
-  end subroutine celestial_body_output_finish
+    POP_SUB(classical_particle_output_finish)
+  end subroutine classical_particle_output_finish
 
   ! ---------------------------------------------------------
-  subroutine celestial_body_output_write(this, iter)
-    class(celestial_body_t), intent(inout) :: this
+  subroutine classical_particle_output_write(this, iter)
+    class(classical_particle_t), intent(inout) :: this
     integer,                 intent(in)    :: iter
 
     integer :: idir
@@ -392,7 +392,7 @@ contains
 
     if(.not.mpi_grp_is_root(mpi_world)) return ! only first node outputs
 
-    PUSH_SUB(celestial_body_output_write)
+    PUSH_SUB(classical_particle_output_write)
 
     if(iter == 0) then
       ! header
@@ -435,61 +435,61 @@ contains
     call write_iter_double(this%output_handle, this%tot_force, this%space%dim)
     call write_iter_nl(this%output_handle)
     
-    POP_SUB(celestial_body_output_write)
-  end subroutine celestial_body_output_write
+    POP_SUB(classical_particle_output_write)
+  end subroutine classical_particle_output_write
 
   ! ---------------------------------------------------------
-  subroutine celestial_body_update_quantity(this, iq, requested_time)
-    class(celestial_body_t),   intent(inout) :: this
+  subroutine classical_particle_update_quantity(this, iq, requested_time)
+    class(classical_particle_t),   intent(inout) :: this
     integer,                   intent(in)    :: iq
     class(clock_t),            intent(in)    :: requested_time
 
-    PUSH_SUB(celestial_body_update_quantity)
+    PUSH_SUB(classical_particle_update_quantity)
 
     ! We are not allowed to update protected quantities!
     ASSERT(.not. this%quantities(iq)%protected)
 
     select case (iq)
     case (MASS)
-      ! The celestial body has a mass, but it is not necessary to update it, as it does not change with time.
+      ! The classical particle has a mass, but it is not necessary to update it, as it does not change with time.
       call this%quantities(iq)%clock%set_time(requested_time)
     case default
       message(1) = "Incompatible quantity."
       call messages_fatal(1)
     end select
 
-    POP_SUB(celestial_body_update_quantity)
-  end subroutine celestial_body_update_quantity
+    POP_SUB(classical_particle_update_quantity)
+  end subroutine classical_particle_update_quantity
 
   ! ---------------------------------------------------------
-  subroutine celestial_body_update_exposed_quantity(this, iq, requested_time)
-    class(celestial_body_t),   intent(inout) :: this
+  subroutine classical_particle_update_exposed_quantity(this, iq, requested_time)
+    class(classical_particle_t),   intent(inout) :: this
     integer,                   intent(in)    :: iq
     class(clock_t),            intent(in)    :: requested_time
 
-    PUSH_SUB(celestial_body_update_exposed_quantity)
+    PUSH_SUB(classical_particle_update_exposed_quantity)
 
     ! We are not allowed to update protected quantities!
     ASSERT(.not. this%quantities(iq)%protected)
 
     select case (iq)
     case (MASS)
-      ! The celestial body has a mass, but it does not require any update, as it does not change with time.
+      ! The classical particle has a mass, but it does not require any update, as it does not change with time.
       call this%quantities(iq)%clock%set_time(this%clock)
     case default
       message(1) = "Incompatible quantity."
       call messages_fatal(1)
     end select
 
-    POP_SUB(celestial_body_update_exposed_quantity)
-  end subroutine celestial_body_update_exposed_quantity
+    POP_SUB(classical_particle_update_exposed_quantity)
+  end subroutine classical_particle_update_exposed_quantity
 
   ! ---------------------------------------------------------
-  subroutine celestial_body_copy_quantities_to_interaction(this, interaction)
-    class(celestial_body_t),          intent(inout) :: this
+  subroutine classical_particle_copy_quantities_to_interaction(this, interaction)
+    class(classical_particle_t),          intent(inout) :: this
     class(interaction_abst_t),        intent(inout) :: interaction
 
-    PUSH_SUB(celestial_body_copy_quantities_to_interaction)
+    PUSH_SUB(classical_particle_copy_quantities_to_interaction)
 
     select type (interaction)
     type is (interaction_gravity_t)
@@ -502,30 +502,30 @@ contains
       call messages_fatal(1)
     end select
 
-    POP_SUB(celestial_body_copy_quantities_to_interaction)
-  end subroutine celestial_body_copy_quantities_to_interaction
+    POP_SUB(classical_particle_copy_quantities_to_interaction)
+  end subroutine classical_particle_copy_quantities_to_interaction
 
   ! ---------------------------------------------------------
-  subroutine celestial_body_update_interactions_start(this)
-    class(celestial_body_t), intent(inout) :: this
+  subroutine classical_particle_update_interactions_start(this)
+    class(classical_particle_t), intent(inout) :: this
 
-    PUSH_SUB(celestial_body_update_interactions_start)
+    PUSH_SUB(classical_particle_update_interactions_start)
 
     ! Store previous force, as it is used as SCF criterium
     this%prev_tot_force(1:this%space%dim) = this%tot_force(1:this%space%dim)
 
-    POP_SUB(celestial_body_update_interactions_start)
-  end subroutine celestial_body_update_interactions_start
+    POP_SUB(classical_particle_update_interactions_start)
+  end subroutine classical_particle_update_interactions_start
 
   ! ---------------------------------------------------------
-  subroutine celestial_body_update_interactions_finish(this)
-    class(celestial_body_t), intent(inout) :: this
+  subroutine classical_particle_update_interactions_finish(this)
+    class(classical_particle_t), intent(inout) :: this
 
     type(interaction_iterator_t) :: iter
 
-    PUSH_SUB(celestial_body_update_interactions_finish)
+    PUSH_SUB(classical_particle_update_interactions_finish)
 
-    ! Compute the total force acting on the celestial body
+    ! Compute the total force acting on the classical particle
     this%tot_force(1:this%space%dim) = M_ZERO
     call iter%start(this%interactions)
     do while (iter%has_next())
@@ -535,22 +535,22 @@ contains
       type is (ghost_interaction_t)
         ! Nothing to do
       class default
-        message(1) = "Unknown interaction by the celestial body " + this%namespace%get()
+        message(1) = "Unknown interaction by the classical particle " + this%namespace%get()
         call messages_fatal(1)
       end select
     end do
 
-    POP_SUB(celestial_body_update_interactions_finish)
-  end subroutine celestial_body_update_interactions_finish
+    POP_SUB(classical_particle_update_interactions_finish)
+  end subroutine classical_particle_update_interactions_finish
 
   ! ---------------------------------------------------------
-  subroutine celestial_body_finalize(this)
-    type(celestial_body_t), intent(inout) :: this
+  subroutine classical_particle_finalize(this)
+    type(classical_particle_t), intent(inout) :: this
 
     type(interaction_iterator_t) :: iter
     class(interaction_abst_t), pointer :: interaction
 
-    PUSH_SUB(celestial_body_finalize)
+    PUSH_SUB(classical_particle_finalize)
 
     deallocate(this%prop)
 
@@ -560,10 +560,10 @@ contains
       SAFE_DEALLOCATE_P(interaction)
     end do
 
-    POP_SUB(celestial_body_finalize)
-  end subroutine celestial_body_finalize
+    POP_SUB(classical_particle_finalize)
+  end subroutine classical_particle_finalize
 
-end module celestial_body_oct_m
+end module classical_particle_oct_m
 
 !! Local Variables:
 !! mode: f90
