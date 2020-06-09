@@ -41,8 +41,9 @@ module classical_particle_oct_m
   implicit none
 
   private
-  public ::               &
-    classical_particle_t
+  public ::                 &
+    classical_particle_t,   &
+    classical_particle_init
 
   type, extends(system_abst_t) :: classical_particle_t
     private
@@ -78,25 +79,46 @@ module classical_particle_oct_m
   end type classical_particle_t
 
   interface classical_particle_t
-    procedure classical_particle_init
+    procedure classical_particle_constructor
   end interface classical_particle_t
 
 contains
 
   ! ---------------------------------------------------------
-  function classical_particle_init(namespace) result(sys)
+  !> The factory routine (or constructor) allocates a pointer of the
+  !! corresponding type and then calls the init routine which is a type-bound
+  !! procedure of the corresponding type. With this design, also derived
+  !! classes can use the init routine of the parent class.
+  function classical_particle_constructor(namespace) result(sys)
     class(classical_particle_t), pointer    :: sys
-    type(namespace_t),       intent(in) :: namespace
+    type(namespace_t),           intent(in) :: namespace
 
-    PUSH_SUB(classical_particle_init)
+    PUSH_SUB(classical_particle_constructor)
 
     SAFE_ALLOCATE(sys)
 
-    sys%namespace = namespace
+    call classical_particle_init(sys, namespace)
+
+    POP_SUB(classical_particle_constructor)
+  end function classical_particle_constructor
+
+  ! ---------------------------------------------------------
+  !> The init routine is a module level procedure
+  !! This has the advantage that different classes can have different
+  !! signatures for the initialization routines because they are not
+  !! type-bound and thus also not inherited.
+  ! ---------------------------------------------------------
+  subroutine classical_particle_init(this, namespace)
+    class(classical_particle_t), intent(inout) :: this
+    type(namespace_t),           intent(in)    :: namespace
+
+    PUSH_SUB(classical_particle_init)
+
+    this%namespace = namespace
 
     call messages_print_stress(stdout, "Classical Particle", namespace=namespace)
 
-    call space_init(sys%space, namespace)
+    call space_init(this%space, namespace)
 
     !%Variable ClassicalParticleMass
     !%Type float
@@ -104,18 +126,18 @@ contains
     !%Description
     !% Mass of classical particle in Kg.
     !%End
-    call parse_variable(namespace, 'ClassicalParticleMass', M_ONE, sys%mass)
-    call messages_print_var_value(stdout, 'ClassicalParticleMass', sys%mass)
+    call parse_variable(namespace, 'ClassicalParticleMass', M_ONE, this%mass)
+    call messages_print_var_value(stdout, 'ClassicalParticleMass', this%mass)
 
-    sys%quantities(POSITION)%required = .true.
-    sys%quantities(VELOCITY)%required = .true.
-    sys%quantities(POSITION)%protected = .true.
-    sys%quantities(VELOCITY)%protected = .true.
+    this%quantities(POSITION)%required = .true.
+    this%quantities(VELOCITY)%required = .true.
+    this%quantities(POSITION)%protected = .true.
+    this%quantities(VELOCITY)%protected = .true.
 
     call messages_print_stress(stdout, namespace=namespace)
 
     POP_SUB(classical_particle_init)
-  end function classical_particle_init
+  end subroutine classical_particle_init
 
   ! ---------------------------------------------------------
   subroutine classical_particle_add_interaction_partner(this, partner)
