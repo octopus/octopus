@@ -424,6 +424,7 @@ AC_CONFIG_FILES([Makefile
   testsuite/real_time/Makefile
   testsuite/lda_u/Makefile
   testsuite/linear_response/Makefile
+  testsuite/maxwell/Makefile
   testsuite/multisystem/Makefile
   testsuite/optimal_control/Makefile
   testsuite/periodic_systems/Makefile

@@ -46,3 +46,4 @@ GuessMagnetDensity = user_defined
 %AtomsMagnetDirection
  0 | 0 | 2
 %
+LCAOStart = lcao_full

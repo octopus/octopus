@@ -20,10 +20,13 @@
 
 module hamiltonian_mxll_oct_m
   use batch_oct_m
+  use batch_ops_oct_m
   use cube_oct_m
   use derivatives_oct_m
+  use energy_mxll_oct_m
   use global_oct_m
   use grid_oct_m
+  use hamiltonian_abst_oct_m
   use hamiltonian_elec_oct_m
   use math_oct_m
   use maxwell_boundary_op_oct_m
@@ -47,26 +50,23 @@ module hamiltonian_mxll_oct_m
     hamiltonian_mxll_null,                      &
     hamiltonian_mxll_init,                      &
     hamiltonian_mxll_end,                       &
-    hamiltonian_mxll_apply,                     &
-    hamiltonian_mxll_apply_all,                 &
+    dhamiltonian_mxll_apply,                    &
+    zhamiltonian_mxll_apply,                    &
+    dhamiltonian_mxll_magnus_apply,             &
+    zhamiltonian_mxll_magnus_apply,             &
     hamiltonian_mxll_apply_batch,               &
+    hamiltonian_mxll_span,                      &
     hamiltonian_mxll_adjoint,                   &
     hamiltonian_mxll_not_adjoint,               &
     hamiltonian_mxll_hermitian,                 &
     hamiltonian_mxll_update,                    &
     hamiltonian_mxll_get_time,                  &
     hamiltonian_mxll_apply_packed,              &
-    maxwell_fft_hamiltonian,                    &
     maxwell_helmholtz_decomposition_trans_field,&
-    maxwell_helmholtz_decomposition_long_field, &
-    surface_integral_helmholtz_transverse
+    maxwell_helmholtz_decomposition_long_field
 
-
-  type hamiltonian_mxll_t
-    !> The Hamiltonian must know what are the "dimensions" of the spaces,
-    !! in order to be able to operate on the states.
-    type(states_elec_dim_t)       :: d
-
+   type, extends(hamiltonian_abst_t) :: hamiltonian_mxll_t
+    integer                        :: dim
     !> absorbing boundaries
     logical :: adjoint
 
@@ -77,12 +77,11 @@ module hamiltonian_mxll_oct_m
 
     type(nl_operator_t), pointer   :: operators(:) 
 
-!    type(poisson_t)                :: poisson
     FLOAT, pointer                 :: vector_potential(:,:)
 
     type(bc_mxll_t)                :: bc
-!    type(grid_t), pointer          :: gr
-    type(states_mxll_t), pointer   :: st
+    type(derivatives_t), pointer   :: der !< pointer to derivatives
+    type(states_mxll_t), pointer   ::  st
 
     integer                        :: rs_sign
 
@@ -90,29 +89,35 @@ module hamiltonian_mxll_oct_m
 
     integer                        :: op_method
 
-!    logical                        :: lorentz_force
-!    logical                        :: lorentz_force_apply
-
     integer, pointer               :: rs_state_fft_map(:,:,:)
     integer, pointer               :: rs_state_fft_map_inv(:,:)
 
+    logical                        :: mx_ma_coupling
+    logical                        :: mx_ma_coupling_apply
+    integer                        :: mx_ma_trans_field_calc_method
+    logical                        :: mx_ma_trans_field_calc_corr
+    integer                        :: mx_ma_coupling_points_number
+    FLOAT, pointer                 :: mx_ma_coupling_points(:,:)
+    integer, pointer               :: mx_ma_coupling_points_map(:)
+    integer                        :: mx_ma_coupling_order
+    logical                        :: ma_mx_coupling
+    logical                        :: ma_mx_coupling_apply
+
     logical                        :: bc_add_ab_region  = .false.
-!    logical                        :: bc_zero           = .false.
+    logical                        :: bc_zero           = .false.
     logical                        :: bc_constant       = .false.
     logical                        :: bc_mirror_pec     = .false.
     logical                        :: bc_mirror_pmc     = .false.
     logical                        :: bc_periodic       = .false.
     logical                        :: bc_plane_waves    = .false.
-!    logical                        :: bc_medium         = .false.
+    logical                        :: bc_medium         = .false.
 
     logical                        :: plane_waves
     logical                        :: plane_waves_apply
-!    logical                        :: spatial_constant
+    logical                        :: spatial_constant
     logical                        :: spatial_constant_apply
 
-!    logical                        :: diamagnetic_current
-!    logical                        :: spin_current
-
+    ! TODO: add medium object file
     integer                        :: medium_calculation
 
     logical                        :: medium_box = .false.
@@ -120,8 +125,8 @@ module hamiltonian_mxll_oct_m
     integer, pointer               :: medium_box_shape(:)
     FLOAT, pointer                 :: medium_box_center(:,:)
     FLOAT, pointer                 :: medium_box_size(:,:)
-!    FLOAT, pointer                 :: medium_box_ep(:,:)
-!    FLOAT, pointer                 :: medium_box_mu(:,:)
+    FLOAT, pointer                 :: medium_box_ep(:,:)
+    FLOAT, pointer                 :: medium_box_mu(:,:)
     FLOAT, pointer                 :: medium_box_c(:,:)
     FLOAT, pointer                 :: medium_box_ep_factor(:)
     FLOAT, pointer                 :: medium_box_mu_factor(:)
@@ -133,51 +138,39 @@ module hamiltonian_mxll_oct_m
     FLOAT, pointer                 :: medium_box_points_map(:,:)
     FLOAT, pointer                 :: medium_box_aux_ep(:,:,:)
     FLOAT, pointer                 :: medium_box_aux_mu(:,:,:)
-!    integer, pointer               :: medium_box_bdry_number(:)
-!    FLOAT, pointer                 :: medium_box_bdry_map(:,:)
+    integer, pointer               :: medium_box_bdry_number(:)
+    FLOAT, pointer                 :: medium_box_bdry_map(:,:)
   
     !> maxwell hamiltonian_mxll
     integer                        :: operator
     logical                        :: current_density_ext_flag
-!    FLOAT                          :: energy
-!    FLOAT                          :: energy_boundaries
-!    FLOAT                          :: e_energy
-!    FLOAT                          :: b_energy
-!    FLOAT                          :: energy_plane_waves
-!    FLOAT                          :: e_energy_plane_waves
-!    FLOAT                          :: b_energy_plane_waves
 
-!    FLOAT                          :: energy_pml
-!    FLOAT                          :: energy_mask
-    FLOAT, pointer                 :: energy_density(:)
-    FLOAT, pointer                 :: energy_density_plane_waves(:)
-    FLOAT, pointer                 :: e_energy_density(:)
-    FLOAT, pointer                 :: b_energy_density(:)
-!    FLOAT                          :: energy_trans
-!    FLOAT                          :: energy_long
-!    FLOAT                          :: e_energy_trans
-!    FLOAT                          :: b_energy_trans
-!    FLOAT                          :: energy_incident_waves
+    type(energy_mxll_t)            :: energy
 
     logical                        :: cpml_hamiltonian = .false.
 
     logical                        :: diamag_current = .false.
 
-!    integer                        :: current_prop_test = 0
-
-!    CMPLX, pointer                 :: test_output(:,:)
-
     type(cube_t)                   :: cube
-!    type(mesh_cube_parallel_map_t) :: mesh_cube_map
+    type(mesh_cube_parallel_map_t) :: mesh_cube_map
 
+  contains
+    procedure :: update_span => hamiltonian_mxll_span
+    procedure :: dapply => dhamiltonian_mxll_apply
+    procedure :: zapply => zhamiltonian_mxll_apply
+    procedure :: dmagnus_apply => dhamiltonian_mxll_magnus_apply
+    procedure :: zmagnus_apply => zhamiltonian_mxll_magnus_apply
+    procedure :: is_hermitian => hamiltonian_mxll_hermitian
   end type hamiltonian_mxll_t
+
+  type(profile_t), save :: prof_hamiltonian_mxll
 
   integer, public, parameter ::      &
     FARADAY_AMPERE_OLD          = 0, &
     FARADAY_AMPERE              = 1, &
-    FARADAT_AMPERE_MEDIUM       = 2, &
-    FARADAT_AMPERE_GAUSS        = 3, &
-    FARADAT_AMPERE_GUASS_MEDIUM = 4
+    FARADAY_AMPERE_MEDIUM       = 2, &
+    FARADAY_AMPERE_GAUSS        = 3, &
+    FARADAY_AMPERE_GAUSS_MEDIUM = 4
 
 contains
 
@@ -191,9 +184,7 @@ contains
     
     hm%current_density_ext_flag = .false.
 
-    nullify(hm%energy_density)
-    nullify(hm%e_energy_density)
-    nullify(hm%b_energy_density)
+    call energy_mxll_nullify(hm%energy)
 
     POP_SUB(hamiltonian_mxll_null)
   end subroutine hamiltonian_mxll_null
@@ -213,33 +204,30 @@ contains
     PUSH_SUB(hamiltonian_mxll_init)
 
     call profiling_in(prof, 'HAMILTONIAN_INIT')
-       
+
     call hamiltonian_mxll_null(hm)
 
-    call states_elec_dim_copy(hm%d, st%d)
+    hm%dim = st%dim
 
     ASSERT(associated(gr%der%lapl))
 
     hm%operators(1:3) => gr%der%grad(1:3) ! cross product for Maxwell calculation needs dimension >= 2
-
+    hm%der => gr%der
     hm%rs_sign = st%rs_sign
 
-    SAFE_ALLOCATE(hm%vector_potential(1:gr%mesh%np_part,1:st%d%dim))
-    SAFE_ALLOCATE(hm%energy_density(1:gr%mesh%np_part))
-    SAFE_ALLOCATE(hm%energy_density_plane_waves(1:gr%mesh%np_part))
-    SAFE_ALLOCATE(hm%e_energy_density(1:gr%mesh%np_part))
-    SAFE_ALLOCATE(hm%b_energy_density(1:gr%mesh%np_part))
+    SAFE_ALLOCATE(hm%vector_potential(1:gr%mesh%np_part,1:st%dim))
+    call energy_mxll_allocate(hm%energy, gr%mesh%np_part)
 
     hm%vector_potential = M_ZERO
-    hm%energy_density = M_ZERO
-    hm%e_energy_density = M_ZERO
-    hm%b_energy_density = M_ZERO
 
-    SAFE_ALLOCATE(hm%cube%fft)
+    hm%mx_ma_coupling_apply = .false.
+    hm%mx_ma_coupling  = .false.
+    hm%ma_mx_coupling_apply = .false.
+    hm%ma_mx_coupling  = .false.
 
     !%Variable MaxwellHamiltonianOperator
     !%Type integer
-    !%Default riemann_silberstein
+    !%Default faraday_ampere
     !%Section Hamiltonian
     !%Description
     !% With this variable the the Maxwell Hamiltonian operator can be selected
@@ -254,22 +242,22 @@ contains
     !%Option faraday_ampere_gauss_medium 4
     !% The propagation operation is done by 4x4 matrices also with Gauss laws constraint in medium
     !%End
-    call parse_variable(namespace, 'MaxwellHamiltonianOperator', OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE, hm%operator)
+    call parse_variable(namespace, 'MaxwellHamiltonianOperator', FARADAY_AMPERE, hm%operator)
 
-    if (hm%operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE_GAUSS) then
-      hm%d%dim = hm%d%dim+1
-    else if (hm%operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE_MEDIUM) then
-      hm%d%dim = 2*hm%d%dim
+    if (hm%operator == FARADAY_AMPERE_GAUSS) then
+      hm%dim = hm%dim+1
+    else if (hm%operator == FARADAY_AMPERE_MEDIUM) then
+      hm%dim = 2*hm%dim
     end if
 
-    !%Variable MaxwellExternalCurrent
+    !%Variable ExternalCurrent
     !%Type logical
     !%Default no
     !%Section Hamiltonian
     !%Description
-    !% Description follows
+    !% If an external current density will be used.
     !%End
-    call parse_variable(namespace, 'MaxwellExternalCurrent', .false., hm%current_density_ext_flag)
+    call parse_variable(namespace, 'ExternalCurrent', .false., hm%current_density_ext_flag)
 
     hm%plane_waves_apply = .false.
     hm%spatial_constant_apply = .false.
@@ -278,20 +266,20 @@ contains
 
     !%Variable MaxwellMediumCalculation
     !%Type integer
-    !%Default current
+    !%Default RS
     !%Section Hamiltonian
     !%Description
-    !% The Maxwell Operator e.g. the curl operation can be obtained by
-    !% two different methods, the finid-difference or the fast fourier
-    !% transform.
-    !%Option riemann_silberstein 1
+    !% For linear media the calculation of the Maxwell Operator acting on the RS state can be done
+    !% directly using the Riemann-Silberstein representation or by calculating the curl of the 
+    !% electric and magnetic fields.
+    !%Option RS 1
     !% Medium calculation directly via Hamiltonian
-    !%Option electric_magnetic_fields 2
+    !%Option EM 2
     !% Medium calculation via curl of electric field and magnetic field
     !%End
-    default_propagator = OPTION__MAXWELLMEDIUMCALCULATION__RIEMANN_SILBERSTEIN
+    default_propagator = OPTION__MAXWELLMEDIUMCALCULATION__RS
     call parse_variable(namespace, 'MaxwellMediumCalculation', default_propagator, hm%medium_calculation)
-    if (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__ELECTRIC_MAGNETIC_FIELDS) then
+    if (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__EM) then
       call messages_not_implemented("Calculation from E and B field not implemented yet.", namespace=namespace)
     end if
 
@@ -302,6 +290,8 @@ contains
 
     call parse_variable(namespace, 'TimeZero', .false., hm%time_zero)
     if(hm%time_zero) call messages_experimental('TimeZero')
+
+    call bc_mxll_nullify(hm%bc)
 
     call profiling_out(prof)
     POP_SUB(hamiltonian_mxll_init)
@@ -316,12 +306,10 @@ contains
 
     nullify(hm%operators)
 
-    SAFE_DEALLOCATE_P(hm%energy_density)
-    SAFE_DEALLOCATE_P(hm%cube%fft)
+    SAFE_DEALLOCATE_P(hm%vector_potential)
+    call energy_mxll_end(hm%energy)
 
     call bc_mxll_end(hm%bc)
-
-    call states_elec_dim_end(hm%d) 
 
     POP_SUB(hamiltonian_mxll_end)
   end subroutine hamiltonian_mxll_end
@@ -329,7 +317,7 @@ contains
 
   ! ---------------------------------------------------------
   logical function hamiltonian_mxll_hermitian(hm)
-    type(hamiltonian_mxll_t), intent(in) :: hm
+    class(hamiltonian_mxll_t), intent(in) :: hm
 
     PUSH_SUB(hamiltonian_mxll_hermitian)
 
@@ -337,6 +325,17 @@ contains
 
     POP_SUB(hamiltonian_mxll_hermitian)
   end function hamiltonian_mxll_hermitian
+
+
+  ! ---------------------------------------------------------
+  subroutine hamiltonian_mxll_span(hm, delta, emin)
+    class(hamiltonian_mxll_t), intent(inout) :: hm
+    FLOAT,                     intent(in)    :: delta, emin
+
+    write(message(1),'(a)') 'hamiltonian_mxll_span is not needed and hence not implemented.'
+    call messages_fatal(1)
+
+  end subroutine hamiltonian_mxll_span
 
 
   ! ---------------------------------------------------------
@@ -412,12 +411,8 @@ contains
     integer, optional,         intent(in)    :: terms
     logical, optional,         intent(in)    :: set_bc !< If set to .false. the boundary conditions are assumed to be set previously.
 
-    type(profile_t), save :: prof_hamiltonian
-!    logical :: pack
-!    integer :: terms_
-
     PUSH_SUB(hamiltonian_mxll_apply_batch)
-    call profiling_in(prof_hamiltonian, "MXLL_HAMILTONIAN")
+    call profiling_in(prof_hamiltonian_mxll, "MXLL_HAMILTONIAN")
 
     ASSERT(psib%status() == hpsib%status())
 
@@ -427,15 +422,6 @@ contains
     ASSERT(.not.present(terms))
     ASSERT(.not.present(set_bc))
 
-!    pack = hamiltonian_mxll_apply_packed(hm, der%mesh) &
-!      .and. (accel_is_enabled() .or. psib%nst_linear > 1) &
-!      .and. terms_ == TERM_ALL
-
-!    if(pack) then
-!      call psib%do_pack()
-!      call hpsib%do_pack(copy = .false.)
-!    end if
-
     if(present(time)) then
       if(abs(time - hm%current_time) > CNST(1e-10)) then
         write(message(1),'(a)') 'hamiltonian_apply_batch time assertion failed.'
@@ -444,101 +430,70 @@ contains
       endif
     end if
 
-    call zderivatives_curl(der, psib%zff(:, :, 1), hpsib%zff(:, :, 1))
-    hpsib%zff(:,:,1) = P_c * hpsib%zff(:,:,1)
+    call psib%copy_data_to(der%mesh%np, hpsib)
+    call zderivatives_batch_curl(der, hpsib)
+    call batch_scal(der%mesh%np, hm%rs_sign * P_c, hpsib)
   
-!    if(pack) then
-!      call psib%do_unpack(copy = .false.)
-!      call hpsib%do_unpack()
-!    end if
-
-    call profiling_out(prof_hamiltonian)
+    call profiling_out(prof_hamiltonian_mxll)
     POP_SUB(hamiltonian_mxll_apply_batch)
   end subroutine hamiltonian_mxll_apply_batch
 
+
+  ! --------------------------------------------------------
+  !> Apply hamiltonian to real states (not possible)
+  subroutine dhamiltonian_mxll_apply(hm, namespace, mesh, psib, hpsib, terms, set_bc)
+    class(hamiltonian_mxll_t),   intent(in)    :: hm
+    type(namespace_t),           intent(in)    :: namespace
+    type(mesh_t),                intent(in)    :: mesh
+    class(batch_t),      target, intent(inout) :: psib
+    class(batch_t),      target, intent(inout) :: hpsib
+    integer,           optional, intent(in)    :: terms
+    logical,           optional, intent(in)    :: set_bc !< If set to .false. the boundary conditions are assumed to be set previously.
+
+    write(message(1),'(a)') 'dhamiltonian_mxll_apply not implemented (states are complex).'
+    call messages_fatal(1, namespace=namespace)
+
+  end subroutine dhamiltonian_mxll_apply
+
   ! ---------------------------------------------------------
   !> Applying the Maxwell Hamiltonian on Maxwell states
-  subroutine hamiltonian_mxll_apply(hm, namespace, der, psi, oppsi, ist, ik, time, terms, set_bc)
-    type(hamiltonian_mxll_t), intent(in)    :: hm
-    type(namespace_t),        intent(in)    :: namespace
-    type(derivatives_t),      intent(in)    :: der
-    integer,                  intent(in)    :: ist       !< the index of the state
-    integer,                  intent(in)    :: ik        !< the index of the k-point
-    !R_TYPE,   target,         intent(inout) :: psi(:,:)  !< (gr%mesh%np_part, hm%d%dim)
-    !R_TYPE,   target,         intent(inout) :: hpsi(:,:) !< (gr%mesh%np, hm%d%dim)
-    CMPLX,    target,          intent(inout) :: psi(:,:)  !< (gr%mesh%np_part, hm%d%dim)
-    CMPLX,    target,         intent(inout) :: oppsi(:,:) !< (gr%mesh%np, hm%d%dim)
-    FLOAT,    optional,       intent(in)    :: time
-    integer,  optional,       intent(in)    :: terms
-    logical,  optional,       intent(in)    :: set_bc
+  subroutine zhamiltonian_mxll_apply(hm, namespace, mesh, psib, hpsib, terms, set_bc)
+    class(hamiltonian_mxll_t),   intent(in)    :: hm
+    type(namespace_t),           intent(in)    :: namespace
+    type(mesh_t),                intent(in)    :: mesh
+    class(batch_t),      target, intent(inout) :: psib
+    class(batch_t),      target, intent(inout) :: hpsib
+    integer,           optional, intent(in)    :: terms
+    logical,           optional, intent(in)    :: set_bc !< If set to .false. the boundary conditions are assumed to be set previously.
 
-!    type(batch_t) :: psib, hpsib
-    type(profile_t), save :: prof_hamiltonian
+    CMPLX, allocatable :: rs_aux_in(:,:), rs_aux_out(:,:)
+    integer :: ii
 
-    PUSH_SUB(hamiltonian_mxll_apply)
+    PUSH_SUB(zhamiltonian_mxll_apply)
 
-!    call batch_init(psib, hm%d%dim, ist, ist, psi)
-!    call batch_init(hpsib, hm%d%dim, ist, ist, hpsi)
-!
-!    call hamiltonian_mxll_apply_batch(hm, der, psib, hpsib, ik, time = time, terms = terms, Imtime = Imtime, set_bc = set_bc)
-!
-!    call psib%end()
-!    call hpsib%end()
+    if (hm%operator == FARADAY_AMPERE .and. all(hm%bc%bc_ab_type(:) /= MXLL_AB_CPML)) then
+      ! This part is already batchified
+      call hamiltonian_mxll_apply_batch(hm, namespace, hm%der, psib, hpsib)
 
-    call profiling_in(prof_hamiltonian, "MAXWELLHAMILTONIAN")
-
-    if (present(time)) then
-      if (abs(time - hm%current_time) > CNST(1e-10)) then
-        write(message(1),'(a)') 'hamiltonian_apply_batch time assertion failed.'
-        write(message(2),'(a,f12.6,a,f12.6)') 'time = ', time, '; hm%current_time = ', hm%current_time
-        call messages_fatal(2, namespace=namespace)
-      end if
+    else
+      ! This part uses the old non-batch implementation
+      SAFE_ALLOCATE(rs_aux_in(1:hm%der%mesh%np_part, 1:3))
+      SAFE_ALLOCATE(rs_aux_out(1:hm%der%mesh%np, 1:3))
+      do ii = 1, 3
+        call batch_get_state(psib, ii, hm%der%mesh%np, rs_aux_in(:, ii))
+      end do
+      call maxwell_hamiltonian_apply_fd(hm, hm%der, rs_aux_in, rs_aux_out)
+      do ii = 1, 3
+        call batch_set_state(hpsib, ii, hm%der%mesh%np, rs_aux_out(:, ii))
+      end do
+      SAFE_DEALLOCATE_A(rs_aux_in)
+      SAFE_DEALLOCATE_A(rs_aux_out)
+      
     end if
 
-!    select case (hm%op_method) 
-!      case(OPTION__MAXWELLTDOPERATORMETHOD__OP_FD)
-        call maxwell_hamiltonian_apply_fd(hm, der, psi, oppsi)
-!      case(OPTION__MAXWELLTDOPERATORMETHOD__OP_FFT) ! For reviews: seems that this option is no longer needed, should we leave it?
-!        call maxwell_hamiltonian_apply_fft(hm, der, psi, oppsi)
-!     end select
+    POP_SUB(zhamiltonian_mxll_apply)
+  end subroutine zhamiltonian_mxll_apply
 
-    call profiling_out(prof_hamiltonian)
-
-    POP_SUB(hamiltonian_mxll_apply)
-  end subroutine hamiltonian_mxll_apply
-
-
-  ! ---------------------------------------------------------
-  subroutine hamiltonian_mxll_apply_all(hm, namespace, der, st, hst, time)
-    type(hamiltonian_mxll_t), intent(inout) :: hm
-    type(namespace_t),        intent(in)    :: namespace
-    type(derivatives_t),      intent(inout) :: der
-    type(states_mxll_t),      intent(inout) :: st
-    type(states_mxll_t),      intent(inout) :: hst
-    FLOAT, optional,          intent(in)    :: time
-
-!    integer :: ik, ib
-!    FLOAT, allocatable :: psi(:, :)
-  
-    PUSH_SUB(X(hamiltonian_mxll_apply_all))
-
-!    if(present(Imtime)) then
-!      do ik = st%d%kpt%start, st%d%kpt%end
-!        do ib = st%group%block_start, st%group%block_end
-!          call hamiltonian_mxll_apply_batch(hm, der, st%group%psib(ib, ik), hst%group%psib(ib, ik), ik, time, Imtime)
-!      end do
-!    end do
-  !  else
-!    if (present(time)) then 
-!      do ik = st%d%kpt%start, st%d%kpt%end
-!        do ib = st%group%block_start, st%group%block_end
-!          call hamiltonian_mxll_apply_batch(hm, namespace, der, st%group%psib(ib, ik), hst%group%psib(ib, ik), time)
-!        end do
-!      end do
-!    end if
-
-    POP_SUB(hamiltonian_mxll_apply_all)
-  end subroutine hamiltonian_mxll_apply_all
 
   ! ---------------------------------------------------------
   !> Applying the Maxwell Hamiltonian on Maxwell states with finite difference
@@ -560,10 +515,12 @@ contains
     rs_sign = hm%rs_sign
 
 
-    !==============================================================================================================================
+    select case (hm%operator)
+
+    !=================================================================================================
     ! Maxwell Hamiltonian - Hamiltonian operation in vacuum via partial derivatives:
 
-    if (hm%operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE) then
+    case (FARADAY_AMPERE)
 
       SAFE_ALLOCATE(tmp(np_part,2))
       oppsi       = M_z0
@@ -573,7 +530,7 @@ contains
         kappa_psi => hm%st%kappa_psi 
       end if
 
-      !----------------------------------------------------------------------------------------------------------------------------
+      !-----------------------------------------------------------------------------------------------
       ! Riemann-Silberstein vector component 1 calculation:
       tmp = M_z0
       call zderivatives_partial(der, psi(:,3), tmp(:,1), 2, set_bc = .false.)
@@ -583,7 +540,7 @@ contains
       call maxwell_pml_hamiltonian(hm, der, psi, 3, 2, tmp(:,2))
       oppsi(1:np_part,1) = ( tmp(1:np_part,1)-tmp(1:np_part,2) )
 
-      !----------------------------------------------------------------------------------------------------------------------------
+      !-----------------------------------------------------------------------------------------------
       ! Riemann-Silberstein vector component 2 calculation:
       tmp = M_z0
       call zderivatives_partial(der, psi(:,1), tmp(:,1), 3, set_bc = .false.)
@@ -593,7 +550,7 @@ contains
       call maxwell_pml_hamiltonian(hm, der, psi, 1, 3, tmp(:,2))
       oppsi(1:np_part,2) = ( tmp(1:np_part,1)-tmp(1:np_part,2) )
 
-      !----------------------------------------------------------------------------------------------------------------------------
+      !-----------------------------------------------------------------------------------------------
       ! Riemann-Silberstein vector component 3 calculation:
       tmp = M_z0
       call zderivatives_partial(der, psi(:,2), tmp(:,1), 1, set_bc = .false.)
@@ -613,15 +570,15 @@ contains
       SAFE_DEALLOCATE_A(tmp)
 
 
-    !==============================================================================================================================
+    !=================================================================================================
     ! Maxwell Hamiltonian - Hamiltonian operation in medium via partial derivatives:
 
-    else if (hm%operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE_MEDIUM) then
+    case (FARADAY_AMPERE_MEDIUM)
 
       SAFE_ALLOCATE(tmp(np_part,4))
       oppsi       = M_z0
 
-      !----------------------------------------------------------------------------------------------------------------------------
+      !-----------------------------------------------------------------------------------------------
       ! Riemann-Silberstein vector component 1 calculation:
       tmp = M_z0
       call zderivatives_partial(der, psi(:,3), tmp(:,1), 2, set_bc = .false.)
@@ -634,7 +591,7 @@ contains
       oppsi(1:np_part,1) =   ( tmp(1:np_part,1)-tmp(1:np_part,3) )
       oppsi(1:np_part,4) = - ( tmp(1:np_part,2)-tmp(1:np_part,4) )
 
-      !----------------------------------------------------------------------------------------------------------------------------
+      !-----------------------------------------------------------------------------------------------
       ! Riemann-Silberstein vector component 2 calculation:
       tmp = M_z0
       call zderivatives_partial(der, psi(:,1), tmp(:,1), 3, set_bc = .false.)
@@ -647,7 +604,7 @@ contains
       oppsi(1:np_part,2) =   ( tmp(1:np_part,1)-tmp(1:np_part,3) )
       oppsi(1:np_part,5) = - ( tmp(1:np_part,2)-tmp(1:np_part,4) )
 
-      !----------------------------------------------------------------------------------------------------------------------------
+      !-----------------------------------------------------------------------------------------------
       ! Riemann-Silberstein vector component 3 calculation:
       tmp = M_z0
       call zderivatives_partial(der, psi(:,2), tmp(:,1), 1, set_bc = .false.)
@@ -663,19 +620,19 @@ contains
 
       SAFE_DEALLOCATE_A(tmp)
 
-      !----------------------------------------------------------------------------------------------------------------------------
+      !-----------------------------------------------------------------------------------------------
       ! Riemann-Silberstein vector calculation if medium boundaries is set:
       call maxwell_medium_boundaries_calculation(hm, psi, oppsi)
 
-      !----------------------------------------------------------------------------------------------------------------------------
+      !-----------------------------------------------------------------------------------------------
       ! Riemann-Silberstein vector calculation for medium boxes:
       call maxwell_medium_boxes_calculation(hm, der, psi, oppsi)
 
 
-    !==============================================================================================================================
+    !=================================================================================================
     ! Maxwell Hamiltonian - Hamiltonian operation in vacuum with Gauss condition via partial derivatives:
 
-    else if (hm%operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE_GAUSS) then
+    case (FARADAY_AMPERE_GAUSS)
 
       SAFE_ALLOCATE(tmp(np_part,3))
       oppsi       = M_z0
@@ -704,10 +661,10 @@ contains
       SAFE_DEALLOCATE_A(tmp)
 
 
-    !==============================================================================================================================
+    !=================================================================================================
     ! Maxwell Hamiltonian - Hamiltonian operation in medium with Gauss condition via partial derivatives:
 
-    else if (hm%operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE_GAUSS_MEDIUM) then
+    case (FARADAY_AMPERE_GAUSS_MEDIUM)
 
       SAFE_ALLOCATE(tmp(np_part,3))
       oppsi       = M_z0
@@ -755,10 +712,11 @@ contains
 
       SAFE_DEALLOCATE_A(tmp)
 
-    end if
+    end select
 
     POP_SUB(maxwell_hamiltonian_apply_fd)
   end subroutine maxwell_hamiltonian_apply_fd
+
 
   ! ---------------------------------------------------------
   !> Maxwell Hamiltonian is updated for the PML calculation
@@ -772,9 +730,8 @@ contains
 
     PUSH_SUB(maxwell_pml_hamiltonian)
 
-    if ( (hm%bc%bc_ab_type(dir1) == OPTION__MAXWELLABSORBINGBOUNDARIES__CPML) .and. &
-          hm%cpml_hamiltonian ) then
-      if (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RIEMANN_SILBERSTEIN) then
+    if ( (hm%bc%bc_ab_type(dir1) == MXLL_AB_CPML) .and. hm%cpml_hamiltonian ) then
+      if (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RS) then
         call maxwell_pml_calculation_via_riemann_silberstein(hm, der, psi, dir1, dir2, tmp(:))
       end if
     end if
@@ -794,11 +751,10 @@ contains
 
     PUSH_SUB(maxwell_pml_hamiltonian_medium)
 
-    if ( (hm%bc%bc_ab_type(dir1) == OPTION__MAXWELLABSORBINGBOUNDARIES__CPML) .and. &
-          hm%cpml_hamiltonian ) then
-      if (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RIEMANN_SILBERSTEIN) then
+    if ( (hm%bc%bc_ab_type(dir1) == MXLL_AB_CPML) .and. hm%cpml_hamiltonian ) then
+      if (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RS) then
         call maxwell_pml_calculation_via_riemann_silberstein_medium(hm, der, psi, dir1, dir2, tmp(:,:))
-!      else if (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__ELECTRIC_MAGNETIC_FIELDS) then
+!      else if (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__EM) then
 !        call maxwell_pml_calculation_via_e_b_fields_medium(hm, der, psi, dir1, dir2, tmp(:,:))
       end if
     end if
@@ -831,12 +787,12 @@ contains
       SAFE_ALLOCATE(tmp_partial(np_part))
 
       call zderivatives_partial(der, psi(:,field_dir), tmp_partial(:), pml_dir, set_bc = .false.)
-      do ip_in = 1, hm%bc%pml_points_number
-        ip       = hm%bc%pml_points_map(ip_in)
-        pml_c(:) = hm%bc%pml_c(ip_in, :)
-        pml_a(:) = hm%bc%pml_a(ip_in, :)
-        pml_b(:) = hm%bc%pml_b(ip_in, :)
-        pml_g(:) = hm%bc%pml_conv_plus(ip_in, pml_dir,:)
+      do ip_in = 1, hm%bc%pml%points_number
+        ip       = hm%bc%pml%points_map(ip_in)
+        pml_c(1:3) = hm%bc%pml%c(ip_in, 1:3)
+        pml_a(1:3) = hm%bc%pml%a(ip_in, 1:3)
+        pml_b(1:3) = hm%bc%pml%b(ip_in, 1:3)
+        pml_g(1:3) = hm%bc%pml%conv_plus(ip_in, pml_dir, 1:3)
         pml(ip)  = rs_sign * pml_c(pml_dir) * tmp_partial(ip) &
                  + rs_sign * pml_c(pml_dir) * TOFLOAT(pml_a(pml_dir)) * TOFLOAT(tmp_partial(ip)) &
                  + rs_sign * M_zI * pml_c(pml_dir) * aimag(pml_a(pml_dir)) * aimag(tmp_partial(ip)) &
@@ -876,23 +832,23 @@ contains
 
       call zderivatives_partial(der, psi(:,field_dir  ), tmp_partial(:,1), pml_dir, set_bc = .false.)
       call zderivatives_partial(der, psi(:,field_dir+3), tmp_partial(:,2), pml_dir, set_bc = .false.)
-      do ip_in = 1, hm%bc%pml_points_number
-        ip         = hm%bc%pml_points_map(ip_in)
-        pml_c(:)   = hm%bc%pml_c(ip_in, :)
-        pml_a(:)   = hm%bc%pml_a(ip_in, :)
-        pml_b(:)   = hm%bc%pml_b(ip_in, :)
-        pml_g_p(:) = hm%bc%pml_conv_plus(ip_in, pml_dir, :)
-        pml_g_m(:) = hm%bc%pml_conv_minus(ip_in, pml_dir, :)
-        pml(ip,1)  = pml_c(pml_dir) * tmp_partial(ip, 1) &
-                   + pml_c(pml_dir) * TOFLOAT(pml_a(pml_dir)) * TOFLOAT(tmp_partial(ip, 1)) &
-                   + M_zI * pml_c(pml_dir) * aimag(pml_a(pml_dir)) * aimag(tmp_partial(ip, 1)) &
-                   + pml_c(pml_dir) * TOFLOAT(pml_b(pml_dir)) * TOFLOAT(pml_g_p(field_dir)) &
-                   + M_zI * pml_c(pml_dir) * aimag(pml_b(pml_dir)) * aimag(pml_g_p(field_dir))
-        pml(ip,2)  = pml_c(pml_dir) * tmp_partial(ip, 2) &
-                   + pml_c(pml_dir) * TOFLOAT(pml_a(pml_dir)) * TOFLOAT(tmp_partial(ip, 2)) &
-                   + M_zI * pml_c(pml_dir) * aimag(pml_a(pml_dir)) * aimag(tmp_partial(ip, 2)) &
-                   + pml_c(pml_dir) * TOFLOAT(pml_b(pml_dir)) * TOFLOAT(pml_g_m(field_dir)) &
-                   + M_zI * pml_c(pml_dir) * aimag(pml_b(pml_dir)) * aimag(pml_g_m(field_dir))
+      do ip_in = 1, hm%bc%pml%points_number
+        ip         = hm%bc%pml%points_map(ip_in)
+        pml_c(1:3)   = hm%bc%pml%c(ip_in, 1:3)
+        pml_a(1:3)   = hm%bc%pml%a(ip_in, 1:3)
+        pml_b(1:3)   = hm%bc%pml%b(ip_in, 1:3)
+        pml_g_p(1:3) = hm%bc%pml%conv_plus(ip_in, pml_dir, 1:3)
+        pml_g_m(1:3) = hm%bc%pml%conv_minus(ip_in, pml_dir, 1:3)
+        pml(ip, 1)   = pml_c(pml_dir) * tmp_partial(ip, 1) &
+                     + pml_c(pml_dir) * TOFLOAT(pml_a(pml_dir)) * TOFLOAT(tmp_partial(ip, 1)) &
+                     + M_zI * pml_c(pml_dir) * aimag(pml_a(pml_dir)) * aimag(tmp_partial(ip, 1)) &
+                     + pml_c(pml_dir) * TOFLOAT(pml_b(pml_dir)) * TOFLOAT(pml_g_p(field_dir)) &
+                     + M_zI * pml_c(pml_dir) * aimag(pml_b(pml_dir)) * aimag(pml_g_p(field_dir))
+        pml(ip, 2)   = pml_c(pml_dir) * tmp_partial(ip, 2) &
+                     + pml_c(pml_dir) * TOFLOAT(pml_a(pml_dir)) * TOFLOAT(tmp_partial(ip, 2)) &
+                     + M_zI * pml_c(pml_dir) * aimag(pml_a(pml_dir)) * aimag(tmp_partial(ip, 2)) &
+                     + pml_c(pml_dir) * TOFLOAT(pml_b(pml_dir)) * TOFLOAT(pml_g_m(field_dir)) &
+                     + M_zI * pml_c(pml_dir) * aimag(pml_b(pml_dir)) * aimag(pml_g_m(field_dir))
       end do
 
     end if
@@ -917,15 +873,15 @@ contains
     PUSH_SUB(maxwell_medium_boundaries_calculation)
 
     do idim = 1, 3
-      if ( (hm%bc%bc_type(idim) == OPTION__MAXWELLBOUNDARYCONDITIONS__MAXWELL_MEDIUM) .and. &
-           (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RIEMANN_SILBERSTEIN) ) then
-        do ip_in = 1, hm%bc%medium_points_number(idim)
-          ip          = hm%bc%medium_points_map(ip_in, idim)
-          cc          = hm%bc%medium_c(ip_in, idim)/P_c
-          aux_ep(:)   = hm%bc%medium_aux_ep(ip_in, :, idim)
-          aux_mu(:)   = hm%bc%medium_aux_mu(ip_in, :, idim)
-          sigma_e     = hm%bc%medium_sigma_e(ip_in, idim)
-          sigma_m     = hm%bc%medium_sigma_m(ip_in, idim)
+      if ( (hm%bc%bc_type(idim) == MXLL_BC_MEDIUM) .and. &
+           (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RS) ) then
+        do ip_in = 1, hm%bc%mxmedium%points_number(idim)
+          ip          = hm%bc%mxmedium%points_map(ip_in, idim)
+          cc          = hm%bc%mxmedium%c(ip_in, idim)/P_c
+          aux_ep(:)   = hm%bc%mxmedium%aux_ep(ip_in, :, idim)
+          aux_mu(:)   = hm%bc%mxmedium%aux_mu(ip_in, :, idim)
+          sigma_e     = hm%bc%mxmedium%sigma_e(ip_in, idim)
+          sigma_m     = hm%bc%mxmedium%sigma_m(ip_in, idim)
           ff_plus(1)  = psi(ip, 1)
           ff_plus(2)  = psi(ip, 2)
           ff_plus(3)  = psi(ip, 3)
@@ -983,13 +939,13 @@ contains
     np_part = der%mesh%np_part
 
     if (hm%medium_box .and. &
-         (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RIEMANN_SILBERSTEIN) ) then
+         (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RS) ) then
       do il = 1, hm%medium_box_number
         do ip_in = 1, hm%medium_box_points_number(il)
           ip           = hm%medium_box_points_map(ip_in, il)
           cc           = hm%medium_box_c(ip_in,il)/P_c
-          aux_ep(:)    = hm%medium_box_aux_ep(ip_in, :, il)
-          aux_mu(:)    = hm%medium_box_aux_mu(ip_in, :, il)
+          aux_ep(1:3)  = hm%medium_box_aux_ep(ip_in, 1:3, il)
+          aux_mu(1:3)  = hm%medium_box_aux_mu(ip_in, 1:3, il)
           sigma_e      = hm%medium_box_sigma_e(ip_in, il)
           sigma_m      = hm%medium_box_sigma_m(ip_in, il)
           ff_plus(1)   = psi(ip, 1)
@@ -998,8 +954,8 @@ contains
           ff_minus(1)  = psi(ip, 4)
           ff_minus(2)  = psi(ip, 5)
           ff_minus(3)  = psi(ip, 6)
-          aux_ep       = dcross_product(aux_ep,TOFLOAT(ff_plus+ff_minus))
-          aux_mu       = dcross_product(aux_mu,aimag(ff_plus-ff_minus))
+          aux_ep       = dcross_product(aux_ep, TOFLOAT(ff_plus+ff_minus))
+          aux_mu       = dcross_product(aux_mu, aimag(ff_plus-ff_minus))
           oppsi(ip, 1) = oppsi(ip,1)*cc                                          &
                        - cc * aux_ep(1) - cc * M_zI * aux_mu(1)                  &
                        - M_zI * sigma_e * TOFLOAT(ff_plus(1) + ff_minus(1))         &
@@ -1031,102 +987,6 @@ contains
     POP_SUB(maxwell_medium_boxes_calculation)
   end subroutine maxwell_medium_boxes_calculation
 
-  ! ---------------------------------------------------------
-  !> Maxwell Hamiltonian as FFT
-  subroutine maxwell_fft_hamiltonian(hm, k_vec, k_index_x, k_index_y, k_index_z, sigma, hm_matrix)
-    type(hamiltonian_mxll_t), intent(in)    :: hm
-    FLOAT,                    intent(in)    :: k_vec(:,:)
-    integer,                  intent(in)    :: k_index_x
-    integer,                  intent(in)    :: k_index_y
-    integer,                  intent(in)    :: k_index_z
-    FLOAT,                    intent(in)    :: sigma(:)
-    CMPLX,                    intent(inout) :: hm_matrix(:,:)
-
-    FLOAT :: omega
-    CMPLX :: ss(3)
-
-    PUSH_SUB(maxwell_fft_hamiltonian)
-
-    if (hm%operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE) then
-      hm_matrix(:,:) = M_z0
-      if (hm%bc%bc_ab_type(1) == OPTION__MAXWELLABSORBINGBOUNDARIES__CPML) then   ! TODO different directions
-        omega = P_c * sqrt(k_vec(k_index_x, 1)**2 + k_vec(k_index_y, 2)**2 + k_vec(k_index_z, 3)**2)
-        if (omega /= M_ZERO) then
-          ss(:) = M_ONE + sigma(:)/(M_zI*P_ep*omega)
-        else
-          ss(:) = M_ONE
-        end if
-        hm_matrix(1, 1)   =   M_z0
-        hm_matrix(1, 2)   = - M_zI * P_c * k_vec(k_index_z, 3)/ss(3)
-        hm_matrix(1, 3)   =   M_zI * P_c * k_vec(k_index_y, 2)/ss(2)
-        hm_matrix(2, 1)   =   M_zI * P_c * k_vec(k_index_z, 3)/ss(3)
-        hm_matrix(2, 2)   =   M_z0
-        hm_matrix(2, 3)   = - M_zI * P_c * k_vec(k_index_x, 1)/ss(1)
-        hm_matrix(3, 1)   = - M_zI * P_c * k_vec(k_index_y, 2)/ss(2)
-        hm_matrix(3, 2)   =   M_zI * P_c * k_vec(k_index_x, 1)/ss(1)
-        hm_matrix(3, 3)   =   M_z0
-      else
-        hm_matrix(1, 1)   =   M_z0
-        hm_matrix(1, 2)   = - M_zI * P_c * k_vec(k_index_z, 3)
-        hm_matrix(1, 3)   =   M_zI * P_c * k_vec(k_index_y, 2)
-        hm_matrix(2, 1)   =   M_zI * P_c * k_vec(k_index_z, 3)
-        hm_matrix(2, 2)   =   M_z0
-        hm_matrix(2, 3)   = - M_zI * P_c * k_vec(k_index_x, 1)
-        hm_matrix(3, 1)   = - M_zI * P_c * k_vec(k_index_y, 2)
-        hm_matrix(3, 2)   =   M_zI * P_c * k_vec(k_index_x, 1)
-        hm_matrix(3, 3)   =   M_z0
-      end if
-    else if (hm%operator == OPTION__MAXWELLHAMILTONIANOPERATOR__FARADAY_AMPERE_MEDIUM) then
-      if (hm%bc%bc_ab_type(1) == OPTION__MAXWELLABSORBINGBOUNDARIES__CPML) then   ! TODO different directions
-        omega = P_c * sqrt(k_vec(k_index_x, 1)**2 + k_vec(k_index_y, 2)**2 + k_vec(k_index_z, 3)**2)
-        if (omega /= M_ZERO) then
-          ss(:) = M_ONE + sigma(:)/(M_zI*P_ep*omega)
-        else
-          ss(:) = M_ONE
-        end if
-        hm_matrix(1, 1)   =   M_z0
-        hm_matrix(1, 2)   = - M_zI * P_c * k_vec(k_index_z, 3)/ss(3)
-        hm_matrix(1, 3)   =   M_zI * P_c * k_vec(k_index_y, 2)/ss(2)
-        hm_matrix(2, 1)   =   M_zI * P_c * k_vec(k_index_z, 3)/ss(3)
-        hm_matrix(2, 2)   =   M_z0
-        hm_matrix(2, 3)   = - M_zI * P_c * k_vec(k_index_x, 1)/ss(1)
-        hm_matrix(3, 1)   = - M_zI * P_c * k_vec(k_index_y, 2)/ss(2)
-        hm_matrix(3, 2)   =   M_zI * P_c * k_vec(k_index_x, 1)/ss(1)
-        hm_matrix(3, 3)   =   M_z0
-        hm_matrix(4, 4)   =   M_z0
-        hm_matrix(4, 5)   =   M_zI * P_c * k_vec(k_index_z, 3)/ss(3)
-        hm_matrix(4, 6)   = - M_zI * P_c * k_vec(k_index_y, 2)/ss(2)
-        hm_matrix(5, 4)   = - M_zI * P_c * k_vec(k_index_z, 3)/ss(3)
-        hm_matrix(5, 5)   =   M_z0
-        hm_matrix(5, 6)   =   M_zI * P_c * k_vec(k_index_x, 1)/ss(1)
-        hm_matrix(6, 4)   =   M_zI * P_c * k_vec(k_index_y, 2)/ss(2)
-        hm_matrix(6, 5)   = - M_zI * P_c * k_vec(k_index_x, 1)/ss(1)
-        hm_matrix(6, 6)   =   M_z0
-      else
-        hm_matrix(1, 1)   =   M_z0
-        hm_matrix(1, 2)   = - M_zI * P_c * k_vec(k_index_z, 3)
-        hm_matrix(1, 3)   =   M_zI * P_c * k_vec(k_index_y, 2)
-        hm_matrix(2, 1)   =   M_zI * P_c * k_vec(k_index_z, 3)
-        hm_matrix(2, 2)   =   M_z0
-        hm_matrix(2, 3)   = - M_zI * P_c * k_vec(k_index_x, 1)
-        hm_matrix(3, 1)   = - M_zI * P_c * k_vec(k_index_y, 2)
-        hm_matrix(3, 2)   =   M_zI * P_c * k_vec(k_index_x, 1)
-        hm_matrix(3, 3)   =   M_z0
-        hm_matrix(4, 4)   =   M_z0
-        hm_matrix(4, 5)   =   M_zI * P_c * k_vec(k_index_z, 3)
-        hm_matrix(4, 6)   = - M_zI * P_c * k_vec(k_index_y, 2)
-        hm_matrix(5, 4)   = - M_zI * P_c * k_vec(k_index_z, 3)
-        hm_matrix(5, 5)   =   M_z0
-        hm_matrix(5, 6)   =   M_zI * P_c * k_vec(k_index_x, 1)
-        hm_matrix(6, 4)   =   M_zI * P_c * k_vec(k_index_y, 2)
-        hm_matrix(6, 5)   = - M_zI * P_c * k_vec(k_index_x, 1)
-        hm_matrix(6, 6)   =   M_z0
-      end if
-    end if
-
-    POP_SUB(maxwell_fft_hamiltonian)
-  end subroutine maxwell_fft_hamiltonian
-
   !----------------------------------------------------------
   !>  Helmholtz decomposition to calculate a transverse field (maybe should be a general math function)
   subroutine maxwell_helmholtz_decomposition_trans_field(poisson, gr, hm_mxll, hm_elec, st, transverse_field)
@@ -1138,9 +998,6 @@ contains
     CMPLX,                    intent(inout) :: transverse_field(:,:)
 
     integer            :: idim, ip, ip_in
-!    integer            :: rankmin, ip_local, ip_global, ii, jj, kk
-!    FLOAT              :: pos(3), dmin
-!    CMPLX              :: surface_integral(3)
     CMPLX, allocatable :: field_old(:,:), ztmp(:,:), tmp_poisson(:)
 
     PUSH_SUB(maxwell_helmholtz_decomposition_trans_field)
@@ -1156,7 +1013,7 @@ contains
     field_old = transverse_field
     call zderivatives_curl(gr%der, transverse_field(:,:), ztmp(:,:), set_bc = .false.)
     ! Apply poisson equation to solve helmholtz decomposition integral
-    do idim = 1, st%d%dim
+    do idim = 1, st%dim
       call zpoisson_solve(poisson, tmp_poisson(:), ztmp(:, idim), .true.)
       ztmp(1:gr%mesh%np_part, idim) = M_ONE / (M_FOUR * M_PI) * tmp_poisson(1:gr%mesh%np_part)
     end do
@@ -1169,25 +1026,7 @@ contains
     SAFE_DEALLOCATE_A(ztmp)
     SAFE_DEALLOCATE_A(tmp_poisson)
 
-!    ! correction surface integral
-!    if (hm_elec%mx_ma_trans_field_calc_corr) then
-!      call mesh_nearest_point_infos(gr%mesh, hm_elec%mx_ma_coupling_points(:,1), dmin, rankmin, &
-!                                    ip_local, ip_global)
-!      ip_local  = 1
-!      ip_global = 1
-!      do ii = -gr%der%order, gr%der%order
-!        do jj = -gr%der%order, gr%der%order
-!          do kk = -gr%der%order, gr%der%order
-!            pos(1) = gr%mesh%x(ip_local,1) * ii * gr%mesh%spacing(1)
-!            pos(2) = gr%mesh%x(ip_local,2) * jj * gr%mesh%spacing(2)
-!            pos(3) = gr%mesh%x(ip_local,3) * kk * gr%mesh%spacing(3)
-!            call surface_integral_helmholtz_transverse(gr, st, pos, field_old, surface_integral)
-!            transverse_field(ip_local,:) = transverse_field(ip_local,:) - M_ONE / (M_FOUR * M_PI) * surface_integral(:)
-!          end do
-!        end do
-!      end do
-!      pos(:) = gr%mesh%x(ip_local,:)
-!    end if
+    ! here we could add surface integral correction from Renes code
 
     SAFE_DEALLOCATE_A(field_old)
 
@@ -1202,6 +1041,8 @@ contains
     CMPLX,               intent(inout) :: longitudinal_field(:,:)
 
     CMPLX, allocatable :: ztmp(:), tmp_poisson(:)        
+
+    PUSH_SUB(maxwell_helmholtz_decomposition_long_field)
 
     SAFE_ALLOCATE(ztmp(1:gr%mesh%np_part))
     SAFE_ALLOCATE(tmp_poisson(1:gr%mesh%np_part))
@@ -1218,135 +1059,39 @@ contains
     SAFE_DEALLOCATE_A(ztmp)
     SAFE_DEALLOCATE_A(tmp_poisson)
 
+    POP_SUB(maxwell_helmholtz_decomposition_long_field)
+
   end subroutine maxwell_helmholtz_decomposition_long_field
 
   ! ---------------------------------------------------------
-  !> Surface integral of the Helmholtz decomposition to calculate the transverse field
-  !> (maybe should be a general math function)
-  subroutine surface_integral_helmholtz_transverse(gr, st, pos, field, surface_integral)
-    type(grid_t),        intent(in)    :: gr
-    type(states_mxll_t), intent(in)    :: st
-    FLOAT,               intent(in)    :: pos(:) 
-    CMPLX,               intent(in)    :: field(:,:)
-    CMPLX,               intent(inout) :: surface_integral(:)
+  !> Maxwell hamiltonian Magnus (not implemeted)
+  subroutine dhamiltonian_mxll_magnus_apply(hm, namespace, mesh, psib, hpsib, vmagnus, set_phase)
+    class(hamiltonian_mxll_t),   intent(in)    :: hm
+    type(namespace_t),           intent(in)    :: namespace
+    type(mesh_t),                intent(in)    :: mesh
+    class(batch_t),              intent(inout) :: psib
+    class(batch_t),              intent(inout) :: hpsib
+    FLOAT,                       intent(in)    :: vmagnus(:, :, :)
+    logical,           optional, intent(in)    :: set_phase
 
-    integer             :: ip_surf, ix, ix_max, iy, iy_max, iz, iz_max, ii_max
-!    integer             :: idim
-    FLOAT               :: xx(3)
-    CMPLX               :: tmp_sum(3), normal(3)
-    CMPLX,  allocatable :: tmp_global(:,:), tmp_surf(:,:,:,:,:)
+    call messages_not_implemented ('dhamiltonian_mxll_magnus_apply', namespace=namespace)
 
-    SAFE_ALLOCATE(tmp_global(1:gr%mesh%np_part_global,1:st%d%dim))
+  end subroutine dhamiltonian_mxll_magnus_apply
 
-!    if (gr%mesh%parallel_in_domains) then
-!      do idim = 1, st%d%dim
-!#if defined(HAVE_MPI)
-!        call vec_allgather(gr%mesh%vp, tmp_global(:,idim), field(:,idim))
-!        call MPI_Barrieri(gr%mesh%vp%comm, mpi_err)
-!#endif
-!      end do
-!    else
-      tmp_global(:,:) = field(:,:)
-!    end if
+  ! ---------------------------------------------------------
+  !> Maxwell hamiltonian Magnus (not implemeted)
+  subroutine zhamiltonian_mxll_magnus_apply(hm, namespace, mesh, psib, hpsib, vmagnus, set_phase)
+    class(hamiltonian_mxll_t),   intent(in)    :: hm
+    type(namespace_t),           intent(in)    :: namespace
+    type(mesh_t),                intent(in)    :: mesh
+    class(batch_t),              intent(inout) :: psib
+    class(batch_t),              intent(inout) :: hpsib
+    FLOAT,                       intent(in)    :: vmagnus(:, :, :)
+    logical,           optional, intent(in)    :: set_phase
 
-    ix_max = st%surface_grid_rows_number(1)
-    iy_max = st%surface_grid_rows_number(2)
-    iz_max = st%surface_grid_rows_number(3)
-    ii_max = max(ix_max,iy_max,iz_max)
+    call messages_not_implemented ('zhamiltonian_mxll_magnus_apply', namespace=namespace)
 
-    SAFE_ALLOCATE(tmp_surf(1:2,1:st%d%dim,1:ii_max,1:ii_max,1:st%d%dim))
-
-    tmp_surf = M_z0
-    tmp_sum  = M_z0
-
-    do iy = 1, iy_max
-      do iz = 1, iz_max
-        do ip_surf = 1, st%surface_grid_points_number(1,iy,iz)
-          normal    =  M_z0
-          normal(1) = -M_z1
-          xx(:) = gr%mesh%idx%lxyz(st%surface_grid_points_map(1, 1, iy, iz, ip_surf), :) &
-                * gr%mesh%spacing(1:3)
-          tmp_surf(1, 1, iy, iz,:) = tmp_surf(1, 1, iy, iz, :) & 
-             + zcross_product(normal(:), tmp_global(st%surface_grid_points_map(1, 1, iy, iz, ip_surf), :)) &
-             / sqrt( (xx(1) - pos(1))**2 + (xx(2) - pos(2))**2 + (xx(3) - pos(3))**2 )
-          normal    =  M_z0
-          normal(1) = +M_z1
-          xx(:) = gr%mesh%idx%lxyz(st%surface_grid_points_map(2, 1, iy, iz, ip_surf), :) &
-                * gr%mesh%spacing(1:3)
-          tmp_surf(2, 1, iy, iz, :) = tmp_surf(2, 1, iy, iz, :) &
-             + zcross_product(normal(:), tmp_global(st%surface_grid_points_map(2, 1, iy, iz, ip_surf), :)) &
-             / sqrt( (xx(1) - pos(1))**2 + (xx(2) - pos(2))**2 + (xx(3) - pos(3))**2 )
-        end do
-        tmp_surf(1, 1, iy, iz, :) = tmp_surf(1, 1, iy, iz, :) / float(st%surface_grid_points_number(1, iy, iz))
-        tmp_surf(2, 1, iy, iz, :) = tmp_surf(2, 1, iy, iz, :) / float(st%surface_grid_points_number(1, iy, iz))
-      end do
-    end do
-    do iy = 1, iy_max
-      do iz = 1, iz_max
-        tmp_sum(:) = tmp_sum(:) + tmp_surf(1, 1, iy, iz, :) * st%surface_grid_element(:)
-        tmp_sum(:) = tmp_sum(:) + tmp_surf(2, 1, iy, iz, :) * st%surface_grid_element(:)
-      end do
-    end do
-
-    do ix = 1, ix_max
-      do iz = 1, iz_max
-        do ip_surf = 1, st%surface_grid_points_number(2, ix, iz)
-          normal    =  M_z0
-          normal(2) = -M_z1
-          xx(:) = gr%mesh%idx%lxyz(st%surface_grid_points_map(1, 2, ix, iz, ip_surf), :) &
-                * gr%mesh%spacing(1:3)
-          tmp_surf(1, 2, ix, iz, :) = tmp_surf(1, 2, ix, iz, :) &
-             + zcross_product(normal(:), tmp_global(st%surface_grid_points_map(1, 2, ix, iz, ip_surf), :)) &
-             / sqrt( (xx(1) - pos(1))**2 + (xx(2) - pos(2))**2 + (xx(3) - pos(3))**2 )
-          normal    =  M_z0
-          normal(2) =  M_z1
-          xx(:) = gr%mesh%idx%lxyz(st%surface_grid_points_map(2, 2, ix, iz, ip_surf), :) &
-                * gr%mesh%spacing(1:3)
-          tmp_surf(2, 2, ix, iz, :) = tmp_surf(2, 2, ix, iz, :) &
-             + zcross_product(normal(:), tmp_global(st%surface_grid_points_map(2, 2, ix, iz, ip_surf), :)) &
-             / sqrt( (xx(1) - pos(1))**2 + (xx(2) - pos(2))**2 + (xx(3) - pos(3))**2 )
-        end do
-        tmp_surf(1, 2, ix, iz, :) = tmp_surf(1, 2, ix, iz, :) / float(st%surface_grid_points_number(2, ix, iz))
-        tmp_surf(2, 2, ix, iz, :) = tmp_surf(2, 2, ix, iz, :) / float(st%surface_grid_points_number(2, ix, iz))
-      end do
-    end do
-    do ix = 1, ix_max
-      do iz = 1, iz_max
-        tmp_sum(:) = tmp_sum(:) + tmp_surf(1, 2, ix, iz, :) * st%surface_grid_element(:)
-        tmp_sum(:) = tmp_sum(:) + tmp_surf(2, 2, ix, iz, :) * st%surface_grid_element(:)
-      end do
-    end do
-
-    do ix = 1, ix_max
-      do iy = 1, iy_max
-        do ip_surf = 1, st%surface_grid_points_number(3, ix, iy)
-          normal    =  M_z0
-          normal(3) = -M_z1
-          xx(:) = gr%mesh%idx%lxyz(st%surface_grid_points_map(1, 3, ix, iy, ip_surf), :) &
-                * gr%mesh%spacing(1:3)
-          tmp_surf(1, 3, ix, iy, :) = tmp_surf(1, 3, ix, iy, :) &
-             + zcross_product(normal(:),tmp_global(st%surface_grid_points_map(1, 3, ix, iy, ip_surf), :)) &
-             / sqrt( (xx(1) - pos(1))**2 + (xx(2) - pos(2))**2 + (xx(3) - pos(3))**2 )
-          normal    =  M_z0
-          normal(3) =  M_z1
-          xx(:) = gr%mesh%idx%lxyz(st%surface_grid_points_map(2, 3, ix, iy, ip_surf), :) &
-                * gr%mesh%spacing(1:3)
-          tmp_surf(2, 3, ix, iy, :) = tmp_surf(2, 3, ix, iy, :) &
-             + zcross_product(normal(:), tmp_global(st%surface_grid_points_map(2, 3, ix, iy, ip_surf), :)) &
-             / sqrt( (xx(1)-pos(1))**2 + (xx(2)-pos(2))**2 + (xx(3)-pos(3))**2 )
-        end do
-        tmp_surf(1, 3, ix, iy, :) = tmp_surf(1, 3, ix, iy, :) / float(st%surface_grid_points_number(3, ix, iy))
-        tmp_surf(2, 3, ix, iy, :) = tmp_surf(2, 3, ix, iy, :) / float(st%surface_grid_points_number(3, ix, iy))
-      end do
-    end do
-    do ix = 1, ix_max
-      do iy = 1, iy_max
-        tmp_sum(:) = tmp_sum(:) - tmp_surf(1, 3, ix, iy, :) * st%surface_grid_element(:)
-        tmp_sum(:) = tmp_sum(:) + tmp_surf(2, 3, ix, iy, :) * st%surface_grid_element(:)
-      end do
-    end do
-
-  end subroutine surface_integral_helmholtz_transverse
+  end subroutine zhamiltonian_mxll_magnus_apply
 
 end module hamiltonian_mxll_oct_m
 

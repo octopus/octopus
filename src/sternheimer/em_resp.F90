@@ -38,6 +38,7 @@ module em_resp_oct_m
   use mpi_oct_m
   use namespace_oct_m
   use parser_oct_m
+  use pcm_oct_m
   use pert_oct_m
   use profiling_oct_m
   use restart_oct_m
@@ -145,8 +146,16 @@ contains
 
     PUSH_SUB(em_resp_run)
 
+    if (sys%hm%pcm%run_pcm) then
+      call messages_not_implemented("PCM for CalculationMode /= gs or td")
+    end if
+
     gr => sys%gr
     ndim = sys%gr%sb%dim
+
+    if (gr%sb%kpoints%use_symmetries) then
+      call messages_experimental("em_resp with k-points symmetries")
+    end if
 
     if(gr%sb%kpoints%reduced%npoints /= gr%sb%kpoints%full%npoints) then
       call messages_experimental('em_resp with reduced k-grid')

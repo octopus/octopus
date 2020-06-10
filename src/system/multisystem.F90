@@ -31,6 +31,7 @@ module multisystem_oct_m
   use parser_oct_m
   use profiling_oct_m
   use system_abst_oct_m
+  use system_mxll_oct_m
   use system_factory_abst_oct_m
   implicit none
 
@@ -63,7 +64,7 @@ module multisystem_oct_m
     procedure :: store_current_status => multisystem_store_current_status
     procedure :: update_quantity => multisystem_update_quantity
     procedure :: update_exposed_quantity => multisystem_update_exposed_quantity
-    procedure :: set_pointers_to_interaction => multisystem_set_pointers_to_interaction
+    procedure :: copy_quantities_to_interaction => multisystem_copy_quantities_to_interaction
     procedure :: update_interactions_start => multisystem_update_interactions_start
     procedure :: update_interactions_finish => multisystem_update_interactions_finish
     final :: multisystem_finalizer
@@ -103,10 +104,12 @@ contains
     !%Option electronic 1
     !% An electronic system. (NOT IMPLEMENTED)
     !%Option maxwell 2
-    !% A maxwell system. (NOT IMPLEMENTED)
-    !%Option celestial_body 3
-    !% A celestial body. Used for testing purposes only.
-    !%Option multisystem 4
+    !% A maxwell system.
+    !%Option classical_particle 3
+    !% A classical particle. Used for testing purposes only.
+    !%Option charged_particle 4
+    !% A charged classical particle.
+    !%Option multisystem 5
     !% A system containing other systems.
     !%End
     if (parse_block(system%namespace, 'Systems', blk) == 0) then
@@ -572,10 +575,10 @@ contains
   end subroutine multisystem_output_write
 
   ! ---------------------------------------------------------
-  subroutine multisystem_update_quantity(this, iq, clock)
+  subroutine multisystem_update_quantity(this, iq, requested_time)
     class(multisystem_t), intent(inout) :: this
     integer,              intent(in)    :: iq
-    class(clock_t),       intent(in)    :: clock
+    class(clock_t),       intent(in)    :: requested_time
 
     PUSH_SUB(multisystem_update_quantity)
 
@@ -587,33 +590,33 @@ contains
   end subroutine multisystem_update_quantity
 
   ! ---------------------------------------------------------
-  logical function multisystem_update_exposed_quantity(this, iq, clock) result(updated)
+  subroutine multisystem_update_exposed_quantity(this, iq, requested_time)
     class(multisystem_t), intent(inout) :: this
     integer,              intent(in)    :: iq
-    class(clock_t),       intent(in)    :: clock
+    class(clock_t),       intent(in)    :: requested_time
 
     PUSH_SUB(multisystem_update_exposed_quantity)
 
     ! At the moment multitystems cannot expose quantities.
     ! All the quantities are directly exposed by the subsystems
-    updated = .false.
+    ASSERT(.false.)
 
     POP_SUB(multisystem_update_exposed_quantity)
-  end function multisystem_update_exposed_quantity
+  end subroutine multisystem_update_exposed_quantity
 
   ! ---------------------------------------------------------
-  subroutine multisystem_set_pointers_to_interaction(this, inter)
-    class(multisystem_t), target, intent(inout) :: this
-    class(interaction_abst_t),    intent(inout) :: inter
+  subroutine multisystem_copy_quantities_to_interaction(this, interaction)
+    class(multisystem_t),         intent(inout) :: this
+    class(interaction_abst_t),    intent(inout) :: interaction
 
-    PUSH_SUB(multisystem_set_pointers_to_interaction)
+    PUSH_SUB(multisystem_copy_quantities_to_interaction)
 
     ! At the moment multitystems cannot have interations.
     ! All the interactions are directly handled by the subsystems
     ASSERT(.false.)
 
-    POP_SUB(multisystem_set_pointers_to_interaction)
-  end subroutine multisystem_set_pointers_to_interaction
+    POP_SUB(multisystem_copy_quantities_to_interaction)
+  end subroutine multisystem_copy_quantities_to_interaction
 
   ! ---------------------------------------------------------
   subroutine multisystem_update_interactions_start(this)

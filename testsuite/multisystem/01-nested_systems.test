@@ -9,67 +9,68 @@ Processors: 1
 
 Input: 01-nested_systems.01-two_levels.inp
 
-match ; Sun   pos x (t=3 days) ; LINEFIELD(SolarSystem/Sun/td.general/coordinates, -1, 3) ; -6.134351620199e+02
-match ; Sun   pos y (t=3 days) ; LINEFIELD(SolarSystem/Sun/td.general/coordinates, -1, 4) ; -1.134689251424e+02
-match ; Sun   pos z (t=3 days) ; LINEFIELD(SolarSystem/Sun/td.general/coordinates, -1, 5) ;  6.794152425957e-03
-match ; Sun   vel x (t=3 days) ; LINEFIELD(SolarSystem/Sun/td.general/coordinates, -1, 6) ; -4.659195414154e-03
-match ; Sun   vel y (t=3 days) ; LINEFIELD(SolarSystem/Sun/td.general/coordinates, -1, 7) ; -9.039865460789e-04
-match ; Sun   vel z (t=3 days) ; LINEFIELD(SolarSystem/Sun/td.general/coordinates, -1, 8) ;  5.353995554838e-08
-match ; Earth pos x (t=3 days) ; LINEFIELD(SolarSystem/Earth/td.general/coordinates, -1, 3) ; -1.459982809400e+11
-match ; Earth pos y (t=3 days) ; LINEFIELD(SolarSystem/Earth/td.general/coordinates, -1, 4) ; -3.232242026952e+10
-match ; Earth pos z (t=3 days) ; LINEFIELD(SolarSystem/Earth/td.general/coordinates, -1, 5) ;  1.738815874319e+06
-match ; Earth vel x (t=3 days) ; LINEFIELD(SolarSystem/Earth/td.general/coordinates, -1, 6) ;  5.963512670321e+03
-match ; Earth vel y (t=3 days) ; LINEFIELD(SolarSystem/Earth/td.general/coordinates, -1, 7) ; -2.919187562247e+04
-match ; Earth vel z (t=3 days) ; LINEFIELD(SolarSystem/Earth/td.general/coordinates, -1, 8) ;  3.004350138872e-01
-match ; Moon  pos x (t=3 days) ; LINEFIELD(SolarSystem/Moon/td.general/coordinates, -1, 3) ; -1.461278487102e+11
-match ; Moon  pos y (t=3 days) ; LINEFIELD(SolarSystem/Moon/td.general/coordinates, -1, 4) ; -3.196480317618e+10
-match ; Moon  pos z (t=3 days) ; LINEFIELD(SolarSystem/Moon/td.general/coordinates, -1, 5) ;  1.179498535710e+07
-match ; Moon  vel x (t=3 days) ; LINEFIELD(SolarSystem/Moon/td.general/coordinates, -1, 6) ;  5.025449409110e+03
-match ; Moon  vel y (t=3 days) ; LINEFIELD(SolarSystem/Moon/td.general/coordinates, -1, 7) ; -2.960708948803e+04
-match ; Moon  vel z (t=3 days) ; LINEFIELD(SolarSystem/Moon/td.general/coordinates, -1, 8) ;  8.458630158791e+01
+match ; Sun   pos x (t=3 days) ; LINEFIELD(SolarSystem/Sun/td.general/coordinates, -1, 3) ; -5.967762323026e+02
+match ; Sun   pos y (t=3 days) ; LINEFIELD(SolarSystem/Sun/td.general/coordinates, -1, 4) ; -1.102398467344e+02
+match ; Sun   pos z (t=3 days) ; LINEFIELD(SolarSystem/Sun/td.general/coordinates, -1, 5) ;  6.602863769506e-03
+match ; Sun   vel x (t=3 days) ; LINEFIELD(SolarSystem/Sun/td.general/coordinates, -1, 6) ; -4.595759750834e-03
+match ; Sun   vel y (t=3 days) ; LINEFIELD(SolarSystem/Sun/td.general/coordinates, -1, 7) ; -8.899684849550e-04
+match ; Sun   vel z (t=3 days) ; LINEFIELD(SolarSystem/Sun/td.general/coordinates, -1, 8) ;  5.273253873038e-08
+match ; Earth pos x (t=3 days) ; LINEFIELD(SolarSystem/Earth/td.general/coordinates, -1, 3) ; -1.460197121068e+11
+match ; Earth pos y (t=3 days) ; LINEFIELD(SolarSystem/Earth/td.general/coordinates, -1, 4) ; -3.221732099721e+10
+match ; Earth pos z (t=3 days) ; LINEFIELD(SolarSystem/Earth/td.general/coordinates, -1, 5) ;  1.737739657565e+06
+match ; Earth vel x (t=3 days) ; LINEFIELD(SolarSystem/Earth/td.general/coordinates, -1, 6) ;  5.942688628412e+03
+match ; Earth vel y (t=3 days) ; LINEFIELD(SolarSystem/Earth/td.general/coordinates, -1, 7) ; -2.919660169119e+04
+match ; Earth vel z (t=3 days) ; LINEFIELD(SolarSystem/Earth/td.general/coordinates, -1, 8) ;  2.975148046822e-01
+match ; Moon  pos x (t=3 days) ; LINEFIELD(SolarSystem/Moon/td.general/coordinates, -1, 3) ; -1.461458967034e+11
+match ; Moon  pos y (t=3 days) ; LINEFIELD(SolarSystem/Moon/td.general/coordinates, -1, 4) ; -3.185822620852e+10
+match ; Moon  pos z (t=3 days) ; LINEFIELD(SolarSystem/Moon/td.general/coordinates, -1, 5) ;  1.149000011845e+07
+match ; Moon  vel x (t=3 days) ; LINEFIELD(SolarSystem/Moon/td.general/coordinates, -1, 6) ;  5.001258383296e+03
+match ; Moon  vel y (t=3 days) ; LINEFIELD(SolarSystem/Moon/td.general/coordinates, -1, 7) ; -2.960231945802e+04
+match ; Moon  vel z (t=3 days) ; LINEFIELD(SolarSystem/Moon/td.general/coordinates, -1, 8) ;  8.484571535205e+01
 
 
 Input: 01-nested_systems.02-three_levels.inp
 
 # The values for the following matches are the same as above, as the way how the systems are divided into subsystems is equivalent
-match ; Sun   pos x (t=3 days) ; LINEFIELD(SolarSystem/Sun/td.general/coordinates, -1, 3) ; -6.134351620199e+02
-match ; Sun   pos y (t=3 days) ; LINEFIELD(SolarSystem/Sun/td.general/coordinates, -1, 4) ; -1.134689251424e+02
-match ; Sun   pos z (t=3 days) ; LINEFIELD(SolarSystem/Sun/td.general/coordinates, -1, 5) ;  6.794152425957e-03
-match ; Sun   vel x (t=3 days) ; LINEFIELD(SolarSystem/Sun/td.general/coordinates, -1, 6) ; -4.659195414154e-03
-match ; Sun   vel y (t=3 days) ; LINEFIELD(SolarSystem/Sun/td.general/coordinates, -1, 7) ; -9.039865460789e-04
-match ; Sun   vel z (t=3 days) ; LINEFIELD(SolarSystem/Sun/td.general/coordinates, -1, 8) ;  5.353995554838e-08
-match ; Earth pos x (t=3 days) ; LINEFIELD(SolarSystem/Earth/Terra/td.general/coordinates, -1, 3) ; -1.459982809400e+11
-match ; Earth pos y (t=3 days) ; LINEFIELD(SolarSystem/Earth/Terra/td.general/coordinates, -1, 4) ; -3.232242026952e+10
-match ; Earth pos z (t=3 days) ; LINEFIELD(SolarSystem/Earth/Terra/td.general/coordinates, -1, 5) ;  1.738815874319e+06
-match ; Earth vel x (t=3 days) ; LINEFIELD(SolarSystem/Earth/Terra/td.general/coordinates, -1, 6) ;  5.963512670321e+03
-match ; Earth vel y (t=3 days) ; LINEFIELD(SolarSystem/Earth/Terra/td.general/coordinates, -1, 7) ; -2.919187562247e+04
-match ; Earth vel z (t=3 days) ; LINEFIELD(SolarSystem/Earth/Terra/td.general/coordinates, -1, 8) ;  3.004350138872e-01
-match ; Moon  pos x (t=3 days) ; LINEFIELD(SolarSystem/Earth/Luna/td.general/coordinates, -1, 3) ; -1.461278487102e+11
-match ; Moon  pos y (t=3 days) ; LINEFIELD(SolarSystem/Earth/Luna/td.general/coordinates, -1, 4) ; -3.196480317618e+10
-match ; Moon  pos z (t=3 days) ; LINEFIELD(SolarSystem/Earth/Luna/td.general/coordinates, -1, 5) ;  1.179498535710e+07
-match ; Moon  vel x (t=3 days) ; LINEFIELD(SolarSystem/Earth/Luna/td.general/coordinates, -1, 6) ;  5.025449409110e+03
-match ; Moon  vel y (t=3 days) ; LINEFIELD(SolarSystem/Earth/Luna/td.general/coordinates, -1, 7) ; -2.960708948803e+04
-match ; Moon  vel z (t=3 days) ; LINEFIELD(SolarSystem/Earth/Luna/td.general/coordinates, -1, 8) ;  8.458630158791e+01
+match ; Sun   pos x (t=3 days) ; LINEFIELD(SolarSystem/Sun/td.general/coordinates, -1, 3) ; -5.967762323026e+02
+match ; Sun   pos y (t=3 days) ; LINEFIELD(SolarSystem/Sun/td.general/coordinates, -1, 4) ; -1.102398467344e+02
+match ; Sun   pos z (t=3 days) ; LINEFIELD(SolarSystem/Sun/td.general/coordinates, -1, 5) ;  6.602863769506e-03
+match ; Sun   vel x (t=3 days) ; LINEFIELD(SolarSystem/Sun/td.general/coordinates, -1, 6) ; -4.595759750834e-03
+match ; Sun   vel y (t=3 days) ; LINEFIELD(SolarSystem/Sun/td.general/coordinates, -1, 7) ; -8.899684849550e-04
+match ; Sun   vel z (t=3 days) ; LINEFIELD(SolarSystem/Sun/td.general/coordinates, -1, 8) ;  5.273253873038e-08
+match ; Earth pos x (t=3 days) ; LINEFIELD(SolarSystem/Earth/Terra/td.general/coordinates, -1, 3) ; -1.460197121068e+11
+match ; Earth pos y (t=3 days) ; LINEFIELD(SolarSystem/Earth/Terra/td.general/coordinates, -1, 4) ; -3.221732099721e+10
+match ; Earth pos z (t=3 days) ; LINEFIELD(SolarSystem/Earth/Terra/td.general/coordinates, -1, 5) ;  1.737739657565e+06
+match ; Earth vel x (t=3 days) ; LINEFIELD(SolarSystem/Earth/Terra/td.general/coordinates, -1, 6) ;  5.942688628412e+03
+match ; Earth vel y (t=3 days) ; LINEFIELD(SolarSystem/Earth/Terra/td.general/coordinates, -1, 7) ; -2.919660169119e+04
+match ; Earth vel z (t=3 days) ; LINEFIELD(SolarSystem/Earth/Terra/td.general/coordinates, -1, 8) ;  2.975148046822e-01
+match ; Moon  pos x (t=3 days) ; LINEFIELD(SolarSystem/Earth/Luna/td.general/coordinates, -1, 3) ; -1.461458967034e+11
+match ; Moon  pos y (t=3 days) ; LINEFIELD(SolarSystem/Earth/Luna/td.general/coordinates, -1, 4) ; -3.185822620852e+10
+match ; Moon  pos z (t=3 days) ; LINEFIELD(SolarSystem/Earth/Luna/td.general/coordinates, -1, 5) ;  1.149000011845e+07
+match ; Moon  vel x (t=3 days) ; LINEFIELD(SolarSystem/Earth/Luna/td.general/coordinates, -1, 6) ;  5.001258383296e+03
+match ; Moon  vel y (t=3 days) ; LINEFIELD(SolarSystem/Earth/Luna/td.general/coordinates, -1, 7) ; -2.960231945802e+04
+match ; Moon  vel z (t=3 days) ; LINEFIELD(SolarSystem/Earth/Luna/td.general/coordinates, -1, 8) ;  8.484571535205e+01
 
 
 Input: 01-nested_systems.03-four_levels.inp
 
 # The values for the following matches are the same as above, as the way how the systems are divided into subsystems is equivalent
-match ; Sun   pos x (t=3 days) ; LINEFIELD(MilkyWay/SolarSystem/Sun/td.general/coordinates, -1, 3) ; -6.134351620199e+02
-match ; Sun   pos y (t=3 days) ; LINEFIELD(MilkyWay/SolarSystem/Sun/td.general/coordinates, -1, 4) ; -1.134689251424e+02
-match ; Sun   pos z (t=3 days) ; LINEFIELD(MilkyWay/SolarSystem/Sun/td.general/coordinates, -1, 5) ;  6.794152425957e-03
-match ; Sun   vel x (t=3 days) ; LINEFIELD(MilkyWay/SolarSystem/Sun/td.general/coordinates, -1, 6) ; -4.659195414154e-03
-match ; Sun   vel y (t=3 days) ; LINEFIELD(MilkyWay/SolarSystem/Sun/td.general/coordinates, -1, 7) ; -9.039865460789e-04
-match ; Sun   vel z (t=3 days) ; LINEFIELD(MilkyWay/SolarSystem/Sun/td.general/coordinates, -1, 8) ;  5.353995554838e-08
-match ; Earth pos x (t=3 days) ; LINEFIELD(MilkyWay/SolarSystem/Earth/Terra/td.general/coordinates, -1, 3) ; -1.459982809400e+11
-match ; Earth pos y (t=3 days) ; LINEFIELD(MilkyWay/SolarSystem/Earth/Terra/td.general/coordinates, -1, 4) ; -3.232242026952e+10
-match ; Earth pos z (t=3 days) ; LINEFIELD(MilkyWay/SolarSystem/Earth/Terra/td.general/coordinates, -1, 5) ;  1.738815874319e+06
-match ; Earth vel x (t=3 days) ; LINEFIELD(MilkyWay/SolarSystem/Earth/Terra/td.general/coordinates, -1, 6) ;  5.963512670321e+03
-match ; Earth vel y (t=3 days) ; LINEFIELD(MilkyWay/SolarSystem/Earth/Terra/td.general/coordinates, -1, 7) ; -2.919187562247e+04
-match ; Earth vel z (t=3 days) ; LINEFIELD(MilkyWay/SolarSystem/Earth/Terra/td.general/coordinates, -1, 8) ;  3.004350138872e-01
-match ; Moon  pos x (t=3 days) ; LINEFIELD(MilkyWay/SolarSystem/Earth/Luna/td.general/coordinates, -1, 3) ; -1.461278487102e+11
-match ; Moon  pos y (t=3 days) ; LINEFIELD(MilkyWay/SolarSystem/Earth/Luna/td.general/coordinates, -1, 4) ; -3.196480317618e+10
-match ; Moon  pos z (t=3 days) ; LINEFIELD(MilkyWay/SolarSystem/Earth/Luna/td.general/coordinates, -1, 5) ;  1.179498535710e+07
-match ; Moon  vel x (t=3 days) ; LINEFIELD(MilkyWay/SolarSystem/Earth/Luna/td.general/coordinates, -1, 6) ;  5.025449409110e+03
-match ; Moon  vel y (t=3 days) ; LINEFIELD(MilkyWay/SolarSystem/Earth/Luna/td.general/coordinates, -1, 7) ; -2.960708948803e+04
-match ; Moon  vel z (t=3 days) ; LINEFIELD(MilkyWay/SolarSystem/Earth/Luna/td.general/coordinates, -1, 8) ;  8.458630158791e+01
+match ; Sun   pos x (t=3 days) ; LINEFIELD(MilkyWay/SolarSystem/Sun/td.general/coordinates, -1, 3) ; -5.967762323026e+02
+match ; Sun   pos y (t=3 days) ; LINEFIELD(MilkyWay/SolarSystem/Sun/td.general/coordinates, -1, 4) ; -1.102398467344e+02
+match ; Sun   pos z (t=3 days) ; LINEFIELD(MilkyWay/SolarSystem/Sun/td.general/coordinates, -1, 5) ;  6.602863769506e-03
+match ; Sun   vel x (t=3 days) ; LINEFIELD(MilkyWay/SolarSystem/Sun/td.general/coordinates, -1, 6) ; -4.595759750834e-03
+match ; Sun   vel y (t=3 days) ; LINEFIELD(MilkyWay/SolarSystem/Sun/td.general/coordinates, -1, 7) ; -8.899684849550e-04
+match ; Sun   vel z (t=3 days) ; LINEFIELD(MilkyWay/SolarSystem/Sun/td.general/coordinates, -1, 8) ;  5.273253873038e-08
+match ; Earth pos x (t=3 days) ; LINEFIELD(MilkyWay/SolarSystem/Earth/Terra/td.general/coordinates, -1, 3) ; -1.460197121068e+11
+match ; Earth pos y (t=3 days) ; LINEFIELD(MilkyWay/SolarSystem/Earth/Terra/td.general/coordinates, -1, 4) ; -3.221732099721e+10
+match ; Earth pos z (t=3 days) ; LINEFIELD(MilkyWay/SolarSystem/Earth/Terra/td.general/coordinates, -1, 5) ;  1.737739657565e+06
+match ; Earth vel x (t=3 days) ; LINEFIELD(MilkyWay/SolarSystem/Earth/Terra/td.general/coordinates, -1, 6) ;  5.942688628412e+03
+match ; Earth vel y (t=3 days) ; LINEFIELD(MilkyWay/SolarSystem/Earth/Terra/td.general/coordinates, -1, 7) ; -2.919660169119e+04
+match ; Earth vel z (t=3 days) ; LINEFIELD(MilkyWay/SolarSystem/Earth/Terra/td.general/coordinates, -1, 8) ;  2.975148046822e-01
+match ; Moon  pos x (t=3 days) ; LINEFIELD(MilkyWay/SolarSystem/Earth/Luna/td.general/coordinates, -1, 3) ; -1.461458967034e+11
+match ; Moon  pos y (t=3 days) ; LINEFIELD(MilkyWay/SolarSystem/Earth/Luna/td.general/coordinates, -1, 4) ; -3.185822620852e+10
+match ; Moon  pos z (t=3 days) ; LINEFIELD(MilkyWay/SolarSystem/Earth/Luna/td.general/coordinates, -1, 5) ;  1.149000011845e+07
+match ; Moon  vel x (t=3 days) ; LINEFIELD(MilkyWay/SolarSystem/Earth/Luna/td.general/coordinates, -1, 6) ;  5.001258383296e+03
+match ; Moon  vel y (t=3 days) ; LINEFIELD(MilkyWay/SolarSystem/Earth/Luna/td.general/coordinates, -1, 7) ; -2.960231945802e+04
+match ; Moon  vel z (t=3 days) ; LINEFIELD(MilkyWay/SolarSystem/Earth/Luna/td.general/coordinates, -1, 8) ;  8.484571535205e+01
+

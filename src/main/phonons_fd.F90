@@ -59,6 +59,10 @@ contains
 
     PUSH_SUB(phonons_run)
 
+    if (sys%hm%pcm%run_pcm) then
+      call messages_not_implemented("PCM for CalculationMode /= gs or td")
+    end if
+
     ! Why not? The symmetries are computed only for the unperturbed geometry,
     ! and are not valid when the atoms are displaced.
     ! FIXME: implement instead use of symmetry over dynamical matrix to make things more efficient.

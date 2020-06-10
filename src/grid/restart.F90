@@ -131,7 +131,9 @@ module restart_oct_m
                                 RESTART_CASIDA     =  9,  &
                                 RESTART_OCT        =  10, &
                                 RESTART_PARTITION  =  11, &
-                                RESTART_PROJ       =  12
+                                RESTART_PROJ       =  12, &
+                                RESTART_MAXWELL    =  13, &
+                                RESTART_TD_MAXWELL =  14
 
   integer, parameter :: RESTART_N_DATA_TYPES = 12
 

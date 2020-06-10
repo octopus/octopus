@@ -12,6 +12,7 @@ EigenSolver = rmmdiis
 
 LCAOAlternative = yes
 LCAOExtraOrbitals = yes
+LCAOStart = lcao_full
 
 ConvRelDens = 2e-6
 

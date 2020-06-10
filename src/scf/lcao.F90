@@ -175,7 +175,7 @@ contains
 
     ! The initial LCAO calculation is done by default if we have species representing atoms.
     ! Otherwise, it is not the default value and has to be enforced in the input file.
-    mode_default = OPTION__LCAOSTART__LCAO_FULL
+    mode_default = OPTION__LCAOSTART__LCAO_STATES
     if(geo%only_user_def) mode_default = OPTION__LCAOSTART__LCAO_NONE
     
     !%Variable LCAOStart
@@ -187,7 +187,7 @@ contains
     !% These can provide <tt>Octopus</tt> with a good set
     !% of initial wavefunctions and with a new guess for the density.
     !% (Up to the current version, only a minimal basis set is used.)
-    !% The default is <tt>lcao_full</tt> if at least one species representing an atom is present.
+    !% The default is <tt>lcao_states</tt> if at least one species representing an atom is present.
     !% The default is <tt>lcao_none</tt> if all species are <tt>species_user_defined</tt>,
     !% <tt>species_charge_density</tt>, <tt>species_from_file</tt>, or <tt>species_jellium_slab</tt>.
     !%

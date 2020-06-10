@@ -84,6 +84,7 @@ subroutine X(xc_oep_calc)(oep, namespace, xcs, apply_sic_pz, gr, hm, st, ex, ec,
     if(apply_sic_pz) then
       call X(oep_sic) (xcs, gr, hm%psolver, namespace, st, is, oep, ex, ec)
     end if
+
     ! calculate uxc_bar for the occupied states
 
     SAFE_ALLOCATE(psi(1:gr%mesh%np))
@@ -91,7 +92,7 @@ subroutine X(xc_oep_calc)(oep, namespace, xcs, apply_sic_pz, gr, hm, st, ex, ec,
     oep%uxc_bar(:, is) = M_ZERO
     do ist = st%st_start, st%st_end
       call states_elec_get_state(st, gr%mesh, idm, ist, isp, psi)
-      oep%uxc_bar(ist, is) = R_REAL(X(mf_dotp)(gr%mesh, R_CONJ(psi), oep%X(lxc)(1:gr%mesh%np, ist, is), reduce = .false.))
+      oep%uxc_bar(ist, is) = R_REAL(X(mf_dotp)(gr%mesh, psi, oep%X(lxc)(1:gr%mesh%np, ist, is), reduce = .false., dotu = .true.))
     end do
     if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm, oep%uxc_bar(1:st%st_end, is), dim = st%st_end)
 

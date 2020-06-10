@@ -34,6 +34,7 @@ module geom_opt_oct_m
   use mpi_oct_m
   use namespace_oct_m
   use parser_oct_m
+  use pcm_oct_m
   use profiling_oct_m
   use read_coords_oct_m
   use restart_oct_m
@@ -103,8 +104,15 @@ contains
 
     PUSH_SUB(geom_opt_run)
 
+    if (sys%hm%pcm%run_pcm) then
+      call messages_not_implemented("PCM for CalculationMode /= gs or td")
+    end if
+
+    if (sys%gr%sb%kpoints%use_symmetries) then
+      call messages_experimental("KPoints symmetries with CalculationMode = go")
+    end if
+
     call init_(fromscratch)
-    
 
     ! load wavefunctions
     if(.not. fromscratch) then

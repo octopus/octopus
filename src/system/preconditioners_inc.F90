@@ -103,9 +103,9 @@ contains
 
     PUSH_SUB(X(preconditioner_apply).multigrid)
 
-    mesh0 => gr%mgrid_prec%level(0)%mesh
-    mesh1 => gr%mgrid_prec%level(1)%mesh
-    mesh2 => gr%mgrid_prec%level(2)%mesh
+    mesh0 => pre%mgrid%level(0)%mesh
+    mesh1 => pre%mgrid%level(1)%mesh
+    mesh2 => pre%mgrid%level(2)%mesh
 
     SAFE_ALLOCATE(r0(1:mesh0%np_part))
     SAFE_ALLOCATE(d0(1:mesh0%np_part))
@@ -136,8 +136,8 @@ contains
 
 
       ! move to level  1
-      call X(multigrid_fine2coarse)(gr%mgrid_prec%level(1)%tt, gr%mgrid_prec%level(0)%der, &
-        gr%mgrid_prec%level(1)%mesh, a(:,idim), r1, FULLWEIGHT)
+      call X(multigrid_fine2coarse)(pre%mgrid%level(1)%tt, pre%mgrid%level(0)%der, &
+        pre%mgrid%level(1)%mesh, a(:,idim), r1, FULLWEIGHT)
       ! r1 has the opposite sign of r2 to avoid an unnecessary operation in the first step
 
       do ip = 1, mesh1%np
@@ -146,7 +146,7 @@ contains
 
       ! pre-smoothing
       do j = 1, pre%npre
-        call X(derivatives_lapl)(gr%mgrid_prec%level(1)%der, d1, q1)
+        call X(derivatives_lapl)(pre%mgrid%level(1)%der, d1, q1)
 
         do ip = 1, mesh1%np
           q1(ip) = CNST(-0.5)*q1(ip) + r1(ip)
@@ -154,14 +154,14 @@ contains
         end do
       end do
 
-      call X(derivatives_lapl)(gr%mgrid_prec%level(1)%der, d1, q1)
+      call X(derivatives_lapl)(pre%mgrid%level(1)%der, d1, q1)
 
       call lalg_axpy(mesh1%np, -M_HALF, q1, r1)
 
 
       ! move to level  2
-      call X(multigrid_fine2coarse)(gr%mgrid_prec%level(2)%tt, gr%mgrid_prec%level(1)%der, &
-        gr%mgrid_prec%level(2)%mesh, q1, r2, FULLWEIGHT)
+      call X(multigrid_fine2coarse)(pre%mgrid%level(2)%tt, pre%mgrid%level(1)%der, &
+        pre%mgrid%level(2)%mesh, q1, r2, FULLWEIGHT)
 
       do ip = 1, mesh2%np
         d2(ip) = CNST(16.0)*step*r2(ip)
@@ -169,7 +169,7 @@ contains
 
       ! Jacobi steps on coarsest grid
       do j = 1, pre%nmiddle
-        call X(derivatives_lapl)(gr%mgrid_prec%level(2)%der, d2, q2)
+        call X(derivatives_lapl)(pre%mgrid%level(2)%der, d2, q2)
 
         do ip = 1, mesh2%np
           q2(ip) = CNST(-0.5)*q2(ip) - r2(ip)
@@ -178,8 +178,8 @@ contains
       end do
 
       ! back to level 1
-      call X(multigrid_coarse2fine)(gr%mgrid_prec%level(2)%tt, gr%mgrid_prec%level(2)%der, &
-        gr%mgrid_prec%level(1)%mesh, d2, t1)
+      call X(multigrid_coarse2fine)(pre%mgrid%level(2)%tt, pre%mgrid%level(2)%der, &
+        pre%mgrid%level(1)%mesh, d2, t1)
 
       do ip = 1, mesh1%np
         d1(ip) = d1(ip) - t1(ip)
@@ -187,7 +187,7 @@ contains
 
       ! post-smoothing
       do j = 1, pre%npost
-        call X(derivatives_lapl)(gr%mgrid_prec%level(1)%der, d1, q1)
+        call X(derivatives_lapl)(pre%mgrid%level(1)%der, d1, q1)
 
         do ip = 1, mesh1%np
           q1(ip) = CNST(-0.5)*q1(ip) + r1(ip)
@@ -196,8 +196,8 @@ contains
       end do
 
       ! and finally back to level 0
-      call X(multigrid_coarse2fine)(gr%mgrid_prec%level(1)%tt ,gr%mgrid_prec%level(1)%der, &
-        gr%mgrid_prec%level(0)%mesh, d1, q0)
+      call X(multigrid_coarse2fine)(pre%mgrid%level(1)%tt ,pre%mgrid%level(1)%der, &
+        pre%mgrid%level(0)%mesh, d1, q0)
 
       do ip = 1, mesh0%np
          d0(ip) = - q0(ip)
@@ -205,7 +205,7 @@ contains
 
       ! post-smoothing
       do j = 1, pre%npost
-        call X(derivatives_lapl)(gr%mgrid_prec%level(0)%der, d0, q0)
+        call X(derivatives_lapl)(pre%mgrid%level(0)%der, d0, q0)
 
         do ip = 1, mesh0%np
           q0(ip) = CNST(-0.5)*q0(ip) - a(ip, idim)

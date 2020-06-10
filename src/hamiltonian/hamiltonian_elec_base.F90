@@ -104,6 +104,7 @@ module hamiltonian_elec_base_oct_m
     FLOAT,                    allocatable, public :: vector_potential(:, :)
     integer,                               public :: nprojector_matrices
     logical,                               public :: apply_projector_matrices
+    logical,                               public :: has_non_local_potential
     integer                                       :: full_projection_size
     integer,                               public :: max_npoints
     integer,                               public :: total_points
@@ -176,6 +177,7 @@ contains
     this%rashba_coupling = rashba_coupling
 
     this%apply_projector_matrices = .false.
+    this%has_non_local_potential = .false.
     this%nprojector_matrices = 0
 
     nullify(this%spin)
@@ -459,11 +461,22 @@ contains
     ! count projectors
     this%nprojector_matrices = 0
     this%apply_projector_matrices = .false.
+    this%has_non_local_potential = .false.
     this%nregions = nregion
 
+    !We determine if we have only local potential or not.
     do iorder = 1, epot%natoms
       iatom = order(iorder)
 
+      if(.not. projector_is_null(epot%proj(iatom))) then
+        this%has_non_local_potential = .true.
+        exit
+      end if
+    end do
+
+    do iorder = 1, epot%natoms
+      iatom = order(iorder)
+  
       if(projector_is(epot%proj(iatom), PROJ_KB) .or. projector_is(epot%proj(iatom), PROJ_HGH)) then
         INCR(this%nprojector_matrices, 1)
         this%apply_projector_matrices = .true.

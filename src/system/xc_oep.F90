@@ -23,6 +23,7 @@ module xc_oep_oct_m
   use comm_oct_m
   use derivatives_oct_m
   use exchange_operator_oct_m
+  use geometry_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_elec_oct_m
@@ -34,6 +35,7 @@ module xc_oep_oct_m
   use mesh_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use multicomm_oct_m
   use namespace_oct_m
   use parser_oct_m
   use photon_mode_oct_m
@@ -104,12 +106,14 @@ module xc_oep_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine xc_oep_init(oep, namespace, family, gr, st)
+  subroutine xc_oep_init(oep, namespace, family, gr, st, geo, mc)
     type(xc_oep_t),      intent(out)   :: oep
     type(namespace_t),   intent(in)    :: namespace
     integer,             intent(in)    :: family
     type(grid_t),        intent(inout) :: gr
     type(states_elec_t), intent(in)    :: st
+    type(geometry_t),    intent(in)    :: geo
+    type(multicomm_t),   intent(in)    :: mc
 
     PUSH_SUB(xc_oep_init)
 
@@ -236,7 +240,7 @@ contains
       ! when performing full OEP, we need to solve a linear equation
       if((oep%level == XC_OEP_FULL).or.(oep%has_photons)) then 
         call scf_tol_init(oep%scftol, namespace, st%qtot, def_maximumiter=10)
-        call linear_solver_init(oep%solver, namespace, gr, states_are_real(st))
+        call linear_solver_init(oep%solver, namespace, gr, states_are_real(st), geo, mc)
         call lr_init(oep%lr)
         if(oep%has_photons) then
           call lr_init(oep%photon_lr)

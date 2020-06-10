@@ -81,6 +81,10 @@ module current_oct_m
     CURRENT_GRADIENT_CORR      = 2,       &
     CURRENT_HAMILTONIAN        = 3
 
+  integer, parameter, public ::           &
+    EXTERNAL_CURRENT_PARSER      = 0,     &
+    EXTERNAL_CURRENT_TD_FUNCTION = 1
+
 contains
 
   subroutine current_init(this, namespace)
@@ -800,16 +804,16 @@ contains
     !% Example:
     !%
     !% <tt>%UserDefinedMaxwellExternalCurrent
-    !% <br>&nbsp;&nbsp; external_current_parser      | "expression_x_dir1" | "expression_y_dir1" | "expression_z_dir1" 
-    !% <br>&nbsp;&nbsp; external_current_parser      | "expression_x_dir2" | "expression_y_dir2" | "expression_z_dir2" 
-    !% <br>&nbsp;&nbsp; external_current_td_function | "amplitude_j0_x"    | "amplitude_j0_y"    | "amplitude_j0_z"    | omega   | envelope_td_function_name | phase
+    !% <br>&nbsp;&nbsp; current_parser      | "expression_x_dir1" | "expression_y_dir1" | "expression_z_dir1"
+    !% <br>&nbsp;&nbsp; current_parser      | "expression_x_dir2" | "expression_y_dir2" | "expression_z_dir2"
+    !% <br>&nbsp;&nbsp; current_td_function | "amplitude_j0_x"    | "amplitude_j0_y"    | "amplitude_j0_z"    | omega   | envelope_td_function_name | phase
     !% <br>%</tt>
     !%
     !% Description about UserDefinedMaxwellExternalCurrent follows
     !%
-    !%Option external_current_parser 0
+    !%Option current_parser 0
     !% description follows
-    !%Option external_current_td_function 1
+    !%Option current_td_function 1
     !% description follows
     !%End
 
@@ -838,23 +842,23 @@ contains
 
         call parse_block_integer(blk, il - 1, 0, st%external_current_modus(il))
 
-        if (st%external_current_modus(il) == OPTION__USERDEFINEDMAXWELLEXTERNALCURRENT__EXTERNAL_CURRENT_PARSER) then
+        if (st%external_current_modus(il) == EXTERNAL_CURRENT_PARSER) then
           ! parse formula string
-          do idir = 1, st%d%dim
+          do idir = 1, st%dim
             call parse_block_string(blk, il - 1, idir, st%external_current_string(idir, il))
             call conv_to_C_string(st%external_current_string(idir, il))
           end do
-        else if (st%external_current_modus(il) == OPTION__USERDEFINEDMAXWELLEXTERNALCURRENT__EXTERNAL_CURRENT_TD_FUNCTION) then
+        else if (st%external_current_modus(il) == EXTERNAL_CURRENT_TD_FUNCTION) then
           do ip = 1, mesh%np
             call mesh_r(mesh, ip, rr, coords = xx)
-            do idir = 1, st%d%dim
+            do idir = 1, st%dim
               call parse_block_string(blk, il - 1, idir, st%external_current_string(idir, il))
               call conv_to_C_string(st%external_current_string(idir, il))
-              call parse_expression(j_vector(idir), dummy(idir), st%d%dim, xx, rr, M_ZERO, &
+              call parse_expression(j_vector(idir), dummy(idir), st%dim, xx, rr, M_ZERO, &
                 st%external_current_string(idir, il))
               j_vector(idir) = units_to_atomic(units_inp%energy/(units_inp%length**2), j_vector(idir))
             end do
-            st%external_current_amplitude(ip, 1:st%d%dim, il) = j_vector(1:st%d%dim)
+            st%external_current_amplitude(ip, 1:st%dim, il) = j_vector(1:st%dim)
           end do
           call parse_block_float(blk, il-1, 4, omega, unit_one/units_inp%time)
           st%external_current_omega(il) = omega
@@ -893,24 +897,24 @@ contains
 
     current(:,:) = M_ZERO
     do jn = 1, st%external_current_number
-      if (st%external_current_modus(jn) == OPTION__USERDEFINEDMAXWELLEXTERNALCURRENT__EXTERNAL_CURRENT_PARSER) then
+      if (st%external_current_modus(jn) == EXTERNAL_CURRENT_PARSER) then
         do ip = 1, mesh%np
           call mesh_r(mesh, ip, rr, coords = xx)
-          do idir = 1, st%d%dim
+          do idir = 1, st%dim
             tt = time
-            call parse_expression(j_vector(idir), dummy(idir), st%d%dim, xx, rr, tt, &
+            call parse_expression(j_vector(idir), dummy(idir), st%dim, xx, rr, tt, &
               & trim(st%external_current_string(idir,jn)))
             j_vector(idir) = units_to_atomic(units_inp%energy/(units_inp%length**2), j_vector(idir))
           end do
-          current(ip, 1:st%d%dim) = current(ip, 1:st%d%dim) + j_vector(1:st%d%dim)
+          current(ip, 1:st%dim) = current(ip, 1:st%dim) + j_vector(1:st%dim)
         end do
 
-      else if(st%external_current_modus(jn) == OPTION__USERDEFINEDMAXWELLEXTERNALCURRENT__EXTERNAL_CURRENT_TD_FUNCTION) then
+      else if(st%external_current_modus(jn) == EXTERNAL_CURRENT_TD_FUNCTION) then
         do ip = 1, mesh%np
           exp_arg = st%external_current_omega(jn) * time + tdf(st%external_current_td_phase(jn),time)
-          amp(1:st%d%dim) = st%external_current_amplitude(ip, 1:st%d%dim, jn)*tdf(st%external_current_td_function(jn), time)
-          j_vector(1:st%d%dim) = TOFLOAT(amp(1:st%d%dim) * exp(-M_zI*exp_arg))
-          current(ip, 1:st%d%dim) = current(ip, 1:st%d%dim) + j_vector(1:st%d%dim)
+          amp(1:st%dim) = st%external_current_amplitude(ip, 1:st%dim, jn)*tdf(st%external_current_td_function(jn), time)
+          j_vector(1:st%dim) = TOFLOAT(amp(1:st%dim) * exp(-M_zI*exp_arg))
+          current(ip, 1:st%dim) = current(ip, 1:st%dim) + j_vector(1:st%dim)
         end do
       end if
     end do

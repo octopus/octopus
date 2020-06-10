@@ -22,7 +22,8 @@ module td_oct_m
   use boundaries_oct_m
   use boundary_op_oct_m
   use calc_mode_par_oct_m
-  use celestial_body_oct_m
+  use current_oct_m
+  use classical_particle_oct_m
   use density_oct_m
   use energy_calc_oct_m
   use epot_oct_m
@@ -41,6 +42,7 @@ module td_oct_m
   use lda_u_io_oct_m
   use linked_list_oct_m
   use loct_oct_m
+  use maxwell_boundary_op_oct_m
   use messages_oct_m
   use modelmb_exchange_syms_oct_m
   use mpi_oct_m
@@ -127,15 +129,32 @@ contains
   ! ---------------------------------------------------------
 
   subroutine td_init(td, sys)
-    type(td_t),            intent(inout) :: td
-    type(system_t),        intent(inout) :: sys
+    type(td_t),       intent(inout) :: td
+    type(system_t),   intent(inout) :: sys
 
     integer :: default
     FLOAT   :: spacing, default_dt, propagation_time
 
     PUSH_SUB(td_init)
 
+    if (sys%hm%pcm%run_pcm) call messages_experimental("PCM for CalculationMode = td")
+
+    if(sys%gr%sb%kpoints%use_symmetries) call messages_experimental("KPoints symmetries with CalculationMode = td")
+
     call ion_dynamics_init(td%ions, sys%namespace, sys%geo)
+
+    if(ion_dynamics_ions_move(td%ions)) then
+      if(sys%gr%sb%kpoints%use_symmetries) then
+        message(1) = "KPoints symmetries cannot be used with moving ions."
+        message(2) = "Please set KPointsSymmetries = no."
+        call messages_fatal(2, namespace=sys%namespace)
+      end if
+      if(sys%st%symmetrize_density) then
+        message(1) = "Symmetrization of the density cannot be used with moving ions."
+        message(2) = "Please set SymmetrizeDensity = no."
+        call messages_fatal(2, namespace=sys%namespace)
+      end if
+    end if
 
     td%iter = 0
 
@@ -171,11 +190,12 @@ contains
     call parse_variable(sys%namespace, 'TDIonicTimeScale', CNST(1.0), td%mu)
 
     if (td%mu <= M_ZERO) then
-      write(message(1),'(a)') 'Input: TDIonicTimeScale must be positive.'
-      call messages_fatal(1, namespace=sys%namespace)
+       write(message(1),'(a)') 'Input: TDIonicTimeScale must be positive.'
+       call messages_fatal(1)
     end if
 
     call messages_print_var_value(stdout, 'TDIonicTimeScale', td%mu)
+
 
     !%Variable TDTimeStep
     !%Type float
@@ -200,17 +220,16 @@ contains
     call parse_variable(sys%namespace, 'TDTimeStep', default_dt, td%dt, unit = units_inp%time)
 
     if (td%dt <= M_ZERO) then
-      write(message(1),'(a)') 'Input: TDTimeStep must be positive.'
-      call messages_fatal(1, namespace=sys%namespace)
+       write(message(1),'(a)') 'Input: TDTimeStep must be positive.'
+       call messages_fatal(1, namespace=sys%namespace)
     end if
 
     call messages_print_var_value(stdout, 'TDTimeStep', td%dt, unit = units_out%time)
 
-    td%dt = td%dt/td%mu
-    
+
     if(parse_is_defined(sys%namespace, 'TDMaxSteps') .and. parse_is_defined(sys%namespace, 'TDPropagationTime')) then
-      call messages_write('You cannot set TDMaxSteps and TDPropagationTime at the same time')
-      call messages_fatal(namespace=sys%namespace)
+       call messages_write('You cannot set TDMaxSteps and TDPropagationTime at the same time')
+       call messages_fatal(namespace=sys%namespace)
     end if
 
     !%Variable TDPropagationTime
@@ -247,14 +266,18 @@ contains
     call messages_print_var_value(stdout, 'TDMaxSteps', td%max_iter)
 
     if(td%max_iter < 1) then
-      write(message(1), '(a,i6,a)') "Input: '", td%max_iter, "' is not a valid value for TDMaxSteps."
-      message(2) = '(TDMaxSteps <= 1)'
-      call messages_fatal(2, namespace=sys%namespace)
+       write(message(1), '(a,i6,a)') "Input: '", td%max_iter, "' is not a valid value for TDMaxSteps."
+       message(2) = '(TDMaxSteps <= 1)'
+       call messages_fatal(2, namespace=sys%namespace)
     end if
+
+    td%iter = 0
+
+    td%dt = td%dt/td%mu
 
     ! now the photoelectron stuff
     call pes_init(td%pesv, sys%namespace, sys%gr%mesh, sys%gr%sb, sys%st, sys%outp%restart_write_interval, sys%hm, td%max_iter, &
-      td%dt)
+         td%dt)
 
     !%Variable TDDynamics
     !%Type integer
@@ -273,7 +296,7 @@ contains
     if(.not.varinfo_valid_option('TDDynamics', td%dynamics)) call messages_input_error(sys%namespace, 'TDDynamics')
     call messages_print_var_option(stdout, 'TDDynamics', td%dynamics)
     if(td%dynamics .ne. EHRENFEST) then
-      if(.not.ion_dynamics_ions_move(td%ions)) call messages_input_error(sys%namespace, 'TDDynamics')
+       if(.not.ion_dynamics_ions_move(td%ions)) call messages_input_error(sys%namespace, 'TDDynamics')
     end if
 
     !%Variable RecalculateGSDuringEvolution
@@ -294,28 +317,28 @@ contains
     !%End
     call parse_variable(sys%namespace, 'RecalculateGSDuringEvolution', .false., td%recalculate_gs)
     if( sys%hm%lda_u_level /= DFT_U_NONE .and. td%recalculate_gs) &
-      call messages_not_implemented("DFT+U with RecalculateGSDuringEvolution=yes", namespace=sys%namespace)
+         call messages_not_implemented("DFT+U with RecalculateGSDuringEvolution=yes", namespace=sys%namespace)
 
-    !%Variable TDScissor 
-    !%Type float 
-    !%Default 0.0 
-    !%Section Time-Dependent 
-    !%Description 
-    !% (experimental) If set, a scissor operator will be applied in the 
-    !% Hamiltonian, shifting the excitation energies by the amount 
-    !% specified. By default, it is not applied. 
-    !%End 
-    call parse_variable(sys%namespace, 'TDScissor', CNST(0.0), td%scissor) 
-    td%scissor = units_to_atomic(units_inp%energy, td%scissor) 
+    !%Variable TDScissor
+    !%Type float
+    !%Default 0.0
+    !%Section Time-Dependent
+    !%Description
+    !% (experimental) If set, a scissor operator will be applied in the
+    !% Hamiltonian, shifting the excitation energies by the amount
+    !% specified. By default, it is not applied.
+    !%End
+    call parse_variable(sys%namespace, 'TDScissor', CNST(0.0), td%scissor)
+    td%scissor = units_to_atomic(units_inp%energy, td%scissor)
     call messages_print_var_value(stdout, 'TDScissor', td%scissor)
 
     call propagator_init(sys%gr, sys%namespace, sys%st, td%tr, &
-      ion_dynamics_ions_move(td%ions) .or. gauge_field_is_applied(sys%hm%ep%gfield), family_is_mgga_with_exc(sys%ks%xc))
-    
+         ion_dynamics_ions_move(td%ions) .or. gauge_field_is_applied(sys%hm%ep%gfield), family_is_mgga_with_exc(sys%ks%xc))
+
     if(sys%hm%ep%no_lasers>0.and.mpi_grp_is_root(mpi_world)) then
-      call messages_print_stress(stdout, "Time-dependent external fields", namespace=sys%namespace)
-      call laser_write_info(sys%hm%ep%lasers, stdout, td%dt, td%max_iter)
-      call messages_print_stress(stdout, namespace=sys%namespace)
+       call messages_print_stress(stdout, "Time-dependent external fields", namespace=sys%namespace)
+       call laser_write_info(sys%hm%ep%lasers, stdout, td%dt, td%max_iter)
+       call messages_print_stress(stdout, namespace=sys%namespace)
     end if
 
     !%Variable TDEnergyUpdateIter
@@ -335,18 +358,18 @@ contains
     call parse_variable(sys%namespace, 'TDEnergyUpdateIter', default, td%energy_update_iter)
 
     if(ion_dynamics_ions_move(td%ions) .and. td%energy_update_iter /= 1) then
-      call messages_experimental('TDEnergyUpdateIter /= 1 when moving ions')
+       call messages_experimental('TDEnergyUpdateIter /= 1 when moving ions')
     end if
 
     if(sys%gr%der%boundaries%spiralBC .and. sys%hm%ep%reltype == SPIN_ORBIT) then
-      message(1) = "Generalized Bloch theorem cannot be used with spin-orbit coupling."
-      call messages_fatal(1, namespace=sys%namespace)
+       message(1) = "Generalized Bloch theorem cannot be used with spin-orbit coupling."
+       call messages_fatal(1, namespace=sys%namespace)
     end if
 
     if(sys%gr%der%boundaries%spiralBC .and. &
-          any(abs(sys%hm%ep%kick%easy_axis(1:2)) > M_EPSILON)) then 
-      message(1) = "Generalized Bloch theorem cannot be used for an easy axis along the z direction."
-      call messages_fatal(1, namespace=sys%namespace)
+         any(abs(sys%hm%ep%kick%easy_axis(1:2)) > M_EPSILON)) then
+       message(1) = "Generalized Bloch theorem cannot be used for an easy axis along the z direction."
+       call messages_fatal(1, namespace=sys%namespace)
     end if
 
     POP_SUB(td_init)
@@ -390,75 +413,76 @@ contains
 
     PUSH_SUB(td_run)
 
+
+    call td_init(td, sys)
+
     ! some shortcuts
     gr  => sys%gr
     geo => sys%geo
     st  => sys%st
 
-    call td_init(td, sys)
-
     ! Allocate wavefunctions during time-propagation
     if(td%dynamics == EHRENFEST) then
-      !Note: this is not really clean to do this
-      if(sys%hm%lda_u_level /= DFT_U_NONE .and. states_are_real(st)) then
-        call lda_u_end(sys%hm%lda_u)
-        !complex wfs are required for Ehrenfest
-        call states_elec_allocate_wfns(st, gr%mesh, TYPE_CMPLX, packed=.true.)
-        call lda_u_init(sys%hm%lda_u, sys%namespace, sys%hm%lda_u_level, gr, geo, st, sys%hm%psolver)
-      else
-        !complex wfs are required for Ehrenfest
-        call states_elec_allocate_wfns(st, gr%mesh, TYPE_CMPLX, packed=.true.)
-      end if 
+       !Note: this is not really clean to do this
+       if(sys%hm%lda_u_level /= DFT_U_NONE .and. states_are_real(st)) then
+          call lda_u_end(sys%hm%lda_u)
+          !complex wfs are required for Ehrenfest
+          call states_elec_allocate_wfns(st, gr%mesh, TYPE_CMPLX, packed=.true.)
+          call lda_u_init(sys%hm%lda_u, sys%namespace, sys%hm%lda_u_level, gr, geo, st, sys%hm%psolver)
+       else
+          !complex wfs are required for Ehrenfest
+          call states_elec_allocate_wfns(st, gr%mesh, TYPE_CMPLX, packed=.true.)
+       end if
     else
-      call states_elec_allocate_wfns(st, gr%mesh, packed=.true.)
-      call scf_init(td%scf, sys%namespace, sys%gr, sys%geo, sys%st, sys%mc, sys%hm)
+       call states_elec_allocate_wfns(st, gr%mesh, packed=.true.)
+       call scf_init(td%scf, sys%namespace, sys%gr, sys%geo, sys%st, sys%mc, sys%hm)
     end if
 
     if(sys%hm%scdm_EXX) then
-      call scdm_init(sys%hm%scdm, sys%namespace, st, gr%der, sys%hm%psolver%cube, operate_on_scdm = .true.)
-      ! make sure scdm is constructed as soon as it is needed
-      scdm_is_local = .false.
+       call scdm_init(sys%hm%scdm, sys%namespace, st, gr%der, sys%hm%psolver%cube, operate_on_scdm = .true.)
+       ! make sure scdm is constructed as soon as it is needed
+       scdm_is_local = .false.
     end if
-    
-    if (gauge_field_is_applied(sys%hm%ep%gfield)) then
-      !if the gauge field is applied, we need to tell v_ks to calculate the current
-      call v_ks_calculate_current(sys%ks, .true.)
 
-      ! initialize the vector field and update the hamiltonian
-      call gauge_field_init_vec_pot(sys%hm%ep%gfield, gr%sb, st)
-      call hamiltonian_elec_update(sys%hm, gr%mesh, sys%namespace, time = td%dt*td%iter)
+    if (gauge_field_is_applied(sys%hm%ep%gfield)) then
+       !if the gauge field is applied, we need to tell v_ks to calculate the current
+       call v_ks_calculate_current(sys%ks, .true.)
+
+       ! initialize the vector field and update the hamiltonian
+       call gauge_field_init_vec_pot(sys%hm%ep%gfield, gr%sb, st)
+       call hamiltonian_elec_update(sys%hm, gr%mesh, sys%namespace, time = td%dt*td%iter)
     end if
 
     call init_wfs()
 
     if(td%iter >= td%max_iter) then
-      call end_()
-      POP_SUB(td_run)
-      return
+       call end_()
+       POP_SUB(td_run)
+       return
     end if
 
     ! Calculate initial forces and kinetic energy
     if(ion_dynamics_ions_move(td%ions)) then
-      if(td%iter > 0) then
-        call td_read_coordinates()
-        call hamiltonian_elec_epot_generate(sys%hm, sys%namespace, gr, geo, st, time = td%iter*td%dt)
-      end if
+       if(td%iter > 0) then
+          call td_read_coordinates()
+          call hamiltonian_elec_epot_generate(sys%hm, sys%namespace, gr, geo, st, time = td%iter*td%dt)
+       end if
 
-      call forces_calculate(gr, sys%namespace, geo, sys%hm, st, sys%ks, t = td%iter*td%dt, dt = td%dt)
+       call forces_calculate(gr, sys%namespace, geo, sys%hm, st, sys%ks, t = td%iter*td%dt, dt = td%dt)
 
-      geo%kinetic_energy = ion_dynamics_kinetic_energy(geo)
+       geo%kinetic_energy = ion_dynamics_kinetic_energy(geo)
     else
-      if(bitand(sys%outp%what, OPTION__OUTPUT__FORCES) /= 0) then
-        call forces_calculate(gr, sys%namespace, geo, sys%hm, st, sys%ks, t = td%iter*td%dt, dt = td%dt)
-      end if  
+       if(bitand(sys%outp%what, OPTION__OUTPUT__FORCES) /= 0) then
+          call forces_calculate(gr, sys%namespace, geo, sys%hm, st, sys%ks, t = td%iter*td%dt, dt = td%dt)
+       end if
     end if
 
     call td_write_init(write_handler, sys%namespace, sys%outp, gr, st, sys%hm, geo, sys%ks, &
-      ion_dynamics_ions_move(td%ions), gauge_field_is_applied(sys%hm%ep%gfield), &
-      sys%hm%ep%kick, td%iter, td%max_iter, td%dt, sys%mc)
+         ion_dynamics_ions_move(td%ions), gauge_field_is_applied(sys%hm%ep%gfield), &
+         sys%hm%ep%kick, td%iter, td%max_iter, td%dt, sys%mc)
 
     if(td%scissor > M_EPSILON) then
-      call scissor_init(sys%hm%scissor, sys%namespace, st, gr, sys%hm%d, td%scissor, sys%mc)
+       call scissor_init(sys%hm%scissor, sys%namespace, st, gr, sys%hm%d, td%scissor, sys%mc)
     end if
 
     if(td%iter == 0) call td_run_zero_iter()
@@ -470,80 +494,80 @@ contains
 
     call restart_init(restart_dump, sys%namespace, RESTART_TD, RESTART_TYPE_DUMP, sys%mc, ierr, mesh=gr%mesh)
     if (ion_dynamics_ions_move(td%ions) .and. td%recalculate_gs) then
-      ! We will also use the TD restart directory as temporary storage during the time propagation
-      call restart_init(restart_load, sys%namespace, RESTART_TD, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh)
+       ! We will also use the TD restart directory as temporary storage during the time propagation
+       call restart_init(restart_load, sys%namespace, RESTART_TD, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh)
     end if
 
     call messages_print_stress(stdout, "Time-Dependent Simulation", namespace=sys%namespace)
-    call print_header()
+    call print_header(sys%namespace)
 
     if(td%pesv%calc_spm .or. td%pesv%calc_mask .and. fromScratch) then
-      call pes_init_write(td%pesv,gr%mesh,st, sys%namespace)
+       call pes_init_write(td%pesv,gr%mesh,st, sys%namespace)
     end if
 
     if(st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call st%pack()
-    
+
     etime = loct_clock()
     ! This is the time-propagation loop. It starts at t=0 and finishes
     ! at td%max_iter*dt. The index i runs from 1 to td%max_iter, and
     ! step "iter" means propagation from (iter-1)*dt to iter*dt.
     propagation: do iter = td%iter, td%max_iter
 
-      stopping = clean_stop(sys%mc%master_comm) .or. walltimer_alarm()
+       stopping = clean_stop(sys%mc%master_comm) .or. walltimer_alarm()
 
 #ifdef HAVE_MPI
-      call MPI_Allreduce(stopping, stopping_tmp, 1, MPI_LOGICAL, MPI_LOR, sys%mc%master_comm, mpi_err)
-      stopping = stopping_tmp
+       call MPI_Allreduce(stopping, stopping_tmp, 1, MPI_LOGICAL, MPI_LOR, sys%mc%master_comm, mpi_err)
+       stopping = stopping_tmp
 #endif      
 
-      call profiling_in(prof, "TIME_STEP")
+       call profiling_in(prof, "TIME_STEP")
 
-      if(iter > 1) then
-        if( ((iter-1)*td%dt <= sys%hm%ep%kick%time) .and. (iter*td%dt > sys%hm%ep%kick%time) ) then
-          if( .not.sys%hm%pcm%localf ) then
-            call kick_apply(gr%mesh, st, td%ions, geo, sys%hm%ep%kick, sys%hm%psolver)
-          else
-            call kick_apply(gr%mesh, st, td%ions, geo, sys%hm%ep%kick, sys%hm%psolver, pcm = sys%hm%pcm)
+       if(iter > 1) then
+          if( ((iter-1)*td%dt <= sys%hm%ep%kick%time) .and. (iter*td%dt > sys%hm%ep%kick%time) ) then
+             if( .not.sys%hm%pcm%localf ) then
+                call kick_apply(gr%mesh, st, td%ions, geo, sys%hm%ep%kick, sys%hm%psolver)
+             else
+                call kick_apply(gr%mesh, st, td%ions, geo, sys%hm%ep%kick, sys%hm%psolver, pcm = sys%hm%pcm)
+             end if
+             call td_write_kick(sys%outp, sys%namespace, gr%mesh, sys%hm%ep%kick, geo, iter)
+             !We activate the sprial BC only after the kick,
+             !to be sure that the first iteration corresponds to the ground state
+             if(gr%der%boundaries%spiralBC) gr%der%boundaries%spiral = .true.
           end if
-          call td_write_kick(sys%outp, sys%namespace, gr%mesh, sys%hm%ep%kick, geo, iter)
-          !We activate the sprial BC only after the kick, 
-          !to be sure that the first iteration corresponds to the ground state
-          if(gr%der%boundaries%spiralBC) gr%der%boundaries%spiral = .true.
-        end if
-      end if
+       end if
 
-      ! in case use scdm localized states for exact exchange and request a new localization             
-      if(sys%hm%scdm_EXX) scdm_is_local = .false.
+       ! in case use scdm localized states for exact exchange and request a new localization
+       if(sys%hm%scdm_EXX) scdm_is_local = .false.
 
-      ! time iterate the system, one time step.
-      select case(td%dynamics)
-      case(EHRENFEST)
-        call propagator_dt(sys%ks, sys%namespace, sys%hm, gr, st, td%tr, iter*td%dt, td%dt, &
-          td%energy_update_iter*td%mu, iter, td%ions, geo, sys%outp, scsteps = scsteps, &
-          update_energy = (mod(iter, td%energy_update_iter) == 0) .or. (iter == td%max_iter) )
-      case(BO)
-        call propagator_dt_bo(td%scf, sys%namespace, gr, sys%ks, st, sys%hm, geo, sys%mc, sys%outp, iter, td%dt, &
-          td%ions, scsteps)
-      end select
+       ! time iterate the system, one time step.
+       select case(td%dynamics)
+       case(EHRENFEST)
+          call propagator_dt(sys%ks, sys%namespace, sys%hm, gr, st, td%tr, iter*td%dt, td%dt, &
+               td%energy_update_iter*td%mu, iter, td%ions, geo, sys%outp, scsteps = scsteps, &
+               update_energy = (mod(iter, td%energy_update_iter) == 0) .or. (iter == td%max_iter) )
+       case(BO)
+          call propagator_dt_bo(td%scf, sys%namespace, gr, sys%ks, st, sys%hm, geo, sys%mc, sys%outp, iter, td%dt, &
+               td%ions, scsteps)
+       end select
 
-      !Apply mask absorbing boundaries
-      if(sys%hm%bc%abtype == MASK_ABSORBING) call zvmask(gr%mesh, sys%hm, st) 
+       !Apply mask absorbing boundaries
+       if(sys%hm%bc%abtype == MASK_ABSORBING) call zvmask(gr%mesh, sys%hm, st)
 
-      !Photoelectron stuff 
-      if (td%pesv%calc_spm .or. td%pesv%calc_mask .or. td%pesv%calc_flux) then
-        call pes_calc(td%pesv, sys%namespace, gr%mesh, st, td%dt, iter, gr, sys%hm, stopping)
-      end if
+       !Photoelectron stuff
+       if (td%pesv%calc_spm .or. td%pesv%calc_mask .or. td%pesv%calc_flux) then
+          call pes_calc(td%pesv, sys%namespace, gr%mesh, st, td%dt, iter, gr, sys%hm, stopping)
+       end if
 
-      call td_write_iter(write_handler, sys%namespace, sys%outp, gr, st, sys%hm, geo, sys%hm%ep%kick, td%dt, iter)
+       call td_write_iter(write_handler, sys%namespace, sys%outp, gr, st, sys%hm, geo, sys%hm%ep%kick, td%dt, iter)
 
-      ! write down data
-      call check_point()
+       ! write down data
+       call check_point()
 
-      ! check if debug mode should be enabled or disabled on the fly
-      call io_debug_on_the_fly(sys%namespace)
+       ! check if debug mode should be enabled or disabled on the fly
+       call io_debug_on_the_fly(sys%namespace)
 
-      call profiling_out(prof)
-      if (stopping) exit
+       call profiling_out(prof)
+       if (stopping) exit
 
     end do propagation
 
@@ -558,12 +582,13 @@ contains
 
   contains
 
-    subroutine print_header()
+    subroutine print_header(namespace)
+    type(namespace_t),    intent(in)    :: namespace
 
       write(message(1), '(a7,1x,a14,a14,a10,a17)') 'Iter ', 'Time ', 'Energy ', 'SC Steps', 'Elapsed Time '
 
       call messages_info(1)
-      call messages_print_stress(stdout, namespace=sys%namespace)
+      call messages_print_stress(stdout, namespace%get())
 
     end subroutine print_header
 
@@ -614,7 +639,7 @@ contains
           call v_ks_calc(sys%ks, sys%namespace, sys%hm, st, sys%geo, calc_eigenval=.true., time = iter*td%dt, calc_energy=.true.)
           call forces_calculate(gr, sys%namespace, geo, sys%hm, st, sys%ks, t = iter*td%dt, dt = td%dt)
           call messages_print_stress(stdout, "Time-dependent simulation proceeds", namespace=sys%namespace)
-          call print_header()
+          call print_header(sys%namespace)
         end if
       end if
 
@@ -925,6 +950,7 @@ contains
       end do
 
       call io_close(iunit)
+
       POP_SUB(td_run.td_read_coordinates)
     end subroutine td_read_coordinates
 
@@ -961,13 +987,12 @@ contains
     ! Set initial conditions
     call systems%initial_conditions(.true.)
 
+    call messages_print_stress(stdout, "Multi-system propagation", namespace=systems%namespace)
+
     call systems%propagation_start()
 
     ! The full TD loop
-    call messages_print_stress(stdout, "Multi-system propagation", namespace=systems%namespace)
-
     it = 0
-
     do while (.not. systems%has_reached_final_propagation_time())
 
       it = it + 1

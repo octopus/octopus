@@ -70,9 +70,15 @@ contains
 
     PUSH_SUB(vdw_run)
 
+    if (sys%hm%pcm%run_pcm) then
+      call messages_not_implemented("PCM for CalculationMode /= gs or td")
+    end if
+
     if(simul_box_is_periodic(sys%gr%sb)) then
       call messages_not_implemented('Van der Waals calculation for periodic system')
     end if
+
+    if (sys%gr%sb%kpoints%use_symmetries) call messages_experimental("KPoints symmetries with CalculationMode = vdw")
 
     call input()
     call init_()

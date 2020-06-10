@@ -36,7 +36,8 @@ module quantity_oct_m
     E_FIELD                      =  7,  &
     B_FIELD                      =  8,  &
     MASS                         =  9,  &
-    MAX_QUANTITIES               =  9
+    CHARGE                       = 10,  &
+    MAX_QUANTITIES               = 10
 
   !> Systems can expose quantities that can be used to calculate interactions
   !! with other systems.

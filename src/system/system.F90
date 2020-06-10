@@ -123,7 +123,11 @@ contains
       sys%ks%xc, sys%mc, need_exchange = output_need_exchange(sys%outp) .or. sys%ks%oep%level /= XC_OEP_NONE)
     
     if(poisson_is_multigrid(sys%hm%psolver)) call grid_create_multigrid(sys%gr, sys%namespace, sys%geo, sys%mc)
-  
+
+    if (sys%hm%pcm%run_pcm .and. sys%mc%par_strategy /= P_STRATEGY_SERIAL .and. sys%mc%par_strategy /= P_STRATEGY_STATES) then
+      call messages_experimental('Parallel in domain calculations with PCM')
+    end if
+
     call profiling_out(prof)
     POP_SUB(system_init)
 

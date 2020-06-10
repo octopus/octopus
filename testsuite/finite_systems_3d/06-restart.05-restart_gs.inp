@@ -18,3 +18,4 @@ MixField = density
 
 WorkDir = "./workdir"
 StatesPack = yes
+LCAOStart = lcao_full

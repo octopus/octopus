@@ -883,9 +883,9 @@ subroutine X(priv_mesh_batch_nrm2)(mesh, aa, nrm2)
   class(batch_t),          intent(in)    :: aa
   FLOAT,                   intent(out)   :: nrm2(:)
 
-  integer :: ist, idim, indb, ip
-  R_TYPE :: a0
-  FLOAT, allocatable :: scal(:), ssq(:)
+  integer :: ist, idim, indb, ip, sp, np, num_threads, ithread
+  FLOAT :: a0
+  FLOAT, allocatable :: scal(:,:), ssq(:,:)
   type(accel_mem_t)  :: nrm2_buffer
   type(profile_t), save :: prof
 
@@ -904,51 +904,114 @@ subroutine X(priv_mesh_batch_nrm2)(mesh, aa, nrm2)
 
   case(BATCH_PACKED)
     
-    SAFE_ALLOCATE(scal(1:aa%nst_linear))
-    SAFE_ALLOCATE(ssq(1:aa%nst_linear))
+
+    num_threads = 1
+    !$omp parallel shared(num_threads)
+    !$ num_threads = omp_get_num_threads()
+    !$omp end parallel
+
+    SAFE_ALLOCATE(scal(1:aa%nst_linear, 1:num_threads))
+    SAFE_ALLOCATE(ssq(1:aa%nst_linear, 1:num_threads))
 
     scal = M_ZERO
     ssq  = M_ONE
+
+    ! divide the range from 1:mesh%np across the OpenMP threads and sum independently
+    ! the reduction is done outside the parallel region
+    !$omp parallel private(ithread, sp, np, a0, ip, ist) shared(ssq, scal, num_threads)
+    call multicomm_divide_range_omp(mesh%np, sp, np)
+    ithread = 1
+    !$ ithread = omp_get_thread_num() + 1
     
+    ! The algorithm for the squared sum is the same as used, e.g., in openblas.
+    ! The idea is that one wants to avoid an overflow caused by squaring a big
+    ! number by using separate values for the sum of squares and the scale.
+    ! Only at the end, the norm is computed as scal*sqrt(ssq) - in this way
+    ! the largest number which is stored in scal is never squared.
     if(.not. mesh%use_curvilinear) then
 
-      ! do not use openmp here because the logic of the loop is sequential
-      do ip = 1, mesh%np
+      do ip = sp, sp + np - 1
         do ist = 1, aa%nst_linear
-          a0 = aa%X(ff_pack)(ist, ip)
-          if(abs(a0) <= M_EPSILON) cycle
-          if(scal(ist) < abs(a0)) then
-            ssq(ist) = M_ONE + ssq(ist)*(scal(ist)/abs(a0))**2
-            scal(ist) = abs(a0)
-          else
-            ssq(ist) = ssq(ist) + (abs(a0)/scal(ist))**2
+          ! first add real part
+          a0 = abs(R_REAL(aa%X(ff_pack)(ist, ip)))
+          ! only add a0 if it is non-zero
+          if(a0 > M_EPSILON) then
+            if(scal(ist, ithread) < a0) then
+              ssq(ist, ithread) = M_ONE + ssq(ist, ithread)*(scal(ist, ithread)/a0)**2
+              scal(ist, ithread) = a0
+            else
+              ssq(ist, ithread) = ssq(ist, ithread) + (a0/scal(ist, ithread))**2
+            end if
           end if
+#ifdef R_TCOMPLEX
+          ! then add imaginary part for complex numbers
+          a0 = abs(R_AIMAG(aa%X(ff_pack)(ist, ip)))
+          ! only add a0 if it is non-zero
+          if(a0 > M_EPSILON) then
+            if(scal(ist, ithread) < a0) then
+              ssq(ist, ithread) = M_ONE + ssq(ist, ithread)*(scal(ist, ithread)/a0)**2
+              scal(ist, ithread) = a0
+            else
+              ssq(ist, ithread) = ssq(ist, ithread) + (a0/scal(ist, ithread))**2
+            end if
+          end if
+#endif
         end do
       end do
 
     else
 
-      ! do not use openmp here because the logic of the loop is sequential
-      do ip = 1, mesh%np
+      do ip = sp, sp + np - 1
         do ist = 1, aa%nst_linear
-          a0 = aa%X(ff_pack)(ist, ip)
-          if(a0 == R_TOTYPE(M_ZERO)) cycle
-          if(scal(ist) < abs(a0)) then
-            ssq(ist) =  mesh%vol_pp(ip)*M_ONE + ssq(ist)*(scal(ist)/abs(a0))**2
-            scal(ist) = abs(a0)
-          else
-            ssq(ist) = ssq(ist) + mesh%vol_pp(ip)*(abs(a0)/scal(ist))**2
+          ! first add real part
+          a0 = abs(R_REAL(aa%X(ff_pack)(ist, ip)))
+          ! only add a0 if it is non-zero
+          if(a0 > M_EPSILON) then
+            if(scal(ist, ithread) < a0) then
+              ssq(ist, ithread) =  mesh%vol_pp(ip) + ssq(ist, ithread)*(scal(ist, ithread)/a0)**2
+              scal(ist, ithread) = a0
+            else
+              ssq(ist, ithread) = ssq(ist, ithread) + mesh%vol_pp(ip)*(a0/scal(ist, ithread))**2
+            end if
           end if
+#ifdef R_TCOMPLEX
+          ! then add imaginary part for complex numbers
+          a0 = abs(R_AIMAG(aa%X(ff_pack)(ist, ip)))
+          ! only add a0 if it is non-zero
+          if(a0 > M_EPSILON) then
+            if(scal(ist, ithread) < a0) then
+              ssq(ist, ithread) =  mesh%vol_pp(ip) + ssq(ist, ithread)*(scal(ist, ithread)/a0)**2
+              scal(ist, ithread) = a0
+            else
+              ssq(ist, ithread) = ssq(ist, ithread) + mesh%vol_pp(ip)*(a0/scal(ist, ithread))**2
+            end if
+          end if
+#endif
         end do
       end do
 
     end if
+    !$omp end parallel
 
+    ! now do the reduction: sum the components of the different threads without overflow
+    do ithread = 2, num_threads
+      do ist = 1, aa%nst_linear
+        if (scal(ist, ithread) < M_EPSILON) cycle
+        if (scal(ist, 1) < scal(ist, ithread)) then
+          ssq(ist, 1) = ssq(ist, 1) * (scal(ist, 1)/scal(ist, ithread))**2 + ssq(ist, ithread)
+          scal(ist, 1) = scal(ist, ithread)
+        else
+          ssq(ist, 1) = ssq(ist, 1) + ssq(ist, ithread) * (scal(ist, ithread)/scal(ist, 1))**2
+        end if
+      end do
+    end do
+
+    ! the result is in scal(ist, 1) and ssq(ist, 1)
     do ist = 1, aa%nst
       nrm2(ist) = M_ZERO
       do idim = 1, aa%dim
         indb = aa%ist_idim_to_linear((/ist, idim/))
-        nrm2(ist) = hypot(nrm2(ist), scal(indb)*sqrt(mesh%volume_element*ssq(indb)))
+        nrm2(ist) = hypot(nrm2(ist), scal(indb, 1)*sqrt(mesh%volume_element*ssq(indb, 1)))
       end do
     end do
 
@@ -959,7 +1022,7 @@ subroutine X(priv_mesh_batch_nrm2)(mesh, aa, nrm2)
 
     ASSERT(.not. mesh%use_curvilinear)
 
-    SAFE_ALLOCATE(ssq(1:aa%pack_size(1)))
+    SAFE_ALLOCATE(ssq(1:aa%pack_size(1), 1))
 
     call accel_create_buffer(nrm2_buffer, ACCEL_MEM_WRITE_ONLY, TYPE_FLOAT, aa%pack_size(1))
 
@@ -979,7 +1042,7 @@ subroutine X(priv_mesh_batch_nrm2)(mesh, aa, nrm2)
       nrm2(ist) = M_ZERO
       do idim = 1, aa%dim
         indb = aa%ist_idim_to_linear((/ist, idim/))
-        nrm2(ist) = hypot(nrm2(ist), sqrt(mesh%volume_element)*ssq(indb))
+        nrm2(ist) = hypot(nrm2(ist), sqrt(mesh%volume_element)*ssq(indb, 1))
       end do
     end do
 

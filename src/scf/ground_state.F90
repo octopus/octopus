@@ -30,6 +30,7 @@ module ground_state_oct_m
   use mpi_oct_m
   use multicomm_oct_m
   use namespace_oct_m
+  use pcm_oct_m
   use rdmft_oct_m
   use restart_oct_m
   use scf_oct_m
@@ -78,7 +79,18 @@ contains
     if(sys%st%parallel_in_states) then
       call messages_experimental('State parallelization for ground state calculations')
     end if
-    
+
+    if (sys%hm%pcm%run_pcm) then
+      if (sys%hm%pcm%epsilon_infty /= sys%hm%pcm%epsilon_0 .and. sys%hm%pcm%tdlevel /= PCM_TD_EQ) then
+        message(1) = 'Non-equilbrium PCM is not active in a time-independent run.'
+        message(2) = 'You set epsilon_infty /= epsilon_0, but epsilon_infty is not relevant for CalculationMode = gs.'
+        message(3) = 'By definition, the ground state is in equilibrium with the solvent.'
+        message(4) = 'Therefore, the only relevant dielectric constant is the static one.'
+        message(5) = 'Nevertheless, the dynamical PCM response matrix is evaluated for benchamarking purposes.'
+        call messages_warning(5)
+      end if
+    end if
+
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh, packed=.true.)
 
 #ifdef HAVE_MPI

@@ -31,8 +31,6 @@ ExperimentalFeatures = yes
  4 | 4 | 4
 %
 
-LCAOStart = lcao_states
-
 Output = geometry + dos
 OutputFormat = xyz
 

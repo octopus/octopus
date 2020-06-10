@@ -46,6 +46,7 @@ module eigensolver_oct_m
   use parser_oct_m
   use preconditioners_oct_m
   use profiling_oct_m
+  use smear_oct_m
   use states_abst_oct_m
   use states_elec_oct_m
   use states_elec_calc_oct_m
@@ -264,17 +265,23 @@ contains
 
       !%Variable EigensolverImaginaryTime
       !%Type float
-      !%Default 10.0
+      !%Default 0.1
       !%Section SCF::Eigensolver
       !%Description
       !% The imaginary-time step that is used in the imaginary-time evolution
       !% method (<tt>Eigensolver = evolution</tt>) to obtain the lowest eigenvalues/eigenvectors.
       !% It must satisfy <tt>EigensolverImaginaryTime > 0</tt>.
+      !% Increasing this value can make the propagation faster, but could lead to unstable propagations.
       !%End
-      call parse_variable(namespace, 'EigensolverImaginaryTime', CNST(10.0), eigens%imag_time)
+      call parse_variable(namespace, 'EigensolverImaginaryTime', CNST(0.1), eigens%imag_time)
       if(eigens%imag_time <= M_ZERO) call messages_input_error(namespace, 'EigensolverImaginaryTime')
       
       call exponential_init(eigens%exponential_operator, namespace)
+
+      if(st%smear%method /= SMEAR_SEMICONDUCTOR .and. st%smear%method /= SMEAR_FIXED_OCC) then
+        message(1) = "Smearing of occupations is incompatible with imaginary time evolution."
+        call messages_fatal(1)
+      end if
       
     case(RS_LOBPCG)
     case(RS_RMMDIIS)
@@ -337,6 +344,7 @@ contains
     !% except for <tt>rmdiis</tt>, which performs only 3 iterations.
     !% Increasing this value for <tt>rmdiis</tt> increases the convergence speed,
     !% at the cost of an increased memory footprint.
+    !% In the case of imaginary time propatation, this variable is not used.
     !%End
     call parse_variable(namespace, 'EigensolverMaxIter', default_iter, eigens%es_maxiter)
     if(eigens%es_maxiter < 1) call messages_input_error(namespace, 'EigensolverMaxIter')
@@ -352,7 +360,7 @@ contains
     end if
 
     if (any(eigens%es_type == (/RS_PLAN, RS_CG, RS_LOBPCG, RS_RMMDIIS, RS_PSD/))) then
-      call preconditioner_init(eigens%pre, namespace, gr)
+      call preconditioner_init(eigens%pre, namespace, gr, geo, mc)
     else
       call preconditioner_null(eigens%pre)
     end if
@@ -367,7 +375,14 @@ contains
 
     ! FEAST: subspace diagonalization or not?  I guess not.
     ! But perhaps something could be gained by changing this.
-    call subspace_init(eigens%sdiag, namespace, st, no_sd = .false.)
+    !
+    ! In case of the evolution eigensolver, this makes no sense to use subspace diagonalization
+    ! as orthogonalization is done internally at each time-step
+    if(eigens%es_type == RS_EVO) then
+      call subspace_init(eigens%sdiag, namespace, st, no_sd = .true.)
+    else
+      call subspace_init(eigens%sdiag, namespace, st, no_sd = .false.)
+    end if
 
     ! print memory requirements
     select case(eigens%es_type)
@@ -401,12 +416,6 @@ contains
     call parse_variable(namespace, 'EigensolverSkipKpoints', .false., eigens%skip_finite_weight_kpoints)
     call messages_print_var_value(stdout,'EigensolverSkipKpoints',  eigens%skip_finite_weight_kpoints)
 
-    if(preconditioner_is_multigrid(eigens%pre)) then
-      SAFE_ALLOCATE(gr%mgrid_prec)
-      call multigrid_init(gr%mgrid_prec, namespace, geo, gr%cv, gr%mesh, gr%der, gr%stencil, mc, used_for_preconditioner = .true.)
-    end if
-
-
     POP_SUB(eigensolver_init)
   end subroutine eigensolver_init
 
@@ -417,12 +426,6 @@ contains
     type(grid_t),        intent(inout) :: gr
 
     PUSH_SUB(eigensolver_end)
-
-    if(preconditioner_is_multigrid(eigens%pre)) then
-      call multigrid_end(gr%mgrid_prec)
-      SAFE_DEALLOCATE_P(gr%mgrid_prec)
-    end if
-
 
     select case(eigens%es_type)
     case(RS_PLAN, RS_CG, RS_LOBPCG, RS_RMMDIIS, RS_PSD)
@@ -504,6 +507,7 @@ contains
           call deigensolver_plan(namespace, gr, st, hm, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), ik, &
             eigens%diff(:, ik))
         case(RS_EVO)
+          maxiter = 1
           call deigensolver_evolution(namespace, gr%mesh, st, hm, eigens%exponential_operator, eigens%tolerance, maxiter, &
             eigens%converged(ik), ik, eigens%diff(:, ik), tau = eigens%imag_time)
         case(RS_LOBPCG)
@@ -550,6 +554,7 @@ contains
           call zeigensolver_plan(namespace, gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
             eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_EVO)
+          maxiter = 1
           call zeigensolver_evolution(namespace, gr%mesh, st, hm, eigens%exponential_operator, eigens%tolerance, maxiter, &
             eigens%converged(ik), ik, eigens%diff(:, ik), tau = eigens%imag_time)
         case(RS_LOBPCG)
