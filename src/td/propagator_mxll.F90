@@ -86,7 +86,8 @@ module propagator_mxll_oct_m
     constant_boundaries_calculation,         &
     maxwell_mask,                            &
     td_function_mxll_init,                   &
-    plane_waves_in_box_calculation
+    plane_waves_in_box_calculation,          &
+    spatial_constant_calculation
 
   integer, public, parameter ::   &
      RS_TRANS_FORWARD = 1,        &
@@ -162,8 +163,6 @@ contains
           tr%bc_add_ab_region = .true.
           hm%bc_constant = .true.
           hm%bc_add_ab_region = .true.
-          SAFE_ALLOCATE(st%rs_state_const(1:st%dim))
-          st%rs_state_const = M_z0
         case (MXLL_BC_MIRROR_PEC)
           string = 'PEC Mirror'
           tr%bc_mirror_pec = .true.
@@ -199,7 +198,13 @@ contains
      call parse_block_end(blk)
      call messages_print_stress(stdout, namespace=namespace)
 
-    end if
+   end if
+
+   if (any(hm%bc%bc_type(1:3) == MXLL_BC_CONSTANT)) then
+     call td_function_mxll_init(st, namespace, hm)
+     SAFE_ALLOCATE(st%rs_state_const(1:st%dim))
+     st%rs_state_const = M_z0
+   end if
 
     !%Variable MaxwellMediumBox
     !%Type block
@@ -2500,15 +2505,18 @@ contains
       if (constant_calc) then
         icn = size(st%rs_state_const_td_function(:))
         st%rs_state_const(:) = M_z0
-        do ic=1, icn
+        do ic = 1, icn
           tf_old = tdf(st%rs_state_const_td_function(ic), time-delay-dt)
           tf_new = tdf(st%rs_state_const_td_function(ic), time-delay)
           do ip = 1, gr%mesh%np_part
-            rs_state(ip,:) = rs_state(ip,:) + st%rs_state_const_amp(:,ic) * (tf_new - tf_old)
+            ! changed this original line
+             !rs_state(ip,:) = rs_state(ip,:) + st%rs_state_const_amp(:,ic) * (tf_new - tf_old)
+             ! by this
+             rs_state(ip,:) = st%rs_state_const_amp(:,ic) * tf_new
           end do
           st%rs_state_const(:) = st%rs_state_const(:) + st%rs_state_const_amp(:, ic)
         end do
-        st%rs_state_const(:) = st%rs_state_const(:)*tf_new
+       st%rs_state_const(:) = st%rs_state_const(:) * tf_new
       end if
     end if
 

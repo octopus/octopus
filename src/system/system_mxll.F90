@@ -353,8 +353,12 @@ contains
       if (this%tr_mxll%bc_plane_waves) then
         this%st%rs_state_plane_waves(:,:) = this%rs_state_init
       end if
-      if (this%tr_mxll%bc_constant) &
-        this%st%rs_state_const(:) = this%rs_state_init(this%gr%mesh%idx%lxyz_inv(0,0,0),:)
+    end if
+
+    if (this%tr_mxll%bc_constant) then
+      call spatial_constant_calculation(this%tr_mxll%bc_constant, this%st, this%gr, this%hm, M_ZERO, &
+           this%prop%dt/this%tr_mxll%inter_steps, this%tr_mxll%delay_time, this%rs_state_init)
+      this%st%rs_state_const(:) = this%rs_state_init(this%gr%mesh%idx%lxyz_inv(0,0,0),:)
       call constant_boundaries_calculation(this%tr_mxll%bc_constant, this%hm%bc, this%hm, this%st, this%st%rs_state)
     end if
 
