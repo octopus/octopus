@@ -205,6 +205,7 @@ contains
 
   end subroutine lda_u_nullify
 
+  ! ---------------------------------------------------------
   subroutine lda_u_init(this, namespace, level, gr, geo, st, psolver)
     type(lda_u_t),             intent(inout) :: this
     type(namespace_t),         intent(in)    :: namespace
@@ -495,7 +496,7 @@ contains
     POP_SUB(lda_u_init)
   end subroutine lda_u_init
 
-
+  ! ---------------------------------------------------------
   subroutine lda_u_end(this)
     implicit none
     type(lda_u_t), intent(inout) :: this
@@ -674,6 +675,7 @@ contains
 
   end subroutine lda_u_build_phase_correction
 
+  ! ---------------------------------------------------------
   subroutine lda_u_periodic_coulomb_integrals(this, namespace, st, der, mc, has_phase)
     type(lda_u_t),                 intent(inout) :: this
     type(namespace_t),             intent(in)    :: namespace
@@ -714,6 +716,7 @@ contains
     POP_SUB(lda_u_periodic_coulomb_integrals)
   end subroutine lda_u_periodic_coulomb_integrals
 
+  ! ---------------------------------------------------------
   subroutine compute_ACBNO_U_kanamori(this, st, kanamori)
     type(lda_u_t),        intent(in)  :: this
     type(states_elec_t),  intent(in)  :: st
