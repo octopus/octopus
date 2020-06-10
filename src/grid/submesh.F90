@@ -74,16 +74,19 @@ module submesh_oct_m
     submesh_init_cube_map,       &
     submesh_end_cube_map
 
+  !> A submesh is a type of mesh, used for the projectors in the pseudopotentials
+  !! It contains points on a regular mesh confined to a sphere of a given radius. 
   type submesh_t
     ! Components are public by default
     FLOAT                 :: center(1:MAX_DIM)
     FLOAT                 :: radius
     integer               :: np             !< number of points inside the submesh
     integer               :: np_part        !< number of points inside the submesh including ghost points
-    integer,      pointer :: map(:)         !< index in the mesh of the points inside the sphere
-    FLOAT,        pointer :: x(:,:)
-    type(mesh_t), pointer :: mesh
-    logical               :: overlap        !< .true. if the submesh has more than one point that is mapped to a mesh point
+    integer,      pointer :: map(:)         !< maps point inside the submesh to a point inside the underlying mesh
+    FLOAT,        pointer :: x(:,:)         !< x(1:np_part, 0:sb%dim): zeroth component is distance from centre of the submesh.
+    type(mesh_t), pointer :: mesh           !< pointer to the underlying mesh
+    logical               :: overlap        !< .true. if the submesh has more than one point that is mapped to a mesh point,
+                                            !! i.e. the submesh overlaps with itself (as can happen in periodic systems)
     integer               :: np_global      !< total number of points in the entire mesh
     FLOAT,    allocatable :: x_global(:,:)  
     integer,  allocatable :: part_v(:)
@@ -168,6 +171,7 @@ contains
       nmax(1:sb%dim) = int((center(1:sb%dim) + abs(rc))/mesh%spacing(1:sb%dim)) + 1
 
       ! make sure that the cube is inside the grid
+      ! parts of the cube which would fall outside the simulation box are chopped off.
       nmin(1:sb%dim) = max(mesh%idx%nr(1, 1:sb%dim), nmin(1:sb%dim))
       nmax(1:sb%dim) = min(mesh%idx%nr(2, 1:sb%dim), nmax(1:sb%dim))
 
@@ -271,6 +275,7 @@ contains
           this%map(is) = ip
           xtmp(is, 0) = sqrt(r2)
           xtmp(is, 1:sb%dim) = xx(1:sb%dim)
+          ! Note that xx can be outside the unit cell
          end do
       end do
 
@@ -295,11 +300,12 @@ contains
       this%x(ip, 0:sb%dim) = xtmp(order(ip), 0:sb%dim)
     end do
 
-    !check whether points overlap
+    !check whether points overlap (i.e. whetehr a submesh contains the same point more than once)
 
     this%overlap = .false.
     do ip = 1, this%np_part - 1
       if(this%map(ip) == this%map(ip + 1)) then
+        ! this simplified test works, as the points are ordered.
         this%overlap = .true.
         exit
       end if

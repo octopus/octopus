@@ -139,6 +139,7 @@ module hamiltonian_elec_base_oct_m
     FLOAT, allocatable     :: dprojection(:, :)
     CMPLX, allocatable     :: zprojection(:, :)
     type(accel_mem_t)      :: buff_projection
+    type(accel_mem_t)      :: buff_spin_to_phase
   end type projection_t
 
   integer, parameter, public ::          &

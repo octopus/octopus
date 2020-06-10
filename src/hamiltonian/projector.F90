@@ -196,21 +196,26 @@ contains
 
     integer :: ns, iq, is, ikpoint
     FLOAT   :: kr, kpoint(1:MAX_DIM)
-    integer :: ndim, idim, stdim
+    integer :: ndim, idim
+    integer :: nphase, iphase
     FLOAT, allocatable :: diff(:,:) 
 
     PUSH_SUB(projector_init_phases)
 
-    ns = this%sphere%np
+    ns = this%sphere%np !< number of points in the sphere
     ndim = sb%dim
-    stdim = 1
-    if(bnd%spiralBC) stdim = 3
+    nphase = 1
+    if(bnd%spiralBC) nphase = 3
 
 
     if(.not. associated(this%phase) .and. ns > 0) then
-      SAFE_ALLOCATE(this%phase(1:ns, 1:stdim, std%kpt%start:std%kpt%end))
+      SAFE_ALLOCATE(this%phase(1:ns, 1:nphase, std%kpt%start:std%kpt%end))
     end if
 
+    ! Conctruct vectors which translate the submesh point back into the unit cell:
+    !   The positions this%sphere%x can lie outside the unit cell, while
+    !   this%sphere%mesh%x(this%sphere%map(is), 1:ndim) by construction is the periodic image inside the unit cell.
+    !   If a point of the submesh is inside the unit cell, diff(:,is) = 0.
     SAFE_ALLOCATE(diff(1:ndim, 1:ns))
     do is = 1, ns
       diff(1:ndim, is) = this%sphere%x(is, 1:ndim) - this%sphere%mesh%x(this%sphere%map(is), 1:ndim)
@@ -225,27 +230,26 @@ contains
       kpoint = M_ZERO
       kpoint(1:ndim) = kpoints_get_point(sb%kpoints, ikpoint)
         
-      do idim = 1, stdim
+      do iphase = 1, nphase
         do is = 1, ns
           ! this is only the correction to the global phase, that can
-          ! appear if the sphere crossed the boundary of the cell.
+          ! appear if the sphere crossed the boundary of the cell. (diff=0 otherwise)
           
           kr = sum(kpoint(1:ndim)*diff(1:ndim, is))
 
           if(present(vec_pot)) then
-            if(allocated(vec_pot)) kr = kr + &
-              sum(vec_pot(1:ndim)*diff(1:ndim, is))
+            if(allocated(vec_pot)) kr = kr + sum(vec_pot(1:ndim)*diff(1:ndim, is))
           end if
 
           if(present(vec_pot_var)) then
             if(allocated(vec_pot_var)) kr = kr + sum(vec_pot_var(1:ndim, this%sphere%map(is))*this%sphere%x(is, 1:ndim))
           end if
 
-          if(bnd%spiralBC .and. idim > 1) then
-            kr = kr + (2*(idim-1)-3)*sum(bnd%spiral_q(1:ndim)*diff(1:ndim, is))
+          if(bnd%spiralBC .and. iphase > 1) then
+            kr = kr + (2*(iphase-1)-3)*sum(bnd%spiral_q(1:ndim)*diff(1:ndim, is))
           end if
 
-          this%phase(is, idim, iq) = exp(-M_zI*kr)
+          this%phase(is, iphase, iq) = exp(-M_zI*kr)
         end do
       end do
 
