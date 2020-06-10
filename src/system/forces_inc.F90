@@ -75,7 +75,7 @@ subroutine X(forces_from_local_potential)(gr, namespace, geo, ep, gdensity, forc
  
   PUSH_SUB(X(forces_from_local_potential))
 
-  call profiling_in(prof, "FORCES_VLOC")
+  call profiling_in(prof, "FORCES_LOCAL_POT")
 
   SAFE_ALLOCATE(vloc(1:gr%mesh%np))
   SAFE_ALLOCATE(zvloc(1:gr%mesh%np))
@@ -150,7 +150,7 @@ subroutine X(forces_from_potential)(gr, namespace, geo, hm, st, force, force_loc
 
   PUSH_SUB(X(forces_from_potential))
 
-  call profiling_in(prof, "FORCES_VNL")
+  call profiling_in(prof, "FORCES_FROM_POTENTIALS")
 
   np = gr%mesh%np
   np_part = gr%mesh%np_part

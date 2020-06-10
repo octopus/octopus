@@ -1571,7 +1571,7 @@ end subroutine X(compute_periodic_coulomb_integrals)
 
    PUSH_SUB(X(lda_u_force))
 
-   call profiling_in(prof, "DFT_U_FORCES")
+   call profiling_in(prof, "FORCES_DFTU")
 
    !TODO: Implement
    if(this%intersite) then
