@@ -1827,11 +1827,14 @@ contains
     CMPLX, allocatable :: psi_gpsi(:)
     CMPLX   :: c_tmp
     integer :: is, ik, ist, i_dim, st_dim, ii, st_end_, idir
+    integer :: ib, idim
     FLOAT   :: ww, kpoint(1:MAX_DIM)
     logical :: something_to_do
     FLOAT, allocatable :: symm(:, :)
     type(symmetrizer_t) :: symmetrizer
     type(profile_t), save :: prof
+    type(wfs_elec_t) :: lwf_psib
+    class(wfs_elec_t), allocatable :: gwf_psib(:)
 
     call profiling_in(prof, "STATES_CALC_QUANTITIES")
 
@@ -1843,7 +1846,7 @@ contains
       present(paramagnetic_current) .or. present(density_gradient) .or. present(density_laplacian)
     ASSERT(something_to_do)
 
-    SAFE_ALLOCATE( wf_psi(1:der%mesh%np_part, 1:st%d%dim))
+    SAFE_ALLOCATE( wf_psi(1:der%mesh%np, 1:st%d%dim))
     SAFE_ALLOCATE( wf_psi_conj(1:der%mesh%np_part, 1:st%d%dim))
     SAFE_ALLOCATE(gwf_psi(1:der%mesh%np, 1:der%mesh%sb%dim, 1:st%d%dim))
     SAFE_ALLOCATE(abs_wf_psi(1:der%mesh%np))
@@ -1876,141 +1879,163 @@ contains
     if(present(density_laplacian)) density_laplacian(:,:) = M_ZERO
     if(present(gi_kinetic_energy_density)) gi_kinetic_energy_density = M_ZERO
 
+    SAFE_ALLOCATE_TYPE_ARRAY(wfs_elec_t, gwf_psib, (1:der%mesh%sb%dim))
+
     do ik = st%d%kpt%start, st%d%kpt%end
 
       kpoint(1:der%mesh%sb%dim) = kpoints_get_point(der%mesh%sb%kpoints, states_elec_dim_get_kpoint_index(st%d, ik))
       is = states_elec_dim_get_spin_index(st%d, ik)
 
-      do ist = st%st_start, st_end_
-        ww = st%d%kweights(ik)*st%occ(ist, ik)
-        if(abs(ww) <= M_EPSILON) cycle
-
-        ! all calculations will be done with complex wavefunctions
-        call states_elec_get_state(st, der%mesh, ist, ik, wf_psi)
-
-        do st_dim = 1, st%d%dim
-          call boundaries_set(der%boundaries, wf_psi(:, st_dim))
-        end do
+      do ib = st%group%block_start, st%group%block_end
+        call st%group%psib(ib, ik)%do_pack(copy = .true.)
+        call boundaries_set(der%boundaries, st%group%psib(ib, ik))
 
         ! calculate gradient of the wavefunction
-        do st_dim = 1, st%d%dim
-          call zderivatives_grad(der, wf_psi(:,st_dim), gwf_psi(:,:,st_dim), set_bc = .false.)
+        do idir = 1, der%mesh%sb%dim
+          call st%group%psib(ib, ik)%copy_to(gwf_psib(idir))
         end do
+        call zderivatives_batch_grad(der, st%group%psib(ib, ik), gwf_psib, set_bc=.false.)
 
         ! calculate the Laplacian of the wavefunction
         if (present(density_laplacian)) then
-          do st_dim = 1, st%d%dim
-            call zderivatives_lapl(der, wf_psi(:,st_dim), lwf_psi(:,st_dim), set_bc = .false.)
+          call st%group%psib(ib, ik)%copy_to(lwf_psib)
+          call zderivatives_batch_perform(der%lapl, der, st%group%psib(ib, ik), lwf_psib, set_bc=.false.)
+        end if
+
+        do ist = states_elec_block_min(st, ib), states_elec_block_max(st, ib)
+          ww = st%d%kweights(ik)*st%occ(ist, ik)
+          if(abs(ww) <= M_EPSILON) cycle
+
+          do idim = 1, st%d%dim
+            ii = st%group%psib(ib, ik)%inv_index((/ist, idim/))
+            call batch_get_state(st%group%psib(ib, ik), ii, der%mesh%np, wf_psi(:, idim))
+            do idir = 1, der%mesh%sb%dim
+              call batch_get_state(gwf_psib(idir), ii, der%mesh%np, gwf_psi(:, idir, idim))
+            end do
+            if (present(density_laplacian)) then
+              call batch_get_state(lwf_psib, ii, der%mesh%np, lwf_psi(:, idim))
+            end if
           end do
-        end if
-
-        !We precompute some quantites, to avoid to compute it many times
-        wf_psi_conj(1:der%mesh%np, 1:st%d%dim) = conjg(wf_psi(1:der%mesh%np,1:st%d%dim))
-        abs_wf_psi(1:der%mesh%np) = real(wf_psi_conj(1:der%mesh%np, 1)*wf_psi(1:der%mesh%np, 1))
-
-        if(present(density_laplacian)) then
-          density_laplacian(1:der%mesh%np, is) = density_laplacian(1:der%mesh%np, is) + &
-               ww*M_TWO*real(wf_psi_conj(1:der%mesh%np, 1)*lwf_psi(1:der%mesh%np, 1))
-          if(st%d%ispin == SPINORS) then
-            density_laplacian(1:der%mesh%np, 2) = density_laplacian(1:der%mesh%np, 2) + &
-                 ww*M_TWO*real(wf_psi_conj(1:der%mesh%np, 2)*lwf_psi(1:der%mesh%np, 2))
-            density_laplacian(1:der%mesh%np, 3) = density_laplacian(1:der%mesh%np, 3) + &
-                 ww*real (lwf_psi(1:der%mesh%np, 1)*wf_psi_conj(1:der%mesh%np, 2) + &
-                 wf_psi(1:der%mesh%np, 1)*conjg(lwf_psi(1:der%mesh%np, 2)))
-            density_laplacian(1:der%mesh%np, 4) = density_laplacian(1:der%mesh%np, 4) + &
-                 ww*aimag(lwf_psi(1:der%mesh%np, 1)*wf_psi_conj(1:der%mesh%np, 2) + &
-                 wf_psi(1:der%mesh%np, 1)*conjg(lwf_psi(1:der%mesh%np, 2)))
-          end if
-        end if
-        
-        do i_dim = 1, der%mesh%sb%dim
 
           !We precompute some quantites, to avoid to compute it many times
-          psi_gpsi(1:der%mesh%np) = wf_psi_conj(1:der%mesh%np, 1)*gwf_psi(1:der%mesh%np,i_dim,1)
-          abs_gwf_psi(1:der%mesh%np) = real(conjg(gwf_psi(1:der%mesh%np, i_dim, 1))*gwf_psi(1:der%mesh%np, i_dim, 1))
+          wf_psi_conj(1:der%mesh%np, 1:st%d%dim) = conjg(wf_psi(1:der%mesh%np,1:st%d%dim))
+          abs_wf_psi(1:der%mesh%np) = real(wf_psi_conj(1:der%mesh%np, 1)*wf_psi(1:der%mesh%np, 1))
 
-          if(present(density_gradient)) &
+          if(present(density_laplacian)) then
+            density_laplacian(1:der%mesh%np, is) = density_laplacian(1:der%mesh%np, is) + &
+                 ww*M_TWO*real(wf_psi_conj(1:der%mesh%np, 1)*lwf_psi(1:der%mesh%np, 1))
+            if(st%d%ispin == SPINORS) then
+              density_laplacian(1:der%mesh%np, 2) = density_laplacian(1:der%mesh%np, 2) + &
+                   ww*M_TWO*real(wf_psi_conj(1:der%mesh%np, 2)*lwf_psi(1:der%mesh%np, 2))
+              density_laplacian(1:der%mesh%np, 3) = density_laplacian(1:der%mesh%np, 3) + &
+                   ww*real (lwf_psi(1:der%mesh%np, 1)*wf_psi_conj(1:der%mesh%np, 2) + &
+                   wf_psi(1:der%mesh%np, 1)*conjg(lwf_psi(1:der%mesh%np, 2)))
+              density_laplacian(1:der%mesh%np, 4) = density_laplacian(1:der%mesh%np, 4) + &
+                   ww*aimag(lwf_psi(1:der%mesh%np, 1)*wf_psi_conj(1:der%mesh%np, 2) + &
+                   wf_psi(1:der%mesh%np, 1)*conjg(lwf_psi(1:der%mesh%np, 2)))
+            end if
+          end if
+        
+          do i_dim = 1, der%mesh%sb%dim
+
+            !We precompute some quantites, to avoid to compute it many times
+            psi_gpsi(1:der%mesh%np) = wf_psi_conj(1:der%mesh%np, 1)*gwf_psi(1:der%mesh%np,i_dim,1)
+            abs_gwf_psi(1:der%mesh%np) = real(conjg(gwf_psi(1:der%mesh%np, i_dim, 1))*gwf_psi(1:der%mesh%np, i_dim, 1))
+
+            if(present(density_gradient)) &
                density_gradient(1:der%mesh%np, i_dim, is) = density_gradient(1:der%mesh%np, i_dim, is) &
                       + ww*M_TWO*real(psi_gpsi(1:der%mesh%np))
-          if(present(density_laplacian)) &
+            if(present(density_laplacian)) &
                density_laplacian(1:der%mesh%np, is) = density_laplacian(1:der%mesh%np, is)             &
                       + ww*M_TWO*abs_gwf_psi(1:der%mesh%np)
 
-          if(associated(jp)) then
-            if (.not.(states_are_real(st))) then
-              jp(1:der%mesh%np, i_dim, is) = jp(1:der%mesh%np, i_dim, is) + &
-                    ww*aimag(psi_gpsi(1:der%mesh%np)) &
-                  - ww*abs_wf_psi(1:der%mesh%np)*kpoint(i_dim)
-            else
-              jp(1:der%mesh%np, i_dim, is) = M_ZERO
+            if(associated(jp)) then
+              if (.not.(states_are_real(st))) then
+                jp(1:der%mesh%np, i_dim, is) = jp(1:der%mesh%np, i_dim, is) + &
+                      ww*aimag(psi_gpsi(1:der%mesh%np)) &
+                    - ww*abs_wf_psi(1:der%mesh%np)*kpoint(i_dim)
+              else
+                jp(1:der%mesh%np, i_dim, is) = M_ZERO
+              end if
             end if
-          end if
 
-          if (associated(tau)) then
-            tau (1:der%mesh%np, is)   = tau (1:der%mesh%np, is)        + &
-                 ww*(abs_gwf_psi(1:der%mesh%np) + abs(kpoint(i_dim))**2*abs_wf_psi(1:der%mesh%np)  &
-                     - M_TWO*aimag(psi_gpsi(1:der%mesh%np))*kpoint(i_dim))
-          end if
+            if (associated(tau)) then
+              tau (1:der%mesh%np, is)   = tau (1:der%mesh%np, is)        + &
+                   ww*(abs_gwf_psi(1:der%mesh%np) + abs(kpoint(i_dim))**2*abs_wf_psi(1:der%mesh%np)  &
+                       - M_TWO*aimag(psi_gpsi(1:der%mesh%np))*kpoint(i_dim))
+            end if
 
-          if(st%d%ispin == SPINORS) then
-            if(present(density_gradient)) then
-              density_gradient(1:der%mesh%np, i_dim, 2) = density_gradient(1:der%mesh%np, i_dim, 2) + &
-                   ww*M_TWO*real(wf_psi_conj(1:der%mesh%np, 2)*gwf_psi(1:der%mesh%np, i_dim, 2))
-              density_gradient(1:der%mesh%np, i_dim, 3) = density_gradient(1:der%mesh%np, i_dim, 3) + ww* &
-                   real (gwf_psi(1:der%mesh%np, i_dim, 1)*wf_psi_conj(1:der%mesh%np, 2) + &
-                   wf_psi(1:der%mesh%np, 1)*conjg(gwf_psi(1:der%mesh%np, i_dim, 2)))
-              density_gradient(1:der%mesh%np, i_dim, 4) = density_gradient(1:der%mesh%np, i_dim, 4) + ww* &
+            if(st%d%ispin == SPINORS) then
+              if(present(density_gradient)) then
+                density_gradient(1:der%mesh%np, i_dim, 2) = density_gradient(1:der%mesh%np, i_dim, 2) + &
+                     ww*M_TWO*real(wf_psi_conj(1:der%mesh%np, 2)*gwf_psi(1:der%mesh%np, i_dim, 2))
+                density_gradient(1:der%mesh%np, i_dim, 3) = density_gradient(1:der%mesh%np, i_dim, 3) + ww* &
+                     real (gwf_psi(1:der%mesh%np, i_dim, 1)*wf_psi_conj(1:der%mesh%np, 2) + &
+                     wf_psi(1:der%mesh%np, 1)*conjg(gwf_psi(1:der%mesh%np, i_dim, 2)))
+                density_gradient(1:der%mesh%np, i_dim, 4) = density_gradient(1:der%mesh%np, i_dim, 4) + ww* &
                    aimag(gwf_psi(1:der%mesh%np, i_dim, 1)*wf_psi_conj(1:der%mesh%np, 2) + &
                    wf_psi(1:der%mesh%np, 1)*conjg(gwf_psi(1:der%mesh%np, i_dim, 2)))
-            end if
+              end if
 
-            if(present(density_laplacian)) then
-              density_laplacian(1:der%mesh%np, 2) = density_laplacian(1:der%mesh%np, 2)         + &
+              if(present(density_laplacian)) then
+                density_laplacian(1:der%mesh%np, 2) = density_laplacian(1:der%mesh%np, 2)         + &
                    ww*M_TWO*real(conjg(gwf_psi(1:der%mesh%np, i_dim, 2))*gwf_psi(1:der%mesh%np, i_dim, 2))
-              density_laplacian(1:der%mesh%np, 3) = density_laplacian(1:der%mesh%np, 3)         + &
-                   ww*M_TWO*real (gwf_psi(1:der%mesh%np, i_dim, 1)*conjg(gwf_psi(1:der%mesh%np, i_dim, 2)))
-              density_laplacian(1:der%mesh%np, 4) = density_laplacian(1:der%mesh%np, 4)         + &
+                density_laplacian(1:der%mesh%np, 3) = density_laplacian(1:der%mesh%np, 3)         + &
+                     ww*M_TWO*real (gwf_psi(1:der%mesh%np, i_dim, 1)*conjg(gwf_psi(1:der%mesh%np, i_dim, 2)))
+                density_laplacian(1:der%mesh%np, 4) = density_laplacian(1:der%mesh%np, 4)         + &
                    ww*M_TWO*aimag(gwf_psi(1:der%mesh%np, i_dim, 1)*conjg(gwf_psi(1:der%mesh%np, i_dim, 2)))
-            end if
+              end if
 
-            ! the expression for the paramagnetic current with spinors is
-            !     j = ( jp(1)             jp(3) + i jp(4) )
-            !         (-jp(3) + i jp(4)   jp(2)           )
-            if(associated(jp)) then
-              jp(1:der%mesh%np, i_dim, 2) = jp(1:der%mesh%np, i_dim, 2) + &
-                   ww*aimag(wf_psi_conj(1:der%mesh%np, 2)*gwf_psi(1:der%mesh%np, i_dim, 2))
-              do ii = 1, der%mesh%np
-                c_tmp = wf_psi_conj(ii, 1)*gwf_psi(ii, i_dim, 2) - wf_psi(ii, 2)*conjg(gwf_psi(ii, i_dim, 1))
-                jp(ii, i_dim, 3) = jp(ii, i_dim, 3) + ww* real(c_tmp)
-                jp(ii, i_dim, 4) = jp(ii, i_dim, 4) + ww*aimag(c_tmp)
-              end do
-            end if
+              ! the expression for the paramagnetic current with spinors is
+              !     j = ( jp(1)             jp(3) + i jp(4) )
+              !         (-jp(3) + i jp(4)   jp(2)           )
+              if(associated(jp)) then
+                jp(1:der%mesh%np, i_dim, 2) = jp(1:der%mesh%np, i_dim, 2) + &
+                     ww*aimag(wf_psi_conj(1:der%mesh%np, 2)*gwf_psi(1:der%mesh%np, i_dim, 2))
+                do ii = 1, der%mesh%np
+                  c_tmp = wf_psi_conj(ii, 1)*gwf_psi(ii, i_dim, 2) - wf_psi(ii, 2)*conjg(gwf_psi(ii, i_dim, 1))
+                  jp(ii, i_dim, 3) = jp(ii, i_dim, 3) + ww* real(c_tmp)
+                  jp(ii, i_dim, 4) = jp(ii, i_dim, 4) + ww*aimag(c_tmp)
+                end do
+              end if
 
-            ! the expression for the paramagnetic current with spinors is
-            !     t = ( tau(1)              tau(3) + i tau(4) )
-            !         ( tau(3) - i tau(4)   tau(2)            )
-            if(associated(tau)) then
-              tau (1:der%mesh%np, 2) = tau (1:der%mesh%np, 2) + ww*abs(gwf_psi(1:der%mesh%np, i_dim, 2))**2
-              do ii = 1, der%mesh%np
-                c_tmp = conjg(gwf_psi(ii, i_dim, 1))*gwf_psi(ii, i_dim, 2)
-                tau(ii, 3) = tau(ii, 3) + ww* real(c_tmp)
-                tau(ii, 4) = tau(ii, 4) + ww*aimag(c_tmp)
-              end do
-            end if
+              ! the expression for the paramagnetic current with spinors is
+              !     t = ( tau(1)              tau(3) + i tau(4) )
+              !         ( tau(3) - i tau(4)   tau(2)            )
+              if(associated(tau)) then
+                tau (1:der%mesh%np, 2) = tau (1:der%mesh%np, 2) + ww*abs(gwf_psi(1:der%mesh%np, i_dim, 2))**2
+                do ii = 1, der%mesh%np
+                  c_tmp = conjg(gwf_psi(ii, i_dim, 1))*gwf_psi(ii, i_dim, 2)
+                  tau(ii, 3) = tau(ii, 3) + ww* real(c_tmp)
+                  tau(ii, 4) = tau(ii, 4) + ww*aimag(c_tmp)
+                end do
+              end if
 
-            ASSERT(.not. present(gi_kinetic_energy_density))
+              ASSERT(.not. present(gi_kinetic_energy_density))
 
-          end if !SPINORS
+            end if !SPINORS
 
+          end do !i_dim
+
+        end do !ist
+
+        do idir = 1, der%mesh%sb%dim
+          call gwf_psib(idir)%end()
         end do
 
-      end do
-    end do
+        if(present(density_laplacian)) then
+          call lwf_psib%end()
+        end if
+        call st%group%psib(ib, ik)%do_unpack(copy = .false.)        
+
+      end do !ib
+    end do !ik
 
     SAFE_DEALLOCATE_A(wf_psi_conj)
     SAFE_DEALLOCATE_A(abs_wf_psi)
     SAFE_DEALLOCATE_A(abs_gwf_psi)
     SAFE_DEALLOCATE_A(psi_gpsi)
+    SAFE_DEALLOCATE_A(gwf_psib)
 
     if(.not. present(gi_kinetic_energy_density)) then
       if(.not. present(paramagnetic_current)) then
