@@ -19,27 +19,12 @@
 #include "global.h"
 
 module photon_mode_oct_m
-  use comm_oct_m
-  use derivatives_oct_m
   use global_oct_m
-  use grid_oct_m
-  use hamiltonian_elec_oct_m
-  use lalg_adv_oct_m
-  use mesh_function_oct_m
   use mesh_oct_m
   use messages_oct_m
-  use mpi_oct_m
   use namespace_oct_m
   use parser_oct_m
-  use poisson_oct_m
   use profiling_oct_m
-  use states_elec_oct_m
-  use states_elec_dim_oct_m
-  use scf_tol_oct_m
-  use varinfo_oct_m
-  use xc_oct_m
-  use XC_F90(lib_m)
-  use xc_functl_oct_m
 
   implicit none
 
@@ -63,10 +48,10 @@ module photon_mode_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine photon_mode_init(this, namespace, gr)
-    type(photon_mode_t),  intent(out)   :: this
-    type(namespace_t),    intent(in)    :: namespace 
-    type(grid_t),         intent(inout) :: gr
+  subroutine photon_mode_init(this, namespace, mesh)
+    type(photon_mode_t),  intent(out) :: this
+    type(namespace_t),    intent(in)  :: namespace
+    type(mesh_t),         intent(in)  :: mesh
 
     type(block_t)         :: blk
     integer               :: ii, ncols
@@ -93,30 +78,30 @@ contains
        this%nmodes = parse_block_n(blk)
        SAFE_ALLOCATE(this%omega_array(1:this%nmodes))
        SAFE_ALLOCATE(this%lambda_array(1:this%nmodes))
-       SAFE_ALLOCATE(this%pol_array(1:this%nmodes,3))
-       SAFE_ALLOCATE(this%pol_dipole_array(1:gr%mesh%np,1:this%nmodes))
+       SAFE_ALLOCATE(this%pol_array(1:this%nmodes, 3))
+       SAFE_ALLOCATE(this%pol_dipole_array(1:mesh%np,1:this%nmodes))
        do ii = 1, this%nmodes
           ncols = parse_block_cols(blk, ii-1)
           call parse_block_float(blk, ii-1, 0, this%omega_array(ii))   !row, column
           call parse_block_float(blk, ii-1, 1, this%lambda_array(ii))  !row, column
-          call parse_block_float(blk, ii-1, 2, this%pol_array(ii,1))   !row, column
-          call parse_block_float(blk, ii-1, 3, this%pol_array(ii,2))   !row, column
-          call parse_block_float(blk, ii-1, 4, this%pol_array(ii,3))   !row, column
-          this%pol_dipole_array(1:gr%mesh%np,ii) = this%pol_array(ii,1)*gr%mesh%x(1:gr%mesh%np, 1) &
-                                        + this%pol_array(ii,2)*gr%mesh%x(1:gr%mesh%np, 2) &
-                                        + this%pol_array(ii,3)*gr%mesh%x(1:gr%mesh%np, 3)
+          call parse_block_float(blk, ii-1, 2, this%pol_array(ii, 1))  !row, column
+          call parse_block_float(blk, ii-1, 3, this%pol_array(ii, 2))  !row, column
+          call parse_block_float(blk, ii-1, 4, this%pol_array(ii, 3))  !row, column
+          this%pol_dipole_array(1:mesh%np,ii) = this%pol_array(ii,1)*mesh%x(1:mesh%np, 1) &
+                                              + this%pol_array(ii,2)*mesh%x(1:mesh%np, 2) &
+                                              + this%pol_array(ii,3)*mesh%x(1:mesh%np, 3)
        end do
       call parse_block_end(blk)
     else
       call messages_write('You need to specify the photon modes!')
-      call messages_fatal()
+      call messages_fatal(namespace=namespace)
     end if
 
     this%ex = M_ZERO
     SAFE_ALLOCATE(this%pt_number(1:this%nmodes))
     this%pt_number = M_ZERO
 
-    SAFE_ALLOCATE(this%correlator(1:gr%mesh%np,1:this%nmodes))
+    SAFE_ALLOCATE(this%correlator(1:mesh%np, 1:this%nmodes))
     this%correlator = M_ZERO
 
     POP_SUB(photon_mode_init)
