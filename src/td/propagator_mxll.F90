@@ -2428,7 +2428,7 @@ contains
   subroutine td_function_mxll_init(st, namespace, hm)
     type(states_mxll_t),      intent(inout) :: st
     type(namespace_t),        intent(in)    :: namespace
-    type(hamiltonian_mxll_t), intent(in)    :: hm
+    type(hamiltonian_mxll_t), intent(inout)    :: hm
 
     type(block_t)        :: blk
     integer              :: il, nlines, idim, ncols, ierr
@@ -2437,7 +2437,7 @@ contains
 
     PUSH_SUB(td_function_init)
 
-    !%Variable UserDefinedConstantSpacialMaxwellField
+    !%Variable UserDefinedConstantSpatialMaxwellField
     !%Type block
     !%Section MaxwellStates
     !%Description
@@ -2445,16 +2445,16 @@ contains
     !%
     !% Example:
     !%
-    !% <tt>%UserDefinedConstantSpacialMaxwellFields
+    !% <tt>%UserDefinedConstantSpatialMaxwellFields
     !% <br>&nbsp;&nbsp;   plane_wave_parser      | E_x | E_y | E_z | B_x | B_y | B_z | "tdf_function"
     !% <br>%</tt>
     !%
     !% This block defines three components of E field, three components of B field, and reference to
-    !% TD function.
+    !% the TD function.
     !%
     !%End
 
-    if (parse_block(namespace, 'UserDefinedConstantSpacialMaxwellField', blk) == 0) then
+    if (parse_block(namespace, 'UserDefinedConstantSpatialMaxwellField', blk) == 0) then
       st%rs_state_const_external = .true.
       nlines = parse_block_n(blk)
       SAFE_ALLOCATE(st%rs_state_const_td_function(nlines))
@@ -2466,7 +2466,7 @@ contains
         ! Check that number of columns is five or six.
         ncols = parse_block_cols(blk, il - 1)
         if (ncols  /= 7) then
-          message(1) = 'Each line in the UserDefinedConstantSpacialMaxwellField block must have'
+          message(1) = 'Each line in the UserDefinedConstantSpatialMaxwellField block must have'
           message(2) = 'seven columns.'
           call messages_fatal(2)
         end if
@@ -2482,11 +2482,22 @@ contains
       end do
     end if
 
+    !%Variable PropagateSpatialMaxwellField
+    !%Type logical
+    !%Default yes
+    !%Section MaxwellStates
+    !%Description
+    !% Allow for numerical propagation of Maxwells equations of spatially constant field.
+    !% If set to no, do only analytic evaluation of the field inside the box.
+    !%End
+
+    call parse_variable(namespace, 'PropagateSpatialMaxwellField', .true., hm%spatial_constant_propagate)
+
     POP_SUB(td_function_mxll_init)
   end subroutine td_function_mxll_init
 
   ! ---------------------------------------------------------
-  subroutine spatial_constant_calculation(constant_calc, st, gr, hm, time, dt, delay, rs_state)
+  subroutine spatial_constant_calculation(constant_calc, st, gr, hm, time, dt, delay, rs_state, set_initial_state)
     logical,                  intent(in)    :: constant_calc
     type(states_mxll_t),      intent(inout) :: st
     type(grid_t),             intent(in)    :: gr
@@ -2495,11 +2506,16 @@ contains
     FLOAT,                    intent(in)    :: dt
     FLOAT,                    intent(in)    :: delay
     CMPLX,                    intent(inout) :: rs_state(:,:)
+    logical,        optional, intent(in)    :: set_initial_state
 
     integer :: ip, ic, icn
     FLOAT   :: tf_old, tf_new
+    logical :: set_initial_state_
 
     PUSH_SUB(spatial_constant_calculation)
+
+    set_initial_state_ = .false.
+    if (present(set_initial_state)) set_initial_state_ = set_initial_state
 
     if (hm%spatial_constant_apply) then
       if (constant_calc) then
@@ -2508,11 +2524,12 @@ contains
         do ic = 1, icn
           tf_old = tdf(st%rs_state_const_td_function(ic), time-delay-dt)
           tf_new = tdf(st%rs_state_const_td_function(ic), time-delay)
-          do ip = 1, gr%mesh%np_part
-            ! changed this original line
-             !rs_state(ip,:) = rs_state(ip,:) + st%rs_state_const_amp(:,ic) * (tf_new - tf_old)
-             ! by this
-             rs_state(ip,:) = st%rs_state_const_amp(:,ic) * tf_new
+          do ip = 1, gr%mesh%np
+            if (set_initial_state_ .or. (.not. hm%spatial_constant_propagate)) then
+              rs_state(ip,:) = st%rs_state_const_amp(:,ic) * tf_new
+            else
+              rs_state(ip,:) = rs_state(ip,:) + st%rs_state_const_amp(:,ic) * (tf_new - tf_old)
+            end if
           end do
           st%rs_state_const(:) = st%rs_state_const(:) + st%rs_state_const_amp(:, ic)
         end do

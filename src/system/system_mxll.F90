@@ -355,11 +355,13 @@ contains
       end if
     end if
 
+    ! initialize the spatial constant field according to the conditions set in the
+    ! UserDefinedConstantSpatialMaxwellField block
     if (this%tr_mxll%bc_constant) then
       call spatial_constant_calculation(this%tr_mxll%bc_constant, this%st, this%gr, this%hm, M_ZERO, &
-           this%prop%dt/this%tr_mxll%inter_steps, this%tr_mxll%delay_time, this%rs_state_init)
-      this%st%rs_state_const(:) = this%rs_state_init(this%gr%mesh%idx%lxyz_inv(0,0,0),:)
-      call constant_boundaries_calculation(this%tr_mxll%bc_constant, this%hm%bc, this%hm, this%st, this%st%rs_state)
+           this%prop%dt/this%tr_mxll%inter_steps, this%tr_mxll%delay_time, this%st%rs_state, &
+           set_initial_state = .true.)
+      this%st%rs_state_const(:) = this%st%rs_state(this%gr%mesh%idx%lxyz_inv(0,0,0),:)
     end if
 
     if (parse_is_defined(this%namespace, 'UserDefinedInitialMaxwellStates')) then

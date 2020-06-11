@@ -116,6 +116,7 @@ module hamiltonian_mxll_oct_m
     logical                        :: plane_waves_apply
     logical                        :: spatial_constant
     logical                        :: spatial_constant_apply
+    logical                        :: spatial_constant_propagate
 
     ! TODO: add medium object file
     integer                        :: medium_calculation
@@ -261,6 +262,7 @@ contains
 
     hm%plane_waves_apply = .false.
     hm%spatial_constant_apply = .false.
+    hm%spatial_constant_propagate = .true. ! only used if spatially constant field is used
 
     hm%propagation_apply = .false.
 
