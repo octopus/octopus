@@ -93,7 +93,7 @@ module xc_oep_oct_m
     FLOAT,               public :: norm2ss
     FLOAT,   pointer            :: vxc_old(:,:), ss_old(:,:)
     integer                     :: noccst
-    logical                     :: coctranslation_logical
+    logical                     :: coc_translation
   end type xc_oep_t
 
   type(profile_t), save ::      &
@@ -244,7 +244,7 @@ contains
         call lr_init(oep%lr)
         if(oep%has_photons) then
           call lr_init(oep%photon_lr)
-          call parse_variable(namespace, 'KLIPhotonCOC', .false., oep%coctranslation_logical)
+          call parse_variable(namespace, 'KLIPhotonCOC', .false., oep%coc_translation)
         end if
       end if
 
