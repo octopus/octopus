@@ -37,12 +37,13 @@ module photon_mode_oct_m
   type photon_mode_t
     ! All components are public by default
     integer               :: nmodes
-    FLOAT, allocatable    :: omega_array(:), lambda_array(:)  ! frequencies and interaction strength
-    FLOAT, allocatable    :: pol_array(:,:)                   ! polarization of the photon field
-    FLOAT, allocatable    :: pol_dipole_array(:,:)            ! polarization*dipole operator
-    FLOAT                 :: ex                               ! photon exchange energy
-    FLOAT, allocatable    :: pt_number(:)                     ! number of photons in mode
-    FLOAT, allocatable    :: correlator(:,:)                  ! correlation function <n(r)(ad+a)>
+    FLOAT, allocatable    :: omega(:)           !< frequencies
+    FLOAT, allocatable    :: lambda(:)          !< interaction strength
+    FLOAT, allocatable    :: pol(:,:)           !< polarization of the photon field
+    FLOAT, allocatable    :: pol_dipole(:,:)    !< polarization*dipole operator
+    FLOAT                 :: ex                 !< photon exchange energy
+    FLOAT, allocatable    :: number(:)          !< number of photons in mode
+    FLOAT, allocatable    :: correlator(:,:)    !< correlation function <n(r)(ad+a)>
   end type photon_mode_t
 
 contains
@@ -76,20 +77,20 @@ contains
     if(parse_block(namespace, 'PhotonModes', blk) == 0) then
 
        this%nmodes = parse_block_n(blk)
-       SAFE_ALLOCATE(this%omega_array(1:this%nmodes))
-       SAFE_ALLOCATE(this%lambda_array(1:this%nmodes))
-       SAFE_ALLOCATE(this%pol_array(1:this%nmodes, 3))
-       SAFE_ALLOCATE(this%pol_dipole_array(1:mesh%np,1:this%nmodes))
+       SAFE_ALLOCATE(this%omega(1:this%nmodes))
+       SAFE_ALLOCATE(this%lambda(1:this%nmodes))
+       SAFE_ALLOCATE(this%pol(1:this%nmodes, 3))
+       SAFE_ALLOCATE(this%pol_dipole(1:mesh%np, 1:this%nmodes))
        do ii = 1, this%nmodes
           ncols = parse_block_cols(blk, ii-1)
-          call parse_block_float(blk, ii-1, 0, this%omega_array(ii))   !row, column
-          call parse_block_float(blk, ii-1, 1, this%lambda_array(ii))  !row, column
-          call parse_block_float(blk, ii-1, 2, this%pol_array(ii, 1))  !row, column
-          call parse_block_float(blk, ii-1, 3, this%pol_array(ii, 2))  !row, column
-          call parse_block_float(blk, ii-1, 4, this%pol_array(ii, 3))  !row, column
-          this%pol_dipole_array(1:mesh%np,ii) = this%pol_array(ii,1)*mesh%x(1:mesh%np, 1) &
-                                              + this%pol_array(ii,2)*mesh%x(1:mesh%np, 2) &
-                                              + this%pol_array(ii,3)*mesh%x(1:mesh%np, 3)
+          call parse_block_float(blk, ii-1, 0, this%omega(ii))   !row, column
+          call parse_block_float(blk, ii-1, 1, this%lambda(ii))  !row, column
+          call parse_block_float(blk, ii-1, 2, this%pol(ii, 1))  !row, column
+          call parse_block_float(blk, ii-1, 3, this%pol(ii, 2))  !row, column
+          call parse_block_float(blk, ii-1, 4, this%pol(ii, 3))  !row, column
+          this%pol_dipole(1:mesh%np,ii) = this%pol(ii,1)*mesh%x(1:mesh%np, 1) &
+                                        + this%pol(ii,2)*mesh%x(1:mesh%np, 2) &
+                                        + this%pol(ii,3)*mesh%x(1:mesh%np, 3)
        end do
       call parse_block_end(blk)
     else
@@ -98,8 +99,8 @@ contains
     end if
 
     this%ex = M_ZERO
-    SAFE_ALLOCATE(this%pt_number(1:this%nmodes))
-    this%pt_number = M_ZERO
+    SAFE_ALLOCATE(this%number(1:this%nmodes))
+    this%number = M_ZERO
 
     SAFE_ALLOCATE(this%correlator(1:mesh%np, 1:this%nmodes))
     this%correlator = M_ZERO
@@ -116,12 +117,12 @@ contains
 
     SAFE_DEALLOCATE_A(this%correlator)
 
-    SAFE_DEALLOCATE_A(this%omega_array)
-    SAFE_DEALLOCATE_A(this%lambda_array)
-    SAFE_DEALLOCATE_A(this%pt_number)
+    SAFE_DEALLOCATE_A(this%omega)
+    SAFE_DEALLOCATE_A(this%lambda)
+    SAFE_DEALLOCATE_A(this%number)
 
-    SAFE_DEALLOCATE_A(this%pol_array)
-    SAFE_DEALLOCATE_A(this%pol_dipole_array)
+    SAFE_DEALLOCATE_A(this%pol)
+    SAFE_DEALLOCATE_A(this%pol_dipole)
 
     POP_SUB(photon_mode_end)
   end subroutine photon_mode_end
