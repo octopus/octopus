@@ -903,7 +903,7 @@ contains
   contains
 
     subroutine build_phase()
-      integer :: ik, imat, nmat, max_npoints, offset, idim, ndim
+      integer :: ik, imat, nmat, max_npoints, offset
       integer :: ip, ip_global, ip_inner, sp
       FLOAT   :: kpoint(1:MAX_DIM), x_global(1:MAX_DIM)
       integer :: iphase, nphase

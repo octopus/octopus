@@ -196,7 +196,7 @@ contains
 
     integer :: ns, iq, is, ikpoint
     FLOAT   :: kr, kpoint(1:MAX_DIM)
-    integer :: ndim, idim
+    integer :: ndim
     integer :: nphase, iphase
     FLOAT, allocatable :: diff(:,:) 
 
