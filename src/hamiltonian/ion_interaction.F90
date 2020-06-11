@@ -26,6 +26,7 @@ module ion_interaction_oct_m
   use loct_math_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use multicomm_oct_m
   use namespace_oct_m
   use parser_oct_m
   use periodic_copy_oct_m
@@ -59,10 +60,11 @@ module ion_interaction_oct_m
   
 contains
 
-  subroutine ion_interaction_init(this, namespace, geo)
+  subroutine ion_interaction_init(this, namespace, geo, mc)
     type(ion_interaction_t), intent(out)   :: this
     type(namespace_t),       intent(in)    :: namespace
     type(geometry_t),        intent(in)    :: geo
+    type(multicomm_t),       intent(in)    :: mc
 
     PUSH_SUB(ion_interaction_init)
 
@@ -80,7 +82,7 @@ contains
 
     !As the code below is not parallelized with any of k-point, states not domain
     !we can safely parallelize it over atoms
-    call distributed_init(this%dist, geo%natoms, MPI_COMM_WORLD, "Ions")
+    call distributed_init(this%dist, geo%natoms, mc%master_comm, "Ions")
     
     POP_SUB(ion_interaction_init)
   end subroutine ion_interaction_init
@@ -643,10 +645,11 @@ contains
 
   ! ---------------------------------------------------------
   
-  subroutine ion_interaction_test(geo, namespace, sb)
+  subroutine ion_interaction_test(geo, namespace, sb, mc)
     type(geometry_t),         intent(in)    :: geo
     type(namespace_t),        intent(in)    :: namespace
     type(simul_box_t),        intent(in)    :: sb
+    type(multicomm_t),        intent(in)    :: mc
 
     type(ion_interaction_t) :: ion_interaction
     FLOAT :: energy
@@ -656,7 +659,7 @@ contains
     
     PUSH_SUB(ion_interaction_test)
 
-    call ion_interaction_init(ion_interaction, namespace, geo)
+    call ion_interaction_init(ion_interaction, namespace, geo, mc)
 
     SAFE_ALLOCATE(force(1:sb%dim, 1:geo%natoms))
     SAFE_ALLOCATE(force_components(1:sb%dim, 1:geo%natoms, ION_NUM_COMPONENTS))

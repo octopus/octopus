@@ -972,7 +972,7 @@ contains
 
     sys => system_init(namespace)
 
-    call ion_interaction_test(sys%geo, sys%namespace, sys%gr%sb)
+    call ion_interaction_test(sys%geo, sys%namespace, sys%gr%sb, sys%mc)
 
     SAFE_DEALLOCATE_P(sys)
 
