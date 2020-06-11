@@ -307,15 +307,6 @@ module splines_oct_m
       type(c_ptr), intent(in) :: acc  
     end subroutine oct_spline_eval_array
 
-    pure subroutine oct_spline_eval_array4(nn, xf, spl, acc)
-      use iso_c_binding
-
-      integer,     intent(in)    :: nn
-      real(4),     intent(inout) :: xf
-      type(c_ptr), intent(in)    :: spl
-      type(c_ptr), intent(in)    :: acc  
-    end subroutine oct_spline_eval_array4
-
     pure subroutine oct_spline_eval_arrayz(nn, xf, spl, acc)
       use iso_c_binding
 
@@ -324,15 +315,6 @@ module splines_oct_m
       type(c_ptr), intent(in) :: spl
       type(c_ptr), intent(in) :: acc  
     end subroutine oct_spline_eval_arrayz
-
-    pure subroutine oct_spline_eval_arrayc(nn, xf, spl, acc)
-      use iso_c_binding
-
-      integer,     intent(in)    :: nn
-      complex(4),  intent(inout) :: xf
-      type(c_ptr), intent(in)    :: spl
-      type(c_ptr), intent(in)    :: acc  
-    end subroutine oct_spline_eval_arrayc
 
     real(8) pure function oct_spline_eval_der(x, spl, acc)
       use iso_c_binding
