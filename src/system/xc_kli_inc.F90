@@ -125,13 +125,6 @@ subroutine X(xc_KLI_solve) (namespace, mesh, gr, hm, st, is, oep, first)
   end if
 #endif
   
-  if (oep%level == XC_OEP_SLATER .and. .not. oep%has_photons) then
-    SAFE_DEALLOCATE_A(rho_sigma)
-    SAFE_DEALLOCATE_A(sqphi)
-    call profiling_out(C_PROFILING_XC_KLI)
-    POP_SUB(X(xc_KLI_solve))
-    return
-  end if
   eigen_n = oep%eigen_n
 
   SAFE_ALLOCATE(v_bar_S(1:st%nst))

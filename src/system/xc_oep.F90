@@ -67,7 +67,6 @@ module xc_oep_oct_m
   !> the OEP levels
   integer, public, parameter ::  &
     XC_OEP_NONE   = 1,           &
-    XC_OEP_SLATER = 2,           &
     XC_OEP_KLI    = 3,           &
     XC_OEP_FULL   = 5,           &
     OEP_MIXING_SCHEME_CONST = 1, &
@@ -132,8 +131,6 @@ contains
     !% At what level shall <tt>Octopus</tt> handle the optimized effective potential (OEP) equation.
     !%Option oep_none 1
     !% Do not solve OEP equation.
-    !%Option oep_slater 2
-    !% Slater approximation.
     !%Option oep_kli 3
     !% Krieger-Li-Iafrate (KLI) approximation. For spinors, the iterative solution is controlled by the variables
     !% in section <tt>Linear Response::Solver</tt>, and the default for <tt>LRMaximumIter</tt> is set to 50.
@@ -168,9 +165,6 @@ contains
         end if
         if (oep%level == XC_OEP_FULL .and. st%d%nspin /= UNPOLARIZED) then
           call messages_not_implemented('Spin-polarized calculations with photon OEP.')
-        end if
-        if (oep%level == XC_OEP_SLATER) then
-          call messages_not_implemented('Slater approximation with photons.')
         end if
       end if
 
@@ -420,8 +414,6 @@ contains
 #include "xc_oep_sic_inc.F90"
 #include "xc_oep_inc.F90"
 #include "xc_oep_qed_inc.F90"
-
-#include "undef.F90"
 
 end module xc_oep_oct_m
 
