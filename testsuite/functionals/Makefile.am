@@ -40,7 +40,7 @@ dist_share_DATA =                                  \
 	03-xc.01-gs.inp                            \
 	03-xc.exx.inp                              \
 	03-xc.kli.inp                              \
-        03-xc.slater_fast.inp                      \
+        03-xc.slater.inp                           \
 	03-xc.lda_c_vbh.inp                        \
 	03-xc.lda_c_rpa.inp                        \
 	03-xc.lda_c_pw.inp                         \

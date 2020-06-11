@@ -399,7 +399,7 @@ match ; OEP KLI Eigenvalue dn                  ; GREPFIELD(static/info, '  1   d
 match ; OEP KLI Exchange                       ; GREPFIELD(static/info, 'Exchange    =', 3) ; -0.25285983
 match ; OEP KLI Int[n*v_xc]                    ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -0.50571990
 
-Input: 03-xc.slater_fast.inp
+Input: 03-xc.slater.inp
 match ; OEP Slater Eigenvalue up                  ; GREPFIELD(static/info, '  1   up', 3)      ; -1.128711
 match ; OEP Slater Eigenvalue dn                  ; GREPFIELD(static/info, '  1   dn', 3)      ; -0.683557
 match ; OEP Slater Exchange                       ; GREPFIELD(static/info, 'Exchange    =', 3) ; -0.25285983
