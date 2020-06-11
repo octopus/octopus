@@ -1,7 +1,6 @@
 # -*- coding: utf-8 mode: shell-script -*-
 
 Test       : Hartree OpenCL
-#Options    : clamdfft
 Program    : octopus
 TestGroups : short-run, components
 Enabled    : Yes

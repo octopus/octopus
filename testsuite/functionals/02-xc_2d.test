@@ -1,7 +1,6 @@
 # -*- coding: utf-8 mode: shell-script -*-
 
 Test       : XC 2D
-# Options    : libxc4
 Program    : octopus
 TestGroups : short-run, functionals
 Enabled    : Yes

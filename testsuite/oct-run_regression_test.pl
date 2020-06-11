@@ -158,10 +158,6 @@ if(!$opt_s) {
 # default number of processors for MPI runs is 2
 $np = 2;
 $enabled = ""; # FIXME: should Enabled be optional?
-# the options_* should be obsolete:
-# $options_required = "";
-# $options_required_mpi = "";
-# $options_are_mpi = 0;
 
 $expect_error = 0; # check for controlled failure 
 $error_match_done = 1;   # check that at least one error-match has been done. 
@@ -331,20 +327,6 @@ while ($_ = <TESTSUITE>) {
             die255("Unknown option 'Enabled = $enabled' in testsuite file.");
         }
 
-#     } elsif ( $_ =~ /^Options\s*:\s*(.*)\s*$/) {
-#         # Options are obsolete now and can be removed after more tests
-#         $options_required = $1;
-#         # note: we could implement Options by baking this into the script via configure...
-#         $report{$testname}{"options"} = $options_required;
-#         
-#     } elsif ( $_ =~ /^Options_MPI\s*:\s*(.*)\s*$/) {
-#         # Options_MPI are obsolete now and can be removed after more tests
-#         if ($is_parallel && $np ne "serial") {
-#             $options_required_mpi = $1;
-#             $options_are_mpi = 1;
-#             $report{$testname}{"options_mpi"} = $options_required_mpi;
-#         }
-
     } elsif ( $_ =~ /^Program\s*:\s*(.*)\s*$/) {
         $command = "$exec_directory/$1";
 
@@ -363,34 +345,8 @@ while ($_ = <TESTSUITE>) {
         if($is_parallel && $options_available !~ "mpi") {
             print "Running in serial since executable was not compiled with MPI.\n";
             $is_parallel = 0;
-#            $options_are_mpi = 0;
         }
 
-#        if($options_are_mpi) {
-#            $options_required = $options_required_mpi;
-#        }
-
-#        # options_required should become obsolete
-#        if(length($options_required) > 0) {
-#            # check if the executable was compiled with the required options
-#            foreach my $option (split(/;/, $options_required)){
-#
-#                if(" $options_available " !~ " $option ") {
-#
-#                    $expect_error = 1;
-#
-#                    print "\nChanging rules: executable does not have the required option '$option'";
-#                    if($options_are_mpi) {
-#                        print " for MPI";
-#                    }
-#                    print ".\n";
-#                    print "Executable: $command\n";
-#                    print "Available options: $options_available\n\n";
-#                    # skip_exit();
-#                }
-#
-#            }
-#        }
 
         # FIXME: import Options to BGW version
     } elsif ( $_ =~ /^TestGroups\s*:\s*(.*)\s*$/) {
@@ -584,29 +540,6 @@ while ($_ = <TESTSUITE>) {
                             print "----------------------------------------\n\n";
 
                             $error_match_done = 0;
-
-    #                        if($expect_error) {
-    #
-    #                            # An error is expected. In this case, the execution will be marked 'success', but matching of the error message will be marked as obligatory.
-    #
-    #                            printf "%-40s%s", " Execution", ": \t [ $color_start{green} OK (expected Fail) $color_end{green} ] \n\n";
-    #                            $input_report{"execution"} = "success";
-    #                            $match_error = 1;
-    #                            $test_succeeded = 1;  
-    #
-    #                            # Set $error_match_done to FALSE to indicate that this test is obligatory.
-    #                            $error_match_done = 0;
-    #
-    #                        } else {
-    #
-    #                            # No error was expected, but the code crashed with non-zero return value. This will be registered as execution failure and no further matches are required.
-    #
-    #                            printf "%-40s%s", " Execution", ": \t [ $color_start{red} FAIL $color_end{red} ] \n\n";
-    #                            $input_report{"execution"} = "fail";
-    #
-    #                            $failures++;
-    #                            $test_succeeded = 0;  
-    #                        }
                         }
                         $test{"run"} = 1;
                     }
