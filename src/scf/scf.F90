@@ -141,6 +141,7 @@ contains
     FLOAT :: rmin
     integer :: mixdefault, ierr
     type(type_t) :: mix_type
+    logical :: force_default
 
     PUSH_SUB(scf_init)
 
@@ -448,6 +449,8 @@ contains
     end if
 
 
+    force_default = .not. geo%only_user_def .and. .not. gr%der%boundaries%spiralBC
+
     !%Variable SCFCalculateForces
     !%Type logical
     !%Section SCF
@@ -455,10 +458,14 @@ contains
     !% This variable controls whether the forces on the ions are
     !% calculated at the end of a self-consistent iteration. The
     !% default is yes, unless the system only has user-defined
-    !% species.
+    !% species or spiral boundary conditions are used.
     !%End
-    call parse_variable(namespace, 'SCFCalculateForces', .not. geo%only_user_def, scf%calc_force)
+    call parse_variable(namespace, 'SCFCalculateForces', force_default, scf%calc_force)
 
+    if(scf%calc_force .and. gr%der%boundaries%spiralBC) then
+      message(1) = 'Forces cannot be calculated when using spiral boundary conditions.'
+      call messages_fatal(1)
+    end if
 
     !%Variable SCFCalculateStress
     !%Type logical
