@@ -23,6 +23,7 @@ module charged_particle_oct_m
   use clock_oct_m
   use global_oct_m
   use interaction_abst_oct_m
+  use interaction_lorentz_force_oct_m
   use io_oct_m
   use iso_c_binding
   use messages_oct_m
@@ -61,6 +62,7 @@ module charged_particle_oct_m
     procedure :: store_current_status => charged_particle_store_current_status
     procedure :: update_quantity => charged_particle_update_quantity
     procedure :: update_exposed_quantity => charged_particle_update_exposed_quantity
+    procedure :: copy_quantities_to_interaction => charged_particle_copy_quantities_to_interaction
     procedure :: update_interactions_start => charged_particle_update_interactions_start
     procedure :: update_interactions_finish => charged_particle_update_interactions_finish
     final :: charged_particle_finalize
@@ -112,6 +114,9 @@ contains
     call parse_variable(namespace, 'ClassicalParticleCharge', M_ONE, this%charge)
     call messages_print_var_value(stdout, 'ClassicalParticleCharge', this%charge)
 
+    this%quantities(CHARGE)%required = .true.
+    this%quantities(CHARGE)%protected = .true.
+
     POP_SUB(charged_particle_init)
   end subroutine charged_particle_init
 
@@ -120,8 +125,21 @@ contains
     class(charged_particle_t), target, intent(inout) :: this
     class(system_abst_t),              intent(inout) :: partner
 
+    class(interaction_lorentz_force_t), pointer :: lorentz_force
+    type(interaction_lorentz_force_t) :: lorentz_force_t
+
     PUSH_SUB(charged_particle_add_interaction_partner)
 
+    if (partner%has_interaction(lorentz_force_t)) then
+      lorentz_force => interaction_lorentz_force_t(this%space%dim, partner)
+      this%quantities(POSITION)%required = .true.
+      this%quantities(VELOCITY)%required = .true.
+      this%quantities(CHARGE)%required = .true.
+      lorentz_force%system_pos => this%pos
+      lorentz_force%system_vel => this%vel
+      lorentz_force%system_charge => this%charge
+      call this%interactions%add(lorentz_force)
+    end if
     call this%classical_particle_t%add_interaction_partner(partner)
 
     POP_SUB(charged_particle_add_interaction_partner)
@@ -132,9 +150,16 @@ contains
     class(charged_particle_t), intent(in) :: this
     class(interaction_abst_t), intent(in) :: interaction
 
+    logical :: has_lorentz_interaction
     PUSH_SUB(charged_particle_has_interaction)
 
-    charged_particle_has_interaction = this%classical_particle_t%has_interaction(interaction)
+    select type (interaction)
+    type is (interaction_lorentz_force_t)
+      has_lorentz_interaction = .true.
+    end select
+
+    charged_particle_has_interaction = this%classical_particle_t%has_interaction(interaction) &
+                                        .or. has_lorentz_interaction
 
     POP_SUB(charged_particle_has_interaction)
   end function charged_particle_has_interaction
@@ -270,6 +295,22 @@ contains
 
     POP_SUB(charged_particle_update_exposed_quantity)
   end subroutine charged_particle_update_exposed_quantity
+
+  ! ---------------------------------------------------------
+  subroutine charged_particle_copy_quantities_to_interaction(this, interaction)
+    class(charged_particle_t), intent(inout) :: this
+    class(interaction_abst_t), intent(inout) :: interaction
+
+    PUSH_SUB(classical_particle_copy_quantities_to_interaction)
+
+    select type (interaction)
+    type is (interaction_lorentz_force_t)
+      ! Nothing to copy
+    end select
+    call this%classical_particle_t%copy_quantities_to_interaction(interaction)
+
+    POP_SUB(charged_particle_copy_quantities_to_interaction)
+  end subroutine charged_particle_copy_quantities_to_interaction
 
   ! ---------------------------------------------------------
   subroutine charged_particle_update_interactions_start(this)
