@@ -145,6 +145,7 @@ module pes_flux_oct_m
     logical          :: surf_interp                    !< interpolate points on the surface
     logical          :: use_symmetry              
     logical          :: runtime_output              
+    logical          :: anisotrpy_correction                   
 
     integer          :: par_strategy                   !< parallelization strategy 
     integer          :: dim                            !< simulation box dimensions
@@ -247,6 +248,19 @@ contains
       call messages_fatal(1, namespace=namespace)
     end if
     call messages_print_var_option(stdout, 'PES_Flux_Shape', this%surf_shape)
+
+
+    !%Variable PES_Flux_AnisotropyCorrection
+    !%Type logical
+    !%Section Time-Dependent::PhotoElectronSpectrum
+    !%Description
+    !% Apply anisotropy correction. 
+    !%  
+    !%End
+    if(this%surf_shape == M_CUBIC) then
+      call parse_variable(namespace, 'PES_Flux_AnisotropyCorrection', .false., this%anisotrpy_correction)
+      call messages_print_var_value(stdout, 'PES_Flux_AnisotropyCorrection', this%anisotrpy_correction)
+    end if
 
     !%Variable PES_Flux_Offset
     !%Type block
@@ -2055,13 +2069,14 @@ contains
             
                   gwfpw(ikp) = &
                     sum(this%gwf(ist, isdim, ik, isp_start:isp_end, itstep, n_dir) &
-                      * this%expkr(isp_start:isp_end,ikp,ik_map,1))
+                      * this%expkr(isp_start:isp_end,ikp,ik_map,1)                 &
+                      * this%srfcnrml(n_dir, isp_start:isp_end))
 
 
                   wfpw(ikp) = &
                     sum(this%wf(ist, isdim, ik, isp_start:isp_end, itstep)        &
-                      * this%expkr(isp_start:isp_end,ikp,ik_map,1))
-
+                      * this%expkr(isp_start:isp_end,ikp,ik_map,1)                &
+                      * this%srfcnrml(n_dir, isp_start:isp_end))
                 end do 
 
               else 
@@ -2072,12 +2087,14 @@ contains
                   
                     face_int_gwf = sum(this%gwf(ist, isdim, ik, isp_start:isp_end, itstep, n_dir) &
                                  * this%expkr(isp_start:isp_end,ikpu,ik_map,dir_on_face(1)) &
-                                 * this%expkr(isp_start:isp_end,ikpv,ik_map,dir_on_face(2)))
-
+                                 * this%expkr(isp_start:isp_end,ikpv,ik_map,dir_on_face(2)) &
+                                 * this%srfcnrml(n_dir, isp_start:isp_end))
+                                 
                     face_int_wf  = sum(this%wf(ist, isdim, ik, isp_start:isp_end, itstep) &
                                  * this%expkr(isp_start:isp_end,ikpu,ik_map,dir_on_face(1)) &
-                                 * this%expkr(isp_start:isp_end,ikpv,ik_map,dir_on_face(2)))
-                  
+                                 * this%expkr(isp_start:isp_end,ikpv,ik_map,dir_on_face(2)) &
+                                 * this%srfcnrml(n_dir, isp_start:isp_end))
+                                 
                     do ikpz = 1, this%ll(n_dir)
 
                        gwfpw(get_ikp(this,ikpu,ikpv,ikpz,n_dir)) = face_int_gwf &
@@ -2094,8 +2111,8 @@ contains
               
               end if
               
-              gwfpw(ikp_start:ikp_end) = gwfpw(ikp_start:ikp_end) * this%srfcnrml(n_dir, isp_start) ! surface area element ds
-              wfpw(ikp_start:ikp_end)  = wfpw(ikp_start:ikp_end)  * this%srfcnrml(n_dir, isp_start) ! surface area element ds
+!               gwfpw(ikp_start:ikp_end) = gwfpw(ikp_start:ikp_end) * this%srfcnrml(n_dir, isp_start) ! surface area element ds
+!               wfpw(ikp_start:ikp_end)  = wfpw(ikp_start:ikp_end)  * this%srfcnrml(n_dir, isp_start) ! surface area element ds
 
               
               
@@ -2378,7 +2395,7 @@ contains
     logical               :: in_ab
     integer               :: ip_local, nsrfcpnts, NN(1:MAX_DIM,1:2), idx(1:MAX_DIM,1:2) 
     integer               :: isp_end, isp_start, ifc, n_dir, nfaces, mindim
-    FLOAT                 :: RSmax(1:2),RSmin(1:2),RS(1:2), dRS(1:2)
+    FLOAT                 :: RSmax(1:2),RSmin(1:2),RS(1:2), dRS(1:2), weight
 
 
     PUSH_SUB(pes_flux_getcube)
@@ -2646,6 +2663,17 @@ contains
       
     end if
     
+    if(this%anisotrpy_correction) then
+      !Compensate the fact that the angular distribution of points is not uniform
+      !and have peaks in correspondence to the edges and corners of the parallelepiped
+      do isp = 1, this%nsrfcpnts
+        weight = sum(this%rcoords(1:mdim, isp) * this%srfcnrml(1:mdim, isp))
+        weight = weight/sum(this%rcoords(1:mdim, isp)**2)/sum(this%srfcnrml(1:mdim, isp)**2)
+        this%srfcnrml(1:mdim, isp) = this%srfcnrml(1:mdim, isp)*abs(weight)                
+      end do        
+      
+    end if
+
 
     SAFE_DEALLOCATE_A(which_surface)
 
