@@ -1722,7 +1722,7 @@ contains
       ! This is not general but should work in the specific case where it is relevant
       !i.e. when the system is semiperiodic in <=2 dimensions
       Jac(1:fdim, 1:fdim) = mesh%sb%rlattice_primitive(1:fdim, 1:fdim) !The Jacobian on the surface
-!       jdet = lalg_determinant(fdim, Jac, invert = .false.)
+      jdet = lalg_determinant(fdim, Jac, preserve_mat = .false.)
 
       if(debug%info .and. mpi_grp_is_root(mpi_world)) then
         print *, "jdet =", jdet
