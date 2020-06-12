@@ -21,6 +21,7 @@
 module projector_oct_m
   use atom_oct_m
   use batch_oct_m
+  use boundaries_oct_m
   use comm_oct_m
   use geometry_oct_m
   use global_oct_m
@@ -39,6 +40,7 @@ module projector_oct_m
   use species_oct_m
   use states_elec_dim_oct_m
   use submesh_oct_m
+  use wfs_elec_oct_m
 
   implicit none
 
@@ -98,7 +100,8 @@ module projector_oct_m
     type(hgh_projector_t), pointer, public :: hgh_p(:, :) => null()
     type(kb_projector_t),  pointer, public :: kb_p(:, :)  => null()
     type(rkb_projector_t), pointer         :: rkb_p(:, :) => null()
-    CMPLX,                 pointer, public :: phase(:, :) => null()
+    CMPLX,                 pointer, public :: phase(:, :, :) => null()
+    integer,                        public :: ndim
   end type projector_t
 
 contains
@@ -183,25 +186,29 @@ contains
 
   !---------------------------------------------
 
-  subroutine projector_init_phases(this, sb, std, vec_pot, vec_pot_var)
+  subroutine projector_init_phases(this, sb, std, bnd, vec_pot, vec_pot_var)
     type(projector_t),             intent(inout) :: this
     type(simul_box_t),             intent(in)    :: sb
-    type(states_elec_dim_t),       intent(in)    :: std
+    type(states_elec_dim_t),            intent(in)    :: std
+    type(boundaries_t),            intent(in)    :: bnd
     FLOAT, optional,  allocatable, intent(in)    :: vec_pot(:) !< (sb%dim)
     FLOAT, optional,  allocatable, intent(in)    :: vec_pot_var(:, :) !< (1:sb%dim, 1:ns)
 
     integer :: ns, iq, is, ikpoint
     FLOAT   :: kr, kpoint(1:MAX_DIM)
-    integer :: ndim
+    integer :: ndim, idim, stdim
     FLOAT, allocatable :: diff(:,:) 
 
     PUSH_SUB(projector_init_phases)
 
     ns = this%sphere%np
     ndim = sb%dim
+    stdim = std%dim
+    if(bnd%spiralBC) stdim = stdim + 1
+
 
     if(.not. associated(this%phase) .and. ns > 0) then
-      SAFE_ALLOCATE(this%phase(1:ns, std%kpt%start:std%kpt%end))
+      SAFE_ALLOCATE(this%phase(1:ns, 1:stdim, std%kpt%start:std%kpt%end))
     end if
 
     SAFE_ALLOCATE(diff(1:ndim, 1:ns))
@@ -218,21 +225,28 @@ contains
       kpoint = M_ZERO
       kpoint(1:ndim) = kpoints_get_point(sb%kpoints, ikpoint)
         
-      do is = 1, ns
-        ! this is only the correction to the global phase, that can
-        ! appear if the sphere crossed the boundary of the cell.
-        
-        kr = sum(kpoint(1:ndim)*diff(1:ndim, is))
+      do idim = 1, stdim
+        do is = 1, ns
+          ! this is only the correction to the global phase, that can
+          ! appear if the sphere crossed the boundary of the cell.
+          
+          kr = sum(kpoint(1:ndim)*diff(1:ndim, is))
 
-        if(present(vec_pot)) then
-          if(allocated(vec_pot)) kr = kr + sum(vec_pot(1:ndim)*diff(1:ndim, is))
-        end if
+          if(present(vec_pot)) then
+            if(allocated(vec_pot)) kr = kr + &
+              sum(vec_pot(1:ndim)*diff(1:ndim, is))
+          end if
 
-        if(present(vec_pot_var)) then
-          if(allocated(vec_pot_var)) kr = kr + sum(vec_pot_var(1:ndim, this%sphere%map(is))*this%sphere%x(is, 1:ndim))
-        end if
+          if(present(vec_pot_var)) then
+            if(allocated(vec_pot_var)) kr = kr + sum(vec_pot_var(1:ndim, this%sphere%map(is))*this%sphere%x(is, 1:ndim))
+          end if
 
-        this%phase(is, iq) = exp(-M_zI*kr)
+          if(bnd%spiralBC .and. idim > 1) then
+            kr = kr + (2*(idim-1)-3)*sum(bnd%spiral_q(1:ndim)*diff(1:ndim, is))
+          end if
+
+          this%phase(is, idim, iq) = exp(-M_zI*kr)
+        end do
       end do
 
     end do

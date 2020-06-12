@@ -379,7 +379,7 @@ contains
 #if defined(HAVE_MPI)
     if(mesh%parallel_in_domains) then
       min_loc_in(1) = dmin
-      min_loc_in(2) = mesh%np_global * mesh%mpi_grp%rank  + real(imin, REAL_PRECISION) 
+      min_loc_in(2) = mesh%np_global * mesh%mpi_grp%rank  + TOFLOAT(imin) 
       call MPI_Allreduce(min_loc_in, min_loc_out, 1, MPI_2FLOAT, &
         MPI_MINLOC, mesh%mpi_grp%comm, mpi_err)
       dmin = min_loc_out(1)
@@ -408,12 +408,12 @@ contains
     dmin_global = M_HUGE
     if (mesh%parallel_in_domains) then
       do ipart=1, mesh%vp%npart
-        do ip=1, mesh%vp%np_local_vec(ipart)
+        do ip = 1, mesh%vp%np_local_vec(ipart)
           ip_global = mesh%vp%local_vec(mesh%vp%xlocal_vec(ipart) + ip - 1)
           do idim = 1, mesh%sb%dim
             xx(idim) = mesh%idx%lxyz(ip_global,idim) * mesh%spacing(idim)
           end do
-          dd = sqrt(sum((pos(:) - xx(:))**2))
+          dd = sqrt(sum((pos(1:3) - xx(1:3))**2))
           if (dd < dmin_global) then
             imin_local  = ip
             rankmin     = ipart-1
@@ -423,11 +423,11 @@ contains
         end do
       end do
     else
-      do ip=1, mesh%np
+      do ip = 1, mesh%np
         do idim = 1, mesh%sb%dim
           xx(idim) = mesh%idx%lxyz(ip,idim) * mesh%spacing(idim)
         end do
-        dd = sqrt(sum((pos(:) - xx(:))**2))
+        dd = sqrt(sum((pos(1:3) - xx(1:3))**2))
         if (dd < dmin_global) then
           imin_local  = ip
           rankmin     = 0
@@ -474,8 +474,9 @@ contains
       position="append", die=.false., grp=mpi_grp)
     if (iunit <= 0) then
       ierr = ierr + 1
-      message(1) = "Unable to open file '"//io_workpath(trim(dir)//"/"//trim(filename), namespace)//"'."
-      call messages_warning(1)
+      message(1) = "Unable to open file:"
+      message(2) = io_workpath(trim(dir)//"/"//trim(filename), namespace)
+      call messages_warning(2)
     else
       if (mpi_grp_is_root(mpi_grp)) then
         write(iunit, '(a)') dump_tag
@@ -803,10 +804,10 @@ contains
   
 
   ! ---------------------------------------------------------
-  real(8) pure function mesh_global_memory(mesh) result(memory)
+  FLOAT pure function mesh_global_memory(mesh) result(memory)
     type(mesh_t), intent(in) :: mesh
     
-    memory = 0.0_8
+    memory = M_ZERO
     
     ! lxyz_inv
     memory = memory + SIZEOF_UNSIGNED_INT * product(mesh%idx%nr(2, 1:mesh%sb%dim) - mesh%idx%nr(1, 1:mesh%sb%dim) + M_ONE)
@@ -815,19 +816,19 @@ contains
       memory = memory + SIZEOF_UNSIGNED_INT * product(mesh%idx%nr(2, 1:mesh%sb%dim) - mesh%idx%nr(1, 1:mesh%sb%dim) + M_ONE)
     end if
     ! lxyz
-    memory = memory + SIZEOF_UNSIGNED_INT * dble(mesh%np_part_global) * MAX_DIM
+    memory = memory + SIZEOF_UNSIGNED_INT * TOFLOAT(mesh%np_part_global) * MAX_DIM
 
   end function mesh_global_memory
 
 
   ! ---------------------------------------------------------
-  real(8) pure function mesh_local_memory(mesh) result(memory)
+  FLOAT pure function mesh_local_memory(mesh) result(memory)
     type(mesh_t), intent(in) :: mesh
     
-    memory = 0.0_8
+    memory = M_ZERO
     
     ! x
-    memory = memory + REAL_PRECISION * dble(mesh%np_part) * MAX_DIM
+    memory = memory + REAL_PRECISION * TOFLOAT(mesh%np_part) * MAX_DIM
   end function mesh_local_memory
 
 
@@ -896,10 +897,10 @@ contains
     message(1) = "Checking if the real-space grid is symmetric";
     call messages_info(1)
 
-    lsize(1:3) = real(mesh%idx%ll(1:3), REAL_PRECISION)
-    offset(1:3) = real(mesh%idx%nr(1, 1:3) + mesh%idx%enlarge(1:3), REAL_PRECISION)
+    lsize(1:3) = TOFLOAT(mesh%idx%ll(1:3))
+    offset(1:3) = TOFLOAT(mesh%idx%nr(1, 1:3) + mesh%idx%enlarge(1:3))
 
-    nops = symmetries_number(mesh%sb%symm)
+    nops = symmetries_number(sb%symm)
 
     do ip = 1, mesh%np
       !We use floating point coordinates to check if the symmetric point 
@@ -907,32 +908,36 @@ contains
       !If yes, it should have integer reduced coordinates 
       if(mesh%parallel_in_domains) then
         ! convert to global point
-        destpoint(1:3) = real(mesh%idx%lxyz(mesh%vp%local(mesh%vp%xlocal + ip - 1), 1:3), REAL_PRECISION) - offset(1:3)
+        destpoint(1:3) = TOFLOAT(mesh%idx%lxyz(mesh%vp%local(mesh%vp%xlocal + ip - 1), 1:3)) - offset(1:3)
       else
-        destpoint(1:3) = real(mesh%idx%lxyz(ip, 1:3), REAL_PRECISION) - offset(1:3)
+        destpoint(1:3) = TOFLOAT(mesh%idx%lxyz(ip, 1:3)) - offset(1:3)
       end if
       ! offset moves corner of cell to origin, in integer mesh coordinates
       ASSERT(all(destpoint >= 0))
       ASSERT(all(destpoint < lsize))
 
       ! move to center of cell in real coordinates
-      destpoint = destpoint - real(int(lsize)/2, REAL_PRECISION)
+      destpoint = destpoint - TOFLOAT(int(lsize)/2)
 
       !convert to proper reduced coordinates
-      forall(idim = 1:3) destpoint(idim) = destpoint(idim)/lsize(idim)
+      do idim = 1, 3
+        destpoint(idim) = destpoint(idim)/lsize(idim)
+      end do
 
       ! iterate over all points that go to this point by a symmetry operation
       do iop = 1, nops
-        srcpoint = symm_op_apply_red(mesh%sb%symm%ops(iop), destpoint) 
+        srcpoint = symm_op_apply_red(sb%symm%ops(iop), destpoint) 
 
         !We now come back to what should be an integer, if the symmetric point beloings to the grid
-        forall(idim = 1:3) srcpoint(idim) = srcpoint(idim)*lsize(idim)
+        do idim = 1, 3
+          srcpoint(idim) = srcpoint(idim)*lsize(idim)
+        end do
 
         ! move back to reference to origin at corner of cell
-        srcpoint = srcpoint + real(int(lsize)/2, REAL_PRECISION)
+        srcpoint = srcpoint + TOFLOAT(int(lsize)/2)
 
         ! apply periodic boundary conditions in periodic directions 
-        do idim = 1, mesh%sb%periodic_dim
+        do idim = 1, sb%periodic_dim
           if(nint(srcpoint(idim)) < 0 .or. nint(srcpoint(idim)) >= lsize(idim)) then
             srcpoint(idim) = modulo(srcpoint(idim)+M_HALF*SYMPREC, lsize(idim))
           end if

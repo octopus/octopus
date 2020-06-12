@@ -55,7 +55,7 @@ dist_share_DATA = \
 	07-spin_orbit_coupling.test                    \
 	08-spin_orbit_coupling_full.01-hgh.inp         \
 	08-spin_orbit_coupling_full.02-rkb.inp         \
-        08-spin_orbit_coupling_full.03-unocc.inp       \
+    08-spin_orbit_coupling_full.03-unocc.inp       \
 	08-spin_orbit_coupling_full.Xe.UPF             \
 	08-spin_orbit_coupling_full.test               \
 	09-spinors.01-ground_state.inp                 \
@@ -66,22 +66,24 @@ dist_share_DATA = \
 	10-fullerene.01-gs.inp                         \
 	10-fullerene.geometry.xyz                      \
 	12-forces.01-N2_gs.inp \
-        12-forces.02-N2_gs.inp \
-        12-forces.03-N2_gs.inp \
+	12-forces.02-N2_gs.inp \
+	12-forces.03-N2_gs.inp \
 	12-forces.test \
 	13-full_potential_hydrogen.01-gs.inp \
 	13-full_potential_hydrogen.02-gs-cg.inp \
 	13-full_potential_hydrogen.test \
-	14-fullerene_unpacked.test                      \
-	14-fullerene_unpacked.01-gs.inp                 \
+	14-fullerene_unpacked.test                    \
+	14-fullerene_unpacked.01-gs.inp               \
+	14-fullerene_unpacked.02-td-unpacked.inp      \
+	14-fullerene_unpacked.03-td-packed.inp        \
 	15-fullerene_stdlcao.test                     \
 	15-fullerene_stdlcao.01-gs.inp                \
-        16-scfinlcao_std.test                         \
+    16-scfinlcao_std.test                         \
 	16-scfinlcao_std.Cl.psf                       \
-        16-scfinlcao_std.01-gs.inp                    \
-        17-scfinlcao_alt.test                         \
+    16-scfinlcao_std.01-gs.inp                    \
+    17-scfinlcao_alt.test                         \
 	17-scfinlcao_alt.Cl.psf                       \
-        17-scfinlcao_alt.01-gs.inp                    \
+    17-scfinlcao_alt.01-gs.inp                    \
 	18-preconditioner_poisson.test                \
 	18-preconditioner_poisson.01-poisson.inp      \
 	20-eigensolver.01-lobpcg.inp \
@@ -91,6 +93,7 @@ dist_share_DATA = \
 	20-eigensolver.05-evolution.inp \
 	20-eigensolver.06-rmmdiis.inp \
 	20-eigensolver.07-psd.inp \
+	20-eigensolver.08-rmmdiis-noscalapack.inp \
 	20-eigensolver.test \
 	21-lobpcg.01-spin_polarized.inp \
 	21-lobpcg.02-spinors.inp \

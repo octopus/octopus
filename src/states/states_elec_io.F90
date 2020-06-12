@@ -370,7 +370,7 @@ contains
     type(states_elec_t), intent(in) :: st
     type(simul_box_t),   intent(in) :: sb
     
-    integer :: ik, ikk, ist
+    integer :: ik, ist
 
     FLOAT :: homo, lumo, egdir, egindir
     integer :: homok, lumok, egdirk
@@ -379,6 +379,12 @@ contains
 
     if(.not. st%calc_eigenval .or. .not. mpi_grp_is_root(mpi_world) &
      .or. .not. simul_box_is_periodic(sb) .or. st%smear%method  /=  SMEAR_SEMICONDUCTOR) then 
+      POP_SUB(states_elec_write_gaps)
+      return
+    end if
+
+    !We do not want to compute the bandgap in case there is no extra states
+    if(ceiling(st%qtot/st%smear%el_per_state) == st%nst) then
       POP_SUB(states_elec_write_gaps)
       return
     end if
@@ -708,7 +714,7 @@ contains
       end do
     end if
  
-    npath = SIZE(sb%kpoints%coord_along_path)*ns
+    npath = kpoints_nkpt_in_path(sb%kpoints)*ns
 
 
     !We need to compute the projections of each wavefunctions on the localized basis

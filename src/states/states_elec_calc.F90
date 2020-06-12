@@ -29,6 +29,7 @@ module states_elec_calc_oct_m
   use comm_oct_m
   use derivatives_oct_m
   use geometry_oct_m
+  use fourier_space_oct_m
   use global_oct_m
   use grid_oct_m
   use hardware_oct_m
@@ -48,11 +49,13 @@ module states_elec_calc_oct_m
   use profiling_oct_m
   use scalapack_oct_m
   use simul_box_oct_m
+  use singularity_oct_m
   use states_abst_oct_m
   use states_elec_oct_m
   use states_elec_dim_oct_m
   use states_elec_parallel_oct_m
   use types_oct_m
+  use wfs_elec_oct_m
 
   implicit none
 
@@ -67,6 +70,8 @@ module states_elec_calc_oct_m
     zstates_elec_orthogonalization,      &
     dstates_elec_orthogonalize_single,   &
     zstates_elec_orthogonalize_single,   &
+    dstates_elec_orthogonalize_single_batch,   &
+    zstates_elec_orthogonalize_single_batch,   &
     dstates_elec_orthogonalization_full, &
     zstates_elec_orthogonalization_full, &
     dstates_elec_residue,                &

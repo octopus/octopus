@@ -30,6 +30,7 @@ module ground_state_oct_m
   use mpi_oct_m
   use multicomm_oct_m
   use namespace_oct_m
+  use pcm_oct_m
   use rdmft_oct_m
   use restart_oct_m
   use scf_oct_m
@@ -78,8 +79,19 @@ contains
     if(sys%st%parallel_in_states) then
       call messages_experimental('State parallelization for ground state calculations')
     end if
-    
-    call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
+
+    if (sys%hm%pcm%run_pcm) then
+      if (sys%hm%pcm%epsilon_infty /= sys%hm%pcm%epsilon_0 .and. sys%hm%pcm%tdlevel /= PCM_TD_EQ) then
+        message(1) = 'Non-equilbrium PCM is not active in a time-independent run.'
+        message(2) = 'You set epsilon_infty /= epsilon_0, but epsilon_infty is not relevant for CalculationMode = gs.'
+        message(3) = 'By definition, the ground state is in equilibrium with the solvent.'
+        message(4) = 'Therefore, the only relevant dielectric constant is the static one.'
+        message(5) = 'Nevertheless, the dynamical PCM response matrix is evaluated for benchamarking purposes.'
+        call messages_warning(5)
+      end if
+    end if
+
+    call states_elec_allocate_wfns(sys%st, sys%gr%mesh, packed=.true.)
 
 #ifdef HAVE_MPI
     ! sometimes a deadlock can occur here (if some nodes can allocate and other cannot)
@@ -107,9 +119,11 @@ contains
 
     call write_canonicalized_xyz_file("exec", "initial_coordinates", sys%geo, sys%gr%mesh, sys%namespace)
 
-    call scf_init(scfv, sys%namespace, sys%gr, sys%geo, sys%st, sys%mc, sys%hm)
+    if(sys%ks%theory_level /= RDMFT) then
+      call scf_init(scfv, sys%namespace, sys%gr, sys%geo, sys%st, sys%mc, sys%hm)
+    end if
 
-    if(fromScratch) then
+    if (fromScratch .and. sys%ks%theory_level /= RDMFT) then
       call lcao_run(sys, lmm_r = scfv%lmm_r)
     else
       ! setup Hamiltonian
@@ -128,8 +142,7 @@ contains
     ! self-consistency for occupation numbers and natural orbitals in RDMFT
     if(sys%ks%theory_level == RDMFT) then 
       call rdmft_init(rdm, sys%namespace, sys%gr, sys%st, sys%geo, sys%mc, fromScratch)
-      call scf_rdmft(rdm, sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, sys%outp, scfv%max_iter, &
-        restart_dump)
+      call scf_rdmft(rdm, sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, sys%outp, restart_dump)
       call rdmft_end(rdm, sys%gr)
     else
       if(.not. fromScratch) then
@@ -140,9 +153,10 @@ contains
         call scf_run(scfv, sys%namespace, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, sys%outp, &
           restart_dump=restart_dump)
       end if
+
+      call scf_end(scfv)
     end if
 
-    call scf_end(scfv)
     call restart_end(restart_dump)
 
     if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call sys%st%unpack()

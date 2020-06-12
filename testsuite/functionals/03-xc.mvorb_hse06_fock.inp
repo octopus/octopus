@@ -1,0 +1,32 @@
+CalculationMode = gs
+
+PeriodicDimensions = 3
+ExperimentalFeatures = yes
+LSize = 5
+
+%Coordinates
+ 'H' |  0.717157 | 0 | 0
+ 'H' | -0.717157 | 0 | 0
+%
+
+MaximumIter = 0
+
+SpinComponents = spin_polarized
+
+ExcessCharge = 1
+
+Spacing = 0.5
+
+TheoryLevel = hartree_fock # this is the default, but we keep it to check the parsing routines, b3lyp does not define it
+
+XCFunctional = hyb_gga_xc_mvorb_hse06
+
+%Occupations
+0.8
+0.2
+%
+RestartWrite = no
+
+FilterPotentials = filter_none
+
+StatesPack = yes

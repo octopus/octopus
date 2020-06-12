@@ -37,7 +37,8 @@ module orbitalset_oct_m
   use simul_box_oct_m
   use species_oct_m
   use submesh_oct_m
- 
+  use wfs_elec_oct_m
+
   implicit none
 
   private
@@ -88,7 +89,7 @@ module orbitalset_oct_m
 
     logical             :: submeshforperiodic !> Do we use or not submeshes for the orbitals
 
-    type(poisson_t)  :: poisson               !> For computing the Coulomb integrals
+    type(poisson_t)     :: poisson            !> For computing the Coulomb integrals
   end type orbitalset_t
 
 contains
@@ -238,9 +239,9 @@ contains
       else !In the case of the isolated system, we still use the submesh 
         do im = 1, os%norbs
           do idim = 1, os%ndim
-            forall(is=1:ns)
+            do is = 1, ns
               os%eorb_submesh(is,idim,im,iq) = os%zorb(is,idim,im)*os%phase(is, iq)
-            end forall
+            end do
           end do
         end do
       endif

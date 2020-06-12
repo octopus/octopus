@@ -36,6 +36,7 @@ module eigen_rmmdiis_oct_m
   use profiling_oct_m
   use states_elec_oct_m
   use states_elec_calc_oct_m
+  use wfs_elec_oct_m
 
   implicit none
 
@@ -48,11 +49,11 @@ module eigen_rmmdiis_oct_m
 
   type batch_pointer_t
     private
-    type(batch_t), pointer :: batch
+    type(wfs_elec_t), pointer :: batch
   end type batch_pointer_t
 
   type(profile_t), save :: prof, prof_iter
-  type(profile_t), save :: prof_lc, prof_sync
+  type(profile_t), save :: prof_lc
 
   contains
 

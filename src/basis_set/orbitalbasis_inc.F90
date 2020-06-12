@@ -349,16 +349,15 @@ end subroutine X(orbitalbasis_build)
 ! ---------------------------------------------------------
 !> This routine constructd an empty orbital basis.
 ! ---------------------------------------------------------
-subroutine X(orbitalbasis_build_empty)(this, geo, mesh, kpt, ndim, nstates, verbose)
+subroutine X(orbitalbasis_build_empty)(this, mesh, kpt, ndim, nstates, verbose)
   type(orbitalbasis_t),      intent(inout)    :: this
-  type(geometry_t), target,  intent(in)       :: geo
   type(distributed_t),       intent(in)       :: kpt
   type(mesh_t), target,      intent(in)       :: mesh
   integer,                   intent(in)       :: ndim
   integer,                   intent(in)       :: nstates
   logical, optional,         intent(in)       :: verbose
 
-  integer :: is, ios, iorb, offset
+  integer :: ios, iorb, offset
   type(orbitalset_t), pointer :: os
   logical :: verbose_
 

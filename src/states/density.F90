@@ -45,6 +45,7 @@ module density_oct_m
   use states_elec_dim_oct_m
   use symmetrizer_oct_m
   use types_oct_m
+  use wfs_elec_oct_m
 
   implicit none
 
@@ -77,7 +78,7 @@ contains
   
   subroutine density_calc_init(this, st, gr, density)
     type(density_calc_t),           intent(out)   :: this
-    type(states_elec_t),       target,   intent(in)    :: st
+    type(states_elec_t),  target,   intent(in)    :: st
     type(grid_t),         target,   intent(in)    :: gr
     FLOAT,                target,   intent(out)   :: density(:, :)
 
@@ -119,15 +120,14 @@ contains
 
   ! ---------------------------------------------------
 
-  subroutine density_calc_accumulate(this, ik, psib)
+  subroutine density_calc_accumulate(this, psib)
     type(density_calc_t),         intent(inout) :: this
-    integer,                      intent(in)    :: ik
-    type(batch_t),                intent(in)    :: psib
+    type(wfs_elec_t),             intent(in)    :: psib
 
     integer :: ist, ip, ispin
     FLOAT   :: nrm
     CMPLX   :: term, psi1, psi2
-    CMPLX, allocatable :: psi(:), fpsi(:), zpsi(:, :)
+    CMPLX, allocatable :: psi(:), fpsi(:)
     FLOAT, allocatable :: weight(:), sqpsi(:)
     type(profile_t), save :: prof
     integer            :: wgsize
@@ -137,14 +137,16 @@ contains
     PUSH_SUB(density_calc_accumulate)
     call profiling_in(prof, "CALC_DENSITY")
 
-    ispin = states_elec_dim_get_spin_index(this%st%d, ik)
+    ispin = states_elec_dim_get_spin_index(this%st%d, psib%ik)
 
     SAFE_ALLOCATE(weight(1:psib%nst))
-    forall(ist = 1:psib%nst) weight(ist) = this%st%d%kweights(ik)*this%st%occ(psib%states(ist)%ist, ik)
+    do ist = 1, psib%nst
+      weight(ist) = this%st%d%kweights(psib%ik)*this%st%occ(psib%ist(ist), psib%ik)
+    end do
 
     if (.not. this%gr%have_fine_mesh) then 
 
-      select case(batch_status(psib))
+      select case(psib%status())
       case(BATCH_NOT_PACKED)
         select case (this%st%d%ispin)
         case (UNPOLARIZED, SPIN_POLARIZED)
@@ -153,7 +155,7 @@ contains
               if(abs(weight(ist)) <= M_EPSILON) cycle
               !$omp parallel do simd schedule(static)
               do ip = 1, this%gr%mesh%np
-                this%density(ip, ispin) = this%density(ip, ispin) + weight(ist)*psib%states(ist)%dpsi(ip, 1)**2
+                this%density(ip, ispin) = this%density(ip, ispin) + weight(ist)*psib%dff(ip, 1, ist)**2
               end do
             end do
           else
@@ -162,7 +164,7 @@ contains
               !$omp parallel do schedule(static)
               do ip = 1, this%gr%mesh%np
                 this%density(ip, ispin) = this%density(ip, ispin) + weight(ist)* &
-                  real(conjg(psib%states(ist)%zpsi(ip, 1))*psib%states(ist)%zpsi(ip, 1), REAL_PRECISION)
+                  TOFLOAT(conjg(psib%zff(ip, 1, ist))*psib%zff(ip, 1, ist))
               end do
             end do
           end if
@@ -171,12 +173,12 @@ contains
             if(abs(weight(ist)) <= M_EPSILON) cycle
             !$omp parallel do schedule(static) private(psi1, psi2, term)
             do ip = 1, this%gr%mesh%np          
-              psi1 = psib%states(ist)%zpsi(ip, 1)
-              psi2 = psib%states(ist)%zpsi(ip, 2)
-              this%density(ip, 1) = this%density(ip, 1) + weight(ist)*real(conjg(psi1)*psi1, REAL_PRECISION)
-              this%density(ip, 2) = this%density(ip, 2) + weight(ist)*real(conjg(psi2)*psi2, REAL_PRECISION)
+              psi1 = psib%zff(ip, 1, ist)
+              psi2 = psib%zff(ip, 2, ist)
+              this%density(ip, 1) = this%density(ip, 1) + weight(ist)*TOFLOAT(conjg(psi1)*psi1)
+              this%density(ip, 2) = this%density(ip, 2) + weight(ist)*TOFLOAT(conjg(psi2)*psi2)
               term = weight(ist)*psi1*conjg(psi2)
-              this%density(ip, 3) = this%density(ip, 3) + real(term, REAL_PRECISION)
+              this%density(ip, 3) = this%density(ip, 3) + TOFLOAT(term)
               this%density(ip, 4) = this%density(ip, 4) + aimag(term)
             end do
           end do
@@ -190,7 +192,7 @@ contains
             !$omp parallel do schedule(static)
             do ip = 1, this%gr%mesh%np
               do ist = 1, psib%nst
-                this%density(ip, ispin) = this%density(ip, ispin) + weight(ist)*psib%pack%dpsi(ist, ip)**2
+                this%density(ip, ispin) = this%density(ip, ispin) + weight(ist)*psib%dff_pack(ist, ip)**2
               end do
             end do
           else
@@ -198,7 +200,7 @@ contains
             do ip = 1, this%gr%mesh%np
               do ist = 1, psib%nst
                 this%density(ip, ispin) = this%density(ip, ispin) + weight(ist)* &
-                  real(conjg(psib%pack%zpsi(ist, ip))*psib%pack%zpsi(ist, ip), REAL_PRECISION)
+                  TOFLOAT(conjg(psib%zff_pack(ist, ip))*psib%zff_pack(ist, ip))
               end do
             end do
           end if
@@ -207,13 +209,13 @@ contains
           !$omp parallel do schedule(static) private(ist, psi1, psi2, term)
           do ip = 1, this%gr%mesh%np
             do ist = 1, psib%nst
-              psi1 = psib%pack%zpsi(2*ist - 1, ip)
-              psi2 = psib%pack%zpsi(2*ist,     ip)
+              psi1 = psib%zff_pack(2*ist - 1, ip)
+              psi2 = psib%zff_pack(2*ist,     ip)
               term = weight(ist)*psi1*conjg(psi2)
 
-              this%density(ip, 1) = this%density(ip, 1) + weight(ist)*real(conjg(psi1)*psi1, REAL_PRECISION)
-              this%density(ip, 2) = this%density(ip, 2) + weight(ist)*real(conjg(psi2)*psi2, REAL_PRECISION)
-              this%density(ip, 3) = this%density(ip, 3) + real(term, REAL_PRECISION)
+              this%density(ip, 1) = this%density(ip, 1) + weight(ist)*TOFLOAT(conjg(psi1)*psi1)
+              this%density(ip, 2) = this%density(ip, 2) + weight(ist)*TOFLOAT(conjg(psi2)*psi2)
+              this%density(ip, 3) = this%density(ip, 3) + TOFLOAT(term)
               this%density(ip, 4) = this%density(ip, 4) + aimag(term)
             end do
           end do
@@ -237,8 +239,8 @@ contains
           call accel_set_kernel_arg(kernel, 1, this%gr%mesh%np)
           call accel_set_kernel_arg(kernel, 2, this%pnp*(ispin - 1))
           call accel_set_kernel_arg(kernel, 3, buff_weight)
-          call accel_set_kernel_arg(kernel, 4, psib%pack%buffer)
-          call accel_set_kernel_arg(kernel, 5, log2(psib%pack%size(1)))
+          call accel_set_kernel_arg(kernel, 4, psib%ff_device)
+          call accel_set_kernel_arg(kernel, 5, log2(psib%pack_size(1)))
           call accel_set_kernel_arg(kernel, 6, this%buff_density)
         
         case (SPINORS)
@@ -248,8 +250,8 @@ contains
           call accel_set_kernel_arg(kernel, 1, this%gr%mesh%np)
           call accel_set_kernel_arg(kernel, 2, this%pnp)
           call accel_set_kernel_arg(kernel, 3, buff_weight)
-          call accel_set_kernel_arg(kernel, 4, psib%pack%buffer)
-          call accel_set_kernel_arg(kernel, 5, log2(psib%pack%size(1)))
+          call accel_set_kernel_arg(kernel, 4, psib%ff_device)
+          call accel_set_kernel_arg(kernel, 5, log2(psib%pack_size(1)))
           call accel_set_kernel_arg(kernel, 6, this%buff_density)
         end select
 
@@ -281,7 +283,7 @@ contains
 
         !$omp parallel do schedule(static)
         do ip = 1, this%gr%fine%mesh%np
-          sqpsi(ip) = real(conjg(fpsi(ip))*fpsi(ip), REAL_PRECISION)
+          sqpsi(ip) = TOFLOAT(conjg(fpsi(ip))*fpsi(ip))
         end do
 
         nrm = dmf_integrate(this%gr%fine%mesh, sqpsi)
@@ -294,13 +296,15 @@ contains
       end do
 
 
-      ! For this to work again, a namespace has to be available. I don't make
+      ! For this to work again, a namespace has to be available. I don`t make
       ! the change now because this debugging output has been commented out for
       ! 4 years. - SO
       ! some debugging output that I will keep here for the moment, XA
       !      call dio_function_output(1, "./", "n_fine", this%gr%fine%mesh, frho, unit_one, ierr)
       !      call dio_function_output(1, "./", "n_coarse", this%gr%mesh, crho, unit_one, ierr)
-      !        forall(ip = 1:this%gr%fine%mesh%np) this%density(ip, ispin) = this%density(ip, ispin) + frho(ip)
+      !        do ip = 1, this%gr%fine%mesh%np
+      !            this%density(ip, ispin) = this%density(ip, ispin) + frho(ip)
+      !        end do
 
       SAFE_DEALLOCATE_A(psi)
       SAFE_DEALLOCATE_A(fpsi)
@@ -400,7 +404,7 @@ contains
     
     do ik = st%d%kpt%start, st%d%kpt%end
       do ib = st%group%block_start, st%group%block_end
-        call density_calc_accumulate(dens_calc, ik, st%group%psib(ib, ik))
+        call density_calc_accumulate(dens_calc, st%group%psib(ib, ik))
       end do
     end do
 
@@ -423,7 +427,7 @@ contains
     integer :: nodeto, nodefr, nsend, nreceiv
     type(states_elec_t) :: staux
     CMPLX, allocatable :: psi(:, :, :), rec_buffer(:,:)
-    type(batch_t)  :: psib
+    type(wfs_elec_t)  :: psib
     type(density_calc_t) :: dens_calc
 #ifdef HAVE_MPI
     integer :: status(MPI_STATUS_SIZE)
@@ -452,7 +456,7 @@ contains
         !We can use the full batch 
         if(states_elec_block_max(st, ib) <= n) then
 
-          call density_calc_accumulate(dens_calc, ik, st%group%psib(ib, ik))
+          call density_calc_accumulate(dens_calc, st%group%psib(ib, ik))
           if(states_elec_block_max(st, ib) == n) exit
 
         else !Here we only use a part of this batch 
@@ -465,9 +469,9 @@ contains
             call states_elec_get_state(st, gr%mesh, states_elec_block_min(st, ib) + ist - 1, ik, psi(:, :, ist)) 
           end do
 
-          call batch_init(psib, st%d%dim, states_elec_block_min(st, ib), n, psi)
-          call density_calc_accumulate(dens_calc, ik, psib)
-          call batch_end(psib)
+          call wfs_elec_init(psib, st%d%dim, states_elec_block_min(st, ib), n, psi, ik)
+          call density_calc_accumulate(dens_calc, psib)
+          call psib%end()
           SAFE_DEALLOCATE_A(psi)
           
           exit
@@ -503,7 +507,6 @@ contains
     SAFE_ALLOCATE(rec_buffer(1:gr%mesh%np, 1:st%d%dim))
 
     if(staux%parallel_in_states) then
-#if defined(HAVE_MPI) 
 
       do ik = st%d%kpt%start, st%d%kpt%end
         !We cound how many states we have to send, and how many we  will receive
@@ -530,14 +533,18 @@ contains
           else
             if(nsend > 0 .and. nodeto > -1 .and. nodeto /= st%mpi_grp%rank) then
               call states_elec_get_state(staux, gr%mesh, ist+n, ik, psi(:, :, 1))
+#if defined(HAVE_MPI)
               call MPI_Send(psi(1, 1, 1), gr%mesh%np*st%d%dim, MPI_CMPLX, nodeto, ist, &
                     st%mpi_grp%comm, mpi_err)
+#endif
               nsend = nsend -1
-            end if          
+            end if
 
             if(nreceiv > 0 .and. nodefr > -1 .and. nodefr /= st%mpi_grp%rank) then
+#if defined(HAVE_MPI)
               call MPI_Recv(rec_buffer(1, 1), gr%mesh%np*st%d%dim, MPI_CMPLX, nodefr, &
                  ist, st%mpi_grp%comm, status, mpi_err)
+#endif
               call states_elec_set_state(st, gr%mesh, ist, ik, rec_buffer(:, :))
               nreceiv= nreceiv-1
             end if
@@ -546,6 +553,7 @@ contains
       end do
 
       ! Add a barrier to ensure that the process are synchronized
+#if defined(HAVE_MPI)
       call MPI_Barrier(mpi_world%comm, mpi_err)
 #endif
    
@@ -645,23 +653,29 @@ contains
 
     PUSH_SUB(states_elec_total_density)
 
-    forall(ip = 1:mesh%np, is = 1:st%d%nspin)
-      total_rho(ip, is) = st%rho(ip, is)
-    end forall
+    do is = 1, st%d%nspin
+      do ip = 1, mesh%np
+        total_rho(ip, is) = st%rho(ip, is)
+      end do
+    end do
 
     if(associated(st%rho_core)) then
-      forall(ip = 1:mesh%np, is = 1:st%d%spin_channels)
-        total_rho(ip, is) = total_rho(ip, is) + st%rho_core(ip)/st%d%spin_channels
-      end forall
+      do is = 1, st%d%spin_channels
+        do ip = 1, mesh%np
+          total_rho(ip, is) = total_rho(ip, is) + st%rho_core(ip)/st%d%spin_channels
+        end do
+      end do
     end if
 
     ! Add, if it exists, the frozen density from the inner orbitals.
     if(associated(st%frozen_rho)) then
-      forall(ip = 1:mesh%np, is = 1:st%d%nspin)
-        total_rho(ip, is) = total_rho(ip, is) + st%frozen_rho(ip, is)
-      end forall
+      do is = 1, st%d%nspin
+        do ip = 1, mesh%np
+          total_rho(ip, is) = total_rho(ip, is) + st%frozen_rho(ip, is)
+        end do
+      end do
     end if
-  
+
     POP_SUB(states_elec_total_density)
   end subroutine states_elec_total_density
 

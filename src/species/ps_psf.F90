@@ -85,9 +85,9 @@ contains
     end if
     
     if(ascii) then
-      iunit = io_open(fullpath, namespace, action='read', form='formatted', status='old')
+      iunit = io_open(fullpath, action='read', form='formatted', status='old')
     else
-      iunit = io_open(fullpath, namespace, action='read', form='unformatted', status='old')
+      iunit = io_open(fullpath, action='read', form='unformatted', status='old')
     end if
     call ps_psf_file_read(iunit, ascii, pstm%psf_file, namespace)
     call io_close(iunit)
@@ -168,7 +168,7 @@ contains
       l = conf%l(i)
       if(ispin==2 .and. psf_file%irel /= 'isp') then
         x = conf%occ(i, 1)
-        conf%occ(i, 1) = min(x, real(2*l+1, REAL_PRECISION))
+        conf%occ(i, 1) = min(x, TOFLOAT(2*l+1))
         conf%occ(i, 2) = x - conf%occ(i,1)
       end if
     end do
@@ -324,20 +324,20 @@ contains
     !       eigen(1:conf%p, :)        : eigenvalues, in Rydbergs.
     do l = 1, psf_file%npotd
       do ir = 2, g%nrval
-        vtot = psf_file%vps(ir, l) + ve(ir, 1) + dble((l-1)*l)/(g%rofi(ir)**2)
+        vtot = psf_file%vps(ir, l) + ve(ir, 1) + TOFLOAT((l-1)*l)/(g%rofi(ir)**2)
         hato(ir) = vtot*s(ir) + a2b4
       end do
       hato(1) = first_point_extrapolate(g%rofi, hato)
 
       nnode = 1
       nprin = l
-      e     = -((psf_file%zval/dble(nprin))**2)
+      e     = -((psf_file%zval/TOFLOAT(nprin))**2)
       z     = psf_file%zval
       dr    = CNST(-1.0e5)
       rmax = g%rofi(g%nrval)
 
       call egofv(hato, s, g%nrval, e, gg, y, l-1, z, &
-        real(g%a, 8), real(g%b, 8), rmax, nprin, nnode, dr, ierr)
+        TOFLOAT(g%a), TOFLOAT(g%b), rmax, nprin, nnode, dr, ierr)
 
       if(ierr /= 0) then
         write(message(1),'(a)') 'The algorithm that calculates atomic wavefunctions could not'
@@ -368,20 +368,20 @@ contains
         spin: do is = 1, ispin
           ang: do l = 1, psf_file%npotd
             do ir = 2, g%nrval
-              vtot = psf_file%vps(ir, l) + ve(ir, is) + dble((l-1)*l)/(g%rofi(ir)**2)
+              vtot = psf_file%vps(ir, l) + ve(ir, is) + TOFLOAT((l-1)*l)/(g%rofi(ir)**2)
               hato(ir) = vtot*s(ir) + a2b4
             end do
             hato(1) = first_point_extrapolate(g%rofi, hato)
 
             nnode = 1
             nprin = l
-            e     = -((psf_file%zval/dble(nprin))**2)
+            e     = -((psf_file%zval/TOFLOAT(nprin))**2)
             z     = psf_file%zval
             dr    = -CNST(1.0e5)
             rmax = g%rofi(g%nrval)
 
             call egofv(hato, s, g%nrval, e, gg, y, l-1, z, &
-              real(g%a, 8), real(g%b, 8), rmax, nprin, nnode, dr, ierr)
+              TOFLOAT(g%a), TOFLOAT(g%b), rmax, nprin, nnode, dr, ierr)
 
             if(ierr /= 0) then
               write(message(1),'(a)') 'The algorithm that calculates atomic wavefunctions could not'
@@ -472,20 +472,20 @@ contains
 
     do l = 1, lmax+1
       do ir = 2, g%nrval
-        vtot = ps_grid%vlocal(ir) + ve(ir) + dble((l-1)*l)/(g%rofi(ir)**2)
+        vtot = ps_grid%vlocal(ir) + ve(ir) + TOFLOAT((l-1)*l)/(g%rofi(ir)**2)
         hato(ir) = vtot*s(ir) + a2b4
       end do
       hato(1) = first_point_extrapolate(g%rofi, hato)
 
       do nnode = 1, 2
         nprin = l
-        e     = -(ps_grid%zval/dble(nprin))**2
+        e     = -(ps_grid%zval/TOFLOAT(nprin))**2
         z     = ps_grid%zval
         dr    = CNST(-1.0e5)
         rmax  = g%rofi(g%nrval)
 
         call egofv(hato, s, g%nrval, e, gg, y, l, z, &
-          real(g%a, 8), real(g%b, 8), rmax, nprin, nnode, dr, ierr)
+          TOFLOAT(g%a), TOFLOAT(g%b), rmax, nprin, nnode, dr, ierr)
 
         elocal(nnode, l) = e
       end do

@@ -20,15 +20,9 @@
 ! Preprocessor directives
 ! ------------------------------------------------------------------
 
-#if   TYPE == 1
-#  define TYPE1 real(4)
-#  define TYPE2 real(4)
-#elif TYPE == 2
+#if TYPE == 2
 #  define TYPE1 real(8)
 #  define TYPE2 real(8)
-#elif TYPE == 3
-#  define TYPE1 complex(4)
-#  define TYPE2 real(4)
 #elif TYPE == 4
 #  define TYPE1 complex(8)
 #  define TYPE2 real(8)
@@ -531,8 +525,10 @@ subroutine FNAME(symv_1)(n, alpha, a, x, beta, y)
 
   ! no push_sub, called too frequently
 
+  ASSERT(ubound(a, dim=1) >= n)
+
   call profiling_in(symv_profile, 'BLAS_SYMV')
-  call blas_symv('U', n, alpha, a(1, 1), n, x(1), 1, beta, y(1), 1)
+  call blas_symv('U', n, alpha, a(1, 1), lead_dim(a), x(1), 1, beta, y(1), 1)
   call profiling_out(symv_profile)
 
 end subroutine FNAME(symv_1)
@@ -546,8 +542,13 @@ subroutine FNAME(symv_2)(n1, n2, alpha, a, x, beta, y)
 
   PUSH_SUB(FNAME(symv_2))
 
+  ASSERT(ubound(a, dim=1) == n1)
+  ASSERT(ubound(a, dim=2) == n2) 
+  ASSERT(ubound(y, dim=1) == n1)
+  ASSERT(ubound(y, dim=2) >= n2)
+
   call profiling_in(symv_profile, 'BLAS_SYMV')
-  call blas_symv('U', n1*n2, alpha, a(1, 1, 1), n1*2, x(1), 1, beta, y(1, 1), 1)
+  call blas_symv('U', n1*n2, alpha, a(1, 1, 1), n1*n2, x(1), 1, beta, y(1, 1), 1)
   call profiling_out(symv_profile)
 
   POP_SUB(FNAME(symv_2))
@@ -562,8 +563,10 @@ subroutine FNAME(gemv_1)(m, n, alpha, a, x, beta, y)
 
   PUSH_SUB(FNAME(gemv_1))
 
+  ASSERT(ubound(a, dim=1) >= m)
+
   call profiling_in(gemv_profile, "BLAS_GEMV")
-  call blas_gemv('N', m, n, alpha, a(1,1), m, x(1), 1, beta, y(1), 1)
+  call blas_gemv('N', m, n, alpha, a(1,1), lead_dim(a), x(1), 1, beta, y(1), 1)
   call profiling_out(gemv_profile)
 
   POP_SUB(FNAME(gemv_1))
@@ -577,6 +580,11 @@ subroutine FNAME(gemv_2)(m1, m2, n, alpha, a, x, beta, y)
   TYPE1,   intent(inout) :: y(:,:)
 
   PUSH_SUB(FNAME(gemv_2))
+
+  ASSERT(ubound(a, dim=1) == m1)
+  ASSERT(ubound(a, dim=2) == m2)
+  ASSERT(ubound(y, dim=1) == m1)
+  ASSERT(ubound(y, dim=2) >= m2)
 
   call profiling_in(gemv_profile, "BLAS_GEMV")
   call blas_gemv('N', m1*m2, n, alpha, a(1,1,1), m1*m2, x(1), 1, beta, y(1,1), 1)
@@ -603,21 +611,36 @@ subroutine FNAME(gemm_1)(m, n, k, alpha, a, b, beta, c)
 
   ! no PUSH SUB, called too often
 
+  ASSERT(ubound(a, dim=1) >= m)
+  ASSERT(ubound(a, dim=2) >= n)
+  ASSERT(ubound(b, dim=1) >= k)
+  ASSERT(ubound(c, dim=1) >= m)
+  ASSERT(ubound(c, dim=2) >= n)
+ 
+
   call blas_gemm('N', 'N', m, n, k, alpha, a(1, 1), lead_dim(a), b(1, 1), lead_dim(b), beta, c(1, 1), lead_dim(c))
 
 end subroutine FNAME(gemm_1)
 
-subroutine FNAME(gemm_2)(m, n, k, alpha, a, b, beta, c)
-  integer, intent(in)    :: m, n, k
+subroutine FNAME(gemm_2)(m1, m2, n, k, alpha, a, b, beta, c)
+  integer, intent(in)    :: m1, m2, n, k
   TYPE1,   intent(in)    :: alpha, beta
-  TYPE1,   intent(in)    :: a(:, :, :)  !< a(m, k)
+  TYPE1,   intent(in)    :: a(:, :, :)  !< a(m1, m2, k)
   TYPE1,   intent(in)    :: b(:, :)     !< b(k, n)
-  TYPE1,   intent(inout) :: c(:, :, :)  !< c(m, n)
+  TYPE1,   intent(inout) :: c(:, :, :)  !< c(m1, m2, n)
 
   PUSH_SUB(FNAME(gemm_2))
 
-  call blas_gemm('N', 'N', m, n, k, alpha, a(1, 1, 1), lead_dim(a), &
-    b(1, 1), lead_dim(b), beta, c(1, 1, 1), lead_dim(c))
+  ASSERT(ubound(a, dim=1) == m1)
+  ASSERT(ubound(a, dim=2) == m2)
+  ASSERT(ubound(a, dim=3) >= k)
+  ASSERT(ubound(b, dim=1) >= k)
+  ASSERT(ubound(c, dim=1) == m1)
+  ASSERT(ubound(c, dim=2) == m2)
+  ASSERT(ubound(c, dim=3) >= n)
+
+  call blas_gemm('N', 'N', m1*m2, n, k, alpha, a(1, 1, 1), m1*m2, &
+    b(1, 1), lead_dim(b), beta, c(1, 1, 1), m1*m2)
 
   POP_SUB(FNAME(gemm_2))
 end subroutine FNAME(gemm_2)
@@ -632,20 +655,36 @@ subroutine FNAME(gemmt_1)(m, n, k, alpha, a, b, beta, c)
   
   ! no PUSH_SUB, called too often
 
+  ASSERT(ubound(a, dim=1) >= k)
+  ASSERT(ubound(a, dim=2) >= m)
+  ASSERT(ubound(b, dim=1) >= k)
+  ASSERT(ubound(b, dim=2) >= n)
+  ASSERT(ubound(c, dim=1) >= m)
+  ASSERT(ubound(c, dim=2) >= n)
+  
   call blas_gemm('C', 'N', m, n, k, alpha, a(1, 1), lead_dim(a), b(1, 1), lead_dim(b), beta, c(1, 1), lead_dim(c))
 
 end subroutine FNAME(gemmt_1)
 
-subroutine FNAME(gemmt_2)(m, n, k, alpha, a, b, beta, c)
-  integer, intent(in)    :: m, n, k
+subroutine FNAME(gemmt_2)(m1, m2, n1, n2, k, alpha, a, b, beta, c)
+  integer, intent(in)    :: m1, m2, n1, n2, k
   TYPE1,   intent(in)    :: alpha, beta
-  TYPE1,   intent(in)    :: a(:, :, :)  !< a((k), m)
-  TYPE1,   intent(in)    :: b(:, :, :)  !< b((k), n)
-  TYPE1,   intent(inout) :: c(:, :)     !< c(m, n)
+  TYPE1,   intent(in)    :: a(:, :, :)  !< a(k, m2, m1)
+  TYPE1,   intent(in)    :: b(:, :, :)  !< b(k, n2, n1)
+  TYPE1,   intent(inout) :: c(:, :)     !< c(m1*m2, n1*n2)
 
   PUSH_SUB(FNAME(gemmt_2))
 
-  call blas_gemm('C', 'N', m, n, k, alpha, a(1, 1, 1), lead_dim(a), &
+  ASSERT(ubound(a, dim=1) >= k)
+  ASSERT(ubound(a, dim=2) == m2)
+  ASSERT(ubound(a, dim=3) == m1)
+  ASSERT(ubound(b, dim=1) >= k)
+  ASSERT(ubound(b, dim=2) == n2)
+  ASSERT(ubound(b, dim=3) >= n1)
+  ASSERT(ubound(c, dim=1) >= m1*m2)
+  ASSERT(ubound(c, dim=2) >= n1*n2)
+
+  call blas_gemm('C', 'N', m1*m2, n1*n2, k, alpha, a(1, 1, 1), lead_dim(a), &
     b(1, 1, 1), lead_dim(b), beta, c(1, 1), lead_dim(c))
 
   POP_SUB(FNAME(gemmt_2))
@@ -657,45 +696,25 @@ subroutine FNAME(symm_1)(m, n, side, alpha, a, b, beta, c)
   integer,      intent(in)    :: m, n
   character(1), intent(in)    :: side
   TYPE1,        intent(in)    :: alpha, beta, a(:, :), b(:, :)
-  TYPE1,        intent(inout) :: c(:, :)
-
-  integer :: lda
+  TYPE1,        intent(inout) :: c(:, :) !c(m, n)
 
   ! no push_sub, called too frequently
-
+  !The size specified are for the matrix C
+  ASSERT(ubound(c, dim=1) >= m)
+  ASSERT(ubound(c, dim=2) >= n)
+ 
   select case(side)
-  case('l', 'L')
-    lda = max(1, m)
-  case('r', 'R')
-    lda = max(1, n)
+  case('l', 'L') ! Here we compute C := alpha*A*B + beta*C
+    ASSERT(ubound(a, dim=1) >= m)
+    ASSERT(ubound(b, dim=1) >= n)
+  case('r', 'R') ! Here we compute C := alpha*B*A + beta*C
+    ASSERT(ubound(a, dim=1) >= n)
+    ASSERT(ubound(b, dim=1) >= m)
   end select
   
-  call blas_symm(side, 'U', m, n, alpha, a(1, 1), lda, b(1, 1), m, beta, c(1, 1), m)
+  call blas_symm(side, 'U', m, n, alpha, a(1, 1), lead_dim(a), b(1, 1), lead_dim(b), beta, c(1, 1), lead_dim(c))
 
 end subroutine FNAME(symm_1)
-
-
-subroutine FNAME(symm_2)(m, n, side, alpha, a, b, beta, c)
-  integer,      intent(in)    :: m, n
-  character(1), intent(in)    :: side
-  TYPE1,        intent(in)    :: alpha, beta, a(:, :, :), b(:, :)
-  TYPE1,        intent(inout) :: c(:, :, :)
-
-  integer :: lda
-
-  PUSH_SUB(FNAME(symm_2))
-
-  select case(side)
-  case('l', 'L')
-    lda = max(1, m)
-  case('r', 'R')
-    lda = max(1, n)
-  end select
-  
-  call blas_symm(side, 'U', m, n, alpha, a(1, 1, 1), lda, b(1, 1), m, beta, c(1, 1, 1), m)
-
-  POP_SUB(FNAME(symm_2))
-end subroutine FNAME(symm_2)
 
 !> ------------------------------------------------------------------
 !! Matrix-matrix multiplication.
@@ -708,18 +727,21 @@ subroutine FNAME(trmm_1)(m, n, uplo, transa, side, alpha, a, b)
   TYPE1,        intent(in)    :: a(:, :) !< a(m, m), upper triangular matrix.
   TYPE1,        intent(inout) :: b(:, :) !< b(m, n).
 
-  integer :: lda
-
   ! no push_sub, called too frequently
+
+  ASSERT(ubound(b, dim=1) >= m)
+  ASSERT(ubound(b, dim=2) >= n)
 
   select case(side)
     case('L', 'l')
-      lda = max(1, m)
+      ASSERT(ubound(a, dim=1) >= m)
+      ASSERT(ubound(a, dim=2) >= m)
     case('R', 'r')
-      lda = max(1, n)
+      ASSERT(ubound(a, dim=1) >= n)
+      ASSERT(ubound(a, dim=2) >= n)
   end select
       
-  call blas_trmm(side, uplo, transa, 'N', m, n, alpha, a(1, 1), lda, b(1, 1), m)
+  call blas_trmm(side, uplo, transa, 'N', m, n, alpha, a(1, 1), lead_dim(a), b(1, 1), lead_dim(b))
 
 end subroutine FNAME(trmm_1)
 

@@ -38,6 +38,8 @@ module pseudo_set_oct_m
     pseudo_set_spacing,                      &
     pseudo_set_radius
   
+  !! Dummy data type for pseudopotential sets. The actual data type is a C++ class, defined in set.hpp.
+  !> The integer(8) dummy reserves the memory for the pointer to the actual data structure.
   type pseudo_set_t
     private
     integer(8) :: dummy
@@ -45,6 +47,7 @@ module pseudo_set_oct_m
 
   interface
     
+    !> Nullify the C++ pointer
     subroutine pseudo_set_nullify(pseudo_set)
       import :: pseudo_set_t
       implicit none
@@ -54,6 +57,7 @@ module pseudo_set_oct_m
     
     ! -------------------------------------------------
     
+    !> Delete the C++ object
     subroutine pseudo_set_end(pseudo_set)
       import :: pseudo_set_t
       implicit none
@@ -85,19 +89,19 @@ module pseudo_set_oct_m
 
     ! -------------------------------------------------
 
-    real(8) function pseudo_set_spacing(pseudo_set, element, etol)
+    FLOAT function pseudo_set_spacing(pseudo_set, element, etol)
       use element_oct_m
       import :: pseudo_set_t
       implicit none
       
       type(pseudo_set_t), intent(in)    :: pseudo_set
       type(element_t),    intent(in)    :: element
-      real(8),            intent(in)    :: etol
+      FLOAT,              intent(in)    :: etol
     end function pseudo_set_spacing
     
     ! -------------------------------------------------
 
-    real(8) function pseudo_set_radius(pseudo_set, element)
+    FLOAT function pseudo_set_radius(pseudo_set, element)
       use element_oct_m
       import :: pseudo_set_t
       implicit none

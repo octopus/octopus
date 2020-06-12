@@ -27,6 +27,7 @@ module propagator_etrs_oct_m
   use geometry_oct_m
   use global_oct_m
   use hamiltonian_elec_oct_m
+  use hamiltonian_elec_base_oct_m
   use ion_dynamics_oct_m
   use lalg_basic_oct_m
   use lda_u_oct_m
@@ -43,6 +44,7 @@ module propagator_etrs_oct_m
   use states_elec_oct_m
   use types_oct_m
   use v_ks_oct_m
+  use wfs_elec_oct_m
   use propagation_ops_elec_oct_m
   use xc_oct_m
 
@@ -75,9 +77,6 @@ contains
     logical,                          intent(in)    :: move_ions
 
     FLOAT, allocatable :: vhxc_t1(:,:), vhxc_t2(:,:)
-    integer :: ik, ib
-    type(batch_t) :: zpsib_dt
-    type(density_calc_t) :: dens_calc
 
     PUSH_SUB(td_etrs)
 
@@ -147,7 +146,7 @@ contains
     FLOAT :: diff
     FLOAT, allocatable :: vhxc_t1(:,:), vhxc_t2(:,:)
     integer :: ik, ib, iter, ip
-    type(batch_t), allocatable :: psi2(:, :)
+    class(wfs_elec_t), allocatable :: psi2(:, :)
     ! these are hardcoded for the moment
     integer, parameter :: niter = 10
 
@@ -187,14 +186,12 @@ contains
 
     call propagation_ops_elec_update_hamiltonian(namespace, st, gr%mesh, hm, time)
 
-    SAFE_ALLOCATE(psi2(st%group%block_start:st%group%block_end, st%d%kpt%start:st%d%kpt%end))
+    SAFE_ALLOCATE_TYPE_ARRAY(wfs_elec_t, psi2, (st%group%block_start:st%group%block_end, st%d%kpt%start:st%d%kpt%end))
 
     ! store the state at half iteration
     do ik = st%d%kpt%start, st%d%kpt%end
       do ib = st%group%block_start, st%group%block_end
-        call batch_copy(st%group%psib(ib, ik), psi2(ib, ik))
-        if(batch_is_packed(st%group%psib(ib, ik))) call batch_pack(psi2(ib, ik), copy = .false.)
-        call batch_copy_data(gr%mesh%np, st%group%psib(ib, ik), psi2(ib, ik))
+        call st%group%psib(ib, ik)%copy_to(psi2(ib, ik), copy_data=.true.)
       end do
     end do
 
@@ -225,7 +222,7 @@ contains
         ! we are not converged, restore the states
         do ik = st%d%kpt%start, st%d%kpt%end
           do ib = st%group%block_start, st%group%block_end
-            call batch_copy_data(gr%mesh%np, psi2(ib, ik), st%group%psib(ib, ik))
+            call psi2(ib, ik)%copy_data_to(gr%mesh%np, st%group%psib(ib, ik))
           end do
         end do
       end if
@@ -247,7 +244,7 @@ contains
 
     do ik = st%d%kpt%start, st%d%kpt%end
       do ib = st%group%block_start, st%group%block_end
-        call batch_end(psi2(ib, ik))
+        call psi2(ib, ik)%end()
       end do
     end do
 
@@ -348,18 +345,22 @@ contains
          tr%vksold%v_old(:, :, 1:3), time, tr%vksold%v_old(:, :, 0))
       call interpolate( (/time - dt, time - M_TWO*dt, time - M_THREE*dt/), &
          tr%vksold%vtau_old(:, :, 1:3), time, tr%vksold%vtau_old(:, :, 0))
-      forall(ispin = 1:st%d%nspin, ip = 1:gr%mesh%np)
-        vold(ip, ispin) =  CNST(0.5)*dt*(hm%vhxc(ip, ispin) - vold(ip, ispin))
-        vtauold(ip, ispin) =  CNST(0.5)*dt*(hm%vtau(ip, ispin) - vtauold(ip, ispin))
-      end forall      
+      do ispin = 1, st%d%nspin
+        do ip = 1, gr%mesh%np
+          vold(ip, ispin) =  CNST(0.5)*dt*(hm%vhxc(ip, ispin) - vold(ip, ispin))
+          vtauold(ip, ispin) =  CNST(0.5)*dt*(hm%vtau(ip, ispin) - vtauold(ip, ispin))
+        end do
+      end do
     else
       call potential_interpolation_set(tr%vksold, gr%mesh%np, st%d%nspin, 1, hm%vhxc)
       call interpolate( (/time - dt, time - M_TWO*dt, time - M_THREE*dt/), &
          tr%vksold%v_old(:, :, 1:3), time, tr%vksold%v_old(:, :, 0))
 
-      forall(ispin = 1:st%d%nspin, ip = 1:gr%mesh%np)
-        vold(ip, ispin) =  CNST(0.5)*dt*(hm%vhxc(ip, ispin) - vold(ip, ispin))
-      end forall
+      do ispin = 1, st%d%nspin
+        do ip = 1, gr%mesh%np
+          vold(ip, ispin) =  CNST(0.5)*dt*(hm%vhxc(ip, ispin) - vold(ip, ispin))
+        end do
+      end do
     end if
 
     ! copy vold to a cl buffer
@@ -394,53 +395,55 @@ contains
 
       do ib = st%group%block_start, st%group%block_end
         if (hamiltonian_elec_apply_packed(hm)) then
-          call batch_pack(st%group%psib(ib, ik))
-          if (hamiltonian_elec_inh_term(hm)) call batch_pack(hm%inh_st%group%psib(ib, ik))
+          call st%group%psib(ib, ik)%do_pack()
+          if (hamiltonian_elec_inh_term(hm)) call hm%inh_st%group%psib(ib, ik)%do_pack()
         end if
 
         call profiling_in(phase_prof, "CAETRS_PHASE")
-        select case(batch_status(st%group%psib(ib, ik)))
+        select case(st%group%psib(ib, ik)%status())
         case(BATCH_NOT_PACKED)
           do ip = 1, gr%mesh%np
             vv = vold(ip, ispin)
             phase = TOCMPLX(cos(vv), -sin(vv))
-            forall(ist = 1:st%group%psib(ib, ik)%nst_linear)
-              st%group%psib(ib, ik)%states_linear(ist)%zpsi(ip) = st%group%psib(ib, ik)%states_linear(ist)%zpsi(ip)*phase
-            end forall
+            do ist = 1, st%group%psib(ib, ik)%nst_linear
+              st%group%psib(ib, ik)%zff_linear(ip, ist) = st%group%psib(ib, ik)%zff_linear(ip, ist)*phase
+            end do
           end do
         case(BATCH_PACKED)
           do ip = 1, gr%mesh%np
             vv = vold(ip, ispin)
             phase = TOCMPLX(cos(vv), -sin(vv))
-            forall(ist = 1:st%group%psib(ib, ik)%nst_linear)
-              st%group%psib(ib, ik)%pack%zpsi(ist, ip) = st%group%psib(ib, ik)%pack%zpsi(ist, ip)*phase
-            end forall
+            do ist = 1, st%group%psib(ib, ik)%nst_linear
+              st%group%psib(ib, ik)%zff_pack(ist, ip) = st%group%psib(ib, ik)%zff_pack(ist, ip)*phase
+            end do
           end do
         case(BATCH_DEVICE_PACKED)
           call accel_set_kernel_arg(kernel_phase, 0, pnp*(ispin - 1))
           call accel_set_kernel_arg(kernel_phase, 1, phase_buff)
-          call accel_set_kernel_arg(kernel_phase, 2, st%group%psib(ib, ik)%pack%buffer)
-          call accel_set_kernel_arg(kernel_phase, 3, log2(st%group%psib(ib, ik)%pack%size(1)))
+          call accel_set_kernel_arg(kernel_phase, 2, st%group%psib(ib, ik)%ff_device)
+          call accel_set_kernel_arg(kernel_phase, 3, log2(st%group%psib(ib, ik)%pack_size(1)))
 
-          iprange = accel_max_workgroup_size()/st%group%psib(ib, ik)%pack%size(1)
+          iprange = accel_max_workgroup_size()/st%group%psib(ib, ik)%pack_size(1)
 
-          call accel_kernel_run(kernel_phase, (/st%group%psib(ib, ik)%pack%size(1), pnp/), &
-            (/st%group%psib(ib, ik)%pack%size(1), iprange/))
+          call accel_kernel_run(kernel_phase, (/st%group%psib(ib, ik)%pack_size(1), pnp/), &
+            (/st%group%psib(ib, ik)%pack_size(1), iprange/))
         end select
         call profiling_out(phase_prof)
 
+        call hamiltonian_elec_base_set_phase_corr(hm%hm_base, gr%mesh, st%group%psib(ib, ik))
         if (hamiltonian_elec_inh_term(hm)) then
-          call exponential_apply_batch(tr%te, namespace, gr%mesh, hm, st%group%psib(ib, ik), ik, CNST(0.5)*dt, &
+          call exponential_apply_batch(tr%te, namespace, gr%mesh, hm, st%group%psib(ib, ik), CNST(0.5)*dt, &
             inh_psib = hm%inh_st%group%psib(ib, ik))
         else
-          call exponential_apply_batch(tr%te, namespace, gr%mesh, hm, st%group%psib(ib, ik), ik, CNST(0.5)*dt)
+          call exponential_apply_batch(tr%te, namespace, gr%mesh, hm, st%group%psib(ib, ik), CNST(0.5)*dt)
         end if
+        call hamiltonian_elec_base_unset_phase_corr(hm%hm_base, gr%mesh, st%group%psib(ib, ik))
 
-        call density_calc_accumulate(dens_calc, ik, st%group%psib(ib, ik))
+        call density_calc_accumulate(dens_calc, st%group%psib(ib, ik))
 
         if (hamiltonian_elec_apply_packed(hm)) then
-          call batch_unpack(st%group%psib(ib, ik))
-          if (hamiltonian_elec_inh_term(hm)) call batch_unpack(hm%inh_st%group%psib(ib, ik))
+          call st%group%psib(ib, ik)%do_unpack()
+          if (hamiltonian_elec_inh_term(hm)) call hm%inh_st%group%psib(ib, ik)%do_unpack()
         end if
       end do
     end do

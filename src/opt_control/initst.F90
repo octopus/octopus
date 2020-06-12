@@ -94,7 +94,7 @@ contains
     !% Start in a user-defined state.
     !%End
     call parse_variable(sys%namespace, 'OCTInitialState', oct_is_groundstate, istype)
-    if(.not.varinfo_valid_option('OCTInitialState', istype)) call messages_input_error('OCTInitialState')    
+    if(.not.varinfo_valid_option('OCTInitialState', istype)) call messages_input_error(sys%namespace, 'OCTInitialState')    
 
     select case(istype)
     case(oct_is_groundstate) 
@@ -195,7 +195,7 @@ contains
                   call parse_expression(psi_re, psi_im, &
                     sys%gr%sb%dim, xx, rr, M_ZERO, psi%user_def_states(id, is, ik))
                   ! fill state
-                  zpsi(ip, id) = cmplx(psi_re, psi_im, REAL_PRECISION)
+                  zpsi(ip, id) = TOCMPLX(psi_re, psi_im)
                 end do
                 call states_elec_set_state(psi, sys%gr%mesh, id, is, ik, zpsi(:, id))
               end do

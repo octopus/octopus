@@ -47,3 +47,5 @@ OutputMatrixElements  = two_body
 OutputMEStart = 24
 OutputMEEnd = 25
 
+StatesPack = yes
+LCAOStart = lcao_full

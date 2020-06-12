@@ -171,7 +171,7 @@ contains
     call pblas_herk(uplo = 'U', trans = 'C', n = st%nst, k = total_np, &
       alpha = R_TOTYPE(mesh%vol_pp(1)), a = psi(1, 1, st%st_start), ia = 1, ja = 1, desca = psi_desc(1), &
       beta = R_TOTYPE(M_ZERO), c = ss(1, 1), ic = 1, jc = 1, descc = ss_desc(1))
-    call profiling_count_operations(dble(mesh%np)*dble(nst)**2*(R_ADD + R_MUL))
+    call profiling_count_operations(TOFLOAT(mesh%np*nst)**2*(R_ADD + R_MUL))
     call profiling_out(prof_herk)
 
     call profiling_in(prof_cholesky, "SCALAPACK_CHOLESKY")
@@ -207,10 +207,18 @@ contains
     FLOAT   :: cc
     R_TYPE, allocatable :: aa(:), psii(:, :), psij(:, :)
     R_TYPE, allocatable :: psii0(:, :)
+    integer :: method
     
     PUSH_SUB(X(states_elec_orthogonalization_full).mgs)
 
-    if(st%parallel_in_states) then
+    ! set method to MGS in case this method is called as bof from cholesky
+    method = st%d%orth_method
+    if(method == OPTION__STATESORTHOGONALIZATION__CHOLESKY_SERIAL) then
+      method = OPTION__STATESORTHOGONALIZATION__MGS
+    end if
+
+    if(st%parallel_in_states .and. &
+       method /= OPTION__STATESORTHOGONALIZATION__MGS) then
       message(1) = 'The mgs orthogonalization method cannot work with state-parallelization.'
       call messages_fatal(1, only_root_writes = .true., namespace=namespace)
     end if
@@ -223,20 +231,33 @@ contains
 
     do ist = 1, nst
 
-      call states_elec_get_state(st, mesh, ist, ik, psii)
-
       !The different algorithms are given in Giraud et al., 
       !Computers and Mathematics with Applications 50, 1069 (2005).
-      select case(st%d%orth_method)
+      select case(method)
       case(OPTION__STATESORTHOGONALIZATION__MGS)
-        ! renormalize
-        cc = TOFLOAT(X(mf_dotp)(mesh, st%d%dim, psii, psii))
-        do idim = 1, st%d%dim
-          call lalg_scal(mesh%np, M_ONE/sqrt(cc), psii(:, idim))
-        end do
-        call states_elec_set_state(st, mesh, ist, ik, psii)
+
+        if(ist >= st%st_start .and. ist <= st%st_end) then
+          call states_elec_get_state(st, mesh, ist, ik, psii)
+
+          ! renormalize
+          cc = TOFLOAT(X(mf_dotp)(mesh, st%d%dim, psii, psii))
+          do idim = 1, st%d%dim
+            call lalg_scal(mesh%np, M_ONE/sqrt(cc), psii(:, idim))
+          end do
+          call states_elec_set_state(st, mesh, ist, ik, psii)
+        end if
+
+        if(st%parallel_in_states) then
+#ifdef HAVE_MPI
+          call MPI_Bcast(psii(1, 1), mesh%np*st%d%dim, R_MPITYPE, st%node(ist), st%mpi_grp%comm, mpi_err)
+#endif
+        end if
+
+        aa = M_ZERO
+
         ! calculate the projections
         do jst = ist + 1, nst
+          if(jst < st%st_start .or. jst > st%st_end) cycle
           call states_elec_get_state(st, mesh, jst, ik, psij)
           aa(jst) = X(mf_dotp)(mesh, st%d%dim, psii, psij, reduce = .false.)
         end do
@@ -244,6 +265,7 @@ contains
  
         ! subtract the projections
         do jst = ist + 1, nst
+          if(jst < st%st_start .or. jst > st%st_end) cycle
           call states_elec_get_state(st, mesh, jst, ik, psij)
           do idim = 1, st%d%dim
             call lalg_axpy(mesh%np, -aa(jst), psii(:, idim), psij(:, idim))
@@ -252,6 +274,8 @@ contains
         end do
 
       case(OPTION__STATESORTHOGONALIZATION__CGS)
+
+        call states_elec_get_state(st, mesh, ist, ik, psii)
 
         ! calculate the projections first with the same vector
         do jst = 1, ist - 1
@@ -269,6 +293,8 @@ contains
         end do
 
       case(OPTION__STATESORTHOGONALIZATION__DRCGS)
+
+        call states_elec_get_state(st, mesh, ist, ik, psii)
 
         !double step reorthogonalization
         do is = 1, 2
@@ -299,7 +325,8 @@ contains
       end select
 
       !In case of modified Gram-Schmidt, this was done before.
-      if(st%d%orth_method /= OPTION__STATESORTHOGONALIZATION__MGS) then
+      if(method == OPTION__STATESORTHOGONALIZATION__CGS .or. &
+         method == OPTION__STATESORTHOGONALIZATION__DRCGS) then
         ! renormalize
         cc = TOFLOAT(X(mf_dotp)(mesh, st%d%dim, psii, psii))
 
@@ -381,7 +408,7 @@ subroutine X(states_elec_trsm)(st, namespace, mesh, ik, ss)
 
     if(st%d%dim > 1) call messages_not_implemented('Opencl states_elec_trsm for spinors', namespace=namespace)
 
-    block_size = batch_points_block_size(st%group%psib(st%group%block_start, ik))
+    block_size = batch_points_block_size()
 
     call accel_create_buffer(psicopy_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*block_size)
 
@@ -393,13 +420,23 @@ subroutine X(states_elec_trsm)(st, namespace, mesh, ik, ss)
 
     call profiling_out(prof_copy)
 
+    if(st%parallel_in_states) then
+      SAFE_ALLOCATE(psicopy(1:st%nst, 1:st%d%dim, 1:block_size))
+    end if
+
     do sp = 1, mesh%np, block_size
       size = min(block_size, mesh%np - sp + 1)
-      
+
       do ib = st%group%block_start, st%group%block_end
-        ASSERT(R_TYPE_VAL == batch_type(st%group%psib(ib, ik)))
+        ASSERT(R_TYPE_VAL == st%group%psib(ib, ik)%type())
         call batch_get_points(st%group%psib(ib, ik), sp, sp + size - 1, psicopy_buffer, st%nst)
       end do
+
+      if(st%parallel_in_states) then
+        call accel_read_buffer(psicopy_buffer, st%nst*st%d%dim*block_size, psicopy)
+        call states_elec_parallel_gather(st, (/st%d%dim, size/), psicopy)
+        call accel_write_buffer(psicopy_buffer, st%nst*st%d%dim*block_size, psicopy)
+      end if
 
       call X(accel_trsm)(side = ACCEL_BLAS_LEFT, uplo = ACCEL_BLAS_UPPER, &
         trans = ACCEL_BLAS_T, diag = ACCEL_BLAS_DIAG_NON_UNIT, &
@@ -412,13 +449,16 @@ subroutine X(states_elec_trsm)(st, namespace, mesh, ik, ss)
       end do
     end do
 
-    
+    if(st%parallel_in_states) then
+      SAFE_DEALLOCATE_A(psicopy)
+    end if
+
     call accel_release_buffer(ss_buffer)
     call accel_release_buffer(psicopy_buffer)
 
   end if
 
-  call profiling_count_operations(mesh%np*dble(st%nst)*(st%nst + 1)*CNST(0.5)*(R_ADD + R_MUL))
+  call profiling_count_operations(mesh%np*TOFLOAT(st%nst*(st%nst + 1))*st%d%dim*CNST(0.5)*(R_ADD + R_MUL))
 
 
   call profiling_out(prof)
@@ -447,7 +487,7 @@ subroutine X(states_elec_orthogonalize_single)(st, mesh, nst, iqn, phi, normaliz
   type(profile_t), save :: prof
   type(profile_t), save :: reduce_prof
   logical :: against_all_
-  type(batch_t), pointer :: batch
+  type(wfs_elec_t), pointer :: batch
   
   call profiling_in(prof, "GRAM_SCHMIDT")
   PUSH_SUB(X(states_elec_orthogonalize_single))
@@ -485,12 +525,12 @@ subroutine X(states_elec_orthogonalize_single)(st, mesh, nst, iqn, phi, normaliz
  
     !To understand this, one should look at states_elec_get_states and batch_get_states routines 
     batch => st%group%psib(st%group%iblock(ist, iqn), iqn)
-    select case(batch_status(batch))
+    select case(batch%status())
     case(BATCH_NOT_PACKED)
       ss(ist) = R_TOTYPE(M_ZERO)
       do idim = 1, st%d%dim
-        ibind = batch_inv_index(batch, (/ist, idim/)) 
-        ss(ist) = ss(ist) + X(mf_dotp)(mesh, batch%states_linear(ibind)%X(psi), phi(:,idim), reduce = .false.)
+        ibind = batch%inv_index((/ist, idim/)) 
+        ss(ist) = ss(ist) + X(mf_dotp)(mesh, batch%X(ff_linear)(:, ibind), phi(:,idim), reduce = .false.)
       end do
     case(BATCH_PACKED, BATCH_DEVICE_PACKED)
       !Not properly implemented
@@ -526,11 +566,11 @@ subroutine X(states_elec_orthogonalize_single)(st, mesh, nst, iqn, phi, normaliz
     end if
     
     batch => st%group%psib(st%group%iblock(ist, iqn), iqn)
-    select case(batch_status(batch))
+    select case(batch%status())
     case(BATCH_NOT_PACKED)
       do idim = 1, st%d%dim
-        ibind = batch_inv_index(batch, (/ist, idim/))
-        call blas_axpy(mesh%np, -ss(ist), batch%states_linear(ibind)%X(psi)(1), 1, phi(1, idim), 1)
+        ibind = batch%inv_index((/ist, idim/))
+        call blas_axpy(mesh%np, -ss(ist), batch%X(ff_linear)(1, ibind), 1, phi(1, idim), 1)
       end do
     case(BATCH_PACKED, BATCH_DEVICE_PACKED)
       !Not properly implemented
@@ -578,6 +618,160 @@ subroutine X(states_elec_orthogonalize_single)(st, mesh, nst, iqn, phi, normaliz
       end if
     end function skip_this_iteration
 end subroutine X(states_elec_orthogonalize_single)
+
+! ---------------------------------------------------------
+subroutine X(states_elec_orthogonalize_single_batch)(st, mesh, nst, iqn, phi, normalize, mask, overlap, norm, Theta_fi, beta_ij, &
+  against_all)
+  type(states_elec_t), intent(in)    :: st
+  type(mesh_t),        intent(in)    :: mesh
+  integer,             intent(in)    :: nst
+  integer,             intent(in)    :: iqn
+  R_TYPE,              intent(inout) :: phi(:,:)     !< phi(mesh%np_part, dim)
+  logical, optional,   intent(in)    :: normalize
+  logical, optional,   intent(inout) :: mask(:)      !< mask(nst)
+  R_TYPE,  optional,   intent(out)   :: overlap(:) 
+  FLOAT,   optional,   intent(out)   :: norm
+  FLOAT,   optional,   intent(in)    :: theta_fi
+  R_TYPE,  optional,   intent(in)    :: beta_ij(:)   !< beta_ij(nst)
+  logical, optional,   intent(in)    :: against_all
+
+  integer :: ib, minst, maxst, ist, length_ss
+  FLOAT   :: nrm2
+  R_TYPE, allocatable  :: ss(:)
+  type(profile_t), save :: prof
+  type(profile_t), save :: reduce_prof
+  logical :: against_all_
+  
+  call profiling_in(prof, "GRAM_SCHMIDT_BATCH")
+  PUSH_SUB(X(states_elec_orthogonalize_single_batch))
+
+  ASSERT(nst <= st%nst)
+  ASSERT(.not. st%parallel_in_states)
+  ! if against_all is set to true, phi is orthogonalized to all other states except nst+1
+  ! (nst + 1 is chosen because this routine is usually called with nst=ist-1 in a loop)
+  against_all_ = optional_default(against_all, .false.)
+
+  length_ss = nst
+  if(against_all_) then
+    length_ss = st%nst
+  end if
+  SAFE_ALLOCATE(ss(1:length_ss))
+  ! Check length of optional arguments
+  if(present(mask)) then
+    ASSERT(ubound(mask, dim=1) >= length_ss)
+  end if
+  if(present(overlap)) then
+    ASSERT(ubound(overlap, dim=1) >= length_ss)
+  end if
+  if(present(beta_ij)) then
+    ASSERT(ubound(beta_ij, dim=1) >= length_ss)
+  end if
+
+  ss = R_TOTYPE(M_ZERO)
+
+  do ib = st%group%block_start, st%group%block_end
+    minst = states_elec_block_min(st, ib)
+    maxst = min(states_elec_block_max(st, ib), length_ss)
+    if(minst > length_ss) cycle
+
+    if(skip_this_batch(minst, maxst, nst, against_all_)) cycle
+    if(present(mask)) then
+      if(all(mask(minst:maxst))) cycle
+    end if
+ 
+    call X(mesh_batch_mf_dotp)(mesh, st%group%psib(ib, iqn), phi, ss(minst:maxst), reduce = .false., nst = maxst-minst+1)
+
+    !In case some of the states in the batche need to be skipped
+    do ist = minst, maxst
+      if(ist > length_ss) cycle
+      if(skip_this_iteration(ist, nst, against_all_)) ss(ist) = R_TOTYPE(M_ZERO)
+      if(present(mask)) then
+        if(mask(ist)) ss(ist) = R_TOTYPE(M_ZERO)
+      end if
+    end do    
+  end do
+    
+  if(mesh%parallel_in_domains) then
+    call profiling_in(reduce_prof, "GRAM_SCHMIDT_REDUCE")
+    call comm_allreduce(mesh%mpi_grp%comm, ss, dim = length_ss)
+    call profiling_out(reduce_prof)
+  end if
+
+  if(present(mask)) then
+    do ist = 1, st%nst
+      if(skip_this_iteration(ist, nst, against_all_)) cycle
+      mask(ist) = (abs(ss(ist)) <= M_EPSILON)
+    end do
+  end if
+
+  if(present(beta_ij)) ss(1:length_ss) = ss(1:length_ss)*beta_ij(1:length_ss)
+  
+  if(present(theta_fi)) then
+    if(theta_fi /= M_ONE) phi(1:mesh%np, 1:st%d%dim) = theta_fi*phi(1:mesh%np, 1:st%d%dim)
+  end if
+
+  do ib = st%group%block_start, st%group%block_end
+    minst = states_elec_block_min(st, ib)
+    maxst = min(states_elec_block_max(st, ib), length_ss)
+    if(minst > length_ss) cycle
+
+    if(skip_this_batch(minst, maxst, nst, against_all_)) cycle
+    if(present(mask)) then
+      if(all(mask(minst:maxst))) cycle
+    end if
+
+    call X(batch_axpy_function)(mesh%np, -ss(minst:maxst), st%group%psib(ib, iqn), phi, nst = maxst-minst+1) 
+
+  end do
+
+  if(optional_default(normalize, .false.)) then
+    call X(mf_normalize)(mesh, st%d%dim, phi, nrm2)
+  end if
+
+  if(present(overlap)) then
+    overlap(1:length_ss) = ss(1:length_ss)
+  end if
+
+  if(present(norm)) then
+    ASSERT(present(normalize))
+    ASSERT(normalize)
+    norm = nrm2
+  end if
+
+  SAFE_DEALLOCATE_A(ss)
+
+  POP_SUB(X(states_elec_orthogonalize_single_batch))
+  call profiling_out(prof)
+
+  contains
+   logical function skip_this_iteration(ist, nst, against_all_states)
+      integer, intent(in) :: ist, nst
+      logical, intent(in) :: against_all_states
+
+      skip_this_iteration = .false.
+      if(.not.against_all_states) then
+        ! orthogonalize against previous states only
+        if(ist > nst) skip_this_iteration = .true.
+      else
+        ! orthogonalize against all other states besides nst + 1
+        if(ist == nst + 1) skip_this_iteration = .true.
+      end if
+    end function skip_this_iteration
+
+    logical function skip_this_batch(minst, maxst, nst, against_all_states)
+      integer, intent(in) :: minst, maxst, nst
+      logical, intent(in) :: against_all_states
+
+      skip_this_batch = .false.
+      if(.not.against_all_states) then
+        ! orthogonalize against previous states only
+        if(minst > nst) skip_this_batch = .true.
+      else
+        ! orthogonalize against all other states besides nst + 1
+        if(minst == nst + 1 .and. maxst == nst + 1) skip_this_batch = .true.
+      end if
+    end function skip_this_batch
+end subroutine X(states_elec_orthogonalize_single_batch)
 
 ! ---------------------------------------------------------
 !> Orthonormalizes phi to the nst orbitals psi.
@@ -792,7 +986,11 @@ FLOAT function X(states_elec_residue)(mesh, dim, hf, ee, ff) result(rr)
 
   SAFE_ALLOCATE(res(1:mesh%np, 1:dim))
 
-  forall (idim = 1:dim, ip = 1:mesh%np) res(ip, idim) = hf(ip, idim) - ee*ff(ip, idim)
+  do idim = 1, dim
+    do ip = 1, mesh%np
+      res(ip, idim) = hf(ip, idim) - ee*ff(ip, idim)
+    end do
+  end do
 
   call profiling_count_operations(dim*mesh%np*(R_ADD + R_MUL))
 
@@ -861,7 +1059,9 @@ subroutine X(states_elec_calc_momentum)(st, der, momentum)
       ! since psi contains only u_k
       kpoint = M_ZERO
       kpoint(1:der%mesh%sb%dim) = kpoints_get_point(der%mesh%sb%kpoints, states_elec_dim_get_kpoint_index(st%d, ik))
-      forall(idir = 1:der%mesh%sb%periodic_dim) momentum(idir, ist, ik) = momentum(idir, ist, ik) + kpoint(idir)
+      do idir = 1, der%mesh%sb%periodic_dim
+        momentum(idir, ist, ik) = momentum(idir, ist, ik) + kpoint(idir)
+      end do
 
     end do
 
@@ -1268,7 +1468,7 @@ subroutine X(states_elec_rotate)(st, namespace, mesh, uu, ik)
 
     end do
 
-    call profiling_count_operations((R_ADD + R_MUL)*st%nst*(st%nst - CNST(1.0))*mesh%np)
+    call profiling_count_operations((R_ADD + R_MUL)*st%nst*st%d%dim*(st%nst - CNST(1.0))*mesh%np)
 
     SAFE_DEALLOCATE_A(psinew)
     SAFE_DEALLOCATE_A(psicopy)
@@ -1277,13 +1477,16 @@ subroutine X(states_elec_rotate)(st, namespace, mesh, uu, ik)
 
     if(st%d%dim > 1) call messages_not_implemented('Opencl states_elec_rotate for spinors', namespace=namespace)
 
-    block_size = batch_points_block_size(st%group%psib(st%group%block_start, ik))
+    block_size = batch_points_block_size()
 
     call accel_create_buffer(uu_buffer, ACCEL_MEM_READ_ONLY, R_TYPE_VAL, product(ubound(uu)))
     call accel_write_buffer(uu_buffer, product(ubound(uu)), uu)
 
-    call accel_create_buffer(psicopy_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*block_size)
-    call accel_create_buffer(psinew_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*block_size)
+    call accel_create_buffer(psicopy_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*st%d%dim*block_size)
+    call accel_create_buffer(psinew_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*st%d%dim*block_size)
+    if(st%parallel_in_states) then
+      SAFE_ALLOCATE(psicopy(1:st%nst, 1:st%d%dim, 1:block_size))
+    end if
 
     do sp = 1, mesh%np, block_size
       size = min(block_size, mesh%np - sp + 1)
@@ -1292,7 +1495,13 @@ subroutine X(states_elec_rotate)(st, namespace, mesh, uu, ik)
         call batch_get_points(st%group%psib(ib, ik), sp, sp + size - 1, psicopy_buffer, st%nst)
       end do
 
-      call X(accel_gemm)(transA = CUBLAS_OP_T, transB = CUBLAS_OP_N, &
+     if(st%parallel_in_states) then
+        call accel_read_buffer(psicopy_buffer, st%nst*st%d%dim*block_size, psicopy)
+        call states_elec_parallel_gather(st, (/st%d%dim, size/), psicopy)
+        call accel_write_buffer(psicopy_buffer, st%nst*st%d%dim*block_size, psicopy)
+      end if
+
+      call X(accel_gemm)(transA = CUBLAS_OP_C, transB = CUBLAS_OP_N, &
         M = int(st%nst, 8), N = int(size, 8), K = int(st%nst, 8), alpha = R_TOTYPE(M_ONE), &
         A = uu_buffer, offA = 0_8, lda = int(ubound(uu, dim = 1), 8), &
         B = psicopy_buffer, offB = 0_8, ldb = int(st%nst, 8), beta = R_TOTYPE(M_ZERO), &
@@ -1310,6 +1519,9 @@ subroutine X(states_elec_rotate)(st, namespace, mesh, uu, ik)
     call accel_release_buffer(uu_buffer)
     call accel_release_buffer(psicopy_buffer)
     call accel_release_buffer(psinew_buffer)
+    if(st%parallel_in_states) then
+      SAFE_DEALLOCATE_A(psicopy)
+    end if
 
   end if
 
@@ -1338,7 +1550,8 @@ subroutine X(states_elec_calc_overlap)(st, mesh, ik, overlap)
 
   call profiling_in(prof, "STATES_OVERLAP")
 
-  if(.not. st%are_packed() .or. .not. accel_is_enabled()) then
+  if(.not. st%are_packed() .or. .not. accel_is_enabled() .or. &
+     (st%parallel_in_states .and. .not. accel_is_enabled())) then
 
 #ifdef R_TREAL  
     block_size = max(80, hardware%l2%size/(8*st%nst))
@@ -1383,7 +1596,7 @@ subroutine X(states_elec_calc_overlap)(st, mesh, ik, overlap)
     end do
 #endif
 
-    call profiling_count_operations((R_ADD + R_MUL)*CNST(0.5)*st%nst*(st%nst - CNST(1.0))*mesh%np)
+    call profiling_count_operations((R_ADD + R_MUL)*CNST(0.5)*st%nst*st%d%dim*(st%nst - CNST(1.0))*mesh%np)
 
     if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm, overlap, dim = (/st%nst, st%nst/))
 
@@ -1393,38 +1606,51 @@ subroutine X(states_elec_calc_overlap)(st, mesh, ik, overlap)
   else if(accel_is_enabled()) then
 
     ASSERT(ubound(overlap, dim = 1) == st%nst)
-    ASSERT(.not. st%parallel_in_states)
     
     call accel_create_buffer(overlap_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*st%nst)
     call accel_set_buffer_to_zero(overlap_buffer, R_TYPE_VAL, st%nst*st%nst)
 
     ! we need to use a temporary array
 
-    block_size = batch_points_block_size(st%group%psib(st%group%block_start, ik))
+    block_size = batch_points_block_size()
 
-    call accel_create_buffer(psi_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*block_size)
+    call accel_create_buffer(psi_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*st%d%dim*block_size)
+    if(st%parallel_in_states) then
+      SAFE_ALLOCATE(psi(1:st%nst, 1:st%d%dim, 1:block_size))
+    end if
 
     do sp = 1, mesh%np, block_size
       size = min(block_size, mesh%np - sp + 1)
 
       do ib = st%group%block_start, st%group%block_end
-        ASSERT(R_TYPE_VAL == batch_type(st%group%psib(ib, ik)))
+        ASSERT(R_TYPE_VAL == st%group%psib(ib, ik)%type())
         call batch_get_points(st%group%psib(ib, ik), sp, sp + size - 1, psi_buffer, st%nst)
       end do
 
+      if(st%parallel_in_states) then
+        call accel_read_buffer(psi_buffer, st%nst*st%d%dim*block_size, psi)
+        call states_elec_parallel_gather(st, (/st%d%dim, size/), psi)
+        call accel_write_buffer(psi_buffer, st%nst*st%d%dim*block_size, psi)
+      end if
+
       call X(accel_herk)(uplo = ACCEL_BLAS_UPPER, trans = ACCEL_BLAS_N, &
-        n = int(st%nst, 8), k = int(size, 8), &
+        n = int(st%nst, 8), k = int(size*st%d%dim, 8), &
         alpha = mesh%volume_element, &
         A = psi_buffer, offa = 0_8, lda = int(st%nst, 8), &
-        beta = 1.0_8, &
+        beta = M_ONE, &
         C = overlap_buffer, offc = 0_8, ldc = int(st%nst, 8))
+      call accel_finish()
     end do
+
+    if(st%parallel_in_states) then
+      SAFE_DEALLOCATE_A(psi)
+    end if
 
     call accel_finish()
 
     call accel_release_buffer(psi_buffer)
 
-    call profiling_count_operations((R_ADD + R_MUL)*CNST(0.5)*st%nst*(st%nst - CNST(1.0))*mesh%np)
+    call profiling_count_operations((R_ADD + R_MUL)*CNST(0.5)*st%nst*st%d%dim*(st%nst - CNST(1.0))*mesh%np)
 
     call accel_read_buffer(overlap_buffer, st%nst*st%nst, overlap)
 
@@ -1457,18 +1683,21 @@ subroutine X(states_elec_calc_overlap)(st, mesh, ik, overlap)
     end do
 
     if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm, overlap, dim = (/st%nst, st%nst/))
-
   end if
 
-! Debug output
-!#ifndef R_TREAL
-!  do ist = 1, st%nst
-!    do jst = 1, st%nst
-!      write(12, '(e12.6,a,e12.6,a)', advance = 'no') real(overlap(ist, jst)), ' ',  aimag(overlap(ist, jst)), ' '
-!    end do
-!      write(12, *) ' ' 
-!  end do
-!#endif
+  ! Debug output
+  if(debug%info .and. mpi_grp_is_root(mpi_world)) then
+    do ib = 1, st%nst
+      do jb = 1, st%nst
+#ifndef R_TREAL
+        write(12, '(e12.6,a,e12.6,a)', advance = 'no') real(overlap(ib, jb)), ' ',  aimag(overlap(ib, jb)), ' '
+#else
+        write(12, '(e12.6,a)', advance = 'no') overlap(ib, jb), ' '
+#endif
+      end do
+      write(12, *) ' ' 
+    end do
+  end if
 
   call profiling_out(prof)
 
@@ -1544,7 +1773,7 @@ subroutine X(states_elec_calc_projections)(st, gs_st, namespace, mesh, ik, proj,
 
   end if
   
-  call profiling_count_operations((R_ADD + R_MUL)*gs_nst_*(st%nst - CNST(1.0))*mesh%np)
+  call profiling_count_operations((R_ADD + R_MUL)*gs_nst_*st%d%dim*(st%nst - CNST(1.0))*mesh%np)
   
   if(mesh%parallel_in_domains) call comm_allreduce(mesh%mpi_grp%comm, proj, dim = (/gs_nst_, st%nst/))
   
@@ -1554,12 +1783,10 @@ subroutine X(states_elec_calc_projections)(st, gs_st, namespace, mesh, ik, proj,
 end subroutine X(states_elec_calc_projections)
 
 ! ---------------------------------------------------------
-subroutine X(states_elec_me_one_body)(st, namespace, dir, gr, geo, nspin, vhxc, nint, iindex, jindex, oneint)
+subroutine X(states_elec_me_one_body)(st, namespace, gr, nspin, vhxc, nint, iindex, jindex, oneint)
   type(states_elec_t), intent(inout) :: st
   type(namespace_t),   intent(in)    :: namespace
-  character(len=*),    intent(in)    :: dir
   type(grid_t),        intent(in)    :: gr
-  type(geometry_t),    intent(in)    :: geo
   integer,             intent(in)    :: nspin
   FLOAT,               intent(in)    :: vhxc(1:gr%mesh%np, nspin)
   integer,             intent(in)    :: nint
@@ -1615,38 +1842,54 @@ end subroutine X(states_elec_me_one_body)
 
 
 ! ---------------------------------------------------------
-subroutine X(states_elec_me_two_body) (st, namespace, gr, psolver, st_min, st_max, iindex, jindex, kindex, lindex, twoint, phase)
-  type(states_elec_t), intent(in)              :: st
+subroutine X(states_elec_me_two_body) (st, namespace, gr, psolver, st_min, st_max, iindex, &
+                                         jindex, kindex, lindex, twoint, phase, singularity, exc_k)
+  type(states_elec_t), intent(inout)           :: st
   type(namespace_t),   intent(in)              :: namespace
   type(grid_t),        intent(in)              :: gr
-  type(poisson_t),     intent(in)              :: psolver
+  type(poisson_t),     intent(inout)           :: psolver
   integer,             intent(in)              :: st_min, st_max
   integer,             intent(out)             :: iindex(:,:)
   integer,             intent(out)             :: jindex(:,:)
   integer,             intent(out)             :: kindex(:,:)
   integer,             intent(out)             :: lindex(:,:)
   R_TYPE,              intent(out)             :: twoint(:)  !
-  CMPLX,     optional, intent(in)              :: phase(:,:)
+  CMPLX,     optional, intent(in)              :: phase(:,st%d%kpt%start:)
+  type(singularity_t), optional,intent(in)  :: singularity
+  logical, optional, intent(in)             :: exc_k
 
   integer :: ist, jst, kst, lst, ijst, klst, ikpt, jkpt, kkpt, lkpt
   integer :: ist_global, jst_global, kst_global, lst_global, nst, nst_tot
-  integer :: iint
+  integer :: iint, ikpoint, jkpoint, ip, ibind, npath
   R_TYPE  :: me
-  R_TYPE, allocatable :: nn(:), vv(:)
-  R_TYPE, allocatable :: psii(:, :), psij(:, :), psik(:, :), psil(:, :)
+  R_TYPE, allocatable :: nn(:), vv(:), two_body_int(:), tmp(:)
+  R_TYPE, pointer :: psii(:), psij(:), psil(:)
+  R_TYPE, allocatable :: psik(:, :)
+  FLOAT :: qq(1:MAX_DIM)
+  logical :: exc_k_
+  class(wfs_elec_t), pointer :: wfs
+  type(fourier_space_op_t) :: coulb
 
   PUSH_SUB(X(states_elec_me_two_body))
 
   SAFE_ALLOCATE(nn(1:gr%mesh%np))
   SAFE_ALLOCATE(vv(1:gr%mesh%np))
-  SAFE_ALLOCATE(psii(1:gr%mesh%np, 1:st%d%dim))
-  SAFE_ALLOCATE(psij(1:gr%mesh%np, 1:st%d%dim))
   SAFE_ALLOCATE(psik(1:gr%mesh%np, 1:st%d%dim))
-  SAFE_ALLOCATE(psil(1:gr%mesh%np, 1:st%d%dim))
+  SAFE_ALLOCATE(tmp(1:gr%mesh%np))
+  SAFE_ALLOCATE(two_body_int(1:gr%mesh%np))
 
   if (st%d%ispin == SPINORS) then
     call messages_not_implemented("Two-body integrals with spinors.", namespace=namespace)
   end if
+
+  ASSERT(present(phase) .eqv. present(singularity))
+#ifdef R_TCOMPLEX
+  ASSERT(present(phase))
+#endif
+
+  npath = kpoints_nkpt_in_path(gr%sb%kpoints)
+
+  if(st%are_packed()) call st%unpack()
 
   ijst = 0
   iint = 1
@@ -1654,40 +1897,78 @@ subroutine X(states_elec_me_two_body) (st, namespace, gr, psolver, st_min, st_ma
   nst_tot = (st_max-st_min+1)*st%d%nik
   nst = (st_max-st_min+1)
 
+  exc_k_ = .false.
+  if(present(exc_k)) exc_k_ = exc_k
+
+  if(present(singularity)) then
+    call fourier_space_op_nullify(coulb)
+    qq = M_ZERO
+    call poisson_build_kernel(psolver, namespace, gr%sb, coulb, qq, M_ZERO)
+  end if
+
   do ist_global = 1, nst_tot
-    ist = mod(ist_global-1, nst) +1
-    ikpt = (ist_global-ist)/nst+1
+    ist = mod(ist_global - 1, nst) + 1
+    ikpt = (ist_global - ist) / nst + 1
+    ikpoint = states_elec_dim_get_kpoint_index(st%d, ikpt)
 
-    call states_elec_get_state(st, gr%mesh, ist+st_min-1, ikpt, psii)
-
-#ifdef R_TCOMPLEX
-    if(present(phase)) then
-       call states_elec_set_phase(st%d, psii, phase(1:gr%mesh%np, ikpt), gr%mesh%np, .false.)
+    wfs => st%group%psib(st%group%iblock(ist+st_min-1, ikpt), ikpt)
+    ASSERT(wfs%status() /= BATCH_DEVICE_PACKED)
+    ibind = wfs%inv_index((/ist+st_min-1, 1/))
+    if(wfs%status() == BATCH_NOT_PACKED) then
+      psii => wfs%X(ff_linear)(:, ibind)
+    else if(wfs%status() == BATCH_PACKED) then
+      psii => wfs%X(ff_pack)(ibind, :)
     end if
-#endif
 
     do jst_global = 1, nst_tot
-      jst = mod(jst_global-1, nst) +1
-      jkpt = (jst_global-jst)/nst+1
+      jst = mod(jst_global - 1, nst) + 1
+      jkpt = (jst_global - jst) / nst + 1
+      jkpoint = states_elec_dim_get_kpoint_index(st%d, jkpt)
 
-      if(jst_global > ist_global) cycle
-      ijst=ijst+1
+      if(exc_k_ .and. ist /= jst) cycle
 
-      call states_elec_get_state(st, gr%mesh, jst+st_min-1, jkpt, psij)
-#ifdef R_TCOMPLEX
-      if(present(phase)) then
-         call states_elec_set_phase(st%d, psij, phase(1:gr%mesh%np, jkpt), gr%mesh%np, .false.)
+      if(present(singularity)) then
+        qq(1:gr%der%dim) = kpoints_get_point(gr%sb%kpoints, ikpoint, absolute_coordinates=.false.) &
+                         - kpoints_get_point(gr%sb%kpoints, jkpoint, absolute_coordinates=.false.)
+        ! In case of k-points, the poisson solver must contains k-q 
+        ! in the Coulomb potential, and must be changed for each q point
+        call poisson_build_kernel(psolver, namespace, gr%sb, coulb, qq, M_ZERO, &
+                  -(gr%sb%kpoints%full%npoints-npath)*gr%sb%rcell_volume*(singularity%Fk(jkpoint)-singularity%FF))
       end if
+
+#ifndef R_TCOMPLEX
+      if(jst_global > ist_global) cycle
 #endif
+      ijst=ijst+1
+      
+      wfs => st%group%psib(st%group%iblock(jst+st_min-1, jkpt), jkpt)
+      ibind = wfs%inv_index((/jst+st_min-1, 1/))
+      if(wfs%status() == BATCH_NOT_PACKED) then
+        psij => wfs%X(ff_linear)(:, ibind)
+      else if(wfs%status() == BATCH_PACKED) then
+        psij => wfs%X(ff_pack)(ibind, :)
+      end if
 
+      nn(1:gr%mesh%np) = R_CONJ(psii(1:gr%mesh%np))*psij(1:gr%mesh%np)
+      if(present(singularity)) then
+        call X(poisson_solve)(psolver, vv, nn, all_nodes=.false., kernel=coulb)
+      else
+        call X(poisson_solve)(psolver, vv, nn, all_nodes=.false.)
+      end if
 
-      nn(1:gr%mesh%np) = R_CONJ(psii(1:gr%mesh%np, 1))*psij(1:gr%mesh%np, 1)
-      call X(poisson_solve)(psolver, vv, nn, all_nodes=.false.)
+      !We now put back the phase that we treated analytically using the Poisson solver
+#ifdef R_TCOMPLEX
+      do ip = 1, gr%mesh%np
+        vv(ip) = vv(ip) * exp(M_zI*sum(qq(1:gr%der%dim)*gr%mesh%x(ip, 1:gr%der%dim)))
+      end do
+#endif
 
       klst=0
       do kst_global = 1, nst_tot
-        kst = mod(kst_global-1, nst) +1
-        kkpt = (kst_global-kst)/nst+1
+        kst = mod(kst_global - 1, nst) + 1
+        kkpt = (kst_global - kst) / nst + 1
+
+        if(exc_k_ .and. kkpt /= jkpt) cycle
 
         call states_elec_get_state(st, gr%mesh, kst+st_min-1, kkpt, psik)
 #ifdef R_TCOMPLEX
@@ -1696,24 +1977,45 @@ subroutine X(states_elec_me_two_body) (st, namespace, gr, psolver, st_min, st_ma
         end if
 #endif
 
-        do lst_global = 1, nst_tot
-          lst = mod(lst_global-1, nst) +1
-          lkpt = (lst_global-lst)/nst+1
+        tmp(1:gr%mesh%np) = vv(1:gr%mesh%np)*R_CONJ(psik(1:gr%mesh%np, 1))
 
+        do lst_global = 1, nst_tot
+          lst = mod(lst_global - 1, nst) + 1
+          lkpt = (lst_global - lst)/nst + 1
+
+#ifndef R_TCOMPLEX
           if(lst_global > kst_global) cycle
           klst=klst+1
           if(klst > ijst) cycle
-
-          call states_elec_get_state(st, gr%mesh, lst+st_min-1, lkpt, psil)
-#ifdef R_TCOMPLEX
-          if(present(phase)) then
-            call states_elec_set_phase(st%d, psil, phase(1:gr%mesh%np, lkpt), gr%mesh%np, .false.)
-          end if
 #endif
 
-          psil(1:gr%mesh%np, 1) = vv(1:gr%mesh%np)*R_CONJ(psik(1:gr%mesh%np, 1))*psil(1:gr%mesh%np, 1)
+          if(exc_k_ .and. kst /= lst) cycle
+          if(exc_k_ .and. lkpt /= ikpt) cycle
+          wfs => st%group%psib(st%group%iblock(lst+st_min-1, lkpt), lkpt)
+          ibind = wfs%inv_index((/lst+st_min-1, 1/))
+          if(wfs%status() == BATCH_NOT_PACKED) then
+            psil => wfs%X(ff_linear)(:, ibind)
+          else if(wfs%status() == BATCH_PACKED) then
+            psil => wfs%X(ff_pack)(ibind, :)
+          end if
 
-          me = X(mf_integrate)(gr%mesh, psil(:, 1))
+          if(present(phase)) then
+#ifdef R_TCOMPLEX
+            !$omp parallel do
+            do ip = 1, gr%mesh%np
+              two_body_int(ip) = tmp(ip)*psil(ip)*phase(ip, lkpt)
+            end do
+            !$omp end parallel do
+#endif 
+          else
+            !$omp parallel do
+            do ip = 1, gr%mesh%np
+              two_body_int(ip) = tmp(ip)*psil(ip)
+            end do
+            !$omp end parallel do
+          end if
+
+          me = X(mf_integrate)(gr%mesh, two_body_int(:), reduce = .false.)
 
           iindex(1,iint) =  ist+st_min-1
           iindex(2,iint) =  ikpt
@@ -1731,12 +2033,19 @@ subroutine X(states_elec_me_two_body) (st, namespace, gr, psolver, st_min, st_ma
     end do
   end do
 
+  if(gr%mesh%parallel_in_domains) then
+    call comm_allreduce(gr%mesh%mpi_grp%comm, twoint)
+  end if
+
+  if(present(singularity)) then
+    call fourier_space_op_end(coulb)
+  end if
+
   SAFE_DEALLOCATE_A(nn)
   SAFE_DEALLOCATE_A(vv)
-  SAFE_DEALLOCATE_A(psii)
-  SAFE_DEALLOCATE_A(psij)
+  SAFE_DEALLOCATE_A(tmp)
+  SAFE_DEALLOCATE_A(two_body_int)
   SAFE_DEALLOCATE_A(psik)
-  SAFE_DEALLOCATE_A(psil)
 
   POP_SUB(X(states_elec_me_two_body))
 end subroutine X(states_elec_me_two_body)

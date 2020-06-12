@@ -43,3 +43,4 @@ UnfoldMode = unfold_setup
  1.0 | 1.0 | 1.0 # Another Gamma point
 %
 
+StatesPack = yes

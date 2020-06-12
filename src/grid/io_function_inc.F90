@@ -220,12 +220,12 @@ subroutine X(io_function_input_global)(filename, namespace, mesh, ff, ierr, map)
       SAFE_ALLOCATE(x_out(1:cube%rs_n_global(1), 1:1))
       
       do ii = 1, int(dims(1))
-        x_in(ii,:) = (/ real(ii-1, REAL_PRECISION)*(real(cube%rs_n_global(1)-1, REAL_PRECISION)/(dims(1)-1)) /)
+        x_in(ii,:) = (/ TOFLOAT(ii-1)*(TOFLOAT(cube%rs_n_global(1)-1)/(dims(1)-1)) /)
       end do
 
       
       do ii = 1, cube%rs_n_global(1)
-        x_out(ii,1) = real(ii-1, REAL_PRECISION)
+        x_out(ii,1) = TOFLOAT(ii-1)
       end do
         
 ! TODO: find out why this was called with ndim 2 as a first argument, in the mesh%sb%dim 1 case
@@ -242,14 +242,14 @@ subroutine X(io_function_input_global)(filename, namespace, mesh, ff, ierr, map)
       do ii = 1, int(dims(2))
         do jj = 1, int(dims(1))
           x_in((ii-1)*dims(1) + jj,:) = & 
-            (/ real(jj-1, REAL_PRECISION)*(real(cube%rs_n_global(1)-1, REAL_PRECISION)/(dims(1)-1)),&
-               real(ii-1, REAL_PRECISION)*(real(cube%rs_n_global(2)-1, REAL_PRECISION)/(dims(2)-1)) /)
+            (/ TOFLOAT(jj-1)*(TOFLOAT(cube%rs_n_global(1)-1)/(dims(1)-1)),&
+               TOFLOAT(ii-1)*(TOFLOAT(cube%rs_n_global(2)-1)/(dims(2)-1)) /)
         end do
       end do
       
       do ii = 1, cube%rs_n_global(2)
         do jj = 1, cube%rs_n_global(1)
-          x_out((ii-1)*cube%rs_n_global(1) + jj,:) = (/ real(jj-1, REAL_PRECISION), real(ii-1, REAL_PRECISION) /)
+          x_out((ii-1)*cube%rs_n_global(1) + jj,:) = (/ TOFLOAT(jj-1), TOFLOAT(ii-1) /)
         end do
       end do
       call X(mf_interpolate_points)(2, int(dims(1)*dims(2), FC_INTEGER_SIZE), x_in(:,:),&
@@ -265,9 +265,9 @@ subroutine X(io_function_input_global)(filename, namespace, mesh, ff, ierr, map)
         do jj = 1, int(dims(2))
           do kk = 1, int(dims(1))
             x_in((ii-1)*dims(1)*dims(2) + (jj-1)*dims(1) + kk,:) = &
-              (/ real(kk-1, REAL_PRECISION)*(real(cube%rs_n_global(1)-1, REAL_PRECISION)/(dims(1)-1)) , &
-                 real(jj-1, REAL_PRECISION)*(real(cube%rs_n_global(2)-1, REAL_PRECISION)/(dims(2)-1)) , &
-                 real(ii-1, REAL_PRECISION)*(real(cube%rs_n_global(3)-1, REAL_PRECISION)/(dims(3)-1)) /)
+              (/ TOFLOAT(kk-1)*(TOFLOAT(cube%rs_n_global(1)-1)/(dims(1)-1)) , &
+                 TOFLOAT(jj-1)*(TOFLOAT(cube%rs_n_global(2)-1)/(dims(2)-1)) , &
+                 TOFLOAT(ii-1)*(TOFLOAT(cube%rs_n_global(3)-1)/(dims(3)-1)) /)
           end do
         end do
       end do
@@ -276,7 +276,7 @@ subroutine X(io_function_input_global)(filename, namespace, mesh, ff, ierr, map)
         do jj = 1, cube%rs_n_global(2)
           do kk = 1, cube%rs_n_global(1)
             x_out((ii-1)*cube%rs_n_global(1)*cube%rs_n_global(2) + (jj-1)*cube%rs_n_global(1) + kk,:) = &
-              (/ real(kk-1, REAL_PRECISION), real(jj-1, REAL_PRECISION), real(ii-1, REAL_PRECISION) /)
+              (/ TOFLOAT(kk-1), TOFLOAT(jj-1), TOFLOAT(ii-1) /)
             end do
           end do
         end do
@@ -585,7 +585,9 @@ contains
 
     filename = trim(dir)//'/'//trim(fname)//".vtk"
 
-    forall (ii = 1:3) dk(ii)= units_from_atomic(units_out%length, mesh%spacing(ii))
+    do ii = 1, 3
+      dk(ii)= units_from_atomic(units_out%length, mesh%spacing(ii))
+    end do
 
     call X(vtk_out_cf_vector)(filename, namespace, fname, ierr, cf, vector_dim, cube, dk, unit)
 
@@ -1121,9 +1123,9 @@ contains
         case(2)
           out_vec(iy) = R_AIMAG(fu) ! imaginary part
         case(3)
-          out_vec(iy) = R_ABS(fu)   ! absolute value
+          out_vec(iy) = abs(fu)   ! absolute value
         end select
-        
+
       end do
 
       ! now we write to the disk
@@ -1412,7 +1414,7 @@ contains
           if(.not. write_real) then
             write(iunit,'(2f25.15)') aimag(units_from_atomic(unit, cf%X(RS)(ix2, iy2, iz2)))
           else
-            write(iunit,'(2f25.15)') real(units_from_atomic(unit, cf%X(RS)(ix2, iy2, iz2)), REAL_PRECISION)
+            write(iunit,'(2f25.15)') TOFLOAT(units_from_atomic(unit, cf%X(RS)(ix2, iy2, iz2)))
           end if
 #else
           write(iunit,'(2f25.15)') units_from_atomic(unit, cf%X(RS)(ix2, iy2, iz2))
@@ -1472,11 +1474,13 @@ contains
     FLOAT :: dk(3), pnt(3)
     integer :: i, i1, i2, i3 
     FLOAT, ALLOCATABLE :: points(:,:,:,:)
-    
+
     PUSH_SUB(X(io_function_output_global).out_vtk)
 
-    forall (i = 1:3) dk(i)= units_from_atomic(units_out%length, mesh%spacing(i))
-    
+    do i = 1, 3
+      dk(i)= units_from_atomic(units_out%length, mesh%spacing(i))
+    end do
+
     call cube_init(cube, mesh%idx%ll, mesh%sb, namespace, spacing = dk )
     call cube_function_null(cf)
     call X(cube_function_alloc_RS) (cube, cf)
@@ -1601,53 +1605,6 @@ subroutine X(io_function_output_global_BZ) (how, dir, fname, namespace, mesh, ff
   end subroutine out_plane
 end subroutine X(io_function_output_global_BZ)
 
-! -----------------------------------------------
-
-logical pure function X(inside_isolevel)(ff, ip, isosurface_value) result(inside)
-  R_TYPE,          intent(in) :: ff(:)
-  integer,         intent(in) :: ip
-  FLOAT,           intent(in) :: isosurface_value
-
-#ifdef R_TREAL
-  inside = ff(ip) > isosurface_value
-#else
-  inside = abs(ff(ip)) > isosurface_value
-#endif  
-
-end function X(inside_isolevel)
-
-! -----------------------------------------------
-
-function X(interpolate_isolevel)(mesh, ff, isosurface_value, ip1, ip2) result(pos)
-  type(mesh_t),    intent(in) :: mesh
-  R_TYPE,          intent(in) :: ff(:)
-  FLOAT,           intent(in) :: isosurface_value
-  integer,         intent(in) :: ip1
-  integer,         intent(in) :: ip2
-  FLOAT                       :: pos(1:3)
-
-  FLOAT :: v1, v2, x1(MAX_DIM), x2(MAX_DIM)
-  
-#ifdef R_TREAL
-  v1 = ff(ip1)
-  v2 = ff(ip2)
-#else
-  v1 = abs(ff(ip1))
-  v2 = abs(ff(ip2))
-#endif
-  x1(:) = mesh_x_global(mesh, ip1)
-  x2(:) = mesh_x_global(mesh, ip2)
-  
-  if(abs(v2 - v1) > M_EPSILON) then
-    pos(1:3) = x1(1:3) + (isosurface_value - v1)*(x2(1:3) - x1(1:3))/(v2 - v1)
-  else
-    ! this should never happen, but just to be sure
-    pos(1:3) = CNST(0.5)*(x1(1:3) + x2(1:3))
-  end if
-
-end function X(interpolate_isolevel)
- 
-
 #if defined(HAVE_NETCDF)
   ! --------------------------------------------------------- 
   !>  Writes a cube_function in netcdf format
@@ -1765,9 +1722,9 @@ end function X(interpolate_isolevel)
 #if defined(R_TCOMPLEX)
     if(status == NF90_NOERR) then
       if (transpose) then
-        call transpose3(real(cf%X(RS), REAL_PRECISION), xx)
+        call transpose3(TOFLOAT(cf%X(RS)), xx)
       else
-        xx = real(cf%X(RS), REAL_PRECISION)
+        xx = TOFLOAT(cf%X(RS))
       end if
       xx = units_from_atomic(unit, xx)
       call write_variable(ncid, data_id, status, sb_dim, xx)

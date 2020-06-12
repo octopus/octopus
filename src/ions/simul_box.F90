@@ -22,12 +22,12 @@
 module simul_box_oct_m
   use atom_oct_m
   use iso_c_binding
+  use gdlib_oct_m
   use geometry_oct_m
   use global_oct_m
   use io_oct_m
   use kpoints_oct_m
   use lalg_basic_oct_m
-  use loct_oct_m
   use lookup_oct_m
   use math_oct_m
   use messages_oct_m
@@ -121,6 +121,8 @@ module simul_box_oct_m
     FLOAT, private :: volume_element               !< the volume element in real space
     FLOAT :: surface_element   (MAX_DIM)         !< surface element in real space
     FLOAT :: rcell_volume                        !< the volume of the cell in real space
+    FLOAT :: alpha, beta, gamma                  !< the angles defining the cell
+    FLOAT :: rmetric            (MAX_DIM,MAX_DIM) !< metric for the real space lattice vectors
     FLOAT :: stress_tensor(MAX_DIM,MAX_DIM)   !< reciprocal-lattice primitive vectors
     logical :: nonorthogonal
     
@@ -169,7 +171,7 @@ contains
     only_gamma_kpoint = (sb%periodic_dim == 0)
     call kpoints_init(sb%kpoints, namespace, sb%symm, sb%dim, sb%rlattice, sb%klattice, only_gamma_kpoint)
 
-    call simul_box_symmetry_check(sb, geo, sb%kpoints, sb%dim, namespace)
+    call simul_box_symmetry_check(sb, geo, sb%dim, namespace)
 
     POP_SUB(simul_box_init)
 
@@ -210,8 +212,9 @@ contains
       else
         sb%periodic_dim = geo%periodic_dim
       end if
-      if ((sb%periodic_dim < 0) .or. (sb%periodic_dim > MAX_DIM) .or. (sb%periodic_dim > sb%dim)) &
-        call messages_input_error('PeriodicDimensions')
+      if ((sb%periodic_dim < 0) .or. (sb%periodic_dim > MAX_DIM) .or. (sb%periodic_dim > sb%dim)) then
+        call messages_input_error(namespace, 'PeriodicDimensions')
+      end if
 
       if(sb%periodic_dim > 0 .and. sb%periodic_dim < sb%dim) then
         call messages_experimental('Support for mixed periodicity systems')
@@ -255,7 +258,7 @@ contains
           call parse_block_float(blk, 0, idir - 1, sb%hr_area%center(idir))
         end do
 
-        if (sb%hr_area%num_areas /= 1) call messages_input_error('MultiResolutionArea')
+        if (sb%hr_area%num_areas /= 1) call messages_input_error(namespace, 'MultiResolutionArea')
 
         ! the radii
         SAFE_ALLOCATE(sb%hr_area%radius(1:sb%hr_area%num_radii))
@@ -347,16 +350,16 @@ contains
         default_boxshape = MINIMUM
       end if
       call parse_variable(namespace, 'BoxShape', default_boxshape, sb%box_shape)
-      if(.not.varinfo_valid_option('BoxShape', sb%box_shape)) call messages_input_error('BoxShape')
+      if(.not.varinfo_valid_option('BoxShape', sb%box_shape)) call messages_input_error(namespace, 'BoxShape')
       select case(sb%box_shape)
       case(SPHERE, MINIMUM, BOX_USDEF)
-        if(sb%dim > 1 .and. simul_box_is_periodic(sb)) call messages_input_error('BoxShape')
+        if(sb%dim > 1 .and. simul_box_is_periodic(sb)) call messages_input_error(namespace, 'BoxShape')
       case(CYLINDER)
         if(sb%dim == 2) then
           message(1) = "BoxShape = cylinder is not meaningful in 2D. Use sphere if you want a circle."
           call messages_fatal(1, namespace=namespace)
         end if
-        if(sb%periodic_dim > 1) call messages_input_error('BoxShape')
+        if(sb%periodic_dim > 1) call messages_input_error(namespace, 'BoxShape')
       end select
 
       ! ignore box_shape in 1D
@@ -364,7 +367,7 @@ contains
         sb%box_shape = SPHERE
 
       ! Cannot use images in 1D or 3D
-      if(sb%dim /= 2 .and. sb%box_shape == BOX_IMAGE) call messages_input_error('BoxShape')
+      if(sb%dim /= 2 .and. sb%box_shape == BOX_IMAGE) call messages_input_error(namespace, 'BoxShape')
 
       if(sb%dim > 3 .and. sb%box_shape /= HYPERCUBE) then
         message(1) = "For more than 3 dimensions, you can only use the hypercubic box."
@@ -389,7 +392,7 @@ contains
       select case(sb%box_shape)
       case(SPHERE, CYLINDER)
         call parse_variable(namespace, 'Radius', def_rsize, sb%rsize, units_inp%length)
-        if(sb%rsize < M_ZERO) call messages_input_error('radius')
+        if(sb%rsize < M_ZERO) call messages_input_error(namespace, 'radius')
         if(def_rsize>M_ZERO) call messages_check_def(sb%rsize, .false., def_rsize, 'radius', units_out%length)
       case(MINIMUM)
 
@@ -401,7 +404,7 @@ contains
 
         default=sb%rsize
         call parse_variable(namespace, 'radius', default, sb%rsize, units_inp%length)
-        if(sb%rsize < M_ZERO .and. def_rsize < M_ZERO) call messages_input_error('Radius')
+        if(sb%rsize < M_ZERO .and. def_rsize < M_ZERO) call messages_input_error(namespace, 'Radius')
       end select
 
       if(sb%box_shape == CYLINDER) then
@@ -451,7 +454,7 @@ contains
           sb%lsize(:) = geo%lsize(:)
         else if(parse_block(namespace, 'Lsize', blk) == 0) then
           if(parse_block_cols(blk,0) < sb%dim .and. .not. parse_is_defined(namespace, 'LatticeVectors')) &
-              call messages_input_error('Lsize')
+              call messages_input_error(namespace, 'Lsize')
           do idir = 1, sb%dim
             call parse_block_float(blk, 0, idir - 1, sb%lsize(idir), units_inp%length)
             if(def_rsize > M_ZERO .and. sb%periodic_dim < idir) &
@@ -461,7 +464,7 @@ contains
         else if ((parse_is_defined(namespace, 'Lsize'))) then
           call parse_variable(namespace, 'Lsize', -M_ONE, sb%lsize(1), units_inp%length)
           if(abs(sb%lsize(1)+M_ONE)  <=  M_EPSILON) then
-            call messages_input_error('Lsize')
+            call messages_input_error(namespace, 'Lsize')
           end if
           if(def_rsize > M_ZERO .and. sb%periodic_dim < sb%dim) &
             call messages_check_def(sb%lsize(1), .false., def_rsize, 'Lsize', units_out%length)
@@ -507,13 +510,13 @@ contains
           if(.not. found) call messages_fatal(1, namespace=namespace)
         end if
 
-        sb%image = loct_gdimage_create_from(sb%filename)
+        sb%image = gdlib_image_create_from(sb%filename)
         if(.not.c_associated(sb%image)) then
           message(1) = "Could not open file '" // trim(sb%filename) // "' for BoxShape = box_image."
           call messages_fatal(1, namespace=namespace)
         end if
-        sb%image_size(1) = loct_gdImage_SX(sb%image)
-        sb%image_size(2) = loct_gdImage_SY(sb%image)
+        sb%image_size(1) = gdlib_image_sx(sb%image)
+        sb%image_size(2) = gdlib_image_sy(sb%image)
 
         ! adjust Lsize if necessary to ensure that one grid point = one pixel
         do idir = 1, 2
@@ -640,6 +643,10 @@ contains
 
     PUSH_SUB(simul_box_build_lattice)
 
+    sb%alpha = CNST(90.0)
+    sb%beta  = CNST(90.0)
+    sb%gamma = CNST(90.0)
+
     if(present(rlattice_primitive)) then
       sb%rlattice_primitive(1:sb%dim, 1:sb%dim) = rlattice_primitive(1:sb%dim, 1:sb%dim)
       sb%nonorthogonal = .false.
@@ -687,6 +694,10 @@ contains
       end if
 
       if( has_angles ) then
+        sb%alpha = angles(1)
+        sb%beta  = angles(2)
+        sb%gamma = angles(3)
+
         !Converting the angles to LatticeVectors
         !See 57_iovars/ingeo.F90 in Abinit for details
         if( abs(angles(1)-angles(2))< tol_angle .and. abs(angles(2)-angles(3))< tol_angle .and.  &
@@ -725,12 +736,9 @@ contains
         end if
 
         if(any(angles/=CNST(90.0))) sb%nonorthogonal = .true.
-
-        if (.not. parse_is_defined(namespace, 'Lsize')) then
-          sb%lsize(:) = M_ZERO
-          sb%lsize(1:sb%dim) = lparams(1:sb%dim)*M_HALF
-        end if
+        
       else  
+
         !%Variable LatticeVectors
         !%Type block
         !%Default simple cubic
@@ -746,7 +754,9 @@ contains
         !%End
         sb%rlattice_primitive = M_ZERO
         sb%nonorthogonal = .false.
-        forall(idim = 1:sb%dim) sb%rlattice_primitive(idim, idim) = M_ONE
+        do idim = 1, sb%dim
+          sb%rlattice_primitive(idim, idim) = M_ONE
+        end do
 
         if (parse_block(namespace, 'LatticeVectors', blk) == 0) then 
           do idim = 1, sb%dim
@@ -757,22 +767,28 @@ contains
           end do
           call parse_block_end(blk)
 
-          if (.not. parse_is_defined(namespace, 'Lsize')) then
-            sb%lsize(:) = M_ZERO
-            sb%lsize(1:sb%dim) = lparams(1:sb%dim)*M_HALF
-          end if
         end if
       end if
+
+      ! Always need Lsize for periodic systems even if LatticeVectors block is not present
+      if (.not. parse_is_defined(namespace, 'Lsize') .and. sb%periodic_dim > 0) then
+        do idim = 1, sb%dim
+          if (sb%lsize(idim) == M_ZERO) then
+            sb%lsize(idim) = lparams(idim)*M_HALF
+          end if
+        end do
+      end if
+
     end if
 
     sb%rlattice = M_ZERO
     do idim = 1, sb%dim
       norm = sqrt(sum(sb%rlattice_primitive(1:sb%dim, idim)**2))
       sb%lsize(idim) = sb%lsize(idim) * norm
-      forall(jdim = 1:sb%dim)
+      do jdim = 1, sb%dim
         sb%rlattice_primitive(jdim, idim) = sb%rlattice_primitive(jdim, idim) / norm
         sb%rlattice(jdim, idim) = sb%rlattice_primitive(jdim, idim) * M_TWO*sb%lsize(idim)
-      end forall
+      end do
     end do
     
     call reciprocal_lattice(sb%rlattice, sb%klattice, sb%rcell_volume, sb%dim, namespace)
@@ -790,7 +806,13 @@ contains
     ! klattice_primitive is the transpose (!) of the B matrix, with no 2 pi factor included
     ! klattice is the proper reciprocal lattice vectors, with 2 pi factor, and in units of 1/bohr
     ! The F matrix of Chelikowski is matmul(transpose(sb%klattice_primitive), sb%klattice_primitive)
-
+    sb%rmetric = matmul(transpose(sb%rlattice_primitive), sb%rlattice_primitive)
+    if(.not. has_angles .and. sb%dim == 3) then
+      !We compute the angles from the lattice vectors
+      sb%alpha=acos(sb%rmetric(2,3)/sqrt(sb%rmetric(2,2)*sb%rmetric(3,3)))/M_PI*CNST(180.0)
+      sb%beta =acos(sb%rmetric(1,3)/sqrt(sb%rmetric(1,1)*sb%rmetric(3,3)))/M_PI*CNST(180.0)
+      sb%gamma=acos(sb%rmetric(1,2)/sqrt(sb%rmetric(1,1)*sb%rmetric(2,2)))/M_PI*CNST(180.0)
+    end if
 
     POP_SUB(simul_box_build_lattice)
   end subroutine simul_box_build_lattice
@@ -868,7 +890,6 @@ contains
         ! in this case coordinates are already in reduced space
         xx(1:pd) = ratom(1:pd)
       end if
-
 
       xx(1:pd) = xx(1:pd) + M_HALF
       do idir = 1, pd
@@ -958,7 +979,7 @@ contains
 
 #ifdef HAVE_GDLIB
     if(sb%box_shape == BOX_IMAGE) &
-      call loct_gdImageDestroy(sb%image)
+      call gdlib_imagedestroy(sb%image)
 #endif
 
     POP_SUB(simul_box_end)
@@ -1048,6 +1069,14 @@ contains
           idir2 = 1, sb%dim)
       end do
       call messages_info(1+sb%dim, iunit)
+
+      if(sb%dim == 3) then
+        write(message(1),'(a)') '  Cell angles [degree]'
+        write(message(2),'(a, f8.3)') '    alpha = ', sb%alpha
+        write(message(3),'(a, f8.3)') '    beta  = ', sb%beta
+        write(message(4),'(a, f8.3)') '    gamma = ', sb%gamma
+        call messages_info(4, iunit)
+      end if
     end if
 
     POP_SUB(simul_box_write_info)
@@ -1106,7 +1135,6 @@ contains
     FLOAT,              intent(in) :: yy(:)
     type(namespace_t),  intent(in) :: namespace
 
-    real(8), parameter :: DELTA = CNST(1e-12)
     FLOAT :: xx(1:MAX_DIM, 1)
     logical :: in_box2(1)
 
@@ -1130,9 +1158,9 @@ contains
     logical,            intent(out) :: in_box(:)
     type(namespace_t),  intent(in)  :: namespace
 
-    real(8), parameter :: DELTA = CNST(1e-12)
+    FLOAT, parameter :: DELTA = CNST(1e-12)
     FLOAT :: rr, re, im, dist2, radius
-    real(8) :: llimit(MAX_DIM), ulimit(MAX_DIM)
+    FLOAT :: llimit(MAX_DIM), ulimit(MAX_DIM)
     FLOAT, allocatable :: xx(:, :)
     integer :: ip, idir, iatom, ilist
     integer, allocatable :: nlist(:)
@@ -1155,9 +1183,9 @@ contains
 
     select case(sb%box_shape)
     case(SPHERE)
-      forall(ip = 1:npoints)
+      do ip = 1, npoints
         in_box(ip) = sum(xx(1:sb%dim, ip)**2) <= (sb%rsize+DELTA)**2
-      end forall
+      end do
 
     case(CYLINDER)
       do ip = 1, npoints
@@ -1225,9 +1253,9 @@ contains
       ulimit(1:sb%dim) =  sb%lsize(1:sb%dim) + DELTA
       ulimit(1:sb%periodic_dim)  = sb%lsize(1:sb%periodic_dim) - DELTA
 
-      forall(ip = 1:npoints)
+      do ip = 1, npoints
         in_box(ip) = all(xx(1:sb%dim, ip) >= llimit(1:sb%dim) .and. xx(1:sb%dim, ip) <= ulimit(1:sb%dim))
-      end forall
+      end do
 
 #if defined(HAVE_GDLIB)
 ! Why the minus sign for y? Explanation: http://biolinx.bios.niu.edu/bios546/gd_mod.htm
@@ -1238,7 +1266,7 @@ contains
       do ip = 1, npoints
         ix = nint(( xx(1, ip) + sb%lsize(1)) * sb%image_size(1) / (M_TWO * sb%lsize(1)))
         iy = nint((-xx(2, ip) + sb%lsize(2)) * sb%image_size(2) / (M_TWO * sb%lsize(2)))
-        call loct_gdimage_get_pixel_rgb(sb%image, ix, iy, red, green, blue)
+        call gdlib_image_get_pixel_rgb(sb%image, ix, iy, red, green, blue)
         in_box(ip) = (red == 255) .and. (green == 255) .and. (blue == 255)
       end do
 #endif
@@ -1617,10 +1645,9 @@ contains
 
 
     ! ---------------------------------------------------------
-  subroutine simul_box_symmetry_check(this, geo, kpoints, dim, namespace)
+  subroutine simul_box_symmetry_check(this, geo, dim, namespace)
     type(simul_box_t),  intent(in) :: this
     type(geometry_t),   intent(in) :: geo
-    type(kpoints_t),    intent(in) :: kpoints
     integer,            intent(in) :: dim
     type(namespace_t),  intent(in) :: namespace
 

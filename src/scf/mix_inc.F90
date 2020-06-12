@@ -144,7 +144,7 @@ subroutine X(broyden_extrapolation)(this, coeff, d1, d2, d3, vin, vnew, iter_use
   
   FLOAT, parameter :: w0 = CNST(0.01), ww = M_FIVE
   integer  :: i, j, k, l
-  R_TYPE    :: gamma, determinant
+  R_TYPE    :: gamma
   R_TYPE, allocatable :: beta(:, :), work(:)
 
   PUSH_SUB(X(broyden_extrapolation))
@@ -186,7 +186,7 @@ subroutine X(broyden_extrapolation)(this, coeff, d1, d2, d3, vin, vnew, iter_use
   end do
   
   ! invert matrix beta
-  determinant = lalg_inverter(iter_used, beta)
+  call lalg_inverter(iter_used, beta)
   
   do i = 1, iter_used
     work(i) = M_ZERO
@@ -231,7 +231,7 @@ subroutine X(broyden_extrapolation_aux)(this, ii, coeff, iter_used, dbeta, dwork
   FLOAT, optional,    intent(in) :: dbeta(:, :), dwork(:), dgamma
   CMPLX, optional,    intent(in) :: zbeta(:, :), zwork(:), zgamma
 
-  FLOAT, parameter :: w0 = CNST(0.01), ww = M_FIVE
+  FLOAT, parameter :: ww = M_FIVE
   integer :: d1,d2,d3, ipos, i
   R_TYPE  :: gamma
   R_TYPE, allocatable :: f(:, :, :)
@@ -358,7 +358,7 @@ subroutine X(mixing_diis)(this, vin, vout, vnew, iter)
   SAFE_ALLOCATE(rhs(1:size + 1))
 
   do ii = 1, size
-    do jj = 1, size
+    do jj = ii, size
 
       aa(ii, jj) = CNST(0.0)
       do kk = 1, d2
@@ -367,7 +367,7 @@ subroutine X(mixing_diis)(this, vin, vout, vnew, iter)
                            this%mixfield%X(df)(:, kk, ll, ii), reduce = .false.)
         end do
       end do
-      
+      aa(jj, ii) = R_CONJ(aa(ii, jj))
     end do
   end do
   if(this%der%mesh%parallel_in_domains) call comm_allreduce(this%der%mesh%mpi_grp%comm,  aa)
@@ -379,7 +379,7 @@ subroutine X(mixing_diis)(this, vin, vout, vnew, iter)
   rhs(1:size) = CNST(0.0)
   rhs(size + 1) = CNST(-1.0)
 
-  call lalg_least_squares(size + 1, aa, rhs, alpha)
+  call lalg_least_squares(size + 1, aa, rhs, alpha, preserve_mat=.false.)
 
   sumalpha = sum(alpha(1:size))
   alpha = alpha/sumalpha
@@ -468,7 +468,7 @@ subroutine X(pulay_extrapolation)(this, d2, d3, vin, vout, vnew, iter_used, f, d
   R_TYPE,  intent(out) :: vnew(:, :, :)
   
   integer :: i, j, k, l
-  R_TYPE :: alpha, determinant
+  R_TYPE :: alpha
   R_TYPE, allocatable :: a(:, :)
   
   PUSH_SUB(X(pulay_extrapolation))
@@ -489,14 +489,14 @@ subroutine X(pulay_extrapolation)(this, d2, d3, vin, vout, vnew, iter_used, f, d
       if(j > i) a(j, i) = a(i, j)
     end do
   end do
-  if (all(abs(a) < 1.0E-8)) then
+  if (all(abs(a) < CNST(1.0E-8))) then
     ! residuals are too small. Do not mix.
     vnew = vout
     POP_SUB(X(pulay_extrapolation))
     return
   end if
   
-  determinant = lalg_inverter(iter_used, a)
+  call lalg_inverter(iter_used, a)
   
   ! compute new vector
   vnew = vin

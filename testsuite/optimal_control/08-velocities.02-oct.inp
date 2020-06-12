@@ -7,6 +7,7 @@ CalculationMode = opt_control
 #CalculationMode = td
 Dimensions = 1
 fromScratch = yes
+StatesPack = yes
 
 ExperimentalFeatures = yes
 
@@ -69,9 +70,6 @@ stime  = 100.0
 TDPropagationTime = stime
 TDPropagator = crank_nicolson
 
-# For the TD runs:
-totaltime = 500.0
-
 TDOutput = multipoles + laser + geometry
 
 AbsorbingBoundaries = cap
@@ -122,7 +120,5 @@ amplitude = 0.2
 #%TDFunctions
 #"envelope_function" | tdf_from_file | "./opt-control/laser.238/cp"
 #%
-
-
 
 

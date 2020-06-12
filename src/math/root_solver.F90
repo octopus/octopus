@@ -64,9 +64,10 @@ module root_solver_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine root_solver_init(rs, dimensionality, solver_type, maxiter, rel_tolerance, &
-    abs_tolerance, have_polynomial, ws_radius)
+  subroutine root_solver_init(rs, namespace, dimensionality, solver_type, maxiter, &
+    rel_tolerance, abs_tolerance, have_polynomial, ws_radius)
     type(root_solver_t), intent(out) :: rs
+    type(namespace_t),   intent(in)  :: namespace
     integer,             intent(in)  :: dimensionality
     integer, optional,   intent(in)  :: solver_type, maxiter
     FLOAT, optional,     intent(in)  :: rel_tolerance, abs_tolerance, ws_radius
@@ -74,14 +75,11 @@ contains
 
     ! no push_sub, called too often
 
-    ! Fill in the defaults
-    rs%dim             = dimensionality
-    rs%solver_type     = ROOT_NEWTON
-    rs%maxiter         = 100
-    rs%rel_tolerance   = CNST(1.0e-8)
-    rs%abs_tolerance   = CNST(1.0e-8)
-    rs%have_polynomial = .false.
-    rs%ws_radius       = CNST(1.0)
+    ! Set dimension
+    rs%dim = dimensionality
+
+    ! Read config parameters for the solver
+    call root_solver_read(rs, namespace)
 
     if(present(solver_type))     rs%solver_type     = solver_type
     if(present(maxiter))         rs%maxiter         = maxiter
@@ -95,7 +93,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine root_solver_read(rs, namespace)
-    type(root_solver_t),   intent(out) :: rs
+    type(root_solver_t),   intent(inout) :: rs
     type(namespace_t),     intent(in)  :: namespace
 
     PUSH_SUB(root_solver_read)
@@ -113,7 +111,7 @@ contains
     !%End
     call parse_variable(namespace, 'RootSolver', ROOT_NEWTON, rs%solver_type)
     if( rs%solver_type /= ROOT_NEWTON .and. rs%solver_type /= ROOT_WATTERSTROM ) then
-      call messages_input_error('RootSolver')
+      call messages_input_error(namespace, 'RootSolver')
     end if
 
     !%Variable RootSolverMaxIter
@@ -124,7 +122,7 @@ contains
     !% In case of an iterative root solver, this variable determines the maximum number
     !% of iteration steps.
     !%End
-    call parse_variable(namespace, 'RootSolverMaxIter', 100, rs%maxiter)
+    call parse_variable(namespace, 'RootSolverMaxIter', 500, rs%maxiter)
 
     !%Variable RootSolverRelTolerance
     !%Type float
@@ -133,7 +131,7 @@ contains
     !%Description
     !% Relative tolerance for the root-finding process.
     !%End
-    call parse_variable(namespace, 'RootSolverRelTolerance', CNST(1e-8), rs%rel_tolerance)
+    call parse_variable(namespace, 'RootSolverRelTolerance', CNST(1e-10), rs%rel_tolerance)
 
     !%Variable RootSolverAbsTolerance
     !%Type float
@@ -142,7 +140,7 @@ contains
     !%Description
     !% Relative tolerance for the root-finding process.
     !%End
-    call parse_variable(namespace, 'RootSolverAbsTolerance', CNST(1e-8), rs%abs_tolerance)
+    call parse_variable(namespace, 'RootSolverAbsTolerance', CNST(1e-10), rs%abs_tolerance)
 
     !%Variable RootSolverHavePolynomial
     !%Type logical
@@ -210,9 +208,9 @@ contains
   ! ---------------------------------------------------------
   !> Implementation of J. Comp. Phys., 8, (1971), p. 304-308
   subroutine zroot_watterstrom(rs, roots, coeff)
-    type(root_solver_t), intent(inout)  :: rs
-    CMPLX,               intent(out)    :: roots(:)    !< roots we are searching
-    CMPLX,               intent(in)     :: coeff(:)    !< polynomial coefficients
+    type(root_solver_t), intent(in)  :: rs
+    CMPLX,               intent(out) :: roots(:)    !< roots we are searching
+    CMPLX,               intent(in)  :: coeff(:)    !< polynomial coefficients
 
     CMPLX, allocatable    :: base_roots(:)
     FLOAT   :: theta

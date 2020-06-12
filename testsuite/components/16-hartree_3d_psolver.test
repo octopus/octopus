@@ -1,0 +1,14 @@
+# -*- coding: utf-8 mode: shell-script -*-
+
+Test       : Hartree PSolver
+Options    : psolver
+Program    : octopus
+TestGroups : short-run, components
+Enabled    : Yes
+
+Precision : 0.005
+Input: 16-hartree_3d_psolver.01-psolver.inp
+match ; PSolver       ; GREPFIELD(hartree_results, 'Hartree test (abs.) =', 5) ; 0.00035845
+
+Input: 16-hartree_3d_psolver.02-psolver.inp
+match ; PSolver       ; GREPFIELD(hartree_results, 'Hartree test (abs.) =', 5) ; 0.00035845

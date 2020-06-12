@@ -563,13 +563,13 @@ contains
     rhs1 = M_z0
     do ik = kp1, kp2
       do ist = st1, st2
-        call zhamiltonian_elec_apply(hm_p, namespace, mesh_p, zphi(:, :, ist, ik), rhs1(:, :, ist, ik), ist, ik)
+        call zhamiltonian_elec_apply_single(hm_p, namespace, mesh_p, zphi(:, :, ist, ik), rhs1(:, :, ist, ik), ist, ik)
       end do
     end do
     do ik = kp1, kp2
       do ist = st1, st2
         if(oct_exchange_enabled(hm%oct_exchange)) then
-          call zoct_exchange_operator(hm%oct_exchange, namespace, gr%mesh, rhs1(:, :, ist, ik), ist, ik)
+          call oct_exchange_operator(hm%oct_exchange, namespace, gr%mesh, rhs1(:, :, ist, ik), ist, ik)
         end if
       end do
     end do
@@ -582,7 +582,9 @@ contains
         do ist = st1, st2
           do idim = 1, st%d%dim
             call states_elec_get_state(hm%inh_st, gr%mesh, idim, ist, ik, inhpsi)
-            forall(ip = 1:gr%mesh%np) rhs1(ip, idim, ist, ik) = rhs1(ip, idim, ist, ik) + dt * inhpsi(ip)
+            do ip = 1, gr%mesh%np
+              rhs1(ip, idim, ist, ik) = rhs1(ip, idim, ist, ik) + dt * inhpsi(ip)
+            end do
           end do
         end do
       end do
@@ -820,12 +822,14 @@ contains
       rhs1 = M_z0
       do ik = kp1, kp2
         do ist = st1, st2
-          call zhamiltonian_elec_apply(hm_p, namespace, mesh_p, zphi(:, :, ist, ik), rhs1(:, :, ist, ik), ist, ik)
+          call zhamiltonian_elec_apply_single(hm_p, namespace, mesh_p, zphi(:, :, ist, ik), rhs1(:, :, ist, ik), ist, ik)
           if(hamiltonian_elec_inh_term(hm)) then
             SAFE_ALLOCATE(inhpsi(1:gr%mesh%np))
             do idim = 1, st%d%dim
               call states_elec_get_state(hm%inh_st, gr%mesh, idim, ist, ik, inhpsi)
-              forall(ip = 1:gr%mesh%np) rhs1(ip, idim, ist, ik) = rhs1(ip, idim, ist, ik) + M_zI * inhpsi(ip)
+              do ip = 1, gr%mesh%np
+                rhs1(ip, idim, ist, ik) = rhs1(ip, idim, ist, ik) + M_zI * inhpsi(ip)
+              end do
             end do
             SAFE_DEALLOCATE_A(inhpsi)
           end if
@@ -858,12 +862,14 @@ contains
       rhs2 = M_z0
       do ik = kp1, kp2
         do ist = st1, st2
-          call zhamiltonian_elec_apply(hm_p, namespace, mesh_p, zphi(:, :, ist, ik), rhs2(:, :, ist, ik), ist, ik)
+          call zhamiltonian_elec_apply_single(hm_p, namespace, mesh_p, zphi(:, :, ist, ik), rhs2(:, :, ist, ik), ist, ik)
           if(hamiltonian_elec_inh_term(hm)) then
             SAFE_ALLOCATE(inhpsi(1:gr%mesh%np))
             do idim = 1, st%d%dim
               call states_elec_get_state(hm%inh_st, gr%mesh, idim, ist, ik, inhpsi)
-              forall(ip = 1:gr%mesh%np) rhs2(ip, idim, ist, ik) = rhs2(ip, idim, ist, ik) + M_zI * inhpsi(ip)
+              do ip = 1, gr%mesh%np
+                rhs2(ip, idim, ist, ik) = rhs2(ip, idim, ist, ik) + M_zI * inhpsi(ip)
+              end do
             end do
             SAFE_DEALLOCATE_A(inhpsi)
           end if
@@ -1023,16 +1029,16 @@ contains
       do ist = st1, st2
         jj = j
         do idim = 1, dim
-          zpsi(1:np, idim) = a(1, 1) * cmplx(xre(j:j+np-1), xim(j:j+np-1), REAL_PRECISION) + &
-            a(1, 2) * cmplx(xre(k:k+np-1), xim(k:k+np-1), REAL_PRECISION)
+          zpsi(1:np, idim) = a(1, 1) * TOCMPLX(xre(j:j+np-1), xim(j:j+np-1)) + &
+            a(1, 2) * TOCMPLX(xre(k:k+np-1), xim(k:k+np-1))
           j = j + np
           k = k + np
         end do
 
-        call zhamiltonian_elec_apply(hm_p, namespace_p, mesh_p, zpsi, opzpsi, ist, ik)
+        call zhamiltonian_elec_apply_single(hm_p, namespace_p, mesh_p, zpsi, opzpsi, ist, ik)
 
         do idim = 1, dim
-          yre(jj:jj+np-1) = xre(jj:jj+np-1) + real(M_zI * dt_op * opzpsi(1:np, idim))
+          yre(jj:jj+np-1) = xre(jj:jj+np-1) + TOFLOAT(M_zI * dt_op * opzpsi(1:np, idim))
           yim(jj:jj+np-1) = xim(jj:jj+np-1) + aimag(M_zI * dt_op * opzpsi(1:np, idim))
           jj = jj + np
         end do
@@ -1048,16 +1054,16 @@ contains
       do ist = st1, st2
         jj = k
         do idim = 1, dim
-          zpsi(1:np, idim) = a(2, 1) * cmplx(xre(j:j+np-1), xim(j:j+np-1), REAL_PRECISION) + &
-            a(2, 2) * cmplx(xre(k:k+np-1), xim(k:k+np-1), REAL_PRECISION)
+          zpsi(1:np, idim) = a(2, 1) * TOCMPLX(xre(j:j+np-1), xim(j:j+np-1)) + &
+            a(2, 2) * TOCMPLX(xre(k:k+np-1), xim(k:k+np-1))
           j = j + np
           k = k + np
         end do
 
-        call zhamiltonian_elec_apply(hm_p, namespace_p, mesh_p, zpsi, opzpsi, ist, ik)
+        call zhamiltonian_elec_apply_single(hm_p, namespace_p, mesh_p, zpsi, opzpsi, ist, ik)
 
         do idim = 1, dim
-          yre(jj:jj+np-1) = xre(jj:jj+np-1) + real(M_zI * dt_op * opzpsi(1:np, idim))
+          yre(jj:jj+np-1) = xre(jj:jj+np-1) + TOFLOAT(M_zI * dt_op * opzpsi(1:np, idim))
           yim(jj:jj+np-1) = xim(jj:jj+np-1) + aimag(M_zI * dt_op * opzpsi(1:np, idim))
           jj = jj + np
         end do
@@ -1119,16 +1125,16 @@ contains
       do ist = st1, st2
         jj = j
         do idim = 1, dim
-          zpsi(1:np, idim) = a(1, 1) * cmplx(xre(j:j+np-1), -xim(j:j+np-1), REAL_PRECISION) + &
-            a(1, 2) * cmplx(xre(k:k+np-1), -xim(k:k+np-1), REAL_PRECISION)
+          zpsi(1:np, idim) = a(1, 1) * TOCMPLX(xre(j:j+np-1), -xim(j:j+np-1)) + &
+            a(1, 2) * TOCMPLX(xre(k:k+np-1), -xim(k:k+np-1))
           j = j + np
           k = k + np
         end do
 
-        call zhamiltonian_elec_apply(hm_p, namespace_p, mesh_p, zpsi, opzpsi, ist, ik)
+        call zhamiltonian_elec_apply_single(hm_p, namespace_p, mesh_p, zpsi, opzpsi, ist, ik)
 
         do idim = 1, dim
-          yre(jj:jj+np-1) = xre(jj:jj+np-1) + real(M_zI * dt_op * opzpsi(1:np, idim))
+          yre(jj:jj+np-1) = xre(jj:jj+np-1) + TOFLOAT(M_zI * dt_op * opzpsi(1:np, idim))
           yim(jj:jj+np-1) = xim(jj:jj+np-1) - aimag(M_zI * dt_op * opzpsi(1:np, idim))
           jj = jj + np
         end do
@@ -1146,16 +1152,16 @@ contains
       do ist = st1, st2
         jj = k
         do idim = 1, dim
-          zpsi(1:np, idim) = a(2, 1) * cmplx(xre(j:j+np-1), -xim(j:j+np-1), REAL_PRECISION) + &
-            a(2, 2) * cmplx(xre(k:k+np-1), -xim(k:k+np-1), REAL_PRECISION)
+          zpsi(1:np, idim) = a(2, 1) * TOCMPLX(xre(j:j+np-1), -xim(j:j+np-1)) + &
+            a(2, 2) * TOCMPLX(xre(k:k+np-1), -xim(k:k+np-1))
           j = j + np
           k = k + np
         end do
 
-        call zhamiltonian_elec_apply(hm_p, namespace_p, mesh_p, zpsi, opzpsi, ist, ik)
+        call zhamiltonian_elec_apply_single(hm_p, namespace_p, mesh_p, zpsi, opzpsi, ist, ik)
 
         do idim = 1, dim
-          yre(jj:jj+np-1) = xre(jj:jj+np-1) + real(M_zI * dt_op * opzpsi(1:np, idim))
+          yre(jj:jj+np-1) = xre(jj:jj+np-1) + TOFLOAT(M_zI * dt_op * opzpsi(1:np, idim))
           yim(jj:jj+np-1) = xim(jj:jj+np-1) - aimag(M_zI * dt_op * opzpsi(1:np, idim))
           jj = jj + np
         end do
@@ -1210,7 +1216,7 @@ contains
         do ist = st1, st2
           jj = j
           do idim = 1, dim
-            zpsi_(1:np, idim, ist, ik) = cmplx(xre(j:j+np-1), xim(j:j+np-1), REAL_PRECISION)
+            zpsi_(1:np, idim, ist, ik) = TOCMPLX(xre(j:j+np-1), xim(j:j+np-1))
             j = j + np
           end do
         end do
@@ -1223,12 +1229,12 @@ contains
       do ist = st1, st2
         jj = j
         do idim = 1, dim
-          zpsi(1:np, idim) = cmplx(xre(j:j+np-1), xim(j:j+np-1), REAL_PRECISION)
+          zpsi(1:np, idim) = TOCMPLX(xre(j:j+np-1), xim(j:j+np-1))
           j = j + np
         end do
-        call zhamiltonian_elec_apply(hm_p, namespace_p, mesh_p, zpsi, opzpsi, ist, ik)
+        call zhamiltonian_elec_apply_single(hm_p, namespace_p, mesh_p, zpsi, opzpsi, ist, ik)
         do idim = 1, dim
-          yre(jj:jj+np-1) = xre(jj:jj+np-1) + real(M_zI * dt_op * M_HALF * opzpsi(1:np, idim))
+          yre(jj:jj+np-1) = xre(jj:jj+np-1) + TOFLOAT(M_zI * dt_op * M_HALF * opzpsi(1:np, idim))
           yim(jj:jj+np-1) = xim(jj:jj+np-1) + aimag(M_zI * dt_op * M_HALF * opzpsi(1:np, idim))
           jj = jj + np
         end do
@@ -1241,14 +1247,14 @@ contains
         do ist = st1, st2
           jj = j
           do idim = 1, dim
-            zpsi(1:np, idim) = cmplx(xre(j:j+np-1), xim(j:j+np-1), REAL_PRECISION)
+            zpsi(1:np, idim) = TOCMPLX(xre(j:j+np-1), xim(j:j+np-1))
             j = j + np
           end do
           opzpsi = M_z0
-          call zoct_exchange_operator(hm_p%oct_exchange, namespace_p, mesh_p, opzpsi, ist, ik)
+          call oct_exchange_operator(hm_p%oct_exchange, namespace_p, mesh_p, opzpsi, ist, ik)
 
           do idim = 1, dim
-            yre(jj:jj+np-1) = yre(jj:jj+np-1) + real(M_zI * dt_op * M_HALF * opzpsi(1:np, idim))
+            yre(jj:jj+np-1) = yre(jj:jj+np-1) + TOFLOAT(M_zI * dt_op * M_HALF * opzpsi(1:np, idim))
             yim(jj:jj+np-1) = yim(jj:jj+np-1) + aimag(M_zI * dt_op * M_HALF * opzpsi(1:np, idim))
             jj = jj + np
           end do
@@ -1305,7 +1311,7 @@ contains
         do ist = st1, st2
           jj = j
           do idim = 1, dim
-            zpsi_(1:np, idim, ist, ik) = cmplx(xre(j:j+np-1), -xim(j:j+np-1), REAL_PRECISION)
+            zpsi_(1:np, idim, ist, ik) = TOCMPLX(xre(j:j+np-1), -xim(j:j+np-1))
             j = j + np
           end do
         end do
@@ -1318,13 +1324,13 @@ contains
       do ist = st1, st2
         jj = j
         do idim = 1, dim
-          zpsi(1:np, idim) = cmplx(xre(j:j+np-1), -xim(j:j+np-1), REAL_PRECISION)
+          zpsi(1:np, idim) = TOCMPLX(xre(j:j+np-1), -xim(j:j+np-1))
           j = j + np
         end do
-        call zhamiltonian_elec_apply(hm_p, namespace_p, mesh_p, zpsi, opzpsi, ist, ik)
+        call zhamiltonian_elec_apply_single(hm_p, namespace_p, mesh_p, zpsi, opzpsi, ist, ik)
 
         do idim = 1, dim
-          yre(jj:jj+np-1) = xre(jj:jj+np-1) + real(M_zI * dt_op * M_HALF * opzpsi(1:np, idim))
+          yre(jj:jj+np-1) = xre(jj:jj+np-1) + TOFLOAT(M_zI * dt_op * M_HALF * opzpsi(1:np, idim))
           yim(jj:jj+np-1) = xim(jj:jj+np-1) - aimag(M_zI * dt_op * M_HALF * opzpsi(1:np, idim))
           jj = jj + np
         end do
@@ -1337,14 +1343,14 @@ contains
         do ist = st1, st2
           jj = j
           do idim = 1, dim
-            zpsi(1:np, idim) = cmplx(xre(j:j+np-1), xim(j:j+np-1), REAL_PRECISION)
+            zpsi(1:np, idim) = TOCMPLX(xre(j:j+np-1), xim(j:j+np-1))
             j = j + np
           end do
           opzpsi = M_z0
-          call zoct_exchange_operator(hm_p%oct_exchange, namespace_p, mesh_p, opzpsi, ist, ik)
+          call oct_exchange_operator(hm_p%oct_exchange, namespace_p, mesh_p, opzpsi, ist, ik)
 
           do idim = 1, dim
-            yre(jj:jj+np-1) = yre(jj:jj+np-1) + real(M_zI * dt_op * M_HALF * opzpsi(1:np, idim))
+            yre(jj:jj+np-1) = yre(jj:jj+np-1) + TOFLOAT(M_zI * dt_op * M_HALF * opzpsi(1:np, idim))
             yim(jj:jj+np-1) = yim(jj:jj+np-1) - aimag(M_zI * dt_op * M_HALF * opzpsi(1:np, idim))
             jj = jj + np
           end do

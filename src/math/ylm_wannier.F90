@@ -1,7 +1,7 @@
   !              
   ! Copyright (C) 2003-2013 Quantum ESPRESSO and Wannier90 groups
   ! This file is distributed under the terms of the
-  ! GNU General Public License. See the file `License'
+  ! GNU General Public License. See the file "License"
   ! in the root directory of the present distribution,
   ! or http://www.gnu.org/copyleft/gpl.txt .
   !
@@ -77,22 +77,22 @@ contains
   
   
         if (l == 0) then   ! s orbital
-           ylm(ir) = s(cost, phi)
+           ylm(ir) = s()
         endif
         if (l == 1) then   ! p orbitals
-           if (mr == 1) ylm(ir) = p_z(cost, phi)
+           if (mr == 1) ylm(ir) = p_z(cost)
            if (mr == 2) ylm(ir) = px(cost, phi)
            if (mr == 3) ylm(ir) = py(cost, phi)
         endif
         if (l == 2) then   ! d orbitals
-           if (mr == 1) ylm(ir) = dz2(cost, phi)
+           if (mr == 1) ylm(ir) = dz2(cost)
            if (mr == 2) ylm(ir) = dxz(cost, phi)
            if (mr == 3) ylm(ir) = dyz(cost, phi)
            if (mr == 4) ylm(ir) = dx2my2(cost, phi)
            if (mr == 5) ylm(ir) = dxy(cost, phi)
         endif
         if (l == 3) then   ! f orbitals
-           if (mr == 1) ylm(ir) = fz3(cost, phi)
+           if (mr == 1) ylm(ir) = fz3(cost)
            if (mr == 2) ylm(ir) = fxz2(cost, phi)
            if (mr == 3) ylm(ir) = fyz2(cost, phi)
            if (mr == 4) ylm(ir) = fzx2my2(cost, phi)
@@ -101,38 +101,38 @@ contains
            if (mr == 7) ylm(ir) = fy3x2my2(cost, phi)
         endif
         if (l == -1) then  !  sp hybrids
-           if (mr == 1) ylm(ir) = bs2 * ( s(cost, phi) + px(cost, phi) )
-           if (mr == 2) ylm(ir) = bs2 * ( s(cost, phi) - px(cost, phi) )
+           if (mr == 1) ylm(ir) = bs2 * ( s() + px(cost, phi) )
+           if (mr == 2) ylm(ir) = bs2 * ( s() - px(cost, phi) )
         endif
         if (l == -2) then  !  sp2 hybrids
-           if (mr == 1) ylm(ir) = bs3 * s(cost, phi) - bs6 * px(cost, phi) + bs2 * py(cost, phi)
-           if (mr == 2) ylm(ir) = bs3 * s(cost, phi) - bs6 * px(cost, phi) - bs2 * py(cost, phi)
-           if (mr == 3) ylm(ir) = bs3 * s(cost, phi) + M_TWO * bs6 * px(cost, phi)
+           if (mr == 1) ylm(ir) = bs3 * s() - bs6 * px(cost, phi) + bs2 * py(cost, phi)
+           if (mr == 2) ylm(ir) = bs3 * s() - bs6 * px(cost, phi) - bs2 * py(cost, phi)
+           if (mr == 3) ylm(ir) = bs3 * s() + M_TWO * bs6 * px(cost, phi)
         endif
         if (l == -3) then  !  sp3 hybrids
-           if (mr == 1) ylm(ir) = M_HALF*(s(cost, phi) + px(cost, phi) + py(cost, phi) + p_z(cost, phi))
-           if (mr == 2) ylm(ir) = M_HALF*(s(cost, phi) + px(cost, phi) - py(cost, phi) - p_z(cost, phi))
-           if (mr == 3) ylm(ir) = M_HALF*(s(cost, phi) - px(cost, phi) + py(cost, phi) - p_z(cost, phi))
-           if (mr == 4) ylm(ir) = M_HALF*(s(cost, phi) - px(cost, phi) - py(cost, phi) + p_z(cost, phi))
+           if (mr == 1) ylm(ir) = M_HALF*(s() + px(cost, phi) + py(cost, phi) + p_z(cost))
+           if (mr == 2) ylm(ir) = M_HALF*(s() + px(cost, phi) - py(cost, phi) - p_z(cost))
+           if (mr == 3) ylm(ir) = M_HALF*(s() - px(cost, phi) + py(cost, phi) - p_z(cost))
+           if (mr == 4) ylm(ir) = M_HALF*(s() - px(cost, phi) - py(cost, phi) + p_z(cost))
         endif
         if (l == -4) then  !  sp3d hybrids
-           if (mr == 1) ylm(ir) = bs3 * s(cost, phi) - bs6 * px(cost, phi) + bs2 * py(cost, phi)
-           if (mr == 2) ylm(ir) = bs3 * s(cost, phi) - bs6 * px(cost, phi) - bs2 * py(cost, phi)
-           if (mr == 3) ylm(ir) = bs3 * s(cost, phi) + M_TWO * bs6 * px(cost, phi)
-           if (mr == 4) ylm(ir) = bs2 * p_z(cost, phi) + bs2 * dz2(cost, phi)
-           if (mr == 5) ylm(ir) =-bs2 * p_z(cost, phi) + bs2 * dz2(cost, phi)
+           if (mr == 1) ylm(ir) = bs3 * s() - bs6 * px(cost, phi) + bs2 * py(cost, phi)
+           if (mr == 2) ylm(ir) = bs3 * s() - bs6 * px(cost, phi) - bs2 * py(cost, phi)
+           if (mr == 3) ylm(ir) = bs3 * s() + M_TWO * bs6 * px(cost, phi)
+           if (mr == 4) ylm(ir) = bs2 * p_z(cost) + bs2 * dz2(cost)
+           if (mr == 5) ylm(ir) =-bs2 * p_z(cost) + bs2 * dz2(cost)
         endif
         if (l == -5) then  ! sp3d2 hybrids
-           if (mr == 1) ylm(ir) = bs6 * s(cost, phi) - bs2 * px(cost, phi) -bs12 * dz2(cost, phi) &
+           if (mr == 1) ylm(ir) = bs6 * s() - bs2 * px(cost, phi) -bs12 * dz2(cost) &
                                       + M_HALF * dx2my2(cost, phi)
-           if (mr == 2) ylm(ir) = bs6 * s(cost, phi) + bs2 * px(cost, phi) -bs12 * dz2(cost, phi) &
+           if (mr == 2) ylm(ir) = bs6 * s() + bs2 * px(cost, phi) -bs12 * dz2(cost) &
                                       + M_HALF * dx2my2(cost, phi)
-           if (mr == 3) ylm(ir) = bs6 * s(cost, phi) - bs2 * py(cost, phi) -bs12 * dz2(cost, phi) &
+           if (mr == 3) ylm(ir) = bs6 * s() - bs2 * py(cost, phi) -bs12 * dz2(cost) &
                                       - M_HALF * dx2my2(cost, phi)
-           if (mr == 4) ylm(ir) = bs6 * s(cost, phi) + bs2 * py(cost, phi) -bs12 * dz2(cost, phi) &
+           if (mr == 4) ylm(ir) = bs6 * s() + bs2 * py(cost, phi) -bs12 * dz2(cost) &
                                       - M_HALF * dx2my2(cost, phi)
-           if (mr == 5) ylm(ir) = bs6 * s(cost, phi) - bs2 * p_z(cost ,phi) +bs3 * dz2(cost, phi)
-           if (mr == 6) ylm(ir) = bs6 * s(cost, phi) + bs2 * p_z(cost ,phi) +bs3 * dz2(cost, phi)
+           if (mr == 5) ylm(ir) = bs6 * s() - bs2 * p_z(cost) +bs3 * dz2(cost)
+           if (mr == 6) ylm(ir) = bs6 * s() + bs2 * p_z(cost) +bs3 * dz2(cost)
         endif
   
      enddo
@@ -141,15 +141,15 @@ contains
    end subroutine ylm_wannier
   
     !======== l = 0 =====================================================================
-     function s(cost, phi)
-       FLOAT :: s, cost, phi
+     function s()
+       FLOAT :: s
        s = M_ONE / sqrt((M_FOUR * M_PI))
        return
     end function s
 
     !======== l = 1 =====================================================================
-    function p_z(cost, phi)
-       FLOAT ::p_z, cost, phi
+    function p_z(cost)
+       FLOAT ::p_z, cost
        p_z =  sqrt(CNST(3.0) / (M_FOUR * M_PI)) * cost
        return
     end function p_z
@@ -169,8 +169,8 @@ contains
     end function py
 
     !======== l = 2 =====================================================================
-    function dz2(cost, phi)
-       FLOAT ::dz2, cost, phi
+    function dz2(cost)
+       FLOAT ::dz2, cost
        dz2 =  sqrt(CNST(1.25) / (M_FOUR * M_PI)) * (CNST(3.0)* cost * cost - M_ONE)
        return
     end function dz2
@@ -204,8 +204,8 @@ contains
     end function dxy
 
     !======== l = 3 =====================================================================
-    function fz3(cost, phi)
-       FLOAT ::fz3, cost, phi
+    function fz3(cost)
+       FLOAT ::fz3, cost
        fz3 =  CNST(0.25) * sqrt(CNST(7.0) / M_PI) * ( CNST(5.0) * cost * cost - CNST(3.0) ) * cost
        return
     end function fz3

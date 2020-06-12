@@ -22,8 +22,10 @@
 module io_binary_oct_m
   use global_oct_m
   use io_oct_m
+  use iso_c_binding
   use messages_oct_m
   use mpi_oct_m
+  use string_oct_m
   use profiling_oct_m
 
   implicit none 
@@ -65,27 +67,49 @@ module io_binary_oct_m
   end interface io_binary_read_parallel
 
   interface
-    subroutine get_info_binary(np, type, file_size, ierr, iio, fname)
-      integer,             intent(out)   :: np        !< Number of points of the mesh, written in the header
-      integer,             intent(out)   :: type      !< Type of number
-      integer,             intent(out)   :: file_size !< The actual size of the file
-      integer,             intent(out)   :: ierr      
-      integer,             intent(inout) :: iio
-      character(len=*),    intent(in)    :: fname
+    subroutine get_info_binary(np, type, file_size, ierr, iio, fname) bind(c)
+      use iso_c_binding
+      integer(c_int),         intent(out)   :: np        !< Number of points of the mesh, written in the header
+      integer(c_int),         intent(out)   :: type      !< Type of number
+      integer(c_int),         intent(out)   :: file_size !< The actual size of the file
+      integer(c_int),         intent(out)   :: ierr
+      integer(c_int),         intent(inout) :: iio
+      character(kind=c_char), intent(in)    :: fname(*)
     end subroutine get_info_binary
-  end interface
 
-  interface
-    subroutine write_header(np_global, type, ierr, iio, fname)
-      integer,             intent(in)    :: np_global
-      integer,             intent(in)    :: type
-      integer,             intent(out)   :: ierr 
-      integer,             intent(inout) :: iio     
-      character(len=*),    intent(in)    :: fname
+    subroutine write_header(np, type, ierr, iio, fname) bind(c, name="io_write_header")
+      use iso_c_binding
+      integer(c_int),         intent(in)    :: np
+      integer(c_int),         intent(in)    :: type
+      integer(c_int),         intent(out)   :: ierr
+      integer(c_int),         intent(inout) :: iio
+      character(kind=c_char), intent(in)    :: fname(*)
     end subroutine write_header
-  end interface
 
-  ! no interfaces for read_binary, write_binary since we call them with different types
+    subroutine write_binary(np, ff, type, ierr, iio, nhd, flpe, fname) bind(c, name="write_binary")
+      use iso_c_binding
+      integer(c_int),         intent(in)    :: np
+      type(c_ptr),            value         :: ff
+      integer(c_int),         intent(in)    :: type
+      integer(c_int),         intent(out)   :: ierr
+      integer(c_int),         intent(inout) :: iio
+      integer(c_int),         intent(in)    :: nhd
+      integer(c_int),         intent(in)    :: flpe
+      character(kind=c_char), intent(in)    :: fname(*)
+    end subroutine write_binary
+
+    subroutine read_binary(np, offset, ff, output_type, ierr, iio, fname) bind(c, name="read_binary")
+      use iso_c_binding
+      integer(c_int),         intent(in)    :: np
+      integer(c_int),         intent(in)    :: offset
+      type(c_ptr),            value         :: ff
+      integer(c_int),         intent(in)    :: output_type
+      integer(c_int),         intent(in)    :: ierr
+      integer(c_int),         intent(inout) :: iio
+      character(kind=c_char), intent(in)    :: fname(*)
+    end subroutine read_binary
+
+  end interface
 
 contains
 
@@ -170,7 +194,7 @@ contains
     PUSH_SUB(try_dread_binary)
 
     iio = 0
-    call get_info_binary(read_np, number_type, file_size, ierr, iio, fname)
+    call get_info_binary(read_np, number_type, file_size, ierr, iio, string_f_to_c(fname))
     call io_incr_counters(iio)
  
     ! if the type of the file is real, then read real numbers and convert to complex
@@ -208,7 +232,7 @@ contains
     PUSH_SUB(try_dread_parallel)
 
     iio = 0
-    call get_info_binary(read_np, number_type, file_size, ierr, iio, fname)
+    call get_info_binary(read_np, number_type, file_size, ierr, iio, string_f_to_c(fname))
     call io_incr_counters(iio)
     ! if the type of the file is real, then read real numbers and convert to complex
     if (number_type /= TYPE_DOUBLE_COMPLEX) then
@@ -241,7 +265,7 @@ contains
     PUSH_SUB(io_binary_get_info)
 
     iio = 0
-    call get_info_binary(np, type, file_size, ierr, iio, trim(fname))
+    call get_info_binary(np, type, file_size, ierr, iio, string_f_to_c(fname))
     call io_incr_counters(iio)
 
     POP_SUB(io_binary_get_info)
@@ -253,7 +277,6 @@ contains
     iflag = 0
     if(flag) iflag = 1
   end function logical_to_integer
-  
 
 #include "complex.F90"
 #include "io_binary_f_inc.F90"

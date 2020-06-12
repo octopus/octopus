@@ -60,8 +60,6 @@ module atom_oct_m
   interface atom_same_species
     module procedure atom_same_species_aa
     module procedure atom_same_species_as
-    !GFORTRAN objects to the next procedure, possibly a compiler bug
-    !module procedure atom_same_species_sa
   end interface atom_same_species
 
 contains
@@ -177,17 +175,6 @@ contains
   end function atom_same_species_as
 
   ! ---------------------------------------------------------
-  elemental function atom_same_species_sa(species, this) result(is)
-    type(species_t), intent(in) :: species
-    type(atom_t),    intent(in) :: this
-
-    logical :: is
-
-    is=(atom_get_label(this)==species_label(species))
-
-  end function atom_same_species_sa
-
-  ! ---------------------------------------------------------
   elemental function atom_distance(this_1, this_2) result(dst)
     type(atom_t), intent(in) :: this_1
     type(atom_t), intent(in) :: this_2
@@ -236,7 +223,7 @@ contains
     write(unit=frmt, fmt="(a5,i2.2,a4,i2.2,a6)") "(6x,a", LABEL_LEN, ",2x,", dim_,"f12.6)"
     read(unit=unit, fmt=frmt) dum, (tmp(i), i=1, dim_)
 
-    do i=1, dim_
+    do i = 1, dim_
       this%x(i) = units_to_atomic(units_out%length_xyz_file, tmp(i))
     end do
  
@@ -319,7 +306,7 @@ contains
     write(unit=frmt, fmt="(a10,i2.2,a15)") "(6x,a1,2x,", dim_, "f12.6,a3,f12.6)"
     read(unit=unit, fmt=frmt) dum, (tmp, i=1, dim_)
 
-    do i=1, dim_
+    do i = 1, dim_
       this%x(i) = units_to_atomic(units_out%length_xyz_file, tmp(i))
     end do
 

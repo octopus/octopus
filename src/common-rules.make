@@ -56,11 +56,14 @@ external_LIBS = \
 	$(top_builddir)/external_libs/qshep/libqshep.a                  \
 	$(top_builddir)/external_libs/spglib-1.9.9/src/libsymspg.a      \
 	$(top_builddir)/external_libs/bpdn/libbpdn.a                    \
-	$(top_builddir)/external_libs/dftd3/libdftd3.a                  \
-	$(top_builddir)/external_libs/yaml-0.1.4/src/libyaml.a
+	$(top_builddir)/external_libs/dftd3/libdftd3.a
 # we should not have libyaml here if we used an external one...
 
-FCFLAGS_MODS += @FCFLAGS_LIBXC@ @FCFLAGS_PSPIO@ @FCFLAGS_ISF@ @FCFLAGS_FFTW@ @FCFLAGS_PFFT@ @FCFLAGS_PNFFT@ @FCFLAGS_NETCDF@ @FCFLAGS_ETSF_IO@ @FCFLAGS_LIBVDWXC@ @FCFLAGS_BERKELEYGW@ @FCFLAGS_NLOPT@ @FCFLAGS_LIBFM@ @FCFLAGS_ELPA@ @FCFLAGS_POKE@ @FCFLAGS_LIKWID@
+FCFLAGS_MODS += @FCFLAGS_LIBXC@ @FCFLAGS_PSPIO@ @FCFLAGS_PSOLVER@ @FCFLAGS_ISF@	\
+  @FCFLAGS_FUTILE@ @FCFLAGS_FFTW@ @FCFLAGS_PFFT@ @FCFLAGS_PNFFT@		\
+  @FCFLAGS_NETCDF@ @FCFLAGS_ETSF_IO@ @FCFLAGS_LIBVDWXC@ @FCFLAGS_BERKELEYGW@	\
+  @FCFLAGS_NLOPT@ @FCFLAGS_LIBFM@ @FCFLAGS_ELPA@ @FCFLAGS_POKE@			\
+  @FCFLAGS_LIKWID@
 
 if COMPILE_OPENCL
   external_LIBS += $(top_builddir)/external_libs/fortrancl/libfortrancl.a @LIBS_CLBLAS@ @LIBS_CLFFT@ @CL_LIBS@
@@ -73,12 +76,17 @@ if COMPILE_METIS
   AM_CPPFLAGS += -I$(top_srcdir)/external_libs/metis-5.1/include/
 endif
 
+if COMPILE_LIBYAML
+  external_LIBS += $(top_builddir)/external_libs/yaml-0.1.4/src/libyaml.a
+endif
+
 # These must be arranged so if LIB1 depends on LIB2, LIB1 must occur before LIB2.
 # e.g. ETSF_IO depends on netCDF, ISF depends on LAPACK
-outside_LIBS = @LIBS_PSPIO@ @LIBS_POKE@ @LIBS_ISF@ @LIBS_NFFT@ @LIBS_PNFFT@ @LIBS_PFFT@ \
-  @LIBS_SPARSKIT@ @LIBS_ETSF_IO@ @LIBS_NETCDF@ @LIBS_LIBFM@ \
-  @LIBS_LIBVDWXC@ @LIBS_BERKELEYGW@ @LIBS_NLOPT@ @GD_LIBS@ \
-  @LIBS_PARMETIS@ @LIBS_METIS@ @LIBS_LIKWID@ @LIBS_CUDA@ @LIBS_MPI@
+outside_LIBS = @LIBS_PSPIO@ @LIBS_POKE@ @LIBS_PSOLVER@ @LIBS_ISF@ @LIBS_FUTILE@	\
+  @LIBS_LIBYAML@ @LIBS_NFFT@ @LIBS_PNFFT@ @LIBS_PFFT@ @LIBS_SPARSKIT@		\
+  @LIBS_ETSF_IO@ @LIBS_NETCDF@ @LIBS_LIBFM@ @LIBS_LIBVDWXC@ @LIBS_BERKELEYGW@	\
+  @LIBS_NLOPT@ @GD_LIBS@ @LIBS_PARMETIS@ @LIBS_METIS@ @LIBS_LIKWID@ @LIBS_CUDA@	\
+  @LIBS_MPI@
 
 other_LIBS = $(external_LIBS) $(scalapack_LIBS) $(outside_LIBS) $(core_LIBS) @CXXLIBS@
 all_LIBS = $(octopus_LIBS) $(other_LIBS)
@@ -104,7 +112,7 @@ fc_verbose_0 = @echo "  FC       $@";
 .F90.o:
 	$(cpp_verbose)@FCCPP@ @CPPFLAGS@ $(AM_CPPFLAGS) -I. $< | \
 	  $(top_srcdir)/build/preprocess.pl - \
-	  "@DEBUG@" "@F90_ACCEPTS_LINE_NUMBERS@" "@F90_FORALL@" > $*_oct.f90
+	  "@DEBUG@" "@F90_ACCEPTS_LINE_NUMBERS@" > $*_oct.f90
 	$(fc_verbose)@FC@ @FCFLAGS@ $(FCFLAGS_MODS) -c @FCFLAGS_f90@ -o $@ $*_oct.f90
 	@rm -f $*_oct.f90
 
@@ -114,7 +122,7 @@ fc_verbose_0 = @echo "  FC       $@";
 .F90_oct.f90:
 	$(cpp_verbose)@FCCPP@ @CPPFLAGS@ $(AM_CPPFLAGS) -I. $< | \
 	  $(top_srcdir)/build/preprocess.pl - \
-	  "@DEBUG@" "@F90_ACCEPTS_LINE_NUMBERS@" "@F90_FORALL@" > $*_oct.f90
+	  "@DEBUG@" "@F90_ACCEPTS_LINE_NUMBERS@" > $*_oct.f90
 
 
 # ---------------------------------------------------------------

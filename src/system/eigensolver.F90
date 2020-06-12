@@ -30,6 +30,7 @@ module eigensolver_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_elec_oct_m
+  use hamiltonian_elec_base_oct_m
   use lalg_adv_oct_m
   use lalg_basic_oct_m
   use loct_oct_m
@@ -45,6 +46,7 @@ module eigensolver_oct_m
   use parser_oct_m
   use preconditioners_oct_m
   use profiling_oct_m
+  use smear_oct_m
   use states_abst_oct_m
   use states_elec_oct_m
   use states_elec_calc_oct_m
@@ -52,6 +54,7 @@ module eigensolver_oct_m
   use subspace_oct_m
   use unit_oct_m
   use unit_system_oct_m
+  use wfs_elec_oct_m
   use xc_oct_m
 
   implicit none
@@ -123,7 +126,7 @@ contains
 
     integer :: default_iter, default_es
     FLOAT   :: default_tol
-    real(8) :: mem
+    FLOAT   :: mem
 
     PUSH_SUB(eigensolver_init)
 
@@ -158,8 +161,7 @@ contains
     !% Kresse and Furthm&uuml;ller [<i>Phys. Rev. B</i> <b>54</b>, 11169
     !% (1996)]. This eigensolver requires almost no orthogonalization
     !% so it can be considerably faster than the other options for
-    !% large systems; however it might suffer stability problems. To
-    !% improve its performance a large number of <tt>ExtraStates</tt>
+    !% large systems. To improve its performance a large number of <tt>ExtraStates</tt>
     !% are required (around 10-20% of the number of occupied states).
     !% Note: with <tt>unocc</tt>, you will need to stop the calculation
     !% by hand, since the highest states will probably never converge.
@@ -190,7 +192,7 @@ contains
     call messages_obsolete_variable(namespace, 'EigensolverSubspaceDiag', 'SubspaceDiagonalization')
 
     default_iter = 25
-    default_tol = CNST(1e-6)
+    default_tol = CNST(1e-7)
 
     select case(eigens%es_type)
     case(RS_CG_NEW)
@@ -263,17 +265,23 @@ contains
 
       !%Variable EigensolverImaginaryTime
       !%Type float
-      !%Default 10.0
+      !%Default 0.1
       !%Section SCF::Eigensolver
       !%Description
       !% The imaginary-time step that is used in the imaginary-time evolution
       !% method (<tt>Eigensolver = evolution</tt>) to obtain the lowest eigenvalues/eigenvectors.
       !% It must satisfy <tt>EigensolverImaginaryTime > 0</tt>.
+      !% Increasing this value can make the propagation faster, but could lead to unstable propagations.
       !%End
-      call parse_variable(namespace, 'EigensolverImaginaryTime', CNST(10.0), eigens%imag_time)
-      if(eigens%imag_time <= M_ZERO) call messages_input_error('EigensolverImaginaryTime')
+      call parse_variable(namespace, 'EigensolverImaginaryTime', CNST(0.1), eigens%imag_time)
+      if(eigens%imag_time <= M_ZERO) call messages_input_error(namespace, 'EigensolverImaginaryTime')
       
       call exponential_init(eigens%exponential_operator, namespace)
+
+      if(st%smear%method /= SMEAR_SEMICONDUCTOR .and. st%smear%method /= SMEAR_FIXED_OCC) then
+        message(1) = "Smearing of occupations is incompatible with imaginary time evolution."
+        call messages_fatal(1)
+      end if
       
     case(RS_LOBPCG)
     case(RS_RMMDIIS)
@@ -299,7 +307,7 @@ contains
       call messages_experimental("preconditioned steepest descent (PSD) eigensolver")
 
     case default
-      call messages_input_error('Eigensolver')
+      call messages_input_error(namespace, 'Eigensolver')
     end select
 
     call messages_print_stress(stdout, 'Eigensolver', namespace=namespace)
@@ -321,7 +329,7 @@ contains
     !%Type float
     !%Section SCF::Eigensolver
     !%Description
-    !% This is the tolerance for the eigenvectors. The default is 1e-6,
+    !% This is the tolerance for the eigenvectors. The default is 1e-7,
     !% except for the ARPACK solver for which it is 0.
     !%End
     call parse_variable(namespace, 'EigensolverTolerance', default_tol, eigens%tolerance)
@@ -333,11 +341,13 @@ contains
     !% Determines the maximum number of iterations that the
     !% eigensolver will perform if the desired tolerance is not
     !% achieved. The default is 25 iterations for all eigensolvers
-    !% except for <tt>rmdiis</tt>, which performs only 3 iterations (only
-    !% increase it if you know what you are doing).
+    !% except for <tt>rmdiis</tt>, which performs only 3 iterations.
+    !% Increasing this value for <tt>rmdiis</tt> increases the convergence speed,
+    !% at the cost of an increased memory footprint.
+    !% In the case of imaginary time propatation, this variable is not used.
     !%End
     call parse_variable(namespace, 'EigensolverMaxIter', default_iter, eigens%es_maxiter)
-    if(eigens%es_maxiter < 1) call messages_input_error('EigensolverMaxIter')
+    if(eigens%es_maxiter < 1) call messages_input_error(namespace, 'EigensolverMaxIter')
 
     if(eigens%es_maxiter > default_iter) then
       call messages_write('You have specified a large number of eigensolver iterations (')
@@ -350,7 +360,7 @@ contains
     end if
 
     if (any(eigens%es_type == (/RS_PLAN, RS_CG, RS_LOBPCG, RS_RMMDIIS, RS_PSD/))) then
-      call preconditioner_init(eigens%pre, namespace, gr)
+      call preconditioner_init(eigens%pre, namespace, gr, geo, mc)
     else
       call preconditioner_null(eigens%pre)
     end if
@@ -365,13 +375,20 @@ contains
 
     ! FEAST: subspace diagonalization or not?  I guess not.
     ! But perhaps something could be gained by changing this.
-    call subspace_init(eigens%sdiag, namespace, st, no_sd = .false.)
+    !
+    ! In case of the evolution eigensolver, this makes no sense to use subspace diagonalization
+    ! as orthogonalization is done internally at each time-step
+    if(eigens%es_type == RS_EVO) then
+      call subspace_init(eigens%sdiag, namespace, st, no_sd = .true.)
+    else
+      call subspace_init(eigens%sdiag, namespace, st, no_sd = .false.)
+    end if
 
     ! print memory requirements
     select case(eigens%es_type)
     case(RS_RMMDIIS)
       call messages_write('Info: The rmmdiis eigensolver requires ')
-      mem = (2.0_8*eigens%es_maxiter - 1.0_8)*st%d%block_size*dble(gr%mesh%np_part)
+      mem = (M_TWO*eigens%es_maxiter - M_ONE)*st%d%block_size*TOFLOAT(gr%mesh%np_part)
       if(states_are_real(st)) then
         mem = mem*CNST(8.0)
       else
@@ -399,12 +416,6 @@ contains
     call parse_variable(namespace, 'EigensolverSkipKpoints', .false., eigens%skip_finite_weight_kpoints)
     call messages_print_var_value(stdout,'EigensolverSkipKpoints',  eigens%skip_finite_weight_kpoints)
 
-    if(preconditioner_is_multigrid(eigens%pre)) then
-      SAFE_ALLOCATE(gr%mgrid_prec)
-      call multigrid_init(gr%mgrid_prec, namespace, geo, gr%cv, gr%mesh, gr%der, gr%stencil, mc, used_for_preconditioner = .true.)
-    end if
-
-
     POP_SUB(eigensolver_init)
   end subroutine eigensolver_init
 
@@ -415,12 +426,6 @@ contains
     type(grid_t),        intent(inout) :: gr
 
     PUSH_SUB(eigensolver_end)
-
-    if(preconditioner_is_multigrid(eigens%pre)) then
-      call multigrid_end(gr%mgrid_prec)
-      SAFE_DEALLOCATE_P(gr%mgrid_prec)
-    end if
-
 
     select case(eigens%es_type)
     case(RS_PLAN, RS_CG, RS_LOBPCG, RS_RMMDIIS, RS_PSD)
@@ -502,6 +507,7 @@ contains
           call deigensolver_plan(namespace, gr, st, hm, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), ik, &
             eigens%diff(:, ik))
         case(RS_EVO)
+          maxiter = 1
           call deigensolver_evolution(namespace, gr%mesh, st, hm, eigens%exponential_operator, eigens%tolerance, maxiter, &
             eigens%converged(ik), ik, eigens%diff(:, ik), tau = eigens%imag_time)
         case(RS_LOBPCG)
@@ -548,6 +554,7 @@ contains
           call zeigensolver_plan(namespace, gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
             eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_EVO)
+          maxiter = 1
           call zeigensolver_evolution(namespace, gr%mesh, st, hm, eigens%exponential_operator, eigens%tolerance, maxiter, &
             eigens%converged(ik), ik, eigens%diff(:, ik), tau = eigens%imag_time)
         case(RS_LOBPCG)

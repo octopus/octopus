@@ -53,7 +53,11 @@ subroutine output_states(outp, namespace, dir, st, gr, geo, hm)
     SAFE_ALLOCATE(polarization(1:gr%fine%mesh%np, 1:gr%sb%dim))
 
     do is = 1, st%d%nspin
-      forall(ip = 1:gr%fine%mesh%np, idir = 1:gr%sb%dim) polarization(ip, idir) = st%rho(ip, is)*gr%fine%mesh%x(ip, idir)
+      do idir = 1, gr%sb%dim
+        do ip = 1, gr%fine%mesh%np
+          polarization(ip, idir) = st%rho(ip, is)*gr%fine%mesh%x(ip, idir)
+        end do
+      end do
 
       if(st%d%nspin == 1) then
         write(fname, '(a)') 'dipole_density'
@@ -63,7 +67,7 @@ subroutine output_states(outp, namespace, dir, st, gr, geo, hm)
       call io_function_output_vector(outp%how, dir, fname, namespace, gr%fine%mesh, polarization, gr%sb%dim, fn_unit, ierr, &
         geo = geo, grp = st%dom_st_kpt_mpi_grp, vector_dim_labels = (/'x', 'y', 'z'/))
     end do
-    
+
     SAFE_DEALLOCATE_A(polarization)
   end if
 

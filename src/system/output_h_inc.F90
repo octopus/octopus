@@ -270,7 +270,7 @@
       do ik = st%d%kpt%start,st%d%kpt%end
         call density_calc_init(dens_calc, st, gr, density_tmp)
         do ib = st%group%block_start, st%group%block_end
-          call density_calc_accumulate(dens_calc, ik, st%group%psib(ib, ik))
+          call density_calc_accumulate(dens_calc, st%group%psib(ib, ik))
         end do
  
         density_kpt(ik) = M_ZERO
@@ -341,7 +341,7 @@
 
     if(bitand(outp%what, OPTION__OUTPUT__DELTA_PERTURBATION) /= 0) then
       SAFE_ALLOCATE(kick_function(1:mesh%np))
-      call kick_function_get(mesh, kick, kick_function)
+      call kick_function_get(mesh, kick, kick_function, 1)
       call zio_function_output(outp%how, dir, "kick_function", namespace, mesh, kick_function(:), &
         units_out%energy, err, geo = geo)
       SAFE_DEALLOCATE_A(kick_function)

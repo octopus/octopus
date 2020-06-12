@@ -57,7 +57,9 @@ module lasers_oct_m
     laser_set_phi,                &
     laser_set_f_value,            &
     laser_carrier_frequency,      &
+    dvlaser_operator_linear,      &
     zvlaser_operator_linear,      &
+    dvlaser_operator_quadratic,   &
     zvlaser_operator_quadratic
 
 
@@ -412,7 +414,7 @@ contains
             xx(1:mesh%sb%dim) = mesh%x(ip, 1:mesh%sb%dim)
             select case(mesh%sb%dim)
             case(2)
-              lasers(il)%a(ip, :) = (/xx(2), -xx(1)/) * sign(CNST(1.0), real(lasers(il)%pol(3), REAL_PRECISION))
+              lasers(il)%a(ip, :) = (/xx(2), -xx(1)/) * sign(CNST(1.0), TOFLOAT(lasers(il)%pol(3)))
             case(3)
               lasers(il)%a(ip, :) = (/ xx(2)*lasers(il)%pol(3) - xx(3)*lasers(il)%pol(2), &
                                 xx(3)*lasers(il)%pol(1) - xx(1)*lasers(il)%pol(3), &
@@ -513,9 +515,9 @@ contains
       end select
       if(lasers(il)%field /= E_FIELD_SCALAR_POTENTIAL) then
         write(iunit,'(3x,a,3(a1,f7.4,a1,f7.4,a1))') 'Polarization: ', &
-          '(', real(lasers(il)%pol(1)), ',', aimag(lasers(il)%pol(1)), '), ', &
-          '(', real(lasers(il)%pol(2)), ',', aimag(lasers(il)%pol(2)), '), ', &
-          '(', real(lasers(il)%pol(3)), ',', aimag(lasers(il)%pol(3)), ')'
+          '(', TOFLOAT(lasers(il)%pol(1)), ',', aimag(lasers(il)%pol(1)), '), ', &
+          '(', TOFLOAT(lasers(il)%pol(2)), ',', aimag(lasers(il)%pol(2)), '), ', &
+          '(', TOFLOAT(lasers(il)%pol(3)), ',', aimag(lasers(il)%pol(3)), ')'
       end if
       write(iunit,'(3x,a,f14.8,3a)') 'Carrier frequency = ', &
         units_from_atomic(units_out%energy, lasers(il)%omega), &
@@ -602,9 +604,9 @@ contains
 
     select case(laser%field)
     case(E_FIELD_SCALAR_POTENTIAL)
-      pot(1:mesh%np) = pot(1:mesh%np) + real(amp)*laser%v(1:mesh%np)
+      pot(1:mesh%np) = pot(1:mesh%np) + TOFLOAT(amp)*laser%v(1:mesh%np)
     case default
-      field(1:mesh%sb%dim) = real(amp*laser%pol(1:mesh%sb%dim))
+      field(1:mesh%sb%dim) = TOFLOAT(amp*laser%pol(1:mesh%sb%dim))
       do ip = 1, mesh%np
         ! The -1 sign is missing here. Check epot.F90 for the explanation.
         pot(ip) = pot(ip) + sum(field(1:mesh%sb%dim)*mesh%x(ip, 1:mesh%sb%dim))
@@ -629,10 +631,18 @@ contains
     PUSH_SUB(laser_vector_potential)
 
     if(present(time)) then
-      amp = real(tdf(laser%f, time)*exp(M_zI*(laser%omega*time + tdf(laser%phi, time))))
-      forall(idir = 1:mesh%sb%dim, ip = 1:mesh%np) aa(ip, idir) = aa(ip, idir) + amp*laser%a(ip, idir)
+      amp = TOFLOAT(tdf(laser%f, time)*exp(M_zI*(laser%omega*time + tdf(laser%phi, time))))
+      do idir = 1, mesh%sb%dim
+        do ip = 1, mesh%np
+          aa(ip, idir) = aa(ip, idir) + amp*laser%a(ip, idir)
+        end do
+      end do
     else
-      forall(idir = 1:mesh%sb%dim, ip = 1:mesh%np) aa(ip, idir) = aa(ip, idir) + laser%a(ip, idir)
+      do idir = 1, mesh%sb%dim
+        do ip = 1, mesh%np
+          aa(ip, idir) = aa(ip, idir) + laser%a(ip, idir)
+        end do
+      end do
     end if
 
     POP_SUB(laser_vector_potential)
@@ -667,9 +677,9 @@ contains
       ! In this case we will just return the value of the time function. The "field", in fact, 
       ! should be a function of the position in space (thus, a true "field"), given by the 
       ! gradient of the scalar potential.
-      field(1) = field(1) + real(amp)
+      field(1) = field(1) + TOFLOAT(amp)
     else
-      field(1:dim) = field(1:dim) + real(amp*laser%pol(1:dim))
+      field(1:dim) = field(1:dim) + TOFLOAT(amp*laser%pol(1:dim))
     end if
 
   end subroutine laser_field

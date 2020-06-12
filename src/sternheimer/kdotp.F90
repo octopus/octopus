@@ -93,7 +93,7 @@ contains
 
     integer              :: idir, idir2, ierr, pdim, ispin
     character(len=100)   :: str_tmp
-    real(8)              :: errornorm
+    FLOAT                :: errornorm
     type(restart_t)      :: restart_load, restart_dump
 	
     type(pert_t)            :: pert2  ! for the second direction in second-order kdotp
@@ -102,8 +102,16 @@ contains
 
     call messages_experimental("k.p perturbation and calculation of effective masses")
 
+    if (sys%hm%pcm%run_pcm) then
+      call messages_not_implemented("PCM for CalculationMode /= gs or td")
+    end if
+
     if(sys%hm%theory_level == HARTREE_FOCK) then
       call messages_not_implemented('Commutator of Fock operator')
+    end if
+
+    if (sys%gr%sb%kpoints%use_symmetries) then
+      call messages_experimental("KPoints symmetries with CalculationMode = kdotp")
     end if
 
     pdim = sys%gr%sb%periodic_dim
@@ -263,14 +271,14 @@ contains
           units_out%force)
 
         do ispin = 1, sys%st%d%nspin
-          errornorm = hypot(errornorm, real(dmf_nrm2(sys%gr%mesh, kdotp_vars%lr(1, idir)%ddl_rho(:, ispin)), 8))
+          errornorm = hypot(errornorm, TOFLOAT(dmf_nrm2(sys%gr%mesh, kdotp_vars%lr(1, idir)%ddl_rho(:, ispin))))
         end do
       else
         call zoutput_lr(sys%outp, sys%namespace, KDOTP_DIR, sys%st, sys%gr, kdotp_vars%lr(1, idir), idir, 1, sys%geo, &
           units_out%force)
 
         do ispin = 1, sys%st%d%nspin
-          errornorm = hypot(errornorm, real(zmf_nrm2(sys%gr%mesh, kdotp_vars%lr(1, idir)%zdl_rho(:, ispin)), 8))
+          errornorm = hypot(errornorm, TOFLOAT(zmf_nrm2(sys%gr%mesh, kdotp_vars%lr(1, idir)%zdl_rho(:, ispin))))
         end do
       end if
 
@@ -511,7 +519,6 @@ contains
 
     character(len=80) :: filename, tmp
     integer :: iunit, ik, ist, ik2, ispin
-    FLOAT :: determinant
 
     PUSH_SUB(kdotp_write_eff_mass)
 
@@ -545,7 +552,7 @@ contains
         tmp = int2str(ist)
         write(iunit,'(a, a, a, f12.8, a, a)') 'State #', trim(tmp), ', Energy = ', &
           units_from_atomic(units_out%energy, st%eigenval(ist, ik)), ' ', units_abbrev(units_out%energy)
-        determinant = lalg_inverter(gr%sb%periodic_dim, kdotp_vars%eff_mass_inv(:, :, ist, ik), invert = .true.)
+        call lalg_inverter(gr%sb%periodic_dim, kdotp_vars%eff_mass_inv(:, :, ist, ik))
         call output_tensor(iunit, kdotp_vars%eff_mass_inv(:, :, ist, ik), gr%sb%periodic_dim, unit_one)
       end do
 

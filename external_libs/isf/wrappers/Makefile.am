@@ -51,7 +51,7 @@ mpi.o: $(mpi_include)
 # an object file and delete the intermediate file.
 .F90.o:
 	@FCCPP@ @CPPFLAGS@ $(DEFS) $(DEFAULT_INCLUDES) $(AM_CPPFLAGS) -I. $< > $*_oct.f90
-	$(top_srcdir)/build/preprocess.pl $*_oct.f90 "@DEBUG@" "@F90_ACCEPTS_LINE_NUMBERS@" "@F90_FORALL@"
+	$(top_srcdir)/build/preprocess.pl $*_oct.f90 "@DEBUG@" "@F90_ACCEPTS_LINE_NUMBERS@"
 	@FC@ @FCFLAGS@ $(AM_FCFLAGS) -c @FCFLAGS_f90@ -o $@ $*_oct.f90
 	@rm -f $*_oct.f90
 

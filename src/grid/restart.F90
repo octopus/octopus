@@ -131,7 +131,9 @@ module restart_oct_m
                                 RESTART_CASIDA     =  9,  &
                                 RESTART_OCT        =  10, &
                                 RESTART_PARTITION  =  11, &
-                                RESTART_PROJ       =  12
+                                RESTART_PROJ       =  12, &
+                                RESTART_MAXWELL    =  13, &
+                                RESTART_TD_MAXWELL =  14
 
   integer, parameter :: RESTART_N_DATA_TYPES = 12
 
@@ -374,7 +376,7 @@ contains
         n_cols = parse_block_cols(blk,iline-1)
 
         call parse_block_integer(blk, iline-1, 0, data_type)
-        if (data_type < 0 .or. data_type > RESTART_N_DATA_TYPES) call messages_input_error('RestartOptions')
+        if (data_type < 0 .or. data_type > RESTART_N_DATA_TYPES) call messages_input_error(namespace, 'RestartOptions')
         if (data_type == 0) then
           call parse_block_string(blk, iline-1, 1, default_basedir)
         else

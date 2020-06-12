@@ -62,6 +62,7 @@ module forces_oct_m
   use utils_oct_m
   use v_ks_oct_m
   use vdw_ts_oct_m
+  use wfs_elec_oct_m
 
   implicit none
 
@@ -234,12 +235,12 @@ contains
     
       res(:) = M_ZERO
       do m = 1, ubound(res, 1)
-        res(m) = real( zmf_dotp(gr%mesh, viapsi(:, 1), derpsi(:, m, 1), reduce = .false.) , REAL_PRECISION)
+        res(m) = TOFLOAT( zmf_dotp(gr%mesh, viapsi(:, 1), derpsi(:, m, 1), reduce = .false.))
       end do
       if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm,  res)
 
       call states_elec_get_state(chi, gr%mesh, ist, ik, zpsi)
-      pdot3 = real(M_zI * zmf_dotp(gr%mesh, zpsi(:, 1), viapsi(:, 1)), REAL_PRECISION)
+      pdot3 = TOFLOAT(M_zI * zmf_dotp(gr%mesh, zpsi(:, 1), viapsi(:, 1)))
       geo%atom(iatom)%x(j) = qold
 
       SAFE_DEALLOCATE_A(viapsi)
@@ -518,7 +519,11 @@ subroutine forces_from_nlcc(gr, geo, hm, st, force_nlcc)
   integer :: is, iatom, idir
   FLOAT, allocatable :: drho(:,:)
 
+  type(profile_t), save :: prof
+
   PUSH_SUB(forces_from_nlcc)
+
+  call profiling_in(prof, "FORCES_NLCC")
 
   SAFE_ALLOCATE(drho(1:gr%mesh%np, 1:gr%mesh%sb%dim))
 
@@ -547,6 +552,8 @@ subroutine forces_from_nlcc(gr, geo, hm, st, force_nlcc)
     call profiling_out(prof_comm)
   end if
 #endif
+ 
+  call profiling_out(prof)
 
   POP_SUB(forces_from_nlcc)
 end subroutine forces_from_nlcc
@@ -566,8 +573,11 @@ subroutine forces_from_scf(namespace, gr, geo, hm, force_scf, vhxc_old)
 
   integer :: is, iatom, idir
   FLOAT, allocatable :: dvhxc(:,:), drho(:,:,:)
+  type(profile_t), save :: prof
 
   PUSH_SUB(forces_from_scf)
+
+  call profiling_in(prof, "FORCES_SCF")
 
   SAFE_ALLOCATE(dvhxc(1:gr%mesh%np, 1:hm%d%spin_channels))
   SAFE_ALLOCATE(drho(1:gr%mesh%np, 1:hm%d%spin_channels, 1:gr%mesh%sb%dim))
@@ -611,9 +621,32 @@ subroutine forces_from_scf(namespace, gr, geo, hm, force_scf, vhxc_old)
   end if
 #endif
 
+  call profiling_out(prof)
   
   POP_SUB(forces_from_scf)
 end subroutine forces_from_scf
+
+!---------------------------------------------------------------------------
+subroutine total_force_from_local_potential(gr, ep, gdensity, force)
+  type(grid_t),                   intent(in)    :: gr
+  type(epot_t),                   intent(in)    :: ep
+  FLOAT,                          intent(in)    :: gdensity(:, :)
+  FLOAT,                          intent(inout) :: force(:)
+
+  integer            :: idir
+  FLOAT              :: force_tmp(1:MAX_DIM)
+
+  PUSH_SUB(total_force_from_local_potential)
+
+  do idir = 1, gr%mesh%sb%dim
+    force_tmp(idir) = dmf_dotp(gr%mesh, ep%vpsl(1:gr%mesh%np), gdensity(:, idir), reduce = .false.)
+  end do
+
+  if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm,  force_tmp, dim = gr%mesh%sb%dim)
+  force(1:gr%mesh%sb%dim) = force(1:gr%mesh%sb%dim) + force_tmp(1:gr%mesh%sb%dim)
+
+  POP_SUB(total_force_from_local_potential)
+end subroutine total_force_from_local_potential
 
 
 #include "undef.F90"

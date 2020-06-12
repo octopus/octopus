@@ -34,6 +34,7 @@ module geom_opt_oct_m
   use mpi_oct_m
   use namespace_oct_m
   use parser_oct_m
+  use pcm_oct_m
   use profiling_oct_m
   use read_coords_oct_m
   use restart_oct_m
@@ -97,14 +98,21 @@ contains
     REAL_DOUBLE, allocatable :: coords(:)
     REAL_DOUBLE :: energy
 
-    real (8), allocatable :: mass(:)
+    FLOAT, allocatable :: mass(:)
     integer :: iatom, imass
     type(restart_t) :: restart_load
 
     PUSH_SUB(geom_opt_run)
 
+    if (sys%hm%pcm%run_pcm) then
+      call messages_not_implemented("PCM for CalculationMode /= gs or td")
+    end if
+
+    if (sys%gr%sb%kpoints%use_symmetries) then
+      call messages_experimental("KPoints symmetries with CalculationMode = go")
+    end if
+
     call init_(fromscratch)
-    
 
     ! load wavefunctions
     if(.not. fromscratch) then
@@ -138,8 +146,8 @@ contains
     !Minimize
     select case(g_opt%method)
     case(MINMETHOD_NMSIMPLEX)
-      call minimize_multidim_nograd(g_opt%method, g_opt%size, coords, real(g_opt%step, 8),&
-        real(g_opt%toldr, 8), g_opt%max_iter, &
+      call minimize_multidim_nograd(g_opt%method, g_opt%size, coords, TOFLOAT(g_opt%step),&
+        TOFLOAT(g_opt%toldr), g_opt%max_iter, &
         calc_point_ng, write_iter_info_ng, energy, ierr)
     case(MINMETHOD_FIRE)
 
@@ -157,13 +165,13 @@ contains
       end do
 
       !TODO: add variable to use Euler integrator
-      call minimize_fire(g_opt%size, coords, real(g_opt%step, 8), real(g_opt%tolgrad, 8), &
+      call minimize_fire(g_opt%size, coords, TOFLOAT(g_opt%step), TOFLOAT(g_opt%tolgrad), &
         g_opt%max_iter, calc_point, write_iter_info, energy, ierr, mass, integrator=g_opt%fire_integrator)
       SAFE_DEALLOCATE_A(mass)
 
     case default
-      call minimize_multidim(g_opt%method, g_opt%size, coords, real(g_opt%step, 8),&
-        real(g_opt%line_tol, 8), real(g_opt%tolgrad, 8), real(g_opt%toldr, 8), g_opt%max_iter, &
+      call minimize_multidim(g_opt%method, g_opt%size, coords, TOFLOAT(g_opt%step),&
+        TOFLOAT(g_opt%line_tol), TOFLOAT(g_opt%tolgrad), TOFLOAT(g_opt%toldr), g_opt%max_iter, &
         calc_point, write_iter_info, energy, ierr)
     end select
 
@@ -200,10 +208,18 @@ contains
       integer :: iter, iatom
       character(len=100) :: filename
       FLOAT :: default_toldr
-      real(8) :: default_step
+      FLOAT :: default_step
       type(read_coords_info) :: xyz
 
       PUSH_SUB(geom_opt_run.init_)
+
+      if (sys%gr%sb%periodic_dim > 0) then
+        call messages_experimental('Geometry optimization for periodic systems')
+
+        message(1) = "Optimization of cell parameters during geometry optimization"
+        message(2) = "of periodic systems is currently not implemented."
+        call messages_warning(2)
+      end if
 
       call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
 
@@ -284,7 +300,7 @@ contains
       !% Ref: E. Bitzek, P. Koskinen, F. Gahler, M. Moseler, and P. Gumbsch, <i>Phys. Rev. Lett.</i> <b>97</b>, 170201 (2006).
       !%End
       call parse_variable(sys%namespace, 'GOMethod', MINMETHOD_FIRE, g_opt%method)
-      if(.not.varinfo_valid_option('GOMethod', g_opt%method)) call messages_input_error('GOMethod')
+      if(.not.varinfo_valid_option('GOMethod', g_opt%method)) call messages_input_error(sys%namespace, 'GOMethod')
       call messages_print_var_option(stdout, "GOMethod", g_opt%method)
 
       !%Variable GOTolerance
@@ -320,7 +336,7 @@ contains
       end if
       call parse_variable(sys%namespace, 'GOMinimumMove', default_toldr, g_opt%toldr, units_inp%length)
 
-      if(g_opt%method == MINMETHOD_NMSIMPLEX .and. g_opt%toldr <= M_ZERO) call messages_input_error('GOMinimumMove')
+      if(g_opt%method == MINMETHOD_NMSIMPLEX .and. g_opt%toldr <= M_ZERO) call messages_input_error(sys%namespace, 'GOMinimumMove')
       
       !%Variable GOStep
       !%Type float
@@ -417,7 +433,7 @@ contains
       !% This is, of course, inconsistent, and may lead to very strange behavior.
       !%End
       call parse_variable(sys%namespace, 'GOObjective', MINWHAT_ENERGY, g_opt%what2minimize)
-      if(.not.varinfo_valid_option('GOObjective', g_opt%what2minimize)) call messages_input_error('GOObjective')
+      if(.not.varinfo_valid_option('GOObjective', g_opt%what2minimize)) call messages_input_error(sys%namespace, 'GOObjective')
       call messages_print_var_option(stdout, "GOObjective", g_opt%what2minimize)
 
 
@@ -798,7 +814,7 @@ contains
     REAL_DOUBLE, intent(in) :: coords(size)
 
     PUSH_SUB(write_iter_info_ng)
-    call write_iter_info(geom_iter, size, energy, maxdx, real(-M_ONE, 8), coords)
+    call write_iter_info(geom_iter, size, energy, maxdx, -M_ONE, coords)
 
     POP_SUB(write_iter_info_ng)
   end subroutine write_iter_info_ng

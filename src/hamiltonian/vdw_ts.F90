@@ -70,11 +70,10 @@ module vdw_ts_oct_m
 
 contains
 
-  subroutine vdw_ts_init(this, namespace, geo, der)
+  subroutine vdw_ts_init(this, namespace, geo)
     type(vdw_ts_t),      intent(out)   :: this
     type(namespace_t),   intent(in)    :: namespace
     type(geometry_t),    intent(in)    :: geo
-    type(derivatives_t), intent(in)    :: der
     
     integer :: ispecies, jspecies
     FLOAT :: num, den
@@ -333,9 +332,11 @@ contains
     integer :: iatom, jatom, ispecies, jspecies, jcopy
     FLOAT :: rr, rr2, rr6,  dffdr0, ee, ff, dee, dffdvra, deabdvra, deabdrab, x_j(1:MAX_DIM) 
     FLOAT, allocatable ::  vol_ratio(:), dvadrr(:), dr0dvra(:), r0ab(:,:), derivative_coeff(:), c6ab(:,:)
+    type(profile_t), save :: prof
 
     PUSH_SUB(vdw_ts_force_calculate)
 
+    call profiling_in(prof, "FORCE_VDW_TS")
 
     SAFE_ALLOCATE(vol_ratio(1:geo%natoms))
     SAFE_ALLOCATE(dvadrr(1:3))
@@ -421,7 +422,7 @@ contains
 
     do iatom = 1, geo%natoms
       do jatom = 1, geo%natoms
-        call hirshfeld_position_derivative(hirshfeld, der, namespace, iatom, jatom, density, dvadrr) !dvadrr_ij = \frac{\delta V_i}{\delta \vec{x_j}}
+        call hirshfeld_position_derivative(hirshfeld, namespace, iatom, jatom, density, dvadrr) !dvadrr_ij = \frac{\delta V_i}{\delta \vec{x_j}}
         force_vdw(1:sb%dim, jatom)= force_vdw(1:sb%dim, jatom) + derivative_coeff(iatom)*dvadrr(1:sb%dim)  ! geo%atom(jatom)%f_vdw(1:sb%dim) = sum_i coeff_i * dvadrr_ij
       end do
     end do
@@ -434,6 +435,8 @@ contains
     SAFE_DEALLOCATE_A(r0ab)
     SAFE_DEALLOCATE_A(derivative_coeff)
     SAFE_DEALLOCATE_A(c6ab)
+
+    call profiling_out(prof)
 
     POP_SUB(vdw_ts_force_calculate)
   end subroutine vdw_ts_force_calculate

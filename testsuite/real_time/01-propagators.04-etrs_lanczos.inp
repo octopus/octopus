@@ -23,7 +23,7 @@ MoveIons = yes
 
 TDPropagator = etrs
 TDExponentialMethod = lanczos
-TDExponentialOrder = 24
+TDExpOrder = 24
 TDLanczosTol = 2.0e-4
 
 TDMaxSteps = 20
@@ -33,6 +33,4 @@ TDDeltaStrength = 0.01
 TDPolarizationDirection = 1
 
 TDEnergyUpdateIter = 1
-
-StatesMirror = yes
-
+StatesPack = yes

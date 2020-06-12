@@ -25,7 +25,7 @@ module atomic_oct_m
   use namespace_oct_m
   use profiling_oct_m
   use XC_F90(lib_m)
-
+use iso_c_binding
   implicit none
 
   private
@@ -295,11 +295,10 @@ contains
     integer :: IN, IN1, IN2, IR, IS, JN
     REAL_DOUBLE :: AUX(MAXR), D(NSPIN),                              &
       DGDM(-NN:NN), DGIDFJ(-NN:NN), DRDM, DVOL,                      &
-      F1, F2, GD(3,NSPIN), sigma(3), vxsigma(3), vcsigma(3),         &
-      EPSX, EPSC,                                                    &
+      F1, F2, GD(3,NSPIN), sigma(3), vxsigma(3), vcsigma(3),   &
+      EPSX(1), EPSC(1),                                              &
       DEXDD(NSPIN), DEXDGD(3,NSPIN), DECDD(NSPIN), DECDGD(3,NSPIN)
-    type(XC_F90(pointer_t)) :: x_conf, c_conf
-    type(XC_F90(pointer_t)) :: x_info, c_info
+    type(XC_F90(func_t)) :: x_conf, c_conf
 
     PUSH_SUB(atomxc)
 
@@ -317,18 +316,18 @@ contains
       write(message(1),'(a,a)') 'atomxc: Unknown functional ', FUNCTL
       call messages_fatal(1)
     ENDIF
-    
+
     ! initialize xc functional
     if(GGA) then
-      call XC_F90(func_init)(x_conf, x_info, XC_GGA_X_PBE, NSPIN)
-      call XC_F90(func_init)(c_conf, c_info, XC_GGA_C_PBE, NSPIN)
+      call XC_F90(func_init)(x_conf, XC_GGA_X_PBE, NSPIN)
+      call XC_F90(func_init)(c_conf, XC_GGA_C_PBE, NSPIN)
     else
-      call XC_F90(func_init)(x_conf, x_info, XC_LDA_X, NSPIN)
+      call XC_F90(func_init)(x_conf, XC_LDA_X, NSPIN)
       if(AUTHOR.EQ.'CA' .OR. AUTHOR.EQ.'ca' .OR.                                &
         AUTHOR.EQ.'PZ' .OR. AUTHOR.EQ.'pz') THEN
-        call XC_F90(func_init)(c_conf, c_info, XC_LDA_C_PZ, NSPIN)
+        call XC_F90(func_init)(c_conf, XC_LDA_C_PZ, NSPIN)
       else IF ( AUTHOR.EQ.'PW92' .OR. AUTHOR.EQ.'pw92' ) THEN
-        call XC_F90(func_init)(c_conf, c_info, XC_LDA_C_PW, NSPIN)
+        call XC_F90(func_init)(c_conf, XC_LDA_C_PW, NSPIN)
       else
         write(message(1),'(a,a)') 'LDAXC: Unknown author ', AUTHOR
         call messages_fatal(1)
@@ -426,11 +425,11 @@ contains
       ! Find exchange and correlation energy densities and their
       ! derivatives with respect to density and density gradient
       if (GGA) then
-        call XC_F90(gga_exc_vxc)(x_conf, 1, D(1), sigma(1), EPSX, DEXDD(1), vxsigma(1))
-        call XC_F90(gga_exc_vxc)(c_conf, 1, D(1), sigma(1), EPSC, DECDD(1), vcsigma(1))
+        call XC_F90(gga_exc_vxc)(x_conf, int(1, XC_SIZE_T), D, sigma, EPSX, DEXDD, vxsigma)
+        call XC_F90(gga_exc_vxc)(c_conf, int(1, XC_SIZE_T), D, sigma, EPSC, DECDD, vcsigma)
       else
-        call XC_F90(lda_exc_vxc)(x_conf, 1, D(1), EPSX, DEXDD(1))
-        call XC_F90(lda_exc_vxc)(c_conf, 1, D(1), EPSC, DECDD(1))
+        call XC_F90(lda_exc_vxc)(x_conf, int(1, XC_SIZE_T), D, EPSX, DEXDD)
+        call XC_F90(lda_exc_vxc)(c_conf, int(1, XC_SIZE_T), D, EPSC, DECDD)
       end if
       
       ! The derivatives of the exchange and correlation energies per particle with
@@ -450,10 +449,10 @@ contains
       ! Add contributions to exchange-correlation energy and its
       ! derivatives with respect to density at all points
       do is = 1, NSPIN
-        EX = EX + DVOL * D(IS) * EPSX
-        EC = EC + DVOL * D(IS) * EPSC
-        DX = DX + DVOL * D(IS) * (EPSX - DEXDD(IS))
-        DC = DC + DVOL * D(IS) * (EPSC - DECDD(IS))
+        EX = EX + DVOL * D(IS) * EPSX(1)
+        EC = EC + DVOL * D(IS) * EPSC(1)
+        DX = DX + DVOL * D(IS) * (EPSX(1) - DEXDD(IS))
+        DC = DC + DVOL * D(IS) * (EPSC(1) - DECDD(IS))
         if (GGA) then
           V_XC(IR,IS) = V_XC(IR,IS) + DVOL * ( DEXDD(IS) + DECDD(IS) )
           do IN = IN1,IN2
@@ -968,7 +967,7 @@ contains
     end do
     norm = norm/M_THREE
     srnrm = sqrt(norm)
-    do i=1,n
+    do i = 1,n
       g(i) = g(i)/srnrm
     end do
     

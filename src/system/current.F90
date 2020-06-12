@@ -52,6 +52,7 @@ module current_oct_m
   use unit_oct_m
   use unit_system_oct_m  
   use varinfo_oct_m
+  use wfs_elec_oct_m
   use xc_oct_m
   
   implicit none
@@ -79,6 +80,10 @@ module current_oct_m
     CURRENT_GRADIENT           = 1,       &
     CURRENT_GRADIENT_CORR      = 2,       &
     CURRENT_HAMILTONIAN        = 3
+
+  integer, parameter, public ::           &
+    EXTERNAL_CURRENT_PARSER      = 0,     &
+    EXTERNAL_CURRENT_TD_FUNCTION = 1
 
 contains
 
@@ -108,7 +113,7 @@ contains
     !%End
 
     call parse_variable(namespace, 'CurrentDensity', CURRENT_GRADIENT_CORR, this%method)
-    if(.not.varinfo_valid_option('CurrentDensity', this%method)) call messages_input_error('CurrentDensity')
+    if(.not.varinfo_valid_option('CurrentDensity', this%method)) call messages_input_error(namespace, 'CurrentDensity')
     if(this%method /= CURRENT_GRADIENT_CORR) then
       call messages_experimental("CurrentDensity /= gradient_corrected")
     end if
@@ -134,8 +139,8 @@ contains
     type(derivatives_t), intent(inout) :: der
     integer,             intent(in)    :: ik
     integer,             intent(in)    :: ib
-    type(batch_t),       intent(in)    :: psib
-    type(batch_t),       intent(in)    :: gpsib(:)
+    type(wfs_elec_t),    intent(in)    :: psib
+    type(wfs_elec_t),    intent(in)    :: gpsib(:)
     FLOAT,               intent(inout) :: current(:, :, :) !< current(1:der%mesh%np_part, 1:der%mesh%sb%dim, 1:st%d%nspin)
     FLOAT, pointer,      intent(inout) :: current_kpt(:, :, :) !< current(1:der%mesh%np, 1:der%mesh%sb%dim, kpt%start:kpt%end)
 
@@ -151,10 +156,7 @@ contains
     SAFE_ALLOCATE(psi(1:der%mesh%np_part, 1:st%d%dim))
     SAFE_ALLOCATE(gpsi(1:der%mesh%np_part, 1:st%d%dim))
 
-    SAFE_ALLOCATE(weight(1:psib%nst))
-    forall(ist = 1:psib%nst) weight(ist) = st%d%kweights(ik)*st%occ(psib%states(ist)%ist, ik)
- 
-    if(st%d%ispin == SPINORS .or. (batch_status(psib) == BATCH_DEVICE_PACKED .and. der%mesh%sb%dim /= 3)) then
+    if(st%d%ispin == SPINORS .or. (psib%status() == BATCH_DEVICE_PACKED .and. der%mesh%sb%dim /= 3)) then
 
       do idir = 1, der%mesh%sb%dim
         do ist = states_elec_block_min(st, ib), states_elec_block_max(st, ib)
@@ -163,7 +165,7 @@ contains
           if(abs(ww) <= M_EPSILON) cycle
 
           do idim = 1, st%d%dim
-            ii = batch_inv_index(st%group%psib(ib, ik), (/ist, idim/))
+            ii = st%group%psib(ib, ik)%inv_index((/ist, idim/))
             call batch_get_state(psib, ii, der%mesh%np, psi(:, idim))
             call batch_get_state(gpsib(idir), ii, der%mesh%np, gpsi(:, idim))
           end do
@@ -180,7 +182,7 @@ contains
               current(ip, idir, 1) = current(ip, idir, 1) + ww*aimag(conjg(psi(ip, 1))*gpsi(ip, 1))
               current(ip, idir, 2) = current(ip, idir, 2) + ww*aimag(conjg(psi(ip, 2))*gpsi(ip, 2))
               c_tmp = conjg(psi(ip, 1))*gpsi(ip, 2) - psi(ip, 2)*conjg(gpsi(ip, 1))
-              current(ip, idir, 3) = current(ip, idir, 3) + ww* real(c_tmp)
+              current(ip, idir, 3) = current(ip, idir, 3) + ww*TOFLOAT(c_tmp)
               current(ip, idir, 4) = current(ip, idir, 4) + ww*aimag(c_tmp)
             end do
             !$omp end parallel do
@@ -189,13 +191,19 @@ contains
         end do
       end do
 
-    else if(batch_status(psib) == BATCH_DEVICE_PACKED) then
+    else if(psib%status() == BATCH_DEVICE_PACKED) then
 
       ASSERT(der%mesh%sb%dim == 3)
-      
+
+      SAFE_ALLOCATE(weight(1:psib%nst))
+      do ist = 1, psib%nst
+        weight(ist) = st%d%kweights(ik)*st%occ(psib%ist(ist), ik)
+      end do
+
+
       call accel_create_buffer(buff_weight, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, psib%nst)
       call accel_write_buffer(buff_weight, psib%nst, weight)
-      
+
       call accel_create_buffer(buff_current, ACCEL_MEM_WRITE_ONLY, TYPE_FLOAT, der%mesh%np*3)
      
       call accel_kernel_start_call(kernel, 'density.cl', 'current_accumulate')
@@ -203,12 +211,12 @@ contains
       call accel_set_kernel_arg(kernel, 0, psib%nst)
       call accel_set_kernel_arg(kernel, 1, der%mesh%np)
       call accel_set_kernel_arg(kernel, 2, buff_weight)
-      call accel_set_kernel_arg(kernel, 3, psib%pack%buffer)
-      call accel_set_kernel_arg(kernel, 4, log2(psib%pack%size(1)))
-      call accel_set_kernel_arg(kernel, 5, gpsib(1)%pack%buffer)
-      call accel_set_kernel_arg(kernel, 6, gpsib(2)%pack%buffer)
-      call accel_set_kernel_arg(kernel, 7, gpsib(3)%pack%buffer)
-      call accel_set_kernel_arg(kernel, 8, log2(gpsib(1)%pack%size(1)))
+      call accel_set_kernel_arg(kernel, 3, psib%ff_device)
+      call accel_set_kernel_arg(kernel, 4, log2(psib%pack_size(1)))
+      call accel_set_kernel_arg(kernel, 5, gpsib(1)%ff_device)
+      call accel_set_kernel_arg(kernel, 6, gpsib(2)%ff_device)
+      call accel_set_kernel_arg(kernel, 7, gpsib(3)%ff_device)
+      call accel_set_kernel_arg(kernel, 8, log2(gpsib(1)%pack_size(1)))
       call accel_set_kernel_arg(kernel, 9, buff_current)
       
       wgsize = accel_kernel_workgroup_size(kernel)
@@ -231,20 +239,24 @@ contains
       
       call accel_release_buffer(buff_weight)
       call accel_release_buffer(buff_current)
+
+      SAFE_DEALLOCATE_A(weight)
       
     else
+
+      ASSERT(psib%is_packed() .eqv. gpsib(1)%is_packed())
 
       do ii = 1, psib%nst
         ist = states_elec_block_min(st, ib) + ii - 1
         ww = st%d%kweights(ik)*st%occ(ist, ik)
         if(abs(ww) <= M_EPSILON) cycle
 
-        if(batch_is_packed(psib)) then
+        if(psib%is_packed()) then
           do idir = 1, der%mesh%sb%dim
             !$omp parallel do
             do ip = 1, der%mesh%np
               current_kpt(ip, idir, ik) = current_kpt(ip, idir, ik) &
-                + ww*aimag(conjg(psib%pack%zpsi(ii, ip))*gpsib(idir)%pack%zpsi(ii, ip))
+                + ww*aimag(conjg(psib%zff_pack(ii, ip))*gpsib(idir)%zff_pack(ii, ip))
             end do
             !$omp end parallel do
           end do
@@ -253,7 +265,7 @@ contains
             !$omp parallel do
             do ip = 1, der%mesh%np
               current_kpt(ip, idir, ik) = current_kpt(ip, idir, ik) &
-                + ww*aimag(conjg(psib%states(ii)%zpsi(ip, 1))*gpsib(idir)%states(ii)%zpsi(ip, 1))
+                + ww*aimag(conjg(psib%zff(ip, 1, ii))*gpsib(idir)%zff(ip, 1, ii))
             end do
             !$omp end parallel do
           end do          
@@ -284,9 +296,8 @@ contains
     FLOAT, allocatable :: symmcurrent(:, :)
     type(profile_t), save :: prof
     type(symmetrizer_t) :: symmetrizer
-    type(batch_t) :: hpsib, rhpsib, rpsib, hrpsib, epsib
-    type(batch_t), allocatable :: commpsib(:)
-    logical, parameter :: hamiltonian_elec_current = .false.
+    type(wfs_elec_t) :: hpsib, rhpsib, rpsib, hrpsib, epsib
+    class(wfs_elec_t), allocatable :: commpsib(:)
     FLOAT :: ww
     CMPLX :: c_tmp
 
@@ -304,7 +315,7 @@ contains
     SAFE_ALLOCATE(rhpsi(1:der%mesh%np_part, 1:st%d%dim))
     SAFE_ALLOCATE(rpsi(1:der%mesh%np_part, 1:st%d%dim))
     SAFE_ALLOCATE(hrpsi(1:der%mesh%np_part, 1:st%d%dim))
-    SAFE_ALLOCATE(commpsib(1:der%mesh%sb%dim))
+    SAFE_ALLOCATE_TYPE_ARRAY(wfs_elec_t, commpsib, (1:der%mesh%sb%dim))
 
     current = M_ZERO
     current_kpt = M_ZERO
@@ -317,29 +328,29 @@ contains
         ispin = states_elec_dim_get_spin_index(st%d, ik)
         do ib = st%group%block_start, st%group%block_end
 
-          call batch_pack(st%group%psib(ib, ik), copy = .true.)
+          call st%group%psib(ib, ik)%do_pack(copy = .true.)
 
-          call batch_copy(st%group%psib(ib, ik), hpsib)
-          call batch_copy(st%group%psib(ib, ik), rhpsib)
-          call batch_copy(st%group%psib(ib, ik), rpsib)
-          call batch_copy(st%group%psib(ib, ik), hrpsib)
+          call st%group%psib(ib, ik)%copy_to(hpsib)
+          call st%group%psib(ib, ik)%copy_to(rhpsib)
+          call st%group%psib(ib, ik)%copy_to(rpsib)
+          call st%group%psib(ib, ik)%copy_to(hrpsib)
 
           call boundaries_set(der%boundaries, st%group%psib(ib, ik))
-          call zhamiltonian_elec_apply_batch(hm, namespace, der%mesh, st%group%psib(ib, ik), hpsib, ik, set_bc = .false.)
+          call zhamiltonian_elec_apply_batch(hm, namespace, der%mesh, st%group%psib(ib, ik), hpsib, set_bc = .false.)
 
           do idir = 1, der%mesh%sb%dim
 
             call batch_mul(der%mesh%np, der%mesh%x(:, idir), hpsib, rhpsib)
             call batch_mul(der%mesh%np_part, der%mesh%x(:, idir), st%group%psib(ib, ik), rpsib)
 
-            call zhamiltonian_elec_apply_batch(hm, namespace, der%mesh, rpsib, hrpsib, ik, set_bc = .false.)
+            call zhamiltonian_elec_apply_batch(hm, namespace, der%mesh, rpsib, hrpsib, set_bc = .false.)
 
             do ist = states_elec_block_min(st, ib), states_elec_block_max(st, ib)
               ww = st%d%kweights(ik)*st%occ(ist, ik)
               if(ww <= M_EPSILON) cycle
 
               do idim = 1, st%d%dim
-                ii = batch_inv_index(st%group%psib(ib, ik), (/ist, idim/))
+                ii = st%group%psib(ib, ik)%inv_index((/ist, idim/))
                 call batch_get_state(st%group%psib(ib, ik), ii, der%mesh%np, psi(:, idim))
                 call batch_get_state(hrpsib, ii, der%mesh%np, hrpsi(:, idim))
                 call batch_get_state(rhpsib, ii, der%mesh%np, rhpsi(:, idim))
@@ -361,7 +372,7 @@ contains
                     ww*aimag(conjg(psi(ip, 2))*hrpsi(ip, 2) - conjg(psi(ip, 2))*rhpsi(ip, 2))
                   c_tmp = conjg(psi(ip, 1))*hrpsi(ip, 2) - conjg(psi(ip, 1))*rhpsi(ip, 2) &
                     -psi(ip, 2)*conjg(hrpsi(ip, 1)) - psi(ip, 2)*conjg(rhpsi(ip, 1))
-                  current(ip, idir, 3) = current(ip, idir, 3) + ww* real(c_tmp)
+                  current(ip, idir, 3) = current(ip, idir, 3) + ww*TOFLOAT(c_tmp)
                   current(ip, idir, 4) = current(ip, idir, 4) + ww*aimag(c_tmp)
                 end do
                 !$omp end parallel do
@@ -371,12 +382,12 @@ contains
 
           end do
 
-          call batch_unpack(st%group%psib(ib, ik), copy = .false.)
+          call st%group%psib(ib, ik)%do_unpack(copy = .false.)
 
-          call batch_end(hpsib)
-          call batch_end(rhpsib)
-          call batch_end(rpsib)
-          call batch_end(hrpsib)
+          call hpsib%end()
+          call rhpsib%end()
+          call rpsib%end()
+          call hrpsib%end()
 
         end do
       end do
@@ -384,7 +395,7 @@ contains
     case(CURRENT_GRADIENT, CURRENT_GRADIENT_CORR)
 
       if(this%method == CURRENT_GRADIENT_CORR .and. .not. family_is_mgga_with_exc(hm%xc) &
-        .and. hm%lda_u_level == DFT_U_NONE .and. .not. der%mesh%sb%nonorthogonal) then
+        .and. hm%lda_u_level == DFT_U_NONE) then
 
         ! we can use the packed version
         
@@ -392,43 +403,34 @@ contains
           ispin = states_elec_dim_get_spin_index(st%d, ik)
           do ib = st%group%block_start, st%group%block_end
 
-            call batch_pack(st%group%psib(ib, ik), copy = .true.)
-            call batch_copy(st%group%psib(ib, ik), epsib)
+            call st%group%psib(ib, ik)%do_pack(copy = .true.)
+            call st%group%psib(ib, ik)%copy_to(epsib)
             call boundaries_set(der%boundaries, st%group%psib(ib, ik))
 
             if(associated(hm%hm_base%phase)) then
-              call zhamiltonian_elec_base_phase(hm%hm_base, der%mesh, der%mesh%np_part, ik, &
+              call zhamiltonian_elec_base_phase(hm%hm_base, der%mesh, der%mesh%np_part, &
                 conjugate = .false., psib = epsib, src = st%group%psib(ib, ik))
             else
-              call batch_copy_data(der%mesh%np_part, st%group%psib(ib, ik), epsib)
+              call st%group%psib(ib, ik)%copy_data_to(der%mesh%np_part, epsib)
             end if
 
-            !The call to individual derivatives_perfom routines returns the derivatives along
-            !the primitive axis in case of non-orthogonal cells, whereas the code expects derivatives
-            !along the Cartesian axis.
-            ASSERT(.not.der%mesh%sb%nonorthogonal)
+            ! this now takes non-orthogonal axis into account
             do idir = 1, der%mesh%sb%dim
-              call batch_copy(st%group%psib(ib, ik), commpsib(idir))
-              call zderivatives_batch_perform(der%grad(idir), der, epsib, commpsib(idir), set_bc = .false.)
+              call epsib%copy_to(commpsib(idir))
             end do
+            call zderivatives_batch_grad(der, epsib, commpsib, set_bc=.false.)
 
-            call zhamiltonian_elec_base_nlocal_position_commutator(hm%hm_base, der%mesh, st%d, ik, epsib, commpsib)
+            call zhamiltonian_elec_base_nlocal_position_commutator(hm%hm_base, der%mesh, st%d, epsib, commpsib)
 
-            if(associated(hm%hm_base%phase)) then
-              do idir = 1, der%mesh%sb%dim
-                call zhamiltonian_elec_base_phase(hm%hm_base, der%mesh, der%mesh%np_part, ik, conjugate = .true., &
-                  psib = commpsib(idir))
-              end do
-            end if
-            
-            call current_batch_accumulate(st, der, ik, ib, st%group%psib(ib, ik), commpsib, current, current_kpt)
+
+            call current_batch_accumulate(st, der, ik, ib, epsib, commpsib, current, current_kpt)
 
             do idir = 1, der%mesh%sb%dim
-              call batch_end(commpsib(idir))
+              call commpsib(idir)%end()
             end do
 
-            call batch_end(epsib)
-            call batch_unpack(st%group%psib(ib, ik), copy = .false.)
+            call epsib%end()
+            call st%group%psib(ib, ik)%do_unpack(copy = .false.)
 
           end do
         end do
@@ -505,7 +507,7 @@ contains
                   current(ip, idir, 2) = current(ip, idir, 2) + &
                     ww*aimag(conjg(psi(ip, 2))*gpsi(ip, idir, 2))
                   c_tmp = conjg(psi(ip, 1))*gpsi(ip, idir, 2) - psi(ip, 2)*conjg(gpsi(ip, idir, 1))
-                  current(ip, idir, 3) = current(ip, idir, 3) + ww* real(c_tmp)
+                  current(ip, idir, 3) = current(ip, idir, 3) + ww*TOFLOAT(c_tmp)
                   current(ip, idir, 4) = current(ip, idir, 4) + ww*aimag(c_tmp)
                 end do
                 !$omp end parallel do
@@ -802,16 +804,16 @@ contains
     !% Example:
     !%
     !% <tt>%UserDefinedMaxwellExternalCurrent
-    !% <br>&nbsp;&nbsp; external_current_parser      | "expression_x_dir1" | "expression_y_dir1" | "expression_z_dir1" 
-    !% <br>&nbsp;&nbsp; external_current_parser      | "expression_x_dir2" | "expression_y_dir2" | "expression_z_dir2" 
-    !% <br>&nbsp;&nbsp; external_current_td_function | "amplitude_j0_x"    | "amplitude_j0_y"    | "amplitude_j0_z"    | omega   | envelope_td_function_name | phase
+    !% <br>&nbsp;&nbsp; current_parser      | "expression_x_dir1" | "expression_y_dir1" | "expression_z_dir1"
+    !% <br>&nbsp;&nbsp; current_parser      | "expression_x_dir2" | "expression_y_dir2" | "expression_z_dir2"
+    !% <br>&nbsp;&nbsp; current_td_function | "amplitude_j0_x"    | "amplitude_j0_y"    | "amplitude_j0_z"    | omega   | envelope_td_function_name | phase
     !% <br>%</tt>
     !%
     !% Description about UserDefinedMaxwellExternalCurrent follows
     !%
-    !%Option external_current_parser 0
+    !%Option current_parser 0
     !% description follows
-    !%Option external_current_td_function 1
+    !%Option current_td_function 1
     !% description follows
     !%End
 
@@ -840,23 +842,23 @@ contains
 
         call parse_block_integer(blk, il - 1, 0, st%external_current_modus(il))
 
-        if (st%external_current_modus(il) == OPTION__USERDEFINEDMAXWELLEXTERNALCURRENT__EXTERNAL_CURRENT_PARSER) then
+        if (st%external_current_modus(il) == EXTERNAL_CURRENT_PARSER) then
           ! parse formula string
-          do idir = 1, st%d%dim
+          do idir = 1, st%dim
             call parse_block_string(blk, il - 1, idir, st%external_current_string(idir, il))
             call conv_to_C_string(st%external_current_string(idir, il))
           end do
-        else if (st%external_current_modus(il) == OPTION__USERDEFINEDMAXWELLEXTERNALCURRENT__EXTERNAL_CURRENT_TD_FUNCTION) then
+        else if (st%external_current_modus(il) == EXTERNAL_CURRENT_TD_FUNCTION) then
           do ip = 1, mesh%np
             call mesh_r(mesh, ip, rr, coords = xx)
-            do idir = 1, st%d%dim
+            do idir = 1, st%dim
               call parse_block_string(blk, il - 1, idir, st%external_current_string(idir, il))
               call conv_to_C_string(st%external_current_string(idir, il))
-              call parse_expression(j_vector(idir), dummy(idir), st%d%dim, xx, rr, M_ZERO, &
+              call parse_expression(j_vector(idir), dummy(idir), st%dim, xx, rr, M_ZERO, &
                 st%external_current_string(idir, il))
               j_vector(idir) = units_to_atomic(units_inp%energy/(units_inp%length**2), j_vector(idir))
             end do
-            st%external_current_amplitude(ip, 1:st%d%dim, il) = j_vector(1:st%d%dim)
+            st%external_current_amplitude(ip, 1:st%dim, il) = j_vector(1:st%dim)
           end do
           call parse_block_float(blk, il-1, 4, omega, unit_one/units_inp%time)
           st%external_current_omega(il) = omega
@@ -887,32 +889,32 @@ contains
     FLOAT,          intent(in)    :: time
     FLOAT,          intent(inout) :: current(:,:)
 
-    integer :: ip, jn, idir, il
-    FLOAT   :: xx(MAX_DIM), rr, tt, j_vector(MAX_DIM), dummy(MAX_DIM), omega, shift, width, amp(MAX_DIM)
+    integer :: ip, jn, idir
+    FLOAT   :: xx(MAX_DIM), rr, tt, j_vector(MAX_DIM), dummy(MAX_DIM), amp(MAX_DIM)
     CMPLX   :: exp_arg
 
     PUSH_SUB(external_current_calculation)
 
     current(:,:) = M_ZERO
     do jn = 1, st%external_current_number
-      if (st%external_current_modus(jn) == OPTION__USERDEFINEDMAXWELLEXTERNALCURRENT__EXTERNAL_CURRENT_PARSER) then
+      if (st%external_current_modus(jn) == EXTERNAL_CURRENT_PARSER) then
         do ip = 1, mesh%np
           call mesh_r(mesh, ip, rr, coords = xx)
-          do idir = 1, st%d%dim
+          do idir = 1, st%dim
             tt = time
-            call parse_expression(j_vector(idir), dummy(idir), st%d%dim, xx, rr, tt, &
+            call parse_expression(j_vector(idir), dummy(idir), st%dim, xx, rr, tt, &
               & trim(st%external_current_string(idir,jn)))
             j_vector(idir) = units_to_atomic(units_inp%energy/(units_inp%length**2), j_vector(idir))
           end do
-          current(ip, 1:st%d%dim) = current(ip, 1:st%d%dim) + j_vector(1:st%d%dim)
+          current(ip, 1:st%dim) = current(ip, 1:st%dim) + j_vector(1:st%dim)
         end do
 
-      else if(st%external_current_modus(jn) == OPTION__USERDEFINEDMAXWELLEXTERNALCURRENT__EXTERNAL_CURRENT_TD_FUNCTION) then
+      else if(st%external_current_modus(jn) == EXTERNAL_CURRENT_TD_FUNCTION) then
         do ip = 1, mesh%np
           exp_arg = st%external_current_omega(jn) * time + tdf(st%external_current_td_phase(jn),time)
-          amp(1:st%d%dim) = st%external_current_amplitude(ip, 1:st%d%dim, jn)*tdf(st%external_current_td_function(jn), time)
-          j_vector(1:st%d%dim) = real(amp(1:st%d%dim) * exp(-M_zI*exp_arg))
-          current(ip, 1:st%d%dim) = current(ip, 1:st%d%dim) + j_vector(1:st%d%dim)
+          amp(1:st%dim) = st%external_current_amplitude(ip, 1:st%dim, jn)*tdf(st%external_current_td_function(jn), time)
+          j_vector(1:st%dim) = TOFLOAT(amp(1:st%dim) * exp(-M_zI*exp_arg))
+          current(ip, 1:st%dim) = current(ip, 1:st%dim) + j_vector(1:st%dim)
         end do
       end if
     end do

@@ -97,7 +97,7 @@ subroutine X(output_modelmb) (outp, namespace, dir, gr, st, geo)
       "  ", mm, st%eigenval(mm,1), st%mmb_proj(mm), trim(youngstring)
 
     symmetries_satisfied = .true.
-    if (st%mmb_proj(mm) < 1.e-6) then
+    if (st%mmb_proj(mm) < CNST(1.e-6)) then
       symmetries_satisfied = .false.
     end if
 

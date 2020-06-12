@@ -1,6 +1,7 @@
 # -*- coding: utf-8 mode: shell-script -*-
 
 CalculationMode = opt_control
+StatesPack = yes
 
 ExperimentalFeatures = yes
 
@@ -32,7 +33,7 @@ stime  = 400.0
 dt = 0.01
 TDPropagator = exp_mid
 TDExponentialMethod = taylor
-TDExponentialOrder = 4
+TDExpOrder = 4
 TDLanczosTol = 1.0e-5
 TDPropagationTime = stime
 TDTimeStep = dt
@@ -72,4 +73,3 @@ electric_field | 1 | 0 | 0 | freq1 | "envelope_function"
 %
 
 DisableAccel = yes
-

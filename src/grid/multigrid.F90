@@ -174,13 +174,14 @@ contains
       
       call multigrid_mesh_half(geo, cv, mgrid%level(i-1)%mesh, mgrid%level(i)%mesh, stencil, namespace)
 
+      call derivatives_nullify(mgrid%level(i)%der)
       call derivatives_init(mgrid%level(i)%der, namespace, mesh%sb, cv%method /= CURV_METHOD_UNIFORM, order=order)
 
       call mesh_init_stage_3(mgrid%level(i)%mesh, namespace, stencil, mc, parent = mgrid%level(i - 1)%mesh)
 
       call multigrid_get_transfer_tables(mgrid%level(i)%tt, mgrid%level(i-1)%mesh, mgrid%level(i)%mesh)
 
-      call derivatives_build(mgrid%level(i)%der, mgrid%level(i)%mesh)
+      call derivatives_build(mgrid%level(i)%der, namespace, mgrid%level(i)%mesh)
 
       call mesh_write_info(mgrid%level(i)%mesh, stdout)
       

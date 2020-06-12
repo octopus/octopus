@@ -121,6 +121,10 @@ contains
     !%Section Output
     !%Description
     !% Determines if projected dos are computed or not.
+    !% At the moment, the PDOS is computed from the bare pseudo-atomic orbitals, directly taken from 
+    !% the pseudopotentials. The orbitals are not orthonormalized, in order to preserve their 
+    !% atomic orbitals character. As a consequence, the sum of the different PDOS does not integrate 
+    !% to the total DOS.
     !%End
     call parse_variable(namespace, 'DOSComputePDOS', .false., this%computepdos)
 
@@ -143,7 +147,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine dos_write_dos(this, dir, st, sb, geo, mesh, hm, namespace)
-    type(dos_t),              intent(in) :: this
+    type(dos_t),               intent(in) :: this
     character(len=*),         intent(in) :: dir
     type(states_elec_t),      intent(in) :: st
     type(simul_box_t),        intent(in) :: sb

@@ -137,8 +137,9 @@ subroutine X(states_elec_blockt_mul)(mesh, st, psi1_start, psi2_start, &
           SAFE_ALLOCATE(res_local(1:xpsi1_count(rank), 1:sendcnt))
 
           call profiling_in(C_PROFILING_BLOCKT_MM, 'BLOCKT_MM')
-          call lalg_gemmt(xpsi1_count(rank), sendcnt, mesh%np*st%d%dim, R_TOTYPE(mesh%vol_pp(1)), &
-            psi1_block, sendbuf, R_TOTYPE(M_ZERO), res_local)
+          call blas_gemm('C', 'N', xpsi1_count(rank), sendcnt, mesh%np*st%d%dim, &
+               R_TOTYPE(mesh%vol_pp(1)), psi1_block(1, 1, 1), mesh%np*st%d%dim, &
+               sendbuf(1, 1, 1), mesh%np*st%d%dim, R_TOTYPE(M_ZERO), res_local(1, 1), xpsi1_count(rank))
           call profiling_out(C_PROFILING_BLOCKT_MM)
 
           call profiling_in(C_PROFILING_BLOCKT_CP, 'BLOCKT_CP')
@@ -175,30 +176,27 @@ subroutine X(states_elec_blockt_mul)(mesh, st, psi1_start, psi2_start, &
   else ! No states parallelization.
 
     if(present(xpsi1)) then
-      call batch_init(psi1b, st%d%dim, psi1_col)
+      call X(batch_init)(psi1b, st%d%dim, 1, psi1_col, ubound(psi1, dim=1))
       do ii = 1, psi1_col
-        call batch_add_state(psi1b, ii, psi1(:, :, xpsi1(ii)))
+        call batch_set_state(psi1b, ii, ubound(psi1, dim=1), psi1(:, :, xpsi1(ii)))
       end do
     else
       call batch_init(psi1b, st%d%dim, 1, psi1_col, psi1(:, :, :))
     end if
 
     if(present(xpsi2)) then
-      call batch_init(psi2b, st%d%dim, psi2_col)
+      call X(batch_init)(psi2b, st%d%dim, 1, psi2_col, ubound(psi2, dim=1))
       do ii = 1, psi2_col
-        call batch_add_state(psi2b, ii, psi2(:, :, xpsi2(ii)))
+        call batch_set_state(psi2b, ii, ubound(psi2, dim=1), psi2(:, :, xpsi2(ii)))
       end do
     else
       call batch_init(psi2b, st%d%dim, 1, psi2_col, psi2(:, :, :))
     end if
 
-    ASSERT(batch_is_ok(psi1b))
-    ASSERT(batch_is_ok(psi2b))
-
     call X(mesh_batch_dotp_matrix)(mesh, psi1b, psi2b, res, symm = symm_)
     
-    call batch_end(psi1b)
-    call batch_end(psi2b)
+    call psi1b%end()
+    call psi2b%end()
 
   end if
   SAFE_DEALLOCATE_P(xpsi1_)
@@ -334,7 +332,7 @@ subroutine X(states_elec_block_matr_mul_add)(mesh, st, alpha, psi_start, res_sta
           matr_col_offset+1:matr_col_offset+xres_count(rank))
         call profiling_out(C_PROFILING_BLOCK_MATR_CP)
         call profiling_in(C_PROFILING_BLOCK_MATR_MM, 'BLOCK_MATR_MM')
-        call lalg_gemm(mesh%np * st%d%dim, xres_count(rank), sendcnt, alpha, &
+        call lalg_gemm(mesh%np, st%d%dim, xres_count(rank), sendcnt, alpha, &
           sendbuf, matr_block, R_TOTYPE(M_ONE), res_block)
         call profiling_out(C_PROFILING_BLOCK_MATR_MM)
       end if
@@ -369,7 +367,9 @@ subroutine X(states_elec_block_matr_mul_add)(mesh, st, alpha, psi_start, res_sta
     ! matr_block is needed because matr may be an assumed-shape array.
     SAFE_ALLOCATE(matr_block(1:psi_col, 1:matr_col))
     matr_block = matr
-    call lalg_gemm(mesh%np * st%d%dim, matr_col, psi_col, alpha, &
+    
+    ASSERT(matr_col == res_col)
+    call lalg_gemm(mesh%np, st%d%dim, matr_col, psi_col, alpha, &
       psi_block, matr_block, beta, res_block)
     SAFE_DEALLOCATE_A(matr_block)
 

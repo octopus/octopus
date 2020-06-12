@@ -186,9 +186,14 @@ module accel_oct_m
   type(accel_kernel_t), public, target, save :: kernel_density_complex
   type(accel_kernel_t), public, target, save :: kernel_density_spinors
   type(accel_kernel_t), public, target, save :: kernel_phase
+  type(accel_kernel_t), public, target, save :: kernel_phase_spiral
   type(accel_kernel_t), public, target, save :: dkernel_dot_matrix
   type(accel_kernel_t), public, target, save :: zkernel_dot_matrix
   type(accel_kernel_t), public, target, save :: zkernel_dot_matrix_spinors
+  type(accel_kernel_t), public, target, save :: dkernel_batch_axpy
+  type(accel_kernel_t), public, target, save :: zkernel_batch_axpy
+  type(accel_kernel_t), public, target, save :: dkernel_batch_dotp
+  type(accel_kernel_t), public, target, save :: zkernel_batch_dotp
   type(accel_kernel_t), public, target, save :: dzmul
   type(accel_kernel_t), public, target, save :: zzmul
   type(accel_kernel_t), public, target, save :: set_one
@@ -579,6 +584,10 @@ contains
     call accel_kernel_start_call(kernel_vpsi_spinors, 'vpsi.cl', "vpsi_spinors")
     call accel_kernel_start_call(kernel_daxpy, 'axpy.cl', "daxpy", flags = '-DRTYPE_DOUBLE')
     call accel_kernel_start_call(kernel_zaxpy, 'axpy.cl', "zaxpy", flags = '-DRTYPE_COMPLEX')
+    call accel_kernel_start_call(dkernel_batch_axpy, 'axpy.cl', "dbatch_axpy_function", flags = '-lineinfo -DRTYPE_DOUBLE')
+    call accel_kernel_start_call(zkernel_batch_axpy, 'axpy.cl', "zbatch_axpy_function", flags = '-lineinfo -DRTYPE_COMPLEX')
+    call accel_kernel_start_call(dkernel_batch_dotp, 'mesh_batch_single.cl', "dbatch_mf_dotp", flags = '-lineinfo')
+    call accel_kernel_start_call(zkernel_batch_dotp, 'mesh_batch_single.cl', "zbatch_mf_dotp", flags = '-lineinfo')
     call accel_kernel_start_call(dpack, 'pack.cl', "dpack")
     call accel_kernel_start_call(zpack, 'pack.cl', "zpack")
     call accel_kernel_start_call(dunpack, 'pack.cl', "dunpack")
@@ -592,6 +601,8 @@ contains
     call accel_kernel_start_call(dkernel_dot_matrix, 'mesh_batch.cl', "ddot_matrix")
     call accel_kernel_start_call(zkernel_dot_matrix, 'mesh_batch.cl', "zdot_matrix")
     call accel_kernel_start_call(zkernel_dot_matrix_spinors, 'mesh_batch.cl', "zdot_matrix_spinors")
+
+    
     call accel_kernel_start_call(dzmul, 'mul.cl', "dzmul", flags = '-DRTYPE_DOUBLE')
     call accel_kernel_start_call(zzmul, 'mul.cl', "zzmul", flags = '-DRTYPE_COMPLEX')
 
@@ -861,7 +872,7 @@ contains
       call messages_write(volume_hits + volume_misses, fmt = 'f18.1', units = unit_gigabytes, align_left = .true., &
         new_line = .true.)
       call messages_write('    Hit ratio                =')
-      call messages_write(hits/dble(hits + misses)*100, fmt='(f6.1)', align_left = .true.)
+      call messages_write(hits/TOFLOAT(hits + misses)*100, fmt='(f6.1)', align_left = .true.)
       call messages_write('%', new_line = .true.)
       call messages_write('    Volume hit ratio         =')
       call messages_write(volume_hits/(volume_hits + volume_misses)*100, fmt='(f6.1)', align_left = .true.)
@@ -897,7 +908,7 @@ contains
       
       if(buffer_alloc_count /= 0) then
         call messages_write('Accel:')
-        call messages_write(real(allocated_mem, REAL_PRECISION), fmt = 'f12.1', units = unit_megabytes, align_left = .true.)
+        call messages_write(TOFLOAT(allocated_mem), fmt = 'f12.1', units = unit_megabytes, align_left = .true.)
         call messages_write(' in ')
         call messages_write(buffer_alloc_count)
         call messages_write(' buffers were not deallocated.')
@@ -1072,13 +1083,15 @@ contains
 
     ! no push_sub, called too frequently
     
+    if(accel_is_enabled()) then
 #ifdef HAVE_OPENCL
-    call clFinish(accel%command_queue, ierr)
-    if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, 'clFinish') 
+      call clFinish(accel%command_queue, ierr)
+      if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, 'clFinish')
 #endif
 #ifdef HAVE_CUDA
-    call cuda_context_synchronize()
+      call cuda_context_synchronize()
 #endif
+    end if
   end subroutine accel_finish
 
   ! ------------------------------------------
@@ -1125,8 +1138,8 @@ contains
     size_in_bytes = int(size, 8)*types_get_size(type)
 
     if(size_in_bytes > accel%local_memory_size) then
-      write(message(1), '(a,f12.6,a)') "CL Error: requested local memory: ", dble(size_in_bytes)/1024.0, " Kb"
-      write(message(2), '(a,f12.6,a)') "          available local memory: ", dble(accel%local_memory_size)/1024.0, " Kb"
+      write(message(1), '(a,f12.6,a)') "CL Error: requested local memory: ", TOFLOAT(size_in_bytes)/1024.0, " Kb"
+      write(message(2), '(a,f12.6,a)') "          available local memory: ", TOFLOAT(accel%local_memory_size)/1024.0, " Kb"
       call messages_fatal(2)
     else if(size_in_bytes <= 0) then
       write(message(1), '(a,i10)') "CL Error: invalid local memory size: ", size_in_bytes
@@ -1208,16 +1221,18 @@ contains
   integer function accel_kernel_workgroup_size(kernel) result(workgroup_size)
     type(accel_kernel_t), intent(inout) :: kernel
 
-    integer(8) :: workgroup_size8
 #ifdef HAVE_OPENCL
+    integer(8) :: workgroup_size8
     integer :: ierr
 #endif
+
+    workgroup_size = 0
 
 #ifdef HAVE_OPENCL
     call clGetKernelWorkGroupInfo(kernel%kernel, accel%device%cl_device, CL_KERNEL_WORK_GROUP_SIZE, workgroup_size8, ierr)
     if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "EnqueueNDRangeKernel")
-#endif
     workgroup_size = workgroup_size8
+#endif
 
 #ifdef HAVE_CUDA
     workgroup_size = accel%max_workgroup_size
@@ -1641,8 +1656,8 @@ contains
     integer :: itime
     integer, parameter :: times = 10
     integer :: size
-    real(8) :: time, stime
-    real(8) :: read_bw, write_bw
+    FLOAT   :: time, stime
+    FLOAT   :: read_bw, write_bw
     type(accel_mem_t) :: buff
     FLOAT, allocatable :: data(:)
 
@@ -1666,9 +1681,9 @@ contains
         call accel_write_buffer(buff, size, data)
         call accel_finish()
       end do
-      time = (loct_clock() - stime)/dble(times)
+      time = (loct_clock() - stime)/TOFLOAT(times)
 
-      write_bw = dble(size)*8.0_8/time
+      write_bw = TOFLOAT(size)*CNST(8.0)/time
 
       stime = loct_clock()
       do itime = 1, times
@@ -1676,12 +1691,12 @@ contains
       end do
       call accel_finish()
 
-      time = (loct_clock() - stime)/dble(times)
-      read_bw = dble(size)*8.0_8/time
+      time = (loct_clock() - stime)/TOFLOAT(times)
+      read_bw = TOFLOAT(size)*CNST(8.0)/time
 
-      call messages_write(size*8.0_8/1024.0**2)
-      call messages_write(write_bw/1024.0**2, fmt = '(f10.1)')
-      call messages_write(read_bw/1024.0**2, fmt = '(f10.1)')
+      call messages_write(size*CNST(8.0)/CNST(1024.0)**2)
+      call messages_write(write_bw/CNST(1024.0)**2, fmt = '(f10.1)')
+      call messages_write(read_bw/CNST(1024.0)**2, fmt = '(f10.1)')
       call messages_info()
 
       call accel_release_buffer(buff)
@@ -1752,7 +1767,7 @@ contains
     character(len=1000) :: all_flags
     type(c_ptr) :: cuda_module
 #endif
-    
+   
     PUSH_SUB(accel_kernel_build)
 
     call profiling_in(prof, "ACCEL_COMPILE", exclude = .true.)
@@ -1854,6 +1869,7 @@ contains
   integer pure function accel_max_size_per_dim(dim) result(size)
     integer, intent(in) :: dim
 
+    size = 0
 #ifdef HAVE_OPENCL
     size = 2**30
 #endif
@@ -1870,10 +1886,12 @@ contains
 
     PUSH_SUB(accel_set_stream)
 
+    if(accel_is_enabled()) then
 #ifdef HAVE_CUDA
-    call cuda_set_stream(accel%cuda_stream, stream_number)
-    call cublas_set_stream(accel%cublas_handle, accel%cuda_stream)
+      call cuda_set_stream(accel%cuda_stream, stream_number)
+      call cublas_set_stream(accel%cublas_handle, accel%cuda_stream)
 #endif
+    end if
 
     POP_SUB(accel_set_stream)
   end subroutine accel_set_stream

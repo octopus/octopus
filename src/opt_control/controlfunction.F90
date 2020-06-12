@@ -249,7 +249,7 @@ contains
     !%End
     call parse_variable(namespace, 'OCTControlFunctionRepresentation', ctr_rt, cf_common%representation)
       if(.not.varinfo_valid_option('OCTControlFunctionRepresentation', cf_common%representation)) &
-        call messages_input_error('OCTControlFunctionRepresentation')
+        call messages_input_error(namespace, 'OCTControlFunctionRepresentation')
       select case(cf_common%representation)
       case(ctr_fourier_series_h)
         write(message(1), '(a)') 'Info: The OCT control functions will be represented as a Fourier series,'
@@ -352,9 +352,9 @@ contains
     !%End
     call parse_variable(namespace, 'OCTControlFunctionType', controlfunction_mode_epsilon, cf_common%mode)
     if(.not.varinfo_valid_option('OCTControlFunctionType', cf_common%mode)) &
-      call messages_input_error('OCTControlFunctionType')
+      call messages_input_error(namespace, 'OCTControlFunctionType')
     if(cf_common%representation == ctr_rt .and. (cf_common%mode /= controlfunction_mode_epsilon) ) &
-      call messages_input_error('OCTControlFunctionType')
+      call messages_input_error(namespace, 'OCTControlFunctionType')
     call messages_print_var_option(stdout, 'OCTControlFunctionType', cf_common%mode)
 
 
@@ -453,11 +453,11 @@ contains
       ! We have a block
       ncols = parse_block_cols(blk, 0)
       if(ncols /= cf_common%no_controlfunctions) then
-        call messages_input_error('OCTPenalty')
+        call messages_input_error(namespace, 'OCTPenalty')
       else
         do ipar = 1, ncols
           call parse_block_float(blk, 0, ipar - 1, cf_common%alpha(ipar))
-          if(cf_common%alpha(ipar) <= M_ZERO) call messages_input_error('OCTPenalty')
+          if(cf_common%alpha(ipar) <= M_ZERO) call messages_input_error(namespace, 'OCTPenalty')
         end do
       end if
     else
@@ -493,7 +493,7 @@ contains
       end if
 
       no_lines = parse_block_n(blk)
-      if(no_lines /= cf_common%no_controlfunctions) call messages_input_error('OCTLaserEnvelope')
+      if(no_lines /= cf_common%no_controlfunctions) call messages_input_error(namespace, 'OCTLaserEnvelope')
 
       do irow = 1, no_lines
         call parse_block_string(blk, irow - 1, 0, expression)
@@ -540,9 +540,8 @@ contains
   !! to be initialized, either by calling controlfunction_init, or
   !! by copying another initialized variable through
   !! controlfunction_copy.
-  subroutine controlfunction_init(cp, namespace, dt, ntiter)
+  subroutine controlfunction_init(cp, dt, ntiter)
     type(controlfunction_t), intent(inout) :: cp
-    type(namespace_t),       intent(in)    :: namespace
     FLOAT,                   intent(in)    :: dt
     integer,                 intent(in)    :: ntiter
 
@@ -634,7 +633,7 @@ contains
     end if
 
     ! Construct the transformation matrix, if needed.
-    call controlfunction_trans_matrix(cp, namespace)
+    call controlfunction_trans_matrix(cp)
 
     POP_SUB(controlfunction_init)
   end subroutine controlfunction_init
@@ -844,19 +843,6 @@ contains
 
 
   ! ---------------------------------------------------------
-  FLOAT function controlfunction_dotp(xx, yy) result(res)
-    FLOAT, intent(in) :: xx(:)
-    FLOAT, intent(in) :: yy(:)
-
-    PUSH_SUB(controlfunction_dotp)
-    res = sum(xx(:) * yy(:))
-
-    POP_SUB(controlfunction_dotp)
-  end function controlfunction_dotp
-  ! ---------------------------------------------------------
-
-
-  ! ---------------------------------------------------------
   subroutine controlfunction_apply_envelope(cp)
     type(controlfunction_t), intent(inout) :: cp
     integer :: ipar, iter
@@ -1048,7 +1034,7 @@ contains
             ez = ez * ezdt
           end do
           ft = ft * dt
-          write(iunit,'(3es20.8e3)') ww, real(ft), aimag(ft)
+          write(iunit,'(3es20.8e3)') ww, TOFLOAT(ft), aimag(ft)
         end do
         call io_close(iunit)
       end do
@@ -1077,7 +1063,7 @@ contains
           ez = ez * ezdt
         end do
         ft = ft * dt
-        write(iunit,'(3es20.8e3)') ww, real(ft), aimag(ft)
+        write(iunit,'(3es20.8e3)') ww, TOFLOAT(ft), aimag(ft)
       end do
 
       call io_close(iunit)
@@ -1162,7 +1148,7 @@ contains
         do iter = 1, tdf_niter(ff) + 1
           time = (iter - 1) * tdf_dt(ff)
           fi = tdf(par_%f(ipar), iter)
-          tdp = sqrt(real(tdf(cf_common%td_penalty(ipar), iter), kind=REAL_PRECISION))
+          tdp = sqrt(TOFLOAT(tdf(cf_common%td_penalty(ipar), iter)))
           call tdf_set_numerical(ff, iter, fi * tdp)
         end do
         integral = integral + tdf_dot_product(ff, ff)
@@ -1175,7 +1161,7 @@ contains
         do iter = 1, tdf_niter(ff) + 1
           time = (iter - 1) * tdf_dt(ff)
           fi = tdf(par_%f(ipar), iter)
-          tdp = sqrt(real(tdf(cf_common%td_penalty(ipar), iter)))
+          tdp = sqrt(TOFLOAT(tdf(cf_common%td_penalty(ipar), iter)))
           call tdf_set_numerical(ff, iter, fi * tdp * cos(par_%w0 * time))
         end do
         integral = integral + tdf_dot_product(ff, ff)
@@ -1506,9 +1492,8 @@ contains
 
   !> controlfunction_der computes the derivative of a controlfunction with respect
   !! to one of its degrees of freedom.
-  subroutine controlfunction_der(par, namespace, depsilon, i)
+  subroutine controlfunction_der(par, depsilon, i)
     type(controlfunction_t), intent(in)    :: par
-    type(namespace_t),       intent(in)    :: namespace
     type(tdf_t),             intent(inout) :: depsilon
     integer,                 intent(in)    :: i
 
@@ -1529,9 +1514,8 @@ contains
 
   !> controlfunction_gradient computes the (minus the) gradient of the
   !! J functional with respect to the parameters.
-  subroutine controlfunction_gradient(par, namespace, par_output, grad)
+  subroutine controlfunction_gradient(par, par_output, grad)
     type(controlfunction_t), intent(in)    :: par, par_output
-    type(namespace_t),       intent(in)    :: namespace
     FLOAT,                   intent(inout) :: grad(:)
 
     integer :: jj
@@ -1548,7 +1532,7 @@ contains
     case(ctr_fourier_series, ctr_zero_fourier_series)
       do jj = 1, par%dof
         call tdf_copy(depsilon, par%f(1))
-        call controlfunction_der(par, namespace, depsilon, jj)
+        call controlfunction_der(par, depsilon, jj)
         grad(jj) = M_TWO * controlfunction_alpha(par, 1) * sum(par%u(jj, :)*par%theta(:)) &
                  - tdf_dot_product(par_output%f(1), depsilon)
         call tdf_end(depsilon)
@@ -1557,7 +1541,7 @@ contains
     case(ctr_fourier_series_h, ctr_zero_fourier_series_h)
       do jj = 1, par%dof
         call tdf_copy(depsilon, par%f(1))
-        call controlfunction_der(par, namespace, depsilon, jj)
+        call controlfunction_der(par, depsilon, jj)
         grad(jj) = - tdf_dot_product(par_output%f(1), depsilon)
         call tdf_end(depsilon)
       end do

@@ -162,6 +162,7 @@ contains
     gr => sys%gr
 
     psi => opt_control_point_qs(qcpsi)
+    if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call psi%pack()
     call opt_control_get_classical(sys%geo, qcpsi)
 
     if(write_iter_) then
@@ -189,7 +190,7 @@ contains
     if(target_type(tg) == oct_tg_velocity .or. target_type(tg) == oct_tg_hhgnew) then
        SAFE_ALLOCATE(x_initial(1:sys%geo%natoms, 1:gr%mesh%sb%dim))
        vel_target_ = .true.
-       do iatom=1, sys%geo%natoms
+       do iatom = 1, sys%geo%natoms
           sys%geo%atom(iatom)%f(1:MAX_DIM) = M_ZERO
           sys%geo%atom(iatom)%v(1:MAX_DIM) = M_ZERO
           x_initial(iatom, 1:gr%mesh%sb%dim) = sys%geo%atom(iatom)%x(1:gr%mesh%sb%dim)
@@ -255,7 +256,7 @@ contains
     call messages_info(1)
 
     if(vel_target_) then
-       do iatom=1, sys%geo%natoms
+       do iatom = 1, sys%geo%natoms
           sys%geo%atom(iatom)%x(1:gr%mesh%sb%dim) = x_initial(iatom, 1:gr%mesh%sb%dim)
        end do
        SAFE_DEALLOCATE_A(x_initial)
@@ -264,6 +265,7 @@ contains
     call opt_control_set_classical(sys%geo, qcpsi)
 
     if(write_iter_) call td_write_end(write_handler)
+    if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call psi%unpack()
     nullify(psi)
     POP_SUB(propagate_forward)
   end subroutine propagate_forward
@@ -291,6 +293,7 @@ contains
 
     gr => sys%gr
     psi => opt_control_point_qs(qcpsi)
+    if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call psi%pack()
 
     call hamiltonian_elec_adjoint(sys%hm)
 
@@ -321,6 +324,7 @@ contains
       if(mod(istep, 100) == 0 .and. mpi_grp_is_root(mpi_world)) call loct_progress_bar(td%max_iter - istep + 1, td%max_iter)
     end do
 
+    if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call psi%unpack()
     nullify(psi)
     POP_SUB(propagate_backward)
   end subroutine propagate_backward
@@ -385,6 +389,7 @@ contains
     if(aux_fwd_propagation) then
       call states_elec_copy(psi2, psi)
       call controlfunction_copy(par_prev, par)
+      if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call psi2%pack()
     end if
 
     ! setup forward propagation
@@ -407,6 +412,9 @@ contains
       message(1) = "Unable to read OCT states restart."
       call messages_fatal(1)
     end if
+
+    if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call psi%pack()
+    if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call chi%pack()
 
     do i = 1, td%max_iter
       call update_field(i, par, gr, sys%hm, sys%geo, qcpsi, qcchi, par_chi, dir = 'f')
@@ -447,6 +455,7 @@ contains
     if(aux_fwd_propagation) call propagator_end(tr_psi2)
     call states_elec_end(chi)
     call propagator_end(tr_chi)
+    if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call psi%unpack()
     nullify(psi)
     nullify(chi)
     POP_SUB(fwd_step)
@@ -502,6 +511,8 @@ contains
       message(1) = "Unable to read OCT states restart."
       call messages_fatal(1)
     end if
+    if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call psi%pack()
+    if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call chi%pack()
 
     call density_calc(psi, gr, psi%rho)
     call v_ks_calc(sys%ks, sys%namespace, sys%hm, psi, sys%geo)
@@ -543,6 +554,7 @@ contains
     call controlfunction_to_basis(par_chi)
     call states_elec_end(psi)
     call propagator_end(tr_chi)
+    if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call chi%unpack()
     nullify(chi)
     nullify(psi)
     POP_SUB(bwd_step)
@@ -626,6 +638,8 @@ contains
     end if
 
     call states_elec_copy(st_ref, psi)
+    if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call psi%pack()
+    if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call st_ref%pack()
 
     if(ion_dynamics_ions_move(td%ions)) &
       call forces_calculate(gr, sys%namespace, sys%geo, sys%hm, psi, sys%ks, t = td%max_iter*abs(td%dt), dt = td%dt)
@@ -674,7 +688,7 @@ contains
 
         do ik = psi%d%kpt%start, psi%d%kpt%end
           do ib = psi%group%block_start, psi%group%block_end
-            call batch_copy_data(sys%gr%mesh%np, psi%group%psib(ib, ik), st_ref%group%psib(ib, ik))
+            call psi%group%psib(ib, ik)%copy_data_to(sys%gr%mesh%np, st_ref%group%psib(ib, ik))
           end do
         end do
 
@@ -690,9 +704,9 @@ contains
 
         do ik = psi%d%kpt%start, psi%d%kpt%end
           do ib = psi%group%block_start, psi%group%block_end
-            call batch_scal(sys%gr%mesh%np, cmplx(M_HALF, M_ZERO, REAL_PRECISION), &
+            call batch_scal(sys%gr%mesh%np, TOCMPLX(M_HALF, M_ZERO), &
               st_ref%group%psib(ib, ik))
-            call batch_axpy(sys%gr%mesh%np, cmplx(M_HALF, M_ZERO, REAL_PRECISION), &
+            call batch_axpy(sys%gr%mesh%np, TOCMPLX(M_HALF, M_ZERO), &
               psi%group%psib(ib, ik), st_ref%group%psib(ib, ik))
           end do
         end do
@@ -1021,17 +1035,23 @@ contains
 
       call states_elec_get_state(psi, gr%mesh, 1, 1, zpsi)
       call states_elec_get_state(chi, gr%mesh, 1, 1, zchi)
-      
+
       d1 = zmf_dotp(gr%mesh, psi%d%dim, zpsi, zchi)
-      forall(j = 1:no_parameters) d(j) = aimag(d1*dl(j)) / controlfunction_alpha(cp, j)
+      do j = 1, no_parameters
+        d(j) = aimag(d1*dl(j)) / controlfunction_alpha(cp, j)
+      end do
 
       SAFE_DEALLOCATE_A(zpsi)
       SAFE_DEALLOCATE_A(zchi)
-      
+
     elseif(gradients_) then
-      forall(j = 1:no_parameters) d(j) = M_TWO * aimag(dl(j))
+      do j = 1, no_parameters
+        d(j) = M_TWO * aimag(dl(j))
+      end do
     else
-      forall(j = 1:no_parameters) d(j) = aimag(dl(j)) / controlfunction_alpha(cp, j) 
+      do j = 1, no_parameters
+        d(j) = aimag(dl(j)) / controlfunction_alpha(cp, j)
+      end do
     end if
 
     ! This is for the classical target.
@@ -1039,7 +1059,7 @@ contains
       pol = laser_polarization(hm%ep%lasers(1))
       do iatom = 1, geo%natoms
         d(1) = d(1) - species_zval(geo%atom(iatom)%species) * &
-          real(sum(pol(1:gr%sb%dim)*q(iatom, 1:gr%sb%dim)), REAL_PRECISION)
+          TOFLOAT(sum(pol(1:gr%sb%dim)*q(iatom, 1:gr%sb%dim)))
       end do
     end if
 
@@ -1085,7 +1105,7 @@ contains
     SAFE_ALLOCATE(prop%iter(1:prop%number_checkpoints+2))
     prop%iter(1) = 0
     do j = 1, prop%number_checkpoints
-      prop%iter(j+1) = nint( real(niter_)/(prop%number_checkpoints+1) * j)
+      prop%iter(j+1) = nint( TOFLOAT(niter_)/(prop%number_checkpoints+1) * j)
     end do
     prop%iter(prop%number_checkpoints+2) = niter_
 

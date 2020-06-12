@@ -58,6 +58,35 @@ module sort_oct_m
     module procedure dshellsort2, zshellsort2, ishellsort2
   end interface sort
 
+  !> from sort_low.cc
+  interface
+    subroutine dsort1(size, array)
+      implicit none
+      integer, intent(in)    :: size
+      FLOAT,   intent(inout) :: array(*)
+    end subroutine dsort1
+
+    subroutine dsort2(size, array, indices)
+      implicit none
+      integer, intent(in)    :: size
+      FLOAT,   intent(inout) :: array(*)
+      integer, intent(out)   :: indices(*)
+    end subroutine dsort2
+
+    subroutine isort1(size, array)
+      implicit none
+      integer, intent(in)    :: size
+      integer, intent(inout) :: array(*)
+    end subroutine isort1
+
+    subroutine isort2(size, array, indices)
+      implicit none
+      integer, intent(in)    :: size
+      integer, intent(inout) :: array(*)
+      integer, intent(out)   :: indices(*)
+    end subroutine isort2
+  end interface
+
 contains
 
   ! ---------------------------------------------------------
@@ -70,9 +99,9 @@ contains
     if(size(a) > 0) then
       
       if(.not. present(ind)) then
-        call dsort1(size(a), a(1))
+        call dsort1(size(a), a)
       else
-        call dsort2(size(a), a(1), ind(1))
+        call dsort2(size(a), a, ind)
       end if
 
     end if
@@ -92,9 +121,9 @@ contains
     if(size(a) > 0) then
       
       if(.not. present(ind)) then
-        call isort1(size(a), a(1))
+        call isort1(size(a), a)
       else
-        call isort2(size(a), a(1), ind(1))
+        call isort2(size(a), a, ind)
       end if
       
     end if

@@ -71,8 +71,11 @@ subroutine X(forces_from_local_potential)(gr, namespace, geo, ep, gdensity, forc
   R_TYPE, pointer     :: zvloc(:)
   integer             :: ip, idir, iatom
   R_TYPE, allocatable  :: force_tmp(:,:)
+  type(profile_t), save :: prof
  
   PUSH_SUB(X(forces_from_local_potential))
+
+  call profiling_in(prof, "FORCES_LOCAL_POT")
 
   SAFE_ALLOCATE(vloc(1:gr%mesh%np))
   SAFE_ALLOCATE(zvloc(1:gr%mesh%np))
@@ -89,7 +92,9 @@ subroutine X(forces_from_local_potential)(gr, namespace, geo, ep, gdensity, forc
     vloc(1:gr%mesh%np) = M_ZERO
     call epot_local_potential(ep, namespace, gr%der, gr%dgrid, geo, iatom, vloc)
 
-    forall(ip = 1:gr%mesh%np) zvloc(ip) = vloc(ip)
+    do ip = 1, gr%mesh%np
+      zvloc(ip) = vloc(ip)
+    end do
 
     do idir = 1, gr%mesh%sb%dim
       force_tmp(idir, iatom) = -X(mf_dotp)(gr%mesh, zvloc, gdensity(:, idir), reduce = .false.)
@@ -108,36 +113,10 @@ subroutine X(forces_from_local_potential)(gr, namespace, geo, ep, gdensity, forc
   SAFE_DEALLOCATE_P(zvloc)
   SAFE_DEALLOCATE_A(force_tmp)
 
+  call profiling_out(prof)
+
   POP_SUB(X(forces_from_local_potential))
 end subroutine X(forces_from_local_potential)
-
-
-!---------------------------------------------------------------------------
-subroutine X(total_force_from_local_potential)(gr, ep, gdensity, force)
-  type(grid_t),                   intent(in)    :: gr
-  type(epot_t),                   intent(in)    :: ep
-  R_TYPE,                         intent(in)    :: gdensity(:, :)
-  R_TYPE,                         intent(inout) :: force(:)
-
-  R_TYPE, pointer     :: zvloc(:)
-  integer             :: idir
-  R_TYPE              :: force_tmp(1:MAX_DIM)
- 
-  PUSH_SUB(X(total_force_from_local_potential))
-  SAFE_ALLOCATE(zvloc(1:gr%mesh%np))
-  
-  zvloc(1:gr%mesh%np) = ep%vpsl(1:gr%mesh%np)
-  do idir = 1, gr%mesh%sb%dim
-    force_tmp(idir) = X(mf_dotp)(gr%mesh, zvloc, gdensity(:, idir), reduce = .false.)
-  end do
-
-  if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm,  force_tmp, dim = gr%mesh%sb%dim)
-  force(1:gr%mesh%sb%dim) = force(1:gr%mesh%sb%dim) + force_tmp(1:gr%mesh%sb%dim)
-
-  SAFE_DEALLOCATE_P(zvloc)
-  POP_SUB(X(total_force_from_local_potential))
-end subroutine X(total_force_from_local_potential)
-
 
 !---------------------------------------------------------------------------
 !> Ref: Kikuji Hirose, Tomoya Ono, Yoshitaka Fujimoto, and Shigeru Tsukamoto,
@@ -165,10 +144,13 @@ subroutine X(forces_from_potential)(gr, namespace, geo, hm, st, force, force_loc
   FLOAT,  pointer :: grad_rho(:, :)
   FLOAT,  allocatable :: force_psi(:)
   FLOAT, allocatable :: symmtmp(:, :)
-  type(batch_t) :: psib, grad_psib(1:MAX_DIM)
+  type(wfs_elec_t) :: psib, grad_psib(1:MAX_DIM)
   FLOAT :: kweight
+  type(profile_t), save :: prof
 
   PUSH_SUB(X(forces_from_potential))
+
+  call profiling_in(prof, "FORCES_FROM_POTENTIALS")
 
   np = gr%mesh%np
   np_part = gr%mesh%np_part
@@ -197,24 +179,25 @@ subroutine X(forces_from_potential)(gr, namespace, geo, hm, st, force, force_loc
       minst = states_elec_block_min(st, ib)
       maxst = states_elec_block_max(st, ib)
 
-      call batch_copy(st%group%psib(ib, iq), psib, copy_data = .true.)
+      call st%group%psib(ib, iq)%copy_to(psib, copy_data = .true.)
+      if(hamiltonian_elec_apply_packed(hm)) call psib%do_pack()
 
       ! set the boundary conditions
       call boundaries_set(gr%der%boundaries, psib)
 
       ! set the phase for periodic systems
       if(associated(hm%hm_base%phase)) then
-        call X(hamiltonian_elec_base_phase)(hm%hm_base, gr%mesh, gr%mesh%np_part, iq, .false., psib)
+        call X(hamiltonian_elec_base_phase)(hm%hm_base, gr%mesh, gr%mesh%np_part, .false., psib)
       end if
 
       ! calculate the gradient
       do idir = 1, gr%mesh%sb%dim
-        call batch_copy(st%group%psib(ib, iq), grad_psib(idir))
+        call psib%copy_to(grad_psib(idir))
         call X(derivatives_batch_perform)(gr%der%grad(idir), gr%der, psib, grad_psib(idir), set_bc = .false.)
       end do
 
       ! calculate the contribution to the density gradient
-      call X(density_accumulate_grad)(gr, st, iq, psib, grad_psib, grad_rho)
+      call X(density_accumulate_grad)(gr, st, psib, grad_psib, grad_rho)
 
       ! the non-local potential contribution
       if(hm%hm_base%apply_projector_matrices .and. .not. accel_is_enabled() .and. &
@@ -333,9 +316,9 @@ subroutine X(forces_from_potential)(gr, namespace, geo, hm, st, force, force_loc
       call X(lda_u_force)(hm%lda_u, namespace, gr%mesh, st, iq, gr%mesh%sb%dim, psib, grad_psib, &
                             force_u, associated(hm%hm_base%phase))  
 
-      call batch_end(psib)
+      call psib%end()
       do idir = 1, gr%mesh%sb%dim
-        call batch_end(grad_psib(idir))
+        call grad_psib(idir)%end()
       end do
 
     end do
@@ -399,6 +382,8 @@ subroutine X(forces_from_potential)(gr, namespace, geo, hm, st, force, force_loc
 
   SAFE_DEALLOCATE_A(force_psi)
   SAFE_DEALLOCATE_P(grad_rho)
+
+  call profiling_out(prof)
   
   POP_SUB(X(forces_from_potential))
 end subroutine X(forces_from_potential)
@@ -500,7 +485,7 @@ subroutine X(total_force_from_potential)(gr, geo, ep, st, x, lda_u_level)
   end if
 #endif
 
-  call dtotal_force_from_local_potential(gr, ep, grad_rho, x)
+  call total_force_from_local_potential(gr, ep, grad_rho, x)
 
   do iatom = 1, geo%natoms
     do idir = 1, gr%mesh%sb%dim

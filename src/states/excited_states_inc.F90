@@ -179,7 +179,7 @@ R_TYPE function X(states_elec_mpmatrixelement_g)(namespace, mesh, st1, st2, opst
         end do
       end do
 
-      det = lalg_determinant(i1+k1, cc, invert = .true.)
+      call lalg_inverter(i1+k1, cc, det)
       cc = det * transpose(cc)
 
       ! And now, apply Lowdin`s formula.
@@ -231,7 +231,7 @@ R_TYPE function X(states_elec_mpmatrixelement_g)(namespace, mesh, st1, st2, opst
         end do
 
         ! Get the matrix of cofactors.
-        zz = lalg_determinant(i1, cc, invert = .true.)
+        call lalg_inverter(i1, cc, zz)
         cc = zz * transpose(cc)
 
         ! And now, apply Lowdin`s formula.
@@ -339,10 +339,11 @@ R_TYPE function X(states_elec_mpdotp_g)(namespace, mesh, st1, st2, mat) result(d
         end do
       end do
 
-      dotp = dotp * (lalg_determinant(i1+k1, bb, invert = .false.)) ** st1%d%kweights(ik)
+      dotp = dotp * (lalg_determinant(i1+k1, bb, preserve_mat = .true.)) ** st1%d%kweights(ik)
       if(i1 > 0) then
-        dotp = dotp * (lalg_determinant(i1, bb(1:i1, 1:i1), invert = .false.)) ** st1%d%kweights(ik)
+        dotp = dotp * (lalg_determinant(i1, bb(1:i1, 1:i1), preserve_mat = .false.)) ** st1%d%kweights(ik)
       end if
+      SAFE_DEALLOCATE_A(bb)
 
     end do
   case(SPIN_POLARIZED, SPINORS)
@@ -368,7 +369,7 @@ R_TYPE function X(states_elec_mpdotp_g)(namespace, mesh, st1, st2, mat) result(d
           end do
         end do
 
-        dotp = dotp * lalg_determinant(i1, bb, invert = .false.) ** st1%d%kweights(ik)
+        dotp = dotp * lalg_determinant(i1, bb, preserve_mat = .false.) ** st1%d%kweights(ik)
         SAFE_DEALLOCATE_A(bb)
       end if
 

@@ -20,8 +20,11 @@ Spacing = 0.25*angstrom
 
 EigenSolver = evolution
 EigenSolverTolerance = 1e-5
+FilterPotentials = filter_none
 
-ConvRelDens = 0.08
+MixField = density
+Mixing = 1
+MixingScheme = linear
 
 TDExponentialMethod = lanczos
 TDExpOrder = 100
@@ -30,3 +33,5 @@ SCFCalculatePartialCharges = yes
 
 ExperimentalFeatures = yes
 
+StatesPack = yes
+LCAOStart = lcao_full

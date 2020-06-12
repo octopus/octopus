@@ -27,11 +27,10 @@ BoxShape = parallelepiped
 
 KPointsUseSymmetries = no
 
-ParDomains = no
-
 Output = density
 OutputFormat = xcrysden
 
 FilterPotentials = filter_none
 
 MixField = density
+StatesPack = yes

@@ -23,6 +23,7 @@ module test_oct_m
   use batch_ops_oct_m
   use boundaries_oct_m
   use calc_mode_par_oct_m
+  use clock_oct_m
   use density_oct_m
   use derivatives_oct_m
   use epot_oct_m
@@ -31,6 +32,7 @@ module test_oct_m
   use grid_oct_m
   use hamiltonian_elec_oct_m
   use ion_interaction_oct_m
+  use io_oct_m
   use mesh_batch_oct_m
   use mesh_function_oct_m
   use mesh_interpolation_oct_m
@@ -52,6 +54,7 @@ module test_oct_m
   use system_oct_m
   use types_oct_m
   use v_ks_oct_m
+  use wfs_elec_oct_m
   use XC_F90(lib_m)
   use xc_oct_m
 
@@ -113,6 +116,8 @@ contains
     !% Tests the subspace diagonalization
     !%Option batch_ops 13
     !% Tests the batch operations
+    !%Option clock 18
+    !% Tests for clock
     !%End
     call parse_variable(namespace, 'TestMode', OPTION__TESTMODE__HARTREE, test_mode)
 
@@ -213,6 +218,8 @@ contains
       call test_subspace_diagonalization(param, namespace)
     case(OPTION__TESTMODE__BATCH_OPS)
       call test_batch_ops(param, namespace)
+    case(OPTION__TESTMODE__CLOCK)
+      call test_clock()
     end select
 
     POP_SUB(test_run)
@@ -223,15 +230,15 @@ contains
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
 
-    type(system_t) :: sys
+    type(system_t), pointer :: sys
 
     PUSH_SUB(test_hartree)
 
     call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
 
-    call system_init(sys, namespace)
+    sys => system_init(namespace)
     call poisson_test(sys%hm%psolver, sys%gr%mesh, namespace, param%repetitions)
-    call system_end(sys)
+    SAFE_DEALLOCATE_P(sys)
 
     POP_SUB(test_hartree)
   end subroutine test_hartree
@@ -241,9 +248,10 @@ contains
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
 
-    type(system_t) :: sys
-    type(batch_t), pointer :: epsib
+    type(system_t), pointer :: sys
+    type(wfs_elec_t), pointer :: epsib
     integer :: itime
+    CMPLX, allocatable :: psi(:, :)
 
     PUSH_SUB(test_projector)
 
@@ -254,7 +262,7 @@ contains
     call messages_new_line()
     call messages_info()
 
-    call system_init(sys, namespace)
+    sys => system_init(namespace)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh, wfs_type = TYPE_CMPLX)
     call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
@@ -265,23 +273,27 @@ contains
 
     !Initialize external potential
     SAFE_ALLOCATE(epsib)
-    call batch_copy(sys%st%group%psib(1, 1), epsib)
+    call sys%st%group%psib(1, 1)%copy_to(epsib)
 
     call batch_set_zero(epsib)
 
     do itime = 1, param%repetitions
-      call zproject_psi_batch(sys%gr%mesh, sys%hm%ep%proj, sys%hm%ep%natoms, 2, sys%st%group%psib(1, 1), epsib, 1)
+      call zproject_psi_batch(sys%gr%mesh, sys%gr%der%boundaries, sys%hm%ep%proj,  &
+                              sys%hm%ep%natoms, 2, sys%st%group%psib(1, 1), epsib)
     end do
 
+    SAFE_ALLOCATE(psi(sys%gr%mesh%np, sys%st%d%dim))
     do itime = 1, epsib%nst
-      write(message(1),'(a,i1,3x, f12.6)') "Norm state  ", itime, zmf_nrm2(sys%gr%mesh, 2, epsib%states(itime)%zpsi)
+      call batch_get_state(epsib, itime, sys%gr%mesh%np, psi)
+      write(message(1),'(a,i1,3x, f12.6)') "Norm state  ", itime, zmf_nrm2(sys%gr%mesh, 2, psi)
       call messages_info(1)
     end do
+    SAFE_DEALLOCATE_A(psi)
 
-    call batch_end(epsib)
+    call epsib%end()
     SAFE_DEALLOCATE_P(epsib)
     call states_elec_deallocate_wfns(sys%st)
-    call system_end(sys)
+    SAFE_DEALLOCATE_P(sys)
 
     POP_SUB(test_projector)
   end subroutine test_projector
@@ -291,8 +303,8 @@ contains
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
 
-    type(system_t) :: sys
-    type(batch_t), pointer :: epsib
+    type(system_t), pointer :: sys
+    type(wfs_elec_t), pointer :: epsib
     integer :: itime
     type(orbitalbasis_t) :: basis
     FLOAT, allocatable :: ddot(:,:,:), dweight(:,:)
@@ -307,25 +319,23 @@ contains
     call messages_new_line()
     call messages_info()
 
-    call system_init(sys, namespace)
+    sys => system_init(namespace)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
     call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
     if(sys%st%d%pack_states) call sys%st%pack()
 
     SAFE_ALLOCATE(epsib)
-    call batch_copy(sys%st%group%psib(1, 1), epsib, copy_data = .true.)
+    call sys%st%group%psib(1, 1)%copy_to(epsib, copy_data = .true.)
 
     !Initialize the orbital basis
     call orbitalbasis_init(basis, sys%namespace)
     if (states_are_real(sys%st)) then
-      call dorbitalbasis_build(basis, sys%geo, sys%gr%mesh, sys%st%d%kpt, sys%st%d%dim, &
-                                .false., .false.)
+      call dorbitalbasis_build(basis, sys%geo, sys%gr%mesh, sys%st%d%kpt, sys%st%d%dim, .false., .false.)
       SAFE_ALLOCATE(dweight(1:basis%orbsets(1)%sphere%np,1:epsib%nst_linear))
       SAFE_ALLOCATE(ddot(1:sys%st%d%dim,1:basis%orbsets(1)%norbs, 1:epsib%nst))
     else
-      call zorbitalbasis_build(basis, sys%geo, sys%gr%mesh, sys%st%d%kpt, sys%st%d%dim, &
-                                .false., .false.)
+      call zorbitalbasis_build(basis, sys%geo, sys%gr%mesh, sys%st%d%kpt, sys%st%d%dim, .false., .false.)
       call orbitalset_update_phase(basis%orbsets(1), sys%gr%sb, sys%st%d%kpt, (sys%st%d%ispin==SPIN_POLARIZED))
       SAFE_ALLOCATE(zweight(1:basis%orbsets(1)%sphere%np,1:epsib%nst_linear))
       SAFE_ALLOCATE(zdot(1:sys%st%d%dim,1:basis%orbsets(1)%norbs, 1:epsib%nst))
@@ -336,20 +346,18 @@ contains
       if(states_are_real(sys%st)) then
         dweight = M_ONE
         ddot = M_ZERO
-        call dorbitalset_get_coeff_batch(basis%orbsets(1), 1, sys%st%group%psib(1, 1), 1, .false., &
-                                           .false., ddot)
-        call dorbitalset_add_to_batch(basis%orbsets(1), 1, epsib, 1, .false., .false., dweight)
+        call dorbitalset_get_coeff_batch(basis%orbsets(1), 1, sys%st%group%psib(1, 1), .false., ddot)
+        call dorbitalset_add_to_batch(basis%orbsets(1), 1, epsib, .false., dweight)
       else
         zweight = M_ONE
         zdot = M_ZERO
-        call zorbitalset_get_coeff_batch(basis%orbsets(1), sys%st%d%dim, sys%st%group%psib(1, 1), 1, &
-                                           .true., .false., zdot)
-        call zorbitalset_add_to_batch(basis%orbsets(1), sys%st%d%dim, epsib, 1, .true., .false., zweight)
+        call zorbitalset_get_coeff_batch(basis%orbsets(1), sys%st%d%dim, sys%st%group%psib(1, 1), .false., zdot)
+        call zorbitalset_add_to_batch(basis%orbsets(1), sys%st%d%dim, epsib, .false., zweight)
       end if
     end do
 
-    if(batch_is_packed(epsib)) then
-      call batch_unpack(epsib, force = .true.)
+    if(epsib%is_packed()) then
+      call epsib%do_unpack(force = .true.)
     end if
 
     call test_prints_info_batch(sys%st, sys%gr, epsib)
@@ -359,11 +367,11 @@ contains
     SAFE_DEALLOCATE_A(ddot)
     SAFE_DEALLOCATE_A(zdot)
 
-    call batch_end(epsib)
+    call epsib%end()
     SAFE_DEALLOCATE_P(epsib)
     call orbitalbasis_end(basis)
     call states_elec_deallocate_wfns(sys%st)
-    call system_end(sys)
+    SAFE_DEALLOCATE_P(sys)
 
     POP_SUB(test_dft_u)
   end subroutine test_dft_u
@@ -373,10 +381,9 @@ contains
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
 
-    type(system_t) :: sys
-    type(batch_t), pointer :: hpsib
+    type(system_t), pointer :: sys
+    type(wfs_elec_t), pointer :: hpsib
     integer :: itime, terms
-    type(simul_box_t) :: sb
 
     PUSH_SUB(test_hamiltonian)
 
@@ -406,13 +413,12 @@ contains
     call messages_new_line()
     call messages_info()
 
-    call system_init(sys, namespace)
+    sys => system_init(namespace)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
     call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
 
     !Initialize external potential
-    call simul_box_init(sb, sys%namespace, sys%geo, sys%space)
     if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call sys%st%pack()
     call hamiltonian_elec_epot_generate(sys%hm, sys%namespace, sys%gr, sys%geo, sys%st)
     call density_calc(sys%st, sys%gr, sys%st%rho)
@@ -421,34 +427,33 @@ contains
     call boundaries_set(sys%gr%der%boundaries, sys%st%group%psib(1, 1))
 
     SAFE_ALLOCATE(hpsib)
-    call batch_copy(sys%st%group%psib(1, 1), hpsib)
+    call sys%st%group%psib(1, 1)%copy_to(hpsib)
 
     if(hamiltonian_elec_apply_packed(sys%hm)) then
-      call batch_pack(sys%st%group%psib(1, 1))
-      call batch_pack(hpsib, copy = .false.)
+      call sys%st%group%psib(1, 1)%do_pack()
+      call hpsib%do_pack(copy = .false.)
     end if
 
     do itime = 1, param%repetitions
       if(states_are_real(sys%st)) then
-        call dhamiltonian_elec_apply_batch(sys%hm, sys%namespace, sys%gr%mesh, sys%st%group%psib(1, 1), hpsib, 1, terms = terms, &
+        call dhamiltonian_elec_apply_batch(sys%hm, sys%namespace, sys%gr%mesh, sys%st%group%psib(1, 1), hpsib, terms = terms, &
           set_bc = .false.)
       else
-        call zhamiltonian_elec_apply_batch(sys%hm, sys%namespace, sys%gr%mesh, sys%st%group%psib(1, 1), hpsib, 1, terms = terms, &
+        call zhamiltonian_elec_apply_batch(sys%hm, sys%namespace, sys%gr%mesh, sys%st%group%psib(1, 1), hpsib, terms = terms, &
           set_bc = .false.)
       end if
     end do
 
-    if(batch_is_packed(hpsib)) then
-      call batch_unpack(hpsib, force = .true.)
+    if(hpsib%is_packed()) then
+      call hpsib%do_unpack(force = .true.)
     end if
 
     call test_prints_info_batch(sys%st, sys%gr, hpsib)
 
-    call batch_end(hpsib, copy = .false.)
+    call hpsib%end(copy = .false.)
     SAFE_DEALLOCATE_P(hpsib)
-    call simul_box_end(sb)
     call states_elec_deallocate_wfns(sys%st)
-    call system_end(sys)
+    SAFE_DEALLOCATE_P(sys)
 
     POP_SUB(test_hamiltonian)
   end subroutine test_hamiltonian
@@ -459,7 +464,7 @@ contains
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
 
-    type(system_t) :: sys
+    type(system_t), pointer :: sys
     integer :: itime
 
     PUSH_SUB(test_density_calc)
@@ -471,7 +476,7 @@ contains
     call messages_new_line()
     call messages_info()
 
-    call system_init(sys, namespace)
+    sys => system_init(namespace)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
     call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
@@ -485,7 +490,7 @@ contains
     call messages_info(1)
 
     call states_elec_deallocate_wfns(sys%st)
-    call system_end(sys)
+    SAFE_DEALLOCATE_P(sys)
 
     POP_SUB(test_density_calc)
   end subroutine test_density_calc
@@ -496,7 +501,7 @@ contains
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
 
-    type(system_t) :: sys
+    type(system_t), pointer :: sys
     integer :: itime
 
     PUSH_SUB(test_density_calc)
@@ -508,7 +513,7 @@ contains
     call messages_new_line()
     call messages_info()
 
-    call system_init(sys, namespace)
+    sys => system_init(namespace)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
     call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
@@ -521,7 +526,7 @@ contains
     call test_prints_info_batch(sys%st, sys%gr, sys%st%group%psib(1, 1))
 
     call states_elec_deallocate_wfns(sys%st)
-    call system_end(sys)
+    SAFE_DEALLOCATE_P(sys)
 
     POP_SUB(test_density_calc)
   end subroutine test_boundaries
@@ -532,7 +537,7 @@ contains
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
 
-    type(system_t) :: sys
+    type(system_t), pointer :: sys
     type(exponential_t) :: te
     integer :: itime
 
@@ -545,7 +550,7 @@ contains
     call messages_new_line()
     call messages_info()
 
-    call system_init(sys, namespace)
+    sys => system_init(namespace)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh, wfs_type=TYPE_CMPLX)
     call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
@@ -559,11 +564,11 @@ contains
     call exponential_init(te, namespace)
 
     if(hamiltonian_elec_apply_packed(sys%hm)) then
-      call batch_pack(sys%st%group%psib(1, 1))
+      call sys%st%group%psib(1, 1)%do_pack()
     end if
 
     do itime = 1, param%repetitions
-      call exponential_apply_batch(te, sys%namespace, sys%gr%mesh, sys%hm, sys%st%group%psib(1, 1), 1, CNST(1.0))
+      call exponential_apply_batch(te, sys%namespace, sys%gr%mesh, sys%hm, sys%st%group%psib(1, 1), CNST(1.0))
     end do
 
     call test_prints_info_batch(sys%st, sys%gr, sys%st%group%psib(1, 1))
@@ -571,7 +576,7 @@ contains
     call exponential_end(te)
 
     call states_elec_deallocate_wfns(sys%st)
-    call system_end(sys)
+    SAFE_DEALLOCATE_P(sys)
 
     POP_SUB(test_exponential)
   end subroutine test_exponential
@@ -582,7 +587,7 @@ contains
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
 
-    type(system_t) :: sys
+    type(system_t), pointer :: sys
     integer :: itime
     type(subspace_t) :: sdiag
 
@@ -595,7 +600,7 @@ contains
     call messages_new_line()
     call messages_info()
 
-    call system_init(sys, namespace)
+    sys => system_init(namespace)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
     call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
@@ -618,7 +623,7 @@ contains
     call test_prints_info_batch(sys%st, sys%gr, sys%st%group%psib(1, 1))
 
     call states_elec_deallocate_wfns(sys%st)
-    call system_end(sys)
+    SAFE_DEALLOCATE_P(sys)
 
     POP_SUB(test_subspace_diagonalization)
   end subroutine test_subspace_diagonalization
@@ -629,12 +634,17 @@ contains
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
 
-    type(system_t) :: sys
-    integer :: itime, ops
-    type(batch_t) :: xx, yy
+    type(system_t), pointer :: sys
+    integer :: itime, ops, ops_default, ist, jst, nst
+    type(wfs_elec_t) :: xx, yy
     FLOAT, allocatable :: tmp(:)
+    FLOAT, allocatable :: ddotv(:)
+    CMPLX, allocatable :: zdotv(:)
+    FLOAT, allocatable :: ddot(:,:)
+    CMPLX, allocatable :: zdot(:,:)
 
-    PUSH_SUB(test_density_calc)
+
+    PUSH_SUB(test_batch_ops)
 
     !%Variable TestBatchOps
     !%Type flag
@@ -648,11 +658,21 @@ contains
     !% Tests batch_scal operation
     !%Option ops_nrm2 bit(3)
     !% Tests batch_nrm2 operation
+    !%Option ops_dotp_matrix bit(4)
+    !% Tests X(mesh_batch_dotp_matrix)
+    !%Option ops_dotp_self bit(5)
+    !% Tests X(mesh_batch_dotp_self)
+    !%Option ops_dotp_vector bit(6)
+    !% Tests X(mesh_batch_dotp_vector)
     !%End
-    ops = OPTION__TESTBATCHOPS__OPS_AXPY &
-        + OPTION__TESTBATCHOPS__OPS_SCAL &
-        + OPTION__TESTBATCHOPS__OPS_NRM2
-    call parse_variable(namespace, 'TestBatchOps', ops, ops)
+    ops_default = OPTION__TESTBATCHOPS__OPS_AXPY &
+                + OPTION__TESTBATCHOPS__OPS_SCAL &
+                + OPTION__TESTBATCHOPS__OPS_NRM2 &
+                + OPTION__TESTBATCHOPS__OPS_DOTP_MATRIX &
+                + OPTION__TESTBATCHOPS__OPS_DOTP_SELF &
+                + OPTION__TESTBATCHOPS__OPS_DOTP_VECTOR
+
+    call parse_variable(namespace, 'TestBatchOps', ops_default, ops)
 
     call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
 
@@ -661,7 +681,7 @@ contains
     call messages_new_line()
     call messages_info()
 
-    call system_init(sys, namespace)
+    sys => system_init(namespace)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
     call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
@@ -671,40 +691,40 @@ contains
       message(1) = 'Info: Testing axpy'
       call messages_info(1)
 
-      call batch_copy(sys%st%group%psib(1, 1), xx, copy_data = .true.)
-      call batch_copy(sys%st%group%psib(1, 1), yy, copy_data = .true.)
+      call sys%st%group%psib(1, 1)%copy_to(xx, copy_data = .true.)
+      call sys%st%group%psib(1, 1)%copy_to(yy, copy_data = .true.)
 
       do itime = 1, param%repetitions
         call batch_axpy(sys%gr%mesh%np, CNST(0.1), xx, yy)
       end do
-      call test_prints_info_batch(sys%st, sys%gr, yy)
+      call test_prints_info_batch(sys%st, sys%gr, yy, string = "axpy")
 
-      call batch_end(xx)
-      call batch_end(yy)
+      call xx%end()
+      call yy%end()
     end if
 
     if(bitand(ops, OPTION__TESTBATCHOPS__OPS_SCAL) /= 0) then
       message(1) = 'Info: Testing scal'
       call messages_info(1)
 
-      call batch_copy(sys%st%group%psib(1, 1), xx, copy_data = .true.)
-      call batch_copy(sys%st%group%psib(1, 1), yy, copy_data = .true.)
+      call sys%st%group%psib(1, 1)%copy_to(xx, copy_data = .true.)
+      call sys%st%group%psib(1, 1)%copy_to(yy, copy_data = .true.)
 
       do itime = 1, param%repetitions
         call batch_scal(sys%gr%mesh%np, CNST(0.1), yy)
       end do
-      call test_prints_info_batch(sys%st, sys%gr, yy)
+      call test_prints_info_batch(sys%st, sys%gr, yy, string="scal")
 
-      call batch_end(xx)
-      call batch_end(yy)
+      call xx%end()
+      call yy%end()
     end if
 
     if(bitand(ops, OPTION__TESTBATCHOPS__OPS_NRM2) /= 0) then
       message(1) = 'Info: Testing nrm2'
       call messages_info(1)
 
-      call batch_copy(sys%st%group%psib(1, 1), xx, copy_data = .true.)
-      call batch_copy(sys%st%group%psib(1, 1), yy, copy_data = .true.)
+      call sys%st%group%psib(1, 1)%copy_to(xx, copy_data = .true.)
+      call sys%st%group%psib(1, 1)%copy_to(yy, copy_data = .true.)
 
       SAFE_ALLOCATE(tmp(1:xx%nst))
 
@@ -718,14 +738,120 @@ contains
 
       SAFE_DEALLOCATE_A(tmp)
 
-      call batch_end(xx)
-      call batch_end(yy)
+      call xx%end()
+      call yy%end()
+    end if
+
+    if(bitand(ops, OPTION__TESTBATCHOPS__OPS_DOTP_MATRIX) /= 0) then
+    
+      message(1) = 'Info: Testing dotp_matrix'
+      call messages_info(1)
+
+      call sys%st%group%psib(1, 1)%copy_to(xx, copy_data = .true.)
+      call sys%st%group%psib(1, 1)%copy_to(yy, copy_data = .true.)
+
+      nst = sys%st%group%psib(1, 1)%nst
+
+      if(states_are_real(sys%st)) then
+        SAFE_ALLOCATE(ddot(nst, nst))
+        call dmesh_batch_dotp_matrix(sys%gr%mesh, xx, yy, ddot)
+
+        do ist = 1, nst
+          do jst = 1, nst
+            write(message(jst), '(a,2i3,3x,e13.6)') 'Dotp_matrix states', ist, jst, ddot(ist,jst)
+          end do
+          call messages_info(nst)
+        end do
+        SAFE_DEALLOCATE_A(ddot)
+      else
+        SAFE_ALLOCATE(zdot(nst, nst))
+        call zmesh_batch_dotp_matrix(sys%gr%mesh, xx, yy, zdot)
+
+        do ist = 1, nst
+          do jst = 1, nst
+            write(message(jst), '(a,2i3,3x,2e14.6)') 'Dotp_matrix states', ist, jst, zdot(ist,jst)
+          end do
+          call messages_info(nst)
+        end do
+        SAFE_DEALLOCATE_A(zdot)
+      end if
+  
+      call xx%end()
+      call yy%end()    
+    end if
+  
+    if(bitand(ops, OPTION__TESTBATCHOPS__OPS_DOTP_VECTOR) /= 0) then
+    
+      message(1) = 'Info: Testing dotp_vector'
+      call messages_info(1)
+
+      call sys%st%group%psib(1, 1)%copy_to(xx, copy_data = .true.)
+      call sys%st%group%psib(1, 1)%copy_to(yy, copy_data = .true.)
+
+      nst = sys%st%group%psib(1, 1)%nst
+
+      if(states_are_real(sys%st)) then
+        SAFE_ALLOCATE(ddotv(nst))
+        call dmesh_batch_dotp_vector(sys%gr%mesh, xx, yy, ddotv)
+
+        do ist = 1, nst
+          write(message(ist), '(a,i3,3x,e13.6)') 'Dotp_vector state', ist, ddotv(ist)
+        end do
+        call messages_info(nst)
+        SAFE_DEALLOCATE_A(ddotv)
+      else
+        SAFE_ALLOCATE(zdotv(nst))
+        call zmesh_batch_dotp_vector(sys%gr%mesh, xx, yy, zdotv)
+        do ist = 1, nst
+          write(message(ist), '(a,i3,3x,2e14.6)') 'Dotp_vector state', ist, zdotv(ist)
+        end do
+        call messages_info(nst)
+        SAFE_DEALLOCATE_A(zdotv)
+      end if
+  
+      call xx%end()
+      call yy%end()    
+    end if
+
+    if(bitand(ops, OPTION__TESTBATCHOPS__OPS_DOTP_SELF) /= 0) then
+    
+      message(1) = 'Info: Testing dotp_self'
+      call messages_info(1)
+
+      call sys%st%group%psib(1, 1)%copy_to(xx, copy_data = .true.)
+
+      nst = sys%st%group%psib(1, 1)%nst
+
+      if(states_are_real(sys%st)) then
+        SAFE_ALLOCATE(ddot(nst, nst))
+        call dmesh_batch_dotp_self(sys%gr%mesh, xx, ddot)
+
+        do ist = 1, nst
+          do jst = 1, nst
+            write(message(jst), '(a,2i3,3x,e13.6)') 'Dotp_self states', ist, jst, ddot(ist,jst)
+          end do
+          call messages_info(nst*nst)
+        end do
+        SAFE_DEALLOCATE_A(ddot)
+      else
+        SAFE_ALLOCATE(zdot(nst, nst))
+        call zmesh_batch_dotp_self(sys%gr%mesh, xx, zdot)
+        do ist = 1, nst
+          do jst = 1, nst
+            write(message(jst), '(a,2i3,3x,2e14.6)') 'Dotp_self states', ist, jst, zdot(ist,jst)
+          end do
+          call messages_info(nst*nst)
+        end do
+        SAFE_DEALLOCATE_A(zdot)
+      end if
+  
+      call xx%end()
     end if
 
     call states_elec_deallocate_wfns(sys%st)
-    call system_end(sys)
+    SAFE_DEALLOCATE_P(sys)
 
-    POP_SUB(test_density_calc)
+    POP_SUB(test_batch_ops)
   end subroutine test_batch_ops
 
 
@@ -734,11 +860,11 @@ contains
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
 
-    type(system_t) :: sys
+    type(system_t), pointer :: sys
 
     PUSH_SUB(test_derivatives)
 
-    call system_init(sys, namespace)
+    sys => system_init(namespace)
 
     message(1) = 'Info: Testing the finite-differences derivatives.'
     message(2) = ''
@@ -752,7 +878,7 @@ contains
       call zderivatives_test(sys%gr%der, sys%namespace, param%repetitions, param%min_blocksize, param%max_blocksize)
     end if
 
-    call system_end(sys)
+    SAFE_DEALLOCATE_P(sys)
 
     POP_SUB(test_derivatives)
   end subroutine test_derivatives
@@ -763,7 +889,7 @@ contains
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
 
-    type(system_t) :: sys
+    type(system_t), pointer :: sys
     integer :: itime
 
     PUSH_SUB(test_orthogonalization)
@@ -771,7 +897,7 @@ contains
     call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
     call calc_mode_par_set_scalapack_compat()
 
-    call system_init(sys, namespace)
+    sys => system_init(namespace)
 
     message(1) = 'Info: Testing orthogonalization.'
     message(2) = ''
@@ -793,7 +919,7 @@ contains
       end do
     end if
 
-    call system_end(sys)
+    SAFE_DEALLOCATE_P(sys)
 
     POP_SUB(test_orthogonalization)
   end subroutine test_orthogonalization
@@ -804,11 +930,11 @@ contains
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
 
-    type(system_t) :: sys
+    type(system_t), pointer :: sys
 
     PUSH_SUB(test_interpolation)
 
-    call system_init(sys, namespace)
+    sys => system_init(namespace)
 
     if(param%type == OPTION__TESTTYPE__ALL .or. param%type == OPTION__TESTTYPE__REAL) then
       call messages_write('Info: Testing real interpolation routines')
@@ -829,7 +955,7 @@ contains
       call zmesh_interpolation_test(sys%gr%mesh)
     end if
 
-    call system_end(sys)
+    SAFE_DEALLOCATE_P(sys)
 
     POP_SUB(test_interpolation)
   end subroutine test_interpolation
@@ -840,48 +966,115 @@ contains
   subroutine test_ion_interaction(namespace)
     type(namespace_t),        intent(in) :: namespace
 
-    type(system_t) :: sys
+    type(system_t), pointer :: sys
 
     PUSH_SUB(test_ion_interaction)
 
-    call system_init(sys, namespace)
+    sys => system_init(namespace)
 
     call ion_interaction_test(sys%geo, sys%namespace, sys%gr%sb)
 
-    call system_end(sys)
+    SAFE_DEALLOCATE_P(sys)
 
     POP_SUB(test_ion_interaction)
   end subroutine test_ion_interaction
 
   ! ---------------------------------------------------------
 
-  subroutine test_prints_info_batch(st, gr, psib)
+  subroutine test_prints_info_batch(st, gr, psib, string)
     type(states_elec_t), intent(in)    :: st
     type(grid_t),        intent(in)    :: gr
-    type(batch_t),       intent(inout) :: psib
+    class(batch_t),      intent(inout) :: psib
+    character(*), optional,  intent(in)    :: string      
 
     integer :: itime
+    CMPLX, allocatable :: zpsi(:, :)
+    FLOAT, allocatable :: dpsi(:, :)
+
+    character(80)      :: string_
+
+    string_ = optional_default(string, "")
 
     PUSH_SUB(test_prints_info_batch)
 
-    if(batch_is_packed(psib)) then
-      call batch_unpack(psib, force = .true.)
+    if(states_are_real(st)) then
+      SAFE_ALLOCATE(dpsi(gr%mesh%np, st%d%dim))
+    else
+      SAFE_ALLOCATE(zpsi(gr%mesh%np, st%d%dim))
     end if
 
     do itime = 1, psib%nst
       if(states_are_real(st)) then
-        write(message(1),'(a,i1,3x,e13.6)') "Norm state  ", itime, dmf_nrm2(gr%mesh, st%d%dim, &
-                                                                   psib%states(itime)%dpsi)
+        call batch_get_state(psib, itime, gr%mesh%np, dpsi)
+        write(message(1),'(a,i1,3x,e13.6)') "Norm state "//trim(string_)//" ", itime, dmf_nrm2(gr%mesh, st%d%dim, dpsi)
       else
-        write(message(1),'(a,i1,3x,e13.6)') "Norm state  ", itime, zmf_nrm2(gr%mesh, st%d%dim, &
-                                                                   psib%states(itime)%zpsi)
+        call batch_get_state(psib, itime, gr%mesh%np, zpsi)
+        write(message(1),'(a,i1,3x,e13.6)') "Norm state "//trim(string_)//" ", itime, zmf_nrm2(gr%mesh, st%d%dim, zpsi)
       end if
       call messages_info(1)
     end do
 
+    if(states_are_real(st)) then
+      SAFE_DEALLOCATE_A(dpsi)
+    else
+      SAFE_DEALLOCATE_A(zpsi)
+    end if
+
     POP_SUB(test_prints_info_batch)
 
   end subroutine test_prints_info_batch
+
+
+  ! ---------------------------------------------------------
+  subroutine test_clock()
+
+    type(clock_t) :: test_clock_a, test_clock_b
+
+    PUSH_SUB(test_clock)
+
+    test_clock_a = clock_t('test_clock_a', CNST(2.0), CNST(1.0), 100)
+    test_clock_b = clock_t('test_clock_b', CNST(1.0), CNST(1.0))
+    call test_clock_a%print()
+    call test_clock_b%print()
+
+    call test_clock_a%set_time(test_clock_b)
+    call test_clock_a%print()
+    call test_clock_a%increment()
+    call test_clock_a%print()
+    call test_clock_a%decrement()
+    call test_clock_a%print()
+    call test_clock_a%increment()
+    call test_clock_a%print()
+    call test_clock_a%reset()
+    call test_clock_a%print()
+    call test_clock_a%increment(3)
+    call test_clock_a%print()
+    call test_clock_a%decrement(2)
+    call test_clock_a%print()
+    message(1) = test_clock_a%print_str()
+    call messages_info(1)
+
+    write(message(1),'(A,x,I10.10)') &
+	'clock_get_tick', test_clock_a%get_tick()
+    write(message(2),'(A,x,F15.10)') &
+	'clock_get_sim_time', test_clock_a%get_sim_time()
+    write(message(3),'(A,x,I1)')     &
+	'clock_is_earlier', abs(transfer(test_clock_a .lt. test_clock_b, 0))
+    write(message(4),'(A,x,I1)')     &
+	'clock_is_equal_or_earlier', abs(transfer(test_clock_a .le. test_clock_b, 0))
+    write(message(5),'(A,x,I1)')     &
+	'clock_is_later', abs(transfer(test_clock_a .gt. test_clock_b, 0))
+    write(message(6),'(A,x,I1)')     &
+	'clock_is_equal_or_later', abs(transfer(test_clock_a .ge. test_clock_b, 0))
+    write(message(7),'(A,x,I1)')     &
+	'clock_is_equal', abs(transfer(test_clock_a .eq. test_clock_b, 0))
+    write(message(8),'(A,x,I1)')     &
+	'clock_is_later_with_step', abs(transfer(test_clock_a%is_later_with_step(test_clock_b), 0))
+    call messages_info(8)
+
+
+    POP_SUB(test_clock)
+  end subroutine test_clock
 
 end module test_oct_m
 

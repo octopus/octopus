@@ -17,22 +17,21 @@
 !!
 
 ! --------------------------------------------------------------------------
-subroutine X(pert_apply_batch)(this, namespace, gr, geo, hm, ik, f_in, f_out)
+subroutine X(pert_apply_batch)(this, namespace, gr, geo, hm, f_in, f_out)
   type(pert_t),             intent(in)    :: this
   type(namespace_t),        intent(in)    :: namespace
   type(grid_t),             intent(in)    :: gr
   type(geometry_t),         intent(in)    :: geo
   type(hamiltonian_elec_t), intent(inout) :: hm
-  integer,                  intent(in)    :: ik
-  type(batch_t),            intent(in)    :: f_in
-  type(batch_t),            intent(inout) :: f_out
+  type(wfs_elec_t),         intent(in)    :: f_in
+  type(wfs_elec_t),         intent(inout) :: f_out
 
   integer :: ist
   R_TYPE, allocatable :: fi(:, :), fo(:, :)
   
   PUSH_SUB(X(pert_apply_batch))
 
-  ASSERT(batch_status(f_in) == batch_status(f_out))
+  ASSERT(f_in%status() == f_out%status())
   
   SAFE_ALLOCATE(fi(1:gr%mesh%np, 1:hm%d%dim))
   SAFE_ALLOCATE(fo(1:gr%mesh%np, 1:hm%d%dim))
@@ -45,7 +44,7 @@ subroutine X(pert_apply_batch)(this, namespace, gr, geo, hm, ik, f_in, f_out)
   case default
     do ist = 1, f_in%nst
       call batch_get_state(f_in, ist, gr%mesh%np, fi)
-      call X(pert_apply)(this, namespace, gr, geo, hm, ik, fi, fo)
+      call X(pert_apply)(this, namespace, gr, geo, hm, f_in%ik, fi, fo)
       call batch_set_state(f_out, ist, gr%mesh%np, fo)
     end do
   end select
@@ -60,12 +59,12 @@ contains
   subroutine electric()
     integer :: ii, ip
 
-    select case(batch_status(f_in))
+    select case(f_in%status())
       
     case(BATCH_NOT_PACKED)
       do ii = 1, f_in%nst_linear
         do ip = 1, gr%mesh%np
-          f_out%states_linear(ii)%X(psi)(ip) = gr%mesh%x(ip, this%dir)*f_in%states_linear(ii)%X(psi)(ip) 
+          f_out%X(ff_linear)(ip, ii) = gr%mesh%x(ip, this%dir)*f_in%X(ff_linear)(ip, ii) 
         end do
       end do
 
@@ -73,7 +72,7 @@ contains
 
       do ip = 1, gr%mesh%np
         do ii = 1, f_in%nst_linear
-          f_out%pack%X(psi)(ii, ip) = gr%mesh%x(ip, this%dir)*f_in%pack%X(psi)(ii, ip)
+          f_out%X(ff_pack)(ii, ip) = gr%mesh%x(ip, this%dir)*f_in%X(ff_pack)(ii, ip)
         end do
       end do
 
@@ -188,9 +187,11 @@ contains
 
     PUSH_SUB(X(pert_apply).electric)
 
-    forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np)
-      f_out(ip, idim) = f_in(ip, idim) * gr%mesh%x(ip, this%dir)
-    end forall
+    do idim = 1, hm%d%dim
+      do ip = 1, gr%mesh%np
+        f_out(ip, idim) = f_in(ip, idim) * gr%mesh%x(ip, this%dir)
+      end do
+    end do
 
     POP_SUB(X(pert_apply).electric)
 
@@ -212,7 +213,11 @@ contains
         ! set_bc done already separately
       end do
 
-      forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np) f_out(ip, idim) = grad(ip, this%dir, idim)
+      do idim = 1, hm%d%dim
+        do ip = 1, gr%mesh%np
+          f_out(ip, idim) = grad(ip, this%dir, idim)
+        end do
+      end do
 
       ! i delta_H_k = i (-i*grad + k) . delta_k
       ! representation on psi is just grad . delta_k
@@ -228,7 +233,7 @@ contains
       SAFE_DEALLOCATE_A(grad)
     else
       SAFE_ALLOCATE(Hxpsi(1:gr%mesh%np,1:hm%d%dim))     
-      call X(hamiltonian_elec_apply)(hm, namespace, gr%mesh, f_in_copy(:,:), Hxpsi(:,:), 1, ik, set_bc = .false.)
+      call X(hamiltonian_elec_apply_single)(hm, namespace, gr%mesh, f_in_copy(:,:), Hxpsi(:,:), 1, ik, set_bc = .false.)
       do idim = 1, hm%d%dim
         do ip = 1, gr%mesh%np
           f_out(ip,idim) = gr%mesh%x(ip,this%dir)*Hxpsi(ip,idim)
@@ -240,7 +245,7 @@ contains
           f_in_copy(ip,idim) = gr%mesh%x(ip,this%dir)*f_in_copy(ip,idim)
         end do
       end do
-      call X(hamiltonian_elec_apply)(hm, namespace, gr%mesh, f_in_copy(:,:), Hxpsi(:,:), 1, ik, set_bc = .false.)
+      call X(hamiltonian_elec_apply_single)(hm, namespace, gr%mesh, f_in_copy(:,:), Hxpsi(:,:), 1, ik, set_bc = .false.)
       do idim = 1, hm%d%dim
         do ip = 1, gr%mesh%np
           f_out(ip,idim) = f_out(ip,idim) - Hxpsi(ip,idim)
@@ -374,16 +379,22 @@ subroutine X(ionic_perturbation)(gr, namespace, geo, hm, ik, f_in, f_out, iatom,
 
   !d^T v |f>
   SAFE_ALLOCATE(fout(1:gr%mesh%np_part, 1:1))
-  forall(ip = 1:gr%mesh%np) fout(ip, 1) = vloc(ip)*fin(ip, 1)
-  call X(project_psi)(gr%mesh, hm%ep%proj(iatom:iatom), 1, 1, fin, fout, ik)
+  do ip = 1, gr%mesh%np
+    fout(ip, 1) = vloc(ip)*fin(ip, 1)
+  end do
+  call X(project_psi)(gr%mesh, gr%der%boundaries, hm%ep%proj(iatom:iatom), 1, 1, fin, fout, ik)
   call X(derivatives_perform)(gr%der%grad(idir), gr%der, fout(:,1), f_out)
 
   !v d |f>
   SAFE_ALLOCATE(grad(1:gr%mesh%np, 1:1))
   call X(derivatives_perform)(gr%der%grad(idir), gr%der, fin(:,1), grad(:,1))
-  forall(ip = 1:gr%mesh%np) fout(ip, 1) = vloc(ip)*grad(ip, 1)
-  call X(project_psi)(gr%mesh, hm%ep%proj(iatom:iatom), 1, 1, grad, fout, ik)
-  forall(ip = 1:gr%mesh%np) f_out(ip) = -f_out(ip) + fout(ip, 1)
+  do ip = 1, gr%mesh%np
+    fout(ip, 1) = vloc(ip)*grad(ip, 1)
+  end do
+  call X(project_psi)(gr%mesh, gr%der%boundaries, hm%ep%proj(iatom:iatom), 1, 1, grad, fout, ik)
+  do ip = 1, gr%mesh%np
+    f_out(ip) = -f_out(ip) + fout(ip, 1)
+  end do
 
   SAFE_DEALLOCATE_A(grad)
   SAFE_DEALLOCATE_A(fin)
@@ -513,17 +524,27 @@ contains
             call X(projector_commute_r)(hm%ep%proj(iatom), gr%mesh, hm%d%dim, idir2, ik, f_in2(:, :, idir2), vrnl)
 
             ! -x vnl |f>
-            forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np) 
-              dnl(ip, idim, idir) = dnl(ip, idim, idir) - gr%mesh%x(ip, idir)*vrnl(ip, idim)
-            end forall
+            do idim = 1, hm%d%dim
+              do ip = 1, gr%mesh%np
+                dnl(ip, idim, idir) = dnl(ip, idim, idir) - gr%mesh%x(ip, idir)*vrnl(ip, idim)
+              end do
+            end do
 
             ! vnl x |f>
-            forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np) xf(ip, idim) = gr%mesh%x(ip, idir) * f_in2(ip, idim, idir2)
+            do idim = 1, hm%d%dim
+              do ip = 1, gr%mesh%np
+                xf(ip, idim) = gr%mesh%x(ip, idir) * f_in2(ip, idim, idir2)
+              end do
+            end do
 
             vrnl = M_ZERO
             call X(projector_commute_r)(hm%ep%proj(iatom), gr%mesh, hm%d%dim, idir2, ik, xf, vrnl)
 
-            forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np) dnl(ip, idim, idir) = dnl(ip, idim, idir) + vrnl(ip, idim)
+            do idim = 1, hm%d%dim
+              do ip = 1, gr%mesh%np
+                dnl(ip, idim, idir) = dnl(ip, idim, idir) + vrnl(ip, idim)
+              end do
+            end do
           end do
         end do
 
@@ -615,9 +636,11 @@ contains
           end if
         end do
 
-        forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np)
-          f_out(ip, idim) = f_out(ip, idim) + gr%mesh%x(ip, this%dir2) * cpsi(ip, idim)
-        end forall
+        do idim = 1, hm%d%dim
+          do ip = 1, gr%mesh%np
+            f_out(ip, idim) = f_out(ip, idim) + gr%mesh%x(ip, this%dir2) * cpsi(ip, idim)
+          end do
+        end do
 
         cpsi(1:gr%mesh%np_part, 1:hm%d%dim) = M_ZERO
         do idim = 1, hm%d%dim
@@ -632,15 +655,21 @@ contains
           end if
         end do
 
-        forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np)
-          f_out(ip, idim) = f_out(ip, idim) - cpsi(ip, idim)
-        end forall
+        do idim = 1, hm%d%dim
+          do ip = 1, gr%mesh%np
+            f_out(ip, idim) = f_out(ip, idim) - cpsi(ip, idim)
+          end do
+        end do
 
       end if
 
       if(this%dir == this%dir2) then
       ! add delta_ij
-        forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np) f_out(ip, idim) = f_out(ip, idim) - f_in(ip, idim)
+        do idim = 1, hm%d%dim
+          do ip = 1, gr%mesh%np
+            f_out(ip, idim) = f_out(ip, idim) - f_in(ip, idim)
+          end do
+        end do
       end if
     else 
       SAFE_ALLOCATE(cpsi(1:gr%mesh%np,1:hm%d%dim))  
@@ -671,7 +700,11 @@ contains
     end if
 
     if(this%dir /= this%dir2) then
-      forall(idim = 1:hm%d%dim, ip = 1:gr%mesh%np) f_out(ip, idim) = M_HALF * f_out(ip, idim)
+      do idim = 1, hm%d%dim
+        do ip = 1, gr%mesh%np
+          f_out(ip, idim) = M_HALF * f_out(ip, idim)
+        end do
+      end do
     end if
 
     SAFE_DEALLOCATE_A(cpsi)
@@ -706,37 +739,53 @@ subroutine X(ionic_perturbation_order_2) (gr, namespace, geo, hm, ik, f_in, f_ou
   SAFE_ALLOCATE(tmp2(1:gr%mesh%np_part, 1:1))
   SAFE_ALLOCATE(vloc(1:gr%mesh%np))
 
-  forall(ip = 1:gr%mesh%np) vloc(ip) = M_ZERO
+  do ip = 1, gr%mesh%np
+    vloc(ip) = M_ZERO
+  end do
   call epot_local_potential(hm%ep, namespace, gr%der, gr%dgrid, geo, iatom, vloc)
 
   call lalg_copy(gr%mesh%np_part, f_in, fin(:, 1))
    
   !di^T dj^T v |f>
-  forall(ip = 1:gr%mesh%np) tmp1(ip, 1) = vloc(ip)*fin(ip, 1)
-  call X(project_psi)(gr%mesh, hm%ep%proj(iatom:iatom), 1, 1, fin, tmp1, ik)
+  do ip = 1, gr%mesh%np
+    tmp1(ip, 1) = vloc(ip)*fin(ip, 1)
+  end do
+  call X(project_psi)(gr%mesh, gr%der%boundaries, hm%ep%proj(iatom:iatom), 1, 1, fin, tmp1, ik)
   call X(derivatives_perform)(gr%der%grad(idir), gr%der, tmp1(:,1), tmp2(:,1))
   call X(derivatives_perform)(gr%der%grad(jdir), gr%der, tmp2(:,1), f_out)
 
   !di^T v dj |f>
   call X(derivatives_perform)(gr%der%grad(jdir), gr%der, fin(:,1), tmp1(:,1))
-  forall(ip = 1:gr%mesh%np) tmp2(ip, 1) = vloc(ip)*tmp1(ip, 1)
-  call X(project_psi)(gr%mesh, hm%ep%proj(iatom:iatom), 1, 1, tmp1, tmp2, ik)
+  do ip = 1, gr%mesh%np
+    tmp2(ip, 1) = vloc(ip)*tmp1(ip, 1)
+  end do
+  call X(project_psi)(gr%mesh, gr%der%boundaries, hm%ep%proj(iatom:iatom), 1, 1, tmp1, tmp2, ik)
   call X(derivatives_perform)(gr%der%grad(idir), gr%der, tmp2(:,1), tmp1(:,1))
-  forall(ip = 1:gr%mesh%np) f_out(ip) = f_out(ip) - tmp1(ip, 1)
+  do ip = 1, gr%mesh%np
+    f_out(ip) = f_out(ip) - tmp1(ip, 1)
+  end do
 
   !dj^T v di |f>
   call X(derivatives_perform)(gr%der%grad(idir), gr%der, fin(:,1), tmp1(:,1))
-  forall(ip = 1:gr%mesh%np) tmp2(ip, 1) = vloc(ip)*tmp1(ip, 1)
-  call X(project_psi)(gr%mesh, hm%ep%proj(iatom:iatom), 1, 1, tmp1, tmp2, ik)
+  do ip = 1, gr%mesh%np
+    tmp2(ip, 1) = vloc(ip)*tmp1(ip, 1)
+  end do
+  call X(project_psi)(gr%mesh, gr%der%boundaries, hm%ep%proj(iatom:iatom), 1, 1, tmp1, tmp2, ik)
   call X(derivatives_perform)(gr%der%grad(jdir), gr%der, tmp2(:,1), tmp1(:,1))
-  forall(ip = 1:gr%mesh%np) f_out(ip) = f_out(ip) - tmp1(ip, 1)
+  do ip = 1, gr%mesh%np
+    f_out(ip) = f_out(ip) - tmp1(ip, 1)
+  end do
 
   !v di dj |f>
   call X(derivatives_perform)(gr%der%grad(idir), gr%der, fin(:,1), tmp1(:,1))
   call X(derivatives_perform)(gr%der%grad(jdir), gr%der, tmp1(:,1), tmp2(:,1))
-  forall(ip = 1:gr%mesh%np) tmp1(ip, 1) = vloc(ip)*tmp2(ip, 1)
-  call X(project_psi)(gr%mesh, hm%ep%proj(iatom:iatom), 1, 1, tmp2, tmp1, ik)
-  forall(ip = 1:gr%mesh%np) f_out(ip) = f_out(ip) + tmp1(ip, 1)
+  do ip = 1, gr%mesh%np
+    tmp1(ip, 1) = vloc(ip)*tmp2(ip, 1)
+  end do
+  call X(project_psi)(gr%mesh, gr%der%boundaries, hm%ep%proj(iatom:iatom), 1, 1, tmp2, tmp1, ik)
+  do ip = 1, gr%mesh%np
+    f_out(ip) = f_out(ip) + tmp1(ip, 1)
+  end do
 
   POP_SUB(X(ionic_perturbation_order_2))
 
@@ -784,7 +833,9 @@ subroutine X(ionic_pert_matrix_elements_2)(gr, namespace, geo, hm, ik, st, vib, 
       iatom = vibrations_get_atom(vib, imat)
       idir  = vibrations_get_dir (vib, imat)
 
-      forall(ip = 1:gr%mesh%np) vloc(ip) = M_ZERO
+      do ip = 1, gr%mesh%np
+        vloc(ip) = M_ZERO
+      end do
       call epot_local_potential(hm%ep, namespace, gr%der, gr%dgrid, geo, iatom, vloc)
 
       do jdir = 1, gr%sb%dim
@@ -793,13 +844,21 @@ subroutine X(ionic_pert_matrix_elements_2)(gr, namespace, geo, hm, ik, st, vib, 
         dot = M_ZERO
 
         !2<f|dj^T v di |f>
-        forall (idim = 1:st%d%dim, ip = 1:gr%mesh%np) tmp1(ip, idim) = vloc(ip)*gpsi(ip, idim, idir)
-        call X(project_psi)(gr%mesh, hm%ep%proj(iatom:iatom), 1, st%d%dim, gpsi(:, :, idir), tmp1, ik)
+        do idim = 1, st%d%dim
+          do ip = 1, gr%mesh%np
+            tmp1(ip, idim) = vloc(ip)*gpsi(ip, idim, idir)
+          end do
+        end do
+        call X(project_psi)(gr%mesh, gr%der%boundaries, hm%ep%proj(iatom:iatom), 1, st%d%dim, gpsi(:, :, idir), tmp1, ik)
         dot = dot + M_TWO*R_REAL(X(mf_dotp)(gr%mesh, st%d%dim, gpsi(:, :, jdir), tmp1))
 
         !2<f|di^T dj^T v |f> 
-        forall (idim = 1:st%d%dim, ip = 1:gr%mesh%np) tmp1(ip, idim) = vloc(ip)*psi(ip, idim)
-        call X(project_psi)(gr%mesh, hm%ep%proj(iatom:iatom), 1, st%d%dim, psi, tmp1, ik)
+        do idim = 1, st%d%dim
+          do ip = 1, gr%mesh%np
+            tmp1(ip, idim) = vloc(ip)*psi(ip, idim)
+          end do
+        end do
+        call X(project_psi)(gr%mesh, gr%der%boundaries, hm%ep%proj(iatom:iatom), 1, st%d%dim, psi, tmp1, ik)
         dot = dot + M_TWO*R_REAL(X(mf_dotp)(gr%mesh, st%d%dim, g2psi(:, :, idir, jdir), tmp1))
 
         matrix(jmat, imat) = matrix(jmat, imat) + dot*st%occ(ist, ik)*factor
@@ -925,7 +984,7 @@ R_TYPE function X(pert_states_elec_expectation_value)(this, namespace, gr, geo, 
 
   integer :: order, ik, ib, minst, maxst, ist
   R_TYPE, allocatable :: tt(:)
-  type(batch_t) :: hpsib
+  type(wfs_elec_t) :: hpsib
 
   PUSH_SUB(X(pert_states_elec_expectation_value))
 
@@ -944,12 +1003,12 @@ R_TYPE function X(pert_states_elec_expectation_value)(this, namespace, gr, geo, 
       minst = states_elec_block_min(st, ib)
       maxst = states_elec_block_max(st, ib)
 
-      call batch_copy(st%group%psib(ib, ik), hpsib)
+      call st%group%psib(ib, ik)%copy_to(hpsib)
 
-      call X(pert_apply_batch)(this, namespace, gr, geo, hm, ik, st%group%psib(ib, ik), hpsib)
+      call X(pert_apply_batch)(this, namespace, gr, geo, hm, st%group%psib(ib, ik), hpsib)
       call X(mesh_batch_dotp_vector)(gr%der%mesh, st%group%psib(ib, ik), hpsib, tt(minst:maxst))
 
-      call batch_end(hpsib, copy = .false.)
+      call hpsib%end(copy = .false.)
 
     end do
     

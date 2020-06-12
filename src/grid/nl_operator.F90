@@ -30,9 +30,7 @@ module nl_operator_oct_m
   use mesh_oct_m
   use messages_oct_m
   use mpi_oct_m
-#ifdef HAVE_OPENMP
   use multicomm_oct_m
-#endif
   use namespace_oct_m
   use operate_f_oct_m
   use par_vec_oct_m
@@ -128,7 +126,6 @@ module nl_operator_oct_m
 
   integer, public, parameter :: OP_ALL = 3, OP_INNER = 1, OP_OUTER = 2
 
-  logical :: initialized = .false.
   logical :: compact_boundaries
 
   interface
@@ -185,10 +182,10 @@ contains
     default = OP_VEC
 
     call parse_variable(namespace, 'OperateDouble', default, dfunction_global)
-    if(.not.varinfo_valid_option('OperateDouble', dfunction_global)) call messages_input_error('OperateDouble')
+    if(.not.varinfo_valid_option('OperateDouble', dfunction_global)) call messages_input_error(namespace, 'OperateDouble')
 
     call parse_variable(namespace, 'OperateComplex', default, zfunction_global)
-    if(.not.varinfo_valid_option('OperateComplex', zfunction_global)) call messages_input_error('OperateComplex')
+    if(.not.varinfo_valid_option('OperateComplex', zfunction_global)) call messages_input_error(namespace, 'OperateComplex')
 
 
     !%Variable OperateSingle
@@ -218,10 +215,12 @@ contains
     !%End
     
     call parse_variable(namespace, 'OperateSingle', OP_FORTRAN, sfunction_global)
-    if(.not.varinfo_valid_option('OperateSingle', sfunction_global)) call messages_input_error('OperateSingle')
+    if(.not.varinfo_valid_option('OperateSingle', sfunction_global)) call messages_input_error(namespace, 'OperateSingle')
     
     call parse_variable(namespace, 'OperateComplexSingle', OP_FORTRAN, cfunction_global)
-    if(.not.varinfo_valid_option('OperateComplexSingle', cfunction_global)) call messages_input_error('OperateComplexSingle')
+    if(.not.varinfo_valid_option('OperateComplexSingle', cfunction_global)) then
+      call messages_input_error(namespace, 'OperateComplexSingle')
+    end if
 
     if(accel_is_enabled()) then
 
@@ -272,21 +271,6 @@ contains
 
     POP_SUB(nl_operator_global_end)
   end subroutine nl_operator_global_end
-
-  ! ---------------------------------------------------------
-
-  character(len=8) function op_function_name(id) result(str)
-    integer, intent(in) :: id
-
-    PUSH_SUB(op_function_name)
-    
-    str = 'unknown'
-    if(id == OP_FORTRAN) str = 'Fortran'
-    if(id == OP_VEC)     str = 'Vector'
-    
-    POP_SUB(op_function_name)
-  end function op_function_name
-
 
   ! ---------------------------------------------------------
   subroutine nl_operator_init(op, label)
@@ -636,11 +620,12 @@ contains
           call accel_create_buffer(op%buff_outer, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, pad(op%nouter, accel_max_workgroup_size()))
           call accel_write_buffer(op%buff_outer, op%nouter, outer_points)
 
+          SAFE_DEALLOCATE_A(inner_points)
+          SAFE_DEALLOCATE_A(outer_points)
+          SAFE_DEALLOCATE_A(all_points)
+  
         end if
-        
-        SAFE_DEALLOCATE_A(inner_points)
-        SAFE_DEALLOCATE_A(outer_points)
-        
+                
       case(OP_NOMAP)
 
         ASSERT(op%mesh%sb%dim == 3)
@@ -931,33 +916,6 @@ contains
   ! End of private routines.
   ! ---------------------------------------------------------
 #endif
-
-
-  ! ---------------------------------------------------------
-  subroutine nl_operator_matrix_to_op(op_ref, op, aa, bb)
-    FLOAT, intent(in)                :: aa(:, :)
-    FLOAT, optional, intent(in)      :: bb(:, :)
-    type(nl_operator_t), intent(in)  :: op_ref
-    type(nl_operator_t), intent(out) :: op
-
-    integer :: ip, jp, index
-
-    PUSH_SUB(nl_operator_matrix_to_op)
-
-    ASSERT(associated(op_ref%index))
-
-    call nl_operator_copy(op, op_ref)
-    do ip = 1, op%np
-      do jp = 1, op%stencil%size
-        index = nl_operator_get_index(op, jp, ip)
-        if(index <= op%np) &
-          op%w(jp, ip) = aa(ip, index)
-      end do
-    end do
-
-    POP_SUB(nl_operator_matrix_to_op)
-  end subroutine nl_operator_matrix_to_op
-
 
   ! ---------------------------------------------------------
   subroutine nl_operator_end(op)

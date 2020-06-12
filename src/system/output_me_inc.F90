@@ -378,7 +378,7 @@ subroutine X(output_me_dipole)(this, fname, namespace, st, gr, hm, geo, ik)
         end if
         dip_element = units_from_atomic(units_out%length, dip_element)
 
-        write(iunit, fmt='(f20.12)', advance = 'no') R_ABS(dip_element)
+        write(iunit, fmt='(f20.12)', advance = 'no') abs(dip_element)
         write(iunit, fmt='(a)', advance = 'no') '   '
       end do
       write(iunit, '(a)') ''

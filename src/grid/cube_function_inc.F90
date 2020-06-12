@@ -43,7 +43,7 @@ subroutine X(cube_function_alloc_rs)(cube, cf, in_device, force_alloc)
     case(FFTLIB_PFFT)
 
       ASSERT(associated(cube%fft))
-      if(.not. cf%forced_alloc) then  
+      if(.not. cf%forced_alloc) then 
         allocated = .true.
         cf%X(rs) => cube%fft%X(rs_data)(1:cube%rs_n(1), 1:cube%rs_n(2), 1:cube%rs_n(3))
       end if
@@ -52,6 +52,14 @@ subroutine X(cube_function_alloc_rs)(cube, cf, in_device, force_alloc)
         allocated = .true.
         cf%in_device_memory = .true.
         call accel_create_buffer(cf%real_space_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, product(cube%rs_n(1:3)))
+      end if
+    !We use aligned memory for FFTW
+    case(FFTLIB_FFTW)
+      if(.not. cf%forced_alloc) then
+        ASSERT(associated(cube%fft))
+        ASSERT(cube%fft%aligned_memory)
+        allocated = .true.
+        cf%X(rs) => cube%fft%X(rs_data)(1:cube%rs_n(1), 1:cube%rs_n(2), 1:cube%rs_n(3))
       end if
     end select
   end if
@@ -90,6 +98,11 @@ subroutine X(cube_function_free_rs)(cube, cf)
            call accel_release_buffer(cf%real_space_buffer)
            cf%in_device_memory = .false.
         end if
+     case(FFTLIB_FFTW) 
+       if(.not. cf%forced_alloc) then
+         deallocated = .true.
+         nullify(cf%X(rs))
+       end if
      end select
   end if
 
@@ -240,7 +253,9 @@ subroutine X(mesh_to_cube)(mesh, mf, cube, cf, local)
 
       ip = mesh%cube_map%map(MCM_POINT, im)
       nn = mesh%cube_map%map(MCM_COUNT, im)
-      forall(ii = 0:nn - 1) cf%X(rs)(ix, iy, iz + ii) = gmf(ip + ii)
+      do ii = 0, nn - 1
+        cf%X(rs)(ix, iy, iz + ii) = gmf(ip + ii)
+      end do
     end do
     !$omp end parallel do
 
@@ -330,7 +345,9 @@ subroutine X(cube_to_mesh) (cube, cf, mesh, mf, local)
       ip = mesh%cube_map%map(MCM_POINT, im)
       nn = mesh%cube_map%map(MCM_COUNT, im)
 
-      forall(ii = 0:nn - 1) gmf(ip + ii) = cf%X(rs)(ix, iy, iz + ii)
+      do ii = 0, nn - 1
+        gmf(ip + ii) = cf%X(rs)(ix, iy, iz + ii)
+      end do
     end do
     !$omp end parallel do
 
@@ -433,15 +450,21 @@ subroutine X(mesh_to_cube_parallel)(mesh, mf, cube, cf, map)
     max_x = cube%rs_istart(1) + cube%rs_n(1)
     max_y = cube%rs_istart(2) + cube%rs_n(2)
     max_z = cube%rs_istart(3) + cube%rs_n(3)
-  
+
     ! Initialize to zero the input matrix
-    forall(iz = 1:cube%rs_n(3), iy = 1:cube%rs_n(2), ix = 1:cube%rs_n(1)) cf%X(rs)(ix, iy, iz) = M_ZERO
+    do iz = 1, cube%rs_n(3)
+      do iy = 1, cube%rs_n(2)
+        do ix = 1, cube%rs_n(1)
+          cf%X(rs)(ix, iy, iz) = M_ZERO
+        end do
+      end do
+    end do
 
     ! Do the actual transform, only for the output values
     do im = 1, mesh%cube_map%nmap
       ip = mesh%cube_map%map(MCM_POINT, im)
       nn = mesh%cube_map%map(MCM_COUNT, im)
-    
+
       ix = mesh%cube_map%map(1, im) + cube%center(1)
       if (ix >= min_x .and. ix < max_x) then
         iy = mesh%cube_map%map(2, im) + cube%center(2)
@@ -524,7 +547,9 @@ subroutine X(cube_to_mesh_parallel) (cube, cf, mesh, mf, map)
 
       ixyz(1:3) = mesh%cube_map%map(1:3, im) + cube%center(1:3)
 
-      forall(ii = 0:nn - 1) mf(ip + ii) = gcf(ixyz(1), ixyz(2), ixyz(3) + ii)
+      do ii = 0, nn - 1
+        mf(ip + ii) = gcf(ixyz(1), ixyz(2), ixyz(3) + ii)
+      end do
     end do
 
     SAFE_DEALLOCATE_A(gcf)
@@ -535,6 +560,165 @@ subroutine X(cube_to_mesh_parallel) (cube, cf, mesh, mf, map)
 
   POP_SUB(X(cube_to_mesh_parallel))
 end subroutine X(cube_to_mesh_parallel)
+
+! ---------------------------------------------------------
+!> This function calculates the surface average of any function.
+!! \warning Some more careful testing should be done on this.
+R_TYPE function X(cube_function_surface_average)(cube, cf) result(x)
+  type(cube_t),          intent(in) :: cube
+  type(cube_function_t), intent(in) :: cf
+
+  integer :: ii, jj, kk, ix, iy, iz, npoints
+  R_TYPE :: tmp_x
+
+  ASSERT(.not. cf%in_device_memory)
+
+  PUSH_SUB(X(cube_function_surface_average))
+
+  tmp_x = M_ZERO
+  do ii = 1, cube%rs_n(1)
+    do jj = 1, cube%rs_n(2)
+      do kk = 1, cube%rs_n(3)
+        ix = ii + cube%rs_istart(1) - 1
+        iy = jj + cube%rs_istart(2) - 1
+        iz = kk + cube%rs_istart(3) - 1
+        if ( (ix == 1 .or. ix == cube%rs_n_global(1) ) .or. &
+             ( (iy == 1 .or. iy == cube%rs_n_global(2)) .and. (ix /= 1 .and. ix /= cube%rs_n_global(1)) ) .or. &
+             ( (iz == 1 .or. iz == cube%rs_n_global(3)) .and. (ix /= 1 .and. ix /= cube%rs_n_global(1) .and. &
+               iy /= 1 .and. iy /= cube%rs_n_global(2))) ) then
+          tmp_x = tmp_x + cf%X(RS)(ii, jj, kk)
+        end if
+      end do
+    end do
+  end do
+
+
+  if (cube%parallel_in_domains) then
+#ifdef HAVE_MPI
+    call MPI_Allreduce(tmp_x, x, 1, R_MPITYPE, MPI_SUM, cube%mpi_grp%comm, mpi_err)
+#endif
+  else
+    x = tmp_x
+  end if
+
+  npoints = 2*(cube%rs_n_global(1)-2)**2 + 4*(cube%rs_n_global(1)-2) + &
+            2*(cube%rs_n_global(2)-2)**2 + 4*(cube%rs_n_global(2)-2) + &
+            2*(cube%rs_n_global(3)-2)**2 + 4*(cube%rs_n_global(3)-2) + 8
+  x = x/npoints
+
+  POP_SUB(X(cube_function_surface_average))
+end function X(cube_function_surface_average)
+
+
+!> The next two subroutines convert a function between a
+!! submesh and the cube.
+! ---------------------------------------------------------
+
+subroutine X(submesh_to_cube)(sm, mf, cube, cf)
+  type(submesh_t),       intent(in)    :: sm
+  R_TYPE,  target,       intent(in)    :: mf(:) !< function defined on the submesh.
+  type(cube_t),          intent(in)    :: cube
+  type(cube_function_t), intent(inout) :: cf
+
+  integer :: ix, iy, iz, im
+  R_TYPE, pointer :: gmf(:)
+  type(profile_t), save :: prof_sm2c
+
+  PUSH_SUB(X(submesh_to_cube))
+  call profiling_in(prof_sm2c, "SUBMESH_TO_CUBE")
+
+  ASSERT(ubound(mf, dim = 1) == sm%np)
+  ASSERT(.not. sm%mesh%parallel_in_domains)
+
+  if(sm%mesh%parallel_in_domains) then
+    SAFE_ALLOCATE(gmf(1:sm%np_global))
+  else
+    gmf => mf
+  end if
+
+  !Not implemented, but not reachable at the moment
+  ASSERT(.not.cf%in_device_memory)
+
+  ASSERT(associated(cf%X(rs)))
+
+  !$omp parallel workshare
+  cf%X(rs) = M_ZERO
+  !$omp end parallel workshare
+
+  ASSERT(associated(sm%cube_map%map))
+  ASSERT(sm%mesh%sb%dim <= 3)
+
+  do im = 1, sm%np
+    ix = sm%cube_map%map(1, im) + cube%center(1)
+    iy = sm%cube_map%map(2, im) + cube%center(2)
+    iz = sm%cube_map%map(3, im) + cube%center(3)
+    cf%X(rs)(ix, iy, iz) = gmf(im)
+  end do
+
+  if(sm%mesh%parallel_in_domains) then
+    SAFE_DEALLOCATE_P(gmf)
+    call profiling_count_transfers(sm%np_global, mf(1))
+  else
+    call profiling_count_transfers(sm%np, mf(1))
+  end if
+
+  call profiling_out(prof_sm2c)
+  POP_SUB(X(submesh_to_cube))
+end subroutine X(submesh_to_cube)
+
+! ---------------------------------------------------------
+subroutine X(cube_to_submesh) (cube, cf, sm, mf)
+  type(cube_t),          intent(in)  :: cube
+  type(cube_function_t), intent(in)  :: cf
+  type(submesh_t),       intent(in)  :: sm
+  R_TYPE,  target,       intent(out) :: mf(:) !< function defined on the submesh. 
+
+  integer :: ix, iy, iz
+  integer :: im
+  R_TYPE, pointer :: gmf(:)
+  type(profile_t), save :: prof_c2sm
+
+  PUSH_SUB(X(cube_to_submesh))
+
+  call profiling_in(prof_c2sm, "CUBE_TO_SUBMESH")
+
+  ASSERT(ubound(mf, dim = 1) == sm%np)
+  ASSERT(.not. sm%mesh%parallel_in_domains)
+
+  if(sm%mesh%parallel_in_domains) then
+    SAFE_ALLOCATE(gmf(1:sm%np_global))
+  else
+    gmf => mf
+  end if
+
+  !Not implemented, but not reachable at the moment
+  ASSERT(.not.cf%in_device_memory)
+
+  ASSERT(associated(cf%X(rs)))
+
+  ASSERT(associated(sm%cube_map%map))
+
+  do im = 1, sm%np
+    ix = sm%cube_map%map(1, im) + cube%center(1)
+    iy = sm%cube_map%map(2, im) + cube%center(2)
+    iz = sm%cube_map%map(3, im) + cube%center(3)
+    gmf(im) = cf%X(rs)(ix, iy, iz)
+  end do
+
+
+  if(sm%mesh%parallel_in_domains) then
+    SAFE_DEALLOCATE_P(gmf)
+    call profiling_count_transfers(sm%np_global, mf(1))
+  else
+    call profiling_count_transfers(sm%np, mf(1))
+  end if
+  
+  call profiling_out(prof_c2sm)
+
+  POP_SUB(X(cube_to_submesh))
+
+end subroutine X(cube_to_submesh)
+
 
 !! Local Variables:
 !! mode: f90

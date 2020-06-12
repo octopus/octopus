@@ -84,7 +84,7 @@ subroutine X(subspace_diag_standard)(namespace, mesh, st, hm, ik, eigenval, diff
 
   R_TYPE, allocatable :: hmss(:, :), rdiff(:)
   integer             :: ib, minst, maxst
-  type(batch_t)       :: hpsib
+  type(wfs_elec_t)       :: hpsib
   type(profile_t), save :: prof_diff
   
   PUSH_SUB(X(subspace_diag_standard))
@@ -121,17 +121,17 @@ subroutine X(subspace_diag_standard)(namespace, mesh, st, hm, ik, eigenval, diff
       minst = states_elec_block_min(st, ib)
       maxst = states_elec_block_max(st, ib)
 
-      if(hamiltonian_elec_apply_packed(hm)) call batch_pack(st%group%psib(ib, ik))
+      if(hamiltonian_elec_apply_packed(hm)) call st%group%psib(ib, ik)%do_pack()
       
-      call batch_copy(st%group%psib(ib, ik), hpsib)
+      call st%group%psib(ib, ik)%copy_to(hpsib)
 
-      call X(hamiltonian_elec_apply_batch)(hm, namespace, mesh, st%group%psib(ib, ik), hpsib, ik)
+      call X(hamiltonian_elec_apply_batch)(hm, namespace, mesh, st%group%psib(ib, ik), hpsib)
       call batch_axpy(mesh%np, -eigenval, st%group%psib(ib, ik), hpsib)
       call X(mesh_batch_dotp_vector)(mesh, hpsib, hpsib, rdiff(minst:maxst), reduce = .false.)
 
-      call batch_end(hpsib)
+      call hpsib%end()
 
-      if(hamiltonian_elec_apply_packed(hm)) call batch_unpack(st%group%psib(ib, ik), copy = .false.)
+      if(hamiltonian_elec_apply_packed(hm)) call st%group%psib(ib, ik)%do_unpack(copy = .false.)
       
     end do
 
@@ -169,7 +169,7 @@ subroutine X(subspace_diag_scalapack)(namespace, mesh, st, hm, ik, eigenval, psi
   integer             :: ist, size
   integer :: psi_block(1:2), total_np, psi_desc(BLACS_DLEN), hs_desc(BLACS_DLEN), info
   integer :: nbl, nrow, ncol, ip, idim
-  type(batch_t) :: psib, hpsib
+  type(wfs_elec_t) :: psib, hpsib
   type(profile_t), save :: prof_diag, prof_gemm1, prof_gemm2
 #ifdef HAVE_ELPA
   class(elpa_t), pointer :: elpa
@@ -219,13 +219,13 @@ subroutine X(subspace_diag_scalapack)(namespace, mesh, st, hm, ik, eigenval, psi
   do ist = st%st_start, st%st_end, st%d%block_size
     size = min(st%d%block_size, st%st_end - ist + 1)
     
-    call batch_init(psib, hm%d%dim, ist, ist + size - 1, psi(:, :, ist:))
-    call batch_init(hpsib, hm%d%dim, ist, ist + size - 1, hpsi(: , :, ist:))
+    call wfs_elec_init(psib, hm%d%dim, ist, ist + size - 1, psi(:, :, ist:), ik)
+    call wfs_elec_init(hpsib, hm%d%dim, ist, ist + size - 1, hpsi(: , :, ist:), ik)
     
-    call X(hamiltonian_elec_apply_batch)(hm, namespace, mesh, psib, hpsib, ik)
+    call X(hamiltonian_elec_apply_batch)(hm, namespace, mesh, psib, hpsib)
     
-    call batch_end(psib)
-    call batch_end(hpsib)
+    call psib%end()
+    call hpsib%end()
   end do
 
   ! We need to set to zero some extra parts of the array
@@ -301,7 +301,7 @@ subroutine X(subspace_diag_scalapack)(namespace, mesh, st, hm, ik, eigenval, psi
   end if
 
   lwork = nint(abs(rttmp))
-  lrwork = nint(real(ftmp, 8))
+  lrwork = nint(TOFLOAT(ftmp))
 
   SAFE_ALLOCATE(work(1:lwork))
   SAFE_ALLOCATE(rwork(1:lrwork))
@@ -371,7 +371,7 @@ subroutine X(subspace_diag_scalapack)(namespace, mesh, st, hm, ik, eigenval, psi
   ! Recalculate the residues if requested by the diff argument.
   if(present(diff)) then 
     do ist = st%st_start, st%st_end
-      call X(hamiltonian_elec_apply)(hm, namespace, mesh, psi(:, :, ist) , hpsi(:, :, st%st_start), ist, ik)
+      call X(hamiltonian_elec_apply_single)(hm, namespace, mesh, psi(:, :, ist) , hpsi(:, :, st%st_start), ist, ik)
       diff(ist) = X(states_elec_residue)(mesh, st%d%dim, hpsi(:, :, st%st_start), eigenval(ist), psi(:, :, ist))
     end do
   end if
@@ -397,18 +397,18 @@ subroutine X(subspace_diag_hamiltonian)(namespace, mesh, st, hm, ik, hmss)
 
   integer       :: ib, ip
   R_TYPE, allocatable :: psi(:, :, :), hpsi(:, :, :)
-  type(batch_t), allocatable :: hpsib(:)
+  class(wfs_elec_t), allocatable :: hpsib(:)
   integer :: sp, size, block_size
   type(accel_mem_t) :: psi_buffer, hpsi_buffer, hmss_buffer
 
   PUSH_SUB(X(subspace_diag_hamiltonian))
   call profiling_in(hamiltonian_elec_prof, "SUBSPACE_HAMILTONIAN")
 
-  SAFE_ALLOCATE(hpsib(st%group%block_start:st%group%block_end))
+  SAFE_ALLOCATE_TYPE_ARRAY(wfs_elec_t, hpsib, (st%group%block_start:st%group%block_end))
   
   do ib = st%group%block_start, st%group%block_end
-    call batch_copy(st%group%psib(ib, ik), hpsib(ib))
-    call X(hamiltonian_elec_apply_batch)(hm, namespace, mesh, st%group%psib(ib, ik), hpsib(ib), ik)
+    call st%group%psib(ib, ik)%copy_to(hpsib(ib))
+    call X(hamiltonian_elec_apply_batch)(hm, namespace, mesh, st%group%psib(ib, ik), hpsib(ib))
   end do
   
   if(st%are_packed() .and. accel_is_enabled()) then
@@ -425,43 +425,59 @@ subroutine X(subspace_diag_hamiltonian)(namespace, mesh, st, hm, ik, hmss)
       call X(accel_gemm)(transA = ACCEL_BLAS_N, transB = ACCEL_BLAS_C, &
         M = int(st%nst, 8), N = int(st%nst, 8), K = int(mesh%np, 8), &
         alpha = R_TOTYPE(mesh%volume_element), &
-        A = st%group%psib(st%group%block_start, ik)%pack%buffer, offA = 0_8, &
-        lda = int(st%group%psib(st%group%block_start, ik)%pack%size(1), 8), &
-        B = hpsib(st%group%block_start)%pack%buffer, offB = 0_8, &
-        ldb = int(hpsib(st%group%block_start)%pack%size(1), 8), &
+        A = hpsib(st%group%block_start)%ff_device, offA = 0_8, &
+        lda = int(hpsib(st%group%block_start)%pack_size(1), 8), &
+        B = st%group%psib(st%group%block_start, ik)%ff_device, offB = 0_8, &
+        ldb = int(st%group%psib(st%group%block_start, ik)%pack_size(1), 8), &
         beta = R_TOTYPE(CNST(0.0)), &
         C = hmss_buffer, offC = 0_8, ldc = int(st%nst, 8))
 
     else
 
-      ASSERT(.not. st%parallel_in_states)
-      
       ! we have to copy the blocks to a temporary array
-      block_size = batch_points_block_size(st%group%psib(st%group%block_start, ik))
+      block_size = batch_points_block_size()
 
-      call accel_create_buffer(psi_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*block_size)
-      call accel_create_buffer(hpsi_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*block_size)
+      call accel_create_buffer(psi_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*st%d%dim*block_size)
+      call accel_create_buffer(hpsi_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, st%nst*st%d%dim*block_size)
+      if(st%parallel_in_states) then
+        SAFE_ALLOCATE(psi(1:st%nst, 1:st%d%dim, 1:block_size))
+        SAFE_ALLOCATE(hpsi(1:st%nst, 1:st%d%dim, 1:block_size))
+      end if
 
       do sp = 1, mesh%np, block_size
         size = min(block_size, mesh%np - sp + 1)
 
         do ib = st%group%block_start, st%group%block_end
-          ASSERT(R_TYPE_VAL == batch_type(st%group%psib(ib, ik)))
+          ASSERT(R_TYPE_VAL == st%group%psib(ib, ik)%type())
           call batch_get_points(st%group%psib(ib, ik), sp, sp + size - 1, psi_buffer, st%nst)
           call batch_get_points(hpsib(ib), sp, sp + size - 1, hpsi_buffer, st%nst)
         end do
 
+        if(st%parallel_in_states) then
+          call accel_read_buffer(psi_buffer, st%nst*st%d%dim*block_size, psi)
+          call states_elec_parallel_gather(st, (/st%d%dim, size/), psi)
+          call accel_write_buffer(psi_buffer, st%nst*st%d%dim*block_size, psi)
+          call accel_read_buffer(hpsi_buffer, st%nst*st%d%dim*block_size, hpsi)
+          call states_elec_parallel_gather(st, (/st%d%dim, size/), hpsi)
+          call accel_write_buffer(hpsi_buffer, st%nst*st%d%dim*block_size, hpsi)
+        end if
+
         call X(accel_gemm)(transA = ACCEL_BLAS_N, transB = ACCEL_BLAS_C, &
-          M = int(st%nst, 8), N = int(st%nst, 8), K = int(size, 8), &
+          M = int(st%nst, 8), N = int(st%nst, 8), K = int(size*st%d%dim, 8), &
           alpha = R_TOTYPE(mesh%volume_element), &
-          A = psi_buffer, offA = 0_8, lda = int(st%nst, 8), &
-          B = hpsi_buffer, offB = 0_8, ldb = int(st%nst, 8), beta = R_TOTYPE(CNST(1.0)), & 
+          A = hpsi_buffer, offA = 0_8, lda = int(st%nst, 8), &
+          B = psi_buffer, offB = 0_8, ldb = int(st%nst, 8), &
+          beta = R_TOTYPE(CNST(1.0)), & 
           C = hmss_buffer, offC = 0_8, ldc = int(st%nst, 8))
         
         call accel_finish()
 
       end do
 
+      if(st%parallel_in_states) then
+        SAFE_DEALLOCATE_A(psi)
+        SAFE_DEALLOCATE_A(hpsi)
+      end if
 
       call accel_release_buffer(psi_buffer)
       call accel_release_buffer(hpsi_buffer)
@@ -520,7 +536,7 @@ subroutine X(subspace_diag_hamiltonian)(namespace, mesh, st, hm, ik, hmss)
   call profiling_count_operations((R_ADD + R_MUL)*st%nst*(st%nst - CNST(1.0))*mesh%np)
   
   do ib = st%group%block_start, st%group%block_end
-    call batch_end(hpsib(ib))
+    call hpsib(ib)%end()
   end do
   
   SAFE_DEALLOCATE_A(hpsib)

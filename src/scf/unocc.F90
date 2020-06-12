@@ -74,6 +74,10 @@ contains
 
     PUSH_SUB(unocc_run)
 
+    if (sys%hm%pcm%run_pcm) then
+      call messages_not_implemented("PCM for CalculationMode /= gs or td")
+    end if
+
     !%Variable MaximumIter
     !%Type integer
     !%Default 50
@@ -332,7 +336,8 @@ contains
 
     if(simul_box_is_periodic(sys%gr%sb).and. sys%st%d%nik > sys%st%d%nspin) then
       if(bitand(sys%gr%sb%kpoints%method, KPOINTS_PATH) /= 0) then
-        call states_elec_write_bandstructure(STATIC_DIR, sys%namespace, sys%st%nst, sys%st, sys%gr%sb, sys%geo, sys%gr%mesh, &
+        call states_elec_write_bandstructure(STATIC_DIR, sys%namespace, sys%st%nst, sys%st, &
+              sys%gr%sb, sys%geo, sys%gr%mesh, &
               sys%hm%hm_base%phase, vec_pot = sys%hm%hm_base%uniform_vector_potential, &
               vec_pot_var = sys%hm%hm_base%vector_potential)
       end if
@@ -355,7 +360,7 @@ contains
 
       call messages_obsolete_variable(sys%namespace, "NumberUnoccStates", "ExtraStates")
 
-      call states_elec_allocate_wfns(st, mesh)
+      call states_elec_allocate_wfns(st, mesh, packed=.true.)
 
       ! now the eigensolver stuff
       call eigensolver_init(eigens, sys%namespace, sys%gr, st, sys%geo, sys%mc)
@@ -384,10 +389,6 @@ contains
       type(states_elec_t), intent(in) :: st
 
       character(len=50) :: str
-      FLOAT :: mem
-#ifdef HAVE_MPI
-      FLOAT :: mem_tmp
-#endif
 
       PUSH_SUB(unocc_run.write_iter_)
 

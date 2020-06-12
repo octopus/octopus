@@ -136,23 +136,23 @@ contains
     logical,      intent(out) :: inside(:)
 
     integer :: ip
-    real(8), parameter :: DELTA = CNST(1e-12)
-    real(8) :: llimit(MAX_DIM), ulimit(MAX_DIM)
+    FLOAT, parameter :: DELTA = CNST(1e-12)
+    FLOAT :: llimit(MAX_DIM), ulimit(MAX_DIM)
     FLOAT :: rr
     FLOAT, allocatable :: xx(:, :)
 
     ! no push_sub because this function is called very frequently
 
     SAFE_ALLOCATE(xx(1:box%dim, 1:npoints))
-    forall(ip = 1:npoints)
+    do ip = 1, npoints
       xx(1:box%dim, ip) = points(ip, 1:box%dim) - box%center(1:box%dim)
-    end forall
+    end do
 
     select case(box%shape)
     case(BOX_SPHERE)
-      forall(ip = 1:npoints)
+      do ip = 1, npoints
         inside(ip) = sum(xx(1:box%dim, ip)**2) <= (box%rsize + DELTA)**2
-      end forall
+      end do
 
     case(BOX_CYLINDER)
       do ip = 1, npoints
@@ -164,9 +164,9 @@ contains
       llimit(1:box%dim) = -box%lsize(1:box%dim) - DELTA
       ulimit(1:box%dim) =  box%lsize(1:box%dim) + DELTA
 
-      forall(ip = 1:npoints)
+      do ip = 1, npoints
         inside(ip) = all(xx(1:box%dim, ip) >= llimit(1:box%dim) .and. xx(1:box%dim, ip) <= ulimit(1:box%dim))
-      end forall
+      end do
 
     end select
 

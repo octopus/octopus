@@ -39,6 +39,7 @@ module scissor_oct_m
   use states_elec_oct_m
   use states_elec_dim_oct_m
   use states_elec_restart_oct_m
+  use wfs_elec_oct_m
 
   implicit none
 
@@ -93,7 +94,7 @@ contains
   if(gr%mesh%parallel_in_domains) call messages_not_implemented("Scissor operator parallel in domains", namespace=namespace)
 
   this%apply = .true.
-  this%gap = real(gap)
+  this%gap = gap
 
   write(message(1),'(a)')    'Start loading GS states.'
   call messages_info(1) 
@@ -123,11 +124,11 @@ contains
     SAFE_ALLOCATE(phase(1:gr%mesh%np))
     ! We apply the phase to these states, as we need it for the projectors later
     do ik=this%gs_st%d%kpt%start, this%gs_st%d%kpt%end
-      
+
       kpoint(1:gr%sb%dim) = kpoints_get_point(gr%sb%kpoints, states_elec_dim_get_kpoint_index(d, ik))
-      forall (ip = 1:gr%mesh%np)
+      do ip = 1, gr%mesh%np
         phase(ip) = exp(-M_zI * sum(gr%mesh%x(ip, 1:gr%sb%dim) * kpoint(1:gr%sb%dim)))
-      end forall
+      end do
 
       do ist=this%gs_st%st_start, this%gs_st%st_end
         call states_elec_get_state(this%gs_st, gr%mesh, ist, ik, temp_state )

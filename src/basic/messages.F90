@@ -121,15 +121,29 @@ module messages_oct_m
 
   type(debug_t), save :: debug
   
+  !> from signals.c
+  interface
+    subroutine get_signal_description(signum, signame)
+      implicit none
+      integer, intent(in) :: signum
+      character(len=*), intent(out) :: signame
+    end subroutine get_signal_description
+
+    subroutine trap_segfault()
+      implicit none
+    end subroutine trap_segfault
+  end interface
+
+
+
 contains
 
   ! ---------------------------------------------------------
-  subroutine messages_init(namespace)
-    type(namespace_t), intent(in) :: namespace
+  subroutine messages_init()
     
     logical :: trap_signals
 
-    call messages_obsolete_variable(namespace, 'DevelVersion', 'ExperimentalFeatures')
+    call messages_obsolete_variable(global_namespace, 'DevelVersion', 'ExperimentalFeatures')
 
     !%Variable ExperimentalFeatures
     !%Type logical
@@ -142,11 +156,11 @@ contains
     !% See details on
     !% <a href=http://octopus-code.org/experimental_features>wiki page</a>.
     !%End
-    call parse_variable(namespace, 'ExperimentalFeatures', .false., conf%devel_version)
+    call parse_variable(global_namespace, 'ExperimentalFeatures', .false., conf%devel_version)
     
-    call messages_obsolete_variable(namespace, 'DebugLevel', 'Debug')
+    call messages_obsolete_variable(global_namespace, 'DebugLevel', 'Debug')
 
-    call debug_init(debug, namespace)
+    call debug_init(debug, global_namespace)
     
     warnings = 0
     experimentals = 0
@@ -162,7 +176,7 @@ contains
     !% variable is enabled if <tt>Debug</tt> is set to trace mode
     !% (<tt>trace</tt>, <tt>trace_term</tt> or <tt>trace_file</tt>).
     !%End
-    call parse_variable(namespace, 'DebugTrapSignals', debug%trace, trap_signals)
+    call parse_variable(global_namespace, 'DebugTrapSignals', debug%trace, trap_signals)
 
     if (trap_signals) call trap_segfault()
 
@@ -223,8 +237,6 @@ contains
       close(iunit_out)
  
     end if
-
-    call debug_end(debug)
   
   end subroutine messages_end
 
@@ -237,8 +249,8 @@ contains
     integer :: ii, no_lines_
     logical :: only_root_writes_, should_write
     integer, allocatable :: recv_buf(:), recv_req(:)
-    integer, parameter :: FATAL_TAG = 1620299
 #ifdef HAVE_MPI
+    integer, parameter :: FATAL_TAG = 1620299
     logical :: received
     integer :: send_req
 #endif
@@ -366,10 +378,7 @@ contains
     type(namespace_t), optional, intent(in) :: namespace
 
     integer :: il, no_lines_
-    logical :: have_to_write
-#ifdef HAVE_MPI
-    logical :: all_nodes_
-#endif
+    logical :: have_to_write, all_nodes_
     
     no_lines_ = current_line
     if(present(no_lines)) no_lines_ = no_lines
@@ -378,13 +387,11 @@ contains
 
     have_to_write = mpi_grp_is_root(mpi_world)
 
-#ifdef HAVE_MPI
     all_nodes_ = .false.
     if(present(all_nodes)) then
       have_to_write = have_to_write .or. all_nodes
       all_nodes_ = all_nodes
     end if
-#endif
 
     if(have_to_write) then
 
@@ -620,12 +627,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine messages_input_error(var, details)
+  subroutine messages_input_error(namespace, var, details)
+    type(namespace_t),          intent(in) :: namespace
     character(len=*),           intent(in) :: var
     character(len=*), optional, intent(in) :: details
 
-    type(block_t) :: blk
-    
     call messages_write('Input error in the input variable '// trim(var))
     
     if(present(details)) then
@@ -640,7 +646,7 @@ contains
     
     call messages_write('You can get the documentation of the variable with the command:', new_line = .true.)
     call messages_write('  oct-help -p '//trim(var))
-    call messages_fatal()
+    call messages_fatal(namespace=namespace)
 
   end subroutine messages_input_error
   ! ---------------------------------------------------------
@@ -1254,7 +1260,10 @@ contains
       write(number, '(f12.6)') tval
     end if
 
-    if(optional_default(align_left, .false.)) number = ' '//adjustl(number)
+    if(optional_default(align_left, .false.)) then
+      number = adjustl(number)
+      number(1:len(number)) = ' '//number(1:len(number)-1)
+    end if
 
     write(message(current_line), '(a, a)') trim(message(current_line)), trim(number)
 

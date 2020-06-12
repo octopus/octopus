@@ -147,8 +147,9 @@ contains
     !% P. M. Dinh, P. Romaniello, P.-G. Reinhard, and E. Suraud, <i>Phys. Rev. A.</i> <b>87</b>, 032514 (2013).
     !%End
     call parse_variable(namespace, 'PES_spm_recipe', M_PHASE, this%recipe)
-    if(.not.varinfo_valid_option('PES_spm_recipe', this%recipe, is_flag = .true.)) &
-      call messages_input_error('PES_spm_recipe')
+    if(.not.varinfo_valid_option('PES_spm_recipe', this%recipe, is_flag = .true.)) then
+      call messages_input_error(namespace, 'PES_spm_recipe')
+    end if
     call messages_print_var_option(stdout, "PES_spm_recipe", this%recipe)
 
     !%Variable PES_spm_OmegaMax
@@ -178,7 +179,7 @@ contains
     !%End
     call parse_variable(namespace, 'PES_spm_DeltaOmega', units_to_atomic(units_inp%energy, this%omegamax/CNST(500)), this%delomega)
     if(this%onfly) then
-      if(this%delomega <= M_ZERO) call messages_input_error('PES_spm_DeltaOmega')
+      if(this%delomega <= M_ZERO) call messages_input_error(namespace, 'PES_spm_DeltaOmega')
       call messages_print_var_value(stdout, "PES_spm_DeltaOmega", this%delomega)
     end if
 
@@ -191,7 +192,7 @@ contains
     !% <tt>PES_spm_points</tt> are given).
     !%End
     call parse_variable(namespace, 'PES_spm_StepsThetaR', 45, this%nstepsthetar)
-    if(this%sphgrid .and. this%nstepsthetar < 0) call messages_input_error('PES_spm_StepsThetaR')
+    if(this%sphgrid .and. this%nstepsthetar < 0) call messages_input_error(namespace, 'PES_spm_StepsThetaR')
 
     !%Variable PES_spm_StepsPhiR
     !%Type integer
@@ -203,7 +204,7 @@ contains
     !%End
     call parse_variable(namespace, 'PES_spm_StepsPhiR', 90, this%nstepsphir)
     if(this%sphgrid) then
-      if(this%nstepsphir < 0)  call messages_input_error('PES_spm_StepsPhiR')
+      if(this%nstepsphir < 0)  call messages_input_error(namespace, 'PES_spm_StepsPhiR')
       if(this%nstepsphir == 0) this%nstepsphir = 1
     end if
 
@@ -217,7 +218,7 @@ contains
     if(this%sphgrid) then
       if(parse_is_defined(namespace, 'PES_spm_Radius')) then
         call parse_variable(namespace, 'PES_spm_Radius', M_ZERO, radius)
-        if(radius <= M_ZERO) call messages_input_error('PES_spm_Radius')
+        if(radius <= M_ZERO) call messages_input_error(namespace, 'PES_spm_Radius')
         call messages_print_var_value(stdout, "PES_spm_Radius", radius)
       else
         select case(mesh%sb%box_shape)
@@ -457,8 +458,7 @@ contains
     integer            :: iom, ith, iph, iphi, itot
     FLOAT              :: omega, thetar, phir
     CMPLX              :: vfu
-    FLOAT              :: wfu, weight
-    FLOAT, allocatable :: wffttot(:,:)
+    FLOAT              :: weight
     FLOAT, allocatable :: spctrsum(:,:,:,:), spctrout(:,:)
     character(len=80)  :: filenr
     integer            :: iunitone, iunittwo
@@ -673,7 +673,7 @@ contains
    
                 do isp = 1, this%nspoints
                   vfu = units_from_atomic(sqrt(units_out%length**(-3)), this%wf(ist, isdim, ik, isp, ii-1))
-                  write(iunitone, '(1x,e18.10E3,1x,e18.10E3)', advance='no') real(vfu), aimag(vfu)
+                  write(iunitone, '(1x,e18.10E3,1x,e18.10E3)', advance='no') TOFLOAT(vfu), aimag(vfu)
                 end do
                 write(iunitone, '(1x)', advance='yes')
               end do

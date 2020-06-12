@@ -69,7 +69,7 @@ subroutine X(scdm_localize)(scdm, namespace, st, mesh)
     state_global(1:mesh%np)=temp_state(1:mesh%np,1)
 #endif
     ! loop over JPVT to copy columns of the density matrix
-    do ii=1,nval
+    do ii = 1,nval
       SCDM_matrix(count,ii) = state_global(JPVT(ii))
     end do
   end do
@@ -164,7 +164,7 @@ subroutine X(scdm_localize)(scdm, namespace, st, mesh)
   SAFE_ALLOCATE(lxyz_domains(1:mesh%np,3))
   SAFE_ALLOCATE(lxyz_global(1:mesh%np_global))
   SAFE_ALLOCATE(lxyz_local(1:mesh%np))
-  do ii=1,3
+  do ii = 1,3
     lxyz_global(1:mesh%np_global) = mesh%idx%lxyz(1:mesh%np_global,ii)
 #ifdef HAVE_MPI
     call vec_scatter(mesh%vp, 0, lxyz_local, lxyz_global)
@@ -174,7 +174,7 @@ subroutine X(scdm_localize)(scdm, namespace, st, mesh)
 
   do vv = scdm%st%st_start,scdm%st%st_end
     call states_elec_get_state(scdm%st, mesh, vv, scdm%st%d%nik, temp_state(1:mesh%np,:))
-    do ii=1,3
+    do ii = 1,3
       scdm%center(ii,vv) = sum(temp_state(1:mesh%np,1)*R_CONJ(temp_state(1:mesh%np,1))*&
            lxyz_domains(1:mesh%np,ii)*mesh%spacing(ii))*mesh%volume_element
     end do
@@ -208,7 +208,7 @@ subroutine X(scdm_localize)(scdm, namespace, st, mesh)
     call check_box_in_index(mesh%idx,icenter(:),scdm%box_size,out_of_index_range)
 
     ! only periodic dimensions can be out of range
-    do idim=1,3
+    do idim = 1,3
       if(out_of_index_range(idim).and.idim > mesh%sb%periodic_dim) then
         message(1) = 'SCDM box out of index range in non-periodic dimension'
         call messages_fatal(1, namespace=namespace)
@@ -223,7 +223,7 @@ subroutine X(scdm_localize)(scdm, namespace, st, mesh)
 
       ! check if all indices are within the mesh
       out_of_mesh(1:3) = .false.
-      do idim=1,3
+      do idim = 1,3
         if(minval(minval(temp_box,dim=idim)) < 1 .or. &
            maxval(maxval(temp_box,dim=idim)) > mesh%np_global) then
           out_of_mesh(idim) = .true.
@@ -248,7 +248,7 @@ subroutine X(scdm_localize)(scdm, namespace, st, mesh)
       nn = scdm%full_cube_n
       ! limits of the indices that are on the mesh
       ! NOTE: this should already be defined somewhere, but I didnt find it
-      do idim=1,3
+      do idim = 1,3
         if(mod(scdm%full_cube_n(idim),2) == 0 ) then
           nr(idim,1) = -nn(idim)/2
           nr(idim,2) =  nn(idim)/2-1
@@ -264,7 +264,7 @@ subroutine X(scdm_localize)(scdm, namespace, st, mesh)
 
             ix(:) = icenter(:)+(/i1,i2,i3/)
 
-            do idim=1,3
+            do idim = 1,3
               if( ix(idim) < nr(idim,1)) then
                 ix(idim) = ix(idim) + nn(idim)
               else if( ix(idim) > nr(idim,2)) then

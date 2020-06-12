@@ -111,15 +111,14 @@ end subroutine X(linear_solver_solve_HXeY)
 
 ! ---------------------------------------------------------
 
-subroutine X(linear_solver_solve_HXeY_batch) (this, namespace, hm, gr, st, ik, xb, yb, shift, tol, residue, iter_used, occ_response)
+subroutine X(linear_solver_solve_HXeY_batch) (this, namespace, hm, gr, st, xb, yb, shift, tol, residue, iter_used, occ_response)
   type(linear_solver_t),    target, intent(inout) :: this
   type(namespace_t),                intent(in)    :: namespace
   type(hamiltonian_elec_t), target, intent(in)    :: hm
   type(grid_t),             target, intent(in)    :: gr
   type(states_elec_t),      target, intent(in)    :: st
-  integer,                          intent(in)    :: ik
-  type(batch_t),                    intent(inout) :: xb
-  type(batch_t),                    intent(inout) :: yb
+  type(wfs_elec_t),                 intent(inout) :: xb
+  type(wfs_elec_t),                 intent(inout) :: yb
   R_TYPE,                           intent(in)    :: shift(:)
   FLOAT,                            intent(in)    :: tol
   FLOAT,                            intent(out)   :: residue(:)
@@ -136,20 +135,20 @@ subroutine X(linear_solver_solve_HXeY_batch) (this, namespace, hm, gr, st, ik, x
     call profiling_in(prof_batch, "LINEAR_SOLVER_BATCH")
 
     if (hamiltonian_elec_apply_packed(hm)) then
-      call batch_pack(xb)
-      call batch_pack(yb)
+      call xb%do_pack()
+      call yb%do_pack()
     end if
-    call X(linear_solver_qmr_dotp)(this, namespace, hm, gr, st, ik, xb, yb, shift, iter_used, residue, tol)
+    call X(linear_solver_qmr_dotp)(this, namespace, hm, gr, st, xb, yb, shift, iter_used, residue, tol)
     if (hamiltonian_elec_apply_packed(hm)) then
-      call batch_unpack(yb)
-      call batch_unpack(xb)
+      call yb%do_unpack()
+      call xb%do_unpack()
     end if
     call profiling_out(prof_batch)
 
   case default
     do ii = 1, xb%nst
-      call X(linear_solver_solve_HXeY) (this, namespace, hm, gr, st, xb%states(ii)%ist, ik, xb%states(ii)%X(psi), yb%states(ii)%X(psi), &
-        shift(ii), tol, residue(ii), iter_used(ii), occ_response)
+      call X(linear_solver_solve_HXeY) (this, namespace, hm, gr, st, xb%ist(ii), xb%ik, xb%X(ff)(:,:,ii), &
+        yb%X(ff)(:,:,ii), shift(ii), tol, residue(ii), iter_used(ii), occ_response)
     end do
 
   end select
@@ -328,7 +327,11 @@ subroutine X(linear_solver_bicgstab) (ls, namespace, hm, gr, st, ist, ik, x, y, 
   ! Initial residue
   call X(linear_solver_operator) (hm, namespace, gr, st, ist, ik, shift, x, Hp)
 
-  forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np) r(ip, idim) = y(ip, idim) - Hp(ip, idim)
+  do idim = 1, st%d%dim
+    do ip = 1, gr%mesh%np
+      r(ip, idim) = y(ip, idim) - Hp(ip, idim)
+    end do
+  end do
 
   !re-orthogonalize r, this helps considerably with convergence
   if (occ_response) then
@@ -366,7 +369,11 @@ subroutine X(linear_solver_bicgstab) (ls, namespace, hm, gr, st, ist, ik, x, y, 
       end do
     else
       beta = rho_1/rho_2*alpha/w
-      forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np) p(ip, idim) = r(ip, idim) + beta*(p(ip, idim) - w*Hp(ip, idim))
+      do idim = 1, st%d%dim
+        do ip = 1, gr%mesh%np
+          p(ip, idim) = r(ip, idim) + beta*(p(ip, idim) - w*Hp(ip, idim))
+        end do
+      end do
     end if
 
     ! preconditioning 
@@ -375,7 +382,11 @@ subroutine X(linear_solver_bicgstab) (ls, namespace, hm, gr, st, ist, ik, x, y, 
     
     alpha = rho_1/X(mf_dotp)(gr%mesh, st%d%dim, rs, Hp)
 
-    forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np) s(ip, idim) = r(ip, idim) - alpha*Hp(ip, idim)
+    do idim = 1, st%d%dim
+      do ip = 1, gr%mesh%np
+        s(ip, idim) = r(ip, idim) - alpha*Hp(ip, idim)
+      end do
+    end do
 
     gamma = X(mf_nrm2) (gr%mesh, st%d%dim, s)
 
@@ -392,10 +403,12 @@ subroutine X(linear_solver_bicgstab) (ls, namespace, hm, gr, st, ist, ik, x, y, 
 
     w = X(mf_dotp)(gr%mesh, st%d%dim, Hs, s)/X(mf_dotp) (gr%mesh, st%d%dim, Hs, Hs)
 
-    forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np)
-      x(ip, idim) = x(ip, idim) + alpha*phat(ip, idim) + w*shat(ip, idim)
-      r(ip, idim) = s(ip, idim) - w*Hs(ip, idim)
-    end forall
+    do idim = 1, st%d%dim
+      do ip = 1, gr%mesh%np
+        x(ip, idim) = x(ip, idim) + alpha*phat(ip, idim) + w*shat(ip, idim)
+        r(ip, idim) = s(ip, idim) - w*Hs(ip, idim)
+      end do
+    end do
 
     rho_2 = rho_1
 
@@ -546,7 +559,7 @@ subroutine X(linear_solver_operator) (hm, namespace, gr, st, ist, ik, shift, x, 
 
   PUSH_SUB(X(linear_solver_operator))
 
-  call X(hamiltonian_elec_apply)(hm, namespace, gr%mesh, x, Hx, ist, ik)
+  call X(hamiltonian_elec_apply_single)(hm, namespace, gr%mesh, x, Hx, ist, ik)
 
   !Hx = Hx + shift*x
   do idim = 1, st%d%dim
@@ -582,15 +595,14 @@ subroutine X(linear_solver_operator) (hm, namespace, gr, st, ist, ik, shift, x, 
 end subroutine X(linear_solver_operator)
 
 ! ---------------------------------------------------------
-subroutine X(linear_solver_operator_batch) (hm, namespace, gr, st, ik, shift, xb, hxb)
+subroutine X(linear_solver_operator_batch) (hm, namespace, gr, st, shift, xb, hxb)
   type(hamiltonian_elec_t), intent(in)    :: hm
   type(namespace_t),        intent(in)    :: namespace
   type(grid_t),             intent(in)    :: gr
   type(states_elec_t),      intent(in)    :: st
-  integer,                  intent(in)    :: ik
   R_TYPE,                   intent(in)    :: shift(:)
-  type(batch_t),            intent(inout) :: xb   
-  type(batch_t),            intent(inout) :: hxb  
+  type(wfs_elec_t),         intent(inout) :: xb   
+  type(wfs_elec_t),         intent(inout) :: hxb  
 
   integer :: ii
   R_TYPE, allocatable :: shift_ist_indexed(:)
@@ -599,12 +611,12 @@ subroutine X(linear_solver_operator_batch) (hm, namespace, gr, st, ik, shift, xb
 
   if(st%smear%method == SMEAR_SEMICONDUCTOR .or. st%smear%integral_occs) then
 
-    call X(hamiltonian_elec_apply_batch)(hm, namespace, gr%mesh, xb, hxb, ik)
+    call X(hamiltonian_elec_apply_batch)(hm, namespace, gr%mesh, xb, hxb)
     
     SAFE_ALLOCATE(shift_ist_indexed(st%st_start:st%st_end))
     
     do ii = 1, xb%nst 
-      shift_ist_indexed(xb%states(ii)%ist) = shift(ii)
+      shift_ist_indexed(xb%ist(ii)) = shift(ii)
     end do
     
     call batch_axpy(gr%mesh%np, shift_ist_indexed, xb, hxb)
@@ -614,8 +626,8 @@ subroutine X(linear_solver_operator_batch) (hm, namespace, gr, st, ik, shift, xb
   else
 
     do ii = 1, xb%nst
-      call X(linear_solver_operator)(hm, namespace, gr, st, xb%states(ii)%ist, ik, shift(ii), &
-        xb%states(ii)%X(psi), hxb%states(ii)%X(psi))
+      call X(linear_solver_operator)(hm, namespace, gr, st, xb%ist(ii), xb%ik, shift(ii), xb%X(ff)(:,:,ii), &
+        hxb%X(ff)(:,:,ii))
     end do
 
   end if
@@ -779,21 +791,20 @@ end subroutine X(linear_solver_sos)
 ! ---------------------------------------------------------
 !> for complex symmetric matrices
 !! W Chen and B Poirier, J Comput Phys 219, 198-209 (2006)
-subroutine X(linear_solver_qmr_dotp)(this, namespace, hm, gr, st, ik, xb, bb, shift, iter_used, residue, threshold)
+subroutine X(linear_solver_qmr_dotp)(this, namespace, hm, gr, st, xb, bb, shift, iter_used, residue, threshold)
   type(linear_solver_t),    intent(inout) :: this
   type(namespace_t),        intent(in)    :: namespace
   type(hamiltonian_elec_t), intent(in)    :: hm
   type(grid_t),             intent(in)    :: gr
   type(states_elec_t),      intent(in)    :: st
-  integer,                  intent(in)    :: ik
-  type(batch_t),            intent(inout) :: xb
-  type(batch_t),            intent(in)    :: bb
+  type(wfs_elec_t),         intent(inout) :: xb
+  type(wfs_elec_t),         intent(in)    :: bb
   R_TYPE,                   intent(in)    :: shift(:)
   integer,                  intent(out)   :: iter_used(:) 
   FLOAT,                    intent(out)   :: residue(:)   !< the residue = abs(Ax-b)
   FLOAT,                    intent(in)    :: threshold    !< convergence threshold
 
-  type(batch_t) :: vvb, res, zzb, qqb, ppb, deltax, deltar
+  type(wfs_elec_t) :: vvb, res, zzb, qqb, ppb, deltax, deltar
   FLOAT               :: oldgamma
   integer             :: ii, iter
   FLOAT, allocatable  :: rho(:), oldrho(:), norm_b(:), xsi(:), gamma(:), alpha(:), theta(:), oldtheta(:), saved_res(:)
@@ -831,18 +842,18 @@ subroutine X(linear_solver_qmr_dotp)(this, namespace, hm, gr, st, ik, xb, bb, sh
 
   SAFE_ALLOCATE(exception_saved(1:gr%mesh%np, 1:st%d%dim, 1:xb%nst))
 
-  call batch_copy(xb, vvb)
-  call batch_copy(xb, res)
-  call batch_copy(xb, zzb)
-  call batch_copy(xb, qqb)
-  call batch_copy(xb, ppb)
-  call batch_copy(xb, deltax)
-  call batch_copy(xb, deltar)
+  call xb%copy_to(vvb)
+  call xb%copy_to(res)
+  call xb%copy_to(zzb)
+  call xb%copy_to(qqb)
+  call xb%copy_to(ppb)
+  call xb%copy_to(deltax)
+  call xb%copy_to(deltar)
 
-  call X(linear_solver_operator_batch)(hm, namespace, gr, st, ik, shift, xb, vvb)
+  call X(linear_solver_operator_batch)(hm, namespace, gr, st, shift, xb, vvb)
 
   call batch_xpay(gr%mesh%np, bb, CNST(-1.0), vvb)
-  call batch_copy_data(gr%mesh%np, vvb, res)
+  call vvb%copy_data_to(gr%mesh%np, res)
 
   call mesh_batch_nrm2(gr%mesh, vvb, rho)
   call mesh_batch_nrm2(gr%mesh, bb, norm_b)
@@ -914,12 +925,12 @@ subroutine X(linear_solver_qmr_dotp)(this, namespace, hm, gr, st, ik, xb, bb, sh
     end do
 
     if(iter == 1) then
-      call batch_copy_data(gr%mesh%np, zzb, qqb)
+      call zzb%copy_data_to(gr%mesh%np, qqb)
     else
       call batch_xpay(gr%mesh%np, zzb, -rho*delta/eps, qqb, a_full = .false.)
     end if
 
-    call X(linear_solver_operator_batch)(hm, namespace, gr, st, ik, shift, qqb, ppb)
+    call X(linear_solver_operator_batch)(hm, namespace, gr, st, shift, qqb, ppb)
 
     call batch_scal(gr%mesh%np, alpha, ppb, a_full = .false.)
 
@@ -938,7 +949,9 @@ subroutine X(linear_solver_qmr_dotp)(this, namespace, hm, gr, st, ik, xb, bb, sh
 
     call batch_xpay(gr%mesh%np, ppb, -beta, vvb, a_full = .false.)
 
-    forall (ii = 1:xb%nst) oldrho(ii) = rho(ii)
+    do ii = 1, xb%nst
+      oldrho(ii) = rho(ii)
+    end do
 
     call mesh_batch_nrm2(gr%mesh, vvb, rho)
 
@@ -966,11 +979,11 @@ subroutine X(linear_solver_qmr_dotp)(this, namespace, hm, gr, st, ik, xb, bb, sh
 
     if(iter == 1) then
 
-      call batch_copy_data(gr%mesh%np, qqb, deltax)
+      call qqb%copy_data_to(gr%mesh%np, deltax)
       call batch_scal(gr%mesh%np, eta*alpha, deltax, a_full = .false.)
       call batch_axpy(gr%mesh%np, CNST(1.0), deltax, xb)
       
-      call batch_copy_data(gr%mesh%np, ppb, deltar)
+      call ppb%copy_data_to(gr%mesh%np, deltar)
       call batch_scal(gr%mesh%np, eta, deltar, a_full = .false.)
       call batch_axpy(gr%mesh%np, CNST(-1.0), deltar, res)
 
@@ -987,7 +1000,9 @@ subroutine X(linear_solver_qmr_dotp)(this, namespace, hm, gr, st, ik, xb, bb, sh
     end if
 
     call mesh_batch_nrm2(gr%mesh, res, residue)
-    forall(ii = 1:xb%nst) residue(ii) = residue(ii)/norm_b(ii)
+    do ii = 1, xb%nst
+      residue(ii) = residue(ii)/norm_b(ii)
+    end do
 
     do ii = 1, xb%nst
       if(status(ii) == QMR_NOT_CONVERGED .and. residue(ii) < threshold) then
@@ -1027,13 +1042,13 @@ subroutine X(linear_solver_qmr_dotp)(this, namespace, hm, gr, st, ik, xb, bb, sh
 
   end do
 
-  call batch_end(vvb)
-  call batch_end(res)
-  call batch_end(zzb)
-  call batch_end(qqb)
-  call batch_end(ppb)
-  call batch_end(deltax)
-  call batch_end(deltar)
+  call vvb%end()
+  call res%end()
+  call zzb%end()
+  call qqb%end()
+  call ppb%end()
+  call deltax%end()
+  call deltar%end()
 
   SAFE_DEALLOCATE_A(exception_saved)
   SAFE_DEALLOCATE_A(rho)

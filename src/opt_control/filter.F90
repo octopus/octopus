@@ -120,7 +120,7 @@ contains
       SAFE_ALLOCATE(filter%expression(1:no_f))
       SAFE_ALLOCATE(filter%domain(1:no_f))
 
-      do i=1, no_f
+      do i = 1, no_f
         call parse_block_integer(blk, i-1, 0, filter%domain(i))
         call parse_block_string(blk, i-1, 1, filter%expression(i))
         call conv_to_C_string(filter%expression(i))
@@ -187,7 +187,7 @@ contains
     type(filter_t), intent(inout) :: filter
 
     integer :: i, ip, j, nfreqs
-    real(8) :: f_re, f_im
+    FLOAT   :: f_re, f_im
     CMPLX, allocatable :: ff(:)
     FLOAT, allocatable :: grid(:)
 
@@ -207,7 +207,7 @@ contains
         call tdf_fourier_grid(filter%f(i), grid)
         ff = M_z1
         do ip = 1, tdf_nfreqs(filter%f(i))
-          call parse_expression(f_re, f_im, "w", real(grid(ip), 8), filter%expression(i))
+          call parse_expression(f_re, f_im, "w", TOFLOAT(grid(ip)), filter%expression(i))
           ff(ip) = f_re + M_zI*f_im
         end do
        
@@ -217,9 +217,9 @@ contains
         call messages_fatal(2)
       end select
 
-      call tdf_set_numerical(filter%f(i), 1, real(ff(1), REAL_PRECISION))
+      call tdf_set_numerical(filter%f(i), 1, TOFLOAT(ff(1)))
       do j = 2, nfreqs !+ 1
-         call tdf_set_numerical(filter%f(i), j, sqrt(M_TWO)*real(ff(j), REAL_PRECISION))
+         call tdf_set_numerical(filter%f(i), j, sqrt(M_TWO)*TOFLOAT(ff(j)))
       end do
       ! WARNING: all the sine coefficients (imaginary part of ff) should be null.
       do j = nfreqs + 1, 2*nfreqs - 1

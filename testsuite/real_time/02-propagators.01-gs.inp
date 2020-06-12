@@ -23,3 +23,5 @@ MixField = density
 
 ConvRelDens = 1e-8
 EigensolverTolerance = 1e-9
+StatesPack = yes
+LCAOStart = lcao_full

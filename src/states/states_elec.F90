@@ -57,6 +57,7 @@ module states_elec_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use varinfo_oct_m
+  use wfs_elec_oct_m
 
   implicit none
 
@@ -271,7 +272,7 @@ contains
     !% directions at different points. This vector is always in 3D regardless of <tt>Dimensions</tt>.
     !%End
     call parse_variable(namespace, 'SpinComponents', UNPOLARIZED, st%d%ispin)
-    if(.not.varinfo_valid_option('SpinComponents', st%d%ispin)) call messages_input_error('SpinComponents')
+    if(.not.varinfo_valid_option('SpinComponents', st%d%ispin)) call messages_input_error(namespace, 'SpinComponents')
     call messages_print_var_option(stdout, 'SpinComponents', st%d%ispin)
     ! Use of spinors requires complex wavefunctions.
     if (st%d%ispin == SPINORS) call states_set_complex(st)
@@ -731,23 +732,18 @@ contains
 
       ncols = parse_block_cols(blk, 0)
       if(ncols > st%nst) then
-        message(1) = "Too many columns in block Occupations."
-        call messages_warning(1, namespace=namespace)
-        call messages_input_error("Occupations")
+        call messages_input_error(namespace, "Occupations", "Too many columns in block Occupations.")
       end if
 
       nrows = parse_block_n(blk)
       if(nrows /= st%d%nik) then
-        message(1) = "Wrong number of rows in block Occupations."
-        call messages_warning(1, namespace=namespace)
-        call messages_input_error("Occupations")
+        call messages_input_error(namespace, "Occupations", "Wrong number of rows in block Occupations.")
       end if
 
       do ik = 1, st%d%nik - 1
         if(parse_block_cols(blk, ik) /= ncols) then
-          message(1) = "All rows in block Occupations must have the same number of columns."
-          call messages_warning(1, namespace=namespace)
-          call messages_input_error("Occupations")
+          call messages_input_error(namespace, "Occupations", &
+            "All rows in block Occupations must have the same number of columns.")
         end if
       end do
 
@@ -949,7 +945,7 @@ contains
         do j = 1, 3
           call parse_block_float(blk, i-1, j-1, st%spin(j, i, 1))
         end do
-        if( abs(sum(st%spin(1:3, i, 1)**2) - M_FOURTH) > CNST(1.0e-6)) call messages_input_error('InitialSpins')
+        if( abs(sum(st%spin(1:3, i, 1)**2) - M_FOURTH) > CNST(1.0e-6)) call messages_input_error(namespace, 'InitialSpins')
       end do
       call parse_block_end(blk)
       st%fixed_spins = .true.
@@ -964,11 +960,12 @@ contains
 
   ! ---------------------------------------------------------
   !> Allocates the KS wavefunctions defined within a states_elec_t structure.
-  subroutine states_elec_allocate_wfns(st, mesh, wfs_type, skip)
+  subroutine states_elec_allocate_wfns(st, mesh, wfs_type, skip, packed)
     type(states_elec_t),    intent(inout)   :: st
     type(mesh_t),           intent(in)      :: mesh
     type(type_t), optional, intent(in)      :: wfs_type
     logical,      optional, intent(in)      :: skip(:)
+    logical,      optional, intent(in)      :: packed
 
     PUSH_SUB(states_elec_allocate_wfns)
 
@@ -977,7 +974,7 @@ contains
       st%wfs_type = wfs_type
     end if
 
-    call states_elec_init_block(st, mesh, skip = skip)
+    call states_elec_init_block(st, mesh, skip = skip, packed=packed)
     call states_elec_set_zero(st)
 
     POP_SUB(states_elec_allocate_wfns)
@@ -1000,14 +997,15 @@ contains
   !! st\%block_initialized: it should be .false. on entry, and .true. after exiting this routine.
   !!
   !! The set of batches st\%psib(1:st\%nblocks) contains the blocks themselves.
-  subroutine states_elec_init_block(st, mesh, verbose, skip)
+  subroutine states_elec_init_block(st, mesh, verbose, skip, packed)
     type(states_elec_t),           intent(inout) :: st
     type(mesh_t),                  intent(in)    :: mesh
     logical, optional,             intent(in)    :: verbose
     logical, optional,             intent(in)    :: skip(:)
+    logical, optional,             intent(in)    :: packed
 
     integer :: ib, iqn, ist, istmin, istmax
-    logical :: same_node, verbose_
+    logical :: same_node, verbose_, packed_
     integer, allocatable :: bstart(:), bend(:)
 
     PUSH_SUB(states_elec_init_block)
@@ -1019,6 +1017,7 @@ contains
     st%group%iblock = 0
 
     verbose_ = optional_default(verbose, .true.)
+    packed_ = optional_default(packed, .false.)
 
     !In case we have a list of state to skip, we do not allocate them 
     istmin = 1
@@ -1088,13 +1087,11 @@ contains
           st%group%block_is_local(ib, iqn) = .true.
 
           if (states_are_real(st)) then
-            call batch_init(st%group%psib(ib, iqn), st%d%dim, bend(ib) - bstart(ib) + 1)
-            call dbatch_allocate(st%group%psib(ib, iqn), bstart(ib), bend(ib), mesh%np_part, &
-              mirror = st%d%mirror_states, special=.true.)
+            call dwfs_elec_init(st%group%psib(ib, iqn), st%d%dim, bstart(ib), bend(ib), mesh%np_part, iqn, &
+              special=.true., packed=packed_)
           else
-            call batch_init(st%group%psib(ib, iqn), st%d%dim, bend(ib) - bstart(ib) + 1)
-            call zbatch_allocate(st%group%psib(ib, iqn), bstart(ib), bend(ib), mesh%np_part, &
-              mirror = st%d%mirror_states, special=.true.)
+            call zwfs_elec_init(st%group%psib(ib, iqn), st%d%dim, bstart(ib), bend(ib), mesh%np_part, iqn, &
+              special=.true., packed=packed_)
           end if
           
         end do
@@ -1266,26 +1263,7 @@ contains
 
     call messages_print_var_value(stdout, 'StatesPack', st%d%pack_states)
 
-    !%Variable StatesMirror
-    !%Type logical
-    !%Section Execution::Optimization
-    !%Description
-    !% When this is enabled, Octopus keeps a copy of the states in
-    !% main memory. This speeds up calculations when working with
-    !% GPUs, as the memory does not to be copied back, but consumes
-    !% more main memory.
-    !%
-    !% The default is false, except when acceleration is enabled and
-    !% StatesPack is disabled.
-    !%End
-
-    defaultl = .false.
-    if(accel_is_enabled() .and. .not. st%d%pack_states) then
-      defaultl = .true.
-    end if
-    call parse_variable(namespace, 'StatesMirror', defaultl, st%d%mirror_states)
-
-    call messages_print_var_value(stdout, 'StatesMirror', st%d%mirror_states)
+    call messages_obsolete_variable(namespace, 'StatesMirror')
 
     !%Variable StatesOrthogonalization
     !%Type integer
@@ -1325,7 +1303,9 @@ contains
     
     call parse_variable(namespace, 'StatesOrthogonalization', default, st%d%orth_method)
 
-    if(.not.varinfo_valid_option('StatesOrthogonalization', st%d%orth_method)) call messages_input_error('StatesOrthogonalization')
+    if(.not.varinfo_valid_option('StatesOrthogonalization', st%d%orth_method)) then
+      call messages_input_error(namespace, 'StatesOrthogonalization')
+    end if
     call messages_print_var_option(stdout, 'StatesOrthogonalization', st%d%orth_method)
 
     !%Variable StatesCLDeviceMemory
@@ -1511,6 +1491,10 @@ contains
     CMPLX, allocatable :: zpsi(:,  :), zpsi2(:)
     integer :: ikpoint, ip
 
+    logical :: normalized_
+
+    normalized_ = optional_default(normalized, .true.)
+
     PUSH_SUB(states_elec_generate_random)
  
     ist_start = optional_default(ist_start_, 1)
@@ -1531,22 +1515,28 @@ contains
         do ist = ist_start, ist_end
           if (states_are_real(st).or.kpoints_point_is_gamma(sb%kpoints, ikpoint)) then
             if(st%randomization == PAR_INDEPENDENT) then
-              call dmf_random(mesh, dpsi(:, 1), mesh%vp%xlocal-1, normalized = normalized)
+              call dmf_random(mesh, dpsi(:, 1), &
+                pre_shift = mesh%vp%xlocal-1, &
+                post_shift = mesh%vp%np_global - mesh%vp%xlocal - mesh%np + 1, &
+                normalized = normalized)
             else
               call dmf_random(mesh, dpsi(:, 1), normalized = normalized)
             end if
             if(.not. state_kpt_is_local(st, ist, ik)) cycle
             if(states_are_complex(st)) then !Gamma point
-              forall(ip=1:mesh%np) 
+              do ip = 1, mesh%np
                 zpsi(ip,1) = cmplx(dpsi(ip,1), M_ZERO)
-              end forall
+              end do
               call states_elec_set_state(st, mesh, ist,  ik, zpsi)
             else
               call states_elec_set_state(st, mesh, ist,  ik, dpsi)
             end if
           else
             if(st%randomization == PAR_INDEPENDENT) then
-              call zmf_random(mesh, zpsi(:, 1), mesh%vp%xlocal-1, normalized = normalized)
+              call zmf_random(mesh, zpsi(:, 1), &
+                pre_shift = mesh%vp%xlocal-1, &
+                post_shift = mesh%vp%np_global - mesh%vp%xlocal - mesh%np + 1, &
+                normalized = normalized)
             else
               call zmf_random(mesh, zpsi(:, 1), normalized = normalized)
             end if
@@ -1567,18 +1557,24 @@ contains
           do ist = ist_start, ist_end
             if(kpoints_point_is_gamma(sb%kpoints, ikpoint)) then
               if(st%randomization == PAR_INDEPENDENT) then
-                call dmf_random(mesh, dpsi(:, 1), mesh%vp%xlocal-1, normalized = normalized)
+                call dmf_random(mesh, dpsi(:, 1), &
+                  pre_shift = mesh%vp%xlocal-1, &
+                  post_shift = mesh%vp%np_global - mesh%vp%xlocal - mesh%np + 1, &
+                  normalized = normalized)
               else
                 call dmf_random(mesh, dpsi(:, 1), normalized = normalized)
                 if(.not. state_kpt_is_local(st, ist, ik)) cycle
               end if
-              forall(ip=1:mesh%np)
+              do ip = 1, mesh%np
                 zpsi(ip,1) = cmplx(dpsi(ip,1), M_ZERO)
-              end forall
+              end do
               call states_elec_set_state(st, mesh, ist,  ik, zpsi)
             else
               if(st%randomization == PAR_INDEPENDENT) then
-                call zmf_random(mesh, zpsi(:, 1), mesh%vp%xlocal-1, normalized = normalized)
+                call zmf_random(mesh, zpsi(:, 1), &
+                  pre_shift = mesh%vp%xlocal-1, &
+                  post_shift = mesh%vp%np_global - mesh%vp%xlocal - mesh%np + 1, &
+                  normalized = normalized)
               else
                 call zmf_random(mesh, zpsi(:, 1), normalized = normalized)
                 if(.not. state_kpt_is_local(st, ist, ik)) cycle
@@ -1618,12 +1614,19 @@ contains
           do ist = ist_start, ist_end
             do id = 1, st%d%dim
               if(st%randomization == PAR_INDEPENDENT) then
-                call zmf_random(mesh, zpsi(:, id), mesh%vp%xlocal-1, normalized = normalized)
+                call zmf_random(mesh, zpsi(:, id), &
+                  pre_shift = mesh%vp%xlocal-1, &
+                  post_shift = mesh%vp%np_global - mesh%vp%xlocal - mesh%np + 1, &
+                  normalized = .false.)
               else
-                call zmf_random(mesh, zpsi(:, id), normalized = normalized)
+                call zmf_random(mesh, zpsi(:, id), normalized = .false.)
               end if
             end do
+            ! We need to generate the wave functions even if not using them in order to be consistent with the random seed in parallel runs.
             if(.not. state_kpt_is_local(st, ist, ik)) cycle
+            ! Note that mf_random normalizes each spin channel independently to 1.
+            ! Therefore we need to renormalize the spinor:
+            if(normalized_) call zmf_normalize(mesh, st%d%dim, zpsi)
             call states_elec_set_state(st, mesh, ist,  ik, zpsi)
           end do
         end do
@@ -1638,10 +1641,11 @@ contains
   end subroutine states_elec_generate_random
 
   ! ---------------------------------------------------------
-  subroutine states_elec_fermi(st, namespace, mesh)
+  subroutine states_elec_fermi(st, namespace, mesh, compute_spin)
     type(states_elec_t), intent(inout) :: st
     type(namespace_t),   intent(in)    :: namespace
     type(mesh_t),        intent(in)    :: mesh
+    logical, optional,   intent(in)    :: compute_spin
 
     !> Local variables.
     integer            :: ist, ik
@@ -1671,7 +1675,7 @@ contains
       end if
     end if
 
-    if(st%d%ispin == SPINORS) then
+    if(st%d%ispin == SPINORS .and. optional_default(compute_spin,.true.)) then
       ASSERT(states_are_complex(st))
       
       st%spin(:,:,:) = M_ZERO
@@ -1819,8 +1823,8 @@ contains
     FLOAT, pointer :: jp(:, :, :)
     FLOAT, pointer :: tau(:, :)
     CMPLX, allocatable :: wf_psi(:,:), gwf_psi(:,:,:), wf_psi_conj(:,:), lwf_psi(:,:)
-    FLOAT, allocatable :: abs_wf_psi(:), abs_gwf_psi(:)
-    CMPLX, allocatable :: psi_gpsi(:)
+    FLOAT, allocatable :: abs_wf_psi(:,:), abs_gwf_psi(:)
+    CMPLX, allocatable :: psi_gpsi(:,:)
     CMPLX   :: c_tmp
     integer :: is, ik, ist, i_dim, st_dim, ii, st_end_, idir
     FLOAT   :: ww, kpoint(1:MAX_DIM)
@@ -1842,9 +1846,9 @@ contains
     SAFE_ALLOCATE( wf_psi(1:der%mesh%np_part, 1:st%d%dim))
     SAFE_ALLOCATE( wf_psi_conj(1:der%mesh%np_part, 1:st%d%dim))
     SAFE_ALLOCATE(gwf_psi(1:der%mesh%np, 1:der%mesh%sb%dim, 1:st%d%dim))
-    SAFE_ALLOCATE(abs_wf_psi(1:der%mesh%np))
+    SAFE_ALLOCATE(abs_wf_psi(1:der%mesh%np, 1:st%d%dim))
     SAFE_ALLOCATE(abs_gwf_psi(1:der%mesh%np))
-    SAFE_ALLOCATE(psi_gpsi(1:der%mesh%np))
+    SAFE_ALLOCATE(psi_gpsi(1:der%mesh%np, 1:st%d%dim))
     if(present(density_laplacian)) then
       SAFE_ALLOCATE(lwf_psi(1:der%mesh%np, 1:st%d%dim))
     end if
@@ -1902,7 +1906,7 @@ contains
 
         !We precompute some quantites, to avoid to compute it many times
         wf_psi_conj(1:der%mesh%np, 1:st%d%dim) = conjg(wf_psi(1:der%mesh%np,1:st%d%dim))
-        abs_wf_psi(1:der%mesh%np) = real(wf_psi_conj(1:der%mesh%np, 1)*wf_psi(1:der%mesh%np, 1))
+        abs_wf_psi(1:der%mesh%np, 1:st%d%dim) = real(wf_psi_conj(1:der%mesh%np, 1:st%d%dim)*wf_psi(1:der%mesh%np, 1:st%d%dim))
 
         if(present(density_laplacian)) then
           density_laplacian(1:der%mesh%np, is) = density_laplacian(1:der%mesh%np, is) + &
@@ -1922,12 +1926,12 @@ contains
         do i_dim = 1, der%mesh%sb%dim
 
           !We precompute some quantites, to avoid to compute it many times
-          psi_gpsi(1:der%mesh%np) = wf_psi_conj(1:der%mesh%np, 1)*gwf_psi(1:der%mesh%np,i_dim,1)
+          psi_gpsi(1:der%mesh%np, 1:st%d%dim) = wf_psi_conj(1:der%mesh%np, 1:st%d%dim)*gwf_psi(1:der%mesh%np,i_dim,1:st%d%dim)
           abs_gwf_psi(1:der%mesh%np) = real(conjg(gwf_psi(1:der%mesh%np, i_dim, 1))*gwf_psi(1:der%mesh%np, i_dim, 1))
 
           if(present(density_gradient)) &
                density_gradient(1:der%mesh%np, i_dim, is) = density_gradient(1:der%mesh%np, i_dim, is) &
-                      + ww*M_TWO*real(psi_gpsi(1:der%mesh%np))
+                      + ww*M_TWO*real(psi_gpsi(1:der%mesh%np, 1))
           if(present(density_laplacian)) &
                density_laplacian(1:der%mesh%np, is) = density_laplacian(1:der%mesh%np, is)             &
                       + ww*M_TWO*abs_gwf_psi(1:der%mesh%np)
@@ -1935,8 +1939,8 @@ contains
           if(associated(jp)) then
             if (.not.(states_are_real(st))) then
               jp(1:der%mesh%np, i_dim, is) = jp(1:der%mesh%np, i_dim, is) + &
-                    ww*aimag(psi_gpsi(1:der%mesh%np)) &
-                  - ww*abs_wf_psi(1:der%mesh%np)*kpoint(i_dim)
+                    ww*aimag(psi_gpsi(1:der%mesh%np, 1)) &
+                  - ww*abs_wf_psi(1:der%mesh%np, 1)*kpoint(i_dim)
             else
               jp(1:der%mesh%np, i_dim, is) = M_ZERO
             end if
@@ -1944,8 +1948,8 @@ contains
 
           if (associated(tau)) then
             tau (1:der%mesh%np, is)   = tau (1:der%mesh%np, is)        + &
-                 ww*(abs_gwf_psi(1:der%mesh%np) + abs(kpoint(i_dim))**2*abs_wf_psi(1:der%mesh%np)  &
-                     - M_TWO*aimag(psi_gpsi(1:der%mesh%np))*kpoint(i_dim))
+                 ww*(abs_gwf_psi(1:der%mesh%np) + abs(kpoint(i_dim))**2*abs_wf_psi(1:der%mesh%np, 1)  &
+                     - M_TWO*aimag(psi_gpsi(1:der%mesh%np, 1))*kpoint(i_dim))
           end if
 
           if(st%d%ispin == SPINORS) then
@@ -1974,7 +1978,8 @@ contains
             !         (-jp(3) + i jp(4)   jp(2)           )
             if(associated(jp)) then
               jp(1:der%mesh%np, i_dim, 2) = jp(1:der%mesh%np, i_dim, 2) + &
-                   ww*aimag(wf_psi_conj(1:der%mesh%np, 2)*gwf_psi(1:der%mesh%np, i_dim, 2))
+                   ww*( aimag(psi_gpsi(1:der%mesh%np, 2)) &
+                       - ww*abs_wf_psi(1:der%mesh%np, 2)*kpoint(i_dim))
               do ii = 1, der%mesh%np
                 c_tmp = wf_psi_conj(ii, 1)*gwf_psi(ii, i_dim, 2) - wf_psi(ii, 2)*conjg(gwf_psi(ii, i_dim, 1))
                 jp(ii, i_dim, 3) = jp(ii, i_dim, 3) + ww* real(c_tmp)
@@ -1986,7 +1991,10 @@ contains
             !     t = ( tau(1)              tau(3) + i tau(4) )
             !         ( tau(3) - i tau(4)   tau(2)            )
             if(associated(tau)) then
-              tau (1:der%mesh%np, 2) = tau (1:der%mesh%np, 2) + ww*abs(gwf_psi(1:der%mesh%np, i_dim, 2))**2
+              tau(1:der%mesh%np, 2) = tau(1:der%mesh%np, 2) + ww*(abs(gwf_psi(1:der%mesh%np, i_dim, 2))**2 &
+                     + abs(kpoint(i_dim))**2*abs_wf_psi(1:der%mesh%np, 2)  &
+                     - M_TWO*aimag(psi_gpsi(1:der%mesh%np, 2))*kpoint(i_dim))
+
               do ii = 1, der%mesh%np
                 c_tmp = conjg(gwf_psi(ii, i_dim, 1))*gwf_psi(ii, i_dim, 2)
                 tau(ii, 3) = tau(ii, 3) + ww* real(c_tmp)
@@ -2056,9 +2064,9 @@ contains
 
 
     if(associated(st%rho_core) .and. nlcc .and. (present(density_laplacian) .or. present(density_gradient))) then
-       forall(ii=1:der%mesh%np)
+       do ii = 1, der%mesh%np
          wf_psi(ii, 1) = st%rho_core(ii)/st%d%spin_channels
-       end forall
+       end do
 
        call boundaries_set(der%boundaries, wf_psi(:, 1))
 
@@ -2176,7 +2184,7 @@ contains
 
     z = zmf_dotp(mesh, f1(:, 1) , f1(:, 2))
 
-    spin(1) = M_TWO*dble(z)
+    spin(1) = M_TWO*TOFLOAT(z)
     spin(2) = M_TWO*aimag(z)
     spin(3) = zmf_nrm2(mesh, f1(:, 1))**2 - zmf_nrm2(mesh, f1(:, 2))**2
     spin = M_HALF*spin ! spin is half the sigma matrix.
@@ -2213,15 +2221,15 @@ contains
 
   ! ---------------------------------------------------------
 
-  real(8) function states_elec_wfns_memory(st, mesh) result(memory)
+  FLOAT function states_elec_wfns_memory(st, mesh) result(memory)
     type(states_elec_t), intent(in) :: st
     type(mesh_t),        intent(in) :: mesh
 
     PUSH_SUB(states_elec_wfns_memory)
-    memory = 0.0_8
+    memory = M_ZERO
 
     ! orbitals
-    memory = memory + REAL_PRECISION*dble(mesh%np_part_global)*st%d%dim*dble(st%nst)*st%d%kpt%nglobal
+    memory = memory + REAL_PRECISION*TOFLOAT(mesh%np_part_global)*st%d%dim*TOFLOAT(st%nst)*st%d%kpt%nglobal
 
     POP_SUB(states_elec_wfns_memory)
   end function states_elec_wfns_memory
@@ -2253,7 +2261,7 @@ contains
       else if(st%d%cl_states_mem < CNST(0.0)) then
         max_mem = max_mem + int(st%d%cl_states_mem, 8)*(1024_8)**2
       else
-        max_mem = int(st%d%cl_states_mem*real(max_mem, REAL_PRECISION), 8)
+        max_mem = int(st%d%cl_states_mem*TOFLOAT(max_mem), 8)
       end if
     else
       max_mem = HUGE(max_mem)
@@ -2263,7 +2271,7 @@ contains
     qnloop: do iqn = st%d%kpt%start, st%d%kpt%end
       do ib = st%group%block_start, st%group%block_end
 
-        mem = mem + batch_pack_size(st%group%psib(ib, iqn))
+        mem = mem + st%group%psib(ib, iqn)%pack_total_size()
 
         if(mem > max_mem) then
           call messages_write('Not enough CL device memory to store all states simultaneously.', new_line = .true.)
@@ -2276,7 +2284,7 @@ contains
           exit qnloop
         end if
         
-        call batch_pack(st%group%psib(ib, iqn), copy)
+        call st%group%psib(ib, iqn)%do_pack(copy)
       end do
     end do qnloop
 
@@ -2298,7 +2306,7 @@ contains
 
       do iqn = st%d%kpt%start, st%d%kpt%end
         do ib = st%group%block_start, st%group%block_end
-          if(batch_is_packed(st%group%psib(ib, iqn))) call batch_unpack(st%group%psib(ib, iqn), copy)
+          if(st%group%psib(ib, iqn)%is_packed()) call st%group%psib(ib, iqn)%do_unpack(copy)
         end do
       end do
     end if

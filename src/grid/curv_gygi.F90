@@ -110,14 +110,18 @@ contains
     !%End
     call parse_variable(namespace, 'CurvGygiBeta', M_FOUR, cv%beta, units_inp%length)
 
-    if(cv%a<=M_ZERO)     call messages_input_error('CurvGygiA')
-    if(cv%alpha<=M_ZERO) call messages_input_error('CurvGygiAlpha')
-    if(cv%beta<=M_ZERO)  call messages_input_error('CurvGygiBeta')
+    if(cv%a<=M_ZERO)     call messages_input_error(namespace, 'CurvGygiA')
+    if(cv%alpha<=M_ZERO) call messages_input_error(namespace, 'CurvGygiAlpha')
+    if(cv%beta<=M_ZERO)  call messages_input_error(namespace, 'CurvGygiBeta')
 
     cv%npos = geo%natoms
     SAFE_ALLOCATE(cv%pos(1:cv%npos, 1:sb%dim))
-    forall(ipos = 1:cv%npos, idir = 1:sb%dim) cv%pos(ipos, idir) = geo%atom(ipos)%x(idir)
-    
+    do idir = 1, sb%dim
+      do ipos = 1, cv%npos
+        cv%pos(ipos, idir) = geo%atom(ipos)%x(idir)
+      end do
+    end do
+
     POP_SUB(curv_gygi_init)
   end subroutine curv_gygi_init
 
@@ -161,20 +165,17 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine curv_gygi_chi2x(sb, cv, chi, x)
-    type(simul_box_t), target, intent(in)  :: sb
-    type(curv_gygi_t), target, intent(in)  :: cv
+  subroutine curv_gygi_chi2x(sb, cv, rs, chi, x)
+    type(simul_box_t), target, intent(in)   :: sb
+    type(curv_gygi_t), target, intent(in)   :: cv
+    type(root_solver_t), intent(in)         :: rs
     FLOAT,                     intent(in)  :: chi(:)  !< chi(sb%dim)
     FLOAT,                     intent(out) :: x(:)    !< x(sb%dim)
 
     integer :: i
     logical :: conv
-    type(root_solver_t) :: rs
 
     ! no push_sub, called too frequently
-
-    call root_solver_init(rs, sb%dim,  &
-      solver_type = ROOT_NEWTON, maxiter = 500, abs_tolerance = CNST(1.0e-10))
 
     sb_p            => sb
     cv_p            => cv

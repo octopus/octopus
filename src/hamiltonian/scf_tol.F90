@@ -151,8 +151,9 @@ contains
     else
       call parse_variable(namespace, 'LRTolScheme', SCF_TOL_ADAPTIVE, this%scheme)
     end if
-    if(.not.varinfo_valid_option('LRTolScheme', this%scheme)) &
-      call messages_input_error('LRTolScheme')
+    if(.not.varinfo_valid_option('LRTolScheme', this%scheme)) then
+      call messages_input_error(namespace, 'LRTolScheme')
+    end if
 
     !%Variable LRTolInitTol
     !%Type float
@@ -232,13 +233,13 @@ contains
 
     case(SCF_TOL_LINEAR)
       r = this%initial_tol + (this%final_tol - this%initial_tol) * &
-        real(iter, REAL_PRECISION) / real(this%iter_window, REAL_PRECISION)
+        TOFLOAT(iter) / TOFLOAT(this%iter_window)
 
     case(SCF_TOL_EXP)
       logi = log(this%initial_tol)
       logf = log(this%final_tol)
       r = logi + (logf - logi) * &
-        real(iter, REAL_PRECISION) / real(this%iter_window, REAL_PRECISION)
+        TOFLOAT(iter) / TOFLOAT(this%iter_window)
       r = exp(r)
     end select
       

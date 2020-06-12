@@ -229,9 +229,9 @@ contains
       add_lm = 1
       do ll = 0, this%maxl
         do mm = -ll, ll
-          forall(ip = 1:der%mesh%np)
+          do ip = 1, der%mesh%np
             rho_corrected(ip) = rho_corrected(ip) - mult(add_lm)*betal(add_lm)*this%aux(ip, add_lm)*this%gaussian(ip)
-          end forall
+          end do
           call lalg_axpy(der%mesh%np, mult(add_lm), this%phi(:, add_lm), vh_correction)
           add_lm = add_lm + 1
         end do
@@ -242,8 +242,10 @@ contains
 
     case(CORR_EXACT)
 
-      forall(ip = 1:der%mesh%np) vh_correction(ip) = M_ZERO
-      
+      do ip = 1, der%mesh%np
+        vh_correction(ip) = M_ZERO
+      end do
+
       do ip = der%mesh%np + 1, der%mesh%np_part
         vv = M_ZERO
         do ip2 = 1, der%mesh%np
@@ -256,8 +258,10 @@ contains
       ASSERT(.not. nl_operator_compact_boundaries(der%lapl))
 
       call dderivatives_lapl(der, vh_correction, rho_corrected, set_bc = .false.)
- 
-      forall(ip = 1:der%mesh%np) rho_corrected(ip) = rho(ip) + CNST(1.0)/(CNST(4.0)*M_PI)*rho_corrected(ip)
+
+      do ip = 1, der%mesh%np
+        rho_corrected(ip) = rho(ip) + CNST(1.0)/(CNST(4.0)*M_PI)*rho_corrected(ip)
+      end do
 
     end select
 

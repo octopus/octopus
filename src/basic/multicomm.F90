@@ -66,9 +66,7 @@ module multicomm_oct_m
   
   public ::                          &
     multicomm_divide_range,          &
-#ifdef HAVE_OPENMP
     multicomm_divide_range_omp,      &
-#endif
 #if defined(HAVE_MPI)
     multicomm_create_all_pairs,      &
 #endif
@@ -133,6 +131,8 @@ module multicomm_oct_m
     integer, public  :: master_comm      !< The communicator without slaves.
     integer          :: master_comm_rank !< The rank in the communicator without slaves.
     integer, public  :: slave_intercomm  !< the intercomm to communicate with slaves
+
+    logical          :: reorder_ranks    !< do we reorder ranks in a more compact way?
   end type multicomm_t
 
   !> An all-pairs communication schedule for a given group.
@@ -182,6 +182,18 @@ contains
     mc%n_node  = n_node
 
     call messages_print_stress(stdout, "Parallelization")
+
+    !%Variable ReorderRanks
+    !%Default no
+    !%Type logical
+    !%Section Execution::Parallelization
+    !%Description
+    !% This variable controls whether the ranks are reorganized to have a more
+    !% compact distribution with respect to domain parallelization which needs
+    !% to communicate most often. Depending on the system, this can improve
+    !% communication speeds.
+    !%End
+    call parse_variable(namespace, 'ReorderRanks', .false., mc%reorder_ranks)
 
     call messages_obsolete_variable(namespace, 'ParallelizationStrategy')
     call messages_obsolete_variable(namespace, 'ParallelizationGroupRanks')
@@ -554,9 +566,9 @@ contains
       ! calculate fraction of idle time
       frac = M_ONE
       do ii = 1, P_STRATEGY_MAX
-        n_max = ceiling(real(index_range(ii), REAL_PRECISION) / real(real_group_sizes(ii), REAL_PRECISION))
+        n_max = ceiling(TOFLOAT(index_range(ii)) / TOFLOAT(real_group_sizes(ii)))
         kk = n_max*real_group_sizes(ii)
-        frac = frac*(M_ONE - real(kk - index_range(ii), REAL_PRECISION) / real(kk, REAL_PRECISION))
+        frac = frac*(M_ONE - TOFLOAT(kk - index_range(ii)) / TOFLOAT(kk))
       end do
 
       write(message(1), '(a,f5.2,a)') "Info: Octopus will waste at least ", &
@@ -580,6 +592,9 @@ contains
       integer :: coords(MAX_INDEX)
       integer :: new_comm, new_comm_size
       character(len=6) :: node_type
+      type(mpi_grp_t) :: reorder_grp
+      integer :: base_group, reorder_group, ranks(base_grp%size)
+      integer :: ii, jj, kk, ll, nn, reorder_comm
 #endif
 
       PUSH_SUB(multicomm_init.group_comm_create)
@@ -593,6 +608,46 @@ contains
       mc%full_comm = MPI_COMM_NULL
       mc%slave_intercomm = MPI_COMM_NULL
       if(mc%par_strategy /= P_STRATEGY_SERIAL) then
+        if(mc%reorder_ranks) then
+          ! first, reorder the ranks
+          ! this is done to get a column-major ordering of the ranks in the
+          ! Cartesian communicator, since they a ordered row-major otherwise
+          call MPI_Comm_group(base_grp%comm, base_group, mpi_err)
+          if(mpi_err /= MPI_SUCCESS) then
+            message(1) = "Error in getting MPI group!"
+            call messages_fatal(1)
+          end if
+          ! now transpose the hypercube => get rank numbers in column-major order
+          nn = 1
+          do ii = 1, mc%group_sizes(1)
+            do jj = 1, mc%group_sizes(2)
+              do kk = 1, mc%group_sizes(3)
+                do ll = 1, mc%group_sizes(4)
+                  ranks(nn) = (ll-1)*mc%group_sizes(3)*mc%group_sizes(2)*mc%group_sizes(1) &
+                            + (kk-1)*mc%group_sizes(2)*mc%group_sizes(1) &
+                            + (jj-1)*mc%group_sizes(1) + ii - 1
+                  nn = nn + 1
+                end do
+              end do
+            end do
+          end do
+          call MPI_Group_incl(base_group, base_grp%size, ranks, reorder_group, mpi_err)
+          if(mpi_err /= MPI_SUCCESS) then
+            message(1) = "Error in creating MPI group!"
+            call messages_fatal(1)
+          end if
+          ! now get the reordered communicator
+          call MPI_Comm_create(base_grp%comm, reorder_group, reorder_comm, mpi_err)
+          if(mpi_err /= MPI_SUCCESS) then
+            message(1) = "Error in creating reordered communicator!"
+            call messages_fatal(1)
+          end if
+          call mpi_grp_init(reorder_grp, reorder_comm)
+          call mpi_grp_copy(base_grp, reorder_grp)
+        else
+          call mpi_grp_copy(reorder_grp, base_grp)
+        end if
+
         ! Multilevel parallelization is organized in a hypercube. We
         ! use an MPI Cartesian topology to generate the communicators
         ! that correspond to each level.
@@ -607,7 +662,7 @@ contains
         periodic_mask(P_STRATEGY_STATES)  = multicomm_strategy_is_parallel(mc, P_STRATEGY_STATES)
 
         ! We allow reordering of ranks. 
-        call MPI_Cart_create(base_grp%comm, P_STRATEGY_MAX, mc%group_sizes, periodic_mask, reorder, mc%full_comm, mpi_err)
+        call MPI_Cart_create(reorder_grp%comm, P_STRATEGY_MAX, mc%group_sizes, periodic_mask, reorder, mc%full_comm, mpi_err)
 
         call MPI_Comm_rank(mc%full_comm, mc%full_comm_rank, mpi_err)
 
@@ -901,32 +956,33 @@ contains
   !! between nprocs processors.
   !! THREADSAFE
   subroutine multicomm_divide_range(nobjs, nprocs, istart, ifinal, lsize, scalapack_compat)
-    integer,           intent(in)    :: nobjs !< Number of points to divide
-    integer,           intent(in)    :: nprocs !< Number of processors
+    integer,           intent(in)  :: nobjs !< Number of points to divide
+    integer,           intent(in)  :: nprocs !< Number of processors
     integer,           intent(out) :: istart(:)
     integer,           intent(out) :: ifinal(:)
     integer, optional, intent(out) :: lsize(:) !< Number of objects in each partition
-    logical, optional, intent(in)    :: scalapack_compat
+    logical, optional, intent(in)  :: scalapack_compat
 
     integer :: ii, jj, rank
     logical :: scalapack_compat_
-#ifdef HAVE_SCALAPACK
     integer :: nbl, size
-#endif
-    
-    scalapack_compat_ = .false.
-#ifdef HAVE_SCALAPACK
-    if(present(scalapack_compat)) scalapack_compat_ = scalapack_compat
-#endif
+
     ! no push_sub, threadsafe
-    if(scalapack_compat_) then
-#ifdef HAVE_SCALAPACK      
+
+    scalapack_compat_ = optional_default(scalapack_compat, .false.)
+#ifndef HAVE_SCALAPACK
+    scalapack_compat_ = .false.
+#endif
+
+    if (scalapack_compat_) then
       nbl = nobjs/nprocs
       if (mod(nobjs, nprocs) /= 0) INCR(nbl, 1)
       
       istart(1) = 1
       do rank = 1, nprocs
+#ifdef HAVE_SCALAPACK
         size = numroc(nobjs, nbl, rank - 1, 0, nprocs)
+#endif
         if(size > 0) then
           if(rank > 1) istart(rank) = ifinal(rank - 1) + 1
           ifinal(rank) = istart(rank) + size - 1
@@ -935,7 +991,6 @@ contains
           ifinal(rank) = 0
         end if
       end do
-#endif
     else
       
       if(nprocs <= nobjs) then
@@ -984,8 +1039,8 @@ contains
     integer, intent(out)   :: nobjs_loc   !< Number of objects in each partition
 
     integer :: rank
-    integer, allocatable :: istart(:), ifinal(:), lsize(:)
 #ifdef HAVE_OPENMP
+    integer, allocatable :: istart(:), ifinal(:), lsize(:)
     integer :: nthreads
 #endif
 

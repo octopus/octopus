@@ -73,21 +73,10 @@ extern "C" void FC_FUNC_(oct_spline_eval_array, OCT_SPLINE_EVAL_ARRAY)
   oct_spline_eval_array<double, 1>(*nn, xf, spl, acc);
 }
 
-extern "C" void FC_FUNC_(oct_spline_eval_array4, OCT_SPLINE_EVAL_ARRAY4)
-     (const fint * nn, float *xf, const void **spl, void **acc){
-  oct_spline_eval_array<float, 1>(*nn, xf, spl, acc);
-}
-
 /* use a stride of 2 to store into just the real part of a Fortran complex array */
 extern "C" void FC_FUNC_(oct_spline_eval_arrayz, OCT_SPLINE_EVAL_ARRAYZ)
   (const fint * nn, double *xf, const void **spl, void **acc){
   oct_spline_eval_array<double, 2>(*nn, xf, spl, acc);
-}
-
-/* use a stride of 2 to store into just the real part of a Fortran complex array */
-extern "C" void FC_FUNC_(oct_spline_eval_arrayc, OCT_SPLINE_EVAL_ARRAYC)
-  (const fint * nn, float *xf, const void **spl, void **acc){
-  oct_spline_eval_array<float, 2>(*nn, xf, spl, acc);
 }
 
 /* This function returns the number of points with which a spline

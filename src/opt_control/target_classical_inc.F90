@@ -186,7 +186,7 @@
     tq = M_ZERO
     tp = M_ZERO
 
-    do ist=1, geo%natoms
+    do ist = 1, geo%natoms
       do jst=1, geo%space%dim
         temp_string = tg%mom_der_array(ist, jst)
         call parse_array(temp_string, p, 'p')
@@ -197,7 +197,7 @@
       end do
     end do
 
-    do ist=1, geo%natoms
+    do ist = 1, geo%natoms
       do jst=1, geo%space%dim
         temp_string = tg%pos_der_array(ist, jst)
         call parse_array(temp_string, p, 'p')

@@ -178,7 +178,7 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
 
             do ip = 1, gr%mesh%np
               lr%X(dl_de)(ip, is) = lr%X(dl_de)(ip, is) + &
-                dl_rho(ip) * ik_weight * sum(R_ABS(gpsi(ip, 1:gr%mesh%sb%dim))**2) + &
+                dl_rho(ip) * ik_weight * sum(abs(gpsi(ip, 1:gr%mesh%sb%dim))**2) + &
                 rho(ip) * ik_weight * &
                 sum(R_CONJ(gpsi(ip, 1:gr%mesh%sb%dim))*gdl_psi(ip, 1:gr%mesh%sb%dim) + &
                 gpsi(ip, 1:gr%mesh%sb%dim) * R_CONJ(gdl_psi_m(ip, 1:gr%mesh%sb%dim)))
@@ -188,7 +188,7 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
 
             do ip = 1, gr%mesh%np
               lr%X(dl_de)(ip, is) = lr%X(dl_de)(ip, is) + &
-                dl_rho(ip) * ik_weight * sum(R_ABS(gpsi(ip, 1:gr%mesh%sb%dim))**2) + &
+                dl_rho(ip) * ik_weight * sum(abs(gpsi(ip, 1:gr%mesh%sb%dim))**2) + &
                 rho(ip) * ik_weight * M_TWO * &
                 (sum(R_CONJ(gpsi(ip, 1:gr%mesh%sb%dim)) * gdl_psi(ip, 1:gr%mesh%sb%dim)))
             end do
@@ -716,7 +716,7 @@ contains
           if(occ_response_ .and. ist2 /= ist) cycle
 
           call states_elec_get_state(st, sys%gr%mesh, ist2, ik, psi2)
-          
+
           do ii = 1, ndir
             call pert_setup_dir(dipole, ii)
 
@@ -727,16 +727,22 @@ contains
                 if(ist == ist2) then
                   ppsi = M_ZERO ! will put in eigenvalue directly later
                 else
-                  forall (idim = 1:st%d%dim, ip = 1:np) ppsi(ip, idim) = kdotp_lr(ii)%X(dl_psi)(ip, idim, ist, ik)
+                  do idim = 1, st%d%dim
+                    do ip = 1, np
+                      ppsi(ip, idim) = kdotp_lr(ii)%X(dl_psi)(ip, idim, ist, ik)
+                    end do
+                  end do
                 end if
               else
                 call X(pert_apply)(dipole, sys%namespace, sys%gr, sys%geo, sys%hm, ik, psi1, ppsi)
               end if
 
               isigma = 1
-              forall (idim = 1:st%d%dim, ip = 1:np)
-                ppsi(ip, idim) = ppsi(ip, idim) + hvar(ip, ispin, isigma, idim, ii, ifreq)*psi1(ip, idim)
-              end forall
+              do idim = 1, st%d%dim
+                do ip = 1, np
+                  ppsi(ip, idim) = ppsi(ip, idim) + hvar(ip, ispin, isigma, idim, ii, ifreq)*psi1(ip, idim)
+                end do
+              end do
 
               me010(ist2, ist, ii, ifreq, ik) = X(mf_dotp)(mesh, st%d%dim, psi2, ppsi)
 
@@ -862,14 +868,14 @@ subroutine X(em_resp_calc_eigenvalues)(sys, dl_eig)
 
   do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
     do ist = sys%st%st_start, sys%st%st_end
-        
+
       call states_elec_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
-        
+
       do idir = 1, sys%gr%sb%periodic_dim
         do idim = 1, sys%st%d%dim
-          forall(ip = 1:sys%gr%mesh%np) 
+          do ip = 1, sys%gr%mesh%np
             integrand(ip) = exp(M_zI*(M_PI/sys%gr%mesh%sb%lsize(idir))*sys%gr%mesh%x(ip, idir)) * abs(psi(ip, idim))**2
-          end forall
+          end do
           dl_eig(ist, ik, idir) = dl_eig(ist, ik, idir) + &
             (sys%gr%mesh%sb%lsize(idir)/M_PI) * aimag(zmf_integrate(sys%gr%mesh, integrand))
         end do
@@ -1647,7 +1653,7 @@ subroutine X(lr_calc_magnetization_periodic)(sys, lr_k, magn)
     do ist = 1, sys%st%nst
       if (abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
         do idir = 1, ndir
-          call X(hamiltonian_elec_apply)(sys%hm, sys%namespace, sys%gr%mesh, lr_k(idir)%X(dl_psi)(:, :, ist, ik), &
+          call X(hamiltonian_elec_apply_single)(sys%hm, sys%namespace, sys%gr%mesh, lr_k(idir)%X(dl_psi)(:, :, ist, ik), &
             Hdl_psi(:, :, idir), ist, ik)
         end do
    
@@ -1752,17 +1758,17 @@ subroutine X(lr_calc_susceptibility_periodic)(sys, nsigma, lr_k, lr_b, &
     do ist = 1, sys%st%nst
       if(abs(sys%st%occ(ist, ik)) .gt. M_EPSILON) then
         do idir = 1, ndir
-          call X(hamiltonian_elec_apply)(sys%hm, sys%namespace, sys%gr%mesh, lr_b(idir)%X(dl_psi)(:,:,ist,ik), &
+          call X(hamiltonian_elec_apply_single)(sys%hm, sys%namespace, sys%gr%mesh, lr_b(idir)%X(dl_psi)(:,:,ist,ik), &
             Hdl_b(:,:,idir), ist, ik)
-          call X(hamiltonian_elec_apply)(sys%hm, sys%namespace, sys%gr%mesh, lr_k(idir)%X(dl_psi)(:,:,ist,ik), &
+          call X(hamiltonian_elec_apply_single)(sys%hm, sys%namespace, sys%gr%mesh, lr_k(idir)%X(dl_psi)(:,:,ist,ik), &
             Hdl_k(:,:,ist,idir), ist, ik)
         end do
 
         do idir1 = 1, ndir
           do idir2 = 1, ndir
-            call X(hamiltonian_elec_apply)(sys%hm, sys%namespace, sys%gr%mesh, lr_kb(idir1, idir2)%X(dl_psi)(:,:, ist, ik), &
-              Hdl_kb(:,:, idir1, idir2), ist, ik)
-            call X(hamiltonian_elec_apply)(sys%hm, sys%namespace, sys%gr%mesh, &
+            call X(hamiltonian_elec_apply_single)(sys%hm, sys%namespace, sys%gr%mesh, &
+              lr_kb(idir1, idir2)%X(dl_psi)(:,:, ist, ik), Hdl_kb(:,:, idir1, idir2), ist, ik)
+            call X(hamiltonian_elec_apply_single)(sys%hm, sys%namespace, sys%gr%mesh, &
               lr_kk(max(idir1, idir2), min(idir1, idir2))%X(dl_psi)(:,:, ist, ik), Hdl_kk(:,:, idir1, idir2), ist, ik)
           end do
         end do

@@ -33,6 +33,7 @@ module casida_oct_m
   use io_function_oct_m
   use kpoints_oct_m
   use lalg_adv_oct_m
+  use lda_u_oct_m
   use loct_oct_m
   use linear_response_oct_m
   use mesh_oct_m
@@ -42,6 +43,7 @@ module casida_oct_m
   use multicomm_oct_m
   use namespace_oct_m
   use parser_oct_m
+  use pcm_oct_m
   use pert_oct_m
   use phonons_lr_oct_m
   use poisson_oct_m
@@ -185,6 +187,10 @@ contains
     PUSH_SUB(casida_run)
     call profiling_in(prof, 'CASIDA')
 
+    if (sys%hm%pcm%run_pcm) then
+      call messages_not_implemented("PCM for CalculationMode /= gs or td")
+    end if
+
     if (simul_box_is_periodic(sys%gr%sb)) then
       message(1) = "Casida oscillator strengths will be incorrect in periodic systems."
       call messages_warning(1)
@@ -193,6 +199,15 @@ contains
     if(kpoints_number(sys%gr%sb%kpoints) > 1) then
       ! Hartree matrix elements may not be correct, not tested anyway. --DAS
       call messages_not_implemented("Casida with k-points")
+    end if
+    if (family_is_mgga_with_exc(sys%hm%xc)) then
+      call messages_not_implemented("Casida with MGGA and non-local terms")
+    end if
+    if(sys%hm%lda_u_level /= DFT_U_NONE) then
+      call messages_not_implemented("Casida with DFT+U")
+    end if
+    if(sys%hm%theory_level == HARTREE_FOCK) then
+      call messages_not_implemented("Casida for Hartree-Fock")
     end if
 
     message(1) = 'Info: Starting Casida linear-response calculation.'

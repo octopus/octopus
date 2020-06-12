@@ -28,6 +28,7 @@ module states_elec_parallel_oct_m
   use profiling_oct_m
   use states_abst_oct_m
   use states_elec_oct_m
+  use wfs_elec_oct_m
 
   implicit none
 
@@ -110,12 +111,17 @@ contains
 
     ASSERT(associated(this%group%psib))
 
+    if(this%mpi_grp%size == 1) then 
+      POP_SUB(states_elec_parallel_remote_access_start)
+      return
+    end if
+
     SAFE_ALLOCATE(this%group%rma_win(1:this%group%nblocks, 1:this%d%nik))
     
     do iqn = this%d%kpt%start, this%d%kpt%end
       do ib = 1, this%group%nblocks
         if(this%group%block_is_local(ib, iqn)) then
-          call batch_remote_access_start(this%group%psib(ib, iqn), this%mpi_grp, this%group%rma_win(ib, iqn))
+          call this%group%psib(ib, iqn)%remote_access_start(this%mpi_grp, this%group%rma_win(ib, iqn))
         else
 #ifdef HAVE_MPI2
           ! create an empty window
@@ -135,6 +141,8 @@ contains
     type(states_elec_t),       intent(inout) :: this
     
     integer :: ib, iqn
+
+    if(.not.allocated(this%group%rma_win)) return
     
     PUSH_SUB(states_elec_parallel_remote_access_stop)
 
@@ -143,7 +151,7 @@ contains
     do iqn = this%d%kpt%start, this%d%kpt%end
       do ib = 1, this%group%nblocks
         if(this%group%block_is_local(ib, iqn)) then
-          call batch_remote_access_stop(this%group%psib(ib, iqn), this%group%rma_win(ib, iqn))
+          call this%group%psib(ib, iqn)%remote_access_stop(this%group%rma_win(ib, iqn))
         else
 #ifdef HAVE_MPI2
           call MPI_Win_free(this%group%rma_win(ib, iqn), mpi_err)
@@ -164,7 +172,7 @@ contains
     type(mesh_t),                intent(in) :: mesh
     integer,                     intent(in) :: ib
     integer,                     intent(in) :: iqn
-    type(batch_t),               pointer    :: psib
+    class(wfs_elec_t),           pointer    :: psib
 
     type(profile_t), save :: prof
     
@@ -174,28 +182,34 @@ contains
     
     if(this%group%block_is_local(ib, iqn)) then
       psib => this%group%psib(ib, iqn)
+      call profiling_out(prof)
+      POP_SUB(states_elec_parallel_get_block)
+      return
     else
-      SAFE_ALLOCATE(psib)
-      call batch_init(psib, this%d%dim, this%group%block_size(ib))
+      SAFE_ALLOCATE_TYPE(wfs_elec_t, psib)
 
       if(states_are_real(this)) then
-        call dbatch_allocate(psib, this%group%block_range(ib, 1), this%group%block_range(ib, 2), mesh%np_part)
+        call dwfs_elec_init(psib, this%d%dim, this%group%block_range(ib, 1), this%group%block_range(ib, 2), &
+          mesh%np_part, iqn)
       else
-        call zbatch_allocate(psib, this%group%block_range(ib, 1), this%group%block_range(ib, 2), mesh%np_part)
+        call zwfs_elec_init(psib, this%d%dim, this%group%block_range(ib, 1), this%group%block_range(ib, 2), &
+          mesh%np_part, iqn)
       end if
-      
-      call batch_pack(psib, copy = .false.)
+
+      ASSERT(allocated(this%group%rma_win))      
+
+      call psib%do_pack(copy = .false.)
       
 #ifdef HAVE_MPI2
       call MPI_Win_lock(MPI_LOCK_SHARED, this%group%block_node(ib), 0, this%group%rma_win(ib, iqn),  mpi_err)
 
       if(states_are_real(this)) then
-        call MPI_Get(psib%pack%dpsi(1, 1), product(psib%pack%size), MPI_FLOAT, &
-          this%group%block_node(ib), int(0, MPI_ADDRESS_KIND), product(psib%pack%size), MPI_FLOAT, &
+        call MPI_Get(psib%dff_pack(1, 1), product(psib%pack_size), MPI_FLOAT, &
+          this%group%block_node(ib), int(0, MPI_ADDRESS_KIND), product(psib%pack_size), MPI_FLOAT, &
           this%group%rma_win(ib, iqn), mpi_err)
       else
-        call MPI_Get(psib%pack%zpsi(1, 1), product(psib%pack%size), MPI_CMPLX, &
-          this%group%block_node(ib), int(0, MPI_ADDRESS_KIND), product(psib%pack%size), MPI_CMPLX, &
+        call MPI_Get(psib%zff_pack(1, 1), product(psib%pack_size), MPI_CMPLX, &
+          this%group%block_node(ib), int(0, MPI_ADDRESS_KIND), product(psib%pack_size), MPI_CMPLX, &
           this%group%rma_win(ib, iqn), mpi_err)
       end if
         
@@ -210,18 +224,17 @@ contains
 
   ! --------------------------------------
 
-  subroutine states_elec_parallel_release_block(this, ib, iqn, psib)
+  subroutine states_elec_parallel_release_block(this, ib, psib)
     type(states_elec_t), target, intent(in) :: this
     integer,                     intent(in) :: ib
-    integer,                     intent(in) :: iqn
-    type(batch_t),               pointer    :: psib
+    class(wfs_elec_t),           pointer    :: psib
 
     PUSH_SUB(states_elec_parallel_release_block)
 
-    if(this%group%block_is_local(ib, iqn)) then
+    if(this%group%block_is_local(ib, psib%ik)) then
       nullify(psib)
     else
-      call batch_end(psib)
+      call psib%end()
       SAFE_DEALLOCATE_P(psib)
     end if
     

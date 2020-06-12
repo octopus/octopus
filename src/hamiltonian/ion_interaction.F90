@@ -328,7 +328,7 @@ contains
 !Temporarily, the 3D Ewald sum is employed for the 1D mixed-periodic system.
       call Ewald_long_3D(this, geo, sb, efourier, force, charge)
     case(2)
-      call Ewald_long_2D(this, geo, sb, efourier, force, charge)
+      call Ewald_long_2D(this, geo, sb, efourier, force)
     case(3)
       call Ewald_long_3D(this, geo, sb, efourier, force, charge)
     end select
@@ -461,13 +461,12 @@ contains
 
   ! ---------------------------------------------------------
   !> In-Chul Yeh and Max L. Berkowitz, J. Chem. Phys. 111, 3155 (1999).
-  subroutine Ewald_long_2D(this, geo, sb, efourier, force, charge)
+  subroutine Ewald_long_2D(this, geo, sb, efourier, force)
     type(ion_interaction_t),   intent(in)    :: this
     type(geometry_t),          intent(in)    :: geo
     type(simul_box_t),         intent(in)    :: sb
     FLOAT,                     intent(inout)   :: efourier
     FLOAT,                     intent(inout)   :: force(:, :) !< (sb%dim, geo%natoms)
-    FLOAT,                     intent(in)   :: charge
 
     FLOAT :: rcut
     integer :: iatom, jatom
@@ -493,8 +492,9 @@ contains
     !get a converged value for the cutoff in g
     rcut = M_TWO*this%alpha*CNST(4.6) + M_TWO*this%alpha**2*dz_max
     do 
+      if( rcut * dz_max >= 718 ) exit  !Maximum double precision numbber
       erfc1 = M_ONE - loct_erf(this%alpha*dz_max + M_HALF*rcut/this%alpha)
-      if(erfc1*exp(rcut*dz_max) < CNST(1e-10))exit
+      if( erfc1 * exp(rcut*dz_max) < CNST(1e-10) ) exit
       rcut = rcut * CNST(1.414)
     end do
 

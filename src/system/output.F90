@@ -32,6 +32,7 @@ module output_oct_m
   use etsf_io
   use etsf_io_tools
 #endif
+  use exchange_operator_oct_m
   use fft_oct_m
   use fourier_shell_oct_m
   use fourier_space_oct_m
@@ -85,6 +86,8 @@ module output_oct_m
 #endif
   use young_oct_m
   use xc_oct_m
+  use xc_oep_oct_m
+  use XC_F90(lib_m)
 
   implicit none
 
@@ -105,6 +108,7 @@ module output_oct_m
     output_kick,         &
     output_scalar_pot,   &
     output_needs_current, &
+    output_need_exchange,&
     output_mxll_init,    &
     output_mxll
 
@@ -153,14 +157,13 @@ module output_oct_m
   
 contains
 
-  subroutine output_init(outp, namespace, sb, st, nst, ks, states_are_real)
+  subroutine output_init(outp, namespace, sb, st, nst, ks)
     type(output_t),            intent(out)   :: outp
     type(namespace_t),         intent(in)    :: namespace
     type(simul_box_t),         intent(in)    :: sb
     type(states_elec_t),       intent(in)    :: st
     integer,                   intent(in)    :: nst
     type(v_ks_t),              intent(inout) :: ks
-    logical,                   intent(in)    :: states_are_real
 
     type(block_t) :: blk
     FLOAT :: norm
@@ -296,6 +299,9 @@ contains
     !%Option heat_current bit(33)
     !% Outputs the total heat current density. The output file is
     !% called <tt>heat_current-</tt>.
+    !%Option photon_correlator bit(34)
+    !% Outputs the electron-photon correlation function. The output file is
+    !% called <tt>photon_correlator</tt>.
     !%End
     call parse_variable(namespace, 'Output', 0, outp%what)
 
@@ -313,7 +319,7 @@ contains
     end if
 
     if(.not.varinfo_valid_option('Output', outp%what, is_flag=.true.)) then
-      call messages_input_error('Output')
+      call messages_input_error(namespace, 'Output')
     end if
 
     if(bitand(outp%what, OPTION__OUTPUT__MMB_WFS) /= 0) then
@@ -470,6 +476,8 @@ contains
 
     if(bitand(outp%what, OPTION__OUTPUT__MATRIX_ELEMENTS) /= 0) then
       call output_me_init(outp%me, namespace, sb, st, nst)
+    else
+      outp%me%what = 0
     end if
 
     if(bitand(outp%what, OPTION__OUTPUT__BERKELEYGW) /= 0) then
@@ -588,7 +596,7 @@ contains
     call parse_variable(namespace, 'Output_KPT', 0_8, outp%whatBZ)
 
     if(.not.varinfo_valid_option('Output_KPT', outp%whatBZ, is_flag=.true.)) then
-      call messages_input_error('Output_KPT')
+      call messages_input_error(namespace, 'Output_KPT')
     end if
 
     if(bitand(outp%whatBZ, OPTION__OUTPUT_KPT__CURRENT_KPT) /= 0) then
@@ -619,7 +627,7 @@ contains
       outp%how = 0
     end if
 
-    ! At this point, we don't know whether the states will be real or complex.
+    ! At this point, we don`t know whether the states will be real or complex.
     ! We therefore pass .false. to states_are_real, and need to check for real states later.
 
     if(output_needs_current(outp, .false.)) then
@@ -652,7 +660,7 @@ contains
     type(geometry_t),         intent(in)    :: geo
     type(states_elec_t),      intent(inout) :: st
     type(hamiltonian_elec_t), intent(inout) :: hm
-    type(v_ks_t),             intent(in)    :: ks
+    type(v_ks_t),             intent(inout) :: ks
 
     integer :: idir, ierr
     character(len=80) :: fname
@@ -730,6 +738,18 @@ contains
 
       if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__KANAMORIU) /= 0)&
         call lda_u_write_kanamoriU(dir, st, hm%lda_u, namespace)
+    end if
+    
+    if (bitand(ks%xc_family, XC_FAMILY_OEP) /= 0 .and. ks%theory_level /= HARTREE_FOCK) then
+      if (ks%oep%level == XC_OEP_FULL) then
+        if (ks%oep%has_photons) then
+          if(bitand(outp%what, OPTION__OUTPUT__PHOTON_CORRELATOR) /= 0) then
+            write(fname, '(a)') 'photon_correlator'
+            call dio_function_output(outp%how, dir, trim(fname), namespace, gr%mesh, ks%oep%pt%correlator(:,1), &
+              units_out%length, ierr, geo = geo)
+          end if
+        end if
+      end if
     end if
 
     call profiling_out(prof)
@@ -839,7 +859,7 @@ contains
       call basins_analyze(basins, gr%mesh, ff(:), st%rho, CNST(0.01))
 
       call dio_function_output(outp%how, dir, trim(filename), namespace, gr%mesh, &
-        real(basins%map, REAL_PRECISION), unit_one, ierr, geo = geo, grp = mpi_grp)
+        TOFLOAT(basins%map), unit_one, ierr, geo = geo, grp = mpi_grp)
       ! this quantity is dimensionless
 
       write(fname,'(4a)') trim(dir), '/', trim(filename), '.info'
@@ -908,7 +928,7 @@ contains
     type(namespace_t),         intent(in) :: namespace
     character(len=*),          intent(in) :: dir
     type(hamiltonian_elec_t),  intent(in) :: hm
-    type(v_ks_t),              intent(in) :: ks
+    type(v_ks_t),           intent(inout) :: ks
     type(states_elec_t),       intent(in) :: st
     type(derivatives_t),       intent(in) :: der
     type(geometry_t),          intent(in) :: geo
@@ -932,14 +952,18 @@ contains
       call states_elec_calc_quantities(gr%der, st, .true., kinetic_energy_density = energy_density)
 
       ! the external potential energy density
-      forall(ip = 1:gr%fine%mesh%np, is = 1:st%d%nspin)
-        energy_density(ip, is) = energy_density(ip, is) + st%rho(ip, is)*hm%ep%vpsl(ip)
-      end forall
+      do is = 1, st%d%nspin
+        do ip = 1, gr%fine%mesh%np
+          energy_density(ip, is) = energy_density(ip, is) + st%rho(ip, is)*hm%ep%vpsl(ip)
+        end do
+      end do
 
       ! the hartree energy density
-      forall(ip = 1:gr%fine%mesh%np, is = 1:st%d%nspin)
-        energy_density(ip, is) = energy_density(ip, is) + CNST(0.5)*st%rho(ip, is)*hm%vhartree(ip)
-      end forall
+      do is = 1, st%d%nspin
+        do ip = 1, gr%fine%mesh%np
+          energy_density(ip, is) = energy_density(ip, is) + CNST(0.5)*st%rho(ip, is)*hm%vhartree(ip)
+        end do
+      end do
 
       ! the XC energy density
       SAFE_ALLOCATE(ex_density(1:gr%mesh%np))
@@ -948,14 +972,16 @@ contains
       ASSERT(.not. gr%have_fine_mesh)
 
       call xc_get_vxc(gr%fine%der, ks%xc, st, hm%psolver, namespace, st%rho, st%d%ispin, &
-        -minval(st%eigenval(st%nst,:)), st%qtot, ex_density = ex_density, ec_density = ec_density)
-      forall(ip = 1:gr%fine%mesh%np, is = 1:st%d%nspin)
-        energy_density(ip, is) = energy_density(ip, is) + ex_density(ip) + ec_density(ip)
-      end forall
+        ex_density = ex_density, ec_density = ec_density)
+      do is = 1, st%d%nspin
+        do ip = 1, gr%fine%mesh%np
+          energy_density(ip, is) = energy_density(ip, is) + ex_density(ip) + ec_density(ip)
+        end do
+      end do
 
       SAFE_DEALLOCATE_A(ex_density)
       SAFE_DEALLOCATE_A(ec_density)
-      
+
       select case(st%d%ispin)
       case(UNPOLARIZED)
         write(fname, '(a)') 'energy_density'
@@ -1195,7 +1221,7 @@ contains
     character(len=*),         intent(in)    :: dir
     type(states_elec_t),      intent(in)    :: st
     type(grid_t),             intent(in)    :: gr
-    type(v_ks_t),             intent(in)    :: ks
+    type(v_ks_t),             intent(inout) :: ks
     type(hamiltonian_elec_t), intent(inout) :: hm
     type(geometry_t),         intent(in)    :: geo
 
@@ -1238,8 +1264,7 @@ contains
     SAFE_ALLOCATE(vxc(1:gr%mesh%np, 1:st%d%nspin))
     vxc(:,:) = M_ZERO
     ! we should not include core rho here. that is why we do not just use hm%vxc
-    call xc_get_vxc(gr%der, ks%xc, st, hm%psolver, namespace, st%rho, st%d%ispin, &
-      -minval(st%eigenval(st%nst, :)), st%qtot, vxc)
+    call xc_get_vxc(gr%der, ks%xc, st, hm%psolver, namespace, st%rho, st%d%ispin, vxc)
 
     message(1) = "BerkeleyGW output: vxc.dat"
     if(bgw%calc_exchange) message(1) = trim(message(1)) // ", x.dat"
@@ -1469,6 +1494,18 @@ contains
 #endif
 
   end subroutine output_berkeleygw
+
+ 
+  !--------------------------------------------------------------
+
+  logical function output_need_exchange(outp) result(need_exx)
+    type(output_t),         intent(in)    :: outp
+
+    need_exx =( bitand(outp%what, OPTION__OUTPUT__BERKELEYGW) /= 0 &
+           .or. bitand(outp%me%what, OPTION__OUTPUTMATRIXELEMENTS__TWO_BODY) /= 0 &
+           .or. bitand(outp%me%what, OPTION__OUTPUTMATRIXELEMENTS__TWO_BODY_EXC_K) /= 0 )
+  end function output_need_exchange
+
 
    ! ---------------------------------------------------------
   subroutine output_dftu_orbitals(outp, dir, namespace, this, st, mesh, geo, has_phase)

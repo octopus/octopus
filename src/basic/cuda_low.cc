@@ -52,6 +52,7 @@ typedef int CUstream;
 #include <cassert>
 #include <cstring>
 #include <map>
+#include <stdbool.h>
 
 #include <fortran_types.h>
 
@@ -215,6 +216,7 @@ extern "C" void FC_FUNC_(cuda_build_program, CUDA_BUILD_PROGRAM)(map<string, CUm
   }
   
   delete [] log;
+  delete [] opts;
 
   // Obtain PTX from the program.
   size_t ptxSize;
@@ -322,17 +324,17 @@ extern "C" void FC_FUNC_(cuda_mem_free, CUDA_MEM_FREE)(CUdeviceptr ** cuda_ptr){
 #endif
 }
 
-extern "C" void FC_FUNC_(cuda_memcpy_htod, CUDA_MEMCPY_HTOD)(CUdeviceptr ** cuda_ptr, const void * data, fint8 * size, fint8 * offset){
+extern "C" void FC_FUNC_(cuda_memcpy_htod, CUDA_MEMCPY_HTOD)(CUdeviceptr ** cuda_ptr, const void * data, fint8 * size, fint8 * offset, bool * async){
 #ifdef HAVE_CUDA
   CUDA_SAFE_CALL(cuMemcpyHtoDAsync(**cuda_ptr + *offset, data, *size, phStream[current_stream]));
-  CUDA_SAFE_CALL(cuStreamSynchronize(phStream[current_stream]));
+  if(!(*async)) CUDA_SAFE_CALL(cuStreamSynchronize(phStream[current_stream]));
 #endif  
 }
 
-extern "C" void FC_FUNC_(cuda_memcpy_dtoh, CUDA_MEMCPY_DTOH)(CUdeviceptr ** cuda_ptr, void * data, fint8 * size, fint8 * offset){
+extern "C" void FC_FUNC_(cuda_memcpy_dtoh, CUDA_MEMCPY_DTOH)(CUdeviceptr ** cuda_ptr, void * data, fint8 * size, fint8 * offset, bool * async){
 #ifdef HAVE_CUDA
   CUDA_SAFE_CALL(cuMemcpyDtoHAsync(data, **cuda_ptr + *offset, *size, phStream[current_stream]));
-  CUDA_SAFE_CALL(cuStreamSynchronize(phStream[current_stream]));
+  if(!(*async)) CUDA_SAFE_CALL(cuStreamSynchronize(phStream[current_stream]));
 #endif  
 }
 

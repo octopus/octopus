@@ -55,3 +55,4 @@ DFTULevel = dft_u_empirical
 ExperimentalFeatures = yes
 AOThreshold = 0.1
 
+StatesPack = yes

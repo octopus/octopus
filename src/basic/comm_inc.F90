@@ -24,8 +24,12 @@ subroutine X(comm_allreduce_0)(comm, aa)
 
 #if defined(HAVE_MPI)
   R_TYPE :: aac
+#endif
 
   !no PUSH SUB, called too often
+  if (comm == -1) return
+
+#if defined(HAVE_MPI)
   aac = aa
   call MPI_Allreduce(aac, aa, 1, R_MPITYPE, MPI_SUM, comm, mpi_err)
 #endif
@@ -43,6 +47,8 @@ subroutine X(comm_allreduce_1)(comm, aa, dim)
 #if defined(HAVE_MPI) && !defined(HAVE_MPI2)
   R_TYPE, allocatable :: aac(:)
 #endif
+
+  if (comm == -1) return
 
   PUSH_SUB(X(comm_allreduce_1))
 
@@ -76,10 +82,14 @@ subroutine X(comm_allreduce_2)(comm, aa, dim)
   integer, optional,                intent(in)    :: dim(:) !< (2)
 
   integer :: dim_(1:2)
+#if defined(HAVE_MPI)
   R_TYPE, allocatable :: aac(:, :)
+#endif
 #if defined(HAVE_MPI) && !defined(HAVE_MPI2)
   integer :: ii
 #endif
+
+  if (comm == -1) return
 
   PUSH_SUB(X(comm_allreduce_2))
 
@@ -114,6 +124,8 @@ subroutine X(comm_allreduce_2)(comm, aa, dim)
     aac(1:dim_(1), 1:dim_(2)) = aa(1:dim_(1), 1:dim_(2))
     call MPI_Allreduce(MPI_IN_PLACE, aac(1, 1), product(dim_), R_MPITYPE, MPI_SUM, comm, mpi_err)
     aa(1:dim_(1), 1:dim_(2)) = aac(1:dim_(1), 1:dim_(2))
+    SAFE_DEALLOCATE_A(aac)
+
 #elif defined(HAVE_MPI)
    
     SAFE_ALLOCATE(aac(1:dim_(1), 1))
@@ -121,11 +133,10 @@ subroutine X(comm_allreduce_2)(comm, aa, dim)
       aac(1:dim_(1), 1) = aa(1:dim_(1), ii)
       call MPI_Allreduce(aac(1, 1), aa(1, ii), dim_(1), R_MPITYPE, MPI_SUM, comm, mpi_err)
     end do
+    SAFE_DEALLOCATE_A(aac)
 #endif
   end if
-
-  SAFE_DEALLOCATE_A(aac)
-
+  
   POP_SUB(X(comm_allreduce_2))
 end subroutine X(comm_allreduce_2)
 
@@ -137,12 +148,15 @@ subroutine X(comm_allreduce_3)(comm, aa, dim)
   integer, optional,                intent(in)    :: dim(:) !< (3)
 
   integer :: dim_(1:3)
+#if defined(HAVE_MPI)
   R_TYPE, allocatable :: aac(:, :, :)
+#endif
 #if defined(HAVE_MPI) && !defined(HAVE_MPI2)
   integer :: ii, jj
 #endif
 
-  
+  if (comm == -1) return
+
   PUSH_SUB(X(comm_allreduce_3))
 
   dim_ = ubound(aa)
@@ -204,7 +218,9 @@ subroutine X(comm_allreduce_4)(comm, aa)
 
   integer :: dim_(1:4)
   R_TYPE, allocatable :: aac(:, :, :, :)
-  
+
+  if (comm == -1) return
+
   PUSH_SUB(X(comm_allreduce_4))
 
   dim_ = ubound(aa)
@@ -232,7 +248,9 @@ subroutine X(comm_allreduce_5)(comm, aa)
 
   integer :: dim_(1:5)
   R_TYPE, allocatable :: aac(:, :, :, :, :)
-  
+
+  if (comm == -1) return
+
   PUSH_SUB(X(comm_allreduce_5))
 
   dim_ = ubound(aa)

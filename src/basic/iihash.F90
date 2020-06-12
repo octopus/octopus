@@ -58,9 +58,8 @@ contains
   !! principle, unlimited. We take the smallest prime number as table
   !! size that is greater or equal than the requested size to reduce
   !! collisions.
-  subroutine iihash_init(h, size)
+  subroutine iihash_init(h)
     type(iihash_t), intent(out) :: h
-    integer,        intent(in)  :: size
 
     interface
       subroutine iihash_map_init(map)

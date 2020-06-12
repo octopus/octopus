@@ -86,8 +86,10 @@
 
           rotation_matrix = M_z0
 
-          forall(ist = 1:tmp_st%nst) rotation_matrix(ist, ist) = CNST(1.0)
-          
+          do ist = 1, tmp_st%nst
+            rotation_matrix(ist, ist) = CNST(1.0)
+          end do
+
           do ist = 1, tg%st%nst
             do jst = 1, parse_block_cols(blk, ist - 1)
               call parse_block_cmplx(blk, ist - 1, jst - 1, rotation_matrix(jst, ist))
@@ -99,7 +101,7 @@
           do iqn = tg%st%d%kpt%start, tg%st%d%kpt%end
             
             if(states_are_real(tg%st)) then
-              call states_elec_rotate(tmp_st, namespace, gr%mesh, real(rotation_matrix, REAL_PRECISION), iqn)
+              call states_elec_rotate(tmp_st, namespace, gr%mesh, TOFLOAT(rotation_matrix), iqn)
             else
               call states_elec_rotate(tmp_st, namespace, gr%mesh, rotation_matrix, iqn)
             end if
@@ -121,9 +123,7 @@
           end do
           call parse_block_end(blk)
         else
-          message(1) = '"OCTTargetDensityState" has to be specified as block.'
-          call messages_info(1)
-          call messages_input_error('OCTTargetDensity')
+          call messages_input_error(namespace, 'OCTTargetDensityFromState', 'Has to be specified as block.')
         end if
 
       else
@@ -242,11 +242,9 @@
     if (target_mode(tg)  ==  oct_targetmode_td) then
       call parse_variable(namespace, 'OCTStartIterCurrTg', 0, tg%strt_iter_curr_tg)
       if (tg%strt_iter_curr_tg  <  0) then
-        message(1) = 'OCTStartIterCurrTg must be positive.'
-        call messages_fatal(1)
+        call messages_input_error(namespace, 'OCTStartIterCurrTg', 'Must be positive.')
       elseif (tg%strt_iter_curr_tg >= td%max_iter) then
-        message(1) = 'OCTStartIterCurrTg has to be  <  TDMaximumIter.'
-        call messages_fatal(1)
+        call messages_input_error(namespace, 'OCTStartIterCurrTg', 'Has to be  <  TDMaximumIter.')
       end if
       write(message(1), '(a,i3)')   'Info: TargetMode = ', target_mode(tg)
       write(message(2), '(a,i8)') 'Info: OCTStartIterCurrTg = ',  tg%strt_iter_curr_tg
@@ -314,9 +312,7 @@
                              
         call parse_block_end(blk)     
       else
-        message(1) = '"OCTSpatialCurrWeight" has to be specified as a block.'
-        call messages_info(1)
-        call messages_input_error('OCTEvalBoxCurrTg')
+        call messages_input_error(namespace, 'OCTSpatialCurrWeight', 'Has to be specified as a block.')
       end if
     end if
 
@@ -446,7 +442,7 @@
         call states_elec_get_state(psi_in, gr%mesh, 1, 1, zpsi)
 
         do ip = 1, gr%mesh%np
-          zpsi(ip, 1) = sqrt(tg%rho(ip))*exp(M_zI*atan2(aimag(zpsi(ip, 1)), real(zpsi(ip, 1))))
+          zpsi(ip, 1) = sqrt(tg%rho(ip))*exp(M_zI*atan2(aimag(zpsi(ip, 1)), TOFLOAT(zpsi(ip, 1))))
         end do
 
         call states_elec_set_state(chi_out, gr%mesh, 1, 1, zpsi)

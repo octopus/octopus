@@ -83,8 +83,8 @@ subroutine xc_get_fxc(xcs, mesh, namespace, rho, ispin, fxc, zfxc)
       if(spinors_fxc) l_vdedd = M_ZERO
       select case(functl(ixc)%family)
       case(XC_FAMILY_LDA)
-        call XC_F90(lda_fxc)(functl(ixc)%conf, 1, l_dens(1), l_dedd(1))
-        if(spinors_fxc)  call XC_F90(lda_vxc)(functl(ixc)%conf, 1, l_dens(1), l_vdedd(1))
+        call XC_F90(lda_fxc)(functl(ixc)%conf, int(1, XC_SIZE_T), l_dens, l_dedd)
+        if(spinors_fxc)  call XC_F90(lda_vxc)(functl(ixc)%conf, int(1, XC_SIZE_T), l_dens, l_vdedd)
         
       case default
         cycle
@@ -163,8 +163,8 @@ contains
         if(maxval(abs(densitymatrix)) < tiny) densitymatrix = M_z0
 
         call lalg_zeigenderivatives(2, densitymatrix, zeigref_(:, :, ip), zeigenval, mmatrix(:, :, :, ip))
-        dens(ip, 1) = max(real(zeigenval(1), REAL_PRECISION), M_ZERO)
-        dens(ip, 2) = max(real(zeigenval(2), REAL_PRECISION), M_ZERO)
+        dens(ip, 1) = max(TOFLOAT(zeigenval(1)), M_ZERO)
+        dens(ip, 2) = max(TOFLOAT(zeigenval(2)), M_ZERO)
 
       end select
     end do

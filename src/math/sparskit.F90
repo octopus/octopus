@@ -75,6 +75,58 @@ module sparskit_oct_m
     logical :: verbose              !< if .true. then the solver will write more details
   end type sparskit_solver_t
 
+  interface
+    subroutine cg(n, rhs, sol, ipar, fpar, w)
+      integer n, ipar(16)
+      real*8 rhs(n), sol(n), fpar(16), w(n,*)
+    end subroutine cg
+
+    subroutine cgnr(n, rhs, sol, ipar, fpar, wk)
+      integer n, ipar(16)
+      real*8 rhs(n),sol(n),fpar(16),wk(n,*)
+    end subroutine cgnr
+
+    subroutine bcg(n, rhs, sol, ipar, fpar, w)
+      integer n, ipar(16)
+      real*8  fpar(16), rhs(n), sol(n), w(n,*)
+    end subroutine bcg
+
+    subroutine dbcg(n, rhs, sol, ipar, fpar, w)
+      integer n, ipar(16)
+      real*8 rhs(n), sol(n), fpar(16), w(n,*)
+    end subroutine dbcg
+
+    subroutine bcgstab(n, rhs, sol, ipar, fpar, w)
+      integer n, ipar(16)
+      real*8 rhs(n), sol(n), fpar(16), w(n,8)
+    end subroutine bcgstab
+
+    subroutine tfqmr(n, rhs, sol, ipar, fpar, w)
+      integer n, ipar(16)
+      real*8 rhs(n), sol(n), fpar(16), w(n,*)
+    end subroutine tfqmr
+
+    subroutine fom(n, rhs, sol, ipar, fpar, w)
+      integer n, ipar(16)
+      real*8 rhs(n), sol(n), fpar(16), w(*)
+    end subroutine fom
+
+    subroutine gmres(n, rhs, sol, ipar, fpar, w)
+      integer n, ipar(16)
+      real*8 rhs(n), sol(n), fpar(16), w(*)
+    end subroutine gmres
+
+    subroutine dqgmres(n, rhs, sol, ipar, fpar, w)
+      integer n, ipar(16)
+      real*8 rhs(n), sol(n), fpar(16), w(*)
+    end subroutine dqgmres
+
+    subroutine fgmres(n, rhs, sol, ipar, fpar, w)
+      integer n, ipar(16)
+      real*8 rhs(n), sol(n), fpar(16), w(*)
+    end subroutine fgmres
+  end interface
+  
 contains
 
   ! ---------------------------------------------------------
@@ -120,7 +172,7 @@ contains
     !%End
     call parse_variable(namespace, 'SPARSKITSolver', SK_BCG, sk%solver_type)
     if ( sk%solver_type < SK_MINVAL.or.sk%solver_type > SK_MAXVAL ) then
-      call messages_input_error('SPARSKITSolver')
+      call messages_input_error(namespace, 'SPARSKITSolver')
     end if
 
     !%Variable SPARSKITKrylovSubspaceSize

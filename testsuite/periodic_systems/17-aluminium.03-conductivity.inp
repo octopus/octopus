@@ -33,13 +33,6 @@ ExperimentalFeatures = yes
 
 FromScratch = yes
 
-%Velocities
-  'Al' | 1.0 | 0.0 | 0.0
-  'Al' | 1.0 | 0.0 | 0.0
-  'Al' | 1.0 | 0.0 | 0.0
-  'Al' | 1.0 | 0.0 | 0.0
-%
-
 %GaugeVectorField
  c | 0.0 | 0.0
 %
@@ -47,3 +40,4 @@ FromScratch = yes
 TDMaxSteps = 150
 
 TDOutput = energy + geometry + total_current + gauge_field
+StatesPack = yes

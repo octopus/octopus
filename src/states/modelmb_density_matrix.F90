@@ -109,12 +109,12 @@ contains
    
     ncols = parse_block_cols(blk, 0)
     if(ncols /= 3 ) then
-      call messages_input_error("DensitytoCalc")
+      call messages_input_error(namespace, "DensitytoCalc")
     end if
     denmat%ndensmat_to_calculate=parse_block_n(blk)
     if (denmat%ndensmat_to_calculate < 0 .or. &
         denmat%ndensmat_to_calculate > st%modelmbparticles%nparticle) then
-      call messages_input_error("DensitytoCalc")
+      call messages_input_error(namespace, "DensitytoCalc")
     end if
 
     SAFE_ALLOCATE(denmat%labels(1:denmat%ndensmat_to_calculate))

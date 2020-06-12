@@ -20,3 +20,4 @@ match ; eigenvalue 1 up                          ; GREPFIELD(static/info, '  1  
 match ; eigenvalue 1 dn                          ; GREPFIELD(static/info, '  1   dn', 3)      ; -5.808808
 match ; eigenvalue 5 up                          ; GREPFIELD(static/info, '  5   up', 3)      ; -0.409571
 match ; eigenvalue 5 dn                          ; GREPFIELD(static/info, '  5   dn', 3)      ; -0.409571
+

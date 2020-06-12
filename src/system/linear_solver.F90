@@ -22,6 +22,7 @@ module linear_solver_oct_m
   use batch_oct_m
   use batch_ops_oct_m
   use derivatives_oct_m
+  use geometry_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_elec_oct_m
@@ -31,6 +32,8 @@ module linear_solver_oct_m
   use mesh_batch_oct_m
   use mesh_function_oct_m
   use messages_oct_m
+  use multicomm_oct_m
+  use multigrid_oct_m
   use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
@@ -38,6 +41,7 @@ module linear_solver_oct_m
   use smear_oct_m
   use solvers_oct_m
   use states_elec_oct_m
+  use wfs_elec_oct_m
 
   implicit none
 
@@ -81,11 +85,13 @@ module linear_solver_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine linear_solver_init(this, namespace, gr, states_are_real, def_solver)
+  subroutine linear_solver_init(this, namespace, gr, states_are_real, geo, mc, def_solver)
     type(linear_solver_t),  intent(out)   :: this
     type(namespace_t),      intent(in)    :: namespace
-    type(grid_t),           intent(in)    :: gr
+    type(grid_t),           intent(inout) :: gr
     logical,                intent(in)    :: states_are_real !< for choosing solver
+    type(geometry_t),       intent(in)    :: geo
+    type(multicomm_t),      intent(in)    :: mc
     integer(8), optional,   intent(in)    :: def_solver
 
     integer :: fsolver
@@ -159,7 +165,7 @@ contains
     !the last 2 digits select the linear solver
     this%solver = mod(fsolver, 100)
 
-    call preconditioner_init(this%pre, namespace, gr)
+    call preconditioner_init(this%pre, namespace, gr, geo, mc)
 
     !%Variable LinearSolverMaxIter
     !%Type integer
@@ -208,10 +214,18 @@ contains
     
     call messages_print_stress(stdout, namespace=namespace)
 
-    if(this%solver == OPTION__LINEARSOLVER__MULTIGRID) &
+    if (this%solver == OPTION__LINEARSOLVER__MULTIGRID) then
       call messages_experimental("Multigrid linear solver")
-    if(this%solver == OPTION__LINEARSOLVER__QMR_DOTP)  &
+
+      if (.not. associated(gr%mgrid)) then
+        SAFE_ALLOCATE(gr%mgrid)
+        call multigrid_init(gr%mgrid, namespace, geo, gr%cv, gr%mesh, gr%der, gr%stencil, mc)
+      end if
+    end if
+
+    if (this%solver == OPTION__LINEARSOLVER__QMR_DOTP) then
       call messages_experimental("QMR solver (symmetric with conjugated dot product)")
+    end if
 
     POP_SUB(linear_solver_init)
 

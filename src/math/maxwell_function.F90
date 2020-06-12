@@ -66,17 +66,17 @@ module maxwell_function_oct_m
     MXF_ZERO_FOURIER     =  10013
 
   type mxf_t
-    integer :: mode        = MXF_EMPTY
-    FLOAT   :: k_vector(3) = M_ZERO
-    FLOAT   :: r0(3)       = M_ZERO  !< vector at the maximum of the pulse
-    FLOAT   :: width       = M_ZERO  !< the width of the pulse
-    FLOAT   :: a0          = M_ZERO
-    FLOAT   :: dx          = M_ZERO !< the space-discretization value.
-    FLOAT   :: init_x      = M_ZERO
-    FLOAT   :: final_x     = M_ZERO
-    FLOAT   :: gr          = M_ZERO
-    integer :: niter       = 0
-    integer :: nfreqs      = 0
+    integer :: mode              = MXF_EMPTY
+    FLOAT   :: k_vector(MAX_DIM) = M_ZERO
+    FLOAT   :: r0(MAX_DIM)       = M_ZERO  !< vector at the maximum of the pulse
+    FLOAT   :: width             = M_ZERO  !< the width of the pulse
+    FLOAT   :: a0                = M_ZERO
+    FLOAT   :: dx                = M_ZERO !< the space-discretization value.
+    FLOAT   :: init_x            = M_ZERO
+    FLOAT   :: final_x           = M_ZERO
+    FLOAT   :: growth            = M_ZERO
+    integer :: niter             = 0
+    integer :: nfreqs            = 0
 
     type(spline_t)         :: amplitude
     character(len=200)     :: expression
@@ -100,9 +100,9 @@ contains
     integer,           intent(out)   :: ierr  !< Error code, 0 on success.
 
     type(block_t) :: blk
-    integer :: nrows, ncols, i, function_type, idim, oam, sam
+    integer :: nrows, ncols, i, function_type, idim
     character(len=100) :: row_name, function_expression
-    FLOAT :: a0, r0(3), gr, width, k_vector(3)
+    FLOAT :: a0, r0(MAX_DIM), growth, width, k_vector(MAX_DIM)
 
     PUSH_SUB(mxf_read)
 
@@ -154,19 +154,19 @@ contains
     !%Option mxf_logistic_wave 10007
     !%
     !% <tt>%MaxwellFunctions
-    !% <br>&nbsp;&nbsp; "function-name" | mxf_logistic_wave | kx | ky | kz | x0 | y0 | z0 | gr | width 
+    !% <br>&nbsp;&nbsp; "function-name" | mxf_logistic_wave | kx | ky | kz | x0 | y0 | z0 | growth | width
     !% <br>%</tt>
     !% 
-    !% The function is a logistic function, <math> f(x,y,z) = a0 * 1/(1+exp(gr*(kx*(x-x0)+ky*(y-y0)+kz*(kz*(z-z0))+width/2))) * 1/(1+exp(-gr*(kx*(x-x0)+ky*(y-y0)+kz*(kz*(z-z0))-width/2)))  </math>
+    !% The function is a logistic function, <math> f(x,y,z) = a0 * 1/(1+exp(growth*(kx*(x-x0)+ky*(y-y0)+kz*(kz*(z-z0))+width/2))) * 1/(1+exp(-growth*(kx*(x-x0)+ky*(y-y0)+kz*(kz*(z-z0))-width/2)))  </math>
     !%
     !%Option mxf_trapezoidal_wave 10008
     !%
     !% <tt>%MaxwellFunctions
-    !% <br>&nbsp;&nbsp; "function-name" | mxf_trapezoidal_wave | kx | ky | kz | x0 | y0 | z0 | gr | width 
+    !% <br>&nbsp;&nbsp; "function-name" | mxf_trapezoidal_wave | kx | ky | kz | x0 | y0 | z0 | growth | width
     !% <br>%</tt>
     !% 
-    !% The function is a logistic function, <math> f(x,y,z) = a0 * ( ( 1-gr*(k*(r-r0)-width/2)*Theta(k*(r-r0)-width/2) ) * Theta(-(k*(r-r0)+width/2+1/gr))
-    !%                                                             + (-1+gr*(k*(r-r0)+width/2)*Theta(k*(r-r0)+width/2) ) * Theta(-(k*(r-r0)-width/2+1/gr)) </math>
+    !% The function is a logistic function, <math> f(x,y,z) = a0 * ( ( 1-growth*(k*(r-r0)-width/2)*Theta(k*(r-r0)-width/2) ) * Theta(-(k*(r-r0)+width/2+1/growth))
+    !%                                                             + (-1+growth*(k*(r-r0)+width/2)*Theta(k*(r-r0)+width/2) ) * Theta(-(k*(r-r0)-width/2+1/growth)) </math>
     !%
     !%Option mxf_from_expr 10011
     !%
@@ -237,9 +237,9 @@ contains
           do idim = 1, 3
             call parse_block_float(blk, i-1, 4+idim, r0(idim), units_inp%length)
           end do
-          call parse_block_float(blk, i-1, 8, gr, units_inp%length)
+          call parse_block_float(blk, i-1, 8, growth, units_inp%length)
           call parse_block_float(blk, i-1, 9, width, units_inp%length)
-          call mxf_init_logistic_wave(f, a0, k_vector, r0, gr, width)
+          call mxf_init_logistic_wave(f, a0, k_vector, r0, growth, width)
         case (MXF_TRAPEZOIDAL_WAVE)
           do idim = 1, 3
             call parse_block_float(blk, i-1, 1+idim, k_vector(idim), unit_one/units_inp%length)
@@ -247,15 +247,9 @@ contains
           do idim = 1, 3
             call parse_block_float(blk, i-1, 4+idim, r0(idim), units_inp%length)
           end do
-          call parse_block_float(blk, i-1, 8, gr, units_inp%length)
+          call parse_block_float(blk, i-1, 8, growth, units_inp%length)
           call parse_block_float(blk, i-1, 9, width, units_inp%length)
-          call mxf_init_trapezoidal_wave(f, a0, k_vector, r0, gr, width)
-        !case(MXF_BESSEL_WAVE)
-        !  call parse_block_float(blk, i-1, 2, k_vector(1), unit_one/units_inp%length)
-        !  call parse_block_float(blk, i-1, 3, k_vector(2), units_inp%length)
-        !  call parse_block_integer(blk, i-1, 4, order, unit_one)
-        !  call parse_block_integer(blk, i-1, 5, sam, unit_one)
-        !  call mxf_init_bessel_wave(f, a0, k_vector, oam, sam)
+          call mxf_init_trapezoidal_wave(f, a0, k_vector, r0, growth, width)
         case (MXF_FROM_EXPR)
           call parse_block_string(blk, i-1, 2, function_expression)
           call mxf_init_fromexpr(f, trim(function_expression))
@@ -310,7 +304,7 @@ contains
   !------------------------------------------------------------
   subroutine mxf_init_const_wave(f, a0, k_vector, r0)
     type(mxf_t), intent(inout) :: f
-    FLOAT,       intent(in)    :: a0, k_vector(3), r0(3)
+    FLOAT,       intent(in)    :: a0, k_vector(MAX_DIM), r0(MAX_DIM)
 
     PUSH_SUB(mxf_init_const_wave)
 
@@ -329,7 +323,7 @@ contains
   !------------------------------------------------------------
   subroutine mxf_init_const_phase(f, a0, k_vector, r0)
     type(mxf_t), intent(inout) :: f
-    FLOAT,       intent(in)    :: a0, k_vector(3), r0(3)
+    FLOAT,       intent(in)    :: a0, k_vector(MAX_DIM), r0(MAX_DIM)
 
     PUSH_SUB(mxf_init_const_phase)
 
@@ -348,7 +342,7 @@ contains
   !------------------------------------------------------------
   subroutine mxf_init_gaussian_wave(f, a0, k_vector, r0, width)
     type(mxf_t), intent(inout) :: f
-    FLOAT,       intent(in)    :: a0, k_vector(3), r0(3), width
+    FLOAT,       intent(in)    :: a0, k_vector(MAX_DIM), r0(MAX_DIM), width
 
     PUSH_SUB(mxf_init_gaussian_wave)
 
@@ -368,7 +362,7 @@ contains
   !------------------------------------------------------------
   subroutine mxf_init_cosinoidal_wave(f, a0, k_vector, r0, width)
     type(mxf_t), intent(inout) :: f
-    FLOAT,       intent(in)    :: a0, k_vector(3), r0(3), width
+    FLOAT,       intent(in)    :: a0, k_vector(MAX_DIM), r0(MAX_DIM), width
 
     PUSH_SUB(mxf_init_cosinoidal_wave)
 
@@ -386,9 +380,9 @@ contains
     
 
   !------------------------------------------------------------
-  subroutine mxf_init_logistic_wave(f, a0, k_vector, r0, gr, width)
+  subroutine mxf_init_logistic_wave(f, a0, k_vector, r0, growth, width)
     type(mxf_t), intent(inout) :: f
-    FLOAT,       intent(in)    :: a0, k_vector(3), r0(3), gr, width
+    FLOAT,       intent(in)    :: a0, k_vector(MAX_DIM), r0(MAX_DIM), growth, width
 
     PUSH_SUB(mxf_init_logistic_wave)
 
@@ -396,7 +390,7 @@ contains
     f%a0 = a0
     f%k_vector = k_vector
     f%r0 = r0
-    f%gr = gr
+    f%growth = growth
     f%width = width
 
     nullify(f%val)
@@ -408,9 +402,9 @@ contains
 
 
   !------------------------------------------------------------
-  subroutine mxf_init_trapezoidal_wave(f, a0, k_vector, r0, gr, width)
+  subroutine mxf_init_trapezoidal_wave(f, a0, k_vector, r0, growth, width)
     type(mxf_t), intent(inout) :: f
-    FLOAT,       intent(in)    :: a0, k_vector(3), r0(3), gr, width
+    FLOAT,       intent(in)    :: a0, k_vector(MAX_DIM), r0(MAX_DIM), growth, width
 
     PUSH_SUB(mxf_init_trapezoidal_wave)
 
@@ -418,7 +412,7 @@ contains
     f%a0 = a0
     f%k_vector = k_vector
     f%r0 = r0
-    f%gr = gr
+    f%growth = growth
     f%width = width
 
     nullify(f%val)
@@ -426,29 +420,6 @@ contains
 
     POP_SUB(mxf_init_trapezoidal_wave)
   end subroutine
-  !------------------------------------------------------------
-
-
-  !------------------------------------------------------------
-  !subroutine mxf_init_bessel_wave(f, a0, k_vector, order)
-  !  type(mxf_t), intent(inout) :: f
-  !  FLOAT,       intent(in)    :: a0, k_vector(3)
-  !  integer,     intent(in)    :: order
-
-  !  P USH_SUB(mxf_init_bessel_wave)
-
-  !  f%mode = MXF_BESSEL_WAVE
-  !  f%a0 = a0
-  !  f%k_vector = k_vector
-  !  f%order = order
-  !  !f%oam = r0
-  !  !f%sam = gr
-
-  !  nullify(f%val)
-  !  nullify(f%valww)
-
-  !  P OP_SUB(mxf_init_bessel_wave)
-  !end subroutine
   !------------------------------------------------------------
 
 
@@ -474,62 +445,63 @@ contains
     type(mxf_t), intent(in) :: f
     FLOAT,       intent(in) :: x(:)
 
-    FLOAT :: r, xx, limit_1, limit_2, limit_3, limit_4, phi, rad
+    FLOAT :: r, xx, limit_1, limit_2, limit_3, limit_4
+    integer :: xdim
 
     ! no push_sub because it is called too frequently
+
+    xdim = size(x)
 
     select case(f%mode)
     case (MXF_CONST_WAVE)
 
-      y = f%a0 * cos( sum(f%k_vector(:)*(x(:) - f%r0(:))) )
+      y = f%a0 * cos( sum(f%k_vector(1:xdim)*(x(:) - f%r0(1:xdim))) )
 
     case (MXF_CONST_PHASE)
 
-      y = f%a0 * sum(f%k_vector(:)*(x(:) - f%r0(:))) 
+      y = f%a0 * sum(f%k_vector(1:xdim)*(x(:) - f%r0(1:xdim)))
 
     case (MXF_GAUSSIAN_WAVE)
 
-      r = exp( - ( ( sum(f%k_vector(:)*(x(:) - f%r0(:))) / sqrt(sum(f%k_vector(:)**2)) )**2 / (M_TWO*f%width**2) ) )
-      y = f%a0 * r * cos( sum(f%k_vector(:)*(x(:) - f%r0(:))) )
+       r = exp( - ( ( sum(f%k_vector(1:xdim)*(x(:) - f%r0(1:xdim))) &
+            / sqrt(sum(f%k_vector(1:xdim)**2)) )**2 / (M_TWO*f%width**2) ) )
+      y = f%a0 * r * cos( sum(f%k_vector(1:xdim)*(x(:) - f%r0(1:xdim))) )
 
     case (MXF_COSINOIDAL_WAVE)
 
       r = M_ZERO
-      if(abs( sum( f%k_vector(:)*(x(:) - f%r0(:))/sqrt(sum(f%k_vector(:)**2)) ) ) <= f%width) then
-        r = - cos((M_Pi/M_TWO) * ((sum(f%k_vector(:)*(x(:) - f%r0(:))) / sqrt(sum(f%k_vector(:)**2)) - M_TWO*f%width) / f%width))
-        r = r * cos( sum(f%k_vector(:)*(x(:) - f%r0(:))) )
+      if(abs( sum( f%k_vector(1:xdim)*(x(:) - f%r0(1:xdim))/sqrt(sum(f%k_vector(1:xdim)**2)) ) ) <= f%width) then
+         r = - cos((M_Pi/M_TWO) * ((sum(f%k_vector(1:xdim)*(x(:) - f%r0(1:xdim))) &
+              / sqrt(sum(f%k_vector(1:xdim)**2)) - M_TWO*f%width) / f%width))
+        r = r * cos( sum(f%k_vector(1:xdim)*(x(:) - f%r0(1:xdim))) )
       end if
       y = f%a0 * r
 
     case (MXF_LOGISTIC_WAVE)
 
-      r = M_ONE/(M_ONE + exp(f%gr*(sum(f%k_vector(:)*(x(:) - f%r0(:)))/sqrt(sum(f%k_vector(:)**2)) - f%width/M_TWO))) &
-          + M_ONE/(M_ONE + exp(-f%gr*(sum(f%k_vector(:)*(x(:) - f%r0(:)))/sqrt(sum(f%k_vector(:)**2)) + f%width/M_TWO))) - M_ONE
-      y = f%a0 * r * cos( sum(f%k_vector(:)*(x(:) - f%r0(:))) )
+       r = M_ONE/(M_ONE + exp(f%growth*(sum(f%k_vector(1:xdim)*(x(:) - f%r0(1:xdim))) &
+            / sqrt(sum(f%k_vector(1:xdim)**2)) - f%width/M_TWO))) &
+            + M_ONE/(M_ONE + exp(-f%growth*(sum(f%k_vector(1:xdim)*(x(:) - f%r0(1:xdim))) &
+            / sqrt(sum(f%k_vector(1:xdim)**2)) + f%width/M_TWO))) - M_ONE
+      y = f%a0 * r * cos( sum(f%k_vector(1:xdim)*(x(:) - f%r0(1:xdim))) )
 
     case (MXF_TRAPEZOIDAL_WAVE)
 
-      xx = sum(f%k_vector(:)*(x(:) - f%r0(:)))/sqrt(sum(f%k_vector(:)**2))
-      limit_1 = - f%width/M_TWO - M_ONE/f%gr
+      xx = sum(f%k_vector(1:xdim)*(x(:) - f%r0(1:xdim)))/sqrt(sum(f%k_vector(1:xdim)**2))
+      limit_1 = - f%width/M_TWO - M_ONE/f%growth
       limit_2 = - f%width/M_TWO
       limit_3 =   f%width/M_TWO
-      limit_4 =   f%width/M_TWO + M_ONE/f%gr
+      limit_4 =   f%width/M_TWO + M_ONE/f%growth
       if ( ( xx > limit_1 ) .and. ( xx <= limit_2 ) ) then
-        r = M_ONE + f%gr * (sum(f%k_vector(:)*(x(:) - f%r0(:)))/sqrt(sum(f%k_vector(:)**2)) + f%width/M_TWO)
+        r = M_ONE + f%growth * (sum(f%k_vector(1:xdim)*(x(:) - f%r0(1:xdim)))/sqrt(sum(f%k_vector(1:xdim)**2)) + f%width/M_TWO)
       else if ( ( xx > limit_2 ) .and. ( xx <= limit_3 ) ) then
         r = M_ONE
       else if ( ( xx > limit_3 ) .and. ( xx <= limit_4 ) ) then
-        r = M_ONE - f%gr * (sum(f%k_vector(:)*(x(:) - f%r0(:)))/sqrt(sum(f%k_vector(:)**2)) - f%width/M_TWO)
+        r = M_ONE - f%growth * (sum(f%k_vector(1:xdim)*(x(:) - f%r0(1:xdim)))/sqrt(sum(f%k_vector(1:xdim)**2)) - f%width/M_TWO)
       else
         r = M_ZERO
       end if
-      y = f%a0 * r * cos( sum(f%k_vector(:)*(x(:) - f%r0(:))) )
-
-   ! case (MXF_BESSEL_WAVE)
-
-   !   rad = sqrt(x(1)**2 + x(2)**2)
-   !   phi = atan2(x(2), x(1))
-   !   r   = loct_bessel(order, f%k_vector(1)*rad) * exp(M_zI*(f%k_vector(2)*x(3) + order*phi))
+      y = f%a0 * r * cos( sum(f%k_vector(1:xdim)*(x(:) - f%r0(1:xdim))) )
 
     case default
 

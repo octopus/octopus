@@ -18,19 +18,26 @@
 !!
 
 ! ---------------------------------------------------------
-subroutine X(xc_KLI_solve) (mesh, st, is, oep)
-  type(mesh_t),        intent(in)    :: mesh
-  type(states_elec_t), intent(in)    :: st
-  integer,             intent(in)    :: is
-  type(xc_oep_t),      intent(inout) :: oep
+subroutine X(xc_KLI_solve) (namespace, mesh, gr, hm, st, is, oep, first)
+  type(namespace_t),        intent(in)    :: namespace
+  type(mesh_t),             intent(in)    :: mesh
+  type(grid_t),             intent(in)    :: gr
+  type(hamiltonian_elec_t), intent(in)    :: hm
+  type(states_elec_t),      intent(in)    :: st
+  integer,                  intent(in)    :: is
+  type(xc_oep_t),           intent(inout) :: oep
+  logical,                  intent(in)    :: first
 
   integer :: ist, ip, jst, eigen_n, kssi, kssj, proc
-  FLOAT, allocatable :: rho_sigma(:), v_bar_S(:), sqphi(:, :, :), dd(:)
+  FLOAT, allocatable :: rho_sigma(:), v_bar_S(:), sqphi(:, :, :), dd(:), coctranslation(:)
   FLOAT, allocatable :: Ma(:,:), xx(:,:), yy(:,:)
-  R_TYPE, allocatable :: psi(:, :)
+  R_TYPE, allocatable :: psi(:, :), bb(:,:)
+  R_TYPE, allocatable :: phi1(:,:,:)
   
   call profiling_in(C_PROFILING_XC_KLI, 'XC_KLI')
-  
+
+  if((st%parallel_in_states) .and. (oep%has_photons)) call messages_not_implemented("Photonic KLI not parallel in states")
+
   PUSH_SUB(X(xc_KLI_solve))
   ! some intermediate quantities
   ! vxc contains the Slater part!
@@ -38,14 +45,34 @@ subroutine X(xc_KLI_solve) (mesh, st, is, oep)
   SAFE_ALLOCATE(sqphi(1:mesh%np, 1:st%d%dim, 1:st%nst))
   SAFE_ALLOCATE(psi(1:mesh%np, 1:st%d%dim))
 
+  if (oep%has_photons) then
+
+    if (oep%coctranslation_logical) then
+      SAFE_ALLOCATE(coctranslation(1:mesh%np))
+      coctranslation(1:mesh%np) = oep%pt%pol_dipole_array(1:mesh%np, 1)
+      oep%pt%pol_dipole_array(1:mesh%np,1) = oep%pt%pol_dipole_array(1:mesh%np, 1) - &
+        dmf_dotp(gr%mesh, SUM(st%rho(1:mesh%np, :), dim=2),oep%pt%pol_dipole_array(1:mesh%np, 1))/abs(st%qtot)
+    end if
+
+    SAFE_ALLOCATE(phi1(1:gr%mesh%np,1:st%d%dim,1:st%nst))
+    SAFE_ALLOCATE(bb(1:gr%mesh%np, 1:1))
+    if (is == 1) oep%pt%ex = M_ZERO
+
+    if(.not. lr_is_allocated(oep%photon_lr)) then
+      call lr_allocate(oep%photon_lr, st, gr%mesh)
+      oep%photon_lr%X(dl_psi)(:,:, :, :) = M_ZERO
+    end if
+
+    if (.not. first) call X(xc_oep_pt_phi)(namespace, gr, hm, st, is, oep, phi1)
+  end if
+
   do ist = st%st_start, st%st_end
     call states_elec_get_state(st, mesh, ist, is, psi)
     sqphi(1:mesh%np, 1:st%d%dim, ist) = abs(psi(1:mesh%np, 1:st%d%dim))**2
   end do
 
   do ip = 1, mesh%np
-    rho_sigma(ip) = max(sum(oep%socc * st%occ(st%st_start:st%st_end, is) * &
-      sqphi(ip, 1, st%st_start:st%st_end)), CNST(1e-20))
+    rho_sigma(ip) = max(sum(oep%socc * st%occ(st%st_start:st%st_end, is) * sqphi(ip, 1, st%st_start:st%st_end)), CNST(1e-20))
   end do
 
 #if defined(HAVE_MPI)
@@ -58,16 +85,31 @@ subroutine X(xc_KLI_solve) (mesh, st, is, oep)
 
   ! Comparing to KLI paper 1990, oep%vxc corresponds to V_{x \sigma}^S in Eq. 8
   ! The n_{i \sigma} in Eq. 8 is partitioned in this code into \psi^{*} (included in lxc) and \psi (explicitly below)
-  
+
   oep%vxc(1:mesh%np, 1) = CNST(0.0)
 
   do ist = st%st_start, st%st_end
     call states_elec_get_state(st, mesh, ist, is, psi)
-    
-    do ip = 1, mesh%np
-      oep%vxc(ip, 1) = oep%vxc(ip, 1) + oep%socc*st%occ(ist, is)*R_REAL(oep%X(lxc)(ip, ist, is)*psi(ip, 1))
-    end do
+    if (oep%has_photons) then
+      if (ist>(oep%eigen_n + 1)) exit ! included to guarantee that the photonic KLI finishes correctly but the parallel in states feature of the normal KLI works still
+      bb(:,1) = oep%X(lxc)(1:gr%mesh%np, ist, is)
+      if (ist /= oep%eigen_n + 1) bb(:,1) = bb(:,1) - oep%uxc_bar(ist, is)*R_CONJ(psi(:, 1))
+      if (.not.first) then
+        call X(xc_oep_pt_rhs)(gr, st, is, oep, phi1, ist, bb)
+      end if
+      oep%vxc(:, 1) = oep%vxc(:, 1) + oep%socc*st%occ(ist, is)*bb(:, 1)*psi(:, 1)
+    else
+      do ip = 1, mesh%np
+        oep%vxc(ip, 1) = oep%vxc(ip, 1) + oep%socc*st%occ(ist, is)*R_REAL(oep%X(lxc)(ip, ist, is)*psi(ip, 1))
+      end do
+    end if
   end do
+
+  if (oep%has_photons .and. oep%coctranslation_logical) then
+    oep%pt%pol_dipole_array(1:mesh%np, 1) = oep%pt%pol_dipole_array(1:mesh%np,1 ) + &
+        dmf_dotp(gr%mesh, sum(st%rho(1:mesh%np, :), dim=2), coctranslation(1:mesh%np))/abs(st%qtot)
+    SAFE_DEALLOCATE_A(coctranslation)
+  end if
 
   do ip = 1, mesh%np
     oep%vxc(ip, 1) = oep%vxc(ip, 1)/rho_sigma(ip)
@@ -83,13 +125,6 @@ subroutine X(xc_KLI_solve) (mesh, st, is, oep)
   end if
 #endif
   
-  if(oep%level == XC_OEP_SLATER) then
-    SAFE_DEALLOCATE_A(rho_sigma)
-    SAFE_DEALLOCATE_A(sqphi)
-    call profiling_out(C_PROFILING_XC_KLI)
-    POP_SUB(X(xc_KLI_solve))
-    return
-  end if
   eigen_n = oep%eigen_n
 
   SAFE_ALLOCATE(v_bar_S(1:st%nst))
@@ -134,7 +169,11 @@ subroutine X(xc_KLI_solve) (mesh, st, is, oep)
           Ma(ist, jst) = - dmf_dotp(mesh, dd, sqphi(:, 1, kssj) )
         end do j_loop
         Ma(ist, ist) = M_ONE + Ma(ist, ist)
-        yy(ist, 1) = v_bar_S(kssi) - oep%uxc_bar(kssi,is)
+        if (oep%has_photons) then
+          yy(ist, 1) = v_bar_S(kssi)
+        else
+          yy(ist, 1) = v_bar_S(kssi) - oep%uxc_bar(kssi, is)
+        end if
       end if
     end do i_loop
 
@@ -168,6 +207,10 @@ subroutine X(xc_KLI_solve) (mesh, st, is, oep)
     SAFE_DEALLOCATE_A(xx)
     SAFE_DEALLOCATE_A(Ma)
     SAFE_DEALLOCATE_A(yy)
+    if (oep%has_photons) then
+      SAFE_DEALLOCATE_A(phi1)
+      SAFE_DEALLOCATE_A(bb)
+    end if
 
   end if linear_equation
   ! The previous stuff is only needed if eigen_n>0.

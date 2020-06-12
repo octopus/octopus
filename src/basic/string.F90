@@ -19,20 +19,22 @@
 #include "global.h"
 
 module string_oct_m
-  
   use iso_c_binding
   use loct_oct_m
   
   implicit none
 
   private
-  public ::          &
-    compact,         &
-    add_last_slash,  &
-    str_trim,        &
-    str_center,      &
-    print_C_string,  &
-    conv_to_C_string 
+  public ::           &
+    compact,          &
+    add_last_slash,   &
+    str_trim,         &
+    str_center,       &
+    print_C_string,   &
+    conv_to_C_string, &
+    string_f_to_c,    &
+    string_c_to_f,    &
+    string_c_ptr_to_f
 
 contains
 
@@ -161,6 +163,62 @@ contains
     str(j+1:j+1) = achar(0) 
   end subroutine conv_to_C_string
 
+  ! Helper functions to convert between C and Fortran strings
+  ! Based on the routines by Joseph M. Krahn
+
+  ! ---------------------------------------------------------
+  function string_f_to_c(f_string) result(c_string)
+    character(len=*), intent(in) :: f_string
+    character(kind=c_char,len=1) :: c_string(len_trim(f_string)+1)
+
+    integer :: i, strlen
+
+    strlen = len_trim(f_string)
+
+    do i = 1, strlen
+      c_string(i) = f_string(i:i)
+    end do
+    c_string(strlen+1) = C_NULL_CHAR
+
+  end function string_f_to_c
+
+  ! ---------------------------------------------------------
+  subroutine string_c_to_f(c_string, f_string)
+    character(kind=c_char,len=1), intent(in)  :: c_string(*)
+    character(len=*),             intent(out) :: f_string
+
+    integer :: i
+
+    i = 1
+    do while(c_string(i) /= C_NULL_CHAR .and. i <= len(f_string))
+      f_string(i:i) = c_string(i)
+      i = i + 1
+    end do
+    if (i < len(f_string)) f_string(i:) = ' '
+
+  end subroutine string_c_to_f
+
+  ! ---------------------------------------------------------
+  subroutine string_c_ptr_to_f(c_string, f_string)
+    type(c_ptr),      intent(in)  :: c_string
+    character(len=*), intent(out) :: f_string
+
+    character(len=1, kind=c_char), pointer :: p_chars(:)
+    integer :: i
+
+    if (.not. c_associated(c_string)) then
+      f_string = ' '
+    else
+      call c_f_pointer(c_string, p_chars, [huge(0)])
+      i = 1
+      do while(p_chars(i) /= C_NULL_CHAR .and. i <= len(f_string))
+        f_string(i:i) = p_chars(i)
+        i = i + 1
+      end do
+      if (i < len(f_string)) f_string(i:) = ' '
+    end if
+
+  end subroutine string_c_ptr_to_f
 
 end module string_oct_m
 

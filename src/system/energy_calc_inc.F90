@@ -40,7 +40,7 @@ subroutine X(calculate_eigenvalues)(namespace, hm, der, st)
   call X(calculate_expectation_values)(namespace, hm, der, st, eigen)
 
   st%eigenval(st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end) = &
-    real(eigen(st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end), REAL_PRECISION)
+    TOFLOAT(eigen(st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
 
   call comm_allreduce(st%st_kpt_mpi_grp%comm, st%eigenval)
 
@@ -58,7 +58,7 @@ subroutine X(calculate_expectation_values)(namespace, hm, der, st, eigen, terms)
   integer, optional,        intent(in)    :: terms
 
   integer :: ik, minst, maxst, ib
-  type(batch_t) :: hpsib
+  type(wfs_elec_t) :: hpsib
   type(profile_t), save :: prof
 
   PUSH_SUB(X(calculate_expectation_values))
@@ -72,19 +72,19 @@ subroutine X(calculate_expectation_values)(namespace, hm, der, st, eigen, terms)
       maxst = states_elec_block_max(st, ib)
 
       if(hamiltonian_elec_apply_packed(hm)) then
-        call batch_pack(st%group%psib(ib, ik))
+        call st%group%psib(ib, ik)%do_pack()
       end if
       
-      call batch_copy(st%group%psib(ib, ik), hpsib)
+      call st%group%psib(ib, ik)%copy_to(hpsib)
 
-      call X(hamiltonian_elec_apply_batch)(hm, namespace, der%mesh, st%group%psib(ib, ik), hpsib, ik, terms = terms)
+      call X(hamiltonian_elec_apply_batch)(hm, namespace, der%mesh, st%group%psib(ib, ik), hpsib, terms = terms)
       call X(mesh_batch_dotp_vector)(der%mesh, st%group%psib(ib, ik), hpsib, eigen(minst:maxst, ik), reduce = .false.)        
 
       if(hamiltonian_elec_apply_packed(hm)) then
-        call batch_unpack(st%group%psib(ib, ik), copy = .false.)
+        call st%group%psib(ib, ik)%do_unpack(copy = .false.)
       end if
 
-      call batch_end(hpsib)
+      call hpsib%end()
 
     end do
   end do
@@ -112,7 +112,7 @@ FLOAT function X(energy_calc_electronic)(namespace, hm, der, st, terms) result(e
 
   call X(calculate_expectation_values)(namespace, hm, der, st, tt, terms = terms)
 
-  energy = states_elec_eigenvalues_sum(st, real(tt, REAL_PRECISION))
+  energy = states_elec_eigenvalues_sum(st, TOFLOAT(tt))
 
   SAFE_DEALLOCATE_A(tt)
   POP_SUB(X(energy_calc_electronic))

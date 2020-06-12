@@ -19,6 +19,7 @@
 #include "global.h"
 
 module propagation_ops_elec_oct_m
+  use accel_oct_m
   use batch_oct_m
   use density_oct_m  
   use exponential_oct_m
@@ -27,6 +28,7 @@ module propagation_ops_elec_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_elec_oct_m
+  use hamiltonian_elec_base_oct_m
   use ion_dynamics_oct_m
   use lda_u_oct_m
   use mesh_oct_m
@@ -37,6 +39,7 @@ module propagation_ops_elec_oct_m
   use states_elec_oct_m
   use varinfo_oct_m
   use propagation_ops_abst_oct_m
+  use wfs_elec_oct_m
   use xc_oct_m
 
   implicit none
@@ -231,29 +234,30 @@ contains
     call profiling_in(prof, 'ELEC_EXP_APPLY')
 
     do ik = st%d%kpt%start, st%d%kpt%end
+      call propagation_ops_do_pack(st, hm, st%group%block_start, ik)
       do ib = st%group%block_start, st%group%block_end
-        if (hamiltonian_elec_apply_packed(hm)) then
-          call batch_pack(st%group%psib(ib, ik))
-          if (hamiltonian_elec_inh_term(hm)) call batch_pack(hm%inh_st%group%psib(ib, ik))
-        end if
+        if(ib + 1 <= st%group%block_end) call propagation_ops_do_pack(st, hm, ib+1, ik)
+        call accel_set_stream(ib)
 
+        call hamiltonian_elec_base_set_phase_corr(hm%hm_base, mesh, st%group%psib(ib, ik))
         if (hamiltonian_elec_inh_term(hm)) then
-          call exponential_apply_batch(te, namespace, mesh, hm, st%group%psib(ib, ik), ik, dt, &
+          call exponential_apply_batch(te, namespace, mesh, hm, st%group%psib(ib, ik), dt, &
             inh_psib = hm%inh_st%group%psib(ib, ik))
         else
-          call exponential_apply_batch(te, namespace, mesh, hm, st%group%psib(ib, ik), ik, dt)
+          call exponential_apply_batch(te, namespace, mesh, hm, st%group%psib(ib, ik), dt)
         end if
+        call hamiltonian_elec_base_unset_phase_corr(hm%hm_base, mesh, st%group%psib(ib, ik))
 
-        if (hamiltonian_elec_apply_packed(hm)) then
-          call batch_unpack(st%group%psib(ib, ik))
-          if (hamiltonian_elec_inh_term(hm)) call batch_unpack(hm%inh_st%group%psib(ib, ik))
-        end if
+        call propagation_ops_do_unpack(st, hm, ib, ik)
+        if(ib-1 >= st%group%block_start) call propagation_ops_finish_unpack(st, hm, ib-1, ik)
       end do
+      call propagation_ops_finish_unpack(st, hm, st%group%block_end, ik)
     end do
 
     call profiling_out(prof)
 
     POP_SUB(propagation_ops_elec_exp_apply)
+
   end subroutine propagation_ops_elec_exp_apply
 
   ! ---------------------------------------------------------
@@ -268,7 +272,7 @@ contains
     FLOAT, optional,          intent(in)    :: vmagnus(:,:,:)
 
     integer :: ik, ib
-    type(batch_t) :: zpsib_dt
+    type(wfs_elec_t) :: zpsib_dt
     type(density_calc_t) :: dens_calc
     type(profile_t), save :: prof
 
@@ -279,47 +283,49 @@ contains
     call density_calc_init(dens_calc, st, gr, st%rho)
 
     do ik = st%d%kpt%start, st%d%kpt%end
+      call propagation_ops_do_pack(st, hm, st%group%block_start, ik)
       do ib = st%group%block_start, st%group%block_end
-        if (hamiltonian_elec_apply_packed(hm)) then
-          call batch_pack(st%group%psib(ib, ik))
-          if (hamiltonian_elec_inh_term(hm)) call batch_pack(hm%inh_st%group%psib(ib, ik))
-        end if
+        if(ib + 1 <= st%group%block_end) call propagation_ops_do_pack(st, hm, ib+1, ik)
+        call accel_set_stream(ib)
 
+        call hamiltonian_elec_base_set_phase_corr(hm%hm_base, gr%mesh, st%group%psib(ib, ik))
         if(present(dt2)) then
-          call batch_copy(st%group%psib(ib, ik), zpsib_dt)
-          if(batch_is_packed(st%group%psib(ib, ik))) call batch_pack(zpsib_dt, copy = .false.)
+          call st%group%psib(ib, ik)%copy_to(zpsib_dt)
+          if(st%group%psib(ib, ik)%is_packed()) call zpsib_dt%do_pack(copy = .false.)
 
           !propagate the state to dt/2 and dt, simultaneously, with H(time - dt)
           if (hamiltonian_elec_inh_term(hm)) then
-            call exponential_apply_batch(te, namespace, gr%mesh, hm, st%group%psib(ib, ik), ik, dt, psib2 = zpsib_dt, &
-              deltat2 = M_TWO*dt, inh_psib = hm%inh_st%group%psib(ib, ik))
+            call exponential_apply_batch(te, namespace, gr%mesh, hm, st%group%psib(ib, ik), dt, psib2 = zpsib_dt, &
+              deltat2 = dt2, inh_psib = hm%inh_st%group%psib(ib, ik))
           else
-            call exponential_apply_batch(te, namespace, gr%mesh, hm, st%group%psib(ib, ik), ik, dt, psib2 = zpsib_dt, &
-              deltat2 = M_TWO*dt)
+            call exponential_apply_batch(te, namespace, gr%mesh, hm, st%group%psib(ib, ik), dt, psib2 = zpsib_dt, &
+              deltat2 = dt2)
           end if
+          call hamiltonian_elec_base_unset_phase_corr(hm%hm_base, gr%mesh, st%group%psib(ib, ik))
+          call hamiltonian_elec_base_unset_phase_corr(hm%hm_base, gr%mesh, zpsib_dt)
 
           !use the dt propagation to calculate the density
-          call density_calc_accumulate(dens_calc, ik, zpsib_dt)
+          call density_calc_accumulate(dens_calc, zpsib_dt)
 
-          call batch_end(zpsib_dt)
+          call zpsib_dt%end()
         else
           !propagate the state to dt with H(time - dt)
           if (hamiltonian_elec_inh_term(hm)) then
-            call exponential_apply_batch(te, namespace, gr%mesh, hm, st%group%psib(ib, ik), ik, dt, vmagnus=vmagnus, &
+            call exponential_apply_batch(te, namespace, gr%mesh, hm, st%group%psib(ib, ik), dt, vmagnus=vmagnus, &
               inh_psib = hm%inh_st%group%psib(ib, ik))
           else
-            call exponential_apply_batch(te, namespace, gr%mesh, hm, st%group%psib(ib, ik), ik, dt, vmagnus=vmagnus)
+            call exponential_apply_batch(te, namespace, gr%mesh, hm, st%group%psib(ib, ik), dt, vmagnus=vmagnus)
           end if
+          call hamiltonian_elec_base_unset_phase_corr(hm%hm_base, gr%mesh, st%group%psib(ib, ik))
 
           !use the dt propagation to calculate the density
-          call density_calc_accumulate(dens_calc, ik, st%group%psib(ib, ik))
+          call density_calc_accumulate(dens_calc, st%group%psib(ib, ik))
         end if
 
-        if (hamiltonian_elec_apply_packed(hm)) then
-          call batch_unpack(st%group%psib(ib, ik))
-          if (hamiltonian_elec_inh_term(hm)) call batch_unpack(hm%inh_st%group%psib(ib, ik))
-        end if
+        call propagation_ops_do_unpack(st, hm, ib, ik)
+        if(ib-1 >= st%group%block_start) call propagation_ops_finish_unpack(st, hm, ib-1, ik)
       end do
+      call propagation_ops_finish_unpack(st, hm, st%group%block_end, ik)
     end do
 
     call density_calc_end(dens_calc)
@@ -328,6 +334,54 @@ contains
 
     POP_SUB(propagation_ops_elec_fuse_density_exp_apply)
   end subroutine propagation_ops_elec_fuse_density_exp_apply
+
+  ! ---------------------------------------------------------
+  subroutine propagation_ops_do_pack(st, hm, ib, ik)
+    type(states_elec_t),      intent(inout) :: st
+    type(hamiltonian_elec_t), intent(inout) :: hm
+    integer,                  intent(in)    :: ib
+    integer,                  intent(in)    :: ik
+
+    PUSH_SUB(propagation_ops_do_pack)
+    if (hamiltonian_elec_apply_packed(hm)) then
+      call accel_set_stream(ib)
+      call st%group%psib(ib, ik)%do_pack(async=.true.)
+      if (hamiltonian_elec_inh_term(hm)) call hm%inh_st%group%psib(ib, ik)%do_pack(async=.true.)
+    end if
+    POP_SUB(propagation_ops_do_pack)
+  end subroutine propagation_ops_do_pack
+
+  ! ---------------------------------------------------------
+  subroutine propagation_ops_do_unpack(st, hm, ib, ik)
+    type(states_elec_t),      intent(inout) :: st
+    type(hamiltonian_elec_t), intent(inout) :: hm
+    integer,                  intent(in)    :: ib
+    integer,                  intent(in)    :: ik
+
+    PUSH_SUB(propagation_ops_do_unpack)
+    if (hamiltonian_elec_apply_packed(hm)) then
+      call accel_set_stream(ib)
+      call st%group%psib(ib, ik)%do_unpack(async=.true.)
+      if (hamiltonian_elec_inh_term(hm)) call hm%inh_st%group%psib(ib, ik)%do_unpack(async=.true.)
+    end if
+    POP_SUB(propagation_ops_do_unpack)
+  end subroutine propagation_ops_do_unpack
+
+  ! ---------------------------------------------------------
+  subroutine propagation_ops_finish_unpack(st, hm, ib, ik)
+    type(states_elec_t),      intent(inout) :: st
+    type(hamiltonian_elec_t), intent(inout) :: hm
+    integer,                  intent(in)    :: ib
+    integer,                  intent(in)    :: ik
+
+    PUSH_SUB(propagation_ops_finish_unpack)
+    if (hamiltonian_elec_apply_packed(hm)) then
+      call accel_set_stream(ib)
+      call st%group%psib(ib, ik)%finish_unpack()
+      if (hamiltonian_elec_inh_term(hm)) call hm%inh_st%group%psib(ib, ik)%finish_unpack()
+    end if
+    POP_SUB(propagation_ops_finish_unpack)
+  end subroutine propagation_ops_finish_unpack
 
   ! ---------------------------------------------------------
   subroutine propagation_ops_elec_interpolate_get(mesh, hm, interp)

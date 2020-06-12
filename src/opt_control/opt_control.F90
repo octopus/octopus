@@ -99,6 +99,14 @@ contains
 
     PUSH_SUB(opt_control_run)
 
+    if (sys%hm%pcm%run_pcm) then
+      call messages_not_implemented("PCM for CalculationMode /= gs or td")
+    end if
+
+    if (sys%gr%sb%kpoints%use_symmetries) then
+      call messages_experimental("KPoints symmetries with CalculationMode = opt_control")
+    end if
+
     ! Creates a directory where the optimal control stuff will be written. The name of the directory
     ! is stored in the preprocessor macro OCT_DIR, which should be defined in src/include/global.h
     call io_mkdir(OCT_DIR, sys%namespace)
@@ -114,7 +122,7 @@ contains
 
     ! Read info about, and prepare, the control functions
     call controlfunction_mod_init(sys%hm%ep, sys%namespace, td%dt, td%max_iter, oct%mode_fixed_fluence)
-    call controlfunction_init(par, sys%namespace, td%dt, td%max_iter)
+    call controlfunction_init(par, td%dt, td%max_iter)
     call controlfunction_set(par, sys%hm%ep)
       ! This prints the initial control parameters, exactly as described in the inp file,
       ! that is, without applying any envelope or filter.
@@ -206,7 +214,7 @@ contains
         call messages_info(1)
         call scheme_nlopt()
     case default
-      call messages_input_error('OCTScheme')
+      call messages_input_error(sys%namespace, 'OCTScheme')
     end select
 
     ! do final test run: propagate initial state with optimal field
@@ -391,12 +399,12 @@ contains
 
       select case(oct%algorithm)
       case(OPTION__OCTSCHEME__OCT_BFGS)
-        call minimize_multidim(MINMETHOD_BFGS2, dof, x, step, real(0.1, 8), &
-          real(oct_iterator_tolerance(iterator), 8), real(oct_iterator_tolerance(iterator), 8), &
+        call minimize_multidim(MINMETHOD_BFGS2, dof, x, step, CNST(0.1), &
+          TOFLOAT(oct_iterator_tolerance(iterator)), TOFLOAT(oct_iterator_tolerance(iterator)), &
           maxiter, opt_control_cg_calc, opt_control_cg_write_info, minvalue, ierr)
       case(OPTION__OCTSCHEME__OCT_CG)
-        call minimize_multidim(MINMETHOD_FR_CG, dof, x, step, real(0.1, 8), &
-          real(oct_iterator_tolerance(iterator), 8), real(oct_iterator_tolerance(iterator), 8), &
+        call minimize_multidim(MINMETHOD_FR_CG, dof, x, step, CNST(0.1), &
+          TOFLOAT(oct_iterator_tolerance(iterator)), TOFLOAT(oct_iterator_tolerance(iterator)), &
           maxiter, opt_control_cg_calc, opt_control_cg_write_info, minvalue, ierr)
       end select
 
@@ -466,7 +474,7 @@ contains
       maxiter = oct_iterator_maxiter(iterator)
 
       call minimize_multidim_nograd(MINMETHOD_NMSIMPLEX, dim, x, step, &
-        real(oct_iterator_tolerance(iterator), 8), maxiter, &
+        TOFLOAT(oct_iterator_tolerance(iterator)), maxiter, &
         opt_control_direct_calc, opt_control_direct_message_info, minvalue, ierr)
 
       if(ierr /= 0) then

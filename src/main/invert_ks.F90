@@ -30,6 +30,7 @@ module invert_ks_oct_m
   use messages_oct_m
   use namespace_oct_m
   use parser_oct_m
+  use pcm_oct_m
   use poisson_oct_m
   use profiling_oct_m
   use restart_oct_m
@@ -55,6 +56,14 @@ contains
     type(restart_t) :: restart
       
     PUSH_SUB(invert_ks_run)
+
+    if (sys%hm%pcm%run_pcm) then
+      call messages_not_implemented("PCM for CalculationMode /= gs or td")
+    end if
+
+    if (sys%gr%sb%kpoints%use_symmetries) then
+      call messages_experimental("KPoints symmetries with CalculationMode = invert_ks")
+    end if
 
     ! initialize KS inversion module
     call xc_ks_inversion_write_info(sys%ks%ks_inversion, stdout)

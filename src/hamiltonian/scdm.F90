@@ -195,7 +195,7 @@ subroutine scdm_init(scdm, namespace, st, der, fullcube, operate_on_scdm)
   
   if (scdm%root .and. scdm%verbose) then
     call messages_print_var_value(stdout,'SCDM box_size', scdm%box_size)
-    call messages_print_var_value(stdout,'SCDM box_size[Ang]', scdm%box_size*der%mesh%spacing(1)*0.529177249)
+    call messages_print_var_value(stdout,'SCDM box_size[Ang]', scdm%box_size*der%mesh%spacing(1)*CNST(0.529177249))
   end if
   scdm%full_box = (2*scdm%box_size+1)**3
   !check if scdm is not bigger than fft-grid of full simualtion cell  
@@ -203,7 +203,7 @@ subroutine scdm_init(scdm, namespace, st, der, fullcube, operate_on_scdm)
     message(1) = 'SCDM box larger than mesh, no point in using it'
     call messages_fatal(1,only_root_writes = .true., namespace=namespace)
   end if
-  dummy = 2*(2*scdm%box_size+1)*der%mesh%spacing(1)*0.529177249
+  dummy = 2*(2*scdm%box_size+1)*der%mesh%spacing(1)*CNST(0.529177249)
   if (scdm%root .and. scdm%verbose) call messages_print_var_value(stdout, 'SCDM fullbox[Ang]', dummy)
   SAFE_ALLOCATE(scdm%box(1:scdm%box_size*2+1,1:scdm%box_size*2+1,1:scdm%box_size*2+1,1:scdm%st%nst))
   
@@ -353,8 +353,8 @@ subroutine check_box_in_index(idx,center,size,out)
   corner(:,7) = (/-1,-1,1/)
   corner(:,8) = (/-1,-1,-1/)
   
-  do idim=1,3
-    do i1=1,8
+  do idim = 1,3
+    do i1 = 1,8
       ix(:)=center(:) + size*corner(:,i1)
       if (ix(idim).lt.idx%nr(1,idim).or.ix(idim).gt.idx%nr(2,idim)) then
         out(idim) = .true. 

@@ -61,7 +61,10 @@ module kpoints_oct_m
     kpoints_path_generate,        &
     kpoints_to_reduced,           & 
     kpoints_fold_to_1BZ,          &
-    kpoints_grid_end
+    kpoints_is_compatible_downsampling, &
+    kpoints_is_valid_symmetry,    &
+    kpoints_grid_end,             & 
+    kpoints_nkpt_in_path
 
   type kpoints_grid_t
     ! Components are public by default
@@ -88,11 +91,14 @@ module kpoints_oct_m
 
     !> For the modified Monkhorst-Pack scheme
     integer                   :: nik_axis(MAX_DIM)    !< number of MP divisions
+    integer                   :: niq_axis(MAX_DIM)    !< number of MP divisions
     integer, pointer, private :: symmetry_ops(:, :)  !< (reduced%npoints, nops)
     integer, pointer, private :: num_symmetry_ops(:) !< (reduced%npoints)
 
     !> For the output of a band-structure
     FLOAT, pointer            :: coord_along_path(:)
+
+    integer              :: downsampling(MAX_DIM) !< downsampling coefficients
   end type kpoints_t
 
   integer, public, parameter ::        &
@@ -211,7 +217,6 @@ contains
     this%point1BZ(1:old_grid%dim, old_grid%npoints+1:this%npoints) = that%point1BZ(1:that%dim, 1:that%npoints)
     this%weight(old_grid%npoints+1:this%npoints)                   = that%weight(1:that%npoints)
 
-
     call kpoints_grid_end(old_grid)
 
 
@@ -230,8 +235,10 @@ contains
     this%use_time_reversal = .false.
     this%nik_skip = 0
     this%nik_axis = 0
+    this%niq_axis = 0
     nullify(this%symmetry_ops, this%num_symmetry_ops)
     nullify(this%coord_along_path)
+    this%downsampling = 1
 
   end subroutine kpoints_nullify
 
@@ -400,7 +407,7 @@ contains
       type(block_t) :: blk
       integer, allocatable :: symm_ops(:, :), num_symm_ops(:)
       FLOAT, allocatable :: shifts(:,:)
-      
+     
 
       PUSH_SUB(kpoints_init.read_MP)
 
@@ -496,6 +503,52 @@ contains
         shifts(1:dim, 1) = -M_HALF                                                                                                                       
       end if
 
+      !%Variable QPointsGrid
+      !%Type block
+      !%Default KPointsGrid
+      !%Section Mesh::KPoints
+      !%Description
+      !% This block allows to define a q-point grid used for the calculation of the Fock operator 
+      !% with k-points. The <i>q</i>-points are distributed in a uniform grid, as done for the 
+      !% <tt>KPointsGrid</tt> variable.
+      !% See J. Chem Phys. 124, 154709 (2006) for details
+      !%
+      !% For each dimension, the number of q point must be a divider of the number of  k point
+      !%
+      !% <tt>%QPointsGrid
+      !% <br>&nbsp;&nbsp;2 | 2 | 1
+      !% <br>%</tt>
+      !%
+      !%End
+      this%niq_axis(:) = this%nik_axis(:)
+      this%downsampling(:) = 1
+      if(parse_is_defined(namespace, 'QPointsGrid')) then
+        if(parse_block(namespace, 'QPointsGrid', blk) == 0) then
+          ncols = parse_block_cols(blk, 0)
+          if(ncols /= dim) then
+            write(message(1),'(a,i3,a,i3)') 'QPointsGrid first row has ', ncols, ' columns but must have ', dim
+            call messages_fatal(1)
+          end if
+          do ii = 1, dim
+            call parse_block_integer(blk, 0, ii - 1, this%niq_axis(ii))
+          end do
+
+          if (any(this%nik_axis(1:dim)/this%niq_axis(1:dim) &
+                  /= nint(this%nik_axis(1:dim)/real(this%niq_axis(1:dim))))) then
+            message(1) = 'Input: QPointsGrid is not compatible with the KPointsGrid.'
+            call messages_fatal(1, namespace=namespace)
+          end if
+
+          this%downsampling(1:dim) = this%nik_axis(1:dim)/this%niq_axis(1:dim)
+
+          if(any(this%downsampling(1:dim)/=1)) then
+            ASSERT(.not.this%use_symmetries)
+          end if
+
+          call parse_block_end(blk)
+        end if
+      end if 
+
       call kpoints_grid_init(dim, this%full, product(this%nik_axis(1:dim))*nshifts, nshifts)
 
       !We move the k-points into this%shifts
@@ -518,7 +571,7 @@ contains
       if(this%use_symmetries) then
         message(1) = "Checking if the generated full k-point grid is symmetric";
         call messages_info(1)
-        call kpoints_check_symmetries(this%full, symm, dim, klattice, this%use_time_reversal, namespace)
+        call kpoints_check_symmetries(this%full, symm, dim, this%use_time_reversal, namespace)
       end if
 
       call kpoints_grid_copy(this%full, this%reduced)
@@ -589,6 +642,9 @@ contains
       FLOAT, allocatable   :: highsympoints(:,:)
       type(kpoints_grid_t) :: path_kpoints_grid
 
+      integer npoints
+      integer, allocatable :: symm_ops(:, :), num_symm_ops(:)
+
       PUSH_SUB(kpoints_init.read_path)
 
 
@@ -641,7 +697,7 @@ contains
         !Sanity check
         ncols = parse_block_cols(blk, ik)
         if(ncols /= dim) then
-          write(message(1),'(a,i3,a,i3)') 'KPointsPath row ', ik, ' has ', ncols, ' columns but must have ', dim
+          write(message(1),'(a,i3,a,i3,a,i3)') 'KPointsPath row ', ik, ' has ', ncols, ' columns but must have ', dim
           call messages_fatal(1, namespace=namespace)
         end if
 
@@ -652,6 +708,9 @@ contains
 
       call parse_block_end(blk)
 
+      !We do not use axis
+      this%nik_axis(1:MAX_DIM) = 1
+
       !We do not have shifts
       nshifts = 1
       call kpoints_grid_init(dim, path_kpoints_grid, nkpoints, nshifts)
@@ -659,8 +718,8 @@ contains
       ! For the output of band-structures
       SAFE_ALLOCATE(this%coord_along_path(1:nkpoints))
 
-      call kpoints_path_generate(dim, klattice, nkpoints, nsegments, resolution, &
-               nhighsympoints, highsympoints, path_kpoints_grid%point, this%coord_along_path)
+      call kpoints_path_generate(dim, klattice, nkpoints, nsegments, resolution, highsympoints, path_kpoints_grid%point, &
+        this%coord_along_path)
 
       SAFE_DEALLOCATE_A(resolution)
       SAFE_DEALLOCATE_A(highsympoints)
@@ -682,8 +741,38 @@ contains
 
       call kpoints_fold_to_1BZ(path_kpoints_grid, klattice)
 
+      !We need to copy the arrays containing the information on the symmetries
+      !Before calling kpoints_grid_addto
+      if(associated(this%symmetry_ops)) then
+        npoints = this%reduced%npoints
+        SAFE_ALLOCATE(num_symm_ops(1:npoints))
+        SAFE_ALLOCATE(symm_ops(1:npoints, 1:maxval(this%num_symmetry_ops)))
+
+        num_symm_ops(1:npoints) = this%num_symmetry_ops(1:npoints)
+        symm_ops(1:npoints, 1:maxval(num_symm_ops)) = &
+          this%symmetry_ops(1:npoints, 1:maxval(num_symm_ops))
+
+      end if
+
       call kpoints_grid_addto(this%full   , path_kpoints_grid)
       call kpoints_grid_addto(this%reduced, path_kpoints_grid)
+
+      if(associated(this%symmetry_ops)) then
+        SAFE_DEALLOCATE_P(this%num_symmetry_ops)
+        SAFE_DEALLOCATE_P(this%symmetry_ops)
+        SAFE_ALLOCATE(this%num_symmetry_ops(1:this%reduced%npoints))
+        SAFE_ALLOCATE(this%symmetry_ops(1:this%reduced%npoints,1:maxval(num_symm_ops)))
+
+        this%num_symmetry_ops(1:npoints) = num_symm_ops(1:npoints)
+        this%symmetry_ops(1:npoints, 1:maxval(num_symm_ops)) = &
+          symm_ops(1:npoints, 1:maxval(num_symm_ops))
+        this%num_symmetry_ops(npoints+1:this%reduced%npoints) = 1
+        this%symmetry_ops(npoints+1:this%reduced%npoints, 1) = 1
+
+        SAFE_DEALLOCATE_A(num_symm_ops)
+        SAFE_DEALLOCATE_A(symm_ops)
+      end if
+
 
       call kpoints_grid_end(path_kpoints_grid)
       
@@ -908,6 +997,14 @@ contains
       kout%coord_along_path(1:kin%full%npoints) = kin%coord_along_path(1:kin%full%npoints)
     end if
 
+    if(associated(kin%symmetry_ops)) then
+      SAFE_ALLOCATE(kout%num_symmetry_ops(1:kin%reduced%npoints))
+      SAFE_ALLOCATE(kout%symmetry_ops(1:kin%reduced%npoints, 1:maxval(kin%num_symmetry_ops)))
+      kout%num_symmetry_ops(1:kin%reduced%npoints) = kin%num_symmetry_ops(1:kin%reduced%npoints)
+      kout%symmetry_ops(1:kin%reduced%npoints, 1:maxval(kin%num_symmetry_ops)) = &
+         kin%symmetry_ops(1:kin%reduced%npoints, 1:maxval(kin%num_symmetry_ops))
+    end if
+
     POP_SUB(kpoints_copy)
   end subroutine kpoints_copy
 
@@ -1060,14 +1157,12 @@ contains
 
   ! --------------------------------------------------------------------------------------------  
   !> Generate the k-point along a path
-  subroutine kpoints_path_generate(dim, klattice, nkpoints, nsegments, resolution, &
-               nhighsympoints, highsympoints, kpoints, coord)
+  subroutine kpoints_path_generate(dim, klattice, nkpoints, nsegments, resolution, highsympoints, kpoints, coord)
     integer,           intent(in)  :: dim
     FLOAT,             intent(in)  :: klattice(:,:)
     integer,           intent(in)  :: nkpoints
     integer,           intent(in)  :: nsegments
     integer,           intent(in)  :: resolution(:)
-    integer,           intent(in)  :: nhighsympoints
     FLOAT,             intent(in)  :: highsympoints(:,:)
     FLOAT,             intent(out) :: kpoints(:, :) 
     FLOAT,             intent(out) :: coord(:)
@@ -1080,7 +1175,7 @@ contains
 
     total_length = M_ZERO
     !We first compute the total length of the k-point path
-    do is=1, nsegments
+    do is = 1, nsegments
       ! We need to work in abolute coordinates to get the correct path length
       call kpoints_to_absolute(klattice, highsympoints(1:dim,is), kpt1(:), dim)
       call kpoints_to_absolute(klattice, highsympoints(1:dim,is+1), kpt2(:), dim)
@@ -1093,7 +1188,7 @@ contains
     accumulated_length = M_ZERO
     kpt_ind = 0
     !Now we generate the points
-    do is=1, nsegments
+    do is = 1, nsegments
       ! We need to work in abolute coordinates to get the correct path length
       call kpoints_to_absolute(klattice, highsympoints(1:dim,is), kpt1(:), dim)
       call kpoints_to_absolute(klattice, highsympoints(1:dim,is+1), kpt2(:), dim)
@@ -1159,7 +1254,9 @@ contains
     SAFE_ALLOCATE(reduced(1:dim, 1:nkpoints))
 
     dw = M_ONE / nkpoints
-    forall(ik = 1:nkpoints) kweight(ik) = dw   
+    do ik=1, nkpoints
+      kweight(ik) = dw
+    end do
 
     nreduced = 0
 
@@ -1276,7 +1373,7 @@ contains
 
       dmin = CNST(1e10)
       do ig1 = 1, 27
-        do ii=1, grid%dim
+        do ii = 1, grid%dim
           vec(ii) = Gvec_cart(ii,ig1)-grid%point(ii,ik)
         end do
         d = real(sum(vec(1:grid%dim)**2),4) !Conversion to simple precision
@@ -1286,7 +1383,7 @@ contains
           ig2 = ig1
         end if
       end do
-      do ii=1, grid%dim
+      do ii = 1, grid%dim
         kpt(ii) = grid%red_point(ii,ik) - Gvec(ii,ig2)
       end do
       call kpoints_to_absolute(klattice,kpt(1:grid%dim),grid%point1BZ(1:grid%dim,ik),grid%dim) 
@@ -1318,6 +1415,14 @@ contains
         call messages_write(this%nik_axis(idir), fmt = '(i3,1x)')
       end do
       call messages_new_line()
+
+      if(.not.all(this%downsampling(1:this%full%dim) == 1)) then
+        call messages_write('Dimensions of the q-point grid      =')
+        do idir = 1, this%full%dim
+          call messages_write(this%niq_axis(idir), fmt = '(i3,1x)')
+        end do
+        call messages_new_line()
+      end if
       
       call messages_write('Total number of k-points            =')
       call messages_write(this%full%npoints)
@@ -1413,6 +1518,29 @@ contains
   end function kpoints_get_symmetry_ops
 
   !--------------------------------------------------------
+  logical pure function kpoints_is_valid_symmetry(this, ik, index) result(valid)
+    type(kpoints_t),    intent(in) :: this
+    integer,            intent(in) :: ik
+    integer,            intent(in) :: index
+
+    integer :: iop
+
+    valid = .false.
+    if(this%use_symmetries) then
+      do iop = 1, this%num_symmetry_ops(ik)
+        if(this%symmetry_ops(ik, iop) == index) then
+          valid = .true.
+          return
+        end if
+      end do
+    else
+      valid = .true.
+    end if
+
+  end function kpoints_is_valid_symmetry
+
+
+  !--------------------------------------------------------
   integer function kpoints_kweight_denominator(this)
     type(kpoints_t),    intent(in) :: this
 
@@ -1470,11 +1598,10 @@ contains
   
 
   !--------------------------------------------------------
-  subroutine kpoints_check_symmetries(grid, symm, dim, klattice, time_reversal, namespace)
+  subroutine kpoints_check_symmetries(grid, symm, dim, time_reversal, namespace)
     type(kpoints_grid_t), intent(in) :: grid
     type(symmetries_t),   intent(in) :: symm    
     integer,              intent(in) :: dim
-    FLOAT,                intent(in) :: klattice(:,:)
     logical,              intent(in) :: time_reversal
     type(namespace_t),    intent(in) :: namespace
     
@@ -1501,7 +1628,9 @@ contains
       if(iop == symmetries_identity_index(symm) .and. &
             .not. time_reversal) cycle
 
-      forall(ik=kpt_dist%start:kpt_dist%end)  kmap(ik) = ik
+      do ik = kpt_dist%start, kpt_dist%end
+        kmap(ik) = ik
+      end do
 
       do ik = kpt_dist%start, kpt_dist%end
         !We apply the symmetry
@@ -1557,6 +1686,53 @@ contains
  
     POP_SUB(kpoints_check_symmetries)
   end subroutine kpoints_check_symmetries
+
+  !--------------------------------------------------------
+  logical function kpoints_is_compatible_downsampling(kpt, ik, iq) result(compatible)
+    type(kpoints_t), intent(in) :: kpt
+    integer,              intent(in) :: ik
+    integer,              intent(in) :: iq
+
+    integer :: dim, idim
+    FLOAT :: diff(1:MAX_DIM), red(1:MAX_DIM)
+
+    PUSH_SUB(kpoints_is_compatible_downsampling)
+
+    compatible = .true.
+    dim = kpt%reduced%dim
+
+    !No downsampling. We use all k-points
+    if(all(kpt%downsampling(1:dim) == 1)) then
+      POP_SUB(kpoints_is_compatible_downsampling)
+      return
+    end if
+
+    ASSERT(kpt%method == KPOINTS_MONKH_PACK)
+    
+    diff(1:dim) = kpt%reduced%red_point(1:dim, ik)-kpt%reduced%red_point(1:dim, iq)
+    do idim = 1, dim
+      !We remove potential umklapp
+      diff(idim)= diff(idim)-anint(diff(idim)+M_HALF*SYMPREC)
+      red(idim) = diff(idim)*kpt%nik_axis(idim)/real(kpt%downsampling(idim))
+      if( abs(red(idim) - anint(red(idim))) > M_EPSILON) then
+        compatible = .false.
+        POP_SUB(kpoints_is_compatible_downsampling)
+        return
+      end if
+    end do
+
+    POP_SUB(kpoints_is_compatible_downsampling)
+
+  end function kpoints_is_compatible_downsampling
+
+
+  integer function kpoints_nkpt_in_path(this) result(npath)
+    type(kpoints_t), intent(in) :: this
+
+    npath = 0
+    if(associated(this%coord_along_path)) npath = SIZE(this%coord_along_path)
+
+  end function kpoints_nkpt_in_path
 
 end module kpoints_oct_m
 

@@ -57,6 +57,10 @@ check-long:
 	$(MAKE) -C doc check
 	$(MAKE) -C testsuite check-long
 
+check-performance:
+	$(MAKE) -C share check
+	$(MAKE) -C testsuite check-performance
+
 rpm: dist
 	@topdir=`rpmbuild --showrc | @GREP@ ': *_topdir' | cut -f 2`; \
 	mv -f $(PACKAGE)-$(VERSION).tar.gz $$topdir/SOURCES; \

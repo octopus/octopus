@@ -44,7 +44,7 @@ subroutine flip_sign_Lkpt_idx( dim, nk, idx)
        idx(ii,idir) = nk(idir) - idx_tmp(ii,idir) + 1 
      end do
      
-!          do ii=1, nk(idir)
+!          do ii = 1, nk(idir)
 !            print *,idir, ii, "idx = ", idx(ii,idir),"idx_tmp =", idx_tmp(ii,idir),mod(nk(idir),2)
 !          end do
    end do
@@ -158,7 +158,7 @@ subroutine pes_mask_pmesh(namespace, dim, kpoints, ll, LG, pmesh, idxZero, krng,
   end do  
   
   if(debug%info) then
-    do idir=1, dim
+    do idir = 1, dim
       print *, "*** direction =", idir  
       do j1 = 1, ll(idir)
         print *,j1, "LG = ",LG(j1,idir),"LG_ = ",LG_(j1,idir), "idx = ", idx(j1,idir), "idx_inv = ", idx_inv(j1,idir)
@@ -348,9 +348,9 @@ subroutine pes_mask_map_from_states(restart, st, ll, pesK, krng, Lp, istin)
           itot = ist + (ik-1) * st%nst +  (idim-1) * st%nst * st%d%kpt%nglobal
           call pes_mask_map_from_state(restart, itot, ll, psiG1)
         
-          do i1=1, ll(1)
-            do i2=1, ll(2)
-              do i3=1, ll(3)
+          do i1 = 1, ll(1)
+            do i2 = 1, ll(2)
+              do i3 = 1, ll(3)
                 ip(1:3) = Lp(i1, i2, i3, ik, 1:3) 
               
                   pesK(ip(1),ip(2),ip(3), ispin) = pesK(ip(1),ip(2),ip(3), ispin) &
@@ -369,9 +369,9 @@ subroutine pes_mask_map_from_states(restart, st, ll, pesK, krng, Lp, istin)
         itot = ist + (ik-1) * st%nst +  (idim-1) * st%nst * st%d%kpt%nglobal
         call pes_mask_map_from_state(restart, itot, ll, psiG2)
             
-        do i1=1, ll(1)
-          do i2=1, ll(2)
-            do i3=1, ll(3)
+        do i1 = 1, ll(1)
+          do i2 = 1, ll(2)
+            do i3 = 1, ll(3)
               ip(1:3) = Lp(i1, i2, i3, ik, 1:3) 
             
                 pesK(ip(1),ip(2),ip(3), 1) = pesK(ip(1),ip(2),ip(3), 1) &
@@ -381,7 +381,7 @@ subroutine pes_mask_map_from_states(restart, st, ll, pesK, krng, Lp, istin)
                                                + abs(psiG2(i1,i2,i3))**2 * weight
 
                 pesK(ip(1),ip(2),ip(3), 3) = pesK(ip(1),ip(2),ip(3), 3) &
-                                               + real(psiG1(i1,i2,i3)*conjg(psiG2(i1,i2,i3)), REAL_PRECISION) * weight
+                                               + TOFLOAT(psiG1(i1,i2,i3)*conjg(psiG2(i1,i2,i3))) * weight
                                                
                 pesK(ip(1),ip(2),ip(3), 4) = pesK(ip(1),ip(2),ip(3), 4) &
                                                + aimag(psiG1(i1,i2,i3)*conjg(psiG2(i1,i2,i3))) * weight
@@ -411,8 +411,7 @@ subroutine pes_mask_map_from_state(restart, idx, ll, psiG)
   CMPLX, target,    intent(out) :: psiG(:,:,:)
 
   character(len=80) :: filename
-  integer ::  np, err, iunit 
-  character(len=128) :: lines(2)
+  integer ::  np, err
 
   PUSH_SUB(pes_mask_map_from_state)
 
@@ -449,7 +448,7 @@ subroutine pes_mask_output_states(namespace, st, gr, geo, dir, outp, mask)
   type(cube_function_t) :: cf
   type(mesh_t):: mesh   
   
-  type(batch_t)        :: psib
+  type(wfs_elec_t)        :: psib
   type(density_calc_t) :: dens_calc
 
   PUSH_SUB(pes_mask_output_states)
@@ -474,7 +473,7 @@ subroutine pes_mask_output_states(namespace, st, gr, geo, dir, outp, mask)
 
         cf%zRs=M_z0
 
-        call pes_mask_K_to_X(mask,mesh,mask%k(:,:,:, idim, ist, ik),cf%zRs)
+        call pes_mask_K_to_X(mask, mask%k(:,:,:, idim, ist, ik),cf%zRs)
 
         call pes_mask_cube_to_mesh(mask, cf, PsiAB(:, idim, ist, ik))        
 
@@ -487,9 +486,9 @@ subroutine pes_mask_output_states(namespace, st, gr, geo, dir, outp, mask)
       end do
     end do
      
-    call batch_init(psib, st%d%dim, st%st_start, st%st_end, PsiAB(:, :, st%st_start:, ik))
-    call density_calc_accumulate(dens_calc, ik, psib) 
-    call batch_end(psib)
+    call wfs_elec_init(psib, st%d%dim, st%st_start, st%st_end, PsiAB(:, :, st%st_start:, ik), ik)
+    call density_calc_accumulate(dens_calc, psib)
+    call psib%end()
 
   end do
   
@@ -840,10 +839,10 @@ subroutine pes_mask_output_full_mapM(pesK, file, namespace, Lk, ll, how, sb, pme
         sqrt(units_out%energy)**sb%dim)
     end if        
       
-!   else
-!     write(message(1), '(a)') 'Writing ASCII format file: '
-!     call messages_info(1)
-!     call out_ascii()
+   else
+     write(message(1), '(a)') 'Writing ASCII format file: '
+     call messages_info(1)
+     call out_ascii()
   end if
   
   call cube_end(cube)
@@ -1942,7 +1941,7 @@ subroutine pes_mask_output(mask, mesh, st, outp, namespace, file, gr, geo, iter)
           call states_elec_get_state(st, mesh, idim, ist, ik, psi)
           call pes_mask_mesh_to_cube(mask, psi, cf1)
           cf1%zRs = (M_ONE - mask%cM%zRs**10) * cf1%zRs ! mask^10 is practically a box function
-          call pes_mask_X_to_K(mask,mesh,cf1%zRs,cf1%Fs)
+          call pes_mask_X_to_K(mask, cf1%zRs, cf1%Fs)
           wfAk(:,:,:,idim, ist, ik) = cf1%Fs
         end do
       end do
@@ -2048,7 +2047,7 @@ subroutine pes_mask_read_info(dir, namespace, dim, Emax, Estep, ll, Lk,RR)
   SAFE_ALLOCATE(Lk(1:maxval(ll(:)), 1:3))
   Lk = M_ZERO
 
-  do ii=1, maxval(ll(:))
+  do ii = 1, maxval(ll(:))
     do idim = 1, dim
       read(iunit, '(2x,es19.12)', advance='no') Lk(ii, idim)
     end do
@@ -2093,7 +2092,7 @@ subroutine pes_mask_write_info(mask, dir, namespace)
   end do 
   write(iunit, '(1x)')
      
-  do ii=1, maxval(mask%ll(:))
+  do ii = 1, maxval(mask%ll(:))
     do idim = 1, mask%mesh%sb%dim
       write(iunit, '(2x,es19.12)', advance='no')  mask%Lk(ii, idim)
     end do
@@ -2314,7 +2313,7 @@ subroutine pes_mask_restart_map(mask, namespace, st, RR)
     do ist = st%st_start, st%st_end
       do idim = 1, st%d%dim
         cf1%zRs = M_z0
-        call pes_mask_K_to_X(mask, mask%mesh, mask%k(:,:,:, idim, ist, ik), cf1%zRs)
+        call pes_mask_K_to_X(mask, mask%k(:,:,:, idim, ist, ik), cf1%zRs)
         call states_elec_get_state(st, mask%mesh, idim, ist, ik, psi)
         call pes_mask_mesh_to_cube(mask, psi, cf2)
         cf2%zRs = cf1%zRs + cf2%zRs ! the whole pes orbital in real space 
@@ -2322,7 +2321,7 @@ subroutine pes_mask_restart_map(mask, namespace, st, RR)
         call pes_mask_cube_to_mesh(mask, cf1, psi)
         call states_elec_set_state(st, mask%mesh, idim, ist, ik, psi)
         cf2%zRs = cf2%zRs * (mask%cM%zRs-M_old) ! modify the k-orbital in B 
-        call pes_mask_X_to_K(mask, mask%mesh, cf2%zRs, cf1%Fs)
+        call pes_mask_X_to_K(mask, cf2%zRs, cf1%Fs)
         mask%k(:,:,:, idim, ist, ik) = mask%k(:,:,:, idim, ist, ik) - cf1%Fs
       end do
     end do

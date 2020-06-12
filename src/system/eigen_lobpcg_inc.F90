@@ -171,7 +171,6 @@ subroutine X(lobpcg)(namespace, gr, st, hm, st_start, st_end, psi, constr_start,
   integer, allocatable :: lall_constr(:)
 #endif
 
-  integer           :: hash_table_size
   logical           :: no_bof, found
   logical           :: explicit_gram
   R_TYPE            :: beta
@@ -190,7 +189,7 @@ subroutine X(lobpcg)(namespace, gr, st, hm, st_start, st_end, psi, constr_start,
   R_TYPE, allocatable         :: gram_i(:, :)     !< Gram matrix for unit matrix.
   R_TYPE, allocatable         :: gram_block(:, :) !< Space to construct the Gram matrix blocks.
   R_TYPE, allocatable, target :: ritz_vec(:, :)   !< Ritz-vectors.
-  type(batch_t) :: psib, hpsib
+  type(wfs_elec_t) :: psib, hpsib
   logical :: there_are_constraints
   
   PUSH_SUB(X(lobpcg))
@@ -288,8 +287,7 @@ subroutine X(lobpcg)(namespace, gr, st, hm, st_start, st_end, psi, constr_start,
   ! all_ev_inv: {1, ..., st%nst} -> {1, ..., nst} (the reverse of all_ev).
   SAFE_ALLOCATE(all_ev(1:nst))
   all_ev = uc
-  hash_table_size = max(3, st%nst) ! Minimum size of hash table is 3.
-  call iihash_init(all_ev_inv, hash_table_size)
+  call iihash_init(all_ev_inv)
   do ist = 1, nst
     call iihash_insert(all_ev_inv, all_ev(ist), ist)
   end do
@@ -309,13 +307,13 @@ subroutine X(lobpcg)(namespace, gr, st, hm, st_start, st_end, psi, constr_start,
   end if
 
   ! Get initial Ritz-values and -vectors.
-  call batch_init(psib, st%d%dim, st_start, st_end, psi(:, :, st_start:))
-  call batch_init(hpsib, st%d%dim, st_start, st_end, h_psi(:, :, st_start:))
+  call wfs_elec_init(psib, st%d%dim, st_start, st_end, psi(:, :, st_start:), ik)
+  call wfs_elec_init(hpsib, st%d%dim, st_start, st_end, h_psi(:, :, st_start:), ik)
 
-  call X(hamiltonian_elec_apply_batch)(hm, namespace, gr%mesh, psib, hpsib, ik)
+  call X(hamiltonian_elec_apply_batch)(hm, namespace, gr%mesh, psib, hpsib)
   
-  call batch_end(psib)
-  call batch_end(hpsib)
+  call psib%end()
+  call hpsib%end()
 
   niter = niter+lnst
   call X(blockt_mul)(gr%mesh, st, st_start, psi, h_psi, gram_block, xpsi1 = all_ev, xpsi2 = all_ev, symm = .true.)
@@ -394,24 +392,29 @@ subroutine X(lobpcg)(namespace, gr, st, hm, st_start, st_end, psi, constr_start,
     ! Apply Hamiltonian to residuals.
 
     if(lnuc > 0) then
-      call batch_init(psib, st%d%dim, lnuc)
-      call batch_init(hpsib, st%d%dim, lnuc)
+      call X(wfs_elec_init)(psib, st%d%dim, 1, lnuc, ubound(res, dim=1), ik)
+      call X(wfs_elec_init)(hpsib, st%d%dim, 1, lnuc, ubound(h_res, dim=1), ik)
     end if
     
     do i = 1, lnuc
       ist = luc(i)
-      call batch_add_state(psib, ist, res(:, :, ist))
-      call batch_add_state(hpsib, ist, h_res(:, :, ist))
+      call batch_set_state(psib, i, ubound(res, dim=1), res(:, :, ist))
+      call batch_set_state(hpsib, i, ubound(h_res, dim=1), h_res(:, :, ist))
     end do
 
     if(lnuc > 0) then
-      call X(hamiltonian_elec_apply_batch)(hm, namespace, gr%mesh, psib, hpsib, ik)
+      call X(hamiltonian_elec_apply_batch)(hm, namespace, gr%mesh, psib, hpsib)
     end if
 
     niter = niter + lnuc
 
-    call batch_end(psib)
-    call batch_end(hpsib)
+    do i = 1, lnuc
+      ist = luc(i)
+      call batch_get_state(hpsib, i, ubound(h_res, dim=1), h_res(:, :, ist))
+    end do
+
+    call psib%end()
+    call hpsib%end()
       
     ! Orthonormalize conjugate directions in all but the first iteration.
     ! Since h_dir also has to be modified (to avoid a full calculation of
@@ -513,7 +516,8 @@ subroutine X(lobpcg)(namespace, gr, st, hm, st_start, st_end, psi, constr_start,
 
     call profiling_in(C_PROFILING_LOBPCG_ESOLVE, 'LOBPCG_ESOLVE')
     no_bof = .false.
-    call lalg_lowest_geneigensolve(nst, nst+blks*nuc, gram_h, gram_i, eval, ritz_vec, bof = no_bof)
+    call lalg_lowest_geneigensolve(nst, nst+blks*nuc, gram_h, gram_i, eval, ritz_vec, &
+               preserve_mat=.false., bof = no_bof)
     call profiling_out(C_PROFILING_LOBPCG_ESOLVE)
 
     if(no_bof) then
@@ -614,10 +618,12 @@ contains
     do ist = st_start, st_end
       iev = iihash_lookup(all_ev_inv, ist, found)
       ASSERT(found)
-     
-      forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np) 
-        res(ip, idim, ist) = h_psi(ip, idim, ist) - eval(iev)*psi(ip, idim, ist)
-      end forall
+
+      do idim = 1, st%d%dim
+        do ip = 1, gr%mesh%np
+          res(ip, idim, ist) = h_psi(ip, idim, ist) - eval(iev)*psi(ip, idim, ist)
+        end do
+      end do
     end do
 
     POP_SUB(X(lobpcg).X(lobpcg_res))
@@ -661,20 +667,6 @@ contains
 #endif
     POP_SUB(X(lobpcg).X(lobpcg_unconv_ev))
   end subroutine X(lobpcg_unconv_ev)
-
-
-  ! ---------------------------------------------------------
-  !> Returns a mask with mask(i) = .false. for eigenvector i unconverged.
-  subroutine X(lobpcg_conv_mask)(mask)
-    logical, intent(out) :: mask(:)
-
-    PUSH_SUB(X(lobpcg).X(lobpcg_conv_mask))
-
-    mask     = .true.
-    mask(uc(1:nuc)) = .false.
-
-    POP_SUB(X(lobpcg).X(lobpcg_conv_mask))
-  end subroutine X(lobpcg_conv_mask)
 
 
   ! ---------------------------------------------------------
@@ -724,7 +716,6 @@ contains
     integer, intent(in)    :: nidx
     integer, intent(in)    :: idx(:)
     
-    R_TYPE              :: det
     R_TYPE, allocatable :: tmp1(:, :), tmp2(:, :), tmp3(:, :)
     type(profile_t), save :: prof
 
@@ -737,7 +728,7 @@ contains
 
     call states_elec_blockt_mul(gr%mesh, st, constr_start, constr_start, &
       constr, constr, tmp1, xpsi1 = all_constr, xpsi2 = all_constr)
-    det = lalg_inverter(nconstr, tmp1, invert = .true.)
+    call lalg_inverter(nconstr, tmp1)
     call states_elec_blockt_mul(gr%mesh, st, constr_start, vs_start, &
       constr, vs, tmp2, xpsi1 = all_constr, xpsi2 = idx(1:nidx))
     call lalg_gemm(nconstr, nidx, nconstr, R_TOTYPE(M_ONE), tmp1, tmp2, R_TOTYPE(M_ZERO), tmp3)

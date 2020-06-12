@@ -49,6 +49,7 @@ module subspace_oct_m
   use states_elec_parallel_oct_m
   use types_oct_m
   use varinfo_oct_m
+  use wfs_elec_oct_m
 
   implicit none
   
@@ -93,6 +94,7 @@ contains
       !% Selects the method to perform subspace diagonalization. The
       !% default is <tt>standard</tt>, unless states parallelization is used,
       !% when the default is <tt>scalapack</tt>.
+      !% Note that this variable is not parsed in the case of the evolution eigensolver.
       !%Option none 0
       !% No subspace diagonalization. WARNING: this will generally give incorrect results.
       !%Option standard 1
@@ -111,7 +113,9 @@ contains
 
       call parse_variable(namespace, 'SubspaceDiagonalization', default, this%method)
 
-      if(.not.varinfo_valid_option('SubspaceDiagonalization', this%method)) call messages_input_error('SubspaceDiagonalization')
+      if(.not.varinfo_valid_option('SubspaceDiagonalization', this%method)) then
+        call messages_input_error(namespace, 'SubspaceDiagonalization')
+      end if
     end if
 
     call messages_print_var_option(stdout, 'SubspaceDiagonalization', this%method)
