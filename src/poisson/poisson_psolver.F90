@@ -34,6 +34,7 @@ module poisson_psolver_oct_m
   use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
+  use submesh_oct_m
 
   !! Support for PSolver from BigDFT
 
@@ -109,13 +110,14 @@ module poisson_psolver_oct_m
 contains
 
   !-----------------------------------------------------------------
-  subroutine poisson_psolver_init(this, namespace, mesh, cube, mu, qq)
+  subroutine poisson_psolver_init(this, namespace, mesh, cube, mu, qq, force_isolated)
     type(poisson_psolver_t), intent(out)   :: this
     type(namespace_t),       intent(in)    :: namespace
     type(mesh_t),            intent(inout) :: mesh
     type(cube_t),            intent(inout) :: cube
     FLOAT,                   intent(in)    :: mu
     FLOAT,                   intent(in)    :: qq(1:MAX_DIM)
+    logical, optional,       intent(in)    :: force_isolated
 
     logical data_is_parallel
 #ifdef HAVE_PSOLVER
@@ -137,23 +139,27 @@ contains
     call f_lib_initialize()
 #endif
 
-    select case(mesh%sb%periodic_dim)
-    case(0)
-      ! Free BC
+    if(optional_default(force_isolated, .false.)) then
       this%geocode = "F"
-    case(1)
-      ! Wire BC
-      this%geocode = "W"
-      call messages_not_implemented("PSolver support for 1D periodic boundary conditions.")
-    case(2)
-      ! Surface BC
-      this%geocode = "S"
-      call messages_not_implemented("PSolver support for 2D periodic boundary conditions.")
-    case(3)
-      ! Periodic BC
-      this%geocode = "P"
-      call messages_experimental("PSolver support for 3D periodic boundary conditions.")
-    end select
+    else
+      select case(mesh%sb%periodic_dim)
+      case(0)
+        ! Free BC
+        this%geocode = "F"
+      case(1)
+        ! Wire BC
+        this%geocode = "W"
+        call messages_not_implemented("PSolver support for 1D periodic boundary conditions.")
+      case(2)
+        ! Surface BC
+        this%geocode = "S"
+        call messages_not_implemented("PSolver support for 2D periodic boundary conditions.")
+      case(3)
+        ! Periodic BC
+        this%geocode = "P"
+        call messages_experimental("PSolver support for 3D periodic boundary conditions.")
+      end select
+    end if
 
 
 #ifdef HAVE_PSOLVER
@@ -403,12 +409,13 @@ contains
   end subroutine poisson_psolver_parallel_solve
 
   !-----------------------------------------------------------------
-  subroutine poisson_psolver_global_solve(this, mesh, cube, pot, rho)
+  subroutine poisson_psolver_global_solve(this, mesh, cube, pot, rho, sm)
     type(poisson_psolver_t), intent(in), target :: this
     type(mesh_t),            intent(in)         :: mesh
     type(cube_t),            intent(in)         :: cube
     FLOAT,                   intent(out)        :: pot(:)
     FLOAT,                   intent(in)         :: rho(:)
+    type(submesh_t),     optional,  intent(in)    :: sm  !< If present pot and rho are assumed to come from it
 
     character(len=3) :: quiet
     type(profile_t), save :: prof
@@ -441,10 +448,14 @@ contains
     call cube_function_null(cf)
     call dcube_function_alloc_RS(cube, cf)
 
-    if(mesh%parallel_in_domains) then
-      call dmesh_to_cube(mesh, rho, cube, cf, local=.true.)
+    if(present(sm)) then
+      call dsubmesh_to_cube(sm, rho, cube, cf)
     else
-      call dmesh_to_cube(mesh, rho, cube, cf)
+      if(mesh%parallel_in_domains) then
+        call dmesh_to_cube(mesh, rho, cube, cf, local=.true.)
+      else
+        call dmesh_to_cube(mesh, rho, cube, cf)
+      end if
     end if
 
     SAFE_ALLOCATE(pot_ion(1:cube%rs_n(1),1:cube%rs_n(2),1:cube%rs_n(3)))
@@ -479,10 +490,14 @@ contains
 #endif
     SAFE_DEALLOCATE_A(pot_ion)
 
-    if(mesh%parallel_in_domains) then
-      call dcube_to_mesh(cube, cf, mesh, pot, local=.true.)
+    if(present(sm)) then
+      call dcube_to_submesh(cube, cf, sm, pot)
     else
-      call dcube_to_mesh(cube, cf, mesh, pot)
+      if(mesh%parallel_in_domains) then
+        call dcube_to_mesh(cube, cf, mesh, pot, local=.true.)
+      else
+        call dcube_to_mesh(cube, cf, mesh, pot)
+      end if
     end if
 
     call dcube_function_free_RS(cube, cf)

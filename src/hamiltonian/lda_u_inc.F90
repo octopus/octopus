@@ -1082,10 +1082,14 @@ subroutine X(compute_coulomb_integrals) (this, namespace, mesh, der, psolver)
     call submesh_build_global(os%sphere)
 
     select case (this%sm_poisson)
-    case(DFT_U_POISSON_DIRECT)
+    case(SM_POISSON_DIRECT)
       call poisson_init_sm(os%poisson, namespace, psolver, der, os%sphere, method = POISSON_DIRECT_SUM) 
-    case(DFT_U_POISSON_ISF)
+    case(SM_POISSON_ISF)
       call poisson_init_sm(os%poisson, namespace, psolver, der, os%sphere, method = POISSON_ISF)
+    case(SM_POISSON_PSOLVER)
+      call poisson_init_sm(os%poisson, namespace, psolver, der, os%sphere, method = POISSON_PSOLVER)
+    case(SM_POISSON_FFT)
+      call poisson_init_sm(os%poisson, namespace, psolver, der, os%sphere, method = POISSON_FFT)
     end select
  
     ijst=0
