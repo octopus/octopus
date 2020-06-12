@@ -439,9 +439,10 @@ program floquet_observables
       call states_write_eigenvalues(filename, FBZ_st%nst, FBZ_st, sys%gr%sb)
     end if
      
-    call states_end(FBZ_st)
     
   end if
+
+!   if (FBZ_st_initialized) call states_end(FBZ_st)
 
   
   call hamiltonian_end(hm)
