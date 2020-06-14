@@ -44,7 +44,6 @@ module dressed_interaction_oct_m
     FLOAT         :: lambda(1:MAX_DIM - 1) !< Polarization vector, including the interaction strength
     FLOAT, public :: omega                 !< Mode frequency
     FLOAT         :: n_electrons           !< Number of electrons
-    FLOAT         :: coulomb               !< Prefactor of the electron-electron interaction
   end type dressed_interaction_t
 
 contains
@@ -93,16 +92,6 @@ contains
     call parse_variable(namespace, 'DressedOmega', CNST(1.0), this%omega, units_inp%energy)
     call messages_print_var_value(stdout, 'DressedOmega', this%omega, unit = units_out%energy)
 
-    !%Variable DressedCoulomb
-    !%Type float
-    !%Default 1.0
-    !%Section SCF::RDMFT
-    !%Description
-    !% Allows to control the prefactor of the electron-electron interaction.
-    !%End
-    call parse_variable(namespace, 'DressedCoulomb', CNST(1.0), this%coulomb)
-    call messages_print_var_value(stdout, 'DressedCoulomb', this%coulomb)
-
     POP_SUB(dressed_init)
   end subroutine dressed_init
 
@@ -118,7 +107,6 @@ contains
     write(iunit, '(a,1x)', advance='no') 'DressedLambda:   '
     write(iunit, '(f14.12)') (this%lambda(idir), idir = 1, this%dim)
     write(iunit, '(a,1x,f14.12)') 'DressedOmega:    ', this%omega
-    write(iunit, '(a,1x,f14.12)') 'DressedCoulomb:  ', this%coulomb
 
     POP_SUB(dressed_write_info)
   end subroutine dressed_write_info
@@ -140,8 +128,7 @@ contains
 
     do ip = 1, mesh%np
       lx = dot_product(this%lambda(1:this%dim), mesh%x(ip, 1:this%dim))
-      pot(ip) = pot(ip)*this%coulomb - &
-        this%omega/sqrt(this%n_electrons)*(mesh%x(ip, this%dim + 1)*ld + lx*dipole(this%dim + 1)) + lx*ld
+      pot(ip) = pot(ip) - this%omega/sqrt(this%n_electrons)*(mesh%x(ip, this%dim + 1)*ld + lx*dipole(this%dim + 1)) + lx*ld
     end do
 
     POP_SUB(dressed_add_poisson_terms)
