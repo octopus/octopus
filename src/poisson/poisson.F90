@@ -25,7 +25,6 @@ module poisson_oct_m
   use cube_oct_m
   use cube_function_oct_m
   use derivatives_oct_m
-  use dressed_interaction_oct_m
   use fft_oct_m
   use fourier_space_oct_m
   use global_oct_m
@@ -46,6 +45,7 @@ module poisson_oct_m
   use par_vec_oct_m
   use parser_oct_m
   use partition_oct_m
+  use photon_mode_oct_m
   use poisson_cg_oct_m
   use poisson_corrections_oct_m
   use poisson_isf_oct_m
@@ -125,7 +125,7 @@ module poisson_oct_m
     type(poisson_no_t) :: no_solver
     integer :: nslaves
     logical, public :: is_dressed
-    type(dressed_interaction_t), public :: dressed
+    type(photon_mode_t), public :: photons
     type(poisson_fmm_t)  :: params_fmm
 #ifdef HAVE_MPI2
     integer         :: intercomm
@@ -195,7 +195,10 @@ contains
     if (this%is_dressed) then
       call messages_experimental('Dressed Orbitals')
       ASSERT(qtot > M_ZERO)
-      call dressed_init(this%dressed, namespace, der%mesh%sb%dim, qtot)
+      call photon_mode_init(this%photons, namespace, der%mesh, der%mesh%sb%dim-1, qtot)
+      if (this%photons%nmodes > 1) then
+        call messages_not_implemented('DressedOrbitals for more than one photon mode.')
+      end if
     end if
 
 #ifdef HAVE_MPI
@@ -689,6 +692,10 @@ contains
       call cube_end(this%cube)
     end if
 
+    if (this%is_dressed) then
+      call photon_mode_end(this%photons)
+    end if
+
     POP_SUB(poisson_end)
   end subroutine poisson_end
 
@@ -929,7 +936,7 @@ contains
 
     ! Add extra terms for dressed interaction
     if (this%is_dressed .and. this%method /= POISSON_NO) then
-      call dressed_add_poisson_terms(this%dressed, der%mesh, rho, pot)
+      call photon_mode_add_poisson_terms(this%photons, der%mesh, rho, pot)
     end if
 
     POP_SUB(dpoisson_solve)

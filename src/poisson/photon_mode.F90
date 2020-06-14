@@ -1,4 +1,5 @@
 !! Copyright (C) 2017 Johannes Flick
+!! Copyright (C) 2019 F. Buchholz, M. Oliveira
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -21,6 +22,7 @@
 module photon_mode_oct_m
   use global_oct_m
   use mesh_oct_m
+  use mesh_function_oct_m
   use messages_oct_m
   use namespace_oct_m
   use parser_oct_m
@@ -31,12 +33,14 @@ module photon_mode_oct_m
   implicit none
 
   private
-  public ::                      &
-    photon_mode_t,               &
-    photon_mode_init,            &
-    photon_mode_end
+  public ::                       &
+    photon_mode_t,                &
+    photon_mode_init,             &
+    photon_mode_end,              &
+    photon_mode_write_info,       &
+    photon_mode_add_poisson_terms
 
-  type photon_mode_t
+type photon_mode_t
     ! All components are public by default
     integer               :: nmodes             !< Number of photon modes
     integer               :: dim                !< Dimensionality of the electronic system
@@ -61,7 +65,7 @@ contains
     FLOAT,                intent(in)  :: n_electrons
 
     type(block_t)         :: blk
-    integer               :: ii, idir, ncols
+    integer               :: ii, ip, idir, ncols
 
     PUSH_SUB(photon_mode_init)
 
@@ -113,9 +117,8 @@ contains
           this%pol = this%pol/sqrt(dot_product(this%pol(ii,:), this%pol(ii,:)))
 
           ! Calculate polarization dipole
-          this%pol_dipole(:, ii) = M_ZERO
-          do idir = 1, this%dim
-            this%pol_dipole(1:mesh%np, ii) = this%pol_dipole(1:mesh%np, ii) + this%pol(ii, idir)*mesh%x(1:mesh%np, idir)
+          do ip = 1, mesh%np
+            this%pol_dipole(ip, ii) = dot_product(this%pol(ii, 1:this%dim), mesh%x(ip, 1:this%dim))
           end do
 
         end do
@@ -153,6 +156,53 @@ contains
     POP_SUB(photon_mode_end)
   end subroutine photon_mode_end
 
+  !-----------------------------------------------------------------
+  subroutine photon_mode_write_info(this, iunit)
+    type(photon_mode_t), intent(in) :: this
+    integer,             intent(in) :: iunit
+
+    integer :: im, idir
+
+    PUSH_SUB(photon_mode_write_info)
+
+    call messages_print_stress(iunit, "Photon Modes")
+    write(iunit, '(6x,a,10x,a,3x)', advance='no') 'Omega', 'Lambda'
+    write(iunit, '(1x,a,i1,a)') ('Pol.(', idir, ')', idir = 1, this%dim)
+    do im = 1, this%nmodes
+      write(iunit, '(1x,f14.12)', advance='no') this%omega(im)
+      write(iunit, '(1x,f14.12)', advance='no') this%lambda(im)
+      write(iunit, '(2X,f5.3,1X)') (this%pol(im, idir), idir = 1, this%dim)
+    end do
+    call messages_print_stress(iunit)
+
+    POP_SUB(photon_mode_write_info)
+  end subroutine photon_mode_write_info
+
+  !-----------------------------------------------------------------
+  subroutine photon_mode_add_poisson_terms(this, mesh, rho, pot)
+    type(photon_mode_t), intent(in)    :: this
+    type(mesh_t),        intent(in)    :: mesh
+    FLOAT,               intent(in)    :: rho(:)
+    FLOAT,               intent(inout) :: pot(:)
+
+    integer :: ip
+    FLOAT :: lx, ld, dipole(1:MAX_DIM)
+
+    PUSH_SUB(photon_mode_add_poisson_terms)
+
+    ! Currently this only works with one photon mode
+    ASSERT(this%nmodes == 1)
+
+    call dmf_dipole(mesh, rho, dipole)
+    ld = dot_product(this%pol(1, 1:this%dim), dipole(1:this%dim))*this%lambda(1)
+
+    do ip = 1, mesh%np
+      lx = this%pol_dipole(ip, 1)*this%lambda(1)
+      pot(ip) = pot(ip) - this%omega(1)/sqrt(this%n_electrons)*(mesh%x(ip, this%dim + 1)*ld + lx*dipole(this%dim + 1)) + lx*ld
+    end do
+
+    POP_SUB(photon_mode_add_poisson_terms)
+  end subroutine photon_mode_add_poisson_terms
 
 end module photon_mode_oct_m
 
