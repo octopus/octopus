@@ -352,6 +352,7 @@ noinst_HEADERS +=                             \
 # Sources in poisson
 poisson_f_srcs =                                 \
 	poisson/dressed_interaction.F90          \
+	poisson/photon_mode.F90                  \
 	poisson/poisson_cg.F90                   \
 	poisson/poisson_corrections.F90          \
 	poisson/poisson_cutoff.F90               \
@@ -503,7 +504,6 @@ system_f_srcs =                                 \
 	system/output_me.F90                    \
 	system/partial_charges.F90              \
 	system/pert.F90                         \
-	system/photon_mode.F90                  \
 	system/preconditioners.F90              \
 	system/propagator_abst.F90              \
 	system/propagator_beeman.F90            \
