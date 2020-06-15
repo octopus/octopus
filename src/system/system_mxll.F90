@@ -441,8 +441,9 @@ contains
       this%rs_charge_density_ext_t2 = M_z0
 
       ! Propagation dt with H_maxwell
-      call mxll_propagation_step(this%hm, this%namespace, this%gr, this%st, this%tr_mxll, this%st%rs_state, &
-                               this%clock%get_sim_time(), this%prop%dt)
+      call mxll_propagation_step(this%hm, this%namespace, this%gr, this%st, this%tr_mxll,&
+          this%st%rs_state, this%rs_current_density_ext_t2, this%rs_current_density_ext_t2,&
+          this%rs_charge_density_ext_t1, this%rs_charge_density_ext_t2, this%clock%get_sim_time(), this%prop%dt)
 
       this%st%rs_state_trans(:,:) = this%st%rs_state
 
