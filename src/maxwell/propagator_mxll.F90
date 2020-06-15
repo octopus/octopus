@@ -404,6 +404,11 @@ contains
 
     PUSH_SUB(mxll_propagation_step)
 
+    if (hm%ma_mx_coupling_apply) then
+      message(1) = "Maxwell-matter coupling not implemented yet"
+      call messages_fatal(1)
+    end if
+
     if (tr%plane_waves_in_box) then
       call plane_waves_in_box_calculation(hm%bc, time+dt, gr, st, hm, rs_state)
       POP_SUB(mxll_propagation_step)
@@ -468,8 +473,6 @@ contains
       SAFE_DEALLOCATE_A(ff_rs_inhom_2)
       SAFE_DEALLOCATE_A(ff_rs_inhom_mean)
 
-      !message(1) = "Maxwell-matter coupling"
-      !call messages_fatal(1)
     end if
 
     do ii = 1, inter_steps
@@ -483,7 +486,6 @@ contains
       if ((hm%ma_mx_coupling_apply) .or. hm%current_density_ext_flag) then
 
         if (tr%tr_etrs_approx == OPTION__MAXWELLTDETRSAPPROX__NO) then
-          print *,'here 1'
           SAFE_ALLOCATE(ff_rs_inhom_1(1:gr%mesh%np_part, ff_dim))
           SAFE_ALLOCATE(ff_rs_inhom_2(1:gr%mesh%np_part, ff_dim))
           ! RS state propagation
@@ -523,9 +525,6 @@ contains
           ff_rs_state(:,:) = ff_rs_state + M_FOURTH * inter_dt * (ff_rs_inhom_1 + ff_rs_inhom_2)
           SAFE_DEALLOCATE_A(ff_rs_inhom_1)
           SAFE_DEALLOCATE_A(ff_rs_inhom_2)
-
-          !message(1) = "Maxwell-matter coupling"
-          !call messages_fatal(1)
 
         else if (tr%tr_etrs_approx == OPTION__MAXWELLTDETRSAPPROX__CONST_STEPS) then
           ! RS state propagation
