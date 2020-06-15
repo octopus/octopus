@@ -959,8 +959,7 @@ contains
       end do
     end do
 
-    if (present(rs_field_plane_waves) .and. present(energy_dens_plane_waves) .and. &
-        optional_default(plane_waves_check, .false.)) then
+    if (present(rs_field_plane_waves) .and. present(energy_dens_plane_waves) .and. plane_waves_check) then
       ztmp(:,:) = rs_field_plane_waves(:,:)
       energy_dens_plane_waves(:) = M_ZERO
       do ip = 1, gr%mesh%np
@@ -1024,7 +1023,11 @@ contains
     mx_energy             = dmf_integrate(gr%mesh, tmp)
     mx_e_energy           = dmf_integrate(gr%mesh, tmp_e)
     mx_b_energy           = dmf_integrate(gr%mesh, tmp_b)
-    if (present(rs_field_plane_waves) .and. present(mx_energy_plane_waves)) mx_energy_plane_waves = dmf_integrate(gr%mesh, tmp_pw)
+    if (present(rs_field_plane_waves) .and. present(mx_energy_plane_waves) .and. hm%plane_waves) then
+      mx_energy_plane_waves = dmf_integrate(gr%mesh, tmp_pw)
+    else
+      mx_energy_plane_waves = M_ZERO
+    end if
 
     if (present(mx_energy_boundary)) then
       do ip_in = 1, st%boundary_points_number
@@ -1032,6 +1035,8 @@ contains
         tmp(ip) = energy_density(ip)
       end do
       mx_energy_boundary = dmf_integrate(gr%mesh, tmp)
+    else
+      mx_energy_boundary = M_ZERO
     end if
 
     SAFE_DEALLOCATE_A(energy_density)
