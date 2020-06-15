@@ -48,7 +48,6 @@ module maxwell_boundary_op_oct_m
   public ::                    &
     bc_mxll_init,              &
     bc_mxll_end,               &
-    bc_mxll_nullify,           &
     bc_mxll_t,                 &
     bc_mxll_write_info,        &
     inner_and_outer_points_mapping,  &
@@ -56,95 +55,93 @@ module maxwell_boundary_op_oct_m
 
 
   type pml_t
-    FLOAT             :: width
-    integer           :: points_number
-    integer, pointer  :: points_map(:)
-    integer, pointer  :: points_map_inv(:)
-    FLOAT             :: power
-    FLOAT             :: refl_error
-    FLOAT,   pointer  :: kappa(:,:)
-    FLOAT,   pointer  :: sigma_e(:,:)
-    FLOAT,   pointer  :: sigma_m(:,:)
-    CMPLX,   pointer  :: a(:,:)
-    CMPLX,   pointer  :: b(:,:)
-    FLOAT,   pointer  :: c(:,:)
-    FLOAT,   pointer  :: mask(:)
-    CMPLX,   pointer  :: aux_ep(:,:,:)
-    CMPLX,   pointer  :: aux_mu(:,:,:)
-    CMPLX,   pointer  :: conv_plus(:,:,:)
-    CMPLX,   pointer  :: conv_minus(:,:,:)
-    CMPLX,   pointer  :: conv_plus_old(:,:,:)
-    CMPLX,   pointer  :: conv_minus_old(:,:,:)
+    FLOAT                :: width
+    integer              :: points_number
+    integer, allocatable :: points_map(:)
+    integer, allocatable :: points_map_inv(:)
+    FLOAT                :: power
+    FLOAT                :: refl_error
+    FLOAT,   allocatable :: kappa(:,:)
+    FLOAT,   allocatable :: sigma_e(:,:)
+    FLOAT,   allocatable :: sigma_m(:,:)
+    CMPLX,   allocatable :: a(:,:)
+    CMPLX,   allocatable :: b(:,:)
+    FLOAT,   allocatable :: c(:,:)
+    FLOAT,   allocatable :: mask(:)
+    CMPLX,   allocatable :: aux_ep(:,:,:)
+    CMPLX,   allocatable :: aux_mu(:,:,:)
+    CMPLX,   allocatable :: conv_plus(:,:,:)
+    CMPLX,   allocatable :: conv_minus(:,:,:)
+    CMPLX,   allocatable :: conv_plus_old(:,:,:)
+    CMPLX,   allocatable :: conv_minus_old(:,:,:)
   end type pml_t
 
   type mxmedium_t
-    FLOAT             :: width
-    FLOAT             :: ep_factor
-    FLOAT             :: mu_factor
-    FLOAT             :: sigma_e_factor
-    FLOAT             :: sigma_m_factor
-    FLOAT,   pointer  :: ep(:,:)
-    FLOAT,   pointer  :: mu(:,:)
-    FLOAT,   pointer  :: sigma_e(:,:)
-    FLOAT,   pointer  :: sigma_m(:,:)
-    FLOAT,   pointer  :: c(:,:)
-    integer           :: points_number(MAX_DIM)
-    integer, pointer  :: points_map(:,:)
-    FLOAT,   pointer  :: aux_ep(:,:,:)
-    FLOAT,   pointer  :: aux_mu(:,:,:)
-    integer           :: bdry_number(MAX_DIM)
-    integer, pointer  :: bdry_map(:,:)
+    FLOAT                :: width
+    FLOAT                :: ep_factor
+    FLOAT                :: mu_factor
+    FLOAT                :: sigma_e_factor
+    FLOAT                :: sigma_m_factor
+    FLOAT,   allocatable :: ep(:,:)
+    FLOAT,   allocatable :: mu(:,:)
+    FLOAT,   allocatable :: sigma_e(:,:)
+    FLOAT,   allocatable :: sigma_m(:,:)
+    FLOAT,   allocatable :: c(:,:)
+    integer              :: points_number(MAX_DIM)
+    integer, allocatable :: points_map(:,:)
+    FLOAT,   allocatable :: aux_ep(:,:,:)
+    FLOAT,   allocatable :: aux_mu(:,:,:)
+    integer              :: bdry_number(MAX_DIM)
+    integer, allocatable :: bdry_map(:,:)
   end type mxmedium_t
 
   type plane_wave_t
-     integer             :: points_number
-    integer,  pointer    :: points_map(:)
-    integer              :: number
-    integer,  pointer    :: modus(:)
-    character(len=1024), pointer :: e_field_string(:,:)
-    FLOAT,    pointer    :: k_vector(:,:)
-    FLOAT,    pointer    :: v_vector(:,:)
-    FLOAT,    pointer    :: e_field(:,:)
-    type(mxf_t), pointer :: mx_function(:)
-    type(mxf_t), pointer :: mx_phase(:)
+    integer                          :: points_number
+    integer,             allocatable :: points_map(:)
+    integer                          :: number
+    integer,             allocatable :: modus(:)
+    character(len=1024), allocatable :: e_field_string(:,:)
+    FLOAT,               allocatable :: k_vector(:,:)
+    FLOAT,               allocatable :: v_vector(:,:)
+    FLOAT,               allocatable :: e_field(:,:)
+    type(mxf_t),         allocatable :: mx_function(:)
+    type(mxf_t),         allocatable :: mx_phase(:)
   end type plane_wave_t
 
   type bc_mxll_t
+    integer              :: bc_type(MAX_DIM)
+    integer              :: bc_ab_type(MAX_DIM)
+    FLOAT                :: bc_bounds(2, MAX_DIM)
+    logical              :: ab_user_def
+    FLOAT,   allocatable :: ab_ufn(:)
 
-    integer           :: bc_type(MAX_DIM)
-    integer           :: bc_ab_type(MAX_DIM)
-    FLOAT             :: bc_bounds(2,MAX_DIM)
-    logical           :: ab_user_def
-    FLOAT,   pointer  :: ab_ufn(:)
+    FLOAT                :: ab_width
+    FLOAT                :: mask_width
+    integer              :: mask_points_number(MAX_DIM)
+    integer, allocatable :: mask_points_map(:,:)
+    FLOAT,   allocatable :: mask(:,:)
 
-    FLOAT             :: ab_width
-    FLOAT             :: mask_width
-    integer           :: mask_points_number(MAX_DIM)
-    integer, allocatable  :: mask_points_map(:,:)
-    FLOAT,   allocatable  :: mask(:,:)
+    integer              :: der_bndry_mask_points_number
+    integer, allocatable :: der_bndry_mask_points_map(:)
+    FLOAT,   allocatable :: der_bndry_mask(:)
 
-    integer           :: der_bndry_mask_points_number
-    integer, pointer  :: der_bndry_mask_points_map(:)
-    FLOAT,   pointer  :: der_bndry_mask(:)
+    type(pml_t)          :: pml       !< attributes of PML absorbing boundaries
+    type(mxmedium_t)     :: mxmedium  !< attributes of linear medium boundaries
 
-    type(pml_t)       :: pml       !< attributes of PML absorbing boundaries
-    type(mxmedium_t)  :: mxmedium  !< attributes of linear medium boundaries
+    integer              :: constant_points_number
+    integer, allocatable :: constant_points_map(:)
+    CMPLX,   allocatable :: constant_rs_state(:,:)
 
-    integer           :: constant_points_number
-    integer, pointer  :: constant_points_map(:)
-    CMPLX,   pointer  :: constant_rs_state(:,:)
+    integer              :: mirror_points_number(3)
+    integer, allocatable :: mirror_points_map(:,:)
 
-    integer           :: mirror_points_number(3)
-    integer, pointer  :: mirror_points_map(:,:)
+    logical              :: do_plane_waves
+    type(plane_wave_t)   :: plane_wave
 
-    logical           :: do_plane_waves
-    type(plane_wave_t) :: plane_wave
-
-    FLOAT             :: zero_width
-    integer           :: zero_points_number(MAX_DIM)
-    integer, pointer  :: zero_points_map(:,:)
-    FLOAT,   pointer  :: zero(:,:)
-
+    FLOAT                :: zero_width
+    integer              :: zero_points_number(MAX_DIM)
+    integer, allocatable :: zero_points_map(:,:)
+    FLOAT,   allocatable :: zero(:,:)
   end type bc_mxll_t
 
   integer, public, parameter ::   &
@@ -424,56 +421,100 @@ contains
     POP_SUB(bc_mxll_init)
   end subroutine bc_mxll_init
 
-
-  ! ---------------------------------------------------------
-  subroutine bc_mxll_nullify(bc)
-    type(bc_mxll_t),   intent(inout) :: bc
-    PUSH_SUB(bc_mxll_nullify)
-
-    nullify(bc%constant_points_map)
-    nullify(bc%constant_rs_state)
-    nullify(bc%mirror_points_map)
-    nullify(bc%plane_wave%points_map)
-    nullify(bc%plane_wave%modus)
-    nullify(bc%plane_wave%e_field_string)
-    nullify(bc%plane_wave%k_vector)
-    nullify(bc%plane_wave%v_vector)
-    nullify(bc%plane_wave%e_field)
-    nullify(bc%plane_wave%mx_function)
-    nullify(bc%plane_wave%mx_phase)
-    nullify(bc%zero_points_map)
-    nullify(bc%zero)
-
-    POP_SUB(bc_mxll_nullify)
-  end subroutine bc_mxll_nullify
-
-
   ! ---------------------------------------------------------
   subroutine bc_mxll_end(bc)
     type(bc_mxll_t),   intent(inout) :: bc
+
     PUSH_SUB(bc_mxll_end)
 
+    SAFE_DEALLOCATE_A(bc%ab_ufn)
+
+    SAFE_DEALLOCATE_A(bc%mask_points_map)
     SAFE_DEALLOCATE_A(bc%mask)
 
-    SAFE_DEALLOCATE_P(bc%plane_wave%modus)
-    SAFE_DEALLOCATE_P(bc%plane_wave%e_field_string)
-    SAFE_DEALLOCATE_P(bc%plane_wave%e_field)
-    SAFE_DEALLOCATE_P(bc%plane_wave%k_vector)
-    SAFE_DEALLOCATE_P(bc%plane_wave%v_vector)
-    SAFE_DEALLOCATE_P(bc%plane_wave%mx_function)
-    SAFE_DEALLOCATE_P(bc%plane_wave%mx_phase)
-    SAFE_DEALLOCATE_P(bc%plane_wave%points_map)
+    SAFE_DEALLOCATE_A(bc%der_bndry_mask)
+    SAFE_DEALLOCATE_A(bc%der_bndry_mask_points_map)
 
-    SAFE_DEALLOCATE_P(bc%der_bndry_mask)
-    SAFE_DEALLOCATE_P(bc%der_bndry_mask_points_map)
+    SAFE_DEALLOCATE_A(bc%pml%points_map)
+    SAFE_DEALLOCATE_A(bc%pml%points_map_inv)
 
-    SAFE_DEALLOCATE_P(bc%zero_points_map)
+    call pml_end(bc%pml)
+    call mxmedium_end(bc%mxmedium)
 
-    SAFE_DEALLOCATE_P(bc%zero)
+    SAFE_DEALLOCATE_A(bc%constant_points_map)
+    SAFE_DEALLOCATE_A(bc%constant_rs_state)
+
+    SAFE_DEALLOCATE_A(bc%mirror_points_map)
+
+    call plane_wave_end(bc%plane_wave)
+
+    SAFE_DEALLOCATE_A(bc%zero_points_map)
+    SAFE_DEALLOCATE_A(bc%zero)
 
     POP_SUB(bc_mxll_end)
   end subroutine bc_mxll_end
 
+  ! ---------------------------------------------------------
+  subroutine pml_end(pml)
+    type(pml_t),   intent(inout) :: pml
+
+    PUSH_SUB(pml_end)
+
+    SAFE_DEALLOCATE_A(pml%points_map)
+    SAFE_DEALLOCATE_A(pml%points_map_inv)
+    SAFE_DEALLOCATE_A(pml%kappa)
+    SAFE_DEALLOCATE_A(pml%sigma_e)
+    SAFE_DEALLOCATE_A(pml%sigma_m)
+    SAFE_DEALLOCATE_A(pml%a)
+    SAFE_DEALLOCATE_A(pml%b)
+    SAFE_DEALLOCATE_A(pml%c)
+    SAFE_DEALLOCATE_A(pml%mask)
+    SAFE_DEALLOCATE_A(pml%aux_ep)
+    SAFE_DEALLOCATE_A(pml%aux_mu)
+    SAFE_DEALLOCATE_A(pml%conv_plus)
+    SAFE_DEALLOCATE_A(pml%conv_minus)
+    SAFE_DEALLOCATE_A(pml%conv_plus_old)
+    SAFE_DEALLOCATE_A(pml%conv_minus_old)
+
+    POP_SUB(pml_end)
+  end subroutine pml_end
+
+  ! ---------------------------------------------------------
+  subroutine mxmedium_end(mxmedium)
+    type(mxmedium_t),   intent(inout) :: mxmedium
+
+    PUSH_SUB(mxmedium_end)
+
+    SAFE_DEALLOCATE_A(mxmedium%ep)
+    SAFE_DEALLOCATE_A(mxmedium%mu)
+    SAFE_DEALLOCATE_A(mxmedium%sigma_e)
+    SAFE_DEALLOCATE_A(mxmedium%sigma_m)
+    SAFE_DEALLOCATE_A(mxmedium%c)
+    SAFE_DEALLOCATE_A(mxmedium%points_map)
+    SAFE_DEALLOCATE_A(mxmedium%aux_ep)
+    SAFE_DEALLOCATE_A(mxmedium%aux_mu)
+    SAFE_DEALLOCATE_A(mxmedium%bdry_map)
+
+    POP_SUB(mxmedium_end)
+  end subroutine mxmedium_end
+
+  ! ---------------------------------------------------------
+  subroutine plane_wave_end(plane_wave)
+    type(plane_wave_t),   intent(inout) :: plane_wave
+
+    PUSH_SUB(plane_wave_end)
+
+    SAFE_DEALLOCATE_A(plane_wave%points_map)
+    SAFE_DEALLOCATE_A(plane_wave%modus)
+    SAFE_DEALLOCATE_A(plane_wave%e_field_string)
+    SAFE_DEALLOCATE_A(plane_wave%k_vector)
+    SAFE_DEALLOCATE_A(plane_wave%v_vector)
+    SAFE_DEALLOCATE_A(plane_wave%e_field)
+    SAFE_DEALLOCATE_A(plane_wave%mx_function)
+    SAFE_DEALLOCATE_A(plane_wave%mx_phase)
+
+    POP_SUB(plane_wave_end)
+  end subroutine plane_wave_end
 
   ! ---------------------------------------------------------
   subroutine bc_mxll_medium_init(bc, gr, namespace, bounds, idim)

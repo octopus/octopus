@@ -293,8 +293,6 @@ contains
     call parse_variable(namespace, 'TimeZero', .false., hm%time_zero)
     if(hm%time_zero) call messages_experimental('TimeZero')
 
-    call bc_mxll_nullify(hm%bc)
-
     call profiling_out(prof)
     POP_SUB(hamiltonian_mxll_init)
   end subroutine hamiltonian_mxll_init
