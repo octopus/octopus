@@ -345,7 +345,7 @@ contains
   end subroutine system_reset_clocks
 
   ! ---------------------------------------------------------
-  logical function system_update_exposed_quantities(this, requested_time, interaction) result(all_updated)
+  logical function system_update_exposed_quantities(this, requested_time, interaction) result(allowed_to_update)
     class(system_abst_t),      intent(inout) :: this
     type(clock_t),             intent(in)    :: requested_time
     class(interaction_abst_t), intent(inout) :: interaction
@@ -361,7 +361,7 @@ contains
       if ((this%clock < requested_time .and. this%clock%is_earlier_with_step(requested_time)) .or. this%prop%inside_scf) then
         ! We have to wait, either because this is not the best moment to update the quantities or
         ! because we are inside an SCF cycle and therefore are not allowed to expose any quantities.
-        all_updated = .false.
+        allowed_to_update = .false.
 
       else
         ! Check if this system is ahead in time
@@ -376,11 +376,11 @@ contains
         if (ahead_in_time) then
           ! This system is ahead of the requested time. The interaction is allowed to be updated,
           ! but using the old quantities. Therefore we do not update the quantities here.
-          all_updated = .true.
+          allowed_to_update = .true.
 
         else
           !This is the best moment to update the quantities
-          all_updated = .true.
+          allowed_to_update = .true.
           do iq = 1, interaction%n_partner_quantities
             ! Get the requested quantity ID
             q_id = interaction%partner_quantities(iq)
@@ -403,7 +403,7 @@ contains
               if (this%quantities(q_id)%protected) then
                 ! If this quantity is protected, then we are not allowed to update it, as that is done by the propagation.
                 ! So we have to wait until the quantity is at the right time.
-                all_updated = .false.
+                allowed_to_update = .false.
               else
                 ! This is not a protected quantity and we are the right time, so we update it
                 call this%update_exposed_quantity(q_id, requested_time)
@@ -412,7 +412,7 @@ contains
           end do
 
           ! If the quantities have been updated, we copy them to the interaction
-          if (all_updated) call this%copy_quantities_to_interaction(interaction)
+          if (allowed_to_update) call this%copy_quantities_to_interaction(interaction)
         end if
       end if
 
