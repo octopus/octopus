@@ -59,7 +59,7 @@ module energy_mxll_oct_m
 contains
 
   subroutine energy_mxll_nullify(this)
-    type(energy_mxll_t), intent(out) :: this
+    type(energy_mxll_t), intent(inout) :: this
 
     PUSH_SUB(energy_mxll_nullify)
 
@@ -81,7 +81,7 @@ contains
 
 
   subroutine energy_mxll_allocate(this, np)
-    type(energy_mxll_t), intent(out)   :: this
+    type(energy_mxll_t), intent(inout) :: this
     integer,             intent(in)    :: np
 
     PUSH_SUB(energy_mxll_allocate)
@@ -101,7 +101,7 @@ contains
 
 
   subroutine energy_mxll_end(this)
-    type(energy_mxll_t), intent(out) :: this
+    type(energy_mxll_t), intent(inout) :: this
 
     PUSH_SUB(energy_mxll_end)
 
