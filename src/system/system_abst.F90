@@ -359,7 +359,7 @@ contains
     select type (interaction)
     class is (interaction_with_partner_t)
 
-      if ((partner%clock < requested_time .and. partner%clock%is_earlier_with_step(requested_time)) &
+      if (partner%clock%is_earlier_with_step(requested_time) &
           .or. partner%prop%inside_scf) then
         ! We have to wait, either because this is not the best moment to update the quantities or
         ! because we are inside an SCF cycle and therefore are not allowed to expose any quantities.
