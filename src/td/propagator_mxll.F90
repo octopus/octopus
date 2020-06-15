@@ -2481,6 +2481,7 @@ contains
         call tdf_read(st%rs_state_const_td_function(il), namespace, trim(mxf_expression), ierr)
       end do
     end if
+    call parse_block_end(blk)
 
     !%Variable PropagateSpatialMaxwellField
     !%Type logical
