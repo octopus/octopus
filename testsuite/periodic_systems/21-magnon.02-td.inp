@@ -37,7 +37,7 @@ ExtraStates = 3
 RestartFixedOccupations = yes
 
 SpinComponents = spinors
-TDDeltaStrength = 0.01
+TDDeltaStrength = 0.05
 TDDeltaStrengthMode = kick_magnon
 %TDMomentumTransfer
  0 | 0 | 2*pi/a
