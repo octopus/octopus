@@ -63,18 +63,18 @@ contains
 
     PUSH_SUB(energy_mxll_nullify)
 
-     this%energy = M_ZERO
-     this%boundaries = M_ZERO
-     this%e_energy = M_ZERO
-     this%b_energy = M_ZERO
-     this%energy_plane_waves = M_ZERO
-     this%e_energy_plane_waves = M_ZERO
-     this%b_energy_plane_waves = M_ZERO
-     this%energy_trans = M_ZERO
-     this%energy_long = M_ZERO
-     this%e_energy_trans = M_ZERO
-     this%b_energy_trans = M_ZERO
-     this%energy_incident_waves = M_ZERO
+    this%energy = M_ZERO
+    this%boundaries = M_ZERO
+    this%e_energy = M_ZERO
+    this%b_energy = M_ZERO
+    this%energy_plane_waves = M_ZERO
+    this%e_energy_plane_waves = M_ZERO
+    this%b_energy_plane_waves = M_ZERO
+    this%energy_trans = M_ZERO
+    this%energy_long = M_ZERO
+    this%e_energy_trans = M_ZERO
+    this%b_energy_trans = M_ZERO
+    this%energy_incident_waves = M_ZERO
 
     POP_SUB(energy_mxll_nullify)
   end subroutine energy_mxll_nullify
