@@ -959,7 +959,8 @@ contains
       end do
     end do
 
-    if (present(rs_field_plane_waves) .and. present(energy_dens_plane_waves) .and. plane_waves_check) then
+    if (present(rs_field_plane_waves) .and. present(energy_dens_plane_waves) .and. &
+        optional_default(plane_waves_check, .false.)) then
       ztmp(:,:) = rs_field_plane_waves(:,:)
       energy_dens_plane_waves(:) = M_ZERO
       do ip = 1, gr%mesh%np
