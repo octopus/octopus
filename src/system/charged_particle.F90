@@ -275,8 +275,8 @@ contains
   end subroutine charged_particle_update_quantity
 
  ! ---------------------------------------------------------
- subroutine charged_particle_update_exposed_quantity(this, iq, requested_time)
-    class(charged_particle_t), intent(inout) :: this
+ subroutine charged_particle_update_exposed_quantity(partner, iq, requested_time)
+    class(charged_particle_t), intent(inout) :: partner
     integer,                   intent(in)    :: iq
     class(clock_t),            intent(in)    :: requested_time
 
@@ -285,10 +285,10 @@ contains
     select case (iq)
     case (CHARGE)
       ! The charged particle has a charge, but it is not necessary to update it, as it does not change with time.
-      call this%quantities(iq)%clock%set_time(requested_time)
+      call partner%quantities(iq)%clock%set_time(requested_time)
     case default
       ! Other quantities should be handled by the parent class
-      call this%classical_particle_t%update_exposed_quantity(iq, requested_time)
+      call partner%classical_particle_t%update_exposed_quantity(iq, requested_time)
     end select
 
     POP_SUB(charged_particle_update_exposed_quantity)

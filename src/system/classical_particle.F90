@@ -556,20 +556,20 @@ contains
   end subroutine classical_particle_update_quantity
 
   ! ---------------------------------------------------------
-  subroutine classical_particle_update_exposed_quantity(this, iq, requested_time)
-    class(classical_particle_t),   intent(inout) :: this
+  subroutine classical_particle_update_exposed_quantity(partner, iq, requested_time)
+    class(classical_particle_t),   intent(inout) :: partner
     integer,                   intent(in)    :: iq
     class(clock_t),            intent(in)    :: requested_time
 
     PUSH_SUB(classical_particle_update_exposed_quantity)
 
     ! We are not allowed to update protected quantities!
-    ASSERT(.not. this%quantities(iq)%protected)
+    ASSERT(.not. partner%quantities(iq)%protected)
 
     select case (iq)
     case (MASS)
       ! The classical particle has a mass, but it does not require any update, as it does not change with time.
-      call this%quantities(iq)%clock%set_time(this%clock)
+      call partner%quantities(iq)%clock%set_time(partner%clock)
     case default
       message(1) = "Incompatible quantity."
       call messages_fatal(1)
@@ -579,16 +579,16 @@ contains
   end subroutine classical_particle_update_exposed_quantity
 
   ! ---------------------------------------------------------
-  subroutine classical_particle_copy_quantities_to_interaction(this, interaction)
-    class(classical_particle_t),          intent(inout) :: this
+  subroutine classical_particle_copy_quantities_to_interaction(partner, interaction)
+    class(classical_particle_t),          intent(inout) :: partner
     class(interaction_abst_t),        intent(inout) :: interaction
 
     PUSH_SUB(classical_particle_copy_quantities_to_interaction)
 
     select type (interaction)
     type is (interaction_gravity_t)
-      interaction%partner_mass = this%mass
-      interaction%partner_pos = this%pos
+      interaction%partner_mass = partner%mass
+      interaction%partner_pos = partner%pos
     type is (interaction_lorentz_force_t)
       ! Nothing to copy
     type is (ghost_interaction_t)

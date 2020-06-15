@@ -589,8 +589,8 @@ contains
   end subroutine multisystem_update_quantity
 
   ! ---------------------------------------------------------
-  subroutine multisystem_update_exposed_quantity(this, iq, requested_time)
-    class(multisystem_t), intent(inout) :: this
+  subroutine multisystem_update_exposed_quantity(partner, iq, requested_time)
+    class(multisystem_t), intent(inout) :: partner
     integer,              intent(in)    :: iq
     class(clock_t),       intent(in)    :: requested_time
 
@@ -604,8 +604,8 @@ contains
   end subroutine multisystem_update_exposed_quantity
 
   ! ---------------------------------------------------------
-  subroutine multisystem_copy_quantities_to_interaction(this, interaction)
-    class(multisystem_t),         intent(inout) :: this
+  subroutine multisystem_copy_quantities_to_interaction(partner, interaction)
+    class(multisystem_t),         intent(inout) :: partner
     class(interaction_abst_t),    intent(inout) :: interaction
 
     PUSH_SUB(multisystem_copy_quantities_to_interaction)

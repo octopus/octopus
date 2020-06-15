@@ -345,8 +345,9 @@ contains
   end subroutine system_reset_clocks
 
   ! ---------------------------------------------------------
-  logical function system_update_exposed_quantities(this, requested_time, interaction) result(allowed_to_update)
-    class(system_abst_t),      intent(inout) :: this
+  ! this function is called as partner from the interaction
+  logical function system_update_exposed_quantities(partner, requested_time, interaction) result(allowed_to_update)
+    class(system_abst_t),      intent(inout) :: partner
     type(clock_t),             intent(in)    :: requested_time
     class(interaction_abst_t), intent(inout) :: interaction
 
@@ -358,19 +359,20 @@ contains
     select type (interaction)
     class is (interaction_with_partner_t)
 
-      if ((this%clock < requested_time .and. this%clock%is_earlier_with_step(requested_time)) .or. this%prop%inside_scf) then
+      if ((partner%clock < requested_time .and. partner%clock%is_earlier_with_step(requested_time)) &
+          .or. partner%prop%inside_scf) then
         ! We have to wait, either because this is not the best moment to update the quantities or
         ! because we are inside an SCF cycle and therefore are not allowed to expose any quantities.
         allowed_to_update = .false.
 
       else
-        ! Check if this system is ahead in time
+        ! Check if partner system is ahead in time
         ahead_in_time = .false.
         do iq = 1, interaction%n_partner_quantities
           ! Get the requested quantity ID
           q_id = interaction%partner_quantities(iq)
 
-          if (this%quantities(q_id)%clock > requested_time) ahead_in_time = .true.
+          if (partner%quantities(q_id)%clock > requested_time) ahead_in_time = .true.
         end do
 
         if (ahead_in_time) then
@@ -386,39 +388,39 @@ contains
             q_id = interaction%partner_quantities(iq)
 
             ! All needed quantities must have been marked as required. If not, then fix your code!
-            ASSERT(this%quantities(q_id)%required)
+            ASSERT(partner%quantities(q_id)%required)
 
-            if (.not. (this%quantities(q_id)%clock == requested_time .or. &
-              (this%quantities(q_id)%clock < requested_time .and. &
-              this%quantities(q_id)%clock%is_later_with_step(requested_time)))) then
+            if (.not. (partner%quantities(q_id)%clock == requested_time .or. &
+              (partner%quantities(q_id)%clock < requested_time .and. &
+              partner%quantities(q_id)%clock%is_later_with_step(requested_time)))) then
               ! The quantity is not at the requested time nor at the best possible time, so we try to update it
 
               ! Sanity check: it can never happen that the quantity is in advance with respect to the
               ! requested time.
-              if (this%quantities(q_id)%clock > requested_time) then
+              if (partner%quantities(q_id)%clock > requested_time) then
                 message(1) = "The partner quantity is in advance compared to the requested time."
                 call messages_fatal(1)
               end if
 
-              if (this%quantities(q_id)%protected) then
-                ! If this quantity is protected, then we are not allowed to update it, as that is done by the propagation.
+              if (partner%quantities(q_id)%protected) then
+                ! If partner quantity is protected, then we are not allowed to update it, as that is done by the propagation.
                 ! So we have to wait until the quantity is at the right time.
                 allowed_to_update = .false.
               else
                 ! This is not a protected quantity and we are the right time, so we update it
-                call this%update_exposed_quantity(q_id, requested_time)
+                call partner%update_exposed_quantity(q_id, requested_time)
               end if
             end if
           end do
 
           ! If the quantities have been updated, we copy them to the interaction
-          if (allowed_to_update) call this%copy_quantities_to_interaction(interaction)
+          if (allowed_to_update) call partner%copy_quantities_to_interaction(interaction)
         end if
       end if
 
     class default
       message(1) = "A system can only expose quantities to an interaction as a partner."
-      call messages_fatal(1, namespace=this%namespace)
+      call messages_fatal(1, namespace=partner%namespace)
     end select
 
 
