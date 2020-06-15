@@ -381,20 +381,25 @@ contains
   end subroutine propagator_mxll_init
 
   ! ---------------------------------------------------------
-  subroutine mxll_propagation_step(hm, namespace, gr, st, tr, rs_state, time, dt)
+  subroutine mxll_propagation_step(hm, namespace, gr, st, tr, rs_state, rs_current_density_t1,&
+      & rs_current_density_t2, rs_charge_density_t1, rs_charge_density_t2, time, dt)
     type(hamiltonian_mxll_t),   intent(inout) :: hm
     type(namespace_t),          intent(in)    :: namespace
     type(grid_t),               intent(inout) :: gr
     type(states_mxll_t),        intent(inout) :: st
     type(propagator_mxll_t),    intent(inout) :: tr
     CMPLX,                      intent(inout) :: rs_state(:,:)
+    CMPLX,                      intent(inout) :: rs_current_density_t1(:,:)
+    CMPLX,                      intent(inout) :: rs_current_density_t2(:,:)
+    CMPLX,                      intent(inout) :: rs_charge_density_t1(:)
+    CMPLX,                      intent(inout) :: rs_charge_density_t2(:)
     FLOAT,                      intent(in)    :: time
     FLOAT,                      intent(in)    :: dt
 
     integer            :: ii, inter_steps, ff_dim, idim
     FLOAT              :: inter_dt, inter_time, delay
-    CMPLX, allocatable :: ff_rs_state(:,:)
-    CMPLX, allocatable :: ff_rs_state_pml(:,:)
+    CMPLX, allocatable :: ff_rs_state(:,:), ff_rs_inhom_1(:,:), ff_rs_inhom_2(:,:)
+    CMPLX, allocatable :: ff_rs_state_pml(:,:), ff_rs_inhom_mean(:,:)
     logical            :: pml_check = .false.
 
     PUSH_SUB(mxll_propagation_step)
@@ -426,18 +431,45 @@ contains
     ! delay time
     delay = tr%delay_time
 
-    SAFE_ALLOCATE(ff_rs_state(1:gr%mesh%np_part,ff_dim))
+    SAFE_ALLOCATE(ff_rs_state(1:gr%mesh%np_part, ff_dim))
 
     if (pml_check) then
-      SAFE_ALLOCATE(ff_rs_state_pml(1:gr%mesh%np_part,ff_dim))
+      SAFE_ALLOCATE(ff_rs_state_pml(1:gr%mesh%np_part, ff_dim))
     end if
 
     ! first step of Maxwell inhomogeneity propagation with constant current density
     if ((hm%ma_mx_coupling_apply .or. hm%current_density_ext_flag) .and. &
         tr%tr_etrs_approx == OPTION__MAXWELLTDETRSAPPROX__CONST_STEPS) then
 
-      message(1) = "Maxwell-matter coupling or external current not implemented yet"
-      call messages_fatal(1)
+      SAFE_ALLOCATE(ff_rs_inhom_1(1:gr%mesh%np_part, ff_dim))
+      SAFE_ALLOCATE(ff_rs_inhom_2(1:gr%mesh%np_part, ff_dim))
+      SAFE_ALLOCATE(ff_rs_inhom_mean(1:gr%mesh%np_part, ff_dim))
+      ! inhomogeneity propagation
+      call transform_rs_densities(hm, rs_charge_density_t1, rs_current_density_t1, ff_rs_inhom_1, RS_TRANS_FORWARD)
+      call transform_rs_densities(hm, rs_charge_density_t2, rs_current_density_t2, ff_rs_inhom_2, RS_TRANS_FORWARD)
+      ff_rs_inhom_mean(:,:) = (ff_rs_inhom_1 + ff_rs_inhom_2)/M_TWO
+      ! add term J(time)
+      ff_rs_inhom_1(:,:) = ff_rs_inhom_mean
+      ff_rs_inhom_2(:,:) = ff_rs_inhom_mean
+      call hamiltonian_mxll_update(hm, time=time)
+      call exponential_mxll_apply(hm, namespace, gr, st, tr, inter_dt, ff_rs_inhom_2)
+      ! add term U(time+dt,time)J(time)
+      ff_rs_inhom_1(:,:) = ff_rs_inhom_1 + ff_rs_inhom_2
+      ff_rs_inhom_2(:,:) = ff_rs_inhom_mean
+      call hamiltonian_mxll_update(hm, time=time)
+      call exponential_mxll_apply(hm, namespace, gr, st, tr, inter_dt/M_TWO, ff_rs_inhom_2)
+      ! add term U(time+dt/2,time)J(time)
+      ff_rs_inhom_1(:,:) = ff_rs_inhom_1 + ff_rs_inhom_2
+      ff_rs_inhom_2(:,:) = ff_rs_inhom_mean
+      call hamiltonian_mxll_update(hm, time=time)
+      call exponential_mxll_apply(hm, namespace, gr, st, tr, -inter_dt/M_TWO, ff_rs_inhom_2)
+      ! add term U(time,time+dt/2)J(time)
+      ff_rs_inhom_1 = ff_rs_inhom_1 + ff_rs_inhom_2
+      SAFE_DEALLOCATE_A(ff_rs_inhom_2)
+      SAFE_DEALLOCATE_A(ff_rs_inhom_mean)
+
+      !message(1) = "Maxwell-matter coupling"
+      !call messages_fatal(1)
     end if
 
     do ii = 1, inter_steps
@@ -449,9 +481,66 @@ contains
       call transform_rs_state(hm, rs_state, ff_rs_state, RS_TRANS_FORWARD)
 
       if ((hm%ma_mx_coupling_apply) .or. hm%current_density_ext_flag) then
-        message(1) = "Maxwell-matter coupling or external current not implemented yet"
-        call messages_fatal(1)
 
+        if (tr%tr_etrs_approx == OPTION__MAXWELLTDETRSAPPROX__NO) then
+          print *,'here 1'
+          SAFE_ALLOCATE(ff_rs_inhom_1(1:gr%mesh%np_part, ff_dim))
+          SAFE_ALLOCATE(ff_rs_inhom_2(1:gr%mesh%np_part, ff_dim))
+          ! RS state propagation
+          call hamiltonian_mxll_update(hm, time=inter_time)
+          if (pml_check) then
+            call pml_propagation_stage_1(hm, gr, st, tr, ff_rs_state, ff_rs_state_pml)
+            hm%cpml_hamiltonian = .true.
+          end if
+          call exponential_mxll_apply(hm, namespace, gr, st, tr, inter_dt, ff_rs_state)
+          if (pml_check) then
+            hm%cpml_hamiltonian = .false.
+            call pml_propagation_stage_2(hm, namespace, gr, st, tr, inter_time, inter_dt, delay, ff_rs_state_pml, ff_rs_state)
+          end if
+
+          ! inhomogeneity propagation
+          call transform_rs_densities(hm, rs_charge_density_t1, rs_current_density_t1,&
+              & ff_rs_inhom_1, RS_TRANS_FORWARD)
+          call transform_rs_densities(hm, rs_charge_density_t2, rs_current_density_t2,&
+              & ff_rs_inhom_2, RS_TRANS_FORWARD)
+          ff_rs_inhom_1(:,:) = ff_rs_inhom_1 + (ff_rs_inhom_2 - ff_rs_inhom_1) * inter_dt * (ii-1)/&
+              &TOFLOAT(inter_steps)
+          ff_rs_inhom_2(:,:) = ff_rs_inhom_1 + (ff_rs_inhom_2 - ff_rs_inhom_1) * inter_dt * ii/&
+              & TOFLOAT(inter_steps)
+          call exponential_mxll_apply(hm, namespace, gr, st, tr, inter_dt, ff_rs_inhom_1)
+          ! add terms U(time+dt,time)J(time) and J(time+dt)
+          ff_rs_state(:,:) = ff_rs_state + M_FOURTH * inter_dt * (ff_rs_inhom_1 + ff_rs_inhom_2)
+
+          call transform_rs_densities(hm, rs_charge_density_t1, rs_current_density_t1,&
+              & ff_rs_inhom_1, RS_TRANS_FORWARD)
+          call transform_rs_densities(hm, rs_charge_density_t2, rs_current_density_t2,&
+              & ff_rs_inhom_2, RS_TRANS_FORWARD)
+          ff_rs_inhom_1(:,:) = M_HALF * (ff_rs_inhom_1 + ff_rs_inhom_2)
+          ff_rs_inhom_2(:,:) = M_HALF * (ff_rs_inhom_1 + ff_rs_inhom_2) ! is this right?
+          call exponential_mxll_apply(hm, namespace, gr, st, tr, inter_dt/M_TWO, ff_rs_inhom_1)
+          call exponential_mxll_apply(hm, namespace, gr, st, tr, -inter_dt/M_TWO, ff_rs_inhom_2)
+          ! add terms U(time+dt/2,time)J(time) and U(time,time+dt/2)J(time+dt)
+          ff_rs_state(:,:) = ff_rs_state + M_FOURTH * inter_dt * (ff_rs_inhom_1 + ff_rs_inhom_2)
+          SAFE_DEALLOCATE_A(ff_rs_inhom_1)
+          SAFE_DEALLOCATE_A(ff_rs_inhom_2)
+
+          !message(1) = "Maxwell-matter coupling"
+          !call messages_fatal(1)
+
+        else if (tr%tr_etrs_approx == OPTION__MAXWELLTDETRSAPPROX__CONST_STEPS) then
+          ! RS state propagation
+          call hamiltonian_mxll_update(hm, time=inter_time)
+          if (pml_check) then
+            call pml_propagation_stage_1(hm, gr, st, tr, ff_rs_state, ff_rs_state_pml)
+            hm%cpml_hamiltonian = .true.
+          end if
+          call exponential_mxll_apply(hm, namespace, gr, st, tr, inter_dt, ff_rs_state)
+          if (pml_check) then
+            hm%cpml_hamiltonian = .false.
+            call pml_propagation_stage_2(hm, namespace, gr, st, tr, inter_time, inter_dt, delay, ff_rs_state_pml, ff_rs_state)
+          end if
+          ff_rs_state(:,:) = ff_rs_state + M_FOURTH * inter_dt * ff_rs_inhom_1
+        end if
       else
         ! RS state propagation
         call hamiltonian_mxll_update(hm, time=inter_time)
@@ -498,6 +587,10 @@ contains
       end if
 
     end do
+
+    if (tr%tr_etrs_approx == OPTION__MAXWELLTDETRSAPPROX__CONST_STEPS) then
+      SAFE_DEALLOCATE_A(ff_rs_inhom_1)
+    end if
 
     SAFE_DEALLOCATE_A(ff_rs_state)
 
@@ -579,7 +672,6 @@ contains
     POP_SUB(set_medium_rs_state)
   end subroutine set_medium_rs_state
 
-
   ! ---------------------------------------------------------
   subroutine transform_rs_state(hm, rs_state, ff_rs_state, sign)
     type(hamiltonian_mxll_t), intent(in)    :: hm
@@ -607,6 +699,37 @@ contains
     end if
 
   end subroutine transform_rs_state
+
+  ! ---------------------------------------------------------
+  subroutine transform_rs_densities(hm, rs_charge_density, rs_current_density, ff_density, sign)
+    type(hamiltonian_mxll_t), intent(in)    :: hm
+    CMPLX,                    intent(inout) :: rs_charge_density(:)
+    CMPLX,                    intent(inout) :: rs_current_density(:,:)
+    CMPLX,                    intent(inout) :: ff_density(:,:)
+    integer,                  intent(in)    :: sign
+
+    ASSERT(sign == RS_TRANS_FORWARD .or. sign == RS_TRANS_BACKWARD)
+
+    if (hm%operator == FARADAY_AMPERE_MEDIUM) then
+      message(1) = "Maxwell solver in linear media not yet implemented"
+      call messages_fatal(1)
+    else if (hm%operator == FARADAY_AMPERE_GAUSS) then
+      if (sign == RS_TRANS_FORWARD) then
+        call transform_rs_densities_to_4x4_rs_densities_forward(rs_charge_density,&
+            & rs_current_density, ff_density)
+      else
+        call transform_rs_densities_to_4x4_rs_densities_backward(ff_density, rs_charge_density,&
+            & rs_current_density)
+      end if
+    else
+      if (sign == RS_TRANS_FORWARD) then
+        ff_density(:, 1:3) = rs_current_density(:, 1:3)
+      else
+        rs_current_density(:, 1:3) = ff_density(:, 1:3)
+      end if
+    end if
+
+  end subroutine transform_rs_densities
 
   !----------------------------------------------------------
   subroutine transform_rs_state_to_6x6_rs_state_forward(rs_state_3x3_plus, rs_state_3x3_minus, rs_state_6x6)
