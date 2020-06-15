@@ -2544,7 +2544,7 @@ contains
   ! ---------------------------------------------------------
   subroutine constant_boundaries_calculation(constant_calc, bc, hm, st, rs_state)
     logical,                   intent(in)    :: constant_calc
-    type(bc_mxll_t),           intent(in)    :: bc
+    type(bc_mxll_t),           intent(inout) :: bc
     type(states_mxll_t),       intent(in)    :: st
     type(hamiltonian_mxll_t),  intent(in)    :: hm
     CMPLX,                     intent(inout) :: rs_state(:,:)
