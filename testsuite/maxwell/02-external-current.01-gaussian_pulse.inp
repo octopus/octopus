@@ -1,0 +1,84 @@
+# ----- Calculation mode and parallelization ------------------------------------------------------
+
+ CalculationMode   = td
+ RestartWrite = no
+ ExperimentalFeatures = yes
+
+%Systems
+  'Maxwell' | maxwell
+%
+
+ Maxwell.ParDomains = auto
+ Maxwell.ParStates  = no
+
+# ----- Maxwell box variables ---------------------------------------------------------------------
+
+ # free maxwell box limit of 10.0 plus 2.0 for the incident wave boundaries with
+ # der_order = 4 times dx_mx
+
+ lsize_mx = 10.0
+ dx_mx    = 0.5
+
+ Maxwell.BoxShape   = parallelepiped
+
+ %Maxwell.Lsize
+  lsize_mx | lsize_mx | lsize_mx
+ %
+
+ %Maxwell.Spacing
+  dx_mx | dx_mx | dx_mx
+ %
+
+
+# ----- Maxwell calculation variables -------------------------------------------------------------
+
+ HamiltonianOperator = faraday_ampere
+
+ %MaxwellBoundaryConditions
+  zero | zero | zero
+ %
+
+ %MaxwellAbsorbingBoundaries
+  not_absorbing | not_absorbing | not_absorbing
+ %
+
+
+# ----- Output variables --------------------------------------------------------------------------
+
+ OutputFormat = axis_x + axis_y + axis_z
+
+
+# ----- Maxwell output variables ------------------------------------------------------------------
+
+ MaxwellOutput = electric_field + magnetic_field + maxwell_energy_density + trans_electric_field
+
+ MaxwellOutputInterval = 10
+ MaxwellTDOutput       = maxwell_energy + maxwell_fields
+
+ %MaxwellFieldsCoordinate
+   0.00 | 0.00 | 0.00
+ %
+
+
+# ----- Time step variables -----------------------------------------------------------------------
+
+ TDSystemPropagator = exp_mid
+ TDTimeStep                        = 1 / ( sqrt(c^2/dx_mx^2 + c^2/dx_mx^2 + c^2/dx_mx^2) )
+ TDMaxSteps                        = 50
+
+# Maxwell field variables
+
+# external current
+ExternalCurrent            = yes
+
+t0    = 2.0 / c
+js    = 00.007297350000
+jmax  = 1.000000000
+
+%UserDefinedMaxwellExternalCurrent
+ current_td_function |  "0" | "0" | " jmax * exp(-x^2/2) * exp(-y^2/2) * exp(-z^2/2) " | 0 | "external_current_envelope_function"
+%
+
+%TDFunctions
+ "external_current_envelope_function" | tdf_gaussian | 1.0 | js | t0
+%
