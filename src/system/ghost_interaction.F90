@@ -23,6 +23,7 @@ module ghost_interaction_oct_m
   use interaction_with_partner_oct_m
   use interaction_partner_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use profiling_oct_m
   use system_abst_oct_m
 
@@ -63,8 +64,9 @@ contains
   end function ghost_interaction_init
 
   ! ---------------------------------------------------------
-  subroutine ghost_interaction_calculate(this)
+  subroutine ghost_interaction_calculate(this, namespace)
     class(ghost_interaction_t), intent(inout) :: this
+    type(namespace_t),          intent(in)    :: namespace
 
     PUSH_SUB(ghost_interaction_calculate)
 

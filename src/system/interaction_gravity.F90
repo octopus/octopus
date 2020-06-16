@@ -23,6 +23,7 @@ module interaction_gravity_oct_m
   use interaction_with_partner_oct_m
   use interaction_partner_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use profiling_oct_m
   use quantity_oct_m
 
@@ -88,8 +89,9 @@ contains
   end function interaction_gravity_init
 
   ! ---------------------------------------------------------
-  subroutine interaction_gravity_calculate(this)
+  subroutine interaction_gravity_calculate(this, namespace)
     class(interaction_gravity_t), intent(inout) :: this
+    type(namespace_t),            intent(in)    :: namespace
 
     FLOAT, parameter :: GG = CNST(6.67430e-11)
     FLOAT :: dist3

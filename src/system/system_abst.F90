@@ -458,7 +458,7 @@ contains
             ! with respect to the requested time.
             if (this%quantities(q_id)%clock > requested_time) then
               message(1) = "The quantity clock is in advance compared to the requested time."
-              call messages_fatal(1)
+              call messages_fatal(1, namespace=this%namespace)
             end if
 
             call this%update_quantity(q_id, requested_time)
@@ -467,7 +467,7 @@ contains
         end do
 
         ! We can now try to update the interaction
-        all_updated = interaction%update(requested_time) .and. all_updated
+        all_updated = interaction%update(this%namespace, requested_time) .and. all_updated
       end if
     end do
 
