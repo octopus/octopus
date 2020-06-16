@@ -314,8 +314,8 @@ contains
       call periodic_copy_end(pc)
     end do
 
-    call comm_allreduce(geo%atoms_dist%mpi_grp%comm, ereal)
-    call comm_allreduce(geo%atoms_dist%mpi_grp%comm, force)
+    call comm_allreduce(this%dist%mpi_grp%comm, ereal)
+    call comm_allreduce(this%dist%mpi_grp%comm, force)
 
     if(present(force_components)) then
       force_components(1:sb%dim, 1:geo%natoms, ION_COMPONENT_REAL) = force(1:sb%dim, 1:geo%natoms)
@@ -328,11 +328,13 @@ contains
     ! self-interaction
     eself = M_ZERO
     charge = M_ZERO
-    do iatom = 1, geo%natoms
+    do iatom = this%dist%start, this%dist%end
       zi = species_zval(geo%atom(iatom)%species)
       charge = charge + zi
       eself = eself - this%alpha/sqrt(M_PI)*zi**2
     end do
+    call comm_allreduce(this%dist%mpi_grp%comm, eself)
+    call comm_allreduce(this%dist%mpi_grp%comm, charge)
 
 ! Long range part of Ewald sum
     select case(sb%periodic_dim)
@@ -366,7 +368,7 @@ contains
        ! Previously unaccounted G = 0 term from pseudopotentials. 
        ! See J. Ihm, A. Zunger, M.L. Cohen, J. Phys. C 12, 4409 (1979)
 
-       do iatom = 1, geo%natoms
+       do iatom = this%dist%start, this%dist%end
           if(species_is_ps(geo%atom(iatom)%species)) then
              zi = species_zval(geo%atom(iatom)%species)
              spec_ps = species_ps(geo%atom(iatom)%species)
@@ -374,6 +376,7 @@ contains
                   (spec_ps%sigma_erf*sqrt(M_TWO))**2/sb%rcell_volume*charge
           end if
        end do
+       call comm_allreduce(this%dist%mpi_grp%comm, epseudo)
 
        energy = energy + epseudo
     end if
@@ -486,6 +489,7 @@ contains
     FLOAT   :: gg(1:MAX_DIM), gg2, gx, gg_abs
     FLOAT   :: factor,factor1,factor2, coeff
     FLOAT   :: dz_max, dz_ij, area_cell, erfc1, erfc2, tmp_erf
+    FLOAT, allocatable :: force_tmp(:,:)
 
     PUSH_SUB(Ewald_long_2d)
 
@@ -501,6 +505,7 @@ contains
       end do
     end do
 
+
     !get a converged value for the cutoff in g
     rcut = M_TWO*this%alpha*CNST(4.6) + M_TWO*this%alpha**2*dz_max
     do 
@@ -510,11 +515,13 @@ contains
       rcut = rcut * CNST(1.414)
     end do
 
-
     ix_max = ceiling(rcut/sqrt(sum(sb%klattice(1:sb%dim, 1)**2)))
     iy_max = ceiling(rcut/sqrt(sum(sb%klattice(1:sb%dim, 2)**2)))
 
     area_cell = abs(sb%rlattice(1, 1)*sb%rlattice(2, 2) - sb%rlattice(1, 2)*sb%rlattice(2, 1))
+
+    SAFE_ALLOCATE(force_tmp(1:sb%dim, 1:geo%natoms))
+    force_tmp = M_ZERO
 
     ! First the G = 0 term (charge was calculated previously)
     efourier = M_ZERO
@@ -536,7 +543,7 @@ contains
         if(iatom == jatom)cycle
         if(abs(tmp_erf) < M_EPSILON) cycle
 
-        force(3,iatom) = force(3,iatom) - (- M_TWO*factor) &
+        force_tmp(3,iatom) = force_tmp(3,iatom) - (- M_TWO*factor) &
           * species_zval(geo%atom(iatom)%species)*species_zval(geo%atom(jatom)%species) &
           * tmp_erf
 
@@ -591,12 +598,12 @@ contains
 ! force
             if(iatom == jatom)cycle
 
-            force(1:2, iatom) = force(1:2, iatom) &
+            force_tmp(1:2, iatom) = force_tmp(1:2, iatom) &
               - (CNST(-1.0)* M_TWO*factor )* gg(1:2) &
               * species_zval(geo%atom(iatom)%species)*species_zval(geo%atom(jatom)%species) &
               *sin(gx)*(factor1 + factor2)
 
-            force(1:2, jatom) = force(1:2, jatom) &
+            force_tmp(1:2, jatom) = force_tmp(1:2, jatom) &
               + (CNST(-1.0)* M_TWO*factor )* gg(1:2) &
               * species_zval(geo%atom(iatom)%species)*species_zval(geo%atom(jatom)%species) &
               *sin(gx)*(factor1 + factor2)
@@ -618,11 +625,11 @@ contains
             end if
              
 
-            force(3, iatom) = force(3, iatom) &
+            force_tmp(3, iatom) = force_tmp(3, iatom) &
               - M_TWO*factor &
               * species_zval(geo%atom(iatom)%species)*species_zval(geo%atom(jatom)%species) &
               * cos(gx)* ( factor1 - factor2)
-            force(3, jatom) = force(3, jatom) &
+            force_tmp(3, jatom) = force_tmp(3, jatom) &
               + M_TWO*factor &
               * species_zval(geo%atom(iatom)%species)*species_zval(geo%atom(jatom)%species) &
               * cos(gx)* ( factor1 - factor2)
@@ -636,7 +643,11 @@ contains
     end do
 
     call comm_allreduce(this%dist%mpi_grp%comm, efourier)
-    call comm_allreduce(this%dist%mpi_grp%comm, force)
+    call comm_allreduce(this%dist%mpi_grp%comm, force_tmp)
+
+    force = force + force_tmp
+
+    SAFE_DEALLOCATE_A(force_tmp)
 
     POP_SUB(Ewald_long_2d)
 
