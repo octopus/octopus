@@ -429,7 +429,11 @@ match ; PBE0 Fock Total                        ; GREPFIELD(static/info, 'Total  
 
 Input: 03-xc.mvorb_hse06_fock.inp
 match ; MVORB HSE06 Fock Eigenvalue up         ; GREPFIELD(static/info, '  1   up', 3)      ; -0.808643
-match ; MVORB HSE06 Fock Eigenvalue dn         ; GREPFIELD(static/info, '  1   dn', 3)      ; -0.542083
+if (available libxc5); then
+    match ; MVORB HSE06 Fock Eigenvalue dn         ; GREPFIELD(static/info, '  1   dn', 3)      ; -0.542256
+else
+    match ; MVORB HSE06 Fock Eigenvalue dn         ; GREPFIELD(static/info, '  1   dn', 3)      ; -0.542083
+endif
 match ; MVORB HSE06 Fock Correlation           ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.20720907
 match ; MVORB HSE06 Fock Int[n*v_xc]           ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -0.25864459
 match ; MVORB HSE06 Fock Total                 ; GREPFIELD(static/info, 'Total       =', 3) ; -0.66775361
