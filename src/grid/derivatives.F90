@@ -819,6 +819,7 @@ contains
     SAFE_DEALLOCATE_A(polynomials)
     SAFE_DEALLOCATE_A(rhs)
     call nl_operator_copy(lapl, op(1))
+    call nl_operator_end(op(1))
     SAFE_DEALLOCATE_P(op)
 
     POP_SUB(derivatives_get_lapl)
