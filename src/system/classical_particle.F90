@@ -569,7 +569,8 @@ contains
     select case (iq)
     case (MASS)
       ! The classical particle has a mass, but it does not require any update, as it does not change with time.
-      call partner%quantities(iq)%clock%set_time(partner%clock)
+      !call partner%quantities(iq)%clock%set_time(partner%clock)
+      call partner%quantities(iq)%clock%set_time(requested_time)
     case default
       message(1) = "Incompatible quantity."
       call messages_fatal(1)

@@ -53,6 +53,9 @@ module system_abst_oct_m
 
     integer :: accumulated_loop_ticks
 
+    integer :: interaction_quantity_timing  !< parameter to determine if interactions
+      !< should use the quantities at the exact time or if retardation is allowed
+
     type(interaction_list_t), public :: interactions !< List with all the interactions of this system
   contains
     procedure :: dt_operation =>  system_dt_operation
@@ -351,70 +354,71 @@ contains
     type(clock_t),             intent(in)    :: requested_time
     class(interaction_abst_t), intent(inout) :: interaction
 
-    logical :: ahead_in_time
+    logical :: ahead_in_time, behind_in_time, right_in_time, need_to_copy
     integer :: iq, q_id
 
     PUSH_SUB(system_update_exposed_quantities)
 
+    if (debug%info) then
+      write(message(1), '(a,a)') "Debug: ----- updating exposed quantities for partner ", trim(partner%namespace%get())
+      call messages_info(1)
+    end if
+
     select type (interaction)
     class is (interaction_with_partner_t)
 
-      if (partner%clock%is_earlier_with_step(requested_time) &
-          .or. partner%prop%inside_scf) then
-        ! We have to wait, either because this is not the best moment to update the quantities or
-        ! because we are inside an SCF cycle and therefore are not allowed to expose any quantities.
+      if(partner%prop%inside_scf) then
+        ! we are inside an SCF cycle and therefore are not allowed to expose any quantities.
         allowed_to_update = .false.
-
       else
-        ! Check if partner system is ahead in time
-        ahead_in_time = .false.
+        allowed_to_update = .true.
+        need_to_copy = .true.
         do iq = 1, interaction%n_partner_quantities
           ! Get the requested quantity ID
           q_id = interaction%partner_quantities(iq)
 
-          if (partner%quantities(q_id)%clock > requested_time) ahead_in_time = .true.
+          ! All needed quantities must have been marked as required. If not, then fix your code!
+          ASSERT(partner%quantities(q_id)%required)
+
+          ! First update the exposed quantities that are not protected
+          if (.not.partner%quantities(q_id)%protected) then
+            if (partner%quantities(q_id)%clock%is_later_with_step(requested_time)) then
+              ! We can update because the partner will reach this time in its current timestep
+              ! This is not a protected quantity, so we update it
+              call partner%update_exposed_quantity(q_id, requested_time)
+            end if
+          end if
+
+          ! Now compare the times
+          ahead_in_time = partner%quantities(q_id)%clock > requested_time
+          right_in_time = partner%quantities(q_id)%clock == requested_time
+
+          if(partner%interaction_quantity_timing == OPTION__INTERACTIONQUANTITYTIMING__TIMING_EXACT) then
+            ! only allow interaction at exactly the same time
+            allowed_to_update = allowed_to_update .and. right_in_time
+            need_to_copy = allowed_to_update
+          else if(partner%interaction_quantity_timing == OPTION__INTERACTIONQUANTITYTIMING__TIMING_RETARDED) then
+            ! allow retarded interaction
+            allowed_to_update = allowed_to_update .and. &
+              (right_in_time .or. ahead_in_time)
+            need_to_copy = need_to_copy .and. .not. ahead_in_time
+          else
+            call messages_not_implemented("Method for interaction quantity timing")
+          end if
+
+          ! Debug stuff
+          if (debug%info) then
+            write(message(1), '(a,i3)') "Debug: ------ updating exposed quantities ", q_id
+            write(message(2), '(a,i3,a,i3)') "Debug: ------ requested time is ", requested_time%get_tick(), &
+              " and partner time is ", partner%quantities(q_id)%clock%get_tick()
+            call messages_info(2)
+          end if
+
         end do
 
-        if (ahead_in_time) then
-          ! This system is ahead of the requested time. The interaction is allowed to be updated,
-          ! but using the old quantities. Therefore we do not update the quantities here.
-          allowed_to_update = .true.
-
-        else
-          !This is the best moment to update the quantities
-          allowed_to_update = .true.
-          do iq = 1, interaction%n_partner_quantities
-            ! Get the requested quantity ID
-            q_id = interaction%partner_quantities(iq)
-
-            ! All needed quantities must have been marked as required. If not, then fix your code!
-            ASSERT(partner%quantities(q_id)%required)
-
-            if (.not. (partner%quantities(q_id)%clock == requested_time .or. &
-              (partner%quantities(q_id)%clock < requested_time .and. &
-              partner%quantities(q_id)%clock%is_later_with_step(requested_time)))) then
-              ! The quantity is not at the requested time nor at the best possible time, so we try to update it
-
-              ! Sanity check: it can never happen that the quantity is in advance with respect to the
-              ! requested time.
-              if (partner%quantities(q_id)%clock > requested_time) then
-                message(1) = "The partner quantity is in advance compared to the requested time."
-                call messages_fatal(1)
-              end if
-
-              if (partner%quantities(q_id)%protected) then
-                ! If partner quantity is protected, then we are not allowed to update it, as that is done by the propagation.
-                ! So we have to wait until the quantity is at the right time.
-                allowed_to_update = .false.
-              else
-                ! This is not a protected quantity and we are the right time, so we update it
-                call partner%update_exposed_quantity(q_id, requested_time)
-              end if
-            end if
-          end do
-
-          ! If the quantities have been updated, we copy them to the interaction
-          if (allowed_to_update) call partner%copy_quantities_to_interaction(interaction)
+        ! If the quantities have been updated, we copy them to the interaction
+        if (allowed_to_update .and. need_to_copy) then
+          call partner%copy_quantities_to_interaction(interaction)
         end if
       end if
 
@@ -537,6 +541,27 @@ contains
     ! Check if this propagators dt is smaller then the current smallest dt.
     ! If so, replace the current smallest dt by the one from this propagator.
     smallest_algo_dt = min(smallest_algo_dt, this%prop%dt/this%prop%algo_steps)
+
+    !%Variable InteractionQuantityTiming
+    !%Type integer
+    !%Default exact
+    !%Section Time-Dependent::Propagation
+    !%Description
+    !% A parameter to determine if interactions should use the quantities
+    !% at the exact time or if retardation is allowed.
+    !%Option timing_exact 1
+    !% Only allow interactions at exactly the same times
+    !%Option timing_retarded 2
+    !% Allow retarded interactions
+    !%End
+    call parse_variable(this%namespace, 'InteractionQuantityTiming', &
+      OPTION__INTERACTIONQUANTITYTIMING__TIMING_EXACT, &
+      this%interaction_quantity_timing)
+    if(.not.varinfo_valid_option('InteractionQuantityTiming', this%interaction_quantity_timing)) then
+      call messages_input_error(this%namespace, 'InteractionQuantityTiming')
+    end if
+    call messages_print_var_option(stdout, 'InteractionQuantityTiming', &
+      this%interaction_quantity_timing)
 
     POP_SUB(system_init_propagator)
   end subroutine system_init_propagator
