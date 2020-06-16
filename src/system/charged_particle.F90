@@ -150,16 +150,14 @@ contains
     class(charged_particle_t), intent(in) :: this
     class(interaction_abst_t), intent(in) :: interaction
 
-    logical :: has_lorentz_interaction
     PUSH_SUB(charged_particle_has_interaction)
 
     select type (interaction)
     type is (interaction_lorentz_force_t)
-      has_lorentz_interaction = .true.
+      charged_particle_has_interaction = .true.
+    class default
+      charged_particle_has_interaction = this%classical_particle_t%has_interaction(interaction)
     end select
-
-    charged_particle_has_interaction = this%classical_particle_t%has_interaction(interaction) &
-                                        .or. has_lorentz_interaction
 
     POP_SUB(charged_particle_has_interaction)
   end function charged_particle_has_interaction
@@ -268,10 +266,10 @@ contains
     case (CHARGE)
       ! The charged particle has a charge, but it is not necessary to update it, as it does not change with time.
       call this%quantities(iq)%clock%set_time(requested_time)
+    case default
+      ! Other quantities should be handled by the parent class
+      call this%classical_particle_t%update_quantity(iq, requested_time)
     end select
-    ! Note: the assert for protected quantities and the default case are taken care of by
-    ! the update of quantities of the classical particle, which follows next:
-    call this%classical_particle_t%update_quantity(iq, requested_time)
 
     POP_SUB(charged_particle_update_quantity)
   end subroutine charged_particle_update_quantity
@@ -288,10 +286,10 @@ contains
     case (CHARGE)
       ! The charged particle has a charge, but it is not necessary to update it, as it does not change with time.
       call this%quantities(iq)%clock%set_time(requested_time)
+    case default
+      ! Other quantities should be handled by the parent class
+      call this%classical_particle_t%update_exposed_quantity(iq, requested_time)
     end select
-    ! Note: the assert for protected quantities and the default case are taken care of by
-    ! the update of exposed quantities of the classical particle, which follows next:
-    call this%classical_particle_t%update_exposed_quantity(iq, requested_time)
 
     POP_SUB(charged_particle_update_exposed_quantity)
   end subroutine charged_particle_update_exposed_quantity
@@ -306,8 +304,9 @@ contains
     select type (interaction)
     type is (interaction_lorentz_force_t)
       ! Nothing to copy
+    class default
+      call this%classical_particle_t%copy_quantities_to_interaction(interaction)
     end select
-    call this%classical_particle_t%copy_quantities_to_interaction(interaction)
 
     POP_SUB(charged_particle_copy_quantities_to_interaction)
   end subroutine charged_particle_copy_quantities_to_interaction
