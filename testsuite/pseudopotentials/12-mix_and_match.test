@@ -5,7 +5,7 @@ Program    : octopus
 TestGroups : short-run, pseudopotentials
 Enabled    : Yes
 
-Input: 12_mix_and_match.01-mgo.inp
+Input: 12-mix_and_match.01-mgo.inp
 Precision: 0.00011
 match ; SCF convergence    ;     GREPCOUNT(static/info, 'SCF converged') ; 1
 match;  Total energy       ;	 GREPFIELD(static/info, 'Total       =', 3) ;	-75.27909809
