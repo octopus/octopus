@@ -44,7 +44,7 @@ module unocc_oct_m
   use states_elec_oct_m
   use states_elec_io_oct_m
   use states_elec_restart_oct_m
-  use system_oct_m
+  use electrons_oct_m
   use v_ks_oct_m
   use xc_oct_m
 

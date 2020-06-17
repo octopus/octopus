@@ -44,7 +44,7 @@ program oct_local_multipoles
   use species_oct_m
   use species_pot_oct_m
   use simul_box_oct_m
-  use system_oct_m
+  use electrons_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use utils_oct_m

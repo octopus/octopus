@@ -35,7 +35,7 @@ module invert_ks_oct_m
   use profiling_oct_m
   use restart_oct_m
   use states_elec_restart_oct_m
-  use system_oct_m
+  use electrons_oct_m
   use xc_ks_inversion_oct_m
   
   implicit none

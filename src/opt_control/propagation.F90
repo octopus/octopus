@@ -52,7 +52,7 @@ module propagation_oct_m
   use species_oct_m
   use states_elec_oct_m
   use states_elec_restart_oct_m
-  use system_oct_m
+  use electrons_oct_m
   use target_oct_m
   use td_oct_m
   use td_write_oct_m

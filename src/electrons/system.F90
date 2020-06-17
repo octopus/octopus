@@ -18,7 +18,7 @@
 
 #include "global.h"
 
-module system_oct_m
+module electrons_oct_m
   use accel_oct_m
   use calc_mode_par_oct_m
   use density_oct_m
@@ -231,7 +231,7 @@ contains
     POP_SUB(system_h_setup)
   end subroutine system_h_setup
 
-end module system_oct_m
+end module electrons_oct_m
 
 !! Local Variables:
 !! mode: f90

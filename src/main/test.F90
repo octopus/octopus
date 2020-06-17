@@ -51,7 +51,7 @@ module test_oct_m
   use states_elec_calc_oct_m
   use states_elec_dim_oct_m
   use subspace_oct_m
-  use system_oct_m
+  use electrons_oct_m
   use types_oct_m
   use v_ks_oct_m
   use wfs_elec_oct_m

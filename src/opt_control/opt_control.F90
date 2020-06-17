@@ -51,7 +51,7 @@ module opt_control_oct_m
   use simul_box_oct_m
   use states_elec_oct_m
   use states_elec_dim_oct_m
-  use system_oct_m
+  use electrons_oct_m
   use target_oct_m
   use td_oct_m
 
