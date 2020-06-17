@@ -268,8 +268,8 @@ end subroutine X(transition_density)
 
 ! ---------------------------------------------------------
 subroutine X(get_transition_densities) (cas, sys)
-  type(casida_t),    intent(in) :: cas
-  type(system_t),    intent(in) :: sys
+  type(casida_t),      intent(in) :: cas
+  type(electrons_t),   intent(in) :: sys
 
   integer :: ia, ierr
   character(len=5) :: intstr
@@ -339,7 +339,7 @@ end subroutine X(casida_get_rho)
 
 !> one-particle matrix elements of perturbation
 subroutine X(casida_calc_lr_hmat1)(sys, pert, hvar, lr_hmat1, is_saved, st_start, st_end, ik)
-  type(system_t),      intent(inout) :: sys
+  type(electrons_t),   intent(inout) :: sys
   type(pert_t),        intent(in)    :: pert
   FLOAT,               intent(in)    :: hvar(:,:,:)
   R_TYPE,              intent(out)   :: lr_hmat1(:,:,:)
@@ -724,8 +724,8 @@ end subroutine X(write_K_term)
 ! ---------------------------------------------------------
 subroutine X(casida_forces)(cas, sys, mesh, st)
   type(casida_t),      intent(inout) :: cas
-  type(system_t),      intent(inout) :: sys
-  type(mesh_t),           intent(in) :: mesh
+  type(electrons_t),   intent(inout) :: sys
+  type(mesh_t),        intent(in) :: mesh
   type(states_elec_t), intent(inout) :: st
   
   integer :: ip, iatom, idir, is1, is2, ierr, ik, ia
@@ -865,7 +865,7 @@ end subroutine X(casida_forces)
 ! ---------------------------------------------------------
 subroutine X(casida_get_lr_hmat1)(cas, sys, iatom, idir, dl_rho, lr_hmat1)
   type(casida_t),      intent(in)     :: cas
-  type(system_t),      intent(inout)  :: sys
+  type(electrons_t),   intent(inout)  :: sys
   integer,             intent(in)     :: iatom
   integer,             intent(in)     :: idir
   FLOAT,               intent(in)     :: dl_rho(:,:)
@@ -1096,8 +1096,8 @@ end subroutine X(casida_solve)
 
 ! ---------------------------------------------------------
 subroutine X(casida_write)(cas, sys)
-  type(casida_t), intent(in) :: cas
-  type(system_t), intent(in) :: sys
+  type(casida_t),      intent(in) :: cas
+  type(electrons_t),   intent(in) :: sys
   
   character(len=5) :: str
   character(len=50) :: dir_name

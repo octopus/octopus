@@ -126,7 +126,7 @@ contains
     integer,           intent(in) :: cm
 
     class(multisystem_t), pointer :: systems
-    type(system_t), pointer :: sys
+    type(electrons_t), pointer :: sys
     type(system_factory_t) :: factory
     type(profile_t), save :: calc_mode_prof
     logical :: fromScratch

@@ -35,7 +35,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine memory_run(sys)
-    type(system_t),      intent(inout) :: sys
+    type(electrons_t),      intent(inout) :: sys
 
     FLOAT :: mesh_global, mesh_local, wfns
 

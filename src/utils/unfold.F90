@@ -69,7 +69,7 @@ program oct_unfold
 
   implicit none
 
-  type(system_t), pointer :: sys
+  type(electrons_t), pointer :: sys
   type(simul_box_t)     :: sb
   integer               :: ik, idim, nkpoints
   type(restart_t)       :: restart

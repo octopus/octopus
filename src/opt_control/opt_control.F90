@@ -76,7 +76,7 @@ module opt_control_oct_m
 
   !> For the direct, nlopt, and cg schemes:
   type(controlfunction_t), save :: par_
-  type(system_t), pointer :: sys_
+  type(electrons_t), pointer :: sys_
   type(hamiltonian_elec_t), pointer :: hm_
   type(td_t), pointer :: td_
   FLOAT, allocatable :: x_(:)
@@ -88,7 +88,7 @@ contains
   !> This is the main procedure for all types of optimal control runs.
   !! It is called from the "run" procedure in the "run_m" module.
   subroutine opt_control_run(sys)
-    type(system_t), target,      intent(inout) :: sys
+    type(electrons_t), target,      intent(inout) :: sys
 
     type(td_t), target             :: td
     type(controlfunction_t)        :: par, par_new, par_prev
@@ -569,11 +569,12 @@ contains
 
   ! ---------------------------------------------------------
   subroutine f_zbr98(sys, td, qcpsi, prop_psi, prop_chi, par)
-    type(system_t), intent(inout)                 :: sys
-    type(td_t), intent(inout)                     :: td
-    type(opt_control_state_t), intent(inout)      :: qcpsi
-    type(oct_prop_t), intent(inout)               :: prop_psi, prop_chi
-    type(controlfunction_t), intent(inout)        :: par
+    type(electrons_t),         intent(inout) :: sys
+    type(td_t),                intent(inout) :: td
+    type(opt_control_state_t), intent(inout) :: qcpsi
+    type(oct_prop_t),          intent(inout) :: prop_psi
+    type(oct_prop_t),          intent(inout) :: prop_chi
+    type(controlfunction_t),   intent(inout) :: par
 
     type(states_elec_t) :: chi
     type(opt_control_state_t) :: qcchi
@@ -598,12 +599,13 @@ contains
 
   ! ---------------------------------------------------------
   subroutine f_wg05(sys, td, qcpsi, par, prop_psi, prop_chi, j1)
-    type(system_t), intent(inout)                 :: sys
-    type(td_t), intent(inout)                     :: td
-    type(opt_control_state_t), intent(inout)      :: qcpsi
-    type(controlfunction_t), intent(inout)        :: par
-    type(oct_prop_t), intent(inout)               :: prop_psi, prop_chi
-    FLOAT, intent(out)                            :: j1
+    type(electrons_t),         intent(inout) :: sys
+    type(td_t),                intent(inout) :: td
+    type(opt_control_state_t), intent(inout) :: qcpsi
+    type(controlfunction_t),   intent(inout) :: par
+    type(oct_prop_t),          intent(inout) :: prop_psi
+    type(oct_prop_t),          intent(inout) :: prop_chi
+    FLOAT,                     intent(out)   :: j1
 
     FLOAT :: new_penalty
     type(opt_control_state_t) :: qcchi
@@ -652,10 +654,10 @@ contains
 
    ! ---------------------------------------------------------
   subroutine f_striter(sys, td, par, j1)
-    type(system_t), intent(inout)                 :: sys
-    type(td_t), intent(inout)                     :: td
-    type(controlfunction_t), intent(inout)        :: par
-    FLOAT, intent(out)                            :: j1
+    type(electrons_t),       intent(inout) :: sys
+    type(td_t),              intent(inout) :: td
+    type(controlfunction_t), intent(inout) :: par
+    FLOAT,                   intent(out)   :: j1
 
     type(opt_control_state_t) :: qcpsi
     type(opt_control_state_t) :: qcchi
@@ -705,12 +707,13 @@ contains
 
   ! ---------------------------------------------------------
   subroutine f_iter(sys, td, qcpsi, par, prop_psi, prop_chi, j1)
-    type(system_t), intent(inout)                 :: sys
-    type(td_t), intent(inout)                     :: td
-    type(opt_control_state_t), intent(inout)      :: qcpsi
-    type(controlfunction_t), intent(inout)        :: par
-    type(oct_prop_t), intent(inout)               :: prop_psi, prop_chi
-    FLOAT, intent(out)                            :: j1
+    type(electrons_t),         intent(inout) :: sys
+    type(td_t),                intent(inout) :: td
+    type(opt_control_state_t), intent(inout) :: qcpsi
+    type(controlfunction_t),   intent(inout) :: par
+    type(oct_prop_t),          intent(inout) :: prop_psi
+    type(oct_prop_t),          intent(inout) :: prop_chi
+    FLOAT,                     intent(out)   :: j1
 
     type(opt_control_state_t) :: qcchi
     type(controlfunction_t) :: par_chi

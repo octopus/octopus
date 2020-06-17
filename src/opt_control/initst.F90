@@ -57,7 +57,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine initial_state_init(sys, qcstate)
-    type(system_t),      intent(inout) :: sys
+    type(electrons_t),                 intent(inout) :: sys
     type(opt_control_state_t), target, intent(inout) :: qcstate
 
     integer           :: ik, ib, idim, inst, inik, id, is, ip, ierr, &

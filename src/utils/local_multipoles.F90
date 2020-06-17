@@ -65,7 +65,7 @@ program oct_local_multipoles
     type(local_write_t)             :: writ            !< write option for local domains analysis.
   end type local_domain_t
 
-  type(system_t), pointer :: sys
+  type(electrons_t), pointer :: sys
   type(simul_box_t)     :: sb
   integer, parameter    :: BADER = 512
   FLOAT                 :: BaderThreshold

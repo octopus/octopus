@@ -75,7 +75,7 @@ program wannier90_interface
   integer              :: ii, nik, iter, nst
 
   type(restart_t)      :: restart
-  type(system_t), pointer :: sys
+  type(electrons_t), pointer :: sys
   logical              :: w90_spinors, scdm_proj, w90_scdm
   integer              :: w90_nntot, w90_num_bands, w90_num_kpts   ! w90 input parameters
   integer, allocatable :: w90_nnk_list(:,:)                        !

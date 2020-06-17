@@ -686,9 +686,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine lcao_run(sys, st_start, lmm_r)
-    type(system_t),      intent(inout) :: sys
-    integer, optional,   intent(in)    :: st_start !< use for unoccupied-states run
-    FLOAT,   optional,   intent(in)    :: lmm_r !< used only if not present(st_start)
+    type(electrons_t),      intent(inout) :: sys
+    integer,      optional, intent(in)    :: st_start !< use for unoccupied-states run
+    FLOAT,        optional, intent(in)    :: lmm_r !< used only if not present(st_start)
 
     type(lcao_t) :: lcao
     integer :: st_start_random

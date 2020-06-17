@@ -59,8 +59,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine unocc_run(sys, fromscratch)
-    type(system_t),         intent(inout) :: sys
-    logical,                intent(inout) :: fromscratch
+    type(electrons_t),    intent(inout) :: sys
+    logical,              intent(inout) :: fromscratch
 
     type(eigensolver_t) :: eigens
     integer :: iunit, ierr, iter, ierr_rho, ik

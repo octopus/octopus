@@ -130,7 +130,7 @@ contains
   !! set to .true., writes down through the td_write module.
   !! ---------------------------------------------------------
   subroutine propagate_forward(sys, td, par, tg, qcpsi, prop, write_iter)
-    type(system_t),             intent(inout)  :: sys
+    type(electrons_t),          intent(inout)  :: sys
     type(td_t),                 intent(inout)  :: td
     type(controlfunction_t),    intent(in)     :: par
     type(target_t),             intent(inout)  :: tg
@@ -277,7 +277,7 @@ contains
   !! external fields specified in Hamiltonian h.
   !! ---------------------------------------------------------
   subroutine propagate_backward(sys, td, qcpsi, prop)
-    type(system_t),            intent(inout) :: sys
+    type(electrons_t),         intent(inout) :: sys
     type(td_t),                intent(inout) :: td
     type(opt_control_state_t), intent(inout) :: qcpsi
     type(oct_prop_t),          intent(inout) :: prop
@@ -345,7 +345,7 @@ contains
   !! "new" control functions.
   !! --------------------------------------------------------
   subroutine fwd_step(sys, td, tg, par, par_chi, qcpsi, prop_chi, prop_psi)
-    type(system_t),            intent(inout) :: sys
+    type(electrons_t),         intent(inout) :: sys
     type(td_t),                intent(inout) :: td
     type(target_t),            intent(inout) :: tg
     type(controlfunction_t),   intent(inout) :: par
@@ -473,7 +473,7 @@ contains
   !! |chi> --> U[par_chi](0, T)|chi>
   !! --------------------------------------------------------
   subroutine bwd_step(sys, td, tg, par, par_chi, qcchi, prop_chi, prop_psi) 
-    type(system_t),            intent(inout) :: sys
+    type(electrons_t),         intent(inout) :: sys
     type(td_t),                intent(inout) :: td
     type(target_t),            intent(inout) :: tg
     type(controlfunction_t),   intent(in)    :: par
@@ -575,7 +575,7 @@ contains
   !! par_chi = par_chi[|psi>, |chi>]
   !! --------------------------------------------------------
   subroutine bwd_step_2(sys, td, tg, par, par_chi, qcchi, prop_chi, prop_psi) 
-    type(system_t),                    intent(inout) :: sys
+    type(electrons_t),                 intent(inout) :: sys
     type(td_t),                        intent(inout) :: td
     type(target_t),                    intent(inout) :: tg
     type(controlfunction_t),           intent(in)    :: par

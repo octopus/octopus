@@ -100,7 +100,7 @@ contains
   !! This is a high-level interface that reads the input file and
   !! calls the proper function.
   subroutine convert()
-    type(system_t), pointer :: sys
+    type(electrons_t), pointer :: sys
 
     character(MAX_PATH_LEN)  :: basename, folder, ref_name, ref_folder, folder_default
     integer                  :: c_start, c_end, c_step, c_start_default, length, c_how

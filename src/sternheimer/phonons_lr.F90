@@ -70,8 +70,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine phonons_lr_run(sys, fromscratch)
-    type(system_t), target, intent(inout) :: sys
-    logical,                intent(in)    :: fromscratch
+    type(electrons_t), target, intent(inout) :: sys
+    logical,                   intent(in)    :: fromscratch
 
     type(sternheimer_t) :: sh
     type(lr_t)          :: lr(1:1), kdotp_lr(MAX_DIM)

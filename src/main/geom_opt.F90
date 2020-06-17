@@ -68,16 +68,16 @@ module geom_opt_oct_m
     integer  :: what2minimize
 
     !> shortcuts
-    type(scf_t)                  :: scfv
-    type(geometry_t),    pointer :: geo
+    type(scf_t)                       :: scfv
+    type(geometry_t),         pointer :: geo
     type(hamiltonian_elec_t), pointer :: hm
-    type(system_t),      pointer :: syst
-    type(mesh_t),        pointer :: mesh
-    type(states_elec_t), pointer :: st
-    integer                      :: dim
-    integer                      :: size
-    integer                      :: fixed_atom
-    type(restart_t)              :: restart_dump
+    type(electrons_t),        pointer :: syst
+    type(mesh_t),             pointer :: mesh
+    type(states_elec_t),      pointer :: st
+    integer                           :: dim
+    integer                           :: size
+    integer                           :: fixed_atom
+    type(restart_t)                   :: restart_dump
     
   end type geom_opt_t
 
@@ -91,7 +91,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine geom_opt_run(sys, fromscratch)
-    type(system_t), target,      intent(inout) :: sys
+    type(electrons_t),   target, intent(inout) :: sys
     logical,                     intent(inout) :: fromscratch
 
     integer :: ierr

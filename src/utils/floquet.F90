@@ -54,7 +54,7 @@ program oct_floquet
 
   integer :: ierr
 
-  type(system_t), pointer :: sys
+  type(electrons_t), pointer :: sys
   type(simul_box_t) :: sb
   type(states_elec_t) :: st
   type(grid_t)   :: gr

@@ -84,7 +84,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine kdotp_lr_run(sys, fromScratch)
-    type(system_t),      intent(inout) :: sys
+    type(electrons_t),   intent(inout) :: sys
     logical,             intent(inout) :: fromScratch
 
     type(kdotp_t)           :: kdotp_vars

@@ -51,7 +51,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine phonons_run(sys)
-    type(system_t),      intent(inout) :: sys
+    type(electrons_t),      intent(inout) :: sys
 
     type(vibrations_t) :: vib
     integer :: ierr

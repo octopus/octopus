@@ -52,8 +52,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine vdw_run(sys, fromScratch)
-    type(system_t),         intent(inout) :: sys
-    logical,                intent(inout) :: fromScratch
+    type(electrons_t),    intent(inout) :: sys
+    logical,              intent(inout) :: fromScratch
 
     type(lr_t) :: lr(MAX_DIM, 1)
     type(sternheimer_t)     :: sh

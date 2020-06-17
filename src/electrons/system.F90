@@ -52,11 +52,11 @@ module system_oct_m
 
   private
   public ::               &
-    system_t,             &
+    electrons_t,          &
     system_init,          &
     system_h_setup
 
-  type :: system_t
+  type :: electrons_t
     ! Components are public by default
     type(space_t)                :: space
     type(geometry_t)             :: geo
@@ -69,14 +69,14 @@ module system_oct_m
     type(hamiltonian_elec_t)     :: hm
   contains
     final :: system_finalize
-  end type system_t
+  end type electrons_t
   
 contains
   
   !----------------------------------------------------------
   function system_init(namespace) result(sys)
-    class(system_t),    pointer    :: sys
-    type(namespace_t), intent(in) :: namespace
+    class(electrons_t), pointer    :: sys
+    type(namespace_t),  intent(in) :: namespace
 
     type(profile_t), save :: prof
 
@@ -157,7 +157,7 @@ contains
 
   !----------------------------------------------------------
   subroutine system_finalize(sys)
-    type(system_t), intent(inout) :: sys
+    type(electrons_t), intent(inout) :: sys
 
     PUSH_SUB(system_finalize)
 
@@ -188,9 +188,9 @@ contains
 
   !----------------------------------------------------------
   subroutine system_h_setup(sys, calc_eigenval, calc_current)
-    type(system_t),      intent(inout) :: sys
-    logical,   optional, intent(in)    :: calc_eigenval !< default is true
-    logical,   optional, intent(in)    :: calc_current !< default is true
+    type(electrons_t), intent(inout) :: sys
+    logical, optional, intent(in)    :: calc_eigenval !< default is true
+    logical, optional, intent(in)    :: calc_current !< default is true
 
     integer, allocatable :: ind(:)
     integer :: ist, ik

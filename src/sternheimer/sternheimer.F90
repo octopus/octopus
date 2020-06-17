@@ -117,7 +117,7 @@ contains
   subroutine sternheimer_init(this, sys, wfs_are_cplx, &
     set_ham_var, set_occ_response, set_last_occ_response, occ_response_by_sternheimer, set_default_solver)
     type(sternheimer_t),  intent(out)   :: this
-    type(system_t),       intent(inout) :: sys
+    type(electrons_t),    intent(inout) :: sys
     logical,              intent(in)    :: wfs_are_cplx
     integer,    optional, intent(in)    :: set_ham_var
     logical,    optional, intent(in)    :: set_occ_response

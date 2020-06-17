@@ -63,7 +63,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine ground_state_run(sys, fromScratch)
-    type(system_t),      intent(inout) :: sys
+    type(electrons_t),   intent(inout) :: sys
     logical,             intent(inout) :: fromScratch
 
     type(scf_t)     :: scfv

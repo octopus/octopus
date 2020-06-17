@@ -58,8 +58,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine static_pol_run(sys, fromScratch)
-    type(system_t),         intent(inout) :: sys
-    logical,                intent(inout) :: fromScratch
+    type(electrons_t),    intent(inout) :: sys
+    logical,              intent(inout) :: fromScratch
 
     type(scf_t) :: scfv
     integer :: iunit, ios, i_start, ii, jj, is, isign, ierr, read_count, verbosity

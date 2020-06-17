@@ -47,7 +47,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine invert_ks_run(sys)
-    type(system_t),              intent(inout) :: sys
+    type(electrons_t), intent(inout) :: sys
 
     integer :: ii, jj, np, ndim, nspin
     integer :: err

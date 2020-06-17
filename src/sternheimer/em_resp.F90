@@ -118,8 +118,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine em_resp_run(sys, fromScratch)
-    type(system_t), target, intent(inout) :: sys
-    logical,                intent(inout) :: fromScratch
+    type(electrons_t), target, intent(inout) :: sys
+    logical,                   intent(inout) :: fromScratch
 
     type(grid_t),   pointer :: gr
     type(em_resp_t)         :: em_vars

@@ -230,7 +230,7 @@ contains
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
 
-    type(system_t), pointer :: sys
+    type(electrons_t), pointer :: sys
 
     PUSH_SUB(test_hartree)
 
@@ -248,7 +248,7 @@ contains
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
 
-    type(system_t), pointer :: sys
+    type(electrons_t), pointer :: sys
     type(wfs_elec_t), pointer :: epsib
     integer :: itime
     CMPLX, allocatable :: psi(:, :)
@@ -303,7 +303,7 @@ contains
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
 
-    type(system_t), pointer :: sys
+    type(electrons_t), pointer :: sys
     type(wfs_elec_t), pointer :: epsib
     integer :: itime
     type(orbitalbasis_t) :: basis
@@ -381,7 +381,7 @@ contains
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
 
-    type(system_t), pointer :: sys
+    type(electrons_t), pointer :: sys
     type(wfs_elec_t), pointer :: hpsib
     integer :: itime, terms
 
@@ -464,7 +464,7 @@ contains
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
 
-    type(system_t), pointer :: sys
+    type(electrons_t), pointer :: sys
     integer :: itime
 
     PUSH_SUB(test_density_calc)
@@ -501,7 +501,7 @@ contains
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
 
-    type(system_t), pointer :: sys
+    type(electrons_t), pointer :: sys
     integer :: itime
 
     PUSH_SUB(test_density_calc)
@@ -537,7 +537,7 @@ contains
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
 
-    type(system_t), pointer :: sys
+    type(electrons_t), pointer :: sys
     type(exponential_t) :: te
     integer :: itime
 
@@ -587,7 +587,7 @@ contains
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
 
-    type(system_t), pointer :: sys
+    type(electrons_t), pointer :: sys
     integer :: itime
     type(subspace_t) :: sdiag
 
@@ -634,7 +634,7 @@ contains
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
 
-    type(system_t), pointer :: sys
+    type(electrons_t), pointer :: sys
     integer :: itime, ops, ops_default, ist, jst, nst
     type(wfs_elec_t) :: xx, yy
     FLOAT, allocatable :: tmp(:)
@@ -860,7 +860,7 @@ contains
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
 
-    type(system_t), pointer :: sys
+    type(electrons_t), pointer :: sys
 
     PUSH_SUB(test_derivatives)
 
@@ -889,7 +889,7 @@ contains
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
 
-    type(system_t), pointer :: sys
+    type(electrons_t), pointer :: sys
     integer :: itime
 
     PUSH_SUB(test_orthogonalization)
@@ -930,7 +930,7 @@ contains
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
 
-    type(system_t), pointer :: sys
+    type(electrons_t), pointer :: sys
 
     PUSH_SUB(test_interpolation)
 
@@ -966,7 +966,7 @@ contains
   subroutine test_ion_interaction(namespace)
     type(namespace_t),        intent(in) :: namespace
 
-    type(system_t), pointer :: sys
+    type(electrons_t), pointer :: sys
 
     PUSH_SUB(test_ion_interaction)
 
