@@ -28,6 +28,7 @@ module hamiltonian_elec_oct_m
   use derivatives_oct_m
   use energy_oct_m
   use exchange_operator_oct_m
+  use external_potential_oct_m
   use hamiltonian_elec_base_oct_m
   use epot_oct_m
   use gauge_field_oct_m
@@ -35,6 +36,7 @@ module hamiltonian_elec_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_abst_oct_m
+  use interaction_abst_oct_m
   use kick_oct_m
   use kpoints_oct_m
   use lalg_basic_oct_m
@@ -170,8 +172,6 @@ module hamiltonian_elec_oct_m
 
     type(exchange_operator_t), public :: exxop
     type(namespace_t), pointer :: namespace
-
-    type(linked_list_t), public :: external_potentials !< List with all the external potentials
 
   contains
     procedure :: update_span => hamiltonian_elec_span
@@ -540,6 +540,14 @@ contains
       end if
     end if
 
+    !We are building the list of external potentials
+    !This is done here at the moment, because we pass directly the mesh
+    !TODO: Once the abstract Hamiltonian knows about an abstract basis, we might move this to the 
+    !      abstract Hamiltonian 
+    call load_external_potentials(hm%external_potentials, namespace, gr%mesh)
+    !At the moment we do only have static external potential, so we never update them
+    call build_external_potentials()
+
     call profiling_out(prof)
     POP_SUB(hamiltonian_elec_init)
 
@@ -630,6 +638,35 @@ contains
       POP_SUB(hamiltonian_elec_init.init_phase)
     end subroutine init_phase
 
+    ! ---------------------------------------------------------
+    subroutine build_external_potentials()
+      type(interaction_iterator_t) :: iter
+      class(interaction_abst_t), pointer :: potential
+
+      PUSH_SUB(hamiltonian_elec_init.build_external_potentials)
+
+      SAFE_ALLOCATE(hm%v_ext_pot(1:gr%mesh%np)) 
+      hm%v_ext_pot(1:gr%mesh%np) = M_ZERO
+
+      call iter%start(hm%external_potentials)
+      do while (iter%has_next())
+        potential => iter%get_next_interaction() 
+        select type (potential)
+        class is (external_potential_t)
+
+          call potential%allocate_memory()
+          call potential%calculate(namespace)
+          call lalg_axpy(gr%mesh%np, M_ONE, potential%pot, hm%v_ext_pot)
+          call potential%deallocate_memory()
+
+        class default
+          ASSERT(.false.)
+        end select
+      end do
+
+      POP_SUB(hamiltonian_elec_init.build_external_potentials)
+    end subroutine build_external_potentials
+
   end subroutine hamiltonian_elec_init
 
   
@@ -658,6 +695,7 @@ contains
     SAFE_DEALLOCATE_P(hm%vberry)
     SAFE_DEALLOCATE_P(hm%a_ind)
     SAFE_DEALLOCATE_P(hm%b_ind)
+    SAFE_DEALLOCATE_A(hm%v_ext_pot)
     
     if (family_is_mgga_with_exc(hm%xc)) then
       SAFE_DEALLOCATE_P(hm%vtau)
@@ -1040,7 +1078,7 @@ contains
       if(ispin <= 2) then
         !$omp parallel do simd schedule(static)
         do ip = 1, mesh%np
-          this%hm_base%potential(ip, ispin) = this%vhxc(ip, ispin) + this%ep%vpsl(ip)
+          this%hm_base%potential(ip, ispin) = this%vhxc(ip, ispin) + this%ep%vpsl(ip) + this%v_ext_pot(ip)
         end do
 
         !> Adds PCM contributions

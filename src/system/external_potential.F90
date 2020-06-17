@@ -22,6 +22,7 @@ module external_potential_oct_m
   use global_oct_m
   use iihash_oct_m
   use interaction_abst_oct_m
+  use io_function_oct_m
   use linked_list_oct_m
   use mesh_oct_m
   use messages_oct_m
@@ -49,11 +50,13 @@ module external_potential_oct_m
     type(mesh_t),    pointer :: mesh  
     type(poisson_t), pointer :: poisson
 
-    FLOAT, allocatable :: pot(:)
+    FLOAT, allocatable, public :: pot(:)
 
   contains
     procedure :: update => external_potential_update
     procedure :: calculate => external_potential_calculate
+    procedure :: allocate_memory => external_potential_allocate
+    procedure :: deallocate_memory => external_potential_deallocate
     final :: external_potential_finalize
   end type external_potential_t
 
@@ -77,7 +80,6 @@ contains
     SAFE_ALLOCATE(this)
 
     this%mesh => mesh
-    SAFE_ALLOCATE(this%pot(1:mesh%np))
 
     POP_SUB(external_potential_init)
   end function external_potential_init
@@ -88,15 +90,40 @@ contains
 
     PUSH_SUB(external_potential_finalize)
 
-    SAFE_DEALLOCATE_A(this%pot)
+    call this%deallocate_memory()
 
     POP_SUB(external_potential_finalize)
 
   end subroutine external_potential_finalize
 
   ! ---------------------------------------------------------
-  logical function external_potential_update(this, requested_time) result(updated)
+  subroutine external_potential_allocate(this)
     class(external_potential_t), intent(inout) :: this
+
+    PUSH_SUB(external_potential_allocate)
+
+    SAFE_ALLOCATE(this%pot(1:this%mesh%np)) 
+
+    POP_SUB(external_potential_allocate)
+
+  end subroutine external_potential_allocate
+
+  ! ---------------------------------------------------------
+  subroutine external_potential_deallocate(this)
+    class(external_potential_t), intent(inout) :: this
+
+    PUSH_SUB(external_potential_deallocate)
+
+    SAFE_DEALLOCATE_A(this%pot)
+
+    POP_SUB(external_potential_deallocate)
+
+  end subroutine external_potential_deallocate
+
+  ! ---------------------------------------------------------
+  logical function external_potential_update(this, namespace, requested_time) result(updated)
+    class(external_potential_t), intent(inout) :: this
+    type(namespace_t),           intent(in)    :: namespace
     class(clock_t),              intent(in)    :: requested_time
 
     logical :: allowed_to_update
@@ -107,7 +134,7 @@ contains
     ASSERT(.not. (this%clock == requested_time))
 
     ! We can now compute the interaction from the updated quantities
-    call this%calculate()
+    call this%calculate(namespace)
 
     ! Update was successful, so set new interaction time
     updated = .true.
@@ -124,8 +151,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine external_potential_calculate(this)
+  subroutine external_potential_calculate(this, namespace)
     class(external_potential_t), intent(inout) :: this
+    type(namespace_t),           intent(in)    :: namespace
 
     FLOAT :: pot_re, pot_im, r, xx(1:MAX_DIM)
     FLOAT, allocatable :: den(:)
@@ -164,12 +192,12 @@ contains
         den(ip) = pot_re
       end do
 
-      if(poisson_solver_is_iterative(this%poisson_solver)) then
+      if(poisson_solver_is_iterative(this%poisson)) then
         ! pot has to be initialized before entering routine
         ! and our best guess for the potential is zero
         this%pot(1:this%mesh%np) = M_ZERO
       end if
-      call dpoisson_solve(this%poisson_solver, this%pot, den, all_nodes = .false.)
+      call dpoisson_solve(this%poisson, this%pot, den, all_nodes = .false.)
 
       SAFE_DEALLOCATE_A(den)
 
@@ -189,11 +217,11 @@ contains
 
     PUSH_SUB(load_external_potentials)
 
-    !%Variable ExternalPotentials
+    !%Variable StaticExternalPotentials
     !%Type block
-    !%Section System::Species
+    !%Section System
     !%Description
-    !% An external potential is a model potential added to the local potential of the Hamiltonian
+    !% An static external potential is a model potential added to the local potential of the Hamiltonian
     !%
     !% The format of this block is the following: 
     !% The first field defines the type of species (the valid options are detailed
@@ -231,7 +259,7 @@ contains
 
     ! First, find out if there is a Species block.
     n_pot_block = 0
-    if(parse_block(namespace, 'ExternalPotentials', blk) == 0) then
+    if(parse_block(namespace, 'StaticExternalPotentials', blk) == 0) then
       n_pot_block = parse_block_n(blk)
 
       do row = 0, n_pot_block-1
@@ -243,9 +271,8 @@ contains
         !Add this to the list
         call external_potentials%add(pot)  
       end do 
-
+      call parse_block_end(blk)
     end if
-    call parse_block_end(blk)
 
     POP_SUB(load_external_potentials)
   end subroutine load_external_potentials
@@ -296,12 +323,12 @@ contains
       
       select case(flag)
 
-      case(OPTION__EXTERNALPOTENTIALS__FILE)
-        call check_duplication(OPTION__EXTERNALPOTENTIALS__FILE)
+      case(OPTION__STATICEXTERNALPOTENTIALS__FILE)
+        call check_duplication(OPTION__STATICEXTERNALPOTENTIALS__FILE)
         call parse_block_string(blk, row, icol + 1, pot%filename)
 
-      case(OPTION__EXTERNALPOTENTIALS__POTENTIAL_FORMULA)
-        call check_duplication(OPTION__EXTERNALPOTENTIALS__POTENTIAL_FORMULA)
+      case(OPTION__STATICEXTERNALPOTENTIALS__POTENTIAL_FORMULA)
+        call check_duplication(OPTION__STATICEXTERNALPOTENTIALS__POTENTIAL_FORMULA)
         call parse_block_string(blk, row, icol + 1, pot%potential_formula)
         call conv_to_C_string(pot%potential_formula)
 
@@ -309,8 +336,8 @@ contains
           call messages_input_error(namespace, 'ExternalPotentials', 'potential_formula can only be used with user_defined')
         end if
 
-      case(OPTION__EXTERNALPOTENTIALS__DENSITY_FORMULA)
-        call check_duplication(OPTION__EXTERNALPOTENTIALS__DENSITY_FORMULA)
+      case(OPTION__STATICEXTERNALPOTENTIALS__DENSITY_FORMULA)
+        call check_duplication(OPTION__STATICEXTERNALPOTENTIALS__DENSITY_FORMULA)
         call parse_block_string(blk, row, icol + 1, pot%density_formula)
         call conv_to_C_string(pot%density_formula)
               
@@ -328,15 +355,15 @@ contains
     ! CHECK THAT WHAT WE PARSED MAKES SENSE
     
 
-    if(pot%type == EXTERNAL_POT_USDEF .and. .not. parameter_defined(OPTION__EXTERNALPOTENTIALS__POTENTIAL_FORMULA)) then
+    if(pot%type == EXTERNAL_POT_USDEF .and. .not. parameter_defined(OPTION__STATICEXTERNALPOTENTIALS__POTENTIAL_FORMULA)) then
       call messages_input_error(namespace, 'ExternalPotentials', "The 'potential_formula' parameter is missing.")
     end if
 
-    if(pot%type == EXTERNAL_POT_CHARGE_DENSITY .and. .not. parameter_defined(OPTION__EXTERNALPOTENTIALS__DENSITY_FORMULA)) then
+    if(pot%type == EXTERNAL_POT_CHARGE_DENSITY .and. .not. parameter_defined(OPTION__STATICEXTERNALPOTENTIALS__DENSITY_FORMULA)) then
       call messages_input_error(namespace, 'ExternalPotentials', "The 'density_formula' parameter is missing.")
     end if
     
-    if(pot%type == EXTERNAL_POT_FROM_FILE .and. .not. (parameter_defined(OPTION__EXTERNALPOTENTIALS__FILE))) then
+    if(pot%type == EXTERNAL_POT_FROM_FILE .and. .not. (parameter_defined(OPTION__STATICEXTERNALPOTENTIALS__FILE))) then
       call messages_input_error(namespace, 'ExternalPotentials', "The 'file' parameter is missing.")
     end if
 
