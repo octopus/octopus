@@ -254,6 +254,8 @@ contains
       
       if(debug%info) call bc_write_info(this, mesh, namespace)
       
+      call messages_print_stress(stdout)
+      
       SAFE_DEALLOCATE_A(mf)
     end if
 
