@@ -463,7 +463,8 @@ contains
     !%   
     !%End
 
-    par_strategy = OPTION__PES_FLUX_PARALLELIZATION__PF_NONE
+    par_strategy      = OPTION__PES_FLUX_PARALLELIZATION__PF_NONE
+    this%par_strategy = par_strategy
     if(mesh%parallel_in_domains) then
 
       if(this%surf_shape == M_SPHERICAL) then
