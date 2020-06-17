@@ -786,7 +786,7 @@ contains
         kgrid = M_CARTESIAN
       case (M_CUBIC)
         kgrid = M_CARTESIAN
-        if (mdim == 1)  this%kgrid = M_POLAR
+        if (mdim == 1)  kgrid = M_POLAR
     end select
         
     call parse_variable(namespace, 'PES_Flux_Momenutum_Grid', kgrid, this%kgrid)
