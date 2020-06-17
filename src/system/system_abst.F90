@@ -354,7 +354,7 @@ contains
     type(clock_t),             intent(in)    :: requested_time
     class(interaction_abst_t), intent(inout) :: interaction
 
-    logical :: ahead_in_time, behind_in_time, right_in_time, need_to_copy
+    logical :: ahead_in_time, right_in_time, need_to_copy
     integer :: iq, q_id
 
     PUSH_SUB(system_update_exposed_quantities)
