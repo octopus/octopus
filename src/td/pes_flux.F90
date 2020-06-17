@@ -72,7 +72,7 @@ module pes_flux_oct_m
   type pes_flux_t
     private
     !< NOTE: On unfortunate choice of nomenclature. In this module we use the variable k to indicate 
-    !< the momentum of photoelectrons. This has to be distinguished from the electrons' crystal momentum 
+    !< the momentum of photoelectrons. This has to be distinguished from the electrons crystal momentum 
     !< in periodic systems and its discretized values (AKA kpoints). 
     
     integer          :: nkpnts                         !< total number of k-points
