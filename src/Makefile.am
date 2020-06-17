@@ -529,7 +529,7 @@ electrons_f_srcs =                                 \
 	electrons/preconditioners.F90              \
 	electrons/stress.F90                       \
 	electrons/subspace.F90                     \
-	electrons/system.F90                       \
+	electrons/electrons.F90                    \
 	electrons/v_ks.F90                         \
 	electrons/xc_ks_inversion.F90              \
 	electrons/xc_oep.F90
