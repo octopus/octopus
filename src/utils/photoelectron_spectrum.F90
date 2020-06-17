@@ -91,7 +91,7 @@ program photoelectron_spectrum
   integer              :: pes_method, option 
 
   type(multicomm_t)    :: mc
-  integer              :: index_range(4)
+  integer              :: index_range(4), what
 
   call getopt_init(ierr)
   if(ierr /= 0) then
@@ -187,7 +187,7 @@ program photoelectron_spectrum
   center = (/0,0,0/)
   pvec = (/1,0,0/)
 
-  pesout%what = OPTION__PHOTOELECTRONSPECTRUMOUTPUT__ENERGY_TOT 
+  what = OPTION__PHOTOELECTRONSPECTRUMOUTPUT__ENERGY_TOT 
   pesout%pvec = pvec
 
   have_zweight_path = kpoints_have_zero_weight_path(sb%kpoints)
@@ -205,7 +205,7 @@ program photoelectron_spectrum
       pol = (/0,1,0/) 
       pvec = (/0,0,1/)
       
-      pesout%what = OPTION__PHOTOELECTRONSPECTRUMOUTPUT__VELOCITY_MAP_CUT 
+      what = OPTION__PHOTOELECTRONSPECTRUMOUTPUT__VELOCITY_MAP_CUT 
       pesout%pol = (/0,1,0/) 
       pesout%pvec = (/0,0,1/)
     end if
@@ -214,7 +214,7 @@ program photoelectron_spectrum
       ! write the full ARPES in vtk format (this could be a big file)
       pol = (/0,0,1/) 
       
-      pesout%what = OPTION__PHOTOELECTRONSPECTRUMOUTPUT__ARPES
+      what = OPTION__PHOTOELECTRONSPECTRUMOUTPUT__ARPES
       pesout%pol = (/0,0,1/) 
     end if
     
@@ -224,7 +224,7 @@ program photoelectron_spectrum
       pol = (/0,0,1/) 
       pvec = (/0,1,0/)
 
-      pesout%what = OPTION__PHOTOELECTRONSPECTRUMOUTPUT__ARPES_CUT
+      what = OPTION__PHOTOELECTRONSPECTRUMOUTPUT__ARPES_CUT
       pesout%pol = (/0,0,1/) 
       pesout%pvec = (/0,1,0/)
     end if 
@@ -278,7 +278,7 @@ program photoelectron_spectrum
   !%Option arpes_cut bit(8)
   !% ARPES cut on a plane following a zero-weight path in reciprocal space.
   !%End
-  call parse_variable(global_namespace,'PhotoelectronSpectrumOutput', pesout%what, pesout%what)
+  call parse_variable(global_namespace,'PhotoelectronSpectrumOutput', what, pesout%what)
   
   ! TODO: I think it would be better to move these options in the
   ! input file to have more flexibility to combine and to keep
