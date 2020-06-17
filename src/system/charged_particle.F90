@@ -295,8 +295,8 @@ contains
   end subroutine charged_particle_update_exposed_quantity
 
   ! ---------------------------------------------------------
-  subroutine charged_particle_copy_quantities_to_interaction(this, interaction)
-    class(charged_particle_t), intent(inout) :: this
+  subroutine charged_particle_copy_quantities_to_interaction(partner, interaction)
+    class(charged_particle_t), intent(inout) :: partner
     class(interaction_abst_t), intent(inout) :: interaction
 
     PUSH_SUB(classical_particle_copy_quantities_to_interaction)
@@ -305,7 +305,7 @@ contains
     type is (interaction_lorentz_force_t)
       ! Nothing to copy
     class default
-      call this%classical_particle_t%copy_quantities_to_interaction(interaction)
+      call partner%classical_particle_t%copy_quantities_to_interaction(interaction)
     end select
 
     POP_SUB(charged_particle_copy_quantities_to_interaction)
