@@ -22,6 +22,7 @@ module interaction_abst_oct_m
   use global_oct_m
   use linked_list_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use profiling_oct_m
   implicit none
 
@@ -52,16 +53,20 @@ module interaction_abst_oct_m
   end type interaction_iterator_t
 
   abstract interface
-    logical function interaction_update(this, requested_time)
+    logical function interaction_update(this, namespace, requested_time)
       import interaction_abst_t
       import clock_t
+      import namespace_t
       class(interaction_abst_t), intent(inout) :: this
+      type(namespace_t),         intent(in)    :: namespace
       class(clock_t),            intent(in)    :: requested_time
     end function interaction_update
 
-    subroutine interaction_calculate(this)
+    subroutine interaction_calculate(this, namespace)
       import interaction_abst_t
+      import namespace_t
       class(interaction_abst_t), intent(inout) :: this
+      type(namespace_t),         intent(in)    :: namespace
     end subroutine interaction_calculate
   end interface
 
