@@ -40,6 +40,7 @@ module hamiltonian_elec_oct_m
   use lalg_basic_oct_m
   use lasers_oct_m
   use lda_u_oct_m
+  use linked_list_oct_m
   use mesh_oct_m
   use messages_oct_m
   use multicomm_oct_m
@@ -169,6 +170,8 @@ module hamiltonian_elec_oct_m
 
     type(exchange_operator_t), public :: exxop
     type(namespace_t), pointer :: namespace
+
+    type(linked_list_t), public :: external_potentials !< List with all the external potentials
 
   contains
     procedure :: update_span => hamiltonian_elec_span
@@ -1622,7 +1625,6 @@ contains
 
     POP_SUB(zhamiltonian_elec_apply_all)
   end subroutine zhamiltonian_elec_apply_all
-
 
 #include "undef.F90"
 #include "real.F90"

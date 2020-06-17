@@ -490,6 +490,7 @@ system_f_srcs =                                 \
 	system/elf.F90                          \
 	system/energy_calc.F90                  \
 	system/exponential.F90                  \
+        system/external_potential.F90           \
 	system/forces.F90                       \
 	system/ghost_interaction.F90            \
 	system/interaction_abst.F90             \

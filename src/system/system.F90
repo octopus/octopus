@@ -24,6 +24,7 @@ module system_oct_m
   use density_oct_m
   use elf_oct_m
   use energy_calc_oct_m
+  use external_potential_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
@@ -121,7 +122,11 @@ contains
 
     call hamiltonian_elec_init(sys%hm, sys%namespace, sys%gr, sys%geo, sys%st, sys%ks%theory_level, &
       sys%ks%xc, sys%mc, need_exchange = output_need_exchange(sys%outp) .or. sys%ks%oep%level /= XC_OEP_NONE)
-    
+
+    !We are building the list of external potentials
+    !At the moment the information are still obtained from the species block
+    call load_external_potentials(sys%hm%external_potentials, sys%namespace)
+
     if(poisson_is_multigrid(sys%hm%psolver)) call grid_create_multigrid(sys%gr, sys%namespace, sys%geo, sys%mc)
 
     if (sys%hm%pcm%run_pcm .and. sys%mc%par_strategy /= P_STRATEGY_SERIAL .and. sys%mc%par_strategy /= P_STRATEGY_STATES) then
