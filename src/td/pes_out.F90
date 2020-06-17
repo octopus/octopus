@@ -77,7 +77,6 @@ contains
     character(len=512) :: filename
     type(cube_t) :: cube
     type(cube_function_t) :: cf
-    integer :: ii
     FLOAT :: dk(3)  
 
     PUSH_SUB(pes_out_velocity_map)
@@ -92,9 +91,6 @@ contains
       ! Ignore Lk and use pmesh
       dk(:) = M_ZERO
       dk(1:sb%dim) = abs(Lk(2,1:sb%dim)-Lk(1,1:sb%dim))
-!       do ii = 1, sb%dim
-!         dk(ii) = units_from_atomic(sqrt(units_out%energy), dk(ii))
-!       end do
     end if
   
 #if defined(HAVE_NETCDF)  

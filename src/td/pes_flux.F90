@@ -180,16 +180,17 @@ contains
     FLOAT              :: border(MAX_DIM)       ! distance of surface from border
     FLOAT              :: offset(MAX_DIM)       ! offset for border
     integer            :: stst, stend, kptst, kptend, sdim, mdim, pdim
-    integer            :: imdim, idir
-    integer            :: isp, ikp
-    integer            :: il, ik
+    integer            :: imdim
+    integer            :: isp
+    integer            :: il
 
-    FLOAT, allocatable :: k_dot_aux(:)
     integer            :: nstepsphir, nstepsthetar
     integer            :: ll, mm
     integer            :: default_shape
     FLOAT              :: fc_ptdens        !< density of points on face 
     
+    integer            :: par_strategy
+    logical            :: use_symmetry
 
     PUSH_SUB(pes_flux_init)
 
@@ -461,18 +462,18 @@ contains
     !%   
     !%End
 
-    this%par_strategy = OPTION__PES_FLUX_PARALLELIZATION__PF_NONE
+    par_strategy = OPTION__PES_FLUX_PARALLELIZATION__PF_NONE
     if(mesh%parallel_in_domains) then
 
       if(this%surf_shape == M_SPHERICAL) then
-        this%par_strategy = OPTION__PES_FLUX_PARALLELIZATION__PF_TIME  &
+        par_strategy = OPTION__PES_FLUX_PARALLELIZATION__PF_TIME  &
                           + OPTION__PES_FLUX_PARALLELIZATION__PF_SURFACE
       else 
-        this%par_strategy = OPTION__PES_FLUX_PARALLELIZATION__PF_SURFACE    
-        if(mesh%sb%dim == 1) this%par_strategy = OPTION__PES_FLUX_PARALLELIZATION__PF_TIME  
+        par_strategy = OPTION__PES_FLUX_PARALLELIZATION__PF_SURFACE    
+        if(mesh%sb%dim == 1) par_strategy = OPTION__PES_FLUX_PARALLELIZATION__PF_TIME  
       end if
 
-      call parse_variable(namespace, 'PES_Flux_Parallelization', this%par_strategy, this%par_strategy)
+      call parse_variable(namespace, 'PES_Flux_Parallelization', par_strategy, this%par_strategy)
       if(.not.varinfo_valid_option('PES_Flux_Parallelization', this%par_strategy, is_flag = .true.)) &
         call messages_input_error(namespace,'PES_Flux_Parallelization')
 
@@ -545,11 +546,11 @@ contains
     !% or 
     !% PES_Flux_Shape = m_sph and PES_Flux_Momenutum_Grid = m_polar
     !%End
-    this%use_symmetry = .false.
+    use_symmetry = .false.
     if ((this%surf_shape == M_CUBIC .or. this%surf_shape == M_PLANE) &
-         .and. this%kgrid == M_CARTESIAN .and. mdim == 3) this%use_symmetry = .true.
-    if (this%surf_shape == M_SPHERICAL .and. this%kgrid == M_POLAR) this%use_symmetry = .true.
-    call parse_variable(namespace, 'PES_Flux_UseSymmetries', this%use_symmetry, this%use_symmetry)
+         .and. this%kgrid == M_CARTESIAN .and. mdim == 3) use_symmetry = .true.
+    if (this%surf_shape == M_SPHERICAL .and. this%kgrid == M_POLAR) use_symmetry = .true.
+    call parse_variable(namespace, 'PES_Flux_UseSymmetries', use_symmetry, this%use_symmetry)
     call messages_print_var_value(stdout, 'PES_Flux_UseSymmetries', this%use_symmetry)
     
     
@@ -645,7 +646,6 @@ contains
   subroutine pes_flux_end(this)
     type(pes_flux_t), intent(inout) :: this
 
-    integer          :: ii  
     PUSH_SUB(pes_flux_end)
 
     if(this%surf_shape == M_SPHERICAL) then
@@ -699,8 +699,8 @@ contains
 
     integer           :: mdim, pdim
     integer           :: kptst, kptend  
-    integer           :: isp, ikp, ikpt, ibz1, ibz2
-    integer           :: il, ll, mm, idim, idir
+    integer           :: ikp, ikpt
+    integer           :: ll, mm, idim, idir
     integer           :: ikk, ith, iph, iomk,ie, ik1, ik2, ik3, kgrid_block_dim
     FLOAT             :: kmax(1:MAX_DIM), kmin(1:MAX_DIM), kact, thetak, phik
     type(block_t)     :: blk
@@ -708,10 +708,10 @@ contains
     FLOAT             :: Emin, Emax, DE , kvec(1:3) 
     integer           :: nkp_out, nkmin, nkmax
     
-    integer             :: ig
+    integer             :: kgrid
     FLOAT, allocatable  :: gpoints(:,:), gpoints_reduced(:,:)
     FLOAT               :: dk(1:3), kpoint(1:3), Dthetak, Dphik
-    logical             :: use_enegy_grid
+    logical             :: use_enegy_grid, arpes_grid
       
     PUSH_SUB(pes_flux_reciprocal_mesh_gen)  
 
@@ -742,15 +742,15 @@ contains
     ! default values
     select case (this%surf_shape)
       case (M_SPHERICAL)
-        this%kgrid = M_POLAR
+        kgrid = M_POLAR
       case (M_PLANE)
-        this%kgrid = M_CARTESIAN
+        kgrid = M_CARTESIAN
       case (M_CUBIC)
-        this%kgrid = M_CARTESIAN
+        kgrid = M_CARTESIAN
         if (mdim == 1)  this%kgrid = M_POLAR
     end select
         
-    call parse_variable(namespace, 'PES_Flux_Momenutum_Grid', this%kgrid, this%kgrid)
+    call parse_variable(namespace, 'PES_Flux_Momenutum_Grid', kgrid, this%kgrid)
     if(.not.varinfo_valid_option('PES_Flux_Momenutum_Grid', this%kgrid, is_flag = .true.)) &
       call messages_input_error(namespace,'PES_Flux_Momenutum_Grid')
     call messages_print_var_option(stdout, 'PES_Flux_Momenutum_Grid', this%kgrid)
@@ -1093,8 +1093,8 @@ contains
         !% By default true when <tt>PES_Flux_Shape = pln</tt> and a <tt>KPointsPath</tt>
         !% is specified.
         !%End
-        this%arpes_grid = kpoints_have_zero_weight_path(sb%kpoints)
-        call parse_variable(namespace, 'PES_Flux_ARPES_grid', this%arpes_grid, this%arpes_grid)
+        arpes_grid = kpoints_have_zero_weight_path(sb%kpoints)
+        call parse_variable(namespace, 'PES_Flux_ARPES_grid', arpes_grid, this%arpes_grid)
         call messages_print_var_value(stdout, "PES_Flux_ARPES_grid", this%arpes_grid)       
       end if      
                 
@@ -1526,7 +1526,7 @@ contains
       type(pes_flux_t),   intent(inout) :: this
         
       integer :: sign
-      FLOAT   :: kpar(1:pdim), kpoint(1:3), val
+      FLOAT   :: kpar(1:pdim), val
 
       ikp = ikp + 1
       
@@ -1693,12 +1693,12 @@ contains
     type(mesh_t),        intent(in)    :: mesh
     type(states_elec_t), intent(in)    :: st
 
-    integer            :: stst, stend, kptst, kptend, sdim, mdim
-    integer            :: ist, ik, isdim, imdim, j1, j2, jvec(1:2)
+    integer            :: kptst, kptend,  mdim
+    integer            :: ik, j1, j2, jvec(1:2)
     integer            :: isp, ikp, ikp_start, ikp_end
     integer            :: ik_map
     
-    integer            :: ikp1, ikp2, fdim, idir,pdim, nfaces, ifc, n_dir
+    integer            :: fdim, idir,pdim, nfaces, ifc, n_dir
     CMPLX              :: tmp
     FLOAT              :: Jac(1:2,1:2), jdet, kpoint(1:3), vec(1:3), lvec(1:3)
     
@@ -1934,17 +1934,17 @@ contains
 
     integer            :: stst, stend, kptst, kptend, sdim, mdim
     integer            :: ist, ik, isdim, imdim, ik_map
-    integer            :: isp, ikp, itstep
+    integer            :: ikp, itstep
     integer            :: idir, n_dir, nfaces
     CMPLX, allocatable :: Jk_cub(:,:,:,:), spctramp_cub(:,:,:,:)
     integer            :: ikp_start, ikp_end, isp_start, isp_end
-    FLOAT              :: vec, kpoint(1:3), k_dot_r, expkr 
+    FLOAT              :: vec, kpoint(1:3)
     integer            :: ifc
     CMPLX, allocatable :: wfpw(:), gwfpw(:)
     CMPLX, allocatable :: phase(:,:),vphase(:,:)
     
     integer            :: tdstep_on_node
-    integer            :: ng, ig, nfp
+    integer            :: nfp
     
     !Symmetry helpers
     integer            :: ikpu, ikpv, ikpz, dir_on_face(1:2)
@@ -2393,7 +2393,7 @@ contains
     integer               :: ip_global, npface
     integer               :: rankmin, nsurfaces
     logical               :: in_ab
-    integer               :: ip_local, nsrfcpnts, NN(1:MAX_DIM,1:2), idx(1:MAX_DIM,1:2) 
+    integer               :: ip_local, NN(1:MAX_DIM,1:2), idx(1:MAX_DIM,1:2) 
     integer               :: isp_end, isp_start, ifc, n_dir, nfaces, mindim
     FLOAT                 :: RSmax(1:2),RSmin(1:2),RS(1:2), dRS(1:2), weight
 

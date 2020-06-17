@@ -75,7 +75,7 @@ contains
     character(len=1024) :: user_def_expr
 
     FLOAT, allocatable  :: mf(:)
-    FLOAT               :: abheight, abwidth
+    FLOAT               :: abheight, abwidth, abwidth_def
     type(block_t)       :: blk
 
     character(len=50)   :: str
@@ -224,8 +224,8 @@ contains
       !% shape use ABShape. 
       !%End
 !       call messages_obsolete_variable('ABWidth', 'ABShape')
-      abwidth = bounds(1,2)-bounds(1,1)
-      call parse_variable(namespace, 'ABWidth', abwidth, abwidth, units_inp%length)
+      abwidth_def = bounds(1,2)-bounds(1,1)
+      call parse_variable(namespace, 'ABWidth', abwidth_def, abwidth, units_inp%length)
       bounds(1:mesh%sb%dim,1) = bounds(1:mesh%sb%dim,2) - abwidth
 
       maxdim = mesh%sb%dim

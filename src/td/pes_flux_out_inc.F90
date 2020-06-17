@@ -158,10 +158,10 @@ subroutine pes_flux_pmesh_pln(this, namespace, dim, kpoints, ll, pmesh, idxZero,
    
 
 
-  integer :: ik, j1, j2, j3, nk(1:3), ip1, ip2, ip3, idir, err
+  integer :: ik, j1, j2, j3, nk(1:3), ip1, ip2, ip3, err
   FLOAT :: kpt(1:3)
 
-  integer, allocatable :: Lkpt(:,:), idx(:,:), idx_inv(:,:), ikidx(:,:)
+  integer, allocatable :: Lkpt(:,:), ikidx(:,:)
 
   integer :: nkpt, kpth_dir, ikp
   FLOAT :: zero_thr
@@ -454,7 +454,7 @@ subroutine pes_flux_pmesh_cub(this, namespace, dim, kpoints, ll, pmesh, idxZero,
   
   
   integer :: ikpt,ikp, ik1, ik2, ik3
-  FLOAT   :: vec(1:3), tmp, min
+  FLOAT   :: min
   
   PUSH_SUB(pes_flux_pmesh_cub)
   
@@ -517,7 +517,7 @@ subroutine pes_flux_pmesh_sph(this, dim, kpoints, ll, pmesh, idxZero, krng, Lp)
                                                         
 
   integer            :: iomk
-  integer            :: ikk, ith, iph, iphi
+  integer            :: ikk, ith, iph
   FLOAT              :: phik, thetak, kact, kvec(1:3), Dthetak, Dphik
   
   integer            :: ip1, ip2, ip3
@@ -842,7 +842,7 @@ subroutine pes_flux_out_vmap_cub(pesK, file, namespace, ll, pmesh, dim)
   FLOAT,             intent(in) :: pmesh(:,:,:,:)  
   integer,           intent(in) :: dim
   
-  integer :: ik1,ik2,ik3, idir, idim
+  integer :: ik1,ik2,ik3, idir
   integer :: iunit
   
   PUSH_SUB(pes_flux_out_vmap_cub)
@@ -953,9 +953,8 @@ subroutine pes_flux_out_cartesian_ascii(this, st, namespace, dim, path )
   integer,             intent(in)    :: dim
   character(len=*),    intent(in)    :: path 
   
-  integer            :: stst, stend, kptst, kptend, sdim, mdim, idir
-  integer            :: iunit
-  integer            :: ik, ist, isdim, ikp, ikpt, ik1, ik2, ik3
+  integer            :: stst, stend, kptst, kptend, sdim, mdim
+  integer            :: ik, ist, isdim, ikp, ik1, ik2, ik3
   FLOAT, allocatable ::  spctrout(:,:,:), pmesh(:,:,:,:)
   
   PUSH_SUB(pes_flux_out_cartesian_ascii)
@@ -1085,16 +1084,14 @@ subroutine pes_flux_out_polar_ascii(this, st, namespace, dim, efile, mfile)
   integer            :: ist, ik, isdim
   integer            :: ikp, iomk, ikp_save, iomk_save
   integer            :: ikk, ith, iph, iphi
-  FLOAT              :: phik, thetak, kact,kmin, Dthetak, Dphik, Lphik
+  FLOAT              :: phik, thetak, kact, Dthetak, Dphik, Lphik
 
   integer            :: iunitone, iunittwo
   FLOAT, allocatable :: spctrout_cub(:), spctrout_sph(:,:)
   FLOAT, allocatable :: spctrsum(:,:,:,:)
   FLOAT              :: weight
   logical           :: energy_resolved, momentum_resolved
-
   
-  integer            :: itot
 
   PUSH_SUB(pes_flux_out_polar_ascii)
 
