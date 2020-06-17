@@ -187,8 +187,18 @@ set_precision("default");
 # Conditions can be of the form: (avail[able] COND1 [(and|,) COND2 ...])
 
 # global variables, defining the state of the parser:
+
+# array to hold a set of conditions:
 my @conditions= ();
+
+# recursion level of nested if blocks:
 my $if_level = 0;
+
+# array of flags, indicating whether an if..else..endif block has been satisfied.
+# The array index is the recursion level.
+# Once a condition in a if..elseif..else..endif structure has been met, the if_done
+# for this level is set to 1 and further blocks of the same level will be skipped.
+my @if_started = ();
 my @if_done = ();
 
 sub parse_condition {
@@ -236,10 +246,13 @@ sub check_conditions {
     my $result=1;
 
     if($if_level>0) {
+
+        # collect required options in $_:
         foreach(@{$_[0]}) {
             parse_condition($_, \@required_options);
         }
     
+        # check whether all required options are present:
         foreach(@required_options) {
             $result = $result * ($options_available =~ /$_/i);
         }
@@ -248,8 +261,9 @@ sub check_conditions {
 }
 
 
-# Set test_succeeded flag to 'TRUE'. Only change to 'FALSE' if a test fails.
+# Set test_succeeded flag to 'TRUE' (=1). Only change to 'FALSE' (=0) if a test fails.
 $test_succeeded = 1;
+$if_done[0] = 0;
 
 $pwd = get_env("PWD");
 if (!$opt_m) {
@@ -394,12 +408,15 @@ while ($_ = <TESTSUITE>) {
             # Entering an IF region
             push(@conditions,$1);
             $if_level += 1;
+            $if_started[$if_level] = 0;
             $if_done[$if_level] = 0;
     
         }
     
         elsif ( $_ =~ /^elseif\s\((.*)\)\s*;\s*then\s*$/i ) {
     
+            $if_done[$if_level] = $if_started[$if_level];
+            $if_started[$if_level] = 0;
             pop(@conditions);
             push(@conditions,$1);
     
@@ -407,11 +424,15 @@ while ($_ = <TESTSUITE>) {
     
         elsif ( $_ =~ /^else\s*$/i ) {
 
+            $if_done[$if_level] = $if_started[$if_level];
+            $if_started[$if_level] = 0;
             pop(@conditions);
         }
     
         elsif ( $_ =~ /^endif\s*$/i ) {
     
+            $if_done[$if_level] = $if_started[$if_level];
+            $if_started[$if_level] = 0;
             if ($if_level==0) { die255("Ill-formed test file (unpaired endif.)\n"); }
             # Exiting IF region
             pop(@conditions);
@@ -591,6 +612,7 @@ while ($_ = <TESTSUITE>) {
                         $failures++;
                     }
                 }
+                $if_started[$if_level]=1;
             } 
         }
 
