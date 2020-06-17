@@ -1380,7 +1380,8 @@ subroutine pes_flux_out_polar_ascii(this, st, namespace, dim, efile, mfile)
               ikp = ikp + 1
               if(iph == 0) ikp_save = ikp
               phik = iph * M_TWO * M_PI / this%nstepsphik
-              write(iunittwo,'(3(1x,e18.10E3))') units_from_atomic(unit_one/units_out%length,kact), phik, spctrout_cub(ikp)
+              write(iunittwo,'(3(1x,e18.10E3))') units_from_atomic(unit_one/units_out%length,kact), &
+                                                 phik, spctrout_cub(ikp)
             end do
             ! just repeat the result for output
             write(iunittwo,'(3(1x,e18.10E3))') &
@@ -1430,7 +1431,8 @@ subroutine pes_flux_out_polar_ascii(this, st, namespace, dim, efile, mfile)
 
                 phik = iph * Dphik + this%phik_rng(1)
                 if(iph == 0) ikp_save = ikp
-                write(iunittwo,'(4(1x,e18.10E3))') units_from_atomic(unit_one/units_out%length,kact), thetak, phik, spctrout_cub(ikp)
+                write(iunittwo,'(4(1x,e18.10E3))') units_from_atomic(unit_one/units_out%length,kact), thetak, & 
+                                                   phik, spctrout_cub(ikp)
 
                 ! just repeat the result for output
                 if(iph == (this%nstepsphik - 1)) &
