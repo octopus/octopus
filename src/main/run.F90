@@ -185,7 +185,7 @@ contains
 
     else
       ! Fall back to old behaviour
-      sys => system_init(namespace)
+      sys => electrons_t(namespace)
 
       call messages_print_stress(stdout, 'Approximate memory requirements')
       call memory_run(sys)

@@ -227,7 +227,7 @@ contains
       ! setup Hamiltonian
       message(1) = 'Info: Setting up Hamiltonian for linear response.'
       call messages_info(1)
-      call system_h_setup(sys)
+      call sys%h_setup()
 
       do dir = 1, ndir
         call lr_init(lr(dir,1))

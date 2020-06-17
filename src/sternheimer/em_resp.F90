@@ -201,7 +201,7 @@ contains
     ! setup Hamiltonian
     message(1) = 'Info: Setting up Hamiltonian for linear response'
     call messages_info(1)
-    call system_h_setup(sys)
+    call sys%h_setup()
 
     use_kdotp = simul_box_is_periodic(gr%sb) .and. .not. em_vars%force_no_kdotp
 

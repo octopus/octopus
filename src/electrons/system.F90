@@ -52,9 +52,7 @@ module electrons_oct_m
 
   private
   public ::               &
-    electrons_t,          &
-    system_init,          &
-    system_h_setup
+    electrons_t
 
   type :: electrons_t
     ! Components are public by default
@@ -68,20 +66,25 @@ module electrons_oct_m
     type(namespace_t)            :: namespace
     type(hamiltonian_elec_t)     :: hm
   contains
-    final :: system_finalize
+    procedure :: h_setup => electrons_h_setup
+    final :: electrons_finalize
   end type electrons_t
   
+  interface electrons_t
+    procedure electrons_constructor
+  end interface electrons_t
+
 contains
   
   !----------------------------------------------------------
-  function system_init(namespace) result(sys)
+  function electrons_constructor(namespace) result(sys)
     class(electrons_t), pointer    :: sys
     type(namespace_t),  intent(in) :: namespace
 
     type(profile_t), save :: prof
 
-    PUSH_SUB(system_init)
-    call profiling_in(prof,"SYSTEM_INIT")
+    PUSH_SUB(electrons_constructor)
+    call profiling_in(prof,"ELECTRONS_CONSTRUCTOR")
 
     SAFE_ALLOCATE(sys)
 
@@ -129,15 +132,14 @@ contains
     end if
 
     call profiling_out(prof)
-    POP_SUB(system_init)
-
+    POP_SUB(electrons_constructor)
   contains
 
     ! ---------------------------------------------------------
     subroutine parallel_init()
       integer :: index_range(4)
 
-      PUSH_SUB(system_init.parallel_init)
+      PUSH_SUB(electrons_constructor.parallel_init)
 
       ! store the ranges for these two indices (serves as initial guess
       ! for parallelization strategy)
@@ -150,16 +152,16 @@ contains
       call multicomm_init(sys%mc, sys%namespace, mpi_world, calc_mode_par_parallel_mask(), calc_mode_par_default_parallel_mask(), &
         mpi_world%size, index_range, (/ 5000, 1, 1, 1 /))
 
-      POP_SUB(system_init.parallel_init)
+      POP_SUB(electrons_constructor.parallel_init)
     end subroutine parallel_init
 
-  end function system_init
+  end function electrons_constructor
 
   !----------------------------------------------------------
-  subroutine system_finalize(sys)
+  subroutine electrons_finalize(sys)
     type(electrons_t), intent(inout) :: sys
 
-    PUSH_SUB(system_finalize)
+    PUSH_SUB(electrons_finalize)
 
     call hamiltonian_elec_end(sys%hm)
 
@@ -182,15 +184,14 @@ contains
 
     SAFE_DEALLOCATE_P(sys%gr)
 
-    POP_SUB(system_finalize)
-  end subroutine system_finalize
-
+    POP_SUB(electrons_finalize)
+  end subroutine electrons_finalize
 
   !----------------------------------------------------------
-  subroutine system_h_setup(sys, calc_eigenval, calc_current)
-    type(electrons_t), intent(inout) :: sys
-    logical, optional, intent(in)    :: calc_eigenval !< default is true
-    logical, optional, intent(in)    :: calc_current !< default is true
+  subroutine electrons_h_setup(this, calc_eigenval, calc_current)
+    class(electrons_t), intent(inout) :: this
+    logical,  optional, intent(in)    :: calc_eigenval !< default is true
+    logical,  optional, intent(in)    :: calc_current !< default is true
 
     integer, allocatable :: ind(:)
     integer :: ist, ik
@@ -198,26 +199,27 @@ contains
     logical :: calc_eigenval_
     logical :: calc_current_
 
-    PUSH_SUB(system_h_setup)
+    PUSH_SUB(electrons_h_setup)
 
     calc_eigenval_ = optional_default(calc_eigenval, .true.)
     calc_current_ = optional_default(calc_current, .true.)
-    call states_elec_fermi(sys%st, sys%namespace, sys%gr%mesh)
-    call density_calc(sys%st, sys%gr, sys%st%rho)
-    call v_ks_calc(sys%ks, sys%namespace, sys%hm, sys%st, sys%geo, calc_eigenval = calc_eigenval_, calc_current = calc_current_) ! get potentials
+    call states_elec_fermi(this%st, this%namespace, this%gr%mesh)
+    call density_calc(this%st, this%gr, this%st%rho)
+    call v_ks_calc(this%ks, this%namespace, this%hm, this%st, this%geo, calc_eigenval = calc_eigenval_, &
+      calc_current = calc_current_) ! get potentials
 
-    if(sys%st%restart_reorder_occs .and. .not. sys%st%fromScratch) then
+    if(this%st%restart_reorder_occs .and. .not. this%st%fromScratch) then
       message(1) = "Reordering occupations for restart."
       call messages_info(1)
 
-      SAFE_ALLOCATE(ind(1:sys%st%nst))
-      SAFE_ALLOCATE(copy_occ(1:sys%st%nst))
+      SAFE_ALLOCATE(ind(1:this%st%nst))
+      SAFE_ALLOCATE(copy_occ(1:this%st%nst))
 
-      do ik = 1, sys%st%d%nik
-        call sort(sys%st%eigenval(:, ik), ind)
-        copy_occ(1:sys%st%nst) = sys%st%occ(1:sys%st%nst, ik)
-        do ist = 1, sys%st%nst
-          sys%st%occ(ist, ik) = copy_occ(ind(ist))
+      do ik = 1, this%st%d%nik
+        call sort(this%st%eigenval(:, ik), ind)
+        copy_occ(1:this%st%nst) = this%st%occ(1:this%st%nst, ik)
+        do ist = 1, this%st%nst
+          this%st%occ(ist, ik) = copy_occ(ind(ist))
         end do
       end do
 
@@ -225,11 +227,11 @@ contains
       SAFE_DEALLOCATE_A(copy_occ)
     end if
 
-    if(calc_eigenval_) call states_elec_fermi(sys%st, sys%namespace, sys%gr%mesh) ! occupations
-    call energy_calc_total(sys%namespace, sys%hm, sys%gr, sys%st)
+    if(calc_eigenval_) call states_elec_fermi(this%st, this%namespace, this%gr%mesh) ! occupations
+    call energy_calc_total(this%namespace, this%hm, this%gr, this%st)
 
-    POP_SUB(system_h_setup)
-  end subroutine system_h_setup
+    POP_SUB(electrons_h_setup)
+  end subroutine electrons_h_setup
 
 end module electrons_oct_m
 

@@ -117,7 +117,7 @@ program wannier90_interface
   call unit_system_init(global_namespace)
 
   call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
-  sys => system_init(global_namespace)
+  sys => electrons_t(global_namespace)
 
   !%Variable Wannier90Prefix
   !%Type string

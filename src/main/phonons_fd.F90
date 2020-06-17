@@ -86,7 +86,7 @@ contains
     ! setup Hamiltonian
     message(1) = 'Info: Setting up Hamiltonian.'
     call messages_info(1)
-    call system_h_setup(sys)
+    call sys%h_setup()
 
     call vibrations_init(vib, sys%geo, sys%gr%sb, "fd", sys%namespace)
 

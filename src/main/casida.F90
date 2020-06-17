@@ -252,7 +252,7 @@ contains
     ! setup Hamiltonian, without recalculating eigenvalues (use the ones from the restart information)
     message(1) = 'Info: Setting up Hamiltonian.'
     call messages_info(1)
-    call system_h_setup(sys, calc_eigenval=.false.)
+    call sys%h_setup(calc_eigenval=.false.)
 
     !%Variable CasidaTheoryLevel
     !%Type flag

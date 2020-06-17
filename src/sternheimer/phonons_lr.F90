@@ -191,7 +191,7 @@ contains
     message(1) = 'Info: Setting up Hamiltonian for linear response.'
     call messages_info(1)
 
-    call system_h_setup(sys)
+    call sys%h_setup()
     call sternheimer_init(sh, sys, wfs_are_cplx = states_are_complex(st))
     call vibrations_init(vib, geo, gr%sb, "lr", sys%namespace)
 

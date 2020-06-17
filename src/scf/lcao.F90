@@ -724,7 +724,7 @@ contains
         call write_magnetic_moments(stdout, sys%gr%fine%mesh, sys%st, sys%geo, sys%gr%der%boundaries, lmm_r)
       end if
 
-      ! set up Hamiltonian (we do not call system_h_setup here because we do not want to
+      ! set up Hamiltonian (we do not call sys%h_setup here because we do not want to
       ! overwrite the guess density)
       message(1) = 'Info: Setting up Hamiltonian.'
       call messages_info(1)
@@ -756,7 +756,7 @@ contains
 
         ! Update the density and the Hamiltonian
         if (lcao%mode == OPTION__LCAOSTART__LCAO_FULL) then
-          call system_h_setup(sys, calc_eigenval = .false., calc_current=.false.)
+          call sys%h_setup(calc_eigenval = .false., calc_current=.false.)
           if(sys%st%d%ispin > UNPOLARIZED) then
             ASSERT(present(lmm_r))
             call write_magnetic_moments(stdout, sys%gr%fine%mesh, sys%st, sys%geo, sys%gr%der%boundaries, lmm_r)

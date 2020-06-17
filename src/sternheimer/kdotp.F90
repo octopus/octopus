@@ -163,7 +163,7 @@ contains
     ! setup Hamiltonian
     message(1) = 'Info: Setting up Hamiltonian for linear response.'
     call messages_info(1)
-    call system_h_setup(sys)
+    call sys%h_setup()
     
     if(states_are_real(sys%st)) then
       message(1) = 'Info: Using real wavefunctions.'

@@ -236,7 +236,7 @@ contains
 
     call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
 
-    sys => system_init(namespace)
+    sys => electrons_t(namespace)
     call poisson_test(sys%hm%psolver, sys%gr%mesh, namespace, param%repetitions)
     SAFE_DEALLOCATE_P(sys)
 
@@ -262,7 +262,7 @@ contains
     call messages_new_line()
     call messages_info()
 
-    sys => system_init(namespace)
+    sys => electrons_t(namespace)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh, wfs_type = TYPE_CMPLX)
     call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
@@ -319,7 +319,7 @@ contains
     call messages_new_line()
     call messages_info()
 
-    sys => system_init(namespace)
+    sys => electrons_t(namespace)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
     call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
@@ -413,7 +413,7 @@ contains
     call messages_new_line()
     call messages_info()
 
-    sys => system_init(namespace)
+    sys => electrons_t(namespace)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
     call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
@@ -476,7 +476,7 @@ contains
     call messages_new_line()
     call messages_info()
 
-    sys => system_init(namespace)
+    sys => electrons_t(namespace)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
     call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
@@ -513,7 +513,7 @@ contains
     call messages_new_line()
     call messages_info()
 
-    sys => system_init(namespace)
+    sys => electrons_t(namespace)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
     call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
@@ -550,7 +550,7 @@ contains
     call messages_new_line()
     call messages_info()
 
-    sys => system_init(namespace)
+    sys => electrons_t(namespace)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh, wfs_type=TYPE_CMPLX)
     call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
@@ -600,7 +600,7 @@ contains
     call messages_new_line()
     call messages_info()
 
-    sys => system_init(namespace)
+    sys => electrons_t(namespace)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
     call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
@@ -681,7 +681,7 @@ contains
     call messages_new_line()
     call messages_info()
 
-    sys => system_init(namespace)
+    sys => electrons_t(namespace)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
     call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
@@ -864,7 +864,7 @@ contains
 
     PUSH_SUB(test_derivatives)
 
-    sys => system_init(namespace)
+    sys => electrons_t(namespace)
 
     message(1) = 'Info: Testing the finite-differences derivatives.'
     message(2) = ''
@@ -897,7 +897,7 @@ contains
     call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
     call calc_mode_par_set_scalapack_compat()
 
-    sys => system_init(namespace)
+    sys => electrons_t(namespace)
 
     message(1) = 'Info: Testing orthogonalization.'
     message(2) = ''
@@ -934,7 +934,7 @@ contains
 
     PUSH_SUB(test_interpolation)
 
-    sys => system_init(namespace)
+    sys => electrons_t(namespace)
 
     if(param%type == OPTION__TESTTYPE__ALL .or. param%type == OPTION__TESTTYPE__REAL) then
       call messages_write('Info: Testing real interpolation routines')
@@ -970,7 +970,7 @@ contains
 
     PUSH_SUB(test_ion_interaction)
 
-    sys => system_init(namespace)
+    sys => electrons_t(namespace)
 
     call ion_interaction_test(sys%geo, sys%namespace, sys%gr%sb, sys%mc)
 
