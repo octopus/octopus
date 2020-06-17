@@ -780,6 +780,7 @@ contains
   
     PUSH_SUB(derivatives_get_lapl)
 
+    call nl_operator_init(lapl, name)
     SAFE_ALLOCATE(op(1:1))
     call nl_operator_init(op(1), name)
     if(this%mesh%sb%nonorthogonal) then
