@@ -660,8 +660,10 @@ contains
       SAFE_DEALLOCATE_P(this%kcoords_cub)
       SAFE_DEALLOCATE_P(this%conjgphase_prev)
       SAFE_DEALLOCATE_P(this%spctramp_cub)
-
-      SAFE_DEALLOCATE_P(this%srfcpnt)
+      
+      if(.not. this%surf_interp) then
+        SAFE_DEALLOCATE_P(this%srfcpnt)
+      end if
       SAFE_DEALLOCATE_P(this%rankmin)
       
       SAFE_DEALLOCATE_P(this%face_idx_range)
