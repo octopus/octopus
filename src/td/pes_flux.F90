@@ -59,6 +59,7 @@ module pes_flux_oct_m
     pes_flux_t,                &
     pes_flux_init,             &
     pes_flux_end,              &
+    pes_flux_nullify,          &
     pes_flux_calc,             &
     pes_flux_output,           &
     pes_flux_load,             &
@@ -642,6 +643,43 @@ contains
     POP_SUB(pes_flux_init)
   end subroutine pes_flux_init
 
+
+  ! ---------------------------------------------------------
+  subroutine pes_flux_nullify(this)
+    type(pes_flux_t), intent(inout) :: this
+    PUSH_SUB(pes_flux_nullify)
+
+    nullify(this%kcoords_sph)
+    nullify(this%ylm_k)
+    nullify(this%j_l)
+    nullify(this%ylm_r)
+    nullify(this%conjgphase_prev)
+    nullify(this%spctramp_sph)
+    nullify(this%klinear)
+    nullify(this%kcoords_cub)
+    nullify(this%conjgphase_prev)
+    nullify(this%spctramp_cub)    
+    nullify(this%srfcpnt)
+    nullify(this%rankmin)
+    nullify(this%face_idx_range)
+    nullify(this%LLr)
+    nullify(this%NN)      
+    nullify(this%expkr)
+    nullify(this%expkr_perp)
+    nullify(this%bvk_phase)      
+    nullify(this%Lkpuvz_inv)      
+    
+
+    nullify(this%srfcnrml)
+    nullify(this%rcoords)
+    nullify(this%wf)
+    nullify(this%gwf)
+    nullify(this%veca)
+
+
+    POP_SUB(pes_flux_nullify)
+  end subroutine pes_flux_nullify
+
   ! ---------------------------------------------------------
   subroutine pes_flux_end(this)
     type(pes_flux_t), intent(inout) :: this
@@ -655,7 +693,6 @@ contains
       SAFE_DEALLOCATE_P(this%ylm_r)
       SAFE_DEALLOCATE_P(this%conjgphase_prev)
       SAFE_DEALLOCATE_P(this%spctramp_sph)
-      SAFE_DEALLOCATE_P(this%klinear)
     else
       SAFE_DEALLOCATE_P(this%kcoords_cub)
       SAFE_DEALLOCATE_P(this%conjgphase_prev)
@@ -677,6 +714,8 @@ contains
       SAFE_DEALLOCATE_P(this%Lkpuvz_inv)      
       
     end if
+
+    SAFE_DEALLOCATE_P(this%klinear)
 
     SAFE_DEALLOCATE_P(this%srfcnrml)
     SAFE_DEALLOCATE_P(this%rcoords)

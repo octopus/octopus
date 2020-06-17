@@ -109,8 +109,10 @@ contains
     call pes_spm_nullify(this%spm)
     !this%calc_mask=.false.
     call pes_mask_nullify(this%mask)
+    
+    call pes_flux_nullify(this%flux)
+    
     POP_SUB(pes_nullify)
-    return
   end subroutine pes_nullify
 
   ! ---------------------------------------------------------
