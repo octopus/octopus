@@ -25,7 +25,7 @@ Input      : 09-flux_3d.03-Na_gs_cub.inp
 
 # Na cube photoemission
 # Processors : 2
-Precision  : 2.0e-8
+Precision  : 5.0e-8
 Input      : 09-flux_3d.04-Na_td_cub.inp
 match ; PES [val  1] ; LINEFIELD(td.general/PES_flux.distribution.out, 9435, 4) ; 0.7235990632E-004
 match ; PES [val  2] ; LINEFIELD(td.general/PES_flux.distribution.out, 9437, 4) ; 0.3931059481E-004
