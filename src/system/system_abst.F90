@@ -367,8 +367,10 @@ contains
     select type (interaction)
     class is (interaction_with_partner_t)
 
-      if(partner%prop%inside_scf) then
+      if (partner%prop%inside_scf .or. &
+          partner%clock%is_earlier_with_step(requested_time)) then
         ! we are inside an SCF cycle and therefore are not allowed to expose any quantities.
+        ! or we are too much behind the requested time
         allowed_to_update = .false.
       else
         allowed_to_update = .true.
