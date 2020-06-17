@@ -3,7 +3,6 @@ CalculationMode = td
 Dimensions = 1
 FromScratch = YES
 
-Debug = info
 ExperimentalFeatures = YES
 
 #############################
