@@ -3,7 +3,7 @@
 Test       : Photoelectron ARPES
 Program    : octopus
 TestGroups : long-run, periodic_systems, photo_electron
-Enabled    : Yes
+Enabled    : No
 
 
 
