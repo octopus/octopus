@@ -24,6 +24,7 @@ module classical_particle_oct_m
   use global_oct_m
   use interaction_abst_oct_m
   use interaction_gravity_oct_m
+  use interaction_lorentz_force_oct_m
   use ghost_interaction_oct_m
   use io_oct_m
   use iso_c_binding
@@ -41,13 +42,11 @@ module classical_particle_oct_m
   implicit none
 
   private
-  public ::                 &
-    classical_particle_t,   &
+  public ::                  &
+    classical_particle_t,    &
     classical_particle_init
 
-  type, extends(system_abst_t) :: classical_particle_t
-    private
-
+   type, extends(system_abst_t) :: classical_particle_t
     FLOAT :: mass
     FLOAT :: pos(1:MAX_DIM)
     FLOAT :: vel(1:MAX_DIM)
@@ -238,7 +237,7 @@ contains
   ! ---------------------------------------------------------
   subroutine classical_particle_do_td(this, operation)
     class(classical_particle_t), intent(inout) :: this
-    integer,                 intent(in)    :: operation
+    integer,                     intent(in)    :: operation
 
     integer :: ii
 
@@ -456,7 +455,7 @@ contains
     call write_iter_double(this%output_handle, this%vel, this%space%dim)
     call write_iter_double(this%output_handle, this%tot_force, this%space%dim)
     call write_iter_nl(this%output_handle)
-    
+
     POP_SUB(classical_particle_output_write)
   end subroutine classical_particle_output_write
 
@@ -517,6 +516,8 @@ contains
     type is (interaction_gravity_t)
       interaction%partner_mass = this%mass
       interaction%partner_pos = this%pos
+    type is (interaction_lorentz_force_t)
+      ! Nothing to copy
     type is (ghost_interaction_t)
       ! Nothing to copy
     class default
@@ -552,6 +553,8 @@ contains
     call iter%start(this%interactions)
     do while (iter%has_next())
       select type (interaction => iter%get_next_interaction())
+      type is (interaction_lorentz_force_t)
+        this%tot_force(1:this%space%dim) = this%tot_force(1:this%space%dim) + interaction%force(1:this%space%dim)
       type is (interaction_gravity_t)
         this%tot_force(1:this%space%dim) = this%tot_force(1:this%space%dim) + interaction%force(1:this%space%dim)
       type is (ghost_interaction_t)
