@@ -463,18 +463,17 @@ contains
     !%   
     !%End
 
-    par_strategy      = OPTION__PES_FLUX_PARALLELIZATION__PF_NONE
-    this%par_strategy = par_strategy
+    this%par_strategy      = OPTION__PES_FLUX_PARALLELIZATION__PF_NONE
     if(mesh%parallel_in_domains) then
 
       if(this%surf_shape == M_SPHERICAL) then
-        par_strategy = OPTION__PES_FLUX_PARALLELIZATION__PF_TIME  &
+        this%par_strategy = OPTION__PES_FLUX_PARALLELIZATION__PF_TIME  &
                           + OPTION__PES_FLUX_PARALLELIZATION__PF_SURFACE
       else 
-        par_strategy = OPTION__PES_FLUX_PARALLELIZATION__PF_SURFACE    
-        if(mesh%sb%dim == 1) par_strategy = OPTION__PES_FLUX_PARALLELIZATION__PF_TIME  
+        this%par_strategy = OPTION__PES_FLUX_PARALLELIZATION__PF_SURFACE    
+        if(mesh%sb%dim == 1) this%par_strategy = OPTION__PES_FLUX_PARALLELIZATION__PF_TIME  
       end if
-
+      par_strategy = this%par_strategy
       call parse_variable(namespace, 'PES_Flux_Parallelization', par_strategy, this%par_strategy)
       if(.not.varinfo_valid_option('PES_Flux_Parallelization', this%par_strategy, is_flag = .true.)) &
         call messages_input_error(namespace,'PES_Flux_Parallelization')
