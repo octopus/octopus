@@ -13,49 +13,49 @@ Processors: 1
 Input: 05-propagation_expmid.01-two_body.inp
 
 Precision: 1e-6
-match ; Sun   pos x (t=3 days) ; LINEFIELD(Sun/td.general/coordinates, -1, 3) ; -6.043907268914e+02
-match ; Sun   pos y (t=3 days) ; LINEFIELD(Sun/td.general/coordinates, -1, 4) ; -9.383471926432e+01
-match ; Sun   pos z (t=3 days) ; LINEFIELD(Sun/td.general/coordinates, -1, 5) ;  1.679813573642e-02
+match ; Sun   pos x (t=3 days) ; LINEFIELD(Sun/td.general/coordinates, -1, 3) ; -5.517964878241e+02
+match ; Sun   pos y (t=3 days) ; LINEFIELD(Sun/td.general/coordinates, -1, 4) ; -1.108013242052e+02
+match ; Sun   pos z (t=3 days) ; LINEFIELD(Sun/td.general/coordinates, -1, 5) ;  1.679810579345e-02
 Precision: 1e-9
-match ; Sun   vel x (t=3 days) ; LINEFIELD(Sun/td.general/coordinates, -1, 6) ; -4.604773001671e-03
-match ; Sun   vel y (t=3 days) ; LINEFIELD(Sun/td.general/coordinates, -1, 7) ; -8.198819769993e-04
-match ; Sun   vel z (t=3 days) ; LINEFIELD(Sun/td.general/coordinates, -1, 8) ;  5.288043469252e-08
+match ; Sun   vel x (t=3 days) ; LINEFIELD(Sun/td.general/coordinates, -1, 6) ; -4.399206084345e-03
+match ; Sun   vel y (t=3 days) ; LINEFIELD(Sun/td.general/coordinates, -1, 7) ; -8.874783456536e-04
+match ; Sun   vel z (t=3 days) ; LINEFIELD(Sun/td.general/coordinates, -1, 8) ;  5.288031965995e-08
 
 Precision: 1e2
-match ; Earth pos x (t=3 days) ; LINEFIELD(Earth/td.general/coordinates, -1, 3) ; -1.460198280023e+11
-match ; Earth pos y (t=3 days) ; LINEFIELD(Earth/td.general/coordinates, -1, 4) ; -3.221837458963e+10
-match ; Earth pos z (t=3 days) ; LINEFIELD(Earth/td.general/coordinates, -1, 5) ;  1.751930836014e+06
+match ; Earth pos x (t=3 days) ; LINEFIELD(Earth/td.general/coordinates, -1, 3) ; -1.460198279116e+11
+match ; Earth pos y (t=3 days) ; LINEFIELD(Earth/td.general/coordinates, -1, 4) ; -3.221837457446e+10
+match ; Earth pos z (t=3 days) ; LINEFIELD(Earth/td.general/coordinates, -1, 5) ;  1.751930834989e+06
 Precision: 1e-2
-match ; Earth vel x (t=3 days) ; LINEFIELD(Earth/td.general/coordinates, -1, 6) ;  5.942719149996e+03
-match ; Earth vel y (t=3 days) ; LINEFIELD(Earth/td.general/coordinates, -1, 7) ; -2.920484219415e+04
-match ; Earth vel z (t=3 days) ; LINEFIELD(Earth/td.general/coordinates, -1, 8) ;  3.258701460822e-01
+match ; Earth vel x (t=3 days) ; LINEFIELD(Earth/td.general/coordinates, -1, 6) ;  5.942719502410e+03
+match ; Earth vel y (t=3 days) ; LINEFIELD(Earth/td.general/coordinates, -1, 7) ; -2.920484213529e+04
+match ; Earth vel z (t=3 days) ; LINEFIELD(Earth/td.general/coordinates, -1, 8) ;  3.258701421012e-01
 
 
 Input: 05-propagation_expmid.02-three_body.inp
 
 Precision: 1e-6
-match ; Sun   pos x (t=3 days) ; LINEFIELD(Sun/td.general/coordinates, -1, 3) ; -6.138968409243e+02
-match ; Sun   pos y (t=3 days) ; LINEFIELD(Sun/td.general/coordinates, -1, 4) ; -1.100533747002e+02
-match ; Sun   pos z (t=3 days) ; LINEFIELD(Sun/td.general/coordinates, -1, 5) ;  1.660348039170e-02
+match ; Sun   pos x (t=3 days) ; LINEFIELD(Sun/td.general/coordinates, -1, 3) ; -5.633516345802e+02
+match ; Sun   pos y (t=3 days) ; LINEFIELD(Sun/td.general/coordinates, -1, 4) ; -1.120950084069e+02
+match ; Sun   pos z (t=3 days) ; LINEFIELD(Sun/td.general/coordinates, -1, 5) ;  1.660322428164e-02
 Precision: 1e-9
-match ; Sun   vel x (t=3 days) ; LINEFIELD(Sun/td.general/coordinates, -1, 6) ; -4.669723150147e-03
-match ; Sun   vel y (t=3 days) ; LINEFIELD(Sun/td.general/coordinates, -1, 7) ; -8.900339697852e-04
-match ; Sun   vel z (t=3 days) ; LINEFIELD(Sun/td.general/coordinates, -1, 8) ;  5.273722412653e-08
+match ; Sun   vel x (t=3 days) ; LINEFIELD(Sun/td.general/coordinates, -1, 6) ; -4.474307794272e-03
+match ; Sun   vel y (t=3 days) ; LINEFIELD(Sun/td.general/coordinates, -1, 7) ; -8.980462747066e-04
+match ; Sun   vel z (t=3 days) ; LINEFIELD(Sun/td.general/coordinates, -1, 8) ;  5.273609824759e-08
 
 Precision: 1e2
-match ; Earth pos x (t=3 days) ; LINEFIELD(Earth/td.general/coordinates, -1, 3) ; -1.460197124324e+11
-match ; Earth pos y (t=3 days) ; LINEFIELD(Earth/td.general/coordinates, -1, 4) ; -3.221732042943e+10
-match ; Earth pos z (t=3 days) ; LINEFIELD(Earth/td.general/coordinates, -1, 5) ;  1.737745806331e+06
+match ; Earth pos x (t=3 days) ; LINEFIELD(Earth/td.general/coordinates, -1, 3) ; -1.460197122326e+11
+match ; Earth pos y (t=3 days) ; LINEFIELD(Earth/td.general/coordinates, -1, 4) ; -3.221732041151e+10
+match ; Earth pos z (t=3 days) ; LINEFIELD(Earth/td.general/coordinates, -1, 5) ;  1.737735133323e+06
 Precision: 1e-2
-match ; Earth vel x (t=3 days) ; LINEFIELD(Earth/td.general/coordinates, -1, 6) ;  5.942687959620e+03
-match ; Earth vel y (t=3 days) ; LINEFIELD(Earth/td.general/coordinates, -1, 7) ; -2.919660232095e+04
-match ; Earth vel z (t=3 days) ; LINEFIELD(Earth/td.general/coordinates, -1, 8) ;  2.975095842618e-01
+match ; Earth vel x (t=3 days) ; LINEFIELD(Earth/td.general/coordinates, -1, 6) ;  5.942688677375e+03
+match ; Earth vel y (t=3 days) ; LINEFIELD(Earth/td.general/coordinates, -1, 7) ; -2.919660227967e+04
+match ; Earth vel z (t=3 days) ; LINEFIELD(Earth/td.general/coordinates, -1, 8) ;  2.974662720544e-01
 
 Precision: 1e2
-match ; Moon  pos x (t=3 days) ; LINEFIELD(Moon/td.general/coordinates, -1, 3) ; -1.461458917475e+11
-match ; Moon  pos y (t=3 days) ; LINEFIELD(Moon/td.general/coordinates, -1, 4) ; -3.185822082240e+10
-match ; Moon  pos z (t=3 days) ; LINEFIELD(Moon/td.general/coordinates, -1, 5) ;  1.148972442260e+07
+match ; Moon  pos x (t=3 days) ; LINEFIELD(Moon/td.general/coordinates, -1, 3) ; -1.461459003778e+11
+match ; Moon  pos y (t=3 days) ; LINEFIELD(Moon/td.general/coordinates, -1, 4) ; -3.185822103537e+10
+match ; Moon  pos z (t=3 days) ; LINEFIELD(Moon/td.general/coordinates, -1, 5) ;  1.148954466834e+07
 Precision: 1e-2
-match ; Moon  vel x (t=3 days) ; LINEFIELD(Moon/td.general/coordinates, -1, 6) ;  5001.248517088488
-match ; Moon  vel y (t=3 days) ; LINEFIELD(Moon/td.general/coordinates, -1, 7) ; -29602.28052474309
-match ; Moon  vel z (t=3 days) ; LINEFIELD(Moon/td.general/coordinates, -1, 8) ;  84.845791739068
+match ; Moon  vel x (t=3 days) ; LINEFIELD(Moon/td.general/coordinates, -1, 6) ;  5001.219744462704
+match ; Moon  vel y (t=3 days) ; LINEFIELD(Moon/td.general/coordinates, -1, 7) ; -29602.27904531393
+match ; Moon  vel z (t=3 days) ; LINEFIELD(Moon/td.general/coordinates, -1, 8) ;  84.845249471602
