@@ -59,29 +59,29 @@ module energy_mxll_oct_m
 contains
 
   subroutine energy_mxll_nullify(this)
-    type(energy_mxll_t), intent(out) :: this
+    type(energy_mxll_t), intent(inout) :: this
 
     PUSH_SUB(energy_mxll_nullify)
 
-     this%energy = M_ZERO
-     this%boundaries = M_ZERO
-     this%e_energy = M_ZERO
-     this%b_energy = M_ZERO
-     this%energy_plane_waves = M_ZERO
-     this%e_energy_plane_waves = M_ZERO
-     this%b_energy_plane_waves = M_ZERO
-     this%energy_trans = M_ZERO
-     this%energy_long = M_ZERO
-     this%e_energy_trans = M_ZERO
-     this%b_energy_trans = M_ZERO
-     this%energy_incident_waves = M_ZERO
+    this%energy = M_ZERO
+    this%boundaries = M_ZERO
+    this%e_energy = M_ZERO
+    this%b_energy = M_ZERO
+    this%energy_plane_waves = M_ZERO
+    this%e_energy_plane_waves = M_ZERO
+    this%b_energy_plane_waves = M_ZERO
+    this%energy_trans = M_ZERO
+    this%energy_long = M_ZERO
+    this%e_energy_trans = M_ZERO
+    this%b_energy_trans = M_ZERO
+    this%energy_incident_waves = M_ZERO
 
     POP_SUB(energy_mxll_nullify)
   end subroutine energy_mxll_nullify
 
 
   subroutine energy_mxll_allocate(this, np)
-    type(energy_mxll_t), intent(out)   :: this
+    type(energy_mxll_t), intent(inout) :: this
     integer,             intent(in)    :: np
 
     PUSH_SUB(energy_mxll_allocate)
@@ -101,7 +101,7 @@ contains
 
 
   subroutine energy_mxll_end(this)
-    type(energy_mxll_t), intent(out) :: this
+    type(energy_mxll_t), intent(inout) :: this
 
     PUSH_SUB(energy_mxll_end)
 

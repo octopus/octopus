@@ -25,6 +25,7 @@ module system_mxll_oct_m
   use distributed_oct_m
   use geometry_oct_m
   use ghost_interaction_oct_m
+  use interaction_lorentz_force_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_mxll_oct_m
@@ -34,6 +35,7 @@ module system_mxll_oct_m
   use maxwell_boundary_op_oct_m
   use mesh_oct_m
   use messages_oct_m
+  use mesh_interpolation_oct_m
   use mpi_oct_m
   use multicomm_oct_m
   use namespace_oct_m
@@ -76,6 +78,8 @@ module system_mxll_oct_m
     type(grid_t),        pointer :: gr    !< the mesh
     type(output_t)               :: outp  !< the output
     type(multicomm_t)            :: mc    !< index and domain communicators
+
+    type(mesh_interpolation_t)   :: mesh_interpolate
 
     type(propagator_mxll_t)      :: tr_mxll   !< contains the details of the Maxwell time-evolution
     type(td_write_t)             :: write_handler
@@ -177,6 +181,8 @@ contains
     this%quantities(E_FIELD)%required = .true.
     this%quantities(B_FIELD)%required = .true.
 
+    call mesh_interpolation_init(this%mesh_interpolate, this%gr%mesh)
+
     POP_SUB(system_mxll_init)
 
   contains
@@ -223,7 +229,12 @@ contains
 
     PUSH_SUB(system_mxll_has_interaction)
 
-    system_mxll_has_interaction = .false.
+    select type (interaction)
+    type is (interaction_lorentz_force_t)
+      system_mxll_has_interaction = .true.
+    class default
+      system_mxll_has_interaction = .false.
+    end select
 
     POP_SUB(system_mxll_has_interaction)
   end function system_mxll_has_interaction
@@ -539,7 +550,7 @@ contains
     select case (iq)
     case default
       message(1) = "Incompatible quantity."
-      call messages_fatal(1)
+!      call messages_fatal(1)
     end select
 
     POP_SUB(system_mxll_update_exposed_quantity)
@@ -572,14 +583,26 @@ contains
 
     ! ---------------------------------------------------------
   subroutine system_mxll_copy_quantities_to_interaction(this, interaction)
-    class(system_mxll_t),          intent(inout) :: this
-    class(interaction_abst_t),        intent(inout) :: interaction
+    class(system_mxll_t),      intent(inout) :: this
+    class(interaction_abst_t), intent(inout) :: interaction
+
+    CMPLX :: interpolated_value(3)
+    FLOAT :: e_field(3)
+    FLOAT :: b_field(3)
 
     PUSH_SUB(system_mxll_copy_quantities_to_interaction)
 
     select type (interaction)
     type is (ghost_interaction_t)
       ! Nothing to copy
+    type is (interaction_lorentz_force_t)
+      call mesh_interpolation_evaluate(this%mesh_interpolate, this%st%rs_state(:,1), interaction%system_pos, interpolated_value(1))
+      call mesh_interpolation_evaluate(this%mesh_interpolate, this%st%rs_state(:,2), interaction%system_pos, interpolated_value(2))
+      call mesh_interpolation_evaluate(this%mesh_interpolate, this%st%rs_state(:,3), interaction%system_pos, interpolated_value(3))
+      call get_electric_field_vector(interpolated_value, e_field)
+      call get_magnetic_field_vector(interpolated_value, 1, b_field)
+      interaction%partner_E_field = e_field
+      interaction%partner_B_field = b_field
     class default
       message(1) = "Unsupported interaction."
       call messages_fatal(1)

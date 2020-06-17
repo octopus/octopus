@@ -1023,7 +1023,11 @@ contains
     mx_energy             = dmf_integrate(gr%mesh, tmp)
     mx_e_energy           = dmf_integrate(gr%mesh, tmp_e)
     mx_b_energy           = dmf_integrate(gr%mesh, tmp_b)
-    if (present(rs_field_plane_waves) .and. present(mx_energy_plane_waves)) mx_energy_plane_waves = dmf_integrate(gr%mesh, tmp_pw)
+    if (present(rs_field_plane_waves) .and. present(mx_energy_plane_waves) .and. hm%plane_waves) then
+      mx_energy_plane_waves = dmf_integrate(gr%mesh, tmp_pw)
+    else
+      mx_energy_plane_waves = M_ZERO
+    end if
 
     if (present(mx_energy_boundary)) then
       do ip_in = 1, st%boundary_points_number
@@ -1031,6 +1035,8 @@ contains
         tmp(ip) = energy_density(ip)
       end do
       mx_energy_boundary = dmf_integrate(gr%mesh, tmp)
+    else
+      mx_energy_boundary = M_ZERO
     end if
 
     SAFE_DEALLOCATE_A(energy_density)
@@ -2481,6 +2487,7 @@ contains
         call tdf_read(st%rs_state_const_td_function(il), namespace, trim(mxf_expression), ierr)
       end do
     end if
+    call parse_block_end(blk)
 
     !%Variable PropagateSpatialMaxwellField
     !%Type logical
@@ -2543,7 +2550,7 @@ contains
   ! ---------------------------------------------------------
   subroutine constant_boundaries_calculation(constant_calc, bc, hm, st, rs_state)
     logical,                   intent(in)    :: constant_calc
-    type(bc_mxll_t),           intent(in)    :: bc
+    type(bc_mxll_t),           intent(inout) :: bc
     type(states_mxll_t),       intent(in)    :: st
     type(hamiltonian_mxll_t),  intent(in)    :: hm
     CMPLX,                     intent(inout) :: rs_state(:,:)

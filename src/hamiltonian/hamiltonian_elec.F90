@@ -308,7 +308,7 @@ contains
     end if
   
     !Initialize external potential
-    call epot_init(hm%ep, namespace, gr, hm%geo, hm%psolver, hm%d%ispin, hm%d%nik, hm%xc%family)
+    call epot_init(hm%ep, namespace, gr, hm%geo, hm%psolver, hm%d%ispin, hm%d%nik, hm%xc%family, mc)
 
     ! Calculate initial value of the gauge vector field
     call gauge_field_init(hm%ep%gfield, namespace, gr%sb)
