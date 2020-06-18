@@ -44,7 +44,7 @@ program oct_local_multipoles
   use species_oct_m
   use species_pot_oct_m
   use simul_box_oct_m
-  use system_oct_m
+  use electrons_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use utils_oct_m
@@ -65,7 +65,7 @@ program oct_local_multipoles
     type(local_write_t)             :: writ            !< write option for local domains analysis.
   end type local_domain_t
 
-  type(system_t), pointer :: sys
+  type(electrons_t), pointer :: sys
   type(simul_box_t)     :: sb
   integer, parameter    :: BADER = 512
   FLOAT                 :: BaderThreshold
@@ -91,7 +91,7 @@ program oct_local_multipoles
   call restart_module_init(global_namespace)
 
   call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
-  sys => system_init(global_namespace)
+  sys => electrons_t(global_namespace)
   call simul_box_init(sb, global_namespace, sys%geo, sys%space)
 
   call local_domains()

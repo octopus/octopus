@@ -65,7 +65,7 @@ module td_oct_m
   use states_elec_oct_m
   use states_elec_calc_oct_m
   use states_elec_restart_oct_m
-  use system_oct_m
+  use electrons_oct_m
   use system_abst_oct_m
   use td_write_oct_m
   use types_oct_m
@@ -129,8 +129,8 @@ contains
   ! ---------------------------------------------------------
 
   subroutine td_init(td, sys)
-    type(td_t),       intent(inout) :: td
-    type(system_t),   intent(inout) :: sys
+    type(td_t),          intent(inout) :: td
+    type(electrons_t),   intent(inout) :: sys
 
     integer :: default
     FLOAT   :: spacing, default_dt, propagation_time
@@ -394,8 +394,8 @@ contains
   ! ---------------------------------------------------------
   
   subroutine td_run(sys, fromScratch)
-    type(system_t), target, intent(inout) :: sys
-    logical,                intent(inout) :: fromScratch
+    type(electrons_t), target, intent(inout) :: sys
+    logical,                   intent(inout) :: fromScratch
 
     type(td_t)                   :: td
     type(td_write_t)             :: write_handler

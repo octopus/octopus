@@ -43,7 +43,7 @@ module geom_opt_oct_m
   use species_oct_m
   use states_elec_oct_m
   use states_elec_restart_oct_m
-  use system_oct_m
+  use electrons_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use v_ks_oct_m
@@ -68,16 +68,16 @@ module geom_opt_oct_m
     integer  :: what2minimize
 
     !> shortcuts
-    type(scf_t)                  :: scfv
-    type(geometry_t),    pointer :: geo
+    type(scf_t)                       :: scfv
+    type(geometry_t),         pointer :: geo
     type(hamiltonian_elec_t), pointer :: hm
-    type(system_t),      pointer :: syst
-    type(mesh_t),        pointer :: mesh
-    type(states_elec_t), pointer :: st
-    integer                      :: dim
-    integer                      :: size
-    integer                      :: fixed_atom
-    type(restart_t)              :: restart_dump
+    type(electrons_t),        pointer :: syst
+    type(mesh_t),             pointer :: mesh
+    type(states_elec_t),      pointer :: st
+    integer                           :: dim
+    integer                           :: size
+    integer                           :: fixed_atom
+    type(restart_t)                   :: restart_dump
     
   end type geom_opt_t
 
@@ -91,7 +91,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine geom_opt_run(sys, fromscratch)
-    type(system_t), target,      intent(inout) :: sys
+    type(electrons_t),   target, intent(inout) :: sys
     logical,                     intent(inout) :: fromscratch
 
     integer :: ierr
@@ -134,7 +134,7 @@ contains
       ! setup Hamiltonian
       message(1) = 'Info: Setting up Hamiltonian.'
       call messages_info(1)
-      call system_h_setup(sys)
+      call sys%h_setup()
     end if
 
     !Initial point

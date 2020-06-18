@@ -43,7 +43,7 @@ program oct_floquet
   use simul_box_oct_m
   use states_elec_oct_m
   use states_elec_restart_oct_m
-  use system_oct_m
+  use electrons_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use utils_oct_m
@@ -54,7 +54,7 @@ program oct_floquet
 
   integer :: ierr
 
-  type(system_t), pointer :: sys
+  type(electrons_t), pointer :: sys
   type(simul_box_t) :: sb
   type(states_elec_t) :: st
   type(grid_t)   :: gr
@@ -90,7 +90,7 @@ program oct_floquet
   call restart_module_init(global_namespace)
 
   call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
-  sys => system_init(global_namespace)
+  sys => electrons_t(global_namespace)
   call simul_box_init(sb, global_namespace, sys%geo, sys%space)
   ! make shortcut copies
   st = sys%st

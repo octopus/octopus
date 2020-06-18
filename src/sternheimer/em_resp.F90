@@ -51,7 +51,7 @@ module em_resp_oct_m
   use states_elec_restart_oct_m
   use sternheimer_oct_m
   use string_oct_m
-  use system_oct_m
+  use electrons_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use utils_oct_m
@@ -118,8 +118,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine em_resp_run(sys, fromScratch)
-    type(system_t), target, intent(inout) :: sys
-    logical,                intent(inout) :: fromScratch
+    type(electrons_t), target, intent(inout) :: sys
+    logical,                   intent(inout) :: fromScratch
 
     type(grid_t),   pointer :: gr
     type(em_resp_t)         :: em_vars
@@ -201,7 +201,7 @@ contains
     ! setup Hamiltonian
     message(1) = 'Info: Setting up Hamiltonian for linear response'
     call messages_info(1)
-    call system_h_setup(sys)
+    call sys%h_setup()
 
     use_kdotp = simul_box_is_periodic(gr%sb) .and. .not. em_vars%force_no_kdotp
 

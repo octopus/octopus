@@ -44,7 +44,6 @@ module system_mxll_oct_m
   use poisson_oct_m
   use profiling_oct_m
   use propagator_abst_oct_m
-  use propagator_base_oct_m
   use propagator_mxll_oct_m
   use quantity_oct_m
   use restart_oct_m
@@ -54,7 +53,7 @@ module system_mxll_oct_m
   use system_abst_oct_m
   use states_mxll_oct_m
   use states_mxll_restart_oct_m
-  use system_oct_m
+  use electrons_oct_m
   use td_write_oct_m
   use unit_oct_m
   use unit_system_oct_m

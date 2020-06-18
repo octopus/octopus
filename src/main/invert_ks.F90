@@ -35,7 +35,7 @@ module invert_ks_oct_m
   use profiling_oct_m
   use restart_oct_m
   use states_elec_restart_oct_m
-  use system_oct_m
+  use electrons_oct_m
   use xc_ks_inversion_oct_m
   
   implicit none
@@ -47,7 +47,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine invert_ks_run(sys)
-    type(system_t),              intent(inout) :: sys
+    type(electrons_t), intent(inout) :: sys
 
     integer :: ii, jj, np, ndim, nspin
     integer :: err

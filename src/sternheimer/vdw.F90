@@ -37,7 +37,7 @@ module vdw_oct_m
   use states_elec_oct_m
   use states_elec_restart_oct_m
   use sternheimer_oct_m
-  use system_oct_m
+  use electrons_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use utils_oct_m
@@ -52,8 +52,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine vdw_run(sys, fromScratch)
-    type(system_t),         intent(inout) :: sys
-    logical,                intent(inout) :: fromScratch
+    type(electrons_t),    intent(inout) :: sys
+    logical,              intent(inout) :: fromScratch
 
     type(lr_t) :: lr(MAX_DIM, 1)
     type(sternheimer_t)     :: sh
@@ -227,7 +227,7 @@ contains
       ! setup Hamiltonian
       message(1) = 'Info: Setting up Hamiltonian for linear response.'
       call messages_info(1)
-      call system_h_setup(sys)
+      call sys%h_setup()
 
       do dir = 1, ndir
         call lr_init(lr(dir,1))
