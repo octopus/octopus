@@ -198,9 +198,9 @@ __kernel void projector_bra_phase_spiral(const int nmat,
 
   const int npoints       = offsets[OFFSET_SIZE*imat + 0]; // number of points in projector_matrix(imat)
   const int nprojs        = offsets[OFFSET_SIZE*imat + 1]; // number of projectors
-  const int matrix_offset = offsets[OFFSET_SIZE*imat + 2]; // cumulative of pmat%npoints*pmat%nprojs
-  const int map_offset    = offsets[OFFSET_SIZE*imat + 3]; // cumulative pmat%npoints
-  const int scal_offset   = offsets[OFFSET_SIZE*imat + 4];
+  const int matrix_offset = offsets[OFFSET_SIZE*imat + 2]; // cumulative of pmat%npoints * pmat%nprojs
+  const int map_offset    = offsets[OFFSET_SIZE*imat + 3]; // cumulative of pmat%npoints for each imap
+  const int scal_offset   = offsets[OFFSET_SIZE*imat + 4]; // cumulative of pmat%nprojs
 
   if(ipj >= nprojs) return;
 

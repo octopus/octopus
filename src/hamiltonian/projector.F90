@@ -207,7 +207,6 @@ contains
     nphase = 1
     if(bnd%spiralBC) nphase = 3
 
-
     if(.not. associated(this%phase) .and. ns > 0) then
       SAFE_ALLOCATE(this%phase(1:ns, 1:nphase, std%kpt%start:std%kpt%end))
     end if
@@ -246,7 +245,7 @@ contains
           end if
 
           if(bnd%spiralBC .and. iphase > 1) then
-            kr = kr + (2*(iphase-1)-3)*sum(bnd%spiral_q(1:ndim)*diff(1:ndim, is))
+            kr = kr + (2*(iphase-1)-3)*sum(bnd%spiral_q(1:ndim)*diff(1:ndim, is)) 
           end if
 
           this%phase(is, iphase, iq) = exp(-M_zI*kr)

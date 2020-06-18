@@ -1,4 +1,5 @@
-!! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!! Copyright (C) 2002-2020 M. Marques, A. Castro, A. Rubio, G. Bertsch, 
+!!                         N. Tancogne-Dejean, M. Lueders
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -985,9 +986,10 @@ contains
 
       if(associated(this%hm_base%phase) .and. allocated(this%hm_base%projector_matrices)) then
 
+        nphase = 1
+        if(this%der%boundaries%spiralBC) nphase = 3
+
         if(.not. allocated(this%hm_base%projector_phases)) then
-          nphase = 1
-          if(this%der%boundaries%spiralBC) nphase = 3
           SAFE_ALLOCATE(this%hm_base%projector_phases(1:max_npoints, 1:nphase, nmat, this%d%kpt%start:this%d%kpt%end))
           if(accel_is_enabled()) then
             call accel_create_buffer(this%hm_base%buff_projector_phases, ACCEL_MEM_READ_ONLY, &
@@ -999,8 +1001,6 @@ contains
         do ik = this%d%kpt%start, this%d%kpt%end
           do imat = 1, this%hm_base%nprojector_matrices
             iatom = this%hm_base%projector_to_atom(imat)
-            nphase = 1
-            if(this%der%boundaries%spiralBC) nphase = 3
             do iphase = 1, nphase
               !$omp parallel do schedule(static)
               do ip = 1, this%hm_base%projector_matrices(imat)%npoints
@@ -1512,9 +1512,10 @@ contains
 
       if(associated(this%hm_base%phase) .and. allocated(this%hm_base%projector_matrices)) then
 
+        nphase = 1
+        if(this%der%boundaries%spiralBC) nphase = 3
+
         if(.not. allocated(this%hm_base%projector_phases)) then
-          nphase = 1
-          if(this%der%boundaries%spiralBC) nphase = 3
           SAFE_ALLOCATE(this%hm_base%projector_phases(1:max_npoints, nphase, nmat, this%d%kpt%start:this%d%kpt%end))
           if(accel_is_enabled()) then
             call accel_create_buffer(this%hm_base%buff_projector_phases, ACCEL_MEM_READ_ONLY, &
@@ -1526,8 +1527,6 @@ contains
         do ik = this%d%kpt%start, this%d%kpt%end
           do imat = 1, this%hm_base%nprojector_matrices
             iatom = this%hm_base%projector_to_atom(imat)
-            nphase = 1
-            if(this%der%boundaries%spiralBC) nphase = 3
             do iphase = 1, nphase
               !$omp parallel do schedule(static)
               do ip = 1, this%hm_base%projector_matrices(imat)%npoints
