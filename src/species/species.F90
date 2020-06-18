@@ -33,6 +33,7 @@ module species_oct_m
   use pseudo_oct_m
   use share_directory_oct_m
   use pseudo_set_oct_m
+  use species_abst_oct_m
   use splines_oct_m
   use string_oct_m
   use unit_oct_m
@@ -91,8 +92,6 @@ module species_oct_m
     species_end,                   &
     species_x_functional,          &
     species_c_functional
-
-  integer, public, parameter :: LABEL_LEN=15
 
   integer, public, parameter ::  &
     SPECIES_JELLIUM        = 3,             & !< jellium sphere.

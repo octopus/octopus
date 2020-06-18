@@ -4,6 +4,7 @@ module atom_oct_m
   use global_oct_m
   use messages_oct_m
   use species_oct_m
+  use species_abst_oct_m
   use unit_oct_m
   use unit_system_oct_m
 

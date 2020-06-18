@@ -202,7 +202,9 @@ noinst_HEADERS +=                             \
 # Sources in species
 species_f_srcs =                                 \
 	species/atomic.F90                       \
+        species/atomic_species.F90               \
 	species/element.F90                      \
+        species/jellium.F90                      \
 	species/logrid.F90                       \
 	species/ps_cpi.F90                       \
 	species/ps_cpi_file.F90                  \
@@ -217,7 +219,8 @@ species_f_srcs =                                 \
 	species/pseudo.F90                       \
 	species/pseudo_set.F90                   \
 	species/share_directory.F90              \
-	species/species.F90
+	species/species.F90                      \
+        species/species_abst.F90
 
 species_c_srcs =                                 \
 	species/element_low.cc                   \
