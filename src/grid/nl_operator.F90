@@ -286,6 +286,17 @@ contains
 
     op%label = label
 
+    call accel_mem_nullify(op%buff_imin)
+    call accel_mem_nullify(op%buff_imax)
+    call accel_mem_nullify(op%buff_ri)
+    call accel_mem_nullify(op%buff_map)
+    call accel_mem_nullify(op%buff_all)
+    call accel_mem_nullify(op%buff_inner)
+    call accel_mem_nullify(op%buff_outer)
+    call accel_mem_nullify(op%buff_stencil)
+    call accel_mem_nullify(op%buff_ip_to_xyz)
+    call accel_mem_nullify(op%buff_xyz_to_ip)
+
     POP_SUB(nl_operator_init)
   end subroutine nl_operator_init
 
