@@ -2119,7 +2119,7 @@ contains
                 end do 
 
               else 
-              
+                !$omp parallel do private(ikpu,ikpv,ikpz)
                 do ikpu = 1, this%ll(dir_on_face(1))
                   do ikpv = 1, this%ll(dir_on_face(2))
               
@@ -2145,7 +2145,7 @@ contains
                   
                   end do
                 end do
-              
+                !$omp end parallel do
 
               
               end if
