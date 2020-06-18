@@ -248,7 +248,7 @@ contains
             rr = max(rr, R_SMALL)
             
             do isp = 1, spin_channels
-              if(rr >= spline_range_max(ps%density(isp))) cycle
+              if((rr >= spline_range_max(ps%density(isp))) .or. (spline_eval(ps%density(isp), rr) < 0)) cycle
               rho(ip, isp) = rho(ip, isp) + spline_eval(ps%density(isp), rr)
             end do
             
