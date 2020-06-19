@@ -130,6 +130,7 @@ contains
     type(system_factory_t) :: factory
     type(profile_t), save :: calc_mode_prof
     logical :: fromScratch
+    integer :: iunit_out
 
     PUSH_SUB(run)
 
@@ -171,6 +172,18 @@ contains
 
       ! Initialize systems
       systems => multisystem_t(namespace, factory)
+
+      ! Initialize interactions
+      call systems%init_interactions()
+
+      ! Write the interaction graph as a DOT graph for debug
+      if (debug%interaction_graph .and. mpi_grp_is_root(mpi_world)) then
+        iunit_out = io_open('interaction_graph.dot', systems%namespace, action='write')
+        write(iunit_out, '(a)') 'digraph {'
+        call systems%write_interaction_graph(iunit_out)
+        write(iunit_out, '(a)') '}'
+        call io_close(iunit_out)
+      end if
 
       ! Run mode
       select case(calc_mode_id)
