@@ -18,6 +18,8 @@
 # 02110-1301, USA.
 #
 
+use strict;
+
 use warnings;
 use Getopt::Std;
 use File::Basename;
@@ -58,6 +60,7 @@ EndOfUsage
     exit 0;
 }
 
+my $precnum;
 
 sub set_precision{
     my $p = $_[0];
@@ -70,6 +73,10 @@ sub set_precision{
 
 # Check whether STDOUT is a terminal. If not, no ANSI sequences are
 # emitted.
+
+my %color_start;
+my %color_end;
+
 if(-t STDOUT) {
     $color_start{blue}="\033[34m";
     $color_end{blue}="\033[0m";
@@ -88,11 +95,22 @@ if(-t STDOUT) {
 
 if (not @ARGV) { usage; }
 
-$opt_f = "";
-$opt_r = "";
+our $opt_f = "";
+our $opt_r = "";
+our $opt_h = "";
+our $opt_s = "";
+our $opt_l = "";
+our $opt_D = "";
+our $opt_G = "";
+our $opt_m = "";
+our $opt_p = "";
+our $opt_n = "";
+our $opt_v = "";
+
 getopts("nlvhD:c:f:spmr:G:");
 
 # avoid warnings 'used only once: possible typo'
+my $useless;
 $useless = $opt_h;
 $useless = $opt_l;
 $useless = $opt_s;
@@ -117,12 +135,16 @@ if(length($opt_f) == 0) {
     die255("You must supply the name of a test file with the -f option.");
 }
 
-$aexec = get_env("EXEC");
-$global_np = get_env("OCT_TEST_MPI_NPROCS");
+my $aexec = get_env("EXEC");
+my $global_np = get_env("OCT_TEST_MPI_NPROCS");
 
 # FIXME: all test files should declare Processors
 #$np = "serial";
-$is_parallel = 0;
+my $is_parallel = 0;
+my $mpiexec;
+my $mpiexec_raw;
+my $machinelist;
+my ($np, $nslots, $my_nslots, $specify_np);
 
 # FIXME: could bake in mpiexec at configure time
 
@@ -157,13 +179,14 @@ if(!$opt_s) {
 
 # default number of processors for MPI runs is 2
 $np = 2;
-$enabled = ""; # FIXME: should Enabled be optional?
+my $enabled = ""; # FIXME: should Enabled be optional?
 
-$expect_error = 0; # check for controlled failure 
-$error_match_done = 1;   # check that at least one error-match has been done. 
+my $expect_error = 0; # check for controlled failure 
+my $error_match_done = 1;   # check that at least one error-match has been done. 
+my $command_env;
 
 # Handle GPU offset
-$offset_GPU = defined $opt_G ? $opt_G : -1;
+my $offset_GPU = defined $opt_G ? $opt_G : -1;
 if($offset_GPU >= 0) {
     $command_env = "OCT_PARSE_ENV=1 OCT_AccelDevice=$offset_GPU";
 } else {
@@ -171,9 +194,9 @@ if($offset_GPU >= 0) {
 }
 
 # This variable counts the number of failed testcases.
-$failures = 0;
+my $failures = 0;
 
-$tempdirpath = get_env("TEMPDIRPATH");
+my $tempdirpath = get_env("TEMPDIRPATH");
 if ("$tempdirpath" eq "") { $tempdirpath = '/tmp'; }
 if (! -d $tempdirpath) { mkdir $tempdirpath; }
 
@@ -190,6 +213,8 @@ set_precision("default");
 
 # array to hold a set of conditions:
 my @conditions= ();
+
+my $options_available;
 
 # recursion level of nested if blocks:
 my $if_level = 0;
@@ -262,10 +287,14 @@ sub check_conditions {
 
 
 # Set test_succeeded flag to 'TRUE' (=1). Only change to 'FALSE' (=0) if a test fails.
-$test_succeeded = 1;
+my $test_succeeded = 1;
 $if_done[0] = 0;
 
-$pwd = get_env("PWD");
+my $pwd = get_env("PWD");
+my $workdir;
+my $scriptname;
+my $matchdir;
+
 if (!$opt_m) {
     my $name = $opt_f;
     $name =~ s/\.\.\///g;
@@ -293,6 +322,19 @@ open(TESTSUITE, "<".$opt_f ) or die255("Cannot open testsuite file '$opt_f'.");
 
 
 my (%report, $r_match_report, $r_matches_array, $r_input_report);
+my %test;
+my ($test_start, $test_end);
+my ($basename, $basedir, $basecommand, $testname, $command, $command_line);
+my ($input_base, $input_file);
+my ($return_value, $cp_return);
+my $mode;
+my ($workfiles, $file_cp);
+my @wfiles;
+my $elapsed;
+my $value;
+my $name;
+my $line_num;
+
 
 while ($_ = <TESTSUITE>) {
 
@@ -444,7 +486,7 @@ while ($_ = <TESTSUITE>) {
 
         elsif ( $_ =~ /^\w*Input\s*:\s*(.*)\s*$/  ) {
 
-            if( check_conditions(\@conditions, $available_options)) {
+            if( check_conditions(\@conditions, $options_available)) {
 
                 check_error_resolved();
 
@@ -591,7 +633,7 @@ while ($_ = <TESTSUITE>) {
         elsif ( $_ =~ /^match/ ) {
             # matches results when execution was successful
 
-            if( check_conditions(\@conditions, $available_options)) {
+            if( check_conditions(\@conditions, $options_available)) {
 
                 my %match_report;
                 $r_match_report = \%match_report;
@@ -646,7 +688,7 @@ exit $failures;
 
 
 sub run_match_new {
-    die255("Have to run before matching.") if !$test{"run"} && !opt_m;
+    die255("Have to run before matching.") if !$test{"run"} && !$opt_m;
 
     # parse match line
     my ($line, $match, $match_command, $shell_command, $ref_value, $off);
@@ -749,7 +791,7 @@ sub run_match_new {
     # otherwise the error comes only if the last step failed.
     $value = qx(cd $matchdir && $shell_command);    
     # Perl gives error code shifted, for some reason.
-    $exit_code = $? >> 8;
+    my $exit_code = $? >> 8;
     if ($exit_code) {
         print STDERR "ERROR: Match command failed: $shell_command\n";
         return 0;
@@ -783,7 +825,7 @@ sub run_match_new {
     }
 
     # at this point, we know that the command was successful, and returned a number.
-    $success = (abs(($value)-($ref_value)) <= $precnum);
+    my $success = (abs(($value)-($ref_value)) <= $precnum);
 
     if (!$success || $opt_v) {
         print_hline();
