@@ -22,6 +22,7 @@ module multisystem_oct_m
   use clock_oct_m
   use global_oct_m
   use interaction_abst_oct_m
+  use interaction_with_partner_oct_m
   use io_oct_m
   use loct_oct_m
   use messages_oct_m
@@ -53,6 +54,7 @@ module multisystem_oct_m
     procedure :: init_interactions => multisystem_init_interactions
     procedure :: add_interaction_partner => multisystem_add_interaction_partner
     procedure :: has_interaction => multisystem_has_interaction
+    procedure :: write_interaction_graph => multisystem_write_interaction_graph
     procedure :: initial_conditions => multisystem_initial_conditions
     procedure :: do_td_operation => multisystem_do_td_operation
     procedure :: iteration_info => multisystem_iteration_info
@@ -321,14 +323,8 @@ contains
     class(system_abst_t), pointer :: sys1, sys2
     type(system_iterator_t) :: iter1, iter2
     type(system_list_t) :: flat_list
-    integer :: iunit_out
 
     PUSH_SUB(multisystem_init_interactions)
-
-    if (debug%interaction_graph .and. mpi_grp_is_root(mpi_world)) then
-      iunit_out = io_open('interaction_graph.dot', this%namespace, action='write')
-      write(iunit_out, '(a)') 'digraph {'
-    end if
 
     ! We start by getting a list of all the subsystems that are not multisystems
     call flatten_list(this, flat_list)
@@ -346,18 +342,9 @@ contains
         if(.not.associated(sys1, sys2)) then
           call sys1%add_interaction_partner(sys2)
 
-          !Debug information in form of a DOT graph
-          if(debug%interaction_graph .and. mpi_grp_is_root(mpi_world)) then
-            write(iunit_out, '(2x,a)') trim(sys1%namespace%get()) + ' -> ' + trim(sys2%namespace%get()) + ';'
-          end if
         end if
       end do
     end do
-
-    if (debug%interaction_graph .and. mpi_grp_is_root(mpi_world)) then
-      write(iunit_out, '(a)') '}'
-      call io_close(iunit_out)
-    end if
 
     POP_SUB(multisystem_init_interactions)
   contains
@@ -423,6 +410,45 @@ contains
 
     POP_SUB(multisystem_has_interaction)
   end function multisystem_has_interaction
+
+  ! ---------------------------------------------------------------------------------------
+  recursive subroutine multisystem_write_interaction_graph(this, iunit)
+    class(multisystem_t), intent(in) :: this
+    integer,              intent(in) :: iunit
+
+    class(system_abst_t), pointer :: system
+    class(interaction_abst_t), pointer :: interaction
+    type(system_iterator_t) :: sys_iter
+    type(interaction_iterator_t) :: inter_iter
+
+    PUSH_SUB(multisystem_write_interaction_graph)
+
+    ! Loop over all the subsystems
+    call sys_iter%start(this%list)
+    do while (sys_iter%has_next())
+      system => sys_iter%get_next()
+
+      ! Loop over the interactions that this subsystem has
+      call inter_iter%start(system%interactions)
+      do while (inter_iter%has_next())
+        interaction => inter_iter%get_next()
+
+        ! Write interaction to DOT graph if this interaction has a partner
+        select type (interaction)
+        class is (interaction_with_partner_t)
+          write(iunit, '(2x,a)') '"' + trim(system%namespace%get()) + '" -> "' + trim(interaction%partner%namespace%get()) + '";'
+        end select
+      end do
+
+      ! If this subsystem is also a multisystem, then we also need to traverse it
+      select type (system)
+      class is (multisystem_t)
+        call system%write_interaction_graph(iunit)
+      end select
+    end do
+
+    POP_SUB(multisystem_write_interaction_graph)
+  end subroutine multisystem_write_interaction_graph
 
   ! ---------------------------------------------------------
   recursive subroutine multisystem_initial_conditions(this, from_scratch)
