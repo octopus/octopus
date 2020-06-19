@@ -25,6 +25,7 @@ module classical_particle_oct_m
   use interaction_abst_oct_m
   use interaction_gravity_oct_m
   use interaction_lorentz_force_oct_m
+  use interactions_factory_oct_m
   use ghost_interaction_oct_m
   use io_oct_m
   use iso_c_binding
@@ -62,8 +63,7 @@ module classical_particle_oct_m
 
     type(c_ptr) :: output_handle
   contains
-    procedure :: add_interaction_partner => classical_particle_add_interaction_partner
-    procedure :: has_interaction => classical_particle_has_interaction
+    procedure :: init_interactions => classical_particle_init_interactions
     procedure :: initial_conditions => classical_particle_initial_conditions
     procedure :: do_td_operation => classical_particle_do_td
     procedure :: iteration_info => classical_particle_iteration_info
@@ -135,6 +135,8 @@ contains
     this%quantities(VELOCITY)%required = .true.
     this%quantities(POSITION)%protected = .true.
     this%quantities(VELOCITY)%protected = .true.
+    call this%supported_interactions%add(GRAVITY)
+    call this%supported_interactions_as_partner%add(GRAVITY)
 
     call messages_print_stress(stdout, namespace=namespace)
 
@@ -142,44 +144,25 @@ contains
   end subroutine classical_particle_init
 
   ! ---------------------------------------------------------
-  subroutine classical_particle_add_interaction_partner(this, partner)
+  subroutine classical_particle_init_interactions(this)
     class(classical_particle_t), target, intent(inout) :: this
-    class(system_abst_t),            intent(inout) :: partner
 
-    class(ghost_interaction_t), pointer :: ghost
-    class(interaction_gravity_t), pointer :: gravity
-    type(interaction_gravity_t) :: gravity_t
+    type(interaction_iterator_t) :: iter
+    class(interaction_abst_t), pointer :: interaction
 
-    PUSH_SUB(classical_particle_add_interaction_partner)
+    PUSH_SUB(classical_particle_init_interactions)
 
-    if (partner%has_interaction(gravity_t)) then
-      gravity => interaction_gravity_t(partner)
-      call gravity%init(this%space%dim, this%quantities, this%mass, this%pos)
-      call this%interactions%add(gravity)
-    else
-      ghost => ghost_interaction_t(partner)
-      call this%interactions%add(ghost)
-    end if
+    call iter%start(this%interactions)
+    do while (iter%has_next())
+      interaction => iter%get_next()
+      select type (interaction)
+      type is (interaction_gravity_t)
+        call interaction%init(this%space%dim, this%quantities, this%mass, this%pos)
+      end select
+    end do
 
-    POP_SUB(classical_particle_add_interaction_partner)
-  end subroutine classical_particle_add_interaction_partner
-
-  ! ---------------------------------------------------------
-  logical function classical_particle_has_interaction(this, interaction)
-    class(classical_particle_t),   intent(in) :: this
-    class(interaction_abst_t), intent(in) :: interaction
-
-    PUSH_SUB(classical_particle_has_interaction)
-
-    select type (interaction)
-    type is (interaction_gravity_t)
-      classical_particle_has_interaction = .true.
-    class default
-      classical_particle_has_interaction = .false.
-    end select
-
-    POP_SUB(classical_particle_has_interaction)
-  end function classical_particle_has_interaction
+    POP_SUB(classical_particle_init_interactions)
+  end subroutine classical_particle_init_interactions
 
   ! ---------------------------------------------------------
   subroutine classical_particle_initial_conditions(this, from_scratch)

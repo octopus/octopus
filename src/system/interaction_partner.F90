@@ -42,7 +42,7 @@ module interaction_partner_oct_m
     type(namespace_t), public :: namespace
     type(clock_t),     public :: clock
 
-    integer, allocatable, public :: interactions_supported_as_partner(:)
+    type(integer_list_t), public :: supported_interactions_as_partner
 
     type(quantity_t),  public :: quantities(MAX_QUANTITIES) !< Array of all possible quantities.
                                                             !< The elements of the array are accessed using the

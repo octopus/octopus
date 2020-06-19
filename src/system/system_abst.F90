@@ -57,6 +57,7 @@ module system_abst_oct_m
     integer :: interaction_timing  !< parameter to determine if interactions
       !< should use the quantities at the exact time or if retardation is allowed
 
+    type(integer_list_t), public :: supported_interactions
     type(interaction_list_t), public :: interactions !< List with all the interactions of this system
   contains
     procedure :: dt_operation =>  system_dt_operation
@@ -70,8 +71,7 @@ module system_abst_oct_m
     procedure :: has_reached_final_propagation_time => system_has_reached_final_propagation_time
     procedure :: propagation_step_finish => system_propagation_step_finish
     procedure :: propagation_step_is_done => system_propagation_step_is_done
-    procedure(system_add_interaction_partner),        deferred :: add_interaction_partner
-    procedure(system_has_interaction),                deferred :: has_interaction
+    procedure(system_init_interactions),              deferred :: init_interactions
     procedure(system_initial_conditions),             deferred :: initial_conditions
     procedure(system_do_td_op),                       deferred :: do_td_operation
     procedure(system_iteration_info),                 deferred :: iteration_info
@@ -87,19 +87,10 @@ module system_abst_oct_m
 
   abstract interface
     ! ---------------------------------------------------------
-    subroutine system_add_interaction_partner(this, partner)
+    subroutine system_init_interactions(this)
       import system_abst_t
-      class(system_abst_t), target,    intent(inout) :: this
-      class(system_abst_t),            intent(inout) :: partner
-    end subroutine system_add_interaction_partner
-
-    ! ---------------------------------------------------------
-    logical function system_has_interaction(this, interaction)
-      import system_abst_t
-      import interaction_abst_t
-      class(system_abst_t),      intent(in) :: this
-      class(interaction_abst_t), intent(in) :: interaction
-    end function system_has_interaction
+      class(system_abst_t), target, intent(inout) :: this
+    end subroutine system_init_interactions
 
     ! ---------------------------------------------------------
     subroutine system_initial_conditions(this, from_scratch)
@@ -175,8 +166,10 @@ module system_abst_oct_m
     end subroutine system_output_finish
   end interface
 
-  !> These class extends the list and list iterator to create a system list
-  type, extends(linked_list_t) :: system_list_t
+  !> These classes extends the list and list iterator to create a system list.
+  !! Since a list of systems is also a list of interaction partners, the system
+  !! list is an extension of the partner list.
+  type, extends(partner_list_t) :: system_list_t
     private
   contains
     procedure :: add => system_list_add_node
@@ -675,13 +668,18 @@ contains
   end subroutine system_abst_end
 
   ! ---------------------------------------------------------
-  subroutine system_list_add_node(this, system)
+  subroutine system_list_add_node(this, partner)
     class(system_list_t)         :: this
-    class(system_abst_t), target :: system
+    class(interaction_partner_t), target :: partner
 
     PUSH_SUB(system_list_add_node)
 
-    call this%add_ptr(system)
+    select type (partner)
+    class is (system_abst_t)
+      call this%add_ptr(partner)
+    class default
+      ASSERT(.false.)
+    end select
 
     POP_SUB(system_list_add_node)
   end subroutine system_list_add_node

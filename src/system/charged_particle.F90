@@ -24,6 +24,7 @@ module charged_particle_oct_m
   use global_oct_m
   use interaction_abst_oct_m
   use interaction_lorentz_force_oct_m
+  use interactions_factory_oct_m
   use io_oct_m
   use iso_c_binding
   use messages_oct_m
@@ -50,8 +51,7 @@ module charged_particle_oct_m
     FLOAT :: charge
 
   contains
-    procedure :: add_interaction_partner => charged_particle_add_interaction_partner
-    procedure :: has_interaction => charged_particle_has_interaction
+    procedure :: init_interactions => charged_particle_init_interactions
     procedure :: initial_conditions => charged_particle_initial_conditions
     procedure :: do_td_operation => charged_particle_do_td
     procedure :: iteration_info => charged_particle_iteration_info
@@ -113,45 +113,35 @@ contains
     call parse_variable(namespace, 'ClassicalParticleCharge', M_ONE, this%charge)
     call messages_print_var_value(stdout, 'ClassicalParticleCharge', this%charge)
 
+    call this%supported_interactions%add(LORENTZ_FORCE)
+
     POP_SUB(charged_particle_init)
   end subroutine charged_particle_init
 
   ! ---------------------------------------------------------
-  subroutine charged_particle_add_interaction_partner(this, partner)
+  subroutine charged_particle_init_interactions(this)
     class(charged_particle_t), target, intent(inout) :: this
-    class(system_abst_t),              intent(inout) :: partner
 
-    class(interaction_lorentz_force_t), pointer :: lorentz_force
-    type(interaction_lorentz_force_t) :: lorentz_force_t
+    type(interaction_iterator_t) :: iter
+    class(interaction_abst_t), pointer :: interaction
 
-    PUSH_SUB(charged_particle_add_interaction_partner)
+    PUSH_SUB(charged_particle_init_interactions)
 
-    if (partner%has_interaction(lorentz_force_t)) then
-      lorentz_force => interaction_lorentz_force_t(partner)
-      call lorentz_force%init(this%space%dim, this%quantities, this%charge, this%pos, this%vel)
-      call this%interactions%add(lorentz_force)
-    end if
-    call this%classical_particle_t%add_interaction_partner(partner)
+    ! Initialize interactions known by the charged particle, but not by the parent class
+    call iter%start(this%interactions)
+    do while (iter%has_next())
+      interaction => iter%get_next()
+      select type (interaction)
+      type is (interaction_lorentz_force_t)
+        call interaction%init(this%space%dim, this%quantities, this%charge, this%pos, this%vel)
+      end select
+    end do
 
-    POP_SUB(charged_particle_add_interaction_partner)
-  end subroutine charged_particle_add_interaction_partner
+    ! Initialize interactions known by the parent class
+    call this%classical_particle_t%init_interactions()
 
-  ! ---------------------------------------------------------
-  logical function charged_particle_has_interaction(this, interaction)
-    class(charged_particle_t), intent(in) :: this
-    class(interaction_abst_t), intent(in) :: interaction
-
-    PUSH_SUB(charged_particle_has_interaction)
-
-    select type (interaction)
-    type is (interaction_lorentz_force_t)
-      charged_particle_has_interaction = .true.
-    class default
-      charged_particle_has_interaction = this%classical_particle_t%has_interaction(interaction)
-    end select
-
-    POP_SUB(charged_particle_has_interaction)
-  end function charged_particle_has_interaction
+    POP_SUB(charged_particle_init_interactions)
+  end subroutine charged_particle_init_interactions
 
   ! ---------------------------------------------------------
   subroutine charged_particle_initial_conditions(this, from_scratch)
