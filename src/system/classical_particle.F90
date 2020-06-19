@@ -367,7 +367,6 @@ contains
       SAFE_DEALLOCATE_A(tmp_vel)
       call this%quantities(POSITION)%clock%increment()
       call this%quantities(VELOCITY)%clock%increment()
-      call this%prop%clock%increment()
 
     case (EXPMID_CORRECT_DT_2)
       ! only correct for dt/2 if not converged yet
@@ -569,7 +568,6 @@ contains
     select case (iq)
     case (MASS)
       ! The classical particle has a mass, but it does not require any update, as it does not change with time.
-      !call partner%quantities(iq)%clock%set_time(partner%clock)
       call partner%quantities(iq)%clock%set_time(requested_time)
     case default
       message(1) = "Incompatible quantity."

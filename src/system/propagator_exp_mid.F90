@@ -78,6 +78,8 @@ contains
       call this%add(UPDATE_INTERACTIONS)
       call this%add(UPDATE_HAMILTONIAN)   ! update: H(t+dt/2) from psi(t+dt/2)
       call this%add(EXPMID_PREDICT_DT)    ! predict: psi(t+dt) = U_H(t+dt/2) psi(t)
+      call this%add(UPDATE_INTERACTIONS)
+      call this%add(UPDATE_HAMILTONIAN)   ! update: H(t+dt) from psi(t+dt)
       call this%add(FINISHED)
 
     end if
