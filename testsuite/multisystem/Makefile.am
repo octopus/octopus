@@ -37,6 +37,8 @@ dist_share_DATA =                                                       \
 	04-propagation_beeman.02-three_body.inp                         \
 	04-propagation_beeman.03-two_body_different_time_steps.inp      \
 	04-propagation_beeman.04-three_body_different_time_steps.inp    \
+	05-lorentz-force.test                                           \
+	05-lorentz-force.01-charged_particle_coupled_to_maxwell.inp     \
 	06-propagation_expmid.test                                      \
 	06-propagation_expmid.01-two_body.inp                           \
 	06-propagation_expmid.02-three_body.inp                         \
