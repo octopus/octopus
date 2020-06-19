@@ -296,7 +296,7 @@ contains
     class(charged_particle_t), intent(inout) :: partner
     class(interaction_abst_t), intent(inout) :: interaction
 
-    PUSH_SUB(classical_particle_copy_quantities_to_interaction)
+    PUSH_SUB(charged_particle_copy_quantities_to_interaction)
 
     select type (interaction)
     type is (interaction_lorentz_force_t)
