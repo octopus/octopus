@@ -21,6 +21,7 @@
 module multisystem_oct_m
   use clock_oct_m
   use global_oct_m
+  use ghost_interaction_oct_m
   use interaction_abst_oct_m
   use interaction_with_partner_oct_m
   use io_oct_m
@@ -435,6 +436,8 @@ contains
 
         ! Write interaction to DOT graph if this interaction has a partner
         select type (interaction)
+        type is (ghost_interaction_t)
+          ! Do not include systems connected by ghost interactions
         class is (interaction_with_partner_t)
           write(iunit, '(2x,a)') '"' + trim(system%namespace%get()) + '" -> "' + trim(interaction%partner%namespace%get()) + &
             '" [label="'+ interaction%label + '"];'
