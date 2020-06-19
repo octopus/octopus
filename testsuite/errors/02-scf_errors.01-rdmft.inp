@@ -2,7 +2,6 @@
 #
 
 CalculationMode = gs
-fromScratch = yes
 
 TheoryLevel = rdmft
 
@@ -10,12 +9,3 @@ TheoryLevel = rdmft
 "C" | 0 | 0 | 0
 %
 
-spacing = 0.19*angstrom
-radius = 5.0*angstrom
-
-
-XCFunctional = lda_x + lda_c_pz
-
-FilterPotentials = filter_none
-
-MixField = density
