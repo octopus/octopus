@@ -547,9 +547,11 @@ contains
     ASSERT(.not. partner%quantities(iq)%protected)
 
     select case (iq)
+    case(E_FIELD,B_FIELD)
+      call partner%quantities(iq)%clock%set_time(requested_time)
     case default
       message(1) = "Incompatible quantity."
-!      call messages_fatal(1)
+      call messages_fatal(1)
     end select
 
     POP_SUB(system_mxll_update_exposed_quantity)
