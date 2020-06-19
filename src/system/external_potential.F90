@@ -22,6 +22,7 @@ module external_potential_oct_m
   use global_oct_m
   use iihash_oct_m
   use interaction_abst_oct_m
+  use interaction_partner_oct_m
   use io_function_oct_m
   use linked_list_oct_m
   use mesh_oct_m
@@ -38,7 +39,7 @@ module external_potential_oct_m
     external_potential_t, &
     load_external_potentials
 
-  type, extends(interaction_abst_t) :: external_potential_t
+  type, extends(interaction_partner_t) :: external_potential_t
     private
 
     integer :: type   !< Type of external potential
@@ -53,10 +54,12 @@ module external_potential_oct_m
     FLOAT, allocatable, public :: pot(:)
 
   contains
-    procedure :: update => external_potential_update
     procedure :: calculate => external_potential_calculate
     procedure :: allocate_memory => external_potential_allocate
     procedure :: deallocate_memory => external_potential_deallocate
+    procedure :: update_exposed_quantities => external_potential_update_exposed_quantities
+    procedure :: update_exposed_quantity => external_potential_update_exposed_quantity
+    procedure :: copy_quantities_to_interaction => external_potential_copy_quantities_to_interaction
     final :: external_potential_finalize
   end type external_potential_t
 
@@ -121,33 +124,39 @@ contains
   end subroutine external_potential_deallocate
 
   ! ---------------------------------------------------------
-  logical function external_potential_update(this, namespace, requested_time) result(updated)
+  logical function external_potential_update_exposed_quantities(this, requested_time, interaction)
     class(external_potential_t), intent(inout) :: this
-    type(namespace_t),           intent(in)    :: namespace
-    class(clock_t),              intent(in)    :: requested_time
+    type(clock_t),                intent(in)    :: requested_time
+    class(interaction_abst_t),    intent(inout) :: interaction
 
-    logical :: allowed_to_update
+    PUSH_SUB(external_potential_update_exposed_quantities)
 
-    PUSH_SUB(external_potential_update)
+    POP_SUB(external_potential_update_exposed_quantities)
 
-    ! We should only try to update the interaction if it is not yet at the requested time
-    ASSERT(.not. (this%clock == requested_time))
+  end function external_potential_update_exposed_quantities
 
-    ! We can now compute the interaction from the updated quantities
-    call this%calculate(namespace)
+  ! ---------------------------------------------------------
+  subroutine external_potential_update_exposed_quantity(this, iq, requested_time)
+    class(external_potential_t),      intent(inout) :: this
+    integer,                           intent(in)    :: iq
+    class(clock_t),                    intent(in)    :: requested_time
 
-    ! Update was successful, so set new interaction time
-    updated = .true.
-    call this%clock%set_time(requested_time)
+    PUSH_SUB(external_potential_update_exposed_quantities)
 
-    if (debug%info) then
-      write(message(1), '(a)') "Debug: -- Updated external potential "
-      write(message(2), '(a,i3)') "Debug: ---- requested time is ", requested_time%get_tick()
-      call messages_info(2)
-    end if
+    POP_SUB(external_potential_update_exposed_quantities)
 
-    POP_SUB(external_potential_update)
-  end function external_potential_update
+  end subroutine external_potential_update_exposed_quantity
+
+  ! ---------------------------------------------------------
+  subroutine external_potential_copy_quantities_to_interaction(this, interaction)
+    class(external_potential_t),     intent(inout) :: this
+    class(interaction_abst_t),        intent(inout) :: interaction
+
+    PUSH_SUB(external_potential_copy_quantities_to_interaction)
+
+    POP_SUB(external_potential_copy_quantities_to_interaction)
+
+  end subroutine external_potential_copy_quantities_to_interaction
 
 
   ! ---------------------------------------------------------

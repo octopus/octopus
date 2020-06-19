@@ -37,6 +37,7 @@ module hamiltonian_elec_oct_m
   use grid_oct_m
   use hamiltonian_abst_oct_m
   use interaction_abst_oct_m
+  use interaction_partner_oct_m
   use kick_oct_m
   use kpoints_oct_m
   use lalg_basic_oct_m
@@ -640,8 +641,8 @@ contains
 
     ! ---------------------------------------------------------
     subroutine build_external_potentials()
-      type(interaction_iterator_t) :: iter
-      class(interaction_abst_t), pointer :: potential
+      type(list_iterator_t) :: iter
+      class(*), pointer :: potential
 
       PUSH_SUB(hamiltonian_elec_init.build_external_potentials)
 
@@ -650,7 +651,7 @@ contains
 
       call iter%start(hm%external_potentials)
       do while (iter%has_next())
-        potential => iter%get_next_interaction() 
+        potential => iter%get_next() 
         select type (potential)
         class is (external_potential_t)
 
