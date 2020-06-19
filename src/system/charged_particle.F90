@@ -114,9 +114,6 @@ contains
     call parse_variable(namespace, 'ClassicalParticleCharge', M_ONE, this%charge)
     call messages_print_var_value(stdout, 'ClassicalParticleCharge', this%charge)
 
-    this%quantities(CHARGE)%required = .true.
-    this%quantities(CHARGE)%protected = .true.
-
     POP_SUB(charged_particle_init)
   end subroutine charged_particle_init
 
