@@ -1656,6 +1656,7 @@ contains
               do ip = 1, mesh%np_part
                 psi(ip) = exp(-M_zI*sum(mesh%x(ip, 1:mdim)*kpoint(1:mdim)))*psi(ip) 
               end do
+              !$omp end parallel do
             end if
             
             call zderivatives_grad(gr%der, psi, gpsi, .true.)
