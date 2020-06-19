@@ -216,7 +216,12 @@ contains
     class(system_mxll_t), target, intent(inout) :: this
     class(system_abst_t),         intent(inout) :: partner
 
+    class(ghost_interaction_t), pointer :: ghost
+
     PUSH_SUB(system_mxll_add_interaction_partner)
+
+    ghost => ghost_interaction_t(partner)
+    call this%interactions%add(ghost)
 
     POP_SUB(system_mxll_add_interaction_partner)
   end subroutine system_mxll_add_interaction_partner
