@@ -34,7 +34,7 @@ module propagator_abst_oct_m
     propagator_abst_t,                 &
     propagator_step_debug_message
 
-  type, extends(linked_list_t) :: propagator_abst_t
+  type, extends(list_t) :: propagator_abst_t
     private
 
     type(list_iterator_t) :: iter

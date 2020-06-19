@@ -23,7 +23,6 @@ module multisystem_oct_m
   use global_oct_m
   use interaction_abst_oct_m
   use io_oct_m
-  use linked_list_oct_m
   use loct_oct_m
   use messages_oct_m
   use mpi_oct_m
@@ -40,7 +39,7 @@ module multisystem_oct_m
     multisystem_t
 
   type, extends(system_abst_t) :: multisystem_t
-    type(linked_list_t) :: list
+    type(system_list_t) :: list
   contains
     procedure :: dt_operation =>  multisystem_dt_operation
     procedure :: init_clocks => multisystem_init_clocks
@@ -85,7 +84,7 @@ contains
     integer :: isys, system_type
     character(len=128) :: system_name
     type(block_t) :: blk
-    class(*), pointer :: sys
+    class(system_abst_t), pointer :: sys
     
     PUSH_SUB(multisystem_constructor)
 
@@ -155,7 +154,7 @@ contains
 
     call iter%start(this%list)
     do while (iter%has_next())
-      system => iter%get_next_system()
+      system => iter%get_next()
       call system%dt_operation()
     end do
 
@@ -174,7 +173,7 @@ contains
 
     call iter%start(this%list)
     do while (iter%has_next())
-      system => iter%get_next_system()
+      system => iter%get_next()
       call system%init_clocks(smallest_algo_dt)
     end do
 
@@ -193,7 +192,7 @@ contains
 
     call iter%start(this%list)
     do while (iter%has_next())
-      system => iter%get_next_system()
+      system => iter%get_next()
       call system%reset_clocks(accumulated_ticks)
     end do
 
@@ -212,7 +211,7 @@ contains
 
     call iter%start(this%list)
     do while (iter%has_next())
-      system => iter%get_next_system()
+      system => iter%get_next()
       call system%init_propagator(smallest_algo_dt)
     end do
 
@@ -230,7 +229,7 @@ contains
 
     call iter%start(this%list)
     do while (iter%has_next())
-      system => iter%get_next_system()
+      system => iter%get_next()
       call system%propagation_start()
     end do
 
@@ -248,7 +247,7 @@ contains
 
     call iter%start(this%list)
     do while (iter%has_next())
-      system => iter%get_next_system()
+      system => iter%get_next()
       call system%propagation_finish()
     end do
 
@@ -267,7 +266,7 @@ contains
     multisystem_has_reached_final_propagation_time = .true.
     call iter%start(this%list)
     do while (iter%has_next())
-      system => iter%get_next_system()
+      system => iter%get_next()
       multisystem_has_reached_final_propagation_time = multisystem_has_reached_final_propagation_time .and. &
         system%has_reached_final_propagation_time()
     end do
@@ -287,7 +286,7 @@ contains
 
     call iter%start(this%list)
     do while (iter%has_next())
-      system => iter%get_next_system()
+      system => iter%get_next()
       if (system%propagation_step_is_done()) then
         call system%propagation_step_finish(iteration)
       end if
@@ -308,7 +307,7 @@ contains
     multisystem_propagation_step_is_done = .false.
     call iter%start(this%list)
     do while (iter%has_next())
-      system => iter%get_next_system()
+      system => iter%get_next()
       multisystem_propagation_step_is_done = multisystem_propagation_step_is_done .or. system%propagation_step_is_done()
     end do
 
@@ -321,7 +320,7 @@ contains
 
     class(system_abst_t), pointer :: sys1, sys2
     type(system_iterator_t) :: iter1, iter2
-    type(linked_list_t) :: flat_list
+    type(system_list_t) :: flat_list
     integer :: iunit_out
 
     PUSH_SUB(multisystem_init_interactions)
@@ -337,11 +336,11 @@ contains
     ! Double loop over all the subsystems that can interact
     call iter1%start(flat_list)
     do while (iter1%has_next())
-      sys1 => iter1%get_next_system()
+      sys1 => iter1%get_next()
 
       call iter2%start(flat_list)
       do while (iter2%has_next())
-        sys2 => iter2%get_next_system()
+        sys2 => iter2%get_next()
 
         !No self interaction
         if(.not.associated(sys1, sys2)) then
@@ -365,14 +364,14 @@ contains
 
     recursive subroutine flatten_list(systems, list)
       class(multisystem_t), intent(inout) :: systems
-      type(linked_list_t),  intent(inout) :: list
+      type(system_list_t),  intent(inout) :: list
 
       class(system_abst_t), pointer :: system
       type(system_iterator_t) :: iterator
 
       call iterator%start(systems%list)
       do while (iterator%has_next())
-        system => iterator%get_next_system()
+        system => iterator%get_next()
 
         select type (system)
         class is (multisystem_t)
@@ -398,7 +397,7 @@ contains
 
     call iter%start(this%list)
     do while (iter%has_next())
-      system => iter%get_next_system()
+      system => iter%get_next()
       call system%add_interaction_partner(partner)
     end do
 
@@ -418,7 +417,7 @@ contains
     multisystem_has_interaction = .false.
     call iter%start(this%list)
     do while (iter%has_next())
-      system => iter%get_next_system()
+      system => iter%get_next()
       if (system%has_interaction(interaction)) multisystem_has_interaction = .true.
     end do
 
@@ -437,7 +436,7 @@ contains
 
     call iter%start(this%list)
     do while (iter%has_next())
-      system => iter%get_next_system()
+      system => iter%get_next()
       call system%initial_conditions(from_scratch)
     end do
 
@@ -456,7 +455,7 @@ contains
 
     call iter%start(this%list)
     do while (iter%has_next())
-      system => iter%get_next_system()
+      system => iter%get_next()
       call system%do_td_operation(operation)
     end do
 
@@ -476,7 +475,7 @@ contains
     converged = .true.
     call iter%start(this%list)
     do while (iter%has_next())
-      system => iter%get_next_system()
+      system => iter%get_next()
       if (.not. system%is_tolerance_reached(tol)) converged = .false.
     end do
 
@@ -494,7 +493,7 @@ contains
 
     call iter%start(this%list)
     do while (iter%has_next())
-      system => iter%get_next_system()
+      system => iter%get_next()
       call system%store_current_status()
     end do
 
@@ -512,7 +511,7 @@ contains
 
     call iter%start(this%list)
     do while (iter%has_next())
-      system => iter%get_next_system()
+      system => iter%get_next()
       call system%iteration_info()
     end do
 
@@ -530,7 +529,7 @@ contains
 
     call iter%start(this%list)
     do while (iter%has_next())
-      system => iter%get_next_system()
+      system => iter%get_next()
       call system%output_start()
     end do
 
@@ -548,7 +547,7 @@ contains
 
     call iter%start(this%list)
     do while (iter%has_next())
-      system => iter%get_next_system()
+      system => iter%get_next()
       call system%output_finish()
     end do
 
@@ -567,7 +566,7 @@ contains
 
     call iterator%start(this%list)
     do while (iterator%has_next())
-      system => iterator%get_next_system()
+      system => iterator%get_next()
       call system%output_write(iter)
     end do
 
@@ -655,7 +654,7 @@ contains
 
     call iter%start(this%list)
     do while (iter%has_next())
-      system => iter%get_next_system()
+      system => iter%get_next()
       SAFE_DEALLOCATE_P(system)
     end do
 

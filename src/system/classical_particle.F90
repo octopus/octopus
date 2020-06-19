@@ -552,7 +552,7 @@ contains
     this%tot_force(1:this%space%dim) = M_ZERO
     call iter%start(this%interactions)
     do while (iter%has_next())
-      select type (interaction => iter%get_next_interaction())
+      select type (interaction => iter%get_next())
       type is (interaction_lorentz_force_t)
         this%tot_force(1:this%space%dim) = this%tot_force(1:this%space%dim) + interaction%force(1:this%space%dim)
       type is (interaction_gravity_t)
@@ -581,7 +581,7 @@ contains
 
     call iter%start(this%interactions)
     do while (iter%has_next())
-      interaction => iter%get_next_interaction()
+      interaction => iter%get_next()
       SAFE_DEALLOCATE_P(interaction)
     end do
 

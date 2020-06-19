@@ -42,6 +42,7 @@ module system_abst_oct_m
   private
   public ::               &
     system_abst_t,        &
+    system_list_t,        &
     system_iterator_t
 
   type, extends(interaction_partner_t), abstract :: system_abst_t
@@ -52,7 +53,7 @@ module system_abst_oct_m
 
     integer :: accumulated_loop_ticks
 
-    type(linked_list_t), public :: interactions !< List with all the interactions of this system
+    type(interaction_list_t), public :: interactions !< List with all the interactions of this system
   contains
     procedure :: dt_operation =>  system_dt_operation
     procedure :: init_clocks => system_init_clocks
@@ -170,12 +171,17 @@ module system_abst_oct_m
     end subroutine system_output_finish
   end interface
 
-  !> This class extends the list iterator and adds one method to get the
-  !! system as a pointer of type class(system_abst_t).
-  type, extends(list_iterator_t) :: system_iterator_t
+  !> These class extends the list and list iterator to create a system list
+  type, extends(linked_list_t) :: system_list_t
     private
   contains
-    procedure :: get_next_system => system_iterator_get_next
+    procedure :: add => system_list_add_node
+  end type system_list_t
+  
+  type, extends(linked_list_iterator_t) :: system_iterator_t
+    private
+  contains
+    procedure :: get_next => system_iterator_get_next
   end type system_iterator_t
 
 contains
@@ -295,7 +301,7 @@ contains
     ! Interaction clocks
     call iter%start(this%interactions)
     do while (iter%has_next())
-      interaction => iter%get_next_interaction()
+      interaction => iter%get_next()
       call interaction%init_clock(this%namespace%get(), this%prop%dt, smallest_algo_dt)
     end do
 
@@ -325,7 +331,7 @@ contains
       ! Interaction clocks
       call iter%start(this%interactions)
       do while (iter%has_next())
-        interaction => iter%get_next_interaction()
+        interaction => iter%get_next()
         call interaction%clock%decrement()
       end do
 
@@ -437,7 +443,7 @@ contains
     all_updated = .true.
     call iter%start(this%interactions)
     do while (iter%has_next())
-      interaction => iter%get_next_interaction()
+      interaction => iter%get_next()
 
       if (.not. interaction%clock == requested_time) then
         ! Update the system quantities that will be needed for computing the interaction
@@ -616,18 +622,27 @@ contains
   end function system_propagation_step_is_done
 
   ! ---------------------------------------------------------
-  function system_iterator_get_next(this) result(value)
-    class(system_iterator_t), intent(inout) :: this
-    class(system_abst_t),     pointer       :: value
+  subroutine system_list_add_node(this, system)
+    class(system_list_t)         :: this
+    class(system_abst_t), target :: system
 
-    class(*), pointer :: ptr
+    PUSH_SUB(system_list_add_node)
+
+    call this%add_ptr(system)
+
+    POP_SUB(system_list_add_node)
+  end subroutine system_list_add_node
+
+  ! ---------------------------------------------------------
+  function system_iterator_get_next(this) result(system)
+    class(system_iterator_t), intent(inout) :: this
+    class(system_abst_t),     pointer       :: system
 
     PUSH_SUB(system_iterator_get_next)
 
-    ptr => this%get_next()
-    select type (ptr)
+    select type (ptr => this%get_next_ptr())
     class is (system_abst_t)
-      value => ptr
+      system => ptr
     class default
       ASSERT(.false.)
     end select
