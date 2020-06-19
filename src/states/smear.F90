@@ -204,6 +204,7 @@ contains
     logical            :: conv
     FLOAT,   allocatable :: eigenval_list(:)
     integer, allocatable :: k_list(:), reorder(:)
+    integer            :: fermi_count_up, fermi_count_down
 
     PUSH_SUB(smear_find_fermi_energy)
 
@@ -259,11 +260,22 @@ contains
           ! count how many occupied states are at the fermi level,
           ! this is required later to fill the states
           this%fermi_count = 1
+          fermi_count_up = 1
+          fermi_count_down = 1
           do
-            if(iter - this%fermi_count < 1) exit
-            if(this%e_fermi /= eigenval_list(iter - this%fermi_count)) exit
-            this%fermi_count = this%fermi_count + 1
+            if(iter - fermi_count_down < 1) exit
+            if(abs(this%e_fermi - eigenval_list(iter - fermi_count_down)) > CNST(1e-6)) exit
+            fermi_count_down = fermi_count_down + 1
+            this%ef_occ = this%ef_occ  &
+                    + int(kweights(k_list(reorder(iter-fermi_count_down))) * this%nik_factor + M_HALF)
           end do
+          do
+            if(iter + fermi_count_up > nst*nik) exit
+            if(abs(this%e_fermi - eigenval_list(iter + fermi_count_up)) > CNST(1e-6)) exit
+            fermi_count_up = fermi_count_up + 1
+          end do
+          this%fermi_count = fermi_count_up + fermi_count_down - 1
+          this%ef_occ = this%ef_occ / this%fermi_count
           exit
         end if
 
@@ -335,9 +347,9 @@ contains
       do ik = 1, nik
         do ist = 1, nst
           xx = eigenvalues(ist, ik) - this%e_fermi
-          if(xx < M_ZERO) then
+          if(xx < -CNST(1e-6)) then
             occupations(ist, ik) = this%el_per_state
-          else if(abs(xx) <= M_EPSILON .and. ifermi < this%fermi_count) then
+          else if(abs(xx) <= CNST(1e-6) .and. ifermi < this%fermi_count) then
             occupations(ist, ik) = this%ef_occ * this%el_per_state
             ifermi = ifermi + 1
           else

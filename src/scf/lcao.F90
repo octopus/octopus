@@ -733,7 +733,7 @@ contains
       call v_ks_calc(sys%ks, sys%namespace, sys%hm, sys%st, sys%geo, calc_eigenval=.false., &
                       calc_berry=.false., calc_current=.false.)
       ! eigenvalues have nevertheless to be initialized to something
-      sys%st%eigenval = M_ZERO
+      sys%st%eigenval = M_HUGE
 
     end if
 
