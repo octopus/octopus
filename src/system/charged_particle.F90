@@ -127,13 +127,8 @@ contains
     PUSH_SUB(charged_particle_add_interaction_partner)
 
     if (partner%has_interaction(lorentz_force_t)) then
-      lorentz_force => interaction_lorentz_force_t(this%space%dim, partner)
-      this%quantities(POSITION)%required = .true.
-      this%quantities(VELOCITY)%required = .true.
-      this%quantities(CHARGE)%required = .true.
-      lorentz_force%system_pos => this%pos
-      lorentz_force%system_vel => this%vel
-      lorentz_force%system_charge => this%charge
+      lorentz_force => interaction_lorentz_force_t(partner)
+      call lorentz_force%init(this%space%dim, this%quantities, this%charge, this%pos, this%vel)
       call this%interactions%add(lorentz_force)
     end if
     call this%classical_particle_t%add_interaction_partner(partner)

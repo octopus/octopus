@@ -153,11 +153,8 @@ contains
     PUSH_SUB(classical_particle_add_interaction_partner)
 
     if (partner%has_interaction(gravity_t)) then
-      gravity => interaction_gravity_t(this%space%dim, partner)
-      this%quantities(POSITION)%required = .true.
-      this%quantities(MASS)%required = .true.
-      gravity%system_mass => this%mass
-      gravity%system_pos  => this%pos
+      gravity => interaction_gravity_t(partner)
+      call gravity%init(this%space%dim, this%quantities, this%mass, this%pos)
       call this%interactions%add(gravity)
     else
       ghost => ghost_interaction_t(partner)
