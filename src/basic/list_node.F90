@@ -35,6 +35,7 @@ module list_node_oct_m
     procedure :: get
     procedure :: next
     procedure :: set_next
+    procedure :: is_equal
     final :: finalize
   end type list_node_t
 
@@ -92,6 +93,49 @@ contains
 
     POP_SUB(get)
   end function get
+
+  logical function is_equal(this, value)
+    class(list_node_t), intent(in) :: this
+    class(*),           target     :: value
+
+    ! First try to match the two types and compare the values.
+    ! Note that the list of types taken into account might not be exhaustive.
+    is_equal = .false.
+    select type (ptr => this%value)
+    type is (integer)
+      select type (value)
+      type is (integer)
+        is_equal = value == ptr
+      end select
+    type is (FLOAT)
+      select type (value)
+      type is (FLOAT)
+        is_equal = value == ptr
+      end select
+    type is (complex)
+      select type (value)
+      type is (complex)
+        is_equal = value == ptr
+      end select
+    type is (character(len=*))
+      select type (value)
+      type is (character(len=*))
+        is_equal = value == ptr
+      end select
+    type is (logical)
+      select type (value)
+      type is (logical)
+        is_equal = value .eqv. ptr
+      end select
+    end select
+
+    ! If we were not able to match the types, then we check if the two values
+    ! point to the same target.
+    if (.not. is_equal) then
+      is_equal = associated(this%value, value)
+    end if
+
+  end function is_equal
 
   subroutine finalize(this)
     type(list_node_t), intent(inout) :: this

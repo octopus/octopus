@@ -44,6 +44,7 @@ module linked_list_oct_m
     class(list_node_t), pointer :: last_node => null()
   contains
     procedure :: add_ptr => linked_list_add_node_ptr
+    procedure :: has => linked_list_has
     final     :: linked_list_finalize
   end type linked_list_t
 
@@ -137,6 +138,22 @@ contains
     end do
 
   end subroutine linked_list_finalize
+
+  ! ---------------------------------------------------------
+  logical function linked_list_has(this, value)
+    class(linked_list_t),        intent(inout) :: this
+    class(*),                    target        :: value
+
+    class(list_node_t), pointer :: current
+
+    current => this%first_node
+    linked_list_has = .false.
+    do while (associated(current) .and. .not. linked_list_has)
+      linked_list_has = current%is_equal(value)
+      current => current%next()
+    end do
+
+  end function linked_list_has
 
   ! ---------------------------------------------------------
   subroutine linked_list_iterator_start(this, list)
