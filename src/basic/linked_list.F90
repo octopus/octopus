@@ -28,7 +28,9 @@ module linked_list_oct_m
   public :: linked_list_t,          &
             linked_list_iterator_t, &
             list_t,                 &
-            list_iterator_t
+            list_iterator_t,        &
+            integer_list_t,         &
+            integer_iterator_t
 
   !---------------------------------------------------------------------------
   !> The following class implements a linked list of unlimited polymorphic
@@ -84,6 +86,20 @@ module linked_list_oct_m
   contains
     procedure :: get_next => list_iterator_get_next
   end type list_iterator_t
+
+  !---------------------------------------------------------------------------
+  !> The following class implements a linked list of integer values. Note that
+  !> the get method returns an integer, not a pointer.
+  type, extends(linked_list_t) :: integer_list_t
+    private
+  contains
+    procedure :: add => integer_list_add_node
+  end type integer_list_t
+
+  type, extends(linked_list_iterator_t) :: integer_iterator_t
+  contains
+    procedure :: get_next => integer_iterator_get_next
+  end type integer_iterator_t
 
 contains
 
@@ -169,5 +185,30 @@ contains
     value => this%get_next_ptr()
 
   end function list_iterator_get_next
+
+  ! Integer list
+
+  ! ---------------------------------------------------------
+  subroutine integer_list_add_node(this, value)
+    class(integer_list_t), intent(inout) :: this
+    integer,               target        :: value
+
+    call this%add_ptr(value)
+
+  end subroutine integer_list_add_node
+
+  ! ---------------------------------------------------------
+  function integer_iterator_get_next(this) result(value)
+    class(integer_iterator_t), intent(inout) :: this
+    integer                                  :: value
+
+    select type (ptr => this%get_next_ptr())
+    type is (integer)
+      value = ptr
+    class default
+      ASSERT(.false.)
+    end select
+
+  end function integer_iterator_get_next
 
 end module linked_list_oct_m

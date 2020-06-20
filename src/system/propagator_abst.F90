@@ -34,11 +34,11 @@ module propagator_abst_oct_m
     propagator_abst_t,                 &
     propagator_step_debug_message
 
-  type, extends(list_t) :: propagator_abst_t
+  type, extends(integer_list_t) :: propagator_abst_t
     private
 
-    type(list_iterator_t) :: iter
-    type(list_iterator_t) :: scf_start
+    type(integer_iterator_t) :: iter
+    type(integer_iterator_t) :: scf_start
     integer               :: current_ops
 
     integer, public       :: start_step
@@ -135,13 +135,7 @@ contains
 
     PUSH_SUB(propagator_next)
 
-    select type(next_ops => this%iter%get_next())
-    type is (integer)
-      this%current_ops = next_ops
-    class default
-      message(1) = "Corrupted list."
-      call messages_fatal(1)
-    end select
+    this%current_ops = this%iter%get_next()
 
     POP_SUB(propagator_next)
   end subroutine propagator_next
