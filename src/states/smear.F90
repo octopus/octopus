@@ -266,8 +266,7 @@ contains
             if(iter - fermi_count_down < 1) exit
             if(abs(this%e_fermi - eigenval_list(iter - fermi_count_down)) > CNST(1e-6)) exit
             fermi_count_down = fermi_count_down + 1
-            this%ef_occ = this%ef_occ  &
-                    + int(kweights(k_list(reorder(iter-fermi_count_down))) * this%nik_factor + M_HALF)
+            this%ef_occ = this%ef_occ + 1
           end do
           do
             if(iter + fermi_count_up > nst*nik) exit
