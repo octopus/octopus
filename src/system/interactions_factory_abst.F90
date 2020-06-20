@@ -27,17 +27,27 @@ module interactions_factory_abst_oct_m
   use messages_oct_m
   use multisystem_oct_m
   use namespace_oct_m
+  use parser_oct_m
   use system_abst_oct_m
+  use varinfo_oct_m
   implicit none
 
   private
   public ::                        &
     interactions_factory_abst_t
 
+  integer, parameter, public ::   &
+    NO_PARTNERS   = -1,            &
+    ALL_PARTNERS  = -2,            &
+    ONLY_PARTNERS = -3,            &
+    ALL_EXCEPT    = -4
+
   type, abstract :: interactions_factory_abst_t
   contains
     procedure :: create_interactions => interactions_factory_abst_create_interactions
     procedure(interactions_factory_abst_create), deferred :: create
+    procedure(interactions_factory_abst_default_mode), deferred :: default_mode
+    procedure(interactions_factory_abst_block_name), deferred :: block_name
   end type interactions_factory_abst_t
 
   abstract interface
@@ -50,20 +60,39 @@ module interactions_factory_abst_oct_m
       class(interaction_partner_t),       target, intent(inout) :: partner
       class(interaction_abst_t),                  pointer       :: interaction
     end function interactions_factory_abst_create
+
+    integer function interactions_factory_abst_default_mode(this, type)
+      import :: interactions_factory_abst_t
+      class(interactions_factory_abst_t), intent(in)    :: this
+      integer,                            intent(in)    :: type
+    end function interactions_factory_abst_default_mode
+
+    character(len=80) function interactions_factory_abst_block_name(this)
+      import :: interactions_factory_abst_t
+      class(interactions_factory_abst_t), intent(in)    :: this
+    end function interactions_factory_abst_block_name
   end interface
 
 contains
   
   ! ---------------------------------------------------------------------------------------
-  recursive subroutine interactions_factory_abst_create_interactions(this, system, partners)
+  recursive subroutine interactions_factory_abst_create_interactions(this, system, available_partners)
     class(interactions_factory_abst_t),    intent(in)    :: this
     class(system_abst_t),                  intent(inout) :: system
-    class(partner_list_t),         target, intent(in)    :: partners
+    class(partner_list_t),         target, intent(in)    :: available_partners
 
+    type(integer_list_t) :: interactions_to_create
     type(integer_iterator_t) :: interaction_iter
     integer :: interaction_type
-    class(system_abst_t), pointer :: subsystem
+    type(partner_list_t) :: partners
+    type(partner_iterator_t) :: partner_iter
+    class(interaction_partner_t), pointer :: partner
     type(system_iterator_t) :: iter
+    class(system_abst_t), pointer :: subsystem
+
+    integer :: il, ic, mode
+    type(block_t) :: blk
+    character(len=MAX_NAMESPACE_LEN) :: partner_name
 
     PUSH_SUB(interactions_factory_abst_create_interactions)
 
@@ -72,16 +101,102 @@ contains
       call messages_info(1)
     end if
 
-    ! Loop over all the interactions supported by the system
-    call interaction_iter%start(system%supported_interactions)
+    ! Make a copy of the interactions list so that we can modify it
+    interactions_to_create = system%supported_interactions
+
+    ! Parse input. The variable name and description should be given by the
+    ! factory, as different factories might have different options.
+    if (parse_block(system%namespace, this%block_name(), blk) == 0) then
+      ! Loop over all interactions specified in the input file
+      do il = 0, parse_block_n(blk) - 1
+        ! Read the interaction type (first column)
+        call parse_block_integer(blk, il, 0, interaction_type)
+
+        ! Sanity check: the interaction type must be known and must not be mistaken for an interaction mode
+        if (.not. varinfo_valid_option(this%block_name(), interaction_type) .or. &
+          any(interaction_type == (/ALL_PARTNERS, ONLY_PARTNERS, NO_PARTNERS, ALL_EXCEPT/))) then
+          call messages_input_error(system%namespace, this%block_name(), details="Unknown interaction type", row=il, column=0)
+        end if
+
+        ! Ignore interactions that are not supported by this system
+        if (.not. interactions_to_create%has(interaction_type)) cycle
+
+        ! Read how this interaction should be treated (second column)
+        call parse_block_integer(blk, il, 1, mode)
+
+        ! Create list of partners for this interaction taking into account the selected mode
+        select case (mode)
+        case (ALL_PARTNERS)
+          ! Use all available partners
+          partners = available_partners
+        case (NO_PARTNERS)
+          ! No partners for this interaction
+          call partners%empty()
+        case (ONLY_PARTNERS)
+          ! Start with an empty list. We will add only the select partners bellow
+          call partners%empty()
+        case (ALL_EXCEPT)
+          ! Start with full list. We will remove the select partners bellow
+          partners = available_partners
+        case default
+          call messages_input_error(system%namespace, this%block_name(), "Unknown interaction mode", row=il, column=1)
+        end select
+
+        if (mode == ONLY_PARTNERS .or. mode == ALL_EXCEPT) then
+          ! In these two cases we need to read the names of the selected
+          ! partners (remaining columns) and handled them appropriatly
+          do ic = 2, parse_block_cols(blk, il) - 1
+            call parse_block_string(blk, il, ic, partner_name)
+
+            ! Loop over available partners and either add them or remove them
+            ! from the list depending on the selected mode
+            call partner_iter%start(available_partners)
+            do while (partner_iter%has_next())
+              partner => partner_iter%get_next()
+              if (trim(partner%namespace%get()) == trim(partner_name) .or. partner%namespace%has_parent(partner_name)) then
+                select case (mode)
+                case (ONLY_PARTNERS)
+                  call partners%add(partner)
+                case (ALL_EXCEPT)
+                  call partners%delete(partner)
+                end select
+              end if
+            end do
+          end do
+
+        end if
+
+        ! Now actually create the interactions for the selected partners
+        call create_interaction_with_partners(this, system%namespace, partners, system%interactions, interaction_type)
+
+        ! Remove this interaction type from the list, as it has just been handled
+        call interactions_to_create%delete(interaction_type)
+      end do
+      call parse_block_end(blk)
+    end if
+
+    ! Loop over all the remaining interactions supported by the system
+    call interaction_iter%start(interactions_to_create)
     do while (interaction_iter%has_next())
       interaction_type = interaction_iter%get_next()
+
+      ! Check what is the default mode for this interaction type (all or none)
+      select case (this%default_mode(interaction_type))
+      case (ALL_PARTNERS)
+        partners = available_partners
+      case (NO_PARTNERS)
+        call partners%empty()
+      case default
+        message(1) = "Default interaction mode can only be all_partners or no_partners."
+        call messages_fatal(1, namespace=system%namespace)
+      end select
+
       call create_interaction_with_partners(this, system%namespace, partners, system%interactions, interaction_type)
     end do
 
     ! All systems need to be connected to make sure they remain synchronized.
     ! We enforce that be adding a ghost interaction between all systems
-    call create_interaction_with_partners(this, system%namespace, partners, system%interactions)
+    call create_interaction_with_partners(this, system%namespace, available_partners, system%interactions)
 
     ! If the system is a multisystem, then we also need to create the interactions for the subsystems
     select type (system)
@@ -89,7 +204,7 @@ contains
       call iter%start(system%list)
       do while (iter%has_next())
         subsystem => iter%get_next()
-        call this%create_interactions(subsystem, partners)
+        call this%create_interactions(subsystem, available_partners)
       end do
     end select
 
@@ -107,6 +222,8 @@ contains
     type(partner_iterator_t) :: iter
     class(interaction_partner_t), pointer :: partner
     class(interaction_abst_t), pointer :: interaction
+
+    PUSH_SUB(create_interaction_with_partners)
 
     ! Loop over all available partners
     call iter%start(partners)
@@ -143,6 +260,7 @@ contains
       end select
     end do
 
+    POP_SUB(create_interaction_with_partners)
   end subroutine create_interaction_with_partners
 
 end module interactions_factory_abst_oct_m

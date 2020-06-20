@@ -40,6 +40,8 @@ module interactions_factory_oct_m
   type, extends(interactions_factory_abst_t) :: interactions_factory_t
   contains
     procedure :: create => interactions_factory_create
+    procedure :: default_mode => interactions_factory_default_mode
+    procedure :: block_name => interactions_factory_block_name
   end type interactions_factory_t
 
 contains
@@ -53,6 +55,60 @@ contains
 
     PUSH_SUB(interactions_factory_create)
 
+    !%Variable Interactions
+    !%Type block
+    !%Section System
+    !%Description
+    !% This input option controls the interactions between systems. It basically
+    !% allows to select which systems will interact with another system through
+    !% a given interaction type. The format of the block is the following:
+    !%
+    !%  <br>%</tt>Namespace.Interactions
+    !%   <br>&nbsp;&nbsp;interaction_type | interaction_mode | ...
+    !%  <br>%</tt>
+    !%
+    !% Here is an example to better understand how this works:
+    !%
+    !%  <br>%</tt>SystemA.Interactions
+    !%   <br>&nbsp;&nbsp;gravity | all_except | "SystemB"
+    !%  <br>%</tt>
+    !%
+    !% This means that SystemA and all the systems that belong to the same
+    !% namespace (i.e., all its subsystems) will interact through gravity with
+    !% all interaction partners that are also able to interact through gravity,
+    !% except with SystemB. Note that the opposite is not true so, although
+    !% clearly unphysical, this will not prevent SystemB from feeling the
+    !% gravity from SystemA (in <tt>Octopus</tt> the interactions are always
+    !% one-sided).
+    !%
+    !% NB: Each interaction type should only appear once in the block. Any
+    !% further instances beyond the first will be ignored.
+    !%
+    !% Available modes and interaction types:
+    !%Option no_partners -1
+    !%  (interaction mode)
+    !% Do not interact with any partner.
+    !%Option all_partners -2
+    !%  (interaction mode)
+    !% Interact with all available partners.
+    !%Option only_partners -3
+    !%  (interaction mode)
+    !% Interact only with some specified partners. A list of partner names must
+    !% be given.
+    !%Option all_except -4
+    !%  (interaction mode)
+    !% Interact with all available partners except with some specified
+    !% partners. A list of partner names to exclude must be given.
+    !%Option gravity 1
+    !%  (interaction type)
+    !% Gravity interaction between two masses.
+    !%Option lorenz_force 2
+    !%  (interaction type)
+    !% Lorenz force resulting from an EM field acting on a moving charge.
+    !%Option coulomb_force 3
+    !%  (interaction type)
+    !% Coulomb force between two charged particles.
+    !%End
     select case (type)
     case (GRAVITY)
       interaction => interaction_gravity_t(partner)
@@ -61,11 +117,45 @@ contains
     case (LORENTZ_FORCE)
       interaction => interaction_lorentz_force_t(partner)
     case default
-      ASSERT(.false.)
+      ! This should never happen, as this is handled in
+      ! interactions_factory_abst_create_interactions
     end select
 
     POP_SUB(interactions_factory_create)
   end function interactions_factory_create
+
+  ! ---------------------------------------------------------------------------------------
+  integer function interactions_factory_default_mode(this, type) result(mode)
+    class(interactions_factory_t), intent(in)    :: this
+    integer,                       intent(in)    :: type
+
+    PUSH_SUB(interactions_factory_default_mode)
+
+    select case (type)
+    case (GRAVITY)
+      mode = ALL_PARTNERS
+    case (COULOMB_FORCE)
+      mode = ALL_PARTNERS
+    case (LORENTZ_FORCE)
+      mode = ALL_PARTNERS
+    case default
+      message(1) = "Unknown interaction type"
+      call messages_fatal(1)
+    end select
+
+    POP_SUB(interactions_factory_default_mode)
+  end function interactions_factory_default_mode
+
+  ! ---------------------------------------------------------------------------------------
+  character(len=80) function interactions_factory_block_name(this) result(name)
+    class(interactions_factory_t), intent(in)    :: this
+
+    PUSH_SUB(interactions_factory_block_name)
+
+    name = "Interactions"
+
+    POP_SUB(interactions_factory_block_name)
+  end function interactions_factory_block_name
 
 end module interactions_factory_oct_m
 
