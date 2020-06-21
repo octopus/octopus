@@ -25,6 +25,7 @@ module system_mxll_oct_m
   use distributed_oct_m
   use geometry_oct_m
   use ghost_interaction_oct_m
+  use interactions_factory_oct_m
   use interaction_lorentz_force_oct_m
   use global_oct_m
   use grid_oct_m
@@ -94,8 +95,7 @@ module system_mxll_oct_m
     integer                      :: mxll_ks_relax_iter
 
   contains
-    procedure :: add_interaction_partner => system_mxll_add_interaction_partner
-    procedure :: has_interaction => system_mxll_has_interaction
+    procedure :: init_interactions => system_mxll_init_interactions
     procedure :: initial_conditions => system_mxll_initial_conditions
     procedure :: do_td_operation => system_mxll_do_td
     procedure :: iteration_info => system_mxll_iteration_info
@@ -182,8 +182,9 @@ contains
 
     call mesh_interpolation_init(this%mesh_interpolate, this%gr%mesh)
 
-    POP_SUB(system_mxll_init)
+    call this%supported_interactions_as_partner%add(LORENTZ_FORCE)
 
+    POP_SUB(system_mxll_init)
   contains
 
     ! ---------------------------------------------------------
@@ -212,36 +213,13 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine system_mxll_add_interaction_partner(this, partner)
+  subroutine system_mxll_init_interactions(this)
     class(system_mxll_t), target, intent(inout) :: this
-    class(system_abst_t),         intent(inout) :: partner
 
-    class(ghost_interaction_t), pointer :: ghost
+    PUSH_SUB(system_mxll_init_interactions)
 
-    PUSH_SUB(system_mxll_add_interaction_partner)
-
-    ghost => ghost_interaction_t(partner)
-    call this%interactions%add(ghost)
-
-    POP_SUB(system_mxll_add_interaction_partner)
-  end subroutine system_mxll_add_interaction_partner
-
-  ! ---------------------------------------------------------
-  logical function system_mxll_has_interaction(this, interaction)
-    class(system_mxll_t),      intent(in) :: this
-    class(interaction_abst_t), intent(in) :: interaction
-
-    PUSH_SUB(system_mxll_has_interaction)
-
-    select type (interaction)
-    type is (interaction_lorentz_force_t)
-      system_mxll_has_interaction = .true.
-    class default
-      system_mxll_has_interaction = .false.
-    end select
-
-    POP_SUB(system_mxll_has_interaction)
-  end function system_mxll_has_interaction
+    POP_SUB(system_mxll_init_interactions)
+  end subroutine system_mxll_init_interactions
 
   ! ---------------------------------------------------------
   subroutine system_mxll_initial_conditions(this, from_scratch)
