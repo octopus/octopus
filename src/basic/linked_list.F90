@@ -116,10 +116,10 @@ contains
     class(list_node_t), pointer :: new_node
 
     if (.not. associated(this%first_node)) then
-      this%first_node => list_node(value, this%first_node, clone)
+      this%first_node => list_node_t(value, this%first_node, clone)
       this%last_node => this%first_node
     else
-      new_node => list_node(value, this%last_node%next(), clone)
+      new_node => list_node_t(value, this%last_node%next(), clone)
       call this%last_node%set_next(new_node)
       this%last_node => new_node
     end if

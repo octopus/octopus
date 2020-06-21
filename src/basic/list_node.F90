@@ -24,8 +24,7 @@ module list_node_oct_m
   implicit none
 
   private
-  public :: list_node_t, &
-            list_node
+  public :: list_node_t
 
   type :: list_node_t
     private
@@ -33,21 +32,21 @@ module list_node_oct_m
     class(*),          pointer :: value => null()
     type(list_node_t), pointer :: next_node => null()
   contains
-    procedure :: get
-    procedure :: next
-    procedure :: set_next
-    procedure :: is_equal
-    final :: finalize
+    procedure :: get => list_node_get
+    procedure :: next => list_node_next
+    procedure :: set_next => list_node_set_next
+    procedure :: is_equal => list_node_is_equal
+    final :: list_node_finalize
   end type list_node_t
 
-  interface list_node
-    procedure constructor
-  end interface list_node
+  interface list_node_t
+    procedure list_node_constructor
+  end interface list_node_t
 
 contains
 
   ! ---------------------------------------------------------
-  function constructor(value, next, clone)
+  function list_node_constructor(value, next, clone) result(constructor)
     class(*),           target     :: value
     class(list_node_t), pointer    :: next
     logical,            intent(in) :: clone
@@ -64,37 +63,37 @@ contains
       constructor%value => value
     end if
 
-  end function constructor
+  end function list_node_constructor
 
   ! ---------------------------------------------------------
-  function next(this)
+  function list_node_next(this) result(next)
     class(list_node_t), intent(in) :: this
     class(list_node_t), pointer    :: next
 
     next => this%next_node
 
-  end function next
+  end function list_node_next
 
   ! ---------------------------------------------------------
-  subroutine set_next(this, next_node)
+  subroutine list_node_set_next(this, next_node)
     class(list_node_t), intent(inout) :: this
     class(list_node_t), pointer       :: next_node
 
     this%next_node => next_node
 
-  end subroutine set_next
+  end subroutine list_node_set_next
 
   ! ---------------------------------------------------------
-  function get(this)
+  function list_node_get(this) result(get)
     class(list_node_t), intent(in) :: this
     class(*),           pointer :: get
 
     get => this%value
 
-  end function get
+  end function list_node_get
 
   ! ---------------------------------------------------------
-  logical function is_equal(this, value)
+  logical function list_node_is_equal(this, value) result(is_equal)
     class(list_node_t), intent(in) :: this
     class(*),           target     :: value
 
@@ -135,9 +134,9 @@ contains
       is_equal = associated(this%value, value)
     end if
 
-  end function is_equal
+  end function list_node_is_equal
 
-  subroutine finalize(this)
+  subroutine list_node_finalize(this)
     type(list_node_t), intent(inout) :: this
 
     if (associated(this%next_node)) then
@@ -151,6 +150,6 @@ contains
       end if
     end if
 
-  end subroutine finalize
+  end subroutine list_node_finalize
   
 end module list_node_oct_m
