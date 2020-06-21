@@ -46,13 +46,12 @@ module list_node_oct_m
 
 contains
 
+  ! ---------------------------------------------------------
   function constructor(value, next, clone)
     class(*),           target     :: value
     class(list_node_t), pointer    :: next
     logical,            intent(in) :: clone
     class(list_node_t), pointer    :: constructor
-
-    PUSH_SUB(constructor)
 
     ! No safe_allocate macro here, as its counterpart in linked_list.F90
     ! causes an internal compiler error with GCC 6.4.0
@@ -65,42 +64,36 @@ contains
       constructor%value => value
     end if
 
-    POP_SUB(constructor)
   end function constructor
 
+  ! ---------------------------------------------------------
   function next(this)
     class(list_node_t), intent(in) :: this
     class(list_node_t), pointer    :: next
 
-    PUSH_SUB(next)
-
     next => this%next_node
 
-    POP_SUB(next)
   end function next
 
+  ! ---------------------------------------------------------
   subroutine set_next(this, next_node)
     class(list_node_t), intent(inout) :: this
     class(list_node_t), pointer       :: next_node
 
-    PUSH_SUB(set_next)
-
     this%next_node => next_node
 
-    POP_SUB(set_next)
   end subroutine set_next
 
+  ! ---------------------------------------------------------
   function get(this)
     class(list_node_t), intent(in) :: this
     class(*),           pointer :: get
 
-    PUSH_SUB(get)
-
     get => this%value
 
-    POP_SUB(get)
   end function get
 
+  ! ---------------------------------------------------------
   logical function is_equal(this, value)
     class(list_node_t), intent(in) :: this
     class(*),           target     :: value
@@ -147,8 +140,6 @@ contains
   subroutine finalize(this)
     type(list_node_t), intent(inout) :: this
 
-    PUSH_SUB(finalize)
-
     if (associated(this%next_node)) then
       nullify(this%next_node)
     end if
@@ -160,7 +151,6 @@ contains
       end if
     end if
 
-    POP_SUB(finalize)
   end subroutine finalize
   
 end module list_node_oct_m
