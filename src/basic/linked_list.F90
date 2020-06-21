@@ -46,6 +46,7 @@ module linked_list_oct_m
     procedure :: add_node => linked_list_add_node
     procedure :: add_ptr  => linked_list_add_node_ptr
     procedure :: add_copy => linked_list_add_node_copy
+    procedure :: delete => linked_list_delete_node
     procedure :: has => linked_list_has
     procedure :: copy => linked_list_copy
     generic   :: assignment(=) => copy
@@ -63,8 +64,9 @@ module linked_list_oct_m
 
   !---------------------------------------------------------------------------
   !> The following class implements a linked list of unlimited polymorphic
-  !> values. Iterating over the is done using the associated iterator and there
-  !> are two ways of doing so. The first is by using a "do while" construct:
+  !> values. Iterating over the list is done using the associated iterator and
+  !> there are two ways of doing so. The first is by using a "do while"
+  !> construct:
   !>
   !>  call iter%start(list)
   !>  do while (iter%has_next())
@@ -145,6 +147,43 @@ contains
     call this%add_node(value, clone=.true.)
 
   end subroutine linked_list_add_node_copy
+
+  ! ---------------------------------------------------------
+  subroutine linked_list_delete_node(this, value)
+    class(linked_list_t), intent(inout) :: this
+    class(*),             target        :: value
+
+    class(list_node_t), pointer :: previous, current, next
+
+    previous => null()
+    current => null()
+    next => this%first_node
+    do while (associated(next))
+      previous => current
+      current => next
+      next => next%next()
+      if (current%is_equal(value)) then
+        if (associated(next) .and. .not. associated(previous)) then
+          ! First node
+          this%first_node => next
+        else if (.not. associated(next) .and. associated(previous)) then
+          ! Last node
+          call previous%set_next(null())
+          this%last_node => previous
+        else if (.not. associated(next) .and. .not. associated(previous)) then
+          ! List only has one node
+          nullify(this%first_node)
+          nullify(this%last_node)
+        else
+          ! Neither the first nor the last node
+          call previous%set_next(next)
+        end if
+        deallocate(current)
+        exit
+      end if
+    end do
+
+  end subroutine linked_list_delete_node
 
   ! ---------------------------------------------------------
   subroutine linked_list_finalize(this)
