@@ -47,6 +47,8 @@ module linked_list_oct_m
     procedure :: add_ptr  => linked_list_add_node_ptr
     procedure :: add_copy => linked_list_add_node_copy
     procedure :: has => linked_list_has
+    procedure :: copy => linked_list_copy
+    generic   :: assignment(=) => copy
     final     :: linked_list_finalize
   end type linked_list_t
 
@@ -156,8 +158,32 @@ contains
       deallocate(current)
       current => next
     end do
+    nullify(this%first_node)
+    nullify(this%last_node)
 
   end subroutine linked_list_finalize
+
+  ! ---------------------------------------------------------
+  subroutine linked_list_copy(lhs, rhs)
+    class(linked_list_t), intent(out) :: lhs
+    class(linked_list_t), intent(in)  :: rhs
+
+    class(list_node_t), pointer :: current, new_node
+
+    current => rhs%first_node
+    do while (associated(current))
+      if (.not. associated(lhs%first_node)) then
+        lhs%first_node => current%copy(lhs%first_node)
+        lhs%last_node => lhs%first_node
+      else
+        new_node => current%copy(lhs%last_node%next())
+        call lhs%last_node%set_next(new_node)
+        lhs%last_node => new_node
+      end if
+      current => current%next()
+    end do
+
+  end subroutine linked_list_copy
 
   ! ---------------------------------------------------------
   logical function linked_list_has(this, value)

@@ -36,6 +36,7 @@ module list_node_oct_m
     procedure :: next => list_node_next
     procedure :: set_next => list_node_set_next
     procedure :: is_equal => list_node_is_equal
+    procedure :: copy => list_node_copy
     final :: list_node_finalize
   end type list_node_t
 
@@ -64,6 +65,16 @@ contains
     end if
 
   end function list_node_constructor
+
+  ! ---------------------------------------------------------
+  function list_node_copy(this, next)
+    class(list_node_t), target  :: this
+    class(list_node_t), pointer :: next
+    class(list_node_t), pointer :: list_node_copy
+
+    list_node_copy => list_node_constructor(this%value, next, this%clone)
+
+  end function list_node_copy
 
   ! ---------------------------------------------------------
   function list_node_next(this) result(next)
