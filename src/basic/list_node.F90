@@ -29,6 +29,7 @@ module list_node_oct_m
 
   type :: list_node_t
     private
+    logical :: clone
     class(*),          pointer :: value => null()
     type(list_node_t), pointer :: next_node => null()
   contains
@@ -45,10 +46,11 @@ module list_node_oct_m
 
 contains
 
-  function constructor(value, next)
-    class(list_node_t), pointer :: constructor
-    class(*),           target  :: value
-    class(list_node_t), pointer :: next
+  function constructor(value, next, clone)
+    class(*),           target     :: value
+    class(list_node_t), pointer    :: next
+    logical,            intent(in) :: clone
+    class(list_node_t), pointer    :: constructor
 
     PUSH_SUB(constructor)
 
@@ -56,7 +58,12 @@ contains
     ! causes an internal compiler error with GCC 6.4.0
     allocate(constructor)
     constructor%next_node => next
-    constructor%value => value
+    constructor%clone = clone
+    if (constructor%clone) then
+      allocate(constructor%value, source=value)
+    else
+      constructor%value => value
+    end if
 
     POP_SUB(constructor)
   end function constructor
@@ -146,9 +153,13 @@ contains
       nullify(this%next_node)
     end if
     if (associated(this%value)) then
-      nullify(this%value)
+      if (this%clone) then
+        deallocate(this%value)
+      else
+        nullify(this%value)
+      end if
     end if
-    
+
     POP_SUB(finalize)
   end subroutine finalize
   

@@ -43,7 +43,9 @@ module linked_list_oct_m
     class(list_node_t), pointer :: first_node => null()
     class(list_node_t), pointer :: last_node => null()
   contains
-    procedure :: add_ptr => linked_list_add_node_ptr
+    procedure :: add_node => linked_list_add_node
+    procedure :: add_ptr  => linked_list_add_node_ptr
+    procedure :: add_copy => linked_list_add_node_copy
     procedure :: has => linked_list_has
     final     :: linked_list_finalize
   end type linked_list_t
@@ -105,24 +107,42 @@ module linked_list_oct_m
 contains
 
   ! Linked list
+  ! ---------------------------------------------------------
+  subroutine linked_list_add_node(this, value, clone)
+    class(linked_list_t), intent(inout) :: this
+    class(*),             target        :: value
+    logical,              intent(in)    :: clone
+
+    class(list_node_t), pointer :: new_node
+
+    if (.not. associated(this%first_node)) then
+      this%first_node => list_node(value, this%first_node, clone)
+      this%last_node => this%first_node
+    else
+      new_node => list_node(value, this%last_node%next(), clone)
+      call this%last_node%set_next(new_node)
+      this%last_node => new_node
+    end if
+
+  end subroutine linked_list_add_node
 
   ! ---------------------------------------------------------
   subroutine linked_list_add_node_ptr(this, value)
     class(linked_list_t), intent(inout) :: this
     class(*),             target        :: value
 
-    class(list_node_t), pointer :: new_node
-
-    if (.not. associated(this%first_node)) then
-      this%first_node => list_node(value, this%first_node)
-      this%last_node => this%first_node
-    else
-      new_node => list_node(value, this%last_node%next())
-      call this%last_node%set_next(new_node)
-      this%last_node => new_node
-    end if
+    call this%add_node(value, clone=.false.)
 
   end subroutine linked_list_add_node_ptr
+
+  ! ---------------------------------------------------------
+  subroutine linked_list_add_node_copy(this, value)
+    class(linked_list_t), intent(inout) :: this
+    class(*),             target        :: value
+
+    call this%add_node(value, clone=.true.)
+
+  end subroutine linked_list_add_node_copy
 
   ! ---------------------------------------------------------
   subroutine linked_list_finalize(this)
@@ -210,7 +230,7 @@ contains
     class(integer_list_t), intent(inout) :: this
     integer,               target        :: value
 
-    call this%add_ptr(value)
+    call this%add_copy(value)
 
   end subroutine integer_list_add_node
 
