@@ -95,7 +95,7 @@ module system_mxll_oct_m
     integer                      :: mxll_ks_relax_iter
 
   contains
-    procedure :: init_interactions => system_mxll_init_interactions
+    procedure :: init_interaction => system_mxll_init_interaction
     procedure :: initial_conditions => system_mxll_initial_conditions
     procedure :: do_td_operation => system_mxll_do_td
     procedure :: iteration_info => system_mxll_iteration_info
@@ -211,15 +211,22 @@ contains
 
   end subroutine system_mxll_init
 
-
   ! ---------------------------------------------------------
-  subroutine system_mxll_init_interactions(this)
+  subroutine system_mxll_init_interaction(this, interaction)
     class(system_mxll_t), target, intent(inout) :: this
+    class(interaction_abst_t),    intent(inout) :: interaction
 
-    PUSH_SUB(system_mxll_init_interactions)
+    PUSH_SUB(system_mxll_init_interaction)
 
-    POP_SUB(system_mxll_init_interactions)
-  end subroutine system_mxll_init_interactions
+    select type (interaction)
+    class default
+      ! Currently Maxwell system does not know any type of interaction
+      message(1) = "Trying to initialize an unsupported interaction by Maxwell."
+      call messages_fatal(1)
+    end select
+
+    POP_SUB(system_mxll_init_interaction)
+  end subroutine system_mxll_init_interaction
 
   ! ---------------------------------------------------------
   subroutine system_mxll_initial_conditions(this, from_scratch)

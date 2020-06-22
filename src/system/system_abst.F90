@@ -21,6 +21,7 @@
 
 module system_abst_oct_m
   use clock_oct_m
+  use ghost_interaction_oct_m
   use global_oct_m
   use interaction_abst_oct_m
   use interaction_partner_oct_m
@@ -65,13 +66,14 @@ module system_abst_oct_m
     procedure :: reset_clocks => system_reset_clocks
     procedure :: update_exposed_quantities => system_update_exposed_quantities
     procedure :: init_propagator => system_init_propagator
+    procedure :: init_all_interactions => system_init_all_interactions
     procedure :: update_interactions => system_update_interactions
     procedure :: propagation_start => system_propagation_start
     procedure :: propagation_finish => system_propagation_finish
     procedure :: has_reached_final_propagation_time => system_has_reached_final_propagation_time
     procedure :: propagation_step_finish => system_propagation_step_finish
     procedure :: propagation_step_is_done => system_propagation_step_is_done
-    procedure(system_init_interactions),              deferred :: init_interactions
+    procedure(system_init_interaction),               deferred :: init_interaction
     procedure(system_initial_conditions),             deferred :: initial_conditions
     procedure(system_do_td_op),                       deferred :: do_td_operation
     procedure(system_iteration_info),                 deferred :: iteration_info
@@ -87,10 +89,12 @@ module system_abst_oct_m
 
   abstract interface
     ! ---------------------------------------------------------
-    subroutine system_init_interactions(this)
+    subroutine system_init_interaction(this, interaction)
       import system_abst_t
+      import interaction_abst_t
       class(system_abst_t), target, intent(inout) :: this
-    end subroutine system_init_interactions
+      class(interaction_abst_t),    intent(inout) :: interaction
+    end subroutine system_init_interaction
 
     ! ---------------------------------------------------------
     subroutine system_initial_conditions(this, from_scratch)
@@ -426,6 +430,29 @@ contains
 
     POP_SUB(system_update_exposed_quantities)
   end function system_update_exposed_quantities
+
+  ! ---------------------------------------------------------
+  subroutine system_init_all_interactions(this)
+    class(system_abst_t), intent(inout) :: this
+
+    type(interaction_iterator_t) :: iter
+    class(interaction_abst_t), pointer :: interaction
+
+    PUSH_SUB(system_init_all_interactions)
+
+    call iter%start(this%interactions)
+    do while (iter%has_next())
+      interaction => iter%get_next()
+      select type (interaction)
+      type is (ghost_interaction_t)
+        ! Skip the ghost interactions
+      class default
+        call this%init_interaction(interaction)
+      end select
+    end do
+
+    POP_SUB(system_init_all_interactions)
+  end subroutine system_init_all_interactions
 
   ! ---------------------------------------------------------
   logical function system_update_interactions(this, requested_time) result(all_updated)

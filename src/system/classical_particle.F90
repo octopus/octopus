@@ -63,7 +63,7 @@ module classical_particle_oct_m
 
     type(c_ptr) :: output_handle
   contains
-    procedure :: init_interactions => classical_particle_init_interactions
+    procedure :: init_interaction => classical_particle_init_interaction
     procedure :: initial_conditions => classical_particle_initial_conditions
     procedure :: do_td_operation => classical_particle_do_td
     procedure :: iteration_info => classical_particle_iteration_info
@@ -144,25 +144,22 @@ contains
   end subroutine classical_particle_init
 
   ! ---------------------------------------------------------
-  subroutine classical_particle_init_interactions(this)
+  subroutine classical_particle_init_interaction(this, interaction)
     class(classical_particle_t), target, intent(inout) :: this
+    class(interaction_abst_t),           intent(inout) :: interaction
 
-    type(interaction_iterator_t) :: iter
-    class(interaction_abst_t), pointer :: interaction
+    PUSH_SUB(classical_particle_init_interaction)
 
-    PUSH_SUB(classical_particle_init_interactions)
+    select type (interaction)
+    type is (interaction_gravity_t)
+      call interaction%init(this%space%dim, this%quantities, this%mass, this%pos)
+    class default
+      message(1) = "Trying to initialize an unsupported interaction by classical particles."
+      call messages_fatal(1)
+    end select
 
-    call iter%start(this%interactions)
-    do while (iter%has_next())
-      interaction => iter%get_next()
-      select type (interaction)
-      type is (interaction_gravity_t)
-        call interaction%init(this%space%dim, this%quantities, this%mass, this%pos)
-      end select
-    end do
-
-    POP_SUB(classical_particle_init_interactions)
-  end subroutine classical_particle_init_interactions
+    POP_SUB(classical_particle_init_interaction)
+  end subroutine classical_particle_init_interaction
 
   ! ---------------------------------------------------------
   subroutine classical_particle_initial_conditions(this, from_scratch)

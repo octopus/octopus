@@ -51,7 +51,7 @@ module charged_particle_oct_m
     FLOAT :: charge
 
   contains
-    procedure :: init_interactions => charged_particle_init_interactions
+    procedure :: init_interaction => charged_particle_init_interaction
     procedure :: initial_conditions => charged_particle_initial_conditions
     procedure :: do_td_operation => charged_particle_do_td
     procedure :: iteration_info => charged_particle_iteration_info
@@ -119,29 +119,21 @@ contains
   end subroutine charged_particle_init
 
   ! ---------------------------------------------------------
-  subroutine charged_particle_init_interactions(this)
+  subroutine charged_particle_init_interaction(this, interaction)
     class(charged_particle_t), target, intent(inout) :: this
+    class(interaction_abst_t),         intent(inout) :: interaction
 
-    type(interaction_iterator_t) :: iter
-    class(interaction_abst_t), pointer :: interaction
+    PUSH_SUB(charged_particle_init_interaction)
 
-    PUSH_SUB(charged_particle_init_interactions)
+    select type (interaction)
+    type is (interaction_lorentz_force_t)
+      call interaction%init(this%space%dim, this%quantities, this%charge, this%pos, this%vel)
+    class default
+      call this%classical_particle_t%init_interaction(interaction)
+    end select
 
-    ! Initialize interactions known by the charged particle, but not by the parent class
-    call iter%start(this%interactions)
-    do while (iter%has_next())
-      interaction => iter%get_next()
-      select type (interaction)
-      type is (interaction_lorentz_force_t)
-        call interaction%init(this%space%dim, this%quantities, this%charge, this%pos, this%vel)
-      end select
-    end do
-
-    ! Initialize interactions known by the parent class
-    call this%classical_particle_t%init_interactions()
-
-    POP_SUB(charged_particle_init_interactions)
-  end subroutine charged_particle_init_interactions
+    POP_SUB(charged_particle_init_interaction)
+  end subroutine charged_particle_init_interaction
 
   ! ---------------------------------------------------------
   subroutine charged_particle_initial_conditions(this, from_scratch)

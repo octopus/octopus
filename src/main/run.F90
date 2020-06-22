@@ -177,7 +177,7 @@ contains
 
       ! Create and initialize interactions
       call interactions_factory%create_interactions(systems, systems%list)
-      call systems%init_interactions()
+      call systems%init_all_interactions()
 
       ! Write the interaction graph as a DOT graph for debug
       if (debug%interaction_graph .and. mpi_grp_is_root(mpi_world)) then

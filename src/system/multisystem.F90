@@ -51,7 +51,8 @@ module multisystem_oct_m
     procedure :: has_reached_final_propagation_time => multisystem_has_reached_final_propagation_time
     procedure :: propagation_step_finish => multisystem_propagation_step_finish
     procedure :: propagation_step_is_done => multisystem_propagation_step_is_done
-    procedure :: init_interactions => multisystem_init_interactions
+    procedure :: init_all_interactions => multisystem_init_all_interactions
+    procedure :: init_interaction => multisystem_init_interaction
     procedure :: write_interaction_graph => multisystem_write_interaction_graph
     procedure :: initial_conditions => multisystem_initial_conditions
     procedure :: do_td_operation => multisystem_do_td_operation
@@ -315,22 +316,53 @@ contains
   end function multisystem_propagation_step_is_done
 
   ! ---------------------------------------------------------
-  recursive subroutine multisystem_init_interactions(this)
-    class(multisystem_t), target, intent(inout) :: this
+  recursive subroutine multisystem_init_all_interactions(this)
+    class(multisystem_t), intent(inout) :: this
 
-    type(system_iterator_t) :: iter
+    type(interaction_iterator_t) :: iter_i
+    class(interaction_abst_t), pointer :: interaction
+    type(system_iterator_t) :: iter_s
     class(system_abst_t), pointer :: system
 
-    PUSH_SUB(multisystem_init_interactions)
+    PUSH_SUB(multisystem_init_all_interactions)
 
-    call iter%start(this%list)
-    do while (iter%has_next())
-      system => iter%get_next()
-      call system%init_interactions()
+    ! Initialize interactions directly owned by the multisystem
+    call iter_i%start(this%interactions)
+    do while (iter_i%has_next())
+      interaction => iter_i%get_next()
+      select type (interaction)
+      type is (ghost_interaction_t)
+        ! Skip the ghost interactions
+      class default
+        call this%init_interaction(interaction)
+      end select
     end do
 
-    POP_SUB(multisystem_init_interactions)
-  end subroutine multisystem_init_interactions
+    ! Initialize interactions owned by the subsystems
+    call iter_s%start(this%list)
+    do while (iter_s%has_next())
+      system => iter_s%get_next()
+      call system%init_all_interactions()
+    end do
+
+    POP_SUB(multisystem_init_all_interactions)
+  end subroutine multisystem_init_all_interactions
+
+  ! ---------------------------------------------------------
+  subroutine multisystem_init_interaction(this, interaction)
+    class(multisystem_t), target, intent(inout) :: this
+    class(interaction_abst_t),    intent(inout) :: interaction
+
+    PUSH_SUB(multisystem_init_interaction)
+
+    ! The multitystem class should never know about any specific interaction.
+    ! Only classes that extend it can know about specific interactions.
+    ! Such classes should override this method to add new supported interactions.
+    message(1) = "Trying to initialize an interaction in the multisystem class"
+    call messages_fatal(1)
+
+    POP_SUB(multisystem_init_interaction)
+  end subroutine multisystem_init_interaction
 
   ! ---------------------------------------------------------------------------------------
   recursive subroutine multisystem_write_interaction_graph(this, iunit)
