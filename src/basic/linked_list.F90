@@ -1,4 +1,4 @@
-!! Copyright (C) 2019-2020 M. Oliveira
+! Copyright (C) 2019-2020 M. Oliveira
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -50,6 +50,7 @@ module linked_list_oct_m
     procedure :: has => linked_list_has
     procedure :: copy => linked_list_copy
     generic   :: assignment(=) => copy
+    procedure :: empty => linked_list_empty
     final     :: linked_list_finalize
   end type linked_list_t
 
@@ -189,6 +190,14 @@ contains
   subroutine linked_list_finalize(this)
     type(linked_list_t), intent(inout) :: this
 
+    call this%empty()
+
+  end subroutine linked_list_finalize
+
+  ! ---------------------------------------------------------
+  subroutine linked_list_empty(this)
+    class(linked_list_t), intent(inout) :: this
+
     class(list_node_t), pointer :: current, next
 
     current => this%first_node
@@ -200,7 +209,7 @@ contains
     nullify(this%first_node)
     nullify(this%last_node)
 
-  end subroutine linked_list_finalize
+  end subroutine linked_list_empty
 
   ! ---------------------------------------------------------
   subroutine linked_list_copy(lhs, rhs)
