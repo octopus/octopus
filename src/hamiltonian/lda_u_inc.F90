@@ -31,7 +31,7 @@ subroutine X(lda_u_apply)(this, d, mesh, psib, hpsib)
   integer :: el_per_state
   R_TYPE :: weight
 
-  call profiling_in(prof, "DFTU_APPLY")
+  call profiling_in(prof, "X(DFTU_APPLY)")
 
   PUSH_SUB(lda_u_apply)
 
@@ -160,7 +160,7 @@ subroutine X(update_occ_matrices)(this, namespace, mesh, st, lda_u_energy, phase
   type(profile_t), save :: prof
   integer :: spec_ind
 
-  call profiling_in(prof, "DFTU_OCC_MATRICES")
+  call profiling_in(prof, "X(DFTU_OCC_MATRICES)")
   
   PUSH_SUB(update_occ_matrices)
 
@@ -485,7 +485,7 @@ subroutine X(lda_u_update_potential)(this, st)
   type(profile_t), save :: prof
   FLOAT :: nsigma
 
-  call profiling_in(prof, "DFTU_POTENTIAL")
+  call profiling_in(prof, "X(DFTU_POTENTIAL)")
 
   PUSH_SUB(lda_u_update_potential)
 
@@ -1053,7 +1053,7 @@ subroutine X(compute_coulomb_integrals) (this, namespace, mesh, der, psolver)
   type(orbitalset_t), pointer :: os
   type(profile_t), save :: prof
 
-  call profiling_in(prof, "DFTU_COULOMB_INTEGRALS")
+  call profiling_in(prof, "X(DFTU_COULOMB_INTEGRALS)")
 
   PUSH_SUB(X(compute_coulomb_integrals))
 
@@ -1172,7 +1172,7 @@ subroutine X(compute_periodic_coulomb_integrals)(this, namespace, der, mc)
   type(orbitalset_t), pointer :: os
   type(profile_t), save :: prof
 
-  call profiling_in(prof, "DFTU_PER_COULOMB")
+  call profiling_in(prof, "X(DFTU_PER_COULOMB)")
 
   !At the moment the basis is not spin polarized
   ASSERT(this%nspins == 1)
@@ -1278,7 +1278,7 @@ end subroutine X(compute_periodic_coulomb_integrals)
    type(orbitalset_t), pointer  :: os 
    type(profile_t), save :: prof
 
-   call profiling_in(prof, "DFTU_COMMUTE_R")
+   call profiling_in(prof, "X(DFTU_COMMUTE_R)")
 
    PUSH_SUB(lda_u_commute_r)
 
@@ -1571,7 +1571,7 @@ end subroutine X(compute_periodic_coulomb_integrals)
 
    PUSH_SUB(X(lda_u_force))
 
-   call profiling_in(prof, "FORCES_DFTU")
+   call profiling_in(prof, "X(FORCES_DFTU)")
 
    !TODO: Implement
    if(this%intersite) then

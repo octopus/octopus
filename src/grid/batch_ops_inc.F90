@@ -26,12 +26,13 @@ subroutine X(batch_axpy_const)(np, aa, xx, yy)
   class(batch_t),    intent(in)    :: xx
   class(batch_t),    intent(inout) :: yy
 
+  type(profile_t), save :: prof 
   integer :: ist, dim2, dim3
   integer :: localsize
   CMPLX :: zaa
 
   PUSH_SUB(X(batch_axpy_const))
-  call profiling_in(axpy_const_prof, "BATCH_AXPY_CONST")
+  call profiling_in(prof, "X(BATCH_AXPY_CONST)")
 
   call xx%check_compatibility_with(yy)
 #ifdef R_TCOMPLEX
@@ -100,7 +101,7 @@ subroutine X(batch_axpy_const)(np, aa, xx, yy)
 
   call profiling_count_operations(xx%nst_linear*np*(R_ADD + R_MUL))
 
-  call profiling_out(axpy_const_prof)
+  call profiling_out(prof)
   POP_SUB(X(batch_axpy_const))
 end subroutine X(batch_axpy_const)
 
@@ -117,6 +118,7 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy, a_start, a_full)
   integer,  optional, intent(in)    :: a_start
   logical,  optional, intent(in)    :: a_full
 
+  type(profile_t), save :: prof 
   integer :: ist, ip, effsize, iaa, dim2, dim3
   R_TYPE, allocatable     :: aa_linear(:)
   integer :: localsize
@@ -126,7 +128,7 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy, a_start, a_full)
   type(accel_kernel_t), save :: kernel
   
   PUSH_SUB(X(batch_axpy_vec))
-  call profiling_in(axpy_vec_prof, "BATCH_AXPY_VEC")
+  call profiling_in(prof, "X(BATCH_AXPY_VEC)")
 
   call xx%check_compatibility_with(yy)
 #ifdef R_TCOMPLEX
@@ -219,7 +221,7 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy, a_start, a_full)
 
   call profiling_count_operations(xx%nst_linear*np*(R_ADD + R_MUL))
 
-  call profiling_out(axpy_vec_prof)
+  call profiling_out(prof)
   POP_SUB(X(batch_axpy_vec))
 end subroutine X(batch_axpy_vec)
 
@@ -247,7 +249,7 @@ subroutine X(batch_axpy_function)(np, aa, xx, psi, nst)
   integer :: global_sizes(3)
 
   PUSH_SUB(X(batch_axpy_function))
-  call profiling_in(prof, "BATCH_AXPY_FUNCTION")
+  call profiling_in(prof, "X(BATCH_AXPY_FUNCTION)")
 
   ASSERT(xx%dim == ubound(psi,dim=2))
 
@@ -363,6 +365,7 @@ subroutine X(batch_scal_vec)(np, aa, xx, a_start, a_full)
   integer, optional, intent(in)    :: a_start
   logical, optional, intent(in)    :: a_full
 
+  type(profile_t), save :: prof 
   integer :: ist, ip, effsize, iaa, dim2, dim3
   R_TYPE, allocatable     :: aa_linear(:)
   integer :: localsize
@@ -372,7 +375,7 @@ subroutine X(batch_scal_vec)(np, aa, xx, a_start, a_full)
   type(accel_kernel_t), save :: kernel
   
   PUSH_SUB(X(batch_scal_vec))
-  call profiling_in(scal_prof, "BATCH_SCAL")
+  call profiling_in(prof, "X(BATCH_SCAL)")
 
 #ifdef R_TCOMPLEX
   !if aa is complex, the functions must be complex
@@ -459,7 +462,7 @@ subroutine X(batch_scal_vec)(np, aa, xx, a_start, a_full)
 
   SAFE_DEALLOCATE_A(aa_linear)
 
-  call profiling_out(scal_prof)
+  call profiling_out(prof)
   POP_SUB(X(batch_scal_vec))
 end subroutine X(batch_scal_vec)
 
@@ -473,6 +476,7 @@ subroutine X(batch_xpay_vec)(np, xx, aa, yy, a_start, a_full)
   integer, optional, intent(in)    :: a_start
   logical, optional, intent(in)    :: a_full
 
+  type(profile_t), save :: prof 
   integer :: ist, ip, effsize, iaa, dim2, dim3
   R_TYPE, allocatable     :: aa_linear(:)
   integer :: size_factor, localsize
@@ -481,7 +485,7 @@ subroutine X(batch_xpay_vec)(np, xx, aa, yy, a_start, a_full)
   type(accel_kernel_t), save :: kernel
   
   PUSH_SUB(X(batch_xpay_vec))
-  call profiling_in(xpay_prof, "BATCH_XPAY")
+  call profiling_in(prof, "X(BATCH_XPAY)")
 
   call xx%check_compatibility_with(yy)
 #ifdef R_TCOMPLEX
@@ -579,7 +583,7 @@ subroutine X(batch_xpay_vec)(np, xx, aa, yy, a_start, a_full)
 
   SAFE_DEALLOCATE_A(aa_linear)
 
-  call profiling_out(xpay_prof)
+  call profiling_out(prof)
   POP_SUB(X(batch_xpay_vec))
 end subroutine X(batch_xpay_vec)
 
@@ -627,7 +631,7 @@ subroutine X(batch_set_state1)(this, ist, np, psi)
   type(accel_mem_t) :: tmp
   FLOAT, allocatable :: zpsi(:)
   
-  call profiling_in(prof, "BATCH_SET_STATE")
+  call profiling_in(prof, "X(BATCH_SET_STATE)")
 
   PUSH_SUB(X(batch_set_state1))
 
@@ -754,7 +758,7 @@ subroutine X(batch_get_state1)(this, ist, np, psi)
 
   PUSH_SUB(X(batch_get_state1))
 
-  call profiling_in(prof, "BATCH_GET_STATE")
+  call profiling_in(prof, "X(BATCH_GET_STATE)")
 
   ASSERT(ubound(psi, dim = 1) >= np)
   ASSERT(ist >= 1 .and. ist <= this%nst_linear)
@@ -899,10 +903,11 @@ subroutine X(batch_get_points)(this, sp, ep, psi)
   integer,        intent(in)    :: ep
   R_TYPE,         intent(inout) :: psi(:, :, sp:)
 
+  type(profile_t), save :: prof 
   integer :: idim, ist, ii, ip
   
   PUSH_SUB(X(batch_get_points))
-  call profiling_in(get_points_prof, 'GET_POINTS')
+  call profiling_in(prof, "X(GET_POINTS)")
 
 #ifdef R_TREAL
   ! cannot get a real value from a complex batch
@@ -962,7 +967,7 @@ subroutine X(batch_get_points)(this, sp, ep, psi)
     call messages_not_implemented('batch_get_points for CL packed batches')
   end select
 
-  call profiling_out(get_points_prof)
+  call profiling_out(prof)
 
   POP_SUB(X(batch_get_points))
 end subroutine X(batch_get_points)
@@ -975,11 +980,12 @@ subroutine X(batch_set_points)(this, sp, ep, psi)
   integer,        intent(in)    :: ep
   R_TYPE,         intent(in)    :: psi(:, :, sp:)
 
+  type(profile_t), save :: prof 
   integer :: idim, ist, ii, ip
 
   PUSH_SUB(X(batch_set_points))
 
-  call profiling_in(set_points_prof, 'SET_POINTS')
+  call profiling_in(prof, "X(SET_POINTS)")
 
 #ifdef R_TCOMPLEX
   ! cannot set a real batch with complex values
@@ -1039,7 +1045,7 @@ subroutine X(batch_set_points)(this, sp, ep, psi)
     call messages_not_implemented('batch_set_points for CL packed batches')
   end select
 
-  call profiling_out(set_points_prof)
+  call profiling_out(prof)
 
   POP_SUB(X(batch_set_points))
 end subroutine X(batch_set_points)
@@ -1052,6 +1058,7 @@ subroutine X(batch_mul)(np, ff,  xx, yy)
   class(batch_t),    intent(in)    :: xx
   class(batch_t),    intent(inout) :: yy
 
+  type(profile_t), save :: prof 
   integer :: ist, ip
   R_TYPE :: mul
 #if defined(R_TREAL)
@@ -1060,7 +1067,7 @@ subroutine X(batch_mul)(np, ff,  xx, yy)
 #endif
   
   PUSH_SUB(X(batch_mul))
-  call profiling_in(mul_prof, "BATCH_MUL")
+  call profiling_in(prof, "X(BATCH_MUL)")
 
   call xx%check_compatibility_with(yy)
 #ifdef R_TCOMPLEX
@@ -1142,7 +1149,7 @@ subroutine X(batch_mul)(np, ff,  xx, yy)
     end if
   end select
 
-  call profiling_out(mul_prof)
+  call profiling_out(prof)
   POP_SUB(X(batch_mul))
 
 end subroutine X(batch_mul)

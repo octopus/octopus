@@ -70,7 +70,7 @@ subroutine X(project_psi_batch)(mesh, bnd, pj, npj, dim, psib, ppsib)
   type(profile_t), save :: reduce_prof
 
   PUSH_SUB(X(project_psi_batch))
-  call profiling_in(prof, "VNLPSI")
+  call profiling_in(prof, "X(VNLPSI)")
 
   ASSERT(.not.bnd%spiral)
   ASSERT(psib%status() /= BATCH_DEVICE_PACKED)
@@ -175,7 +175,7 @@ subroutine X(project_psi_batch)(mesh, bnd, pj, npj, dim, psib, ppsib)
   SAFE_DEALLOCATE_A(lpsi)
 
   if(mesh%parallel_in_domains) then
-    call profiling_in(reduce_prof, "VNLPSI_REDUCE_BATCH")
+    call profiling_in(reduce_prof, "X(VNLPSI_REDUCE_BATCH)")
     call comm_allreduce(mesh%mpi_grp%comm, reduce_buffer)
     call profiling_out(reduce_prof)
   end if
@@ -293,7 +293,7 @@ R_TYPE function X(projector_matrix_element)(pj, dim, ik, psia, psib) result(apb)
 
   PUSH_SUB(X(projector_matrix_element))
 
-  call profiling_in(prof, "PROJ_MAT_ELEM")
+  call profiling_in(prof, "X(PROJ_MAT_ELEM)")
 
   ns = pj%sphere%np
 
@@ -403,7 +403,7 @@ subroutine X(projector_commute_r)(pj, mesh, dim, idir, ik, psi, cpsi)
   type(profile_t), save :: prof
 
   PUSH_SUB(X(projector_commute_r))
-  call profiling_in(prof, "PROJ_COMMUTE")
+  call profiling_in(prof, "X(PROJ_COMMUTE)")
 
   if(pj%type /= PROJ_NONE) then
 
@@ -477,7 +477,7 @@ subroutine X(projector_commute_r_allatoms_alldir)(pj, geo, mesh, dim, ik, psi, c
   type(profile_t), save :: prof
 
   PUSH_SUB(X(projector_commute_r_allatoms_alldir))
-  call profiling_in(prof, "PROJ_COMMUTE_ALL")
+  call profiling_in(prof, "X(PROJ_COMMUTE_ALL)")
 
   do iatom = 1, geo%natoms
     if(species_is_ps(geo%atom(iatom)%species) .and. pj(iatom)%type /= PROJ_NONE) then
@@ -561,7 +561,7 @@ subroutine X(r_project_psi)(pj, mesh, dim, ik, psi, cpsi)
   type(profile_t), save :: prof
 
   PUSH_SUB(X(r_project_psi))
-  call profiling_in(prof, "P_PROJECT_PSI")
+  call profiling_in(prof, "X(P_PROJECT_PSI)")
 
   sb_dim = mesh%sb%dim
   

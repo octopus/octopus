@@ -62,7 +62,7 @@ subroutine X(hamiltonian_elec_base_local_sub)(potential, mesh, std, ispin, psib,
   logical :: pot_is_cmplx
   integer :: pnp, localsize
 
-  call profiling_in(prof_vlpsi, "VLPSI")
+  call profiling_in(prof_vlpsi, "X(VLPSI)")
   PUSH_SUB(X(hamiltonian_elec_base_local_sub))
 
   pot_is_cmplx = .false.
@@ -265,7 +265,7 @@ subroutine X(hamiltonian_elec_base_phase)(this, mesh, np, conjugate, psib, src)
   type(accel_kernel_t), save :: ker_phase
 
   PUSH_SUB(X(hamiltonian_elec_base_phase))
-  call profiling_in(phase_prof, "PBC_PHASE_APPLY")
+  call profiling_in(phase_prof, "X(PBC_PHASE_APPLY)")
 
   call profiling_count_operations(R_MUL*TOFLOAT(np)*psib%nst_linear)
 
@@ -376,7 +376,7 @@ subroutine X(hamiltonian_elec_base_phase_spiral)(this, der, psib)
 
 
   PUSH_SUB(X(hamiltonian_elec_base_phase_spiral))
-  call profiling_in(phase_prof, "PBC_PHASE_SPIRAL")
+  call profiling_in(phase_prof, "X(PBC_PHASE_SPIRAL)")
 
   call profiling_count_operations(R_MUL*TOFLOAT(der%mesh%np_part-der%mesh%np)*psib%nst_linear)
 
@@ -548,7 +548,7 @@ subroutine X(hamiltonian_elec_base_magnetic)(this, mesh, der, std, ep, ispin, ps
 
   if(.not. hamiltonian_elec_base_has_magnetic(this)) return
 
-  call profiling_in(prof_magnetic, "MAGNETIC")
+  call profiling_in(prof_magnetic, "X(MAGNETIC)")
   PUSH_SUB(X(hamiltonian_elec_base_magnetic))
 
   SAFE_ALLOCATE(psi(1:mesh%np_part, 1:std%dim))
@@ -638,7 +638,7 @@ subroutine X(hamiltonian_elec_base_nlocal_start)(this, mesh, std, bnd, psib, pro
   
   ASSERT(this%apply_projector_matrices)
 
-  call profiling_in(prof_vnlpsi_start, "VNLPSI_MAT_BRA")
+  call profiling_in(prof_vnlpsi_start, "X(VNLPSI_MAT_BRA)")
   PUSH_SUB(X(hamiltonian_elec_base_nlocal_start))
 
   nst = psib%nst_linear
@@ -657,7 +657,7 @@ subroutine X(hamiltonian_elec_base_nlocal_start)(this, mesh, std, bnd, psib, pro
     call accel_create_buffer(projection%buff_projection, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, &
       this%full_projection_size*psib%pack_size_real(1))
 
-    call profiling_in(cl_prof, "CL_PROJ_BRA")
+    call profiling_in(cl_prof, "X(CL_PROJ_BRA)")
     ! only do this if we have some points of projector matrices
     if(this%max_npoints > 0) then
 
@@ -897,7 +897,7 @@ subroutine X(hamiltonian_elec_base_nlocal_finish)(this, mesh, bnd, std, projecti
 
   ASSERT(this%apply_projector_matrices)
 
-  call profiling_in(prof_vnlpsi_finish, "VNLPSI_MAT_KET")
+  call profiling_in(prof_vnlpsi_finish, "X(VNLPSI_MAT_KET)")
   PUSH_SUB(X(hamiltonian_elec_base_nlocal_finish))
 
   nst = vpsib%nst_linear
@@ -913,7 +913,7 @@ subroutine X(hamiltonian_elec_base_nlocal_finish)(this, mesh, bnd, std, projecti
 
   ! reduce the projections
   if(mesh%parallel_in_domains) then
-    call profiling_in(reduce_prof, "VNLPSI_MAT_REDUCE")
+    call profiling_in(reduce_prof, "X(VNLPSI_MAT_REDUCE)")
     call comm_allreduce(mesh%vp%comm, projection%X(projection))
     call profiling_out(reduce_prof)
   end if
@@ -1001,7 +1001,7 @@ subroutine X(hamiltonian_elec_base_nlocal_finish)(this, mesh, bnd, std, projecti
 #endif
       end if
       
-      call profiling_in(prof_scatter, "PROJ_MAT_SCATTER")
+      call profiling_in(prof_scatter, "X(PROJ_MAT_SCATTER)")
 
       if(.not. allocated(this%projector_phases)) then    
         ! and copy the points from the local buffer to its position
@@ -1118,7 +1118,7 @@ contains
     ! the wave-function. Otherwise we would need to do atomic
     ! operations.
 
-    call profiling_in(cl_prof, "CL_PROJ_KET")
+    call profiling_in(cl_prof, "X(CL_PROJ_KET)")
 
     ! only do this if we have points of some projector matrices
     if(this%max_npoints > 0) then
@@ -1234,7 +1234,7 @@ subroutine X(hamiltonian_elec_base_nlocal_force)(this, mesh, st, iqn, ndim, psi1
 
   ASSERT(this%apply_projector_matrices)
     
-  call profiling_in(prof_matelement, "VNLPSI_MAT_ELEM")
+  call profiling_in(prof_matelement, "X(VNLPSI_MAT_ELEM)")
   PUSH_SUB(X(hamiltonian_elec_base_nlocal_force))
 
   ASSERT(psi1b%nst_linear == psi2b(1)%nst_linear)
@@ -1263,7 +1263,7 @@ subroutine X(hamiltonian_elec_base_nlocal_force)(this, mesh, st, iqn, ndim, psi1
 
       SAFE_ALLOCATE(psi(0:ndim, 1:nst, 1:npoints))
 
-      call profiling_in(prof_matelement_gather, "PROJ_MAT_ELEM_GATHER")
+      call profiling_in(prof_matelement_gather, "X(PROJ_MAT_ELEM_GATHER)")
 
       ! collect all the points we need in a continuous array
       if(psi1b%status() == BATCH_PACKED) then
@@ -1337,7 +1337,7 @@ subroutine X(hamiltonian_elec_base_nlocal_force)(this, mesh, st, iqn, ndim, psi1
   end do
 
   if(mesh%parallel_in_domains) then
-    call profiling_in(prof_matelement_reduce, "VNLPSI_MAT_ELEM_REDUCE")
+    call profiling_in(prof_matelement_reduce, "X(VNLPSI_MAT_ELEM_REDUCE)")
     call comm_allreduce(mesh%mpi_grp%comm, projs)
     call profiling_out(prof_matelement_reduce)
   end if
@@ -1444,7 +1444,7 @@ subroutine X(hamiltonian_elec_base_nlocal_position_commutator)(this, mesh, std, 
   ASSERT(this%apply_projector_matrices)
 
   PUSH_SUB(X(hamiltonian_elec_base_nlocal_position_commutator))
-  call profiling_in(prof, "COMMUTATOR")
+  call profiling_in(prof, "X(COMMUTATOR)")
 
   ASSERT(psib%is_packed())
 
@@ -1549,7 +1549,7 @@ subroutine X(hamiltonian_elec_base_nlocal_position_commutator)(this, mesh, std, 
 
   ! reduce the projections
   if(mesh%parallel_in_domains) then
-    call profiling_in(reduce_prof, "COMMUTATOR_REDUCE")
+    call profiling_in(reduce_prof, "X(COMMUTATOR_REDUCE)")
     call comm_allreduce(mesh%mpi_grp%comm, projections)
     call profiling_out(reduce_prof)
   end if

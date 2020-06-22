@@ -26,7 +26,7 @@ subroutine X(subarray_gather)(this, array, subarray)
   type(profile_t), save :: prof
   integer :: iblock, ii
 
-  call profiling_in(prof, "SUBARRAY_GATHER")
+  call profiling_in(prof, "X(SUBARRAY_GATHER)")
 
   do iblock = 1, this%nblocks
     do ii = 1, this%blength(iblock)
@@ -56,7 +56,7 @@ subroutine X(subarray_gather_batch)(this, arrayb, subarrayb)
 
   PUSH_SUB(X(subarray_gather_batch))
 
-  call profiling_in(prof, "SUBARRAY_GATHER_BATCH")
+  call profiling_in(prof, "X(SUBARRAY_GATHER_BATCH)")
 
 
   ASSERT(arrayb%status() == subarrayb%status())

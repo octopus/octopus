@@ -58,7 +58,7 @@ subroutine X(oep_x) (namespace, der, psolver, st, is, jdm, lxc, ex, exx_coef, F_
   integer :: send_req, status(MPI_STATUS_SIZE)
 #endif
 
-  call profiling_in(C_PROFILING_XC_EXX, 'XC_EXX')
+  call profiling_in(C_PROFILING_XC_EXX, "X(XC_EXX)")
   PUSH_SUB(X(oep_x))
 
   if(der%mesh%sb%kpoints%reduced%npoints > 1) &

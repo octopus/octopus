@@ -30,7 +30,7 @@ subroutine X(preconditioner_apply)(pre, namespace, gr, hm, a, b, omega)
   R_TYPE  :: omega_
   type(profile_t), save :: preconditioner_prof
 
-  call profiling_in(preconditioner_prof, "PRECONDITIONER")
+  call profiling_in(preconditioner_prof, "X(PRECONDITIONER)")
   PUSH_SUB(X(preconditioner_apply))
 
   omega_ = M_ZERO
@@ -241,7 +241,7 @@ subroutine X(preconditioner_apply_batch)(pre, namespace, gr, hm, aa, bb, omega)
   R_TYPE, allocatable :: psia(:, :), psib(:, :)
 
   PUSH_SUB(X(preconditioner_apply_batch))
-  call profiling_in(prof, 'PRECONDITIONER_BATCH')
+  call profiling_in(prof, "X(PRECONDITIONER_BATCH)")
 
   call aa%check_compatibility_with(bb)
 
