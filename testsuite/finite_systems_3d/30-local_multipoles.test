@@ -19,7 +19,7 @@ match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;     1.
 match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ;    -3.52993397 
 match ; Partial charge  1  ; GREPFIELD(static/info, 'Partial ionic charges', 3, 2)  ; 1.000
 
-Util       : oct-local_multipoles
+MPIUtil       : oct-local_multipoles
 Input      : 30-local_multipoles.02-multipoles.inp
 
 # The matches of this test are disabled since they always failed in the buildbot due
