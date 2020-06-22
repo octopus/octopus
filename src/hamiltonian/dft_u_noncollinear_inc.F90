@@ -129,7 +129,7 @@ subroutine compute_complex_coulomb_integrals (this, mesh, der, st, psolver, name
       end do !jst
     end do !ist
     call poisson_end(os%poisson)
-
+    call submesh_end_cube_map(os%sphere)
     call submesh_end_global(os%sphere)
   end do !iorb
 

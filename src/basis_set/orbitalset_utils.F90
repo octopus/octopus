@@ -262,7 +262,7 @@ contains
         SAFE_DEALLOCATE_A(tmp)
 
         call submesh_end_global(sm)
-
+        call submesh_end_cube_map(sm)
         call submesh_end(sm)
         SAFE_DEALLOCATE_A(orb)
       end do !inn
