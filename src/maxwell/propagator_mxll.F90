@@ -2459,7 +2459,7 @@ contains
     FLOAT                :: e_field(st%dim), b_field(st%dim)
     character(len=1024)  :: mxf_expression
 
-    PUSH_SUB(td_function_init)
+    PUSH_SUB(td_function_mxll_init)
 
     !%Variable UserDefinedConstantSpatialMaxwellField
     !%Type block

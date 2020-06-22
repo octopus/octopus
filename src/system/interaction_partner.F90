@@ -50,29 +50,29 @@ module interaction_partner_oct_m
   abstract interface
 
     ! ---------------------------------------------------------
-    logical function interaction_partner_update_exposed_quantities(this, requested_time, interaction)
+    logical function interaction_partner_update_exposed_quantities(partner, requested_time, interaction)
       import interaction_partner_t
       import clock_t
       import interaction_abst_t
-      class(interaction_partner_t), intent(inout) :: this
+      class(interaction_partner_t), intent(inout) :: partner
       type(clock_t),                intent(in)    :: requested_time
       class(interaction_abst_t),    intent(inout) :: interaction
     end function interaction_partner_update_exposed_quantities
 
     ! ---------------------------------------------------------
-    subroutine interaction_partner_update_exposed_quantity(this, iq, requested_time)
+    subroutine interaction_partner_update_exposed_quantity(partner, iq, requested_time)
       import interaction_partner_t
       import clock_t
-      class(interaction_partner_t),      intent(inout) :: this
+      class(interaction_partner_t),      intent(inout) :: partner
       integer,                           intent(in)    :: iq
       class(clock_t),                    intent(in)    :: requested_time
     end subroutine interaction_partner_update_exposed_quantity
 
     ! ---------------------------------------------------------
-    subroutine interaction_partner_copy_quantities_to_interaction(this, interaction)
+    subroutine interaction_partner_copy_quantities_to_interaction(partner, interaction)
       import interaction_partner_t
       import interaction_abst_t
-      class(interaction_partner_t),     intent(inout) :: this
+      class(interaction_partner_t),     intent(inout) :: partner
       class(interaction_abst_t),        intent(inout) :: interaction
     end subroutine interaction_partner_copy_quantities_to_interaction
 

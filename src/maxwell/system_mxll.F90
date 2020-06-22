@@ -216,7 +216,12 @@ contains
     class(system_mxll_t), target, intent(inout) :: this
     class(system_abst_t),         intent(inout) :: partner
 
+    class(ghost_interaction_t), pointer :: ghost
+
     PUSH_SUB(system_mxll_add_interaction_partner)
+
+    ghost => ghost_interaction_t(partner)
+    call this%interactions%add(ghost)
 
     POP_SUB(system_mxll_add_interaction_partner)
   end subroutine system_mxll_add_interaction_partner
@@ -536,20 +541,22 @@ contains
   end subroutine system_mxll_update_quantity
 
  ! ---------------------------------------------------------
- subroutine system_mxll_update_exposed_quantity(this, iq, requested_time)
-    class(system_mxll_t),      intent(inout) :: this
+ subroutine system_mxll_update_exposed_quantity(partner, iq, requested_time)
+    class(system_mxll_t),      intent(inout) :: partner
     integer,                   intent(in)    :: iq
     class(clock_t),            intent(in)    :: requested_time
 
     PUSH_SUB(system_mxll_update_exposed_quantity)
 
     ! We are not allowed to update protected quantities!
-    ASSERT(.not. this%quantities(iq)%protected)
+    ASSERT(.not. partner%quantities(iq)%protected)
 
     select case (iq)
+    case(E_FIELD,B_FIELD)
+      call partner%quantities(iq)%clock%set_time(requested_time)
     case default
       message(1) = "Incompatible quantity."
-!      call messages_fatal(1)
+      call messages_fatal(1)
     end select
 
     POP_SUB(system_mxll_update_exposed_quantity)
@@ -581,9 +588,9 @@ contains
   end subroutine system_mxll_update_interactions_finish
 
     ! ---------------------------------------------------------
-  subroutine system_mxll_copy_quantities_to_interaction(this, interaction)
-    class(system_mxll_t),      intent(inout) :: this
-    class(interaction_abst_t), intent(inout) :: interaction
+  subroutine system_mxll_copy_quantities_to_interaction(partner, interaction)
+    class(system_mxll_t),       intent(inout) :: partner
+    class(interaction_abst_t),  intent(inout) :: interaction
 
     CMPLX :: interpolated_value(3)
     FLOAT :: e_field(3)
@@ -595,9 +602,12 @@ contains
     type is (ghost_interaction_t)
       ! Nothing to copy
     type is (interaction_lorentz_force_t)
-      call mesh_interpolation_evaluate(this%mesh_interpolate, this%st%rs_state(:,1), interaction%system_pos, interpolated_value(1))
-      call mesh_interpolation_evaluate(this%mesh_interpolate, this%st%rs_state(:,2), interaction%system_pos, interpolated_value(2))
-      call mesh_interpolation_evaluate(this%mesh_interpolate, this%st%rs_state(:,3), interaction%system_pos, interpolated_value(3))
+      call mesh_interpolation_evaluate(partner%mesh_interpolate, partner%st%rs_state(:,1), &
+        interaction%system_pos, interpolated_value(1))
+      call mesh_interpolation_evaluate(partner%mesh_interpolate, partner%st%rs_state(:,2), &
+        interaction%system_pos, interpolated_value(2))
+      call mesh_interpolation_evaluate(partner%mesh_interpolate, partner%st%rs_state(:,3), &
+        interaction%system_pos, interpolated_value(3))
       call get_electric_field_vector(interpolated_value, e_field)
       call get_magnetic_field_vector(interpolated_value, 1, b_field)
       interaction%partner_E_field = e_field
