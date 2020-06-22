@@ -46,7 +46,6 @@ module interaction_gravity_oct_m
 
   contains
     procedure :: calculate => interaction_gravity_calculate
-    procedure :: end => interaction_gravity_end
     final :: interaction_gravity_finalize
   end type interaction_gravity_t
 
@@ -107,29 +106,17 @@ contains
   end subroutine interaction_gravity_calculate
 
   ! ---------------------------------------------------------
-  subroutine interaction_gravity_end(this)
-    class(interaction_gravity_t), intent(inout) :: this
+  subroutine interaction_gravity_finalize(this)
+    type(interaction_gravity_t), intent(inout) :: this
 
-    PUSH_SUB(interaction_gravity_end)
+    PUSH_SUB(interaction_gravity_finalize)
 
-    nullify(this%partner)
     this%force = M_ZERO
     nullify(this%system_mass)
     nullify(this%system_pos)
     SAFE_DEALLOCATE_A(this%partner_pos)
 
     call interaction_with_partner_end(this)
-
-    POP_SUB(interaction_gravity_end)
-  end subroutine interaction_gravity_end
-
-  ! ---------------------------------------------------------
-  subroutine interaction_gravity_finalize(this)
-    type(interaction_gravity_t), intent(inout) :: this
-
-    PUSH_SUB(interaction_gravity_finalize)
-
-    call this%end()
 
     POP_SUB(interaction_gravity_finalize)
   end subroutine interaction_gravity_finalize

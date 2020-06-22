@@ -658,6 +658,8 @@ contains
       SAFE_DEALLOCATE_P(system)
     end do
 
+    call system_abst_end(this)
+
     POP_SUB(multisystem_finalizer)
   end subroutine multisystem_finalizer
 

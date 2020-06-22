@@ -65,7 +65,6 @@ module charged_particle_oct_m
     procedure :: copy_quantities_to_interaction => charged_particle_copy_quantities_to_interaction
     procedure :: update_interactions_start => charged_particle_update_interactions_start
     procedure :: update_interactions_finish => charged_particle_update_interactions_finish
-    final :: charged_particle_finalize
   end type charged_particle_t
 
   interface charged_particle_t
@@ -329,14 +328,6 @@ contains
 
     POP_SUB(charged_particle_update_interactions_finish)
   end subroutine charged_particle_update_interactions_finish
-
-  ! ---------------------------------------------------------
-  subroutine charged_particle_finalize(this)
-    type(charged_particle_t), intent(inout) :: this
-
-    PUSH_SUB(charged_particle_finalize)
-    POP_SUB(charged_particle_finalize)
-  end subroutine charged_particle_finalize
 
 end module charged_particle_oct_m
 

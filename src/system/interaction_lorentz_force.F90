@@ -48,7 +48,6 @@ module interaction_lorentz_force_oct_m
 
   contains
     procedure :: calculate => interaction_lorentz_force_calculate
-    procedure :: end => interaction_lorentz_force_end
     final :: interaction_lorentz_force_finalize
   end type interaction_lorentz_force_t
 
@@ -110,12 +109,11 @@ contains
   end subroutine interaction_lorentz_force_calculate
 
   ! ---------------------------------------------------------
-  subroutine interaction_lorentz_force_end(this)
-    class(interaction_lorentz_force_t), intent(inout) :: this
+  subroutine interaction_lorentz_force_finalize(this)
+    type(interaction_lorentz_force_t), intent(inout) :: this
 
-    PUSH_SUB(interaction_lorentz_force_end)
+    PUSH_SUB(interaction_lorentz_force_finalize)
 
-    nullify(this%partner)
     this%force = M_ZERO
     nullify(this%system_charge)
     nullify(this%system_pos)
@@ -124,17 +122,6 @@ contains
     SAFE_DEALLOCATE_A(this%partner_B_field)
 
     call interaction_with_partner_end(this)
-
-    POP_SUB(interaction_lorentz_force_end)
-  end subroutine interaction_lorentz_force_end
-
-  ! ---------------------------------------------------------
-  subroutine interaction_lorentz_force_finalize(this)
-    type(interaction_lorentz_force_t), intent(inout) :: this
-
-    PUSH_SUB(interaction_lorentz_force_finalize)
-
-    call this%end()
 
     POP_SUB(interaction_lorentz_force_finalize)
   end subroutine interaction_lorentz_force_finalize

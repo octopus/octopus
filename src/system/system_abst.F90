@@ -42,6 +42,7 @@ module system_abst_oct_m
   private
   public ::               &
     system_abst_t,        &
+    system_abst_end,      &
     system_list_t,        &
     system_iterator_t
 
@@ -49,7 +50,7 @@ module system_abst_oct_m
     private
     type(space_t), public :: space
 
-    class(propagator_abst_t), pointer, public :: prop
+    class(propagator_abst_t), pointer, public :: prop => null()
 
     integer :: accumulated_loop_ticks
 
@@ -649,6 +650,29 @@ contains
 
     POP_SUB(system_propagation_step_is_done)
   end function system_propagation_step_is_done
+
+  ! ---------------------------------------------------------
+  subroutine system_abst_end(this)
+    class(system_abst_t), intent(inout) :: this
+
+    type(interaction_iterator_t) :: iter
+    class(interaction_abst_t), pointer :: interaction
+
+    PUSH_SUB(system_abst_end)
+
+    ! No call to safe_deallocate macro here, as it gives an ICE with gfortran
+    if (associated(this%prop)) then
+      deallocate(this%prop)
+    end if
+
+    call iter%start(this%interactions)
+    do while (iter%has_next())
+      interaction => iter%get_next()
+      SAFE_DEALLOCATE_P(interaction)
+    end do
+
+    POP_SUB(system_abst_end)
+  end subroutine system_abst_end
 
   ! ---------------------------------------------------------
   subroutine system_list_add_node(this, system)
