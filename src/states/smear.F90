@@ -70,6 +70,8 @@ module smear_oct_m
     SMEAR_METHFESSEL_PAXTON = 4,      &
     SMEAR_SPLINE            = 5,      &
     SMEAR_FIXED_OCC         = 6
+ 
+  FLOAT, parameter :: TOL_SMEAR = CNST(1e-6)
   
 contains
 
@@ -200,7 +202,7 @@ contains
     integer, parameter :: nitmax = 200
     FLOAT, parameter   :: tol = CNST(1.0e-10)
     integer            :: ist, ik, iter, maxq, weight, sumq_int
-    FLOAT              :: drange, xx, emin, emax, sumq, dsmear, sumq_frac
+    FLOAT              :: drange, xx, emin, emax, sumq, dsmear, sumq_frac, sum_weight
     logical            :: conv
     FLOAT,   allocatable :: eigenval_list(:)
     integer, allocatable :: k_list(:), reorder(:)
@@ -262,19 +264,28 @@ contains
           this%fermi_count = 1
           fermi_count_up = 1
           fermi_count_down = 1
+          sum_weight = weight
           do
             if(iter - fermi_count_down < 1) exit
-            if(abs(this%e_fermi - eigenval_list(iter - fermi_count_down)) > CNST(1e-6)) exit
+            if(abs(this%e_fermi - eigenval_list(iter - fermi_count_down)) > TOL_SMEAR) exit
+            weight = int(kweights(k_list(reorder(iter - fermi_count_down))) * this%nik_factor + M_HALF)
+            if(weight > M_EPSILON) then
+              sumq_int = sumq_int + weight * this%el_per_state
+              sum_weight = sum_weight + weight
+            end if
             fermi_count_down = fermi_count_down + 1
-            this%ef_occ = this%ef_occ + 1
           end do
           do
             if(iter + fermi_count_up > nst*nik) exit
-            if(abs(this%e_fermi - eigenval_list(iter + fermi_count_up)) > CNST(1e-6)) exit
+            if(abs(this%e_fermi - eigenval_list(iter + fermi_count_up)) > TOL_SMEAR) exit
+            weight = int(kweights(k_list(reorder(iter + fermi_count_up))) * this%nik_factor + M_HALF)
+            if(weight > M_EPSILON) then
+              sum_weight = sum_weight + weight
+            end if
             fermi_count_up = fermi_count_up + 1
           end do
           this%fermi_count = fermi_count_up + fermi_count_down - 1
-          this%ef_occ = this%ef_occ / this%fermi_count
+          this%ef_occ  = (sumq_int + sumq_frac) / (sum_weight * this%el_per_state)
           exit
         end if
 
@@ -326,9 +337,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine smear_fill_occupations(this, eigenvalues, occupations, nik, nst)
+  subroutine smear_fill_occupations(this, eigenvalues, occupations, kweights, nik, nst)
     type(smear_t),   intent(in)    :: this
-    FLOAT,           intent(in)    :: eigenvalues(:,:)
+    FLOAT,           intent(in)    :: eigenvalues(:,:) 
+    FLOAT,           intent(in)    :: kweights(:)
     FLOAT,           intent(inout) :: occupations(:,:)
     integer,         intent(in)    :: nik, nst
 
@@ -346,10 +358,10 @@ contains
       do ik = 1, nik
         do ist = 1, nst
           xx = eigenvalues(ist, ik) - this%e_fermi
-          if(xx < -CNST(1e-6)) then
+          if(xx < -TOL_SMEAR) then
             occupations(ist, ik) = this%el_per_state
-          else if(abs(xx) <= CNST(1e-6) .and. ifermi < this%fermi_count) then
-            occupations(ist, ik) = this%ef_occ * this%el_per_state
+          else if(abs(xx) <= TOL_SMEAR .and. ifermi < this%fermi_count) then
+            occupations(ist, ik) = this%ef_occ * this%el_per_state 
             ifermi = ifermi + 1
           else
             occupations(ist, ik) = M_ZERO
