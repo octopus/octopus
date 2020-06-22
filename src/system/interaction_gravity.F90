@@ -112,7 +112,6 @@ contains
 
     PUSH_SUB(interaction_gravity_end)
 
-    nullify(this%partner)
     this%force = M_ZERO
     nullify(this%system_mass)
     nullify(this%system_pos)

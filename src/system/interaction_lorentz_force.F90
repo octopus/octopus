@@ -115,7 +115,6 @@ contains
 
     PUSH_SUB(interaction_lorentz_force_end)
 
-    nullify(this%partner)
     this%force = M_ZERO
     nullify(this%system_charge)
     nullify(this%system_pos)
