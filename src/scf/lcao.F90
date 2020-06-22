@@ -48,6 +48,7 @@ module lcao_oct_m
   use quickrnd_oct_m
   use simul_box_oct_m
   use scalapack_oct_m
+  use smear_oct_m
   use species_oct_m
   use species_pot_oct_m
   use states_abst_oct_m
@@ -733,7 +734,12 @@ contains
       call v_ks_calc(sys%ks, sys%namespace, sys%hm, sys%st, sys%geo, calc_eigenval=.false., &
                       calc_berry=.false., calc_current=.false.)
       ! eigenvalues have nevertheless to be initialized to something
-      sys%st%eigenval = M_HUGE
+      if(sys%st%smear%method == SMEAR_SEMICONDUCTOR) then
+        sys%st%eigenval = M_HUGE
+      else
+        !For smearing functions with finite temperature, we cannot set them to M_HUGE
+        sys%st%eigenval = M_ZERO
+      end if
 
     end if
 
