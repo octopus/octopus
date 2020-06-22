@@ -207,15 +207,15 @@ subroutine X(slater) (namespace, mesh, psolver, st, isp, ex, vxc)
                       * R_REAL(wf_ist(1:mesh%np, 2)*R_CONJ(psi(1:mesh%np, 2)) * pot_ij(1:mesh%np))
                 !As we only compute the terms ist >= jst, we get a symmetric form
                 bij(1:mesh%np, 3) = bij(1:mesh%np, 3) - rr * &
-                              ( wf_ist(1:mesh%np, 1)*R_CONJ(psi(1:mesh%np, 2)) * pot_ij(1:mesh%np) &
-                              + psi(1:mesh%np, 1)*R_CONJ(wf_ist(1:mesh%np, 2) * pot_ij(1:mesh%np)))
+                              ( wf_ist(1:mesh%np, 2)*R_CONJ(psi(1:mesh%np, 1)) * pot_ij(1:mesh%np) &
+                              + psi(1:mesh%np, 2)*R_CONJ(wf_ist(1:mesh%np, 1) * pot_ij(1:mesh%np)))
               else
                 bij(1:mesh%np, 1) = bij(1:mesh%np, 1) - rr &
                       * R_REAL(wf_ist(1:mesh%np, 1)*R_CONJ(psi(1:mesh%np, 1)) * pot_ij(1:mesh%np))
                 bij(1:mesh%np, 2) = bij(1:mesh%np, 2) - rr &
                       * R_REAL(wf_ist(1:mesh%np, 2)*R_CONJ(psi(1:mesh%np, 2)) * pot_ij(1:mesh%np))
                 bij(1:mesh%np, 3) = bij(1:mesh%np, 3) - rr &
-                      * wf_ist(1:mesh%np, 1)*R_CONJ(psi(1:mesh%np, 2)) * pot_ij(1:mesh%np)
+                      * wf_ist(1:mesh%np, 2)*R_CONJ(psi(1:mesh%np, 1)) * pot_ij(1:mesh%np)
               end if
               !The last component is simply the complex conjuguate of bij(3), so we do not compute it.
             end if
@@ -258,11 +258,11 @@ subroutine X(slater) (namespace, mesh, psolver, st, isp, ex, vxc)
       ! where D is the determinant of the spin-density matrix
       rr = (st%rho(ip, 1) * st%rho(ip, 2)  - (st%rho(ip, 3)**2 + st%rho(ip, 4)**2))
       if(abs(rr) < CNST(1.0e-10)) then !The matrix is singular, we are fully spin polarized along one direction
-        vxc(ip, 1) = vxc(ip, 1) +  M_HALF/nn*bij(ip, 1) 
-        vxc(ip, 2) = vxc(ip, 2) +  M_HALF/nn*bij(ip, 2)
+        vxc(ip, 1) = vxc(ip, 1) +  M_HALF/st%rho(ip, 1)*bij(ip, 1) 
+        vxc(ip, 2) = vxc(ip, 2) +  M_HALF/st%rho(ip, 2)*bij(ip, 2)
       else
 
-        rr = M_ONE/(M_TWO * nn * rr)
+        rr = M_HALF/(nn * rr)
 
         vxc(ip, 1) = vxc(ip, 1) + rr * ( &
            ( nn * st%rho(ip, 2) - (st%rho(ip, 3)**2 + st%rho(ip, 4)**2)) * bij(ip, 1) &
@@ -273,9 +273,9 @@ subroutine X(slater) (namespace, mesh, psolver, st, isp, ex, vxc)
            ( nn * st%rho(ip, 1) - (st%rho(ip, 3)**2 + st%rho(ip, 4)**2)) * bij(ip, 2) &
           +( (st%rho(ip, 3)**2 + st%rho(ip, 4)**2) ) * bij(ip, 1) &
           - M_TWO * st%rho(ip,1) * ( st%rho(ip,3) * R_REAL(bij(ip,3)) + st%rho(ip,4) * R_AIMAG(bij(ip,3)))) 
-         tmp = -cmplx(st%rho(ip, 3), st%rho(ip,4)) * (st%rho(ip, 2) * bij(ip,1) + st%rho(ip, 1) * bij(ip,2)) &
+         tmp = -cmplx(st%rho(ip, 3), -st%rho(ip,4)) * (st%rho(ip, 2) * bij(ip,1) + st%rho(ip, 1) * bij(ip,2)) &
        + (M_TWO *st%rho(ip, 1) * st%rho(ip, 2)  - (st%rho(ip, 3)**2 + st%rho(ip, 4)**2)) * bij(ip, 3) &
-               + (cmplx(st%rho(ip, 3),st%rho(ip,4)))**2 * R_CONJ(bij(ip,3))
+               + (cmplx(st%rho(ip, 3),-st%rho(ip,4)))**2 * R_CONJ(bij(ip,3))
   
          vxc(ip, 3) = vxc(ip, 3) + rr * R_REAL(tmp)
          vxc(ip, 4) = vxc(ip, 4) + rr * R_AIMAG(tmp) 
