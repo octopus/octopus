@@ -27,7 +27,7 @@ module namespace_oct_m
   public :: namespace_t, &
             global_namespace
 
-  integer, parameter :: MAX_NAMESPACE_LEN = 128
+  integer, parameter, public :: MAX_NAMESPACE_LEN = 128
 
   type :: namespace_t
     private
