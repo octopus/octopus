@@ -36,4 +36,4 @@ days = 3
 TDTimeStep = 24*3600/sampling
 TDMaxSteps = days*sampling
 
-InteractionQuantityTiming = timing_retarded
+InteractionTiming = timing_retarded

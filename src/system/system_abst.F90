@@ -53,7 +53,7 @@ module system_abst_oct_m
 
     integer :: accumulated_loop_ticks
 
-    integer :: interaction_quantity_timing  !< parameter to determine if interactions
+    integer :: interaction_timing  !< parameter to determine if interactions
       !< should use the quantities at the exact time or if retardation is allowed
 
     type(interaction_list_t), public :: interactions !< List with all the interactions of this system
@@ -354,7 +354,7 @@ contains
     type(clock_t),             intent(in)    :: requested_time
     class(interaction_abst_t), intent(inout) :: interaction
 
-    logical :: ahead_in_time, right_in_time, need_to_copy
+    logical :: ahead_in_time, right_on_time, need_to_copy
     integer :: iq, q_id
 
     PUSH_SUB(system_update_exposed_quantities)
@@ -393,16 +393,16 @@ contains
 
           ! Now compare the times
           ahead_in_time = partner%quantities(q_id)%clock > requested_time
-          right_in_time = partner%quantities(q_id)%clock == requested_time
+          right_on_time = partner%quantities(q_id)%clock == requested_time
 
-          if(partner%interaction_quantity_timing == OPTION__INTERACTIONQUANTITYTIMING__TIMING_EXACT) then
+          if(partner%interaction_timing == OPTION__INTERACTIONTIMING__TIMING_EXACT) then
             ! only allow interaction at exactly the same time
-            allowed_to_update = allowed_to_update .and. right_in_time
+            allowed_to_update = allowed_to_update .and. right_on_time
             need_to_copy = allowed_to_update
-          else if(partner%interaction_quantity_timing == OPTION__INTERACTIONQUANTITYTIMING__TIMING_RETARDED) then
+          else if(partner%interaction_timing == OPTION__INTERACTIONTIMING__TIMING_RETARDED) then
             ! allow retarded interaction
             allowed_to_update = allowed_to_update .and. &
-              (right_in_time .or. ahead_in_time)
+              (right_on_time .or. ahead_in_time)
             need_to_copy = need_to_copy .and. .not. ahead_in_time
           else
             call messages_not_implemented("Method for interaction quantity timing")
@@ -544,9 +544,9 @@ contains
     ! If so, replace the current smallest dt by the one from this propagator.
     smallest_algo_dt = min(smallest_algo_dt, this%prop%dt/this%prop%algo_steps)
 
-    !%Variable InteractionQuantityTiming
+    !%Variable InteractionTiming
     !%Type integer
-    !%Default exact
+    !%Default timing_exact
     !%Section Time-Dependent::Propagation
     !%Description
     !% A parameter to determine if interactions should use the quantities
@@ -556,14 +556,14 @@ contains
     !%Option timing_retarded 2
     !% Allow retarded interactions
     !%End
-    call parse_variable(this%namespace, 'InteractionQuantityTiming', &
-      OPTION__INTERACTIONQUANTITYTIMING__TIMING_EXACT, &
-      this%interaction_quantity_timing)
-    if(.not.varinfo_valid_option('InteractionQuantityTiming', this%interaction_quantity_timing)) then
-      call messages_input_error(this%namespace, 'InteractionQuantityTiming')
+    call parse_variable(this%namespace, 'InteractionTiming', &
+      OPTION__INTERACTIONTIMING__TIMING_EXACT, &
+      this%interaction_timing)
+    if(.not.varinfo_valid_option('InteractionTiming', this%interaction_timing)) then
+      call messages_input_error(this%namespace, 'InteractionTiming')
     end if
-    call messages_print_var_option(stdout, 'InteractionQuantityTiming', &
-      this%interaction_quantity_timing)
+    call messages_print_var_option(stdout, 'InteractionTiming', &
+      this%interaction_timing)
 
     POP_SUB(system_init_propagator)
   end subroutine system_init_propagator

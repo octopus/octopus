@@ -49,4 +49,4 @@ Earth.TDMaxSteps = days*sampling*2
 Moon.TDTimeStep = 24*3600/sampling/4
 Moon.TDMaxSteps = days*sampling*4
 
-InteractionQuantityTiming = timing_retarded
+InteractionTiming = timing_retarded
