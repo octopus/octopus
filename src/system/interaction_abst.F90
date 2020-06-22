@@ -27,9 +27,10 @@ module interaction_abst_oct_m
   implicit none
 
   private
-  public ::               &
-    interaction_abst_t,   &
-    interaction_abst_end, &
+  public ::                &
+    interaction_abst_t,    &
+    interaction_abst_end,  &
+    interaction_list_t,    &
     interaction_iterator_t
 
   type, abstract :: interaction_abst_t
@@ -43,14 +44,6 @@ module interaction_abst_oct_m
     procedure(interaction_update),    deferred :: update
     procedure(interaction_calculate), deferred :: calculate
   end type interaction_abst_t
-
-  !> This class extends the list iterator and adds one method to get the
-  !! interaction as a pointer of type class(interaction_abst_t).
-  type, extends(list_iterator_t) :: interaction_iterator_t
-    private
-  contains
-    procedure :: get_next_interaction => interaction_iterator_get_next
-  end type interaction_iterator_t
 
   abstract interface
     logical function interaction_update(this, namespace, requested_time)
@@ -69,6 +62,19 @@ module interaction_abst_oct_m
       type(namespace_t),         intent(in)    :: namespace
     end subroutine interaction_calculate
   end interface
+
+  !> These classes extend the list and list iterator to make an interaction list
+  type, extends(linked_list_t) :: interaction_list_t
+    private
+  contains
+    procedure :: add => interaction_list_add_node
+  end type interaction_list_t
+
+  type, extends(linked_list_iterator_t) :: interaction_iterator_t
+    private
+  contains
+    procedure :: get_next => interaction_iterator_get_next
+  end type interaction_iterator_t
 
 contains
 
@@ -99,18 +105,27 @@ contains
   end subroutine interaction_abst_end
 
   ! ---------------------------------------------------------
-  function interaction_iterator_get_next(this) result(value)
-    class(interaction_iterator_t), intent(inout) :: this
-    class(interaction_abst_t),     pointer       :: value
+  subroutine interaction_list_add_node(this, interaction)
+    class(interaction_list_t)         :: this
+    class(interaction_abst_t), target :: interaction
 
-    class(*), pointer :: ptr
+    PUSH_SUB(interaction_list_add_node)
+
+    call this%add_ptr(interaction)
+
+    POP_SUB(interaction_list_add_node)
+  end subroutine interaction_list_add_node
+
+  ! ---------------------------------------------------------
+  function interaction_iterator_get_next(this) result(interaction)
+    class(interaction_iterator_t), intent(inout) :: this
+    class(interaction_abst_t),     pointer       :: interaction
 
     PUSH_SUB(interaction_iterator_get_next)
 
-    ptr => this%get_next()
-    select type (ptr)
+    select type (ptr => this%get_next_ptr())
     class is (interaction_abst_t)
-      value => ptr
+      interaction => ptr
     class default
       ASSERT(.false.)
     end select

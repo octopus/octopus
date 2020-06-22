@@ -679,7 +679,7 @@ contains
 
     call iter%start(this%interactions)
     do while (iter%has_next())
-      interaction => iter%get_next_interaction()
+      interaction => iter%get_next()
       SAFE_DEALLOCATE_P(interaction)
     end do
 
