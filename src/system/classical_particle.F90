@@ -572,18 +572,9 @@ contains
   subroutine classical_particle_finalize(this)
     type(classical_particle_t), intent(inout) :: this
 
-    type(interaction_iterator_t) :: iter
-    class(interaction_abst_t), pointer :: interaction
-
     PUSH_SUB(classical_particle_finalize)
 
-    deallocate(this%prop)
-
-    call iter%start(this%interactions)
-    do while (iter%has_next())
-      interaction => iter%get_next()
-      SAFE_DEALLOCATE_P(interaction)
-    end do
+    call system_abst_end(this)
 
     POP_SUB(classical_particle_finalize)
   end subroutine classical_particle_finalize

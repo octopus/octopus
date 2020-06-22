@@ -667,21 +667,12 @@ contains
   subroutine system_mxll_finalize(this)
     type(system_mxll_t), intent(inout) :: this
 
-    type(interaction_iterator_t) :: iter
-    class(interaction_abst_t), pointer :: interaction
-
     PUSH_SUB(system_mxll_finalize)
 
-    deallocate(this%prop)
+    call system_abst_end(this)
 
     ! free memory
     SAFE_DEALLOCATE_A(this%rs_state_init)
-
-    call iter%start(this%interactions)
-    do while (iter%has_next())
-      interaction => iter%get_next()
-      SAFE_DEALLOCATE_P(interaction)
-    end do
 
     call hamiltonian_mxll_end(this%hm)
 
