@@ -66,7 +66,10 @@ contains
 
     SAFE_ALLOCATE(this)
 
+    this%label = "gravity"
+
     this%dim = dim
+
     this%partner => partner
 
     ! Gravity interaction needs two quantities from each system: the position and the mass

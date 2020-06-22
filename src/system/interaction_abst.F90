@@ -39,6 +39,7 @@ module interaction_abst_oct_m
     integer,              public :: n_system_quantities  !< Number of quantities needed from the system
     integer, allocatable, public :: system_quantities(:) !< Identifiers of the quantities needed from the system
     type(clock_t), public :: clock !< Clock storing the time at which the interaction was last updated.
+    character(len=:), public, allocatable :: label
   contains
     procedure :: init_clock => interaction_init_clock
     procedure(interaction_update),    deferred :: update
@@ -99,9 +100,11 @@ contains
     PUSH_SUB(interaction_abst_end)
 
     SAFE_DEALLOCATE_A(this%system_quantities)
+    if (allocated(this%label)) then
+      deallocate(this%label)
+    end if
 
     POP_SUB(interaction_abst_end)
-
   end subroutine interaction_abst_end
 
   ! ---------------------------------------------------------
