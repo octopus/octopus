@@ -436,7 +436,8 @@ contains
         ! Write interaction to DOT graph if this interaction has a partner
         select type (interaction)
         class is (interaction_with_partner_t)
-          write(iunit, '(2x,a)') '"' + trim(system%namespace%get()) + '" -> "' + trim(interaction%partner%namespace%get()) + '";'
+          write(iunit, '(2x,a)') '"' + trim(system%namespace%get()) + '" -> "' + trim(interaction%partner%namespace%get()) + &
+            '" [label="'+ interaction%label + '"];'
         end select
       end do
 

@@ -54,6 +54,8 @@ contains
 
     SAFE_ALLOCATE(this)
 
+    this%label = "ghost"
+
     this%partner => partner
 
     ! A ghost interaction does not require any quantity

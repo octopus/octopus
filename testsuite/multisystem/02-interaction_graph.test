@@ -9,12 +9,12 @@ Processors: 1
 
 Input: 02-interaction_graph.01-three_body.inp
 
-match ; Sun-Earth interaction  ; GREPCOUNT(interaction_graph.dot, '"Sun" -> "Earth"') ; 1
-match ; Sun-Moon interaction   ; GREPCOUNT(interaction_graph.dot, '"Sun" -> "Moon"') ; 1
-match ; Earth-Sun interaction  ; GREPCOUNT(interaction_graph.dot, '"Earth" -> "Sun"') ; 1
-match ; Earth-Moon interaction ; GREPCOUNT(interaction_graph.dot, '"Earth" -> "Moon"') ; 1
-match ; Moon-Sun interaction   ; GREPCOUNT(interaction_graph.dot, '"Moon" -> "Sun"') ; 1
-match ; Moon-Earth interaction ; GREPCOUNT(interaction_graph.dot, '"Moon" -> "Earth"') ; 1
+match ; Sun-Earth interaction  ; GREPCOUNT(interaction_graph.dot, '"Sun" -> "Earth" \[label="gravity"\]') ; 1
+match ; Sun-Moon interaction   ; GREPCOUNT(interaction_graph.dot, '"Sun" -> "Moon" \[label="gravity"\]') ; 1
+match ; Earth-Sun interaction  ; GREPCOUNT(interaction_graph.dot, '"Earth" -> "Sun" \[label="gravity"\]') ; 1
+match ; Earth-Moon interaction ; GREPCOUNT(interaction_graph.dot, '"Earth" -> "Moon" \[label="gravity"\]') ; 1
+match ; Moon-Sun interaction   ; GREPCOUNT(interaction_graph.dot, '"Moon" -> "Sun" \[label="gravity"\]') ; 1
+match ; Moon-Earth interaction ; GREPCOUNT(interaction_graph.dot, '"Moon" -> "Earth" \[label="gravity"\]') ; 1
 
 
 

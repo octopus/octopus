@@ -68,7 +68,10 @@ contains
 
     SAFE_ALLOCATE(this)
 
+    this%label = "lorenz_force"
+
     this%dim = dim
+
     this%partner => partner
 
     ! For the Lorentz force we need the position, velocity and charge of the
