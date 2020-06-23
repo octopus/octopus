@@ -84,7 +84,7 @@ contains
     type(integer_list_t) :: interactions_to_create
     type(integer_iterator_t) :: interaction_iter
     integer :: interaction_type
-    type(partner_list_t) :: partners
+    type(partner_list_t) :: partners, partners_flat_list
     type(partner_iterator_t) :: partner_iter
     class(interaction_partner_t), pointer :: partner
     type(system_iterator_t) :: iter
@@ -92,7 +92,8 @@ contains
 
     integer :: il, ic, mode
     type(block_t) :: blk
-    character(len=MAX_NAMESPACE_LEN) :: partner_name
+    character(len=MAX_NAMESPACE_LEN) :: input_name
+    type(namespace_t) :: input_namespace
 
     PUSH_SUB(interactions_factory_abst_create_interactions)
 
@@ -104,9 +105,13 @@ contains
     ! Make a copy of the interactions list so that we can modify it
     interactions_to_create = system%supported_interactions
 
+    ! Get the list of partners as a flat list
+    call flatten_partner_list(available_partners, partners_flat_list)
+
     ! Parse input. The variable name and description should be given by the
     ! factory, as different factories might have different options.
     if (parse_block(system%namespace, this%block_name(), blk) == 0) then
+
       ! Loop over all interactions specified in the input file
       do il = 0, parse_block_n(blk) - 1
         ! Read the interaction type (first column)
@@ -128,7 +133,7 @@ contains
         select case (mode)
         case (ALL_PARTNERS)
           ! Use all available partners
-          partners = available_partners
+          partners = partners_flat_list
         case (NO_PARTNERS)
           ! No partners for this interaction
           call partners%empty()
@@ -137,7 +142,7 @@ contains
           call partners%empty()
         case (ALL_EXCEPT)
           ! Start with full list. We will remove the select partners bellow
-          partners = available_partners
+          partners = partners_flat_list
         case default
           call messages_input_error(system%namespace, this%block_name(), "Unknown interaction mode", row=il, column=1)
         end select
@@ -146,14 +151,15 @@ contains
           ! In these two cases we need to read the names of the selected
           ! partners (remaining columns) and handled them appropriatly
           do ic = 2, parse_block_cols(blk, il) - 1
-            call parse_block_string(blk, il, ic, partner_name)
+            call parse_block_string(blk, il, ic, input_name)
+            input_namespace = namespace_t(input_name)
 
             ! Loop over available partners and either add them or remove them
             ! from the list depending on the selected mode
-            call partner_iter%start(available_partners)
+            call partner_iter%start(partners_flat_list)
             do while (partner_iter%has_next())
               partner => partner_iter%get_next()
-              if (trim(partner%namespace%get()) == trim(partner_name) .or. partner%namespace%has_parent(partner_name)) then
+              if (input_namespace%contains(partner%namespace)) then
                 select case (mode)
                 case (ONLY_PARTNERS)
                   call partners%add(partner)
@@ -183,7 +189,7 @@ contains
       ! Check what is the default mode for this interaction type (all or none)
       select case (this%default_mode(interaction_type))
       case (ALL_PARTNERS)
-        partners = available_partners
+        partners = partners_flat_list
       case (NO_PARTNERS)
         call partners%empty()
       case default
@@ -196,7 +202,7 @@ contains
 
     ! All systems need to be connected to make sure they remain synchronized.
     ! We enforce that be adding a ghost interaction between all systems
-    call create_interaction_with_partners(this, system%namespace, available_partners, system%interactions)
+    call create_interaction_with_partners(this, system%namespace, partners_flat_list, system%interactions)
 
     ! If the system is a multisystem, then we also need to create the interactions for the subsystems
     select type (system)
@@ -208,11 +214,40 @@ contains
       end do
     end select
 
-    PUSH_SUB(interactions_factory_abst_create_interactions)
+    POP_SUB(interactions_factory_abst_create_interactions)
+  contains
+
+    recursive subroutine flatten_partner_list(partners, flat_list)
+      class(partner_list_t),  intent(in)    :: partners
+      class(partner_list_t),  intent(inout) :: flat_list
+
+      class(interaction_partner_t), pointer :: partner
+      type(partner_iterator_t) :: iterator
+
+      PUSH_SUB(interactions_factory_abst_create_interactions.flatten_partner_list)
+
+      call iterator%start(partners)
+      do while (iterator%has_next())
+        partner => iterator%get_next()
+
+        select type (partner)
+        class is (multisystem_t)
+          ! Note that for the moment we are not including the multisystem itself
+          ! in the flat list. This is because currently multisystems cannot be
+          ! partners.
+          call flatten_partner_list(partner%list, flat_list)
+        class default
+          call flat_list%add(partner)
+        end select
+      end do
+
+      POP_SUB(interactions_factory_abst_create_interactions.flatten_partner_list)
+    end subroutine flatten_partner_list
+
   end subroutine interactions_factory_abst_create_interactions
 
   ! ---------------------------------------------------------------------------------------
-  recursive subroutine create_interaction_with_partners(this, namespace, partners, interactions, interaction_type)
+  subroutine create_interaction_with_partners(this, namespace, partners, interactions, interaction_type)
     class(interactions_factory_abst_t), intent(in)    :: this
     type(namespace_t),                  intent(in)    :: namespace
     class(partner_list_t),      target, intent(in)    :: partners
@@ -230,34 +265,27 @@ contains
     do while (iter%has_next())
       partner => iter%get_next()
 
-      select type (partner)
-      class is (multisystem_t)
-        ! If the partner is a multitsystem, then we need to create the interactions with all the subsystems it contains
-        call create_interaction_with_partners(this, namespace, partner%list, interactions, interaction_type)
+      ! No self-interaction
+      if (partner%namespace%get() /= namespace%get()) then
 
-      class default
-        ! No self-interaction
-        if (partner%namespace%get() /= namespace%get()) then
-
-          if (debug%info) then
-            write(message(1), '(a)') "Debug: ----  with " + trim(partner%namespace%get())
-            call messages_info(1)
-          end if
-
-          if (present(interaction_type)) then
-            ! If the partner also supports this type of interaction, then create the interaction
-            if (partner%supported_interactions_as_partner%has(interaction_type)) then
-              interaction => this%create(interaction_type, partner)
-              call interactions%add(interaction)
-            end if
-          else
-            ! Create a ghost interaction if no interaction type was given
-            interaction => ghost_interaction_t(partner)
-            call interactions%add(interaction)
-          end if
+        if (debug%info) then
+          write(message(1), '(a)') "Debug: ----  with " + trim(partner%namespace%get())
+          call messages_info(1)
         end if
 
-      end select
+        if (present(interaction_type)) then
+          ! If the partner also supports this type of interaction, then create the interaction
+          if (partner%supported_interactions_as_partner%has(interaction_type)) then
+            interaction => this%create(interaction_type, partner)
+            call interactions%add(interaction)
+          end if
+        else
+          ! Create a ghost interaction if no interaction type was given
+          interaction => ghost_interaction_t(partner)
+          call interactions%add(interaction)
+        end if
+      end if
+
     end do
 
     POP_SUB(create_interaction_with_partners)
