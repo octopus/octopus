@@ -627,20 +627,34 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine messages_input_error(namespace, var, details)
+  subroutine messages_input_error(namespace, var, details, row, column)
     type(namespace_t),          intent(in) :: namespace
     character(len=*),           intent(in) :: var
     character(len=*), optional, intent(in) :: details
+    integer,          optional, intent(in) :: row
+    integer,          optional, intent(in) :: column
+
+    character(len=10) :: row_str, column_str
 
     call messages_write('Input error in the input variable '// trim(var))
     
+    if (present(row)) then
+      ! Print row and, if available, the column. We add one to both values
+      ! in order to translate from the C numbering used by the parser to a
+      ! more human-friendly numbering.
+      write(row_str, '(I10)') row + 1
+      call messages_write(' at row '//adjustl(row_str))
+      if (present(column)) then
+        write(column_str, '(I10)') column + 1
+        call messages_write(', column '//adjustl(column_str))
+      end if
+    end if
     if(present(details)) then
       call messages_write(':', new_line = .true.)
       call messages_new_line()
-      call messages_write('  '//trim(details)//'.', new_line = .true.)
-    else
-      call messages_write('.', new_line = .true.)
+      call messages_write('  '//trim(details))
     end if
+    call messages_write('.', new_line = .true.)
     
     call messages_new_line()
     
