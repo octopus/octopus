@@ -381,18 +381,19 @@ contains
           ahead_in_time = partner%quantities(q_id)%clock > requested_time
           right_on_time = partner%quantities(q_id)%clock == requested_time
 
-          if(partner%interaction_timing == OPTION__INTERACTIONTIMING__TIMING_EXACT) then
+          select case (partner%interaction_timing)
+          case (OPTION__INTERACTIONTIMING__TIMING_EXACT)
             ! only allow interaction at exactly the same time
             allowed_to_update = allowed_to_update .and. right_on_time
             need_to_copy = allowed_to_update
-          else if(partner%interaction_timing == OPTION__INTERACTIONTIMING__TIMING_RETARDED) then
+          case (OPTION__INTERACTIONTIMING__TIMING_RETARDED)
             ! allow retarded interaction
             allowed_to_update = allowed_to_update .and. &
               (right_on_time .or. ahead_in_time)
             need_to_copy = need_to_copy .and. .not. ahead_in_time
-          else
+          case default
             call messages_not_implemented("Method for interaction quantity timing")
-          end if
+          end select
 
           ! Debug stuff
           if (debug%info) then
