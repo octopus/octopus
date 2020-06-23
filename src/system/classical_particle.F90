@@ -26,7 +26,6 @@ module classical_particle_oct_m
   use interaction_gravity_oct_m
   use interaction_lorentz_force_oct_m
   use interactions_factory_oct_m
-  use ghost_interaction_oct_m
   use io_oct_m
   use iso_c_binding
   use messages_oct_m
@@ -600,15 +599,8 @@ contains
     call iter%start(this%interactions)
     do while (iter%has_next())
       select type (interaction => iter%get_next())
-      type is (interaction_lorentz_force_t)
-        this%tot_force(1:this%space%dim) = this%tot_force(1:this%space%dim) + interaction%force(1:this%space%dim)
       type is (interaction_gravity_t)
         this%tot_force(1:this%space%dim) = this%tot_force(1:this%space%dim) + interaction%force(1:this%space%dim)
-      type is (ghost_interaction_t)
-        ! Nothing to do
-      class default
-        message(1) = "Unknown interaction by the classical particle " + this%namespace%get()
-        call messages_fatal(1)
       end select
     end do
 

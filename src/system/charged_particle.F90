@@ -299,9 +299,24 @@ contains
   subroutine charged_particle_update_interactions_finish(this)
     class(charged_particle_t), intent(inout) :: this
 
+    type(interaction_iterator_t) :: iter
+
     PUSH_SUB(charged_particle_update_interactions_finish)
 
+    ! Call the method of the parent class to add the force contribution from the
+    ! interactions that it knows about. We need to do this before adding the
+    ! contributions from the charged particle interactions, as the parent will
+    ! start by setting the force to zero.
     call this%classical_particle_t%update_interactions_finish()
+
+    ! Now we handle the forces coming the interactions the charge particle knows
+    call iter%start(this%interactions)
+    do while (iter%has_next())
+      select type (interaction => iter%get_next())
+      type is (interaction_lorentz_force_t)
+        this%tot_force(1:this%space%dim) = this%tot_force(1:this%space%dim) + interaction%force(1:this%space%dim)
+      end select
+    end do
 
     POP_SUB(charged_particle_update_interactions_finish)
   end subroutine charged_particle_update_interactions_finish
