@@ -454,14 +454,28 @@ contains
     class(system_abst_t),      intent(inout) :: this
     type(clock_t),             intent(in)    :: requested_time !< Requested time for the update
 
+    logical :: none_updated
     integer :: iq, q_id
     class(interaction_abst_t), pointer :: interaction
     type(interaction_iterator_t) :: iter
 
     PUSH_SUB(system_update_interactions)
 
-    ! Some systems might need to perform some specific operations before the update
-    call this%update_interactions_start()
+    ! Some systems might need to perform some specific operations before the
+    ! update. This should only be done if no interaction has been updated yet,
+    ! so that it is only done once.
+    none_updated = .true.
+    call iter%start(this%interactions)
+    do while (iter%has_next())
+      interaction => iter%get_next()
+      if (interaction%clock == requested_time) then
+        none_updated = .false.
+        exit
+      end if
+    end do
+    if (none_updated) then
+      call this%update_interactions_start()
+    end if
 
     !Loop over all interactions
     all_updated = .true.
@@ -501,8 +515,11 @@ contains
       end if
     end do
 
-    ! Some systems might need to perform some specific operations after the update
-    call this%update_interactions_finish()
+    ! Some systems might need to perform some specific operations after all the
+    ! interactions have been updated
+    if (all_updated) then
+      call this%update_interactions_finish()
+    end if
 
     POP_SUB(system_update_interactions)
   end function system_update_interactions
