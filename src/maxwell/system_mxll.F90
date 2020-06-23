@@ -102,7 +102,6 @@ module system_mxll_oct_m
     procedure :: store_current_status => system_mxll_store_current_status
     procedure :: update_quantity => system_mxll_update_quantity
     procedure :: update_exposed_quantity => system_mxll_update_exposed_quantity
-    procedure :: set_pointers_to_interaction => system_mxll_set_pointers_to_interaction
     procedure :: copy_quantities_to_interaction => system_mxll_copy_quantities_to_interaction
     procedure :: output_start => system_mxll_output_start
     procedure :: output_write => system_mxll_output_write
@@ -545,15 +544,6 @@ contains
   end subroutine system_mxll_update_exposed_quantity
 
   ! ---------------------------------------------------------
-  subroutine system_mxll_set_pointers_to_interaction(this, inter)
-    class(system_mxll_t), target,  intent(inout) :: this
-    class(interaction_abst_t),     intent(inout) :: inter
-
-    PUSH_SUB(system_mxll_set_pointers_to_interaction)
-    POP_SUB(system_mxll_set_pointers_to_interaction)
-  end subroutine system_mxll_set_pointers_to_interaction
-
-    ! ---------------------------------------------------------
   subroutine system_mxll_copy_quantities_to_interaction(partner, interaction)
     class(system_mxll_t),       intent(inout) :: partner
     class(interaction_abst_t),  intent(inout) :: interaction
