@@ -734,7 +734,7 @@ contains
       call v_ks_calc(sys%ks, sys%namespace, sys%hm, sys%st, sys%geo, calc_eigenval=.false., &
                       calc_berry=.false., calc_current=.false.)
       ! eigenvalues have nevertheless to be initialized to something
-      if(sys%st%smear%method == SMEAR_SEMICONDUCTOR) then
+      if(sys%st%smear%method == SMEAR_SEMICONDUCTOR .and. lcao_is_available(lcao)) then
         sys%st%eigenval = M_HUGE
       else
         !For smearing functions with finite temperature, we cannot set them to M_HUGE
