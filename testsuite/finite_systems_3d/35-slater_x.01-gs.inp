@@ -1,0 +1,28 @@
+CalculationMode = gs
+FromScratch = yes
+UnitsOutput = ev_angstrom
+
+%Coordinates
+"Cl" | 0 | 0 | 0
+%
+
+PseudopotentialSet = hgh_lda
+SpinComponents = spinors
+RelativisticCorrection = spin_orbit 
+
+spacing = 0.15*angstrom
+radius = 4.5*angstrom
+ExtraStates = 2
+
+XCFunctional = slater_x + lda_c_pz
+
+%Occupations
+ 2/3 | 2/3 | 2/3
+%
+
+ConvRelDens = 5e-6
+GuessMagnetDensity = user_defined
+%AtomsMagnetDirection
+ 0 | 0 | 1
+%
+

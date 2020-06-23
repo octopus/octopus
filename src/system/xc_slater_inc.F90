@@ -65,6 +65,7 @@ subroutine X(slater) (namespace, mesh, psolver, st, isp, ex, vxc)
   R_TYPE, allocatable:: bij(:,:)
   R_TYPE, allocatable :: rho_ij(:), pot_ij(:), psi(:,:), wf_ist(:,:)
   R_TYPE :: tmp
+  FLOAT, allocatable :: tmp_vxc(:)
 
 #if defined(HAVE_MPI)
   integer :: send_req, status(MPI_STATUS_SIZE)
@@ -87,6 +88,11 @@ subroutine X(slater) (namespace, mesh, psolver, st, isp, ex, vxc)
   if(st%d%ispin == SPINORS) then
     SAFE_ALLOCATE(bij(1:mesh%np, 1:3))
     bij(:,:) = M_ZERO
+  end if
+
+  if(present(vxc) .and. st%d%ispin /= SPINORS) then
+    SAFE_ALLOCATE(tmp_vxc(1:mesh%np))
+    tmp_vxc(:) = M_ZERO
   end if
 
   ! This is the maximum number of blocks for each processor
@@ -196,7 +202,7 @@ subroutine X(slater) (namespace, mesh, psolver, st, isp, ex, vxc)
               do ip = 1, mesh%np
                 !If there is no density at this point, we simply ignore it
                 if(st%rho(ip, isp) < CNST(1e-10)) cycle        
-                vxc(ip, isp) = vxc(ip, isp) - rr * R_REAL(R_CONJ(rho_ij(ip)) * pot_ij(ip)) / st%rho(ip, isp)
+                tmp_vxc(ip) = tmp_vxc(ip) - rr * R_REAL(R_CONJ(rho_ij(ip)) * pot_ij(ip)) / st%rho(ip, isp)
               end do
             else
               !This is given by Eq. 19 in SI of PRB 98, 035140 (2018)
@@ -239,11 +245,15 @@ subroutine X(slater) (namespace, mesh, psolver, st, isp, ex, vxc)
       if(st%d%ispin == SPINORS) then
         call comm_allreduce(st%mpi_grp%comm, bij)
       else
-        call comm_allreduce(st%mpi_grp%comm, vxc)
+        call comm_allreduce(st%mpi_grp%comm, tmp_vxc)
       end if
     end if
   end if
 #endif
+  if(present(vxc) .and. st%d%ispin /= SPINORS) then
+    vxc(:, isp) = vxc(:, isp) + tmp_vxc
+  end if
+  SAFE_DEALLOCATE_A(tmp_vxc)
 
   !We now construct the full potential from the density and the quantity b_ij
   !Note that the final potential is real and stored as v_upup, v_downdown, Re(v_updown), and Im(updown)
