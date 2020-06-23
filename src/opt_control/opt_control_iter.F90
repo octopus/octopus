@@ -27,7 +27,7 @@ module opt_control_iter_oct_m
   use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
-  use system_oct_m
+  use electrons_oct_m
 
   implicit none
 
@@ -250,11 +250,11 @@ contains
 
   ! ---------------------------------------------------------
   subroutine iteration_manager_direct(j, par, iterator, sys, dx)
-    FLOAT, intent(in) :: j
-    type(controlfunction_t), intent(in)  :: par
-    type(oct_iterator_t), intent(inout) :: iterator
-    type(system_t), intent(in) :: sys
-    FLOAT, optional, intent(in) :: dx
+    FLOAT,                   intent(in)    :: j
+    type(controlfunction_t), intent(in)    :: par
+    type(oct_iterator_t),    intent(inout) :: iterator
+    type(electrons_t),       intent(in)    :: sys
+    FLOAT,         optional, intent(in)    :: dx
 
     FLOAT :: j1, j2, fluence, delta
     PUSH_SUB(iteration_manager_direct)
@@ -393,7 +393,7 @@ contains
   ! ---------------------------------------------------------
   subroutine velocities_write(iterator, sys)
     type(oct_iterator_t),    intent(in) :: iterator
-    type(system_t),          intent(in) :: sys
+    type(electrons_t),       intent(in) :: sys
 
     character (len=100) :: temp_str
     character (len=2) :: atoms_str

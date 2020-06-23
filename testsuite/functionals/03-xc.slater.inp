@@ -1,0 +1,26 @@
+CalculationMode = gs
+
+%Coordinates
+ 'H' |  0.717157 | 0 | 0
+ 'H' | -0.717157 | 0 | 0
+%
+
+MaximumIter = 0
+
+SpinComponents = spin_polarized
+
+ExcessCharge = 1
+
+Spacing = 0.5
+
+XCFunctional = slater_x
+%Occupations
+0.8
+0.2
+%
+
+FilterPotentials = filter_none
+
+# Parallelization in spin/k-points is currently not available for OEP
+ParKpoints = no
+StatesPack = yes

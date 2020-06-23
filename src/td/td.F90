@@ -65,7 +65,7 @@ module td_oct_m
   use states_elec_oct_m
   use states_elec_calc_oct_m
   use states_elec_restart_oct_m
-  use system_oct_m
+  use electrons_oct_m
   use system_abst_oct_m
   use td_write_oct_m
   use types_oct_m
@@ -129,8 +129,8 @@ contains
   ! ---------------------------------------------------------
 
   subroutine td_init(td, sys)
-    type(td_t),       intent(inout) :: td
-    type(system_t),   intent(inout) :: sys
+    type(td_t),          intent(inout) :: td
+    type(electrons_t),   intent(inout) :: sys
 
     integer :: default
     FLOAT   :: spacing, default_dt, propagation_time
@@ -394,8 +394,8 @@ contains
   ! ---------------------------------------------------------
   
   subroutine td_run(sys, fromScratch)
-    type(system_t), target, intent(inout) :: sys
-    logical,                intent(inout) :: fromScratch
+    type(electrons_t), target, intent(inout) :: sys
+    logical,                   intent(inout) :: fromScratch
 
     type(td_t)                   :: td
     type(td_write_t)             :: write_handler
@@ -965,6 +965,7 @@ contains
     integer :: it, internal_loop
     integer, parameter :: MAX_PROPAGATOR_STEPS = 1000
     FLOAT :: smallest_algo_dt
+    integer :: iunit_out
 
     PUSH_SUB(multisys_td_run)
 
@@ -976,6 +977,15 @@ contains
     ! this should eventually be moved up to run.F90 when all systems
     ! are derived classes from system_abst
     call systems%init_interactions()
+
+    ! Write the interaction graph as a DOT graph for debug
+    if (debug%interaction_graph .and. mpi_grp_is_root(mpi_world)) then
+      iunit_out = io_open('interaction_graph.dot', systems%namespace, action='write')
+      write(iunit_out, '(a)') 'digraph {'
+      call systems%write_interaction_graph(iunit_out)
+      write(iunit_out, '(a)') '}'
+      call io_close(iunit_out)
+    end if
 
     ! Initialize all propagators and find the smallest time-step
     smallest_algo_dt = CNST(1e10)

@@ -85,21 +85,18 @@ subroutine X(xc_oep_calc)(oep, namespace, xcs, apply_sic_pz, gr, hm, st, ex, ec,
       call X(oep_sic) (xcs, gr, hm%psolver, namespace, st, is, oep, ex, ec)
     end if
 
-    if(oep%level /= XC_OEP_SLATER) then
-      ! calculate uxc_bar for the occupied states
+    ! calculate uxc_bar for the occupied states
 
-      SAFE_ALLOCATE(psi(1:gr%mesh%np))
+    SAFE_ALLOCATE(psi(1:gr%mesh%np))
 
-      oep%uxc_bar(:, is) = M_ZERO
-      do ist = st%st_start, st%st_end
-        call states_elec_get_state(st, gr%mesh, idm, ist, isp, psi)
-        oep%uxc_bar(ist, is) = R_REAL(X(mf_dotp)(gr%mesh, psi, oep%X(lxc)(1:gr%mesh%np, ist, is), reduce = .false., dotu = .true.))
-      end do
-      if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm, oep%uxc_bar(1:st%st_end, is), dim = st%st_end)
+    oep%uxc_bar(:, is) = M_ZERO
+    do ist = st%st_start, st%st_end
+      call states_elec_get_state(st, gr%mesh, idm, ist, isp, psi)
+      oep%uxc_bar(ist, is) = R_REAL(X(mf_dotp)(gr%mesh, psi, oep%X(lxc)(1:gr%mesh%np, ist, is), reduce = .false., dotu = .true.))
+    end do
+    if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm, oep%uxc_bar(1:st%st_end, is), dim = st%st_end)
 
-      SAFE_DEALLOCATE_A(psi)
-
-    end if
+    SAFE_DEALLOCATE_A(psi)
 
   end do spin
 
@@ -114,7 +111,9 @@ subroutine X(xc_oep_calc)(oep, namespace, xcs, apply_sic_pz, gr, hm, st, ex, ec,
 
   if (st%d%ispin==SPINORS) then
     call xc_KLI_Pauli_solve(gr%mesh, namespace, st, oep)
-    vxc(1:gr%mesh%np,:) = oep%vxc(1:gr%mesh%np,:)
+    if(present(vxc)) then
+      vxc(1:gr%mesh%np,:) = oep%vxc(1:gr%mesh%np,:)
+    end if
     ! full OEP not implemented!
   else
     spin2: do is = 1, nspin_
@@ -126,12 +125,16 @@ subroutine X(xc_oep_calc)(oep, namespace, xcs, apply_sic_pz, gr, hm, st, ex, ec,
         if(oep%level /= XC_OEP_FULL .or. first) then
           oep%vxc = M_ZERO
           call X(xc_KLI_solve) (namespace, gr%mesh, gr, hm, st, is, oep, first)
-          vxc(1:gr%mesh%np, is) = vxc(1:gr%mesh%np, is) + oep%vxc(1:gr%mesh%np, 1)
+          if(present(vxc)) then
+            vxc(1:gr%mesh%np, is) = vxc(1:gr%mesh%np, is) + oep%vxc(1:gr%mesh%np, 1)
+          end if
         end if
         ! if asked, solve the full OEP equation
         if(oep%level == XC_OEP_FULL .and. (.not. first)) then
           call X(xc_oep_solve)(namespace, gr, hm, st, is, vxc(:,is), oep)
-          vxc(1:gr%mesh%np, is) = vxc(1:gr%mesh%np, is) + oep%vxc(1:gr%mesh%np, is)
+          if(present(vxc)) then
+            vxc(1:gr%mesh%np, is) = vxc(1:gr%mesh%np, is) + oep%vxc(1:gr%mesh%np, is)
+          end if
         end if
         if (is == nspin_) first = .false.
       end if

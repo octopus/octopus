@@ -25,6 +25,7 @@ module system_mxll_oct_m
   use distributed_oct_m
   use geometry_oct_m
   use ghost_interaction_oct_m
+  use interaction_lorentz_force_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_mxll_oct_m
@@ -34,6 +35,7 @@ module system_mxll_oct_m
   use maxwell_boundary_op_oct_m
   use mesh_oct_m
   use messages_oct_m
+  use mesh_interpolation_oct_m
   use mpi_oct_m
   use multicomm_oct_m
   use namespace_oct_m
@@ -42,7 +44,6 @@ module system_mxll_oct_m
   use poisson_oct_m
   use profiling_oct_m
   use propagator_abst_oct_m
-  use propagator_base_oct_m
   use propagator_mxll_oct_m
   use quantity_oct_m
   use restart_oct_m
@@ -52,7 +53,7 @@ module system_mxll_oct_m
   use system_abst_oct_m
   use states_mxll_oct_m
   use states_mxll_restart_oct_m
-  use system_oct_m
+  use electrons_oct_m
   use td_write_oct_m
   use unit_oct_m
   use unit_system_oct_m
@@ -76,6 +77,8 @@ module system_mxll_oct_m
     type(grid_t),        pointer :: gr    !< the mesh
     type(output_t)               :: outp  !< the output
     type(multicomm_t)            :: mc    !< index and domain communicators
+
+    type(mesh_interpolation_t)   :: mesh_interpolate
 
     type(propagator_mxll_t)      :: tr_mxll   !< contains the details of the Maxwell time-evolution
     type(td_write_t)             :: write_handler
@@ -177,6 +180,8 @@ contains
     this%quantities(E_FIELD)%required = .true.
     this%quantities(B_FIELD)%required = .true.
 
+    call mesh_interpolation_init(this%mesh_interpolate, this%gr%mesh)
+
     POP_SUB(system_mxll_init)
 
   contains
@@ -211,7 +216,12 @@ contains
     class(system_mxll_t), target, intent(inout) :: this
     class(system_abst_t),         intent(inout) :: partner
 
+    class(ghost_interaction_t), pointer :: ghost
+
     PUSH_SUB(system_mxll_add_interaction_partner)
+
+    ghost => ghost_interaction_t(partner)
+    call this%interactions%add(ghost)
 
     POP_SUB(system_mxll_add_interaction_partner)
   end subroutine system_mxll_add_interaction_partner
@@ -223,7 +233,12 @@ contains
 
     PUSH_SUB(system_mxll_has_interaction)
 
-    system_mxll_has_interaction = .false.
+    select type (interaction)
+    type is (interaction_lorentz_force_t)
+      system_mxll_has_interaction = .true.
+    class default
+      system_mxll_has_interaction = .false.
+    end select
 
     POP_SUB(system_mxll_has_interaction)
   end function system_mxll_has_interaction
@@ -353,9 +368,15 @@ contains
       if (this%tr_mxll%bc_plane_waves) then
         this%st%rs_state_plane_waves(:,:) = this%rs_state_init
       end if
-      if (this%tr_mxll%bc_constant) &
-        this%st%rs_state_const(:) = this%rs_state_init(this%gr%mesh%idx%lxyz_inv(0,0,0),:)
-      call constant_boundaries_calculation(this%tr_mxll%bc_constant, this%hm%bc, this%hm, this%st, this%st%rs_state)
+    end if
+
+    ! initialize the spatial constant field according to the conditions set in the
+    ! UserDefinedConstantSpatialMaxwellField block
+    if (this%tr_mxll%bc_constant) then
+      call spatial_constant_calculation(this%tr_mxll%bc_constant, this%st, this%gr, this%hm, M_ZERO, &
+           this%prop%dt/this%tr_mxll%inter_steps, this%tr_mxll%delay_time, this%st%rs_state, &
+           set_initial_state = .true.)
+      this%st%rs_state_const(:) = this%st%rs_state(this%gr%mesh%idx%lxyz_inv(0,0,0),:)
     end if
 
     if (parse_is_defined(this%namespace, 'UserDefinedInitialMaxwellStates')) then
@@ -520,17 +541,19 @@ contains
   end subroutine system_mxll_update_quantity
 
  ! ---------------------------------------------------------
- subroutine system_mxll_update_exposed_quantity(this, iq, requested_time)
-    class(system_mxll_t),      intent(inout) :: this
+ subroutine system_mxll_update_exposed_quantity(partner, iq, requested_time)
+    class(system_mxll_t),      intent(inout) :: partner
     integer,                   intent(in)    :: iq
     class(clock_t),            intent(in)    :: requested_time
 
     PUSH_SUB(system_mxll_update_exposed_quantity)
 
     ! We are not allowed to update protected quantities!
-    ASSERT(.not. this%quantities(iq)%protected)
+    ASSERT(.not. partner%quantities(iq)%protected)
 
     select case (iq)
+    case(E_FIELD,B_FIELD)
+      call partner%quantities(iq)%clock%set_time(requested_time)
     case default
       message(1) = "Incompatible quantity."
       call messages_fatal(1)
@@ -565,15 +588,30 @@ contains
   end subroutine system_mxll_update_interactions_finish
 
     ! ---------------------------------------------------------
-  subroutine system_mxll_copy_quantities_to_interaction(this, interaction)
-    class(system_mxll_t),          intent(inout) :: this
-    class(interaction_abst_t),        intent(inout) :: interaction
+  subroutine system_mxll_copy_quantities_to_interaction(partner, interaction)
+    class(system_mxll_t),       intent(inout) :: partner
+    class(interaction_abst_t),  intent(inout) :: interaction
+
+    CMPLX :: interpolated_value(3)
+    FLOAT :: e_field(3)
+    FLOAT :: b_field(3)
 
     PUSH_SUB(system_mxll_copy_quantities_to_interaction)
 
     select type (interaction)
     type is (ghost_interaction_t)
       ! Nothing to copy
+    type is (interaction_lorentz_force_t)
+      call mesh_interpolation_evaluate(partner%mesh_interpolate, partner%st%rs_state(:,1), &
+        interaction%system_pos, interpolated_value(1))
+      call mesh_interpolation_evaluate(partner%mesh_interpolate, partner%st%rs_state(:,2), &
+        interaction%system_pos, interpolated_value(2))
+      call mesh_interpolation_evaluate(partner%mesh_interpolate, partner%st%rs_state(:,3), &
+        interaction%system_pos, interpolated_value(3))
+      call get_electric_field_vector(interpolated_value, e_field)
+      call get_magnetic_field_vector(interpolated_value, 1, b_field)
+      interaction%partner_E_field = e_field
+      interaction%partner_B_field = b_field
     class default
       message(1) = "Unsupported interaction."
       call messages_fatal(1)
@@ -639,21 +677,12 @@ contains
   subroutine system_mxll_finalize(this)
     type(system_mxll_t), intent(inout) :: this
 
-    type(interaction_iterator_t) :: iter
-    class(interaction_abst_t), pointer :: interaction
-
     PUSH_SUB(system_mxll_finalize)
 
-    deallocate(this%prop)
+    call system_abst_end(this)
 
     ! free memory
     SAFE_DEALLOCATE_A(this%rs_state_init)
-
-    call iter%start(this%interactions)
-    do while (iter%has_next())
-      interaction => iter%get_next_interaction()
-      SAFE_DEALLOCATE_P(interaction)
-    end do
 
     call hamiltonian_mxll_end(this%hm)
 

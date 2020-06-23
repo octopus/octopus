@@ -57,7 +57,7 @@ module lcao_oct_m
   use states_elec_io_oct_m
   use submesh_oct_m
   use symmetrizer_oct_m
-  use system_oct_m
+  use electrons_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use v_ks_oct_m
@@ -686,9 +686,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine lcao_run(sys, st_start, lmm_r)
-    type(system_t),      intent(inout) :: sys
-    integer, optional,   intent(in)    :: st_start !< use for unoccupied-states run
-    FLOAT,   optional,   intent(in)    :: lmm_r !< used only if not present(st_start)
+    type(electrons_t),      intent(inout) :: sys
+    integer,      optional, intent(in)    :: st_start !< use for unoccupied-states run
+    FLOAT,        optional, intent(in)    :: lmm_r !< used only if not present(st_start)
 
     type(lcao_t) :: lcao
     integer :: st_start_random
@@ -724,7 +724,7 @@ contains
         call write_magnetic_moments(stdout, sys%gr%fine%mesh, sys%st, sys%geo, sys%gr%der%boundaries, lmm_r)
       end if
 
-      ! set up Hamiltonian (we do not call system_h_setup here because we do not want to
+      ! set up Hamiltonian (we do not call sys%h_setup here because we do not want to
       ! overwrite the guess density)
       message(1) = 'Info: Setting up Hamiltonian.'
       call messages_info(1)
@@ -756,7 +756,7 @@ contains
 
         ! Update the density and the Hamiltonian
         if (lcao%mode == OPTION__LCAOSTART__LCAO_FULL) then
-          call system_h_setup(sys, calc_eigenval = .false., calc_current=.false.)
+          call sys%h_setup(calc_eigenval = .false., calc_current=.false.)
           if(sys%st%d%ispin > UNPOLARIZED) then
             ASSERT(present(lmm_r))
             call write_magnetic_moments(stdout, sys%gr%fine%mesh, sys%st, sys%geo, sys%gr%der%boundaries, lmm_r)

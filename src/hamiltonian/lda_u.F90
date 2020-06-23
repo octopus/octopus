@@ -699,7 +699,7 @@ contains
     type(multicomm_t),             intent(in)    :: mc
     logical,                       intent(in)    :: has_phase
 
-    integer :: ik, im, idim, ii
+    integer :: ik, im, idim
 
     if(this%level /= DFT_U_ACBN0) return
 
@@ -715,7 +715,6 @@ contains
 
     ! We rebuild the phase for the orbital projection, similarly to the one of the pseudopotentials
     ! In case of a laser field, the phase is recomputed in hamiltonian_elec_update
-    ii = 1
     if(has_phase) then
       ASSERT(states_are_complex(st))
       do ik = st%d%kpt%start, st%d%kpt%end

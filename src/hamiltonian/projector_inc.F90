@@ -289,8 +289,11 @@ R_TYPE function X(projector_matrix_element)(pj, dim, ik, psia, psib) result(apb)
   integer ::  ns, idim, is
   R_TYPE, allocatable :: lpsi(:, :), plpsi(:,:)
   type(mesh_t), pointer :: mesh
+  type(profile_t), save :: prof
 
   PUSH_SUB(X(projector_matrix_element))
+
+  call profiling_in(prof, "PROJ_MAT_ELEM")
 
   ns = pj%sphere%np
 
@@ -335,6 +338,8 @@ R_TYPE function X(projector_matrix_element)(pj, dim, ik, psia, psib) result(apb)
 
   SAFE_DEALLOCATE_A(lpsi)
   SAFE_DEALLOCATE_A(plpsi)
+
+  call profiling_out(prof)
   
   POP_SUB(X(projector_matrix_element))
 end function X(projector_matrix_element)

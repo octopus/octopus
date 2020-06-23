@@ -42,17 +42,22 @@ module system_abst_oct_m
   private
   public ::               &
     system_abst_t,        &
+    system_abst_end,      &
+    system_list_t,        &
     system_iterator_t
 
   type, extends(interaction_partner_t), abstract :: system_abst_t
     private
     type(space_t), public :: space
 
-    class(propagator_abst_t), pointer, public :: prop
+    class(propagator_abst_t), pointer, public :: prop => null()
 
     integer :: accumulated_loop_ticks
 
-    type(linked_list_t), public :: interactions !< List with all the interactions of this system
+    integer :: interaction_timing  !< parameter to determine if interactions
+      !< should use the quantities at the exact time or if retardation is allowed
+
+    type(interaction_list_t), public :: interactions !< List with all the interactions of this system
   contains
     procedure :: dt_operation =>  system_dt_operation
     procedure :: init_clocks => system_init_clocks
@@ -170,12 +175,17 @@ module system_abst_oct_m
     end subroutine system_output_finish
   end interface
 
-  !> This class extends the list iterator and adds one method to get the
-  !! system as a pointer of type class(system_abst_t).
-  type, extends(list_iterator_t) :: system_iterator_t
+  !> These class extends the list and list iterator to create a system list
+  type, extends(linked_list_t) :: system_list_t
     private
   contains
-    procedure :: get_next_system => system_iterator_get_next
+    procedure :: add => system_list_add_node
+  end type system_list_t
+  
+  type, extends(linked_list_iterator_t) :: system_iterator_t
+    private
+  contains
+    procedure :: get_next => system_iterator_get_next
   end type system_iterator_t
 
 contains
@@ -295,13 +305,13 @@ contains
     ! Interaction clocks
     call iter%start(this%interactions)
     do while (iter%has_next())
-      interaction => iter%get_next_interaction()
+      interaction => iter%get_next()
       call interaction%init_clock(this%namespace%get(), this%prop%dt, smallest_algo_dt)
     end do
 
     ! Required quantities clocks
     where (this%quantities%required)
-      this%quantities%clock = clock_t(this%namespace%get(), this%prop%dt, smallest_algo_dt)
+      this%quantities%clock = clock_t(this%namespace%get(), this%prop%dt/this%prop%algo_steps, smallest_algo_dt)
     end where
 
     POP_SUB(system_init_clocks)
@@ -325,7 +335,7 @@ contains
       ! Interaction clocks
       call iter%start(this%interactions)
       do while (iter%has_next())
-        interaction => iter%get_next_interaction()
+        interaction => iter%get_next()
         call interaction%clock%decrement()
       end do
 
@@ -339,80 +349,85 @@ contains
   end subroutine system_reset_clocks
 
   ! ---------------------------------------------------------
-  logical function system_update_exposed_quantities(this, requested_time, interaction) result(all_updated)
-    class(system_abst_t),      intent(inout) :: this
+  ! this function is called as partner from the interaction
+  logical function system_update_exposed_quantities(partner, requested_time, interaction) result(allowed_to_update)
+    class(system_abst_t),      intent(inout) :: partner
     type(clock_t),             intent(in)    :: requested_time
     class(interaction_abst_t), intent(inout) :: interaction
 
-    logical :: ahead_in_time
+    logical :: ahead_in_time, right_on_time, need_to_copy
     integer :: iq, q_id
 
     PUSH_SUB(system_update_exposed_quantities)
 
+    if (debug%info) then
+      write(message(1), '(a,a)') "Debug: ----- updating exposed quantities for partner ", trim(partner%namespace%get())
+      call messages_info(1)
+    end if
+
     select type (interaction)
     class is (interaction_with_partner_t)
 
-      if ((this%clock < requested_time .and. this%clock%is_earlier_with_step(requested_time)) .or. this%prop%inside_scf) then
-        ! We have to wait, either because this is not the best moment to update the quantities or
-        ! because we are inside an SCF cycle and therefore are not allowed to expose any quantities.
-        all_updated = .false.
-
+      if (partner%prop%inside_scf .or. &
+          partner%clock%is_earlier_with_step(requested_time)) then
+        ! we are inside an SCF cycle and therefore are not allowed to expose any quantities.
+        ! or we are too much behind the requested time
+        allowed_to_update = .false.
       else
-        ! Check if this system is ahead in time
-        ahead_in_time = .false.
+        allowed_to_update = .true.
+        need_to_copy = .true.
         do iq = 1, interaction%n_partner_quantities
           ! Get the requested quantity ID
           q_id = interaction%partner_quantities(iq)
 
-          if (this%quantities(q_id)%clock > requested_time) ahead_in_time = .true.
+          ! All needed quantities must have been marked as required. If not, then fix your code!
+          ASSERT(partner%quantities(q_id)%required)
+
+          ! First update the exposed quantities that are not protected
+          if (.not.partner%quantities(q_id)%protected) then
+            if (partner%quantities(q_id)%clock%get_tick() + 1 >= requested_time%get_tick()) then
+              ! We can update because the partner will reach this time in the next sub-timestep
+              ! This is not a protected quantity, so we update it
+              call partner%update_exposed_quantity(q_id, requested_time)
+            end if
+          end if
+
+          ! Now compare the times
+          ahead_in_time = partner%quantities(q_id)%clock > requested_time
+          right_on_time = partner%quantities(q_id)%clock == requested_time
+
+          if(partner%interaction_timing == OPTION__INTERACTIONTIMING__TIMING_EXACT) then
+            ! only allow interaction at exactly the same time
+            allowed_to_update = allowed_to_update .and. right_on_time
+            need_to_copy = allowed_to_update
+          else if(partner%interaction_timing == OPTION__INTERACTIONTIMING__TIMING_RETARDED) then
+            ! allow retarded interaction
+            allowed_to_update = allowed_to_update .and. &
+              (right_on_time .or. ahead_in_time)
+            need_to_copy = need_to_copy .and. .not. ahead_in_time
+          else
+            call messages_not_implemented("Method for interaction quantity timing")
+          end if
+
+          ! Debug stuff
+          if (debug%info) then
+            write(message(1), '(a,i3)') "Debug: ------ updating exposed quantities ", q_id
+            write(message(2), '(a,i3,a,i3)') "Debug: ------ requested time is ", requested_time%get_tick(), &
+              " and partner time is ", partner%quantities(q_id)%clock%get_tick()
+            call messages_info(2)
+          end if
+
         end do
 
-        if (ahead_in_time) then
-          ! This system is ahead of the requested time. The interaction is allowed to be updated,
-          ! but using the old quantities. Therefore we do not update the quantities here.
-          all_updated = .true.
-
-        else
-          !This is the best moment to update the quantities
-          all_updated = .true.
-          do iq = 1, interaction%n_partner_quantities
-            ! Get the requested quantity ID
-            q_id = interaction%partner_quantities(iq)
-
-            ! All needed quantities must have been marked as required. If not, then fix your code!
-            ASSERT(this%quantities(q_id)%required)
-
-            if (.not. (this%quantities(q_id)%clock == requested_time .or. &
-              (this%quantities(q_id)%clock < requested_time .and. &
-              this%quantities(q_id)%clock%is_later_with_step(requested_time)))) then
-              ! The quantity is not at the requested time nor at the best possible time, so we try to update it
-
-              ! Sanity check: it can never happen that the quantity is in advance with respect to the
-              ! requested time.
-              if (this%quantities(q_id)%clock > requested_time) then
-                message(1) = "The partner quantity is in advance compared to the requested time."
-                call messages_fatal(1)
-              end if
-
-              if (this%quantities(q_id)%protected) then
-                ! If this quantity is protected, then we are not allowed to update it, as that is done by the propagation.
-                ! So we have to wait until the quantity is at the right time.
-                all_updated = .false.
-              else
-                ! This is not a protected quantity and we are the right time, so we update it
-                call this%update_exposed_quantity(q_id, requested_time)
-              end if
-            end if
-          end do
-
-          ! If the quantities have been updated, we copy them to the interaction
-          if (all_updated) call this%copy_quantities_to_interaction(interaction)
+        ! If the quantities have been updated, we copy them to the interaction
+        if (allowed_to_update .and. need_to_copy) then
+          call partner%copy_quantities_to_interaction(interaction)
         end if
       end if
 
     class default
       message(1) = "A system can only expose quantities to an interaction as a partner."
-      call messages_fatal(1, namespace=this%namespace)
+      call messages_fatal(1, namespace=partner%namespace)
     end select
 
 
@@ -437,7 +452,7 @@ contains
     all_updated = .true.
     call iter%start(this%interactions)
     do while (iter%has_next())
-      interaction => iter%get_next_interaction()
+      interaction => iter%get_next()
 
       if (.not. interaction%clock == requested_time) then
         ! Update the system quantities that will be needed for computing the interaction
@@ -458,7 +473,7 @@ contains
             ! with respect to the requested time.
             if (this%quantities(q_id)%clock > requested_time) then
               message(1) = "The quantity clock is in advance compared to the requested time."
-              call messages_fatal(1)
+              call messages_fatal(1, namespace=this%namespace)
             end if
 
             call this%update_quantity(q_id, requested_time)
@@ -467,7 +482,7 @@ contains
         end do
 
         ! We can now try to update the interaction
-        all_updated = interaction%update(requested_time) .and. all_updated
+        all_updated = interaction%update(this%namespace, requested_time) .and. all_updated
       end if
     end do
 
@@ -529,6 +544,27 @@ contains
     ! Check if this propagators dt is smaller then the current smallest dt.
     ! If so, replace the current smallest dt by the one from this propagator.
     smallest_algo_dt = min(smallest_algo_dt, this%prop%dt/this%prop%algo_steps)
+
+    !%Variable InteractionTiming
+    !%Type integer
+    !%Default timing_exact
+    !%Section Time-Dependent::Propagation
+    !%Description
+    !% A parameter to determine if interactions should use the quantities
+    !% at the exact time or if retardation is allowed.
+    !%Option timing_exact 1
+    !% Only allow interactions at exactly the same times
+    !%Option timing_retarded 2
+    !% Allow retarded interactions
+    !%End
+    call parse_variable(this%namespace, 'InteractionTiming', &
+      OPTION__INTERACTIONTIMING__TIMING_EXACT, &
+      this%interaction_timing)
+    if(.not.varinfo_valid_option('InteractionTiming', this%interaction_timing)) then
+      call messages_input_error(this%namespace, 'InteractionTiming')
+    end if
+    call messages_print_var_option(stdout, 'InteractionTiming', &
+      this%interaction_timing)
 
     POP_SUB(system_init_propagator)
   end subroutine system_init_propagator
@@ -616,18 +652,50 @@ contains
   end function system_propagation_step_is_done
 
   ! ---------------------------------------------------------
-  function system_iterator_get_next(this) result(value)
-    class(system_iterator_t), intent(inout) :: this
-    class(system_abst_t),     pointer       :: value
+  subroutine system_abst_end(this)
+    class(system_abst_t), intent(inout) :: this
 
-    class(*), pointer :: ptr
+    type(interaction_iterator_t) :: iter
+    class(interaction_abst_t), pointer :: interaction
+
+    PUSH_SUB(system_abst_end)
+
+    ! No call to safe_deallocate macro here, as it gives an ICE with gfortran
+    if (associated(this%prop)) then
+      deallocate(this%prop)
+    end if
+
+    call iter%start(this%interactions)
+    do while (iter%has_next())
+      interaction => iter%get_next()
+      SAFE_DEALLOCATE_P(interaction)
+    end do
+
+    POP_SUB(system_abst_end)
+  end subroutine system_abst_end
+
+  ! ---------------------------------------------------------
+  subroutine system_list_add_node(this, system)
+    class(system_list_t)         :: this
+    class(system_abst_t), target :: system
+
+    PUSH_SUB(system_list_add_node)
+
+    call this%add_ptr(system)
+
+    POP_SUB(system_list_add_node)
+  end subroutine system_list_add_node
+
+  ! ---------------------------------------------------------
+  function system_iterator_get_next(this) result(system)
+    class(system_iterator_t), intent(inout) :: this
+    class(system_abst_t),     pointer       :: system
 
     PUSH_SUB(system_iterator_get_next)
 
-    ptr => this%get_next()
-    select type (ptr)
+    select type (ptr => this%get_next_ptr())
     class is (system_abst_t)
-      value => ptr
+      system => ptr
     class default
       ASSERT(.false.)
     end select

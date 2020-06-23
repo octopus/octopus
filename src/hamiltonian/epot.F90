@@ -33,6 +33,7 @@ module epot_oct_m
   use mesh_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use multicomm_oct_m
   use namespace_oct_m
   use parser_oct_m
   use poisson_oct_m
@@ -135,7 +136,7 @@ module epot_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine epot_init(ep, namespace, gr, geo, psolver, ispin, nik, xc_family)
+  subroutine epot_init(ep, namespace, gr, geo, psolver, ispin, nik, xc_family, mc)
     type(epot_t),                       intent(out)   :: ep
     type(namespace_t),                  intent(in)    :: namespace
     type(grid_t),                       intent(in)    :: gr
@@ -144,6 +145,7 @@ contains
     integer,                            intent(in)    :: ispin
     integer,                            intent(in)    :: nik
     integer,                            intent(in)    :: xc_family
+    type(multicomm_t),                  intent(in)    :: mc
 
 
     integer :: ispec, ip, idir, ia, gauge_2d, ierr
@@ -509,7 +511,7 @@ contains
       nullify(ep%poisson_solver)
     end if
 
-    call ion_interaction_init(ep%ion_interaction, namespace)
+    call ion_interaction_init(ep%ion_interaction, namespace, geo, mc)
 
     !%Variable TDGlobalForce
     !%Type string

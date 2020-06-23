@@ -58,7 +58,6 @@ module propagator_mxll_oct_m
   use parser_oct_m
   use par_vec_oct_m
   use profiling_oct_m
-  use propagator_base_oct_m
   use poisson_oct_m
   use states_elec_oct_m
   use states_mxll_oct_m
@@ -71,6 +70,7 @@ module propagator_mxll_oct_m
 
   private
   public ::                                  &
+    propagator_mxll_t,                       &
     propagator_mxll_init,                    &
     mxll_propagation_step,                   &
     transform_rs_state,                      &
@@ -86,7 +86,26 @@ module propagator_mxll_oct_m
     constant_boundaries_calculation,         &
     maxwell_mask,                            &
     td_function_mxll_init,                   &
-    plane_waves_in_box_calculation
+    plane_waves_in_box_calculation,          &
+    spatial_constant_calculation
+
+  type propagator_mxll_t
+    integer             :: op_method
+    logical             :: bc_add_ab_region  = .false.
+    logical             :: bc_zero           = .false.
+    logical             :: bc_constant       = .false.
+    logical             :: bc_mirror_pec     = .false.
+    logical             :: bc_mirror_pmc     = .false.
+    logical             :: bc_periodic       = .false.
+    logical             :: bc_plane_waves    = .false.
+    logical             :: bc_medium         = .false.
+    type(exponential_t) :: te
+    integer             :: inter_steps
+    FLOAT               :: delay_time
+    FLOAT               :: scf_threshold
+    logical             :: plane_waves_in_box
+    integer             :: tr_etrs_approx
+  end type propagator_mxll_t
 
   integer, public, parameter ::   &
      RS_TRANS_FORWARD = 1,        &
@@ -162,8 +181,6 @@ contains
           tr%bc_add_ab_region = .true.
           hm%bc_constant = .true.
           hm%bc_add_ab_region = .true.
-          SAFE_ALLOCATE(st%rs_state_const(1:st%dim))
-          st%rs_state_const = M_z0
         case (MXLL_BC_MIRROR_PEC)
           string = 'PEC Mirror'
           tr%bc_mirror_pec = .true.
@@ -199,7 +216,13 @@ contains
      call parse_block_end(blk)
      call messages_print_stress(stdout, namespace=namespace)
 
-    end if
+   end if
+
+   if (any(hm%bc%bc_type(1:3) == MXLL_BC_CONSTANT)) then
+     call td_function_mxll_init(st, namespace, hm)
+     SAFE_ALLOCATE(st%rs_state_const(1:st%dim))
+     st%rs_state_const = M_z0
+   end if
 
     !%Variable MaxwellMediumBox
     !%Type block
@@ -735,7 +758,7 @@ contains
   end subroutine calculate_matter_longitudinal_field
 
   !----------------------------------------------------------
-  subroutine get_vector_pot_and_transverse_field(trans_calc_method, gr_mxll, hm_mxll, st_mxll, tr_mxll, hm, st, tr, &
+  subroutine get_vector_pot_and_transverse_field(trans_calc_method, gr_mxll, hm_mxll, st_mxll, tr_mxll, hm, st, &
     poisson_solver, time, field, transverse_field, vector_potential, geo)
     integer,                    intent(in)    :: trans_calc_method
     type(grid_t),               intent(in)    :: gr_mxll
@@ -744,7 +767,7 @@ contains
     type(propagator_mxll_t),    intent(in)    :: tr_mxll
     type(hamiltonian_elec_t),   intent(in)    :: hm
     type(states_elec_t),        intent(in)    :: st
-    type(propagator_t),         intent(in)    :: tr
+!    type(propagator_t),         intent(in)    :: tr
     type(poisson_t),            intent(in)    :: poisson_solver
     FLOAT,                      intent(in)    :: time
     CMPLX,                      intent(inout) :: field(:,:)
@@ -1018,7 +1041,11 @@ contains
     mx_energy             = dmf_integrate(gr%mesh, tmp)
     mx_e_energy           = dmf_integrate(gr%mesh, tmp_e)
     mx_b_energy           = dmf_integrate(gr%mesh, tmp_b)
-    if (present(rs_field_plane_waves) .and. present(mx_energy_plane_waves)) mx_energy_plane_waves = dmf_integrate(gr%mesh, tmp_pw)
+    if (present(rs_field_plane_waves) .and. present(mx_energy_plane_waves) .and. hm%plane_waves) then
+      mx_energy_plane_waves = dmf_integrate(gr%mesh, tmp_pw)
+    else
+      mx_energy_plane_waves = M_ZERO
+    end if
 
     if (present(mx_energy_boundary)) then
       do ip_in = 1, st%boundary_points_number
@@ -1026,6 +1053,8 @@ contains
         tmp(ip) = energy_density(ip)
       end do
       mx_energy_boundary = dmf_integrate(gr%mesh, tmp)
+    else
+      mx_energy_boundary = M_ZERO
     end if
 
     SAFE_DEALLOCATE_A(energy_density)
@@ -2423,16 +2452,16 @@ contains
   subroutine td_function_mxll_init(st, namespace, hm)
     type(states_mxll_t),      intent(inout) :: st
     type(namespace_t),        intent(in)    :: namespace
-    type(hamiltonian_mxll_t), intent(in)    :: hm
+    type(hamiltonian_mxll_t), intent(inout)    :: hm
 
     type(block_t)        :: blk
     integer              :: il, nlines, idim, ncols, ierr
     FLOAT                :: e_field(st%dim), b_field(st%dim)
     character(len=1024)  :: mxf_expression
 
-    PUSH_SUB(td_function_init)
+    PUSH_SUB(td_function_mxll_init)
 
-    !%Variable UserDefinedConstantSpacialMaxwellField
+    !%Variable UserDefinedConstantSpatialMaxwellField
     !%Type block
     !%Section MaxwellStates
     !%Description
@@ -2440,16 +2469,16 @@ contains
     !%
     !% Example:
     !%
-    !% <tt>%UserDefinedConstantSpacialMaxwellFields
+    !% <tt>%UserDefinedConstantSpatialMaxwellFields
     !% <br>&nbsp;&nbsp;   plane_wave_parser      | E_x | E_y | E_z | B_x | B_y | B_z | "tdf_function"
     !% <br>%</tt>
     !%
     !% This block defines three components of E field, three components of B field, and reference to
-    !% TD function.
+    !% the TD function.
     !%
     !%End
 
-    if (parse_block(namespace, 'UserDefinedConstantSpacialMaxwellField', blk) == 0) then
+    if (parse_block(namespace, 'UserDefinedConstantSpatialMaxwellField', blk) == 0) then
       st%rs_state_const_external = .true.
       nlines = parse_block_n(blk)
       SAFE_ALLOCATE(st%rs_state_const_td_function(nlines))
@@ -2461,7 +2490,7 @@ contains
         ! Check that number of columns is five or six.
         ncols = parse_block_cols(blk, il - 1)
         if (ncols  /= 7) then
-          message(1) = 'Each line in the UserDefinedConstantSpacialMaxwellField block must have'
+          message(1) = 'Each line in the UserDefinedConstantSpatialMaxwellField block must have'
           message(2) = 'seven columns.'
           call messages_fatal(2)
         end if
@@ -2476,12 +2505,24 @@ contains
         call tdf_read(st%rs_state_const_td_function(il), namespace, trim(mxf_expression), ierr)
       end do
     end if
+    call parse_block_end(blk)
+
+    !%Variable PropagateSpatialMaxwellField
+    !%Type logical
+    !%Default yes
+    !%Section MaxwellStates
+    !%Description
+    !% Allow for numerical propagation of Maxwells equations of spatially constant field.
+    !% If set to no, do only analytic evaluation of the field inside the box.
+    !%End
+
+    call parse_variable(namespace, 'PropagateSpatialMaxwellField', .true., hm%spatial_constant_propagate)
 
     POP_SUB(td_function_mxll_init)
   end subroutine td_function_mxll_init
 
   ! ---------------------------------------------------------
-  subroutine spatial_constant_calculation(constant_calc, st, gr, hm, time, dt, delay, rs_state)
+  subroutine spatial_constant_calculation(constant_calc, st, gr, hm, time, dt, delay, rs_state, set_initial_state)
     logical,                  intent(in)    :: constant_calc
     type(states_mxll_t),      intent(inout) :: st
     type(grid_t),             intent(in)    :: gr
@@ -2490,25 +2531,34 @@ contains
     FLOAT,                    intent(in)    :: dt
     FLOAT,                    intent(in)    :: delay
     CMPLX,                    intent(inout) :: rs_state(:,:)
+    logical,        optional, intent(in)    :: set_initial_state
 
     integer :: ip, ic, icn
     FLOAT   :: tf_old, tf_new
+    logical :: set_initial_state_
 
     PUSH_SUB(spatial_constant_calculation)
+
+    set_initial_state_ = .false.
+    if (present(set_initial_state)) set_initial_state_ = set_initial_state
 
     if (hm%spatial_constant_apply) then
       if (constant_calc) then
         icn = size(st%rs_state_const_td_function(:))
         st%rs_state_const(:) = M_z0
-        do ic=1, icn
+        do ic = 1, icn
           tf_old = tdf(st%rs_state_const_td_function(ic), time-delay-dt)
           tf_new = tdf(st%rs_state_const_td_function(ic), time-delay)
-          do ip = 1, gr%mesh%np_part
-            rs_state(ip,:) = rs_state(ip,:) + st%rs_state_const_amp(:,ic) * (tf_new - tf_old)
+          do ip = 1, gr%mesh%np
+            if (set_initial_state_ .or. (.not. hm%spatial_constant_propagate)) then
+              rs_state(ip,:) = st%rs_state_const_amp(:,ic) * tf_new
+            else
+              rs_state(ip,:) = rs_state(ip,:) + st%rs_state_const_amp(:,ic) * (tf_new - tf_old)
+            end if
           end do
           st%rs_state_const(:) = st%rs_state_const(:) + st%rs_state_const_amp(:, ic)
         end do
-        st%rs_state_const(:) = st%rs_state_const(:)*tf_new
+       st%rs_state_const(:) = st%rs_state_const(:) * tf_new
       end if
     end if
 
@@ -2518,7 +2568,7 @@ contains
   ! ---------------------------------------------------------
   subroutine constant_boundaries_calculation(constant_calc, bc, hm, st, rs_state)
     logical,                   intent(in)    :: constant_calc
-    type(bc_mxll_t),           intent(in)    :: bc
+    type(bc_mxll_t),           intent(inout) :: bc
     type(states_mxll_t),       intent(in)    :: st
     type(hamiltonian_mxll_t),  intent(in)    :: hm
     CMPLX,                     intent(inout) :: rs_state(:,:)

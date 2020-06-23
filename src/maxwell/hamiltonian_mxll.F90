@@ -85,23 +85,23 @@ module hamiltonian_mxll_oct_m
 
     integer                        :: rs_sign
 
-    logical                        :: propagation_apply
+    logical                        :: propagation_apply = .false.
 
     integer                        :: op_method
 
     integer, pointer               :: rs_state_fft_map(:,:,:)
     integer, pointer               :: rs_state_fft_map_inv(:,:)
 
-    logical                        :: mx_ma_coupling
-    logical                        :: mx_ma_coupling_apply
+    logical                        :: mx_ma_coupling = .false.
+    logical                        :: mx_ma_coupling_apply = .false.
     integer                        :: mx_ma_trans_field_calc_method
-    logical                        :: mx_ma_trans_field_calc_corr
+    logical                        :: mx_ma_trans_field_calc_corr = .false.
     integer                        :: mx_ma_coupling_points_number
     FLOAT, pointer                 :: mx_ma_coupling_points(:,:)
     integer, pointer               :: mx_ma_coupling_points_map(:)
     integer                        :: mx_ma_coupling_order
-    logical                        :: ma_mx_coupling
-    logical                        :: ma_mx_coupling_apply
+    logical                        :: ma_mx_coupling       = .false.
+    logical                        :: ma_mx_coupling_apply = .false.
 
     logical                        :: bc_add_ab_region  = .false.
     logical                        :: bc_zero           = .false.
@@ -112,10 +112,11 @@ module hamiltonian_mxll_oct_m
     logical                        :: bc_plane_waves    = .false.
     logical                        :: bc_medium         = .false.
 
-    logical                        :: plane_waves
-    logical                        :: plane_waves_apply
-    logical                        :: spatial_constant
-    logical                        :: spatial_constant_apply
+    logical                        :: plane_waves                = .false.
+    logical                        :: plane_waves_apply          = .false.
+    logical                        :: spatial_constant           = .false.
+    logical                        :: spatial_constant_apply     = .false.
+    logical                        :: spatial_constant_propagate = .false.
 
     ! TODO: add medium object file
     integer                        :: medium_calculation
@@ -143,7 +144,7 @@ module hamiltonian_mxll_oct_m
   
     !> maxwell hamiltonian_mxll
     integer                        :: operator
-    logical                        :: current_density_ext_flag
+    logical                        :: current_density_ext_flag = .false.
 
     type(energy_mxll_t)            :: energy
 
@@ -261,6 +262,7 @@ contains
 
     hm%plane_waves_apply = .false.
     hm%spatial_constant_apply = .false.
+    hm%spatial_constant_propagate = .true. ! only used if spatially constant field is used
 
     hm%propagation_apply = .false.
 
@@ -290,8 +292,6 @@ contains
 
     call parse_variable(namespace, 'TimeZero', .false., hm%time_zero)
     if(hm%time_zero) call messages_experimental('TimeZero')
-
-    call bc_mxll_nullify(hm%bc)
 
     call profiling_out(prof)
     POP_SUB(hamiltonian_mxll_init)

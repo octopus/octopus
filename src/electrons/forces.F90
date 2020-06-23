@@ -519,7 +519,11 @@ subroutine forces_from_nlcc(gr, geo, hm, st, force_nlcc)
   integer :: is, iatom, idir
   FLOAT, allocatable :: drho(:,:)
 
+  type(profile_t), save :: prof
+
   PUSH_SUB(forces_from_nlcc)
+
+  call profiling_in(prof, "FORCES_NLCC")
 
   SAFE_ALLOCATE(drho(1:gr%mesh%np, 1:gr%mesh%sb%dim))
 
@@ -548,6 +552,8 @@ subroutine forces_from_nlcc(gr, geo, hm, st, force_nlcc)
     call profiling_out(prof_comm)
   end if
 #endif
+ 
+  call profiling_out(prof)
 
   POP_SUB(forces_from_nlcc)
 end subroutine forces_from_nlcc
@@ -567,8 +573,11 @@ subroutine forces_from_scf(namespace, gr, geo, hm, force_scf, vhxc_old)
 
   integer :: is, iatom, idir
   FLOAT, allocatable :: dvhxc(:,:), drho(:,:,:)
+  type(profile_t), save :: prof
 
   PUSH_SUB(forces_from_scf)
+
+  call profiling_in(prof, "FORCES_SCF")
 
   SAFE_ALLOCATE(dvhxc(1:gr%mesh%np, 1:hm%d%spin_channels))
   SAFE_ALLOCATE(drho(1:gr%mesh%np, 1:hm%d%spin_channels, 1:gr%mesh%sb%dim))
@@ -612,6 +621,7 @@ subroutine forces_from_scf(namespace, gr, geo, hm, force_scf, vhxc_old)
   end if
 #endif
 
+  call profiling_out(prof)
   
   POP_SUB(forces_from_scf)
 end subroutine forces_from_scf

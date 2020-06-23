@@ -45,7 +45,7 @@ module kdotp_oct_m
   use states_elec_dim_oct_m
   use states_elec_restart_oct_m
   use sternheimer_oct_m
-  use system_oct_m
+  use electrons_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use utils_oct_m
@@ -84,7 +84,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine kdotp_lr_run(sys, fromScratch)
-    type(system_t),      intent(inout) :: sys
+    type(electrons_t),   intent(inout) :: sys
     logical,             intent(inout) :: fromScratch
 
     type(kdotp_t)           :: kdotp_vars
@@ -163,7 +163,7 @@ contains
     ! setup Hamiltonian
     message(1) = 'Info: Setting up Hamiltonian for linear response.'
     call messages_info(1)
-    call system_h_setup(sys)
+    call sys%h_setup()
     
     if(states_are_real(sys%st)) then
       message(1) = 'Info: Using real wavefunctions.'

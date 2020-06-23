@@ -23,6 +23,7 @@ module interaction_gravity_oct_m
   use interaction_with_partner_oct_m
   use interaction_partner_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use profiling_oct_m
   use quantity_oct_m
 
@@ -45,7 +46,6 @@ module interaction_gravity_oct_m
 
   contains
     procedure :: calculate => interaction_gravity_calculate
-    procedure :: end => interaction_gravity_end
     final :: interaction_gravity_finalize
   end type interaction_gravity_t
 
@@ -66,7 +66,10 @@ contains
 
     SAFE_ALLOCATE(this)
 
+    this%label = "gravity"
+
     this%dim = dim
+
     this%partner => partner
 
     ! Gravity interaction needs two quantities from each system: the position and the mass
@@ -88,8 +91,9 @@ contains
   end function interaction_gravity_init
 
   ! ---------------------------------------------------------
-  subroutine interaction_gravity_calculate(this)
+  subroutine interaction_gravity_calculate(this, namespace)
     class(interaction_gravity_t), intent(inout) :: this
+    type(namespace_t),            intent(in)    :: namespace
 
     FLOAT, parameter :: GG = CNST(6.67430e-11)
     FLOAT :: dist3
@@ -105,29 +109,17 @@ contains
   end subroutine interaction_gravity_calculate
 
   ! ---------------------------------------------------------
-  subroutine interaction_gravity_end(this)
-    class(interaction_gravity_t), intent(inout) :: this
+  subroutine interaction_gravity_finalize(this)
+    type(interaction_gravity_t), intent(inout) :: this
 
-    PUSH_SUB(interaction_gravity_end)
+    PUSH_SUB(interaction_gravity_finalize)
 
-    nullify(this%partner)
     this%force = M_ZERO
     nullify(this%system_mass)
     nullify(this%system_pos)
     SAFE_DEALLOCATE_A(this%partner_pos)
 
     call interaction_with_partner_end(this)
-
-    POP_SUB(interaction_gravity_end)
-  end subroutine interaction_gravity_end
-
-  ! ---------------------------------------------------------
-  subroutine interaction_gravity_finalize(this)
-    type(interaction_gravity_t), intent(inout) :: this
-
-    PUSH_SUB(interaction_gravity_finalize)
-
-    call this%end()
 
     POP_SUB(interaction_gravity_finalize)
   end subroutine interaction_gravity_finalize

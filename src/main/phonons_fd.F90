@@ -36,7 +36,7 @@ module phonons_fd_oct_m
   use scf_oct_m
   use states_elec_oct_m
   use states_elec_restart_oct_m
-  use system_oct_m
+  use electrons_oct_m
   use unit_system_oct_m
   use utils_oct_m
   use v_ks_oct_m
@@ -51,7 +51,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine phonons_run(sys)
-    type(system_t),      intent(inout) :: sys
+    type(electrons_t),      intent(inout) :: sys
 
     type(vibrations_t) :: vib
     integer :: ierr
@@ -86,7 +86,7 @@ contains
     ! setup Hamiltonian
     message(1) = 'Info: Setting up Hamiltonian.'
     call messages_info(1)
-    call system_h_setup(sys)
+    call sys%h_setup()
 
     call vibrations_init(vib, sys%geo, sys%gr%sb, "fd", sys%namespace)
 
