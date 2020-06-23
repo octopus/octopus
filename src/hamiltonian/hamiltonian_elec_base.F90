@@ -113,6 +113,7 @@ module hamiltonian_elec_base_oct_m
     CMPLX,                    allocatable, public :: projector_phases(:, :, :, :)
     integer,                  allocatable, public :: projector_to_atom(:)
     integer                                       :: nregions
+    integer,                               public :: nphase
     integer,                  allocatable         :: regions(:)
     type(accel_mem_t)                             :: potential_opencl
     type(accel_mem_t)                             :: buff_offsets

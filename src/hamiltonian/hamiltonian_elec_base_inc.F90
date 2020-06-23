@@ -717,7 +717,9 @@ subroutine X(hamiltonian_elec_base_nlocal_start)(this, mesh, std, bnd, psib, pro
 
       if(allocated(this%projector_phases)) then
         call accel_set_kernel_arg(kernel, 9, this%buff_projector_phases)
-        call accel_set_kernel_arg(kernel, 10, (psib%ik - std%kpt%start)*this%total_points*nphase)
+        ! Note: we need to use this%nphase, as the kernel might be called with spiral=false, but 
+        !       the phases been built with spiralBC=true
+        call accel_set_kernel_arg(kernel, 10, (psib%ik - std%kpt%start)*this%total_points*this%nphase)
         if(bnd%spiral) then
           call accel_set_kernel_arg(kernel, 11, projection%buff_spin_to_phase)
         end if
@@ -1225,7 +1227,9 @@ contains
 
         if(allocated(this%projector_phases)) then
           call accel_set_kernel_arg(kernel, 9, this%buff_projector_phases)
-          call accel_set_kernel_arg(kernel, 10, (vpsib%ik - std%kpt%start)*this%total_points*nphase)
+          ! Note: we need to use this%nphase, as the kernel might be called with spiral=false, but 
+          !       the phases been built with spiralBC=true
+          call accel_set_kernel_arg(kernel, 10, (vpsib%ik - std%kpt%start)*this%total_points*this%nphase)
           if(bnd%spiral) then
             call accel_set_kernel_arg(kernel, 11, projection%buff_spin_to_phase)
           end if  

@@ -828,6 +828,7 @@ contains
 #endif
       call sys%hm%update_span(minval(gr%mesh%spacing(1:gr%mesh%sb%dim)), x)
       ! initialize Fermi energy
+      ! Note: we already have calculated the spin above.
       call states_elec_fermi(st, sys%namespace, gr%mesh, compute_spin = .not. gr%der%boundaries%spiralBC)
       call energy_calc_total(sys%namespace, sys%hm, gr, st)
 

@@ -924,6 +924,7 @@ contains
       end if
 
       if(allocated(this%hm_base%uniform_vector_potential)) then
+
         if(.not. associated(this%hm_base%phase)) then
           SAFE_ALLOCATE(this%hm_base%phase(1:mesh%np_part, this%d%kpt%start:this%d%kpt%end))
           if(accel_is_enabled()) then
@@ -994,6 +995,9 @@ contains
           if(accel_is_enabled()) then
             call accel_create_buffer(this%hm_base%buff_projector_phases, ACCEL_MEM_READ_ONLY, &
               TYPE_CMPLX, this%hm_base%total_points*nphase*this%d%kpt%nlocal)
+            ! We need to save nphase, with which the array has been build, 
+            ! as the number might change throughout the run
+            this%hm_base%nphase = nphase
           end if
         end if
 
