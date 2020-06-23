@@ -65,8 +65,6 @@ module multisystem_oct_m
     procedure :: update_quantity => multisystem_update_quantity
     procedure :: update_exposed_quantity => multisystem_update_exposed_quantity
     procedure :: copy_quantities_to_interaction => multisystem_copy_quantities_to_interaction
-    procedure :: update_interactions_start => multisystem_update_interactions_start
-    procedure :: update_interactions_finish => multisystem_update_interactions_finish
     final :: multisystem_finalizer
   end type multisystem_t
 
@@ -598,32 +596,6 @@ contains
 
     POP_SUB(multisystem_copy_quantities_to_interaction)
   end subroutine multisystem_copy_quantities_to_interaction
-
-  ! ---------------------------------------------------------
-  subroutine multisystem_update_interactions_start(this)
-    class(multisystem_t), intent(inout) :: this
-
-    PUSH_SUB(multisystem_update_interactions_start)
-
-    ! At the moment multitystems cannot have interations
-    ! All the interactions are directly handled by the subsystems
-    ASSERT(.false.)
-
-    POP_SUB(multisystem_update_interactions_start)
-  end subroutine multisystem_update_interactions_start
-
-  ! ---------------------------------------------------------
-  subroutine multisystem_update_interactions_finish(this)
-    class(multisystem_t), intent(inout) :: this
-
-    PUSH_SUB(multisystem_update_interactions_finish)
-
-    ! At the moment multitystems cannot have interations
-    ! All the interactions are directly handled by the subsystems
-    ASSERT(.false.)
-
-    POP_SUB(multisystem_update_interactions_finish)
-  end subroutine multisystem_update_interactions_finish
 
   ! ---------------------------------------------------------
   recursive subroutine multisystem_finalizer(this)

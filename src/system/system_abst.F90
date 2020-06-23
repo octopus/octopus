@@ -68,6 +68,8 @@ module system_abst_oct_m
     procedure :: init_propagator => system_init_propagator
     procedure :: init_all_interactions => system_init_all_interactions
     procedure :: update_interactions => system_update_interactions
+    procedure :: update_interactions_start => system_update_interactions_start
+    procedure :: update_interactions_finish => system_update_interactions_finish
     procedure :: propagation_start => system_propagation_start
     procedure :: propagation_finish => system_propagation_finish
     procedure :: has_reached_final_propagation_time => system_has_reached_final_propagation_time
@@ -80,8 +82,6 @@ module system_abst_oct_m
     procedure(system_is_tolerance_reached),           deferred :: is_tolerance_reached
     procedure(system_store_current_status),           deferred :: store_current_status
     procedure(system_update_quantity),                deferred :: update_quantity
-    procedure(system_update_interactions_start),      deferred :: update_interactions_start
-    procedure(system_update_interactions_finish),     deferred :: update_interactions_finish
     procedure(system_output_start),                   deferred :: output_start
     procedure(system_output_write),                   deferred :: output_write
     procedure(system_output_finish),                  deferred :: output_finish
@@ -137,18 +137,6 @@ module system_abst_oct_m
       integer,                   intent(in)    :: iq
       class(clock_t),            intent(in)    :: requested_time
     end subroutine system_update_quantity
-
-    ! ---------------------------------------------------------
-    subroutine system_update_interactions_start(this)
-      import system_abst_t
-      class(system_abst_t), intent(inout) :: this
-    end subroutine system_update_interactions_start
-
-    ! ---------------------------------------------------------
-    subroutine system_update_interactions_finish(this)
-      import system_abst_t
-      class(system_abst_t), intent(inout) :: this
-    end subroutine system_update_interactions_finish
 
     ! ---------------------------------------------------------
     subroutine system_output_start(this)
@@ -517,6 +505,30 @@ contains
 
     POP_SUB(system_update_interactions)
   end function system_update_interactions
+
+  ! ---------------------------------------------------------
+  subroutine system_update_interactions_start(this)
+    class(system_abst_t), intent(inout) :: this
+
+    PUSH_SUB(system_update_interactions_start)
+
+    ! By default nothing is done just before updating the interactions. Child
+    ! classes that wish to change this behavious should override this method.
+
+    POP_SUB(system_update_interactions_start)
+  end subroutine system_update_interactions_start
+
+  ! ---------------------------------------------------------
+  subroutine system_update_interactions_finish(this)
+    class(system_abst_t), intent(inout) :: this
+
+    PUSH_SUB(system_update_interactions_finish)
+
+    ! By default nothing is done just after updating the interactions. Child
+    ! classes that wish to change this behavious should override this method.
+
+    POP_SUB(system_update_interactions_finish)
+  end subroutine system_update_interactions_finish
 
   ! ---------------------------------------------------------
   subroutine system_init_propagator(this, smallest_algo_dt)

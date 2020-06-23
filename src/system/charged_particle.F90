@@ -63,7 +63,6 @@ module charged_particle_oct_m
     procedure :: update_quantity => charged_particle_update_quantity
     procedure :: update_exposed_quantity => charged_particle_update_exposed_quantity
     procedure :: copy_quantities_to_interaction => charged_particle_copy_quantities_to_interaction
-    procedure :: update_interactions_start => charged_particle_update_interactions_start
     procedure :: update_interactions_finish => charged_particle_update_interactions_finish
   end type charged_particle_t
 
@@ -283,17 +282,6 @@ contains
 
     POP_SUB(charged_particle_copy_quantities_to_interaction)
   end subroutine charged_particle_copy_quantities_to_interaction
-
-  ! ---------------------------------------------------------
-  subroutine charged_particle_update_interactions_start(this)
-    class(charged_particle_t), intent(inout) :: this
-
-    PUSH_SUB(charged_particle_update_interactions_start)
-
-    call this%classical_particle_t%update_interactions_start()
-
-    POP_SUB(charged_particle_update_interactions_start)
-  end subroutine charged_particle_update_interactions_start
 
   ! ---------------------------------------------------------
   subroutine charged_particle_update_interactions_finish(this)

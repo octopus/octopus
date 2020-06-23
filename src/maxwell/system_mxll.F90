@@ -103,8 +103,6 @@ module system_mxll_oct_m
     procedure :: update_quantity => system_mxll_update_quantity
     procedure :: update_exposed_quantity => system_mxll_update_exposed_quantity
     procedure :: set_pointers_to_interaction => system_mxll_set_pointers_to_interaction
-    procedure :: update_interactions_start => system_mxll_update_interactions_start
-    procedure :: update_interactions_finish => system_mxll_update_interactions_finish
     procedure :: copy_quantities_to_interaction => system_mxll_copy_quantities_to_interaction
     procedure :: output_start => system_mxll_output_start
     procedure :: output_write => system_mxll_output_write
@@ -554,22 +552,6 @@ contains
     PUSH_SUB(system_mxll_set_pointers_to_interaction)
     POP_SUB(system_mxll_set_pointers_to_interaction)
   end subroutine system_mxll_set_pointers_to_interaction
-
-  ! ---------------------------------------------------------
-  subroutine system_mxll_update_interactions_start(this)
-    class(system_mxll_t), intent(inout) :: this
-
-    PUSH_SUB(system_mxll_update_interactions_start)
-    POP_SUB(system_mxll_update_interactions_start)
-  end subroutine system_mxll_update_interactions_start
-
-  ! ---------------------------------------------------------
-  subroutine system_mxll_update_interactions_finish(this)
-    class(system_mxll_t), intent(inout) :: this
-
-    PUSH_SUB(system_mxll_update_interactions_finish)
-    POP_SUB(system_mxll_update_interactions_finish)
-  end subroutine system_mxll_update_interactions_finish
 
     ! ---------------------------------------------------------
   subroutine system_mxll_copy_quantities_to_interaction(partner, interaction)
