@@ -27,6 +27,11 @@ dist_share_DATA =                                                       \
 	01-nested_systems.03-four_levels.inp                            \
 	02-interaction_graph.test                                       \
 	02-interaction_graph.01-three_body.inp                          \
+	03-interactions_creation.test                                   \
+	03-interactions_creation.01-case1.inp                           \
+	03-interactions_creation.02-case2.inp                           \
+	03-interactions_creation.03-case3.inp                           \
+	03-interactions_creation.04-case4.inp                           \
 	04-propagation_verlet.test                                      \
 	04-propagation_verlet.01-two_body.inp                           \
 	04-propagation_verlet.02-three_body.inp                         \
