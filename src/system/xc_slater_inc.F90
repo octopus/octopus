@@ -254,12 +254,18 @@ subroutine X(slater) (namespace, mesh, psolver, st, isp, ex, vxc)
       nn = st%rho(ip, 1) + st%rho(ip, 2)
       !If there is no density at this point, we simply ignore it
       if(nn < CNST(1e-10)) cycle 
+
       ! 1/(2nD), where n is the charge density and D = n_uu*n_dd - n_ud*n_du
       ! where D is the determinant of the spin-density matrix
       rr = (st%rho(ip, 1) * st%rho(ip, 2)  - (st%rho(ip, 3)**2 + st%rho(ip, 4)**2))
       if(abs(rr) < CNST(1.0e-10)) then !The matrix is singular, we are fully spin polarized along one direction
-        vxc(ip, 1) = vxc(ip, 1) +  M_HALF/st%rho(ip, 1)*bij(ip, 1) 
-        vxc(ip, 2) = vxc(ip, 2) +  M_HALF/st%rho(ip, 2)*bij(ip, 2)
+        !If we are fully polarized locally, we do not add the contribution of the other spin channel
+        if(st%rho(ip, 1) > CNST(1e-10)) then
+          vxc(ip, 1) = vxc(ip, 1) +  M_HALF/st%rho(ip, 1)*bij(ip, 1) 
+        end if
+        if(st%rho(ip, 1) > CNST(1e-10)) then
+          vxc(ip, 2) = vxc(ip, 2) +  M_HALF/st%rho(ip, 2)*bij(ip, 2)
+        end if
       else
 
         rr = M_HALF/(nn * rr)
