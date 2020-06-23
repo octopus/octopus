@@ -274,9 +274,9 @@ contains
 
     PUSH_SUB(charged_particle_copy_quantities_to_interaction)
 
+    ! Currently the charged particle does not support any interaction as partner
+    ! besides the ones supported by the classical particle
     select type (interaction)
-    type is (interaction_lorentz_force_t)
-      ! Nothing to copy
     class default
       call partner%classical_particle_t%copy_quantities_to_interaction(interaction)
     end select
