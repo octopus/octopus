@@ -24,7 +24,6 @@ module system_mxll_oct_m
   use current_oct_m
   use distributed_oct_m
   use geometry_oct_m
-  use ghost_interaction_oct_m
   use interactions_factory_oct_m
   use interaction_lorentz_force_oct_m
   use global_oct_m
@@ -584,8 +583,6 @@ contains
     PUSH_SUB(system_mxll_copy_quantities_to_interaction)
 
     select type (interaction)
-    type is (ghost_interaction_t)
-      ! Nothing to copy
     type is (interaction_lorentz_force_t)
       call mesh_interpolation_evaluate(partner%mesh_interpolate, partner%st%rs_state(:,1), &
         interaction%system_pos, interpolated_value(1))

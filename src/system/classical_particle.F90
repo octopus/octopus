@@ -567,8 +567,6 @@ contains
       interaction%partner_pos = partner%pos
     type is (interaction_lorentz_force_t)
       ! Nothing to copy
-    type is (ghost_interaction_t)
-      ! Nothing to copy
     class default
       message(1) = "Unsupported interaction."
       call messages_fatal(1)

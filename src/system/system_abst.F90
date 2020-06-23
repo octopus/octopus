@@ -418,7 +418,13 @@ contains
 
         ! If the quantities have been updated, we copy them to the interaction
         if (allowed_to_update .and. need_to_copy) then
-          call partner%copy_quantities_to_interaction(interaction)
+          select type (interaction)
+          type is (ghost_interaction_t)
+            ! Nothing to copy. We still need to check that we are at the right
+            ! time for the update though!
+          class default
+            call partner%copy_quantities_to_interaction(interaction)
+          end select
         end if
       end if
 
