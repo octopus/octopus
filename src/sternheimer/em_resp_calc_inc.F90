@@ -519,7 +519,7 @@ subroutine X(lr_calc_beta) (sh, sys, em_lr, dipole, beta, kdotp_lr, kdotp_em_lr,
 
   PUSH_SUB(X(lr_calc_beta))
 
-  call profiling_in(beta_prof, "CALC_BETA")
+  call profiling_in(beta_prof, "X(CALC_BETA)")
 
   st   => sys%st
   mesh => sys%gr%mesh

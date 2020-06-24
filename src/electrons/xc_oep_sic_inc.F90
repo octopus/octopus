@@ -36,7 +36,7 @@ subroutine X(oep_sic) (xcs, gr, psolver, namespace, st, is, oep, ex, ec)
   FLOAT :: edummy
 #endif
 
-  call profiling_in(C_PROFILING_XC_SIC, 'XC_SIC')
+  call profiling_in(C_PROFILING_XC_SIC, "X(XC_SIC)")
   PUSH_SUB(X(oep_sic))
 
   ASSERT(st%d%dim == 1)

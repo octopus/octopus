@@ -28,7 +28,7 @@ subroutine X(poisson_solve_start)(this, rho)
   type(profile_t), save :: prof
 
   PUSH_SUB(X(poisson_solve_start))
-  call profiling_in(prof, "POISSON_START")
+  call profiling_in(prof, "X(POISSON_START)")
 
   ! we assume all nodes have a copy of the density
   do islave = this%local_grp%rank, this%nslaves - 1, this%local_grp%size !all nodes are used for communication
@@ -51,7 +51,7 @@ subroutine X(poisson_solve_finish)(this, pot)
   type(profile_t), save :: prof
 
   PUSH_SUB(X(poisson_solve_finish))
-  call profiling_in(prof, "POISSON_FINISH")
+  call profiling_in(prof, "X(POISSON_FINISH)")
 
   call MPI_Bcast(pot(1), this%der%mesh%np, R_MPITYPE, 0, this%intercomm, mpi_err)
 
@@ -84,7 +84,7 @@ subroutine X(poisson_solve_sm)(this, sm, pot, rho, all_nodes)
   FLOAT, allocatable :: aux1(:), aux2(:)
 #endif
 
-  call profiling_in(prof, 'POISSON_SOLVE_SM')
+  call profiling_in(prof, "X(POISSON_SOLVE_SM)")
   PUSH_SUB(X(poisson_solve_sm))
 
   der => this%der

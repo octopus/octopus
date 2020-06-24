@@ -32,7 +32,7 @@ subroutine X(subspace_diag)(this, namespace, mesh, st, hm, ik, eigenval, diff)
   R_TYPE, allocatable :: psi(:, :, :)
     
   PUSH_SUB(X(subspace_diag))
-  call profiling_in(diagon_prof, "SUBSPACE_DIAG")
+  call profiling_in(diagon_prof, "X(SUBSPACE_DIAG)")
 
   select case(this%method)
     
@@ -111,7 +111,7 @@ subroutine X(subspace_diag_standard)(namespace, mesh, st, hm, ik, eigenval, diff
   ! Recalculate the residues if requested by the diff argument.
   if(present(diff)) then 
 
-    call profiling_in(prof_diff, 'SUBSPACE_DIFF')
+    call profiling_in(prof_diff, "X(SUBSPACE_DIFF)")
     
     SAFE_ALLOCATE(rdiff(1:st%nst))
     rdiff(1:st%nst) = R_TOTYPE(M_ZERO)
@@ -237,7 +237,7 @@ subroutine X(subspace_diag_scalapack)(namespace, mesh, st, hm, ik, eigenval, psi
     hpsi(mesh%np + 1:mesh%np_part, 1:st%d%dim, st%st_start:st%st_end) = M_ZERO
   end if
   
-  call profiling_in(prof_gemm1, "SCALAPACK_GEMM1")
+  call profiling_in(prof_gemm1, "X(SCALAPACK_GEMM1)")
 
   ! get the matrix <psi|H|psi> = <psi|hpsi>
   call pblas_gemm('c', 'n', st%nst, st%nst, total_np, &
@@ -248,7 +248,7 @@ subroutine X(subspace_diag_scalapack)(namespace, mesh, st, hm, ik, eigenval, psi
   SAFE_ALLOCATE(evectors(1:nrow, 1:ncol))
   call profiling_out(prof_gemm1)
 
-  call profiling_in(prof_diag, "SCALAPACK_DIAG")
+  call profiling_in(prof_diag, "X(SCALAPACK_DIAG)")
 
   ! now diagonalize
 #ifdef HAVE_ELPA
@@ -361,7 +361,7 @@ subroutine X(subspace_diag_scalapack)(namespace, mesh, st, hm, ik, eigenval, psi
   end do
   !$omp end parallel
 
-  call profiling_in(prof_gemm2, "SCALAPACK_GEMM2")
+  call profiling_in(prof_gemm2, "X(SCALAPACK_GEMM2)")
   call pblas_gemm('n', 'n', total_np, st%nst, st%nst, &
     R_TOTYPE(M_ONE), hpsi(1, 1, st%st_start), 1, 1, psi_desc(1), &
     evectors(1, 1), 1, 1, hs_desc(1), &
@@ -402,7 +402,7 @@ subroutine X(subspace_diag_hamiltonian)(namespace, mesh, st, hm, ik, hmss)
   type(accel_mem_t) :: psi_buffer, hpsi_buffer, hmss_buffer
 
   PUSH_SUB(X(subspace_diag_hamiltonian))
-  call profiling_in(hamiltonian_elec_prof, "SUBSPACE_HAMILTONIAN")
+  call profiling_in(hamiltonian_elec_prof, "X(SUBSPACE_HAMILTONIAN)")
 
   SAFE_ALLOCATE_TYPE_ARRAY(wfs_elec_t, hpsib, (st%group%block_start:st%group%block_end))
   

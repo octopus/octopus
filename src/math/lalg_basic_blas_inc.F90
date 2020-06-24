@@ -226,7 +226,7 @@ subroutine FNAME(axpy_1)(n1, da, dx, dy)
   ASSERT(ubound(dx, dim = 1) >= n1)
   ASSERT(ubound(dy, dim = 1) >= n1)
 
-  call profiling_in(axpy_profile, "BLAS_AXPY")
+  call profiling_in(axpy_profile, "X(BLAS_AXPY)")
 
   call blas_axpy(n1, da, dx(1), 1, dy(1), 1)
   
@@ -251,7 +251,7 @@ subroutine FNAME(axpy_2)(n1, n2, da, dx, dy)
 
   PUSH_SUB(FNAME(axpy_2))
 
-  call profiling_in(axpy_profile, "BLAS_AXPY")
+  call profiling_in(axpy_profile, "X(BLAS_AXPY)")
 
   ASSERT(ubound(dx, dim = 1) == n1)
   ASSERT(ubound(dy, dim = 1) == n1)
@@ -280,7 +280,7 @@ subroutine FNAME(axpy_3)(n1, n2, n3, da, dx, dy)
 
   PUSH_SUB(FNAME(axpy_3))
 
-  call profiling_in(axpy_profile, "BLAS_AXPY")
+  call profiling_in(axpy_profile, "X(BLAS_AXPY)")
 
   ASSERT(ubound(dx, dim = 1) == n1)
   ASSERT(ubound(dy, dim = 1) == n1)
@@ -311,7 +311,7 @@ subroutine FNAME(axpy_4)(n1, n2, n3, n4, da, dx, dy)
 
   PUSH_SUB(FNAME(axpy_4))
 
-  call profiling_in(axpy_profile, "BLAS_AXPY")
+  call profiling_in(axpy_profile, "X(BLAS_AXPY)")
 
   ASSERT(ubound(dx, dim = 1) == n1)
   ASSERT(ubound(dy, dim = 1) == n1)
@@ -348,7 +348,7 @@ subroutine FNAME(axpy_5)(n1, da, dx, dy)
   ASSERT(ubound(dx, dim = 1) >= n1)
   ASSERT(ubound(dy, dim = 1) >= n1)
 
-  call profiling_in(axpy_profile, "BLAS_AXPY")
+  call profiling_in(axpy_profile, "X(BLAS_AXPY)")
 
   call blas_axpy(n1, da, dx(1), dy(1))
 
@@ -370,7 +370,7 @@ subroutine FNAME(axpy_6)(n1, n2, da, dx, dy)
   
   PUSH_SUB(FNAME(axpy_6))
 
-  call profiling_in(axpy_profile, "BLAS_AXPY")
+  call profiling_in(axpy_profile, "X(BLAS_AXPY)")
 
   ASSERT(ubound(dx, dim = 1) == n1)
   ASSERT(ubound(dy, dim = 1) == n1)
@@ -403,7 +403,7 @@ subroutine FNAME(copy_1)(n1, dx, dy)
   ASSERT(ubound(dx, dim = 1) >= n1)
   ASSERT(ubound(dy, dim = 1) >= n1)
 
-  call profiling_in(copy_profile, "BLAS_COPY")
+  call profiling_in(copy_profile, "X(BLAS_COPY)")
 
   call blas_copy(n1, dx(1), 1, dy(1), 1)
 
@@ -422,7 +422,7 @@ subroutine FNAME(copy_2)(n1, n2, dx, dy)
 
   PUSH_SUB(FNAME(copy_2))
 
-  call profiling_in(copy_profile, "BLAS_COPY")
+  call profiling_in(copy_profile, "X(BLAS_COPY)")
 
   ASSERT(ubound(dx, dim = 1) == n1)
   ASSERT(ubound(dy, dim = 1) == n1)
@@ -444,7 +444,7 @@ subroutine FNAME(copy_3)(n1, n2, n3, dx, dy)
 
   PUSH_SUB(FNAME(copy_3))
 
-  call profiling_in(copy_profile, "BLAS_COPY")
+  call profiling_in(copy_profile, "X(BLAS_COPY)")
 
   ASSERT(ubound(dx, dim = 1) == n1)
   ASSERT(ubound(dy, dim = 1) == n1)
@@ -468,7 +468,7 @@ subroutine FNAME(copy_4)(n1, n2, n3, n4, dx, dy)
 
   PUSH_SUB(FNAME(copy_4))
 
-  call profiling_in(copy_profile, "BLAS_COPY")
+  call profiling_in(copy_profile, "X(BLAS_COPY)")
  
   ASSERT(ubound(dx, dim = 1) == n1)
   ASSERT(ubound(dy, dim = 1) == n1)
@@ -527,7 +527,7 @@ subroutine FNAME(symv_1)(n, alpha, a, x, beta, y)
 
   ASSERT(ubound(a, dim=1) >= n)
 
-  call profiling_in(symv_profile, 'BLAS_SYMV')
+  call profiling_in(symv_profile, "X(BLAS_SYMV)")
   call blas_symv('U', n, alpha, a(1, 1), lead_dim(a), x(1), 1, beta, y(1), 1)
   call profiling_out(symv_profile)
 
@@ -547,7 +547,7 @@ subroutine FNAME(symv_2)(n1, n2, alpha, a, x, beta, y)
   ASSERT(ubound(y, dim=1) == n1)
   ASSERT(ubound(y, dim=2) >= n2)
 
-  call profiling_in(symv_profile, 'BLAS_SYMV')
+  call profiling_in(symv_profile, "X(BLAS_SYMV)")
   call blas_symv('U', n1*n2, alpha, a(1, 1, 1), n1*n2, x(1), 1, beta, y(1, 1), 1)
   call profiling_out(symv_profile)
 
@@ -565,7 +565,7 @@ subroutine FNAME(gemv_1)(m, n, alpha, a, x, beta, y)
 
   ASSERT(ubound(a, dim=1) >= m)
 
-  call profiling_in(gemv_profile, "BLAS_GEMV")
+  call profiling_in(gemv_profile, "X(BLAS_GEMV)")
   call blas_gemv('N', m, n, alpha, a(1,1), lead_dim(a), x(1), 1, beta, y(1), 1)
   call profiling_out(gemv_profile)
 
@@ -586,7 +586,7 @@ subroutine FNAME(gemv_2)(m1, m2, n, alpha, a, x, beta, y)
   ASSERT(ubound(y, dim=1) == m1)
   ASSERT(ubound(y, dim=2) >= m2)
 
-  call profiling_in(gemv_profile, "BLAS_GEMV")
+  call profiling_in(gemv_profile, "X(BLAS_GEMV)")
   call blas_gemv('N', m1*m2, n, alpha, a(1,1,1), m1*m2, x(1), 1, beta, y(1,1), 1)
   call profiling_out(gemv_profile)
 

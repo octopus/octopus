@@ -38,7 +38,7 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
   type(profile_t), save :: profcomm
   
   PUSH_SUB(X(mesh_batch_dotp_matrix))
-  call profiling_in(prof, "DOTP_BATCH")
+  call profiling_in(prof, "X(DOTP_BATCH)")
 
   reduce_ = .true.
   if(present(reduce)) reduce_ = reduce
@@ -57,7 +57,7 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
     use_blas = associated(aa%X(ff)) .and. associated(bb%X(ff)) .and. (.not. mesh%use_curvilinear) .and. (aa%dim == 1)
 
     if(use_blas) then
-      call profiling_in(profgemm, "DOTP_BATCH_GEMM")
+      call profiling_in(profgemm, "X(DOTP_BATCH_GEMM)")
 
       ldaa = size(aa%X(ff), dim = 1)
       ldbb = size(bb%X(ff), dim = 1)
@@ -112,7 +112,7 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
 
     if(use_blas) then
       conj = .true.
-      call profiling_in(profgemm, "DOTP_BATCH_GEMM")
+      call profiling_in(profgemm, "X(DOTP_BATCH_GEMM)")
 
       ldaa = aa%pack_size(1)
       ldbb = bb%pack_size(1)
@@ -145,7 +145,7 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
  
       call accel_create_buffer(dot_buffer, ACCEL_MEM_WRITE_ONLY, R_TYPE_VAL, aa%nst*bb%nst)
 
-      call profiling_in(prof_gemmcl, "DOTP_BATCH_CL_GEMM")
+      call profiling_in(prof_gemmcl, "X(DOTP_BATCH_CL_GEMM)")
       
       call X(accel_gemm)(transA = CUBLAS_OP_N, transB = CUBLAS_OP_T, &
         M = int(aa%nst, 8), N = int(bb%nst, 8), K = int(mesh%np, 8), alpha = R_TOTYPE(M_ONE), &
@@ -158,7 +158,7 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
       call accel_finish()
       call profiling_out(prof_gemmcl)
   
-      call profiling_in(prof_copy, 'DOTP_BATCH_COPY')
+      call profiling_in(prof_copy, "X(DOTP_BATCH_COPY)")
       call accel_read_buffer(dot_buffer, aa%nst*bb%nst, dd)
       call profiling_count_transfers(aa%nst*bb%nst, dd(1, 1))
       call accel_finish()
@@ -181,7 +181,7 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
       ASSERT(accel_buffer_is_allocated(bb%ff_device))
       ASSERT(accel_buffer_is_allocated(dot_buffer))
 
-      call profiling_in(prof_gemmcl, "DOTP_BATCH_CL_KERNEL")
+      call profiling_in(prof_gemmcl, "X(DOTP_BATCH_CL_KERNEL)")
 
       call accel_set_kernel_arg(zkernel_dot_matrix_spinors, 0, mesh%np)
       call accel_set_kernel_arg(zkernel_dot_matrix_spinors, 1, aa%nst)
@@ -202,7 +202,7 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
 
       call profiling_out(prof_gemmcl)
   
-      call profiling_in(prof_copy, 'DOTP_BATCH_COPY')
+      call profiling_in(prof_copy, "X(DOTP_BATCH_COPY)")
       call accel_read_buffer(dot_buffer, aa%nst*bb%nst, dd)
       call profiling_count_transfers(aa%nst*bb%nst, dd(1, 1))
       call accel_finish()
@@ -234,7 +234,7 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
   if(use_blas) call profiling_out(profgemm)
 
   if(mesh%parallel_in_domains .and. reduce_) then
-    call profiling_in(profcomm, "DOTP_BATCH_REDUCE")
+    call profiling_in(profcomm, "X(DOTP_BATCH_REDUCE)")
     call comm_allreduce(mesh%mpi_grp%comm, dd)
     call profiling_out(profcomm)
   end if
@@ -293,10 +293,10 @@ subroutine X(mesh_batch_dotp_self)(mesh, aa, dot, reduce)
   ! This has to be set to zero by hand since NaN * 0 = NaN.
   dd(1:aa%nst, 1:aa%nst) = R_TOTYPE(CNST(0.0))
 
-  call profiling_in(prof, "BATCH_DOTP_SELF")
+  call profiling_in(prof, "X(BATCH_DOTP_SELF)")
 
   if(use_blas) then
-    call profiling_in(profgemm, "BATCH_HERK")
+    call profiling_in(profgemm, "X(BATCH_HERK)")
 
     lda = size(aa%X(ff), dim = 1)*aa%dim
 
@@ -356,7 +356,7 @@ subroutine X(mesh_batch_dotp_self)(mesh, aa, dot, reduce)
   if(use_blas) call profiling_out(profgemm)
 
   if(mesh%parallel_in_domains .and. reduce_) then
-    call profiling_in(profcomm, "BATCH_SELF_REDUCE")
+    call profiling_in(profcomm, "X(BATCH_SELF_REDUCE)")
     call comm_allreduce(mesh%mpi_grp%comm, dd)
     call profiling_out(profcomm)
   end if
@@ -391,7 +391,7 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
   type(accel_mem_t)  :: dot_buffer
 
   PUSH_SUB(X(mesh_batch_dotp_vector))
-  call profiling_in(prof, "DOTPV_BATCH")
+  call profiling_in(prof, "X(DOTPV_BATCH)")
 
   cproduct_ = optional_default(cproduct, .false.)
   
@@ -493,7 +493,7 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
   end select
 
   if(mesh%parallel_in_domains .and. optional_default(reduce, .true.)) then
-    call profiling_in(profcomm, "DOTPV_BATCH_REDUCE")
+    call profiling_in(profcomm, "X(DOTPV_BATCH_REDUCE)")
     call comm_allreduce(mesh%mpi_grp%comm, dot, dim = aa%nst)
     call profiling_out(profcomm)
   end if
@@ -526,7 +526,7 @@ subroutine X(mesh_batch_mf_dotp)(mesh, aa, psi, dot, reduce, nst)
   integer :: global_sizes(3)
 
   PUSH_SUB(X(mesh_batch_mf_dotp))
-  call profiling_in(prof, "DOTPV_MF_BATCH")
+  call profiling_in(prof, "X(DOTPV_MF_BATCH)")
 
   ASSERT(aa%dim == ubound(psi,dim=2))
 
@@ -636,7 +636,7 @@ subroutine X(mesh_batch_mf_dotp)(mesh, aa, psi, dot, reduce, nst)
   end select
 
   if(mesh%parallel_in_domains .and. optional_default(reduce, .true.)) then
-    call profiling_in(profcomm, "DOTPV_MF_BATCH_REDUCE")
+    call profiling_in(profcomm, "X(DOTPV_MF_BATCH_REDUCE)")
     call comm_allreduce(mesh%mpi_grp%comm, dot, dim = nst_)
     call profiling_out(profcomm)
   end if
@@ -890,7 +890,7 @@ subroutine X(priv_mesh_batch_nrm2)(mesh, aa, nrm2)
   type(profile_t), save :: prof
 
   PUSH_SUB(X(priv_mesh_batch_nrm2))
-  call profiling_in(prof, 'MESH_BATCH_NRM2')
+  call profiling_in(prof, "X(MESH_BATCH_NRM2)")
 
   select case(aa%status())
   case(BATCH_NOT_PACKED)
@@ -1079,7 +1079,7 @@ subroutine X(mesh_batch_orthogonalization)(mesh, nst, psib, phib,  &
   logical :: drcgs
   integer :: nsteps
 
-  call profiling_in(prof, "BATCH_GRAM_SCHMIDT")
+  call profiling_in(prof, "X(BATCH_GRAM_SCHMIDT)")
   PUSH_SUB(X(mesh_batch_orthogonalization))
 
   SAFE_ALLOCATE(ss(1:phib%nst, 1:nst))
@@ -1114,7 +1114,7 @@ subroutine X(mesh_batch_orthogonalization)(mesh, nst, psib, phib,  &
     end do
 
     if(mesh%parallel_in_domains) then
-      call profiling_in(reduce_prof, "BATCH_GRAM_SCHMIDT_REDUCE")
+      call profiling_in(reduce_prof, "X(BATCH_GRAM_SCHMIDT_REDUCE)")
       call comm_allreduce(mesh%mpi_grp%comm, ss, dim = (/phib%nst, nst/))
       call profiling_out(reduce_prof)
     end if
