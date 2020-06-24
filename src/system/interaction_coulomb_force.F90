@@ -34,15 +34,16 @@ module interaction_coulomb_force_oct_m
     interaction_coulomb_force_t
 
   type, extends(interaction_with_partner_t) :: interaction_coulomb_force_t
+    private
     integer :: dim
 
-    FLOAT :: force(MAX_DIM)
+    FLOAT, public :: force(MAX_DIM)
 
     FLOAT, pointer :: system_charge
     FLOAT, pointer :: system_pos(:)
 
-    FLOAT :: partner_charge
-    FLOAT, allocatable :: partner_pos(:)
+    FLOAT, public :: partner_charge
+    FLOAT, allocatable, public :: partner_pos(:)
 
   contains
     procedure :: init => interaction_coulomb_force_init
