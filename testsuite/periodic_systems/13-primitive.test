@@ -11,6 +11,7 @@ Input      : 13-primitive.01-diamond.inp
 
 match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
 
+Precision 1e-8
 match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -11.47103731
 match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -10.73490075
 match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -0.82653907
@@ -36,9 +37,10 @@ match ; Eigenvalue  2 ; GREPFIELD(static/info,  '#k =  75', 3, 2) ;  0.195385
 match ; Eigenvalue  3 ; GREPFIELD(static/info,  '#k =  75', 3, 3) ;  0.210684
 match ; Eigenvalue  4 ; GREPFIELD(static/info,  '#k =  75', 3, 4) ;  0.210684
 
-match ; dipole 2-5 ; LINEFIELD(static/ks_me_dipole.k1_x, 4, 4) ;   3.063409732506
-match ; dipole 4-7 ; LINEFIELD(static/ks_me_dipole.k1_x, 9, 3);    3.174729371945
-
+Precision: 1.8e-5
+match ; dipole 2-5 ; LINEFIELD(static/ks_me_dipole.k1_x, 4, 4) ;   3.0630811880940003
+match ; dipole 4-7 ; LINEFIELD(static/ks_me_dipole.k1_x, 9, 3);    3.1747321312665
+Precision: 1e-04
 
 Input      : 13-primitive.02-graphene.inp
 
