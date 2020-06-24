@@ -42,7 +42,6 @@ module interaction_lorentz_force_oct_m
     FLOAT, pointer :: system_pos(:)
     FLOAT, pointer :: system_vel(:)
 
-    FLOAT :: partner_mass
     FLOAT, allocatable :: partner_E_field(:)
     FLOAT, allocatable :: partner_B_field(:)
 
