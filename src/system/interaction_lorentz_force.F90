@@ -34,16 +34,17 @@ module interaction_lorentz_force_oct_m
     interaction_lorentz_force_t
 
   type, extends(interaction_with_partner_t) :: interaction_lorentz_force_t
+    private
     integer :: dim
 
-    FLOAT :: force(MAX_DIM)
+    FLOAT, public :: force(MAX_DIM)
 
     FLOAT, pointer :: system_charge
-    FLOAT, pointer :: system_pos(:)
+    FLOAT, pointer, public :: system_pos(:)
     FLOAT, pointer :: system_vel(:)
 
-    FLOAT, allocatable :: partner_E_field(:)
-    FLOAT, allocatable :: partner_B_field(:)
+    FLOAT, allocatable, public :: partner_E_field(:)
+    FLOAT, allocatable, public :: partner_B_field(:)
 
   contains
     procedure :: init => interaction_lorentz_force_init
