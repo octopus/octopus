@@ -965,7 +965,6 @@ contains
     integer :: it, internal_loop
     integer, parameter :: MAX_PROPAGATOR_STEPS = 1000
     FLOAT :: smallest_algo_dt
-    integer :: iunit_out
 
     PUSH_SUB(multisys_td_run)
 
@@ -973,19 +972,6 @@ contains
     call messages_new_line()
     call messages_new_line()
     call messages_info()
-
-    ! this should eventually be moved up to run.F90 when all systems
-    ! are derived classes from system_abst
-    call systems%init_interactions()
-
-    ! Write the interaction graph as a DOT graph for debug
-    if (debug%interaction_graph .and. mpi_grp_is_root(mpi_world)) then
-      iunit_out = io_open('interaction_graph.dot', systems%namespace, action='write')
-      write(iunit_out, '(a)') 'digraph {'
-      call systems%write_interaction_graph(iunit_out)
-      write(iunit_out, '(a)') '}'
-      call io_close(iunit_out)
-    end if
 
     ! Initialize all propagators and find the smallest time-step
     smallest_algo_dt = CNST(1e10)

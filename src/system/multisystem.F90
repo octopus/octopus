@@ -32,7 +32,6 @@ module multisystem_oct_m
   use parser_oct_m
   use profiling_oct_m
   use system_abst_oct_m
-  use system_mxll_oct_m
   use system_factory_abst_oct_m
   implicit none
 
@@ -52,9 +51,8 @@ module multisystem_oct_m
     procedure :: has_reached_final_propagation_time => multisystem_has_reached_final_propagation_time
     procedure :: propagation_step_finish => multisystem_propagation_step_finish
     procedure :: propagation_step_is_done => multisystem_propagation_step_is_done
-    procedure :: init_interactions => multisystem_init_interactions
-    procedure :: add_interaction_partner => multisystem_add_interaction_partner
-    procedure :: has_interaction => multisystem_has_interaction
+    procedure :: init_all_interactions => multisystem_init_all_interactions
+    procedure :: init_interaction => multisystem_init_interaction
     procedure :: write_interaction_graph => multisystem_write_interaction_graph
     procedure :: initial_conditions => multisystem_initial_conditions
     procedure :: do_td_operation => multisystem_do_td_operation
@@ -317,100 +315,54 @@ contains
     POP_SUB(multisystem_propagation_step_is_done)
   end function multisystem_propagation_step_is_done
 
-  ! ---------------------------------------------------------------------------------------
-  recursive subroutine multisystem_init_interactions(this)
+  ! ---------------------------------------------------------
+  recursive subroutine multisystem_init_all_interactions(this)
     class(multisystem_t), intent(inout) :: this
 
-    class(system_abst_t), pointer :: sys1, sys2
-    type(system_iterator_t) :: iter1, iter2
-    type(system_list_t) :: flat_list
+    type(interaction_iterator_t) :: iter_i
+    class(interaction_abst_t), pointer :: interaction
+    type(system_iterator_t) :: iter_s
+    class(system_abst_t), pointer :: system
 
-    PUSH_SUB(multisystem_init_interactions)
+    PUSH_SUB(multisystem_init_all_interactions)
 
-    ! We start by getting a list of all the subsystems that are not multisystems
-    call flatten_list(this, flat_list)
-
-    ! Double loop over all the subsystems that can interact
-    call iter1%start(flat_list)
-    do while (iter1%has_next())
-      sys1 => iter1%get_next()
-
-      call iter2%start(flat_list)
-      do while (iter2%has_next())
-        sys2 => iter2%get_next()
-
-        !No self interaction
-        if(.not.associated(sys1, sys2)) then
-          call sys1%add_interaction_partner(sys2)
-
-        end if
-      end do
+    ! Initialize interactions directly owned by the multisystem
+    call iter_i%start(this%interactions)
+    do while (iter_i%has_next())
+      interaction => iter_i%get_next()
+      select type (interaction)
+      type is (ghost_interaction_t)
+        ! Skip the ghost interactions
+      class default
+        call this%init_interaction(interaction)
+      end select
     end do
 
-    POP_SUB(multisystem_init_interactions)
-  contains
+    ! Initialize interactions owned by the subsystems
+    call iter_s%start(this%list)
+    do while (iter_s%has_next())
+      system => iter_s%get_next()
+      call system%init_all_interactions()
+    end do
 
-    recursive subroutine flatten_list(systems, list)
-      class(multisystem_t), intent(inout) :: systems
-      type(system_list_t),  intent(inout) :: list
-
-      class(system_abst_t), pointer :: system
-      type(system_iterator_t) :: iterator
-
-      call iterator%start(systems%list)
-      do while (iterator%has_next())
-        system => iterator%get_next()
-
-        select type (system)
-        class is (multisystem_t)
-          call flatten_list(system, list)
-        class default
-          call list%add(system)
-        end select
-      end do
-
-    end subroutine flatten_list
-
-  end subroutine multisystem_init_interactions
+    POP_SUB(multisystem_init_all_interactions)
+  end subroutine multisystem_init_all_interactions
 
   ! ---------------------------------------------------------
-  recursive subroutine multisystem_add_interaction_partner(this, partner)
+  subroutine multisystem_init_interaction(this, interaction)
     class(multisystem_t), target, intent(inout) :: this
-    class(system_abst_t),         intent(inout) :: partner
+    class(interaction_abst_t),    intent(inout) :: interaction
 
-    type(system_iterator_t) :: iter
-    class(system_abst_t), pointer :: system
+    PUSH_SUB(multisystem_init_interaction)
 
-    PUSH_SUB(multisystem_add_interaction_partner)
+    ! The multitystem class should never know about any specific interaction.
+    ! Only classes that extend it can know about specific interactions.
+    ! Such classes should override this method to add new supported interactions.
+    message(1) = "Trying to initialize an interaction in the multisystem class"
+    call messages_fatal(1)
 
-    call iter%start(this%list)
-    do while (iter%has_next())
-      system => iter%get_next()
-      call system%add_interaction_partner(partner)
-    end do
-
-    POP_SUB(multisystem_add_interaction_partner)
-  end subroutine multisystem_add_interaction_partner
-
-  ! ---------------------------------------------------------
-  recursive logical function multisystem_has_interaction(this, interaction)
-    class(multisystem_t),      intent(in) :: this
-    class(interaction_abst_t), intent(in) :: interaction
-
-    type(system_iterator_t) :: iter
-    class(system_abst_t), pointer :: system
-
-    PUSH_SUB(multisystem_has_interaction)
-
-    multisystem_has_interaction = .false.
-    call iter%start(this%list)
-    do while (iter%has_next())
-      system => iter%get_next()
-      if (system%has_interaction(interaction)) multisystem_has_interaction = .true.
-    end do
-
-    POP_SUB(multisystem_has_interaction)
-  end function multisystem_has_interaction
+    POP_SUB(multisystem_init_interaction)
+  end subroutine multisystem_init_interaction
 
   ! ---------------------------------------------------------------------------------------
   recursive subroutine multisystem_write_interaction_graph(this, iunit)
