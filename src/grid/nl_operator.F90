@@ -308,6 +308,9 @@ contains
 
     PUSH_SUB(nl_operator_copy)
 
+    ! We cannot currently copy the GPU kernel for the nl_operator
+    ASSERT(.not. accel_is_enabled())
+
     call nl_operator_init(opo, opi%label)
 
     call stencil_copy(opi%stencil, opo%stencil)
@@ -339,6 +342,7 @@ contains
       call loct_pointer_copy(opo%outer%imax, opi%outer%imax)
       call loct_pointer_copy(opo%outer%ri,   opi%outer%ri)
     end if
+
 
     POP_SUB(nl_operator_copy)
   end subroutine nl_operator_copy

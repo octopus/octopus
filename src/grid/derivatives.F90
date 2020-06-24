@@ -766,13 +766,12 @@ contains
 #endif
 
   ! ---------------------------------------------------------
-  subroutine derivatives_get_lapl(this, lapl, name, order) 
-    type(derivatives_t),         intent(in)  :: this
-    type(nl_operator_t), target, intent(out) :: lapl
-    character(len=32),           intent(in)  :: name
-    integer,                     intent(in)  :: order
+  subroutine derivatives_get_lapl(this, op, name, order) 
+    type(derivatives_t),         intent(in)    :: this
+    type(nl_operator_t),         intent(inout) :: op(:) 
+    character(len=32),           intent(in)    :: name
+    integer,                     intent(in)    :: order
 
-    type(nl_operator_t), pointer :: op(:) 
     integer, allocatable :: polynomials(:,:)
     FLOAT, allocatable :: rhs(:,:)
     integer :: i, j, k
@@ -780,8 +779,6 @@ contains
   
     PUSH_SUB(derivatives_get_lapl)
 
-    call nl_operator_init(lapl, name)
-    SAFE_ALLOCATE(op(1:1))
     call nl_operator_init(op(1), name)
     if(this%mesh%sb%nonorthogonal) then
       call stencil_stargeneral_get_arms(op(1)%stencil, this%mesh%sb)
@@ -819,9 +816,6 @@ contains
              polynomials, rhs, 1, op(1:1), name, force_orthogonal = .true.)
     SAFE_DEALLOCATE_A(polynomials)
     SAFE_DEALLOCATE_A(rhs)
-    call nl_operator_copy(lapl, op(1))
-    call nl_operator_end(op(1))
-    SAFE_DEALLOCATE_P(op)
 
     POP_SUB(derivatives_get_lapl)
   end subroutine derivatives_get_lapl

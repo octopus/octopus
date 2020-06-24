@@ -65,7 +65,9 @@ module preconditioners_oct_m
     private
     integer :: which
 
-    type(nl_operator_t) :: op
+    type(nl_operator_t), pointer :: op_array(:)  !< this array is necessary for derivatives_get_lapl() to work
+    type(nl_operator_t), pointer :: op           !< pointer to access op_array(1) simply as op
+
     FLOAT, pointer      :: diag_lapl(:) !< diagonal of the laplacian
     integer             :: npre, npost, nmiddle
 
@@ -89,6 +91,9 @@ contains
     character(len=32) :: name
 
     PUSH_SUB(preconditioner_init)
+
+    SAFE_ALLOCATE(this%op_array(1))
+    this%op => this%op_array(1)
 
     !%Variable Preconditioner
     !%Type integer
@@ -126,7 +131,7 @@ contains
     case(PRE_FILTER)
       ! the smoothing is performed uing the same stencil as the Laplacian
       name = "Preconditioner"
-      call derivatives_get_lapl(gr%der, this%op, name, 1)
+      call derivatives_get_lapl(gr%der, this%op_array, name, 1)
 
       !%Variable PreconditionerFilterFactor
       !%Type float
@@ -272,6 +277,9 @@ contains
       SAFE_DEALLOCATE_P(this%mgrid)
 
     end select
+
+    nullify(this%op)
+    SAFE_DEALLOCATE_P(this%op_array)
 
     call preconditioner_null(this)
     POP_SUB(preconditioner_end)
