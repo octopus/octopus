@@ -521,7 +521,7 @@ contains
           call messages_fatal(2)
         end if
         call parse_block_float(blk, row, 2, rsize, unit = units_inp%length)
-        if(rsize < M_ZERO) call messages_input_error(namespace, 'radius')
+        if(rsize < M_ZERO) call messages_input_error(namespace, 'radius', row=row, column=2)
         call parse_block_string(blk, row, 3, clist)
         nb = 0
         do ic = 1, sys%geo%natoms
@@ -529,13 +529,13 @@ contains
         end do
       case(SPHERE)
         call parse_block_float(blk, row, 2, rsize, unit = units_inp%length)
-        if(rsize < M_ZERO) call messages_input_error(namespace, 'radius')
+        if(rsize < M_ZERO) call messages_input_error(namespace, 'radius', row=row, column=2)
         do ic = 1, dim 
           call parse_block_float(blk, row, 2 + ic, center(ic), unit = units_inp%length)
         end do
       case(CYLINDER)
         call parse_block_float(blk, row, 2, rsize, unit = units_inp%length)
-        if(rsize < M_ZERO) call messages_input_error(namespace, 'radius')
+        if(rsize < M_ZERO) call messages_input_error(namespace, 'radius', row=row, column=2)
         call parse_block_float(blk, row, 3, xsize, unit = units_inp%length)
         do ic = 1, dim 
           call parse_block_float(blk, row, 3 + ic, center(ic), unit = units_inp%length)
