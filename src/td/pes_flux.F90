@@ -2108,7 +2108,7 @@ contains
                 end do 
 
               else 
-                !$omp parallel do private(ikpu,ikpv,ikpz)
+                !$omp parallel do private (ikpv,ikpz,face_int_gwf,face_int_wf) shared(gwfpw, wfpw)
                 do ikpu = 1, this%ll(dir_on_face(1))
                   do ikpv = 1, this%ll(dir_on_face(2))
               
@@ -2130,12 +2130,11 @@ contains
                        wfpw( get_ikp(this, ikpu, ikpv, ikpz, n_dir)) = face_int_wf &
                                                                      * this%expkr_perp(ikpz, ifc)  
 
-                    end do
-                  
+                    end do                 
+                                        
                   end do
                 end do
-                !$omp end parallel do
-
+ 
               
               end if
                             
