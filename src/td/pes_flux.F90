@@ -512,25 +512,27 @@ contains
       
       if (this%surf_shape /= PES_SPHERICAL) call pes_flux_distribute_facepnts_cub(this, mesh)
       
-      if(debug%info) then
-#if defined(HAVE_MPI)
-        call MPI_Barrier(mpi_world%comm, mpi_err)
-        write(*,*) &
-          'Debug: surface points on node ', mpi_world%rank, ' : ', this%nsrfcpnts_start, this%nsrfcpnts_end
-        call MPI_Barrier(mpi_world%comm, mpi_err)
-#endif
-      end if
-    else
-      this%nsrfcpnts_start = 1
-      this%nsrfcpnts_end   = this%nsrfcpnts
-    end if
-      
-    if(debug%info .and. mpi_grp_is_root(mpi_world)) then
-      do isp = 1, this%nsrfcpnts
-        write(223,*) isp, this%rcoords(:, isp), this%srfcnrml(:,isp)
-      end do
-      if(this%nsrfcpnts > 0) flush(223)
-    end if
+!   Keep this because is useful for debug but not enough to bother having it polished out        
+!       if(debug%info) then
+! #if defined(HAVE_MPI)
+!         call MPI_Barrier(mpi_world%comm, mpi_err)
+!         write(*,*) &
+!           'Debug: surface points on node ', mpi_world%rank, ' : ', this%nsrfcpnts_start, this%nsrfcpnts_end
+!         call MPI_Barrier(mpi_world%comm, mpi_err)
+! #endif
+!       end if
+!     else
+!       this%nsrfcpnts_start = 1
+!       this%nsrfcpnts_end   = this%nsrfcpnts
+!     end if
+
+!   Keep this because is useful for debug but not enough to bother having it polished out        
+!     if(debug%info .and. mpi_grp_is_root(mpi_world)) then
+!       do isp = 1, this%nsrfcpnts
+!         write(223,*) isp, this%rcoords(:, isp), this%srfcnrml(:,isp)
+!       end do
+!       if(this%nsrfcpnts > 0) flush(223)
+!     end if
 
     ! Generate the momentum space mesh grid
     call pes_flux_reciprocal_mesh_gen(this, namespace, mesh%sb, st, mesh%mpi_grp%comm)
@@ -1228,17 +1230,18 @@ contains
         if((this%nk_end - this%nk_start + 1) < this%nk) this%parallel_in_momentum = .true.
         call pes_flux_distribute(1, this%nstepsomegak, this%nstepsomegak_start, this%nstepsomegak_end, comm)
 
-        if(debug%info) then
-#if defined(HAVE_MPI)
-          call MPI_Barrier(mpi_world%comm, mpi_err)
-          write(*,*) &
-            'Debug: momentum points on node ', mpi_world%rank, ' : ', this%nk_start, this%nk_end
-          call MPI_Barrier(mpi_world%comm, mpi_err)
-          write(*,*) &
-            'Debug: momentum directions on node ', mpi_world%rank, ' : ', this%nstepsomegak_start, this%nstepsomegak_end
-          call MPI_Barrier(mpi_world%comm, mpi_err)
-#endif
-        end if
+!   Keep this because is useful for debug but not enough to bother having it polished out        
+!         if(debug%info) then
+! #if defined(HAVE_MPI)
+!           call MPI_Barrier(mpi_world%comm, mpi_err)
+!           write(*,*) &
+!             'Debug: momentum points on node ', mpi_world%rank, ' : ', this%nk_start, this%nk_end
+!           call MPI_Barrier(mpi_world%comm, mpi_err)
+!           write(*,*) &
+!             'Debug: momentum directions on node ', mpi_world%rank, ' : ', this%nstepsomegak_start, this%nstepsomegak_end
+!           call MPI_Barrier(mpi_world%comm, mpi_err)
+! #endif
+!         end if
         SAFE_ALLOCATE(this%j_l(0:this%lmax, this%nk_start:this%nk_end))
         this%j_l = M_ZERO
 
@@ -1433,40 +1436,41 @@ contains
         end if
         
       end if
-  
-      if (debug%info .and. mpi_grp_is_root(mpi_world)) then
-        ! this does not work for parallel in kpoint 
-        ! you need to gather kcoords_pln
-        if (kpoints_have_zero_weight_path(sb%kpoints)) then
-          write(229,*) "#   ikpt (kpoint index),   ikp (momentum index),   this%kcoords_cub(1:mdim, ikp, ikpt)"
-          do ikpt = kptst, kptend
-            do ikp = 1, this%nkpnts
-              write(229,*) ikpt, ikp, this%kcoords_cub(1:mdim, ikp, ikpt)
-            end do
-          end do
-        else
-          write(229,*) "#   ikp (momentum index),   this%kcoords_cub(1:mdim, ikp, ikpt)"
-          do ikp = 1, this%nkpnts
-            write(229,*) ikp, this%kcoords_cub(1:mdim, ikp, 1)
-          end do
-        end if
-        flush(229)
 
-        
-        if(mdim == 3) then
-          write(230,*) "#   ik1, ik2, ik3,  this%Lkpuvz_inv(ik1,ik2,ik3) "
-          do ik1 = 1, this%ll(1)
-            do ik2 = 1, this%ll(2)
-              do ik3 = 1, this%ll(3)
-                write(230,*) ik1, ik2, ik3,  this%Lkpuvz_inv(ik1,ik2,ik3) 
-              end do
-            end do
-          end do
-            
-          flush(230)
-        end if
-        
-      end if
+!   Keep this because is useful for debug but not enough to bother having it polished out    
+!       if (debug%info .and. mpi_grp_is_root(mpi_world)) then
+!         ! this does not work for parallel in kpoint
+!         ! you need to gather kcoords_pln
+!         if (kpoints_have_zero_weight_path(sb%kpoints)) then
+!           write(229,*) "#   ikpt (kpoint index),   ikp (momentum index),   this%kcoords_cub(1:mdim, ikp, ikpt)"
+!           do ikpt = kptst, kptend
+!             do ikp = 1, this%nkpnts
+!               write(229,*) ikpt, ikp, this%kcoords_cub(1:mdim, ikp, ikpt)
+!             end do
+!           end do
+!         else
+!           write(229,*) "#   ikp (momentum index),   this%kcoords_cub(1:mdim, ikp, ikpt)"
+!           do ikp = 1, this%nkpnts
+!             write(229,*) ikp, this%kcoords_cub(1:mdim, ikp, 1)
+!           end do
+!         end if
+!         flush(229)
+!
+!
+!         if(mdim == 3) then
+!           write(230,*) "#   ik1, ik2, ik3,  this%Lkpuvz_inv(ik1,ik2,ik3) "
+!           do ik1 = 1, this%ll(1)
+!             do ik2 = 1, this%ll(2)
+!               do ik3 = 1, this%ll(3)
+!                 write(230,*) ik1, ik2, ik3,  this%Lkpuvz_inv(ik1,ik2,ik3)
+!               end do
+!             end do
+!           end do
+!
+!           flush(230)
+!         end if
+!
+!       end if
       
       if (this%arpes_grid) then
         call messages_write("Number of points with E<p//^2/2 = ")
@@ -1766,10 +1770,11 @@ contains
       Jac(1:fdim, 1:fdim) = mesh%sb%rlattice_primitive(1:fdim, 1:fdim) !The Jacobian on the surface
       jdet = lalg_determinant(fdim, Jac, preserve_mat = .false.)
 
-      if(debug%info .and. mpi_grp_is_root(mpi_world)) then
-        print *, "jdet =", jdet
-        print *, "mesh%sb%rlattice_primitive(1:fdim, 1:fdim) ", mesh%sb%rlattice_primitive(1:fdim, 1:fdim) 
-      end if
+!   Keep this because is useful for debug but not enough to bother having it polished out        
+!       if(debug%info .and. mpi_grp_is_root(mpi_world)) then
+!         print *, "jdet =", jdet
+!         print *, "mesh%sb%rlattice_primitive(1:fdim, 1:fdim) ", mesh%sb%rlattice_primitive(1:fdim, 1:fdim)
+!       end if
       
       this%srfcnrml(:,1: this%nsrfcpnts ) = this%srfcnrml(:,1:this%nsrfcpnts )*jdet
     end if
@@ -1871,15 +1876,16 @@ contains
       this%bvk_phase(:,:) = this%bvk_phase(:,:) * M_ONE/product(mesh%sb%kpoints%nik_axis(1:pdim))
     
 
-      if(debug%info .and. mpi_grp_is_root(mpi_world)) then
-        write(225,*) "ik, ikp, this%bvk_phase(ikp,ik)"
-        do ik = st%d%kpt%start, st%d%kpt%end
-          do ikp = ikp_start, ikp_end
-            write(225,*) ik, ikp, this%bvk_phase(ikp,ik)
-          end do 
-        end do
-        flush(225)
-      end if
+!   Keep this because is useful for debug but not enough to bother having it polished out        
+!       if(debug%info .and. mpi_grp_is_root(mpi_world)) then
+!         write(225,*) "ik, ikp, this%bvk_phase(ikp,ik)"
+!         do ik = st%d%kpt%start, st%d%kpt%end
+!           do ikp = ikp_start, ikp_end
+!             write(225,*) ik, ikp, this%bvk_phase(ikp,ik)
+!           end do
+!         end do
+!         flush(225)
+!       end if
     
     end if
             
@@ -1954,9 +1960,10 @@ contains
 
       end if
       
-      if(debug%info) then     
-        print *, mpi_world%rank, ifc, ifp_start, ifp_end, this%face_idx_range(ifc, 1:2), this%nsrfcpnts_start, this%nsrfcpnts_end
-      end if
+!   Keep this because is useful for debug but not enough to bother having it polished out        
+!       if(debug%info) then
+!         print *, mpi_world%rank, ifc, ifp_start, ifp_end, this%face_idx_range(ifc, 1:2), this%nsrfcpnts_start, this%nsrfcpnts_end
+!       end if
 
     end do
     

@@ -198,19 +198,20 @@ subroutine pes_flux_pmesh_pln(this, namespace, dim, kpoints, ll, pmesh, idxZero,
   SAFE_ALLOCATE(ikidx(maxval(nk(1:3)),1:3))
   call flip_sign_Lkpt_idx(dim, nk(:), ikidx(:,:), do_nothing = .true.)
   
-  
-  if (debug%info) then
-    print *,"reordered"
-    do ik = krng(1),krng(2)
-      kpt(1:dim) = kpoints_get_point(kpoints, ik, absolute_coordinates = .true.)
-      print *, ik, "Lkpt(ik)= [", ikidx(Lkpt(ik,1),1), ikidx(Lkpt(ik,2),2), ikidx(Lkpt(ik,3),3),&
-                "] -- kpt= ",kpt(1:dim)
-    end do
 
-    print *,"----"
-    print *,"ll(:)", ll(:)
-    print *,"----"
-  end if
+!   Keep this because is useful for debug but not enough to bother having it polished with message_info  
+!   if (debug%info) then
+!     print *,"reordered"
+!     do ik = krng(1),krng(2)
+!       kpt(1:dim) = kpoints_get_point(kpoints, ik, absolute_coordinates = .true.)
+!       print *, ik, "Lkpt(ik)= [", ikidx(Lkpt(ik,1),1), ikidx(Lkpt(ik,2),2), ikidx(Lkpt(ik,3),3),&
+!                 "] -- kpt= ",kpt(1:dim)
+!     end do
+!
+!     print *,"----"
+!     print *,"ll(:)", ll(:)
+!     print *,"----"
+!   end if
 
 
   pmesh(:, :, :, :) = M_HUGE      
@@ -246,9 +247,10 @@ subroutine pes_flux_pmesh_pln(this, namespace, dim, kpoints, ll, pmesh, idxZero,
           if (present(Ekin)) Ekin(ip1, ip2, ip3) = sign(M_ONE,pmesh(ip1,ip2,ip3,dim)) &
                                                    * sum(pmesh(ip1,ip2,ip3,1:dim)**2)/M_TWO
 
-          if (debug%info) then
-            print *,j1,j2,j3,ik, "pmesh = ",pmesh(ip1, ip2, ip3, :), "Ekin=", Ekin(ip1, ip2, ip3)
-          end if
+!   Keep this because is useful for debug but not enough to bother having it polished with message_info  
+!           if (debug%info) then
+!             print *,j1,j2,j3,ik, "pmesh = ",pmesh(ip1, ip2, ip3, :), "Ekin=", Ekin(ip1, ip2, ip3)
+!           end if
 
           ! Sanity checks
           if (sum(pmesh(ip1, ip2, ip3, 1:dim-1)**2)<=zero_thr) then
@@ -270,10 +272,10 @@ subroutine pes_flux_pmesh_pln(this, namespace, dim, kpoints, ll, pmesh, idxZero,
     
   end do
   
-
-  if(debug%info) then
-    print * ,"idxZero(1:3)=", idxZero(1:3)
-  end if
+!   Keep this because is useful for debug but not enough to bother having it polished with message_info
+!   if(debug%info) then
+!     print * ,"idxZero(1:3)=", idxZero(1:3)
+!   end if
 
   if (err == -2) then
     call messages_write('Malformed momentum-space mesh: two or more points with the same p.')
