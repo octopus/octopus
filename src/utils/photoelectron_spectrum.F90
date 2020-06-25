@@ -369,8 +369,9 @@ program photoelectron_spectrum
   endif  
   
   if (debug%info) then
-    print *, "llp(:)= ", llp(:) 
-    print *, "llpp(:)= ", llpp(:) 
+    write(message(1),'(a,i4,i4,i4)') 'Debug :  llp = ', llp(1:3) 
+    write(message(2),'(a,i4,i4,i4)') 'Debug : llpp = ', llpp(1:3) 
+    call messages_info(2)
   end if
   
   SAFE_ALLOCATE(pmesh(1:llp(1),1:llp(2),1:llp(3),1:3 + 1))
