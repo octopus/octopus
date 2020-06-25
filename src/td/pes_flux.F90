@@ -123,8 +123,8 @@ module pes_flux_oct_m
                                                        !< and z perpendicular)
 
     ! Surface and time integration 
-    integer          :: tdsteps                        !< = sys%outp%restart_write_interval (M_PLANE/M_CUBIC)
-                                                       !< = mesh%mpi_grp%size (M_SPHERICAL)
+    integer          :: tdsteps                        !< = sys%outp%restart_write_interval (PES_PLANE/PES_CUBIC)
+                                                       !< = mesh%mpi_grp%size (PES_SPHERICAL)
     integer          :: max_iter                       !< td%max_iter
     integer          :: save_iter                      !< sys%outp%restart_write_interval
     integer          :: itstep                         !< 1 <= itstep <= tdsteps
@@ -155,13 +155,13 @@ module pes_flux_oct_m
   end type pes_flux_t
 
   integer, parameter ::   &
-    M_CUBIC      = 1,     &
-    M_SPHERICAL  = 2,     &
-    M_PLANE      = 3
+    PES_CUBIC      = 1,     &
+    PES_SPHERICAL  = 2,     &
+    PES_PLANE      = 3
 
   integer, parameter ::   &
-    M_POLAR      = 1,     &
-    M_CARTESIAN  = 2
+    PES_POLAR      = 1,     &
+    PES_CARTESIAN  = 2
 
 
 contains
@@ -236,14 +236,14 @@ contains
     !% Constructs a plane perpendicular to the non-periodic dimension 
     !% at <tt>PES_Flux_Lsize</tt>.
     !%End
-    default_shape = M_SPHERICAL
-    if(mesh%sb%box_shape == PARALLELEPIPED .or. mdim <= 2) default_shape = M_CUBIC
-    if(simul_box_is_periodic(mesh%sb)) default_shape = M_PLANE
+    default_shape = PES_SPHERICAL
+    if(mesh%sb%box_shape == PARALLELEPIPED .or. mdim <= 2) default_shape = PES_CUBIC
+    if(simul_box_is_periodic(mesh%sb)) default_shape = PES_PLANE
     
     call parse_variable(namespace, 'PES_Flux_Shape', default_shape, this%surf_shape)
     if(.not.varinfo_valid_option('PES_Flux_Shape', this%surf_shape, is_flag = .true.)) &
       call messages_input_error(namespace,'PES_Flux_Shape')
-    if(this%surf_shape == M_SPHERICAL .and. mdim /= 3) then
+    if(this%surf_shape == PES_SPHERICAL .and. mdim /= 3) then
       message(1) = 'Spherical grid works only in 3d.'
       call messages_fatal(1, namespace=namespace)
     end if
@@ -257,7 +257,7 @@ contains
     !% Apply anisotropy correction. 
     !%  
     !%End
-    if(this%surf_shape == M_CUBIC) then
+    if(this%surf_shape == PES_CUBIC) then
       call parse_variable(namespace, 'PES_Flux_AnisotropyCorrection', .false., this%anisotrpy_correction)
       call messages_print_var_value(stdout, 'PES_Flux_AnisotropyCorrection', this%anisotrpy_correction)
     end if
@@ -289,14 +289,14 @@ contains
     !% Maximum order of the spherical harmonic to be integrated on an equidistant spherical 
     !% grid (to be changed to Gauss-Legendre quadrature).
     !%End
-    if(this%surf_shape == M_SPHERICAL) then
+    if(this%surf_shape == PES_SPHERICAL) then
       call parse_variable(namespace, 'PES_Flux_Lmax', 80, this%lmax)
       if(this%lmax < 1) call messages_input_error(namespace,'PES_Flux_Lmax', 'must be > 0')
       call messages_print_var_value(stdout, 'PES_Flux_Lmax', this%lmax)
     end if
 
 
-    if(this%surf_shape == M_CUBIC .or. this%surf_shape == M_PLANE) then
+    if(this%surf_shape == PES_CUBIC .or. this%surf_shape == PES_PLANE) then
       
 
       !%Variable PES_Flux_Lsize
@@ -428,7 +428,7 @@ contains
     ! -----------------------------------------------------------------
     ! Get the surface points
     ! -----------------------------------------------------------------
-    if(this%surf_shape == M_CUBIC .or. this%surf_shape == M_PLANE) then
+    if(this%surf_shape == PES_CUBIC .or. this%surf_shape == PES_PLANE) then
       call pes_flux_getcube(this, mesh, hm, border, offset, fc_ptdens)
     else
       ! equispaced grid in theta & phi (Gauss-Legendre would optimize to nstepsthetar = this%lmax & nstepsphir = 2*this%lmax + 1):
@@ -466,7 +466,7 @@ contains
     this%par_strategy      = OPTION__PES_FLUX_PARALLELIZATION__PF_NONE
     if(mesh%parallel_in_domains) then
 
-      if(this%surf_shape == M_SPHERICAL) then
+      if(this%surf_shape == PES_SPHERICAL) then
         this%par_strategy = OPTION__PES_FLUX_PARALLELIZATION__PF_TIME  &
                           + OPTION__PES_FLUX_PARALLELIZATION__PF_SURFACE
       else 
@@ -510,7 +510,7 @@ contains
       
       call pes_flux_distribute(1, this%nsrfcpnts, this%nsrfcpnts_start, this%nsrfcpnts_end, mesh%mpi_grp%comm)
       
-      if (this%surf_shape /= M_SPHERICAL) call pes_flux_distribute_facepnts_cub(this, mesh)
+      if (this%surf_shape /= PES_SPHERICAL) call pes_flux_distribute_facepnts_cub(this, mesh)
       
       if(debug%info) then
 #if defined(HAVE_MPI)
@@ -548,16 +548,16 @@ contains
     !% PES_Flux_Shape = m_sph and PES_Flux_Momenutum_Grid = m_polar
     !%End
     use_symmetry = .false.
-    if ((this%surf_shape == M_CUBIC .or. this%surf_shape == M_PLANE) &
-         .and. this%kgrid == M_CARTESIAN .and. mdim == 3) use_symmetry = .true.
-    if (this%surf_shape == M_SPHERICAL .and. this%kgrid == M_POLAR) use_symmetry = .true.
+    if ((this%surf_shape == PES_CUBIC .or. this%surf_shape == PES_PLANE) &
+         .and. this%kgrid == PES_CARTESIAN .and. mdim == 3) use_symmetry = .true.
+    if (this%surf_shape == PES_SPHERICAL .and. this%kgrid == PES_POLAR) use_symmetry = .true.
     call parse_variable(namespace, 'PES_Flux_UseSymmetries', use_symmetry, this%use_symmetry)
     call messages_print_var_value(stdout, 'PES_Flux_UseSymmetries', this%use_symmetry)
     
     
 
-    ! get the values of the spherical harmonics for the surface points for M_SPHERICAL
-    if(this%surf_shape == M_SPHERICAL) then
+    ! get the values of the spherical harmonics for the surface points for PES_SPHERICAL
+    if(this%surf_shape == PES_SPHERICAL) then
       SAFE_ALLOCATE(this%ylm_r(0:this%lmax, -this%lmax:this%lmax, this%nsrfcpnts_start:this%nsrfcpnts_end))
       this%ylm_r = M_z0
 
@@ -616,7 +616,7 @@ contains
     SAFE_ALLOCATE(this%veca(1:mdim, 1:this%tdsteps))
     this%veca = M_ZERO
 
-    if(this%surf_shape == M_SPHERICAL) then
+    if(this%surf_shape == PES_SPHERICAL) then
       SAFE_ALLOCATE(this%spctramp_sph(stst:stend, 1:sdim, kptst:kptend, 1:this%nk, 1:this%nstepsomegak))
       this%spctramp_sph = M_z0
 
@@ -686,7 +686,7 @@ contains
 
     PUSH_SUB(pes_flux_end)
 
-    if(this%surf_shape == M_SPHERICAL) then
+    if(this%surf_shape == PES_SPHERICAL) then
       SAFE_DEALLOCATE_P(this%kcoords_sph)
       SAFE_DEALLOCATE_P(this%ylm_k)
       SAFE_DEALLOCATE_P(this%j_l)
@@ -780,13 +780,13 @@ contains
     
     ! default values
     select case (this%surf_shape)
-      case (M_SPHERICAL)
-        kgrid = M_POLAR
-      case (M_PLANE)
-        kgrid = M_CARTESIAN
-      case (M_CUBIC)
-        kgrid = M_CARTESIAN
-        if (mdim == 1)  kgrid = M_POLAR
+      case (PES_SPHERICAL)
+        kgrid = PES_POLAR
+      case (PES_PLANE)
+        kgrid = PES_CARTESIAN
+      case (PES_CUBIC)
+        kgrid = PES_CARTESIAN
+        if (mdim == 1)  kgrid = PES_POLAR
     end select
         
     call parse_variable(namespace, 'PES_Flux_Momenutum_Grid', kgrid, this%kgrid)
@@ -797,8 +797,8 @@ contains
 
     
     !Check availability of the calculation requested
-    if (this%surf_shape == M_SPHERICAL) then
-      if (this%kgrid == M_CARTESIAN) then
+    if (this%surf_shape == PES_SPHERICAL) then
+      if (this%kgrid == PES_CARTESIAN) then
         call messages_not_implemented('Cartesian momentum grid with a spherical surface')
       end if
       if (simul_box_is_periodic(sb)) then
@@ -809,7 +809,7 @@ contains
       end if
     end if
     
-    if (this%surf_shape == M_CUBIC) then
+    if (this%surf_shape == PES_CUBIC) then
       if (simul_box_is_periodic(sb)) then
         call messages_not_implemented('Use of cubic surface for periodic systems (use pln)')                
       end if
@@ -879,7 +879,7 @@ contains
       !% for cartesian direction using a block input.
       !%End      
       if(parse_block(namespace, 'PES_Flux_Kmax', blk) == 0) then
-        if (this%kgrid == M_CARTESIAN) then
+        if (this%kgrid == PES_CARTESIAN) then
           do idim = 1, mdim 
             call parse_block_float(blk, 0, idim-1, kmax(idim))
           end do
@@ -903,7 +903,7 @@ contains
       !% for cartesian direction using a block input.
       !%End
       if(parse_block(namespace, 'PES_Flux_Kmin', blk) == 0) then
-        if (this%kgrid == M_CARTESIAN) then
+        if (this%kgrid == PES_CARTESIAN) then
           do idim = 1, mdim 
             call parse_block_float(blk, 0, idim-1, kmin(idim))
           end do
@@ -949,8 +949,8 @@ contains
 
 
     
-!     if (this%surf_shape == M_SPHERICAL .or. this%surf_shape == M_CUBIC) then
-    if (this%kgrid == M_POLAR) then  
+!     if (this%surf_shape == PES_SPHERICAL .or. this%surf_shape == PES_CUBIC) then
+    if (this%kgrid == PES_POLAR) then  
       ! -----------------------------------------------------------------
       ! Setting up k-mesh
       ! 1D = 2 points, 2D = polar coordinates, 3D = spherical coordinates
@@ -1203,7 +1203,7 @@ contains
     ! Create the grid
     select case (this%kgrid)
 
-    case (M_POLAR)
+    case (PES_POLAR)
     
       if(use_enegy_grid) then
         do ie = 1, this%nk  
@@ -1216,7 +1216,7 @@ contains
       end if
       
       
-      if (this%surf_shape == M_SPHERICAL) then
+      if (this%surf_shape == PES_SPHERICAL) then
 
         if(optional_default(post, .false.)) then 
           POP_SUB(pes_flux_reciprocal_mesh_gen)
@@ -1332,7 +1332,7 @@ contains
         end if
       end if
 
-    case (M_CARTESIAN)
+    case (PES_CARTESIAN)
 
   !         call pes_flux_distribute(1, this%nkpnts, this%nkpnts_start, this%nkpnts_end, mpi_world%comm)
 
@@ -1517,7 +1517,7 @@ contains
 
       
       !Apply the transformation
-      if (this%surf_shape == M_SPHERICAL) then
+      if (this%surf_shape == PES_SPHERICAL) then
 
         iomk = 0
         do ith = 0, this%nstepsthetak
@@ -1648,7 +1648,7 @@ contains
           do isdim = 1, sdim
             call states_elec_get_state(st, mesh, isdim, ist, ik, psi)
             
-            if(this%surf_shape == M_PLANE) then
+            if(this%surf_shape == PES_PLANE) then
               ! Apply the phase containing kpoint only
               kpoint(1:mdim) = kpoints_get_point(mesh%sb%kpoints, states_elec_dim_get_kpoint_index(st%d, ik))
 
@@ -1707,7 +1707,7 @@ contains
       SAFE_DEALLOCATE_A(gpsi)
 
       if(this%itstep == this%tdsteps .or. mod(iter, this%save_iter) == 0 .or. iter == this%max_iter .or. stopping) then
-        if(this%surf_shape == M_CUBIC .or. this%surf_shape == M_PLANE) then
+        if(this%surf_shape == PES_CUBIC .or. this%surf_shape == PES_PLANE) then
           call pes_flux_integrate_cub(this, mesh, st, dt)
         else
           call pes_flux_integrate_sph(this, mesh, st, dt)
@@ -1759,7 +1759,7 @@ contains
     ikp_end   = this%nkpnts_end
     
     
-    if(this%surf_shape == M_PLANE) then
+    if(this%surf_shape == PES_PLANE) then
       fdim = mdim - 1
       ! This is not general but should work in the specific case where it is relevant
       !i.e. when the system is semiperiodic in <=2 dimensions
@@ -1796,7 +1796,7 @@ contains
     else !do something smart to exploit symmetries
 
       nfaces = mdim*2
-      if(this%surf_shape == M_PLANE) nfaces = 1 
+      if(this%surf_shape == PES_PLANE) nfaces = 1 
       
       
       SAFE_ALLOCATE(this%expkr(1:this%nsrfcpnts,maxval(this%ll(1:mdim)),kptst:kptend,1:mdim))
@@ -1922,7 +1922,7 @@ contains
     mdim      = mesh%sb%dim
 
     nfaces = mdim*2
-    if(this%surf_shape == M_PLANE) nfaces = 1 
+    if(this%surf_shape == PES_PLANE) nfaces = 1 
     
     do ifc = 1, nfaces
     
@@ -2035,7 +2035,7 @@ contains
 
     
     nfaces = mdim*2
-    if(this%surf_shape == M_PLANE) nfaces = 1 
+    if(this%surf_shape == PES_PLANE) nfaces = 1 
 
     SAFE_ALLOCATE( wfpw(ikp_start:ikp_end))
     SAFE_ALLOCATE(gwfpw(ikp_start:ikp_end))
@@ -2463,7 +2463,7 @@ contains
       
       mindim  = 1 
       factor = M_TWO
-      if(this%surf_shape == M_PLANE) then
+      if(this%surf_shape == PES_PLANE) then
         mindim = mdim  ! We only have two planes along the non periodic dimension 
         ! this is due to the fact that for semiperiodic systems we multiply border by two to prenvet the creation of surfaces at the edges
         factor = M_ONE 
@@ -2555,7 +2555,7 @@ contains
       ! Surface points are on the mesh
       
       nfaces = mdim*2
-      if(this%surf_shape == M_PLANE) nfaces = 2 
+      if(this%surf_shape == PES_PLANE) nfaces = 2 
 
       in_ab = .false.
 
@@ -2587,7 +2587,7 @@ contains
         if(all(abs(xx(1:mdim)) <= border(1:mdim)) .and. .not. in_ab) then
           ! check whether the point is close to any border
           do imdim = 1, mdim
-            if(this%surf_shape == M_PLANE) then
+            if(this%surf_shape == PES_PLANE) then
               dd = border(imdim) - xx(imdim)
             else
               dd = border(imdim) - abs(xx(imdim))
