@@ -110,10 +110,10 @@ subroutine flip_sign_Lkpt_idx( dim, nk, idx, do_nothing)
      end do
      
      if (do_nothing) then
-       idx(1:nk(idir),idir)  = idx_tmp(1:nk(idir),idir)
+       idx(1:nk(idir), idir)  = idx_tmp(1:nk(idir), idir)
      else 
        do ii = 1, nk(idir)
-         idx(ii,idir) = nk(idir) - idx_tmp(ii,idir) + 1 
+         idx(ii,idir) = nk(idir) - idx_tmp(ii, idir) + 1 
        end do
      end if
      
@@ -170,12 +170,12 @@ subroutine pes_flux_pmesh_pln(this, namespace, dim, kpoints, ll, pmesh, idxZero,
   PUSH_SUB(pes_flux_pmesh_pln)
         
         
-  SAFE_ALLOCATE(Lp(1:ll(1),1:ll(2),1:ll(3),krng(1):krng(2),1:3))
+  SAFE_ALLOCATE(Lp(1:ll(1), 1:ll(2), 1:ll(3), krng(1):krng(2), 1:3))
         
         
   nkpt = krng(2) - krng(1) + 1
 
-  SAFE_ALLOCATE(Lkpt(krng(1):krng(2),1:3))
+  SAFE_ALLOCATE(Lkpt(krng(1):krng(2), 1:3))
       
   nk(:) = 1  
   nk(1:dim) = kpoints%nik_axis(1:dim)
@@ -195,7 +195,7 @@ subroutine pes_flux_pmesh_pln(this, namespace, dim, kpoints, ll, pmesh, idxZero,
     kpt(1:dim) = kpoints_get_point(kpoints, krng(1) + ik -1) 
   end do
         
-  SAFE_ALLOCATE(ikidx(maxval(nk(1:3)),1:3))
+  SAFE_ALLOCATE(ikidx(maxval(nk(1:3)), 1:3))
   call flip_sign_Lkpt_idx(dim, nk(:), ikidx(:,:), do_nothing = .true.)
   
 
@@ -228,7 +228,7 @@ subroutine pes_flux_pmesh_pln(this, namespace, dim, kpoints, ll, pmesh, idxZero,
         do j3 = 1, ll(3) 
           
           kpt(:) = M_ZERO 
-          ikp = flatten_indices(j1,j2,j3,ll)
+          ikp = flatten_indices(j1, j2, j3, ll)
 
           kpt(1:dim) = this%kcoords_cub(1:dim, ikp, ik)
         
@@ -244,8 +244,8 @@ subroutine pes_flux_pmesh_pln(this, namespace, dim, kpoints, ll, pmesh, idxZero,
           pmesh(ip1, ip2, ip3, dim+1)       = pmesh(ip1, ip2, ip3, dim+1) + 1 
         
         
-          if (present(Ekin)) Ekin(ip1, ip2, ip3) = sign(M_ONE,pmesh(ip1,ip2,ip3,dim)) &
-                                                   * sum(pmesh(ip1,ip2,ip3,1:dim)**2)/M_TWO
+          if (present(Ekin)) Ekin(ip1, ip2, ip3) = sign(M_ONE,pmesh(ip1, ip2, ip3, dim)) &
+                                                 * sum(pmesh(ip1, ip2, ip3, 1:dim)**2) / M_TWO
 
 !   Keep this because is useful for debug but not enough to bother having it polished with message_info  
 !           if (debug%info) then
@@ -253,10 +253,10 @@ subroutine pes_flux_pmesh_pln(this, namespace, dim, kpoints, ll, pmesh, idxZero,
 !           end if
 
           ! Sanity checks
-          if (sum(pmesh(ip1, ip2, ip3, 1:dim-1)**2)<=zero_thr) then
+          if (sum(pmesh(ip1, ip2, ip3, 1:dim-1)**2) <= zero_thr) then
             err = err + 1 
             !Find the indices identifying the center of the coordinates 
-            idxZero(1:3) = (/ip1,ip2,ip3/)
+            idxZero(1:3) = (/ip1, ip2, ip3/)
           end if
         
           if (pmesh(ip1, ip2, ip3, dim+1) > 1 ) then
@@ -302,7 +302,7 @@ subroutine pes_flux_map_from_states_elec_pln(this, restart, st, ll, pesP, krng, 
   integer,            intent(in) :: ll(:)
   FLOAT, target,     intent(out) :: pesP(:,:,:,:)
   integer,           intent(in)  :: krng(:) 
-  integer,  dimension(1:ll(1),1:ll(2),1:ll(3),krng(1):krng(2),1:3), intent(in) :: Lp
+  integer,  dimension(1:ll(1), 1:ll(2), 1:ll(3), krng(1):krng(2), 1:3), intent(in) :: Lp
   integer, optional, intent(in)  :: istin 
   
   integer :: ik, ist, idim, itot, nkpt, ispin
@@ -345,7 +345,7 @@ subroutine pes_flux_map_from_states_elec_pln(this, restart, st, ll, pesP, krng, 
       if(st%d%ispin /= SPINORS) then 
 
         do idim = 1, st%d%dim
-          itot = idim + (ist-1)*st%d%dim + (ik-1)*st%d%dim* st%nst
+          itot = idim + (ist - 1) * st%d%dim + (ik - 1) * st%d%dim * st%nst
           call pes_flux_map_from_state_1(restart, itot, this%nkpnts, psiG1)
         
         
@@ -353,9 +353,9 @@ subroutine pes_flux_map_from_states_elec_pln(this, restart, st, ll, pesP, krng, 
             do i2=1, ll(2)
               do i3=1, ll(3)
                 ip(1:3) = Lp(i1, i2, i3, ik, 1:3) 
-                iflt = flatten_indices(i1,i2,i3, ll) 
+                iflt = flatten_indices(i1, i2, i3, ll) 
             
-                pesP(ip(1),ip(2),ip(3), ispin) = pesP(ip(1),ip(2),ip(3), ispin) &
+                pesP(ip(1),ip(2),ip(3), ispin) = pesP(ip(1), ip(2), ip(3), ispin) &
                                                + abs(psiG1(iflt))**2 * weight 
                 
               end do
@@ -365,10 +365,10 @@ subroutine pes_flux_map_from_states_elec_pln(this, restart, st, ll, pesP, krng, 
         end do
       else ! SPINORS
         idim = 1
-        itot = idim + (ist-1)*st%d%dim + (ik-1)*st%d%dim* st%nst
+        itot = idim + (ist - 1) * st%d%dim + (ik - 1) * st%d%dim * st%nst
         call pes_flux_map_from_state_1(restart, itot, this%nkpnts, psiG1)
         idim = 2
-        itot = idim + (ist-1)*st%d%dim + (ik-1)*st%d%dim* st%nst
+        itot = idim + (ist - 1) * st%d%dim + (ik - 1) * st%d%dim * st%nst
         call pes_flux_map_from_state_1(restart, itot, this%nkpnts, psiG2)
             
         do i1=1, ll(1)
@@ -377,16 +377,16 @@ subroutine pes_flux_map_from_states_elec_pln(this, restart, st, ll, pesP, krng, 
               ip(1:3) = Lp(i1, i2, i3, ik, 1:3) 
               iflt = flatten_indices(i1,i2,i3, ll) 
           
-              pesP(ip(1),ip(2),ip(3), 1) = pesP(ip(1),ip(2),ip(3), 1) &
+              pesP(ip(1),ip(2),ip(3), 1) = pesP(ip(1), ip(2), ip(3), 1) &
                                              + abs(psiG1(iflt))**2 * weight 
 
-              pesP(ip(1),ip(2),ip(3), 2) = pesP(ip(1),ip(2),ip(3), 2) &
+              pesP(ip(1),ip(2),ip(3), 2) = pesP(ip(1), ip(2), ip(3), 2) &
                                              + abs(psiG2(iflt))**2 * weight
 
-              pesP(ip(1),ip(2),ip(3), 3) = pesP(ip(1),ip(2),ip(3), 3) &
+              pesP(ip(1),ip(2),ip(3), 3) = pesP(ip(1), ip(2), ip(3), 3) &
                                              + real(psiG1(iflt)*conjg(psiG2(iflt)), REAL_PRECISION) * weight
                                            
-              pesP(ip(1),ip(2),ip(3), 4) = pesP(ip(1),ip(2),ip(3), 4) &
+              pesP(ip(1),ip(2),ip(3), 4) = pesP(ip(1), ip(2), ip(3), 4) &
                                              + aimag(psiG1(iflt)*conjg(psiG2(iflt))) * weight
             end do
           end do
@@ -395,7 +395,7 @@ subroutine pes_flux_map_from_states_elec_pln(this, restart, st, ll, pesP, krng, 
           
       end if
       
-      idone = idone +1 
+      idone = idone + 1 
       call loct_progress_bar(idone, ntodo)
       
     end do
@@ -460,7 +460,7 @@ subroutine pes_flux_pmesh_cub(this, namespace, dim, kpoints, ll, pmesh, idxZero,
   
   PUSH_SUB(pes_flux_pmesh_cub)
   
-  idxZero(1:3) =(/(this%ll(1)+1)/2,(this%ll(2)+1)/2,(this%ll(3)+1)/2 /) 
+  idxZero(1:3) =(/(this%ll(1) + 1) / 2,(this%ll(2) + 1) / 2,(this%ll(3) + 1) / 2 /) 
   
   SAFE_ALLOCATE(Lp(1:this%ll(1), 1:this%ll(2), this%ll(3), krng(1):krng(2), 1:3))          
   
@@ -523,24 +523,21 @@ subroutine pes_flux_pmesh_sph(this, dim, kpoints, ll, pmesh, idxZero, krng, Lp)
   idxZero(1:3) = (/0,0,0/)
   
   Dthetak  = M_ZERO
-  if (dim ==3) Dthetak = abs(this%thetak_rng(2) - this%thetak_rng(1))/(this%nstepsthetak)
-  Dphik = abs(this%phik_rng(2) - this%phik_rng(1))/(this%nstepsphik)
+  if (dim ==3) Dthetak = abs(this%thetak_rng(2) - this%thetak_rng(1)) / (this%nstepsthetak)
+  Dphik = abs(this%phik_rng(2) - this%phik_rng(1)) / (this%nstepsphik)
   
   do ikk = 1, this%nk 
-    kact = this%klinear(ikk,1)
+    kact = this%klinear(ikk, 1)
     iomk = 0
 
     do ith = 0, this%nstepsthetak
-!       thetak = ith * M_PI / this%nstepsthetak
       thetak = ith * Dthetak + this%thetak_rng(1)
       
       do iph = 0, this%nstepsphik - 1
         iomk = iomk + 1
 
-!         phik = iph * M_TWO * M_PI / this%nstepsphik
         phik = iph * Dphik + this%phik_rng(1)        
 
-!         if(ith == 0 .or. ith == this%nstepsthetak) then 
         if(thetak < M_EPSILON .or. abs(thetak-M_PI) < M_EPSILON) then  
           ! Mark singular points on the sphere with -1 index
           Lp(ikk, iomk, 1, :, 1) = -1           
@@ -586,7 +583,7 @@ subroutine pes_flux_map_from_states_elec_sph(this, restart, st, ll, pesP, krng, 
   integer,            intent(in) :: ll(:)
   FLOAT, target,       intent(out) :: pesP(:,:,:,:)
   integer,             intent(in)  :: krng(:) 
-  integer,             intent(in)  :: Lp(1:this%nk,1:this%nstepsomegak,1,krng(1):krng(2),1:3)
+  integer,             intent(in)  :: Lp(1:this%nk, 1:this%nstepsomegak, 1, krng(1):krng(2), 1:3)
   integer, optional,   intent(in)  :: istin 
 
   integer :: ik, ist, idim, itot, nkpt, ispin
@@ -608,7 +605,7 @@ subroutine pes_flux_map_from_states_elec_sph(this, restart, st, ll, pesP, krng, 
     nst = 1
   end if
 
-  nkpt =  krng(2)-krng(1)+1
+  nkpt =  krng(2) - krng(1) + 1
   ntodo = nkpt * nst 
   idone = 0 
   call loct_progress_bar(-1, ntodo)
@@ -629,7 +626,7 @@ subroutine pes_flux_map_from_states_elec_sph(this, restart, st, ll, pesP, krng, 
       if(st%d%ispin /= SPINORS) then 
 
         do idim = 1, st%d%dim
-          itot = idim + (ist-1)*st%d%dim + (ik-1)*st%d%dim* st%nst
+          itot = idim + (ist - 1) * st%d%dim + (ik - 1) * st%d%dim * st%nst
           call pes_flux_map_from_state_2(restart, itot, this%nkpnts, psiG1)
         
           do i1 = 1, this%nk
@@ -638,7 +635,7 @@ subroutine pes_flux_map_from_states_elec_sph(this, restart, st, ll, pesP, krng, 
                 ip(1:3) = Lp(i1, i2, 1, ik, 1:3) 
                 if (ip(1) < 0) cycle
               
-                pesP(ip(1),ip(2),ip(3), ispin) = pesP(ip(1),ip(2),ip(3), ispin) &
+                pesP(ip(1),ip(2),ip(3), ispin) = pesP(ip(1), ip(2), ip(3), ispin) &
                                                + abs(psiG1(i1,i2))**2 * weight 
             end do
           end do
@@ -646,10 +643,10 @@ subroutine pes_flux_map_from_states_elec_sph(this, restart, st, ll, pesP, krng, 
         end do
       else ! SPINORS
         idim = 1
-        itot = idim + (ist-1)*st%d%dim + (ik-1)*st%d%dim* st%nst
+        itot = idim + (ist - 1) * st%d%dim + (ik - 1) * st%d%dim * st%nst
         call pes_flux_map_from_state_2(restart, itot, this%nkpnts, psiG1)
         idim = 2
-        itot = idim + (ist-1)*st%d%dim + (ik-1)*st%d%dim* st%nst
+        itot = idim + (ist - 1) * st%d%dim + (ik - 1) * st%d%dim * st%nst
         call pes_flux_map_from_state_2(restart, itot, this%nkpnts, psiG2)
             
         do i1 = 1, this%nk
@@ -658,24 +655,24 @@ subroutine pes_flux_map_from_states_elec_sph(this, restart, st, ll, pesP, krng, 
               ip(1:3) = Lp(i1, i2, 1, ik, 1:3) 
               if (ip(1) < 0) cycle
             
-              pesP(ip(1),ip(2),ip(3), 1) = pesP(ip(1),ip(2),ip(3), 1) &
+              pesP(ip(1),ip(2),ip(3), 1) = pesP(ip(1), ip(2), ip(3), 1) &
                                              + abs(psiG1(i1,i2))**2 * weight 
 
-              pesP(ip(1),ip(2),ip(3), 2) = pesP(ip(1),ip(2),ip(3), 2) &
+              pesP(ip(1),ip(2),ip(3), 2) = pesP(ip(1), ip(2), ip(3), 2) &
                                              + abs(psiG2(i1,i2))**2 * weight
 
-              pesP(ip(1),ip(2),ip(3), 3) = pesP(ip(1),ip(2),ip(3), 3) &
-                                             + TOFLOAT(psiG1(i1,i2)*conjg(psiG2(i1,i2))) * weight
+              pesP(ip(1),ip(2),ip(3), 3) = pesP(ip(1), ip(2), ip(3), 3) &
+                                             + TOFLOAT(psiG1(i1,i2) * conjg(psiG2(i1,i2))) * weight
                                              
-              pesP(ip(1),ip(2),ip(3), 3) = pesP(ip(1),ip(2),ip(3), 3) &
-                                               + aimag(psiG1(i1,i2)*conjg(psiG2(i1,i2))) * weight
+              pesP(ip(1),ip(2),ip(3), 3) = pesP(ip(1), ip(2), ip(3), 3) &
+                                               + aimag(psiG1(i1,i2) * conjg(psiG2(i1,i2))) * weight
           end do
         end do
           
           
       end if
       
-      idone = idone +1 
+      idone = idone + 1 
       call loct_progress_bar(idone, ntodo)
       
     end do
@@ -838,7 +835,7 @@ subroutine pes_flux_out_vmap_cub(pesK, file, namespace, ll, pmesh, dim)
   FLOAT,             intent(in) :: pmesh(:,:,:,:)  
   integer,           intent(in) :: dim
   
-  integer :: ik1,ik2,ik3, idir
+  integer :: ik1, ik2, ik3, idir
   integer :: iunit
   
   PUSH_SUB(pes_flux_out_vmap_cub)
@@ -884,9 +881,9 @@ subroutine pes_flux_out_vmap_cub(pesK, file, namespace, ll, pmesh, dim)
         
         do idir = dim, 1, -1
           write(iunit, '(1x,e18.10E3)', advance='no') & 
-            units_from_atomic(unit_one/units_out%length,pmesh(ik1,ik2,ik3, idir))
+            units_from_atomic(unit_one/units_out%length,pmesh(ik1, ik2, ik3, idir))
         end do
-        write(iunit, '(1x,e18.10E3)', advance='no') pesK(ik1,ik2,ik3)
+        write(iunit, '(1x,e18.10E3)', advance='no') pesK(ik1, ik2, ik3)
         write(iunit, '(1x)', advance='yes')
         
       end do
@@ -962,7 +959,7 @@ subroutine pes_flux_out_cartesian_ascii(this, st, namespace, dim, path )
   mdim   = dim
 
   SAFE_ALLOCATE(spctrout(1:this%ll(1), 1:this%ll(2), 1:this%ll(3)))
-  SAFE_ALLOCATE(pmesh(1:this%ll(1), 1:this%ll(2), 1:this%ll(3),1:dim))
+  SAFE_ALLOCATE(pmesh(1:this%ll(1), 1:this%ll(2), 1:this%ll(3), 1:dim))
   spctrout = M_ZERO
 
   ! calculate spectra & total distribution
@@ -977,9 +974,9 @@ subroutine pes_flux_out_cartesian_ascii(this, st, namespace, dim, path )
             do ik1 = 1, this%ll(1)
               ikp = ikp + 1 
 
-              spctrout(ik1,ik2,ik3) = spctrout(ik1,ik2,ik3) + &
+              spctrout(ik1, ik2, ik3) = spctrout(ik1, ik2, ik3) + &
                 abs(this%spctramp_cub(ist, isdim, ik, ikp))**M_TWO
-              pmesh(ik1,ik2,ik3, 1:dim) =  this%kcoords_cub(1:dim, ikp, 1)
+              pmesh(ik1, ik2, ik3, 1:dim) =  this%kcoords_cub(1:dim, ikp, 1)
                 
             end do
           end do
@@ -1030,7 +1027,7 @@ subroutine pes_flux_out_polar_ascii(this, st, namespace, dim, efile, mfile)
   FLOAT, allocatable :: spctrout_cub(:), spctrout_sph(:,:)
   FLOAT, allocatable :: spctrsum(:,:,:,:)
   FLOAT              :: weight
-  logical           :: energy_resolved, momentum_resolved
+  logical            :: energy_resolved, momentum_resolved
   
 
   PUSH_SUB(pes_flux_out_polar_ascii)
@@ -1065,8 +1062,8 @@ subroutine pes_flux_out_polar_ascii(this, st, namespace, dim, efile, mfile)
 
 
   Dthetak  = M_ZERO
-  if (mdim ==3)  Dthetak = abs(this%thetak_rng(2) - this%thetak_rng(1))/(this%nstepsthetak)
-  Dphik = abs(this%phik_rng(2) - this%phik_rng(1))/(this%nstepsphik)
+  if (mdim ==3)  Dthetak = abs(this%thetak_rng(2) - this%thetak_rng(1)) / (this%nstepsthetak)
+  Dphik = abs(this%phik_rng(2) - this%phik_rng(1)) / (this%nstepsphik)
   Lphik = abs(this%phik_rng(2) - this%phik_rng(1))
 
   ! calculate spectra & total distribution
@@ -1246,7 +1243,7 @@ subroutine pes_flux_out_polar_ascii(this, st, namespace, dim, efile, mfile)
         
         if (energy_resolved) then
           write(iunitone, '(2(1x,e18.10E3))', advance='no') &
-            units_from_atomic(units_out%energy,kact**M_TWO / M_TWO), sum(sum(sum(spctrsum(:,:,:,ikk),1),1),1) &
+            units_from_atomic(units_out%energy,kact**M_TWO / M_TWO), sum(sum(sum(spctrsum(:,:,:,ikk), 1), 1), 1) &
             * units_from_atomic(unit_one/units_out%length,kact)
           do ik = 1, st%d%nik
             do ist = 1, st%nst
@@ -1283,7 +1280,7 @@ subroutine pes_flux_out_polar_ascii(this, st, namespace, dim, efile, mfile)
           do ikk = 1, this%nk
             kact = this%kcoords_cub(1, this%nk + ikk, 1)
             write(iunitone, '(2(1x,e18.10E3))', advance='no') &
-              units_from_atomic(units_out%energy,kact**M_TWO / M_TWO), sum(sum(sum(spctrsum(:,:,:,ikk),1),1),1) &
+              units_from_atomic(units_out%energy,kact**M_TWO / M_TWO), sum(sum(sum(spctrsum(:,:,:,ikk), 1), 1), 1) &
               * units_from_atomic(unit_one/units_out%length,kact)
           
             do ik = 1, st%d%nik
@@ -1317,25 +1314,25 @@ subroutine pes_flux_out_polar_ascii(this, st, namespace, dim, efile, mfile)
               ikp = ikp + 1
               if(iph == 0) ikp_save = ikp
               phik = iph * M_TWO * M_PI / this%nstepsphik
-              write(iunittwo,'(3(1x,e18.10E3))') units_from_atomic(unit_one/units_out%length,kact), &
+              write(iunittwo,'(3(1x,e18.10E3))') units_from_atomic(unit_one / units_out%length,kact), &
                                                  phik, spctrout_cub(ikp)
             end do
             ! just repeat the result for output
             write(iunittwo,'(3(1x,e18.10E3))') &
-              units_from_atomic(unit_one/units_out%length,kact), M_TWO * M_PI, spctrout_cub(ikp_save)
+              units_from_atomic(unit_one / units_out%length,kact), M_TWO * M_PI, spctrout_cub(ikp_save)
             write(iunittwo, '(1x)', advance='yes')
           end if
 
           if (energy_resolved) then
             write(iunitone, '(2(1x,e18.10E3))', advance='no') &
-              units_from_atomic(units_out%energy,kact**M_TWO / M_TWO), sum(sum(sum(spctrsum(:,:,:,ikk),1),1),1) &
+              units_from_atomic(units_out%energy,kact**M_TWO / M_TWO), sum(sum(sum(spctrsum(:,:,:,ikk), 1), 1), 1) &
               * units_from_atomic(unit_one/units_out%length,kact)
           
             do ik = 1, st%d%nik
               do ist = 1, st%nst
                 do isdim = 1, st%d%dim
                   write(iunitone, '(1x,e18.10E3)', advance='no') spctrsum(ist, isdim, ik, ikk) &
-                    * units_from_atomic(unit_one/units_out%length,kact)
+                    * units_from_atomic(unit_one / units_out%length,kact)
                 end do
               end do
             end do
@@ -1374,14 +1371,14 @@ subroutine pes_flux_out_polar_ascii(this, st, namespace, dim, efile, mfile)
                 ! just repeat the result for output
                 if(iph == (this%nstepsphik - 1)) &
                   write(iunittwo,'(4(1x,e18.10E3))') &
-                    units_from_atomic(unit_one/units_out%length,kact), thetak, Lphik, spctrout_cub(ikp_save)
+                    units_from_atomic(unit_one /units_out%length,kact), thetak, Lphik, spctrout_cub(ikp_save)
 
                 ! just repeat the result for output and exit
                 if(thetak < M_EPSILON .or. abs(thetak-M_PI) < M_EPSILON) then  
                   do iphi = 1, this%nstepsphik
                     phik = iphi * M_TWO * M_PI / this%nstepsphik
                     write(iunittwo,'(4(1x,e18.10E3))') &
-                      units_from_atomic(unit_one/units_out%length, kact), thetak, phik, spctrout_cub(ikp)
+                      units_from_atomic(unit_one / units_out%length, kact), thetak, phik, spctrout_cub(ikp)
                   end do
                   exit
                 end if
@@ -1392,13 +1389,13 @@ subroutine pes_flux_out_polar_ascii(this, st, namespace, dim, efile, mfile)
           
           if (energy_resolved) then
             write(iunitone, '(2(1x,e18.10E3))', advance='no') &
-              units_from_atomic(units_out%energy, kact**M_TWO / M_TWO), sum(sum(sum(spctrsum(:,:,:,ikk),1),1),1) &
-              * units_from_atomic(unit_one/units_out%length,kact)
+              units_from_atomic(units_out%energy, kact**M_TWO / M_TWO), sum(sum(sum(spctrsum(:,:,:,ikk), 1), 1), 1) &
+              * units_from_atomic(unit_one / units_out%length,kact)
             do ik = 1, st%d%nik
               do ist = 1, st%nst
                 do isdim = 1, st%d%dim
                   write(iunitone, '(1x,e18.10E3)', advance='no') spctrsum(ist, isdim, ik, ikk) &
-                  * units_from_atomic(unit_one/units_out%length,kact)
+                  * units_from_atomic(unit_one / units_out%length,kact)
                 end do
               end do
             end do
@@ -1441,12 +1438,11 @@ subroutine pes_flux_dump(restart, this, mesh, st, ierr)
   type(states_elec_t), intent(in)  :: st
   integer,             intent(out) :: ierr
 
-  integer          :: ist, ik, idim, itot
-  integer          :: err
-  integer          :: root(1:P_STRATEGY_MAX)
+  integer            :: ist, ik, idim, itot
+  integer            :: err
+  integer            :: root(1:P_STRATEGY_MAX)
   character(len=128) :: filename
-
-  CMPLX, pointer    :: psi1(:), psi2(:,:)
+  CMPLX, pointer     :: psi1(:), psi2(:,:)
   
   
   PUSH_SUB(pes_flux_dump)
@@ -1540,10 +1536,9 @@ subroutine pes_flux_load(restart, this, st, ierr)
   type(states_elec_t), intent(in)    :: st
   integer,             intent(out)   :: ierr
 
-  integer          :: ist, ik, idim, itot
-  integer          :: err
+  integer            :: ist, ik, idim, itot
+  integer            :: err
   character(len=128) :: filename
-
   CMPLX, pointer    :: psi1(:), psi2(:,:)
 
   PUSH_SUB(pes_flux_load)

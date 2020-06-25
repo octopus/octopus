@@ -321,7 +321,7 @@ contains
           call parse_block_float(blk, 0, imdim - 1, border(imdim))
         end do
         ! Snap the face to the closest grid point
-        border(1:mdim) = int(border(1:mdim)/mesh%spacing(1:mdim))*mesh%spacing(1:mdim)
+        border(1:mdim) = int(border(1:mdim) / mesh%spacing(1:mdim)) * mesh%spacing(1:mdim)
         call parse_block_end(blk)
 
       else if (parse_is_defined(namespace, 'PES_Flux_Lsize')) then 
@@ -331,18 +331,18 @@ contains
           border(1:pdim)= mesh%sb%lsize(1:pdim) * M_TWO 
           call parse_variable(namespace, 'PES_Flux_Lsize', border(mdim), border(mdim))
           ! Snap the plane to the closest grid point
-          border(mdim) = floor(border(mdim)/mesh%spacing(mdim))*mesh%spacing(mdim) 
+          border(mdim) = floor(border(mdim) / mesh%spacing(mdim)) * mesh%spacing(mdim) 
         else 
           call parse_variable(namespace, 'PES_Flux_Lsize', border(mdim), border(mdim))
-          border(1:mdim-1) = border(mdim)
-          border(1:mdim) = floor(border(1:mdim)/mesh%spacing(1:mdim))*mesh%spacing(1:mdim)            
+          border(1:mdim - 1) = border(mdim)
+          border(1:mdim)     = floor(border(1:mdim) / mesh%spacing(1:mdim)) * mesh%spacing(1:mdim)            
         end if
       else
         select case(mesh%sb%box_shape)
         case(PARALLELEPIPED)
           border(1:mdim) = mesh%sb%lsize(1:mdim) * M_HALF
         case(SPHERE)
-          border(1:mdim) = mesh%sb%rsize/sqrt(M_TWO) * M_HALF
+          border(1:mdim) = mesh%sb%rsize / sqrt(M_TWO) * M_HALF
         case default
           call messages_write('PES_Flux_Lsize not specified. No default values available for this box shape.')
           call messages_new_line()
@@ -405,7 +405,7 @@ contains
       !%Description
       !% Number of steps in <math>\theta</math> (<math>0 \le \theta \le \pi</math>) for the spherical surface.
       !%End
-      call parse_variable(namespace, 'PES_Flux_StepsThetaR', 2*this%lmax + 1, nstepsthetar)
+      call parse_variable(namespace, 'PES_Flux_StepsThetaR', 2 * this%lmax + 1, nstepsthetar)
       if(nstepsthetar < 0) call messages_input_error(namespace, 'PES_Flux_StepsThetaR')
       call messages_print_var_value(stdout, "PES_Flux_StepsThetaR", nstepsthetar)
 
@@ -416,7 +416,7 @@ contains
       !%Description
       !% Number of steps in <math>\phi</math> (<math>0 \le \phi \le 2 \pi</math>) for the spherical surface.
       !%End
-      call parse_variable(namespace, 'PES_Flux_StepsPhiR', 2*this%lmax + 1, nstepsphir)
+      call parse_variable(namespace, 'PES_Flux_StepsPhiR', 2 * this%lmax + 1, nstepsphir)
       if(nstepsphir < 0) call messages_input_error(namespace, 'PES_Flux_StepsPhiR')
       call messages_print_var_value(stdout, "PES_Flux_StepsPhiR", nstepsphir)
 
@@ -884,7 +884,7 @@ contains
       if(parse_block(namespace, 'PES_Flux_Kmax', blk) == 0) then
         if (this%kgrid == PES_CARTESIAN) then
           do idim = 1, mdim 
-            call parse_block_float(blk, 0, idim-1, kmax(idim))
+            call parse_block_float(blk, 0, idim - 1, kmax(idim))
           end do
           kgrid_block_dim = mdim
         else
@@ -908,7 +908,7 @@ contains
       if(parse_block(namespace, 'PES_Flux_Kmin', blk) == 0) then
         if (this%kgrid == PES_CARTESIAN) then
           do idim = 1, mdim 
-            call parse_block_float(blk, 0, idim-1, kmin(idim))
+            call parse_block_float(blk, 0, idim - 1, kmin(idim))
           end do
           kgrid_block_dim = mdim
         else
@@ -1023,7 +1023,7 @@ contains
       !% By default theta_min=0, theta_max = pi, npoints = 90.
       !%End
       this%nstepsphik = 90
-      this%phik_rng(1:2) = (/M_ZERO, 2*M_PI/)
+      this%phik_rng(1:2) = (/M_ZERO, 2 * M_PI/)
       if (mdim == 1) this%phik_rng(1:2) = (/M_PI, M_ZERO/)
       if(parse_block(namespace, 'PES_Flux_PhiK', blk) == 0) then
         call parse_block_float(blk, 0, 0, this%phik_rng(1))
@@ -1031,7 +1031,7 @@ contains
         call parse_block_integer(blk, 0, 2, this%nstepsphik)
         call parse_block_end(blk)
         do idim = 1,2
-          if (this%phik_rng(idim) < M_ZERO .or. this%phik_rng(idim) > M_TWO*M_PI) &
+          if (this%phik_rng(idim) < M_ZERO .or. this%phik_rng(idim) > M_TWO * M_PI) &
              call messages_input_error(namespace,'PES_Flux_PhiK')              
         end do 
         if(this%nstepsphik < 0) call messages_input_error(namespace,'PES_Flux_PhiK')
@@ -1052,8 +1052,8 @@ contains
 
       
       Dthetak  = M_ZERO
-      if (mdim ==3)  Dthetak = abs(this%thetak_rng(2) - this%thetak_rng(1))/(this%nstepsthetak)
-      Dphik = abs(this%phik_rng(2) - this%phik_rng(1))/(this%nstepsphik)
+      if (mdim ==3)  Dthetak = abs(this%thetak_rng(2) - this%thetak_rng(1)) / (this%nstepsthetak)
+      Dphik = abs(this%phik_rng(2) - this%phik_rng(1)) / (this%nstepsphik)
 
 
       select case(mdim)
@@ -1101,9 +1101,9 @@ contains
 
 
       if(use_enegy_grid) then
-        this%nk     = nint(abs(Emax-Emin)/DE)
+        this%nk     = nint(abs(Emax - Emin) / DE)
       else  
-        this%nk     = nint(abs(kmax(1)-kmin(1))/this%dk)
+        this%nk     = nint(abs(kmax(1) - kmin(1)) / this%dk)
       end if
       this%nkpnts = this%nstepsomegak * this%nk
 
@@ -1112,7 +1112,7 @@ contains
       this%ll(3)      = this%nstepsthetak !- 1
       this%ll(mdim+1:3) = 1
       
-      SAFE_ALLOCATE(this%klinear(1:this%nk,1))
+      SAFE_ALLOCATE(this%klinear(1:this%nk, 1))
       
 
     else 
@@ -1145,12 +1145,12 @@ contains
       if (kpoints_have_zero_weight_path(sb%kpoints)) then
 
         if (this%arpes_grid) then
-          nkmax = floor(Emax/DE)
-          nkmin = floor(Emin/DE)
+          nkmax = floor(Emax / DE)
+          nkmin = floor(Emin / DE)
 
         else 
-          nkmax = floor(kmax(mdim)/this%dk)
-          nkmin = floor(kmin(mdim)/this%dk)
+          nkmax = floor(kmax(mdim) / this%dk)
+          nkmin = floor(kmin(mdim) / this%dk)
     
         end if
 
@@ -1167,8 +1167,8 @@ contains
           
         else
           
-          nkmax = floor(Emax/DE)
-          nkmin = floor(Emin/DE)
+          nkmax = floor(Emax / DE)
+          nkmin = floor(Emin / DE)
           this%nk = abs(nkmax - nkmin) + 1
           
           this%ll(1:pdim) = floor(abs(kmax(1:pdim) - kmin(1:pdim))/this%dk) + 1
@@ -1176,7 +1176,7 @@ contains
           
         end if
 
-        SAFE_ALLOCATE(this%klinear(1:maxval(this%ll(1:mdim)),1:mdim))
+        SAFE_ALLOCATE(this%klinear(1:maxval(this%ll(1:mdim)), 1:mdim))
         this%klinear = M_ZERO
 
       end if      
@@ -1200,11 +1200,11 @@ contains
     
       if(use_enegy_grid) then
         do ie = 1, this%nk  
-          this%klinear(ie,1) = sqrt(M_TWO*(ie * DE + Emin))
+          this%klinear(ie, 1) = sqrt(M_TWO * (ie * DE + Emin))
         end do
       else  
         do ikk = 1, this%nk  
-          this%klinear(ikk,1) = ikk * this%dk + kmin(1)
+          this%klinear(ikk, 1) = ikk * this%dk + kmin(1)
         end do
       end if
       
@@ -1239,7 +1239,7 @@ contains
         SAFE_ALLOCATE(this%kcoords_sph(1:3, this%nk_start:this%nk_end, 1:this%nstepsomegak))
         this%kcoords_sph = M_ZERO
 
-        SAFE_ALLOCATE(this%ylm_k(0:this%lmax, -this%lmax:this%lmax, this%nstepsomegak_start:this%nstepsomegak_end))
+        SAFE_ALLOCATE(this%ylm_k(0:this%lmax, - this%lmax:this%lmax, this%nstepsomegak_start:this%nstepsomegak_end))
         this%ylm_k = M_z0
 
         ! spherical harmonics & kcoords_sph
@@ -1271,7 +1271,7 @@ contains
             kact = this%klinear(ikk,1)
             do ll = 0, this%lmax
               this%j_l(ll, ikk) = loct_sph_bessel(ll, kact * this%radius) * &
-                                  M_TWO * M_PI / (M_TWO * M_PI)**M_THREE/M_TWO
+                                  M_TWO * M_PI / (M_TWO * M_PI)**M_THREE / M_TWO
             end do
             this%kcoords_sph(:, ikk, :) = kact * this%kcoords_sph(:, ikk, :)
           end do
@@ -1280,9 +1280,6 @@ contains
       else 
         !planar or cubic surface
         
-!         call pes_flux_distribute(1, this%nkpnts, this%nkpnts_start, this%nkpnts_end, comm)
-!         this%parallel_in_momentum = .true.
-
 
         ! no distribution
         this%nkpnts_start = 1 
@@ -1299,8 +1296,7 @@ contains
           do ikk = -this%nk, this%nk
             if(ikk == 0) cycle
             ikp = ikp + 1
-!             kact = ikk * this%dk 
-            kact = sign(1,ikk)*this%klinear(abs(ikk),1)
+            kact = sign(1,ikk) * this%klinear(abs(ikk), 1)
             this%kcoords_cub(1, ikp, 1) = kact
           end do
 
@@ -1356,11 +1352,11 @@ contains
 
         SAFE_ALLOCATE(this%kcoords_cub(1:mdim, this%nkpnts_start:this%nkpnts_end, 1))
 
-        SAFE_ALLOCATE(this%Lkpuvz_inv(this%ll(1),this%ll(2),this%ll(3)))
+        SAFE_ALLOCATE(this%Lkpuvz_inv(this%ll(1), this%ll(2), this%ll(3)))
       
         do idir = 1, mdim
           do ikk = 1, this%ll(idir)  
-            this%klinear(ikk,idir) = ikk * this%dk + kmin(idir)
+            this%klinear(ikk, idir) = ikk * this%dk + kmin(idir)
           end do
         end do
 
@@ -1373,14 +1369,14 @@ contains
           ikp = 0
           kvec(:) = M_ZERO
           do ik3 = 1, this%ll(3)
-            if(mdim>2) kvec(3) = this%klinear(ik3,3)
+            if(mdim>2) kvec(3) = this%klinear(ik3, 3)
             do ik2 = 1, this%ll(2)
-              if(mdim>1) kvec(2) = this%klinear(ik2,2)
+              if(mdim>1) kvec(2) = this%klinear(ik2, 2)
               do ik1 = 1, this%ll(1)
                 ikp = ikp + 1 
-                kvec(1) = this%klinear(ik1,1)
+                kvec(1) = this%klinear(ik1, 1)
                 this%kcoords_cub(1:mdim, ikp, ikpt) =  kvec(1:mdim)
-                this%Lkpuvz_inv(ik1,ik2,ik3) = ikp
+                this%Lkpuvz_inv(ik1, ik2, ik3) = ikp
 
               end do
             end do
@@ -1400,7 +1396,7 @@ contains
               
               do ik1 = 1, this%ll(1)
                 kvec(1) = this%klinear(ik1,1)
-                kvec(1:pdim) = matmul(sb%klattice_primitive(1:pdim,1:pdim),kvec(1:pdim))
+                kvec(1:pdim) = matmul(sb%klattice_primitive(1:pdim, 1:pdim), kvec(1:pdim))
                 call fill_non_periodic_dimension(this)               
               end do
 
@@ -1409,10 +1405,10 @@ contains
               do ik2 = 1, this%ll(2)
                 do ik1 = 1, this%ll(1)
                   kvec(1:2) = (/this%klinear(ik1,1), this%klinear(ik2,2)/)
-                  kvec(1:pdim) = matmul(sb%klattice_primitive(1:pdim,1:pdim),kvec(1:pdim))
+                  kvec(1:pdim) = matmul(sb%klattice_primitive(1:pdim, 1:pdim), kvec(1:pdim))
                   call fill_non_periodic_dimension(this)
                   
-                  this%Lkpuvz_inv(ik1,ik2,ikk-nkmin+1) = ikp
+                  this%Lkpuvz_inv(ik1, ik2, ikk - nkmin + 1) = ikp
                   
                   
                 end do
@@ -1497,16 +1493,16 @@ contains
     if(parse_block(namespace, 'PES_Flux_GridTransformMatrix', blk) == 0) then
       do idim = 1,mdim
         do idir = 1, mdim
-          call parse_block_float(blk, idir-1, idim-1, this%ktransf(idim,idir))
+          call parse_block_float(blk, idir - 1, idim - 1, this%ktransf(idim, idir))
         end do
       end do
       call parse_block_end(blk)
       
       write(message(1),'(a)') 'Momentum grid transformation matrix :'
       do idir = 1, sb%dim
-        write(message(1+idir),'(9f12.6)') ( this%ktransf(idim, idir), idim = 1, mdim) 
+        write(message(1 + idir),'(9f12.6)') ( this%ktransf(idim, idir), idim = 1, mdim) 
       end do
-      call messages_info(1+mdim)
+      call messages_info(1 + mdim)
 
       
       !Apply the transformation
@@ -1526,8 +1522,8 @@ contains
     
       else !planar or cubic surface
       
-        do ikpt = kptst, kptend+1
-          if (ikpt == kptend+1) then
+        do ikpt = kptst, kptend + 1
+          if (ikpt == kptend + 1) then
             kpoint(1:sb%dim) = M_ZERO
           else
             kpoint(1:sb%dim) = kpoints_get_point(sb%kpoints, ikpt)
@@ -1563,10 +1559,10 @@ contains
       ikp = ikp + 1
       
       sign = 1         
-      if (ikk /= 0) sign= ikk/abs(ikk)        
+      if (ikk /= 0) sign= ikk / abs(ikk)        
       
       kpar(1:pdim) = kvec(1:pdim) 
-      val = abs(ikk)*DE * M_TWO - sum(kpar(1:pdim)**2)
+      val = abs(ikk) * DE * M_TWO - sum(kpar(1:pdim)**2)
       if (val >= 0) then
         kvec(mdim) =  sign * sqrt(val)
       else  ! if E < p//^2/2
@@ -1645,7 +1641,7 @@ contains
 
               !$omp parallel do schedule(static)
               do ip = 1, mesh%np_part
-                psi(ip) = exp(-M_zI*sum(mesh%x(ip, 1:mdim)*kpoint(1:mdim)))*psi(ip) 
+                psi(ip) = exp(- M_zI * sum(mesh%x(ip, 1:mdim) * kpoint(1:mdim))) * psi(ip) 
               end do
               !$omp end parallel do
             end if
@@ -1719,7 +1715,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine pes_flux_integrate_cub_tabulate(this,mesh,st)
+  subroutine pes_flux_integrate_cub_tabulate(this, mesh, st)
     type(pes_flux_t),    intent(inout) :: this
     type(mesh_t),        intent(in)    :: mesh
     type(states_elec_t), intent(in)    :: st
@@ -1763,7 +1759,7 @@ contains
 !         print *, "mesh%sb%rlattice_primitive(1:fdim, 1:fdim) ", mesh%sb%rlattice_primitive(1:fdim, 1:fdim)
 !       end if
       
-      this%srfcnrml(:,1: this%nsrfcpnts ) = this%srfcnrml(:,1:this%nsrfcpnts )*jdet
+      this%srfcnrml(:, 1:this%nsrfcpnts) = this%srfcnrml(:, 1:this%nsrfcpnts) * jdet
     end if
     
     
@@ -1775,9 +1771,9 @@ contains
       do ik = kptst, kptend
         do ikp = ikp_start, ikp_end
           do isp = 1, this%nsrfcpnts 
-            this%expkr(isp,ikp,ik,1) = exp(-M_zI * sum(this%rcoords(1:mdim,isp) &
+            this%expkr(isp,ikp,ik,1) = exp(- M_zI * sum(this%rcoords(1:mdim,isp) &
                                                 * this%kcoords_cub(1:mdim, ikp, ik)) ) &
-                                                * (M_TWO*M_PI)**(-mdim/M_TWO)
+                                                * (M_TWO * M_PI)**(- mdim / M_TWO)
       
           end do
         end do
@@ -1798,29 +1794,29 @@ contains
         do idir = 1, mdim
           do ikp = 1, this%ll(idir)
             do isp = 1, this%nsrfcpnts 
-              this%expkr(isp,ikp,ik,idir) = exp(-M_zI * this%rcoords(idir,isp) &
+              this%expkr(isp,ikp,ik,idir) = exp(- M_zI * this%rcoords(idir,isp) &
                                                   * this%klinear(ikp, idir) ) & 
-                                                  * (M_TWO*M_PI)**(-M_ONE/M_TWO)
+                                                  * (M_TWO * M_PI)**(-M_ONE / M_TWO)
     
             end do
           end do
         end do
       end do
 
-      SAFE_ALLOCATE(this%expkr_perp(maxval(this%ll(1:mdim)),nfaces))
+      SAFE_ALLOCATE(this%expkr_perp(maxval(this%ll(1:mdim)), nfaces))
       this%expkr_perp(:,:) = M_z1
 
       do ifc = 1, nfaces
-        if (this%face_idx_range(ifc, 1)<0) cycle ! this face have no local surface point
+        if (this%face_idx_range(ifc, 1) < 0) cycle ! this face have no local surface point
         isp = this%face_idx_range(ifc, 1)
         do idir = 1, mdim
           if(abs(this%srfcnrml(idir, isp)) >= M_EPSILON) n_dir = idir
         end do 
 
         do ikp = 1, this%ll(n_dir)
-          this%expkr_perp(ikp,ifc) = exp(-M_zI * this%rcoords(n_dir,isp) &
+          this%expkr_perp(ikp, ifc) = exp(- M_zI * this%rcoords(n_dir,isp) &
                                             * this%klinear(ikp, n_dir) ) & 
-                                            * (M_TWO*M_PI)**(-M_ONE/M_TWO)
+                                            * (M_TWO * M_PI)**(- M_ONE / M_TWO)
 
 
         end do
@@ -1845,12 +1841,12 @@ contains
         end if
         do ikp = ikp_start, ikp_end
           vec(1:pdim) = this%kcoords_cub(1:pdim, ikp, ik_map) + kpoint(1:pdim)
-          do j1 = 0, mesh%sb%kpoints%nik_axis(1)-1
-            do j2 = 0, mesh%sb%kpoints%nik_axis(2)-1
-              jvec(1:2)=(/j1,j2/)
-              lvec(1:pdim)=matmul(mesh%sb%rlattice(1:pdim,1:2),jvec(1:2))
-              tmp = sum(lvec(1:pdim)*vec(1:pdim))
-              this%bvk_phase(ikp,ik) =  this%bvk_phase(ikp,ik) &
+          do j1 = 0, mesh%sb%kpoints%nik_axis(1) - 1
+            do j2 = 0, mesh%sb%kpoints%nik_axis(2) - 1
+              jvec(1:2)=(/j1, j2/)
+              lvec(1:pdim)=matmul(mesh%sb%rlattice(1:pdim, 1:2), jvec(1:2))
+              tmp = sum(lvec(1:pdim) * vec(1:pdim))
+              this%bvk_phase(ikp, ik) =  this%bvk_phase(ikp,ik) &
                                      +  exp(M_zI * tmp)
             
             end do
@@ -1858,7 +1854,7 @@ contains
 
         end do
       end do
-      this%bvk_phase(:,:) = this%bvk_phase(:,:) * M_ONE/product(mesh%sb%kpoints%nik_axis(1:pdim))
+      this%bvk_phase(:,:) = this%bvk_phase(:,:) * M_ONE / product(mesh%sb%kpoints%nik_axis(1:pdim))
     
 
 !   Keep this because is useful for debug but not enough to bother having it polished out        
@@ -1890,11 +1886,11 @@ contains
     
     select case (n_dir)
       case (1)
-        ikp = this%Lkpuvz_inv(ikpz,ikpu,ikpv)
+        ikp = this%Lkpuvz_inv(ikpz, ikpu, ikpv)
       case (2)
-        ikp = this%Lkpuvz_inv(ikpu,ikpz,ikpv)
+        ikp = this%Lkpuvz_inv(ikpu, ikpz, ikpv)
       case (3)
-        ikp = this%Lkpuvz_inv(ikpu,ikpv,ikpz)
+        ikp = this%Lkpuvz_inv(ikpu, ikpv, ikpz)
         
     end select
 
@@ -2026,7 +2022,7 @@ contains
     phase(:,:) = M_z0
 
     
-    nfaces = mdim*2
+    nfaces = mdim * 2
     if(this%surf_shape == PES_PLANE) nfaces = 1 
 
     SAFE_ALLOCATE( wfpw(ikp_start:ikp_end))
@@ -2101,13 +2097,13 @@ contains
             
                   gwfpw(ikp) = &
                     sum(this%gwf(ist, isdim, ik, isp_start:isp_end, itstep, n_dir) &
-                      * this%expkr(isp_start:isp_end,ikp,ik_map,1)                 &
+                      * this%expkr(isp_start:isp_end, ikp, ik_map, 1)              &
                       * this%srfcnrml(n_dir, isp_start:isp_end))
 
 
                   wfpw(ikp) = &
                     sum(this%wf(ist, isdim, ik, isp_start:isp_end, itstep)        &
-                      * this%expkr(isp_start:isp_end,ikp,ik_map,1)                &
+                      * this%expkr(isp_start:isp_end, ikp,ik_map, 1)              &
                       * this%srfcnrml(n_dir, isp_start:isp_end))
                 end do 
 
@@ -2118,21 +2114,21 @@ contains
               
                   
                     face_int_gwf = sum(this%gwf(ist, isdim, ik, isp_start:isp_end, itstep, n_dir) &
-                                 * this%expkr(isp_start:isp_end,ikpu,ik_map,dir_on_face(1)) &
-                                 * this%expkr(isp_start:isp_end,ikpv,ik_map,dir_on_face(2)) &
+                                 * this%expkr(isp_start:isp_end, ikpu, ik_map, dir_on_face(1)) &
+                                 * this%expkr(isp_start:isp_end, ikpv, ik_map, dir_on_face(2)) &
                                  * this%srfcnrml(n_dir, isp_start:isp_end))
                                  
                     face_int_wf  = sum(this%wf(ist, isdim, ik, isp_start:isp_end, itstep) &
-                                 * this%expkr(isp_start:isp_end,ikpu,ik_map,dir_on_face(1)) &
-                                 * this%expkr(isp_start:isp_end,ikpv,ik_map,dir_on_face(2)) &
+                                 * this%expkr(isp_start:isp_end, ikpu, ik_map, dir_on_face(1)) &
+                                 * this%expkr(isp_start:isp_end, ikpv, ik_map, dir_on_face(2)) &
                                  * this%srfcnrml(n_dir, isp_start:isp_end))
                                  
                     do ikpz = 1, this%ll(n_dir)
 
-                       gwfpw(get_ikp(this,ikpu,ikpv,ikpz,n_dir)) = face_int_gwf &
-                                                                 * this%expkr_perp(ikpz,ifc)  
-                       wfpw( get_ikp(this,ikpu,ikpv,ikpz,n_dir)) = face_int_wf &
-                                                                 * this%expkr_perp(ikpz,ifc)  
+                       gwfpw(get_ikp(this, ikpu, ikpv, ikpz, n_dir)) = face_int_gwf &
+                                                                     * this%expkr_perp(ikpz, ifc)  
+                       wfpw( get_ikp(this, ikpu, ikpv, ikpz, n_dir)) = face_int_wf &
+                                                                     * this%expkr_perp(ikpz, ifc)  
 
                     end do
                   
@@ -2145,7 +2141,7 @@ contains
                             
 
                 ! Sum it up  
-                Jk_cub(ist, isdim, ik, ikp_start:ikp_end) = Jk_cub(ist, isdim, ik,ikp_start:ikp_end) +  &
+                Jk_cub(ist, isdim, ik, ikp_start:ikp_end) = Jk_cub(ist, isdim, ik, ikp_start:ikp_end) +  &
                   phase(ikp_start:ikp_end, ik) * ( wfpw(ikp_start:ikp_end) * &
                      (M_TWO * this%veca(n_dir, itstep) / P_c  - this%kcoords_cub(n_dir, ikp_start:ikp_end, ik_map)) + &
                       M_zI * gwfpw(ikp_start:ikp_end) )
@@ -2164,7 +2160,7 @@ contains
     end do ! face loop 
 
 
-    this%conjgphase_prev(ikp_start:ikp_end,:) = vphase(ikp_start:ikp_end,:)
+    this%conjgphase_prev(ikp_start:ikp_end, :) = vphase(ikp_start:ikp_end, :)
 
 
     if(mesh%parallel_in_domains .and.(     bitand(this%par_strategy, OPTION__PES_FLUX_PARALLELIZATION__PF_TIME)    /= 0 &
@@ -2174,7 +2170,7 @@ contains
 
 
 
-    this%spctramp_cub = this%spctramp_cub + spctramp_cub*dt
+    this%spctramp_cub = this%spctramp_cub + spctramp_cub * dt
 
     SAFE_DEALLOCATE_A(gwfpw)
     SAFE_DEALLOCATE_A(wfpw)
@@ -2278,8 +2274,8 @@ contains
             end if
 
             if(itstep == tdstep_on_node) then
-              s1_node(ist, isdim, ik, :, :, :) = s1_act(:,:,:)
-              s2_node(ist, isdim, ik, :, :)    = s2_act(:,:)
+              s1_node(ist, isdim, ik, :, :, :) = s1_act(:, :, :)
+              s2_node(ist, isdim, ik, :, :)    = s2_act(:, :)
             end if
 
           end do
@@ -2324,8 +2320,8 @@ contains
             end if
 #if defined(HAVE_MPI)
             if(mesh%parallel_in_domains) then
-              call MPI_Bcast(s1_act, (lmax+1)*(2*lmax+1)*3, MPI_CMPLX, itstep - 1, mesh%mpi_grp%comm, mpi_err)
-              call MPI_Bcast(s2_act, (lmax+1)*(2*lmax+1), MPI_CMPLX, itstep - 1, mesh%mpi_grp%comm, mpi_err)
+              call MPI_Bcast(s1_act, (lmax + 1) * (2 * lmax + 1) * 3, MPI_CMPLX, itstep - 1, mesh%mpi_grp%comm, mpi_err)
+              call MPI_Bcast(s2_act, (lmax + 1) * (2 * lmax + 1), MPI_CMPLX, itstep - 1, mesh%mpi_grp%comm, mpi_err)
               call MPI_Barrier(mesh%mpi_grp%comm, mpi_err)
             end if
 #endif
@@ -2399,7 +2395,8 @@ contains
       call comm_allreduce(mesh%mpi_grp%comm, spctramp_sph)
     end if
 
-    this%spctramp_sph(:,:,:,1:this%nk,:) = this%spctramp_sph(:,:,:,1:this%nk,:) + spctramp_sph(:,:,:,1:this%nk,:)*dt
+    this%spctramp_sph(:, :, :, 1:this%nk, :) = this%spctramp_sph(:, :, :, 1:this%nk, :) & 
+                                             + spctramp_sph(:, :, :, 1:this%nk, :) * dt
     SAFE_DEALLOCATE_A(spctramp_sph)
 
     POP_SUB(pes_flux_integrate_sph)
@@ -2415,12 +2412,12 @@ contains
     FLOAT,            intent(in)    :: fc_ptdens
 
     integer, allocatable  :: which_surface(:)
-    FLOAT                 :: xx(1:MAX_DIM), dd, area, dS(1:MAX_DIM,1:2), factor
+    FLOAT                 :: xx(1:MAX_DIM), dd, area, dS(1:MAX_DIM, 1:2), factor
     integer               :: mdim, imdim, idir, isp, pm,nface, idim, ndir, iu,iv, iuv(1:2)
     integer               :: ip_global, npface
     integer               :: rankmin, nsurfaces
     logical               :: in_ab
-    integer               :: ip_local, NN(1:MAX_DIM,1:2), idx(1:MAX_DIM,1:2) 
+    integer               :: ip_local, NN(1:MAX_DIM, 1:2), idx(1:MAX_DIM, 1:2) 
     integer               :: isp_end, isp_start, ifc, n_dir, nfaces, mindim
     FLOAT                 :: RSmax(1:2),RSmin(1:2),RS(1:2), dRS(1:2), weight
 
@@ -2434,14 +2431,14 @@ contains
     
     
 
-    SAFE_ALLOCATE(this%face_idx_range(1:mdim*2,1:2))
-    SAFE_ALLOCATE(this%LLr(mdim,1:2))
-    SAFE_ALLOCATE(this%NN(mdim,1:2))
+    SAFE_ALLOCATE(this%face_idx_range(1:mdim * 2, 1:2))
+    SAFE_ALLOCATE(this%LLr(mdim, 1:2))
+    SAFE_ALLOCATE(this%NN(mdim, 1:2))
 
-    this%face_idx_range(:,:) = 0
-    this%LLr(:,:) = M_ZERO
-    this%NN(:,:) = 1
-    NN(:,:) = 1
+    this%face_idx_range(:, :) = 0
+    this%LLr(:, :) = M_ZERO
+    this%NN(:, :) = 1
+    NN(:, :) = 1
 
     if (this%surf_interp) then
       ! Create a surface with points not on the mesh
@@ -2463,7 +2460,7 @@ contains
         area = M_ONE
         do idir=1, mdim
           if (idir == ndir) cycle
-          area = area * border(idir)*factor
+          area = area * border(idir) * factor
         end do
         
         npface = int(fc_ptdens * area) ! number of points on the face
@@ -2471,16 +2468,16 @@ contains
         idim = 1 
         do idir=1, mdim
           if (idir == ndir) cycle
-          NN(ndir,idim) = int( sqrt(npface * (border(idir)*factor)**2/area) )
-          dS(ndir,idim) = border(idir)*factor/NN(ndir,idim)
-          this%LLr(ndir,idim) = NN(ndir,idim)*dS(ndir,idim)
-          idx(ndir,idim) = idir
+          NN(ndir, idim) = int( sqrt(npface * (border(idir) * factor)**2 / area) )
+          dS(ndir, idim) = border(idir) * factor / NN(ndir, idim)
+          this%LLr(ndir, idim) = NN(ndir, idim) * dS(ndir, idim)
+          idx(ndir, idim) = idir
           idim = idim + 1
         end do
-        this%nsrfcpnts = this%nsrfcpnts + 2*product(NN(ndir,1:mdim-1))
+        this%nsrfcpnts = this%nsrfcpnts + 2 * product(NN(ndir, 1:mdim - 1))
       end do
       
-      this%NN(1:mdim,:)  = NN(1:mdim,:)
+      this%NN(1:mdim, :)  = NN(1:mdim, :)
       
       
       ASSERT(this%nsrfcpnts > 0) !at this point should be satisfied otherwise the point density is way too small
@@ -2489,8 +2486,8 @@ contains
       SAFE_ALLOCATE(this%srfcnrml(1:mdim, 0:this%nsrfcpnts))
       SAFE_ALLOCATE(this%rcoords(1:mdim, 0:this%nsrfcpnts))
     
-      this%srfcnrml(:,:) = M_ZERO
-      this%rcoords(:,:)  = M_ZERO
+      this%srfcnrml(:, :) = M_ZERO
+      this%rcoords(:, :)  = M_ZERO
     
 
       isp = 1  
@@ -2503,45 +2500,44 @@ contains
           do iv = 1, NN(ndir,2)
             this%rcoords(ndir, isp)  =  border(ndir)
             this%srfcnrml(ndir, isp) =  product(dS(ndir,1:mdim-1))             
-            iuv =(/iu,iv/)
+            iuv =(/iu, iv/)
             do idim = 1, mdim-1
-              this%rcoords(idx(ndir,idim), isp) = (-NN(ndir,idim)*M_HALF -M_HALF + iuv(idim)) * dS(ndir,idim)
-!               this%rcoords(idx(ndir,idim), isp) = (-NN(ndir,idim)*M_HALF -M_ONE + iuv(idim)) * dS(ndir,idim) + mesh%spacing(idx(ndir,idim))/M_TWO
+              this%rcoords(idx(ndir, idim), isp) = (-NN(ndir, idim) * M_HALF - M_HALF + iuv(idim)) * dS(ndir, idim)
             end do 
             isp = isp + 1
           end do
         end do
-        this%face_idx_range(ifc,2) = isp-1
+        this%face_idx_range(ifc, 2) = isp-1
 
         ifc = ifc + 1
 
         !Down face
-        this%face_idx_range(ifc,1) = isp
-        do iu = 1, NN(ndir,1)
-          do iv = 1, NN(ndir,2)
+        this%face_idx_range(ifc, 1) = isp
+        do iu = 1, NN(ndir, 1)
+          do iv = 1, NN(ndir, 2)
             this%rcoords(ndir, isp)  = -border(ndir)
-            this%srfcnrml(ndir, isp) = -product(dS(ndir,1:mdim-1)) 
-            iuv =(/iu,iv/)              
+            this%srfcnrml(ndir, isp) = -product(dS(ndir, 1:mdim - 1)) 
+            iuv =(/iu, iv/)              
             do idim = 1, mdim-1
-              this%rcoords(idx(ndir,idim), isp) = (-NN(ndir,idim)*M_HALF -M_HALF + iuv(idim)) * dS(ndir,idim)
+              this%rcoords(idx(ndir, idim), isp) = (-NN(ndir, idim) * M_HALF -M_HALF + iuv(idim)) * dS(ndir, idim)
             end do              
             isp = isp + 1
           end do
         end do
-        this%face_idx_range(ifc,2) = isp-1
+        this%face_idx_range(ifc, 2) = isp-1
 
         ifc = ifc + 1 
       end do
       
       do isp = 1, this%nsrfcpnts
-        xx(1:mdim) = matmul(mesh%sb%rlattice_primitive(1:mdim,1:mdim),this%rcoords(1:mdim, isp))
+        xx(1:mdim) = matmul(mesh%sb%rlattice_primitive(1:mdim, 1:mdim),this%rcoords(1:mdim, isp))
         this%rcoords(1:mdim, isp) = xx(1:mdim)
       end do
       
     else
       ! Surface points are on the mesh
       
-      nfaces = mdim*2
+      nfaces = mdim * 2
       if(this%surf_shape == PES_PLANE) nfaces = 2 
 
       in_ab = .false.
@@ -2579,7 +2575,7 @@ contains
             else
               dd = border(imdim) - abs(xx(imdim))
             end if
-            if(dd < mesh%spacing(imdim)/M_TWO) then
+            if(dd < mesh%spacing(imdim) / M_TWO) then
               nsurfaces = nsurfaces + 1
               which_surface(ip_global) = int(sign(M_ONE, xx(imdim))) * imdim  ! +-x=+-1, +-y=+-2, +-z=+-3
             end if
@@ -2615,7 +2611,7 @@ contains
       do idir = mdim, 1, -1 ! Start counting from z to simplify implementation for semiperiodic systems (pln)
         do pm = 1, -1, -2 
           nface = nface + 1
-          this%face_idx_range(nface,1) = isp + 1
+          this%face_idx_range(nface, 1) = isp + 1
         
           do ip_global = 1, mesh%np_global
             if(abs(which_surface(ip_global)) == idir .and. sign(1, which_surface(ip_global)) == pm) then
@@ -2643,7 +2639,7 @@ contains
       
       
       !Get dimensions and spacing on each (pair of) face 
-      do ifc = 1, nint((nfaces+0.5)/2)
+      do ifc = 1, nint((nfaces + 0.5) / 2)
         isp_start = this%face_idx_range(ifc, 1)
         isp_end   = this%face_idx_range(ifc, 2)
       
@@ -2659,7 +2655,7 @@ contains
         do idir = 1, mdim 
           if (idir == n_dir ) cycle
           dRS(idim)= mesh%spacing(idir)
-          idim = idim+1
+          idim = idim + 1
         end do
 
       
@@ -2668,21 +2664,21 @@ contains
         RSmax = M_ZERO
         do isp = isp_start, isp_end
           !measure in reduced coordinates 
-          xx(1:mdim) = matmul(this%rcoords(1:mdim,isp),mesh%sb%klattice_primitive(1:mdim,1:mdim))
+          xx(1:mdim) = matmul(this%rcoords(1:mdim, isp), mesh%sb%klattice_primitive(1:mdim, 1:mdim))
           idim = 1
           do idir = 1, mdim 
             if (idir == n_dir ) cycle
             RS(idim)=xx(idir)
             if (RS(idim) < RSmin(idim)) RSmin(idim) = RS(idim)
             if (RS(idim) > RSmax(idim)) RSmax(idim) = RS(idim)
-            idim = idim+1
+            idim = idim + 1
           end do        
         end do
         
    
-        do idir = 1, mdim -1
+        do idir = 1, mdim - 1
           this%LLr(n_dir,idir) = RSmax(idir) - RSmin(idir) + dRS(idir)
-          if(dRS(idir) > M_ZERO) this%NN(n_dir,idir) = int(this%LLr(n_dir,idir)/dRS(idir))
+          if(dRS(idir) > M_ZERO) this%NN(n_dir,idir) = int(this%LLr(n_dir,idir) / dRS(idir))
         end do        
 
       end do
@@ -2695,8 +2691,8 @@ contains
       !and have peaks in correspondence to the edges and corners of the parallelepiped
       do isp = 1, this%nsrfcpnts
         weight = sum(this%rcoords(1:mdim, isp) * this%srfcnrml(1:mdim, isp))
-        weight = weight/sum(this%rcoords(1:mdim, isp)**2)/sum(this%srfcnrml(1:mdim, isp)**2)
-        this%srfcnrml(1:mdim, isp) = this%srfcnrml(1:mdim, isp)*abs(weight)                
+        weight = weight/sum(this%rcoords(1:mdim, isp)**2) / sum(this%srfcnrml(1:mdim, isp)**2)
+        this%srfcnrml(1:mdim, isp) = this%srfcnrml(1:mdim, isp) * abs(weight)                
       end do        
       
     end if
@@ -2743,9 +2739,9 @@ contains
       thetar  = ith * dthetar
 
       if(ith == 0 .or. ith == nstepsthetar) then
-        weight = (M_ONE - cos(dthetar/M_TWO)) * M_TWO * M_PI
+        weight = (M_ONE - cos(dthetar / M_TWO)) * M_TWO * M_PI
       else
-        weight = abs(cos(thetar - dthetar/M_TWO) - cos(thetar + dthetar/M_TWO)) &
+        weight = abs(cos(thetar - dthetar / M_TWO) - cos(thetar + dthetar / M_TWO)) &
           * M_TWO * M_PI / nstepsphir
       end if
 

@@ -178,14 +178,14 @@ program photoelectron_spectrum
 
 
   integrate = INTEGRATE_NONE
-  uEstep = -1
-  uEspan = (/-1,-1/)
+  uEstep  = -1
+  uEspan  = (/-1,-1/)
   uThstep = -1
   uThspan = (/-1,-1/)
   uPhstep = -1
   uPhspan = (/-1,-1/)
-  center = (/0,0,0/)
-  pvec = (/1,0,0/)
+  center  = (/0,0,0/)
+  pvec    = (/1,0,0/)
 
   what = OPTION__PHOTOELECTRONSPECTRUMOUTPUT__ENERGY_TOT 
   pesout%pvec = pvec
@@ -202,11 +202,11 @@ program photoelectron_spectrum
     
     if (dim == 2) then
       ! write the velocity map on plane pz=0 as it contains all the informations
-      pol = (/0,1,0/) 
+      pol  = (/0,1,0/) 
       pvec = (/0,0,1/)
       
       what = OPTION__PHOTOELECTRONSPECTRUMOUTPUT__VELOCITY_MAP_CUT 
-      pesout%pol = (/0,1,0/) 
+      pesout%pol  = (/0,1,0/) 
       pesout%pvec = (/0,0,1/)
     end if
     
@@ -221,11 +221,11 @@ program photoelectron_spectrum
     if (have_zweight_path) then
       ! In this case the output is well defined only on a path in reciprocal space
       ! so we are going to have only a 2D slice regardless of dim=2 or 3 
-      pol = (/0,0,1/) 
+      pol  = (/0,0,1/) 
       pvec = (/0,1,0/)
 
       what = OPTION__PHOTOELECTRONSPECTRUMOUTPUT__ARPES_CUT
-      pesout%pol = (/0,0,1/) 
+      pesout%pol  = (/0,0,1/) 
       pesout%pvec = (/0,1,0/)
     end if 
     
@@ -312,7 +312,7 @@ program photoelectron_spectrum
   !% <br> i | j
   !% <br>%</tt>
   !%End
-  st_range(1:2)=(/1, st%nst/)
+  st_range(1:2) = (/1, st%nst/)
   resolve_states = .false.
   if(parse_block(global_namespace, 'PhotoelectronSpectrumResolveStates', blk) == 0) then
     if(parse_block_cols(blk,0) < 2) call messages_input_error(global_namespace, 'PhotoelectronSpectrumResolveStates')
@@ -327,7 +327,7 @@ program photoelectron_spectrum
   
   
   krng(1) = 1
-  krng(2) =  kpoints_number(sb%kpoints)
+  krng(2) = kpoints_number(sb%kpoints)
   
   if (have_zweight_path) then 
     
@@ -342,7 +342,7 @@ program photoelectron_spectrum
       call messages_info(1)
 
       kpth_dir = 1
-      pvec = (/0,1,0/)
+      pvec     = (/0,1,0/)
     
 
     else
@@ -374,18 +374,18 @@ program photoelectron_spectrum
     call messages_info(2)
   end if
   
-  SAFE_ALLOCATE(pmesh(1:llp(1),1:llp(2),1:llp(3),1:3 + 1))
-  SAFE_ALLOCATE(pesP(1:llp(1),1:llp(2),1:llp(3),1:st%d%nspin))
+  SAFE_ALLOCATE(pmesh(1:llp(1), 1:llp(2), 1:llp(3), 1:3 + 1))
+  SAFE_ALLOCATE( pesP(1:llp(1), 1:llp(2), 1:llp(3), 1:st%d%nspin))
 
   select case (pes_method)
   case (OPTION__PHOTOELECTRONSPECTRUM__PES_MASK)
-    SAFE_ALLOCATE(Lp(1:llpp(1),1:llpp(2),1:llpp(3),krng(1):krng(2),1:3))
+    SAFE_ALLOCATE(Lp(1:llpp(1), 1:llpp(2), 1:llpp(3), krng(1):krng(2), 1:3))
     call pes_mask_pmesh(global_namespace, dim, sb%kpoints, llpp, Lg, pmesh, idxZero, krng, Lp)
 
   case (OPTION__PHOTOELECTRONSPECTRUM__PES_FLUX)
     ! Lp is allocated inside pes_flux_pmesh to comply with the 
     ! declinations of the different surfaces
-    SAFE_ALLOCATE(Ekin(1:llp(1),1:llp(2),1:llp(3)))
+    SAFE_ALLOCATE(Ekin(1:llp(1), 1:llp(2), 1:llp(3)))
     Ekin = M_ZERO
     call pes_flux_pmesh(pflux, global_namespace, dim, sb%kpoints, llpp, pmesh, idxZero, krng, Lp, Ekin)
   end select
@@ -517,8 +517,8 @@ program photoelectron_spectrum
         call output_pes()
       else 
         ! Write total quantities (summed over spin) 
-        SAFE_ALLOCATE(pesP_out(1:llp(1),1:llp(2),1:llp(3)))
-        pesP_out(:,:,:) = pesP(:,:,:,1)+pesP(:,:,:,2)
+        SAFE_ALLOCATE(pesP_out(1:llp(1), 1:llp(2), 1:llp(3)))
+        pesP_out(:,:,:) = pesP(:,:,:,1) + pesP(:,:,:,2)
     
         call output_pes()
         
@@ -590,9 +590,9 @@ program photoelectron_spectrum
         if(sum((pvec-(/0 ,0 ,1/))**2)  <= M_EPSILON  )  dir = 3
 
         if (use_zweight_path) then
-          filename = outfile('PES_velocity_map',ist,ispin,'path')
+          filename = outfile('PES_velocity_map', ist, ispin, 'path')
         else
-          filename = outfile('PES_velocity_map',ist,ispin,'p'//index2axis(dir)//'=0')
+          filename = outfile('PES_velocity_map', ist, ispin, 'p'//index2axis(dir)//'=0')
         end if
 
         if (dir == -1) then
@@ -628,7 +628,7 @@ program photoelectron_spectrum
 
         select case (pes_method)
         case (OPTION__PHOTOELECTRONSPECTRUM__PES_MASK)
-          call pes_mask_output_ar_plane_M(pesP_out,outfile('./PES_energy',ist,ispin,'map'), &
+          call pes_mask_output_ar_plane_M(pesP_out,outfile('./PES_energy', ist, ispin, 'map'), &
                                           global_namespace, Lg, llp, dim, pol, Emax, Estep)
         case (OPTION__PHOTOELECTRONSPECTRUM__PES_FLUX)                                     
           call messages_not_implemented("Angle and energy-resolved on a plane for the flux method") 
@@ -652,7 +652,7 @@ program photoelectron_spectrum
         
         select case (pes_method)
         case (OPTION__PHOTOELECTRONSPECTRUM__PES_MASK)
-          call pes_mask_output_ar_spherical_cut_M(pesP_out,outfile('./PES_sphere',ist,ispin,'map'), & 
+          call pes_mask_output_ar_spherical_cut_M(pesP_out,outfile('./PES_sphere', ist, ispin, 'map'), & 
                                                   global_namespace, Lg, llp, dim, pol, Emin, Emax, Estep)
 
         case (OPTION__PHOTOELECTRONSPECTRUM__PES_FLUX)                                     
