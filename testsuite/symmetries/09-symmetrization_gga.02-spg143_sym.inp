@@ -18,6 +18,9 @@ ExtraStates = 2
 ConvRelDens = 5e-5
 EigensolverTolerance = 1e-7
 
+Smearing = 0.1*eV
+SmearingFunction = fermi_dirac
+
 XCFunctional = gga_x_pbe + gga_c_pbe
 
 %KpointsGrid
