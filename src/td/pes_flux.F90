@@ -1070,7 +1070,6 @@ contains
           this%nstepsphik   = 1
           this%nstepsthetak = 1
         end if
-!         this%nstepsomegak = this%nstepsphik * (this%nstepsthetak - 1) + 2
         ! count the omegak samples
         iomk = 0
         do ith = 0, this%nstepsthetak
@@ -1088,7 +1087,6 @@ contains
       write(message(1),'(a)') "Polar momentum grid:"
       call messages_info(1)
       if(mdim == 3)  then
-!         call messages_print_var_value(stdout, "PES_Flux_StepsThetaK", this%nstepsthetak)
         write(message(1),'(a,f12.6,a,f12.6,a, i6)') & 
             "  Theta = (", this%thetak_rng(1), ",",this%thetak_rng(2), &
              "); n = ", this%nstepsthetak
@@ -1099,7 +1097,6 @@ contains
            "); n = ", this%nstepsphik
       call messages_info(1)
 
-!       call messages_print_var_value(stdout, "PES_Flux_StepsPhiK", this%nstepsphik)
 
 
       if(use_enegy_grid) then
@@ -1160,13 +1157,6 @@ contains
       
         this%nk = this%ll(mdim) 
       
-
-!         call messages_write("Number of Brillouin zones = ")
-!         do idim = 1 , pdim
-!           call messages_write( this%ll(idim) )
-!           if (.not. idim == pdim) call messages_write(" x ")
-!         end do
-!         call messages_info()
         
       else
 
@@ -1336,8 +1326,6 @@ contains
       end if
 
     case (PES_CARTESIAN)
-
-  !         call pes_flux_distribute(1, this%nkpnts, this%nkpnts_start, this%nkpnts_end, mpi_world%comm)
 
       this%nkpnts_start = 1 
       this%nkpnts_end   = this%nkpnts
@@ -1576,16 +1564,13 @@ contains
       sign = 1         
       if (ikk /= 0) sign= ikk/abs(ikk)        
       
-!       kpoint(1:sb%dim) = M_ZERO
-!       if (kpoints_have_zero_weight_path(sb%kpoints)) kpoint(1:sb%dim) = kpoints_get_point(sb%kpoints, ikpt)
-      kpar(1:pdim) = kvec(1:pdim) !- kpoint(1:pdim)
+      kpar(1:pdim) = kvec(1:pdim) 
       val = abs(ikk)*DE * M_TWO - sum(kpar(1:pdim)**2)
       if (val >= 0) then
         kvec(mdim) =  sign * sqrt(val)
       else  ! if E < p//^2/2
         !FIXME: Should handle the exception doing something smarter than this
         kvec(mdim) = sqrt(val) ! set to NaN
-!           kvec(mdim) = M_HUGE ! set to infinity
         nkp_out = nkp_out + 1
       end if
       
@@ -1644,6 +1629,7 @@ contains
       end do
       this%veca(:, this%itstep) = - this%veca(:, this%itstep)
 
+!  Ideally one could directly access uniform_vector_potential
 !       this%veca(:, this%itstep) = hm%hm_base%uniform_vector_potential(:)
 
       ! save wavefunctions & gradients
@@ -1829,8 +1815,6 @@ contains
         do idir = 1, mdim
           if(abs(this%srfcnrml(idir, isp)) >= M_EPSILON) n_dir = idir
         end do 
-
-! print *, ifc, this%srfcnrml(:, isp), this%rcoords(n_dir,isp), n_dir
 
         do ikp = 1, this%ll(n_dir)
           this%expkr_perp(ikp,ifc) = exp(-M_zI * this%rcoords(n_dir,isp) &
@@ -2157,12 +2141,7 @@ contains
 
               
               end if
-              
-!               gwfpw(ikp_start:ikp_end) = gwfpw(ikp_start:ikp_end) * this%srfcnrml(n_dir, isp_start) ! surface area element ds
-!               wfpw(ikp_start:ikp_end)  = wfpw(ikp_start:ikp_end)  * this%srfcnrml(n_dir, isp_start) ! surface area element ds
-
-              
-              
+                            
 
                 ! Sum it up  
                 Jk_cub(ist, isdim, ik, ikp_start:ikp_end) = Jk_cub(ist, isdim, ik,ikp_start:ikp_end) +  &
