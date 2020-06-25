@@ -623,9 +623,7 @@ contains
     
     CMPLX :: deltat_, deltat2_
 
-    PUSH_SUB(exponential_apply_batch)
-    
-    deltat2_ = M_z0
+    PUSH_SUB(exponential_apply_batch)    
     
     ASSERT(psib%type() == TYPE_CMPLX)
 
@@ -633,6 +631,8 @@ contains
     if (present(inh_psib)) then
       ASSERT(inh_psib%nst == psib%nst)
     end if
+
+    deltat2_ = TOCMPLX(optional_default(deltat2, M_ZERO), M_ZERO)
 
     if (optional_default(imag_time, .false.)) then
       select case(te%exp_method)
