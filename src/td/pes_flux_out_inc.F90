@@ -333,7 +333,7 @@ subroutine pes_flux_map_from_states_elec_pln(this, restart, st, ll, pesP, krng, 
     do ist = istart, iend
 
       if (st%d%kweights(ik) < M_EPSILON) then
-        ! we have a zero-weifltht path
+        ! we have a zero-weight path
         ! the st%occ(ist, ik) factor is already in psiG[1,2]
         weight = M_ONE !/nkpt
       else
@@ -471,22 +471,14 @@ subroutine pes_flux_pmesh_cub(this, namespace, dim, kpoints, ll, pmesh, idxZero,
       do ik1 = 1, this%ll(1)
         ikp = ikp + 1 
         
-
         Lp(ik1, ik2, ik3, :, 1) = ik1  
         Lp(ik1, ik2, ik3, :, 2) = ik2  
         Lp(ik1, ik2, ik3, :, 3) = ik3  
         
         pmesh(ik1, ik2, ik3, 1:dim) = this%kcoords_cub(1:dim, ikp, ikpt)
 
-        Ekin(ik1, ik2, ik3) = sum(this%kcoords_cub(1:dim, ikp, ikpt)**2)*M_HALF
+        Ekin(ik1, ik2, ik3) = sum(this%kcoords_cub(1:dim, ikp, ikpt)**2) * M_HALF
         
-!         ! get the origin index
-!         tmp=sum(pmesh(ik1, ik2, ik3, 1:dim)**2)
-!         if (tmp<min) then
-!           min = tmp
-!           idxZero(1:3) = (/ik1, ik2, ik3/)
-!         end if
-
       end do
     end do
   end do
@@ -739,6 +731,7 @@ subroutine pes_flux_out_energy(this, pesK, file, namespace, ll, pmesh, Ekin, dim
   
   case (M_POLAR)
     call messages_not_implemented("Energy-resolved PES for the flux method polar momentum grids", namespace=namespace)
+!    It has to be implemented in the subroutine below
 !     call  pes_flux_out_polar_ascii(this, st, namespace, dim, efile = file)
   
   case (M_CARTESIAN)
@@ -820,7 +813,8 @@ subroutine pes_flux_out_vmap(this, pesK, file, namespace, ll, pmesh, dim)
   select case (this%kgrid)
 
     case (M_POLAR)
-
+        call messages_not_implemented("ASCII output of the velocity map with polar momentum grids", namespace=namespace)
+        
     case (M_CARTESIAN)
       if (this%surf_shape == M_CUBIC) &
         call pes_flux_out_vmap_cub(pesK, file, namespace, ll, pmesh, dim)
@@ -848,18 +842,21 @@ subroutine pes_flux_out_vmap_cub(pesK, file, namespace, ll, pmesh, dim)
   PUSH_SUB(pes_flux_out_vmap_cub)
 
   iunit = io_open(file, namespace, action='write', position='rewind')
-  write(iunit, '(a)') '##################################################'                                        
-  if (dim == 3) then 
+  write(iunit, '(a)') '##################################################'    
+  select case (dim)
+
+    case (3)
+
     write(iunit, '(a1,a18,2x,a18,2x,a18,2x,a18)') '#', &
                                       str_center("kz", 18), str_center("ky", 18),&
                                       str_center("kx", 18),  str_center("P(kz,ky,kx)", 18)
     write(iunit, '(a1,a18,2x,a18,2x,a18)') '#', &
                                       str_center('[hbar/'//trim(units_abbrev(units_out%length)) // ']', 18), &
                                       str_center('[hbar/'//trim(units_abbrev(units_out%length)) // ']', 18), &
-                                      str_center('[hbar/'//trim(units_abbrev(units_out%length)) // ']', 18)    
-  end if
-  
-  if (dim == 2) then 
+                                      str_center('[hbar/'//trim(units_abbrev(units_out%length)) // ']', 18)   
+
+    case (2)
+
     write(iunit, '(a1,a18,2x,a18,2x,a18)') '#', &
                                     str_center("ky", 18), str_center("kx", 18),&
                                     str_center("P(ky,kx)", 18)
@@ -867,16 +864,14 @@ subroutine pes_flux_out_vmap_cub(pesK, file, namespace, ll, pmesh, dim)
                                       str_center('[hbar/'//trim(units_abbrev(units_out%length)) // ']', 18), &
                                       str_center('[hbar/'//trim(units_abbrev(units_out%length)) // ']', 18)    
 
-  end if  
-                                    
+    case (1)
 
-  if (dim == 1) then
     write(iunit, '(a1,a18,2x,a18)') '#', &
                                     str_center("kx", 18),  str_center("P(kx)", 18)
     write(iunit, '(a1,a18)') '#', &
                                       str_center('[hbar/'//trim(units_abbrev(units_out%length)) // ']', 18)    
                                     
-  end if
+  end select
   write(iunit, '(a)') '##################################################'
   
   
@@ -936,8 +931,6 @@ subroutine pes_flux_output(this, mesh, sb, st, namespace)
   case (M_CARTESIAN)
     call pes_flux_out_cartesian_ascii(this, st, namespace, sb%dim, io_workpath("td.general/", namespace))
     
-  case default
-    !empty      
     
   end select
   
@@ -1006,61 +999,6 @@ subroutine pes_flux_out_cartesian_ascii(this, st, namespace, dim, path )
     call pes_flux_out_vmap_cub(spctrout, io_workpath("td.general/PES_flux.distribution.out", namespace), &
                                namespace, this%ll(:), pmesh, mdim)
 
-!     iunit = io_open(trim(path)//'PES_flux.distribution.out', namespace, action='write', position='rewind')
-!     write(iunit, '(a)') '##################################################'
-!     if (mdim == 3) then
-!       write(iunit, '(a1,a18,2x,a18,2x,a18,2x,a18)') '#', &
-!                                         str_center("kz", 18), str_center("ky", 18),&
-!                                         str_center("kx", 18),  str_center("P(kz,ky,kx)", 18)
-!       write(iunit, '(a1,a18,2x,a18,2x,a18)') '#', &
-!                                         str_center('[hbar/'//trim(units_abbrev(units_out%length)) // ']', 18), &
-!                                         str_center('[hbar/'//trim(units_abbrev(units_out%length)) // ']', 18), &
-!                                         str_center('[hbar/'//trim(units_abbrev(units_out%length)) // ']', 18)
-!     end if
-!
-!     if (mdim == 2) then
-!       write(iunit, '(a1,a18,2x,a18,2x,a18)') '#', &
-!                                       str_center("ky", 18), str_center("kx", 18),&
-!                                       str_center("P(ky,kx)", 18)
-!       write(iunit, '(a1,a18,2x,a18)') '#', &
-!                                         str_center('[hbar/'//trim(units_abbrev(units_out%length)) // ']', 18), &
-!                                         str_center('[hbar/'//trim(units_abbrev(units_out%length)) // ']', 18)
-!
-!     end if
-!
-!
-!     if (mdim == 1) then
-!       write(iunit, '(a1,a18,2x,a18)') '#', &
-!                                       str_center("kx", 18),  str_center("P(kx)", 18)
-!       write(iunit, '(a1,a18)') '#', &
-!                                         str_center('[hbar/'//trim(units_abbrev(units_out%length)) // ']', 18)
-!
-!     end if
-!     write(iunit, '(a)') '##################################################'
-!
-!
-!     ikpt = 1
-!     ikp = 0
-!
-!     do ik3 = 1, this%ll(3)
-!       do ik2 = 1, this%ll(2)
-!         do ik1 = 1, this%ll(1)
-!           ikp = ikp + 1
-!
-!           do idir = mdim, 1, -1
-!             write(iunit, '(1x,e18.10E3)', advance='no') &
-!               units_from_atomic(unit_one/units_out%length,this%kcoords_cub(idir, ikp, ikpt))
-!           end do
-!           write(iunit, '(1x,e18.10E3)', advance='no') spctrout(ik1,ik2,ik3)
-!           write(iunit, '(1x)', advance='yes')
-!
-!         end do
-!         write(iunit, '(1x)', advance='yes')
-!       end do
-!       write(iunit, '(1x)', advance='yes')
-!     end do
-!
-!     call io_close(iunit)
   end if
   
    SAFE_DEALLOCATE_A(spctrout)
@@ -1539,7 +1477,6 @@ subroutine pes_flux_dump(restart, this, mesh, st, ierr)
             call zrestart_write_binary(restart, filename, this%nkpnts, psi1(:), err, root = root)
             SAFE_DEALLOCATE_P(psi1)
 
-! print *,mpi_world%rank, filename, err
           end if
         else 
           err = 0  
@@ -1562,7 +1499,6 @@ subroutine pes_flux_dump(restart, this, mesh, st, ierr)
         SAFE_ALLOCATE(psi1(this%nkpnts))
         psi1(:)=this%conjgphase_prev(:,ik)
         call zrestart_write_binary(restart, filename, this%nkpnts, psi1(:), err, root = root)
-! print *,mpi_world%rank, filename, err
         SAFE_DEALLOCATE_P(psi1)
       else
         err = 0
@@ -1572,7 +1508,6 @@ subroutine pes_flux_dump(restart, this, mesh, st, ierr)
   
   end if
 
-! print *,mpi_world%rank,"suuca"
 
   if(this%surf_shape == M_SPHERICAL) then
     call zrestart_write_binary(restart, 'pesflux4', this%nk * this%nstepsomegak, this%conjgphase_prev, err)
