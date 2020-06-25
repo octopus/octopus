@@ -512,7 +512,7 @@ contains
       
       if (this%surf_shape /= PES_SPHERICAL) call pes_flux_distribute_facepnts_cub(this, mesh)
       
-!   Keep this because is useful for debug but not enough to bother having it polished out        
+!   Keep this because is useful for debug but not enough to bother having it polished out
 !       if(debug%info) then
 ! #if defined(HAVE_MPI)
 !         call MPI_Barrier(mpi_world%comm, mpi_err)
@@ -524,7 +524,8 @@ contains
 !     else
 !       this%nsrfcpnts_start = 1
 !       this%nsrfcpnts_end   = this%nsrfcpnts
-!     end if
+
+    end if
 
 !   Keep this because is useful for debug but not enough to bother having it polished out        
 !     if(debug%info .and. mpi_grp_is_root(mpi_world)) then
