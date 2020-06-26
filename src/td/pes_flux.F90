@@ -784,13 +784,17 @@ contains
     
     ! default values
     select case (this%surf_shape)
-      case (PES_SPHERICAL)
-        kgrid = PES_POLAR
-      case (PES_PLANE)
-        kgrid = PES_CARTESIAN
-      case (PES_CUBIC)
-        kgrid = PES_CARTESIAN
-        if (mdim == 1)  kgrid = PES_POLAR
+    case (PES_SPHERICAL)
+      kgrid = PES_POLAR
+    case (PES_PLANE)
+      kgrid = PES_CARTESIAN
+    case (PES_CUBIC)
+      kgrid = PES_CARTESIAN
+      if (mdim == 1)  kgrid = PES_POLAR
+
+    case default
+      ASSERT(.false.)
+              
     end select
         
     call parse_variable(namespace, 'PES_Flux_Momenutum_Grid', kgrid, this%kgrid)
@@ -1083,6 +1087,9 @@ contains
           end do
         end do
         this%nstepsomegak  = iomk
+
+      case default
+        ASSERT(.false.)
         
       end select
 
@@ -1414,6 +1421,10 @@ contains
                   
                 end do
               end do
+
+            case default
+              ASSERT(.false.)
+              
             end select
               
           end do
@@ -1469,6 +1480,9 @@ contains
       
       SAFE_DEALLOCATE_A(gpoints)
       SAFE_DEALLOCATE_A(gpoints_reduced)
+
+    case default
+      ASSERT(.false.)
 
     end select
     
@@ -1886,13 +1900,16 @@ contains
     integer                              :: ikp
     
     select case (n_dir)
-      case (1)
-        ikp = this%Lkpuvz_inv(ikpz, ikpu, ikpv)
-      case (2)
-        ikp = this%Lkpuvz_inv(ikpu, ikpz, ikpv)
-      case (3)
-        ikp = this%Lkpuvz_inv(ikpu, ikpv, ikpz)
-        
+    case (1)
+      ikp = this%Lkpuvz_inv(ikpz, ikpu, ikpv)
+    case (2)
+      ikp = this%Lkpuvz_inv(ikpu, ikpz, ikpv)
+    case (3)
+      ikp = this%Lkpuvz_inv(ikpu, ikpv, ikpz)
+    
+    case default  
+    ! should die here but cannot use ASSERT(.false.) in a pure function
+      
     end select
 
   end function get_ikp
@@ -2564,6 +2581,8 @@ contains
           in_ab = (hm%bc%mf(ip_local) /= M_ONE)
         case(IMAGINARY_ABSORBING)
           in_ab = (hm%bc%mf(ip_local) /= M_ZERO)
+        case default
+          ASSERT(.false.)          
         end select
 
         ! check whether the point is inside the cube

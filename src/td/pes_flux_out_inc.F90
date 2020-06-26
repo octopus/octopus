@@ -46,6 +46,9 @@ subroutine pes_flux_pmesh(this, namespace, dim, kpoints, ll, pmesh, idxZero, krn
       call pes_flux_pmesh_cub(this, namespace, dim, kpoints, ll, pmesh, idxZero, krng, Lp, Ekin)
     end if
   
+  case default
+    ASSERT(.false.)
+  
   end select
   
 
@@ -74,6 +77,9 @@ subroutine pes_flux_map_from_states(this, restart, st, ll, pesP, krng, Lp, istin
   
   case (PES_CARTESIAN)
     call pes_flux_map_from_states_elec_pln(this, restart, st, ll, pesP, krng, Lp, istin)
+  
+  case default
+    ASSERT(.false.)
   
   end select
 
@@ -739,6 +745,9 @@ subroutine pes_flux_out_energy(this, pesK, file, namespace, ll, pmesh, Ekin, dim
     else 
       call messages_not_implemented("Energy-resolved PES for the flux method with cartesian momentum grids", namespace=namespace)
     end if
+  
+  case default
+    ASSERT(.false.)
     
   end select
 
@@ -785,7 +794,11 @@ subroutine pes_flux_out_energy_pln(arpes, file,namespace, ll, pmesh, Ekin, dim)
       write(iunit, '(es19.12,2x,es19.12,2x,es19.12)')   &
                                       units_from_atomic(units_out%energy, Ekin(1,1,ie)), &
                                       sum(arpes(:,:,ie))
-    end do      
+    end do 
+  
+  case default
+    ASSERT(.false.)
+         
   end select
   
   
@@ -811,12 +824,15 @@ subroutine pes_flux_out_vmap(this, pesK, file, namespace, ll, pmesh, dim)
   
   select case (this%kgrid)
 
-    case (PES_POLAR)
-        call messages_not_implemented("ASCII output of the velocity map with polar momentum grids", namespace=namespace)
-        
-    case (PES_CARTESIAN)
-      if (this%surf_shape == PES_CUBIC) &
-        call pes_flux_out_vmap_cub(pesK, file, namespace, ll, pmesh, dim)
+  case (PES_POLAR)
+    call messages_not_implemented("ASCII output of the velocity map with polar momentum grids", namespace=namespace)
+      
+  case (PES_CARTESIAN)
+    if (this%surf_shape == PES_CUBIC) &
+      call pes_flux_out_vmap_cub(pesK, file, namespace, ll, pmesh, dim)
+      
+  case default    
+    ASSERT(.false.)
       
   end select
   
@@ -869,6 +885,10 @@ subroutine pes_flux_out_vmap_cub(pesK, file, namespace, ll, pmesh, dim)
                                     str_center("kx", 18),  str_center("P(kx)", 18)
     write(iunit, '(a1,a18)') '#', &
                                       str_center('[hbar/'//trim(units_abbrev(units_out%length)) // ']', 18)    
+
+
+  case default
+    ASSERT(.false.)
                                     
   end select
   write(iunit, '(a)') '##################################################'
@@ -930,6 +950,9 @@ subroutine pes_flux_output(this, mesh, sb, st, namespace)
   case (PES_CARTESIAN)
     call pes_flux_out_cartesian_ascii(this, st, namespace, sb%dim, io_workpath("td.general/", namespace))
     
+  
+  case default
+    ASSERT(.false.)
     
   end select
   
@@ -1146,6 +1169,10 @@ subroutine pes_flux_out_polar_ascii(this, st, namespace, dim, efile, mfile)
                 end do
               end do
             end do
+
+          case default
+            ASSERT(.false.)
+            
           end select
           
           ! distribution
@@ -1403,6 +1430,9 @@ subroutine pes_flux_out_polar_ascii(this, st, namespace, dim, efile, mfile)
           end if
           
         end do
+
+      case default
+        ASSERT(.false.)
 
       end select
 
