@@ -521,9 +521,10 @@ contains
 !         call MPI_Barrier(mpi_world%comm, mpi_err)
 ! #endif
 !       end if
-!     else
-!       this%nsrfcpnts_start = 1
-!       this%nsrfcpnts_end   = this%nsrfcpnts
+
+    else
+      this%nsrfcpnts_start = 1
+      this%nsrfcpnts_end   = this%nsrfcpnts
 
     end if
 
