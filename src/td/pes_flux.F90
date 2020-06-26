@@ -1908,7 +1908,7 @@ contains
       ikp = this%Lkpuvz_inv(ikpu, ikpv, ikpz)
     
     case default  
-    ! should die here but cannot use ASSERT(.false.) in a pure function
+    ! should die here but cannot use assert in a pure function
       
     end select
 
