@@ -65,8 +65,6 @@ module multisystem_oct_m
     procedure :: update_quantity => multisystem_update_quantity
     procedure :: update_exposed_quantity => multisystem_update_exposed_quantity
     procedure :: copy_quantities_to_interaction => multisystem_copy_quantities_to_interaction
-    procedure :: update_interactions_start => multisystem_update_interactions_start
-    procedure :: update_interactions_finish => multisystem_update_interactions_finish
     final :: multisystem_finalizer
   end type multisystem_t
 
@@ -563,9 +561,11 @@ contains
 
     PUSH_SUB(multisystem_update_quantity)
 
-    ! At the moment multitystems cannot expose quantities.
-    ! All the quantities are directly exposed by the subsystems
-    ASSERT(.false.)
+    ! The multitystem class should never know about any specific quantities.
+    ! Only classes that extend it can know about specific quantities.
+    ! Such classes should override this method to add new supported quantities.
+    message(1) = "Trying to update a quantity in the multisystem class"
+    call messages_fatal(1)
 
     POP_SUB(multisystem_update_quantity)
   end subroutine multisystem_update_quantity
@@ -578,9 +578,11 @@ contains
 
     PUSH_SUB(multisystem_update_exposed_quantity)
 
-    ! At the moment multitystems cannot expose quantities.
-    ! All the quantities are directly exposed by the subsystems
-    ASSERT(.false.)
+    ! The multitystem class should never know about any specific quantities.
+    ! Only classes that extend it can know about specific quantities.
+    ! Such classes should override this method to add new supported quantities.
+    message(1) = "Trying to update an exposed quantity in the multisystem class"
+    call messages_fatal(1)
 
     POP_SUB(multisystem_update_exposed_quantity)
   end subroutine multisystem_update_exposed_quantity
@@ -592,38 +594,14 @@ contains
 
     PUSH_SUB(multisystem_copy_quantities_to_interaction)
 
-    ! At the moment multitystems cannot have interations.
-    ! All the interactions are directly handled by the subsystems
-    ASSERT(.false.)
+    ! The multitystem class should never know about any specific quantities.
+    ! Only classes that extend it can know about specific quantities.
+    ! Such classes should override this method to add new supported quantities.
+    message(1) = "Trying to copy quantities to interaction in the multisystem class"
+    call messages_fatal(1)
 
     POP_SUB(multisystem_copy_quantities_to_interaction)
   end subroutine multisystem_copy_quantities_to_interaction
-
-  ! ---------------------------------------------------------
-  subroutine multisystem_update_interactions_start(this)
-    class(multisystem_t), intent(inout) :: this
-
-    PUSH_SUB(multisystem_update_interactions_start)
-
-    ! At the moment multitystems cannot have interations
-    ! All the interactions are directly handled by the subsystems
-    ASSERT(.false.)
-
-    POP_SUB(multisystem_update_interactions_start)
-  end subroutine multisystem_update_interactions_start
-
-  ! ---------------------------------------------------------
-  subroutine multisystem_update_interactions_finish(this)
-    class(multisystem_t), intent(inout) :: this
-
-    PUSH_SUB(multisystem_update_interactions_finish)
-
-    ! At the moment multitystems cannot have interations
-    ! All the interactions are directly handled by the subsystems
-    ASSERT(.false.)
-
-    POP_SUB(multisystem_update_interactions_finish)
-  end subroutine multisystem_update_interactions_finish
 
   ! ---------------------------------------------------------
   recursive subroutine multisystem_finalizer(this)

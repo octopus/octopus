@@ -68,6 +68,8 @@ module system_abst_oct_m
     procedure :: init_propagator => system_init_propagator
     procedure :: init_all_interactions => system_init_all_interactions
     procedure :: update_interactions => system_update_interactions
+    procedure :: update_interactions_start => system_update_interactions_start
+    procedure :: update_interactions_finish => system_update_interactions_finish
     procedure :: propagation_start => system_propagation_start
     procedure :: propagation_finish => system_propagation_finish
     procedure :: has_reached_final_propagation_time => system_has_reached_final_propagation_time
@@ -80,8 +82,6 @@ module system_abst_oct_m
     procedure(system_is_tolerance_reached),           deferred :: is_tolerance_reached
     procedure(system_store_current_status),           deferred :: store_current_status
     procedure(system_update_quantity),                deferred :: update_quantity
-    procedure(system_update_interactions_start),      deferred :: update_interactions_start
-    procedure(system_update_interactions_finish),     deferred :: update_interactions_finish
     procedure(system_output_start),                   deferred :: output_start
     procedure(system_output_write),                   deferred :: output_write
     procedure(system_output_finish),                  deferred :: output_finish
@@ -137,18 +137,6 @@ module system_abst_oct_m
       integer,                   intent(in)    :: iq
       class(clock_t),            intent(in)    :: requested_time
     end subroutine system_update_quantity
-
-    ! ---------------------------------------------------------
-    subroutine system_update_interactions_start(this)
-      import system_abst_t
-      class(system_abst_t), intent(inout) :: this
-    end subroutine system_update_interactions_start
-
-    ! ---------------------------------------------------------
-    subroutine system_update_interactions_finish(this)
-      import system_abst_t
-      class(system_abst_t), intent(inout) :: this
-    end subroutine system_update_interactions_finish
 
     ! ---------------------------------------------------------
     subroutine system_output_start(this)
@@ -393,18 +381,19 @@ contains
           ahead_in_time = partner%quantities(q_id)%clock > requested_time
           right_on_time = partner%quantities(q_id)%clock == requested_time
 
-          if(partner%interaction_timing == OPTION__INTERACTIONTIMING__TIMING_EXACT) then
+          select case (partner%interaction_timing)
+          case (OPTION__INTERACTIONTIMING__TIMING_EXACT)
             ! only allow interaction at exactly the same time
             allowed_to_update = allowed_to_update .and. right_on_time
             need_to_copy = allowed_to_update
-          else if(partner%interaction_timing == OPTION__INTERACTIONTIMING__TIMING_RETARDED) then
+          case (OPTION__INTERACTIONTIMING__TIMING_RETARDED)
             ! allow retarded interaction
             allowed_to_update = allowed_to_update .and. &
               (right_on_time .or. ahead_in_time)
             need_to_copy = need_to_copy .and. .not. ahead_in_time
-          else
+          case default
             call messages_not_implemented("Method for interaction quantity timing")
-          end if
+          end select
 
           ! Debug stuff
           if (debug%info) then
@@ -418,7 +407,13 @@ contains
 
         ! If the quantities have been updated, we copy them to the interaction
         if (allowed_to_update .and. need_to_copy) then
-          call partner%copy_quantities_to_interaction(interaction)
+          select type (interaction)
+          type is (ghost_interaction_t)
+            ! Nothing to copy. We still need to check that we are at the right
+            ! time for the update though!
+          class default
+            call partner%copy_quantities_to_interaction(interaction)
+          end select
         end if
       end if
 
@@ -459,14 +454,28 @@ contains
     class(system_abst_t),      intent(inout) :: this
     type(clock_t),             intent(in)    :: requested_time !< Requested time for the update
 
+    logical :: none_updated
     integer :: iq, q_id
     class(interaction_abst_t), pointer :: interaction
     type(interaction_iterator_t) :: iter
 
     PUSH_SUB(system_update_interactions)
 
-    ! Some systems might need to perform some specific operations before the update
-    call this%update_interactions_start()
+    ! Some systems might need to perform some specific operations before the
+    ! update. This should only be done if no interaction has been updated yet,
+    ! so that it is only done once.
+    none_updated = .true.
+    call iter%start(this%interactions)
+    do while (iter%has_next())
+      interaction => iter%get_next()
+      if (interaction%clock == requested_time) then
+        none_updated = .false.
+        exit
+      end if
+    end do
+    if (none_updated) then
+      call this%update_interactions_start()
+    end if
 
     !Loop over all interactions
     all_updated = .true.
@@ -506,11 +515,38 @@ contains
       end if
     end do
 
-    ! Some systems might need to perform some specific operations after the update
-    call this%update_interactions_finish()
+    ! Some systems might need to perform some specific operations after all the
+    ! interactions have been updated
+    if (all_updated) then
+      call this%update_interactions_finish()
+    end if
 
     POP_SUB(system_update_interactions)
   end function system_update_interactions
+
+  ! ---------------------------------------------------------
+  subroutine system_update_interactions_start(this)
+    class(system_abst_t), intent(inout) :: this
+
+    PUSH_SUB(system_update_interactions_start)
+
+    ! By default nothing is done just before updating the interactions. Child
+    ! classes that wish to change this behavious should override this method.
+
+    POP_SUB(system_update_interactions_start)
+  end subroutine system_update_interactions_start
+
+  ! ---------------------------------------------------------
+  subroutine system_update_interactions_finish(this)
+    class(system_abst_t), intent(inout) :: this
+
+    PUSH_SUB(system_update_interactions_finish)
+
+    ! By default nothing is done just after updating the interactions. Child
+    ! classes that wish to change this behavious should override this method.
+
+    POP_SUB(system_update_interactions_finish)
+  end subroutine system_update_interactions_finish
 
   ! ---------------------------------------------------------
   subroutine system_init_propagator(this, smallest_algo_dt)

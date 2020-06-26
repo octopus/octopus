@@ -34,15 +34,16 @@ module interaction_gravity_oct_m
     interaction_gravity_t
 
   type, extends(interaction_with_partner_t) :: interaction_gravity_t
+    private
     integer :: dim
 
-    FLOAT :: force(MAX_DIM)
+    FLOAT, public :: force(MAX_DIM)
 
     FLOAT, pointer :: system_mass
     FLOAT, pointer :: system_pos(:)
 
-    FLOAT :: partner_mass
-    FLOAT, allocatable :: partner_pos(:)
+    FLOAT, public :: partner_mass
+    FLOAT, allocatable, public :: partner_pos(:)
 
   contains
     procedure :: init => interaction_gravity_init
