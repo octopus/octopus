@@ -205,6 +205,7 @@ contains
               end do
             end do
           else
+
             !$omp parallel do schedule(static)
             do ip = 1, this%gr%mesh%np
               do ist = 1, psib%nst
@@ -333,8 +334,9 @@ contains
 
   ! ---------------------------------------------------
 
-  subroutine density_calc_end(this)
+  subroutine density_calc_end(this, allreduce)
     type(density_calc_t), intent(inout) :: this
+    logical, optional,    intent(in)    :: allreduce 
 
     type(symmetrizer_t) :: symmetrizer
     FLOAT, allocatable :: tmpdensity(:)
@@ -374,7 +376,7 @@ contains
     end if
 
     ! reduce over states and k-points
-    if(this%st%parallel_in_states .or. this%st%d%kpt%parallel) then
+    if((this%st%parallel_in_states .or. this%st%d%kpt%parallel) .and. optional_default(allreduce, .true.)) then
       call profiling_in(reduce_prof, "DENSITY_REDUCE")
       call comm_allreduce(this%st%st_kpt_mpi_grp%comm, this%density, dim = (/this%gr%fine%mesh%np, this%st%d%nspin/))
       call profiling_out(reduce_prof)
@@ -425,7 +427,7 @@ contains
       end do
     end do
 
-    call density_calc_end(dens_calc)
+    call density_calc_end(dens_calc, allreduce = .not. present(istin))
 
     POP_SUB(density_calc)
   end subroutine density_calc

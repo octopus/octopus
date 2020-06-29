@@ -1299,7 +1299,6 @@ contains
     if (out_multip%resolve_states) then
       SAFE_ALLOCATE(rho(1:gr%fine%mesh%np_part, 1:st%d%nspin))
       rho(:,:)     = M_ZERO
-    
 
       do ist = st%st_start, st%st_end
         call density_calc(st, gr, rho, istin = ist)      
