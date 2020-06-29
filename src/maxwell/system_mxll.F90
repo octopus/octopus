@@ -24,7 +24,7 @@ module system_mxll_oct_m
   use current_oct_m
   use distributed_oct_m
   use geometry_oct_m
-  use ghost_interaction_oct_m
+  use interactions_factory_oct_m
   use interaction_lorentz_force_oct_m
   use global_oct_m
   use grid_oct_m
@@ -44,7 +44,6 @@ module system_mxll_oct_m
   use poisson_oct_m
   use profiling_oct_m
   use propagator_abst_oct_m
-  use propagator_base_oct_m
   use propagator_mxll_oct_m
   use quantity_oct_m
   use restart_oct_m
@@ -54,7 +53,7 @@ module system_mxll_oct_m
   use system_abst_oct_m
   use states_mxll_oct_m
   use states_mxll_restart_oct_m
-  use system_oct_m
+  use electrons_oct_m
   use td_write_oct_m
   use unit_oct_m
   use unit_system_oct_m
@@ -95,8 +94,7 @@ module system_mxll_oct_m
     integer                      :: mxll_ks_relax_iter
 
   contains
-    procedure :: add_interaction_partner => system_mxll_add_interaction_partner
-    procedure :: has_interaction => system_mxll_has_interaction
+    procedure :: init_interaction => system_mxll_init_interaction
     procedure :: initial_conditions => system_mxll_initial_conditions
     procedure :: do_td_operation => system_mxll_do_td
     procedure :: iteration_info => system_mxll_iteration_info
@@ -104,9 +102,6 @@ module system_mxll_oct_m
     procedure :: store_current_status => system_mxll_store_current_status
     procedure :: update_quantity => system_mxll_update_quantity
     procedure :: update_exposed_quantity => system_mxll_update_exposed_quantity
-    procedure :: set_pointers_to_interaction => system_mxll_set_pointers_to_interaction
-    procedure :: update_interactions_start => system_mxll_update_interactions_start
-    procedure :: update_interactions_finish => system_mxll_update_interactions_finish
     procedure :: copy_quantities_to_interaction => system_mxll_copy_quantities_to_interaction
     procedure :: output_start => system_mxll_output_start
     procedure :: output_write => system_mxll_output_write
@@ -183,8 +178,9 @@ contains
 
     call mesh_interpolation_init(this%mesh_interpolate, this%gr%mesh)
 
-    POP_SUB(system_mxll_init)
+    call this%supported_interactions_as_partner%add(LORENTZ_FORCE)
 
+    POP_SUB(system_mxll_init)
   contains
 
     ! ---------------------------------------------------------
@@ -211,33 +207,22 @@ contains
 
   end subroutine system_mxll_init
 
-
   ! ---------------------------------------------------------
-  subroutine system_mxll_add_interaction_partner(this, partner)
+  subroutine system_mxll_init_interaction(this, interaction)
     class(system_mxll_t), target, intent(inout) :: this
-    class(system_abst_t),         intent(inout) :: partner
+    class(interaction_abst_t),    intent(inout) :: interaction
 
-    PUSH_SUB(system_mxll_add_interaction_partner)
-
-    POP_SUB(system_mxll_add_interaction_partner)
-  end subroutine system_mxll_add_interaction_partner
-
-  ! ---------------------------------------------------------
-  logical function system_mxll_has_interaction(this, interaction)
-    class(system_mxll_t),      intent(in) :: this
-    class(interaction_abst_t), intent(in) :: interaction
-
-    PUSH_SUB(system_mxll_has_interaction)
+    PUSH_SUB(system_mxll_init_interaction)
 
     select type (interaction)
-    type is (interaction_lorentz_force_t)
-      system_mxll_has_interaction = .true.
     class default
-      system_mxll_has_interaction = .false.
+      ! Currently Maxwell system does not know any type of interaction
+      message(1) = "Trying to initialize an unsupported interaction by Maxwell."
+      call messages_fatal(1)
     end select
 
-    POP_SUB(system_mxll_has_interaction)
-  end function system_mxll_has_interaction
+    POP_SUB(system_mxll_init_interaction)
+  end subroutine system_mxll_init_interaction
 
   ! ---------------------------------------------------------
   subroutine system_mxll_initial_conditions(this, from_scratch)
@@ -537,54 +522,31 @@ contains
   end subroutine system_mxll_update_quantity
 
  ! ---------------------------------------------------------
- subroutine system_mxll_update_exposed_quantity(this, iq, requested_time)
-    class(system_mxll_t),      intent(inout) :: this
+ subroutine system_mxll_update_exposed_quantity(partner, iq, requested_time)
+    class(system_mxll_t),      intent(inout) :: partner
     integer,                   intent(in)    :: iq
     class(clock_t),            intent(in)    :: requested_time
 
     PUSH_SUB(system_mxll_update_exposed_quantity)
 
     ! We are not allowed to update protected quantities!
-    ASSERT(.not. this%quantities(iq)%protected)
+    ASSERT(.not. partner%quantities(iq)%protected)
 
     select case (iq)
+    case(E_FIELD,B_FIELD)
+      call partner%quantities(iq)%clock%set_time(requested_time)
     case default
       message(1) = "Incompatible quantity."
-!      call messages_fatal(1)
+      call messages_fatal(1)
     end select
 
     POP_SUB(system_mxll_update_exposed_quantity)
   end subroutine system_mxll_update_exposed_quantity
 
   ! ---------------------------------------------------------
-  subroutine system_mxll_set_pointers_to_interaction(this, inter)
-    class(system_mxll_t), target,  intent(inout) :: this
-    class(interaction_abst_t),     intent(inout) :: inter
-
-    PUSH_SUB(system_mxll_set_pointers_to_interaction)
-    POP_SUB(system_mxll_set_pointers_to_interaction)
-  end subroutine system_mxll_set_pointers_to_interaction
-
-  ! ---------------------------------------------------------
-  subroutine system_mxll_update_interactions_start(this)
-    class(system_mxll_t), intent(inout) :: this
-
-    PUSH_SUB(system_mxll_update_interactions_start)
-    POP_SUB(system_mxll_update_interactions_start)
-  end subroutine system_mxll_update_interactions_start
-
-  ! ---------------------------------------------------------
-  subroutine system_mxll_update_interactions_finish(this)
-    class(system_mxll_t), intent(inout) :: this
-
-    PUSH_SUB(system_mxll_update_interactions_finish)
-    POP_SUB(system_mxll_update_interactions_finish)
-  end subroutine system_mxll_update_interactions_finish
-
-    ! ---------------------------------------------------------
-  subroutine system_mxll_copy_quantities_to_interaction(this, interaction)
-    class(system_mxll_t),      intent(inout) :: this
-    class(interaction_abst_t), intent(inout) :: interaction
+  subroutine system_mxll_copy_quantities_to_interaction(partner, interaction)
+    class(system_mxll_t),       intent(inout) :: partner
+    class(interaction_abst_t),  intent(inout) :: interaction
 
     CMPLX :: interpolated_value(3)
     FLOAT :: e_field(3)
@@ -593,12 +555,13 @@ contains
     PUSH_SUB(system_mxll_copy_quantities_to_interaction)
 
     select type (interaction)
-    type is (ghost_interaction_t)
-      ! Nothing to copy
     type is (interaction_lorentz_force_t)
-      call mesh_interpolation_evaluate(this%mesh_interpolate, this%st%rs_state(:,1), interaction%system_pos, interpolated_value(1))
-      call mesh_interpolation_evaluate(this%mesh_interpolate, this%st%rs_state(:,2), interaction%system_pos, interpolated_value(2))
-      call mesh_interpolation_evaluate(this%mesh_interpolate, this%st%rs_state(:,3), interaction%system_pos, interpolated_value(3))
+      call mesh_interpolation_evaluate(partner%mesh_interpolate, partner%st%rs_state(:,1), &
+        interaction%system_pos, interpolated_value(1))
+      call mesh_interpolation_evaluate(partner%mesh_interpolate, partner%st%rs_state(:,2), &
+        interaction%system_pos, interpolated_value(2))
+      call mesh_interpolation_evaluate(partner%mesh_interpolate, partner%st%rs_state(:,3), &
+        interaction%system_pos, interpolated_value(3))
       call get_electric_field_vector(interpolated_value, e_field)
       call get_magnetic_field_vector(interpolated_value, 1, b_field)
       interaction%partner_E_field = e_field
@@ -668,21 +631,12 @@ contains
   subroutine system_mxll_finalize(this)
     type(system_mxll_t), intent(inout) :: this
 
-    type(interaction_iterator_t) :: iter
-    class(interaction_abst_t), pointer :: interaction
-
     PUSH_SUB(system_mxll_finalize)
 
-    deallocate(this%prop)
+    call system_abst_end(this)
 
     ! free memory
     SAFE_DEALLOCATE_A(this%rs_state_init)
-
-    call iter%start(this%interactions)
-    do while (iter%has_next())
-      interaction => iter%get_next_interaction()
-      SAFE_DEALLOCATE_P(interaction)
-    end do
 
     call hamiltonian_mxll_end(this%hm)
 

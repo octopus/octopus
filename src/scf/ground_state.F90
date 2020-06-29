@@ -37,7 +37,7 @@ module ground_state_oct_m
   use states_abst_oct_m
   use states_elec_oct_m
   use states_elec_restart_oct_m
-  use system_oct_m
+  use electrons_oct_m
   use v_ks_oct_m
 
   implicit none
@@ -63,7 +63,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine ground_state_run(sys, fromScratch)
-    type(system_t),      intent(inout) :: sys
+    type(electrons_t),   intent(inout) :: sys
     logical,             intent(inout) :: fromScratch
 
     type(scf_t)     :: scfv
@@ -129,7 +129,7 @@ contains
       ! setup Hamiltonian
       call messages_write('Info: Setting up Hamiltonian.')
       call messages_info()
-      call system_h_setup(sys, calc_eigenval = .false., calc_current = .false.)
+      call sys%h_setup(calc_eigenval = .false., calc_current = .false.)
     end if
 
     call restart_init(restart_dump, sys%namespace, RESTART_GS, RESTART_TYPE_DUMP, sys%mc, ierr, mesh=sys%gr%mesh)

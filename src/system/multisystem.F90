@@ -21,9 +21,10 @@
 module multisystem_oct_m
   use clock_oct_m
   use global_oct_m
+  use ghost_interaction_oct_m
   use interaction_abst_oct_m
+  use interaction_with_partner_oct_m
   use io_oct_m
-  use linked_list_oct_m
   use loct_oct_m
   use messages_oct_m
   use mpi_oct_m
@@ -31,7 +32,6 @@ module multisystem_oct_m
   use parser_oct_m
   use profiling_oct_m
   use system_abst_oct_m
-  use system_mxll_oct_m
   use system_factory_abst_oct_m
   implicit none
 
@@ -40,7 +40,7 @@ module multisystem_oct_m
     multisystem_t
 
   type, extends(system_abst_t) :: multisystem_t
-    type(linked_list_t) :: list
+    type(system_list_t) :: list
   contains
     procedure :: dt_operation =>  multisystem_dt_operation
     procedure :: init_clocks => multisystem_init_clocks
@@ -51,9 +51,9 @@ module multisystem_oct_m
     procedure :: has_reached_final_propagation_time => multisystem_has_reached_final_propagation_time
     procedure :: propagation_step_finish => multisystem_propagation_step_finish
     procedure :: propagation_step_is_done => multisystem_propagation_step_is_done
-    procedure :: init_interactions => multisystem_init_interactions
-    procedure :: add_interaction_partner => multisystem_add_interaction_partner
-    procedure :: has_interaction => multisystem_has_interaction
+    procedure :: init_all_interactions => multisystem_init_all_interactions
+    procedure :: init_interaction => multisystem_init_interaction
+    procedure :: write_interaction_graph => multisystem_write_interaction_graph
     procedure :: initial_conditions => multisystem_initial_conditions
     procedure :: do_td_operation => multisystem_do_td_operation
     procedure :: iteration_info => multisystem_iteration_info
@@ -65,8 +65,6 @@ module multisystem_oct_m
     procedure :: update_quantity => multisystem_update_quantity
     procedure :: update_exposed_quantity => multisystem_update_exposed_quantity
     procedure :: copy_quantities_to_interaction => multisystem_copy_quantities_to_interaction
-    procedure :: update_interactions_start => multisystem_update_interactions_start
-    procedure :: update_interactions_finish => multisystem_update_interactions_finish
     final :: multisystem_finalizer
   end type multisystem_t
 
@@ -85,7 +83,7 @@ contains
     integer :: isys, system_type
     character(len=128) :: system_name
     type(block_t) :: blk
-    class(*), pointer :: sys
+    class(system_abst_t), pointer :: sys
     
     PUSH_SUB(multisystem_constructor)
 
@@ -155,7 +153,7 @@ contains
 
     call iter%start(this%list)
     do while (iter%has_next())
-      system => iter%get_next_system()
+      system => iter%get_next()
       call system%dt_operation()
     end do
 
@@ -174,7 +172,7 @@ contains
 
     call iter%start(this%list)
     do while (iter%has_next())
-      system => iter%get_next_system()
+      system => iter%get_next()
       call system%init_clocks(smallest_algo_dt)
     end do
 
@@ -193,7 +191,7 @@ contains
 
     call iter%start(this%list)
     do while (iter%has_next())
-      system => iter%get_next_system()
+      system => iter%get_next()
       call system%reset_clocks(accumulated_ticks)
     end do
 
@@ -212,7 +210,7 @@ contains
 
     call iter%start(this%list)
     do while (iter%has_next())
-      system => iter%get_next_system()
+      system => iter%get_next()
       call system%init_propagator(smallest_algo_dt)
     end do
 
@@ -230,7 +228,7 @@ contains
 
     call iter%start(this%list)
     do while (iter%has_next())
-      system => iter%get_next_system()
+      system => iter%get_next()
       call system%propagation_start()
     end do
 
@@ -248,7 +246,7 @@ contains
 
     call iter%start(this%list)
     do while (iter%has_next())
-      system => iter%get_next_system()
+      system => iter%get_next()
       call system%propagation_finish()
     end do
 
@@ -267,7 +265,7 @@ contains
     multisystem_has_reached_final_propagation_time = .true.
     call iter%start(this%list)
     do while (iter%has_next())
-      system => iter%get_next_system()
+      system => iter%get_next()
       multisystem_has_reached_final_propagation_time = multisystem_has_reached_final_propagation_time .and. &
         system%has_reached_final_propagation_time()
     end do
@@ -287,7 +285,7 @@ contains
 
     call iter%start(this%list)
     do while (iter%has_next())
-      system => iter%get_next_system()
+      system => iter%get_next()
       if (system%propagation_step_is_done()) then
         call system%propagation_step_finish(iteration)
       end if
@@ -308,122 +306,103 @@ contains
     multisystem_propagation_step_is_done = .false.
     call iter%start(this%list)
     do while (iter%has_next())
-      system => iter%get_next_system()
+      system => iter%get_next()
       multisystem_propagation_step_is_done = multisystem_propagation_step_is_done .or. system%propagation_step_is_done()
     end do
 
     POP_SUB(multisystem_propagation_step_is_done)
   end function multisystem_propagation_step_is_done
 
-  ! ---------------------------------------------------------------------------------------
-  recursive subroutine multisystem_init_interactions(this)
+  ! ---------------------------------------------------------
+  recursive subroutine multisystem_init_all_interactions(this)
     class(multisystem_t), intent(inout) :: this
 
-    class(system_abst_t), pointer :: sys1, sys2
-    type(system_iterator_t) :: iter1, iter2
-    type(linked_list_t) :: flat_list
-    integer :: iunit_out
+    type(interaction_iterator_t) :: iter_i
+    class(interaction_abst_t), pointer :: interaction
+    type(system_iterator_t) :: iter_s
+    class(system_abst_t), pointer :: system
 
-    PUSH_SUB(multisystem_init_interactions)
+    PUSH_SUB(multisystem_init_all_interactions)
 
-    if (debug%interaction_graph .and. mpi_grp_is_root(mpi_world)) then
-      iunit_out = io_open('interaction_graph.dot', this%namespace, action='write')
-      write(iunit_out, '(a)') 'digraph {'
-    end if
-
-    ! We start by getting a list of all the subsystems that are not multisystems
-    call flatten_list(this, flat_list)
-
-    ! Double loop over all the subsystems that can interact
-    call iter1%start(flat_list)
-    do while (iter1%has_next())
-      sys1 => iter1%get_next_system()
-
-      call iter2%start(flat_list)
-      do while (iter2%has_next())
-        sys2 => iter2%get_next_system()
-
-        !No self interaction
-        if(.not.associated(sys1, sys2)) then
-          call sys1%add_interaction_partner(sys2)
-
-          !Debug information in form of a DOT graph
-          if(debug%interaction_graph .and. mpi_grp_is_root(mpi_world)) then
-            write(iunit_out, '(2x,a)') trim(sys1%namespace%get()) + ' -> ' + trim(sys2%namespace%get()) + ';'
-          end if
-        end if
-      end do
+    ! Initialize interactions directly owned by the multisystem
+    call iter_i%start(this%interactions)
+    do while (iter_i%has_next())
+      interaction => iter_i%get_next()
+      select type (interaction)
+      type is (ghost_interaction_t)
+        ! Skip the ghost interactions
+      class default
+        call this%init_interaction(interaction)
+      end select
     end do
 
-    if (debug%interaction_graph .and. mpi_grp_is_root(mpi_world)) then
-      write(iunit_out, '(a)') '}'
-      call io_close(iunit_out)
-    end if
+    ! Initialize interactions owned by the subsystems
+    call iter_s%start(this%list)
+    do while (iter_s%has_next())
+      system => iter_s%get_next()
+      call system%init_all_interactions()
+    end do
 
-    POP_SUB(multisystem_init_interactions)
-  contains
+    POP_SUB(multisystem_init_all_interactions)
+  end subroutine multisystem_init_all_interactions
 
-    recursive subroutine flatten_list(systems, list)
-      class(multisystem_t), intent(inout) :: systems
-      type(linked_list_t),  intent(inout) :: list
+  ! ---------------------------------------------------------
+  subroutine multisystem_init_interaction(this, interaction)
+    class(multisystem_t), target, intent(inout) :: this
+    class(interaction_abst_t),    intent(inout) :: interaction
 
-      class(system_abst_t), pointer :: system
-      type(system_iterator_t) :: iterator
+    PUSH_SUB(multisystem_init_interaction)
 
-      call iterator%start(systems%list)
-      do while (iterator%has_next())
-        system => iterator%get_next_system()
+    ! The multitystem class should never know about any specific interaction.
+    ! Only classes that extend it can know about specific interactions.
+    ! Such classes should override this method to add new supported interactions.
+    message(1) = "Trying to initialize an interaction in the multisystem class"
+    call messages_fatal(1)
 
-        select type (system)
-        class is (multisystem_t)
-          call flatten_list(system, list)
-        class default
-          call list%add(system)
+    POP_SUB(multisystem_init_interaction)
+  end subroutine multisystem_init_interaction
+
+  ! ---------------------------------------------------------------------------------------
+  recursive subroutine multisystem_write_interaction_graph(this, iunit)
+    class(multisystem_t), intent(in) :: this
+    integer,              intent(in) :: iunit
+
+    class(system_abst_t), pointer :: system
+    class(interaction_abst_t), pointer :: interaction
+    type(system_iterator_t) :: sys_iter
+    type(interaction_iterator_t) :: inter_iter
+
+    PUSH_SUB(multisystem_write_interaction_graph)
+
+    ! Loop over all the subsystems
+    call sys_iter%start(this%list)
+    do while (sys_iter%has_next())
+      system => sys_iter%get_next()
+
+      ! Loop over the interactions that this subsystem has
+      call inter_iter%start(system%interactions)
+      do while (inter_iter%has_next())
+        interaction => inter_iter%get_next()
+
+        ! Write interaction to DOT graph if this interaction has a partner
+        select type (interaction)
+        type is (ghost_interaction_t)
+          ! Do not include systems connected by ghost interactions
+        class is (interaction_with_partner_t)
+          write(iunit, '(2x,a)') '"' + trim(system%namespace%get()) + '" -> "' + trim(interaction%partner%namespace%get()) + &
+            '" [label="'+ interaction%label + '"];'
         end select
       end do
 
-    end subroutine flatten_list
-
-  end subroutine multisystem_init_interactions
-
-  ! ---------------------------------------------------------
-  recursive subroutine multisystem_add_interaction_partner(this, partner)
-    class(multisystem_t), target, intent(inout) :: this
-    class(system_abst_t),         intent(inout) :: partner
-
-    type(system_iterator_t) :: iter
-    class(system_abst_t), pointer :: system
-
-    PUSH_SUB(multisystem_add_interaction_partner)
-
-    call iter%start(this%list)
-    do while (iter%has_next())
-      system => iter%get_next_system()
-      call system%add_interaction_partner(partner)
+      ! If this subsystem is also a multisystem, then we also need to traverse it
+      select type (system)
+      class is (multisystem_t)
+        call system%write_interaction_graph(iunit)
+      end select
     end do
 
-    POP_SUB(multisystem_add_interaction_partner)
-  end subroutine multisystem_add_interaction_partner
-
-  ! ---------------------------------------------------------
-  recursive logical function multisystem_has_interaction(this, interaction)
-    class(multisystem_t),      intent(in) :: this
-    class(interaction_abst_t), intent(in) :: interaction
-
-    type(system_iterator_t) :: iter
-    class(system_abst_t), pointer :: system
-
-    PUSH_SUB(multisystem_has_interaction)
-
-    multisystem_has_interaction = .false.
-    call iter%start(this%list)
-    do while (iter%has_next())
-      system => iter%get_next_system()
-      if (system%has_interaction(interaction)) multisystem_has_interaction = .true.
-    end do
-
-    POP_SUB(multisystem_has_interaction)
-  end function multisystem_has_interaction
+    POP_SUB(multisystem_write_interaction_graph)
+  end subroutine multisystem_write_interaction_graph
 
   ! ---------------------------------------------------------
   recursive subroutine multisystem_initial_conditions(this, from_scratch)
@@ -437,7 +416,7 @@ contains
 
     call iter%start(this%list)
     do while (iter%has_next())
-      system => iter%get_next_system()
+      system => iter%get_next()
       call system%initial_conditions(from_scratch)
     end do
 
@@ -456,7 +435,7 @@ contains
 
     call iter%start(this%list)
     do while (iter%has_next())
-      system => iter%get_next_system()
+      system => iter%get_next()
       call system%do_td_operation(operation)
     end do
 
@@ -476,7 +455,7 @@ contains
     converged = .true.
     call iter%start(this%list)
     do while (iter%has_next())
-      system => iter%get_next_system()
+      system => iter%get_next()
       if (.not. system%is_tolerance_reached(tol)) converged = .false.
     end do
 
@@ -494,7 +473,7 @@ contains
 
     call iter%start(this%list)
     do while (iter%has_next())
-      system => iter%get_next_system()
+      system => iter%get_next()
       call system%store_current_status()
     end do
 
@@ -512,7 +491,7 @@ contains
 
     call iter%start(this%list)
     do while (iter%has_next())
-      system => iter%get_next_system()
+      system => iter%get_next()
       call system%iteration_info()
     end do
 
@@ -530,7 +509,7 @@ contains
 
     call iter%start(this%list)
     do while (iter%has_next())
-      system => iter%get_next_system()
+      system => iter%get_next()
       call system%output_start()
     end do
 
@@ -548,7 +527,7 @@ contains
 
     call iter%start(this%list)
     do while (iter%has_next())
-      system => iter%get_next_system()
+      system => iter%get_next()
       call system%output_finish()
     end do
 
@@ -567,7 +546,7 @@ contains
 
     call iterator%start(this%list)
     do while (iterator%has_next())
-      system => iterator%get_next_system()
+      system => iterator%get_next()
       call system%output_write(iter)
     end do
 
@@ -582,67 +561,47 @@ contains
 
     PUSH_SUB(multisystem_update_quantity)
 
-    ! At the moment multitystems cannot expose quantities.
-    ! All the quantities are directly exposed by the subsystems
-    ASSERT(.false.)
+    ! The multitystem class should never know about any specific quantities.
+    ! Only classes that extend it can know about specific quantities.
+    ! Such classes should override this method to add new supported quantities.
+    message(1) = "Trying to update a quantity in the multisystem class"
+    call messages_fatal(1)
 
     POP_SUB(multisystem_update_quantity)
   end subroutine multisystem_update_quantity
 
   ! ---------------------------------------------------------
-  subroutine multisystem_update_exposed_quantity(this, iq, requested_time)
-    class(multisystem_t), intent(inout) :: this
+  subroutine multisystem_update_exposed_quantity(partner, iq, requested_time)
+    class(multisystem_t), intent(inout) :: partner
     integer,              intent(in)    :: iq
     class(clock_t),       intent(in)    :: requested_time
 
     PUSH_SUB(multisystem_update_exposed_quantity)
 
-    ! At the moment multitystems cannot expose quantities.
-    ! All the quantities are directly exposed by the subsystems
-    ASSERT(.false.)
+    ! The multitystem class should never know about any specific quantities.
+    ! Only classes that extend it can know about specific quantities.
+    ! Such classes should override this method to add new supported quantities.
+    message(1) = "Trying to update an exposed quantity in the multisystem class"
+    call messages_fatal(1)
 
     POP_SUB(multisystem_update_exposed_quantity)
   end subroutine multisystem_update_exposed_quantity
 
   ! ---------------------------------------------------------
-  subroutine multisystem_copy_quantities_to_interaction(this, interaction)
-    class(multisystem_t),         intent(inout) :: this
+  subroutine multisystem_copy_quantities_to_interaction(partner, interaction)
+    class(multisystem_t),         intent(inout) :: partner
     class(interaction_abst_t),    intent(inout) :: interaction
 
     PUSH_SUB(multisystem_copy_quantities_to_interaction)
 
-    ! At the moment multitystems cannot have interations.
-    ! All the interactions are directly handled by the subsystems
-    ASSERT(.false.)
+    ! The multitystem class should never know about any specific quantities.
+    ! Only classes that extend it can know about specific quantities.
+    ! Such classes should override this method to add new supported quantities.
+    message(1) = "Trying to copy quantities to interaction in the multisystem class"
+    call messages_fatal(1)
 
     POP_SUB(multisystem_copy_quantities_to_interaction)
   end subroutine multisystem_copy_quantities_to_interaction
-
-  ! ---------------------------------------------------------
-  subroutine multisystem_update_interactions_start(this)
-    class(multisystem_t), intent(inout) :: this
-
-    PUSH_SUB(multisystem_update_interactions_start)
-
-    ! At the moment multitystems cannot have interations
-    ! All the interactions are directly handled by the subsystems
-    ASSERT(.false.)
-
-    POP_SUB(multisystem_update_interactions_start)
-  end subroutine multisystem_update_interactions_start
-
-  ! ---------------------------------------------------------
-  subroutine multisystem_update_interactions_finish(this)
-    class(multisystem_t), intent(inout) :: this
-
-    PUSH_SUB(multisystem_update_interactions_finish)
-
-    ! At the moment multitystems cannot have interations
-    ! All the interactions are directly handled by the subsystems
-    ASSERT(.false.)
-
-    POP_SUB(multisystem_update_interactions_finish)
-  end subroutine multisystem_update_interactions_finish
 
   ! ---------------------------------------------------------
   recursive subroutine multisystem_finalizer(this)
@@ -655,9 +614,11 @@ contains
 
     call iter%start(this%list)
     do while (iter%has_next())
-      system => iter%get_next_system()
+      system => iter%get_next()
       SAFE_DEALLOCATE_P(system)
     end do
+
+    call system_abst_end(this)
 
     POP_SUB(multisystem_finalizer)
   end subroutine multisystem_finalizer

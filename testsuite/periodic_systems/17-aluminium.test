@@ -80,7 +80,7 @@ match ;  Gauge field  [step 100]  ; LINEFIELD(td.general/gauge_field, -51, 3) ; 
 match ;  Gauge field  [step 125]  ; LINEFIELD(td.general/gauge_field, -26, 3) ; -192.167509079
 match ;  Gauge field  [step 150]  ; LINEFIELD(td.general/gauge_field, -1, 3) ; -170.7394719499
 
-Precision: 1e-8
+Precision: 1e-7
 match ;  Current      [step   1]  ; LINEFIELD(td.general/total_current, -151, 3) ; 11.683210294270001
 match ;  Current      [step  25]  ; LINEFIELD(td.general/total_current, -126, 3) ; -2.3200800717685
 match ;  Current      [step  50]  ; LINEFIELD(td.general/total_current, -101, 3) ; -7.8688531044765

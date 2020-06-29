@@ -24,88 +24,143 @@ module list_node_oct_m
   implicit none
 
   private
-  public :: list_node_t, &
-            list_node
+  public :: list_node_t
 
   type :: list_node_t
     private
+    logical :: clone
     class(*),          pointer :: value => null()
     type(list_node_t), pointer :: next_node => null()
   contains
-    procedure :: get
-    procedure :: next
-    procedure :: set_next
-    final :: finalize
+    procedure :: get => list_node_get
+    procedure :: next => list_node_next
+    procedure :: set_next => list_node_set_next
+    procedure :: is_equal => list_node_is_equal
+    procedure :: copy => list_node_copy
+    final :: list_node_finalize
   end type list_node_t
 
-  interface list_node
-    procedure constructor
-  end interface list_node
+  interface list_node_t
+    procedure list_node_constructor
+  end interface list_node_t
 
 contains
 
-  function constructor(value, next)
-    class(list_node_t), pointer :: constructor
-    class(*),           target  :: value
-    class(list_node_t), pointer :: next
-
-    PUSH_SUB(constructor)
+  ! ---------------------------------------------------------
+  function list_node_constructor(value, next, clone) result(constructor)
+    class(*),           target     :: value
+    class(list_node_t), pointer    :: next
+    logical,            intent(in) :: clone
+    class(list_node_t), pointer    :: constructor
 
     ! No safe_allocate macro here, as its counterpart in linked_list.F90
     ! causes an internal compiler error with GCC 6.4.0
     allocate(constructor)
     constructor%next_node => next
-    constructor%value => value
+    constructor%clone = clone
+    if (constructor%clone) then
+      allocate(constructor%value, source=value)
+    else
+      constructor%value => value
+    end if
 
-    POP_SUB(constructor)
-  end function constructor
+  end function list_node_constructor
 
-  function next(this)
+  ! ---------------------------------------------------------
+  function list_node_copy(this, next)
+    class(list_node_t), target  :: this
+    class(list_node_t), pointer :: next
+    class(list_node_t), pointer :: list_node_copy
+
+    list_node_copy => list_node_constructor(this%value, next, this%clone)
+
+  end function list_node_copy
+
+  ! ---------------------------------------------------------
+  function list_node_next(this) result(next)
     class(list_node_t), intent(in) :: this
     class(list_node_t), pointer    :: next
 
-    PUSH_SUB(next)
-
     next => this%next_node
 
-    POP_SUB(next)
-  end function next
+  end function list_node_next
 
-  subroutine set_next(this, next_node)
+  ! ---------------------------------------------------------
+  subroutine list_node_set_next(this, next_node)
     class(list_node_t), intent(inout) :: this
     class(list_node_t), pointer       :: next_node
 
-    PUSH_SUB(set_next)
-
     this%next_node => next_node
 
-    POP_SUB(set_next)
-  end subroutine set_next
+  end subroutine list_node_set_next
 
-  function get(this)
+  ! ---------------------------------------------------------
+  function list_node_get(this) result(get)
     class(list_node_t), intent(in) :: this
     class(*),           pointer :: get
 
-    PUSH_SUB(get)
-
     get => this%value
 
-    POP_SUB(get)
-  end function get
+  end function list_node_get
 
-  subroutine finalize(this)
+  ! ---------------------------------------------------------
+  logical function list_node_is_equal(this, value) result(is_equal)
+    class(list_node_t), intent(in) :: this
+    class(*),           target     :: value
+
+    ! First try to match the two types and compare the values.
+    ! Note that the list of types taken into account might not be exhaustive.
+    is_equal = .false.
+    select type (ptr => this%value)
+    type is (integer)
+      select type (value)
+      type is (integer)
+        is_equal = value == ptr
+      end select
+    type is (FLOAT)
+      select type (value)
+      type is (FLOAT)
+        is_equal = value == ptr
+      end select
+    type is (complex)
+      select type (value)
+      type is (complex)
+        is_equal = value == ptr
+      end select
+    type is (character(len=*))
+      select type (value)
+      type is (character(len=*))
+        is_equal = value == ptr
+      end select
+    type is (logical)
+      select type (value)
+      type is (logical)
+        is_equal = value .eqv. ptr
+      end select
+    end select
+
+    ! If we were not able to match the types, then we check if the two values
+    ! point to the same target.
+    if (.not. is_equal) then
+      is_equal = associated(this%value, value)
+    end if
+
+  end function list_node_is_equal
+
+  subroutine list_node_finalize(this)
     type(list_node_t), intent(inout) :: this
-
-    PUSH_SUB(finalize)
 
     if (associated(this%next_node)) then
       nullify(this%next_node)
     end if
     if (associated(this%value)) then
-      nullify(this%value)
+      if (this%clone) then
+        deallocate(this%value)
+      else
+        nullify(this%value)
+      end if
     end if
-    
-    POP_SUB(finalize)
-  end subroutine finalize
+
+  end subroutine list_node_finalize
   
 end module list_node_oct_m

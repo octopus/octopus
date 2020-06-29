@@ -25,7 +25,7 @@ module classical_particle_oct_m
   use interaction_abst_oct_m
   use interaction_gravity_oct_m
   use interaction_lorentz_force_oct_m
-  use ghost_interaction_oct_m
+  use interactions_factory_oct_m
   use io_oct_m
   use iso_c_binding
   use messages_oct_m
@@ -56,11 +56,13 @@ module classical_particle_oct_m
     FLOAT :: save_vel(1:MAX_DIM)   !< A storage for the SCF loops
     FLOAT :: tot_force(1:MAX_DIM)
     FLOAT :: prev_tot_force(1:MAX_DIM) !< Used for the SCF convergence criterium
+    FLOAT, allocatable :: prev_pos(:, :) !< Used for extrapolation
+    FLOAT, allocatable :: prev_vel(:, :) !< Used for extrapolation
+    FLOAT :: hamiltonian_elements(1:MAX_DIM)
 
     type(c_ptr) :: output_handle
   contains
-    procedure :: add_interaction_partner => classical_particle_add_interaction_partner
-    procedure :: has_interaction => classical_particle_has_interaction
+    procedure :: init_interaction => classical_particle_init_interaction
     procedure :: initial_conditions => classical_particle_initial_conditions
     procedure :: do_td_operation => classical_particle_do_td
     procedure :: iteration_info => classical_particle_iteration_info
@@ -132,6 +134,8 @@ contains
     this%quantities(VELOCITY)%required = .true.
     this%quantities(POSITION)%protected = .true.
     this%quantities(VELOCITY)%protected = .true.
+    call this%supported_interactions%add(GRAVITY)
+    call this%supported_interactions_as_partner%add(GRAVITY)
 
     call messages_print_stress(stdout, namespace=namespace)
 
@@ -139,47 +143,22 @@ contains
   end subroutine classical_particle_init
 
   ! ---------------------------------------------------------
-  subroutine classical_particle_add_interaction_partner(this, partner)
+  subroutine classical_particle_init_interaction(this, interaction)
     class(classical_particle_t), target, intent(inout) :: this
-    class(system_abst_t),            intent(inout) :: partner
+    class(interaction_abst_t),           intent(inout) :: interaction
 
-    class(ghost_interaction_t), pointer :: ghost
-    class(interaction_gravity_t), pointer :: gravity
-    type(interaction_gravity_t) :: gravity_t
-
-    PUSH_SUB(classical_particle_add_interaction_partner)
-
-    if (partner%has_interaction(gravity_t)) then
-      gravity => interaction_gravity_t(this%space%dim, partner)
-      this%quantities(POSITION)%required = .true.
-      this%quantities(MASS)%required = .true.
-      gravity%system_mass => this%mass
-      gravity%system_pos  => this%pos
-      call this%interactions%add(gravity)
-    else
-      ghost => ghost_interaction_t(partner)
-      call this%interactions%add(ghost)
-    end if
-
-    POP_SUB(classical_particle_add_interaction_partner)
-  end subroutine classical_particle_add_interaction_partner
-
-  ! ---------------------------------------------------------
-  logical function classical_particle_has_interaction(this, interaction)
-    class(classical_particle_t),   intent(in) :: this
-    class(interaction_abst_t), intent(in) :: interaction
-
-    PUSH_SUB(classical_particle_has_interaction)
+    PUSH_SUB(classical_particle_init_interaction)
 
     select type (interaction)
     type is (interaction_gravity_t)
-      classical_particle_has_interaction = .true.
+      call interaction%init(this%space%dim, this%quantities, this%mass, this%pos)
     class default
-      classical_particle_has_interaction = .false.
+      message(1) = "Trying to initialize an unsupported interaction by classical particles."
+      call messages_fatal(1)
     end select
 
-    POP_SUB(classical_particle_has_interaction)
-  end function classical_particle_has_interaction
+    POP_SUB(classical_particle_init_interaction)
+  end subroutine classical_particle_init_interaction
 
   ! ---------------------------------------------------------
   subroutine classical_particle_initial_conditions(this, from_scratch)
@@ -239,9 +218,13 @@ contains
     class(classical_particle_t), intent(inout) :: this
     integer,                     intent(in)    :: operation
 
-    integer :: ii
+    integer :: ii, sdim
+    FLOAT, allocatable :: tmp_pos(:, :), tmp_vel(:, :)
+    FLOAT :: factor
 
     PUSH_SUB(classical_particle_do_td)
+
+    sdim = this%space%dim
 
     select case(operation)
     case (VERLET_START)
@@ -306,6 +289,71 @@ contains
 
       ! We set it to the propagation time to avoid double increment
       call this%quantities(VELOCITY)%clock%set_time(this%prop%clock)
+
+    case (EXPMID_START)
+      SAFE_ALLOCATE(this%prev_pos(1:sdim, 1))
+      SAFE_ALLOCATE(this%prev_vel(1:sdim, 1))
+      this%prev_pos(1:sdim, 1) = this%pos(1:sdim)
+      this%prev_vel(1:sdim, 1) = this%vel(1:sdim)
+
+    case (EXPMID_FINISH)
+      SAFE_DEALLOCATE_A(this%prev_pos)
+      SAFE_DEALLOCATE_A(this%prev_vel)
+
+    case (EXPMID_PREDICT_DT_2)
+      this%pos(1:sdim) = CNST(1.5)*this%save_pos(1:sdim) - &
+                         CNST(0.5)*this%prev_pos(1:sdim, 1)
+      this%vel(1:sdim) = CNST(1.5)*this%save_vel(1:sdim) - &
+                         CNST(0.5)*this%prev_vel(1:sdim, 1)
+      this%prev_pos(1:sdim, 1) = this%save_pos(1:sdim)
+      this%prev_vel(1:sdim, 1) = this%save_vel(1:sdim)
+      call this%quantities(POSITION)%clock%increment()
+      call this%quantities(VELOCITY)%clock%increment()
+
+    case (UPDATE_HAMILTONIAN)
+      this%hamiltonian_elements(1:sdim) = this%tot_force(1:sdim) / (this%mass * this%pos(1:sdim))
+
+    case (EXPMID_PREDICT_DT)
+      SAFE_ALLOCATE(tmp_pos(1:sdim, 2))
+      SAFE_ALLOCATE(tmp_vel(1:sdim, 2))
+      ! apply exponential - at some point this could use the machinery of
+      !   exponential_apply (but this would require a lot of boilerplate code
+      !   like a Hamiltonian class etc)
+      ! save_pos/vel contain the state at t - this is the state we want to
+      !   apply the Hamiltonian to
+      tmp_pos(1:sdim, 1) = this%save_pos(1:sdim)
+      tmp_vel(1:sdim, 1) = this%save_vel(1:sdim)
+      this%pos(1:sdim) = this%save_pos(1:sdim)
+      this%vel(1:sdim) = this%save_vel(1:sdim)
+      ! compute exponential with Taylor expansion
+      factor = M_ONE
+      do ii = 1, 4
+        factor = factor * this%prop%dt / ii
+        ! apply hamiltonian
+        tmp_pos(1:sdim, 2) = tmp_vel(1:sdim, 1)
+        tmp_vel(1:sdim, 2) = this%hamiltonian_elements(1:sdim) * tmp_pos(1:sdim, 1)
+        ! swap temporary variables
+        tmp_pos(1:sdim, 1) = tmp_pos(1:sdim, 2)
+        tmp_vel(1:sdim, 1) = tmp_vel(1:sdim, 2)
+        ! accumulate components of Taylor expansion
+        this%pos(1:sdim) = this%pos(1:sdim) + factor * tmp_pos(1:sdim, 1)
+        this%vel(1:sdim) = this%vel(1:sdim) + factor * tmp_vel(1:sdim, 1)
+      end do
+      SAFE_DEALLOCATE_A(tmp_pos)
+      SAFE_DEALLOCATE_A(tmp_vel)
+      call this%quantities(POSITION)%clock%increment()
+      call this%quantities(VELOCITY)%clock%increment()
+
+    case (EXPMID_CORRECT_DT_2)
+      ! only correct for dt/2 if not converged yet
+      if(.not. this%is_tolerance_reached(this%prop%scf_tol)) then
+        this%pos(1:sdim) = CNST(0.5)*(this%pos(1:sdim) + &
+                                      this%save_pos(1:sdim))
+        this%vel(1:sdim) = CNST(0.5)*(this%vel(1:sdim) + &
+                                      this%save_vel(1:sdim))
+        call this%quantities(POSITION)%clock%increment()
+        call this%quantities(VELOCITY)%clock%increment()
+      end if
 
     case default
       message(1) = "Unsupported TD operation."
@@ -483,20 +531,20 @@ contains
   end subroutine classical_particle_update_quantity
 
   ! ---------------------------------------------------------
-  subroutine classical_particle_update_exposed_quantity(this, iq, requested_time)
-    class(classical_particle_t),   intent(inout) :: this
+  subroutine classical_particle_update_exposed_quantity(partner, iq, requested_time)
+    class(classical_particle_t),   intent(inout) :: partner
     integer,                   intent(in)    :: iq
     class(clock_t),            intent(in)    :: requested_time
 
     PUSH_SUB(classical_particle_update_exposed_quantity)
 
     ! We are not allowed to update protected quantities!
-    ASSERT(.not. this%quantities(iq)%protected)
+    ASSERT(.not. partner%quantities(iq)%protected)
 
     select case (iq)
     case (MASS)
       ! The classical particle has a mass, but it does not require any update, as it does not change with time.
-      call this%quantities(iq)%clock%set_time(this%clock)
+      call partner%quantities(iq)%clock%set_time(requested_time)
     case default
       message(1) = "Incompatible quantity."
       call messages_fatal(1)
@@ -506,19 +554,17 @@ contains
   end subroutine classical_particle_update_exposed_quantity
 
   ! ---------------------------------------------------------
-  subroutine classical_particle_copy_quantities_to_interaction(this, interaction)
-    class(classical_particle_t),          intent(inout) :: this
+  subroutine classical_particle_copy_quantities_to_interaction(partner, interaction)
+    class(classical_particle_t),          intent(inout) :: partner
     class(interaction_abst_t),        intent(inout) :: interaction
 
     PUSH_SUB(classical_particle_copy_quantities_to_interaction)
 
     select type (interaction)
     type is (interaction_gravity_t)
-      interaction%partner_mass = this%mass
-      interaction%partner_pos = this%pos
+      interaction%partner_mass = partner%mass
+      interaction%partner_pos = partner%pos
     type is (interaction_lorentz_force_t)
-      ! Nothing to copy
-    type is (ghost_interaction_t)
       ! Nothing to copy
     class default
       message(1) = "Unsupported interaction."
@@ -552,16 +598,9 @@ contains
     this%tot_force(1:this%space%dim) = M_ZERO
     call iter%start(this%interactions)
     do while (iter%has_next())
-      select type (interaction => iter%get_next_interaction())
-      type is (interaction_lorentz_force_t)
-        this%tot_force(1:this%space%dim) = this%tot_force(1:this%space%dim) + interaction%force(1:this%space%dim)
+      select type (interaction => iter%get_next())
       type is (interaction_gravity_t)
         this%tot_force(1:this%space%dim) = this%tot_force(1:this%space%dim) + interaction%force(1:this%space%dim)
-      type is (ghost_interaction_t)
-        ! Nothing to do
-      class default
-        message(1) = "Unknown interaction by the classical particle " + this%namespace%get()
-        call messages_fatal(1)
       end select
     end do
 
@@ -572,18 +611,9 @@ contains
   subroutine classical_particle_finalize(this)
     type(classical_particle_t), intent(inout) :: this
 
-    type(interaction_iterator_t) :: iter
-    class(interaction_abst_t), pointer :: interaction
-
     PUSH_SUB(classical_particle_finalize)
 
-    deallocate(this%prop)
-
-    call iter%start(this%interactions)
-    do while (iter%has_next())
-      interaction => iter%get_next_interaction()
-      SAFE_DEALLOCATE_P(interaction)
-    end do
+    call system_abst_end(this)
 
     POP_SUB(classical_particle_finalize)
   end subroutine classical_particle_finalize

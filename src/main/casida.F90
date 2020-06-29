@@ -56,7 +56,7 @@ module casida_oct_m
   use states_elec_dim_oct_m
   use states_elec_restart_oct_m
   use sternheimer_oct_m
-  use system_oct_m
+  use electrons_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use utils_oct_m
@@ -173,8 +173,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine casida_run(sys, fromScratch)
-    type(system_t),      intent(inout) :: sys
-    logical,             intent(inout) :: fromScratch
+    type(electrons_t), intent(inout) :: sys
+    logical,           intent(inout) :: fromScratch
 
     type(casida_t) :: cas
     type(block_t) :: blk
@@ -252,7 +252,7 @@ contains
     ! setup Hamiltonian, without recalculating eigenvalues (use the ones from the restart information)
     message(1) = 'Info: Setting up Hamiltonian.'
     call messages_info(1)
-    call system_h_setup(sys, calc_eigenval=.false.)
+    call sys%h_setup(calc_eigenval=.false.)
 
     !%Variable CasidaTheoryLevel
     !%Type flag
@@ -527,8 +527,8 @@ contains
   ! ---------------------------------------------------------
   !> allocates stuff, and constructs the arrays pair_i and pair_j
   subroutine casida_type_init(cas, sys)
-    type(casida_t),    intent(inout) :: cas
-    type(system_t),    intent(in)    :: sys
+    type(casida_t),      intent(inout) :: cas
+    type(electrons_t),   intent(in)    :: sys
 
     integer :: ist, ast, jpair, ik, ierr
 
@@ -660,8 +660,8 @@ contains
   !> this subroutine calculates electronic excitation energies using
   !! the matrix formulation of M. Petersilka, or of M. Casida
   subroutine casida_work(sys, cas)
-    type(system_t), target, intent(inout) :: sys
-    type(casida_t),         intent(inout) :: cas
+    type(electrons_t),   target, intent(inout) :: sys
+    type(casida_t),              intent(inout) :: cas
 
     type(states_elec_t), pointer :: st
     type(mesh_t),   pointer :: mesh
@@ -850,8 +850,8 @@ contains
 
   ! ---------------------------------------------------------
   FLOAT function casida_matrix_factor(cas, sys)
-    type(casida_t), intent(in)    :: cas
-    type(system_t), intent(in)    :: sys
+    type(casida_t),      intent(in)    :: cas
+    type(electrons_t),   intent(in)    :: sys
     
     PUSH_SUB(casida_matrix_factor)
     

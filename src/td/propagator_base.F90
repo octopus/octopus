@@ -28,8 +28,7 @@ module propagator_base_oct_m
 
   private
   public ::                            &
-    propagator_t,                      &
-    propagator_mxll_t
+    propagator_t
 
   integer, public, parameter ::        &
     PROP_ETRS                    = 2,  &
@@ -60,26 +59,6 @@ module propagator_base_oct_m
     
     type(propagation_ops_elec_t) :: propagation_ops_elec
   end type propagator_t
-
-
-  type propagator_mxll_t
-    integer             :: op_method
-    logical             :: bc_add_ab_region  = .false.
-    logical             :: bc_zero           = .false.
-    logical             :: bc_constant       = .false.
-    logical             :: bc_mirror_pec     = .false.
-    logical             :: bc_mirror_pmc     = .false.
-    logical             :: bc_periodic       = .false.
-    logical             :: bc_plane_waves    = .false.
-    logical             :: bc_medium         = .false.
-    type(exponential_t) :: te
-    integer             :: inter_steps
-    FLOAT               :: delay_time
-    FLOAT               :: scf_threshold
-    logical             :: plane_waves_in_box
-    integer             :: tr_etrs_approx
-  end type propagator_mxll_t
-
 
 end module propagator_base_oct_m
 

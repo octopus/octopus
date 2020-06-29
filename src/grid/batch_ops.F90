@@ -103,8 +103,7 @@ module batch_ops_oct_m
     module procedure zbatch_mul
   end interface batch_mul
 
-  type(profile_t), save :: scal_prof, xpay_prof, axpy_const_prof, axpy_vec_prof, get_points_prof, set_points_prof
-  type(profile_t), save :: mul_prof
+  type(profile_t), save :: get_points_prof, set_points_prof
 
 contains
 

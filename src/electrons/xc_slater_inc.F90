@@ -29,7 +29,7 @@ subroutine X(xc_slater_calc)(namespace, psolver, mesh, st, ex, vxc)
   integer :: isp
   type(profile_t), save :: prof
 
-  call profiling_in(prof, 'XC_SLATER')
+  call profiling_in(prof, "X(XC_SLATER)")
   PUSH_SUB(X(xc_slater_calc))
 
   eig = M_ZERO

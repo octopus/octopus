@@ -34,60 +34,85 @@ module interaction_lorentz_force_oct_m
     interaction_lorentz_force_t
 
   type, extends(interaction_with_partner_t) :: interaction_lorentz_force_t
+    private
     integer :: dim
 
-    FLOAT :: force(MAX_DIM)
+    FLOAT, public :: force(MAX_DIM)
 
     FLOAT, pointer :: system_charge
-    FLOAT, pointer :: system_pos(:)
+    FLOAT, pointer, public :: system_pos(:)
     FLOAT, pointer :: system_vel(:)
 
-    FLOAT :: partner_mass
-    FLOAT, allocatable :: partner_E_field(:)
-    FLOAT, allocatable :: partner_B_field(:)
+    FLOAT, allocatable, public :: partner_E_field(:)
+    FLOAT, allocatable, public :: partner_B_field(:)
 
   contains
+    procedure :: init => interaction_lorentz_force_init
     procedure :: calculate => interaction_lorentz_force_calculate
-    procedure :: end => interaction_lorentz_force_end
     final :: interaction_lorentz_force_finalize
   end type interaction_lorentz_force_t
 
   interface interaction_lorentz_force_t
-    module procedure interaction_lorentz_force_init
+    module procedure interaction_lorentz_force_constructor
   end interface interaction_lorentz_force_t
 
 contains
 
   ! ---------------------------------------------------------
-
-  function interaction_lorentz_force_init(dim, partner) result(this)
-    integer,                              intent(in)    :: dim
+  function interaction_lorentz_force_constructor(partner) result(this)
     class(interaction_partner_t), target, intent(inout) :: partner
     class(interaction_lorentz_force_t),   pointer       :: this
 
-    PUSH_SUB(interaction_lorentz_force_init)
+    PUSH_SUB(interaction_lorentz_force_constructor)
 
     SAFE_ALLOCATE(this)
 
-    this%dim = dim
+    this%label = "lorenz_force"
+
     this%partner => partner
 
-    ! For the Lorentz force we need the position, velocity and charge of the
-    ! system and the E and B field of the interaction partner at the particle position
+    ! The Lorentz force needs the position, velocity and charge of the system
     this%n_system_quantities = 3
-    this%n_partner_quantities = 2
     SAFE_ALLOCATE(this%system_quantities(this%n_system_quantities))
-    SAFE_ALLOCATE(this%partner_quantities(this%n_partner_quantities))
     this%system_quantities(1) = POSITION
     this%system_quantities(2) = VELOCITY
     this%system_quantities(3) = CHARGE
+    nullify(this%system_pos)
+    nullify(this%system_vel)
+
+    ! The Lorenz force needs the E and B field of the interaction partner at the particle position
+    this%n_partner_quantities = 2
+    SAFE_ALLOCATE(this%partner_quantities(this%n_partner_quantities))
     this%partner_quantities(1) = E_FIELD
     this%partner_quantities(2) = B_FIELD
+
+    POP_SUB(interaction_lorentz_force_constructor)
+  end function interaction_lorentz_force_constructor
+
+  ! ---------------------------------------------------------
+  subroutine interaction_lorentz_force_init(this, dim, system_quantities, system_charge, system_pos, system_vel)
+    class(interaction_lorentz_force_t),   intent(inout) :: this
+    integer,                              intent(in)    :: dim
+    type(quantity_t),                     intent(inout) :: system_quantities(:)
+    FLOAT,                        target, intent(in)    :: system_charge
+    FLOAT,                        target, intent(in)    :: system_pos(:)
+    FLOAT,                        target, intent(in)    :: system_vel(:)
+
+    PUSH_SUB(interaction_lorentz_force_init)
+
+    this%dim = dim
     SAFE_ALLOCATE(this%partner_E_field(dim))
     SAFE_ALLOCATE(this%partner_B_field(dim))
+  
+    system_quantities(POSITION)%required = .true.
+    system_quantities(VELOCITY)%required = .true.
+    system_quantities(CHARGE)%required = .true.
+    this%system_charge => system_charge
+    this%system_pos => system_pos
+    this%system_vel => system_vel
 
     POP_SUB(interaction_lorentz_force_init)
-  end function interaction_lorentz_force_init
+  end subroutine interaction_lorentz_force_init
 
   ! ---------------------------------------------------------
   subroutine interaction_lorentz_force_calculate(this, namespace)
@@ -110,12 +135,11 @@ contains
   end subroutine interaction_lorentz_force_calculate
 
   ! ---------------------------------------------------------
-  subroutine interaction_lorentz_force_end(this)
-    class(interaction_lorentz_force_t), intent(inout) :: this
+  subroutine interaction_lorentz_force_finalize(this)
+    type(interaction_lorentz_force_t), intent(inout) :: this
 
-    PUSH_SUB(interaction_lorentz_force_end)
+    PUSH_SUB(interaction_lorentz_force_finalize)
 
-    nullify(this%partner)
     this%force = M_ZERO
     nullify(this%system_charge)
     nullify(this%system_pos)
@@ -124,17 +148,6 @@ contains
     SAFE_DEALLOCATE_A(this%partner_B_field)
 
     call interaction_with_partner_end(this)
-
-    POP_SUB(interaction_lorentz_force_end)
-  end subroutine interaction_lorentz_force_end
-
-  ! ---------------------------------------------------------
-  subroutine interaction_lorentz_force_finalize(this)
-    type(interaction_lorentz_force_t), intent(inout) :: this
-
-    PUSH_SUB(interaction_lorentz_force_finalize)
-
-    call this%end()
 
     POP_SUB(interaction_lorentz_force_finalize)
   end subroutine interaction_lorentz_force_finalize

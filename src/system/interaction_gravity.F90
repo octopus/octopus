@@ -34,40 +34,39 @@ module interaction_gravity_oct_m
     interaction_gravity_t
 
   type, extends(interaction_with_partner_t) :: interaction_gravity_t
+    private
     integer :: dim
 
-    FLOAT :: force(MAX_DIM)
+    FLOAT, public :: force(MAX_DIM)
 
     FLOAT, pointer :: system_mass
     FLOAT, pointer :: system_pos(:)
 
-    FLOAT :: partner_mass
-    FLOAT, allocatable :: partner_pos(:)
+    FLOAT, public :: partner_mass
+    FLOAT, allocatable, public :: partner_pos(:)
 
   contains
+    procedure :: init => interaction_gravity_init
     procedure :: calculate => interaction_gravity_calculate
-    procedure :: end => interaction_gravity_end
     final :: interaction_gravity_finalize
   end type interaction_gravity_t
 
   interface interaction_gravity_t
-    module procedure interaction_gravity_init
+    module procedure interaction_gravity_constructor
   end interface interaction_gravity_t
 
 contains
-
   ! ---------------------------------------------------------
-
-  function interaction_gravity_init(dim, partner) result(this)
-    integer,                              intent(in)    :: dim
+  function interaction_gravity_constructor(partner) result(this)
     class(interaction_partner_t), target, intent(inout) :: partner
     class(interaction_gravity_t),         pointer       :: this
 
-    PUSH_SUB(interaction_gravity_init)
+    PUSH_SUB(interaction_gravity_constructor)
 
     SAFE_ALLOCATE(this)
 
-    this%dim = dim
+    this%label = "gravity"
+
     this%partner => partner
 
     ! Gravity interaction needs two quantities from each system: the position and the mass
@@ -76,6 +75,9 @@ contains
     SAFE_ALLOCATE(this%system_quantities(this%n_system_quantities))
     this%system_quantities(1) = POSITION
     this%system_quantities(2) = MASS
+    nullify(this%system_mass)
+    nullify(this%system_pos)
+
     ! From the partner:
     this%n_partner_quantities = 2
     SAFE_ALLOCATE(this%partner_quantities(this%n_partner_quantities))
@@ -83,10 +85,30 @@ contains
     this%partner_quantities(2) = MASS
     this%partner%quantities(POSITION)%required = .true.
     this%partner%quantities(MASS)%required = .true.
+
+    POP_SUB(interaction_gravity_constructor)
+  end function interaction_gravity_constructor
+
+  ! ---------------------------------------------------------
+  subroutine interaction_gravity_init(this, dim, system_quantities, system_mass, system_pos)
+    class(interaction_gravity_t),         intent(inout) :: this
+    integer,                              intent(in)    :: dim
+    type(quantity_t),                     intent(inout) :: system_quantities(:)
+    FLOAT,                        target, intent(in)    :: system_mass
+    FLOAT,                        target, intent(in)    :: system_pos(:)
+
+    PUSH_SUB(interaction_gravity_init)
+
+    this%dim = dim
     SAFE_ALLOCATE(this%partner_pos(dim))
 
+    system_quantities(POSITION)%required = .true.
+    system_quantities(MASS)%required = .true.
+    this%system_mass => system_mass
+    this%system_pos => system_pos
+
     POP_SUB(interaction_gravity_init)
-  end function interaction_gravity_init
+  end subroutine interaction_gravity_init
 
   ! ---------------------------------------------------------
   subroutine interaction_gravity_calculate(this, namespace)
@@ -107,29 +129,17 @@ contains
   end subroutine interaction_gravity_calculate
 
   ! ---------------------------------------------------------
-  subroutine interaction_gravity_end(this)
-    class(interaction_gravity_t), intent(inout) :: this
+  subroutine interaction_gravity_finalize(this)
+    type(interaction_gravity_t), intent(inout) :: this
 
-    PUSH_SUB(interaction_gravity_end)
+    PUSH_SUB(interaction_gravity_finalize)
 
-    nullify(this%partner)
     this%force = M_ZERO
     nullify(this%system_mass)
     nullify(this%system_pos)
     SAFE_DEALLOCATE_A(this%partner_pos)
 
     call interaction_with_partner_end(this)
-
-    POP_SUB(interaction_gravity_end)
-  end subroutine interaction_gravity_end
-
-  ! ---------------------------------------------------------
-  subroutine interaction_gravity_finalize(this)
-    type(interaction_gravity_t), intent(inout) :: this
-
-    PUSH_SUB(interaction_gravity_finalize)
-
-    call this%end()
 
     POP_SUB(interaction_gravity_finalize)
   end subroutine interaction_gravity_finalize

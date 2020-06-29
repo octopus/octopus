@@ -421,7 +421,7 @@ subroutine X(lobpcg)(namespace, gr, st, hm, st_start, st_end, psi, constr_start,
     ! H dir with the new dir), we cannot use lobpcg_orth at this point.
     if(iter > 1) then
       call X(blockt_mul)(gr%mesh, st, st_start, dir, dir, nuc_tmp, xpsi1 = uc(1:nuc), xpsi2 = uc(1:nuc), symm = .true.)
-      call profiling_in(C_PROFILING_LOBPCG_CHOL, 'LOBPCG_CHOL')
+      call profiling_in(C_PROFILING_LOBPCG_CHOL, "X(LOBPCG_CHOL)")
       no_bof = .false.
       call lalg_cholesky(nuc, nuc_tmp, bof = no_bof)
       call profiling_out(C_PROFILING_LOBPCG_CHOL)
@@ -436,7 +436,7 @@ subroutine X(lobpcg)(namespace, gr, st, hm, st_start, st_end, psi, constr_start,
         dir   = R_TOTYPE(M_ZERO)
         h_dir = R_TOTYPE(M_ZERO)
       else
-        call profiling_in(C_PROFILING_LOBPCG_INV, 'LOBPCG_INV')
+        call profiling_in(C_PROFILING_LOBPCG_INV, "X(LOBPCG_INV)")
         call lalg_invert_upper_triangular(nuc, nuc_tmp)
         call profiling_out(C_PROFILING_LOBPCG_INV)
         ! Fill lower triangle of nuc_tmp with zeros.
@@ -514,7 +514,7 @@ subroutine X(lobpcg)(namespace, gr, st, hm, st_start, st_end, psi, constr_start,
         xpsi1 = uc(1:nuc), xpsi2 = uc(1:nuc))
     end if
 
-    call profiling_in(C_PROFILING_LOBPCG_ESOLVE, 'LOBPCG_ESOLVE')
+    call profiling_in(C_PROFILING_LOBPCG_ESOLVE, "X(LOBPCG_ESOLVE)")
     no_bof = .false.
     call lalg_lowest_geneigensolve(nst, nst+blks*nuc, gram_h, gram_i, eval, ritz_vec, &
                preserve_mat=.false., bof = no_bof)
@@ -684,14 +684,14 @@ contains
     chol_failure = .false.
     SAFE_ALLOCATE(vv(1:nuc, 1:nuc))
     call states_elec_blockt_mul(gr%mesh, st, v_start, v_start, vs, vs, vv, xpsi1 = uc(1:nuc), xpsi2 = uc(1:nuc), symm = .true.)
-    call profiling_in(C_PROFILING_LOBPCG_CHOL, 'LOBPCG_CHOL')
+    call profiling_in(C_PROFILING_LOBPCG_CHOL, "X(LOBPCG_CHOL)")
     call lalg_cholesky(nuc, vv, bof = chol_failure)
     call profiling_out(C_PROFILING_LOBPCG_CHOL)
     if(chol_failure) then ! Failure in Cholesky decomposition.
       POP_SUB(X(lobpcg).X(lobpcg_orth))
       return
     end if
-    call profiling_in(C_PROFILING_LOBPCG_INV, 'LOBPCG_INV')
+    call profiling_in(C_PROFILING_LOBPCG_INV, "X(LOBPCG_INV)")
     call lalg_invert_upper_triangular(nuc, vv)
     call profiling_out(C_PROFILING_LOBPCG_INV)
     ! Fill lower triangle of vv with zeros.
@@ -719,7 +719,7 @@ contains
     R_TYPE, allocatable :: tmp1(:, :), tmp2(:, :), tmp3(:, :)
     type(profile_t), save :: prof
 
-    call profiling_in(prof, "LOBPCG_CONSTRAINTS")
+    call profiling_in(prof, "X(LOBPCG_CONSTRAINTS)")
     PUSH_SUB(X(lobpcg).X(lobpcg_apply_constraints))
 
     SAFE_ALLOCATE(tmp1(1:nconstr, 1:nconstr))

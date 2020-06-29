@@ -40,7 +40,7 @@ subroutine X(linear_solver_solve_HXeY) (this, namespace, hm, gr, st, ist, ik, x,
   R_TYPE, allocatable :: z(:, :)
 
   PUSH_SUB(X(linear_solver_solve_HXeY))
-  call profiling_in(prof, "LINEAR_SOLVER")
+  call profiling_in(prof, "X(LINEAR_SOLVER)")
 
   occ_response_ = .true.
   if(present(occ_response)) occ_response_ = occ_response
@@ -132,7 +132,7 @@ subroutine X(linear_solver_solve_HXeY_batch) (this, namespace, hm, gr, st, xb, y
   select case(this%solver)
   case(OPTION__LINEARSOLVER__QMR_DOTP)
 
-    call profiling_in(prof_batch, "LINEAR_SOLVER_BATCH")
+    call profiling_in(prof_batch, "X(LINEAR_SOLVER_BATCH)")
 
     if (hamiltonian_elec_apply_packed(hm)) then
       call xb%do_pack()

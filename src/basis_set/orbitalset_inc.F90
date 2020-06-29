@@ -28,7 +28,7 @@ subroutine X(orbitalset_get_coefficients)(os, ndim, psi, ik, has_phase, basisfro
   type(profile_t), save :: prof, prof_reduce
   R_TYPE, allocatable :: spsi(:,:)
 
-  call profiling_in(prof, "ORBSET_GET_COEFFICIENTS")
+  call profiling_in(prof, "X(ORBSET_GET_COEFFICIENTS)")
 
   PUSH_SUB(X(orbitalset_get_coefficients))
 
@@ -84,7 +84,7 @@ subroutine X(orbitalset_get_coefficients)(os, ndim, psi, ik, has_phase, basisfro
   end if
 
   if(os%sphere%mesh%parallel_in_domains) then
-    call profiling_in(prof_reduce, "ORBSET_GET_COEFF_REDUCE")
+    call profiling_in(prof_reduce, "X(ORBSET_GET_COEFF_REDUCE)")
     call comm_allreduce(os%sphere%mesh%mpi_grp%comm, dot) 
     call profiling_out(prof_reduce)
   end if
@@ -107,7 +107,7 @@ subroutine X(orbitalset_get_coeff_batch)(os, ndim, psib, basisfromstates, dot)
   type(profile_t), save :: prof
   R_TYPE, allocatable :: psi(:,:)
 
-  call profiling_in(prof, "ORBSET_GET_COEFF_BATCH")
+  call profiling_in(prof, "X(ORBSET_GET_COEFF_BATCH)")
 
   PUSH_SUB(X(orbitalset_get_coeff_batch))
 
@@ -135,7 +135,7 @@ subroutine X(orbitalset_add_to_psi)(os, ndim, psi, ik, has_phase, basisfromstate
   integer :: im, idim, idim_orb
   type(profile_t), save :: prof
 
-  call profiling_in(prof, "ORBSET_ADD_TO_PSI")
+  call profiling_in(prof, "X(ORBSET_ADD_TO_PSI)")
 
   PUSH_SUB(X(orbitalset_add_to_psi))
 
@@ -197,7 +197,7 @@ subroutine X(orbitalset_add_to_batch)(os, ndim, psib, basisfromstates, weight)
   R_TYPE :: tmp
   integer :: block_size, size, sp, ep
 
-  call profiling_in(prof, "ORBSET_ADD_TO_BATCH")
+  call profiling_in(prof, "X(ORBSET_ADD_TO_BATCH)")
 
   PUSH_SUB(X(orbitalset_add_to_batch))
 

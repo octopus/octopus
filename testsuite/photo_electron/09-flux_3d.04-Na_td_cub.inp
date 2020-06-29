@@ -15,17 +15,15 @@ SICCorrection = sic_adsic
  "Na" | 0.0 | 0.0 | 0.0
 %
 
-BoxShape = sphere
-Radius = 20
+BoxShape = parallelepiped
+Lsize = 20
 Spacing = 0.7
 
 #############################
 # Boundaries
 #############################
 AbsorbingBoundaries = cap
-%ABShape
- 15 | Radius
-%
+ABWidth = 5
 ABCapHeight = -1.0
 
 #############################
@@ -33,12 +31,15 @@ ABCapHeight = -1.0
 #############################
 PhotoElectronSpectrum = pes_flux
 
+PES_Flux_Shape  = cub 
+PES_Flux_Lsize = 15
+PES_Flux_UseSymmetries = yes
+PES_Flux_Face_Dens = 1/2
+PES_Flux_Kmin = -2.0
 PES_Flux_Kmax = 2.0
-PES_Flux_DeltaK = 0.01
-PES_Flux_StepsThetaK = 30
-PES_Flux_StepsPhiK = 30
-PES_Flux_Radius = 15
-PES_Flux_Lmax = 4
+PES_Flux_DeltaK = 0.1
+
+PES_Flux_RuntimeOutput = yes
 
 ##########################
 #LASER
@@ -71,4 +72,3 @@ TDExpOrder = 20
 
 TDPropagationTime = ntot*tc
 
-StatesPack = yes

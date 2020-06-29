@@ -58,7 +58,6 @@ module propagator_mxll_oct_m
   use parser_oct_m
   use par_vec_oct_m
   use profiling_oct_m
-  use propagator_base_oct_m
   use poisson_oct_m
   use states_elec_oct_m
   use states_mxll_oct_m
@@ -71,6 +70,7 @@ module propagator_mxll_oct_m
 
   private
   public ::                                  &
+    propagator_mxll_t,                       &
     propagator_mxll_init,                    &
     mxll_propagation_step,                   &
     transform_rs_state,                      &
@@ -88,6 +88,24 @@ module propagator_mxll_oct_m
     td_function_mxll_init,                   &
     plane_waves_in_box_calculation,          &
     spatial_constant_calculation
+
+  type propagator_mxll_t
+    integer             :: op_method
+    logical             :: bc_add_ab_region  = .false.
+    logical             :: bc_zero           = .false.
+    logical             :: bc_constant       = .false.
+    logical             :: bc_mirror_pec     = .false.
+    logical             :: bc_mirror_pmc     = .false.
+    logical             :: bc_periodic       = .false.
+    logical             :: bc_plane_waves    = .false.
+    logical             :: bc_medium         = .false.
+    type(exponential_t) :: te
+    integer             :: inter_steps
+    FLOAT               :: delay_time
+    FLOAT               :: scf_threshold
+    logical             :: plane_waves_in_box
+    integer             :: tr_etrs_approx
+  end type propagator_mxll_t
 
   integer, public, parameter ::   &
      RS_TRANS_FORWARD = 1,        &
@@ -243,7 +261,7 @@ contains
       do il=1, nlines
         ncols = parse_block_cols(blk, il-1)
         if (ncols /= 11) then
-          call messages_input_error(namespace, 'MaxwellMedium', 'should consist of eleven columns')
+          call messages_input_error(namespace, 'MaxwellMedium', 'should consist of eleven columns', row=il-1)
         end if
         do idim=1,3
           call parse_block_float(blk, il-1, idim-1, hm%medium_box_center(idim,il))
@@ -740,7 +758,7 @@ contains
   end subroutine calculate_matter_longitudinal_field
 
   !----------------------------------------------------------
-  subroutine get_vector_pot_and_transverse_field(trans_calc_method, gr_mxll, hm_mxll, st_mxll, tr_mxll, hm, st, tr, &
+  subroutine get_vector_pot_and_transverse_field(trans_calc_method, gr_mxll, hm_mxll, st_mxll, tr_mxll, hm, st, &
     poisson_solver, time, field, transverse_field, vector_potential, geo)
     integer,                    intent(in)    :: trans_calc_method
     type(grid_t),               intent(in)    :: gr_mxll
@@ -749,7 +767,7 @@ contains
     type(propagator_mxll_t),    intent(in)    :: tr_mxll
     type(hamiltonian_elec_t),   intent(in)    :: hm
     type(states_elec_t),        intent(in)    :: st
-    type(propagator_t),         intent(in)    :: tr
+!    type(propagator_t),         intent(in)    :: tr
     type(poisson_t),            intent(in)    :: poisson_solver
     FLOAT,                      intent(in)    :: time
     CMPLX,                      intent(inout) :: field(:,:)
@@ -2441,7 +2459,7 @@ contains
     FLOAT                :: e_field(st%dim), b_field(st%dim)
     character(len=1024)  :: mxf_expression
 
-    PUSH_SUB(td_function_init)
+    PUSH_SUB(td_function_mxll_init)
 
     !%Variable UserDefinedConstantSpatialMaxwellField
     !%Type block
