@@ -83,6 +83,8 @@ contains
     SAFE_ALLOCATE(this%partner_quantities(this%n_partner_quantities))
     this%partner_quantities(1) = POSITION
     this%partner_quantities(2) = CHARGE
+    this%partner%quantities(POSITION)%required = .true.
+    this%partner%quantities(CHARGE)%required = .true.
 
     POP_SUB(interaction_coulomb_force_constructor)
   end function interaction_coulomb_force_constructor
