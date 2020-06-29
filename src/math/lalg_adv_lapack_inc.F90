@@ -31,6 +31,7 @@ subroutine X(cholesky)(n, a, bof, err_code)
   PUSH_SUB(X(cholesky))
 
   ASSERT(n > 0)
+  ASSERT(not_in_openmp())
 
   call lapack_potrf('U', n, a(1, 1), lead_dim(a), info)
   if(info /= 0) then
@@ -91,6 +92,7 @@ subroutine X(geneigensolve)(n, a, b, e, preserve_mat, bof, err_code)
   PUSH_SUB(X(geneigensolve))
 
   ASSERT(n > 0)
+  ASSERT(not_in_openmp())
 
   if(preserve_mat) then
     SAFE_ALLOCATE(diag(1:n))
@@ -190,6 +192,7 @@ subroutine X(eigensolve_nonh)(n, a, e, err_code, side, sort_eigenvectors)
   PUSH_SUB(X(eigensolve_nonh))
 
   ASSERT(n > 0)
+  ASSERT(not_in_openmp())
 
   if (present(side)) then
     side_ = side
@@ -310,6 +313,7 @@ subroutine X(lowest_geneigensolve)(k, n, a, b, e, v, preserve_mat, bof, err_code
   PUSH_SUB(X(lowest_geneigensolve))
 
   ASSERT(n > 0)
+  ASSERT(not_in_openmp())
 
   abstol = 2*sfmin()
 
@@ -442,6 +446,7 @@ subroutine X(eigensolve)(n, a, e, bof, err_code)
   call profiling_in(eigensolver_prof, "X(DENSE_EIGENSOLVER)")
 
   ASSERT(n > 0)
+  ASSERT(not_in_openmp())
 
   lwork = 6*n ! query?
   SAFE_ALLOCATE(work(1:lwork))
@@ -511,6 +516,7 @@ subroutine X(lowest_eigensolve)(k, n, a, e, v, preserve_mat)
   PUSH_SUB(X(lowest_eigensolve))
 
   ASSERT(n > 0)
+  ASSERT(not_in_openmp())
 
   abstol = 2*sfmin()
 
@@ -611,6 +617,7 @@ R_TYPE function X(determinant)(n, a, preserve_mat) result(d)
   ! No PUSH_SUB, called too often
 
   ASSERT(n > 0)
+  ASSERT(not_in_openmp())
 
   SAFE_ALLOCATE(ipiv(1:n))
 
@@ -657,6 +664,7 @@ subroutine X(inverter)(n, a, det)
   ! No PUSH_SUB, called too often
 
   ASSERT(n > 0)
+  ASSERT(not_in_openmp())
 
   SAFE_ALLOCATE(work(1:n)) ! query?
   SAFE_ALLOCATE(ipiv(1:n))
@@ -716,6 +724,7 @@ subroutine X(sym_inverter)(uplo, n, a)
   PUSH_SUB(X(sym_inverter))
 
   ASSERT(n > 0)
+  ASSERT(not_in_openmp())
 
   SAFE_ALLOCATE(work(1:n)) ! query?
   SAFE_ALLOCATE(ipiv(1:n))
@@ -769,6 +778,7 @@ subroutine dlinsyssolve(n, nrhs, a, b, x)
   ! no PUSH_SUB, called too often
 
   ASSERT(n > 0)
+  ASSERT(not_in_openmp())
   ASSERT(ubound(a, dim=1) >= n)
   ASSERT(ubound(a, dim=2) >= n)
   ASSERT(ubound(b, dim=1) >= n)
@@ -849,6 +859,7 @@ subroutine zlinsyssolve(n, nrhs, a, b, x)
   PUSH_SUB(zlinsyssolve)
 
   ASSERT(n > 0)
+  ASSERT(not_in_openmp())
 
   SAFE_ALLOCATE(ipiv(1:n)) ! query?
   SAFE_ALLOCATE(rwork(1:2*n))
@@ -937,6 +948,7 @@ subroutine dsingular_value_decomp(m, n, a, u, vt, sg_values)
 
   ASSERT(n > 0)
   ASSERT(m > 0)
+  ASSERT(not_in_openmp())
 
 
   ! double minimum lwork size to increase performance (see manpage)
@@ -985,6 +997,7 @@ subroutine dsvd_inverse(m, n, a, threshold)
 
   ASSERT(n > 0)
   ASSERT(m > 0)
+  ASSERT(not_in_openmp())
   minmn = min(m,n)
 
   SAFE_ALLOCATE( u(1:m, 1:m))
@@ -1054,6 +1067,7 @@ subroutine zsingular_value_decomp(m, n, a, u, vt, sg_values)
 
   ASSERT(n > 0)
   ASSERT(m > 0)
+  ASSERT(not_in_openmp())
 
   ! double minimum lwork size to increase performance (see manpage)
   lwork = 2*( 2*min(m, n) + max(m, n) )
@@ -1103,6 +1117,7 @@ subroutine zsvd_inverse(m, n, a, threshold)
 
   ASSERT(n > 0)
   ASSERT(m > 0)
+  ASSERT(not_in_openmp())
   minmn = min(m,n)
 
   SAFE_ALLOCATE( u(1:m, 1:m))
@@ -1165,6 +1180,7 @@ subroutine X(invert_upper_triangular)(n, a)
   PUSH_SUB(X(invert_upper_triangular))
 
   ASSERT(n > 0)
+  ASSERT(not_in_openmp())
 
   call X(trtri)('U', 'N', n, a(1, 1), lead_dim(a), info)
 
@@ -1207,6 +1223,8 @@ subroutine X(least_squares_vec)(nn, aa, bb, xx, preserve_mat)
   R_TYPE, pointer :: tmp_aa(:,:)
   
   PUSH_SUB(X(least_squares_vec))
+
+  ASSERT(not_in_openmp())
 
   if(preserve_mat) then
     SAFE_ALLOCATE(tmp_aa(1:nn, 1:nn))
