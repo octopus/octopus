@@ -575,7 +575,6 @@ contains
       writ%out(OUT_MULTIPOLES)%hand_start = st%st_start
       writ%out(OUT_MULTIPOLES)%hand_end   = st%st_end
       SAFE_ALLOCATE(writ%out(OUT_MULTIPOLES)%mult_handles(st%st_start:st%st_end))
-!       print *, mpi_world%rank, "st%nst", st%st_start, st%st_end, size(writ%out(OUT_MULTIPOLES)%mult_handles(:))
       writ%out(OUT_MULTIPOLES)%mpi_grp = gr%mesh%mpi_grp
       
       if (mpi_grp_is_root(writ%out(OUT_MULTIPOLES)%mpi_grp)) then
@@ -583,9 +582,7 @@ contains
           write(filename, '(a,i4.4)') 'td.general/multipoles-ist', ist
           call write_iter_init(writ%out(OUT_MULTIPOLES)%mult_handles(ist), &
           first, units_from_atomic(units_out%time, dt), &
-          trim(io_workpath(filename, namespace)))          
-          print *,mpi_world%rank, filename , writ%out(OUT_MULTIPOLES)%mult_handles(ist)
-          
+          trim(io_workpath(filename, namespace)))                    
         end do
 
       end if
