@@ -120,11 +120,12 @@ contains
 
   ! ---------------------------------------------------
 
-  subroutine density_calc_accumulate(this, psib)
+  subroutine density_calc_accumulate(this, psib, istin)
     type(density_calc_t),         intent(inout) :: this
     type(wfs_elec_t),             intent(in)    :: psib
+    integer, optional,            intent(in)    :: istin
 
-    integer :: ist, ip, ispin
+    integer :: ist, ip, ispin, istin_
     FLOAT   :: nrm
     CMPLX   :: term, psi1, psi2
     CMPLX, allocatable :: psi(:), fpsi(:)
@@ -133,9 +134,13 @@ contains
     integer            :: wgsize
     type(accel_mem_t) :: buff_weight
     type(accel_kernel_t), pointer :: kernel
+    logical  :: select_state
 
     PUSH_SUB(density_calc_accumulate)
     call profiling_in(prof, "CALC_DENSITY")
+    
+    istin_ = optional_default(istin, -1)
+    select_state = (istin_ > 0)
 
     ispin = states_elec_dim_get_spin_index(this%st%d, psib%ik)
 
@@ -152,6 +157,7 @@ contains
         case (UNPOLARIZED, SPIN_POLARIZED)
           if(states_are_real(this%st)) then
             do ist = 1, psib%nst
+              if (select_state .and. psib%ist(ist) /= istin_) cycle
               if(abs(weight(ist)) <= M_EPSILON) cycle
               !$omp parallel do simd schedule(static)
               do ip = 1, this%gr%mesh%np
@@ -160,6 +166,7 @@ contains
             end do
           else
             do ist = 1, psib%nst
+              if (select_state .and. psib%ist(ist) /= istin_) cycle
               if(abs(weight(ist)) <= M_EPSILON) cycle
               !$omp parallel do schedule(static)
               do ip = 1, this%gr%mesh%np
@@ -170,6 +177,7 @@ contains
           end if
         case (SPINORS)
           do ist = 1, psib%nst
+            if (select_state .and. psib%ist(ist) /= istin_) cycle
             if(abs(weight(ist)) <= M_EPSILON) cycle
             !$omp parallel do schedule(static) private(psi1, psi2, term)
             do ip = 1, this%gr%mesh%np          
@@ -192,6 +200,7 @@ contains
             !$omp parallel do schedule(static)
             do ip = 1, this%gr%mesh%np
               do ist = 1, psib%nst
+                if (select_state .and. psib%ist(ist) /= istin_) cycle
                 this%density(ip, ispin) = this%density(ip, ispin) + weight(ist)*psib%dff_pack(ist, ip)**2
               end do
             end do
@@ -199,6 +208,7 @@ contains
             !$omp parallel do schedule(static)
             do ip = 1, this%gr%mesh%np
               do ist = 1, psib%nst
+                if (select_state .and. psib%ist(ist) /= istin_) cycle
                 this%density(ip, ispin) = this%density(ip, ispin) + weight(ist)* &
                   TOFLOAT(conjg(psib%zff_pack(ist, ip))*psib%zff_pack(ist, ip))
               end do
@@ -209,6 +219,7 @@ contains
           !$omp parallel do schedule(static) private(ist, psi1, psi2, term)
           do ip = 1, this%gr%mesh%np
             do ist = 1, psib%nst
+              if (select_state .and. psib%ist(ist) /= istin_) cycle
               psi1 = psib%zff_pack(2*ist - 1, ip)
               psi2 = psib%zff_pack(2*ist,     ip)
               term = weight(ist)*psi1*conjg(psi2)
@@ -275,6 +286,7 @@ contains
 
       do ist = 1, psib%nst
 
+        if (select_state .and. psib%ist(ist) /= istin_) cycle
         if(abs(weight(ist)) <= M_EPSILON) cycle
 
         call batch_get_state(psib, ist, this%gr%mesh%np, psi)
@@ -388,10 +400,11 @@ contains
 
   ! ---------------------------------------------------------
   !> Computes the density from the orbitals in st. 
-  subroutine density_calc(st, gr, density)
+  subroutine density_calc(st, gr, density, istin)
     type(states_elec_t),     intent(in)  :: st
     type(grid_t),            intent(in)  :: gr
     FLOAT,                   intent(out) :: density(:, :)
+    integer, optional,       intent(in)  :: istin 
 
     integer :: ik, ib
     type(density_calc_t) :: dens_calc
@@ -404,7 +417,11 @@ contains
     
     do ik = st%d%kpt%start, st%d%kpt%end
       do ib = st%group%block_start, st%group%block_end
-        call density_calc_accumulate(dens_calc, st%group%psib(ib, ik))
+        if (present(istin)) then
+          call density_calc_accumulate(dens_calc, st%group%psib(ib, ik), istin = istin)
+        else
+          call density_calc_accumulate(dens_calc, st%group%psib(ib, ik))
+        end if
       end do
     end do
 
