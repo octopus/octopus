@@ -23,6 +23,7 @@ module charged_particle_oct_m
   use clock_oct_m
   use global_oct_m
   use interaction_abst_oct_m
+  use interaction_coulomb_force_oct_m
   use interaction_lorentz_force_oct_m
   use interactions_factory_oct_m
   use io_oct_m
@@ -113,6 +114,8 @@ contains
     call messages_print_var_value(stdout, 'ClassicalParticleCharge', this%charge)
 
     call this%supported_interactions%add(LORENTZ_FORCE)
+    call this%supported_interactions%add(COULOMB_FORCE)
+    call this%supported_interactions_as_partner%add(COULOMB_FORCE)
 
     POP_SUB(charged_particle_init)
   end subroutine charged_particle_init
@@ -125,6 +128,8 @@ contains
     PUSH_SUB(charged_particle_init_interaction)
 
     select type (interaction)
+    type is (interaction_coulomb_force_t)
+      call interaction%init(this%space%dim, this%quantities, this%charge, this%pos)
     type is (interaction_lorentz_force_t)
       call interaction%init(this%space%dim, this%quantities, this%charge, this%pos, this%vel)
     class default
@@ -273,9 +278,10 @@ contains
 
     PUSH_SUB(charged_particle_copy_quantities_to_interaction)
 
-    ! Currently the charged particle does not support any interaction as partner
-    ! besides the ones supported by the classical particle
     select type (interaction)
+    type is (interaction_coulomb_force_t)
+      interaction%partner_charge = partner%charge
+      interaction%partner_pos = partner%pos
     class default
       call partner%classical_particle_t%copy_quantities_to_interaction(interaction)
     end select
@@ -301,6 +307,8 @@ contains
     call iter%start(this%interactions)
     do while (iter%has_next())
       select type (interaction => iter%get_next())
+      type is (interaction_coulomb_force_t)
+        this%tot_force(1:this%space%dim) = this%tot_force(1:this%space%dim) + interaction%force(1:this%space%dim)
       type is (interaction_lorentz_force_t)
         this%tot_force(1:this%space%dim) = this%tot_force(1:this%space%dim) + interaction%force(1:this%space%dim)
       end select

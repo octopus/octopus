@@ -21,6 +21,7 @@
 module interactions_factory_oct_m
   use global_oct_m
   use interaction_abst_oct_m
+  use interaction_coulomb_force_oct_m
   use interaction_gravity_oct_m
   use interaction_lorentz_force_oct_m
   use interaction_partner_oct_m
@@ -33,7 +34,8 @@ module interactions_factory_oct_m
 
   integer, parameter, public :: &
     GRAVITY          = 1,       &
-    LORENTZ_FORCE    = 2
+    LORENTZ_FORCE    = 2,       &
+    COULOMB_FORCE    = 3
 
   type, extends(interactions_factory_abst_t) :: interactions_factory_t
   contains
@@ -54,6 +56,8 @@ contains
     select case (type)
     case (GRAVITY)
       interaction => interaction_gravity_t(partner)
+    case (COULOMB_FORCE)
+      interaction => interaction_coulomb_force_t(partner)
     case (LORENTZ_FORCE)
       interaction => interaction_lorentz_force_t(partner)
     case default
