@@ -22,6 +22,7 @@ module td_write_oct_m
   use blas_oct_m
   use comm_oct_m
   use current_oct_m
+  use density_oct_m
   use excited_states_oct_m
   use gauge_field_oct_m
   use geometry_oct_m
@@ -86,8 +87,12 @@ module td_write_oct_m
 
   type td_write_prop_t
     private
-    type(c_ptr) :: handle
-    logical :: write = .false.
+    type(c_ptr)          :: handle
+    type(c_ptr), pointer :: mult_handles(:)
+    type(mpi_grp_t)      :: mpi_grp
+    integer              :: hand_start
+    integer              :: hand_end
+    logical              :: write = .false.
   end type td_write_prop_t
 
   integer, parameter ::   &
@@ -149,6 +154,7 @@ module td_write_oct_m
     integer        :: n_excited_states  !< number of excited states onto which the projections are calculated.
     type(excited_states_t), pointer :: excited_st(:) !< The excited states.
     integer :: compute_interval     !< Compute every compute_interval
+    logical :: resolve_states       !< Whether to resolve output by state
   end type td_write_t
 
 contains
@@ -192,10 +198,11 @@ contains
     type(multicomm_t),        intent(in)    :: mc
 
     FLOAT :: rmin
-    integer :: ierr, first, ii, ist, jj, flags, iout, default
+    integer :: ierr, first, ii, ist, jj, flags, iout, default, idim
     type(block_t) :: blk
-    character(len=100) :: filename
+    character(len=MAX_PATH_LEN) :: filename
     type(restart_t) :: restart_gs
+    logical :: ldefault
 
     PUSH_SUB(td_write_init)
 
@@ -346,6 +353,23 @@ contains
         call messages_fatal(1, namespace=namespace)
       end if
     end if
+    
+    !%Variable TDOutputResolveStates
+    !%Type logical
+    !%Default No
+    !%Section Time-Dependent::TD Output
+    !%Description
+    !% Defines whether the output should be resolved by states. 
+    !% 
+    !% So far only TDOutput = multipoles is supported.
+    !%
+    !%End
+    ldefault = .false.
+    writ%resolve_states = ldefault
+    call parse_variable(namespace, 'TDOutputResolveStates', ldefault, writ%resolve_states)
+    
+    
+    
 
     !%Variable TDMultipoleLmax
     !%Type integer
@@ -546,11 +570,35 @@ contains
 
     call io_mkdir('td.general', namespace)
 
+    if(writ%out(OUT_MULTIPOLES)%write .and. writ%resolve_states) then       
+      !resolve state contribution on multipoles
+      writ%out(OUT_MULTIPOLES)%hand_start = st%st_start
+      writ%out(OUT_MULTIPOLES)%hand_end   = st%st_end
+      SAFE_ALLOCATE(writ%out(OUT_MULTIPOLES)%mult_handles(st%st_start:st%st_end))
+!       print *, mpi_world%rank, "st%nst", st%st_start, st%st_end, size(writ%out(OUT_MULTIPOLES)%mult_handles(:))
+      writ%out(OUT_MULTIPOLES)%mpi_grp = gr%mesh%mpi_grp
+      
+      if (mpi_grp_is_root(writ%out(OUT_MULTIPOLES)%mpi_grp)) then
+        do ist = st%st_start, st%st_end
+          write(filename, '(a,i4.4)') 'td.general/multipoles-ist', ist
+          call write_iter_init(writ%out(OUT_MULTIPOLES)%mult_handles(ist), &
+          first, units_from_atomic(units_out%time, dt), &
+          trim(io_workpath(filename, namespace)))          
+          print *,mpi_world%rank, filename , writ%out(OUT_MULTIPOLES)%mult_handles(ist)
+          
+        end do
+
+      end if
+    end if
+
+
     if(mpi_grp_is_root(mpi_world)) then
-      if(writ%out(OUT_MULTIPOLES)%write) &
+
+      if(writ%out(OUT_MULTIPOLES)%write .and. .not. writ%resolve_states) then 
         call write_iter_init(writ%out(OUT_MULTIPOLES)%handle, &
         first, units_from_atomic(units_out%time, dt), &
         trim(io_workpath("td.general/multipoles", namespace)))
+      end if 
 
       if(writ%out(OUT_FTCHD)%write) then
         select case(kick%qkick_mode)
@@ -744,6 +792,12 @@ contains
           first, units_from_atomic(units_out%time, dt),  &
           trim(io_workpath("td.general/effectiveU", namespace))) 
     end if
+    
+    do iout = 1, OUT_MAX
+      if(iout == OUT_MULTIPOLES) cycle
+      if(writ%out(iout)%write)  writ%out(iout)%mpi_grp = mpi_world
+    end do
+    
      
     POP_SUB(td_write_init)
   end subroutine td_write_init
@@ -757,15 +811,21 @@ contains
 
     PUSH_SUB(td_write_end)
 
-    if(mpi_grp_is_root(mpi_world)) then
-      do iout = 1, OUT_MAX
-        if(iout == OUT_LASER) cycle
-        if(writ%out(iout)%write)  call write_iter_end(writ%out(iout)%handle)
-      end do
+    do iout = 1, OUT_MAX
+      if(iout == OUT_LASER) cycle      
+      if(writ%out(iout)%write) then  
+        if (mpi_grp_is_root(writ%out(iout)%mpi_grp)) then
+          call write_iter_end(writ%out(iout)%handle)
+          SAFE_DEALLOCATE_P(writ%out(iout)%mult_handles)
+        end if
+      end if
+    end do
      
+    if(mpi_grp_is_root(mpi_world)) then
       do iout = 1, OUT_DFTU_MAX
         if(writ%out_dftu(iout)%write) call write_iter_end(writ%out_dftu(iout)%handle)  
       end do
+      
     end if
 
     if( writ%out(OUT_POPULATIONS)%write ) then
@@ -802,8 +862,18 @@ contains
     PUSH_SUB(td_write_iter)
     call profiling_in(prof, "TD_WRITE_ITER")
 
-    if(writ%out(OUT_MULTIPOLES)%write) &
-      call td_write_multipole(writ%out(OUT_MULTIPOLES)%handle, gr, geo, st, writ%lmax, kick, iter)
+
+    if(writ%out(OUT_MULTIPOLES)%write) then
+      call td_write_multipole(writ%out(OUT_MULTIPOLES), gr, geo, st, writ%lmax, kick, iter, writ%resolve_states)
+    end if
+
+!     if(writ%out(OUT_MULTIPOLES)%write) then
+!       if (writ%resolve_states) then
+!         call td_write_multipole_r(writ%out(OUT_MULTIPOLES)%mult_handles, gr, geo, st, writ%lmax, kick, iter)
+!       else
+!         call td_write_multipole(writ%out(OUT_MULTIPOLES)%handle, gr, geo, st, writ%lmax, kick, st%rho, iter)
+!       end if
+!     end if
     
     if(writ%out(OUT_FTCHD)%write) &
       call td_write_ftchd(writ%out(OUT_FTCHD)%handle, gr, st, kick, iter)
@@ -906,17 +976,28 @@ contains
   subroutine td_write_data(writ)
     type(td_write_t),     intent(inout) :: writ
 
-    integer :: iout
+    integer :: iout, ii
     type(profile_t), save :: prof
 
     PUSH_SUB(td_write_data)
     call profiling_in(prof, "TD_WRITE_DATA")
 
+    do iout = 1, OUT_MAX
+      if(iout == OUT_LASER) cycle
+      if(writ%out(iout)%write)  then
+        if (mpi_grp_is_root(writ%out(iout)%mpi_grp)) then
+          if (writ%resolve_states .and. iout == OUT_MULTIPOLES) then
+            do ii = writ%out(iout)%hand_start, writ%out(iout)%hand_end
+              call write_iter_flush(writ%out(iout)%mult_handles(ii))
+            end do
+          else
+            call write_iter_flush(writ%out(iout)%handle)
+          end if
+        end if
+      end if
+    end do
+
     if(mpi_grp_is_root(mpi_world)) then
-      do iout = 1, OUT_MAX
-        if(iout == OUT_LASER) cycle
-        if(writ%out(iout)%write)  call write_iter_flush(writ%out(iout)%handle)
-      end do
       do iout = 1, OUT_DFTU_MAX
         if(writ%out_dftu(iout)%write)  call write_iter_flush(writ%out_dftu(iout)%handle)
       end do
@@ -1198,25 +1279,71 @@ contains
     POP_SUB(td_write_angular)
   end subroutine td_write_angular
 
+  ! ---------------------------------------------------------
+  !> resolve state interface
+  subroutine td_write_multipole(out_multip, gr, geo, st, lmax, kick, iter, resolve_states)
+    type(td_write_prop_t), intent(inout) :: out_multip
+    type(grid_t),             intent(in) :: gr   !< The grid
+    type(geometry_t),         intent(in) :: geo  !< Geometry object
+    type(states_elec_t),      intent(in) :: st   !< State object
+    integer,                  intent(in) :: lmax
+    type(kick_t),             intent(in) :: kick !< Kick object
+    integer,                  intent(in) :: iter !< Iteration number
+    logical,                  intent(in) :: resolve_states
+
+    integer :: ist
+    FLOAT, allocatable :: rho(:,:), rho_tmp(:,:)
+
+    PUSH_SUB(td_write_multipole)
+    
+    
+    if (resolve_states) then
+      SAFE_ALLOCATE(rho(1:gr%fine%mesh%np_part, 1:st%d%nspin))
+      rho(:,:)     = M_ZERO
+    
+
+      do ist = st%st_start, st%st_end
+        call density_calc(st, gr, rho, istin = ist)      
+        call td_write_multipole_r(out_multip%mult_handles(ist), gr, geo, st, lmax, kick, rho, iter, &
+                                  mpi_grp = out_multip%mpi_grp)
+      end do
+
+      SAFE_DEALLOCATE_A(rho)
+
+    else
+      
+      call td_write_multipole_r(out_multip%handle, gr, geo, st, lmax, kick, st%rho, iter)
+
+    end if
+    
+    POP_SUB(td_write_multipole)
+  end subroutine td_write_multipole
 
   ! ---------------------------------------------------------
   !> Subroutine to write multipoles to the corresponding file
-  subroutine td_write_multipole(out_multip, gr, geo, st, lmax, kick, iter)
-    type(c_ptr),         intent(inout) :: out_multip !< C pointer
+  subroutine td_write_multipole_r(out_multip, gr, geo, st, lmax, kick, rho, iter, mpi_grp)
+    type(c_ptr),      intent(inout) :: out_multip !< C pointer
     type(grid_t),        intent(in) :: gr   !< The grid
     type(geometry_t),    intent(in) :: geo  !< Geometry object
     type(states_elec_t), intent(in) :: st   !< State object
     integer,             intent(in) :: lmax
     type(kick_t),        intent(in) :: kick !< Kick object
+    FLOAT,               intent(in) :: rho(:,:)
     integer,             intent(in) :: iter !< Iteration number
+    type(mpi_grp_t), optional, intent(in) :: mpi_grp   
+    
 
     integer :: is, ll, mm, add_lm
     character(len=120) :: aux
     FLOAT, allocatable :: ionic_dipole(:), multipole(:,:)
+    type(mpi_grp_t)    :: mpi_grp_
 
-    PUSH_SUB(td_write_multipole)
+    PUSH_SUB(td_write_multipole_r)
+    
+    mpi_grp_ = mpi_world 
+    if (present(mpi_grp)) mpi_grp_ = mpi_grp
 
-    if(mpi_grp_is_root(mpi_world).and.iter == 0) then
+    if(mpi_grp_is_root(mpi_grp_).and.iter == 0) then
       call td_write_print_header_init(out_multip)
 
       write(aux, '(a15,i2)')      '# nspin        ', st%d%nspin
@@ -1277,7 +1404,7 @@ contains
     multipole   (:,:) = M_ZERO
 
     do is = 1, st%d%nspin
-      call dmf_multipoles(gr%mesh, st%rho(:,is), lmax, multipole(:,is))
+      call dmf_multipoles(gr%mesh, rho(:,is), lmax, multipole(:,is))
     end do
 
     if (lmax > 0) then
@@ -1287,7 +1414,7 @@ contains
       end do
     end if
 
-    if(mpi_grp_is_root(mpi_world)) then
+    if(mpi_grp_is_root(mpi_grp_)) then
       call write_iter_start(out_multip)
       do is = 1, st%d%nspin
         add_lm = 1
@@ -1303,8 +1430,8 @@ contains
 
     SAFE_DEALLOCATE_A(ionic_dipole)
     SAFE_DEALLOCATE_A(multipole)
-    POP_SUB(td_write_multipole)
-  end subroutine td_write_multipole
+    POP_SUB(td_write_multipole_r)
+  end subroutine td_write_multipole_r
 
   ! ---------------------------------------------------------
   subroutine td_write_ftchd(out_ftchd, gr, st, kick, iter)
