@@ -134,13 +134,12 @@ contains
       delimiter_ = '.'
     end if
 
-    name = ""
+    name = this%name
     if (associated(this%parent)) then
-      if (this%parent%len() > 0) then
-        name = trim(this%parent%get(delimiter_)) // delimiter_
+      if (len_trim(name) > 0 .and. this%parent%len() > 0) then
+        name = trim(this%parent%get(delimiter_)) // delimiter_ // trim(name)
       end if
     end if
-    name = trim(name)//this%name
 
   end function namespace_get
 
