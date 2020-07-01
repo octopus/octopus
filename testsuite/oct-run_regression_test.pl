@@ -33,7 +33,7 @@ sub usage {
 
     print <<EndOfUsage;
 
- Copyright (C) 2005-2019 H. Appel, M. Marques, X. Andrade, D. Strubbe, M. Lueders
+ Copyright (C) 2005-2020 H. Appel, M. Marques, X. Andrade, D. Strubbe, M. Lueders
 
 Usage: oct-run_regression_test.pl [options]
 
