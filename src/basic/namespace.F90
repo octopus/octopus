@@ -38,6 +38,7 @@ module namespace_oct_m
     procedure :: len => namespace_len
     generic   :: operator(==) => equal
     procedure :: equal => namespace_equal
+    procedure :: contains => namespace_contains
   end type namespace_t
 
   interface namespace_t
@@ -168,6 +169,40 @@ contains
     namespace_equal = lhs%name == rhs%name
 
   end function namespace_equal
+
+  ! ---------------------------------------------------------
+  logical function namespace_contains(this, namespace)
+    class(namespace_t), target, intent(in) :: this
+    type(namespace_t),  target, intent(in) :: namespace
+
+    logical :: found_ancestor
+    type(namespace_t),  pointer :: this_ancestor, namespace_ancestor
+
+    ! Find if there is a common ancestor
+    found_ancestor = .false.
+    namespace_ancestor => namespace
+    do while (associated(namespace_ancestor))
+      found_ancestor = namespace_ancestor == this
+      if (found_ancestor) exit
+      namespace_ancestor => namespace_ancestor%parent
+    end do
+
+    if (found_ancestor) then
+      ! Check if the remaining ancestors are also equal
+      namespace_contains = .true.
+      this_ancestor => this
+      do while (associated(namespace_ancestor%parent) .and. associated(this_ancestor%parent))
+        namespace_contains = namespace_ancestor%parent == this_ancestor%parent
+        if (.not. namespace_contains) exit
+        this_ancestor => this_ancestor%parent
+        namespace_ancestor => namespace_ancestor%parent
+      end do
+    else
+      ! We did not find a common ancestor
+      namespace_contains = .false.
+    end if
+
+  end function namespace_contains
 
 end module namespace_oct_m
 
