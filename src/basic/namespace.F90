@@ -32,7 +32,7 @@ module namespace_oct_m
   type :: namespace_t
     private
     character(len=MAX_NAMESPACE_LEN) :: name = ""
-    type(namespace_t), pointer :: parent => NULL()
+    type(namespace_t), pointer, public :: parent => NULL()
   contains
     procedure :: get => namespace_get
     procedure :: len => namespace_len
