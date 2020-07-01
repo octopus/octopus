@@ -36,6 +36,8 @@ module namespace_oct_m
   contains
     procedure :: get => namespace_get
     procedure :: len => namespace_len
+    generic   :: operator(==) => equal
+    procedure :: equal => namespace_equal
   end type namespace_t
 
   interface namespace_t
@@ -157,6 +159,15 @@ contains
     end if
 
   end function namespace_len
+
+  ! ---------------------------------------------------------
+  elemental logical function namespace_equal(lhs, rhs)
+    class(namespace_t), intent(in) :: lhs
+    class(namespace_t), intent(in) :: rhs
+
+    namespace_equal = lhs%name == rhs%name
+
+  end function namespace_equal
 
 end module namespace_oct_m
 
