@@ -39,26 +39,34 @@ module namespace_oct_m
   end type namespace_t
 
   interface namespace_t
-    procedure namespace_init
+    procedure namespace_constructor
   end interface namespace_t
 
   type(namespace_t) :: global_namespace
 
 contains
 
-  ! ---------------------------------------------------------
-  type(namespace_t) function namespace_init(name, parent)
+  !---------------------------------------------------------
+  !> Create namespace from name. If parent is present, the new namespace will be
+  !! a child of it. It is also possible to create a namespace with several
+  !! ancestors on the fly by providing a dot separated list of names. A
+  !! different delimiter can be specified with the delimiter optional argument.
+  recursive type(namespace_t) function namespace_constructor(name, parent, delimiter)
     character(len=*),                    intent(in) :: name
     type(namespace_t), optional, target, intent(in) :: parent
+    character(len=1),  optional,         intent(in) :: delimiter
 
-    integer :: total_len, parent_len
+    integer :: total_len, parent_len, n_start
+    character(len=1) :: delimiter_
 
-    total_len = len_trim(name)
-
-    ! We do not allow the creation of empty namespaces, as that might lead to ambiguous paths
-    ASSERT(total_len /= 0)
+    if (present(delimiter)) then
+      delimiter_ = delimiter
+    else
+      delimiter_ = '.'
+    end if
 
     ! Calculate total length of namespace, including the parent
+    total_len = len_trim(name)
     if (present(parent)) then
       parent_len = parent%len()
       if (parent_len > 0) then
@@ -72,7 +80,7 @@ contains
       write(stderr,'(a)') 'Trying to create the following namespace:'
       if (present(parent)) then
         if (parent%len() > 0) then
-          write(stderr,'(a)') trim(parent%get()) // "." // name
+          write(stderr,'(a)') trim(parent%get()) // delimiter_ // name
         end if
       else
         write(stderr,'(a)') name
@@ -84,15 +92,30 @@ contains
       stop
     end if
 
-    ! Now initialize the type
-    namespace_init%name = name
-    if (present(parent)) then
-      namespace_init%parent => parent
+    ! Find last delimiter in name
+    n_start = index(name, delimiter_, back=.true.)
+
+    if (n_start == 0) then
+      ! There are no implicit parents in the name
+
+      ! We do not allow the creation of empty namespaces, as that might lead to ambiguous paths
+      ASSERT(len_trim(name) > 0)
+
+      namespace_constructor%name = name
+      if (present(parent)) then
+        namespace_constructor%parent => parent
+      else
+        nullify(namespace_constructor%parent)
+      end if
+
     else
-      nullify(namespace_init%parent)
+      ! There are implicit parents in the name, so we create them recursively
+      namespace_constructor%name = name(n_start+1:len(name))
+      allocate(namespace_constructor%parent)
+      namespace_constructor%parent = namespace_t(name(1:n_start-1), parent)
     end if
 
-  end function namespace_init
+  end function namespace_constructor
 
   ! ---------------------------------------------------------
   recursive function namespace_get(this, delimiter) result(name)
