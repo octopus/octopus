@@ -9,6 +9,7 @@ Processors: 1
 
 Input: 05-lorentz-force.01-charged_particle_coupled_to_maxwell.inp
 
+Precision: 0.00011
 match ; Charged particle pos x (t=10 steps) ; LINEFIELD(ChargedParticle/td.general/coordinates, -1, 3) ; 9.998560012040e-01
 match ; Charged particle pos y (t=10 steps) ; LINEFIELD(ChargedParticle/td.general/coordinates, -1, 4) ; 0.000000000000e+00
 match ; Charged particle pos z (t=10 steps) ; LINEFIELD(ChargedParticle/td.general/coordinates, -1, 5) ; 1.999944000145e-02
