@@ -27,6 +27,7 @@ use File::Spec;
 use Fcntl qw(:mode :flock);
 use Time::HiRes qw(gettimeofday tv_interval);
 use Scalar::Util qw(looks_like_number);
+use File::Temp qw/tempdir/;
 
 sub usage {
 
@@ -95,28 +96,10 @@ if(-t STDOUT) {
 
 if (not @ARGV) { usage; }
 
-our $opt_f = "";
-our $opt_r = "";
-our $opt_h = "";
-our $opt_s = "";
-our $opt_l = "";
-our $opt_D = "";
-our $opt_G = "";
-our $opt_m = "";
-our $opt_p = "";
-our $opt_n = "";
-our $opt_v = "";
+our($opt_f, $opt_r, $opt_h, $opt_s, $opt_l, $opt_D, $opt_G, $opt_m, $opt_p, $opt_n, $opt_v);
 
 getopts("nlvhD:c:f:spmr:G:");
 
-# avoid warnings 'used only once: possible typo'
-my $useless;
-$useless = $opt_h;
-$useless = $opt_l;
-$useless = $opt_s;
-
-# Default values
-use File::Temp qw/tempdir/;
 
 # Handle options
 $opt_h && usage;
