@@ -1,7 +1,6 @@
 # -*- coding: utf-8 mode: shell-script -*-
 
 Test       : ETSF_IO
-Options    : etsf_io
 Program    : octopus
 TestGroups : long-run, periodic_systems
 Enabled    : Yes
@@ -44,11 +43,15 @@ match ; Eigenvalue 18 ; GREPFIELD(static/info, '#k =   2', 3, 18) ; 0.217481
 # Note that the sizes unfortunately depend on the length of the PACKAGE_STRING for
 # the current version of octopus, and must be updated when that changes.
 
-match ; density-etsf.nc  ; SIZE(static/density-etsf.nc)  ;   25780
-match ; geometry-etsf.nc ; SIZE(static/geometry-etsf.nc) ;    3712
-match ; wfs-etsf.nc      ; SIZE(static/wfs-etsf.nc)      ; 1585320
-match ; wfs-pw-etsf.nc   ; SIZE(static/wfs-pw-etsf.nc)   ;  836068
-
-match ; density.ncdf     ; SIZE(static/density.ncdf)        ;   22248
-match ; netcdf wfn 3     ; SIZE(static/wf-k001-st0003.ncdf) ;   44320
-match ; netcdf wfn 4     ; SIZE(static/wf-k001-st0004.ncdf) ;   44320
+if (available etsf_io); then
+    match ; density-etsf.nc  ; SIZE(static/density-etsf.nc)  ;   25780
+    match ; geometry-etsf.nc ; SIZE(static/geometry-etsf.nc) ;    3712
+    match ; wfs-etsf.nc      ; SIZE(static/wfs-etsf.nc)      ; 1585320
+    match ; wfs-pw-etsf.nc   ; SIZE(static/wfs-pw-etsf.nc)   ;  836068
+    
+    match ; density.ncdf     ; SIZE(static/density.ncdf)        ;   22248
+    match ; netcdf wfn 3     ; SIZE(static/wf-k001-st0003.ncdf) ;   44320
+    match ; netcdf wfn 4     ; SIZE(static/wf-k001-st0004.ncdf) ;   44320
+else
+    match; Error missing NetCDF ; GREPCOUNT(err, 'Octopus was compiled without NetCDF support') ; 1
+endif

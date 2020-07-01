@@ -1,7 +1,6 @@
 # -*- coding: utf-8 mode: shell-script -*-
 
 Test       : Fine mesh density - Benzene
-Options_MPI : scalapack
 Program    : octopus
 TestGroups : short-run, finite_systems_3d
 Enabled    : Yes

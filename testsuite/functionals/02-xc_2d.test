@@ -1,7 +1,6 @@
 # -*- coding: utf-8 mode: shell-script -*-
 
 Test       : XC 2D
-Options    : libxc4
 Program    : octopus
 TestGroups : short-run, functionals
 Enabled    : Yes
@@ -48,15 +47,22 @@ match ; Hartree-Fock eigenvalue 2 dn             ; GREPFIELD(static/info, '  2  
 
 # We use the wave-functions obtained to test the 2D XC functionals
 
+# LDA AMBG
 Input: 02-xc_2d.lda_amgb.inp
 match ; LDA AMGB eigenvalue 1 up               ; GREPFIELD(static/info, '  1   up', 3) ; 0.746062
 match ; LDA AMGB eigenvalue 2 up               ; GREPFIELD(static/info, '  2   up', 3) ; 0.930742
-match ; LDA AMGB eigenvalue 1 dn               ; GREPFIELD(static/info, '  1   dn', 3) ; 0.927729
-match ; LDA AMGB eigenvalue 2 dn               ; GREPFIELD(static/info, '  2   dn', 3) ; 1.040174
+if (available libxc4); then
+    match ; LDA AMGB eigenvalue 1 dn (libxc4)      ; GREPFIELD(static/info, '  1   dn', 3) ; 0.927729
+    match ; LDA AMGB eigenvalue 2 dn (libxc4)      ; GREPFIELD(static/info, '  2   dn', 3) ; 1.040174
+else
+    match ; LDA AMGB eigenvalue 1 dn (libxc5)      ; GREPFIELD(static/info, '  1   dn', 3) ; 1.169397
+    match ; LDA AMGB eigenvalue 2 dn (libxc5)      ; GREPFIELD(static/info, '  2   dn', 3) ; 1.224726
+endif
 match ; LDA Exchange                           ; GREPFIELD(static/info, 'Exchange    =', 3) ; -0.62342504
 match ; LDA AMGB Correlation                   ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.03534534
 match ; LDA AMGB Int[n*v_xc]                   ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -0.97730047
 
+# GGA B86
 Input: 02-xc_2d.gga_b86.inp
 match ; GGA 2D B86 eigenvalue 1 up             ; GREPFIELD(static/info, '  1   up', 3) ; 0.758378
 match ; GGA 2D B86 eigenvalue 2 up             ; GREPFIELD(static/info, '  2   up', 3) ; 0.934658
@@ -65,22 +71,45 @@ match ; GGA 2D B86 eigenvalue 2 dn             ; GREPFIELD(static/info, '  2   d
 match ; GGA 2D B86 Exchange                    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -0.66569035
 match ; GGA 2D B86 Int[n*v_xc]                 ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -0.96106957
 
+# GGA B86_MGC
 Input: 02-xc_2d.gga_b86_mgc.inp
-match ; GGA 2D B86 MGC eigenvalue 1 up         ; GREPFIELD(static/info, '  1   up', 3) ; 0.757507
-match ; GGA 2D B86 MGC eigenvalue 2 up         ; GREPFIELD(static/info, '  2   up', 3) ; 0.932683
+if (available libxc4); then
+    match ; GGA 2D B86 MGC eigenvalue 1 up (libxc4)  ; GREPFIELD(static/info, '  1   up', 3) ; 0.757507
+    match ; GGA 2D B86 MGC eigenvalue 2 up (libxc4)  ; GREPFIELD(static/info, '  2   up', 3) ; 0.932683
+else
+    match ; GGA 2D B86 MGC eigenvalue 1 up (libxc5)  ; GREPFIELD(static/info, '  1   up', 3) ; 0.761277
+    match ; GGA 2D B86 MGC eigenvalue 2 up (libxc5)  ; GREPFIELD(static/info, '  2   up', 3) ; 0.939891
+endif
 match ; GGA 2D B86 MGC eigenvalue 1 dn         ; GREPFIELD(static/info, '  1   dn', 3) ; 1.169397
 match ; GGA 2D B86 MGC eigenvalue 2 dn         ; GREPFIELD(static/info, '  2   dn', 3) ; 1.224726
-match ; GGA 2D B86 MGC Exchange                ; GREPFIELD(static/info, 'Exchange    =', 3) ; -0.65901733
-match ; GGA 2D B86 MGC Int[n*v_xc]             ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -0.96391509
+if (available libxc4); then
+    match ; GGA 2D B86 MGC Exchange     (libxc4)   ; GREPFIELD(static/info, 'Exchange    =', 3) ; -0.65901733
+    match ; GGA 2D B86 MGC Int[n*v_xc]  (libxc4)   ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -0.96391509
+else
+    match ; GGA 2D B86 MGC Exchange     (libxc5)   ; GREPFIELD(static/info, 'Exchange    =', 3) ; -0.64543821
+    match ; GGA 2D B86 MGC Int[n*v_xc]  (libxc5)   ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -0.95293587
+endif
 
+# GGA B88
 Input: 02-xc_2d.gga_b88.inp
-match ; GGA 2D B88 eigenvalue 1 up             ; GREPFIELD(static/info, '  1   up', 3) ; 0.751802
-match ; GGA 2D B88 eigenvalue 2 up             ; GREPFIELD(static/info, '  2   up', 3) ; 0.922801
+if (available libxc4); then
+    match ; GGA 2D B88 eigenvalue 1 up (libxc4)    ; GREPFIELD(static/info, '  1   up', 3) ; 0.751802
+    match ; GGA 2D B88 eigenvalue 2 up (libxc4)    ; GREPFIELD(static/info, '  2   up', 3) ; 0.922801
+else
+    match ; GGA 2D B88 eigenvalue 1 up (libxc5)    ; GREPFIELD(static/info, '  1   up', 3) ; 0.758217
+    match ; GGA 2D B88 eigenvalue 2 up (libxc5)    ; GREPFIELD(static/info, '  2   up', 3) ; 0.934145
+endif
 match ; GGA 2D B88 eigenvalue 1 dn             ; GREPFIELD(static/info, '  1   dn', 3) ; 1.169397
 match ; GGA 2D B88 eigenvalue 2 dn             ; GREPFIELD(static/info, '  2   dn', 3) ; 1.224726
-match ; GGA 2D B88 Exchange                    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -0.67040364
-match ; GGA 2D B88 Int[n*v_xc]                 ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -0.97950183
+if (available libxc4); then
+    match ; GGA 2D B88 Exchange    (libxc4)        ; GREPFIELD(static/info, 'Exchange    =', 3) ; -0.67040364
+    match ; GGA 2D B88 Int[n*v_xc] (libxc4)        ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -0.97950183
+else
+    match ; GGA 2D B88 Exchange    (libxc5)        ; GREPFIELD(static/info, 'Exchange    =', 3) ; -0.65474656
+    match ; GGA 2D B88 Int[n*v_xc] (libxc5)        ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -0.96174321
+endif
 
+# GGA PBE
 Input: 02-xc_2d.gga_pbe.inp
 match ; GGA 2D PBE eigenvalue 1 up             ; GREPFIELD(static/info, '  1   up', 3) ; 0.752796
 match ; GGA 2D PBE eigenvalue 2 up             ; GREPFIELD(static/info, '  2   up', 3) ; 0.923345
@@ -89,6 +118,7 @@ match ; GGA 2D PBE eigenvalue 2 dn             ; GREPFIELD(static/info, '  2   d
 match ; GGA 2D PBE Exchange                    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -0.67022789
 match ; GGA 2D PBE Int[n*v_xc]                 ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -0.97796406
 
+# GGA PRM
 # From PRM 2008 paper: "a spin-polarized extension of the present functional is still missing"
 # Though Octopus and libxc do not flag a problem when running spin-polarized,
 # we will do SCF from scratch spin-unpolarized. Restarting from spin-polarized Hartree-Fock like the others

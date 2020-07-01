@@ -7,4 +7,5 @@ Enabled    : Yes
 
 Precision : 0.005
 Input: 06-hartree_3d_isf.01-isf.inp
+
 match ; ISF           ; GREPFIELD(hartree_results, 'Hartree test (abs.) =', 5) ; 0.00035845
