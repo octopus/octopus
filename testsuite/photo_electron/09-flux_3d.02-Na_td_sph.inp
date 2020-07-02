@@ -75,4 +75,3 @@ TDPropagationTime = ntot*tc
 
 StatesPack = yes
 
-AllowCPUonly = yes

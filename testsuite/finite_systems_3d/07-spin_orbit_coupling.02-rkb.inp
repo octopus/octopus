@@ -37,4 +37,3 @@ ExperimentalFeatures = yes
 StatesPack = yes
 LCAOStart = lcao_full
 
-AllowCPUonly = yes

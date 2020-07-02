@@ -48,4 +48,3 @@ OutputLDA_U = occ_matrices + effectiveU + kanamoriU
 ACBN0Screening = 0.5
 
 DFTUPoissonSolver = dft_u_poisson_fft
-AllowCPUonly = yes

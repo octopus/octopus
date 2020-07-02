@@ -54,4 +54,3 @@ Preconditioner = no
 
 StatesPack = yes
 
-AllowCPUonly = yes

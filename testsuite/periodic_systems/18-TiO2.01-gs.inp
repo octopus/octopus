@@ -50,4 +50,3 @@ OutputMEEnd = 25
 StatesPack = yes
 LCAOStart = lcao_full
 
-AllowCPUonly = yes

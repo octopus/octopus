@@ -7,67 +7,79 @@ Enabled    : Yes
 
 
 Input: 08-spin_orbit_coupling_full.01-hgh.inp
-match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
-match ; Eigenvalue  1 ; GREPFIELD(static/info, ' 1   --', 3) ; -27.322244
-match ; Eigenvalue  3 ; GREPFIELD(static/info, ' 3   --', 3) ; -26.422600
-match ; Eigenvalue  5 ; GREPFIELD(static/info, ' 5   --', 3) ; -17.231805
-match ; Eigenvalue  7 ; GREPFIELD(static/info, ' 7   --', 3) ; -15.779429
-match ; Eigenvalue  9 ; GREPFIELD(static/info, ' 9   --', 3) ; -14.707133
-match ; Eigenvalue 11 ; GREPFIELD(static/info, '11   --', 3) ; -14.698837
-match ; Eigenvalue 13 ; GREPFIELD(static/info, '13   --', 3) ; -13.892193
-match ; Eigenvalue 15 ; GREPFIELD(static/info, '15   --', 3) ; -13.652306
+if(available cuda); then
+  match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
+  match ; Eigenvalue  1 ; GREPFIELD(static/info, ' 1   --', 3) ; -27.322244
+  match ; Eigenvalue  3 ; GREPFIELD(static/info, ' 3   --', 3) ; -26.422600
+  match ; Eigenvalue  5 ; GREPFIELD(static/info, ' 5   --', 3) ; -17.231805
+  match ; Eigenvalue  7 ; GREPFIELD(static/info, ' 7   --', 3) ; -15.779429
+  match ; Eigenvalue  9 ; GREPFIELD(static/info, ' 9   --', 3) ; -14.707133
+  match ; Eigenvalue 11 ; GREPFIELD(static/info, '11   --', 3) ; -14.698837
+  match ; Eigenvalue 13 ; GREPFIELD(static/info, '13   --', 3) ; -13.892193
+  match ; Eigenvalue 15 ; GREPFIELD(static/info, '15   --', 3) ; -13.652306
 
-match ; <Sz>        1 ; GREPFIELD(static/info, ' 1   --', 7) ; 0.5000
-match ; <Sz>        3 ; GREPFIELD(static/info, ' 3   --', 7) ; 0.5000
-match ; <Sz>        5 ; GREPFIELD(static/info, ' 5   --', 7) ; 0.4741
-match ; <Sz>        7 ; GREPFIELD(static/info, ' 7   --', 7) ; 0.1343
-match ; <Sz>        9 ; GREPFIELD(static/info, ' 9   --', 7) ; -0.0838
-match ; <Sz>       11 ; GREPFIELD(static/info, '11   --', 7) ; 0.1277
-match ; <Sz>       13 ; GREPFIELD(static/info, '13   --', 7) ; -0.1016
-match ; <Sz>       15 ; GREPFIELD(static/info, '15   --', 7) ; 0.4492
+  match ; <Sz>        1 ; GREPFIELD(static/info, ' 1   --', 7) ; 0.5000
+  match ; <Sz>        3 ; GREPFIELD(static/info, ' 3   --', 7) ; 0.5000
+  match ; <Sz>        5 ; GREPFIELD(static/info, ' 5   --', 7) ; 0.4741
+  match ; <Sz>        7 ; GREPFIELD(static/info, ' 7   --', 7) ; 0.1343
+  match ; <Sz>        9 ; GREPFIELD(static/info, ' 9   --', 7) ; -0.0838
+  match ; <Sz>       11 ; GREPFIELD(static/info, '11   --', 7) ; 0.1277
+  match ; <Sz>       13 ; GREPFIELD(static/info, '13   --', 7) ; -0.1016
+  match ; <Sz>       15 ; GREPFIELD(static/info, '15   --', 7) ; 0.4492
 
-match ; Force         ; GREPFIELD(static/info, 'Forces on the ions', 3, 2) ; -0.977686
+  match ; Force         ; GREPFIELD(static/info, 'Forces on the ions', 3, 2) ; -0.977686
+else
+  match ; Error match ; GREPCOUNT(err, 'Calculation will not be continued.') ; 1
+endif
 
 ExtraFile: 08-spin_orbit_coupling_full.Xe.UPF
 Input: 08-spin_orbit_coupling_full.02-rkb.inp
-match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
-match ; Eigenvalue  1 ; GREPFIELD(static/info, ' 1   --', 3) ; -27.330226
-match ; Eigenvalue  3 ; GREPFIELD(static/info, ' 3   --', 3) ; -26.439545
-match ; Eigenvalue  5 ; GREPFIELD(static/info, ' 5   --', 3) ; -17.128970
-match ; Eigenvalue  7 ; GREPFIELD(static/info, ' 7   --', 3) ; -15.780517
-match ; Eigenvalue  9 ; GREPFIELD(static/info, ' 9   --', 3) ; -14.714795
-match ; Eigenvalue 11 ; GREPFIELD(static/info, '11   --', 3) ; -14.712017
-match ; Eigenvalue 13 ; GREPFIELD(static/info, '13   --', 3) ; -13.904243
-match ; Eigenvalue 15 ; GREPFIELD(static/info, '15   --', 3) ; -13.539179
-
-match ; <Sz>        1 ; GREPFIELD(static/info, ' 1   --', 7) ; 0.5000
-match ; <Sz>        3 ; GREPFIELD(static/info, ' 3   --', 7) ; 0.5000
-match ; <Sz>        5 ; GREPFIELD(static/info, ' 5   --', 7) ; 0.4714
-match ; <Sz>        7 ; GREPFIELD(static/info, ' 7   --', 7) ; 0.1288
-match ; <Sz>        9 ; GREPFIELD(static/info, ' 9   --', 7) ; -0.0847
-match ; <Sz>       11 ; GREPFIELD(static/info, '11   --', 7) ; 0.1300
-match ; <Sz>       13 ; GREPFIELD(static/info, '13   --', 7) ; -0.1012
-match ; <Sz>       15 ; GREPFIELD(static/info, '15   --', 7) ; 0.4557
-
-match ; Force         ; GREPFIELD(static/info, 'Forces on the ions', 3, 2) ; -0.664587
+if(available cuda); then
+  match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
+  match ; Eigenvalue  1 ; GREPFIELD(static/info, ' 1   --', 3) ; -27.330226
+  match ; Eigenvalue  3 ; GREPFIELD(static/info, ' 3   --', 3) ; -26.439545
+  match ; Eigenvalue  5 ; GREPFIELD(static/info, ' 5   --', 3) ; -17.128970
+  match ; Eigenvalue  7 ; GREPFIELD(static/info, ' 7   --', 3) ; -15.780517
+  match ; Eigenvalue  9 ; GREPFIELD(static/info, ' 9   --', 3) ; -14.714795
+  match ; Eigenvalue 11 ; GREPFIELD(static/info, '11   --', 3) ; -14.712017
+  match ; Eigenvalue 13 ; GREPFIELD(static/info, '13   --', 3) ; -13.904243
+  match ; Eigenvalue 15 ; GREPFIELD(static/info, '15   --', 3) ; -13.539179
+  
+  match ; <Sz>        1 ; GREPFIELD(static/info, ' 1   --', 7) ; 0.5000
+  match ; <Sz>        3 ; GREPFIELD(static/info, ' 3   --', 7) ; 0.5000
+  match ; <Sz>        5 ; GREPFIELD(static/info, ' 5   --', 7) ; 0.4714
+  match ; <Sz>        7 ; GREPFIELD(static/info, ' 7   --', 7) ; 0.1288
+  match ; <Sz>        9 ; GREPFIELD(static/info, ' 9   --', 7) ; -0.0847
+  match ; <Sz>       11 ; GREPFIELD(static/info, '11   --', 7) ; 0.1300
+  match ; <Sz>       13 ; GREPFIELD(static/info, '13   --', 7) ; -0.1012
+  match ; <Sz>       15 ; GREPFIELD(static/info, '15   --', 7) ; 0.4557
+  
+  match ; Force         ; GREPFIELD(static/info, 'Forces on the ions', 3, 2) ; -0.664587
+else
+  match ; Error match ; GREPCOUNT(err, 'Calculation will not be continued.') ; 1
+endif
 
 
 # note: states 17 and 18 may be missing if LCAO is used
 Input: 08-spin_orbit_coupling_full.03-unocc.inp
-match ; Eigenvalue 11 ; GREPFIELD(static/eigenvalues, '11   --', 3) ; -14.712017
-match ; Eigenvalue 13 ; GREPFIELD(static/eigenvalues, '13   --', 3) ; -13.904243
-match ; Eigenvalue 15 ; GREPFIELD(static/eigenvalues, '15   --', 3) ; -13.539179
-match ; Eigenvalue 16 ; GREPFIELD(static/eigenvalues, '16   --', 3) ; -12.933610
-match ; Eigenvalue 17 ; GREPFIELD(static/eigenvalues, '17   --', 3) ; -5.035700
-match ; Eigenvalue 18 ; GREPFIELD(static/eigenvalues, '18   --', 3) ; -4.975020
-match ; Eigenvalue 19 ; GREPFIELD(static/eigenvalues, '19   --', 3) ; -4.127851
-match ; Eigenvalue 20 ; GREPFIELD(static/eigenvalues, '20   --', 3) ; -4.116743
-
-match ; <Sz>       11 ; GREPFIELD(static/eigenvalues, '11   --', 7) ; 0.1300
-match ; <Sz>       13 ; GREPFIELD(static/eigenvalues, '13   --', 7) ; -0.1012
-match ; <Sz>       15 ; GREPFIELD(static/eigenvalues, '15   --', 7) ; 0.4557
-match ; <Sz>       16 ; GREPFIELD(static/eigenvalues, '16   --', 7) ; -0.4671
-match ; <Sz>       17 ; GREPFIELD(static/eigenvalues, '17   --', 7) ; 0.5000
-match ; <Sz>       18 ; GREPFIELD(static/eigenvalues, '18   --', 7) ; -0.5000
-match ; <Sz>       19 ; GREPFIELD(static/eigenvalues, '19   --', 7) ; 0.4525
-match ; <Sz>       20 ; GREPFIELD(static/eigenvalues, '20   --', 7) ; 0.4675
+if(available cuda); then
+  match ; Eigenvalue 11 ; GREPFIELD(static/eigenvalues, '11   --', 3) ; -14.712017
+  match ; Eigenvalue 13 ; GREPFIELD(static/eigenvalues, '13   --', 3) ; -13.904243
+  match ; Eigenvalue 15 ; GREPFIELD(static/eigenvalues, '15   --', 3) ; -13.539179
+  match ; Eigenvalue 16 ; GREPFIELD(static/eigenvalues, '16   --', 3) ; -12.933610
+  match ; Eigenvalue 17 ; GREPFIELD(static/eigenvalues, '17   --', 3) ; -5.035700
+  match ; Eigenvalue 18 ; GREPFIELD(static/eigenvalues, '18   --', 3) ; -4.975020
+  match ; Eigenvalue 19 ; GREPFIELD(static/eigenvalues, '19   --', 3) ; -4.127851
+  match ; Eigenvalue 20 ; GREPFIELD(static/eigenvalues, '20   --', 3) ; -4.116743
+  
+  match ; <Sz>       11 ; GREPFIELD(static/eigenvalues, '11   --', 7) ; 0.1300
+  match ; <Sz>       13 ; GREPFIELD(static/eigenvalues, '13   --', 7) ; -0.1012
+  match ; <Sz>       15 ; GREPFIELD(static/eigenvalues, '15   --', 7) ; 0.4557
+  match ; <Sz>       16 ; GREPFIELD(static/eigenvalues, '16   --', 7) ; -0.4671
+  match ; <Sz>       17 ; GREPFIELD(static/eigenvalues, '17   --', 7) ; 0.5000
+  match ; <Sz>       18 ; GREPFIELD(static/eigenvalues, '18   --', 7) ; -0.5000
+  match ; <Sz>       19 ; GREPFIELD(static/eigenvalues, '19   --', 7) ; 0.4525
+  match ; <Sz>       20 ; GREPFIELD(static/eigenvalues, '20   --', 7) ; 0.4675
+else
+  match ; Error match ; GREPCOUNT(err, 'Calculation will not be continued.') ; 1
+endif

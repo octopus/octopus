@@ -40,4 +40,3 @@ ConvAbsEv = 1e-5
 %
 StatesPack = yes
 
-AllowCPUonly = yes

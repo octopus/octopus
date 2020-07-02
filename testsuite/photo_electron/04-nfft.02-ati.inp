@@ -85,4 +85,3 @@ NFFTPrecompute = NFFT_PRE_PSI
 
 StatesPack = yes
 
-AllowCPUonly = yes

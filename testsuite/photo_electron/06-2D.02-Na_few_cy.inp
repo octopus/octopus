@@ -55,4 +55,3 @@ OutputInterval = 600
 RestartWriteInterval = 600
 StatesPack = yes
 
-AllowCPUonly = yes

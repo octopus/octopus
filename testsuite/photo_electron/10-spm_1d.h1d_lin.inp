@@ -77,5 +77,3 @@ RestartWrite = no
 
 
 StatesPack = yes
-
-AllowCPUonly = yes

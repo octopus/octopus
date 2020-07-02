@@ -18,4 +18,3 @@ TheoryLevel = independent_particles
 %
 StatesPack = yes
 
-AllowCPUonly = yes

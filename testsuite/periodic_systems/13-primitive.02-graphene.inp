@@ -91,4 +91,3 @@ ConvAbsEv = 1e-5
 StatesPack = yes
 LCAOStart = lcao_full
 
-AllowCPUonly = yes

@@ -60,33 +60,36 @@ match ; Kanamori J Ni2  ; LINEFIELD(static/kanamoriU, -1, 4) ; 0.026773
 Processors : 4
 
 Input      : 02-ACBN0.02-lif.inp
-
-Precision: 4e-8
-
-match ;  SCF convergence  ; GREPCOUNT(static/info, 'SCF converged') ; 1.0
-match ;  Total energy        ; GREPFIELD(static/info, 'Total       =', 3) ; -24.296610575000003
-match ;  Ion-ion energy      ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -14.42250723
-match ;  Eigenvalues sum     ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -4.49532353
-match ;  Hartree energy      ; GREPFIELD(static/info, 'Hartree     =', 3) ; 8.265820495
-match ;  Exchange energy     ; GREPFIELD(static/info, 'Exchange    =', 3) ; -4.37612038
-match ;  Correlation energy  ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.49327263
-match ;  Kinetic energy      ; GREPFIELD(static/info, 'Kinetic     =', 3) ; 17.570416950000002
-match ;  External energy     ; GREPFIELD(static/info, 'External    =', 3) ; -30.895867420000002
-match ;  Hubbard energy      ; GREPFIELD(static/info, 'Hubbard     =', 3) ; 0.05491979
-match ;  Total Magnetic Moment  ; GREPFIELD(static/info, 'mz = ', 3) ; 0.0
-match ;  Local Magnetic Moment (Li)  ; GREPFIELD(static/info, '1        Li', 3) ; 0.0
-match ;  Local Magnetic Moment (F)   ; GREPFIELD(static/info, '2         F', 3) ; 0.0
-match ;  k-point 2 (x)  ; GREPFIELD(static/info, '#k =   2', 7) ; 0.0
-match ;  k-point 2 (y)  ; GREPFIELD(static/info, '#k =   2', 8) ; 0.5
-match ;  k-point 2 (z)  ; GREPFIELD(static/info, '#k =   2', 9) ; 0.0
-match ;  Eigenvalue  1 up  ; GREPFIELD(static/info, '#k =   2', 3, 1) ; -0.942691
-match ;  Eigenvalue  1 dn  ; GREPFIELD(static/info, '#k =   2', 3, 2) ; -0.942691
-match ;  Eigenvalue  3 up  ; GREPFIELD(static/info, '#k =   2', 3, 5) ; -0.409534
-match ;  Eigenvalue  4 up  ; GREPFIELD(static/info, '#k =   2', 3, 7) ; -0.408932
-match ;  Eigenvalue  5 up  ; GREPFIELD(static/info, '#k =   2', 3, 9) ; 0.283877
-match ;  Occupation F down 2p2  ; LINEFIELD(static/occ_matrices, -2, 3) ; 0.9613969
-match ;  Occupation F down 2p3  ; LINEFIELD(static/occ_matrices, -1, 5) ; 0.9613969
-match ;  U2p F    ; LINEFIELD(static/effectiveU, -7, 4) ; 0.493266
-match ;  Kanamori U    ; LINEFIELD(static/kanamoriU, -7, 4) ; 0.865337
-match ;  Kanamori Up   ; LINEFIELD(static/kanamoriU, -4, 4) ; 0.779382
-match ;  Kanamori J    ; LINEFIELD(static/kanamoriU, -1, 4) ; 0.043705
+if(available cuda); then
+  Precision: 4e-8
+  
+  match ;  SCF convergence  ; GREPCOUNT(static/info, 'SCF converged') ; 1.0
+  match ;  Total energy        ; GREPFIELD(static/info, 'Total       =', 3) ; -24.296610575000003
+  match ;  Ion-ion energy      ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -14.42250723
+  match ;  Eigenvalues sum     ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -4.49532353
+  match ;  Hartree energy      ; GREPFIELD(static/info, 'Hartree     =', 3) ; 8.265820495
+  match ;  Exchange energy     ; GREPFIELD(static/info, 'Exchange    =', 3) ; -4.37612038
+  match ;  Correlation energy  ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.49327263
+  match ;  Kinetic energy      ; GREPFIELD(static/info, 'Kinetic     =', 3) ; 17.570416950000002
+  match ;  External energy     ; GREPFIELD(static/info, 'External    =', 3) ; -30.895867420000002
+  match ;  Hubbard energy      ; GREPFIELD(static/info, 'Hubbard     =', 3) ; 0.05491979
+  match ;  Total Magnetic Moment  ; GREPFIELD(static/info, 'mz = ', 3) ; 0.0
+  match ;  Local Magnetic Moment (Li)  ; GREPFIELD(static/info, '1        Li', 3) ; 0.0
+  match ;  Local Magnetic Moment (F)   ; GREPFIELD(static/info, '2         F', 3) ; 0.0
+  match ;  k-point 2 (x)  ; GREPFIELD(static/info, '#k =   2', 7) ; 0.0
+  match ;  k-point 2 (y)  ; GREPFIELD(static/info, '#k =   2', 8) ; 0.5
+  match ;  k-point 2 (z)  ; GREPFIELD(static/info, '#k =   2', 9) ; 0.0
+  match ;  Eigenvalue  1 up  ; GREPFIELD(static/info, '#k =   2', 3, 1) ; -0.942691
+  match ;  Eigenvalue  1 dn  ; GREPFIELD(static/info, '#k =   2', 3, 2) ; -0.942691
+  match ;  Eigenvalue  3 up  ; GREPFIELD(static/info, '#k =   2', 3, 5) ; -0.409534
+  match ;  Eigenvalue  4 up  ; GREPFIELD(static/info, '#k =   2', 3, 7) ; -0.408932
+  match ;  Eigenvalue  5 up  ; GREPFIELD(static/info, '#k =   2', 3, 9) ; 0.283877
+  match ;  Occupation F down 2p2  ; LINEFIELD(static/occ_matrices, -2, 3) ; 0.9613969
+  match ;  Occupation F down 2p3  ; LINEFIELD(static/occ_matrices, -1, 5) ; 0.9613969
+  match ;  U2p F    ; LINEFIELD(static/effectiveU, -7, 4) ; 0.493266
+  match ;  Kanamori U    ; LINEFIELD(static/kanamoriU, -7, 4) ; 0.865337
+  match ;  Kanamori Up   ; LINEFIELD(static/kanamoriU, -4, 4) ; 0.779382
+  match ;  Kanamori J    ; LINEFIELD(static/kanamoriU, -1, 4) ; 0.043705
+else
+  match ; Error match ; GREPCOUNT(err, 'Calculation will not be continued.') ; 1
+endif

@@ -41,4 +41,3 @@ ProfilingMode = prof_io
 StatesPack = yes
 LCAOStart = lcao_full
 
-AllowCPUonly = yes

@@ -9,12 +9,20 @@ Enabled    : Yes
 # Na groundstate
 Processors : 2
 Input      : 12-spm_3d.01-Na_gs.inp
+if(available cuda); then
+else
+  match ; Error match ; GREPCOUNT(err, 'Calculation will not be continued.') ; 1
+endif
 
 # Na photoemission
 # Processors : 2
 Precision  : 1.0e-11
 Input      : 12-spm_3d.02-Na_td.inp
-match ; PES [val  1] ; LINEFIELD(td.general/PES_spm.power.sum, 40, 2) ; 0.6331292402E-007
-match ; PES [val  2] ; LINEFIELD(td.general/PES_spm.power.sum, 41, 2) ; 0.8936768177E-007
-match ; PES [val  3] ; LINEFIELD(td.general/PES_spm.power.sum, 42, 2) ; 0.6310381259E-007
+if(available cuda); then
+  match ; PES [val  1] ; LINEFIELD(td.general/PES_spm.power.sum, 40, 2) ; 0.6331292402E-007
+  match ; PES [val  2] ; LINEFIELD(td.general/PES_spm.power.sum, 41, 2) ; 0.8936768177E-007
+  match ; PES [val  3] ; LINEFIELD(td.general/PES_spm.power.sum, 42, 2) ; 0.6310381259E-007
+else
+  match ; Error match ; GREPCOUNT(err, 'Calculation will not be continued.') ; 1
+endif
 

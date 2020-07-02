@@ -43,4 +43,5 @@ ExperimentalFeatures = yes
 ProfilingMode = prof_memory_full
 StatesPack = yes
 
+# Allow on GPU to enable next part of the test
 AllowCPUonly = yes

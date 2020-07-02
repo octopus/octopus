@@ -53,4 +53,3 @@ ACBN0IntersiteCutoff = 7
 UnitsOutput = ev_angstrom
 StatesPack = yes
 
-AllowCPUonly = yes

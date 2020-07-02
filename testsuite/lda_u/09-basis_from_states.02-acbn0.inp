@@ -45,4 +45,3 @@ ExtraStates = 3
 OutputLDA_U = occ_matrices + effectiveU
 StatesPack = yes
 
-AllowCPUonly = yes
