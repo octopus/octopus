@@ -33,6 +33,9 @@ module interaction_gravity_oct_m
   public ::                &
     interaction_gravity_t
 
+  !> Gravity interaction between two particles. This should be used
+  !! for testing purposes only. Note that this interaction assumes all
+  !! quantities are in S.I. units instead of atomic units.
   type, extends(interaction_with_partner_t) :: interaction_gravity_t
     private
     integer :: dim
@@ -115,7 +118,7 @@ contains
     class(interaction_gravity_t), intent(inout) :: this
     type(namespace_t),            intent(in)    :: namespace
 
-    FLOAT, parameter :: GG = CNST(6.67430e-11)
+    FLOAT, parameter :: GG = CNST(6.67430e-11) ! In S.I. units!
     FLOAT :: dist3
 
     PUSH_SUB(interaction_gravity_calculate)
