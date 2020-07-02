@@ -7,6 +7,8 @@ Enabled    : Yes
 
 Input      : 18-TiO2.01-gs.inp
 if(available cuda); then
+  match ; Error match ; GREPCOUNT(err, 'Calculation will not be continued.') ; 1
+else
   match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
   
   match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 8
@@ -47,6 +49,4 @@ if(available cuda); then
   match ;  Two-body (cccc) Im  ; LINEFIELD(static/output_me_two_body, 1887, 10) ; -2.94728e-19
   match ;  Two-body (vvcc) Re  ; LINEFIELD(static/output_me_two_body, 14, 9) ; 2.390449999999999e-16
   match ;  Two-body (vvcc) Re  ; LINEFIELD(static/output_me_two_body, 14, 10) ; -3.72975e-20
-else
-  match ; Error match ; GREPCOUNT(err, 'Calculation will not be continued.') ; 1
 endif

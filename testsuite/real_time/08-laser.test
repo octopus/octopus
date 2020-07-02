@@ -26,17 +26,17 @@ match ; <Z>(t=0.2) ; LINEFIELD(td.general/multipoles, -1, 6) ; -1.334845206979e-
 
 Input: 08-laser.03-velocity_gauge.inp
 if(available cuda); then
+  match ; Error match ; GREPCOUNT(err, 'Calculation will not be continued.') ; 1
+else
   match ;   n(t=0.2) ; LINEFIELD(td.general/multipoles, -1, 2) ; 2.000000000000e-01
   match ; <Z>(t=0.2) ; LINEFIELD(td.general/multipoles, -1, 6) ; -1.332345613504e-04
-else
-  match ; Error match ; GREPCOUNT(err, 'Calculation will not be continued.') ; 1
 endif
 
 Input: 08-laser.04-velocity_gauge_cheby.inp
 if(available cuda); then
+  match ; Error match ; GREPCOUNT(err, 'Calculation will not be continued.') ; 1
+else
   match ;   n(t=0.2) ; LINEFIELD(td.general/multipoles, -1, 2) ; 2.000000000000e-01
   match ; <Z>(t=0.2) ; LINEFIELD(td.general/multipoles, -1, 6) ; -1.332345640862e-04
-else
-  match ; Error match ; GREPCOUNT(err, 'Calculation will not be continued.') ; 1
 endif
 

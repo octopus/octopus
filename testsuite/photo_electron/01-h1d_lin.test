@@ -10,21 +10,21 @@ Enabled    : Yes
 Processors : 2
 Input      : 01-h1d_lin.01-mask.inp
 if(available cuda); then
+  match ; Error match ; GREPCOUNT(err, 'Calculation will not be continued.') ; 1
+else
   match ; PES [val  1] ; LINEFIELD(td.general/PESM_power.sum, 31, 2) ; 1.810496419345E-04
   match ; PES [val  2] ; LINEFIELD(td.general/PESM_power.sum, 47, 2) ; 1.080437170164E-05
   match ; PES [val  3] ; LINEFIELD(td.general/PESM_power.sum, 85, 2) ; 1.162635131303E-06
-else
-  match ; Error match ; GREPCOUNT(err, 'Calculation will not be continued.') ; 1
 endif
 
 # BackAction method with bare fft
 Processors : 2
 Input      : 01-h1d_lin.02-ba.inp
 if(available cuda); then
+  match ; Error match ; GREPCOUNT(err, 'Calculation will not be continued.') ; 1
+else
   match ; PES [val  1] ; LINEFIELD(td.general/PESM_power.sum, 41, 2) ; 1.176406119607E-03
   match ; PES [val  2] ; LINEFIELD(td.general/PESM_power.sum, 51, 2) ; 4.792053525371E-05
   match ; PES [val  3] ; LINEFIELD(td.general/PESM_power.sum, 71, 2) ; 2.486856180514E-06
-else
-  match ; Error match ; GREPCOUNT(err, 'Calculation will not be continued.') ; 1
 endif
 

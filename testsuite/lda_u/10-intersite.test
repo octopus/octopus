@@ -30,6 +30,8 @@ match ; V Na1-Na2 ;  GREPFIELD(static/info, '1        Na  3s 2 3s', 7); 0.077567
 Processors : 4
 Input      : 10-intersite.02-graphite.inp
 if(available cuda); then
+  match ; Error match ; GREPCOUNT(err, 'Calculation will not be continued.') ; 1
+else
   #Units are in eV_angstrom
   Precision : 0.002
   match ; SCF convergence    ; GREPCOUNT(static/info, 'SCF converged') ; 1
@@ -44,7 +46,5 @@ if(available cuda); then
   match ; Hubbard energy     ; GREPFIELD(static/info, 'Hubbard     =', 3) ;   14.51196369
   
   match ; V C1-C2 ;  GREPFIELD(static/info, '1         C  2p 1 2p  2.470', 7); 2.494068
-else
-  match ; Error match ; GREPCOUNT(err, 'Calculation will not be continued.') ; 1
 endif
 

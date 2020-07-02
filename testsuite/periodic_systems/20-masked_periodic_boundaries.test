@@ -9,6 +9,8 @@ Processors : 4
 
 Input      : 20-masked_periodic_boundaries.01-graphene.inp
 if(available cuda); then
+  match ; Error match ; GREPCOUNT(err, 'Calculation will not be continued.') ; 1
+else
   match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
   
   match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -10.29909984
@@ -19,6 +21,4 @@ if(available cuda); then
   match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.45179896
   match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;  11.30173935
   match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ;  11.59239391
-else
-  match ; Error match ; GREPCOUNT(err, 'Calculation will not be continued.') ; 1
 endif

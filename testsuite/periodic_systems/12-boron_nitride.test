@@ -9,6 +9,8 @@ Processors : 4
 
 Input      : 12-boron_nitride.01-gs.inp
 if(available cuda); then
+  match ; Error match ; GREPCOUNT(err, 'Calculation will not be continued.') ; 1
+else
   match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
   
   match ; Total k-points     ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 4
@@ -62,12 +64,12 @@ if(available cuda); then
   match ; Force 4 (x)   ; GREPFIELD(static/info, '4         N', 3)  ;   1.419524
   match ; Force 4 (y)   ; GREPFIELD(static/info, '4         N', 4)  ;   0
   match ; Force 4 (z)   ; GREPFIELD(static/info, '4         N', 5)  ;   0
-else
-  match ; Error match ; GREPCOUNT(err, 'Calculation will not be continued.') ; 1
 endif
   
 Input      : 12-boron_nitride.02-gs_gamma.inp
 if(available cuda); then
+  match ; Error match ; GREPCOUNT(err, 'Calculation will not be continued.') ; 1
+else
   match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
   
   match ; Total k-points     ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 1
@@ -113,6 +115,4 @@ if(available cuda); then
   match ; Force 4 (x)   ; GREPFIELD(static/info, '4         N', 3)  ;  -5.066585
   match ; Force 4 (y)   ; GREPFIELD(static/info, '4         N', 4)  ;   0
   match ; Force 4 (z)   ; GREPFIELD(static/info, '4         N', 5)  ;   0
-else
-  match ; Error match ; GREPCOUNT(err, 'Calculation will not be continued.') ; 1
 endif

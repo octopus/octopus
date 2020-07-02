@@ -10,10 +10,10 @@ Enabled    : Yes
 Processors : 2
 Input      : 02-restart.01-ba.inp
 if(available cuda); then
+  match ; Error match ; GREPCOUNT(err, 'Calculation will not be continued.') ; 1
+else
     #no matches here
     # Why not, there should be! --DAS
-else
-  match ; Error match ; GREPCOUNT(err, 'Calculation will not be continued.') ; 1
 endif
 
 
@@ -21,10 +21,10 @@ endif
 Processors : 2
 Input      : 02-restart.02-restart_ba.inp
 if(available cuda); then
+  match ; Error match ; GREPCOUNT(err, 'Calculation will not be continued.') ; 1
+else
   match ; PES [val  1] ; LINEFIELD(td.general/PESM_power.sum, 41, 2) ; 1.176406119607E-03
   match ; PES [val  2] ; LINEFIELD(td.general/PESM_power.sum, 51, 2) ; 4.792053525371E-05
   match ; PES [val  3] ; LINEFIELD(td.general/PESM_power.sum, 71, 2) ; 2.486856180514E-06
-else
-  match ; Error match ; GREPCOUNT(err, 'Calculation will not be continued.') ; 1
 endif
 

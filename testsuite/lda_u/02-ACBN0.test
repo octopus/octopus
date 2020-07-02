@@ -61,6 +61,8 @@ Processors : 4
 
 Input      : 02-ACBN0.02-lif.inp
 if(available cuda); then
+  match ; Error match ; GREPCOUNT(err, 'Calculation will not be continued.') ; 1
+else
   Precision: 4e-8
   
   match ;  SCF convergence  ; GREPCOUNT(static/info, 'SCF converged') ; 1.0
@@ -90,6 +92,4 @@ if(available cuda); then
   match ;  Kanamori U    ; LINEFIELD(static/kanamoriU, -7, 4) ; 0.865337
   match ;  Kanamori Up   ; LINEFIELD(static/kanamoriU, -4, 4) ; 0.779382
   match ;  Kanamori J    ; LINEFIELD(static/kanamoriU, -1, 4) ; 0.043705
-else
-  match ; Error match ; GREPCOUNT(err, 'Calculation will not be continued.') ; 1
 endif

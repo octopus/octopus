@@ -39,6 +39,8 @@ Precision: 0.0001
 Processors : 2
 Input      : 12-vdw_solid_c6.02-gs_graphene.inp
 if(available cuda); then
+  match ; Error match ; GREPCOUNT(err, 'Calculation will not be continued.') ; 1
+else
   match ; SCF convergence    ; GREPCOUNT(static/info, 'SCF converged') ; 1
   match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -11.33239580
   match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -3.71107822
@@ -62,6 +64,4 @@ if(available cuda); then
   match ; C6 eff  C1-C2   ; GREPFIELD(static/c6ab_eff, '1    2', 3) ; 32.8817
   match ; C6 eff  C2-C1   ; GREPFIELD(static/c6ab_eff, '2    1', 3) ; 32.8817
   match ; C6 eff  C2-C2   ; GREPFIELD(static/c6ab_eff, '2    2', 3) ; 32.8752
-else
-  match ; Error match ; GREPCOUNT(err, 'Calculation will not be continued.') ; 1
 endif

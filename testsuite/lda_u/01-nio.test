@@ -7,6 +7,8 @@ Enabled    : Yes
 
 Input      : 01-nio.01-U5-gs.inp
 if(available cuda); then
+  match ; Error match ; GREPCOUNT(err, 'Calculation will not be continued.') ; 1
+else
   match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
   
   match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 8
@@ -45,12 +47,12 @@ if(available cuda); then
   
   match ; Occupation Ni2 down 3d4 ; LINEFIELD(static/occ_matrices, -2, 7) ; 0.87137742
   match ; Occupation Ni2 down 3d5 ; LINEFIELD(static/occ_matrices, -1, 9) ; 0.88646408
-else
-  match ; Error match ; GREPCOUNT(err, 'Calculation will not be continued.') ; 1
 endif
 
 Input      : 01-nio.02-unocc.inp
 if(available cuda); then
+  match ; Error match ; GREPCOUNT(err, 'Calculation will not be continued.') ; 1
+else
   match ; Red. coord. k1 ; LINEFIELD(static/bandstructure-sp1, 2, 1) ;  0.00000000
   match ; Band structure k1x ; LINEFIELD(static/bandstructure-sp1, 2, 2) ;  0.00000000
   match ; Band structure k1y ; LINEFIELD(static/bandstructure-sp1, 2, 3) ;  0.00000000
@@ -61,7 +63,5 @@ if(available cuda); then
   
   match ; Red. coord. k3 ; LINEFIELD(static/bandstructure-sp1, 4, 1) ;   0.5000000
   match ; Band structure k3x ; LINEFIELD(static/bandstructure-sp1, 4, 2) ;  -0.01562000
-else
-  match ; Error match ; GREPCOUNT(err, 'Calculation will not be continued.') ; 1
 endif
 

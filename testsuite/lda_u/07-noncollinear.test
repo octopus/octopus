@@ -9,6 +9,8 @@ Processors : 2
 
 Input      : 07-noncollinear.01-U5-gs.inp
 if(available cuda); then
+  match ; Error match ; GREPCOUNT(err, 'Calculation will not be continued.') ; 1
+else
   match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
   
   match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 4
@@ -64,14 +66,14 @@ if(available cuda); then
   Precision: 3e-05
   match ;   Occupation Ni2 up-down 3d4   ; LINEFIELD(static/occ_matrices, -2, 7) ; -0.036016704999999996
   match ;   Occupation Ni2 up-down 3d5   ; LINEFIELD(static/occ_matrices, -1, 9) ; -0.39045340500000003
-else
-  match ; Error match ; GREPCOUNT(err, 'Calculation will not be continued.') ; 1
 endif
 
 
 
 Input      : 07-noncollinear.02-acbn0.inp
 if(available cuda); then
+  match ; Error match ; GREPCOUNT(err, 'Calculation will not be continued.') ; 1
+else
   match ;  SCF convergence  ; GREPCOUNT(static/info, 'SCF converged') ; 1.0
   
   match ;  Total k-points    ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 4.0
@@ -125,6 +127,4 @@ if(available cuda); then
   match ;  Occupation Ni2 up-down 3d4  ; LINEFIELD(static/occ_matrices, -2, 7) ; -0.038103219
   Precision: 1e-05
   match ;  Occupation Ni2 up-down 3d5  ; LINEFIELD(static/occ_matrices, -1, 9) ; -0.40487471
-else
-  match ; Error match ; GREPCOUNT(err, 'Calculation will not be continued.') ; 1
 endif

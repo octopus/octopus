@@ -21,10 +21,10 @@ match ; Eigenvalue   ; GREPFIELD(static/info, '1   --', 3) ; -1.647510
 
 Input: 08-velocities.02-oct.inp
 if(available cuda); then
+  match ; Error match ; GREPCOUNT(err, 'Calculation will not be continued.') ; 1
+else
   Precision : 0.1
   match ; J1 1st iteration  ; GREPFIELD(opt-control/convergence, '##        1 ', 4) ; 2118.95988651
-else
-  match ; Error match ; GREPCOUNT(err, 'Calculation will not be continued.') ; 1
 endif
 
 

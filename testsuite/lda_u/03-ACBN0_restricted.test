@@ -7,6 +7,8 @@ Enabled    : Yes
 
 Input      : 03-ACBN0_restricted.01-lif.inp
 if(available cuda); then
+  match ; Error match ; GREPCOUNT(err, 'Calculation will not be continued.') ; 1
+else
   #Copied from 02-ACBN0.test
   match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
   match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ;  -24.296661245
@@ -36,12 +38,12 @@ if(available cuda); then
   match ; Kanamori Up  ; LINEFIELD(static/kanamoriU, -4, 4) ; 0.775511
   match ; Kanamori J   ; LINEFIELD(static/kanamoriU, -1, 4) ; 0.041851
   match ; U2p F   ; LINEFIELD(static/effectiveU, -7, 4) ; 0.492816
-else
-  match ; Error match ; GREPCOUNT(err, 'Calculation will not be continued.') ; 1
 endif
 
 Input      : 03-ACBN0_restricted.02-lif_unpacked.inp
 if(available cuda); then
+  match ; Error match ; GREPCOUNT(err, 'Calculation will not be continued.') ; 1
+else
   #Copied from 02-ACBN0.test
   match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
   
@@ -69,7 +71,5 @@ if(available cuda); then
   match ; Occupation F down 2p3 ; LINEFIELD(static/occ_matrices, -1, 5) ; 1.92279858
   
   match ; U2p F   ; LINEFIELD(static/effectiveU, -7, 4) ; 0.492816
-else
-  match ; Error match ; GREPCOUNT(err, 'Calculation will not be continued.') ; 1
 endif
 
