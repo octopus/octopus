@@ -10,7 +10,7 @@ Enabled    : Yes
 Processors : 2
 Input      : 04-nfft.01-ba.inp
 if (available nfft); then
-    if(available cuda); then
+    if (available cuda); then
       match ; Error match ; GREPCOUNT(err, 'Calculation will not be continued.') ; 1
     else
       match ; PES [val  1] ; LINEFIELD(td.general/PESM_power.sum, 16, 2) ;  3.095515091933E-04
@@ -25,14 +25,14 @@ endif
 Processors : 2
 Input      : 04-nfft.02-ati.inp
 if (available nfft); then
-    if(available cuda); then
-      match ; Error match ; GREPCOUNT(err, 'Calculation will not be continued.') ; 1
-    else
-      Precision: 0.0015
-      match ; PES [val  1] ; LINEFIELD(td.general/PESM_power.sum, 30, 2) ;  6.648502709932E-01 
-      match ; PES [val  2] ; LINEFIELD(td.general/PESM_power.sum, 49, 2) ;  4.532980021948E-01
-      match ; PES [val  3] ; LINEFIELD(td.general/PESM_power.sum, 62, 2) ;  1.826169875388E-01
-    endif
+  if (availabe cuda); then
+    match ; Error match ; GREPCOUNT(err, 'Calculation will not be continued.') ; 1
+  else
+    Precision: 0.0015
+    match ; PES [val  1] ; LINEFIELD(td.general/PESM_power.sum, 30, 2) ;  6.648502709932E-01 
+    match ; PES [val  2] ; LINEFIELD(td.general/PESM_power.sum, 49, 2) ;  4.532980021948E-01
+    match ; PES [val  3] ; LINEFIELD(td.general/PESM_power.sum, 62, 2) ;  1.826169875388E-01
+  endif
 else
-    match; Error; GREPCOUNT(err, 'NFFT but that library was not linked'); 1
+  match; Error; GREPCOUNT(err, 'NFFT but that library was not linked'); 1
 endif
