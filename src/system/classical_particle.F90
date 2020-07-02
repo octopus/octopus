@@ -37,6 +37,8 @@ module classical_particle_oct_m
   use quantity_oct_m
   use space_oct_m
   use system_abst_oct_m
+  use unit_oct_m
+  use unit_system_oct_m
   use write_iter_oct_m
 
   implicit none
@@ -458,6 +460,7 @@ contains
 
     integer :: idir
     character(len=50) :: aux
+    FLOAT :: tmp(MAX_DIM)
 
     if(.not.mpi_grp_is_root(mpi_world)) return ! only first node outputs
 
@@ -490,8 +493,11 @@ contains
 
       ! second line: units
       call write_iter_string(this%output_handle, '#[Iter n.]')
-      call write_iter_header(this%output_handle, '[seconds]')
-      call write_iter_string(this%output_handle, 'Positions in Km, Velocities in Km/s')
+      call write_iter_header(this%output_handle, '[' // trim(units_abbrev(units_out%time)) // ']')
+      call write_iter_string(this%output_handle, &
+        'Position in '   // trim(units_abbrev(units_out%length))   //   &
+        ', Velocity in '// trim(units_abbrev(units_out%velocity)) //   &
+        ', Force in '    // trim(units_abbrev(units_out%force)))
       call write_iter_nl(this%output_handle)
 
       call write_iter_string(this%output_handle,'################################################################################')
@@ -499,9 +505,17 @@ contains
     end if
 
     call write_iter_start(this%output_handle)
-    call write_iter_double(this%output_handle, this%pos, this%space%dim)
-    call write_iter_double(this%output_handle, this%vel, this%space%dim)
-    call write_iter_double(this%output_handle, this%tot_force, this%space%dim)
+
+    ! Position
+    tmp(1:this%space%dim) = units_from_atomic(units_out%length, this%pos(1:this%space%dim))
+    call write_iter_double(this%output_handle, tmp, this%space%dim)
+    ! Velocity
+    tmp(1:this%space%dim) = units_from_atomic(units_out%velocity, this%vel(1:this%space%dim))
+    call write_iter_double(this%output_handle, tmp, this%space%dim)
+    ! Force
+    tmp(1:this%space%dim) = units_from_atomic(units_out%force, this%tot_force(1:this%space%dim))
+    call write_iter_double(this%output_handle, tmp, this%space%dim)
+
     call write_iter_nl(this%output_handle)
 
     POP_SUB(classical_particle_output_write)
