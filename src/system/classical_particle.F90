@@ -123,14 +123,14 @@ contains
 
     call space_init(this%space, namespace)
 
-    !%Variable ClassicalParticleMass
+    !%Variable ParticleMass
     !%Type float
     !%Section ClassicalParticles
     !%Description
     !% Mass of classical particle in Kg.
     !%End
-    call parse_variable(namespace, 'ClassicalParticleMass', M_ONE, this%mass)
-    call messages_print_var_value(stdout, 'ClassicalParticleMass', this%mass)
+    call parse_variable(namespace, 'ParticleMass', M_ONE, this%mass)
+    call messages_print_var_value(stdout, 'ParticleMass', this%mass)
 
     this%quantities(POSITION)%required = .true.
     this%quantities(VELOCITY)%required = .true.
@@ -177,40 +177,40 @@ contains
       call messages_fatal(1, namespace=this%namespace)
     end if
 
-    !%Variable ClassicalParticleInitialPosition
+    !%Variable ParticleInitialPosition
     !%Type block
     !%Section ClassicalParticles
     !%Description
     !% Initial position of classical particle, in Km.
     !%End
     this%pos = M_ZERO
-    if (parse_block(this%namespace, 'ClassicalParticleInitialPosition', blk) == 0) then
+    if (parse_block(this%namespace, 'ParticleInitialPosition', blk) == 0) then
       n_rows = parse_block_n(blk)
-      if (n_rows > 1) call  messages_input_error(this%namespace, 'ClassicalParticleInitialPosition')
+      if (n_rows > 1) call  messages_input_error(this%namespace, 'ParticleInitialPosition')
 
       do idir = 1, this%space%dim
         call parse_block_float(blk, 0, idir - 1, this%pos(idir))
       end do
       call parse_block_end(blk)
     end if
-    call messages_print_var_value(stdout, 'ClassicalParticleInitialPosition', this%pos(1:this%space%dim))
+    call messages_print_var_value(stdout, 'ParticleInitialPosition', this%pos(1:this%space%dim))
 
-    !%Variable ClassicalParticleInitialVelocity
+    !%Variable ParticleInitialVelocity
     !%Type block
     !%Section ClassicalParticles
     !%Description
     !% Initial velocity of classical particle in Km/s.
     !%End
     this%vel = M_ZERO
-    if (parse_block(this%namespace, 'ClassicalParticleInitialVelocity', blk) == 0) then
+    if (parse_block(this%namespace, 'ParticleInitialVelocity', blk) == 0) then
       n_rows = parse_block_n(blk)
-      if (n_rows > 1) call  messages_input_error(this%namespace, 'ClassicalParticleInitialVelocity')
+      if (n_rows > 1) call  messages_input_error(this%namespace, 'ParticleInitialVelocity')
       do idir = 1, this%space%dim
         call parse_block_float(blk, 0, idir - 1, this%vel(idir))
       end do
       call parse_block_end(blk)
     end if
-    call messages_print_var_value(stdout, 'ClassicalParticleInitialVelocity', this%vel(1:this%space%dim))
+    call messages_print_var_value(stdout, 'ParticleInitialVelocity', this%vel(1:this%space%dim))
 
     POP_SUB(classical_particle_initial_conditions)
   end subroutine classical_particle_initial_conditions

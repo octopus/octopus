@@ -104,14 +104,14 @@ contains
 
     call classical_particle_init(this%classical_particle_t, namespace)
 
-    !%Variable ClassicalParticleCharge
+    !%Variable ParticleCharge
     !%Type float
     !%Section ClassicalParticles
     !%Description
     !% Charge of classical particle
     !%End
-    call parse_variable(namespace, 'ClassicalParticleCharge', M_ONE, this%charge)
-    call messages_print_var_value(stdout, 'ClassicalParticleCharge', this%charge)
+    call parse_variable(namespace, 'ParticleCharge', M_ONE, this%charge)
+    call messages_print_var_value(stdout, 'ParticleCharge', this%charge)
 
     call this%supported_interactions%add(LORENTZ_FORCE)
     call this%supported_interactions%add(COULOMB_FORCE)
