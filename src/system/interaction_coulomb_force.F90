@@ -115,8 +115,7 @@ contains
     class(interaction_coulomb_force_t), intent(inout) :: this
     type(namespace_t),                  intent(in)    :: namespace
 
-    FLOAT, parameter :: eps_0 = CNST(625000.0)/(CNST(22468879468420441.0) * M_PI) ! vacuum permittivity in SI units
-    FLOAT, parameter :: COULCONST = M_ONE/(M_FOUR * M_PI * eps_0) ! Coulomb constant in SI units
+    FLOAT, parameter :: COULCONST = M_ONE ! Coulomb constant in atomic units
     FLOAT :: dist3
 
     PUSH_SUB(interaction_coulomb_force_calculate)
