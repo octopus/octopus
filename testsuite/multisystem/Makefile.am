@@ -46,6 +46,8 @@ dist_share_DATA =                                                       \
 	06-propagation_expmid.04-three_body_different_time_steps.inp    \
 	06-propagation_expmid.05-two_body_verlet_half.inp               \
 	06-propagation_expmid.06-two_body_verlet.inp                    \
+	08-coulomb_force.test                                           \
+	08-coulomb_force.01-classical_helium.inp                        \
 	99-carbon_hydrogen.test                                         \
 	99-carbon_hydrogen.01-gs.inp                                    \
 	99-carbon_hydrogen.02-td.inp                                    \
