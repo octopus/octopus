@@ -480,8 +480,6 @@ subroutine X(h_mgga_terms) (hm, mesh, psib, hpsib)
   
   PUSH_SUB(X(h_mgga_terms))
 
-  ASSERT(.not. psib%is_packed())
-  
   ispin = states_elec_dim_get_spin_index(hm%d, psib%ik)
 
   SAFE_ALLOCATE(grad(1:mesh%np_part, 1:mesh%sb%dim))
