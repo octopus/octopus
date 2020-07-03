@@ -133,7 +133,7 @@ contains
 
     select case (type)
     case (GRAVITY)
-      mode = ALL_PARTNERS
+      mode = NO_PARTNERS
     case (COULOMB_FORCE)
       mode = ALL_PARTNERS
     case (LORENTZ_FORCE)

@@ -8,6 +8,10 @@ Dimensions = 3
  "Earth" | classical_particle
 %
 
+%Interactions
+ gravity | all_partners
+%
+
 #Initial conditions are taken from https://ssd.jpl.nasa.gov/horizons.cgi#top.
 # initial condition at time:
 # 2458938.500000000 = A.D. 2020-Mar-30 00:00:00.0000 TDB
