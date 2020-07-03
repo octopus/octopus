@@ -93,7 +93,6 @@ contains
     integer :: il, ic, mode
     type(block_t) :: blk
     character(len=MAX_NAMESPACE_LEN) :: input_name
-    type(namespace_t) :: input_namespace
 
     PUSH_SUB(interactions_factory_abst_create_interactions)
 
@@ -152,14 +151,13 @@ contains
           ! partners (remaining columns) and handled them appropriatly
           do ic = 2, parse_block_cols(blk, il) - 1
             call parse_block_string(blk, il, ic, input_name)
-            input_namespace = namespace_t(input_name)
 
             ! Loop over available partners and either add them or remove them
             ! from the list depending on the selected mode
             call partner_iter%start(partners_flat_list)
             do while (partner_iter%has_next())
               partner => partner_iter%get_next()
-              if (input_namespace%contains(partner%namespace)) then
+              if (partner%namespace%is_contained_in(input_name)) then
                 select case (mode)
                 case (ONLY_PARTNERS)
                   call partners%add(partner)
