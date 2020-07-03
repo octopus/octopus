@@ -476,41 +476,59 @@ noinst_HEADERS +=                                    \
 	hamiltonian/vxc_inc.F90
 
 
-# Sources in system
-system_f_srcs =                                 \
-	system/charged_particle.F90             \
-	system/classical_particle.F90           \
-	system/ghost_interaction.F90            \
-	system/interaction_abst.F90             \
-	system/interaction_coulomb_force.F90    \
-	system/interaction_gravity.F90          \
-	system/interaction_lorentz_force.F90    \
-	system/interaction_partner.F90          \
-	system/interaction_with_partner.F90     \
-	system/interactions_factory_abst.F90    \
-	system/interactions_factory.F90         \
-	system/multisystem.F90                  \
-	system/output.F90                       \
-	system/output_me.F90                    \
-	system/propagator_abst.F90              \
-	system/propagator_beeman.F90            \
-	system/propagator_exp_mid.F90           \
-	system/propagator_verlet.F90            \
-	system/quantity.F90                     \
-	system/system_abst.F90                  \
-	system/system_factory_abst.F90
+# Sources in multisystem
+multisystem_f_srcs =                                 \
+	multisystem/ghost_interaction.F90            \
+	multisystem/interaction.F90                  \
+	multisystem/interaction_partner.F90          \
+	multisystem/interaction_with_partner.F90     \
+	multisystem/interactions_factory_abst.F90    \
+	multisystem/multisystem.F90                  \
+	multisystem/propagator.F90                   \
+	multisystem/propagator_beeman.F90            \
+	multisystem/propagator_exp_mid.F90           \
+	multisystem/propagator_verlet.F90            \
+	multisystem/quantity.F90                     \
+	multisystem/system.F90                       \
+	multisystem/system_factory_abst.F90
 
-system_srcs = $(system_f_srcs)
+multisystem_srcs = $(multisystem_f_srcs)
+
+
+# Sources in interactions
+interactions_f_srcs =                                 \
+	interactions/coulomb_force.F90                \
+	interactions/gravity.F90                      \
+	interactions/lorentz_force.F90                \
+	interactions/interactions_factory.F90
+
+interactions_srcs = $(interactions_f_srcs)
+
+
+# Sources in classical
+classical_f_srcs =                                 \
+	classical/charged_particle.F90             \
+	classical/classical_particle.F90
+
+classical_srcs = $(classical_f_srcs)
+
+
+# Sources in output
+output_f_srcs =                                 \
+	output/output.F90                       \
+	output/output_me.F90
 
 noinst_HEADERS +=                               \
-	system/output_berkeleygw_inc.F90        \
-	system/output_etsf_inc.F90              \
-	system/output_h_inc.F90                 \
-	system/output_linear_response_inc.F90   \
-	system/output_me_inc.F90                \
-	system/output_modelmb_inc.F90           \
-	system/output_mxll_inc.F90              \
-	system/output_states_inc.F90
+	output/output_berkeleygw_inc.F90        \
+	output/output_etsf_inc.F90              \
+	output/output_h_inc.F90                 \
+	output/output_linear_response_inc.F90   \
+	output/output_me_inc.F90                \
+	output/output_modelmb_inc.F90           \
+	output/output_mxll_inc.F90              \
+	output/output_states_inc.F90
+
+output_srcs = $(output_f_srcs)
 
 # Sources in electrons
 electrons_f_srcs =                                 \
@@ -670,7 +688,8 @@ noinst_HEADERS +=                                    \
 
 all_f_srcs = $(basic_f_srcs) $(basis_set_f_srcs) $(math_f_srcs) $(species_f_srcs) \
 	     $(ions_f_srcs) $(grid_f_srcs) $(poisson_f_srcs) $(states_f_srcs) \
-	     $(hamiltonian_f_srcs) $(system_f_srcs) $(electrons_f_srcs) $(maxwell_f_srcs) \
+	     $(hamiltonian_f_srcs) $(multisystem_f_srcs) $(interactions_f_srcs) $(classical_f_srcs) \
+	     $(output_f_srcs) $(electrons_f_srcs) $(maxwell_f_srcs) \
 	     $(scf_f_srcs)  $(td_f_srcs) $(opt_control_f_srcs) $(sternheimer_f_srcs)
 
 all_c_srcs = $(basic_c_srcs) $(math_c_srcs) $(species_c_srcs) $(ions_c_srcs) \
@@ -726,35 +745,35 @@ EXTRA_PROGRAMS = oct-propagation_spectrum \
 
 bin_PROGRAMS += @UTILITY_PROGRAMS@
 
-oct_propagation_spectrum_SOURCES = $(td_srcs) $(scf_srcs) $(electrons_srcs) $(system_srcs) \
+oct_propagation_spectrum_SOURCES = $(td_srcs) $(scf_srcs) $(electrons_srcs) $(output_srcs) $(multisystem_srcs) \
 				$(hamiltonian_srcs) $(basis_set_srcs) $(poisson_srcs) \
 				$(states_srcs) $(grid_srcs) $(ions_srcs) $(species_srcs) \
 				$(math_srcs) $(basic_srcs) \
 				utils/propagation_spectrum.F90
 oct_propagation_spectrum_LINK = $(FCLINK)
 oct_propagation_spectrum_LDADD = $(all_LIBS)
-oct_oscillator_strength_SOURCES = $(td_srcs) $(scf_srcs) $(electrons_srcs) $(system_srcs) \
+oct_oscillator_strength_SOURCES = $(td_srcs) $(scf_srcs) $(electrons_srcs) $(output_srcs) $(multisystem_srcs) \
 				$(hamiltonian_srcs) $(basis_set_srcs) $(poisson_srcs) \
 				$(states_srcs) $(grid_srcs) $(ions_srcs) $(species_srcs) \
 				$(math_srcs) $(basic_srcs) \
 				utils/oscillator_strength.F90
 oct_oscillator_strength_LINK = $(FCLINK)
 oct_oscillator_strength_LDADD = $(all_LIBS)
-oct_dielectric_function_SOURCES = $(td_srcs) $(scf_srcs) $(electrons_srcs) $(system_srcs) \
+oct_dielectric_function_SOURCES = $(td_srcs) $(scf_srcs) $(electrons_srcs) $(output_srcs) $(multisystem_srcs) \
 				$(hamiltonian_srcs) $(basis_set_srcs) $(poisson_srcs) \
 				$(states_srcs) $(grid_srcs) $(ions_srcs) $(species_srcs) \
 				$(math_srcs) $(basic_srcs) \
 				utils/dielectric_function.F90
 oct_dielectric_function_LINK = $(FCLINK)
 oct_dielectric_function_LDADD = $(all_LIBS)
-oct_harmonic_spectrum_SOURCES = $(td_srcs) $(scf_srcs) $(electrons_srcs) $(system_srcs) \
+oct_harmonic_spectrum_SOURCES = $(td_srcs) $(scf_srcs) $(electrons_srcs) $(output_srcs) $(multisystem_srcs) \
 				$(hamiltonian_srcs) $(basis_set_srcs) $(poisson_srcs) \
 				$(states_srcs) $(grid_srcs) $(ions_srcs) $(species_srcs) \
 				$(math_srcs) $(basic_srcs) \
 				utils/harmonic_spectrum.F90
 oct_harmonic_spectrum_LINK = $(FCLINK)
 oct_harmonic_spectrum_LDADD = $(all_LIBS)
-oct_photoelectron_spectrum_SOURCES = $(td_srcs) $(scf_srcs) $(electrons_srcs) $(system_srcs) \
+oct_photoelectron_spectrum_SOURCES = $(td_srcs) $(scf_srcs) $(electrons_srcs) $(output_srcs) $(multisystem_srcs) \
 				$(hamiltonian_srcs) $(basis_set_srcs) $(poisson_srcs) \
 				$(states_srcs) $(grid_srcs) $(ions_srcs) $(species_srcs) \
 				$(math_srcs) $(basic_srcs) \
@@ -769,7 +788,7 @@ oct_casida_spectrum_SOURCES = $(grid_srcs) $(ions_srcs) $(species_srcs) $(math_s
 			utils/casida_spectrum.F90
 oct_casida_spectrum_LINK = $(FCLINK)
 oct_casida_spectrum_LDADD = $(all_LIBS)
-oct_vibrational_spectrum_SOURCES = $(td_srcs) $(scf_srcs) $(electrons_srcs) $(system_srcs) \
+oct_vibrational_spectrum_SOURCES = $(td_srcs) $(scf_srcs) $(electrons_srcs) $(output_srcs) $(multisystem_srcs) \
 			$(hamiltonian_srcs) $(basis_set_srcs) $(poisson_srcs) \
 			$(states_srcs) $(grid_srcs) $(ions_srcs) $(species_srcs) \
 			$(math_srcs) $(basic_srcs) \
@@ -784,14 +803,14 @@ oct_center_geom_SOURCES = $(grid_srcs) $(ions_srcs) $(species_srcs) $(math_srcs)
 			  utils/centergeom.F90
 oct_center_geom_LINK = $(FCLINK)
 oct_center_geom_LDADD = $(all_LIBS)
-oct_convert_SOURCES = $(td_srcs) $(scf_srcs) $(electrons_srcs) $(system_srcs) \
+oct_convert_SOURCES = $(td_srcs) $(scf_srcs) $(electrons_srcs) $(output_srcs) $(multisystem_srcs) \
 			$(hamiltonian_srcs) $(basis_set_srcs) $(poisson_srcs) \
 			$(states_srcs) $(grid_srcs) $(ions_srcs) $(species_srcs) \
 			$(math_srcs) $(basic_srcs) \
 			utils/convert.F90
 oct_convert_LINK = $(FCLINK)
 oct_convert_LDADD = $(all_LIBS)
-oct_local_multipoles_SOURCES = $(td_srcs) $(scf_srcs) $(electrons_srcs) $(system_srcs) \
+oct_local_multipoles_SOURCES = $(td_srcs) $(scf_srcs) $(electrons_srcs) $(output_srcs) $(multisystem_srcs) \
 			$(hamiltonian_srcs) $(basis_set_srcs) $(poisson_srcs) \
 			$(states_srcs) $(grid_srcs) $(ions_srcs) $(species_srcs) \
 			$(math_srcs) $(basic_srcs) \
@@ -799,7 +818,7 @@ oct_local_multipoles_SOURCES = $(td_srcs) $(scf_srcs) $(electrons_srcs) $(system
 			utils/local_write.F90
 oct_local_multipoles_LINK = $(FCLINK)
 oct_local_multipoles_LDADD = $(all_LIBS)
-oct_conductivity_SOURCES = $(td_srcs) $(scf_srcs) $(electrons_srcs) $(system_srcs) \
+oct_conductivity_SOURCES = $(td_srcs) $(scf_srcs) $(electrons_srcs) $(output_srcs) $(multisystem_srcs) \
 			$(hamiltonian_srcs) $(basis_set_srcs) $(poisson_srcs) \
 			$(states_srcs) $(grid_srcs) $(ions_srcs) $(species_srcs) \
 			$(math_srcs) $(basic_srcs) \
@@ -809,7 +828,7 @@ oct_conductivity_LDADD = $(all_LIBS)
 oct_help_SOURCES = $(basic_srcs) utils/help.F90
 oct_help_LINK = $(FCLINK)
 oct_help_LDADD = $(all_LIBS)
-oct_floquet_SOURCES = $(td_srcs) $(scf_srcs) $(electrons_srcs) $(system_srcs) \
+oct_floquet_SOURCES = $(td_srcs) $(scf_srcs) $(electrons_srcs) $(output_srcs) $(multisystem_srcs) \
 			$(hamiltonian_srcs) $(basis_set_srcs) $(poisson_srcs) \
 			$(states_srcs) $(grid_srcs) $(ions_srcs) $(species_srcs) \
 			$(math_srcs) $(basic_srcs) \
@@ -821,7 +840,7 @@ oct_spin_susceptibility_LINK = $(FCLINK)
 oct_spin_susceptibility_LDADD = $(all_LIBS)
 
 
-oct_unfold_SOURCES    = $(electrons_srcs) $(system_srcs) $(hamiltonian_srcs) $(basis_set_srcs) \
+oct_unfold_SOURCES    = $(electrons_srcs) $(output_srcs) $(multisystem_srcs) $(hamiltonian_srcs) $(basis_set_srcs) \
 			$(poisson_srcs) $(states_srcs) $(grid_srcs) $(ions_srcs) \
 			$(species_srcs) $(math_srcs) $(basic_srcs) \
                         utils/unfold.F90
@@ -854,7 +873,7 @@ include/options.h: $(all_f_srcs) $(octopus_f_srcs) $(utils_f_srcs) $(noinst_HEAD
 include/defaults.h: $(all_f_srcs) $(octopus_f_srcs) $(utils_f_srcs) $(noinst_HEADERS)
 	$(top_srcdir)/build/mk_varinfo.pl -s $(top_srcdir) -b $(top_builddir)
 
-oct_wannier90_SOURCES = $(td_srcs) $(scf_srcs) $(electrons_srcs) $(system_srcs) \
+oct_wannier90_SOURCES = $(td_srcs) $(scf_srcs) $(electrons_srcs) $(output_srcs) $(multisystem_srcs) \
 			$(hamiltonian_srcs) $(basis_set_srcs) $(poisson_srcs) \
 			$(states_srcs) $(grid_srcs) $(ions_srcs) $(species_srcs) \
 			$(math_srcs) $(basic_srcs) \
