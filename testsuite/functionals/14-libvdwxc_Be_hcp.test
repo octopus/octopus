@@ -17,5 +17,9 @@ if (available libvdwxc); then
     match ;  Correlation energy  ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.414032305
   endif
 else
-  match; Error; GREPCOUNT(err, 'not compiled with libvdwxc') ; 1
+  if(available cuda); then
+    match ; Error match ; GREPCOUNT(err, 'Calculation will not be continued.') ; 1
+  else
+    match; Error; GREPCOUNT(err, 'not compiled with libvdwxc') ; 1
+  endif
 endif
