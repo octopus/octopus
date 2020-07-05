@@ -13,13 +13,13 @@ Dimensions = 3
 
 # ----- Charged particle ------------------------------------------------------
 
-ChargedParticle.ClassicalParticleMass = 1
-ChargedParticle.ClassicalParticleCharge = 1
+ChargedParticle.ParticleMass = 1
+ChargedParticle.ParticleCharge = 1
 
-%ChargedParticle.ClassicalParticleInitialPosition
+%ChargedParticle.ParticleInitialPosition
  1 | 0.0001 | 0.0001
 %
-%ChargedParticle.ClassicalParticleInitialVelocity
+%ChargedParticle.ParticleInitialVelocity
  0 | 0 | 0.01
 %
 

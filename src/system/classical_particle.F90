@@ -37,6 +37,8 @@ module classical_particle_oct_m
   use quantity_oct_m
   use space_oct_m
   use system_abst_oct_m
+  use unit_oct_m
+  use unit_system_oct_m
   use write_iter_oct_m
 
   implicit none
@@ -121,14 +123,14 @@ contains
 
     call space_init(this%space, namespace)
 
-    !%Variable ClassicalParticleMass
+    !%Variable ParticleMass
     !%Type float
     !%Section ClassicalParticles
     !%Description
     !% Mass of classical particle in Kg.
     !%End
-    call parse_variable(namespace, 'ClassicalParticleMass', M_ONE, this%mass)
-    call messages_print_var_value(stdout, 'ClassicalParticleMass', this%mass)
+    call parse_variable(namespace, 'ParticleMass', M_ONE, this%mass)
+    call messages_print_var_value(stdout, 'ParticleMass', this%mass)
 
     this%quantities(POSITION)%required = .true.
     this%quantities(VELOCITY)%required = .true.
@@ -175,40 +177,40 @@ contains
       call messages_fatal(1, namespace=this%namespace)
     end if
 
-    !%Variable ClassicalParticleInitialPosition
+    !%Variable ParticleInitialPosition
     !%Type block
     !%Section ClassicalParticles
     !%Description
     !% Initial position of classical particle, in Km.
     !%End
     this%pos = M_ZERO
-    if (parse_block(this%namespace, 'ClassicalParticleInitialPosition', blk) == 0) then
+    if (parse_block(this%namespace, 'ParticleInitialPosition', blk) == 0) then
       n_rows = parse_block_n(blk)
-      if (n_rows > 1) call  messages_input_error(this%namespace, 'ClassicalParticleInitialPosition')
+      if (n_rows > 1) call  messages_input_error(this%namespace, 'ParticleInitialPosition')
 
       do idir = 1, this%space%dim
         call parse_block_float(blk, 0, idir - 1, this%pos(idir))
       end do
       call parse_block_end(blk)
     end if
-    call messages_print_var_value(stdout, 'ClassicalParticleInitialPosition', this%pos(1:this%space%dim))
+    call messages_print_var_value(stdout, 'ParticleInitialPosition', this%pos(1:this%space%dim))
 
-    !%Variable ClassicalParticleInitialVelocity
+    !%Variable ParticleInitialVelocity
     !%Type block
     !%Section ClassicalParticles
     !%Description
     !% Initial velocity of classical particle in Km/s.
     !%End
     this%vel = M_ZERO
-    if (parse_block(this%namespace, 'ClassicalParticleInitialVelocity', blk) == 0) then
+    if (parse_block(this%namespace, 'ParticleInitialVelocity', blk) == 0) then
       n_rows = parse_block_n(blk)
-      if (n_rows > 1) call  messages_input_error(this%namespace, 'ClassicalParticleInitialVelocity')
+      if (n_rows > 1) call  messages_input_error(this%namespace, 'ParticleInitialVelocity')
       do idir = 1, this%space%dim
         call parse_block_float(blk, 0, idir - 1, this%vel(idir))
       end do
       call parse_block_end(blk)
     end if
-    call messages_print_var_value(stdout, 'ClassicalParticleInitialVelocity', this%vel(1:this%space%dim))
+    call messages_print_var_value(stdout, 'ParticleInitialVelocity', this%vel(1:this%space%dim))
 
     POP_SUB(classical_particle_initial_conditions)
   end subroutine classical_particle_initial_conditions
@@ -458,6 +460,7 @@ contains
 
     integer :: idir
     character(len=50) :: aux
+    FLOAT :: tmp(MAX_DIM)
 
     if(.not.mpi_grp_is_root(mpi_world)) return ! only first node outputs
 
@@ -490,8 +493,11 @@ contains
 
       ! second line: units
       call write_iter_string(this%output_handle, '#[Iter n.]')
-      call write_iter_header(this%output_handle, '[seconds]')
-      call write_iter_string(this%output_handle, 'Positions in Km, Velocities in Km/s')
+      call write_iter_header(this%output_handle, '[' // trim(units_abbrev(units_out%time)) // ']')
+      call write_iter_string(this%output_handle, &
+        'Position in '   // trim(units_abbrev(units_out%length))   //   &
+        ', Velocity in '// trim(units_abbrev(units_out%velocity)) //   &
+        ', Force in '    // trim(units_abbrev(units_out%force)))
       call write_iter_nl(this%output_handle)
 
       call write_iter_string(this%output_handle,'################################################################################')
@@ -499,9 +505,17 @@ contains
     end if
 
     call write_iter_start(this%output_handle)
-    call write_iter_double(this%output_handle, this%pos, this%space%dim)
-    call write_iter_double(this%output_handle, this%vel, this%space%dim)
-    call write_iter_double(this%output_handle, this%tot_force, this%space%dim)
+
+    ! Position
+    tmp(1:this%space%dim) = units_from_atomic(units_out%length, this%pos(1:this%space%dim))
+    call write_iter_double(this%output_handle, tmp, this%space%dim)
+    ! Velocity
+    tmp(1:this%space%dim) = units_from_atomic(units_out%velocity, this%vel(1:this%space%dim))
+    call write_iter_double(this%output_handle, tmp, this%space%dim)
+    ! Force
+    tmp(1:this%space%dim) = units_from_atomic(units_out%force, this%tot_force(1:this%space%dim))
+    call write_iter_double(this%output_handle, tmp, this%space%dim)
+
     call write_iter_nl(this%output_handle)
 
     POP_SUB(classical_particle_output_write)

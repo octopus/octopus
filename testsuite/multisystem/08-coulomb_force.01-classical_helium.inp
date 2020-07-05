@@ -1,0 +1,45 @@
+CalculationMode   = td
+ExperimentalFeatures = yes
+
+Dimensions = 3
+
+%Systems
+ 'Nucleus'   | charged_particle
+ 'Electrons' | multisystem
+%
+
+%Electrons.Systems
+ 'e1' | charged_particle
+ 'e2' | charged_particle
+%
+
+Nucleus.ParticleMass = 2/0.000549
+Nucleus.ParticleCharge = 2
+%Nucleus.ParticleInitialPosition
+ 0.0 | 0.0 | 0.0
+%
+%Nucleus.ParticleInitialVelocity
+ 0.0 | 0.0 | 0.0
+%
+
+
+Electrons.ParticleMass = 1
+Electrons.ParticleCharge = -1
+
+%e1.ParticleInitialPosition
+ -1.5 | 0.0 | 0.0
+%
+%e1.ParticleInitialVelocity
+ 0.0 | 1.0 | 0
+%
+
+%e2.ParticleInitialPosition
+ 1.5 | 0.0 | 0.0
+%
+%e2.ParticleInitialVelocity
+ 0.0 | -1.0 | 0
+%
+
+TDSystemPropagator = verlet
+TDTimeStep = 0.01
+TDMaxSteps =  1000
