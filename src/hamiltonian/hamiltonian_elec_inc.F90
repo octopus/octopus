@@ -225,6 +225,12 @@ subroutine X(hamiltonian_elec_apply_batch) (hm, namespace, mesh, psib, hpsib, te
   end if
 
   if (bitand(TERM_MGGA, terms_) /= 0 .and. family_is_mgga_with_exc(hm%xc)) then
+#ifdef HAVE_MPI
+    if(accel_is_enabled()) then
+      !At the moment this combination produces wrong results
+      call messages_not_implemented("MGGA with energy functionals and CUDA+MPI")
+    end if
+#endif
     call X(h_mgga_terms)(hm, mesh, epsib, hpsib)
   end if
 
