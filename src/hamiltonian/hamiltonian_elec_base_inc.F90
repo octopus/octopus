@@ -575,7 +575,7 @@ subroutine X(hamiltonian_elec_base_magnetic)(this, mesh, der, std, ep, ispin, ps
 
     if(allocated(this%uniform_magnetic_field).and. std%ispin /= UNPOLARIZED) then
       ! Zeeman term
-      cc = M_HALF/P_C*ep%gyromagnetic_ratio*M_HALF
+      cc = -M_HALF/P_C*ep%gyromagnetic_ratio*M_HALF
       bb(1:max(mesh%sb%dim, 3)) = this%uniform_magnetic_field(1:max(mesh%sb%dim, 3))
       b2 = sqrt(sum(bb(1:max(mesh%sb%dim, 3))**2))
       b12 = bb(1) - M_ZI*bb(2)

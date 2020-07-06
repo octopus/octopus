@@ -879,7 +879,11 @@ contains
       !$omp parallel do schedule(static)
       do ip = 1, mesh%np
         do idir = 1, mesh%sb%dim
-          this%hm_base%vector_potential(idir, ip) = this%hm_base%vector_potential(idir, ip) + this%ep%a_static(ip, idir)
+          !ep%a_static contains -1/c A(r)
+          !We therefore add here a minus sign to compensate for the definition of the Bloch phase of Octopus 
+          !which also add a - sign.
+          !Doing so, we recover the (p-1/cA(r))^2 result we want, applying the Laplacian to e^{-i(k+A).r}|\psi(r)>
+          this%hm_base%vector_potential(idir, ip) = this%hm_base%vector_potential(idir, ip) - this%ep%a_static(ip, idir)
         end do
       end do
     end if
@@ -1445,7 +1449,7 @@ contains
       do idir = 1, mesh%sb%dim
         !$omp parallel do schedule(static)
         do ip = 1, mesh%np
-          this%hm_base%vector_potential(idir, ip) = this%hm_base%vector_potential(idir, ip) + this%ep%a_static(ip, idir)
+          this%hm_base%vector_potential(idir, ip) = this%hm_base%vector_potential(idir, ip) - this%ep%a_static(ip, idir)
         end do
       end do
     end if
