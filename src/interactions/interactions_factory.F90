@@ -20,7 +20,7 @@
 
 module interactions_factory_oct_m
   use global_oct_m
-  use interaction_abst_oct_m
+  use interaction_oct_m
   use interaction_coulomb_force_oct_m
   use interaction_gravity_oct_m
   use interaction_lorentz_force_oct_m
@@ -51,7 +51,7 @@ contains
     class(interactions_factory_t),         intent(in)    :: this
     integer,                               intent(in)    :: type
     class(interaction_partner_t),  target, intent(inout) :: partner
-    class(interaction_abst_t),             pointer       :: interaction
+    class(interaction_t),                  pointer       :: interaction
 
     PUSH_SUB(interactions_factory_create)
 

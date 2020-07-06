@@ -22,7 +22,7 @@
 module classical_particle_oct_m
   use clock_oct_m
   use global_oct_m
-  use interaction_abst_oct_m
+  use interaction_oct_m
   use interaction_gravity_oct_m
   use interaction_lorentz_force_oct_m
   use interactions_factory_oct_m
@@ -36,7 +36,7 @@ module classical_particle_oct_m
   use propagator_abst_oct_m
   use quantity_oct_m
   use space_oct_m
-  use system_abst_oct_m
+  use system_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use write_iter_oct_m
@@ -48,7 +48,7 @@ module classical_particle_oct_m
     classical_particle_t,    &
     classical_particle_init
 
-   type, extends(system_abst_t) :: classical_particle_t
+   type, extends(system_t) :: classical_particle_t
     FLOAT :: mass
     FLOAT :: pos(1:MAX_DIM)
     FLOAT :: vel(1:MAX_DIM)
@@ -147,7 +147,7 @@ contains
   ! ---------------------------------------------------------
   subroutine classical_particle_init_interaction(this, interaction)
     class(classical_particle_t), target, intent(inout) :: this
-    class(interaction_abst_t),           intent(inout) :: interaction
+    class(interaction_t),                intent(inout) :: interaction
 
     PUSH_SUB(classical_particle_init_interaction)
 
@@ -570,7 +570,7 @@ contains
   ! ---------------------------------------------------------
   subroutine classical_particle_copy_quantities_to_interaction(partner, interaction)
     class(classical_particle_t),          intent(inout) :: partner
-    class(interaction_abst_t),        intent(inout) :: interaction
+    class(interaction_t),                 intent(inout) :: interaction
 
     PUSH_SUB(classical_particle_copy_quantities_to_interaction)
 
@@ -627,7 +627,7 @@ contains
 
     PUSH_SUB(classical_particle_finalize)
 
-    call system_abst_end(this)
+    call system_end(this)
 
     POP_SUB(classical_particle_finalize)
   end subroutine classical_particle_finalize

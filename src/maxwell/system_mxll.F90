@@ -29,7 +29,7 @@ module system_mxll_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_mxll_oct_m
-  use interaction_abst_oct_m
+  use interaction_oct_m
   use iso_c_binding
   use loct_oct_m
   use maxwell_boundary_op_oct_m
@@ -50,7 +50,7 @@ module system_mxll_oct_m
   use simul_box_oct_m
   use sort_oct_m
   use space_oct_m
-  use system_abst_oct_m
+  use system_oct_m
   use states_mxll_oct_m
   use states_mxll_restart_oct_m
   use electrons_oct_m
@@ -70,7 +70,7 @@ module system_mxll_oct_m
     MULTIGRID_MX_TO_MA_EQUAL   = 1,       &
     MULTIGRID_MX_TO_MA_LARGE   = 2
 
-  type, extends(system_abst_t) :: system_mxll_t
+  type, extends(system_t) :: system_mxll_t
     type(states_mxll_t), pointer :: st    !< the states
     type(hamiltonian_mxll_t)     :: hm
     type(geometry_t)             :: geo
@@ -210,7 +210,7 @@ contains
   ! ---------------------------------------------------------
   subroutine system_mxll_init_interaction(this, interaction)
     class(system_mxll_t), target, intent(inout) :: this
-    class(interaction_abst_t),    intent(inout) :: interaction
+    class(interaction_t),         intent(inout) :: interaction
 
     PUSH_SUB(system_mxll_init_interaction)
 
@@ -546,7 +546,7 @@ contains
   ! ---------------------------------------------------------
   subroutine system_mxll_copy_quantities_to_interaction(partner, interaction)
     class(system_mxll_t),       intent(inout) :: partner
-    class(interaction_abst_t),  intent(inout) :: interaction
+    class(interaction_t),       intent(inout) :: interaction
 
     CMPLX :: interpolated_value(3)
     FLOAT :: e_field(3)
@@ -633,7 +633,7 @@ contains
 
     PUSH_SUB(system_mxll_finalize)
 
-    call system_abst_end(this)
+    call system_end(this)
 
     ! free memory
     SAFE_DEALLOCATE_A(this%rs_state_init)

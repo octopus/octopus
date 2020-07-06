@@ -18,7 +18,7 @@
 
 module system_factory_abst_oct_m
   use namespace_oct_m
-  use system_abst_oct_m
+  use system_oct_m
   implicit none
 
   private
@@ -33,13 +33,13 @@ module system_factory_abst_oct_m
   abstract interface
     function system_factory_abst_create(this, namespace, name, type) result(system)
       import :: system_factory_abst_t
-      import system_abst_t
+      import system_t
       import namespace_t
       class(system_factory_abst_t), intent(in) :: this
       type(namespace_t),            intent(in) :: namespace
       character(len=*),             intent(in) :: name
       integer,                      intent(in) :: type
-      class(system_abst_t),         pointer    :: system
+      class(system_t),              pointer    :: system
     end function system_factory_abst_create
   end interface
 

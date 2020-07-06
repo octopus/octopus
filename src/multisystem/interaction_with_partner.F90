@@ -20,7 +20,7 @@
 module interaction_with_partner_oct_m
   use clock_oct_m
   use global_oct_m
-  use interaction_abst_oct_m
+  use interaction_oct_m
   use interaction_partner_oct_m
   use messages_oct_m
   use namespace_oct_m
@@ -36,7 +36,7 @@ module interaction_with_partner_oct_m
   !! unidirectional relationship between those two systems. One of the systems
   !! owns the interaction and feels its effects. The other system is referred to
   !! as the interaction partner.
-  type, extends(interaction_abst_t), abstract :: interaction_with_partner_t
+  type, extends(interaction_t), abstract :: interaction_with_partner_t
     private
     class(interaction_partner_t), public, pointer :: partner
 
@@ -98,7 +98,7 @@ contains
 
     SAFE_DEALLOCATE_A(this%partner_quantities)
     nullify(this%partner)
-    call interaction_abst_end(this)
+    call interaction_end(this)
 
     POP_SUB(interaction_with_partner_end)
   end subroutine interaction_with_partner_end

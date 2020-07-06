@@ -17,7 +17,7 @@
 !!
 #include "global.h"
 
-module interaction_abst_oct_m
+module interaction_oct_m
   use clock_oct_m
   use global_oct_m
   use linked_list_oct_m
@@ -28,12 +28,12 @@ module interaction_abst_oct_m
 
   private
   public ::                &
-    interaction_abst_t,    &
-    interaction_abst_end,  &
+    interaction_t,         &
+    interaction_end,       &
     interaction_list_t,    &
     interaction_iterator_t
 
-  type, abstract :: interaction_abst_t
+  type, abstract :: interaction_t
     private
     !> The interaction requires access to some quantities from a system to be evaluated.
     integer,              public :: n_system_quantities  !< Number of quantities needed from the system
@@ -44,22 +44,22 @@ module interaction_abst_oct_m
     procedure :: init_clock => interaction_init_clock
     procedure(interaction_update),    deferred :: update
     procedure(interaction_calculate), deferred :: calculate
-  end type interaction_abst_t
+  end type interaction_t
 
   abstract interface
     logical function interaction_update(this, namespace, requested_time)
-      import interaction_abst_t
+      import interaction_t
       import clock_t
       import namespace_t
-      class(interaction_abst_t), intent(inout) :: this
+      class(interaction_t),      intent(inout) :: this
       type(namespace_t),         intent(in)    :: namespace
       class(clock_t),            intent(in)    :: requested_time
     end function interaction_update
 
     subroutine interaction_calculate(this, namespace)
-      import interaction_abst_t
+      import interaction_t
       import namespace_t
-      class(interaction_abst_t), intent(inout) :: this
+      class(interaction_t),      intent(inout) :: this
       type(namespace_t),         intent(in)    :: namespace
     end subroutine interaction_calculate
   end interface
@@ -81,7 +81,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine interaction_init_clock(this, label, dt, algo_dt)
-    class(interaction_abst_t), intent(inout) :: this
+    class(interaction_t),      intent(inout) :: this
     character(len=*),          intent(in)    :: label
     FLOAT,                     intent(in)    :: dt
     FLOAT,                     intent(in)    :: algo_dt
@@ -94,23 +94,23 @@ contains
   end subroutine interaction_init_clock
 
   ! ---------------------------------------------------------
-  subroutine interaction_abst_end(this)
-    class(interaction_abst_t), intent(inout) :: this
+  subroutine interaction_end(this)
+    class(interaction_t), intent(inout) :: this
 
-    PUSH_SUB(interaction_abst_end)
+    PUSH_SUB(interaction_end)
 
     SAFE_DEALLOCATE_A(this%system_quantities)
     if (allocated(this%label)) then
       deallocate(this%label)
     end if
 
-    POP_SUB(interaction_abst_end)
-  end subroutine interaction_abst_end
+    POP_SUB(interaction_end)
+  end subroutine interaction_end
 
   ! ---------------------------------------------------------
   subroutine interaction_list_add_node(this, interaction)
     class(interaction_list_t)         :: this
-    class(interaction_abst_t), target :: interaction
+    class(interaction_t),      target :: interaction
 
     PUSH_SUB(interaction_list_add_node)
 
@@ -122,12 +122,12 @@ contains
   ! ---------------------------------------------------------
   function interaction_iterator_get_next(this) result(interaction)
     class(interaction_iterator_t), intent(inout) :: this
-    class(interaction_abst_t),     pointer       :: interaction
+    class(interaction_t),          pointer       :: interaction
 
     PUSH_SUB(interaction_iterator_get_next)
 
     select type (ptr => this%get_next_ptr())
-    class is (interaction_abst_t)
+    class is (interaction_t)
       interaction => ptr
     class default
       ASSERT(.false.)
@@ -136,7 +136,7 @@ contains
     POP_SUB(interaction_iterator_get_next)
   end function interaction_iterator_get_next
 
-end module interaction_abst_oct_m
+end module interaction_oct_m
 
 !! Local Variables:
 !! mode: f90

@@ -21,7 +21,7 @@
 module interaction_partner_oct_m
   use clock_oct_m
   use global_oct_m
-  use interaction_abst_oct_m
+  use interaction_oct_m
   use linked_list_oct_m
   use messages_oct_m
   use namespace_oct_m
@@ -58,10 +58,10 @@ module interaction_partner_oct_m
     logical function interaction_partner_update_exposed_quantities(partner, requested_time, interaction)
       import interaction_partner_t
       import clock_t
-      import interaction_abst_t
+      import interaction_t
       class(interaction_partner_t), intent(inout) :: partner
       type(clock_t),                intent(in)    :: requested_time
-      class(interaction_abst_t),    intent(inout) :: interaction
+      class(interaction_t),         intent(inout) :: interaction
     end function interaction_partner_update_exposed_quantities
 
     ! ---------------------------------------------------------
@@ -76,9 +76,9 @@ module interaction_partner_oct_m
     ! ---------------------------------------------------------
     subroutine interaction_partner_copy_quantities_to_interaction(partner, interaction)
       import interaction_partner_t
-      import interaction_abst_t
+      import interaction_t
       class(interaction_partner_t),     intent(inout) :: partner
-      class(interaction_abst_t),        intent(inout) :: interaction
+      class(interaction_t),             intent(inout) :: interaction
     end subroutine interaction_partner_copy_quantities_to_interaction
 
   end interface
