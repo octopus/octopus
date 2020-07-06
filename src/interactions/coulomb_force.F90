@@ -18,7 +18,7 @@
 
 #include "global.h"
 
-module interaction_coulomb_force_oct_m
+module coulomb_force_oct_m
   use global_oct_m
   use interaction_with_partner_oct_m
   use interaction_partner_oct_m
@@ -31,9 +31,9 @@ module interaction_coulomb_force_oct_m
 
   private
   public ::                &
-    interaction_coulomb_force_t
+    coulomb_force_t
 
-  type, extends(interaction_with_partner_t) :: interaction_coulomb_force_t
+  type, extends(interaction_with_partner_t) :: coulomb_force_t
     private
     integer :: dim
 
@@ -46,23 +46,23 @@ module interaction_coulomb_force_oct_m
     FLOAT, allocatable, public :: partner_pos(:)
 
   contains
-    procedure :: init => interaction_coulomb_force_init
-    procedure :: calculate => interaction_coulomb_force_calculate
-    final :: interaction_coulomb_force_finalize
-  end type interaction_coulomb_force_t
+    procedure :: init => coulomb_force_init
+    procedure :: calculate => coulomb_force_calculate
+    final :: coulomb_force_finalize
+  end type coulomb_force_t
 
-  interface interaction_coulomb_force_t
-    module procedure interaction_coulomb_force_constructor
-  end interface interaction_coulomb_force_t
+  interface coulomb_force_t
+    module procedure coulomb_force_constructor
+  end interface coulomb_force_t
 
 contains
 
   ! ---------------------------------------------------------
-  function interaction_coulomb_force_constructor(partner) result(this)
+  function coulomb_force_constructor(partner) result(this)
     class(interaction_partner_t), target, intent(inout) :: partner
-    class(interaction_coulomb_force_t),   pointer       :: this
+    class(coulomb_force_t),               pointer       :: this
 
-    PUSH_SUB(interaction_coulomb_force_constructor)
+    PUSH_SUB(coulomb_force_constructor)
 
     SAFE_ALLOCATE(this)
 
@@ -86,18 +86,18 @@ contains
     this%partner%quantities(POSITION)%required = .true.
     this%partner%quantities(CHARGE)%required = .true.
 
-    POP_SUB(interaction_coulomb_force_constructor)
-  end function interaction_coulomb_force_constructor
+    POP_SUB(coulomb_force_constructor)
+  end function coulomb_force_constructor
 
   ! ---------------------------------------------------------
-  subroutine interaction_coulomb_force_init(this, dim, system_quantities, system_charge, system_pos)
-    class(interaction_coulomb_force_t), intent(inout) :: this
+  subroutine coulomb_force_init(this, dim, system_quantities, system_charge, system_pos)
+    class(coulomb_force_t),             intent(inout) :: this
     integer,                            intent(in)    :: dim
     type(quantity_t),                   intent(inout) :: system_quantities(:)
     FLOAT,                      target, intent(in)    :: system_charge
     FLOAT,                      target, intent(in)    :: system_pos(:)
 
-    PUSH_SUB(interaction_coulomb_force_init)
+    PUSH_SUB(coulomb_force_init)
 
     this%dim = dim
     SAFE_ALLOCATE(this%partner_pos(dim))
@@ -107,32 +107,32 @@ contains
     this%system_charge => system_charge
     this%system_pos => system_pos
 
-    POP_SUB(interaction_coulomb_force_init)
-  end subroutine interaction_coulomb_force_init
+    POP_SUB(coulomb_force_init)
+  end subroutine coulomb_force_init
 
   ! ---------------------------------------------------------
-  subroutine interaction_coulomb_force_calculate(this, namespace)
-    class(interaction_coulomb_force_t), intent(inout) :: this
+  subroutine coulomb_force_calculate(this, namespace)
+    class(coulomb_force_t),             intent(inout) :: this
     type(namespace_t),                  intent(in)    :: namespace
 
     FLOAT, parameter :: COULCONST = M_ONE ! Coulomb constant in atomic units
     FLOAT :: dist3
 
-    PUSH_SUB(interaction_coulomb_force_calculate)
+    PUSH_SUB(coulomb_force_calculate)
 
     dist3 = sum((this%partner_pos(1:this%dim) - this%system_pos(1:this%dim))**2)**(M_THREE/M_TWO)
 
     this%force(1:this%dim) = -(this%partner_pos(1:this%dim) - this%system_pos(1:this%dim)) &
       / dist3 * (COULCONST * this%system_charge * this%partner_charge)
 
-    POP_SUB(interaction_coulomb_force_calculate)
-  end subroutine interaction_coulomb_force_calculate
+    POP_SUB(coulomb_force_calculate)
+  end subroutine coulomb_force_calculate
 
   ! ---------------------------------------------------------
-  subroutine interaction_coulomb_force_finalize(this)
-    type(interaction_coulomb_force_t), intent(inout) :: this
+  subroutine coulomb_force_finalize(this)
+    type(coulomb_force_t), intent(inout) :: this
 
-    PUSH_SUB(interaction_coulomb_force_finalize)
+    PUSH_SUB(coulomb_force_finalize)
 
     this%force = M_ZERO
     nullify(this%system_charge)
@@ -141,10 +141,10 @@ contains
 
     call interaction_with_partner_end(this)
 
-    POP_SUB(interaction_coulomb_force_finalize)
-  end subroutine interaction_coulomb_force_finalize
+    POP_SUB(coulomb_force_finalize)
+  end subroutine coulomb_force_finalize
 
-end module interaction_coulomb_force_oct_m
+end module coulomb_force_oct_m
 
 !! Local Variables:
 !! mode: f90

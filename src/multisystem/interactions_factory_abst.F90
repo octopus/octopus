@@ -21,14 +21,14 @@
 module interactions_factory_abst_oct_m
   use ghost_interaction_oct_m
   use global_oct_m
-  use interaction_abst_oct_m
+  use interaction_oct_m
   use interaction_partner_oct_m
   use linked_list_oct_m
   use messages_oct_m
   use multisystem_oct_m
   use namespace_oct_m
   use parser_oct_m
-  use system_abst_oct_m
+  use system_oct_m
   use varinfo_oct_m
   implicit none
 
@@ -54,11 +54,11 @@ module interactions_factory_abst_oct_m
     function interactions_factory_abst_create(this, type, partner) result(interaction)
       import :: interactions_factory_abst_t
       import interaction_partner_t
-      import interaction_abst_t
+      import interaction_t
       class(interactions_factory_abst_t),         intent(in)    :: this
       integer,                                    intent(in)    :: type
       class(interaction_partner_t),       target, intent(inout) :: partner
-      class(interaction_abst_t),                  pointer       :: interaction
+      class(interaction_t),                       pointer       :: interaction
     end function interactions_factory_abst_create
 
     integer function interactions_factory_abst_default_mode(this, type)
@@ -78,7 +78,7 @@ contains
   ! ---------------------------------------------------------------------------------------
   recursive subroutine interactions_factory_abst_create_interactions(this, system, available_partners)
     class(interactions_factory_abst_t),    intent(in)    :: this
-    class(system_abst_t),                  intent(inout) :: system
+    class(system_t),                       intent(inout) :: system
     class(partner_list_t),         target, intent(in)    :: available_partners
 
     type(integer_list_t) :: interactions_to_create
@@ -88,7 +88,7 @@ contains
     type(partner_iterator_t) :: partner_iter
     class(interaction_partner_t), pointer :: partner
     type(system_iterator_t) :: iter
-    class(system_abst_t), pointer :: subsystem
+    class(system_t), pointer :: subsystem
 
     integer :: il, ic, mode
     type(block_t) :: blk
@@ -254,7 +254,7 @@ contains
 
     type(partner_iterator_t) :: iter
     class(interaction_partner_t), pointer :: partner
-    class(interaction_abst_t), pointer :: interaction
+    class(interaction_t), pointer :: interaction
 
     PUSH_SUB(create_interaction_with_partners)
 

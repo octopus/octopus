@@ -19,11 +19,11 @@
 
 #include "global.h"
 
-module system_abst_oct_m
+module system_oct_m
   use clock_oct_m
   use ghost_interaction_oct_m
   use global_oct_m
-  use interaction_abst_oct_m
+  use interaction_oct_m
   use interaction_partner_oct_m
   use interaction_with_partner_oct_m
   use messages_oct_m
@@ -42,12 +42,12 @@ module system_abst_oct_m
 
   private
   public ::               &
-    system_abst_t,        &
-    system_abst_end,      &
+    system_t,             &
+    system_end,           &
     system_list_t,        &
     system_iterator_t
 
-  type, extends(interaction_partner_t), abstract :: system_abst_t
+  type, extends(interaction_partner_t), abstract :: system_t
     private
     type(space_t), public :: space
 
@@ -85,76 +85,76 @@ module system_abst_oct_m
     procedure(system_output_start),                   deferred :: output_start
     procedure(system_output_write),                   deferred :: output_write
     procedure(system_output_finish),                  deferred :: output_finish
-  end type system_abst_t
+  end type system_t
 
   abstract interface
     ! ---------------------------------------------------------
     subroutine system_init_interaction(this, interaction)
-      import system_abst_t
-      import interaction_abst_t
-      class(system_abst_t), target, intent(inout) :: this
-      class(interaction_abst_t),    intent(inout) :: interaction
+      import system_t
+      import interaction_t
+      class(system_t), target, intent(inout) :: this
+      class(interaction_t),    intent(inout) :: interaction
     end subroutine system_init_interaction
 
     ! ---------------------------------------------------------
     subroutine system_initial_conditions(this, from_scratch)
-      import system_abst_t
-      class(system_abst_t), intent(inout) :: this
-      logical,              intent(in)    :: from_scratch
+      import system_t
+      class(system_t), intent(inout) :: this
+      logical,         intent(in)    :: from_scratch
     end subroutine system_initial_conditions
 
     ! ---------------------------------------------------------
     subroutine system_do_td_op(this, operation)
-      import system_abst_t
-      class(system_abst_t), intent(inout) :: this
-      integer             , intent(in)    :: operation
+      import system_t
+      class(system_t), intent(inout) :: this
+      integer,         intent(in)    :: operation
     end subroutine system_do_td_op
 
     ! ---------------------------------------------------------
     subroutine system_iteration_info(this)
-      import system_abst_t
-      class(system_abst_t), intent(in) :: this
+      import system_t
+      class(system_t), intent(in) :: this
     end subroutine system_iteration_info
 
     ! ---------------------------------------------------------
     logical function system_is_tolerance_reached(this, tol)
-      import system_abst_t
-      class(system_abst_t), intent(in) :: this
-      FLOAT,                intent(in) :: tol
+      import system_t
+      class(system_t), intent(in) :: this
+      FLOAT,           intent(in) :: tol
     end function system_is_tolerance_reached
 
     ! ---------------------------------------------------------
     subroutine system_store_current_status(this)
-      import system_abst_t
-      class(system_abst_t), intent(inout) :: this
+      import system_t
+      class(system_t), intent(inout) :: this
     end subroutine system_store_current_status
 
     ! ---------------------------------------------------------
     subroutine system_update_quantity(this, iq, requested_time)
-      import system_abst_t
+      import system_t
       import clock_t
-      class(system_abst_t),      intent(inout) :: this
-      integer,                   intent(in)    :: iq
-      class(clock_t),            intent(in)    :: requested_time
+      class(system_t),      intent(inout) :: this
+      integer,              intent(in)    :: iq
+      class(clock_t),       intent(in)    :: requested_time
     end subroutine system_update_quantity
 
     ! ---------------------------------------------------------
     subroutine system_output_start(this)
-      import system_abst_t
-      class(system_abst_t), intent(inout) :: this
+      import system_t
+      class(system_t), intent(inout) :: this
     end subroutine system_output_start
 
     ! ---------------------------------------------------------
     subroutine system_output_write(this, iter)
-      import system_abst_t
-      class(system_abst_t), intent(inout) :: this
-      integer,              intent(in)    :: iter
+      import system_t
+      class(system_t), intent(inout) :: this
+      integer,         intent(in)    :: iter
     end subroutine system_output_write
 
     ! ---------------------------------------------------------
     subroutine system_output_finish(this)
-      import system_abst_t
-      class(system_abst_t), intent(inout) :: this
+      import system_t
+      class(system_t), intent(inout) :: this
     end subroutine system_output_finish
   end interface
 
@@ -177,7 +177,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine system_dt_operation(this)
-    class(system_abst_t),     intent(inout) :: this
+    class(system_t),     intent(inout) :: this
 
     integer :: tdop
     logical :: all_updated
@@ -273,11 +273,11 @@ contains
 
   ! ---------------------------------------------------------
   subroutine system_init_clocks(this, smallest_algo_dt)
-    class(system_abst_t), intent(inout) :: this
-    FLOAT,                intent(in)    :: smallest_algo_dt
+    class(system_t), intent(inout) :: this
+    FLOAT,           intent(in)    :: smallest_algo_dt
 
     type(interaction_iterator_t) :: iter
-    class(interaction_abst_t), pointer :: interaction
+    class(interaction_t), pointer :: interaction
 
     PUSH_SUB(system_init_clocks)
 
@@ -304,12 +304,12 @@ contains
 
   ! ---------------------------------------------------------
   subroutine system_reset_clocks(this, accumulated_ticks)
-    class(system_abst_t),      intent(inout) :: this
-    integer,                   intent(in)    :: accumulated_ticks
+    class(system_t),      intent(inout) :: this
+    integer,              intent(in)    :: accumulated_ticks
 
     integer :: it, iq
     type(interaction_iterator_t) :: iter
-    class(interaction_abst_t), pointer :: interaction
+    class(interaction_t), pointer :: interaction
 
     PUSH_SUB(system_reset_clocks)
 
@@ -336,9 +336,9 @@ contains
   ! ---------------------------------------------------------
   ! this function is called as partner from the interaction
   logical function system_update_exposed_quantities(partner, requested_time, interaction) result(allowed_to_update)
-    class(system_abst_t),      intent(inout) :: partner
-    type(clock_t),             intent(in)    :: requested_time
-    class(interaction_abst_t), intent(inout) :: interaction
+    class(system_t),      intent(inout) :: partner
+    type(clock_t),        intent(in)    :: requested_time
+    class(interaction_t), intent(inout) :: interaction
 
     logical :: ahead_in_time, right_on_time, need_to_copy
     integer :: iq, q_id
@@ -428,10 +428,10 @@ contains
 
   ! ---------------------------------------------------------
   subroutine system_init_all_interactions(this)
-    class(system_abst_t), intent(inout) :: this
+    class(system_t), intent(inout) :: this
 
     type(interaction_iterator_t) :: iter
-    class(interaction_abst_t), pointer :: interaction
+    class(interaction_t), pointer :: interaction
 
     PUSH_SUB(system_init_all_interactions)
 
@@ -451,12 +451,12 @@ contains
 
   ! ---------------------------------------------------------
   logical function system_update_interactions(this, requested_time) result(all_updated)
-    class(system_abst_t),      intent(inout) :: this
-    type(clock_t),             intent(in)    :: requested_time !< Requested time for the update
+    class(system_t),      intent(inout) :: this
+    type(clock_t),        intent(in)    :: requested_time !< Requested time for the update
 
     logical :: none_updated
     integer :: iq, q_id
-    class(interaction_abst_t), pointer :: interaction
+    class(interaction_t), pointer :: interaction
     type(interaction_iterator_t) :: iter
 
     PUSH_SUB(system_update_interactions)
@@ -526,7 +526,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine system_update_interactions_start(this)
-    class(system_abst_t), intent(inout) :: this
+    class(system_t), intent(inout) :: this
 
     PUSH_SUB(system_update_interactions_start)
 
@@ -538,7 +538,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine system_update_interactions_finish(this)
-    class(system_abst_t), intent(inout) :: this
+    class(system_t), intent(inout) :: this
 
     PUSH_SUB(system_update_interactions_finish)
 
@@ -550,8 +550,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine system_init_propagator(this, smallest_algo_dt)
-    class(system_abst_t),      intent(inout) :: this
-    FLOAT,                     intent(inout) :: smallest_algo_dt
+    class(system_t),      intent(inout) :: this
+    FLOAT,                intent(inout) :: smallest_algo_dt
 
     integer :: prop
 
@@ -627,7 +627,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine system_propagation_start(this)
-    class(system_abst_t),      intent(inout) :: this
+    class(system_t),      intent(inout) :: this
 
     logical :: all_updated
 
@@ -654,7 +654,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine system_propagation_finish(this)
-    class(system_abst_t),      intent(inout) :: this
+    class(system_t),      intent(inout) :: this
 
     PUSH_SUB(system_propagation_finish)
 
@@ -669,7 +669,7 @@ contains
 
   ! ---------------------------------------------------------
   logical function system_has_reached_final_propagation_time(this)
-    class(system_abst_t),      intent(inout) :: this
+    class(system_t),      intent(inout) :: this
 
     PUSH_SUB(system_has_reached_final_propagation_time)
 
@@ -681,8 +681,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine system_propagation_step_finish(this, iteration)
-    class(system_abst_t),      intent(inout) :: this
-    integer,                   intent(in)    :: iteration
+    class(system_t),      intent(inout) :: this
+    integer,              intent(in)    :: iteration
 
     PUSH_SUB(system_propagation_step_finish)
 
@@ -698,7 +698,7 @@ contains
 
   ! ---------------------------------------------------------
   logical function system_propagation_step_is_done(this)
-    class(system_abst_t),      intent(inout) :: this
+    class(system_t),      intent(inout) :: this
 
     PUSH_SUB(system_propagation_step_is_done)
 
@@ -708,13 +708,13 @@ contains
   end function system_propagation_step_is_done
 
   ! ---------------------------------------------------------
-  subroutine system_abst_end(this)
-    class(system_abst_t), intent(inout) :: this
+  subroutine system_end(this)
+    class(system_t), intent(inout) :: this
 
     type(interaction_iterator_t) :: iter
-    class(interaction_abst_t), pointer :: interaction
+    class(interaction_t), pointer :: interaction
 
-    PUSH_SUB(system_abst_end)
+    PUSH_SUB(system_end)
 
     ! No call to safe_deallocate macro here, as it gives an ICE with gfortran
     if (associated(this%prop)) then
@@ -727,8 +727,8 @@ contains
       SAFE_DEALLOCATE_P(interaction)
     end do
 
-    POP_SUB(system_abst_end)
-  end subroutine system_abst_end
+    POP_SUB(system_end)
+  end subroutine system_end
 
   ! ---------------------------------------------------------
   subroutine system_list_add_node(this, partner)
@@ -738,7 +738,7 @@ contains
     PUSH_SUB(system_list_add_node)
 
     select type (partner)
-    class is (system_abst_t)
+    class is (system_t)
       call this%add_ptr(partner)
     class default
       ASSERT(.false.)
@@ -750,12 +750,12 @@ contains
   ! ---------------------------------------------------------
   function system_iterator_get_next(this) result(system)
     class(system_iterator_t), intent(inout) :: this
-    class(system_abst_t),     pointer       :: system
+    class(system_t),          pointer       :: system
 
     PUSH_SUB(system_iterator_get_next)
 
     select type (ptr => this%get_next_ptr())
-    class is (system_abst_t)
+    class is (system_t)
       system => ptr
     class default
       ASSERT(.false.)
@@ -764,7 +764,7 @@ contains
     POP_SUB(system_iterator_get_next)
   end function system_iterator_get_next
 
-end module system_abst_oct_m
+end module system_oct_m
 
 !! Local Variables:
 !! mode: f90

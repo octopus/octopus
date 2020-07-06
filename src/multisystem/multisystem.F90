@@ -22,7 +22,7 @@ module multisystem_oct_m
   use clock_oct_m
   use global_oct_m
   use ghost_interaction_oct_m
-  use interaction_abst_oct_m
+  use interaction_oct_m
   use interaction_with_partner_oct_m
   use io_oct_m
   use loct_oct_m
@@ -31,7 +31,7 @@ module multisystem_oct_m
   use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
-  use system_abst_oct_m
+  use system_oct_m
   use system_factory_abst_oct_m
   implicit none
 
@@ -39,7 +39,7 @@ module multisystem_oct_m
   public ::               &
     multisystem_t
 
-  type, extends(system_abst_t) :: multisystem_t
+  type, extends(system_t) :: multisystem_t
     type(system_list_t) :: list
   contains
     procedure :: dt_operation =>  multisystem_dt_operation
@@ -83,7 +83,7 @@ contains
     integer :: isys, system_type
     character(len=128) :: system_name
     type(block_t) :: blk
-    class(system_abst_t), pointer :: sys
+    class(system_t), pointer :: sys
     
     PUSH_SUB(multisystem_constructor)
 
@@ -147,7 +147,7 @@ contains
     class(multisystem_t),     intent(inout) :: this
 
     type(system_iterator_t) :: iter
-    class(system_abst_t), pointer :: system
+    class(system_t), pointer :: system
 
     PUSH_SUB(multisystem_dt_operation)
 
@@ -166,7 +166,7 @@ contains
     FLOAT,                intent(in)    :: smallest_algo_dt
 
     type(system_iterator_t) :: iter
-    class(system_abst_t), pointer :: system
+    class(system_t), pointer :: system
 
     PUSH_SUB(multisystem_init_clocks)
 
@@ -185,7 +185,7 @@ contains
     integer,                   intent(in)    :: accumulated_ticks
 
     type(system_iterator_t) :: iter
-    class(system_abst_t), pointer :: system
+    class(system_t), pointer :: system
 
     PUSH_SUB(multisystem_reset_clocks)
 
@@ -204,7 +204,7 @@ contains
     FLOAT,                     intent(inout) :: smallest_algo_dt
 
     type(system_iterator_t) :: iter
-    class(system_abst_t), pointer :: system
+    class(system_t), pointer :: system
 
     PUSH_SUB(multisystem_init_propagator)
 
@@ -222,7 +222,7 @@ contains
     class(multisystem_t),      intent(inout) :: this
 
     type(system_iterator_t) :: iter
-    class(system_abst_t), pointer :: system
+    class(system_t), pointer :: system
 
     PUSH_SUB(multisystem_propagation_start)
 
@@ -240,7 +240,7 @@ contains
     class(multisystem_t),      intent(inout) :: this
 
     type(system_iterator_t) :: iter
-    class(system_abst_t), pointer :: system
+    class(system_t), pointer :: system
 
     PUSH_SUB(multisystem_propagation_finish)
 
@@ -258,7 +258,7 @@ contains
     class(multisystem_t),      intent(inout) :: this
 
     type(system_iterator_t) :: iter
-    class(system_abst_t), pointer :: system
+    class(system_t), pointer :: system
 
     PUSH_SUB(multisystem_has_reached_final_propagation_time)
 
@@ -279,7 +279,7 @@ contains
     integer,                   intent(in)    :: iteration
 
     type(system_iterator_t) :: iter
-    class(system_abst_t), pointer :: system
+    class(system_t), pointer :: system
 
     PUSH_SUB(multisystem_propagation_step_finish)
 
@@ -299,7 +299,7 @@ contains
     class(multisystem_t),      intent(inout) :: this
 
     type(system_iterator_t) :: iter
-    class(system_abst_t), pointer :: system
+    class(system_t), pointer :: system
 
     PUSH_SUB(multisystem_propagation_step_is_done)
 
@@ -318,9 +318,9 @@ contains
     class(multisystem_t), intent(inout) :: this
 
     type(interaction_iterator_t) :: iter_i
-    class(interaction_abst_t), pointer :: interaction
+    class(interaction_t), pointer :: interaction
     type(system_iterator_t) :: iter_s
-    class(system_abst_t), pointer :: system
+    class(system_t), pointer :: system
 
     PUSH_SUB(multisystem_init_all_interactions)
 
@@ -349,7 +349,7 @@ contains
   ! ---------------------------------------------------------
   subroutine multisystem_init_interaction(this, interaction)
     class(multisystem_t), target, intent(inout) :: this
-    class(interaction_abst_t),    intent(inout) :: interaction
+    class(interaction_t),         intent(inout) :: interaction
 
     PUSH_SUB(multisystem_init_interaction)
 
@@ -367,8 +367,8 @@ contains
     class(multisystem_t), intent(in) :: this
     integer,              intent(in) :: iunit
 
-    class(system_abst_t), pointer :: system
-    class(interaction_abst_t), pointer :: interaction
+    class(system_t), pointer :: system
+    class(interaction_t), pointer :: interaction
     type(system_iterator_t) :: sys_iter
     type(interaction_iterator_t) :: inter_iter
 
@@ -410,7 +410,7 @@ contains
     logical,              intent(in)    :: from_scratch
 
     type(system_iterator_t) :: iter
-    class(system_abst_t), pointer :: system
+    class(system_t), pointer :: system
 
     PUSH_SUB(multisystem_initial_conditions)
 
@@ -429,7 +429,7 @@ contains
     integer,              intent(in)    :: operation
 
     type(system_iterator_t) :: iter
-    class(system_abst_t), pointer :: system
+    class(system_t), pointer :: system
 
     PUSH_SUB(multisystem_do_td_operation)
 
@@ -448,7 +448,7 @@ contains
     FLOAT,                intent(in)    :: tol
 
     type(system_iterator_t) :: iter
-    class(system_abst_t), pointer :: system
+    class(system_t), pointer :: system
 
     PUSH_SUB(multisystem_is_tolerance_reached)
 
@@ -467,7 +467,7 @@ contains
     class(multisystem_t), intent(inout)    :: this
 
     type(system_iterator_t) :: iter
-    class(system_abst_t), pointer :: system
+    class(system_t), pointer :: system
 
     PUSH_SUB(multisystem_store_current_status)
 
@@ -485,7 +485,7 @@ contains
     class(multisystem_t), intent(in) :: this
 
     type(system_iterator_t) :: iter
-    class(system_abst_t), pointer :: system
+    class(system_t), pointer :: system
 
     PUSH_SUB(multisystem_iteration_info)
 
@@ -503,7 +503,7 @@ contains
     class(multisystem_t), intent(inout) :: this
 
     type(system_iterator_t) :: iter
-    class(system_abst_t), pointer :: system
+    class(system_t), pointer :: system
 
     PUSH_SUB(multisystem_output_start)
 
@@ -521,7 +521,7 @@ contains
     class(multisystem_t), intent(inout) :: this
 
     type(system_iterator_t) :: iter
-    class(system_abst_t), pointer :: system
+    class(system_t), pointer :: system
 
     PUSH_SUB(multisystem_output_finish)
 
@@ -540,7 +540,7 @@ contains
     integer,              intent(in)    :: iter
 
     type(system_iterator_t) :: iterator
-    class(system_abst_t), pointer :: system
+    class(system_t), pointer :: system
 
     PUSH_SUB(multisystem_output_write)
 
@@ -590,7 +590,7 @@ contains
   ! ---------------------------------------------------------
   subroutine multisystem_copy_quantities_to_interaction(partner, interaction)
     class(multisystem_t),         intent(inout) :: partner
-    class(interaction_abst_t),    intent(inout) :: interaction
+    class(interaction_t),         intent(inout) :: interaction
 
     PUSH_SUB(multisystem_copy_quantities_to_interaction)
 
@@ -608,7 +608,7 @@ contains
     type(multisystem_t), intent(inout) :: this
 
     type(system_iterator_t) :: iter
-    class(system_abst_t), pointer :: system
+    class(system_t), pointer :: system
 
     PUSH_SUB(multisystem_finalizer)
 
@@ -618,7 +618,7 @@ contains
       SAFE_DEALLOCATE_P(system)
     end do
 
-    call system_abst_end(this)
+    call system_end(this)
 
     POP_SUB(multisystem_finalizer)
   end subroutine multisystem_finalizer
