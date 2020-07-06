@@ -1981,7 +1981,7 @@ contains
                    ww*( aimag(psi_gpsi(1:der%mesh%np, 2)) &
                        - ww*abs_wf_psi(1:der%mesh%np, 2)*kpoint(i_dim))
               do ii = 1, der%mesh%np
-                c_tmp = wf_psi_conj(ii, 1)*gwf_psi(ii, i_dim, 2) - wf_psi(ii, 2)*conjg(gwf_psi(ii, i_dim, 1))
+                c_tmp = M_ONE/(M_TWO*M_zI)*wf_psi_conj(ii, 2)*gwf_psi(ii, i_dim, 1) - wf_psi(ii, 1)*conjg(gwf_psi(ii, i_dim, 2))
                 jp(ii, i_dim, 3) = jp(ii, i_dim, 3) + ww* real(c_tmp)
                 jp(ii, i_dim, 4) = jp(ii, i_dim, 4) + ww*aimag(c_tmp)
               end do
@@ -1996,7 +1996,7 @@ contains
                      - M_TWO*aimag(psi_gpsi(1:der%mesh%np, 2))*kpoint(i_dim))
 
               do ii = 1, der%mesh%np
-                c_tmp = conjg(gwf_psi(ii, i_dim, 1))*gwf_psi(ii, i_dim, 2)
+                c_tmp = gwf_psi(ii, i_dim, 1)*conjg(gwf_psi(ii, i_dim, 2))
                 tau(ii, 3) = tau(ii, 3) + ww* real(c_tmp)
                 tau(ii, 4) = tau(ii, 4) + ww*aimag(c_tmp)
               end do
