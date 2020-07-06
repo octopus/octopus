@@ -1,0 +1,167 @@
+# -*- coding: utf-8 mode: shell-script -*-
+
+Test       : Interactions creation
+Program    : octopus
+TestGroups : short-run, multisystem
+Enabled    : Yes
+
+Processors: 1
+
+# The first test checks turning on or off interactions for all systems
+Input: 03-interactions_creation.01-case1.inp
+
+# All systems should interact through gravity
+match ; No. systems with gravity ; GREPCOUNT(debug/interaction_graph.dot, '\[label="gravity"\]') ; 30
+match ; CP_A   - CP_AA1 ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.CP_A" -> "MS_A.MS_AA.CP_AA1" \[label="gravity"\]') ; 1
+match ; CP_A   - CP_AA2 ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.CP_A" -> "MS_A.MS_AA.CP_AA2" \[label="gravity"\]') ; 1
+match ; CP_A   - CP_AB  ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.CP_A" -> "MS_A.MS_AB.CP_AB" \[label="gravity"\]') ; 1
+match ; CP_A   - CP_B   ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.CP_A" -> "MS_B.CP_B" \[label="gravity"\]') ; 1
+match ; CP_A   - CP_BA  ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.CP_A" -> "MS_B.MS_BA.CP_BA" \[label="gravity"\]') ; 1
+match ; CP_AA1 - CP_A   ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.MS_AA.CP_AA1" -> "MS_A.CP_A" \[label="gravity"\]') ; 1
+match ; CP_AA1 - CP_AA2 ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.MS_AA.CP_AA1" -> "MS_A.MS_AA.CP_AA2" \[label="gravity"\]') ; 1
+match ; CP_AA1 - CP_AB  ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.MS_AA.CP_AA1" -> "MS_A.MS_AB.CP_AB" \[label="gravity"\]') ; 1
+match ; CP_AA1 - CP_B   ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.MS_AA.CP_AA1" -> "MS_B.CP_B" \[label="gravity"\]') ; 1
+match ; CP_AA1 - CP_BA  ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.MS_AA.CP_AA1" -> "MS_B.MS_BA.CP_BA" \[label="gravity"\]') ; 1
+match ; CP_AA2 - CP_A   ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.MS_AA.CP_AA2" -> "MS_A.CP_A" \[label="gravity"\]') ; 1
+match ; CP_AA2 - CP_AA1 ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.MS_AA.CP_AA2" -> "MS_A.MS_AA.CP_AA1" \[label="gravity"\]') ; 1
+match ; CP_AA2 - CP_AB  ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.MS_AA.CP_AA2" -> "MS_A.MS_AB.CP_AB" \[label="gravity"\]') ; 1
+match ; CP_AA2 - CP_B   ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.MS_AA.CP_AA2" -> "MS_B.CP_B" \[label="gravity"\]') ; 1
+match ; CP_AA2 - CP_BA  ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.MS_AA.CP_AA2" -> "MS_B.MS_BA.CP_BA" \[label="gravity"\]') ; 1
+match ; CP_AB  - CP_A   ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.MS_AB.CP_AB" -> "MS_A.CP_A" \[label="gravity"\]') ; 1
+match ; CP_AB  - CP_AA1 ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.MS_AB.CP_AB" -> "MS_A.MS_AA.CP_AA1" \[label="gravity"\]') ; 1
+match ; CP_AB  - CP_AA2 ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.MS_AB.CP_AB" -> "MS_A.MS_AA.CP_AA2" \[label="gravity"\]') ; 1
+match ; CP_AB  - CP_B   ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.MS_AB.CP_AB" -> "MS_B.CP_B" \[label="gravity"\]') ; 1
+match ; CP_AB  - CP_BA  ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.MS_AB.CP_AB" -> "MS_B.MS_BA.CP_BA" \[label="gravity"\]') ; 1
+match ; CP_B   - CP_A   ; GREPCOUNT(debug/interaction_graph.dot, '"MS_B.CP_B" -> "MS_A.CP_A" \[label="gravity"\]') ; 1
+match ; CP_B   - CP_AA1 ; GREPCOUNT(debug/interaction_graph.dot, '"MS_B.CP_B" -> "MS_A.MS_AA.CP_AA1" \[label="gravity"\]') ; 1
+match ; CP_B   - CP_AA2 ; GREPCOUNT(debug/interaction_graph.dot, '"MS_B.CP_B" -> "MS_A.MS_AA.CP_AA2" \[label="gravity"\]') ; 1
+match ; CP_B   - CP_AB  ; GREPCOUNT(debug/interaction_graph.dot, '"MS_B.CP_B" -> "MS_A.MS_AB.CP_AB" \[label="gravity"\]') ; 1
+match ; CP_B   - CP_BA  ; GREPCOUNT(debug/interaction_graph.dot, '"MS_B.CP_B" -> "MS_B.MS_BA.CP_BA" \[label="gravity"\]') ; 1
+match ; CP_BA  - CP_A   ; GREPCOUNT(debug/interaction_graph.dot, '"MS_B.MS_BA.CP_BA" -> "MS_A.CP_A" \[label="gravity"\]') ; 1
+match ; CP_BA  - CP_AA1 ; GREPCOUNT(debug/interaction_graph.dot, '"MS_B.MS_BA.CP_BA" -> "MS_A.MS_AA.CP_AA1" \[label="gravity"\]') ; 1
+match ; CP_BA  - CP_AA2 ; GREPCOUNT(debug/interaction_graph.dot, '"MS_B.MS_BA.CP_BA" -> "MS_A.MS_AA.CP_AA2" \[label="gravity"\]') ; 1
+match ; CP_BA  - CP_AB  ; GREPCOUNT(debug/interaction_graph.dot, '"MS_B.MS_BA.CP_BA" -> "MS_A.MS_AB.CP_AB" \[label="gravity"\]') ; 1
+match ; CP_BA  - CP_B   ; GREPCOUNT(debug/interaction_graph.dot, '"MS_B.MS_BA.CP_BA" -> "MS_B.CP_B" \[label="gravity"\]') ; 1
+
+# No system should interact through the Coulomb force
+match ; No. systems with Coulomb ; GREPCOUNT(debug/interaction_graph.dot, '\[label="coulomb_force"\]') ; 0
+
+
+# The second test checks turning on or off an interaction with all systems except some
+Input: 03-interactions_creation.02-case2.inp
+
+# All systems should interact through gravity with all other systems, except with MS_AB (and its subsystem CP_AB) and CP_AA1
+match ; No. systems with gravity ; GREPCOUNT(debug/interaction_graph.dot, '\[label="gravity"\]') ; 20
+match ; CP_A   - CP_AA2 ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.CP_A" -> "MS_A.MS_AA.CP_AA2" \[label="gravity"\]') ; 1
+match ; CP_A   - CP_B   ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.CP_A" -> "MS_B.CP_B" \[label="gravity"\]') ; 1
+match ; CP_A   - CP_BA  ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.CP_A" -> "MS_B.MS_BA.CP_BA" \[label="gravity"\]') ; 1
+match ; CP_AA1 - CP_A   ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.MS_AA.CP_AA1" -> "MS_A.CP_A" \[label="gravity"\]') ; 1
+match ; CP_AA1 - CP_AA2 ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.MS_AA.CP_AA1" -> "MS_A.MS_AA.CP_AA2" \[label="gravity"\]') ; 1
+match ; CP_AA1 - CP_B   ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.MS_AA.CP_AA1" -> "MS_B.CP_B" \[label="gravity"\]') ; 1
+match ; CP_AA1 - CP_BA  ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.MS_AA.CP_AA1" -> "MS_B.MS_BA.CP_BA" \[label="gravity"\]') ; 1
+match ; CP_AA2 - CP_A   ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.MS_AA.CP_AA2" -> "MS_A.CP_A" \[label="gravity"\]') ; 1
+match ; CP_AA2 - CP_B   ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.MS_AA.CP_AA2" -> "MS_B.CP_B" \[label="gravity"\]') ; 1
+match ; CP_AA2 - CP_BA  ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.MS_AA.CP_AA2" -> "MS_B.MS_BA.CP_BA" \[label="gravity"\]') ; 1
+match ; CP_AB  - CP_A   ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.MS_AB.CP_AB" -> "MS_A.CP_A" \[label="gravity"\]') ; 1
+match ; CP_AB  - CP_AA2 ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.MS_AB.CP_AB" -> "MS_A.MS_AA.CP_AA2" \[label="gravity"\]') ; 1
+match ; CP_AB  - CP_B   ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.MS_AB.CP_AB" -> "MS_B.CP_B" \[label="gravity"\]') ; 1
+match ; CP_AB  - CP_BA  ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.MS_AB.CP_AB" -> "MS_B.MS_BA.CP_BA" \[label="gravity"\]') ; 1
+match ; CP_B   - CP_A   ; GREPCOUNT(debug/interaction_graph.dot, '"MS_B.CP_B" -> "MS_A.CP_A" \[label="gravity"\]') ; 1
+match ; CP_B   - CP_AA2 ; GREPCOUNT(debug/interaction_graph.dot, '"MS_B.CP_B" -> "MS_A.MS_AA.CP_AA2" \[label="gravity"\]') ; 1
+match ; CP_B   - CP_BA  ; GREPCOUNT(debug/interaction_graph.dot, '"MS_B.CP_B" -> "MS_B.MS_BA.CP_BA" \[label="gravity"\]') ; 1
+match ; CP_BA  - CP_A   ; GREPCOUNT(debug/interaction_graph.dot, '"MS_B.MS_BA.CP_BA" -> "MS_A.CP_A" \[label="gravity"\]') ; 1
+match ; CP_BA  - CP_AA2 ; GREPCOUNT(debug/interaction_graph.dot, '"MS_B.MS_BA.CP_BA" -> "MS_A.MS_AA.CP_AA2" \[label="gravity"\]') ; 1
+match ; CP_BA  - CP_B   ; GREPCOUNT(debug/interaction_graph.dot, '"MS_B.MS_BA.CP_BA" -> "MS_B.CP_B" \[label="gravity"\]') ; 1
+
+# Only MS_AB (and its subsystem CP_AB) and CP_AA1 should interact through the Coulomb force
+match ; No. systems with Coulomb ; GREPCOUNT(debug/interaction_graph.dot, '\[label="coulomb_force"\]') ; 10
+match ; CP_A   - CP_AA1 ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.CP_A" -> "MS_A.MS_AA.CP_AA1" \[label="coulomb_force"\]') ; 1
+match ; CP_A   - CP_AB  ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.CP_A" -> "MS_A.MS_AB.CP_AB" \[label="coulomb_force"\]') ; 1
+match ; CP_AA1 - CP_AB  ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.MS_AA.CP_AA1" -> "MS_A.MS_AB.CP_AB" \[label="coulomb_force"\]') ; 1
+match ; CP_AA2 - CP_AA1 ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.MS_AA.CP_AA2" -> "MS_A.MS_AA.CP_AA1" \[label="coulomb_force"\]') ; 1
+match ; CP_AA2 - CP_AB  ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.MS_AA.CP_AA2" -> "MS_A.MS_AB.CP_AB" \[label="coulomb_force"\]') ; 1
+match ; CP_AB  - CP_AA1 ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.MS_AB.CP_AB" -> "MS_A.MS_AA.CP_AA1" \[label="coulomb_force"\]') ; 1
+match ; CP_B   - CP_AA1 ; GREPCOUNT(debug/interaction_graph.dot, '"MS_B.CP_B" -> "MS_A.MS_AA.CP_AA1" \[label="coulomb_force"\]') ; 1
+match ; CP_B   - CP_AB  ; GREPCOUNT(debug/interaction_graph.dot, '"MS_B.CP_B" -> "MS_A.MS_AB.CP_AB" \[label="coulomb_force"\]') ; 1
+match ; CP_BA  - CP_AA1 ; GREPCOUNT(debug/interaction_graph.dot, '"MS_B.MS_BA.CP_BA" -> "MS_A.MS_AA.CP_AA1" \[label="coulomb_force"\]') ; 1
+match ; CP_BA  - CP_AB  ; GREPCOUNT(debug/interaction_graph.dot, '"MS_B.MS_BA.CP_BA" -> "MS_A.MS_AB.CP_AB" \[label="coulomb_force"\]') ; 1
+
+
+# The third test checks turning on or off an interaction for a single multisystem and its subsystems
+Input: 03-interactions_creation.03-case3.inp
+
+# All systems that are able to do so must interact through gravity, except MS_AA (and CP_AA1 and CP_AA2) which doesn't feel gravity but is still an interaction partner to others.
+match ; No. systems with gravity ; GREPCOUNT(debug/interaction_graph.dot, '\[label="gravity"\]') ; 20
+match ; CP_A   - CP_AA1 ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.CP_A" -> "MS_A.MS_AA.CP_AA1" \[label="gravity"\]') ; 1
+match ; CP_A   - CP_AA2 ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.CP_A" -> "MS_A.MS_AA.CP_AA2" \[label="gravity"\]') ; 1
+match ; CP_A   - CP_AB  ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.CP_A" -> "MS_A.MS_AB.CP_AB" \[label="gravity"\]') ; 1
+match ; CP_A   - CP_B   ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.CP_A" -> "MS_B.CP_B" \[label="gravity"\]') ; 1
+match ; CP_A   - CP_BA  ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.CP_A" -> "MS_B.MS_BA.CP_BA" \[label="gravity"\]') ; 1
+match ; CP_AB  - CP_A   ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.MS_AB.CP_AB" -> "MS_A.CP_A" \[label="gravity"\]') ; 1
+match ; CP_AB  - CP_AA1 ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.MS_AB.CP_AB" -> "MS_A.MS_AA.CP_AA1" \[label="gravity"\]') ; 1
+match ; CP_AB  - CP_AA2 ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.MS_AB.CP_AB" -> "MS_A.MS_AA.CP_AA2" \[label="gravity"\]') ; 1
+match ; CP_AB  - CP_B   ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.MS_AB.CP_AB" -> "MS_B.CP_B" \[label="gravity"\]') ; 1
+match ; CP_AB  - CP_BA  ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.MS_AB.CP_AB" -> "MS_B.MS_BA.CP_BA" \[label="gravity"\]') ; 1
+match ; CP_B   - CP_A   ; GREPCOUNT(debug/interaction_graph.dot, '"MS_B.CP_B" -> "MS_A.CP_A" \[label="gravity"\]') ; 1
+match ; CP_B   - CP_AA1 ; GREPCOUNT(debug/interaction_graph.dot, '"MS_B.CP_B" -> "MS_A.MS_AA.CP_AA1" \[label="gravity"\]') ; 1
+match ; CP_B   - CP_AA2 ; GREPCOUNT(debug/interaction_graph.dot, '"MS_B.CP_B" -> "MS_A.MS_AA.CP_AA2" \[label="gravity"\]') ; 1
+match ; CP_B   - CP_AB  ; GREPCOUNT(debug/interaction_graph.dot, '"MS_B.CP_B" -> "MS_A.MS_AB.CP_AB" \[label="gravity"\]') ; 1
+match ; CP_B   - CP_BA  ; GREPCOUNT(debug/interaction_graph.dot, '"MS_B.CP_B" -> "MS_B.MS_BA.CP_BA" \[label="gravity"\]') ; 1
+match ; CP_BA  - CP_A   ; GREPCOUNT(debug/interaction_graph.dot, '"MS_B.MS_BA.CP_BA" -> "MS_A.CP_A" \[label="gravity"\]') ; 1
+match ; CP_BA  - CP_AA1 ; GREPCOUNT(debug/interaction_graph.dot, '"MS_B.MS_BA.CP_BA" -> "MS_A.MS_AA.CP_AA1" \[label="gravity"\]') ; 1
+match ; CP_BA  - CP_AA2 ; GREPCOUNT(debug/interaction_graph.dot, '"MS_B.MS_BA.CP_BA" -> "MS_A.MS_AA.CP_AA2" \[label="gravity"\]') ; 1
+match ; CP_BA  - CP_AB  ; GREPCOUNT(debug/interaction_graph.dot, '"MS_B.MS_BA.CP_BA" -> "MS_A.MS_AB.CP_AB" \[label="gravity"\]') ; 1
+match ; CP_BA  - CP_B   ; GREPCOUNT(debug/interaction_graph.dot, '"MS_B.MS_BA.CP_BA" -> "MS_B.CP_B" \[label="gravity"\]') ; 1
+
+# Only CP_AA1 and CP_AA2 should interact through the Coulomb force
+match ; No. systems with Coulomb ; GREPCOUNT(debug/interaction_graph.dot, '\[label="coulomb_force"\]') ; 10
+match ; CP_AA1 - CP_A   ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.MS_AA.CP_AA1" -> "MS_A.CP_A" \[label="coulomb_force"\]') ; 1
+match ; CP_AA1 - CP_AA2 ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.MS_AA.CP_AA1" -> "MS_A.MS_AA.CP_AA2" \[label="coulomb_force"\]') ; 1
+match ; CP_AA1 - CP_AB  ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.MS_AA.CP_AA1" -> "MS_A.MS_AB.CP_AB" \[label="coulomb_force"\]') ; 1
+match ; CP_AA1 - CP_B   ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.MS_AA.CP_AA1" -> "MS_B.CP_B" \[label="coulomb_force"\]') ; 1
+match ; CP_AA1 - CP_BA  ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.MS_AA.CP_AA1" -> "MS_B.MS_BA.CP_BA" \[label="coulomb_force"\]') ; 1
+match ; CP_AA2 - CP_A   ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.MS_AA.CP_AA2" -> "MS_A.CP_A" \[label="coulomb_force"\]') ; 1
+match ; CP_AA2 - CP_AA1 ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.MS_AA.CP_AA2" -> "MS_A.MS_AA.CP_AA1" \[label="coulomb_force"\]') ; 1
+match ; CP_AA2 - CP_AB  ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.MS_AA.CP_AA2" -> "MS_A.MS_AB.CP_AB" \[label="coulomb_force"\]') ; 1
+match ; CP_AA2 - CP_B   ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.MS_AA.CP_AA2" -> "MS_B.CP_B" \[label="coulomb_force"\]') ; 1
+match ; CP_AA2 - CP_BA  ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.MS_AA.CP_AA2" -> "MS_B.MS_BA.CP_BA" \[label="coulomb_force"\]') ; 1
+
+
+# The fourth test checks turning on or off an interaction for a single multisystem and its subsystems
+Input: 03-interactions_creation.04-case4.inp
+
+# Same as test 3, but we allow CP_AA1 to interact with CP_B through gravity
+match ; No. systems with gravity ; GREPCOUNT(debug/interaction_graph.dot, '\[label="gravity"\]') ; 21
+match ; CP_A   - CP_AA1 ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.CP_A" -> "MS_A.MS_AA.CP_AA1" \[label="gravity"\]') ; 1
+match ; CP_A   - CP_AA2 ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.CP_A" -> "MS_A.MS_AA.CP_AA2" \[label="gravity"\]') ; 1
+match ; CP_A   - CP_AB  ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.CP_A" -> "MS_A.MS_AB.CP_AB" \[label="gravity"\]') ; 1
+match ; CP_A   - CP_B   ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.CP_A" -> "MS_B.CP_B" \[label="gravity"\]') ; 1
+match ; CP_A   - CP_BA  ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.CP_A" -> "MS_B.MS_BA.CP_BA" \[label="gravity"\]') ; 1
+match ; CP_AA1 - CP_B   ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.MS_AA.CP_AA1" -> "MS_B.CP_B" \[label="gravity"\]') ; 1
+match ; CP_AB  - CP_A   ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.MS_AB.CP_AB" -> "MS_A.CP_A" \[label="gravity"\]') ; 1
+match ; CP_AB  - CP_AA1 ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.MS_AB.CP_AB" -> "MS_A.MS_AA.CP_AA1" \[label="gravity"\]') ; 1
+match ; CP_AB  - CP_AA2 ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.MS_AB.CP_AB" -> "MS_A.MS_AA.CP_AA2" \[label="gravity"\]') ; 1
+match ; CP_AB  - CP_B   ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.MS_AB.CP_AB" -> "MS_B.CP_B" \[label="gravity"\]') ; 1
+match ; CP_AB  - CP_BA  ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.MS_AB.CP_AB" -> "MS_B.MS_BA.CP_BA" \[label="gravity"\]') ; 1
+match ; CP_B   - CP_A   ; GREPCOUNT(debug/interaction_graph.dot, '"MS_B.CP_B" -> "MS_A.CP_A" \[label="gravity"\]') ; 1
+match ; CP_B   - CP_AA1 ; GREPCOUNT(debug/interaction_graph.dot, '"MS_B.CP_B" -> "MS_A.MS_AA.CP_AA1" \[label="gravity"\]') ; 1
+match ; CP_B   - CP_AA2 ; GREPCOUNT(debug/interaction_graph.dot, '"MS_B.CP_B" -> "MS_A.MS_AA.CP_AA2" \[label="gravity"\]') ; 1
+match ; CP_B   - CP_AB  ; GREPCOUNT(debug/interaction_graph.dot, '"MS_B.CP_B" -> "MS_A.MS_AB.CP_AB" \[label="gravity"\]') ; 1
+match ; CP_B   - CP_BA  ; GREPCOUNT(debug/interaction_graph.dot, '"MS_B.CP_B" -> "MS_B.MS_BA.CP_BA" \[label="gravity"\]') ; 1
+match ; CP_BA  - CP_A   ; GREPCOUNT(debug/interaction_graph.dot, '"MS_B.MS_BA.CP_BA" -> "MS_A.CP_A" \[label="gravity"\]') ; 1
+match ; CP_BA  - CP_AA1 ; GREPCOUNT(debug/interaction_graph.dot, '"MS_B.MS_BA.CP_BA" -> "MS_A.MS_AA.CP_AA1" \[label="gravity"\]') ; 1
+match ; CP_BA  - CP_AA2 ; GREPCOUNT(debug/interaction_graph.dot, '"MS_B.MS_BA.CP_BA" -> "MS_A.MS_AA.CP_AA2" \[label="gravity"\]') ; 1
+match ; CP_BA  - CP_AB  ; GREPCOUNT(debug/interaction_graph.dot, '"MS_B.MS_BA.CP_BA" -> "MS_A.MS_AB.CP_AB" \[label="gravity"\]') ; 1
+match ; CP_BA  - CP_B   ; GREPCOUNT(debug/interaction_graph.dot, '"MS_B.MS_BA.CP_BA" -> "MS_B.CP_B" \[label="gravity"\]') ; 1
+
+# Same as test 3, but we do not allow CP_AA1 to interact with CP_B through the Coulomb force
+match ; No. systems with Coulomb ; GREPCOUNT(debug/interaction_graph.dot, '\[label="coulomb_force"\]') ; 9
+match ; CP_AA1 - CP_A   ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.MS_AA.CP_AA1" -> "MS_A.CP_A" \[label="coulomb_force"\]') ; 1
+match ; CP_AA1 - CP_AA2 ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.MS_AA.CP_AA1" -> "MS_A.MS_AA.CP_AA2" \[label="coulomb_force"\]') ; 1
+match ; CP_AA1 - CP_AB  ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.MS_AA.CP_AA1" -> "MS_A.MS_AB.CP_AB" \[label="coulomb_force"\]') ; 1
+match ; CP_AA1 - CP_BA  ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.MS_AA.CP_AA1" -> "MS_B.MS_BA.CP_BA" \[label="coulomb_force"\]') ; 1
+match ; CP_AA2 - CP_A   ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.MS_AA.CP_AA2" -> "MS_A.CP_A" \[label="coulomb_force"\]') ; 1
+match ; CP_AA2 - CP_AA1 ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.MS_AA.CP_AA2" -> "MS_A.MS_AA.CP_AA1" \[label="coulomb_force"\]') ; 1
+match ; CP_AA2 - CP_AB  ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.MS_AA.CP_AA2" -> "MS_A.MS_AB.CP_AB" \[label="coulomb_force"\]') ; 1
+match ; CP_AA2 - CP_B   ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.MS_AA.CP_AA2" -> "MS_B.CP_B" \[label="coulomb_force"\]') ; 1
+match ; CP_AA2 - CP_BA  ; GREPCOUNT(debug/interaction_graph.dot, '"MS_A.MS_AA.CP_AA2" -> "MS_B.MS_BA.CP_BA" \[label="coulomb_force"\]') ; 1

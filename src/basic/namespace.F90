@@ -39,6 +39,7 @@ module namespace_oct_m
     generic   :: operator(==) => equal
     procedure :: equal => namespace_equal
     procedure :: contains => namespace_contains
+    procedure :: is_contained_in => namespace_is_contained_in
   end type namespace_t
 
   interface namespace_t
@@ -59,7 +60,7 @@ contains
     type(namespace_t), optional, target, intent(in) :: parent
     character(len=1),  optional,         intent(in) :: delimiter
 
-    integer :: total_len, parent_len, n_start
+    integer :: total_len, parent_len
     character(len=1) :: delimiter_
 
     if (present(delimiter)) then
@@ -95,27 +96,14 @@ contains
       stop
     end if
 
-    ! Find last delimiter in name
-    n_start = index(name, delimiter_, back=.true.)
+    ! We do not allow the creation of empty namespaces, as that might lead to ambiguous paths
+    ASSERT(len_trim(name) > 0)
 
-    if (n_start == 0) then
-      ! There are no implicit parents in the name
-
-      ! We do not allow the creation of empty namespaces, as that might lead to ambiguous paths
-      ASSERT(len_trim(name) > 0)
-
-      namespace_constructor%name = name
-      if (present(parent)) then
-        namespace_constructor%parent => parent
-      else
-        nullify(namespace_constructor%parent)
-      end if
-
+    namespace_constructor%name = name
+    if (present(parent)) then
+      namespace_constructor%parent => parent
     else
-      ! There are implicit parents in the name, so we create them recursively
-      namespace_constructor%name = name(n_start+1:len(name))
-      allocate(namespace_constructor%parent)
-      namespace_constructor%parent = namespace_t(name(1:n_start-1), parent)
+      nullify(namespace_constructor%parent)
     end if
 
   end function namespace_constructor
@@ -202,6 +190,48 @@ contains
     end if
 
   end function namespace_contains
+
+  ! ---------------------------------------------------------
+  logical function namespace_is_contained_in(this, name, delimiter) result(is_contained)
+    class(namespace_t), target, intent(in) :: this
+    character(len=*),           intent(in) :: name
+    character(len=1), optional, intent(in) :: delimiter
+
+    integer :: si, se
+    character(len=1) :: delimiter_
+    type(namespace_t), target :: namespace
+    type(namespace_t), pointer :: next, parent
+
+    if (present(delimiter)) then
+      delimiter_ = delimiter
+    else
+      delimiter_ = '.'
+    end if
+
+    ! Create temporary namespace from name
+    si = index(name, delimiter_, back=.true.)
+    namespace%name = name(si+1:len(name))
+    next => namespace
+    do while (si /= 0)
+      se = si
+      si = index(name(:se-1), delimiter_, back=.true.)
+      allocate(next%parent)
+      next%parent = namespace_t(name(si+1:se-1), delimiter=delimiter)
+      next => next%parent
+    end do
+
+    ! Compare namespaces
+    is_contained = namespace%contains(this)
+
+    ! Deallocate all memory
+    parent => namespace%parent
+    do while (associated(parent))
+      next => parent%parent
+      deallocate(parent)
+      parent => next
+    end do
+
+  end function namespace_is_contained_in
 
 end module namespace_oct_m
 

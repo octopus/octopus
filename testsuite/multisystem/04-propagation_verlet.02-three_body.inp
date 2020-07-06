@@ -6,6 +6,11 @@ Dimensions = 3
 %Systems
  "Sun"   | classical_particle
  "Earth" | classical_particle
+ "Moon"  | classical_particle
+%
+
+%Interactions
+ gravity | all_partners
 %
 
 #Initial conditions are taken from https://ssd.jpl.nasa.gov/horizons.cgi#top.
@@ -18,6 +23,14 @@ Earth.ParticleMass = 5.97237e24
 %
 %Earth.ParticleInitialVelocity
  4431.136612956525 | -29497.611635546345 | 0.343475566161544
+%
+
+Moon.ParticleMass = 7.342e22
+%Moon.ParticleInitialPosition
+ -147236396732.81906 | -24234200672.857853 | -11062799.286082389
+%
+%Moon.ParticleInitialVelocity
+ 3484.6397238565924 | -29221.007409082802 | 82.53526338876684
 %
 
 Sun.ParticleMass = 1.98855e30

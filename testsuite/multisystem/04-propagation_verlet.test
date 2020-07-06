@@ -7,7 +7,7 @@ Enabled    : Yes
 
 Processors: 1
 
-Input: 03-propagation_verlet.01-two_body.inp
+Input: 04-propagation_verlet.01-two_body.inp
 
 match ; Sun   pos x (t=3 days) ; LINEFIELD(Sun/td.general/coordinates, -1, 3) ; -5.895142499263e+02
 match ; Sun   pos y (t=3 days) ; LINEFIELD(Sun/td.general/coordinates, -1, 4) ; -1.089174950604e+02
@@ -23,7 +23,7 @@ match ; Earth vel y (t=3 days) ; LINEFIELD(Earth/td.general/coordinates, -1, 7) 
 match ; Earth vel z (t=3 days) ; LINEFIELD(Earth/td.general/coordinates, -1, 8) ;  3.258701370675e-01
 
 
-Input: 03-propagation_verlet.02-three_body.inp
+Input: 04-propagation_verlet.02-three_body.inp
 
 match ; Sun   pos x (t=3 days) ; LINEFIELD(Sun/td.general/coordinates, -1, 3) ; -5.967762323026e+02
 match ; Sun   pos y (t=3 days) ; LINEFIELD(Sun/td.general/coordinates, -1, 4) ; -1.102398467344e+02
@@ -45,7 +45,7 @@ match ; Moon  vel y (t=3 days) ; LINEFIELD(Moon/td.general/coordinates, -1, 7) ;
 match ; Moon  vel z (t=3 days) ; LINEFIELD(Moon/td.general/coordinates, -1, 8) ;  8.484571535205e+01
 
 
-Input: 03-propagation_verlet.03-two_body_different_time_steps.inp
+Input: 04-propagation_verlet.03-two_body_different_time_steps.inp
 
 match ; Sun   pos x (t=3 days) ; LINEFIELD(Sun/td.general/coordinates, -1, 3) ; -5.895142499263e+02
 match ; Sun   pos y (t=3 days) ; LINEFIELD(Sun/td.general/coordinates, -1, 4) ; -1.089174950604e+02
@@ -61,7 +61,7 @@ match ; Earth vel y (t=3 days) ; LINEFIELD(Earth/td.general/coordinates, -1, 7) 
 match ; Earth vel z (t=3 days) ; LINEFIELD(Earth/td.general/coordinates, -1, 8) ;  3.258701364752e-01
 
 
-Input: 03-propagation_verlet.04-three_body_different_time_steps.inp
+Input: 04-propagation_verlet.04-three_body_different_time_steps.inp
 
 match ; Sun   pos x (t=3 days) ; LINEFIELD(Sun/td.general/coordinates, -1, 3) ; -5.967762323026e+02
 match ; Sun   pos y (t=3 days) ; LINEFIELD(Sun/td.general/coordinates, -1, 4) ; -1.102398467344e+02
