@@ -23,8 +23,8 @@ module charged_particle_oct_m
   use clock_oct_m
   use global_oct_m
   use interaction_oct_m
-  use interaction_coulomb_force_oct_m
-  use interaction_lorentz_force_oct_m
+  use coulomb_force_oct_m
+  use lorentz_force_oct_m
   use interactions_factory_oct_m
   use io_oct_m
   use iso_c_binding
@@ -128,9 +128,9 @@ contains
     PUSH_SUB(charged_particle_init_interaction)
 
     select type (interaction)
-    type is (interaction_coulomb_force_t)
+    type is (coulomb_force_t)
       call interaction%init(this%space%dim, this%quantities, this%charge, this%pos)
-    type is (interaction_lorentz_force_t)
+    type is (lorentz_force_t)
       call interaction%init(this%space%dim, this%quantities, this%charge, this%pos, this%vel)
     class default
       call this%classical_particle_t%init_interaction(interaction)
@@ -279,7 +279,7 @@ contains
     PUSH_SUB(charged_particle_copy_quantities_to_interaction)
 
     select type (interaction)
-    type is (interaction_coulomb_force_t)
+    type is (coulomb_force_t)
       interaction%partner_charge = partner%charge
       interaction%partner_pos = partner%pos
     class default
@@ -307,9 +307,9 @@ contains
     call iter%start(this%interactions)
     do while (iter%has_next())
       select type (interaction => iter%get_next())
-      type is (interaction_coulomb_force_t)
+      type is (coulomb_force_t)
         this%tot_force(1:this%space%dim) = this%tot_force(1:this%space%dim) + interaction%force(1:this%space%dim)
-      type is (interaction_lorentz_force_t)
+      type is (lorentz_force_t)
         this%tot_force(1:this%space%dim) = this%tot_force(1:this%space%dim) + interaction%force(1:this%space%dim)
       end select
     end do

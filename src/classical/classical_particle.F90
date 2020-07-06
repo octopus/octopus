@@ -23,8 +23,8 @@ module classical_particle_oct_m
   use clock_oct_m
   use global_oct_m
   use interaction_oct_m
-  use interaction_gravity_oct_m
-  use interaction_lorentz_force_oct_m
+  use gravity_oct_m
+  use lorentz_force_oct_m
   use interactions_factory_oct_m
   use io_oct_m
   use iso_c_binding
@@ -152,7 +152,7 @@ contains
     PUSH_SUB(classical_particle_init_interaction)
 
     select type (interaction)
-    type is (interaction_gravity_t)
+    type is (gravity_t)
       call interaction%init(this%space%dim, this%quantities, this%mass, this%pos)
     class default
       message(1) = "Trying to initialize an unsupported interaction by classical particles."
@@ -575,11 +575,9 @@ contains
     PUSH_SUB(classical_particle_copy_quantities_to_interaction)
 
     select type (interaction)
-    type is (interaction_gravity_t)
+    type is (gravity_t)
       interaction%partner_mass = partner%mass
       interaction%partner_pos = partner%pos
-    type is (interaction_lorentz_force_t)
-      ! Nothing to copy
     class default
       message(1) = "Unsupported interaction."
       call messages_fatal(1)
@@ -613,7 +611,7 @@ contains
     call iter%start(this%interactions)
     do while (iter%has_next())
       select type (interaction => iter%get_next())
-      type is (interaction_gravity_t)
+      type is (gravity_t)
         this%tot_force(1:this%space%dim) = this%tot_force(1:this%space%dim) + interaction%force(1:this%space%dim)
       end select
     end do

@@ -18,7 +18,7 @@
 
 #include "global.h"
 
-module interaction_gravity_oct_m
+module gravity_oct_m
   use global_oct_m
   use interaction_with_partner_oct_m
   use interaction_partner_oct_m
@@ -31,12 +31,12 @@ module interaction_gravity_oct_m
 
   private
   public ::                &
-    interaction_gravity_t
+    gravity_t
 
   !> Gravity interaction between two particles. This should be used
   !! for testing purposes only. Note that this interaction assumes all
   !! quantities are in S.I. units instead of atomic units.
-  type, extends(interaction_with_partner_t) :: interaction_gravity_t
+  type, extends(interaction_with_partner_t) :: gravity_t
     private
     integer :: dim
 
@@ -49,22 +49,22 @@ module interaction_gravity_oct_m
     FLOAT, allocatable, public :: partner_pos(:)
 
   contains
-    procedure :: init => interaction_gravity_init
-    procedure :: calculate => interaction_gravity_calculate
-    final :: interaction_gravity_finalize
-  end type interaction_gravity_t
+    procedure :: init => gravity_init
+    procedure :: calculate => gravity_calculate
+    final :: gravity_finalize
+  end type gravity_t
 
-  interface interaction_gravity_t
-    module procedure interaction_gravity_constructor
-  end interface interaction_gravity_t
+  interface gravity_t
+    module procedure gravity_constructor
+  end interface gravity_t
 
 contains
   ! ---------------------------------------------------------
-  function interaction_gravity_constructor(partner) result(this)
+  function gravity_constructor(partner) result(this)
     class(interaction_partner_t), target, intent(inout) :: partner
-    class(interaction_gravity_t),         pointer       :: this
+    class(gravity_t),                     pointer       :: this
 
-    PUSH_SUB(interaction_gravity_constructor)
+    PUSH_SUB(gravity_constructor)
 
     SAFE_ALLOCATE(this)
 
@@ -89,18 +89,18 @@ contains
     this%partner%quantities(POSITION)%required = .true.
     this%partner%quantities(MASS)%required = .true.
 
-    POP_SUB(interaction_gravity_constructor)
-  end function interaction_gravity_constructor
+    POP_SUB(gravity_constructor)
+  end function gravity_constructor
 
   ! ---------------------------------------------------------
-  subroutine interaction_gravity_init(this, dim, system_quantities, system_mass, system_pos)
-    class(interaction_gravity_t),         intent(inout) :: this
+  subroutine gravity_init(this, dim, system_quantities, system_mass, system_pos)
+    class(gravity_t),                     intent(inout) :: this
     integer,                              intent(in)    :: dim
     type(quantity_t),                     intent(inout) :: system_quantities(:)
     FLOAT,                        target, intent(in)    :: system_mass
     FLOAT,                        target, intent(in)    :: system_pos(:)
 
-    PUSH_SUB(interaction_gravity_init)
+    PUSH_SUB(gravity_init)
 
     this%dim = dim
     SAFE_ALLOCATE(this%partner_pos(dim))
@@ -110,32 +110,32 @@ contains
     this%system_mass => system_mass
     this%system_pos => system_pos
 
-    POP_SUB(interaction_gravity_init)
-  end subroutine interaction_gravity_init
+    POP_SUB(gravity_init)
+  end subroutine gravity_init
 
   ! ---------------------------------------------------------
-  subroutine interaction_gravity_calculate(this, namespace)
-    class(interaction_gravity_t), intent(inout) :: this
+  subroutine gravity_calculate(this, namespace)
+    class(gravity_t),             intent(inout) :: this
     type(namespace_t),            intent(in)    :: namespace
 
     FLOAT, parameter :: GG = CNST(6.67430e-11) ! In S.I. units!
     FLOAT :: dist3
 
-    PUSH_SUB(interaction_gravity_calculate)
+    PUSH_SUB(gravity_calculate)
 
     dist3 = sum((this%partner_pos(1:this%dim) - this%system_pos(1:this%dim))**2)**(M_THREE/M_TWO)
 
     this%force(1:this%dim) = (this%partner_pos(1:this%dim) - this%system_pos(1:this%dim)) &
       / dist3 * (GG * this%system_mass * this%partner_mass)
 
-    POP_SUB(interaction_gravity_calculate)
-  end subroutine interaction_gravity_calculate
+    POP_SUB(gravity_calculate)
+  end subroutine gravity_calculate
 
   ! ---------------------------------------------------------
-  subroutine interaction_gravity_finalize(this)
-    type(interaction_gravity_t), intent(inout) :: this
+  subroutine gravity_finalize(this)
+    type(gravity_t), intent(inout) :: this
 
-    PUSH_SUB(interaction_gravity_finalize)
+    PUSH_SUB(gravity_finalize)
 
     this%force = M_ZERO
     nullify(this%system_mass)
@@ -144,10 +144,10 @@ contains
 
     call interaction_with_partner_end(this)
 
-    POP_SUB(interaction_gravity_finalize)
-  end subroutine interaction_gravity_finalize
+    POP_SUB(gravity_finalize)
+  end subroutine gravity_finalize
 
-end module interaction_gravity_oct_m
+end module gravity_oct_m
 
 !! Local Variables:
 !! mode: f90

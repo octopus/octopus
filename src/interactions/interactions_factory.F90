@@ -21,9 +21,9 @@
 module interactions_factory_oct_m
   use global_oct_m
   use interaction_oct_m
-  use interaction_coulomb_force_oct_m
-  use interaction_gravity_oct_m
-  use interaction_lorentz_force_oct_m
+  use coulomb_force_oct_m
+  use gravity_oct_m
+  use lorentz_force_oct_m
   use interaction_partner_oct_m
   use interactions_factory_abst_oct_m
   use messages_oct_m
@@ -111,11 +111,11 @@ contains
     !%End
     select case (type)
     case (GRAVITY)
-      interaction => interaction_gravity_t(partner)
+      interaction => gravity_t(partner)
     case (COULOMB_FORCE)
-      interaction => interaction_coulomb_force_t(partner)
+      interaction => coulomb_force_t(partner)
     case (LORENTZ_FORCE)
-      interaction => interaction_lorentz_force_t(partner)
+      interaction => lorentz_force_t(partner)
     case default
       ! This should never happen, as this is handled in
       ! interactions_factory_abst_create_interactions
