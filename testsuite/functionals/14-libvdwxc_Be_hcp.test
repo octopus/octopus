@@ -6,12 +6,20 @@ Enabled    : Yes
 Input      : 14-libvdwxc_Be_hcp.01-vdwdfcx.inp
 
 if (available libvdwxc); then
+  if(available cuda); then
+    match ; Error match ; GREPCOUNT(err, 'Calculation will not be continued.') ; 1
+  else
     Precision: 7.0e-06
     match ;  Total energy  ; GREPFIELD(static/info, 'Total       =', 3) ; -26.588908225
     Precision: 3.0e-07
     match ;  Exchange energy     ; GREPFIELD(static/info, 'Exchange    =', 3) ; -3.769097225
     Precision: 1.5e-7
     match ;  Correlation energy  ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.414032305
+  endif
 else
+  if(available cuda); then
+    match ; Error match ; GREPCOUNT(err, 'Calculation will not be continued.') ; 1
+  else
     match; Error; GREPCOUNT(err, 'not compiled with libvdwxc') ; 1
+  endif
 endif
