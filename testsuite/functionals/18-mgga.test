@@ -2,11 +2,11 @@
 
 Test       : MGGA energy functionals
 Program    : octopus
-TestGroups : short-run, finite_systems_3d
-Enabled    : Yes
+TestGroups : short-run, functionals
+Enabled    : No
 
 
-Input: 35-mgga.01-br89.inp
+Input: 18-mgga.01-br89.inp
 match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
 
 match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -6.75055597
