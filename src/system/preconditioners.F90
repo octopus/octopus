@@ -21,11 +21,13 @@
 module preconditioners_oct_m
   use batch_oct_m
   use batch_ops_oct_m
+  use boundaries_oct_m
   use derivatives_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_elec_oct_m
+  use hamiltonian_elec_base_oct_m
   use lalg_basic_oct_m
   use mesh_oct_m
   use messages_oct_m
@@ -39,6 +41,7 @@ module preconditioners_oct_m
   use stencil_star_oct_m
   use simul_box_oct_m
   use varinfo_oct_m
+  use wfs_elec_oct_m
 
   implicit none
   private

@@ -367,7 +367,7 @@ subroutine X(lobpcg)(namespace, gr, st, hm, st_start, st_end, psi, constr_start,
     ! Apply the preconditioner.
     do i = 1, lnuc
       ist = luc(i)
-      call X(preconditioner_apply)(pre, namespace, gr, hm, res(:, :, ist), tmp(:, :, ist))
+      call X(preconditioner_apply)(pre, namespace, gr, hm, res(:, :, ist), tmp(:, :, ist), ik)
       call lalg_copy(gr%mesh%np_part, st%d%dim, tmp(:, :, ist), res(:, :, ist))
     end do
 

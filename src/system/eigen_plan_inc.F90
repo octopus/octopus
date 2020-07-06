@@ -301,7 +301,7 @@ subroutine X(eigensolver_plan) (namespace, gr, st, hm, pre, tol, niter, converge
       do idim = 1, dim
         call lalg_copy(gr%mesh%np, av(:, idim, d1 + 1), aux(:, idim))
       end do
-      call X(preconditioner_apply)(pre, namespace, gr, hm, aux(:,:), vv(:,:, d1+1))
+      call X(preconditioner_apply)(pre, namespace, gr, hm, aux(:,:), vv(:,:, d1+1), ik)
 
     end do inner_loop
   end do outer_loop

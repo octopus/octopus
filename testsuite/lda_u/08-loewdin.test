@@ -38,36 +38,37 @@ match ; Occupation Ni2 up-down 3d5 ; LINEFIELD(static/occ_matrices, -1, 5) ; 1.1
 
 Input      : 08-loewdin.02-intersite.inp
 
-match ;  Total energy        ; GREPFIELD(static/info, 'Total       =', 3) ; -7.67225388
+Precision : 1e-8
+match ;  Total energy        ; GREPFIELD(static/info, 'Total       =', 3) ; -7.67171036
 match ;  Ion-ion energy      ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -7.8578008
-match ;  Eigenvalues sum     ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -0.14681809
-match ;  Hartree energy      ; GREPFIELD(static/info, 'Hartree     =', 3) ; 0.54645192
-match ;  Exchange energy     ; GREPFIELD(static/info, 'Exchange    =', 3) ; -2.03023969
-match ;  Correlation energy  ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.37502436
-match ;  Kinetic energy      ; GREPFIELD(static/info, 'Kinetic     =', 3) ; 3.11675578
-match ;  External energy     ; GREPFIELD(static/info, 'External    =', 3) ; -1.26756237
-match ;  Hubbard energy      ; GREPFIELD(static/info, 'Hubbard     =', 3) ; 0.06090528
+match ;  Eigenvalues sum     ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -0.14618084
+match ;  Hartree energy      ; GREPFIELD(static/info, 'Hartree     =', 3) ; 0.547474
+match ;  Exchange energy     ; GREPFIELD(static/info, 'Exchange    =', 3) ; -2.03481922
+match ;  Correlation energy  ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.37504875
+match ;  Kinetic energy      ; GREPFIELD(static/info, 'Kinetic     =', 3) ; 3.11832836
+match ;  External energy     ; GREPFIELD(static/info, 'External    =', 3) ; -1.26936578
+match ;  Hubbard energy      ; GREPFIELD(static/info, 'Hubbard     =', 3) ; 0.06217484
 
-match ;  U 3p Si1   ; LINEFIELD(static/effectiveU, 3, 4) ; 0.129050
-match ;  U 3p Si2   ; LINEFIELD(static/effectiveU, 4, 4) ; 0.129050
+match ;  U 3p Si1   ; LINEFIELD(static/effectiveU, 3, 4) ; 0.12891
+match ;  U 3p Si2   ; LINEFIELD(static/effectiveU, 4, 4) ; 0.12891
 
-match ;  V 3p-3p  ; GREPFIELD(static/info, 'Effective intersite V', 7, 3) ; 0.055962
+match ;  V 3p-3p  ; GREPFIELD(static/info, 'Effective intersite V', 7, 3) ; 0.05578
 
 #Values are copied from the test above
 Input      : 08-loewdin.03-intersite_domains.inp
 
-match ;  Total energy        ; GREPFIELD(static/info, 'Total       =', 3) ; -7.67225388
+match ;  Total energy        ; GREPFIELD(static/info, 'Total       =', 3) ; -7.67171036
 match ;  Ion-ion energy      ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -7.8578008
-match ;  Eigenvalues sum     ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -0.14681809
-match ;  Hartree energy      ; GREPFIELD(static/info, 'Hartree     =', 3) ; 0.54645192
-match ;  Exchange energy     ; GREPFIELD(static/info, 'Exchange    =', 3) ; -2.03023969
-match ;  Correlation energy  ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.37502436
-match ;  Kinetic energy      ; GREPFIELD(static/info, 'Kinetic     =', 3) ; 3.11675578
-match ;  External energy     ; GREPFIELD(static/info, 'External    =', 3) ; -1.26756237
-match ;  Hubbard energy      ; GREPFIELD(static/info, 'Hubbard     =', 3) ; 0.06090528
+match ;  Eigenvalues sum     ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -0.14618084
+match ;  Hartree energy      ; GREPFIELD(static/info, 'Hartree     =', 3) ; 0.547474
+match ;  Exchange energy     ; GREPFIELD(static/info, 'Exchange    =', 3) ; -2.03481922
+match ;  Correlation energy  ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.37504875
+match ;  Kinetic energy      ; GREPFIELD(static/info, 'Kinetic     =', 3) ; 3.11832836
+match ;  External energy     ; GREPFIELD(static/info, 'External    =', 3) ; -1.26936578
+match ;  Hubbard energy      ; GREPFIELD(static/info, 'Hubbard     =', 3) ; 0.06217484
 
-match ;  U 3p Si1   ; LINEFIELD(static/effectiveU, 3, 4) ; 0.129050
-match ;  U 3p Si2   ; LINEFIELD(static/effectiveU, 4, 4) ; 0.129050
+match ;  U 3p Si1   ; LINEFIELD(static/effectiveU, 3, 4) ; 0.12891
+match ;  U 3p Si2   ; LINEFIELD(static/effectiveU, 4, 4) ; 0.12891
 
-match ;  V 3p-3p  ; GREPFIELD(static/info, 'Effective intersite V', 7, 3) ; 0.055962
+match ;  V 3p-3p  ; GREPFIELD(static/info, 'Effective intersite V', 7, 3) ; 0.05578
 

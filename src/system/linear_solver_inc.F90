@@ -377,7 +377,7 @@ subroutine X(linear_solver_bicgstab) (ls, namespace, hm, gr, st, ist, ik, x, y, 
     end if
 
     ! preconditioning 
-    call X(preconditioner_apply)(ls%pre, namespace, gr, hm, p, phat, shift)
+    call X(preconditioner_apply)(ls%pre, namespace, gr, hm, p, phat, 1, shift)
     call X(linear_solver_operator)(hm, namespace, gr, st, ist, ik, shift, phat, Hp)
     
     alpha = rho_1/X(mf_dotp)(gr%mesh, st%d%dim, rs, Hp)
@@ -398,7 +398,7 @@ subroutine X(linear_solver_bicgstab) (ls, namespace, hm, gr, st, ist, ik, x, y, 
       exit
     end if
 
-    call X(preconditioner_apply)(ls%pre, namespace, gr, hm, s, shat, shift)
+    call X(preconditioner_apply)(ls%pre, namespace, gr, hm, s, shat, 1, shift)
     call X(linear_solver_operator)(hm, namespace, gr, st, ist, ik, shift, shat, Hs)
 
     w = X(mf_dotp)(gr%mesh, st%d%dim, Hs, s)/X(mf_dotp) (gr%mesh, st%d%dim, Hs, Hs)
@@ -720,7 +720,7 @@ subroutine X(linear_solver_preconditioner) (x, hx)
   SAFE_ALLOCATE(tmpy(1:args%gr%mesh%np_part, 1:1))
 
   call lalg_copy(args%gr%mesh%np, x, tmpx(:, 1))
-  call X(preconditioner_apply)(args%ls%pre, args%namespace, args%gr, args%hm, tmpx, tmpy, args%X(shift))
+  call X(preconditioner_apply)(args%ls%pre, args%namespace, args%gr, args%hm, tmpx, tmpy, 1, args%X(shift))
   call lalg_copy(args%gr%mesh%np, tmpy(:, 1), hx)
 
   SAFE_DEALLOCATE_A(tmpx)
@@ -886,7 +886,7 @@ subroutine X(linear_solver_qmr_dotp)(this, namespace, hm, gr, st, xb, bb, shift,
 
   end do
 
-  call X(preconditioner_apply_batch)(this%pre, namespace, gr, hm, vvb, zzb, omega = shift)
+  call X(preconditioner_apply_batch)(this%pre, namespace, gr, hm, vvb, zzb, 1, omega = shift)
   call mesh_batch_nrm2(gr%mesh, zzb, xsi)
 
   gamma = CNST(1.0)
@@ -955,7 +955,7 @@ subroutine X(linear_solver_qmr_dotp)(this, namespace, hm, gr, st, xb, bb, shift,
 
     call mesh_batch_nrm2(gr%mesh, vvb, rho)
 
-    call X(preconditioner_apply_batch)(this%pre, namespace, gr, hm, vvb, zzb, omega = shift)
+    call X(preconditioner_apply_batch)(this%pre, namespace, gr, hm, vvb, zzb, 1, omega = shift)
 
     call batch_scal(gr%mesh%np, CNST(1.0)/alpha, zzb, a_full = .false.)
 
@@ -1139,7 +1139,7 @@ function X(preconditioner)( v )
 
   phi = R_TOTYPE(M_ZERO)
   phi(1:np, 1:dim) = X(doubledimarray)(np, dim, v(:, 1))
-  call X(preconditioner_apply)(args%ls%pre, args%namespace, args%gr, args%hm, phi, precphi, args%X(shift))
+  call X(preconditioner_apply)(args%ls%pre, args%namespace, args%gr, args%hm, phi, precphi, 1, args%X(shift))
   X(preconditioner)(1:np*dim, 1) = X(singledimarray)(np*dim, precphi)
 
   SAFE_DEALLOCATE_A(phi)
