@@ -83,7 +83,8 @@ contains
     integer :: isys, system_type
     character(len=128) :: system_name
     type(block_t) :: blk
-    class(system_t), pointer :: sys
+    type(system_iterator_t) :: iter
+    class(system_t), pointer :: sys, other
     
     PUSH_SUB(multisystem_constructor)
 
@@ -129,6 +130,15 @@ contains
         if (.not. associated(sys)) then
           call messages_input_error(system%namespace, 'Systems', 'Unknown system type.')
         end if
+
+        ! Check that the system is unique
+        call iter%start(system%list)
+        do while (iter%has_next())
+          other => iter%get_next()
+          if (sys%namespace == other%namespace) then
+            call messages_input_error(system%namespace, 'Systems', 'Duplicated system in multisystem', row=isys-1, column=0)
+          end if
+        end do
 
         ! Add system to list of systems
         call system%list%add(sys)
