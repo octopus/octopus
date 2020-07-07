@@ -19,6 +19,7 @@
 #include "global.h"
 
 module gravity_oct_m
+  use force_interaction_oct_m
   use global_oct_m
   use interaction_with_partner_oct_m
   use interaction_partner_oct_m
@@ -36,11 +37,9 @@ module gravity_oct_m
   !> Gravity interaction between two particles. This should be used
   !! for testing purposes only. Note that this interaction assumes all
   !! quantities are in S.I. units instead of atomic units.
-  type, extends(interaction_with_partner_t) :: gravity_t
+  type, extends(force_interaction_t) :: gravity_t
     private
     integer :: dim
-
-    FLOAT, public :: force(MAX_DIM)
 
     FLOAT, pointer :: system_mass
     FLOAT, pointer :: system_pos(:)

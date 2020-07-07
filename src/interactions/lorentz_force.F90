@@ -19,6 +19,7 @@
 #include "global.h"
 
 module lorentz_force_oct_m
+  use force_interaction_oct_m
   use global_oct_m
   use interaction_with_partner_oct_m
   use interaction_partner_oct_m
@@ -33,11 +34,9 @@ module lorentz_force_oct_m
   public ::                &
     lorentz_force_t
 
-  type, extends(interaction_with_partner_t) :: lorentz_force_t
+  type, extends(force_interaction_t) :: lorentz_force_t
     private
     integer :: dim
-
-    FLOAT, public :: force(MAX_DIM)
 
     FLOAT, pointer :: system_charge
     FLOAT, pointer, public :: system_pos(:)
