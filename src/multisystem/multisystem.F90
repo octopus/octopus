@@ -80,7 +80,7 @@ contains
     class(system_factory_abst_t), intent(in) :: factory
     class(multisystem_t),         pointer    :: system
 
-    integer :: isys, system_type
+    integer :: isys, system_type, ic
     character(len=128) :: system_name
     type(block_t) :: blk
     type(system_iterator_t) :: iter
@@ -119,6 +119,12 @@ contains
         if (len_trim(system_name) == 0) then
           call messages_input_error(system%namespace, 'Systems', 'All systems must have a name.')
         end if
+        do ic = 1, len(parser_varname_excluded_characters)
+          if (index(system_name, parser_varname_excluded_characters(ic:ic)) /= 0) then
+            call messages_input_error(system%namespace, 'Systems', &
+              'Illegal character ' // parser_varname_excluded_characters(ic:ic) // ' in system name', row=isys-1, column=0)
+          end if
+        end do
         call parse_block_integer(blk, isys - 1, 1, system_type)
 
         ! Create folder to store system files.
