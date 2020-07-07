@@ -53,5 +53,5 @@ if (available etsf_io); then
     match ; netcdf wfn 3     ; SIZE(static/wf-k001-st0003.ncdf) ;   44320
     match ; netcdf wfn 4     ; SIZE(static/wf-k001-st0004.ncdf) ;   44320
 else
-    match; Error missing NetCDF ; GREPCOUNT(err, 'Octopus was compiled without NetCDF support') ; 1
+    match; Error missing ETSF_IO ; GREPCOUNT(err, 'Octopus was compiled without ETSF_IO support') ; 1
 endif
