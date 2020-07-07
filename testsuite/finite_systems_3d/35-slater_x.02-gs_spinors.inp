@@ -6,18 +6,27 @@ FromScratch = yes
 %
 
 PseudopotentialSet = hgh_lda
-SpinComponents = polarized
+SpinComponents = spinors
 
 Spacing = 0.3
 Radius = 8
+ExtraStates = 2
 
 XCFunctional = slater_x + lda_c_pz
 
 %Occupations
  2/3 | 2/3 | 2/3
- 1 | 1 | 1
 %
 
 ConvRelDens = 5e-6
-ParKPoints = no
+GuessMagnetDensity = user_defined
+%AtomsMagnetDirection
+ 0 | 0 | 1
+%
+
+%StaticMagneticField 
+ 0 | 0 | 1e-3
+%
+
 FilterPotentials = filter_none
+

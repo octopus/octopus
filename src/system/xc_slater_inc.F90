@@ -201,8 +201,7 @@ subroutine X(slater) (namespace, mesh, psolver, st, isp, ex, vxc)
             if( st%d%ispin /= SPINORS) then
               do ip = 1, mesh%np
                 !If there is no density at this point, we simply ignore it
-                if(st%rho(ip, isp) < CNST(1e-10)) cycle        
-                tmp_vxc(ip) = tmp_vxc(ip) - rr * R_REAL(R_CONJ(rho_ij(ip)) * pot_ij(ip)) / st%rho(ip, isp)
+                tmp_vxc(ip) = tmp_vxc(ip) - rr * R_REAL(R_CONJ(rho_ij(ip)) * pot_ij(ip)) / (st%rho(ip, isp) + M_EPSILON)
               end do
             else
               !This is given by Eq. 19 in SI of PRB 98, 035140 (2018)
@@ -262,23 +261,31 @@ subroutine X(slater) (namespace, mesh, psolver, st, isp, ex, vxc)
     do ip = 1, mesh%np
 
       nn = st%rho(ip, 1) + st%rho(ip, 2)
-      !If there is no density at this point, we simply ignore it
-      if(nn < CNST(1e-10)) cycle 
 
       ! 1/(2nD), where n is the charge density and D = n_uu*n_dd - n_ud*n_du
       ! where D is the determinant of the spin-density matrix
       rr = (st%rho(ip, 1) * st%rho(ip, 2)  - (st%rho(ip, 3)**2 + st%rho(ip, 4)**2))
-      if(abs(rr) < CNST(1.0e-10)) then !The matrix is singular, we are fully spin polarized along one direction
-        !If we are fully polarized locally, we do not add the contribution of the other spin channel
-        if(st%rho(ip, 1) > CNST(1e-10)) then
-          vxc(ip, 1) = vxc(ip, 1) +  M_HALF/st%rho(ip, 1)*bij(ip, 1) 
-        end if
-        if(st%rho(ip, 1) > CNST(1e-10)) then
-          vxc(ip, 2) = vxc(ip, 2) +  M_HALF/st%rho(ip, 2)*bij(ip, 2)
+      if(abs(rr) < CNST(1.0e-14) ) then !The matrix is singular
+        !We are fully polarized along one direction
+        if((st%rho(ip, 3) + st%rho(ip, 4)) < CNST(1e-07) ) then 
+          !If we are fully polarized locally, we do not add the contribution of the other spin channel
+          if(st%rho(ip, 1) > st%rho(ip, 2) .and. st%rho(ip, 1) > CNST(1e-13)) then
+            vxc(ip, 1) = vxc(ip, 1) +  bij(ip, 1)/st%rho(ip, 1)
+          else if(st%rho(ip, 2) > CNST(1e-13)) then
+            vxc(ip, 2) = vxc(ip, 2) +  bij(ip, 2)/st%rho(ip, 2)
+          end if
+        else
+          !We are in the case for which st%rho(1) * st%rho(2) = (st%rho(3)**2 + st%rho(4)**2) 
+          !If the density is singular, the bij matrix is also singular, as we have nv+vn = b
+          !
+          !Here I do not know what to do
+          !Not sure this case exists in practice
+          message(1) = "Error singular b matrix."
+          call messages_fatal(1, namespace=namespace)
         end if
       else
 
-        rr = M_HALF/(nn * rr)
+        rr = M_ONE/(nn * rr)
 
         vxc(ip, 1) = vxc(ip, 1) + rr * ( &
            ( nn * st%rho(ip, 2) - (st%rho(ip, 3)**2 + st%rho(ip, 4)**2)) * bij(ip, 1) &
@@ -289,9 +296,10 @@ subroutine X(slater) (namespace, mesh, psolver, st, isp, ex, vxc)
            ( nn * st%rho(ip, 1) - (st%rho(ip, 3)**2 + st%rho(ip, 4)**2)) * bij(ip, 2) &
           +( (st%rho(ip, 3)**2 + st%rho(ip, 4)**2) ) * bij(ip, 1) &
           - M_TWO * st%rho(ip,1) * ( st%rho(ip,3) * R_REAL(bij(ip,3)) + st%rho(ip,4) * R_AIMAG(bij(ip,3)))) 
-         tmp = -cmplx(st%rho(ip, 3), -st%rho(ip,4)) * (st%rho(ip, 2) * bij(ip,1) + st%rho(ip, 1) * bij(ip,2)) &
+
+         tmp = -cmplx(st%rho(ip, 3), st%rho(ip,4)) * (st%rho(ip, 2) * bij(ip,1) + st%rho(ip, 1) * bij(ip,2)) &
        + (M_TWO *st%rho(ip, 1) * st%rho(ip, 2)  - (st%rho(ip, 3)**2 + st%rho(ip, 4)**2)) * bij(ip, 3) &
-               + (cmplx(st%rho(ip, 3),-st%rho(ip,4)))**2 * R_CONJ(bij(ip,3))
+               + (cmplx(st%rho(ip, 3),st%rho(ip,4)))**2 * R_CONJ(bij(ip,3))
   
          vxc(ip, 3) = vxc(ip, 3) + rr * R_REAL(tmp)
          vxc(ip, 4) = vxc(ip, 4) + rr * R_AIMAG(tmp) 
