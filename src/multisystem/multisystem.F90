@@ -92,36 +92,17 @@ contains
 
     system%namespace = namespace
 
-    !%Variable Systems
-    !%Type block
-    !%Section System
-    !%Description
-    !% List of systems that will be treated in the calculation.
-    !% The first column should be a string containing the system name.
-    !% The second column should be the system type. See below for a list of
-    !% available system types.
-    !%Option electronic 1
-    !% An electronic system. (NOT IMPLEMENTED)
-    !%Option maxwell 2
-    !% A maxwell system.
-    !%Option classical_particle 3
-    !% A classical particle. Used for testing purposes only.
-    !%Option charged_particle 4
-    !% A charged classical particle.
-    !%Option multisystem 5
-    !% A system containing other systems.
-    !%End
-    if (parse_block(system%namespace, 'Systems', blk) == 0) then
+    if (parse_block(system%namespace, factory%block_name(), blk) == 0) then
 
       do isys = 1, parse_block_n(blk)
         ! Parse system name and type
         call parse_block_string(blk, isys - 1, 0, system_name)
         if (len_trim(system_name) == 0) then
-          call messages_input_error(system%namespace, 'Systems', 'All systems must have a name.')
+          call messages_input_error(system%namespace, factory%block_name(), 'All systems must have a name.')
         end if
         do ic = 1, len(parser_varname_excluded_characters)
           if (index(system_name, parser_varname_excluded_characters(ic:ic)) /= 0) then
-            call messages_input_error(system%namespace, 'Systems', &
+            call messages_input_error(system%namespace, factory%block_name(), &
               'Illegal character ' // parser_varname_excluded_characters(ic:ic) // ' in system name', row=isys-1, column=0)
           end if
         end do
@@ -134,7 +115,7 @@ contains
         ! Create system
         sys => factory%create(system%namespace, system_name, system_type)
         if (.not. associated(sys)) then
-          call messages_input_error(system%namespace, 'Systems', 'Unknown system type.')
+          call messages_input_error(system%namespace, factory%block_name(), 'Unknown system type.')
         end if
 
         ! Check that the system is unique
@@ -142,7 +123,8 @@ contains
         do while (iter%has_next())
           other => iter%get_next()
           if (sys%namespace == other%namespace) then
-            call messages_input_error(system%namespace, 'Systems', 'Duplicated system in multisystem', row=isys-1, column=0)
+            call messages_input_error(system%namespace, factory%block_name(), 'Duplicated system in multisystem', &
+              row=isys-1, column=0)
           end if
         end do
 
@@ -151,7 +133,7 @@ contains
       end do
       call parse_block_end(blk)
     else
-      message(1) = "Input error while reading block Systems."
+      message(1) = "Input error while reading block "//trim(system%namespace%get())//"."//trim(factory%block_name())
       call messages_fatal(1, namespace=system%namespace)
     end if
 

@@ -27,7 +27,8 @@ module system_factory_abst_oct_m
 
   type, abstract :: system_factory_abst_t
   contains
-    procedure(system_factory_abst_create), deferred :: create
+    procedure(system_factory_abst_create),     deferred :: create
+    procedure(system_factory_abst_block_name), deferred :: block_name
   end type system_factory_abst_t
 
   abstract interface
@@ -41,6 +42,11 @@ module system_factory_abst_oct_m
       integer,                      intent(in) :: type
       class(system_t),              pointer    :: system
     end function system_factory_abst_create
+
+    character(len=80) function system_factory_abst_block_name(this)
+      import :: system_factory_abst_t
+      class(system_factory_abst_t), intent(in)    :: this
+    end function system_factory_abst_block_name
   end interface
 
 end module system_factory_abst_oct_m
