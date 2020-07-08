@@ -16,7 +16,7 @@ match ; Tot. Maxwell energy [step 10] ; LINEFIELD(Maxwell/td.general/maxwell_ene
 match ; Tot. Maxwell energy [step 30] ; LINEFIELD(Maxwell/td.general/maxwell_energy,  36, 3) ; 6.507108040161e-03
 match ; Tot. Maxwell energy [step 50] ; LINEFIELD(Maxwell/td.general/maxwell_energy,  56, 3) ; 6.506393701508e-03
 
-Precision  : 1.0e-12
+Precision  : 1.0e-6
 
 # E-field-x axis_x
 match ; Ex  (x=-10,y=  0,z=  0) [step 10] ; LINEFIELD(Maxwell/output_iter/td.0000010/e_field-x\.y=0\,z=0,  12, 2) ; -7.10399472246262E-020
