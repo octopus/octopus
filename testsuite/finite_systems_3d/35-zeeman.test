@@ -1,0 +1,48 @@
+# -*- coding: utf-8 mode: shell-script -*-
+
+Test     : Zeeman term for spinors
+Program    : octopus
+TestGroups  : short-run, finite_systems_3d
+Enabled  : Yes
+
+#These tests are here to check that the result of the Zeeman term is correct
+#hence, the magnetization value should never be changed, as this is an "exact" result"
+#Eneriges should be the same for all the tests
+#Due to small tolerance, there is a non-zero mz component because the initial starting point
+#is along mz.
+
+Input: 35-zeeman.01-mx.inp
+Precision: 1e-4
+match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
+match ; Total energy ; GREPFIELD(static/info, 'Total       =', 3) ; -0.50655774
+match ; External energy ; GREPFIELD(static/info, 'External    =', 3) ; -1.10994312
+match ; Eigenvalue   ; GREPFIELD(static/info, '1   --', 3) ; -0.276024
+Precision: 1.1e-6
+match ; mx           ; GREPFIELD(static/info, 'Local Magnetic Moments', 3, 2) ; 1.000000
+match ; my           ; GREPFIELD(static/info, 'Local Magnetic Moments', 4, 2) ; 0.000000
+Precision: 5e-4
+match ; mz           ; GREPFIELD(static/info, 'Local Magnetic Moments', 5, 2) ; 0.000000
+
+Input: 35-zeeman.02-my.inp
+Precision: 1e-4
+match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
+match ; Total energy ; GREPFIELD(static/info, 'Total       =', 3) ; -0.50655774
+match ; External energy ; GREPFIELD(static/info, 'External    =', 3) ; -1.10994312
+match ; Eigenvalue   ; GREPFIELD(static/info, '1   --', 3) ; -0.276024
+Precision: 1.1e-6
+match ; mx           ; GREPFIELD(static/info, 'Local Magnetic Moments', 3, 2) ; 0.000000
+match ; my           ; GREPFIELD(static/info, 'Local Magnetic Moments', 4, 2) ; 1.000000
+Precision: 5e-4
+match ; mz           ; GREPFIELD(static/info, 'Local Magnetic Moments', 5, 2) ; 0.000000
+
+Input: 35-zeeman.03-mxy.inp
+Precision : 1e-4
+match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
+match ; Total energy ; GREPFIELD(static/info, 'Total       =', 3) ; -0.50805891
+match ; External energy ; GREPFIELD(static/info, 'External    =', 3) ; -1.10994312
+match ; Eigenvalue   ; GREPFIELD(static/info, '1   --', 3) ; -0.277520
+Precision: 1.1e-6
+match ; mx           ; GREPFIELD(static/info, 'Local Magnetic Moments', 3, 2) ; 0.707106
+match ; my           ; GREPFIELD(static/info, 'Local Magnetic Moments', 4, 2) ; 0.707106
+Precision: 5e-4
+match ; mz           ; GREPFIELD(static/info, 'Local Magnetic Moments', 5, 2) ; 0.000000

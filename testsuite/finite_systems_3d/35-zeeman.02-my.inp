@@ -1,0 +1,27 @@
+CalculationMode = gs
+FromScratch = yes
+
+%Coordinates
+ 'H' | 0.0 | 0.0 | 0.0
+%
+PseudopotentialSet = hgh_lda
+
+Radius = 5.0
+Spacing = 0.4
+
+MaximumIter = 400
+
+SpinComponents = spinors
+
+%StaticMagneticField 
+ 0.0 | 1.0 | 0.0
+%
+
+ConvRelDens = 1e-5
+EigensolverTolerance = 1e-8
+EigensolverMaxIter = 50
+Mixing = 0.4
+
+FilterPotentials = filter_none
+
+RestartWrite = no
