@@ -1313,7 +1313,7 @@ contains
 
 
     if(present(units) .and. optional_default(print_units, .true.)) then
-      write(message(current_line), '(a, a, a)') trim(message(current_line)), ' ', trim(units_abbrev(units))
+      write(message(current_line), '(a, a, a)') trim(message(current_line)), ' ', trim(adjustl(units_abbrev(units)))
     end if
 
     if(present(new_line)) then
