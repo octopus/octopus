@@ -55,8 +55,9 @@ dist_share_DATA =                                                       \
 	08-coulomb_force.01-classical_helium.inp                        \
 	09-illegal_system_names.test                                    \
 	09-illegal_system_names.01-duplicated.inp                       \
-	09-illegal_system_names.02-illegal_character.inp                \
-	09-illegal_system_names.03-empty.inp                            \
+	09-illegal_system_names.02-empty.inp                            \
+	09-illegal_system_names.03-illegal_character.inp                \
+	09-illegal_system_names.04-white_space.inp                      \
 	99-carbon_hydrogen.test                                         \
 	99-carbon_hydrogen.01-gs.inp                                    \
 	99-carbon_hydrogen.02-td.inp                                    \

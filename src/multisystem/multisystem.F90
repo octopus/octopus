@@ -101,9 +101,9 @@ contains
           call messages_input_error(system%namespace, factory%block_name(), 'All systems must have a name')
         end if
         do ic = 1, len(parser_varname_excluded_characters)
-          if (index(system_name, parser_varname_excluded_characters(ic:ic)) /= 0) then
+          if (index(trim(system_name), parser_varname_excluded_characters(ic:ic)) /= 0) then
             call messages_input_error(system%namespace, factory%block_name(), &
-              'Illegal character ' // parser_varname_excluded_characters(ic:ic) // ' in system name', row=isys-1, column=0)
+              'Illegal character "' // parser_varname_excluded_characters(ic:ic) // '" in system name', row=isys-1, column=0)
           end if
         end do
         call parse_block_integer(blk, isys - 1, 1, system_type)
