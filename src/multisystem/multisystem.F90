@@ -98,7 +98,7 @@ contains
         ! Parse system name and type
         call parse_block_string(blk, isys - 1, 0, system_name)
         if (len_trim(system_name) == 0) then
-          call messages_input_error(system%namespace, factory%block_name(), 'All systems must have a name.')
+          call messages_input_error(system%namespace, factory%block_name(), 'All systems must have a name')
         end if
         do ic = 1, len(parser_varname_excluded_characters)
           if (index(system_name, parser_varname_excluded_characters(ic:ic)) /= 0) then

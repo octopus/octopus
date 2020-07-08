@@ -15,3 +15,8 @@ match ; Error message ; GREPCOUNT(err, 'Duplicated system in multisystem') ; 1
 FailingInput: 09-illegal_system_names.02-illegal_character.inp
 
 match ; Error message ; GREPCOUNT(err, 'Illegal character . in system name') ; 1
+
+
+FailingInput: 09-illegal_system_names.03-empty.inp
+
+match ; Error message ; GREPCOUNT(err, 'All systems must have a name') ; 1
