@@ -32,7 +32,9 @@ module interaction_partner_oct_m
   public ::                &
     interaction_partner_t, &
     partner_list_t,        &
-    partner_iterator_t
+    partner_iterator_t,    &
+    interaction_partner_get_is_replica, &
+    interaction_partner_set_is_replica
 
   !> Some interactions require a partner. This is usually a system, but it could
   !! also be some external entity, like an external field.
@@ -41,6 +43,8 @@ module interaction_partner_oct_m
     private
     type(namespace_t), public :: namespace
     type(clock_t),     public :: clock
+
+    logical :: is_replica = .false.
 
     type(integer_list_t), public :: supported_interactions_as_partner
 
@@ -51,6 +55,10 @@ module interaction_partner_oct_m
     procedure(interaction_partner_update_exposed_quantities),      deferred :: update_exposed_quantities
     procedure(interaction_partner_update_exposed_quantity),        deferred :: update_exposed_quantity
     procedure(interaction_partner_copy_quantities_to_interaction), deferred :: copy_quantities_to_interaction
+    procedure(interaction_partner_distribute_replicas), deferred :: distribute_replicas
+    procedure :: get_is_replica => interaction_partner_get_is_replica
+    procedure :: set_is_replica => interaction_partner_set_is_replica
+
   end type interaction_partner_t
 
   abstract interface
@@ -80,6 +88,12 @@ module interaction_partner_oct_m
       class(interaction_partner_t),     intent(inout) :: partner
       class(interaction_t),             intent(inout) :: interaction
     end subroutine interaction_partner_copy_quantities_to_interaction
+
+    ! ---------------------------------------------------------
+    subroutine interaction_partner_distribute_replicas(this)
+      import interaction_partner_t
+      class(interaction_partner_t),     intent(inout) :: this
+    end subroutine interaction_partner_distribute_replicas
 
   end interface
 
@@ -126,6 +140,29 @@ contains
 
     POP_SUB(partner_iterator_get_next)
   end function partner_iterator_get_next
+
+  ! ---------------------------------------------------------
+  logical function interaction_partner_get_is_replica(this)
+    class(interaction_partner_t),      intent(inout) :: this
+
+    PUSH_SUB(interaction_partner_get_is_replica)
+
+    interaction_partner_get_is_replica = this%is_replica
+
+    POP_SUB(interaction_partner_get_is_replica)
+  end function interaction_partner_get_is_replica
+
+  ! ---------------------------------------------------------
+  subroutine interaction_partner_set_is_replica(this, is_replica)
+    class(interaction_partner_t),      intent(inout) :: this
+    logical,                   intent(in) :: is_replica
+
+    PUSH_SUB(interaction_partner_set_is_replica)
+
+    this%is_replica = is_replica
+
+    POP_SUB(interaction_partner_set_is_replica)
+  end subroutine interaction_partner_set_is_replica
 
 end module interaction_partner_oct_m
 

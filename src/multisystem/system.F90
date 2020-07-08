@@ -65,6 +65,7 @@ module system_oct_m
     procedure :: init_clocks => system_init_clocks
     procedure :: reset_clocks => system_reset_clocks
     procedure :: update_exposed_quantities => system_update_exposed_quantities
+    procedure :: distribute_replicas => system_distribute_replicas
     procedure :: init_propagator => system_init_propagator
     procedure :: init_all_interactions => system_init_all_interactions
     procedure :: update_interactions => system_update_interactions
@@ -763,6 +764,17 @@ contains
 
     POP_SUB(system_iterator_get_next)
   end function system_iterator_get_next
+
+  ! ---------------------------------------------------------
+  subroutine system_distribute_replicas(this)
+    class(system_t),     intent(inout) :: this
+    PUSH_SUB(system_distribute_replicas)
+
+    ! By default no replica distribution is defined. Child
+    ! classes that wish to change this behavior should override this method.
+
+    POP_SUB(system_distribute_replicas)
+  end subroutine system_distribute_replicas
 
 end module system_oct_m
 

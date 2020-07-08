@@ -35,6 +35,7 @@ module classical_particle_oct_m
   use profiling_oct_m
   use propagator_abst_oct_m
   use quantity_oct_m
+  use quickrnd_oct_m
   use space_oct_m
   use system_oct_m
   use unit_oct_m
@@ -75,6 +76,7 @@ module classical_particle_oct_m
     procedure :: store_current_status => classical_particle_store_current_status
     procedure :: update_quantity => classical_particle_update_quantity
     procedure :: update_exposed_quantity => classical_particle_update_exposed_quantity
+    procedure :: distribute_replicas => classical_particle_distribute_replicas
     procedure :: copy_quantities_to_interaction => classical_particle_copy_quantities_to_interaction
     procedure :: update_interactions_start => classical_particle_update_interactions_start
     procedure :: update_interactions_finish => classical_particle_update_interactions_finish
@@ -211,6 +213,8 @@ contains
       call parse_block_end(blk)
     end if
     call messages_print_var_value(stdout, 'ParticleInitialVelocity', this%vel(1:this%space%dim))
+
+    if(this%get_is_replica()) call this%distribute_replicas()
 
     POP_SUB(classical_particle_initial_conditions)
   end subroutine classical_particle_initial_conditions
@@ -629,6 +633,51 @@ contains
 
     POP_SUB(classical_particle_finalize)
   end subroutine classical_particle_finalize
+
+
+  ! ---------------------------------------------------------
+  subroutine classical_particle_distribute_replicas(this)
+    class(classical_particle_t),     intent(inout) :: this
+
+    integer :: replica_distribution_default, replica_distribution
+    integer :: idir, rand_gen_seed, seed, str_len, str_index
+    character (len=128) :: namespace, num
+    FLOAT :: rand_num
+
+    PUSH_SUB(classical_particle_distribute_replicas)
+
+    !%Variable ReplicaDistribution
+    !%Type integer
+    !%Section System
+    !%Description
+    !% The distribution to sample the initial conditions of the system replicas from.
+    !% If none specific then files containing the initial conditions of each replica must be specified (?)
+    !%Option uniform 1
+    !%Option gauss 2
+    !%Option input 3
+    !%End
+    !System Replica Distribution
+    !For now this just gets the centroid
+    replica_distribution_default = 1
+    call parse_variable(this%namespace, 'ReplicaDistribution', replica_distribution_default, replica_distribution)
+
+    write(message(1),'(a,i4)') "ReplicaDistribution is", replica_distribution
+    call messages_info(1)
+
+    str_len = len(trim(this%namespace%get()))
+    str_index = str_len - 7
+    namespace = this%namespace%get()
+    num = namespace(str_index:str_len)
+    read(num, '(I8)') rand_gen_seed
+    seed = rand_gen_seed * 10000
+
+    do idir = 1, this%space%dim
+      call quickrnd(seed, rand_num)
+      this%pos(idir) = this%pos(idir) + 0.01*this%pos(idir)*(rand_num - 0.5)
+    end do
+
+    POP_SUB(classical_particle_distribute_replicas)
+  end subroutine classical_particle_distribute_replicas
 
 end module classical_particle_oct_m
 

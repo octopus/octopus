@@ -81,15 +81,29 @@ contains
     class(multisystem_t),         pointer    :: system
 
     integer :: isys, system_type
-    character(len=128) :: system_name
+    character(len=128) :: system_name, replica_name
     type(block_t) :: blk
     class(system_t), pointer :: sys
+    integer :: system_replicas, system_replicas_default, jj
     
     PUSH_SUB(multisystem_constructor)
 
     SAFE_ALLOCATE(system)
 
     system%namespace = namespace
+
+    !%Variable SystemReplicas
+    !%Type integer
+    !%Section Time-Dependent::Propagation
+    !%Description
+    !% Number of system replicas
+    !%End
+
+    system_replicas_default = 0
+    call parse_variable(system%namespace, 'SystemReplicas', system_replicas_default, system_replicas)
+    write(message(1), '(a,a,a,i6)') 'Namespace: ', trim(system%namespace%get()), ' SystemReplicas:', system_replicas
+    call messages_info(1)
+
 
     !%Variable Systems
     !%Type block
@@ -132,6 +146,20 @@ contains
 
         ! Add system to list of systems
         call system%list%add(sys)
+
+        ! Add replicas to the list of systems
+        do jj = 1, system_replicas
+           write(replica_name,'(a,a,i8.8)') trim(system_name), '.', jj
+           call io_mkdir(replica_name, namespace=system%namespace)
+           sys => factory%create(system%namespace, replica_name, system_type)
+           call sys%set_is_replica(.true.)
+
+           if (.not. associated(sys)) then
+             call messages_input_error(system%namespace, 'Systems', 'Unknown system type.')
+           end if
+           call system%list%add(sys)
+        end do
+
       end do
       call parse_block_end(blk)
     else
