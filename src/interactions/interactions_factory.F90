@@ -22,6 +22,7 @@ module interactions_factory_oct_m
   use global_oct_m
   use interaction_oct_m
   use coulomb_force_oct_m
+  use current_from_particles_oct_m
   use gravity_oct_m
   use lorentz_force_oct_m
   use interaction_partner_oct_m
@@ -33,9 +34,10 @@ module interactions_factory_oct_m
   public :: interactions_factory_t
 
   integer, parameter, public :: &
-    GRAVITY          = 1,       &
-    LORENTZ_FORCE    = 2,       &
-    COULOMB_FORCE    = 3
+    GRAVITY                = 1, &
+    LORENTZ_FORCE          = 2, &
+    COULOMB_FORCE          = 3, &
+    CURRENT_FROM_PARTICLES = 4
 
   type, extends(interactions_factory_abst_t) :: interactions_factory_t
   contains
@@ -102,13 +104,17 @@ contains
     !%Option gravity 1
     !%  (interaction type)
     !% Gravity interaction between two masses.
-    !%Option lorenz_force 2
+    !%Option lorentz_force 2
     !%  (interaction type)
-    !% Lorenz force resulting from an EM field acting on a moving charge.
+    !% Lorentz force resulting from an EM field acting on a moving charge.
     !%Option coulomb_force 3
     !%  (interaction type)
     !% Coulomb force between two charged particles.
+    !%Option current_from_particles 4
+    !%  (interaction type)
+    !% Current density for the Maxwell system from smeared-out classical charged particles.
     !%End
+
     select case (type)
     case (GRAVITY)
       interaction => gravity_t(partner)
@@ -116,6 +122,8 @@ contains
       interaction => coulomb_force_t(partner)
     case (LORENTZ_FORCE)
       interaction => lorentz_force_t(partner)
+    case (CURRENT_FROM_PARTICLES)
+      interaction => current_from_particles_t(partner)
     case default
       ! This should never happen, as this is handled in
       ! interactions_factory_abst_create_interactions
@@ -137,6 +145,8 @@ contains
     case (COULOMB_FORCE)
       mode = ALL_PARTNERS
     case (LORENTZ_FORCE)
+      mode = ALL_PARTNERS
+    case (CURRENT_FROM_PARTICLES)
       mode = ALL_PARTNERS
     case default
       message(1) = "Unknown interaction type"

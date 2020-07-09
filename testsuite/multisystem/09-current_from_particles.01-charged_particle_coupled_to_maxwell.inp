@@ -1,0 +1,119 @@
+# ----- Calculation mode and parallelization ----------------------------------
+
+Debug = trace
+
+CalculationMode   = td
+RestartWrite = no
+ExperimentalFeatures = yes
+
+Dimensions = 3
+
+%Systems
+  'Maxwell' | maxwell
+  'ChargedParticle1' | charged_particle
+  'ChargedParticle2' | charged_particle
+%
+
+%Interactions
+ lorentz_force | all_partners
+ coulomb_force | all_partners
+ current_from_particles | all_partners
+%
+
+
+# ----- Charged particle ------------------------------------------------------
+
+ChargedParticle1.ParticleMass = 1
+ChargedParticle1.ParticleCharge = 1
+
+%ChargedParticle1.ParticleInitialPosition
+ 1 | 0.0001 | 0.0001
+%
+%ChargedParticle1.ParticleInitialVelocity
+ 0 | 0 | 0.01
+%
+
+ChargedParticle1.TDSystemPropagator = exp_mid
+
+ChargedParticle2.ParticleMass = 1
+ChargedParticle2.ParticleCharge = 1
+
+%ChargedParticle2.ParticleInitialPosition
+ 0.0001 | 0.0001 | 0.0001
+%
+%ChargedParticle2.ParticleInitialVelocity
+ 0 | 0 | 0.01
+%
+
+ChargedParticle2.TDSystemPropagator = exp_mid
+
+
+
+# ----- Maxwell variables -----------------------------------------------------
+
+Maxwell.ParDomains = auto
+Maxwell.ParStates  = no
+
+HamiltonianOperator = faraday_ampere
+
+Maxwell.TDSystemPropagator = exp_mid
+
+%MaxwellBoundaryConditions
+ zero | zero | zero
+%
+
+%MaxwellAbsorbingBoundaries
+ not_absorbing | not_absorbing | not_absorbing
+%
+
+# ----- Maxwell box variables -------------------------------------------------
+
+lsize_mx = 12.0
+dx_mx    = 0.5
+
+Maxwell.BoxShape   = parallelepiped
+
+%Maxwell.Lsize
+ lsize_mx | lsize_mx | lsize_mx
+%
+
+%Maxwell.Spacing
+ dx_mx | dx_mx | dx_mx
+%
+
+
+# ----- Output variables ------------------------------------------------------
+
+OutputFormat = plane_x + plane_y + plane_z + vtk + xyz + axis_x
+
+
+# ----- Maxwell output variables ----------------------------------------------
+
+MaxwellOutput = electric_field + magnetic_field + maxwell_energy_density
+
+MaxwellOutputInterval = 50
+MaxwellTDOutput       = maxwell_energy + maxwell_fields
+
+%MaxwellFieldsCoordinate
+  0.00 | 0.00 | 0.00
+%
+
+
+# ----- Time step variables ---------------------------------------------------
+
+TDTimeStep = 0.2
+TDMaxSteps = 10
+
+
+# ----- Spatially constant magnetic field -------------------------------------
+
+Ez           = 0.00000000
+By           = 0.00000000
+
+%UserDefinedConstantSpatialMaxwellField
+0 | 0 | Ez | 0 | By | 0 | "time_function"
+%
+
+%TDFunctions
+"time_function" | tdf_cw | 1.0
+%

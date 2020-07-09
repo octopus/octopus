@@ -67,7 +67,7 @@ contains
 
     SAFE_ALLOCATE(this)
 
-    this%label = "lorenz_force"
+    this%label = "lorentz_force"
 
     this%partner => partner
 
@@ -80,7 +80,7 @@ contains
     nullify(this%system_pos)
     nullify(this%system_vel)
 
-    ! The Lorenz force needs the E and B field of the interaction partner at the particle position
+    ! The Lorentz force needs the E and B field of the interaction partner at the particle position
     this%n_partner_quantities = 2
     SAFE_ALLOCATE(this%partner_quantities(this%n_partner_quantities))
     this%partner_quantities(1) = E_FIELD

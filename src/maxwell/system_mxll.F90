@@ -24,6 +24,7 @@ module system_mxll_oct_m
   use current_oct_m
   use distributed_oct_m
   use geometry_oct_m
+  use current_from_particles_oct_m
   use interactions_factory_oct_m
   use lorentz_force_oct_m
   use global_oct_m
@@ -106,6 +107,7 @@ module system_mxll_oct_m
     procedure :: output_start => system_mxll_output_start
     procedure :: output_write => system_mxll_output_write
     procedure :: output_finish => system_mxll_output_finish
+    procedure :: update_interactions_finish => system_mxll_update_interactions_finish
     final :: system_mxll_finalize
   end type system_mxll_t
 
@@ -173,11 +175,17 @@ contains
     call hamiltonian_mxll_init(this%hm, this%namespace, this%gr, this%st)
     call profiling_out(prof)
 
+    SAFE_ALLOCATE(this%rs_current_density_ext_t1(1:this%gr%mesh%np_part,1:this%st%dim))
+    SAFE_ALLOCATE(this%rs_current_density_ext_t2(1:this%gr%mesh%np_part,1:this%st%dim))
+    SAFE_ALLOCATE(this%rs_charge_density_ext_t1(1:this%gr%mesh%np_part))
+    SAFE_ALLOCATE(this%rs_charge_density_ext_t2(1:this%gr%mesh%np_part))
+
     this%quantities(E_FIELD)%required = .true.
     this%quantities(B_FIELD)%required = .true.
 
     call mesh_interpolation_init(this%mesh_interpolate, this%gr%mesh)
 
+    call this%supported_interactions%add(CURRENT_FROM_PARTICLES)
     call this%supported_interactions_as_partner%add(LORENTZ_FORCE)
 
     POP_SUB(system_mxll_init)
@@ -215,6 +223,8 @@ contains
     PUSH_SUB(system_mxll_init_interaction)
 
     select type (interaction)
+    type is (current_from_particles_t)
+      call interaction%init(this%space%dim, this%gr)
     class default
       ! Currently Maxwell system does not know any type of interaction
       message(1) = "Trying to initialize an unsupported interaction by Maxwell."
@@ -395,10 +405,6 @@ contains
 
     select case(operation)
     case (EXPMID_START)
-      SAFE_ALLOCATE(this%rs_current_density_ext_t1(1:this%gr%mesh%np_part,1:this%st%dim))
-      SAFE_ALLOCATE(this%rs_current_density_ext_t2(1:this%gr%mesh%np_part,1:this%st%dim))
-      SAFE_ALLOCATE(this%rs_charge_density_ext_t1(1:this%gr%mesh%np_part))
-      SAFE_ALLOCATE(this%rs_charge_density_ext_t2(1:this%gr%mesh%np_part))
 
       ! This variable is used to compute the elapsed time during the time-step.
       ! This is incorrect when there is more than one system, as the operations for the different systems
@@ -406,10 +412,6 @@ contains
       this%etime = loct_clock()
 
     case (EXPMID_FINISH)
-      SAFE_DEALLOCATE_A(this%rs_current_density_ext_t1)
-      SAFE_DEALLOCATE_A(this%rs_current_density_ext_t2)
-      SAFE_DEALLOCATE_A(this%rs_charge_density_ext_t1)
-      SAFE_DEALLOCATE_A(this%rs_charge_density_ext_t2)
 
     case (EXPMID_PREDICT_DT_2)  ! predict: psi(t+dt/2) = 0.5*(U_H(dt) psi(t) + psi(t)) or via extrapolation
       ! Empty for the moment
@@ -628,6 +630,32 @@ contains
     POP_SUB(system_mxll_output_finish)
   end subroutine system_mxll_output_finish
 
+
+  ! ---------------------------------------------------------
+  subroutine system_mxll_update_interactions_finish(this)
+    class(system_mxll_t), intent(inout) :: this
+
+    type(interaction_iterator_t) :: iter
+
+    PUSH_SUB(system_mxll_update_interactions_finish)
+
+    ! set total current acting on the Maxwell system to zero
+    this%rs_current_density_ext_t1 = M_z0
+
+    ! Now we handle the current contributions from the interactions that Maxwell knows
+    call iter%start(this%interactions)
+    do while (iter%has_next())
+      select type (interaction => iter%get_next())
+      type is (current_from_particles_t)
+        write(*,*) 'current update in system_mxll_update_interactions_finish'
+        this%rs_current_density_ext_t1 = this%rs_current_density_ext_t1 + interaction%current_rs_state
+      end select
+    end do
+
+    POP_SUB(system_mxll_update_interactions_finish)
+  end subroutine system_mxll_update_interactions_finish
+
+
   ! ---------------------------------------------------------
   subroutine system_mxll_finalize(this)
     type(system_mxll_t), intent(inout) :: this
@@ -654,6 +682,11 @@ contains
     call space_end(this%space)
 
     SAFE_DEALLOCATE_P(this%gr)
+
+    SAFE_DEALLOCATE_A(this%rs_current_density_ext_t1)
+    SAFE_DEALLOCATE_A(this%rs_current_density_ext_t2)
+    SAFE_DEALLOCATE_A(this%rs_charge_density_ext_t1)
+    SAFE_DEALLOCATE_A(this%rs_charge_density_ext_t2)
 
     POP_SUB(system_mxll_finalize)
   end subroutine system_mxll_finalize

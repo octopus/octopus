@@ -24,6 +24,7 @@ module charged_particle_oct_m
   use global_oct_m
   use interaction_oct_m
   use coulomb_force_oct_m
+  use current_from_particles_oct_m
   use lorentz_force_oct_m
   use interactions_factory_oct_m
   use io_oct_m
@@ -50,6 +51,7 @@ module charged_particle_oct_m
     private
 
     FLOAT :: charge
+    FLOAT :: charge_smearing
 
   contains
     procedure :: init_interaction => charged_particle_init_interaction
@@ -113,9 +115,25 @@ contains
     call parse_variable(namespace, 'ParticleCharge', M_ONE, this%charge)
     call messages_print_var_value(stdout, 'ParticleCharge', this%charge)
 
+    !%Variable ParticleChargeSmearing
+    !%Type float
+    !%Default 1.0
+    !%Section ClassicalParticles
+    !%Description
+    !% This parameter controls the smearing of the charge of a classical charged particle.
+    !%
+    !%End
+    call parse_variable(this%namespace, 'ParticleChargeSmearing', CNST(1.0), this%charge_smearing)
+    call messages_print_var_value(stdout, 'ParticleChargeSmearing', this%charge_smearing)
+
+
+    this%quantities(CHARGE)%required = .true.
+    this%quantities(CHARGE_SMEARING)%required = .true.
+
     call this%supported_interactions%add(LORENTZ_FORCE)
     call this%supported_interactions%add(COULOMB_FORCE)
     call this%supported_interactions_as_partner%add(COULOMB_FORCE)
+    call this%supported_interactions_as_partner%add(CURRENT_FROM_PARTICLES)
 
     POP_SUB(charged_particle_init)
   end subroutine charged_particle_init
@@ -240,7 +258,7 @@ contains
     PUSH_SUB(charged_particle_update_quantity)
 
     select case (iq)
-    case (CHARGE)
+    case (CHARGE, CHARGE_SMEARING)
       ! The charged particle has a charge, but it is not necessary to update it, as it does not change with time.
       call this%quantities(iq)%clock%set_time(requested_time)
     case default
@@ -260,7 +278,7 @@ contains
     PUSH_SUB(charged_particle_update_exposed_quantity)
 
     select case (iq)
-    case (CHARGE)
+    case (CHARGE, CHARGE_SMEARING)
       ! The charged particle has a charge, but it is not necessary to update it, as it does not change with time.
       call partner%quantities(iq)%clock%set_time(requested_time)
     case default
@@ -282,6 +300,11 @@ contains
     type is (coulomb_force_t)
       interaction%partner_charge = partner%charge
       interaction%partner_pos = partner%pos
+    type is (current_from_particles_t)
+      interaction%partner_charge = partner%charge
+      interaction%partner_charge_smearing = partner%charge_smearing
+      interaction%partner_pos = partner%pos
+      interaction%partner_vel = partner%vel
     class default
       call partner%classical_particle_t%copy_quantities_to_interaction(interaction)
     end select

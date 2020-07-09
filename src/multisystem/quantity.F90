@@ -37,7 +37,8 @@ module quantity_oct_m
     B_FIELD                      =  8,  &
     MASS                         =  9,  &
     CHARGE                       = 10,  &
-    MAX_QUANTITIES               = 10
+    CHARGE_SMEARING              = 11,  &
+    MAX_QUANTITIES               = 11
 
   !> Systems can expose quantities that can be used to calculate interactions
   !! with other systems.
