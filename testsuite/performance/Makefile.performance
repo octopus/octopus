@@ -15,11 +15,16 @@ bin_testsuite ?= ./
 
 TESTS ?= all
 
-REFERENCE_FILE ?= reference.yaml
-
 RUN_FOLDER=runs
 
-all: testsuite timings.yaml combinations.yaml
+REFERENCE_FILE ?= reference.yaml
+
+TIMINGS_FILE = timing.yaml
+COMBINATIONS_FILE = combinations.yaml
+DATA_FILE = performancedata.yaml
+
+
+all: testsuite $(TIMINGS_FILE) $(COMBINATIONS_FILE) $(DATA_FILE)
 testsuite: $(targets)
 
 targets.inc:
@@ -30,19 +35,24 @@ targets.inc:
 	cd $(@D)/.. && $(MPIEXEC) $(OCTOPUS) > log.out 2> log.err
 	@cd $(@D) && bash process_timings.sh
 
-timings.yaml: $(targets)
+$(TIMINGS_FILE): $(targets)
 	@echo Creating $@
 	@for i in $(RUN_FOLDER)/*/*; do [ -d $$i ] && echo $$i || :; done > _runlist
 	@<_runlist xargs -n1 sh -c 'for i do printf "%s\nrun: $${i#$(RUN_FOLDER)/}\n" ---; cat $$i/profiling/time.yaml; done' '' > $@
 	@rm -f _runlist
 
-combinations.yaml: timings.yaml
+$(COMBINATIONS_FILE): $(targets)
 	@echo Creating $@
 	@for i in $(RUN_FOLDER)/*; do cat $$i/combinations.yaml; done > $@
 
-comparison: $(REFERENCE_FILE) timings.yaml
+$(DATA_FILE): $(TIMINGS_FILE) $(COMBINATIONS_FILE)
+	@echo Creating $@
+	@echo --- > $@
+	@cat $(COMBINATIONS_FILE) $(TIMINGS_FILE) >> $@
+
+comparison: $(REFERENCE_FILE) $(TIMINGS_FILE)
 	@echo Comparing results to $(REFERENCE_FILE).
-	@python3 ${bin_testsuite}/compare_results.py $(REFERENCE_FILE) timings.yaml
+	@python3 ${bin_testsuite}/compare_results.py $(REFERENCE_FILE) $(TIMINGS_FILE)
 
 clean:
-	rm -rf runs targets.inc timings.yaml combinations.yaml
+	rm -rf runs targets.inc $(TIMINGS_FILE) $(COMBINATIONS_FILE) $(DATA_FILE)
