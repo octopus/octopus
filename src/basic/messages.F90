@@ -1298,17 +1298,28 @@ contains
     type(unit_t),     optional, intent(in) :: units
     logical,          optional, intent(in) :: print_units
 
-    character(len=10) :: number
-    integer(8) :: val_conv
+    character(len=20) :: number
+    FLOAT      :: val_conv_float
 
-    val_conv = val
-    if(present(units)) val_conv = int(nint(units_from_atomic(units, dble(val))), 8)
+    if(present(units)) then
+      val_conv_float = units_from_atomic(units, dble(val))
 
-    if(present(fmt)) then
-      write(message(current_line), '(a, '//trim(fmt)//')') trim(message(current_line)), val_conv
+      if(present(fmt)) then
+        write(message(current_line), '(a, '//trim(fmt)//')') trim(message(current_line)), val_conv_float
+      else
+        write(number, '(f15.3)') val_conv_float
+        write(message(current_line), '(3a)') trim(message(current_line)), ' ', trim(adjustl(number))
+      end if
+
     else
-      write(number, '(i10)') val_conv
-      write(message(current_line), '(3a)') trim(message(current_line)), ' ', trim(adjustl(number))
+
+      if(present(fmt)) then
+        write(message(current_line), '(a, '//trim(fmt)//')') trim(message(current_line)), val
+      else
+        write(number, '(i10)') val
+        write(message(current_line), '(3a)') trim(message(current_line)), ' ', trim(adjustl(number))
+      end if
+
     end if
 
 
