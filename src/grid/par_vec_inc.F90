@@ -37,7 +37,7 @@ subroutine X(vec_scatter)(vp, root, v_local, v)
   R_TYPE,  allocatable :: v_tmp(:)  !< Send buffer.
 
   PUSH_SUB(X(vec_scatter))
-  call profiling_in(prof_scatter, "X(VEC_SCATTER)")
+  call profiling_in(prof_scatter, TOSTRING(X(VEC_SCATTER)))
 
   ! Skip the MPI call if domain parallelization is not used.
   if(vp%npart < 2) then
@@ -150,7 +150,7 @@ subroutine X(vec_allgather)(vp, v, v_local)
   R_TYPE,  allocatable :: v_tmp(:)  !< Receive buffer.
 
   PUSH_SUB(X(vec_allgather))
-  call profiling_in(prof_allgather, "X(VEC_ALLGATHER)")
+  call profiling_in(prof_allgather, TOSTRING(X(VEC_ALLGATHER)))
 
   ! Skip the MPI call if domain parallelization is not used.
   if(vp%npart < 2) then

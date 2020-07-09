@@ -90,7 +90,7 @@ subroutine X(hamiltonian_elec_apply_batch) (hm, namespace, mesh, psib, hpsib, te
   integer :: terms_
   type(projection_t) :: projection
   
-  call profiling_in(prof_hamiltonian, "X(HAMILTONIAN)")
+  call profiling_in(prof_hamiltonian, TOSTRING(X(HAMILTONIAN)))
   PUSH_SUB(X(hamiltonian_elec_apply_batch))
 
   ASSERT(psib%status() == hpsib%status())
@@ -151,7 +151,7 @@ subroutine X(hamiltonian_elec_apply_batch) (hm, namespace, mesh, psib, hpsib, te
 
   if(bitand(TERM_KINETIC, terms_) /= 0) then
     ASSERT(associated(hm%hm_base%kinetic))
-    call profiling_in(prof_kinetic_start, "X(KINETIC_START)")
+    call profiling_in(prof_kinetic_start, TOSTRING(X(KINETIC_START)))
     call X(derivatives_batch_start)(hm%hm_base%kinetic, hm%der, epsib, hpsib, handle, set_bc = .false., factor = -M_HALF/hm%mass)
     call profiling_out(prof_kinetic_start)
   end if
@@ -163,7 +163,7 @@ subroutine X(hamiltonian_elec_apply_batch) (hm, namespace, mesh, psib, hpsib, te
   end if
 
   if(bitand(TERM_KINETIC, terms_) /= 0) then
-    call profiling_in(prof_kinetic_finish, "X(KINETIC_FINISH)")
+    call profiling_in(prof_kinetic_finish, TOSTRING(X(KINETIC_FINISH)))
     call X(derivatives_batch_finish)(handle)
     call profiling_out(prof_kinetic_finish)
   else
@@ -202,7 +202,7 @@ subroutine X(hamiltonian_elec_apply_batch) (hm, namespace, mesh, psib, hpsib, te
   
   if (bitand(TERM_OTHERS, terms_) /= 0) then
 
-    call profiling_in(prof_exx, "X(EXCHANGE_OPERATOR)")
+    call profiling_in(prof_exx, TOSTRING(X(EXCHANGE_OPERATOR)))
     select case(hm%theory_level)
 
     case(HARTREE)

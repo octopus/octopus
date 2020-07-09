@@ -27,7 +27,7 @@ subroutine X(cholesky)(n, a, bof, err_code)
 
   integer :: info
 
-  call profiling_in(cholesky_prof, "X(CHOLESKY)")
+  call profiling_in(cholesky_prof, TOSTRING(X(CHOLESKY)))
   PUSH_SUB(X(cholesky))
 
   ASSERT(n > 0)
@@ -88,7 +88,7 @@ subroutine X(geneigensolve)(n, a, b, e, preserve_mat, bof, err_code)
 #endif
   R_TYPE, allocatable :: work(:), diag(:)
 
-  call profiling_in(eigensolver_prof, "X(DENSE_EIGENSOLVER)")
+  call profiling_in(eigensolver_prof, TOSTRING(X(DENSE_EIGENSOLVER)))
   PUSH_SUB(X(geneigensolve))
 
   ASSERT(n > 0)
@@ -443,7 +443,7 @@ subroutine X(eigensolve)(n, a, e, bof, err_code)
 #endif
 
   PUSH_SUB(X(eigensolve))
-  call profiling_in(eigensolver_prof, "X(DENSE_EIGENSOLVER)")
+  call profiling_in(eigensolver_prof, TOSTRING(X(DENSE_EIGENSOLVER)))
 
   ASSERT(n > 0)
   ASSERT(not_in_openmp())

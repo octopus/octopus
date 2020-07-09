@@ -34,7 +34,7 @@ subroutine X(xc_KLI_solve) (namespace, mesh, gr, hm, st, is, oep, first)
   R_TYPE, allocatable :: psi(:, :), bb(:,:)
   R_TYPE, allocatable :: phi1(:,:,:)
   
-  call profiling_in(C_PROFILING_XC_KLI, "X(XC_KLI)")
+  call profiling_in(C_PROFILING_XC_KLI, TOSTRING(X(XC_KLI)))
 
   if((st%parallel_in_states) .and. (oep%has_photons)) call messages_not_implemented("Photonic KLI not parallel in states")
 

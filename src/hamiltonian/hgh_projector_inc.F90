@@ -70,7 +70,7 @@ subroutine X(hgh_project_bra)(mesh, sm, hgh_p, dim, reltype, psi, uvpsi)
   type(profile_t), save :: prof
   integer :: block_size, sp, ep, size
 
-  call profiling_in(prof, "X(HGH_PROJECT_BRA)")
+  call profiling_in(prof, TOSTRING(X(HGH_PROJECT_BRA)))
 
   ! This routine uses blocking to optimize cache usage. One block of
   ! |phi> is loaded in cache L1 and then then we calculate the dot
@@ -158,7 +158,7 @@ subroutine X(hgh_project_ket)(hgh_p, ll, lmax, dim, reltype, uvpsi, ppsi)
   integer :: block_size, sp, ep, size
   type(profile_t), save :: prof
 
-  call profiling_in(prof, "X(HGH_PROJECT_KET)")
+  call profiling_in(prof, TOSTRING(X(HGH_PROJECT_KET)))
 
 #ifndef R_TCOMPLEX
   ASSERT(reltype == 0)

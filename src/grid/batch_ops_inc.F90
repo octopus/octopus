@@ -32,7 +32,7 @@ subroutine X(batch_axpy_const)(np, aa, xx, yy)
   CMPLX :: zaa
 
   PUSH_SUB(X(batch_axpy_const))
-  call profiling_in(prof, "X(BATCH_AXPY_CONST)")
+  call profiling_in(prof, TOSTRING(X(BATCH_AXPY_CONST)))
 
   call xx%check_compatibility_with(yy)
 #ifdef R_TCOMPLEX
@@ -128,7 +128,7 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy, a_start, a_full)
   type(accel_kernel_t), save :: kernel
   
   PUSH_SUB(X(batch_axpy_vec))
-  call profiling_in(prof, "X(BATCH_AXPY_VEC)")
+  call profiling_in(prof, TOSTRING(X(BATCH_AXPY_VEC)))
 
   call xx%check_compatibility_with(yy)
 #ifdef R_TCOMPLEX
@@ -249,7 +249,7 @@ subroutine X(batch_axpy_function)(np, aa, xx, psi, nst)
   integer :: global_sizes(3)
 
   PUSH_SUB(X(batch_axpy_function))
-  call profiling_in(prof, "X(BATCH_AXPY_FUNCTION)")
+  call profiling_in(prof, TOSTRING(X(BATCH_AXPY_FUNCTION)))
 
   ASSERT(xx%dim == ubound(psi,dim=2))
 
@@ -375,7 +375,7 @@ subroutine X(batch_scal_vec)(np, aa, xx, a_start, a_full)
   type(accel_kernel_t), save :: kernel
   
   PUSH_SUB(X(batch_scal_vec))
-  call profiling_in(prof, "X(BATCH_SCAL)")
+  call profiling_in(prof, TOSTRING(X(BATCH_SCAL)))
 
 #ifdef R_TCOMPLEX
   !if aa is complex, the functions must be complex
@@ -485,7 +485,7 @@ subroutine X(batch_xpay_vec)(np, xx, aa, yy, a_start, a_full)
   type(accel_kernel_t), save :: kernel
   
   PUSH_SUB(X(batch_xpay_vec))
-  call profiling_in(prof, "X(BATCH_XPAY)")
+  call profiling_in(prof, TOSTRING(X(BATCH_XPAY)))
 
   call xx%check_compatibility_with(yy)
 #ifdef R_TCOMPLEX
@@ -631,7 +631,7 @@ subroutine X(batch_set_state1)(this, ist, np, psi)
   type(accel_mem_t) :: tmp
   FLOAT, allocatable :: zpsi(:)
   
-  call profiling_in(prof, "X(BATCH_SET_STATE)")
+  call profiling_in(prof, TOSTRING(X(BATCH_SET_STATE)))
 
   PUSH_SUB(X(batch_set_state1))
 
@@ -758,7 +758,7 @@ subroutine X(batch_get_state1)(this, ist, np, psi)
 
   PUSH_SUB(X(batch_get_state1))
 
-  call profiling_in(prof, "X(BATCH_GET_STATE)")
+  call profiling_in(prof, TOSTRING(X(BATCH_GET_STATE)))
 
   ASSERT(ubound(psi, dim = 1) >= np)
   ASSERT(ist >= 1 .and. ist <= this%nst_linear)
@@ -907,7 +907,7 @@ subroutine X(batch_get_points)(this, sp, ep, psi)
   integer :: idim, ist, ii, ip
   
   PUSH_SUB(X(batch_get_points))
-  call profiling_in(prof, "X(GET_POINTS)")
+  call profiling_in(prof, TOSTRING(X(GET_POINTS)))
 
 #ifdef R_TREAL
   ! cannot get a real value from a complex batch
@@ -985,7 +985,7 @@ subroutine X(batch_set_points)(this, sp, ep, psi)
 
   PUSH_SUB(X(batch_set_points))
 
-  call profiling_in(prof, "X(SET_POINTS)")
+  call profiling_in(prof, TOSTRING(X(SET_POINTS)))
 
 #ifdef R_TCOMPLEX
   ! cannot set a real batch with complex values
@@ -1067,7 +1067,7 @@ subroutine X(batch_mul)(np, ff,  xx, yy)
 #endif
   
   PUSH_SUB(X(batch_mul))
-  call profiling_in(prof, "X(BATCH_MUL)")
+  call profiling_in(prof, TOSTRING(X(BATCH_MUL)))
 
   call xx%check_compatibility_with(yy)
 #ifdef R_TCOMPLEX

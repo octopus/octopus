@@ -106,7 +106,7 @@ subroutine X(pert_apply)(this, namespace, gr, geo, hm, ik, f_in, f_out, set_bc)
 
   PUSH_SUB(X(pert_apply))
 
-  call profiling_in(prof, "X(PERT_APPLY)")
+  call profiling_in(prof, TOSTRING(X(PERT_APPLY)))
 
   ASSERT(this%dir /= -1)
 
