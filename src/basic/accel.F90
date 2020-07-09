@@ -803,11 +803,11 @@ contains
 #endif
 
       call messages_write('      Device memory          :')
-      call messages_write(accel%global_memory_size, units = unit_megabytes)
+      call messages_write(accel%global_memory_size, units=unit_megabytes)
       call messages_new_line()
 
       call messages_write('      Local/shared memory    :')
-      call messages_write(accel%local_memory_size, units = unit_kilobytes)
+      call messages_write(accel%local_memory_size, units=unit_kilobytes)
       call messages_new_line()
       
     

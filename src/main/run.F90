@@ -151,12 +151,13 @@ contains
 
     call restart_module_init(namespace)
 
+    call unit_system_init(namespace)
+
     call accel_init(mpi_world, namespace)
 
     ! initialize FFTs
     call fft_all_init(namespace)
 
-    call unit_system_init(namespace)
 
     if(calc_mode_id == CM_TEST) then
       call test_run(namespace)
