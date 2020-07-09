@@ -1,0 +1,11 @@
+# -*- coding: utf-8 mode: shell-script -*-
+#
+
+CalculationMode = gs
+
+TheoryLevel = rdmft
+
+%Coordinates
+"C" | 0 | 0 | 0
+%
+

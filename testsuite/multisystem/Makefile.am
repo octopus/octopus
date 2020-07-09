@@ -27,18 +27,21 @@ dist_share_DATA =                                                       \
 	01-nested_systems.03-four_levels.inp                            \
 	02-interaction_graph.test                                       \
 	02-interaction_graph.01-three_body.inp                          \
-	03-propagation_verlet.test                                      \
-	03-propagation_verlet.01-two_body.inp                           \
-	03-propagation_verlet.02-three_body.inp                         \
-	03-propagation_verlet.03-two_body_different_time_steps.inp      \
-	03-propagation_verlet.04-three_body_different_time_steps.inp    \
-	04-propagation_beeman.test                                      \
-	04-propagation_beeman.01-two_body.inp                           \
-	04-propagation_beeman.02-three_body.inp                         \
-	04-propagation_beeman.03-two_body_different_time_steps.inp      \
-	04-propagation_beeman.04-three_body_different_time_steps.inp    \
-	05-lorentz-force.test                                           \
-	05-lorentz-force.01-charged_particle_coupled_to_maxwell.inp     \
+	03-interactions_creation.test                                   \
+	03-interactions_creation.01-case1.inp                           \
+	03-interactions_creation.02-case2.inp                           \
+	03-interactions_creation.03-case3.inp                           \
+	03-interactions_creation.04-case4.inp                           \
+	04-propagation_verlet.test                                      \
+	04-propagation_verlet.01-two_body.inp                           \
+	04-propagation_verlet.02-three_body.inp                         \
+	04-propagation_verlet.03-two_body_different_time_steps.inp      \
+	04-propagation_verlet.04-three_body_different_time_steps.inp    \
+	05-propagation_beeman.test                                      \
+	05-propagation_beeman.01-two_body.inp                           \
+	05-propagation_beeman.02-three_body.inp                         \
+	05-propagation_beeman.03-two_body_different_time_steps.inp      \
+	05-propagation_beeman.04-three_body_different_time_steps.inp    \
 	06-propagation_expmid.test                                      \
 	06-propagation_expmid.01-two_body.inp                           \
 	06-propagation_expmid.02-three_body.inp                         \
@@ -46,6 +49,10 @@ dist_share_DATA =                                                       \
 	06-propagation_expmid.04-three_body_different_time_steps.inp    \
 	06-propagation_expmid.05-two_body_verlet_half.inp               \
 	06-propagation_expmid.06-two_body_verlet.inp                    \
+	07-lorentz-force.test                                           \
+	07-lorentz-force.01-charged_particle_coupled_to_maxwell.inp     \
+	08-coulomb_force.test                                           \
+	08-coulomb_force.01-classical_helium.inp                        \
 	99-carbon_hydrogen.test                                         \
 	99-carbon_hydrogen.01-gs.inp                                    \
 	99-carbon_hydrogen.02-td.inp                                    \

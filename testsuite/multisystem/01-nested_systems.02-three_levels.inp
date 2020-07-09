@@ -12,41 +12,44 @@ Dimensions = 3
  "Earth" | multisystem
 %
 
-%SolarSystem.Earth.Systems
+%Earth.Systems
  "Terra" | classical_particle
  "Luna"  | classical_particle
+%
+
+%Interactions
+ gravity | all_partners
 %
 
 #Initial conditions are taken from https://ssd.jpl.nasa.gov/horizons.cgi#top.
 # initial condition at time:
 # 2458938.500000000 = A.D. 2020-Mar-30 00:00:00.0000 TDB
 
-SolarSystem.Earth.Terra.ClassicalParticleMass = 5.97237e24
-%SolarSystem.Earth.Terra.ClassicalParticleInitialPosition
+Terra.ParticleMass = 5.97237e24
+%Terra.ParticleInitialPosition
  -147364661998.16476 | -24608859261.610123 | 1665165.2801353487
 %
-%SolarSystem.Earth.Terra.ClassicalParticleInitialVelocity
+%Terra.ParticleInitialVelocity
  4431.136612956525 | -29497.611635546345 | 0.343475566161544
 %
-SolarSystem.Earth.Terra.TDSystemPropagator = verlet
 
-SolarSystem.Earth.Luna.ClassicalParticleMass = 7.342e22
-%SolarSystem.Earth.Luna.ClassicalParticleInitialPosition
+Luna.ParticleMass = 7.342e22
+%Luna.ParticleInitialPosition
  -147236396732.81906 | -24234200672.857853 | -11062799.286082389
 %
-%SolarSystem.Earth.Luna.ClassicalParticleInitialVelocity
+%Luna.ParticleInitialVelocity
  3484.6397238565924 | -29221.007409082802 | 82.53526338876684
 %
-SolarSystem.Earth.Luna.TDSystemPropagator = verlet
 
-SolarSystem.Sun.ClassicalParticleMass = 1.98855e30
-%SolarSystem.Sun.ClassicalParticleInitialPosition
+Sun.ParticleMass = 1.98855e30
+%Sun.ParticleInitialPosition
  0.0 | 0.0 | 0.0
 %
-%SolarSystem.Sun.ClassicalParticleInitialVelocity
+%Sun.ParticleInitialVelocity
  0.0 | 0.0 | 0.0
 %
-SolarSystem.Sun.TDSystemPropagator = verlet
+
+TDSystemPropagator = verlet
 
 sampling = 24 # Time-steps per day
 days = 3

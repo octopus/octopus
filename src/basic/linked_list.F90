@@ -21,7 +21,6 @@
 module linked_list_oct_m
   use global_oct_m
   use list_node_oct_m
-  use messages_oct_m
   implicit none
 
   private
@@ -40,6 +39,7 @@ module linked_list_oct_m
   !> list and a get_next method to the iterator.
   type :: linked_list_t
     private
+    integer, public :: size = 0
     class(list_node_t), pointer :: first_node => null()
     class(list_node_t), pointer :: last_node => null()
   contains
@@ -128,6 +128,7 @@ contains
       call this%last_node%set_next(new_node)
       this%last_node => new_node
     end if
+    this%size = this%size + 1
 
   end subroutine linked_list_add_node
 
@@ -180,6 +181,7 @@ contains
           call previous%set_next(next)
         end if
         deallocate(current)
+        this%size = this%size - 1
         exit
       end if
     end do
@@ -208,6 +210,7 @@ contains
     end do
     nullify(this%first_node)
     nullify(this%last_node)
+    this%size = 0
 
   end subroutine linked_list_empty
 
@@ -230,6 +233,7 @@ contains
       end if
       current => current%next()
     end do
+    lhs%size = rhs%size
 
   end subroutine linked_list_copy
 

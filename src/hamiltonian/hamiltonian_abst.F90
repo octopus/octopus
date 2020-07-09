@@ -41,8 +41,8 @@ module hamiltonian_abst_oct_m
     FLOAT :: spectral_middle_point
     FLOAT :: spectral_half_span
 
-    type(linked_list_t), public :: external_potentials !< List with all the external potentials
-    FLOAT, allocatable, public  :: v_ext_pot(:)        !< the potential comming from external potentials
+    type(list_t), public :: external_potentials  !< List with all the external potentials
+    FLOAT, allocatable, public  :: v_ext_pot(:)  !< the potential comming from external potentials
 
   contains
     procedure(is_hermitian),              deferred :: is_hermitian

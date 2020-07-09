@@ -76,3 +76,6 @@ omega = 1.5
 
 
 StatesPack = yes
+
+# We need to allow this on the GPU to run the second part of the test
+AllowCPUonly = yes

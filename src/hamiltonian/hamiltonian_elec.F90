@@ -36,7 +36,7 @@ module hamiltonian_elec_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_abst_oct_m
-  use interaction_abst_oct_m
+  use interaction_oct_m
   use interaction_partner_oct_m
   use kick_oct_m
   use kpoints_oct_m
@@ -518,24 +518,42 @@ contains
     if (hm%apply_packed .and. accel_is_enabled()) then
       ! Check if we can actually apply the hamiltonian packed
       if (gr%mesh%use_curvilinear) then
-        hm%apply_packed = .false.
-        call messages_write('Cannot use CUDA or OpenCL as curvilinear coordinates are used.')
-        call messages_warning(namespace=namespace)
+        if(accel_allow_CPU_only()) then
+          hm%apply_packed = .false.
+          call messages_write('Cannot use CUDA or OpenCL as curvilinear coordinates are used.')
+          call messages_warning(namespace=namespace)
+        else
+          call messages_write('Cannot use CUDA or OpenCL as curvilinear coordinates are used.', new_line = .true.)
+          call messages_write('Calculation will not be continued. To force execution, set AllowCPUonly = yes.' )
+          call messages_fatal(namespace=namespace)          
+        end if
       end if
 
       if(hm%bc%abtype == IMAGINARY_ABSORBING) then
-        hm%apply_packed = .false.
-        call messages_write('Cannot use CUDA or OpenCL as imaginary absorbing boundaries are enabled.')
-        call messages_warning(namespace=namespace)
+        if(accel_allow_CPU_only()) then
+          hm%apply_packed = .false.
+          call messages_write('Cannot use CUDA or OpenCL as imaginary absorbing boundaries are enabled.')
+          call messages_warning(namespace=namespace)
+        else
+          call messages_write('Cannot use CUDA or OpenCL as imaginary absorbing boundaries are enabled.', new_line = .true.)
+          call messages_write('Calculation will not be continued. To force execution, set AllowCPUonly = yes.' )
+          call messages_fatal(namespace=namespace)          
+        end if
       end if
 
       if (.not. simul_box_is_periodic(gr%mesh%sb)) then
         do il = 1, hm%ep%no_lasers
           if (laser_kind(hm%ep%lasers(il)) == E_FIELD_VECTOR_POTENTIAL) then
-            hm%apply_packed = .false.
-            call messages_write('Cannot use CUDA or OpenCL as a phase is applied to the states.')
-            call messages_warning(namespace=namespace)
-            exit
+            if(accel_allow_CPU_only()) then
+              hm%apply_packed = .false.
+              call messages_write('Cannot use CUDA or OpenCL as a phase is applied to the states.')
+              call messages_warning(namespace=namespace)
+              exit
+            else
+              call messages_write('Cannot use CUDA or OpenCL as a phase is applied to the states.', new_line = .true.)
+              call messages_write('Calculation will not be continued. To force execution, set AllowCPUonly = yes.' )
+              call messages_fatal(namespace=namespace)          
+            end if    
           end if
         end do
       end if
@@ -1144,15 +1162,27 @@ contains
     ! Check if projectors are still compatible with apply_packed on GPU
     if (this%apply_packed .and. accel_is_enabled()) then
       if (this%ep%non_local .and. .not. this%hm_base%apply_projector_matrices) then
-        this%apply_packed = .false.
-        call messages_write('Cannot use CUDA or OpenCL as relativistic pseudopotentials are used.')
-        call messages_warning(namespace=namespace)
+        if(accel_allow_CPU_only()) then
+          this%apply_packed = .false.
+          call messages_write('Cannot use CUDA or OpenCL as relativistic pseudopotentials are used.')
+          call messages_warning(namespace=namespace)
+        else
+          call messages_write('Cannot use CUDA or OpenCL as relativistic pseudopotentials are used.', new_line = .true.)
+          call messages_write('Calculation will not be continued. To force execution, set AllowCPUonly = yes.' )
+          call messages_fatal(namespace=namespace)          
+       end if
       end if
 
       if (hamiltonian_elec_base_projector_self_overlap(this%hm_base)) then
-        this%apply_packed = .false.
-        call messages_write('Cannot use CUDA or OpenCL as some pseudopotentials overlap with themselves.')
-        call messages_warning(namespace=namespace)
+        if(accel_allow_CPU_only()) then
+          this%apply_packed = .false.
+          call messages_write('Cannot use CUDA or OpenCL as some pseudopotentials overlap with themselves.')
+          call messages_warning(namespace=namespace)
+        else
+          call messages_write('Cannot use CUDA or OpenCL as some pseudopotentials overlap with themselves.', new_line = .true.)
+          call messages_write('Calculation will not be continued. To force execution, set AllowCPUonly = yes.' )
+          call messages_fatal(namespace=namespace)          
+        end if
       end if
     end if
 

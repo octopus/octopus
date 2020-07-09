@@ -46,3 +46,4 @@ AONormalize = no
 AOSubmeshForPeriodic = yes
 OutputLDA_U = occ_matrices + effectiveU + kanamoriU
 ACBN0Screening = 0.5
+

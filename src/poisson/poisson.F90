@@ -937,22 +937,26 @@ contains
   end subroutine dpoisson_solve
 
   !-----------------------------------------------------------------
-  subroutine poisson_init_sm(this, namespace, main, der, sm, method)
+  subroutine poisson_init_sm(this, namespace, main, der, sm, method, force_cmplx)
     type(poisson_t),             intent(out)   :: this
     type(namespace_t),           intent(in)    :: namespace
     type(poisson_t),             intent(in)    :: main
     type(derivatives_t), target, intent(in)    :: der
     type(submesh_t),             intent(inout) :: sm
     integer, optional,           intent(in)    :: method
+    logical, optional,           intent(in)    :: force_cmplx
 
-    integer :: default_solver
+    integer :: default_solver, idir
     integer :: box(MAX_DIM)
+    FLOAT   :: qq(1:MAX_DIM)
 
     if(this%method /= POISSON_NULL) return ! already initialized
 
     PUSH_SUB(poisson_init_sm)
 
     this%is_dressed = .false.
+    !TODO: To be implemented as an option
+    this%all_nodes_default = .false.
 
     this%nslaves = 0
     this%der => der
@@ -976,6 +980,7 @@ contains
     select case(this%method)
     case(POISSON_DIRECT_SUM)
       !Nothing to be done
+
     case(POISSON_ISF)    
       !TODO: Add support for domain parrallelization
       ASSERT(.not. der%mesh%parallel_in_domains)
@@ -984,6 +989,43 @@ contains
       call cube_init(this%cube, box, der%mesh%sb, namespace, fft_type = FFT_NONE, &
                      need_partition=.not.der%mesh%parallel_in_domains)
       call poisson_isf_init(this%isf_solver, namespace, der%mesh, this%cube, mpi_world%comm, init_world = this%all_nodes_default)
+ 
+    case(POISSON_PSOLVER)
+      !TODO: Add support for domain parrallelization
+      ASSERT(.not. der%mesh%parallel_in_domains)
+      if(this%all_nodes_default) then
+        this%cube%mpi_grp = mpi_world
+      else
+        this%cube%mpi_grp = this%der%mesh%mpi_grp
+      end if
+      call submesh_get_cube_dim(sm, box, der%dim)
+      call submesh_init_cube_map(sm, der%dim)
+      call cube_init(this%cube, box, der%mesh%sb, namespace, fft_type = FFT_NONE, &
+                     need_partition=.not.der%mesh%parallel_in_domains)
+      qq = M_ZERO
+      call poisson_psolver_init(this%psolver_solver, namespace, this%der%mesh, this%cube, M_ZERO, qq, force_isolated=.true.)
+      call poisson_psolver_get_dims(this%psolver_solver, this%cube)
+    case(POISSON_FFT)
+      !Here we impose zero boundary conditions
+      this%kernel = POISSON_FFT_KERNEL_SPH 
+      !We need to parse this, in case this routine is called before poisson_init
+      call parse_variable(namespace, 'FFTLibrary', FFTLIB_FFTW, fft_default_lib)
+
+      call submesh_get_cube_dim(sm, box, der%dim)
+      call submesh_init_cube_map(sm, der%dim)
+      !We double the size of the cell
+      !Maybe the factor of two should be controlled as a variable 
+      do idir = 1, der%dim
+        box(idir) = nint(M_TWO * (box(idir) - 1)) + 1
+      end do
+      if(optional_default(force_cmplx, .false.)) then
+        call cube_init(this%cube, box, der%mesh%sb, namespace, fft_type = FFT_COMPLEX, &
+                       need_partition=.not.der%mesh%parallel_in_domains)
+      else
+        call cube_init(this%cube, box, der%mesh%sb, namespace, fft_type = FFT_REAL, &
+                       need_partition=.not.der%mesh%parallel_in_domains)
+      end if
+      call poisson_fft_init(this%fft_solver, namespace, this%der%mesh, this%cube, this%kernel)
     end select
 
     POP_SUB(poisson_init_sm)

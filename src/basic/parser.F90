@@ -575,21 +575,68 @@ contains
 
   end subroutine parse_check_varinfo
 
+  ! ----------------------------------------------------------------------
+  !> Given a namespace and a variable name, this function will iterate over all
+  !! namespace ancestors contained in the namespace, until it finds one for
+  !! which the variable is defined. If it finds such namespace it returns the
+  !! variable name prefixed with the namespace. If it does not find any suitable
+  !! namespace it returns the variable name without any prefix.
+  !!
+  !! To make it clear what we mean by all namespace ancestors contained in a
+  !! given namesspace, lets suppose that we have the following namespace:
+  !!
+  !!   "A.B.C"
+  !!
+  !! Clearly "A" and "B" are ancestors of "C", but also the full path to "B",
+  !! that is "A.B", is an ancestor. For practical purposes we will also consider
+  !! that "C" is an ancestor of itself. So "C", "B.C" and "A.B.C" are also
+  !! ancestors.
+  !!
+  !! The order in which the function iterates over the possible namespace
+  !! ancestors is crucial, as it effectively determines namespace precedence in
+  !! the input file. The order is such that it goes from the rigth-most ancestor
+  !! to the left-most, and form the more complete path to the least complete. So
+  !! for the above example, the order will be the following:
+  !!
+  !!   "A.B.C", "B.C", "C", "A.B", "B", "A"
+  !!
+  !! as "C" is the right-most ancestor while "A" is the left-most and "A.B.C" is
+  !! the most complete path while "C" is the least complete.
+  function parse_get_full_name(namespace, varname) result(name)
+    type(namespace_t), target, intent(in)  :: namespace
+    character(len=*),          intent(in)  :: varname
+    character(len=:),          allocatable :: name
 
-  ! this function returns the full name, possibly including the namespace
-  ! of the current parser
-  function parse_get_full_name(namespace, varname) result(full_name)
-    type(namespace_t), intent(in)  :: namespace
-    character(len=*),  intent(in)  :: varname
-    character(len=:),  allocatable :: full_name
+    logical :: found
+    integer :: is
+    type(namespace_t), pointer :: ancestor
+    character(len=MAX_NAMESPACE_LEN) :: ancestor_name
 
-    ! try first the variable prefixed by namespace
-    full_name = trim(namespace%get()) // "." // trim(varname)
-    if (parse_isdef(full_name) == 0) then
-      full_name = varname
-    end if
+    found = .false.
+
+    ! Loop over all ancestors, starting from the right-most
+    ancestor => namespace
+    do while (associated(ancestor) .and. .not. found)
+
+      ! Loop over all paths to this ancestor, starting from the most complete path
+      ancestor_name = ancestor%get()
+      is = -1
+      do while (len_trim(ancestor_name) > 0 .and. is /= 0 .and. .not. found)
+        ! Check if the current path is found in the input file
+        name = trim(ancestor_name) // "." // trim(varname)
+        found = parse_isdef(trim(name)) /= 0
+
+        ! Remove the left-most namespace ("is" will be zero if there is only one namespace left)
+        is = index(ancestor_name, ".")
+        ancestor_name = ancestor_name(is+1:)
+      end do
+      ancestor => ancestor%parent
+    end do
+
+    ! If no suitable namespace found, just return the variable name
+    if (.not. found) name = varname
+
   end function parse_get_full_name
-
 
   ! ----------------------------------------------------------------------
   subroutine parse_fatal()

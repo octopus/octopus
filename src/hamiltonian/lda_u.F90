@@ -1,4 +1,4 @@
-!! Copyright (C) 2016 N. Tancogne-Dejean
+!! Copyright (C) 2016-2020 N. Tancogne-Dejean
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -150,10 +150,6 @@ module lda_u_oct_m
     DFT_U_FLL                     = 0, &
     DFT_U_AMF                     = 1
 
-  integer, public, parameter ::        &
-    DFT_U_POISSON_DIRECT          = 0, &
-    DFT_U_POISSON_ISF             = 1
-
 contains
 
   subroutine lda_u_nullify(this)
@@ -179,7 +175,7 @@ contains
     this%acbn0_screening = M_ONE
     this%rot_inv = .false.
     this%double_couting = DFT_U_FLL
-    this%sm_poisson = DFT_U_POISSON_DIRECT
+    this%sm_poisson = SM_POISSON_DIRECT
 
     nullify(this%dn)
     nullify(this%zn)
@@ -274,21 +270,45 @@ contains
     !%Option dft_u_poisson_isf 1
     !% (Experimental) ISF Poisson solver on a submesh.
     !% This does not work for non-orthogonal cells nor domain parallelization.
+    !%Option dft_u_poisson_psolver 2
+    !% (Experimental) PSolver Poisson solver on a submesh.
+    !% This does not work for non-orthogonal cells nor domain parallelization.
+    !% Requires the PSolver external library.
+    !%Option dft_u_poisson_fft 3
+    !% (Experimental) FFT Poisson solver on a submesh.
+    !% This uses the 0D periodic version of the FFT kernels.
+    !% This does not work for domain parallelization.
     !%End
-    call parse_variable(namespace, 'DFTUPoissonSolver', DFT_U_POISSON_DIRECT, this%sm_poisson)
+    call parse_variable(namespace, 'DFTUPoissonSolver', SM_POISSON_DIRECT, this%sm_poisson)
     call messages_print_var_option(stdout,  'DFTUPoissonSolver', this%sm_poisson)
-    if(this%sm_poisson /= DFT_U_POISSON_DIRECT) then
+    if(this%sm_poisson /= SM_POISSON_DIRECT) then
       call messages_experimental("DFTUPoissonSolver different from dft_u_poisson_direct")
     end if
-    if(this%sm_poisson == DFT_U_POISSON_ISF) then
+    if(this%sm_poisson == SM_POISSON_ISF) then
       if(gr%mesh%parallel_in_domains) then
         call messages_not_implemented("ISF DFT+U Poisson solver with domain parallelization.")
       end if
-      if(gr%mesh%parallel_in_domains) then
+      if(gr%mesh%sb%nonorthogonal) then
         call messages_not_implemented("ISF DFT+U Poisson solver with non-orthogonal cells.")
       end if
     end if
-
+    if(this%sm_poisson == SM_POISSON_PSOLVER) then
+#if !((defined HAVE_LIBISF) || (defined HAVE_PSOLVER))
+      message(1) = "The PSolver Poisson solver cannot be used since the code was not compiled with the PSolver libary."
+      call messages_fatal(1)
+#endif
+      if(gr%mesh%parallel_in_domains) then
+        call messages_not_implemented("PSolver DFT+U Poisson solver with domain parallelization.")
+      end if
+      if(gr%mesh%sb%nonorthogonal) then
+        call messages_not_implemented("Psolver DFT+U Poisson solver with non-orthogonal cells.")
+      end if
+    end if
+    if(this%sm_poisson == SM_POISSON_FFT) then
+      if(gr%mesh%parallel_in_domains) then
+        call messages_not_implemented("FFT DFT+U Poisson solver with domain parallelization.")
+      end if
+    end if
 
     if(this%level == DFT_U_ACBN0 ) then
       !%Variable UseAllAtomicOrbitals
@@ -372,11 +392,6 @@ contains
         if(abs(this%intersite_radius) < M_EPSILON) then
           call messages_write("ACBN0IntersiteCutoff must be greater than 0")
           call messages_fatal(1, namespace=namespace)
-        end if
-
-        if(this%sm_poisson /= DFT_U_POISSON_DIRECT) then
-          call messages_write("DFTUPoissonSolver is ignored for intersite Coulomb interaction")
-          call messages_warning(1, namespace=namespace)
         end if
 
       end if
@@ -572,7 +587,7 @@ contains
       this%maxneighbors = 0
       do ios = 1, this%norbsets
         call orbitalset_init_intersite(this%orbsets(ios), namespace, ios, gr%sb, geo, gr%der, psolver, &
-          this%orbsets, this%norbsets, this%maxnorbs, this%intersite_radius, st%d%kpt, has_phase)
+          this%orbsets, this%norbsets, this%maxnorbs, this%intersite_radius, st%d%kpt, has_phase, this%sm_poisson)
         this%maxneighbors = max(this%maxneighbors, this%orbsets(ios)%nneighbors)
       end do
 

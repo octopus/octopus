@@ -9,14 +9,22 @@ Enabled    : Yes
 # Na sphere groundstate
 Processors : 2
 Input      : 09-flux_3d.01-Na_gs_sph.inp
+if(available cuda); then
+  match ; Error match ; GREPCOUNT(err, 'Calculation will not be continued.') ; 1
+endif
+
 
 # Na sphere photoemission
 # Processors : 2
 Precision  : 2.0e-11
 Input      : 09-flux_3d.02-Na_td_sph.inp
-match ; PES [val  1] ; LINEFIELD(td.general/PES_flux.power.sum, 143, 2) ; 1.966368393e-07
-match ; PES [val  2] ; LINEFIELD(td.general/PES_flux.power.sum, 145, 2) ; 3.959502463e-07
-match ; PES [val  3] ; LINEFIELD(td.general/PES_flux.power.sum, 148, 2) ; 1.561889764e-07
+if(available cuda); then
+  match ; Error match ; GREPCOUNT(err, 'Calculation will not be continued.') ; 1
+else
+  match ; PES [val  1] ; LINEFIELD(td.general/PES_flux.power.sum, 143, 2) ; 1.966368393e-07
+  match ; PES [val  2] ; LINEFIELD(td.general/PES_flux.power.sum, 145, 2) ; 3.959502463e-07
+  match ; PES [val  3] ; LINEFIELD(td.general/PES_flux.power.sum, 148, 2) ; 1.561889764e-07
+endif
 
 
 # Na cube groundstate
@@ -27,7 +35,10 @@ Input      : 09-flux_3d.03-Na_gs_cub.inp
 # Processors : 2
 Precision  : 5.0e-8
 Input      : 09-flux_3d.04-Na_td_cub.inp
-match ; PES [val  1] ; LINEFIELD(td.general/PES_flux.distribution.out, 9435, 4) ; 0.7235990632E-004
-match ; PES [val  2] ; LINEFIELD(td.general/PES_flux.distribution.out, 9437, 4) ; 0.3931059481E-004
-match ; PES [val  3] ; LINEFIELD(td.general/PES_flux.distribution.out, 9439, 4) ; 0.7235990632E-004
-
+if(available cuda); then
+  match ; Error match ; GREPCOUNT(err, 'Calculation will not be continued.') ; 1
+else
+  match ; PES [val  1] ; LINEFIELD(td.general/PES_flux.distribution.out, 9435, 4) ; 0.7235990632E-004
+  match ; PES [val  2] ; LINEFIELD(td.general/PES_flux.distribution.out, 9437, 4) ; 0.3931059481E-004
+  match ; PES [val  3] ; LINEFIELD(td.general/PES_flux.distribution.out, 9439, 4) ; 0.7235990632E-004
+endif

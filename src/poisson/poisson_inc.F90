@@ -126,6 +126,48 @@ subroutine X(poisson_solve_sm)(this, sm, pot, rho, all_nodes)
     SAFE_DEALLOCATE_A(aux1)
     SAFE_DEALLOCATE_A(aux2)
 #endif
+  case(POISSON_PSOLVER)
+#ifdef R_TREAL
+    if (this%psolver_solver%datacode == "G") then
+      ! Global version
+      call poisson_psolver_global_solve(this%psolver_solver, sm%mesh, this%cube, pot, rho, sm)
+    else ! "D" Distributed version
+      ASSERT(.false.)
+      call poisson_psolver_parallel_solve(this%psolver_solver, sm%mesh, this%cube, pot, rho, this%mesh_cube_map)
+    end if
+#else
+    SAFE_ALLOCATE(aux1(1:sm%np))
+    SAFE_ALLOCATE(aux2(1:sm%np))
+    ! first the real part
+    aux1(1:sm%np) = real(rho(1:sm%np))
+    aux2(1:sm%np) = real(pot(1:sm%np))
+    if (this%psolver_solver%datacode == "G") then
+      ! Global version
+      call poisson_psolver_global_solve(this%psolver_solver, sm%mesh, this%cube, aux2, aux1, sm)
+    else ! "D" Distributed version
+      ASSERT(.false.)
+      call poisson_psolver_parallel_solve(this%psolver_solver, sm%mesh, this%cube, aux2, aux1, this%mesh_cube_map)
+    end if
+
+    pot(1:sm%np)  = aux2(1:sm%np)
+
+    ! now the imaginary part
+    aux1(1:sm%np) = aimag(rho(1:sm%np))
+    aux2(1:sm%np) = aimag(pot(1:sm%np))
+    if (this%psolver_solver%datacode == "G") then
+      ! Global version
+      call poisson_psolver_global_solve(this%psolver_solver, sm%mesh, this%cube, aux2, aux1, sm)
+    else ! "D" Distributed version
+      ASSERT(.false.)
+      call poisson_psolver_parallel_solve(this%psolver_solver, sm%mesh, this%cube, aux2, aux1, this%mesh_cube_map)
+    end if
+    pot(1:sm%np) = pot(1:sm%np) + M_zI*aux2(1:sm%np)
+
+    SAFE_DEALLOCATE_A(aux1)
+    SAFE_DEALLOCATE_A(aux2)
+#endif
+  case(POISSON_FFT)
+    call X(poisson_fft_solve)(this%fft_solver, sm%mesh, this%cube, pot, rho, this%mesh_cube_map, sm=sm)
   end select
 
   POP_SUB(X(poisson_solve_sm))

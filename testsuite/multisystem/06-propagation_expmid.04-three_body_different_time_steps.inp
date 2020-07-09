@@ -9,37 +9,40 @@ Dimensions = 3
  "Moon"  | classical_particle
 %
 
+%Interactions
+ gravity | all_partners
+%
+
 #Initial conditions are taken from https://ssd.jpl.nasa.gov/horizons.cgi#top.
 # initial condition at time:
 # 2458938.500000000 = A.D. 2020-Mar-30 00:00:00.0000 TDB
 
-Earth.ClassicalParticleMass = 5.97237e24
-%Earth.ClassicalParticleInitialPosition
+Earth.ParticleMass = 5.97237e24
+%Earth.ParticleInitialPosition
  -147364661998.16476+0.01 | -24608859261.610123+0.01 | 1665165.2801353487+0.01
 %
-%Earth.ClassicalParticleInitialVelocity
+%Earth.ParticleInitialVelocity
  4431.136612956525 | -29497.611635546345 | 0.343475566161544
 %
-Earth.TDSystemPropagator = exp_mid
 
-Moon.ClassicalParticleMass = 7.342e22
-%Moon.ClassicalParticleInitialPosition
+Moon.ParticleMass = 7.342e22
+%Moon.ParticleInitialPosition
  -147236396732.81906+0.01 | -24234200672.857853+0.01 | -11062799.286082389+0.01
 %
-%Moon.ClassicalParticleInitialVelocity
+%Moon.ParticleInitialVelocity
  3484.6397238565924 | -29221.007409082802 | 82.53526338876684
 %
-Moon.TDSystemPropagator = exp_mid
 
-Sun.ClassicalParticleMass = 1.98855e30
+Sun.ParticleMass = 1.98855e30
 # move away from origin because we divide by the position
-%Sun.ClassicalParticleInitialPosition
+%Sun.ParticleInitialPosition
  0.0+0.01 | 0.0+0.01 | 0.0+0.01
 %
-%Sun.ClassicalParticleInitialVelocity
+%Sun.ParticleInitialVelocity
  0.0 | 0.0 | 0.0
 %
-Sun.TDSystemPropagator = exp_mid
+
+TDSystemPropagator = exp_mid
 
 sampling = 24 # Time-steps per day
 days = 3

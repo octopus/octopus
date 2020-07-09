@@ -19,7 +19,11 @@ match ; PES [val  3] ; LINEFIELD(td.general/PES_flux.power.sum, 152, 2) ; 0.5567
 # 1d hydrogen ATI
 Processors : 2
 Input      : 07-flux_1d.02-h1d_ati.inp
-Precision  : 1.0e-6
-match ; PES [val  1] ; LINEFIELD(td.general/PES_flux.power.sum, 104, 2) ; 0.5894079909E+000
-match ; PES [val  2] ; LINEFIELD(td.general/PES_flux.power.sum, 177, 2) ; 0.1304053118E+001
-match ; PES [val  3] ; LINEFIELD(td.general/PES_flux.power.sum, 226, 2) ; 0.1012194306E+001
+if (available cuda); then
+  match ; Error match ; GREPCOUNT(err, 'Calculation will not be continued.') ; 1
+else
+  Precision  : 1.0e-6
+  match ; PES [val  1] ; LINEFIELD(td.general/PES_flux.power.sum, 104, 2) ; 0.5894079909E+000
+  match ; PES [val  2] ; LINEFIELD(td.general/PES_flux.power.sum, 177, 2) ; 0.1304053118E+001
+  match ; PES [val  3] ; LINEFIELD(td.general/PES_flux.power.sum, 226, 2) ; 0.1012194306E+001
+endif
