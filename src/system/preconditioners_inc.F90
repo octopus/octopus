@@ -17,18 +17,23 @@
 !!
 
 ! ---------------------------------------------------------
-subroutine X(preconditioner_apply)(pre, namespace, gr, hm, a, b, omega)
+subroutine X(preconditioner_apply)(pre, namespace, gr, hm, a, b, ik, omega)
   type(preconditioner_t),   intent(in)    :: pre
   type(namespace_t),        intent(in)    :: namespace
   type(grid_t), target,     intent(in)    :: gr
   type(hamiltonian_elec_t), intent(in)    :: hm
   R_TYPE,                   intent(inout) :: a(:,:)
   R_TYPE,                   intent(inout) :: b(:,:)
+  integer,                  intent(in)    :: ik
   R_TYPE,         optional, intent(in)    :: omega
 
   integer :: idim
   R_TYPE  :: omega_
   type(profile_t), save :: preconditioner_prof
+
+  type(wfs_elec_t), target :: batch_a
+  type(wfs_elec_t) :: batch_b
+  type(wfs_elec_t), pointer :: batch_ea
 
   call profiling_in(preconditioner_prof, "PRECONDITIONER")
   PUSH_SUB(X(preconditioner_apply))
@@ -43,9 +48,28 @@ subroutine X(preconditioner_apply)(pre, namespace, gr, hm, a, b, omega)
     end do
 
   case(PRE_FILTER)
-    do idim = 1, hm%d%dim
-      call X(derivatives_perform)(pre%op, gr%der, a(:, idim), b(:, idim))
-    end do
+    call wfs_elec_init(batch_a, hm%d%dim, 1, 1, a, ik)
+    call wfs_elec_init(batch_b, hm%d%dim, 1, 1, b, ik)
+    call boundaries_set(hm%der%boundaries, batch_a)
+    if(associated(hm%hm_base%phase)) then
+      SAFE_ALLOCATE(batch_ea)
+      call batch_a%copy_to(batch_ea)
+      call X(hamiltonian_elec_base_phase)(hm%hm_base, gr%mesh, gr%mesh%np_part, .false., batch_ea, src = batch_a)
+      batch_b%has_phase = .true.
+    else
+      batch_ea => batch_a
+    end if
+
+     call X(derivatives_batch_perform)(pre%op, gr%der, batch_ea, batch_b, set_bc = .false.)
+
+    if(associated(hm%hm_base%phase)) then
+      call X(hamiltonian_elec_base_phase)(hm%hm_base, gr%mesh, gr%mesh%np, .true., batch_b)
+      call batch_ea%end(copy = .false.)
+      SAFE_DEALLOCATE_P(batch_ea)
+    end if
+    call batch_a%end()
+    call batch_b%end()
+
 
   case(PRE_JACOBI)
     call apply_D_inverse(a, b)
@@ -227,13 +251,14 @@ end subroutine X(preconditioner_apply)
 
 ! ----------------------------------------
 
-subroutine X(preconditioner_apply_batch)(pre, namespace, gr, hm, aa, bb, omega)
+subroutine X(preconditioner_apply_batch)(pre, namespace, gr, hm, aa, bb, ik, omega)
   type(preconditioner_t),   intent(in)    :: pre
   type(namespace_t),        intent(in)    :: namespace
   type(grid_t),             intent(in)    :: gr
   type(hamiltonian_elec_t), intent(in)    :: hm
   class(batch_t),           intent(inout) :: aa
   class(batch_t),           intent(inout) :: bb
+  integer,                  intent(in)    :: ik
   R_TYPE,         optional, intent(in)    :: omega(:)
 
   integer :: ii
@@ -258,7 +283,7 @@ subroutine X(preconditioner_apply_batch)(pre, namespace, gr, hm, aa, bb, omega)
     SAFE_ALLOCATE(psib(1:gr%mesh%np, 1:hm%d%dim))
     do ii = 1, aa%nst
       call batch_get_state(aa, ii, gr%mesh%np, psia)
-      call X(preconditioner_apply)(pre, namespace, gr, hm, psia, psib, omega(ii))
+      call X(preconditioner_apply)(pre, namespace, gr, hm, psia, psib, ik, omega(ii))
       call batch_set_state(bb, ii, gr%mesh%np, psib)
     end do
     SAFE_DEALLOCATE_A(psia)
