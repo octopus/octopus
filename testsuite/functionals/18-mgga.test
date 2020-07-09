@@ -3,8 +3,10 @@
 Test       : MGGA energy functionals
 Program    : octopus
 TestGroups : short-run, functionals
-Enabled    : No
+Enabled    : Yes
 
+#At the moment the test fails on CUDA+MPI 
+Processors: 1
 
 Input: 18-mgga.01-br89.inp
 match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
