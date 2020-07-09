@@ -63,7 +63,7 @@ subroutine X(kb_project_bra)(mesh, sm, kb_p, dim, psi, uvpsi)
 
   type(profile_t), save :: prof
 
-  call profiling_in(prof, "KB_PROJECT_BRA")
+  call profiling_in(prof, "X(KB_PROJECT_BRA)")
 
 
 #ifndef HAVE_OPENMP
@@ -117,7 +117,7 @@ subroutine X(kb_project_ket)(kb_p, dim, uvpsi, psi)
   integer :: ic, idim, ns, is
   type(profile_t), save :: prof
 
-  call profiling_in(prof, "KB_PROJECT_KET")
+  call profiling_in(prof, "X(KB_PROJECT_KET)")
 
 
 #ifndef HAVE_OPENMP

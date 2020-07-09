@@ -34,7 +34,7 @@ subroutine X(fft_forward_3d)(fft, in, out, norm)
 
     PUSH_SUB(X(fft_forward_3d))
 
-    call profiling_in(prof_fw, "FFT_FORWARD")
+    call profiling_in(prof_fw, "X(FFT_FORWARD)")
 
     
     slot = fft%slot
@@ -142,7 +142,7 @@ subroutine X(fft_forward_3d)(fft, in, out, norm)
 
     PUSH_SUB(X(fft_forward_cl))
 
-    call profiling_in(prof_fw, "FFT_FORWARD_CL")
+    call profiling_in(prof_fw, "X(FFT_FORWARD_CL)")
 
     slot = fft%slot
     ASSERT(fft_array(slot)%library == FFTLIB_ACCEL)
@@ -221,7 +221,7 @@ subroutine X(fft_forward_3d)(fft, in, out, norm)
 
     PUSH_SUB(X(fft_backward_3d))
     
-    call profiling_in(prof_bw,"FFT_BACKWARD")
+    call profiling_in(prof_bw,"X(FFT_BACKWARD)")
 
     scale = .true.
 
@@ -326,7 +326,7 @@ subroutine X(fft_forward_3d)(fft, in, out, norm)
 
     PUSH_SUB(X(fft_backward_cl))
     
-    call profiling_in(prof_bw,"FFT_BACKWARD_CL")
+    call profiling_in(prof_bw,"X(FFT_BACKWARD_CL)")
 
     slot = fft%slot
     ASSERT(fft_array(slot)%library == FFTLIB_ACCEL)

@@ -26,6 +26,7 @@ module run_oct_m
   use geom_opt_oct_m
   use global_oct_m
   use ground_state_oct_m
+  use interactions_factory_oct_m
   use invert_ks_oct_m
   use messages_oct_m
   use mpi_debug_oct_m
@@ -44,7 +45,6 @@ module run_oct_m
   use pulpo_oct_m
   use restart_oct_m
   use static_pol_oct_m
-  use system_abst_oct_m
   use system_factory_oct_m
   use td_oct_m
   use test_oct_m
@@ -126,10 +126,12 @@ contains
     integer,           intent(in) :: cm
 
     class(multisystem_t), pointer :: systems
-    type(system_t), pointer :: sys
-    type(system_factory_t) :: factory
+    type(electrons_t), pointer :: sys
+    type(system_factory_t) :: system_factory
+    type(interactions_factory_t) :: interactions_factory
     type(profile_t), save :: calc_mode_prof
     logical :: fromScratch
+    integer :: iunit_out
 
     PUSH_SUB(run)
 
@@ -170,7 +172,20 @@ contains
       ! We are running in multi-system mode
 
       ! Initialize systems
-      systems => multisystem_t(namespace, factory)
+      systems => multisystem_t(namespace, system_factory)
+
+      ! Create and initialize interactions
+      call interactions_factory%create_interactions(systems, systems%list)
+      call systems%init_all_interactions()
+
+      ! Write the interaction graph as a DOT graph for debug
+      if (debug%interaction_graph .and. mpi_grp_is_root(mpi_world)) then
+        iunit_out = io_open('debug/interaction_graph.dot', systems%namespace, action='write')
+        write(iunit_out, '(a)') 'digraph {'
+        call systems%write_interaction_graph(iunit_out)
+        write(iunit_out, '(a)') '}'
+        call io_close(iunit_out)
+      end if
 
       ! Run mode
       select case(calc_mode_id)
@@ -185,7 +200,7 @@ contains
 
     else
       ! Fall back to old behaviour
-      sys => system_init(namespace)
+      sys => electrons_t(namespace)
 
       call messages_print_stress(stdout, 'Approximate memory requirements')
       call memory_run(sys)

@@ -35,6 +35,7 @@ module poisson_fft_oct_m
   use profiling_oct_m
   use simul_box_oct_m
   use splines_oct_m
+  use submesh_oct_m
   use unit_oct_m
   use unit_system_oct_m
 
@@ -605,7 +606,9 @@ contains
     db(1:3) = cube%rs_n_global(1:3)
 
     if (kernel /= POISSON_FFT_KERNEL_CORRECTED) then
-      default_r_c = maxval(db(1:3)*mesh%spacing(1:3)/M_TWO)
+      temp(1:3) = db(1:3)*mesh%spacing(1:3)/M_TWO
+      temp(1:3) = matmul(mesh%sb%klattice_primitive(1:3,1:3),temp(1:3)) 
+      default_r_c = maxval(temp(1:3))
       call get_cutoff(namespace, default_r_c, r_c)
     end if
 

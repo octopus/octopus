@@ -830,6 +830,8 @@
 !% Becke 98
 !%Option oep_x                    901
 !% OEP: Exact exchange (not from libxc).
+!%Option slater_x                 902
+!% Slater approximation to the exact exchange (not from libxc).
 !%Option ks_inversion             801
 !% Inversion of KS potential (not from libxc).
 !%Option lda_xc_cmplx             701

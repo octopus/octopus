@@ -1,24 +1,31 @@
 # -*- coding: utf-8 mode: shell-script -*-
 
 Test       : Cholesky (parallel) orthogonalization
-Options    : scalapack
 Program    : octopus
 TestGroups : short-run, components
 Enabled    : Yes
 
 Precision : 1.0e-13
 Input: 15-cholesky_parallel.01-real.inp
-match ; Overlap 1 1 ; GREPFIELD(out, '      1      1', 3) ;  0.100000E+01
-match ; Overlap 1 2 ; GREPFIELD(out, '      1      2', 3) ;  0.446258E-16
-match ; Overlap 1 9 ; GREPFIELD(out, '      1      9', 3) ;  0.523609E-15
-match ; Overlap 6 6 ; GREPFIELD(out, '      6      6', 3) ;  0.100000E+01
-match ; Overlap 7 8 ; GREPFIELD(out, '      7      8', 3) ;  0.201708E-14
-match ; Overlap 9 9 ; GREPFIELD(out, '      9      9', 3) ;  0.100000E+01
+if (available scalapack); then
+    match ; Overlap 1 1 ; GREPFIELD(out, '      1      1', 3) ;  0.100000E+01
+    match ; Overlap 1 2 ; GREPFIELD(out, '      1      2', 3) ;  0.446258E-16
+    match ; Overlap 1 9 ; GREPFIELD(out, '      1      9', 3) ;  0.523609E-15
+    match ; Overlap 6 6 ; GREPFIELD(out, '      6      6', 3) ;  0.100000E+01
+    match ; Overlap 7 8 ; GREPFIELD(out, '      7      8', 3) ;  0.201708E-14
+    match ; Overlap 9 9 ; GREPFIELD(out, '      9      9', 3) ;  0.100000E+01
+else    
+    match; Error;    GREPCOUNT(err, 'cholesky_parallel' ); 1
+endif
 
 Input: 15-cholesky_parallel.02-complex.inp
-match ; Overlap 1 1 ; GREPFIELD(out, '      1      1', 3) ;  0.100000E+01
-match ; Overlap 1 2 ; GREPFIELD(out, '      1      2', 3) ;  0.708249E-16
-match ; Overlap 1 9 ; GREPFIELD(out, '      1      9', 3) ;  0.623065E-15
-match ; Overlap 6 6 ; GREPFIELD(out, '      6      6', 3) ;  0.100000E+01
-match ; Overlap 7 8 ; GREPFIELD(out, '      7      8', 3) ;  0.200086E-14
-match ; Overlap 9 9 ; GREPFIELD(out, '      9      9', 3) ;  0.100000E+01
+if (available scalapack); then
+    match ; Overlap 1 1 ; GREPFIELD(out, '      1      1', 3) ;  0.100000E+01
+    match ; Overlap 1 2 ; GREPFIELD(out, '      1      2', 3) ;  0.708249E-16
+    match ; Overlap 1 9 ; GREPFIELD(out, '      1      9', 3) ;  0.623065E-15
+    match ; Overlap 6 6 ; GREPFIELD(out, '      6      6', 3) ;  0.100000E+01
+    match ; Overlap 7 8 ; GREPFIELD(out, '      7      8', 3) ;  0.200086E-14
+    match ; Overlap 9 9 ; GREPFIELD(out, '      9      9', 3) ;  0.100000E+01
+else
+    match; Error;    GREPCOUNT(err, 'cholesky_parallel' ); 1
+endif

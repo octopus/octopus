@@ -201,6 +201,9 @@ contains
     !% Integrates the function in the x-z plane and the result on the <i>y</i> axis is printed
     !%Option integrate_yz bit(23)
     !% Integrates the function in the y-z plane and the result on the <i>x</i> axis is printed
+    !%Option ascii bit(24)
+    !% Plain text format regardless of dimensionality. For the moment only employed by the oct-phototoelectron_spectrum
+    !% post-processing utility.
     !%End
     call parse_variable(namespace, 'OutputFormat', 0, how)
     if(.not.varinfo_valid_option('OutputFormat', how, is_flag=.true.)) then

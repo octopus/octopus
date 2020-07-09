@@ -1,0 +1,55 @@
+CalculationMode = td
+ExperimentalFeatures = yes
+
+Dimensions = 3
+
+%Systems
+ "MS_A" | multisystem
+ "MS_B" | multisystem
+%
+
+%MS_A.Systems
+ "CP_A" | charged_particle
+ "MS_AA" | multisystem
+ "MS_AB" | multisystem
+%
+
+%MS_AA.Systems
+ "CP_AA1" | charged_particle
+ "CP_AA2" | charged_particle
+%
+
+%MS_AB.Systems
+ "CP_AB" | charged_particle
+%
+
+%MS_B.Systems
+ "CP_B" | charged_particle
+ "MS_BA" | multisystem
+%
+
+%MS_BA.Systems
+ "CP_BA" | charged_particle
+%
+
+%Interactions
+ gravity       | all_except    | "MS_AB" | "MS_AA.CP_AA1"
+ coulomb_force | only_partners | "MS_AB" | "MS_AA.CP_AA1"
+%
+
+# We are not checking the results of the simulation, just the interaction graph,
+# so there's no need to specify other input options except the mandatory ones
+%ParticleInitialVelocity
+ 0.0 | 0.0 | 0.0
+%
+
+%ParticleInitialPosition
+ 0.0 | 0.0 | 0.0
+%
+
+
+TDSystemPropagator = verlet
+TDTimeStep = 1
+TDMaxSteps = 1
+
+Debug = interaction_graph

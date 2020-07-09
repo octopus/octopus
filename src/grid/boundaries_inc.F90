@@ -29,7 +29,7 @@ subroutine X(vec_ghost_update)(vp, v_local)
   R_TYPE,  allocatable :: ghost_send(:)
   integer              :: nsend
   
-  call profiling_in(prof_update, "GHOST_UPDATE")
+  call profiling_in(prof_update, "X(GHOST_UPDATE)")
 
   PUSH_SUB(X(vec_ghost_update))
 
@@ -61,7 +61,7 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
 
   integer :: ipart, pos, ii, tag, nn, offset
 
-  call profiling_in(prof_start, "GHOST_UPDATE_START")
+  call profiling_in(prof_start, "X(GHOST_UPDATE_START)")
   PUSH_SUB(X(ghost_update_batch_start))
 
   ASSERT(v_local%nst_linear > 0)
@@ -200,7 +200,7 @@ subroutine X(ghost_update_batch_finish)(handle)
 
   integer, allocatable :: status(:, :)
 
-  call profiling_in(prof_wait, "GHOST_UPDATE_WAIT")
+  call profiling_in(prof_wait, "X(GHOST_UPDATE_WAIT)")
   PUSH_SUB(X(ghost_update_batch_finish))
   
   ASSERT(handle%nnb > 0)
@@ -246,7 +246,7 @@ subroutine X(boundaries_set_batch)(boundaries, ffb, phase_correction)
   integer :: bndry_start, bndry_end
 
   PUSH_SUB(X(boundaries_set_batch))
-  call profiling_in(set_bc_prof, 'SET_BC')
+  call profiling_in(set_bc_prof, "X(SET_BC)")
   
   ASSERT(ffb%type() == R_TYPE_VAL)
 
@@ -377,7 +377,7 @@ contains
 
     if(boundaries%mesh%parallel_in_domains) then
 
-      call profiling_in(set_bc_precomm_prof, 'SET_BC_PRECOMM')
+      call profiling_in(set_bc_precomm_prof, "X(SET_BC_PRECOMM)")
 
       npart = boundaries%mesh%vp%npart
       maxsend = maxval(boundaries%nsend(1:npart))
@@ -456,7 +456,7 @@ contains
 
       call profiling_out(set_bc_precomm_prof)
 
-      call profiling_in(set_bc_comm_prof, 'SET_BC_COMM')
+      call profiling_in(set_bc_comm_prof, "X(SET_BC_COMM)")
 
 #ifdef HAVE_MPI
       call mpi_debug_in(boundaries%mesh%vp%comm, C_MPI_ALLTOALLV)
@@ -470,7 +470,7 @@ contains
 
       call profiling_out(set_bc_comm_prof)
 
-      call profiling_in(set_bc_postcomm_prof, 'SET_BC_POSTCOMM')
+      call profiling_in(set_bc_postcomm_prof, "X(SET_BC_POSTCOMM)")
 
       SAFE_DEALLOCATE_A(send_count)
       SAFE_DEALLOCATE_A(send_disp)

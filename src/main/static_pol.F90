@@ -42,7 +42,7 @@ module static_pol_oct_m
   use states_abst_oct_m
   use states_elec_oct_m
   use states_elec_restart_oct_m
-  use system_oct_m
+  use electrons_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use utils_oct_m
@@ -58,8 +58,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine static_pol_run(sys, fromScratch)
-    type(system_t),         intent(inout) :: sys
-    logical,                intent(inout) :: fromScratch
+    type(electrons_t),    intent(inout) :: sys
+    logical,              intent(inout) :: fromScratch
 
     type(scf_t) :: scfv
     integer :: iunit, ios, i_start, ii, jj, is, isign, ierr, read_count, verbosity
@@ -103,7 +103,7 @@ contains
     ! set up Hamiltonian
     message(1) = 'Info: Setting up Hamiltonian.'
     call messages_info(1)
-    call system_h_setup (sys, calc_eigenval = .false.) ! we read them from restart
+    call sys%h_setup(calc_eigenval = .false.) ! we read them from restart
 
     ! Allocate the dipole
     SAFE_ALLOCATE(dipole(1:sys%gr%mesh%sb%dim, 1:sys%gr%mesh%sb%dim, 1:2))
@@ -264,7 +264,7 @@ contains
         if(.not. fromScratch) then
           call restart_open_dir(restart_load, trim(dir_name), ierr)
           if (ierr == 0) call states_elec_load(restart_load, sys%namespace, sys%st, sys%gr, ierr)
-          call system_h_setup(sys)
+          call sys%h_setup()
           if(ierr /= 0) fromScratch_local = .true.
           call restart_close_dir(restart_load)
         end if
@@ -272,7 +272,7 @@ contains
         if(fromScratch_local) then
           if(start_density_is_zero_field) then
             sys%st%rho(1:sys%gr%mesh%np, 1:sys%st%d%nspin) = gs_rho(1:sys%gr%mesh%np, 1:sys%st%d%nspin)
-            call system_h_setup(sys)
+            call sys%h_setup()
           else
             call lcao_run(sys, lmm_r = scfv%lmm_r)
           end if
@@ -345,7 +345,7 @@ contains
       if(.not. fromScratch) then
         call restart_open_dir(restart_load, "field_yz+", ierr)
         if (ierr == 0) call states_elec_load(restart_load, sys%namespace, sys%st, sys%gr, ierr)
-        call system_h_setup(sys)
+        call sys%h_setup()
         if(ierr /= 0) fromScratch_local = .true.
         call restart_close_dir(restart_load)
       end if
@@ -353,7 +353,7 @@ contains
       if(fromScratch_local) then
         if(start_density_is_zero_field) then
           sys%st%rho(1:sys%gr%mesh%np, 1:sys%st%d%nspin) = gs_rho(1:sys%gr%mesh%np, 1:sys%st%d%nspin)
-          call system_h_setup(sys)
+          call sys%h_setup()
         else
           call lcao_run(sys, lmm_r = scfv%lmm_r)
         end if

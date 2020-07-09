@@ -50,7 +50,7 @@ program wannier90_interface
   use restart_oct_m
   use scdm_oct_m
   use simul_box_oct_m
-  use system_oct_m
+  use electrons_oct_m
   use space_oct_m
   use string_oct_m
   use states_elec_oct_m
@@ -75,7 +75,7 @@ program wannier90_interface
   integer              :: ii, nik, iter, nst
 
   type(restart_t)      :: restart
-  type(system_t), pointer :: sys
+  type(electrons_t), pointer :: sys
   logical              :: w90_spinors, scdm_proj, w90_scdm
   integer              :: w90_nntot, w90_num_bands, w90_num_kpts   ! w90 input parameters
   integer, allocatable :: w90_nnk_list(:,:)                        !
@@ -117,7 +117,7 @@ program wannier90_interface
   call unit_system_init(global_namespace)
 
   call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
-  sys => system_init(global_namespace)
+  sys => electrons_t(global_namespace)
 
   !%Variable Wannier90Prefix
   !%Type string

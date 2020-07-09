@@ -19,8 +19,8 @@
 
   ! ---------------------------------------------------------
   subroutine oct_finalcheck(sys, td)
-    type(system_t), intent(inout)      :: sys
-    type(td_t), intent(inout)          :: td
+    type(electrons_t),   intent(inout) :: sys
+    type(td_t),          intent(inout) :: td
 
     type(states_elec_t) :: psi
     type(opt_control_state_t) :: qcpsi    

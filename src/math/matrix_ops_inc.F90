@@ -96,7 +96,7 @@ subroutine X(matrix_gather)(this, bsize, proc_grid, submatrix)
 
   PUSH_SUB(matrix_gather)
 
-  call profiling_in(prof_gather, "MATRIX_GATHER")
+  call profiling_in(prof_gather, "X(MATRIX_GATHER)")
   
   do ip1 = 1, proc_grid%nprow      
     do ip2 = 1, proc_grid%npcol

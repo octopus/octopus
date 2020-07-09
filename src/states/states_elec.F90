@@ -1823,8 +1823,8 @@ contains
     FLOAT, pointer :: jp(:, :, :)
     FLOAT, pointer :: tau(:, :)
     CMPLX, allocatable :: wf_psi(:,:), gwf_psi(:,:,:), wf_psi_conj(:,:), lwf_psi(:,:)
-    FLOAT, allocatable :: abs_wf_psi(:), abs_gwf_psi(:)
-    CMPLX, allocatable :: psi_gpsi(:)
+    FLOAT, allocatable :: abs_wf_psi(:,:), abs_gwf_psi(:)
+    CMPLX, allocatable :: psi_gpsi(:,:)
     CMPLX   :: c_tmp
     integer :: is, ik, ist, i_dim, st_dim, ii, st_end_, idir
     FLOAT   :: ww, kpoint(1:MAX_DIM)
@@ -1846,9 +1846,9 @@ contains
     SAFE_ALLOCATE( wf_psi(1:der%mesh%np_part, 1:st%d%dim))
     SAFE_ALLOCATE( wf_psi_conj(1:der%mesh%np_part, 1:st%d%dim))
     SAFE_ALLOCATE(gwf_psi(1:der%mesh%np, 1:der%mesh%sb%dim, 1:st%d%dim))
-    SAFE_ALLOCATE(abs_wf_psi(1:der%mesh%np))
+    SAFE_ALLOCATE(abs_wf_psi(1:der%mesh%np, 1:st%d%dim))
     SAFE_ALLOCATE(abs_gwf_psi(1:der%mesh%np))
-    SAFE_ALLOCATE(psi_gpsi(1:der%mesh%np))
+    SAFE_ALLOCATE(psi_gpsi(1:der%mesh%np, 1:st%d%dim))
     if(present(density_laplacian)) then
       SAFE_ALLOCATE(lwf_psi(1:der%mesh%np, 1:st%d%dim))
     end if
@@ -1906,7 +1906,7 @@ contains
 
         !We precompute some quantites, to avoid to compute it many times
         wf_psi_conj(1:der%mesh%np, 1:st%d%dim) = conjg(wf_psi(1:der%mesh%np,1:st%d%dim))
-        abs_wf_psi(1:der%mesh%np) = real(wf_psi_conj(1:der%mesh%np, 1)*wf_psi(1:der%mesh%np, 1))
+        abs_wf_psi(1:der%mesh%np, 1:st%d%dim) = real(wf_psi_conj(1:der%mesh%np, 1:st%d%dim)*wf_psi(1:der%mesh%np, 1:st%d%dim))
 
         if(present(density_laplacian)) then
           density_laplacian(1:der%mesh%np, is) = density_laplacian(1:der%mesh%np, is) + &
@@ -1926,12 +1926,12 @@ contains
         do i_dim = 1, der%mesh%sb%dim
 
           !We precompute some quantites, to avoid to compute it many times
-          psi_gpsi(1:der%mesh%np) = wf_psi_conj(1:der%mesh%np, 1)*gwf_psi(1:der%mesh%np,i_dim,1)
+          psi_gpsi(1:der%mesh%np, 1:st%d%dim) = wf_psi_conj(1:der%mesh%np, 1:st%d%dim)*gwf_psi(1:der%mesh%np,i_dim,1:st%d%dim)
           abs_gwf_psi(1:der%mesh%np) = real(conjg(gwf_psi(1:der%mesh%np, i_dim, 1))*gwf_psi(1:der%mesh%np, i_dim, 1))
 
           if(present(density_gradient)) &
                density_gradient(1:der%mesh%np, i_dim, is) = density_gradient(1:der%mesh%np, i_dim, is) &
-                      + ww*M_TWO*real(psi_gpsi(1:der%mesh%np))
+                      + ww*M_TWO*real(psi_gpsi(1:der%mesh%np, 1))
           if(present(density_laplacian)) &
                density_laplacian(1:der%mesh%np, is) = density_laplacian(1:der%mesh%np, is)             &
                       + ww*M_TWO*abs_gwf_psi(1:der%mesh%np)
@@ -1939,8 +1939,8 @@ contains
           if(associated(jp)) then
             if (.not.(states_are_real(st))) then
               jp(1:der%mesh%np, i_dim, is) = jp(1:der%mesh%np, i_dim, is) + &
-                    ww*aimag(psi_gpsi(1:der%mesh%np)) &
-                  - ww*abs_wf_psi(1:der%mesh%np)*kpoint(i_dim)
+                    ww*aimag(psi_gpsi(1:der%mesh%np, 1)) &
+                  - ww*abs_wf_psi(1:der%mesh%np, 1)*kpoint(i_dim)
             else
               jp(1:der%mesh%np, i_dim, is) = M_ZERO
             end if
@@ -1948,8 +1948,8 @@ contains
 
           if (associated(tau)) then
             tau (1:der%mesh%np, is)   = tau (1:der%mesh%np, is)        + &
-                 ww*(abs_gwf_psi(1:der%mesh%np) + abs(kpoint(i_dim))**2*abs_wf_psi(1:der%mesh%np)  &
-                     - M_TWO*aimag(psi_gpsi(1:der%mesh%np))*kpoint(i_dim))
+                 ww*(abs_gwf_psi(1:der%mesh%np) + abs(kpoint(i_dim))**2*abs_wf_psi(1:der%mesh%np, 1)  &
+                     - M_TWO*aimag(psi_gpsi(1:der%mesh%np, 1))*kpoint(i_dim))
           end if
 
           if(st%d%ispin == SPINORS) then
@@ -1978,7 +1978,8 @@ contains
             !         (-jp(3) + i jp(4)   jp(2)           )
             if(associated(jp)) then
               jp(1:der%mesh%np, i_dim, 2) = jp(1:der%mesh%np, i_dim, 2) + &
-                   ww*aimag(wf_psi_conj(1:der%mesh%np, 2)*gwf_psi(1:der%mesh%np, i_dim, 2))
+                   ww*( aimag(psi_gpsi(1:der%mesh%np, 2)) &
+                       - ww*abs_wf_psi(1:der%mesh%np, 2)*kpoint(i_dim))
               do ii = 1, der%mesh%np
                 c_tmp = wf_psi_conj(ii, 1)*gwf_psi(ii, i_dim, 2) - wf_psi(ii, 2)*conjg(gwf_psi(ii, i_dim, 1))
                 jp(ii, i_dim, 3) = jp(ii, i_dim, 3) + ww* real(c_tmp)
@@ -1990,7 +1991,10 @@ contains
             !     t = ( tau(1)              tau(3) + i tau(4) )
             !         ( tau(3) - i tau(4)   tau(2)            )
             if(associated(tau)) then
-              tau (1:der%mesh%np, 2) = tau (1:der%mesh%np, 2) + ww*abs(gwf_psi(1:der%mesh%np, i_dim, 2))**2
+              tau(1:der%mesh%np, 2) = tau(1:der%mesh%np, 2) + ww*(abs(gwf_psi(1:der%mesh%np, i_dim, 2))**2 &
+                     + abs(kpoint(i_dim))**2*abs_wf_psi(1:der%mesh%np, 2)  &
+                     - M_TWO*aimag(psi_gpsi(1:der%mesh%np, 2))*kpoint(i_dim))
+
               do ii = 1, der%mesh%np
                 c_tmp = conjg(gwf_psi(ii, i_dim, 1))*gwf_psi(ii, i_dim, 2)
                 tau(ii, 3) = tau(ii, 3) + ww* real(c_tmp)

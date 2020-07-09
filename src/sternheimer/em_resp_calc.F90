@@ -41,7 +41,7 @@ module em_resp_calc_oct_m
   use states_elec_dim_oct_m
   use sternheimer_oct_m
   use symmetrizer_oct_m
-  use system_oct_m
+  use electrons_oct_m
   use utils_oct_m
   use xc_oct_m
 

@@ -121,4 +121,3 @@ amplitude = 0.2
 #"envelope_function" | tdf_from_file | "./opt-control/laser.238/cp"
 #%
 
-

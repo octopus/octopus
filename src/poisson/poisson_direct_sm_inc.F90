@@ -34,7 +34,7 @@ subroutine dpoisson_solve_direct_sm(this, sm, pot, rho)
 
   PUSH_SUB(dpoisson_solve_direct_sm)
 
-  call profiling_in(prof, "SM_POISSON_SOLVE")
+  call profiling_in(prof, "X(SM_POISSON_SOLVE)")
 
   ASSERT(.not. this%is_dressed)
 

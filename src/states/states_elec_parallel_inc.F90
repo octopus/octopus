@@ -26,7 +26,7 @@ subroutine X(states_elec_parallel_gather_3)(st, dims, psi)
   
   !no PUSH_SUB, called too often
   
-  call profiling_in(prof_gather, 'STATES_GATHER')
+  call profiling_in(prof_gather, "X(STATES_GATHER)")
 
   if(st%parallel_in_states) then
 
@@ -82,7 +82,7 @@ subroutine X(states_elec_parallel_gather_1)(st, aa)
   R_TYPE, allocatable :: sendaa(:)
   integer, allocatable :: displs(:)
   
-  call profiling_in(prof_gather, 'STATES_GATHER')
+  call profiling_in(prof_gather, "X(STATES_GATHER)")
 
   if(st%parallel_in_states) then
 

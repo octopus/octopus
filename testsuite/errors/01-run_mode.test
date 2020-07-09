@@ -1,0 +1,17 @@
+# -*- coding: utf-8 mode: shell-script -*-
+
+Test       : Run_mode
+Program    : octopus
+TestGroups : short-run, errors
+Enabled    : Yes
+
+# The keyword 'FailingInput' is strictly not necessary. 'Input' will also do the same job.
+# But it can help to indicate that this test is supposed to fail
+
+FailingInput: 01-run_mode.01-one_shot.inp
+
+# As the code with the given input file will fail, we need to supply (at least) one error match.
+# These are marked by having the word error in their name
+
+match ; Error message ; GREPCOUNT(err, 'one_shot is obsolete') ; 1
+

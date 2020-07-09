@@ -1,15 +1,21 @@
 # -*- coding: utf-8 mode: shell-script -*-
 
-Test       : Hartree pfft
-Options    : pfft
-Program    : octopus
-TestGroups : short-run, components
-Enabled    : Yes
+Test         : Hartree pfft
+Program      : octopus
+TestGroups   : short-run, components
+Enabled      : Yes
 
 Precision : 0.005
 Input: 10-hartree_pfft.01-fft.inp
-match ; FFT           ; GREPFIELD(hartree_results, 'Hartree test (abs.) =', 5) ; 0.00035839
+if (available pfft); then
+    match ;     FFT ;               GREPFIELD(hartree_results, 'Hartree test (abs.) =', 5) ; 0.00035839
+else
+    match; Error PFFT missing; GREPCOUNT(err, 'PFFT'); 1
+endif   
 
 Input: 10-hartree_pfft.02-fft_corrected.inp
-match ; FFT Corrected ; GREPFIELD(hartree_results, 'Hartree test (abs.) =', 5) ; 0.00154839
-
+if (available pfft); then
+    match ;     FFT Corrected ;     GREPFIELD(hartree_results, 'Hartree test (abs.) =', 5) ; 0.00154839
+else
+    match; Error PFFT missing; GREPCOUNT(err, 'PFFT'); 1
+endif
