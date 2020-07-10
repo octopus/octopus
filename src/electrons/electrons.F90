@@ -23,6 +23,7 @@
 module electrons_oct_m
   use accel_oct_m
   use calc_mode_par_oct_m
+  use clock_oct_m
   use density_oct_m
   use elf_oct_m
   use energy_calc_oct_m
@@ -30,6 +31,7 @@ module electrons_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_elec_oct_m
+  use interaction_oct_m
   use mesh_oct_m
   use messages_oct_m
   use modelmb_particles_oct_m
@@ -45,6 +47,8 @@ module electrons_oct_m
   use states_abst_oct_m
   use states_elec_oct_m
   use states_elec_dim_oct_m
+  use sort_oct_m
+  use system_oct_m
   use unit_system_oct_m
   use v_ks_oct_m
   use xc_oct_m
@@ -56,19 +60,30 @@ module electrons_oct_m
   public ::               &
     electrons_t
 
-  type :: electrons_t
+  type, extends(system_t) :: electrons_t
     ! Components are public by default
-    type(space_t)                :: space
     type(geometry_t)             :: geo
     type(grid_t),        pointer :: gr    !< the mesh
     type(states_elec_t), pointer :: st    !< the states
     type(v_ks_t)                 :: ks    !< the Kohn-Sham potentials
     type(output_t)               :: outp  !< the output
     type(multicomm_t)            :: mc    !< index and domain communicators
-    type(namespace_t)            :: namespace
     type(hamiltonian_elec_t)     :: hm
   contains
+    procedure :: init_interaction => electrons_init_interaction
+    procedure :: initial_conditions => electrons_initial_conditions
+    procedure :: do_td_operation => electrons_do_td_operation
+    procedure :: is_tolerance_reached => electrons_is_tolerance_reached
+    procedure :: iteration_info => electrons_iteration_info
+    procedure :: store_current_status => electrons_store_current_status
+    procedure :: update_quantity => electrons_update_quantity
+    procedure :: update_exposed_quantity => electrons_update_exposed_quantity
+    procedure :: copy_quantities_to_interaction => electrons_copy_quantities_to_interaction
+    procedure :: output_start => electrons_output_start
+    procedure :: output_write => electrons_output_write
+    procedure :: output_finish => electrons_output_finish
     procedure :: process_is_slave  => electrons_process_is_slave
+    procedure :: h_setup => electrons_h_setup
     final :: electrons_finalize
   end type electrons_t
   
@@ -213,6 +228,124 @@ contains
   end function electrons_constructor
 
   ! ---------------------------------------------------------
+  subroutine electrons_init_interaction(this, interaction)
+    class(electrons_t), target, intent(inout) :: this
+    class(interaction_t),       intent(inout) :: interaction
+
+    PUSH_SUB(electrons_init_interactions)
+
+    POP_SUB(electrons_init_interactions)
+  end subroutine electrons_init_interaction
+
+  ! ---------------------------------------------------------
+  subroutine electrons_initial_conditions(this, from_scratch)
+    class(electrons_t), intent(inout) :: this
+    logical,            intent(in)    :: from_scratch
+
+    PUSH_SUB(electrons_initial_conditions)
+
+    POP_SUB(electrons_initial_conditions)
+  end subroutine electrons_initial_conditions
+
+  ! ---------------------------------------------------------
+  subroutine electrons_do_td_operation(this, operation)
+    class(electrons_t), intent(inout) :: this
+    integer,         intent(in)    :: operation
+
+    PUSH_SUB(electrons_do_td_operation)
+
+    POP_SUB(electrons_do_td_operation)
+  end subroutine electrons_do_td_operation
+
+  ! ---------------------------------------------------------
+  subroutine electrons_iteration_info(this)
+    class(electrons_t), intent(in) :: this
+
+    PUSH_SUB(electrons_iteraction_info)
+
+    POP_SUB(electrons_iteration_info)
+  end subroutine electrons_iteration_info
+
+  ! ---------------------------------------------------------
+  logical function electrons_is_tolerance_reached(this, tol)
+    class(electrons_t), intent(in) :: this
+    FLOAT,              intent(in) :: tol
+
+    PUSH_SUB(electrons_is_tolerance_reached)
+
+    POP_SUB(electrons_is_tolerance_reached)
+  end function electrons_is_tolerance_reached
+
+  ! ---------------------------------------------------------
+  subroutine electrons_store_current_status(this)
+    class(electrons_t), intent(inout) :: this
+
+    PUSH_SUB(electrons_store_current_status)
+
+    POP_SUB(electrons_store_current_status)
+  end subroutine electrons_store_current_status
+
+  ! ---------------------------------------------------------
+  subroutine electrons_update_quantity(this, iq, requested_time)
+    class(electrons_t),   intent(inout) :: this
+    integer,              intent(in)    :: iq
+    class(clock_t),       intent(in)    :: requested_time
+
+    PUSH_SUB(electrons_update_quantity)
+
+    POP_SUB(electrons_update_quantity)
+  end subroutine electrons_update_quantity
+
+  ! ---------------------------------------------------------
+  subroutine electrons_update_exposed_quantity(partner, iq, requested_time)
+    class(electrons_t), intent(inout) :: partner
+    integer,            intent(in)    :: iq
+    class(clock_t),     intent(in)    :: requested_time
+
+    PUSH_SUB(electrons_update_exposed_quantity)
+
+    POP_SUB(electrons_update_exposed_quantity)
+  end subroutine electrons_update_exposed_quantity
+
+  ! ---------------------------------------------------------
+  subroutine electrons_copy_quantities_to_interaction(partner, interaction)
+    class(electrons_t),   intent(inout) :: partner
+    class(interaction_t), intent(inout) :: interaction
+
+    PUSH_SUB(electrons_copy_quantities_to_interaction)
+
+    POP_SUB(electrons_copy_quantities_to_interaction)
+  end subroutine electrons_copy_quantities_to_interaction
+
+  ! ---------------------------------------------------------
+  subroutine electrons_output_start(this)
+    class(electrons_t), intent(inout) :: this
+
+    PUSH_SUB(electrons_output_start)
+
+    POP_SUB(electrons_output_start)
+  end subroutine electrons_output_start
+
+  ! ---------------------------------------------------------
+  subroutine electrons_output_write(this, iter)
+    class(electrons_t), intent(inout) :: this
+    integer,            intent(in)    :: iter
+
+    PUSH_SUB(electrons_output_write)
+
+    POP_SUB(electrons_output_write)
+  end subroutine electrons_output_write
+
+  ! ---------------------------------------------------------
+  subroutine electrons_output_finish(this)
+    class(electrons_t), intent(inout) :: this
+
+    PUSH_SUB(electrons_output_finish)
+
+    POP_SUB(electrons_output_finish)
+  end subroutine electrons_output_finish
+
+  ! ---------------------------------------------------------
   logical function electrons_process_is_slave(this) result(is_slave)
     class(electrons_t), intent(in) :: this
 
@@ -222,6 +355,52 @@ contains
 
     POP_SUB(electrons_process_is_slave)
   end function electrons_process_is_slave
+
+  !----------------------------------------------------------
+  subroutine electrons_h_setup(this, calc_eigenval, calc_current)
+    class(electrons_t), intent(inout) :: this
+    logical,  optional, intent(in)    :: calc_eigenval !< default is true
+    logical,  optional, intent(in)    :: calc_current !< default is true
+
+    integer, allocatable :: ind(:)
+    integer :: ist, ik
+    FLOAT, allocatable :: copy_occ(:)
+    logical :: calc_eigenval_
+    logical :: calc_current_
+
+    PUSH_SUB(electrons_h_setup)
+
+    calc_eigenval_ = optional_default(calc_eigenval, .true.)
+    calc_current_ = optional_default(calc_current, .true.)
+    call states_elec_fermi(this%st, this%namespace, this%gr%mesh)
+    call density_calc(this%st, this%gr, this%st%rho)
+    call v_ks_calc(this%ks, this%namespace, this%hm, this%st, this%geo, calc_eigenval = calc_eigenval_, &
+      calc_current = calc_current_) ! get potentials
+
+    if(this%st%restart_reorder_occs .and. .not. this%st%fromScratch) then
+      message(1) = "Reordering occupations for restart."
+      call messages_info(1)
+
+      SAFE_ALLOCATE(ind(1:this%st%nst))
+      SAFE_ALLOCATE(copy_occ(1:this%st%nst))
+
+      do ik = 1, this%st%d%nik
+        call sort(this%st%eigenval(:, ik), ind)
+        copy_occ(1:this%st%nst) = this%st%occ(1:this%st%nst, ik)
+        do ist = 1, this%st%nst
+          this%st%occ(ist, ik) = copy_occ(ind(ist))
+        end do
+      end do
+
+      SAFE_DEALLOCATE_A(ind)
+      SAFE_DEALLOCATE_A(copy_occ)
+    end if
+
+    if(calc_eigenval_) call states_elec_fermi(this%st, this%namespace, this%gr%mesh) ! occupations
+    call energy_calc_total(this%namespace, this%hm, this%gr, this%st)
+
+    POP_SUB(electrons_h_setup)
+  end subroutine electrons_h_setup
 
   !----------------------------------------------------------
   subroutine electrons_finalize(sys)
