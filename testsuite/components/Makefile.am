@@ -90,6 +90,8 @@ dist_share_DATA =                                  \
 	26-batch_ops.03-jellium-spinor.inp         \
 	26-batch_ops.test                          \
 	27-clock.01.inp                            \
-	27-clock.test
+	27-clock.test                              \
+	28-density_grad.01-Si.inp                  \
+	28-density_grad.test
 
 CLEANFILES = *~ *.bak

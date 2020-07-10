@@ -1,0 +1,12 @@
+# -*- coding: utf-8 mode: shell-script -*-
+
+Test       : Oct-test density gradient calculation
+Program    : octopus
+TestGroups : short-run, components
+Enabled    : Yes
+
+Processors: 1
+Input: 28-density_grad.01-Si.inp
+match ; Norm density gradient; GREPFIELD(out, 'Norm grad(1)', 3) ; 0.640917
+match ; Norm density gradient; GREPFIELD(out, 'Norm grad(2)', 3) ; 0.660970
+match ; Norm density gradient; GREPFIELD(out, 'Norm grad(3)', 3) ; 0.619735

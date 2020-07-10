@@ -118,6 +118,8 @@ contains
     !% Tests the batch operations
     !%Option clock 18
     !% Tests for clock
+    !%Option density_grad 19
+    !% Calculation of the density gradient.
     !%End
     call parse_variable(namespace, 'TestMode', OPTION__TESTMODE__HARTREE, test_mode)
 
@@ -210,6 +212,8 @@ contains
       call test_hamiltonian(param, namespace)
     case(OPTION__TESTMODE__DENSITY_CALC)
       call test_density_calc(param, namespace)
+    case(OPTION__TESTMODE__DENSITY_GRAD)
+      call test_density_grad(param, namespace)
     case(OPTION__TESTMODE__EXP_APPLY)
       call test_exponential(param, namespace)
     case(OPTION__TESTMODE__BOUNDARIES)
@@ -494,6 +498,85 @@ contains
 
     POP_SUB(test_density_calc)
   end subroutine test_density_calc
+
+  ! ---------------------------------------------------------
+  subroutine test_density_grad(param, namespace)
+    type(test_parameters_t), intent(in) :: param
+    type(namespace_t),       intent(in) :: namespace
+
+    type(electrons_t), pointer :: sys
+    integer :: itime
+
+    integer :: ib, iq, idir, np, np_part
+    type(wfs_elec_t) :: psib, grad_psib(1:MAX_DIM)
+  
+    FLOAT,  allocatable :: grad_psi(:, :, :)
+    FLOAT,  allocatable :: grad_rho(:, :)
+  
+
+    PUSH_SUB(test_density_grad)
+
+    call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
+
+    call messages_write('Info: Testing density gradient calculation')
+    call messages_new_line()
+    call messages_new_line()
+    call messages_info()
+
+    sys => electrons_t(namespace)
+
+    call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
+    call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
+    if(sys%st%d%pack_states) call sys%st%pack()
+
+    np = sys%gr%mesh%np
+    np_part = sys%gr%mesh%np_part
+  
+    SAFE_ALLOCATE(grad_psi(1:np, 1:sys%gr%mesh%sb%dim, 1:sys%st%d%dim))
+    SAFE_ALLOCATE(grad_rho(1:np, 1:sys%gr%mesh%sb%dim))
+    grad_rho = M_ZERO
+  
+
+    do iq = sys%st%d%kpt%start, sys%st%d%kpt%end
+
+      do ib = sys%st%group%block_start, sys%st%group%block_end
+
+        call sys%st%group%psib(ib, iq)%copy_to(psib, copy_data = .true.)
+
+        do idir = 1, sys%gr%mesh%sb%dim
+          call psib%copy_to(grad_psib(idir))
+          if (states_are_real(sys%st) ) then
+            call dderivatives_batch_perform(sys%gr%der%grad(idir), sys%gr%der, psib, grad_psib(idir), set_bc = .false.)
+          else
+            call zderivatives_batch_perform(sys%gr%der%grad(idir), sys%gr%der, psib, grad_psib(idir), set_bc = .false.)
+          end if
+        end do
+
+        if (states_are_real(sys%st) ) then
+          call ddensity_accumulate_grad(sys%gr, sys%st, psib, grad_psib, grad_rho)
+        else
+          call zdensity_accumulate_grad(sys%gr, sys%st, psib, grad_psib, grad_rho)
+        end if
+
+      end do
+
+    end do
+
+
+    write(message(1),'(a,3x, f12.6)') "Norm grad(1)  ", dmf_nrm2(sys%gr%mesh, grad_rho(:,1))
+    write(message(2),'(a,3x, f12.6)') "Norm grad(2)  ", dmf_nrm2(sys%gr%mesh, grad_rho(:,2))
+    write(message(3),'(a,3x, f12.6)') "Norm grad(3)  ", dmf_nrm2(sys%gr%mesh, grad_rho(:,3))
+    call messages_info(3)
+
+    SAFE_DEALLOCATE_A(grad_psi)
+    SAFE_DEALLOCATE_A(grad_rho)
+
+
+    call states_elec_deallocate_wfns(sys%st)
+    SAFE_DEALLOCATE_P(sys)
+
+    POP_SUB(test_density_grad)
+  end subroutine test_density_grad
 
 
   ! ---------------------------------------------------------
