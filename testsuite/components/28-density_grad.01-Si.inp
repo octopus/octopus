@@ -25,5 +25,7 @@ a = 10.26120
 
 Spacing = 0.5
 
+ForceComplex = yes
+
 FilterPotentials = filter_none
 StatesPack = yes
