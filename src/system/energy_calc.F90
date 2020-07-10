@@ -68,7 +68,6 @@ contains
     integer, optional,        intent(in)    :: iunit
     logical, optional,        intent(in)    :: full
 
-    FLOAT                             :: tnadd_energy, external_energy
     logical :: full_
 
     PUSH_SUB(energy_calc_total)
@@ -80,12 +79,8 @@ contains
 
     if(full_ .or. hm%theory_level == HARTREE .or. hm%theory_level == HARTREE_FOCK) then
       if(states_are_real(st)) then
-
-        tnadd_energy = M_ZERO
-        external_energy = M_ZERO
-        
-        hm%energy%kinetic  = tnadd_energy + denergy_calc_electronic(namespace, hm, gr%der, st, terms = TERM_KINETIC)
-        hm%energy%extern_local = external_energy + denergy_calc_electronic(namespace, hm, gr%der, st, terms = TERM_LOCAL_EXTERNAL)
+        hm%energy%kinetic  = denergy_calc_electronic(namespace, hm, gr%der, st, terms = TERM_KINETIC)
+        hm%energy%extern_local = denergy_calc_electronic(namespace, hm, gr%der, st, terms = TERM_LOCAL_EXTERNAL)
         hm%energy%extern_non_local   = denergy_calc_electronic(namespace, hm, gr%der, st, terms = TERM_NON_LOCAL_POTENTIAL)
         hm%energy%extern = hm%energy%extern_local + hm%energy%extern_non_local
       else
