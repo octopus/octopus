@@ -53,6 +53,7 @@ module v_ks_oct_m
   use pseudo_oct_m
   use pcm_oct_m
   use simul_box_oct_m
+  use sort_oct_m
   use species_oct_m
   use states_abst_oct_m
   use states_elec_oct_m
@@ -78,6 +79,7 @@ module v_ks_oct_m
     v_ks_init,          &
     v_ks_end,           &
     v_ks_write_info,    &
+    v_ks_h_setup,       &
     v_ks_calc,          &
     v_ks_calc_t,        &
     v_ks_calc_start,    &
@@ -663,6 +665,56 @@ contains
   end subroutine v_ks_write_info
   ! ---------------------------------------------------------
 
+
+  !----------------------------------------------------------
+  subroutine v_ks_h_setup(namespace, gr, geo, st, ks, hm, calc_eigenval, calc_current)
+    type(namespace_t),        intent(in)    :: namespace
+    type(grid_t),             intent(in)    :: gr
+    type(geometry_t),         intent(in)    :: geo
+    type(states_elec_t),      intent(inout) :: st
+    type(v_ks_t),             intent(inout) :: ks
+    type(hamiltonian_elec_t), intent(inout) :: hm
+    logical,        optional, intent(in)    :: calc_eigenval !< default is true
+    logical,        optional, intent(in)    :: calc_current !< default is true
+
+    integer, allocatable :: ind(:)
+    integer :: ist, ik
+    FLOAT, allocatable :: copy_occ(:)
+    logical :: calc_eigenval_
+    logical :: calc_current_
+
+    PUSH_SUB(v_ks_h_setup)
+
+    calc_eigenval_ = optional_default(calc_eigenval, .true.)
+    calc_current_ = optional_default(calc_current, .true.)
+    call states_elec_fermi(st, namespace, gr%mesh)
+    call density_calc(st, gr, st%rho)
+    call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval = calc_eigenval_, calc_current = calc_current_) ! get potentials
+
+    if (st%restart_reorder_occs .and. .not. st%fromScratch) then
+      message(1) = "Reordering occupations for restart."
+      call messages_info(1)
+
+      SAFE_ALLOCATE(ind(1:st%nst))
+      SAFE_ALLOCATE(copy_occ(1:st%nst))
+
+      do ik = 1, st%d%nik
+        call sort(st%eigenval(:, ik), ind)
+        copy_occ(1:st%nst) = st%occ(1:st%nst, ik)
+        do ist = 1, st%nst
+          st%occ(ist, ik) = copy_occ(ind(ist))
+        end do
+      end do
+
+      SAFE_DEALLOCATE_A(ind)
+      SAFE_DEALLOCATE_A(copy_occ)
+    end if
+
+    if (calc_eigenval_) call states_elec_fermi(st, namespace, gr%mesh) ! occupations
+    call energy_calc_total(namespace, hm, gr, st)
+
+    POP_SUB(v_ks_h_setup)
+  end subroutine v_ks_h_setup
 
   ! ---------------------------------------------------------
   subroutine v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval, time, calc_berry, calc_energy, calc_current)

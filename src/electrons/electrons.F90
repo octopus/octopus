@@ -40,7 +40,6 @@ module electrons_oct_m
   use profiling_oct_m
   use space_oct_m
   use simul_box_oct_m
-  use sort_oct_m
   use states_abst_oct_m
   use states_elec_oct_m
   use states_elec_dim_oct_m
@@ -66,7 +65,6 @@ module electrons_oct_m
     type(namespace_t)            :: namespace
     type(hamiltonian_elec_t)     :: hm
   contains
-    procedure :: h_setup => electrons_h_setup
     final :: electrons_finalize
   end type electrons_t
   
@@ -186,52 +184,6 @@ contains
 
     POP_SUB(electrons_finalize)
   end subroutine electrons_finalize
-
-  !----------------------------------------------------------
-  subroutine electrons_h_setup(this, calc_eigenval, calc_current)
-    class(electrons_t), intent(inout) :: this
-    logical,  optional, intent(in)    :: calc_eigenval !< default is true
-    logical,  optional, intent(in)    :: calc_current !< default is true
-
-    integer, allocatable :: ind(:)
-    integer :: ist, ik
-    FLOAT, allocatable :: copy_occ(:)
-    logical :: calc_eigenval_
-    logical :: calc_current_
-
-    PUSH_SUB(electrons_h_setup)
-
-    calc_eigenval_ = optional_default(calc_eigenval, .true.)
-    calc_current_ = optional_default(calc_current, .true.)
-    call states_elec_fermi(this%st, this%namespace, this%gr%mesh)
-    call density_calc(this%st, this%gr, this%st%rho)
-    call v_ks_calc(this%ks, this%namespace, this%hm, this%st, this%geo, calc_eigenval = calc_eigenval_, &
-      calc_current = calc_current_) ! get potentials
-
-    if(this%st%restart_reorder_occs .and. .not. this%st%fromScratch) then
-      message(1) = "Reordering occupations for restart."
-      call messages_info(1)
-
-      SAFE_ALLOCATE(ind(1:this%st%nst))
-      SAFE_ALLOCATE(copy_occ(1:this%st%nst))
-
-      do ik = 1, this%st%d%nik
-        call sort(this%st%eigenval(:, ik), ind)
-        copy_occ(1:this%st%nst) = this%st%occ(1:this%st%nst, ik)
-        do ist = 1, this%st%nst
-          this%st%occ(ist, ik) = copy_occ(ind(ist))
-        end do
-      end do
-
-      SAFE_DEALLOCATE_A(ind)
-      SAFE_DEALLOCATE_A(copy_occ)
-    end if
-
-    if(calc_eigenval_) call states_elec_fermi(this%st, this%namespace, this%gr%mesh) ! occupations
-    call energy_calc_total(this%namespace, this%hm, this%gr, this%st)
-
-    POP_SUB(electrons_h_setup)
-  end subroutine electrons_h_setup
 
 end module electrons_oct_m
 
