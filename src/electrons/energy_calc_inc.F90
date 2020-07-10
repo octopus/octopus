@@ -63,7 +63,7 @@ subroutine X(calculate_expectation_values)(namespace, hm, der, st, eigen, terms)
 
   PUSH_SUB(X(calculate_expectation_values))
   
-  call profiling_in(prof, "X(EIGENVALUE_CALC)")
+  call profiling_in(prof, TOSTRING(X(EIGENVALUE_CALC)))
 
   do ik = st%d%kpt%start, st%d%kpt%end
     do ib = st%group%block_start, st%group%block_end

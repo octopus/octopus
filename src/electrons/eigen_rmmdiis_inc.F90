@@ -68,7 +68,7 @@ subroutine X(eigensolver_rmmdiis) (namespace, gr, st, hm, pre, tol, niter, conve
 
   nops = 0
 
-  call profiling_in(prof, "X(RMMDIIS)")
+  call profiling_in(prof, TOSTRING(X(RMMDIIS)))
 
   failed = .false.
   prog = 0
@@ -212,7 +212,7 @@ subroutine X(eigensolver_rmmdiis) (namespace, gr, st, hm, pre, tol, niter, conve
 
       !We now perform the direct inversion in the iterative subspace (DIIS)
       !which is solved as an Hermitian eigenvalue problem
-      call profiling_in(prof_iter, "X(RMMDIIS_MATRIX)")
+      call profiling_in(prof_iter, TOSTRING(X(RMMDIIS_MATRIX)))
       ! calculate the matrix elements between iterations
       do jter = 1, iter
         do kter = 1, jter
@@ -280,7 +280,7 @@ subroutine X(eigensolver_rmmdiis) (namespace, gr, st, hm, pre, tol, niter, conve
 
       call resb(iter)%batch%end()
 
-      call profiling_in(prof_lc, "X(RMMDIIS_LC)")
+      call profiling_in(prof_lc, TOSTRING(X(RMMDIIS_LC)))
 
       !Here we construct the linear combination of the states, see Eq. 68 
       call batch_scal(gr%mesh%np, evec(iter, 1, :), psib(iter)%batch, a_start = minst)

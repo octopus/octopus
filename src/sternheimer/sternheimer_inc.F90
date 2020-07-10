@@ -55,7 +55,7 @@ subroutine X(sternheimer_solve)(                           &
 #endif
   
   PUSH_SUB(X(sternheimer_solve))
-  call profiling_in(prof, "X(STERNHEIMER)")
+  call profiling_in(prof, TOSTRING(X(STERNHEIMER)))
 
   ASSERT(nsigma == 1 .or. nsigma == 2)
 
@@ -515,7 +515,7 @@ subroutine X(calc_hvar)(add_hartree, sys, lr_rho, nsigma, hvar, fxc)
   FLOAT :: coeff_hartree
 
   PUSH_SUB(X(calc_hvar))
-  call profiling_in(prof_hvar, "X(CALC_HVAR)")
+  call profiling_in(prof_hvar, TOSTRING(X(CALC_HVAR)))
 
   np = sys%gr%mesh%np
 

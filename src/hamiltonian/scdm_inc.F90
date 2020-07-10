@@ -45,7 +45,7 @@ subroutine X(scdm_localize)(scdm, namespace, st, mesh)
     return
   end if
 
-  call profiling_in(prof_scdm,"X(SCDM)")
+  call profiling_in(prof_scdm,TOSTRING(X(SCDM)))
 
   nval = st%nst ! TODO: check that this is really the number of valence states
 
@@ -74,7 +74,7 @@ subroutine X(scdm_localize)(scdm, namespace, st, mesh)
     end do
   end do
 
-  call profiling_in(prof_scdm_matmul1,"X(SCDM_matmul1)")
+  call profiling_in(prof_scdm_matmul1,TOSTRING(X(SCDM_matmul1)))
 
   SAFE_ALLOCATE(SCDM_temp(1:mesh%np,1:nval))
   SAFE_ALLOCATE(temp_column(1:mesh%np))
@@ -132,7 +132,7 @@ subroutine X(scdm_localize)(scdm, namespace, st, mesh)
   ! invert
   call X(invert)(nval,Pcc)
 
-  call profiling_in(prof_scdm_matmul3,"X(SCDM_matmul3)")
+  call profiling_in(prof_scdm_matmul3,TOSTRING(X(SCDM_matmul3)))
   ! form orthogonal SCDM
   SAFE_ALLOCATE(temp_state(1:mesh%np,1))
   do vv=scdm%st%st_start,scdm%st%st_end
@@ -437,7 +437,7 @@ subroutine X(scdm_rrqr)(scdm, namespace, st, mesh, nst, root, ik, jpvt)
 #endif
 
   PUSH_SUB(X(scdm_rrqr))
-  call profiling_in(prof_scdm_QR,"X(SCDM_QR)")
+  call profiling_in(prof_scdm_QR,TOSTRING(X(SCDM_QR)))
 
   ASSERT(.not. mesh%use_curvilinear)
   ASSERT(nst == st%nst)

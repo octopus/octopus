@@ -34,7 +34,7 @@ subroutine compute_complex_coulomb_integrals (this, mesh, der, st, psolver, name
   type(orbitalset_t), pointer :: os
   type(profile_t), save :: prof
 
-  call profiling_in(prof, "X(DFTU_COMPEX_COULOMB_INTEGRALS)")
+  call profiling_in(prof, TOSTRING(X(DFTU_COMPEX_COULOMB_INTEGRALS)))
 
   PUSH_SUB(compute_complex_coulomb_integrals)
 

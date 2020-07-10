@@ -41,7 +41,7 @@ subroutine X(lcao_atomic_orbital) (this, iorb, mesh, st, geo, psi, spin_channel)
   FLOAT, allocatable :: dorbital(:)
 #endif
   
-  call profiling_in(prof, "X(ATOMIC_ORBITAL)")
+  call profiling_in(prof, TOSTRING(X(ATOMIC_ORBITAL)))
   PUSH_SUB(X(lcao_atomic_orbital))
 
   ASSERT(iorb >= 1)
@@ -567,7 +567,7 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, namespace, start)
       call messages_write('Calculating matrix elements.')
       call messages_info()
 
-      call profiling_in(prof_matrix, "X(LCAO_MATRIX)")
+      call profiling_in(prof_matrix, TOSTRING(X(LCAO_MATRIX)))
 
       if(.not. this%parallel .and. mpi_grp_is_root(gr%mesh%mpi_grp)) then
         hamiltonian = R_TOTYPE(M_ZERO)
@@ -707,7 +707,7 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, namespace, start)
 
       call diagonalization()
 
-      call profiling_in(prof_wavefunction, "X(LCAO_WAVEFUNCTIONS)")
+      call profiling_in(prof_wavefunction, TOSTRING(X(LCAO_WAVEFUNCTIONS)))
 
       call messages_write('Generating wavefunctions.')
       call messages_info()
@@ -858,7 +858,7 @@ contains
 
     PUSH_SUB(X(lcao_alt_wf).diagonalization)
 
-    call profiling_in(prof, "X(LCAO_DIAG)")
+    call profiling_in(prof, TOSTRING(X(LCAO_DIAG)))
     if(this%parallel) then
 #ifdef HAVE_SCALAPACK            
       SAFE_ALLOCATE(ifail(1:this%norbs))
@@ -1146,7 +1146,7 @@ end subroutine X(lcao_alt_wf)
     PUSH_SUB(X(lcao_alt_get_orbital))
 
     if(.not. this%is_orbital_initialized(iatom)) then
-      call profiling_in(prof_orbitals, "X(LCAO_ORBITALS)")
+      call profiling_in(prof_orbitals, TOSTRING(X(LCAO_ORBITALS)))
 
       ! FIXME: the second argument should be dim = st%d%dim, not 1!
       call X(batch_init)(this%orbitals(iatom), 1, 1, norbs, sphere%np)

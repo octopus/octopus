@@ -23,7 +23,7 @@ subroutine X(partition_transfer)(this, f_in, f_out)
     
   PUSH_SUB(X(partition_transfer))  
 
-  call profiling_in(prof_transfer, "X(PARTITION_TRANSFER)")
+  call profiling_in(prof_transfer, TOSTRING(X(PARTITION_TRANSFER)))
 
 #ifdef HAVE_MPI
   call mpi_debug_in(this%comm, C_MPI_ALLTOALLV)
