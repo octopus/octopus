@@ -234,6 +234,12 @@ contains
 
     PUSH_SUB(electrons_init_interactions)
 
+    select type (interaction)
+    class default
+      message(1) = "Trying to initialize an unsupported interaction by the electrons."
+      call messages_fatal(1)
+    end select
+
     POP_SUB(electrons_init_interactions)
   end subroutine electrons_init_interaction
 
@@ -293,6 +299,15 @@ contains
 
     PUSH_SUB(electrons_update_quantity)
 
+    ! We are not allowed to update protected quantities!
+    ASSERT(.not. this%quantities(iq)%protected)
+
+    select case (iq)
+    case default
+      message(1) = "Incompatible quantity."
+      call messages_fatal(1)
+    end select
+
     POP_SUB(electrons_update_quantity)
   end subroutine electrons_update_quantity
 
@@ -304,6 +319,15 @@ contains
 
     PUSH_SUB(electrons_update_exposed_quantity)
 
+    ! We are not allowed to update protected quantities!
+    ASSERT(.not. partner%quantities(iq)%protected)
+
+    select case (iq)
+    case default
+      message(1) = "Incompatible quantity."
+      call messages_fatal(1)
+    end select
+
     POP_SUB(electrons_update_exposed_quantity)
   end subroutine electrons_update_exposed_quantity
 
@@ -313,6 +337,12 @@ contains
     class(interaction_t), intent(inout) :: interaction
 
     PUSH_SUB(electrons_copy_quantities_to_interaction)
+
+    select type (interaction)
+    class default
+      message(1) = "Unsupported interaction."
+      call messages_fatal(1)
+    end select
 
     POP_SUB(electrons_copy_quantities_to_interaction)
   end subroutine electrons_copy_quantities_to_interaction
