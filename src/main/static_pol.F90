@@ -275,7 +275,7 @@ contains
             sys%st%rho(1:sys%gr%mesh%np, 1:sys%st%d%nspin) = gs_rho(1:sys%gr%mesh%np, 1:sys%st%d%nspin)
             call v_ks_h_setup(sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm)
           else
-            call lcao_run(sys, lmm_r = scfv%lmm_r)
+            call lcao_run(sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, lmm_r = scfv%lmm_r)
           end if
         end if
 
@@ -356,7 +356,7 @@ contains
           sys%st%rho(1:sys%gr%mesh%np, 1:sys%st%d%nspin) = gs_rho(1:sys%gr%mesh%np, 1:sys%st%d%nspin)
           call v_ks_h_setup(sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm)
         else
-          call lcao_run(sys, lmm_r = scfv%lmm_r)
+          call lcao_run(sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, lmm_r = scfv%lmm_r)
         end if
       end if
 

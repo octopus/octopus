@@ -124,7 +124,7 @@ contains
     end if
 
     if (fromScratch .and. sys%ks%theory_level /= RDMFT) then
-      call lcao_run(sys, lmm_r = scfv%lmm_r)
+      call lcao_run(sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, lmm_r = scfv%lmm_r)
     else
       ! setup Hamiltonian
       call messages_write('Info: Setting up Hamiltonian.')
