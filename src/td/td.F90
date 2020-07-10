@@ -625,7 +625,7 @@ contains
           call messages_print_stress(stdout, 'Recalculating the ground state.', namespace=sys%namespace)
           fromScratch = .false.
           call states_elec_deallocate_wfns(sys%st)
-          call ground_state_run(sys, fromScratch)
+          call ground_state_run(sys%namespace, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, sys%outp, fromScratch)
           call states_elec_allocate_wfns(sys%st, gr%mesh, packed=.true.)
           call td_load(restart_load, sys%namespace, gr, st, sys%hm, td, ierr)
           if (ierr /= 0) then
