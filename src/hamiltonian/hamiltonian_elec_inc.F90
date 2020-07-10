@@ -479,7 +479,7 @@ subroutine X(h_mgga_terms) (hm, mesh, psib, hpsib)
   type(wfs_elec_t),         intent(inout) :: psib
   type(wfs_elec_t),         intent(inout) :: hpsib
 
-  integer :: ispin, ii, idir, ip
+  integer :: ispin, ii, idir
   R_TYPE, allocatable :: grad(:,:), diverg(:)
   type(wfs_elec_t) :: divb
   class(wfs_elec_t), allocatable :: gradb(:)
@@ -497,21 +497,14 @@ subroutine X(h_mgga_terms) (hm, mesh, psib, hpsib)
   
   do idir = 1, mesh%sb%dim
     call hpsib%copy_to(gradb(idir))
-    call X(derivatives_batch_perform)(hm%der%grad(idir), hm%der, psib, gradb(idir), ghost_update = .false., set_bc = .false.)
   end do
+  call X(derivatives_batch_grad)(hm%der, psib, gradb, ghost_update = .false., set_bc = .false.)
   
   do ii = 1, psib%nst_linear
 
     do idir = 1, mesh%sb%dim
       call batch_get_state(gradb(idir), ii, mesh%np, grad(:, idir))
     end do
-
-    ! Grad_xyw = Bt Grad_uvw, see Chelikowsky after Eq. 10
-    if (simul_box_is_periodic(mesh%sb) .and. mesh%sb%nonorthogonal ) then
-      do ip = 1, mesh%np
-        grad(ip, 1:hm%der%dim) = matmul(mesh%sb%klattice_primitive(1:hm%der%dim, 1:hm%der%dim),grad(ip, 1:hm%der%dim))
-      end do
-    end if
 
     do idir = 1, mesh%sb%dim
       grad(1:mesh%np, idir) = grad(1:mesh%np, idir)*hm%vtau(1:mesh%np, ispin)
