@@ -402,9 +402,6 @@ contains
     !%End
     call parse_variable(namespace, 'TDSCFThreshold', CNST(1.0e-6), tr%scf_threshold)
 
-
-    call tr%propagation_ops_elec%init()
-
     POP_SUB(propagator_init)
   end subroutine propagator_init
   ! ---------------------------------------------------------
@@ -460,8 +457,6 @@ contains
     end select
     
     call exponential_end(tr%te)       ! clean propagator method
-
-    call tr%propagation_ops_elec%end()
 
     POP_SUB(propagator_end)
   end subroutine propagator_end

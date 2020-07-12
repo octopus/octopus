@@ -38,7 +38,6 @@ module propagation_ops_elec_oct_m
   use profiling_oct_m
   use states_elec_oct_m
   use varinfo_oct_m
-  use propagation_ops_abst_oct_m
   use wfs_elec_oct_m
   use xc_oct_m
 
@@ -56,36 +55,14 @@ module propagation_ops_elec_oct_m
     propagation_ops_elec_restore_gauge_field,    &
     propagation_ops_elec_interpolate_get
 
-  type, extends(propagation_ops_abst_t) :: propagation_ops_elec_t
+  type :: propagation_ops_elec_t
     private
-
     type(ion_state_t) :: ions_state
     FLOAT :: vecpot(1:MAX_DIM), vecpot_vel(1:MAX_DIM)
-
-  contains
-
-    procedure :: init => propagation_ops_elec_init
-    procedure :: end => propagation_ops_elec_end
   end type propagation_ops_elec_t
 
 
 contains
-
-  subroutine propagation_ops_elec_init(wo)
-    class(propagation_ops_elec_t),  intent(inout) :: wo
-
-    PUSH_SUB(propagation_ops_elec_init)
-
-    POP_SUB(propagation_ops_elec_init)
-  end subroutine
-
-  subroutine propagation_ops_elec_end(wo)
-    class(propagation_ops_elec_t),  intent(inout) :: wo
-
-    PUSH_SUB(propagation_ops_elec_end)
-
-    POP_SUB(propagation_ops_elec_end)
-  end subroutine
 
   ! ---------------------------------------------------------
   subroutine propagation_ops_elec_update_hamiltonian(namespace, st, mesh, hm, time)
