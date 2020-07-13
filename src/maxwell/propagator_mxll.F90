@@ -128,6 +128,8 @@ contains
 
     PUSH_SUB(propagator_mxll_init)
 
+    hm%bc%bc_type(:) = MXLL_BC_ZERO ! default boundary condition is zero
+
     !%Variable MaxwellBoundaryConditions
     !%Type block
     !%Section Time-Dependent::Propagation
@@ -169,60 +171,62 @@ contains
       if (ncols /= 3) then
         call messages_input_error(namespace, 'MaxwellBoundaryConditions', 'should consist of three columns')
       end if
-      do icol=1, ncols
+      do icol = 1, ncols
         call parse_block_integer(blk, 0, icol-1, hm%bc%bc_type(icol))
-        select case (hm%bc%bc_type(icol))
-          case (MXLL_BC_ZERO)
-          string = 'Zero'
-          tr%bc_zero = .true.
-        case (MXLL_BC_CONSTANT)
-          string = 'Constant'
-          tr%bc_constant = .true.
-          tr%bc_add_ab_region = .true.
-          hm%bc_constant = .true.
-          hm%bc_add_ab_region = .true.
-        case (MXLL_BC_MIRROR_PEC)
-          string = 'PEC Mirror'
-          tr%bc_mirror_pec = .true.
-          hm%bc_mirror_pec = .true.
-        case (MXLL_BC_MIRROR_PMC)
-          string = 'PMC Mirror'
-          tr%bc_mirror_pmc = .true.
-          hm%bc_mirror_pmc = .true.
-        case (MXLL_BC_PERIODIC)
-          string = 'Periodic'
-          tr%bc_periodic = .true.
-          hm%bc_periodic = .true.
-        case (MXLL_BC_PLANE_WAVES)
-          string = 'Plane waves'
-          plane_waves_set = .true.
-          tr%bc_plane_waves = .true.
-          tr%bc_add_ab_region = .true.
-          hm%plane_waves = .true.
-          hm%bc_plane_waves = .true.
-          hm%bc_add_ab_region = .true.
-        case (MXLL_BC_MEDIUM)
-          string = 'Medium boundary'
-        end select
-        write(message(1),'(a,I1,a,a)') 'Maxwell boundary condition in direction ', icol, ': ', trim(string)
-        call messages_info(1)
-        if (plane_waves_set .and. .not. (parse_is_defined(namespace, 'MaxwellIncidentWaves')) ) then
-          write(message(1),'(a)') 'Input: Maxwell boundary condition option is set to "plane_waves".'
-          write(message(2),'(a)') 'Input: User defined Maxwell plane waves have to be defined!'
-          call messages_fatal(2, namespace=namespace)
-        end if
       end do
+      call parse_block_end(blk)
+      call messages_print_stress(stdout, namespace=namespace)
+    end if
 
-     call parse_block_end(blk)
-     call messages_print_stress(stdout, namespace=namespace)
+    do icol = 1, 3
+      select case (hm%bc%bc_type(icol))
+      case (MXLL_BC_ZERO)
+        string = 'Zero'
+        hm%bc_zero = .true.
+        tr%bc_zero = .true.
+      case (MXLL_BC_CONSTANT)
+        string = 'Constant'
+        tr%bc_constant = .true.
+        tr%bc_add_ab_region = .true.
+        hm%bc_constant = .true.
+        hm%bc_add_ab_region = .true.
+      case (MXLL_BC_MIRROR_PEC)
+        string = 'PEC Mirror'
+        tr%bc_mirror_pec = .true.
+        hm%bc_mirror_pec = .true.
+      case (MXLL_BC_MIRROR_PMC)
+        string = 'PMC Mirror'
+        tr%bc_mirror_pmc = .true.
+        hm%bc_mirror_pmc = .true.
+      case (MXLL_BC_PERIODIC)
+        string = 'Periodic'
+        tr%bc_periodic = .true.
+        hm%bc_periodic = .true.
+      case (MXLL_BC_PLANE_WAVES)
+        string = 'Plane waves'
+        plane_waves_set = .true.
+        tr%bc_plane_waves = .true.
+        tr%bc_add_ab_region = .true.
+        hm%plane_waves = .true.
+        hm%bc_plane_waves = .true.
+        hm%bc_add_ab_region = .true.
+      case (MXLL_BC_MEDIUM)
+        string = 'Medium boundary'
+      end select
+      write(message(1),'(a,I1,a,a)') 'Maxwell boundary condition in direction ', icol, ': ', trim(string)
+      call messages_info(1)
+      if (plane_waves_set .and. .not. (parse_is_defined(namespace, 'MaxwellIncidentWaves')) ) then
+        write(message(1),'(a)') 'Input: Maxwell boundary condition option is set to "plane_waves".'
+        write(message(2),'(a)') 'Input: User defined Maxwell plane waves have to be defined!'
+        call messages_fatal(2, namespace=namespace)
+      end if
+    end do
 
-   end if
-
-   if (any(hm%bc%bc_type(1:3) == MXLL_BC_CONSTANT)) then
-     call td_function_mxll_init(st, namespace, hm)
-     SAFE_ALLOCATE(st%rs_state_const(1:st%dim))
-     st%rs_state_const = M_z0
-   end if
+    if (any(hm%bc%bc_type(1:3) == MXLL_BC_CONSTANT)) then
+      call td_function_mxll_init(st, namespace, hm)
+      SAFE_ALLOCATE(st%rs_state_const(1:st%dim))
+      st%rs_state_const = M_z0
+    end if
 
     !%Variable MaxwellMediumBox
     !%Type block
@@ -1133,7 +1137,7 @@ contains
     FLOAT, allocatable :: energy_density(:), energy_density_plane_waves(:), tmp(:), tmp_pw(:)
     FLOAT, allocatable :: e_energy_density(:), tmp_e(:)
     FLOAT, allocatable :: b_energy_density(:), tmp_b(:)
-    
+
     PUSH_SUB(energy_mxll_calc)
 
     SAFE_ALLOCATE(energy_density(1:gr%mesh%np))
