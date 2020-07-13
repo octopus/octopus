@@ -48,6 +48,13 @@ module orbitalset_utils_oct_m
        zorbitalset_utils_getorbitals,  &
        orbitalset_init_intersite
 
+  integer, public, parameter ::     &
+    SM_POISSON_DIRECT          = 0, &
+    SM_POISSON_ISF             = 1, &
+    SM_POISSON_PSOLVER         = 2, &
+    SM_POISSON_FFT             = 3
+
+
 contains
 
   integer function orbitalset_utils_count(geo, ia, iselect) result(norb)
@@ -71,7 +78,8 @@ contains
     end do
   end function orbitalset_utils_count
 
-  subroutine orbitalset_init_intersite(this, namespace, ind, sb, geo, der, psolver, os, nos, maxnorbs, rcut, kpt, has_phase)
+  subroutine orbitalset_init_intersite(this, namespace, ind, sb, geo, der, psolver, os, nos, maxnorbs, &
+                rcut, kpt, has_phase, sm_poisson)
     type(orbitalset_t),           intent(inout) :: this
     type(namespace_t),            intent(in)    :: namespace
     integer,                      intent(in)    :: ind
@@ -84,6 +92,7 @@ contains
     FLOAT,                        intent(in)    :: rcut
     type(distributed_t),          intent(in)    :: kpt
     logical,                      intent(in)    :: has_phase
+    integer,                      intent(in)    :: sm_poisson
 
 
     type(periodic_copy_t) :: pc
@@ -207,7 +216,17 @@ contains
         !Build information needed for the direct Poisson solver on the submesh
         call submesh_build_global(sm)
 
-        call poisson_init_sm(this%poisson, namespace, psolver, der, sm)
+        select case (sm_poisson)
+        case(SM_POISSON_DIRECT)
+          call poisson_init_sm(this%poisson, namespace, psolver, der, sm, method = POISSON_DIRECT_SUM)
+        case(SM_POISSON_ISF)
+          call poisson_init_sm(this%poisson, namespace, psolver, der, sm, method = POISSON_ISF)
+        case(SM_POISSON_PSOLVER)
+          call poisson_init_sm(this%poisson, namespace, psolver, der, sm, method = POISSON_PSOLVER)
+        case(SM_POISSON_FFT)
+          call poisson_init_sm(this%poisson, namespace, psolver, der, sm, method = POISSON_FFT)
+        end select
+ 
         np_sphere = sm%np
 
         do ist = 1, this%norbs
@@ -243,7 +262,7 @@ contains
         SAFE_DEALLOCATE_A(tmp)
 
         call submesh_end_global(sm)
-
+        call submesh_end_cube_map(sm)
         call submesh_end(sm)
         SAFE_DEALLOCATE_A(orb)
       end do !inn

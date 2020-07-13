@@ -73,16 +73,19 @@ contains
 
     else
 
+      call this%add(STORE_CURRENT_STATUS)
       call this%add(EXPMID_PREDICT_DT_2)  ! predict: psi(t+dt/2) = 0.5*(U_H(dt) psi(t) + psi(t)) or via extrapolation
       call this%add(UPDATE_INTERACTIONS)
       call this%add(UPDATE_HAMILTONIAN)   ! update: H(t+dt/2) from psi(t+dt/2)
       call this%add(EXPMID_PREDICT_DT)    ! predict: psi(t+dt) = U_H(t+dt/2) psi(t)
+      call this%add(UPDATE_INTERACTIONS)
+      call this%add(UPDATE_HAMILTONIAN)   ! update: H(t+dt) from psi(t+dt)
       call this%add(FINISHED)
 
     end if
 
     ! Exponential midpoint has only one algorithmic step
-    this%algo_steps = 1
+    this%algo_steps = 2
 
     call this%parse_td_variables(namespace)
 

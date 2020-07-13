@@ -130,7 +130,7 @@ subroutine X(cube_function_allgather)(cube, cf, cf_local, order, gatherfs)
   PUSH_SUB(X(cube_function_allgather))
 
 #ifdef HAVE_MPI
-  call profiling_in(prof_allgather, "CF_ALLGATHER")
+  call profiling_in(prof_allgather, "X(CF_ALLGATHER)")
 
   if(cube_getFFTLibrary(cube) == FFTLIB_PFFT .or. &
     (cube_getFFTLibrary(cube) == FFTLIB_PNFFT .and. .not. optional_default(gatherfs, .false.))) then
@@ -219,7 +219,7 @@ subroutine X(mesh_to_cube)(mesh, mf, cube, cf, local)
   type(accel_kernel_t), save :: kernel
 
   PUSH_SUB(X(mesh_to_cube))
-  call profiling_in(prof_m2c, "MESH_TO_CUBE")
+  call profiling_in(prof_m2c, "X(MESH_TO_CUBE)")
 
   local_ = optional_default(local, .false.) .and. mesh%parallel_in_domains
 
@@ -319,7 +319,7 @@ subroutine X(cube_to_mesh) (cube, cf, mesh, mf, local)
 
   PUSH_SUB(X(cube_to_mesh))
 
-  call profiling_in(prof_c2m, "CUBE_TO_MESH")
+  call profiling_in(prof_c2m, "X(CUBE_TO_MESH)")
 
   local_ = optional_default(local, .false.) .and. mesh%parallel_in_domains
 
@@ -414,7 +414,7 @@ subroutine X(mesh_to_cube_parallel)(mesh, mf, cube, cf, map)
   R_TYPE, allocatable :: in(:), out(:)
 
   PUSH_SUB(X(mesh_to_cube_parallel))
-  call profiling_in(prof_m2c, "MESH_TO_CUBE_PARALLEL")
+  call profiling_in(prof_m2c, "X(MESH_TO_CUBE_PARALLEL)")
 
   ASSERT(ubound(mf, dim = 1) == mesh%np .or. ubound(mf, dim = 1) == mesh%np_part)
 
@@ -502,7 +502,7 @@ subroutine X(cube_to_mesh_parallel) (cube, cf, mesh, mf, map)
   R_TYPE, allocatable :: in(:), out(:)
 
   PUSH_SUB(X(cube_to_mesh_parallel))
-  call profiling_in(prof_c2m, "CUBE_TO_MESH_PARALLEL")
+  call profiling_in(prof_c2m, "X(CUBE_TO_MESH_PARALLEL)")
 
   ASSERT(.not. cf%in_device_memory)
   ASSERT(ubound(mf, dim = 1) == mesh%np .or. ubound(mf, dim = 1) == mesh%np_part)
@@ -625,7 +625,7 @@ subroutine X(submesh_to_cube)(sm, mf, cube, cf)
   type(profile_t), save :: prof_sm2c
 
   PUSH_SUB(X(submesh_to_cube))
-  call profiling_in(prof_sm2c, "SUBMESH_TO_CUBE")
+  call profiling_in(prof_sm2c, "X(SUBMESH_TO_CUBE)")
 
   ASSERT(ubound(mf, dim = 1) == sm%np)
   ASSERT(.not. sm%mesh%parallel_in_domains)
@@ -680,7 +680,7 @@ subroutine X(cube_to_submesh) (cube, cf, sm, mf)
 
   PUSH_SUB(X(cube_to_submesh))
 
-  call profiling_in(prof_c2sm, "CUBE_TO_SUBMESH")
+  call profiling_in(prof_c2sm, "X(CUBE_TO_SUBMESH)")
 
   ASSERT(ubound(mf, dim = 1) == sm%np)
   ASSERT(.not. sm%mesh%parallel_in_domains)

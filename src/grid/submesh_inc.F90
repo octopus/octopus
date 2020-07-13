@@ -46,7 +46,7 @@ R_TYPE function X(sm_integrate)(mesh, sm, ff, reduce) result(res)
   end if
 
   if(mesh%parallel_in_domains .and. optional_default(reduce, .true.)) then
-    call profiling_in(C_PROFILING_SM_REDUCE, "SM_REDUCE")
+    call profiling_in(C_PROFILING_SM_REDUCE, "X(SM_REDUCE)")
     call comm_allreduce(mesh%vp%comm, res)
     call profiling_out(C_PROFILING_SM_REDUCE)
   end if 
@@ -76,7 +76,7 @@ R_TYPE function X(sm_integrate_frommesh)(mesh, sm, ff, reduce) result(res)
   end if
 
   if(mesh%parallel_in_domains .and. optional_default(reduce, .true.)) then
-    call profiling_in(C_PROFILING_SM_REDUCE, "SM_REDUCE")
+    call profiling_in(C_PROFILING_SM_REDUCE, "X(SM_REDUCE)")
     call comm_allreduce(mesh%vp%comm, res)
     call profiling_out(C_PROFILING_SM_REDUCE)
   end if
@@ -166,7 +166,7 @@ subroutine X(submesh_copy_from_mesh_batch)(this, psib, spsi)
   integer :: ip, ist, ii, m, ip_map
   type(profile_t), save :: prof
 
-  call profiling_in(prof, "SM_CP_MESH_BATCH")
+  call profiling_in(prof, "X(SM_CP_MESH_BATCH)")
   PUSH_SUB(X(submesh_copy_from_mesh_batch))
 
   ASSERT(psib%status()/= BATCH_DEVICE_PACKED)
@@ -211,7 +211,7 @@ FLOAT function X(sm_nrm2)(sm, ff, reduce) result(nrm2)
 
   R_TYPE, allocatable :: ll(:)
 
-  call profiling_in(C_PROFILING_SM_NRM2, "SM_NRM2")
+  call profiling_in(C_PROFILING_SM_NRM2, "X(SM_NRM2)")
   PUSH_SUB(X(sm_nrm2))
 
   if(sm%mesh%use_curvilinear) then
@@ -226,7 +226,7 @@ FLOAT function X(sm_nrm2)(sm, ff, reduce) result(nrm2)
   nrm2 = nrm2*sqrt(sm%mesh%volume_element)
 
   if(sm%mesh%parallel_in_domains .and. optional_default(reduce, .true.)) then
-    call profiling_in(C_PROFILING_SM_REDUCE, "SM_REDUCE")
+    call profiling_in(C_PROFILING_SM_REDUCE, "X(SM_REDUCE)")
     nrm2 = nrm2**2
     call comm_allreduce(sm%mesh%vp%comm, nrm2)
     nrm2 = sqrt(nrm2)
@@ -296,7 +296,7 @@ subroutine X(submesh_batch_add_matrix)(this, factor, ss, mm)
   type(profile_t), save :: prof
   
   PUSH_SUB(X(submesh_batch_add_matrix))
-  call profiling_in(prof, 'SUBMESH_ADD_MATRIX')
+  call profiling_in(prof, "X(SUBMESH_ADD_MATRIX)")
 
   ASSERT(.not. ss%is_packed())
   

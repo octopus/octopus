@@ -34,7 +34,7 @@ subroutine compute_complex_coulomb_integrals (this, mesh, der, st, psolver, name
   type(orbitalset_t), pointer :: os
   type(profile_t), save :: prof
 
-  call profiling_in(prof, "DFTU_COMPEX_COULOMB_INTEGRALS")
+  call profiling_in(prof, "X(DFTU_COMPEX_COULOMB_INTEGRALS)")
 
   PUSH_SUB(compute_complex_coulomb_integrals)
 
@@ -67,7 +67,16 @@ subroutine compute_complex_coulomb_integrals (this, mesh, der, st, psolver, name
 
     call submesh_build_global(os%sphere)
 
-    call poisson_init_sm(os%poisson, namespace, psolver, der, os%sphere)
+    select case (this%sm_poisson)
+    case(SM_POISSON_DIRECT)
+      call poisson_init_sm(os%poisson, namespace, psolver, der, os%sphere, method = POISSON_DIRECT_SUM)
+    case(SM_POISSON_ISF)
+      call poisson_init_sm(os%poisson, namespace, psolver, der, os%sphere, method = POISSON_ISF)
+    case(SM_POISSON_PSOLVER)
+      call poisson_init_sm(os%poisson, namespace, psolver, der, os%sphere, method = POISSON_PSOLVER)
+    case(SM_POISSON_FFT)
+      call poisson_init_sm(os%poisson, namespace, psolver, der, os%sphere, method = POISSON_FFT, force_cmplx=.true.)
+    end select
 
     ijst=0
     do ist = 1, norbs
@@ -120,7 +129,7 @@ subroutine compute_complex_coulomb_integrals (this, mesh, der, st, psolver, name
       end do !jst
     end do !ist
     call poisson_end(os%poisson)
-
+    call submesh_end_cube_map(os%sphere)
     call submesh_end_global(os%sphere)
   end do !iorb
 

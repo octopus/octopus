@@ -17,13 +17,13 @@ ChargedParticle.ClassicalParticleMass = 1
 ChargedParticle.ClassicalParticleCharge = 1
 
 %ChargedParticle.ClassicalParticleInitialPosition
- 1 | 0 | 0
+ 1 | 0.0001 | 0.0001
 %
 %ChargedParticle.ClassicalParticleInitialVelocity
  0 | 0 | 0.01
 %
 
-ChargedParticle.TDSystemPropagator = verlet
+ChargedParticle.TDSystemPropagator = exp_mid
 
 
 # ----- Maxwell variables -----------------------------------------------------

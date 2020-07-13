@@ -973,10 +973,6 @@ contains
     call messages_new_line()
     call messages_info()
 
-    ! this should eventually be moved up to run.F90 when all systems
-    ! are derived classes from system_abst
-    call systems%init_interactions()
-
     ! Initialize all propagators and find the smallest time-step
     smallest_algo_dt = CNST(1e10)
     call systems%init_propagator(smallest_algo_dt)

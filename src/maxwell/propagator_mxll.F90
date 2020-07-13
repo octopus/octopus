@@ -261,7 +261,7 @@ contains
       do il=1, nlines
         ncols = parse_block_cols(blk, il-1)
         if (ncols /= 11) then
-          call messages_input_error(namespace, 'MaxwellMedium', 'should consist of eleven columns')
+          call messages_input_error(namespace, 'MaxwellMedium', 'should consist of eleven columns', row=il-1)
         end if
         do idim=1,3
           call parse_block_float(blk, il-1, idim-1, hm%medium_box_center(idim,il))
@@ -2459,7 +2459,7 @@ contains
     FLOAT                :: e_field(st%dim), b_field(st%dim)
     character(len=1024)  :: mxf_expression
 
-    PUSH_SUB(td_function_init)
+    PUSH_SUB(td_function_mxll_init)
 
     !%Variable UserDefinedConstantSpatialMaxwellField
     !%Type block

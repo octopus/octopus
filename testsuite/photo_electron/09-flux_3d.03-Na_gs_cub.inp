@@ -1,0 +1,20 @@
+CalculationMode = gs
+
+Dimensions = 3
+FromScratch = YES
+
+ExperimentalFeatures = YES
+
+#############################
+# GS
+#############################
+
+SICCorrection = sic_adsic
+
+%Coordinates
+ "Na" | 0.0 | 0.0 | 0.0
+%
+
+BoxShape = parallelepiped
+Lsize = 20
+Spacing = 0.7

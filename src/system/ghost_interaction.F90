@@ -25,7 +25,6 @@ module ghost_interaction_oct_m
   use messages_oct_m
   use namespace_oct_m
   use profiling_oct_m
-  use system_abst_oct_m
 
   implicit none
 
@@ -36,6 +35,7 @@ module ghost_interaction_oct_m
   type, extends(interaction_with_partner_t) :: ghost_interaction_t
   contains
     procedure :: calculate => ghost_interaction_calculate
+    final :: ghost_interaction_finalize
   end type ghost_interaction_t
 
   interface ghost_interaction_t
@@ -45,7 +45,6 @@ module ghost_interaction_oct_m
 contains
 
   ! ---------------------------------------------------------
-
   function ghost_interaction_init(partner) result(this)
     class(interaction_partner_t), target, intent(inout) :: partner
     class(ghost_interaction_t),           pointer       :: this
@@ -53,6 +52,8 @@ contains
     PUSH_SUB(ghost_interaction_init)
 
     SAFE_ALLOCATE(this)
+
+    this%label = "ghost"
 
     this%partner => partner
 
@@ -74,6 +75,17 @@ contains
 
     POP_SUB(ghost_interaction_calculate)
   end subroutine ghost_interaction_calculate
+
+  ! ---------------------------------------------------------
+  subroutine ghost_interaction_finalize(this)
+    type(ghost_interaction_t), intent(inout) :: this
+
+    PUSH_SUB(ghost_interaction_finalize)
+
+    call interaction_with_partner_end(this)
+
+    POP_SUB(ghost_interaction_finalize)
+  end subroutine ghost_interaction_finalize
 
 end module ghost_interaction_oct_m
 

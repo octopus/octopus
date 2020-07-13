@@ -482,10 +482,13 @@ system_f_srcs =                                 \
 	system/classical_particle.F90           \
 	system/ghost_interaction.F90            \
 	system/interaction_abst.F90             \
+	system/interaction_coulomb_force.F90    \
+	system/interaction_gravity.F90          \
 	system/interaction_lorentz_force.F90    \
 	system/interaction_partner.F90          \
-	system/interaction_gravity.F90          \
 	system/interaction_with_partner.F90     \
+	system/interactions_factory_abst.F90    \
+	system/interactions_factory.F90         \
 	system/multisystem.F90                  \
 	system/output.F90                       \
 	system/output_me.F90                    \

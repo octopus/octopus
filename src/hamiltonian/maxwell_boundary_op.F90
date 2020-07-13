@@ -742,7 +742,7 @@ contains
       SAFE_DEALLOCATE_A(tmp)
     end if
 
-    POP_SUB(bc_write_info)
+    POP_SUB(bc_mxll_write_info)
   contains
 
     subroutine get_pml_io_function(pml_func, bc, io_func)

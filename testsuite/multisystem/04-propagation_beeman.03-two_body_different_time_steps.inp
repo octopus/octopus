@@ -36,3 +36,5 @@ Earth.TDTimeStep = 24*3600/sampling/2
 Earth.TDMaxSteps = days*sampling*2
 Sun.TDTimeStep = 24*3600/sampling
 Sun.TDMaxSteps = days*sampling
+
+InteractionTiming = timing_retarded

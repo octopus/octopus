@@ -97,10 +97,10 @@ contains
     PUSH_SUB(interaction_with_partner_end)
 
     SAFE_DEALLOCATE_A(this%partner_quantities)
+    nullify(this%partner)
     call interaction_abst_end(this)
 
     POP_SUB(interaction_with_partner_end)
-
   end subroutine interaction_with_partner_end
 
 end module interaction_with_partner_oct_m
