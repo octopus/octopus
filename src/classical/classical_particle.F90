@@ -21,6 +21,7 @@
 
 module classical_particle_oct_m
   use clock_oct_m
+  use force_interaction_oct_m
   use global_oct_m
   use interaction_oct_m
   use gravity_oct_m
@@ -611,7 +612,7 @@ contains
     call iter%start(this%interactions)
     do while (iter%has_next())
       select type (interaction => iter%get_next())
-      type is (gravity_t)
+      class is (force_interaction_t)
         this%tot_force(1:this%space%dim) = this%tot_force(1:this%space%dim) + interaction%force(1:this%space%dim)
       end select
     end do
