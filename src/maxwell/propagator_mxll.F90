@@ -488,6 +488,7 @@ contains
         if (tr%tr_etrs_approx == OPTION__MAXWELLTDETRSAPPROX__NO) then
           SAFE_ALLOCATE(ff_rs_inhom_1(1:gr%mesh%np_part, ff_dim))
           SAFE_ALLOCATE(ff_rs_inhom_2(1:gr%mesh%np_part, ff_dim))
+          SAFE_ALLOCATE(ff_rs_inhom_mean(1:gr%mesh%np_part, ff_dim))
           ! RS state propagation
           call hamiltonian_mxll_update(hm, time=inter_time)
           if (pml_check) then
@@ -505,10 +506,9 @@ contains
               & ff_rs_inhom_1, RS_TRANS_FORWARD)
           call transform_rs_densities(hm, rs_charge_density_t2, rs_current_density_t2,&
               & ff_rs_inhom_2, RS_TRANS_FORWARD)
-          ff_rs_inhom_1(:,:) = ff_rs_inhom_1 + (ff_rs_inhom_2 - ff_rs_inhom_1) * inter_dt * (ii-1)/&
-              &TOFLOAT(inter_steps)
-          ff_rs_inhom_2(:,:) = ff_rs_inhom_1 + (ff_rs_inhom_2 - ff_rs_inhom_1) * inter_dt * ii/&
-              & TOFLOAT(inter_steps)
+          ff_rs_inhom_mean(:,:) = ff_rs_inhom_2 - ff_rs_inhom_1 ! not mean, used as auxiliary variable
+          ff_rs_inhom_2(:,:) = ff_rs_inhom_1 + ff_rs_inhom_mean * inter_dt * ii / TOFLOAT(inter_steps)
+          ff_rs_inhom_1(:,:) = ff_rs_inhom_1 + ff_rs_inhom_mean * inter_dt * (ii-1) / TOFLOAT(inter_steps)
           call exponential_mxll_apply(hm, namespace, gr, st, tr, inter_dt, ff_rs_inhom_1)
           ! add terms U(time+dt,time)J(time) and J(time+dt)
           ff_rs_state(:,:) = ff_rs_state + M_FOURTH * inter_dt * (ff_rs_inhom_1 + ff_rs_inhom_2)
@@ -518,13 +518,14 @@ contains
           call transform_rs_densities(hm, rs_charge_density_t2, rs_current_density_t2,&
               & ff_rs_inhom_2, RS_TRANS_FORWARD)
           ff_rs_inhom_1(:,:) = M_HALF * (ff_rs_inhom_1 + ff_rs_inhom_2)
-          ff_rs_inhom_2(:,:) = M_HALF * (ff_rs_inhom_1 + ff_rs_inhom_2) ! is this right?
+          ff_rs_inhom_2(:,:) = ff_rs_inhom_1 ! changed from the old code
           call exponential_mxll_apply(hm, namespace, gr, st, tr, inter_dt/M_TWO, ff_rs_inhom_1)
           call exponential_mxll_apply(hm, namespace, gr, st, tr, -inter_dt/M_TWO, ff_rs_inhom_2)
           ! add terms U(time+dt/2,time)J(time) and U(time,time+dt/2)J(time+dt)
           ff_rs_state(:,:) = ff_rs_state + M_FOURTH * inter_dt * (ff_rs_inhom_1 + ff_rs_inhom_2)
           SAFE_DEALLOCATE_A(ff_rs_inhom_1)
           SAFE_DEALLOCATE_A(ff_rs_inhom_2)
+          SAFE_DEALLOCATE_A(ff_rs_inhom_mean)
 
         else if (tr%tr_etrs_approx == OPTION__MAXWELLTDETRSAPPROX__CONST_STEPS) then
           ! RS state propagation
