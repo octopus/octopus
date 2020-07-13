@@ -43,6 +43,7 @@ module hamiltonian_elec_oct_m
   use lda_u_oct_m
   use mesh_oct_m
   use messages_oct_m
+  use mpi_oct_m
   use multicomm_oct_m
   use namespace_oct_m
   use oct_exchange_oct_m
