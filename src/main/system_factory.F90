@@ -46,6 +46,7 @@ module system_factory_oct_m
   type, extends(system_factory_abst_t) :: system_factory_t
   contains
     procedure :: create => system_factory_create
+    procedure :: block_name => system_factory_block_name
   end type system_factory_t
 
 contains
@@ -60,6 +61,25 @@ contains
 
     PUSH_SUB(system_factory_create)
 
+    !%Variable Systems
+    !%Type block
+    !%Section System
+    !%Description
+    !% List of systems that will be treated in the calculation.
+    !% The first column should be a string containing the system name.
+    !% The second column should be the system type. See below for a list of
+    !% available system types.
+    !%Option electronic 1
+    !% An electronic system. (NOT IMPLEMENTED)
+    !%Option maxwell 2
+    !% A maxwell system.
+    !%Option classical_particle 3
+    !% A classical particle. Used for testing purposes only.
+    !%Option charged_particle 4
+    !% A charged classical particle.
+    !%Option multisystem 5
+    !% A system containing other systems.
+    !%End
     select case (type)
     case (SYSTEM_MULTISYSTEM)
       system => multisystem_t(namespace_t(name, parent=namespace), this)
@@ -75,6 +95,17 @@ contains
 
     POP_SUB(system_factory_create)
   end function system_factory_create
+
+  ! ---------------------------------------------------------------------------------------
+  character(len=80) function system_factory_block_name(this) result(name)
+    class(system_factory_t), intent(in)    :: this
+
+    PUSH_SUB(system_factory_block_name)
+
+    name = "Systems"
+
+    POP_SUB(system_factory_block_name)
+  end function system_factory_block_name
 
 end module system_factory_oct_m
 

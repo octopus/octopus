@@ -1,0 +1,7 @@
+CalculationMode = td
+ExperimentalFeatures = yes
+
+%Systems
+ "Sun" | classical_particle
+ "Sun" | classical_particle
+%
