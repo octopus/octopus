@@ -341,6 +341,15 @@ contains
      
     end if
 
+    if (family_is_mgga_with_exc(ks%xc)) then
+      call messages_experimental('MGGA energy functionals')
+
+      if (accel_is_enabled() .and. (gr%mesh%parallel_in_domains .or. st%parallel_in_states .or. st%d%kpt%parallel)) then
+        !At the moment this combination produces wrong results
+        call messages_not_implemented("MGGA with energy functionals and CUDA+MPI")
+      end if
+    end if
+
     call messages_obsolete_variable(namespace, 'NonInteractingElectrons', 'TheoryLevel')
     call messages_obsolete_variable(namespace, 'HartreeFock', 'TheoryLevel')
 

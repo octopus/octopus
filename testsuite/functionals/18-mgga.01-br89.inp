@@ -14,3 +14,5 @@ XCFunctional = mgga_x_br89
 ConvRelDens = 4e-6
 
 FilterPotentials = filter_none
+
+ExperimentalFeatures = yes
