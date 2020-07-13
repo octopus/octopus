@@ -58,8 +58,6 @@ module run_oct_m
   public ::                      &
     run
 
-  integer :: calc_mode_id
-
   integer, parameter :: LR = 1, FD = 2
 
   integer, public, parameter ::   &
@@ -120,9 +118,9 @@ contains
   end function get_resp_method
   
   ! ---------------------------------------------------------
-  subroutine run(namespace, cm)
+  subroutine run(namespace, calc_mode_id)
     type(namespace_t), intent(in) :: namespace
-    integer,           intent(in) :: cm
+    integer,           intent(in) :: calc_mode_id
 
     class(multisystem_t), pointer :: systems
     type(electrons_t), pointer :: sys
@@ -133,8 +131,6 @@ contains
     integer :: iunit_out
 
     PUSH_SUB(run)
-
-    calc_mode_id = cm
 
     call messages_print_stress(stdout, "Calculation Mode")
     call messages_print_var_option(stdout, "CalculationMode", calc_mode_id)
