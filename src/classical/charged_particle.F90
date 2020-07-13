@@ -56,9 +56,6 @@ module charged_particle_oct_m
     procedure :: initial_conditions => charged_particle_initial_conditions
     procedure :: do_td_operation => charged_particle_do_td
     procedure :: iteration_info => charged_particle_iteration_info
-    procedure :: output_start => charged_particle_output_start
-    procedure :: output_write => charged_particle_output_write
-    procedure :: output_finish => charged_particle_output_finish
     procedure :: is_tolerance_reached => charged_particle_is_tolerance_reached
     procedure :: store_current_status => charged_particle_store_current_status
     procedure :: update_quantity => charged_particle_update_quantity
@@ -196,40 +193,6 @@ contains
 
     POP_SUB(charged_particle_iteration_info)
   end subroutine charged_particle_iteration_info
-
-  ! ---------------------------------------------------------
-  subroutine charged_particle_output_start(this)
-    class(charged_particle_t), intent(inout) :: this
-
-    PUSH_SUB(charged_particle_output_start)
-
-    call this%classical_particle_t%output_start()
-
-    POP_SUB(charged_particle_output_start)
-  end subroutine charged_particle_output_start
-
-  ! ---------------------------------------------------------
-  subroutine charged_particle_output_finish(this)
-    class(charged_particle_t), intent(inout) :: this
-
-    PUSH_SUB(charged_particle_output_finish)
-
-    call this%classical_particle_t%output_finish()
-
-    POP_SUB(charged_particle_output_finish)
-  end subroutine charged_particle_output_finish
-
-  ! ---------------------------------------------------------
-  subroutine charged_particle_output_write(this, iter)
-    class(charged_particle_t), intent(inout) :: this
-    integer,                   intent(in)    :: iter
-
-    PUSH_SUB(charged_particle_output_write)
-
-    call this%classical_particle_t%output_write(iter)
-
-    POP_SUB(charged_particle_output_write)
-  end subroutine charged_particle_output_write
 
   ! ---------------------------------------------------------
   subroutine charged_particle_update_quantity(this, iq, requested_time)
