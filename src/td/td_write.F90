@@ -198,7 +198,7 @@ contains
     type(multicomm_t),        intent(in)    :: mc
 
     FLOAT :: rmin
-    integer :: ierr, first, ii, ist, jj, flags, iout, default, idim
+    integer :: ierr, first, ii, ist, jj, flags, iout, default
     type(block_t) :: blk
     character(len=MAX_PATH_LEN) :: filename
     type(restart_t) :: restart_gs
@@ -1291,7 +1291,7 @@ contains
     integer,                  intent(in) :: iter !< Iteration number
 
     integer :: ist
-    FLOAT, allocatable :: rho(:,:), rho_tmp(:,:)
+    FLOAT, allocatable :: rho(:,:)
 
     PUSH_SUB(td_write_multipole)
     
