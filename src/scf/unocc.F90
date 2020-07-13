@@ -220,7 +220,7 @@ contains
         nst_calculated = minval(lowest_missing) - 1
       end if
       showstart = max(nst_calculated + 1, 1)
-      call lcao_run(sys, st_start = showstart)
+      call lcao_run(sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, st_start = showstart)
     else
       ! we successfully read all the states and are planning to use them, no need for LCAO
       call v_ks_calc(sys%ks, sys%namespace, sys%hm, sys%st, sys%geo, calc_eigenval = .false.)

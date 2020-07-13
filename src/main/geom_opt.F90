@@ -129,12 +129,12 @@ contains
     call scf_init(g_opt%scfv, sys%namespace, sys%gr, sys%geo, sys%st, sys%mc, sys%hm, conv_force = CNST(1e-8))
 
     if(fromScratch) then
-      call lcao_run(sys, lmm_r = g_opt%scfv%lmm_r)
+      call lcao_run(sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, lmm_r = g_opt%scfv%lmm_r)
     else
       ! setup Hamiltonian
       message(1) = 'Info: Setting up Hamiltonian.'
       call messages_info(1)
-      call sys%h_setup()
+      call v_ks_h_setup(sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm)
     end if
 
     !Initial point

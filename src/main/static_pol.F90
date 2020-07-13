@@ -46,6 +46,7 @@ module static_pol_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use utils_oct_m
+  use v_ks_oct_m
 
   implicit none
 
@@ -103,7 +104,7 @@ contains
     ! set up Hamiltonian
     message(1) = 'Info: Setting up Hamiltonian.'
     call messages_info(1)
-    call sys%h_setup(calc_eigenval = .false.) ! we read them from restart
+    call v_ks_h_setup(sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, calc_eigenval = .false.) ! we read them from restart
 
     ! Allocate the dipole
     SAFE_ALLOCATE(dipole(1:sys%gr%mesh%sb%dim, 1:sys%gr%mesh%sb%dim, 1:2))
@@ -264,7 +265,7 @@ contains
         if(.not. fromScratch) then
           call restart_open_dir(restart_load, trim(dir_name), ierr)
           if (ierr == 0) call states_elec_load(restart_load, sys%namespace, sys%st, sys%gr, ierr)
-          call sys%h_setup()
+          call v_ks_h_setup(sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm)
           if(ierr /= 0) fromScratch_local = .true.
           call restart_close_dir(restart_load)
         end if
@@ -272,9 +273,9 @@ contains
         if(fromScratch_local) then
           if(start_density_is_zero_field) then
             sys%st%rho(1:sys%gr%mesh%np, 1:sys%st%d%nspin) = gs_rho(1:sys%gr%mesh%np, 1:sys%st%d%nspin)
-            call sys%h_setup()
+            call v_ks_h_setup(sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm)
           else
-            call lcao_run(sys, lmm_r = scfv%lmm_r)
+            call lcao_run(sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, lmm_r = scfv%lmm_r)
           end if
         end if
 
@@ -345,7 +346,7 @@ contains
       if(.not. fromScratch) then
         call restart_open_dir(restart_load, "field_yz+", ierr)
         if (ierr == 0) call states_elec_load(restart_load, sys%namespace, sys%st, sys%gr, ierr)
-        call sys%h_setup()
+        call v_ks_h_setup(sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm)
         if(ierr /= 0) fromScratch_local = .true.
         call restart_close_dir(restart_load)
       end if
@@ -353,9 +354,9 @@ contains
       if(fromScratch_local) then
         if(start_density_is_zero_field) then
           sys%st%rho(1:sys%gr%mesh%np, 1:sys%st%d%nspin) = gs_rho(1:sys%gr%mesh%np, 1:sys%st%d%nspin)
-          call sys%h_setup()
+          call v_ks_h_setup(sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm)
         else
-          call lcao_run(sys, lmm_r = scfv%lmm_r)
+          call lcao_run(sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, lmm_r = scfv%lmm_r)
         end if
       end if
 

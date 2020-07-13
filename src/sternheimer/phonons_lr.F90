@@ -55,6 +55,7 @@ module phonons_lr_oct_m
   use unit_system_oct_m
   use utils_oct_m
   use vibrations_oct_m
+  use v_ks_oct_m
 
   implicit none
 
@@ -191,7 +192,7 @@ contains
     message(1) = 'Info: Setting up Hamiltonian for linear response.'
     call messages_info(1)
 
-    call sys%h_setup()
+    call v_ks_h_setup(sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm)
     call sternheimer_init(sh, sys, wfs_are_cplx = states_are_complex(st))
     call vibrations_init(vib, geo, gr%sb, "lr", sys%namespace)
 

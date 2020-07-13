@@ -41,6 +41,7 @@ module vdw_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use utils_oct_m
+  use v_ks_oct_m
 
   implicit none
 
@@ -227,7 +228,7 @@ contains
       ! setup Hamiltonian
       message(1) = 'Info: Setting up Hamiltonian for linear response.'
       call messages_info(1)
-      call sys%h_setup()
+      call v_ks_h_setup(sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm)
 
       do dir = 1, ndir
         call lr_init(lr(dir,1))

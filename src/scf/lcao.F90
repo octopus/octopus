@@ -685,10 +685,15 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine lcao_run(sys, st_start, lmm_r)
-    type(electrons_t),      intent(inout) :: sys
-    integer,      optional, intent(in)    :: st_start !< use for unoccupied-states run
-    FLOAT,        optional, intent(in)    :: lmm_r !< used only if not present(st_start)
+  subroutine lcao_run(namespace, gr, geo, st, ks, hm, st_start, lmm_r)
+    type(namespace_t),        intent(in)    :: namespace
+    type(grid_t),             intent(in)    :: gr
+    type(geometry_t),         intent(in)    :: geo
+    type(states_elec_t),      intent(inout) :: st
+    type(v_ks_t),             intent(inout) :: ks
+    type(hamiltonian_elec_t), intent(inout) :: hm
+    integer,        optional, intent(in)    :: st_start !< use for unoccupied-states run
+    FLOAT,          optional, intent(in)    :: lmm_r !< used only if not present(st_start)
 
     type(lcao_t) :: lcao
     integer :: st_start_random
@@ -700,10 +705,10 @@ contains
     if (present(st_start)) then
       ! If we are doing unocc calculation, do not mess with the correct eigenvalues
       ! of the occupied states.
-      call v_ks_calc(sys%ks, sys%namespace, sys%hm, sys%st, sys%geo, calc_eigenval=.not. present(st_start), calc_current=.false.)
+      call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval=.not. present(st_start), calc_current=.false.)
 
       ASSERT(st_start >= 1)
-      if(st_start > sys%st%nst) then ! nothing to be done in LCAO
+      if (st_start > st%nst) then ! nothing to be done in LCAO
         POP_SUB(lcao_run)
         return
       end if
@@ -711,29 +716,27 @@ contains
 
     call profiling_in(prof, 'LCAO_RUN')
 
-    call lcao_init(lcao, sys%namespace, sys%gr, sys%geo, sys%st)
+    call lcao_init(lcao, namespace, gr, geo, st)
 
-    call lcao_init_orbitals(lcao, sys%st, sys%gr, sys%geo, start = st_start)
+    call lcao_init_orbitals(lcao, st, gr, geo, start = st_start)
 
     if (.not. present(st_start)) then
-      call lcao_guess_density(lcao, sys%namespace, sys%st, sys%gr, sys%gr%sb, sys%geo, sys%st%qtot, sys%st%d%nspin, &
-        sys%st%d%spin_channels, sys%st%rho)
+      call lcao_guess_density(lcao, namespace, st, gr, gr%sb, geo, st%qtot, st%d%nspin, st%d%spin_channels, st%rho)
 
-      if(sys%st%d%ispin > UNPOLARIZED) then
+      if (st%d%ispin > UNPOLARIZED) then
         ASSERT(present(lmm_r))
-        call write_magnetic_moments(stdout, sys%gr%fine%mesh, sys%st, sys%geo, sys%gr%der%boundaries, lmm_r)
+        call write_magnetic_moments(stdout, gr%fine%mesh, st, geo, gr%der%boundaries, lmm_r)
       end if
 
-      ! set up Hamiltonian (we do not call sys%h_setup here because we do not want to
+      ! set up Hamiltonian (we do not call v_ks_h_setup here because we do not want to
       ! overwrite the guess density)
       message(1) = 'Info: Setting up Hamiltonian.'
       call messages_info(1)
 
       ! get the effective potential (we don`t need the eigenvalues yet)
-      call v_ks_calc(sys%ks, sys%namespace, sys%hm, sys%st, sys%geo, calc_eigenval=.false., &
-                      calc_berry=.false., calc_current=.false.)
+      call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval=.false., calc_berry=.false., calc_current=.false.)
       ! eigenvalues have nevertheless to be initialized to something
-      sys%st%eigenval = M_ZERO
+      st%eigenval = M_ZERO
 
     end if
 
@@ -748,24 +751,24 @@ contains
         call messages_info(1)
       end if
 
-      call lcao_wf(lcao, sys%st, sys%gr, sys%geo, sys%hm, sys%namespace, start = st_start)
+      call lcao_wf(lcao, st, gr, geo, hm, namespace, start = st_start)
 
       if (.not. present(st_start)) then
-        call states_elec_fermi(sys%st, sys%namespace, sys%gr%mesh)
-        call states_elec_write_eigenvalues(stdout, min(sys%st%nst, lcao%norbs), sys%st, sys%gr%sb)
+        call states_elec_fermi(st, namespace, gr%mesh)
+        call states_elec_write_eigenvalues(stdout, min(st%nst, lcao%norbs), st, gr%sb)
 
         ! Update the density and the Hamiltonian
         if (lcao%mode == OPTION__LCAOSTART__LCAO_FULL) then
-          call sys%h_setup(calc_eigenval = .false., calc_current=.false.)
-          if(sys%st%d%ispin > UNPOLARIZED) then
+          call v_ks_h_setup(namespace, gr, geo, st, ks, hm, calc_eigenval = .false., calc_current=.false.)
+          if (st%d%ispin > UNPOLARIZED) then
             ASSERT(present(lmm_r))
-            call write_magnetic_moments(stdout, sys%gr%fine%mesh, sys%st, sys%geo, sys%gr%der%boundaries, lmm_r)
+            call write_magnetic_moments(stdout, gr%fine%mesh, st, geo, gr%der%boundaries, lmm_r)
           end if
         end if
       end if
     end if
 
-    if(.not. lcao_done .or. lcao%norbs < sys%st%nst) then
+    if (.not. lcao_done .or. lcao%norbs < st%nst) then
 
       if(lcao_done) then
         st_start_random = lcao%norbs + 1
@@ -780,18 +783,18 @@ contains
       end if
 
       ! Randomly generate the initial wavefunctions.
-      call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb, ist_start_ = st_start_random, normalized = .false.)
+      call states_elec_generate_random(st, gr%mesh, gr%sb, ist_start_ = st_start_random, normalized = .false.)
 
       call messages_write('Orthogonalizing wavefunctions.')
       call messages_info()
-      call states_elec_orthogonalize(sys%st, sys%namespace, sys%gr%mesh)
+      call states_elec_orthogonalize(st, namespace, gr%mesh)
 
       if(.not. lcao_done) then
         ! If we are doing unocc calculation, do not mess with the correct eigenvalues and occupations
         ! of the occupied states.
-        call v_ks_calc(sys%ks, sys%namespace, sys%hm, sys%st, sys%geo, calc_eigenval=.not. present(st_start), calc_current=.false.) ! get potentials
+        call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval=.not. present(st_start), calc_current=.false.) ! get potentials
         if(.not. present(st_start)) then
-          call states_elec_fermi(sys%st, sys%namespace, sys%gr%mesh) ! occupations
+          call states_elec_fermi(st, namespace, gr%mesh) ! occupations
         end if
 
       end if
@@ -801,7 +804,7 @@ contains
       if(st_start > 1) then
         call messages_write('Orthogonalizing wavefunctions.')
         call messages_info()
-        call states_elec_orthogonalize(sys%st, sys%namespace, sys%gr%mesh)
+        call states_elec_orthogonalize(st, namespace, gr%mesh)
       end if
 
     end if

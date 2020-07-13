@@ -245,11 +245,11 @@ contains
 
         select case(calc_mode_id)
         case(CM_GS)
-          call ground_state_run(sys, fromScratch)
+          call ground_state_run(sys%namespace, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, sys%outp, fromScratch)
         case(CM_UNOCC)
           call unocc_run(sys, fromScratch)
         case(CM_TD)
-          call td_run(sys, fromScratch)
+          call td_run(sys%namespace, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, sys%outp, fromScratch)
         case(CM_LR_POL)
           select case(get_resp_method(sys%namespace))
           case(FD)
