@@ -624,7 +624,6 @@ td_f_srcs =                                 \
 	td/td_calc.F90                      \
 	td/td.F90                           \
 	td/td_write.F90                     \
-        td/propagation_ops_abst.F90         \
         td/propagation_ops_elec.F90
 
 td_srcs = $(td_f_srcs)
