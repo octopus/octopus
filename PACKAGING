@@ -6,7 +6,7 @@ Dependencies:
   FFTW >= 3
   GSL >= 1.9
   LAPACK
-  libxc >= 2.0
+  libxc >= 3.0
   perl
   bpdn (internal)
   ISF (internal)
