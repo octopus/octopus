@@ -149,7 +149,7 @@ contains
 
         ! Add replicas to the list of systems
         do jj = 1, system_replicas
-           write(replica_name,'(a,a,i8.8)') trim(system_name), '.', jj
+           write(replica_name,'(a,a,i8.8)') trim(system_name), '-', jj
            call io_mkdir(replica_name, namespace=system%namespace)
            sys => factory%create(system%namespace, replica_name, system_type)
            call sys%set_is_replica(.true.)
