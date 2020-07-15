@@ -60,24 +60,6 @@ module run_oct_m
 
   integer, parameter :: LR = 1, FD = 2
 
-  integer, public, parameter ::   &
-    CM_NONE               =   0,  &
-    CM_GS                 =   1,  &
-    CM_UNOCC              =   2,  &
-    CM_TD                 =   3,  &
-    CM_GEOM_OPT           =   5,  &
-    CM_OPT_CONTROL        =   7,  &
-    CM_LR_POL             =   8,  &
-    CM_CASIDA             =   9,  &
-    CM_VDW                =  11,  &
-    CM_PHONONS_LR         =  12,  &
-    CM_ONE_SHOT           =  14,  &
-    CM_KDOTP              =  15,  &
-    CM_DUMMY              =  17,  &
-    CM_INVERTKDS          =  18,  &
-    CM_TEST               =  19,  &
-    CM_PULPO_A_FEIRA      =  99
-
 contains
 
   ! ---------------------------------------------------------
@@ -138,7 +120,7 @@ contains
 
     call calc_mode_init()
 
-    if(calc_mode_id == CM_PULPO_A_FEIRA) then
+    if (calc_mode_id == OPTION__CALCULATIONMODE__RECIPE) then
       call pulpo_print()
       POP_SUB(run)
       return
@@ -153,8 +135,7 @@ contains
     ! initialize FFTs
     call fft_all_init(namespace)
 
-
-    if(calc_mode_id == CM_TEST) then
+    if (calc_mode_id == OPTION__CALCULATIONMODE__TEST) then
       call test_run(namespace)
       call fft_all_end()
 #ifdef HAVE_MPI
@@ -184,8 +165,8 @@ contains
       end if
 
       ! Run mode
-      select case(calc_mode_id)
-      case (CM_TD)
+      select case (calc_mode_id)
+      case (OPTION__CALCULATIONMODE__TD)
         call multisys_td_run(systems, fromScratch)
       case default
         call messages_not_implemented("CalculationMode /= td for multisystems")
@@ -196,7 +177,7 @@ contains
 
     else
       ! Fall back to old behaviour
-      sys => electrons_t(namespace, generate_epot = calc_mode_id /= CM_DUMMY)
+      sys => electrons_t(namespace, generate_epot = calc_mode_id /= OPTION__CALCULATIONMODE__DUMMY)
 
       if(.not. sys%process_is_slave()) then
         call messages_write('Info: Octopus initialization completed.', new_line = .true.)
@@ -217,44 +198,44 @@ contains
 
         call profiling_in(calc_mode_prof, "CALC_MODE")
 
-        select case(calc_mode_id)
-        case(CM_GS)
+        select case (calc_mode_id)
+        case (OPTION__CALCULATIONMODE__GS)
           call ground_state_run(sys%namespace, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, sys%outp, fromScratch)
-        case(CM_UNOCC)
+        case (OPTION__CALCULATIONMODE__UNOCC)
           call unocc_run(sys, fromScratch)
-        case(CM_TD)
+        case (OPTION__CALCULATIONMODE__TD)
           call td_run(sys%namespace, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, sys%outp, fromScratch)
-        case(CM_LR_POL)
+        case (OPTION__CALCULATIONMODE__GO)
+          call geom_opt_run(sys, fromScratch)
+        case (OPTION__CALCULATIONMODE__OPT_CONTROL)
+          call opt_control_run(sys)
+        case (OPTION__CALCULATIONMODE__EM_RESP)
           select case(get_resp_method(sys%namespace))
           case(FD)
             call static_pol_run(sys, fromScratch)
           case(LR)
             call em_resp_run(sys, fromScratch)
           end select
-        case(CM_VDW)
+        case (OPTION__CALCULATIONMODE__CASIDA)
+          call casida_run(sys, fromScratch)
+        case (OPTION__CALCULATIONMODE__VDW)
           call vdW_run(sys, fromScratch)
-        case(CM_GEOM_OPT)
-          call geom_opt_run(sys, fromScratch)
-        case(CM_PHONONS_LR)
+        case (OPTION__CALCULATIONMODE__VIB_MODES)
           select case(get_resp_method(sys%namespace))
           case(FD)
             call phonons_run(sys)
           case(LR)
             call phonons_lr_run(sys, fromscratch)
           end select
-        case(CM_OPT_CONTROL)
-          call opt_control_run(sys)
-        case(CM_CASIDA)
-          call casida_run(sys, fromScratch)
-        case(CM_ONE_SHOT)
+        case (OPTION__CALCULATIONMODE__ONE_SHOT)
           message(1) = "CalculationMode = one_shot is obsolete. Please use gs with MaximumIter = 0."
           call messages_fatal(1)
-        case(CM_KDOTP)
+        case (OPTION__CALCULATIONMODE__KDOTP)
           call kdotp_lr_run(sys, fromScratch)
-        case(CM_DUMMY)
-        case(CM_INVERTKDS)
+        case (OPTION__CALCULATIONMODE__DUMMY)
+        case (OPTION__CALCULATIONMODE__INVERT_KS)
           call invert_ks_run(sys)
-        case(CM_PULPO_A_FEIRA)
+        case (OPTION__CALCULATIONMODE__RECIPE)
           ASSERT(.false.) !this is handled before, if we get here, it is an error
         end select
 
@@ -280,12 +261,12 @@ contains
 
       PUSH_SUB(calc_mode_init)
 
-      select case(calc_mode_id)
-      case(CM_GS, CM_GEOM_OPT, CM_UNOCC)
+      select case (calc_mode_id)
+      case (OPTION__CALCULATIONMODE__GS, OPTION__CALCULATIONMODE__GO, OPTION__CALCULATIONMODE__UNOCC)
         call ground_state_run_init()
-      case(CM_TD)
+      case (OPTION__CALCULATIONMODE__TD)
         call td_run_init()
-      case(CM_CASIDA)
+      case (OPTION__CALCULATIONMODE__CASIDA)
         call casida_run_init()
       end select
 
