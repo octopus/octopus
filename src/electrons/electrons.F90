@@ -78,9 +78,10 @@ module electrons_oct_m
 contains
   
   !----------------------------------------------------------
-  function electrons_constructor(namespace) result(sys)
+  function electrons_constructor(namespace, generate_epot) result(sys)
     class(electrons_t), pointer    :: sys
     type(namespace_t),  intent(in) :: namespace
+    logical,  optional, intent(in) :: generate_epot
 
     type(profile_t), save :: prof
     FLOAT :: mesh_global, mesh_local, wfns
@@ -166,6 +167,14 @@ contains
     call messages_info()
 
     call messages_print_stress(stdout)
+
+    if (optional_default(generate_epot, .false.)) then
+      message(1) = "Info: Generating external potential"
+      call messages_info(1)
+      call hamiltonian_elec_epot_generate(sys%hm, sys%namespace, sys%gr, sys%geo, sys%st)
+      message(1) = "      done."
+      call messages_info(1)
+    end if
 
     call profiling_out(prof)
     POP_SUB(electrons_constructor)

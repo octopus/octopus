@@ -200,15 +200,7 @@ contains
 
     else
       ! Fall back to old behaviour
-      sys => electrons_t(namespace)
-
-      if(calc_mode_id /= CM_DUMMY) then
-        message(1) = "Info: Generating external potential"
-        call messages_info(1)
-        call hamiltonian_elec_epot_generate(sys%hm, sys%namespace, sys%gr, sys%geo, sys%st)
-        message(1) = "      done."
-        call messages_info(1)
-      end if
+      sys => electrons_t(namespace, generate_epot = calc_mode_id /= CM_DUMMY)
 
       if(sys%ks%theory_level /= INDEPENDENT_PARTICLES) then
         call poisson_async_init(sys%hm%psolver, sys%mc)
