@@ -165,13 +165,13 @@ module states_mxll_oct_m
 
     ! external current variables
     integer                      :: external_current_number
-    integer,             pointer :: external_current_modus(:)
-    character(len=1024), pointer :: external_current_string(:,:)
-    FLOAT,               pointer :: external_current_amplitude(:,:,:)
-    type(tdf_t),         pointer :: external_current_td_function(:)
-    type(tdf_t),         pointer :: external_current_td_phase(:)
-    FLOAT,               pointer :: external_current_omega(:)
-    FLOAT,               pointer :: external_current_phase(:)
+    integer,             allocatable :: external_current_modus(:)
+    character(len=1024), allocatable :: external_current_string(:,:)
+    FLOAT,               allocatable :: external_current_amplitude(:,:,:)
+    type(tdf_t),         allocatable :: external_current_td_function(:)
+    type(tdf_t),         allocatable :: external_current_td_phase(:)
+    FLOAT,               allocatable :: external_current_omega(:)
+    FLOAT,               allocatable :: external_current_phase(:)
 
     !> used for the user-defined wavefunctions (they are stored as formula strings)
     character(len=1024), allocatable :: user_def_states(:,:,:)
@@ -398,12 +398,12 @@ contains
 #ifdef HAVE_SCALAPACK
     call blacs_proc_grid_end(st%dom_st_proc_grid)
 #endif
-    SAFE_DEALLOCATE_P(st%external_current_modus)
-    SAFE_DEALLOCATE_P(st%external_current_string)
-    SAFE_DEALLOCATE_P(st%external_current_amplitude)
-    SAFE_DEALLOCATE_P(st%external_current_td_function)
-    SAFE_DEALLOCATE_P(st%external_current_omega)
-    SAFE_DEALLOCATE_P(st%external_current_td_phase)
+    SAFE_DEALLOCATE_A(st%external_current_modus)
+    SAFE_DEALLOCATE_A(st%external_current_string)
+    SAFE_DEALLOCATE_A(st%external_current_amplitude)
+    SAFE_DEALLOCATE_A(st%external_current_td_function)
+    SAFE_DEALLOCATE_A(st%external_current_omega)
+    SAFE_DEALLOCATE_A(st%external_current_td_phase)
 
     call distributed_end(st%dist)
     SAFE_DEALLOCATE_P(st%node)
