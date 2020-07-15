@@ -202,7 +202,7 @@ contains
       ! Fall back to old behaviour
       sys => electrons_t(namespace, generate_epot = calc_mode_id /= CM_DUMMY)
 
-      if(.not. multicomm_is_slave(sys%mc)) then
+      if(.not. sys%process_is_slave()) then
         call messages_write('Info: Octopus initialization completed.', new_line = .true.)
         call messages_write('Info: Starting calculation mode.')
         call messages_info()

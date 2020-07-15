@@ -68,6 +68,7 @@ module electrons_oct_m
     type(namespace_t)            :: namespace
     type(hamiltonian_elec_t)     :: hm
   contains
+    procedure :: process_is_slave  => electrons_process_is_slave
     final :: electrons_finalize
   end type electrons_t
   
@@ -210,6 +211,17 @@ contains
     end subroutine parallel_init
 
   end function electrons_constructor
+
+  ! ---------------------------------------------------------
+  logical function electrons_process_is_slave(this) result(is_slave)
+    class(electrons_t), intent(in) :: this
+
+    PUSH_SUB(electrons_process_is_slave)
+
+    is_slave = multicomm_is_slave(this%mc)
+
+    POP_SUB(electrons_process_is_slave)
+  end function electrons_process_is_slave
 
   !----------------------------------------------------------
   subroutine electrons_finalize(sys)
