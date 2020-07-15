@@ -30,7 +30,6 @@ module run_oct_m
   use invert_ks_oct_m
   use messages_oct_m
   use mpi_debug_oct_m
-  use memory_oct_m
   use mpi_oct_m
   use multicomm_oct_m
   use multisystem_oct_m
@@ -202,10 +201,6 @@ contains
     else
       ! Fall back to old behaviour
       sys => electrons_t(namespace)
-
-      call messages_print_stress(stdout, 'Approximate memory requirements')
-      call memory_run(sys)
-      call messages_print_stress(stdout)
 
       if(calc_mode_id /= CM_DUMMY) then
         message(1) = "Info: Generating external potential"

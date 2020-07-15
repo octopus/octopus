@@ -1,4 +1,6 @@
 !! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!! Copyright (C) 2009 X. Andrade
+!! Copyright (C) 2020 M. Oliveira
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -43,6 +45,7 @@ module electrons_oct_m
   use states_abst_oct_m
   use states_elec_oct_m
   use states_elec_dim_oct_m
+  use unit_system_oct_m
   use v_ks_oct_m
   use xc_oct_m
   use xc_oep_oct_m
@@ -80,6 +83,7 @@ contains
     type(namespace_t),  intent(in) :: namespace
 
     type(profile_t), save :: prof
+    FLOAT :: mesh_global, mesh_local, wfns
 
     PUSH_SUB(electrons_constructor)
     call profiling_in(prof,"ELECTRONS_CONSTRUCTOR")
@@ -128,6 +132,40 @@ contains
     if (sys%hm%pcm%run_pcm .and. sys%mc%par_strategy /= P_STRATEGY_SERIAL .and. sys%mc%par_strategy /= P_STRATEGY_STATES) then
       call messages_experimental('Parallel in domain calculations with PCM')
     end if
+
+    ! Print memory requirements
+    call messages_print_stress(stdout, 'Approximate memory requirements', namespace=sys%namespace)
+
+    mesh_global = mesh_global_memory(sys%gr%mesh)
+    mesh_local  = mesh_local_memory(sys%gr%mesh)
+
+    call messages_write('Mesh')
+    call messages_new_line()
+    call messages_write('  global  :')
+    call messages_write(mesh_global, units = unit_megabytes, fmt = '(f10.1)')
+    call messages_new_line()
+    call messages_write('  local   :')
+    call messages_write(mesh_local, units = unit_megabytes, fmt = '(f10.1)')
+    call messages_new_line()
+    call messages_write('  total   :')
+    call messages_write(mesh_global + mesh_local, units = unit_megabytes, fmt = '(f10.1)')
+    call messages_new_line()
+    call messages_info()
+
+    wfns = states_elec_wfns_memory(sys%st, sys%gr%mesh)
+    call messages_write('States')
+    call messages_new_line()
+    call messages_write('  real    :')
+    call messages_write(wfns, units = unit_megabytes, fmt = '(f10.1)')
+    call messages_write(' (par_kpoints + par_states + par_domains)')
+    call messages_new_line()
+    call messages_write('  complex :')
+    call messages_write(2.0_8*wfns, units = unit_megabytes, fmt = '(f10.1)')
+    call messages_write(' (par_kpoints + par_states + par_domains)')
+    call messages_new_line()
+    call messages_info()
+
+    call messages_print_stress(stdout)
 
     call profiling_out(prof)
     POP_SUB(electrons_constructor)

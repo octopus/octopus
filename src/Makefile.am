@@ -701,7 +701,6 @@ bin_PROGRAMS = octopus
 
 octopus_f_srcs =                             \
 	main/invert_ks.F90                   \
-	main/memory.F90                      \
 	main/static_pol.F90                  \
 	main/geom_opt.F90                    \
 	main/phonons_fd.F90                  \
