@@ -176,6 +176,15 @@ contains
       call messages_info(1)
     end if
 
+    if (sys%ks%theory_level /= INDEPENDENT_PARTICLES) then
+      call poisson_async_init(sys%hm%psolver, sys%mc)
+      ! slave nodes do not call the calculation routine
+      if (multicomm_is_slave(sys%mc))then
+        !for the moment we only have one type of slave
+        call poisson_slave_work(sys%hm%psolver)
+      end if
+    end if
+
     call profiling_out(prof)
     POP_SUB(electrons_constructor)
   contains
@@ -207,6 +216,10 @@ contains
     type(electrons_t), intent(inout) :: sys
 
     PUSH_SUB(electrons_finalize)
+
+    if (sys%ks%theory_level /= INDEPENDENT_PARTICLES) then
+      call poisson_async_end(sys%hm%psolver, sys%mc)
+    end if
 
     call hamiltonian_elec_end(sys%hm)
 

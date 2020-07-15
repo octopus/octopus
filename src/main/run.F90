@@ -202,15 +202,6 @@ contains
       ! Fall back to old behaviour
       sys => electrons_t(namespace, generate_epot = calc_mode_id /= CM_DUMMY)
 
-      if(sys%ks%theory_level /= INDEPENDENT_PARTICLES) then
-        call poisson_async_init(sys%hm%psolver, sys%mc)
-        ! slave nodes do not call the calculation routine
-        if(multicomm_is_slave(sys%mc))then
-          !for the moment we only have one type of slave
-          call poisson_slave_work(sys%hm%psolver)
-        end if
-      end if
-
       if(.not. multicomm_is_slave(sys%mc)) then
         call messages_write('Info: Octopus initialization completed.', new_line = .true.)
         call messages_write('Info: Starting calculation mode.')
@@ -273,8 +264,6 @@ contains
 
         call profiling_out(calc_mode_prof)
       end if
-
-      if(sys%ks%theory_level /= INDEPENDENT_PARTICLES) call poisson_async_end(sys%hm%psolver, sys%mc)
 
       SAFE_DEALLOCATE_P(sys)
     end if
