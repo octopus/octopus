@@ -871,7 +871,7 @@ contains
           if(parse_block_cols(blk, il-1) > 6) then
             call parse_block_string(blk, il-1, 6, phase_expression)
             call tdf_read(st%external_current_td_phase(il), namespace, trim(phase_expression), ierr)
-            if (ierr /= 0) then            
+            if (ierr /= 0) then
               write(message(1),'(3A)') 'Error in the "', trim(tdf_expression), '" field defined in the TDExternalFields block:'
               write(message(2),'(3A)') 'Time-dependent phase function "', trim(phase_expression), '" not found.'
               call messages_warning(2, namespace=namespace)
@@ -881,7 +881,10 @@ contains
           end if
         end if
       end do
+    call parse_block_end(blk)
     end if
+
+
     POP_SUB(external_current_init)
   end subroutine external_current_init
 

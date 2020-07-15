@@ -398,6 +398,12 @@ contains
 #ifdef HAVE_SCALAPACK
     call blacs_proc_grid_end(st%dom_st_proc_grid)
 #endif
+    SAFE_DEALLOCATE_P(st%external_current_modus)
+    SAFE_DEALLOCATE_P(st%external_current_string)
+    SAFE_DEALLOCATE_P(st%external_current_amplitude)
+    SAFE_DEALLOCATE_P(st%external_current_td_function)
+    SAFE_DEALLOCATE_P(st%external_current_omega)
+    SAFE_DEALLOCATE_P(st%external_current_td_phase)
 
     call distributed_end(st%dist)
     SAFE_DEALLOCATE_P(st%node)
