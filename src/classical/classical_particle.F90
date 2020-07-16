@@ -145,6 +145,39 @@ contains
     call parse_variable(namespace, 'ParticleMass', M_ONE, this%mass)
     call messages_print_var_value(stdout, 'ParticleMass', this%mass)
 
+
+    !%Variable ClassicalReplicaDistribution
+    !%Type integer
+    !%Section ClassicalParticles
+    !%Description
+    !% The distribution to sample the initial conditions of the system replicas from.
+    !% If none specific then files containing the initial conditions of each replica must be specified (?)
+    !%Option uniform 1
+    !%Option gauss 2
+    !%Option input 3
+    !%End
+    !System Replica Distribution
+    !For now this just gets the centroid
+    call parse_variable(this%namespace, 'ClassicalReplicaDistribution', this%system_replica%replica_distribution, &
+                                this%system_replica%replica_distribution)
+
+    call messages_print_var_value(stdout, 'ClassicalReplicaDistribution is ', &
+                                        this%system_replica%replica_distribution)
+
+    !%Variable ClassicalReplicaDistributionWidth
+    !%Type float
+    !%Section ClassicalParticles
+    !%Description
+    !% The width of the distribution distributing the replica
+    !% For the gaussian distribtion, this is the standard deviation.
+    !%End
+    call parse_variable(namespace, 'ClassicalReplicaDistributionWidth', this%system_replica%width, this%system_replica%width)
+    call messages_print_var_value(stdout, 'ClassicalReplicaDistributionWidth', &
+                                  this%system_replica%width)
+
+
+
+
     this%quantities(POSITION)%required = .true.
     this%quantities(VELOCITY)%required = .true.
     this%quantities(POSITION)%protected = .true.
@@ -685,31 +718,11 @@ contains
   subroutine classical_particle_distribute_replicas(this)
     class(classical_particle_t),     intent(inout) :: this
 
-    integer :: replica_distribution_default
     integer :: idir, rand_gen_seed, seed, str_len, str_index
     character (len=128) :: namespace, num
-    FLOAT :: rand_num
+    FLOAT :: rand_num, width, width_default
 
     PUSH_SUB(classical_particle_distribute_replicas)
-
-    !%Variable ClassicalReplicaDistribution
-    !%Type integer
-    !%Section System
-    !%Description
-    !% The distribution to sample the initial conditions of the system replicas from.
-    !% If none specific then files containing the initial conditions of each replica must be specified (?)
-    !%Option uniform 1
-    !%Option gauss 2
-    !%Option input 3
-    !%End
-    !System Replica Distribution
-    !For now this just gets the centroid
-    replica_distribution_default = this%system_replica%replica_distribution
-    call parse_variable(this%namespace, 'ClassicalReplicaDistribution', replica_distribution_default, &
-                                this%system_replica%replica_distribution)
-
-    write(message(1),'(a,i4)') "ClassicalReplicaDistribution is", this%system_replica%replica_distribution
-    call messages_info(1)
 
     str_len = len(trim(this%namespace%get()))
     str_index = str_len - 7
@@ -718,10 +731,19 @@ contains
     read(num, '(I8)') rand_gen_seed
     seed = rand_gen_seed * 10000
 
-    do idir = 1, this%space%dim
-      call quickrnd(seed, rand_num)
-      this%pos(idir) = this%pos(idir) + 0.01*this%pos(idir)*(rand_num - 0.5)
-    end do
+    select case(this%system_replica%replica_distribution)
+    case(UNIFORM_REPLICA)
+      do idir = 1, this%space%dim
+        call quickrnd(seed, rand_num)
+        this%pos(idir) = this%pos(idir) + this%system_replica%width*this%pos(idir)*(rand_num - M_HALF)
+      end do
+    case (GAUSS_REPLICA)
+      message(1) = "Gaussian replica distribution is not implemented so far"
+      call messages_fatal(1)
+    case (INPUT_REPLICA)
+      message(1) = "Replica distributions from input files are not implemented so far"
+      call messages_fatal(1)
+    end select
 
     POP_SUB(classical_particle_distribute_replicas)
   end subroutine classical_particle_distribute_replicas

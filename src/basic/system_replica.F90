@@ -25,10 +25,17 @@ module system_replica_oct_m
   public ::                   &
      system_replica_t
 
+
+  integer, public, parameter ::        &
+    UNIFORM_REPLICA             =  1,  &
+    GAUSS_REPLICA               =  2,  &
+    INPUT_REPLICA               =  3
+
   type :: system_replica_t
     integer :: n_replicas = 0
     logical :: is_replica = .false.
     integer :: replica_distribution = 1
+    FLOAT   :: width = CNST(0.01)
   end type system_replica_t
 
 contains
