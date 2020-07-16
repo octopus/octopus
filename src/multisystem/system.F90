@@ -78,6 +78,7 @@ module system_oct_m
     procedure :: output_start => system_output_start
     procedure :: output_write => system_output_write
     procedure :: output_finish => system_output_finish
+    procedure :: process_is_slave => system_process_is_slave
     procedure(system_init_interaction),               deferred :: init_interaction
     procedure(system_initial_conditions),             deferred :: initial_conditions
     procedure(system_do_td_op),                       deferred :: do_td_operation
@@ -725,6 +726,18 @@ contains
 
     POP_SUB(system_propagation_step_is_done)
   end function system_propagation_step_is_done
+
+  ! ---------------------------------------------------------
+  logical function system_process_is_slave(this)
+    class(system_t), intent(in) :: this
+
+    PUSH_SUB(system_process_is_slave)
+
+    ! By default an MPI process is not a slave
+    system_process_is_slave = .false.
+
+    PUSH_SUB(system_process_is_slave)
+  end function system_process_is_slave
 
   ! ---------------------------------------------------------
   subroutine system_end(this)

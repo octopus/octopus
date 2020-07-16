@@ -38,6 +38,7 @@ module opt_control_oct_m
   use math_oct_m
   use messages_oct_m
   use minimizer_oct_m
+  use multisystem_oct_m
   use namespace_oct_m
   use opt_control_global_oct_m
   use opt_control_iter_oct_m
@@ -84,10 +85,26 @@ module opt_control_oct_m
 
 contains
 
+  ! ---------------------------------------------------------
+  subroutine opt_control_run(system)
+    class(*), intent(inout) :: system
+
+    PUSH_SUB(opt_control_run)
+
+    select type (system)
+    class is (multisystem_t)
+      message(1) = "CalculationMode = opt_control not implemented for multi-system calculations"
+      call messages_fatal(1)
+    type is (electrons_t)
+      call opt_control_run_legacy(system)
+    end select
+
+    POP_SUB(opt_control_run)
+  end subroutine opt_control_run
 
   !> This is the main procedure for all types of optimal control runs.
   !! It is called from the "run" procedure in the "run_m" module.
-  subroutine opt_control_run(sys)
+  subroutine opt_control_run_legacy(sys)
     type(electrons_t), target,      intent(inout) :: sys
 
     type(td_t), target             :: td
@@ -97,7 +114,7 @@ contains
     type(oct_prop_t)               :: prop_chi, prop_psi
     type(states_elec_t)            :: psi
 
-    PUSH_SUB(opt_control_run)
+    PUSH_SUB(opt_control_run_legacy)
 
     if (sys%hm%pcm%run_pcm) then
       call messages_not_implemented("PCM for CalculationMode /= gs or td")
@@ -229,14 +246,14 @@ contains
     call target_end(oct_target, oct)
     call controlfunction_mod_close()
    
-    POP_SUB(opt_control_run)
+    POP_SUB(opt_control_run_legacy)
 
   contains
 
 
     ! ---------------------------------------------------------
     subroutine scheme_straight_iteration()
-      PUSH_SUB(opt_control_run.scheme_straight_iteration)
+      PUSH_SUB(opt_control_run_legacy.scheme_straight_iteration)
 
       call controlfunction_set_rep(par)
       call controlfunction_copy(par_new, par)
@@ -249,7 +266,7 @@ contains
 
       call controlfunction_end(par_new)
       call controlfunction_end(par_prev)
-      POP_SUB(opt_control_run.scheme_straight_iteration)
+      POP_SUB(opt_control_run_legacy.scheme_straight_iteration)
     end subroutine scheme_straight_iteration
     ! ---------------------------------------------------------
 
@@ -257,7 +274,7 @@ contains
     ! ---------------------------------------------------------
     subroutine scheme_mt03()
       type(opt_control_state_t) :: psi
-      PUSH_SUB(opt_control_run.scheme_mt03)
+      PUSH_SUB(opt_control_run_legacy.scheme_mt03)
 
       call opt_control_state_null(psi)
       call opt_control_state_copy(psi, initial_st)
@@ -277,7 +294,7 @@ contains
       call oct_prop_end(prop_psi)
       call controlfunction_end(par_new)
       call controlfunction_end(par_prev)
-      POP_SUB(opt_control_run.scheme_mt03)
+      POP_SUB(opt_control_run_legacy.scheme_mt03)
     end subroutine scheme_mt03
     ! ---------------------------------------------------------
 
@@ -285,7 +302,7 @@ contains
     ! ---------------------------------------------------------
     subroutine scheme_wg05()
       type(opt_control_state_t) :: psi
-      PUSH_SUB(opt_control_run.scheme_wg05)
+      PUSH_SUB(opt_control_run_legacy.scheme_wg05)
 
       call oct_prop_init(prop_chi, sys%namespace, "chi", sys%gr, sys%mc)
       call oct_prop_init(prop_psi, sys%namespace, "psi", sys%gr, sys%mc)
@@ -309,7 +326,7 @@ contains
       call oct_prop_end(prop_psi)
       call controlfunction_end(par_new)
       call controlfunction_end(par_prev)
-      POP_SUB(opt_control_run.scheme_wg05)
+      POP_SUB(opt_control_run_legacy.scheme_wg05)
     end subroutine scheme_wg05
     ! ---------------------------------------------------------
 
@@ -317,7 +334,7 @@ contains
     ! ---------------------------------------------------------
     subroutine scheme_zbr98()
       type(opt_control_state_t) :: qcpsi
-      PUSH_SUB(opt_control_run.scheme_zbr98)
+      PUSH_SUB(opt_control_run_legacy.scheme_zbr98)
 
       call opt_control_state_null(qcpsi)
       call opt_control_state_copy(qcpsi, initial_st)
@@ -332,7 +349,7 @@ contains
         call opt_control_state_end(qcpsi)
         call oct_prop_end(prop_chi)
         call oct_prop_end(prop_psi)
-        POP_SUB(opt_control_run.scheme_zbr98)
+        POP_SUB(opt_control_run_legacy.scheme_zbr98)
         return        
       end if
 
@@ -350,7 +367,7 @@ contains
       call oct_prop_end(prop_psi)
       call controlfunction_end(par_new)
       call controlfunction_end(par_prev)
-      POP_SUB(opt_control_run.scheme_zbr98)
+      POP_SUB(opt_control_run_legacy.scheme_zbr98)
     end subroutine scheme_zbr98
     ! ---------------------------------------------------------
 
@@ -363,7 +380,7 @@ contains
       REAL_DOUBLE, allocatable :: x(:)
       FLOAT   :: f
       type(opt_control_state_t) :: qcpsi
-      PUSH_SUB(opt_control_run.scheme_cg)
+      PUSH_SUB(opt_control_run_legacy.scheme_cg)
 
       call controlfunction_set_rep(par)
 
@@ -375,7 +392,7 @@ contains
       call iteration_manager_direct(-f, par, iterator, sys)
       if(oct_iterator_maxiter(iterator) == 0) then
         ! Nothing to do.
-        POP_SUB(opt_control_run.scheme_cg)
+        POP_SUB(opt_control_run_legacy.scheme_cg)
         return
       end if
 
@@ -422,7 +439,7 @@ contains
       call controlfunction_end(par_)
       SAFE_DEALLOCATE_A(x)
       SAFE_DEALLOCATE_A(theta)
-      POP_SUB(opt_control_run.scheme_cg)
+      POP_SUB(opt_control_run_legacy.scheme_cg)
     end subroutine scheme_cg
     ! ---------------------------------------------------------
 
@@ -437,7 +454,7 @@ contains
       integer :: dim
       type(opt_control_state_t) :: qcpsi
 
-      PUSH_SUB(opt_control_run.scheme_direct)
+      PUSH_SUB(opt_control_run_legacy.scheme_direct)
 
       call controlfunction_set_rep(par)
       dim = controlfunction_dof(par)
@@ -450,7 +467,7 @@ contains
       call iteration_manager_direct(-f, par, iterator, sys)
       if(oct_iterator_maxiter(iterator) == 0) then
         ! Nothing to do.
-        POP_SUB(opt_control_run.scheme_direct)
+        POP_SUB(opt_control_run_legacy.scheme_direct)
         return
       end if
 
@@ -491,7 +508,7 @@ contains
       call controlfunction_end(par_)
       SAFE_DEALLOCATE_A(x)
       SAFE_DEALLOCATE_A(theta)
-      POP_SUB(opt_control_run.scheme_direct)
+      POP_SUB(opt_control_run_legacy.scheme_direct)
     end subroutine scheme_direct
     ! ---------------------------------------------------------
 
@@ -503,7 +520,7 @@ contains
       FLOAT, allocatable :: x(:), xl(:), xu(:)
       FLOAT :: step, toldr, minimum, f
       type(opt_control_state_t) :: qcpsi
-      PUSH_SUB(opt_control_run.scheme_nlopt)
+      PUSH_SUB(opt_control_run_legacy.scheme_nlopt)
 
       call controlfunction_set_rep(par)
 
@@ -515,7 +532,7 @@ contains
       call iteration_manager_direct(-f, par, iterator, sys)      
       if(oct_iterator_maxiter(iterator) == 0) then
         ! Nothing to do.
-        POP_SUB(opt_control_run.scheme_cg)
+        POP_SUB(opt_control_run_legacy.scheme_cg)
         return
       end if
 
@@ -558,12 +575,12 @@ contains
       SAFE_DEALLOCATE_A(xl)
       SAFE_DEALLOCATE_A(xu)
       SAFE_DEALLOCATE_A(x)
-      POP_SUB(opt_control_run.scheme_nlopt)
+      POP_SUB(opt_control_run_legacy.scheme_nlopt)
 #endif
     end subroutine scheme_nlopt
     ! ---------------------------------------------------------
 
-  end subroutine opt_control_run
+  end subroutine opt_control_run_legacy
   ! ---------------------------------------------------------
 
 

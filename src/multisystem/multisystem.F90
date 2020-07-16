@@ -65,6 +65,7 @@ module multisystem_oct_m
     procedure :: update_quantity => multisystem_update_quantity
     procedure :: update_exposed_quantity => multisystem_update_exposed_quantity
     procedure :: copy_quantities_to_interaction => multisystem_copy_quantities_to_interaction
+    procedure :: process_is_slave => multisystem_process_is_slave
     final :: multisystem_finalizer
   end type multisystem_t
 
@@ -600,6 +601,25 @@ contains
 
     POP_SUB(multisystem_copy_quantities_to_interaction)
   end subroutine multisystem_copy_quantities_to_interaction
+
+  ! ---------------------------------------------------------
+  recursive logical function multisystem_process_is_slave(this) result(is_slave)
+    class(multisystem_t), intent(in) :: this
+
+    type(system_iterator_t) :: iter
+    class(system_t), pointer :: system
+
+    PUSH_SUB(multisystem_process_is_slave)
+
+    is_slave = .false.
+    call iter%start(this%list)
+    do while (iter%has_next())
+      system => iter%get_next()
+      if (system%process_is_slave()) is_slave = .true.
+    end do
+
+    POP_SUB(multisystem_process_is_slave)
+  end function multisystem_process_is_slave
 
   ! ---------------------------------------------------------
   recursive subroutine multisystem_finalizer(this)

@@ -3,6 +3,7 @@
 CalculationMode   = td
 RestartWrite = no
 ExperimentalFeatures = yes
+FromScratch = yes
 
 Dimensions = 3
 

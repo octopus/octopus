@@ -1,4 +1,6 @@
 !! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!! Copyright (C) 2009 X. Andrade
+!! Copyright (C) 2020 M. Oliveira
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -43,6 +45,7 @@ module electrons_oct_m
   use states_abst_oct_m
   use states_elec_oct_m
   use states_elec_dim_oct_m
+  use unit_system_oct_m
   use v_ks_oct_m
   use xc_oct_m
   use xc_oep_oct_m
@@ -65,6 +68,7 @@ module electrons_oct_m
     type(namespace_t)            :: namespace
     type(hamiltonian_elec_t)     :: hm
   contains
+    procedure :: process_is_slave  => electrons_process_is_slave
     final :: electrons_finalize
   end type electrons_t
   
@@ -75,11 +79,13 @@ module electrons_oct_m
 contains
   
   !----------------------------------------------------------
-  function electrons_constructor(namespace) result(sys)
+  function electrons_constructor(namespace, generate_epot) result(sys)
     class(electrons_t), pointer    :: sys
     type(namespace_t),  intent(in) :: namespace
+    logical,  optional, intent(in) :: generate_epot
 
     type(profile_t), save :: prof
+    FLOAT :: mesh_global, mesh_local, wfns
 
     PUSH_SUB(electrons_constructor)
     call profiling_in(prof,"ELECTRONS_CONSTRUCTOR")
@@ -129,6 +135,57 @@ contains
       call messages_experimental('Parallel in domain calculations with PCM')
     end if
 
+    ! Print memory requirements
+    call messages_print_stress(stdout, 'Approximate memory requirements', namespace=sys%namespace)
+
+    mesh_global = mesh_global_memory(sys%gr%mesh)
+    mesh_local  = mesh_local_memory(sys%gr%mesh)
+
+    call messages_write('Mesh')
+    call messages_new_line()
+    call messages_write('  global  :')
+    call messages_write(mesh_global, units = unit_megabytes, fmt = '(f10.1)')
+    call messages_new_line()
+    call messages_write('  local   :')
+    call messages_write(mesh_local, units = unit_megabytes, fmt = '(f10.1)')
+    call messages_new_line()
+    call messages_write('  total   :')
+    call messages_write(mesh_global + mesh_local, units = unit_megabytes, fmt = '(f10.1)')
+    call messages_new_line()
+    call messages_info()
+
+    wfns = states_elec_wfns_memory(sys%st, sys%gr%mesh)
+    call messages_write('States')
+    call messages_new_line()
+    call messages_write('  real    :')
+    call messages_write(wfns, units = unit_megabytes, fmt = '(f10.1)')
+    call messages_write(' (par_kpoints + par_states + par_domains)')
+    call messages_new_line()
+    call messages_write('  complex :')
+    call messages_write(2.0_8*wfns, units = unit_megabytes, fmt = '(f10.1)')
+    call messages_write(' (par_kpoints + par_states + par_domains)')
+    call messages_new_line()
+    call messages_info()
+
+    call messages_print_stress(stdout)
+
+    if (optional_default(generate_epot, .false.)) then
+      message(1) = "Info: Generating external potential"
+      call messages_info(1)
+      call hamiltonian_elec_epot_generate(sys%hm, sys%namespace, sys%gr, sys%geo, sys%st)
+      message(1) = "      done."
+      call messages_info(1)
+    end if
+
+    if (sys%ks%theory_level /= INDEPENDENT_PARTICLES) then
+      call poisson_async_init(sys%hm%psolver, sys%mc)
+      ! slave nodes do not call the calculation routine
+      if (multicomm_is_slave(sys%mc))then
+        !for the moment we only have one type of slave
+        call poisson_slave_work(sys%hm%psolver)
+      end if
+    end if
+
     call profiling_out(prof)
     POP_SUB(electrons_constructor)
   contains
@@ -155,11 +212,26 @@ contains
 
   end function electrons_constructor
 
+  ! ---------------------------------------------------------
+  logical function electrons_process_is_slave(this) result(is_slave)
+    class(electrons_t), intent(in) :: this
+
+    PUSH_SUB(electrons_process_is_slave)
+
+    is_slave = multicomm_is_slave(this%mc)
+
+    POP_SUB(electrons_process_is_slave)
+  end function electrons_process_is_slave
+
   !----------------------------------------------------------
   subroutine electrons_finalize(sys)
     type(electrons_t), intent(inout) :: sys
 
     PUSH_SUB(electrons_finalize)
+
+    if (sys%ks%theory_level /= INDEPENDENT_PARTICLES) then
+      call poisson_async_end(sys%hm%psolver, sys%mc)
+    end if
 
     call hamiltonian_elec_end(sys%hm)
 
