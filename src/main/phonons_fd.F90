@@ -28,6 +28,7 @@ module phonons_fd_oct_m
   use mesh_oct_m
   use messages_oct_m
   use multicomm_oct_m
+  use multisystem_oct_m
   use namespace_oct_m
   use output_oct_m
   use parser_oct_m
@@ -50,14 +51,31 @@ module phonons_fd_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine phonons_run(sys)
+  subroutine phonons_run(system)
+    class(*), intent(inout) :: system
+
+    PUSH_SUB(phonons_run)
+
+    select type (system)
+    class is (multisystem_t)
+      message(1) = "CalculationMode = vib_modes not implemented for multi-system calculations"
+      call messages_fatal(1)
+    type is (electrons_t)
+      call phonons_run_legacy(system)
+    end select
+
+    POP_SUB(phonons_run)
+  end subroutine phonons_run
+
+  ! ---------------------------------------------------------
+  subroutine phonons_run_legacy(sys)
     type(electrons_t),      intent(inout) :: sys
 
     type(vibrations_t) :: vib
     integer :: ierr
     type(restart_t) :: gs_restart
 
-    PUSH_SUB(phonons_run)
+    PUSH_SUB(phonons_run_legacy)
 
     if (sys%hm%pcm%run_pcm) then
       call messages_not_implemented("PCM for CalculationMode /= gs or td")
@@ -110,29 +128,29 @@ contains
     call vibrations_end(vib)
 
     call end_()
-    POP_SUB(phonons_run)
+    POP_SUB(phonons_run_legacy)
 
   contains
 
     ! ---------------------------------------------------------
     subroutine init_()
 
-      PUSH_SUB(phonons_run.init_)
+      PUSH_SUB(phonons_run_legacy.init_)
       call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
 
-      POP_SUB(phonons_run.init_)
+      POP_SUB(phonons_run_legacy.init_)
     end subroutine init_
 
     ! ---------------------------------------------------------
     subroutine end_()
 
-      PUSH_SUB(phonons_run.end_)
+      PUSH_SUB(phonons_run_legacy.end_)
       call states_elec_deallocate_wfns(sys%st)
 
-      POP_SUB(phonons_run.end_)
+      POP_SUB(phonons_run_legacy.end_)
     end subroutine end_
 
-  end subroutine phonons_run
+  end subroutine phonons_run_legacy
 
 
   ! ---------------------------------------------------------

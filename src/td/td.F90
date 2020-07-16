@@ -47,7 +47,6 @@ module td_oct_m
   use modelmb_exchange_syms_oct_m
   use mpi_oct_m
   use multicomm_oct_m
-  use multisystem_oct_m
   use namespace_oct_m
   use output_oct_m
   use parser_oct_m
@@ -82,8 +81,7 @@ module td_oct_m
     td_run,               &
     td_run_init,          &
     td_init,              &
-    td_end,               &
-    multisys_td_run
+    td_end
 
   !> Parameters.
   integer, parameter :: &
@@ -622,7 +620,7 @@ contains
           call messages_print_stress(stdout, 'Recalculating the ground state.', namespace=namespace)
           fromScratch = .false.
           call states_elec_deallocate_wfns(st)
-          call ground_state_run(namespace, mc, gr, geo, st, ks, hm, outp, fromScratch)
+          call ground_state_run_legacy(namespace, mc, gr, geo, st, ks, hm, outp, fromScratch)
           call states_elec_allocate_wfns(st, gr%mesh, packed=.true.)
           call td_load(restart_load, namespace, gr, st, hm, td, ierr)
           if (ierr /= 0) then
@@ -951,59 +949,6 @@ contains
     end subroutine td_read_coordinates
 
   end subroutine td_run
-
-
-  ! ---------------------------------------------------------
-  subroutine multisys_td_run(systems, fromScratch)
-    type(multisystem_t), intent(inout) :: systems
-    logical,             intent(inout) :: fromScratch
-
-    integer :: it, internal_loop
-    integer, parameter :: MAX_PROPAGATOR_STEPS = 1000
-    FLOAT :: smallest_algo_dt
-
-    PUSH_SUB(multisys_td_run)
-
-    call messages_write('Info: Running Multi-System time evolution')
-    call messages_new_line()
-    call messages_new_line()
-    call messages_info()
-
-    ! Initialize all propagators and find the smallest time-step
-    smallest_algo_dt = CNST(1e10)
-    call systems%init_propagator(smallest_algo_dt)
-
-    ! Initialize all the clocks
-    call systems%init_clocks(smallest_algo_dt)
-
-    ! Set initial conditions
-    call systems%initial_conditions(.true.)
-
-    call messages_print_stress(stdout, "Multi-system propagation", namespace=systems%namespace)
-
-    call systems%propagation_start()
-
-    ! The full TD loop
-    it = 0
-    do while (.not. systems%has_reached_final_propagation_time())
-
-      it = it + 1
-
-      internal_loop = 1
-      do while (.not. systems%propagation_step_is_done() .and. internal_loop < MAX_PROPAGATOR_STEPS)
-        call systems%dt_operation()
-        internal_loop = internal_loop + 1
-      end do
-      call systems%propagation_step_finish(it)
-
-      write (message(1), '(a)') repeat ('-', 71)
-      call messages_info(1)
-    end do
-
-    call systems%propagation_finish()
-
-    POP_SUB(multisys_td_run)
-  end subroutine multisys_td_run
 
   ! ---------------------------------------------------------
   subroutine td_dump(restart, namespace, gr, st, hm, td, iter, ierr)

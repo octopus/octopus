@@ -32,6 +32,7 @@ module static_pol_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use multisystem_oct_m
   use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
@@ -58,9 +59,27 @@ module static_pol_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine static_pol_run(sys, fromScratch)
+  subroutine static_pol_run(system, from_scratch)
+    class(*),        intent(inout) :: system
+    logical,         intent(in)    :: from_scratch
+
+    PUSH_SUB(static_pol_run)
+
+    select type (system)
+    class is (multisystem_t)
+      message(1) = "CalculationMode = static_pol not implemented for multi-system calculations"
+      call messages_fatal(1)
+    type is (electrons_t)
+      call static_pol_run_legacy(system, from_scratch)
+    end select
+
+    POP_SUB(static_pol_run)
+  end subroutine static_pol_run
+
+  ! ---------------------------------------------------------
+  subroutine static_pol_run_legacy(sys, fromScratch)
     type(electrons_t),    intent(inout) :: sys
-    logical,              intent(inout) :: fromScratch
+    logical,              intent(in)    :: fromScratch
 
     type(scf_t) :: scfv
     integer :: iunit, ios, i_start, ii, jj, is, isign, ierr, read_count, verbosity
@@ -77,7 +96,7 @@ contains
     character :: sign_char
     type(restart_t) :: gs_restart, restart_load, restart_dump
 
-    PUSH_SUB(static_pol_run)
+    PUSH_SUB(static_pol_run_legacy)
 
     if (sys%hm%pcm%run_pcm) then
       call messages_not_implemented("PCM for CalculationMode /= gs or td")
@@ -412,13 +431,13 @@ contains
     SAFE_DEALLOCATE_A(tmp_rho)
     SAFE_DEALLOCATE_A(dipole)
     call end_()
-    POP_SUB(static_pol_run)
+    POP_SUB(static_pol_run_legacy)
 
   contains
 
     ! ---------------------------------------------------------
     subroutine init_()
-      PUSH_SUB(static_pol_run.init_)
+      PUSH_SUB(static_pol_run_legacy.init_)
 
       call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
 
@@ -492,7 +511,7 @@ contains
         verbosity = VERB_COMPACT
       end if
 
-      POP_SUB(static_pol_run.init_)
+      POP_SUB(static_pol_run_legacy.init_)
     end subroutine init_
 
     ! ---------------------------------------------------------
@@ -732,7 +751,7 @@ contains
       POP_SUB(output_end_)
     end subroutine output_end_
 
-  end subroutine static_pol_run
+  end subroutine static_pol_run_legacy
 
 end module static_pol_oct_m
 

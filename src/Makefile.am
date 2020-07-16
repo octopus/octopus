@@ -707,6 +707,7 @@ octopus_f_srcs =                             \
 	main/casida.F90                      \
 	main/pulpo.F90                       \
 	main/test.F90                        \
+	main/time_dependent.F90              \
 	main/run.F90                         \
 	main/system_factory.F90              \
 	main/main.F90

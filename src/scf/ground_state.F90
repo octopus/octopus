@@ -30,6 +30,7 @@ module ground_state_oct_m
   use messages_oct_m
   use mpi_oct_m
   use multicomm_oct_m
+  use multisystem_oct_m
   use namespace_oct_m
   use output_oct_m
   use pcm_oct_m
@@ -47,7 +48,8 @@ module ground_state_oct_m
   private
   public ::                       &
     ground_state_run_init,        &
-    ground_state_run
+    ground_state_run,             &
+    ground_state_run_legacy
 
 contains
 
@@ -64,7 +66,26 @@ contains
   end subroutine ground_state_run_init
 
   ! ---------------------------------------------------------
-  subroutine ground_state_run(namespace, mc, gr, geo, st, ks, hm, outp, fromScratch)
+  subroutine ground_state_run(system, from_scratch)
+    class(*),        intent(inout) :: system
+    logical,         intent(inout) :: from_scratch
+
+    PUSH_SUB(ground_state_run)
+
+    select type (system)
+    class is (multisystem_t)
+      message(1) = "CalculationMode = gs not implemented for multi-system calculations"
+      call messages_fatal(1)
+    type is (electrons_t)
+      call ground_state_run_legacy(system%namespace, system%mc, system%gr, system%geo, system%st, system%ks, system%hm, &
+        system%outp, from_scratch)
+    end select
+
+    POP_SUB(ground_state_run)
+  end subroutine ground_state_run
+
+  ! ---------------------------------------------------------
+  subroutine ground_state_run_legacy(namespace, mc, gr, geo, st, ks, hm, outp, fromScratch)
     type(namespace_t),        intent(in)    :: namespace
     type(multicomm_t),        intent(in)    :: mc
     type(grid_t),             intent(inout) :: gr
@@ -80,7 +101,7 @@ contains
     integer         :: ierr
     type(rdm_t)     :: rdm
 
-    PUSH_SUB(ground_state_run)
+    PUSH_SUB(ground_state_run_legacy)
 
     call messages_write('Info: Allocating ground state wave-functions')
     call messages_info()
@@ -176,8 +197,8 @@ contains
     ! clean up
     call states_elec_deallocate_wfns(st)
 
-    POP_SUB(ground_state_run)
-  end subroutine ground_state_run
+    POP_SUB(ground_state_run_legacy)
+  end subroutine ground_state_run_legacy
 
 end module ground_state_oct_m
 

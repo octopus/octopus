@@ -1,4 +1,5 @@
 !! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!! Copyright (C) 2020 M. Oliveira
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -47,6 +48,7 @@ module run_oct_m
   use system_factory_oct_m
   use td_oct_m
   use test_oct_m
+  use time_dependent_oct_m
   use unit_system_oct_m
   use unocc_oct_m
   use varinfo_oct_m
@@ -104,12 +106,11 @@ contains
     type(namespace_t), intent(in) :: namespace
     integer,           intent(in) :: calc_mode_id
 
-    class(multisystem_t), pointer :: systems
-    type(electrons_t), pointer :: sys
+    class(*), pointer :: systems
     type(system_factory_t) :: system_factory
     type(interactions_factory_t) :: interactions_factory
     type(profile_t), save :: calc_mode_prof
-    logical :: fromScratch
+    logical :: from_scratch, is_slave
     integer :: iunit_out
 
     PUSH_SUB(run)
@@ -145,12 +146,17 @@ contains
       return
     end if
 
+    ! Create systems
     if (parse_is_defined(namespace, "Systems")) then
       ! We are running in multi-system mode
-
-      ! Initialize systems
       systems => multisystem_t(namespace, system_factory)
+    else
+      ! Fall back to old behaviour
+      systems => electrons_t(namespace, generate_epot = calc_mode_id /= OPTION__CALCULATIONMODE__DUMMY)
+    end if
 
+    select type (systems)
+    class is (multisystem_t)
       ! Create and initialize interactions
       call interactions_factory%create_interactions(systems, systems%list)
       call systems%init_all_interactions()
@@ -163,87 +169,76 @@ contains
         write(iunit_out, '(a)') '}'
         call io_close(iunit_out)
       end if
+      is_slave = systems%process_is_slave()
 
-      ! Run mode
+    type is (electrons_t)
+      is_slave = systems%process_is_slave()
+    end select
+
+    if (.not. is_slave) then
+      call messages_write('Info: Octopus initialization completed.', new_line = .true.)
+      call messages_write('Info: Starting calculation mode.')
+      call messages_info()
+
+      !%Variable FromScratch
+      !%Type logical
+      !%Default false
+      !%Section Execution
+      !%Description
+      !% When this variable is set to true, <tt>Octopus</tt> will perform a
+      !% calculation from the beginning, without looking for restart
+      !% information.
+      !%End
+      call parse_variable(namespace, 'FromScratch', .false., from_scratch)
+
+      call profiling_in(calc_mode_prof, "CALC_MODE")
+
       select case (calc_mode_id)
+      case (OPTION__CALCULATIONMODE__GS)
+        call ground_state_run(systems, from_scratch)
+      case (OPTION__CALCULATIONMODE__UNOCC)
+        call unocc_run(systems, from_scratch)
       case (OPTION__CALCULATIONMODE__TD)
-        call multisys_td_run(systems, fromScratch)
-      case default
-        call messages_not_implemented("CalculationMode /= td for multisystems")
+        call time_dependent_run(systems, from_scratch)
+      case (OPTION__CALCULATIONMODE__GO)
+        call geom_opt_run(systems, from_scratch)
+      case (OPTION__CALCULATIONMODE__OPT_CONTROL)
+        call opt_control_run(systems)
+      case (OPTION__CALCULATIONMODE__EM_RESP)
+        select case(get_resp_method(namespace))
+        case(FD)
+          call static_pol_run(systems, from_scratch)
+        case(LR)
+          call em_resp_run(systems, from_scratch)
+        end select
+      case (OPTION__CALCULATIONMODE__CASIDA)
+        call casida_run(systems, from_scratch)
+      case (OPTION__CALCULATIONMODE__VDW)
+        call vdW_run(systems, from_scratch)
+      case (OPTION__CALCULATIONMODE__VIB_MODES)
+        select case(get_resp_method(namespace))
+        case(FD)
+          call phonons_run(systems)
+        case(LR)
+          call phonons_lr_run(systems, from_scratch)
+        end select
+      case (OPTION__CALCULATIONMODE__ONE_SHOT)
+        message(1) = "CalculationMode = one_shot is obsolete. Please use gs with MaximumIter = 0."
+        call messages_fatal(1)
+      case (OPTION__CALCULATIONMODE__KDOTP)
+        call kdotp_lr_run(systems, from_scratch)
+      case (OPTION__CALCULATIONMODE__DUMMY)
+      case (OPTION__CALCULATIONMODE__INVERT_KS)
+        call invert_ks_run(systems)
+      case (OPTION__CALCULATIONMODE__RECIPE)
+        ASSERT(.false.) !this is handled before, if we get here, it is an error
       end select
 
-      ! Finalize systems
-      SAFE_DEALLOCATE_P(systems)
-
-    else
-      ! Fall back to old behaviour
-      sys => electrons_t(namespace, generate_epot = calc_mode_id /= OPTION__CALCULATIONMODE__DUMMY)
-
-      if(.not. sys%process_is_slave()) then
-        call messages_write('Info: Octopus initialization completed.', new_line = .true.)
-        call messages_write('Info: Starting calculation mode.')
-        call messages_info()
-
-        !%Variable FromScratch
-        !%Type logical
-        !%Default false
-        !%Section Execution
-        !%Description
-        !% When this variable is set to true, <tt>Octopus</tt> will perform a
-        !% calculation from the beginning, without looking for restart
-        !% information.
-        !%End
-
-        call parse_variable(namespace, 'FromScratch', .false., fromScratch)
-
-        call profiling_in(calc_mode_prof, "CALC_MODE")
-
-        select case (calc_mode_id)
-        case (OPTION__CALCULATIONMODE__GS)
-          call ground_state_run(sys%namespace, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, sys%outp, fromScratch)
-        case (OPTION__CALCULATIONMODE__UNOCC)
-          call unocc_run(sys, fromScratch)
-        case (OPTION__CALCULATIONMODE__TD)
-          call td_run(sys%namespace, sys%mc, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, sys%outp, fromScratch)
-        case (OPTION__CALCULATIONMODE__GO)
-          call geom_opt_run(sys, fromScratch)
-        case (OPTION__CALCULATIONMODE__OPT_CONTROL)
-          call opt_control_run(sys)
-        case (OPTION__CALCULATIONMODE__EM_RESP)
-          select case(get_resp_method(sys%namespace))
-          case(FD)
-            call static_pol_run(sys, fromScratch)
-          case(LR)
-            call em_resp_run(sys, fromScratch)
-          end select
-        case (OPTION__CALCULATIONMODE__CASIDA)
-          call casida_run(sys, fromScratch)
-        case (OPTION__CALCULATIONMODE__VDW)
-          call vdW_run(sys, fromScratch)
-        case (OPTION__CALCULATIONMODE__VIB_MODES)
-          select case(get_resp_method(sys%namespace))
-          case(FD)
-            call phonons_run(sys)
-          case(LR)
-            call phonons_lr_run(sys, fromscratch)
-          end select
-        case (OPTION__CALCULATIONMODE__ONE_SHOT)
-          message(1) = "CalculationMode = one_shot is obsolete. Please use gs with MaximumIter = 0."
-          call messages_fatal(1)
-        case (OPTION__CALCULATIONMODE__KDOTP)
-          call kdotp_lr_run(sys, fromScratch)
-        case (OPTION__CALCULATIONMODE__DUMMY)
-        case (OPTION__CALCULATIONMODE__INVERT_KS)
-          call invert_ks_run(sys)
-        case (OPTION__CALCULATIONMODE__RECIPE)
-          ASSERT(.false.) !this is handled before, if we get here, it is an error
-        end select
-
-        call profiling_out(calc_mode_prof)
-      end if
-
-      SAFE_DEALLOCATE_P(sys)
+      call profiling_out(calc_mode_prof)
     end if
+
+    ! Finalize systems
+    SAFE_DEALLOCATE_P(systems)
 
     call fft_all_end()
 

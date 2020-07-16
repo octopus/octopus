@@ -1,5 +1,6 @@
 CalculationMode   = td
 ExperimentalFeatures = yes
+FromScratch = yes
 
 Dimensions = 3
 

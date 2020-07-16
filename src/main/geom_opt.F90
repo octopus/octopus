@@ -32,6 +32,7 @@ module geom_opt_oct_m
   use messages_oct_m
   use minimizer_oct_m
   use mpi_oct_m
+  use multisystem_oct_m
   use namespace_oct_m
   use parser_oct_m
   use pcm_oct_m
@@ -90,7 +91,25 @@ module geom_opt_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine geom_opt_run(sys, fromscratch)
+  subroutine geom_opt_run(system, from_scratch)
+    class(*),        intent(inout) :: system
+    logical,         intent(inout) :: from_scratch
+
+    PUSH_SUB(geom_opt_run)
+
+    select type (system)
+    class is (multisystem_t)
+      message(1) = "CalculationMode = go not implemented for multi-system calculations"
+      call messages_fatal(1)
+    type is (electrons_t)
+      call geom_opt_run_legacy(system, from_scratch)
+    end select
+
+    POP_SUB(geom_opt_run)
+  end subroutine geom_opt_run
+
+  ! ---------------------------------------------------------
+  subroutine geom_opt_run_legacy(sys, fromscratch)
     type(electrons_t),   target, intent(inout) :: sys
     logical,                     intent(inout) :: fromscratch
 
@@ -102,7 +121,7 @@ contains
     integer :: iatom, imass
     type(restart_t) :: restart_load
 
-    PUSH_SUB(geom_opt_run)
+    PUSH_SUB(geom_opt_run_legacy)
 
     if (sys%hm%pcm%run_pcm) then
       call messages_not_implemented("PCM for CalculationMode /= gs or td")
@@ -196,7 +215,7 @@ contains
     SAFE_DEALLOCATE_A(coords)
     call scf_end(g_opt%scfv)
     call end_()
-    POP_SUB(geom_opt_run)
+    POP_SUB(geom_opt_run_legacy)
 
   contains
 
@@ -211,7 +230,7 @@ contains
       FLOAT :: default_step
       type(read_coords_info) :: xyz
 
-      PUSH_SUB(geom_opt_run.init_)
+      PUSH_SUB(geom_opt_run_legacy.init_)
 
       if (sys%gr%sb%periodic_dim > 0) then
         call messages_experimental('Geometry optimization for periodic systems')
@@ -543,13 +562,13 @@ contains
 
       call restart_init(g_opt%restart_dump, sys%namespace, RESTART_GS, RESTART_TYPE_DUMP, sys%mc, ierr, mesh=sys%gr%mesh)
 
-      POP_SUB(geom_opt_run.init_)
+      POP_SUB(geom_opt_run_legacy.init_)
     end subroutine init_
 
 
     ! ---------------------------------------------------------
     subroutine end_()
-      PUSH_SUB(geom_opt_run.end_)
+      PUSH_SUB(geom_opt_run_legacy.end_)
 
       call states_elec_deallocate_wfns(sys%st)
 
@@ -561,10 +580,10 @@ contains
       nullify(g_opt%hm)
       nullify(g_opt%syst)
 
-      POP_SUB(geom_opt_run.end_)
+      POP_SUB(geom_opt_run_legacy.end_)
     end subroutine end_
 
-  end subroutine geom_opt_run
+  end subroutine geom_opt_run_legacy
 
 
   ! ---------------------------------------------------------
