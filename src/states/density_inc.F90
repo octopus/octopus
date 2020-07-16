@@ -91,7 +91,7 @@ subroutine X(density_accumulate_grad)(gr, st, psib, grad_psib, grad_rho)
    
     SAFE_DEALLOCATE_A(weights)
     
-    call accel_kernel_start_call(ker_calc_grad_dens, 'forces.cl', TOSTRING(X(density_gradient)), &
+    call accel_kernel_start_call(ker_calc_grad_dens, 'forces.cl', trim(TOSTRING(X(density_gradient))), &
       flags = '-D' + R_TYPE_CL)
 
     do idir = 1, gr%mesh%sb%dim

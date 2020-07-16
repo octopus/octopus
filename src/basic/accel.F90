@@ -169,6 +169,7 @@ module accel_oct_m
     logical                       :: initialized = .false.
     type(accel_kernel_t), pointer :: next
     integer                       :: arg_count
+    character(len=30)             :: name
   end type accel_kernel_t
 
   type(accel_t), public :: accel
@@ -1233,6 +1234,9 @@ contains
     ASSERT(gsizes(1) < 2_8**31 - 1_8)
     ASSERT(all(gsizes(2:3) <= 65535_8))
     
+    write(message(1), *) 'Launching kernel '//trim(kernel%name)//' with ', gsizes(:), lsizes(:), kernel%cuda_shared_mem
+    call messages_info(1)
+
     call cuda_launch_kernel(kernel%cuda_kernel, gsizes(1), lsizes(1), kernel%cuda_shared_mem, kernel%arguments)
 
     kernel%cuda_shared_mem = 0    
@@ -1802,6 +1806,12 @@ contains
 
     call profiling_in(prof, "ACCEL_COMPILE", exclude = .true.)
 
+    this%name = trim(kernel_name)
+
+    write(message(1), *) 'Building kernel '//this%name//' from file '//file_name
+    call messages_info(1)
+
+
 #ifdef HAVE_CUDA
     all_flags = '-I'//trim(conf%share)//'/opencl/'
 
@@ -1874,6 +1884,7 @@ contains
       this%next => head
       head => this
     end if
+
 
     POP_SUB(accel_kernel_start_call)
   end subroutine accel_kernel_start_call
