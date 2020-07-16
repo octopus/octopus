@@ -144,7 +144,7 @@ contains
     type(states_elec_t),      intent(inout) :: st
     type(v_ks_t),             intent(inout) :: ks
     type(hamiltonian_elec_t), intent(inout) :: hm
-    type(output_t),           intent(in)    :: outp
+    type(output_t), pointer,  intent(in)    :: outp(:)
     type(vibrations_t),       intent(inout) :: vib
 
     type(scf_t)               :: scf

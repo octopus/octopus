@@ -297,7 +297,7 @@ contains
      
       if(.not. bandstructure_mode) then
         ! write restart information.
-        if(converged .or. (modulo(iter, sys%outp%restart_write_interval) == 0) &
+        if(converged .or. (modulo(iter, sys%outp(1)%restart_write_interval) == 0) &
                      .or. iter == max_iter .or. forced_finish) then
           call states_elec_dump(restart_dump, sys%st, sys%gr, ierr, iter=iter)
           if(ierr /= 0) then
@@ -307,8 +307,8 @@ contains
         end if
       end if 
 
-      if(sys%outp%output_interval /= 0 .and. mod(iter, sys%outp%output_interval) == 0 &
-            .and. sys%outp%duringscf) then
+      if(sys%outp(1)%output_interval /= 0 .and. mod(iter, sys%outp(1)%output_interval) == 0 &
+            .and. sys%outp(1)%duringscf) then
         write(dirname,'(a,i4.4)') "unocc.",iter
         call output_all(sys%outp, sys%namespace, dirname, sys%gr, sys%geo, sys%st, sys%hm, sys%ks)
       end if

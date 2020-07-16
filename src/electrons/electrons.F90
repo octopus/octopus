@@ -61,7 +61,7 @@ module electrons_oct_m
     type(grid_t),        pointer :: gr    !< the mesh
     type(states_elec_t), pointer :: st    !< the states
     type(v_ks_t)                 :: ks    !< the Kohn-Sham potentials
-    type(output_t)               :: outp  !< the output
+    type(output_t), pointer      :: outp(:)  !< the output
     type(multicomm_t)            :: mc    !< index and domain communicators
     type(namespace_t)            :: namespace
     type(hamiltonian_elec_t)     :: hm

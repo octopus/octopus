@@ -102,16 +102,22 @@ module io_function_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine io_function_read_how(sb, namespace, how, ignore_error)
-    type(simul_box_t), intent(in)  :: sb
-    type(namespace_t), intent(in)  :: namespace
-    integer(8),        intent(out) :: how
-    logical, optional, intent(in)  :: ignore_error !> Ignore error check. Used when called from some external utility.
+  subroutine io_function_read_how(sb, namespace, how, what, ignore_error)
+    type(simul_box_t),    intent(in)  :: sb
+    type(namespace_t),    intent(in)  :: namespace
+    integer(8),           intent(out) :: how
+    integer(8), optional, intent(in)  :: what
+    logical, optional,    intent(in)  :: ignore_error !> Ignore error check. Used when called from some external utility.
+
+    integer(8) :: what_i, what_it
+    type(block_t) :: blk
+    integer :: ncols, nrows, iout
 
     PUSH_SUB(io_function_read_how)
 
     how = 0_8
     
+    !**MFT TODO**: this must be updated!
     call messages_obsolete_variable(namespace, 'OutputHow', 'OutputFormat')
     
     !%Variable OutputFormat
@@ -205,7 +211,51 @@ contains
     !% Plain text format regardless of dimensionality. For the moment only employed by the oct-phototoelectron_spectrum
     !% post-processing utility.
     !%End
-    call parse_variable(namespace, 'OutputFormat', 0, how)
+
+    if(parse_block(namespace, 'Output', blk) == 0) then
+      ncols = parse_block_cols(blk, 0)
+      nrows = parse_block_n(blk)
+      if (.NOT. PRESENT(what)) then
+        if (nrows == 1) then
+          call parse_block_integer(blk, 0, 0, what_i)
+        else
+          write(*,*) '***MFT ERROR*** # Trying read how from block output format without specifying what!'
+        endif
+      else
+        what_i = what
+      endif
+      if(ncols == 2) then
+        !new format, Type 1
+        !%Output
+        !  density | cube + axis_z
+        !  wfs     | cube
+        !%
+
+        do iout = 1, nrows
+          call parse_block_integer(blk, iout - 1, 0, what_it)
+          if (what_it == what_i) then
+            call parse_block_integer(blk, iout - 1, 1, how)
+          endif
+        end do
+
+      else if(ncols == 5) then
+        !new format, Type 2
+        !%Output
+        !  density | output_interval | 10 | output_format | cube + axis_z
+        !  wfs     | output_interval | 50 | output_format | cube       
+        !%
+        !**MFT TODO**
+        message(1) = "This output format definition has not been implemented yet!"
+        call messages_fatal(1, namespace=namespace)
+      endif
+      call parse_block_end(blk)
+    else
+      !old format
+      write(*,*) '***MFT DBG*** # old format'
+      call parse_variable(namespace, 'OutputFormat', 0, how)
+    endif
+
+
     if(.not.varinfo_valid_option('OutputFormat', how, is_flag=.true.)) then
       call messages_input_error(namespace, 'OutputFormat')
     end if

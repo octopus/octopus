@@ -312,8 +312,8 @@ contains
     !% valid.
     !%End
     call parse_variable(sys%namespace, 'CasidaTransitionDensities', "0", cas%trandens)
-
-    if(cas%trandens /= "0") call io_function_read_how(sys%gr%sb, sys%namespace, sys%outp%how)
+    !MFT TODO
+    if(cas%trandens /= "0") call io_function_read_how(sys%gr%sb, sys%namespace, sys%outp(1)%how)
 
     !%Variable CasidaMomentumTransfer
     !%Type block

@@ -131,7 +131,7 @@ contains
     type(td_t),          intent(inout) :: td
     type(electrons_t),   intent(inout) :: sys
 
-    integer :: default
+    integer :: default, iout
     FLOAT   :: spacing, default_dt, propagation_time
 
     PUSH_SUB(td_init)
@@ -275,8 +275,10 @@ contains
     td%dt = td%dt/td%mu
 
     ! now the photoelectron stuff
-    call pes_init(td%pesv, sys%namespace, sys%gr%mesh, sys%gr%sb, sys%st, sys%outp%restart_write_interval, sys%hm, td%max_iter, &
+    do iout = 1, size(sys%outp)
+    call pes_init(td%pesv, sys%namespace, sys%gr%mesh, sys%gr%sb, sys%st, sys%outp(iout)%restart_write_interval, sys%hm, td%max_iter, &
          td%dt)
+    end do
 
     !%Variable TDDynamics
     !%Type integer
@@ -405,7 +407,7 @@ contains
 #ifdef HAVE_MPI
     logical                      :: stopping_tmp
 #endif
-    integer                      :: iter, ierr, scsteps
+    integer                      :: iter, ierr, scsteps, iout
     FLOAT                        :: etime
     type(profile_t),        save :: prof
     type(restart_t)              :: restart_load, restart_dump
@@ -471,9 +473,11 @@ contains
 
        geo%kinetic_energy = ion_dynamics_kinetic_energy(geo)
     else
-       if(bitand(sys%outp%what, OPTION__OUTPUT__FORCES) /= 0) then
-          call forces_calculate(gr, sys%namespace, geo, sys%hm, st, sys%ks, t = td%iter*td%dt, dt = td%dt)
+      do iout = 1, size(sys%outp)
+        if(bitand(sys%outp(iout)%what, OPTION__OUTPUT__FORCES) /= 0) then
+            call forces_calculate(gr, sys%namespace, geo, sys%hm, st, sys%ks, t = td%iter*td%dt, dt = td%dt)
        end if
+      end do
     end if
 
     call td_write_init(write_handler, sys%namespace, sys%outp, gr, st, sys%hm, geo, sys%ks, &
@@ -528,7 +532,8 @@ contains
              else
                 call kick_apply(gr%mesh, st, td%ions, geo, sys%hm%ep%kick, sys%hm%psolver, pcm = sys%hm%pcm)
              end if
-             call td_write_kick(sys%outp, sys%namespace, gr%mesh, sys%hm%ep%kick, geo, iter)
+             ! MFT TODO
+             call td_write_kick(sys%outp(1), sys%namespace, gr%mesh, sys%hm%ep%kick, geo, iter)
              !We activate the sprial BC only after the kick,
              !to be sure that the first iteration corresponds to the ground state
              if(gr%der%boundaries%spiralBC) gr%der%boundaries%spiral = .true.
@@ -557,7 +562,7 @@ contains
           call pes_calc(td%pesv, sys%namespace, gr%mesh, st, td%dt, iter, gr, sys%hm, stopping)
        end if
 
-       call td_write_iter(write_handler, sys%namespace, sys%outp, gr, st, sys%hm, geo, sys%hm%ep%kick, td%dt, iter)
+       call td_write_iter(write_handler, sys%namespace, sys%outp(1), gr, st, sys%hm, geo, sys%hm%ep%kick, td%dt, iter)
 
        ! write down data
        call check_point()
@@ -593,6 +598,9 @@ contains
 
     ! ---------------------------------------------------------
     subroutine check_point()
+
+      integer :: iout 
+
       PUSH_SUB(td_run.check_point)
 
       write(message(1), '(i7,1x,2f14.6,i10,f14.3)') iter, &
@@ -603,45 +611,47 @@ contains
       call messages_info(1)
       etime = loct_clock()
 
-      if((sys%outp%output_interval > 0 .and. mod(iter, sys%outp%output_interval) == 0) .or. &
-        iter == td%max_iter .or. stopping) then ! output
-        ! TODO this now overwrites wf inside st. If this is not wanted need to add an optional overwrite=no flag
-        if (st%modelmbparticles%nparticle > 0) then
-          call modelmb_sym_all_states (gr, st)
-        end if
-        call td_write_output(sys%namespace, gr, st, sys%hm, sys%ks, sys%outp, geo, iter, td%dt)
-      end if
-
-      if (mod(iter, sys%outp%restart_write_interval) == 0 .or. iter == td%max_iter .or. stopping) then ! restart
-        !if(iter == td%max_iter) sys%outp%iter = ii - 1
-        call td_write_data(write_handler)
-        call td_dump(restart_dump, sys%namespace, gr, st, sys%hm, td, iter, ierr)
-        if (ierr /= 0) then
-          message(1) = "Unable to write time-dependent restart information."
-          call messages_warning(1, namespace=sys%namespace)
-        end if
-
-        call pes_output(td%pesv, sys%namespace, gr%mesh, st, iter, sys%outp, td%dt, gr, geo)
-
-        if (ion_dynamics_ions_move(td%ions) .and. td%recalculate_gs) then
-          call messages_print_stress(stdout, 'Recalculating the ground state.', namespace=sys%namespace)
-          fromScratch = .false.
-          call states_elec_deallocate_wfns(sys%st)
-          call ground_state_run(sys, fromScratch)
-          call states_elec_allocate_wfns(sys%st, gr%mesh, packed=.true.)
-          call td_load(restart_load, sys%namespace, gr, st, sys%hm, td, ierr)
-          if (ierr /= 0) then
-            message(1) = "Unable to load TD states."
-            call messages_fatal(1, namespace=sys%namespace)
+      do iout=1,size(sys%outp)
+        if((sys%outp(iout)%output_interval > 0 .and. mod(iter, sys%outp(iout)%output_interval) == 0) .or. &
+          iter == td%max_iter .or. stopping) then ! output
+          ! TODO this now overwrites wf inside st. If this is not wanted need to add an optional overwrite=no flag
+          if (st%modelmbparticles%nparticle > 0) then
+            call modelmb_sym_all_states (gr, st)
           end if
-          call density_calc(st, gr, st%rho)
-          call v_ks_calc(sys%ks, sys%namespace, sys%hm, st, sys%geo, calc_eigenval=.true., time = iter*td%dt, calc_energy=.true.)
-          call forces_calculate(gr, sys%namespace, geo, sys%hm, st, sys%ks, t = iter*td%dt, dt = td%dt)
-          call messages_print_stress(stdout, "Time-dependent simulation proceeds", namespace=sys%namespace)
-          call print_header(sys%namespace)
-        end if
-      end if
 
+          call td_write_output(sys%namespace, gr, st, sys%hm, sys%ks, sys%outp(iout), geo, iter, td%dt)
+        end if
+
+        if (mod(iter, sys%outp(iout)%restart_write_interval) == 0 .or. iter == td%max_iter .or. stopping) then ! restart
+          !if(iter == td%max_iter) sys%outp(iout)%iter = ii - 1
+          call td_write_data(write_handler)
+          call td_dump(restart_dump, sys%namespace, gr, st, sys%hm, td, iter, ierr)
+          if (ierr /= 0) then
+            message(1) = "Unable to write time-dependent restart information."
+            call messages_warning(1, namespace=sys%namespace)
+          end if
+
+          call pes_output(td%pesv, sys%namespace, gr%mesh, st, iter, sys%outp(1), td%dt, gr, geo)
+
+          if (ion_dynamics_ions_move(td%ions) .and. td%recalculate_gs) then
+            call messages_print_stress(stdout, 'Recalculating the ground state.', namespace=sys%namespace)
+            fromScratch = .false.
+            call states_elec_deallocate_wfns(sys%st)
+            call ground_state_run(sys, fromScratch)
+            call states_elec_allocate_wfns(sys%st, gr%mesh, packed=.true.)
+            call td_load(restart_load, sys%namespace, gr, st, sys%hm, td, ierr)
+            if (ierr /= 0) then
+              message(1) = "Unable to load TD states."
+              call messages_fatal(1, namespace=sys%namespace)
+            end if
+            call density_calc(st, gr, st%rho)
+            call v_ks_calc(sys%ks, sys%namespace, sys%hm, st, sys%geo, calc_eigenval=.true., time = iter*td%dt, calc_energy=.true.)
+            call forces_calculate(gr, sys%namespace, geo, sys%hm, st, sys%ks, t = iter*td%dt, dt = td%dt)
+            call messages_print_stress(stdout, "Time-dependent simulation proceeds", namespace=sys%namespace)
+            call print_header(sys%namespace)
+          end if
+        end if
+      end do
       POP_SUB(td_run.check_point)
     end subroutine check_point
 
@@ -883,30 +893,36 @@ contains
 
     ! ---------------------------------------------------------
     subroutine td_run_zero_iter()
+
+      integer :: iout
       PUSH_SUB(td_run.td_run_zero_iter)
 
-      call td_write_iter(write_handler, sys%namespace, sys%outp, gr, st, sys%hm, geo, sys%hm%ep%kick, td%dt, 0)
+      ! MFT TODO
+      !do iout = 1, size(sys%outp)
+      do iout = 1, 1
+        call td_write_iter(write_handler, sys%namespace, sys%outp(iout), gr, st, sys%hm, geo, sys%hm%ep%kick, td%dt, 0)
 
-      ! I apply the delta electric field *after* td_write_iter, otherwise the
-      ! dipole matrix elements in write_proj are wrong
-      if(abs(sys%hm%ep%kick%time)  <=  M_EPSILON) then
-        if( .not.sys%hm%pcm%localf ) then
-          call kick_apply(gr%mesh, st, td%ions, geo, sys%hm%ep%kick, sys%hm%psolver)
-        else
-          call kick_apply(gr%mesh, st, td%ions, geo, sys%hm%ep%kick, sys%hm%psolver, pcm = sys%hm%pcm)
-        end if
-        call td_write_kick(sys%outp, sys%namespace, gr%mesh, sys%hm%ep%kick, geo, 0)
+        ! I apply the delta electric field *after* td_write_iter, otherwise the
+        ! dipole matrix elements in write_proj are wrong
+        if(abs(sys%hm%ep%kick%time)  <=  M_EPSILON) then
+          if( .not.sys%hm%pcm%localf ) then
+            call kick_apply(gr%mesh, st, td%ions, geo, sys%hm%ep%kick, sys%hm%psolver)
+          else
+            call kick_apply(gr%mesh, st, td%ions, geo, sys%hm%ep%kick, sys%hm%psolver, pcm = sys%hm%pcm)
+          end if
+          call td_write_kick(sys%outp(iout), sys%namespace, gr%mesh, sys%hm%ep%kick, geo, 0)
 
-        !We activate the sprial BC only after the kick 
-        if(gr%der%boundaries%spiralBC) then
-          gr%der%boundaries%spiral = .true.
+          !We activate the sprial BC only after the kick
+          if(gr%der%boundaries%spiralBC) then
+            gr%der%boundaries%spiral = .true.
+          end if
         end if
-      end if
-      call propagator_run_zero_iter(sys%hm, gr, td%tr)
-      if (sys%outp%output_interval > 0) then
-        call td_write_data(write_handler)
-        call td_write_output(sys%namespace, gr, st, sys%hm, sys%ks, sys%outp, geo, 0)
-      end if
+        call propagator_run_zero_iter(sys%hm, gr, td%tr)
+        if (sys%outp(iout)%output_interval > 0) then
+          call td_write_data(write_handler)
+          call td_write_output(sys%namespace, gr, st, sys%hm, sys%ks, sys%outp(iout), geo, 0)
+        end if
+      end do
 
       POP_SUB(td_run.td_run_zero_iter)
     end subroutine td_run_zero_iter

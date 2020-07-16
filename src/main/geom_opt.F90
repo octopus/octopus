@@ -667,9 +667,10 @@ contains
     call geometry_write_xyz(g_opt%geo, 'geom/'//trim(c_geom_iter), g_opt%syst%namespace, comment = trim(title))
     call geometry_write_xyz(g_opt%geo, './last', g_opt%syst%namespace)
 
-    if(bitand(g_opt%syst%outp%what, OPTION__OUTPUT__FORCES) /= 0) then
+    !MFT TODO
+    if(bitand(g_opt%syst%outp(1)%what, OPTION__OUTPUT__FORCES) /= 0) then
     write(c_forces_iter, '(a,i4.4)') "forces.", geom_iter
-      if(bitand(g_opt%syst%outp%how, OPTION__OUTPUTFORMAT__BILD) /= 0) then
+      if(bitand(g_opt%syst%outp(1)%how, OPTION__OUTPUTFORMAT__BILD) /= 0) then
         call write_bild_forces_file('forces', trim(c_forces_iter), g_opt%geo, g_opt%syst%gr%mesh, &
           g_opt%syst%namespace)
       else

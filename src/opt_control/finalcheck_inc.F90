@@ -57,8 +57,8 @@
     write(message(4), '(6x,a,f12.5)') " => Fluence  = ", fluence
     call messages_info(4)
     call messages_print_stress(stdout)
-
-    call output_states(sys%outp, sys%namespace, OCT_DIR//'final', psi, sys%gr, sys%geo, sys%hm)
+    !MFT TODO
+    call output_states(sys%outp(1), sys%namespace, OCT_DIR//'final', psi, sys%gr, sys%geo, sys%hm)
 
     nullify(par)
     call states_elec_end(psi)

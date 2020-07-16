@@ -177,7 +177,7 @@ contains
   subroutine td_write_init(writ, namespace, outp, gr, st, hm, geo, ks, ions_move, with_gauge_field, kick, iter, max_iter, dt, mc)
     type(td_write_t), target, intent(out)   :: writ
     type(namespace_t),        intent(in)    :: namespace
-    type(output_t),           intent(out)   :: outp
+    type(output_t), pointer,  intent(inout) :: outp(:)
     type(grid_t),             intent(in)    :: gr
     type(states_elec_t),      intent(inout) :: st
     type(hamiltonian_elec_t), intent(inout) :: hm
@@ -706,12 +706,12 @@ contains
       call v_ks_calculate_current(ks, .true.)
       call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval=.false., time = iter*dt)
     end if
-
+    ! MFT TODO
     if(writ%out(OUT_N_EX)%write .and. writ%compute_interval > 0) then
-      call io_mkdir(outp%iter_dir, namespace)
+      call io_mkdir(outp(1)%iter_dir, namespace)
     end if
 
-    if(outp%how == 0 .and. writ%out(OUT_N_EX)%write) call io_function_read_how(gr%sb, namespace, outp%how)
+    if(outp(1)%how == 0 .and. writ%out(OUT_N_EX)%write) call io_function_read_how(gr%sb, namespace, outp(1)%how)
 
     !%Variable TDOutputDFTU
     !%Type flag
@@ -940,6 +940,7 @@ contains
     
     character(len=256) :: filename
     type(profile_t), save :: prof
+    type(output_t), pointer   :: outp_list(:)
 
     PUSH_SUB(td_write_output)
     call profiling_in(prof, "TD_WRITE_DATA")
@@ -947,7 +948,9 @@ contains
     ! now write down the rest
     write(filename, '(a,a,i7.7)') trim(outp%iter_dir),"td.", iter  ! name of directory
 
-    call output_all(outp, namespace, filename, gr, geo, st, hm, ks)
+    SAFE_ALLOCATE(outp_list(1))
+    outp_list(1) = outp
+    call output_all(outp_list, namespace, filename, gr, geo, st, hm, ks)
     if(present(dt)) then
       call output_scalar_pot(outp, namespace, filename, gr, geo, hm, iter*dt)
     else

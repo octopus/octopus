@@ -285,11 +285,11 @@ contains
     type(states_elec_t),      intent(inout) :: st  !< States
     type(v_ks_t),             intent(inout) :: ks  !< Kohn-Sham
     type(hamiltonian_elec_t), intent(inout) :: hm  !< Hamiltonian
-    type(output_t),           intent(in)    :: outp !< output
+    type(output_t), pointer,  intent(in)    :: outp(:) !< output
     type(restart_t),          intent(in)    :: restart_dump
 
     type(states_elec_t) :: states_save
-    integer :: iter, icount, ip, ist, ierr, maxcount, iorb
+    integer :: iter, icount, ip, ist, ierr, maxcount, iorb, iout
     FLOAT :: energy, energy_dif, energy_old, energy_occ, xpos, xneg, rel_ener
     FLOAT, allocatable :: dpsi(:,:), dpsi2(:,:)
     logical :: conv
@@ -396,60 +396,62 @@ contains
  
       if (rdm%toler > CNST(1e-4)) rdm%toler = rdm%toler*CNST(1e-1) !Is this still okay or does it restrict the possible convergence? FB: Does this makes sense at all?
 
-      ! save restart information
-      if ((conv .or. (modulo(iter, outp%restart_write_interval) == 0) .or. iter == rdm%max_iter)) then
-        if (rdm%do_basis) then
-          call states_elec_copy(states_save, st)
-          SAFE_ALLOCATE(dpsi(1:gr%mesh%np, 1:st%d%dim))
-          SAFE_ALLOCATE(dpsi2(1:gr%mesh%np, 1:st%d%dim))
-          do iorb = 1, st%nst
-            dpsi = M_ZERO
-            do ist = 1, st%nst
-              call states_elec_get_state(st, gr%mesh, ist, 1, dpsi2)
-              do ip = 1, gr%mesh%np
-                dpsi(ip,1) = dpsi(ip,1) + rdm%vecnat(ist, iorb)*dpsi2(ip,1)
+      do iout = 1, size(outp)
+        ! save restart information
+        if ((conv .or. (modulo(iter, outp(iout)%restart_write_interval) == 0) .or. iter == rdm%max_iter)) then
+          if (rdm%do_basis) then
+            call states_elec_copy(states_save, st)
+            SAFE_ALLOCATE(dpsi(1:gr%mesh%np, 1:st%d%dim))
+            SAFE_ALLOCATE(dpsi2(1:gr%mesh%np, 1:st%d%dim))
+            do iorb = 1, st%nst
+              dpsi = M_ZERO
+              do ist = 1, st%nst
+                call states_elec_get_state(st, gr%mesh, ist, 1, dpsi2)
+                do ip = 1, gr%mesh%np
+                  dpsi(ip,1) = dpsi(ip,1) + rdm%vecnat(ist, iorb)*dpsi2(ip,1)
+                end do
               end do
+              call states_elec_set_state(states_save, gr%mesh, iorb, 1, dpsi)
             end do
-            call states_elec_set_state(states_save, gr%mesh, iorb, 1, dpsi)
-          end do
-          call density_calc(states_save, gr, states_save%rho)
-          ! if other quantities besides the densities and the states are needed they also have to be recalculated here!
-          call states_elec_dump(restart_dump, states_save, gr, ierr, iter=iter) 
+            call density_calc(states_save, gr, states_save%rho)
+            ! if other quantities besides the densities and the states are needed they also have to be recalculated here!
+            call states_elec_dump(restart_dump, states_save, gr, ierr, iter=iter) 
 
-          if (conv .or. iter == rdm%max_iter) then
-            call states_elec_end(st)
-            call states_elec_copy(st, states_save)
-          end if
-        
-          call states_elec_end(states_save)
-      
-          SAFE_DEALLOCATE_A(dpsi)
-          SAFE_DEALLOCATE_A(dpsi2)
-        else
-          call states_elec_dump(restart_dump, st, gr, ierr, iter=iter) 
+            if (conv .or. iter == rdm%max_iter) then
+              call states_elec_end(st)
+              call states_elec_copy(st, states_save)
+            end if
           
-          ! calculate maxFO for cg-solver 
-          if (.not. rdm%hf) then
-            call calc_maxFO (namespace, hm, st, gr, rdm)
-            write(message(1),'(a,18x,es20.10)') 'Max F0:', rdm%maxFO
-            call messages_info(1)
-          end if 
+            call states_elec_end(states_save)
+        
+            SAFE_DEALLOCATE_A(dpsi)
+            SAFE_DEALLOCATE_A(dpsi2)
+          else
+            call states_elec_dump(restart_dump, st, gr, ierr, iter=iter) 
+            
+            ! calculate maxFO for cg-solver 
+            if (.not. rdm%hf) then
+              call calc_maxFO (namespace, hm, st, gr, rdm)
+              write(message(1),'(a,18x,es20.10)') 'Max F0:', rdm%maxFO
+              call messages_info(1)
+            end if 
+          endif
+
+          if (ierr /= 0) then
+            message(1) = 'Unable to write states wavefunctions.'
+            call messages_warning(1)
+          end if
+          
         endif
 
-        if (ierr /= 0) then
-          message(1) = 'Unable to write states wavefunctions.'
-          call messages_warning(1)
+        ! write output for iterations if requested
+        if (outp(iout)%what/=0 .and. outp(iout)%duringscf .and. outp(iout)%output_interval /= 0 &
+          .and. mod(iter, outp(iout)%output_interval) == 0) then
+          write(dirname,'(a,a,i4.4)') trim(outp(iout)%iter_dir), "scf.", iter
+          call output_all(outp, namespace, dirname, gr, geo, st, hm, ks, iout)
+          call scf_write_static(dirname, "info")
         end if
-        
-      endif
-
-      ! write output for iterations if requested
-      if (outp%what/=0 .and. outp%duringscf .and. outp%output_interval /= 0 &
-        .and. mod(iter, outp%output_interval) == 0) then
-        write(dirname,'(a,a,i4.4)') trim(outp%iter_dir), "scf.", iter
-        call output_all(outp, namespace, dirname, gr, geo, st, hm, ks)
-        call scf_write_static(dirname, "info")
-      end if
+      end do
 
       if (conv) exit
     end do 

@@ -247,17 +247,18 @@ contains
     
     select case (c_how)
     CASE(OPERATION)
-      call convert_operate(sys%gr%mesh, global_namespace, sys%geo, sys%mc, sys%outp)
+      ! MFT TODO
+      call convert_operate(sys%gr%mesh, global_namespace, sys%geo, sys%mc, sys%outp(1))
 
     CASE(FOURIER_TRANSFORM)
       ! Compute Fourier transform 
       call convert_transform(sys%gr%mesh, global_namespace, sys%geo, sys%mc, basename, folder, &
-         c_start, c_end, c_step, sys%outp, subtract_file, &
+         c_start, c_end, c_step, sys%outp(1), subtract_file, &
          ref_name, ref_folder)
 
     CASE(CONVERT_FORMAT)
       call convert_low(sys%gr%mesh, global_namespace, sys%geo, sys%hm%psolver, sys%mc, basename, folder, &
-         c_start, c_end, c_step, sys%outp, iterate_folder, &
+         c_start, c_end, c_step, sys%outp(1), iterate_folder, &
          subtract_file, ref_name, ref_folder)
     end select
 

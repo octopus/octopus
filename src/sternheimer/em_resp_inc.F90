@@ -470,6 +470,8 @@ end subroutine X(run_sternheimer)
 ! ---------------------------------------------------------
 subroutine X(calc_properties_linear)()
   
+  integer :: iout
+  
   PUSH_SUB(em_resp_run.X(calc_properties_linear))
   
   if(pert_type(em_vars%perturbation) == PERTURBATION_ELECTRIC) then
@@ -577,8 +579,9 @@ subroutine X(calc_properties_linear)()
     end if
   end if
   
-  call em_resp_output(sys%st, sys%namespace, sys%gr, sys%hm, sys%geo, sys%outp, em_vars, iomega, ifactor)
-  
+  do iout = 1, size(sys%outp)
+    call em_resp_output(sys%st, sys%namespace, sys%gr, sys%hm, sys%geo, sys%outp(iout), em_vars, iomega, ifactor)
+  end do
   POP_SUB(em_resp_run.X(calc_properties_linear))
 end subroutine X(calc_properties_linear)
 

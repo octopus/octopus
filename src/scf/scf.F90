@@ -570,7 +570,7 @@ contains
     type(states_elec_t),       intent(inout) :: st !< States
     type(v_ks_t),              intent(inout) :: ks !< Kohn-Sham
     type(hamiltonian_elec_t),  intent(inout) :: hm !< Hamiltonian
-    type(output_t),            intent(in)    :: outp
+    type(output_t), pointer,   intent(in)    :: outp(:)
     logical,         optional, intent(in)    :: gs_run
     integer,         optional, intent(in)    :: verbosity 
     integer,         optional, intent(out)   :: iters_done
@@ -578,7 +578,7 @@ contains
     type(restart_t), optional, intent(in)    :: restart_dump
 
     logical :: finish, converged_current, converged_last, gs_run_, berry_conv
-    integer :: iter, is, iatom, nspin, ierr, iberry, idir, verbosity_, ib, iqn
+    integer :: iter, is, iatom, nspin, ierr, iberry, idir, verbosity_, ib, iqn, iout
     FLOAT :: evsum_out, evsum_in, forcetmp, dipole(MAX_DIM), dipole_prev(MAX_DIM)
     FLOAT :: etime, itime
     character(len=MAX_PATH_LEN) :: dirname
@@ -679,12 +679,15 @@ contains
     rhoin(1:gr%fine%mesh%np, 1, 1:nspin) = st%rho(1:gr%fine%mesh%np, 1:nspin)
     rhoout = M_ZERO
 
-    !We store the Hxc potential for the contribution to the forces
-    if(scf%calc_force .or. scf%conv_abs_force > M_ZERO &
-        .or. (outp%duringscf .and. bitand(outp%what, OPTION__OUTPUT__FORCES) /= 0)) then
-      SAFE_ALLOCATE(vhxc_old(1:gr%mesh%np, 1:nspin))
-      vhxc_old(1:gr%mesh%np, 1:nspin) = hm%vhxc(1:gr%mesh%np, 1:nspin)
-    end if
+    do iout = 1, size(outp)
+      !We store the Hxc potential for the contribution to the forces
+      if(scf%calc_force .or. scf%conv_abs_force > M_ZERO &
+          .or. (outp(iout)%duringscf .and. bitand(outp(iout)%what, OPTION__OUTPUT__FORCES) /= 0)) then
+        SAFE_ALLOCATE(vhxc_old(1:gr%mesh%np, 1:nspin))
+        vhxc_old(1:gr%mesh%np, 1:nspin) = hm%vhxc(1:gr%mesh%np, 1:nspin)
+        exit
+      end if
+    end do
     
 
     select case(scf%mix_field)
@@ -751,11 +754,14 @@ contains
 
       scf%energy_diff = hm%energy%total
 
+      do iout = 1, size(outp)
       !Used for the contribution to the forces
-      if(scf%calc_force .or. scf%conv_abs_force > M_ZERO .or. &
-          (outp%duringscf .and. bitand(outp%what, OPTION__OUTPUT__FORCES) /= 0)) & 
-        vhxc_old(1:gr%mesh%np, 1:nspin) = hm%vhxc(1:gr%mesh%np, 1:nspin)
-      
+        if(scf%calc_force .or. scf%conv_abs_force > M_ZERO .or. &
+            (outp(iout)%duringscf .and. bitand(outp(iout)%what, OPTION__OUTPUT__FORCES) /= 0)) then 
+          vhxc_old(1:gr%mesh%np, 1:nspin) = hm%vhxc(1:gr%mesh%np, 1:nspin)
+          exit
+        end if
+      end do
       if(scf%lcao_restricted) then
         call lcao_init_orbitals(lcao, st, gr, geo)
         call lcao_wf(lcao, st, gr, geo, hm, namespace)
@@ -766,7 +772,8 @@ contains
             scf%eigens%converged = 0
             call eigensolver_run(scf%eigens, namespace, gr, st, hm, iter)
 
-            call v_ks_calc(ks, namespace, hm, st, geo, calc_current=outp%duringscf)
+            !MFT TODO: if any of the outputs need
+            call v_ks_calc(ks, namespace, hm, st, geo, calc_current=outp(1)%duringscf)
 
             dipole_prev = dipole
             call calc_dipole(dipole)
@@ -799,7 +806,8 @@ contains
 
       select case(scf%mix_field)
       case(OPTION__MIXFIELD__POTENTIAL)
-        call v_ks_calc(ks, namespace, hm, st, geo, calc_current=outp%duringscf)
+        !MFT TODO
+        call v_ks_calc(ks, namespace, hm, st, geo, calc_current=outp(1)%duringscf)
         call mixfield_set_vout(scf%mixfield, hm%vhxc)
       case (OPTION__MIXFIELD__DENSITY)
         call mixfield_set_vout(scf%mixfield, rhoout)
@@ -842,10 +850,14 @@ contains
           end if
         end do
       else
-        if(outp%duringscf .and. bitand(outp%what, OPTION__OUTPUT__FORCES) /= 0 &
-           .and. outp%output_interval /= 0 &
-           .and. gs_run_ .and. mod(iter, outp%output_interval) == 0)  &
-          call forces_calculate(gr, namespace, geo, hm, st, ks, vhxc_old=vhxc_old)
+        do iout = 1, size(outp)
+        if(outp(iout)%duringscf .and. bitand(outp(iout)%what, OPTION__OUTPUT__FORCES) /= 0 &
+           .and. outp(iout)%output_interval /= 0 &
+           .and. gs_run_ .and. mod(iter, outp(iout)%output_interval) == 0) then
+            call forces_calculate(gr, namespace, geo, hm, st, ks, vhxc_old=vhxc_old)
+            exit
+          endif
+          end do
       end if
 
       if(abs(st%qtot) <= M_EPSILON) then
@@ -894,7 +906,8 @@ contains
           call messages_warning(1)
         end if
         call lda_u_mixer_get_vnew(hm%lda_u, scf%lda_u_mix, st)
-        call v_ks_calc(ks, namespace, hm, st, geo, calc_current=outp%duringscf)
+        !MFT TODO
+        call v_ks_calc(ks, namespace, hm, st, geo, calc_current=outp(1)%duringscf)
       case (OPTION__MIXFIELD__POTENTIAL)
         ! mix input and output potentials
         call mixing(scf%smix)
@@ -912,10 +925,12 @@ contains
         end do
 
         call density_calc(st, gr, st%rho)
-        call v_ks_calc(ks, namespace, hm, st, geo, calc_current=outp%duringscf)
+        !MFT TODO
+        call v_ks_calc(ks, namespace, hm, st, geo, calc_current=outp(1)%duringscf)
         
       case(OPTION__MIXFIELD__NONE)
-        call v_ks_calc(ks, namespace, hm, st, geo, calc_current=outp%duringscf)
+        !MFT TODO
+        call v_ks_calc(ks, namespace, hm, st, geo, calc_current=outp(1)%duringscf)
       end select
 
 
@@ -933,8 +948,8 @@ contains
 
       if (gs_run_ .and. present(restart_dump)) then 
         ! save restart information
-         
-        if ( (finish .or. (modulo(iter, outp%restart_write_interval) == 0) &
+         !MFT TODO
+        if ( (finish .or. (modulo(iter, outp(1)%restart_write_interval) == 0) &
           .or. iter == scf%max_iter .or. scf%forced_finish) ) then
 
           call states_elec_dump(restart_dump, st, gr, ierr, iter=iter) 
@@ -993,11 +1008,14 @@ contains
         exit
       end if
 
-      if((outp%what+outp%what_lda_u+outp%whatBZ)/=0 .and. outp%duringscf .and. outp%output_interval /= 0 &
-        .and. gs_run_ .and. mod(iter, outp%output_interval) == 0) then
-        write(dirname,'(a,a,i4.4)') trim(outp%iter_dir),"scf.",iter
-        call output_all(outp, namespace, dirname, gr, geo, st, hm, ks)
-      end if
+      do iout = 1, size(outp)
+        if((outp(iout)%what+outp(iout)%what_lda_u+outp(iout)%whatBZ)/=0 .and. outp(iout)%duringscf .and. outp(iout)%output_interval /= 0 &
+          .and. gs_run_ .and. mod(iter, outp(iout)%output_interval) == 0) then
+          write(dirname,'(a,a,i4.4)') trim(outp(iout)%iter_dir),"scf.",iter
+          call output_all(outp, namespace, dirname, gr, geo, st, hm, ks)
+          exit
+        end if
+      end do
 
       ! save information for the next iteration
       rhoin(1:gr%fine%mesh%np, 1, 1:nspin) = st%rho(1:gr%fine%mesh%np, 1:nspin)
@@ -1029,7 +1047,7 @@ contains
 
     if(scf%lcao_restricted) call lcao_end(lcao)
 
-    if((scf%max_iter > 0 .and. scf%mix_field == OPTION__MIXFIELD__POTENTIAL) .or. output_needs_current(outp, states_are_real(st))) then
+    if((scf%max_iter > 0 .and. scf%mix_field == OPTION__MIXFIELD__POTENTIAL) .or. output_needs_current(outp(1), states_are_real(st))) then
       call v_ks_calc(ks, namespace, hm, st, geo)
     end if
 

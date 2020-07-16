@@ -158,7 +158,7 @@ module output_oct_m
 contains
 
   subroutine output_init(outp, namespace, sb, st, nst, ks)
-    type(output_t),            intent(out)   :: outp
+    type(output_t), pointer,   intent(out)   :: outp(:)
     type(namespace_t),         intent(in)    :: namespace
     type(simul_box_t),         intent(in)    :: sb
     type(states_elec_t),       intent(in)    :: st
@@ -168,7 +168,7 @@ contains
     type(block_t) :: blk
     FLOAT :: norm
     character(len=80) :: nst_string, default
-    integer :: what_no_how, what_no_how_u
+    integer :: what_no_how, what_no_how_u, ncols, nrows, iout
 
     PUSH_SUB(output_init)
 
@@ -303,338 +303,374 @@ contains
     !% Outputs the electron-photon correlation function. The output file is
     !% called <tt>photon_correlator</tt>.
     !%End
-    call parse_variable(namespace, 'Output', 0, outp%what)
+    if(parse_block(namespace, 'Output', blk) == 0) then
+      nrows = parse_block_n(blk)
+      SAFE_ALLOCATE(outp(1:nrows))
+      ncols = parse_block_cols(blk, 0)
+      if(ncols == 2) then
+        !new format, Type 1
+        !%Output
+        !  density | cube + axis_z
+        !  wfs     | cube
+        !%
 
-    if(bitand(outp%what, OPTION__OUTPUT__WFS_FOURIER) /= 0) then
-      call messages_experimental("Wave-functions in Fourier space")
-    end if
-
-    ! cannot calculate the ELF in 1D
-    if(bitand(outp%what, OPTION__OUTPUT__ELF) /= 0 .or. bitand(outp%what, OPTION__OUTPUT__ELF_BASINS) /= 0) then
-       if(sb%dim /= 2 .and. sb%dim /= 3) then
-         outp%what = bitand(outp%what, not(OPTION__OUTPUT__ELF + OPTION__OUTPUT__ELF_BASINS))
-         write(message(1), '(a)') 'Cannot calculate ELF except in 2D and 3D.'
-         call messages_warning(1, namespace=namespace)
-       end if
-    end if
-
-    if(.not.varinfo_valid_option('Output', outp%what, is_flag=.true.)) then
-      call messages_input_error(namespace, 'Output')
-    end if
-
-    if(bitand(outp%what, OPTION__OUTPUT__MMB_WFS) /= 0) then
-      call messages_experimental("Model many-body wfs")
-    end if
-
-    if(bitand(outp%what, OPTION__OUTPUT__MMB_DEN) /= 0) then
-      call messages_experimental("Model many-body density matrix")
-      ! NOTES:
-      !   could be made into block to be able to specify which dimensions to trace
-      !   in principle all combinations are interesting, but this means we need to
-      !   be able to output density matrices for multiple particles or multiple
-      !   dimensions. The current 1D 1-particle case is simple.
-    end if
-
-    if(bitand(outp%what, OPTION__OUTPUT__ENERGY_DENSITY) /= 0) call messages_experimental("'Output = energy_density'")
-    if(bitand(outp%what, OPTION__OUTPUT__HEAT_CURRENT) /= 0) call messages_experimental("'Output = heat_current'")
-    
-    if(bitand(outp%what, OPTION__OUTPUT__WFS) /= 0  .or.  bitand(outp%what, OPTION__OUTPUT__WFS_SQMOD) /= 0 ) then
-
-      !%Variable OutputWfsNumber
-      !%Type string
-      !%Default all states
-      !%Section Output
-      !%Description
-      !% Which wavefunctions to print, in list form: <i>i.e.</i>, "1-5" to print the first
-      !% five states, "2,3" to print the second and the third state, etc.
-      !% If more states are specified than available, extra ones will be ignored.
-      !%End
-
-      write(nst_string,'(i6)') nst
-      write(default,'(a,a)') "1-", trim(adjustl(nst_string))
-      call parse_variable(namespace, 'OutputWfsNumber', default, outp%wfs_list)
-    end if
-
-    if(parse_block(namespace, 'CurrentThroughPlane', blk) == 0) then
-      outp%what = ior(outp%what, OPTION__OUTPUT__J_FLOW)
-
-      !%Variable CurrentThroughPlane
-      !%Type block
-      !%Section Output
-      !%Description
-      !% The code can calculate current
-      !% traversing a user-defined portion of a plane, as specified by this block.
-      !% A small plain-text file <tt>current-flow</tt> will be written containing this information.
-      !% Only available for 1D, 2D, or 3D.
-      !% In the format below, <tt>origin</tt> is a point in the plane.
-      !% <tt>u</tt> and <tt>v</tt> are the (dimensionless) vectors defining the plane;
-      !% they will be normalized. <tt>spacing</tt> is the fineness of the mesh
-      !% on the plane. Integers <tt>nu</tt> and <tt>mu</tt> are the length and
-      !% width of the portion of the plane, in units of <tt>spacing</tt>.
-      !% Thus, the grid points included in the plane are
-      !% <tt>x_ij = origin + i*spacing*u + j*spacing*v</tt>,
-      !% for <tt>nu <= i <= mu</tt> and <tt>nv <= j <= mv</tt>.
-      !% Analogously, in the 2D case, the current flow is calculated through a line;
-      !% in the 1D case, the current flow is calculated through a point. Note that the spacing
-      !% can differ from the one used in the main calculation; an interpolation will be performed.
-      !%
-      !% Example (3D):
-      !%
-      !% <tt>%CurrentThroughPlane
-      !% <br>&nbsp;&nbsp; 0.0 | 0.0 | 0.0  # origin
-      !% <br>&nbsp;&nbsp; 0.0 | 1.0 | 0.0  # u
-      !% <br>&nbsp;&nbsp; 0.0 | 0.0 | 1.0  # v
-      !% <br>&nbsp;&nbsp; 0.2              # spacing
-      !% <br>&nbsp;&nbsp; 0 | 50           # nu | mu
-      !% <br>&nbsp;&nbsp; -50 | 50         # nv | mv
-      !% <br>%</tt>
-      !%
-      !% Example (2D):
-      !%
-      !% <tt>%CurrentThroughPlane
-      !% <br>&nbsp;&nbsp; 0.0 | 0.0        # origin
-      !% <br>&nbsp;&nbsp; 1.0 | 0.0        # u
-      !% <br>&nbsp;&nbsp; 0.2              # spacing
-      !% <br>&nbsp;&nbsp; 0 | 50           # nu | mu
-      !% <br>%</tt>
-      !%
-      !% Example (1D):
-      !%
-      !% <tt>%CurrentThroughPlane
-      !% <br>&nbsp;&nbsp; 0.0              # origin
-      !% <br>%</tt>
-      !%
-      !%End
-        
-      select case(sb%dim)
-      case(3)
-
-        call parse_block_float(blk, 0, 0, outp%plane%origin(1), units_inp%length)
-        call parse_block_float(blk, 0, 1, outp%plane%origin(2), units_inp%length)
-        call parse_block_float(blk, 0, 2, outp%plane%origin(3), units_inp%length)
-        call parse_block_float(blk, 1, 0, outp%plane%u(1))
-        call parse_block_float(blk, 1, 1, outp%plane%u(2))
-        call parse_block_float(blk, 1, 2, outp%plane%u(3))
-        call parse_block_float(blk, 2, 0, outp%plane%v(1))
-        call parse_block_float(blk, 2, 1, outp%plane%v(2))
-        call parse_block_float(blk, 2, 2, outp%plane%v(3))
-        call parse_block_float(blk, 3, 0, outp%plane%spacing, units_inp%length)
-        call parse_block_integer(blk, 4, 0, outp%plane%nu)
-        call parse_block_integer(blk, 4, 1, outp%plane%mu)
-        call parse_block_integer(blk, 5, 0, outp%plane%nv)
-        call parse_block_integer(blk, 5, 1, outp%plane%mv)
-
-        norm = sqrt(sum(outp%plane%u(1:3)**2))
-        if(norm < M_EPSILON) then
-          write(message(1), '(a)') 'u-vector for CurrentThroughPlane cannot have norm zero.'
-          call messages_fatal(1, namespace=namespace)
-        end if
-        outp%plane%u(1:3) = outp%plane%u(1:3) / norm
-
-        norm = sqrt(sum(outp%plane%v(1:3)**2))
-        if(norm < M_EPSILON) then
-          write(message(1), '(a)') 'v-vector for CurrentThroughPlane cannot have norm zero.'
-          call messages_fatal(1, namespace=namespace)
-        end if
-        outp%plane%v(1:3) = outp%plane%v(1:3) / norm
-
-        outp%plane%n(1) = outp%plane%u(2)*outp%plane%v(3) - outp%plane%u(3)*outp%plane%v(2)
-        outp%plane%n(2) = outp%plane%u(3)*outp%plane%v(1) - outp%plane%u(1)*outp%plane%v(3)
-        outp%plane%n(3) = outp%plane%u(1)*outp%plane%v(2) - outp%plane%u(2)*outp%plane%v(1)
-
-      case(2)
-
-        call parse_block_float(blk, 0, 0, outp%line%origin(1), units_inp%length)
-        call parse_block_float(blk, 0, 1, outp%line%origin(2), units_inp%length)
-        call parse_block_float(blk, 1, 0, outp%line%u(1))
-        call parse_block_float(blk, 1, 1, outp%line%u(2))
-        call parse_block_float(blk, 2, 0, outp%line%spacing, units_inp%length)
-        call parse_block_integer(blk, 3, 0, outp%line%nu)
-        call parse_block_integer(blk, 3, 1, outp%line%mu)
-
-        norm = sqrt(sum(outp%line%u(1:2)**2))
-        if(norm < M_EPSILON) then
-          write(message(1), '(a)') 'u-vector for CurrentThroughPlane cannot have norm zero.'
-          call messages_fatal(1, namespace=namespace)
-        end if
-        outp%line%u(1:2) = outp%line%u(1:2) / norm
-
-        outp%line%n(1) = -outp%line%u(2)
-        outp%line%n(2) =  outp%line%u(1)
-
-      case(1)
-
-        call parse_block_float(blk, 0, 0, outp%line%origin(1), units_inp%length)
-
-      case default
-
-        call messages_not_implemented("CurrentThroughPlane for 4D or higher", namespace=namespace)
-
-      end select
+        do iout = 1, nrows
+          call parse_block_integer(blk, iout - 1, 0, outp(iout)%what)
+          call parse_block_integer(blk, iout - 1, 1, outp(iout)%how)
+        end do
+      else if(ncols == 5) then
+        !new format, Type 2
+        !%Output
+        !  density | output_interval | 10 | output_format | cube + axis_z
+        !  wfs     | output_interval | 50 | output_format | cube       
+        !%
+        !**MFT TODO**
+        message(1) = "This output format definition has not been implemented yet!"
+        call messages_fatal(1, namespace=namespace)
+      else
+        message(1) = "Unrecognized output format definition!"
+        call messages_fatal(1, namespace=namespace)
+      endif
       call parse_block_end(blk)
-    end if
-
-    if(bitand(outp%what, OPTION__OUTPUT__MATRIX_ELEMENTS) /= 0) then
-      call output_me_init(outp%me, namespace, sb, st, nst)
     else
-      outp%me%what = 0
-    end if
+      !old format
+      SAFE_ALLOCATE(outp(1))
+      call parse_variable(namespace, 'Output', 0, outp(1)%what)
+    endif
 
-    if(bitand(outp%what, OPTION__OUTPUT__BERKELEYGW) /= 0) then
-      call output_berkeleygw_init(nst, namespace, outp%bgw, sb%periodic_dim)
-    end if
 
-    !%Variable OutputLDA_U
-    !%Type flag
-    !%Default none
-    !%Section Output
-    !%Description
-    !% Specifies what to print, related to LDA+U. 
-    !% The output files are written at the end of the run into the output directory for the
-    !% relevant kind of run (<i>e.g.</i> <tt>static</tt> for <tt>CalculationMode = gs</tt>).
-    !% Time-dependent simulations print only per iteration, including always the last. The frequency of output per iteration
-    !% (available for <tt>CalculationMode</tt> = <tt>gs</tt>, <tt>unocc</tt>,  <tt>td</tt>, and <tt>opt_control</tt>)
-    !% is set by <tt>OutputInterval</tt> and the directory is set by <tt>OutputIterDir/effectiveU</tt>.
-    !% For linear-response run modes, the derivatives of many quantities can be printed, as listed in
-    !% the options below. Indices in the filename are labelled as follows:
-    !% <tt>sp</tt> = spin (or spinor component), <tt>k</tt> = <i>k</i>-point, <tt>st</tt> = state/band.
-    !% There is no tag for directions, given as a letter. The perturbation direction is always
-    !% the last direction for linear-response quantities, and a following +/- indicates the sign of the frequency.
-    !% Example: <tt>occ_matrices + effectiveU</tt>
-    !%Option occ_matrices  bit(0)
-    !% Outputs the occupation matrices of LDA+U
-    !%Option effectiveU bit(1)
-    !% Outputs the value of the effectiveU for each atoms 
-    !%Option magnetization bit(2)
-    !% Outputs file containing structure and magnetization of the localized subspace 
-    !% on the atoms as a vector associated with each atom, which can be visualized.
-    !% For the moment, it only works if a +U is added on one type of orbital per atom. 
-    !%Option local_orbitals bit(3)
-    !% Outputs the localized orbitals that form the correlated subspace
-    !%Option kanamoriU bit(4)
-    !% Outputs the Kanamori interaction parameters U, U`, and J.
-    !% These parameters are not determined self-consistently, but are taken from the 
-    !% occupation matrices and Coulomb integrals comming from a standard +U calculation.
-    !%End
-    call parse_variable(namespace, 'OutputLDA_U', 0_8, outp%what_lda_u)
+    do iout = 1, size(outp)
+      if(bitand(outp(iout)%what, OPTION__OUTPUT__WFS_FOURIER) /= 0) then
+        call messages_experimental("Wave-functions in Fourier space")
+      end if
 
-    !%Variable OutputInterval
-    !%Type integer
-    !%Default 50
-    !%Section Output
-    !%Description
-    !% The output requested by variable <tt>Output</tt> is written
-    !% to the directory <tt>OutputIterDir</tt>
-    !% when the iteration number is a multiple of the <tt>OutputInterval</tt> variable.
-    !% Subdirectories are named Y.X, where Y is <tt>td</tt>, <tt>scf</tt>, or <tt>unocc</tt>, and
-    !% X is the iteration number. To use the working directory, specify <tt>"."</tt>
-    !% (Output of restart files is instead controlled by <tt>RestartWriteInterval</tt>.)
-    !% Must be >= 0. If it is 0, then no output is written. For <tt>gs</tt> and <tt>unocc</tt>
-    !% calculations, <tt>OutputDuringSCF</tt> must be set too for this output to be produced.
-    !%End
-    call parse_variable(namespace, 'OutputInterval', 50, outp%output_interval)
-    call messages_obsolete_variable(namespace, 'OutputEvery', 'OutputInterval/RestartWriteInterval')
-    if(outp%output_interval < 0) then
-      message(1) = "OutputInterval must be >= 0."
-      call messages_fatal(1, namespace=namespace)
-    end if
+      ! cannot calculate the ELF in 1D
+      if(bitand(outp(iout)%what, OPTION__OUTPUT__ELF) /= 0 .or. bitand(outp(iout)%what, OPTION__OUTPUT__ELF_BASINS) /= 0) then
+        if(sb%dim /= 2 .and. sb%dim /= 3) then
+          outp(iout)%what = bitand(outp(iout)%what, not(OPTION__OUTPUT__ELF + OPTION__OUTPUT__ELF_BASINS))
+          write(message(1), '(a)') 'Cannot calculate ELF except in 2D and 3D.'
+          call messages_warning(1, namespace=namespace)
+        end if
+      end if
 
-    !%Variable OutputDuringSCF
-    !%Type logical
-    !%Default no
-    !%Section Output
-    !%Description
-    !% During <tt>gs</tt> and <tt>unocc</tt> runs, if this variable is set to yes, 
-    !% output will be written after every <tt>OutputInterval</tt> iterations.
-    !%End
-    call parse_variable(namespace, 'OutputDuringSCF', .false., outp%duringscf) 
+      if(.not.varinfo_valid_option('Output', outp(iout)%what, is_flag=.true.)) then
+        call messages_input_error(namespace, 'Output')
+      end if
 
-    !%Variable RestartWriteInterval
-    !%Type integer
-    !%Default 50
-    !%Section Execution::IO
-    !%Description
-    !% Restart data is written when the iteration number is a multiple
-    !% of the <tt>RestartWriteInterval</tt> variable. For
-    !% time-dependent runs this includes the update of the output
-    !% controlled by the <tt>TDOutput</tt> variable. (Other output is
-    !% controlled by <tt>OutputInterval</tt>.)
-    !%End
-    call parse_variable(namespace, 'RestartWriteInterval', 50, outp%restart_write_interval)
-    if(outp%restart_write_interval <= 0) then
-      message(1) = "RestartWriteInterval must be > 0."
-      call messages_fatal(1, namespace=namespace)
-    end if
+      if(bitand(outp(iout)%what, OPTION__OUTPUT__MMB_WFS) /= 0) then
+        call messages_experimental("Model many-body wfs")
+      end if
 
-    ! these kinds of Output do not have a how
-    what_no_how = OPTION__OUTPUT__MATRIX_ELEMENTS + OPTION__OUTPUT__BERKELEYGW + OPTION__OUTPUT__DOS + &
-      OPTION__OUTPUT__TPA + OPTION__OUTPUT__MMB_DEN + OPTION__OUTPUT__J_FLOW
-    what_no_how_u = OPTION__OUTPUTLDA_U__OCC_MATRICES + OPTION__OUTPUTLDA_U__EFFECTIVEU + &
-      OPTION__OUTPUTLDA_U__MAGNETIZATION + OPTION__OUTPUTLDA_U__KANAMORIU
+      if(bitand(outp(iout)%what, OPTION__OUTPUT__MMB_DEN) /= 0) then
+        call messages_experimental("Model many-body density matrix")
+        ! NOTES:
+        !   could be made into block to be able to specify which dimensions to trace
+        !   in principle all combinations are interesting, but this means we need to
+        !   be able to output density matrices for multiple particles or multiple
+        !   dimensions. The current 1D 1-particle case is simple.
+      end if
 
-    !%Variable Output_KPT
-    !%Type flag
-    !%Default none
-    !%Section Output
-    !%Description
-    !% Specifies what to print. The output files are written at the end of the run into the output directory for the
-    !% relevant kind of run (<i>e.g.</i> <tt>static</tt> for <tt>CalculationMode = gs</tt>).
-    !% Time-dependent simulations print only per iteration, including always the last. The frequency of output per iteration
-    !% (available for <tt>CalculationMode</tt> = <tt>gs</tt>, <tt>unocc</tt>,  <tt>td</tt>, and <tt>opt_control</tt>)
-    !% is set by <tt>OutputInterval</tt> and the directory is set by <tt>OutputIterDir</tt>.
-    !% For linear-response run modes, the derivatives of many quantities can be printed, as listed in
-    !% the options below. Indices in the filename are labelled as follows:
-    !% <tt>sp</tt> = spin (or spinor component), <tt>k</tt> = <i>k</i>-point, <tt>st</tt> = state/band.
-    !% There is no tag for directions, given as a letter. The perturbation direction is always
-    !% the last direction for linear-response quantities, and a following +/- indicates the sign of the frequency.
-    !% Example: <tt>current_kpt</tt>
-    !%Option current_kpt  bit(0)
-    !% Outputs the current density resolved in momentum space. The output file is called <tt>current_kpt-</tt>.
-    !%Option density_kpt bit(1)
-    !% Outputs the electronic density resolved in momentum space. 
-    !%End
-    call parse_variable(namespace, 'Output_KPT', 0_8, outp%whatBZ)
+      if(bitand(outp(iout)%what, OPTION__OUTPUT__ENERGY_DENSITY) /= 0) call messages_experimental("'Output = energy_density'")
+      if(bitand(outp(iout)%what, OPTION__OUTPUT__HEAT_CURRENT) /= 0) call messages_experimental("'Output = heat_current'")
+      
+      if(bitand(outp(iout)%what, OPTION__OUTPUT__WFS) /= 0  .or.  bitand(outp(iout)%what, OPTION__OUTPUT__WFS_SQMOD) /= 0 ) then
 
-    if(.not.varinfo_valid_option('Output_KPT', outp%whatBZ, is_flag=.true.)) then
-      call messages_input_error(namespace, 'Output_KPT')
-    end if
+        !%Variable OutputWfsNumber
+        !%Type string
+        !%Default all states
+        !%Section Output
+        !%Description
+        !% Which wavefunctions to print, in list form: <i>i.e.</i>, "1-5" to print the first
+        !% five states, "2,3" to print the second and the third state, etc.
+        !% If more states are specified than available, extra ones will be ignored.
+        !%End
 
-    if(bitand(outp%whatBZ, OPTION__OUTPUT_KPT__CURRENT_KPT) /= 0) then
-     call v_ks_calculate_current(ks, .true.) 
-    end if
+        write(nst_string,'(i6)') nst
+        write(default,'(a,a)') "1-", trim(adjustl(nst_string))
+        call parse_variable(namespace, 'OutputWfsNumber', default, outp(iout)%wfs_list)
+      end if
 
-    !%Variable OutputIterDir
-    !%Default "output_iter"
-    !%Type string
-    !%Section Output
-    !%Description
-    !% The name of the directory where <tt>Octopus</tt> stores information
-    !% such as the density, forces, etc. requested by variable <tt>Output</tt>
-    !% in the format specified by <tt>OutputFormat</tt>.
-    !% This information is written while iterating <tt>CalculationMode = gs</tt>, <tt>unocc</tt>, or <tt>td</tt>,
-    !% according to <tt>OutputInterval</tt>, and has nothing to do with the restart information.
-    !%End
-    call parse_variable(namespace, 'OutputIterDir', "output_iter", outp%iter_dir)
-    if(outp%what + outp%whatBZ + outp%what_lda_u /= 0 .and. outp%output_interval > 0) then
-      call io_mkdir(outp%iter_dir, namespace)
-    end if
-    call add_last_slash(outp%iter_dir)
+      if(parse_block(namespace, 'CurrentThroughPlane', blk) == 0) then
+        outp(iout)%what = ior(outp(iout)%what, OPTION__OUTPUT__J_FLOW)
 
-    ! we are using a what that has a how.
-    if(bitand(outp%what, not(what_no_how)) /= 0 .or. outp%whatBZ /= 0 .or. bitand(outp%what_lda_u, not(what_no_how_u)) /= 0) then
-      call io_function_read_how(sb, namespace, outp%how)
-    else
-      outp%how = 0
-    end if
+        !%Variable CurrentThroughPlane
+        !%Type block
+        !%Section Output
+        !%Description
+        !% The code can calculate current
+        !% traversing a user-defined portion of a plane, as specified by this block.
+        !% A small plain-text file <tt>current-flow</tt> will be written containing this information.
+        !% Only available for 1D, 2D, or 3D.
+        !% In the format below, <tt>origin</tt> is a point in the plane.
+        !% <tt>u</tt> and <tt>v</tt> are the (dimensionless) vectors defining the plane;
+        !% they will be normalized. <tt>spacing</tt> is the fineness of the mesh
+        !% on the plane. Integers <tt>nu</tt> and <tt>mu</tt> are the length and
+        !% width of the portion of the plane, in units of <tt>spacing</tt>.
+        !% Thus, the grid points included in the plane are
+        !% <tt>x_ij = origin + i*spacing*u + j*spacing*v</tt>,
+        !% for <tt>nu <= i <= mu</tt> and <tt>nv <= j <= mv</tt>.
+        !% Analogously, in the 2D case, the current flow is calculated through a line;
+        !% in the 1D case, the current flow is calculated through a point. Note that the spacing
+        !% can differ from the one used in the main calculation; an interpolation will be performed.
+        !%
+        !% Example (3D):
+        !%
+        !% <tt>%CurrentThroughPlane
+        !% <br>&nbsp;&nbsp; 0.0 | 0.0 | 0.0  # origin
+        !% <br>&nbsp;&nbsp; 0.0 | 1.0 | 0.0  # u
+        !% <br>&nbsp;&nbsp; 0.0 | 0.0 | 1.0  # v
+        !% <br>&nbsp;&nbsp; 0.2              # spacing
+        !% <br>&nbsp;&nbsp; 0 | 50           # nu | mu
+        !% <br>&nbsp;&nbsp; -50 | 50         # nv | mv
+        !% <br>%</tt>
+        !%
+        !% Example (2D):
+        !%
+        !% <tt>%CurrentThroughPlane
+        !% <br>&nbsp;&nbsp; 0.0 | 0.0        # origin
+        !% <br>&nbsp;&nbsp; 1.0 | 0.0        # u
+        !% <br>&nbsp;&nbsp; 0.2              # spacing
+        !% <br>&nbsp;&nbsp; 0 | 50           # nu | mu
+        !% <br>%</tt>
+        !%
+        !% Example (1D):
+        !%
+        !% <tt>%CurrentThroughPlane
+        !% <br>&nbsp;&nbsp; 0.0              # origin
+        !% <br>%</tt>
+        !%
+        !%End
+          
+        select case(sb%dim)
+        case(3)
 
-    ! At this point, we don`t know whether the states will be real or complex.
-    ! We therefore pass .false. to states_are_real, and need to check for real states later.
+          call parse_block_float(blk, 0, 0, outp(iout)%plane%origin(1), units_inp%length)
+          call parse_block_float(blk, 0, 1, outp(iout)%plane%origin(2), units_inp%length)
+          call parse_block_float(blk, 0, 2, outp(iout)%plane%origin(3), units_inp%length)
+          call parse_block_float(blk, 1, 0, outp(iout)%plane%u(1))
+          call parse_block_float(blk, 1, 1, outp(iout)%plane%u(2))
+          call parse_block_float(blk, 1, 2, outp(iout)%plane%u(3))
+          call parse_block_float(blk, 2, 0, outp(iout)%plane%v(1))
+          call parse_block_float(blk, 2, 1, outp(iout)%plane%v(2))
+          call parse_block_float(blk, 2, 2, outp(iout)%plane%v(3))
+          call parse_block_float(blk, 3, 0, outp(iout)%plane%spacing, units_inp%length)
+          call parse_block_integer(blk, 4, 0, outp(iout)%plane%nu)
+          call parse_block_integer(blk, 4, 1, outp(iout)%plane%mu)
+          call parse_block_integer(blk, 5, 0, outp(iout)%plane%nv)
+          call parse_block_integer(blk, 5, 1, outp(iout)%plane%mv)
 
-    if(output_needs_current(outp, .false.)) then
-      call v_ks_calculate_current(ks, .true.)
-    else
-      call v_ks_calculate_current(ks, .false.)
-    end if
+          norm = sqrt(sum(outp(iout)%plane%u(1:3)**2))
+          if(norm < M_EPSILON) then
+            write(message(1), '(a)') 'u-vector for CurrentThroughPlane cannot have norm zero.'
+            call messages_fatal(1, namespace=namespace)
+          end if
+          outp(iout)%plane%u(1:3) = outp(iout)%plane%u(1:3) / norm
+
+          norm = sqrt(sum(outp(iout)%plane%v(1:3)**2))
+          if(norm < M_EPSILON) then
+            write(message(1), '(a)') 'v-vector for CurrentThroughPlane cannot have norm zero.'
+            call messages_fatal(1, namespace=namespace)
+          end if
+          outp(iout)%plane%v(1:3) = outp(iout)%plane%v(1:3) / norm
+
+          outp(iout)%plane%n(1) = outp(iout)%plane%u(2)*outp(iout)%plane%v(3) - outp(iout)%plane%u(3)*outp(iout)%plane%v(2)
+          outp(iout)%plane%n(2) = outp(iout)%plane%u(3)*outp(iout)%plane%v(1) - outp(iout)%plane%u(1)*outp(iout)%plane%v(3)
+          outp(iout)%plane%n(3) = outp(iout)%plane%u(1)*outp(iout)%plane%v(2) - outp(iout)%plane%u(2)*outp(iout)%plane%v(1)
+
+        case(2)
+
+          call parse_block_float(blk, 0, 0, outp(iout)%line%origin(1), units_inp%length)
+          call parse_block_float(blk, 0, 1, outp(iout)%line%origin(2), units_inp%length)
+          call parse_block_float(blk, 1, 0, outp(iout)%line%u(1))
+          call parse_block_float(blk, 1, 1, outp(iout)%line%u(2))
+          call parse_block_float(blk, 2, 0, outp(iout)%line%spacing, units_inp%length)
+          call parse_block_integer(blk, 3, 0, outp(iout)%line%nu)
+          call parse_block_integer(blk, 3, 1, outp(iout)%line%mu)
+
+          norm = sqrt(sum(outp(iout)%line%u(1:2)**2))
+          if(norm < M_EPSILON) then
+            write(message(1), '(a)') 'u-vector for CurrentThroughPlane cannot have norm zero.'
+            call messages_fatal(1, namespace=namespace)
+          end if
+          outp(iout)%line%u(1:2) = outp(iout)%line%u(1:2) / norm
+
+          outp(iout)%line%n(1) = -outp(iout)%line%u(2)
+          outp(iout)%line%n(2) =  outp(iout)%line%u(1)
+
+        case(1)
+
+          call parse_block_float(blk, 0, 0, outp(iout)%line%origin(1), units_inp%length)
+
+        case default
+
+          call messages_not_implemented("CurrentThroughPlane for 4D or higher", namespace=namespace)
+
+        end select
+        call parse_block_end(blk)
+      end if
+
+      if(bitand(outp(iout)%what, OPTION__OUTPUT__MATRIX_ELEMENTS) /= 0) then
+        call output_me_init(outp(iout)%me, namespace, sb, st, nst)
+      else
+        outp(iout)%me%what = 0
+      end if
+
+      if(bitand(outp(iout)%what, OPTION__OUTPUT__BERKELEYGW) /= 0) then
+        call output_berkeleygw_init(nst, namespace, outp(iout)%bgw, sb%periodic_dim)
+      end if
+
+      !%Variable OutputLDA_U
+      !%Type flag
+      !%Default none
+      !%Section Output
+      !%Description
+      !% Specifies what to print, related to LDA+U. 
+      !% The output files are written at the end of the run into the output directory for the
+      !% relevant kind of run (<i>e.g.</i> <tt>static</tt> for <tt>CalculationMode = gs</tt>).
+      !% Time-dependent simulations print only per iteration, including always the last. The frequency of output per iteration
+      !% (available for <tt>CalculationMode</tt> = <tt>gs</tt>, <tt>unocc</tt>,  <tt>td</tt>, and <tt>opt_control</tt>)
+      !% is set by <tt>OutputInterval</tt> and the directory is set by <tt>OutputIterDir/effectiveU</tt>.
+      !% For linear-response run modes, the derivatives of many quantities can be printed, as listed in
+      !% the options below. Indices in the filename are labelled as follows:
+      !% <tt>sp</tt> = spin (or spinor component), <tt>k</tt> = <i>k</i>-point, <tt>st</tt> = state/band.
+      !% There is no tag for directions, given as a letter. The perturbation direction is always
+      !% the last direction for linear-response quantities, and a following +/- indicates the sign of the frequency.
+      !% Example: <tt>occ_matrices + effectiveU</tt>
+      !%Option occ_matrices  bit(0)
+      !% Outputs the occupation matrices of LDA+U
+      !%Option effectiveU bit(1)
+      !% Outputs the value of the effectiveU for each atoms 
+      !%Option magnetization bit(2)
+      !% Outputs file containing structure and magnetization of the localized subspace 
+      !% on the atoms as a vector associated with each atom, which can be visualized.
+      !% For the moment, it only works if a +U is added on one type of orbital per atom. 
+      !%Option local_orbitals bit(3)
+      !% Outputs the localized orbitals that form the correlated subspace
+      !%Option kanamoriU bit(4)
+      !% Outputs the Kanamori interaction parameters U, U`, and J.
+      !% These parameters are not determined self-consistently, but are taken from the 
+      !% occupation matrices and Coulomb integrals comming from a standard +U calculation.
+      !%End
+      call parse_variable(namespace, 'OutputLDA_U', 0_8, outp(iout)%what_lda_u)
+
+      !%Variable OutputInterval
+      !%Type integer
+      !%Default 50
+      !%Section Output
+      !%Description
+      !% The output requested by variable <tt>Output</tt> is written
+      !% to the directory <tt>OutputIterDir</tt>
+      !% when the iteration number is a multiple of the <tt>OutputInterval</tt> variable.
+      !% Subdirectories are named Y.X, where Y is <tt>td</tt>, <tt>scf</tt>, or <tt>unocc</tt>, and
+      !% X is the iteration number. To use the working directory, specify <tt>"."</tt>
+      !% (Output of restart files is instead controlled by <tt>RestartWriteInterval</tt>.)
+      !% Must be >= 0. If it is 0, then no output is written. For <tt>gs</tt> and <tt>unocc</tt>
+      !% calculations, <tt>OutputDuringSCF</tt> must be set too for this output to be produced.
+      !%End
+      call parse_variable(namespace, 'OutputInterval', 50, outp(iout)%output_interval)
+      call messages_obsolete_variable(namespace, 'OutputEvery', 'OutputInterval/RestartWriteInterval')
+      if(outp(iout)%output_interval < 0) then
+        message(1) = "OutputInterval must be >= 0."
+        call messages_fatal(1, namespace=namespace)
+      end if
+
+      !%Variable OutputDuringSCF
+      !%Type logical
+      !%Default no
+      !%Section Output
+      !%Description
+      !% During <tt>gs</tt> and <tt>unocc</tt> runs, if this variable is set to yes, 
+      !% output will be written after every <tt>OutputInterval</tt> iterations.
+      !%End
+      call parse_variable(namespace, 'OutputDuringSCF', .false., outp(iout)%duringscf) 
+
+      !%Variable RestartWriteInterval
+      !%Type integer
+      !%Default 50
+      !%Section Execution::IO
+      !%Description
+      !% Restart data is written when the iteration number is a multiple
+      !% of the <tt>RestartWriteInterval</tt> variable. For
+      !% time-dependent runs this includes the update of the output
+      !% controlled by the <tt>TDOutput</tt> variable. (Other output is
+      !% controlled by <tt>OutputInterval</tt>.)
+      !%End
+      call parse_variable(namespace, 'RestartWriteInterval', 50, outp(iout)%restart_write_interval)
+      if(outp(iout)%restart_write_interval <= 0) then
+        message(1) = "RestartWriteInterval must be > 0."
+        call messages_fatal(1, namespace=namespace)
+      end if
+
+      ! these kinds of Output do not have a how
+      what_no_how = OPTION__OUTPUT__MATRIX_ELEMENTS + OPTION__OUTPUT__BERKELEYGW + OPTION__OUTPUT__DOS + &
+        OPTION__OUTPUT__TPA + OPTION__OUTPUT__MMB_DEN + OPTION__OUTPUT__J_FLOW
+      what_no_how_u = OPTION__OUTPUTLDA_U__OCC_MATRICES + OPTION__OUTPUTLDA_U__EFFECTIVEU + &
+        OPTION__OUTPUTLDA_U__MAGNETIZATION + OPTION__OUTPUTLDA_U__KANAMORIU
+
+      !%Variable Output_KPT
+      !%Type flag
+      !%Default none
+      !%Section Output
+      !%Description
+      !% Specifies what to print. The output files are written at the end of the run into the output directory for the
+      !% relevant kind of run (<i>e.g.</i> <tt>static</tt> for <tt>CalculationMode = gs</tt>).
+      !% Time-dependent simulations print only per iteration, including always the last. The frequency of output per iteration
+      !% (available for <tt>CalculationMode</tt> = <tt>gs</tt>, <tt>unocc</tt>,  <tt>td</tt>, and <tt>opt_control</tt>)
+      !% is set by <tt>OutputInterval</tt> and the directory is set by <tt>OutputIterDir</tt>.
+      !% For linear-response run modes, the derivatives of many quantities can be printed, as listed in
+      !% the options below. Indices in the filename are labelled as follows:
+      !% <tt>sp</tt> = spin (or spinor component), <tt>k</tt> = <i>k</i>-point, <tt>st</tt> = state/band.
+      !% There is no tag for directions, given as a letter. The perturbation direction is always
+      !% the last direction for linear-response quantities, and a following +/- indicates the sign of the frequency.
+      !% Example: <tt>current_kpt</tt>
+      !%Option current_kpt  bit(0)
+      !% Outputs the current density resolved in momentum space. The output file is called <tt>current_kpt-</tt>.
+      !%Option density_kpt bit(1)
+      !% Outputs the electronic density resolved in momentum space. 
+      !%End
+      call parse_variable(namespace, 'Output_KPT', 0_8, outp(iout)%whatBZ)
+
+      if(.not.varinfo_valid_option('Output_KPT', outp(iout)%whatBZ, is_flag=.true.)) then
+        call messages_input_error(namespace, 'Output_KPT')
+      end if
+
+      if(bitand(outp(iout)%whatBZ, OPTION__OUTPUT_KPT__CURRENT_KPT) /= 0) then
+      call v_ks_calculate_current(ks, .true.) 
+      end if
+
+      !%Variable OutputIterDir
+      !%Default "output_iter"
+      !%Type string
+      !%Section Output
+      !%Description
+      !% The name of the directory where <tt>Octopus</tt> stores information
+      !% such as the density, forces, etc. requested by variable <tt>Output</tt>
+      !% in the format specified by <tt>OutputFormat</tt>.
+      !% This information is written while iterating <tt>CalculationMode = gs</tt>, <tt>unocc</tt>, or <tt>td</tt>,
+      !% according to <tt>OutputInterval</tt>, and has nothing to do with the restart information.
+      !%End
+      call parse_variable(namespace, 'OutputIterDir', "output_iter", outp(iout)%iter_dir)
+      if(outp(iout)%what + outp(iout)%whatBZ + outp(iout)%what_lda_u /= 0 .and. outp(iout)%output_interval > 0) then
+        call io_mkdir(outp(iout)%iter_dir, namespace)
+      end if
+      call add_last_slash(outp(iout)%iter_dir)
+
+      ! we are using a what that has a how.
+      if(bitand(outp(iout)%what, not(what_no_how)) /= 0 .or. outp(iout)%whatBZ /= 0 .or. bitand(outp(iout)%what_lda_u, not(what_no_how_u)) /= 0) then
+        call io_function_read_how(sb, namespace, outp(iout)%how)
+      else
+        outp(iout)%how = 0
+      end if
+
+      ! At this point, we don`t know whether the states will be real or complex.
+      ! We therefore pass .false. to states_are_real, and need to check for real states later.
+
+      if(output_needs_current(outp(iout), .false.)) then
+        call v_ks_calculate_current(ks, .true.)
+      else
+        call v_ks_calculate_current(ks, .false.)
+      end if
+  end do
 
 
     POP_SUB(output_init)
@@ -643,7 +679,7 @@ contains
   ! ---------------------------------------------------------
 
   subroutine output_end(outp)
-    type(output_t), intent(inout) :: outp
+    type(output_t), pointer, intent(inout) :: outp(:)
 
     PUSH_SUB(output_end)
     
@@ -652,8 +688,8 @@ contains
   end subroutine output_end
 
   ! ---------------------------------------------------------
-  subroutine output_all(outp, namespace, dir, gr, geo, st, hm, ks)
-    type(output_t),           intent(in)    :: outp
+  subroutine output_all(outp, namespace, dir, gr, geo, st, hm, ks, output_index)
+    type(output_t), pointer,  intent(in)    :: outp(:)
     type(namespace_t),        intent(in)    :: namespace
     character(len=*),         intent(in)    :: dir
     type(grid_t),             intent(in)    :: gr
@@ -661,96 +697,108 @@ contains
     type(states_elec_t),      intent(inout) :: st
     type(hamiltonian_elec_t), intent(inout) :: hm
     type(v_ks_t),             intent(inout) :: ks
+    integer, optional :: output_index
 
-    integer :: idir, ierr
+    integer :: idir, ierr, iout, iout_start, iout_end
     character(len=80) :: fname
     type(profile_t), save :: prof
     
     PUSH_SUB(output_all)
     call profiling_in(prof, "OUTPUT_ALL")
 
-    if(outp%what+outp%whatBZ+outp%what_lda_u /= 0) then
-      message(1) = "Info: Writing output to " // trim(dir)
-      call messages_info(1)
-      call io_mkdir(dir, namespace)
+    if (present(output_index)) then
+      iout_start = output_index
+      iout_end = output_index
+    else
+      iout_start = 1
+      iout_end = size(outp)
     end if
 
-    if(bitand(outp%what, OPTION__OUTPUT__MESH_R) /= 0) then
-      do idir = 1, gr%mesh%sb%dim
-        write(fname, '(a,a)') 'mesh_r-', index2axis(idir)
-        call dio_function_output(outp%how, dir, fname, namespace, gr%mesh, gr%mesh%x(:,idir), &
-          units_out%length, ierr, geo = geo)
-      end do
-    end if
-    
-    call output_states(outp, namespace, dir, st, gr, geo, hm)
-    call output_hamiltonian(outp, namespace, dir, hm, st, gr%der, geo, gr, st%st_kpt_mpi_grp)
-    call output_localization_funct(outp, namespace, dir, st, hm, gr, geo)
-    call output_current_flow(outp, namespace, dir, gr, st)
 
-    if(bitand(outp%what, OPTION__OUTPUT__GEOMETRY) /= 0) then
-      if(bitand(outp%how, OPTION__OUTPUTFORMAT__XCRYSDEN) /= 0) then        
-        call write_xsf_geometry_file(dir, "geometry", geo, gr%mesh, namespace)
+    do iout = iout_start, iout_end
+      if(outp(iout)%what+outp(iout)%whatBZ+outp(iout)%what_lda_u /= 0) then
+        message(1) = "Info: Writing output to " // trim(dir)
+        call messages_info(1)
+        call io_mkdir(dir, namespace)
       end if
-      if(bitand(outp%how, OPTION__OUTPUTFORMAT__XYZ) /= 0) then
-        call geometry_write_xyz(geo, trim(dir)//'/geometry', namespace)
-        if(simul_box_is_periodic(gr%sb))  call periodic_write_crystal(gr%sb, geo, dir, namespace)
+
+      if(bitand(outp(iout)%what, OPTION__OUTPUT__MESH_R) /= 0) then
+        do idir = 1, gr%mesh%sb%dim
+          write(fname, '(a,a)') 'mesh_r-', index2axis(idir)
+          call dio_function_output(outp(iout)%how, dir, fname, namespace, gr%mesh, gr%mesh%x(:,idir), &
+            units_out%length, ierr, geo = geo)
+        end do
       end if
-      if(bitand(outp%how, OPTION__OUTPUTFORMAT__VTK) /= 0) then
-        call vtk_output_geometry(trim(dir)//'/geometry', geo, namespace)
-      end if     
-    end if
+      
+      call output_states(outp(iout), namespace, dir, st, gr, geo, hm)
+      call output_hamiltonian(outp(iout), namespace, dir, hm, st, gr%der, geo, gr, st%st_kpt_mpi_grp)
+      call output_localization_funct(outp(iout), namespace, dir, st, hm, gr, geo)
+      call output_current_flow(outp(iout), namespace, dir, gr, st)
 
-    if(bitand(outp%what, OPTION__OUTPUT__FORCES) /= 0) then
-      if(bitand(outp%how, OPTION__OUTPUTFORMAT__BILD) /= 0) then
-        call write_bild_forces_file(dir, "forces", geo, gr%mesh, namespace)
-      else
-        call write_xsf_geometry_file(dir, "forces", geo, gr%mesh, namespace, write_forces = .true.)
+      if(bitand(outp(iout)%what, OPTION__OUTPUT__GEOMETRY) /= 0) then
+        if(bitand(outp(iout)%how, OPTION__OUTPUTFORMAT__XCRYSDEN) /= 0) then        
+          call write_xsf_geometry_file(dir, "geometry", geo, gr%mesh, namespace)
+        end if
+        if(bitand(outp(iout)%how, OPTION__OUTPUTFORMAT__XYZ) /= 0) then
+          call geometry_write_xyz(geo, trim(dir)//'/geometry', namespace)
+          if(simul_box_is_periodic(gr%sb))  call periodic_write_crystal(gr%sb, geo, dir, namespace)
+        end if
+        if(bitand(outp(iout)%how, OPTION__OUTPUTFORMAT__VTK) /= 0) then
+          call vtk_output_geometry(trim(dir)//'/geometry', geo, namespace)
+        end if     
       end if
-    end if
 
-    if(bitand(outp%what, OPTION__OUTPUT__MATRIX_ELEMENTS) /= 0) then
-      call output_me(outp%me, namespace, dir, st, gr, geo, hm)
-    end if
+      if(bitand(outp(iout)%what, OPTION__OUTPUT__FORCES) /= 0) then
+        if(bitand(outp(iout)%how, OPTION__OUTPUTFORMAT__BILD) /= 0) then
+          call write_bild_forces_file(dir, "forces", geo, gr%mesh, namespace)
+        else
+          call write_xsf_geometry_file(dir, "forces", geo, gr%mesh, namespace, write_forces = .true.)
+        end if
+      end if
 
-    if (bitand(outp%how, OPTION__OUTPUTFORMAT__ETSF) /= 0) then
-      call output_etsf(outp, namespace, dir, st, gr, geo)
-    end if
+      if(bitand(outp(iout)%what, OPTION__OUTPUT__MATRIX_ELEMENTS) /= 0) then
+        call output_me(outp(iout)%me, namespace, dir, st, gr, geo, hm)
+      end if
 
-    if (bitand(outp%what, OPTION__OUTPUT__BERKELEYGW) /= 0) then
-      call output_berkeleygw(outp%bgw, namespace, dir, st, gr, ks, hm, geo)
-    end if
-    
-    call output_energy_density(outp, namespace, dir, hm, ks, st, gr%der, geo, gr, st%st_kpt_mpi_grp)
+      if (bitand(outp(iout)%how, OPTION__OUTPUTFORMAT__ETSF) /= 0) then
+        call output_etsf(outp(iout), namespace, dir, st, gr, geo)
+      end if
 
-    if(hm%lda_u_level /= DFT_U_NONE) then
-      if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__OCC_MATRICES) /= 0)&
-        call lda_u_write_occupation_matrices(dir, hm%lda_u, st, namespace)
+      if (bitand(outp(iout)%what, OPTION__OUTPUT__BERKELEYGW) /= 0) then
+        call output_berkeleygw(outp(iout)%bgw, namespace, dir, st, gr, ks, hm, geo)
+      end if
+      
+      call output_energy_density(outp(iout), namespace, dir, hm, ks, st, gr%der, geo, gr, st%st_kpt_mpi_grp)
 
-      if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__EFFECTIVEU) /= 0)&
-        call lda_u_write_effectiveU(dir, hm%lda_u, namespace)
+      if(hm%lda_u_level /= DFT_U_NONE) then
+        if(iand(outp(iout)%what_lda_u, OPTION__OUTPUTLDA_U__OCC_MATRICES) /= 0)&
+          call lda_u_write_occupation_matrices(dir, hm%lda_u, st, namespace)
 
-      if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__MAGNETIZATION) /= 0)&
-        call lda_u_write_magnetization(dir, hm%lda_u, geo, gr%mesh, st, namespace)
+        if(iand(outp(iout)%what_lda_u, OPTION__OUTPUTLDA_U__EFFECTIVEU) /= 0)&
+          call lda_u_write_effectiveU(dir, hm%lda_u, namespace)
 
-      if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__LOCAL_ORBITALS) /= 0)&
-        call output_dftu_orbitals(outp, dir, namespace, hm%lda_u, st, gr%mesh, geo, associated(hm%hm_base%phase))
+        if(iand(outp(iout)%what_lda_u, OPTION__OUTPUTLDA_U__MAGNETIZATION) /= 0)&
+          call lda_u_write_magnetization(dir, hm%lda_u, geo, gr%mesh, st, namespace)
 
-      if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__KANAMORIU) /= 0)&
-        call lda_u_write_kanamoriU(dir, st, hm%lda_u, namespace)
-    end if
-    
-    if (bitand(ks%xc_family, XC_FAMILY_OEP) /= 0 .and. ks%theory_level /= HARTREE_FOCK) then
-      if (ks%oep%level == XC_OEP_FULL) then
-        if (ks%oep%has_photons) then
-          if(bitand(outp%what, OPTION__OUTPUT__PHOTON_CORRELATOR) /= 0) then
-            write(fname, '(a)') 'photon_correlator'
-            call dio_function_output(outp%how, dir, trim(fname), namespace, gr%mesh, ks%oep%pt%correlator(:,1), &
-              units_out%length, ierr, geo = geo)
+        if(iand(outp(iout)%what_lda_u, OPTION__OUTPUTLDA_U__LOCAL_ORBITALS) /= 0)&
+          call output_dftu_orbitals(outp(iout), dir, namespace, hm%lda_u, st, gr%mesh, geo, associated(hm%hm_base%phase))
+
+        if(iand(outp(iout)%what_lda_u, OPTION__OUTPUTLDA_U__KANAMORIU) /= 0)&
+          call lda_u_write_kanamoriU(dir, st, hm%lda_u, namespace)
+      end if
+      
+      if (bitand(ks%xc_family, XC_FAMILY_OEP) /= 0 .and. ks%theory_level /= HARTREE_FOCK) then
+        if (ks%oep%level == XC_OEP_FULL) then
+          if (ks%oep%has_photons) then
+            if(bitand(outp(iout)%what, OPTION__OUTPUT__PHOTON_CORRELATOR) /= 0) then
+              write(fname, '(a)') 'photon_correlator'
+              call dio_function_output(outp(iout)%how, dir, trim(fname), namespace, gr%mesh, ks%oep%pt%correlator(:,1), &
+                units_out%length, ierr, geo = geo)
+            end if
           end if
         end if
       end if
-    end if
+    end do
 
     call profiling_out(prof)
     POP_SUB(output_all)
@@ -1499,11 +1547,15 @@ contains
   !--------------------------------------------------------------
 
   logical function output_need_exchange(outp) result(need_exx)
-    type(output_t),         intent(in)    :: outp
+    type(output_t), pointer,   intent(in)    :: outp(:)
+    integer :: iout
 
-    need_exx =( bitand(outp%what, OPTION__OUTPUT__BERKELEYGW) /= 0 &
-           .or. bitand(outp%me%what, OPTION__OUTPUTMATRIXELEMENTS__TWO_BODY) /= 0 &
-           .or. bitand(outp%me%what, OPTION__OUTPUTMATRIXELEMENTS__TWO_BODY_EXC_K) /= 0 )
+    need_exx = .false.
+  do iout = 1, size(outp)
+    need_exx = need_exx .or. ( bitand(outp(iout)%what, OPTION__OUTPUT__BERKELEYGW) /= 0 &
+           .or. bitand(outp(iout)%me%what, OPTION__OUTPUTMATRIXELEMENTS__TWO_BODY) /= 0 &
+           .or. bitand(outp(iout)%me%what, OPTION__OUTPUTMATRIXELEMENTS__TWO_BODY_EXC_K) /= 0 )
+  end do
   end function output_need_exchange
 
 
