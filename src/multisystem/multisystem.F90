@@ -86,7 +86,7 @@ contains
     character(len=128) :: system_name, replica_name
     type(block_t) :: blk
     class(system_t), pointer :: sys
-    integer :: system_replicas, system_replicas_default, jj
+    integer :: system_replicas_default, jj
     
     PUSH_SUB(multisystem_constructor)
 
