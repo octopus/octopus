@@ -685,14 +685,14 @@ contains
   subroutine classical_particle_distribute_replicas(this)
     class(classical_particle_t),     intent(inout) :: this
 
-    integer :: replica_distribution_default, replica_distribution
+    integer :: replica_distribution_default
     integer :: idir, rand_gen_seed, seed, str_len, str_index
     character (len=128) :: namespace, num
     FLOAT :: rand_num
 
     PUSH_SUB(classical_particle_distribute_replicas)
 
-    !%Variable ReplicaDistribution
+    !%Variable ClassicalReplicaDistribution
     !%Type integer
     !%Section System
     !%Description
@@ -704,10 +704,11 @@ contains
     !%End
     !System Replica Distribution
     !For now this just gets the centroid
-    replica_distribution_default = 1
-    call parse_variable(this%namespace, 'ReplicaDistribution', replica_distribution_default, replica_distribution)
+    replica_distribution_default = this%system_replica%replica_distribution
+    call parse_variable(this%namespace, 'ClassicalReplicaDistribution', replica_distribution_default, &
+                                this%system_replica%replica_distribution)
 
-    write(message(1),'(a,i4)') "ReplicaDistribution is", replica_distribution
+    write(message(1),'(a,i4)') "ClassicalReplicaDistribution is", this%system_replica%replica_distribution
     call messages_info(1)
 
     str_len = len(trim(this%namespace%get()))

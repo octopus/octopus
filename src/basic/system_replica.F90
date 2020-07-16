@@ -28,6 +28,7 @@ module system_replica_oct_m
   type :: system_replica_t
     integer :: n_replicas = 0
     logical :: is_replica = .false.
+    integer :: replica_distribution = 1
   end type system_replica_t
 
 contains
