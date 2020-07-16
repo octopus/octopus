@@ -46,6 +46,7 @@ module run_oct_m
   use restart_oct_m
   use static_pol_oct_m
   use system_factory_oct_m
+  use system_replica_oct_m
   use td_oct_m
   use test_oct_m
   use unit_system_oct_m
@@ -130,6 +131,7 @@ contains
     type(system_factory_t) :: system_factory
     type(interactions_factory_t) :: interactions_factory
     type(profile_t), save :: calc_mode_prof
+    type(system_replica_t) :: system_replica
     logical :: fromScratch
     integer :: iunit_out
 
@@ -172,7 +174,7 @@ contains
       ! We are running in multi-system mode
 
       ! Initialize systems
-      systems => multisystem_t(namespace, system_factory)
+      systems => multisystem_t(namespace, system_factory, system_replica)
 
       ! Create and initialize interactions
       call interactions_factory%create_interactions(systems, systems%list)

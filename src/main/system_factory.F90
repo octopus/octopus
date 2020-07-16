@@ -27,6 +27,7 @@ module system_factory_oct_m
   use namespace_oct_m
   use electrons_oct_m
   use system_oct_m
+  use system_replica_oct_m
   use system_factory_abst_oct_m
   use system_mxll_oct_m
   implicit none
@@ -51,24 +52,25 @@ module system_factory_oct_m
 contains
 
   ! ---------------------------------------------------------------------------------------
-  recursive function system_factory_create(this, namespace, name, type) result(system)
+  recursive function system_factory_create(this, namespace, name, type, system_replica) result(system)
     class(system_factory_t), intent(in) :: this
     type(namespace_t),       intent(in) :: namespace
     character(len=*),        intent(in) :: name
     integer,                 intent(in) :: type
+    type(system_replica_t),  intent(inout) :: system_replica
     class(system_t),         pointer    :: system
 
     PUSH_SUB(system_factory_create)
 
     select case (type)
     case (SYSTEM_MULTISYSTEM)
-      system => multisystem_t(namespace_t(name, parent=namespace), this)
+      system => multisystem_t(namespace_t(name, parent=namespace), this, system_replica)
     case (SYSTEM_MAXWELL)
-      system => system_mxll_t(namespace_t(name, parent=namespace))
+      system => system_mxll_t(namespace_t(name, parent=namespace), system_replica)
     case (SYSTEM_CLASSICAL_PARTICLE)
-      system => classical_particle_t(namespace_t(name, parent=namespace))
+      system => classical_particle_t(namespace_t(name, parent=namespace), system_replica)
     case (SYSTEM_CHARGED_PARTICLE)
-      system => charged_particle_t(namespace_t(name, parent=namespace))
+      system => charged_particle_t(namespace_t(name, parent=namespace), system_replica)
     case default
       system => null()
     end select

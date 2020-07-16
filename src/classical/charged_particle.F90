@@ -37,6 +37,7 @@ module charged_particle_oct_m
   use quantity_oct_m
   use space_oct_m
   use system_oct_m
+  use system_replica_oct_m
   use write_iter_oct_m
 
   implicit none
@@ -78,15 +79,16 @@ contains
   !! corresponding type and then calls the init routine which is a type-bound
   !! procedure of the corresponding type. With this design, also derived
   !! classes can use the init routine of the parent class.
-  function charged_particle_constructor(namespace) result(sys)
+  function charged_particle_constructor(namespace, system_replica) result(sys)
     class(charged_particle_t), pointer  :: sys
     type(namespace_t),       intent(in) :: namespace
+    type(system_replica_t),  intent(in) :: system_replica
 
     PUSH_SUB(charged_particle_constructor)
 
     SAFE_ALLOCATE(sys)
 
-    call charged_particle_init(sys, namespace)
+    call charged_particle_init(sys, namespace, system_replica)
 
     POP_SUB(charged_particle_constructor)
   end function charged_particle_constructor
@@ -96,13 +98,14 @@ contains
   !! This has the advantage that different classes can have different
   !! signatures for the initialization routines because they are not
   !! type-bound and thus also not inherited.
-  subroutine charged_particle_init(this, namespace)
+  subroutine charged_particle_init(this, namespace, system_replica)
     class(charged_particle_t), intent(inout) :: this
     type(namespace_t),         intent(in)    :: namespace
+    type(system_replica_t),    intent(in)    :: system_replica
 
     PUSH_SUB(charged_particle_init)
 
-    call classical_particle_init(this%classical_particle_t, namespace)
+    call classical_particle_init(this%classical_particle_t, namespace, system_replica)
 
     !%Variable ParticleCharge
     !%Type float

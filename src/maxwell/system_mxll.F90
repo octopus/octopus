@@ -51,6 +51,7 @@ module system_mxll_oct_m
   use sort_oct_m
   use space_oct_m
   use system_oct_m
+  use system_replica_oct_m
   use states_mxll_oct_m
   use states_mxll_restart_oct_m
   use electrons_oct_m
@@ -116,24 +117,26 @@ module system_mxll_oct_m
 contains
 
   ! ---------------------------------------------------------
-  function system_mxll_constructor(namespace) result(sys)
-    class(system_mxll_t), pointer  :: sys
-    type(namespace_t),  intent(in) :: namespace
+  function system_mxll_constructor(namespace, system_replica) result(sys)
+    class(system_mxll_t),     pointer  :: sys
+    type(namespace_t),      intent(in) :: namespace
+    type(system_replica_t), intent(in) :: system_replica
 
     PUSH_SUB(system_mxll_constructor)
 
     SAFE_ALLOCATE(sys)
 
-    call system_mxll_init(sys, namespace)
+    call system_mxll_init(sys, namespace, system_replica)
 
     POP_SUB(system_mxll_constructor)
   end function system_mxll_constructor
 
 
   ! ---------------------------------------------------------
-  subroutine system_mxll_init(this, namespace)
+  subroutine system_mxll_init(this, namespace, system_replica)
     class(system_mxll_t), intent(inout) :: this
     type(namespace_t),    intent(in)    :: namespace
+    type(system_replica_t),  intent(in) :: system_replica
 
     type(profile_t), save :: prof
 

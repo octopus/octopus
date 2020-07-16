@@ -21,6 +21,7 @@
 
 module classical_particle_oct_m
   use clock_oct_m
+  use copy_replica_data_oct_m
   use global_oct_m
   use interaction_oct_m
   use gravity_oct_m
@@ -38,6 +39,7 @@ module classical_particle_oct_m
   use quickrnd_oct_m
   use space_oct_m
   use system_oct_m
+  use system_replica_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use write_iter_oct_m
@@ -53,6 +55,12 @@ module classical_particle_oct_m
     FLOAT :: mass
     FLOAT :: pos(1:MAX_DIM)
     FLOAT :: vel(1:MAX_DIM)
+
+    FLOAT :: pos2(1:MAX_DIM)
+    FLOAT :: vel2(1:MAX_DIM)
+    FLOAT :: varpos(1:MAX_DIM)
+    FLOAT :: varvel(1:MAX_DIM)
+
     FLOAT :: acc(1:MAX_DIM)
     FLOAT, allocatable :: prev_acc(:,:) !< A storage of the prior times.
     FLOAT :: save_pos(1:MAX_DIM)   !< A storage for the SCF loops
@@ -94,15 +102,16 @@ contains
   !! corresponding type and then calls the init routine which is a type-bound
   !! procedure of the corresponding type. With this design, also derived
   !! classes can use the init routine of the parent class.
-  function classical_particle_constructor(namespace) result(sys)
+  function classical_particle_constructor(namespace, system_replica) result(sys)
     class(classical_particle_t), pointer    :: sys
     type(namespace_t),           intent(in) :: namespace
+    type(system_replica_t),      intent(in) :: system_replica
 
     PUSH_SUB(classical_particle_constructor)
 
     SAFE_ALLOCATE(sys)
 
-    call classical_particle_init(sys, namespace)
+    call classical_particle_init(sys, namespace, system_replica)
 
     POP_SUB(classical_particle_constructor)
   end function classical_particle_constructor
@@ -113,13 +122,15 @@ contains
   !! signatures for the initialization routines because they are not
   !! type-bound and thus also not inherited.
   ! ---------------------------------------------------------
-  subroutine classical_particle_init(this, namespace)
+  subroutine classical_particle_init(this, namespace, system_replica)
     class(classical_particle_t), intent(inout) :: this
     type(namespace_t),           intent(in)    :: namespace
+    type(system_replica_t),      intent(in)    :: system_replica
 
     PUSH_SUB(classical_particle_init)
 
     this%namespace = namespace
+    this%system_replica = system_replica
 
     call messages_print_stress(stdout, "Classical Particle", namespace=namespace)
 
@@ -141,6 +152,14 @@ contains
     call this%supported_interactions%add(GRAVITY)
     call this%supported_interactions_as_partner%add(GRAVITY)
 
+    if (this%system_replica%n_replicas .gt. 0) then
+      if(this%system_replica%is_replica .eqv. .true.) then
+        call this%supported_interactions_as_partner%add(COPY_REPLICA_DATA)
+      else
+        call this%supported_interactions%add(COPY_REPLICA_DATA)
+      endif
+    endif
+
     call messages_print_stress(stdout, namespace=namespace)
 
     POP_SUB(classical_particle_init)
@@ -156,6 +175,8 @@ contains
     select type (interaction)
     type is (gravity_t)
       call interaction%init(this%space%dim, this%quantities, this%mass, this%pos)
+    type is (copy_replica_data_t)
+      call interaction%init(this%space%dim, this%quantities, this%pos, this%vel, this%pos2, this%vel2, this%varpos, this%varvel)
     class default
       message(1) = "Trying to initialize an unsupported interaction by classical particles."
       call messages_fatal(1)
@@ -214,7 +235,13 @@ contains
     end if
     call messages_print_var_value(stdout, 'ParticleInitialVelocity', this%vel(1:this%space%dim))
 
-    if(this%get_is_replica()) call this%distribute_replicas()
+    if(this%system_replica%is_replica) call this%distribute_replicas()
+
+    this%pos2 = M_ZERO
+    this%vel2 = M_ZERO
+
+    this%varpos = M_ZERO
+    this%varvel = M_ZERO
 
     POP_SUB(classical_particle_initial_conditions)
   end subroutine classical_particle_initial_conditions
@@ -419,9 +446,11 @@ contains
     write(message(3),fmt) "Velocity:    ", (this%vel(idir), idir = 1, this%space%dim)
     write(message(4),fmt) "Acceleration:", (this%acc(idir), idir = 1, this%space%dim)
     write(message(5),fmt) "Force:       ", (this%tot_force(idir), idir = 1, this%space%dim)
-    write(message(6),'(4x,A,I8.7)')  'Clock tick:      ', this%clock%get_tick()
-    write(message(7),'(4x,A,e14.6)') 'Simulation time: ', this%clock%get_sim_time()
-    call messages_info(7)
+    write(message(6),fmt) "Coordinates**2: ", (this%pos2(idir), idir = 1, this%space%dim)
+    write(message(7),fmt) "Coordinate variance: ", (this%varpos(idir), idir = 1, this%space%dim)
+    write(message(8),'(4x,A,I8.7)')  'Clock tick:      ', this%clock%get_tick()
+    write(message(9),'(4x,A,e14.6)') 'Simulation time: ', this%clock%get_sim_time()
+    call messages_info(9)
 
     POP_SUB(classical_particle_iteration_info)
   end subroutine classical_particle_iteration_info
@@ -582,6 +611,9 @@ contains
     type is (gravity_t)
       interaction%partner_mass = partner%mass
       interaction%partner_pos = partner%pos
+    type is (copy_replica_data_t)
+      interaction%partner_pos = partner%pos
+      interaction%partner_vel = partner%vel
     class default
       message(1) = "Unsupported interaction."
       call messages_fatal(1)
@@ -599,6 +631,14 @@ contains
     ! Store previous force, as it is used as SCF criterium
     this%prev_tot_force(1:this%space%dim) = this%tot_force(1:this%space%dim)
 
+    if ((this%system_replica%n_replicas .gt. 0) .and. (this%system_replica%is_replica .eqv. .false.)) then
+      this%pos = M_ZERO
+      this%vel = M_ZERO
+      this%pos2 = M_ZERO
+      this%vel2 = M_ZERO
+      this%varpos = M_ZERO
+      this%varvel = M_ZERO
+    endif
     POP_SUB(classical_particle_update_interactions_start)
   end subroutine classical_particle_update_interactions_start
 
@@ -619,6 +659,12 @@ contains
         this%tot_force(1:this%space%dim) = this%tot_force(1:this%space%dim) + interaction%force(1:this%space%dim)
       end select
     end do
+
+    if ((this%system_replica%n_replicas .gt. 0) .and. (this%system_replica%is_replica .eqv. .false.)) then
+      this%varpos = this%pos2 - this%pos**2
+      this%varvel = this%vel2 - this%vel**2
+    endif
+
 
     POP_SUB(classical_particle_update_interactions_finish)
   end subroutine classical_particle_update_interactions_finish

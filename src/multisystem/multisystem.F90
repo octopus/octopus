@@ -32,6 +32,7 @@ module multisystem_oct_m
   use parser_oct_m
   use profiling_oct_m
   use system_oct_m
+  use system_replica_oct_m
   use system_factory_abst_oct_m
   implicit none
 
@@ -75,9 +76,10 @@ module multisystem_oct_m
 contains
 
   ! ---------------------------------------------------------------------------------------
-  recursive function multisystem_constructor(namespace, factory) result(system)
+  recursive function multisystem_constructor(namespace, factory, system_replica) result(system)
     type(namespace_t),            intent(in) :: namespace
     class(system_factory_abst_t), intent(in) :: factory
+    type(system_replica_t),       intent(inout) :: system_replica
     class(multisystem_t),         pointer    :: system
 
     integer :: isys, system_type
@@ -91,6 +93,7 @@ contains
     SAFE_ALLOCATE(system)
 
     system%namespace = namespace
+    system%system_replica = system_replica
 
     !%Variable SystemReplicas
     !%Type integer
@@ -100,8 +103,9 @@ contains
     !%End
 
     system_replicas_default = 0
-    call parse_variable(system%namespace, 'SystemReplicas', system_replicas_default, system_replicas)
-    write(message(1), '(a,a,a,i6)') 'Namespace: ', trim(system%namespace%get()), ' SystemReplicas:', system_replicas
+    call parse_variable(system%namespace, 'SystemReplicas', system_replicas_default, system%system_replica%n_replicas)
+    write(message(1), '(a,a,a,i6)') 'Namespace: ', trim(system%namespace%get()), ' SystemReplicas:', &
+            system%system_replica%n_replicas
     call messages_info(1)
 
 
@@ -139,7 +143,7 @@ contains
         call io_mkdir(system_name, namespace=system%namespace)
 
         ! Create system
-        sys => factory%create(system%namespace, system_name, system_type)
+        sys => factory%create(system%namespace, system_name, system_type, system%system_replica)
         if (.not. associated(sys)) then
           call messages_input_error(system%namespace, 'Systems', 'Unknown system type.')
         end if
@@ -148,11 +152,11 @@ contains
         call system%list%add(sys)
 
         ! Add replicas to the list of systems
-        do jj = 1, system_replicas
+        do jj = 1, system%system_replica%n_replicas
            write(replica_name,'(a,a,i8.8)') trim(system_name), '-', jj
            call io_mkdir(replica_name, namespace=system%namespace)
-           sys => factory%create(system%namespace, replica_name, system_type)
-           call sys%set_is_replica(.true.)
+           system%system_replica%is_replica = .true.
+           sys => factory%create(system%namespace, replica_name, system_type, system%system_replica)
 
            if (.not. associated(sys)) then
              call messages_input_error(system%namespace, 'Systems', 'Unknown system type.')

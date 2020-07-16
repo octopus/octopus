@@ -70,10 +70,11 @@ basic_f_srcs =                                 \
 	basic/nvtx.F90                         \
 	basic/parser.F90                       \
 	basic/profiling.F90                    \
-	basic/clock.F90             \
+	basic/clock.F90                        \
 	basic/sort.F90                         \
 	basic/space.F90                        \
 	basic/string.F90                       \
+	basic/system_replica.F90               \
 	basic/types.F90                        \
 	basic/unit.F90                         \
 	basic/unit_system.F90                  \
@@ -497,6 +498,7 @@ multisystem_srcs = $(multisystem_f_srcs)
 
 # Sources in interactions
 interactions_f_srcs =                                 \
+	interactions/copy_replica_data.F90            \
 	interactions/coulomb_force.F90                \
 	interactions/gravity.F90                      \
 	interactions/lorentz_force.F90                \

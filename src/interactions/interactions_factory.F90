@@ -22,6 +22,7 @@ module interactions_factory_oct_m
   use global_oct_m
   use interaction_oct_m
   use coulomb_force_oct_m
+  use copy_replica_data_oct_m
   use gravity_oct_m
   use lorentz_force_oct_m
   use interaction_partner_oct_m
@@ -33,9 +34,10 @@ module interactions_factory_oct_m
   public :: interactions_factory_t
 
   integer, parameter, public :: &
-    GRAVITY          = 1,       &
-    LORENTZ_FORCE    = 2,       &
-    COULOMB_FORCE    = 3
+    GRAVITY             = 1,       &
+    LORENTZ_FORCE       = 2,       &
+    COULOMB_FORCE       = 3,       &
+    COPY_REPLICA_DATA   = 4
 
   type, extends(interactions_factory_abst_t) :: interactions_factory_t
   contains
@@ -108,6 +110,9 @@ contains
     !%Option coulomb_force 3
     !%  (interaction type)
     !% Coulomb force between two charged particles.
+    !%Option copy_replica_data 4
+    !%  (interaction type)
+    !% Interaction that copies data from replicas
     !%End
     select case (type)
     case (GRAVITY)
@@ -116,6 +121,8 @@ contains
       interaction => coulomb_force_t(partner)
     case (LORENTZ_FORCE)
       interaction => lorentz_force_t(partner)
+    case (COPY_REPLICA_DATA)
+      interaction => copy_replica_data_t(partner)
     case default
       ! This should never happen, as this is handled in
       ! interactions_factory_abst_create_interactions
@@ -137,6 +144,8 @@ contains
     case (COULOMB_FORCE)
       mode = ALL_PARTNERS
     case (LORENTZ_FORCE)
+      mode = ALL_PARTNERS
+    case (COPY_REPLICA_DATA)
       mode = ALL_PARTNERS
     case default
       message(1) = "Unknown interaction type"
