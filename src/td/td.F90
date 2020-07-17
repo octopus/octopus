@@ -410,7 +410,6 @@ contains
     type(output_t),           intent(inout) :: outp
     logical,                  intent(inout) :: fromScratch
 
-    type(td_write_t)             :: write_handler
     logical                      :: stopping
 #ifdef HAVE_MPI
     logical                      :: stopping_tmp
@@ -418,7 +417,6 @@ contains
     integer                      :: iter, ierr, scsteps
     FLOAT                        :: etime
     type(profile_t),        save :: prof
-    type(restart_t)              :: restart_load, restart_dump
 
     PUSH_SUB(td_run)
 
@@ -458,7 +456,7 @@ contains
 
     if (td%iter >= td%max_iter) then
       call states_elec_deallocate_wfns(st)
-      if (ion_dynamics_ions_move(td%ions) .and. td%recalculate_gs) call restart_end(restart_load)
+      if (ion_dynamics_ions_move(td%ions) .and. td%recalculate_gs) call restart_end(td%restart_load)
       POP_SUB(td_run)
       return
     end if
@@ -479,24 +477,24 @@ contains
       end if
     end if
 
-    call td_write_init(write_handler, namespace, outp, gr, st, hm, geo, ks, ion_dynamics_ions_move(td%ions), &
+    call td_write_init(td%write_handler, namespace, outp, gr, st, hm, geo, ks, ion_dynamics_ions_move(td%ions), &
       gauge_field_is_applied(hm%ep%gfield), hm%ep%kick, td%iter, td%max_iter, td%dt, mc)
 
     if (td%scissor > M_EPSILON) then
       call scissor_init(hm%scissor, namespace, st, gr, hm%d, td%scissor, mc)
     end if
 
-    if (td%iter == 0) call td_run_zero_iter(td, namespace, gr, geo, st, ks, hm, outp, write_handler)
+    if (td%iter == 0) call td_run_zero_iter(td, namespace, gr, geo, st, ks, hm, outp)
 
     if (gauge_field_is_applied(hm%ep%gfield)) call gauge_field_get_force(hm%ep%gfield, gr, st)
 
     !call td_check_trotter(td, sys, h)
     td%iter = td%iter + 1
 
-    call restart_init(restart_dump, namespace, RESTART_TD, RESTART_TYPE_DUMP, mc, ierr, mesh=gr%mesh)
+    call restart_init(td%restart_dump, namespace, RESTART_TD, RESTART_TYPE_DUMP, mc, ierr, mesh=gr%mesh)
     if (ion_dynamics_ions_move(td%ions) .and. td%recalculate_gs) then
       ! We will also use the TD restart directory as temporary storage during the time propagation
-      call restart_init(restart_load, namespace, RESTART_TD, RESTART_TYPE_LOAD, mc, ierr, mesh=gr%mesh)
+      call restart_init(td%restart_load, namespace, RESTART_TD, RESTART_TYPE_LOAD, mc, ierr, mesh=gr%mesh)
     end if
 
     call messages_print_stress(stdout, "Time-Dependent Simulation", namespace=namespace)
@@ -557,11 +555,10 @@ contains
         call pes_calc(td%pesv, namespace, gr%mesh, st, td%dt, iter, gr, hm, stopping)
       end if
 
-      call td_write_iter(write_handler, namespace, outp, gr, st, hm, geo, hm%ep%kick, td%dt, iter)
+      call td_write_iter(td%write_handler, namespace, outp, gr, st, hm, geo, hm%ep%kick, td%dt, iter)
 
       ! write down data
-      call td_check_point(td, namespace, mc, gr, geo, st, ks, hm, outp, write_handler, restart_dump, restart_load, iter, &
-    scsteps, etime, stopping, fromScratch)
+      call td_check_point(td, namespace, mc, gr, geo, st, ks, hm, outp, iter, scsteps, etime, stopping, fromScratch)
 
       ! check if debug mode should be enabled or disabled on the fly
       call io_debug_on_the_fly(namespace)
@@ -573,12 +570,12 @@ contains
 
     if (st%d%pack_states .and. hamiltonian_elec_apply_packed(hm)) call st%unpack()
 
-    call restart_end(restart_dump)
-    call td_write_end(write_handler)
+    call restart_end(td%restart_dump)
+    call td_write_end(td%write_handler)
 
     ! free memory
     call states_elec_deallocate_wfns(st)
-    if (ion_dynamics_ions_move(td%ions) .and. td%recalculate_gs) call restart_end(restart_load)
+    if (ion_dynamics_ions_move(td%ions) .and. td%recalculate_gs) call restart_end(td%restart_load)
 
     POP_SUB(td_run)
   end subroutine td_run
@@ -597,8 +594,7 @@ contains
   end subroutine td_print_header
 
   ! ---------------------------------------------------------
-  subroutine td_check_point(td, namespace, mc, gr, geo, st, ks, hm, outp, write_handler, restart_dump, restart_load, iter, &
-    scsteps, etime, stopping, from_scratch)
+  subroutine td_check_point(td, namespace, mc, gr, geo, st, ks, hm, outp, iter, scsteps, etime, stopping, from_scratch)
     type(td_t),               intent(inout) :: td
     type(namespace_t),        intent(in)    :: namespace
     type(multicomm_t),        intent(in)    :: mc
@@ -608,9 +604,6 @@ contains
     type(v_ks_t),             intent(inout) :: ks
     type(hamiltonian_elec_t), intent(inout) :: hm
     type(output_t),           intent(in)    :: outp
-    type(td_write_t),         intent(inout) :: write_handler
-    type(restart_t),          intent(in)    :: restart_dump
-    type(restart_t),          intent(in)    :: restart_load
     integer,                  intent(in)    :: iter
     integer,                  intent(in)    :: scsteps
     FLOAT,                    intent(inout) :: etime
@@ -637,8 +630,8 @@ contains
 
     if (mod(iter, outp%restart_write_interval) == 0 .or. iter == td%max_iter .or. stopping) then ! restart
       !if(iter == td%max_iter) outp%iter = ii - 1
-      call td_write_data(write_handler)
-      call td_dump(restart_dump, namespace, gr, st, hm, td, iter, ierr)
+      call td_write_data(td%write_handler)
+      call td_dump(td%restart_dump, namespace, gr, st, hm, td, iter, ierr)
       if (ierr /= 0) then
         message(1) = "Unable to write time-dependent restart information."
         call messages_warning(1, namespace=namespace)
@@ -652,7 +645,7 @@ contains
         call states_elec_deallocate_wfns(st)
         call electrons_ground_state_run(namespace, mc, gr, geo, st, ks, hm, outp, from_scratch)
         call states_elec_allocate_wfns(st, gr%mesh, packed=.true.)
-        call td_load(restart_load, namespace, gr, st, hm, td, ierr)
+        call td_load(td%restart_load, namespace, gr, st, hm, td, ierr)
         if (ierr /= 0) then
           message(1) = "Unable to load TD states."
           call messages_fatal(1, namespace=namespace)
@@ -904,7 +897,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_run_zero_iter(td, namespace, gr, geo, st, ks, hm, outp, write_handler)
+  subroutine td_run_zero_iter(td, namespace, gr, geo, st, ks, hm, outp)
     type(td_t),               intent(inout) :: td
     type(namespace_t),        intent(in)    :: namespace
     type(grid_t),             intent(inout) :: gr
@@ -913,11 +906,10 @@ contains
     type(v_ks_t),             intent(inout) :: ks
     type(hamiltonian_elec_t), intent(inout) :: hm
     type(output_t),           intent(in)    :: outp
-    type(td_write_t),         intent(inout) :: write_handler
 
     PUSH_SUB(td_run_zero_iter)
 
-    call td_write_iter(write_handler, namespace, outp, gr, st, hm, geo, hm%ep%kick, td%dt, 0)
+    call td_write_iter(td%write_handler, namespace, outp, gr, st, hm, geo, hm%ep%kick, td%dt, 0)
 
     ! I apply the delta electric field *after* td_write_iter, otherwise the
     ! dipole matrix elements in write_proj are wrong
@@ -936,7 +928,7 @@ contains
     end if
     ! call propagator_run_zero_iter(hm, gr, td%tr)
     if (outp%output_interval > 0) then
-      call td_write_data(write_handler)
+      call td_write_data(td%write_handler)
       call td_write_output(namespace, gr, st, hm, ks, outp, geo, 0)
     end if
 
