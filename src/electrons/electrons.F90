@@ -49,6 +49,7 @@ module electrons_oct_m
   use states_elec_dim_oct_m
   use sort_oct_m
   use system_oct_m
+  use td_oct_m
   use unit_system_oct_m
   use v_ks_oct_m
   use xc_oct_m
@@ -69,6 +70,7 @@ module electrons_oct_m
     type(output_t)               :: outp  !< the output
     type(multicomm_t)            :: mc    !< index and domain communicators
     type(hamiltonian_elec_t)     :: hm
+    type(td_t)                   :: td
   contains
     procedure :: init_interaction => electrons_init_interaction
     procedure :: initial_conditions => electrons_initial_conditions

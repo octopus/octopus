@@ -113,7 +113,7 @@ contains
     type(system_factory_t) :: system_factory
     type(interactions_factory_t) :: interactions_factory
     type(profile_t), save :: calc_mode_prof
-    logical :: from_scratch, is_slave
+    logical :: from_scratch
     integer :: iunit_out
 
     PUSH_SUB(run)
