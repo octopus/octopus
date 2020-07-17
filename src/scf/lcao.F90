@@ -58,7 +58,6 @@ module lcao_oct_m
   use states_elec_io_oct_m
   use submesh_oct_m
   use symmetrizer_oct_m
-  use electrons_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use v_ks_oct_m

@@ -26,13 +26,13 @@ module td_oct_m
   use classical_particle_oct_m
   use density_oct_m
   use energy_calc_oct_m
+  use electrons_ground_state_oct_m
   use epot_oct_m
   use forces_oct_m
   use gauge_field_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
-  use ground_state_oct_m
   use hamiltonian_elec_oct_m
   use io_oct_m
   use ion_dynamics_oct_m
@@ -620,7 +620,7 @@ contains
           call messages_print_stress(stdout, 'Recalculating the ground state.', namespace=namespace)
           fromScratch = .false.
           call states_elec_deallocate_wfns(st)
-          call ground_state_run_legacy(namespace, mc, gr, geo, st, ks, hm, outp, fromScratch)
+          call electrons_ground_state_run(namespace, mc, gr, geo, st, ks, hm, outp, fromScratch)
           call states_elec_allocate_wfns(st, gr%mesh, packed=.true.)
           call td_load(restart_load, namespace, gr, st, hm, td, ierr)
           if (ierr /= 0) then

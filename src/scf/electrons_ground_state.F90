@@ -18,8 +18,7 @@
 
 #include "global.h"
 
-module ground_state_oct_m
-  use calc_mode_par_oct_m
+module electrons_ground_state_oct_m
   use global_oct_m
   use geometry_oct_m
   use grid_oct_m
@@ -30,7 +29,6 @@ module ground_state_oct_m
   use messages_oct_m
   use mpi_oct_m
   use multicomm_oct_m
-  use multisystem_oct_m
   use namespace_oct_m
   use output_oct_m
   use pcm_oct_m
@@ -40,52 +38,18 @@ module ground_state_oct_m
   use states_abst_oct_m
   use states_elec_oct_m
   use states_elec_restart_oct_m
-  use electrons_oct_m
   use v_ks_oct_m
 
   implicit none
 
   private
   public ::                       &
-    ground_state_run_init,        &
-    ground_state_run,             &
-    ground_state_run_legacy
+    electrons_ground_state_run
 
 contains
 
-  subroutine ground_state_run_init()
-
-    PUSH_SUB(ground_state_run_init)
-
-    call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
-#ifdef HAVE_SCALAPACK
-    call calc_mode_par_set_scalapack_compat()
-#endif    
-
-    POP_SUB(ground_state_run_init)
-  end subroutine ground_state_run_init
-
   ! ---------------------------------------------------------
-  subroutine ground_state_run(system, from_scratch)
-    class(*),        intent(inout) :: system
-    logical,         intent(inout) :: from_scratch
-
-    PUSH_SUB(ground_state_run)
-
-    select type (system)
-    class is (multisystem_t)
-      message(1) = "CalculationMode = gs not implemented for multi-system calculations"
-      call messages_fatal(1)
-    type is (electrons_t)
-      call ground_state_run_legacy(system%namespace, system%mc, system%gr, system%geo, system%st, system%ks, system%hm, &
-        system%outp, from_scratch)
-    end select
-
-    POP_SUB(ground_state_run)
-  end subroutine ground_state_run
-
-  ! ---------------------------------------------------------
-  subroutine ground_state_run_legacy(namespace, mc, gr, geo, st, ks, hm, outp, fromScratch)
+  subroutine electrons_ground_state_run(namespace, mc, gr, geo, st, ks, hm, outp, fromScratch)
     type(namespace_t),        intent(in)    :: namespace
     type(multicomm_t),        intent(in)    :: mc
     type(grid_t),             intent(inout) :: gr
@@ -173,7 +137,7 @@ contains
     end if
 
     ! self-consistency for occupation numbers and natural orbitals in RDMFT
-    if (ks%theory_level == RDMFT) then 
+    if (ks%theory_level == RDMFT) then
       call rdmft_init(rdm, namespace, gr, st, geo, mc, fromScratch)
       call scf_rdmft(rdm, namespace, gr, geo, st, ks, hm, outp, restart_dump)
       call rdmft_end(rdm, gr)
@@ -198,9 +162,9 @@ contains
     call states_elec_deallocate_wfns(st)
 
     POP_SUB(ground_state_run_legacy)
-  end subroutine ground_state_run_legacy
+  end subroutine electrons_ground_state_run
 
-end module ground_state_oct_m
+end module electrons_ground_state_oct_m
 
 !! Local Variables:
 !! mode: f90
