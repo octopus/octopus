@@ -59,6 +59,8 @@ module profiling_oct_m
   use messages_oct_m
   use mpi_oct_m
   use parser_oct_m
+  use namespace_oct_m
+  use nvtx_oct_m
   use sort_oct_m
   use string_oct_m
   use types_oct_m
@@ -89,18 +91,18 @@ module profiling_oct_m
   type profile_t
     private
     character(LABEL_LENGTH)  :: label
-    real(8)                  :: entry_time
-    real(8)                  :: total_time
-    real(8)                  :: min_time
-    real(8)                  :: self_time
-    real(8)                  :: op_count_current
-    real(8)                  :: op_count
-    real(8)                  :: op_count_child
-    real(8)                  :: op_count_child_current
-    real(8)                  :: tr_count_current
-    real(8)                  :: tr_count
-    real(8)                  :: tr_count_child
-    real(8)                  :: tr_count_child_current
+    FLOAT                    :: entry_time
+    FLOAT                    :: total_time
+    FLOAT                    :: min_time
+    FLOAT                    :: self_time
+    FLOAT                    :: op_count_current
+    FLOAT                    :: op_count
+    FLOAT                    :: op_count_child
+    FLOAT                    :: op_count_child_current
+    FLOAT                    :: tr_count_current
+    FLOAT                    :: tr_count
+    FLOAT                    :: tr_count_child
+    FLOAT                    :: tr_count_child_current
     type(profile_t), pointer :: parent
     integer                  :: count
     logical                  :: initialized = .false.
@@ -133,12 +135,14 @@ module profiling_oct_m
        PROFILING_TIME        = 1, &
        PROFILING_MEMORY      = 2, &
        PROFILING_MEMORY_FULL = 4, &
-       PROFILING_LIKWID      = 8
+       PROFILING_LIKWID      = 8, &
+       PROFILING_IO          = 16
 
   integer, parameter :: MAX_MEMORY_VARS = 25
 
   type profile_vars_t
-    integer                  :: mode    !< 1=time, 2=memory, 4=memory_full
+    private
+    integer, public          :: mode    !< 1=time, 2=memory, 4=memory_full
 
     type(profile_pointer_t)  :: current !< the currently active profile
     type(profile_pointer_t)  :: profile_list(MAX_PROFILES) !< the list of all profiles
@@ -155,13 +159,15 @@ module profiling_oct_m
     integer(8)               :: large_vars_size(MAX_MEMORY_VARS)
     character(len=256)       :: large_vars(MAX_MEMORY_VARS)
 
-    real(8)                  :: start_time
+    FLOAT                    :: start_time
     integer                  :: mem_iunit
 
     character(len=256)       :: output_dir
     character(len=6)         :: file_number
 
     logical                  :: all_nodes
+
+    logical                  :: output_yaml
   end type profile_vars_t
 
   type(profile_vars_t), target, public :: prof_vars
@@ -176,7 +182,9 @@ contains
 
   ! ---------------------------------------------------------
   !> Create profiling subdirectory.
-  subroutine profiling_init()
+  subroutine profiling_init(namespace)
+    type(namespace_t),          intent(in)    :: namespace
+    
     integer :: ii
 
     PUSH_SUB(profiling_init)
@@ -207,11 +215,13 @@ contains
     !% log is reported of every allocation and deallocation.
     !%Option likwid 8
     !% Enable instrumentation using LIKWID.
+    !%Option prof_io 16
+    !% Count the number of file open and close.
     !%End
 
-    call parse_variable('ProfilingMode', 0, prof_vars%mode)
+    call parse_variable(namespace, 'ProfilingMode', 0, prof_vars%mode)
     if(.not.varinfo_valid_option('ProfilingMode', prof_vars%mode)) then
-      call messages_input_error('ProfilingMode')
+      call messages_input_error(namespace, 'ProfilingMode')
     end if
 
     in_profiling_mode = (prof_vars%mode > 0)
@@ -230,7 +240,7 @@ contains
     !% will write the profile. If set to yes, all nodes will print it.
     !%End
 
-    call parse_variable('ProfilingAllNodes', .false., prof_vars%all_nodes)
+    call parse_variable(namespace, 'ProfilingAllNodes', .false., prof_vars%all_nodes)
 
     call get_output_dir()
 
@@ -260,7 +270,7 @@ contains
       !% is requested (in kb). Note that this variable only works when 
       !% <tt>ProfilingMode = prof_memory(_full)</tt>.
       !%End
-      call parse_variable('MemoryLimit', -1, ii)
+      call parse_variable(namespace, 'MemoryLimit', -1, ii)
       prof_vars%memory_limit = int(ii, 8)*1024
     end if
 
@@ -270,7 +280,8 @@ contains
       call MPI_Barrier(mpi_world%comm, mpi_err)
 #endif
       
-      prof_vars%mem_iunit = io_open(trim(prof_vars%output_dir)//'/memory.'//prof_vars%file_number, action='write')
+      prof_vars%mem_iunit = io_open(trim(prof_vars%output_dir)//'/memory.'//prof_vars%file_number, &
+        namespace, action='write')
       write(prof_vars%mem_iunit, '(5a16,a70)') 'Elapsed Time', 'Alloc/Dealloc', 'Size (words)', 'Prof Mem', &
         'Sys Mem', 'Variable Name(Filename:Line)'
     end if
@@ -285,6 +296,16 @@ contains
 #endif
     end if
 
+    !%Variable ProfilingOutputYAML
+    !%Default no
+    !%Type logical
+    !%Section Execution::Optimization
+    !%Description
+    !% This variable controls whether the profiling output is additionally
+    !% written to a YAML file.
+    !%End
+    call parse_variable(namespace, 'ProfilingOutputYAML', .false., prof_vars%output_yaml)
+
     call profiling_in(C_PROFILING_COMPLETE_RUN, 'COMPLETE_RUN')
 
     POP_SUB(profiling_init)
@@ -296,15 +317,11 @@ contains
 
       PUSH_SUB(profiling_init.get_output_dir)
 
-      prof_vars%file_number = '0000'
-
-      if(mpi_world%size > 1) then
-        write(prof_vars%file_number, '(i6.6)') mpi_world%rank
-      end if
+      write(prof_vars%file_number, '(i6.6)') mpi_world%rank
 
       prof_vars%output_dir = 'profiling'
 
-      if(mpi_grp_is_root(mpi_world)) call io_mkdir(trim(prof_vars%output_dir))
+      if(mpi_grp_is_root(mpi_world)) call io_mkdir(trim(prof_vars%output_dir), namespace)
 
       POP_SUB(profiling_init.get_output_dir)
     end subroutine get_output_dir
@@ -313,15 +330,20 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine profiling_end
+  subroutine profiling_end(namespace)
+    type(namespace_t), intent(in) :: namespace
     integer :: ii
-    real(8), parameter :: megabyte = 1048576.0_8
+    FLOAT, parameter :: megabyte = CNST(1048576.0)
+    integer(8) :: io_open_count, io_close_count
+#ifdef HAVE_MPI
+    integer(8) :: io_open_count_red, io_close_count_red
+#endif
 
     if(.not. in_profiling_mode) return
     PUSH_SUB(profiling_end)
 
     call profiling_out(C_PROFILING_COMPLETE_RUN)
-    call profiling_output()
+    call profiling_output(namespace)
 
     do ii = 1, prof_vars%last_profile
       prof_vars%profile_list(ii)%p%initialized = .false.
@@ -365,6 +387,26 @@ contains
 #ifdef HAVE_LIKWID
       call likwid_markerClose()
 #endif
+    end if
+
+    if(bitand(prof_vars%mode, PROFILING_IO) /= 0) then
+      call messages_print_stress(stdout, "IO profiling information")
+      io_open_count = io_get_open_count()
+      io_close_count = io_get_close_count()
+      write(message(1), '(a,i10)') 'Number of file open  = ', io_open_count
+      write(message(2), '(a,i10)') 'Number of file close = ', io_close_count
+#ifdef HAVE_MPI
+      call MPI_Allreduce(io_open_count, io_open_count_red, 1, MPI_INTEGER8, MPI_SUM, &
+                            mpi_world%comm, mpi_err)
+      call MPI_Allreduce(io_close_count, io_close_count_red, 1, MPI_INTEGER8, MPI_SUM, &
+                            mpi_world%comm, mpi_err)
+      write(message(3), '(a,i10)') 'Global number of file open  = ', io_open_count_red
+      write(message(4), '(a,i10)') 'Global number of file close = ', io_close_count_red
+      call messages_info(4)
+#else
+      call messages_info(2)
+#endif
+      call messages_print_stress(stdout)
     end if
 
     POP_SUB(profiling_end)
@@ -430,7 +472,7 @@ contains
     logical,         optional,  intent(in)    :: exclude !< .true. The time spent here is also excluded from the parent total_time.
                                                          !! Only use it for functions that otherwise would spoil statistics.
 
-    real(8) :: now
+    FLOAT :: now
 
     if(.not.in_profiling_mode) return
     if(.not. not_in_openmp()) return
@@ -472,6 +514,9 @@ contains
 #endif
     end if
 
+#ifdef HAVE_NVTX
+    call nvtx_range_push(trim(label))
+#endif
 
   end subroutine profiling_in
 
@@ -483,7 +528,7 @@ contains
   subroutine profiling_out(this)
     type(profile_t),   intent(inout) :: this
 
-    real(8) :: now, time_spent
+    FLOAT :: now, time_spent
 
     if(.not.in_profiling_mode) return
     if(.not. not_in_openmp()) return
@@ -536,6 +581,9 @@ contains
 #endif
     end if
 
+#ifdef HAVE_NVTX
+    call nvtx_range_pop()
+#endif
 
   end subroutine profiling_out
 
@@ -548,7 +596,7 @@ contains
     if(.not.in_profiling_mode) return
     ! no PUSH_SUB, called too often
 
-    prof_vars%current%p%op_count_current = prof_vars%current%p%op_count_current + dble(ops)
+    prof_vars%current%p%op_count_current = prof_vars%current%p%op_count_current + TOFLOAT(ops)
   end subroutine iprofiling_count_operations
 
 
@@ -560,7 +608,7 @@ contains
     if(.not.in_profiling_mode) return
     ! no PUSH_SUB, called too often
     
-    prof_vars%current%p%op_count_current = prof_vars%current%p%op_count_current + dble(ops)
+    prof_vars%current%p%op_count_current = prof_vars%current%p%op_count_current + TOFLOAT(ops)
   end subroutine rprofiling_count_operations
 
 
@@ -586,7 +634,7 @@ contains
     if(.not.in_profiling_mode) return
     ! no PUSH_SUB, called too often    
 
-    prof_vars%current%p%tr_count_current = prof_vars%current%p%tr_count_current + dble(4*trf)
+    prof_vars%current%p%tr_count_current = prof_vars%current%p%tr_count_current + TOFLOAT(4*trf)
   end subroutine profiling_count_tran_int
 
 
@@ -599,7 +647,7 @@ contains
     if(.not.in_profiling_mode) return
     ! no PUSH_SUB, called too often
 
-    prof_vars%current%p%tr_count_current = prof_vars%current%p%tr_count_current + dble(4*trf)
+    prof_vars%current%p%tr_count_current = prof_vars%current%p%tr_count_current + TOFLOAT(4*trf)
 
   end subroutine profiling_count_tran_real_4
 
@@ -613,7 +661,7 @@ contains
     if(.not.in_profiling_mode) return
     ! no PUSH_SUB, called too often
     
-    prof_vars%current%p%tr_count_current = prof_vars%current%p%tr_count_current + dble(8*trf)
+    prof_vars%current%p%tr_count_current = prof_vars%current%p%tr_count_current + TOFLOAT(8*trf)
 
   end subroutine profiling_count_tran_real_8
 
@@ -627,7 +675,7 @@ contains
     if(.not.in_profiling_mode) return
     ! no PUSH_SUB, called too often
     
-    prof_vars%current%p%tr_count_current = prof_vars%current%p%tr_count_current + dble(8*trf)
+    prof_vars%current%p%tr_count_current = prof_vars%current%p%tr_count_current + TOFLOAT(8*trf)
 
   end subroutine profiling_count_tran_complex_4
 
@@ -641,7 +689,7 @@ contains
     if(.not.in_profiling_mode) return
     ! no PUSH_SUB, called too often
     
-    prof_vars%current%p%tr_count_current = prof_vars%current%p%tr_count_current + dble(16*trf)
+    prof_vars%current%p%tr_count_current = prof_vars%current%p%tr_count_current + TOFLOAT(16*trf)
 
   end subroutine profiling_count_tran_complex_8
 
@@ -655,12 +703,12 @@ contains
     if(.not.in_profiling_mode) return
     ! no PUSH_SUB, called too often
     
-    prof_vars%current%p%tr_count_current = prof_vars%current%p%tr_count_current + dble(trf)*types_get_size(type)
+    prof_vars%current%p%tr_count_current = prof_vars%current%p%tr_count_current + TOFLOAT(trf)*types_get_size(type)
 
   end subroutine profiling_count_tran_type
   
   ! ---------------------------------------------------------
-  real(8) function profile_total_time(this)
+  FLOAT function profile_total_time(this)
     type(profile_t), intent(in) :: this
 
     PUSH_SUB(profile_total_time)
@@ -671,7 +719,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  real(8) function profile_self_time(this)
+  FLOAT function profile_self_time(this)
     type(profile_t), intent(in) :: this
 
     PUSH_SUB(profile_self_time)
@@ -682,18 +730,18 @@ contains
 
 
   ! ---------------------------------------------------------
-  real(8) function profile_total_time_per_call(this)
+  FLOAT function profile_total_time_per_call(this)
     type(profile_t), intent(in) :: this
 
     PUSH_SUB(profile_total_time_per_call)
-    profile_total_time_per_call = this%total_time / dble(this%count)
+    profile_total_time_per_call = this%total_time / TOFLOAT(this%count)
 
     POP_SUB(profile_total_time_per_call)
   end function profile_total_time_per_call
 
 
   ! ---------------------------------------------------------
-  real(8) function profile_min_time(this)
+  FLOAT function profile_min_time(this)
     type(profile_t), intent(in) :: this
 
     PUSH_SUB(profile_self_time)
@@ -704,11 +752,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  real(8) function profile_self_time_per_call(this)
+  FLOAT function profile_self_time_per_call(this)
     type(profile_t), intent(in) :: this
 
     PUSH_SUB(profile_self_time_per_call)
-    profile_self_time_per_call = this%self_time / dble(this%count)
+    profile_self_time_per_call = this%self_time / TOFLOAT(this%count)
 
     POP_SUB(profile_self_time_per_call)
   end function profile_self_time_per_call
@@ -732,7 +780,7 @@ contains
 
   ! ---------------------------------------------------------
   
-  real(8) function profile_total_bandwidth(this)
+  FLOAT function profile_total_bandwidth(this)
     type(profile_t), intent(in) :: this
 
     PUSH_SUB(profile_bandwidth)
@@ -748,7 +796,7 @@ contains
   
   ! ---------------------------------------------------------
   
-  real(8) function profile_self_throughput(this)
+  FLOAT function profile_self_throughput(this)
     type(profile_t), intent(in) :: this
 
     PUSH_SUB(profile_throughput)
@@ -764,7 +812,7 @@ contains
 
   ! ---------------------------------------------------------
 
-  real(8) function profile_self_bandwidth(this)
+  FLOAT function profile_self_bandwidth(this)
     type(profile_t), intent(in) :: this
 
     PUSH_SUB(profile_bandwidth)
@@ -808,11 +856,12 @@ contains
   !!
   !! The last column gives the average time consumed between in and out
   !! (only, if pass_in and pass_out are equal).
-  subroutine profiling_output()
+  subroutine profiling_output(namespace)
+    type(namespace_t), intent(in) :: namespace
     
     integer          :: ii
     integer          :: iunit
-    real(8)          :: total_time
+    FLOAT            :: total_time
     type(profile_t), pointer :: prof
     character(len=256) :: filename
     FLOAT,   allocatable :: selftime(:)
@@ -831,7 +880,7 @@ contains
     end if
 
     filename = trim(prof_vars%output_dir)//'/time.'//prof_vars%file_number
-    iunit = io_open(trim(filename), action='write')
+    iunit = io_open(trim(filename), namespace, action='write')
     if(iunit < 0) then
       message(1) = 'Failed to open file ' // trim(filename) // ' to write profiling results.'
       call messages_warning(1)
@@ -896,6 +945,36 @@ contains
     end do
 
     call io_close(iunit)
+
+    if(prof_vars%output_yaml) then
+      filename = trim(prof_vars%output_dir)//'/time.'//prof_vars%file_number//'.yaml'
+      iunit = io_open(trim(filename), namespace, action='write')
+      if(iunit < 0) then
+        message(1) = 'Failed to open file ' // trim(filename) // ' to write profiling results.'
+        call messages_warning(1)
+        POP_SUB(profiling_output)
+        return
+      end if
+      write(iunit, '(2a)') 'schema: [num_calls, total_time, total_throughput, ', &
+       'total_bandwidth, self_time, self_throughput, self_bandwidth]'
+      write(iunit, '(a)') 'data:'
+
+      do ii = 1, prof_vars%last_profile
+        prof =>  prof_vars%profile_list(position(ii))%p
+        if(profile_num_calls(prof) == 0) cycle
+        write(iunit, '(a,a,a,i6,a,e10.3,a,e10.3,a,e10.3,a,e10.3,a,e10.3,a,e10.3,a)')         &
+             '  ', profile_label(prof), ': [',     &
+             profile_num_calls(prof),        ', ', &
+             profile_total_time(prof),       ', ', &
+             profile_total_throughput(prof), ', ', &
+             profile_total_bandwidth(prof),  ', ', &
+             profile_self_time(prof),        ', ', &
+             profile_self_throughput(prof),  ', ', &
+             profile_self_bandwidth(prof),   ']'
+      end do
+
+      call io_close(iunit)
+    end if
 
     SAFE_DEALLOCATE_A(selftime)
     SAFE_DEALLOCATE_A(position)
@@ -1051,6 +1130,7 @@ contains
     end if
 
   end subroutine profiling_memory_deallocate
+
 
 end module profiling_oct_m
 

@@ -105,9 +105,11 @@ subroutine X(mixing_broyden)(smix, vin, vout, vnew, iter)
     smix%X(gamma) = M_ZERO
     do i = 1, d2
       do j = 1, d3
-        smix%X(gamma) = smix%X(gamma) + X(mix_dotp)(smix, smix%mixfield%X(df)(:, i, j, ipos), smix%mixfield%X(df)(:, i, j, ipos))
+        smix%X(gamma) = smix%X(gamma) + X(mix_dotp)(smix, smix%mixfield%X(df)(:, i, j, ipos), &
+                                            smix%mixfield%X(df)(:, i, j, ipos), reduce = .false.)
       end do
     end do
+    if(smix%der%mesh%parallel_in_domains) call comm_allreduce(smix%der%mesh%mpi_grp%comm,  smix%X(gamma))
     smix%X(gamma) = max(CNST(1e-8),sqrt(R_REAL(smix%X(gamma))))
     smix%X(gamma) = M_ONE/smix%X(gamma)
 
@@ -142,7 +144,7 @@ subroutine X(broyden_extrapolation)(this, coeff, d1, d2, d3, vin, vnew, iter_use
   
   FLOAT, parameter :: w0 = CNST(0.01), ww = M_FIVE
   integer  :: i, j, k, l
-  R_TYPE    :: gamma, determinant
+  R_TYPE    :: gamma
   R_TYPE, allocatable :: beta(:, :), work(:)
 
   PUSH_SUB(X(broyden_extrapolation))
@@ -173,24 +175,27 @@ subroutine X(broyden_extrapolation)(this, coeff, d1, d2, d3, vin, vnew, iter_use
       beta(i, j) = M_ZERO
       do k = 1, d2
         do l = 1, d3
-          beta(i, j) = beta(i, j) + ww*ww*X(mix_dotp)(this, df(:, k, l, j), df(:, k, l, i))
+          beta(i, j) = beta(i, j) + ww*ww*X(mix_dotp)(this, df(:, k, l, j), df(:, k, l, i), reduce = .false.)
         end do
       end do
+      !TODO: We should further reduce the number of calls to allreduce here
+      if(this%der%mesh%parallel_in_domains) call comm_allreduce(this%der%mesh%mpi_grp%comm,  beta(i,j))
       beta(j, i) = R_CONJ(beta(i, j))
     end do
     beta(i, i) = w0**2 + ww**2
   end do
   
   ! invert matrix beta
-  determinant = lalg_inverter(iter_used, beta)
+  call lalg_inverter(iter_used, beta)
   
   do i = 1, iter_used
     work(i) = M_ZERO
     do k = 1, d2
       do l = 1, d3
-        work(i) = work(i) + X(mix_dotp)(this, df(:, k, l, i), f(:, k, l))
+        work(i) = work(i) + X(mix_dotp)(this, df(:, k, l, i), f(:, k, l), reduce = .false.)
       end do
     end do
+    if(this%der%mesh%parallel_in_domains) call comm_allreduce(this%der%mesh%mpi_grp%comm,  work(i))
   end do
 
   ! linear mixing term
@@ -226,7 +231,7 @@ subroutine X(broyden_extrapolation_aux)(this, ii, coeff, iter_used, dbeta, dwork
   FLOAT, optional,    intent(in) :: dbeta(:, :), dwork(:), dgamma
   CMPLX, optional,    intent(in) :: zbeta(:, :), zwork(:), zgamma
 
-  FLOAT, parameter :: w0 = CNST(0.01), ww = M_FIVE
+  FLOAT, parameter :: ww = M_FIVE
   integer :: d1,d2,d3, ipos, i
   R_TYPE  :: gamma
   R_TYPE, allocatable :: f(:, :, :)
@@ -353,17 +358,19 @@ subroutine X(mixing_diis)(this, vin, vout, vnew, iter)
   SAFE_ALLOCATE(rhs(1:size + 1))
 
   do ii = 1, size
-    do jj = 1, size
+    do jj = ii, size
 
       aa(ii, jj) = CNST(0.0)
       do kk = 1, d2
         do ll = 1, d3
-          aa(ii, jj) = aa(ii, jj) + X(mix_dotp)(this, this%mixfield%X(df)(:, kk, ll, jj), this%mixfield%X(df)(:, kk, ll, ii))
+          aa(ii, jj) = aa(ii, jj) + X(mix_dotp)(this, this%mixfield%X(df)(:, kk, ll, jj), &
+                           this%mixfield%X(df)(:, kk, ll, ii), reduce = .false.)
         end do
       end do
-      
+      aa(jj, ii) = R_CONJ(aa(ii, jj))
     end do
   end do
+  if(this%der%mesh%parallel_in_domains) call comm_allreduce(this%der%mesh%mpi_grp%comm,  aa)
 
   aa(1:size, size + 1) = CNST(-1.0)
   aa(size + 1, 1:size) = CNST(-1.0)
@@ -372,7 +379,7 @@ subroutine X(mixing_diis)(this, vin, vout, vnew, iter)
   rhs(1:size) = CNST(0.0)
   rhs(size + 1) = CNST(-1.0)
 
-  call lalg_least_squares(size + 1, aa, rhs, alpha)
+  call lalg_least_squares(size + 1, aa, rhs, alpha, preserve_mat=.false.)
 
   sumalpha = sum(alpha(1:size))
   alpha = alpha/sumalpha
@@ -461,7 +468,7 @@ subroutine X(pulay_extrapolation)(this, d2, d3, vin, vout, vnew, iter_used, f, d
   R_TYPE,  intent(out) :: vnew(:, :, :)
   
   integer :: i, j, k, l
-  R_TYPE :: alpha, determinant
+  R_TYPE :: alpha
   R_TYPE, allocatable :: a(:, :)
   
   PUSH_SUB(X(pulay_extrapolation))
@@ -475,20 +482,21 @@ subroutine X(pulay_extrapolation)(this, d2, d3, vin, vout, vnew, iter_used, f, d
       a(i, j) = M_ZERO
       do k = 1, d2
         do l = 1, d3
-          a(i, j) = a(i, j) + X(mix_dotp)(this, df(:, k, l, j), df(:, k, l, i))
+          a(i, j) = a(i, j) + X(mix_dotp)(this, df(:, k, l, j), df(:, k, l, i), reduce = .false.)
         end do
       end do
+      if(this%der%mesh%parallel_in_domains) call comm_allreduce(this%der%mesh%mpi_grp%comm,  a(i, j))
       if(j > i) a(j, i) = a(i, j)
     end do
   end do
-  if (all(abs(a) < 1.0E-8)) then
+  if (all(abs(a) < CNST(1.0E-8))) then
     ! residuals are too small. Do not mix.
     vnew = vout
     POP_SUB(X(pulay_extrapolation))
     return
   end if
   
-  determinant = lalg_inverter(iter_used, a)
+  call lalg_inverter(iter_used, a)
   
   ! compute new vector
   vnew = vin
@@ -497,10 +505,11 @@ subroutine X(pulay_extrapolation)(this, d2, d3, vin, vout, vnew, iter_used, f, d
     do j = 1, iter_used
       do k = 1, d2
         do l = 1, d3
-          alpha = alpha - a(i, j)*X(mix_dotp)(this, df(:, k, l, j), f(:, k, l))
+          alpha = alpha - a(i, j)*X(mix_dotp)(this, df(:, k, l, j), f(:, k, l), reduce = .false.)
         end do
       end do
     end do
+    if(this%der%mesh%parallel_in_domains) call comm_allreduce(this%der%mesh%mpi_grp%comm,  alpha)
     vnew(:, :, :) = vnew(:, :, :) + alpha * dv(:, :, :, i)
   end do
 
@@ -511,14 +520,19 @@ end subroutine X(pulay_extrapolation)
 
 ! --------------------------------------------------------------
 
-R_TYPE function X(mix_dotp)(this, xx, yy) result(dotp)
-  type(mix_t), intent(in) :: this
-  R_TYPE,      intent(in) :: xx(:)
-  R_TYPE,      intent(in) :: yy(:)
+R_TYPE function X(mix_dotp)(this, xx, yy, reduce) result(dotp)
+  type(mix_t),       intent(in) :: this
+  R_TYPE,            intent(in) :: xx(:)
+  R_TYPE,            intent(in) :: yy(:)
+  logical, optional, intent(in) :: reduce
 
   R_TYPE, allocatable :: ff(:), precff(:)
+  logical :: reduce_
   
   PUSH_SUB(X(mix_dotp))
+
+  reduce_ = .true.
+  if(present(reduce)) reduce_ = reduce 
 
   ASSERT(this%mixfield%d1 == this%der%mesh%np)
   
@@ -529,13 +543,13 @@ R_TYPE function X(mix_dotp)(this, xx, yy) result(dotp)
 
     ff(1:this%der%mesh%np) = yy(1:this%der%mesh%np)
     call X(derivatives_perform)(this%preconditioner, this%der, ff, precff)
-    dotp = X(mf_dotp)(this%der%mesh, xx, precff)
+    dotp = X(mf_dotp)(this%der%mesh, xx, precff, reduce = reduce_)
 
     SAFE_DEALLOCATE_A(precff)
     SAFE_DEALLOCATE_A(ff)
       
   else
-    dotp = X(mf_dotp)(this%der%mesh, xx, yy)
+    dotp = X(mf_dotp)(this%der%mesh, xx, yy, reduce = reduce_)
   end if
 
   POP_SUB(X(mix_dotp))

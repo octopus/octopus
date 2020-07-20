@@ -23,6 +23,7 @@ module spline_filter_oct_m
   use io_oct_m
   use splines_oct_m
   use messages_oct_m
+  use namespace_oct_m
 
   implicit none
 

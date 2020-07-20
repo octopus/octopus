@@ -29,7 +29,7 @@ module scf_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
-  use hamiltonian_oct_m
+  use hamiltonian_elec_oct_m
   use io_oct_m
   use kpoints_oct_m
   use lcao_oct_m
@@ -44,8 +44,8 @@ module scf_oct_m
   use mix_oct_m
   use modelmb_exchange_syms_oct_m
   use mpi_oct_m
-  use multigrid_oct_m
   use multicomm_oct_m
+  use namespace_oct_m
   use output_oct_m
   use parser_oct_m
   use partial_charges_oct_m
@@ -56,11 +56,12 @@ module scf_oct_m
   use simul_box_oct_m
   use smear_oct_m
   use species_oct_m
-  use states_oct_m
-  use states_dim_oct_m
-  use states_group_oct_m
-  use states_io_oct_m
-  use states_restart_oct_m
+  use states_abst_oct_m
+  use states_elec_oct_m
+  use states_elec_dim_oct_m
+  use states_elec_group_oct_m
+  use states_elec_io_oct_m
+  use states_elec_restart_oct_m
   use stress_oct_m
   use symmetries_oct_m
   use types_oct_m
@@ -71,17 +72,22 @@ module scf_oct_m
   use varinfo_oct_m
   use vdw_ts_oct_m
 !  use xc_functl_oct_m
+  use walltimer_oct_m
+  use wfs_elec_oct_m
   use XC_F90(lib_m)
+  use xc_oep_oct_m
   
   implicit none
 
   private
-  public ::             &
-    scf_t,              &
-    scf_init,           &
-    scf_mix_clear,      &
-    scf_run,            &
-    scf_end
+  public ::              &
+    scf_t,               &
+    scf_init,            & 
+    scf_mix_clear,       &
+    scf_run,             &
+    scf_end,             &
+    scf_state_info,      &
+    scf_print_mem_use
 
   integer, public, parameter :: &
     VERB_NO      = 0,   &
@@ -90,10 +96,11 @@ module scf_oct_m
   
   !> some variables used for the SCF cycle
   type scf_t
-    integer :: max_iter   !< maximum number of SCF iterations
+    private
+    integer, public :: max_iter   !< maximum number of SCF iterations
     integer :: max_iter_berry  !< max number of electronic iterations before updating density, for Berry potential
 
-    FLOAT :: lmm_r
+    FLOAT, public :: lmm_r
 
     ! several convergence criteria
     FLOAT :: conv_abs_dens, conv_rel_dens, conv_abs_ev, conv_rel_ev, conv_abs_force
@@ -115,26 +122,26 @@ module scf_oct_m
     integer :: mixdim1
     logical :: forced_finish !< remember if 'touch stop' was triggered earlier.
     type(lda_u_mixer_t) :: lda_u_mix
-    type(grid_t), pointer :: gr
+    type(grid_t), pointer :: gr 
   end type scf_t
 
 contains
 
   ! ---------------------------------------------------------
-  subroutine scf_init(scf, gr, geo, st, mc, hm, ks, conv_force)
-    type(scf_t),          intent(inout) :: scf
-    type(grid_t), target, intent(inout) :: gr
-    type(geometry_t),     intent(in)    :: geo
-    type(states_t),       intent(in)    :: st
-    type(multicomm_t),    intent(in)    :: mc
-    type(hamiltonian_t),  intent(inout) :: hm
-    type(v_ks_t),         intent(in)    :: ks
-    FLOAT,   optional,    intent(in)    :: conv_force
+  subroutine scf_init(scf, namespace, gr, geo, st, mc, hm, conv_force)
+    type(scf_t),              intent(inout) :: scf
+    type(namespace_t),        intent(in)    :: namespace
+    type(grid_t),     target, intent(inout) :: gr
+    type(geometry_t),         intent(in)    :: geo
+    type(states_elec_t),      intent(in)    :: st
+    type(multicomm_t),        intent(in)    :: mc
+    type(hamiltonian_elec_t), intent(inout) :: hm
+    FLOAT,          optional, intent(in)    :: conv_force
 
     FLOAT :: rmin
     integer :: mixdefault, ierr
     type(type_t) :: mix_type
-    
+
     PUSH_SUB(scf_init)
 
     !%Variable MaximumIter
@@ -146,8 +153,11 @@ contains
     !% has not been achieved. -1 means unlimited.
     !% 0 means just do LCAO (or read from restart), compute the eigenvalues and energy,
     !% and stop, without updating the wavefunctions or density.
+    !%
+    !% If convergence criteria are set, the SCF loop will only stop once the criteria
+    !% are fulfilled for two consecutive iterations.
     !%End
-    call parse_variable('MaximumIter', 200, scf%max_iter)
+    call parse_variable(namespace, 'MaximumIter', 200, scf%max_iter)
 
     !%Variable MaximumIterBerry
     !%Type integer
@@ -160,7 +170,7 @@ contains
     !% has not been achieved. -1 means unlimited.
     !%End
     if(associated(hm%vberry)) then
-      call parse_variable('MaximumIterBerry', 10, scf%max_iter_berry)
+      call parse_variable(namespace, 'MaximumIterBerry', 10, scf%max_iter_berry)
       if(scf%max_iter_berry < 0) scf%max_iter_berry = huge(scf%max_iter_berry)
     end if
     
@@ -173,8 +183,11 @@ contains
     !% one SCF iteration is smaller than this value.
     !%
     !%A zero value (the default) means do not use this criterion.
+    !%
+    !% If this criterion is used, the SCF loop will only stop once it is
+    !% fulfilled for two consecutive iterations.
     !%End
-    call parse_variable('ConvEnergy', M_ZERO, scf%conv_energy_diff, unit = units_inp%energy)
+    call parse_variable(namespace, 'ConvEnergy', M_ZERO, scf%conv_energy_diff, unit = units_inp%energy)
     
     !%Variable ConvAbsDens
     !%Type float
@@ -186,12 +199,15 @@ contains
     !% <math>\varepsilon = \int {\rm d}^3r \left| \rho^{out}(\bf r) -\rho^{inp}(\bf r) \right|</math>.
     !%
     !% A zero value (the default) means do not use this criterion.
+    !%
+    !% If this criterion is used, the SCF loop will only stop once it is
+    !% fulfilled for two consecutive iterations.
     !%End
-    call parse_variable('ConvAbsDens', M_ZERO, scf%conv_abs_dens)
+    call parse_variable(namespace, 'ConvAbsDens', M_ZERO, scf%conv_abs_dens)
 
     !%Variable ConvRelDens
     !%Type float
-    !%Default 1e-5
+    !%Default 1e-6
     !%Section SCF::Convergence
     !%Description
     !% Relative convergence of the density: 
@@ -204,8 +220,11 @@ contains
     !% If you reduce this value, you should also reduce
     !% <tt>EigensolverTolerance</tt> to a value of roughly 1/10 of
     !% <tt>ConvRelDens</tt> to avoid convergence problems.
+    !%
+    !% If this criterion is used, the SCF loop will only stop once it is
+    !% fulfilled for two consecutive iterations.
     !%End
-    call parse_variable('ConvRelDens', CNST(1e-5), scf%conv_rel_dens)
+    call parse_variable(namespace, 'ConvRelDens', CNST(1e-6), scf%conv_rel_dens)
 
     !%Variable ConvAbsEv
     !%Type float
@@ -218,8 +237,11 @@ contains
     !% \sum_{j=1}^{N_{occ}} \varepsilon_j^{inp} \right| </math>
     !%
     !% A zero value (the default) means do not use this criterion.
+    !%
+    !% If this criterion is used, the SCF loop will only stop once it is
+    !% fulfilled for two consecutive iterations.
     !%End
-    call parse_variable('ConvAbsEv', M_ZERO, scf%conv_abs_ev, unit = units_inp%energy)
+    call parse_variable(namespace, 'ConvAbsEv', M_ZERO, scf%conv_abs_ev, unit = units_inp%energy)
 
     !%Variable ConvRelEv
     !%Type float
@@ -232,11 +254,14 @@ contains
     !% {\left| \sum_{j=1}^{N_{occ}} \varepsilon_j^{out} \right|} </math>
     !%
     !%A zero value (the default) means do not use this criterion.
+    !%
+    !% If this criterion is used, the SCF loop will only stop once it is
+    !% fulfilled for two consecutive iterations.
     !%End
-    call parse_variable('ConvRelEv', M_ZERO, scf%conv_rel_ev, unit = units_inp%energy)
+    call parse_variable(namespace, 'ConvRelEv', M_ZERO, scf%conv_rel_ev, unit = units_inp%energy)
 
-    call messages_obsolete_variable("ConvAbsForce", "ConvForce")
-    call messages_obsolete_variable("ConvRelForce", "ConvForce")
+    call messages_obsolete_variable(namespace, 'ConvAbsForce', 'ConvForce')
+    call messages_obsolete_variable(namespace, 'ConvRelForce', 'ConvForce')
 
     !%Variable ConvForce
     !%Type float
@@ -247,8 +272,11 @@ contains
     !% zero value means do not use this criterion. The default is
     !% zero, except for geometry optimization, which sets a default of
     !% 1e-8 H/b.
+    !%
+    !% If this criterion is used, the SCF loop will only stop once it is
+    !% fulfilled for two consecutive iterations.
     !%End
-    call parse_variable('ConvForce', optional_default(conv_force, M_ZERO), scf%conv_abs_force, unit = units_inp%force)
+    call parse_variable(namespace, 'ConvForce', optional_default(conv_force, M_ZERO), scf%conv_abs_force, unit = units_inp%force)
 
     scf%check_conv = &
       scf%conv_energy_diff > M_ZERO .or. &
@@ -279,12 +307,15 @@ contains
     !%Description
     !% If true, the calculation will not be considered converged unless all states have
     !% individual errors less than <tt>EigensolverTolerance</tt>.
+    !%
+    !% If this criterion is used, the SCF loop will only stop once it is
+    !% fulfilled for two consecutive iterations.
     !%End
-    call parse_variable('ConvEigenError', .false., scf%conv_eigen_error)
+    call parse_variable(namespace, 'ConvEigenError', .false., scf%conv_eigen_error)
 
     if(scf%max_iter < 0) scf%max_iter = huge(scf%max_iter)
 
-    call messages_obsolete_variable('What2Mix', 'MixField')
+    call messages_obsolete_variable(namespace, 'What2Mix', 'MixField')
 
     !%Variable MixField
     !%Type integer
@@ -311,8 +342,8 @@ contains
     mixdefault = OPTION__MIXFIELD__POTENTIAL
     if(hm%theory_level == INDEPENDENT_PARTICLES) mixdefault = OPTION__MIXFIELD__NONE
 
-    call parse_variable('MixField', mixdefault, scf%mix_field)
-    if(.not.varinfo_valid_option('MixField', scf%mix_field)) call messages_input_error('MixField')
+    call parse_variable(namespace, 'MixField', mixdefault, scf%mix_field)
+    if(.not.varinfo_valid_option('MixField', scf%mix_field)) call messages_input_error(namespace, 'MixField')
     call messages_print_var_option(stdout, 'MixField', scf%mix_field, "what to mix during SCF cycles")
 
     if (scf%mix_field == OPTION__MIXFIELD__POTENTIAL .and. hm%theory_level == INDEPENDENT_PARTICLES) then
@@ -328,7 +359,7 @@ contains
     end if
 
     if(scf%mix_field == OPTION__MIXFIELD__DENSITY &
-      .and. bitand(hm%xc_family, XC_FAMILY_OEP + XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0) then
+      .and. bitand(hm%xc%family, XC_FAMILY_OEP + XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0) then
 
       call messages_write('Input: You have selected to mix the density with OEP or MGGA XC functionals.', new_line = .true.)
       call messages_write('       This might produce convergence problems. Mix the potential instead.')
@@ -353,9 +384,9 @@ contains
     mix_type = TYPE_FLOAT
 
     if(scf%mix_field == OPTION__MIXFIELD__DENSITY) then
-      call mix_init(scf%smix, gr%fine%der, scf%mixdim1, 1, st%d%nspin, func_type_ = mix_type)
+      call mix_init(scf%smix, namespace, gr%fine%der, scf%mixdim1, 1, st%d%nspin, func_type_ = mix_type)
     else if(scf%mix_field /= OPTION__MIXFIELD__NONE) then
-      call mix_init(scf%smix, gr%der, scf%mixdim1, 1, st%d%nspin, func_type_ = mix_type)
+      call mix_init(scf%smix, namespace, gr%der, scf%mixdim1, 1, st%d%nspin, func_type_ = mix_type)
     end if
 
     !If we use LDA+U, we also have do mix it
@@ -366,22 +397,32 @@ contains
     call mix_get_field(scf%smix, scf%mixfield)
 
     if(hm%lda_u_level /= DFT_U_NONE .and. hm%lda_u%basisfromstates) then
-      call lda_u_loadbasis(hm%lda_u, st, gr%mesh, mc, ierr)
+      call lda_u_loadbasis(hm%lda_u, namespace, st, gr%mesh, mc, ierr)
       if (ierr /= 0) then
         message(1) = "Unable to load LDA+U basis from selected states."
         call messages_fatal(1)
       end if
-      call lda_u_periodic_coulomb_integrals(hm%lda_u, st, gr%der, mc, associated(hm%hm_base%phase))
+      call lda_u_periodic_coulomb_integrals(hm%lda_u, namespace, st, gr%der, mc, associated(hm%hm_base%phase))
     end if
 
-
     ! now the eigensolver stuff
-    call eigensolver_init(scf%eigens, gr, st, ks%xc)
+    call eigensolver_init(scf%eigens, namespace, gr, st, geo, mc)
 
-    if(preconditioner_is_multigrid(scf%eigens%pre)) then
-      SAFE_ALLOCATE(gr%mgrid_prec)
-      call multigrid_init(gr%mgrid_prec, geo, gr%cv,gr%mesh, gr%der, gr%stencil, mc, &
-        used_for_preconditioner=.true.)
+    !The evolution operator is a very specific propagation that requires a specific 
+    !setting to work in the current framework
+    if(scf%eigens%es_type == RS_EVO) then
+      if(scf%mix_field /= OPTION__MIXFIELD__DENSITY) then
+        message(1) = "Evolution eigensolver is only compatible with MixField = density."
+        call messages_fatal(1)
+      end if
+      if(mix_coefficient(scf%smix) /= M_ONE) then
+        message(1) = "Evolution eigensolver is only compatible with Mixing = 1."
+        call messages_fatal(1)
+      end if
+      if(mix_scheme(scf%smix) /= OPTION__MIXINGSCHEME__LINEAR) then
+        message(1) = "Evolution eigensolver is only compatible with MixingScheme = linear."
+        call messages_fatal(1)
+      end if
     end if
 
     !%Variable SCFinLCAO
@@ -394,7 +435,7 @@ contains
     !% calculation within the LCAO subspace, then restart from that point for
     !% an unrestricted calculation).
     !%End
-    call parse_variable('SCFinLCAO', .false., scf%lcao_restricted)
+    call parse_variable(namespace, 'SCFinLCAO', .false., scf%lcao_restricted)
     if(scf%lcao_restricted) then
       call messages_experimental('SCFinLCAO')
       message(1) = 'Info: SCF restricted to LCAO subspace.'
@@ -416,8 +457,12 @@ contains
     !% default is yes, unless the system only has user-defined
     !% species.
     !%End
-    call parse_variable('SCFCalculateForces', .not. geo%only_user_def, scf%calc_force)
+    call parse_variable(namespace, 'SCFCalculateForces', .not. geo%only_user_def, scf%calc_force)
 
+    if(scf%calc_force .and. gr%der%boundaries%spiralBC) then
+      message(1) = 'Forces cannot be calculated when using spiral boundary conditions.'
+      call messages_fatal(1)
+    end if
 
     !%Variable SCFCalculateStress
     !%Type logical
@@ -427,7 +472,7 @@ contains
     !% calculated at the end of a self-consistent iteration. The
     !% default is no.
     !%End
-    call parse_variable('SCFCalculateStress', .false. , scf%calc_stress)
+    call parse_variable(namespace, 'SCFCalculateStress', .false. , scf%calc_stress)
     
     !%Variable SCFCalculateDipole
     !%Type logical
@@ -441,7 +486,7 @@ contains
     !% periodic directions. Ref:
     !% E Yaschenko, L Fu, L Resca, and R Resta, <i>Phys. Rev. B</i> <b>58</b>, 1222-1229 (1998).
     !%End
-    call parse_variable('SCFCalculateDipole', .not. simul_box_is_periodic(gr%sb), scf%calc_dipole)
+    call parse_variable(namespace, 'SCFCalculateDipole', .not. simul_box_is_periodic(gr%sb), scf%calc_dipole)
     if(associated(hm%vberry)) scf%calc_dipole = .true.
 
     !%Variable SCFCalculatePartialCharges
@@ -452,7 +497,7 @@ contains
     !% (Experimental) This variable controls whether partial charges
     !% are calculated at the end of a self-consistent iteration.
     !%End
-    call parse_variable('SCFCalculatePartialCharges', .false., scf%calc_partial_charges)
+    call parse_variable(namespace, 'SCFCalculatePartialCharges', .false., scf%calc_partial_charges)
     if(scf%calc_partial_charges) call messages_experimental('SCFCalculatePartialCharges')
 
     rmin = geometry_min_distance(geo)
@@ -474,7 +519,7 @@ contains
     !% The default is half the minimum distance between two atoms
     !% in the input coordinates, or 100 a.u. if there is only one atom (for isolated systems).
     !%End
-    call parse_variable('LocalMagneticMomentsSphereRadius', rmin*M_HALF, scf%lmm_r, unit = units_inp%length)
+    call parse_variable(namespace, 'LocalMagneticMomentsSphereRadius', rmin*M_HALF, scf%lmm_r, unit = units_inp%length)
     ! this variable is also used in td/td_write.F90
 
     scf%forced_finish = .false.
@@ -491,12 +536,8 @@ contains
     
     PUSH_SUB(scf_end)
 
-    if(preconditioner_is_multigrid(scf%eigens%pre)) then
-      call multigrid_end(scf%gr%mgrid_prec)
-      SAFE_DEALLOCATE_P(scf%gr%mgrid_prec)
-    end if
+    call eigensolver_end(scf%eigens, scf%gr)
 
-    call eigensolver_end(scf%eigens)
     if(scf%mix_field /= OPTION__MIXFIELD__NONE) call mix_end(scf%smix)
 
     nullify(scf%mixfield)
@@ -523,14 +564,16 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine scf_run(scf, mc, gr, geo, st, ks, hm, outp, gs_run, verbosity, iters_done, restart_load, restart_dump)
+  subroutine scf_run(scf, namespace, mc, gr, geo, st, ks, hm, outp, gs_run, verbosity, iters_done, &
+    restart_load, restart_dump)
     type(scf_t),               intent(inout) :: scf !< self consistent cycle
+    type(namespace_t),         intent(in)    :: namespace
     type(multicomm_t),         intent(in)    :: mc
     type(grid_t),              intent(inout) :: gr !< grid
     type(geometry_t),          intent(inout) :: geo !< geometry
-    type(states_t),            intent(inout) :: st !< States
+    type(states_elec_t),       intent(inout) :: st !< States
     type(v_ks_t),              intent(inout) :: ks !< Kohn-Sham
-    type(hamiltonian_t),       intent(inout) :: hm !< Hamiltonian
+    type(hamiltonian_elec_t),  intent(inout) :: hm !< Hamiltonian
     type(output_t),            intent(in)    :: outp
     logical,         optional, intent(in)    :: gs_run
     integer,         optional, intent(in)    :: verbosity 
@@ -538,18 +581,21 @@ contains
     type(restart_t), optional, intent(in)    :: restart_load
     type(restart_t), optional, intent(in)    :: restart_dump
 
-    logical :: finish, gs_run_, berry_conv
+    logical :: finish, converged_current, converged_last, gs_run_, berry_conv
     integer :: iter, is, iatom, nspin, ierr, iberry, idir, verbosity_, ib, iqn
     FLOAT :: evsum_out, evsum_in, forcetmp, dipole(MAX_DIM), dipole_prev(MAX_DIM)
-    real(8) :: etime, itime
+    FLOAT :: etime, itime
     character(len=MAX_PATH_LEN) :: dirname
     type(lcao_t) :: lcao    !< Linear combination of atomic orbitals
     type(profile_t), save :: prof
     FLOAT, allocatable :: rhoout(:,:,:), rhoin(:,:,:)
     FLOAT, allocatable :: vhxc_old(:,:)
     FLOAT, allocatable :: forceout(:,:), forcein(:,:), forcediff(:), tmp(:)
-    type(batch_t), allocatable :: psioutb(:, :)
-    
+    class(wfs_elec_t), allocatable :: psioutb(:, :)
+#ifdef HAVE_MPI
+    logical :: forced_finish_tmp    
+#endif
+
     PUSH_SUB(scf_run)
 
     if(scf%forced_finish) then
@@ -564,7 +610,7 @@ contains
     if(present(verbosity)) verbosity_ = verbosity
 
     if(scf%lcao_restricted) then
-      call lcao_init(lcao, gr, geo, st)
+      call lcao_init(lcao, namespace, gr, geo, st)
       if(.not. lcao_is_available(lcao)) then
         message(1) = 'LCAO is not available. Cannot do SCF in LCAO.'
         call messages_fatal(1)
@@ -576,22 +622,36 @@ contains
     if (present(restart_load)) then
       if (restart_has_flag(restart_load, RESTART_FLAG_RHO)) then
         ! Load density and used it to recalculated the KS potential.
-        call states_load_rho(restart_load, st, gr, ierr)
+        call states_elec_load_rho(restart_load, st, gr, ierr)
         if (ierr /= 0) then
           message(1) = 'Unable to read density. Density will be calculated from states.'
           call messages_warning(1)
         else
-          call v_ks_calc(ks, hm, st, geo)
+          if(bitand(ks%xc_family, XC_FAMILY_OEP) == 0) then
+            call v_ks_calc(ks, namespace, hm, st, geo)
+          else
+            if (.not. restart_has_flag(restart_load, RESTART_FLAG_VHXC) .and. ks%oep%level /= XC_OEP_FULL) then
+              call v_ks_calc(ks, namespace, hm, st, geo)
+            end if
+          end if
         end if
       end if
 
       if (restart_has_flag(restart_load, RESTART_FLAG_VHXC)) then
-        call hamiltonian_load_vhxc(restart_load, hm, gr%mesh, ierr)
+        call hamiltonian_elec_load_vhxc(restart_load, hm, gr%mesh, ierr)
         if (ierr /= 0) then
           message(1) = 'Unable to read Vhxc. Vhxc will be calculated from states.'
           call messages_warning(1)
         else
-          call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
+          call hamiltonian_elec_update(hm, gr%mesh, namespace)
+          if(bitand(ks%xc_family, XC_FAMILY_OEP) /= 0) then
+            if (ks%oep%level == XC_OEP_FULL) then
+              do is = 1, st%d%nspin
+                ks%oep%vxc(1:gr%mesh%np, is) = hm%vhxc(1:gr%mesh%np, is) - hm%vhartree(1:gr%mesh%np)
+              end do
+              call v_ks_calc(ks, namespace, hm, st, geo)
+            end if
+          end if
         end if
       end if
 
@@ -609,7 +669,7 @@ contains
       end if
 
       if(hm%lda_u_level /= DFT_U_NONE) then
-        call lda_u_load(restart_load, hm%lda_u, st, ierr) 
+        call lda_u_load(restart_load, hm%lda_u, st, hm%energy%dft_u, ierr) 
         if (ierr /= 0) then
           message(1) = "Unable to read LDA+U information. LDA+U data will be calculated from states."
           call messages_warning(1)
@@ -639,28 +699,28 @@ contains
 
     case(OPTION__MIXFIELD__STATES)
 
-      SAFE_ALLOCATE(psioutb(st%group%block_start:st%group%block_end, st%d%kpt%start:st%d%kpt%end))
+      SAFE_ALLOCATE_TYPE_ARRAY(wfs_elec_t, psioutb, (st%group%block_start:st%group%block_end, st%d%kpt%start:st%d%kpt%end))
 
       do iqn = st%d%kpt%start, st%d%kpt%end
         do ib = st%group%block_start, st%group%block_end
-          call batch_copy(st%group%psib(ib, iqn), psioutb(ib, iqn), fill_zeros = .false.)
+          call st%group%psib(ib, iqn)%copy_to(psioutb(ib, iqn))
         end do
       end do
       
     end select
 
-    call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy)
+    call lda_u_update_occ_matrices(hm%lda_u, namespace, gr%mesh, st, hm%hm_base, hm%energy)
     !If we use LDA+U, we also have do mix it
     if(scf%mix_field /= OPTION__MIXFIELD__STATES) call lda_u_mixer_set_vin(hm%lda_u, scf%lda_u_mix)
 
-    evsum_in = states_eigenvalues_sum(st)
+    evsum_in = states_elec_eigenvalues_sum(st)
 
     ! allocate and compute forces only if they are used as convergence criteria
     if (scf%conv_abs_force > M_ZERO) then
       SAFE_ALLOCATE(  forcein(1:geo%natoms, 1:gr%sb%dim))
       SAFE_ALLOCATE( forceout(1:geo%natoms, 1:gr%sb%dim))
       SAFE_ALLOCATE(forcediff(1:gr%sb%dim))
-      call forces_calculate(gr, geo, hm, st, ks)
+      call forces_calculate(gr, namespace, geo, hm, st, ks)
       do iatom = 1, geo%natoms
         forcein(iatom, 1:gr%sb%dim) = geo%atom(iatom)%f(1:gr%sb%dim)
       end do
@@ -678,9 +738,11 @@ contains
       end if
       call messages_info(1)
     end if
+    converged_current = .false.
 
     ! SCF cycle
     itime = loct_clock()
+    
     do iter = 1, scf%max_iter
       call profiling_in(prof, "SCF_CYCLE")
 
@@ -700,15 +762,15 @@ contains
       
       if(scf%lcao_restricted) then
         call lcao_init_orbitals(lcao, st, gr, geo)
-        call lcao_wf(lcao, st, gr, geo, hm)
+        call lcao_wf(lcao, st, gr, geo, hm, namespace)
       else
         if(associated(hm%vberry)) then
           ks%frozen_hxc = .true.
           do iberry = 1, scf%max_iter_berry
             scf%eigens%converged = 0
-            call eigensolver_run(scf%eigens, gr, st, hm, iter)
+            call eigensolver_run(scf%eigens, namespace, gr, st, hm, iter)
 
-            call v_ks_calc(ks, hm, st, geo, calc_current=outp%duringscf)
+            call v_ks_calc(ks, namespace, hm, st, geo, calc_current=outp%duringscf)
 
             dipole_prev = dipole
             call calc_dipole(dipole)
@@ -726,13 +788,13 @@ contains
           ks%frozen_hxc = .false.
         else
           scf%eigens%converged = 0
-          call eigensolver_run(scf%eigens, gr, st, hm, iter)
+          call eigensolver_run(scf%eigens, namespace, gr, st, hm, iter)
         end if
       end if
 
       ! occupations
-      call states_fermi(st, gr%mesh)
-      call lda_u_update_occ_matrices(hm%lda_u, gr%mesh, st, hm%hm_base, hm%energy )
+      call states_elec_fermi(st, namespace, gr%mesh)
+      call lda_u_update_occ_matrices(hm%lda_u, namespace, gr%mesh, st, hm%hm_base, hm%energy)
 
       ! compute output density, potential (if needed) and eigenvalues sum
       call density_calc(st, gr, st%rho)
@@ -741,7 +803,7 @@ contains
 
       select case(scf%mix_field)
       case(OPTION__MIXFIELD__POTENTIAL)
-        call v_ks_calc(ks, hm, st, geo, calc_current=outp%duringscf)
+        call v_ks_calc(ks, namespace, hm, st, geo, calc_current=outp%duringscf)
         call mixfield_set_vout(scf%mixfield, hm%vhxc)
       case (OPTION__MIXFIELD__DENSITY)
         call mixfield_set_vout(scf%mixfield, rhoout)
@@ -749,17 +811,17 @@ contains
 
         do iqn = st%d%kpt%start, st%d%kpt%end
           do ib = st%group%block_start, st%group%block_end
-            call batch_copy_data(gr%mesh%np, st%group%psib(ib, iqn), psioutb(ib, iqn))
+            call st%group%psib(ib, iqn)%copy_data_to(gr%mesh%np, psioutb(ib, iqn))
           end do
         end do
       end select
       
       if(scf%mix_field /= OPTION__MIXFIELD__STATES) call lda_u_mixer_set_vout(hm%lda_u, scf%lda_u_mix)
  
-      evsum_out = states_eigenvalues_sum(st)
+      evsum_out = states_elec_eigenvalues_sum(st)
 
       ! recalculate total energy
-      call energy_calc_total(hm, gr, st, iunit = 0)
+      call energy_calc_total(namespace, hm, gr, st, iunit = 0)
 
       ! compute convergence criteria
       scf%energy_diff = hm%energy%total - scf%energy_diff
@@ -773,7 +835,7 @@ contains
 
       ! compute forces only if they are used as convergence criterion
       if (scf%conv_abs_force > M_ZERO) then
-        call forces_calculate(gr, geo, hm, st, ks, vhxc_old=vhxc_old)
+        call forces_calculate(gr, namespace, geo, hm, st, ks, vhxc_old=vhxc_old)
         scf%abs_force = M_ZERO
         do iatom = 1, geo%natoms
           forceout(iatom,1:gr%sb%dim) = geo%atom(iatom)%f(1:gr%sb%dim)
@@ -787,7 +849,7 @@ contains
         if(outp%duringscf .and. bitand(outp%what, OPTION__OUTPUT__FORCES) /= 0 &
            .and. outp%output_interval /= 0 &
            .and. gs_run_ .and. mod(iter, outp%output_interval) == 0)  &
-          call forces_calculate(gr, geo, hm, st, ks, vhxc_old=vhxc_old)
+          call forces_calculate(gr, namespace, geo, hm, st, ks, vhxc_old=vhxc_old)
       end if
 
       if(abs(st%qtot) <= M_EPSILON) then
@@ -806,7 +868,8 @@ contains
       scf%eigens%current_rel_dens_error = scf%rel_dens
 
       ! are we finished?
-      finish = scf%check_conv .and. &
+      converged_last = converged_current
+      converged_current = scf%check_conv .and. &
         (scf%conv_abs_dens  <= M_ZERO .or. scf%abs_dens  <= scf%conv_abs_dens)  .and. &
         (scf%conv_rel_dens  <= M_ZERO .or. scf%rel_dens  <= scf%conv_rel_dens)  .and. &
         (scf%conv_abs_force <= M_ZERO .or. scf%abs_force <= scf%conv_abs_force) .and. &
@@ -814,6 +877,9 @@ contains
         (scf%conv_rel_ev    <= M_ZERO .or. scf%rel_ev    <= scf%conv_rel_ev)    .and. &
         (scf%conv_energy_diff <= M_ZERO .or. abs(scf%energy_diff) <= scf%conv_energy_diff) .and. &
         (.not. scf%conv_eigen_error .or. all(scf%eigens%converged == st%nst))
+      ! only finish if the convergence criterion is fulfilled in two
+      ! consecutive iterations
+      finish = converged_last .and. converged_current
 
       etime = loct_clock() - itime
       itime = etime + itime
@@ -832,13 +898,13 @@ contains
           call messages_warning(1)
         end if
         call lda_u_mixer_get_vnew(hm%lda_u, scf%lda_u_mix, st)
-        call v_ks_calc(ks, hm, st, geo, calc_current=outp%duringscf)
+        call v_ks_calc(ks, namespace, hm, st, geo, calc_current=outp%duringscf)
       case (OPTION__MIXFIELD__POTENTIAL)
         ! mix input and output potentials
         call mixing(scf%smix)
         call mixfield_get_vnew(scf%mixfield, hm%vhxc)
         call lda_u_mixer_get_vnew(hm%lda_u, scf%lda_u_mix, st)
-        call hamiltonian_update(hm, gr%mesh, gr%der%boundaries)
+        call hamiltonian_elec_update_pot(hm, gr%mesh, accel_copy=.true.)
         
       case(OPTION__MIXFIELD__STATES)
 
@@ -850,39 +916,45 @@ contains
         end do
 
         call density_calc(st, gr, st%rho)
-        call v_ks_calc(ks, hm, st, geo, calc_current=outp%duringscf)
+        call v_ks_calc(ks, namespace, hm, st, geo, calc_current=outp%duringscf)
         
       case(OPTION__MIXFIELD__NONE)
-        call v_ks_calc(ks, hm, st, geo, calc_current=outp%duringscf)
+        call v_ks_calc(ks, namespace, hm, st, geo, calc_current=outp%duringscf)
       end select
 
 
       ! Are we asked to stop? (Whenever Fortran is ready for signals, this should go away)
-      scf%forced_finish = clean_stop(mc%master_comm)
+      scf%forced_finish = clean_stop(mc%master_comm) .or. walltimer_alarm()
+
+#ifdef HAVE_MPI
+      call MPI_Allreduce(scf%forced_finish, forced_finish_tmp, 1, MPI_LOGICAL, MPI_LOR, mc%master_comm, mpi_err)
+      scf%forced_finish = forced_finish_tmp
+#endif      
 
       if (finish .and. st%modelmbparticles%nparticle > 0) then
-        call modelmb_sym_all_states (gr, st, geo)
+        call modelmb_sym_all_states (gr, st)
       end if
 
       if (gs_run_ .and. present(restart_dump)) then 
         ! save restart information
+         
         if ( (finish .or. (modulo(iter, outp%restart_write_interval) == 0) &
-          .or. iter == scf%max_iter .or. scf%forced_finish)) then
+          .or. iter == scf%max_iter .or. scf%forced_finish) ) then
 
-          call states_dump(restart_dump, st, gr, ierr, iter=iter) 
+          call states_elec_dump(restart_dump, st, gr, ierr, iter=iter) 
           if (ierr /= 0) then
             message(1) = 'Unable to write states wavefunctions.'
             call messages_warning(1)
           end if
 
-          call states_dump_rho(restart_dump, st, gr, ierr, iter=iter)
+          call states_elec_dump_rho(restart_dump, st, gr, ierr, iter=iter)
           if (ierr /= 0) then
             message(1) = 'Unable to write density.'
             call messages_warning(1)
           end if
 
           if(hm%lda_u_level /= DFT_U_NONE) then
-            call lda_u_dump(restart_dump, hm%lda_u, st, ierr, iter=iter)
+            call lda_u_dump(restart_dump, hm%lda_u, st, ierr)
             if (ierr /= 0) then
               message(1) = 'Unable to write LDA+U information.'
               call messages_warning(1)
@@ -897,7 +969,7 @@ contains
               call messages_warning(1)
             end if
           case (OPTION__MIXFIELD__POTENTIAL)
-            call hamiltonian_dump_vhxc(restart_dump, hm, gr%mesh, ierr)
+            call hamiltonian_elec_dump_vhxc(restart_dump, hm, gr%mesh, ierr)
             if (ierr /= 0) then
               message(1) = 'Unable to write Vhxc.'
               call messages_warning(1)
@@ -928,7 +1000,7 @@ contains
       if((outp%what+outp%what_lda_u+outp%whatBZ)/=0 .and. outp%duringscf .and. outp%output_interval /= 0 &
         .and. gs_run_ .and. mod(iter, outp%output_interval) == 0) then
         write(dirname,'(a,a,i4.4)') trim(outp%iter_dir),"scf.",iter
-        call output_all(outp, gr, geo, st, hm, ks, dirname)
+        call output_all(outp, namespace, dirname, gr, geo, st, hm, ks)
       end if
 
       ! save information for the next iteration
@@ -954,16 +1026,15 @@ contains
       end if
 
       ! check if debug mode should be enabled or disabled on the fly
-      call io_debug_on_the_fly()
+      call io_debug_on_the_fly(namespace)
 
       call profiling_out(prof)
     end do !iter
 
     if(scf%lcao_restricted) call lcao_end(lcao)
 
-    if((scf%max_iter > 0 .and. scf%mix_field == OPTION__MIXFIELD__POTENTIAL) &
-                           .or. output_needs_current(outp, states_are_real(st))) then
-      call v_ks_calc(ks, hm, st, geo)
+    if((scf%max_iter > 0 .and. scf%mix_field == OPTION__MIXFIELD__POTENTIAL) .or. output_needs_current(outp, states_are_real(st))) then
+      call v_ks_calc(ks, namespace, hm, st, geo)
     end if
 
     select case(scf%mix_field)
@@ -971,7 +1042,7 @@ contains
 
       do iqn = st%d%kpt%start, st%d%kpt%end
         do ib = st%group%block_start, st%group%block_end
-          call batch_end(psioutb(ib, iqn))
+          call psioutb(ib, iqn)%end()
         end do
       end do
       
@@ -993,34 +1064,34 @@ contains
 
     ! calculate forces
     if(scf%calc_force) then
-      call forces_calculate(gr, geo, hm, st, ks, vhxc_old=vhxc_old)
+      call forces_calculate(gr, namespace, geo, hm, st, ks, vhxc_old=vhxc_old)
     end if
 
     ! calculate stress
-    if(scf%calc_stress) call stress_calculate(gr, hm, st, geo, ks) 
+    if(scf%calc_stress) call stress_calculate(namespace, gr, hm, st, geo)
     
     if(scf%max_iter == 0) then
-      call energy_calc_eigenvalues(hm, gr%der, st)
-      call states_fermi(st, gr%mesh)
-      call states_write_eigenvalues(stdout, st%nst, st, gr%sb)
+      call energy_calc_eigenvalues(namespace, hm, gr%der, st)
+      call states_elec_fermi(st, namespace, gr%mesh)
+      call states_elec_write_eigenvalues(stdout, st%nst, st, gr%sb)
     end if
 
     if(gs_run_) then 
       ! output final information
       call scf_write_static(STATIC_DIR, "info")
-      call output_all(outp, gr, geo, st, hm, ks, STATIC_DIR)
+      call output_all(outp, namespace, STATIC_DIR, gr, geo, st, hm, ks)
     end if
 
     if(simul_box_is_periodic(gr%sb) .and. st%d%nik > st%d%nspin) then
       if(bitand(gr%sb%kpoints%method, KPOINTS_PATH) /= 0)  then
-        call states_write_bandstructure(STATIC_DIR, st%nst, st, gr%sb, geo, gr%mesh, &
-          hm%hm_base%phase, vec_pot = hm%hm_base%uniform_vector_potential, &
+        call states_elec_write_bandstructure(STATIC_DIR, namespace, st%nst, st, gr%sb,  &
+          geo, gr%mesh, hm%hm_base%phase, vec_pot = hm%hm_base%uniform_vector_potential, &
           vec_pot_var = hm%hm_base%vector_potential)
       end if
     end if
 
     if( ks%vdw_correction == OPTION__VDWCORRECTION__VDW_TS) then
-      call vdw_ts_write_c6ab(ks%vdw_ts, geo, STATIC_DIR, 'c6ab_eff')
+      call vdw_ts_write_c6ab(ks%vdw_ts, geo, STATIC_DIR, 'c6ab_eff', namespace)
     end if
 
     SAFE_DEALLOCATE_A(vhxc_old)
@@ -1033,10 +1104,6 @@ contains
     ! ---------------------------------------------------------
     subroutine scf_write_iter()
       character(len=50) :: str
-      FLOAT :: mem
-#ifdef HAVE_MPI
-      FLOAT :: mem_tmp
-#endif
 
       PUSH_SUB(scf_run.scf_write_iter)
 
@@ -1061,9 +1128,9 @@ contains
           write(message(1),'(a,i6)') 'Matrix vector products: ', scf%eigens%matvec
           write(message(2),'(a,i6)') 'Converged eigenvectors: ', sum(scf%eigens%converged(1:st%d%nik))
           call messages_info(2)
-          call states_write_eigenvalues(stdout, st%nst, st, gr%sb, scf%eigens%diff, compact = .true.)
+          call states_elec_write_eigenvalues(stdout, st%nst, st, gr%sb, scf%eigens%diff, compact = .true.)
         else
-          call states_write_eigenvalues(stdout, st%nst, st, gr%sb, compact = .true.)
+          call states_elec_write_eigenvalues(stdout, st%nst, st, gr%sb, compact = .true.)
         end if
 
         if(associated(hm%vberry)) then
@@ -1072,26 +1139,19 @@ contains
         end if
 
         if(st%d%ispin > UNPOLARIZED) then
-          call write_magnetic_moments(stdout, gr%mesh, st, geo, scf%lmm_r)
+          call write_magnetic_moments(stdout, gr%mesh, st, geo, gr%der%boundaries, scf%lmm_r)
         end if
 
         if(hm%lda_u_level == DFT_U_ACBN0) then
           call lda_u_write_U(hm%lda_u, stdout)
+          call lda_u_write_V(hm%lda_u, stdout)
         end if
 
         write(message(1),'(a)') ''
         write(message(2),'(a,i5,a,f14.2)') 'Elapsed time for SCF step ', iter,':', etime
         call messages_info(2)
 
-        if(conf%report_memory) then
-          mem = loct_get_memory_usage()/(CNST(1024.0)**2)
-#ifdef HAVE_MPI
-          call MPI_Allreduce(mem, mem_tmp, 1, MPI_FLOAT, MPI_SUM, mpi_world%comm, mpi_err)
-          mem = mem_tmp
-#endif
-          write(message(1),'(a,f14.2)') 'Memory usage [Mbytes]     :', mem
-          call messages_info(1)
-        end if
+        call scf_print_mem_use()
 
         call messages_print_stress(stdout)
 
@@ -1124,26 +1184,25 @@ contains
     subroutine scf_write_static(dir, fname)
       character(len=*), intent(in) :: dir, fname
 
-      type(partial_charges_t) :: partial_charges
       integer :: iunit, iatom
       FLOAT, allocatable :: hirshfeld_charges(:)
 
       PUSH_SUB(scf_run.scf_write_static)
 
       if(mpi_grp_is_root(mpi_world)) then ! this the absolute master writes
-        call io_mkdir(dir)
-        iunit = io_open(trim(dir) // "/" // trim(fname), action='write')
+        call io_mkdir(dir, namespace)
+        iunit = io_open(trim(dir) // "/" // trim(fname), namespace, action='write')
 
         call grid_write_info(gr, geo, iunit)
  
-        call symmetries_write_info(gr%mesh%sb%symm, gr%sb%dim, gr%sb%periodic_dim, iunit)
+        call symmetries_write_info(gr%mesh%sb%symm, namespace, gr%sb%dim, gr%sb%periodic_dim, iunit)
 
         if(simul_box_is_periodic(gr%sb)) then
-          call kpoints_write_info(gr%mesh%sb%kpoints, iunit)
+          call kpoints_write_info(gr%mesh%sb%kpoints, namespace, iunit)
           write(iunit,'(1x)')
         end if
 
-        call v_ks_write_info(ks, iunit)
+        call v_ks_write_info(ks, iunit, namespace)
 
         ! scf information
         if(finish) then
@@ -1157,24 +1216,30 @@ contains
           write(iunit,'(a)') 'Some of the states are not fully converged!'
         end if
 
-        call states_write_eigenvalues(iunit, st%nst, st, gr%sb)
+        call states_elec_write_eigenvalues(iunit, st%nst, st, gr%sb)
         write(iunit, '(1x)')
+
+        if(simul_box_is_periodic(gr%sb)) then
+          call states_elec_write_gaps(iunit, st, gr%sb)
+          write(iunit, '(1x)')
+        end if
 
         write(iunit, '(3a)') 'Energy [', trim(units_abbrev(units_out%energy)), ']:'
       else
         iunit = 0
       end if
 
-      call energy_calc_total(hm, gr, st, iunit, full = .true.)
+      call energy_calc_total(namespace, hm, gr, st, iunit, full = .true.)
 
       if(mpi_grp_is_root(mpi_world)) write(iunit, '(1x)')
       if(st%d%ispin > UNPOLARIZED) then
-        call write_magnetic_moments(iunit, gr%mesh, st, geo, scf%lmm_r)
+        call write_magnetic_moments(iunit, gr%mesh, st, geo, gr%der%boundaries, scf%lmm_r)
         if(mpi_grp_is_root(mpi_world)) write(iunit, '(1x)')
       end if
 
       if(hm%lda_u_level == DFT_U_ACBN0) then
           call lda_u_write_U(hm%lda_u, iunit)
+          call lda_u_write_V(hm%lda_u, iunit)
           if(mpi_grp_is_root(mpi_world)) write(iunit, '(1x)')
         end if 
 
@@ -1199,7 +1264,16 @@ contains
         end if
         ! otherwise, these values are uninitialized, and unknown.
 
-        if(scf%calc_force) call forces_write_info(iunit, geo, gr%sb, dir)
+        if (bitand(ks%xc_family, XC_FAMILY_OEP) /= 0 .and. ks%theory_level /= HARTREE_FOCK) then
+          if (((ks%oep%level == XC_OEP_FULL) .or. (ks%oep%level == XC_OEP_KLI)) .and. ks%oep%has_photons) then
+            write(iunit, '(a)') 'Photon observables:'
+            write(iunit, '(6x, a, es15.8,a,es15.8,a)') 'Photon number = ', ks%oep%pt%number(1)
+            write(iunit, '(6x, a, es15.8,a,es15.8,a)') 'Photon ex. = ', ks%oep%pt%ex
+            write(iunit,'(1x)')
+          end if
+        end if
+
+        if(scf%calc_force) call forces_write_info(iunit, geo, gr%sb, dir, namespace)
 
         if(scf%calc_stress) then
            write(iunit,'(a)') "Stress tensor [H/b^3]"
@@ -1214,9 +1288,7 @@ contains
       if(scf%calc_partial_charges) then
         SAFE_ALLOCATE(hirshfeld_charges(1:geo%natoms))
 
-        call partial_charges_init(partial_charges)
-        call partial_charges_calculate(partial_charges, gr%fine%mesh, st, geo, hirshfeld_charges = hirshfeld_charges)
-        call partial_charges_end(partial_charges)
+        call partial_charges_calculate(namespace, gr%fine%mesh, st, geo, hirshfeld_charges = hirshfeld_charges)
 
         if(mpi_grp_is_root(mpi_world)) then
 
@@ -1320,8 +1392,8 @@ contains
       integer :: iunit
       character(len=12) :: label
       if(mpi_grp_is_root(mpi_world)) then ! this the absolute master writes
-        call io_mkdir(dir)
-        iunit = io_open(trim(dir) // "/" // trim(fname), action='write')
+        call io_mkdir(dir, namespace)
+        iunit = io_open(trim(dir) // "/" // trim(fname), namespace, action='write')
         write(iunit, '(a)', advance = 'no') '#iter energy           '
         label = 'energy_diff'
         write(iunit, '(1x,a)', advance = 'no') label
@@ -1333,10 +1405,16 @@ contains
         write(iunit, '(1x,a)', advance = 'no') label
         label = 'rel_ev'
         write(iunit, '(1x,a)', advance = 'no') label
-         if (scf%conv_abs_force > M_ZERO) then
-           label = 'force_diff'
-           write(iunit, '(1x,a)', advance = 'no') label
-         end if
+        if (scf%conv_abs_force > M_ZERO) then
+          label = 'force_diff'
+          write(iunit, '(1x,a)', advance = 'no') label
+        end if
+        if (bitand(ks%xc_family, XC_FAMILY_OEP) /= 0 .and. ks%theory_level /= HARTREE_FOCK) then
+          if (ks%oep%level == XC_OEP_FULL) then
+            label = 'OEP norm2ss'
+            write(iunit, '(1x,a)', advance = 'no') label
+          end if
+        end if
         write(iunit,'(a)') ''
         call io_close(iunit)
       end if
@@ -1352,8 +1430,8 @@ contains
       integer :: iunit
       
       if(mpi_grp_is_root(mpi_world)) then ! this the absolute master writes
-        call io_mkdir(dir)
-        iunit = io_open(trim(dir) // "/" // trim(fname), action='write', position='append')
+        call io_mkdir(dir, namespace)
+        iunit = io_open(trim(dir) // "/" // trim(fname), namespace, action='write', position='append')
         write(iunit, '(i5,es18.8)', advance = 'no') iter, units_from_atomic(units_out%energy, hm%energy%total)
         write(iunit, '(es13.5)', advance = 'no') units_from_atomic(units_out%energy, scf%energy_diff)
         write(iunit, '(es13.5)', advance = 'no') scf%abs_dens
@@ -1363,6 +1441,10 @@ contains
         if (scf%conv_abs_force > M_ZERO) then
           write(iunit, '(es13.5)', advance = 'no') units_from_atomic(units_out%force, scf%abs_force)
         end if
+        if (bitand(ks%xc_family, XC_FAMILY_OEP) /= 0 .and. ks%theory_level /= HARTREE_FOCK) then
+          if (ks%oep%level == XC_OEP_FULL) &
+            write(iunit, '(es13.5)', advance = 'no') ks%oep%norm2ss
+        end if
         write(iunit,'(a)') ''
         call io_close(iunit)
       end if
@@ -1370,6 +1452,45 @@ contains
     end subroutine write_convergence_file
     
   end subroutine scf_run
+
+  ! ---------------------------------------------------------
+  subroutine scf_state_info(st)
+    class(states_abst_t), intent(in) :: st
+
+    PUSH_SUB(scf_state_info)
+
+    if (states_are_real(st)) then
+      call messages_write('Info: SCF using real wavefunctions.')
+    else
+      call messages_write('Info: SCF using complex wavefunctions.')
+    end if
+    call messages_info()
+
+    POP_SUB(scf_state_info)
+
+  end subroutine scf_state_info
+
+  ! ---------------------------------------------------------
+  subroutine scf_print_mem_use()
+    FLOAT :: mem
+#ifdef HAVE_MPI
+    FLOAT :: mem_tmp
+#endif
+
+    PUSH_SUB(scf_print_mem_use)
+
+    if(conf%report_memory) then
+      mem = loct_get_memory_usage()/(CNST(1024.0)**2)
+#ifdef HAVE_MPI
+      call MPI_Allreduce(mem, mem_tmp, 1, MPI_FLOAT, MPI_SUM, mpi_world%comm, mpi_err)
+      mem = mem_tmp
+#endif
+      write(message(1),'(a,f14.2)') 'Memory usage [Mbytes]     :', mem
+      call messages_info(1)
+    end if
+
+    POP_SUB(scf_print_mem_use)
+  end subroutine scf_print_mem_use
 
 end module scf_oct_m
 

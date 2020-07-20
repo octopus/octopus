@@ -36,6 +36,7 @@ include "mpif.h"
 
   !> This is defined even when running serial
   type mpi_grp_t
+    ! Components are public by default
     integer :: comm !< copy of the mpi communicator
     integer :: size !< size of comm (defined also in serial mode)
     integer :: rank !< rank of comm (defined also in serial mode)
@@ -60,12 +61,14 @@ contains
     integer :: iam, nprocs
     integer :: blacs_default_system_context !< for blacs/openmpi bug workaround
 #endif
+#endif
 
     if(is_serial) then
       call mpi_grp_init(mpi_world, -1)
       return
     end if
 
+#if defined(HAVE_MPI)
     ! initialize MPI
 #if defined(HAVE_OPENMP) && defined(HAVE_MPI2)
     call MPI_INIT_THREAD(MPI_THREAD_FUNNELED, provided, mpi_err)
@@ -123,19 +126,21 @@ contains
     type(mpi_grp_t), intent(out)  :: grp   !< information about this MPI group
     integer,         intent(in)   :: comm  !< the communicator that defined the group
 
+    grp%comm = comm
 #if defined(HAVE_MPI)
-    if(comm /= -1 .and. comm /= MPI_COMM_NULL) then
-      grp%comm = comm
-      call MPI_Comm_rank(grp%comm, grp%rank, mpi_err)
-      call MPI_Comm_size(grp%comm, grp%size, mpi_err)
-    else
+    if (grp%comm == MPI_COMM_NULL) grp%comm = -1
 #endif
-      grp%comm = -1
+
+    if (grp%comm == -1) then
       grp%rank = 0
       grp%size = 1
 #if defined(HAVE_MPI)
-    end if
+    else
+      call MPI_Comm_rank(grp%comm, grp%rank, mpi_err)
+      call MPI_Comm_size(grp%comm, grp%size, mpi_err)
 #endif
+    end if
+
   end subroutine mpi_grp_init
 
   subroutine mpi_grp_copy_equal()

@@ -19,7 +19,7 @@
 AC_PREREQ(2.59)
 # Note: the version string is written into ETSF_IO files, so when you update
 # this, update the results for test periodic_systems/09-etsf_io.test too.
-AC_INIT([Octopus],[9.2],[octopus-devel@tddft.org],[octopus])
+AC_INIT([Octopus],[10.0],[octopus-devel@tddft.org],[octopus])
 AC_CONFIG_SRCDIR([src/basic/global.F90])
 AC_CONFIG_AUX_DIR([build-aux])
 AM_INIT_AUTOMAKE([subdir-objects])
@@ -111,17 +111,18 @@ dnl and with OpenMP threads.
 dnl these are the --enable/--disable possible in octopus
 AC_ARG_ENABLE(debug, AS_HELP_STRING([--disable-debug], [debug mode]), [DEBUG=${enableval}])
 AC_ARG_ENABLE(openmp, AS_HELP_STRING([--enable-openmp], [Multi-threaded parallel version using OpenMP from Fortran]))
-AC_ARG_ENABLE(openmp_simd, AS_HELP_STRING([--enable-openmp_simd], [OpenMP SIMD from Fortran]))
 AC_ARG_ENABLE(opencl, AS_HELP_STRING([--enable-opencl], [OpenCL support (experimental)]))
 
 if test -n "${enable_openmp}" -a x"${enable_openmp}" != x"no"; then
   HAVE_OPENMP=1
 fi
-if test -n "${enable_openmp_simd}" -a x"${enable_openmp_simd}" != x"no"; then
-  HAVE_OPENMP_SIMD=1
+
+
+
+AC_ARG_ENABLE(nvtx, AS_HELP_STRING([--enable-nvtx], [NVTX profiling support for Cuda version]))
+if test x"${enable_nvtx}" == x"yes" ; then
+  AC_DEFINE(HAVE_NVTX, 1, [defined if nvtx support is enabled])
 fi
-
-
 
 AC_ARG_ENABLE(cuda, AS_HELP_STRING([--enable-cuda], [Cuda support (experimental)]))
 
@@ -146,17 +147,6 @@ fi
 
 AM_CONDITIONAL(COMPILE_OPENCL, test x"${enable_opencl}" == x"yes")
 
-dnl workaround for xlf compilers
-ac_enable_f90_forall=yes
-AC_ARG_ENABLE(f90-forall, AS_HELP_STRING([--disable-f90-forall], [Workaround for buggy xlf compilers]), 
-        [ac_enable_f90_forall=${enableval}])
-if test x"${ac_enable_f90_forall}" = x"no"; then
-  F90_FORALL=no
-else
-  F90_FORALL=yes
-fi
-AC_SUBST(F90_FORALL)
-  
 dnl check for C MPI
 if test x"$enable_mpi" == x"yes"; then
   AC_CHECK_HEADER(mpi.h,,AC_MSG_ERROR([cannot find mpi.h]))
@@ -237,11 +227,6 @@ AC_SUBST([F90_MODULE_FLAG])
 if test "${HAVE_OPENMP}"; then
   AX_OPENMP(,AC_MSG_ERROR([Fortran compiler does not support OpenMP]))
   FCFLAGS="$FCFLAGS $OPENMP_FCFLAGS"
-fi
-
-if test "${HAVE_OPENMP_SIMD}"; then
-  AX_OPENMP_SIMD(,AC_MSG_ERROR([Fortran compiler does not support OpenMP SIMD]))
-  FCFLAGS="$FCFLAGS $OPENMP_SIMD_FCFLAGS"
 fi
 
 
@@ -332,9 +317,20 @@ ACX_ELPA
 dnl check for Libfm
 ACX_LIBFM
 
-dnl check for ISF included from version 1.7.6 of BigDFT
-ACX_ISF
-AM_CONDITIONAL(COMPILE_ISF, test x${HAVE_COMP_ISF} = x1)
+dnl Check for PSOlver library.
+dnl PSolver depends on LibYAML and on Futile, so we first check for those one.
+AC_LANG_PUSH(C)
+ACX_YAML
+AC_LANG_POP(C)
+ACX_FUTILE
+ACX_PSOLVER
+
+dnl If PSolver was not found, we check for older versions of the library (1.7.x),
+dnl which we named ISF
+if test "x$acx_psolver_ok" = "xno"; then
+  ACX_ISF
+fi
+AM_CONDITIONAL(COMPILE_LIBYAML, test "x${HAVE_ISF}" == "x1")
 
 dnl check for PSPIO
 ACX_PSPIO
@@ -349,8 +345,6 @@ ACX_PATH_METIS
 ACX_PATH_PARMETIS
 AC_LANG_POP(C)
 AM_CONDITIONAL(COMPILE_METIS, test x${HAVE_COMP_METIS} = x1)
-
-ACX_YAML
 
 dnl performance analysis using the likwid marker API
 ACX_LIKWID
@@ -420,6 +414,8 @@ AC_CONFIG_FILES([Makefile
   build/Makefile
   build/octopus.spec
   testsuite/Makefile
+  testsuite/performance/Makefile
+  testsuite/performance/tests/Makefile
   testsuite/components/Makefile 
   testsuite/finite_systems_1d/Makefile 
   testsuite/finite_systems_2d/Makefile
@@ -428,6 +424,8 @@ AC_CONFIG_FILES([Makefile
   testsuite/real_time/Makefile
   testsuite/lda_u/Makefile
   testsuite/linear_response/Makefile
+  testsuite/maxwell/Makefile
+  testsuite/multisystem/Makefile
   testsuite/optimal_control/Makefile
   testsuite/periodic_systems/Makefile
   testsuite/photo_electron/Makefile
@@ -435,6 +433,7 @@ AC_CONFIG_FILES([Makefile
   testsuite/tutorials/Makefile
   testsuite/symmetries/Makefile])
 AC_CONFIG_FILES([testsuite/oct-run_testsuite.sh], [chmod +x testsuite/oct-run_testsuite.sh])
+AC_CONFIG_FILES([testsuite/performance/oct-run_performance_testsuite.sh], [chmod +x testsuite/performance/oct-run_performance_testsuite.sh])
 AC_CONFIG_FILES([doc/html/varsRightFrame.html])
 
 AC_CONFIG_SUBDIRS([external_libs/spglib-1.9.9])

@@ -20,8 +20,10 @@
 
 module sparskit_oct_m
   use global_oct_m
-  use parser_oct_m
+  use loct_pointer_oct_m
   use messages_oct_m
+  use namespace_oct_m
+  use parser_oct_m
   use profiling_oct_m
 
   implicit none
@@ -45,15 +47,15 @@ module sparskit_oct_m
   public ::                      &
     sparskit_solver_t
   
-#ifdef HAVE_SPARSKIT
-    public ::                      &
-      sparskit_solver_init,        &
-      dsparskit_solver_run,        &
-      zsparskit_solver_run,        &
-      sparskit_solver_end
-#endif
-
+  public ::                      &
+    sparskit_solver_init,        &
+    dsparskit_solver_run,        &
+    zsparskit_solver_run,        &
+    sparskit_solver_end,         &
+    sparskit_solver_copy
+  
   type sparskit_solver_t
+    private
     logical :: is_complex           !< whether set up for complex (otherwise real)
     integer :: size                 !< size of the linear system
     integer :: solver_type          !< which solver to use
@@ -73,12 +75,63 @@ module sparskit_oct_m
     logical :: verbose              !< if .true. then the solver will write more details
   end type sparskit_solver_t
 
-#ifdef HAVE_SPARSKIT
+  interface
+    subroutine cg(n, rhs, sol, ipar, fpar, w)
+      integer n, ipar(16)
+      real*8 rhs(n), sol(n), fpar(16), w(n,*)
+    end subroutine cg
 
+    subroutine cgnr(n, rhs, sol, ipar, fpar, wk)
+      integer n, ipar(16)
+      real*8 rhs(n),sol(n),fpar(16),wk(n,*)
+    end subroutine cgnr
+
+    subroutine bcg(n, rhs, sol, ipar, fpar, w)
+      integer n, ipar(16)
+      real*8  fpar(16), rhs(n), sol(n), w(n,*)
+    end subroutine bcg
+
+    subroutine dbcg(n, rhs, sol, ipar, fpar, w)
+      integer n, ipar(16)
+      real*8 rhs(n), sol(n), fpar(16), w(n,*)
+    end subroutine dbcg
+
+    subroutine bcgstab(n, rhs, sol, ipar, fpar, w)
+      integer n, ipar(16)
+      real*8 rhs(n), sol(n), fpar(16), w(n,8)
+    end subroutine bcgstab
+
+    subroutine tfqmr(n, rhs, sol, ipar, fpar, w)
+      integer n, ipar(16)
+      real*8 rhs(n), sol(n), fpar(16), w(n,*)
+    end subroutine tfqmr
+
+    subroutine fom(n, rhs, sol, ipar, fpar, w)
+      integer n, ipar(16)
+      real*8 rhs(n), sol(n), fpar(16), w(*)
+    end subroutine fom
+
+    subroutine gmres(n, rhs, sol, ipar, fpar, w)
+      integer n, ipar(16)
+      real*8 rhs(n), sol(n), fpar(16), w(*)
+    end subroutine gmres
+
+    subroutine dqgmres(n, rhs, sol, ipar, fpar, w)
+      integer n, ipar(16)
+      real*8 rhs(n), sol(n), fpar(16), w(*)
+    end subroutine dqgmres
+
+    subroutine fgmres(n, rhs, sol, ipar, fpar, w)
+      integer n, ipar(16)
+      real*8 rhs(n), sol(n), fpar(16), w(*)
+    end subroutine fgmres
+  end interface
+  
 contains
 
   ! ---------------------------------------------------------
-  subroutine sparskit_solver_init(n, sk, is_complex)
+  subroutine sparskit_solver_init(namespace, n, sk, is_complex)
+    type(namespace_t),       intent(in)  :: namespace
     integer,                 intent(in)  :: n
     type(sparskit_solver_t), intent(out) :: sk
     logical,                 intent(in)  :: is_complex
@@ -117,9 +170,9 @@ contains
     !%Option sk_dqgmres 10
     !% Direct versions of the Quasi-Generalized Minimum Residual method
     !%End
-    call parse_variable('SPARSKITSolver', SK_BCG, sk%solver_type)
+    call parse_variable(namespace, 'SPARSKITSolver', SK_BCG, sk%solver_type)
     if ( sk%solver_type < SK_MINVAL.or.sk%solver_type > SK_MAXVAL ) then
-      call messages_input_error('SPARSKITSolver')
+      call messages_input_error(namespace, 'SPARSKITSolver')
     end if
 
     !%Variable SPARSKITKrylovSubspaceSize
@@ -131,7 +184,7 @@ contains
     !% This variable determines what size the solver will use 
     !% for the subspace.
     !%End
-    call parse_variable('SPARSKITKrylovSubspaceSize', 15, sk%krylov_size)
+    call parse_variable(namespace, 'SPARSKITKrylovSubspaceSize', 15, sk%krylov_size)
 
     ! preconditioner not implemented
     sk%preconditioning = 0
@@ -144,7 +197,7 @@ contains
     !% This variable controls the maximum number of iteration steps that
     !% will be performed by the (iterative) linear solver.
     !%End
-    call parse_variable('SPARSKITMaxIter', 5000, sk%maxiter)
+    call parse_variable(namespace, 'SPARSKITMaxIter', 5000, sk%maxiter)
     
     !%Variable SPARSKITIterOut
     !%Type integer
@@ -154,7 +207,7 @@ contains
     !% Determines how often status info of the solver is printed.
     !% If <= 0, will never be printed.
     !%End
-    call parse_variable('SPARSKITIterOut', -1, sk%iter_out)
+    call parse_variable(namespace, 'SPARSKITIterOut', -1, sk%iter_out)
 
     !%Variable SPARSKITRelTolerance
     !%Type float
@@ -165,7 +218,7 @@ contains
     !% for the iterative solution process. This variable can be used to 
     !% specify the tolerance.
     !%End
-    call parse_variable('SPARSKITRelTolerance', CNST(1e-8), sk%rel_tolerance)
+    call parse_variable(namespace, 'SPARSKITRelTolerance', CNST(1e-8), sk%rel_tolerance)
     
     !%Variable SPARSKITAbsTolerance
     !%Type float
@@ -176,7 +229,7 @@ contains
     !% for the iterative solution process. This variable can be used to 
     !% specify the tolerance.
     !%End
-    call parse_variable('SPARSKITAbsTolerance', CNST(1e-10), sk%abs_tolerance)
+    call parse_variable(namespace, 'SPARSKITAbsTolerance', CNST(1e-10), sk%abs_tolerance)
 
     !%Variable SPARSKITVerboseSolver
     !%Type logical
@@ -185,7 +238,7 @@ contains
     !%Description
     !% When set to yes, the SPARSKIT solver will write more detailed output.
     !%End
-    call parse_variable('SPARSKITVerboseSolver', .false., sk%verbose)
+    call parse_variable(namespace, 'SPARSKITVerboseSolver', .false., sk%verbose)
 
     ! size of the problem
     if(is_complex) then
@@ -286,6 +339,34 @@ contains
     POP_SUB(sparskit_solver_end)
   end subroutine sparskit_solver_end
 
+  ! ---------------------------------------------------------
+  subroutine sparskit_solver_copy(ski, sko)
+    type(sparskit_solver_t), intent(in)  :: ski
+    type(sparskit_solver_t), intent(out) :: sko
+
+    PUSH_SUB(sparskit_solver_end)
+    
+    sko%is_complex      = ski%is_complex
+    sko%size            = ski%size
+    sko%solver_type     = ski%solver_type
+    sko%krylov_size     = ski%krylov_size
+    sko%preconditioning = ski%preconditioning
+    sko%maxiter         = ski%maxiter
+    sko%used_iter       = ski%used_iter
+    sko%iter_out        = ski%iter_out
+    sko%residual_norm   = ski%residual_norm
+    sko%rel_tolerance   = ski%rel_tolerance
+    sko%abs_tolerance   = ski%abs_tolerance
+    call loct_allocatable_copy(sko%sk_work, ski%sk_work)
+    call loct_allocatable_copy(sko%sk_b,    ski%sk_b)
+    call loct_allocatable_copy(sko%sk_y,    ski%sk_y)
+    sko%ipar            = ski%ipar
+    sko%fpar            = ski%fpar
+    sko%verbose         = ski%verbose
+
+    POP_SUB(sparskit_solver_end)
+  end subroutine sparskit_solver_copy
+  
 #include "undef.F90"
 #include "real.F90"
 #include "sparskit_inc.F90"
@@ -293,8 +374,6 @@ contains
 #include "undef.F90"
 #include "complex.F90"
 #include "sparskit_inc.F90"
-
-#endif /* HAVE_SPARSKIT */
 
 ! distdot function for dot products is defined in mesh_function_oct_m
 

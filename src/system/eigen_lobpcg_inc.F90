@@ -22,17 +22,18 @@
 ! ---------------------------------------------------------
 !> Driver for the LOBPCG eigensolver that performs a per-block,
 !! per-k-point iteration.
-subroutine X(eigensolver_lobpcg)(gr, st, hm, pre, tol, niter, converged, ik, diff, block_size)
-  type(grid_t),           intent(in)    :: gr
-  type(states_t),         intent(inout) :: st
-  type(hamiltonian_t),    intent(in)    :: hm
-  type(preconditioner_t), intent(in)    :: pre
-  FLOAT,                  intent(in)    :: tol
-  integer,                intent(inout) :: niter
-  integer,                intent(in)    :: ik
-  integer,                intent(inout) :: converged
-  FLOAT,                  intent(out)   :: diff(:) !< (1:st%nst)
-  integer,                intent(in)    :: block_size
+subroutine X(eigensolver_lobpcg)(namespace, gr, st, hm, pre, tol, niter, converged, ik, diff, block_size)
+  type(namespace_t),        intent(in)    :: namespace
+  type(grid_t),             intent(in)    :: gr
+  type(states_elec_t),      intent(inout) :: st
+  type(hamiltonian_elec_t), intent(in)    :: hm
+  type(preconditioner_t),   intent(in)    :: pre
+  FLOAT,                    intent(in)    :: tol
+  integer,                  intent(inout) :: niter
+  integer,                  intent(in)    :: ik
+  integer,                  intent(inout) :: converged
+  FLOAT,                    intent(out)   :: diff(:) !< (1:st%nst)
+  integer,                  intent(in)    :: block_size
   
   integer            :: ib, psi_start, psi_end, constr_start, constr_end, bs, ist
   integer            :: n_matvec, conv, maxiter, iblock
@@ -74,7 +75,7 @@ subroutine X(eigensolver_lobpcg)(gr, st, hm, pre, tol, niter, converged, ik, dif
     SAFE_ALLOCATE(psi(1:gr%mesh%np_part, 1:st%d%dim, psi_start:psi_end))
 
     do ist = psi_start, psi_end
-      call states_get_state(st, gr%mesh, ist, ik, psi(:, :, ist))
+      call states_elec_get_state(st, gr%mesh, ist, ik, psi(:, :, ist))
     end do
     
     if(constr_end >= constr_start) then
@@ -82,21 +83,21 @@ subroutine X(eigensolver_lobpcg)(gr, st, hm, pre, tol, niter, converged, ik, dif
       SAFE_ALLOCATE(psi_constr(1:gr%mesh%np_part, 1:st%d%dim, constr_start:constr_end))
 
       do ist = constr_start, constr_end
-        call states_get_state(st, gr%mesh, ist, ik, psi_constr(:, :, ist))
+        call states_elec_get_state(st, gr%mesh, ist, ik, psi_constr(:, :, ist))
       end do
     
-      call X(lobpcg)(gr, st, hm, psi_start, psi_end, psi, constr_start, constr_end, &
+      call X(lobpcg)(namespace, gr, st, hm, psi_start, psi_end, psi, constr_start, constr_end, &
         ik, pre, tol, n_matvec, conv, diff, constr = psi_constr)
 
       SAFE_DEALLOCATE_A(psi_constr)
       
     else
-      call X(lobpcg)(gr, st, hm, psi_start, psi_end, psi, &
+      call X(lobpcg)(namespace, gr, st, hm, psi_start, psi_end, psi, &
         constr_start, constr_end, ik, pre, tol, n_matvec, conv, diff)
     end if
 
     do ist = psi_start, psi_end
-      call states_set_state(st, gr%mesh, ist, ik, psi(:, :, ist))
+      call states_elec_set_state(st, gr%mesh, ist, ik, psi(:, :, ist))
     end do
 
     SAFE_DEALLOCATE_A(psi)
@@ -137,23 +138,24 @@ end subroutine X(eigensolver_lobpcg)
 !!
 !! There is also a wiki page at
 !! http://octopus-code.org/wiki/Developers:LOBPCG
-subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end,  &
+subroutine X(lobpcg)(namespace, gr, st, hm, st_start, st_end, psi, constr_start, constr_end,  &
   ik, pre, tol, niter, converged, diff, constr)
-  type(grid_t),           intent(in)    :: gr
-  type(states_t),         intent(inout) :: st
-  type(hamiltonian_t),    intent(in)    :: hm
-  integer,                intent(in)    :: st_start
-  integer,                intent(in)    :: st_end
-  R_TYPE, target,         intent(inout) :: psi(:, :, st_start:) !< (gr%mesh%np_part, st%d%dim, st_start:st_end)
-  integer,                intent(in)    :: constr_start
-  integer,                intent(in)    :: constr_end
-  integer,                intent(in)    :: ik
-  type(preconditioner_t), intent(in)    :: pre
-  FLOAT,                  intent(in)    :: tol
-  integer,                intent(inout) :: niter
-  integer,                intent(out)   :: converged
-  FLOAT,                  intent(inout) :: diff(:) !< (1:st%nst)
-  R_TYPE, optional,       intent(in)    :: constr(:, :, constr_start:) !< (gr%mesh%np_part, st%d%dim, constr_start:constr_end)
+  type(namespace_t),        intent(in)    :: namespace
+  type(grid_t),             intent(in)    :: gr
+  type(states_elec_t),      intent(inout) :: st
+  type(hamiltonian_elec_t), intent(in)    :: hm
+  integer,                  intent(in)    :: st_start
+  integer,                  intent(in)    :: st_end
+  R_TYPE, target,           intent(inout) :: psi(:, :, st_start:) !< (gr%mesh%np_part, st%d%dim, st_start:st_end)
+  integer,                  intent(in)    :: constr_start
+  integer,                  intent(in)    :: constr_end
+  integer,                  intent(in)    :: ik
+  type(preconditioner_t),   intent(in)    :: pre
+  FLOAT,                    intent(in)    :: tol
+  integer,                  intent(inout) :: niter
+  integer,                  intent(out)   :: converged
+  FLOAT,                    intent(inout) :: diff(:) !< (1:st%nst)
+  R_TYPE, optional,         intent(in)    :: constr(:, :, constr_start:) !< (gr%mesh%np_part, st%d%dim, constr_start:constr_end)
 
   integer :: nst   !< Number of eigenstates (i.e. the blocksize).
   integer :: lnst  !< Number of local eigenstates.
@@ -169,7 +171,6 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
   integer, allocatable :: lall_constr(:)
 #endif
 
-  integer           :: hash_table_size
   logical           :: no_bof, found
   logical           :: explicit_gram
   R_TYPE            :: beta
@@ -188,7 +189,7 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
   R_TYPE, allocatable         :: gram_i(:, :)     !< Gram matrix for unit matrix.
   R_TYPE, allocatable         :: gram_block(:, :) !< Space to construct the Gram matrix blocks.
   R_TYPE, allocatable, target :: ritz_vec(:, :)   !< Ritz-vectors.
-  type(batch_t) :: psib, hpsib
+  type(wfs_elec_t) :: psib, hpsib
   logical :: there_are_constraints
   
   PUSH_SUB(X(lobpcg))
@@ -286,8 +287,7 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
   ! all_ev_inv: {1, ..., st%nst} -> {1, ..., nst} (the reverse of all_ev).
   SAFE_ALLOCATE(all_ev(1:nst))
   all_ev = uc
-  hash_table_size = max(3, st%nst) ! Minimum size of hash table is 3.
-  call iihash_init(all_ev_inv, hash_table_size)
+  call iihash_init(all_ev_inv)
   do ist = 1, nst
     call iihash_insert(all_ev_inv, all_ev(ist), ist)
   end do
@@ -303,17 +303,17 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
 
   if(no_bof) then
     message(1) = 'Problem: orthonormalization of initial vectors failed.'
-    call messages_warning(1)
+    call messages_warning(1, namespace=namespace)
   end if
 
   ! Get initial Ritz-values and -vectors.
-  call batch_init(psib, st%d%dim, st_start, st_end, psi(:, :, st_start:))
-  call batch_init(hpsib, st%d%dim, st_start, st_end, h_psi(:, :, st_start:))
+  call wfs_elec_init(psib, st%d%dim, st_start, st_end, psi(:, :, st_start:), ik)
+  call wfs_elec_init(hpsib, st%d%dim, st_start, st_end, h_psi(:, :, st_start:), ik)
 
-  call X(hamiltonian_apply_batch)(hm, gr%der, psib, hpsib, ik)
+  call X(hamiltonian_elec_apply_batch)(hm, namespace, gr%mesh, psib, hpsib)
   
-  call batch_end(psib)
-  call batch_end(hpsib)
+  call psib%end()
+  call hpsib%end()
 
   niter = niter+lnst
   call X(blockt_mul)(gr%mesh, st, st_start, psi, h_psi, gram_block, xpsi1 = all_ev, xpsi2 = all_ev, symm = .true.)
@@ -325,7 +325,7 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
 
   if(no_bof) then
     message(1) = 'Problem: Rayleigh-Ritz procedure for initial vectors failed.'
-    call messages_warning(1)
+    call messages_warning(1, namespace=namespace)
   end if
   call X(block_matr_mul)(psi, ritz_vec, tmp, xpsi = all_ev, xres = all_ev)
   call lalg_copy(gr%mesh%np_part, st%d%dim, lnst, tmp(:, :, st_start:), psi(:, :, st_start:))
@@ -367,7 +367,7 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
     ! Apply the preconditioner.
     do i = 1, lnuc
       ist = luc(i)
-      call X(preconditioner_apply)(pre, gr, hm, ik, res(:, :, ist), tmp(:, :, ist))
+      call X(preconditioner_apply)(pre, namespace, gr, hm, res(:, :, ist), tmp(:, :, ist), ik)
       call lalg_copy(gr%mesh%np_part, st%d%dim, tmp(:, :, ist), res(:, :, ist))
     end do
 
@@ -385,31 +385,36 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
       message(1) = 'Big problem: orthonormalization of residuals failed.'
       message(2) = 'Quitting eigensolver iteration.'
       write(message(3), '(a,i6)') 'in iteration #', iter
-      call messages_warning(3)
+      call messages_warning(3, namespace=namespace)
       exit iteration
     end if
 
     ! Apply Hamiltonian to residuals.
 
     if(lnuc > 0) then
-      call batch_init(psib, st%d%dim, lnuc)
-      call batch_init(hpsib, st%d%dim, lnuc)
+      call X(wfs_elec_init)(psib, st%d%dim, 1, lnuc, ubound(res, dim=1), ik)
+      call X(wfs_elec_init)(hpsib, st%d%dim, 1, lnuc, ubound(h_res, dim=1), ik)
     end if
     
     do i = 1, lnuc
       ist = luc(i)
-      call batch_add_state(psib, ist, res(:, :, ist))
-      call batch_add_state(hpsib, ist, h_res(:, :, ist))
+      call batch_set_state(psib, i, ubound(res, dim=1), res(:, :, ist))
+      call batch_set_state(hpsib, i, ubound(h_res, dim=1), h_res(:, :, ist))
     end do
 
     if(lnuc > 0) then
-      call X(hamiltonian_apply_batch)(hm, gr%der, psib, hpsib, ik)
+      call X(hamiltonian_elec_apply_batch)(hm, namespace, gr%mesh, psib, hpsib)
     end if
 
     niter = niter + lnuc
 
-    call batch_end(psib)
-    call batch_end(hpsib)
+    do i = 1, lnuc
+      ist = luc(i)
+      call batch_get_state(hpsib, i, ubound(h_res, dim=1), h_res(:, :, ist))
+    end do
+
+    call psib%end()
+    call hpsib%end()
       
     ! Orthonormalize conjugate directions in all but the first iteration.
     ! Since h_dir also has to be modified (to avoid a full calculation of
@@ -424,7 +429,7 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
       if(no_bof) then
         message(1) = 'Problem: orthonormalization of conjugate directions failed'
         write(message(2), '(a,i6)') 'in iteration #', iter
-        call messages_warning(2)
+        call messages_warning(2, namespace=namespace)
         ! Set directions to zero.
         ! FIXME: they should not be included in the subspace at all in this case.
         ! (the code has to be cleaned up anyway, so this can be done then).
@@ -511,13 +516,14 @@ subroutine X(lobpcg)(gr, st, hm, st_start, st_end, psi, constr_start, constr_end
 
     call profiling_in(C_PROFILING_LOBPCG_ESOLVE, 'LOBPCG_ESOLVE')
     no_bof = .false.
-    call lalg_lowest_geneigensolve(nst, nst+blks*nuc, gram_h, gram_i, eval, ritz_vec, bof = no_bof)
+    call lalg_lowest_geneigensolve(nst, nst+blks*nuc, gram_h, gram_i, eval, ritz_vec, &
+               preserve_mat=.false., bof = no_bof)
     call profiling_out(C_PROFILING_LOBPCG_ESOLVE)
 
     if(no_bof) then
       message(1) = 'Problem: Rayleigh-Ritz procedure failed'
       write(message(2), '(a,i6)') 'in iteration #', iter
-      call messages_warning(2)
+      call messages_warning(2, namespace=namespace)
       exit iteration
     end if
 
@@ -612,10 +618,12 @@ contains
     do ist = st_start, st_end
       iev = iihash_lookup(all_ev_inv, ist, found)
       ASSERT(found)
-     
-      forall(idim = 1:st%d%dim, ip = 1:gr%mesh%np) 
-        res(ip, idim, ist) = h_psi(ip, idim, ist) - eval(iev)*psi(ip, idim, ist)
-      end forall
+
+      do idim = 1, st%d%dim
+        do ip = 1, gr%mesh%np
+          res(ip, idim, ist) = h_psi(ip, idim, ist) - eval(iev)*psi(ip, idim, ist)
+        end do
+      end do
     end do
 
     POP_SUB(X(lobpcg).X(lobpcg_res))
@@ -662,20 +670,6 @@ contains
 
 
   ! ---------------------------------------------------------
-  !> Returns a mask with mask(i) = .false. for eigenvector i unconverged.
-  subroutine X(lobpcg_conv_mask)(mask)
-    logical, intent(out) :: mask(:)
-
-    PUSH_SUB(X(lobpcg).X(lobpcg_conv_mask))
-
-    mask     = .true.
-    mask(uc(1:nuc)) = .false.
-
-    POP_SUB(X(lobpcg).X(lobpcg_conv_mask))
-  end subroutine X(lobpcg_conv_mask)
-
-
-  ! ---------------------------------------------------------
   !> Orthonormalize the column vectors of vs.
   subroutine X(lobpcg_orth)(v_start, vs, chol_failure)
     integer,        intent(in)    :: v_start
@@ -689,7 +683,7 @@ contains
 
     chol_failure = .false.
     SAFE_ALLOCATE(vv(1:nuc, 1:nuc))
-    call states_blockt_mul(gr%mesh, st, v_start, v_start, vs, vs, vv, xpsi1 = uc(1:nuc), xpsi2 = uc(1:nuc), symm = .true.)
+    call states_elec_blockt_mul(gr%mesh, st, v_start, v_start, vs, vs, vv, xpsi1 = uc(1:nuc), xpsi2 = uc(1:nuc), symm = .true.)
     call profiling_in(C_PROFILING_LOBPCG_CHOL, 'LOBPCG_CHOL')
     call lalg_cholesky(nuc, vv, bof = chol_failure)
     call profiling_out(C_PROFILING_LOBPCG_CHOL)
@@ -722,7 +716,6 @@ contains
     integer, intent(in)    :: nidx
     integer, intent(in)    :: idx(:)
     
-    R_TYPE              :: det
     R_TYPE, allocatable :: tmp1(:, :), tmp2(:, :), tmp3(:, :)
     type(profile_t), save :: prof
 
@@ -733,13 +726,13 @@ contains
     SAFE_ALLOCATE(tmp2(1:nconstr, 1:nidx))
     SAFE_ALLOCATE(tmp3(1:nconstr, 1:nidx))
 
-    call states_blockt_mul(gr%mesh, st, constr_start, constr_start, &
+    call states_elec_blockt_mul(gr%mesh, st, constr_start, constr_start, &
       constr, constr, tmp1, xpsi1 = all_constr, xpsi2 = all_constr)
-    det = lalg_inverter(nconstr, tmp1, invert = .true.)
-    call states_blockt_mul(gr%mesh, st, constr_start, vs_start, &
+    call lalg_inverter(nconstr, tmp1)
+    call states_elec_blockt_mul(gr%mesh, st, constr_start, vs_start, &
       constr, vs, tmp2, xpsi1 = all_constr, xpsi2 = idx(1:nidx))
     call lalg_gemm(nconstr, nidx, nconstr, R_TOTYPE(M_ONE), tmp1, tmp2, R_TOTYPE(M_ZERO), tmp3)
-    call states_block_matr_mul_add(gr%mesh, st, -R_TOTYPE(M_ONE), constr_start, vs_start, &
+    call states_elec_block_matr_mul_add(gr%mesh, st, -R_TOTYPE(M_ONE), constr_start, vs_start, &
       constr, tmp3, R_TOTYPE(M_ONE), vs, xpsi = all_constr, xres = idx(1:nidx))
 
     SAFE_DEALLOCATE_A(tmp1)
@@ -762,7 +755,7 @@ contains
 
     PUSH_SUB(X(lobpcg).X(block_matr_mul_add))
 
-    call states_block_matr_mul_add(gr%mesh, st, alpha, st_start, st_start, &
+    call states_elec_block_matr_mul_add(gr%mesh, st, alpha, st_start, st_start, &
       psi, matr, beta, res, xpsi = xpsi, xres = xres)
 
     POP_SUB(X(lobpcg).X(block_matr_mul_add))
@@ -779,7 +772,7 @@ contains
 
     PUSH_SUB(X(lobpcg).X(block_matr_mul))
 
-    call states_block_matr_mul_add(gr%mesh, st, R_TOTYPE(M_ONE), st_start, st_start, &
+    call states_elec_block_matr_mul_add(gr%mesh, st, R_TOTYPE(M_ONE), st_start, st_start, &
       psi, matr, R_TOTYPE(M_ZERO), res, xpsi = xpsi, xres = xres)
 
     POP_SUB(X(lobpcg).X(block_matr_mul))
@@ -789,19 +782,19 @@ end subroutine X(lobpcg)
 
 ! ---------------------------------------------------------
 subroutine X(blockt_mul)(mesh, st, st_start, psi1, psi2, res, xpsi1, xpsi2, symm)
-  type(mesh_t),      intent(in)  :: mesh
-  type(states_t),    intent(in)  :: st
-  integer,           intent(in)  :: st_start
-  R_TYPE,            intent(in)  :: psi1(:, :, st_start:) !< (gr%mesh%np_part, st%d%dim, st_start:st_end)
-  R_TYPE,            intent(in)  :: psi2(:, :, st_start:) !< (gr%mesh%np_part, st%d%dim, st_start:st_end)
-  R_TYPE,            intent(out) :: res(:, :)
-  integer,           intent(in)  :: xpsi1(:)
-  integer,           intent(in)  :: xpsi2(:)
-  logical, optional, intent(in)  :: symm
+  type(mesh_t),        intent(in)  :: mesh
+  type(states_elec_t), intent(in)  :: st
+  integer,             intent(in)  :: st_start
+  R_TYPE,              intent(in)  :: psi1(:, :, st_start:) !< (gr%mesh%np_part, st%d%dim, st_start:st_end)
+  R_TYPE,              intent(in)  :: psi2(:, :, st_start:) !< (gr%mesh%np_part, st%d%dim, st_start:st_end)
+  R_TYPE,              intent(out) :: res(:, :)
+  integer,             intent(in)  :: xpsi1(:)
+  integer,             intent(in)  :: xpsi2(:)
+  logical, optional,   intent(in)  :: symm
   
   PUSH_SUB(X(blockt_mul))
   
-  call states_blockt_mul(mesh, st, st_start, st_start, psi1, psi2, res, xpsi1 = xpsi1, xpsi2 = xpsi2, symm = symm)
+  call states_elec_blockt_mul(mesh, st, st_start, st_start, psi1, psi2, res, xpsi1 = xpsi1, xpsi2 = xpsi2, symm = symm)
   
   POP_SUB(X(blockt_mul))
 end subroutine X(blockt_mul)

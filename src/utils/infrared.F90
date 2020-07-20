@@ -24,6 +24,7 @@
     use global_oct_m
     use io_oct_m
     use messages_oct_m
+    use namespace_oct_m
     use parser_oct_m
     use profiling_oct_m
     use simul_box_oct_m
@@ -52,26 +53,28 @@
 
     call getopt_end()
 
+    call parser_init()
+    
     call messages_init()
 
     call io_init()
 
-    call unit_system_init()
+    call unit_system_init(global_namespace)
 
     !These variables are documented in src/td/spectrum.F90
-    call parse_variable('TDMaxSteps', 1500, max_iter)
-    call parse_variable('PropagationSpectrumStartTime',  M_ZERO, start_time, units_inp%time)
-    call parse_variable('PropagationSpectrumEndTime',  -M_ONE, end_time, units_inp%time)
-    call parse_variable('PropagationSpectrumMaxEnergy', &
+    call parse_variable(global_namespace, 'TDMaxSteps', 1500, max_iter)
+    call parse_variable(global_namespace, 'PropagationSpectrumStartTime',  M_ZERO, start_time, units_inp%time)
+    call parse_variable(global_namespace, 'PropagationSpectrumEndTime',  -M_ONE, end_time, units_inp%time)
+    call parse_variable(global_namespace, 'PropagationSpectrumMaxEnergy', &
       units_from_atomic(units_inp%energy, units_to_atomic(unit_invcm, CNST(10000.0))), max_energy, units_inp%energy)
 
     dw = max_energy/(max_freq-M_ONE) !Initializes the wavevector step dw
 
     if (end_time < M_ZERO) end_time = huge(end_time)
 
-    call space_init(space)
-    call geometry_init(geo, space)
-    call simul_box_init(sb, geo, space)
+    call space_init(space, global_namespace)
+    call geometry_init(geo, global_namespace, space)
+    call simul_box_init(sb, global_namespace, geo, space)
 
       SAFE_ALLOCATE(dipole(0:max_iter+1, 1:3))
 
@@ -84,7 +87,7 @@
       end do
 
       !and print the spectrum
-      iunit = io_open('td.general/infrared', action='write')
+      iunit = io_open('td.general/infrared', global_namespace, action='write')
 
 100   FORMAT(100('#'))
 
@@ -114,6 +117,8 @@
 
     call io_end()
     call messages_end()
+
+    call parser_end()
     call global_end()
 
   contains
@@ -126,7 +131,7 @@
       PUSH_SUB(read_dipole)
 
       ! Opens the coordinates files.
-      iunit = io_open('td.general/multipoles', action='read')
+      iunit = io_open('td.general/multipoles', global_namespace, action='read')
 
       call io_skip_header(iunit)
 
@@ -143,8 +148,9 @@
         time(iter) =  units_to_atomic(units_out%time, time(iter))
 
         !dipole moment has unit of charge*length, charge has the same unit in both systems
-        forall(ii= 1: 3) dipole(iter, ii) = units_to_atomic(units_out%length, dipole(iter, ii)) 
-
+        do ii = 1, 3
+          dipole(iter, ii) = units_to_atomic(units_out%length, dipole(iter, ii))
+        end do
 
         if (ierr /= 0) then 
           iter = iter - 1 !last iteration is not valid
@@ -168,7 +174,7 @@
       end_iter = iter - 1
 
       write (message(1), '(a)') "Read dipole moment from '"// &
-        trim(io_workpath('td.general/multipoles'))//"'."
+        trim(io_workpath('td.general/multipoles', global_namespace))//"'."
       call messages_info(1)
 
       POP_SUB(read_dipole)

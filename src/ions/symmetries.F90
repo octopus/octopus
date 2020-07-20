@@ -24,6 +24,7 @@ module symmetries_oct_m
   use global_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
   use species_oct_m
@@ -47,8 +48,9 @@ module symmetries_oct_m
     symmetries_write_info
 
   type symmetries_t
-    type(symm_op_t), allocatable :: ops(:)
-    integer                  :: nops
+    private
+    type(symm_op_t), allocatable, public :: ops(:)
+    integer, public          :: nops
     FLOAT                    :: breakdir(1:3)
     integer                  :: space_group
     logical                  :: any_non_spherical
@@ -59,14 +61,14 @@ module symmetries_oct_m
     character(len=6)         :: schoenflies
   end type symmetries_t
 
-  real(8), parameter, public :: SYMPREC = CNST(1e-5)
+  FLOAT, parameter, public :: SYMPREC = CNST(1e-5)
 
   !> NOTE: unfortunately, these routines use global variables shared among them
   interface
     subroutine symmetries_finite_init(natoms, types, positions, verbosity, point_group)
       integer, intent(in)  :: natoms
       integer, intent(in)  :: types !< (natoms)
-      real(8), intent(in)  :: positions !< (3, natoms)
+      FLOAT,   intent(in)  :: positions !< (3, natoms)
       integer, intent(in)  :: verbosity
       integer, intent(out) :: point_group
     end subroutine symmetries_finite_init
@@ -87,8 +89,9 @@ module symmetries_oct_m
 
 contains
 
-  subroutine symmetries_init(this, geo, dim, periodic_dim, rlattice, klattice)
+  subroutine symmetries_init(this, namespace, geo, dim, periodic_dim, rlattice, klattice)
     type(symmetries_t),  intent(out) :: this
+    type(namespace_t),   intent(in)  :: namespace
     type(geometry_t),    intent(in)  :: geo
     integer,             intent(in)  :: dim
     integer,             intent(in)  :: periodic_dim
@@ -97,8 +100,8 @@ contains
 
     integer :: max_size, dim4syms
     integer :: idir, iatom, iop, verbosity, point_group
-    real(8) :: lattice(1:3, 1:3)
-    real(8), allocatable :: position(:, :)
+    FLOAT   :: lattice(1:3, 1:3)
+    FLOAT, allocatable :: position(:, :)
     integer, allocatable :: typs(:)
     type(block_t) :: blk
     type(symm_op_t) :: tmpop
@@ -106,7 +109,7 @@ contains
     logical :: found_identity, is_supercell
     integer                  :: fullnops
     integer, allocatable     :: rotation(:, :, :)
-    real(8), allocatable     :: translation(:, :)
+    FLOAT,   allocatable     :: translation(:, :)
     character(kind=c_char) :: c_symbol(11), c_schoenflies(7) 
     logical :: def_sym_comp
     
@@ -126,7 +129,7 @@ contains
 
     dim4syms = min(3,dim)
 
-    def_sym_comp = (geo%natoms < 100)
+    def_sym_comp = (geo%natoms < 100) .or. periodic_dim > 0
     def_sym_comp = def_sym_comp .and. dim == 3
     
     !%Variable SymmetriesCompute
@@ -138,8 +141,9 @@ contains
     !%
     !% By default, symmetries are computed when running in 3
     !% dimensions for systems with less than 100 atoms.
+    !% For periodic systems, the default is always true, irrespective of the number of atoms.
     !%End
-    call parse_variable('SymmetriesCompute', def_sym_comp, this%symmetries_compute)
+    call parse_variable(namespace, 'SymmetriesCompute', def_sym_comp, this%symmetries_compute)
 
     if(this%symmetries_compute .and. dim /= 3) then
       call messages_experimental('symmetries for non 3D systems')
@@ -166,16 +170,18 @@ contains
         SAFE_ALLOCATE(position(1:3, natoms))
         SAFE_ALLOCATE(typs(1:natoms))
 
-        forall(iatom = 1:geo%natoms)
+        do iatom = 1, geo%natoms
           position(1:3, iatom) = M_ZERO
           position(1:dim4syms, iatom) = geo%atom(iatom)%x(1:dim4syms)
           typs(iatom) = species_index(geo%atom(iatom)%species)
-        end forall
+        end do
 
         if (this%symmetries_compute) then
           call symmetries_finite_init(geo%natoms, typs(1), position(1, 1), verbosity, point_group)
-          call symmetries_finite_get_group_name(point_group, this%group_name)
-          call symmetries_finite_get_group_elements(point_group, this%group_elements)
+          if(point_group > -1) then
+            call symmetries_finite_get_group_name(point_group, this%group_name)
+            call symmetries_finite_get_group_elements(point_group, this%group_elements)
+          end if
           call symmetries_finite_end()
         end if
         SAFE_DEALLOCATE_A(position)
@@ -223,7 +229,7 @@ contains
       
       if(this%space_group == 0) then
         message(1) = "Symmetry analysis failed in spglib. Disabling symmetries."
-        call messages_warning(1)
+        call messages_warning(1, namespace=namespace)
 
         do iatom = 1, geo%natoms
           write(message(1),'(a,i6,a,3f12.6,a,3f12.6)') 'type ', typs(iatom), &
@@ -265,7 +271,7 @@ contains
       do iop = 1, fullnops
         if(all(rotation(1:3, 1:3, iop) == identity(1:3, 1:3))) then
           found_identity = .true.
-          if(any(abs(translation(1:3, iop)) > real(SYMPREC, REAL_PRECISION))) then
+          if(any(abs(translation(1:3, iop)) > TOFLOAT(SYMPREC))) then
             is_supercell = .true.
             write(message(1),'(a,3f12.6)') 'Identity has a fractional translation ', translation(1:3, iop)
             call messages_info(1)
@@ -274,7 +280,7 @@ contains
       end do
       if(.not. found_identity) then
         message(1) = "Symmetries internal error: Identity is missing from symmetry operations."
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
     
       if(is_supercell) then
@@ -298,7 +304,7 @@ contains
 
       this%breakdir(1:3) = M_ZERO
 
-      if(parse_block('SymmetryBreakDir', blk) == 0) then
+      if(parse_block(namespace, 'SymmetryBreakDir', blk) == 0) then
 
         do idir = 1, dim4syms
           call parse_block_float(blk, 0, idir - 1, this%breakdir(idir))
@@ -317,14 +323,13 @@ contains
       do iop = 1, fullnops
         call symm_op_init(tmpop, rotation(1:3, 1:3, iop), rlattice(1:dim4syms,1:dim4syms), &
                               klattice(1:dim4syms,1:dim4syms), dim4syms, &
-                              real(translation(1:3, iop), REAL_PRECISION))
+                              TOFLOAT(translation(1:3, iop)))
 
-        if(symm_op_invariant_cart(tmpop, this%breakdir, real(SYMPREC, REAL_PRECISION)) &
-         .and. .not. symm_op_has_translation(tmpop, real(SYMPREC, REAL_PRECISION))) then
+        if(symm_op_invariant_cart(tmpop, this%breakdir, TOFLOAT(SYMPREC)) &
+         .and. .not. symm_op_has_translation(tmpop, TOFLOAT(SYMPREC))) then
           this%nops = this%nops + 1
           call symm_op_copy(tmpop, this%ops(this%nops))
         end if
-        call symm_op_end(tmpop)
       end do
 
       SAFE_DEALLOCATE_A(position)
@@ -334,7 +339,7 @@ contains
 
     end if
 
-    call symmetries_write_info(this, dim, periodic_dim, stdout)
+    call symmetries_write_info(this, namespace, dim, periodic_dim, stdout)
 
     POP_SUB(symmetries_init)
     
@@ -406,17 +411,9 @@ contains
   subroutine symmetries_end(this)
     type(symmetries_t),  intent(inout) :: this
 
-    integer :: iop
-
     PUSH_SUB(symmetries_end)
 
-    if(allocated(this%ops)) then
-      do iop = 1, this%nops
-        call symm_op_end(this%ops(iop))
-      end do
-
-      SAFE_DEALLOCATE_A(this%ops)
-    end if
+    SAFE_DEALLOCATE_A(this%ops)
 
     POP_SUB(symmetries_end)
   end subroutine symmetries_end
@@ -479,8 +476,9 @@ contains
   end function symmetries_identity_index
 
   ! ---------------------------------------------------------
-  subroutine symmetries_write_info(this, dim, periodic_dim, iunit)
+  subroutine symmetries_write_info(this, namespace, dim, periodic_dim, iunit)
     type(symmetries_t),    intent(in) :: this
+    type(namespace_t),     intent(in) :: namespace
     integer,               intent(in) :: dim, periodic_dim
     integer,               intent(in) :: iunit
     
@@ -488,18 +486,18 @@ contains
  
     PUSH_SUB(symmetries_write_info)
     
-    call messages_print_stress(iunit, 'Symmetries')
+    call messages_print_stress(iunit, 'Symmetries', namespace=namespace)
 
     if(this%any_non_spherical) then
       message(1) = "Symmetries are disabled since non-spherically symmetric species may be present."
       call messages_info(1,iunit = iunit)
-      call messages_print_stress(iunit)
+      call messages_print_stress(iunit, namespace=namespace)
     end if
 
     if(.not. this%symmetries_compute) then
       message(1) = "Symmetries have been disabled by SymmetriesCompute = false."
       call messages_info(1,iunit = iunit)
-      call messages_print_stress(iunit)
+      call messages_print_stress(iunit, namespace=namespace)
       POP_SUB(symmetries_write_info)
       return
     end if
@@ -538,7 +536,7 @@ contains
       write(message(1), '(a,i5,a)') 'Info: The system has ', this%nops, ' symmetries that can be used.'
       call messages_info(iunit = iunit)
     end if
-    call messages_print_stress(iunit)
+    call messages_print_stress(iunit, namespace=namespace)
 
     POP_SUB(symmetries_write_info)
   end subroutine symmetries_write_info

@@ -29,10 +29,11 @@ GuessMagnetDensity = user_defined
 
 ConvRelDens = 0.0
 ConvAbsEv = 1e-6
-ConvAbsForces = 1e-6
+ConvForce = 1e-6
 
 ExperimentalFeatures = yes
 
 FilterPotentials = filter_none
 
 MixField = density
+StatesPack = yes

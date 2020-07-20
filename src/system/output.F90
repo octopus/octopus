@@ -32,13 +32,15 @@ module output_oct_m
   use etsf_io
   use etsf_io_tools
 #endif
+  use exchange_operator_oct_m
   use fft_oct_m
   use fourier_shell_oct_m
   use fourier_space_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
-  use hamiltonian_oct_m
+  use hamiltonian_elec_oct_m
+  use hamiltonian_mxll_oct_m
   use io_oct_m
   use io_function_oct_m
   use kick_oct_m
@@ -54,18 +56,22 @@ module output_oct_m
   use messages_oct_m
   use modelmb_density_matrix_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use orbitalset_oct_m
   use output_me_oct_m
   use parser_oct_m
   use periodic_copy_oct_m
+  use poisson_oct_m
   use profiling_oct_m
   use simul_box_oct_m
   use smear_oct_m
   use string_oct_m
   use species_oct_m
-  use states_oct_m
-  use states_dim_oct_m
-  use states_io_oct_m
+  use states_abst_oct_m
+  use states_elec_oct_m
+  use states_elec_dim_oct_m
+  use states_elec_io_oct_m
+  use states_mxll_oct_m
   use submesh_oct_m
   use symm_op_oct_m
   use symmetries_oct_m
@@ -80,6 +86,8 @@ module output_oct_m
 #endif
   use young_oct_m
   use xc_oct_m
+  use xc_oep_oct_m
+  use XC_F90(lib_m)
 
   implicit none
 
@@ -99,10 +107,13 @@ module output_oct_m
     zoutput_lr,          &
     output_kick,         &
     output_scalar_pot,   &
-    output_needs_current
-
+    output_needs_current, &
+    output_need_exchange,&
+    output_mxll_init,    &
+    output_mxll
 
   type output_bgw_t
+    private
     integer           :: nbands
     integer           :: vxc_diag_nmin
     integer           :: vxc_diag_nmax
@@ -118,20 +129,21 @@ module output_oct_m
   end type output_bgw_t
 
   type output_t
+    private
     !> General output variables:
-    integer(8) :: what                !< what to output
-    integer(8) :: whatBZ              !< what to output - for k-point resolved output
-    integer(8) :: what_lda_u          !< what to output for the LDA+U part
-    integer(8) :: how                 !< how to output
+    integer(8), public :: what                !< what to output
+    integer(8), public :: whatBZ              !< what to output - for k-point resolved output
+    integer(8), public :: what_lda_u          !< what to output for the LDA+U part
+    integer(8), public :: how                 !< how to output
 
     type(output_me_t) :: me        !< this handles the output of matrix elements
 
     !> These variables fine-tune the output for some of the possible output options:
-    integer :: output_interval     !< output every iter
-    integer :: restart_write_interval
-    logical :: duringscf
+    integer, public :: output_interval     !< output every iter
+    integer, public :: restart_write_interval
+    logical, public :: duringscf
     character(len=80) :: wfs_list  !< If output_wfs, this list decides which wavefunctions to print.
-    character(len=MAX_PATH_LEN) :: iter_dir  !< The folder name, if information will be output while iterating.
+    character(len=MAX_PATH_LEN), public :: iter_dir  !< The folder name, if information will be output while iterating.
 
     type(mesh_plane_t) :: plane    !< This is to calculate the current flow across a plane
     type(mesh_line_t)  :: line     !< or through a line (in 2D)
@@ -145,12 +157,13 @@ module output_oct_m
   
 contains
 
-  subroutine output_init(outp, sb, nst, ks, states_are_real)
-    type(output_t),       intent(out)   :: outp
-    type(simul_box_t),    intent(in)    :: sb
-    integer,              intent(in)    :: nst
-    type(v_ks_t),         intent(inout) :: ks
-    logical,              intent(in)    :: states_are_real
+  subroutine output_init(outp, namespace, sb, st, nst, ks)
+    type(output_t),            intent(out)   :: outp
+    type(namespace_t),         intent(in)    :: namespace
+    type(simul_box_t),         intent(in)    :: sb
+    type(states_elec_t),       intent(in)    :: st
+    integer,                   intent(in)    :: nst
+    type(v_ks_t),              intent(inout) :: ks
 
     type(block_t) :: blk
     FLOAT :: norm
@@ -286,8 +299,11 @@ contains
     !%Option heat_current bit(33)
     !% Outputs the total heat current density. The output file is
     !% called <tt>heat_current-</tt>.
+    !%Option photon_correlator bit(34)
+    !% Outputs the electron-photon correlation function. The output file is
+    !% called <tt>photon_correlator</tt>.
     !%End
-    call parse_variable('Output', 0, outp%what)
+    call parse_variable(namespace, 'Output', 0, outp%what)
 
     if(bitand(outp%what, OPTION__OUTPUT__WFS_FOURIER) /= 0) then
       call messages_experimental("Wave-functions in Fourier space")
@@ -298,12 +314,12 @@ contains
        if(sb%dim /= 2 .and. sb%dim /= 3) then
          outp%what = bitand(outp%what, not(OPTION__OUTPUT__ELF + OPTION__OUTPUT__ELF_BASINS))
          write(message(1), '(a)') 'Cannot calculate ELF except in 2D and 3D.'
-         call messages_warning(1)
+         call messages_warning(1, namespace=namespace)
        end if
     end if
 
     if(.not.varinfo_valid_option('Output', outp%what, is_flag=.true.)) then
-      call messages_input_error('Output')
+      call messages_input_error(namespace, 'Output')
     end if
 
     if(bitand(outp%what, OPTION__OUTPUT__MMB_WFS) /= 0) then
@@ -336,10 +352,10 @@ contains
 
       write(nst_string,'(i6)') nst
       write(default,'(a,a)') "1-", trim(adjustl(nst_string))
-      call parse_variable('OutputWfsNumber', default, outp%wfs_list)
+      call parse_variable(namespace, 'OutputWfsNumber', default, outp%wfs_list)
     end if
 
-    if(parse_block('CurrentThroughPlane', blk) == 0) then
+    if(parse_block(namespace, 'CurrentThroughPlane', blk) == 0) then
       outp%what = ior(outp%what, OPTION__OUTPUT__J_FLOW)
 
       !%Variable CurrentThroughPlane
@@ -411,14 +427,14 @@ contains
         norm = sqrt(sum(outp%plane%u(1:3)**2))
         if(norm < M_EPSILON) then
           write(message(1), '(a)') 'u-vector for CurrentThroughPlane cannot have norm zero.'
-          call messages_fatal(1)
+          call messages_fatal(1, namespace=namespace)
         end if
         outp%plane%u(1:3) = outp%plane%u(1:3) / norm
 
         norm = sqrt(sum(outp%plane%v(1:3)**2))
         if(norm < M_EPSILON) then
           write(message(1), '(a)') 'v-vector for CurrentThroughPlane cannot have norm zero.'
-          call messages_fatal(1)
+          call messages_fatal(1, namespace=namespace)
         end if
         outp%plane%v(1:3) = outp%plane%v(1:3) / norm
 
@@ -439,7 +455,7 @@ contains
         norm = sqrt(sum(outp%line%u(1:2)**2))
         if(norm < M_EPSILON) then
           write(message(1), '(a)') 'u-vector for CurrentThroughPlane cannot have norm zero.'
-          call messages_fatal(1)
+          call messages_fatal(1, namespace=namespace)
         end if
         outp%line%u(1:2) = outp%line%u(1:2) / norm
 
@@ -452,18 +468,20 @@ contains
 
       case default
 
-        call messages_not_implemented("CurrentThroughPlane for 4D or higher")
+        call messages_not_implemented("CurrentThroughPlane for 4D or higher", namespace=namespace)
 
       end select
       call parse_block_end(blk)
     end if
 
     if(bitand(outp%what, OPTION__OUTPUT__MATRIX_ELEMENTS) /= 0) then
-      call output_me_init(outp%me, sb)
+      call output_me_init(outp%me, namespace, sb, st, nst)
+    else
+      outp%me%what = 0
     end if
 
     if(bitand(outp%what, OPTION__OUTPUT__BERKELEYGW) /= 0) then
-      call output_berkeleygw_init(nst, outp%bgw, sb%periodic_dim)
+      call output_berkeleygw_init(nst, namespace, outp%bgw, sb%periodic_dim)
     end if
 
     !%Variable OutputLDA_U
@@ -498,7 +516,7 @@ contains
     !% These parameters are not determined self-consistently, but are taken from the 
     !% occupation matrices and Coulomb integrals comming from a standard +U calculation.
     !%End
-    call parse_variable('OutputLDA_U', 0_8, outp%what_lda_u)
+    call parse_variable(namespace, 'OutputLDA_U', 0_8, outp%what_lda_u)
 
     !%Variable OutputInterval
     !%Type integer
@@ -514,11 +532,11 @@ contains
     !% Must be >= 0. If it is 0, then no output is written. For <tt>gs</tt> and <tt>unocc</tt>
     !% calculations, <tt>OutputDuringSCF</tt> must be set too for this output to be produced.
     !%End
-    call parse_variable('OutputInterval', 50, outp%output_interval)
-    call messages_obsolete_variable("OutputEvery", "OutputInterval/RestartWriteInterval")
+    call parse_variable(namespace, 'OutputInterval', 50, outp%output_interval)
+    call messages_obsolete_variable(namespace, 'OutputEvery', 'OutputInterval/RestartWriteInterval')
     if(outp%output_interval < 0) then
       message(1) = "OutputInterval must be >= 0."
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
 
     !%Variable OutputDuringSCF
@@ -529,7 +547,7 @@ contains
     !% During <tt>gs</tt> and <tt>unocc</tt> runs, if this variable is set to yes, 
     !% output will be written after every <tt>OutputInterval</tt> iterations.
     !%End
-    call parse_variable('OutputDuringSCF', .false., outp%duringscf) 
+    call parse_variable(namespace, 'OutputDuringSCF', .false., outp%duringscf) 
 
     !%Variable RestartWriteInterval
     !%Type integer
@@ -542,10 +560,10 @@ contains
     !% controlled by the <tt>TDOutput</tt> variable. (Other output is
     !% controlled by <tt>OutputInterval</tt>.)
     !%End
-    call parse_variable('RestartWriteInterval', 50, outp%restart_write_interval)
+    call parse_variable(namespace, 'RestartWriteInterval', 50, outp%restart_write_interval)
     if(outp%restart_write_interval <= 0) then
       message(1) = "RestartWriteInterval must be > 0."
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
 
     ! these kinds of Output do not have a how
@@ -575,10 +593,10 @@ contains
     !%Option density_kpt bit(1)
     !% Outputs the electronic density resolved in momentum space. 
     !%End
-    call parse_variable('Output_KPT', 0_8, outp%whatBZ)
+    call parse_variable(namespace, 'Output_KPT', 0_8, outp%whatBZ)
 
     if(.not.varinfo_valid_option('Output_KPT', outp%whatBZ, is_flag=.true.)) then
-      call messages_input_error('Output_KPT')
+      call messages_input_error(namespace, 'Output_KPT')
     end if
 
     if(bitand(outp%whatBZ, OPTION__OUTPUT_KPT__CURRENT_KPT) /= 0) then
@@ -596,20 +614,20 @@ contains
     !% This information is written while iterating <tt>CalculationMode = gs</tt>, <tt>unocc</tt>, or <tt>td</tt>,
     !% according to <tt>OutputInterval</tt>, and has nothing to do with the restart information.
     !%End
-    call parse_variable('OutputIterDir', "output_iter", outp%iter_dir)
+    call parse_variable(namespace, 'OutputIterDir', "output_iter", outp%iter_dir)
     if(outp%what + outp%whatBZ + outp%what_lda_u /= 0 .and. outp%output_interval > 0) then
-      call io_mkdir(outp%iter_dir)
+      call io_mkdir(outp%iter_dir, namespace)
     end if
     call add_last_slash(outp%iter_dir)
 
     ! we are using a what that has a how.
     if(bitand(outp%what, not(what_no_how)) /= 0 .or. outp%whatBZ /= 0 .or. bitand(outp%what_lda_u, not(what_no_how_u)) /= 0) then
-      call io_function_read_how(sb, outp%how)
+      call io_function_read_how(sb, namespace, outp%how)
     else
       outp%how = 0
     end if
 
-    ! At this point, we don't know whether the states will be real or complex.
+    ! At this point, we don`t know whether the states will be real or complex.
     ! We therefore pass .false. to states_are_real, and need to check for real states later.
 
     if(output_needs_current(outp, .false.)) then
@@ -634,14 +652,15 @@ contains
   end subroutine output_end
 
   ! ---------------------------------------------------------
-  subroutine output_all(outp, gr, geo, st, hm, ks, dir)
-    type(grid_t),         intent(inout) :: gr
-    type(geometry_t),     intent(in)    :: geo
-    type(states_t),       intent(inout) :: st
-    type(hamiltonian_t),  intent(inout) :: hm
-    type(v_ks_t),         intent(in)    :: ks
-    type(output_t),       intent(in)    :: outp
-    character(len=*),     intent(in)    :: dir
+  subroutine output_all(outp, namespace, dir, gr, geo, st, hm, ks)
+    type(output_t),           intent(in)    :: outp
+    type(namespace_t),        intent(in)    :: namespace
+    character(len=*),         intent(in)    :: dir
+    type(grid_t),             intent(in)    :: gr
+    type(geometry_t),         intent(in)    :: geo
+    type(states_elec_t),      intent(inout) :: st
+    type(hamiltonian_elec_t), intent(inout) :: hm
+    type(v_ks_t),             intent(inout) :: ks
 
     integer :: idir, ierr
     character(len=80) :: fname
@@ -653,72 +672,84 @@ contains
     if(outp%what+outp%whatBZ+outp%what_lda_u /= 0) then
       message(1) = "Info: Writing output to " // trim(dir)
       call messages_info(1)
-      call io_mkdir(dir)
+      call io_mkdir(dir, namespace)
     end if
 
     if(bitand(outp%what, OPTION__OUTPUT__MESH_R) /= 0) then
       do idir = 1, gr%mesh%sb%dim
         write(fname, '(a,a)') 'mesh_r-', index2axis(idir)
-        call dio_function_output(outp%how, dir, fname, gr%mesh, gr%mesh%x(:,idir), &
+        call dio_function_output(outp%how, dir, fname, namespace, gr%mesh, gr%mesh%x(:,idir), &
           units_out%length, ierr, geo = geo)
       end do
     end if
     
-    call output_states(st, gr, geo, hm, dir, outp)
-    call output_hamiltonian(hm, st, gr%der, dir, outp, geo, gr, st%st_kpt_mpi_grp)
-    call output_localization_funct(st, hm, gr, dir, outp, geo)
-    call output_current_flow(gr, st, dir, outp)
+    call output_states(outp, namespace, dir, st, gr, geo, hm)
+    call output_hamiltonian(outp, namespace, dir, hm, st, gr%der, geo, gr, st%st_kpt_mpi_grp)
+    call output_localization_funct(outp, namespace, dir, st, hm, gr, geo)
+    call output_current_flow(outp, namespace, dir, gr, st)
 
     if(bitand(outp%what, OPTION__OUTPUT__GEOMETRY) /= 0) then
       if(bitand(outp%how, OPTION__OUTPUTFORMAT__XCRYSDEN) /= 0) then        
-        call write_xsf_geometry_file(dir, "geometry", geo, gr%mesh)
+        call write_xsf_geometry_file(dir, "geometry", geo, gr%mesh, namespace)
       end if
       if(bitand(outp%how, OPTION__OUTPUTFORMAT__XYZ) /= 0) then
-        call geometry_write_xyz(geo, trim(dir)//'/geometry')
-        if(simul_box_is_periodic(gr%sb))  call periodic_write_crystal(gr%sb, geo, dir)
+        call geometry_write_xyz(geo, trim(dir)//'/geometry', namespace)
+        if(simul_box_is_periodic(gr%sb))  call periodic_write_crystal(gr%sb, geo, dir, namespace)
       end if
       if(bitand(outp%how, OPTION__OUTPUTFORMAT__VTK) /= 0) then
-        call vtk_output_geometry(trim(dir)//'/geometry', geo)
+        call vtk_output_geometry(trim(dir)//'/geometry', geo, namespace)
       end if     
     end if
 
     if(bitand(outp%what, OPTION__OUTPUT__FORCES) /= 0) then
       if(bitand(outp%how, OPTION__OUTPUTFORMAT__BILD) /= 0) then
-        call write_bild_forces_file(dir, "forces", geo, gr%mesh)
+        call write_bild_forces_file(dir, "forces", geo, gr%mesh, namespace)
       else
-        call write_xsf_geometry_file(dir, "forces", geo, gr%mesh, write_forces = .true.)
+        call write_xsf_geometry_file(dir, "forces", geo, gr%mesh, namespace, write_forces = .true.)
       end if
     end if
 
     if(bitand(outp%what, OPTION__OUTPUT__MATRIX_ELEMENTS) /= 0) then
-      call output_me(outp%me, dir, st, gr, geo, hm)
+      call output_me(outp%me, namespace, dir, st, gr, geo, hm)
     end if
 
     if (bitand(outp%how, OPTION__OUTPUTFORMAT__ETSF) /= 0) then
-      call output_etsf(st, gr, geo, dir, outp)
+      call output_etsf(outp, namespace, dir, st, gr, geo)
     end if
 
     if (bitand(outp%what, OPTION__OUTPUT__BERKELEYGW) /= 0) then
-      call output_berkeleygw(outp%bgw, dir, st, gr, ks, hm, geo)
+      call output_berkeleygw(outp%bgw, namespace, dir, st, gr, ks, hm, geo)
     end if
     
-    call output_energy_density(hm, ks, st, gr%der, dir, outp, geo, gr, st%st_kpt_mpi_grp)
+    call output_energy_density(outp, namespace, dir, hm, ks, st, gr%der, geo, gr, st%st_kpt_mpi_grp)
 
     if(hm%lda_u_level /= DFT_U_NONE) then
       if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__OCC_MATRICES) /= 0)&
-        call lda_u_write_occupation_matrices(dir, hm%lda_u, st)
+        call lda_u_write_occupation_matrices(dir, hm%lda_u, st, namespace)
 
       if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__EFFECTIVEU) /= 0)&
-        call lda_u_write_effectiveU(dir, hm%lda_u)
+        call lda_u_write_effectiveU(dir, hm%lda_u, namespace)
 
       if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__MAGNETIZATION) /= 0)&
-        call lda_u_write_magnetization(dir, hm%lda_u, geo, gr%mesh, st)
+        call lda_u_write_magnetization(dir, hm%lda_u, geo, gr%mesh, st, namespace)
 
       if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__LOCAL_ORBITALS) /= 0)&
-        call output_dftu_orbitals(dir, hm%lda_u, outp, st, gr%mesh, geo, associated(hm%hm_base%phase))
+        call output_dftu_orbitals(outp, dir, namespace, hm%lda_u, st, gr%mesh, geo, associated(hm%hm_base%phase))
 
       if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__KANAMORIU) /= 0)&
-        call lda_u_write_kanamoriU(dir, st, hm%lda_u)
+        call lda_u_write_kanamoriU(dir, st, hm%lda_u, namespace)
+    end if
+    
+    if (bitand(ks%xc_family, XC_FAMILY_OEP) /= 0 .and. ks%theory_level /= HARTREE_FOCK) then
+      if (ks%oep%level == XC_OEP_FULL) then
+        if (ks%oep%has_photons) then
+          if(bitand(outp%what, OPTION__OUTPUT__PHOTON_CORRELATOR) /= 0) then
+            write(fname, '(a)') 'photon_correlator'
+            call dio_function_output(outp%how, dir, trim(fname), namespace, gr%mesh, ks%oep%pt%correlator(:,1), &
+              units_out%length, ierr, geo = geo)
+          end if
+        end if
+      end if
     end if
 
     call profiling_out(prof)
@@ -727,13 +758,14 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine output_localization_funct(st, hm, gr, dir, outp, geo)
-    type(states_t),         intent(inout) :: st
-    type(hamiltonian_t),    intent(in)    :: hm
-    type(grid_t),           intent(inout) :: gr
-    character(len=*),       intent(in)    :: dir
-    type(output_t),         intent(in)    :: outp
-    type(geometry_t),       intent(in)    :: geo
+  subroutine output_localization_funct(outp, namespace, dir, st, hm, gr, geo)
+    type(output_t),           intent(in)    :: outp
+    type(namespace_t),        intent(in)    :: namespace
+    character(len=*),         intent(in)    :: dir
+    type(states_elec_t),      intent(inout) :: st
+    type(hamiltonian_elec_t), intent(in)    :: hm
+    type(grid_t),             intent(in)    :: gr
+    type(geometry_t),         intent(in)    :: geo
 
     FLOAT, allocatable :: f_loc(:,:)
     character(len=256) :: fname
@@ -759,14 +791,14 @@ contains
       ! output ELF in real space
       if(bitand(outp%what, OPTION__OUTPUT__ELF) /= 0) then
         write(fname, '(a)') 'elf_rs'
-        call dio_function_output(outp%how, dir, trim(fname), gr%mesh, &
+        call dio_function_output(outp%how, dir, trim(fname), namespace, gr%mesh, &
           f_loc(:,imax), unit_one, ierr, geo = geo, grp = mpi_grp)
         ! this quantity is dimensionless
 
         if(st%d%ispin /= UNPOLARIZED) then
           do is = 1, 2
             write(fname, '(a,i1)') 'elf_rs-sp', is
-            call dio_function_output(outp%how, dir, trim(fname), gr%mesh, &
+            call dio_function_output(outp%how, dir, trim(fname), namespace, gr%mesh, &
               f_loc(:, is), unit_one, ierr, geo = geo, grp = mpi_grp)
             ! this quantity is dimensionless
           end do
@@ -786,7 +818,7 @@ contains
         else
           write(fname, '(a,i1)') 'bader-sp', is
         end if
-        call dio_function_output(outp%how, dir, trim(fname), gr%mesh, &
+        call dio_function_output(outp%how, dir, trim(fname), namespace, gr%mesh, &
           f_loc(:,is), units_out%length**(-2 - gr%sb%dim), ierr, &
           geo = geo, grp = mpi_grp)
 
@@ -802,7 +834,7 @@ contains
     ! Now the pressure
     if(bitand(outp%what, OPTION__OUTPUT__EL_PRESSURE) /= 0) then
       call calc_electronic_pressure(st, hm, gr, f_loc(:,1))
-      call dio_function_output(outp%how, dir, "el_pressure", gr%mesh, &
+      call dio_function_output(outp%how, dir, "el_pressure", namespace, gr%mesh, &
         f_loc(:,1), unit_one, ierr, geo = geo, grp = mpi_grp)
       ! this quantity is dimensionless
     end if
@@ -826,12 +858,12 @@ contains
       call basins_init(basins, gr%mesh)
       call basins_analyze(basins, gr%mesh, ff(:), st%rho, CNST(0.01))
 
-      call dio_function_output(outp%how, dir, trim(filename), gr%mesh, &
-        real(basins%map, REAL_PRECISION), unit_one, ierr, geo = geo, grp = mpi_grp)
+      call dio_function_output(outp%how, dir, trim(filename), namespace, gr%mesh, &
+        TOFLOAT(basins%map), unit_one, ierr, geo = geo, grp = mpi_grp)
       ! this quantity is dimensionless
 
       write(fname,'(4a)') trim(dir), '/', trim(filename), '.info'
-      iunit = io_open(file=trim(fname), action = 'write')
+      iunit = io_open(trim(fname), namespace, action = 'write')
       call basins_write(basins, gr%mesh, iunit)
       call io_close(iunit)
 
@@ -845,9 +877,9 @@ contains
   
   ! ---------------------------------------------------------
   subroutine calc_electronic_pressure(st, hm, gr, pressure)
-    type(states_t),         intent(inout) :: st
-    type(hamiltonian_t),    intent(in)    :: hm
-    type(grid_t),           intent(inout) :: gr
+    type(states_elec_t),    intent(inout) :: st
+    type(hamiltonian_elec_t),    intent(in)    :: hm
+    type(grid_t),           intent(in)    :: gr
     FLOAT,                  intent(out)   :: pressure(:)
 
     FLOAT, allocatable :: rho(:,:), lrho(:), tau(:,:)
@@ -862,7 +894,7 @@ contains
 
     rho = M_ZERO
     call density_calc(st, gr, rho)
-    call states_calc_quantities(gr%der, st, .false., kinetic_energy_density = tau)
+    call states_elec_calc_quantities(gr%der, st, .false., kinetic_energy_density = tau)
 
     pressure = M_ZERO
     do is = 1, st%d%spin_channels
@@ -891,16 +923,17 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine output_energy_density(hm, ks, st, der, dir, outp, geo, gr, grp)
-    type(hamiltonian_t),       intent(in)    :: hm
-    type(v_ks_t),              intent(in)    :: ks
-    type(states_t),            intent(inout) :: st
-    type(derivatives_t),       intent(inout) :: der
-    character(len=*),          intent(in)    :: dir
-    type(output_t),            intent(in)    :: outp
-    type(geometry_t),          intent(in)    :: geo
-    type(grid_t),              intent(in)    :: gr
-    type(mpi_grp_t), optional, intent(in)    :: grp !< the group that shares the same data, must contain the domains group
+  subroutine output_energy_density(outp, namespace, dir, hm, ks, st, der, geo, gr, grp)
+    type(output_t),            intent(in) :: outp
+    type(namespace_t),         intent(in) :: namespace
+    character(len=*),          intent(in) :: dir
+    type(hamiltonian_elec_t),  intent(in) :: hm
+    type(v_ks_t),           intent(inout) :: ks
+    type(states_elec_t),       intent(in) :: st
+    type(derivatives_t),       intent(in) :: der
+    type(geometry_t),          intent(in) :: geo
+    type(grid_t),              intent(in) :: gr
+    type(mpi_grp_t), optional, intent(in) :: grp !< the group that shares the same data, must contain the domains group
 
     integer :: is, ierr, ip
     character(len=MAX_PATH_LEN) :: fname
@@ -909,24 +942,28 @@ contains
     FLOAT, allocatable :: ex_density(:)
     FLOAT, allocatable :: ec_density(:)
 
-    PUSH_SUB(output_hamiltonian)
+    PUSH_SUB(output_energy_density)
    
     if(bitand(outp%what, OPTION__OUTPUT__ENERGY_DENSITY) /= 0) then
       fn_unit = units_out%energy*units_out%length**(-gr%mesh%sb%dim)
       SAFE_ALLOCATE(energy_density(1:gr%mesh%np, 1:st%d%nspin))
 
       ! the kinetic energy density
-      call states_calc_quantities(gr%der, st, .true., kinetic_energy_density = energy_density)
+      call states_elec_calc_quantities(gr%der, st, .true., kinetic_energy_density = energy_density)
 
       ! the external potential energy density
-      forall(ip = 1:gr%fine%mesh%np, is = 1:st%d%nspin)
-        energy_density(ip, is) = energy_density(ip, is) + st%rho(ip, is)*hm%ep%vpsl(ip)
-      end forall
+      do is = 1, st%d%nspin
+        do ip = 1, gr%fine%mesh%np
+          energy_density(ip, is) = energy_density(ip, is) + st%rho(ip, is)*hm%ep%vpsl(ip)
+        end do
+      end do
 
       ! the hartree energy density
-      forall(ip = 1:gr%fine%mesh%np, is = 1:st%d%nspin)
-        energy_density(ip, is) = energy_density(ip, is) + CNST(0.5)*st%rho(ip, is)*hm%vhartree(ip)
-      end forall
+      do is = 1, st%d%nspin
+        do ip = 1, gr%fine%mesh%np
+          energy_density(ip, is) = energy_density(ip, is) + CNST(0.5)*st%rho(ip, is)*hm%vhartree(ip)
+        end do
+      end do
 
       ! the XC energy density
       SAFE_ALLOCATE(ex_density(1:gr%mesh%np))
@@ -934,37 +971,40 @@ contains
 
       ASSERT(.not. gr%have_fine_mesh)
 
-      call xc_get_vxc(gr%fine%der, ks%xc, st, st%rho, st%d%ispin, -minval(st%eigenval(st%nst,:)), &
-                      st%qtot, ex_density = ex_density, ec_density = ec_density)
-      forall(ip = 1:gr%fine%mesh%np, is = 1:st%d%nspin)
-        energy_density(ip, is) = energy_density(ip, is) + ex_density(ip) + ec_density(ip)
-      end forall
+      call xc_get_vxc(gr%fine%der, ks%xc, st, hm%psolver, namespace, st%rho, st%d%ispin, &
+        ex_density = ex_density, ec_density = ec_density)
+      do is = 1, st%d%nspin
+        do ip = 1, gr%fine%mesh%np
+          energy_density(ip, is) = energy_density(ip, is) + ex_density(ip) + ec_density(ip)
+        end do
+      end do
 
       SAFE_DEALLOCATE_A(ex_density)
       SAFE_DEALLOCATE_A(ec_density)
-      
+
       select case(st%d%ispin)
       case(UNPOLARIZED)
         write(fname, '(a)') 'energy_density'
-        call dio_function_output(outp%how, dir, trim(fname), gr%mesh, &
+        call dio_function_output(outp%how, dir, trim(fname), namespace, gr%mesh, &
           energy_density(:,1), unit_one, ierr, geo = geo, grp = st%dom_st_kpt_mpi_grp)
       case(SPIN_POLARIZED, SPINORS)
         do is = 1, 2
           write(fname, '(a,i1)') 'energy_density-sp', is
-          call dio_function_output(outp%how, dir, trim(fname), gr%mesh, &
+          call dio_function_output(outp%how, dir, trim(fname), namespace, gr%mesh, &
             energy_density(:, is), unit_one, ierr, geo = geo, grp = st%dom_st_kpt_mpi_grp)
         end do
       end select
       SAFE_DEALLOCATE_A(energy_density)
     end if
  
-    POP_SUB(output_hamiltonian)
+    POP_SUB(output_energy_density)
   end subroutine output_energy_density
 
   
   ! ---------------------------------------------------------
-  subroutine output_berkeleygw_init(nst, bgw, periodic_dim)
+  subroutine output_berkeleygw_init(nst, namespace, bgw, periodic_dim)
     integer,            intent(in)  :: nst
+    type(namespace_t),  intent(in)  :: namespace
     type(output_bgw_t), intent(out) :: bgw
     integer,            intent(in)  :: periodic_dim
 
@@ -978,7 +1018,7 @@ contains
 
 #ifndef HAVE_BERKELEYGW
     message(1) = "Cannot do BerkeleyGW output: the library was not linked."
-    call messages_fatal(1)
+    call messages_fatal(1, namespace=namespace)
 #endif
   
     !%Variable BerkeleyGW_NumberBands
@@ -989,12 +1029,12 @@ contains
     !% Wavefunctions for bands up to this number will be output. Must be between <= number of states.
     !% If < 1, no wavefunction file will be output.
     !%End
-    call parse_variable('BerkeleyGW_NumberBands', nst, bgw%nbands)
+    call parse_variable(namespace, 'BerkeleyGW_NumberBands', nst, bgw%nbands)
 
     ! these cannot be checked earlier, since output is initialized before unocc determines nst
     if(bgw%nbands > nst) then
       message(1) = "BerkeleyGW_NumberBands must be <= number of states."
-      call messages_fatal(1, only_root_writes = .true.)
+      call messages_fatal(1, only_root_writes = .true., namespace=namespace)
     end if
 
     !%Variable BerkeleyGW_Vxc_diag_nmin
@@ -1005,11 +1045,11 @@ contains
     !% Lowest band for which to write diagonal exchange-correlation matrix elements. Must be <= number of states.
     !% If < 1, diagonals will be skipped.
     !%End
-    call parse_variable('BerkeleyGW_Vxc_diag_nmin', 1, bgw%vxc_diag_nmin)
+    call parse_variable(namespace, 'BerkeleyGW_Vxc_diag_nmin', 1, bgw%vxc_diag_nmin)
 
     if(bgw%vxc_diag_nmin > nst) then
       message(1) = "BerkeleyGW_Vxc_diag_nmin must be <= number of states."
-      call messages_fatal(1, only_root_writes = .true.)
+      call messages_fatal(1, only_root_writes = .true., namespace=namespace)
     end if
     
     !%Variable BerkeleyGW_Vxc_diag_nmax
@@ -1020,11 +1060,11 @@ contains
     !% Highest band for which to write diagonal exchange-correlation matrix elements. Must be between <= number of states.
     !% If < 1, diagonals will be skipped.
     !%End
-    call parse_variable('BerkeleyGW_Vxc_diag_nmax', nst, bgw%vxc_diag_nmax)
+    call parse_variable(namespace, 'BerkeleyGW_Vxc_diag_nmax', nst, bgw%vxc_diag_nmax)
 
     if(bgw%vxc_diag_nmax > nst) then
       message(1) = "BerkeleyGW_Vxc_diag_nmax must be <= number of states."
-      call messages_fatal(1, only_root_writes = .true.)
+      call messages_fatal(1, only_root_writes = .true., namespace=namespace)
     end if
 
     if(bgw%vxc_diag_nmin <= 0 .or. bgw%vxc_diag_nmax <= 0) then
@@ -1040,11 +1080,11 @@ contains
     !% Lowest band for which to write off-diagonal exchange-correlation matrix elements. Must be <= number of states.
     !% If < 1, off-diagonals will be skipped.
     !%End
-    call parse_variable('BerkeleyGW_Vxc_offdiag_nmin', 1, bgw%vxc_offdiag_nmin)
+    call parse_variable(namespace, 'BerkeleyGW_Vxc_offdiag_nmin', 1, bgw%vxc_offdiag_nmin)
     
     if(bgw%vxc_offdiag_nmin > nst) then
       message(1) = "BerkeleyGW_Vxc_offdiag_nmin must be <= number of states."
-      call messages_fatal(1, only_root_writes = .true.)
+      call messages_fatal(1, only_root_writes = .true., namespace=namespace)
     end if
 
     !%Variable BerkeleyGW_Vxc_offdiag_nmax
@@ -1055,11 +1095,11 @@ contains
     !% Highest band for which to write off-diagonal exchange-correlation matrix elements. Must be <= number of states.
     !% If < 1, off-diagonals will be skipped.
     !%End
-    call parse_variable('BerkeleyGW_Vxc_offdiag_nmax', nst, bgw%vxc_offdiag_nmax)
+    call parse_variable(namespace, 'BerkeleyGW_Vxc_offdiag_nmax', nst, bgw%vxc_offdiag_nmax)
 
     if(bgw%vxc_offdiag_nmax > nst) then
       message(1) = "BerkeleyGW_Vxc_offdiag_nmax must be <= number of states."
-      call messages_fatal(1, only_root_writes = .true.)
+      call messages_fatal(1, only_root_writes = .true., namespace=namespace)
     end if
 
     if(bgw%vxc_offdiag_nmin <= 0 .or. bgw%vxc_offdiag_nmax <= 0) then
@@ -1075,7 +1115,7 @@ contains
     !!% Even when wavefunctions, density, and XC potential could be real in reciprocal space,
     !!% they will be output as complex.
     !!%End
-    !call parse_variable('BerkeleyGW_Complex', .false., bgw%complex)
+    !call parse_variable(namespace, 'BerkeleyGW_Complex', .false., bgw%complex)
     
     bgw%complex = .true.
     ! real output not implemented, so currently this is always true
@@ -1087,7 +1127,7 @@ contains
     !%Description
     !% Filename for the wavefunctions.
     !%End
-    call parse_variable('BerkeleyGW_WFN_filename', 'WFN', bgw%wfn_filename)
+    call parse_variable(namespace, 'BerkeleyGW_WFN_filename', 'WFN', bgw%wfn_filename)
   
     !%Variable BerkeleyGW_CalcExchange
     !%Type logical
@@ -1098,7 +1138,7 @@ contains
     !% These will be calculated anyway by BerkeleyGW <tt>Sigma</tt>, so this is useful
     !% mainly for comparison and testing.
     !%End
-    call parse_variable('BerkeleyGW_CalcExchange', .false., bgw%calc_exchange)
+    call parse_variable(namespace, 'BerkeleyGW_CalcExchange', .false., bgw%calc_exchange)
 
     !%Variable BerkeleyGW_CalcDipoleMtxels
     !%Type logical
@@ -1113,7 +1153,7 @@ contains
     !% and <tt>use_momentum</tt>. Specify the number of conduction and valence bands you will
     !% use in BSE here with <tt>BerkeleyGW_VmtxelNumCondBands</tt> and <tt>BerkeleyGW_VmtxelNumValBands</tt>.
     !%End
-    call parse_variable('BerkeleyGW_CalcDipoleMtxels', .false., bgw%calc_vmtxel)
+    call parse_variable(namespace, 'BerkeleyGW_CalcDipoleMtxels', .false., bgw%calc_vmtxel)
 
     !%Variable BerkeleyGW_VmtxelPolarization
     !%Type block
@@ -1128,20 +1168,20 @@ contains
     bgw%vmtxel_polarization(1:3) = M_ZERO
     bgw%vmtxel_polarization(1) = M_ONE
 
-    if(bgw%calc_vmtxel .and. parse_block('BerkeleyGW_VmtxelPolarization', blk)==0) then
+    if(bgw%calc_vmtxel .and. parse_block(namespace, 'BerkeleyGW_VmtxelPolarization', blk)==0) then
       do idir = 1, 3
         call parse_block_float(blk, 0, idir - 1, bgw%vmtxel_polarization(idir))
 
         if(idir <= periodic_dim .and. abs(bgw%vmtxel_polarization(idir)) > M_EPSILON) then
           message(1) = "You cannot calculate vmtxel with polarization in a periodic direction. Use WFNq_fi instead."
-          call messages_fatal(1, only_root_writes = .true.)
+          call messages_fatal(1, only_root_writes = .true., namespace=namespace)
         end if
       end do
       call parse_block_end(blk)
       norm = sum(abs(bgw%vmtxel_polarization(1:3))**2)
       if(norm < M_EPSILON) then
         message(1) = "A non-zero value must be set for BerkeleyGW_VmtxelPolarization when BerkeleyGW_CalcDipoleMtxels = yes."
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
       bgw%vmtxel_polarization(1:3) = bgw%vmtxel_polarization(1:3) / sqrt(norm)
     end if
@@ -1155,7 +1195,7 @@ contains
     !% <tt>BerkeleyGW_CalcDipoleMtxels = yes</tt>. This should be equal to the number to be
     !% used in BSE.
     !%End
-    if(bgw%calc_vmtxel) call parse_variable('BerkeleyGW_VmtxelNumCondBands', 0, bgw%vmtxel_ncband)
+    if(bgw%calc_vmtxel) call parse_variable(namespace, 'BerkeleyGW_VmtxelNumCondBands', 0, bgw%vmtxel_ncband)
     ! The default should be the minimum number of occupied states on any k-point or spin.
 
     !%Variable BerkeleyGW_VmtxelNumValBands
@@ -1167,7 +1207,7 @@ contains
     !% <tt>BerkeleyGW_CalcDipoleMtxels = yes</tt>. This should be equal to the number to be
     !% used in BSE.
     !%End
-    if(bgw%calc_vmtxel) call parse_variable('BerkeleyGW_VmtxelNumValBands', 0, bgw%vmtxel_nvband)
+    if(bgw%calc_vmtxel) call parse_variable(namespace, 'BerkeleyGW_VmtxelNumValBands', 0, bgw%vmtxel_nvband)
     ! The default should be the minimum number of unoccupied states on any k-point or spin.
 
     POP_SUB(output_berkeleygw_init)
@@ -1175,14 +1215,15 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine output_berkeleygw(bgw, dir, st, gr, ks, hm, geo)
-    type(output_bgw_t),  intent(in)    :: bgw
-    character(len=*),    intent(in)    :: dir
-    type(states_t),      intent(in)    :: st
-    type(grid_t),        intent(in)    :: gr
-    type(v_ks_t),        intent(in)    :: ks
-    type(hamiltonian_t), intent(inout) :: hm
-    type(geometry_t),    intent(in)    :: geo
+  subroutine output_berkeleygw(bgw, namespace, dir, st, gr, ks, hm, geo)
+    type(output_bgw_t),       intent(in)    :: bgw
+    type(namespace_t),        intent(in)    :: namespace
+    character(len=*),         intent(in)    :: dir
+    type(states_elec_t),      intent(in)    :: st
+    type(grid_t),             intent(in)    :: gr
+    type(v_ks_t),             intent(inout) :: ks
+    type(hamiltonian_elec_t), intent(inout) :: hm
+    type(geometry_t),         intent(in)    :: geo
 
 #ifdef HAVE_BERKELEYGW
     integer :: ik, is, ikk, ist, itran, iunit, iatom, mtrx(3, 3, 48), FFTgrid(3), ngkmax
@@ -1200,45 +1241,46 @@ contains
 
     if(gr%mesh%sb%dim /= 3) then
       message(1) = "BerkeleyGW output only available in 3D."
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
 
     if(st%d%ispin == SPINORS) &
-      call messages_not_implemented("BerkeleyGW output for spinors")
+      call messages_not_implemented("BerkeleyGW output for spinors", namespace=namespace)
 
     if(st%parallel_in_states) &
-      call messages_not_implemented("BerkeleyGW output parallel in states")
+      call messages_not_implemented("BerkeleyGW output parallel in states", namespace=namespace)
 
     if(st%d%kpt%parallel) &
-      call messages_not_implemented("BerkeleyGW output parallel in k-points")
+      call messages_not_implemented("BerkeleyGW output parallel in k-points", namespace=namespace)
 
     if(ks%theory_level == HARTREE .or. ks%theory_level == HARTREE_FOCK .or. xc_is_orbital_dependent(ks%xc)) &
-      call messages_not_implemented("BerkeleyGW output with orbital-dependent functionals")
+      call messages_not_implemented("BerkeleyGW output with orbital-dependent functionals", namespace=namespace)
 
     if(geo%nlcc) &
-      call messages_not_implemented("BerkeleyGW output with NLCC")
+      call messages_not_implemented("BerkeleyGW output with NLCC", namespace=namespace)
 
 #ifdef HAVE_BERKELEYGW
 
     SAFE_ALLOCATE(vxc(1:gr%mesh%np, 1:st%d%nspin))
     vxc(:,:) = M_ZERO
     ! we should not include core rho here. that is why we do not just use hm%vxc
-    call xc_get_vxc(gr%der, ks%xc, st, st%rho, st%d%ispin, -minval(st%eigenval(st%nst, :)), st%qtot, vxc)
+    call xc_get_vxc(gr%der, ks%xc, st, hm%psolver, namespace, st%rho, st%d%ispin, vxc)
 
     message(1) = "BerkeleyGW output: vxc.dat"
     if(bgw%calc_exchange) message(1) = trim(message(1)) // ", x.dat"
     call messages_info(1)
 
     if(states_are_real(st)) then
-      call dbgw_vxc_dat(bgw, dir, st, gr, hm, vxc)
+      call dbgw_vxc_dat(bgw, namespace, dir, st, gr, hm, vxc)
     else
-      call zbgw_vxc_dat(bgw, dir, st, gr, hm, vxc)
+      call zbgw_vxc_dat(bgw, namespace, dir, st, gr, hm, vxc)
     end if
 
-    call cube_init(cube, gr%mesh%idx%ll, gr%sb, fft_type = FFT_COMPLEX, dont_optimize = .true., nn_out = FFTgrid)
+    call cube_init(cube, gr%mesh%idx%ll, gr%sb, namespace, &
+      fft_type = FFT_COMPLEX, dont_optimize = .true., nn_out = FFTgrid)
     if(any(gr%mesh%idx%ll(1:3) /= FFTgrid(1:3))) then ! paranoia check
       message(1) = "Cannot do BerkeleyGW output: FFT grid has been modified."
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
     call cube_function_null(cf)
     call zcube_function_alloc_rs(cube, cf)
@@ -1257,9 +1299,9 @@ contains
       call messages_info(1)
 
       if(states_are_real(st)) then
-        call dbgw_vmtxel(bgw, dir, st, gr, ifmax)
+        call dbgw_vmtxel(bgw, namespace, dir, st, gr, ifmax)
       else
-        call zbgw_vmtxel(bgw, dir, st, gr, ifmax)
+        call zbgw_vmtxel(bgw, namespace, dir, st, gr, ifmax)
       end if
     end if
 
@@ -1268,7 +1310,7 @@ contains
 
     sheader = 'VXC'
     if(mpi_grp_is_root(mpi_world)) then
-      iunit = io_open(trim(dir) // 'VXC', form = 'unformatted', action = 'write')
+      iunit = io_open(trim(dir) // 'VXC', namespace, form = 'unformatted', action = 'write')
       call bgw_write_header(sheader, iunit)
     end if
     ! convert from Ha to Ry, make usable with same processing as RHO
@@ -1283,7 +1325,7 @@ contains
 
     sheader = 'RHO'
     if(mpi_grp_is_root(mpi_world)) then
-      iunit = io_open(trim(dir) // 'RHO', form = 'unformatted', action = 'write')
+      iunit = io_open(trim(dir) // 'RHO', namespace, form = 'unformatted', action = 'write')
       call bgw_write_header(sheader, iunit)
     end if
     call dbgw_write_FS(iunit, st%rho, field_g, shell_density, st%d%nspin, gr, cube, cf, is_wfn = .false.)
@@ -1302,7 +1344,7 @@ contains
 
     sheader = 'WFN'
     if(mpi_grp_is_root(mpi_world)) then
-      iunit = io_open(trim(dir) // bgw%wfn_filename, form = 'unformatted', action = 'write')
+      iunit = io_open(trim(dir) // bgw%wfn_filename, namespace, form = 'unformatted', action = 'write')
       call bgw_write_header(sheader, iunit)
     end if
 
@@ -1318,9 +1360,9 @@ contains
         do is = 1, st%d%nspin
           ikk = ik + is - 1
           if(states_are_real(st)) then
-            call states_get_state(st, gr%mesh, 1, ist, ikk, dpsi(:, is))
+            call states_elec_get_state(st, gr%mesh, 1, ist, ikk, dpsi(:, is))
           else
-            call states_get_state(st, gr%mesh, 1, ist, ikk, zpsi(:, is))
+            call states_elec_get_state(st, gr%mesh, 1, ist, ikk, zpsi(:, is))
           end if
         end do
         if(states_are_real(st)) then
@@ -1356,7 +1398,7 @@ contains
 
 #else
     message(1) = "Cannot do BerkeleyGW output: the library was not linked."
-    call messages_fatal(1)
+    call messages_fatal(1, namespace=namespace)
 #endif
 
     POP_SUB(output_berkeleygw)
@@ -1389,8 +1431,8 @@ contains
 !        ifmax(:,:) = nint(st%qtot / st%smear%el_per_state)
 !      end if
       do ik = 1, st%d%nik
-        is = states_dim_get_spin_index(st%d, ik)
-        ikk = states_dim_get_kpoint_index(st%d, ik)
+        is = states_elec_dim_get_spin_index(st%d, ik)
+        ikk = states_elec_dim_get_kpoint_index(st%d, ik)
         energies(1:st%nst, ikk, is) = st%eigenval(1:st%nst,ik) * M_TWO
         occupations(1:st%nst, ikk, is) = st%occ(1:st%nst, ik) / st%smear%el_per_state
         do ist = 1, st%nst
@@ -1422,7 +1464,7 @@ contains
       if(any(gr%sb%kpoints%nik_axis(1:3) == 0)) then
         message(1) = "KPointsGrid has a zero component. Set KPointsGrid appropriately,"
         message(2) = "or this WFN will only be usable in BerkeleyGW's inteqp."
-        call messages_warning(1)
+        call messages_warning(1, namespace=namespace)
       end if
 
       POP_SUB(output_berkeleygw.bgw_setup_header)
@@ -1453,15 +1495,28 @@ contains
 
   end subroutine output_berkeleygw
 
+ 
+  !--------------------------------------------------------------
+
+  logical function output_need_exchange(outp) result(need_exx)
+    type(output_t),         intent(in)    :: outp
+
+    need_exx =( bitand(outp%what, OPTION__OUTPUT__BERKELEYGW) /= 0 &
+           .or. bitand(outp%me%what, OPTION__OUTPUTMATRIXELEMENTS__TWO_BODY) /= 0 &
+           .or. bitand(outp%me%what, OPTION__OUTPUTMATRIXELEMENTS__TWO_BODY_EXC_K) /= 0 )
+  end function output_need_exchange
+
+
    ! ---------------------------------------------------------
-  subroutine output_dftu_orbitals(dir, this, outp, st, mesh, geo, has_phase)
-    character(len=*),  intent(in) :: dir
-    type(lda_u_t),     intent(in) :: this
-    type(output_t),    intent(in) :: outp
-    type(states_t),    intent(in) :: st
-    type(mesh_t),      intent(in) :: mesh
-    type(geometry_t),  intent(in) :: geo
-    logical,           intent(in) :: has_phase
+  subroutine output_dftu_orbitals(outp, dir, namespace, this, st, mesh, geo, has_phase)
+    type(output_t),      intent(in) :: outp
+    character(len=*),    intent(in) :: dir
+    type(namespace_t),   intent(in) :: namespace
+    type(lda_u_t),       intent(in) :: this
+    type(states_elec_t), intent(in) :: st
+    type(mesh_t),        intent(in) :: mesh
+    type(geometry_t),    intent(in) :: geo
+    logical,             intent(in) :: has_phase
 
     integer :: ios, im, ik, idim, ierr
     CMPLX, allocatable :: tmp(:)
@@ -1503,31 +1558,31 @@ contains
             end if
             if(has_phase) then
               if(simul_box_is_periodic(mesh%sb) .and. .not. this%basis%submeshforperiodic) then
-               call zio_function_output(outp%how, dir, fname, mesh, &
+               call zio_function_output(outp%how, dir, fname, namespace, mesh, &
                   os%eorb_mesh(1:mesh%np,im,idim,ik), fn_unit, ierr, geo = geo)
               else
                tmp = M_Z0
                call submesh_add_to_mesh(os%sphere, os%eorb_submesh(1:os%sphere%np,idim,im,ik), tmp)
-               call zio_function_output(outp%how, dir, fname, mesh, tmp, fn_unit, ierr, geo = geo)
+               call zio_function_output(outp%how, dir, fname, namespace, mesh, tmp, fn_unit, ierr, geo = geo)
               end if
             else
               if(this%basisfromstates) then
                 if (states_are_real(st)) then
-                  call dio_function_output(outp%how, dir, fname, mesh, &
+                  call dio_function_output(outp%how, dir, fname, namespace, mesh, &
                       os%dorb(1:mesh%np,idim,im), fn_unit, ierr, geo = geo)
                 else
-                  call zio_function_output(outp%how, dir, fname, mesh, &
+                  call zio_function_output(outp%how, dir, fname, namespace, mesh, &
                       os%zorb(1:mesh%np,idim,im), fn_unit, ierr, geo = geo)
                 end if
               else
                 if (states_are_real(st)) then
                   dtmp = M_Z0
                   call submesh_add_to_mesh(os%sphere, os%dorb(1:os%sphere%np,idim,im), dtmp)
-                  call dio_function_output(outp%how, dir, fname, mesh, dtmp, fn_unit, ierr, geo = geo)
+                  call dio_function_output(outp%how, dir, fname, namespace, mesh, dtmp, fn_unit, ierr, geo = geo)
                 else
                   tmp = M_Z0
                   call submesh_add_to_mesh(os%sphere, os%zorb(1:os%sphere%np,idim,im), tmp)
-                  call zio_function_output(outp%how, dir, fname, mesh, tmp, fn_unit, ierr, geo = geo)
+                  call zio_function_output(outp%how, dir, fname, namespace, mesh, tmp, fn_unit, ierr, geo = geo)
                 end if
               end if
             end if
@@ -1573,6 +1628,8 @@ contains
 #include "output_states_inc.F90"
 
 #include "output_h_inc.F90"
+
+#include "output_mxll_inc.F90"
 
 #include "undef.F90"
 #include "complex.F90"

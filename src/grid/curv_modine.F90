@@ -29,10 +29,11 @@ module curv_modine_oct_m
   use geometry_oct_m
   use global_oct_m
   use loct_pointer_oct_m
-  use parser_oct_m
   use messages_oct_m
-  use root_solver_oct_m
+  use namespace_oct_m
+  use parser_oct_m
   use profiling_oct_m
+  use root_solver_oct_m
   use simul_box_oct_m
   use unit_oct_m
   use unit_system_oct_m
@@ -49,6 +50,7 @@ module curv_modine_oct_m
     curv_modine_jacobian_inv
 
   type curv_modine_t
+    private
     FLOAT :: L(MAX_DIM)    !< size of the box
     FLOAT :: xbar          !< size of central flat region (in units of L)
     FLOAT :: Jbar          !< increase in density of points is 1/J
@@ -128,11 +130,14 @@ contains
   end subroutine getf2
 
   ! ---------------------------------------------------------
-  subroutine curv_modine_init(cv, sb, geo, spacing)
-    type(curv_modine_t), target, intent(out)  :: cv
-    type(simul_box_t),   target, intent(in)   :: sb
-    type(geometry_t),            intent(in)   :: geo
-    FLOAT,                       intent(in)   :: spacing(:)
+  subroutine curv_modine_init(cv, namespace, sb, geo, spacing)
+    type(curv_modine_t), target, intent(out) :: cv
+    type(namespace_t),           intent(in)  :: namespace
+    type(simul_box_t),   target, intent(in)  :: sb
+    type(geometry_t),            intent(in)  :: geo
+    FLOAT,                       intent(in)  :: spacing(:)
+
+    type(root_solver_t) :: rs
 
     PUSH_SUB(curv_modine_init)
 
@@ -144,7 +149,7 @@ contains
     !% Size of central flat region (in units of <tt>Lsize</tt>). Must be between 0 and 1.
     !% See N. A. Modine, G. Zumbach, and E. Kaxiras, <i>Phys. Rev. B</i> <b>55</b>, 10289-10301 (1997).
     !%End
-    call parse_variable('CurvModineXBar', M_ONE/M_THREE, cv%xbar)
+    call parse_variable(namespace, 'CurvModineXBar', M_ONE/M_THREE, cv%xbar)
 
     !%Variable CurvModineJBar
     !%Type float
@@ -154,7 +159,7 @@ contains
     !% Increase in density of points is inverse of this parameter.
     !% See N. A. Modine, G. Zumbach, and E. Kaxiras, <i>Phys. Rev. B</i> <b>55</b>, 10289-10301 (1997).
     !%End
-    call parse_variable('CurvModineJBar', M_HALF, cv%Jbar)
+    call parse_variable(namespace, 'CurvModineJBar', M_HALF, cv%Jbar)
 
     cv%L = M_ZERO
     cv%L(1:sb%dim) = sb%lsize(1:sb%dim) / cv%Jbar
@@ -177,7 +182,7 @@ contains
     !% Local refinement around the atoms. Must be between 0 and 1.
     !% See N. A. Modine, G. Zumbach, and E. Kaxiras, <i>Phys. Rev. B</i> <b>55</b>, 10289-10301 (1997).
     !%End
-    call parse_variable('CurvModineJlocal', CNST(0.25), cv%Jlocal(1))
+    call parse_variable(namespace, 'CurvModineJlocal', CNST(0.25), cv%Jlocal(1))
 
     !%Variable CurvModineJrange
     !%Type float
@@ -187,7 +192,7 @@ contains
     !% Local refinement range (a length).
     !% See N. A. Modine, G. Zumbach, and E. Kaxiras, <i>Phys. Rev. B</i> <b>55</b>, 10289-10301 (1997).
     !%End
-    call parse_variable('CurvModineJrange', M_TWO, cv%Jrange(1), units_inp%length)
+    call parse_variable(namespace, 'CurvModineJrange', M_TWO, cv%Jrange(1), units_inp%length)
 
     if(cv%Jlocal(1)<M_ZERO.or.cv%Jlocal(1)>M_ONE) then
       message(1) = 'The parameter "CurvModineJlocal" must lie between 0 and 1.'
@@ -196,6 +201,10 @@ contains
 
     cv%Jlocal(:) = cv%Jlocal(1)
     cv%Jrange(:) = cv%Jrange(1)
+
+    ! initialize root solver for the optimization
+    call root_solver_init(rs, namespace, sb%dim, &
+        solver_type = ROOT_NEWTON, maxiter = 500, abs_tolerance = CNST(1.0e-10))
 
     call find_atom_points()
     call optimize()
@@ -221,7 +230,7 @@ contains
       SAFE_ALLOCATE(cv%chi_atoms(1:sb%dim, 1:geo%natoms))
       do jj = 1, 10  ! \warning: make something better
         do iatom = 1, geo%natoms
-          call curv_modine_x2chi(sb, cv, geo%atom(iatom)%x, cv%chi_atoms(:, iatom))
+          call curv_modine_x2chi(sb, cv, rs, geo%atom(iatom)%x, cv%chi_atoms(:, iatom))
         end do
         cv%csi(:,:) = cv%chi_atoms(:,:)
       end do
@@ -236,14 +245,10 @@ contains
 
     subroutine optimize()
       logical :: conv
-      type(root_solver_t) :: rs
       integer :: iatom, idim, index
       FLOAT, allocatable :: my_csi(:), start_csi(:)
 
       PUSH_SUB(curv_modine_init.optimize)
-
-      call root_solver_init(rs, sb%dim, &
-        solver_type = ROOT_NEWTON, maxiter = 500, abs_tolerance = CNST(1.0e-10))
 
       sb_p  => sb
       cv_p  => cv
@@ -450,19 +455,16 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine curv_modine_x2chi(sb, cv, xx, chi)
-    type(simul_box_t),   target, intent(in)  :: sb
-    type(curv_modine_t), target, intent(in)  :: cv
+  subroutine curv_modine_x2chi(sb, cv, rs, xx, chi)
+    type(simul_box_t),   target, intent(in)     :: sb
+    type(curv_modine_t), target, intent(in)     :: cv
+    type(root_solver_t), target, intent(inout)  :: rs
     FLOAT,                       intent(in)  :: xx(:)   !< xx(sb%dim)
     FLOAT,                       intent(out) :: chi(:)  !< chi(sb%dim)
 
     logical :: conv
-    type(root_solver_t) :: rs
 
     PUSH_SUB(curv_modine_x2chi)
-
-    call root_solver_init(rs, sb%dim,  &
-      solver_type = ROOT_NEWTON, maxiter = 500, abs_tolerance = CNST(1.0e-10))
 
     sb_p  => sb
     cv_p  => cv

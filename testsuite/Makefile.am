@@ -19,7 +19,8 @@
 ##
 
 SUBDIRS = \
-	components       \
+        performance      \
+        components       \
 	finite_systems_1d \
 	finite_systems_2d \
 	finite_systems_3d \
@@ -28,6 +29,8 @@ SUBDIRS = \
         symmetries       \
 	linear_response  \
         lda_u            \
+	maxwell          \
+	multisystem      \
 	optimal_control  \
 	periodic_systems \
 	photo_electron   \
@@ -37,6 +40,9 @@ SUBDIRS = \
 bin_SCRIPTS = oct-run_regression_test.pl oct-run_testsuite.sh
 
 EXTRA_DIST = oct-run_regression_test.pl oct-run_testsuite.sh.in
+
+check-performance:
+	$(MAKE) -C performance check-performance
 
 # OCTOPUS_SHARE has to be set to an absolute path because
 # oct-run_testsuite.sh changes the working directory for every

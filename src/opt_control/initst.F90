@@ -23,21 +23,22 @@ module initst_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
-  use hamiltonian_oct_m
+  use hamiltonian_elec_oct_m
   use messages_oct_m
   use mesh_function_oct_m
   use opt_control_state_oct_m
   use parser_oct_m
   use profiling_oct_m
   use restart_oct_m
-  use states_oct_m
-  use states_restart_oct_m
+  use states_elec_oct_m
+  use states_elec_restart_oct_m
   use string_oct_m
   use system_oct_m
   use td_oct_m
   use v_ks_oct_m
   use varinfo_oct_m
   use types_oct_m
+  use xc_oct_m
 
   implicit none
 
@@ -55,9 +56,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine initial_state_init(sys, hm, qcstate)
+  subroutine initial_state_init(sys, qcstate)
     type(system_t),      intent(inout) :: sys
-    type(hamiltonian_t), intent(inout) :: hm
     type(opt_control_state_t), target, intent(inout) :: qcstate
 
     integer           :: ik, ib, idim, inst, inik, id, is, ip, ierr, &
@@ -67,14 +67,14 @@ contains
     type(restart_t) :: restart
     CMPLX, allocatable :: zpsi(:, :)
 
-    type(states_t), pointer :: psi
+    type(states_elec_t), pointer :: psi
 
     PUSH_SUB(initial_state_init)
 
     call opt_control_state_init(qcstate, sys%st, sys%geo)
     psi => opt_control_point_qs(qcstate)
-    call states_deallocate_wfns(psi)
-    call states_allocate_wfns(psi, sys%gr%mesh, TYPE_CMPLX)
+    call states_elec_deallocate_wfns(psi)
+    call states_elec_allocate_wfns(psi, sys%gr%mesh, TYPE_CMPLX)
 
     !%Variable OCTInitialState
     !%Type integer
@@ -93,15 +93,15 @@ contains
     !%Option oct_is_userdefined 4
     !% Start in a user-defined state.
     !%End
-    call parse_variable('OCTInitialState', oct_is_groundstate, istype)
-    if(.not.varinfo_valid_option('OCTInitialState', istype)) call messages_input_error('OCTInitialState')    
+    call parse_variable(sys%namespace, 'OCTInitialState', oct_is_groundstate, istype)
+    if(.not.varinfo_valid_option('OCTInitialState', istype)) call messages_input_error(sys%namespace, 'OCTInitialState')    
 
     select case(istype)
     case(oct_is_groundstate) 
       message(1) =  'Info: Using ground state for initial state.'
       call messages_info(1)
-      call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
-      if(ierr == 0) call states_load(restart, psi, sys%gr, ierr)
+      call restart_init(restart, sys%namespace, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
+      if(ierr == 0) call states_elec_load(restart, sys%namespace, psi, sys%gr, ierr)
       if (ierr /= 0) then
         message(1) = "Unable to read wavefunctions."
         call messages_fatal(1)
@@ -131,19 +131,19 @@ contains
       !% The syntax is the same as the <tt>TransformStates</tt> block.
       !%End
 
-      if(.not. parse_is_defined("OCTInitialTransformStates")) then
+      if(.not. parse_is_defined(sys%namespace, "OCTInitialTransformStates")) then
         message(1) = 'If "OCTInitialState = oct_is_gstransformation", then you must'
         message(2) = 'supply an "OCTInitialTransformStates" block to define the transformation.'
         call messages_fatal(2)
       end if
 
-      call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
+      call restart_init(restart, sys%namespace, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=sys%gr%mesh, exact=.true.)
       if(ierr /= 0) then
         message(1) = "Could not read states for OCTInitialTransformStates."
         call messages_fatal(1)
       end if
       
-      call transform_states(psi, restart, sys%gr, prefix = "OCTInitial")
+      call transform_states(psi, sys%namespace, restart, sys%gr, prefix = "OCTInitial")
       call restart_end(restart)
 
     case(oct_is_userdefined) 
@@ -162,7 +162,7 @@ contains
       !% <br>%</tt>
       !%  
       !%End
-      if(parse_block('OCTInitialUserdefined', blk) == 0) then
+      if(parse_block(sys%namespace, 'OCTInitialUserdefined', blk) == 0) then
 
         SAFE_ALLOCATE(zpsi(1:sys%gr%mesh%np, 1:psi%d%dim))
         
@@ -195,9 +195,9 @@ contains
                   call parse_expression(psi_re, psi_im, &
                     sys%gr%sb%dim, xx, rr, M_ZERO, psi%user_def_states(id, is, ik))
                   ! fill state
-                  zpsi(ip, id) = cmplx(psi_re, psi_im, REAL_PRECISION)
+                  zpsi(ip, id) = TOCMPLX(psi_re, psi_im)
                 end do
-                call states_set_state(psi, sys%gr%mesh, id, is, ik, zpsi(:, id))
+                call states_elec_set_state(psi, sys%gr%mesh, id, is, ik, zpsi(:, id))
               end do
             end do
           end do
@@ -205,9 +205,9 @@ contains
         call parse_block_end(blk)
         do ik = 1, psi%d%nik
           do is = psi%st_start, psi%st_end
-            call states_get_state(psi, sys%gr%mesh, is, ik, zpsi)
+            call states_elec_get_state(psi, sys%gr%mesh, is, ik, zpsi)
             call zmf_normalize(sys%gr%mesh, psi%d%dim, zpsi)
-            call states_set_state(psi, sys%gr%mesh, is, ik, zpsi)
+            call states_elec_set_state(psi, sys%gr%mesh, is, ik, zpsi)
           end do
         end do
         SAFE_DEALLOCATE_A(zpsi)
@@ -223,29 +223,29 @@ contains
     end select
 
     ! Check whether we want to freeze some of the deeper orbitals.
-    call parse_variable('TDFreezeOrbitals', 0, freeze_orbitals)
+    call parse_variable(sys%namespace, 'TDFreezeOrbitals', 0, freeze_orbitals)
     if(freeze_orbitals > 0) then
       ! In this case, we first freeze the orbitals, then calculate the Hxc potential.
-      call states_freeze_orbitals(psi, sys%gr, sys%mc, freeze_orbitals)
+      call states_elec_freeze_orbitals(psi, sys%namespace, sys%gr, sys%mc, freeze_orbitals, family_is_mgga(sys%ks%xc_family))
       write(message(1),'(a,i4,a,i4,a)') 'Info: The lowest', freeze_orbitals, &
         ' orbitals have been frozen.', psi%nst, ' will be propagated.'
       call messages_info(1)
       call density_calc(psi, sys%gr, psi%rho)
-      call v_ks_calc(sys%ks, hm, psi, sys%geo, calc_eigenval = .true.)
+      call v_ks_calc(sys%ks, sys%namespace, sys%hm, psi, sys%geo, calc_eigenval = .true.)
     elseif(freeze_orbitals < 0) then
       ! This means SAE approximation. We calculate the Hxc first, then freeze all
       ! orbitals minus one.
       write(message(1),'(a)') 'Info: The single-active-electron approximation will be used.'
       call messages_info(1)
       call density_calc(psi, sys%gr, psi%rho)
-      call v_ks_calc(sys%ks, hm, psi, sys%geo, calc_eigenval = .true.)
-      call states_freeze_orbitals(psi, sys%gr, sys%mc, n = psi%nst - 1)
+      call v_ks_calc(sys%ks, sys%namespace, sys%hm, psi, sys%geo, calc_eigenval = .true.)
+      call states_elec_freeze_orbitals(psi, sys%namespace, sys%gr, sys%mc, psi%nst - 1, family_is_mgga(sys%ks%xc_family))
       call v_ks_freeze_hxc(sys%ks)
       call density_calc(psi, sys%gr, psi%rho)
     else
       ! Normal run.
       call density_calc(psi, sys%gr, psi%rho)
-      call v_ks_calc(sys%ks, hm, psi, sys%geo, calc_eigenval = .true.)
+      call v_ks_calc(sys%ks, sys%namespace, sys%hm, psi, sys%geo, calc_eigenval = .true.)
     end if
     
     POP_SUB(initial_state_init)

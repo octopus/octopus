@@ -17,9 +17,10 @@
 !!
 
 ! ---------------------------------------------------------
-subroutine xc_get_fxc(xcs, mesh, rho, ispin, fxc, zfxc)
+subroutine xc_get_fxc(xcs, mesh, namespace, rho, ispin, fxc, zfxc)
   type(xc_t), target, intent(in)    :: xcs
   type(mesh_t),       intent(in)    :: mesh
+  type(namespace_t),  intent(in)    :: namespace
   FLOAT, intent(in)                 :: rho(:, :)
   integer, intent(in)               :: ispin
   FLOAT,              intent(inout) :: fxc(:,:,:)
@@ -48,7 +49,7 @@ subroutine xc_get_fxc(xcs, mesh, rho, ispin, fxc, zfxc)
   ! is there anything to do? (only LDA by now)
   if(bitand(xcs%kernel_family, XC_FAMILY_LDA) == 0) then
     message(1) = "Only LDA functionals are authorized for now in XCKernel."
-    call messages_fatal(1)
+    call messages_fatal(1, namespace=namespace)
   end if
 
   if(ispin == UNPOLARIZED) then
@@ -60,7 +61,7 @@ subroutine xc_get_fxc(xcs, mesh, rho, ispin, fxc, zfxc)
   do ixc = 1, 2
     if(bitand(functl(ixc)%flags, XC_FLAGS_HAVE_FXC) == 0) then
       message(1) = "Cannot calculate kernel. This functional does not have fxc available."
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
   end do
 
@@ -82,8 +83,8 @@ subroutine xc_get_fxc(xcs, mesh, rho, ispin, fxc, zfxc)
       if(spinors_fxc) l_vdedd = M_ZERO
       select case(functl(ixc)%family)
       case(XC_FAMILY_LDA)
-        call XC_F90(lda_fxc)(functl(ixc)%conf, 1, l_dens(1), l_dedd(1))
-        if(spinors_fxc)  call XC_F90(lda_vxc)(functl(ixc)%conf, 1, l_dens(1), l_vdedd(1))
+        call XC_F90(lda_fxc)(functl(ixc)%conf, int(1, XC_SIZE_T), l_dens, l_dedd)
+        if(spinors_fxc)  call XC_F90(lda_vxc)(functl(ixc)%conf, int(1, XC_SIZE_T), l_dens, l_vdedd)
         
       case default
         cycle
@@ -162,8 +163,8 @@ contains
         if(maxval(abs(densitymatrix)) < tiny) densitymatrix = M_z0
 
         call lalg_zeigenderivatives(2, densitymatrix, zeigref_(:, :, ip), zeigenval, mmatrix(:, :, :, ip))
-        dens(ip, 1) = max(real(zeigenval(1), REAL_PRECISION), M_ZERO)
-        dens(ip, 2) = max(real(zeigenval(2), REAL_PRECISION), M_ZERO)
+        dens(ip, 1) = max(TOFLOAT(zeigenval(1)), M_ZERO)
+        dens(ip, 2) = max(TOFLOAT(zeigenval(2)), M_ZERO)
 
       end select
     end do

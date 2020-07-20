@@ -20,9 +20,8 @@
   ! ---------------------------------------------------------
   ! Tries to avoid ill-defined combinations of run modes.
   ! ---------------------------------------------------------
-  subroutine check_faulty_runmodes(sys, hm, tr)
+  subroutine check_faulty_runmodes(sys, tr)
     type(system_t),      intent(in) :: sys
-    type(hamiltonian_t), intent(in) :: hm
     type(propagator_t),  intent(in) :: tr
 
     integer :: no_electrons, n_filled, n_partially_filled, n_half_filled
@@ -40,27 +39,27 @@
     ! Otherwise the algorithms are bound to fail.
     select case(sys%st%d%ispin)
     case(UNPOLARIZED)
-      call occupied_states(sys%st, 1, n_filled, n_partially_filled, n_half_filled)
+      call occupied_states(sys%st, sys%namespace, 1, n_filled, n_partially_filled, n_half_filled)
       no_electrons = 2*n_filled + n_half_filled
       if(n_partially_filled > 0 ) then
         write(message(1),'(a)') 'No partially filled orbitals are allowed in OCT calculations.'
         call messages_fatal(1)
       end if
     case(SPIN_POLARIZED)
-      call occupied_states(sys%st, 1, n_filled, n_partially_filled, n_half_filled)
+      call occupied_states(sys%st, sys%namespace, 1, n_filled, n_partially_filled, n_half_filled)
       if(n_partially_filled > 0 .or. n_half_filled > 0) then
         write(message(1),'(a)') 'No partially filled orbitals are allowed in OCT calculations.'
         call messages_fatal(1)
       end if
       no_electrons = n_filled
-      call occupied_states(sys%st, 2, n_filled, n_partially_filled, n_half_filled)
+      call occupied_states(sys%st, sys%namespace, 2, n_filled, n_partially_filled, n_half_filled)
       no_electrons = n_filled + no_electrons
       if(n_partially_filled > 0 .or. n_half_filled > 0) then
         write(message(1),'(a)') 'No partially filled orbitals are allowed in OCT calculations.'
         call messages_fatal(1)
       end if
     case(SPINORS)
-      call occupied_states(sys%st, 1, n_filled, n_partially_filled, n_half_filled)
+      call occupied_states(sys%st, sys%namespace, 1, n_filled, n_partially_filled, n_half_filled)
       no_electrons = n_filled
       if(n_partially_filled > 0 .or. n_half_filled > 0) then
         write(message(1),'(a)') 'No partially filled orbitals are allowed in OCT calculations.'
@@ -68,7 +67,7 @@
       end if
     end select
 
-    if(abs(sys%st%qtot - real(no_electrons, REAL_PRECISION) ) > CNST(1.0e-8)) then
+    if(abs(sys%st%qtot - TOFLOAT(no_electrons) ) > CNST(1.0e-8)) then
       write(message(1), '(a)') 'Error in check_faulty_runmodes'
       call messages_fatal(1)
     end if
@@ -148,8 +147,8 @@
       end if
     end if
 
-    if( hm%theory_level /= INDEPENDENT_PARTICLES ) then
-      if(hm%theory_level /= KOHN_SHAM_DFT) then
+    if( sys%hm%theory_level /= INDEPENDENT_PARTICLES ) then
+      if(sys%hm%theory_level /= KOHN_SHAM_DFT) then
         write(message(1), '(a)') 'In optimal control theory mode, you can only use either independent'
         write(message(2), '(a)') 'particles "TheoryLevel = independent_particles", or Kohn-Sham DFT'
         write(message(3), '(a)') '"TheoryLevel = dft".'
@@ -166,7 +165,7 @@
       end if
     end if
 
-    if(hm%bc%abtype == MASK_ABSORBING) then
+    if(sys%hm%bc%abtype == MASK_ABSORBING) then
       if( (oct%algorithm /= OPTION__OCTSCHEME__OCT_DIRECT) .and. &
           (oct%algorithm /= OPTION__OCTSCHEME__OCT_NLOPT_BOBYQA) ) then
         write(message(1), '(a)') 'Cannot do QOCT with mask absorbing boundaries. Use either'

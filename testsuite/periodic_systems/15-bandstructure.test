@@ -36,6 +36,9 @@ match ; DOS value  2   ; LINEFIELD(static/total-dos.dat,   2, 2);  0.121384
 match ; DOS energy 442 ; LINEFIELD(static/total-dos.dat, 442, 1);  0.186893
 match ; DOS value  442 ; LINEFIELD(static/total-dos.dat, 442, 2);  0.666684
 
+match ; Angle alpha       ; GREPFIELD(out, 'alpha =', 3) ; 60
+match ; Angle beta        ; GREPFIELD(out, 'beta  =', 3) ; 60
+match ; Angle gamma       ; GREPFIELD(out, 'gamma =', 3) ; 60
 
 Input      : 15-bandstructure.02-unocc.inp
 
@@ -63,3 +66,46 @@ match ; Band structure E7(k7) ; LINEFIELD(static/bandstructure, 7, 11) ;  0.2909
 match ; Band structure E8(k7) ; LINEFIELD(static/bandstructure, 7, 12) ;  0.31874584
 match ; Band structure E9(k7) ; LINEFIELD(static/bandstructure, 7, 13) ;  0.39344398
 
+
+MPIUtil    : oct-wannier90
+Input      : 15-bandstructure.03-wannier90_setup.inp
+match ; Unit cell rlattice 1,1 ; GREPFIELD(w90.win, 'begin unit_cell_cart', 1, 2) ; 0.00000000
+match ; Unit cell rlattice 2,1 ; GREPFIELD(w90.win, 'begin unit_cell_cart', 2, 2) ; 2.69880376
+match ; Unit cell rlattice 3,1 ; GREPFIELD(w90.win, 'begin unit_cell_cart', 3, 2) ; 2.69880376
+match ; Atom 1 coord. 1 ; GREPFIELD(w90.win, 'begin atoms_frac', 2, 1) ; 0.00000000
+match ; Atom 2 coord. 1 ; GREPFIELD(w90.win, 'begin atoms_frac', 2, 2) ; 0.25000000
+match ; num_bands ; GREPFIELD(w90.win, 'num_bands', 2) ; 4
+match ; num_wann ; GREPFIELD(w90.win, 'num_wann', 2) ; 4
+match ; mp_grid 1 ; GREPFIELD(w90.win, 'mp_grid', 2) ; 4
+match ; mp_grid 2 ; GREPFIELD(w90.win, 'mp_grid', 3) ; 4
+match ; mp_grid 3 ; GREPFIELD(w90.win, 'mp_grid', 4) ; 4
+match ; k-point  1 (x) ; GREPFIELD(w90.win, 'begin kpoints', 1, 1) ; 0.000000
+match ; k-point  1 (y) ; GREPFIELD(w90.win, 'begin kpoints', 2, 1) ; 0.000000
+match ; k-point  1 (z) ; GREPFIELD(w90.win, 'begin kpoints', 3, 1) ; 0.000000
+match ; k-point 10 (x) ; GREPFIELD(w90.win, 'begin kpoints', 1, 10) ; -0.25000000
+match ; k-point 10 (y) ; GREPFIELD(w90.win, 'begin kpoints', 2, 10) ;  0.25000000
+match ; k-point 10 (z) ; GREPFIELD(w90.win, 'begin kpoints', 3, 10) ;  0.00000000
+match ; k-point 20 (x) ; GREPFIELD(w90.win, 'begin kpoints', 1, 20) ; -0.25000000
+match ; k-point 20 (y) ; GREPFIELD(w90.win, 'begin kpoints', 2, 20) ; -0.25000000
+match ; k-point 20 (z) ; GREPFIELD(w90.win, 'begin kpoints', 3, 20) ; -0.25000000
+
+
+MPIUtil    : oct-wannier90
+ExtraFile  : 15-bandstructure.04-wannier90.win
+ExtraFile  : 15-bandstructure.04-wannier90.nnkp
+Input      : 15-bandstructure.04-wannier90_output.inp
+
+Precision: 1e-5
+match ;  w90.eig 1  ; LINEFIELD(15-bandstructure.04-wannier90.eig, 1, 3) ; -7.81677
+match ;  w90.eig 2  ; LINEFIELD(15-bandstructure.04-wannier90.eig, 2, 3) ; 4.21194
+match ;  w90.eig 3  ; LINEFIELD(15-bandstructure.04-wannier90.eig, 3, 3) ; 4.21194
+
+Precision: 6.8e-4
+match ;  w90.amn 4-5 kpt64 ; LINEFIELD_ABS(15-bandstructure.04-wannier90.amn, -4, 4, 5) ; 3.6450066949999996e-11
+match ;  w90.amn 4-6 kpt64 ; LINEFIELD_ABS(15-bandstructure.04-wannier90.amn, -3, 4, 5) ; 0.0006112811055
+match ;  w90.amn 4-7 kpt64 ; LINEFIELD_ABS(15-bandstructure.04-wannier90.amn, -2, 4, 5) ; 0.48254149999999996
+match ;  w90.amn 4-8 kpt64 ; LINEFIELD_ABS(15-bandstructure.04-wannier90.amn, -1, 4, 5) ; 0.482364
+match ;  w90.mmn 4-1 kpt64 ; LINEFIELD_ABS(15-bandstructure.04-wannier90.mmn, -4, 1, 2) ; 7.73582938e-11
+match ;  w90.mmn 4-2 kpt64 ; LINEFIELD_ABS(15-bandstructure.04-wannier90.mmn, -3, 1, 2) ; 1.33483827e-10
+match ;  w90.mmn 4-3 kpt64 ; LINEFIELD_ABS(15-bandstructure.04-wannier90.mmn, -2, 1, 2) ; 0.0002289275065
+match ;  w90.mmn 4-4 kpt64 ; LINEFIELD_ABS(15-bandstructure.04-wannier90.mmn, -1, 1, 2) ; 0.9755915

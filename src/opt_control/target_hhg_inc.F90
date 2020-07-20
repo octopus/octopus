@@ -19,10 +19,11 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  subroutine target_init_hhg(tg, td, w0)
-    type(target_t),   intent(inout) :: tg
-    type(td_t),       intent(in)    :: td
-    FLOAT,            intent(in)    :: w0
+  subroutine target_init_hhg(tg, namespace, td, w0)
+    type(target_t),    intent(inout) :: tg
+    type(namespace_t), intent(in)    :: namespace
+    type(td_t),        intent(in)    :: td
+    FLOAT,             intent(in)    :: w0
 
     integer       :: jj
     type(block_t) :: blk
@@ -63,8 +64,8 @@
     !% <br>%</tt>
     !%
     !%End
-    if(parse_is_defined('OCTOptimizeHarmonicSpectrum')) then
-      if(parse_block('OCTOptimizeHarmonicSpectrum', blk) == 0) then
+    if(parse_is_defined(namespace, 'OCTOptimizeHarmonicSpectrum')) then
+      if(parse_block(namespace, 'OCTOptimizeHarmonicSpectrum', blk) == 0) then
         tg%hhg_nks = parse_block_cols(blk, 0)
         SAFE_ALLOCATE(    tg%hhg_k(1:tg%hhg_nks))
         SAFE_ALLOCATE(tg%hhg_alpha(1:tg%hhg_nks))
@@ -78,7 +79,7 @@
       else
         message(1) = '"OCTOptimizeHarmonicSpectrum" has to be specified as a block.'
         call messages_info(1)
-        call messages_input_error('OCTOptimizeHarmonicSpectrum')
+        call messages_input_error(namespace, 'OCTOptimizeHarmonicSpectrum')
       end if
     else
       write(message(1), '(a)') 'If "OCTTargetMode = oct_targetmode_hhg", you must supply an'
@@ -97,12 +98,13 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  subroutine target_init_hhgnew(gr, tg, td, geo, ep)
-    type(grid_t),     intent(in)    :: gr
-    type(target_t),   intent(inout) :: tg
-    type(td_t),       intent(in)    :: td
-    type(geometry_t), intent(in)    :: geo
-    type(epot_t),     intent(inout) :: ep
+  subroutine target_init_hhgnew(gr, namespace, tg, td, geo, ep)
+    type(grid_t),      intent(in)    :: gr
+    type(namespace_t), intent(in)    :: namespace
+    type(target_t),    intent(inout) :: tg
+    type(td_t),        intent(in)    :: td
+    type(geometry_t),  intent(in)    :: geo
+    type(epot_t),      intent(in)    :: ep
 
     integer :: ist, jst, iunit, jj, nn(3), optimize_parity(3)
     logical :: optimize(3)
@@ -137,11 +139,13 @@
 
     vl(:) = M_ZERO
     vl_grad(:,:) = M_ZERO
-    call epot_local_potential(ep, gr%der, gr%dgrid, geo, 1, vl)
+    call epot_local_potential(ep, namespace, gr%der, gr%dgrid, geo, 1, vl)
     call dderivatives_grad(gr%der, vl, vl_grad)
-    forall(ist=1:gr%mesh%np, jst=1:gr%sb%dim)
-      tg%grad_local_pot(1, ist, jst) = vl_grad(ist, jst)
-    end forall
+    do jst=1, gr%sb%dim
+      do ist = 1, gr%mesh%np
+        tg%grad_local_pot(1, ist, jst) = vl_grad(ist, jst)
+      end do
+    end do
     ! Note that the calculation of the gradient of the potential
     ! is wrong at the borders of the box, since it assumes zero boundary
     ! conditions. The best way to solve this problems is to define the 
@@ -163,12 +167,12 @@
     !% In practice, it is better if you also set an upper limit, <i>e.g.</i>
     !% <math>f(\omega) = step(\omega-1) step(2-\omega)</math>.
     !%End
-    call parse_variable('OCTHarmonicWeight', '1', tg%plateau_string)
+    call parse_variable(namespace, 'OCTHarmonicWeight', '1', tg%plateau_string)
     tg%dt = td%dt
     SAFE_ALLOCATE(tg%td_fitness(0:td%max_iter))
     tg%td_fitness = M_ZERO
 
-    iunit = io_open('.alpha', action = 'write')
+    iunit = io_open('.alpha', namespace, action='write')
     dw = (M_TWO * M_PI) / (td%max_iter * tg%dt)
     do jj = 0, td%max_iter - 1
       ww = jj * dw
@@ -201,18 +205,19 @@
 
 
   ! ----------------------------------------------------------------------
-  subroutine target_output_hhg(tg, gr, dir, geo, hm, outp)
-    type(target_t), intent(inout) :: tg
-    type(grid_t), intent(inout)   :: gr
-    character(len=*), intent(in)  :: dir
-    type(geometry_t),       intent(in)  :: geo
-    type(hamiltonian_t),    intent(in)  :: hm
-    type(output_t),         intent(in)  :: outp
+  subroutine target_output_hhg(tg, namespace, gr, dir, geo, hm, outp)
+    type(target_t),      intent(in) :: tg
+    type(namespace_t),   intent(in) :: namespace
+    type(grid_t),        intent(in) :: gr
+    character(len=*),    intent(in) :: dir
+    type(geometry_t),    intent(in) :: geo
+    type(hamiltonian_elec_t), intent(in) :: hm
+    type(output_t),      intent(in) :: outp
 
     PUSH_SUB(target_output_hhg)
     
-    call io_mkdir(trim(dir))
-    call output_states(tg%st, gr, geo, hm, trim(dir), outp)
+    call io_mkdir(trim(dir), namespace)
+    call output_states(outp, namespace, trim(dir), tg%st, gr, geo, hm)
 
     POP_SUB(target_output_hhg)
   end subroutine target_output_hhg
@@ -222,8 +227,8 @@
   ! ----------------------------------------------------------------------
   !> 
   subroutine target_end_hhgnew(tg, oct)
-    type(target_t),   intent(inout) :: tg
-    type(oct_t), intent(in)       :: oct
+    type(target_t), intent(inout) :: tg
+    type(oct_t),    intent(in)    :: oct
     PUSH_SUB(target_init_hhgnew)
     if((oct%algorithm  ==  OPTION__OCTSCHEME__OCT_CG) .or. (oct%algorithm == OPTION__OCTSCHEME__OCT_BFGS)) then
       SAFE_DEALLOCATE_P(tg%grad_local_pot)
@@ -241,9 +246,10 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  FLOAT function target_j1_hhg(tg) result(j1)
-    type(target_t),   intent(inout) :: tg
-
+  FLOAT function target_j1_hhg(tg, namespace) result(j1)
+    type(target_t),    intent(in) :: tg
+    type(namespace_t), intent(in) :: namespace
+    
     integer :: maxiter, jj
     FLOAT :: aa, ww, maxhh, omega
     CMPLX, allocatable :: ddipole(:)
@@ -258,7 +264,7 @@
     do jj = 1, tg%hhg_nks
       aa = tg%hhg_a(jj) * tg%hhg_w0
       ww = tg%hhg_k(jj) * tg%hhg_w0
-      call spectrum_hsfunction_min(ww - aa, ww + aa, omega, maxhh)
+      call spectrum_hsfunction_min(namespace, ww - aa, ww + aa, omega, maxhh)
       j1 = j1 + tg%hhg_alpha(jj) * log(-maxhh)
     end do
     call spectrum_hsfunction_end()
@@ -271,8 +277,8 @@
   ! ----------------------------------------------------------------------
   !> 
   FLOAT function target_j1_hhgnew(gr, tg) result(j1)
-    type(grid_t),     intent(in)    :: gr
-    type(target_t),   intent(inout) :: tg
+    type(grid_t),   intent(in) :: gr
+    type(target_t), intent(in) :: tg
 
     integer :: maxiter, i
     FLOAT :: dw, ww
@@ -292,9 +298,8 @@
 
   ! ----------------------------------------------------------------------
   !> 
-  subroutine target_chi_hhg(gr, chi_out)
-    type(grid_t),      intent(inout) :: gr
-    type(states_t),    intent(inout) :: chi_out
+  subroutine target_chi_hhg(chi_out)
+    type(states_elec_t), intent(inout) :: chi_out
 
     integer :: ik, ib
     PUSH_SUB(target_chi_hhg)
@@ -315,8 +320,8 @@
   !!
   subroutine target_tdcalc_hhgnew(tg, gr, psi, time, max_time)
     type(target_t),      intent(inout) :: tg
-    type(grid_t),        intent(inout) :: gr
-    type(states_t),      intent(inout) :: psi
+    type(grid_t),        intent(in)    :: gr
+    type(states_elec_t), intent(in)    :: psi
     integer,             intent(in)    :: time
     integer,             intent(in)    :: max_time
 
@@ -340,11 +345,10 @@
       acc = M_ZERO
       do ik = 1, psi%d%nik
         do ist = 1, psi%nst
-          call states_get_state(psi, gr%mesh, ist, ik, zpsi)
+          call states_elec_get_state(psi, gr%mesh, ist, ik, zpsi)
           do idim = 1, gr%sb%dim
             opsi(1:gr%mesh%np, 1) = tg%grad_local_pot(1, 1:gr%mesh%np, idim)*zpsi(1:gr%mesh%np, 1)
-            acc(idim) = acc(idim) + real( psi%occ(ist, ik) * &
-                zmf_dotp(gr%mesh, psi%d%dim, opsi, zpsi), REAL_PRECISION )
+            acc(idim) = acc(idim) + TOFLOAT( psi%occ(ist, ik) * zmf_dotp(gr%mesh, psi%d%dim, opsi, zpsi))
             tg%acc(time+1, idim) = tg%acc(time+1, idim) + psi%occ(ist, ik)*zmf_dotp(gr%mesh, psi%d%dim, opsi, zpsi)
           end do
         end do
@@ -360,7 +364,7 @@
     if(time  ==  max_time) then
       tg%acc(1, 1:gr%sb%dim) = M_HALF * (tg%acc(1, 1:gr%sb%dim) + tg%acc(max_time+1, 1:gr%sb%dim))
       do ia = 1, gr%sb%dim
-        call zfft_forward1(tg%fft_handler, tg%acc(1:max_time, ia), tg%vel(1:max_time, ia))
+        call zfft_forward(tg%fft_handler, tg%acc(1:max_time, ia), tg%vel(1:max_time, ia))
       end do
       tg%vel = tg%vel * tg%dt
       do iw = 1, max_time
@@ -369,7 +373,7 @@
         tg%acc(iw, 1:gr%sb%dim) = tg%vel(iw, 1:gr%sb%dim) * tg%alpha(iw) * exp(M_zI * (iw-1) * dw * M_HALF * dt)
       end do
       do ia = 1, gr%sb%dim
-        call zfft_backward1(tg%fft_handler, tg%acc(1:max_time, ia), tg%gvec(1:max_time, ia))
+        call zfft_backward(tg%fft_handler, tg%acc(1:max_time, ia), tg%gvec(1:max_time, ia))
       end do
       tg%gvec(max_time + 1, 1:gr%sb%dim) = tg%gvec(1, 1:gr%sb%dim)
       tg%gvec = tg%gvec * (M_TWO * M_PI/ tg%dt)
@@ -383,18 +387,19 @@
   ! ---------------------------------------------------------
   !> 
   !!
-  subroutine target_tdcalc_hhg(tg, hm, gr, geo, psi, time)
-    type(target_t),      intent(inout) :: tg
-    type(hamiltonian_t), intent(inout) :: hm
-    type(grid_t),        intent(inout) :: gr
-    type(geometry_t),    intent(inout) :: geo
-    type(states_t),      intent(inout) :: psi
-    integer,             intent(in)    :: time
+  subroutine target_tdcalc_hhg(tg, namespace, hm, gr, geo, psi, time)
+    type(target_t),           intent(in)    :: tg
+    type(namespace_t),        intent(in)    :: namespace
+    type(hamiltonian_elec_t), intent(in)    :: hm
+    type(grid_t),             intent(in)    :: gr
+    type(geometry_t),         intent(inout) :: geo
+    type(states_elec_t),      intent(in)    :: psi
+    integer,                  intent(in)    :: time
 
     FLOAT :: acc(MAX_DIM)
     PUSH_SUB(target_tdcalc_hhg)
 
-    call td_calc_tacc(gr, geo, psi, hm, acc, time*tg%dt)
+    call td_calc_tacc(namespace, gr, geo, psi, hm, acc, time*tg%dt)
     tg%td_fitness(time) = acc(1)
 
     POP_SUB(target_tdcalc_hhg)

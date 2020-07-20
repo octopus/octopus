@@ -24,8 +24,7 @@ Lsize = a/2
 
 PseudopotentialSet = pseudodojo_lda
 
-SmearingFunction = fermi_dirac
-Smearing = 0.1*eV
+RestartFixedOccupations = yes
 
 ExtraStates = 2
 
@@ -47,3 +46,7 @@ FromScratch = yes
 TDMaxSteps = 150
 
 TDOutput = energy + geometry + total_current + gauge_field
+
+# test code path without CUDA-aware MPI for this test
+CudaAwareMPI = no
+StatesPack = yes

@@ -29,12 +29,24 @@
 {
   const int n = opn[0];
   const int nri = opnri[0];
+#if DEPTH >= 32
   const int unroll32 = max1(32*VEC_SIZE >> ldf);
+#endif
+#if DEPTH >= 16
   const int unroll16 = max1(16*VEC_SIZE >> ldf);
+#endif
+#if DEPTH >= 8
   const int unroll8  = max1(8*VEC_SIZE >> ldf);
+#endif
+#if DEPTH >= 4
   const int unroll4  = max1(4*VEC_SIZE >> ldf);
+#endif
+#if DEPTH >= 2
   const int unroll2  = max1(2*VEC_SIZE >> ldf);
+#endif
+#if DEPTH >= 1
   const int unroll1  = max1(1*VEC_SIZE >> ldf);
+#endif
 
   int l, i, j;
   const int * restrict index;
@@ -275,7 +287,11 @@
 	a0 = a1 = VEC_ZERO;
 
 	for(j = 0; j < n; j++) {
-	  register VEC_TYPE wj = VEC_SCAL(w[j]);
+#ifdef VEC_SCAL_LD
+          register VEC_TYPE wj = VEC_SCAL_LD(w + j);
+#else
+          register VEC_TYPE wj = VEC_SCAL(w[j]);
+#endif
 	  int indexj = (index[j] + i)<<ldf;
 	  a0 = VEC_FMA(wj, LOAD(fi + indexj              + k), a0);
 	  a1 = VEC_FMA(wj, LOAD(fi + indexj + 1*VEC_SIZE + k), a1);
@@ -318,6 +334,10 @@
 
   } /* l */
 
+  // this fence instruction is needed to ensure correctness when using non-temporal stores
+#if defined(ALIGNED) && defined(FENCE)
+  FENCE;
+#endif
 }
 
 #undef LOAD

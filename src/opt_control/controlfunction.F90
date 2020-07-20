@@ -33,6 +33,7 @@ module controlfunction_oct_m
   use math_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
   use tdfunction_oct_m
@@ -182,11 +183,12 @@ contains
   !!
   !! Output argument "mode_fixed_fluence" is also given a value, depending on whether
   !! the user requires a fixed-fluence run (.true.) or not (.false.).
-  subroutine controlfunction_mod_init(ep, dt, max_iter, mode_fixed_fluence)
-    type(epot_t), intent(inout)                   :: ep
-    FLOAT, intent(in)                             :: dt
-    integer, intent(in)                           :: max_iter
-    logical, intent(out)                          :: mode_fixed_fluence
+  subroutine controlfunction_mod_init(ep, namespace, dt, max_iter, mode_fixed_fluence)
+    type(epot_t),                   intent(inout) :: ep
+    type(namespace_t),              intent(in)    :: namespace
+    FLOAT,                          intent(in)    :: dt
+    integer,                        intent(in)    :: max_iter
+    logical,                        intent(out)   :: mode_fixed_fluence
 
     character(len=1024) :: expression
     integer :: no_lines, steps, il, idir, ncols, ipar, irow, ierr
@@ -245,9 +247,9 @@ contains
     !%Option control_rt 7
     !% (experimental)
     !%End
-    call parse_variable('OCTControlFunctionRepresentation', ctr_rt, cf_common%representation)
+    call parse_variable(namespace, 'OCTControlFunctionRepresentation', ctr_rt, cf_common%representation)
       if(.not.varinfo_valid_option('OCTControlFunctionRepresentation', cf_common%representation)) &
-        call messages_input_error('OCTControlFunctionRepresentation')
+        call messages_input_error(namespace, 'OCTControlFunctionRepresentation')
       select case(cf_common%representation)
       case(ctr_fourier_series_h)
         write(message(1), '(a)') 'Info: The OCT control functions will be represented as a Fourier series,'
@@ -287,7 +289,7 @@ contains
     !% The Fourier series that can be used to represent the control functions must be truncated;
     !% the truncation is given by a cut-off frequency which is determined by this variable.
     !%End
-    call parse_variable('OCTControlFunctionOmegaMax', -M_ONE, cf_common%omegamax)
+    call parse_variable(namespace, 'OCTControlFunctionOmegaMax', -M_ONE, cf_common%omegamax)
     if(cf_common%representation /= ctr_rt) then
       write(message(1), '(a)')         'Info: The representation of the OCT control parameters will be restricted'
       write(message(2), '(a,f10.5,a)') '      with an energy cut-off of ', &
@@ -312,7 +314,7 @@ contains
     !% first the code applies the envelope provided by the <tt>OCTLaserEnvelope</tt> input
     !% option, and afterwards it calculates the fluence.
     !%End
-    call parse_variable('OCTFixFluenceTo', M_ZERO, cf_common%targetfluence)
+    call parse_variable(namespace, 'OCTFixFluenceTo', M_ZERO, cf_common%targetfluence)
 
     !%Variable OCTFixInitialFluence
     !%Type logical
@@ -324,7 +326,7 @@ contains
     !% fluence. However, you can force the program to use that initial laser as the initial
     !% guess, no matter the fluence, by setting <tt>OCTFixInitialFluence = no</tt>.
     !%End
-    call parse_variable('OCTFixInitialFluence', .true., cf_common%fix_initial_fluence)
+    call parse_variable(namespace, 'OCTFixInitialFluence', .true., cf_common%fix_initial_fluence)
 
 
     !%Variable OCTControlFunctionType
@@ -348,11 +350,11 @@ contains
     !% This carrier frequency is given by the carrier frequency of the <tt>TDExternalFields</tt> 
     !% in the <tt>inp</tt> file.
     !%End
-    call parse_variable('OCTControlFunctionType', controlfunction_mode_epsilon, cf_common%mode)
+    call parse_variable(namespace, 'OCTControlFunctionType', controlfunction_mode_epsilon, cf_common%mode)
     if(.not.varinfo_valid_option('OCTControlFunctionType', cf_common%mode)) &
-      call messages_input_error('OCTControlFunctionType')
+      call messages_input_error(namespace, 'OCTControlFunctionType')
     if(cf_common%representation == ctr_rt .and. (cf_common%mode /= controlfunction_mode_epsilon) ) &
-      call messages_input_error('OCTControlFunctionType')
+      call messages_input_error(namespace, 'OCTControlFunctionType')
     call messages_print_var_option(stdout, 'OCTControlFunctionType', cf_common%mode)
 
 
@@ -389,7 +391,7 @@ contains
     end do
 
     ! Fix the carrier frequency
-    call messages_obsolete_variable('OCTCarrierFrequency')
+    call messages_obsolete_variable(namespace, 'OCTCarrierFrequency')
     cf_common%w0 = laser_carrier_frequency(ep%lasers(1))
 
     ! Fix the number of control functions: if we have "traditional" QOCT (i.e. the control functions
@@ -447,20 +449,20 @@ contains
     !%End
     SAFE_ALLOCATE(cf_common%alpha(1:cf_common%no_controlfunctions))
     cf_common%alpha = M_ZERO
-    if(parse_block('OCTPenalty', blk) == 0) then
+    if(parse_block(namespace, 'OCTPenalty', blk) == 0) then
       ! We have a block
       ncols = parse_block_cols(blk, 0)
       if(ncols /= cf_common%no_controlfunctions) then
-        call messages_input_error('OCTPenalty')
+        call messages_input_error(namespace, 'OCTPenalty')
       else
         do ipar = 1, ncols
           call parse_block_float(blk, 0, ipar - 1, cf_common%alpha(ipar))
-          if(cf_common%alpha(ipar) <= M_ZERO) call messages_input_error('OCTPenalty')
+          if(cf_common%alpha(ipar) <= M_ZERO) call messages_input_error(namespace, 'OCTPenalty')
         end do
       end if
     else
       ! We have the same penalty for all the control functions.
-      call parse_variable('OCTPenalty', M_ONE, octpenalty)
+      call parse_variable(namespace, 'OCTPenalty', M_ONE, octpenalty)
       cf_common%alpha(1:cf_common%no_controlfunctions) = octpenalty
     end if
 
@@ -481,7 +483,7 @@ contains
     steps = max_iter
     SAFE_ALLOCATE(cf_common%td_penalty(1:cf_common%no_controlfunctions))
 
-    if (parse_block('OCTLaserEnvelope', blk)==0) then
+    if (parse_block(namespace, 'OCTLaserEnvelope', blk)==0) then
 
       ! Cannot have this unless we have the "usual" controlfunction_mode_epsilon.
       if(cf_common%mode /= controlfunction_mode_epsilon) then
@@ -491,18 +493,18 @@ contains
       end if
 
       no_lines = parse_block_n(blk)
-      if(no_lines /= cf_common%no_controlfunctions) call messages_input_error('OCTLaserEnvelope')
+      if(no_lines /= cf_common%no_controlfunctions) call messages_input_error(namespace, 'OCTLaserEnvelope')
 
       do irow = 1, no_lines
         call parse_block_string(blk, irow - 1, 0, expression)
         call parse_block_end(blk)
-        call tdf_read(cf_common%td_penalty(irow), trim(expression), ierr)
+        call tdf_read(cf_common%td_penalty(irow), namespace, trim(expression), ierr)
         if(ierr.ne.0) then
           message(1) = 'Time-dependent function "'//trim(expression)//'" could not be read from inp file.'
           call messages_fatal(1)
         end if
         call tdf_to_numerical(cf_common%td_penalty(irow), steps, dt, cf_common%omegamax)
-        ierr = parse_block('OCTLaserEnvelope', blk)
+        ierr = parse_block(namespace, 'OCTLaserEnvelope', blk)
       end do
 
       call parse_block_end(blk)
@@ -540,8 +542,8 @@ contains
   !! controlfunction_copy.
   subroutine controlfunction_init(cp, dt, ntiter)
     type(controlfunction_t), intent(inout) :: cp
-    FLOAT, intent(in) :: dt
-    integer, intent(in) :: ntiter
+    FLOAT,                   intent(in)    :: dt
+    integer,                 intent(in)    :: ntiter
 
     integer :: ipar
 
@@ -841,19 +843,6 @@ contains
 
 
   ! ---------------------------------------------------------
-  FLOAT function controlfunction_dotp(xx, yy) result(res)
-    FLOAT, intent(in) :: xx(:)
-    FLOAT, intent(in) :: yy(:)
-
-    PUSH_SUB(controlfunction_dotp)
-    res = sum(xx(:) * yy(:))
-
-    POP_SUB(controlfunction_dotp)
-  end function controlfunction_dotp
-  ! ---------------------------------------------------------
-
-
-  ! ---------------------------------------------------------
   subroutine controlfunction_apply_envelope(cp)
     type(controlfunction_t), intent(inout) :: cp
     integer :: ipar, iter
@@ -945,9 +934,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine controlfunction_write(filename, cp)
+  subroutine controlfunction_write(filename, cp, namespace)
     character(len=*), intent(in) :: filename
     type(controlfunction_t), intent(in) :: cp
+    type(namespace_t),       intent(in) :: namespace
 
     integer :: iter, ipar, ifreq, iunit, niter, nfreqs, idof
     FLOAT :: time, wmax, dw, ww, wa, wb, dt
@@ -960,12 +950,12 @@ contains
 
     PUSH_SUB(controlfunction_write)
 
-    call io_mkdir(trim(filename))
+    call io_mkdir(trim(filename), namespace)
 
     call controlfunction_copy(par, cp)
     call controlfunction_to_realtime(par)
 
-    iunit = io_open(trim(filename)//'/Fluence', action='write')
+    iunit = io_open(trim(filename)//'/Fluence', namespace, action='write')
     write(iunit, '(a,es20.8e3)') 'Fluence = ', controlfunction_fluence(par)
     call io_close(iunit)
 
@@ -978,9 +968,9 @@ contains
       do ipar = 1, cp%no_controlfunctions
         if(cp%no_controlfunctions > 1) then
           write(digit,'(i2.2)') ipar
-          iunit = io_open(trim(filename)//'/cp-'//digit, action='write')
+          iunit = io_open(trim(filename)//'/cp-'//digit, namespace, action='write')
         else
-          iunit = io_open(trim(filename)//'/cp', action='write')
+          iunit = io_open(trim(filename)//'/cp', namespace, action='write')
         end if
         write(iunit,'(2a20)') '#       t [a.u]      ', '        e(t)         '
         do iter = 1, tdf_niter(par%f(ipar)) + 1
@@ -996,9 +986,9 @@ contains
       do ipar = 1, cp%no_controlfunctions
         if(cp%no_controlfunctions > 1) then
           write(digit,'(i2.2)') ipar
-          iunit = io_open(trim(filename)//'/cp-'//digit, action='write')
+          iunit = io_open(trim(filename)//'/cp-'//digit, namespace, action='write')
         else
-          iunit = io_open(trim(filename)//'/cp', action='write')
+          iunit = io_open(trim(filename)//'/cp', namespace, action='write')
         end if
         write(iunit,'(3a20)') '#       t [a.u]      ', '        e(t)         ', '        f(t)         '
         do iter = 1, tdf_niter(par%f(ipar)) + 1
@@ -1019,9 +1009,9 @@ contains
       do ipar = 1, cp%no_controlfunctions
         if(cp%no_controlfunctions > 1) then
           write(digit,'(i2.2)') ipar
-          iunit = io_open(trim(filename)//'/cpw-'//digit, action='write')
+          iunit = io_open(trim(filename)//'/cpw-'//digit, namespace, action='write')
         else
-          iunit = io_open(trim(filename)//'/cpw', action='write')
+          iunit = io_open(trim(filename)//'/cpw', namespace, action='write')
         end if
         write(iunit,'(3a20)') '#       w [a.u]      ', '      Re[e(w)]       ', &
                               '      Im[e(w)]       '
@@ -1044,14 +1034,14 @@ contains
             ez = ez * ezdt
           end do
           ft = ft * dt
-          write(iunit,'(3es20.8e3)') ww, real(ft), aimag(ft)
+          write(iunit,'(3es20.8e3)') ww, TOFLOAT(ft), aimag(ft)
         end do
         call io_close(iunit)
       end do
       
 
     case(controlfunction_mode_f)
-      iunit = io_open(trim(filename)//'/cpw', action='write')
+      iunit = io_open(trim(filename)//'/cpw', namespace, action='write')
       write(iunit,'(3a20)') '#       w [a.u]      ', '      Re[e(w)]       ', &
                             '      Im[e(w)]       '
       
@@ -1073,7 +1063,7 @@ contains
           ez = ez * ezdt
         end do
         ft = ft * dt
-        write(iunit,'(3es20.8e3)') ww, real(ft), aimag(ft)
+        write(iunit,'(3es20.8e3)') ww, TOFLOAT(ft), aimag(ft)
       end do
 
       call io_close(iunit)
@@ -1081,7 +1071,7 @@ contains
 
     ! Now, in case of a parametrized control function, the parameters.
     if(cf_common%representation /= ctr_rt) then
-      iunit = io_open(trim(filename)//'/theta', action='write')
+      iunit = io_open(trim(filename)//'/theta', namespace, action='write')
       do idof = 1, par%dof
         write(iunit,'(i5,es20.8e3)') idof, par%theta(idof)
       end do
@@ -1158,7 +1148,7 @@ contains
         do iter = 1, tdf_niter(ff) + 1
           time = (iter - 1) * tdf_dt(ff)
           fi = tdf(par_%f(ipar), iter)
-          tdp = sqrt(real(tdf(cf_common%td_penalty(ipar), iter), kind=REAL_PRECISION))
+          tdp = sqrt(TOFLOAT(tdf(cf_common%td_penalty(ipar), iter)))
           call tdf_set_numerical(ff, iter, fi * tdp)
         end do
         integral = integral + tdf_dot_product(ff, ff)
@@ -1171,7 +1161,7 @@ contains
         do iter = 1, tdf_niter(ff) + 1
           time = (iter - 1) * tdf_dt(ff)
           fi = tdf(par_%f(ipar), iter)
-          tdp = sqrt(real(tdf(cf_common%td_penalty(ipar), iter)))
+          tdp = sqrt(TOFLOAT(tdf(cf_common%td_penalty(ipar), iter)))
           call tdf_set_numerical(ff, iter, fi * tdp * cos(par_%w0 * time))
         end do
         integral = integral + tdf_dot_product(ff, ff)
@@ -1504,7 +1494,7 @@ contains
   !! to one of its degrees of freedom.
   subroutine controlfunction_der(par, depsilon, i)
     type(controlfunction_t), intent(in)    :: par
-    type(tdf_t), intent(inout) :: depsilon
+    type(tdf_t),             intent(inout) :: depsilon
     integer,                 intent(in)    :: i
 
     FLOAT, allocatable :: dedu(:, :)

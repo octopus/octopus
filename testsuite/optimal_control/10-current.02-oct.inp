@@ -7,6 +7,7 @@ fromScratch = yes
 
 CalculationMode = opt_control
 ExperimentalFeatures = yes
+StatesPack = yes
 
 
 # ------------------
@@ -38,7 +39,7 @@ stime  = 50.0
 dt = 0.01
 TDPropagator = exp_mid
 TDExponentialMethod = taylor
-TDExponentialOrder = 4
+TDExpOrder = 4
 TDLanczosTol = 5.0e-5
 TDPropagationTime = stime
 TDTimeStep = dt
@@ -91,6 +92,5 @@ electric_field | 1 | 0 | 0 | freq | "envelope_function"
 #---------------------------- 
 Output=  wfs + density
 OutputFormat= axis_x
-
 
 

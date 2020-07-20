@@ -18,18 +18,23 @@
 
 ! ---------------------------------------------------------
 !> This routine calculates the SIC exchange functional.
-subroutine X(oep_sic) (xcs, gr, st, is, oep, ex, ec)
-  type(xc_t),     intent(in)    :: xcs
-  type(grid_t),   intent(inout) :: gr
-  type(states_t), intent(inout) :: st
-  integer,        intent(in)    :: is
-  type(xc_oep_t), intent(inout) :: oep
-  FLOAT,          intent(inout) :: ex, ec
+subroutine X(oep_sic) (xcs, gr, psolver, namespace, st, is, oep, ex, ec)
+  type(xc_t),          intent(inout) :: xcs
+  type(grid_t),        intent(in)    :: gr
+  type(poisson_t),     intent(in)    :: psolver
+  type(namespace_t),   intent(in)    :: namespace
+  type(states_elec_t), intent(inout) :: st
+  integer,             intent(in)    :: is
+  type(xc_oep_t),      intent(inout) :: oep
+  FLOAT,               intent(inout) :: ex, ec
 
   integer  :: ist
-  FLOAT :: ex2, ec2, ex_, ec_, edummy
+  FLOAT :: ex2, ec2, ex_, ec_
   FLOAT, allocatable :: vxc(:, :), rho(:,:)
   R_TYPE, allocatable :: psi(:, :)
+#if defined(HAVE_MPI)
+  FLOAT :: edummy
+#endif
 
   call profiling_in(C_PROFILING_XC_SIC, 'XC_SIC')
   PUSH_SUB(X(oep_sic))
@@ -47,10 +52,10 @@ subroutine X(oep_sic) (xcs, gr, st, is, oep, ex, ec)
   do ist = st%st_start, st%st_end
     if(st%occ(ist, is) > M_EPSILON) then ! we only need the occupied states
 
-      call states_get_state(st, gr%mesh, ist, is, psi)
+      call states_elec_get_state(st, gr%mesh, ist, is, psi)
 
       ! get orbital density
-      rho(1:gr%mesh%np, 1) = oep%socc*st%occ(ist, is)*R_ABS(psi(1:gr%mesh%np, 1))**2
+      rho(1:gr%mesh%np, 1) = oep%socc*st%occ(ist, is)*R_REAL(psi(1:gr%mesh%np, 1)*R_CONJ(psi(1:gr%mesh%np, 1)))
 
       ! initialize before calling get_vxc
       vxc = M_ZERO
@@ -58,8 +63,7 @@ subroutine X(oep_sic) (xcs, gr, st, is, oep, ex, ec)
       ec2  = M_ZERO
 
       ! calculate LDA/GGA contribution to the SIC (does not work for LB94)
-      edummy = M_ZERO
-      call xc_get_vxc(gr%fine%der, xcs, st, rho, SPIN_POLARIZED, edummy, edummy, vxc, ex=ex2, ec=ec2)
+      call xc_get_vxc(gr%fine%der, xcs, st, psolver, namespace, rho, SPIN_POLARIZED, vxc, ex=ex2, ec=ec2)
 
       ex_ = ex_ - oep%sfact*ex2
       ec_ = ec_ - oep%sfact*ec2
@@ -71,8 +75,7 @@ subroutine X(oep_sic) (xcs, gr, st, is, oep, ex, ec)
       call dpoisson_solve(psolver, vxc(:, 1), rho(:, 1), all_nodes=.false.)
 
       ! The exchange energy.
-      ex_ = ex_ - M_HALF*oep%sfact*oep%socc*st%occ(ist, is)* &
-        dmf_dotp(gr%mesh, vxc(1:gr%mesh%np, 1), R_ABS(psi(1:gr%mesh%np, 1))**2)
+      ex_ = ex_ - M_HALF*oep%sfact*dmf_dotp(gr%mesh, vxc(1:gr%mesh%np, 1), rho(1:gr%mesh%np, 1))
 
       oep%X(lxc)(1:gr%mesh%np, ist, is) = oep%X(lxc)(1:gr%mesh%np, ist, is) - &
         vxc(1:gr%mesh%np, 1)*R_CONJ(psi(1:gr%mesh%np, 1))

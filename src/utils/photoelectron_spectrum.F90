@@ -28,6 +28,7 @@ program photoelectron_spectrum
   use io_oct_m
   use messages_oct_m
   use multicomm_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use pes_mask_oct_m
   use pes_flux_oct_m
@@ -38,11 +39,12 @@ program photoelectron_spectrum
   use sort_oct_m
   use space_oct_m
   use string_oct_m
-  use states_oct_m
-  use states_dim_oct_m
+  use states_elec_oct_m
+  use states_elec_dim_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use utils_oct_m
+  use mpi_oct_m
   
   implicit none
 
@@ -52,7 +54,7 @@ program photoelectron_spectrum
     FLOAT       :: pvec(3)        
   end type pesoutput_t  
 
-  integer              :: ierr, integrate
+  integer              :: ierr, integrate, what_default
   integer              :: dim, dir, idim, pdim, ngpt
   integer(8)           :: how
   integer              :: llp(3), llg(3)   !< The size of the g-point and p-point cubic grids 
@@ -69,13 +71,13 @@ program photoelectron_spectrum
   type(space_t)        :: space
   type(geometry_t)     :: geo
   type(simul_box_t)    :: sb
-  type(states_t)       :: st
+  type(states_elec_t)  :: st
   type(grid_t)         :: gr
   type(restart_t)      :: restart
   
   character(len=512)   :: filename
 
-  logical              :: have_zweight_path 
+  logical              :: have_zweight_path, use_zweight_path 
   integer              :: krng(2), nkpt, kpth_dir !< Kpoint range for zero-weight path
 
   type(pesoutput_t)    :: pesout
@@ -89,6 +91,7 @@ program photoelectron_spectrum
   integer              :: pes_method, option 
 
   type(multicomm_t)    :: mc
+  integer              :: index_range(4)
 
   call getopt_init(ierr)
   if(ierr /= 0) then
@@ -99,18 +102,20 @@ program photoelectron_spectrum
 
 
   call global_init(is_serial = .true.)
-  
+
+  call parser_init()
+
   call messages_init()  
   call io_init()
 
   !* In order to initialize k-points
-  call unit_system_init()
+  call unit_system_init(global_namespace)
   
-  call space_init(space)
-  call geometry_init(geo, space)
-  call simul_box_init(sb, geo, space)
+  call space_init(space, global_namespace)
+  call geometry_init(geo, global_namespace, space)
+  call simul_box_init(sb, global_namespace, geo, space)
   gr%sb = sb
-  call states_init(st, gr, geo)
+  call states_elec_init(st, global_namespace, gr, geo)
   !*
 
   !Initialize variables
@@ -125,7 +130,7 @@ program photoelectron_spectrum
   call messages_print_stress(stdout,"Postprocessing")  
   
   !Figure out wich method has been used to calculate the photoelectron data  
-  call parse_variable('PhotoElectronSpectrum', OPTION__PHOTOELECTRONSPECTRUM__NONE, pes_method)
+  call parse_variable(global_namespace, 'PhotoElectronSpectrum', OPTION__PHOTOELECTRONSPECTRUM__NONE, pes_method)
   
   select case (pes_method)
   case (OPTION__PHOTOELECTRONSPECTRUM__PES_MASK)
@@ -133,7 +138,7 @@ program photoelectron_spectrum
     call messages_new_line()  
     
     ! Note that Lg(:,:) is allocated inside pes_mask_read_info
-    call pes_mask_read_info("td.general/", dim, Emax, Estep, llp(:), Lg, RR)
+    call pes_mask_read_info("td.general/", global_namespace, dim, Emax, Estep, llp(:), Lg, RR)
     ! Keep a copy the original dimensions vector
     ! For periodic systems llg represents the extension on the g-point grid
     llg(1:dim) = llp(1:dim) 
@@ -153,8 +158,8 @@ program photoelectron_spectrum
     if(dim <= 2) option = OPTION__PES_FLUX_SHAPE__CUB
     if (simul_box_is_periodic(sb)) option = OPTION__PES_FLUX_SHAPE__PLN
     
-    call parse_variable('PES_Flux_Shape', option, pflux%shape)
-    call pes_flux_reciprocal_mesh_gen(pflux, sb, st, 0, post = .true.)
+    call parse_variable(global_namespace, 'PES_Flux_Shape', option, pflux%shape)
+    call pes_flux_reciprocal_mesh_gen(pflux, global_namespace, sb, st, 0, post = .true.)
     
     llg(1:dim) = pflux%ll(1:dim)
     ngpt = pflux%ngpt
@@ -185,10 +190,11 @@ program photoelectron_spectrum
   center = (/0,0,0/)
   pvec = (/1,0,0/)
 
-  pesout%what = OPTION__PHOTOELECTRONSPECTRUMOUTPUT__ENERGY_TOT 
+  what_default = OPTION__PHOTOELECTRONSPECTRUMOUTPUT__ENERGY_TOT 
   pesout%pvec = pvec
 
   have_zweight_path = kpoints_have_zero_weight_path(sb%kpoints)
+  use_zweight_path  = have_zweight_path
 
   call get_laser_polarization(pol)
   ! if there is no laser set pol along the z-axis
@@ -202,7 +208,7 @@ program photoelectron_spectrum
       pol = (/0,1,0/) 
       pvec = (/0,0,1/)
       
-      pesout%what = OPTION__PHOTOELECTRONSPECTRUMOUTPUT__VELOCITY_MAP_CUT 
+      what_default = OPTION__PHOTOELECTRONSPECTRUMOUTPUT__VELOCITY_MAP_CUT 
       pesout%pol = (/0,1,0/) 
       pesout%pvec = (/0,0,1/)
     end if
@@ -211,7 +217,7 @@ program photoelectron_spectrum
       ! write the full ARPES in vtk format (this could be a big file)
       pol = (/0,0,1/) 
       
-      pesout%what = OPTION__PHOTOELECTRONSPECTRUMOUTPUT__ARPES
+      what_default = OPTION__PHOTOELECTRONSPECTRUMOUTPUT__ARPES
       pesout%pol = (/0,0,1/) 
     end if
     
@@ -221,7 +227,7 @@ program photoelectron_spectrum
       pol = (/0,0,1/) 
       pvec = (/0,1,0/)
 
-      pesout%what = OPTION__PHOTOELECTRONSPECTRUMOUTPUT__ARPES_CUT
+      what_default = OPTION__PHOTOELECTRONSPECTRUMOUTPUT__ARPES_CUT
       pesout%pol = (/0,0,1/) 
       pesout%pvec = (/0,1,0/)
     end if 
@@ -229,112 +235,19 @@ program photoelectron_spectrum
   end if
 
   
+  ! Intialize mc 
+  call multicomm_init(mc, global_namespace, mpi_world, P_STRATEGY_KPOINTS, P_STRATEGY_KPOINTS, &
+                      mpi_world%size, index_range, (/ 5000, 1, 1, 1 /))
+  index_range(:) = 100000        
   
-  call restart_module_init()
-  call restart_init(restart, RESTART_TD, RESTART_TYPE_LOAD, mc, ierr)
+  
+  call restart_module_init(global_namespace)
+  call restart_init(restart, global_namespace, RESTART_TD, RESTART_TYPE_LOAD, mc, ierr)
   if(ierr /= 0) then
     message(1) = "Unable to read time-dependent restart information."
     call messages_fatal(1)
   end if
   
-  !%Variable PhotoelectronSpectrumResolveStates
-  !%Type block
-  !%Default 
-  !%Section Utilities::oct-photoelectron_spectrum
-  !%Description
-  !% If </tt>yes</tt> calculate the photoelectron spectrum resolved in each K.S. state. 
-  !% Optionally a range of states can be given as two slot block where the 
-  !% first slot is the lower state index and the second is the highest one. 
-  !% For example to calculate the spectra from state i to state j:
-  !%
-  !% <tt>%PhotoelectronSpectrumResolveStates
-  !% <br> i | j
-  !% <br>%</tt>
-  !%End
-  st_range(1:2)=(/1, st%nst/)
-  resolve_states = .false.
-  if(parse_block('PhotoelectronSpectrumResolveStates', blk) == 0) then
-    if(parse_block_cols(blk,0) < 2) call messages_input_error('PhotoelectronSpectrumResolveStates')
-    do idim = 1, 2
-      call parse_block_integer(blk, 0, idim - 1, st_range(idim))
-    end do
-    call parse_block_end(blk)
-    if (abs(st_range(2)-st_range(1)) > 0)resolve_states = .true.    
-  else
-    call parse_variable('PhotoelectronSpectrumResolveStates', .false., resolve_states)
-  end if
-  
-  
-  krng(1) = 1
-  krng(2) =  kpoints_number(sb%kpoints)
-  
-  if (have_zweight_path) then 
-    
-    
-    krng(1) = kpoints_number(sb%kpoints) - sb%kpoints%nik_skip  + 1
-    
-    call messages_print_stress(stdout, "Kpoint selection")
-    write(message(1), '(a)') 'Will use a zero-weight path in reciprocal space with the following points'
-    call messages_info(1)
-    ! Figure out the direction of the path - it must be along kx or ky only
-!     call get_kpath_direction(sb%kpoints, krng, kpth_dir, pvec)
-    kpth_dir = 1
-    pvec = (/0,1,0/)
-    
-    call write_kpoints_info(sb%kpoints, krng(1), krng(2))    
-    call messages_print_stress(stdout)
-    
-  end if
-  
-  nkpt = krng(2) - krng(1) + 1
-
-  
- 
-  if (have_zweight_path) then
-    llp(1:dim) = llg(1:dim)
-    llp(kpth_dir) = llg(kpth_dir) * nkpt    
-  else
-    llp(1:dim) = llg(1:dim) * sb%kpoints%nik_axis(1:dim)    
-  endif  
-  llp(1:pdim) = llp(1:pdim) * ngpt
-  
-  if (debug%info) then
-    print *, "llp(:)= ", llp(:) 
-    print *, "llg(:)= ", llg(:) 
-  end if
-  
-  SAFE_ALLOCATE(pmesh(1:llp(1),1:llp(2),1:llp(3),1:3 + 1))
-  SAFE_ALLOCATE(pesP(1:llp(1),1:llp(2),1:llp(3),1:st%d%nspin))
-
-  select case (pes_method)
-  case (OPTION__PHOTOELECTRONSPECTRUM__PES_MASK)
-    SAFE_ALLOCATE(Lp(1:llg(1),1:llg(2),1:llg(3),krng(1):krng(2),1:3))
-    call pes_mask_pmesh(dim, sb%kpoints, llg, Lg, pmesh, idxZero, krng, Lp)  
-
-  case (OPTION__PHOTOELECTRONSPECTRUM__PES_FLUX)
-    ! Lp is allocated inside pes_flux_pmesh to comply with the 
-    ! declinations of the different surfaces
-    SAFE_ALLOCATE(Ekin(1:llp(1),1:llp(2),1:llp(3)))
-    Ekin = M_ZERO
-    call pes_flux_pmesh(pflux, dim, sb%kpoints, llg, Lg, pmesh, idxZero, krng, Lp, Ekin)    
-  end select
-   
-
-  
-  if (.not. need_pmesh) then
-    ! There is no need to use pmesh we just need to sort Lg in place
-    ! in order to have a coordinate ordering coherent with pesP
-    ! NOTE: this works only for the mask_method since Lg is well-defined  
-    ! only in this case
-    do idim = 1, dim
-      call sort(Lg(1:llp(idim), idim)) 
-    end do  
-  end if  
-
-
-  call messages_write('Read PES restart files.')
-  call messages_info()
-
   !%Variable PhotoelectronSpectrumOutput
   !%Type flag
   !%Default none
@@ -368,7 +281,7 @@ program photoelectron_spectrum
   !%Option arpes_cut bit(8)
   !% ARPES cut on a plane following a zero-weight path in reciprocal space.
   !%End
-  call parse_variable('PhotoelectronSpectrumOutput', pesout%what, pesout%what)
+  call parse_variable(global_namespace,'PhotoelectronSpectrumOutput', what_default, pesout%what)
   
   ! TODO: I think it would be better to move these options in the
   ! input file to have more flexibility to combine and to keep
@@ -385,9 +298,119 @@ program photoelectron_spectrum
   if(uEstep >  0 .and. uEstep > Estep)    Estep = uEstep
   if(uEspan(1) > 0 ) Emin = uEspan(1)
   if(uEspan(2) > 0 ) Emax = uEspan(2)
+  
+  
+  
+  !%Variable PhotoelectronSpectrumResolveStates
+  !%Type block
+  !%Default 
+  !%Section Utilities::oct-photoelectron_spectrum
+  !%Description
+  !% If </tt>yes</tt> calculate the photoelectron spectrum resolved in each K.S. state. 
+  !% Optionally a range of states can be given as two slot block where the 
+  !% first slot is the lower state index and the second is the highest one. 
+  !% For example to calculate the spectra from state i to state j:
+  !%
+  !% <tt>%PhotoelectronSpectrumResolveStates
+  !% <br> i | j
+  !% <br>%</tt>
+  !%End
+  st_range(1:2)=(/1, st%nst/)
+  resolve_states = .false.
+  if(parse_block(global_namespace, 'PhotoelectronSpectrumResolveStates', blk) == 0) then
+    if(parse_block_cols(blk,0) < 2) call messages_input_error(global_namespace, 'PhotoelectronSpectrumResolveStates')
+    do idim = 1, 2
+      call parse_block_integer(blk, 0, idim - 1, st_range(idim))
+    end do
+    call parse_block_end(blk)
+    if (abs(st_range(2)-st_range(1)) > 0)resolve_states = .true.    
+  else
+    call parse_variable(global_namespace, 'PhotoelectronSpectrumResolveStates', .false., resolve_states)
+  end if
+  
+  
+  krng(1) = 1
+  krng(2) =  kpoints_number(sb%kpoints)
+  
+  if (have_zweight_path) then 
+    
+    if (bitand(pesout%what, OPTION__PHOTOELECTRONSPECTRUMOUTPUT__ARPES_CUT) /= 0) then
+      !Use the path only when asked for ARPES on a cutting curve in reciprocal space(the path)
+      use_zweight_path  = .true.
+    
+      krng(1) = kpoints_number(sb%kpoints) - sb%kpoints%nik_skip  + 1
+    
+      call messages_print_stress(stdout, "Kpoint selection")
+      write(message(1), '(a)') 'Will use a zero-weight path in reciprocal space with the following points'
+      call messages_info(1)
+
+      kpth_dir = 1
+      pvec = (/0,1,0/)
+    
+
+    else
+      use_zweight_path  = .false.
+      krng(2) = kpoints_number(sb%kpoints) - sb%kpoints%nik_skip
+
+    end if
+    
+  end if
+
+  call write_kpoints_info(sb%kpoints, krng(1), krng(2))    
+  call messages_print_stress(stdout)
+
+  
+  nkpt = krng(2) - krng(1) + 1
+
+  
+ 
+  if (use_zweight_path) then
+    llp(1:dim) = llg(1:dim)
+    llp(kpth_dir) = llg(kpth_dir) * nkpt    
+  else
+    llp(1:dim) = llg(1:dim) * sb%kpoints%nik_axis(1:dim)    
+  endif  
+  llp(1:pdim) = llp(1:pdim) * ngpt
+  
+  if (debug%info) then
+    print *, "llp(:)= ", llp(:) 
+    print *, "llg(:)= ", llg(:) 
+  end if
+  
+  SAFE_ALLOCATE(pmesh(1:llp(1),1:llp(2),1:llp(3),1:3 + 1))
+  SAFE_ALLOCATE(pesP(1:llp(1),1:llp(2),1:llp(3),1:st%d%nspin))
+
+  select case (pes_method)
+  case (OPTION__PHOTOELECTRONSPECTRUM__PES_MASK)
+    SAFE_ALLOCATE(Lp(1:llg(1),1:llg(2),1:llg(3),krng(1):krng(2),1:3))
+    call pes_mask_pmesh(global_namespace, dim, sb%kpoints, llg, Lg, pmesh, idxZero, krng, Lp)
+
+  case (OPTION__PHOTOELECTRONSPECTRUM__PES_FLUX)
+    ! Lp is allocated inside pes_flux_pmesh to comply with the 
+    ! declinations of the different surfaces
+    SAFE_ALLOCATE(Ekin(1:llp(1),1:llp(2),1:llp(3)))
+    Ekin = M_ZERO
+    call pes_flux_pmesh(pflux, global_namespace, dim, sb%kpoints, llg, pmesh, idxZero, krng, Lp, Ekin)
+  end select
+   
+  
+  if (.not. need_pmesh) then
+    ! There is no need to use pmesh we just need to sort Lg in place
+    ! in order to have a coordinate ordering coherent with pesP
+    ! NOTE: this works only for the mask_method since Lg is well-defined  
+    ! only in this case
+    do idim = 1, dim
+      call sort(Lg(1:llp(idim), idim)) 
+    end do  
+  end if  
 
 
-  call unit_system_init()
+  call messages_write('Read PES restart files.')
+  call messages_info()
+
+
+
+  call unit_system_init(global_namespace)
  
   write(message(1),'(a,f10.2,a2,f10.2,a2,f10.2,a1)') &
                    "Zenith axis: (",pol(1),", ",pol(2),", ",pol(3),")"
@@ -396,24 +419,30 @@ program photoelectron_spectrum
 
   ! Convert the grid units
   if (need_pmesh) then    
-    forall (i1=1:llp(1), i2=1:llp(2), i3=1:llp(3), ii = 1:3)
-      pmesh(i1,i2,i3,ii) = units_from_atomic(sqrt(units_out%energy), pmesh(i1,i2,i3,ii))
-    end forall
+    do ii = 1,3
+      do i3 = 1, llp(3)
+        do i2 = 1, llp(2)
+          do i1 = 1, llp(1)
+            pmesh(i1, i2, i3, ii) = units_from_atomic(sqrt(units_out%energy), pmesh(i1, i2, i3, ii))
+          end do
+        end do
+      end do
+    end do
   end if
 
   if (resolve_states) then
     do ist = st_range(1), st_range(2)
-      
+
       select case (pes_method)
       case (OPTION__PHOTOELECTRONSPECTRUM__PES_MASK)
         call pes_mask_map_from_states(restart, st, llg, pesP, krng, Lp, ist)
       case (OPTION__PHOTOELECTRONSPECTRUM__PES_FLUX)
         call pes_flux_map_from_states(pflux, restart, st, llg, pesP, krng, Lp, ist)      
       end select
-        
+
       call output_spin_pes()
     end do
-    
+
   else
     ! Read the data
     ist = 0 
@@ -426,7 +455,7 @@ program photoelectron_spectrum
     end select
 
     call output_spin_pes()
-    
+
   end if
 
 
@@ -438,7 +467,7 @@ program photoelectron_spectrum
 
   call restart_end(restart)    
 
-  call states_end(st)
+  call states_elec_end(st)
 
   call geometry_end(geo)
   call simul_box_end(sb)
@@ -446,6 +475,8 @@ program photoelectron_spectrum
 
   call io_end()
   call messages_end()
+
+  call parser_end()
   call global_end()
   
   SAFE_DEALLOCATE_A(pesP)    
@@ -531,10 +562,10 @@ program photoelectron_spectrum
 
         select case (pes_method)
         case (OPTION__PHOTOELECTRONSPECTRUM__PES_MASK)
-          call pes_mask_output_power_totalM(pesP_out,outfile('./PES_power',ist, ispin, 'sum'), &
-                                            Lg, llp, dim, Emax, Estep, interpolate = .true.)
-        case (OPTION__PHOTOELECTRONSPECTRUM__PES_FLUX)                                     
-          call messages_not_implemented("Energy-resolved PES for the flux method") 
+          call pes_mask_output_power_totalM(pesP_out,outfile('./PES_energy',ist, ispin, 'sum'), &
+                                            global_namespace, Lg, llp, dim, Emax, Estep, interpolate = .true.)
+        case (OPTION__PHOTOELECTRONSPECTRUM__PES_FLUX)
+          call pes_flux_out_energy(pflux, pesP_out, outfile('./PES_energy',ist, ispin, 'sum'), global_namespace, llp, Ekin)
         end select 
         
       end if
@@ -545,7 +576,7 @@ program photoelectron_spectrum
         select case (pes_method)
         case (OPTION__PHOTOELECTRONSPECTRUM__PES_MASK)
           call pes_mask_output_ar_polar_M(pesP_out,outfile('./PES_angle_energy',ist, ispin, 'map'), &
-                                          Lg, llp, dim, pol, Emax, Estep)
+                                          global_namespace, Lg, llp, dim, pol, Emax, Estep)
         case (OPTION__PHOTOELECTRONSPECTRUM__PES_FLUX)                                     
           call messages_not_implemented("Angle- and energy-resolved PES for the flux method") 
         end select                       
@@ -560,7 +591,7 @@ program photoelectron_spectrum
         if(sum((pvec-(/0 ,1 ,0/))**2)  <= M_EPSILON  )  dir = 2
         if(sum((pvec-(/0 ,0 ,1/))**2)  <= M_EPSILON  )  dir = 3
 
-        if (have_zweight_path) then
+        if (use_zweight_path) then
           filename = outfile('PES_velocity_map',ist,ispin,'path')
         else
           filename = outfile('PES_velocity_map',ist,ispin,'p'//index2axis(dir)//'=0')
@@ -581,15 +612,11 @@ program photoelectron_spectrum
         end if
 
         if (need_pmesh) then
-          call pes_out_velocity_map_cut(pesP_out, filename, llp, dim, pol, dir, integrate, &
+          call pes_out_velocity_map_cut(global_namespace, pesP_out, filename, llp, dim, pol, dir, integrate, &
                                              pos = idxZero, pmesh = pmesh)
-!           call pes_mask_output_full_mapM_cut(pesP_out, filename, llp, dim, pol, dir, integrate, &
-!                                              pos = idxZero, pmesh = pmesh)
         else
-          call pes_out_velocity_map_cut(pesP_out, filename, llp, dim, pol, dir, integrate, &
+          call pes_out_velocity_map_cut(global_namespace, pesP_out, filename, llp, dim, pol, dir, integrate, &
                                              pos = idxZero, Lk = Lg)
-!           call pes_mask_output_full_mapM_cut(pesP_out, filename, llp, dim, pol, dir, integrate, &
-!                                              pos = idxZero, Lk = Lg)
         end if
       end if
 
@@ -604,7 +631,7 @@ program photoelectron_spectrum
         select case (pes_method)
         case (OPTION__PHOTOELECTRONSPECTRUM__PES_MASK)
           call pes_mask_output_ar_plane_M(pesP_out,outfile('./PES_energy',ist,ispin,'map'), &
-                                          Lg, llp, dim, pol, Emax, Estep)
+                                          global_namespace, Lg, llp, dim, pol, Emax, Estep)
         case (OPTION__PHOTOELECTRONSPECTRUM__PES_FLUX)                                     
           call messages_not_implemented("Angle and energy-resolved on a plane for the flux method") 
         end select   
@@ -628,7 +655,7 @@ program photoelectron_spectrum
         select case (pes_method)
         case (OPTION__PHOTOELECTRONSPECTRUM__PES_MASK)
           call pes_mask_output_ar_spherical_cut_M(pesP_out,outfile('./PES_sphere',ist,ispin,'map'), & 
-                                                  Lg, llp, dim, pol, Emin, Emax, Estep)
+                                                  global_namespace, Lg, llp, dim, pol, Emin, Emax, Estep)
 
         case (OPTION__PHOTOELECTRONSPECTRUM__PES_FLUX)                                     
           call messages_not_implemented("PES on spherical cuts for the flux method") 
@@ -638,7 +665,7 @@ program photoelectron_spectrum
 
       if(bitand(pesout%what, OPTION__PHOTOELECTRONSPECTRUMOUTPUT__VELOCITY_MAP) /= 0) then
         
-        call io_function_read_how(sb, how, ignore_error = .true.)
+        call io_function_read_how(sb, global_namespace, how, ignore_error = .true.)
         call messages_print_stress(stdout, "Full velocity map")
         
         filename = outfile('./PES_velocity_map', ist, ispin)
@@ -646,11 +673,11 @@ program photoelectron_spectrum
           !force vtk output
           how = io_function_fill_how("VTK")
            
-!           call pes_mask_output_full_mapM(pesP_out, filename, Lg, llp, how, sb, pmesh)
-          call pes_out_velocity_map(pesP_out, filename, Lg, llp, how, sb, pmesh)
+!           call pes_mask_output_full_mapM(pesP_out, filename, global_namespace, Lg, llp, how, sb, pmesh)
+          call pes_out_velocity_map(pesP_out, filename, global_namespace, Lg, llp, how, sb, pmesh)
         else
-!           call pes_mask_output_full_mapM(pesP_out, filename, Lg, llp, how, sb)
-          call pes_out_velocity_map(pesP_out, filename, Lg, llp, how, sb)
+!           call pes_mask_output_full_mapM(pesP_out, filename, global_namespace, Lg, llp, how, sb)
+          call pes_out_velocity_map(pesP_out, filename, global_namespace, Lg, llp, how, sb)
         end if
         
       end if
@@ -658,17 +685,19 @@ program photoelectron_spectrum
       if(bitand(pesout%what, OPTION__PHOTOELECTRONSPECTRUMOUTPUT__ARPES) /= 0) then
         call messages_print_stress(stdout, "ARPES")
 
-        forall (i1=1:llp(1), i2=1:llp(2), i3=1:llp(3))
-          pmesh(i1,i2,i3,dim) = units_from_atomic(units_out%energy, &
-            sign(M_ONE,pmesh(i1,i2,i3,dim)) * sum( pmesh(i1,i2,i3,1:dim)**2 )/M_TWO)
-        end forall
+        do i3 = 1, llp(3)
+          do i2 = 1, llp(2)
+            do i1 = 1, llp(1)
+              pmesh(i1, i2, i3, dim) = units_from_atomic(units_out%energy, &
+                sign(M_ONE,pmesh( i1, i2, i3, dim)) * sum( pmesh(i1, i2, i3, 1:dim)**2 )/M_TWO)
+            end do
+          end do
+        end do
 
         how = io_function_fill_how("VTK")
 
-!         call pes_mask_output_full_mapM(pesP_out, outfile('./PES_ARPES', ist, ispin), &
-!                                        Lg, llp, how, sb, pmesh)
         call pes_out_velocity_map(pesP_out, outfile('./PES_ARPES', ist, ispin), &
-                                       Lg, llp, how, sb, pmesh)
+                                  global_namespace, Lg, llp, how, sb, pmesh)
       end if
       
       
@@ -676,54 +705,13 @@ program photoelectron_spectrum
         call messages_print_stress(stdout, "ARPES cut on reciprocal space path")
         
         filename = outfile('./PES_ARPES', ist, ispin, "path")
-        call pes_out_arpes_cut(pesP_out, filename, llp, pmesh, Ekin)
+        call pes_out_arpes_cut(global_namespace, pesP_out, filename, dim, llp, pmesh, Ekin)
         
       end if
       
       
     end subroutine output_pes
     
-    subroutine get_kpath_direction(kpoints, krng, kpth_dir, pvec)
-      type(kpoints_t),   intent(in)  :: kpoints 
-      integer,           intent(in)  :: krng(2)
-      integer,           intent(out) :: kpth_dir
-      FLOAT,             intent(out) :: pvec(3)
-
-         
-      FLOAT                :: kpt(3)
-         
-      PUSH_SUB(get_kpath_direction)
-      
-      kpth_dir = -1
-         
-      kpt = M_ZERO
-      kpt(1:dim) = kpoints_get_point(kpoints, krng(1)+1)-kpoints_get_point(kpoints, krng(1))
-      kpt(1:dim) = kpt(1:dim)/sqrt(sum(kpt(1:dim)**2))  
-           
-      
-      if (sum((kpt(:) - (/1,0,0/))**2) < M_EPSILON) then
-        kpth_dir = 1
-        write(message(1), '(a)') 'along kx'
-        pvec = (/0,1,0/)
-      end if        
-              
-      if (sum((kpt(:) - (/0,1,0/))**2) < M_EPSILON) then 
-        kpth_dir = 2
-        write(message(1), '(a)') 'along ky'
-        pvec = (/1,0,0/)        
-      end if
-      
-      call messages_info(1)
-      
-    
-      if (kpth_dir == -1) then
-        message(1) = "K-points with zero weight path works only with paths along kx or ky."
-        call messages_fatal(1)
-      end if
-      
-      POP_SUB(get_kpath_direction)      
-    end subroutine get_kpath_direction
-
     
     subroutine write_kpoints_info(kpoints, ikstart, ikend)
       type(kpoints_t),   intent(in) :: kpoints 
@@ -762,7 +750,7 @@ program photoelectron_spectrum
         PUSH_SUB(get_laser_polarization)
         
         no_l = 0
-        if(parse_block('TDExternalFields', blk) == 0) then
+        if(parse_block(global_namespace, 'TDExternalFields', blk) == 0) then
           no_l = parse_block_n(blk)
 
           call parse_block_cmplx(blk, 0, 1, cPol(1))

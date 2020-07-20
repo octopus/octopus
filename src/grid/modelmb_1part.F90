@@ -37,19 +37,20 @@ module modelmb_1part_oct_m
             modelmb_1part_end, &
             modelmb_1part_t
 
-!>  container type for the position and dimensions for 1 particle (out of MAX_DIM/dims)
-type modelmb_1part_t
-  integer :: ndim1part
-  integer :: npt_part
-  integer :: npt
-  FLOAT :: vol_elem_1part
-  FLOAT, pointer :: origin(:)
-  integer, pointer :: enlarge_1part(:)
-  integer, pointer :: nr_1part(:,:)
-  integer, pointer :: ll(:)
-  FLOAT, pointer :: h_1part(:)
-  type(hypercube_t) :: hypercube_1part
-end type modelmb_1part_t
+  !>  container type for the position and dimensions for 1 particle (out of MAX_DIM/dims)
+  type modelmb_1part_t
+    ! All components are public by default
+    integer :: ndim1part
+    integer, private :: npt_part
+    integer :: npt
+    FLOAT :: vol_elem_1part
+    FLOAT, pointer :: origin(:)
+    integer, pointer :: enlarge_1part(:)
+    integer, pointer :: nr_1part(:,:)
+    integer, pointer, private :: ll(:)
+    FLOAT, pointer :: h_1part(:)
+    type(hypercube_t) :: hypercube_1part
+  end type modelmb_1part_t
 
 contains
 
@@ -82,7 +83,7 @@ subroutine modelmb_1part_init(this, mesh, ikeeppart, ndim1part)
 
 !   volume element for the chosen particle
   SAFE_ALLOCATE(this%h_1part(1:ndim1part))
-  this%vol_elem_1part = 1.0d0
+  this%vol_elem_1part = M_ONE
   do idir = 1,ndim1part
     irealdir = (ikeeppart-1)*ndim1part + idir
     this%vol_elem_1part = this%vol_elem_1part*mesh%spacing(irealdir)

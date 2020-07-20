@@ -26,6 +26,7 @@ module ion_interaction_oct_m
   use loct_math_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use periodic_copy_oct_m
   use profiling_oct_m
@@ -44,6 +45,7 @@ module ion_interaction_oct_m
     ion_interaction_test
 
   type ion_interaction_t
+    ! Components are public by default
     FLOAT                      :: alpha
   end type ion_interaction_t
 
@@ -55,8 +57,9 @@ module ion_interaction_oct_m
   
 contains
 
-  subroutine ion_interaction_init(this)
+  subroutine ion_interaction_init(this, namespace)
     type(ion_interaction_t), intent(out)   :: this
+    type(namespace_t),       intent(in)    :: namespace
 
     PUSH_SUB(ion_interaction_init)
 
@@ -70,7 +73,7 @@ contains
     !% interaction for periodic systems. This value affects the speed
     !% of the calculation, normally users do not need to modify it.
     !%End
-    call parse_variable('EwaldAlpha', CNST(0.21), this%alpha)
+    call parse_variable(namespace, 'EwaldAlpha', CNST(0.21), this%alpha)
     
     POP_SUB(ion_interaction_init)
   end subroutine ion_interaction_init
@@ -90,10 +93,12 @@ contains
   ! ---------------------------------------------------------
   !> For details about this routine, see
   !! http://octopus-code.org/wiki/Developers:Ion-Ion_interaction
-  subroutine ion_interaction_calculate(this, geo, sb, ignore_external_ions, energy, force, energy_components, force_components)
+  subroutine ion_interaction_calculate(this, geo, sb, namespace, ignore_external_ions, energy, &
+      force, energy_components, force_components)
     type(ion_interaction_t),  intent(inout) :: this
     type(geometry_t), target, intent(in)    :: geo
     type(simul_box_t),        intent(in)    :: sb
+    type(namespace_t),        intent(in)    :: namespace
     logical,                  intent(in)    :: ignore_external_ions
     FLOAT,                    intent(out)   :: energy
     FLOAT,                    intent(out)   :: force(:, :)
@@ -146,10 +151,10 @@ contains
       if(ignore_external_ions) then
         SAFE_ALLOCATE(in_box(1:natom))
         do iatom = 1, geo%natoms
-          in_box(iatom) = simul_box_in_box(sb, geo, geo%atom(iatom)%x)
+          in_box(iatom) = simul_box_in_box(sb, geo, geo%atom(iatom)%x, namespace)
         end do
         do iatom = 1, geo%ncatoms
-          in_box(geo%natoms + iatom) = simul_box_in_box(sb, geo, geo%catom(iatom)%x)
+          in_box(geo%natoms + iatom) = simul_box_in_box(sb, geo, geo%catom(iatom)%x, namespace)
         end do
       end if
       
@@ -323,7 +328,7 @@ contains
 !Temporarily, the 3D Ewald sum is employed for the 1D mixed-periodic system.
       call Ewald_long_3D(this, geo, sb, efourier, force, charge)
     case(2)
-      call Ewald_long_2D(this, geo, sb, efourier, force, charge)
+      call Ewald_long_2D(this, geo, sb, efourier, force)
     case(3)
       call Ewald_long_3D(this, geo, sb, efourier, force, charge)
     end select
@@ -456,13 +461,12 @@ contains
 
   ! ---------------------------------------------------------
   !> In-Chul Yeh and Max L. Berkowitz, J. Chem. Phys. 111, 3155 (1999).
-  subroutine Ewald_long_2D(this, geo, sb, efourier, force, charge)
+  subroutine Ewald_long_2D(this, geo, sb, efourier, force)
     type(ion_interaction_t),   intent(in)    :: this
     type(geometry_t),          intent(in)    :: geo
     type(simul_box_t),         intent(in)    :: sb
     FLOAT,                     intent(inout)   :: efourier
     FLOAT,                     intent(inout)   :: force(:, :) !< (sb%dim, geo%natoms)
-    FLOAT,                     intent(in)   :: charge
 
     FLOAT :: rcut
     integer :: iatom, jatom
@@ -628,8 +632,9 @@ contains
 
   ! ---------------------------------------------------------
   
-  subroutine ion_interaction_test(geo, sb)
+  subroutine ion_interaction_test(geo, namespace, sb)
     type(geometry_t),         intent(in)    :: geo
+    type(namespace_t),        intent(in)    :: namespace
     type(simul_box_t),        intent(in)    :: sb
 
     type(ion_interaction_t) :: ion_interaction
@@ -640,12 +645,12 @@ contains
     
     PUSH_SUB(ion_interaction_test)
 
-    call ion_interaction_init(ion_interaction)
+    call ion_interaction_init(ion_interaction, namespace)
 
     SAFE_ALLOCATE(force(1:sb%dim, 1:geo%natoms))
     SAFE_ALLOCATE(force_components(1:sb%dim, 1:geo%natoms, ION_NUM_COMPONENTS))
     
-    call ion_interaction_calculate(ion_interaction, geo, sb, .false., energy, force, &
+    call ion_interaction_calculate(ion_interaction, geo, sb, namespace, .false., energy, force, &
       energy_components = energy_components, force_components = force_components)
 
     call messages_write('Ionic energy        =')

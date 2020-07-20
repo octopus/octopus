@@ -28,6 +28,7 @@ module ps_hgh_oct_m
   use loct_math_oct_m
   use logrid_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use profiling_oct_m
 
   implicit none
@@ -45,12 +46,14 @@ module ps_hgh_oct_m
   !!   (a) the pseudopotential parameters, as read from a *.hgh file,
   !!   (b) auxiliary intermediate functions, to store stuff before passing it to the "ps" variable.
   type ps_hgh_t
+    ! Components are public by default
+
     !< HGH parameters.
-    character(len=5) :: atom_name
+    character(len=5), private :: atom_name
     integer          :: z_val
-    FLOAT            :: rlocal
-    FLOAT            :: rc(0:3)
-    FLOAT            :: c(1:4)
+    FLOAT, private   :: rlocal
+    FLOAT, private   :: rc(0:3)
+    FLOAT, private   :: c(1:4)
     FLOAT            :: h(0:3, 1:3, 1:3)
     FLOAT            :: k(0:3, 1:3, 1:3)
 
@@ -60,7 +63,8 @@ module ps_hgh_oct_m
     FLOAT, pointer   :: vlocal(:) !< Local potential
     FLOAT, pointer   :: kb(:,:,:) !< KB projectors
     FLOAT, pointer   :: kbr(:)    !< KB radii
-    FLOAT, pointer   :: rphi(:,:), eigen(:)
+    FLOAT, pointer   :: rphi(:,:)
+    FLOAT, pointer, private :: eigen(:)
 
     !> Logarithmic grid parameters
     type(logrid_t) :: g
@@ -79,9 +83,10 @@ module ps_hgh_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine hgh_init(psp, filename)
-    type(ps_hgh_t),   intent(inout) :: psp
-    character(len=*), intent(in)    :: filename
+  subroutine hgh_init(psp, filename, namespace)
+    type(ps_hgh_t),    intent(inout) :: psp
+    character(len=*),  intent(in)    :: filename
+    type(namespace_t), intent(in)    :: namespace
 
     integer :: iunit, i
 
@@ -91,7 +96,7 @@ contains
     i = load_params(iunit, psp)
     if(i /= 0) then
       call messages_write('Error reading hgh file')
-      call messages_fatal()
+      call messages_fatal(namespace=namespace)
     end if
     call io_close(iunit)
 
@@ -144,8 +149,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine hgh_process(psp)
-    type(ps_hgh_t), intent(inout) :: psp
+  subroutine hgh_process(psp, namespace)
+    type(ps_hgh_t),    intent(inout) :: psp
+    type(namespace_t), intent(in)    :: namespace
 
     integer :: l, i, ierr
     FLOAT, pointer :: ptr(:)
@@ -169,12 +175,12 @@ contains
 
     ! get the pseudoatomic eigenfunctions (WARNING: This is not correctly done yet: "some" wavefunctions
     ! are obtained, but not the real ones!!!
-    call solve_schroedinger(psp, ierr)
+    call solve_schroedinger(psp, ierr, namespace)
     if(ierr /= 0) then ! If the wavefunctions could not be found, we set its number to zero.
       write(message(1),'(a)') 'The algorithm that calculates atomic wavefunctions could not'
       write(message(2),'(a)') 'do its job. The program will continue, but expect poor'
       write(message(3),'(a)') 'convergence properties.'
-      call messages_warning(3)
+      call messages_warning(3, namespace=namespace)
       psp%conf%p = 0
     end if
 
@@ -425,7 +431,7 @@ contains
 
     PUSH_SUB(projectorr_scalar)
 
-    x = l + real(4*i-1, REAL_PRECISION)/M_TWO
+    x = l + TOFLOAT(4*i-1)/M_TWO
     y = loct_gamma(x)
     x = sqrt(y)
     if(l==0 .and. i==1) then
@@ -435,7 +441,7 @@ contains
     end if
 
     projectorr_scalar = sqrt(M_TWO) * rr * exp(-r**2/(M_TWO*p%rc(l)**2)) / &
-      (  p%rc(l)**(l + real(4*i-1, REAL_PRECISION)/M_TWO) * x )
+      (  p%rc(l)**(l + TOFLOAT(4*i-1)/M_TWO) * x )
 
     POP_SUB(projectorr_scalar)
   end function projectorr_scalar
@@ -454,7 +460,7 @@ contains
     PUSH_SUB(projectorr_vector)
 
     SAFE_ALLOCATE(projectorr_vector(1:size(r)))
-    do j=1, size(r)
+    do j = 1, size(r)
       projectorr_vector(j) = projectorr_scalar(r(j), p, i, l)
     end do
 
@@ -526,9 +532,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine solve_schroedinger(psp, ierr)
-    type(ps_hgh_t), intent(inout) :: psp
-    integer,        intent(out)   :: ierr
+  subroutine solve_schroedinger(psp, ierr, namespace)
+    type(ps_hgh_t),    intent(inout) :: psp
+    integer,           intent(out)   :: ierr
+    type(namespace_t), intent(in)    :: namespace
 
     integer :: iter, ir, l, nnode, nprin, i, j, irr, n, k
     FLOAT :: vtot, a2b4, diff, nonl
@@ -570,7 +577,7 @@ contains
       do n = 1, psp%conf%p
         l = psp%conf%l(n)
         do ir = 2, psp%g%nrval
-          vtot = 2*psp%vlocal(ir) + ve(ir, 1) + dble(l*(l + 1))/(psp%g%rofi(ir)**2)
+          vtot = 2*psp%vlocal(ir) + ve(ir, 1) + TOFLOAT(l*(l + 1))/(psp%g%rofi(ir)**2)
           nonl = M_ZERO
           if(iter>2 .and. psp%l_max >=0 .and. psp%rphi(ir, n) > CNST(1.0e-7)) then
             do i = 1, 3
@@ -594,7 +601,7 @@ contains
         end do
         nprin = l + 1
         if(iter == 1) then
-          e = -((psp%z_val/dble(nprin))**2)
+          e = -((psp%z_val/TOFLOAT(nprin))**2)
           z = psp%z_val
         else
           e = psp%eigen(n)
@@ -629,7 +636,7 @@ contains
         if (e > CNST(1.0e-5)) then
           write(message(1), '(a,i2,a)') "Eigenstate for n = ", n , ' is not normalized'
           write(message(2), '(a, f12.6,a)') '(abs(1-norm) = ', e, ')'
-          call messages_warning(2)
+          call messages_warning(2, namespace=namespace)
         end if
       end do
 
@@ -651,9 +658,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine hgh_debug(psp, dir)
-    type(ps_hgh_t),   intent(in) :: psp
-    character(len=*), intent(in) :: dir
+  subroutine hgh_debug(psp, dir, namespace)
+    type(ps_hgh_t),    intent(in) :: psp
+    character(len=*),  intent(in) :: dir
+    type(namespace_t), intent(in) :: namespace
 
     integer :: hgh_unit, loc_unit, dat_unit, kbp_unit, wav_unit, i, l, k
     character(len=256) :: dirname
@@ -662,12 +670,12 @@ contains
 
     ! Open files.
     dirname = trim(dir)//'/hgh.'//trim(psp%atom_name)
-    call io_mkdir(trim(dir))
-    hgh_unit = io_open(trim(dirname)//'/hgh', action='write')
-    loc_unit = io_open(trim(dirname)//'/local', action='write')
-    dat_unit = io_open(trim(dirname)//'/info', action='write')
-    kbp_unit = io_open(trim(dirname)//'/nonlocal', action='write')
-    wav_unit = io_open(trim(dirname)//'/wave', action='write')
+    call io_mkdir(trim(dir), namespace)
+    hgh_unit = io_open(trim(dirname)//'/hgh', namespace, action='write')
+    loc_unit = io_open(trim(dirname)//'/local', namespace, action='write')
+    dat_unit = io_open(trim(dirname)//'/info', namespace, action='write')
+    kbp_unit = io_open(trim(dirname)//'/nonlocal', namespace, action='write')
+    wav_unit = io_open(trim(dirname)//'/wave', namespace, action='write')
 
     ! Writes down the input file, to be checked against SHARE_DIR/pseudopotentials/HGH/ATOM_NAME.hgh
     write(hgh_unit,'(a5,i6,5f12.6)') psp%atom_name, psp%z_val, psp%rlocal, psp%c(1:4)

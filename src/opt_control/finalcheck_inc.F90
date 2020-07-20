@@ -18,12 +18,11 @@
 
 
   ! ---------------------------------------------------------
-  subroutine oct_finalcheck(sys, hm, td)
+  subroutine oct_finalcheck(sys, td)
     type(system_t), intent(inout)      :: sys
-    type(hamiltonian_t), intent(inout) :: hm
     type(td_t), intent(inout)          :: td
 
-    type(states_t) :: psi
+    type(states_elec_t) :: psi
     type(opt_control_state_t) :: qcpsi    
     FLOAT :: j1, jfunctional, fluence, j2
 
@@ -40,10 +39,10 @@
 
     call opt_control_state_null(qcpsi)
     call opt_control_state_copy(qcpsi, initial_st)
-    call propagate_forward(sys, hm, td, par, oct_target, qcpsi, write_iter = .true.)
+    call propagate_forward(sys, td, par, oct_target, qcpsi, write_iter = .true.)
     call opt_control_get_qs(psi, qcpsi)
 
-    j1 = target_j1(oct_target, sys%gr, qcpsi)
+    j1 = target_j1(oct_target, sys%namespace, sys%gr, qcpsi)
     call opt_control_state_end(qcpsi)
 
     fluence = controlfunction_fluence(par)
@@ -59,10 +58,10 @@
     call messages_info(4)
     call messages_print_stress(stdout)
 
-    call output_states(psi, sys%gr, sys%geo, hm, OCT_DIR//'final', sys%outp)
+    call output_states(sys%outp, sys%namespace, OCT_DIR//'final', psi, sys%gr, sys%geo, sys%hm)
 
     nullify(par)
-    call states_end(psi)
+    call states_elec_end(psi)
     POP_SUB(oct_finalcheck)
   end subroutine oct_finalcheck
 

@@ -32,6 +32,7 @@ module tdfunction_oct_m
   use math_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
   use splines_oct_m
@@ -119,10 +120,11 @@ contains
 
   !------------------------------------------------------------
   !> This function initializes "f" from the TDFunctions block.
-  subroutine tdf_read(f, function_name, ierr)
-    type(tdf_t),      intent(inout) :: f
-    character(len=*), intent(in)    :: function_name
-    integer,          intent(out)   :: ierr  !< Error code, 0 on success.
+  subroutine tdf_read(f, namespace, function_name, ierr)
+    type(tdf_t),       intent(inout) :: f
+    type(namespace_t), intent(in)    :: namespace
+    character(len=*),  intent(in)    :: function_name
+    integer,           intent(out)   :: ierr  !< Error code, 0 on success.
 
     type(block_t) :: blk
     integer :: nrows, i, function_type
@@ -202,7 +204,7 @@ contains
     !% that defines the field.
     !%End
     ierr = -3
-    if(parse_block('TDFunctions', blk) /= 0) then
+    if(parse_block(namespace, 'TDFunctions', blk) /= 0) then
       ierr = -1
       POP_SUB(tdf_read)
       return
@@ -238,7 +240,7 @@ contains
             call tdf_init_trapezoidal(f, a0, M_ZERO, t0, tau0, tau1)
           case(TDF_FROM_FILE)
             call parse_block_string(blk, i-1, 2, filename)
-            call tdf_init_fromfile(f, trim(filename), ierr)
+            call tdf_init_fromfile(f, trim(filename), namespace, ierr)
           case(TDF_FROM_EXPR)
             call parse_block_string(blk, i-1, 2, function_expression)
             call tdf_init_fromexpr(f, trim(function_expression))
@@ -410,9 +412,10 @@ contains
 
 
   !------------------------------------------------------------
-  subroutine tdf_init_fromfile(f, filename, ierr)
+  subroutine tdf_init_fromfile(f, filename, namespace, ierr)
     type(tdf_t),      intent(inout) :: f
     character(len=*), intent(in)    :: filename
+    type(namespace_t),intent(in)    :: namespace
     integer,          intent(out)   :: ierr
 
     integer :: iunit, lines, j
@@ -424,7 +427,7 @@ contains
     f%mode = TDF_FROM_FILE
     ierr = 0
 
-    iunit = io_open(trim(filename), action='read', status='old')
+    iunit = io_open(trim(filename), namespace, action='read', status='old')
 
     ! count lines in file
     call io_skip_header(iunit)
@@ -557,13 +560,13 @@ contains
     ! better if we take the average of those two values.
     f%val(1) = M_HALF*(f%val(1)+f%val(f%niter+1))
     f%val(f%niter+1) = f%val(1)
-    call dfft_forward1(f%fft_handler, f%val(1:f%niter), tmp)
+    call dfft_forward(f%fft_handler, f%val(1:f%niter), tmp)
     tmp = tmp * f%dt * sqrt(M_ONE/(f%final_time-f%init_time))
     f%mode = TDF_FOURIER_SERIES
     SAFE_ALLOCATE(f%valww(1:2*(f%nfreqs-1)+1))
-    f%valww(1) = real(tmp(1), REAL_PRECISION)
+    f%valww(1) = TOFLOAT(tmp(1))
     do j = 2, f%nfreqs
-      f%valww(j) = (sqrt(M_TWO)) * real(tmp(j))
+      f%valww(j) = (sqrt(M_TWO)) * TOFLOAT(tmp(j))
     end do
     do j = f%nfreqs+1, 2*f%nfreqs-1
       f%valww(j) = - (sqrt(M_TWO)) * aimag(tmp(j-f%nfreqs+1))
@@ -592,7 +595,7 @@ contains
       tmp(j) = TOCMPLX((sqrt(M_TWO)/M_TWO)*f%valww(j), -(sqrt(M_TWO)/M_TWO)*f%valww(j+f%nfreqs-1))
     end do
     SAFE_ALLOCATE(f%val(1:f%niter+1))
-    call dfft_backward1(f%fft_handler, tmp, f%val(1:f%niter))
+    call dfft_backward(f%fft_handler, tmp, f%val(1:f%niter))
     f%val(f%niter+1) = f%val(1)
     f%val = f%val * f%niter * sqrt(M_ONE/(f%final_time-f%init_time))
     f%mode = TDF_NUMERICAL

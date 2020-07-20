@@ -30,3 +30,7 @@ TheoryLevel = independent_particles
 EigenSolverTolerance = 1.0e-6
 
 ExtraStates = 1
+
+# test code path without CUDA-aware MPI for this test
+CudaAwareMPI = no
+StatesPack = yes

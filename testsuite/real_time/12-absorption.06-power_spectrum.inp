@@ -2,3 +2,4 @@ UnitsOutput = ev_angstrom
 PropagationSpectrumType = dipolepower
 PropagationSpectrumMaxEnergy = 10.0*eV
 PropagationSpectrumEnergyStep = 0.1*eV
+StatesPack = yes

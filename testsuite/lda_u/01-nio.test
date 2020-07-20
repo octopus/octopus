@@ -17,14 +17,14 @@ match ; Total energy        ; GREPFIELD(static/info, 'Total       =', 3) ; -246.
 Precision: 0.0001
 match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -177.00987193 
 match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -33.20123578
-Precision: 6.908549999877778e-05
-match ; Hartree energy      ; GREPFIELD(static/info, 'Hartree     =', 3) ; 46.468173665
+Precision: 2e-05
+match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ; 46.468234235
 Precision: 0.0001
 match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -27.71439410 
 match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ; -2.03699375
 Precision: 6.0439500002473786e-05
 match ; Kinetic energy      ; GREPFIELD(static/info, 'Kinetic     =', 3) ; 123.313614715
-Precision: 0.0001271104999929662
+Precision: 0.00013
 match ; External energy     ; GREPFIELD(static/info, 'External    =', 3) ; -210.12046699500002
 Precision: 0.0001
 match ; Hubbard energy     ; GREPFIELD(static/info, 'Hubbard     =', 3) ;  0.21352943
@@ -45,4 +45,16 @@ match ; Eigenvalue 17 ; GREPFIELD(static/info, '#k =   1', 3, 17) ; -0.165644
 
 match ; Occupation Ni2 down 3d4 ; LINEFIELD(static/occ_matrices, -2, 7) ; 0.87137742
 match ; Occupation Ni2 down 3d5 ; LINEFIELD(static/occ_matrices, -1, 9) ; 0.88646408
+
+Input      : 01-nio.02-unocc.inp
+match ; Red. coord. k1 ; LINEFIELD(static/bandstructure-sp1, 2, 1) ;  0.00000000
+match ; Band structure k1x ; LINEFIELD(static/bandstructure-sp1, 2, 2) ;  0.00000000
+match ; Band structure k1y ; LINEFIELD(static/bandstructure-sp1, 2, 3) ;  0.00000000
+match ; Band structure k1z ; LINEFIELD(static/bandstructure-sp1, 2, 4) ;  0.00000000
+match ; Band structure E1(k1) ; LINEFIELD(static/bandstructure-sp1, 2, 5) ;  -3.07331173
+match ; Band structure E2(k1) ; LINEFIELD(static/bandstructure-sp1, 2, 6) ;  -3.06021118
+match ; Band structure E3(k1) ; LINEFIELD(static/bandstructure-sp1, 2, 7) ;  -3.05360222
+
+match ; Red. coord. k3 ; LINEFIELD(static/bandstructure-sp1, 4, 1) ;   0.5000000
+match ; Band structure k3x ; LINEFIELD(static/bandstructure-sp1, 4, 2) ;  -0.01562000
 

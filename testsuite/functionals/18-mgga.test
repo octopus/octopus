@@ -1,0 +1,26 @@
+# -*- coding: utf-8 mode: shell-script -*-
+
+Test       : MGGA energy functionals
+Program    : octopus
+TestGroups : short-run, functionals
+Enabled    : Yes
+
+#At the moment the test fails on CUDA+MPI 
+Processors: 1
+
+Input: 18-mgga.01-br89.inp
+match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
+
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -6.75055597
+match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ;  0.00000000
+match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -2.99862590
+match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ;  4.64175208
+match ; Int[n*v_xc]        ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -3.07178057
+match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -2.18195856
+match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ;  0.00000000
+match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;  10.84816531
+match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ; -20.05849838
+
+match ; Eigenvalue     [1] ; GREPFIELD(static/info, '1   --', 3) ; -1.499313
+
+

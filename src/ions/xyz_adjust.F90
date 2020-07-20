@@ -22,8 +22,9 @@ module xyz_adjust_oct_m
   use global_oct_m
   use geometry_oct_m
   use lalg_adv_oct_m
-  use parser_oct_m
   use messages_oct_m
+  use namespace_oct_m
+  use parser_oct_m
   use species_oct_m
   use unit_oct_m
   use unit_system_oct_m
@@ -39,8 +40,9 @@ module xyz_adjust_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine xyz_adjust_it(geo, rotate)
+  subroutine xyz_adjust_it(geo, namespace, rotate)
     type(geometry_t),           intent(inout) :: geo
+    type(namespace_t),          intent(in)    :: namespace
     logical,          optional, intent(in)    :: rotate
 
     integer, parameter :: &
@@ -61,7 +63,7 @@ contains
     if(optional_default(rotate, .true.)) then
 
       ! get to axis
-      if(parse_block('MainAxis', blk)==0) then
+      if(parse_block(namespace, 'MainAxis', blk)==0) then
         do idir = 1, geo%space%dim
           call parse_block_float(blk, 0, idir - 1, to(idir))
         end do
@@ -110,11 +112,11 @@ contains
       else
         default = NONE
       end if
-      call parse_variable('AxisType', default, axis_type)
+      call parse_variable(namespace, 'AxisType', default, axis_type)
       call messages_print_var_option(stdout, "AxisType", axis_type)
 
       if(geo%space%dim /= 3 .and. axis_type /= NONE) then
-        call messages_not_implemented("alignment to axes (AxisType /= none) in other than 3 dimensions")
+        call messages_not_implemented("alignment to axes (AxisType /= none) in other than 3 dimensions", namespace=namespace)
       end if
 
       select case(axis_type)
@@ -138,14 +140,14 @@ contains
         call axis_large(geo, x1, x2)
       case default
         write(message(1), '(a,i2,a)') 'AxisType = ', axis_type, ' not known by Octopus.'
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end select
 
       write(message(1),'(a,99f15.6)') 'Found primary   axis ', x1(1:geo%space%dim)
       write(message(2),'(a,99f15.6)') 'Found secondary axis ', x2(1:geo%space%dim)
       call messages_info(2)
 
-      if(axis_type /= NONE) call geometry_rotate(geo, x1, x2, to)
+      if(axis_type /= NONE) call geometry_rotate(geo, namespace, x1, x2, to)
 
     end if
 
@@ -323,11 +325,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine geometry_rotate(geo, from, from2, to)
-    type(geometry_t), intent(inout) :: geo
-    FLOAT,            intent(in)    :: from(MAX_DIM)   !< assumed to be normalized
-    FLOAT,            intent(in)    :: from2(MAX_DIM)  !< assumed to be normalized
-    FLOAT,            intent(in)    :: to(MAX_DIM)     !< assumed to be normalized
+  subroutine geometry_rotate(geo, namespace, from, from2, to)
+    type(geometry_t),  intent(inout) :: geo
+    type(namespace_t), intent(in)    :: namespace
+    FLOAT,             intent(in)    :: from(MAX_DIM)   !< assumed to be normalized
+    FLOAT,             intent(in)    :: from2(MAX_DIM)  !< assumed to be normalized
+    FLOAT,             intent(in)    :: to(MAX_DIM)     !< assumed to be normalized
 
     integer :: iatom, idim
     FLOAT :: m1(MAX_DIM, MAX_DIM), m2(MAX_DIM, MAX_DIM)
@@ -337,7 +340,7 @@ contains
     PUSH_SUB(geometry_rotate)
 
     if(geo%space%dim /= 3) &
-      call messages_not_implemented("geometry_rotate in other than 3 dimensions")
+      call messages_not_implemented("geometry_rotate in other than 3 dimensions", namespace=namespace)
 
     ! initialize matrices
     m1 = M_ZERO
@@ -348,10 +351,10 @@ contains
     ! rotate the to-axis to the z-axis
     if(to(2) /= M_ZERO) then
       alpha = atan2(to(2), to(1))
-      call rotate_z(m1, alpha)
+      call rotate(m1, alpha, 3)
     end if
     alpha = atan2(sqrt(to(1)**2 + to(2)**2), to(3))
-    call rotate_y(m1, -alpha)
+    call rotate(m1, -alpha, 2)
 
     ! get perpendicular to z and from
     f2 = matmul(m1, from)
@@ -368,12 +371,12 @@ contains
     ! rotate perpendicular axis to the y-axis
     m2 = M_ZERO; m2(1,1) = M_ONE; m2(2,2) = M_ONE; m2(3,3) = M_ONE
     alpha = atan2(per(1), per(2))
-    call rotate_z(m2, -alpha)
+    call rotate(m2, -alpha, 3)
 
     ! rotate from => to (around the y-axis)
     m3 = M_ZERO; m3(1,1) = M_ONE; m3(2,2) = M_ONE; m3(3,3) = M_ONE
     alpha = acos(sum(from*to))
-    call rotate_y(m3, -alpha)
+    call rotate(m3, -alpha, 2)
 
     ! join matrices
     m2 = matmul(transpose(m2), matmul(m3, m2))
@@ -381,7 +384,7 @@ contains
     ! rotate around the z-axis to get the second axis
     per = matmul(m2, matmul(m1, from2))
     alpha = atan2(per(1), per(2))
-    call rotate_z(m2, -alpha) ! second axis is now y
+    call rotate(m2, -alpha, 3) ! second axis is now y
 
     ! get combined transformation
     m1 = matmul(transpose(m1), matmul(m2, m1))
@@ -403,78 +406,44 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine rotate_x(m, angle)
-    FLOAT, intent(inout) :: m(MAX_DIM, MAX_DIM)
-    FLOAT, intent(in)    :: angle
+  subroutine rotate(m, angle, dir)
+    FLOAT,   intent(inout) :: m(MAX_DIM, MAX_DIM)
+    FLOAT,   intent(in)    :: angle
+    integer, intent(in)    :: dir
 
     FLOAT :: aux(MAX_DIM, MAX_DIM), ca, sa
 
-    PUSH_SUB(rotate_x)
+    PUSH_SUB(rotate)
 
     ca = cos(angle)
     sa = sin(angle)
 
     aux = M_ZERO
-    aux(1, 1) = M_ONE
-    aux(2, 2) = ca
-    aux(3, 3) = ca
-    aux(2, 3) = sa
-    aux(3, 2) = -sa
+    select case (dir)
+    case (1)
+      aux(1, 1) = M_ONE
+      aux(2, 2) = ca
+      aux(3, 3) = ca
+      aux(2, 3) = sa
+      aux(3, 2) = -sa
+    case (2)
+      aux(2, 2) = M_ONE
+      aux(1, 1) = ca
+      aux(3, 3) = ca
+      aux(1, 3) = sa
+      aux(3, 1) = -sa
+    case (3)
+      aux(3, 3) = M_ONE
+      aux(1, 1) = ca
+      aux(2, 2) = ca
+      aux(1, 2) = sa
+      aux(2, 1) = -sa
+    end select
 
     m = matmul(aux, m)
 
-    POP_SUB(rotate_x)
-  end subroutine rotate_x
-
-
-  ! ---------------------------------------------------------
-  subroutine rotate_y(m, angle)
-    FLOAT, intent(inout) :: m(MAX_DIM, MAX_DIM)
-    FLOAT, intent(in)    :: angle
-
-    FLOAT :: aux(MAX_DIM, MAX_DIM), ca, sa
-
-    PUSH_SUB(rotate_y)
-
-    ca = cos(angle)
-    sa = sin(angle)
-
-    aux = M_ZERO
-    aux(2, 2) = M_ONE
-    aux(1, 1) = ca
-    aux(3, 3) = ca
-    aux(1, 3) = sa
-    aux(3, 1) = -sa
-
-    m = matmul(aux, m)
-
-    POP_SUB(rotate_y)
-  end subroutine rotate_y
-
-
-  ! ---------------------------------------------------------
-  subroutine rotate_z(m, angle)
-    FLOAT, intent(inout) :: m(MAX_DIM, MAX_DIM)
-    FLOAT,    intent(in) :: angle
-
-    FLOAT :: aux(MAX_DIM, MAX_DIM), ca, sa
-
-    PUSH_SUB(rotate_z)
-
-    ca = cos(angle)
-    sa = sin(angle)
-
-    aux = M_ZERO
-    aux(3, 3) = M_ONE
-    aux(1, 1) = ca
-    aux(2, 2) = ca
-    aux(1, 2) = sa
-    aux(2, 1) = -sa
-
-    m = matmul(aux, m)
-
-    POP_SUB(rotate_z)
-  end subroutine rotate_z
+    POP_SUB(rotate)
+  end subroutine rotate
 
 end module xyz_adjust_oct_m
 

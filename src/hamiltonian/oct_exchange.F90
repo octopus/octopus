@@ -23,10 +23,11 @@ module oct_exchange_oct_m
   use global_oct_m
   use mesh_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use poisson_oct_m
   use profiling_oct_m
-  use states_oct_m
-  use states_dim_oct_m
+  use states_elec_oct_m
+  use states_elec_dim_oct_m
   use xc_oct_m
 
   implicit none
@@ -39,12 +40,12 @@ module oct_exchange_oct_m
     oct_exchange_prepare,            &
     oct_exchange_set,                &
     oct_exchange_remove,             &
-    doct_exchange_operator,          &
-    zoct_exchange_operator
+    oct_exchange_operator
 
   type oct_exchange_t
+    private
     logical :: oct_exchange
-    type(states_t), pointer :: oct_st
+    type(states_elec_t), pointer :: oct_st
     FLOAT, pointer :: oct_fxc(:, :, :)
     FLOAT, pointer :: oct_pot(:, :)
     FLOAT, pointer :: oct_rho(:, :)
@@ -79,9 +80,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine oct_exchange_set(this, st, mesh)
-    type(oct_exchange_t), intent(inout) :: this
-    type(states_t), target, intent(in) :: st
-    type(mesh_t),        intent(in)    :: mesh
+    type(oct_exchange_t),     intent(inout) :: this
+    type(states_elec_t), target, intent(in) :: st
+    type(mesh_t),             intent(in)    :: mesh
 
     integer :: np, nspin
 
@@ -108,11 +109,13 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine oct_exchange_prepare(this, mesh, psi, xc)
+  subroutine oct_exchange_prepare(this, mesh, psi, xc, psolver, namespace)
     type(oct_exchange_t), intent(inout) :: this
-    type(mesh_t),        intent(in)    :: mesh
-    CMPLX,               intent(in)    :: psi(:, :, :, :)
-    type(xc_t),          intent(in)    :: xc
+    type(mesh_t),         intent(in)    :: mesh
+    CMPLX,                intent(in)    :: psi(:, :, :, :)
+    type(xc_t),           intent(in)    :: xc
+    type(poisson_t),      intent(in)    :: psolver
+    type(namespace_t),    intent(in)    :: namespace
 
     integer :: jst, ip, ik
     CMPLX, allocatable :: psi2(:, :)
@@ -128,10 +131,10 @@ contains
       this%oct_pot = M_ZERO
       this%oct_rho = M_ZERO
       do jst = 1, this%oct_st%nst
-        call states_get_state(this%oct_st, mesh, jst, 1, psi2)
-        forall (ip = 1:mesh%np)
+        call states_elec_get_state(this%oct_st, mesh, jst, 1, psi2)
+        do ip = 1, mesh%np
           this%oct_rho(ip, 1) = this%oct_rho(ip, 1) + this%oct_st%occ(jst, 1)*aimag(conjg(psi2(ip, 1))*psi(ip, 1, jst, 1))
-        end forall
+        end do
       end do
       call dpoisson_solve(psolver, this%oct_pot(:, 1), this%oct_rho(:, 1), all_nodes = .false.)
 
@@ -142,10 +145,10 @@ contains
       this%oct_rho = M_ZERO
       do ik = 1, 2
         do jst = 1, this%oct_st%nst
-          call states_get_state(this%oct_st, mesh, jst, ik, psi2)
-          forall (ip = 1:mesh%np)
+          call states_elec_get_state(this%oct_st, mesh, jst, ik, psi2)
+          do ip = 1, mesh%np
             this%oct_rho(ip, ik) = this%oct_rho(ip, ik) + this%oct_st%occ(jst, ik) * aimag(conjg(psi2(ip, 1))*psi(ip, 1, jst, ik))
-          end forall
+          end do
         end do
       end do
 
@@ -156,7 +159,7 @@ contains
     end select
 
     this%oct_fxc = M_ZERO
-    call xc_get_fxc(xc, mesh, this%oct_st%rho, this%oct_st%d%ispin, this%oct_fxc)
+    call xc_get_fxc(xc, mesh, namespace, this%oct_st%rho, this%oct_st%d%ispin, this%oct_fxc)
 
     SAFE_DEALLOCATE_A(psi2)
     POP_SUB(oct_exchange_prepare)
@@ -178,13 +181,53 @@ contains
     POP_SUB(oct_exchange_remove)
   end subroutine oct_exchange_remove
 
-#include "undef.F90"
-#include "real.F90"
-#include "oct_exchange_inc.F90"
+  ! ---------------------------------------------------------
+  subroutine oct_exchange_operator(this, namespace, mesh, hpsi, ist, ik)
+    type(oct_exchange_t), intent(in)    :: this
+    type(namespace_t),    intent(in)    :: namespace
+    type(mesh_t),         intent(in)    :: mesh
+    CMPLX,                intent(inout) :: hpsi(:, :)
+    integer,              intent(in)    :: ist
+    integer,              intent(in)    :: ik
 
-#include "undef.F90"
-#include "complex.F90"
-#include "oct_exchange_inc.F90"
+    integer :: ik2
+    CMPLX, allocatable :: psi(:, :), psi2(:, :)
+    integer :: ip
+
+    PUSH_SUB(oct_exchange_operator)
+
+    SAFE_ALLOCATE(psi(1:mesh%np, 1:this%oct_st%d%dim))
+    SAFE_ALLOCATE(psi2(1:mesh%np, 1:this%oct_st%d%dim))
+
+    select case(this%oct_st%d%ispin)
+    case(UNPOLARIZED)
+      ASSERT(this%oct_st%d%nik  ==  1)
+      call states_elec_get_state(this%oct_st, mesh, ist, 1, psi2)
+      do ip = 1, mesh%np
+        hpsi(ip, 1) = hpsi(ip, 1) + M_TWO*M_zI*psi2(ip, 1)*(this%oct_pot(ip, 1) + this%oct_fxc(ip, 1, 1)*this%oct_rho(ip, 1))
+      end do
+
+    case(SPIN_POLARIZED)
+      ASSERT(this%oct_st%d%nik  ==  2)
+
+      call states_elec_get_state(this%oct_st, mesh, ist, ik, psi2)
+
+      do ik2 = 1, 2
+        do ip = 1, mesh%np
+          hpsi(ip, 1) = hpsi(ip, 1) + M_TWO * M_zI * this%oct_st%occ(ist, ik) * &
+            psi2(ip, 1) * (this%oct_pot(ip, ik2) + this%oct_fxc(ip, ik, ik2)*this%oct_rho(ip, ik2))
+        end do
+      end do
+
+    case(SPINORS)
+      call messages_not_implemented("Function oct_exchange_operator for spinors", &
+        namespace=namespace)
+    end select
+
+    SAFE_DEALLOCATE_A(psi)
+    SAFE_DEALLOCATE_A(psi2)
+    POP_SUB(oct_exchange_operator)
+  end subroutine oct_exchange_operator
 
 end module oct_exchange_oct_m
 

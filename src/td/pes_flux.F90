@@ -24,7 +24,7 @@ module pes_flux_oct_m
   use derivatives_oct_m
   use global_oct_m
   use grid_oct_m
-  use hamiltonian_oct_m
+  use hamiltonian_elec_oct_m
   use kpoints_oct_m
   use io_oct_m
   use lasers_oct_m
@@ -36,13 +36,15 @@ module pes_flux_oct_m
   use messages_oct_m
   use mpi_oct_m
   use multicomm_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use par_vec_oct_m
   use profiling_oct_m
   use restart_oct_m
   use simul_box_oct_m
-  use states_oct_m
-  use states_dim_oct_m
+  use states_elec_oct_m
+  use states_elec_dim_oct_m
+  use string_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use varinfo_oct_m
@@ -61,9 +63,11 @@ module pes_flux_oct_m
     pes_flux_dump,             &
     pes_flux_reciprocal_mesh_gen, &
     pes_flux_pmesh,            &
-    pes_flux_map_from_states
+    pes_flux_map_from_states,  &
+    pes_flux_out_energy
 
   type pes_flux_t
+    private
     integer          :: nkpnts                         !< total number of k-points
     integer          :: nkpnts_start, nkpnts_end       !< start/end of index for k-points on the current node
     integer          :: nk
@@ -75,7 +79,7 @@ module pes_flux_oct_m
     FLOAT, pointer   :: kcoords_cub(:,:,:)             !< coordinates of k-points
     FLOAT, pointer   :: kcoords_sph(:,:,:)
 
-    integer          :: shape                          !< shape of the surface (= cube/sphere/planes)
+    integer, public  :: shape                          !< shape of the surface (= cube/sphere/planes)
     integer          :: nsrfcpnts                      !< total number of surface points
     integer          :: nsrfcpnts_start, nsrfcpnts_end !< for cubic surface: number of surface points on node
     FLOAT, pointer   :: srfcnrml(:,:)                  !< vectors normal to the surface (includes surface element)
@@ -103,9 +107,9 @@ module pes_flux_oct_m
     CMPLX, pointer   :: spctramp_cub(:,:,:,:)          !< spectral amplitude
     CMPLX, pointer   :: spctramp_sph(:,:,:,:,:)
 
-    integer          :: ll(3)                          !< the dimensions of a cubic mesh containing the momentum-space
+    integer, public  :: ll(3)                          !< the dimensions of a cubic mesh containing the momentum-space
                                                        !< mesh. Used when working with semi-periodic systems 
-    integer          :: ngpt                           !< Number of free Gpoints use to increase resoltion                        
+    integer, public  :: ngpt                           !< Number of free Gpoints use to increase resoltion                        
 
     logical          :: usememory                      !< whether conjgplanewf should be kept in memory
     logical          :: avoid_ab
@@ -113,6 +117,10 @@ module pes_flux_oct_m
       
     logical          :: parallel_in_momentum           !< whether we are parallelizing over the k-mesh  
     logical          :: arpes_grid
+
+    integer          :: dim                            !< dimensions
+    integer          :: pdim                           !< periodi dimensions
+
 
   end type pes_flux_t
 
@@ -125,11 +133,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine pes_flux_init(this, mesh, st, hm, save_iter, max_iter)
+  subroutine pes_flux_init(this, namespace, mesh, st, hm, save_iter, max_iter)
     type(pes_flux_t),    intent(inout) :: this
+    type(namespace_t),   intent(in)    :: namespace
     type(mesh_t),        intent(in)    :: mesh
-    type(states_t),      intent(in)    :: st
-    type(hamiltonian_t), intent(in)    :: hm
+    type(states_elec_t), intent(in)    :: st
+    type(hamiltonian_elec_t), intent(in)    :: hm
     integer,             intent(in)    :: save_iter
     integer,             intent(in)    :: max_iter
 
@@ -156,12 +165,10 @@ contains
     mdim   = mesh%sb%dim
     pdim   = mesh%sb%periodic_dim
 
-    call messages_experimental("PhotoElectronSpectrum with t-surff")
-
     do il = 1, hm%ep%no_lasers
       if(laser_kind(hm%ep%lasers(il)) /= E_FIELD_VECTOR_POTENTIAL) then
         message(1) = 't-surff only works in velocity gauge.'
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
     end do
 
@@ -192,12 +199,12 @@ contains
     if(mdim <= 2) default_shape = M_CUBIC
     if(simul_box_is_periodic(mesh%sb)) default_shape = M_PLANES
     
-    call parse_variable('PES_Flux_Shape', default_shape, this%shape)
+    call parse_variable(namespace, 'PES_Flux_Shape', default_shape, this%shape)
     if(.not.varinfo_valid_option('PES_Flux_Shape', this%shape, is_flag = .true.)) &
-      call messages_input_error('PES_Flux_Shape')
+      call messages_input_error(namespace, 'PES_Flux_Shape')
     if(this%shape == M_SPHERICAL .and. mdim /= 3) then
       message(1) = 'Spherical grid works only in 3d.'
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
     call messages_print_var_option(stdout, 'PES_Flux_Shape', this%shape)
 
@@ -213,7 +220,7 @@ contains
     !% </tt>
     !%End
     offset = M_ZERO
-    if(parse_block('PES_Flux_Offset', blk) == 0) then
+    if(parse_block(namespace, 'PES_Flux_Offset', blk) == 0) then
       do imdim = 1, mdim
         call parse_block_float(blk, 0, imdim - 1, offset(imdim))
       end do
@@ -229,8 +236,8 @@ contains
     !% grid (to be changed to Gauss-Legendre quadrature).
     !%End
     if(this%shape == M_SPHERICAL) then
-      call parse_variable('PES_Flux_Lmax', 1, this%lmax)
-      if(this%lmax < 1) call messages_input_error('PES_Flux_Lmax', 'must be > 0')
+      call parse_variable(namespace, 'PES_Flux_Lmax', 1, this%lmax)
+      if(this%lmax < 1) call messages_input_error(namespace, 'PES_Flux_Lmax', 'must be > 0')
       call messages_print_var_value(stdout, 'PES_Flux_Lmax', this%lmax)
     end if
 
@@ -245,7 +252,7 @@ contains
         !% For <tt>PES_Flux_Shape = cub</tt>, checks whether surface points are inside the
         !% absorbing zone and discards them if set to yes (default).
         !%End
-        call parse_variable('PES_Flux_AvoidAB', .true., this%avoid_ab)
+        call parse_variable(namespace, 'PES_Flux_AvoidAB', .true., this%avoid_ab)
         call messages_print_var_value(stdout, 'PES_Flux_AvoidAB', this%avoid_ab)
       end if
 
@@ -266,7 +273,7 @@ contains
       !% the non-periodic dimension symmetrically placed at <tt>PES_Flux_Lsize</tt> distance from
       !% the origin.
       !%End
-      if(parse_block('PES_Flux_Lsize', blk) == 0) then
+      if(parse_block(namespace, 'PES_Flux_Lsize', blk) == 0) then
         do imdim = 1, mdim
           call parse_block_float(blk, 0, imdim - 1, border(imdim))
         end do
@@ -277,10 +284,9 @@ contains
         ! the cube sides along the periodic directions are out of the simulation box
         border(1:pdim)= mesh%sb%lsize(1:pdim) * M_TWO 
         border(mdim)  = mesh%sb%lsize(mdim) * M_HALF
-        call parse_variable('PES_Flux_Lsize', border(mdim), border(mdim))
+        call parse_variable(namespace, 'PES_Flux_Lsize', border(mdim), border(mdim))
         ! Snap the plane to the closest grid point
         border(mdim) = floor(border(mdim)/mesh%spacing(mdim))*mesh%spacing(mdim) 
-        call messages_print_var_value(stdout, 'PES_Flux_Lsize', border(mdim))
         
       else
         select case(mesh%sb%box_shape)
@@ -292,12 +298,13 @@ contains
           call messages_write('PES_Flux_Lsize not specified. No default values available for this box shape.')
           call messages_new_line()
           call messages_write('Specify the location of the parallelepiped with block PES_Flux_Lsize.')
-          call messages_fatal()
+          call messages_fatal(namespace=namespace)
         end select
         call messages_write('PES_Flux_Lsize not specified. Using default values.')
         call messages_info()
-        call messages_print_var_value(stdout, 'PES_Flux_Lsize', border(1:mdim))
       end if
+
+      call messages_print_var_value(stdout, 'PES_Flux_Lsize', border(1:mdim))
 
     else
       !%Variable PES_Flux_Radius
@@ -306,9 +313,9 @@ contains
       !%Description
       !% The radius of the sphere, if <tt>PES_Flux_Shape == sph</tt>.
       !%End
-      if(parse_is_defined('PES_Flux_Radius')) then
-        call parse_variable('PES_Flux_Radius', M_ZERO, this%radius)
-        if(this%radius <= M_ZERO) call messages_input_error('PES_Flux_Radius')
+      if(parse_is_defined(namespace, 'PES_Flux_Radius')) then
+        call parse_variable(namespace, 'PES_Flux_Radius', M_ZERO, this%radius)
+        if(this%radius <= M_ZERO) call messages_input_error(namespace, 'PES_Flux_Radius')
         call messages_print_var_value(stdout, 'PES_Flux_Radius', this%radius)
       else
         select case(mesh%sb%box_shape)
@@ -319,7 +326,7 @@ contains
         case default
           message(1) = 'PES_Flux_Radius not specified. No default values available for this box shape.'
           message(2) = 'Specify the radius of the sphere with variable PES_Flux_Radius.'
-          call messages_fatal(2)
+          call messages_fatal(2, namespace=namespace)
         end select
         message(1) = 'PES_Flux_Radius not specified. Using default values.'
         call messages_info(1)
@@ -336,8 +343,8 @@ contains
     !% Number of steps in <math>\theta</math> (<math>0 \le \theta \le \pi</math>) for the spherical surface.
     !%End
     if(this%shape == M_SPHERICAL) then
-      call parse_variable('PES_Flux_StepsThetaR', 2*this%lmax + 1, nstepsthetar)
-      if(nstepsthetar < 0) call messages_input_error('PES_Flux_StepsThetaR')
+      call parse_variable(namespace, 'PES_Flux_StepsThetaR', 2*this%lmax + 1, nstepsthetar)
+      if(nstepsthetar < 0) call messages_input_error(namespace, 'PES_Flux_StepsThetaR')
       call messages_print_var_value(stdout, "PES_Flux_StepsThetaR", nstepsthetar)
     end if
 
@@ -349,8 +356,8 @@ contains
     !% Number of steps in <math>\phi</math> (<math>0 \le \phi \le 2 \pi</math>) for the spherical surface.
     !%End
     if(this%shape == M_SPHERICAL) then
-      call parse_variable('PES_Flux_StepsPhiR', 2*this%lmax + 1, nstepsphir)
-      if(nstepsphir < 0) call messages_input_error('PES_Flux_StepsPhiR')
+      call parse_variable(namespace, 'PES_Flux_StepsPhiR', 2*this%lmax + 1, nstepsphir)
+      if(nstepsphir < 0) call messages_input_error(namespace, 'PES_Flux_StepsPhiR')
       call messages_print_var_value(stdout, "PES_Flux_StepsPhiR", nstepsphir)
     end if
 
@@ -364,7 +371,7 @@ contains
       ! equispaced grid in theta & phi (Gauss-Legendre would optimize to nstepsthetar = this%lmax & nstepsphir = 2*this%lmax + 1):
       ! nstepsthetar = M_TWO * this%lmax + 1
       ! nstepsphir   = M_TWO * this%lmax + 1
-      call pes_flux_getsphere(this, mesh, nstepsthetar, nstepsphir, offset)
+      call pes_flux_getsphere(this, mesh, nstepsthetar, nstepsphir)
     end if
 
     ! distribute the surface points on nodes,
@@ -410,7 +417,7 @@ contains
     end if
 
     ! Generate the reciprocal space mesh grid
-    call pes_flux_reciprocal_mesh_gen(this, mesh%sb, st, mesh%mpi_grp%comm)
+    call pes_flux_reciprocal_mesh_gen(this, namespace, mesh%sb, st, mesh%mpi_grp%comm)
 
     ! -----------------------------------------------------------------
     ! Options for time integration 
@@ -440,7 +447,7 @@ contains
     !% on the suface. 
     !% By default true when <tt>PES_Flux_Shape = cub</tt>.
     !%End
-    call parse_variable('PES_Flux_UseMemory', .true., this%usememory)
+    call parse_variable(namespace, 'PES_Flux_UseMemory', .true., this%usememory)
     call messages_print_var_value(stdout, "PES_Flux_UseMemory", this%usememory)            
 
     SAFE_ALLOCATE(this%wf(stst:stend, 1:sdim, kptst:kptend, 0:this%nsrfcpnts, 1:this%tdsteps))
@@ -468,7 +475,7 @@ contains
 
       if(this%usememory) then
         SAFE_ALLOCATE(k_dot_aux(1:this%nkpnts))
-        SAFE_ALLOCATE(this%conjgplanewf_cub(1:this%nkpnts, this%nsrfcpnts_start:this%nsrfcpnts_end,kptst:kptend))
+        SAFE_ALLOCATE(this%conjgplanewf_cub(1:this%nkpnts, this%nsrfcpnts_start:this%nsrfcpnts_end, kptst:kptend))
         this%conjgplanewf_cub = M_z0
 
         do ik = kptst, kptend
@@ -536,12 +543,13 @@ contains
   end subroutine pes_flux_end
 
   ! ---------------------------------------------------------
-  subroutine pes_flux_reciprocal_mesh_gen(this, sb, st, comm, post)
-    type(pes_flux_t),  intent(inout) :: this
-    type(simul_box_t), intent(in)    :: sb
-    type(states_t),    intent(in)    :: st
-    integer,           intent(in)    :: comm
-    logical, optional, intent(in)    :: post !< only fill the data needed for postprocessing  
+  subroutine pes_flux_reciprocal_mesh_gen(this, namespace, sb, st, comm, post)
+    type(pes_flux_t),    intent(inout) :: this
+    type(namespace_t),   intent(in)    :: namespace
+    type(simul_box_t),   intent(in)    :: sb
+    type(states_elec_t), intent(in)    :: st
+    integer,             intent(in)    :: comm
+    logical, optional,   intent(in)    :: post !< only fill the data needed for postprocessing  
 
     integer           :: mdim, pdim
     integer           :: kptst, kptend  
@@ -565,6 +573,9 @@ contains
     mdim   = sb%dim
     pdim   = sb%periodic_dim
 
+    this%dim  = mdim
+    this%pdim = pdim
+
     
     if (this%shape == M_SPHERICAL .or. this%shape == M_CUBIC) then
       ! -----------------------------------------------------------------
@@ -578,9 +589,9 @@ contains
       !%Description
       !% The maximum value of |k|.
       !%End
-      call parse_variable('PES_Flux_Kmax', M_ONE, kmax)
+      call parse_variable(namespace, 'PES_Flux_Kmax', M_ONE, kmax)
       call messages_print_var_value(stdout, "PES_Flux_Kmax", kmax)
-      if(kmax <= M_ZERO) call messages_input_error('PES_Flux_Kmax')
+      if(kmax <= M_ZERO) call messages_input_error(namespace, 'PES_Flux_Kmax')
 
       !%Variable PES_Flux_DeltaK
       !%Type float
@@ -589,8 +600,8 @@ contains
       !%Description
       !% Spacing of the k-mesh in |k| (equidistant).
       !%End
-      call parse_variable('PES_Flux_DeltaK', CNST(0.002), this%dk)
-      if(this%dk <= M_ZERO) call messages_input_error('PES_Flux_DeltaK')
+      call parse_variable(namespace, 'PES_Flux_DeltaK', CNST(0.002), this%dk)
+      if(this%dk <= M_ZERO) call messages_input_error(namespace, 'PES_Flux_DeltaK')
       call messages_print_var_value(stdout, "PES_Flux_DeltaK", this%dk)
 
       !%Variable PES_Flux_StepsThetaK
@@ -600,8 +611,8 @@ contains
       !%Description
       !% Number of steps in <math>\theta</math> (<math>0 \le \theta \le \pi</math>) for the spherical grid in k.
       !%End
-      call parse_variable('PES_Flux_StepsThetaK', 45, this%nstepsthetak)
-      if(this%nstepsthetak < 0) call messages_input_error('PES_Flux_StepsThetaK')
+      call parse_variable(namespace, 'PES_Flux_StepsThetaK', 45, this%nstepsthetak)
+      if(this%nstepsthetak < 0) call messages_input_error(namespace, 'PES_Flux_StepsThetaK')
 
       !%Variable PES_Flux_StepsPhiK
       !%Type integer
@@ -610,8 +621,8 @@ contains
       !%Description
       !% Number of steps in <math>\phi</math> (<math>0 \le \phi \le 2 \pi</math>) for the spherical grid in k.
       !%End
-      call parse_variable('PES_Flux_StepsPhiK', 90, this%nstepsphik)
-      if(this%nstepsphik < 0) call messages_input_error('PES_Flux_StepsPhiK')
+      call parse_variable(namespace, 'PES_Flux_StepsPhiK', 90, this%nstepsphik)
+      if(this%nstepsphik < 0) call messages_input_error(namespace, 'PES_Flux_StepsPhiK')
       if(this%nstepsphik == 0) this%nstepsphik = 1
 
       select case(mdim)
@@ -655,7 +666,7 @@ contains
       !% Kpoints. For each additional Gpoint G an entire Kpoint grid centered at 
       !% G is added to the momentum grid. 
       !%End
-      call parse_variable('PES_Flux_Gpoint_Upsample', 1, this%ngpt)
+      call parse_variable(namespace, 'PES_Flux_Gpoint_Upsample', 1, this%ngpt)
       call messages_print_var_value(stdout, "PES_Flux_Gpoint_Upsample", this%ngpt)
       
       SAFE_ALLOCATE(gpoints(1:mdim,1:this%ngpt))
@@ -682,7 +693,7 @@ contains
       !% regular grid.
       !% By default true when <tt>PES_Flux_Shape = pln</tt>.
       !%End
-      call parse_variable('PES_Flux_ARPES_grid', .true., this%arpes_grid)
+      call parse_variable(namespace, 'PES_Flux_ARPES_grid', .true., this%arpes_grid)
       call messages_print_var_value(stdout, "PES_Flux_ARPES_grid", this%arpes_grid)       
       
       
@@ -701,7 +712,7 @@ contains
       Emax = 10 
       De   = CNST(0.1)
     
-      if(parse_block('PES_Flux_EnergyGrid', blk) == 0) then
+      if(parse_block(namespace, 'PES_Flux_EnergyGrid', blk) == 0) then
 
         call parse_block_float(blk, 0, 0, Emin)
         call parse_block_float(blk, 0, 1, Emax)
@@ -766,7 +777,7 @@ contains
     
       NBZ(:) = 1
       if (.not. kpoints_have_zero_weight_path(sb%kpoints)) NBZ(1:pdim) = 2
-      if(parse_block('PES_Flux_BZones', blk) == 0) then
+      if(parse_block(namespace, 'PES_Flux_BZones', blk) == 0) then
 
         call parse_block_integer(blk, 0, 0, NBZ(1))
         call parse_block_integer(blk, 0, 1, NBZ(2))
@@ -774,7 +785,7 @@ contains
         call parse_block_end(blk)
 
       else
-        call parse_variable('PES_Flux_BZones', maxval(NBZ(:)), NBZ(1))
+        call parse_variable(namespace, 'PES_Flux_BZones', maxval(NBZ(:)), NBZ(1))
         NBZ(:) = NBZ(1)
 
       end if
@@ -786,7 +797,7 @@ contains
         call messages_write("Using a path in reciprocal space with PES_Flux_BZones > 1.")
         call messages_new_line()
         call messages_write("This may cause unphysical results if the path crosses the 1st BZ boundary.")
-        call messages_warning()
+        call messages_warning(namespace=namespace)
 !         call get_kpath_perp_direction(sb%kpoints, idim)
 !         if (idim > 0 ) NBZ(idim) = 1
       end if 
@@ -1014,7 +1025,7 @@ contains
       if (ikk /= 0) sign= ikk/abs(ikk)        
       
       if (this%arpes_grid) then
-        kpoint = kpoints_get_point(sb%kpoints, ikpt)
+        kpoint(1:sb%dim) = kpoints_get_point(sb%kpoints, ikpt)
         kpar(1:pdim) = kvec(1:pdim) - kpoint(1:pdim)
         val = abs(ikk)*DE * M_TWO - sum(kpar(1:pdim)**2)
         if (val >= 0) then
@@ -1032,49 +1043,21 @@ contains
       this%kcoords_cub(1:mdim, ikp, ikpt) =  kvec(1:mdim)
       
     end subroutine fill_non_periodic_dimension
-         
-          
-    subroutine get_kpath_perp_direction(kpoints, kpth_dir)
-      type(kpoints_t),   intent(in)  :: kpoints 
-      integer,           intent(out) :: kpth_dir
-
-      FLOAT                :: kpt(3)
-      integer              :: ikzero_start
-         
-      ikzero_start = kpoints_number(sb%kpoints) - sb%kpoints%nik_skip  + 1   
-      
-      kpth_dir = -1
-         
-      kpt = M_ZERO
-      kpt(1:mdim) = kpoints_get_point(kpoints, ikzero_start+1)-kpoints_get_point(kpoints, ikzero_start)
-      kpt(1:mdim) = kpt(1:mdim)/sqrt(sum(kpt(1:mdim)**2))  
-           
-      
-      if (sum((kpt(:) - (/1,0,0/))**2) < M_EPSILON) then
-        kpth_dir = 2
-      end if        
-              
-      if (sum((kpt(:) - (/0,1,0/))**2) < M_EPSILON) then 
-        kpth_dir = 1
-      end if
-      
-      
-      
-    end subroutine get_kpath_perp_direction
-          
+                   
           
     
   end subroutine pes_flux_reciprocal_mesh_gen
 
   ! ---------------------------------------------------------
-  subroutine pes_flux_calc(this, mesh, st, gr, hm, iter, dt)
-    type(pes_flux_t),    intent(inout) :: this
-    type(mesh_t),        intent(in)    :: mesh
-    type(states_t),      intent(inout) :: st
-    type(grid_t),        intent(in)    :: gr
-    type(hamiltonian_t), intent(in)    :: hm
-    integer,             intent(in)    :: iter
-    FLOAT,               intent(in)    :: dt
+  subroutine pes_flux_calc(this, mesh, st, gr, hm, iter, dt, stopping)
+    type(pes_flux_t),    intent(inout)    :: this
+    type(mesh_t),        intent(in)       :: mesh
+    type(states_elec_t), intent(inout)    :: st
+    type(grid_t),        intent(in)       :: gr
+    type(hamiltonian_elec_t), intent(in)  :: hm
+    integer,             intent(in)       :: iter
+    FLOAT,               intent(in)       :: dt
+    logical,             intent(in)       :: stopping
 
     integer            :: stst, stend, kptst, kptend, sdim, mdim
     integer            :: ist, ik, isdim, imdim
@@ -1119,7 +1102,7 @@ contains
       do ik = kptst, kptend
         do ist = stst, stend
           do isdim = 1, sdim
-            call states_get_state(st, mesh, isdim, ist, ik, psi)
+            call states_elec_get_state(st, mesh, isdim, ist, ik, psi)
             call zderivatives_grad(gr%der, psi, gpsi, .true.)
 
             if(this%shape == M_SPHERICAL) then
@@ -1167,7 +1150,7 @@ contains
       SAFE_DEALLOCATE_A(psi)
       SAFE_DEALLOCATE_A(gpsi)
 
-      if(this%itstep == this%tdsteps .or. mod(iter, this%save_iter) == 0 .or. iter == this%max_iter) then
+      if(this%itstep == this%tdsteps .or. mod(iter, this%save_iter) == 0 .or. iter == this%max_iter .or. stopping) then
         if(this%shape == M_CUBIC .or. this%shape == M_PLANES) then
           call pes_flux_integrate_cub(this, mesh, st, dt)
         else
@@ -1190,7 +1173,7 @@ contains
   subroutine pes_flux_integrate_cub(this, mesh, st, dt)
     type(pes_flux_t),    intent(inout) :: this
     type(mesh_t),        intent(in)    :: mesh
-    type(states_t),      intent(inout) :: st
+    type(states_elec_t), intent(inout) :: st
     FLOAT,               intent(in)    :: dt
 
     integer            :: stst, stend, kptst, kptend, sdim, mdim
@@ -1352,7 +1335,7 @@ contains
   subroutine pes_flux_integrate_sph(this, mesh, st, dt)
     type(pes_flux_t),    intent(inout) :: this
     type(mesh_t),        intent(in)    :: mesh
-    type(states_t),      intent(inout) :: st
+    type(states_elec_t), intent(inout) :: st
     FLOAT,               intent(in)    :: dt
 
     integer            :: stst, stend, kptst, kptend, sdim
@@ -1561,7 +1544,7 @@ contains
   subroutine pes_flux_getcube(this, mesh, hm, border, offset)
     type(mesh_t),     intent(in)    :: mesh
     type(pes_flux_t), intent(inout) :: this
-    type(hamiltonian_t), intent(in) :: hm
+    type(hamiltonian_elec_t), intent(in) :: hm
     FLOAT,            intent(in)    :: border(1:MAX_DIM)
     FLOAT,            intent(in)    :: offset(1:MAX_DIM)
 
@@ -1666,11 +1649,10 @@ contains
   end subroutine pes_flux_getcube
 
   ! ---------------------------------------------------------
-  subroutine pes_flux_getsphere(this, mesh, nstepsthetar, nstepsphir, offset)
+  subroutine pes_flux_getsphere(this, mesh, nstepsthetar, nstepsphir)
     type(pes_flux_t), intent(inout) :: this
     type(mesh_t),     intent(in)    :: mesh
     integer,          intent(inout) :: nstepsthetar, nstepsphir
-    FLOAT,            intent(in)    :: offset(1:MAX_DIM)
     
     integer :: mdim
     integer :: isp, ith, iph

@@ -1,0 +1,14 @@
+# -*- coding: utf-8 mode: shell-script -*-
+
+Test       : Oct-test exponential_apply
+Program    : octopus
+TestGroups : short-run, components
+Enabled    : Yes
+
+Processors: 1
+Input: 23-exponential_apply.01-jellium.inp
+match ; Norm state  1; GREPFIELD(out, 'Norm state  1', 4) ; 0.136284E+24
+match ; Norm state  2; GREPFIELD(out, 'Norm state  2', 4) ; 0.125640E+24
+match ; Norm state  3; GREPFIELD(out, 'Norm state  3', 4) ; 0.126371E+24
+match ; Norm state  4; GREPFIELD(out, 'Norm state  4', 4) ; 0.130542E+24
+

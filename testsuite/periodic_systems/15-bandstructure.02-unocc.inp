@@ -38,8 +38,7 @@ ExperimentalFeatures = yes
 ExtraStates = 5
 ConvRelDens = 1e-7
 
-LCAOStart = lcao_states
-
 Output = geometry + dos
 OutputFormat = xyz
 
+StatesPack = yes

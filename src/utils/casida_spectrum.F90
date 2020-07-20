@@ -25,6 +25,7 @@ program casida_spectrum
   use global_oct_m
   use io_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
   use space_oct_m
@@ -54,14 +55,15 @@ program casida_spectrum
   if(ierr == 0) call getopt_casida_spectrum()
   call getopt_end()
 
+  call parser_init()
   call messages_init()
   call io_init()
-  call unit_system_init()
-  call space_init(cs%space)
+  call unit_system_init(global_namespace)
+  call space_init(cs%space, global_namespace)
 
   ! Reads the spin components. This is read here, as well as in states_init.
-  call parse_variable('SpinComponents', 1, cs%ispin)
-  if(.not.varinfo_valid_option('SpinComponents', cs%ispin)) call messages_input_error('SpinComponents')
+  call parse_variable(global_namespace, 'SpinComponents', 1, cs%ispin)
+  if(.not.varinfo_valid_option('SpinComponents', cs%ispin)) call messages_input_error(global_namespace, 'SpinComponents')
   cs%ispin = min(2, cs%ispin)
 
   !%Variable CasidaSpectrumBroadening
@@ -71,7 +73,7 @@ program casida_spectrum
   !%Description
   !% Width of the Lorentzian used to broaden the excitations.
   !%End
-  call parse_variable('CasidaSpectrumBroadening', CNST(0.005), cs%br, units_inp%energy)
+  call parse_variable(global_namespace, 'CasidaSpectrumBroadening', CNST(0.005), cs%br, units_inp%energy)
 
   call messages_print_var_value(stdout, 'CasidaSpectrumBroadening', cs%br, unit = units_out%energy)
 
@@ -82,7 +84,7 @@ program casida_spectrum
   !%Description
   !% Sampling rate for the spectrum. 
   !%End
-  call parse_variable('CasidaSpectrumEnergyStep', CNST(0.001), cs%energy_step, units_inp%energy)
+  call parse_variable(global_namespace, 'CasidaSpectrumEnergyStep', CNST(0.001), cs%energy_step, units_inp%energy)
 
   call messages_print_var_value(stdout, 'CasidaSpectrumEnergyStep', cs%energy_step, unit = units_out%energy)
 
@@ -93,7 +95,7 @@ program casida_spectrum
   !%Description
   !% The broadening is done for energies greater than <tt>CasidaSpectrumMinEnergy</tt>.
   !%End
-  call parse_variable('CasidaSpectrumMinEnergy', M_ZERO, cs%min_energy, units_inp%energy)
+  call parse_variable(global_namespace, 'CasidaSpectrumMinEnergy', M_ZERO, cs%min_energy, units_inp%energy)
 
   call messages_print_var_value(stdout, 'CasidaSpectrumMinEnergy', cs%min_energy, unit = units_out%energy)
 
@@ -104,7 +106,7 @@ program casida_spectrum
   !%Description
   !% The broadening is done for energies smaller than <tt>CasidaSpectrumMaxEnergy</tt>.
   !%End
-  call parse_variable('CasidaSpectrumMaxEnergy', M_ONE, cs%max_energy, units_inp%energy)
+  call parse_variable(global_namespace, 'CasidaSpectrumMaxEnergy', M_ONE, cs%max_energy, units_inp%energy)
 
   call messages_print_var_value(stdout, 'CasidaSpectrumMaxEnergy', cs%max_energy, unit = units_out%energy)
 
@@ -122,7 +124,7 @@ program casida_spectrum
   !% will also be output. Size of matrix must be <tt>Dimensions</tt>.
   !%End
 
-  if (parse_block('CasidaSpectrumRotationMatrix', blk) == 0) then 
+  if (parse_block(global_namespace, 'CasidaSpectrumRotationMatrix', blk) == 0) then 
     rotation(:,:) = M_ZERO
     do idir = 1, cs%space%dim
       do jdir = 1, cs%space%dim
@@ -144,12 +146,12 @@ program casida_spectrum
     end if
 
     ! apply rotation to geometry
-    call geometry_init(geo, cs%space)
+    call geometry_init(geo, global_namespace, cs%space)
     do iatom = 1, geo%natoms
       coord(1:cs%space%dim) = geo%atom(iatom)%x(1:cs%space%dim)
       geo%atom(iatom)%x(1:cs%space%dim) = matmul(rotation(1:cs%space%dim, 1:cs%space%dim), coord(1:cs%space%dim))
     end do
-    call geometry_write_xyz(geo, trim(CASIDA_DIR)//'rotated')
+    call geometry_write_xyz(geo, trim(CASIDA_DIR)//'rotated', global_namespace)
     call geometry_end(geo)
   else
     rotation(:,:) = identity(:,:)
@@ -164,6 +166,8 @@ program casida_spectrum
   call space_end(cs%space)
   call io_end()
   call messages_end()
+
+  call parser_end()
   call global_end()
 
 contains
@@ -187,7 +191,7 @@ contains
     SAFE_ALLOCATE(spectrum(1:cs%space%dim+1, 1:nsteps))
     spectrum = M_ZERO
 
-    iunit = io_open(trim(dir)// fname, action='read', status='old', die = .false.)
+    iunit = io_open(trim(dir)// fname, global_namespace, action='read', status='old', die = .false.)
 
     if(iunit < 0) then
       message(1) = 'Cannot open file "'//trim(dir)//trim(fname)//'".'
@@ -238,7 +242,7 @@ contains
       ff(1:cs%space%dim) = M_TWO * energy * tm_sq(1:cs%space%dim)
 
       do istep = 1, nsteps
-        omega = cs%min_energy + real(istep-1, REAL_PRECISION)*cs%energy_step
+        omega = cs%min_energy + TOFLOAT(istep-1)*cs%energy_step
         spectrum(1:cs%space%dim+1, istep) = spectrum(1:cs%space%dim+1, istep) + &
           ff(1:cs%space%dim+1)*cs%br/((omega-energy)**2 + cs%br**2)/M_PI ! Lorentzian
       end do
@@ -246,7 +250,7 @@ contains
     call io_close(iunit)
 
     ! print spectra
-    iunit = io_open(trim(dir)//"/spectrum."//fname, action='write')
+    iunit = io_open(trim(dir)//"/spectrum."//fname, global_namespace, action='write')
 
     write(iunit, '(a2,a12)', advance = 'no') '# ', 'E [' // trim(units_abbrev(units_out%energy)) // ']'
     do idir = 1, cs%space%dim
@@ -255,7 +259,7 @@ contains
     write(iunit, '(a14)') '<f>'
 
     do istep = 1, nsteps
-      write(iunit, '(99es14.6)') units_from_atomic(units_out%energy, cs%min_energy + real(istep - 1, REAL_PRECISION) &
+      write(iunit, '(99es14.6)') units_from_atomic(units_out%energy, cs%min_energy + TOFLOAT(istep - 1) &
         *cs%energy_step), (units_from_atomic(unit_one/units_out%energy, spectrum(idir, istep)), idir = 1, cs%space%dim+1)
     end do
 

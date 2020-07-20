@@ -25,6 +25,7 @@ module potential_interpolation_oct_m
   use loct_pointer_oct_m
   use math_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use profiling_oct_m
   use restart_oct_m
 
@@ -46,9 +47,10 @@ module potential_interpolation_oct_m
     potential_interpolation_load
 
   type potential_interpolation_t
-    FLOAT, pointer      :: v_old(:, :, :) => null()
-    FLOAT, pointer      :: vtau_old(:, :, :) => null()
-    logical             :: mgga_with_exc
+    private
+    FLOAT, pointer, public :: v_old(:, :, :) => null()
+    FLOAT, pointer, public :: vtau_old(:, :, :) => null()
+    logical                :: mgga_with_exc
   end type potential_interpolation_t
 
   integer :: interpolation_steps
@@ -131,18 +133,26 @@ contains
     FLOAT, optional,   intent(in)    :: vtau(:, :)
 
     integer :: i, ispin, ip
-    
+
     PUSH_SUB(potential_interpolation_run_zero_iter)
 
-    forall(i = 1:interpolation_steps, ispin = 1:nspin, ip = 1:np)
-      potential_interpolation%v_old(ip, ispin, i) = vhxc(ip, ispin)
-    end forall
-    
+    do i = 1, interpolation_steps
+      do ispin = 1, nspin
+        do ip = 1, np
+          potential_interpolation%v_old(ip, ispin, i) = vhxc(ip, ispin)
+        end do
+      end do
+    end do
+
    if(present(vtau)) then
-      forall(i = 1:interpolation_steps, ispin = 1:nspin, ip = 1:np)
-        potential_interpolation%vtau_old(ip, ispin, i) = vtau(ip, ispin)
-      end forall
-    end if 
+      do i = 1, interpolation_steps
+        do ispin = 1, nspin
+          do ip = 1, np
+            potential_interpolation%vtau_old(ip, ispin, i) = vtau(ip, ispin)
+          end do
+        end do
+      end do
+    end if
 
     POP_SUB(potential_interpolation_run_zero_iter)
   end subroutine potential_interpolation_run_zero_iter
@@ -303,8 +313,9 @@ contains
   ! ---------------------------------------------------------
 
   ! ---------------------------------------------------------
-  subroutine potential_interpolation_load(potential_interpolation, restart, gr, nspin, err2)
+  subroutine potential_interpolation_load(potential_interpolation, namespace, restart, gr, nspin, err2)
     type(potential_interpolation_t), intent(inout) :: potential_interpolation
+    type(namespace_t), intent(in)    :: namespace
     type(restart_t),   intent(in)    :: restart
     type(grid_t),      intent(in)    :: gr
     integer,           intent(in)    :: nspin
@@ -324,7 +335,7 @@ contains
         if (err /= 0) then
           err2 = err2 + 1
           message(1) = "Unable to read VKS restart file '" // trim(filename) // "'"
-          call messages_warning(1)
+          call messages_warning(1, namespace=namespace)
         end if
       end do
     end do
@@ -339,7 +350,7 @@ contains
           if (err /= 0) then
             err2 = err2 + 1
             message(1) = "Unable to read VKS restart file '" // trim(filename) // "'"
-            call messages_warning(1)
+            call messages_warning(1, namespace=namespace)
           end if
         end do
       end do

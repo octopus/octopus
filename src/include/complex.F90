@@ -20,7 +20,6 @@
 
 #define R_TYPE      CMPLX
 #define R_BASE      FLOAT
-#define R_SINGLE    complex(4)
 #define R_DOUBLE    complex(8)
 #define R_MPITYPE   MPI_CMPLX
 #define R_TYPE_VAL  TYPE_CMPLX
@@ -29,9 +28,8 @@
 #define R_TOTYPE(x) cmplx(x, M_ZERO, REAL_PRECISION)
 #define R_TOPREC(x) cmplx(real(x), aimag(x), REAL_PRECISION)
 
-#define R_ABS(x)    abs(x)
 #define R_CONJ(x)   conjg(x)
-#define R_REAL(x)   real(x, REAL_PRECISION)
+#define R_REAL(x)   real(x)
 #define R_AIMAG(x)  aimag(x)
 
 #define R_SIZEOF    16

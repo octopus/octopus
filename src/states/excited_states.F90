@@ -24,10 +24,11 @@ module excited_states_oct_m
   use lalg_adv_oct_m
   use mesh_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use profiling_oct_m
-  use states_oct_m
-  use states_calc_oct_m
-  use states_dim_oct_m
+  use states_elec_oct_m
+  use states_elec_calc_oct_m
+  use states_elec_dim_oct_m
 
   implicit none
 
@@ -38,39 +39,41 @@ module excited_states_oct_m
     excited_states_init,            &
     excited_states_kill,            &
     excited_states_output,          &
-    dstates_mpdotp,                 &
-    zstates_mpdotp,                 &
-    zstates_mpmatrixelement,        &
-    dstates_mpmatrixelement,        &
-    dstates_matrix_swap,            &
-    zstates_matrix_swap
+    dstates_elec_mpdotp,                 &
+    zstates_elec_mpdotp,                 &
+    zstates_elec_mpmatrixelement,        &
+    dstates_elec_mpmatrixelement,        &
+    dstates_elec_matrix_swap,            &
+    zstates_elec_matrix_swap
     
 
 
-  interface dstates_mpdotp
-    module procedure dstates_mpdotp_g, dstates_mpdotp_x
-  end interface dstates_mpdotp
+  interface dstates_elec_mpdotp
+    module procedure dstates_elec_mpdotp_g, dstates_elec_mpdotp_x
+  end interface dstates_elec_mpdotp
 
-  interface zstates_mpdotp
-    module procedure zstates_mpdotp_g, zstates_mpdotp_x
-  end interface zstates_mpdotp
+  interface zstates_elec_mpdotp
+    module procedure zstates_elec_mpdotp_g, zstates_elec_mpdotp_x
+  end interface zstates_elec_mpdotp
 
-  interface dstates_mpmatrixelement
-    module procedure dstates_mpmatrixelement_g
-  end interface dstates_mpmatrixelement
+  interface dstates_elec_mpmatrixelement
+    module procedure dstates_elec_mpmatrixelement_g
+  end interface dstates_elec_mpmatrixelement
 
-  interface zstates_mpmatrixelement
-    module procedure zstates_mpmatrixelement_g
-  end interface zstates_mpmatrixelement
+  interface zstates_elec_mpmatrixelement
+    module procedure zstates_elec_mpmatrixelement_g
+  end interface zstates_elec_mpmatrixelement
 
   type states_pair_t
+    ! Components are public by default
     integer :: i
     integer :: a
     integer :: kk
   end type states_pair_t
 
   type excited_states_t
-    type(states_t),      pointer :: st
+    ! Components are public by default
+    type(states_elec_t),      pointer :: st
     integer                      :: n_pairs
     type(states_pair_t), pointer :: pair(:)
     FLOAT,               pointer :: weight(:)
@@ -102,10 +105,11 @@ contains
   !! This file structure is the one written by the casida run mode, in the files
   !! in the directory "excitations".
   !! ---------------------------------------------------------
-  subroutine excited_states_init(excited_state, ground_state, filename) 
-    type(excited_states_t), intent(inout) :: excited_state
-    type(states_t), target, intent(in)    :: ground_state
-    character(len=*),       intent(in)    :: filename
+  subroutine excited_states_init(excited_state, ground_state, filename, namespace) 
+    type(excited_states_t),      intent(inout) :: excited_state
+    type(states_elec_t), target, intent(in)    :: ground_state
+    character(len=*),            intent(in)    :: filename
+    type(namespace_t),           intent(in)    :: namespace
 
     integer :: iunit, nst, ispin, nik, &
                n_possible_pairs, ipair, jpair, ist, ios, nspin, trash
@@ -124,7 +128,7 @@ contains
 
     if( nik > 2 .or. ( (nik  ==  2) .and. (ispin /= SPIN_POLARIZED))  ) then
       message(1) = 'Cannot calculate projections onto excited states for periodic systems.'
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
 
     SAFE_ALLOCATE(          n_filled(1:nspin))
@@ -137,11 +141,11 @@ contains
 
     select case(ispin)
     case(UNPOLARIZED)
-      call occupied_states(ground_state, 1, n_filled(1), n_partially_filled(1), n_half_filled(1), &
+      call occupied_states(ground_state, namespace, 1, n_filled(1), n_partially_filled(1), n_half_filled(1), &
                            filled(:, 1), partially_filled(:, 1), half_filled(:, 1))
       if(n_partially_filled(1) > 0) then
         message(1) = 'Cannot calculate projections onto excited states if there are partially filled orbitals.'
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
       ! We will not accept, for the time being, constructing excited states in spin-restricted mode if
       ! there are single-particle states that are half-filled, *unless* there is only one state and it is
@@ -150,7 +154,7 @@ contains
         message(1) = 'Cannot construct excited states from ground states that contain half-filled'
         message(2) = 'orbitals - unless they are just one-particle states with only one half-filled'
         message(3) = 'orbital and no doubly occupied ones. Try using the spin-unrestricted mode.'
-        call messages_fatal(3)
+        call messages_fatal(3, namespace=namespace)
       end if
       if(n_half_filled(1) == 0) then
         n_empty(1) = nst - n_filled(1)
@@ -161,30 +165,30 @@ contains
       end if
 
     case(SPIN_POLARIZED)
-      call occupied_states(ground_state, 1, n_filled(1), n_partially_filled(1), n_half_filled(1), &
+      call occupied_states(ground_state, namespace, 1, n_filled(1), n_partially_filled(1), n_half_filled(1), &
                            filled(:, 1), partially_filled(:, 1), half_filled(:, 1))
-      call occupied_states(ground_state, 2, n_filled(2), n_partially_filled(2), n_half_filled(2), &
+      call occupied_states(ground_state, namespace, 2, n_filled(2), n_partially_filled(2), n_half_filled(2), &
                            filled(:, 2), partially_filled(:, 2), half_filled(:, 2))
       if(n_partially_filled(1) * n_partially_filled(2) > 0) then
         message(1) = 'Cannot calculate projections onto excited states if there are partially filled orbitals.'
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
       n_empty(1) = nst - n_filled(1)
       n_empty(2) = nst - n_filled(2)
       n_possible_pairs = n_filled(1) * n_empty(1) + n_filled(2) * n_empty(2)
 
     case(SPINORS)
-      call occupied_states(ground_state, 1, n_filled(1), n_partially_filled(1), n_half_filled(1), &
+      call occupied_states(ground_state, namespace, 1, n_filled(1), n_partially_filled(1), n_half_filled(1), &
                            filled(:, 1), partially_filled(:, 1), half_filled(:, 1))
       if(n_partially_filled(1) > 0) then
         message(1) = 'Cannot calculate projections onto excited states if there are partially filled orbitals.'
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
       n_empty(1) = nst - n_filled(1)
       n_possible_pairs = n_filled(1) * n_empty(1)
     end select
 
-    iunit = io_open(file = trim(filename), action = 'read', status = 'old', die = .true.)
+    iunit = io_open(trim(filename), namespace, action = 'read', status = 'old', die = .true.)
     call io_skip_header(iunit)
 
     ! Now we count the number of pairs in the file
@@ -195,17 +199,17 @@ contains
       read(iunit, *, iostat = ios) trash, trash, trash, dump
       if(ios /= 0) then
         message(1) = 'Error attempting to read the electron-hole pairs in file "'//trim(filename)//'"'
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
       ipair = ipair + 1
     end do
 101 continue
     if(ipair  ==  0) then
       message(1) = 'File "'//trim(filename)//'" is empty?'
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     elseif(ipair > n_possible_pairs) then
       message(1) = 'File "'//trim(filename)//'" contains too many electron-hole pairs.'
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if 
 
     excited_state%n_pairs = ipair
@@ -220,7 +224,7 @@ contains
       if(( (ispin  ==  UNPOLARIZED) .or. (ispin  ==  SPINORS) ) .and. (excited_state%pair(ipair)%kk /= 1) ) then
         message(1) = 'Error reading excited state in file "'//trim(filename)//'":'
         message(2) = 'Cannot treat a electron-hole pair for "down" spin when not working in spin-polarized mode.'
-        call messages_fatal(2)
+        call messages_fatal(2, namespace=namespace)
       end if
       ! Check whether it is a legitimate electron-hole swap.
 
@@ -239,7 +243,7 @@ contains
       if(.not.ok) then
         write(message(1),'(a6,i3,a1,i3,a8,i1,a)') 'Pair (', excited_state%pair(ipair)%i, ',', &
           excited_state%pair(ipair)%a, '; k =', excited_state%pair(ipair)%kk, ') is not valid.'
-        call messages_fatal(1)
+        call messages_fatal(1, namespace=namespace)
       end if
 
       ! Then, whether the unoccupied state is really unoccupied.
@@ -255,7 +259,7 @@ contains
       if(.not.ok) then
         write(message(1),'(a6,i3,a1,i3,a8,i1,a)') 'Pair (', excited_state%pair(ipair)%i, ',', &
           excited_state%pair(ipair)%a, '; k =', excited_state%pair(ipair)%kk, ') is not valid.'
-          call messages_fatal(1)
+          call messages_fatal(1, namespace=namespace)
       end if
 
       ! Now, we check that there are no repetitions:
@@ -264,7 +268,7 @@ contains
         if(.not.ok) then
           write(message(1),'(a6,i3,a1,i3,a8,i1,a)') 'Pair (', excited_state%pair(ipair)%i, ',', &
             excited_state%pair(ipair)%a, '; k =', excited_state%pair(ipair)%kk, ') is repeated in the file.'
-          call messages_fatal(1)
+          call messages_fatal(1, namespace=namespace)
         end if
       end do
 
@@ -278,7 +282,7 @@ contains
     if(.not. abs(dump - M_ONE) < CNST(1.0e-5)) then
       excited_state%weight(1:excited_state%n_pairs) = excited_state%weight(1:excited_state%n_pairs) / sqrt(dump)
       message(1) = 'The excited state in file "'//trim(filename)//'" was not normalized.'
-      call messages_warning(1)
+      call messages_warning(1, namespace=namespace)
     end if
 
     call io_close(iunit)
@@ -310,15 +314,16 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine excited_states_output(excited_state, dirname)
-    type(excited_states_t), intent(inout) :: excited_state
-    character(len=*),       intent(in)    :: dirname
+  subroutine excited_states_output(excited_state, dirname, namespace)
+    type(excited_states_t), intent(in) :: excited_state
+    character(len=*),       intent(in) :: dirname
+    type(namespace_t),      intent(in) :: namespace
 
     integer :: iunit, ipair
 
     PUSH_SUB(excited_states_output)
 
-    iunit = io_open(file = trim(dirname)//'/excitations', action = 'write', status = 'replace')
+    iunit = io_open(trim(dirname)//'/excitations', namespace, action = 'write', status = 'replace')
     do ipair = 1, excited_state%n_pairs
       write(iunit, '(3i5,es20.12)') excited_state%pair(ipair)%i, excited_state%pair(ipair)%a, &
                                     excited_state%pair(ipair)%kk, excited_state%weight(ipair)

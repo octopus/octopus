@@ -20,3 +20,5 @@ MixField = potential
 FilterPotentials = filter_none
 
 WorkDir = "./workdir"
+StatesPack = yes
+LCAOStart = lcao_full

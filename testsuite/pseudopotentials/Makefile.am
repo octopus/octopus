@@ -26,7 +26,6 @@ dist_share_DATA =                                  \
 	02-cu2_hgh.test                            \
 	02-cu2_hgh.01_gs.inp                       \
 	02-cu2_hgh.02_gs_current.inp               \
-	02-cu2_hgh.03_gs_current_fast.inp          \
 	03-nlcc.test                               \
 	03-nlcc.01-Fatom.inp                       \
 	03-nlcc.F.UPF                              \
@@ -53,8 +52,8 @@ dist_share_DATA =                                  \
 	11-isotopes.01-deuterium.inp               \
 	11-isotopes.02-tritium.inp                 \
 	11-isotopes.test                           \
-	12_mix_and_match.01-mgo.inp                \
-	12_mix_and_match.test                      \
+	12-mix_and_match.01-mgo.inp                \
+	12-mix_and_match.test                      \
 	13-U235.01-gs.inp                          \
         13-U235.test                               \
 	14-carbon_dojo_psp8.01-gs.inp              \

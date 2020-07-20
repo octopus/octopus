@@ -24,6 +24,7 @@ Eigensolver = cg_new
 EigensolverTolerance = 1e-9
 EigensolverMaxIter = 50
 ConvEigenError = yes
+MaximumIter = 300
 
 b=0.5
 v = 0.9
@@ -48,3 +49,4 @@ k=1.0
 
 Output = mmb_den + mmb_wfs + density
 OutputFormat = plane_z + axis_x
+StatesPack = yes

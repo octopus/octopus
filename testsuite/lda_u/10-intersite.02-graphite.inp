@@ -1,0 +1,54 @@
+CalculationMode = gs
+ExperimentalFeatures = yes
+FromScratch = yes
+
+PeriodicDimensions = 3
+
+BoxShape = parallelepiped
+aCell = 2.47*angstrom
+cCell = 6.708*angstrom
+
+Spacing= 0.7
+PseudopotentialSet = pseudodojo_lda
+
+%LatticeParameters
+  aCell | aCell | cCell
+%
+
+%LatticeVectors
+1    | 0         | 0.
+-1/2 | sqrt(3)/2 | 0.
+0.   | 0.        | 1.
+%
+
+%ReducedCoordinates
+'C' |  0.  |    0. |   0.0
+'C' |  1/3 |   2/3 |   0.0
+'C' |  0.  |    0. |   0.5
+'C' |  2/3 |   1/3 |   0.5
+%
+
+ExtraStates = 5
+
+SmearingFunction = fermi_dirac
+Smearing = 0.1
+
+ConvRelDens = 1e-6
+EigensolverTolerance = 1e-7
+EigensolverMaxIter = 50
+
+%KPointsGrid  
+ 3 | 3 | 1
+%
+ParKPoints = no
+
+DFTULevel = dft_u_acbn0
+SCFCalculateForces = no
+#AOOverlapTreatment = overlap
+AOLoewdin = yes
+UseAllAtomicOrbitals = yes
+ACBN0IntersiteInteraction = yes
+ACBN0IntersiteCutoff = 7
+
+UnitsOutput = ev_angstrom
+StatesPack = yes

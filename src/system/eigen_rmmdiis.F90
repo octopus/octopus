@@ -24,17 +24,19 @@ module eigen_rmmdiis_oct_m
   use comm_oct_m
   use global_oct_m
   use grid_oct_m
-  use hamiltonian_oct_m
+  use hamiltonian_elec_oct_m
   use lalg_adv_oct_m
   use loct_oct_m
   use mesh_oct_m
   use mesh_batch_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use preconditioners_oct_m
   use profiling_oct_m
-  use states_oct_m
-  use states_calc_oct_m
+  use states_elec_oct_m
+  use states_elec_calc_oct_m
+  use wfs_elec_oct_m
 
   implicit none
 
@@ -46,11 +48,12 @@ module eigen_rmmdiis_oct_m
     zeigensolver_rmmdiis_min
 
   type batch_pointer_t
-    type(batch_t), pointer :: batch
+    private
+    type(wfs_elec_t), pointer :: batch
   end type batch_pointer_t
 
   type(profile_t), save :: prof, prof_iter
-  type(profile_t), save :: prof_lc, prof_sync
+  type(profile_t), save :: prof_lc
 
   contains
 

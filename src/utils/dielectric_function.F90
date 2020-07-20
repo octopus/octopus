@@ -26,6 +26,7 @@ program dielectric_function
   use io_oct_m
   use lalg_adv_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
   use space_oct_m
@@ -51,7 +52,7 @@ program dielectric_function
   character(len=120) :: header
   FLOAT :: start_time
   character(len=MAX_PATH_LEN) :: ref_filename
-
+  
   ! Initialize stuff
   call global_init(is_serial = .true.)
 
@@ -59,21 +60,23 @@ program dielectric_function
   if(ierr == 0) call getopt_dielectric_function()
   call getopt_end()
 
+  call parser_init()
+
   call messages_init()
 
   call io_init()
 
-  call unit_system_init()
+  call unit_system_init(global_namespace)
 
-  call spectrum_init(spectrum)
+  call spectrum_init(spectrum, global_namespace)
 
-  call space_init(space)
-  call geometry_init(geo, space)
-  call simul_box_init(sb, geo, space)
+  call space_init(space, global_namespace)
+  call geometry_init(geo, global_namespace, space)
+  call simul_box_init(sb, global_namespace, geo, space)
     
   SAFE_ALLOCATE(vecpot0(1:space%dim))
 
-  if(parse_block('GaugeVectorField', blk) == 0) then
+  if(parse_block(global_namespace, 'GaugeVectorField', blk) == 0) then
     
     do ii = 1, space%dim
       call parse_block_float(blk, 0, ii - 1, vecpot0(ii))
@@ -97,17 +100,17 @@ program dielectric_function
   call messages_warning(4)
 
   start_time = spectrum%start_time
-  call parse_variable('GaugeFieldDelay', start_time, spectrum%start_time )
+  call parse_variable(global_namespace, 'GaugeFieldDelay', start_time, spectrum%start_time )
 
-  in_file = io_open('td.general/gauge_field', action='read', status='old', die=.false.)
+  in_file = io_open('td.general/gauge_field', global_namespace, action='read', status='old', die=.false.)
   if(in_file < 0) then 
-    message(1) = "Cannot open file '"//trim(io_workpath('td.general/gauge_field'))//"'"
+    message(1) = "Cannot open file '"//trim(io_workpath('td.general/gauge_field', global_namespace))//"'"
     call messages_fatal(1)
   end if
   call io_skip_header(in_file)
-  call spectrum_count_time_steps(in_file, time_steps, dt)
+  call spectrum_count_time_steps(global_namespace, in_file, time_steps, dt)
 
-  if(parse_is_defined('TransientAbsorptionReference')) then
+  if(parse_is_defined(global_namespace, 'TransientAbsorptionReference')) then
     !%Variable TransientAbsorptionReference
     !%Type string
     !%Default "."
@@ -121,14 +124,15 @@ program dielectric_function
     !% relative to the current folder
     !%End
 
-    call parse_variable('TransientAbsorptionReference', '.', ref_filename)
-    ref_file = io_open(trim(ref_filename)//'/gauge_field', action='read', status='old', die=.false.)
+    call parse_variable(global_namespace, 'TransientAbsorptionReference', '.', ref_filename)
+    ref_file = io_open(trim(ref_filename)//'/gauge_field', global_namespace, action='read', status='old', die=.false.)
     if(ref_file < 0) then
-      message(1) = "Cannot open reference file '"//trim(io_workpath(trim(ref_filename)//'/gauge_field'))//"'"
+      message(1) = "Cannot open reference file '"// &
+        trim(io_workpath(trim(ref_filename)//'/gauge_field', global_namespace))//"'"
       call messages_fatal(1)
     end if
     call io_skip_header(ref_file)
-    call spectrum_count_time_steps(ref_file, time_steps_ref, dt_ref)
+    call spectrum_count_time_steps(global_namespace, ref_file, time_steps_ref, dt_ref)
     if(time_steps_ref < time_steps) then
       message(1) = "The reference calculation does not contain enought time steps"
       call messages_fatal(1)
@@ -154,7 +158,7 @@ program dielectric_function
   call io_close(in_file)
 
   !We remove the reference
-  if(parse_is_defined('TransientAbsorptionReference')) then
+  if(parse_is_defined(global_namespace, 'TransientAbsorptionReference')) then
     time_steps_ref = time_steps_ref + 1
     SAFE_ALLOCATE(vecpot_ref(1:time_steps_ref, space%dim*3))
     call io_skip_header(ref_file)
@@ -170,7 +174,7 @@ program dielectric_function
   end if
 
   write(message(1), '(a, i7, a)') "Info: Read ", time_steps, " steps from file '"// &
-    trim(io_workpath('td.general/gauge_field'))//"'"
+    trim(io_workpath('td.general/gauge_field', global_namespace))//"'"
   call messages_info(1)
 
 
@@ -179,43 +183,39 @@ program dielectric_function
 
   istart = max(1, istart)
 
-  energy_steps = int(spectrum%max_energy / spectrum%energy_step)
+  energy_steps = spectrum_nenergy_steps(spectrum)
 
   n0 = sqrt(sum(vecpot0(1:space%dim))**2)
 
-  SAFE_ALLOCATE(ftreal(0:energy_steps, 1:space%dim))
-  SAFE_ALLOCATE(ftimag(0:energy_steps, 1:space%dim))
+  SAFE_ALLOCATE(ftreal(1:energy_steps, 1:space%dim))
+  SAFE_ALLOCATE(ftimag(1:energy_steps, 1:space%dim))
 
-  call batch_init(vecpotb, space%dim)
-  call batch_init(ftrealb, space%dim)
-  call batch_init(ftimagb, space%dim)
-
-  do ii = 1, space%dim
-    call batch_add_state(vecpotb, vecpot(:,  space%dim + ii))
-    call batch_add_state(ftrealb, ftreal(0:,  ii))
-    call batch_add_state(ftimagb, ftimag(0:,  ii))
-  end do
+  call batch_init(vecpotb, 1, 1, space%dim, vecpot(:, space%dim+1:space%dim*2))
+  call batch_init(ftrealb, 1, 1, space%dim, ftreal)
+  call batch_init(ftimagb, 1, 1, space%dim, ftimag)
 
   call spectrum_signal_damp(spectrum%damp, spectrum%damp_factor, istart, iend, spectrum%start_time, dt, vecpotb)
 
   call spectrum_fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_COS, spectrum%noise, &
-    istart, iend, spectrum%start_time, dt, vecpotb, 1, energy_steps + 1, spectrum%energy_step, ftrealb)
+    istart, iend, spectrum%start_time, dt, vecpotb, spectrum%min_energy, &
+    spectrum%max_energy, spectrum%energy_step, ftrealb)
 
   call spectrum_fourier_transform(spectrum%method, SPECTRUM_TRANSFORM_SIN, spectrum%noise, &
-    istart, iend, spectrum%start_time, dt, vecpotb, 1, energy_steps + 1, spectrum%energy_step, ftimagb)
+    istart, iend, spectrum%start_time, dt, vecpotb, spectrum%min_energy, &
+    spectrum%max_energy, spectrum%energy_step, ftimagb)
 
 
-  call batch_end(vecpotb)
-  call batch_end(ftrealb)
-  call batch_end(ftimagb)
+  call vecpotb%end()
+  call ftrealb%end()
+  call ftimagb%end()
 
-  SAFE_ALLOCATE(invdielectric(1:space%dim, 0:energy_steps))
-  SAFE_ALLOCATE(dielectric(1:space%dim, 0:energy_steps))
-  SAFE_ALLOCATE(chi(1:space%dim, 0:energy_steps))
+  SAFE_ALLOCATE(invdielectric(1:space%dim, 1:energy_steps))
+  SAFE_ALLOCATE(dielectric(1:space%dim, 1:energy_steps))
+  SAFE_ALLOCATE(chi(1:space%dim, 1:energy_steps))
   SAFE_ALLOCATE(fullmat(1:space%dim, 1:space%dim))
 
-  do kk = 0, energy_steps
-    ww = kk*spectrum%energy_step
+  do kk = 1, energy_steps
+    ww = (kk-1)*spectrum%energy_step + spectrum%min_energy
 
     invdielectric(1:space%dim, kk) = (vecpot0(1:space%dim) + TOCMPLX(ftreal(kk, 1:space%dim), ftimag(kk, 1:space%dim)))/n0
 
@@ -243,7 +243,7 @@ program dielectric_function
 
   SAFE_DEALLOCATE_A(fullmat)
 
-  out_file = io_open('td.general/inverse_dielectric_function', action='write')
+  out_file = io_open('td.general/inverse_dielectric_function', global_namespace, action='write')
   select case(space%dim)
   case(1)
     write(header, '(7a15)') '#        energy', 'Re x', 'Im x'
@@ -255,32 +255,36 @@ program dielectric_function
 
 
   write(out_file,'(a)') trim(header)
-  do kk = 0, energy_steps
-    write(out_file, '(e15.6)', advance='no') kk*spectrum%energy_step
+  do kk = 1, energy_steps
+    ww = (kk-1)*spectrum%energy_step + spectrum%min_energy
+    write(out_file, '(e15.6)', advance='no') ww
     do idir = 1, space%dim
-      write(out_file, '(2e15.6)', advance='no') real(invdielectric(idir, kk), REAL_PRECISION), aimag(invdielectric(idir, kk))
+      write(out_file, '(2e15.6)', advance='no') TOFLOAT(invdielectric(idir, kk)), aimag(invdielectric(idir, kk))
     end do
     write(out_file, '()')
   end do
   call io_close(out_file)
  
-  out_file = io_open('td.general/dielectric_function', action='write')
+  out_file = io_open('td.general/dielectric_function', global_namespace, action='write')
   write(out_file,'(a)') trim(header)
-  do kk = 0, energy_steps
-    write(out_file, '(e15.6)', advance='no') kk*spectrum%energy_step
+  do kk = 1, energy_steps
+    ww = (kk-1)*spectrum%energy_step + spectrum%min_energy
+    write(out_file, '(e15.6)', advance='no') ww
     do idir = 1, space%dim
-      write(out_file, '(2e15.6)', advance='no') real(dielectric(idir, kk), REAL_PRECISION), aimag(dielectric(idir, kk))
+      write(out_file, '(2e15.6)', advance='no') TOFLOAT(dielectric(idir, kk)), aimag(dielectric(idir, kk))
     end do
     write(out_file, '()')
   end do
   call io_close(out_file)
 
-  out_file = io_open('td.general/chi', action='write')
+  out_file = io_open('td.general/chi', global_namespace, action='write')
   write(out_file,'(a)') trim(header)
-  do kk = 0, energy_steps
-    write(out_file, '(e15.6)', advance='no') kk*spectrum%energy_step
+  do kk = 1, energy_steps
+    dielectric(1:3, kk) = (dielectric(1:3, kk) - M_ONE)/(CNST(4.0)*M_PI)
+    ww = (kk-1)*spectrum%energy_step + spectrum%min_energy
+    write(out_file, '(e15.6)', advance='no') ww
     do idir = 1, space%dim
-      write(out_file, '(2e15.6)', advance='no') real(chi(idir, kk), REAL_PRECISION), aimag(chi(idir, kk))
+      write(out_file, '(2e15.6)', advance='no') TOFLOAT(chi(idir, kk)), aimag(chi(idir, kk))
     end do
     write(out_file, '()')
   end do
@@ -300,6 +304,8 @@ program dielectric_function
   call space_end(space)
   call io_end()
   call messages_end()
+
+  call parser_end()
   call global_end()
 
 end program dielectric_function

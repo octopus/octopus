@@ -21,8 +21,9 @@
 module filter_oct_m  
   use global_oct_m
   use io_oct_m
-  use parser_oct_m
   use messages_oct_m
+  use namespace_oct_m
+  use parser_oct_m
   use profiling_oct_m
   use string_oct_m
   use tdfunction_oct_m
@@ -55,10 +56,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine filter_init(steps, dt, filter)    
-    integer,          intent(in)  :: steps 
-    FLOAT,            intent(in)  :: dt
-    type(filter_t), intent(inout) :: filter
+  subroutine filter_init(steps, namespace, dt, filter)    
+    integer,           intent(in)  :: steps
+    type(namespace_t), intent(in)  :: namespace
+    FLOAT,             intent(in)  :: dt
+    type(filter_t),    intent(inout) :: filter
 
     type(block_t) :: blk
     integer :: i, no_f
@@ -105,7 +107,7 @@ contains
     !%Option frequency_filter 1
     !% The filter is applied in the frequency domain.
     !%End
-    if( parse_block('OCTFilter', blk) == 0 ) then
+    if( parse_block(namespace, 'OCTFilter', blk) == 0 ) then
       no_f = parse_block_n(blk)
 
       if(no_f <= 0) then
@@ -118,7 +120,7 @@ contains
       SAFE_ALLOCATE(filter%expression(1:no_f))
       SAFE_ALLOCATE(filter%domain(1:no_f))
 
-      do i=1, no_f
+      do i = 1, no_f
         call parse_block_integer(blk, i-1, 0, filter%domain(i))
         call parse_block_string(blk, i-1, 1, filter%expression(i))
         call conv_to_C_string(filter%expression(i))
@@ -185,7 +187,7 @@ contains
     type(filter_t), intent(inout) :: filter
 
     integer :: i, ip, j, nfreqs
-    real(8) :: f_re, f_im
+    FLOAT   :: f_re, f_im
     CMPLX, allocatable :: ff(:)
     FLOAT, allocatable :: grid(:)
 
@@ -205,7 +207,7 @@ contains
         call tdf_fourier_grid(filter%f(i), grid)
         ff = M_z1
         do ip = 1, tdf_nfreqs(filter%f(i))
-          call parse_expression(f_re, f_im, "w", real(grid(ip), 8), filter%expression(i))
+          call parse_expression(f_re, f_im, "w", TOFLOAT(grid(ip)), filter%expression(i))
           ff(ip) = f_re + M_zI*f_im
         end do
        
@@ -215,9 +217,9 @@ contains
         call messages_fatal(2)
       end select
 
-      call tdf_set_numerical(filter%f(i), 1, real(ff(1), REAL_PRECISION))
+      call tdf_set_numerical(filter%f(i), 1, TOFLOAT(ff(1)))
       do j = 2, nfreqs !+ 1
-         call tdf_set_numerical(filter%f(i), j, sqrt(M_TWO)*real(ff(j), REAL_PRECISION))
+         call tdf_set_numerical(filter%f(i), j, sqrt(M_TWO)*TOFLOAT(ff(j)))
       end do
       ! WARNING: all the sine coefficients (imaginary part of ff) should be null.
       do j = nfreqs + 1, 2*nfreqs - 1
@@ -235,8 +237,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine filter_write(filter)
-    type(filter_t), intent(in) :: filter
+  subroutine filter_write(filter, namespace)
+    type(filter_t),    intent(in) :: filter
+    type(namespace_t), intent(in) :: namespace
 
     integer :: kk, iunit, i, max_iter
     character(len=80) :: filename
@@ -252,7 +255,7 @@ contains
     do kk = 1, filter%no_filters
       write(filename,'(a,i2.2)') OCT_DIR//'filter', kk
       max_iter = tdf_niter(filter%f(kk))
-      iunit = io_open(filename, action='write')
+      iunit = io_open(filename, namespace, action='write')
       SAFE_ALLOCATE(wgrid(1:max_iter/2+1))
       call tdf_fourier_grid(filter%f(kk), wgrid)
       do i = 1, max_iter/2+1

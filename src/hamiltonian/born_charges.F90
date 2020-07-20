@@ -23,10 +23,11 @@ module born_charges_oct_m
   use global_oct_m
   use io_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
   use species_oct_m
-  use states_oct_m
+  use states_elec_oct_m
   use unit_system_oct_m
   use utils_oct_m
 
@@ -35,12 +36,13 @@ module born_charges_oct_m
   private
   public ::                &
     Born_charges_t,        &
-    Born_charges_init,     &
+    born_charges_init,     &
     Born_charges_end,      &
     out_Born_charges
 
   type Born_charges_t
-    CMPLX, pointer :: charge(:, :, :)    !< i, j, atom: Z*(i,j) = dF(j)/dE(i) = dP(i) / dR(j)
+    private
+    CMPLX, pointer, public :: charge(:, :, :)    !< i, j, atom: Z*(i,j) = dF(j)/dE(i) = dP(i) / dR(j)
     CMPLX :: sum_ideal(MAX_DIM, MAX_DIM) !< the sum of Born charges according to acoustic sum rule 
     CMPLX :: delta(MAX_DIM, MAX_DIM)     !< discrepancy of sum of Born charge tensors from sum rule, per atom
     logical :: correct                   !< correct according to sum rule?
@@ -49,15 +51,16 @@ module born_charges_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine Born_charges_init(this, geo, st, dim)
+  subroutine born_charges_init(this, namespace, geo, st, dim)
     type(Born_charges_t), intent(out) :: this
+    type(namespace_t),    intent(in)  :: namespace
     type(geometry_t),     intent(in)  :: geo
-    type(states_t),       intent(in)  :: st
+    type(states_elec_t),  intent(in)  :: st
     integer,              intent(in)  :: dim
 
     integer :: idir
 
-    PUSH_SUB(Born_charges_init)
+    PUSH_SUB(born_charges_init)
 
     nullify(this%charge)
     SAFE_ALLOCATE(this%charge(1:dim, 1:dim, 1:geo%natoms))
@@ -80,10 +83,10 @@ contains
     !% or <i>k</i>-point sampling (in periodic directions).
     !%End
 
-    call parse_variable('BornChargeSumRuleCorrection', .true., this%correct)
+    call parse_variable(namespace, 'BornChargeSumRuleCorrection', .true., this%correct)
 
-    POP_SUB(Born_charges_init)
-  end subroutine Born_charges_init
+    POP_SUB(born_charges_init)
+  end subroutine born_charges_init
 
   ! ---------------------------------------------------------
   subroutine Born_charges_end(this)
@@ -128,9 +131,10 @@ contains
   end subroutine correct_Born_charges
 
   ! ---------------------------------------------------------
-  subroutine out_Born_charges(this, geo, dim, dirname, write_real)
+  subroutine out_Born_charges(this, geo, namespace, dim, dirname, write_real)
     type(Born_charges_t), intent(inout) :: this
     type(geometry_t),     intent(in)    :: geo
+    type(namespace_t),    intent(in)    :: namespace
     integer,              intent(in)    :: dim
     character(len=*),     intent(in)    :: dirname
     logical,              intent(in)    :: write_real
@@ -143,7 +147,7 @@ contains
 
     call correct_Born_charges(this, geo, dim)
 
-    iunit = io_open(trim(dirname)//'/Born_charges', action='write')
+    iunit = io_open(trim(dirname)//'/Born_charges', namespace, action='write')
     write(iunit,'(a)') '# (Frequency-dependent) Born effective charge tensors'
     if(.not. write_real) write(iunit,'(a)') '# Real and imaginary parts'
     do iatom = 1, geo%natoms
@@ -151,7 +155,7 @@ contains
         '   Ionic charge: ', species_zval(geo%atom(iatom)%species)
 
       if(.not. write_real) write(iunit,'(a)') 'Real:'
-      call output_tensor(iunit, real(this%charge(:, :, iatom)), dim, unit_one)
+      call output_tensor(iunit, TOFLOAT(this%charge(:, :, iatom)), dim, unit_one)
 
       if(.not. write_real) then
         write(iunit,'(a)') 'Imaginary:'
@@ -171,7 +175,7 @@ contains
         call output_tensor(iunit, TOFLOAT(abs(this%charge(:, :, iatom))), dim, unit_one)
 
         write(iunit,'(a)') 'Phase:'
-        phase(1:dim, 1:dim) = atan2(aimag(this%charge(1:dim, 1:dim, iatom)), real(this%charge(1:dim, 1:dim, iatom)))
+        phase(1:dim, 1:dim) = atan2(aimag(this%charge(1:dim, 1:dim, iatom)), TOFLOAT(this%charge(1:dim, 1:dim, iatom)))
         call output_tensor(iunit, phase(:, :), dim, unit_one, write_average = .false.)
         write(iunit,'(a)')
       end do
@@ -179,7 +183,7 @@ contains
 
     write(iunit,'(a)') '# Discrepancy of Born effective charges from acoustic sum rule before correction, per atom'
     if(.not. write_real) write(iunit,'(a)') 'Real:'
-    call output_tensor(iunit, real(this%delta(:, :)), dim, unit_one)
+    call output_tensor(iunit, TOFLOAT(this%delta(:, :)), dim, unit_one)
     if(.not. write_real) then
       write(iunit,'(a)') 'Imaginary:'
       call output_tensor(iunit, aimag(this%delta(:, :)), dim, unit_one)

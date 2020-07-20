@@ -1,0 +1,41 @@
+CalculationMode = gs
+Dimensions = 2
+
+ExperimentalFeatures = yes
+TheoryLevel = rdmft
+RDMBasis = yes
+
+BoxShape = parallelepiped
+Lsize = 8.5
+Spacing = 0.55
+
+# Necessary Parameters for electron-photon coupling
+om = 1.0
+lam = 1.0
+Nelec = 2.0
+
+DressedOrbitals = yes
+%PhotonModes
+ om | lam | 1
+%
+
+# single particle potential for 1d dressed Helium
+# electron coordinate: x     photon coordinate: y
+# local potential:
+#		v(x)=-2/(1+x^2)^(1/2) (Z_He=2)
+# additional potential due to the dressed state construction:
+# 	vd(x,q) = 0.5*om^2*y^2 -sq12*om*lam*y*x +1/2*lam^2*x^2
+%Species
+ "dressedhelium" | species_user_defined | potential_formula | "-2/(1+x^2)^(1/2) +0.5*om^2*y^2 -1/sqrt(Nelec)*om*lam*y*x +1/2*lam^2*x^2" | valence | Nelec
+%
+
+%Coordinates
+ "dressedhelium" | 0 | 0 
+%
+
+Extrastates = 5
+
+RDMToleranceFO = 1e-4
+RDMConvEner = 5e-9
+RDMTolerance = 1e-8
+StatesPack = yes

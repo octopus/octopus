@@ -25,16 +25,13 @@ module nfft_oct_m
   use, intrinsic :: iso_c_binding
   use loct_math_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use varinfo_oct_m
   implicit none
   
   private
   
-#if !defined(HAVE_NFFT)
-  integer, public :: nfft_dummy ! this avoids compilers complaining about empty module
-#else
-
   public ::          &
     nfft_t,          &
     nfft_copy_info,  &
@@ -42,12 +39,11 @@ module nfft_oct_m
     nfft_end,        &
     nfft_precompute, &
     nfft_write_info, &
+    nfft_guru_options, &
     znfft_forward,   &
     znfft_backward,  &
     dnfft_forward,   &
-    dnfft_backward,  &
-    znfft_forward1,  &
-    dnfft_forward1
+    dnfft_backward
 
   ! global constants
   integer, public, parameter ::         &
@@ -70,20 +66,20 @@ module nfft_oct_m
 
 
   type nfft_t
+    private
 
     integer           :: N(3)       !> size of the nfft bandwidths
     integer           :: M(3)          !> Number of the nfft nodes
-    integer           :: is_real    !> is the fft real or complex
     integer           :: dim        !> the dimension
     integer           :: fftN(3)    !> size of the fft used
-    FLOAT             :: norm       !> Normalization
+    FLOAT, public     :: norm       !> Normalization
 
     ! Guru options
-    logical           :: set_defaults = .false. !> set default values from the code
-    logical           :: guru                   !> use guru options?
-    integer           :: precompute             !> precompute strategy
-    integer           :: mm                     !> Window function cut-off parameter
-    FLOAT             :: sigma                  !> Oversampling factor
+    logical, public   :: set_defaults = .false. !> the defaults can be overriden
+    logical, public   :: guru                   !> use guru options?
+    integer, public   :: precompute             !> precompute strategy
+    integer, public   :: mm                     !> Window function cut-off parameter
+    FLOAT,   public   :: sigma                  !> Oversampling factor
 
     type(c_ptr)       :: plan                   !> the NFFT plan
 
@@ -96,8 +92,9 @@ contains
 
   ! ---------------------------------------------------------
   ! GURU options
-  subroutine nfft_guru_options(nfft)
-    type(nfft_t), intent(inout) :: nfft
+  subroutine nfft_guru_options(nfft, namespace)
+    type(nfft_t),      intent(inout) :: nfft
+    type(namespace_t), intent(in)    :: namespace
 
     PUSH_SUB(nfft_guru_options)
 
@@ -108,7 +105,7 @@ contains
     !%Description
     !% Perform NFFT with guru interface. This permits the fine tuning of several critical parameters.
     !%End
-    call parse_variable('NFFTGuruInterface',  nfft%guru, nfft%guru)
+    call parse_variable(namespace, 'NFFTGuruInterface',  .false., nfft%guru)
 
 
     !%Variable NFFTCutoff
@@ -119,7 +116,7 @@ contains
     !% Cut-off parameter of the window function.
     !% See NFFT manual for details.
     !%End
-    call parse_variable('NFFTCutoff', nfft%mm, nfft%mm)
+    call parse_variable(namespace, 'NFFTCutoff', 6, nfft%mm)
 
 
     !%Variable NFFTOversampling
@@ -129,7 +126,7 @@ contains
     !%Description
     !% NFFT oversampling factor (sigma). This will rule the size of the FFT under the hood.
     !%End
-    call parse_variable('NFFTOversampling', nfft%sigma, nfft%sigma)
+    call parse_variable(namespace, 'NFFTOversampling', M_TWO, nfft%sigma)
 
     !%Variable NFFTPrecompute
     !%Type integer
@@ -147,8 +144,8 @@ contains
     !% Is the fastest method but requires a large amount of memory as it requires to store (2*m+1)^d*M
     !% real numbers. No extra operations are needed during matrix vector multiplication.
     !%End
-    call parse_variable('NFFTPrecompute', nfft%precompute, nfft%precompute)
-     if(.not.varinfo_valid_option('NFFTPrecompute', nfft%precompute)) call messages_input_error('NFFTPrecompute')
+    call parse_variable(namespace, 'NFFTPrecompute', NFFT_PRE_PSI, nfft%precompute)
+     if(.not.varinfo_valid_option('NFFTPrecompute', nfft%precompute)) call messages_input_error(namespace, 'NFFTPrecompute')
 !    call messages_print_var_option(stdout, "NFFTPrecompute", nfft%precompute)
 
 !     if(.not.varinfo_valid_option('NFFTPrecompute', nfft%precompute, is_flag=.true.)) then
@@ -162,12 +159,12 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine nfft_init(nfft, N, dim, M, is_real, optimize)
+  subroutine nfft_init(nfft, nfft_options, N, dim, M, optimize)
     type(nfft_t),      intent(inout) :: nfft
+    type(nfft_t),      intent(in)    :: nfft_options
     integer,           intent(inout) :: N(3) !> nfft bandwidths
     integer,           intent(inout) :: M(3) !> nfft nodes
     integer,           intent(in)    :: dim
-    integer,           intent(in)    :: is_real
     logical, optional, intent(in)    :: optimize
 
     integer :: ii, my_N(3)
@@ -184,18 +181,14 @@ contains
     nfft%N(:) = N(:)
 
     if(.not. nfft%set_defaults) then
-      !Set defaults
-      nfft%guru = .false.
-      nfft%mm = 6
-      nfft%sigma = M_TWO
-      nfft%precompute = NFFT_PRE_PSI
+      nfft%guru = nfft_options%guru
+      nfft%mm = nfft_options%mm
+      nfft%sigma = nfft_options%sigma
+      nfft%precompute = nfft_options%precompute
     end if
     
     ! set unused dimensions to 1
     nfft%M(dim+1:3) = 1
-    
-
-    call nfft_guru_options(nfft)
 
     my_N = 0
     do ii = 1, dim
@@ -235,7 +228,8 @@ contains
   subroutine nfft_write_info(nfft)
     type(nfft_t), intent(inout) :: nfft
 
-    integer :: idir, mm
+    integer :: idir
+!    integer :: mm
 
     PUSH_SUB(nfft_write_info)
 
@@ -317,12 +311,10 @@ contains
 
     out%N = in%N
     out%M = in%M
-    out%is_real= in%is_real
     out%dim = in%dim
     out%fftN = in%fftN
     out%norm = in%norm
 
-    out%set_defaults = in%set_defaults
     out%guru = in%guru
     out%precompute = in%precompute
     out%mm = in%mm
@@ -426,7 +418,7 @@ contains
     POP_SUB(nfft_precompute)
   end subroutine nfft_precompute
 
-!--------------------------------------------
+  !--------------------------------------------
   subroutine dnfft_forward(nfft, in, out)
     type(nfft_t), intent(in)  :: nfft
     FLOAT,        intent(in)  :: in(:,:,:)
@@ -436,35 +428,26 @@ contains
     integer:: b(6)
 
     PUSH_SUB(dnfft_forward)
-    
+
     b(1) = lbound(in, dim=1)
     b(2) = ubound(in, dim=1)
     b(3) = lbound(in, dim=2)
     b(4) = ubound(in, dim=3)
     b(5) = lbound(in, dim=3)
     b(6) = ubound(in, dim=3)
-    
+
 !    SAxFE_ALLOCATE(zin(b(1):b(2),b(3):b(4),b(5):b(6)))
     allocate(zin(b(1):b(2),b(3):b(4),b(5):b(6)))
     zin = in
-    call znfft_forward1(nfft, zin, out)
+    call znfft_forward(nfft, zin, out)
 
     deallocate(zin)
 !     SAxFE_DEALLOCATE_A(zin)
+
     POP_SUB(dnfft_forward)
   end subroutine dnfft_forward
 
-!--------------------------------------------  
-  subroutine znfft_forward(nfft, in, out)
-    type(nfft_t), intent(in)  :: nfft
-    CMPLX,        intent(in)  :: in(:,:,:)
-    CMPLX,        intent(out) :: out(:,:,:)
-    PUSH_SUB(znfft_forward)
-    call znfft_forward1(nfft, in, out)
-    POP_SUB(znfft_forward)
-  end subroutine znfft_forward
-  
-!--------------
+  !--------------------------------------------
   subroutine dnfft_backward(nfft, in, out)
     type(nfft_t), intent(in)  :: nfft
     CMPLX,        intent(in)  :: in (:,:,:)
@@ -481,33 +464,79 @@ contains
     b(4) = ubound(out, dim=3)
     b(5) = lbound(out, dim=3)
     b(6) = ubound(out, dim=3)
-    
+
     allocate(zout(b(1):b(2),b(3):b(4),b(5):b(6)))
-    
-    call znfft_backward1(nfft, in, zout)
+
+    call znfft_backward(nfft, in, zout)
     out = zout
     deallocate(zout)
+
     POP_SUB(dnfft_backward)
   end subroutine dnfft_backward
-  
+
+  !--------------------------------------------
+  subroutine znfft_forward(nfft, in, out)
+    type(nfft_t), intent(in)  :: nfft
+    CMPLX,        intent(in)  :: in(:,:,:)
+    CMPLX,        intent(out) :: out(:,:,:)
+
+    integer :: ix, iy, iz
+
+    PUSH_SUB(znfft_forward)
+
+    do ix = 1, nfft%N(1)
+      do iy = 1, nfft%N(2)
+        do iz = 1, nfft%N(3)
+          call zoct_set_f_hat(nfft%plan, nfft%dim, in(ix,iy,iz), ix, iy, iz)
+        end do
+      end do
+    end do
+
+    call oct_nfft_trafo(nfft%plan)
+
+    do ix = 1, nfft%M(1)
+      do iy = 1, nfft%M(2)
+        do iz = 1, nfft%M(3)
+          call zoct_get_f(nfft%plan, nfft%M, nfft%dim, out(ix,iy,iz), ix, iy, iz)
+        end do
+      end do
+    end do
+
+    POP_SUB(znfft_forward)
+  end subroutine znfft_forward
+
+  ! ---------------------------------------------------------
   subroutine znfft_backward(nfft, in, out)
     type(nfft_t), intent(in)  :: nfft
     CMPLX,        intent(in)  :: in (:,:,:)
     CMPLX,        intent(out) :: out(:,:,:)
+
+    integer :: ix, iy, iz
+
     PUSH_SUB(znfft_backward)
-    call znfft_backward1(nfft, in, out)
+
+    do ix = 1, nfft%M(1)
+      do iy = 1, nfft%M(2)
+        do iz = 1, nfft%M(3)
+          call zoct_set_f(nfft%plan, nfft%M, nfft%dim, in(ix,iy,iz), ix, iy, iz)
+        end do
+      end do
+    end do
+
+    call oct_nfft_adjoint(nfft%plan)
+
+    do ix = 1,nfft%N(1)
+      do iy = 1, nfft%N(2)
+        do iz = 1, nfft%N(3)
+          call zoct_get_f_hat(nfft%plan, nfft%dim, out(ix,iy,iz), ix, iy, iz)
+        end do
+      end do
+    end do
+
+    out = out/nfft%norm
+
     POP_SUB(znfft_backward)
   end subroutine znfft_backward
-
-#include "undef.F90"
-#include "real.F90"
-#include "nfft_inc.F90"
-
-#include "undef.F90"
-#include "complex.F90"
-#include "nfft_inc.F90"
-
-#endif
 
 end module nfft_oct_m
 

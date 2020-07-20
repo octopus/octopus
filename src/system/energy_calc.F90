@@ -28,19 +28,22 @@ module energy_calc_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
-  use hamiltonian_oct_m
-  use hamiltonian_base_oct_m
+  use hamiltonian_elec_oct_m
+  use hamiltonian_elec_base_oct_m
   use lda_u_oct_m
   use mesh_oct_m
   use mesh_batch_oct_m
   use messages_oct_m
-  use profiling_oct_m
+  use namespace_oct_m
   use pcm_oct_m
+  use profiling_oct_m
   use simul_box_oct_m
   use smear_oct_m
-  use states_oct_m
+  use states_abst_oct_m
+  use states_elec_oct_m
   use unit_oct_m
   use unit_system_oct_m
+  use wfs_elec_oct_m
 
   implicit none
 
@@ -57,45 +60,36 @@ contains
   !> This subroutine calculates the total energy of the system. Basically, it
   !! adds up the KS eigenvalues, and then it subtracts whatever double
   !! counts exist (see TDDFT theory for details).
-  subroutine energy_calc_total(hm, gr, st, iunit, full)
-    type(hamiltonian_t), intent(inout) :: hm
-    type(grid_t),        intent(inout) :: gr
-    type(states_t),      intent(inout) :: st
-    integer, optional,   intent(in)    :: iunit
-    logical, optional,   intent(in)    :: full
+  subroutine energy_calc_total(namespace, hm, gr, st, iunit, full)
+    type(namespace_t),        intent(in)    :: namespace
+    type(hamiltonian_elec_t), intent(inout) :: hm
+    type(grid_t),             intent(in)    :: gr
+    type(states_elec_t),      intent(inout) :: st
+    integer, optional,        intent(in)    :: iunit
+    logical, optional,        intent(in)    :: full
 
-    FLOAT                             :: tnadd_energy, external_energy
     logical :: full_
-    FLOAT :: evxctau
 
     PUSH_SUB(energy_calc_total)
 
     full_ = .false.
     if(present(full)) full_ = full
 
-    hm%energy%eigenvalues = states_eigenvalues_sum(st)
+    hm%energy%eigenvalues = states_elec_eigenvalues_sum(st)
 
-    evxctau = M_ZERO
     if(full_ .or. hm%theory_level == HARTREE .or. hm%theory_level == HARTREE_FOCK) then
       if(states_are_real(st)) then
-
-        tnadd_energy = M_ZERO
-        external_energy = M_ZERO
-        
-        hm%energy%kinetic  = tnadd_energy + denergy_calc_electronic(hm, gr%der, st, terms = TERM_KINETIC)
-        hm%energy%extern_local = external_energy + denergy_calc_electronic(hm, gr%der, st, terms = TERM_LOCAL_EXTERNAL)
-        hm%energy%extern_non_local   = denergy_calc_electronic(hm, gr%der, st, terms = TERM_NON_LOCAL_POTENTIAL)
+        hm%energy%kinetic  = denergy_calc_electronic(namespace, hm, gr%der, st, terms = TERM_KINETIC)
+        hm%energy%extern_local = denergy_calc_electronic(namespace, hm, gr%der, st, terms = TERM_LOCAL_EXTERNAL)
+        hm%energy%extern_non_local   = denergy_calc_electronic(namespace, hm, gr%der, st, terms = TERM_NON_LOCAL_POTENTIAL)
         hm%energy%extern = hm%energy%extern_local + hm%energy%extern_non_local
-        evxctau = denergy_calc_electronic(hm, gr%der, st, terms = TERM_MGGA)
       else
-        hm%energy%kinetic = zenergy_calc_electronic(hm, gr%der, st, terms = TERM_KINETIC)
+        hm%energy%kinetic = zenergy_calc_electronic(namespace, hm, gr%der, st, terms = TERM_KINETIC)
          
-        hm%energy%extern_local = zenergy_calc_electronic(hm, gr%der, st, terms = TERM_LOCAL_EXTERNAL)
+        hm%energy%extern_local = zenergy_calc_electronic(namespace, hm, gr%der, st, terms = TERM_LOCAL_EXTERNAL)
         
-        hm%energy%extern_non_local = zenergy_calc_electronic(hm, gr%der, st, terms = TERM_NON_LOCAL_POTENTIAL)
+        hm%energy%extern_non_local = zenergy_calc_electronic(namespace, hm, gr%der, st, terms = TERM_NON_LOCAL_POTENTIAL)
         hm%energy%extern   = hm%energy%extern_local   + hm%energy%extern_non_local 
-        
-        evxctau = zenergy_calc_electronic(hm, gr%der, st, terms = TERM_MGGA)
       end if
     end if
 
@@ -121,18 +115,19 @@ contains
       
     case(HARTREE_FOCK)
       hm%energy%total = hm%ep%eii + &
-        M_HALF*(hm%energy%eigenvalues + hm%energy%kinetic + hm%energy%extern - hm%energy%intnvxc - evxctau) &
-        + hm%energy%correlation + hm%energy%vdw
+        M_HALF*(hm%energy%eigenvalues + hm%energy%kinetic + hm%energy%extern - hm%energy%intnvxc) &
+        + hm%energy%correlation + hm%energy%vdw - hm%energy%intnvstatic
 
       ! FIXME: pcm terms are only added to total energy in DFT case
       
     case(KOHN_SHAM_DFT)
       hm%energy%total = hm%ep%eii + hm%energy%eigenvalues &
-        - hm%energy%hartree + hm%energy%exchange + hm%energy%correlation + hm%energy%vdw - hm%energy%intnvxc - evxctau &
+        - hm%energy%hartree + hm%energy%exchange + hm%energy%correlation + hm%energy%vdw - hm%energy%intnvxc &
         - hm%energy%pcm_corr + hm%energy%int_ee_pcm + hm%energy%int_en_pcm &
                              + hm%energy%int_nn_pcm + hm%energy%int_ne_pcm &
                              + hm%energy%int_e_ext_pcm + hm%energy%int_n_ext_pcm &
-        + hm%energy%dft_u -  hm%energy%int_dft_u
+                             + hm%energy%dft_u -  hm%energy%int_dft_u - hm%energy%intnvstatic &
+                             + hm%energy%photon_exchange
 
    end select 
     
@@ -164,15 +159,16 @@ contains
       write(message(1), '(6x,a, f18.8)')'Ion-ion     = ', units_from_atomic(units_out%energy, hm%ep%eii)
       write(message(2), '(6x,a, f18.8)')'Eigenvalues = ', units_from_atomic(units_out%energy, hm%energy%eigenvalues)
       write(message(3), '(6x,a, f18.8)')'Hartree     = ', units_from_atomic(units_out%energy, hm%energy%hartree)
-      write(message(4), '(6x,a, f18.8)')'Int[n*v_xc] = ', units_from_atomic(units_out%energy, hm%energy%intnvxc + evxctau)
+      write(message(4), '(6x,a, f18.8)')'Int[n*v_xc] = ', units_from_atomic(units_out%energy, hm%energy%intnvxc)
       write(message(5), '(6x,a, f18.8)')'Exchange    = ', units_from_atomic(units_out%energy, hm%energy%exchange)
       write(message(6), '(6x,a, f18.8)')'Correlation = ', units_from_atomic(units_out%energy, hm%energy%correlation)
       write(message(7), '(6x,a, f18.8)')'vanderWaals = ', units_from_atomic(units_out%energy, hm%energy%vdw)
       write(message(8), '(6x,a, f18.8)')'Delta XC    = ', units_from_atomic(units_out%energy, hm%energy%delta_xc)
       write(message(9), '(6x,a, f18.8)')'Entropy     = ', hm%energy%entropy ! the dimensionless sigma of Kittel&Kroemer
       write(message(10), '(6x,a, f18.8)')'-TS         = ', -units_from_atomic(units_out%energy, hm%energy%TS)
-      call messages_info(10, iunit)
-      
+      write(message(11), '(6x,a, f18.8)')'Photon ex.  = ', units_from_atomic(units_out%energy, hm%energy%photon_exchange)
+      call messages_info(11, iunit)
+
       if (hm%pcm%run_pcm) then
           write(message(1),'(6x,a, f18.8)')'E_e-solvent = ',  units_from_atomic(units_out%energy, hm%energy%int_ee_pcm + &
                                                                                                   hm%energy%int_en_pcm + &
@@ -191,7 +187,8 @@ contains
         write(message(1), '(6x,a, f18.8)')'Kinetic     = ', units_from_atomic(units_out%energy, hm%energy%kinetic)
         write(message(2), '(6x,a, f18.8)')'External    = ', units_from_atomic(units_out%energy, hm%energy%extern)
         write(message(3), '(6x,a, f18.8)')'Non-local   = ', units_from_atomic(units_out%energy, hm%energy%extern_non_local)
-        call messages_info(3, iunit)
+        write(message(4), '(6x,a, f18.8)')'Int[n*v_E]  = ', units_from_atomic(units_out%energy, hm%energy%intnvstatic)
+        call messages_info(4, iunit)
       end if
       if(associated(hm%vberry) .and. simul_box_is_periodic(gr%sb)) then
         write(message(1), '(6x,a, f18.8)')'Berry       = ', units_from_atomic(units_out%energy, hm%energy%berry)
@@ -209,17 +206,18 @@ contains
 
   ! --------------------------------------------------------------------
   
-  subroutine energy_calc_eigenvalues(hm, der, st)
-    type(hamiltonian_t), intent(inout) :: hm
-    type(derivatives_t), intent(inout) :: der
-    type(states_t),      intent(inout) :: st
+  subroutine energy_calc_eigenvalues(namespace, hm, der, st)
+    type(namespace_t),        intent(in)    :: namespace
+    type(hamiltonian_elec_t), intent(inout) :: hm
+    type(derivatives_t),      intent(in)    :: der
+    type(states_elec_t),      intent(inout) :: st
     
     PUSH_SUB(energy_calc_eigenvalues)
 
     if(states_are_real(st)) then
-      call dcalculate_eigenvalues(hm, der, st)
+      call dcalculate_eigenvalues(namespace, hm, der, st)
     else
-      call zcalculate_eigenvalues(hm, der, st)
+      call zcalculate_eigenvalues(namespace, hm, der, st)
     end if
 
     POP_SUB(energy_calc_eigenvalues)

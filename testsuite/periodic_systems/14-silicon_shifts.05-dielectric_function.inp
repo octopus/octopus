@@ -1,0 +1,64 @@
+FromScratch=yes
+
+CalculationMode = td
+ExperimentalFeatures = yes
+
+PeriodicDimensions = 3
+
+a = 10.2
+
+BoxShape = parallelepiped
+Spacing = a/14
+
+%LatticeParameters
+ a | a | a
+%
+
+%LatticeVectors
+ 0.0 | 0.5 | 0.5
+ 0.5 | 0.0 | 0.5
+ 0.5 | 0.5 | 0.0
+%
+
+
+%ReducedCoordinates
+  "Si" |   0.0       | 0.0       | 0.0
+  "Si" |   1/4       | 1/4       | 1/4
+%
+
+%KPointsGrid
+ 2 | 2 | 2
+ 0.5 | 0.5 | 0.5
+ 0.5 | 0.0 | 0.0
+ 0.0 | 0.5 | 0.0
+ 0.0 | 0.0 | 0.5
+%
+%SymmetryBreakDir
+ 1 | 0 | 0
+%
+
+KPointsUseSymmetries = yes
+
+ExtraStates = 0
+
+FilterPotentials = filter_none
+
+TDPropagator = aetrs
+TDExponentialMethod = lanczos
+TDExpOrder = 16
+TDTimeStep = 0.5
+TDMaxSteps = 100
+TDOutputComputeInterval = 50
+
+ParStates = no
+ParDomains = auto
+ParKPoints = no
+CurrentDensity = gradient_corrected
+
+%GaugeVectorField
+  10 | 0 | 0
+%
+GaugeFieldDelay =  50*0.5
+TransientAbsorptionReference = "14-silicon_shifts.02-td.inp/td.general"
+
+PropagationSpectrumDampMode = exponential

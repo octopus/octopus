@@ -111,7 +111,9 @@ subroutine X(sym_conjugate_gradients)(np, x, b, op, dotp, iter, residue, thresho
 
   ! Initial residue.
   call op(x, ax)
-  forall(ip = 1:np) r(ip) = b(ip) - ax(ip)
+  do ip = 1, np
+    r(ip) = b(ip) - ax(ip)
+  end do
 
   ! Initial search direction.
   call lalg_copy(np, r, p)
@@ -126,7 +128,9 @@ subroutine X(sym_conjugate_gradients)(np, x, b, op, dotp, iter, residue, thresho
     call lalg_axpy(np, -alpha, ap, r)
     call lalg_axpy(np, alpha, p, x)
     beta    = dotp(r, r)/gamma
-    forall(ip = 1:np) p(ip) = r(ip) + beta*p(ip)
+    do ip = 1, np
+      p(ip) = r(ip) + beta*p(ip)
+    end do
     iter    = iter + 1
   end do
   if(present(residue)) residue = gamma
@@ -386,10 +390,10 @@ end subroutine X(bi_conjugate_gradients)
     ! use v as temp var
     call op(x, v)
 
-    forall (ip = 1:np)
+    do ip = 1, np
       r(ip) = b(ip) - v(ip)
       v(ip) = r(ip)
-    end forall
+    end do
 
     rho      = nrm2(v)
     norm_b   = nrm2(b)
@@ -424,9 +428,13 @@ end subroutine X(bi_conjugate_gradients)
         end if
         alpha = alpha*xsi/rho
         tmp = M_ONE/rho
-        forall (ip = 1:np) v(ip) = tmp*v(ip)
+        do ip = 1, np
+          v(ip) = tmp*v(ip)
+        end do
         tmp = M_ONE/xsi
-        forall (ip = 1:np) z(ip) = tmp*z(ip)
+        do ip = 1, np
+          z(ip) = tmp*z(ip)
+        end do
 
         delta = dotu(v, z)
 
@@ -435,13 +443,19 @@ end subroutine X(bi_conjugate_gradients)
           exit
         end if
         if(iter == 1) then
-          forall (ip = 1:np) q(ip) = z(ip)
+          do ip = 1, np
+            q(ip) = z(ip)
+          end do
         else
           rtmp = -rho*delta/epsilon
-          forall (ip = 1:np) q(ip) = rtmp*q(ip) + z(ip)
+          do ip = 1, np
+            q(ip) = rtmp*q(ip) + z(ip)
+          end do
         end if
         call op(q, p)
-        forall (ip = 1:np) p(ip) = alpha*p(ip)
+        do ip = 1, np
+          p(ip) = alpha*p(ip)
+        end do
 
         epsilon = dotu(q, p)
 
@@ -450,14 +464,18 @@ end subroutine X(bi_conjugate_gradients)
           exit
         end if
         beta = epsilon/delta
-        forall (ip = 1:np) v(ip) = -beta*v(ip) + p(ip)
+        do ip = 1, np
+          v(ip) = -beta*v(ip) + p(ip)
+        end do
         oldrho = rho
 
         rho = nrm2(v)
 
         call prec(v, z)
         tmp = M_ONE/alpha
-        forall (ip = 1:np) z(ip) = tmp*z(ip)
+        do ip = 1, np
+          z(ip) = tmp*z(ip)
+        end do
 
         xsi = nrm2(z)
 
@@ -474,28 +492,28 @@ end subroutine X(bi_conjugate_gradients)
         rtmp = eta*alpha
         if(iter == 1) then
 
-          forall (ip = 1:np)
+          do ip = 1, np
             deltax(ip) = rtmp*q(ip)
             x(ip) = x(ip) + deltax(ip)
-          end forall
+          end do
 
-          forall (ip = 1:np)
+          do ip = 1, np
             deltar(ip) = eta*p(ip)
             r(ip) = r(ip) - deltar(ip)
-          end forall
+          end do
 
         else
 
           tmp  = (oldtheta*gamma)**2
-          forall (ip = 1:np)
+          do ip = 1, np
             deltax(ip) = tmp*deltax(ip) + rtmp*q(ip)
             x(ip) = x(ip) + deltax(ip)
-          end forall
+          end do
 
-          forall (ip = 1:np)
+          do ip = 1, np
             deltar(ip) = tmp*deltar(ip) + eta*p(ip)
             r(ip) = r(ip) - deltar(ip)
-          end forall
+          end do
 
         end if
 
@@ -519,10 +537,6 @@ end subroutine X(bi_conjugate_gradients)
     case(0)
       if(res < threshold_) then
         if (present(converged)) converged = .true.
-      else
-        write(message(1), '(a)') "QMR solver not converged!"
-        write(message(2), '(a)') "Try increasing the maximum number of iterations or the tolerance."
-        call messages_warning(2)
       end if
     case(1)
       write(message(1), '(a)') "QMR breakdown, cannot continue: b or P*b is the zero vector!"
@@ -1245,9 +1259,7 @@ end subroutine X(bi_conjugate_gradients)
 #if defined(R_TREAL)
            v(i) = v(i) + ddotprod(P(:, k, i), w(:, k))
 #else
-           v(i) = v(i) + cmplx( ddotprod(P(:, k, i), R_REAL(w(:, k)) ), &
-                                ddotprod(P(:, k, i), R_AIMAG(w(:, k))), &
-                                REAL_PRECISION )
+           v(i) = v(i) + TOCMPLX(ddotprod(P(:, k, i), R_REAL(w(:, k))), ddotprod(P(:, k, i), R_AIMAG(w(:, k)))) 
 #endif
          end do
        end do

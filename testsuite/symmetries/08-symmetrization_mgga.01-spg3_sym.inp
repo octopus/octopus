@@ -12,7 +12,6 @@ BoxShape = parallelepiped
  1.7364817767E-01 | 5.0599455709E-17 | 9.8480775301E-01
 %
 Spacing = 0.5
-LCAOStart = lcao_states
 FilterPotentials = filter_none
 ExtraStates = 1
 %KpointsGrid
@@ -31,3 +30,4 @@ Output = bader + density
 OutputFormat = axis_x
 
 SCFCalculatePartialCharges = yes
+StatesPack = yes

@@ -34,6 +34,7 @@ module cube_function_oct_m
   use par_vec_oct_m
   use profiling_oct_m
   use simul_box_oct_m
+  use submesh_oct_m
   use types_oct_m
 
   implicit none
@@ -45,7 +46,8 @@ module cube_function_oct_m
     zcube_function_alloc_RS,       &
     dcube_function_free_RS,        &
     zcube_function_free_RS,        &
-    cube_function_surface_average, &
+    dcube_function_surface_average,&
+    zcube_function_surface_average,&
     dmesh_to_cube_parallel,        &
     zmesh_to_cube_parallel,        &
     dcube_to_mesh_parallel,        &
@@ -54,10 +56,15 @@ module cube_function_oct_m
     zmesh_to_cube,                 &
     dcube_to_mesh,                 &
     zcube_to_mesh,                 &
+    dsubmesh_to_cube,              &
+    zsubmesh_to_cube,              &
+    dcube_to_submesh,              &
+    zcube_to_submesh,              &
     dcube_function_allgather,      &
     zcube_function_allgather
 
   type cube_function_t
+    ! Components are public by default
     FLOAT, pointer :: dRS(:, :, :)  !< real-space grid
     CMPLX, pointer :: zRS(:, :, :)  !< real-space grid, complex numbers
     CMPLX, pointer :: FS(:, :, :)   !< Fourier-space grid
@@ -70,54 +77,6 @@ module cube_function_oct_m
   type(profile_t), save :: prof_m2c, prof_c2m
   
 contains
-
-  ! ---------------------------------------------------------
-  !> This function calculates the surface average of any function.
-  !! \warning Some more careful testing should be done on this.
-  FLOAT function cube_function_surface_average(cube, cf) result(x)
-    type(cube_t),          intent(in) :: cube
-    type(cube_function_t), intent(in) :: cf
-
-    integer :: ii, jj, kk, ix, iy, iz, npoints
-    FLOAT :: tmp_x
-
-    ASSERT(.not. cf%in_device_memory)
-
-    PUSH_SUB(cube_function_surface_average)
-
-    tmp_x = M_ZERO
-    do ii = 1, cube%rs_n(1)
-      do jj = 1, cube%rs_n(2)
-        do kk = 1, cube%rs_n(3)
-          ix = ii + cube%rs_istart(1) - 1
-          iy = jj + cube%rs_istart(2) - 1
-          iz = kk + cube%rs_istart(3) - 1
-          if ( (ix == 1 .or. ix == cube%rs_n_global(1) ) .or. &
-               ( (iy == 1 .or. iy == cube%rs_n_global(2)) .and. (ix /= 1 .and. ix /= cube%rs_n_global(1)) ) .or. &
-               ( (iz == 1 .or. iz == cube%rs_n_global(3)) .and. (ix /= 1 .and. ix /= cube%rs_n_global(1) .and. &
-                 iy /= 1 .and. iy /= cube%rs_n_global(2))) ) then
-            tmp_x = tmp_x + cf%dRS(ii, jj, kk)
-          end if
-        end do
-      end do
-    end do
-
-    
-    if (cube%parallel_in_domains) then
-#ifdef HAVE_MPI
-      call MPI_Allreduce(tmp_x, x, 1, MPI_FLOAT, MPI_SUM, cube%mpi_grp%comm, mpi_err)
-#endif
-    else
-      x = tmp_x
-    end if
-
-    npoints = 2*(cube%rs_n_global(1)-2)**2 + 4*(cube%rs_n_global(1)-2) + &
-              2*(cube%rs_n_global(2)-2)**2 + 4*(cube%rs_n_global(2)-2) + &
-              2*(cube%rs_n_global(3)-2)**2 + 4*(cube%rs_n_global(3)-2) + 8
-    x = x/npoints
-
-    POP_SUB(cube_function_surface_average)
-  end function cube_function_surface_average
 
   ! ---------------------------------------------------------
   !> Nullifies the real space and Fourier space grids

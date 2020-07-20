@@ -27,10 +27,12 @@ module poisson_isf_oct_m
   use messages_oct_m
   use mesh_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
   use scaling_function_oct_m
   use sgfft_oct_m
+  use submesh_oct_m
 
   implicit none
   
@@ -52,6 +54,7 @@ module poisson_isf_oct_m
   ! Datatype to store kernel values to solve Poisson equation
   ! on different communicators (configurations).
   type isf_cnf_t
+    private
     real(8), pointer  :: kernel(:, :, :)
     integer           :: nfft1, nfft2, nfft3
     type(mpi_grp_t)   :: mpi_grp
@@ -59,21 +62,24 @@ module poisson_isf_oct_m
   end type isf_cnf_t
 
   type poisson_isf_t
+    private
     integer         :: all_nodes_comm
     type(isf_cnf_t) :: cnf(1:N_CNF)
   end type poisson_isf_t
 
   integer, parameter :: order_scaling_function = 8 
 
+
 contains
 
   ! ---------------------------------------------------------
-  subroutine poisson_isf_init(this, mesh, cube, all_nodes_comm, init_world)
-    type(poisson_isf_t), intent(out)   :: this
-    type(mesh_t),        intent(in)    :: mesh
-    type(cube_t),        intent(inout) :: cube
-    integer,             intent(in)    :: all_nodes_comm
-    logical, optional,   intent(in)    :: init_world 
+  subroutine poisson_isf_init(this, namespace, mesh, cube, all_nodes_comm, init_world)
+    type(poisson_isf_t),       intent(out)   :: this
+    type(namespace_t), target, intent(in)    :: namespace
+    type(mesh_t),              intent(in)    :: mesh
+    type(cube_t),              intent(inout) :: cube
+    integer,                   intent(in)    :: all_nodes_comm
+    logical, optional,         intent(in)    :: init_world 
 
     integer :: n1, n2, n3
     integer :: i_cnf
@@ -137,7 +143,7 @@ contains
     !% How many nodes to use to solve the Poisson equation. A value of
     !% 0, the default, implies that all available nodes are used.
     !%End
-    call parse_variable('PoissonSolverNodes', default_nodes, nodes)
+    call parse_variable(namespace, 'PoissonSolverNodes', default_nodes, nodes)
 
     this%all_nodes_comm = all_nodes_comm
 
@@ -207,13 +213,14 @@ contains
   end subroutine poisson_isf_init
 
   ! ---------------------------------------------------------
-  subroutine poisson_isf_solve(this, mesh, cube, pot, rho, all_nodes)
+  subroutine poisson_isf_solve(this, mesh, cube, pot, rho, all_nodes, sm)
     type(poisson_isf_t), intent(in)    :: this
     type(mesh_t),        intent(in)    :: mesh
     type(cube_t),        intent(in)    :: cube
     FLOAT,               intent(out)   :: pot(:)
     FLOAT,               intent(in)    :: rho(:)
     logical,             intent(in)    :: all_nodes
+    type(submesh_t),     optional,  intent(in)    :: sm  !< If present pot and rho are assumed to come from it
 
     integer :: i_cnf, nn(1:3)
     type(cube_function_t) :: rho_cf
@@ -223,10 +230,14 @@ contains
     call cube_function_null(rho_cf)
     call dcube_function_alloc_RS(cube, rho_cf)
 
-    if(mesh%parallel_in_domains) then
-      call dmesh_to_cube(mesh, rho, cube, rho_cf, local=.true.)
+    if(present(sm)) then
+      call dsubmesh_to_cube(sm, rho, cube, rho_cf)
     else
-      call dmesh_to_cube(mesh, rho, cube, rho_cf)
+      if(mesh%parallel_in_domains) then
+        call dmesh_to_cube(mesh, rho, cube, rho_cf, local=.true.)
+      else
+        call dmesh_to_cube(mesh, rho, cube, rho_cf)
+      end if
     end if
 
     ! Choose configuration.
@@ -273,10 +284,14 @@ contains
 #endif
     end if
 
-    if(mesh%parallel_in_domains) then
-      call dcube_to_mesh(cube, rho_cf, mesh, pot, local=.true.)
+    if(present(sm)) then
+      call dcube_to_submesh(cube, rho_cf, sm, pot)
     else
-       call dcube_to_mesh(cube, rho_cf, mesh, pot)
+      if(mesh%parallel_in_domains) then
+        call dcube_to_mesh(cube, rho_cf, mesh, pot, local=.true.)
+      else
+        call dcube_to_mesh(cube, rho_cf, mesh, pot)
+      end if
     end if
     
     call dcube_function_free_RS(cube, rho_cf)
@@ -461,7 +476,7 @@ contains
 
     pi2=8.d0*datan(1.d0)
     pi2=pi2/real(n1,8)
-    do i1=1,n1h+1
+    do i1 = 1,n1h+1
       cos_array(i1)=dcos(pi2*(i1-1))
       sin_array(i1)=-dsin(pi2*(i1-1))
     end do
@@ -796,7 +811,7 @@ contains
     !case i2=1
     i2=1
     j2=1
-    do i1=1,n1h
+    do i1 = 1,n1h
       j1=n1h+2-i1
 
       a=zarray(1,i1,i2,i3,ouzee)
@@ -818,7 +833,7 @@ contains
     !case i2 >= 2
     do i2=2,n2
       j2=nd2+1-i2
-      do i1=1,n1h
+      do i1 = 1,n1h
         j1=n1h+2-i1
 
         a=zarray(1,i1,i2,i3,ouzee)
@@ -846,7 +861,7 @@ contains
       !case i2=1
       i2=1
       j2=1
-      do i1=1,n1h
+      do i1 = 1,n1h
         j1=n1h+2-i1
 
         a=zarray(1,i1,i2,i3,ouzee)
@@ -868,7 +883,7 @@ contains
       !case i2 >= 2
       do i2=2,n2
         j2=nd2+1-i2
-        do i1=1,n1h
+        do i1 = 1,n1h
           j1=n1h+2-i1
 
           a=zarray(1,i1,i2,i3,ouzee)
@@ -990,26 +1005,26 @@ contains
     nd2hm=(nd2-1)/2
     nd3hm=(nd3-1)/2
     !Set to zero
-    do i3=1,nd3
-      do i2=1,nd2
-        do i1=1,nd1
+    do i3 = 1,nd3
+      do i2 = 1,nd2
+        do i1 = 1,nd1
           zarray(1,i1,i2,i3) = 0.0_8
           zarray(2,i1,i2,i3) = 0.0_8
         end do
       end do
     end do
     !Set zarray
-    do i3=1,n03
-      do i2=1,n02
-        do i1=1,n01h
+    do i3 = 1,n03
+      do i2 = 1,n02
+        do i1 = 1,n01h
           zarray(1,i1+nd1hm,i2+nd2hm,i3+nd3hm) = density(2*i1-1,i2,i3)
           zarray(2,i1+nd1hm,i2+nd2hm,i3+nd3hm) = density(2*i1,i2,i3)
         end do
       end do
     end do
     if(modulo(n01,2) == 1) then
-      do i3=1,n03
-        do i2=1,n02
+      do i3 = 1,n03
+        do i2 = 1,n02
           zarray(1,n01h+1+nd1hm,i2+nd2hm,i3+nd3hm) = density(n01,i2,i3)
         end do
       end do
@@ -1041,9 +1056,9 @@ contains
     
     PUSH_SUB(zarray_out)
 
-    do i3=1,n03
-      do i2=1,n02
-        do i1=1,n01
+    do i3 = 1,n03
+      do i2 = 1,n02
+        do i1 = 1,n01
           rhopot(i1, i2, i3) = factor*zarray(i1,i2,i3)
         end do
       end do
@@ -1207,11 +1222,11 @@ contains
       call scf_recursion(itype_scf,n_iter,n_range,kernel_scf,kern_1_scf)
 
       !Add to the kernel.
-      do i3=1,n03
+      do i3 = 1,n03
         i03 = i3-1
-        do i2=1,n02
+        do i2 = 1,n02
           i02 = i2-1
-          do i1=1,n01
+          do i1 = 1,n01
             i01 = i1-1
             karrayout(i1,i2,i3) = karrayout(i1,i2,i3) + w_gauss(i_gauss)* & 
               kernel_scf(i01)*kernel_scf(i02)*kernel_scf(i03)
@@ -1326,30 +1341,30 @@ contains
 
     nd1h=(nd1+1)/2
     karrayhalf(:,:,:,:) = 0.0_8
-    do i3=1,n03
-      do i2=1,n02
+    do i3 = 1,n03
+      do i2 = 1,n02
         karray(:) = 0.0_8
-        do i1=1,n01
+        do i1 = 1,n01
           karray(i1+n1h) = kernel(i1,i2,i3)
         end do
-        do i1=2,n01
+        do i1 = 2,n01
           karray(n1h-i1+1+nd1-nfft1) = kernel(i1,i2,i3)
         end do
-        do i1=1,n1h
+        do i1 = 1,n1h
           karrayhalf(1,i1,i2+n2h,i3+n3h) = karray(2*i1-1)
           karrayhalf(2,i1,i2+n2h,i3+n3h) = karray(2*i1)
         end do
       end do
-      do i2=2,n02
-        do i1=1,nd1h
+      do i2 = 2,n02
+        do i1 = 1,nd1h
           karrayhalf(:,i1,n2h-i2+1+nd2-nfft2,i3+n3h) = &
             karrayhalf(:,i1,i2+n2h,i3+n3h)
         end do
       end do
     end do
-    do i3=2,n03
-      do i2=1,nd2
-        do i1=1,nd1h
+    do i3 = 2,n03
+      do i2 = 1,nd2
+        do i1 = 1,nd1h
           karrayhalf(:,i1,i2,n3h-i3+1+nd3-nfft3) = karrayhalf(:,i1,i2,i3+n3h)
         end do
       end do
@@ -1393,13 +1408,13 @@ contains
     SAFE_ALLOCATE(cos_array(1:nd1h))
     SAFE_ALLOCATE(sin_array(1:nd1h))
 
-    do i1=1,nd1h
+    do i1 = 1,nd1h
       cos_array(i1)= dcos(pi2*(i1-1))
       sin_array(i1)=-dsin(pi2*(i1-1))
     end do
-    do i3=1,n3h+1
-      do i2=1,n2h+1
-        do i1=1,nd1h
+    do i3 = 1,n3h+1
+      do i2 = 1,n2h+1
+        do i1 = 1,nd1h
           call norm_ind(nd1h,nd2,nd3,i1,i2,i3,ind1)
           call symm_ind(nd1h,nd2,nd3,i1,i2,i3,ind2)
           a=zarray(1,ind1)
@@ -1965,9 +1980,9 @@ contains
 
       do i3=istart1,iend1
         i03 =  n2h - i3 + 1
-        do i2=1,n02
+        do i2 = 1,n02
           i02 = i2-1
-          do i1=1,n01
+          do i1 = 1,n01
             i01 = i1-1
             karray(i1+n1h,i2+n3h,i3-istart+1) = karray(i1+n1h,i2+n3h,i3-istart+1) + w_gauss(i_gauss)* &
               kernel_scf(i01)*kernel_scf(i02)*kernel_scf(i03)
@@ -1976,9 +1991,9 @@ contains
       end do
       do i3=istart2,iend2
         i03 = i3 - n2h -1
-        do i2=1,n02
+        do i2 = 1,n02
           i02 = i2-1
-          do i1=1,n01
+          do i1 = 1,n01
             i01 = i1-1
             karray(i1+n1h,i2+n3h,i3-istart+1) = karray(i1+n1h,i2+n3h,i3-istart+1) + w_gauss(i_gauss)* &
               kernel_scf(i01)*kernel_scf(i02)*kernel_scf(i03)
@@ -1992,13 +2007,13 @@ contains
     !Build the kernel in the real space as an even function, thus having a real FFT
 
     do i3=istart1,iend2
-      do i2=1,n02
+      do i2 = 1,n02
         do i1=2,n01
           karray(n1h+2-i1,i2+n3h,i3-istart+1) = karray(i1+n1h,i2+n3h,i3-istart+1)
         end do
       end do
       do i2=2,n02
-        do i1=1,nker1
+        do i1 = 1,nker1
           karray(i1,n3h+2-i2,i3-istart+1) = karray(i1,i2+n3h,i3-istart+1)
         end do
       end do
@@ -2020,9 +2035,9 @@ contains
     call kernelfft(nfft1,nfft2,nfft3,nker1,nker2,nker3,nproc,iproc,karray,karrayfour,comm)
 
     !Reconstruct the real kernel FFT
-    do i3=1,n3k/nproc
-      do i2=1,n2k
-        do i1=1,n1k
+    do i3 = 1,n3k/nproc
+      do i2 = 1,n2k
+        do i1 = 1,n1k
           karrayoutLOC(i1,i2,i3)=karrayfour(1,i1,i2,i3)
         end do
       end do

@@ -2,6 +2,7 @@
 
 CalculationMode = opt_control
 ExperimentalFeatures = yes
+StatesPack = yes
 
 # ------------------
 # TD RUN Parameters
@@ -10,9 +11,10 @@ ExperimentalFeatures = yes
 stime  = 100.0
 dt = 0.02
 TDPropagator = exp_mid
-TDExponentialMethod = lanczos
-TDExponentialOrder = 30
-TDLanczosTol = 1.0e-4
+# use default Taylor expansion -> much faster on GPUs
+#TDExponentialMethod = lanczos
+#TDExpOrder = 30
+#TDLanczosTol = 1.0e-4
 TDPropagationTime = stime
 TDTimeStep = dt
 
@@ -32,8 +34,6 @@ OCTTargetOperator = oct_tg_gstransformation
 %
 OCTScheme  = oct_wg05
 OCTDoubleCheck = No	
-gamma1 = 0.1
-gamma2 = 80
 
 
 #----------------------------
@@ -70,3 +70,6 @@ TheoryLevel = independent_particles
 
 
 
+
+# test code path without CUDA-aware MPI for this test
+CudaAwareMPI = no

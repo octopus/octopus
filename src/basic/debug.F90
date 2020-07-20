@@ -20,6 +20,7 @@
 
 module debug_oct_m
   use global_oct_m
+  use namespace_oct_m
   use parser_oct_m
 
   implicit none
@@ -28,23 +29,25 @@ module debug_oct_m
   public ::             &
     debug_t,            &
     debug_init,         &
-    debug_end,          &
     debug_enable,       &
     debug_disable
 
   type debug_t
-    logical :: info
-    logical :: trace
-    logical :: trace_term
-    logical :: trace_file
+    private
+    logical, public :: info
+    logical, public :: trace
+    logical, public :: trace_term
+    logical, public :: trace_file
     logical :: extra_checks
+    logical, public :: interaction_graph
     integer :: bits    
   end type debug_t
 
 contains
   
-  subroutine debug_init(this)
-    type(debug_t), intent(out) :: this
+  subroutine debug_init(this, namespace)
+    type(debug_t),     intent(out)   :: this
+    type(namespace_t), intent(in)    :: namespace
 
     !%Variable Debug
     !%Type flag
@@ -72,19 +75,14 @@ contains
     !%Option extra_checks 16
     !% This enables Octopus to perform some extra checks, to ensure
     !% code correctness, that might be too costly for regular runs.
+    !%Option interaction_graph 32
+    !% Octopus generates a dot file containing the graph for a multisystem run.
     !%End
-    call parse_variable('Debug', OPTION__DEBUG__NO, this%bits)
+    call parse_variable(namespace, 'Debug', OPTION__DEBUG__NO, this%bits)
 
     call from_bits(this)
     
   end subroutine debug_init
-
-  !--------------------------------------------------
-
-  subroutine debug_end(this)
-    type(debug_t), intent(inout) :: this
-
-  end subroutine debug_end
 
   !--------------------------------------------------
   
@@ -95,6 +93,7 @@ contains
     this%trace      = .true.
     this%trace_term = .true.
     this%trace_file = .true.
+    this%interaction_graph = .true.
     
   end subroutine debug_enable
 
@@ -117,6 +116,7 @@ contains
     this%trace_file   = (bitand(this%bits, OPTION__DEBUG__TRACE_FILE)   /= 0)
     this%trace        = (bitand(this%bits, OPTION__DEBUG__TRACE)        /= 0) .or. this%trace_term .or. this%trace_file
     this%extra_checks = (bitand(this%bits, OPTION__DEBUG__EXTRA_CHECKS) /= 0) .or. this%trace_term .or. this%trace_file
+    this%interaction_graph = (bitand(this%bits, OPTION__DEBUG__INTERACTION_GRAPH)   /= 0)
 
   end subroutine from_bits
   

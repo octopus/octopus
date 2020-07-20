@@ -71,14 +71,12 @@ module lalg_adv_oct_m
     module procedure deigensolve, zeigensolve
   end interface lalg_eigensolve
 
-  !> Note that lalg_determinant and lalg_inverter are just wrappers
-  !! over the same routine.
   interface lalg_determinant
     module procedure ddeterminant, zdeterminant
   end interface lalg_determinant
 
   interface lalg_inverter
-    module procedure ddeterminant, zdeterminant
+    module procedure dinverter, zinverter
   end interface lalg_inverter
 
   interface lalg_sym_inverter
@@ -114,7 +112,7 @@ module lalg_adv_oct_m
   end interface lapack_geev
 
   interface lalg_least_squares
-    module procedure dlalg_least_squares_vec, zlalg_least_squares_vec
+    module procedure dleast_squares_vec, zleast_squares_vec
   end interface lalg_least_squares
 
 contains
@@ -151,7 +149,7 @@ contains
 
     call dgeev(jobvl, jobvr, n, a(1, 1), lda, wr(1), wi(1), vl(1, 1), ldvl, vr(1, 1), ldvr, work(1), lwork, rwork(1), info)
 
-    w(1:n) = cmplx(wr(1:n), wi(1:n), REAL_PRECISION)
+    w(1:n) = TOCMPLX(wr(1:n), wi(1:n))
     
     SAFE_DEALLOCATE_A(wr)
     SAFE_DEALLOCATE_A(wi)
@@ -202,7 +200,6 @@ contains
 
     CMPLX, allocatable :: evectors(:, :), zevalues(:)
     FLOAT, allocatable :: evalues(:)
-    CMPLX :: deter
     
     integer :: ii
 
@@ -239,7 +236,7 @@ contains
 
       ex(1:nn, 1:nn) = evectors(1:nn, 1:nn)
 
-      deter = lalg_inverter(nn, evectors)
+      call lalg_inverter(nn, evectors)
       
       do ii = 1, nn
         evectors(1:nn, ii) = zevalues(1:nn)*evectors(1:nn, ii)
@@ -281,7 +278,6 @@ contains
 
     CMPLX, allocatable :: evectors(:, :), zevalues(:)
     FLOAT, allocatable :: evalues(:)
-    CMPLX :: deter
     
     integer :: ii
 
@@ -297,7 +293,9 @@ contains
 
       call lalg_eigensolve(nn, evectors, evalues)
 
-      forall(ii = 1:nn) zevalues(ii) = (exp(pp*evalues(ii)) - M_z1) / (pp*evalues(ii))
+      do ii = 1, nn
+        zevalues(ii) = (exp(pp*evalues(ii)) - M_z1) / (pp*evalues(ii))
+      end do
 
       do ii = 1, nn
         ex(1:nn, ii) = zevalues(1:nn)*conjg(evectors(ii, 1:nn))
@@ -313,13 +311,15 @@ contains
       evectors(1:nn, 1:nn) = aa(1:nn, 1:nn)
 
       call lalg_eigensolve_nonh(nn, evectors, zevalues)
-      
-      forall(ii = 1:nn) zevalues(ii) = (exp(pp*zevalues(ii)) - M_z1) / (pp*zevalues(ii))
+
+      do ii = 1, nn
+        zevalues(ii) = (exp(pp*zevalues(ii)) - M_z1) / (pp*zevalues(ii))
+      end do
 
       ex(1:nn, 1:nn) = evectors(1:nn, 1:nn)
 
-      deter = lalg_inverter(nn, evectors)
-      
+      call lalg_inverter(nn, evectors)
+
       do ii = 1, nn
         evectors(1:nn, ii) = zevalues(1:nn)*evectors(1:nn, ii)
       end do
@@ -368,7 +368,9 @@ contains
     call lalg_eigensolve_nonh(n, zeigenvec, zeigenval)
 
     unit = M_z0
-    forall(i = 1:n) unit(i, i) = M_z1
+    do i = 1, n
+      unit(i, i) = M_z1
+    end do
 
     do i = 1, n
       do alpha = 1, n
@@ -432,7 +434,7 @@ contains
       write(*, *) maxval(abs(vt))
       write(*, *) vt
       write(*, *)
-      write(*, *) 1.0e-10 * maxval(abs(mat))
+      write(*, *) CNST(1.0e-10) * maxval(abs(mat))
       write(*, *) maxval(abs(vt)) > CNST(1.0e-10) * maxval(abs(mat))
       write(*, *) mat
       write(message(1), '(a)') 'Pseudoinverse failed.'

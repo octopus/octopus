@@ -39,10 +39,12 @@ module young_oct_m
             young_end,            &
             young_t
 
-  type young_t 
-   integer :: nyoung, nup, ndown, iyoung
-   integer, pointer :: young_up(:,:)
-   integer, pointer :: young_down(:,:)
+  type young_t
+    private
+    integer,          public :: nyoung
+    integer                  :: nup, ndown, iyoung
+    integer, pointer, public :: young_up(:,:)
+    integer, pointer, public :: young_down(:,:)
   end type young_t 
 
 contains
@@ -245,7 +247,7 @@ contains
     PUSH_SUB(young_write_allspins)
 
     call young_nullify (this)
-    do ndown = 0, floor(nparticles * 0.5)
+    do ndown = 0, floor(nparticles * M_HALF)
       nup = nparticles - ndown
       call young_init (this, nup, ndown)
       call young_write (iunit, this)
@@ -266,7 +268,7 @@ contains
 
     ndiagrams = 0
     call young_nullify (this)
-    do ndown = 0, floor(nparticles * 0.5)
+    do ndown = 0, floor(nparticles * M_HALF)
       nup = nparticles - ndown
       call young_init (this, nup, ndown)
       ndiagrams = ndiagrams + this%nyoung

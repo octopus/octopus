@@ -24,6 +24,7 @@ module boundary_op_oct_m
   use global_oct_m
   use mesh_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
   use unit_oct_m
@@ -41,8 +42,9 @@ module boundary_op_oct_m
     bc_t
 
   type bc_t
-    integer                 :: abtype
-    FLOAT, pointer          :: mf(:)     !< The mask-function on the mesh
+    private
+    integer, public         :: abtype
+    FLOAT, pointer, public  :: mf(:)     !< The mask-function on the mesh
     type(cube_function_t)   :: cf        !< The mask-function on the cube
     logical                 :: ab_user_def
     FLOAT, pointer          :: ab_ufn(:)
@@ -57,8 +59,9 @@ module boundary_op_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine bc_init(this, mesh, sb, geo)
+  subroutine bc_init(this, namespace, mesh, sb, geo)
     type(bc_t),               intent(out) :: this
+    type(namespace_t),        intent(in)  :: namespace
     type(mesh_t),             intent(in)  :: mesh
     type(simul_box_t),        intent(in)  :: sb
     type(geometry_t),         intent(in)  :: geo
@@ -98,17 +101,17 @@ contains
     !%Option exterior 3
     !% Exterior complex scaling (not yet implemented).
     !%End
-    call parse_variable('AbsorbingBoundaries', NOT_ABSORBING, this%abtype)
+    call parse_variable(namespace, 'AbsorbingBoundaries', NOT_ABSORBING, this%abtype)
     if(.not.varinfo_valid_option('AbsorbingBoundaries', this%abtype, is_flag = .true.)) then
-      call messages_input_error('AbsorbingBoundaries')
+      call messages_input_error(namespace, 'AbsorbingBoundaries')
     end if
 
     if(this%abtype == EXTERIOR) &
-      call messages_not_implemented('Exterior complex scaling')
+      call messages_not_implemented('Exterior complex scaling', namespace=namespace)
 
     if(this%abtype /= NOT_ABSORBING) then
       write(str, '(a,i5)') 'Absorbing Boundaries'
-      call messages_print_stress(stdout, trim(str))
+      call messages_print_stress(stdout, trim(str), namespace=namespace)
 
       !%Variable ABCapHeight
       !%Type float
@@ -118,7 +121,7 @@ contains
       !% When <tt>AbsorbingBoundaries = cap</tt>, this is the height of the imaginary potential.
       !%End
       if(this%abtype == IMAGINARY_ABSORBING) then
-        call parse_variable('ABCapHeight', -CNST(0.2), abheight, units_inp%energy)
+        call parse_variable(namespace, 'ABCapHeight', -CNST(0.2), abheight, units_inp%energy)
       end if
 
       !%Variable ABShape
@@ -143,7 +146,7 @@ contains
       !%End
 
       cols_abshape_block = 0
-      if(parse_block('ABShape', blk) < 0) then
+      if(parse_block(namespace, 'ABShape', blk) < 0) then
         message(1) = "Input: ABShape not specified. Using default values for absorbing boundaries."
         call messages_info(1)
       
@@ -183,7 +186,9 @@ contains
             xx = M_ZERO
             xx(1:MAX_DIM) = mesh%x(ip, 1:MAX_DIM)
             rr = units_from_atomic(units_inp%length, sqrt(sum(xx(1:mesh%sb%dim)**2)))
-            forall(imdim = 1:mesh%sb%dim) xx(imdim) = units_from_atomic(units_inp%length, xx(imdim))
+            do imdim = 1, mesh%sb%dim
+              xx(imdim) = units_from_atomic(units_inp%length, xx(imdim))
+            end do
             call parse_expression(ufn_re, ufn_im, mesh%sb%dim, xx, rr, M_ZERO, user_def_expr)
             this%ab_ufn(ip) = ufn_re
           end do
@@ -192,7 +197,7 @@ contains
           call messages_info(2)
         case default
           message(1) = "Input: ABShape block must have at least 2 columns."
-          call messages_fatal(1)
+          call messages_fatal(1, namespace=namespace)
         end select
 
         call parse_block_end(blk)
@@ -206,8 +211,7 @@ contains
       !% shape use ABShape. 
       !%End
 !       call messages_obsolete_variable('ABWidth', 'ABShape')
-      abwidth = bounds(2)-bounds(1)
-      call parse_variable('ABWidth', abwidth, abwidth, units_inp%length)
+      call parse_variable(namespace, 'ABWidth', bounds(2)-bounds(1), abwidth, units_inp%length)
       bounds(1) = bounds(2) - abwidth
       
       write(message(1),'(a,es10.3,3a)') & 
@@ -231,7 +235,7 @@ contains
         this%mf(:) = abheight * mf(:)
       end if
       
-      if(debug%info) call bc_write_info(this, mesh)
+      if(debug%info) call bc_write_info(this, mesh, namespace)
       
       SAFE_DEALLOCATE_A(mf)
     end if
@@ -252,23 +256,24 @@ contains
   end subroutine bc_end
 
   ! ---------------------------------------------------------
-  subroutine bc_write_info(this, mesh)
+  subroutine bc_write_info(this, mesh, namespace)
     type(bc_t),               intent(in) :: this
     type(mesh_t),             intent(in) :: mesh
+    type(namespace_t),        intent(in) :: namespace
 
     integer :: err
 
     PUSH_SUB(bc_write_info)
 
     if(this%abtype == MASK_ABSORBING) then
-      call dio_function_output(io_function_fill_how("VTK"), "./td.general", "mask", mesh, &
+      call dio_function_output(io_function_fill_how("VTK"), "./td.general", "mask", namespace, mesh, &
         this%mf(1:mesh%np), unit_one, err)
-      call dio_function_output(io_function_fill_how("PlaneZ"), "./td.general", "mask", mesh, &
+      call dio_function_output(io_function_fill_how("PlaneZ"), "./td.general", "mask", namespace, mesh, &
         this%mf(1:mesh%np), unit_one, err)
     else if(this%abtype == IMAGINARY_ABSORBING) then
-      call dio_function_output(io_function_fill_how("VTK"), "./td.general", "cap", mesh, &
+      call dio_function_output(io_function_fill_how("VTK"), "./td.general", "cap", namespace, mesh, &
         this%mf(1:mesh%np), unit_one, err)
-      call dio_function_output(io_function_fill_how("PlaneZ"), "./td.general", "cap", mesh, &
+      call dio_function_output(io_function_fill_how("PlaneZ"), "./td.general", "cap", namespace, mesh, &
         this%mf(1:mesh%np), unit_one, err)
     end if
 

@@ -30,13 +30,14 @@ module vdw_ts_oct_m
   use messages_oct_m
   use mesh_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use periodic_copy_oct_m
   use profiling_oct_m
   use ps_oct_m
   use simul_box_oct_m
   use species_oct_m
-  use states_oct_m
+  use states_elec_oct_m
   use unit_oct_m
   use unit_system_oct_m
   
@@ -53,6 +54,7 @@ module vdw_ts_oct_m
     vdw_ts_calculate
   
   type vdw_ts_t
+    private
     FLOAT, allocatable :: c6free(:)        !> Free atomic volumes for each atomic species.
     FLOAT, allocatable :: dpfree(:)        !> Free atomic static dipole polarizability for each atomic species.
     FLOAT, allocatable :: r0free(:)        !> Free atomic vdW radius for each atomic species.
@@ -68,10 +70,10 @@ module vdw_ts_oct_m
 
 contains
 
-  subroutine vdw_ts_init(this, geo, der)
+  subroutine vdw_ts_init(this, namespace, geo)
     type(vdw_ts_t),      intent(out)   :: this
+    type(namespace_t),   intent(in)    :: namespace
     type(geometry_t),    intent(in)    :: geo
-    type(derivatives_t), intent(in)    :: der
     
     integer :: ispecies, jspecies
     FLOAT :: num, den
@@ -86,7 +88,7 @@ contains
     !% Set the value of the cutoff (unit of length) for the VDW correction in periodic system 
     !% in the Tkatchenko and Scheffler (vdw_ts) scheme only. 
     !%End
-    call parse_variable('VDW_TS_cutoff', CNST(10.0), this%cutoff, units_inp%length)
+    call parse_variable(namespace, 'VDW_TS_cutoff', CNST(10.0), this%cutoff, units_inp%length)
 
 
     !%Variable VDW_TS_damping
@@ -97,7 +99,7 @@ contains
     !% Set the value of the damping function (in unit of 1/length) steepness for the VDW correction in the 
     !% Tkatchenko-Scheffler scheme. See Equation (12) of Phys. Rev. Lett. 102 073005 (2009). 
     !%End
-    call parse_variable('VDW_TS_damping', CNST(20.0), this%damping, units_inp%length**(-1))
+    call parse_variable(namespace, 'VDW_TS_damping', CNST(20.0), this%damping, units_inp%length**(-1))
 
     !%Variable VDW_TS_sr
     !%Type float
@@ -109,7 +111,7 @@ contains
     !% This parameter depends on the xc functional used. 
     !% The default value is 0.94, which holds for PBE. For PBE0, a value of 0.96 should be used.
     !%End
-    call parse_variable('VDW_TS_sr', CNST(0.94), this%sr)
+    call parse_variable(namespace, 'VDW_TS_sr', CNST(0.94), this%sr)
 
 
     SAFE_ALLOCATE(this%c6free(1:geo%nspecies))
@@ -121,9 +123,9 @@ contains
     SAFE_ALLOCATE(this%derivative_coeff(1:geo%natoms))
 
     do ispecies = 1, geo%nspecies
-      call get_vdw_param(species_label(geo%species(ispecies)), &
+      call get_vdw_param(namespace, species_label(geo%species(ispecies)), &
         this%c6free(ispecies), this%dpfree(ispecies), this%r0free(ispecies))
-      this%volfree(ispecies) = ps_density_volume(species_ps(geo%species(ispecies)))
+      this%volfree(ispecies) = ps_density_volume(species_ps(geo%species(ispecies)), namespace)
     end do
 
     do ispecies = 1, geo%nspecies
@@ -157,20 +159,21 @@ contains
 
   !------------------------------------------
 
-  subroutine vdw_ts_calculate(this, geo, der, sb, st, density, energy, potential, force)
+  subroutine vdw_ts_calculate(this, namespace, geo, der, sb, st, density, energy, potential, force)
     type(vdw_ts_t),      intent(inout) :: this
+    type(namespace_t),   intent(in)    :: namespace
     type(geometry_t),    intent(in)    :: geo
     type(derivatives_t), intent(in)    :: der
     type(simul_box_t),   intent(in)    :: sb
-    type(states_t),      intent(in)    :: st
+    type(states_elec_t), intent(in)    :: st
     FLOAT,               intent(in)    :: density(:, :)
     FLOAT,               intent(out)   :: energy
     FLOAT,               intent(out)   :: potential(:)
     FLOAT,               intent(out)   :: force(:, :)
 
- interface
-     subroutine f90_vdw_calculate(natoms, dd, sr, zatom, coordinates, vol_ratio, &
-       energy, force, derivative_coeff)
+    interface
+      subroutine f90_vdw_calculate(natoms, dd, sr, zatom, coordinates, vol_ratio, &
+        energy, force, derivative_coeff)
         integer, intent(in)  :: natoms
         real(8), intent(in)  :: dd
         real(8), intent(in)  :: sr
@@ -202,7 +205,7 @@ contains
     energy=M_ZERO
     force(1:sb%dim, 1:geo%natoms) = M_ZERO
     this%derivative_coeff(1:geo%natoms) = M_ZERO
-    call hirshfeld_init(hirshfeld, der%mesh, geo, st)
+    call hirshfeld_init(hirshfeld, namespace, der%mesh, geo, st)
 
     do iatom = 1, geo%natoms
       call hirshfeld_volume_ratio(hirshfeld, iatom, density, vol_ratio(iatom))
@@ -297,7 +300,7 @@ contains
     end do
 
     if(debug%info) then
-      call dio_function_output(1_8, "./", "vvdw", der%mesh, potential, unit_one, ip)
+      call dio_function_output(1_8, "./", "vvdw", namespace, der%mesh, potential, unit_one, ip)
     end if
 
     call hirshfeld_end(hirshfeld)
@@ -313,13 +316,14 @@ contains
 
 
   !------------------------------------------
-  subroutine vdw_ts_force_calculate(this, force_vdw, geo, der, sb, st, density)
+  subroutine vdw_ts_force_calculate(this, namespace, force_vdw, geo, der, sb, st, density)
     type(vdw_ts_t),      intent(in)    :: this
+    type(namespace_t),   intent(in)    :: namespace
     FLOAT,               intent(inout) :: force_vdw(:,:)
     type(geometry_t),    intent(in)    :: geo
     type(derivatives_t), intent(in)    :: der
     type(simul_box_t),   intent(in)    :: sb
-    type(states_t),      intent(in)    :: st
+    type(states_elec_t), intent(in)    :: st
     FLOAT,               intent(in)    :: density(:, :)
 
     type(hirshfeld_t) :: hirshfeld
@@ -328,9 +332,11 @@ contains
     integer :: iatom, jatom, ispecies, jspecies, jcopy
     FLOAT :: rr, rr2, rr6,  dffdr0, ee, ff, dee, dffdvra, deabdvra, deabdrab, x_j(1:MAX_DIM) 
     FLOAT, allocatable ::  vol_ratio(:), dvadrr(:), dr0dvra(:), r0ab(:,:), derivative_coeff(:), c6ab(:,:)
+    type(profile_t), save :: prof
 
     PUSH_SUB(vdw_ts_force_calculate)
 
+    call profiling_in(prof, "FORCE_VDW_TS")
 
     SAFE_ALLOCATE(vol_ratio(1:geo%natoms))
     SAFE_ALLOCATE(dvadrr(1:3))
@@ -349,7 +355,7 @@ contains
     vol_ratio(1:geo%natoms) = M_ZERO
 
 
-    call hirshfeld_init(hirshfeld, der%mesh, geo, st)
+    call hirshfeld_init(hirshfeld, namespace, der%mesh, geo, st)
 
 
     do iatom = 1, geo%natoms
@@ -416,7 +422,7 @@ contains
 
     do iatom = 1, geo%natoms
       do jatom = 1, geo%natoms
-        call hirshfeld_position_derivative(hirshfeld, der, iatom, jatom, density, dvadrr) !dvadrr_ij = \frac{\delta V_i}{\delta \vec{x_j}}
+        call hirshfeld_position_derivative(hirshfeld, namespace, iatom, jatom, density, dvadrr) !dvadrr_ij = \frac{\delta V_i}{\delta \vec{x_j}}
         force_vdw(1:sb%dim, jatom)= force_vdw(1:sb%dim, jatom) + derivative_coeff(iatom)*dvadrr(1:sb%dim)  ! geo%atom(jatom)%f_vdw(1:sb%dim) = sum_i coeff_i * dvadrr_ij
       end do
     end do
@@ -430,23 +436,26 @@ contains
     SAFE_DEALLOCATE_A(derivative_coeff)
     SAFE_DEALLOCATE_A(c6ab)
 
+    call profiling_out(prof)
+
     POP_SUB(vdw_ts_force_calculate)
   end subroutine vdw_ts_force_calculate
 
   !------------------------------------------
 
-  subroutine vdw_ts_write_c6ab(this, geo, dir, fname)
+  subroutine vdw_ts_write_c6ab(this, geo, dir, fname, namespace)
      type(vdw_ts_t)  , intent(inout) :: this
      type(geometry_t),    intent(in) :: geo
      character(len=*), intent(in)    :: dir, fname
+     type(namespace_t),   intent(in) :: namespace
  
      integer :: iunit, iatom, jatom
 
      PUSH_SUB(vdw_ts_write_c6ab)
 
      if(mpi_grp_is_root(mpi_world)) then  
-       call io_mkdir(dir)
-       iunit = io_open(trim(dir) // "/" // trim(fname), action='write')  
+       call io_mkdir(dir, namespace)
+       iunit = io_open(trim(dir) // "/" // trim(fname), namespace, action='write')
         write(iunit, '(a)') ' # Atom1 Atom2 C6_{12}^{eff}'
 
 
@@ -466,11 +475,12 @@ contains
 
   !------------------------------------------
   
-  subroutine get_vdw_param(atom, c6, alpha, r0)
-    character(len=*), intent(in)  :: atom
-    FLOAT,            intent(out) :: c6
-    FLOAT,            intent(out) :: alpha
-    FLOAT,            intent(out) :: r0
+  subroutine get_vdw_param(namespace, atom, c6, alpha, r0)
+    type(namespace_t), intent(in)  :: namespace
+    character(len=*),  intent(in)  :: atom
+    FLOAT,             intent(out) :: c6
+    FLOAT,             intent(out) :: alpha
+    FLOAT,             intent(out) :: r0
 
     PUSH_SUB(get_vdw_param)
     
@@ -739,7 +749,7 @@ contains
     case default
       
       call messages_write('vdw ts: reference free atom parameters not available for species '//trim(atom))
-      call messages_fatal()
+      call messages_fatal(namespace=namespace)
       
     end select
 

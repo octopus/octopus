@@ -19,6 +19,7 @@
 #include "global.h"
 
 module mix_oct_m
+  use comm_oct_m
   use derivatives_oct_m
   use global_oct_m
   use lalg_adv_oct_m
@@ -27,6 +28,7 @@ module mix_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use nl_operator_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
   use restart_oct_m
@@ -38,7 +40,6 @@ module mix_oct_m
 
   private
   public ::                     &
-    mix_set_mixing,             &
     mix_t,                      &
     mix_init,                   &
     mix_clear,                  &
@@ -63,6 +64,7 @@ module mix_oct_m
     mix_add_auxmixfield
 
   type mixfield_t
+    private
     FLOAT, pointer :: ddf(:, :, :, :)
     FLOAT, pointer :: ddv(:, :, :, :)
     FLOAT, pointer :: df_old(:, :, :)
@@ -84,6 +86,7 @@ module mix_oct_m
   end type mixfield_t
 
   type mixfield_ptr_t
+    private
     type(mixfield_t), pointer :: p
   end type mixfield_ptr_t
 
@@ -142,8 +145,9 @@ module mix_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine mix_init(smix, der, d1, d2, d3, def_, func_type_, prefix_)
+  subroutine mix_init(smix, namespace, der, d1, d2, d3, def_, func_type_, prefix_)
     type(mix_t),                   intent(out) :: smix
+    type(namespace_t),             intent(in)  :: namespace
     type(derivatives_t), target,   intent(in)  :: der
     integer,                       intent(in)  :: d1, d2, d3
     integer,             optional, intent(in)  :: def_
@@ -168,7 +172,7 @@ contains
     prefix = ""
     if(present(prefix_)) prefix = prefix_
 
-    call messages_obsolete_variable('TypeOfMixing', 'MixingScheme')
+    call messages_obsolete_variable(namespace, 'TypeOfMixing', 'MixingScheme')
     
     !%Variable MixingScheme
     !%Type integer
@@ -195,8 +199,10 @@ contains
     !% Bowler and Gillan [D. R. Bowler and M. J. Gillan,
     !% <i>Chem. Phys.  Lett.</i> <b>325</b>, 473 (2000)].
     !%End
-    call parse_variable(trim(prefix)//'MixingScheme', def, smix%scheme)
-    if(.not.varinfo_valid_option('MixingScheme', smix%scheme)) call messages_input_error('MixingScheme', 'invalid option')
+    call parse_variable(namespace, trim(prefix)//'MixingScheme', def, smix%scheme)
+    if(.not.varinfo_valid_option('MixingScheme', smix%scheme)) then
+      call messages_input_error(namespace, 'MixingScheme', 'invalid option')
+    end if
     call messages_print_var_option(stdout, "MixingScheme", smix%scheme)
 
     if(smix%scheme == OPTION__MIXINGSCHEME__DIIS) call messages_experimental('MixingScheme = diis')
@@ -209,7 +215,7 @@ contains
     !% (Experimental) If set to yes, Octopus will use a preconditioner
     !% for the mixing operator.
     !%End
-    call parse_variable(trim(prefix)+'MixingPreconditioner', .false., smix%precondition)
+    call parse_variable(namespace, trim(prefix)+'MixingPreconditioner', .false., smix%precondition)
     if(smix%precondition) call messages_experimental('MixingPreconditioner')
     
     !%Variable Mixing
@@ -220,9 +226,9 @@ contains
     !% The linear, Broyden and DIIS scheme depend on a "mixing parameter", set by this variable. 
     !% Must be 0 < <tt>Mixing</tt> <= 1.
     !%End
-    call parse_variable(trim(prefix)+'Mixing', CNST(0.3), smix%coeff)
+    call parse_variable(namespace, trim(prefix)+'Mixing', CNST(0.3), smix%coeff)
     if(smix%coeff <= M_ZERO .or. smix%coeff > M_ONE) then
-      call messages_input_error('Mixing', 'Value should be positive and smaller than one.')
+      call messages_input_error(namespace, 'Mixing', 'Value should be positive and smaller than one.')
     end if
     
     !%Variable MixingResidual
@@ -233,9 +239,9 @@ contains
     !% In the DIIS mixing it is benefitial to include a bit of
     !% residual into the mixing. This parameter controls this amount.
     !%End
-    call parse_variable(trim(prefix)+'MixingResidual', CNST(0.05), smix%residual_coeff)
+    call parse_variable(namespace, trim(prefix)+'MixingResidual', CNST(0.05), smix%residual_coeff)
     if(smix%residual_coeff <= M_ZERO .or. smix%residual_coeff > M_ONE) then
-      call messages_input_error('MixingResidual', 'Value should be positive and smaller than one.')
+      call messages_input_error(namespace, 'MixingResidual', 'Value should be positive and smaller than one.')
     end if
     
     !%Variable MixNumberSteps
@@ -248,8 +254,8 @@ contains
     !% This number is set by this variable. Must be greater than 1.
     !%End
     if (smix%scheme /= OPTION__MIXINGSCHEME__LINEAR) then
-      call parse_variable(trim(prefix)//'MixNumberSteps', 3, smix%ns)
-      if(smix%ns <= 1) call messages_input_error('MixNumberSteps')
+      call parse_variable(namespace, trim(prefix)//'MixNumberSteps', 3, smix%ns)
+      if(smix%ns <= 1) call messages_input_error(namespace, 'MixNumberSteps')
     else
       smix%ns = 0
     end if
@@ -260,17 +266,17 @@ contains
     !%Section SCF::Mixing
     !%Description
     !% When this variable is set to a value different than 1 (the
-    !% defaul) a combined mixing scheme will be used, with MixInterval
+    !% default) a combined mixing scheme will be used, with MixInterval
     !% - 1 steps of linear mixing followed by 1 step of the selected
     !% mixing. For the moment this variable only works with DIIS mixing.
     !%End
-    call parse_variable(trim(prefix)//'MixInterval', 1, smix%interval)
-    if(smix%interval < 1) call messages_input_error('MixInterval', 'MixInterval must be larger or equal than 1')
+    call parse_variable(namespace, trim(prefix)//'MixInterval', 1, smix%interval)
+    if(smix%interval < 1) call messages_input_error(namespace, 'MixInterval', 'MixInterval must be larger or equal than 1')
     
     smix%iter = 0
 
     smix%nauxmixfield = 0
-    do ii=1,MAX_AUXMIXFIELD
+    do ii = 1,MAX_AUXMIXFIELD
       nullify(smix%auxmixfield(ii)%p)   
     end do
 
@@ -369,30 +375,12 @@ contains
     call mixfield_end(smix, smix%mixfield)
 
     smix%nauxmixfield = 0
-    do ii=1,MAX_AUXMIXFIELD
+    do ii = 1,MAX_AUXMIXFIELD
       nullify(smix%auxmixfield(ii)%p)
     end do
 
     POP_SUB(mix_end)
   end subroutine mix_end
-
-
-  ! ---------------------------------------------------------
-  subroutine mix_set_mixing(smix, newmixing)
-    type(mix_t), intent(inout) :: smix
-    FLOAT, intent(in):: newmixing
-
-    PUSH_SUB(mix_set_mixing)
-    
-    if(smix%scheme == OPTION__MIXINGSCHEME__LINEAR) then
-      smix%coeff = newmixing
-    else
-    !  message(1) = "Mixing can only be adjusted in linear mixing scheme."
-    !  call messages_fatal(1)
-    end if
-    
-    POP_SUB(mix_set_mixing)
-  end subroutine mix_set_mixing
 
 
   ! ---------------------------------------------------------
@@ -669,7 +657,7 @@ contains
     POP_SUB(mixing)
   end subroutine mixing
 
-  subroutine mix_add_auxmixfield( smix, mixfield )
+  subroutine mix_add_auxmixfield(smix, mixfield)
     type(mix_t),      intent(inout)      :: smix
     type(mixfield_t), target, intent(in) :: mixfield
 
@@ -678,11 +666,15 @@ contains
     smix%nauxmixfield = smix%nauxmixfield + 1
     smix%auxmixfield(smix%nauxmixfield)%p => mixfield 
 
-    if( smix%scheme == OPTION__MIXINGSCHEME__DIIS) &
-      call messages_input_error('Mixing scheme  DIIS is not implemented for auxiliary mixing fields')
+    if( smix%scheme == OPTION__MIXINGSCHEME__DIIS) then
+      message(1) = 'Mixing scheme DIIS is not implemented for auxiliary mixing fields'
+      call messages_fatal(1)
+    end if
 
-    if( smix%scheme == OPTION__MIXINGSCHEME__BOWLER_GILLAN) &
-      call messages_input_error('Mixing scheme  Bowler Gillan is not implemented for auxiliary mixing fields')
+    if( smix%scheme == OPTION__MIXINGSCHEME__BOWLER_GILLAN) then
+      message(1) = 'Mixing scheme Bowler Gillan is not implemented for auxiliary mixing fields'
+      call messages_fatal(1)
+    end if
 
     POP_SUB(mix_add_auxmixfield)
   end subroutine mix_add_auxmixfield
@@ -846,25 +838,13 @@ contains
   end subroutine ddmixfield_set_vout2
 
   ! --------------------------------------------------------------
-  subroutine mixfield_get_dvnew(mixfield, vnew)
-    type(mixfield_t),   intent(in) :: mixfield
-    FLOAT,          intent(inout)  :: vnew(:,:)
-
-    PUSH_SUB(mixfield_get_dvnew)
-
-    vnew(1:mixfield%d1, 1:mixfield%d3) = mixfield%dvnew(1:mixfield%d1, 1, 1:mixfield%d3)
-
-    POP_SUB(mixfield_get_dvnew)
-  end subroutine mixfield_get_dvnew
-
-  ! --------------------------------------------------------------
   subroutine ddmixfield_get_vnew(mixfield, re, im)
     type(mixfield_t),   intent(in) :: mixfield
     FLOAT,          intent(inout)  :: re(:,:), im(:,:)
 
     PUSH_SUB(mixfield_get_ddvnew)
 
-    re(1:mixfield%d1, 1:mixfield%d3) =  real(mixfield%zvnew(1:mixfield%d1, 1, 1:mixfield%d3), REAL_PRECISION)
+    re(1:mixfield%d1, 1:mixfield%d3) = TOFLOAT(mixfield%zvnew(1:mixfield%d1, 1, 1:mixfield%d3))
     im(1:mixfield%d1, 1:mixfield%d3) = aimag(mixfield%zvnew(1:mixfield%d1, 1, 1:mixfield%d3))
 
     POP_SUB(mixfield_get_ddvnew)

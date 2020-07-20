@@ -27,6 +27,7 @@ module pes_out_oct_m
   use loct_oct_m
   use math_oct_m
   use messages_oct_m
+  use namespace_oct_m
 #if defined(HAVE_NETCDF)
   use netcdf
 #endif    
@@ -62,9 +63,10 @@ module pes_out_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine pes_out_velocity_map(pesK, file, Lk, ll, how, sb, pmesh)
+  subroutine pes_out_velocity_map(pesK, file, namespace, Lk, ll, how, sb, pmesh)
     FLOAT,             intent(in) :: pesK(:,:,:)
     character(len=*),  intent(in) :: file
+    type(namespace_t), intent(in) :: namespace
     FLOAT,             intent(in) :: Lk(:,:)
     integer,           intent(in) :: ll(:)  
     integer(8),        intent(in) :: how
@@ -80,7 +82,7 @@ contains
 
     PUSH_SUB(pes_out_velocity_map)
 
-    call cube_init(cube, ll, sb)
+    call cube_init(cube, ll, sb, namespace)
     call cube_function_null(cf)
     call dcube_function_alloc_RS(cube, cf, force_alloc = .true.)
     cf%dRS = pesK
@@ -115,10 +117,10 @@ contains
       call messages_info(1)
     
       if (present(pmesh)) then          
-        call dvtk_out_cf_structured(filename, 'PES_vel_map', ierr, cf, cube,& 
+        call dvtk_out_cf_structured(filename, namespace, 'PES_vel_map', ierr, cf, cube,& 
           sqrt(units_out%energy)**sb%dim, pmesh, ascii = .false.)
       else 
-        call dvtk_out_cf(filename, 'PES_vel_map', ierr, cf, cube, dk(:),& 
+        call dvtk_out_cf(filename, namespace, 'PES_vel_map', ierr, cf, cube, dk(:),& 
           sqrt(units_out%energy)**sb%dim)
       end if        
     end if
@@ -132,9 +134,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine pes_out_arpes_cut(arpes, file, ll, pmesh, Ekin)
+  subroutine pes_out_arpes_cut(namespace, arpes, file, dim, ll, pmesh, Ekin)
+    type(namespace_t), intent(in) :: namespace
     FLOAT,             intent(in) :: arpes(:,:,:)
     character(len=*),  intent(in) :: file
+    integer,           intent(in) :: dim
     integer,           intent(in) :: ll(:)
     FLOAT,             intent(in) :: pmesh(:,:,:,:)
     FLOAT,             intent(in) :: Ekin(:,:,:)
@@ -144,7 +148,7 @@ contains
     
     PUSH_SUB(pes_out_arpes_cut)
     
-    iunit = io_open(file, action='write')
+    iunit = io_open(file, namespace, action='write')
     write(iunit, '(a)') '##################################################'
     write(iunit, '(a1,a18,2x,a18,2x,a18,2x,a18,2x, a18,2x,a18)') '#', &
                                       str_center("Ppath", 18), &
@@ -168,15 +172,31 @@ contains
       if (ip > 1) pdiff = pp(1:2) - pmesh(ip-1,1,1,1:2)
       dp = sqrt(sum(pdiff(1:2)**2))
       length = length + dp 
+
+      select case (dim)
+        case (2)
+          do ie = 1, ll(2) 
+            write(iunit, '(es19.12,2x,es19.12,2x,es19.12,2x,es19.12,2x,es19.12,2x,es19.12)')   &
+                                            units_from_atomic(unit_one/units_out%length, length),&
+                                            units_from_atomic(unit_one/units_out%length, pp(1)), &
+                                            units_from_atomic(unit_one/units_out%length, pp(2)), &
+                                            units_from_atomic(units_out%energy, Ekin(ip,ie,1)), &
+                                            arpes(ip,ie,1)
+          end do      
+
+        case(3)
+          do ie = 1, ll(3)
+            write(iunit, '(es19.12,2x,es19.12,2x,es19.12,2x,es19.12,2x,es19.12,2x,es19.12)')   &
+                                            units_from_atomic(unit_one/units_out%length, length),&
+                                            units_from_atomic(unit_one/units_out%length, pp(1)), &
+                                            units_from_atomic(unit_one/units_out%length, pp(2)), &
+                                            units_from_atomic(units_out%energy, Ekin(ip,1,ie)), &
+                                            arpes(ip,1,ie)
+          end do
+          
+      end select
       
-      do ie = 1, ll(3) 
-        write(iunit, '(es19.12,2x,es19.12,2x,es19.12,2x,es19.12,2x,es19.12,2x,es19.12)')   &
-                                        units_from_atomic(unit_one/units_out%length, length),&
-                                        units_from_atomic(unit_one/units_out%length, pp(1)), &
-                                        units_from_atomic(unit_one/units_out%length, pp(2)), &
-                                        units_from_atomic(units_out%energy, Ekin(ip,1,ie)), &
-                                        arpes(ip,1,ie)
-      end do      
+
       write(iunit, *)
       
        
@@ -190,7 +210,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine pes_out_velocity_map_cut(pesK, file, ll, dim, pol, dir, integrate, pos, Lk, pmesh)
+  subroutine pes_out_velocity_map_cut(namespace, pesK, file, ll, dim, pol, dir, integrate, pos, Lk, pmesh)
+    type(namespace_t), intent(in) :: namespace
     FLOAT,             intent(in) :: pesK(:,:,:)
     character(len=*),  intent(in) :: file
     integer,           intent(in) :: ll(:)
@@ -219,7 +240,7 @@ contains
 
     PUSH_SUB(pes_out_velocity_map_cut)
 
-    iunit = io_open(file, action='write')
+    iunit = io_open(file, namespace, action='write')
 
 
 
@@ -325,7 +346,7 @@ contains
         print *,rotation(3,:)
       end if
 
-      call pes_out_interpolator_init(pesK, Lk, ll, dim, cube_f, interp, pmesh)
+      call pes_out_interpolator_init(namespace, pesK, Lk, ll, dim, cube_f, interp, pmesh)
 
       ntodo = product(ll(1:2))
       idone = 0
@@ -439,6 +460,8 @@ contains
 
     call io_close(iunit)
 
+    call pes_out_interpolator_end(cube_f, interp)
+
     SAFE_DEALLOCATE_A(idx)
     SAFE_DEALLOCATE_A(Lk_)
 
@@ -452,7 +475,8 @@ contains
   !!  qshep interpolator opbject (interp).
   !
   ! ---------------------------------------------------------
-  subroutine pes_out_interpolator_init(pesK, Lk, ll, dim, cube_f, interp, pmesh)
+  subroutine pes_out_interpolator_init(namespace, pesK, Lk, ll, dim, cube_f, interp, pmesh)
+    type(namespace_t), intent(in)  :: namespace
     FLOAT,           intent(in)    :: pesK(:,:,:)
     FLOAT,           intent(in)    :: Lk(:,:)
     integer,         intent(in)    :: ll(:)
@@ -476,7 +500,7 @@ contains
     !check dim
     if (dim  <  2 .or. dim > 3) then
       message(1) = "This interpolator works only for 2 <= dim <= 3."
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
 
     SAFE_ALLOCATE(cube_f(1:np))
@@ -564,12 +588,6 @@ contains
 
     POP_SUB(pes_out_interpolator_end)
   end subroutine pes_out_interpolator_end
-
-
-
-
-
-
 
 end module pes_out_oct_m
 

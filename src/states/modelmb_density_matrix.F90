@@ -32,10 +32,11 @@ module modelmb_density_matrix_oct_m
   use messages_oct_m
   use modelmb_1part_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use par_vec_oct_m
   use parser_oct_m
   use profiling_oct_m
-  use states_oct_m
+  use states_elec_oct_m
 
   implicit none
 
@@ -59,9 +60,10 @@ module modelmb_density_matrix_oct_m
 
 contains
 
-  subroutine modelmb_density_matrix_init(dir, st, denmat)
+  subroutine modelmb_density_matrix_init(dir, namespace, st, denmat)
     character(len=*),       intent(in)  :: dir
-    type(states_t),         intent(in)  :: st
+    type(namespace_t),      intent(in)  :: namespace
+    type(states_elec_t),    intent(in)  :: st
     type(modelmb_denmat_t), intent(out) :: denmat
 
     integer :: ncols, ipart
@@ -97,22 +99,22 @@ contains
     !%
     !%End
    
-    call messages_obsolete_variable('DensityMatrixtoCalc', 'DensitytoCalc')
-    call messages_obsolete_variable('DensitiestoCalc', 'DensitytoCalc')
+    call messages_obsolete_variable(namespace, 'DensityMatrixtoCalc', 'DensitytoCalc')
+    call messages_obsolete_variable(namespace, 'DensitiestoCalc', 'DensitytoCalc')
 
-    if(parse_block('DensitytoCalc', blk) /= 0) then
+    if(parse_block(namespace, 'DensitytoCalc', blk) /= 0) then
      message(1) = 'To print out density (matrices), you must specify the DensitytoCalc block in input'
-     call messages_fatal(1)
+     call messages_fatal(1, namespace=namespace)
     end if
    
     ncols = parse_block_cols(blk, 0)
     if(ncols /= 3 ) then
-      call messages_input_error("DensitytoCalc")
+      call messages_input_error(namespace, "DensitytoCalc")
     end if
     denmat%ndensmat_to_calculate=parse_block_n(blk)
     if (denmat%ndensmat_to_calculate < 0 .or. &
         denmat%ndensmat_to_calculate > st%modelmbparticles%nparticle) then
-      call messages_input_error("DensitytoCalc")
+      call messages_input_error(namespace, "DensitytoCalc")
     end if
 
     SAFE_ALLOCATE(denmat%labels(1:denmat%ndensmat_to_calculate))

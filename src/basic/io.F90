@@ -24,6 +24,7 @@ module io_oct_m
   use loct_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use parser_oct_m
 
   implicit none
@@ -48,11 +49,18 @@ module io_oct_m
     iopar_find_line,     &
     io_skip_header,      &
     io_file_exists,      &
-    io_dir_exists
+    io_dir_exists,       &
+    io_get_open_count,   &
+    io_get_close_count,  &
+    io_incr_open_count,  &
+    io_incr_close_count, &
+    io_incr_counters
 
   integer, parameter :: min_lun=10, max_lun=99
   logical            :: lun_is_free(min_lun:max_lun)
   character(len=MAX_PATH_LEN) :: work_dir    !< name of the output directory
+  integer(8), save :: io_open_count
+  integer(8), save :: io_close_count
 
 contains
 
@@ -61,12 +69,15 @@ contains
   !! will not try to read anything from the inp file, but set everything
   !! to the default values.
   subroutine io_init(defaults)
-    logical, optional, intent(in) :: defaults
+    logical, optional, intent(in)    :: defaults
 
     character(len=MAX_PATH_LEN) :: filename
     character(len=256) :: node_hook
     logical :: file_exists, mpi_debug_hook
     integer :: sec, usec
+
+    io_open_count = 0
+    io_close_count = 0
 
     ! cannot use push/pop before initializing io
 
@@ -94,7 +105,7 @@ contains
     !% be changed by setting this variable: if you give it a name (other than "-")
     !% the output stream is printed in that file instead.
     !%End
-    call parse_variable('stdout', '-', filename)
+    call parse_variable(global_namespace, 'stdout', '-', filename)
     stdout = 6
     if(trim(filename) /= '-') then
       close(stdout)
@@ -110,7 +121,7 @@ contains
     !% be changed by setting this variable: if you give it a name (other than "-")
     !% the output stream is printed in that file instead.
     !%End
-    call parse_variable('stderr', '-', filename)
+    call parse_variable(global_namespace, 'stderr', '-', filename)
     stderr = 0
     if(trim(filename) /= '-') then
       close(stderr)
@@ -144,7 +155,7 @@ contains
     !% Furthermore, some of the debug information (see <tt>Debug</tt>) is also written to <tt>WorkDir</tt> and
     !% the non-absolute paths defined in <tt>OutputIterDir</tt> are relative to <tt>WorkDir</tt>.
     !%End
-    call parse_variable('WorkDir', '.', work_dir)
+    call parse_variable(global_namespace, 'WorkDir', '.', work_dir)
     ! ... and if necessary create workdir (will not harm if work_dir is already there)
     if (work_dir /= '.') call loct_mkdir(trim(work_dir))
 
@@ -157,7 +168,7 @@ contains
     !% flushed to <tt>messages.stdout</tt> and <tt>messages.stderr</tt>, if this variable is
     !% set to yes.
     !%End
-    call parse_variable('FlushMessages', .false., flush_messages)
+    call parse_variable(global_namespace, 'FlushMessages', .false., flush_messages)
 
     ! delete files so that we start writing to empty ones
     if(flush_messages) then
@@ -166,16 +177,13 @@ contains
     end if
 
     if(debug%info) then
-      call io_mkdir('debug')
+      call io_mkdir('debug', global_namespace)
     end if
 
     if(debug%trace_file) then
       !wipe out debug trace files from previous runs to start fresh rather than appending
       call delete_debug_trace()
     end if
-
-    ! create static directory
-    call io_mkdir(STATIC_DIR)
 
     if(debug%info) then
       !%Variable MPIDebugHook
@@ -184,17 +192,17 @@ contains
       !%Section Execution::Debug
       !%Description
       !% When debugging the code in parallel it is usually difficult to find the origin
-      !% of race conditions that appear in MPI communications. This variable introduces 
-      !% a facility to control separate MPI processes. If set to yes, all nodes will 
-      !% start up, but will get trapped in an endless loop. In every cycle of the loop 
-      !% each node is sleeping for one second and is then checking if a file with the 
-      !% name <tt>node_hook.xxx</tt> (where <tt>xxx</tt> denotes the node number) exists. A given node can 
-      !% only be released from the loop if the corresponding file is created. This allows 
+      !% of race conditions that appear in MPI communications. This variable introduces
+      !% a facility to control separate MPI processes. If set to yes, all nodes will
+      !% start up, but will get trapped in an endless loop. In every cycle of the loop
+      !% each node is sleeping for one second and is then checking if a file with the
+      !% name <tt>node_hook.xxx</tt> (where <tt>xxx</tt> denotes the node number) exists. A given node can
+      !% only be released from the loop if the corresponding file is created. This allows
       !% to selectively run, <i>e.g.</i>, a compute node first followed by the master node. Or, by
       !% reversing the file creation of the node hooks, to run the master first followed
       !% by a compute node.
       !%End
-      call parse_variable('MPIDebugHook', .false., mpi_debug_hook)
+      call parse_variable(global_namespace, 'MPIDebugHook', .false., mpi_debug_hook)
       if (mpi_debug_hook) then
         call loct_gettimeofday(sec, usec)
         call epoch_time_diff(sec,usec)
@@ -227,7 +235,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine io_end()
-    
+
     ! no PUSH/POP, because the POP would write to stderr after it was closed.
 
     if(stderr /= 0) call io_close(stderr)
@@ -263,7 +271,6 @@ contains
     end do
 
     POP_SUB(io_assign)
-
   end subroutine io_assign
 
 
@@ -277,32 +284,59 @@ contains
       lun_is_free(lun) = .true.
 
     POP_SUB(io_free)
-
   end subroutine io_free
 
 
   ! ---------------------------------------------------------
-  character(len=MAX_PATH_LEN) function io_workpath(path) result(wpath)
-    character(len=*),  intent(in) :: path
+  character(len=MAX_PATH_LEN) function io_workpath(path, namespace) result(wpath)
+    character(len=*),            intent(in) :: path
+    type(namespace_t), optional, intent(in) :: namespace
+
+    logical :: absolute_path
+    integer :: total_len
 
     PUSH_SUB(io_workpath)
 
-    if(path(1:1)  ==  '/') then
+    ! use the logical to avoid problems with the string length
+    absolute_path = .false.
+    if (len_trim(path) > 0) then
+      absolute_path = path(1:1) == '/'
+    end if
+
+    ! check that the path is not longer than the maximum allowed
+    total_len = len_trim(path)
+    if (.not. absolute_path) then
+      total_len = total_len + len_trim(work_dir) + 1
+      if (present(namespace)) then
+        if (namespace%len() > 0) total_len = total_len + namespace%len() + 1
+      end if
+    end if
+    if (total_len > MAX_PATH_LEN) then
+      write(message(1),"(A,I5)") "Path is longer than the maximum path length of ", MAX_PATH_LEN
+      call messages_fatal(1, namespace=namespace)
+    end if
+
+    if (absolute_path) then
       ! we do not change absolute path names
       wpath = trim(path)
     else
-      write(wpath, '(3a)') trim(work_dir), "/", trim(path)
+      wpath = trim(work_dir)
+      if (present(namespace)) then
+        ! insert namespace into path
+        if (namespace%len() > 0) wpath = trim(wpath) + "/" + trim(namespace%get('/'))
+      end if
+      wpath = trim(wpath) + "/" + trim(path)
     end if
 
     POP_SUB(io_workpath)
-
   end function io_workpath
 
 
   ! ---------------------------------------------------------
-  subroutine io_mkdir(fname, parents)
-    character(len=*),  intent(in) :: fname
-    logical, optional, intent(in) :: parents
+  subroutine io_mkdir(fname, namespace, parents)
+    character(len=*),            intent(in) :: fname
+    type(namespace_t), optional, intent(in) :: namespace
+    logical,           optional, intent(in) :: parents
 
     logical :: parents_
     integer :: last_slash, pos, length
@@ -313,13 +347,14 @@ contains
     if (present(parents)) parents_ = parents
 
     if (.not. parents_) then
-      call loct_mkdir(trim(io_workpath(fname)))
+      call loct_mkdir(trim(io_workpath("", namespace=namespace)))
+      call loct_mkdir(trim(io_workpath(fname, namespace=namespace)))
     else
       last_slash = max(index(fname, "/", .true.), len_trim(fname))
       pos = 1
       length = index(fname, '/') - 1
       do while (pos < last_slash)
-        call loct_mkdir(trim(io_workpath(fname(1:pos+length-1))))
+        call loct_mkdir(trim(io_workpath(fname(1:pos+length-1), namespace=namespace)))
         pos = pos + length + 1
         length = index(fname(pos:), "/") - 1
         if (length < 1) length = len_trim(fname(pos:))
@@ -332,20 +367,22 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine io_rm(fname)
-    character(len=*),  intent(in) :: fname
+  subroutine io_rm(fname, namespace)
+    character(len=*),            intent(in) :: fname
+    type(namespace_t), optional, intent(in) :: namespace
 
     PUSH_SUB(io_rm)
 
-    call loct_rm(trim(io_workpath(fname)))
+    call loct_rm(trim(io_workpath(fname, namespace=namespace)))
 
     POP_SUB(io_rm)
   end subroutine io_rm
 
-  
+
   ! ---------------------------------------------------------
-  integer function io_open(file, action, status, form, position, die, recl, grp) result(iunit)
-    character(len=*), intent(in) :: file, action
+  integer function io_open(file, namespace, action, status, form, position, die, recl, grp) result(iunit)
+    character(len=*), intent(in)           :: file, action
+    type(namespace_t),intent(in), optional :: namespace
     character(len=*), intent(in), optional :: status, form, position
     logical,          intent(in), optional :: die
     integer,          intent(in), optional :: recl
@@ -389,7 +426,7 @@ contains
         return
       end if
 
-      file_ = io_workpath(file)
+      file_ = io_workpath(file, namespace=namespace)
 
       if(present(recl)) then
         open(unit=iunit, file=trim(file_), status=trim(status_), form=trim(form_), &
@@ -398,7 +435,9 @@ contains
         open(unit=iunit, file=trim(file_), status=trim(status_), form=trim(form_), &
           action=trim(action), position=trim(position_), iostat=iostat)
       end if
-      
+
+      io_open_count = io_open_count + 1
+
       if(iostat /= 0) then
         call io_free(iunit)
         iunit = -1
@@ -418,7 +457,6 @@ contains
 #endif
 
     POP_SUB(io_open)
-    
   end function io_open
 
 
@@ -441,6 +479,7 @@ contains
 
     if(mpi_grp_is_root(grp_)) then
       close(iunit)
+      io_close_count = io_close_count + 1
       call io_free(iunit)
       iunit = -1
     end if
@@ -452,7 +491,6 @@ contains
 #endif
 
     POP_SUB(io_close)
-
   end subroutine io_close
 
 
@@ -485,7 +523,6 @@ contains
     write(iunit,'(a)') '********           ********'
 
     POP_SUB(io_status)
-
   end subroutine io_status
 
 
@@ -518,14 +555,14 @@ contains
         end if
       end if
     end do
-    
+
     if(flush_messages) then
       close(iunit_out)
     end if
 
     call io_close(iunit)
-    POP_SUB(io_dump_file)
 
+    POP_SUB(io_dump_file)
   end subroutine io_dump_file
 
 
@@ -548,14 +585,14 @@ contains
     end if
 
     POP_SUB(io_get_extension)
-
   end function io_get_extension
 
 
   ! ---------------------------------------------------------
-  !> check if debug mode or message flushing should be enabled or 
+  !> check if debug mode or message flushing should be enabled or
   !! disabled on the fly
-  subroutine io_debug_on_the_fly()
+  subroutine io_debug_on_the_fly(namespace)
+    type(namespace_t), intent(in) :: namespace
 
     PUSH_SUB(io_debug_on_the_fly)
 
@@ -565,7 +602,7 @@ contains
         call debug_enable(debug)
         ! this call does not hurt if the directory is already there
         ! but is otherwise required
-        call io_mkdir('debug')
+        call io_mkdir('debug', namespace)
         ! we have been notified by the user, so we can cleanup the file
         call loct_rm('enable_debug_mode')
         ! artificially increase sub stack to avoid underflow
@@ -592,10 +629,9 @@ contains
     end if
 
     POP_SUB(io_debug_on_the_fly)
-
   end subroutine io_debug_on_the_fly
 
-  
+
   !> Returns true if a file with name 'filename' exists
   !! and issues a reminder.
   ! ---------------------------------------------------------
@@ -617,12 +653,13 @@ contains
 
   !> Returns true if a dir with name 'dir' exists
   ! ---------------------------------------------------------
-  logical function io_dir_exists(dir)
+  logical function io_dir_exists(dir, namespace)
     character(len=*), intent(in)  :: dir
+    type(namespace_t),   intent(in) :: namespace
 
     PUSH_SUB(io_dir_exists)
 
-    io_dir_exists = loct_dir_exists(trim(io_workpath(dir)))
+    io_dir_exists = loct_dir_exists(trim(io_workpath(dir, namespace)))
 
     POP_SUB(io_dir_exists)
   end function io_dir_exists
@@ -674,7 +711,6 @@ contains
     end if
 
     POP_SUB(iopar_backspace)
-
   end subroutine iopar_backspace
 
 
@@ -700,7 +736,7 @@ contains
 #if defined(HAVE_MPI)
     if(grp%size > 1) then
       call MPI_Bcast(ierr, 1, MPI_INTEGER, 0, grp%comm, mpi_err)
-      ! MPI_Bcast is not a synchronization point, so we add a barrier 
+      ! MPI_Bcast is not a synchronization point, so we add a barrier
       ! to make sure the calls are properly synchronized.
       call MPI_Barrier(grp%comm, mpi_err)
     end if
@@ -726,11 +762,48 @@ contains
     backspace(iunit)
 
     POP_SUB(io_skip_header)
-
   end subroutine io_skip_header
 
+  ! ---------------------------------------------------------
+  integer(8) pure function io_get_open_count() result(count)
+    
+    count = io_open_count
   
-  
+  end function io_get_open_count
+
+  ! ---------------------------------------------------------
+  integer(8) pure function io_get_close_count() result(count)
+
+    count = io_close_count
+
+  end function io_get_close_count
+
+  ! ---------------------------------------------------------
+  subroutine io_incr_open_count()
+
+    io_open_count = io_open_count + 1
+
+  end subroutine io_incr_open_count
+
+  ! ---------------------------------------------------------
+  subroutine io_incr_close_count()
+
+    io_close_count = io_close_count + 1
+
+  end subroutine io_incr_close_count
+
+  ! ---------------------------------------------------------
+  subroutine io_incr_counters(iio)
+    integer, intent(in) :: iio
+
+    integer :: open_count
+   
+    open_count = int(iio/100)
+    io_open_count = io_open_count + open_count
+    io_close_count = io_close_count + iio - open_count * 100
+
+  end subroutine io_incr_counters
+
 end module io_oct_m
 
 !! Local Variables:

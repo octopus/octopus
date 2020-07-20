@@ -4,7 +4,9 @@ BoxShape = parallelepiped
 ExperimentalFeatures = yes
 
 EigenSolver = rmmdiis
-ConvRelDens = 1.0e-7
+ConvRelDens = 5.0e-7
+EigensolverTolerance = 5e-8
+MaximumIter = 200
 
 a = 7.8809
 %Species
@@ -31,7 +33,6 @@ DFTULevel = dft_u_acbn0
 Spacing = 0.5
 
 FromScratch = yes
-ParDomains = no
 
 SpinComponents = polarized
 GuessMagnetDensity = user_defined
@@ -41,8 +42,6 @@ GuessMagnetDensity = user_defined
  0.0
  0.0
 %
-
-LCAOStart= lcao_states
 
 %KPointsGrid
 2 | 2 | 1

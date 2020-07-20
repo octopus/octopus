@@ -19,11 +19,11 @@
 
 
 ! ---------------------------------------------------------
-subroutine X(fft_forward)(fft, in, out, norm)
-    type(fft_t),     intent(in)  :: fft
-    R_TYPE,          intent(inout)  :: in(:,:,:)
-    CMPLX,           intent(out) :: out(:,:,:)
-    FLOAT, optional, intent(out) :: norm 
+subroutine X(fft_forward_3d)(fft, in, out, norm)
+    type(fft_t),     intent(in)    :: fft
+    R_TYPE,          intent(inout) :: in(:,:,:)
+    CMPLX,           intent(out)   :: out(:,:,:)
+    FLOAT, optional, intent(out)   :: norm 
 
     integer :: ii, jj, kk, slot, n1, n2, n3
     type(profile_t), save :: prof_fw
@@ -32,7 +32,7 @@ subroutine X(fft_forward)(fft, in, out, norm)
     type(accel_mem_t) :: rsbuffer, fsbuffer
 #endif
 
-    PUSH_SUB(X(fft_forward))
+    PUSH_SUB(X(fft_forward_3d))
 
     call profiling_in(prof_fw, "FFT_FORWARD")
 
@@ -57,17 +57,13 @@ subroutine X(fft_forward)(fft, in, out, norm)
 #endif
       end if
     case (FFTLIB_NFFT)
-#ifdef HAVE_NFFT
       call X(nfft_forward)(fft_array(slot)%nfft, in(:,:,:), out(:,:,:))
       if(present(norm)) norm = fft_array(slot)%nfft%norm
-#endif
+
     case (FFTLIB_PNFFT)
-#ifdef HAVE_PNFFT
       call X(pnfft_forward)(fft_array(slot)%pnfft, in(:,:,:), out(:,:,:))
       if(present(norm)) norm = fft_array(slot)%pnfft%norm
-#else
-      if(present(norm)) norm = M_ZERO
-#endif
+
     case (FFTLIB_PFFT)
       if (all(fft_array(slot)%rs_n /= 0)) then
         ASSERT(fft_array(slot)%X(rs_data)(1,1,1) == in(1,1,1))
@@ -127,8 +123,8 @@ subroutine X(fft_forward)(fft, in, out, norm)
 
     call profiling_out(prof_fw)
 
-    POP_SUB(X(fft_forward))
-  end subroutine X(fft_forward)
+    POP_SUB(X(fft_forward_3d))
+  end subroutine X(fft_forward_3d)
 
 ! ---------------------------------------------------------
   subroutine X(fft_forward_cl)(fft, in, out)
@@ -152,7 +148,7 @@ subroutine X(fft_forward)(fft, in, out, norm)
     ASSERT(fft_array(slot)%library == FFTLIB_ACCEL)
 
 #ifdef HAVE_CUDA
-    call cuda_fft_execute_d2z(fft_array(slot)%cuda_plan_fw, in%cuda_ptr, out%cuda_ptr)
+    call cuda_fft_execute_d2z(fft_array(slot)%cuda_plan_fw, in%mem, out%mem)
     call accel_finish()
 #endif
     
@@ -190,12 +186,12 @@ subroutine X(fft_forward)(fft, in, out, norm)
 
   ! ---------------------------------------------------------
 
-  subroutine X(fft_forward1)(fft, in, out)
-    type(fft_t), intent(in)  :: fft
-    R_TYPE,      intent(inout)  :: in(:)
-    CMPLX,       intent(out) :: out(:)
+  subroutine X(fft_forward_1d)(fft, in, out)
+    type(fft_t), intent(in)    :: fft
+    R_TYPE,      intent(inout) :: in(:)
+    CMPLX,       intent(out)   :: out(:)
 
-    PUSH_SUB(X(fft_forward1))
+    PUSH_SUB(X(fft_forward_1d))
 
 #ifdef R_TREAL
     call fftw_execute_dft_r2c(fft_array(fft%slot)%planf, in, out)
@@ -204,15 +200,15 @@ subroutine X(fft_forward)(fft, in, out, norm)
 #endif
     call fft_operation_count(fft)
 
-    POP_SUB(X(fft_forward1))
-  end subroutine X(fft_forward1)
+    POP_SUB(X(fft_forward_1d))
+  end subroutine X(fft_forward_1d)
 
   ! ---------------------------------------------------------
-  subroutine X(fft_backward)(fft, in, out, norm)
-    type(fft_t), intent(in)  :: fft
-    CMPLX,       intent(inout)  :: in(:,:,:)
-    R_TYPE,      intent(out) :: out(:,:,:)
-    FLOAT, optional, intent(out) :: norm 
+  subroutine X(fft_backward_3d)(fft, in, out, norm)
+    type(fft_t),     intent(in)    :: fft
+    CMPLX,           intent(inout) :: in(:,:,:)
+    R_TYPE,          intent(out)   :: out(:,:,:)
+    FLOAT, optional, intent(out)   :: norm 
     
     integer :: ii, jj, kk, slot
     FLOAT :: scaling_factor
@@ -223,7 +219,7 @@ subroutine X(fft_forward)(fft, in, out, norm)
     type(accel_mem_t) :: rsbuffer, fsbuffer
 #endif
 
-    PUSH_SUB(X(fft_backward))
+    PUSH_SUB(X(fft_backward_3d))
     
     call profiling_in(prof_bw,"FFT_BACKWARD")
 
@@ -239,18 +235,14 @@ subroutine X(fft_forward)(fft, in, out, norm)
 #endif
     case (FFTLIB_NFFT)
       scale = .false. ! the result is already scaled
-#ifdef HAVE_NFFT    
       call X(nfft_backward)(fft_array(slot)%nfft, in(:,:,:), out(:,:,:))
       if(present(norm)) norm = fft_array(slot)%nfft%norm
-#else
-      if(present(norm)) norm = M_ZERO
-#endif
+
     case (FFTLIB_PNFFT)
       scale = .false. ! the result is already scaled
-#ifdef HAVE_PNFFT    
       call X(pnfft_backward)(fft_array(slot)%pnfft, in(:,:,:), out(:,:,:))
       if(present(norm)) norm = fft_array(slot)%pnfft%norm
-#endif
+
     case (FFTLIB_PFFT)
       if (all(fft_array(slot)%fs_n /= 0)) then
         ASSERT(fft_array(slot)%fs_data(1,1,1) == in(1,1,1))
@@ -314,8 +306,8 @@ subroutine X(fft_forward)(fft, in, out, norm)
 
     call profiling_out(prof_bw)
 
-    POP_SUB(X(fft_backward))
-  end subroutine X(fft_backward)
+    POP_SUB(X(fft_backward_3d))
+  end subroutine X(fft_backward_3d)
 
   ! ---------------------------------------------------------
 
@@ -340,7 +332,7 @@ subroutine X(fft_forward)(fft, in, out, norm)
     ASSERT(fft_array(slot)%library == FFTLIB_ACCEL)
 
 #ifdef HAVE_CUDA
-    call cuda_fft_execute_z2d(fft_array(slot)%cuda_plan_bw, in%cuda_ptr, out%cuda_ptr)
+    call cuda_fft_execute_z2d(fft_array(slot)%cuda_plan_bw, in%mem, out%mem)
     call accel_finish()
 #endif
     
@@ -376,12 +368,12 @@ subroutine X(fft_forward)(fft, in, out, norm)
   end subroutine X(fft_backward_cl)
 
   ! ---------------------------------------------------------
-  subroutine X(fft_backward1)(fft, in, out)
-    type(fft_t), intent(in)  :: fft
-    CMPLX,       intent(inout)  :: in(:)
-    R_TYPE,      intent(out) :: out(:)
+  subroutine X(fft_backward_1d)(fft, in, out)
+    type(fft_t), intent(in)    :: fft
+    CMPLX,       intent(inout) :: in(:)
+    R_TYPE,      intent(out)   :: out(:)
  
-    PUSH_SUB(X(fft_backward1))
+    PUSH_SUB(X(fft_backward_1d))
     
 #ifdef R_TREAL
     call fftw_execute_dft_c2r(fft_array(fft%slot)%planb, in, out)
@@ -394,8 +386,8 @@ subroutine X(fft_forward)(fft, in, out, norm)
     ! multiply by 1/(N1*N2*N2)
     call lalg_scal(fft_array(fft%slot)%rs_n_global(1), R_TOTYPE(M_ONE) / fft_array(fft%slot)%rs_n_global(1), out)
 
-    POP_SUB(X(fft_backward1))
-  end subroutine X(fft_backward1)
+    POP_SUB(X(fft_backward_1d))
+  end subroutine X(fft_backward_1d)
 
 !! Local Variables:
 !! mode: f90

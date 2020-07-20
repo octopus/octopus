@@ -20,7 +20,6 @@
 
 module modelmb_exchange_syms_oct_m
   use batch_oct_m
-  use geometry_oct_m
   use global_oct_m
   use grid_oct_m
   use index_oct_m
@@ -29,7 +28,8 @@ module modelmb_exchange_syms_oct_m
   use modelmb_particles_oct_m
   use permutations_oct_m
   use profiling_oct_m
-  use states_oct_m
+  use states_abst_oct_m
+  use states_elec_oct_m
   use young_oct_m
 
   implicit none
@@ -53,17 +53,16 @@ contains
 #include "modelmb_exchange_syms_inc.F90"
 #include "undef.F90"
 
-subroutine modelmb_sym_all_states (gr, st, geo)
-  type(states_t),         intent(inout) :: st
-  type(grid_t),           intent(inout) :: gr
-  type(geometry_t),       intent(in)    :: geo
+subroutine modelmb_sym_all_states (gr, st)
+  type(states_elec_t),    intent(inout) :: st
+  type(grid_t),           intent(in)    :: gr
 
   PUSH_SUB(modelmb_sym_all_states)
 
   if (states_are_complex(st)) then
-    call zmodelmb_sym_all_states (gr, st, geo)
+    call zmodelmb_sym_all_states (gr, st)
   else
-    call dmodelmb_sym_all_states (gr, st, geo)
+    call dmodelmb_sym_all_states (gr, st)
   end if
 
   POP_SUB(modelmb_sym_all_states)

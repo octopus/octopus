@@ -30,11 +30,13 @@ module hardware_oct_m
     hardware_end
 
   type cache_t
+    ! Components are public by default
     integer :: size
     integer :: line_size
   end type cache_t
 
-  type hardware_t 
+  type hardware_t
+    ! Components are public by default
     type(cache_t) :: l1
     type(cache_t) :: l2
     integer :: dblock_size

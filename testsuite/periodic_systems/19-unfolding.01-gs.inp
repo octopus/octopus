@@ -1,0 +1,47 @@
+FromScratch=yes
+
+CalculationMode = gs
+
+PeriodicDimensions = 3
+
+a = 10.2
+
+BoxShape = parallelepiped
+%LatticeParameters
+ a | a | a
+ 90 | 90 | 90
+%
+Spacing = a/14
+
+%ReducedCoordinates
+  "Si" |   0.0       | 0.0       | 0.0 
+  "Si" |   1/2       | 1/2       | 0.0
+  "Si" |   1/2       | 0.0       | 1/2
+  "Si" |   0.0       | 1/2       | 1/2 
+  "Si" |   1/4       | 1/4       | 1/4 
+  "Si" |   1/4 + 1/2 | 1/4 + 1/2 | 1/4
+  "Si" |   1/4 + 1/2 | 1/4       | 1/4 + 1/2
+  "Si" |   1/4       | 1/4 + 1/2 | 1/4 + 1/2 
+%
+
+%KPointsGrid
+ 4 | 4 | 4
+ 1/2 | 1/2 | 1/2
+%
+
+KPointsUseSymmetries = yes
+ExperimentalFeatures = yes
+SymmetrizeDensity = yes
+
+ExtraStates = 1
+ConvRelDens = 1e-8
+EigensolverTolerance = 1e-9
+EigensolverMaxIter = 50
+
+Output = geometry + dos
+OutputFormat = xyz
+
+FilterPotentials = filter_none
+
+MixField = density
+StatesPack = yes

@@ -64,7 +64,7 @@
 !        integer, intent(in) :: nrc
 !        real(X), intent(in) :: x(n), y(n)
 !        type(spline_t), intent(out) :: spl
-!     end subroutine spline_fit8
+!     end subroutine spline_fit
 !
 !     (X may be 4 or eight, for single or double precision)
 !
@@ -233,26 +233,15 @@ module splines_oct_m
 
   !> the basic spline datatype
   type spline_t
+    private
     real(8)     :: x_limit(2)
     type(c_ptr) :: spl, acc
   end type spline_t
 
   !> Both the filling of the function, and the retrieval of the values
   !! may be done using single- or double-precision values.
-  interface spline_fit
-    module procedure spline_fit4
-    module procedure spline_fit8
-  end interface spline_fit
-
-  interface spline_eval
-    module procedure spline_eval4
-    module procedure spline_eval8
-  end interface spline_eval
-
   interface spline_eval_vec
-    module procedure spline_eval4_array
     module procedure spline_eval8_array
-    module procedure spline_evalc_array
     module procedure spline_evalz_array
   end interface spline_eval_vec
 
@@ -291,7 +280,7 @@ module splines_oct_m
       type(c_ptr), intent(inout) :: spl, acc
     end subroutine oct_spline_end
 
-    subroutine oct_spline_fit(nrc, x, y, spl, acc, lib)
+    subroutine oct_spline_fit(nrc, x, y, spl, acc)
       use iso_c_binding
       implicit none
       integer,     intent(in) :: nrc
@@ -299,7 +288,6 @@ module splines_oct_m
       real(8),     intent(in) :: y
       type(c_ptr), intent(inout) :: spl
       type(c_ptr), intent(inout) :: acc
-      integer,     intent(in)    :: lib
     end subroutine oct_spline_fit
 
     real(8) pure function oct_spline_eval(x, spl, acc)
@@ -319,15 +307,6 @@ module splines_oct_m
       type(c_ptr), intent(in) :: acc  
     end subroutine oct_spline_eval_array
 
-    pure subroutine oct_spline_eval_array4(nn, xf, spl, acc)
-      use iso_c_binding
-
-      integer,     intent(in)    :: nn
-      real(4),     intent(inout) :: xf
-      type(c_ptr), intent(in)    :: spl
-      type(c_ptr), intent(in)    :: acc  
-    end subroutine oct_spline_eval_array4
-
     pure subroutine oct_spline_eval_arrayz(nn, xf, spl, acc)
       use iso_c_binding
 
@@ -336,15 +315,6 @@ module splines_oct_m
       type(c_ptr), intent(in) :: spl
       type(c_ptr), intent(in) :: acc  
     end subroutine oct_spline_eval_arrayz
-
-    pure subroutine oct_spline_eval_arrayc(nn, xf, spl, acc)
-      use iso_c_binding
-
-      integer,     intent(in)    :: nn
-      complex(4),  intent(inout) :: xf
-      type(c_ptr), intent(in)    :: spl
-      type(c_ptr), intent(in)    :: acc  
-    end subroutine oct_spline_eval_arrayc
 
     real(8) pure function oct_spline_eval_der(x, spl, acc)
       use iso_c_binding
@@ -402,29 +372,7 @@ module splines_oct_m
     end function oct_spline_eval_integ_full
   end interface
 
-  integer, save :: library = 0
-
 contains
-
-  subroutine spline_init_global()
-    PUSH_SUB(spline_init_global)
-
-    !%Variable Splines
-    !%Type integer
-    !%Default gsl
-    !%Section Execution
-    !%Description
-    !% Selects the implementation of the spline interpolation.
-    !%Option gsl 1
-    !% The GNU scientific library. 
-    !%Option native 2
-    !% (experimental) Octopus own implementation. New, untested, and
-    !% hopefully faster.
-    !%End
-    call parse_variable('Splines', OPTION__SPLINES__GSL, library)
-    
-    POP_SUB(spline_init_global)
-  end subroutine spline_init_global
 
   !------------------------------------------------------------
   subroutine spline_init_0(spl)
@@ -526,92 +474,27 @@ contains
 
 
   !------------------------------------------------------------
-  subroutine spline_copy(splout, splin)
-    type(spline_t), intent(inout) :: splout
-    type(spline_t), intent(in)    :: splin
-
-    integer :: npoints
-    real(8), allocatable :: x(:), y(:)
-
-    PUSH_SUB(spline_copy)
-
-    npoints = oct_spline_npoints(splin%spl, splin%acc)
-
-    SAFE_ALLOCATE( x(1:npoints))
-    SAFE_ALLOCATE( y(1:npoints))
-
-    call oct_spline_x(splin%spl, splin%acc, x(1))
-    call oct_spline_y(splin%spl, splin%acc, y(1))
-
-    call spline_fit(npoints, x, y, splout)
-
-    SAFE_DEALLOCATE_A(x)
-    SAFE_DEALLOCATE_A(y)
-
-    POP_SUB(spline_copy)
-  end subroutine spline_copy
-
-
-  !------------------------------------------------------------
-  subroutine spline_fit8(nrc, rofi, ffit, spl)
+  subroutine spline_fit(nrc, rofi, ffit, spl)
     integer,        intent(in)    :: nrc
     real(8),        intent(in)    :: rofi(:)
     real(8),        intent(in)    :: ffit(:)
     type(spline_t), intent(inout) :: spl
 
     !No PUSH SUB, called too often
-
-    if(library == 0) call spline_init_global()
     
     spl%x_limit(1) = rofi(1)
     spl%x_limit(2) = rofi(nrc)
-    call oct_spline_fit(nrc, rofi(1), ffit(1), spl%spl, spl%acc, library)
+    call oct_spline_fit(nrc, rofi(1), ffit(1), spl%spl, spl%acc)
 
-  end subroutine spline_fit8
-
-
-  !------------------------------------------------------------
-  subroutine spline_fit4(nrc, rofi, ffit, spl)
-    integer,        intent(in)    :: nrc
-    real(4),        intent(in)    :: rofi(:)
-    real(4),        intent(in)    :: ffit(:)
-    type(spline_t), intent(inout) :: spl
-
-    real(8), allocatable :: rofi8(:), ffit8(:)
-
-    PUSH_SUB(spline_fit4)
-
-    SAFE_ALLOCATE(rofi8(1:nrc))
-    SAFE_ALLOCATE(ffit8(1:nrc))
-
-    rofi8 = real(rofi, kind=8)
-    ffit8 = real(ffit, kind=8)
-
-    call spline_fit8(nrc, rofi8, ffit8, spl)
-
-    SAFE_DEALLOCATE_A(rofi8)
-    SAFE_DEALLOCATE_A(ffit8)
-
-    POP_SUB(spline_fit4)
-  end subroutine spline_fit4
-
+  end subroutine spline_fit
 
   !------------------------------------------------------------
-  real(8) pure function spline_eval8(spl, x)
+  real(8) pure function spline_eval(spl, x)
     type(spline_t), intent(in) :: spl
     real(8),        intent(in) :: x
 
-    spline_eval8 = oct_spline_eval(x, spl%spl, spl%acc)
-  end function spline_eval8
-
-
-  !------------------------------------------------------------
-  real(4) pure function spline_eval4(spl, x)
-    type(spline_t), intent(in) :: spl
-    real(4),        intent(in) :: x
-
-    spline_eval4 = real(oct_spline_eval(real(x, kind=8), spl%spl, spl%acc), kind=4)
-  end function spline_eval4
+    spline_eval = oct_spline_eval(x, spl%spl, spl%acc)
+  end function spline_eval
 
 
   !------------------------------------------------------------
@@ -625,16 +508,6 @@ contains
 
 
   !------------------------------------------------------------
-  pure subroutine spline_eval4_array(spl, nn, xf)
-    type(spline_t), intent(in)    :: spl
-    integer,        intent(in)    :: nn
-    real(4),        intent(inout) :: xf(:)
-
-    call oct_spline_eval_array4(nn, xf(1), spl%spl, spl%acc)
-  end subroutine spline_eval4_array
-
-
-  !------------------------------------------------------------
   pure subroutine spline_evalz_array(spl, nn, xf)
     type(spline_t), intent(in)    :: spl
     integer,        intent(in)    :: nn
@@ -642,17 +515,6 @@ contains
 
     call oct_spline_eval_arrayz(nn, xf(1), spl%spl, spl%acc)
   end subroutine spline_evalz_array
-
-
-  !------------------------------------------------------------
-  pure subroutine spline_evalc_array(spl, nn, xf)
-    type(spline_t), intent(in)    :: spl
-    integer,        intent(in)    :: nn
-    complex(4),     intent(inout) :: xf(:)
-
-    call oct_spline_eval_arrayc(nn, xf(1), spl%spl, spl%acc)
-  end subroutine spline_evalc_array
-
 
   !------------------------------------------------------------
   subroutine spline_sum(spl1, spl2, splsum)
@@ -675,7 +537,7 @@ contains
     call oct_spline_y(spl1%spl, spl1%acc, y(1))
 
     do i = 1, npoints
-      y2(i) = spline_eval8(spl2, x(i))
+      y2(i) = spline_eval(spl2, x(i))
     end do
 
     y2 = y2 + y

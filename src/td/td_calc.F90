@@ -24,17 +24,18 @@ module td_calc_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
-  use hamiltonian_base_oct_m
-  use hamiltonian_oct_m
+  use hamiltonian_elec_base_oct_m
+  use hamiltonian_elec_oct_m
   use lasers_oct_m
   use loct_math_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use profiling_oct_m
-  use states_calc_oct_m
-  use states_oct_m
-  use states_dim_oct_m
+  use states_elec_calc_oct_m
+  use states_elec_oct_m
+  use states_elec_dim_oct_m
 
   implicit none
 
@@ -57,13 +58,14 @@ contains
 !! \warning This subroutine only works if ions are not
 !!          allowed to move
 ! ---------------------------------------------------------
-subroutine td_calc_tacc(gr, geo, st, hm, acc, time)
-  type(grid_t),        intent(inout) :: gr
-  type(geometry_t),    intent(inout) :: geo
-  type(states_t),      intent(inout) :: st
-  type(hamiltonian_t), intent(inout) :: hm
-  FLOAT,               intent(in)    :: time
-  FLOAT,               intent(out)   :: acc(MAX_DIM)
+subroutine td_calc_tacc(namespace, gr, geo, st, hm, acc, time)
+  type(namespace_t),        intent(in)  :: namespace
+  type(grid_t),             intent(in)  :: gr
+  type(geometry_t),         intent(in)  :: geo
+  type(states_elec_t),      intent(in)  :: st
+  type(hamiltonian_elec_t), intent(in)  :: hm
+  FLOAT,                    intent(in)  :: time
+  FLOAT,                    intent(out) :: acc(MAX_DIM)
 
   FLOAT :: field(MAX_DIM), x(MAX_DIM)
   CMPLX, allocatable :: zpsi(:, :), hzpsi(:,:), hhzpsi(:,:), xzpsi(:,:,:), vnl_xzpsi(:,:)
@@ -102,9 +104,9 @@ subroutine td_calc_tacc(gr, geo, st, hm, acc, time)
   do ik = st%d%kpt%start, st%d%kpt%end
     do ist = st%st_start, st%st_end
 
-      call states_get_state(st, gr%mesh, ist, ik, zpsi)
+      call states_elec_get_state(st, gr%mesh, ist, ik, zpsi)
       
-      call zhamiltonian_apply(hm, gr%der, zpsi, hzpsi, ist, ik)
+      call zhamiltonian_elec_apply_single(hm, namespace, gr%mesh, zpsi, hzpsi, ist, ik)
 
       SAFE_ALLOCATE(xzpsi    (1:gr%mesh%np_part, 1:st%d%dim, 1:3))
       SAFE_ALLOCATE(vnl_xzpsi(1:gr%mesh%np_part, 1:st%d%dim))
@@ -116,10 +118,11 @@ subroutine td_calc_tacc(gr, geo, st, hm, acc, time)
       end do
 
       do j = 1, gr%mesh%sb%dim
-        call zhamiltonian_apply(hm, gr%der, xzpsi(:, :, j), vnl_xzpsi, ist, ik, terms = TERM_NON_LOCAL_POTENTIAL)
+        call zhamiltonian_elec_apply_single(hm, namespace, gr%mesh, xzpsi(:, :, j), vnl_xzpsi, ist, ik, &
+          terms = TERM_NON_LOCAL_POTENTIAL)
 
         do idim = 1, st%d%dim
-          x(j) = x(j) - 2*st%occ(ist, ik)*real(zmf_dotp(gr%mesh, hzpsi(1:gr%mesh%np, idim), vnl_xzpsi(:, idim)), REAL_PRECISION)
+          x(j) = x(j) - 2*st%occ(ist, ik)*TOFLOAT(zmf_dotp(gr%mesh, hzpsi(1:gr%mesh%np, idim), vnl_xzpsi(:, idim)))
         end do
       end do
 
@@ -131,10 +134,11 @@ subroutine td_calc_tacc(gr, geo, st, hm, acc, time)
       end do
 
       do j = 1, gr%mesh%sb%dim
-        call zhamiltonian_apply(hm, gr%der, xzpsi(:, :, j), vnl_xzpsi, ist, ik, terms = TERM_NON_LOCAL_POTENTIAL)
+        call zhamiltonian_elec_apply_single(hm, namespace, gr%mesh, xzpsi(:, :, j), vnl_xzpsi, ist, ik, &
+          terms = TERM_NON_LOCAL_POTENTIAL)
 
         do idim = 1, st%d%dim
-          x(j) = x(j) + 2*st%occ(ist, ik)*real(zmf_dotp(gr%mesh, zpsi(:, idim), vnl_xzpsi(:, idim)), REAL_PRECISION)
+          x(j) = x(j) + 2*st%occ(ist, ik)*TOFLOAT(zmf_dotp(gr%mesh, zpsi(:, idim), vnl_xzpsi(:, idim)))
         end do
       end do
       SAFE_DEALLOCATE_A(xzpsi)
@@ -164,16 +168,16 @@ end subroutine td_calc_tacc
 !! \f]
 ! ---------------------------------------------------------
 subroutine td_calc_tvel(gr, st, vel)
-  type(grid_t),        intent(inout) :: gr
-  type(states_t),      intent(inout) :: st
-  FLOAT,               intent(out)   :: vel(MAX_DIM)
+  type(grid_t),        intent(in)  :: gr
+  type(states_elec_t), intent(in)  :: st
+  FLOAT,               intent(out) :: vel(MAX_DIM)
 
   FLOAT, allocatable :: momentum(:,:,:)
   
   PUSH_SUB(td_calc_tvel)
 
   SAFE_ALLOCATE(momentum(1:gr%mesh%sb%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
-  call states_calc_momentum(st, gr%der, momentum)
+  call states_elec_calc_momentum(st, gr%der, momentum)
 
   momentum(1:gr%mesh%sb%dim, st%st_start:st%st_end, 1) = & 
     sum(momentum(1:gr%mesh%sb%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end), 3)
@@ -191,7 +195,7 @@ end subroutine td_calc_tvel
 ! ---------------------------------------------------------
 subroutine td_calc_ionch(gr, st, ch, Nch)
   type(grid_t),        intent(in)    :: gr
-  type(states_t),      intent(in)    :: st
+  type(states_elec_t), intent(in)    :: st
   integer,             intent(in)    :: Nch
   FLOAT,               intent(out)   :: ch(0:Nch)
 
@@ -226,7 +230,7 @@ subroutine td_calc_ionch(gr, st, ch, Nch)
 
         if (st%st_start <= ist .and. ist <= st%st_end .and. &
               st%d%kpt%start <= ik .and. ik <= st%d%kpt%end) then
-          call states_get_state(st, gr%mesh, idim, ist, ik, zpsi)
+          call states_elec_get_state(st, gr%mesh, idim, ist, ik, zpsi)
           N(ii) = zmf_integrate(gr%mesh, zpsi(:) * conjg(zpsi(:)) ) 
           Nnot(ii) = M_ONE - N(ii)
         end if

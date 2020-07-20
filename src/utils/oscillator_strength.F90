@@ -25,6 +25,8 @@ module oscillator_strength_oct_m
   use lalg_adv_oct_m
   use messages_oct_m
   use minimizer_oct_m
+  use namespace_oct_m
+  use parser_oct_m
   use profiling_oct_m
   use spectrum_oct_m
   use string_oct_m
@@ -149,9 +151,10 @@ contains
   end subroutine local_operator_copy
 
   ! ---------------------------------------------------------
-  subroutine read_resonances_file(order, ffile, search_interval, final_time, nfrequencies)
+  subroutine read_resonances_file(order, ffile, namespace, search_interval, final_time, nfrequencies)
     integer, intent(inout)       :: order
     character(len=*), intent(in) :: ffile
+    type(namespace_t), intent(in):: namespace
     FLOAT,   intent(inout)       :: search_interval
     FLOAT,   intent(in)          :: final_time
     integer, intent(in)          :: nfrequencies
@@ -177,7 +180,7 @@ contains
     end if
   
     ! Now, we should find out which units the file "ot" has.
-    call unit_system_from_file(units, "ot", ierr)
+    call unit_system_from_file(units, "ot", namespace, ierr)
     if(ierr /= 0) then
       write(message(1),'(a)') "Could not retrieve units in the 'ot' file."
       call messages_fatal(1)
@@ -185,7 +188,7 @@ contains
   
     mode = COSINE_TRANSFORM
   
-    iunit = io_open(trim(ffile), action='read', status='old', die=.false.)
+    iunit = io_open(trim(ffile), namespace, action='read', status='old', die=.false.)
     if(iunit == 0) then
       write(message(1),'(a)') 'Could not open '//trim(ffile)//' file.'
       call messages_fatal(1)
@@ -225,7 +228,7 @@ contains
       search_interval = M_HALF
     end if
   
-    call read_ot(nspin, order_in_file, nw_subtracted)
+    call read_ot(namespace, nspin, order_in_file, nw_subtracted)
   
     if(order_in_file /= order) then
       write(message(1), '(a)') 'The ot file should contain the second-order response in this run mode.'
@@ -280,7 +283,8 @@ contains
   
   
   ! ---------------------------------------------------------
-  subroutine analyze_signal(order, omega, search_interval, final_time, nresonances, nfrequencies, damping)
+  subroutine analyze_signal(order, omega, search_interval, final_time, nresonances, nfrequencies, &
+      damping, namespace)
     integer, intent(inout) :: order
     FLOAT,   intent(inout) :: omega
     FLOAT,   intent(inout) :: search_interval
@@ -288,6 +292,7 @@ contains
     integer, intent(inout) :: nresonances
     integer, intent(inout) :: nfrequencies
     FLOAT,   intent(in)    :: damping
+    type(namespace_t), intent(in) :: namespace
   
     FLOAT :: leftbound, rightbound, dw, power
     FLOAT, allocatable :: w(:), c0I2(:)
@@ -304,7 +309,7 @@ contains
     end if
   
     ! Now, we should find out which units the file "ot" has.
-    call unit_system_from_file(units, "ot", ierr)
+    call unit_system_from_file(units, "ot", namespace, ierr)
     if(ierr /= 0) then
       write(message(1),'(a)') "Could not retrieve units in the 'ot' file."
       call messages_fatal(1)
@@ -325,7 +330,7 @@ contains
     leftbound = omega - search_interval
     rightbound = omega + search_interval
   
-    call read_ot(nspin, order_in_file, nw_subtracted)
+    call read_ot(namespace, nspin, order_in_file, nw_subtracted)
   
     if(order_in_file /= order) then
       write(message(1), '(a)') 'Internal error in analyze_signal'
@@ -388,7 +393,7 @@ contains
   
     select case(order)
       case(1)
-        call write_polarizability(nfrequencies, nresonances, dw, w, c0I2, damping)
+        call write_polarizability(namespace, nfrequencies, nresonances, dw, w, c0I2, damping)
     end select
   
     SAFE_DEALLOCATE_A(ot)
@@ -404,7 +409,8 @@ contains
   !> Implements the SOS formula of the polarizability, and writes
   !! down to the "polarizability" file the real and imaginary part
   !! of the dynamical polarizability.
-  subroutine write_polarizability(nfrequencies, nresonances, dw, w, c0I2, gamma)
+  subroutine write_polarizability(namespace, nfrequencies, nresonances, dw, w, c0I2, gamma)
+    type(namespace_t), intent(in) :: namespace
     integer, intent(in) :: nfrequencies, nresonances
     FLOAT, intent(in)   :: dw
     FLOAT, intent(in)   :: w(nresonances), c0I2(nresonances)
@@ -416,7 +422,7 @@ contains
   
     PUSH_SUB(write_polarizability)
 
-    iunit = io_open('polarizability', status='replace', action = 'write', die=.false.)
+    iunit = io_open('polarizability', namespace, action = 'write', status='replace', die=.false.)
     write(iunit, '(a)') '# Polarizability file. Generated using the SOS formula with the following data:'
     write(iunit, '(a)') '#'
   
@@ -593,14 +599,15 @@ contains
   
   
   ! ---------------------------------------------------------
-  subroutine generate_signal(order, observable)
+  subroutine generate_signal(namespace, order, observable)
+    type(namespace_t), intent(in) :: namespace
     integer, intent(in) :: order
     integer, intent(in) :: observable(2)
   
     logical :: file_exists
     integer :: i, j, nspin, time_steps, lmax, nfiles, k, add_lm, l, m, max_add_lm
     integer, allocatable :: iunit(:)
-    FLOAT :: dt, lambda, det, dump, o0
+    FLOAT :: dt, lambda, dump, o0
     type(unit_t) :: mp_unit
     FLOAT, allocatable :: q(:), mu(:), qq(:, :), c(:)
     character(len=20) :: filename
@@ -636,7 +643,7 @@ contains
     SAFE_ALLOCATE(iunit(1:nfiles))
     do j = 1, nfiles
       write(filename,'(a11,i1)') 'multipoles.', j
-      iunit(j) = io_open(trim(filename), action='read', status='old', die=.false.)
+      iunit(j) = io_open(trim(filename), namespace, action='read', status='old', die=.false.)
     end do
   
     SAFE_ALLOCATE( q(1:nfiles))
@@ -648,7 +655,7 @@ contains
     c(order) = M_ONE
   
     ! Get the basic info from the first file
-    call spectrum_mult_info(iunit(1), nspin, kick, time_steps, dt, units, lmax=lmax)
+    call spectrum_mult_info(namespace, iunit(1), nspin, kick, time_steps, dt, units, lmax=lmax)
   
     ! Sets the kick operator...
     if(kick%n_multipoles > 0) then
@@ -716,7 +723,7 @@ contains
     q(1) = kick%delta_strength / lambda
   
     do j = 2, nfiles
-      call spectrum_mult_info(iunit(j), nspin, kick, time_steps, dt, units, lmax=lmax)
+      call spectrum_mult_info(namespace, iunit(j), nspin, kick, time_steps, dt, units, lmax=lmax)
       q(j) = kick%delta_strength / lambda
     end do
   
@@ -726,7 +733,7 @@ contains
      end do
     end do
   
-    det = lalg_inverter(nfiles, qq, invert = .true.)
+    call lalg_inverter(nfiles, qq)
   
     mu = matmul(qq, c)
   
@@ -795,7 +802,7 @@ contains
   
     ot = ot / lambda**order
   
-    call write_ot(nspin, time_steps, dt, kick, order, ot(0:time_steps), observable)
+    call write_ot(namespace, nspin, time_steps, dt, kick, order, ot(0:time_steps), observable)
   
     ! Close files and exit.
     do j = 1, nfiles
@@ -851,7 +858,8 @@ contains
   
   
   ! ---------------------------------------------------------
-  subroutine write_ot(nspin, time_steps, dt, kick, order, ot, observable)
+  subroutine write_ot(namespace, nspin, time_steps, dt, kick, order, ot, observable)
+    type(namespace_t),   intent(in) :: namespace
     integer,             intent(in) :: nspin, time_steps
     FLOAT,               intent(in) :: dt
     type(kick_t),        intent(in) :: kick
@@ -865,7 +873,7 @@ contains
   
     PUSH_SUB(write_ot)
 
-    iunit = io_open('ot', action='write', status='replace')
+    iunit = io_open('ot', namespace, action='write', status='replace')
   
     write(iunit, '(a15,i2)')      '# nspin        ', nspin
     write(iunit, '(a15,i2)')      '# Order        ', order
@@ -911,7 +919,8 @@ contains
   
   
   ! ---------------------------------------------------------
-  subroutine read_ot(nspin, order, nw_subtracted)
+  subroutine read_ot(namespace, nspin, order, nw_subtracted)
+    type(namespace_t), intent(in) :: namespace
     integer, intent(out) :: nspin
     integer, intent(out) :: order
     integer, intent(out) :: nw_subtracted
@@ -924,7 +933,7 @@ contains
   
     PUSH_SUB(read_ot)
 
-    iunit = io_open('ot', action='read', status='old')
+    iunit = io_open('ot', namespace, action='read', status='old')
     if(iunit == 0) then
       write(message(1),'(a)') 'A file called ot should be present and was not found.'
       call messages_fatal(1)
@@ -955,13 +964,13 @@ contains
       call messages_fatal(2)
     end if
   
-    call kick_read(kick, iunit)
+    call kick_read(kick, iunit, namespace)
     read(iunit, '(a)')  line
     read(iunit, '(a)')  line
     call io_skip_header(iunit)
   
     ! Figure out about the units of the file
-    call unit_system_from_file(units, "ot", ierr)
+    call unit_system_from_file(units, "ot", namespace, ierr)
     if(ierr /= 0) then
       write(message(1), '(a)') 'Could not figure out the units in file "ot".'
       call messages_fatal(1)
@@ -1005,7 +1014,8 @@ contains
   
   
   ! ---------------------------------------------------------
-  subroutine print_omega_file(omega, search_interval, final_time, nfrequencies)
+  subroutine print_omega_file(namespace, omega, search_interval, final_time, nfrequencies)
+    type(namespace_t), intent(in) :: namespace
     FLOAT,   intent(inout) :: omega
     FLOAT,   intent(inout) :: search_interval
     FLOAT,   intent(inout) :: final_time
@@ -1027,7 +1037,7 @@ contains
     end if
   
     ! Now, we should find out which units the file "ot" has.
-    call unit_system_from_file(units, "ot", ierr)
+    call unit_system_from_file(units, "ot", namespace, ierr)
     if(ierr /= 0) then
       write(message(1),'(a)') "Could not retrieve units in the 'ot' file."
       call messages_fatal(1)
@@ -1051,7 +1061,7 @@ contains
     SAFE_ALLOCATE(warray(1:nfrequencies))
     SAFE_ALLOCATE(tarray(1:nfrequencies))
   
-    call read_ot(nspin, order, nw_subtracted)
+    call read_ot(namespace, nspin, order, nw_subtracted)
   
     if(mod(order, 2) == 1) then
       mode = SINE_TRANSFORM
@@ -1083,7 +1093,7 @@ contains
       tarray(i) = aw
     end do
   
-    iunit = io_open('omega', action='write', status='replace')
+    iunit = io_open('omega', namespace, action='write', status='replace')
     write(iunit, '(a15,i2)')      '# nspin        ', nspin
     call kick_write(kick, iunit)
     write(iunit, '(a)') '#%'
@@ -1157,21 +1167,24 @@ program oscillator_strength
 
   ! Initialize stuff
   call global_init(is_serial = .true.)
+  call parser_init()
   call io_init(defaults = .true.)
 
   select case(run_mode)
   case(GENERATE_NTHORDER_SIGNAL)
-    call generate_signal(order, observable)
+    call generate_signal(global_namespace, order, observable)
   case(ANALYZE_NTHORDER_SIGNAL)
-    call analyze_signal(order, omega, search_interval, final_time, nresonances, nfrequencies, damping)
+    call analyze_signal(order, omega, search_interval, final_time, nresonances, nfrequencies, damping, &
+      global_namespace)
   case(READ_RESONANCES_FROM_FILE)
-    call read_resonances_file(order, ffile, search_interval, final_time, nfrequencies)
+    call read_resonances_file(order, ffile, global_namespace, search_interval, final_time, nfrequencies)
   case(GENERATE_OMEGA_FILE)
-    call print_omega_file(omega, search_interval, final_time, nfrequencies)
+    call print_omega_file(global_namespace, omega, search_interval, final_time, nfrequencies)
   case default
   end select
 
   call io_end()
+  call parser_end()
   call global_end()
 
 end program oscillator_strength

@@ -21,8 +21,9 @@
 !>  Writes a cube_function in VTK legacy format
 !!  see http://www.vtk.org/VTK/img/file-formats.pdf
 ! ---------------------------------------------------------
-subroutine X(vtk_out_cf)(filename, fieldname, ierr, cf_in, cube, spacing, unit)
+subroutine X(vtk_out_cf)(filename, namespace, fieldname, ierr, cf_in, cube, spacing, unit)
   character(len=*),      intent(in) :: filename        !< the file name
+  type(namespace_t),     intent(in) :: namespace       !< namespace for directory
   character(len=*),      intent(in) :: fieldname       !< the name of the field
   integer,               intent(out):: ierr            !< error message   
   type(cube_function_t), intent(in) :: cf_in           !< the cube_function to be written 
@@ -38,7 +39,7 @@ subroutine X(vtk_out_cf)(filename, fieldname, ierr, cf_in, cube, spacing, unit)
 
   np = cube%rs_n_global(1)*cube%rs_n_global(2)*cube%rs_n_global(3)
 
-  iunit = io_open(trim(filename), action='write')
+  iunit = io_open(trim(filename), namespace, action='write')
 
   write(iunit, '(1a)') '# vtk DataFile Version 2.0 '
 
@@ -64,17 +65,21 @@ subroutine X(vtk_out_cf)(filename, fieldname, ierr, cf_in, cube, spacing, unit)
   call cube_function_null(cf_out)
   call X(cube_function_alloc_RS) (cube, cf_out)
 
-  forall(i1 = 1:cube%rs_n_global(1), i2 = 1:cube%rs_n_global(2), i3 = 1:cube%rs_n_global(3)) 
-    cf_out%X(RS)(i1,i2,i3) = units_from_atomic(unit, cf_in%X(RS)(i1,i2,i3))
-  end forall
+  do i3 = 1, cube%rs_n_global(3)
+    do i2 = 1, cube%rs_n_global(2)
+      do i1 = 1, cube%rs_n_global(1)
+        cf_out%X(RS)(i1, i2, i3) = units_from_atomic(unit, cf_in%X(RS)(i1, i2, i3))
+      end do
+    end do
+  end do
 
   ! Paraview likes BigEndian binaries
-  call io_binary_write(io_workpath(filename), np, R_REAL(cf_out%X(RS)(:,:,:)),&
+  call io_binary_write(io_workpath(filename, namespace), np, R_REAL(cf_out%X(RS)(:,:,:)),&
     ierr, nohead = .true., fendian = is_little_endian())
 
 #ifdef R_TCOMPLEX
 
-  iunit = io_open(trim(filename), action='write', position = 'append')
+  iunit = io_open(trim(filename), namespace, action='write', position='append')
 
   write(iunit, '(1a)') ' '
   write(iunit, '(3a)') 'SCALARS Im_'//trim(fieldname), ' double 1'
@@ -82,7 +87,7 @@ subroutine X(vtk_out_cf)(filename, fieldname, ierr, cf_in, cube, spacing, unit)
 
   call io_close(iunit)
 
-  call io_binary_write(io_workpath(filename), np, R_AIMAG(cf_out%X(RS)(:,:,:)),&
+  call io_binary_write(io_workpath(filename, namespace), np, R_AIMAG(cf_out%X(RS)(:,:,:)),&
     ierr, nohead = .true., fendian = is_little_endian())
 
 #endif
@@ -99,8 +104,9 @@ end subroutine X(vtk_out_cf)
 !>  Writes a cube_function in VTK legacy format
 !!  see http://www.vtk.org/VTK/img/file-formats.pdf
 ! ---------------------------------------------------------
-subroutine X(vtk_out_cf_vector)(filename, fieldname, ierr, cf_in, vector_dim, cube, spacing, unit)
+subroutine X(vtk_out_cf_vector)(filename, namespace, fieldname, ierr, cf_in, vector_dim, cube, spacing, unit)
   character(len=*),      intent(in) :: filename        !< the file name
+  type(namespace_t),     intent(in) :: namespace       !< namespace for directory
   character(len=*),      intent(in) :: fieldname       !< the name of the field
   integer,               intent(out):: ierr            !< error message   
   type(cube_function_t), intent(in) :: cf_in(:)        !< the cube_function to be written
@@ -117,7 +123,7 @@ subroutine X(vtk_out_cf_vector)(filename, fieldname, ierr, cf_in, vector_dim, cu
 
   np = cube%rs_n_global(1)*cube%rs_n_global(2)*cube%rs_n_global(3)
 
-  iunit = io_open(trim(filename), action='write')
+  iunit = io_open(trim(filename), namespace, action='write')
 
   write(iunit, '(1a)') '# vtk DataFile Version 2.0 '
 
@@ -143,17 +149,23 @@ subroutine X(vtk_out_cf_vector)(filename, fieldname, ierr, cf_in, vector_dim, cu
 
   SAFE_ALLOCATE(cfout(1:vector_dim, 1:cube%rs_n_global(1), 1:cube%rs_n_global(2), 1:cube%rs_n_global(3)))
 
-  forall(ivd = 1:vector_dim, i1 = 1:cube%rs_n_global(1), i2 = 1:cube%rs_n_global(2), i3 = 1:cube%rs_n_global(3)) 
-    cfout(ivd, i1,i2,i3) = R_REAL(units_from_atomic(unit, cf_in(ivd)%X(RS)(i1,i2,i3)))
-  end forall
+  do i3 = 1, cube%rs_n_global(3)
+    do i2 = 1, cube%rs_n_global(2)
+      do i1 = 1, cube%rs_n_global(1)
+        do ivd = 1, vector_dim
+          cfout(ivd, i1, i2, i3) = R_REAL(units_from_atomic(unit, cf_in(ivd)%X(RS)(i1, i2, i3)))
+        end do
+      end do
+    end do
+  end do
 
   ! Paraview likes BigEndian binaries
-  call io_binary_write(io_workpath(filename), vector_dim*np, cfout(:, :, :, :), ierr, &
+  call io_binary_write(io_workpath(filename, namespace), vector_dim*np, cfout(:, :, :, :), ierr, &
     nohead = .true., fendian = is_little_endian())
 
 #ifdef R_TCOMPLEX
 
-  iunit = io_open(trim(filename), action='write', position = 'append')
+  iunit = io_open(trim(filename), namespace, action='write', position='append')
 
   write(iunit, '(1a)') ' '
   write(iunit, '(3a,i1)') 'SCALARS Im_'//trim(fieldname), ' double ', vector_dim
@@ -161,11 +173,17 @@ subroutine X(vtk_out_cf_vector)(filename, fieldname, ierr, cf_in, vector_dim, cu
 
   call io_close(iunit)
 
-  forall(ivd = 1:vector_dim, i1 = 1:cube%rs_n_global(1), i2 = 1:cube%rs_n_global(2), i3 = 1:cube%rs_n_global(3)) 
-    cfout(ivd, i1,i2,i3) = R_AIMAG(units_from_atomic(unit, cf_in(ivd)%X(RS)(i1,i2,i3)))
-  end forall
-  
-  call io_binary_write(io_workpath(filename), vector_dim*np, cfout(:, :, :, :), ierr, &
+  do ivd = 1, vector_dim
+    do i3 = 1, cube%rs_n_global(3)
+      do i2 = 1, cube%rs_n_global(2)
+        do i1 = 1, cube%rs_n_global(1)
+          cfout(ivd, i1, i2, i3) = R_AIMAG(units_from_atomic(unit, cf_in(ivd)%X(RS)(i1, i2, i3)))
+        end do
+      end do
+    end do
+  end do
+
+  call io_binary_write(io_workpath(filename, namespace), vector_dim*np, cfout(:, :, :, :), ierr, &
     nohead = .true., fendian = is_little_endian())
 
 #endif
@@ -184,8 +202,9 @@ end subroutine X(vtk_out_cf_vector)
 !!  coordinate is free in space. 
 !!    
 ! ---------------------------------------------------------
-subroutine X(vtk_out_cf_structured)(filename, fieldname, ierr, cf_in, cube, unit, points, ascii)
+subroutine X(vtk_out_cf_structured)(filename, namespace, fieldname, ierr, cf_in, cube, unit, points, ascii)
   character(len=*),      intent(in) :: filename        !< the file name
+  type(namespace_t),     intent(in) :: namespace       !< namespace for directory
   character(len=*),      intent(in) :: fieldname       !< the name of the field
   integer,               intent(out):: ierr            !< error message   
   type(cube_function_t), intent(in) :: cf_in           !< the cube_function to be written 
@@ -204,7 +223,7 @@ subroutine X(vtk_out_cf_structured)(filename, fieldname, ierr, cf_in, cube, unit
 
   np =  product(cube%rs_n_global(1:3))
 
-  iunit = io_open(trim(filename), action='write')
+  iunit = io_open(trim(filename), namespace, action='write')
 
   if (optional_default(ascii, .false.)) then 
     ! ASCII
@@ -237,15 +256,11 @@ subroutine X(vtk_out_cf_structured)(filename, fieldname, ierr, cf_in, cube, unit
     call cube_function_null(cf_out)
     call X(cube_function_alloc_RS) (cube, cf_out)
 
-    forall(i1 = 1:cube%rs_n_global(1), i2 = 1:cube%rs_n_global(2), i3 = 1:cube%rs_n_global(3)) 
-      cf_out%X(RS)(i1,i2,i3) = units_from_atomic(unit, cf_in%X(RS)(i1,i2,i3))
-    end forall
-
-
-    do i3 =1 , cube%rs_n_global(3)
-      do i2 =1 , cube%rs_n_global(2)
-        do i1 =1 , cube%rs_n_global(1)
-          write(iunit, '(1f12.6)') R_REAL(cf_out%X(RS)(i1,i2,i3))
+    do i3 = 1, cube%rs_n_global(3)
+      do i2 = 1, cube%rs_n_global(2)
+        do i1 = 1, cube%rs_n_global(1)
+          cf_out%X(RS)(i1, i2, i3) = units_from_atomic(unit, cf_in%X(RS)(i1, i2, i3))
+          write(iunit, '(1f12.6)') R_REAL(cf_out%X(RS)(i1, i2, i3))
         end do
       end do
     end do
@@ -277,12 +292,12 @@ subroutine X(vtk_out_cf_structured)(filename, fieldname, ierr, cf_in, cube, unit
       end do
     end do
 
-    call io_binary_write(io_workpath(filename), np*3, pnts1(:,:,:,:) ,&
+    call io_binary_write(io_workpath(filename, namespace), np*3, pnts1(:,:,:,:) ,&
       ierr, nohead = .true., fendian = is_little_endian())
 
     SAFE_DEALLOCATE_A(pnts1)
 
-    iunit = io_open(trim(filename), action='write', position = 'append')
+    iunit = io_open(trim(filename), namespace, action='write', position='append')
     write(iunit, '(1a)') ' '
     write(iunit, '(1a,1i9)') 'POINT_DATA ', np
 #ifdef R_TCOMPLEX
@@ -296,24 +311,28 @@ subroutine X(vtk_out_cf_structured)(filename, fieldname, ierr, cf_in, cube, unit
     call cube_function_null(cf_out)
     call X(cube_function_alloc_RS) (cube, cf_out)
 
-    forall(i1 = 1:cube%rs_n_global(1), i2 = 1:cube%rs_n_global(2), i3 = 1:cube%rs_n_global(3)) 
-      cf_out%X(RS)(i1,i2,i3) = units_from_atomic(unit, cf_in%X(RS)(i1,i2,i3))
-    end forall
+    do i3 = 1, cube%rs_n_global(3)
+      do i2 = 1, cube%rs_n_global(2)
+        do i1 = 1, cube%rs_n_global(1)
+          cf_out%X(RS)(i1, i2, i3) = units_from_atomic(unit, cf_in%X(RS)(i1, i2, i3))
+        end do
+      end do
+    end do
 
 
-    call io_binary_write(io_workpath(filename), np, R_REAL(cf_out%X(RS)(:,:,:)),&
+    call io_binary_write(io_workpath(filename, namespace), np, R_REAL(cf_out%X(RS)(:,:,:)),&
       ierr, nohead = .true., fendian = is_little_endian())
 
 
 #ifdef R_TCOMPLEX
 
-    iunit = io_open(trim(filename), action='write', position = 'append')
+    iunit = io_open(trim(filename), namespace, action='write', position='append')
     write(iunit, '(1a)') ' '
     write(iunit, '(3a)') 'SCALARS Im_'//trim(fieldname), ' double 1'
     write(iunit, '(1a)') 'LOOKUP_TABLE default'
     call io_close(iunit)
 
-    call io_binary_write(io_workpath(filename), np, R_AIMAG(cf_out%X(RS)(:,:,:)),&
+    call io_binary_write(io_workpath(filename, namespace), np, R_AIMAG(cf_out%X(RS)(:,:,:)),&
       ierr, nohead = .true., fendian = is_little_endian())
 
 #endif

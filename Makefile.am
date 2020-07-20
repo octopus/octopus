@@ -35,7 +35,7 @@ EXTRA_DIST =     \
 	debian/README.Debian debian/rules
 
 DISTCLEANFILES = \
-	ChangeLog config.log config.status
+	config.log config.status
 
 DEB_DIR = deb-work
 
@@ -56,6 +56,10 @@ check-long:
 	$(MAKE) -C share check
 	$(MAKE) -C doc check
 	$(MAKE) -C testsuite check-long
+
+check-performance:
+	$(MAKE) -C share check
+	$(MAKE) -C testsuite check-performance
 
 rpm: dist
 	@topdir=`rpmbuild --showrc | @GREP@ ': *_topdir' | cut -f 2`; \

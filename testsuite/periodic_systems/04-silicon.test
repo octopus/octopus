@@ -76,6 +76,9 @@ match ; DOS value  2   ; LINEFIELD(static/total-dos.dat,   2, 2);        0.47203
 match ; DOS energy 442 ; LINEFIELD(static/total-dos.dat, 442, 1);        0.250698
 match ; DOS value  442 ; LINEFIELD(static/total-dos.dat, 442, 2);        1.858955
 
+match ; Direct gap ; GREPFIELD(static/info, 'Direct gap', 7, 0) ; 0.0337
+match ; Indirect gap ; GREPFIELD(static/info, 'Indirect gap', 10, 0) ; 0.0337
+
 Input      : 04-silicon.02-kdotp.inp
 
 match ; vg(x) k1 st1  ; LINEFIELD(kdotp/velocity, 5, 3) ; 0.06525
@@ -184,4 +187,3 @@ Precision : 0.3
 match ; Susceptibility XX          ; GREPFIELD(em_resp/freq_0.0000/susceptibility, "susceptibility", 1, 1) ; -6185.012367
 match ; Susceptibility YY          ; GREPFIELD(em_resp/freq_0.0000/susceptibility, "susceptibility", 2, 2) ; -6185.012367
 match ; Susceptibility ZZ          ; GREPFIELD(em_resp/freq_0.0000/susceptibility, "susceptibility", 3, 3) ; -6185.012367
-

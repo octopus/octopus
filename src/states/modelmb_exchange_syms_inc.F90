@@ -17,11 +17,9 @@
 !!
 
 !> project out states with proper symmetry for cases which are of symmetry = unknown
-subroutine X(modelmb_sym_state)(eigenval, gr, mm, modelmbparticles, ncombo, young_used, &
+subroutine X(modelmb_sym_state)(gr, modelmbparticles, ncombo, young_used, &
   wf, symmetries_satisfied, tproj_1yd, nspindown_out, iyoung_out, norm)
-  FLOAT,                    intent(in)    :: eigenval
   type(grid_t),             intent(in)    :: gr
-  integer,                  intent(in)    :: mm
   type(modelmb_particle_t), intent(in)    :: modelmbparticles
   integer,                  intent(in)    :: ncombo
   integer,                  intent(inout) :: young_used(:) !< (1:ncombo)
@@ -77,7 +75,7 @@ subroutine X(modelmb_sym_state)(eigenval, gr, mm, modelmbparticles, ncombo, youn
       cycle
     end if
     npptype = modelmbparticles%nparticles_per_type(itype)
-    do nspindown = 0, floor(npptype/2.)
+    do nspindown = 0, floor(npptype/M_TWO)
       nspinup = npptype - nspindown
       call young_init (young, nspinup, nspindown)
       do iyoung = 1, young%nyoung
@@ -108,7 +106,7 @@ subroutine X(modelmb_sym_state)(eigenval, gr, mm, modelmbparticles, ncombo, youn
    
     ! test the overall symmetrization (no 0.0 norms for present combination of Young diagrams)
     ! check if all types of particles have been properly symmetrized
-    if (sum(sym_ok_alltypes) == modelmbparticles%ntype_of_particle .and. abs(norm) > 1.e-6) then
+    if (sum(sym_ok_alltypes) == modelmbparticles%ntype_of_particle .and. abs(norm) > CNST(1.e-6)) then
       fermicompwf = fermicompwf + antisymwf
       symmetries_satisfied = .true.
       young_used (idiagram_combo) = 1
@@ -127,7 +125,7 @@ subroutine X(modelmb_sym_state)(eigenval, gr, mm, modelmbparticles, ncombo, youn
     call batch_init(wfbatch, 1, 1, 1, fermicompwf)
     call X(mesh_batch_dotp_self)(gr%mesh, wfbatch, wfdotp, reduce=.true.)
     norm = TOFLOAT(wfdotp(1,1))
-    call batch_end(wfbatch)
+    call wfbatch%end()
   else
     norm = TOFLOAT(sum(R_CONJ(fermicompwf(:,1,1))*fermicompwf(:,1,1)))
     norm = norm * product(gr%mesh%spacing(1:gr%mesh%sb%dim)) !1/units_out%length**gr%mesh%sb%dim
@@ -264,12 +262,12 @@ subroutine X(modelmb_sym_state_1diag)(gr, &
       call batch_init(antisymwfbatch, 1, 1, 1, antisymwf)
       call X(mesh_batch_dotp_self)(gr%mesh, antisymwfbatch, wfdotp, reduce=.true.)
       norm = TOFLOAT(wfdotp(1,1))
-      call batch_end(antisymwfbatch)
+      call antisymwfbatch%end()
     else
       norm = TOFLOAT(sum(R_CONJ(antisymwf(:,1,1))*antisymwf(:,1,1))) * normalizer
     end if
 
-    if (abs(norm) > 1.e-6) sym_ok_alltypes(itype) = 1
+    if (abs(norm) > CNST(1.e-6)) sym_ok_alltypes(itype) = 1
   end do ! itype
 
   POP_SUB(X(modelmb_sym_state_1diag))
@@ -335,7 +333,7 @@ subroutine X(modelmb_sym_updown)(ndimmb, npptype, &
       ! set up batch type for global exchange operation: 1 state, the loop over MB states is outside this routine
       call batch_init (antisymwfbatch, 1, 1, 1, antisymwf_swap)
       call X(mesh_batch_exchange_points) (gr%mesh, antisymwfbatch, forward_map=forward_map_exchange)
-      call batch_end(antisymwfbatch)
+      call antisymwfbatch%end()
     else
       antisymwf_swap(:,1,1) = antisymwf(forward_map_exchange(:),1,1)
     end if
@@ -349,7 +347,7 @@ subroutine X(modelmb_sym_updown)(ndimmb, npptype, &
       call batch_init(antisymwfbatch, 1, 1, 1, antisymwf)
       call X(mesh_batch_dotp_self)(gr%mesh, antisymwfbatch, wfdotp, reduce=.true.)
       norm = TOFLOAT(wfdotp(1,1))
-      call batch_end(antisymwfbatch)
+      call antisymwfbatch%end()
     else
       norm = TOFLOAT(sum(R_CONJ(antisymwf(:,1,1))*antisymwf(:,1,1))) * normalizer
     end if
@@ -417,7 +415,7 @@ subroutine X(modelmb_antisym_1spin) (n1spin, perms_1spin, ndimmb, npptype, ofst,
       ! set up batch type for global exchange operation: 1 state, the loop over MB states is outside this routine
       call batch_init (antisymwfbatch, 1, 1, 1, antisymwf_swap)
       call X(mesh_batch_exchange_points) (gr%mesh, antisymwfbatch, forward_map=forward_map_exchange)
-      call batch_end(antisymwfbatch)
+      call antisymwfbatch%end()
     else
       antisymwf_swap(:,1,1) = antisymwf(forward_map_exchange(:),1,1)
     end if
@@ -434,7 +432,7 @@ subroutine X(modelmb_antisym_1spin) (n1spin, perms_1spin, ndimmb, npptype, ofst,
       call batch_init(antisymwfbatch, 1, 1, 1, antisymwf)
       call X(mesh_batch_dotp_self)(gr%mesh, antisymwfbatch, wfdotp, reduce=.true.)
       norm = TOFLOAT(wfdotp(1,1))
-      call batch_end(antisymwfbatch)
+      call antisymwfbatch%end()
     else
       norm = TOFLOAT(sum(R_CONJ(antisymwf(:,1,1))*antisymwf(:,1,1))) * normalizer
     end if
@@ -454,10 +452,9 @@ end subroutine X(modelmb_antisym_1spin)
 !
 !> routine to loop over projection of all states wrt fermionic or bosonic character
 !
-subroutine X(modelmb_sym_all_states) (gr, st, geo)
-  type(states_t),         intent(inout) :: st
-  type(grid_t),           intent(inout) :: gr
-  type(geometry_t),       intent(in)    :: geo
+subroutine X(modelmb_sym_all_states) (gr, st)
+  type(states_elec_t),    intent(inout) :: st
+  type(grid_t),           intent(in)    :: gr
 
   integer :: mm, itype
   integer :: tdrun
@@ -494,29 +491,29 @@ subroutine X(modelmb_sym_all_states) (gr, st, geo)
   young_used_save = 0
 
   do mm = 1, st%nst
-    call states_get_state(st, gr%mesh, 1, mm, 1, wf)
+    call states_elec_get_state(st, gr%mesh, 1, mm, 1, wf)
 
     symmetries_satisfied = .true.
     if (impose_exch_symmetry) then
       if (mm > 1) then
         ! if eigenval is not degenerate reset young_used
-        if (abs(st%eigenval(mm,1) - st%eigenval(mm-1,1)) > 1.e-5) then
+        if (abs(st%eigenval(mm,1) - st%eigenval(mm-1,1)) > CNST(1.e-5)) then
           young_used_save = 0
         end if
       end if
 
-      call X(modelmb_sym_state)(st%eigenval(mm,1), gr, mm, &
-        st%modelmbparticles, ncombo, young_used_save, wf, symmetries_satisfied, .true.,&
+      call X(modelmb_sym_state)(gr, st%modelmbparticles, ncombo, young_used_save, &
+        wf, symmetries_satisfied, .true.,&
         st%mmb_nspindown(:,mm), st%mmb_iyoung(:,mm), st%mmb_proj(mm))
 
       young_used = 0
-      call X(modelmb_sym_state)(st%eigenval(mm,1), gr, mm, &
-        st%modelmbparticles, ncombo, young_used, wf, symmetries_satisfied, .true.,&
+      call X(modelmb_sym_state)(gr, st%modelmbparticles, ncombo, young_used, &
+        wf, symmetries_satisfied, .true.,&
         st%mmb_nspindown(:,mm), st%mmb_iyoung(:,mm), st%mmb_proj(mm))
     end if
 
     ! push back the projected state - this may overwrite with a bunch of 0s if we found a bosonic state...
-    call states_set_state(st, gr%mesh, 1, mm, 1, wf)
+    call states_elec_set_state(st, gr%mesh, 1, mm, 1, wf)
 
   end do
 

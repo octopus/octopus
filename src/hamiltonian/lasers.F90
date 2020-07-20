@@ -25,9 +25,10 @@ module lasers_oct_m
   use parser_oct_m
   use mesh_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use profiling_oct_m
   use simul_box_oct_m
-  use states_dim_oct_m
+  use states_elec_dim_oct_m
   use symmetries_oct_m
   use symm_op_oct_m
   use unit_oct_m
@@ -56,7 +57,9 @@ module lasers_oct_m
     laser_set_phi,                &
     laser_set_f_value,            &
     laser_carrier_frequency,      &
+    dvlaser_operator_linear,      &
     zvlaser_operator_linear,      &
+    dvlaser_operator_quadratic,   &
     zvlaser_operator_quadratic
 
 
@@ -95,7 +98,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  integer pure function laser_kind(laser)
+  integer pure elemental function laser_kind(laser)
     type(laser_t), intent(in) :: laser
 
     ! no push_sub allowed in pure function
@@ -197,10 +200,10 @@ contains
   !! zero carrier frequency).
   ! ---------------------------------------------------------
   subroutine laser_to_numerical_all(laser, dt, max_iter, omegamax)
-    type(laser_t), intent(inout)  :: laser
-    FLOAT,         intent(in)     :: dt
-    integer,       intent(in)     :: max_iter
-    FLOAT,         intent(in)     :: omegamax
+    type(laser_t),   intent(inout)  :: laser
+    FLOAT,           intent(in)     :: dt
+    integer,         intent(in)     :: max_iter
+    FLOAT,           intent(in)     :: omegamax
 
     integer :: iter
     FLOAT   :: tt, fj, phi
@@ -228,14 +231,15 @@ contains
   !! "numerical" representation (i.e. time grid, values at this time grid).
   ! ---------------------------------------------------------
   subroutine laser_to_numerical(laser, dt, max_iter, omegamax)
-    type(laser_t), intent(inout)  :: laser
-    FLOAT,         intent(in)     :: dt
-    integer,       intent(in)     :: max_iter
-    FLOAT,         intent(in)     :: omegamax
+    type(laser_t),   intent(inout) :: laser
+    FLOAT,           intent(in)    :: dt
+    integer,         intent(in)    :: max_iter
+    FLOAT,           intent(in)    :: omegamax
+    
     PUSH_SUB(lasers_to_numerical)
 
     call tdf_to_numerical(laser%f, max_iter, dt, omegamax)
-    call tdf_to_numerical(laser%phi, max_iter, dt, omegamax)
+    call tdf_to_numerical(laser%phi,  max_iter, dt, omegamax)
 
     POP_SUB(lasers_to_numerical)
   end subroutine laser_to_numerical
@@ -243,9 +247,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine laser_init(no_l, lasers, mesh)
+  subroutine laser_init(lasers, namespace, no_l, mesh)
+    type(laser_t),       pointer     :: lasers(:)
+    type(namespace_t),   intent(in)  :: namespace
     integer,             intent(out) :: no_l
-    type(laser_t), pointer           :: lasers(:)
     type(mesh_t),        intent(in)  :: mesh
 
     type(block_t)     :: blk
@@ -257,7 +262,7 @@ contains
 
     PUSH_SUB(laser_init)
 
-    call messages_obsolete_variable("TDLasers", "TDExternalFields")
+    call messages_obsolete_variable(namespace, "TDLasers", "TDExternalFields")
     !%Variable TDExternalFields
     !%Type block
     !%Section Time-Dependent
@@ -347,7 +352,7 @@ contains
     !%End
 
     no_l = 0
-    if(parse_block('TDExternalFields', blk) == 0) then
+    if(parse_block(namespace, 'TDExternalFields', blk) == 0) then
       no_l = parse_block_n(blk)
       SAFE_ALLOCATE(lasers(1:no_l))
 
@@ -373,16 +378,16 @@ contains
         lasers(il)%omega = omega0
      
         call parse_block_string(blk, il-1, jj+2, envelope_expression)
-        call tdf_read(lasers(il)%f, trim(envelope_expression), ierr)
+        call tdf_read(lasers(il)%f, namespace, trim(envelope_expression), ierr)
 
         ! Check if there is a phase.
         if(parse_block_cols(blk, il-1) > jj+3) then
           call parse_block_string(blk, il-1, jj+3, phase_expression)
-          call tdf_read(lasers(il)%phi, trim(phase_expression), ierr)
+          call tdf_read(lasers(il)%phi, namespace, trim(phase_expression), ierr)
           if (ierr /= 0) then            
             write(message(1),'(3A)') 'Error in the "', trim(envelope_expression), '" field defined in the TDExternalFields block:'
             write(message(2),'(3A)') 'Time-dependent phase function "', trim(phase_expression), '" not found.'
-            call messages_warning(2)
+            call messages_warning(2, namespace=namespace)
           end if
         else
           call tdf_init(lasers(il)%phi)
@@ -409,7 +414,7 @@ contains
             xx(1:mesh%sb%dim) = mesh%x(ip, 1:mesh%sb%dim)
             select case(mesh%sb%dim)
             case(2)
-              lasers(il)%a(ip, :) = (/xx(2), -xx(1)/) * sign(CNST(1.0), real(lasers(il)%pol(3), REAL_PRECISION))
+              lasers(il)%a(ip, :) = (/xx(2), -xx(1)/) * sign(CNST(1.0), TOFLOAT(lasers(il)%pol(3)))
             case(3)
               lasers(il)%a(ip, :) = (/ xx(2)*lasers(il)%pol(3) - xx(3)*lasers(il)%pol(2), &
                                 xx(3)*lasers(il)%pol(1) - xx(1)*lasers(il)%pol(3), &
@@ -432,7 +437,7 @@ contains
           if(.not. symm_op_invariant_cart(mesh%sb%symm%ops(iop), lasers(il)%pol(:), SYMPREC)) then
             message(1) = "The lasers break (at least) one of the symmetries used to reduce the k-points."
             message(2) = "Set SymmetryBreakDir accordingly to your laser fields."
-            call messages_fatal(2)
+            call messages_fatal(2, namespace=namespace)
           end if
         end do
       end do
@@ -510,9 +515,9 @@ contains
       end select
       if(lasers(il)%field /= E_FIELD_SCALAR_POTENTIAL) then
         write(iunit,'(3x,a,3(a1,f7.4,a1,f7.4,a1))') 'Polarization: ', &
-          '(', real(lasers(il)%pol(1)), ',', aimag(lasers(il)%pol(1)), '), ', &
-          '(', real(lasers(il)%pol(2)), ',', aimag(lasers(il)%pol(2)), '), ', &
-          '(', real(lasers(il)%pol(3)), ',', aimag(lasers(il)%pol(3)), ')'
+          '(', TOFLOAT(lasers(il)%pol(1)), ',', aimag(lasers(il)%pol(1)), '), ', &
+          '(', TOFLOAT(lasers(il)%pol(2)), ',', aimag(lasers(il)%pol(2)), '), ', &
+          '(', TOFLOAT(lasers(il)%pol(3)), ',', aimag(lasers(il)%pol(3)), ')'
       end if
       write(iunit,'(3x,a,f14.8,3a)') 'Carrier frequency = ', &
         units_from_atomic(units_out%energy, lasers(il)%omega), &
@@ -599,9 +604,9 @@ contains
 
     select case(laser%field)
     case(E_FIELD_SCALAR_POTENTIAL)
-      pot(1:mesh%np) = pot(1:mesh%np) + real(amp)*laser%v(1:mesh%np)
+      pot(1:mesh%np) = pot(1:mesh%np) + TOFLOAT(amp)*laser%v(1:mesh%np)
     case default
-      field(1:mesh%sb%dim) = real(amp*laser%pol(1:mesh%sb%dim))
+      field(1:mesh%sb%dim) = TOFLOAT(amp*laser%pol(1:mesh%sb%dim))
       do ip = 1, mesh%np
         ! The -1 sign is missing here. Check epot.F90 for the explanation.
         pot(ip) = pot(ip) + sum(field(1:mesh%sb%dim)*mesh%x(ip, 1:mesh%sb%dim))
@@ -626,10 +631,18 @@ contains
     PUSH_SUB(laser_vector_potential)
 
     if(present(time)) then
-      amp = real(tdf(laser%f, time)*exp(M_zI*(laser%omega*time + tdf(laser%phi, time))))
-      forall(idir = 1:mesh%sb%dim, ip = 1:mesh%np) aa(ip, idir) = aa(ip, idir) + amp*laser%a(ip, idir)
+      amp = TOFLOAT(tdf(laser%f, time)*exp(M_zI*(laser%omega*time + tdf(laser%phi, time))))
+      do idir = 1, mesh%sb%dim
+        do ip = 1, mesh%np
+          aa(ip, idir) = aa(ip, idir) + amp*laser%a(ip, idir)
+        end do
+      end do
     else
-      forall(idir = 1:mesh%sb%dim, ip = 1:mesh%np) aa(ip, idir) = aa(ip, idir) + laser%a(ip, idir)
+      do idir = 1, mesh%sb%dim
+        do ip = 1, mesh%np
+          aa(ip, idir) = aa(ip, idir) + laser%a(ip, idir)
+        end do
+      end do
     end if
 
     POP_SUB(laser_vector_potential)
@@ -664,9 +677,9 @@ contains
       ! In this case we will just return the value of the time function. The "field", in fact, 
       ! should be a function of the position in space (thus, a true "field"), given by the 
       ! gradient of the scalar potential.
-      field(1) = field(1) + real(amp)
+      field(1) = field(1) + TOFLOAT(amp)
     else
-      field(1:dim) = field(1:dim) + real(amp*laser%pol(1:dim))
+      field(1:dim) = field(1:dim) + TOFLOAT(amp*laser%pol(1:dim))
     end if
 
   end subroutine laser_field

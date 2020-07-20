@@ -59,8 +59,8 @@
     call controlfunction_set_theta(par_, theta)
     call opt_control_state_null(qcpsi)
     call opt_control_state_copy(qcpsi, initial_st)
-    call propagate_forward(sys_, hm_, td_, par_, oct_target, qcpsi)
-    f = - target_j1(oct_target, sys_%gr, qcpsi, sys_%geo) - controlfunction_j2(par_)
+    call propagate_forward(sys_, td_, par_, oct_target, qcpsi)
+    f = - target_j1(oct_target, sys_%namespace, sys_%gr, qcpsi, sys_%geo) - controlfunction_j2(par_)
 
     SAFE_DEALLOCATE_A(theta)
     SAFE_DEALLOCATE_A(y)
@@ -70,11 +70,11 @@
 
   ! ---------------------------------------------------------
   subroutine opt_control_cg_calc(n, x, f, getgrad, df)
-    integer,     intent(in)    :: n
-    REAL_DOUBLE, intent(in)    :: x(n)
-    REAL_DOUBLE, intent(inout) :: f
-    integer,     intent(in)    :: getgrad
-    REAL_DOUBLE, intent(inout) :: df(n)
+    integer,        intent(in)    :: n
+    REAL_DOUBLE,    intent(in)    :: x(n)
+    REAL_DOUBLE,    intent(inout) :: f
+    integer,        intent(in)    :: getgrad
+    REAL_DOUBLE,    intent(inout) :: df(n)
 
     integer :: j
     type(controlfunction_t) :: par_new
@@ -90,9 +90,9 @@
       theta = x
       call controlfunction_set_theta(par_, theta)
       call controlfunction_copy(par_new, par_)
-      call f_striter(sys_, hm_, td_, par_new, j1)
+      call f_striter(sys_, td_, par_new, j1)
       f = - j1 - controlfunction_j2(par_)
-      call iteration_manager_direct(real(-f, REAL_PRECISION), par_, iterator, sys_)
+      call iteration_manager_direct(TOFLOAT(-f), par_, iterator, sys_)
       SAFE_ALLOCATE(dff(1:n))
       dff = df
       call controlfunction_gradient(par_, par_new, dff)
@@ -141,10 +141,10 @@
       call controlfunction_set_theta(par_, theta)
       call opt_control_state_null(qcpsi)
       call opt_control_state_copy(qcpsi, initial_st)
-      call propagate_forward(sys_, hm_, td_, par_, oct_target, qcpsi)
-      f = - target_j1(oct_target, sys_%gr, qcpsi, sys_%geo) - controlfunction_j2(par_)
+      call propagate_forward(sys_, td_, par_, oct_target, qcpsi)
+      f = - target_j1(oct_target, sys_%namespace, sys_%gr, qcpsi, sys_%geo) - controlfunction_j2(par_)
       call opt_control_state_end(qcpsi)
-      call iteration_manager_direct(real(-f, REAL_PRECISION), par_, iterator, sys_)
+      call iteration_manager_direct(TOFLOAT(-f), par_, iterator, sys_)
     end if
 
     SAFE_DEALLOCATE_A(theta)
@@ -180,7 +180,7 @@
     call messages_info(5)
     call messages_print_stress(stdout)
 
-    call iteration_manager_main(iterator, j, j1, j2, real(maxdx, REAL_PRECISION))
+    call iteration_manager_main(iterator, j, j1, j2, TOFLOAT(maxdx))
 
     POP_SUB(opt_control_cg_write_info)
   end subroutine opt_control_cg_write_info
@@ -210,16 +210,16 @@
       ! We only need the value of the target functional.
       call opt_control_state_null(qcpsi)
       call opt_control_state_copy(qcpsi, initial_st)
-      call propagate_forward(sys_, hm_, td_, par_, oct_target, qcpsi)
-      f = - target_j1(oct_target, sys_%gr, qcpsi, sys_%geo) - controlfunction_j2(par_)
+      call propagate_forward(sys_, td_, par_, oct_target, qcpsi)
+      f = - target_j1(oct_target, sys_%namespace, sys_%gr, qcpsi, sys_%geo) - controlfunction_j2(par_)
       call opt_control_state_end(qcpsi)
-      call iteration_manager_direct(real(-f, REAL_PRECISION), par_, iterator, sys_)
+      call iteration_manager_direct(TOFLOAT(-f), par_, iterator, sys_)
     else
       call controlfunction_copy(par_new, par_)
-      call f_striter(sys_, hm_, td_, par_new, j1)
+      call f_striter(sys_, td_, par_new, j1)
       delta = controlfunction_diff(par_, par_new)
       f = - oct%eta * j1 + oct%delta * delta
-      call iteration_manager_direct(real(-f, REAL_PRECISION), par_, iterator, sys_, delta)
+      call iteration_manager_direct(TOFLOAT(-f), par_, iterator, sys_, delta)
       call controlfunction_end(par_new)
     end if
 
@@ -261,7 +261,7 @@
     call messages_info(5)
     call messages_print_stress(stdout)
 
-    call iteration_manager_main(iterator, j, j1, j2, real(maxdx, REAL_PRECISION))
+    call iteration_manager_main(iterator, j, j1, j2, TOFLOAT(maxdx))
 
     POP_SUB(opt_control_direct_message_info)
   end subroutine opt_control_direct_message_info

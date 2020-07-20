@@ -25,9 +25,11 @@ module curvilinear_oct_m
   use geometry_oct_m
   use global_oct_m
   use lalg_adv_oct_m
-  use parser_oct_m
   use messages_oct_m
+  use namespace_oct_m
+  use parser_oct_m
   use profiling_oct_m
+  use root_solver_oct_m
   use simul_box_oct_m
   use unit_oct_m
   use unit_system_oct_m
@@ -53,10 +55,12 @@ module curvilinear_oct_m
     CURV_METHOD_MODINE  = 4
 
   type curvilinear_t
-    integer :: method
+    private
+    integer, public :: method
     type(curv_gygi_t)   :: gygi
     type(curv_briggs_t) :: briggs
     type(curv_modine_t) :: modine
+    type(root_solver_t) :: rs
   end type curvilinear_t
 
   character(len=23), parameter :: dump_tag = '*** curvilinear_dump **'
@@ -64,8 +68,9 @@ module curvilinear_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine curvilinear_init(cv, sb, geo, spacing)
+  subroutine curvilinear_init(cv, namespace, sb, geo, spacing)
     type(curvilinear_t), intent(out) :: cv
+    type(namespace_t),   intent(in)  :: namespace
     type(simul_box_t),   intent(in)  :: sb
     type(geometry_t),    intent(in)  :: geo
     FLOAT,               intent(in)  :: spacing(:)
@@ -97,8 +102,8 @@ contains
     !% Modine [N.A. Modine, G. Zumbach and E. Kaxiras, <i>Phys. Rev. B</i> <b>55</b>, 10289 (1997)]
     !% (NOT WORKING).
     !%End
-    call parse_variable('CurvMethod', CURV_METHOD_UNIFORM, cv%method)
-    if(.not.varinfo_valid_option('CurvMethod', cv%method)) call messages_input_error('CurvMethod')
+    call parse_variable(namespace, 'CurvMethod', CURV_METHOD_UNIFORM, cv%method)
+    if(.not.varinfo_valid_option('CurvMethod', cv%method)) call messages_input_error(namespace, 'CurvMethod')
     call messages_print_var_option(stdout, "CurvMethod", cv%method)
 
     ! FIXME: The other two methods are apparently not working
@@ -106,12 +111,16 @@ contains
 
     select case(cv%method)
     case(CURV_METHOD_GYGI)
-      call curv_gygi_init(cv%gygi, sb, geo)
+      call curv_gygi_init(cv%gygi, namespace, sb, geo)
     case(CURV_METHOD_BRIGGS)
-      call curv_briggs_init(cv%briggs, sb)
+      call curv_briggs_init(cv%briggs, namespace, sb)
     case(CURV_METHOD_MODINE)
-      call curv_modine_init(cv%modine, sb, geo, spacing)
+      call curv_modine_init(cv%modine, namespace, sb, geo, spacing)
     end select
+
+    ! initialize root solver
+    call root_solver_init(cv%rs, namespace, sb%dim,  &
+      solver_type = ROOT_NEWTON, maxiter = 500, abs_tolerance = CNST(1.0e-10))
 
     POP_SUB(curvilinear_init)
   end subroutine curvilinear_init
@@ -168,7 +177,7 @@ contains
     case(CURV_METHOD_UNIFORM)
       x(1:sb%dim) = matmul(sb%rlattice_primitive(1:sb%dim,1:sb%dim), chi(1:sb%dim))
     case(CURV_METHOD_GYGI)
-      call curv_gygi_chi2x(sb, cv%gygi, chi, x)
+      call curv_gygi_chi2x(sb, cv%gygi, cv%rs, chi, x)
     case(CURV_METHOD_BRIGGS)
       call curv_briggs_chi2x(sb, cv%briggs, chi, x)
     case(CURV_METHOD_MODINE)
@@ -221,10 +230,10 @@ contains
     select case(cv%method)
     case(CURV_METHOD_UNIFORM)
       Jac(1:sb%dim, 1:sb%dim) = sb%rlattice_primitive(1:sb%dim, 1:sb%dim)
-      jdet = lalg_determinant(sb%dim, Jac, invert = .false.)      
+      jdet = lalg_determinant(sb%dim, Jac, preserve_mat = .false.)      
     case(CURV_METHOD_GYGI)
       call curv_gygi_jacobian(sb, cv%gygi, x, dummy, Jac)
-      jdet = M_ONE/lalg_determinant(sb%dim, Jac, invert = .false.)
+      jdet = M_ONE/lalg_determinant(sb%dim, Jac, preserve_mat = .false.)
     case(CURV_METHOD_BRIGGS)
       call curv_briggs_jacobian_inv(sb, cv%briggs, chi, Jac)
       jdet = M_ONE
@@ -233,7 +242,7 @@ contains
       end do
     case(CURV_METHOD_MODINE)
       call curv_modine_jacobian_inv(sb, cv%modine, chi, dummy, Jac)
-      jdet = M_ONE*lalg_determinant(sb%dim, Jac, invert = .false.)
+      jdet = M_ONE*lalg_determinant(sb%dim, Jac, preserve_mat = .false.)
     end select
 
     SAFE_DEALLOCATE_A(Jac)

@@ -155,7 +155,7 @@ module pseudo_oct_m
 
     ! -------------------------------------------------
     
-    real(8) function pseudo_valence_charge(pseudo)
+    FLOAT function pseudo_valence_charge(pseudo)
       import :: pseudo_t
       implicit none
 
@@ -164,7 +164,7 @@ module pseudo_oct_m
 
     ! -------------------------------------------------
 
-    real(8) function pseudo_mesh_spacing(pseudo)
+    FLOAT function pseudo_mesh_spacing(pseudo)
       import :: pseudo_t
       implicit none
       
@@ -182,7 +182,7 @@ module pseudo_oct_m
 
     ! -------------------------------------------------
     
-    real(8) function pseudo_mass(pseudo)
+    FLOAT function pseudo_mass(pseudo)
       import :: pseudo_t
       implicit none
       
@@ -232,7 +232,7 @@ module pseudo_oct_m
       implicit none
       
       type(pseudo_t),   intent(in)    :: pseudo
-      real(8),          intent(out)   :: grid
+      FLOAT,            intent(out)   :: grid
     end subroutine pseudo_grid
     
     ! -------------------------------------------------
@@ -242,7 +242,7 @@ module pseudo_oct_m
       implicit none
       
       type(pseudo_t),   intent(in)    :: pseudo
-      real(8),          intent(out)   :: weight
+      FLOAT,            intent(out)   :: weight
     end subroutine pseudo_grid_weights
 
     ! -------------------------------------------------
@@ -252,7 +252,7 @@ module pseudo_oct_m
       implicit none
       
       type(pseudo_t),   intent(in)    :: pseudo
-      real(8),          intent(out)   :: local_potential
+      FLOAT,            intent(out)   :: local_potential
     end subroutine pseudo_local_potential
     
     ! -------------------------------------------------
@@ -264,12 +264,12 @@ module pseudo_oct_m
       type(pseudo_t),   intent(in)    :: pseudo
       integer,          intent(in)    :: l
       integer,          intent(in)    :: ic
-      real(8),          intent(out)   :: projector
+      FLOAT,            intent(out)   :: projector
     end subroutine pseudo_projector
 
     ! -------------------------------------------------
     
-    real(8) function pseudo_dij(pseudo, l, ic, jc)
+    FLOAT function pseudo_dij(pseudo, l, ic, jc)
       import :: pseudo_t
       implicit none
       
@@ -287,7 +287,7 @@ module pseudo_oct_m
       
       type(pseudo_t),   intent(in)    :: pseudo
       integer,          intent(in)    :: l
-      real(8),          intent(inout) :: radial_potential
+      FLOAT,            intent(inout) :: radial_potential
     end subroutine pseudo_radial_potential
 
     ! -------------------------------------------------
@@ -298,7 +298,7 @@ module pseudo_oct_m
       
       type(pseudo_t),   intent(in)    :: pseudo
       integer,          intent(in)    :: l
-      real(8),          intent(out)   :: radial_function
+      FLOAT,            intent(out)   :: radial_function
     end subroutine pseudo_radial_function
 
     ! -------------------------------------------------
@@ -308,7 +308,7 @@ module pseudo_oct_m
       implicit none
       
       type(pseudo_t),   intent(in)    :: pseudo
-      real(8),          intent(out)   :: nlcc_density
+      FLOAT,            intent(out)   :: nlcc_density
     end subroutine pseudo_nlcc_density
 
     ! -------------------------------------------------
@@ -318,7 +318,7 @@ module pseudo_oct_m
       implicit none
       
       type(pseudo_t),   intent(in)    :: pseudo
-      real(8),          intent(out)   :: density
+      FLOAT,            intent(out)   :: density
     end subroutine pseudo_density
 
     ! -------------------------------------------------
@@ -340,8 +340,8 @@ module pseudo_oct_m
       integer,          intent(in)    :: index
       integer,          intent(out)   :: n
       integer,          intent(out)   :: l
-      real(8),          intent(out)   :: occ
-      real(8),          intent(out)   :: wf
+      FLOAT,            intent(out)   :: occ
+      FLOAT,            intent(out)   :: wf
     end subroutine pseudo_wavefunction
 
     ! -------------------------------------------------

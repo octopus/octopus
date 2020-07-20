@@ -24,12 +24,13 @@ module gauge_field_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
   use restart_oct_m
   use simul_box_oct_m
-  use states_oct_m
-  use states_dim_oct_m
+  use states_elec_oct_m
+  use states_elec_dim_oct_m
   use symmetries_oct_m
   use symm_op_oct_m
   use unit_oct_m
@@ -59,6 +60,7 @@ module gauge_field_oct_m
     gauge_field_get_force
 
   type gauge_field_t
+    private
     FLOAT   :: vecpot(1:MAX_DIM)   
     FLOAT   :: vecpot_vel(1:MAX_DIM)
     FLOAT   :: vecpot_acc(1:MAX_DIM)    
@@ -66,7 +68,7 @@ module gauge_field_oct_m
     FLOAT   :: force(1:MAX_DIM)
     FLOAT   :: wp2
     integer :: ndim
-    logical :: with_gauge_field
+    logical, public :: with_gauge_field
     integer :: dynamics
     FLOAT   :: kicktime 
   end type gauge_field_t
@@ -83,8 +85,9 @@ contains
   end subroutine gauge_field_nullify
 
   ! ---------------------------------------------------------
-  subroutine gauge_field_init(this, sb)
+  subroutine gauge_field_init(this, namespace, sb)
     type(gauge_field_t),     intent(out)   :: this
+    type(namespace_t),       intent(in)    :: namespace
     type(simul_box_t),       intent(in)    :: sb
 
     integer :: ii, iop
@@ -115,7 +118,7 @@ contains
     !% Bertsch et al, Phys. Rev. B 62 7998 (2000).
     !%End
 
-    call parse_variable('GaugeFieldDynamics', OPTION__GAUGEFIELDDYNAMICS__POLARIZATION, this%dynamics)
+    call parse_variable(namespace, 'GaugeFieldDynamics', OPTION__GAUGEFIELDDYNAMICS__POLARIZATION, this%dynamics)
 
     !%Variable GaugeFieldPropagate
     !%Type logical
@@ -125,7 +128,7 @@ contains
     !% Propagate the gauge field with initial condition set by GaugeVectorField or zero if not specified
     !%End
 
-    call parse_variable('GaugeFieldPropagate', .false., this%with_gauge_field)
+    call parse_variable(namespace, 'GaugeFieldPropagate', .false., this%with_gauge_field)
 
     !%Variable GaugeVectorField
     !%Type block
@@ -144,7 +147,7 @@ contains
     !%End
     ! Read the initial gauge vector field
 
-    if(parse_block('GaugeVectorField', blk) == 0) then
+    if(parse_block(namespace, 'GaugeVectorField', blk) == 0) then
 
       this%with_gauge_field = .true.
 
@@ -155,7 +158,7 @@ contains
       call parse_block_end(blk)
       if(.not. simul_box_is_periodic(sb)) then
         message(1) = "GaugeVectorField is intended for periodic systems."
-        call messages_warning(1)
+        call messages_warning(1, namespace=namespace)
       end if
 
       if(sb%kpoints%use_symmetries) then
@@ -164,7 +167,7 @@ contains
           if(.not. symm_op_invariant_cart(sb%symm%ops(iop), this%vecpot_kick, CNST(1e-5))) then
             message(1) = "The GaugeVectorField breaks (at least) one of the symmetries used to reduce the k-points."
             message(2) = "Set SymmetryBreakDir equal to GaugeVectorField."
-            call messages_fatal(2)
+            call messages_fatal(2, namespace=namespace)
           end if
         end do
       end if
@@ -180,7 +183,7 @@ contains
     !% systems one can apply this probe with a delay relative to the start of the simulation.
     !%End
 
-    call parse_variable('GaugeFieldDelay', M_ZERO, this%kicktime)
+    call parse_variable(namespace, 'GaugeFieldDelay', M_ZERO, this%kicktime)
 
     if(abs(this%kicktime) <= M_EPSILON) then
        this%vecpot(1:this%ndim) = this%vecpot_kick(1:this%ndim)
@@ -270,10 +273,11 @@ contains
   end subroutine gauge_field_get_vec_pot_acc
 
   ! ---------------------------------------------------------
-  subroutine gauge_field_propagate(this, dt, time)
+  subroutine gauge_field_propagate(this, dt, time, namespace)
     type(gauge_field_t),  intent(inout) :: this
     FLOAT,                intent(in)    :: dt
     FLOAT,                intent(in)    :: time
+    type(namespace_t),    intent(in)    :: namespace
     
     logical, save :: warning_shown = .false.
     integer :: idim
@@ -301,7 +305,7 @@ contains
 
         write(message(1),'(a)') 'It seems that the gauge-field might be diverging. You should probably check'
         write(message(2),'(a)') 'the simulation parameters, in particular the number of k-points.'
-        call messages_warning(2)
+        call messages_warning(2, namespace=namespace)
       end if
     end do
     POP_SUB(gauge_field_propagate)
@@ -325,7 +329,7 @@ contains
   subroutine gauge_field_init_vec_pot(this, sb, st)
     type(gauge_field_t),  intent(inout) :: this
     type(simul_box_t),    intent(in)    :: sb
-    type(states_t),       intent(in)    :: st
+    type(states_elec_t),  intent(in)    :: st
     
     PUSH_SUB(gauge_field_init_vec_pot)
 
@@ -434,11 +438,11 @@ contains
   ! ---------------------------------------------------------
 
   subroutine gauge_field_get_force(this, gr, st)
-    type(gauge_field_t),  intent(inout)    :: this
+    type(gauge_field_t),  intent(inout) :: this
     type(grid_t),         intent(in)    :: gr
-    type(states_t),       intent(in)    :: st
+    type(states_elec_t),  intent(in)    :: st
 
-    integer :: idir,ispin,istot
+    integer :: idir, ispin
 
     PUSH_SUB(gauge_field_get_force)
 
@@ -448,11 +452,9 @@ contains
       this%force(1:gr%sb%dim) = M_ZERO 
 
     case(OPTION__GAUGEFIELDDYNAMICS__POLARIZATION)
-      istot = 1
-      if (st%d%nspin > 1) istot = 2
       do idir = 1, gr%sb%periodic_dim
         this%force(idir) = M_ZERO
-        do ispin = 1, istot                      
+        do ispin = 1, st%d%spin_channels
           this%force(idir) = this%force(idir) - &
                                CNST(4.0)*M_PI*P_c/gr%sb%rcell_volume*dmf_integrate(gr%mesh, st%current(:, idir, ispin))
         end do

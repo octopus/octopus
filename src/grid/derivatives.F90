@@ -19,14 +19,19 @@
 #include "global.h"
 
 module derivatives_oct_m
+  use accel_oct_m
   use batch_oct_m
+  use batch_ops_oct_m
   use boundaries_oct_m
   use global_oct_m
+  use iso_c_binding
   use lalg_adv_oct_m
   use loct_oct_m
+  use math_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use nl_operator_oct_m
   use par_vec_oct_m
   use parser_oct_m
@@ -38,6 +43,7 @@ module derivatives_oct_m
   use stencil_stargeneral_oct_m
   use stencil_variational_oct_m
   use transfer_table_oct_m
+  use types_oct_m
   use utils_oct_m
   use varinfo_oct_m
 
@@ -53,14 +59,13 @@ module derivatives_oct_m
   private
   public ::                             &
     derivatives_t,                      &
+    derivatives_nullify,                &
     derivatives_init,                   &
     derivatives_end,                    &
     derivatives_build,                  &
     derivatives_handle_batch_t,         &
     dderivatives_test,                  &
     zderivatives_test,                  &
-    sderivatives_test,                  &
-    cderivatives_test,                  &
     dderivatives_batch_start,           &
     zderivatives_batch_start,           &
     dderivatives_batch_finish,          &
@@ -74,10 +79,16 @@ module derivatives_oct_m
     derivatives_lapl_diag,              &
     dderivatives_grad,                  &
     zderivatives_grad,                  &
+    dderivatives_batch_grad,            &
+    zderivatives_batch_grad,            &
     dderivatives_div,                   &
     zderivatives_div,                   &
     dderivatives_curl,                  &
-    zderivatives_curl
+    zderivatives_curl,                  &
+    dderivatives_batch_curl,            &
+    zderivatives_batch_curl,            &
+    dderivatives_partial,               &
+    zderivatives_partial
 
 
   integer, parameter ::     &
@@ -97,6 +108,7 @@ module derivatives_oct_m
     NON_BLOCKING = 2 
 
   type derivatives_t
+    ! Components are public by default
     type(boundaries_t)    :: boundaries
     type(mesh_t), pointer :: mesh          !< pointer to the underlying mesh
     integer               :: dim           !< dimensionality of the space (sb%dim)
@@ -107,16 +119,16 @@ module derivatives_oct_m
 
     !> If the so-called variational discretization is used, this controls a
     !! possible filter on the Laplacian.
-    FLOAT :: lapl_cutoff   
+    FLOAT, private :: lapl_cutoff   
 
-    type(nl_operator_t), pointer :: op(:)  !< op(1:conf%dim) => gradient
-    !! op(conf%dim+1) => Laplacian
-    type(nl_operator_t), pointer :: lapl   !< these are just shortcuts for op
+    type(nl_operator_t), pointer, private :: op(:)  !< op(1:conf%dim) => gradient
+                                                    !! op(conf%dim+1) => Laplacian
+    type(nl_operator_t), pointer :: lapl            !< these are just shortcuts for op
     type(nl_operator_t), pointer :: grad(:)
 
     integer                      :: n_ghost(MAX_DIM)   !< ghost points to add in each dimension
 #if defined(HAVE_MPI)
-    integer                      :: comm_method 
+    integer, private             :: comm_method 
 #endif
     type(derivatives_t),    pointer :: finer
     type(derivatives_t),    pointer :: coarser
@@ -138,19 +150,44 @@ module derivatives_oct_m
     FLOAT                        :: factor
   end type derivatives_handle_batch_t
 
-  type(profile_t), save :: gradient_prof, divergence_prof, curl_prof
+  type(accel_kernel_t) :: kernel_uvw_xyz, kernel_dcurl, kernel_zcurl
+
+  type(profile_t), save :: gradient_prof, divergence_prof, curl_prof, batch_gradient_prof, curl_batch_prof
 
 contains
 
   ! ---------------------------------------------------------
-  subroutine derivatives_init(der, sb, use_curvilinear, order)
+  elemental subroutine derivatives_nullify(this)
+    type(derivatives_t), intent(out) :: this
+
+    call boundaries_nullify(this%boundaries)
+    nullify(this%mesh)
+    this%dim = 0
+    this%order = 0
+    this%stencil_type = 0
+    this%masses = M_ZERO
+    this%lapl_cutoff = M_ZERO
+    nullify(this%op, this%lapl, this%grad)
+    this%n_ghost = 0
+#if defined(HAVE_MPI)
+    this%comm_method = 0
+#endif
+    nullify(this%finer, this%coarser)
+    nullify(this%to_finer, this%to_coarser)
+
+  end subroutine derivatives_nullify
+
+  ! ---------------------------------------------------------
+  subroutine derivatives_init(der, namespace, sb, use_curvilinear, order)
     type(derivatives_t), target, intent(out) :: der
+    type(namespace_t),           intent(in)  :: namespace
     type(simul_box_t),           intent(in)  :: sb
     logical,                     intent(in)  :: use_curvilinear
     integer, optional,           intent(in)  :: order
 
     integer :: idir
     integer :: default_stencil
+    character(len=40) :: flags
 
     PUSH_SUB(derivatives_init)
 
@@ -184,14 +221,16 @@ contains
     if(use_curvilinear) default_stencil = DER_STARPLUS
     if(sb%nonorthogonal) default_stencil = DER_STARGENERAL
 
-    call parse_variable('DerivativesStencil', default_stencil, der%stencil_type)
+    call parse_variable(namespace, 'DerivativesStencil', default_stencil, der%stencil_type)
     
-    if(.not.varinfo_valid_option('DerivativesStencil', der%stencil_type)) call messages_input_error('DerivativesStencil')
+    if(.not.varinfo_valid_option('DerivativesStencil', der%stencil_type)) then
+      call messages_input_error(namespace, 'DerivativesStencil')
+    end if
     call messages_print_var_option(stdout, "DerivativesStencil", der%stencil_type)
 
-    if(use_curvilinear  .and.  der%stencil_type < DER_CUBE) call messages_input_error('DerivativesStencil')
+    if(use_curvilinear  .and.  der%stencil_type < DER_CUBE) call messages_input_error(namespace, 'DerivativesStencil')
     if(der%stencil_type == DER_VARIATIONAL) then
-      call parse_variable('DerivativesLaplacianFilter', M_ONE, der%lapl_cutoff)
+      call parse_variable(namespace, 'DerivativesLaplacianFilter', M_ONE, der%lapl_cutoff)
     end if
 
     !%Variable DerivativesOrder
@@ -213,7 +252,7 @@ contains
     !% in 2D and 24 in 3D.
     !% </ul>
     !%End
-    call parse_variable('DerivativesOrder', 4, der%order)
+    call parse_variable(namespace, 'DerivativesOrder', 4, der%order)
     ! overwrite order if given as argument
     if(present(order)) then
       der%order = order
@@ -232,13 +271,13 @@ contains
     !% Communication is based on non-blocking point-to-point communication.
     !%End
     
-    call parse_variable('ParallelizationOfDerivatives', NON_BLOCKING, der%comm_method)
+    call parse_variable(namespace, 'ParallelizationOfDerivatives', NON_BLOCKING, der%comm_method)
     
     if(.not. varinfo_valid_option('ParallelizationOfDerivatives', der%comm_method)) then
-      call messages_input_error('ParallelizationOfDerivatives')
+      call messages_input_error(namespace, 'ParallelizationOfDerivatives')
     end if
 
-    call messages_obsolete_variable('OverlapDerivatives', 'ParallelizationOfDerivatives')
+    call messages_obsolete_variable(namespace, 'OverlapDerivatives', 'ParallelizationOfDerivatives')
 #endif
 
     ! if needed, der%masses should be initialized in modelmb_particles_init
@@ -262,6 +301,13 @@ contains
     nullify(der%finer)
     nullify(der%to_coarser)
     nullify(der%to_finer)
+
+    if(accel_is_enabled()) then
+      write(flags, '(A,I1.1)') ' -DDIMENSION=', der%dim
+      call accel_kernel_build(kernel_uvw_xyz, 'uvw_to_xyz.cl', 'uvw_to_xyz', flags)
+      call accel_kernel_build(kernel_dcurl, 'curl.cl', 'dcurl', flags = '-DRTYPE_DOUBLE')
+      call accel_kernel_build(kernel_zcurl, 'curl.cl', 'zcurl', flags = '-DRTYPE_COMPLEX')
+    end if
 
     POP_SUB(derivatives_init)
   end subroutine derivatives_init
@@ -380,22 +426,10 @@ contains
 
   end subroutine derivatives_get_stencil_grad
 
-
   ! ---------------------------------------------------------
-  subroutine derivatives_update(der, mesh)
+  subroutine derivatives_build(der, namespace, mesh)
     type(derivatives_t),    intent(inout) :: der
-    type(mesh_t),   target, intent(in)    :: mesh
-    
-    call derivatives_get_stencil_lapl(der)
-    call derivatives_get_stencil_grad(der)
-    
-    call derivatives_build(der, mesh)
-    
-  end subroutine derivatives_update
-
-  ! ---------------------------------------------------------
-  subroutine derivatives_build(der, mesh)
-    type(derivatives_t),    intent(inout) :: der
+    type(namespace_t),      intent(in)    :: namespace
     type(mesh_t),   target, intent(in)    :: mesh
 
     integer, allocatable :: polynomials(:,:)
@@ -408,7 +442,7 @@ contains
 
     PUSH_SUB(derivatives_build)
 
-    call boundaries_init(der%boundaries, mesh)
+    call boundaries_init(der%boundaries, namespace, mesh)
 
     ASSERT(associated(der%op))
     ASSERT(der%stencil_type>=DER_STAR .and. der%stencil_type<=DER_STARGENERAL)
@@ -649,16 +683,22 @@ contains
       ! i indexes the point in the stencil
       do i = 1, op(1)%stencil%size
         if(mesh%use_curvilinear) then
-          forall(j = 1:dim) x(j) = mesh%x(p + op(1)%ri(i, op(1)%rimap(p)), j) - mesh%x(p, j)
+          do j = 1, dim
+            x(j) = mesh%x(p + op(1)%ri(i, op(1)%rimap(p)), j) - mesh%x(p, j)
+          end do
         else
-          forall(j = 1:dim) x(j) = real(op(1)%stencil%points(j, i), REAL_PRECISION)*mesh%spacing(j)
+          do j = 1, dim
+            x(j) = TOFLOAT(op(1)%stencil%points(j, i))*mesh%spacing(j)
+          end do
           ! TODO : this internal if clause is inefficient - the condition is determined globally
           if (mesh%sb%nonorthogonal .and. .not. optional_default(force_orthogonal, .false.))  & 
               x(1:dim) = matmul(mesh%sb%rlattice_primitive(1:dim,1:dim), x(1:dim))
         end if
                          
 ! NB: these masses are applied on the cartesian directions. Should add a check for non-orthogonal axes
-        forall(j = 1:dim) x(j) = x(j)*sqrt(masses(j))
+        do j = 1, dim
+          x(j) = x(j)*sqrt(masses(j))
+        end do
 
         ! calculate powers
         do j = 1, dim
@@ -723,6 +763,7 @@ contains
     POP_SUB(derivatives_overlap)
   end function derivatives_overlap
 #endif
+
   
 #include "undef.F90"
 #include "real.F90"
@@ -730,14 +771,6 @@ contains
 
 #include "undef.F90"
 #include "complex.F90"
-#include "derivatives_inc.F90"
-
-#include "undef.F90"
-#include "real_single.F90"
-#include "derivatives_inc.F90"
-
-#include "undef.F90"
-#include "complex_single.F90"
 #include "derivatives_inc.F90"
 
 end module derivatives_oct_m

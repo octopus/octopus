@@ -34,13 +34,17 @@ module projector_matrix_oct_m
     projector_matrix_deallocate
 
   type projector_matrix_t
+    ! Components are public by default
     integer, pointer :: map(:)
-    FLOAT,   pointer :: projectors(:, :)
+    FLOAT,   pointer :: dprojectors(:, :)
+    CMPLX,   pointer :: zprojectors(:, :)
     FLOAT,   pointer :: scal(:)
     FLOAT,   allocatable :: position(:, :)
     integer          :: npoints
     integer          :: nprojs
-    FLOAT,   allocatable :: mix(:, :)
+    FLOAT,   allocatable :: dmix(:, :)
+    CMPLX,   allocatable :: zmix(:, :, :)
+    logical          :: is_cmplx
   end type projector_matrix_t
 
 contains
@@ -49,31 +53,46 @@ contains
     type(projector_matrix_t), intent(out) :: this
 
     nullify(this%map)
-    nullify(this%projectors)
+    nullify(this%dprojectors)
+    nullify(this%zprojectors)
     nullify(this%scal)
+    this%is_cmplx = .false.
 
   end subroutine projector_matrix_nullify
   
   ! -------------------------------------------------
 
-  subroutine projector_matrix_allocate(this, npoints, nprojs, has_mix_matrix)
+  subroutine projector_matrix_allocate(this, npoints, nprojs, has_mix_matrix, is_cmplx)
     type(projector_matrix_t), intent(out) :: this
     integer,                  intent(in)  :: npoints
     integer,                  intent(in)  :: nprojs
     logical,                  intent(in)  :: has_mix_matrix
+    logical, optional,        intent(in)  :: is_cmplx
 
     PUSH_SUB(projector_matrix_allocate)
 
     this%npoints = npoints
     this%nprojs = nprojs
 
+    this%is_cmplx = optional_default(is_cmplx, .false.)
+
     SAFE_ALLOCATE(this%map(1:npoints))
-    SAFE_ALLOCATE(this%projectors(1:npoints, 1:nprojs))
+    if(this%is_cmplx) then
+      SAFE_ALLOCATE(this%zprojectors(1:npoints, 1:nprojs))
+      nullify(this%dprojectors)
+    else
+      SAFE_ALLOCATE(this%dprojectors(1:npoints, 1:nprojs))
+      nullify(this%zprojectors)
+    end if
     SAFE_ALLOCATE(this%scal(1:nprojs))
     SAFE_ALLOCATE(this%position(1:3, 1:npoints))
 
     if(has_mix_matrix) then
-      SAFE_ALLOCATE(this%mix(1:nprojs, 1:nprojs))
+      if(this%is_cmplx) then
+        SAFE_ALLOCATE(this%zmix(1:nprojs, 1:nprojs, 1:4))
+      else
+        SAFE_ALLOCATE(this%dmix(1:nprojs, 1:nprojs))
+      end if
     end if
 
     POP_SUB(projector_matrix_allocate)
@@ -87,10 +106,12 @@ contains
     PUSH_SUB(projector_matrix_deallocate)
 
     SAFE_DEALLOCATE_P(this%map)
-    SAFE_DEALLOCATE_P(this%projectors)
+    SAFE_DEALLOCATE_P(this%dprojectors)
+    SAFE_DEALLOCATE_P(this%zprojectors)
     SAFE_DEALLOCATE_P(this%scal)
     SAFE_DEALLOCATE_A(this%position)
-    SAFE_DEALLOCATE_A(this%mix)
+    SAFE_DEALLOCATE_A(this%dmix)
+    SAFE_DEALLOCATE_A(this%zmix)
 
     POP_SUB(projector_matrix_deallocate)
   end subroutine projector_matrix_deallocate

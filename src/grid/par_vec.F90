@@ -84,6 +84,7 @@ module par_vec_oct_m
   use messages_oct_m
   use mpi_oct_m
   use mpi_debug_oct_m
+  use namespace_oct_m
   use partition_oct_m
   use profiling_oct_m
   use stencil_oct_m
@@ -112,6 +113,8 @@ module par_vec_oct_m
   
   !> Parallel information
   type pv_t
+    ! Components are public by default
+
     ! The content of these members is process-dependent.
     integer          :: rank                 !< Our rank in the communicator. 
     !> Partition number of the
@@ -138,14 +141,14 @@ module par_vec_oct_m
                                                     !! Global vector; npart elements.
     integer                 :: np_local             !< How many points has running partition? 
                                                     !! Local value.
-    integer, pointer        :: xlocal_vec(:)        !< Points of partition r start at
+    integer, pointer        :: xlocal_vec(:)      !< Points of partition r start at
                                                     !! xlocal_vec(r) in local. Global start point
                                                     !! of the local index.  
                                                     !! Global vector; npart elements.
     integer                 :: xlocal               !< Starting index of running process in local(:) vector.
                                                     !! Local value.
           
-    integer, pointer        :: local_vec(:)         !< Partition r has points
+    integer, pointer        :: local_vec(:)       !< Partition r has points
                                                     !! local_vec(xlocal_vec(r):
                                                     !! xlocal_vec(r)+np_local_vec(r)-1). 
                                                     !! Global vector; np_global elements    
@@ -165,9 +168,9 @@ module par_vec_oct_m
     integer, pointer        :: bndry(:)             !< Global numbers of boundary points.
                                                     !! Global vector; np_enl elements
       
-    type(iihash_t), pointer :: global(:)            !< global(r) contains the global ->
+    type(iihash_t), pointer, private :: global(:)   !< global(r) contains the global ->
                                                     !! local mapping for partition r.   
-    integer                 :: total                !< Total number of ghost points. 
+    integer, private        :: total                !< Total number of ghost points. 
 
     integer                 :: np_ghost                 !< How many ghost points has partition r?
                                                         !! Local value
@@ -181,24 +184,18 @@ module par_vec_oct_m
   interface vec_scatter
     module procedure dvec_scatter
     module procedure zvec_scatter
-    module procedure svec_scatter
-    module procedure cvec_scatter
     module procedure ivec_scatter
   end interface vec_scatter
 
   interface vec_gather
     module procedure dvec_gather
     module procedure zvec_gather
-    module procedure svec_gather
-    module procedure cvec_gather
     module procedure ivec_gather
   end interface vec_gather
 
   interface vec_allgather
     module procedure dvec_allgather
     module procedure zvec_allgather
-    module procedure svec_allgather
-    module procedure cvec_allgather
     module procedure ivec_allgather
   end interface vec_allgather
   
@@ -223,7 +220,7 @@ contains
   !! and also because the vec_init has more a global than local point
   !! of view on the mesh): See the comments in the parameter list.
   subroutine vec_init(comm, root, np_global, np_part_global, idx, stencil, dim, periodic_dim, &
-       inner_partition, bndry_partition, vp)
+       inner_partition, bndry_partition, vp, namespace)
     integer,         intent(in)  :: comm         !< Communicator to use.
     integer,         intent(in)  :: root         !< The master process.
 
@@ -237,6 +234,7 @@ contains
     type(partition_t),intent(in)    :: inner_partition
     type(partition_t),intent(in)    :: bndry_partition
     type(pv_t),       intent(inout) :: vp             !< Description of partition.
+    type(namespace_t),intent(in)    :: namespace
 
     ! Careful: MPI counts process ranks from 0 to numproc-1.
     ! Partition numbers from METIS range from 1 to numproc.
@@ -329,7 +327,7 @@ contains
     ! Mark and count ghost points and neighbours
     ! (set vp%np_ghost_neigh, vp%np_ghost, ghost_flag).
     do inode = 1, npart
-      call iihash_init(ghost_flag(inode), vp%np_local_vec(inode))
+      call iihash_init(ghost_flag(inode))
     end do
 
     do jj = 1, stencil%size
@@ -573,10 +571,10 @@ contains
       ! Write numbers and coordinates of each process` ghost points
       ! to a single file (like in mesh_partition_init) called
       ! debug/mesh_partition/ghost_points.###.
-      call io_mkdir('debug/mesh_partition')
+      call io_mkdir('debug/mesh_partition', namespace)
       
       write(filenum, '(i6.6)') vp%partno
-      iunit = io_open('debug/mesh_partition/ghost_points.'//filenum, action='write')
+      iunit = io_open('debug/mesh_partition/ghost_points.'//filenum, namespace, action='write')
       do ip = 1, vp%np_ghost
         jp = vp%ghost(xghost_tmp(vp%partno) + ip - 1)
         write(iunit, '(99i8)') jp, (idx%lxyz(jp, idir), idir = 1, dim)
@@ -610,7 +608,7 @@ contains
       ! initialize to zero all input
       do inode = 1, npart
         if (inode /= vp%partno) then
-          call iihash_init(vp%global(inode),1)
+          call iihash_init(vp%global(inode))
         end if
       end do
       ii = xbndry_tmp(vp%partno) + np_bndry_tmp(vp%partno)
@@ -629,8 +627,7 @@ contains
     
     do inode = ip, jp
       ! Create hash table.
-      call iihash_init(vp%global(inode), vp%np_local_vec(inode) + &
-           np_ghost_tmp(inode) + np_bndry_tmp(inode))
+      call iihash_init(vp%global(inode))
       ! Insert local points.
       do kp = 1, vp%np_local_vec(inode)
         call iihash_insert(vp%global(inode), vp%local_vec(vp%xlocal_vec(inode) + kp - 1), kp)
@@ -914,14 +911,6 @@ contains
 
 #include "undef.F90"
 #include "real.F90"
-#include "par_vec_inc.F90"
-
-#include "undef.F90"
-#include "complex_single.F90"
-#include "par_vec_inc.F90"
-
-#include "undef.F90"
-#include "real_single.F90"
 #include "par_vec_inc.F90"
 
 #include "undef.F90"

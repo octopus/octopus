@@ -20,31 +20,41 @@
 
 module eigensolver_oct_m
   use batch_oct_m
+  use batch_ops_oct_m
   use derivatives_oct_m
   use eigen_cg_oct_m
   use eigen_lobpcg_oct_m
   use eigen_rmmdiis_oct_m
   use exponential_oct_m
+  use geometry_oct_m
   use global_oct_m
   use grid_oct_m
-  use hamiltonian_oct_m
+  use hamiltonian_elec_oct_m
+  use hamiltonian_elec_base_oct_m
   use lalg_adv_oct_m
   use lalg_basic_oct_m
   use loct_oct_m
   use mesh_oct_m
+  use mesh_batch_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use mpi_oct_m
   use mpi_lib_oct_m
+  use multicomm_oct_m
+  use multigrid_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use preconditioners_oct_m
   use profiling_oct_m
-  use states_oct_m
-  use states_calc_oct_m
-  use states_dim_oct_m
+  use smear_oct_m
+  use states_abst_oct_m
+  use states_elec_oct_m
+  use states_elec_calc_oct_m
+  use states_elec_dim_oct_m
   use subspace_oct_m
   use unit_oct_m
   use unit_system_oct_m
+  use wfs_elec_oct_m
   use xc_oct_m
 
   implicit none
@@ -57,36 +67,38 @@ module eigensolver_oct_m
     eigensolver_run
 
   type eigensolver_t
-    integer :: es_type    !< which eigensolver to use
+    private
+    integer, public :: es_type    !< which eigensolver to use
 
-    FLOAT   :: tolerance
-    integer :: es_maxiter
+    FLOAT,   public :: tolerance
+    integer, public :: es_maxiter
 
-    FLOAT   :: current_rel_dens_error
-    FLOAT   :: imag_time
+    FLOAT,   public :: current_rel_dens_error
+    FLOAT           :: imag_time
 
     !> Stores information about how well it performed.
-    FLOAT, pointer   :: diff(:, :)
-    integer          :: matvec
-    integer, pointer :: converged(:)
+    FLOAT, pointer,   public :: diff(:, :)
+    integer,          public :: matvec
+    integer, pointer, public :: converged(:)
 
     !> Stores information about the preconditioning.
-    type(preconditioner_t) :: pre
+    type(preconditioner_t), public :: pre
 
     type(subspace_t) :: sdiag
-
-    type(xc_t), pointer :: xc
 
     integer :: rmmdiis_minimization_iter
 
     logical :: skip_finite_weight_kpoints
-    logical :: folded_spectrum
+    logical, public :: folded_spectrum
     FLOAT, pointer   :: spectrum_shift(:,:)
 
     ! cg options
-    logical :: orthogonalize_to_all
-    integer :: conjugate_direction
-    logical :: additional_terms
+    logical, public :: orthogonalize_to_all
+    integer, public :: conjugate_direction
+    logical, public :: additional_terms
+    FLOAT,   public :: energy_change_threshold
+
+    type(exponential_t) :: exponential_operator
   end type eigensolver_t
 
 
@@ -104,15 +116,17 @@ module eigensolver_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine eigensolver_init(eigens, gr, st, xc)
+  subroutine eigensolver_init(eigens, namespace, gr, st, geo, mc)
     type(eigensolver_t), intent(out)   :: eigens
-    type(grid_t),        intent(in)    :: gr
-    type(states_t),      intent(in)    :: st
-    type(xc_t), target,  intent(in)    :: xc
+    type(namespace_t),   intent(in)    :: namespace
+    type(grid_t),        intent(inout) :: gr
+    type(states_elec_t), intent(in)    :: st
+    type(geometry_t),    intent(in)    :: geo
+    type(multicomm_t),   intent(in)    :: mc
 
     integer :: default_iter, default_es
     FLOAT   :: default_tol
-    real(8) :: mem
+    FLOAT   :: mem
 
     PUSH_SUB(eigensolver_init)
 
@@ -147,8 +161,7 @@ contains
     !% Kresse and Furthm&uuml;ller [<i>Phys. Rev. B</i> <b>54</b>, 11169
     !% (1996)]. This eigensolver requires almost no orthogonalization
     !% so it can be considerably faster than the other options for
-    !% large systems; however it might suffer stability problems. To
-    !% improve its performance a large number of <tt>ExtraStates</tt>
+    !% large systems. To improve its performance a large number of <tt>ExtraStates</tt>
     !% are required (around 10-20% of the number of occupied states).
     !% Note: with <tt>unocc</tt>, you will need to stop the calculation
     !% by hand, since the highest states will probably never converge.
@@ -163,22 +176,23 @@ contains
       default_es = RS_CG
     end if
 
-    call parse_variable('Eigensolver', default_es, eigens%es_type)
+    call parse_variable(namespace, 'Eigensolver', default_es, eigens%es_type)
 
     if(st%parallel_in_states .and. .not. eigensolver_parallel_in_states(eigens)) then
       message(1) = "The selected eigensolver is not parallel in states."
       message(2) = "Please use the lobpcg, psd, or rmmdiis eigensolvers."
-      call messages_fatal(2)
+      call messages_fatal(2, namespace=namespace)
     end if
 
-    if(eigens%es_type == RS_LOBPCG .and. st%group%block_start /= st%group%block_end) &
+    if(eigens%es_type == RS_LOBPCG .and. st%group%block_start /= st%group%block_end) then
       call messages_experimental("lobpcg eigensolver with more than one block per node")
+    end if
 
-    call messages_obsolete_variable('EigensolverVerbose')
-    call messages_obsolete_variable('EigensolverSubspaceDiag', 'SubspaceDiagonalization')
+    call messages_obsolete_variable(namespace, 'EigensolverVerbose')
+    call messages_obsolete_variable(namespace, 'EigensolverSubspaceDiag', 'SubspaceDiagonalization')
 
     default_iter = 25
-    default_tol = CNST(1e-6)
+    default_tol = CNST(1e-7)
 
     select case(eigens%es_type)
     case(RS_CG_NEW)
@@ -194,7 +208,7 @@ contains
       !% against all other bands can improve convergence properties, whereas
       !% orthogonalizing against lower bands needs less operations.
       !%End
-      call parse_variable('CGOrthogonalizeAll', .false., eigens%orthogonalize_to_all)
+      call parse_variable(namespace, 'CGOrthogonalizeAll', .false., eigens%orthogonalize_to_all)
 
       !%Variable CGDirection
       !%Type integer
@@ -211,7 +225,7 @@ contains
       !% For the Polak-Ribiere scheme, a product of the current with the previous
       !% steepest descent vector is subtracted in the nominator.
       !%End
-      call parse_variable('CGDirection', OPTION__CGDIRECTION__FLETCHER, eigens%conjugate_direction)
+      call parse_variable(namespace, 'CGDirection', OPTION__CGDIRECTION__FLETCHER, eigens%conjugate_direction)
 
       !%Variable CGAdditionalTerms
       !%Type logical
@@ -224,10 +238,26 @@ contains
       !% If you experience convergence problems, you might try out this option.
       !% This feature is still experimental.
       !%End
-      call parse_variable('CGAdditionalTerms', .false., eigens%additional_terms)
+      call parse_variable(namespace, 'CGAdditionalTerms', .false., eigens%additional_terms)
       if(eigens%additional_terms) then
         call messages_experimental("The additional terms for the CG eigensolver are not tested for all cases.")
       end if
+
+      !%Variable CGEnergyChangeThreshold
+      !%Type float
+      !%Section SCF::Eigensolver
+      !%Default 0.1
+      !%Description
+      !% Used by the cg solver only.
+      !% For each band, the CG iterations are stopped when the change in energy is smaller than the
+      !% change in the first iteration multiplied by this factor. This limits the number of CG
+      !% iterations for each band, while still showing good convergence for the SCF cycle. The criterion
+      !% is discussed in Sec. V.B.6 of Payne et al. (1992), Rev. Mod. Phys. 64, 4.
+      !% The default value is 0.1, which is usually a good choice for LDA and GGA potentials. If you
+      !% are solving the OEP equation, you might want to set this value to 1e-3 or smaller. In general,
+      !% smaller values might help if you experience convergence problems.
+      !%End
+      call parse_variable(namespace, 'CGEnergyChangeThreshold', CNST(0.1), eigens%energy_change_threshold)
 
     case(RS_PLAN)
     case(RS_EVO)
@@ -235,15 +265,24 @@ contains
 
       !%Variable EigensolverImaginaryTime
       !%Type float
-      !%Default 10.0
+      !%Default 0.1
       !%Section SCF::Eigensolver
       !%Description
       !% The imaginary-time step that is used in the imaginary-time evolution
       !% method (<tt>Eigensolver = evolution</tt>) to obtain the lowest eigenvalues/eigenvectors.
       !% It must satisfy <tt>EigensolverImaginaryTime > 0</tt>.
+      !% Increasing this value can make the propagation faster, but could lead to unstable propagations.
       !%End
-      call parse_variable('EigensolverImaginaryTime', CNST(10.0), eigens%imag_time)
-      if(eigens%imag_time <= M_ZERO) call messages_input_error('EigensolverImaginaryTime')
+      call parse_variable(namespace, 'EigensolverImaginaryTime', CNST(0.1), eigens%imag_time)
+      if(eigens%imag_time <= M_ZERO) call messages_input_error(namespace, 'EigensolverImaginaryTime')
+      
+      call exponential_init(eigens%exponential_operator, namespace)
+
+      if(st%smear%method /= SMEAR_SEMICONDUCTOR .and. st%smear%method /= SMEAR_FIXED_OCC) then
+        message(1) = "Smearing of occupations is incompatible with imaginary time evolution."
+        call messages_fatal(1)
+      end if
+      
     case(RS_LOBPCG)
     case(RS_RMMDIIS)
       default_iter = 3
@@ -259,7 +298,7 @@ contains
       !% minimizations.
       !%End
 
-      call parse_variable('EigensolverMinimizationIter', 5, eigens%rmmdiis_minimization_iter)
+      call parse_variable(namespace, 'EigensolverMinimizationIter', 5, eigens%rmmdiis_minimization_iter)
 
       if(gr%mesh%use_curvilinear) call messages_experimental("RMMDIIS eigensolver for curvilinear coordinates")
 
@@ -268,16 +307,16 @@ contains
       call messages_experimental("preconditioned steepest descent (PSD) eigensolver")
 
     case default
-      call messages_input_error('Eigensolver')
+      call messages_input_error(namespace, 'Eigensolver')
     end select
 
-    call messages_print_stress(stdout, 'Eigensolver')
+    call messages_print_stress(stdout, 'Eigensolver', namespace=namespace)
 
     call messages_print_var_option(stdout, "Eigensolver", eigens%es_type)
 
-    call messages_obsolete_variable('EigensolverInitTolerance', 'EigensolverTolerance')
-    call messages_obsolete_variable('EigensolverFinalTolerance', 'EigensolverTolerance')
-    call messages_obsolete_variable('EigensolverFinalToleranceIteration')
+    call messages_obsolete_variable(namespace, 'EigensolverInitTolerance', 'EigensolverTolerance')
+    call messages_obsolete_variable(namespace, 'EigensolverFinalTolerance', 'EigensolverTolerance')
+    call messages_obsolete_variable(namespace, 'EigensolverFinalToleranceIteration')
 
     ! this is an internal option that makes the solver use the 
     ! folded operator (H-shift)^2 to converge first eigenvalues around
@@ -290,10 +329,10 @@ contains
     !%Type float
     !%Section SCF::Eigensolver
     !%Description
-    !% This is the tolerance for the eigenvectors. The default is 1e-6,
+    !% This is the tolerance for the eigenvectors. The default is 1e-7,
     !% except for the ARPACK solver for which it is 0.
     !%End
-    call parse_variable('EigensolverTolerance', default_tol, eigens%tolerance)
+    call parse_variable(namespace, 'EigensolverTolerance', default_tol, eigens%tolerance)
 
     !%Variable EigensolverMaxIter
     !%Type integer
@@ -302,11 +341,13 @@ contains
     !% Determines the maximum number of iterations that the
     !% eigensolver will perform if the desired tolerance is not
     !% achieved. The default is 25 iterations for all eigensolvers
-    !% except for <tt>rmdiis</tt>, which performs only 3 iterations (only
-    !% increase it if you know what you are doing).
+    !% except for <tt>rmdiis</tt>, which performs only 3 iterations.
+    !% Increasing this value for <tt>rmdiis</tt> increases the convergence speed,
+    !% at the cost of an increased memory footprint.
+    !% In the case of imaginary time propatation, this variable is not used.
     !%End
-    call parse_variable('EigensolverMaxIter', default_iter, eigens%es_maxiter)
-    if(eigens%es_maxiter < 1) call messages_input_error('EigensolverMaxIter')
+    call parse_variable(namespace, 'EigensolverMaxIter', default_iter, eigens%es_maxiter)
+    if(eigens%es_maxiter < 1) call messages_input_error(namespace, 'EigensolverMaxIter')
 
     if(eigens%es_maxiter > default_iter) then
       call messages_write('You have specified a large number of eigensolver iterations (')
@@ -315,15 +356,14 @@ contains
       call messages_write('This is not a good idea as it might slow down convergence, even for', new_line = .true.)
       call messages_write('independent particles, as subspace diagonalization will not be used', new_line = .true.)
       call messages_write('often enough.')
-      call messages_warning()
+      call messages_warning(namespace=namespace)
     end if
 
-    select case(eigens%es_type)
-    case(RS_PLAN, RS_CG, RS_LOBPCG, RS_RMMDIIS, RS_PSD)
-      call preconditioner_init(eigens%pre, gr)
-    case default
+    if (any(eigens%es_type == (/RS_PLAN, RS_CG, RS_LOBPCG, RS_RMMDIIS, RS_PSD/))) then
+      call preconditioner_init(eigens%pre, namespace, gr, geo, mc)
+    else
       call preconditioner_null(eigens%pre)
-    end select
+    end if
 
     nullify(eigens%diff)
     SAFE_ALLOCATE(eigens%diff(1:st%nst, 1:st%d%nik))
@@ -335,13 +375,20 @@ contains
 
     ! FEAST: subspace diagonalization or not?  I guess not.
     ! But perhaps something could be gained by changing this.
-    call subspace_init(eigens%sdiag, st, no_sd = .false.)
+    !
+    ! In case of the evolution eigensolver, this makes no sense to use subspace diagonalization
+    ! as orthogonalization is done internally at each time-step
+    if(eigens%es_type == RS_EVO) then
+      call subspace_init(eigens%sdiag, namespace, st, no_sd = .true.)
+    else
+      call subspace_init(eigens%sdiag, namespace, st, no_sd = .false.)
+    end if
 
     ! print memory requirements
     select case(eigens%es_type)
     case(RS_RMMDIIS)
       call messages_write('Info: The rmmdiis eigensolver requires ')
-      mem = (2.0_8*eigens%es_maxiter - 1.0_8)*st%d%block_size*dble(gr%mesh%np_part)
+      mem = (M_TWO*eigens%es_maxiter - M_ONE)*st%d%block_size*TOFLOAT(gr%mesh%np_part)
       if(states_are_real(st)) then
         mem = mem*CNST(8.0)
       else
@@ -358,7 +405,7 @@ contains
       call messages_info()
     end select
 
-    call messages_print_stress(stdout)
+    call messages_print_stress(stdout, namespace=namespace)
 
     !%Variable EigensolverSkipKpoints
     !%Type logical
@@ -366,25 +413,25 @@ contains
     !%Description
     !% Only solve Hamiltonian for k-points with zero weight
     !%End
-    call parse_variable('EigensolverSkipKpoints', .false., eigens%skip_finite_weight_kpoints)
+    call parse_variable(namespace, 'EigensolverSkipKpoints', .false., eigens%skip_finite_weight_kpoints)
     call messages_print_var_value(stdout,'EigensolverSkipKpoints',  eigens%skip_finite_weight_kpoints)
-
-    ! set KS object
-    eigens%xc => xc
 
     POP_SUB(eigensolver_init)
   end subroutine eigensolver_init
 
 
   ! ---------------------------------------------------------
-  subroutine eigensolver_end(eigens)
+  subroutine eigensolver_end(eigens, gr)
     type(eigensolver_t), intent(inout) :: eigens
+    type(grid_t),        intent(inout) :: gr
 
     PUSH_SUB(eigensolver_end)
 
     select case(eigens%es_type)
     case(RS_PLAN, RS_CG, RS_LOBPCG, RS_RMMDIIS, RS_PSD)
       call preconditioner_end(eigens%pre)
+    case(RS_EVO)
+      call exponential_end(eigens%exponential_operator)
     end select
 
     SAFE_DEALLOCATE_P(eigens%converged)
@@ -395,14 +442,15 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine eigensolver_run(eigens, gr, st, hm, iter, conv, nstconv)
-    type(eigensolver_t),  intent(inout) :: eigens
-    type(grid_t),         intent(in)    :: gr
-    type(states_t),       intent(inout) :: st
-    type(hamiltonian_t),  intent(inout) :: hm
-    integer,              intent(in)    :: iter
-    logical,    optional, intent(out)   :: conv
-    integer,    optional, intent(in)    :: nstconv !< Number of states considered for 
+  subroutine eigensolver_run(eigens, namespace, gr, st, hm, iter, conv, nstconv)
+    type(eigensolver_t),      intent(inout) :: eigens
+    type(namespace_t),        intent(in)    :: namespace
+    type(grid_t),             intent(in)    :: gr
+    type(states_elec_t),      intent(inout) :: st
+    type(hamiltonian_elec_t), intent(inout) :: hm
+    integer,                  intent(in)    :: iter
+    logical,        optional, intent(out)   :: conv
+    integer,        optional, intent(in)    :: nstconv !< Number of states considered for 
                                                    !< the convergence criteria
 
     integer :: maxiter, ik, ist, nstconv_
@@ -439,9 +487,9 @@ contains
           .or. (eigens%converged(ik) == 0 .and. hm%theory_level /= INDEPENDENT_PARTICLES)) then
           
           if (states_are_real(st)) then
-            call dsubspace_diag(eigens%sdiag, gr%der, st, hm, ik, st%eigenval(:, ik), eigens%diff(:, ik))
+            call dsubspace_diag(eigens%sdiag, namespace, gr%mesh, st, hm, ik, st%eigenval(:, ik), eigens%diff(:, ik))
           else
-            call zsubspace_diag(eigens%sdiag, gr%der, st, hm, ik, st%eigenval(:, ik), eigens%diff(:, ik))
+            call zsubspace_diag(eigens%sdiag, namespace, gr%mesh, st, hm, ik, st%eigenval(:, ik), eigens%diff(:, ik))
           end if
         end if
       end if
@@ -450,37 +498,37 @@ contains
 
         select case(eigens%es_type)
         case(RS_CG_NEW)
-          call deigensolver_cg2_new(gr, st, hm, eigens%tolerance, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
+          call deigensolver_cg2_new(namespace, gr, st, hm, eigens%tolerance, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_CG)
-          call deigensolver_cg2(gr, st, hm, eigens%xc, eigens%pre, eigens%tolerance, maxiter, &
-            eigens%converged(ik), ik, eigens%diff(:, ik), &
-            orthogonalize_to_all=eigens%orthogonalize_to_all, &
-            conjugate_direction=eigens%conjugate_direction, &
-            additional_terms=eigens%additional_terms)
+          call deigensolver_cg2(namespace, gr, st, hm, hm%xc, eigens%pre, eigens%tolerance, maxiter, &
+            eigens%converged(ik), ik, eigens%diff(:, ik), eigens%orthogonalize_to_all, &
+            eigens%conjugate_direction, eigens%additional_terms, eigens%energy_change_threshold)
         case(RS_PLAN)
-          call deigensolver_plan(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
+          call deigensolver_plan(namespace, gr, st, hm, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), ik, &
+            eigens%diff(:, ik))
         case(RS_EVO)
-          call deigensolver_evolution(gr, st, hm, eigens%tolerance, maxiter, &
+          maxiter = 1
+          call deigensolver_evolution(namespace, gr%mesh, st, hm, eigens%exponential_operator, eigens%tolerance, maxiter, &
             eigens%converged(ik), ik, eigens%diff(:, ik), tau = eigens%imag_time)
         case(RS_LOBPCG)
-          call deigensolver_lobpcg(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
+          call deigensolver_lobpcg(namespace, gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
             eigens%converged(ik), ik, eigens%diff(:, ik), hm%d%block_size)
         case(RS_RMMDIIS)
           if(iter <= eigens%rmmdiis_minimization_iter) then
             maxiter = 2
-            call deigensolver_rmmdiis_min(gr, st, hm, eigens%pre, maxiter, eigens%converged(ik), ik)
+            call deigensolver_rmmdiis_min(namespace, gr, st, hm, eigens%pre, maxiter, eigens%converged(ik), ik)
           else
-            call deigensolver_rmmdiis(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
+            call deigensolver_rmmdiis(namespace, gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
               eigens%converged(ik), ik, eigens%diff(:, ik))
           end if
         case(RS_PSD)
-          call deigensolver_rmmdiis_min(gr, st, hm, eigens%pre, maxiter, eigens%converged(ik), ik)
+          call deigensolver_rmmdiis_min(namespace, gr, st, hm, eigens%pre, maxiter, eigens%converged(ik), ik)
         end select
 
         ! FEAST: subspace diag or not?
         if(st%calc_eigenval) then
           if(eigens%es_type /= RS_RMMDIIS .and. eigens%es_type /= RS_PSD) then
-            call dsubspace_diag(eigens%sdiag, gr%der, st, hm, ik, st%eigenval(:, ik), eigens%diff(:, ik))
+            call dsubspace_diag(eigens%sdiag, namespace, gr%mesh, st, hm, ik, st%eigenval(:, ik), eigens%diff(:, ik))
           end if
         end if
         
@@ -488,47 +536,45 @@ contains
 
         select case(eigens%es_type)
         case(RS_CG_NEW)
-          call zeigensolver_cg2_new(gr, st, hm, eigens%tolerance, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
+          call zeigensolver_cg2_new(namespace, gr, st, hm, eigens%tolerance, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_CG)
            if(eigens%folded_spectrum) then
-             call zeigensolver_cg2(gr, st, hm, eigens%xc, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), ik, & 
-                                eigens%diff(:, ik), shift=eigens%spectrum_shift, &
-                                orthogonalize_to_all=eigens%orthogonalize_to_all, &
-                                conjugate_direction=eigens%conjugate_direction, &
-                                additional_terms=eigens%additional_terms)
-
+             call zeigensolver_cg2(namespace, gr, st, hm, hm%xc, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), & 
+               ik, eigens%diff(:, ik), eigens%orthogonalize_to_all, eigens%conjugate_direction, &
+               eigens%additional_terms, eigens%energy_change_threshold, &
+               shift=eigens%spectrum_shift)
+             
            else
-              call zeigensolver_cg2(gr, st, hm, eigens%xc, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), ik, &
-                                eigens%diff(:, ik), &
-                                orthogonalize_to_all=eigens%orthogonalize_to_all, &
-                                conjugate_direction=eigens%conjugate_direction, &
-                                additional_terms=eigens%additional_terms)
-
+             call zeigensolver_cg2(namespace, gr, st, hm, hm%xc, eigens%pre, eigens%tolerance, maxiter, eigens%converged(ik), &
+               ik, eigens%diff(:, ik), eigens%orthogonalize_to_all, eigens%conjugate_direction, &
+               eigens%additional_terms, eigens%energy_change_threshold)
+             
            end if
         case(RS_PLAN)
-          call zeigensolver_plan(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
+          call zeigensolver_plan(namespace, gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
             eigens%converged(ik), ik, eigens%diff(:, ik))
         case(RS_EVO)
-          call zeigensolver_evolution(gr, st, hm, eigens%tolerance, maxiter, &
+          maxiter = 1
+          call zeigensolver_evolution(namespace, gr%mesh, st, hm, eigens%exponential_operator, eigens%tolerance, maxiter, &
             eigens%converged(ik), ik, eigens%diff(:, ik), tau = eigens%imag_time)
         case(RS_LOBPCG)
-          call zeigensolver_lobpcg(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
+          call zeigensolver_lobpcg(namespace, gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
             eigens%converged(ik), ik, eigens%diff(:, ik), hm%d%block_size)
         case(RS_RMMDIIS)
           if(iter <= eigens%rmmdiis_minimization_iter) then
             maxiter = 2
-            call zeigensolver_rmmdiis_min(gr, st, hm, eigens%pre, maxiter, eigens%converged(ik), ik)
+            call zeigensolver_rmmdiis_min(namespace, gr, st, hm, eigens%pre, maxiter, eigens%converged(ik), ik)
           else
-            call zeigensolver_rmmdiis(gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
+            call zeigensolver_rmmdiis(namespace, gr, st, hm, eigens%pre, eigens%tolerance, maxiter, &
               eigens%converged(ik), ik,  eigens%diff(:, ik))
           end if
         case(RS_PSD)
-          call zeigensolver_rmmdiis_min(gr, st, hm, eigens%pre, maxiter, eigens%converged(ik), ik)
+          call zeigensolver_rmmdiis_min(namespace, gr, st, hm, eigens%pre, maxiter, eigens%converged(ik), ik)
         end select
 
         if(st%calc_eigenval) then
           if(eigens%es_type /= RS_RMMDIIS .and. eigens%es_type /= RS_PSD) then
-            call zsubspace_diag(eigens%sdiag, gr%der, st, hm, ik, st%eigenval(:, ik), eigens%diff(:, ik))
+            call zsubspace_diag(eigens%sdiag, namespace, gr%mesh, st, hm, ik, st%eigenval(:, ik), eigens%diff(:, ik))
           end if
         end if
         

@@ -12,6 +12,7 @@ EigenSolver = rmmdiis
 
 LCAOAlternative = yes
 LCAOExtraOrbitals = yes
+LCAOStart = lcao_full
 
 ConvRelDens = 2e-6
 
@@ -84,3 +85,4 @@ HamiltonianApplyPacked = No
 'C'| -2.963792| -4.78832  | 3.625482
 'C'| -6.291688| -0.839777 | 2.141966
 %
+

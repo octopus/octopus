@@ -47,6 +47,7 @@ module global_oct_m
   integer, public, parameter :: MAX_PATH_LEN=256
 
   type conf_t
+    ! Components are public by default
     logical :: devel_version !< If true then allow unstable parts of the code
     logical :: report_memory
     character(len=256) :: share       !< Name of the share dir
@@ -55,6 +56,8 @@ module global_oct_m
     character(len=20)  :: version     !< version number
     character(len=256) :: cc
     character(len=256) :: cflags
+    character(len=256) :: cxx
+    character(len=256) :: cxxflags
     character(len=256) :: fc
     character(len=256) :: fcflags
     integer            :: target_states_block_size
@@ -62,7 +65,7 @@ module global_oct_m
 
   type(conf_t),      public :: conf
    
-  FLOAT, public, parameter :: r_small = CNST(0.0001)
+  FLOAT, public, parameter :: R_SMALL = CNST(0.0001)
 
   !> some mathematical constants
   FLOAT, public, parameter :: M_Pi        = CNST(3.1415926535897932384626433832795029)
@@ -95,6 +98,8 @@ module global_oct_m
   FLOAT, public, parameter :: P_c   =  CNST(137.035999679)
   FLOAT, public, parameter :: P_g   =  CNST(2.0023193043768)   !< Electron gyromagnetic ratio
   FLOAT, public, parameter :: P_PROTON_CHARGE = CNST(-1.0)
+  FLOAT, public, parameter :: P_ep  =  M_ONE/(M_FOUR*M_Pi)
+  FLOAT, public, parameter :: P_mu  =  M_FOUR*M_PI/(P_c**2)
 
   !> the standard input and output
   integer, public :: stderr, stdin, stdout
@@ -104,7 +109,7 @@ module global_oct_m
 
   !> The stack.
   character(len=80), public          :: sub_stack(50)
-  real(8), public                    :: time_stack(50)
+  FLOAT, public                      :: time_stack(50)
   integer, public                    :: no_sub_stack = 0
 
   !> Same for profiling mode.
@@ -186,6 +191,9 @@ contains
     ! not indented to have the whole line in case it is long
     conf%cflags     = &
 CFLAGS
+    conf%cxx        = CXX
+    conf%cxxflags   = &
+CXXFLAGS
     conf%fc         = FC
     conf%fcflags    = &
 FCFLAGS

@@ -21,9 +21,10 @@
 
 module volume_oct_m
   use iso_c_binding
-  use parser_oct_m
   use global_oct_m
   use messages_oct_m
+  use namespace_oct_m
+  use parser_oct_m
   use profiling_oct_m
   use simul_box_oct_m
 
@@ -38,6 +39,7 @@ module volume_oct_m
        volume_in_volume
 
   type volume_t
+    private
     integer          :: n_elements
     logical, pointer :: join(:)      => NULL()         ! Add or subtract the volume
     integer, pointer :: type(:)      => NULL()         ! sphere, slab, etc.
@@ -60,9 +62,10 @@ contains
     SAFE_DEALLOCATE_P(vol%params)
   end subroutine volume_end
 
-  subroutine volume_read_from_block(vol, block_name)
-    type(volume_t),   intent(inout) :: vol
-    character(len=*), intent(in)    :: block_name
+  subroutine volume_read_from_block(vol, namespace, block_name)
+    type(volume_t),    intent(inout) :: vol
+    type(namespace_t), intent(in)    :: namespace
+    character(len=*),  intent(in)    :: block_name
 
     type(block_t) :: blk
     integer :: i, j, n_par
@@ -89,7 +92,7 @@ contains
     !%
     !%End
 
-    if(parse_block(block_name, blk, check_varinfo_=.false.) == 0) then
+    if(parse_block(namespace, block_name, blk, check_varinfo_=.false.) == 0) then
       vol%n_elements = parse_block_n(blk)
 
       SAFE_ALLOCATE(vol%join(1:vol%n_elements))
@@ -113,7 +116,7 @@ contains
         case(OPTION__VOLUME__VOL_SLAB)
           n_par = 1 ! thickness of the slab
         case default
-          call messages_input_error('Species', "Unknown type for volume")
+          call messages_input_error(namespace, 'Species', "Unknown type for volume")
         end select
 
         do j = 1, n_par
@@ -122,15 +125,15 @@ contains
 
       end do
     else
-      call messages_input_error('Volume')
+      call messages_input_error(namespace, 'Volume')
     end if
   end subroutine volume_read_from_block
 
 
-  logical function volume_in_volume(sb, vol, xx, rr) result(in_vol)
+  logical function volume_in_volume(sb, vol, xx) result(in_vol)
     type(simul_box_t), intent(in) :: sb
     type(volume_t),    intent(in) :: vol
-    FLOAT,             intent(in) :: xx(:), rr
+    FLOAT,             intent(in) :: xx(:)
 
     logical :: in_partial_volume
     integer :: i

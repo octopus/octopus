@@ -45,12 +45,12 @@ subroutine X(mf_calculate_gamma)(ikeeppart, mb_1part, nparticles_densmat, &
   SAFE_ALLOCATE(forward_map_gamma(1:mesh%np_global))
   SAFE_ALLOCATE(icoord_map(1:mesh%np))
 
-  volume_element = 1.0d0
+  volume_element = M_ONE
   do jdim = 1, mesh%sb%dim
-    if (mesh%spacing(jdim) > 1.e-10) volume_element=volume_element*mesh%spacing(jdim)
+    if (mesh%spacing(jdim) > CNST(1.0e-10)) volume_element=volume_element*mesh%spacing(jdim)
   end do
   do jdim = (ikeeppart - 1)*mb_1part%ndim1part + 1, ikeeppart*mb_1part%ndim1part
-    if (mesh%spacing(jdim) > 1.e-10) volume_element = volume_element/mesh%spacing(jdim)
+    if (mesh%spacing(jdim) > CNST(1.e-10)) volume_element = volume_element/mesh%spacing(jdim)
   end do
 
   ASSERT (ubound(gamma, dim=1) == mb_1part%npt)
@@ -118,7 +118,7 @@ subroutine X(mf_calculate_gamma)(ikeeppart, mb_1part, nparticles_densmat, &
       psi_p(:,1,1) = psi(1:mesh%np)
       call batch_init (wfbatch, 1, 1, 1, psi_p)
       call X(mesh_batch_exchange_points) (mesh, wfbatch, forward_map=forward_map_gamma)
-      call batch_end(wfbatch)
+      call wfbatch%end()
     else
       psi_p(forward_map_gamma(1:mesh%np),1,1) = psi(1:mesh%np)
     end if
@@ -146,12 +146,13 @@ end subroutine X(mf_calculate_gamma)
 
 
 ! ---------------------------------------------------------
-subroutine X(modelmb_density_matrix_write)(gr, st, wf, mm, denmat)
+subroutine X(modelmb_density_matrix_write)(gr, st, wf, mm, denmat, namespace)
   type(grid_t),           intent(in) :: gr
-  type(states_t),         intent(in) :: st
+  type(states_elec_t),    intent(in) :: st
   R_TYPE,                 intent(in) :: wf(:) !< (1:gr%mesh%np)
   integer,                intent(in) :: mm
   type(modelmb_denmat_t), intent(in) :: denmat
+  type(namespace_t),      intent(in) :: namespace
 
   integer :: jj, ll, j, err_code, iunit, ndims, ndim1part
   integer :: ikeeppart, idir
@@ -228,7 +229,7 @@ subroutine X(modelmb_density_matrix_write)(gr, st, wf, mm, denmat)
 
       !Write everything into files
       write(filename,'(a,i3.3,a,i2.2)') trim(denmat%dirname)//'/occnumb_ip',ikeeppart,'_imb',mm
-      iunit = io_open(trim(filename), action='write')
+      iunit = io_open(trim(filename), namespace, action='write')
 
       do jj = mb_1part%npt, 1, -1
         write(iunit,'(i4.4,es11.3)') mb_1part%npt-jj+1, evalues(jj)
@@ -239,11 +240,11 @@ subroutine X(modelmb_density_matrix_write)(gr, st, wf, mm, denmat)
       do jj = mb_1part%npt-denmat%nnatorb_prt(idensmat)+1, mb_1part%npt
         write(filename,'(a,i3.3,a,i2.2,a,i4.4)') trim(denmat%dirname)//'/natorb_ip', &
           ikeeppart,'_imb', mm, '_', mb_1part%npt-jj+1
-        iunit = io_open(filename, action='write')
+        iunit = io_open(filename, namespace, action='write')
         do ll = 1, mb_1part%npt
           call hypercube_i_to_x(mb_1part%hypercube_1part, ndim1part, mb_1part%nr_1part, &
             mb_1part%enlarge_1part(1), ll, ix_1part)
-          do idir=1,ndim1part
+          do idir = 1,ndim1part
             write(iunit,'(es11.3)', ADVANCE='no') ix_1part(idir)*mb_1part%h_1part(idir)+mb_1part%origin(idir)
           end do
           write(iunit,'(es11.3,es11.3)') evectors(ll,jj) 
@@ -253,17 +254,17 @@ subroutine X(modelmb_density_matrix_write)(gr, st, wf, mm, denmat)
       end do
       
       write(filename,'(a,i3.3,a,i2.2)') trim(denmat%dirname)//'/densmatr_ip', ikeeppart,'_imb', mm
-      iunit = io_open(filename,action='write')
+      iunit = io_open(filename, namespace, action='write')
       do jj = 1, mb_1part%npt
         call hypercube_i_to_x(mb_1part%hypercube_1part, ndim1part, mb_1part%nr_1part, &
           mb_1part%enlarge_1part(1), jj, ix_1part)
         do ll = 1, mb_1part%npt
           call hypercube_i_to_x(mb_1part%hypercube_1part, ndim1part, mb_1part%nr_1part, &
             mb_1part%enlarge_1part(1), ll, ix_1part_p)
-          do idir=1,ndim1part
+          do idir = 1,ndim1part
             write(iunit,'(es11.3)', ADVANCE='no') ix_1part(idir)*mb_1part%h_1part(idir)+mb_1part%origin(idir)
           end do
-          do idir=1,ndim1part
+          do idir = 1,ndim1part
             write(iunit,'(es11.3)', ADVANCE='no') ix_1part_p(idir)*mb_1part%h_1part(idir)+mb_1part%origin(idir)
           end do
           write(iunit,'(es11.3,es11.3)') densmatr(jj,ll)
@@ -274,11 +275,11 @@ subroutine X(modelmb_density_matrix_write)(gr, st, wf, mm, denmat)
       call io_close(iunit)
 
       write(filename,'(a,i3.3,a,i2.2)') trim(denmat%dirname)//'/density_ip', ikeeppart,'_imb', mm
-      iunit = io_open(filename,action='write')
+      iunit = io_open(filename, namespace, action='write')
       do jj = 1, mb_1part%npt
         call hypercube_i_to_x(mb_1part%hypercube_1part, ndim1part, mb_1part%nr_1part, &
           mb_1part%enlarge_1part(1), jj, ix_1part)
-        do idir=1,ndim1part
+        do idir = 1,ndim1part
           write(iunit,'(es11.3)', ADVANCE='no') ix_1part(idir)*mb_1part%h_1part(idir)+mb_1part%origin(idir)
         end do
         write(iunit,'(es18.10)') real(densmatr(jj,jj))
@@ -300,7 +301,7 @@ subroutine X(modelmb_density_matrix_write)(gr, st, wf, mm, denmat)
     ! note: for eventual multiple particles in 4D (eg 8D total) this would fail to give the last values of dipole_moment
     write (message(1),'(a,I6,a,I6,a,I6)') 'For particle ', ikeeppart, ' of mb state ', mm
     write (message(2),'(a,3E20.10)') 'The dipole moment is (in a.u. = e bohr):     ', dipole_moment(1:min(3,ndim1part))
-    write (message(3),'(a,E15.3)') '     with intrinsic numerical error usually <= ', 1.e-6*mb_1part%npt
+    write (message(3),'(a,E15.3)') '     with intrinsic numerical error usually <= ', CNST(1.e-6)*mb_1part%npt
     call messages_info(3)
 
     SAFE_DEALLOCATE_A(evectors)

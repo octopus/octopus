@@ -40,8 +40,6 @@ PseudopotentialSet=hscv_pbe
 Spacing = 0.5
 
 FromScratch = yes
-ParStates = no
-ParDomains = no
 
 SpinComponents = polarized
 GuessMagnetDensity = user_defined
@@ -51,8 +49,6 @@ GuessMagnetDensity = user_defined
  0.0
  0.0
 %
-
-LCAOStart = lcao_states
 
 %KPointsGrid
 2 | 2 | 2
@@ -66,3 +62,4 @@ ConvRelDens = 1e-6
 AOTruncation = ao_box
 OutputLDA_U = occ_matrices
 
+StatesPack = yes

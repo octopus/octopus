@@ -27,6 +27,7 @@ module poisson_corrections_oct_m
   use mesh_function_oct_m
   use mesh_oct_m
   use messages_oct_m
+  use namespace_oct_m
   use nl_operator_oct_m
   use parser_oct_m
   use profiling_oct_m
@@ -49,6 +50,7 @@ module poisson_corrections_oct_m
   FLOAT, parameter :: alpha_ = M_FIVE
 
   type poisson_corr_t
+    private
     integer :: method
     integer :: maxl
     FLOAT, pointer :: phi(:, :)
@@ -66,8 +68,9 @@ module poisson_corrections_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine poisson_corrections_init(this, ml, mesh)
+  subroutine poisson_corrections_init(this, namespace, ml, mesh)
     type(poisson_corr_t), intent(out) :: this
+    type(namespace_t),    intent(in)  :: namespace
     integer,              intent(in)  :: ml
     type(mesh_t),         intent(in)  :: mesh
 
@@ -94,7 +97,7 @@ contains
     !% An exact integration of the Poisson equation is done over the boundaries. This option is
     !% experimental, and not implemented for domain parallelization.
     !%End
-    call parse_variable('PoissonSolverBoundaries', CORR_MULTIPOLE, this%method)
+    call parse_variable(namespace, 'PoissonSolverBoundaries', CORR_MULTIPOLE, this%method)
 
     select case(this%method)
     case(CORR_MULTIPOLE)
@@ -226,9 +229,9 @@ contains
       add_lm = 1
       do ll = 0, this%maxl
         do mm = -ll, ll
-          forall(ip = 1:der%mesh%np)
+          do ip = 1, der%mesh%np
             rho_corrected(ip) = rho_corrected(ip) - mult(add_lm)*betal(add_lm)*this%aux(ip, add_lm)*this%gaussian(ip)
-          end forall
+          end do
           call lalg_axpy(der%mesh%np, mult(add_lm), this%phi(:, add_lm), vh_correction)
           add_lm = add_lm + 1
         end do
@@ -239,8 +242,10 @@ contains
 
     case(CORR_EXACT)
 
-      forall(ip = 1:der%mesh%np) vh_correction(ip) = M_ZERO
-      
+      do ip = 1, der%mesh%np
+        vh_correction(ip) = M_ZERO
+      end do
+
       do ip = der%mesh%np + 1, der%mesh%np_part
         vv = M_ZERO
         do ip2 = 1, der%mesh%np
@@ -253,8 +258,10 @@ contains
       ASSERT(.not. nl_operator_compact_boundaries(der%lapl))
 
       call dderivatives_lapl(der, vh_correction, rho_corrected, set_bc = .false.)
- 
-      forall(ip = 1:der%mesh%np) rho_corrected(ip) = rho(ip) + CNST(1.0)/(CNST(4.0)*M_PI)*rho_corrected(ip)
+
+      do ip = 1, der%mesh%np
+        rho_corrected(ip) = rho(ip) + CNST(1.0)/(CNST(4.0)*M_PI)*rho_corrected(ip)
+      end do
 
     end select
 

@@ -42,11 +42,12 @@ module ode_solver_oct_m
     ODE_MAXVAL =  ODE_PD89
 
   type ode_solver_t
-    integer :: solver_type     !< what solver to use (see ODE_* variables above)_oct_m
-    integer :: nsteps          !< how many steps to use
-    integer :: nsize           !< how many odes to solve simultaneously
+    private
+    integer, public :: solver_type     !< what solver to use (see ODE_* variables above)_oct_m
+    integer, public :: nsteps          !< how many steps to use
+    integer, public :: nsize           !< how many odes to solve simultaneously
+    FLOAT,   public :: tmax, tmin      !< integrate ODE from tmin to tmax
     integer :: vsize           !< vector size of ode method (used internally)
-    FLOAT   :: tmax, tmin      !< integrate ODE from tmin to tmax
     logical :: adaptive_steps  !< should we use adaptive steps?
     logical :: full_solution   !< if true the solution will be returned for all t, otherwise only at the endpoint t=tmax.
     FLOAT, pointer :: a(:,:), b(:), c(:), e(:) !< coefficients for the ode solver
@@ -79,11 +80,29 @@ contains
       message(1) = 'Info: ode_solver: Using Prince-Dormand, 8th/9th order.'
       call messages_info(1)
     end select
-    
+
     SAFE_ALLOCATE(os%a(1:os%vsize, 1:os%vsize))
     SAFE_ALLOCATE(os%b(1:os%vsize))
     SAFE_ALLOCATE(os%c(1:os%vsize))
     SAFE_ALLOCATE(os%e(1:os%vsize))
+
+    ! setup coefficients
+    select case(os%solver_type)
+    case(ODE_RK4)
+      call ode_rk4_coeff(os)
+    case(ODE_FB78)
+      call ode_fb78_coeff(os)
+    case(ODE_VR89)
+      call ode_vr89_coeff(os)
+    case(ODE_PD89)
+      call ode_pd89_coeff(os)
+    case default
+      write(message(1), '(a,i4,a)') "Input: '", os%solver_type, &
+	"' is not a valid ODE solver"
+      message(2) = '( ODE solver =  ode_rk4 | ode_fb7 | ode_vr8 | ode_pd8 )'
+      call messages_fatal(2)
+    end select
+
 
     POP_SUB(ode_solver_create)
   end subroutine ode_solver_create

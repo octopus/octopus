@@ -1,0 +1,39 @@
+FromScratch=yes
+
+CalculationMode = gs
+
+PeriodicDimensions = 3
+
+a = 10.2
+
+BoxShape = parallelepiped
+
+%LatticeParameters
+  a | a | a
+%
+
+%LatticeVectors
+ 0.  | 0.5 | 0.5
+ 0.5 | 0.  | 0.5
+ 0.5 | 0.5 | 0.0
+%
+
+%ReducedCoordinates
+ "Si" |   0.0    | 0.0     | 0.0
+ "Si" |   1/4    | 1/4     | 1/4
+%
+
+Spacing = 0.5
+
+ExperimentalFeatures = yes
+
+%KPointsGrid
+ 4 | 4 | 4
+%
+
+ParKPoints = no
+
+Wannier90Prefix = '15-bandstructure.04-wannier90'
+Wannier90Mode = w90_output
+
+StatesPack = yes

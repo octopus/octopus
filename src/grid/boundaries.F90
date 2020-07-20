@@ -28,17 +28,22 @@ module boundaries_oct_m
   use mesh_oct_m
   use mpi_oct_m
   use mpi_debug_oct_m
+  use namespace_oct_m
   use par_vec_oct_m
+  use parser_oct_m
   use profiling_oct_m
   use simul_box_oct_m
   use subarray_oct_m
   use types_oct_m
+  use unit_oct_m
+  use unit_system_oct_m
 
   implicit none
   
   private
 
   type boundaries_t
+    private
     type(mesh_t), pointer :: mesh
     integer          :: nper             !< the number of points that correspond to pbc
     integer, pointer :: per_points(:, :) !< (1:2, 1:nper) the list of points that correspond to pbc 
@@ -51,10 +56,14 @@ module boundaries_oct_m
     type(accel_mem_t) :: buff_per_recv
     type(accel_mem_t) :: buff_nsend
     type(accel_mem_t) :: buff_nrecv
+    logical, public   :: spiralBC           !< set .true. when SpiralBoundaryCondition are set in the input file
+    logical, public   :: spiral             !< set .true. after first time step IF spiralBC == .true. (see td_run in td.F90)
+    FLOAT,   public   :: spiral_q(MAX_DIM)
   end type boundaries_t
 
   public ::                        &
     boundaries_t,                  &
+    boundaries_nullify,            &
     boundaries_init,               &
     boundaries_end,                &
     boundaries_set
@@ -63,16 +72,10 @@ module boundaries_oct_m
     pv_handle_batch_t,             &
     dvec_ghost_update,             &
     zvec_ghost_update,             &
-    svec_ghost_update,             &
-    cvec_ghost_update,             &
     dghost_update_batch_start,     &
     zghost_update_batch_start,     &
-    sghost_update_batch_start,     &
-    cghost_update_batch_start,     &
     dghost_update_batch_finish,    &
-    zghost_update_batch_finish,    &
-    sghost_update_batch_finish,    &
-    cghost_update_batch_finish
+    zghost_update_batch_finish
 
   integer, parameter, public ::    &
     POINT_BOUNDARY = 1,            &
@@ -88,10 +91,6 @@ module boundaries_oct_m
     CMPLX, pointer       :: zrecv_buffer(:)
     FLOAT, pointer       :: dsend_buffer(:)
     CMPLX, pointer       :: zsend_buffer(:)
-    FLOAT, pointer       :: srecv_buffer(:)
-    CMPLX, pointer       :: crecv_buffer(:)
-    FLOAT, pointer       :: ssend_buffer(:)
-    CMPLX, pointer       :: csend_buffer(:)
     type(batch_t),   pointer :: v_local
     type(pv_t),      pointer :: vp
   end type pv_handle_batch_t
@@ -108,18 +107,36 @@ module boundaries_oct_m
     module procedure boundaries_set_batch
     module procedure dboundaries_set_single
     module procedure zboundaries_set_single
-    module procedure sboundaries_set_single
-    module procedure cboundaries_set_single
   end interface boundaries_set
 
 contains
+  
+  ! ---------------------------------------------------------
+  elemental subroutine boundaries_nullify(this)
+    type(boundaries_t), intent(out) :: this
+
+    nullify(this%mesh)
+    this%nper = 0
+    nullify(this%per_points, this%per_send, this%per_recv)
+    nullify(this%nsend, this%nrecv)
+    call accel_mem_nullify(this%buff_per_points)
+    call accel_mem_nullify(this%buff_per_send)
+    call accel_mem_nullify(this%buff_per_recv)
+    call accel_mem_nullify(this%buff_nsend)
+    call accel_mem_nullify(this%buff_nrecv)
+    this%spiralBC = .false.
+    this%spiral = .false.
+    this%spiral_q(1:MAX_DIM) = M_ZERO
+
+  end subroutine boundaries_nullify
 
   ! ---------------------------------------------------------
-  subroutine boundaries_init(this, mesh)
+  subroutine boundaries_init(this, namespace, mesh)
     type(boundaries_t),   intent(out)   :: this
+    type(namespace_t),       intent(in)    :: namespace
     type(mesh_t), target, intent(in)    :: mesh
 
-    integer :: sp, ip, ip_inner, iper, ip_global
+    integer :: sp, ip, ip_inner, iper, ip_global, idir
 #ifdef HAVE_MPI
     integer :: ip_inner_global, ipart
     integer, allocatable :: recv_rem_points(:, :)
@@ -127,6 +144,7 @@ contains
     integer, allocatable :: send_buffer(:)
     integer :: bsize, status(MPI_STATUS_SIZE)
 #endif
+    type(block_t) :: blk
 
     PUSH_SUB(boundaries_init)
 
@@ -135,6 +153,34 @@ contains
     nullify(this%per_points)
 
     if (simul_box_is_periodic(mesh%sb)) then
+
+      !%Variable SpiralBoundaryCondition
+      !%Type logical
+      !%Default no
+      !%Section Mesh
+      !%Description
+      !% (Experimental) If set to yes, Octopus will apply spin-spiral boundary conditions.
+      !% The momentum of the spin spiral is defined by the variable 
+      !% <tt>TDMomentumTransfer</tt> 
+      !%End
+      call parse_variable(namespace, 'SpiralBoundaryCondition', .false., this%spiralBC)
+      if(this%spiralBC) then
+        if(parse_is_defined(namespace, 'TDMomentumTransfer')) then
+          if(parse_block(namespace, 'TDMomentumTransfer', blk)==0) then
+            do idir = 1, MAX_DIM
+             call parse_block_float(blk, 0, idir - 1, this%spiral_q(idir))
+             this%spiral_q(idir) = units_to_atomic(unit_one / units_inp%length, this%spiral_q(idir))
+            end do
+            call messages_experimental("SpiralBoundaryCondition")
+          else 
+            message(1) = "TDMomentumTransfer must be defined if SpiralBoundaryCondition=yes"
+            call messages_fatal(1, namespace=namespace)
+          end if
+        else
+         message(1) = "TDMomentumTransfer must be defined if SpiralBoundaryCondition=yes"
+         call messages_fatal(1, namespace=namespace) 
+        end if
+      end if
 
       sp = mesh%np
       if(mesh%parallel_in_domains) sp = mesh%np + mesh%vp%np_ghost
@@ -153,7 +199,7 @@ contains
         if(mesh%parallel_in_domains) ip_global = mesh%vp%bndry(ip - sp - 1 + mesh%vp%xbndry)
 #endif
 
-        ip_inner = mesh_periodic_point(mesh, ip_global)
+        ip_inner = mesh_periodic_point(mesh, ip_global, ip)
 
 #ifdef HAVE_MPI
         !translate back to a local point
@@ -199,7 +245,7 @@ contains
         if(mesh%parallel_in_domains) ip_global = mesh%vp%bndry(ip - sp - 1 + mesh%vp%xbndry)
 #endif
 
-        ip_inner = mesh_periodic_point(mesh, ip_global)
+        ip_inner = mesh_periodic_point(mesh, ip_global, ip)
         
         !translate to local (and keep a copy of the global)
 #ifdef HAVE_MPI
@@ -354,19 +400,15 @@ contains
 
   subroutine boundaries_set_batch(this, ffb, phase_correction)
     type(boundaries_t), intent(in)    :: this
-    type(batch_t),      intent(inout) :: ffb
+    class(batch_t),     intent(inout) :: ffb
     CMPLX, optional,    intent(in)    :: phase_correction(:)
 
     PUSH_SUB(boundaries_set_batch)
     
-    if(batch_type(ffb) == TYPE_FLOAT) then 
+    if(ffb%type() == TYPE_FLOAT) then 
       call dboundaries_set_batch(this, ffb, phase_correction)
-    else if(batch_type(ffb) == TYPE_CMPLX) then 
+    else if(ffb%type() == TYPE_CMPLX) then 
       call zboundaries_set_batch(this, ffb, phase_correction)
-    else if(batch_type(ffb) == TYPE_FLOAT_SINGLE) then 
-      call sboundaries_set_batch(this, ffb, phase_correction)
-    else if(batch_type(ffb) == TYPE_CMPLX_SINGLE) then 
-      call cboundaries_set_batch(this, ffb, phase_correction)
     else
       ASSERT(.false.)
      end if
@@ -380,14 +422,6 @@ contains
 
 #include "undef.F90"
 #include "real.F90"
-#include "boundaries_inc.F90"
-
-#include "undef.F90"
-#include "complex_single.F90"
-#include "boundaries_inc.F90"
-
-#include "undef.F90"
-#include "real_single.F90"
 #include "boundaries_inc.F90"
 
 end module boundaries_oct_m

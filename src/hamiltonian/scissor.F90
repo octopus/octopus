@@ -30,12 +30,16 @@ module scissor_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use multicomm_oct_m
+  use namespace_oct_m
+  use parser_oct_m
   use profiling_oct_m
   use restart_oct_m
   use simul_box_oct_m
-  use states_oct_m
-  use states_dim_oct_m
-  use states_restart_oct_m
+  use states_abst_oct_m
+  use states_elec_oct_m
+  use states_elec_dim_oct_m
+  use states_elec_restart_oct_m
+  use wfs_elec_oct_m
 
   implicit none
 
@@ -51,9 +55,10 @@ module scissor_oct_m
        scissor_end
 
   type scissor_t
-    logical                 :: apply
+    private
+    logical, public         :: apply
     FLOAT                   :: gap
-    type(states_t)          :: gs_st
+    type(states_elec_t)     :: gs_st
   end type scissor_t
  
   interface scissor_commute_r
@@ -62,13 +67,14 @@ module scissor_oct_m
 
 contains
 
- subroutine scissor_init(this, st, gr, d, gap, mc)
-  type(scissor_t),           intent(inout) :: this
-  type(states_t),            intent(in)    :: st
-  type(grid_t),              intent(in)    :: gr
-  type(states_dim_t),        intent(in)    :: d
-  FLOAT,                     intent(in)    :: gap
-  type(multicomm_t),         intent(in)    :: mc
+ subroutine scissor_init(this, namespace, st, gr, d, gap, mc)
+  type(scissor_t),          intent(inout) :: this
+  type(namespace_t),        intent(in)    :: namespace
+  type(states_elec_t),      intent(in)    :: st
+  type(grid_t),             intent(in)    :: gr
+  type(states_elec_dim_t),  intent(in)    :: d
+  FLOAT,                    intent(in)    :: gap
+  type(multicomm_t),        intent(in)    :: mc
 
   CMPLX, allocatable   :: phase(:)
   type(restart_t) :: restart_gs
@@ -82,31 +88,29 @@ contains
   ASSERT(.not. this%apply)
   ASSERT(.not. states_are_real(st))
 
-  call messages_print_stress(stdout, "TDScissor")
+  call messages_print_stress(stdout, "TDScissor", namespace=namespace)
 
-  if(this%gs_st%parallel_in_states) &
-    call messages_not_implemented("scissor operator parallel in states")
-  if(gr%mesh%parallel_in_domains) &
-    call messages_not_implemented("scissor operator parallel in domains")
+  if(st%parallel_in_states) call messages_not_implemented("Scissor operator parallel in states", namespace=namespace)
+  if(gr%mesh%parallel_in_domains) call messages_not_implemented("Scissor operator parallel in domains", namespace=namespace)
 
   this%apply = .true.
-  this%gap = real(gap)
+  this%gap = gap
 
   write(message(1),'(a)')    'Start loading GS states.'
   call messages_info(1) 
   !We need to load GS states and to store them in this%gs_st
-  call states_copy(this%gs_st, st)
+  call states_elec_copy(this%gs_st, st)
   
-  call restart_init(restart_gs, RESTART_PROJ, RESTART_TYPE_LOAD, mc, ierr, mesh=gr%mesh)
+  call restart_init(restart_gs, namespace, RESTART_PROJ, RESTART_TYPE_LOAD, mc, ierr, mesh=gr%mesh)
   if(ierr /= 0) then
      message(1) = "Unable to read states information."
-     call messages_fatal(1)
+     call messages_fatal(1, namespace=namespace)
   end if
 
-  call states_load(restart_gs, this%gs_st, gr, ierr, label = ': gs for TDScissor')
+  call states_elec_load(restart_gs, namespace, this%gs_st, gr, ierr, label = ': gs for TDScissor')
   if(ierr /= 0 .and. ierr /= (this%gs_st%st_end-this%gs_st%st_start+1)*this%gs_st%d%nik*this%gs_st%d%dim) then
     message(1) = "Unable to read wavefunctions for TDScissor."
-    call messages_fatal(1)
+    call messages_fatal(1, namespace=namespace)
   end if
   call restart_end(restart_gs)
 
@@ -120,16 +124,16 @@ contains
     SAFE_ALLOCATE(phase(1:gr%mesh%np))
     ! We apply the phase to these states, as we need it for the projectors later
     do ik=this%gs_st%d%kpt%start, this%gs_st%d%kpt%end
-      
-      kpoint(1:gr%sb%dim) = kpoints_get_point(gr%sb%kpoints, states_dim_get_kpoint_index(d, ik))
-      forall (ip = 1:gr%mesh%np)
+
+      kpoint(1:gr%sb%dim) = kpoints_get_point(gr%sb%kpoints, states_elec_dim_get_kpoint_index(d, ik))
+      do ip = 1, gr%mesh%np
         phase(ip) = exp(-M_zI * sum(gr%mesh%x(ip, 1:gr%sb%dim) * kpoint(1:gr%sb%dim)))
-      end forall
+      end do
 
       do ist=this%gs_st%st_start, this%gs_st%st_end
-        call states_get_state(this%gs_st, gr%mesh, ist, ik, temp_state )
-        call states_set_phase(this%gs_st%d, temp_state, phase, gr%mesh%np, .false.)
-        call states_set_state(this%gs_st, gr%mesh, ist, ik,temp_state )
+        call states_elec_get_state(this%gs_st, gr%mesh, ist, ik, temp_state )
+        call states_elec_set_phase(this%gs_st%d, temp_state, phase, gr%mesh%np, .false.)
+        call states_elec_set_state(this%gs_st, gr%mesh, ist, ik,temp_state )
       end do
    
     end do
@@ -138,7 +142,7 @@ contains
     SAFE_DEALLOCATE_A(phase)
   end if
 
-  call messages_print_stress(stdout) 
+  call messages_print_stress(stdout, namespace=namespace)
 
   POP_SUB(scissor_init)
  end subroutine scissor_init
@@ -154,7 +158,7 @@ contains
    type(scissor_t), intent(inout) :: this
   
    this%apply = .false.
-   call states_end(this%gs_st)
+   call states_elec_end(this%gs_st)
  end subroutine scissor_end
 
 #include "undef.F90"

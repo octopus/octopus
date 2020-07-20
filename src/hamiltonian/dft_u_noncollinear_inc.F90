@@ -18,11 +18,13 @@
 
 ! ---------------------------------------------------------
 ! TODO: Merge this with the two_body routine in system/output_me_inc.F90
-subroutine compute_complex_coulomb_integrals (this, mesh, der, st)
-  type(lda_u_t),   intent(inout)  :: this
-  type(mesh_t),       intent(in)  :: mesh
-  type(derivatives_t), intent(in) :: der
-  type(states_t),     intent(in)  :: st
+subroutine compute_complex_coulomb_integrals (this, mesh, der, st, psolver, namespace)
+  type(lda_u_t),       intent(inout) :: this
+  type(mesh_t),        intent(in)    :: mesh
+  type(derivatives_t), intent(in)    :: der
+  type(states_elec_t), intent(in)    :: st
+  type(poisson_t),     intent(in)    :: psolver
+  type(namespace_t),   intent(in)    :: namespace
 
   integer :: ist, jst, kst, lst, ijst, klst
   integer :: is1, is2
@@ -37,7 +39,9 @@ subroutine compute_complex_coulomb_integrals (this, mesh, der, st)
   PUSH_SUB(compute_complex_coulomb_integrals)
 
   ASSERT(.not. st%parallel_in_states)
-  if(mesh%parallel_in_domains) call messages_not_implemented("Coulomb integrals parallel in domains")
+  if(mesh%parallel_in_domains) then
+    call messages_not_implemented("Coulomb integrals parallel in domains", namespace=namespace)
+  end if
 
   SAFE_ALLOCATE(nn(1:this%max_np,st%d%dim))
   SAFE_ALLOCATE(vv(1:this%max_np,st%d%dim))
@@ -61,7 +65,9 @@ subroutine compute_complex_coulomb_integrals (this, mesh, der, st)
     norbs = os%norbs
     np_sphere = os%sphere%np
 
-    call poisson_init_sm(os%poisson, psolver, der, os%sphere)
+    call submesh_build_global(os%sphere)
+
+    call poisson_init_sm(os%poisson, namespace, psolver, der, os%sphere)
 
     ijst=0
     do ist = 1, norbs
@@ -71,7 +77,7 @@ subroutine compute_complex_coulomb_integrals (this, mesh, der, st)
 
         do is1 = 1, st%d%dim
           !$omp parallel do
-          do ip=1,np_sphere
+          do ip = 1,np_sphere
             nn(ip,is1)  = conjg(os%zorb(ip,is1,ist))*os%zorb(ip,is1,jst)
           end do
           !$omp end parallel do    
@@ -89,8 +95,8 @@ subroutine compute_complex_coulomb_integrals (this, mesh, der, st)
               do is2 = 1, st%d%dim
 
                 !$omp parallel do
-                do ip=1,np_sphere
-                 tmp(ip) = vv(ip,is1)*conjg(os%zorb(ip,is2,lst))*os%zorb(ip,is2,kst)
+                do ip = 1,np_sphere
+                 tmp(ip) = vv(ip,is1)*conjg(os%zorb(ip,is2,kst))*os%zorb(ip,is2,lst)
                 end do
                 !$omp end parallel do
 
@@ -114,6 +120,8 @@ subroutine compute_complex_coulomb_integrals (this, mesh, der, st)
       end do !jst
     end do !ist
     call poisson_end(os%poisson)
+
+    call submesh_end_global(os%sphere)
   end do !iorb
 
   if(this%orbs_dist%parallel) then
@@ -137,9 +145,10 @@ end subroutine compute_complex_coulomb_integrals
 ! ---------------------------------------------------------
 !> This routine computes the effective U in the non-collinear case 
 ! ---------------------------------------------------------
-subroutine compute_ACBNO_U_noncollinear(this, ios)
-  type(lda_u_t), intent(inout)    :: this
-  integer,       intent(in)       :: ios
+subroutine compute_ACBNO_U_noncollinear(this, ios, namespace)
+  type(lda_u_t),     intent(inout) :: this
+  integer,           intent(in)    :: ios
+  type(namespace_t), intent(in)    :: namespace
 
   integer :: im, imp, impp, imppp, ispin1, ispin2, norbs
   CMPLX   :: numU, numJ, tmpU, tmpJ, denomU, denomJ
@@ -213,10 +222,9 @@ subroutine compute_ACBNO_U_noncollinear(this, ios)
       denomU = denomU + tmpU
     end do
     end do
-    this%orbsets(ios)%Ueff = real(numU, REAL_PRECISION)/real(denomU, REAL_PRECISION) - &
-                             real(numJ, REAL_PRECISION)/real(denomJ, REAL_PRECISION)
-    this%orbsets(ios)%Ubar = real(numU,REAL_PRECISION)/real(denomU,REAL_PRECISION)
-    this%orbsets(ios)%Jbar = real(numJ,REAL_PRECISION)/real(denomJ,REAL_PRECISION)
+    this%orbsets(ios)%Ueff = TOFLOAT(numU)/TOFLOAT(denomU) - TOFLOAT(numJ)/TOFLOAT(denomJ)
+    this%orbsets(ios)%Ubar = TOFLOAT(numU)/TOFLOAT(denomU)
+    this%orbsets(ios)%Jbar = TOFLOAT(numJ)/TOFLOAT(denomJ)
 
   else !In the case of s orbitals, the expression is different
     ! sum_{alpha/=beta} P^alpha_{mmp}P^beta_{mpp,mppp}  
@@ -237,11 +245,11 @@ subroutine compute_ACBNO_U_noncollinear(this, ios)
 
     ! We have to be careful in the case of hydrogen atom for instance 
     if(abs(denomU)> CNST(1.0e-3)) then
-      this%orbsets(ios)%Ubar = (real(numU,REAL_PRECISION)/real(denomU,REAL_PRECISION))
+      this%orbsets(ios)%Ubar = (TOFLOAT(numU)/TOFLOAT(denomU))
     else
       write(message(1),'(a,a)')' Small denominator value for the s orbital ', this%orbsets(ios)%Ubar
       write(message(2),'(a)')' U is set to zero '
-      call messages_warning(2)
+      call messages_warning(2, namespace=namespace)
       this%orbsets(ios)%Ubar = M_ZERO
     end if
     this%orbsets(ios)%Jbar = 0

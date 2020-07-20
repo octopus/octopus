@@ -39,6 +39,7 @@ module distributed_oct_m
   
 
   type distributed_t
+    ! Components are public by default
     integer              :: start
     integer              :: end
     integer              :: nlocal

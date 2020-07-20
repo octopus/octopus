@@ -2,11 +2,6 @@ CalculationMode = td
 
 UnitsOutput = ev_angstrom
 
-%Coordinates
-'Na'  | -1.4646408*angstrom | 0 | 0 | yes
-'Na'  |  1.4646408*angstrom | 0 | 0 | yes
-%
-
 ExcessCharge = 1
 
 FromScratch = yes
@@ -20,12 +15,6 @@ TDPropagator = aetrs
 
 TDDeltaStrength = 0.01/angstrom
 
-%TDPolarization
- 1/sqrt(2) | -1/sqrt(2) | 0
- 1/sqrt(2) |  1/sqrt(2) | 0
- 1/sqrt(2) |  0         | 1/sqrt(2)
-%
-   
 TDPolarizationDirection = 1
 TDPolarizationEquivAxes = 3
 
@@ -36,3 +25,4 @@ SpinComponents = spin_polarized
 
 FilterPotentials = filter_none
 
+StatesPack = yes

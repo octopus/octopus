@@ -28,6 +28,8 @@ dist_share_DATA =                                  \
 	02-derivatives_2d.01.inp                   \
 	03-derivatives_3d.test                     \
 	03-derivatives_3d.01.inp                   \
+	03-derivatives_3d.02-non-orthogonal.inp    \
+	03-derivatives_3d.02-non-orthogonal_unpacked.inp \
 	04-hartree_3d_cg.test                      \
 	04-hartree_3d_cg.01-cg_corrected.inp       \
 	05-hartree_3d_fft.test                     \
@@ -39,13 +41,13 @@ dist_share_DATA =                                  \
 	07-cholesky_serial.01-real.inp             \
 	07-cholesky_serial.02-complex.inp          \
 	07-cholesky_serial.03-parindep.inp         \
-	08-gs.test                                \
-	08-gs.01-cgs_real.inp                         \
-	08-gs.02-cgs_complex.inp                      \
-        08-gs.03-mgs_real.inp                         \
-        08-gs.04-mgs_complex.inp                      \
-        08-gs.05-drcgs_real.inp                         \
-        08-gs.06-drcgs_complex.inp                      \
+	08-gs.test                                 \
+	08-gs.01-cgs_real.inp                      \
+	08-gs.02-cgs_complex.inp                   \
+	08-gs.03-mgs_real.inp                      \
+	08-gs.04-mgs_complex.inp                   \
+	08-gs.05-drcgs_real.inp                    \
+	08-gs.06-drcgs_complex.inp                 \
 	10-hartree_pfft.test                       \
 	10-hartree_pfft.01-fft.inp                 \
 	10-hartree_pfft.02-fft_corrected.inp       \
@@ -60,20 +62,34 @@ dist_share_DATA =                                  \
 	15-cholesky_parallel.test                  \
 	15-cholesky_parallel.01-real.inp           \
 	15-cholesky_parallel.02-complex.inp        \
-	16-hartree_3d_libisf.test                  \
-	16-hartree_3d_libisf.01-libisf.inp         \
-	16-hartree_3d_libisf.02-libisf.inp         \
+	16-hartree_3d_psolver.test                 \
+	16-hartree_3d_psolver.01-psolver.inp       \
+	16-hartree_3d_psolver.02-psolver.inp       \
 	17-recipe.inp                              \
-        17-recipe.test                             \
+	17-recipe.test                             \
 	18-interpolation.01-1d.inp                 \
 	18-interpolation.02-2d.inp                 \
 	18-interpolation.03-3d.inp                 \
 	18-interpolation.test                      \
 	19-hgh_soc.01-3d.inp                       \
-        19-hgh_soc.test                            \
+	19-hgh_soc.test                            \
 	20-dft_u.01-NiO.inp                        \
 	20-dft_u.test                              \
 	21-hamiltonian_apply.01-Si.inp             \
-	21-hamiltonian_apply.test
+	21-hamiltonian_apply.test                  \
+	22-density_calc.01-Si.inp                  \
+	22-density_calc.test                       \
+	23-exponential_apply.01-jellium.inp        \
+	23-exponential_apply.test                  \
+	24-boundaries.01-jellium.inp               \
+	24-boundaries.test                         \
+	25-subspace.01-jellium.inp                 \
+	25-subspace.test                           \
+	26-batch_ops.01-jellium.inp                \
+	26-batch_ops.02-jellium-complex.inp        \
+	26-batch_ops.03-jellium-spinor.inp         \
+	26-batch_ops.test                          \
+	27-clock.01.inp                            \
+	27-clock.test
 
 CLEANFILES = *~ *.bak

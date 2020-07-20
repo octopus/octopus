@@ -27,27 +27,29 @@ module subspace_oct_m
   use blacs_oct_m
   use blacs_proc_grid_oct_m
   use comm_oct_m
-  use derivatives_oct_m
 #ifdef HAVE_ELPA
   use elpa
 #endif
   use global_oct_m
-  use hamiltonian_oct_m
+  use hamiltonian_elec_oct_m
   use hardware_oct_m
   use lalg_adv_oct_m
   use mesh_oct_m
   use mesh_batch_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use parser_oct_m
   use pblas_oct_m
   use profiling_oct_m
   use scalapack_oct_m
-  use states_oct_m
-  use states_calc_oct_m
-  use states_parallel_oct_m
+  use states_abst_oct_m
+  use states_elec_oct_m
+  use states_elec_calc_oct_m
+  use states_elec_parallel_oct_m
   use types_oct_m
   use varinfo_oct_m
+  use wfs_elec_oct_m
 
   implicit none
   
@@ -60,17 +62,19 @@ module subspace_oct_m
     zsubspace_diag
 
   type subspace_t
+    private
     integer :: method
   end type subspace_t
 
-  type(profile_t),     save    :: diagon_prof, hamiltonian_prof
+  type(profile_t),     save    :: diagon_prof, hamiltonian_elec_prof
   
 contains
 
-  subroutine subspace_init(this, st, no_sd)
-    type(subspace_t),  intent(out) :: this
-    type(states_t),    intent(in)  :: st
-    logical,           intent(in)  :: no_sd
+  subroutine subspace_init(this, namespace, st, no_sd)
+    type(subspace_t),    intent(out) :: this
+    type(namespace_t),   intent(in)  :: namespace
+    type(states_elec_t), intent(in)  :: st
+    logical,             intent(in)  :: no_sd
 
     integer :: default
 
@@ -90,6 +94,7 @@ contains
       !% Selects the method to perform subspace diagonalization. The
       !% default is <tt>standard</tt>, unless states parallelization is used,
       !% when the default is <tt>scalapack</tt>.
+      !% Note that this variable is not parsed in the case of the evolution eigensolver.
       !%Option none 0
       !% No subspace diagonalization. WARNING: this will generally give incorrect results.
       !%Option standard 1
@@ -106,9 +111,11 @@ contains
       if(st%parallel_in_states) default = OPTION__SUBSPACEDIAGONALIZATION__SCALAPACK
 #endif
 
-      call parse_variable('SubspaceDiagonalization', default, this%method)
+      call parse_variable(namespace, 'SubspaceDiagonalization', default, this%method)
 
-      if(.not.varinfo_valid_option('SubspaceDiagonalization', this%method)) call messages_input_error('SubspaceDiagonalization')
+      if(.not.varinfo_valid_option('SubspaceDiagonalization', this%method)) then
+        call messages_input_error(namespace, 'SubspaceDiagonalization')
+      end if
     end if
 
     call messages_print_var_option(stdout, 'SubspaceDiagonalization', this%method)
@@ -117,20 +124,20 @@ contains
     if(this%method == OPTION__SUBSPACEDIAGONALIZATION__SCALAPACK) then
 #ifndef HAVE_MPI
       message(1) = 'The scalapack subspace diagonalization can only be used in parallel.'
-      call messages_fatal(1, only_root_writes = .true.)
+      call messages_fatal(1, only_root_writes = .true., namespace=namespace)
 #else
 #ifndef HAVE_SCALAPACK
       message(1) = 'The scalapack subspace diagonalization requires scalapack.'
-      call messages_fatal(1, only_root_writes = .true.)
+      call messages_fatal(1, only_root_writes = .true., namespace=namespace)
 #endif
       if(st%dom_st_mpi_grp%size == 1) then
         message(1) = 'The scalapack subspace diagonalization is designed to be used with domain or state parallelization.'
-        call messages_warning(1)
+        call messages_warning(1, namespace=namespace)
       end if
 
       if(st%d%kpt%parallel) then
         message(1) = 'Currently the scalapack subspace diagonalization does not use k-point parallelization.'
-        call messages_warning(1)
+        call messages_warning(1, namespace=namespace)
       end if
 #endif
     end if

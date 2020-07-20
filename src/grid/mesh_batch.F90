@@ -22,17 +22,23 @@ module mesh_batch_oct_m
   use accel_oct_m
   use accel_blas_oct_m
   use batch_oct_m
+  use batch_ops_oct_m
   use blas_oct_m
   use iso_c_binding
   use comm_oct_m
   use global_oct_m
   use hardware_oct_m
   use lalg_basic_oct_m
+  use math_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use mpi_oct_m
   use mpi_debug_oct_m
+  use multicomm_oct_m
+#if defined(HAVE_OPENMP)
+  use omp_lib
+#endif
   use par_vec_oct_m
   use partition_oct_m
   use profiling_oct_m
@@ -50,7 +56,11 @@ module mesh_batch_oct_m
     zmesh_batch_dotp_self,          &
     dmesh_batch_exchange_points,    &
     zmesh_batch_exchange_points,    &
-    mesh_batch_nrm2
+    mesh_batch_nrm2,                &
+    dmesh_batch_orthogonalization,  &
+    zmesh_batch_orthogonalization,  &
+    dmesh_batch_mf_dotp,            &
+    zmesh_batch_mf_dotp
 
 contains
 
@@ -58,13 +68,13 @@ contains
 
   subroutine mesh_batch_nrm2(mesh, aa, nrm2, reduce)
     type(mesh_t),            intent(in)    :: mesh
-    type(batch_t),           intent(in)    :: aa
+    class(batch_t),          intent(in)    :: aa
     FLOAT,                   intent(out)   :: nrm2(:)
     logical,       optional, intent(in)    :: reduce
     
     PUSH_SUB(mesh_batch_nrm2)
     
-    if(batch_type(aa) == TYPE_FLOAT) then
+    if(aa%type() == TYPE_FLOAT) then
       call dpriv_mesh_batch_nrm2(mesh, aa, nrm2)
     else
       call zpriv_mesh_batch_nrm2(mesh, aa, nrm2)

@@ -27,6 +27,7 @@
 #endif
 
 module accel_oct_m
+  use alloc_cache_oct_m
 #ifdef HAVE_OPENCL
   use cl
 #endif
@@ -42,6 +43,7 @@ module accel_oct_m
   use loct_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use namespace_oct_m
   use types_oct_m
   use parser_oct_m
   use profiling_oct_m
@@ -68,6 +70,7 @@ module accel_oct_m
     accel_write_buffer,           &
     accel_read_buffer,            &
     accel_release_buffer,         &
+    accel_buffer_is_allocated,    &
     accel_finish,                 &
     accel_set_kernel_arg,         &
     accel_max_workgroup_size,     &
@@ -79,7 +82,10 @@ module accel_oct_m
     clfft_print_error,            &
     accel_local_memory_size,      &
     accel_global_memory_size,     &
-    accel_max_size_per_dim
+    accel_max_size_per_dim,       &
+    accel_get_device_pointer,     &
+    accel_set_stream,             &
+    accel_synchronize_all_streams
   
 #ifdef HAVE_OPENCL
   integer, public, parameter ::                 &
@@ -94,6 +100,7 @@ module accel_oct_m
 #endif
 
   type accel_context_t
+    ! Components are public by default
 #ifdef HAVE_OPENCL
     type(cl_context) :: cl_context
 #elif defined(HAVE_CUDA)
@@ -104,6 +111,7 @@ module accel_oct_m
   end type accel_context_t
 
   type accel_device_t
+    ! Components are public by default
 #ifdef HAVE_OPENCL
     type(cl_device_id) :: cl_device
 #elif defined(HAVE_CUDA)
@@ -113,34 +121,40 @@ module accel_oct_m
 #endif
   end type accel_device_t
 
-  type accel_t 
+  type accel_t
+    ! Components are public by default
     type(accel_context_t)  :: context
     type(accel_device_t)   :: device
 #ifdef HAVE_OPENCL
     type(cl_command_queue) :: command_queue
 #endif
     type(c_ptr)            :: cublas_handle
+    type(c_ptr)            :: cuda_stream
     type(c_ptr)            :: module_map
     integer                :: max_workgroup_size
     integer(8)             :: local_memory_size
     integer(8)             :: global_memory_size
     logical                :: enabled
     logical                :: shared_mem
+    logical                :: cuda_mpi
+    integer                :: warp_size
   end type accel_t
 
   type accel_mem_t
+    ! Components are public by default
 #ifdef HAVE_OPENCL
     type(cl_mem)           :: mem
-#endif
-#ifdef HAVE_CUDA
-    type(c_ptr)            :: cuda_ptr
+#else
+    type(c_ptr)            :: mem
 #endif
     integer(SIZEOF_SIZE_T) :: size
     type(type_t)           :: type
     integer                :: flags
+    logical                :: allocated
   end type accel_mem_t
 
   type accel_kernel_t
+    ! Components are public by default
 #ifdef HAVE_OPENCL
     type(cl_kernel)               :: kernel
 #endif
@@ -170,12 +184,19 @@ module accel_oct_m
   type(accel_kernel_t), public, target, save :: kernel_subarray_gather
   type(accel_kernel_t), public, target, save :: kernel_density_real
   type(accel_kernel_t), public, target, save :: kernel_density_complex
+  type(accel_kernel_t), public, target, save :: kernel_density_spinors
   type(accel_kernel_t), public, target, save :: kernel_phase
+  type(accel_kernel_t), public, target, save :: kernel_phase_spiral
   type(accel_kernel_t), public, target, save :: dkernel_dot_matrix
   type(accel_kernel_t), public, target, save :: zkernel_dot_matrix
   type(accel_kernel_t), public, target, save :: zkernel_dot_matrix_spinors
+  type(accel_kernel_t), public, target, save :: dkernel_batch_axpy
+  type(accel_kernel_t), public, target, save :: zkernel_batch_axpy
+  type(accel_kernel_t), public, target, save :: dkernel_batch_dotp
+  type(accel_kernel_t), public, target, save :: zkernel_batch_dotp
   type(accel_kernel_t), public, target, save :: dzmul
   type(accel_kernel_t), public, target, save :: zzmul
+  type(accel_kernel_t), public, target, save :: set_one
 
   ! kernels used locally
   type(accel_kernel_t), save :: set_zero
@@ -189,18 +210,12 @@ module accel_oct_m
     module procedure iaccel_write_buffer_1, daccel_write_buffer_1, zaccel_write_buffer_1
     module procedure iaccel_write_buffer_2, daccel_write_buffer_2, zaccel_write_buffer_2
     module procedure iaccel_write_buffer_3, daccel_write_buffer_3, zaccel_write_buffer_3
-    module procedure saccel_write_buffer_1, caccel_write_buffer_1
-    module procedure saccel_write_buffer_2, caccel_write_buffer_2
-    module procedure saccel_write_buffer_3, caccel_write_buffer_3
   end interface accel_write_buffer
 
   interface accel_read_buffer
     module procedure iaccel_read_buffer_1, daccel_read_buffer_1, zaccel_read_buffer_1
     module procedure iaccel_read_buffer_2, daccel_read_buffer_2, zaccel_read_buffer_2
     module procedure iaccel_read_buffer_3, daccel_read_buffer_3, zaccel_read_buffer_3
-    module procedure saccel_read_buffer_1, caccel_read_buffer_1
-    module procedure saccel_read_buffer_2, caccel_read_buffer_2
-    module procedure saccel_read_buffer_3, caccel_read_buffer_3
   end interface accel_read_buffer
 
   interface accel_set_kernel_arg
@@ -211,6 +226,13 @@ module accel_oct_m
       zaccel_set_kernel_arg_data,   &
       accel_set_kernel_arg_local
   end interface accel_set_kernel_arg
+
+  interface accel_get_device_pointer
+    module procedure iaccel_get_device_pointer_1
+    module procedure iaccel_get_device_pointer_2
+    module procedure daccel_get_device_pointer_1, zaccel_get_device_pointer_1
+    module procedure daccel_get_device_pointer_2, zaccel_get_device_pointer_2
+  end interface accel_get_device_pointer
 
   type(profile_t), save :: prof_read, prof_write
 
@@ -234,6 +256,7 @@ module accel_oct_m
   integer :: buffer_alloc_count
   integer(8) :: allocated_mem
   type(accel_kernel_t), pointer :: head
+  type(alloc_cache_t) :: memcache
   
 contains
 
@@ -247,9 +270,10 @@ contains
 
   ! ------------------------------------------
 
-  subroutine accel_init(base_grp)
-    type(mpi_grp_t),  intent(inout) :: base_grp
-
+  subroutine accel_init(base_grp, namespace)
+    type(mpi_grp_t),     intent(inout) :: base_grp
+    type(namespace_t),   intent(in)    :: namespace
+    
     logical  :: disable, default, run_benchmark
     integer  :: idevice, iplatform
 #ifdef HAVE_OPENCL
@@ -277,13 +301,13 @@ contains
     !% try to initialize and use an accelerator device. By setting this
     !% variable to <tt>yes</tt> you force Octopus not to use an accelerator even it is available.
     !%End
-    call messages_obsolete_variable('DisableOpenCL', 'DisableAccel')
+    call messages_obsolete_variable(namespace, 'DisableOpenCL', 'DisableAccel')
 #ifdef HAVE_ACCEL
     default = .false.
 #else
     default = .true.
 #endif
-    call parse_variable('DisableAccel', default, disable)
+    call parse_variable(namespace, 'DisableAccel', default, disable)
     accel%enabled = .not. disable
     
 #ifndef HAVE_ACCEL
@@ -298,7 +322,7 @@ contains
       return
     end if
 
-    !%Variable OpenCLPlatform
+    !%Variable AccelPlatform
     !%Type integer
     !%Default 0
     !%Section Execution::Accel
@@ -307,6 +331,8 @@ contains
     !% use. You can give an explicit platform number or use one of
     !% the options that select a particular vendor
     !% implementation. Platform 0 is used by default.
+    !%
+    !% This variable has no effect for CUDA.
     !%Option amd -2
     !% Use the AMD OpenCL platform.
     !%Option nvidia -3
@@ -316,37 +342,46 @@ contains
     !%Option intel -5
     !% Use the Intel OpenCL platform.
     !%End
-    call parse_variable('OpenCLPlatform', 0, iplatform)
+    call parse_variable(namespace, 'AccelPlatform', 0, iplatform)
 
-    !%Variable OpenCLDevice
+    call messages_obsolete_variable(namespace, 'OpenCLPlatform', 'AccelPlatform')
+    
+    !%Variable AccelDevice
     !%Type integer
     !%Default gpu
     !%Section Execution::Accel
     !%Description
-    !% This variable selects the OpenCL device that Octopus will
-    !% use. You can specify one of the options below or a numerical
-    !% id to select a specific device.
+    !% This variable selects the OpenCL or CUDA accelerator device
+    !% that Octopus will use. You can specify one of the options below
+    !% or a numerical id to select a specific device.
+    !%
+    !% Values >= 0 select the device to be used. In case of MPI enabled runs
+    !% devices are distributed in a round robin fashion, starting at this value.
     !%Option gpu -1
-    !% If available, Octopus will use a GPU for OpenCL.
+    !% If available, Octopus will use a GPU.
     !%Option cpu -2
-    !% If available, Octopus will use a GPU for OpenCL.
+    !% If available, Octopus will use a CPU (only for OpenCL).
     !%Option accelerator -3
-    !% If available, Octopus will use an accelerator for OpenCL.
-    !%Option cl_default -4
-    !% Octopus will use the default device specified by the OpenCL
+    !% If available, Octopus will use an accelerator (only for OpenCL).
+    !%Option accel_default -4
+    !% Octopus will use the default device specified by the implementation.
     !% implementation.
     !%End
-    call parse_variable('OpenCLDevice', OPENCL_GPU, idevice)
+    call parse_variable(namespace, 'AccelDevice', OPENCL_GPU, idevice)
 
+    call messages_obsolete_variable(namespace, 'OpenCLDevice', 'AccelDevice')
+    
     if(idevice < OPENCL_DEFAULT) then
-      message(1) = 'Invalid OpenCLDevice.'
-      call messages_fatal(1)
+      call messages_write('Invalid AccelDevice')
+      call messages_fatal()
     end if
 
     call messages_print_stress(stdout, "GPU acceleration")
 
 #ifdef HAVE_CUDA
-    call cuda_init(accel%context%cuda_context, accel%device%cuda_device, idevice, base_grp%rank)
+    if(idevice<0) idevice = 0
+    call cuda_init(accel%context%cuda_context, accel%device%cuda_device, accel%cuda_stream, &
+      idevice, base_grp%rank)
 #ifdef HAVE_MPI
     write(message(1), '(A, I5.5, A, I5.5)') "Rank ", base_grp%rank, " uses device number ", idevice
     call messages_info(1, all_nodes = .true.)
@@ -355,7 +390,7 @@ contains
     ! no shared mem support in our cuda interface (for the moment)
     accel%shared_mem = .true.
 
-    call cublas_init(accel%cublas_handle)
+    call cublas_init(accel%cublas_handle, accel%cuda_stream)
 #endif
     
 #ifdef HAVE_OPENCL
@@ -526,23 +561,33 @@ contains
     call clGetDeviceInfo(accel%device%cl_device, CL_DEVICE_GLOBAL_MEM_SIZE, accel%global_memory_size, cl_status)
     call clGetDeviceInfo(accel%device%cl_device, CL_DEVICE_LOCAL_MEM_SIZE, accel%local_memory_size, cl_status)
     call clGetDeviceInfo(accel%device%cl_device, CL_DEVICE_MAX_WORK_GROUP_SIZE, accel%max_workgroup_size, cl_status)
+    accel%warp_size = 1
 #endif
 #ifdef HAVE_CUDA
     call cuda_device_total_memory(accel%device%cuda_device, accel%global_memory_size)
     call cuda_device_shared_memory(accel%device%cuda_device, accel%local_memory_size)
     call cuda_device_max_threads_per_block(accel%device%cuda_device, accel%max_workgroup_size)
+    call cuda_device_get_warpsize(accel%device%cuda_device, accel%warp_size)
 #endif
       
     if(mpi_grp_is_root(base_grp)) call device_info()
 
+    ! initialize the cache used to speed up allocations
+    call alloc_cache_init(memcache, nint(CNST(0.25)*accel%global_memory_size, 8))
+    
     ! now initialize the kernels
     call accel_kernel_global_init()
 
     call accel_kernel_start_call(set_zero, 'set_zero.cl', "set_zero")
+    call accel_kernel_start_call(set_one, 'set_one.cl', "set_one")
     call accel_kernel_start_call(kernel_vpsi, 'vpsi.cl', "vpsi")
     call accel_kernel_start_call(kernel_vpsi_spinors, 'vpsi.cl', "vpsi_spinors")
     call accel_kernel_start_call(kernel_daxpy, 'axpy.cl', "daxpy", flags = '-DRTYPE_DOUBLE')
     call accel_kernel_start_call(kernel_zaxpy, 'axpy.cl', "zaxpy", flags = '-DRTYPE_COMPLEX')
+    call accel_kernel_start_call(dkernel_batch_axpy, 'axpy.cl', "dbatch_axpy_function", flags = '-lineinfo -DRTYPE_DOUBLE')
+    call accel_kernel_start_call(zkernel_batch_axpy, 'axpy.cl', "zbatch_axpy_function", flags = '-lineinfo -DRTYPE_COMPLEX')
+    call accel_kernel_start_call(dkernel_batch_dotp, 'mesh_batch_single.cl', "dbatch_mf_dotp", flags = '-lineinfo')
+    call accel_kernel_start_call(zkernel_batch_dotp, 'mesh_batch_single.cl', "zbatch_mf_dotp", flags = '-lineinfo')
     call accel_kernel_start_call(dpack, 'pack.cl', "dpack")
     call accel_kernel_start_call(zpack, 'pack.cl', "zpack")
     call accel_kernel_start_call(dunpack, 'pack.cl', "dunpack")
@@ -551,25 +596,53 @@ contains
     call accel_kernel_start_call(kernel_subarray_gather, 'subarray.cl', "subarray_gather")
     call accel_kernel_start_call(kernel_density_real, 'density.cl', "density_real")
     call accel_kernel_start_call(kernel_density_complex, 'density.cl', "density_complex")
+    call accel_kernel_start_call(kernel_density_spinors, 'density.cl', "density_spinors")
     call accel_kernel_start_call(kernel_phase, 'phase.cl', "phase")
     call accel_kernel_start_call(dkernel_dot_matrix, 'mesh_batch.cl', "ddot_matrix")
     call accel_kernel_start_call(zkernel_dot_matrix, 'mesh_batch.cl', "zdot_matrix")
     call accel_kernel_start_call(zkernel_dot_matrix_spinors, 'mesh_batch.cl', "zdot_matrix_spinors")
+
+    
     call accel_kernel_start_call(dzmul, 'mul.cl', "dzmul", flags = '-DRTYPE_DOUBLE')
     call accel_kernel_start_call(zzmul, 'mul.cl', "zzmul", flags = '-DRTYPE_COMPLEX')
 
-    !%Variable OpenCLBenchmark
+    !%Variable AccelBenchmark
     !%Type logical
     !%Default no
     !%Section Execution::Accel
     !%Description
     !% If this variable is set to yes, Octopus will run some
-    !% routines to benchmark the performance of the OpenCL device.
+    !% routines to benchmark the performance of the accelerator device.
     !%End
-    call parse_variable('OpenCLBenchmark', .false., run_benchmark)
+    call parse_variable(namespace, 'AccelBenchmark', .false., run_benchmark)
 
+    call messages_obsolete_variable(namespace, 'OpenCLBenchmark', 'AccelBenchmark')
+    
     if(run_benchmark) then
       call opencl_check_bandwidth()
+    end if
+
+    !%Variable CudaAwareMPI
+    !%Type logical
+    !%Section Execution::Accel
+    !%Description
+    !% If Octopus was compiled with CUDA support and MPI support and if the MPI
+    !% implementation is CUDA-aware (i.e., it supports communication using device pointers),
+    !% this switch can be set to true to use the CUDA-aware MPI features. The advantage
+    !% of this approach is that it can do, e.g., peer-to-peer copies between devices without
+    !% going through the host memmory.
+    !% The default is false, except when the configure switch --enable-cudampi is set, in which
+    !% case this variable is set to true.
+    !%End
+#ifdef HAVE_CUDA_MPI
+    default = .true.
+#else
+    default = .false.
+#endif
+    call parse_variable(namespace, 'CudaAwareMPI', default, accel%cuda_mpi)
+    if(accel%cuda_mpi) then
+      call messages_write("Using CUDA-aware MPI.")
+      call messages_info()
     end if
 
     call messages_print_stress(stdout)
@@ -766,9 +839,50 @@ contains
 #ifdef HAVE_OPENCL
     integer :: ierr
 #endif
+    integer(8) :: hits, misses
+    real(8) :: volume_hits, volume_misses
+    logical :: found
+    type(accel_mem_t) :: tmp
 
     PUSH_SUB(accel_end)
 
+    if(accel_is_enabled()) then
+
+      do 
+        call alloc_cache_get(memcache, ALLOC_CACHE_ANY_SIZE, found, tmp%mem)
+        if(.not. found) exit
+
+#ifdef HAVE_OPENCL
+        call clReleaseMemObject(tmp%mem, ierr)
+        if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clReleaseMemObject")
+#endif
+#ifdef HAVE_CUDA
+        call cuda_mem_free(tmp%mem)
+#endif
+      end do
+
+      call alloc_cache_end(memcache, hits, misses, volume_hits, volume_misses)
+
+      call messages_print_stress(stdout, "Acceleration-device allocation cache")
+
+      call messages_new_line()
+      call messages_write('    Number of allocations    =')
+      call messages_write(hits + misses, new_line = .true.)
+      call messages_write('    Volume of allocations    =')
+      call messages_write(volume_hits + volume_misses, fmt = 'f18.1', units = unit_gigabytes, align_left = .true., &
+        new_line = .true.)
+      call messages_write('    Hit ratio                =')
+      call messages_write(hits/TOFLOAT(hits + misses)*100, fmt='(f6.1)', align_left = .true.)
+      call messages_write('%', new_line = .true.)
+      call messages_write('    Volume hit ratio         =')
+      call messages_write(volume_hits/(volume_hits + volume_misses)*100, fmt='(f6.1)', align_left = .true.)
+      call messages_write('%')
+      call messages_new_line()
+      call messages_info()
+
+      call messages_print_stress(stdout)
+    end if
+    
     call accel_kernel_global_end()
 
 #ifdef HAVE_CLBLAS
@@ -794,7 +908,7 @@ contains
       
       if(buffer_alloc_count /= 0) then
         call messages_write('Accel:')
-        call messages_write(real(allocated_mem, REAL_PRECISION), fmt = 'f12.1', units = unit_megabytes, align_left = .true.)
+        call messages_write(TOFLOAT(allocated_mem), fmt = 'f12.1', units = unit_megabytes, align_left = .true.)
         call messages_write(' in ')
         call messages_write(buffer_alloc_count)
         call messages_write(' buffers were not deallocated.')
@@ -814,7 +928,8 @@ contains
     !> To be implemented.
     this%size = 0
     this%flags = 0
-
+    this%allocated = .false.
+    
   end subroutine accel_mem_nullify
 
   ! ------------------------------------------
@@ -846,34 +961,7 @@ contains
     type(type_t),       intent(in)    :: type
     integer,            intent(in)    :: size
 
-    integer(8) :: fsize
-#ifdef HAVE_OPENCL
-    integer :: ierr
-#endif
-
-    PUSH_SUB(accel_create_buffer_4)
-
-    this%type = type
-    this%size = size
-    this%flags = flags
-    fsize = int(size, 8)*types_get_size(type)
-
-    if(this%size > 0) then
-
-#ifdef HAVE_OPENCL
-      this%mem = clCreateBuffer(accel%context%cl_context, flags, fsize, ierr)
-      if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clCreateBuffer")
-#endif
-#ifdef HAVE_CUDA
-      call cuda_mem_alloc(this%cuda_ptr, fsize)
-#endif
-    
-      INCR(buffer_alloc_count, 1)
-      INCR(allocated_mem, fsize)
-      
-    end if
-    
-    POP_SUB(accel_create_buffer_4)
+    call accel_create_buffer_8(this, flags, type, int(size, 8))
   end subroutine accel_create_buffer_4
 
   ! ------------------------------------------
@@ -885,6 +973,7 @@ contains
     integer(8),         intent(in)    :: size
 
     integer(8) :: fsize
+    logical    :: found
 #ifdef HAVE_OPENCL
     integer :: ierr
 #endif
@@ -895,16 +984,21 @@ contains
     this%size = size
     this%flags = flags
     fsize = int(size, 8)*types_get_size(type)
-
+    this%allocated = .true.
+    
     if(fsize > 0) then
-      
+
+      call alloc_cache_get(memcache, fsize, found, this%mem)
+
+      if(.not. found) then
 #ifdef HAVE_OPENCL
-      this%mem = clCreateBuffer(accel%context%cl_context, flags, fsize, ierr)
-      if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clCreateBuffer")
+        this%mem = clCreateBuffer(accel%context%cl_context, flags, fsize, ierr)
+        if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clCreateBuffer")
 #endif
 #ifdef HAVE_CUDA
-      call cuda_mem_alloc(this%cuda_ptr, fsize)
+        call cuda_mem_alloc(this%mem, fsize)
 #endif
+      end if
       
       INCR(buffer_alloc_count, 1)
       INCR(allocated_mem, fsize)
@@ -922,30 +1016,48 @@ contains
 #ifdef HAVE_OPENCL
     integer :: ierr
 #endif
+    logical :: put
+    integer(8) :: fsize
 
     PUSH_SUB(accel_release_buffer)
 
     if(this%size > 0) then
 
+      fsize = int(this%size, 8)*types_get_size(this%type)
+      
+      call alloc_cache_put(memcache, fsize, this%mem, put) 
+
+      if(.not. put) then
 #ifdef HAVE_OPENCL
-      call clReleaseMemObject(this%mem, ierr)
-      if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clReleaseMemObject")
+        call clReleaseMemObject(this%mem, ierr)
+        if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "clReleaseMemObject")
 #endif
 #ifdef HAVE_CUDA
-      call cuda_mem_free(this%cuda_ptr)
+        call cuda_mem_free(this%mem)
 #endif
+      end if
       
       INCR(buffer_alloc_count, -1)
-      INCR(allocated_mem, -int(this%size, 8)*types_get_size(this%type))
+      INCR(allocated_mem, fsize)
 
     end if
     
     this%size = 0
     this%flags = 0
 
+    this%allocated = .false.
+    
     POP_SUB(accel_release_buffer)
   end subroutine accel_release_buffer
+    
+  ! ------------------------------------------
+  
+  logical pure function accel_buffer_is_allocated(this) result(allocated)
+    type(accel_mem_t), intent(in) :: this
 
+    allocated = this%allocated
+  end function accel_buffer_is_allocated
+    
   ! ------------------------------------------
 
   integer(SIZEOF_SIZE_T) pure function opencl_get_buffer_size(this) result(size)
@@ -971,13 +1083,15 @@ contains
 
     ! no push_sub, called too frequently
     
+    if(accel_is_enabled()) then
 #ifdef HAVE_OPENCL
-    call clFinish(accel%command_queue, ierr)
-    if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, 'clFinish') 
+      call clFinish(accel%command_queue, ierr)
+      if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, 'clFinish')
 #endif
 #ifdef HAVE_CUDA
-    call cuda_context_synchronize()
+      call cuda_context_synchronize()
 #endif
+    end if
   end subroutine accel_finish
 
   ! ------------------------------------------
@@ -991,6 +1105,8 @@ contains
     integer :: ierr
 #endif
 
+    ASSERT(accel_buffer_is_allocated(buffer))
+    
     ! no push_sub, called too frequently
 #ifdef HAVE_OPENCL
     call clSetKernelArg(kernel%kernel, narg, buffer%mem, ierr)
@@ -998,7 +1114,7 @@ contains
 #endif
 
 #ifdef HAVE_CUDA
-    call cuda_kernel_set_arg_buffer(kernel%arguments, buffer%cuda_ptr, narg)
+    call cuda_kernel_set_arg_buffer(kernel%arguments, buffer%mem, narg)
 #endif
    
   end subroutine accel_set_kernel_arg_buffer
@@ -1022,8 +1138,8 @@ contains
     size_in_bytes = int(size, 8)*types_get_size(type)
 
     if(size_in_bytes > accel%local_memory_size) then
-      write(message(1), '(a,f12.6,a)') "CL Error: requested local memory: ", dble(size_in_bytes)/1024.0, " Kb"
-      write(message(2), '(a,f12.6,a)') "          available local memory: ", dble(accel%local_memory_size)/1024.0, " Kb"
+      write(message(1), '(a,f12.6,a)') "CL Error: requested local memory: ", TOFLOAT(size_in_bytes)/1024.0, " Kb"
+      write(message(2), '(a,f12.6,a)') "          available local memory: ", TOFLOAT(accel%local_memory_size)/1024.0, " Kb"
       call messages_fatal(2)
     else if(size_in_bytes <= 0) then
       write(message(1), '(a,i10)') "CL Error: invalid local memory size: ", size_in_bytes
@@ -1105,16 +1221,18 @@ contains
   integer function accel_kernel_workgroup_size(kernel) result(workgroup_size)
     type(accel_kernel_t), intent(inout) :: kernel
 
-    integer(8) :: workgroup_size8
 #ifdef HAVE_OPENCL
+    integer(8) :: workgroup_size8
     integer :: ierr
 #endif
+
+    workgroup_size = 0
 
 #ifdef HAVE_OPENCL
     call clGetKernelWorkGroupInfo(kernel%kernel, accel%device%cl_device, CL_KERNEL_WORK_GROUP_SIZE, workgroup_size8, ierr)
     if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "EnqueueNDRangeKernel")
-#endif
     workgroup_size = workgroup_size8
+#endif
 
 #ifdef HAVE_CUDA
     workgroup_size = accel%max_workgroup_size
@@ -1538,8 +1656,8 @@ contains
     integer :: itime
     integer, parameter :: times = 10
     integer :: size
-    real(8) :: time, stime
-    real(8) :: read_bw, write_bw
+    FLOAT   :: time, stime
+    FLOAT   :: read_bw, write_bw
     type(accel_mem_t) :: buff
     FLOAT, allocatable :: data(:)
 
@@ -1563,9 +1681,9 @@ contains
         call accel_write_buffer(buff, size, data)
         call accel_finish()
       end do
-      time = (loct_clock() - stime)/dble(times)
+      time = (loct_clock() - stime)/TOFLOAT(times)
 
-      write_bw = dble(size)*8.0_8/time
+      write_bw = TOFLOAT(size)*CNST(8.0)/time
 
       stime = loct_clock()
       do itime = 1, times
@@ -1573,12 +1691,12 @@ contains
       end do
       call accel_finish()
 
-      time = (loct_clock() - stime)/dble(times)
-      read_bw = dble(size)*8.0_8/time
+      time = (loct_clock() - stime)/TOFLOAT(times)
+      read_bw = TOFLOAT(size)*CNST(8.0)/time
 
-      call messages_write(size*8.0_8/1024.0**2)
-      call messages_write(write_bw/1024.0**2, fmt = '(f10.1)')
-      call messages_write(read_bw/1024.0**2, fmt = '(f10.1)')
+      call messages_write(size*CNST(8.0)/CNST(1024.0)**2)
+      call messages_write(write_bw/CNST(1024.0)**2, fmt = '(f10.1)')
+      call messages_write(read_bw/CNST(1024.0)**2, fmt = '(f10.1)')
       call messages_info()
 
       call accel_release_buffer(buff)
@@ -1649,7 +1767,7 @@ contains
     character(len=1000) :: all_flags
     type(c_ptr) :: cuda_module
 #endif
-    
+   
     PUSH_SUB(accel_kernel_build)
 
     call profiling_in(prof, "ACCEL_COMPILE", exclude = .true.)
@@ -1751,6 +1869,7 @@ contains
   integer pure function accel_max_size_per_dim(dim) result(size)
     integer, intent(in) :: dim
 
+    size = 0
 #ifdef HAVE_OPENCL
     size = 2**30
 #endif
@@ -1761,21 +1880,40 @@ contains
   end function accel_max_size_per_dim
 
   ! ------------------------------------------------------
-  
+
+  subroutine accel_set_stream(stream_number)
+    integer, intent(in) :: stream_number
+
+    PUSH_SUB(accel_set_stream)
+
+    if(accel_is_enabled()) then
+#ifdef HAVE_CUDA
+      call cuda_set_stream(accel%cuda_stream, stream_number)
+      call cublas_set_stream(accel%cublas_handle, accel%cuda_stream)
+#endif
+    end if
+
+    POP_SUB(accel_set_stream)
+  end subroutine accel_set_stream
+
+  ! ------------------------------------------------------
+
+  subroutine accel_synchronize_all_streams()
+    PUSH_SUB(accel_synchronize_all_streams)
+
+#ifdef HAVE_CUDA
+    call cuda_synchronize_all_streams()
+#endif
+
+    POP_SUB(accel_synchronize_all_streams)
+  end subroutine accel_synchronize_all_streams
+
 #include "undef.F90"
 #include "real.F90"
 #include "accel_inc.F90"
 
 #include "undef.F90"
 #include "complex.F90"
-#include "accel_inc.F90"
-
-#include "undef.F90"
-#include "real_single.F90"
-#include "accel_inc.F90"
-
-#include "undef.F90"
-#include "complex_single.F90"
 #include "accel_inc.F90"
 
 #include "undef.F90"
