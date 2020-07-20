@@ -2,10 +2,10 @@ The main development team of this program consists of (alphabetical
 order):
 
  * Xavier Andrade
+ * Heiko Appel
+ * Franco Bonafe
  * Alberto Castro
- * Tilman Dannert
  * Umberto De Giovannini
- * Alain Delgado
  * Johannes Flick
  * Gabriel Gil
  * Adrián Gómez Pueyo
@@ -14,38 +14,45 @@ order):
  * Joaquim Jornet-Somoza
  * Ask Larsen
  * Irina Lebedeva
- * Guillaume Le Breton
+ * Kevin Lively
+ * Martin Lueders
  * Miguel A. L. Marques
- * Fernando Nogueira
  * Sebastian Ohlmann
  * Micael Oliveira
  * Carlo Andrea Rozzi
  * Angel Rubio
  * Shunsuke Sato
- * Jose R. F. Sousa
+ * Christian Schaefer
  * David Strubbe
+ * Meisam Farzalipour Tabriz  
  * Nicolas Tancogne-Dejean
  * Iris Theophilou
- * Alejandro Varas
- * Matthieu Verstraete
- * Philipp Wopperer
+ * Alicia Welden
 
 Former developers
 
  * Joseba Alberdi
- * Heiko Appel
  * Fulvio Berardi
+ * Tilman Dannert
+ * Alain Delgado
+ * Florian Eich
  * Johanna Fuks
  * David Kammerlander
  * Kevin Krieger
+ * Guillaume Le Breton
  * Florian Lorenzen
  * Danilo Nitsche
+ * Fernando Nogueira
  * Roberto Olivares-Amaya
  * Arto Sakko
  * Ravindra Shinde
+ * Jose R. F. Sousa
  * Axel Thimm
+ * Alejandro Varas
+ * Matthieu Verstraete
  * Jessica Walkenhorst
  * Jan Werschnik
+ * Philipp Wopperer
 
 octopus is based on a fixed-nucleus code written by:
 
