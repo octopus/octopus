@@ -54,7 +54,7 @@ module td_oct_m
   use poisson_oct_m
   use potential_interpolation_oct_m
   use profiling_oct_m
-  use propagator_oct_m
+  use propagator_elec_oct_m
   use propagator_base_oct_m
   use restart_oct_m
   use scdm_oct_m
@@ -333,7 +333,7 @@ contains
     td%scissor = units_to_atomic(units_inp%energy, td%scissor)
     call messages_print_var_value(stdout, 'TDScissor', td%scissor)
 
-    call propagator_init(gr, namespace, st, td%tr, ion_dynamics_ions_move(td%ions) .or. gauge_field_is_applied(hm%ep%gfield), &
+    call propagator_elec_init(gr, namespace, st, td%tr, ion_dynamics_ions_move(td%ions) .or. gauge_field_is_applied(hm%ep%gfield), &
       family_is_mgga_with_exc(ks%xc))
 
     if (hm%ep%no_lasers > 0 .and. mpi_grp_is_root(mpi_world)) then
@@ -383,7 +383,7 @@ contains
     PUSH_SUB(td_end)
 
     call pes_end(td%pesv)
-    call propagator_end(td%tr)  ! clean the evolution method
+    call propagator_elec_end(td%tr)  ! clean the evolution method
     call ion_dynamics_end(td%ions)
 
     if(td%dynamics == BO) call scf_end(td%scf)
@@ -539,10 +539,10 @@ contains
       ! time iterate the system, one time step.
       select case(td%dynamics)
       case(EHRENFEST)
-        call propagator_dt(ks, namespace, hm, gr, st, td%tr, iter*td%dt, td%dt, td%energy_update_iter*td%mu, iter, td%ions, geo, &
-          outp, scsteps = scsteps, update_energy = (mod(iter, td%energy_update_iter) == 0) .or. (iter == td%max_iter))
+        call propagator_elec_dt(ks, namespace, hm, gr, st, td%tr, iter*td%dt, td%dt, td%energy_update_iter*td%mu, iter, td%ions, &
+          geo, outp, scsteps = scsteps, update_energy = (mod(iter, td%energy_update_iter) == 0) .or. (iter == td%max_iter))
       case(BO)
-        call propagator_dt_bo(td%scf, namespace, gr, ks, st, hm, geo, mc, outp, iter, td%dt, td%ions, scsteps)
+        call propagator_elec_dt_bo(td%scf, namespace, gr, ks, st, hm, geo, mc, outp, iter, td%dt, td%ions, scsteps)
       end select
 
       !Apply mask absorbing boundaries
@@ -897,7 +897,7 @@ contains
           gr%der%boundaries%spiral = .true.
         end if
       end if
-      call propagator_run_zero_iter(hm, gr, td%tr)
+      call propagator_elec_run_zero_iter(hm, gr, td%tr)
       if (outp%output_interval > 0) then
         call td_write_data(write_handler)
         call td_write_output(namespace, gr, st, hm, ks, outp, geo, 0)
