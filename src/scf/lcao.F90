@@ -48,6 +48,7 @@ module lcao_oct_m
   use quickrnd_oct_m
   use simul_box_oct_m
   use scalapack_oct_m
+  use smear_oct_m
   use species_oct_m
   use species_pot_oct_m
   use states_abst_oct_m
@@ -736,7 +737,12 @@ contains
       ! get the effective potential (we don`t need the eigenvalues yet)
       call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval=.false., calc_berry=.false., calc_current=.false.)
       ! eigenvalues have nevertheless to be initialized to something
-      st%eigenval = M_ZERO
+      if(st%smear%method == SMEAR_SEMICONDUCTOR .and. lcao_is_available(lcao)) then
+        st%eigenval = M_HUGE
+      else
+        !For smearing functions with finite temperature, we cannot set them to M_HUGE
+        st%eigenval = M_ZERO
+      end if
 
     end if
 

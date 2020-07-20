@@ -22,7 +22,6 @@
 module rdmft_oct_m
   use density_oct_m
   use derivatives_oct_m
-  use dressed_interaction_oct_m
   use eigen_cg_oct_m
   use eigensolver_oct_m
   use energy_oct_m
@@ -45,6 +44,7 @@ module rdmft_oct_m
   use namespace_oct_m
   use output_oct_m
   use parser_oct_m
+  use photon_mode_oct_m
   use poisson_oct_m
   use profiling_oct_m
   use restart_oct_m
@@ -476,7 +476,6 @@ contains
       character(len=*), intent(in) :: dir, fname
 
       integer :: iunit, ist
-      FLOAT :: photon_number
       FLOAT, allocatable :: photon_number_state (:), ekin_state (:), epot_state (:)
 
       PUSH_SUB(scf_rdmft.scf_write_static)
@@ -507,7 +506,7 @@ contains
         
         if (hm%psolver%is_dressed) then
           write(iunit, '(a)')'Dressed state calculation'
-          call dressed_write_info(hm%psolver%dressed, iunit)
+          call photon_mode_write_info(hm%psolver%photons, iunit)
           write(iunit, '(1x)')
         end if
 
@@ -527,9 +526,9 @@ contains
       end if
 
       if (hm%psolver%is_dressed) then
-        call calc_photon_number(gr, st, hm%psolver%dressed, photon_number_state, photon_number, ekin_state, epot_state)
+        call calc_photon_number(gr, st, hm%psolver%photons, photon_number_state, ekin_state, epot_state)
         if(mpi_grp_is_root(mpi_world)) then
-          write(iunit,'(a,1x,f14.12)') 'Total mode occupation:', photon_number
+          write(iunit,'(a,1x,f14.12)') 'Total mode occupation:', hm%psolver%photons%number(1)
         end if
       end if
 
@@ -610,14 +609,13 @@ contains
   end subroutine calc_maxFO
 
   ! ---------------------------------------------------------
-  subroutine calc_photon_number(gr, st, dressed, photon_number_state, photon_number, ekin_state, epot_state)
-    type(grid_t),                intent(in)  :: gr
-    type(states_elec_t),         intent(in)  :: st
-    type(dressed_interaction_t), intent(in)  :: dressed
-    FLOAT,                       intent(out) :: photon_number_state(:)
-    FLOAT,                       intent(out) :: photon_number
-    FLOAT,                       intent(out) :: ekin_state(:)
-    FLOAT,                       intent(out) :: epot_state(:)
+  subroutine calc_photon_number(gr, st, photons, photon_number_state, ekin_state, epot_state)
+    type(grid_t),                intent(in)    :: gr
+    type(states_elec_t),         intent(in)    :: st
+    type(photon_mode_t),         intent(inout) :: photons
+    FLOAT,                       intent(out)   :: photon_number_state(:)
+    FLOAT,                       intent(out)   :: ekin_state(:)
+    FLOAT,                       intent(out)   :: epot_state(:)
 
     integer :: ist, dim_photon
     FLOAT   :: q2_exp, laplace_exp
@@ -633,7 +631,7 @@ contains
     SAFE_ALLOCATE(dpsidq(1:gr%mesh%np_part))
     SAFE_ALLOCATE(d2psidq2(1:gr%mesh%np))
 
-    photon_number = M_ZERO
+    photons%number(1) = M_ZERO
 
     do ist = 1, st%nst
       call states_elec_get_state(st, gr%mesh, ist, 1, psi)
@@ -647,18 +645,18 @@ contains
       ! <phi(ist)|q^2|psi(ist)>= |q|psi(ist)>|^2
       psi_q2(1:gr%mesh%np) = psi(1:gr%mesh%np, 1) * gr%mesh%x(1:gr%mesh%np, dim_photon)**2
       q2_exp = dmf_dotp(gr%mesh, psi(:, 1), psi_q2(:))
-      epot_state(ist) = M_HALF * dressed%omega**2 * q2_exp
+      epot_state(ist) = M_HALF * photons%omega(1)**2 * q2_exp
 
       !! N_phot(ist)=( <phi_i|H_ph|phi_i>/omega - 0.5 ) / N_elec
       !! with <phi_i|H_ph|phi_i>=-0.5* <phi(ist)|d^2/dq^2|phi(ist)> + 0.5*omega <phi(ist)|q^2|psi(ist)>
-      photon_number_state(ist) = -M_HALF*laplace_exp / dressed%omega + M_HALF * dressed%omega * q2_exp
+      photon_number_state(ist) = -M_HALF*laplace_exp / photons%omega(1) + M_HALF * photons%omega(1) * q2_exp
       photon_number_state(ist) = photon_number_state(ist) - M_HALF
 
       !! N_phot_total= sum_ist occ_ist*N_phot(ist)
-      photon_number = photon_number + (photon_number_state(ist) + M_HALF)*st%occ(ist, 1) ! 0.5 must be added again to do the normalization due to the total charge correctly
+      photons%number(1) = photons%number(1) + (photon_number_state(ist) + M_HALF)*st%occ(ist, 1) ! 0.5 must be added again to do the normalization due to the total charge correctly
     end do
 
-    photon_number =  photon_number - st%qtot/M_TWO
+    photons%number(1) =  photons%number(1) - st%qtot/M_TWO
 
     SAFE_DEALLOCATE_A(psi)
     SAFE_DEALLOCATE_A(psi_q2)

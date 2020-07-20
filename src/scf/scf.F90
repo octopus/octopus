@@ -459,6 +459,10 @@ contains
     !%End
     call parse_variable(namespace, 'SCFCalculateForces', .not. geo%only_user_def, scf%calc_force)
 
+    if(scf%calc_force .and. gr%der%boundaries%spiralBC) then
+      message(1) = 'Forces cannot be calculated when using spiral boundary conditions.'
+      call messages_fatal(1)
+    end if
 
     !%Variable SCFCalculateStress
     !%Type logical
@@ -1263,7 +1267,7 @@ contains
         if (bitand(ks%xc_family, XC_FAMILY_OEP) /= 0 .and. ks%theory_level /= HARTREE_FOCK) then
           if (((ks%oep%level == XC_OEP_FULL) .or. (ks%oep%level == XC_OEP_KLI)) .and. ks%oep%has_photons) then
             write(iunit, '(a)') 'Photon observables:'
-            write(iunit, '(6x, a, es15.8,a,es15.8,a)') 'Photon number = ', ks%oep%pt%pt_number(1)
+            write(iunit, '(6x, a, es15.8,a,es15.8,a)') 'Photon number = ', ks%oep%pt%number(1)
             write(iunit, '(6x, a, es15.8,a,es15.8,a)') 'Photon ex. = ', ks%oep%pt%ex
             write(iunit,'(1x)')
           end if

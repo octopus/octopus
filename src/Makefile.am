@@ -351,7 +351,7 @@ noinst_HEADERS +=                             \
 
 # Sources in poisson
 poisson_f_srcs =                                 \
-	poisson/dressed_interaction.F90          \
+	poisson/photon_mode.F90                  \
 	poisson/poisson_cg.F90                   \
 	poisson/poisson_corrections.F90          \
 	poisson/poisson_cutoff.F90               \
@@ -547,7 +547,6 @@ electrons_f_srcs =                                 \
 	electrons/magnetic.F90                     \
 	electrons/partial_charges.F90              \
 	electrons/pert.F90                         \
-	electrons/photon_mode.F90                  \
 	electrons/preconditioners.F90              \
 	electrons/stress.F90                       \
 	electrons/subspace.F90                     \

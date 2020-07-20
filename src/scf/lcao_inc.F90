@@ -355,7 +355,7 @@ subroutine X(init_orbitals)(this, st, gr, geo, start)
       call X(lcao_atomic_orbital)(this, iorb, gr%mesh, st, geo, ao, ispin)
       call states_elec_set_state(st, gr%mesh, ist, ik, ao)
 
-      if(ispin < st%d%spin_channels) then
+      if(ispin < st%d%spin_channels .and. st%d%ispin /= SPINORS) then
         ispin = ispin + 1
       else
         ispin = 1
@@ -366,7 +366,7 @@ subroutine X(init_orbitals)(this, st, gr, geo, start)
     end do
   end do ist_loop
 
-  if(ispin < st%d%spin_channels) iorb = iorb - 1 ! we have not completed all the spin channels
+  if(ispin < st%d%spin_channels .and. st%d%ispin /= SPINORS) iorb = iorb - 1 ! we have not completed all the spin channels
 
   ! if there are any orbitals left, allocate extra space for them
 

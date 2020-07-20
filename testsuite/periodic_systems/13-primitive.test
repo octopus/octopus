@@ -11,34 +11,38 @@ Input      : 13-primitive.01-diamond.inp
 
 match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
 
-match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -11.47103731
-match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -10.73490075
-match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -0.82653907
-match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ;  0.99994048
-match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -3.10096624
-match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.44501249
-match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;  8.61902528
-match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ; -6.80916304
+Precision: 1e-8
+match ;  Total energy        ; GREPFIELD(static/info, 'Total       =', 3) ; -11.471079215
+match ;  Ion-ion energy      ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -10.73490075
+match ;  Eigenvalues sum     ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -0.826573915
+match ;  Hartree energy      ; GREPFIELD(static/info, 'Hartree     =', 3) ; 0.99994867
+match ;  Exchange energy     ; GREPFIELD(static/info, 'Exchange    =', 3) ; -3.10096961
+match ;  Correlation energy  ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.44501265
+match ;  Kinetic energy      ; GREPFIELD(static/info, 'Kinetic     =', 3) ; 8.61906161
+match ;  External energy     ; GREPFIELD(static/info, 'External    =', 3) ; -6.80920652
 
-match ; k-point 50 (x) ; GREPFIELD(static/info, '#k =  50', 7) ;   0.000000
-match ; k-point 50 (y) ; GREPFIELD(static/info, '#k =  50', 8) ;   0.000000
-match ; k-point 50 (z) ; GREPFIELD(static/info, '#k =  50', 9) ;   0.000000
-match ; Eigenvalue  1  ; GREPFIELD(static/info, '#k =  50', 3, 1) ; -0.556925
-match ; Eigenvalue  2  ; GREPFIELD(static/info, '#k =  50', 3, 2) ; 0.216186
-match ; Eigenvalue  3  ; GREPFIELD(static/info, '#k =  50', 3, 3) ; 0.216187
-match ; Eigenvalue  4  ; GREPFIELD(static/info, '#k =  50', 3, 4) ; 0.216188
+match ;  k-point 50 (x)  ; GREPFIELD(static/info, '#k =  50', 7) ; 0.0
+match ;  k-point 50 (y)  ; GREPFIELD(static/info, '#k =  50', 8) ; 0.0
+match ;  k-point 50 (z)  ; GREPFIELD(static/info, '#k =  50', 9) ; 0.0
 
-match ; k-point 75 (x) ; GREPFIELD(static/info, '#k =  75', 7) ;   0.055556
-match ; k-point 75 (y) ; GREPFIELD(static/info, '#k =  75', 8) ;   0.055556
-match ; k-point 75 (z) ; GREPFIELD(static/info, '#k =  75', 9) ;   0.055556
-match ; Eigenvalue  1 ; GREPFIELD(static/info,  '#k =  75', 3, 1) ; -0.553789
-match ; Eigenvalue  2 ; GREPFIELD(static/info,  '#k =  75', 3, 2) ;  0.195385
-match ; Eigenvalue  3 ; GREPFIELD(static/info,  '#k =  75', 3, 3) ;  0.210684
-match ; Eigenvalue  4 ; GREPFIELD(static/info,  '#k =  75', 3, 4) ;  0.210684
+match ;  Eigenvalue  1   ; GREPFIELD(static/info, '#k =  50', 3, 1) ; -0.556928
+match ;  Eigenvalue  2   ; GREPFIELD(static/info, '#k =  50', 3, 2) ; 0.216177
+match ;  Eigenvalue  3   ; GREPFIELD(static/info, '#k =  50', 3, 3) ; 0.216182
+match ;  Eigenvalue  4   ; GREPFIELD(static/info, '#k =  50', 3, 4) ; 0.216183
 
-match ; dipole 2-5 ; LINEFIELD(static/ks_me_dipole.k1_x, 4, 4) ;   3.063409732506
-match ; dipole 4-7 ; LINEFIELD(static/ks_me_dipole.k1_x, 9, 3);    3.174729371945
+match ;  k-point 75 (x)  ; GREPFIELD(static/info, '#k =  75', 7) ; 0.055556
+match ;  k-point 75 (y)  ; GREPFIELD(static/info, '#k =  75', 8) ; 0.055556
+match ;  k-point 75 (z)  ; GREPFIELD(static/info, '#k =  75', 9) ; 0.055556
 
+match ;  Eigenvalue  1  ; GREPFIELD(static/info, '#k =  75', 3, 1) ; -0.553792
+match ;  Eigenvalue  2  ; GREPFIELD(static/info, '#k =  75', 3, 2) ; 0.195378
+match ;  Eigenvalue  3  ; GREPFIELD(static/info, '#k =  75', 3, 3) ; 0.210678
+match ;  Eigenvalue  4  ; GREPFIELD(static/info, '#k =  75', 3, 4) ; 0.21068
+
+Precision: 1.6e-5
+match ;  dipole 2-5  ; LINEFIELD(static/ks_me_dipole.k1_x, 4, 4) ; 3.0631828910345
+match ;  dipole 4-7  ; LINEFIELD(static/ks_me_dipole.k1_x, 9, 3) ; 3.1747322345055
+Precision: 1e-04
 
 Input      : 13-primitive.02-graphene.inp
 if(available cuda); then

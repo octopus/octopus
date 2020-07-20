@@ -343,6 +343,15 @@ contains
      
     end if
 
+    if (family_is_mgga_with_exc(ks%xc)) then
+      call messages_experimental('MGGA energy functionals')
+
+      if (accel_is_enabled() .and. (gr%mesh%parallel_in_domains .or. st%parallel_in_states .or. st%d%kpt%parallel)) then
+        !At the moment this combination produces wrong results
+        call messages_not_implemented("MGGA with energy functionals and CUDA+MPI")
+      end if
+    end if
+
     call messages_obsolete_variable(namespace, 'NonInteractingElectrons', 'TheoryLevel')
     call messages_obsolete_variable(namespace, 'HartreeFock', 'TheoryLevel')
 
@@ -1049,15 +1058,18 @@ contains
             else
               call  zxc_slater_calc(namespace, hm%psolver, ks%gr%mesh, st, ks%calc%energy%exchange, vxc = ks%calc%vxc)
             end if
+          else
+
+            if (states_are_real(st)) then
+              call dxc_oep_calc(ks%oep, namespace, ks%xc, (ks%sic_type == SIC_PZ), ks%gr, &
+                hm, st, ks%calc%energy%exchange, ks%calc%energy%correlation, vxc = ks%calc%vxc)
+            else
+              call zxc_oep_calc(ks%oep, namespace, ks%xc, (ks%sic_type == SIC_PZ), ks%gr, &
+                hm, st, ks%calc%energy%exchange, ks%calc%energy%correlation, vxc = ks%calc%vxc)
+            end if
+
           end if
 
-          if (states_are_real(st)) then
-            call dxc_oep_calc(ks%oep, namespace, ks%xc, (ks%sic_type == SIC_PZ), ks%gr, &
-              hm, st, ks%calc%energy%exchange, ks%calc%energy%correlation, vxc = ks%calc%vxc)
-          else
-            call zxc_oep_calc(ks%oep, namespace, ks%xc, (ks%sic_type == SIC_PZ), ks%gr, &
-              hm, st, ks%calc%energy%exchange, ks%calc%energy%correlation, vxc = ks%calc%vxc)
-          end if
           if (ks%oep%has_photons) then
             ks%calc%energy%photon_exchange = ks%oep%pt%ex
           end if
@@ -1136,6 +1148,13 @@ contains
             factor*dmf_dotp(ks%gr%fine%mesh, st%rho(:, ispin), ks%calc%vxc(:, ispin), reduce = .false.)
         end do
         if(ks%gr%der%mesh%parallel_in_domains) call comm_allreduce(ks%gr%der%mesh%mpi_grp%comm,  ks%calc%energy%intnvxc)
+
+        ! MGGA vtau contribution
+        if (states_are_real(st)) then
+          ks%calc%energy%intnvxc = ks%calc%energy%intnvxc + denergy_calc_electronic(namespace, hm, ks%gr%der, st, terms = TERM_MGGA)
+        else
+          ks%calc%energy%intnvxc = ks%calc%energy%intnvxc + zenergy_calc_electronic(namespace, hm, ks%gr%der, st, terms = TERM_MGGA)
+        end if
 
         if(hm%lda_u_level /= DFT_U_NONE) then
           if(states_are_real(st)) then

@@ -203,7 +203,8 @@ subroutine X(forces_from_potential)(gr, namespace, geo, hm, st, force, force_loc
       if(hm%hm_base%apply_projector_matrices .and. .not. accel_is_enabled() .and. &
         .not. (st%symmetrize_density .and. gr%sb%kpoints%use_symmetries)) then
 
-        call X(hamiltonian_elec_base_nlocal_force)(hm%hm_base, gr%mesh, st, iq, gr%mesh%sb%dim, psib, grad_psib, force_nl)
+        call X(hamiltonian_elec_base_nlocal_force)(hm%hm_base, gr%mesh, st, gr%der%boundaries, iq, &
+                   gr%mesh%sb%dim, psib, grad_psib, force_nl)
 
       else 
 
@@ -267,7 +268,7 @@ subroutine X(forces_from_potential)(gr, namespace, geo, hm, st, force, force_loc
 
                 do idir = 1, gr%mesh%sb%dim
                   force_psi(idir) = - M_TWO * kweight * st%occ(ist, iq) * &
-                    R_REAL(X(projector_matrix_element)(hm%ep%proj(iatom_symm), st%d%dim, iq, psi, grad_psi(:, idir, :)))
+      R_REAL(X(projector_matrix_element)(hm%ep%proj(iatom_symm), gr%der%boundaries, st%d%dim, iq, psi, grad_psi(:, idir, :)))
                 end do
 
                 ! We convert the force to Cartesian coordinates before symmetrization
@@ -294,7 +295,7 @@ subroutine X(forces_from_potential)(gr, namespace, geo, hm, st, force, force_loc
 
               do idir = 1, gr%mesh%sb%dim
                 force_psi(idir) = - M_TWO * st%d%kweights(iq) * st%occ(ist, iq) * &
-                  R_REAL(X(projector_matrix_element)(hm%ep%proj(iatom), st%d%dim, iq, psi, grad_psi(:, idir, :)))
+                  R_REAL(X(projector_matrix_element)(hm%ep%proj(iatom), gr%der%boundaries, st%d%dim, iq, psi, grad_psi(:, idir, :)))
               end do
 
               ! We convert the forces to Cartesian coordinates
@@ -465,7 +466,7 @@ subroutine X(total_force_from_potential)(gr, geo, ep, st, x, lda_u_level)
         do idir = 1, gr%mesh%sb%dim
 
           force(idir, iatom) = force(idir, iatom) - M_TWO * st%d%kweights(iq) * st%occ(ist, iq) * &
-            R_REAL(X(projector_matrix_element)(ep%proj(iatom), st%d%dim, iq, psi, grad_psi(:, idir, :)))
+            R_REAL(X(projector_matrix_element)(ep%proj(iatom), gr%der%boundaries, st%d%dim, iq, psi, grad_psi(:, idir, :)))
 
         end do
       end do
@@ -593,10 +594,10 @@ subroutine X(forces_derivative)(gr, namespace, geo, ep, st, lr, lr2, force_deriv
         do idir = 1, gr%mesh%sb%dim
 
           force_deriv(idir, iatom) = force_deriv(idir, iatom) - ff * &
-            (X(projector_matrix_element)(ep%proj(iatom), st%d%dim, iq, grad_psi(:, idir, :), dl_psi) &
-            + X(projector_matrix_element)(ep%proj(iatom), st%d%dim, iq, psi, grad_dl_psi(:, idir, :)) &
-            + X(projector_matrix_element)(ep%proj(iatom), st%d%dim, iq, dl_psi2, grad_psi(:, idir, :)) &
-            + X(projector_matrix_element)(ep%proj(iatom), st%d%dim, iq, grad_dl_psi2(:, idir, :), psi))
+            (X(projector_matrix_element)(ep%proj(iatom), gr%der%boundaries, st%d%dim, iq, grad_psi(:, idir, :), dl_psi) &
+            + X(projector_matrix_element)(ep%proj(iatom), gr%der%boundaries, st%d%dim, iq, psi, grad_dl_psi(:, idir, :)) &
+            + X(projector_matrix_element)(ep%proj(iatom), gr%der%boundaries, st%d%dim, iq, dl_psi2, grad_psi(:, idir, :)) &
+            + X(projector_matrix_element)(ep%proj(iatom), gr%der%boundaries, st%d%dim, iq, grad_dl_psi2(:, idir, :), psi))
           
         end do
       end do

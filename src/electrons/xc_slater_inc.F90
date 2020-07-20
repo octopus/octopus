@@ -254,24 +254,32 @@ subroutine X(slater) (namespace, mesh, psolver, st, isp, ex, vxc)
       nn = st%rho(ip, 1) + st%rho(ip, 2)
       !If there is no density at this point, we simply ignore it
       if(nn < CNST(1e-10)) cycle 
-      ! 1/(2nM), where n is the charge density and M = n_uu*n_dd - n_ud*n_du
-      rr = M_ONE/( nn * (st%rho(ip, 1) * st%rho(ip, 2)  - (st%rho(ip, 3)**2 + st%rho(ip, 4)**2)))
+      ! 1/(2nD), where n is the charge density and D = n_uu*n_dd - n_ud*n_du
+      ! where D is the determinant of the spin-density matrix
+      rr = (st%rho(ip, 1) * st%rho(ip, 2)  - (st%rho(ip, 3)**2 + st%rho(ip, 4)**2))
+      if(abs(rr) < CNST(1.0e-10)) then !The matrix is singular, we are fully spin polarized along one direction
+        vxc(ip, 1) = vxc(ip, 1) +  M_HALF/nn*bij(ip, 1) 
+        vxc(ip, 2) = vxc(ip, 2) +  M_HALF/nn*bij(ip, 2)
+      else
 
-      vxc(ip, 1) = vxc(ip, 1) + rr * ( &
-         ( nn * st%rho(ip, 2) - (st%rho(ip, 3)**2 + st%rho(ip, 4)**2)) * bij(ip, 1) &
-        +( (st%rho(ip, 3)**2 + st%rho(ip, 4)**2) ) * bij(ip, 2) &
-        - M_TWO * st%rho(ip,2) * ( st%rho(ip,3) * R_REAL(bij(ip,3)) + st%rho(ip,4) * R_AIMAG(bij(ip,3))))
+        rr = M_ONE/(M_TWO * nn * rr)
 
-      vxc(ip, 2) = vxc(ip, 2) + rr * ( &
-         ( nn * st%rho(ip, 1) - (st%rho(ip, 3)**2 + st%rho(ip, 4)**2)) * bij(ip, 2) &
-        +( (st%rho(ip, 3)**2 + st%rho(ip, 4)**2) ) * bij(ip, 1) &
-        - M_TWO * st%rho(ip,1) * ( st%rho(ip,3) * R_REAL(bij(ip,3)) + st%rho(ip,4) * R_AIMAG(bij(ip,3)))) 
-       tmp = -cmplx(st%rho(ip, 3), st%rho(ip,4)) * (st%rho(ip, 2) * bij(ip,1) + st%rho(ip, 1) * bij(ip,2)) &
-     + (M_TWO *st%rho(ip, 1) * st%rho(ip, 2)  - (st%rho(ip, 3)**2 + st%rho(ip, 4)**2)) * bij(ip, 3) &
-             + (cmplx(st%rho(ip, 3),st%rho(ip,4)))**2 * R_CONJ(bij(ip,3))
+        vxc(ip, 1) = vxc(ip, 1) + rr * ( &
+           ( nn * st%rho(ip, 2) - (st%rho(ip, 3)**2 + st%rho(ip, 4)**2)) * bij(ip, 1) &
+          +( (st%rho(ip, 3)**2 + st%rho(ip, 4)**2) ) * bij(ip, 2) &
+          - M_TWO * st%rho(ip,2) * ( st%rho(ip,3) * R_REAL(bij(ip,3)) + st%rho(ip,4) * R_AIMAG(bij(ip,3))))
 
-       vxc(ip, 3) = vxc(ip, 3) + rr * R_REAL(tmp)
-       vxc(ip, 4) = vxc(ip, 4) + rr * R_AIMAG(tmp) 
+        vxc(ip, 2) = vxc(ip, 2) + rr * ( &
+           ( nn * st%rho(ip, 1) - (st%rho(ip, 3)**2 + st%rho(ip, 4)**2)) * bij(ip, 2) &
+          +( (st%rho(ip, 3)**2 + st%rho(ip, 4)**2) ) * bij(ip, 1) &
+          - M_TWO * st%rho(ip,1) * ( st%rho(ip,3) * R_REAL(bij(ip,3)) + st%rho(ip,4) * R_AIMAG(bij(ip,3)))) 
+         tmp = -cmplx(st%rho(ip, 3), st%rho(ip,4)) * (st%rho(ip, 2) * bij(ip,1) + st%rho(ip, 1) * bij(ip,2)) &
+       + (M_TWO *st%rho(ip, 1) * st%rho(ip, 2)  - (st%rho(ip, 3)**2 + st%rho(ip, 4)**2)) * bij(ip, 3) &
+               + (cmplx(st%rho(ip, 3),st%rho(ip,4)))**2 * R_CONJ(bij(ip,3))
+  
+         vxc(ip, 3) = vxc(ip, 3) + rr * R_REAL(tmp)
+         vxc(ip, 4) = vxc(ip, 4) + rr * R_AIMAG(tmp) 
+      end if
     end do 
   end if
   
