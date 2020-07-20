@@ -23,7 +23,7 @@ module propagator_beeman_oct_m
   use messages_oct_m
   use namespace_oct_m
   use profiling_oct_m
-  use propagator_abst_oct_m
+  use propagator_oct_m
 
   implicit none
 
@@ -31,7 +31,7 @@ module propagator_beeman_oct_m
   public ::                            &
     propagator_beeman_t
 
-  type, extends(propagator_abst_t) :: propagator_beeman_t
+  type, extends(propagator_t) :: propagator_beeman_t
     private
   end type propagator_beeman_t
 

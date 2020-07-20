@@ -18,7 +18,7 @@
 
 #include "global.h"
 
-module propagator_abst_oct_m
+module propagator_oct_m
   use clock_oct_m
   use global_oct_m
   use linked_list_oct_m
@@ -30,11 +30,11 @@ module propagator_abst_oct_m
   implicit none
 
   private
-  public ::                            &
-    propagator_abst_t,                 &
+  public ::                       &
+    propagator_t,                 &
     propagator_step_debug_message
 
-  type, extends(integer_list_t) :: propagator_abst_t
+  type, extends(integer_list_t) :: propagator_t
     private
 
     type(integer_iterator_t) :: iter
@@ -69,7 +69,7 @@ module propagator_abst_oct_m
     procedure :: save_scf_start => propagator_save_scf_start
     procedure :: rewind_scf_loop => propagator_rewind_scf_loop
     procedure :: parse_td_variables => propagator_parse_td_variables
-  end type propagator_abst_t
+  end type propagator_t
 
   ! Known propagation operations
   integer, public, parameter ::        &
@@ -108,8 +108,9 @@ module propagator_abst_oct_m
 
 contains
 
+  ! ---------------------------------------------------------
   subroutine propagator_rewind(this)
-    class(propagator_abst_t), intent(inout) :: this
+    class(propagator_t), intent(inout) :: this
 
     PUSH_SUB(propagator_rewind)
 
@@ -120,8 +121,9 @@ contains
     POP_SUB(propagator_rewind)
   end subroutine propagator_rewind
 
+  ! ---------------------------------------------------------
   subroutine propagator_finished(this)
-    class(propagator_abst_t), intent(inout) :: this
+    class(propagator_t), intent(inout) :: this
 
     PUSH_SUB(propagator_finished)
 
@@ -130,8 +132,9 @@ contains
     POP_SUB(propagator_finished)
   end subroutine propagator_finished
 
+  ! ---------------------------------------------------------
   subroutine propagator_next(this)
-    class(propagator_abst_t), intent(inout) :: this
+    class(propagator_t), intent(inout) :: this
 
     PUSH_SUB(propagator_next)
 
@@ -140,8 +143,9 @@ contains
     POP_SUB(propagator_next)
   end subroutine propagator_next
 
+  ! ---------------------------------------------------------
   integer function propagator_get_tdop(this) result(tdop)
-    class(propagator_abst_t), intent(in) :: this
+    class(propagator_t), intent(in) :: this
 
     PUSH_SUB(propagator_get_tdop)
 
@@ -150,15 +154,17 @@ contains
     POP_SUB(propagator_get_tdop)
   end function propagator_get_tdop
 
+  ! ---------------------------------------------------------
   logical pure function propagator_step_is_done(this) result(step_is_done)
-    class(propagator_abst_t), intent(in) :: this
+    class(propagator_t), intent(in) :: this
 
     step_is_done = this%step_done
 
   end function propagator_step_is_done
 
+  ! ---------------------------------------------------------
   subroutine propagator_save_scf_start(this)
-    class(propagator_abst_t), intent(inout) :: this
+    class(propagator_t), intent(inout) :: this
     
     PUSH_SUB(propagator_save_scf_start)
 
@@ -171,8 +177,9 @@ contains
 
   end subroutine propagator_save_scf_start
 
+  ! ---------------------------------------------------------
   subroutine propagator_rewind_scf_loop(this)
-    class(propagator_abst_t), intent(inout) :: this
+    class(propagator_t), intent(inout) :: this
 
     PUSH_SUB(propagator_rewind_scf_loop)
 
@@ -185,6 +192,7 @@ contains
 
   end subroutine propagator_rewind_scf_loop
 
+  ! ---------------------------------------------------------
   function propagator_step_debug_message(tdop) result(description)
     integer, intent(in) :: tdop
     character(len=100) :: description
@@ -233,7 +241,7 @@ contains
 
   !--------------------------------------------------------
   subroutine propagator_parse_td_variables(this, namespace)
-    class(propagator_abst_t), intent(inout) :: this
+    class(propagator_t), intent(inout) :: this
     type(namespace_t),        intent(in)    :: namespace
 
     PUSH_SUB(propagator_parse_td_variables)
@@ -249,7 +257,7 @@ contains
     POP_SUB(propagator_parse_td_variables)
   end subroutine propagator_parse_td_variables
 
-end module propagator_abst_oct_m
+end module propagator_oct_m
 
 
 !!o, Local Variables:
