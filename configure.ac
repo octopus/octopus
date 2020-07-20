@@ -22,7 +22,7 @@ AC_PREREQ(2.59)
 AC_INIT([Octopus],[arborescens],[octopus-devel@tddft.org],[octopus])
 AC_CONFIG_SRCDIR([src/basic/global.F90])
 AC_CONFIG_AUX_DIR([build-aux])
-AM_INIT_AUTOMAKE([subdir-objects])
+AM_INIT_AUTOMAKE([subdir-objects tar-ustar])
 
 AC_CONFIG_HEADERS([config.h])
 
