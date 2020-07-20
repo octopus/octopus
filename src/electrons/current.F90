@@ -881,7 +881,7 @@ contains
           end if
         end if
       end do
-    call parse_block_end(blk)
+      call parse_block_end(blk)
     end if
 
 

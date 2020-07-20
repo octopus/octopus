@@ -183,7 +183,7 @@ contains
     PUSH_SUB(bc_mxll_init)
 
     bc%ab_user_def = .false.
-    bc%bc_ab_type(:) = MXLL_AB_NOT_ABSORBING ! deafault option
+    bc%bc_ab_type(:) = MXLL_AB_NOT_ABSORBING ! default option
 
     !%Variable MaxwellAbsorbingBoundaries
     !%Type block

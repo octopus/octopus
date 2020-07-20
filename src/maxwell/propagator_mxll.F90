@@ -212,6 +212,9 @@ contains
         hm%bc_add_ab_region = .true.
       case (MXLL_BC_MEDIUM)
         string = 'Medium boundary'
+      case default
+        write(message(1),'(a)') 'Unknown Maxwell boundary condition'
+        call messages_fatal(1, namespace=namespace)
       end select
       write(message(1),'(a,I1,a,a)') 'Maxwell boundary condition in direction ', icol, ': ', trim(string)
       call messages_info(1)
@@ -386,7 +389,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine mxll_propagation_step(hm, namespace, gr, st, tr, rs_state, rs_current_density_t1,&
-      & rs_current_density_t2, rs_charge_density_t1, rs_charge_density_t2, time, dt)
+      rs_current_density_t2, rs_charge_density_t1, rs_charge_density_t2, time, dt)
     type(hamiltonian_mxll_t),   intent(inout) :: hm
     type(namespace_t),          intent(in)    :: namespace
     type(grid_t),               intent(inout) :: gr
@@ -507,9 +510,9 @@ contains
 
           ! inhomogeneity propagation
           call transform_rs_densities(hm, rs_charge_density_t1, rs_current_density_t1,&
-              & ff_rs_inhom_1, RS_TRANS_FORWARD)
+              ff_rs_inhom_1, RS_TRANS_FORWARD)
           call transform_rs_densities(hm, rs_charge_density_t2, rs_current_density_t2,&
-              & ff_rs_inhom_2, RS_TRANS_FORWARD)
+              ff_rs_inhom_2, RS_TRANS_FORWARD)
           ff_rs_inhom_mean(:,:) = ff_rs_inhom_2 - ff_rs_inhom_1 ! not mean, used as auxiliary variable
           ff_rs_inhom_2(:,:) = ff_rs_inhom_1 + ff_rs_inhom_mean * inter_dt * ii / TOFLOAT(inter_steps)
           ff_rs_inhom_1(:,:) = ff_rs_inhom_1 + ff_rs_inhom_mean * inter_dt * (ii-1) / TOFLOAT(inter_steps)
@@ -518,9 +521,9 @@ contains
           ff_rs_state(:,:) = ff_rs_state + M_FOURTH * inter_dt * (ff_rs_inhom_1 + ff_rs_inhom_2)
 
           call transform_rs_densities(hm, rs_charge_density_t1, rs_current_density_t1,&
-              & ff_rs_inhom_1, RS_TRANS_FORWARD)
+              ff_rs_inhom_1, RS_TRANS_FORWARD)
           call transform_rs_densities(hm, rs_charge_density_t2, rs_current_density_t2,&
-              & ff_rs_inhom_2, RS_TRANS_FORWARD)
+              ff_rs_inhom_2, RS_TRANS_FORWARD)
           ff_rs_inhom_1(:,:) = M_HALF * (ff_rs_inhom_1 + ff_rs_inhom_2)
           ff_rs_inhom_2(:,:) = ff_rs_inhom_1 ! changed from the old code
           call exponential_mxll_apply(hm, namespace, gr, st, tr, inter_dt/M_TWO, ff_rs_inhom_1)
@@ -720,10 +723,10 @@ contains
     else if (hm%operator == FARADAY_AMPERE_GAUSS) then
       if (sign == RS_TRANS_FORWARD) then
         call transform_rs_densities_to_4x4_rs_densities_forward(rs_charge_density,&
-            & rs_current_density, ff_density)
+            rs_current_density, ff_density)
       else
         call transform_rs_densities_to_4x4_rs_densities_backward(ff_density, rs_charge_density,&
-            & rs_current_density)
+            rs_current_density)
       end if
     else
       if (sign == RS_TRANS_FORWARD) then
