@@ -36,18 +36,18 @@ module propagator_beeman_oct_m
   end type propagator_beeman_t
 
   interface propagator_beeman_t
-    procedure propagator_beeman_init
+    procedure propagator_beeman_constructor
   end interface propagator_beeman_t
 
 contains
 
   ! ---------------------------------------------------------
-  function propagator_beeman_init(namespace, predictor_corrector) result(this)
+  function propagator_beeman_constructor(namespace, predictor_corrector) result(this)
     type(namespace_t),   intent(in)    :: namespace
     logical,             intent(in)    :: predictor_corrector
     type(propagator_beeman_t), pointer :: this
 
-    PUSH_SUB(propagator_beeman_init)
+    PUSH_SUB(propagator_beeman_constructor)
 
     SAFE_ALLOCATE(this)
 
@@ -86,8 +86,8 @@ contains
 
     call this%parse_td_variables(namespace)
 
-    POP_SUB(propagator_beeman_init)
-  end function propagator_beeman_init
+    POP_SUB(propagator_beeman_constructor)
+  end function propagator_beeman_constructor
 
 end module propagator_beeman_oct_m
 

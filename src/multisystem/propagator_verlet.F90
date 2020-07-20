@@ -38,17 +38,17 @@ module propagator_verlet_oct_m
   end type propagator_verlet_t
 
   interface propagator_verlet_t
-    procedure propagator_verlet_init
+    procedure propagator_verlet_constructor
   end interface propagator_verlet_t
 
 contains
 
   ! ---------------------------------------------------------
-  function propagator_verlet_init(namespace) result(this)
+  function propagator_verlet_constructor(namespace) result(this)
     type(namespace_t),         intent(in) :: namespace
     type(propagator_verlet_t), pointer    :: this
 
-    PUSH_SUB(propagator_verlet_init)
+    PUSH_SUB(propagator_verlet_constructor)
 
     SAFE_ALLOCATE(this)
 
@@ -66,8 +66,8 @@ contains
 
     call this%parse_td_variables(namespace)
 
-    POP_SUB(propagator_verlet_init)
-  end function propagator_verlet_init
+    POP_SUB(propagator_verlet_constructor)
+  end function propagator_verlet_constructor
 
 end module propagator_verlet_oct_m
 
