@@ -72,7 +72,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine propagator_nullify(this)
-    type(propagator_t), intent(out) :: this
+    type(propagator_base_t), intent(out) :: this
 
     PUSH_SUB(propagator_nullify)
 
@@ -91,8 +91,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine propagator_copy(tro, tri)
-    type(propagator_t), intent(inout) :: tro
-    type(propagator_t), intent(in)    :: tri
+    type(propagator_base_t), intent(inout) :: tro
+    type(propagator_base_t), intent(in)    :: tri
 
     PUSH_SUB(propagator_copy)
     
@@ -133,15 +133,15 @@ contains
 
   ! ---------------------------------------------------------
   subroutine propagator_init(gr, namespace, st, tr, have_fields, family_is_mgga_with_exc)
-    type(grid_t),        intent(in)    :: gr
-    type(namespace_t),   intent(in)    :: namespace
-    type(states_elec_t), intent(in)    :: st
-    type(propagator_t),  intent(inout) :: tr
+    type(grid_t),            intent(in)    :: gr
+    type(namespace_t),       intent(in)    :: namespace
+    type(states_elec_t),     intent(in)    :: st
+    type(propagator_base_t), intent(inout) :: tr
     !> whether there is an associated "field"
     !! that must be propagated (currently ions
     !! or a gauge field).
-    logical,             intent(in)    :: have_fields 
-    logical,             intent(in)    :: family_is_mgga_with_exc
+    logical,                 intent(in)    :: have_fields 
+    logical,                 intent(in)    :: family_is_mgga_with_exc
 
     PUSH_SUB(propagator_init)
     
@@ -409,8 +409,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine propagator_set_scf_prop(tr, threshold)
-    type(propagator_t), intent(inout) :: tr
-    FLOAT, intent(in), optional :: threshold
+    type(propagator_base_t), intent(inout) :: tr
+    FLOAT, optional,         intent(in)    :: threshold
 
     PUSH_SUB(propagator_set_scf_prop)
 
@@ -426,7 +426,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine propagator_remove_scf_prop(tr)
-    type(propagator_t), intent(inout) :: tr
+    type(propagator_base_t), intent(inout) :: tr
 
     PUSH_SUB(propagator_remove_scf_prop)
 
@@ -439,7 +439,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine propagator_end(tr)
-    type(propagator_t), intent(inout) :: tr
+    type(propagator_base_t), intent(inout) :: tr
 
     PUSH_SUB(propagator_end)
 
@@ -466,8 +466,8 @@ contains
   ! ---------------------------------------------------------
   subroutine propagator_run_zero_iter(hm, gr, tr)
     type(hamiltonian_elec_t),  intent(in)    :: hm
-    type(grid_t),         intent(in)    :: gr
-    type(propagator_t),   intent(inout) :: tr
+    type(grid_t),              intent(in)    :: gr
+    type(propagator_base_t),   intent(inout) :: tr
 
     PUSH_SUB(propagator_run_zero_iter)
 
@@ -494,7 +494,7 @@ contains
     type(hamiltonian_elec_t),            target, intent(inout) :: hm
     type(grid_t),                        target, intent(inout) :: gr
     type(states_elec_t),                 target, intent(inout) :: st
-    type(propagator_t),                  target, intent(inout) :: tr
+    type(propagator_base_t),             target, intent(inout) :: tr
     FLOAT,                                       intent(in)    :: time
     FLOAT,                                       intent(in)    :: dt
     FLOAT,                                       intent(in)    :: ionic_scale
@@ -624,7 +624,7 @@ contains
 
   ! ---------------------------------------------------------
   logical pure function propagator_ions_are_propagated(tr) result(propagated)
-    type(propagator_t), intent(in) :: tr
+    type(propagator_base_t), intent(in) :: tr
 
     select case(tr%method)
     case(PROP_ETRS, PROP_AETRS, PROP_CAETRS, PROP_EXPLICIT_RUNGE_KUTTA4)

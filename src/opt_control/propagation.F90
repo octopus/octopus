@@ -360,8 +360,8 @@ contains
     type(opt_control_state_t) :: qcchi
     type(controlfunction_t) :: par_prev
     type(grid_t), pointer :: gr
-    type(propagator_t) :: tr_chi
-    type(propagator_t) :: tr_psi2
+    type(propagator_base_t) :: tr_chi
+    type(propagator_base_t) :: tr_psi2
     type(states_elec_t), pointer :: psi, chi
 
     PUSH_SUB(fwd_step)
@@ -484,7 +484,7 @@ contains
 
     integer :: i, ierr
     type(grid_t), pointer :: gr
-    type(propagator_t) :: tr_chi
+    type(propagator_base_t) :: tr_chi
     type(opt_control_state_t) :: qcpsi
     type(states_elec_t), pointer :: chi, psi
 
@@ -587,7 +587,7 @@ contains
     integer :: i, ierr, ik, ib
     logical :: freeze
     type(grid_t), pointer :: gr
-    type(propagator_t) :: tr_chi
+    type(propagator_base_t) :: tr_chi
     type(opt_control_state_t) :: qcpsi
     type(states_elec_t) :: st_ref
     type(states_elec_t), pointer :: chi, psi

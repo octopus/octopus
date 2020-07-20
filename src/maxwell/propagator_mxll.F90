@@ -767,7 +767,7 @@ contains
     type(propagator_mxll_t),    intent(in)    :: tr_mxll
     type(hamiltonian_elec_t),   intent(in)    :: hm
     type(states_elec_t),        intent(in)    :: st
-!    type(propagator_t),         intent(in)    :: tr
+!    type(propagator_base_t),    intent(in)    :: tr
     type(poisson_t),            intent(in)    :: poisson_solver
     FLOAT,                      intent(in)    :: time
     CMPLX,                      intent(inout) :: field(:,:)

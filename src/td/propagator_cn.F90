@@ -51,7 +51,7 @@ module propagator_cn_oct_m
   type(namespace_t),        pointer, private :: namespace_p
   type(mesh_t),             pointer, private :: mesh_p
   type(hamiltonian_elec_t), pointer, private :: hm_p
-  type(propagator_t),       pointer, private :: tr_p
+  type(propagator_base_t),  pointer, private :: tr_p
   integer,                           private :: ik_op, ist_op, dim_op
   FLOAT,                             private :: t_op, dt_op
 
@@ -64,7 +64,7 @@ contains
     type(namespace_t),        target, intent(in)    :: namespace
     type(grid_t),             target, intent(inout) :: gr
     type(states_elec_t),      target, intent(inout) :: st
-    type(propagator_t),       target, intent(inout) :: tr
+    type(propagator_base_t),  target, intent(inout) :: tr
     FLOAT,                            intent(in)    :: time
     FLOAT,                            intent(in)    :: dt
     type(ion_dynamics_t),             intent(inout) :: ions

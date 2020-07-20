@@ -21,8 +21,8 @@
   ! Tries to avoid ill-defined combinations of run modes.
   ! ---------------------------------------------------------
   subroutine check_faulty_runmodes(sys, tr)
-    type(electrons_t),   intent(in) :: sys
-    type(propagator_t),  intent(in) :: tr
+    type(electrons_t),       intent(in) :: sys
+    type(propagator_base_t), intent(in) :: tr
 
     integer :: no_electrons, n_filled, n_partially_filled, n_half_filled
 
