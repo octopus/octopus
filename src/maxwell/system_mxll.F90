@@ -580,8 +580,7 @@ contains
 
     PUSH_SUB(system_mxll_output_start)
 
-    call td_write_mxll_init(this%write_handler, this%namespace, this%gr, this%st, &
-                            this%hm, 0, this%prop%max_td_steps, this%prop%dt)
+    call td_write_mxll_init(this%write_handler, this%namespace, this%gr, this%st, this%hm, 0, this%prop%dt)
     call td_write_mxll_iter(this%write_handler, this%gr, this%st, this%hm, this%prop%dt, 0)
     call td_write_mxll_free_data(this%write_handler, this%namespace, this%gr, &
                                  this%st, this%hm, this%geo, this%outp, 0, this%prop%dt)
