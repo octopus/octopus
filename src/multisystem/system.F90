@@ -175,6 +175,8 @@ contains
     end if
 
     select case (tdop)
+    case (SKIP)
+      ! Do nothing
     case (FINISHED)
       if (.not. this%prop%step_is_done()) then
         call this%clock%increment()
@@ -613,6 +615,8 @@ contains
       this%prop => propagator_exp_mid_t(this%namespace, .false.)
     case(PROP_EXPMID_SCF)
       this%prop => propagator_exp_mid_t(this%namespace, .true.)
+    case default
+      this%prop => propagator_t(this%namespace)
     end select
 
     call this%prop%rewind()

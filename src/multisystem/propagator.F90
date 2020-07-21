@@ -71,7 +71,8 @@ module propagator_oct_m
   end type propagator_t
 
   ! Known propagation operations
-  integer, public, parameter ::        &
+  integer, public, parameter ::         &
+    SKIP                         = -1,  &
     FINISHED                     =  0,  &
     VERLET_START                 =  1,  &
     VERLET_FINISH                =  2,  &
@@ -104,8 +105,33 @@ module propagator_oct_m
     PROP_EXPMID                  = 4,  &
     PROP_EXPMID_SCF              = 5
 
+  interface propagator_t
+    procedure propagator_constructor
+  end interface propagator_t
 
 contains
+
+  ! ---------------------------------------------------------
+  function propagator_constructor(namespace) result(this)
+    type(namespace_t),  intent(in) :: namespace
+    type(propagator_t), pointer    :: this
+
+    PUSH_SUB(propagator_constructor)
+
+    SAFE_ALLOCATE(this)
+
+    this%start_step = SKIP
+    this%final_step = SKIP
+
+    call this%add(UPDATE_INTERACTIONS)
+    call this%add(FINISHED)
+
+    this%algo_steps = 1
+
+    call this%parse_td_variables(namespace)
+
+    POP_SUB(propagator_constructor)
+  end function propagator_constructor
 
   ! ---------------------------------------------------------
   subroutine propagator_rewind(this)
@@ -199,6 +225,8 @@ contains
     PUSH_SUB(propagator_step_debug_message)
 
     select case (tdop)
+    case (SKIP)
+      description = "Skipping propagation step for"
     case (FINISHED)
       description = "Propagation step finished for"
     case (UPDATE_INTERACTIONS)
