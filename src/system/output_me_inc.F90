@@ -346,7 +346,8 @@ subroutine X(output_me_dipole)(this, fname, namespace, st, gr, hm, geo, ik)
         end if
 
         !A nonlocal contribution from the pseudopotential must be included
-        call X(projector_commute_r_allatoms_alldir)(hm%ep%proj, geo, gr%mesh, st%d%dim, ik, psii, gpsii) 
+        call X(projector_commute_r_allatoms_alldir)(hm%ep%proj, geo, gr%mesh, st%d%dim, &
+                    gr%der%boundaries, ik, psii, gpsii) 
         
         !A nonlocal contribution from the scissor must be included
         if(hm%scissor%apply) then

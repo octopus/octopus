@@ -151,6 +151,8 @@ dist_share_DATA =                                  \
         17-oep-photons.01-kli-spinpolarized.inp    \
         17-oep-photons.02-kli.inp                  \
         17-oep-photons.03-oep.inp                  \
-        17-oep-photons.test
+        17-oep-photons.test                        \
+        18-mgga.01-br89.inp                        \
+        18-mgga.test
 
 CLEANFILES = *~ *.bak
