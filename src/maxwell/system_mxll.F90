@@ -299,15 +299,6 @@ contains
       call messages_fatal()
     end if
 
-    SAFE_ALLOCATE(this%st%energy_rate(1:this%prop%max_td_steps))
-    SAFE_ALLOCATE(this%st%delta_energy(1:this%prop%max_td_steps))
-    SAFE_ALLOCATE(this%st%energy_via_flux_calc(1:this%prop%max_td_steps))
-    SAFE_ALLOCATE(this%st%trans_energy_rate(1:this%prop%max_td_steps))
-    SAFE_ALLOCATE(this%st%trans_delta_energy(1:this%prop%max_td_steps))
-    SAFE_ALLOCATE(this%st%trans_energy_via_flux_calc(1:this%prop%max_td_steps))
-    SAFE_ALLOCATE(this%st%plane_waves_energy_rate(1:this%prop%max_td_steps))
-    SAFE_ALLOCATE(this%st%plane_waves_delta_energy(1:this%prop%max_td_steps))
-    SAFE_ALLOCATE(this%st%plane_waves_energy_via_flux_calc(1:this%prop%max_td_steps))
     this%st%energy_rate = M_ZERO
     this%st%delta_energy = M_ZERO
     this%st%energy_via_flux_calc = M_ZERO

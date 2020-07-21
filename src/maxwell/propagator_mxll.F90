@@ -1075,10 +1075,10 @@ contains
     type(states_mxll_t), intent(in)    :: st
     integer,             intent(in)    :: iter
     FLOAT,               intent(in)    :: dt
-    FLOAT,               intent(out)   :: energy_rate(:)
-    FLOAT,               intent(out)   :: delta_energy(:)
-    FLOAT,               intent(out)   :: energy_via_flux_calc(:)
-    FLOAT,  optional,    intent(out)   :: energy_via_flux_calc_dir(:,:)
+    FLOAT,               intent(out)   :: energy_rate
+    FLOAT,               intent(out)   :: delta_energy
+    FLOAT,               intent(out)   :: energy_via_flux_calc
+    FLOAT,  optional,    intent(out)   :: energy_via_flux_calc_dir(:)
 
     integer             :: idim, ip_surf, ix, ix_max, iy, iy_max, iz, iz_max, ii_max
     FLOAT               :: tmp_sum
@@ -1163,14 +1163,14 @@ contains
       end do
     end do
 
-    energy_rate(iter)          = - tmp_sum
-    delta_energy(iter)         = energy_rate(iter) * dt
+    energy_rate          = - tmp_sum
+    delta_energy         = energy_rate * dt
     if (iter > 1) then
-      energy_via_flux_calc(iter) = energy_via_flux_calc(iter-1) + delta_energy(iter)
+      energy_via_flux_calc = energy_via_flux_calc + delta_energy
     else if (iter == 1) then
-      energy_via_flux_calc(iter) = delta_energy(iter)
+      energy_via_flux_calc = delta_energy
     else
-      energy_via_flux_calc(iter) = M_ZERO
+      energy_via_flux_calc = M_ZERO
     end if
 
     SAFE_DEALLOCATE_A(poynting_vector)
@@ -1274,14 +1274,14 @@ contains
       end do
     end do
 
-    energy_rate(iter)          = - tmp_sum
-    delta_energy(iter)         = energy_rate(iter) * dt
+    energy_rate          = - tmp_sum
+    delta_energy         = energy_rate(iter) * dt
     if (iter > 1) then
-      energy_via_flux_calc(iter) = energy_via_flux_calc(iter-1) + delta_energy(iter)
+      energy_via_flux_calc = energy_via_flux_calc + delta_energy
     else if (iter == 1) then
-      energy_via_flux_calc(iter) = delta_energy(iter)
+      energy_via_flux_calc = delta_energy
     else
-      energy_via_flux_calc(iter) = M_ZERO
+      energy_via_flux_calc = M_ZERO
     end if
 
     SAFE_DEALLOCATE_A(poynting_vector)
