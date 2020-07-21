@@ -43,4 +43,4 @@ Electrons.ParticleCharge = -1
 
 TDSystemPropagator = verlet
 TDTimeStep = 0.01
-TDMaxSteps =  1000
+TDPropagationTime = 10

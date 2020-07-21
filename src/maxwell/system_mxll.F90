@@ -597,8 +597,7 @@ contains
 
     call td_write_mxll_iter(this%write_handler, this%gr, this%st, this%hm, this%prop%dt, iter)
 
-    if ((this%outp%output_interval > 0 .and. mod(iter, this%outp%output_interval) == 0) .or. &
-      iter == this%prop%max_td_steps .or. stopping) then
+    if ((this%outp%output_interval > 0 .and. mod(iter, this%outp%output_interval) == 0) .or. stopping) then
       call td_write_mxll_free_data(this%write_handler, this%namespace, this%gr, this%st, this%hm, this%geo, this%outp, &
         iter, this%prop%dt)
     end if

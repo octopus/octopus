@@ -688,13 +688,13 @@ contains
   end subroutine system_propagation_finish
 
   ! ---------------------------------------------------------
-  logical function system_has_reached_final_propagation_time(this)
+  logical function system_has_reached_final_propagation_time(this, final_time)
     class(system_t),      intent(inout) :: this
+    FLOAT,                intent(in)    :: final_time
 
     PUSH_SUB(system_has_reached_final_propagation_time)
 
-    ! Fixme: should be changed to final propagation time
-    system_has_reached_final_propagation_time = (this%clock%get_sim_time() >= this%prop%max_td_steps*this%prop%dt)
+    system_has_reached_final_propagation_time = (this%clock%get_sim_time() >= final_time)
 
     POP_SUB(system_has_reached_final_propagation_time)
   end function system_has_reached_final_propagation_time

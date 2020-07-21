@@ -253,8 +253,9 @@ contains
   end subroutine multisystem_propagation_finish
 
   ! ---------------------------------------------------------------------------------------
-  recursive logical function multisystem_has_reached_final_propagation_time(this)
+  recursive logical function multisystem_has_reached_final_propagation_time(this, final_time)
     class(multisystem_t),      intent(inout) :: this
+    FLOAT,                     intent(in)    :: final_time
 
     type(system_iterator_t) :: iter
     class(system_t), pointer :: system
@@ -266,7 +267,7 @@ contains
     do while (iter%has_next())
       system => iter%get_next()
       multisystem_has_reached_final_propagation_time = multisystem_has_reached_final_propagation_time .and. &
-        system%has_reached_final_propagation_time()
+        system%has_reached_final_propagation_time(final_time)
     end do
 
     POP_SUB(multisystem_has_reached_final_propagation_time)
