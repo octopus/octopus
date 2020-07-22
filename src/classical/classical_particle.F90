@@ -720,7 +720,7 @@ contains
 
     integer :: idir, rand_gen_seed, seed, str_len, str_index
     character (len=128) :: namespace, num
-    FLOAT :: rand_num, width, width_default
+    FLOAT :: rand_num
 
     PUSH_SUB(classical_particle_distribute_replicas)
 
