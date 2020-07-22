@@ -88,3 +88,4 @@ HamiltonianApplyPacked = Yes
 %
 
 Debug = trace, info
+DebugTrapSignals = yes
