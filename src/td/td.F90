@@ -725,7 +725,7 @@ contains
         call density_calc(st, gr, st%rho)
       else
         ! Normal run.
-        call v_ks_calc(sys%ks, hm, st, sys%geo, calc_eigenval=.true., time = td%iter*td%dt)
+         call v_ks_calc(sys%ks, hm, st, sys%geo, calc_eigenval=.true., time = td%iter*td%dt)
       end if
 
       !%Variable TDFreezeHXC

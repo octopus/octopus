@@ -92,7 +92,6 @@ module hamiltonian_base_oct_m
     FLOAT,                    allocatable :: Impotential(:, :)
     FLOAT,                    allocatable :: uniform_magnetic_field(:)
     FLOAT,                    allocatable :: uniform_vector_potential(:)
-    FLOAT,                    allocatable :: uniform_thermal_potential(:)
     FLOAT,                    allocatable :: vector_potential(:, :)
     integer                               :: nprojector_matrices
     logical                               :: apply_projector_matrices
@@ -140,7 +139,6 @@ module hamiltonian_base_oct_m
     FIELD_POTENTIAL                 = 1,    &
     FIELD_VECTOR_POTENTIAL          = 2,    &
     FIELD_UNIFORM_VECTOR_POTENTIAL  = 4,    &
-    FIELD_UNIFORM_THERMAL_POTENTIAL = 5,    & 
     FIELD_UNIFORM_MAGNETIC_FIELD    = 8
   
   ! declare module wide to be retained over several applications of the hamiltonian
@@ -194,7 +192,6 @@ contains
     SAFE_DEALLOCATE_A(this%Impotential)
     SAFE_DEALLOCATE_A(this%vector_potential)
     SAFE_DEALLOCATE_A(this%uniform_vector_potential)
-    SAFE_DEALLOCATE_A(this%uniform_thermal_potential)
     SAFE_DEALLOCATE_A(this%uniform_magnetic_field)
     call hamiltonian_base_destroy_proj(this)
 
@@ -214,7 +211,6 @@ contains
     if(allocated(this%potential))                this%potential = M_ZERO
     if(allocated(this%Impotential))              this%Impotential = M_ZERO
     if(allocated(this%uniform_vector_potential)) this%uniform_vector_potential = M_ZERO
-    if(allocated(this%uniform_thermal_potential)) this%uniform_thermal_potential = M_ZERO
     if(allocated(this%vector_potential))         this%vector_potential = M_ZERO
     if(allocated(this%uniform_magnetic_field))   this%uniform_magnetic_field = M_ZERO
 
@@ -250,13 +246,6 @@ contains
       if(.not. allocated(this%uniform_vector_potential)) then
         SAFE_ALLOCATE(this%uniform_vector_potential(1:mesh%sb%dim))
         this%uniform_vector_potential = M_ZERO
-      end if
-    end if
-
-    if(bitand(FIELD_UNIFORM_THERMAL_POTENTIAL, field) /= 0) then
-      if(.not. allocated(this%uniform_thermal_potential)) then
-        SAFE_ALLOCATE(this%uniform_thermal_potential(1:mesh%sb%dim))
-        this%uniform_thermal_potential = M_ZERO
       end if
     end if
 
@@ -296,11 +285,6 @@ contains
        call unify_vector_potentials()
     end if
  
-    
-    if(allocated(this%uniform_thermal_potential) .and. allocated(this%vector_potential)) then
-       call unify_thermal_potentials()
-    end if
-
     if(allocated(this%potential) .and. accel_is_enabled()) then
 
       offset = 0
@@ -319,7 +303,7 @@ contains
       integer :: idir, ip
 
       PUSH_SUB(hamiltonian_base_update.unify_vector_potentials)
-      
+
       ! copy the uniform vector potential onto the non-uniform one
       forall (idir = 1:mesh%sb%dim, ip = 1:mesh%np) 
         this%vector_potential(idir, ip) = &
@@ -330,22 +314,6 @@ contains
       SAFE_DEALLOCATE_A(this%uniform_vector_potential)
       POP_SUB(hamiltonian_base_update.unify_vector_potentials)      
     end subroutine unify_vector_potentials
-
-    subroutine unify_thermal_potentials()
-      integer :: idir, ip
-
-      PUSH_SUB(hamiltonian_base_update.unify_thermal_potentials)
-      
-      ! copy the uniform vector potential onto the non-uniform one
-      forall (idir = 1:mesh%sb%dim, ip = 1:mesh%np) 
-        this%vector_potential(idir, ip) = &
-          this%vector_potential(idir, ip) + this%uniform_thermal_potential(idir)
-      end forall
-      
-      ! and deallocate
-      SAFE_DEALLOCATE_A(this%uniform_thermal_potential)
-      POP_SUB(hamiltonian_base_update.unify_thermal_potentials)      
-    end subroutine unify_thermal_potentials
 
   end subroutine hamiltonian_base_update
   

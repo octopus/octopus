@@ -555,8 +555,8 @@ contains
     type(states_t),       intent(in)    :: st
     FLOAT,                intent(out)   :: current(:, :, :)
 
-    integer :: ik, ist, idir, idim, ip, ispin, ndim
-    CMPLX, allocatable :: gpsi(:, :, :), psi(:, :), g2psi(:, :, :, :)
+    integer :: ik, ist, idir, idim, ip, ib, ii, ispin, ndim, s
+    CMPLX, allocatable :: gpsi(:, :, :), psi(:, :), g2psi(:, :, :, :), interaction(:,:,:)
     CMPLX :: tmp
 
     PUSH_SUB(current_heat_calculate)
@@ -569,7 +569,8 @@ contains
     SAFE_ALLOCATE(psi(1:der%mesh%np_part, 1:st%d%dim))
     SAFE_ALLOCATE(gpsi(1:der%mesh%np_part, 1:ndim, 1:st%d%dim))
     SAFE_ALLOCATE(g2psi(1:der%mesh%np, 1:ndim, 1:ndim, 1:st%d%dim))
-    
+    SAFE_ALLOCATE(interaction(1:der%mesh%np, 1:ndim, 1:st%d%dim))
+  
     do ip = 1, der%mesh%np
       current(ip, 1:ndim, 1:st%d%nspin) = st%current(ip, 1:ndim, 1:st%d%nspin)*hm%ep%vpsl(ip)
     end do
@@ -609,6 +610,7 @@ contains
                                   der%mesh%np_part,  conjugate = .false.)
           end if
             
+
           do idim = 1, st%d%dim
             call zderivatives_grad(der, gpsi(:, idir, idim), g2psi(:, :, idir, idim), set_bc = .false.)
           end do
@@ -626,7 +628,6 @@ contains
         end do
       end do
     end do
-
 
     POP_SUB(current_heat_calculate)
       

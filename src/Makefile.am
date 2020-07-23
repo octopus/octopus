@@ -427,6 +427,7 @@ hamiltonian_f_srcs =                                 \
 	hamiltonian/scf_tol.F90                      \
 	hamiltonian/scissor.F90                      \
 	hamiltonian/species_pot.F90                  \
+	hamiltonian/thermal_gradient.F90             \
 	hamiltonian/vdw_ts.F90                       \
 	hamiltonian/xc.F90
 

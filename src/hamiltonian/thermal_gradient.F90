@@ -65,6 +65,7 @@ module thermal_gradient_oct_m
     FLOAT   :: vecpot_kick(1:MAX_DIM)
     FLOAT   :: force(1:MAX_DIM)
     FLOAT   :: wp2
+    FLOAT   :: eigenval(1:MAX_DIM,1:MAX_DIM)
     integer :: ndim
     logical :: with_thermal_gradient
  !   integer :: dynamics
@@ -83,10 +84,10 @@ contains
   end subroutine thermal_gradient_nullify
 
   ! ---------------------------------------------------------
-  subroutine thermal_gradient_init(this, sb)
+  subroutine thermal_gradient_init(this, sb, st)
     type(thermal_gradient_t),     intent(out)   :: this
     type(simul_box_t),       intent(in)    :: sb
-
+    type(states_t), intent(in) :: st
     integer :: ii, iop
     type(block_t) :: blk
 
@@ -99,6 +100,7 @@ contains
     this%vecpot_kick = M_ZERO
     this%force = M_ZERO
     this%ndim = sb%dim
+    this%eigenval = st%eigenval
 
     !%Variable ThermalGradient
     !%Type block

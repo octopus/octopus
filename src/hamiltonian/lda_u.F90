@@ -532,7 +532,7 @@ contains
    ASSERT(this%basisfromstates)
  
    PUSH_SUB(lda_u_periodic_coulomb_integrals)
-
+   
    if(states_are_real(st)) then
      call dcompute_periodic_coulomb_integrals(this, der, mc)
    else
