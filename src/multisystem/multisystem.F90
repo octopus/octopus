@@ -46,6 +46,7 @@ module multisystem_oct_m
   contains
     procedure :: dt_operation =>  multisystem_dt_operation
     procedure :: init_parallelization => multisystem_init_parallelization
+    procedure :: smallest_algo_dt => multisystem_smallest_algo_dt
     procedure :: reset_clocks => multisystem_reset_clocks
     procedure :: init_propagator => multisystem_init_propagator
     procedure :: propagation_start => multisystem_propagation_start
@@ -176,6 +177,32 @@ contains
 
     POP_SUB(multisystem_init_parallelization)
   end subroutine multisystem_init_parallelization
+
+  ! ---------------------------------------------------------------------------------------
+  recursive function multisystem_smallest_algo_dt(this) result(smallest_algo_dt)
+    class(multisystem_t), intent(inout) :: this
+    FLOAT :: smallest_algo_dt
+
+    type(system_iterator_t) :: iter
+    class(system_t), pointer :: system
+
+    PUSH_SUB(multisystem_smallest_algo_dt)
+
+    smallest_algo_dt = M_HUGE
+    call iter%start(this%list)
+    do while (iter%has_next())
+      system => iter%get_next()
+      select type (system)
+      class is (multisystem_t)
+        smallest_algo_dt = min(smallest_algo_dt, system%smallest_algo_dt())
+      class default
+        smallest_algo_dt = min(smallest_algo_dt, system%prop%dt/system%prop%algo_steps)
+      end select
+    end do
+
+    POP_SUB(multisystem_smallest_algo_dt)
+  end function multisystem_smallest_algo_dt
+
   ! ---------------------------------------------------------------------------------------
   recursive subroutine multisystem_dt_operation(this)
     class(multisystem_t),     intent(inout) :: this
