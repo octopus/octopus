@@ -190,7 +190,7 @@ echo ""
 if [ "$cleanup" == "yes" ]; then
     preserve_opt=""
 else
-    preserve_opt="-p"
+    preserve_opt=""
 fi
 
 test_index=0
