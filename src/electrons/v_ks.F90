@@ -1150,10 +1150,12 @@ contains
         if(ks%gr%der%mesh%parallel_in_domains) call comm_allreduce(ks%gr%der%mesh%mpi_grp%comm,  ks%calc%energy%intnvxc)
 
         ! MGGA vtau contribution
-        if (states_are_real(st)) then
-          ks%calc%energy%intnvxc = ks%calc%energy%intnvxc + denergy_calc_electronic(namespace, hm, ks%gr%der, st, terms = TERM_MGGA)
-        else
-          ks%calc%energy%intnvxc = ks%calc%energy%intnvxc + zenergy_calc_electronic(namespace, hm, ks%gr%der, st, terms = TERM_MGGA)
+        if (family_is_mgga_with_exc(hm%xc)) then
+          if (states_are_real(st)) then
+            ks%calc%energy%intnvxc = ks%calc%energy%intnvxc + denergy_calc_electronic(namespace, hm, ks%gr%der, st, terms = TERM_MGGA)
+          else
+            ks%calc%energy%intnvxc = ks%calc%energy%intnvxc + zenergy_calc_electronic(namespace, hm, ks%gr%der, st, terms = TERM_MGGA)
+          end if
         end if
 
         if(hm%lda_u_level /= DFT_U_NONE) then
