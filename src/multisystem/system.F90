@@ -42,10 +42,17 @@ module system_oct_m
   implicit none
 
   private
-  public ::               &
-    system_t,             &
-    system_end,           &
-    system_list_t,        &
+  public ::                                    &
+    system_t,                                  &
+    system_dt_operation,                       &
+    system_reset_clocks,                       &
+    system_propagation_start,                  &
+    system_propagation_finish,                 &
+    system_has_reached_final_propagation_time, &
+    system_propagation_step_finish,            &
+    system_propagation_step_is_done,           &
+    system_end,                                &
+    system_list_t,                             &
     system_iterator_t
 
   type, extends(interaction_partner_t), abstract :: system_t
@@ -56,7 +63,7 @@ module system_oct_m
 
     integer :: accumulated_loop_ticks
 
-    integer :: interaction_timing  !< parameter to determine if interactions
+    integer, public :: interaction_timing  !< parameter to determine if interactions
       !< should use the quantities at the exact time or if retardation is allowed
 
     type(integer_list_t), public :: supported_interactions

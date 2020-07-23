@@ -31,6 +31,7 @@ module multisystem_oct_m
   use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
+  use propagator_oct_m
   use system_oct_m
   use system_factory_abst_oct_m
   implicit none
@@ -209,6 +210,10 @@ contains
 
     PUSH_SUB(multisystem_dt_operation)
 
+    ! Multisystem
+    call system_dt_operation(this)
+
+    ! Subsystems
     call iter%start(this%list)
     do while (iter%has_next())
       system => iter%get_next()
@@ -228,6 +233,10 @@ contains
 
     PUSH_SUB(multisystem_reset_clocks)
 
+    ! Multisystem clocks
+    call system_reset_clocks(this, accumulated_ticks)
+
+    ! Subsystems clocks
     call iter%start(this%list)
     do while (iter%has_next())
       system => iter%get_next()
@@ -243,14 +252,42 @@ contains
 
     type(system_iterator_t) :: iter
     class(system_t), pointer :: system
+    type(interaction_iterator_t) :: inter_iter
+    class(interaction_t), pointer :: interaction
 
     PUSH_SUB(multisystem_init_propagator)
 
+    ! Now initialized the propagators of the subsystems
     call iter%start(this%list)
     do while (iter%has_next())
       system => iter%get_next()
       call system%init_propagator()
     end do
+
+    ! Initialize the propagator of the multisystem
+    ! Needs to be done after initializing the subsystems propagators,
+    ! as we use the smallest dt of the subsystems.
+    this%prop => propagator_t(this%smallest_algo_dt())
+    this%interaction_timing = OPTION__INTERACTIONTIMING__TIMING_EXACT
+    call this%prop%rewind()
+
+    ! Initialize propagator clock
+    this%prop%clock = clock_t(this%namespace%get(), this%prop%dt/this%prop%algo_steps)
+
+    ! Initialize system clock
+    this%clock = clock_t(this%namespace%get(), this%prop%dt)
+
+    ! Interaction clocks
+    call inter_iter%start(this%interactions)
+    do while (inter_iter%has_next())
+      interaction => inter_iter%get_next()
+      interaction%clock = this%prop%clock - CLOCK_TICK
+    end do
+
+    ! Required quantities clocks
+    where (this%quantities%required)
+      this%quantities%clock = this%prop%clock
+    end where
 
     POP_SUB(multisystem_init_propagator)
   end subroutine multisystem_init_propagator
@@ -264,6 +301,10 @@ contains
 
     PUSH_SUB(multisystem_propagation_start)
 
+    ! Start the propagation of the multisystem
+    call system_propagation_start(this)
+
+    ! Now start the propagation of the subsystems
     call iter%start(this%list)
     do while (iter%has_next())
       system => iter%get_next()
@@ -282,6 +323,10 @@ contains
 
     PUSH_SUB(multisystem_propagation_finish)
 
+    ! Finish the propagation of the multisystem
+    call system_propagation_finish(this)
+
+    ! Now finish the propagation of the subsystems
     call iter%start(this%list)
     do while (iter%has_next())
       system => iter%get_next()
@@ -301,7 +346,7 @@ contains
 
     PUSH_SUB(multisystem_has_reached_final_propagation_time)
 
-    multisystem_has_reached_final_propagation_time = .true.
+    multisystem_has_reached_final_propagation_time = system_has_reached_final_propagation_time(this, final_time)
     call iter%start(this%list)
     do while (iter%has_next())
       system => iter%get_next()
@@ -321,6 +366,12 @@ contains
 
     PUSH_SUB(multisystem_propagation_step_finish)
 
+    ! Multisystem
+    if (this%propagation_step_is_done()) then
+      call system_propagation_step_finish(this)
+    end if
+
+    ! Subsystems
     call iter%start(this%list)
     do while (iter%has_next())
       system => iter%get_next()
@@ -328,6 +379,8 @@ contains
         call system%propagation_step_finish()
       end if
     end do
+
+    call system_propagation_step_finish(this)
 
     POP_SUB(multisystem_propagation_step_finish)
   end subroutine multisystem_propagation_step_finish
@@ -341,7 +394,7 @@ contains
 
     PUSH_SUB(multisystem_propagation_step_is_done)
 
-    multisystem_propagation_step_is_done = .false.
+    multisystem_propagation_step_is_done = system_propagation_step_is_done(this)
     call iter%start(this%list)
     do while (iter%has_next())
       system => iter%get_next()
@@ -466,14 +519,12 @@ contains
     class(multisystem_t), intent(inout) :: this
     integer,              intent(in)    :: operation
 
-    type(system_iterator_t) :: iter
-    class(system_t), pointer :: system
-
     PUSH_SUB(multisystem_do_td_operation)
 
     select case (operation)
+    case (SKIP)
+      ! Nothing to do
     case default
-      ! Currently no td operation is supported
       message(1) = "Unsupported TD operation."
       call messages_fatal(1, namespace=this%namespace)
     end select
