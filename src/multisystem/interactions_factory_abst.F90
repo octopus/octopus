@@ -25,7 +25,7 @@ module interactions_factory_abst_oct_m
   use interaction_partner_oct_m
   use linked_list_oct_m
   use messages_oct_m
-  use multisystem_basic_oct_m
+  use multisystem_oct_m
   use namespace_oct_m
   use parser_oct_m
   use system_oct_m
@@ -204,7 +204,7 @@ contains
 
     ! If the system is a multisystem, then we also need to create the interactions for the subsystems
     select type (system)
-    class is (multisystem_basic_t)
+    class is (multisystem_t)
       call iter%start(system%list)
       do while (iter%has_next())
         subsystem => iter%get_next()
@@ -228,15 +228,14 @@ contains
       do while (iterator%has_next())
         partner => iterator%get_next()
 
+        call flat_list%add(partner)
+
         select type (partner)
-        class is (multisystem_basic_t)
-          ! Note that for the moment we are not including the multisystem itself
-          ! in the flat list. This is because currently multisystems cannot be
-          ! partners.
+        class is (multisystem_t)
+          ! Also incude the subsystems of a multisystem
           call flatten_partner_list(partner%list, flat_list)
-        class default
-          call flat_list%add(partner)
         end select
+
       end do
 
       POP_SUB(interactions_factory_abst_create_interactions.flatten_partner_list)
