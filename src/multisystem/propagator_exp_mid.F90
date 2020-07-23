@@ -43,8 +43,8 @@ module propagator_exp_mid_oct_m
 contains
 
   ! ---------------------------------------------------------
-  function propagator_exp_mid_constructor(namespace, predictor_corrector) result(this)
-    type(namespace_t),         intent(in) :: namespace
+  function propagator_exp_mid_constructor(dt, predictor_corrector) result(this)
+    FLOAT,                     intent(in) :: dt
     logical,                   intent(in) :: predictor_corrector
     type(propagator_exp_mid_t), pointer   :: this
 
@@ -87,7 +87,7 @@ contains
     ! Exponential midpoint has only one algorithmic step
     this%algo_steps = 2
 
-    call this%parse_td_variables(namespace)
+    this%dt = dt
 
     POP_SUB(propagator_exp_mid_constructor)
   end function propagator_exp_mid_constructor

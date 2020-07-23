@@ -42,8 +42,8 @@ module propagator_beeman_oct_m
 contains
 
   ! ---------------------------------------------------------
-  function propagator_beeman_constructor(namespace, predictor_corrector) result(this)
-    type(namespace_t),   intent(in)    :: namespace
+  function propagator_beeman_constructor(dt, predictor_corrector) result(this)
+    FLOAT,               intent(in)    :: dt
     logical,             intent(in)    :: predictor_corrector
     type(propagator_beeman_t), pointer :: this
 
@@ -84,7 +84,7 @@ contains
     ! Beeman has only one algorithmic step
     this%algo_steps = 1
 
-    call this%parse_td_variables(namespace)
+    this%dt = dt
 
     POP_SUB(propagator_beeman_constructor)
   end function propagator_beeman_constructor
