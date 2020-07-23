@@ -1152,9 +1152,11 @@ contains
         ! MGGA vtau contribution
         if (family_is_mgga_with_exc(hm%xc)) then
           if (states_are_real(st)) then
-            ks%calc%energy%intnvxc = ks%calc%energy%intnvxc + denergy_calc_electronic(namespace, hm, ks%gr%der, st, terms = TERM_MGGA)
+            ks%calc%energy%intnvxc = ks%calc%energy%intnvxc + &
+                                     denergy_calc_electronic(namespace, hm, ks%gr%der, st, terms = TERM_MGGA)
           else
-            ks%calc%energy%intnvxc = ks%calc%energy%intnvxc + zenergy_calc_electronic(namespace, hm, ks%gr%der, st, terms = TERM_MGGA)
+            ks%calc%energy%intnvxc = ks%calc%energy%intnvxc + & 
+                                    zenergy_calc_electronic(namespace, hm, ks%gr%der, st, terms = TERM_MGGA)
           end if
         end if
 
