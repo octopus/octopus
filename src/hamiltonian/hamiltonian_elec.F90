@@ -1551,7 +1551,7 @@ contains
         if(this%der%boundaries%spiralBC) nphase = 3
 
         if(.not. allocated(this%hm_base%projector_phases)) then
-          SAFE_ALLOCATE(this%hm_base%projector_phases(1:max_npoints, nphase, nmat, this%d%kpt%start:this%d%kpt%end))
+          SAFE_ALLOCATE(this%hm_base%projector_phases(1:max_npoints, 1:nphase, 1:nmat, this%d%kpt%start:this%d%kpt%end))
           if(accel_is_enabled()) then
             call accel_create_buffer(this%hm_base%buff_projector_phases, ACCEL_MEM_READ_ONLY, &
               TYPE_CMPLX, this%hm_base%total_points*nphase*this%d%kpt%nlocal)
