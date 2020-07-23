@@ -67,7 +67,6 @@ module propagator_oct_m
     procedure :: finished => propagator_finished
     procedure :: save_scf_start => propagator_save_scf_start
     procedure :: rewind_scf_loop => propagator_rewind_scf_loop
-    procedure :: parse_td_variables => propagator_parse_td_variables
   end type propagator_t
 
   ! Known propagation operations
@@ -112,8 +111,8 @@ module propagator_oct_m
 contains
 
   ! ---------------------------------------------------------
-  function propagator_constructor(namespace) result(this)
-    type(namespace_t),  intent(in) :: namespace
+  function propagator_constructor(dt) result(this)
+    FLOAT,              intent(in) :: dt
     type(propagator_t), pointer    :: this
 
     PUSH_SUB(propagator_constructor)
@@ -128,7 +127,7 @@ contains
 
     this%algo_steps = 1
 
-    call this%parse_td_variables(namespace)
+    this%dt = dt
 
     POP_SUB(propagator_constructor)
   end function propagator_constructor
@@ -265,20 +264,6 @@ contains
 
     POP_SUB(propagator_step_debug_message)
   end function propagator_step_debug_message
-
-  !--------------------------------------------------------
-  subroutine propagator_parse_td_variables(this, namespace)
-    class(propagator_t), intent(inout) :: this
-    type(namespace_t),        intent(in)    :: namespace
-
-    PUSH_SUB(propagator_parse_td_variables)
-
-    ! This variable is also defined (and properly documented) in td/td.F90.
-    ! This is temporary, until all the propagators are moved to the new framework.
-    call parse_variable(namespace, 'TDTimeStep', CNST(10.0), this%dt)
-
-    POP_SUB(propagator_parse_td_variables)
-  end subroutine propagator_parse_td_variables
 
 end module propagator_oct_m
 
