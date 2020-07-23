@@ -188,9 +188,9 @@ echo ""
 
 # Check for 'preserve working directories' flag.
 if [ "$cleanup" == "yes" ]; then
-    preserve_opt=""
+    preserve_opt="-p"
 else
-    preserve_opt=""
+    preserve_opt="-p"
 fi
 
 test_index=0
