@@ -181,7 +181,7 @@ contains
 
     PUSH_SUB(hamiltonian_mxll_null)
  
-    hm%axdjoint = .false.
+    hm%adjoint = .false.
     
     hm%current_density_ext_flag = .false.
 
