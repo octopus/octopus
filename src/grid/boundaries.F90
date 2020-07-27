@@ -56,8 +56,8 @@ module boundaries_oct_m
     type(accel_mem_t) :: buff_per_recv
     type(accel_mem_t) :: buff_nsend
     type(accel_mem_t) :: buff_nrecv
-    logical, public   :: spiral
-    logical, public   :: spiralBC
+    logical, public   :: spiralBC           !< set .true. when SpiralBoundaryCondition are set in the input file
+    logical, public   :: spiral             !< set .true. after first time step IF spiralBC == .true. (see td_run in td.F90)
     FLOAT,   public   :: spiral_q(MAX_DIM)
   end type boundaries_t
 

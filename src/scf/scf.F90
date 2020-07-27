@@ -459,6 +459,10 @@ contains
     !%End
     call parse_variable(namespace, 'SCFCalculateForces', .not. geo%only_user_def, scf%calc_force)
 
+    if(scf%calc_force .and. gr%der%boundaries%spiralBC) then
+      message(1) = 'Forces cannot be calculated when using spiral boundary conditions.'
+      call messages_fatal(1)
+    end if
 
     !%Variable SCFCalculateStress
     !%Type logical

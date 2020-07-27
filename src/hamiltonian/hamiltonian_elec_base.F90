@@ -113,6 +113,7 @@ module hamiltonian_elec_base_oct_m
     CMPLX,                    allocatable, public :: projector_phases(:, :, :, :)
     integer,                  allocatable, public :: projector_to_atom(:)
     integer                                       :: nregions
+    integer,                               public :: nphase
     integer,                  allocatable         :: regions(:)
     type(accel_mem_t)                             :: potential_opencl
     type(accel_mem_t)                             :: buff_offsets
@@ -139,6 +140,7 @@ module hamiltonian_elec_base_oct_m
     FLOAT, allocatable     :: dprojection(:, :)
     CMPLX, allocatable     :: zprojection(:, :)
     type(accel_mem_t)      :: buff_projection
+    type(accel_mem_t)      :: buff_spin_to_phase
   end type projection_t
 
   integer, parameter, public ::          &
@@ -695,6 +697,19 @@ contains
       SAFE_ALLOCATE(cnt(1:mesh%np))
 
       cnt = 0
+
+      ! Here we construct the offsets for accessing various arrays within the GPU kernels.
+      ! The offset(:,:) array contains a number of sizes and offsets, describing how to address the arrays.
+      ! This allows to transfer all these number to the GPU in one memory transfer.
+      !
+      ! For each projection matrix (addressed by imap), we have:
+      !
+      ! offset(POINTS, imap) : number of points of the sphere imap
+      ! offset(PROJS, imap)  : number of projectors for imap
+      ! offset(MATRIX, imap) : address offset: cumulative of pmat%npoints * pmat%nprojs
+      ! offset(MAP, imap)    : address offset: cumulative of pmat%npoints for each imap
+      ! offset(SCAL, imap)   : address_offset: cumulative of pmat%nprojs
+      ! offset(MIX, imap)    : address_offset: cumulative of pmat%nprojs**2
 
       ! first we count
       matrix_size = 0
