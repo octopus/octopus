@@ -1425,6 +1425,75 @@ contains
     POP_SUB(v_ks_calculate_current)
   end subroutine v_ks_calculate_current
 
+  subroutine get_rotation_matrix(dens, alpha, betar, betai)
+    FLOAT,  intent(in)  :: dens(:)
+    FLOAT,  intent(out) :: alpha, betar, betai
+
+    FLOAT :: mz, mm
+    FLOAT :: alpha2, beta2
+
+    mz = dens(1) - dens(2) 
+
+    mm = sqrt(mz**2 + M_FOUR*(dens(3)**2 + dens(4)**2))
+
+    !Fully spin unpolarized system
+    if(mm < CNST(1.0e-12)) then
+      alpha = M_ONE
+      betar = M_ZERO
+      betai = M_ZERO
+      return
+    end if
+
+    alpha = sqrt( (mm + abs(mz))/(M_TWO * mm) )
+    !We find the absolute values of real and imaginary parts of beta
+    betar = M_TWO * dens(3) / sqrt( M_TWO * mm * (mm + abs(mz)))
+    betai = M_TWO * dens(4) / sqrt( M_TWO * mm * (mm + abs(mz)))
+
+    if(mz < M_ZERO) then
+      betar = -betar
+      betai = -betai
+    end if
+
+  end subroutine get_rotation_matrix
+
+  !Given a matrix in spin space, this routine rotates is according to the rotation
+  !matrix R defined by the alpha and beta coefficients
+  !rotmat = R mat R^T
+  subroutine rotate_to_local(mat, alpha, betar, betai, alpha2, beta2, rot_mat)
+    FLOAT,  intent(in)  :: mat(:)
+    FLOAT,  intent(in)  :: alpha, betar, betai, alpha2, beta2
+    FLOAT,  intent(out) :: rot_mat(:)
+
+    CMPLX :: cross
+
+    rot_mat(1) = alpha2 * mat(1) + beta2 * mat(2) + M_TWO * alpha * (betar * mat(3) + betai * mat(4))
+    rot_mat(2) = alpha2 * mat(2) + beta2 * mat(1) - M_TWO * alpha * (betar * mat(3) + betai * mat(4))
+    cross = (cmplx(betar, betai))**2 * cmplx(mat(3), -mat(4))
+    rot_mat(3) = alpha2 * mat(3) + alpha * betar * (mat(2)-mat(1)) - real(cross)
+    rot_mat(4) = alpha2 * mat(4) + alpha * betai * (mat(2)-mat(1)) - aimag(cross)
+
+  end subroutine rotate_to_local
+
+  !Given a matrix in spin space, this routine rotates is according to the rotation
+  !matrix R defined by the alpha and beta coefficients
+  !rotmat = R^T mat R
+  subroutine rotate_to_global(mat, alpha, betar, betai, alpha2, beta2, rot_mat)
+    FLOAT,  intent(in)  :: mat(:)
+    FLOAT,  intent(in)  :: alpha, betar, betai, alpha2, beta2
+    FLOAT,  intent(out) :: rot_mat(:)
+
+    CMPLX :: cross
+
+    rot_mat(1) = alpha2 * mat(1) + beta2 * mat(2) - M_TWO * alpha * (betar * mat(3) + betai * mat(4))
+    rot_mat(2) = alpha2 * mat(2) + beta2 * mat(1) + M_TWO * alpha * (betar * mat(3) + betai * mat(4))
+    cross = (cmplx(betar, betai))**2 * cmplx(mat(3), -mat(4))
+    rot_mat(3) = alpha2 * mat(3) - alpha * betar * (mat(2)-mat(1)) - real(cross)
+    rot_mat(4) = alpha2 * mat(4) - alpha * betai * (mat(2)-mat(1)) - aimag(cross)
+
+  end subroutine rotate_to_global
+
+
+
 #include "undef.F90"
 #include "real.F90"
 #include "xc_slater_inc.F90"
