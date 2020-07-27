@@ -135,7 +135,7 @@ module maxwell_boundary_op_oct_m
     integer              :: mirror_points_number(3)
     integer, allocatable :: mirror_points_map(:,:)
 
-    logical              :: do_plane_waves
+    logical              :: do_plane_waves = .false.
     type(plane_wave_t)   :: plane_wave
 
     FLOAT                :: zero_width
@@ -183,7 +183,8 @@ contains
     PUSH_SUB(bc_mxll_init)
 
     bc%ab_user_def = .false.
-    
+    bc%bc_ab_type(:) = MXLL_AB_NOT_ABSORBING ! default option
+
     !%Variable MaxwellAbsorbingBoundaries
     !%Type block
     !%Section Time-Dependent::Propagation
@@ -221,14 +222,13 @@ contains
         message(1) = 'MaxwellAbsorbingBoundaries has to consist of three columns!'
         call messages_fatal(1, namespace=namespace)
       end if
-    end if
 
-    do icol = 1, ncols
-      call parse_block_integer(blk, 0, icol-1, bc%bc_ab_type(icol))
-    end do
+      do icol = 1, ncols
+        call parse_block_integer(blk, 0, icol-1, bc%bc_ab_type(icol))
+      end do
 
     call parse_block_end(blk)
-
+    end if
 
     do idim = 1, 3
       if (bc%bc_ab_type(idim) == MXLL_AB_MASK) ab_mask_check = .true.
