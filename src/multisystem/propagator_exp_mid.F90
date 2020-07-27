@@ -24,7 +24,7 @@ module propagator_exp_mid_oct_m
   use messages_oct_m
   use namespace_oct_m
   use profiling_oct_m
-  use propagator_abst_oct_m
+  use propagator_oct_m
 
   implicit none
 
@@ -32,7 +32,7 @@ module propagator_exp_mid_oct_m
   public ::                            &
     propagator_exp_mid_t
 
-  type, extends(propagator_abst_t) :: propagator_exp_mid_t
+  type, extends(propagator_t) :: propagator_exp_mid_t
     private
   end type propagator_exp_mid_t
 

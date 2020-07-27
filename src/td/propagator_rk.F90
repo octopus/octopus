@@ -61,7 +61,7 @@ module propagator_rk_oct_m
   type(mesh_t),             pointer,     private :: mesh_p
   type(hamiltonian_elec_t), pointer,     private :: hm_p
   type(states_elec_t),      pointer,     private :: st_p
-  type(propagator_t),       pointer,     private :: tr_p
+  type(propagator_base_t),  pointer,     private :: tr_p
   type(namespace_t),        pointer,     private :: namespace_p
   integer,                               private :: dim_op
   FLOAT,                                 private :: t_op, dt_op
@@ -493,7 +493,7 @@ contains
     type(hamiltonian_elec_t), target, intent(inout) :: hm
     type(grid_t),             target, intent(inout) :: gr
     type(states_elec_t),      target, intent(inout) :: st
-    type(propagator_t),       target, intent(inout) :: tr
+    type(propagator_base_t),  target, intent(inout) :: tr
     FLOAT,                            intent(in)    :: time
     FLOAT,                            intent(in)    :: dt
     type(ion_dynamics_t),             intent(inout) :: ions
@@ -710,7 +710,7 @@ contains
     type(hamiltonian_elec_t), target, intent(inout) :: hm
     type(grid_t),             target, intent(inout) :: gr
     type(states_elec_t),      target, intent(inout) :: st
-    type(propagator_t),       target, intent(inout) :: tr
+    type(propagator_base_t),  target, intent(inout) :: tr
     FLOAT,                            intent(in)    :: time
     FLOAT,                            intent(in)    :: dt
     type(ion_dynamics_t),             intent(inout) :: ions

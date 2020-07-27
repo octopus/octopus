@@ -34,7 +34,7 @@ module classical_particle_oct_m
   use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
-  use propagator_abst_oct_m
+  use propagator_oct_m
   use quantity_oct_m
   use space_oct_m
   use system_oct_m

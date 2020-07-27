@@ -46,7 +46,7 @@ module opt_control_oct_m
   use parser_oct_m
   use profiling_oct_m
   use propagation_oct_m
-  use propagator_oct_m
+  use propagator_elec_oct_m
   use propagator_base_oct_m
   use restart_oct_m
   use simul_box_oct_m
@@ -131,7 +131,7 @@ contains
     ! Initializes the time propagator. Then, it forces the propagation to be self consistent, in case
     ! the theory level is not "independent particles".
     call td_init(td, sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, sys%outp)
-    if(sys%hm%theory_level /= INDEPENDENT_PARTICLES ) call propagator_set_scf_prop(td%tr, threshold = CNST(1.0e-14))
+    if(sys%hm%theory_level /= INDEPENDENT_PARTICLES ) call propagator_elec_set_scf_prop(td%tr, threshold = CNST(1.0e-14))
 
     ! Read general information about how the OCT run will be made, from inp file. "oct_read_inp" is
     ! in the opt_control_global_oct_m module (like the definition of the oct_t data type)

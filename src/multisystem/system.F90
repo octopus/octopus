@@ -31,7 +31,7 @@ module system_oct_m
   use linked_list_oct_m
   use parser_oct_m
   use profiling_oct_m
-  use propagator_abst_oct_m
+  use propagator_oct_m
   use propagator_beeman_oct_m
   use propagator_exp_mid_oct_m
   use propagator_verlet_oct_m
@@ -51,7 +51,7 @@ module system_oct_m
     private
     type(space_t), public :: space
 
-    class(propagator_abst_t), pointer, public :: prop => null()
+    class(propagator_t), pointer, public :: prop => null()
 
     integer :: accumulated_loop_ticks
 

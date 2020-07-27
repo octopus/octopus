@@ -28,7 +28,7 @@ module propagator_base_oct_m
 
   private
   public ::                            &
-    propagator_t
+    propagator_base_t
 
   integer, public, parameter ::        &
     PROP_ETRS                    = 2,  &
@@ -44,7 +44,7 @@ module propagator_base_oct_m
     PROP_EXPLICIT_RUNGE_KUTTA4   = 15, &
     PROP_CFMAGNUS4               = 16
 
-  type propagator_t
+  type propagator_base_t
     ! Components are public by default
     integer             :: method           !< Which evolution method to use.
     type(exponential_t) :: te               !< How to apply the propagator \f$ e^{-i H \Delta t} \f$.
@@ -58,7 +58,7 @@ module propagator_base_oct_m
     FLOAT               :: scf_threshold
     
     type(propagation_ops_elec_t) :: propagation_ops_elec
-  end type propagator_t
+  end type propagator_base_t
 
 end module propagator_base_oct_m
 
