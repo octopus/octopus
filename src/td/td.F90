@@ -387,7 +387,7 @@ contains
         !complex wfs are required for Ehrenfest
         call states_allocate_wfns(st, gr%mesh, TYPE_CMPLX)
       end if 
-    else
+   else
       call states_allocate_wfns(st, gr%mesh)
       call scf_init(td%scf, sys%gr, sys%geo, sys%st, sys%mc, hm, sys%ks)
     end if
@@ -407,17 +407,16 @@ contains
       call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = td%dt*td%iter)
     end if
 
-   
+    call init_wfs()
+
     if (thermal_gradient_is_applied(hm%ep%tfield)) then
       !if the thermal gradient is applied, we need to tell v_ks to calculate the current
-      !call v_ks_calculate_current(sys%ks, .true.)
-
+       call v_ks_calculate_current(sys%ks, .true.)
+       
       ! initialize the vector field and update the hamiltonian
       call thermal_gradient_init_vec_pot(hm%ep%tfield, gr%sb, st)
       call hamiltonian_update(hm, gr%mesh, gr%der%boundaries, time = td%dt*td%iter)
     end if
-
-    call init_wfs()
 
     if(td%iter >= td%max_iter) then
       call end_()
