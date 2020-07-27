@@ -135,12 +135,12 @@ contains
     FLOAT,                intent(in)     :: center(:)
     FLOAT,                intent(in)     :: rc
     
-    FLOAT :: r2, xx(1:MAX_DIM)
+    FLOAT :: r2, rc2, xx(1:MAX_DIM)
     FLOAT, allocatable :: center_copies(:, :), xtmp(:, :)
     integer :: icell, is, isb, ip, ix, iy, iz
     type(profile_t), save :: submesh_init_prof
     type(periodic_copy_t) :: pp
-    integer, allocatable :: map_inv(:)
+    integer, allocatable :: map_inv(:), map_temp(:)
     integer :: nmax(1:MAX_DIM), nmin(1:MAX_DIM)
     integer, allocatable :: order(:)
 
@@ -155,6 +155,7 @@ contains
     this%center(1:sb%dim) = center(1:sb%dim)
 
     this%radius = rc
+    rc2 = rc**2
 
     ! The spheres are generated differently for periodic coordinates,
     ! mainly for performance reasons.
@@ -188,7 +189,7 @@ contains
 #endif
             if(ip == 0) cycle
             r2 = sum((mesh%x(ip, 1:sb%dim) - center(1:sb%dim))**2)
-            if(r2 <= rc**2) then
+            if(r2 <= rc2) then
               if(ip > mesh%np) then
                 ! boundary points are marked as negative values
                 isb = isb + 1
@@ -248,13 +249,21 @@ contains
         center_copies(1:sb%dim, icell) = periodic_copy_position(pp, sb, icell)
       end do
 
+      ! This is a very conservative approximation of the max size. A better estimation is needed.
+      SAFE_ALLOCATE(map_temp(1:mesh%np_part*periodic_copy_num(pp)))
+      SAFE_ALLOCATE(xtmp(1:mesh%np_part*periodic_copy_num(pp), 0:sb%dim))
+            
       is = 0
       do ip = 1, mesh%np_part
         do icell = 1, periodic_copy_num(pp)
           xx(1:sb%dim) = mesh%x(ip, 1:sb%dim) - center_copies(1:sb%dim, icell)
           r2 = sum(xx(1:sb%dim)**2)
-          if(r2 > rc**2 ) cycle
+          if(r2 > rc2) cycle
           is = is + 1
+          map_temp(is) = ip
+          xtmp(is, 0) = sqrt(r2)
+          xtmp(is, 1:sb%dim) = xx(1:sb%dim)
+          ! Note that xx can be outside the unit cell
         end do
         if (ip == mesh%np) this%np = is
       end do
@@ -262,23 +271,9 @@ contains
       this%np_part = is
 
       SAFE_ALLOCATE(this%map(1:this%np_part))
-      SAFE_ALLOCATE(xtmp(1:this%np_part, 0:sb%dim))
-            
-      !iterate again to fill the tables
-      is = 0
-      do ip = 1, mesh%np_part
-        do icell = 1, periodic_copy_num(pp)
-          xx(1:sb%dim) = mesh%x(ip, 1:sb%dim) - center_copies(1:sb%dim, icell)
-          r2 = sum(xx(1:sb%dim)**2)
-          if(r2 > rc**2 ) cycle
-          is = is + 1
-          this%map(is) = ip
-          xtmp(is, 0) = sqrt(r2)
-          xtmp(is, 1:sb%dim) = xx(1:sb%dim)
-          ! Note that xx can be outside the unit cell
-         end do
-      end do
+      this%map(1:this%np_part) = map_temp(1:this%np_part)
 
+      SAFE_DEALLOCATE_A(map_temp)
       SAFE_DEALLOCATE_A(center_copies)
       
       call periodic_copy_end(pp)
