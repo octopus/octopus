@@ -47,11 +47,10 @@ TDSystemPropagator = exp_mid
 
 sampling = 24 # Time-steps per day
 days = 3
-Sun.TDTimeStep = 24*3600/sampling
-Sun.TDMaxSteps = days*sampling
-Earth.TDTimeStep = 24*3600/sampling/2
-Earth.TDMaxSteps = days*sampling*2
-Moon.TDTimeStep = 24*3600/sampling/4
-Moon.TDMaxSteps = days*sampling*4
+seconds_per_day = 24*3600
+Sun.TDTimeStep = seconds_per_day/sampling
+Earth.TDTimeStep = seconds_per_day/sampling/2
+Moon.TDTimeStep = seconds_per_day/sampling/4
+TDPropagationTime = days*seconds_per_day
 
 InteractionTiming = timing_retarded

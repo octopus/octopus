@@ -24,8 +24,10 @@ module time_dependent_oct_m
   use messages_oct_m
   use multisystem_oct_m
   use namespace_oct_m
+  use parser_oct_m
   use profiling_oct_m
   use td_oct_m
+  use unit_system_oct_m
 
   implicit none
 
@@ -58,7 +60,7 @@ contains
 
     integer :: it, internal_loop
     integer, parameter :: MAX_PROPAGATOR_STEPS = 1000
-    FLOAT :: smallest_algo_dt
+    FLOAT :: final_time, smallest_algo_dt
 
     PUSH_SUB(time_dependent_run_multisystem)
 
@@ -66,6 +68,15 @@ contains
     call messages_new_line()
     call messages_new_line()
     call messages_info()
+
+    ! Get final propagation time from input
+    ! This variable is also defined (and properly documented) in td/td.F90.
+    ! This is temporary, until all the propagators are moved to the new framework.
+    call parse_variable(systems%namespace, 'TDPropagationTime', CNST(-1.0), final_time, unit = units_inp%time)
+    if (final_time <= M_ZERO) then
+      call messages_input_error(systems%namespace, 'TDPropagationTime', 'must be greater than zero')
+    end if
+    call messages_print_var_value(stdout, 'TDPropagationTime', final_time)
 
     ! Initialize all propagators and find the smallest time-step
     smallest_algo_dt = CNST(1e10)
@@ -83,7 +94,7 @@ contains
 
     ! The full TD loop
     it = 0
-    do while (.not. systems%has_reached_final_propagation_time())
+    do while (.not. systems%has_reached_final_propagation_time(final_time))
 
       it = it + 1
 

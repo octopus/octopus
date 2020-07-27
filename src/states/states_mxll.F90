@@ -104,17 +104,17 @@ module states_mxll_oct_m
     integer, pointer             :: rs_state_fft_map(:,:,:)
     integer, pointer             :: rs_state_fft_map_inv(:,:)
 
-    FLOAT, allocatable            :: energy_rate(:)
-    FLOAT, allocatable            :: delta_energy(:)
-    FLOAT, allocatable            :: energy_via_flux_calc(:)
+    FLOAT                        :: energy_rate
+    FLOAT                        :: delta_energy
+    FLOAT                        :: energy_via_flux_calc
 
-    FLOAT, allocatable            :: trans_energy_rate(:)
-    FLOAT, allocatable            :: trans_delta_energy(:)
-    FLOAT, allocatable            :: trans_energy_via_flux_calc(:)
+    FLOAT                        :: trans_energy_rate
+    FLOAT                        :: trans_delta_energy
+    FLOAT                        :: trans_energy_via_flux_calc
 
-    FLOAT, allocatable            :: plane_waves_energy_rate(:)
-    FLOAT, allocatable            :: plane_waves_delta_energy(:)
-    FLOAT, allocatable            :: plane_waves_energy_via_flux_calc(:)
+    FLOAT                        :: plane_waves_energy_rate
+    FLOAT                        :: plane_waves_delta_energy
+    FLOAT                        :: plane_waves_energy_via_flux_calc
 
     FLOAT                        :: poynting_vector_box_surface(1:2,1:MAX_DIM,1:MAX_DIM) = M_ZERO
     FLOAT                        :: poynting_vector_box_surface_plane_waves(1:2,1:MAX_DIM,1:MAX_DIM) = M_ZERO
@@ -377,16 +377,6 @@ contains
     SAFE_DEALLOCATE_A(st%rs_state_const_td_function)
     SAFE_DEALLOCATE_A(st%rs_state_const_amp)
     SAFE_DEALLOCATE_A(st%rs_state_plane_waves)
-
-    SAFE_DEALLOCATE_A(st%energy_rate)
-    SAFE_DEALLOCATE_A(st%delta_energy)
-    SAFE_DEALLOCATE_A(st%energy_via_flux_calc)
-    SAFE_DEALLOCATE_A(st%trans_energy_rate)
-    SAFE_DEALLOCATE_A(st%trans_delta_energy)
-    SAFE_DEALLOCATE_A(st%trans_energy_via_flux_calc)
-    SAFE_DEALLOCATE_A(st%plane_waves_energy_rate)
-    SAFE_DEALLOCATE_A(st%plane_waves_delta_energy)
-    SAFE_DEALLOCATE_A(st%plane_waves_energy_via_flux_calc)
 
     SAFE_DEALLOCATE_P(st%surface_grid_center)
     SAFE_DEALLOCATE_P(st%surface_grid_points_number)

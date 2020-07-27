@@ -38,7 +38,7 @@ Sun.TDSystemPropagator = exp_mid
 
 sampling = 24 # Time-steps per day
 days = 3
-Earth.TDTimeStep = 24*3600/sampling/2
-Earth.TDMaxSteps = days*sampling*2
-Sun.TDTimeStep = 24*3600/sampling
-Sun.TDMaxSteps = days*sampling
+seconds_per_day = 24*3600
+Earth.TDTimeStep = seconds_per_day/sampling/2
+Sun.TDTimeStep = seconds_per_day/sampling
+TDPropagationTime = days*seconds_per_day

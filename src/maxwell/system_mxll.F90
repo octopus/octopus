@@ -299,15 +299,6 @@ contains
       call messages_fatal()
     end if
 
-    SAFE_ALLOCATE(this%st%energy_rate(1:this%prop%max_td_steps))
-    SAFE_ALLOCATE(this%st%delta_energy(1:this%prop%max_td_steps))
-    SAFE_ALLOCATE(this%st%energy_via_flux_calc(1:this%prop%max_td_steps))
-    SAFE_ALLOCATE(this%st%trans_energy_rate(1:this%prop%max_td_steps))
-    SAFE_ALLOCATE(this%st%trans_delta_energy(1:this%prop%max_td_steps))
-    SAFE_ALLOCATE(this%st%trans_energy_via_flux_calc(1:this%prop%max_td_steps))
-    SAFE_ALLOCATE(this%st%plane_waves_energy_rate(1:this%prop%max_td_steps))
-    SAFE_ALLOCATE(this%st%plane_waves_delta_energy(1:this%prop%max_td_steps))
-    SAFE_ALLOCATE(this%st%plane_waves_energy_via_flux_calc(1:this%prop%max_td_steps))
     this%st%energy_rate = M_ZERO
     this%st%delta_energy = M_ZERO
     this%st%energy_via_flux_calc = M_ZERO
@@ -581,8 +572,7 @@ contains
 
     PUSH_SUB(system_mxll_output_start)
 
-    call td_write_mxll_init(this%write_handler, this%namespace, this%gr, this%st, &
-                            this%hm, 0, this%prop%max_td_steps, this%prop%dt)
+    call td_write_mxll_init(this%write_handler, this%namespace, this%gr, this%st, this%hm, 0, this%prop%dt)
     call td_write_mxll_iter(this%write_handler, this%gr, this%st, this%hm, this%prop%dt, 0)
     call td_write_mxll_free_data(this%write_handler, this%namespace, this%gr, &
                                  this%st, this%hm, this%geo, this%outp, 0, this%prop%dt)
@@ -608,8 +598,7 @@ contains
 
     call td_write_mxll_iter(this%write_handler, this%gr, this%st, this%hm, this%prop%dt, iter)
 
-    if ((this%outp%output_interval > 0 .and. mod(iter, this%outp%output_interval) == 0) .or. &
-      iter == this%prop%max_td_steps .or. stopping) then
+    if ((this%outp%output_interval > 0 .and. mod(iter, this%outp%output_interval) == 0) .or. stopping) then
       call td_write_mxll_free_data(this%write_handler, this%namespace, this%gr, this%st, this%hm, this%geo, this%outp, &
         iter, this%prop%dt)
     end if

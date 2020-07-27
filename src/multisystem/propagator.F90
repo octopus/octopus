@@ -46,7 +46,6 @@ module propagator_oct_m
 
     integer, public :: algo_steps
     FLOAT, public   :: dt
-    integer, public :: max_td_steps
 
     !< Options related to predictor-corrector propagators
     logical, public :: predictor_corrector = .false.
@@ -249,10 +248,6 @@ contains
     ! This variable is also defined (and properly documented) in td/td.F90.
     ! This is temporary, until all the propagators are moved to the new framework.
     call parse_variable(namespace, 'TDTimeStep', CNST(10.0), this%dt)
-
-    ! This variable is also defined (and properly documented) in td/td.F90.
-    ! This is temporary, until all the propagators are moved to the new framework.
-    call parse_variable(namespace, 'TDMaxSteps', 1000, this%max_td_steps)
 
     POP_SUB(propagator_parse_td_variables)
   end subroutine propagator_parse_td_variables

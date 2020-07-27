@@ -52,6 +52,6 @@ Dimensions = 3
 
 TDSystemPropagator = verlet
 TDTimeStep = 1
-TDMaxSteps = 1
+TDPropagationTime = 1
 
 Debug = interaction_graph

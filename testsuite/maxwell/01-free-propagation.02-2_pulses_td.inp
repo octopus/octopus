@@ -41,8 +41,9 @@ MaxwellTDOutput                   = maxwell_energy + maxwell_fields
 
 # Time step variables
 TDSystemPropagator = exp_mid
-TDTimeStep                        = 1 / ( sqrt(c^2/dx_mx^2 + c^2/dx_mx^2 + c^2/dx_mx^2) )
-TDMaxSteps                        = 30
+td = 1 / ( sqrt(c^2/dx_mx^2 + c^2/dx_mx^2 + c^2/dx_mx^2) )
+TDTimeStep                        = td
+TDPropagationTime                 = 30*td
 
 # laser propagates in x direction
 k_1_x       =  0.707107
