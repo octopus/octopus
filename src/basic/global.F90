@@ -88,6 +88,7 @@ module global_oct_m
 
   FLOAT, public, parameter :: M_EPSILON   =  epsilon(M_ONE)
   FLOAT, public, parameter :: M_HUGE      =  huge(M_ONE)
+  FLOAT, public, parameter :: M_TINY      =  tiny(M_ONE)
 
   !> some physical constants
   FLOAT, public, parameter :: P_a_B =  CNST(0.52917720859)

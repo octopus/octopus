@@ -120,6 +120,8 @@ print OUT <<EOF;
 !%Option hyb_gga_xc_mvorb_pbeh    922000
 !% Density-based mixing parameter of PBEH (not from libxc).
 !% At the moment this is not supported for libxc >= 4.0.
+!%Option mgga_x_nc_br          923
+!% Noncollinear version of the Becke-Roussel function (not from libxc).
 !%Option vdw_c_vdwdf      918000
 !% van der Waals density functional vdW-DF correlation from libvdwxc (not from libxc).  Use with gga_x_pbe_r.
 !%Option vdw_c_vdwdf2     919000

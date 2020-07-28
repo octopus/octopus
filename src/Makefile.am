@@ -469,7 +469,8 @@ noinst_HEADERS +=                                    \
 	hamiltonian/projector_inc.F90                \
 	hamiltonian/scdm_inc.F90                     \
 	hamiltonian/scissor_inc.F90                  \
-	hamiltonian/vxc_inc.F90
+	hamiltonian/vxc_inc.F90                      \
+        hamiltonian/vxc_nc_inc.F90
 
 
 # Sources in multisystem

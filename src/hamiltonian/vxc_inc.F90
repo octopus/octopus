@@ -896,13 +896,13 @@ end subroutine xc_get_vxc
     integer, intent(in) :: family
 
     family_is_gga = bitand(family, XC_FAMILY_GGA + XC_FAMILY_HYB_GGA + &
-      XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA + XC_FAMILY_LIBVDWXC) /= 0
+      XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA + XC_FAMILY_LIBVDWXC + XC_FAMILY_NC_MGGA) /= 0
   end function  family_is_gga
 
   pure logical function family_is_mgga(family)
     integer, intent(in) :: family
 
-    family_is_mgga = bitand(family, XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0
+    family_is_mgga = bitand(family, XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA + XC_FAMILY_NC_MGGA) /= 0
   end function family_is_mgga
 
 ! -----------------------------------------------------
