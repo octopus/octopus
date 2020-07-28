@@ -1,5 +1,6 @@
 CalculationMode = td
 ExperimentalFeatures = yes
+FromScratch = yes
 
 Dimensions = 3
 
@@ -45,5 +46,6 @@ TDSystemPropagator = beeman
 
 sampling = 24 # Time-steps per day
 days = 3
-TDTimeStep = 24*3600/sampling
-TDMaxSteps = days*sampling
+seconds_per_day = 24*3600
+TDTimeStep = seconds_per_day/sampling
+TDPropagationTime = days*seconds_per_day

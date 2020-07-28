@@ -119,7 +119,7 @@ subroutine X(io_function_input_global)(filename, namespace, mesh, ff, ierr, map)
 #endif
   R_TYPE, pointer :: read_ff(:)
 
-  call profiling_in(read_prof, "X(DISK_READ)")
+  call profiling_in(read_prof, TOSTRING(X(DISK_READ)))
   PUSH_SUB(X(io_function_input_global))
 
   ierr = 0
@@ -815,7 +815,7 @@ subroutine X(io_function_output_global) (how, dir, fname, namespace, mesh, ff, u
   integer            :: iunit, ip, idir, jj, np_max
   FLOAT              :: x0
 
-  call profiling_in(write_prof, "X(DISK_WRITE)")
+  call profiling_in(write_prof, TOSTRING(X(DISK_WRITE)))
   PUSH_SUB(X(io_function_output_global))
 
   call io_mkdir(dir, namespace)
@@ -1532,7 +1532,7 @@ subroutine X(io_function_output_global_BZ) (how, dir, fname, namespace, mesh, ff
   character(len=20)  :: mformat, mformat2, mfmtheader
   integer            :: iunit, np_max
 
-  call profiling_in(write_prof, "X(DISK_WRITE)")
+  call profiling_in(write_prof, TOSTRING(X(DISK_WRITE)))
   PUSH_SUB(X(io_function_output_global_BZ))
 
   call io_mkdir(dir, namespace)

@@ -45,7 +45,7 @@ module propagation_oct_m
   use opt_control_state_oct_m
   use parser_oct_m
   use pert_oct_m
-  use propagator_oct_m
+  use propagator_elec_oct_m
   use propagator_base_oct_m
   use profiling_oct_m
   use restart_oct_m
@@ -177,7 +177,7 @@ contains
     ! setup the Hamiltonian
     call density_calc(psi, gr, psi%rho)
     call v_ks_calc(sys%ks, sys%namespace, sys%hm, psi, sys%geo, time = M_ZERO)
-    call propagator_run_zero_iter(sys%hm, gr, td%tr)
+    call propagator_elec_run_zero_iter(sys%hm, gr, td%tr)
     if(ion_dynamics_ions_move(td%ions)) then
       call hamiltonian_elec_epot_generate(sys%hm, sys%namespace,  gr, sys%geo, psi, time = M_ZERO)
       call forces_calculate(gr, sys%namespace, sys%geo, sys%hm, psi, sys%ks, t = M_ZERO, dt = td%dt)
@@ -216,7 +216,7 @@ contains
     do istep = 1, td%max_iter
       ! time-iterate wavefunctions
 
-      call propagator_dt(sys%ks, sys%namespace, sys%hm, gr, psi, td%tr, istep*td%dt, td%dt, td%mu, istep, td%ions, &
+      call propagator_elec_dt(sys%ks, sys%namespace, sys%hm, gr, psi, td%tr, istep*td%dt, td%dt, td%mu, istep, td%ions, &
         sys%geo, sys%outp)
 
       if(present(prop)) then
@@ -300,7 +300,7 @@ contains
     ! setup the Hamiltonian
     call density_calc(psi, gr, psi%rho)
     call v_ks_calc(sys%ks, sys%namespace, sys%hm, psi, sys%geo)
-    call propagator_run_zero_iter(sys%hm, gr, td%tr)
+    call propagator_elec_run_zero_iter(sys%hm, gr, td%tr)
 
     call oct_prop_dump_states(prop, td%max_iter, psi, gr, ierr)
     if (ierr /= 0) then
@@ -311,7 +311,7 @@ contains
     if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, td%max_iter)
 
     do istep = td%max_iter, 1, -1
-      call propagator_dt(sys%ks, sys%namespace, sys%hm, gr, psi, td%tr, &
+      call propagator_elec_dt(sys%ks, sys%namespace, sys%hm, gr, psi, td%tr, &
         (istep - 1)*td%dt, -td%dt, td%mu, istep-1, td%ions, sys%geo, sys%outp)
 
       call oct_prop_dump_states(prop, istep - 1, psi, gr, ierr)
@@ -360,8 +360,8 @@ contains
     type(opt_control_state_t) :: qcchi
     type(controlfunction_t) :: par_prev
     type(grid_t), pointer :: gr
-    type(propagator_t) :: tr_chi
-    type(propagator_t) :: tr_psi2
+    type(propagator_base_t) :: tr_chi
+    type(propagator_base_t) :: tr_psi2
     type(states_elec_t), pointer :: psi, chi
 
     PUSH_SUB(fwd_step)
@@ -377,11 +377,11 @@ contains
     psi => opt_control_point_qs(qcpsi)
     chi => opt_control_point_qs(qcchi)
     gr => sys%gr
-    call propagator_copy(tr_chi, td%tr)
+    call propagator_elec_copy(tr_chi, td%tr)
     ! The propagation of chi should not be self-consistent, because the Kohn-Sham
     ! potential used is the one created by psi. Note, however, that it is likely that
     ! the first two iterations are done self-consistently nonetheless.
-    call propagator_remove_scf_prop(tr_chi)
+    call propagator_elec_remove_scf_prop(tr_chi)
 
     aux_fwd_propagation = ( target_mode(tg) == oct_targetmode_td .or. &
                            (sys%hm%theory_level /= INDEPENDENT_PARTICLES .and. &
@@ -395,11 +395,11 @@ contains
     ! setup forward propagation
     call density_calc(psi, gr, psi%rho)
     call v_ks_calc(sys%ks, sys%namespace, sys%hm, psi, sys%geo)
-    call propagator_run_zero_iter(sys%hm, gr, td%tr)
-    call propagator_run_zero_iter(sys%hm, gr, tr_chi)
+    call propagator_elec_run_zero_iter(sys%hm, gr, td%tr)
+    call propagator_elec_run_zero_iter(sys%hm, gr, tr_chi)
     if(aux_fwd_propagation) then
-      call propagator_copy(tr_psi2, td%tr)
-      call propagator_run_zero_iter(sys%hm, gr, tr_psi2)
+      call propagator_elec_copy(tr_psi2, td%tr)
+      call propagator_elec_run_zero_iter(sys%hm, gr, tr_psi2)
     end if
 
     call oct_prop_dump_states(prop_psi, 0, psi, gr, ierr)
@@ -420,16 +420,16 @@ contains
       call update_field(i, par, gr, sys%hm, sys%geo, qcpsi, qcchi, par_chi, dir = 'f')
       call update_hamiltonian_elec_chi(i, sys%namespace, gr, sys%ks, sys%hm, td, tg, par_chi, sys%geo, psi2)
       call hamiltonian_elec_update(sys%hm, gr%mesh, sys%namespace, time = (i - 1)*td%dt)
-      call propagator_dt(sys%ks, sys%namespace, sys%hm, gr, chi, tr_chi, i*td%dt, td%dt, td%mu, i, td%ions, sys%geo, &
+      call propagator_elec_dt(sys%ks, sys%namespace, sys%hm, gr, chi, tr_chi, i*td%dt, td%dt, td%mu, i, td%ions, sys%geo, &
         sys%outp)
       if(aux_fwd_propagation) then
         call update_hamiltonian_elec_psi(i, sys%namespace, gr, sys%ks, sys%hm, td, tg, par_prev, psi2, sys%geo)
-        call propagator_dt(sys%ks, sys%namespace, sys%hm, gr, psi2, tr_psi2, i*td%dt, td%dt, td%mu, i, td%ions, &
+        call propagator_elec_dt(sys%ks, sys%namespace, sys%hm, gr, psi2, tr_psi2, i*td%dt, td%dt, td%mu, i, td%ions, &
           sys%geo, sys%outp)
       end if
       call update_hamiltonian_elec_psi(i, sys%namespace, gr, sys%ks, sys%hm, td, tg, par, psi, sys%geo)
       call hamiltonian_elec_update(sys%hm, gr%mesh, sys%namespace, time = (i - 1)*td%dt)
-      call propagator_dt(sys%ks, sys%namespace, sys%hm, gr, psi, td%tr, i*td%dt, td%dt, td%mu, i, td%ions, sys%geo, &
+      call propagator_elec_dt(sys%ks, sys%namespace, sys%hm, gr, psi, td%tr, i*td%dt, td%dt, td%mu, i, td%ions, sys%geo, &
         sys%outp)
       call target_tdcalc(tg, sys%namespace, sys%hm, gr, sys%geo, psi, i, td%max_iter) 
 
@@ -452,9 +452,9 @@ contains
     end if
 
     call controlfunction_to_basis(par)
-    if(aux_fwd_propagation) call propagator_end(tr_psi2)
+    if(aux_fwd_propagation) call propagator_elec_end(tr_psi2)
     call states_elec_end(chi)
-    call propagator_end(tr_chi)
+    call propagator_elec_end(tr_chi)
     if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call psi%unpack()
     nullify(psi)
     nullify(chi)
@@ -484,7 +484,7 @@ contains
 
     integer :: i, ierr
     type(grid_t), pointer :: gr
-    type(propagator_t) :: tr_chi
+    type(propagator_base_t) :: tr_chi
     type(opt_control_state_t) :: qcpsi
     type(states_elec_t), pointer :: chi, psi
 
@@ -499,11 +499,11 @@ contains
     psi => opt_control_point_qs(qcpsi)
     gr => sys%gr
 
-    call propagator_copy(tr_chi, td%tr)
+    call propagator_elec_copy(tr_chi, td%tr)
     ! The propagation of chi should not be self-consistent, because the Kohn-Sham
     ! potential used is the one created by psi. Note, however, that it is likely that
     ! the first two iterations are done self-consistently nonetheless.
-    call propagator_remove_scf_prop(tr_chi)
+    call propagator_elec_remove_scf_prop(tr_chi)
 
     call states_elec_copy(psi, chi)
     call oct_prop_load_states(prop_psi, sys%namespace, psi, gr, td%max_iter, ierr)
@@ -517,8 +517,8 @@ contains
     call density_calc(psi, gr, psi%rho)
     call v_ks_calc(sys%ks, sys%namespace, sys%hm, psi, sys%geo)
     call hamiltonian_elec_update(sys%hm, gr%mesh, sys%namespace)
-    call propagator_run_zero_iter(sys%hm, gr, td%tr)
-    call propagator_run_zero_iter(sys%hm, gr, tr_chi)
+    call propagator_elec_run_zero_iter(sys%hm, gr, td%tr)
+    call propagator_elec_run_zero_iter(sys%hm, gr, tr_chi)
 
     td%dt = -td%dt
     call oct_prop_dump_states(prop_chi, td%max_iter, chi, gr, ierr)
@@ -532,7 +532,7 @@ contains
       call update_field(i, par_chi, gr, sys%hm, sys%geo, qcpsi, qcchi, par, dir = 'b')
       call update_hamiltonian_elec_chi(i-1, sys%namespace, gr, sys%ks, sys%hm, td, tg, par_chi, sys%geo, psi)
       call hamiltonian_elec_update(sys%hm, gr%mesh, sys%namespace, time = abs(i*td%dt))
-      call propagator_dt(sys%ks, sys%namespace, sys%hm, gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%mu, i-1, &
+      call propagator_elec_dt(sys%ks, sys%namespace, sys%hm, gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%mu, i-1, &
         td%ions, sys%geo, sys%outp)
       call oct_prop_dump_states(prop_chi, i-1, chi, gr, ierr)
       if (ierr /= 0) then
@@ -541,7 +541,7 @@ contains
       end if
       call update_hamiltonian_elec_psi(i-1, sys%namespace, gr, sys%ks, sys%hm, td, tg, par, psi, sys%geo)
       call hamiltonian_elec_update(sys%hm, gr%mesh, sys%namespace, time = abs(i*td%dt))
-      call propagator_dt(sys%ks, sys%namespace, sys%hm, gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%mu, i-1, &
+      call propagator_elec_dt(sys%ks, sys%namespace, sys%hm, gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%mu, i-1, &
         td%ions, sys%geo, sys%outp)
     end do
     td%dt = -td%dt
@@ -553,7 +553,7 @@ contains
 
     call controlfunction_to_basis(par_chi)
     call states_elec_end(psi)
-    call propagator_end(tr_chi)
+    call propagator_elec_end(tr_chi)
     if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call chi%unpack()
     nullify(chi)
     nullify(psi)
@@ -587,7 +587,7 @@ contains
     integer :: i, ierr, ik, ib
     logical :: freeze
     type(grid_t), pointer :: gr
-    type(propagator_t) :: tr_chi
+    type(propagator_base_t) :: tr_chi
     type(opt_control_state_t) :: qcpsi
     type(states_elec_t) :: st_ref
     type(states_elec_t), pointer :: chi, psi
@@ -608,11 +608,11 @@ contains
     SAFE_ALLOCATE(qtildehalf(1:sys%geo%natoms, 1:sys%geo%space%dim))
     SAFE_ALLOCATE(qinitial(1:sys%geo%natoms, 1:sys%geo%space%dim))
 
-    call propagator_copy(tr_chi, td%tr)
+    call propagator_elec_copy(tr_chi, td%tr)
     ! The propagation of chi should not be self-consistent, because the Kohn-Sham
     ! potential used is the one created by psi. Note, however, that it is likely that
     ! the first two iterations are done self-consistently nonetheless.
-    call propagator_remove_scf_prop(tr_chi)
+    call propagator_elec_remove_scf_prop(tr_chi)
 
     call opt_control_state_null(qcpsi)
     call opt_control_state_copy(qcpsi, qcchi)
@@ -628,8 +628,8 @@ contains
     call density_calc(psi, gr, psi%rho)
     call v_ks_calc(sys%ks, sys%namespace, sys%hm, psi, sys%geo)
     call hamiltonian_elec_update(sys%hm, gr%mesh, sys%namespace)
-    call propagator_run_zero_iter(sys%hm, gr, td%tr)
-    call propagator_run_zero_iter(sys%hm, gr, tr_chi)
+    call propagator_elec_run_zero_iter(sys%hm, gr, td%tr)
+    call propagator_elec_run_zero_iter(sys%hm, gr, tr_chi)
     td%dt = -td%dt
     call oct_prop_dump_states(prop_chi, td%max_iter, chi, gr, ierr)
     if (ierr /= 0) then
@@ -660,7 +660,7 @@ contains
       case(PROP_EXPLICIT_RUNGE_KUTTA4)
 
         call update_hamiltonian_elec_psi(i-1, sys%namespace, gr, sys%ks, sys%hm, td, tg, par, psi, sys%geo)
-        call propagator_dt(sys%ks, sys%namespace, sys%hm, gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%mu, i-1, &
+        call propagator_elec_dt(sys%ks, sys%namespace, sys%hm, gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%mu, i-1, &
           td%ions, sys%geo, sys%outp, qcchi = qcchi)
 
       case default
@@ -693,7 +693,7 @@ contains
         end do
 
         vhxc(:, :) = sys%hm%vhxc(:, :)
-        call propagator_dt(sys%ks, sys%namespace, sys%hm, gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%mu, i-1, &
+        call propagator_elec_dt(sys%ks, sys%namespace, sys%hm, gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%mu, i-1, &
           td%ions, sys%geo, sys%outp)
 
         if(ion_dynamics_ions_move(td%ions)) then
@@ -715,7 +715,7 @@ contains
         call update_hamiltonian_elec_chi(i-1, sys%namespace, gr, sys%ks, sys%hm, td, tg, par, sys%geo, st_ref, &
           qtildehalf)
         freeze = ion_dynamics_freeze(td%ions)
-        call propagator_dt(sys%ks, sys%namespace, sys%hm, gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%mu, i-1, &
+        call propagator_elec_dt(sys%ks, sys%namespace, sys%hm, gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%mu, i-1, &
           td%ions, sys%geo, sys%outp)
         if(freeze) call ion_dynamics_unfreeze(td%ions)
 
@@ -760,7 +760,7 @@ contains
     call v_ks_calc(sys%ks, sys%namespace, sys%hm, psi, sys%geo)
     call hamiltonian_elec_update(sys%hm, gr%mesh, sys%namespace)
 
-    call propagator_end(tr_chi)
+    call propagator_elec_end(tr_chi)
 
     SAFE_DEALLOCATE_A(vhxc)
     call states_elec_end(psi)

@@ -18,7 +18,7 @@
 
 #include "global.h"
 
-module propagator_oct_m
+module propagator_elec_oct_m
   use energy_calc_oct_m
   use exponential_oct_m
   use forces_oct_m
@@ -58,23 +58,23 @@ module propagator_oct_m
 
   private
   public ::                         &
-    propagator_init,                &
-    propagator_end,                 &
-    propagator_copy,                &
-    propagator_run_zero_iter,       &
-    propagator_dt,                  &
-    propagator_set_scf_prop,        &
-    propagator_remove_scf_prop,     &
-    propagator_ions_are_propagated, &
-    propagator_dt_bo
+    propagator_elec_init,                &
+    propagator_elec_end,                 &
+    propagator_elec_copy,                &
+    propagator_elec_run_zero_iter,       &
+    propagator_elec_dt,                  &
+    propagator_elec_set_scf_prop,        &
+    propagator_elec_remove_scf_prop,     &
+    propagator_elec_ions_are_propagated, &
+    propagator_elec_dt_bo
 
 contains
 
   ! ---------------------------------------------------------
-  subroutine propagator_nullify(this)
-    type(propagator_t), intent(out) :: this
+  subroutine propagator_elec_nullify(this)
+    type(propagator_base_t), intent(out) :: this
 
-    PUSH_SUB(propagator_nullify)
+    PUSH_SUB(propagator_elec_nullify)
 
     !this%method
     !call exponential_nullify(this%te)
@@ -85,18 +85,18 @@ contains
 
     nullify(this%tdsk)
 
-    POP_SUB(propagator_nullify)
-  end subroutine propagator_nullify
+    POP_SUB(propagator_elec_nullify)
+  end subroutine propagator_elec_nullify
   ! ---------------------------------------------------------
 
   ! ---------------------------------------------------------
-  subroutine propagator_copy(tro, tri)
-    type(propagator_t), intent(inout) :: tro
-    type(propagator_t), intent(in)    :: tri
+  subroutine propagator_elec_copy(tro, tri)
+    type(propagator_base_t), intent(inout) :: tro
+    type(propagator_base_t), intent(in)    :: tri
 
-    PUSH_SUB(propagator_copy)
+    PUSH_SUB(propagator_elec_copy)
     
-    call propagator_nullify(tro)
+    call propagator_elec_nullify(tro)
     tro%method = tri%method
 
     select case(tro%method)
@@ -126,26 +126,26 @@ contains
     tro%scf_propagation_steps = tri%scf_propagation_steps
 
     tro%scf_threshold = tri%scf_threshold
-    POP_SUB(propagator_copy)
-  end subroutine propagator_copy
+    POP_SUB(propagator_elec_copy)
+  end subroutine propagator_elec_copy
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  subroutine propagator_init(gr, namespace, st, tr, have_fields, family_is_mgga_with_exc)
-    type(grid_t),        intent(in)    :: gr
-    type(namespace_t),   intent(in)    :: namespace
-    type(states_elec_t), intent(in)    :: st
-    type(propagator_t),  intent(inout) :: tr
+  subroutine propagator_elec_init(gr, namespace, st, tr, have_fields, family_is_mgga_with_exc)
+    type(grid_t),            intent(in)    :: gr
+    type(namespace_t),       intent(in)    :: namespace
+    type(states_elec_t),     intent(in)    :: st
+    type(propagator_base_t), intent(inout) :: tr
     !> whether there is an associated "field"
     !! that must be propagated (currently ions
     !! or a gauge field).
-    logical,             intent(in)    :: have_fields 
-    logical,             intent(in)    :: family_is_mgga_with_exc
+    logical,                 intent(in)    :: have_fields 
+    logical,                 intent(in)    :: family_is_mgga_with_exc
 
-    PUSH_SUB(propagator_init)
+    PUSH_SUB(propagator_elec_init)
     
-    call propagator_nullify(tr)
+    call propagator_elec_nullify(tr)
 
     !%Variable TDPropagator
     !%Type integer
@@ -402,49 +402,46 @@ contains
     !%End
     call parse_variable(namespace, 'TDSCFThreshold', CNST(1.0e-6), tr%scf_threshold)
 
-
-    call tr%propagation_ops_elec%init()
-
-    POP_SUB(propagator_init)
-  end subroutine propagator_init
+    POP_SUB(propagator_elec_init)
+  end subroutine propagator_elec_init
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  subroutine propagator_set_scf_prop(tr, threshold)
-    type(propagator_t), intent(inout) :: tr
-    FLOAT, intent(in), optional :: threshold
+  subroutine propagator_elec_set_scf_prop(tr, threshold)
+    type(propagator_base_t), intent(inout) :: tr
+    FLOAT, optional,         intent(in)    :: threshold
 
-    PUSH_SUB(propagator_set_scf_prop)
+    PUSH_SUB(propagator_elec_set_scf_prop)
 
     tr%scf_propagation_steps = huge(1)
     if(present(threshold)) then
       tr%scf_threshold = threshold
     end if
 
-    POP_SUB(propagator_set_scf_prop)
-  end subroutine propagator_set_scf_prop
+    POP_SUB(propagator_elec_set_scf_prop)
+  end subroutine propagator_elec_set_scf_prop
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  subroutine propagator_remove_scf_prop(tr)
-    type(propagator_t), intent(inout) :: tr
+  subroutine propagator_elec_remove_scf_prop(tr)
+    type(propagator_base_t), intent(inout) :: tr
 
-    PUSH_SUB(propagator_remove_scf_prop)
+    PUSH_SUB(propagator_elec_remove_scf_prop)
 
     tr%scf_propagation_steps = -1
 
-    POP_SUB(propagator_remove_scf_prop)
-  end subroutine propagator_remove_scf_prop
+    POP_SUB(propagator_elec_remove_scf_prop)
+  end subroutine propagator_elec_remove_scf_prop
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  subroutine propagator_end(tr)
-    type(propagator_t), intent(inout) :: tr
+  subroutine propagator_elec_end(tr)
+    type(propagator_base_t), intent(inout) :: tr
 
-    PUSH_SUB(propagator_end)
+    PUSH_SUB(propagator_elec_end)
 
     call potential_interpolation_end(tr%vksold)
 
@@ -461,20 +458,18 @@ contains
     
     call exponential_end(tr%te)       ! clean propagator method
 
-    call tr%propagation_ops_elec%end()
-
-    POP_SUB(propagator_end)
-  end subroutine propagator_end
+    POP_SUB(propagator_elec_end)
+  end subroutine propagator_elec_end
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
-  subroutine propagator_run_zero_iter(hm, gr, tr)
+  subroutine propagator_elec_run_zero_iter(hm, gr, tr)
     type(hamiltonian_elec_t),  intent(in)    :: hm
-    type(grid_t),         intent(in)    :: gr
-    type(propagator_t),   intent(inout) :: tr
+    type(grid_t),              intent(in)    :: gr
+    type(propagator_base_t),   intent(inout) :: tr
 
-    PUSH_SUB(propagator_run_zero_iter)
+    PUSH_SUB(propagator_elec_run_zero_iter)
 
     if (family_is_mgga_with_exc(hm%xc)) then
       call potential_interpolation_run_zero_iter(tr%vksold, gr%mesh%np, hm%d%nspin, &
@@ -484,22 +479,22 @@ contains
                 hm%vhxc)
     end if
 
-    POP_SUB(propagator_run_zero_iter)
-  end subroutine propagator_run_zero_iter
+    POP_SUB(propagator_elec_run_zero_iter)
+  end subroutine propagator_elec_run_zero_iter
 
 
   ! ---------------------------------------------------------
   !> Propagates st from time - dt to t.
   !! If dt<0, it propagates *backwards* from t+|dt| to t
   ! ---------------------------------------------------------
-  subroutine propagator_dt(ks, namespace, hm, gr, st, tr, time, dt, ionic_scale, nt, ions, geo, outp, &
+  subroutine propagator_elec_dt(ks, namespace, hm, gr, st, tr, time, dt, ionic_scale, nt, ions, geo, outp, &
     scsteps, update_energy, qcchi)
     type(v_ks_t),                        target, intent(inout) :: ks
     type(namespace_t),                           intent(in)    :: namespace
     type(hamiltonian_elec_t),            target, intent(inout) :: hm
     type(grid_t),                        target, intent(inout) :: gr
     type(states_elec_t),                 target, intent(inout) :: st
-    type(propagator_t),                  target, intent(inout) :: tr
+    type(propagator_base_t),             target, intent(inout) :: tr
     FLOAT,                                       intent(in)    :: time
     FLOAT,                                       intent(in)    :: dt
     FLOAT,                                       intent(in)    :: ionic_scale
@@ -515,7 +510,7 @@ contains
     type(profile_t), save :: prof
 
     call profiling_in(prof, "TD_PROPAGATOR")
-    PUSH_SUB(propagator_dt)
+    PUSH_SUB(propagator_elec_dt)
 
     update_energy_ = optional_default(update_energy, .true.)
 
@@ -573,13 +568,13 @@ contains
 
     generate = .false.
     if(update_energy_ .and. ion_dynamics_ions_move(ions)) then
-      if(.not. propagator_ions_are_propagated(tr)) then
+      if(.not. propagator_elec_ions_are_propagated(tr)) then
         call ion_dynamics_propagate(ions, gr%sb, geo, abs(nt*dt), ionic_scale*dt, namespace)
         generate = .true.
       end if
     end if
 
-    if(gauge_field_is_applied(hm%ep%gfield) .and. .not. propagator_ions_are_propagated(tr)) then
+    if(gauge_field_is_applied(hm%ep%gfield) .and. .not. propagator_elec_ions_are_propagated(tr)) then
       call gauge_field_propagate(hm%ep%gfield, dt, time, namespace)
     end if
 
@@ -610,7 +605,7 @@ contains
     !We update the occupation matrices
     call lda_u_update_occ_matrices(hm%lda_u, namespace, gr%mesh, st, hm%hm_base, hm%energy)
 
-    POP_SUB(propagator_dt)
+    POP_SUB(propagator_elec_dt)
     call profiling_out(prof)
 
   contains
@@ -621,15 +616,15 @@ contains
     end function self_consistent_step
     ! ---------------------------------------------------------
 
-  end subroutine propagator_dt
+  end subroutine propagator_elec_dt
   ! ---------------------------------------------------------
 
 
 
 
   ! ---------------------------------------------------------
-  logical pure function propagator_ions_are_propagated(tr) result(propagated)
-    type(propagator_t), intent(in) :: tr
+  logical pure function propagator_elec_ions_are_propagated(tr) result(propagated)
+    type(propagator_base_t), intent(in) :: tr
 
     select case(tr%method)
     case(PROP_ETRS, PROP_AETRS, PROP_CAETRS, PROP_EXPLICIT_RUNGE_KUTTA4)
@@ -638,13 +633,13 @@ contains
       propagated = .false.
     end select
 
-  end function propagator_ions_are_propagated
+  end function propagator_elec_ions_are_propagated
   ! ---------------------------------------------------------
 
 
   ! ---------------------------------------------------------
 
-  subroutine propagator_dt_bo(scf, namespace, gr, ks, st, hm, geo, mc, outp, iter, dt, ions, scsteps)
+  subroutine propagator_elec_dt_bo(scf, namespace, gr, ks, st, hm, geo, mc, outp, iter, dt, ions, scsteps)
     type(scf_t),              intent(inout) :: scf
     type(namespace_t),        intent(in)    :: namespace
     type(grid_t),             intent(inout) :: gr
@@ -659,7 +654,7 @@ contains
     type(ion_dynamics_t), intent(inout) :: ions
     integer,              intent(inout) :: scsteps
 
-    PUSH_SUB(propagator_dt_bo)
+    PUSH_SUB(propagator_elec_dt_bo)
 
     ! move the hamiltonian to time t
     call ion_dynamics_propagate(ions, gr%sb, geo, iter*dt, dt, namespace)
@@ -674,7 +669,7 @@ contains
 
     !TODO: we should update the occupation matrices here 
     if(hm%lda_u_level /= DFT_U_NONE) then
-      call messages_not_implemented("DFT+U with propagator_dt_bo", namespace=namespace)
+      call messages_not_implemented("DFT+U with propagator_elec_dt_bo", namespace=namespace)
     end if
 
     call hamiltonian_elec_epot_generate(hm, namespace,  gr, geo, st, time = iter*dt)
@@ -693,10 +688,10 @@ contains
       call gauge_field_propagate_vel(hm%ep%gfield, dt)
     end if
 
-    POP_SUB(propagator_dt_bo)
-  end subroutine propagator_dt_bo
+    POP_SUB(propagator_elec_dt_bo)
+  end subroutine propagator_elec_dt_bo
 
-end module propagator_oct_m
+end module propagator_elec_oct_m
 
 
 !! Local Variables:

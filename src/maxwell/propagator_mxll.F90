@@ -128,6 +128,8 @@ contains
 
     PUSH_SUB(propagator_mxll_init)
 
+    hm%bc%bc_type(:) = MXLL_BC_ZERO ! default boundary condition is zero
+
     !%Variable MaxwellBoundaryConditions
     !%Type block
     !%Section Time-Dependent::Propagation
@@ -169,60 +171,65 @@ contains
       if (ncols /= 3) then
         call messages_input_error(namespace, 'MaxwellBoundaryConditions', 'should consist of three columns')
       end if
-      do icol=1, ncols
+      do icol = 1, ncols
         call parse_block_integer(blk, 0, icol-1, hm%bc%bc_type(icol))
-        select case (hm%bc%bc_type(icol))
-          case (MXLL_BC_ZERO)
-          string = 'Zero'
-          tr%bc_zero = .true.
-        case (MXLL_BC_CONSTANT)
-          string = 'Constant'
-          tr%bc_constant = .true.
-          tr%bc_add_ab_region = .true.
-          hm%bc_constant = .true.
-          hm%bc_add_ab_region = .true.
-        case (MXLL_BC_MIRROR_PEC)
-          string = 'PEC Mirror'
-          tr%bc_mirror_pec = .true.
-          hm%bc_mirror_pec = .true.
-        case (MXLL_BC_MIRROR_PMC)
-          string = 'PMC Mirror'
-          tr%bc_mirror_pmc = .true.
-          hm%bc_mirror_pmc = .true.
-        case (MXLL_BC_PERIODIC)
-          string = 'Periodic'
-          tr%bc_periodic = .true.
-          hm%bc_periodic = .true.
-        case (MXLL_BC_PLANE_WAVES)
-          string = 'Plane waves'
-          plane_waves_set = .true.
-          tr%bc_plane_waves = .true.
-          tr%bc_add_ab_region = .true.
-          hm%plane_waves = .true.
-          hm%bc_plane_waves = .true.
-          hm%bc_add_ab_region = .true.
-        case (MXLL_BC_MEDIUM)
-          string = 'Medium boundary'
-        end select
-        write(message(1),'(a,I1,a,a)') 'Maxwell boundary condition in direction ', icol, ': ', trim(string)
-        call messages_info(1)
-        if (plane_waves_set .and. .not. (parse_is_defined(namespace, 'MaxwellIncidentWaves')) ) then
-          write(message(1),'(a)') 'Input: Maxwell boundary condition option is set to "plane_waves".'
-          write(message(2),'(a)') 'Input: User defined Maxwell plane waves have to be defined!'
-          call messages_fatal(2, namespace=namespace)
-        end if
       end do
+      call parse_block_end(blk)
+      call messages_print_stress(stdout, namespace=namespace)
+    end if
 
-     call parse_block_end(blk)
-     call messages_print_stress(stdout, namespace=namespace)
+    do icol = 1, 3
+      select case (hm%bc%bc_type(icol))
+      case (MXLL_BC_ZERO)
+        string = 'Zero'
+        hm%bc_zero = .true.
+        tr%bc_zero = .true.
+      case (MXLL_BC_CONSTANT)
+        string = 'Constant'
+        tr%bc_constant = .true.
+        tr%bc_add_ab_region = .true.
+        hm%bc_constant = .true.
+        hm%bc_add_ab_region = .true.
+      case (MXLL_BC_MIRROR_PEC)
+        string = 'PEC Mirror'
+        tr%bc_mirror_pec = .true.
+        hm%bc_mirror_pec = .true.
+      case (MXLL_BC_MIRROR_PMC)
+        string = 'PMC Mirror'
+        tr%bc_mirror_pmc = .true.
+        hm%bc_mirror_pmc = .true.
+      case (MXLL_BC_PERIODIC)
+        string = 'Periodic'
+        tr%bc_periodic = .true.
+        hm%bc_periodic = .true.
+      case (MXLL_BC_PLANE_WAVES)
+        string = 'Plane waves'
+        plane_waves_set = .true.
+        tr%bc_plane_waves = .true.
+        tr%bc_add_ab_region = .true.
+        hm%plane_waves = .true.
+        hm%bc_plane_waves = .true.
+        hm%bc_add_ab_region = .true.
+      case (MXLL_BC_MEDIUM)
+        string = 'Medium boundary'
+      case default
+        write(message(1),'(a)') 'Unknown Maxwell boundary condition'
+        call messages_fatal(1, namespace=namespace)
+      end select
+      write(message(1),'(a,I1,a,a)') 'Maxwell boundary condition in direction ', icol, ': ', trim(string)
+      call messages_info(1)
+      if (plane_waves_set .and. .not. (parse_is_defined(namespace, 'MaxwellIncidentWaves')) ) then
+        write(message(1),'(a)') 'Input: Maxwell boundary condition option is set to "plane_waves".'
+        write(message(2),'(a)') 'Input: User defined Maxwell plane waves have to be defined!'
+        call messages_fatal(2, namespace=namespace)
+      end if
+    end do
 
-   end if
-
-   if (any(hm%bc%bc_type(1:3) == MXLL_BC_CONSTANT)) then
-     call td_function_mxll_init(st, namespace, hm)
-     SAFE_ALLOCATE(st%rs_state_const(1:st%dim))
-     st%rs_state_const = M_z0
-   end if
+    if (any(hm%bc%bc_type(1:3) == MXLL_BC_CONSTANT)) then
+      call td_function_mxll_init(st, namespace, hm)
+      SAFE_ALLOCATE(st%rs_state_const(1:st%dim))
+      st%rs_state_const = M_z0
+    end if
 
     !%Variable MaxwellMediumBox
     !%Type block
@@ -381,23 +388,33 @@ contains
   end subroutine propagator_mxll_init
 
   ! ---------------------------------------------------------
-  subroutine mxll_propagation_step(hm, namespace, gr, st, tr, rs_state, time, dt)
+  subroutine mxll_propagation_step(hm, namespace, gr, st, tr, rs_state, rs_current_density_t1,&
+      rs_current_density_t2, rs_charge_density_t1, rs_charge_density_t2, time, dt)
     type(hamiltonian_mxll_t),   intent(inout) :: hm
     type(namespace_t),          intent(in)    :: namespace
     type(grid_t),               intent(inout) :: gr
     type(states_mxll_t),        intent(inout) :: st
     type(propagator_mxll_t),    intent(inout) :: tr
     CMPLX,                      intent(inout) :: rs_state(:,:)
+    CMPLX,                      intent(inout) :: rs_current_density_t1(:,:)
+    CMPLX,                      intent(inout) :: rs_current_density_t2(:,:)
+    CMPLX,                      intent(inout) :: rs_charge_density_t1(:)
+    CMPLX,                      intent(inout) :: rs_charge_density_t2(:)
     FLOAT,                      intent(in)    :: time
     FLOAT,                      intent(in)    :: dt
 
     integer            :: ii, inter_steps, ff_dim, idim
     FLOAT              :: inter_dt, inter_time, delay
-    CMPLX, allocatable :: ff_rs_state(:,:)
-    CMPLX, allocatable :: ff_rs_state_pml(:,:)
+    CMPLX, allocatable :: ff_rs_state(:,:), ff_rs_inhom_1(:,:), ff_rs_inhom_2(:,:)
+    CMPLX, allocatable :: ff_rs_state_pml(:,:), ff_rs_inhom_mean(:,:)
     logical            :: pml_check = .false.
 
     PUSH_SUB(mxll_propagation_step)
+
+    if (hm%ma_mx_coupling_apply) then
+      message(1) = "Maxwell-matter coupling not implemented yet"
+      call messages_fatal(1)
+    end if
 
     if (tr%plane_waves_in_box) then
       call plane_waves_in_box_calculation(hm%bc, time+dt, gr, st, hm, rs_state)
@@ -426,18 +443,43 @@ contains
     ! delay time
     delay = tr%delay_time
 
-    SAFE_ALLOCATE(ff_rs_state(1:gr%mesh%np_part,ff_dim))
+    SAFE_ALLOCATE(ff_rs_state(1:gr%mesh%np_part, ff_dim))
 
     if (pml_check) then
-      SAFE_ALLOCATE(ff_rs_state_pml(1:gr%mesh%np_part,ff_dim))
+      SAFE_ALLOCATE(ff_rs_state_pml(1:gr%mesh%np_part, ff_dim))
     end if
 
     ! first step of Maxwell inhomogeneity propagation with constant current density
     if ((hm%ma_mx_coupling_apply .or. hm%current_density_ext_flag) .and. &
         tr%tr_etrs_approx == OPTION__MAXWELLTDETRSAPPROX__CONST_STEPS) then
 
-      message(1) = "Maxwell-matter coupling or external current not implemented yet"
-      call messages_fatal(1)
+      SAFE_ALLOCATE(ff_rs_inhom_1(1:gr%mesh%np_part, ff_dim))
+      SAFE_ALLOCATE(ff_rs_inhom_2(1:gr%mesh%np_part, ff_dim))
+      SAFE_ALLOCATE(ff_rs_inhom_mean(1:gr%mesh%np_part, ff_dim))
+      ! inhomogeneity propagation
+      call transform_rs_densities(hm, rs_charge_density_t1, rs_current_density_t1, ff_rs_inhom_1, RS_TRANS_FORWARD)
+      call transform_rs_densities(hm, rs_charge_density_t2, rs_current_density_t2, ff_rs_inhom_2, RS_TRANS_FORWARD)
+      ff_rs_inhom_mean(:,:) = (ff_rs_inhom_1 + ff_rs_inhom_2)/M_TWO
+      ! add term J(time)
+      ff_rs_inhom_1(:,:) = ff_rs_inhom_mean
+      ff_rs_inhom_2(:,:) = ff_rs_inhom_mean
+      call hamiltonian_mxll_update(hm, time=time)
+      call exponential_mxll_apply(hm, namespace, gr, st, tr, inter_dt, ff_rs_inhom_2)
+      ! add term U(time+dt,time)J(time)
+      ff_rs_inhom_1(:,:) = ff_rs_inhom_1 + ff_rs_inhom_2
+      ff_rs_inhom_2(:,:) = ff_rs_inhom_mean
+      call hamiltonian_mxll_update(hm, time=time)
+      call exponential_mxll_apply(hm, namespace, gr, st, tr, inter_dt/M_TWO, ff_rs_inhom_2)
+      ! add term U(time+dt/2,time)J(time)
+      ff_rs_inhom_1(:,:) = ff_rs_inhom_1 + ff_rs_inhom_2
+      ff_rs_inhom_2(:,:) = ff_rs_inhom_mean
+      call hamiltonian_mxll_update(hm, time=time)
+      call exponential_mxll_apply(hm, namespace, gr, st, tr, -inter_dt/M_TWO, ff_rs_inhom_2)
+      ! add term U(time,time+dt/2)J(time)
+      ff_rs_inhom_1 = ff_rs_inhom_1 + ff_rs_inhom_2
+      SAFE_DEALLOCATE_A(ff_rs_inhom_2)
+      SAFE_DEALLOCATE_A(ff_rs_inhom_mean)
+
     end if
 
     do ii = 1, inter_steps
@@ -449,9 +491,63 @@ contains
       call transform_rs_state(hm, rs_state, ff_rs_state, RS_TRANS_FORWARD)
 
       if ((hm%ma_mx_coupling_apply) .or. hm%current_density_ext_flag) then
-        message(1) = "Maxwell-matter coupling or external current not implemented yet"
-        call messages_fatal(1)
 
+        if (tr%tr_etrs_approx == OPTION__MAXWELLTDETRSAPPROX__NO) then
+          SAFE_ALLOCATE(ff_rs_inhom_1(1:gr%mesh%np_part, ff_dim))
+          SAFE_ALLOCATE(ff_rs_inhom_2(1:gr%mesh%np_part, ff_dim))
+          SAFE_ALLOCATE(ff_rs_inhom_mean(1:gr%mesh%np_part, ff_dim))
+          ! RS state propagation
+          call hamiltonian_mxll_update(hm, time=inter_time)
+          if (pml_check) then
+            call pml_propagation_stage_1(hm, gr, st, tr, ff_rs_state, ff_rs_state_pml)
+            hm%cpml_hamiltonian = .true.
+          end if
+          call exponential_mxll_apply(hm, namespace, gr, st, tr, inter_dt, ff_rs_state)
+          if (pml_check) then
+            hm%cpml_hamiltonian = .false.
+            call pml_propagation_stage_2(hm, namespace, gr, st, tr, inter_time, inter_dt, delay, ff_rs_state_pml, ff_rs_state)
+          end if
+
+          ! inhomogeneity propagation
+          call transform_rs_densities(hm, rs_charge_density_t1, rs_current_density_t1,&
+              ff_rs_inhom_1, RS_TRANS_FORWARD)
+          call transform_rs_densities(hm, rs_charge_density_t2, rs_current_density_t2,&
+              ff_rs_inhom_2, RS_TRANS_FORWARD)
+          ff_rs_inhom_mean(:,:) = ff_rs_inhom_2 - ff_rs_inhom_1 ! not mean, used as auxiliary variable
+          ff_rs_inhom_2(:,:) = ff_rs_inhom_1 + ff_rs_inhom_mean * inter_dt * ii / TOFLOAT(inter_steps)
+          ff_rs_inhom_1(:,:) = ff_rs_inhom_1 + ff_rs_inhom_mean * inter_dt * (ii-1) / TOFLOAT(inter_steps)
+          call exponential_mxll_apply(hm, namespace, gr, st, tr, inter_dt, ff_rs_inhom_1)
+          ! add terms U(time+dt,time)J(time) and J(time+dt)
+          ff_rs_state(:,:) = ff_rs_state + M_FOURTH * inter_dt * (ff_rs_inhom_1 + ff_rs_inhom_2)
+
+          call transform_rs_densities(hm, rs_charge_density_t1, rs_current_density_t1,&
+              ff_rs_inhom_1, RS_TRANS_FORWARD)
+          call transform_rs_densities(hm, rs_charge_density_t2, rs_current_density_t2,&
+              ff_rs_inhom_2, RS_TRANS_FORWARD)
+          ff_rs_inhom_1(:,:) = M_HALF * (ff_rs_inhom_1 + ff_rs_inhom_2)
+          ff_rs_inhom_2(:,:) = ff_rs_inhom_1 ! changed from the old code
+          call exponential_mxll_apply(hm, namespace, gr, st, tr, inter_dt/M_TWO, ff_rs_inhom_1)
+          call exponential_mxll_apply(hm, namespace, gr, st, tr, -inter_dt/M_TWO, ff_rs_inhom_2)
+          ! add terms U(time+dt/2,time)J(time) and U(time,time+dt/2)J(time+dt)
+          ff_rs_state(:,:) = ff_rs_state + M_FOURTH * inter_dt * (ff_rs_inhom_1 + ff_rs_inhom_2)
+          SAFE_DEALLOCATE_A(ff_rs_inhom_1)
+          SAFE_DEALLOCATE_A(ff_rs_inhom_2)
+          SAFE_DEALLOCATE_A(ff_rs_inhom_mean)
+
+        else if (tr%tr_etrs_approx == OPTION__MAXWELLTDETRSAPPROX__CONST_STEPS) then
+          ! RS state propagation
+          call hamiltonian_mxll_update(hm, time=inter_time)
+          if (pml_check) then
+            call pml_propagation_stage_1(hm, gr, st, tr, ff_rs_state, ff_rs_state_pml)
+            hm%cpml_hamiltonian = .true.
+          end if
+          call exponential_mxll_apply(hm, namespace, gr, st, tr, inter_dt, ff_rs_state)
+          if (pml_check) then
+            hm%cpml_hamiltonian = .false.
+            call pml_propagation_stage_2(hm, namespace, gr, st, tr, inter_time, inter_dt, delay, ff_rs_state_pml, ff_rs_state)
+          end if
+          ff_rs_state(:,:) = ff_rs_state + M_FOURTH * inter_dt * ff_rs_inhom_1
+        end if
       else
         ! RS state propagation
         call hamiltonian_mxll_update(hm, time=inter_time)
@@ -498,6 +594,10 @@ contains
       end if
 
     end do
+
+    if (tr%tr_etrs_approx == OPTION__MAXWELLTDETRSAPPROX__CONST_STEPS) then
+      SAFE_DEALLOCATE_A(ff_rs_inhom_1)
+    end if
 
     SAFE_DEALLOCATE_A(ff_rs_state)
 
@@ -579,7 +679,6 @@ contains
     POP_SUB(set_medium_rs_state)
   end subroutine set_medium_rs_state
 
-
   ! ---------------------------------------------------------
   subroutine transform_rs_state(hm, rs_state, ff_rs_state, sign)
     type(hamiltonian_mxll_t), intent(in)    :: hm
@@ -607,6 +706,37 @@ contains
     end if
 
   end subroutine transform_rs_state
+
+  ! ---------------------------------------------------------
+  subroutine transform_rs_densities(hm, rs_charge_density, rs_current_density, ff_density, sign)
+    type(hamiltonian_mxll_t), intent(in)    :: hm
+    CMPLX,                    intent(inout) :: rs_charge_density(:)
+    CMPLX,                    intent(inout) :: rs_current_density(:,:)
+    CMPLX,                    intent(inout) :: ff_density(:,:)
+    integer,                  intent(in)    :: sign
+
+    ASSERT(sign == RS_TRANS_FORWARD .or. sign == RS_TRANS_BACKWARD)
+
+    if (hm%operator == FARADAY_AMPERE_MEDIUM) then
+      message(1) = "Maxwell solver in linear media not yet implemented"
+      call messages_fatal(1)
+    else if (hm%operator == FARADAY_AMPERE_GAUSS) then
+      if (sign == RS_TRANS_FORWARD) then
+        call transform_rs_densities_to_4x4_rs_densities_forward(rs_charge_density,&
+            rs_current_density, ff_density)
+      else
+        call transform_rs_densities_to_4x4_rs_densities_backward(ff_density, rs_charge_density,&
+            rs_current_density)
+      end if
+    else
+      if (sign == RS_TRANS_FORWARD) then
+        ff_density(:, 1:3) = rs_current_density(:, 1:3)
+      else
+        rs_current_density(:, 1:3) = ff_density(:, 1:3)
+      end if
+    end if
+
+  end subroutine transform_rs_densities
 
   !----------------------------------------------------------
   subroutine transform_rs_state_to_6x6_rs_state_forward(rs_state_3x3_plus, rs_state_3x3_minus, rs_state_6x6)
@@ -767,7 +897,7 @@ contains
     type(propagator_mxll_t),    intent(in)    :: tr_mxll
     type(hamiltonian_elec_t),   intent(in)    :: hm
     type(states_elec_t),        intent(in)    :: st
-!    type(propagator_t),         intent(in)    :: tr
+!    type(propagator_base_t),    intent(in)    :: tr
     type(poisson_t),            intent(in)    :: poisson_solver
     FLOAT,                      intent(in)    :: time
     CMPLX,                      intent(inout) :: field(:,:)
@@ -1010,7 +1140,7 @@ contains
     FLOAT, allocatable :: energy_density(:), energy_density_plane_waves(:), tmp(:), tmp_pw(:)
     FLOAT, allocatable :: e_energy_density(:), tmp_e(:)
     FLOAT, allocatable :: b_energy_density(:), tmp_b(:)
-    
+
     PUSH_SUB(energy_mxll_calc)
 
     SAFE_ALLOCATE(energy_density(1:gr%mesh%np))
@@ -1075,10 +1205,10 @@ contains
     type(states_mxll_t), intent(in)    :: st
     integer,             intent(in)    :: iter
     FLOAT,               intent(in)    :: dt
-    FLOAT,               intent(out)   :: energy_rate(:)
-    FLOAT,               intent(out)   :: delta_energy(:)
-    FLOAT,               intent(out)   :: energy_via_flux_calc(:)
-    FLOAT,  optional,    intent(out)   :: energy_via_flux_calc_dir(:,:)
+    FLOAT,               intent(out)   :: energy_rate
+    FLOAT,               intent(out)   :: delta_energy
+    FLOAT,               intent(out)   :: energy_via_flux_calc
+    FLOAT,  optional,    intent(out)   :: energy_via_flux_calc_dir(:)
 
     integer             :: idim, ip_surf, ix, ix_max, iy, iy_max, iz, iz_max, ii_max
     FLOAT               :: tmp_sum
@@ -1163,14 +1293,14 @@ contains
       end do
     end do
 
-    energy_rate(iter)          = - tmp_sum
-    delta_energy(iter)         = energy_rate(iter) * dt
+    energy_rate          = - tmp_sum
+    delta_energy         = energy_rate * dt
     if (iter > 1) then
-      energy_via_flux_calc(iter) = energy_via_flux_calc(iter-1) + delta_energy(iter)
+      energy_via_flux_calc = energy_via_flux_calc + delta_energy
     else if (iter == 1) then
-      energy_via_flux_calc(iter) = delta_energy(iter)
+      energy_via_flux_calc = delta_energy
     else
-      energy_via_flux_calc(iter) = M_ZERO
+      energy_via_flux_calc = M_ZERO
     end if
 
     SAFE_DEALLOCATE_A(poynting_vector)
@@ -1274,14 +1404,14 @@ contains
       end do
     end do
 
-    energy_rate(iter)          = - tmp_sum
-    delta_energy(iter)         = energy_rate(iter) * dt
+    energy_rate          = - tmp_sum
+    delta_energy         = energy_rate(iter) * dt
     if (iter > 1) then
-      energy_via_flux_calc(iter) = energy_via_flux_calc(iter-1) + delta_energy(iter)
+      energy_via_flux_calc = energy_via_flux_calc + delta_energy
     else if (iter == 1) then
-      energy_via_flux_calc(iter) = delta_energy(iter)
+      energy_via_flux_calc = delta_energy
     else
-      energy_via_flux_calc(iter) = M_ZERO
+      energy_via_flux_calc = M_ZERO
     end if
 
     SAFE_DEALLOCATE_A(poynting_vector)

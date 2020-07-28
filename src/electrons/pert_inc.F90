@@ -106,7 +106,7 @@ subroutine X(pert_apply)(this, namespace, gr, geo, hm, ik, f_in, f_out, set_bc)
 
   PUSH_SUB(X(pert_apply))
 
-  call profiling_in(prof, "X(PERT_APPLY)")
+  call profiling_in(prof, TOSTRING(X(PERT_APPLY)))
 
   ASSERT(this%dir /= -1)
 
@@ -225,7 +225,7 @@ contains
       if(this%use_nonlocalpps) then
         do iatom = 1, geo%natoms
           if(species_is_ps(geo%atom(iatom)%species)) then
-            call X(projector_commute_r)(hm%ep%proj(iatom), gr%mesh, hm%d%dim, this%dir, ik, f_in_copy, f_out)
+            call X(projector_commute_r)(hm%ep%proj(iatom), gr%mesh, gr%der%boundaries, hm%d%dim, this%dir, ik, f_in_copy, f_out)
           end if
         end do
       end if
@@ -285,7 +285,7 @@ contains
         vrnl = M_ZERO
         do idir = 1, gr%mesh%sb%dim
           if(this%dir == idir) cycle ! this direction is not used in the cross product
-          call X(projector_commute_r)(hm%ep%proj(iatom), gr%mesh, hm%d%dim, idir, ik, f_in_copy, vrnl(:, :, idir))
+          call X(projector_commute_r)(hm%ep%proj(iatom), gr%mesh, gr%der%boundaries, hm%d%dim, idir, ik, f_in_copy, vrnl(:, :, idir))
         end do
         
         xx(1:gr%mesh%sb%dim) = geo%atom(iatom)%x(1:gr%mesh%sb%dim)
@@ -521,7 +521,7 @@ contains
           do idir2 = 1, gr%sb%dim
             vrnl = M_ZERO
             !calculate dnl |f_in2> = -[x,vnl] |f_in2>
-            call X(projector_commute_r)(hm%ep%proj(iatom), gr%mesh, hm%d%dim, idir2, ik, f_in2(:, :, idir2), vrnl)
+            call X(projector_commute_r)(hm%ep%proj(iatom), gr%mesh, gr%der%boundaries, hm%d%dim, idir2, ik, f_in2(:, :, idir2), vrnl)
 
             ! -x vnl |f>
             do idim = 1, hm%d%dim
@@ -538,7 +538,7 @@ contains
             end do
 
             vrnl = M_ZERO
-            call X(projector_commute_r)(hm%ep%proj(iatom), gr%mesh, hm%d%dim, idir2, ik, xf, vrnl)
+            call X(projector_commute_r)(hm%ep%proj(iatom), gr%mesh, gr%der%boundaries, hm%d%dim, idir2, ik, xf, vrnl)
 
             do idim = 1, hm%d%dim
               do ip = 1, gr%mesh%np
@@ -632,7 +632,7 @@ contains
       if(this%use_nonlocalpps) then
         do iatom = 1, geo%natoms
           if(species_is_ps(geo%atom(iatom)%species)) then
-            call X(projector_commute_r)(hm%ep%proj(iatom), gr%mesh, hm%d%dim, this%dir, ik, f_in_copy, cpsi(:, :))
+            call X(projector_commute_r)(hm%ep%proj(iatom), gr%mesh, gr%der%boundaries, hm%d%dim, this%dir, ik, f_in_copy, cpsi(:, :))
           end if
         end do
 
@@ -651,7 +651,7 @@ contains
 
         do iatom = 1, geo%natoms
           if(species_is_ps(geo%atom(iatom)%species)) then
-            call X(projector_commute_r)(hm%ep%proj(iatom), gr%mesh, hm%d%dim, this%dir, ik, f_in_copy, cpsi(:, :))
+            call X(projector_commute_r)(hm%ep%proj(iatom), gr%mesh, gr%der%boundaries, hm%d%dim, this%dir, ik, f_in_copy, cpsi(:, :))
           end if
         end do
 

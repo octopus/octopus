@@ -43,7 +43,7 @@ module system_mxll_oct_m
   use parser_oct_m
   use poisson_oct_m
   use profiling_oct_m
-  use propagator_abst_oct_m
+  use propagator_oct_m
   use propagator_mxll_oct_m
   use quantity_oct_m
   use restart_oct_m
@@ -299,15 +299,6 @@ contains
       call messages_fatal()
     end if
 
-    SAFE_ALLOCATE(this%st%energy_rate(1:this%prop%max_td_steps))
-    SAFE_ALLOCATE(this%st%delta_energy(1:this%prop%max_td_steps))
-    SAFE_ALLOCATE(this%st%energy_via_flux_calc(1:this%prop%max_td_steps))
-    SAFE_ALLOCATE(this%st%trans_energy_rate(1:this%prop%max_td_steps))
-    SAFE_ALLOCATE(this%st%trans_delta_energy(1:this%prop%max_td_steps))
-    SAFE_ALLOCATE(this%st%trans_energy_via_flux_calc(1:this%prop%max_td_steps))
-    SAFE_ALLOCATE(this%st%plane_waves_energy_rate(1:this%prop%max_td_steps))
-    SAFE_ALLOCATE(this%st%plane_waves_delta_energy(1:this%prop%max_td_steps))
-    SAFE_ALLOCATE(this%st%plane_waves_energy_via_flux_calc(1:this%prop%max_td_steps))
     this%st%energy_rate = M_ZERO
     this%st%delta_energy = M_ZERO
     this%st%energy_via_flux_calc = M_ZERO
@@ -424,21 +415,22 @@ contains
       ! calculation of external RS density at time (time-dt)
       this%rs_current_density_ext_t1 = M_z0
       if (this%hm%current_density_ext_flag) then
-        call get_rs_density_ext(this%st, this%gr%mesh, this%clock%get_sim_time()-this%prop%dt, this%rs_current_density_ext_t1)
+        call get_rs_density_ext(this%st, this%gr%mesh, this%clock%get_sim_time(), this%rs_current_density_ext_t1)
       end if
 
       ! calculation of external RS density at time (time)
       this%rs_current_density_ext_t2 = M_z0
       if (this%hm%current_density_ext_flag) then
-        call get_rs_density_ext(this%st, this%gr%mesh, this%clock%get_sim_time(), this%rs_current_density_ext_t2)
+        call get_rs_density_ext(this%st, this%gr%mesh, this%clock%get_sim_time()+this%prop%dt, this%rs_current_density_ext_t2)
       end if
 
       this%rs_charge_density_ext_t1 = M_z0
       this%rs_charge_density_ext_t2 = M_z0
 
       ! Propagation dt with H_maxwell
-      call mxll_propagation_step(this%hm, this%namespace, this%gr, this%st, this%tr_mxll, this%st%rs_state, &
-                               this%clock%get_sim_time(), this%prop%dt)
+      call mxll_propagation_step(this%hm, this%namespace, this%gr, this%st, this%tr_mxll,&
+          this%st%rs_state, this%rs_current_density_ext_t1, this%rs_current_density_ext_t2,&
+          this%rs_charge_density_ext_t1, this%rs_charge_density_ext_t2, this%clock%get_sim_time(), this%prop%dt)
 
       this%st%rs_state_trans(:,:) = this%st%rs_state
 
@@ -580,8 +572,7 @@ contains
 
     PUSH_SUB(system_mxll_output_start)
 
-    call td_write_mxll_init(this%write_handler, this%namespace, this%gr, this%st, &
-                            this%hm, 0, this%prop%max_td_steps, this%prop%dt)
+    call td_write_mxll_init(this%write_handler, this%namespace, this%gr, this%st, this%hm, 0, this%prop%dt)
     call td_write_mxll_iter(this%write_handler, this%gr, this%st, this%hm, this%prop%dt, 0)
     call td_write_mxll_free_data(this%write_handler, this%namespace, this%gr, &
                                  this%st, this%hm, this%geo, this%outp, 0, this%prop%dt)
@@ -607,8 +598,7 @@ contains
 
     call td_write_mxll_iter(this%write_handler, this%gr, this%st, this%hm, this%prop%dt, iter)
 
-    if ((this%outp%output_interval > 0 .and. mod(iter, this%outp%output_interval) == 0) .or. &
-      iter == this%prop%max_td_steps .or. stopping) then
+    if ((this%outp%output_interval > 0 .and. mod(iter, this%outp%output_interval) == 0) .or. stopping) then
       call td_write_mxll_free_data(this%write_handler, this%namespace, this%gr, this%st, this%hm, this%geo, this%outp, &
         iter, this%prop%dt)
     end if

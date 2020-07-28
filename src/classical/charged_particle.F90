@@ -33,7 +33,6 @@ module charged_particle_oct_m
   use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
-  use propagator_abst_oct_m
   use quantity_oct_m
   use space_oct_m
   use system_oct_m
@@ -56,15 +55,11 @@ module charged_particle_oct_m
     procedure :: initial_conditions => charged_particle_initial_conditions
     procedure :: do_td_operation => charged_particle_do_td
     procedure :: iteration_info => charged_particle_iteration_info
-    procedure :: output_start => charged_particle_output_start
-    procedure :: output_write => charged_particle_output_write
-    procedure :: output_finish => charged_particle_output_finish
     procedure :: is_tolerance_reached => charged_particle_is_tolerance_reached
     procedure :: store_current_status => charged_particle_store_current_status
     procedure :: update_quantity => charged_particle_update_quantity
     procedure :: update_exposed_quantity => charged_particle_update_exposed_quantity
     procedure :: copy_quantities_to_interaction => charged_particle_copy_quantities_to_interaction
-    procedure :: update_interactions_finish => charged_particle_update_interactions_finish
   end type charged_particle_t
 
   interface charged_particle_t
@@ -198,40 +193,6 @@ contains
   end subroutine charged_particle_iteration_info
 
   ! ---------------------------------------------------------
-  subroutine charged_particle_output_start(this)
-    class(charged_particle_t), intent(inout) :: this
-
-    PUSH_SUB(charged_particle_output_start)
-
-    call this%classical_particle_t%output_start()
-
-    POP_SUB(charged_particle_output_start)
-  end subroutine charged_particle_output_start
-
-  ! ---------------------------------------------------------
-  subroutine charged_particle_output_finish(this)
-    class(charged_particle_t), intent(inout) :: this
-
-    PUSH_SUB(charged_particle_output_finish)
-
-    call this%classical_particle_t%output_finish()
-
-    POP_SUB(charged_particle_output_finish)
-  end subroutine charged_particle_output_finish
-
-  ! ---------------------------------------------------------
-  subroutine charged_particle_output_write(this, iter)
-    class(charged_particle_t), intent(inout) :: this
-    integer,                   intent(in)    :: iter
-
-    PUSH_SUB(charged_particle_output_write)
-
-    call this%classical_particle_t%output_write(iter)
-
-    POP_SUB(charged_particle_output_write)
-  end subroutine charged_particle_output_write
-
-  ! ---------------------------------------------------------
   subroutine charged_particle_update_quantity(this, iq, requested_time)
     class(charged_particle_t), intent(inout) :: this
     integer,                   intent(in)    :: iq
@@ -288,34 +249,6 @@ contains
 
     POP_SUB(charged_particle_copy_quantities_to_interaction)
   end subroutine charged_particle_copy_quantities_to_interaction
-
-  ! ---------------------------------------------------------
-  subroutine charged_particle_update_interactions_finish(this)
-    class(charged_particle_t), intent(inout) :: this
-
-    type(interaction_iterator_t) :: iter
-
-    PUSH_SUB(charged_particle_update_interactions_finish)
-
-    ! Call the method of the parent class to add the force contribution from the
-    ! interactions that it knows about. We need to do this before adding the
-    ! contributions from the charged particle interactions, as the parent will
-    ! start by setting the force to zero.
-    call this%classical_particle_t%update_interactions_finish()
-
-    ! Now we handle the forces coming the interactions the charge particle knows
-    call iter%start(this%interactions)
-    do while (iter%has_next())
-      select type (interaction => iter%get_next())
-      type is (coulomb_force_t)
-        this%tot_force(1:this%space%dim) = this%tot_force(1:this%space%dim) + interaction%force(1:this%space%dim)
-      type is (lorentz_force_t)
-        this%tot_force(1:this%space%dim) = this%tot_force(1:this%space%dim) + interaction%force(1:this%space%dim)
-      end select
-    end do
-
-    POP_SUB(charged_particle_update_interactions_finish)
-  end subroutine charged_particle_update_interactions_finish
 
 end module charged_particle_oct_m
 

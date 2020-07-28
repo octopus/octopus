@@ -34,7 +34,7 @@ subroutine X(xc_KLI_solve) (namespace, mesh, gr, hm, st, is, oep, first)
   R_TYPE, allocatable :: psi(:, :), bb(:,:)
   R_TYPE, allocatable :: phi1(:,:,:)
   
-  call profiling_in(C_PROFILING_XC_KLI, "X(XC_KLI)")
+  call profiling_in(C_PROFILING_XC_KLI, TOSTRING(X(XC_KLI)))
 
   if((st%parallel_in_states) .and. (oep%has_photons)) call messages_not_implemented("Photonic KLI not parallel in states")
 
@@ -47,11 +47,11 @@ subroutine X(xc_KLI_solve) (namespace, mesh, gr, hm, st, is, oep, first)
 
   if (oep%has_photons) then
 
-    if (oep%coctranslation_logical) then
+    if (oep%coc_translation) then
       SAFE_ALLOCATE(coctranslation(1:mesh%np))
-      coctranslation(1:mesh%np) = oep%pt%pol_dipole_array(1:mesh%np, 1)
-      oep%pt%pol_dipole_array(1:mesh%np,1) = oep%pt%pol_dipole_array(1:mesh%np, 1) - &
-        dmf_dotp(gr%mesh, SUM(st%rho(1:mesh%np, :), dim=2),oep%pt%pol_dipole_array(1:mesh%np, 1))/abs(st%qtot)
+      coctranslation(1:mesh%np) = oep%pt%pol_dipole(1:mesh%np, 1)
+      oep%pt%pol_dipole(1:mesh%np,1) = oep%pt%pol_dipole(1:mesh%np, 1) - &
+        dmf_dotp(gr%mesh, SUM(st%rho(1:mesh%np, :), dim=2),oep%pt%pol_dipole(1:mesh%np, 1))/abs(st%qtot)
     end if
 
     SAFE_ALLOCATE(phi1(1:gr%mesh%np,1:st%d%dim,1:st%nst))
@@ -105,8 +105,8 @@ subroutine X(xc_KLI_solve) (namespace, mesh, gr, hm, st, is, oep, first)
     end if
   end do
 
-  if (oep%has_photons .and. oep%coctranslation_logical) then
-    oep%pt%pol_dipole_array(1:mesh%np, 1) = oep%pt%pol_dipole_array(1:mesh%np,1 ) + &
+  if (oep%has_photons .and. oep%coc_translation) then
+    oep%pt%pol_dipole(1:mesh%np, 1) = oep%pt%pol_dipole(1:mesh%np,1 ) + &
         dmf_dotp(gr%mesh, sum(st%rho(1:mesh%np, :), dim=2), coctranslation(1:mesh%np))/abs(st%qtot)
     SAFE_DEALLOCATE_A(coctranslation)
   end if

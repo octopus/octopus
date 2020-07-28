@@ -32,6 +32,7 @@ module static_pol_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use multisystem_oct_m
   use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
@@ -46,6 +47,7 @@ module static_pol_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use utils_oct_m
+  use v_ks_oct_m
 
   implicit none
 
@@ -57,9 +59,27 @@ module static_pol_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine static_pol_run(sys, fromScratch)
+  subroutine static_pol_run(system, from_scratch)
+    class(*),        intent(inout) :: system
+    logical,         intent(in)    :: from_scratch
+
+    PUSH_SUB(static_pol_run)
+
+    select type (system)
+    class is (multisystem_t)
+      message(1) = "CalculationMode = static_pol not implemented for multi-system calculations"
+      call messages_fatal(1)
+    type is (electrons_t)
+      call static_pol_run_legacy(system, from_scratch)
+    end select
+
+    POP_SUB(static_pol_run)
+  end subroutine static_pol_run
+
+  ! ---------------------------------------------------------
+  subroutine static_pol_run_legacy(sys, fromScratch)
     type(electrons_t),    intent(inout) :: sys
-    logical,              intent(inout) :: fromScratch
+    logical,              intent(in)    :: fromScratch
 
     type(scf_t) :: scfv
     integer :: iunit, ios, i_start, ii, jj, is, isign, ierr, read_count, verbosity
@@ -76,7 +96,7 @@ contains
     character :: sign_char
     type(restart_t) :: gs_restart, restart_load, restart_dump
 
-    PUSH_SUB(static_pol_run)
+    PUSH_SUB(static_pol_run_legacy)
 
     if (sys%hm%pcm%run_pcm) then
       call messages_not_implemented("PCM for CalculationMode /= gs or td")
@@ -103,7 +123,7 @@ contains
     ! set up Hamiltonian
     message(1) = 'Info: Setting up Hamiltonian.'
     call messages_info(1)
-    call sys%h_setup(calc_eigenval = .false.) ! we read them from restart
+    call v_ks_h_setup(sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, calc_eigenval = .false.) ! we read them from restart
 
     ! Allocate the dipole
     SAFE_ALLOCATE(dipole(1:sys%gr%mesh%sb%dim, 1:sys%gr%mesh%sb%dim, 1:2))
@@ -264,7 +284,7 @@ contains
         if(.not. fromScratch) then
           call restart_open_dir(restart_load, trim(dir_name), ierr)
           if (ierr == 0) call states_elec_load(restart_load, sys%namespace, sys%st, sys%gr, ierr)
-          call sys%h_setup()
+          call v_ks_h_setup(sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm)
           if(ierr /= 0) fromScratch_local = .true.
           call restart_close_dir(restart_load)
         end if
@@ -272,9 +292,9 @@ contains
         if(fromScratch_local) then
           if(start_density_is_zero_field) then
             sys%st%rho(1:sys%gr%mesh%np, 1:sys%st%d%nspin) = gs_rho(1:sys%gr%mesh%np, 1:sys%st%d%nspin)
-            call sys%h_setup()
+            call v_ks_h_setup(sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm)
           else
-            call lcao_run(sys, lmm_r = scfv%lmm_r)
+            call lcao_run(sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, lmm_r = scfv%lmm_r)
           end if
         end if
 
@@ -345,7 +365,7 @@ contains
       if(.not. fromScratch) then
         call restart_open_dir(restart_load, "field_yz+", ierr)
         if (ierr == 0) call states_elec_load(restart_load, sys%namespace, sys%st, sys%gr, ierr)
-        call sys%h_setup()
+        call v_ks_h_setup(sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm)
         if(ierr /= 0) fromScratch_local = .true.
         call restart_close_dir(restart_load)
       end if
@@ -353,9 +373,9 @@ contains
       if(fromScratch_local) then
         if(start_density_is_zero_field) then
           sys%st%rho(1:sys%gr%mesh%np, 1:sys%st%d%nspin) = gs_rho(1:sys%gr%mesh%np, 1:sys%st%d%nspin)
-          call sys%h_setup()
+          call v_ks_h_setup(sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm)
         else
-          call lcao_run(sys, lmm_r = scfv%lmm_r)
+          call lcao_run(sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, lmm_r = scfv%lmm_r)
         end if
       end if
 
@@ -411,13 +431,13 @@ contains
     SAFE_DEALLOCATE_A(tmp_rho)
     SAFE_DEALLOCATE_A(dipole)
     call end_()
-    POP_SUB(static_pol_run)
+    POP_SUB(static_pol_run_legacy)
 
   contains
 
     ! ---------------------------------------------------------
     subroutine init_()
-      PUSH_SUB(static_pol_run.init_)
+      PUSH_SUB(static_pol_run_legacy.init_)
 
       call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
 
@@ -491,7 +511,7 @@ contains
         verbosity = VERB_COMPACT
       end if
 
-      POP_SUB(static_pol_run.init_)
+      POP_SUB(static_pol_run_legacy.init_)
     end subroutine init_
 
     ! ---------------------------------------------------------
@@ -731,7 +751,7 @@ contains
       POP_SUB(output_end_)
     end subroutine output_end_
 
-  end subroutine static_pol_run
+  end subroutine static_pol_run_legacy
 
 end module static_pol_oct_m
 

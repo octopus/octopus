@@ -41,6 +41,7 @@ module casida_oct_m
   use messages_oct_m
   use mpi_oct_m
   use multicomm_oct_m
+  use multisystem_oct_m
   use namespace_oct_m
   use parser_oct_m
   use pcm_oct_m
@@ -172,9 +173,27 @@ contains
   end subroutine casida_run_init
 
   ! ---------------------------------------------------------
-  subroutine casida_run(sys, fromScratch)
+  subroutine casida_run(system, from_scratch)
+    class(*),        intent(inout) :: system
+    logical,         intent(in)    :: from_scratch
+
+    PUSH_SUB(casida_run)
+
+    select type (system)
+    class is (multisystem_t)
+      message(1) = "CalculationMode = casida not implemented for multi-system calculations"
+      call messages_fatal(1)
+    type is (electrons_t)
+      call casida_run_legacy(system, from_scratch)
+    end select
+
+    POP_SUB(casida_run)
+  end subroutine casida_run
+
+  ! ---------------------------------------------------------
+  subroutine casida_run_legacy(sys, fromScratch)
     type(electrons_t), intent(inout) :: sys
-    logical,           intent(inout) :: fromScratch
+    logical,           intent(in)    :: fromScratch
 
     type(casida_t) :: cas
     type(block_t) :: blk
@@ -184,7 +203,7 @@ contains
     logical :: is_frac_occ
     type(restart_t) :: gs_restart
 
-    PUSH_SUB(casida_run)
+    PUSH_SUB(casida_run_legacy)
     call profiling_in(prof, 'CASIDA')
 
     if (sys%hm%pcm%run_pcm) then
@@ -252,7 +271,7 @@ contains
     ! setup Hamiltonian, without recalculating eigenvalues (use the ones from the restart information)
     message(1) = 'Info: Setting up Hamiltonian.'
     call messages_info(1)
-    call sys%h_setup(calc_eigenval=.false.)
+    call v_ks_h_setup(sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, calc_eigenval=.false.)
 
     !%Variable CasidaTheoryLevel
     !%Type flag
@@ -521,8 +540,8 @@ contains
     call casida_type_end(cas)
 
     call profiling_out(prof)
-    POP_SUB(casida_run)
-  end subroutine casida_run
+    POP_SUB(casida_run_legacy)
+  end subroutine casida_run_legacy
 
   ! ---------------------------------------------------------
   !> allocates stuff, and constructs the arrays pair_i and pair_j

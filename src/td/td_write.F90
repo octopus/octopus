@@ -177,7 +177,7 @@ contains
   subroutine td_write_init(writ, namespace, outp, gr, st, hm, geo, ks, ions_move, with_gauge_field, kick, iter, max_iter, dt, mc)
     type(td_write_t), target, intent(out)   :: writ
     type(namespace_t),        intent(in)    :: namespace
-    type(output_t),           intent(out)   :: outp
+    type(output_t),           intent(inout) :: outp
     type(grid_t),             intent(in)    :: gr
     type(states_elec_t),      intent(inout) :: st
     type(hamiltonian_elec_t), intent(inout) :: hm
@@ -3214,14 +3214,13 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_mxll_init(writ, namespace, gr, st, hm, iter, max_iter, dt)
+  subroutine td_write_mxll_init(writ, namespace, gr, st, hm, iter, dt)
     type(td_write_t),         intent(out)   :: writ
     type(namespace_t),        intent(in)    :: namespace
     type(grid_t),             intent(inout) :: gr
     type(states_mxll_t),      intent(inout) :: st
     type(hamiltonian_mxll_t), intent(inout) :: hm
     integer,                  intent(in)    :: iter
-    integer,                  intent(in)    :: max_iter
     FLOAT,                    intent(in)    :: dt
 
     integer :: default, flags, iout, first, idim

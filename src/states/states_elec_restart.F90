@@ -39,6 +39,7 @@ module states_elec_restart_oct_m
   use simul_box_oct_m
   use smear_oct_m
   use states_abst_oct_m
+  use states_elec_calc_oct_m
   use states_elec_oct_m
   use states_elec_dim_oct_m
   use string_oct_m
@@ -59,7 +60,8 @@ module states_elec_restart_oct_m
     states_elec_load_spin,               &
     states_elec_dump_frozen,             &
     states_elec_load_frozen,             &
-    states_elec_read_user_def_orbitals
+    states_elec_read_user_def_orbitals,  &
+    states_elec_transform
 
 contains
 
@@ -1401,7 +1403,112 @@ contains
 
     call profiling_out(prof_read)
     POP_SUB(states_elec_load_spin)
- end subroutine states_elec_load_spin
+  end subroutine states_elec_load_spin
+
+  ! ---------------------------------------------------------
+  subroutine states_elec_transform(st, namespace, restart, gr, prefix)
+    type(states_elec_t),        intent(inout) :: st
+    type(namespace_t),          intent(in)    :: namespace
+    type(restart_t),            intent(inout) :: restart
+    type(grid_t),               intent(in)    :: gr
+    character(len=*), optional, intent(in)    :: prefix
+
+    type(states_elec_t) :: stin
+    type(block_t) :: blk
+    CMPLX, allocatable :: rotation_matrix(:,:), psi(:, :)
+    integer :: ist, jst, ncols, iqn
+    character(len=256) :: block_name
+
+    PUSH_SUB(states_elec_transform)
+
+    block_name = trim(optional_default(prefix, "")) // "TransformStates"
+
+    !%Variable TransformStates
+    !%Type block
+    !%Default no
+    !%Section States
+    !%Description
+    !% Before starting the <tt>td</tt> calculation, the initial states (that are
+    !% read from the <tt>restart/gs</tt> directory, which should have been
+    !% generated in a previous ground-state calculation) can be "transformed"
+    !% among themselves. The block <tt>TransformStates</tt> gives the transformation matrix
+    !% to be used. The number of rows and columns of the matrix should equal the number
+    !% of the states present in the time-dependent calculation (the independent
+    !% spin and <i>k</i>-point subspaces are all transformed equally); the number of
+    !% columns should be equal to the number of states present in the
+    !% <tt>restart/gs</tt> directory. This number may be different: for example,
+    !% one could have run previously in <tt>unocc</tt> mode in order to obtain unoccupied
+    !% Kohn-Sham states, and therefore <tt>restart/gs</tt> will contain more states.
+    !% These states can be used in the transformation.
+    !%
+    !% Note that the code will not check the orthonormality of the new states!
+    !%
+    !% Each line provides the coefficients of the new states, in terms of
+    !% the old ones. The coefficients are complex, but the imaginary part will be
+    !% ignored for real wavefunctions.
+    !% Note: This variable cannot be used when parallel in states.
+    !%End
+    if(parse_is_defined(namespace, trim(block_name))) then
+      if(parse_block(namespace, trim(block_name), blk) == 0) then
+        if(st%parallel_in_states) &
+          call messages_not_implemented(trim(block_name) // " parallel in states", namespace=namespace)
+        if(parse_block_n(blk) /= st%nst) then
+          message(1) = "Number of rows in block " // trim(block_name) // " must equal number of states in this calculation."
+          call messages_fatal(1, namespace=namespace)
+        end if
+        call states_elec_copy(stin, st, exclude_wfns = .true.)
+        call states_elec_look_and_load(restart, namespace, stin, gr)
+
+        ! FIXME: rotation matrix should be R_TYPE
+        SAFE_ALLOCATE(rotation_matrix(1:stin%nst, 1:stin%nst))
+        SAFE_ALLOCATE(psi(1:gr%mesh%np, 1:st%d%dim))
+
+        rotation_matrix = M_z0
+        do ist = 1, stin%nst
+          rotation_matrix(ist, ist) = CNST(1.0)
+        end do
+
+        do ist = 1, st%nst
+          ncols = parse_block_cols(blk, ist-1)
+          if(ncols /= stin%nst) then
+            write(message(1),'(a,i6,a,i6,3a,i6,a)') "Number of columns (", ncols, ") in row ", ist, " of block ", &
+              trim(block_name), " must equal number of states (", stin%nst, ") read from gs restart."
+            call messages_fatal(1, namespace=namespace)
+          end if
+          do jst = 1, stin%nst
+            call parse_block_cmplx(blk, ist - 1, jst - 1, rotation_matrix(jst, ist))
+          end do
+        end do
+
+        call parse_block_end(blk)
+
+        do iqn = st%d%kpt%start, st%d%kpt%end
+          if(states_are_real(st)) then
+            call states_elec_rotate(stin, namespace, gr%mesh, TOFLOAT(rotation_matrix), iqn)
+          else
+            call states_elec_rotate(stin, namespace, gr%mesh, rotation_matrix, iqn)
+          end if
+
+          do ist = st%st_start, st%st_end
+            call states_elec_get_state(stin, gr%mesh, ist, iqn, psi)
+            call states_elec_set_state(st, gr%mesh, ist, iqn, psi)
+          end do
+
+        end do
+
+        SAFE_DEALLOCATE_A(rotation_matrix)
+        SAFE_DEALLOCATE_A(psi)
+
+        call states_elec_end(stin)
+
+      else
+        call messages_input_error(namespace, trim(block_name), '"' // trim(block_name) // '" has to be specified as block.')
+      end if
+
+    end if
+
+    POP_SUB(states_elec_transform)
+  end subroutine states_elec_transform
 
 end module states_elec_restart_oct_m
 

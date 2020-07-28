@@ -1,5 +1,6 @@
 CalculationMode = td
 ExperimentalFeatures = yes
+FromScratch = yes
 
 Dimensions = 3
 
@@ -36,9 +37,9 @@ TDSystemPropagator = verlet
 
 sampling = 24 # Time-steps per day
 days = 3
-Sun.TDTimeStep = 24*3600/sampling
-Sun.TDMaxSteps = days*sampling
-Earth.TDTimeStep = 24*3600/sampling/2
-Earth.TDMaxSteps = days*sampling*2
+seconds_per_day = 24*3600
+Sun.TDTimeStep = seconds_per_day/sampling
+Earth.TDTimeStep = seconds_per_day/sampling/2
+TDPropagationTime = days*seconds_per_day
 
 InteractionTiming = timing_retarded

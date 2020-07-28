@@ -34,6 +34,7 @@ module unocc_oct_m
   use mesh_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use multisystem_oct_m
   use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
@@ -58,9 +59,27 @@ module unocc_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine unocc_run(sys, fromscratch)
+  subroutine unocc_run(system, from_scratch)
+    class(*),        intent(inout) :: system
+    logical,         intent(in)    :: from_scratch
+
+    PUSH_SUB(unocc_run)
+
+    select type (system)
+    class is (multisystem_t)
+      message(1) = "CalculationMode = unocc not implemented for multi-system calculations"
+      call messages_fatal(1)
+    type is (electrons_t)
+      call unocc_run_legacy(system, from_scratch)
+    end select
+
+    POP_SUB(unocc_run)
+  end subroutine unocc_run
+
+  ! ---------------------------------------------------------
+  subroutine unocc_run_legacy(sys, fromscratch)
     type(electrons_t),    intent(inout) :: sys
-    logical,              intent(inout) :: fromscratch
+    logical,              intent(in)    :: fromscratch
 
     type(eigensolver_t) :: eigens
     integer :: iunit, ierr, iter, ierr_rho, ik
@@ -72,7 +91,7 @@ contains
     type(restart_t) :: restart_load_unocc, restart_load_gs, restart_dump
     logical :: write_density, bandstructure_mode, read_td_states
 
-    PUSH_SUB(unocc_run)
+    PUSH_SUB(unocc_run_legacy)
 
     if (sys%hm%pcm%run_pcm) then
       call messages_not_implemented("PCM for CalculationMode /= gs or td")
@@ -220,7 +239,7 @@ contains
         nst_calculated = minval(lowest_missing) - 1
       end if
       showstart = max(nst_calculated + 1, 1)
-      call lcao_run(sys, st_start = showstart)
+      call lcao_run(sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, st_start = showstart)
     else
       ! we successfully read all the states and are planning to use them, no need for LCAO
       call v_ks_calc(sys%ks, sys%namespace, sys%hm, sys%st, sys%geo, calc_eigenval = .false.)
@@ -347,7 +366,7 @@ contains
     call output_all(sys%outp, sys%namespace, STATIC_DIR, sys%gr, sys%geo, sys%st, sys%hm, sys%ks)
 
     call end_()
-    POP_SUB(unocc_run)
+    POP_SUB(unocc_run_legacy)
 
   contains
 
@@ -356,7 +375,7 @@ contains
       type(mesh_t),        intent(in)    :: mesh
       type(states_elec_t), intent(inout) :: st
 
-      PUSH_SUB(unocc_run.init_)
+      PUSH_SUB(unocc_run_legacy.init_)
 
       call messages_obsolete_variable(sys%namespace, "NumberUnoccStates", "ExtraStates")
 
@@ -371,17 +390,17 @@ contains
         call messages_warning(2)
       end if
       
-      POP_SUB(unocc_run.init_)
+      POP_SUB(unocc_run_legacy.init_)
     end subroutine init_
 
 
     ! ---------------------------------------------------------
     subroutine end_()
-      PUSH_SUB(unocc_run.end_)
+      PUSH_SUB(unocc_run_legacy.end_)
 
       call eigensolver_end(eigens, sys%gr)
 
-      POP_SUB(unocc_run.end_)
+      POP_SUB(unocc_run_legacy.end_)
     end subroutine end_
 
         ! ---------------------------------------------------------
@@ -390,7 +409,7 @@ contains
 
       character(len=50) :: str
 
-      PUSH_SUB(unocc_run.write_iter_)
+      PUSH_SUB(unocc_run_legacy.write_iter_)
 
       write(str, '(a,i5)') 'Unoccupied states iteration #', iter
       call messages_print_stress(stdout, trim(str))
@@ -404,11 +423,11 @@ contains
 
       call messages_print_stress(stdout)
 
-      POP_SUB(unocc_run.write_iter_)
+      POP_SUB(unocc_run_legacy.write_iter_)
     end subroutine write_iter_
 
 
-  end subroutine unocc_run
+  end subroutine unocc_run_legacy
 
 
 end module unocc_oct_m

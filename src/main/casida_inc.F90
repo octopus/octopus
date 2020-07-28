@@ -32,7 +32,7 @@ subroutine X(oscillator_strengths)(cas, mesh, st)
 
   PUSH_SUB(X(oscillator_strengths))
 
-  call profiling_in(prof, "X(CASIDA_OSCILLATOR_STRENGTHS)")
+  call profiling_in(prof, TOSTRING(X(CASIDA_OSCILLATOR_STRENGTHS)))
 
   if(cas%qcalc) then
     SAFE_ALLOCATE(zf(1:mesh%np))
@@ -164,7 +164,7 @@ function X(ks_matrix_elements) (cas, st, mesh, dv) result(xx)
   type(profile_t), save :: prof
 
   PUSH_SUB(X(ks_matrix_elements))
-  call profiling_in(prof, "X(CASIDA_KS)")
+  call profiling_in(prof, TOSTRING(X(CASIDA_KS)))
 
   SAFE_ALLOCATE(ff(1:mesh%np))
   SAFE_ALLOCATE(psii(1:mesh%np, 1:st%d%dim))
@@ -312,7 +312,7 @@ subroutine X(casida_get_rho)(st, mesh, ii, ia, kk, rho)
   type(profile_t), save :: prof
 
   PUSH_SUB(X(casida_get_rho))
-  call profiling_in(prof, "X(CASIDA_GET_RHO)")
+  call profiling_in(prof, TOSTRING(X(CASIDA_GET_RHO)))
 
   ! For performance reasons we don`t use states_elec_get_states, but we access the states directly
 
@@ -571,7 +571,7 @@ contains
     type(profile_t), save :: prof
 
     PUSH_SUB(X(casida_get_matrix).X(K_term))
-    call profiling_in(prof, "X(CASIDA_K)")
+    call profiling_in(prof, TOSTRING(X(CASIDA_K)))
     
     if(cas%herm_conj) then
       pi = qq%i
@@ -1063,7 +1063,7 @@ subroutine X(casida_solve)(cas, st)
     call messages_info(1)
     ! now we diagonalize the matrix
     ! for huge matrices, perhaps we should consider ScaLAPACK here...
-    call profiling_in(prof, "X(CASIDA_DIAGONALIZATION)")
+    call profiling_in(prof, TOSTRING(X(CASIDA_DIAGONALIZATION)))
     if(cas%calc_forces) cas%X(mat_save) = cas%X(mat) ! save before gets turned into eigenvectors
     call lalg_eigensolve(cas%n_pairs, cas%X(mat), cas%w)
     call profiling_out(prof)

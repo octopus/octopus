@@ -37,6 +37,7 @@ module phonons_lr_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use multisystem_oct_m
   use namespace_oct_m
   use parser_oct_m
   use pert_oct_m
@@ -55,6 +56,7 @@ module phonons_lr_oct_m
   use unit_system_oct_m
   use utils_oct_m
   use vibrations_oct_m
+  use v_ks_oct_m
 
   implicit none
 
@@ -69,7 +71,25 @@ module phonons_lr_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine phonons_lr_run(sys, fromscratch)
+  subroutine phonons_lr_run(system, from_scratch)
+    class(*),        intent(inout) :: system
+    logical,         intent(in)    :: from_scratch
+
+    PUSH_SUB(phonons_lr_run)
+
+    select type (system)
+    class is (multisystem_t)
+      message(1) = "CalculationMode = vib_modes not implemented for multi-system calculations"
+      call messages_fatal(1)
+    type is (electrons_t)
+      call phonons_lr_run_legacy(system, from_scratch)
+    end select
+
+    POP_SUB(phonons_lr_run)
+  end subroutine phonons_lr_run
+
+  ! ---------------------------------------------------------
+  subroutine phonons_lr_run_legacy(sys, fromscratch)
     type(electrons_t), target, intent(inout) :: sys
     logical,                   intent(in)    :: fromscratch
 
@@ -90,7 +110,7 @@ contains
     logical :: normal_mode_wfs, do_infrared, symmetrize
     type(restart_t) :: restart_load, restart_dump, kdotp_restart, gs_restart
 
-    PUSH_SUB(phonons_lr_run)
+    PUSH_SUB(phonons_lr_run_legacy)
 
     !some shortcuts
 
@@ -191,7 +211,7 @@ contains
     message(1) = 'Info: Setting up Hamiltonian for linear response.'
     call messages_info(1)
 
-    call sys%h_setup()
+    call v_ks_h_setup(sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm)
     call sternheimer_init(sh, sys, wfs_are_cplx = states_are_complex(st))
     call vibrations_init(vib, geo, gr%sb, "lr", sys%namespace)
 
@@ -364,7 +384,7 @@ contains
     call restart_end(restart_load)
     call restart_end(restart_dump)
 
-    POP_SUB(phonons_lr_run)
+    POP_SUB(phonons_lr_run_legacy)
 
   contains
 
@@ -375,7 +395,7 @@ contains
 
       FLOAT :: term, xi(1:MAX_DIM), xj(1:MAX_DIM), r2
 
-      PUSH_SUB(phonons_lr_run.build_ionic_dyn_matrix)
+      PUSH_SUB(phonons_lr_run_legacy.build_ionic_dyn_matrix)
 
       vib%dyn_matrix(:,:) = M_ZERO
 
@@ -405,7 +425,7 @@ contains
           end do
         end do
       end do
-      POP_SUB(phonons_lr_run.build_ionic_dyn_matrix)
+      POP_SUB(phonons_lr_run_legacy.build_ionic_dyn_matrix)
 
     end subroutine build_ionic_dyn_matrix
 
@@ -416,7 +436,7 @@ contains
       integer :: iunit_ir
       FLOAT :: lir(1:MAX_DIM+1)
 
-      PUSH_SUB(phonons_lr_run.calc_infrared)
+      PUSH_SUB(phonons_lr_run_legacy.calc_infrared)
 
       iunit_ir = io_open(VIB_MODES_DIR//'infrared', sys%namespace, action='write')
 
@@ -443,10 +463,10 @@ contains
       end do
 
       call io_close(iunit_ir)
-      POP_SUB(phonons_lr_run.calc_infrared)
+      POP_SUB(phonons_lr_run_legacy.calc_infrared)
     end subroutine calc_infrared
 
-  end subroutine phonons_lr_run
+  end subroutine phonons_lr_run_legacy
 
 
   ! ---------------------------------------------------------

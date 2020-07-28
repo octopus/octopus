@@ -51,7 +51,7 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
 
   profile_ = .true.
   if(present(profile)) profile_ = profile
-  if(profile_) call profiling_in(operate_batch_prof, "X(NL_OPERATOR_BATCH)")
+  if(profile_) call profiling_in(operate_batch_prof, TOSTRING(X(NL_OPERATOR_BATCH)))
 
   call select_op()
 
@@ -261,7 +261,7 @@ contains
     type(accel_kernel_t) :: kernel_operate
 
     PUSH_SUB(X(nl_operator_operate_batch).operate_opencl)
-    call profiling_in(prof, "X(CL_NL_OPERATOR)")
+    call profiling_in(prof, TOSTRING(X(CL_NL_OPERATOR)))
 
     ASSERT(accel_buffer_is_allocated(fi%ff_device))
     ASSERT(accel_buffer_is_allocated(fo%ff_device))

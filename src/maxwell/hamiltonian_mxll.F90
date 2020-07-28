@@ -72,10 +72,10 @@ module hamiltonian_mxll_oct_m
 
     FLOAT :: current_time
     logical :: apply_packed  !< This is initialized by the StatesPack variable.
-    
+
     logical :: time_zero
 
-    type(nl_operator_t), pointer   :: operators(:) 
+    type(nl_operator_t), pointer   :: operators(:)
 
     FLOAT, pointer                 :: vector_potential(:,:)
 
@@ -471,7 +471,7 @@ contains
 
     PUSH_SUB(zhamiltonian_mxll_apply)
 
-    if (hm%operator == FARADAY_AMPERE .and. all(hm%bc%bc_ab_type(:) /= MXLL_AB_CPML)) then
+    if (hm%operator == FARADAY_AMPERE .and. all(hm%bc%bc_ab_type(1:3) /= MXLL_AB_CPML)) then
       ! This part is already batchified
       call hamiltonian_mxll_apply_batch(hm, namespace, hm%der, psib, hpsib)
 

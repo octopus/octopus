@@ -3,6 +3,7 @@
 CalculationMode   = td
 RestartWrite = no
 ExperimentalFeatures = yes
+FromScratch = yes
 
 Dimensions = 3
 
@@ -79,7 +80,7 @@ MaxwellTDOutput       = maxwell_energy + maxwell_fields
 # ----- Time step variables ---------------------------------------------------
 
 TDTimeStep = 0.2
-TDMaxSteps = 10
+TDPropagationTime = 2
 
 
 # ----- Spatially constant magnetic field -------------------------------------

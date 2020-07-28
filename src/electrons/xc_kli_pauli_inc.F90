@@ -29,7 +29,7 @@ subroutine xc_kli_pauli_solve(mesh, namespace, st, oep)
   CMPLX, allocatable :: weighted_hf(:,:,:), rho_i(:,:,:,:), psii(:), psij(:)
   FLOAT :: reached_threshold(4)
 
-  call profiling_in(C_PROFILING_XC_KLI, "X(XC_KLI)")
+  call profiling_in(C_PROFILING_XC_KLI, TOSTRING(X(XC_KLI)))
   PUSH_SUB(xc_kli_pauli_solve)
 
   ! Density related quantities

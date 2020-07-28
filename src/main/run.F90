@@ -1,4 +1,5 @@
 !! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!! Copyright (C) 2020 M. Oliveira
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -30,7 +31,6 @@ module run_oct_m
   use invert_ks_oct_m
   use messages_oct_m
   use mpi_debug_oct_m
-  use memory_oct_m
   use mpi_oct_m
   use multicomm_oct_m
   use multisystem_oct_m
@@ -48,6 +48,7 @@ module run_oct_m
   use system_factory_oct_m
   use td_oct_m
   use test_oct_m
+  use time_dependent_oct_m
   use unit_system_oct_m
   use unocc_oct_m
   use varinfo_oct_m
@@ -59,27 +60,7 @@ module run_oct_m
   public ::                      &
     run
 
-  integer :: calc_mode_id
-
   integer, parameter :: LR = 1, FD = 2
-
-  integer, public, parameter ::   &
-    CM_NONE               =   0,  &
-    CM_GS                 =   1,  &
-    CM_UNOCC              =   2,  &
-    CM_TD                 =   3,  &
-    CM_GEOM_OPT           =   5,  &
-    CM_OPT_CONTROL        =   7,  &
-    CM_LR_POL             =   8,  &
-    CM_CASIDA             =   9,  &
-    CM_VDW                =  11,  &
-    CM_PHONONS_LR         =  12,  &
-    CM_ONE_SHOT           =  14,  &
-    CM_KDOTP              =  15,  &
-    CM_DUMMY              =  17,  &
-    CM_INVERTKDS          =  18,  &
-    CM_TEST               =  19,  &
-    CM_PULPO_A_FEIRA      =  99
 
 contains
 
@@ -121,21 +102,18 @@ contains
   end function get_resp_method
   
   ! ---------------------------------------------------------
-  subroutine run(namespace, cm)
+  subroutine run(namespace, calc_mode_id)
     type(namespace_t), intent(in) :: namespace
-    integer,           intent(in) :: cm
+    integer,           intent(in) :: calc_mode_id
 
-    class(multisystem_t), pointer :: systems
-    type(electrons_t), pointer :: sys
+    class(*), pointer :: systems
     type(system_factory_t) :: system_factory
     type(interactions_factory_t) :: interactions_factory
     type(profile_t), save :: calc_mode_prof
-    logical :: fromScratch
+    logical :: from_scratch, is_slave
     integer :: iunit_out
 
     PUSH_SUB(run)
-
-    calc_mode_id = cm
 
     call messages_print_stress(stdout, "Calculation Mode")
     call messages_print_var_option(stdout, "CalculationMode", calc_mode_id)
@@ -143,7 +121,7 @@ contains
 
     call calc_mode_init()
 
-    if(calc_mode_id == CM_PULPO_A_FEIRA) then
+    if (calc_mode_id == OPTION__CALCULATIONMODE__RECIPE) then
       call pulpo_print()
       POP_SUB(run)
       return
@@ -151,14 +129,14 @@ contains
 
     call restart_module_init(namespace)
 
+    call unit_system_init(namespace)
+
     call accel_init(mpi_world, namespace)
 
     ! initialize FFTs
     call fft_all_init(namespace)
 
-    call unit_system_init(namespace)
-
-    if(calc_mode_id == CM_TEST) then
+    if (calc_mode_id == OPTION__CALCULATIONMODE__TEST) then
       call test_run(namespace)
       call fft_all_end()
 #ifdef HAVE_MPI
@@ -168,12 +146,17 @@ contains
       return
     end if
 
+    ! Create systems
     if (parse_is_defined(namespace, "Systems")) then
       ! We are running in multi-system mode
-
-      ! Initialize systems
       systems => multisystem_t(namespace, system_factory)
+    else
+      ! Fall back to old behaviour
+      systems => electrons_t(namespace, generate_epot = calc_mode_id /= OPTION__CALCULATIONMODE__DUMMY)
+    end if
 
+    select type (systems)
+    class is (multisystem_t)
       ! Create and initialize interactions
       call interactions_factory%create_interactions(systems, systems%list)
       call systems%init_all_interactions()
@@ -186,110 +169,76 @@ contains
         write(iunit_out, '(a)') '}'
         call io_close(iunit_out)
       end if
+      is_slave = systems%process_is_slave()
 
-      ! Run mode
-      select case(calc_mode_id)
-      case (CM_TD)
-        call multisys_td_run(systems, fromScratch)
-      case default
-        call messages_not_implemented("CalculationMode /= td for multisystems")
+    type is (electrons_t)
+      is_slave = systems%process_is_slave()
+    end select
+
+    if (.not. is_slave) then
+      call messages_write('Info: Octopus initialization completed.', new_line = .true.)
+      call messages_write('Info: Starting calculation mode.')
+      call messages_info()
+
+      !%Variable FromScratch
+      !%Type logical
+      !%Default false
+      !%Section Execution
+      !%Description
+      !% When this variable is set to true, <tt>Octopus</tt> will perform a
+      !% calculation from the beginning, without looking for restart
+      !% information.
+      !%End
+      call parse_variable(namespace, 'FromScratch', .false., from_scratch)
+
+      call profiling_in(calc_mode_prof, "CALC_MODE")
+
+      select case (calc_mode_id)
+      case (OPTION__CALCULATIONMODE__GS)
+        call ground_state_run(systems, from_scratch)
+      case (OPTION__CALCULATIONMODE__UNOCC)
+        call unocc_run(systems, from_scratch)
+      case (OPTION__CALCULATIONMODE__TD)
+        call time_dependent_run(systems, from_scratch)
+      case (OPTION__CALCULATIONMODE__GO)
+        call geom_opt_run(systems, from_scratch)
+      case (OPTION__CALCULATIONMODE__OPT_CONTROL)
+        call opt_control_run(systems)
+      case (OPTION__CALCULATIONMODE__EM_RESP)
+        select case(get_resp_method(namespace))
+        case(FD)
+          call static_pol_run(systems, from_scratch)
+        case(LR)
+          call em_resp_run(systems, from_scratch)
+        end select
+      case (OPTION__CALCULATIONMODE__CASIDA)
+        call casida_run(systems, from_scratch)
+      case (OPTION__CALCULATIONMODE__VDW)
+        call vdW_run(systems, from_scratch)
+      case (OPTION__CALCULATIONMODE__VIB_MODES)
+        select case(get_resp_method(namespace))
+        case(FD)
+          call phonons_run(systems)
+        case(LR)
+          call phonons_lr_run(systems, from_scratch)
+        end select
+      case (OPTION__CALCULATIONMODE__ONE_SHOT)
+        message(1) = "CalculationMode = one_shot is obsolete. Please use gs with MaximumIter = 0."
+        call messages_fatal(1)
+      case (OPTION__CALCULATIONMODE__KDOTP)
+        call kdotp_lr_run(systems, from_scratch)
+      case (OPTION__CALCULATIONMODE__DUMMY)
+      case (OPTION__CALCULATIONMODE__INVERT_KS)
+        call invert_ks_run(systems)
+      case (OPTION__CALCULATIONMODE__RECIPE)
+        ASSERT(.false.) !this is handled before, if we get here, it is an error
       end select
 
-      ! Finalize systems
-      SAFE_DEALLOCATE_P(systems)
-
-    else
-      ! Fall back to old behaviour
-      sys => electrons_t(namespace)
-
-      call messages_print_stress(stdout, 'Approximate memory requirements')
-      call memory_run(sys)
-      call messages_print_stress(stdout)
-
-      if(calc_mode_id /= CM_DUMMY) then
-        message(1) = "Info: Generating external potential"
-        call messages_info(1)
-        call hamiltonian_elec_epot_generate(sys%hm, sys%namespace, sys%gr, sys%geo, sys%st)
-        message(1) = "      done."
-        call messages_info(1)
-      end if
-
-      if(sys%ks%theory_level /= INDEPENDENT_PARTICLES) then
-        call poisson_async_init(sys%hm%psolver, sys%mc)
-        ! slave nodes do not call the calculation routine
-        if(multicomm_is_slave(sys%mc))then
-          !for the moment we only have one type of slave
-          call poisson_slave_work(sys%hm%psolver)
-        end if
-      end if
-
-      if(.not. multicomm_is_slave(sys%mc)) then
-        call messages_write('Info: Octopus initialization completed.', new_line = .true.)
-        call messages_write('Info: Starting calculation mode.')
-        call messages_info()
-
-        !%Variable FromScratch
-        !%Type logical
-        !%Default false
-        !%Section Execution
-        !%Description
-        !% When this variable is set to true, <tt>Octopus</tt> will perform a
-        !% calculation from the beginning, without looking for restart
-        !% information.
-        !%End
-
-        call parse_variable(namespace, 'FromScratch', .false., fromScratch)
-
-        call profiling_in(calc_mode_prof, "CALC_MODE")
-
-        select case(calc_mode_id)
-        case(CM_GS)
-          call ground_state_run(sys, fromScratch)
-        case(CM_UNOCC)
-          call unocc_run(sys, fromScratch)
-        case(CM_TD)
-          call td_run(sys, fromScratch)
-        case(CM_LR_POL)
-          select case(get_resp_method(sys%namespace))
-          case(FD)
-            call static_pol_run(sys, fromScratch)
-          case(LR)
-            call em_resp_run(sys, fromScratch)
-          end select
-        case(CM_VDW)
-          call vdW_run(sys, fromScratch)
-        case(CM_GEOM_OPT)
-          call geom_opt_run(sys, fromScratch)
-        case(CM_PHONONS_LR)
-          select case(get_resp_method(sys%namespace))
-          case(FD)
-            call phonons_run(sys)
-          case(LR)
-            call phonons_lr_run(sys, fromscratch)
-          end select
-        case(CM_OPT_CONTROL)
-          call opt_control_run(sys)
-        case(CM_CASIDA)
-          call casida_run(sys, fromScratch)
-        case(CM_ONE_SHOT)
-          message(1) = "CalculationMode = one_shot is obsolete. Please use gs with MaximumIter = 0."
-          call messages_fatal(1)
-        case(CM_KDOTP)
-          call kdotp_lr_run(sys, fromScratch)
-        case(CM_DUMMY)
-        case(CM_INVERTKDS)
-          call invert_ks_run(sys)
-        case(CM_PULPO_A_FEIRA)
-          ASSERT(.false.) !this is handled before, if we get here, it is an error
-        end select
-
-        call profiling_out(calc_mode_prof)
-      end if
-
-      if(sys%ks%theory_level /= INDEPENDENT_PARTICLES) call poisson_async_end(sys%hm%psolver, sys%mc)
-
-      SAFE_DEALLOCATE_P(sys)
+      call profiling_out(calc_mode_prof)
     end if
+
+    ! Finalize systems
+    SAFE_DEALLOCATE_P(systems)
 
     call fft_all_end()
 
@@ -307,12 +256,12 @@ contains
 
       PUSH_SUB(calc_mode_init)
 
-      select case(calc_mode_id)
-      case(CM_GS, CM_GEOM_OPT, CM_UNOCC)
+      select case (calc_mode_id)
+      case (OPTION__CALCULATIONMODE__GS, OPTION__CALCULATIONMODE__GO, OPTION__CALCULATIONMODE__UNOCC)
         call ground_state_run_init()
-      case(CM_TD)
+      case (OPTION__CALCULATIONMODE__TD)
         call td_run_init()
-      case(CM_CASIDA)
+      case (OPTION__CALCULATIONMODE__CASIDA)
         call casida_run_init()
       end select
 

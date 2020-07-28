@@ -90,7 +90,7 @@ subroutine X(hamiltonian_elec_apply_batch) (hm, namespace, mesh, psib, hpsib, te
   integer :: terms_
   type(projection_t) :: projection
   
-  call profiling_in(prof_hamiltonian, "X(HAMILTONIAN)")
+  call profiling_in(prof_hamiltonian, TOSTRING(X(HAMILTONIAN)))
   PUSH_SUB(X(hamiltonian_elec_apply_batch))
 
   ASSERT(psib%status() == hpsib%status())
@@ -151,7 +151,7 @@ subroutine X(hamiltonian_elec_apply_batch) (hm, namespace, mesh, psib, hpsib, te
 
   if(bitand(TERM_KINETIC, terms_) /= 0) then
     ASSERT(associated(hm%hm_base%kinetic))
-    call profiling_in(prof_kinetic_start, "X(KINETIC_START)")
+    call profiling_in(prof_kinetic_start, TOSTRING(X(KINETIC_START)))
     call X(derivatives_batch_start)(hm%hm_base%kinetic, hm%der, epsib, hpsib, handle, set_bc = .false., factor = -M_HALF/hm%mass)
     call profiling_out(prof_kinetic_start)
   end if
@@ -163,7 +163,7 @@ subroutine X(hamiltonian_elec_apply_batch) (hm, namespace, mesh, psib, hpsib, te
   end if
 
   if(bitand(TERM_KINETIC, terms_) /= 0) then
-    call profiling_in(prof_kinetic_finish, "X(KINETIC_FINISH)")
+    call profiling_in(prof_kinetic_finish, TOSTRING(X(KINETIC_FINISH)))
     call X(derivatives_batch_finish)(handle)
     call profiling_out(prof_kinetic_finish)
   else
@@ -202,7 +202,7 @@ subroutine X(hamiltonian_elec_apply_batch) (hm, namespace, mesh, psib, hpsib, te
   
   if (bitand(TERM_OTHERS, terms_) /= 0) then
 
-    call profiling_in(prof_exx, "X(EXCHANGE_OPERATOR)")
+    call profiling_in(prof_exx, TOSTRING(X(EXCHANGE_OPERATOR)))
     select case(hm%theory_level)
 
     case(HARTREE)
@@ -473,15 +473,13 @@ subroutine X(h_mgga_terms) (hm, mesh, psib, hpsib)
   type(wfs_elec_t),         intent(inout) :: psib
   type(wfs_elec_t),         intent(inout) :: hpsib
 
-  integer :: ispin, ii, idir, ip
+  integer :: ispin, ii, idir
   R_TYPE, allocatable :: grad(:,:), diverg(:)
   type(wfs_elec_t) :: divb
   class(wfs_elec_t), allocatable :: gradb(:)
   
   PUSH_SUB(X(h_mgga_terms))
 
-  ASSERT(.not. psib%is_packed())
-  
   ispin = states_elec_dim_get_spin_index(hm%d, psib%ik)
 
   SAFE_ALLOCATE(grad(1:mesh%np_part, 1:mesh%sb%dim))
@@ -493,21 +491,14 @@ subroutine X(h_mgga_terms) (hm, mesh, psib, hpsib)
   
   do idir = 1, mesh%sb%dim
     call hpsib%copy_to(gradb(idir))
-    call X(derivatives_batch_perform)(hm%der%grad(idir), hm%der, psib, gradb(idir), ghost_update = .false., set_bc = .false.)
   end do
+  call X(derivatives_batch_grad)(hm%der, psib, gradb, ghost_update = .false., set_bc = .false.)
   
   do ii = 1, psib%nst_linear
 
     do idir = 1, mesh%sb%dim
       call batch_get_state(gradb(idir), ii, mesh%np, grad(:, idir))
     end do
-
-    ! Grad_xyw = Bt Grad_uvw, see Chelikowsky after Eq. 10
-    if (simul_box_is_periodic(mesh%sb) .and. mesh%sb%nonorthogonal ) then
-      do ip = 1, mesh%np
-        grad(ip, 1:hm%der%dim) = matmul(mesh%sb%klattice_primitive(1:hm%der%dim, 1:hm%der%dim),grad(ip, 1:hm%der%dim))
-      end do
-    end if
 
     do idir = 1, mesh%sb%dim
       grad(1:mesh%np, idir) = grad(1:mesh%np, idir)*hm%vtau(1:mesh%np, ispin)

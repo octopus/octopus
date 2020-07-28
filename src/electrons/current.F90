@@ -420,7 +420,8 @@ contains
             end do
             call zderivatives_batch_grad(der, epsib, commpsib, set_bc=.false.)
 
-            call zhamiltonian_elec_base_nlocal_position_commutator(hm%hm_base, der%mesh, st%d, epsib, commpsib)
+            call zhamiltonian_elec_base_nlocal_position_commutator(hm%hm_base, der%mesh, st%d, &
+                    der%boundaries, epsib, commpsib)
 
 
             call current_batch_accumulate(st, der, ik, ib, epsib, commpsib, current, current_kpt)
@@ -476,7 +477,8 @@ contains
               end if
 
               !A nonlocal contribution from the pseudopotential must be included
-              call zprojector_commute_r_allatoms_alldir(hm%ep%proj, geo, der%mesh, st%d%dim, ik, psi, gpsi)                 
+              call zprojector_commute_r_allatoms_alldir(hm%ep%proj, geo, der%mesh, st%d%dim, &
+                          der%boundaries, ik, psi, gpsi)                 
               !A nonlocal contribution from the scissor must be included
               if(hm%scissor%apply) then
                 call scissor_commute_r(hm%scissor, der%mesh, ik, psi, gpsi)
@@ -636,8 +638,10 @@ contains
       end do 
      
       !A nonlocal contribution from the pseudopotential must be included
-      call zprojector_commute_r_allatoms_alldir(hm%ep%proj, geo, der%mesh, hm%d%dim, ik, ppsi_i, gpsi_i)                 
-      call zprojector_commute_r_allatoms_alldir(hm%ep%proj, geo, der%mesh, hm%d%dim, ik, ppsi_j, gpsi_j)                 
+      call zprojector_commute_r_allatoms_alldir(hm%ep%proj, geo, der%mesh, hm%d%dim, &
+               der%boundaries, ik, ppsi_i, gpsi_i)                 
+      call zprojector_commute_r_allatoms_alldir(hm%ep%proj, geo, der%mesh, hm%d%dim, &
+               der%boundaries, ik, ppsi_j, gpsi_j)                 
       !A nonlocal contribution from the scissor must be included
       if(hm%scissor%apply) then
         call scissor_commute_r(hm%scissor, der%mesh, ik, ppsi_i, gpsi_i)
@@ -867,7 +871,7 @@ contains
           if(parse_block_cols(blk, il-1) > 6) then
             call parse_block_string(blk, il-1, 6, phase_expression)
             call tdf_read(st%external_current_td_phase(il), namespace, trim(phase_expression), ierr)
-            if (ierr /= 0) then            
+            if (ierr /= 0) then
               write(message(1),'(3A)') 'Error in the "', trim(tdf_expression), '" field defined in the TDExternalFields block:'
               write(message(2),'(3A)') 'Time-dependent phase function "', trim(phase_expression), '" not found.'
               call messages_warning(2, namespace=namespace)
@@ -877,7 +881,10 @@ contains
           end if
         end if
       end do
+      call parse_block_end(blk)
     end if
+
+
     POP_SUB(external_current_init)
   end subroutine external_current_init
 

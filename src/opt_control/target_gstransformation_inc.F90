@@ -46,7 +46,7 @@
     !% 
     !% The syntax is the same as the <tt>TransformStates</tt> block.
     !%End
-    call transform_states(tg%st, namespace, restart, gr, prefix = "OCTTarget")
+    call states_elec_transform(tg%st, namespace, restart, gr, prefix = "OCTTarget")
 
     if(.not. parse_is_defined(namespace, 'OCTTargetTransformStates')) then
       message(1) = 'If "OCTTargetOperator = oct_tg_superposition", then you must'

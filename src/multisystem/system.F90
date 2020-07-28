@@ -31,7 +31,7 @@ module system_oct_m
   use linked_list_oct_m
   use parser_oct_m
   use profiling_oct_m
-  use propagator_abst_oct_m
+  use propagator_oct_m
   use propagator_beeman_oct_m
   use propagator_exp_mid_oct_m
   use propagator_verlet_oct_m
@@ -51,7 +51,7 @@ module system_oct_m
     private
     type(space_t), public :: space
 
-    class(propagator_abst_t), pointer, public :: prop => null()
+    class(propagator_t), pointer, public :: prop => null()
 
     integer :: accumulated_loop_ticks
 
@@ -75,6 +75,10 @@ module system_oct_m
     procedure :: has_reached_final_propagation_time => system_has_reached_final_propagation_time
     procedure :: propagation_step_finish => system_propagation_step_finish
     procedure :: propagation_step_is_done => system_propagation_step_is_done
+    procedure :: output_start => system_output_start
+    procedure :: output_write => system_output_write
+    procedure :: output_finish => system_output_finish
+    procedure :: process_is_slave => system_process_is_slave
     procedure(system_init_interaction),               deferred :: init_interaction
     procedure(system_initial_conditions),             deferred :: initial_conditions
     procedure(system_do_td_op),                       deferred :: do_td_operation
@@ -82,9 +86,6 @@ module system_oct_m
     procedure(system_is_tolerance_reached),           deferred :: is_tolerance_reached
     procedure(system_store_current_status),           deferred :: store_current_status
     procedure(system_update_quantity),                deferred :: update_quantity
-    procedure(system_output_start),                   deferred :: output_start
-    procedure(system_output_write),                   deferred :: output_write
-    procedure(system_output_finish),                  deferred :: output_finish
   end type system_t
 
   abstract interface
@@ -138,24 +139,6 @@ module system_oct_m
       class(clock_t),       intent(in)    :: requested_time
     end subroutine system_update_quantity
 
-    ! ---------------------------------------------------------
-    subroutine system_output_start(this)
-      import system_t
-      class(system_t), intent(inout) :: this
-    end subroutine system_output_start
-
-    ! ---------------------------------------------------------
-    subroutine system_output_write(this, iter)
-      import system_t
-      class(system_t), intent(inout) :: this
-      integer,         intent(in)    :: iter
-    end subroutine system_output_write
-
-    ! ---------------------------------------------------------
-    subroutine system_output_finish(this)
-      import system_t
-      class(system_t), intent(inout) :: this
-    end subroutine system_output_finish
   end interface
 
   !> These classes extends the list and list iterator to create a system list.
@@ -531,7 +514,7 @@ contains
     PUSH_SUB(system_update_interactions_start)
 
     ! By default nothing is done just before updating the interactions. Child
-    ! classes that wish to change this behavious should override this method.
+    ! classes that wish to change this behaviour should override this method.
 
     POP_SUB(system_update_interactions_start)
   end subroutine system_update_interactions_start
@@ -543,10 +526,47 @@ contains
     PUSH_SUB(system_update_interactions_finish)
 
     ! By default nothing is done just after updating the interactions. Child
-    ! classes that wish to change this behavious should override this method.
+    ! classes that wish to change this behaviour should override this method.
 
     POP_SUB(system_update_interactions_finish)
   end subroutine system_update_interactions_finish
+
+  ! ---------------------------------------------------------
+  subroutine system_output_start(this)
+    class(system_t), intent(inout) :: this
+
+    PUSH_SUB(system_output_start)
+
+    ! By default nothing is done to regarding outpout. Child classes that wish
+    ! to change this behaviour should override this method.
+
+    POP_SUB(system_output_start)
+  end subroutine system_output_start
+
+  ! ---------------------------------------------------------
+  subroutine system_output_write(this, iter)
+    class(system_t), intent(inout) :: this
+    integer,         intent(in)    :: iter
+
+    PUSH_SUB(system_output_write)
+
+    ! By default nothing is done to regarding outpout. Child classes that wish
+    ! to change this behaviour should override this method.
+
+    POP_SUB(system_output_write)
+  end subroutine system_output_write
+
+  ! ---------------------------------------------------------
+  subroutine system_output_finish(this)
+    class(system_t), intent(inout) :: this
+
+    PUSH_SUB(system_output_finish)
+
+    ! By default nothing is done to regarding outpout. Child classes that wish
+    ! to change this behaviour should override this method.
+
+    POP_SUB(system_output_finish)
+  end subroutine system_output_finish
 
   ! ---------------------------------------------------------
   subroutine system_init_propagator(this, smallest_algo_dt)
@@ -668,13 +688,13 @@ contains
   end subroutine system_propagation_finish
 
   ! ---------------------------------------------------------
-  logical function system_has_reached_final_propagation_time(this)
+  logical function system_has_reached_final_propagation_time(this, final_time)
     class(system_t),      intent(inout) :: this
+    FLOAT,                intent(in)    :: final_time
 
     PUSH_SUB(system_has_reached_final_propagation_time)
 
-    ! Fixme: should be changed to final propagation time
-    system_has_reached_final_propagation_time = (this%clock%get_sim_time() >= this%prop%max_td_steps*this%prop%dt)
+    system_has_reached_final_propagation_time = (this%clock%get_sim_time() >= final_time)
 
     POP_SUB(system_has_reached_final_propagation_time)
   end function system_has_reached_final_propagation_time
@@ -706,6 +726,18 @@ contains
 
     POP_SUB(system_propagation_step_is_done)
   end function system_propagation_step_is_done
+
+  ! ---------------------------------------------------------
+  logical function system_process_is_slave(this)
+    class(system_t), intent(in) :: this
+
+    PUSH_SUB(system_process_is_slave)
+
+    ! By default an MPI process is not a slave
+    system_process_is_slave = .false.
+
+    PUSH_SUB(system_process_is_slave)
+  end function system_process_is_slave
 
   ! ---------------------------------------------------------
   subroutine system_end(this)

@@ -157,7 +157,7 @@ subroutine X(restart_read_mesh_function)(restart, filename, mesh, ff, ierr)
 
   ASSERT(associated(read_ff))
 
-  call profiling_in(prof_io, "X(RESTART_READ_IO)")
+  call profiling_in(prof_io, TOSTRING(X(RESTART_READ_IO)))
 
 #ifdef HAVE_MPI2
   if(mesh%parallel_in_domains) then
@@ -176,7 +176,7 @@ subroutine X(restart_read_mesh_function)(restart, filename, mesh, ff, ierr)
   call profiling_out(prof_io)
 
   if(mesh%parallel_in_domains) then
-    call profiling_in(prof_comm, "X(RESTART_READ_COMM)")
+    call profiling_in(prof_comm, TOSTRING(X(RESTART_READ_COMM)))
     ! this is the global index of the points we read
 
     ff(1:mesh%np) = read_ff(1:mesh%np)

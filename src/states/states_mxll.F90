@@ -104,17 +104,17 @@ module states_mxll_oct_m
     integer, pointer             :: rs_state_fft_map(:,:,:)
     integer, pointer             :: rs_state_fft_map_inv(:,:)
 
-    FLOAT, allocatable            :: energy_rate(:)
-    FLOAT, allocatable            :: delta_energy(:)
-    FLOAT, allocatable            :: energy_via_flux_calc(:)
+    FLOAT                        :: energy_rate
+    FLOAT                        :: delta_energy
+    FLOAT                        :: energy_via_flux_calc
 
-    FLOAT, allocatable            :: trans_energy_rate(:)
-    FLOAT, allocatable            :: trans_delta_energy(:)
-    FLOAT, allocatable            :: trans_energy_via_flux_calc(:)
+    FLOAT                        :: trans_energy_rate
+    FLOAT                        :: trans_delta_energy
+    FLOAT                        :: trans_energy_via_flux_calc
 
-    FLOAT, allocatable            :: plane_waves_energy_rate(:)
-    FLOAT, allocatable            :: plane_waves_delta_energy(:)
-    FLOAT, allocatable            :: plane_waves_energy_via_flux_calc(:)
+    FLOAT                        :: plane_waves_energy_rate
+    FLOAT                        :: plane_waves_delta_energy
+    FLOAT                        :: plane_waves_energy_via_flux_calc
 
     FLOAT                        :: poynting_vector_box_surface(1:2,1:MAX_DIM,1:MAX_DIM) = M_ZERO
     FLOAT                        :: poynting_vector_box_surface_plane_waves(1:2,1:MAX_DIM,1:MAX_DIM) = M_ZERO
@@ -165,13 +165,13 @@ module states_mxll_oct_m
 
     ! external current variables
     integer                      :: external_current_number
-    integer,             pointer :: external_current_modus(:)
-    character(len=1024), pointer :: external_current_string(:,:)
-    FLOAT,               pointer :: external_current_amplitude(:,:,:)
-    type(tdf_t),         pointer :: external_current_td_function(:)
-    type(tdf_t),         pointer :: external_current_td_phase(:)
-    FLOAT,               pointer :: external_current_omega(:)
-    FLOAT,               pointer :: external_current_phase(:)
+    integer,             allocatable :: external_current_modus(:)
+    character(len=1024), allocatable :: external_current_string(:,:)
+    FLOAT,               allocatable :: external_current_amplitude(:,:,:)
+    type(tdf_t),         allocatable :: external_current_td_function(:)
+    type(tdf_t),         allocatable :: external_current_td_phase(:)
+    FLOAT,               allocatable :: external_current_omega(:)
+    FLOAT,               allocatable :: external_current_phase(:)
 
     !> used for the user-defined wavefunctions (they are stored as formula strings)
     character(len=1024), allocatable :: user_def_states(:,:,:)
@@ -378,16 +378,6 @@ contains
     SAFE_DEALLOCATE_A(st%rs_state_const_amp)
     SAFE_DEALLOCATE_A(st%rs_state_plane_waves)
 
-    SAFE_DEALLOCATE_A(st%energy_rate)
-    SAFE_DEALLOCATE_A(st%delta_energy)
-    SAFE_DEALLOCATE_A(st%energy_via_flux_calc)
-    SAFE_DEALLOCATE_A(st%trans_energy_rate)
-    SAFE_DEALLOCATE_A(st%trans_delta_energy)
-    SAFE_DEALLOCATE_A(st%trans_energy_via_flux_calc)
-    SAFE_DEALLOCATE_A(st%plane_waves_energy_rate)
-    SAFE_DEALLOCATE_A(st%plane_waves_delta_energy)
-    SAFE_DEALLOCATE_A(st%plane_waves_energy_via_flux_calc)
-
     SAFE_DEALLOCATE_P(st%surface_grid_center)
     SAFE_DEALLOCATE_P(st%surface_grid_points_number)
     SAFE_DEALLOCATE_P(st%surface_grid_points_map)
@@ -398,6 +388,12 @@ contains
 #ifdef HAVE_SCALAPACK
     call blacs_proc_grid_end(st%dom_st_proc_grid)
 #endif
+    SAFE_DEALLOCATE_A(st%external_current_modus)
+    SAFE_DEALLOCATE_A(st%external_current_string)
+    SAFE_DEALLOCATE_A(st%external_current_amplitude)
+    SAFE_DEALLOCATE_A(st%external_current_td_function)
+    SAFE_DEALLOCATE_A(st%external_current_omega)
+    SAFE_DEALLOCATE_A(st%external_current_td_phase)
 
     call distributed_end(st%dist)
     SAFE_DEALLOCATE_P(st%node)

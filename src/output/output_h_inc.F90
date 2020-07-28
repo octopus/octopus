@@ -77,8 +77,8 @@
         end if
         
         SAFE_ALLOCATE(potential(1:der%mesh%np))
-        do is = 1, min(hm%d%ispin, 2)
-          if(hm%d%ispin == 1) then
+        do is = 1, hm%d%nspin
+          if(hm%d%nspin == 1) then
             write(fname, '(a)') 'vxc'
           else
             write(fname, '(a,i1)') 'vxc-sp', is
@@ -88,7 +88,7 @@
           
           ! finally the full KS potential (without non-local PP contributions)
           potential = hm%ep%vpsl + hm%vhxc(:, is)
-          if(hm%d%ispin == 1) then
+          if(hm%d%nspin == 1) then
             write(fname, '(a)') 'vks'
           else
             write(fname, '(a,i1)') 'vks-sp', is
@@ -160,8 +160,8 @@
       SAFE_ALLOCATE(v0(1:der%mesh%np_part, 1))
       SAFE_ALLOCATE(nxc(1:der%mesh%np))
 
-      do is = 1, min(hm%d%ispin, 2)
-        if(hm%d%ispin == 1) then
+      do is = 1, hm%d%nspin
+        if(hm%d%nspin == 1) then
           write(fname, '(a)') 'nxc'
         else
           write(fname, '(a,i1)') 'nxc-sp', is

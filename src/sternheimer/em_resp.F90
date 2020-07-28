@@ -36,6 +36,7 @@ module em_resp_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use multisystem_oct_m
   use namespace_oct_m
   use parser_oct_m
   use pcm_oct_m
@@ -56,7 +57,8 @@ module em_resp_oct_m
   use unit_system_oct_m
   use utils_oct_m
   use v_ks_oct_m
-  
+  use v_ks_oct_m  
+
   implicit none
 
   private
@@ -117,9 +119,27 @@ module em_resp_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine em_resp_run(sys, fromScratch)
+  subroutine em_resp_run(system, from_scratch)
+    class(*),        intent(inout) :: system
+    logical,         intent(in)    :: from_scratch
+
+    PUSH_SUB(em_resp_run)
+
+    select type (system)
+    class is (multisystem_t)
+      message(1) = "CalculationMode = em_resp not implemented for multi-system calculations"
+      call messages_fatal(1)
+    type is (electrons_t)
+      call em_resp_run_legacy(system, from_scratch)
+    end select
+
+    POP_SUB(em_resp_run)
+  end subroutine em_resp_run
+
+  ! ---------------------------------------------------------
+  subroutine em_resp_run_legacy(sys, fromScratch)
     type(electrons_t), target, intent(inout) :: sys
-    logical,                   intent(inout) :: fromScratch
+    logical,                   intent(in)    :: fromScratch
 
     type(grid_t),   pointer :: gr
     type(em_resp_t)         :: em_vars
@@ -144,7 +164,7 @@ contains
     type(restart_t) :: gs_restart, restart_load, restart_dump, kdotp_restart
     integer, parameter :: PB = 1, PK2 = 2, PKB = 3, PKE = 4, PE = 5
 
-    PUSH_SUB(em_resp_run)
+    PUSH_SUB(em_resp_run_legacy)
 
     if (sys%hm%pcm%run_pcm) then
       call messages_not_implemented("PCM for CalculationMode /= gs or td")
@@ -201,7 +221,7 @@ contains
     ! setup Hamiltonian
     message(1) = 'Info: Setting up Hamiltonian for linear response'
     call messages_info(1)
-    call sys%h_setup()
+    call v_ks_h_setup(sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm)
 
     use_kdotp = simul_box_is_periodic(gr%sb) .and. .not. em_vars%force_no_kdotp
 
@@ -672,7 +692,7 @@ contains
     end do
     call states_elec_deallocate_wfns(sys%st)
 
-    POP_SUB(em_resp_run)
+    POP_SUB(em_resp_run_legacy)
 
   contains
 
@@ -684,7 +704,7 @@ contains
       FLOAT :: omega_ini, omega_fin, domega
       logical :: freq_sort  
 
-      PUSH_SUB(em_resp_run.parse_input)
+      PUSH_SUB(em_resp_run_legacy.parse_input)
 
       call messages_obsolete_variable(sys%namespace, 'PolFreqs               ', 'EMFreqs             ')
       call messages_obsolete_variable(sys%namespace, 'PolHyper               ', 'EMHyperpol          ')
@@ -938,7 +958,7 @@ contains
 
       call parse_variable(sys%namespace, 'EMWavefunctionsFromScratch', .false., em_vars%wfns_from_scratch)
 
-      POP_SUB(em_resp_run.parse_input)
+      POP_SUB(em_resp_run_legacy.parse_input)
 
     end subroutine parse_input
 
@@ -946,7 +966,7 @@ contains
     ! ---------------------------------------------------------
     subroutine info()
 
-      PUSH_SUB(em_resp_run.info)
+      PUSH_SUB(em_resp_run_legacy.info)
 
       call pert_info(em_vars%perturbation)
       if(pert_type(em_vars%perturbation) == PERTURBATION_ELECTRIC) then
@@ -974,7 +994,7 @@ contains
 
       call messages_print_stress(stdout)
 
-      POP_SUB(em_resp_run.info)
+      POP_SUB(em_resp_run_legacy.info)
 
     end subroutine info
 
@@ -987,7 +1007,7 @@ contains
 #include "complex.F90"
 #include "em_resp_inc.F90"
 
-  end subroutine em_resp_run
+  end subroutine em_resp_run_legacy
 
 
   ! ---------------------------------------------------------

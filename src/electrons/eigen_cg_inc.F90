@@ -222,7 +222,7 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
 
       ! PTA92, eq. 5.17
       ! Approximate inverse preconditioner
-      call  X(preconditioner_apply)(pre, namespace, gr, hm, g(:,:), g0(:,:))
+      call  X(preconditioner_apply)(pre, namespace, gr, hm, g(:,:), g0(:,:), ik)
 
       ! PTA92, eq. 5.18
       dot = X(mf_dotp) (gr%mesh, st%d%dim, psi, g0)

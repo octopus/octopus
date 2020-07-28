@@ -55,6 +55,9 @@ module parser_oct_m
     integer, pointer :: p
   end type block_t
 
+  ! The following characters should not be allowed in variable names.
+  character(len=27), parameter, public :: parser_varname_excluded_characters = '|!''"#$%&/\()=?{}+-*^.,;:<> '
+
   interface parse_init
     integer function oct_parse_init(file_out, mpiv_node)
       implicit none

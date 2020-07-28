@@ -1,4 +1,6 @@
 !! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
+!! Copyright (C) 2009 X. Andrade
+!! Copyright (C) 2020 M. Oliveira
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -40,10 +42,10 @@ module electrons_oct_m
   use profiling_oct_m
   use space_oct_m
   use simul_box_oct_m
-  use sort_oct_m
   use states_abst_oct_m
   use states_elec_oct_m
   use states_elec_dim_oct_m
+  use unit_system_oct_m
   use v_ks_oct_m
   use xc_oct_m
   use xc_oep_oct_m
@@ -66,7 +68,7 @@ module electrons_oct_m
     type(namespace_t)            :: namespace
     type(hamiltonian_elec_t)     :: hm
   contains
-    procedure :: h_setup => electrons_h_setup
+    procedure :: process_is_slave  => electrons_process_is_slave
     final :: electrons_finalize
   end type electrons_t
   
@@ -77,11 +79,13 @@ module electrons_oct_m
 contains
   
   !----------------------------------------------------------
-  function electrons_constructor(namespace) result(sys)
+  function electrons_constructor(namespace, generate_epot) result(sys)
     class(electrons_t), pointer    :: sys
     type(namespace_t),  intent(in) :: namespace
+    logical,  optional, intent(in) :: generate_epot
 
     type(profile_t), save :: prof
+    FLOAT :: mesh_global, mesh_local, wfns
 
     PUSH_SUB(electrons_constructor)
     call profiling_in(prof,"ELECTRONS_CONSTRUCTOR")
@@ -131,6 +135,57 @@ contains
       call messages_experimental('Parallel in domain calculations with PCM')
     end if
 
+    ! Print memory requirements
+    call messages_print_stress(stdout, 'Approximate memory requirements', namespace=sys%namespace)
+
+    mesh_global = mesh_global_memory(sys%gr%mesh)
+    mesh_local  = mesh_local_memory(sys%gr%mesh)
+
+    call messages_write('Mesh')
+    call messages_new_line()
+    call messages_write('  global  :')
+    call messages_write(mesh_global, units = unit_megabytes, fmt = '(f10.1)')
+    call messages_new_line()
+    call messages_write('  local   :')
+    call messages_write(mesh_local, units = unit_megabytes, fmt = '(f10.1)')
+    call messages_new_line()
+    call messages_write('  total   :')
+    call messages_write(mesh_global + mesh_local, units = unit_megabytes, fmt = '(f10.1)')
+    call messages_new_line()
+    call messages_info()
+
+    wfns = states_elec_wfns_memory(sys%st, sys%gr%mesh)
+    call messages_write('States')
+    call messages_new_line()
+    call messages_write('  real    :')
+    call messages_write(wfns, units = unit_megabytes, fmt = '(f10.1)')
+    call messages_write(' (par_kpoints + par_states + par_domains)')
+    call messages_new_line()
+    call messages_write('  complex :')
+    call messages_write(2.0_8*wfns, units = unit_megabytes, fmt = '(f10.1)')
+    call messages_write(' (par_kpoints + par_states + par_domains)')
+    call messages_new_line()
+    call messages_info()
+
+    call messages_print_stress(stdout)
+
+    if (optional_default(generate_epot, .false.)) then
+      message(1) = "Info: Generating external potential"
+      call messages_info(1)
+      call hamiltonian_elec_epot_generate(sys%hm, sys%namespace, sys%gr, sys%geo, sys%st)
+      message(1) = "      done."
+      call messages_info(1)
+    end if
+
+    if (sys%ks%theory_level /= INDEPENDENT_PARTICLES) then
+      call poisson_async_init(sys%hm%psolver, sys%mc)
+      ! slave nodes do not call the calculation routine
+      if (multicomm_is_slave(sys%mc))then
+        !for the moment we only have one type of slave
+        call poisson_slave_work(sys%hm%psolver)
+      end if
+    end if
+
     call profiling_out(prof)
     POP_SUB(electrons_constructor)
   contains
@@ -157,11 +212,26 @@ contains
 
   end function electrons_constructor
 
+  ! ---------------------------------------------------------
+  logical function electrons_process_is_slave(this) result(is_slave)
+    class(electrons_t), intent(in) :: this
+
+    PUSH_SUB(electrons_process_is_slave)
+
+    is_slave = multicomm_is_slave(this%mc)
+
+    POP_SUB(electrons_process_is_slave)
+  end function electrons_process_is_slave
+
   !----------------------------------------------------------
   subroutine electrons_finalize(sys)
     type(electrons_t), intent(inout) :: sys
 
     PUSH_SUB(electrons_finalize)
+
+    if (sys%ks%theory_level /= INDEPENDENT_PARTICLES) then
+      call poisson_async_end(sys%hm%psolver, sys%mc)
+    end if
 
     call hamiltonian_elec_end(sys%hm)
 
@@ -186,52 +256,6 @@ contains
 
     POP_SUB(electrons_finalize)
   end subroutine electrons_finalize
-
-  !----------------------------------------------------------
-  subroutine electrons_h_setup(this, calc_eigenval, calc_current)
-    class(electrons_t), intent(inout) :: this
-    logical,  optional, intent(in)    :: calc_eigenval !< default is true
-    logical,  optional, intent(in)    :: calc_current !< default is true
-
-    integer, allocatable :: ind(:)
-    integer :: ist, ik
-    FLOAT, allocatable :: copy_occ(:)
-    logical :: calc_eigenval_
-    logical :: calc_current_
-
-    PUSH_SUB(electrons_h_setup)
-
-    calc_eigenval_ = optional_default(calc_eigenval, .true.)
-    calc_current_ = optional_default(calc_current, .true.)
-    call states_elec_fermi(this%st, this%namespace, this%gr%mesh)
-    call density_calc(this%st, this%gr, this%st%rho)
-    call v_ks_calc(this%ks, this%namespace, this%hm, this%st, this%geo, calc_eigenval = calc_eigenval_, &
-      calc_current = calc_current_) ! get potentials
-
-    if(this%st%restart_reorder_occs .and. .not. this%st%fromScratch) then
-      message(1) = "Reordering occupations for restart."
-      call messages_info(1)
-
-      SAFE_ALLOCATE(ind(1:this%st%nst))
-      SAFE_ALLOCATE(copy_occ(1:this%st%nst))
-
-      do ik = 1, this%st%d%nik
-        call sort(this%st%eigenval(:, ik), ind)
-        copy_occ(1:this%st%nst) = this%st%occ(1:this%st%nst, ik)
-        do ist = 1, this%st%nst
-          this%st%occ(ist, ik) = copy_occ(ind(ist))
-        end do
-      end do
-
-      SAFE_DEALLOCATE_A(ind)
-      SAFE_DEALLOCATE_A(copy_occ)
-    end if
-
-    if(calc_eigenval_) call states_elec_fermi(this%st, this%namespace, this%gr%mesh) ! occupations
-    call energy_calc_total(this%namespace, this%hm, this%gr, this%st)
-
-    POP_SUB(electrons_h_setup)
-  end subroutine electrons_h_setup
 
 end module electrons_oct_m
 

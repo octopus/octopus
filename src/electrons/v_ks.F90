@@ -53,6 +53,7 @@ module v_ks_oct_m
   use pseudo_oct_m
   use pcm_oct_m
   use simul_box_oct_m
+  use sort_oct_m
   use species_oct_m
   use states_abst_oct_m
   use states_elec_oct_m
@@ -78,6 +79,7 @@ module v_ks_oct_m
     v_ks_init,          &
     v_ks_end,           &
     v_ks_write_info,    &
+    v_ks_h_setup,       &
     v_ks_calc,          &
     v_ks_calc_t,        &
     v_ks_calc_start,    &
@@ -339,6 +341,15 @@ contains
       call parse_variable(namespace, 'TheoryLevel', default, ks%theory_level)
       if(.not.varinfo_valid_option('TheoryLevel', ks%theory_level)) call messages_input_error(namespace, 'TheoryLevel')
      
+    end if
+
+    if (family_is_mgga_with_exc(ks%xc)) then
+      call messages_experimental('MGGA energy functionals')
+
+      if (accel_is_enabled() .and. (gr%mesh%parallel_in_domains .or. st%parallel_in_states .or. st%d%kpt%parallel)) then
+        !At the moment this combination produces wrong results
+        call messages_not_implemented("MGGA with energy functionals and CUDA+MPI")
+      end if
     end if
 
     call messages_obsolete_variable(namespace, 'NonInteractingElectrons', 'TheoryLevel')
@@ -663,6 +674,56 @@ contains
   end subroutine v_ks_write_info
   ! ---------------------------------------------------------
 
+
+  !----------------------------------------------------------
+  subroutine v_ks_h_setup(namespace, gr, geo, st, ks, hm, calc_eigenval, calc_current)
+    type(namespace_t),        intent(in)    :: namespace
+    type(grid_t),             intent(in)    :: gr
+    type(geometry_t),         intent(in)    :: geo
+    type(states_elec_t),      intent(inout) :: st
+    type(v_ks_t),             intent(inout) :: ks
+    type(hamiltonian_elec_t), intent(inout) :: hm
+    logical,        optional, intent(in)    :: calc_eigenval !< default is true
+    logical,        optional, intent(in)    :: calc_current !< default is true
+
+    integer, allocatable :: ind(:)
+    integer :: ist, ik
+    FLOAT, allocatable :: copy_occ(:)
+    logical :: calc_eigenval_
+    logical :: calc_current_
+
+    PUSH_SUB(v_ks_h_setup)
+
+    calc_eigenval_ = optional_default(calc_eigenval, .true.)
+    calc_current_ = optional_default(calc_current, .true.)
+    call states_elec_fermi(st, namespace, gr%mesh)
+    call density_calc(st, gr, st%rho)
+    call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval = calc_eigenval_, calc_current = calc_current_) ! get potentials
+
+    if (st%restart_reorder_occs .and. .not. st%fromScratch) then
+      message(1) = "Reordering occupations for restart."
+      call messages_info(1)
+
+      SAFE_ALLOCATE(ind(1:st%nst))
+      SAFE_ALLOCATE(copy_occ(1:st%nst))
+
+      do ik = 1, st%d%nik
+        call sort(st%eigenval(:, ik), ind)
+        copy_occ(1:st%nst) = st%occ(1:st%nst, ik)
+        do ist = 1, st%nst
+          st%occ(ist, ik) = copy_occ(ind(ist))
+        end do
+      end do
+
+      SAFE_DEALLOCATE_A(ind)
+      SAFE_DEALLOCATE_A(copy_occ)
+    end if
+
+    if (calc_eigenval_) call states_elec_fermi(st, namespace, gr%mesh) ! occupations
+    call energy_calc_total(namespace, hm, gr, st)
+
+    POP_SUB(v_ks_h_setup)
+  end subroutine v_ks_h_setup
 
   ! ---------------------------------------------------------
   subroutine v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval, time, calc_berry, calc_energy, calc_current)
@@ -997,15 +1058,18 @@ contains
             else
               call  zxc_slater_calc(namespace, hm%psolver, ks%gr%mesh, st, ks%calc%energy%exchange, vxc = ks%calc%vxc)
             end if
+          else
+
+            if (states_are_real(st)) then
+              call dxc_oep_calc(ks%oep, namespace, ks%xc, (ks%sic_type == SIC_PZ), ks%gr, &
+                hm, st, ks%calc%energy%exchange, ks%calc%energy%correlation, vxc = ks%calc%vxc)
+            else
+              call zxc_oep_calc(ks%oep, namespace, ks%xc, (ks%sic_type == SIC_PZ), ks%gr, &
+                hm, st, ks%calc%energy%exchange, ks%calc%energy%correlation, vxc = ks%calc%vxc)
+            end if
+
           end if
 
-          if (states_are_real(st)) then
-            call dxc_oep_calc(ks%oep, namespace, ks%xc, (ks%sic_type == SIC_PZ), ks%gr, &
-              hm, st, ks%calc%energy%exchange, ks%calc%energy%correlation, vxc = ks%calc%vxc)
-          else
-            call zxc_oep_calc(ks%oep, namespace, ks%xc, (ks%sic_type == SIC_PZ), ks%gr, &
-              hm, st, ks%calc%energy%exchange, ks%calc%energy%correlation, vxc = ks%calc%vxc)
-          end if
           if (ks%oep%has_photons) then
             ks%calc%energy%photon_exchange = ks%oep%pt%ex
           end if
@@ -1084,6 +1148,13 @@ contains
             factor*dmf_dotp(ks%gr%fine%mesh, st%rho(:, ispin), ks%calc%vxc(:, ispin), reduce = .false.)
         end do
         if(ks%gr%der%mesh%parallel_in_domains) call comm_allreduce(ks%gr%der%mesh%mpi_grp%comm,  ks%calc%energy%intnvxc)
+
+        ! MGGA vtau contribution
+        if (states_are_real(st)) then
+          ks%calc%energy%intnvxc = ks%calc%energy%intnvxc + denergy_calc_electronic(namespace, hm, ks%gr%der, st, terms = TERM_MGGA)
+        else
+          ks%calc%energy%intnvxc = ks%calc%energy%intnvxc + zenergy_calc_electronic(namespace, hm, ks%gr%der, st, terms = TERM_MGGA)
+        end if
 
         if(hm%lda_u_level /= DFT_U_NONE) then
           if(states_are_real(st)) then

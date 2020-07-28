@@ -351,7 +351,7 @@ noinst_HEADERS +=                             \
 
 # Sources in poisson
 poisson_f_srcs =                                 \
-	poisson/dressed_interaction.F90          \
+	poisson/photon_mode.F90                  \
 	poisson/poisson_cg.F90                   \
 	poisson/poisson_corrections.F90          \
 	poisson/poisson_cutoff.F90               \
@@ -499,6 +499,7 @@ multisystem_srcs = $(multisystem_f_srcs)
 # Sources in interactions
 interactions_f_srcs =                                 \
 	interactions/coulomb_force.F90                \
+	interactions/force_interaction.F90            \
 	interactions/gravity.F90                      \
 	interactions/lorentz_force.F90                \
 	interactions/interactions_factory.F90
@@ -547,7 +548,6 @@ electrons_f_srcs =                                 \
 	electrons/magnetic.F90                     \
 	electrons/partial_charges.F90              \
 	electrons/pert.F90                         \
-	electrons/photon_mode.F90                  \
 	electrons/preconditioners.F90              \
 	electrons/stress.F90                       \
 	electrons/subspace.F90                     \
@@ -615,9 +615,9 @@ td_f_srcs =                                 \
 	td/potential_interpolation.F90      \
 	td/propagator_base.F90              \
 	td/propagator_cn.F90                \
+	td/propagator_elec.F90              \
 	td/propagator_etrs.F90              \
 	td/propagator_expmid.F90            \
-	td/propagator.F90                   \
 	td/propagator_magnus.F90            \
 	td/propagator_qoct.F90              \
 	td/propagator_rk.F90                \
@@ -625,7 +625,6 @@ td_f_srcs =                                 \
 	td/td_calc.F90                      \
 	td/td.F90                           \
 	td/td_write.F90                     \
-        td/propagation_ops_abst.F90         \
         td/propagation_ops_elec.F90
 
 td_srcs = $(td_f_srcs)
@@ -702,13 +701,13 @@ bin_PROGRAMS = octopus
 
 octopus_f_srcs =                             \
 	main/invert_ks.F90                   \
-	main/memory.F90                      \
 	main/static_pol.F90                  \
 	main/geom_opt.F90                    \
 	main/phonons_fd.F90                  \
 	main/casida.F90                      \
 	main/pulpo.F90                       \
 	main/test.F90                        \
+	main/time_dependent.F90              \
 	main/run.F90                         \
 	main/system_factory.F90              \
 	main/main.F90
