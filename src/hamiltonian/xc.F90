@@ -54,6 +54,7 @@ module xc_oct_m
     xc_end,             &
     xc_write_info,      &
     xc_get_vxc,         &
+    xc_get_nc_vxc,      &
     xc_get_fxc,         &
     xc_get_kxc,         &
     xc_is_orbital_dependent, &
@@ -218,7 +219,7 @@ contains
     call messages_obsolete_variable(namespace, 'MGGAimplementation')
     call messages_obsolete_variable(namespace, 'CurrentInTau', 'XCUseGaugeIndependentKED')
 
-    if(family_is_mgga(xcs%family)) then
+    if(family_is_mgga(xcs%family) .or. family_is_nc_mgga(xcs%family)) then
       !%Variable XCUseGaugeIndependentKED
       !%Type logical
       !%Default yes
@@ -385,7 +386,7 @@ contains
 
     family_is_mgga_with_exc = .false.
     do ixc = 1, 2
-      if ((bitand(xcs%functional(ixc, 1)%family, XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0) &
+      if ((bitand(xcs%functional(ixc, 1)%family, XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA + XC_FAMILY_NC_MGGA) /= 0) &
         .and. (bitand(xcs%functional(ixc, 1)%flags, XC_FLAGS_HAVE_EXC) /= 0 )) family_is_mgga_with_exc = .true.
     end do
 
@@ -411,6 +412,8 @@ contains
 #include "vxc_inc.F90"
 #include "fxc_inc.F90"
 #include "kxc_inc.F90"
+
+#include "vxc_nc_inc.F90"
 
 end module xc_oct_m
 

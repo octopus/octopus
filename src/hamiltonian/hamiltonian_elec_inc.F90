@@ -396,42 +396,72 @@ subroutine X(h_mgga_terms) (hm, mesh, psib, hpsib)
   type(wfs_elec_t),         intent(inout) :: psib
   type(wfs_elec_t),         intent(inout) :: hpsib
 
-  integer :: ispin, ii, idir
-  R_TYPE, allocatable :: grad(:,:), diverg(:)
+  integer :: ispin, ii, ip, idir, idim
+  R_TYPE, allocatable :: grad(:,:,:), diverg(:,:)
   type(wfs_elec_t) :: divb
   class(wfs_elec_t), allocatable :: gradb(:)
+  CMPLX :: tmp
   
   PUSH_SUB(X(h_mgga_terms))
 
   ispin = hm%d%get_spin_index(psib%ik)
 
-  SAFE_ALLOCATE(grad(1:mesh%np_part, 1:mesh%sb%dim))
-  SAFE_ALLOCATE(diverg(1:mesh%np))
+  if(bitand(hm%xc%family, XC_FAMILY_NC_MGGA) == 0) then
+    SAFE_ALLOCATE(grad(1:mesh%np_part, 1:1, 1:mesh%sb%dim))
+    SAFE_ALLOCATE(diverg(1:mesh%np,1:1))
+  else
+    SAFE_ALLOCATE(grad(1:mesh%np_part, 1:hm%d%dim, 1:mesh%sb%dim))
+    SAFE_ALLOCATE(diverg(1:mesh%np,1:hm%d%dim))
+  end if
 
   SAFE_ALLOCATE_TYPE_ARRAY(wfs_elec_t, gradb, (1:mesh%sb%dim))
 
   call hpsib%copy_to(divb)
-  
+
   do idir = 1, mesh%sb%dim
     call hpsib%copy_to(gradb(idir))
   end do
   call X(derivatives_batch_grad)(hm%der, psib, gradb, ghost_update = .false., set_bc = .false.)
   
-  do ii = 1, psib%nst_linear
+  if(bitand(hm%xc%family, XC_FAMILY_NC_MGGA) == 0) then
+    do ii = 1, psib%nst_linear
 
-    do idir = 1, mesh%sb%dim
-      call batch_get_state(gradb(idir), ii, mesh%np, grad(:, idir))
+      do idir = 1, mesh%sb%dim
+        call batch_get_state(gradb(idir), ii, mesh%np, grad(:, 1, idir))
+      end do
+
+      do idir = 1, mesh%sb%dim
+        grad(1:mesh%np, 1, idir) = grad(1:mesh%np, 1, idir)*hm%vtau(1:mesh%np, ispin)
+      end do
+      call X(derivatives_div)(hm%der, grad(:,1,:), diverg(:,1))
+
+      call batch_set_state(divb, ii, mesh%np, diverg(:, 1))
+
     end do
 
-    do idir = 1, mesh%sb%dim
-      grad(1:mesh%np, idir) = grad(1:mesh%np, idir)*hm%vtau(1:mesh%np, ispin)
+  else
+    !Here we treat the full spinor directly, because of the cross terms
+    do ii = 1, psib%nst
+      
+      do idir = 1, mesh%sb%dim
+        call batch_get_state(gradb(idir), ii, mesh%np, grad(:, :, idir))
+      end do
+
+      do idir = 1, mesh%sb%dim
+        do ip = 1, mesh%np
+          tmp = grad(ip, 1, idir)*cmplx(hm%vtau(ip, 3),-hm%vtau(ip, 4))
+          grad(ip, 1, idir) = grad(ip, 1, idir)*hm%vtau(ip, 1) + grad(ip, 2, idir)*cmplx(hm%vtau(ip, 3),hm%vtau(ip, 4)) 
+          grad(ip, 2, idir) = grad(ip, 2, idir)*hm%vtau(ip, 2) + tmp
+        end do
+      end do
+
+      do idim = 1, hm%d%dim
+        call X(derivatives_div)(hm%der, grad(:,idim,:), diverg(:,idim))
+      end do
+
+      call batch_set_state(divb, ii, mesh%np, diverg)
     end do
-
-    call X(derivatives_div)(hm%der, grad, diverg)
-
-    call batch_set_state(divb, ii, mesh%np, diverg)
-
-  end do
+  end if
 
   call batch_axpy(mesh%np, CNST(-1.0), divb, hpsib)
 

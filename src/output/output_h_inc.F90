@@ -89,6 +89,16 @@
           end if
           call dio_function_output(outp%how, dir, fname, namespace, &
             der%mesh, hm%vxc(:, is), units_out%energy, err, geo = geo, grp = grp)
+
+          if(family_is_mgga_with_exc(hm%xc)) then
+            if(hm%d%nspin == 1) then
+              write(fname, '(a)') 'vtau'
+            else
+              write(fname, '(a,i1)') 'vtau-sp', is
+            end if
+            call dio_function_output(outp%how, dir, fname, namespace, &
+              der%mesh, hm%vtau(:, is), units_out%energy, err, geo = geo, grp = grp)
+          end if
           
           ! finally the full KS potential (without non-local PP contributions)
           potential = hm%ep%vpsl + hm%vhxc(:, is)

@@ -1025,22 +1025,46 @@ contains
       end if
 
       ! Get the *local* XC term
-      if(ks%calc%calc_energy) then
-        if (family_is_mgga_with_exc(hm%xc)) then
-          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%kpoints, hm%psolver_fine, namespace, ks%calc%density, st%d%ispin, &
-            ks%calc%vxc, ex = ks%calc%energy%exchange, ec = ks%calc%energy%correlation, deltaxc = ks%calc%energy%delta_xc, &
-            vtau = ks%calc%vtau)
+      if(bitand(hm%xc%family, XC_FAMILY_NC_LDA + XC_FAMILY_NC_MGGA) == 0) then
+        if(ks%calc%calc_energy) then
+          if (family_is_mgga_with_exc(hm%xc)) then
+            call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%kpoints, hm%psolver_fine, namespace, ks%calc%density, st%d%ispin, &
+              ks%calc%vxc, ex = ks%calc%energy%exchange, ec = ks%calc%energy%correlation, deltaxc = ks%calc%energy%delta_xc, &
+              vtau = ks%calc%vtau)
+          else
+            call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%kpoints, hm%psolver_fine, namespace, ks%calc%density, st%d%ispin, &
+              ks%calc%vxc, ex = ks%calc%energy%exchange, ec = ks%calc%energy%correlation, deltaxc = ks%calc%energy%delta_xc)
+          end if
         else
-          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%kpoints, hm%psolver_fine, namespace, ks%calc%density, st%d%ispin, &
-            ks%calc%vxc, ex = ks%calc%energy%exchange, ec = ks%calc%energy%correlation, deltaxc = ks%calc%energy%delta_xc)
+          if (family_is_mgga_with_exc(hm%xc)) then
+            call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%kpoints, hm%psolver_fine, namespace, ks%calc%density, st%d%ispin, &
+              ks%calc%vxc, vtau = ks%calc%vtau)
+          else
+            call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%kpoints, hm%psolver_fine, namespace, ks%calc%density, st%d%ispin, &
+              ks%calc%vxc)
+          end if
         end if
-      else
-        if (family_is_mgga_with_exc(hm%xc)) then
-          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%kpoints, hm%psolver_fine, namespace, ks%calc%density, st%d%ispin, &
-            ks%calc%vxc, vtau = ks%calc%vtau)
+      else !Noncollinear functionals
+        if(st%d%ispin /= SPINORS) then
+          message(1) = "Noncollinear functionals can only be used with spinor wavefunctions."
+          call messages_fatal(1)
+        end if
+
+        if(ks%calc%calc_energy) then
+          if (family_is_mgga_with_exc(hm%xc)) then
+            call xc_get_nc_vxc(ks%gr%fine%der, ks%xc, st, hm%kpoints, namespace, ks%calc%density, ks%calc%vxc, &
+                vtau = ks%calc%vtau, ex = ks%calc%energy%exchange, ec = ks%calc%energy%correlation)
+          else
+            call xc_get_nc_vxc(ks%gr%fine%der, ks%xc, st, hm%kpoints, namespace, ks%calc%density, ks%calc%vxc, &
+                ex = ks%calc%energy%exchange, ec = ks%calc%energy%correlation)
+          end if
         else
-          call xc_get_vxc(ks%gr%fine%der, ks%xc, st, hm%kpoints, hm%psolver_fine, namespace, ks%calc%density, st%d%ispin, &
-            ks%calc%vxc)
+          if (family_is_mgga_with_exc(hm%xc)) then
+            call xc_get_nc_vxc(ks%gr%fine%der, ks%xc, st, hm%kpoints, namespace, ks%calc%density, &
+              ks%calc%vxc, vtau = ks%calc%vtau)
+          else
+            call xc_get_nc_vxc(ks%gr%fine%der, ks%xc, st, hm%kpoints, namespace, ks%calc%density, ks%calc%vxc)
+          end if
         end if
       end if
 

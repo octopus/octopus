@@ -54,6 +54,7 @@ module xc_functl_oct_m
     XC_VDW_C_VDWDFCX = 920,       &  !< vdw-df-cx correlation from libvdwxc
     XC_HYB_GGA_XC_MVORB_HSE06 = 921, &  !< Density-based mixing parameter of HSE06
     XC_HYB_GGA_XC_MVORB_PBEH = 922,  &  !< Density-based mixing parameter of PBE0 
+    XC_MGGA_X_NC_BR = 923,           &  !< Noncollinear version of the Becke-Roussel functional
     XC_RDMFT_XC_M = 601              !< RDMFT Mueller functional
 
   !> declaring 'family' constants for 'functionals' not handled by libxc
@@ -61,7 +62,9 @@ module xc_functl_oct_m
   integer, public, parameter :: &
     XC_FAMILY_KS_INVERSION = 1024, &
     XC_FAMILY_RDMFT = 2048, &
-    XC_FAMILY_LIBVDWXC = 4096
+    XC_FAMILY_LIBVDWXC = 4096, &
+    XC_FAMILY_NC_LDA = 8192, &
+    XC_FAMILY_NC_MGGA = 16384
 
   type xc_functl_t
     ! Components are public by default
@@ -127,6 +130,9 @@ contains
 
         case(XC_HYB_GGA_XC_MVORB_HSE06, XC_HYB_GGA_XC_MVORB_PBEH)
           functl%family = XC_FAMILY_HYB_GGA
+ 
+        case(XC_MGGA_X_NC_BR) 
+          functl%family = XC_FAMILY_NC_MGGA
 
         case default
           call messages_input_error(namespace, 'XCFunctional', 'Unknown functional')
@@ -151,6 +157,10 @@ contains
 
     else if(functl%id == XC_HALF_HARTREE) then
       functl%type = XC_EXCHANGE_CORRELATION
+
+    else if(functl%id == XC_MGGA_X_NC_BR) then
+      functl%type = XC_EXCHANGE
+      functl%flags = XC_FLAGS_HAVE_VXC + XC_FLAGS_HAVE_EXC
 
     else if(functl%family == XC_FAMILY_NONE) then
       functl%type = -1
@@ -296,7 +306,8 @@ contains
     PUSH_SUB(xc_functl_end)
 
     if (functl%family /= XC_FAMILY_NONE .and. functl%family /= XC_FAMILY_OEP .and. &
-        functl%family /= XC_FAMILY_KS_INVERSION .and. functl%id /= XC_HALF_HARTREE ) then
+        functl%family /= XC_FAMILY_KS_INVERSION .and. functl%id /= XC_HALF_HARTREE &
+        .and. functl%family /= XC_FAMILY_NC_LDA .and. functl%family /= XC_FAMILY_NC_MGGA) then
       call xc_f03_func_end(functl%conf)
     end if
 
@@ -341,6 +352,11 @@ contains
 
     else if(functl%family == XC_FAMILY_LIBVDWXC) then
       call libvdwxc_write_info(functl%libvdwxc, iunit)
+
+    else if(functl%id == XC_MGGA_X_NC_BR) then
+      write(message(1), '(2x,a)') 'Exchange'
+      write(message(2), '(4x,a)') 'Noncollinear Becke-Roussel'
+      call messages_info(2, iunit)
 
     else if(functl%id == XC_HALF_HARTREE) then
       write(message(1), '(2x,a)') 'Exchange-Correlation:'

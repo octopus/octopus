@@ -80,6 +80,7 @@ module scf_oct_m
   use walltimer_oct_m
   use wfs_elec_oct_m
   use xc_f03_lib_m
+  use xc_functl_oct_m
   use xc_oep_oct_m
   
   implicit none
@@ -263,7 +264,7 @@ contains
     end if
 
     if(scf%mix_field == OPTION__MIXFIELD__DENSITY &
-      .and. bitand(hm%xc%family, XC_FAMILY_OEP + XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA) /= 0) then
+      .and. bitand(hm%xc%family, XC_FAMILY_OEP + XC_FAMILY_MGGA + XC_FAMILY_HYB_MGGA + XC_FAMILY_NC_MGGA) /= 0) then
 
       call messages_write('Input: You have selected to mix the density with OEP or MGGA XC functionals.', new_line = .true.)
       call messages_write('       This might produce convergence problems. Mix the potential instead.')
