@@ -275,11 +275,13 @@ contains
   end subroutine electrons_iteration_info
 
   ! ---------------------------------------------------------
-  logical function electrons_is_tolerance_reached(this, tol)
+  logical function electrons_is_tolerance_reached(this, tol) result(converged)
     class(electrons_t), intent(in) :: this
     FLOAT,              intent(in) :: tol
 
     PUSH_SUB(electrons_is_tolerance_reached)
+
+    converged = .false.
 
     POP_SUB(electrons_is_tolerance_reached)
   end function electrons_is_tolerance_reached
