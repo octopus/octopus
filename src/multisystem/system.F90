@@ -175,6 +175,8 @@ contains
     end if
 
     select case (tdop)
+    case (SKIP)
+      ! Do nothing
     case (FINISHED)
       if (.not. this%prop%step_is_done()) then
         call this%clock%increment()
@@ -574,6 +576,7 @@ contains
     FLOAT,                intent(inout) :: smallest_algo_dt
 
     integer :: prop
+    FLOAT :: dt
 
     PUSH_SUB(system_init_propagator)
 
@@ -602,17 +605,27 @@ contains
     if(.not.varinfo_valid_option('TDSystemPropagator', prop)) call messages_input_error(this%namespace, 'TDSystemPropagator')
     call messages_print_var_option(stdout, 'TDSystemPropagator', prop)
 
+    ! This variable is also defined (and properly documented) in td/td.F90.
+    ! This is temporary, until all the propagators are moved to the new framework.
+    call parse_variable(this%namespace, 'TDTimeStep', CNST(10.0), dt)
+    if (dt <= M_ZERO) then
+      call messages_input_error(this%namespace, 'TDTimeStep', "must be greater than zero")
+    end if
+    call messages_print_var_option(stdout, 'TDSystemPropagator', prop)
+
     select case(prop)
     case(PROP_VERLET)
-      this%prop => propagator_verlet_t(this%namespace)
+      this%prop => propagator_verlet_t(dt)
     case(PROP_BEEMAN)
-      this%prop => propagator_beeman_t(this%namespace, .false.)
+      this%prop => propagator_beeman_t(dt, predictor_corrector=.false.)
     case(PROP_BEEMAN_SCF)
-      this%prop => propagator_beeman_t(this%namespace, .true.)
+      this%prop => propagator_beeman_t(dt, predictor_corrector=.true.)
     case(PROP_EXPMID)
-      this%prop => propagator_exp_mid_t(this%namespace, .false.)
+      this%prop => propagator_exp_mid_t(dt, predictor_corrector=.false.)
     case(PROP_EXPMID_SCF)
-      this%prop => propagator_exp_mid_t(this%namespace, .true.)
+      this%prop => propagator_exp_mid_t(dt, predictor_corrector=.true.)
+    case default
+      this%prop => propagator_t(dt)
     end select
 
     call this%prop%rewind()
