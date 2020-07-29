@@ -290,10 +290,12 @@ subroutine X(slater) (namespace, mesh, psolver, st, isp, ex, vxc)
         beta2 = betar**2 + betai**2
 
         !We rotate to the local frame
-        global_b(1) = TOFLOAT(bij(ip, 1))
-        global_b(2) = TOFLOAT(bij(ip, 2))
-        global_b(3) = TOFLOAT(bij(ip, 3))
-        global_b(4) = R_AIMAG(bij(ip, 3))
+        !We add here the factor of two that is originally in the Sylvester equation
+        !In the non singular case, this is cancelled by a factor one half
+        global_b(1) = M_TWO*TOFLOAT(bij(ip, 1))
+        global_b(2) = M_TWO*TOFLOAT(bij(ip, 2))
+        global_b(3) = M_TWO*TOFLOAT(bij(ip, 3))
+        global_b(4) = M_TWO*R_AIMAG(bij(ip, 3))
         call rotate_to_local(global_b, alpha, betar, betai, alpha2, beta2, local_b)
        
         local_v(1:4) = M_ZERO
