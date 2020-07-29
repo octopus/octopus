@@ -926,7 +926,7 @@ contains
         gr%der%boundaries%spiral = .true.
       end if
     end if
-    ! call propagator_run_zero_iter(hm, gr, td%tr)
+    call propagator_elec_run_zero_iter(hm, gr, td%tr)
     if (outp%output_interval > 0) then
       call td_write_data(td%write_handler)
       call td_write_output(namespace, gr, st, hm, ks, outp, geo, 0)
