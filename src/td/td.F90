@@ -658,7 +658,7 @@ contains
       end if
     end if
 
-    POP_SUB(td_run.check_point)
+    POP_SUB(td_check_point)
   end subroutine td_check_point
 
   ! ---------------------------------------------------------
