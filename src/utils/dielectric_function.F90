@@ -86,10 +86,8 @@ program dielectric_function
 
   else
     
-    if(in_file < 0) then 
-      message(1) = "Cannot find the GaugeVectorField in the input file"
-      call messages_fatal(1)
-    end if
+    message(1) = "Cannot find the GaugeVectorField in the input file"
+    call messages_fatal(1)
 
   end if
 
