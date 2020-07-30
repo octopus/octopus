@@ -67,7 +67,7 @@ subroutine X(slater) (namespace, mesh, psolver, st, isp, ex, vxc)
   R_TYPE :: tmp
   FLOAT, allocatable :: tmp_vxc(:)
   FLOAT :: global_b(4), local_b(4), local_v(4), global_v(4)
-  FLOAT :: nup, ndn
+  FLOAT :: nup, ndn, sqmod_updn
 
 
 #if defined(HAVE_MPI)
@@ -183,7 +183,7 @@ subroutine X(slater) (namespace, mesh, psolver, st, isp, ex, vxc)
         ist = recv_stack(ist_r)
         do jst = st%st_start, st%st_end
 
-          if( abs(st%occ(jst, isp)) < M_EPSILON ) cycle
+          if(abs(st%occ(ist, isp)) < M_EPSILON .or. abs(st%occ(jst, isp)) < M_EPSILON) cycle
 
           if((st%node(ist) == st%mpi_grp%rank).and.(jst < ist)) cycle
           if((st%occ(ist, isp) <= M_EPSILON).or.(st%occ(jst, isp) <= M_EPSILON)) cycle
@@ -218,7 +218,7 @@ subroutine X(slater) (namespace, mesh, psolver, st, isp, ex, vxc)
                 !As we only compute the terms ist >= jst, we get a symmetric form
                 bij(1:mesh%np, 3) = bij(1:mesh%np, 3) - rr &
                       * ( wf_ist(1:mesh%np, 1)* R_CONJ(psi(1:mesh%np, 2)) * pot_ij(1:mesh%np) &
-                        + psi(1:mesh%np, 2)   * R_CONJ(wf_ist(1:mesh%np, 1) * pot_ij(1:mesh%np)))
+                        + psi(1:mesh%np, 1)   * R_CONJ(wf_ist(1:mesh%np, 2) * pot_ij(1:mesh%np)))
               else
                 bij(1:mesh%np, 1) = bij(1:mesh%np, 1) - rr &
                       * R_REAL(wf_ist(1:mesh%np, 1)*R_CONJ(psi(1:mesh%np, 1)) * pot_ij(1:mesh%np))
@@ -265,17 +265,18 @@ subroutine X(slater) (namespace, mesh, psolver, st, isp, ex, vxc)
   if(present(vxc) .and. st%d%ispin == SPINORS) then
     do ip = 1, mesh%np
 
-      nn = st%rho(ip, 1) + st%rho(ip, 2)
+      nn = st%rho(ip, 1) + st%rho(ip, 2) + M_EPSILON
+      sqmod_updn = st%rho(ip, 3)**2 + st%rho(ip, 4)**2
 
       ! 1/(2nD), where n is the charge density and D = n_uu*n_dd - n_ud*n_du
       ! where D is the determinant of the spin-density matrix
-      rr = (st%rho(ip, 1) * st%rho(ip, 2)  - (st%rho(ip, 3)**2 + st%rho(ip, 4)**2))
+      rr = (st%rho(ip, 1) * st%rho(ip, 2)  - sqmod_updn)
       if(abs(rr) < CNST(1.0e-13) ) then !The matrix is singular
         !For determining the potential, we go to the local frame given by the local magnetization
         !In this frame, the spin density matrix has a single non-zero element on the diagonal (because wthe matrix is singular)
         !This allows us to determine the potential in this frame, and to rotate it back in the original frame
         !We start by finding the non-zero component in the local rotated frame
-        mm = sqrt((st%rho(ip, 1) - st%rho(ip, 2))**2 + M_FOUR*(st%rho(ip, 3)**2 + st%rho(ip, 4)**2))
+        mm = sqrt((st%rho(ip, 1) - st%rho(ip, 2))**2 + M_FOUR*sqmod_updn)
         if((st%rho(ip, 1) - st%rho(ip, 2)) > 0) then
           nup = max(M_HALF*(nn + mm), M_ZERO)
           ndn = max(M_HALF*(nn - mm), M_ZERO)
@@ -318,17 +319,15 @@ subroutine X(slater) (namespace, mesh, psolver, st, isp, ex, vxc)
         rr = M_ONE/(nn * rr)
 
         vxc(ip, 1) = vxc(ip, 1) + rr * ( &
-           ( nn * st%rho(ip, 2) - (st%rho(ip, 3)**2 + st%rho(ip, 4)**2)) * bij(ip, 1) &
-          +( (st%rho(ip, 3)**2 + st%rho(ip, 4)**2) ) * bij(ip, 2) &
+           (nn * st%rho(ip, 2) - sqmod_updn) * bij(ip, 1) + sqmod_updn * bij(ip, 2) &
           - M_TWO * st%rho(ip,2) * ( st%rho(ip,3) * R_REAL(bij(ip,3)) + st%rho(ip,4) * R_AIMAG(bij(ip,3))))
 
         vxc(ip, 2) = vxc(ip, 2) + rr * ( &
-           ( nn * st%rho(ip, 1) - (st%rho(ip, 3)**2 + st%rho(ip, 4)**2)) * bij(ip, 2) &
-          +( (st%rho(ip, 3)**2 + st%rho(ip, 4)**2) ) * bij(ip, 1) &
+           (nn * st%rho(ip, 1) - sqmod_updn) * bij(ip, 2) + sqmod_updn * bij(ip, 1) &
           - M_TWO * st%rho(ip,1) * ( st%rho(ip,3) * R_REAL(bij(ip,3)) + st%rho(ip,4) * R_AIMAG(bij(ip,3)))) 
 
          tmp = -cmplx(st%rho(ip, 3), st%rho(ip,4)) * (st%rho(ip, 2) * bij(ip, 1) + st%rho(ip, 1) * bij(ip,2)) &
-       + (M_TWO *st%rho(ip, 1) * st%rho(ip, 2)  - (st%rho(ip, 3)**2 + st%rho(ip, 4)**2)) * bij(ip, 3) &
+               + (M_TWO *st%rho(ip, 1) * st%rho(ip, 2)  - sqmod_updn) * bij(ip, 3) &
                + (cmplx(st%rho(ip, 3),st%rho(ip,4)))**2 * R_CONJ(bij(ip,3))
   
          vxc(ip, 3) = vxc(ip, 3) + rr * R_REAL(tmp)
