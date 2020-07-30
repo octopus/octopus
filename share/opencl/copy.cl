@@ -21,8 +21,8 @@
 #include <cl_global.h>
 
 __kernel void copy(const int np,
-		   const __global double * restrict xx, const int ldxx,
-		   __global double * restrict yy, const int ldyy){
+                  const __global double * restrict xx, const int ldxx,
+                  __global double * restrict yy, const int ldyy){
   
   int ist = get_global_id(0);
   int ip = get_global_id(1) + get_global_size(1)*get_global_id(2);
