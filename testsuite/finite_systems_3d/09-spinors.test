@@ -40,10 +40,10 @@ match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; Total energy ; GREPFIELD(static/info, 'Total       =', 3) ; -0.17669585
 match ; External energy ; GREPFIELD(static/info, 'External    =', 3) ; -0.29125110
 match ; Eigenvalue   ; GREPFIELD(static/info, '1   --', 3) ; -0.085321
-match ; <Sx>         ; GREPFIELD(static/info, '1   --', 5) ; 0.0736
-match ; <Sy>         ; GREPFIELD(static/info, '1   --', 6) ; 0.0736
-match ; <Sz>         ; GREPFIELD(static/info, '1   --', 7) ; 0.4890
+match ; <Sx>         ; GREPFIELD(static/info, '1   --', 5) ; 0.0492
+match ; <Sy>         ; GREPFIELD(static/info, '1   --', 6) ; 0.0492
+match ; <Sz>         ; GREPFIELD(static/info, '1   --', 7) ; 0.4951
 Precision : 0.00021
-match ; mx           ; GREPFIELD(static/info, 'Local Magnetic Moments', 3, 2) ; 0.147186
-match ; my           ; GREPFIELD(static/info, 'Local Magnetic Moments', 4, 2) ; 0.147186
-match ; mz           ; GREPFIELD(static/info, 'Local Magnetic Moments', 5, 2) ; 0.978097
+match ; mx           ; GREPFIELD(static/info, 'Local Magnetic Moments', 3, 2) ; 0.098387
+match ; my           ; GREPFIELD(static/info, 'Local Magnetic Moments', 4, 2) ; 0.098387
+match ; mz           ; GREPFIELD(static/info, 'Local Magnetic Moments', 5, 2) ; 0.990273
