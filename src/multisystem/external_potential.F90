@@ -48,9 +48,6 @@ module external_potential_oct_m
     character(len=MAX_PATH_LEN) :: filename !< for the potential read from a file.
     FLOAT :: omega
 
-    type(mesh_t),    pointer :: mesh  
-    type(poisson_t), pointer :: poisson
-
     FLOAT, allocatable, public :: pot(:)
 
   contains
@@ -74,15 +71,12 @@ module external_potential_oct_m
 
 contains
 
-  function external_potential_init(mesh) result(this)
+  function external_potential_init() result(this)
     class(external_potential_t), pointer :: this
-    type(mesh_t), target,     intent(in) :: mesh
 
     PUSH_SUB(external_potential_init)
 
     SAFE_ALLOCATE(this)
-
-    this%mesh => mesh
 
     POP_SUB(external_potential_init)
   end function external_potential_init
@@ -100,12 +94,13 @@ contains
   end subroutine external_potential_finalize
 
   ! ---------------------------------------------------------
-  subroutine external_potential_allocate(this)
+  subroutine external_potential_allocate(this, mesh)
     class(external_potential_t), intent(inout) :: this
+    type(mesh_t),                intent(in)    :: mesh
 
     PUSH_SUB(external_potential_allocate)
 
-    SAFE_ALLOCATE(this%pot(1:this%mesh%np)) 
+    SAFE_ALLOCATE(this%pot(1:mesh%np)) 
 
     POP_SUB(external_potential_allocate)
 
@@ -160,9 +155,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine external_potential_calculate(this, namespace)
+  subroutine external_potential_calculate(this, namespace, mesh, poisson)
     class(external_potential_t), intent(inout) :: this
     type(namespace_t),           intent(in)    :: namespace
+    type(mesh_t),                intent(in)    :: mesh
+    type(poisson_t),             intent(in)    :: poisson
 
     FLOAT :: pot_re, pot_im, r, xx(1:MAX_DIM)
     FLOAT, allocatable :: den(:)
@@ -176,15 +173,15 @@ contains
 
     case(EXTERNAL_POT_USDEF)
 
-      do ip = 1, this%mesh%np
-        call mesh_r(this%mesh, ip, r, coords = xx)
-        call parse_expression(pot_re, pot_im, this%mesh%sb%dim, xx, r, M_ZERO, this%potential_formula)
+      do ip = 1, mesh%np
+        call mesh_r(mesh, ip, r, coords = xx)
+        call parse_expression(pot_re, pot_im, mesh%sb%dim, xx, r, M_ZERO, this%potential_formula)
         this%pot(ip) = pot_re
       end do 
 
     case(EXTERNAL_POT_FROM_FILE)
 
-      call dio_function_input(trim(this%filename), namespace, this%mesh, this%pot, err)
+      call dio_function_input(trim(this%filename), namespace, mesh, this%pot, err)
       if(err /= 0) then
         write(message(1), '(a)')    'Error loading file '//trim(this%filename)//'.'
         write(message(2), '(a,i4)') 'Error code returned = ', err      
@@ -193,20 +190,20 @@ contains
 
     case(EXTERNAL_POT_CHARGE_DENSITY)
 
-      SAFE_ALLOCATE(den(1:this%mesh%np))
+      SAFE_ALLOCATE(den(1:mesh%np))
 
-      do ip = 1, this%mesh%np
-        call mesh_r(this%mesh, ip, r, coords = xx)
-        call parse_expression(pot_re, pot_im, this%mesh%sb%dim, xx, r, M_ZERO, this%potential_formula)
+      do ip = 1, mesh%np
+        call mesh_r(mesh, ip, r, coords = xx)
+        call parse_expression(pot_re, pot_im, mesh%sb%dim, xx, r, M_ZERO, this%potential_formula)
         den(ip) = pot_re
       end do
 
-      if(poisson_solver_is_iterative(this%poisson)) then
+      if(poisson_solver_is_iterative(poisson)) then
         ! pot has to be initialized before entering routine
         ! and our best guess for the potential is zero
-        this%pot(1:this%mesh%np) = M_ZERO
+        this%pot(1:mesh%np) = M_ZERO
       end if
-      call dpoisson_solve(this%poisson, this%pot, den, all_nodes = .false.)
+      call dpoisson_solve(poisson, this%pot, den, all_nodes = .false.)
 
       SAFE_DEALLOCATE_A(den)
 
@@ -215,10 +212,9 @@ contains
     POP_SUB(external_potential_calculate)
   end subroutine external_potential_calculate
 
-  subroutine load_external_potentials(external_potentials, namespace, mesh)
+  subroutine load_external_potentials(external_potentials, namespace)
     type(list_t),         intent(inout)  :: external_potentials
     type(namespace_t),    intent(in)     :: namespace
-    type(mesh_t),         intent(in)     :: mesh
 
     integer :: n_pot_block, row, read_data
     type(block_t) :: blk
@@ -273,7 +269,7 @@ contains
 
       do row = 0, n_pot_block-1
         !Create a potential
-        pot => external_potential_t(mesh) 
+        pot => external_potential_t() 
         !Parse the information from the block
         call read_from_block(pot, namespace, blk, row, read_data)
         ASSERT(read_data > 0)

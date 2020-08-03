@@ -565,7 +565,7 @@ contains
     !This is done here at the moment, because we pass directly the mesh
     !TODO: Once the abstract Hamiltonian knows about an abstract basis, we might move this to the 
     !      abstract Hamiltonian 
-    call load_external_potentials(hm%external_potentials, namespace, gr%mesh)
+    call load_external_potentials(hm%external_potentials, namespace)
     !At the moment we do only have static external potential, so we never update them
     call build_external_potentials()
 
@@ -675,8 +675,8 @@ contains
         select type (potential)
         class is (external_potential_t)
 
-          call potential%allocate_memory()
-          call potential%calculate(namespace)
+          call potential%allocate_memory(gr%mesh)
+          call potential%calculate(namespace, gr%mesh, hm%psolver)
           call lalg_axpy(gr%mesh%np, M_ONE, potential%pot, hm%v_ext_pot)
           call potential%deallocate_memory()
 
