@@ -550,7 +550,7 @@ contains
   ! ---------------------------------------------------------
   subroutine current_heat_calculate(der, hm, geo, st, current)
     type(derivatives_t),  intent(in)    :: der
-    type(hamiltonian_t),  intent(in)    :: hm
+    type(hamiltonian_t),  intent(inout)    :: hm
     type(geometry_t),     intent(in)    :: geo
     type(states_t),       intent(in)    :: st
     FLOAT,                intent(out)   :: current(:, :, :)
@@ -573,8 +573,8 @@ contains
   
     do ip = 1, der%mesh%np
       current(ip, 1:ndim, 1:st%d%nspin) = st%current(ip, 1:ndim, 1:st%d%nspin)*hm%ep%vpsl(ip)
-    end do
-    
+   end do
+   
     
     do ik = st%d%kpt%start, st%d%kpt%end
       ispin = states_dim_get_spin_index(st%d, ik)
@@ -624,10 +624,13 @@ contains
             tmp = tmp - conjg(gpsi(ip, idir, idim))*sum(g2psi(ip, 1:ndim, 1:ndim, idim)) + &
                   sum(conjg(g2psi(ip, 1:ndim, 1:ndim, idim)))*gpsi(ip, idir, idim)
             current(ip, idir, ispin) = current(ip, idir, ispin) + st%d%kweights(ik)*st%occ(ist, ik)*aimag(tmp)/CNST(8.0)
-          end do
-        end do
+         end do
+
+
       end do
-    end do
+   end do
+end do
+
 
     POP_SUB(current_heat_calculate)
       

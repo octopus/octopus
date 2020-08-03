@@ -469,6 +469,10 @@ contains
 
     call scissor_nullify(hm%scissor)
 
+    if (thermal_gradient_is_applied(hm%ep%tfield)) then
+       call thermal_gradient_init_vec_pot(hm%ep%tfield, gr%sb, st)
+    end if
+
     call profiling_out(prof)
     POP_SUB(hamiltonian_init)
 
@@ -687,7 +691,7 @@ contains
     type(boundaries_t),  intent(in)    :: boundaries
     FLOAT, optional,     intent(in)    :: time
 
-    integer :: ispin, ip, idir, iatom, ilaser
+    integer :: ispin, ip, idir, iatom, ilaser, ist, ik
     type(profile_t), save :: prof, prof_phases
     FLOAT :: aa(1:MAX_DIM), time_
     FLOAT, allocatable :: vp(:,:)
@@ -794,15 +798,18 @@ contains
       if(thermal_gradient_is_applied(this%ep%tfield)) then
          call hamiltonian_base_allocate(this%hm_base, mesh, FIELD_UNIFORM_VECTOR_POTENTIAL,.false.)
          call thermal_gradient_get_vec_pot(this%ep%tfield, aa)
-         write(*,*)"eigenval",this%ep%tfield%eigenval(1,1)
-         stop
-         !!!need to put a factor of epsilon_k-eA
-        ! write(*,*)"kpt", this%d%kpt%start, this%d%kpt%end
-         this%hm_base%uniform_vector_potential(1:mesh%sb%dim) = this%hm_base%uniform_vector_potential(1:mesh%sb%dim)  &
-              - aa(1:mesh%sb%dim)/P_c !!check if needs a factor later.
-      end if
+
+            do ik = this%d%kpt%start, this%d%kpt%end
+               do ist = this%ep%tfield%st%st_start, this%ep%tfield%st%st_end
+                  this%hm_base%uniform_vector_potential(1:mesh%sb%dim) = this%hm_base%uniform_vector_potential(1:mesh%sb%dim)  &
+                       - aa(1:mesh%sb%dim)*this%d%kweights(ik)*this%ep%tfield%eigenval(ist,ik)
+                  !!!write(*,*)"aa, kweight, eig", aa(1:mesh%sb%dim)*this%d%kweights(ik)*this%ep%tfield%eigenval(ist,ik)
+               enddo
+            enddo
+
+         end if
       
-   end if
+      end if
   
 
     ! the vector potential of a static magnetic field

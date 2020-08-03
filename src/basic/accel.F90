@@ -277,7 +277,8 @@ contains
     !% try to initialize and use an accelerator device. By setting this
     !% variable to <tt>yes</tt> you force Octopus not to use an accelerator even it is available.
     !%End
-!     call messages_obsolete_variable('DisableOpenCL', 'DisableAccel')
+
+!    call messages_obsolete_variable('DisableOpenCL', 'DisableAccel')
 ! #ifdef HAVE_ACCEL
 !     default = .false.
 ! #else

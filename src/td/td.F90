@@ -929,7 +929,7 @@ contains
         end if
         call states_copy(stin, st, exclude_wfns = .true.)
         call states_look_and_load(restart, stin, gr)
-
+        
         ! FIXME: rotation matrix should be R_TYPE
         SAFE_ALLOCATE(rotation_matrix(1:stin%nst, 1:stin%nst))
         SAFE_ALLOCATE(psi(1:gr%mesh%np, 1:st%d%dim))

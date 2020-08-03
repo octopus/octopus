@@ -18,7 +18,7 @@
 
   ! ---------------------------------------------------------
   subroutine output_hamiltonian(hm, st, der, dir, outp, geo, gr, grp)
-    type(hamiltonian_t),       intent(in)    :: hm
+    type(hamiltonian_t),       intent(inout)    :: hm
     type(states_t),            intent(inout) :: st
     type(derivatives_t),       intent(inout) :: der
     character(len=*),          intent(in)    :: dir

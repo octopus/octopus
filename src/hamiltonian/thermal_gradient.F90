@@ -59,17 +59,20 @@ module thermal_gradient_oct_m
     thermal_gradient_get_force
 
   type thermal_gradient_t
+    type(states_t) :: st
     FLOAT   :: vecpot(1:MAX_DIM)   
     FLOAT   :: vecpot_vel(1:MAX_DIM)
     FLOAT   :: vecpot_acc(1:MAX_DIM)    
     FLOAT   :: vecpot_kick(1:MAX_DIM)
     FLOAT   :: force(1:MAX_DIM)
     FLOAT   :: wp2
-    FLOAT   :: eigenval(1:MAX_DIM,1:MAX_DIM)
     integer :: ndim
+    !integer :: st_start, st_end
     logical :: with_thermal_gradient
  !   integer :: dynamics
-    FLOAT   :: kicktime 
+    FLOAT   :: kicktime
+    FLOAT,pointer   :: eigenval(:,:)
+
   end type thermal_gradient_t
 
 contains
@@ -86,7 +89,7 @@ contains
   ! ---------------------------------------------------------
   subroutine thermal_gradient_init(this, sb, st)
     type(thermal_gradient_t),     intent(out)   :: this
-    type(simul_box_t),       intent(in)    :: sb
+    type(simul_box_t),       intent(inout)    :: sb
     type(states_t), intent(in) :: st
     integer :: ii, iop
     type(block_t) :: blk
@@ -100,7 +103,10 @@ contains
     this%vecpot_kick = M_ZERO
     this%force = M_ZERO
     this%ndim = sb%dim
-    this%eigenval = st%eigenval
+    !this%st = st%st
+    !this%st_end = st%st_end
+    SAFE_ALLOCATE(this%eigenval(1:st%nst, 1:st%d%nik))
+    this%eigenval = huge(st%eigenval)
 
     !%Variable ThermalGradient
     !%Type block
@@ -246,7 +252,7 @@ contains
     PUSH_SUB(thermal_gradient_propagate)
   
     this%vecpot_acc(1:this%ndim) = this%force(1:this%ndim)
-
+    !write(*,*)"in thermal gradeint prop"
     ! apply kick, in case kicktime=0 the kick has already been applied
     if(this%kicktime > M_ZERO .and. time-dt <= this%kicktime .and. time >= this%kicktime )  then
       this%vecpot(1:this%ndim) = this%vecpot(1:this%ndim) +  this%vecpot_kick(1:this%ndim)
@@ -256,6 +262,8 @@ contains
      
     this%vecpot(1:this%ndim) = this%vecpot(1:this%ndim) + dt * this%vecpot_vel(1:this%ndim) + &
       M_HALF * dt**2 * this%force(1:this%ndim)
+
+    !write(*,*)"dt*vel, 0.5*dt^2*force", dt * this%vecpot_vel(1:this%ndim), M_HALF * dt**2 * this%force(1:this%ndim)
 
     !In the case of a kick, the induced field could not be higher than the initial kick
     do idim = 1, this%ndim
@@ -296,6 +304,9 @@ contains
 
     this%wp2 = M_FOUR*M_PI*st%qtot/sb%rcell_volume
 
+    !! copy eigenvals
+    this%eigenval = st%eigenval
+    
     write (message(1), '(a,f12.6,a)') "Info: Electron-gas plasmon frequency", &
          units_from_atomic(units_out%energy, sqrt(this%wp2)), " ["//trim(units_abbrev(units_out%energy))//"]"
     call messages_info(1)
