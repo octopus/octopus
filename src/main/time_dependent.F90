@@ -121,8 +121,11 @@ contains
 
     PUSH_SUB(time_dependent_run_legacy)
 
-    call td_run(electrons%namespace, electrons%mc, electrons%gr, electrons%geo, electrons%st, electrons%ks, electrons%hm, &
-      electrons%outp, from_scratch)
+    call td_init(electrons%td, electrons%namespace, electrons%gr, electrons%geo, electrons%st, electrons%ks, electrons%hm, &
+      electrons%outp)
+    call td_run(electrons%td, electrons%namespace, electrons%mc, electrons%gr, electrons%geo, electrons%st, electrons%ks, &
+      electrons%hm, electrons%outp, from_scratch)
+    call td_end(electrons%td)
 
     POP_SUB(time_dependent_run_legacy)
   end subroutine time_dependent_run_legacy

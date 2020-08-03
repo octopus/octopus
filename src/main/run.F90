@@ -28,6 +28,7 @@ module run_oct_m
   use global_oct_m
   use ground_state_oct_m
   use interactions_factory_oct_m
+  use interaction_partner_oct_m
   use invert_ks_oct_m
   use messages_oct_m
   use mpi_debug_oct_m
@@ -46,6 +47,7 @@ module run_oct_m
   use restart_oct_m
   use static_pol_oct_m
   use system_factory_oct_m
+  use system_oct_m
   use td_oct_m
   use test_oct_m
   use time_dependent_oct_m
@@ -106,11 +108,12 @@ contains
     type(namespace_t), intent(in) :: namespace
     integer,           intent(in) :: calc_mode_id
 
-    class(*), pointer :: systems
+    type(partner_list_t) :: partners
+    class(system_t), pointer :: systems
     type(system_factory_t) :: system_factory
     type(interactions_factory_t) :: interactions_factory
     type(profile_t), save :: calc_mode_prof
-    logical :: from_scratch, is_slave
+    logical :: from_scratch
     integer :: iunit_out
 
     PUSH_SUB(run)
@@ -155,12 +158,20 @@ contains
       systems => electrons_t(namespace, generate_epot = calc_mode_id /= OPTION__CALCULATIONMODE__DUMMY)
     end if
 
+    ! Create list of partners (currently missing partners that are not systems)
     select type (systems)
     class is (multisystem_t)
-      ! Create and initialize interactions
-      call interactions_factory%create_interactions(systems, systems%list)
-      call systems%init_all_interactions()
+      partners = systems%list
+    type is (electrons_t)
+      call partners%add(systems)
+    end select
 
+    ! Create and initialize interactions
+    call interactions_factory%create_interactions(systems, partners)
+    call systems%init_all_interactions()
+
+    select type (systems)
+    class is (multisystem_t)
       ! Write the interaction graph as a DOT graph for debug
       if (debug%interaction_graph .and. mpi_grp_is_root(mpi_world)) then
         iunit_out = io_open('debug/interaction_graph.dot', systems%namespace, action='write')
@@ -169,13 +180,9 @@ contains
         write(iunit_out, '(a)') '}'
         call io_close(iunit_out)
       end if
-      is_slave = systems%process_is_slave()
-
-    type is (electrons_t)
-      is_slave = systems%process_is_slave()
     end select
 
-    if (.not. is_slave) then
+    if (.not. systems%process_is_slave()) then
       call messages_write('Info: Octopus initialization completed.', new_line = .true.)
       call messages_write('Info: Starting calculation mode.')
       call messages_info()

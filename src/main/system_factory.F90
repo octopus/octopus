@@ -83,6 +83,8 @@ contains
     select case (type)
     case (SYSTEM_MULTISYSTEM)
       system => multisystem_t(namespace_t(name, parent=namespace), this)
+    case (SYSTEM_ELECTRONIC)
+      system => electrons_t(namespace_t(name, parent=namespace))
     case (SYSTEM_MAXWELL)
       system => system_mxll_t(namespace_t(name, parent=namespace))
     case (SYSTEM_CLASSICAL_PARTICLE)

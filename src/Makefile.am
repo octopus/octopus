@@ -588,7 +588,7 @@ maxwell_srcs = $(maxwell_f_srcs)
 
 # Sources in scf
 scf_f_srcs =                                 \
-	scf/ground_state.F90                 \
+	scf/electrons_ground_state.F90       \
 	scf/lcao.F90                         \
 	scf/lda_u_mixer.F90                  \
 	scf/mix.F90                          \
@@ -702,6 +702,7 @@ octopus_f_srcs =                             \
 	main/invert_ks.F90                   \
 	main/static_pol.F90                  \
 	main/geom_opt.F90                    \
+	main/ground_state.F90                \
 	main/phonons_fd.F90                  \
 	main/casida.F90                      \
 	main/pulpo.F90                       \
