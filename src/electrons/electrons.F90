@@ -23,6 +23,7 @@
 module electrons_oct_m
   use accel_oct_m
   use calc_mode_par_oct_m
+  use clock_oct_m
   use density_oct_m
   use elf_oct_m
   use energy_calc_oct_m
@@ -30,6 +31,7 @@ module electrons_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_elec_oct_m
+  use interaction_oct_m
   use mesh_oct_m
   use messages_oct_m
   use modelmb_particles_oct_m
@@ -45,6 +47,9 @@ module electrons_oct_m
   use states_abst_oct_m
   use states_elec_oct_m
   use states_elec_dim_oct_m
+  use sort_oct_m
+  use system_oct_m
+  use td_oct_m
   use unit_system_oct_m
   use v_ks_oct_m
   use xc_oct_m
@@ -56,18 +61,29 @@ module electrons_oct_m
   public ::               &
     electrons_t
 
-  type :: electrons_t
+  type, extends(system_t) :: electrons_t
     ! Components are public by default
-    type(space_t)                :: space
     type(geometry_t)             :: geo
     type(grid_t),        pointer :: gr    !< the mesh
     type(states_elec_t), pointer :: st    !< the states
     type(v_ks_t)                 :: ks    !< the Kohn-Sham potentials
     type(output_t)               :: outp  !< the output
     type(multicomm_t)            :: mc    !< index and domain communicators
-    type(namespace_t)            :: namespace
     type(hamiltonian_elec_t)     :: hm
+    type(td_t)                   :: td
   contains
+    procedure :: init_interaction => electrons_init_interaction
+    procedure :: initial_conditions => electrons_initial_conditions
+    procedure :: do_td_operation => electrons_do_td_operation
+    procedure :: is_tolerance_reached => electrons_is_tolerance_reached
+    procedure :: iteration_info => electrons_iteration_info
+    procedure :: store_current_status => electrons_store_current_status
+    procedure :: update_quantity => electrons_update_quantity
+    procedure :: update_exposed_quantity => electrons_update_exposed_quantity
+    procedure :: copy_quantities_to_interaction => electrons_copy_quantities_to_interaction
+    procedure :: output_start => electrons_output_start
+    procedure :: output_write => electrons_output_write
+    procedure :: output_finish => electrons_output_finish
     procedure :: process_is_slave  => electrons_process_is_slave
     final :: electrons_finalize
   end type electrons_t
@@ -211,6 +227,156 @@ contains
     end subroutine parallel_init
 
   end function electrons_constructor
+
+  ! ---------------------------------------------------------
+  subroutine electrons_init_interaction(this, interaction)
+    class(electrons_t), target, intent(inout) :: this
+    class(interaction_t),       intent(inout) :: interaction
+
+    PUSH_SUB(electrons_init_interactions)
+
+    select type (interaction)
+    class default
+      message(1) = "Trying to initialize an unsupported interaction by the electrons."
+      call messages_fatal(1)
+    end select
+
+    POP_SUB(electrons_init_interactions)
+  end subroutine electrons_init_interaction
+
+  ! ---------------------------------------------------------
+  subroutine electrons_initial_conditions(this, from_scratch)
+    class(electrons_t), intent(inout) :: this
+    logical,            intent(in)    :: from_scratch
+
+    PUSH_SUB(electrons_initial_conditions)
+
+    POP_SUB(electrons_initial_conditions)
+  end subroutine electrons_initial_conditions
+
+  ! ---------------------------------------------------------
+  subroutine electrons_do_td_operation(this, operation)
+    class(electrons_t), intent(inout) :: this
+    integer,         intent(in)    :: operation
+
+    PUSH_SUB(electrons_do_td_operation)
+
+    POP_SUB(electrons_do_td_operation)
+  end subroutine electrons_do_td_operation
+
+  ! ---------------------------------------------------------
+  subroutine electrons_iteration_info(this)
+    class(electrons_t), intent(in) :: this
+
+    PUSH_SUB(electrons_iteraction_info)
+
+    POP_SUB(electrons_iteration_info)
+  end subroutine electrons_iteration_info
+
+  ! ---------------------------------------------------------
+  logical function electrons_is_tolerance_reached(this, tol) result(converged)
+    class(electrons_t), intent(in) :: this
+    FLOAT,              intent(in) :: tol
+
+    PUSH_SUB(electrons_is_tolerance_reached)
+
+    converged = .false.
+
+    POP_SUB(electrons_is_tolerance_reached)
+  end function electrons_is_tolerance_reached
+
+  ! ---------------------------------------------------------
+  subroutine electrons_store_current_status(this)
+    class(electrons_t), intent(inout) :: this
+
+    PUSH_SUB(electrons_store_current_status)
+
+    POP_SUB(electrons_store_current_status)
+  end subroutine electrons_store_current_status
+
+  ! ---------------------------------------------------------
+  subroutine electrons_update_quantity(this, iq, requested_time)
+    class(electrons_t),   intent(inout) :: this
+    integer,              intent(in)    :: iq
+    class(clock_t),       intent(in)    :: requested_time
+
+    PUSH_SUB(electrons_update_quantity)
+
+    ! We are not allowed to update protected quantities!
+    ASSERT(.not. this%quantities(iq)%protected)
+
+    select case (iq)
+    case default
+      message(1) = "Incompatible quantity."
+      call messages_fatal(1)
+    end select
+
+    POP_SUB(electrons_update_quantity)
+  end subroutine electrons_update_quantity
+
+  ! ---------------------------------------------------------
+  subroutine electrons_update_exposed_quantity(partner, iq, requested_time)
+    class(electrons_t), intent(inout) :: partner
+    integer,            intent(in)    :: iq
+    class(clock_t),     intent(in)    :: requested_time
+
+    PUSH_SUB(electrons_update_exposed_quantity)
+
+    ! We are not allowed to update protected quantities!
+    ASSERT(.not. partner%quantities(iq)%protected)
+
+    select case (iq)
+    case default
+      message(1) = "Incompatible quantity."
+      call messages_fatal(1)
+    end select
+
+    POP_SUB(electrons_update_exposed_quantity)
+  end subroutine electrons_update_exposed_quantity
+
+  ! ---------------------------------------------------------
+  subroutine electrons_copy_quantities_to_interaction(partner, interaction)
+    class(electrons_t),   intent(inout) :: partner
+    class(interaction_t), intent(inout) :: interaction
+
+    PUSH_SUB(electrons_copy_quantities_to_interaction)
+
+    select type (interaction)
+    class default
+      message(1) = "Unsupported interaction."
+      call messages_fatal(1)
+    end select
+
+    POP_SUB(electrons_copy_quantities_to_interaction)
+  end subroutine electrons_copy_quantities_to_interaction
+
+  ! ---------------------------------------------------------
+  subroutine electrons_output_start(this)
+    class(electrons_t), intent(inout) :: this
+
+    PUSH_SUB(electrons_output_start)
+
+    POP_SUB(electrons_output_start)
+  end subroutine electrons_output_start
+
+  ! ---------------------------------------------------------
+  subroutine electrons_output_write(this, iter)
+    class(electrons_t), intent(inout) :: this
+    integer,            intent(in)    :: iter
+
+    PUSH_SUB(electrons_output_write)
+
+    POP_SUB(electrons_output_write)
+  end subroutine electrons_output_write
+
+  ! ---------------------------------------------------------
+  subroutine electrons_output_finish(this)
+    class(electrons_t), intent(inout) :: this
+
+    PUSH_SUB(electrons_output_finish)
+
+    POP_SUB(electrons_output_finish)
+  end subroutine electrons_output_finish
 
   ! ---------------------------------------------------------
   logical function electrons_process_is_slave(this) result(is_slave)

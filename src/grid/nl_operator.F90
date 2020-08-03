@@ -286,6 +286,17 @@ contains
 
     op%label = label
 
+    call accel_mem_nullify(op%buff_imin)
+    call accel_mem_nullify(op%buff_imax)
+    call accel_mem_nullify(op%buff_ri)
+    call accel_mem_nullify(op%buff_map)
+    call accel_mem_nullify(op%buff_all)
+    call accel_mem_nullify(op%buff_inner)
+    call accel_mem_nullify(op%buff_outer)
+    call accel_mem_nullify(op%buff_stencil)
+    call accel_mem_nullify(op%buff_ip_to_xyz)
+    call accel_mem_nullify(op%buff_xyz_to_ip)
+
     POP_SUB(nl_operator_init)
   end subroutine nl_operator_init
 
@@ -296,6 +307,9 @@ contains
     type(nl_operator_t), target, intent(in)  :: opi
 
     PUSH_SUB(nl_operator_copy)
+
+    ! We cannot currently copy the GPU kernel for the nl_operator
+    ASSERT(.not. accel_is_enabled())
 
     call nl_operator_init(opo, opi%label)
 
@@ -328,6 +342,7 @@ contains
       call loct_pointer_copy(opo%outer%imax, opi%outer%imax)
       call loct_pointer_copy(opo%outer%ri,   opi%outer%ri)
     end if
+
 
     POP_SUB(nl_operator_copy)
   end subroutine nl_operator_copy

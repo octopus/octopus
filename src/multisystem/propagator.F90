@@ -67,11 +67,11 @@ module propagator_oct_m
     procedure :: finished => propagator_finished
     procedure :: save_scf_start => propagator_save_scf_start
     procedure :: rewind_scf_loop => propagator_rewind_scf_loop
-    procedure :: parse_td_variables => propagator_parse_td_variables
   end type propagator_t
 
   ! Known propagation operations
-  integer, public, parameter ::        &
+  integer, public, parameter ::         &
+    SKIP                         = -1,  &
     FINISHED                     =  0,  &
     VERLET_START                 =  1,  &
     VERLET_FINISH                =  2,  &
@@ -104,8 +104,33 @@ module propagator_oct_m
     PROP_EXPMID                  = 4,  &
     PROP_EXPMID_SCF              = 5
 
+  interface propagator_t
+    procedure propagator_constructor
+  end interface propagator_t
 
 contains
+
+  ! ---------------------------------------------------------
+  function propagator_constructor(dt) result(this)
+    FLOAT,              intent(in) :: dt
+    type(propagator_t), pointer    :: this
+
+    PUSH_SUB(propagator_constructor)
+
+    SAFE_ALLOCATE(this)
+
+    this%start_step = SKIP
+    this%final_step = SKIP
+
+    call this%add(UPDATE_INTERACTIONS)
+    call this%add(FINISHED)
+
+    this%algo_steps = 1
+
+    this%dt = dt
+
+    POP_SUB(propagator_constructor)
+  end function propagator_constructor
 
   ! ---------------------------------------------------------
   subroutine propagator_rewind(this)
@@ -199,6 +224,8 @@ contains
     PUSH_SUB(propagator_step_debug_message)
 
     select case (tdop)
+    case (SKIP)
+      description = "Skipping propagation step for"
     case (FINISHED)
       description = "Propagation step finished for"
     case (UPDATE_INTERACTIONS)
@@ -237,20 +264,6 @@ contains
 
     POP_SUB(propagator_step_debug_message)
   end function propagator_step_debug_message
-
-  !--------------------------------------------------------
-  subroutine propagator_parse_td_variables(this, namespace)
-    class(propagator_t), intent(inout) :: this
-    type(namespace_t),        intent(in)    :: namespace
-
-    PUSH_SUB(propagator_parse_td_variables)
-
-    ! This variable is also defined (and properly documented) in td/td.F90.
-    ! This is temporary, until all the propagators are moved to the new framework.
-    call parse_variable(namespace, 'TDTimeStep', CNST(10.0), this%dt)
-
-    POP_SUB(propagator_parse_td_variables)
-  end subroutine propagator_parse_td_variables
 
 end module propagator_oct_m
 

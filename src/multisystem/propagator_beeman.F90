@@ -36,18 +36,18 @@ module propagator_beeman_oct_m
   end type propagator_beeman_t
 
   interface propagator_beeman_t
-    procedure propagator_beeman_init
+    procedure propagator_beeman_constructor
   end interface propagator_beeman_t
 
 contains
 
   ! ---------------------------------------------------------
-  function propagator_beeman_init(namespace, predictor_corrector) result(this)
-    type(namespace_t),   intent(in)    :: namespace
+  function propagator_beeman_constructor(dt, predictor_corrector) result(this)
+    FLOAT,               intent(in)    :: dt
     logical,             intent(in)    :: predictor_corrector
     type(propagator_beeman_t), pointer :: this
 
-    PUSH_SUB(propagator_beeman_init)
+    PUSH_SUB(propagator_beeman_constructor)
 
     SAFE_ALLOCATE(this)
 
@@ -84,10 +84,10 @@ contains
     ! Beeman has only one algorithmic step
     this%algo_steps = 1
 
-    call this%parse_td_variables(namespace)
+    this%dt = dt
 
-    POP_SUB(propagator_beeman_init)
-  end function propagator_beeman_init
+    POP_SUB(propagator_beeman_constructor)
+  end function propagator_beeman_constructor
 
 end module propagator_beeman_oct_m
 

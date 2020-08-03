@@ -9,15 +9,14 @@ Enabled    : Yes
 Input : 09-symmetrization_gga.01-spg143_nosym.inp
 
 Precision: 1e-9
-match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
-match ;  Total energy        ; GREPFIELD(static/info, 'Total       =', 3) ; -0.14124633
+match ;  Total energy        ; GREPFIELD(static/info, 'Total       =', 3) ; -0.14124709
 match ;  Ion-ion energy      ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -0.13210182
-match ;  Eigenvalues sum     ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -0.13550864
-match ;  Hartree energy      ; GREPFIELD(static/info, 'Hartree     =', 3) ; 0.03169732
-match ;  Exchange energy     ; GREPFIELD(static/info, 'Exchange    =', 3) ; -0.43889114
-match ;  Correlation energy  ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.09076636
-match ;  Kinetic energy      ; GREPFIELD(static/info, 'Kinetic     =', 3) ; 0.37545712
-match ;  External energy     ; GREPFIELD(static/info, 'External    =', 3) ; 0.11335732
+match ;  Eigenvalues sum     ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -0.13550927
+match ;  Hartree energy      ; GREPFIELD(static/info, 'Hartree     =', 3) ; 0.03169748
+match ;  Exchange energy     ; GREPFIELD(static/info, 'Exchange    =', 3) ; -0.43889119
+match ;  Correlation energy  ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.09076635
+match ;  Kinetic energy      ; GREPFIELD(static/info, 'Kinetic     =', 3) ; 0.37545717
+match ;  External energy     ; GREPFIELD(static/info, 'External    =', 3) ; 0.11335718
 
 match ;  Eigenvalue [  k=1, n=1   ]  ; GREPFIELD(static/info, '#k =   1', 3, 1) ; -0.136963
 match ;  Eigenvalue [  k=1, n=2   ]  ; GREPFIELD(static/info, '#k =   1', 3, 2) ; 0.072893
@@ -30,17 +29,17 @@ match ;  Force 1 (x)    ; GREPFIELD(static/info, '1        Na', 3) ; 0.17158
 match ;  Force 1 (y)    ; GREPFIELD(static/info, '1        Na', 4) ; 0.235951
 match ;  Force 2 (x)    ; GREPFIELD(static/info, '2        Na', 3) ; 0.118549
 match ;  Force 2 (y)    ; GREPFIELD(static/info, '2        Na', 4) ; -0.266564
-match ;  Force 2 (z)    ; GREPFIELD(static/info, '2        Na', 5) ; 9.22552e-06
+match ;  Force 2 (z)    ; GREPFIELD(static/info, '2        Na', 5) ; 9.22286e-06
 match ;  Force 3 (x)    ; GREPFIELD(static/info, '3        Na', 3) ; -0.290125
 match ;  Force 3 (y)    ; GREPFIELD(static/info, '3        Na', 4) ; 0.0306201
-match ;  Force 3 (z)    ; GREPFIELD(static/info, '3        Na', 5) ; 9.24803e-06
+match ;  Force 3 (z)    ; GREPFIELD(static/info, '3        Na', 5) ; 9.24653e-06
 
 match ;  Partial charge  1  ; GREPFIELD(static/info, 'Partial ionic charges', 3, 2) ; 1.0
 match ;  Partial charge  2  ; GREPFIELD(static/info, 'Partial ionic charges', 3, 3) ; 1.0
-match ;  Density value 1    ; LINEFIELD(static/density.y=0\,z=0, 2, 2) ; 0.00974958320896463
-match ;  Density value 2    ; LINEFIELD(static/density.y=0\,z=0, 3, 2) ; 0.00866870024322418
-match ;  Bader value 1      ; LINEFIELD(static/bader.y=0\,z=0, 6, 2) ; 0.0099384920648451
-match ;  Bader value 2      ; LINEFIELD(static/bader.y=0\,z=0, 10, 2) ; 0.01158962633614245
+match ;  Density value 1    ; LINEFIELD(static/density.y=0\,z=0, 2, 2) ; 0.009749583546970385
+match ;  Density value 2    ; LINEFIELD(static/density.y=0\,z=0, 3, 2) ; 0.00866870526366572
+match ;  Bader value 1      ; LINEFIELD(static/bader.y=0\,z=0, 6, 2) ; 0.009938473170772219
+match ;  Bader value 2      ; LINEFIELD(static/bader.y=0\,z=0, 10, 2) ; 0.011589634259676102
 
 # Here the reference values should be copied from the calculation without symmetries
 Precision: 5e-6

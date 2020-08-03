@@ -37,18 +37,18 @@ module propagator_exp_mid_oct_m
   end type propagator_exp_mid_t
 
   interface propagator_exp_mid_t
-    procedure propagator_exp_mid_init
+    procedure propagator_exp_mid_constructor
   end interface propagator_exp_mid_t
 
 contains
 
   ! ---------------------------------------------------------
-  function propagator_exp_mid_init(namespace, predictor_corrector) result(this)
-    type(namespace_t),         intent(in) :: namespace
+  function propagator_exp_mid_constructor(dt, predictor_corrector) result(this)
+    FLOAT,                     intent(in) :: dt
     logical,                   intent(in) :: predictor_corrector
     type(propagator_exp_mid_t), pointer   :: this
 
-    PUSH_SUB(propagator_exp_mid_init)
+    PUSH_SUB(propagator_exp_mid_constructor)
 
     SAFE_ALLOCATE(this)
 
@@ -87,10 +87,10 @@ contains
     ! Exponential midpoint has only one algorithmic step
     this%algo_steps = 2
 
-    call this%parse_td_variables(namespace)
+    this%dt = dt
 
-    POP_SUB(propagator_exp_mid_init)
-  end function propagator_exp_mid_init
+    POP_SUB(propagator_exp_mid_constructor)
+  end function propagator_exp_mid_constructor
 
 end module propagator_exp_mid_oct_m
 
