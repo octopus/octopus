@@ -478,7 +478,7 @@ contains
     else
       ! This part uses the old non-batch implementation
       SAFE_ALLOCATE(rs_aux_in(1:hm%der%mesh%np_part, 1:3))
-      SAFE_ALLOCATE(rs_aux_out(1:hm%der%mesh%np, 1:3))
+      SAFE_ALLOCATE(rs_aux_out(1:hm%der%mesh%np_part, 1:3))
       do ii = 1, 3
         call batch_get_state(psib, ii, hm%der%mesh%np, rs_aux_in(:, ii))
       end do

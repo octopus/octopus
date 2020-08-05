@@ -1107,12 +1107,12 @@ contains
     pml%conv_plus_old         = M_z0
     pml%conv_minus_old        = M_z0
 
-    width(:) = bounds(2, :) - bounds(1, :)
+    width(1:3) = bounds(2, 1:3) - bounds(1, 1:3)
 
     ! PML variables for all boundary points
     do ip_in = 1, pml%points_number
       ip = pml%points_map(ip_in)
-      ddv(:) = abs(gr%mesh%x(ip, :)) - bounds(1, :)
+      ddv(1:3) = abs(gr%mesh%x(ip, 1:3)) - bounds(1, 1:3)
       do idim = 1, gr%mesh%sb%dim
         if (ddv(idim) >= M_ZERO) then
           gg     = (ddv(idim)/pml%width)**pml%power
@@ -1205,13 +1205,13 @@ contains
 
     mask(:) = M_ONE
 
-    width(:) = bounds(2, :) - bounds(1, :)
+    width(1:3) = bounds(2, 1:3) - bounds(1, 1:3)
     tmp(:)   = M_ZERO
 
     do ip = 1, mesh%np
       tmp = M_ONE
       mask(ip) = M_ONE
-      ddv(:) = abs(mesh%x(ip, :)) - bounds(1, :)
+      ddv(1:3) = abs(mesh%x(ip, 1:3)) - bounds(1, 1:3)
       do idim = 1, mesh%sb%dim
         if(ddv(idim) >= M_ZERO ) then
           if (ddv(idim)  <=  width(idim)) then
@@ -1616,7 +1616,7 @@ contains
 
     point_info = 0
 
-    width(:) = bounds(2, :) - bounds(1, :)
+    width(1:3) = bounds(2, 1:3) - bounds(1, 1:3)
     xx = M_ZERO
     xx(1:mesh%sb%dim) = mesh%x(ip, 1:mesh%sb%dim)
     rr = sqrt(dot_product(xx(1:mesh%sb%dim), xx(1:mesh%sb%dim)))
