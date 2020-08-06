@@ -156,6 +156,7 @@ subroutine poisson_solve_direct(this, pot, rho)
         !$omp parallel do reduction(+:aa1,aa2,aa3,aa4) private(yy)
         do jp = 1, this%der%mesh%np
           yy(1:dim_ele) = this%der%mesh%x(jp, 1:dim_ele)
+          if(include_diag) yy(dim_eff) = M_ZERO
           if (ip     /= jp .or. include_diag) then
             aa1 = aa1 + rho(jp)/sqrt(sum((xx1(1:dim_eff) - yy(1:dim_eff))**2)) * this%der%mesh%vol_pp(jp)
           end if
@@ -187,6 +188,7 @@ subroutine poisson_solve_direct(this, pot, rho)
         !$omp parallel do reduction(+:aa1,aa2,aa3,aa4) private(yy)
         do jp = 1, this%der%mesh%np
           yy(1:dim_ele) = this%der%mesh%x(jp, 1:dim_ele)
+          if(include_diag) yy(dim_eff) = M_ZERO
           if (ip     /= jp .or. include_diag) aa1 = aa1 + rho(jp)/sqrt(sum((xx1(1:dim_eff) - yy(1:dim_eff))**2))
           if (ip + 1 /= jp .or. include_diag) aa2 = aa2 + rho(jp)/sqrt(sum((xx2(1:dim_eff) - yy(1:dim_eff))**2))
           if (ip + 2 /= jp .or. include_diag) aa3 = aa3 + rho(jp)/sqrt(sum((xx3(1:dim_eff) - yy(1:dim_eff))**2))
