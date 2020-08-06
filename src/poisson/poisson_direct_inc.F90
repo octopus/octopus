@@ -151,6 +151,11 @@ subroutine poisson_solve_direct(this, pot, rho)
           aa2 = prefactor*rho(ip + 1)*this%der%mesh%vol_pp(ip + 1)**(M_ONE - M_ONE/dim_ele)
           aa3 = prefactor*rho(ip + 2)*this%der%mesh%vol_pp(ip + 2)**(M_ONE - M_ONE/dim_ele)
           aa4 = prefactor*rho(ip + 3)*this%der%mesh%vol_pp(ip + 3)**(M_ONE - M_ONE/dim_ele)
+        else
+          aa1 = M_ZERO
+          aa2 = M_ZERO
+          aa3 = M_ZERO
+          aa4 = M_ZERO
         end if
 
         !$omp parallel do reduction(+:aa1,aa2,aa3,aa4) firstprivate(yy)
