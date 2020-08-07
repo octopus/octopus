@@ -649,16 +649,21 @@ contains
 
     select case(te%exp_method)
     case(EXP_TAYLOR)
+      ! Note that delttat2_ is only initialized if deltat2 is present.
       if(present(deltat2)) then
-        call exponential_taylor_series_batch(te, namespace, mesh, hm, psib, deltat_, psib2, deltat2_, vmagnus)
+        call exponential_taylor_series_batch(te, namespace, mesh, hm, psib, deltat_, &
+                                             psib2, deltat2_, vmagnus)
       else
-        call exponential_taylor_series_batch(te, namespace, mesh, hm, psib, deltat_, psib2, vmagnus = vmagnus)
+        call exponential_taylor_series_batch(te, namespace, mesh, hm, psib, deltat_, &
+                                             vmagnus=vmagnus)
       end if
       if (present(inh_psib)) then
         if(present(deltat2)) then
-          call exponential_taylor_series_batch(te, namespace, mesh, hm, psib, deltat_, psib2, deltat2_, vmagnus, inh_psib)
+          call exponential_taylor_series_batch(te, namespace, mesh, hm, psib, deltat_, &
+                                               psib2, deltat2_, vmagnus, inh_psib)
         else
-          call exponential_taylor_series_batch(te, namespace, mesh, hm, psib, deltat_, psib2, vmagnus=vmagnus, inh_psib=inh_psib)
+          call exponential_taylor_series_batch(te, namespace, mesh, hm, psib, deltat_, &
+                                               vmagnus=vmagnus, inh_psib=inh_psib)
         end if
       end if
 
@@ -727,8 +732,10 @@ contains
       zfact = zfact*deltat
       call batch_axpy(mesh%np, real(zfact), inh_psib, psib)
 
-      zfact2 = zfact2*deltat2
-      if(present(psib2)) call batch_axpy(mesh%np, TOFLOAT(zfact2), inh_psib, psib2)
+      if(present(psib2)) then
+        zfact2 = zfact2*deltat2
+        call batch_axpy(mesh%np, TOFLOAT(zfact2), inh_psib, psib2)
+      end if
     end if
 
     do iter = 1, te%exp_order
