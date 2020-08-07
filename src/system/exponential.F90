@@ -649,9 +649,17 @@ contains
 
     select case(te%exp_method)
     case(EXP_TAYLOR)
-      call exponential_taylor_series_batch(te, namespace, mesh, hm, psib, deltat_, psib2, deltat2_, vmagnus)
+      if(present(deltat2)) then
+        call exponential_taylor_series_batch(te, namespace, mesh, hm, psib, deltat_, psib2, deltat2_, vmagnus)
+      else
+        call exponential_taylor_series_batch(te, namespace, mesh, hm, psib, deltat_, psib2, vmagnus = vmagnus)
+      end if
       if (present(inh_psib)) then
-        call exponential_taylor_series_batch(te, namespace, mesh, hm, psib, deltat_, psib2, deltat2_, vmagnus, inh_psib)
+        if(present(deltat2)) then
+          call exponential_taylor_series_batch(te, namespace, mesh, hm, psib, deltat_, psib2, deltat2_, vmagnus, inh_psib)
+        else
+          call exponential_taylor_series_batch(te, namespace, mesh, hm, psib, deltat_, psib2, vmagnus=vmagnus, inh_psib=inh_psib)
+        end if
       end if
 
     case(EXP_LANCZOS)
