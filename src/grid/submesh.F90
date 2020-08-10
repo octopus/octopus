@@ -270,7 +270,7 @@ contains
       !Garry Tee, NZ J. Mathematics Vol. 34 (2005) 165. eqs 53,55
       rc_norm_n = product(ceiling(rc / mesh%spacing) + 1.0)
       if (mesh%use_curvilinear) rc_norm_n = rc_norm_n / mesh%cv%min_mesh_scaling
-      max_elements_count = MAX_DIM**sb%periodic_dim * M_PI**floor(0.5 * MAX_DIM) * rc_norm_n * f_n(MAX_DIM) + 1 
+      max_elements_count = 3**MAX_DIM * M_PI**floor(0.5 * MAX_DIM) * rc_norm_n * f_n(MAX_DIM) + 1 
       SAFE_ALLOCATE(map_temp(1:max_elements_count))
       SAFE_ALLOCATE(xtmp(1:max_elements_count, 0:sb%dim))
             
