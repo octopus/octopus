@@ -128,6 +128,23 @@ contains
 
   ! -------------------------------------------------------------
 
+  ! Multipliers for recursive formulation of the Gamma function
+  ! f(n) = 2f(n-2)/n, f(0)=1, f(1)=2
+  recursive FLOAT function f_n(dims) result(fn)
+
+    integer :: dims
+
+    if (dims == 0) then
+      fn = 1
+    else if (dims == 1) then
+      fn = 2
+    else
+      fn = 2 * f_n(dims - 2) / dims
+    end if
+  end function f_n
+
+! -------------------------------------------------------------
+
   subroutine submesh_init(this, sb, mesh, center, rc)
     type(submesh_t),      intent(inout)  :: this !< valgrind objects to intent(out) due to the initializations above
     type(simul_box_t),    intent(in)     :: sb
@@ -135,9 +152,9 @@ contains
     FLOAT,                intent(in)     :: center(:)
     FLOAT,                intent(in)     :: rc
     
-    FLOAT :: r2, rc2, xx(1:MAX_DIM)
+    FLOAT :: r2, rc2, xx(1:MAX_DIM), rc_norm_n
     FLOAT, allocatable :: center_copies(:, :), xtmp(:, :)
-    integer :: icell, is, isb, ip, ix, iy, iz
+    integer :: icell, is, isb, ip, ix, iy, iz, max_elements_count
     type(profile_t), save :: submesh_init_prof
     type(periodic_copy_t) :: pp
     integer, allocatable :: map_inv(:), map_temp(:)
@@ -249,9 +266,13 @@ contains
         center_copies(1:sb%dim, icell) = periodic_copy_position(pp, sb, icell)
       end do
 
-      ! This is a very conservative approximation of the max size. A better estimation is needed.
-      SAFE_ALLOCATE(map_temp(1:mesh%np_part*periodic_copy_num(pp)))
-      SAFE_ALLOCATE(xtmp(1:mesh%np_part*periodic_copy_num(pp), 0:sb%dim))
+      !Recursive formulation of the volume of n-ellipsoid 
+      !Garry Tee, NZ J. Mathematics Vol. 34 (2005) 165. eqs 53,55
+      rc_norm_n = product(ceiling(rc / mesh%spacing) + 1.0)
+      if (mesh%use_curvilinear) rc_norm_n = rc_norm_n / mesh%cv%min_mesh_scaling
+      max_elements_count = MAX_DIM**sb%periodic_dim * M_PI**floor(0.5 * MAX_DIM) * rc_norm_n * f_n(MAX_DIM) + 1 
+      SAFE_ALLOCATE(map_temp(1:max_elements_count))
+      SAFE_ALLOCATE(xtmp(1:max_elements_count, 0:sb%dim))
             
       is = 0
       do ip = 1, mesh%np_part
