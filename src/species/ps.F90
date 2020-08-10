@@ -417,7 +417,6 @@ contains
       call hgh_get_eigen(ps_hgh, eigen)
       SAFE_ALLOCATE(ps%k    (0:ps%lmax, 1:ps%kbc, 1:ps%kbc))
       call hgh_load(ps, ps_hgh)
-      if(debug%info) call hgh_debug(ps_hgh, '.', namespace)
       call hgh_end(ps_hgh)
     case(PSEUDO_FORMAT_QSO, PSEUDO_FORMAT_UPF1, PSEUDO_FORMAT_UPF2, PSEUDO_FORMAT_PSML, PSEUDO_FORMAT_PSP8)
       call ps_xml_load(ps, ps_xml)
