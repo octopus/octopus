@@ -362,7 +362,7 @@
     ! and \epsilon^-1 = 1 + 4 \pi \chi
     SAFE_ALLOCATE(invdielectric(1:space%dim, 1:energy_steps))
     do ifreq = 1, energy_steps
-      ww = (ifreq-1)*spectrum%energy_step + spectrum%min_energy
+      ww = max((ifreq-1)*spectrum%energy_step + spectrum%min_energy, M_EPSILON)
 
       invdielectric(1:space%dim, ifreq) = (vel0(1:space%dim) + M_FOUR * M_PI * &
                   TOCMPLX(ftcurr(ifreq, 1:space%dim, 2),-ftcurr(ifreq, 1:space%dim, 1)) / ww )/v0
