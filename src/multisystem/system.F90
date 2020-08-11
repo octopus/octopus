@@ -43,12 +43,23 @@ module system_oct_m
   private
   public ::               &
     system_t,             &
+    system_init,          &
     system_end,           &
     system_list_t,        &
     system_iterator_t
 
+  integer, parameter, public ::     &
+    SYSTEM_ELECTRONIC         = 1,  &
+    SYSTEM_MAXWELL            = 2,  &
+    SYSTEM_CLASSICAL_PARTICLE = 3,  &
+    SYSTEM_CHARGED_PARTICLE   = 4,  &
+    SYSTEM_MULTISYSTEM        = 5
+
+
   type, extends(interaction_partner_t), abstract :: system_t
     private
+
+    integer :: system_type
     type(space_t), public :: space
 
     class(propagator_t), pointer, public :: prop => null()
@@ -61,6 +72,7 @@ module system_oct_m
     type(integer_list_t), public :: supported_interactions
     type(interaction_list_t), public :: interactions !< List with all the interactions of this system
   contains
+    procedure :: init => system_init
     procedure :: dt_operation =>  system_dt_operation
     procedure :: init_clocks => system_init_clocks
     procedure :: reset_clocks => system_reset_clocks
@@ -157,6 +169,20 @@ module system_oct_m
   end type system_iterator_t
 
 contains
+
+  ! ---------------------------------------------------------
+  subroutine system_init(this, namespace, system_type)
+    class(system_t),  intent(inout) :: this
+    type(namespace_t),   intent(in) :: namespace
+    integer,          intent(in)    :: system_type
+
+    PUSH_SUB(system_init)
+
+    this%namespace = namespace
+    this%system_type = system_type
+
+    POP_SUB(system_init)
+  end subroutine system_init
 
   ! ---------------------------------------------------------
   subroutine system_dt_operation(this)

@@ -98,6 +98,7 @@ contains
     PUSH_SUB(charged_particle_init)
 
     call classical_particle_init(this%classical_particle_t, namespace)
+    call this%init(namespace, SYSTEM_CHARGED_PARTICLE)
 
     !%Variable ParticleCharge
     !%Type float

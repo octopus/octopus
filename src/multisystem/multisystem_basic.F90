@@ -56,7 +56,7 @@ contains
   recursive function multisystem_basic_constructor(namespace, factory) result(system)
     type(namespace_t),            intent(in) :: namespace
     class(system_factory_abst_t), intent(in) :: factory
-    class(multisystem_basic_t),         pointer    :: system
+    class(multisystem_basic_t),   pointer    :: system
 
     PUSH_SUB(multisystem_basic_constructor)
 

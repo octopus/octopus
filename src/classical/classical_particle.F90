@@ -118,10 +118,8 @@ contains
 
     PUSH_SUB(classical_particle_init)
 
-    this%namespace = namespace
-
+    call this%init(namespace, SYSTEM_CLASSICAL_PARTICLE)
     call messages_print_stress(stdout, "Classical Particle", namespace=namespace)
-
     call space_init(this%space, namespace)
 
     !%Variable ParticleMass

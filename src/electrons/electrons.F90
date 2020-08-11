@@ -111,7 +111,7 @@ contains
     SAFE_ALLOCATE(sys%gr)
     SAFE_ALLOCATE(sys%st)
 
-    sys%namespace = namespace
+    call sys%init(namespace, SYSTEM_ELECTRONIC)
 
     call messages_obsolete_variable(sys%namespace, 'SystemName')
 

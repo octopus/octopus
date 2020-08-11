@@ -35,14 +35,6 @@ module system_factory_oct_m
   public ::                         &
     system_factory_t
 
-  integer, parameter ::             &
-    SYSTEM_ELECTRONIC         = 1,  &
-    SYSTEM_MAXWELL            = 2,  &
-    SYSTEM_CLASSICAL_PARTICLE = 3,  &
-    SYSTEM_CHARGED_PARTICLE   = 4,  &
-    SYSTEM_MULTISYSTEM        = 5
-
-
   type, extends(system_factory_abst_t) :: system_factory_t
   contains
     procedure :: create => system_factory_create
@@ -70,7 +62,7 @@ contains
     !% The second column should be the system type. See below for a list of
     !% available system types.
     !%Option electronic 1
-    !% An electronic system. (NOT IMPLEMENTED)
+    !% An electronic system.
     !%Option maxwell 2
     !% A maxwell system.
     !%Option classical_particle 3

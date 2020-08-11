@@ -140,8 +140,7 @@ contains
     PUSH_SUB(system_mxll_init)
 
     call profiling_in(prof,"SYSTEM_MXLL_INIT")
-
-    this%namespace = namespace
+    call this%init(namespace, SYSTEM_MAXWELL)
 
     SAFE_ALLOCATE(this%gr)
     SAFE_ALLOCATE(this%st)

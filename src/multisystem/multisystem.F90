@@ -83,7 +83,7 @@ contains
 
     PUSH_SUB(multisystem_init)
 
-    this%namespace = namespace
+    call this%init(namespace, SYSTEM_MULTISYSTEM)
 
     if (parse_block(this%namespace, factory%block_name(), blk) == 0) then
 
