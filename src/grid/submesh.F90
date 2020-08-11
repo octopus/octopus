@@ -269,9 +269,9 @@ contains
 
       !Recursive formulation for the volume of n-ellipsoid 
       !Garry Tee, NZ J. Mathematics Vol. 34 (2005) p. 165 eqs. 53,55
-      rc_norm_n = product(ceiling(rc / mesh%spacing) + 1.0)
-      if (mesh%use_curvilinear) rc_norm_n = rc_norm_n / mesh%cv%min_mesh_scaling
-      max_elements_count = 3**MAX_DIM * int(M_PI**floor(0.5 * MAX_DIM) * rc_norm_n * f_n(MAX_DIM)) 
+      rc_norm_n = product(ceiling(rc / mesh%spacing(1:sb%dim)) + 1.0)
+      if (mesh%use_curvilinear) rc_norm_n = rc_norm_n / mesh%cv%min_mesh_scaling**sb%dim
+      max_elements_count = 3**sb%dim * int(M_PI**floor(0.5 * sb%dim) * rc_norm_n * f_n(sb%dim)) 
       SAFE_ALLOCATE(map_temp(1:max_elements_count))
       SAFE_ALLOCATE(xtmp(1:max_elements_count, 0:sb%dim))
             
@@ -289,11 +289,11 @@ contains
         end do
         if (ip == mesh%np) this%np = is
       end do
-      write (*,*) 'ceiling(rc / mesh%spacing)=', ceiling(rc / mesh%spacing)
+      write (*,*) 'ceiling(rc / mesh%spacing(1:sb%dim))=', ceiling(rc / mesh%spacing(1:sb%dim))
       write (*,*) 'mesh%cv%min_mesh_scaling=', mesh%cv%min_mesh_scaling
       write (*,*) 'rc_norm_n=', rc_norm_n
-      write (*,*) 'f_n(MAX_DIM)=', f_n(MAX_DIM)
-      write (*,*) 'int(M_PI**floor(0.5 * MAX_DIM) * rc_norm_n * f_n(MAX_DIM))', int(M_PI**floor(0.5 * MAX_DIM) * rc_norm_n * f_n(MAX_DIM))
+      write (*,*) 'f_n(sb%dim)=', f_n(sb%dim)
+      write (*,*) 'int(M_PI**floor(0.5 * sb%dim) * rc_norm_n * f_n(sb%dim))', int(M_PI**floor(0.5 * sb%dim) * rc_norm_n * f_n(sb%dim))
       write (*,*) 'max_elements_count=', max_elements_count
       write (*,*) 'is=', is
 
