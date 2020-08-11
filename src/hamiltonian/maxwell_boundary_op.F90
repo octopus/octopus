@@ -597,7 +597,7 @@ contains
     !% the derivative order.
     !%End
 
-    width = 2*gr%der%order
+    width = 2*gr%der%order * maxval(gr%mesh%spacing(1:3))
     call parse_variable(namespace, 'MaxwellABWidth', width, bc%ab_width, units_inp%length)
 
     if (any(width < gr%der%order*gr%mesh%spacing(1:3))) then
@@ -607,7 +607,7 @@ contains
        call messages_info(2)
     end if
 
-    ab_bounds(1, idim) = ab_bounds(2, idim) - width
+    ab_bounds(1, idim) = ab_bounds(2, idim) - bc%ab_width
 
     POP_SUB(bc_mxll_ab_bounds_init)
   end subroutine bc_mxll_ab_bounds_init
