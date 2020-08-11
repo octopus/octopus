@@ -267,11 +267,11 @@ contains
         center_copies(1:sb%dim, icell) = periodic_copy_position(pp, sb, icell)
       end do
 
-      !Recursive formulation of the volume of n-ellipsoid 
-      !Garry Tee, NZ J. Mathematics Vol. 34 (2005) 165. eqs 53,55
+      !Recursive formulation for the volume of n-ellipsoid 
+      !Garry Tee, NZ J. Mathematics Vol. 34 (2005) p. 165 eqs. 53,55
       rc_norm_n = product(ceiling(rc / mesh%spacing) + 1.0)
       if (mesh%use_curvilinear) rc_norm_n = rc_norm_n / mesh%cv%min_mesh_scaling
-      max_elements_count = 3**MAX_DIM * int(M_PI**floor(0.5 * MAX_DIM) * rc_norm_n * f_n(MAX_DIM)) + 1 
+      max_elements_count = 3**MAX_DIM * int(M_PI**floor(0.5 * MAX_DIM) * rc_norm_n * f_n(MAX_DIM)) 
       SAFE_ALLOCATE(map_temp(1:max_elements_count))
       SAFE_ALLOCATE(xtmp(1:max_elements_count, 0:sb%dim))
             
@@ -293,6 +293,7 @@ contains
       write (*,*) 'mesh%cv%min_mesh_scaling=', mesh%cv%min_mesh_scaling
       write (*,*) 'rc_norm_n=', rc_norm_n
       write (*,*) 'f_n(MAX_DIM)=', f_n(MAX_DIM)
+      write (*,*) 'int(M_PI**floor(0.5 * MAX_DIM) * rc_norm_n * f_n(MAX_DIM))', int(M_PI**floor(0.5 * MAX_DIM) * rc_norm_n * f_n(MAX_DIM))
       write (*,*) 'max_elements_count=', max_elements_count
       write (*,*) 'is=', is
 
