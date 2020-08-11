@@ -128,18 +128,19 @@ contains
 
   ! -------------------------------------------------------------
 
-  ! Multipliers for recursive formulation of the Gamma function
+  ! Multipliers for recursive formulation of n-ellipsoid volume 
+  ! simplifying the Gamma function
   ! f(n) = 2f(n-2)/n, f(0)=1, f(1)=2
   recursive FLOAT function f_n(dims) result(fn)
 
     integer :: dims
 
     if (dims == 0) then
-      fn = 1
+      fn = 1.0
     else if (dims == 1) then
-      fn = 2
+      fn = 2.0
     else
-      fn = 2 * f_n(dims - 2) / dims
+      fn = 2.0 * f_n(dims - 2) / dims
     end if
   end function f_n
 
@@ -270,7 +271,7 @@ contains
       !Garry Tee, NZ J. Mathematics Vol. 34 (2005) 165. eqs 53,55
       rc_norm_n = product(ceiling(rc / mesh%spacing) + 1.0)
       if (mesh%use_curvilinear) rc_norm_n = rc_norm_n / mesh%cv%min_mesh_scaling
-      max_elements_count = 3**MAX_DIM * M_PI**floor(0.5 * MAX_DIM) * rc_norm_n * f_n(MAX_DIM) + 1 
+      max_elements_count = 3**MAX_DIM * int(M_PI**floor(0.5 * MAX_DIM) * rc_norm_n * f_n(MAX_DIM)) + 1 
       SAFE_ALLOCATE(map_temp(1:max_elements_count))
       SAFE_ALLOCATE(xtmp(1:max_elements_count, 0:sb%dim))
             
@@ -288,7 +289,13 @@ contains
         end do
         if (ip == mesh%np) this%np = is
       end do
-      
+      write (*,*) 'ceiling(rc / mesh%spacing)=', ceiling(rc / mesh%spacing)
+      write (*,*) 'mesh%cv%min_mesh_scaling=', mesh%cv%min_mesh_scaling
+      write (*,*) 'rc_norm_n=', rc_norm_n
+      write (*,*) 'f_n(MAX_DIM)=', f_n(MAX_DIM)
+      write (*,*) 'max_elements_count=', max_elements_count
+      write (*,*) 'is=', is
+
       this%np_part = is
 
       SAFE_ALLOCATE(this%map(1:this%np_part))
