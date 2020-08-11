@@ -1,4 +1,4 @@
-!! Copyright (C) 2019-2020 M. Oliveira
+!! Copyright (C) 2019-2020 M. Oliveira, Heiko Appel
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -37,9 +37,10 @@ module multisystem_oct_m
 
   private
   public ::               &
-    multisystem_t
+    multisystem_t,        &
+    multisystem_init
 
-  type, extends(system_t) :: multisystem_t
+  type, extends(system_t), abstract :: multisystem_t
     type(system_list_t) :: list
   contains
     procedure :: dt_operation =>  multisystem_dt_operation
@@ -66,80 +67,89 @@ module multisystem_oct_m
     procedure :: update_exposed_quantity => multisystem_update_exposed_quantity
     procedure :: copy_quantities_to_interaction => multisystem_copy_quantities_to_interaction
     procedure :: process_is_slave => multisystem_process_is_slave
-    final :: multisystem_finalizer
   end type multisystem_t
-
-  interface multisystem_t
-    procedure multisystem_constructor
-  end interface multisystem_t
 
 contains
 
   ! ---------------------------------------------------------------------------------------
-  recursive function multisystem_constructor(namespace, factory) result(system)
+  recursive subroutine multisystem_init(this, namespace, factory)
+    class(multisystem_t),      intent(inout) :: this
     type(namespace_t),            intent(in) :: namespace
     class(system_factory_abst_t), intent(in) :: factory
-    class(multisystem_t),         pointer    :: system
 
     integer :: isys, system_type, ic
     character(len=128) :: system_name
     type(block_t) :: blk
-    type(system_iterator_t) :: iter
-    class(system_t), pointer :: sys, other
-    
-    PUSH_SUB(multisystem_constructor)
 
-    SAFE_ALLOCATE(system)
+    PUSH_SUB(multisystem_init)
 
-    system%namespace = namespace
+    this%namespace = namespace
 
-    if (parse_block(system%namespace, factory%block_name(), blk) == 0) then
+    if (parse_block(this%namespace, factory%block_name(), blk) == 0) then
 
       do isys = 1, parse_block_n(blk)
         ! Parse system name and type
         call parse_block_string(blk, isys - 1, 0, system_name)
         if (len_trim(system_name) == 0) then
-          call messages_input_error(system%namespace, factory%block_name(), 'All systems must have a name')
+          call messages_input_error(this%namespace, factory%block_name(), 'All systems must have a name')
         end if
         do ic = 1, len(parser_varname_excluded_characters)
           if (index(trim(system_name), parser_varname_excluded_characters(ic:ic)) /= 0) then
-            call messages_input_error(system%namespace, factory%block_name(), &
+            call messages_input_error(this%namespace, factory%block_name(), &
               'Illegal character "' // parser_varname_excluded_characters(ic:ic) // '" in system name', row=isys-1, column=0)
           end if
         end do
         call parse_block_integer(blk, isys - 1, 1, system_type)
 
-        ! Create folder to store system files.
-        ! Needs to be done before creating the system as this in turn might create subfolders.
-        call io_mkdir(system_name, namespace=system%namespace)
-
-        ! Create system
-        sys => factory%create(system%namespace, system_name, system_type)
-        if (.not. associated(sys)) then
-          call messages_input_error(system%namespace, factory%block_name(), 'Unknown system type.')
-        end if
-
-        ! Check that the system is unique
-        call iter%start(system%list)
-        do while (iter%has_next())
-          other => iter%get_next()
-          if (sys%namespace == other%namespace) then
-            call messages_input_error(system%namespace, factory%block_name(), 'Duplicated system in multisystem', &
-              row=isys-1, column=0)
-          end if
-        end do
-
-        ! Add system to list of systems
-        call system%list%add(sys)
+        call multisystem_create_system(this, system_name, system_type, isys, factory)
       end do
       call parse_block_end(blk)
     else
-      message(1) = "Input error while reading block "//trim(system%namespace%get())//"."//trim(factory%block_name())
-      call messages_fatal(1, namespace=system%namespace)
+      message(1) = "Input error while reading block "//trim(this%namespace%get())//"."//trim(factory%block_name())
+      call messages_fatal(1, namespace=this%namespace)
     end if
 
-    POP_SUB(multisystem_constructor)
-  end function multisystem_constructor
+    POP_SUB(multisystem_init)
+  end subroutine multisystem_init
+
+  ! ---------------------------------------------------------------------------------------
+  recursive subroutine multisystem_create_system(this, system_name, system_type, isys, factory)
+    class(multisystem_t),      intent(inout) :: this
+    character(len=128),           intent(in) :: system_name
+    integer,                      intent(in) :: system_type
+    integer,                      intent(in) :: isys
+    class(system_factory_abst_t), intent(in) :: factory
+
+    type(system_iterator_t) :: iter
+    class(system_t), pointer :: sys, other
+
+    PUSH_SUB(multisystem_create_system)
+
+    ! Create folder to store system files.
+    ! Needs to be done before creating the system as this in turn might create subfolders.
+    call io_mkdir(system_name, namespace=this%namespace)
+
+    ! Create system
+    sys => factory%create(this%namespace, system_name, system_type)
+    if (.not. associated(sys)) then
+      call messages_input_error(this%namespace, factory%block_name(), 'Unknown system type.')
+    end if
+
+    ! Check that the system is unique
+    call iter%start(this%list)
+    do while (iter%has_next())
+      other => iter%get_next()
+      if (sys%namespace == other%namespace) then
+        call messages_input_error(this%namespace, factory%block_name(), 'Duplicated system in multisystem', &
+          row=isys-1, column=0)
+      end if
+    end do
+
+    ! Add system to list of systems
+    call this%list%add(sys)
+
+    POP_SUB(multisystem_create_system)
+  end subroutine multisystem_create_system
 
   ! ---------------------------------------------------------------------------------------
   recursive subroutine multisystem_dt_operation(this)
@@ -621,25 +631,5 @@ contains
 
     POP_SUB(multisystem_process_is_slave)
   end function multisystem_process_is_slave
-
-  ! ---------------------------------------------------------
-  recursive subroutine multisystem_finalizer(this)
-    type(multisystem_t), intent(inout) :: this
-
-    type(system_iterator_t) :: iter
-    class(system_t), pointer :: system
-
-    PUSH_SUB(multisystem_finalizer)
-
-    call iter%start(this%list)
-    do while (iter%has_next())
-      system => iter%get_next()
-      SAFE_DEALLOCATE_P(system)
-    end do
-
-    call system_end(this)
-
-    POP_SUB(multisystem_finalizer)
-  end subroutine multisystem_finalizer
 
 end module multisystem_oct_m

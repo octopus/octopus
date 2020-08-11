@@ -22,7 +22,7 @@ module time_dependent_oct_m
   use electrons_oct_m
   use global_oct_m
   use messages_oct_m
-  use multisystem_oct_m
+  use multisystem_basic_oct_m
   use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
@@ -44,7 +44,7 @@ contains
     PUSH_SUB(time_dependent_run)
 
     select type (system)
-    class is (multisystem_t)
+    class is (multisystem_basic_t)
       call time_dependent_run_multisystem(system, from_scratch)
     type is (electrons_t)
       call time_dependent_run_legacy(system, from_scratch)
@@ -55,7 +55,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine time_dependent_run_multisystem(systems, from_scratch)
-    class(multisystem_t), intent(inout) :: systems
+    class(multisystem_basic_t), intent(inout) :: systems
     logical,              intent(in)    :: from_scratch
 
     integer :: it, internal_loop
