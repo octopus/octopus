@@ -1446,7 +1446,6 @@ contains
     FLOAT,  intent(out) :: alpha, betar, betai
 
     FLOAT :: mz, mm
-    FLOAT :: alpha2, beta2
 
     mz = dens(1) - dens(2) 
 
