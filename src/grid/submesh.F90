@@ -293,7 +293,6 @@ contains
       write (*,*) 'mesh%cv%min_mesh_scaling=', mesh%cv%min_mesh_scaling
       write (*,*) 'rc_norm_n=', rc_norm_n
       write (*,*) 'f_n(sb%dim)=', f_n(sb%dim)
-      write (*,*) 'int(M_PI**floor(0.5 * sb%dim) * rc_norm_n * f_n(sb%dim))', int(M_PI**floor(0.5 * sb%dim) * rc_norm_n * f_n(sb%dim))
       write (*,*) 'max_elements_count=', max_elements_count
       write (*,*) 'is=', is
 
