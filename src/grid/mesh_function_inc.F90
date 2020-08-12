@@ -668,7 +668,7 @@ subroutine X(mf_multipoles) (mesh, ff, lmax, multipole, inside)
   multipole(1) = X(mf_integrate)(mesh, ff2, mask = inside)
   
   if(lmax > 0) then
-    do idim = 1, 3
+    do idim = 1, mesh%sb%dim
       ff2(1:mesh%np) = ff(1:mesh%np) * mesh%x(1:mesh%np, idim)
       multipole(idim+1) = X(mf_integrate)(mesh, ff2, mask = inside)
     end do
