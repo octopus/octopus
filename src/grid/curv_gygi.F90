@@ -44,7 +44,8 @@ module curv_gygi_oct_m
     curv_gygi_end,            &
     curv_gygi_chi2x,          &
     curv_gygi_x2chi,          &
-    curv_gygi_jacobian
+    curv_gygi_jacobian,       &
+    curv_gygi_min_scaling  
 
   type curv_gygi_t
     private
@@ -278,6 +279,16 @@ contains
     end do
 
   end subroutine curv_gygi_jacobian
+
+
+  ! ---------------------------------------------------------
+  subroutine curv_gygi_min_scaling(sb, cv, min_scaling_product)
+    type(simul_box_t), intent(in)  :: sb
+    type(curv_gygi_t), intent(in)  :: cv
+    FLOAT,             intent(out) :: min_scaling_product
+    
+    min_scaling_product = (1.0 / (1.0 + cv%A))**sb%dim
+  end subroutine curv_gygi_min_scaling
 
 end module curv_gygi_oct_m
 

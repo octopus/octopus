@@ -38,12 +38,13 @@ module curv_briggs_oct_m
     curv_briggs_init,           &
     curv_briggs_copy,           &
     curv_briggs_chi2x,          &
-    curv_briggs_jacobian_inv
+    curv_briggs_jacobian_inv,   &
+    curv_briggs_min_scaling
 
   type curv_briggs_t
     private
-    FLOAT, public :: L(MAX_DIM)  !< size of the box
-    FLOAT, public :: beta        !< adjustable parameter between 0 and 1 that controls the degree of scaling
+    FLOAT :: L(MAX_DIM)  !< size of the box
+    FLOAT :: beta        !< adjustable parameter between 0 and 1 that controls the degree of scaling
   end type curv_briggs_t
 
 contains
@@ -110,6 +111,24 @@ contains
     end do
 
   end subroutine curv_briggs_jacobian_inv
+
+
+  ! ---------------------------------------------------------
+  subroutine curv_briggs_min_scaling(sb, cv, spacing, min_scaling_product)
+    type(simul_box_t),   intent(in)  :: sb
+    type(curv_briggs_t), intent(in)  :: cv
+    FLOAT,               intent(in)  :: spacing(:)
+    FLOAT,               intent(out) :: min_scaling_product
+
+    integer :: idim
+
+    min_scaling_product = 1.0
+    do idim = 1, sb%dim
+      ! corresponds to the distance of grid points at [+spacing/2,-spacing/2]
+      min_scaling_product = min_scaling_product * (1.0 / &
+        (1.0 - cv%L(idim) * cv%beta / (M_PI * spacing(idim)) * sin(M_PI * spacing(idim) / cv%L(idim))))
+    end do
+  end subroutine curv_briggs_min_scaling
 
 end module curv_briggs_oct_m
 

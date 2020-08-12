@@ -47,16 +47,17 @@ module curv_modine_oct_m
     curv_modine_copy,           &
     curv_modine_end,            &
     curv_modine_chi2x,          &
-    curv_modine_jacobian_inv
+    curv_modine_jacobian_inv,   &
+    curv_modine_min_scaling
 
   type curv_modine_t
     private
-    FLOAT         :: L(MAX_DIM)    !< size of the box
-    FLOAT         :: xbar          !< size of central flat region (in units of L)
-    FLOAT, public :: Jbar          !< increase in density of points is 1/J
+    FLOAT          :: L(MAX_DIM) !< size of the box
+    FLOAT          :: xbar       !< size of central flat region (in units of L)
+    FLOAT          :: Jbar       !< increase in density of points is 1/J
 
-    FLOAT,            pointer :: Jlocal(:)  !< local (around the atoms) refinement
-    FLOAT,            pointer :: Jrange(:)  !< local refinement range
+    FLOAT, pointer :: Jlocal(:)  !< local (around the atoms) refinement
+    FLOAT, pointer :: Jrange(:)  !< local refinement range
 
     FLOAT, pointer :: chi_atoms(:,:)
     FLOAT, pointer :: csi(:,:)
@@ -486,6 +487,16 @@ contains
 
     POP_SUB(curv_modine_x2chi)
   end subroutine curv_modine_x2chi
+
+
+  ! ---------------------------------------------------------
+  subroutine curv_modine_min_scaling(sb, cv, min_scaling_product)
+    type(simul_box_t),   intent(in)  :: sb
+    type(curv_modine_t), intent(in)  :: cv
+    FLOAT,               intent(out) :: min_scaling_product
+    
+    min_scaling_product = cv%Jbar**sb%dim
+  end subroutine curv_modine_min_scaling
 
 end module curv_modine_oct_m
 
