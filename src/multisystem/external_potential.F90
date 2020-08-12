@@ -71,12 +71,15 @@ module external_potential_oct_m
 
 contains
 
-  function external_potential_init() result(this)
+  function external_potential_init(namespace) result(this)
     class(external_potential_t), pointer :: this
+    type(namespace_t), intent(in) :: namespace
 
     PUSH_SUB(external_potential_init)
 
     SAFE_ALLOCATE(this)
+
+    this%namespace = namespace
 
     POP_SUB(external_potential_init)
   end function external_potential_init
@@ -213,7 +216,7 @@ contains
   end subroutine external_potential_calculate
 
   subroutine load_external_potentials(external_potentials, namespace)
-    type(list_t),         intent(inout)  :: external_potentials
+    type(partner_list_t), intent(inout)  :: external_potentials
     type(namespace_t),    intent(in)     :: namespace
 
     integer :: n_pot_block, row, read_data
@@ -269,7 +272,7 @@ contains
 
       do row = 0, n_pot_block-1
         !Create a potential
-        pot => external_potential_t() 
+        pot => external_potential_t(namespace) 
         !Parse the information from the block
         call read_from_block(pot, namespace, blk, row, read_data)
         ASSERT(read_data > 0)

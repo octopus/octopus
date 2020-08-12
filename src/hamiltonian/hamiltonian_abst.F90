@@ -21,6 +21,7 @@ module hamiltonian_abst_oct_m
   use batch_oct_m
   use external_potential_oct_m
   use global_oct_m
+  use interaction_partner_oct_m
   use loct_oct_m
   use linked_list_oct_m
   use mesh_oct_m
@@ -41,7 +42,7 @@ module hamiltonian_abst_oct_m
     FLOAT :: spectral_middle_point
     FLOAT :: spectral_half_span
 
-    type(list_t), public :: external_potentials  !< List with all the external potentials
+    type(partner_list_t), public :: external_potentials  !< List with all the external potentials
     FLOAT, allocatable, public  :: v_ext_pot(:)  !< the potential comming from external potentials
 
   contains
