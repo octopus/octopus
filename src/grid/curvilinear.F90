@@ -61,7 +61,7 @@ module curvilinear_oct_m
     type(curv_briggs_t) :: briggs
     type(curv_modine_t) :: modine
     type(root_solver_t) :: rs
-    FLOAT, public :: min_mesh_scaling ! the smallest scaling :: min(distance between the grid points / spacing)
+    FLOAT, public :: min_mesh_scaling_product ! product of the smallest scaling :: min(distance between the grid points / spacing)
   end type curvilinear_t
 
   character(len=23), parameter :: dump_tag = '*** curvilinear_dump **'
@@ -75,6 +75,8 @@ contains
     type(simul_box_t),   intent(in)  :: sb
     type(geometry_t),    intent(in)  :: geo
     FLOAT,               intent(in)  :: spacing(:)
+
+    integer :: idim
 
     PUSH_SUB(curvilinear_init)
 
@@ -110,12 +112,19 @@ contains
     ! FIXME: The other two methods are apparently not working
     if(cv%method > CURV_METHOD_GYGI) call messages_experimental('Selected curvilinear coordinates method')
 
+    cv%min_mesh_scaling_product = 1.0
+
     select case(cv%method)
     case(CURV_METHOD_GYGI)
       call curv_gygi_init(cv%gygi, namespace, sb, geo)
-      cv%min_mesh_scaling = 1.0 / (1.0 + cv%gygi%A)
+      cv%min_mesh_scaling_product = (1.0 / (1.0 + cv%gygi%A))**sb%dim
     case(CURV_METHOD_BRIGGS)
       call curv_briggs_init(cv%briggs, namespace, sb)
+      do idim = 1, sb%dim
+        ! corresponds to the distance of grid points at [+spacing/2,-spacing/2]
+        cv%min_mesh_scaling_product = cv%min_mesh_scaling_product * &
+          (1.0 / (1.0 - cv%briggs%L(idim) * cv%briggs%beta / (M_PI * spacing(idim)) * sin(M_PI * spacing(idim) / cv%briggs%L(idim))))
+      end do
     case(CURV_METHOD_MODINE)
       call curv_modine_init(cv%modine, namespace, sb, geo, spacing)
     end select
