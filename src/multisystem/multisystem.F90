@@ -632,4 +632,24 @@ contains
     POP_SUB(multisystem_process_is_slave)
   end function multisystem_process_is_slave
 
+  ! ---------------------------------------------------------
+  recursive subroutine multisystem_finalizer(this)
+    type(multisystem_t), intent(inout) :: this
+
+    type(system_iterator_t) :: iter
+    class(system_t), pointer :: system
+
+    PUSH_SUB(multisystem_finalizer)
+
+    call iter%start(this%list)
+    do while (iter%has_next())
+      system => iter%get_next()
+      SAFE_DEALLOCATE_P(system)
+    end do
+
+    call system_end(this)
+
+    POP_SUB(multisystem_finalizer)
+  end subroutine multisystem_finalizer
+
 end module multisystem_oct_m
