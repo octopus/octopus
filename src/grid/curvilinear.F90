@@ -127,6 +127,7 @@ contains
       end do
     case(CURV_METHOD_MODINE)
       call curv_modine_init(cv%modine, namespace, sb, geo, spacing)
+      cv%min_mesh_scaling_product = cv%modine%Jbar**sb%dim
     end select
 
     ! initialize root solver

@@ -51,9 +51,9 @@ module curv_modine_oct_m
 
   type curv_modine_t
     private
-    FLOAT :: L(MAX_DIM)    !< size of the box
-    FLOAT :: xbar          !< size of central flat region (in units of L)
-    FLOAT :: Jbar          !< increase in density of points is 1/J
+    FLOAT         :: L(MAX_DIM)    !< size of the box
+    FLOAT         :: xbar          !< size of central flat region (in units of L)
+    FLOAT, public :: Jbar          !< increase in density of points is 1/J
 
     FLOAT,            pointer :: Jlocal(:)  !< local (around the atoms) refinement
     FLOAT,            pointer :: Jrange(:)  !< local refinement range
