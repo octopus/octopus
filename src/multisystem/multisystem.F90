@@ -38,7 +38,8 @@ module multisystem_oct_m
   private
   public ::               &
     multisystem_t,        &
-    multisystem_init
+    multisystem_init,     &
+    multisystem_end
 
   type, extends(system_t), abstract :: multisystem_t
     type(system_list_t) :: list
@@ -631,5 +632,25 @@ contains
 
     POP_SUB(multisystem_process_is_slave)
   end function multisystem_process_is_slave
+
+  ! ---------------------------------------------------------
+  recursive subroutine multisystem_end(this)
+    class(multisystem_t), intent(inout) :: this
+
+    type(system_iterator_t) :: iter
+    class(system_t), pointer :: system
+
+    PUSH_SUB(multisystem_end)
+
+    call iter%start(this%list)
+    do while (iter%has_next())
+      system => iter%get_next()
+      SAFE_DEALLOCATE_P(system)
+    end do
+
+    call system_end(this)
+
+    POP_SUB(multisystem_end)
+  end subroutine multisystem_end
 
 end module multisystem_oct_m

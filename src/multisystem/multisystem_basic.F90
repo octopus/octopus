@@ -84,18 +84,9 @@ contains
   recursive subroutine multisystem_basic_finalizer(this)
     type(multisystem_basic_t), intent(inout) :: this
 
-    type(system_iterator_t) :: iter
-    class(system_t), pointer :: system
-
     PUSH_SUB(multisystem_basic_finalizer)
 
-    call iter%start(this%list)
-    do while (iter%has_next())
-      system => iter%get_next()
-      SAFE_DEALLOCATE_P(system)
-    end do
-
-    call system_end(this)
+    call multisystem_end(this)
 
     POP_SUB(multisystem_basic_finalizer)
   end subroutine multisystem_basic_finalizer
