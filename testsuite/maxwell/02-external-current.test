@@ -7,7 +7,7 @@ TestGroups : short-run, maxwell
 Enabled    : Yes
 
 
-# Large spacing
+# gaussian current pulse with no absorbing boundaries
 Processors : 4
 Input      : 02-external-current.01-gaussian_current_pulse.inp
 Precision  : 1.0e-5
