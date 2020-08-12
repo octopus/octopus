@@ -76,8 +76,6 @@ contains
     type(geometry_t),    intent(in)  :: geo
     FLOAT,               intent(in)  :: spacing(:)
 
-    integer :: idim
-
     PUSH_SUB(curvilinear_init)
 
     !%Variable CurvMethod
@@ -111,8 +109,6 @@ contains
 
     ! FIXME: The other two methods are apparently not working
     if(cv%method > CURV_METHOD_GYGI) call messages_experimental('Selected curvilinear coordinates method')
-
-    cv%min_mesh_scaling_product = 1.0
 
     select case(cv%method)
     case(CURV_METHOD_GYGI)
