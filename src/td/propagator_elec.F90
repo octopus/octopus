@@ -41,7 +41,7 @@ module propagator_elec_oct_m
   use profiling_oct_m
   use propagator_base_oct_m
   use propagator_cn_oct_m
-  use propagator_etrs_oct_m
+  use propagator_etrs_legacy_oct_m
   use propagator_expmid_oct_m
   use propagator_magnus_oct_m
   use propagator_qoct_oct_m

@@ -18,7 +18,7 @@
 
 #include "global.h"
 
-module propagator_etrs_oct_m
+module propagator_etrs_legacy_oct_m
   use accel_oct_m
   use batch_oct_m
   use density_oct_m
@@ -460,7 +460,7 @@ contains
     POP_SUB(td_caetrs)
   end subroutine td_caetrs
 
-end module propagator_etrs_oct_m
+end module propagator_etrs_legacy_oct_m
 
 !! Local Variables:
 !! mode: f90
