@@ -35,6 +35,8 @@ module system_oct_m
   use propagator_beeman_oct_m
   use propagator_exp_mid_oct_m
   use propagator_verlet_oct_m
+  use propagator_etrs_oct_m
+  use propagator_aetrs_oct_m
   use quantity_oct_m
   use space_oct_m
   use varinfo_oct_m
