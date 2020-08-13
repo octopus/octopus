@@ -112,14 +112,11 @@ contains
 
     select case(cv%method)
     case(CURV_METHOD_GYGI)
-      call curv_gygi_init(cv%gygi, namespace, sb, geo)
-      call curv_gygi_min_scaling(sb, cv%gygi, cv%min_mesh_scaling_product)
+      call curv_gygi_init(cv%gygi, namespace, sb, geo, cv%min_mesh_scaling_product)
     case(CURV_METHOD_BRIGGS)
-      call curv_briggs_init(cv%briggs, namespace, sb)
-      call curv_briggs_min_scaling(sb, cv%briggs, spacing, cv%min_mesh_scaling_product)
+      call curv_briggs_init(cv%briggs, namespace, sb, spacing, cv%min_mesh_scaling_product)
     case(CURV_METHOD_MODINE)
-      call curv_modine_init(cv%modine, namespace, sb, geo, spacing)
-      call curv_modine_min_scaling(sb, cv%modine, cv%min_mesh_scaling_product)
+      call curv_modine_init(cv%modine, namespace, sb, geo, spacing, cv%min_mesh_scaling_product)
     end select
 
     ! initialize root solver

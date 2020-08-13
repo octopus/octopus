@@ -38,8 +38,7 @@ module curv_briggs_oct_m
     curv_briggs_init,           &
     curv_briggs_copy,           &
     curv_briggs_chi2x,          &
-    curv_briggs_jacobian_inv,   &
-    curv_briggs_min_scaling
+    curv_briggs_jacobian_inv
 
   type curv_briggs_t
     private
@@ -50,11 +49,13 @@ module curv_briggs_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine curv_briggs_init(cv, namespace, sb)
+  subroutine curv_briggs_init(cv, namespace, sb, spacing, min_scaling_product)
     type(curv_briggs_t), intent(out) :: cv
     type(namespace_t),   intent(in)  :: namespace
     type(simul_box_t),   intent(in)  :: sb
-
+    FLOAT,               intent(in)  :: spacing(:)
+    FLOAT,               intent(out) :: min_scaling_product
+  
     cv%L = M_ZERO
     cv%L(1:sb%dim) = sb%lsize(1:sb%dim)
 
@@ -64,6 +65,8 @@ contains
       message(1) = 'The parameter "CurvBriggsBeta" must lie between 0 and 1.'
       call messages_fatal(1)
     end if
+
+    call curv_briggs_min_scaling(sb, cv, spacing, min_scaling_product)
 
   end subroutine curv_briggs_init
 

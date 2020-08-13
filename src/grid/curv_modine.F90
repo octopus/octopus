@@ -47,8 +47,7 @@ module curv_modine_oct_m
     curv_modine_copy,           &
     curv_modine_end,            &
     curv_modine_chi2x,          &
-    curv_modine_jacobian_inv,   &
-    curv_modine_min_scaling
+    curv_modine_jacobian_inv
 
   type curv_modine_t
     private
@@ -131,12 +130,13 @@ contains
   end subroutine getf2
 
   ! ---------------------------------------------------------
-  subroutine curv_modine_init(cv, namespace, sb, geo, spacing)
+  subroutine curv_modine_init(cv, namespace, sb, geo, spacing, min_scaling_product)
     type(curv_modine_t), target, intent(out) :: cv
     type(namespace_t),           intent(in)  :: namespace
     type(simul_box_t),   target, intent(in)  :: sb
     type(geometry_t),            intent(in)  :: geo
     FLOAT,                       intent(in)  :: spacing(:)
+    FLOAT,                       intent(out) :: min_scaling_product
 
     type(root_solver_t) :: rs
 
@@ -211,6 +211,8 @@ contains
     call optimize()
 
     cv%natoms = geo%natoms
+
+    call curv_modine_min_scaling(sb, cv, min_scaling_product)
 
     POP_SUB(curv_modine_init)
 

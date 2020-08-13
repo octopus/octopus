@@ -44,8 +44,7 @@ module curv_gygi_oct_m
     curv_gygi_end,            &
     curv_gygi_chi2x,          &
     curv_gygi_x2chi,          &
-    curv_gygi_jacobian,       &
-    curv_gygi_min_scaling  
+    curv_gygi_jacobian
 
   type curv_gygi_t
     private
@@ -64,11 +63,12 @@ module curv_gygi_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine curv_gygi_init(cv, namespace, sb, geo)
+  subroutine curv_gygi_init(cv, namespace, sb, geo, min_scaling_product)
     type(curv_gygi_t), intent(out) :: cv
     type(namespace_t), intent(in)  :: namespace
     type(simul_box_t), intent(in)  :: sb
     type(geometry_t),  intent(in)  :: geo
+    FLOAT,             intent(out) :: min_scaling_product
 
     integer :: ipos, idir
 
@@ -122,6 +122,8 @@ contains
         cv%pos(ipos, idir) = geo%atom(ipos)%x(idir)
       end do
     end do
+
+    call curv_gygi_min_scaling(sb, cv, min_scaling_product)
 
     POP_SUB(curv_gygi_init)
   end subroutine curv_gygi_init
