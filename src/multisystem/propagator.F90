@@ -71,30 +71,43 @@ module propagator_oct_m
 
   ! Known propagation operations
   integer, public, parameter ::         &
-    SKIP                         = -1,  &
-    FINISHED                     =  0,  &
-    VERLET_START                 =  1,  &
-    VERLET_FINISH                =  2,  &
-    VERLET_UPDATE_POS            =  3,  &
-    VERLET_COMPUTE_ACC           =  4,  &
-    VERLET_COMPUTE_VEL           =  5,  &
-    SYNC                         =  6,  &
-    UPDATE_INTERACTIONS          =  7,  &
-    START_SCF_LOOP               =  8,  &
-    END_SCF_LOOP                 =  9,  &
-    STORE_CURRENT_STATUS         = 10,  &
-    BEEMAN_START                 = 11,  &
-    BEEMAN_FINISH                = 12,  &
-    BEEMAN_PREDICT_POS           = 13,  &
-    BEEMAN_PREDICT_VEL           = 14,  &
-    BEEMAN_CORRECT_POS           = 15,  &
-    BEEMAN_CORRECT_VEL           = 16,  &
-    EXPMID_START                 = 17,  &
-    EXPMID_FINISH                = 18,  &
-    EXPMID_PREDICT_DT_2          = 19,  &
-    EXPMID_PREDICT_DT            = 20,  &
-    EXPMID_CORRECT_DT_2          = 21,  &
-    UPDATE_HAMILTONIAN           = 22
+    SKIP                          = -1,  &
+    FINISHED                      =  0,  &
+    VERLET_START                  =  1,  &
+    VERLET_FINISH                 =  2,  &
+    VERLET_UPDATE_POS             =  3,  &
+    VERLET_COMPUTE_ACC            =  4,  &
+    VERLET_COMPUTE_VEL            =  5,  &
+    SYNC                          =  6,  &
+    UPDATE_INTERACTIONS           =  7,  &
+    START_SCF_LOOP                =  8,  &
+    END_SCF_LOOP                  =  9,  &
+    STORE_CURRENT_STATUS          = 10,  &
+    BEEMAN_START                  = 11,  &
+    BEEMAN_FINISH                 = 12,  &
+    BEEMAN_PREDICT_POS            = 13,  &
+    BEEMAN_PREDICT_VEL            = 14,  &
+    BEEMAN_CORRECT_POS            = 15,  &
+    BEEMAN_CORRECT_VEL            = 16,  &
+    EXPMID_START                  = 17,  &
+    EXPMID_FINISH                 = 18,  &
+    EXPMID_PREDICT_DT_2           = 19,  &
+    EXPMID_PREDICT_DT             = 20,  &
+    EXPMID_CORRECT_DT_2           = 21,  &
+    ETRS_START                    = 22,  &
+    ETRS_FINISH                   = 23,  &
+    ETRS_STORE_STATE_T1           = 24,  &
+    ETRS_STORE_HAMILTONIAN_T1     = 25,  &
+    ETRS_PROPAGATE_T1_DT          = 26,  &
+    ETRS_RESET_STATE_T1           = 27,  &
+    ETRS_PROPAGATE_T1_DT_2        = 28,  &
+    ETRS_STORE_STATE_T2           = 29,  &
+    ETRS_RESET_STATE_T2           = 30,  &
+    ETRS_PROPAGATE_T3_DT_2        = 31,  &
+    AETRS_START                   = 32,  &
+    AETRS_FINISH                  = 33,  &
+    AETRS_EXTRAPOLATE_HAMILTONIAN = 34,  &
+    UPDATE_HAMILTONIAN            = 35
 
   ! Known multisystem propagators
   integer, public, parameter ::        &
