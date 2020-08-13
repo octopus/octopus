@@ -600,13 +600,13 @@ contains
     !% (Experimental) Exponential midpoint propagator without predictor-corrector.
     !%Option exp_mid_scf 5
     !% (Experimental) Exponential midpoint propagator with predictor-corrector scheme.
-    !%Option etrs 6
+    !%Option multisystem_etrs 6
     !% (Experimental) enforced time-reversal symmetry propagator without predictor-corrector scheme.
-    !%Option etrs_scf 7
+    !%Option multisystem_etrs_scf 7
     !% (Experimental) enforced time-reversal symmetry propagator with predictor-corrector scheme.
-    !%Option aetrs 8
+    !%Option multisystem_aetrs 8
     !% (Experimental) approximate enforced time-reversal symmetry propagator without predictor-corrector scheme (uses extrapolation).
-    !%Option aetrs_scf 9
+    !%Option multisystem_aetrs_scf 9
     !% (Experimental) approximate enforced time-reversal symmetry propagator with predictor-corrector scheme (uses extrapolation).
     !%End
     call parse_variable(this%namespace, 'TDSystemPropagator', PROP_VERLET, prop)
