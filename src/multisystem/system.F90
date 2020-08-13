@@ -600,6 +600,14 @@ contains
     !% (Experimental) Exponential midpoint propagator without predictor-corrector.
     !%Option exp_mid_scf 5
     !% (Experimental) Exponential midpoint propagator with predictor-corrector scheme.
+    !%Option etrs 6
+    !% (Experimental) enforced time-reversal symmetry propagator without predictor-corrector scheme.
+    !%Option etrs_scf 7
+    !% (Experimental) enforced time-reversal symmetry propagator with predictor-corrector scheme.
+    !%Option aetrs 8
+    !% (Experimental) approximate enforced time-reversal symmetry propagator without predictor-corrector scheme (uses extrapolation).
+    !%Option aetrs_scf 9
+    !% (Experimental) approximate enforced time-reversal symmetry propagator with predictor-corrector scheme (uses extrapolation).
     !%End
     call parse_variable(this%namespace, 'TDSystemPropagator', PROP_VERLET, prop)
     if(.not.varinfo_valid_option('TDSystemPropagator', prop)) call messages_input_error(this%namespace, 'TDSystemPropagator')
@@ -624,6 +632,14 @@ contains
       this%prop => propagator_exp_mid_t(dt, predictor_corrector=.false.)
     case(PROP_EXPMID_SCF)
       this%prop => propagator_exp_mid_t(dt, predictor_corrector=.true.)
+    case(PROP_ETRS)
+      this%prop => propagator_etrs_t(dt, predictor_corrector=.false.)
+    case(PROP_ETRS_SCF)
+      this%prop => propagator_etrs_t(dt, predictor_corrector=.true.)
+    case(PROP_AETRS)
+      this%prop => propagator_aetrs_t(dt, predictor_corrector=.false.)
+    case(PROP_AETRS_SCF)
+      this%prop => propagator_aetrs_t(dt, predictor_corrector=.true.)
     case default
       this%prop => propagator_t(dt)
     end select
