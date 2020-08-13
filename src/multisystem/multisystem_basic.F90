@@ -19,20 +19,11 @@
 #include "global.h"
 
 module multisystem_basic_oct_m
-  use clock_oct_m
   use global_oct_m
-  use ghost_interaction_oct_m
-  use interaction_oct_m
-  use interaction_with_partner_oct_m
-  use io_oct_m
-  use loct_oct_m
   use messages_oct_m
   use multisystem_oct_m
-  use mpi_oct_m
   use namespace_oct_m
-  use parser_oct_m
   use profiling_oct_m
-  use system_oct_m
   use system_factory_abst_oct_m
   implicit none
 
@@ -56,7 +47,7 @@ contains
   recursive function multisystem_basic_constructor(namespace, factory) result(system)
     type(namespace_t),            intent(in) :: namespace
     class(system_factory_abst_t), intent(in) :: factory
-    class(multisystem_basic_t),         pointer    :: system
+    class(multisystem_basic_t),   pointer    :: system
 
     PUSH_SUB(multisystem_basic_constructor)
 
