@@ -110,7 +110,7 @@ else
   match ;   Eigenvalue 16   ; GREPFIELD(static/info, '#k =   1', 3, 16) ; -0.46682049999999997
   match ;   Eigenvalue 17   ; GREPFIELD(static/info, '#k =   1', 3, 17) ; -0.1737665
 
-  Precision: 8.2e-06
+  Precision: 9e-06
   match ;   Occupation Ni2 up-down 3d4   ; LINEFIELD(static/occ_matrices, -2, 7) ; -0.038094695
   match ;   Occupation Ni2 up-down 3d5   ; LINEFIELD(static/occ_matrices, -1, 9) ; -0.40489267
 endif
