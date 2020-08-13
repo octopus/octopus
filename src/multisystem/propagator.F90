@@ -115,7 +115,11 @@ module propagator_oct_m
     PROP_BEEMAN                  = 2,  &
     PROP_BEEMAN_SCF              = 3,  &
     PROP_EXPMID                  = 4,  &
-    PROP_EXPMID_SCF              = 5
+    PROP_EXPMID_SCF              = 5,  &
+    PROP_ETRS                    = 6,  &
+    PROP_ETRS_SCF                = 7,  &
+    PROP_AETRS                   = 8,  &
+    PROP_AETRS_SCF               = 9
 
   interface propagator_t
     procedure propagator_constructor
