@@ -156,8 +156,7 @@ module maxwell_boundary_op_oct_m
   integer, public, parameter ::   &
     MXLL_AB_NOT_ABSORBING = 0,    &
     MXLL_AB_MASK          = 1,    &
-    MXLL_AB_MAXWELL_MASK  = 2,    &
-    MXLL_AB_CPML          = 3,    &
+    MXLL_AB_CPML          = 2,    &
     MXLL_AB_MASK_ZERO     = 7
 
 contains
@@ -201,9 +200,7 @@ contains
     !% No absorbing boundaries.
     !%Option mask 1
     !% A mask equal to the wavefunctions mask is applied to the Maxwell states at the boundaries
-    !%Option maxwell_mask 2
-    !% A different mask than the wavefunctions mask is applied on Maxwell states
-    !%Option cpml 3
+    !%Option cpml 2
     !% Perfectly matched layer absorbing boundary
     !%Option mask_zero 7
     !% Absorbing boundary region is set to zero
