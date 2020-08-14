@@ -37,17 +37,23 @@ module system_oct_m
   use propagator_verlet_oct_m
   use propagator_etrs_oct_m
   use propagator_aetrs_oct_m
+  use propagator_multisys_scf_oct_m
   use quantity_oct_m
   use space_oct_m
   use varinfo_oct_m
   implicit none
 
   private
-  public ::               &
-    system_t,             &
-    system_end,           &
-    system_list_t,        &
-    system_iterator_t
+  public ::                   &
+    system_t,                 &
+    system_end,               &
+    system_list_t,            &
+    system_iterator_t,        &
+    system_init_propagator,   &
+    system_dt_operation,      &
+    system_propagation_start, &
+    system_propagation_finish, &
+    system_propagation_step_finish
 
   type, extends(interaction_partner_t), abstract :: system_t
     private
@@ -610,6 +616,8 @@ contains
     !% (Experimental) approximate enforced time-reversal symmetry propagator without predictor-corrector scheme (uses extrapolation).
     !%Option multisystem_aetrs_scf 9
     !% (Experimental) approximate enforced time-reversal symmetry propagator with predictor-corrector scheme (uses extrapolation).
+    !%Option multisystem_scf 10
+    !% (Experimental) multisystem container propagator with predictor-corrector scheme.
     !%End
     call parse_variable(this%namespace, 'TDSystemPropagator', PROP_VERLET, prop)
     if(.not.varinfo_valid_option('TDSystemPropagator', prop)) call messages_input_error(this%namespace, 'TDSystemPropagator')
@@ -642,6 +650,8 @@ contains
       this%prop => propagator_aetrs_t(dt, predictor_corrector=.false.)
     case(PROP_AETRS_SCF)
       this%prop => propagator_aetrs_t(dt, predictor_corrector=.true.)
+    case(PROP_MULTISYS_SCF)
+      this%prop => propagator_multisys_scf_t(dt, predictor_corrector=.true.)
     case default
       this%prop => propagator_t(dt)
     end select
@@ -686,10 +696,10 @@ contains
 
     ! Update interactions at initial time
     all_updated = this%update_interactions(this%clock)
-    if (.not. all_updated) then
-      message(1) = "Unable to update interactions when initializing the propagation."
-      call messages_fatal(1, namespace=this%namespace)
-    end if
+!    if (.not. all_updated) then
+!      message(1) = "Unable to update interactions when initializing the propagation."
+!      call messages_fatal(1, namespace=this%namespace)
+!    end if
 
     ! System-specific and propagator-specific initialization step
     call this%do_td_operation(this%prop%start_step)

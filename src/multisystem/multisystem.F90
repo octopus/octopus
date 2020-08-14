@@ -31,6 +31,8 @@ module multisystem_oct_m
   use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
+  use propagator_oct_m
+  use propagator_multisys_scf_oct_m
   use system_oct_m
   use system_factory_abst_oct_m
   implicit none
@@ -150,6 +152,8 @@ contains
 
     PUSH_SUB(multisystem_dt_operation)
 
+    call system_dt_operation(this)
+
     call iter%start(this%list)
     do while (iter%has_next())
       system => iter%get_next()
@@ -207,6 +211,8 @@ contains
 
     PUSH_SUB(multisystem_init_propagator)
 
+    call system_init_propagator(this, smallest_algo_dt)
+
     call iter%start(this%list)
     do while (iter%has_next())
       system => iter%get_next()
@@ -224,6 +230,8 @@ contains
     class(system_t), pointer :: system
 
     PUSH_SUB(multisystem_propagation_start)
+
+    call system_propagation_start(this)
 
     call iter%start(this%list)
     do while (iter%has_next())
@@ -248,6 +256,7 @@ contains
       system => iter%get_next()
       call system%propagation_finish()
     end do
+    call system_propagation_finish(this)
 
     POP_SUB(multisystem_propagation_finish)
   end subroutine multisystem_propagation_finish
@@ -282,6 +291,8 @@ contains
     class(system_t), pointer :: system
 
     PUSH_SUB(multisystem_propagation_step_finish)
+
+    call system_propagation_step_finish(this, iteration)
 
     call iter%start(this%list)
     do while (iter%has_next())
@@ -353,11 +364,16 @@ contains
 
     PUSH_SUB(multisystem_init_interaction)
 
+!    select type (interaction)
+!    type is (ghost_interaction_t)
+!      call interaction%init()
+!    class default
     ! The multitystem class should never know about any specific interaction.
     ! Only classes that extend it can know about specific interactions.
     ! Such classes should override this method to add new supported interactions.
-    message(1) = "Trying to initialize an interaction in the multisystem class"
-    call messages_fatal(1)
+!      message(1) = "Trying to initialize an interaction in the multisystem class"
+!      call messages_fatal(1)
+!    end
 
     POP_SUB(multisystem_init_interaction)
   end subroutine multisystem_init_interaction
@@ -433,11 +449,23 @@ contains
 
     PUSH_SUB(multisystem_do_td_operation)
 
-    call iter%start(this%list)
-    do while (iter%has_next())
-      system => iter%get_next()
-      call system%do_td_operation(operation)
-    end do
+    select case(operation)
+    case(MULTISYS_SCF_START)
+        call this%prop%next()
+    case(MULTISYS_SCF_FINISH)
+        call this%prop%next()
+    case(MULTISYS_SCF_PROPAGATE_SYSTEMS)
+        call this%prop%next()
+    case default
+      call iter%start(this%list)
+      do while (iter%has_next())
+        system => iter%get_next()
+        call system%do_td_operation(operation)
+      end do
+!      message(1) = "Unsupported TD operation for the multi-system container."
+!      call messages_fatal(1, namespace=this%namespace)
+    end select
+
 
     POP_SUB(multisystem_do_td_operation)
   end subroutine multisystem_do_td_operation

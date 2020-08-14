@@ -39,7 +39,7 @@ module propagator_oct_m
 
     type(integer_iterator_t) :: iter
     type(integer_iterator_t) :: scf_start
-    integer               :: current_ops
+    integer,public               :: current_ops
 
     integer, public       :: start_step
     integer, public       :: final_step
@@ -70,56 +70,60 @@ module propagator_oct_m
   end type propagator_t
 
   ! Known propagation operations
-  integer, public, parameter ::         &
-    SKIP                          = -1,  &
-    FINISHED                      =  0,  &
-    VERLET_START                  =  1,  &
-    VERLET_FINISH                 =  2,  &
-    VERLET_UPDATE_POS             =  3,  &
-    VERLET_COMPUTE_ACC            =  4,  &
-    VERLET_COMPUTE_VEL            =  5,  &
-    SYNC                          =  6,  &
-    UPDATE_INTERACTIONS           =  7,  &
-    START_SCF_LOOP                =  8,  &
-    END_SCF_LOOP                  =  9,  &
-    STORE_CURRENT_STATUS          = 10,  &
-    BEEMAN_START                  = 11,  &
-    BEEMAN_FINISH                 = 12,  &
-    BEEMAN_PREDICT_POS            = 13,  &
-    BEEMAN_PREDICT_VEL            = 14,  &
-    BEEMAN_CORRECT_POS            = 15,  &
-    BEEMAN_CORRECT_VEL            = 16,  &
-    EXPMID_START                  = 17,  &
-    EXPMID_FINISH                 = 18,  &
-    EXPMID_PREDICT_DT_2           = 19,  &
-    EXPMID_PREDICT_DT             = 20,  &
-    EXPMID_CORRECT_DT_2           = 21,  &
-    ETRS_START                    = 22,  &
-    ETRS_FINISH                   = 23,  &
-    ETRS_STORE_STATE_T1           = 24,  &
-    ETRS_STORE_HAMILTONIAN_T1     = 25,  &
-    ETRS_PROPAGATE_T1_DT          = 26,  &
-    ETRS_RESET_STATE_T1           = 27,  &
-    ETRS_PROPAGATE_T1_DT_2        = 28,  &
-    ETRS_STORE_STATE_T2           = 29,  &
-    ETRS_RESET_STATE_T2           = 30,  &
-    ETRS_PROPAGATE_T3_DT_2        = 31,  &
-    AETRS_START                   = 32,  &
-    AETRS_FINISH                  = 33,  &
-    AETRS_EXTRAPOLATE_HAMILTONIAN = 34,  &
-    UPDATE_HAMILTONIAN            = 35
+  integer, public, parameter ::           &
+    SKIP                           = -1,  &
+    FINISHED                       =  0,  &
+    VERLET_START                   =  1,  &
+    VERLET_FINISH                  =  2,  &
+    VERLET_UPDATE_POS              =  3,  &
+    VERLET_COMPUTE_ACC             =  4,  &
+    VERLET_COMPUTE_VEL             =  5,  &
+    SYNC                           =  6,  &
+    UPDATE_INTERACTIONS            =  7,  &
+    START_SCF_LOOP                 =  8,  &
+    END_SCF_LOOP                   =  9,  &
+    STORE_CURRENT_STATUS           = 10,  &
+    BEEMAN_START                   = 11,  &
+    BEEMAN_FINISH                  = 12,  &
+    BEEMAN_PREDICT_POS             = 13,  &
+    BEEMAN_PREDICT_VEL             = 14,  &
+    BEEMAN_CORRECT_POS             = 15,  &
+    BEEMAN_CORRECT_VEL             = 16,  &
+    EXPMID_START                   = 17,  &
+    EXPMID_FINISH                  = 18,  &
+    EXPMID_PREDICT_DT_2            = 19,  &
+    EXPMID_PREDICT_DT              = 20,  &
+    EXPMID_CORRECT_DT_2            = 21,  &
+    ETRS_START                     = 22,  &
+    ETRS_FINISH                    = 23,  &
+    ETRS_STORE_STATE_T1            = 24,  &
+    ETRS_STORE_HAMILTONIAN_T1      = 25,  &
+    ETRS_PROPAGATE_T1_DT           = 26,  &
+    ETRS_RESET_STATE_T1            = 27,  &
+    ETRS_PROPAGATE_T1_DT_2         = 28,  &
+    ETRS_STORE_STATE_T2            = 29,  &
+    ETRS_RESET_STATE_T2            = 30,  &
+    ETRS_PROPAGATE_T3_DT_2         = 31,  &
+    AETRS_START                    = 32,  &
+    AETRS_FINISH                   = 33,  &
+    AETRS_EXTRAPOLATE_HAMILTONIAN  = 34,  &
+    MULTISYS_SCF_START             = 35,  &
+    MULTISYS_SCF_FINISH            = 36,  &
+    MULTISYS_SCF_PROPAGATE_SYSTEMS = 37,  &
+    UPDATE_HAMILTONIAN             = 38
 
   ! Known multisystem propagators
-  integer, public, parameter ::        &
-    PROP_VERLET                  = 1,  &
-    PROP_BEEMAN                  = 2,  &
-    PROP_BEEMAN_SCF              = 3,  &
-    PROP_EXPMID                  = 4,  &
-    PROP_EXPMID_SCF              = 5,  &
-    PROP_ETRS                    = 6,  &
-    PROP_ETRS_SCF                = 7,  &
-    PROP_AETRS                   = 8,  &
-    PROP_AETRS_SCF               = 9
+  integer, public, parameter ::         &
+    PROP_VERLET                  =  1,  &
+    PROP_BEEMAN                  =  2,  &
+    PROP_BEEMAN_SCF              =  3,  &
+    PROP_EXPMID                  =  4,  &
+    PROP_EXPMID_SCF              =  5,  &
+    PROP_ETRS                    =  6,  &
+    PROP_ETRS_SCF                =  7,  &
+    PROP_AETRS                   =  8,  &
+    PROP_AETRS_SCF               =  9,  &
+    PROP_MULTISYS_SCF            = 10
 
   interface propagator_t
     procedure propagator_constructor
@@ -179,7 +183,7 @@ contains
 
     PUSH_SUB(propagator_next)
 
-    this%current_ops = this%iter%get_next()
+    if(this%iter%has_next()) this%current_ops = this%iter%get_next()
 
     POP_SUB(propagator_next)
   end subroutine propagator_next
