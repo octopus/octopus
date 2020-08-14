@@ -49,11 +49,13 @@ module curv_briggs_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine curv_briggs_init(cv, namespace, sb)
+  subroutine curv_briggs_init(cv, namespace, sb, spacing, min_scaling_product)
     type(curv_briggs_t), intent(out) :: cv
     type(namespace_t),   intent(in)  :: namespace
     type(simul_box_t),   intent(in)  :: sb
-
+    FLOAT,               intent(in)  :: spacing(:)
+    FLOAT,               intent(out) :: min_scaling_product
+  
     cv%L = M_ZERO
     cv%L(1:sb%dim) = sb%lsize(1:sb%dim)
 
@@ -63,6 +65,8 @@ contains
       message(1) = 'The parameter "CurvBriggsBeta" must lie between 0 and 1.'
       call messages_fatal(1)
     end if
+
+    call curv_briggs_min_scaling(sb, cv, spacing, min_scaling_product)
 
   end subroutine curv_briggs_init
 
@@ -110,6 +114,24 @@ contains
     end do
 
   end subroutine curv_briggs_jacobian_inv
+
+
+  ! ---------------------------------------------------------
+  subroutine curv_briggs_min_scaling(sb, cv, spacing, min_scaling_product)
+    type(simul_box_t),   intent(in)  :: sb
+    type(curv_briggs_t), intent(in)  :: cv
+    FLOAT,               intent(in)  :: spacing(:)
+    FLOAT,               intent(out) :: min_scaling_product
+
+    integer :: idim
+
+    min_scaling_product = 1.0
+    do idim = 1, sb%dim
+      ! corresponds to the distance of grid points at [+spacing/2,-spacing/2]
+      min_scaling_product = min_scaling_product * (1.0 / &
+        (1.0 - cv%L(idim) * cv%beta / (M_PI * spacing(idim)) * sin(M_PI * spacing(idim) / cv%L(idim))))
+    end do
+  end subroutine curv_briggs_min_scaling
 
 end module curv_briggs_oct_m
 
