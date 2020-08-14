@@ -110,7 +110,7 @@ contains
           call parse_block_float(blk, ii-1, 0, this%omega(ii), units_inp%energy)  ! frequency
           call parse_block_float(blk, ii-1, 1, this%lambda(ii), units_inp%energy) ! coupling strength
           do idir = 1, this%dim
-            call parse_block_float(blk, 0, idir + 1, this%pol(ii, idir)) ! polarization vector components
+            call parse_block_float(blk, ii-1, idir + 1, this%pol(ii, idir)) ! polarization vector components
           end do
 
           ! Normalize polarization vector
