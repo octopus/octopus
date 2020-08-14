@@ -1200,7 +1200,6 @@ contains
 
     ip_in_max = maxval(bc%mask_points_number(:))
 
-    SAFE_ALLOCATE(bc%mask(ip_in_max, 3))
     SAFE_ALLOCATE(mask(mesh%np))
 
     mask(:) = M_ONE
