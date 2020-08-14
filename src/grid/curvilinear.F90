@@ -61,6 +61,7 @@ module curvilinear_oct_m
     type(curv_briggs_t) :: briggs
     type(curv_modine_t) :: modine
     type(root_solver_t) :: rs
+    FLOAT, public :: min_mesh_scaling_product ! product of the smallest scaling :: min(distance between the grid points / spacing)
   end type curvilinear_t
 
   character(len=23), parameter :: dump_tag = '*** curvilinear_dump **'
@@ -111,11 +112,11 @@ contains
 
     select case(cv%method)
     case(CURV_METHOD_GYGI)
-      call curv_gygi_init(cv%gygi, namespace, sb, geo)
+      call curv_gygi_init(cv%gygi, namespace, sb, geo, cv%min_mesh_scaling_product)
     case(CURV_METHOD_BRIGGS)
-      call curv_briggs_init(cv%briggs, namespace, sb)
+      call curv_briggs_init(cv%briggs, namespace, sb, spacing, cv%min_mesh_scaling_product)
     case(CURV_METHOD_MODINE)
-      call curv_modine_init(cv%modine, namespace, sb, geo, spacing)
+      call curv_modine_init(cv%modine, namespace, sb, geo, spacing, cv%min_mesh_scaling_product)
     end select
 
     ! initialize root solver

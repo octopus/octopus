@@ -51,12 +51,12 @@ module curv_modine_oct_m
 
   type curv_modine_t
     private
-    FLOAT :: L(MAX_DIM)    !< size of the box
-    FLOAT :: xbar          !< size of central flat region (in units of L)
-    FLOAT :: Jbar          !< increase in density of points is 1/J
+    FLOAT          :: L(MAX_DIM) !< size of the box
+    FLOAT          :: xbar       !< size of central flat region (in units of L)
+    FLOAT          :: Jbar       !< increase in density of points is 1/J
 
-    FLOAT,            pointer :: Jlocal(:)  !< local (around the atoms) refinement
-    FLOAT,            pointer :: Jrange(:)  !< local refinement range
+    FLOAT, pointer :: Jlocal(:)  !< local (around the atoms) refinement
+    FLOAT, pointer :: Jrange(:)  !< local refinement range
 
     FLOAT, pointer :: chi_atoms(:,:)
     FLOAT, pointer :: csi(:,:)
@@ -130,12 +130,13 @@ contains
   end subroutine getf2
 
   ! ---------------------------------------------------------
-  subroutine curv_modine_init(cv, namespace, sb, geo, spacing)
+  subroutine curv_modine_init(cv, namespace, sb, geo, spacing, min_scaling_product)
     type(curv_modine_t), target, intent(out) :: cv
     type(namespace_t),           intent(in)  :: namespace
     type(simul_box_t),   target, intent(in)  :: sb
     type(geometry_t),            intent(in)  :: geo
     FLOAT,                       intent(in)  :: spacing(:)
+    FLOAT,                       intent(out) :: min_scaling_product
 
     type(root_solver_t) :: rs
 
@@ -210,6 +211,8 @@ contains
     call optimize()
 
     cv%natoms = geo%natoms
+
+    call curv_modine_min_scaling(sb, cv, min_scaling_product)
 
     POP_SUB(curv_modine_init)
 
@@ -486,6 +489,16 @@ contains
 
     POP_SUB(curv_modine_x2chi)
   end subroutine curv_modine_x2chi
+
+
+  ! ---------------------------------------------------------
+  subroutine curv_modine_min_scaling(sb, cv, min_scaling_product)
+    type(simul_box_t),   intent(in)  :: sb
+    type(curv_modine_t), intent(in)  :: cv
+    FLOAT,               intent(out) :: min_scaling_product
+    
+    min_scaling_product = cv%Jbar**sb%dim
+  end subroutine curv_modine_min_scaling
 
 end module curv_modine_oct_m
 
