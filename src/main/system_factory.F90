@@ -23,7 +23,7 @@ module system_factory_oct_m
   use classical_particle_oct_m
   use global_oct_m
   use messages_oct_m
-  use multisystem_oct_m
+  use multisystem_basic_oct_m
   use namespace_oct_m
   use electrons_oct_m
   use system_oct_m
@@ -82,7 +82,7 @@ contains
     !%End
     select case (type)
     case (SYSTEM_MULTISYSTEM)
-      system => multisystem_t(namespace_t(name, parent=namespace), this)
+      system => multisystem_basic_t(namespace_t(name, parent=namespace), this)
     case (SYSTEM_ELECTRONIC)
       system => electrons_t(namespace_t(name, parent=namespace))
     case (SYSTEM_MAXWELL)

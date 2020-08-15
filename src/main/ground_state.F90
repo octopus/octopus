@@ -28,7 +28,7 @@ module ground_state_oct_m
   use hamiltonian_elec_oct_m
   use messages_oct_m
   use multicomm_oct_m
-  use multisystem_oct_m
+  use multisystem_basic_oct_m
   use namespace_oct_m
   use output_oct_m
   use states_elec_oct_m
@@ -63,7 +63,7 @@ contains
     PUSH_SUB(ground_state_run)
 
     select type (system)
-    class is (multisystem_t)
+    class is (multisystem_basic_t)
       message(1) = "CalculationMode = gs not implemented for multi-system calculations"
       call messages_fatal(1)
     type is (electrons_t)

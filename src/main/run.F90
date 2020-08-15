@@ -34,7 +34,7 @@ module run_oct_m
   use mpi_debug_oct_m
   use mpi_oct_m
   use multicomm_oct_m
-  use multisystem_oct_m
+  use multisystem_basic_oct_m
   use namespace_oct_m
   use opt_control_oct_m
   use parser_oct_m
@@ -152,7 +152,7 @@ contains
     ! Create systems
     if (parse_is_defined(namespace, "Systems")) then
       ! We are running in multi-system mode
-      systems => multisystem_t(namespace, system_factory)
+      systems => multisystem_basic_t(namespace, system_factory)
     else
       ! Fall back to old behaviour
       systems => electrons_t(namespace, generate_epot = calc_mode_id /= OPTION__CALCULATIONMODE__DUMMY)
@@ -160,7 +160,7 @@ contains
 
     ! Create list of partners (currently missing partners that are not systems)
     select type (systems)
-    class is (multisystem_t)
+    class is (multisystem_basic_t)
       partners = systems%list
     type is (electrons_t)
       call partners%add(systems)
@@ -171,7 +171,7 @@ contains
     call systems%init_all_interactions()
 
     select type (systems)
-    class is (multisystem_t)
+    class is (multisystem_basic_t)
       ! Write the interaction graph as a DOT graph for debug
       if (debug%interaction_graph .and. mpi_grp_is_root(mpi_world)) then
         iunit_out = io_open('debug/interaction_graph.dot', systems%namespace, action='write')
