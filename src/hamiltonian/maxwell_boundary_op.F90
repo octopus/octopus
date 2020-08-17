@@ -582,7 +582,7 @@ contains
     FLOAT,               intent(inout) :: bounds(:,:), ab_bounds(:,:)
     integer,             intent(in)    :: idim
 
-    FLOAT               :: width
+    FLOAT               :: default_width
 
     PUSH_SUB(bc_mxll_ab_bounds_init)
 
@@ -594,14 +594,14 @@ contains
     !% the derivative order.
     !%End
 
-    width = 2*gr%der%order * maxval(gr%mesh%spacing(1:3))
-    call parse_variable(namespace, 'MaxwellABWidth', width, bc%ab_width, units_inp%length)
+    default_width = M_TWO * gr%der%order * maxval(gr%mesh%spacing(1:3))
+    call parse_variable(namespace, 'MaxwellABWidth', default_width, bc%ab_width, units_inp%length)
 
-    if (any(width < gr%der%order*gr%mesh%spacing(1:3))) then
-       width = gr%der%order * maxval(gr%mesh%spacing(1:3))
-       write(message(1),'(a)') 'Absorbing boundary width has to be larger or equal than derivatives order times spacing!'
-       write(message(2),'(a,es10.3)') 'Absorbing boundary width is set to: ', width
-       call messages_info(2)
+    if (bc%ab_width < default_width) then
+      bc%ab_width = default_width
+      write(message(1),'(a)') 'Absorbing boundary width has to be larger or equal than twice the derivatives order times spacing!'
+      write(message(2),'(a,es10.3)') 'Absorbing boundary width is set to: ', default_width
+      call messages_info(2)
     end if
 
     ab_bounds(1, idim) = ab_bounds(2, idim) - bc%ab_width
@@ -1714,9 +1714,11 @@ contains
       end if
     end do
     st%inner_points_number = ip_in
+    print *, 'inner points', ip_in
     SAFE_ALLOCATE(st%inner_points_map(1:ip_in))
     st%boundary_points_number = ip_bd
     SAFE_ALLOCATE(st%boundary_points_map(1:ip_bd))
+    print *, 'boudanry points', ip_bd
 
     ! inner and boundary points mapping
     ip_in = 0
