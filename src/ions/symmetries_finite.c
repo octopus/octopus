@@ -1753,7 +1753,7 @@ void FC_FUNC_(symmetries_finite_init,SYMMETRIES_FINITE_INIT)
     if(verbose > 5) printf("%d %f %f %f\n", Atoms[i].type,  Atoms[i].x[0],  Atoms[i].x[1], Atoms[i].x[2]);
   }
 
-  find_symmetry_elements() ;
+  if(AtomsCount > 0) find_symmetry_elements() ;
   sort_symmetry_elements() ;
 
   summarize_symmetry_elements() ;
