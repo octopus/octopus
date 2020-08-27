@@ -26,6 +26,7 @@ dist_share_DATA =                                                   \
         01-free-propagation.02-2_pulses_td.inp                      \
         02-external-current.test                                    \
         02-external-current.01-gaussian_current_pulse.inp           \
-        02-external-current.02-gaussian_current_pulse_with_pml.inp
+        02-external-current.02-gaussian_current_pulse_with_pml.inp  \
+        02-external-current.03-gaussian_current_pulse_with_mask.inp
 
 CLEANFILES = *~ *.bak
