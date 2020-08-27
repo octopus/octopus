@@ -21,6 +21,7 @@
 module hamiltonian_mxll_oct_m
   use batch_oct_m
   use batch_ops_oct_m
+  use boundaries_oct_m
   use cube_oct_m
   use derivatives_oct_m
   use energy_mxll_oct_m
@@ -479,8 +480,9 @@ contains
       ! This part uses the old non-batch implementation
       SAFE_ALLOCATE(rs_aux_in(1:hm%der%mesh%np_part, 1:3))
       SAFE_ALLOCATE(rs_aux_out(1:hm%der%mesh%np, 1:3))
+      call boundaries_set(hm%der%boundaries, psib)
       do ii = 1, 3
-        call batch_get_state(psib, ii, hm%der%mesh%np, rs_aux_in(:, ii))
+        call batch_get_state(psib, ii, hm%der%mesh%np_part, rs_aux_in(:, ii))
       end do
       call maxwell_hamiltonian_apply_fd(hm, hm%der, rs_aux_in, rs_aux_out)
       do ii = 1, 3
