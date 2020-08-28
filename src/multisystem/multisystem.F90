@@ -73,14 +73,16 @@ module multisystem_oct_m
 contains
 
   ! ---------------------------------------------------------------------------------------
-  recursive subroutine multisystem_init(this, namespace, factory)
+  recursive subroutine multisystem_init(this, namespace, factory, mpi_grp)
     class(multisystem_t),      intent(inout) :: this
     type(namespace_t),            intent(in) :: namespace
     class(system_factory_abst_t), intent(in) :: factory
+    type(mpi_grp_t),              intent(in) :: mpi_grp
 
     integer :: isys, system_type, ic
     character(len=128) :: system_name
     type(block_t) :: blk
+    type(mpi_grp_t) :: system_grp
 
     PUSH_SUB(multisystem_init)
 
@@ -102,7 +104,11 @@ contains
         end do
         call parse_block_integer(blk, isys - 1, 1, system_type)
 
-        call multisystem_create_system(this, system_name, system_type, isys, factory)
+        ! for the moment, duplicate communicator
+        ! -> parallelization over systems needs to be implemented here
+        call mpi_grp_duplicate(system_grp, mpi_grp)
+        call multisystem_create_system(this, system_name, system_type, isys, &
+          factory, system_grp)
       end do
       call parse_block_end(blk)
     else
@@ -114,12 +120,13 @@ contains
   end subroutine multisystem_init
 
   ! ---------------------------------------------------------------------------------------
-  recursive subroutine multisystem_create_system(this, system_name, system_type, isys, factory)
+  recursive subroutine multisystem_create_system(this, system_name, system_type, isys, factory, mpi_grp)
     class(multisystem_t),      intent(inout) :: this
     character(len=128),           intent(in) :: system_name
     integer,                      intent(in) :: system_type
     integer,                      intent(in) :: isys
     class(system_factory_abst_t), intent(in) :: factory
+    type(mpi_grp_t),              intent(in) :: mpi_grp
 
     type(system_iterator_t) :: iter
     class(system_t), pointer :: sys, other
@@ -131,7 +138,7 @@ contains
     call io_mkdir(system_name, namespace=this%namespace)
 
     ! Create system
-    sys => factory%create(this%namespace, system_name, system_type)
+    sys => factory%create(this%namespace, system_name, system_type, mpi_grp)
     if (.not. associated(sys)) then
       call messages_input_error(this%namespace, factory%block_name(), 'Unknown system type.')
     end if

@@ -95,9 +95,10 @@ module electrons_oct_m
 contains
   
   !----------------------------------------------------------
-  function electrons_constructor(namespace, generate_epot) result(sys)
+  function electrons_constructor(namespace, mpi_grp, generate_epot) result(sys)
     class(electrons_t), pointer    :: sys
     type(namespace_t),  intent(in) :: namespace
+    type(mpi_grp_t),    intent(in) :: mpi_grp
     logical,  optional, intent(in) :: generate_epot
 
     type(profile_t), save :: prof
@@ -220,7 +221,7 @@ contains
       index_range(4) = 100000                 ! Some large number
 
       ! create index and domain communicators
-      call multicomm_init(sys%mc, sys%namespace, mpi_world, calc_mode_par_parallel_mask(), calc_mode_par_default_parallel_mask(), &
+      call multicomm_init(sys%mc, sys%namespace, mpi_grp, calc_mode_par_parallel_mask(), calc_mode_par_default_parallel_mask(), &
         mpi_world%size, index_range, (/ 5000, 1, 1, 1 /))
 
       POP_SUB(electrons_constructor.parallel_init)

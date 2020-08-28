@@ -110,7 +110,7 @@ contains
     PUSH_SUB(convert)
 
     call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
-    sys => electrons_t(global_namespace)
+    sys => electrons_t(global_namespace, mpi_world)
 
     message(1) = 'Info: Converting files'
     message(2) = ''

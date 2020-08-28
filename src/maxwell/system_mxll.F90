@@ -116,24 +116,26 @@ module system_mxll_oct_m
 contains
 
   ! ---------------------------------------------------------
-  function system_mxll_constructor(namespace) result(sys)
+  function system_mxll_constructor(namespace, mpi_grp) result(sys)
     class(system_mxll_t), pointer  :: sys
     type(namespace_t),  intent(in) :: namespace
+    type(mpi_grp_t),    intent(in) :: mpi_grp
 
     PUSH_SUB(system_mxll_constructor)
 
     SAFE_ALLOCATE(sys)
 
-    call system_mxll_init(sys, namespace)
+    call system_mxll_init(sys, namespace, mpi_grp)
 
     POP_SUB(system_mxll_constructor)
   end function system_mxll_constructor
 
 
   ! ---------------------------------------------------------
-  subroutine system_mxll_init(this, namespace)
+  subroutine system_mxll_init(this, namespace, mpi_grp)
     class(system_mxll_t), intent(inout) :: this
     type(namespace_t),    intent(in)    :: namespace
+    type(mpi_grp_t),      intent(in)    :: mpi_grp
 
     type(profile_t), save :: prof
 
@@ -199,7 +201,7 @@ contains
       index_range(4) = 100000                 ! Some large number
 
       ! create index and domain communicators
-      call multicomm_init(sys%mc, sys%namespace, mpi_world, calc_mode_par_parallel_mask(), &
+      call multicomm_init(sys%mc, sys%namespace, mpi_grp, calc_mode_par_parallel_mask(), &
            &calc_mode_par_default_parallel_mask(),mpi_world%size, index_range, (/ 5000, 1, 1, 1 /))
 
       POP_SUB(system_mxll_init.parallel_init)

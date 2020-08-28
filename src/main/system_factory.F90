@@ -23,6 +23,7 @@ module system_factory_oct_m
   use classical_particle_oct_m
   use global_oct_m
   use messages_oct_m
+  use mpi_oct_m
   use multisystem_basic_oct_m
   use namespace_oct_m
   use electrons_oct_m
@@ -52,11 +53,12 @@ module system_factory_oct_m
 contains
 
   ! ---------------------------------------------------------------------------------------
-  recursive function system_factory_create(this, namespace, name, type) result(system)
+  recursive function system_factory_create(this, namespace, name, type, mpi_grp) result(system)
     class(system_factory_t), intent(in) :: this
     type(namespace_t),       intent(in) :: namespace
     character(len=*),        intent(in) :: name
     integer,                 intent(in) :: type
+    type(mpi_grp_t),         intent(in) :: mpi_grp
     class(system_t),         pointer    :: system
 
     PUSH_SUB(system_factory_create)
@@ -82,11 +84,11 @@ contains
     !%End
     select case (type)
     case (SYSTEM_MULTISYSTEM)
-      system => multisystem_basic_t(namespace_t(name, parent=namespace), this)
+      system => multisystem_basic_t(namespace_t(name, parent=namespace), this, mpi_grp)
     case (SYSTEM_ELECTRONIC)
-      system => electrons_t(namespace_t(name, parent=namespace))
+      system => electrons_t(namespace_t(name, parent=namespace), mpi_grp)
     case (SYSTEM_MAXWELL)
-      system => system_mxll_t(namespace_t(name, parent=namespace))
+      system => system_mxll_t(namespace_t(name, parent=namespace), mpi_grp)
     case (SYSTEM_CLASSICAL_PARTICLE)
       system => classical_particle_t(namespace_t(name, parent=namespace))
     case (SYSTEM_CHARGED_PARTICLE)
