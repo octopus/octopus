@@ -177,8 +177,6 @@ contains
     end if
 
     select case (tdop)
-    case (SKIP)
-      ! Do nothing
     case (FINISHED)
       if (.not. this%prop%step_is_done()) then
         this%clock = this%clock + CLOCK_TICK

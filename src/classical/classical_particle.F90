@@ -230,6 +230,8 @@ contains
     sdim = this%space%dim
 
     select case(operation)
+    case (SKIP)
+      ! Do nothing
     case (VERLET_START)
       SAFE_ALLOCATE(this%prev_acc(1:this%space%dim, 1))
       this%acc(1:this%space%dim) = this%tot_force(1:this%space%dim) / this%mass
