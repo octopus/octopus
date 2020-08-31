@@ -9,6 +9,8 @@ AC_CONFIG_SRCDIR([src/spglib.c])
 AC_CONFIG_HEADER([config.h])
 AC_CONFIG_MACRO_DIR([m4])
 
+AC_SUBST([AM_CFLAGS], [-fPIC])
+
 # Checks for programs.
 AC_PROG_CC
 AC_PROG_RANLIB

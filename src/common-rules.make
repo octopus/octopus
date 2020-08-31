@@ -96,7 +96,7 @@ all_LIBS = $(octopus_LIBS) $(other_LIBS)
 # How to compile F90 files.
 # ---------------------------------------------------------------
 
-SUFFIXES = _oct.f90 .F90 .o
+SUFFIXES = _oct.f90 .F90 .o .lo
 
 # some definitions for silencing make
 cpp_verbose = $(cpp_verbose_@AM_V@)
@@ -116,6 +116,16 @@ fc_verbose_0 = @echo "  FC       $@";
 	  "@DEBUG@" "@F90_ACCEPTS_LINE_NUMBERS@" > $*_oct.f90
 	$(fc_verbose)@FC@ @FCFLAGS@ $(FCFLAGS_MODS) -c @FCFLAGS_f90@ -o $@ $*_oct.f90
 	@rm -f $*_oct.f90
+
+.F90.lo:
+	$(cpp_verbose)@FCCPP@ @CPPFLAGS@ $(AM_CPPFLAGS) -I. $< | \
+	  $(top_srcdir)/build/preprocess.pl - \
+	  "@DEBUG@" "@F90_ACCEPTS_LINE_NUMBERS@" > $*_oct.f90
+	$(fc_verbose)$(LIBTOOL) $(AM_V_lt) --tag=FC $(AM_LIBTOOLFLAGS) \
+	  $(LIBTOOLFLAGS) --mode=compile \
+	  @FC@ @FCFLAGS@ $(FCFLAGS_MODS) -c @FCFLAGS_f90@ -o $@ $*_oct.f90
+	@rm -f $*_oct.f90
+
 
 # This rule is basically to create a _oct.f90 file by hand for
 # debugging purposes. It is identical to the first part of

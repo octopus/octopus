@@ -36,8 +36,12 @@ AC_CANONICAL_HOST
 AC_PROG_INSTALL
 AC_PROG_LN_S
 AC_PROG_MAKE_SET
-AC_PROG_RANLIB
 AC_PROG_MKDIR_P
+
+LT_INIT([disable-static])
+AC_SUBST([AM_CFLAGS], [-fPIC])
+AC_SUBST([AM_CXXFLAGS], [-fPIC])
+AC_SUBST([AM_FCFLAGS], [-fPIC])
 
 dnl check whether mpi is enabled
 AC_ARG_ENABLE(mpi, AS_HELP_STRING([--enable-mpi(=PATH)], [Parallel version. For ancient versions of MPI, you may need to specify PATH for MPI libs.]))
