@@ -388,6 +388,8 @@ contains
     PUSH_SUB(system_mxll_do_td)
 
     select case(operation)
+    case (SKIP)
+      ! Do nothing
     case (EXPMID_START)
       SAFE_ALLOCATE(this%rs_current_density_ext_t1(1:this%gr%mesh%np_part,1:this%st%dim))
       SAFE_ALLOCATE(this%rs_current_density_ext_t2(1:this%gr%mesh%np_part,1:this%st%dim))
