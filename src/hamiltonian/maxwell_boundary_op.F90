@@ -1714,11 +1714,9 @@ contains
       end if
     end do
     st%inner_points_number = ip_in
-    print *, 'inner points', ip_in
     SAFE_ALLOCATE(st%inner_points_map(1:ip_in))
     st%boundary_points_number = ip_bd
     SAFE_ALLOCATE(st%boundary_points_map(1:ip_bd))
-    print *, 'boudanry points', ip_bd
 
     ! inner and boundary points mapping
     ip_in = 0
