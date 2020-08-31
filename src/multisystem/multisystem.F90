@@ -60,9 +60,6 @@ module multisystem_oct_m
     procedure :: initial_conditions => multisystem_initial_conditions
     procedure :: do_td_operation => multisystem_do_td_operation
     procedure :: iteration_info => multisystem_iteration_info
-    procedure :: output_start => multisystem_output_start
-    procedure :: output_write => multisystem_output_write
-    procedure :: output_finish => multisystem_output_finish
     procedure :: is_tolerance_reached => multisystem_is_tolerance_reached
     procedure :: store_current_status => multisystem_store_current_status
     procedure :: update_quantity => multisystem_update_quantity
@@ -465,7 +462,7 @@ contains
   end subroutine multisystem_initial_conditions
 
   ! ---------------------------------------------------------
-  recursive subroutine multisystem_do_td_operation(this, operation)
+  subroutine multisystem_do_td_operation(this, operation)
     class(multisystem_t), intent(inout) :: this
     integer,              intent(in)    :: operation
 
@@ -474,11 +471,12 @@ contains
 
     PUSH_SUB(multisystem_do_td_operation)
 
-    call iter%start(this%list)
-    do while (iter%has_next())
-      system => iter%get_next()
-      call system%do_td_operation(operation)
-    end do
+    select case (operation)
+    case default
+      ! Currently no td operation is supported
+      message(1) = "Unsupported TD operation."
+      call messages_fatal(1, namespace=this%namespace)
+    end select
 
     POP_SUB(multisystem_do_td_operation)
   end subroutine multisystem_do_td_operation
@@ -504,94 +502,30 @@ contains
   end function multisystem_is_tolerance_reached
 
   ! ---------------------------------------------------------
-  recursive subroutine multisystem_store_current_status(this)
+  subroutine multisystem_store_current_status(this)
     class(multisystem_t), intent(inout)    :: this
-
-    type(system_iterator_t) :: iter
-    class(system_t), pointer :: system
 
     PUSH_SUB(multisystem_store_current_status)
 
-    call iter%start(this%list)
-    do while (iter%has_next())
-      system => iter%get_next()
-      call system%store_current_status()
-    end do
+    ! The multitystem class does not have any status to be stored.
+    ! Classes that extend it might need to override this method in order to
+    ! support certain propagators.
 
     POP_SUB(multisystem_store_current_status)
   end subroutine multisystem_store_current_status
 
-   ! ---------------------------------------------------------
-  recursive subroutine multisystem_iteration_info(this)
+  ! ---------------------------------------------------------
+  subroutine multisystem_iteration_info(this)
     class(multisystem_t), intent(in) :: this
-
-    type(system_iterator_t) :: iter
-    class(system_t), pointer :: system
 
     PUSH_SUB(multisystem_iteration_info)
 
-    call iter%start(this%list)
-    do while (iter%has_next())
-      system => iter%get_next()
-      call system%iteration_info()
-    end do
+    ! The multitystem class does not output any iteration info.
+    ! Classes that extend it and need to output iteration info should override
+    ! this method.
 
     POP_SUB(multisystem_iteration_info)
   end subroutine multisystem_iteration_info
-
-  ! ---------------------------------------------------------
-  subroutine multisystem_output_start(this)
-    class(multisystem_t), intent(inout) :: this
-
-    type(system_iterator_t) :: iter
-    class(system_t), pointer :: system
-
-    PUSH_SUB(multisystem_output_start)
-
-    call iter%start(this%list)
-    do while (iter%has_next())
-      system => iter%get_next()
-      call system%output_start()
-    end do
-
-    POP_SUB(multisystem_output_start)
-  end subroutine multisystem_output_start
-
-  ! ---------------------------------------------------------
-  recursive subroutine multisystem_output_finish(this)
-    class(multisystem_t), intent(inout) :: this
-
-    type(system_iterator_t) :: iter
-    class(system_t), pointer :: system
-
-    PUSH_SUB(multisystem_output_finish)
-
-    call iter%start(this%list)
-    do while (iter%has_next())
-      system => iter%get_next()
-      call system%output_finish()
-    end do
-
-    POP_SUB(multisystem_output_finish)
-  end subroutine multisystem_output_finish
-
-  ! ---------------------------------------------------------
-  recursive subroutine multisystem_output_write(this)
-    class(multisystem_t), intent(inout) :: this
-
-    type(system_iterator_t) :: iterator
-    class(system_t), pointer :: system
-
-    PUSH_SUB(multisystem_output_write)
-
-    call iterator%start(this%list)
-    do while (iterator%has_next())
-      system => iterator%get_next()
-      call system%output_write()
-    end do
-
-    POP_SUB(multisystem_output_write)
-  end subroutine multisystem_output_write
 
   ! ---------------------------------------------------------
   subroutine multisystem_update_quantity(this, iq, requested_time)
