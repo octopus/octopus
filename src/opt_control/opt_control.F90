@@ -38,7 +38,7 @@ module opt_control_oct_m
   use math_oct_m
   use messages_oct_m
   use minimizer_oct_m
-  use multisystem_oct_m
+  use multisystem_basic_oct_m
   use namespace_oct_m
   use opt_control_global_oct_m
   use opt_control_iter_oct_m
@@ -92,7 +92,7 @@ contains
     PUSH_SUB(opt_control_run)
 
     select type (system)
-    class is (multisystem_t)
+    class is (multisystem_basic_t)
       message(1) = "CalculationMode = opt_control not implemented for multi-system calculations"
       call messages_fatal(1)
     type is (electrons_t)

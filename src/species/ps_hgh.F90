@@ -670,7 +670,7 @@ contains
 
     ! Open files.
     dirname = trim(dir)//'/hgh.'//trim(psp%atom_name)
-    call io_mkdir(trim(dir), namespace)
+    call io_mkdir(trim(dirname), namespace)
     hgh_unit = io_open(trim(dirname)//'/hgh', namespace, action='write')
     loc_unit = io_open(trim(dirname)//'/local', namespace, action='write')
     dat_unit = io_open(trim(dirname)//'/info', namespace, action='write')

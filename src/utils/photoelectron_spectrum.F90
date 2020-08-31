@@ -758,6 +758,8 @@ program photoelectron_spectrum
         
         PUSH_SUB(get_laser_polarization)
         
+        cPol = M_ZERO
+
         no_l = 0
         if(parse_block(global_namespace, 'TDExternalFields', blk) == 0) then
           no_l = parse_block_n(blk)

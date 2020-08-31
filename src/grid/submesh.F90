@@ -128,6 +128,24 @@ contains
 
   ! -------------------------------------------------------------
 
+  ! Multipliers for recursive formulation of n-ellipsoid volume 
+  ! simplifying the Gamma function
+  ! f(n) = 2f(n-2)/n, f(0)=1, f(1)=2
+  recursive FLOAT function f_n(dims) result(fn)
+
+    integer :: dims
+
+    if (dims == 0) then
+      fn = 1.0
+    else if (dims == 1) then
+      fn = 2.0
+    else
+      fn = 2.0 * f_n(dims - 2) / dims
+    end if
+  end function f_n
+
+! -------------------------------------------------------------
+
   subroutine submesh_init(this, sb, mesh, center, rc)
     type(submesh_t),      intent(inout)  :: this !< valgrind objects to intent(out) due to the initializations above
     type(simul_box_t),    intent(in)     :: sb
@@ -135,12 +153,12 @@ contains
     FLOAT,                intent(in)     :: center(:)
     FLOAT,                intent(in)     :: rc
     
-    FLOAT :: r2, xx(1:MAX_DIM)
+    FLOAT :: r2, rc2, xx(1:MAX_DIM), rc_norm_n
     FLOAT, allocatable :: center_copies(:, :), xtmp(:, :)
-    integer :: icell, is, isb, ip, ix, iy, iz
+    integer :: icell, is, isb, ip, ix, iy, iz, max_elements_count
     type(profile_t), save :: submesh_init_prof
     type(periodic_copy_t) :: pp
-    integer, allocatable :: map_inv(:)
+    integer, allocatable :: map_inv(:), map_temp(:)
     integer :: nmax(1:MAX_DIM), nmin(1:MAX_DIM)
     integer, allocatable :: order(:)
 
@@ -155,6 +173,7 @@ contains
     this%center(1:sb%dim) = center(1:sb%dim)
 
     this%radius = rc
+    rc2 = rc**2
 
     ! The spheres are generated differently for periodic coordinates,
     ! mainly for performance reasons.
@@ -188,7 +207,7 @@ contains
 #endif
             if(ip == 0) cycle
             r2 = sum((mesh%x(ip, 1:sb%dim) - center(1:sb%dim))**2)
-            if(r2 <= rc**2) then
+            if(r2 <= rc2) then
               if(ip > mesh%np) then
                 ! boundary points are marked as negative values
                 isb = isb + 1
@@ -248,37 +267,36 @@ contains
         center_copies(1:sb%dim, icell) = periodic_copy_position(pp, sb, icell)
       end do
 
-      is = 0
-      do ip = 1, mesh%np_part
-        do icell = 1, periodic_copy_num(pp)
-          xx(1:sb%dim) = mesh%x(ip, 1:sb%dim) - center_copies(1:sb%dim, icell)
-          r2 = sum(xx(1:sb%dim)**2)
-          if(r2 > rc**2 ) cycle
-          is = is + 1
-        end do
-        if (ip == mesh%np) this%np = is
-      end do
-      
-      this%np_part = is
+      !Recursive formulation for the volume of n-ellipsoid 
+      !Garry Tee, NZ J. Mathematics Vol. 34 (2005) p. 165 eqs. 53,55
+      rc_norm_n = product(ceiling(rc / mesh%spacing(1:sb%dim)) + 1.0)
+      if (mesh%use_curvilinear) rc_norm_n = rc_norm_n / mesh%cv%min_mesh_scaling_product
+      max_elements_count = 3**sb%dim * int(M_PI**floor(0.5 * sb%dim) * rc_norm_n * f_n(sb%dim)) 
 
-      SAFE_ALLOCATE(this%map(1:this%np_part))
-      SAFE_ALLOCATE(xtmp(1:this%np_part, 0:sb%dim))
+      SAFE_ALLOCATE(map_temp(1:max_elements_count))
+      SAFE_ALLOCATE(xtmp(1:max_elements_count, 0:sb%dim))
             
-      !iterate again to fill the tables
       is = 0
       do ip = 1, mesh%np_part
         do icell = 1, periodic_copy_num(pp)
           xx(1:sb%dim) = mesh%x(ip, 1:sb%dim) - center_copies(1:sb%dim, icell)
           r2 = sum(xx(1:sb%dim)**2)
-          if(r2 > rc**2 ) cycle
+          if(r2 > rc2) cycle
           is = is + 1
-          this%map(is) = ip
+          map_temp(is) = ip
           xtmp(is, 0) = sqrt(r2)
           xtmp(is, 1:sb%dim) = xx(1:sb%dim)
           ! Note that xx can be outside the unit cell
-         end do
+        end do
+        if (ip == mesh%np) this%np = is
       end do
 
+      this%np_part = is
+
+      SAFE_ALLOCATE(this%map(1:this%np_part))
+      this%map(1:this%np_part) = map_temp(1:this%np_part)
+
+      SAFE_DEALLOCATE_A(map_temp)
       SAFE_DEALLOCATE_A(center_copies)
       
       call periodic_copy_end(pp)

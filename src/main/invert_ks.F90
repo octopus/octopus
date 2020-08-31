@@ -28,7 +28,7 @@ module invert_ks_oct_m
   use io_oct_m
   use mesh_function_oct_m
   use messages_oct_m
-  use multisystem_oct_m
+  use multisystem_basic_oct_m
   use namespace_oct_m
   use parser_oct_m
   use pcm_oct_m
@@ -53,7 +53,7 @@ contains
     PUSH_SUB(invert_ks_run)
 
     select type (system)
-    class is (multisystem_t)
+    class is (multisystem_basic_t)
       message(1) = "CalculationMode = invert_ks not implemented for multi-system calculations"
       call messages_fatal(1)
     type is (electrons_t)
