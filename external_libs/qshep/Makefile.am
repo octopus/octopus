@@ -25,6 +25,6 @@ libqshep_a_SOURCES = qshep2d.f90 qshep3d.f90
 
 # how to compile a f90 file :)
 .f90.o:
-	@FC@ @FCFLAGS@ -c @FCFLAGS_f90@ -o $@ $<
+	@FC@ @FCFLAGS@ @AM_FCFLAGS@ -c @FCFLAGS_f90@ -o $@ $<
 
 CLEANFILES = *~ *.bak *.mod *.il *.d *.pc* ifc*
