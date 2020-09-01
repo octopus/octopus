@@ -91,7 +91,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine xc_ks_inversion_init(ks_inv, namespace, gr, geo, st, xc, mc)
-    type(xc_ks_inversion_t), intent(out)   :: ks_inv
+    type(xc_ks_inversion_t), intent(inout) :: ks_inv
     type(namespace_t),       intent(in)    :: namespace
     type(grid_t),            intent(inout) :: gr
     type(geometry_t),        intent(inout) :: geo
