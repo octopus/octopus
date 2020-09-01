@@ -364,9 +364,11 @@ contains
     !% So far only TDOutput = multipoles is supported.
     !%
     !%End
-    resolve_states =  .false.
     call parse_variable(namespace, 'TDOutputResolveStates', .false., resolve_states)
-    
+    if(.not. writ%out(OUT_MULTIPOLES)%write) then
+       write(message(1),'(a)') "TDOutputResolveStates works only for TDOutput = multipoles."
+       call messages_warning(1)
+    end if
     
     
 
