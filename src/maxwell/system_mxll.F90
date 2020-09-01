@@ -326,10 +326,10 @@ contains
     this%hm%plane_waves_apply = .true.
     this%hm%spatial_constant_apply = .true.
     call bc_mxll_init(this%hm%bc, this%namespace, this%gr, this%st, this%gr%sb, this%geo, this%prop%dt/this%tr_mxll%inter_steps)
-    this%bc_bounds(:,:) = this%hm%bc%bc_bounds(:,:)
+    this%bc_bounds(:,1:3) = this%hm%bc%bc_bounds(:,1:3)
     call inner_and_outer_points_mapping(this%gr%mesh, this%st, this%bc_bounds)
-    this%dt_bounds(2,:) = this%bc_bounds(1,:)
-    this%dt_bounds(1,:) = this%bc_bounds(1,:) - this%gr%der%order * this%gr%mesh%spacing(:)
+    this%dt_bounds(2, 1:3) = this%bc_bounds(1, 1:3)
+    this%dt_bounds(1, 1:3) = this%bc_bounds(1, 1:3) - this%gr%der%order * this%gr%mesh%spacing(1:3)
     call surface_grid_points_mapping(this%gr%mesh, this%st, this%dt_bounds)
 
     if (parse_is_defined(this%namespace, 'UserDefinedInitialMaxwellStates')) then
