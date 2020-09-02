@@ -58,7 +58,7 @@ contains
     class(multisystem_basic_t), intent(inout) :: systems
     logical,              intent(in)    :: from_scratch
 
-    integer :: it, internal_loop
+    integer :: internal_loop
     integer, parameter :: MAX_PROPAGATOR_STEPS = 1000
     FLOAT :: final_time
 
@@ -89,17 +89,13 @@ contains
     call systems%propagation_start()
 
     ! The full TD loop
-    it = 0
     do while (.not. systems%has_reached_final_propagation_time(final_time))
-
-      it = it + 1
-
       internal_loop = 1
       do while (.not. systems%propagation_step_is_done() .and. internal_loop < MAX_PROPAGATOR_STEPS)
         call systems%dt_operation()
         internal_loop = internal_loop + 1
       end do
-      call systems%propagation_step_finish(it)
+      call systems%propagation_step_finish()
 
       write (message(1), '(a)') repeat ('-', 71)
       call messages_info(1)

@@ -588,9 +588,8 @@ contains
   end subroutine system_mxll_output_start
 
   ! ---------------------------------------------------------
-  subroutine system_mxll_output_write(this, iter)
+  subroutine system_mxll_output_write(this)
     class(system_mxll_t), intent(inout) :: this
-    integer,              intent(in)    :: iter
 
     logical :: stopping
 
@@ -598,9 +597,9 @@ contains
 
     stopping = clean_stop(this%mc%master_comm)
 
-    call td_write_mxll_iter(this%write_handler, this%gr, this%st, this%hm, this%prop%dt, iter)
+    call td_write_mxll_iter(this%write_handler, this%gr, this%st, this%hm, this%prop%dt, this%clock%get_tick())
 
-    if ((this%outp%output_interval > 0 .and. mod(iter, this%outp%output_interval) == 0) .or. stopping) then
+    if ((this%outp%output_interval > 0 .and. mod(this%clock%get_tick(), this%outp%output_interval) == 0) .or. stopping) then
       call td_write_mxll_free_data(this%write_handler, this%namespace, this%gr, this%st, this%hm, this%geo, this%outp, this%clock)
     end if
 

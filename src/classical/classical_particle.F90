@@ -435,7 +435,7 @@ contains
     end if
 
     ! Output info for first iteration
-    call this%output_write(0)
+    call this%output_write()
 
     POP_SUB(classical_particle_output_start)
   end subroutine classical_particle_output_start
@@ -454,9 +454,8 @@ contains
   end subroutine classical_particle_output_finish
 
   ! ---------------------------------------------------------
-  subroutine classical_particle_output_write(this, iter)
+  subroutine classical_particle_output_write(this)
     class(classical_particle_t), intent(inout) :: this
-    integer,                 intent(in)    :: iter
 
     integer :: idir
     character(len=50) :: aux
@@ -466,7 +465,7 @@ contains
 
     PUSH_SUB(classical_particle_output_write)
 
-    if(iter == 0) then
+    if (this%clock%get_tick() == 0) then
       ! header
       call write_iter_clear(this%output_handle)
       call write_iter_string(this%output_handle,'################################################################################')

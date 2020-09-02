@@ -289,9 +289,8 @@ contains
   end function multisystem_has_reached_final_propagation_time
 
   ! ---------------------------------------------------------
-  recursive subroutine multisystem_propagation_step_finish(this, iteration)
+  recursive subroutine multisystem_propagation_step_finish(this)
     class(multisystem_t),      intent(inout) :: this
-    integer,                   intent(in)    :: iteration
 
     type(system_iterator_t) :: iter
     class(system_t), pointer :: system
@@ -302,7 +301,7 @@ contains
     do while (iter%has_next())
       system => iter%get_next()
       if (system%propagation_step_is_done()) then
-        call system%propagation_step_finish(iteration)
+        call system%propagation_step_finish()
       end if
     end do
 
@@ -550,9 +549,8 @@ contains
   end subroutine multisystem_output_finish
 
   ! ---------------------------------------------------------
-  recursive subroutine multisystem_output_write(this, iter)
+  recursive subroutine multisystem_output_write(this)
     class(multisystem_t), intent(inout) :: this
-    integer,              intent(in)    :: iter
 
     type(system_iterator_t) :: iterator
     class(system_t), pointer :: system
@@ -562,7 +560,7 @@ contains
     call iterator%start(this%list)
     do while (iterator%has_next())
       system => iterator%get_next()
-      call system%output_write(iter)
+      call system%output_write()
     end do
 
     POP_SUB(multisystem_output_write)

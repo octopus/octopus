@@ -560,9 +560,8 @@ contains
   end subroutine system_output_start
 
   ! ---------------------------------------------------------
-  subroutine system_output_write(this, iter)
+  subroutine system_output_write(this)
     class(system_t), intent(inout) :: this
-    integer,         intent(in)    :: iter
 
     PUSH_SUB(system_output_write)
 
@@ -742,14 +741,13 @@ contains
   end function system_has_reached_final_propagation_time
 
   ! ---------------------------------------------------------
-  subroutine system_propagation_step_finish(this, iteration)
+  subroutine system_propagation_step_finish(this)
     class(system_t),      intent(inout) :: this
-    integer,              intent(in)    :: iteration
 
     PUSH_SUB(system_propagation_step_finish)
 
     ! Print information about the current iteration and write output
-    call this%output_write(iteration)
+    call this%output_write()
     call this%iteration_info()
 
     ! Reset propagator for next step
