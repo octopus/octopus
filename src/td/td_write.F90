@@ -20,6 +20,7 @@
 
 module td_write_oct_m
   use blas_oct_m
+  use clock_oct_m
   use comm_oct_m
   use current_oct_m
   use density_oct_m
@@ -4029,16 +4030,15 @@ contains
 
 
   !----------------------------------------------------------
-  subroutine td_write_mxll_free_data(writ, namespace, gr, st, hm, geo, outp, iter, dt)
-    type(td_write_t),     intent(inout) :: writ
-    type(namespace_t),    intent(in)    :: namespace
-    type(grid_t),         intent(inout) :: gr
-    type(states_mxll_t),       intent(inout) :: st
-    type(hamiltonian_mxll_t),  intent(inout) :: hm
-    type(geometry_t),     intent(inout) :: geo
-    type(output_t),       intent(in)    :: outp
-    integer,              intent(in)    :: iter
-    FLOAT, optional,      intent(in)    :: dt
+  subroutine td_write_mxll_free_data(writ, namespace, gr, st, hm, geo, outp, clock)
+    type(td_write_t),         intent(inout) :: writ
+    type(namespace_t),        intent(in)    :: namespace
+    type(grid_t),             intent(inout) :: gr
+    type(states_mxll_t),      intent(inout) :: st
+    type(hamiltonian_mxll_t), intent(inout) :: hm
+    type(geometry_t),         intent(inout) :: geo
+    type(output_t),           intent(in)    :: outp
+    type(clock_t),            intent(in)    :: clock
 
     character(len=256) :: filename
     integer :: iout
@@ -4054,9 +4054,10 @@ contains
     end if
 
     ! now write down the rest
-    write(filename, '(a,a,i7.7)') trim(outp%iter_dir),"td.", iter  ! name of directory
+    write(filename, '(a,a,i7.7)') trim(outp%iter_dir),"td.", clock%get_tick()  ! name of directory
 
-    call output_mxll(outp, namespace, gr, st, hm, iter*dt, geo, filename)
+    call output_mxll(outp, namespace, gr, st, hm, clock%time(), geo, filename)
+
     call profiling_out(prof)
     POP_SUB(td_write_maxwell_free_data)
   end subroutine td_write_mxll_free_data

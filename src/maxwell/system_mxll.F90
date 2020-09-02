@@ -577,8 +577,7 @@ contains
 
     call td_write_mxll_init(this%write_handler, this%namespace, this%gr, this%st, this%hm, 0, this%prop%dt)
     call td_write_mxll_iter(this%write_handler, this%gr, this%st, this%hm, this%prop%dt, 0)
-    call td_write_mxll_free_data(this%write_handler, this%namespace, this%gr, &
-                                 this%st, this%hm, this%geo, this%outp, 0, this%prop%dt)
+    call td_write_mxll_free_data(this%write_handler, this%namespace, this%gr, this%st, this%hm, this%geo, this%outp, this%clock)
 
     ! Currently we print this header here, but this needs to be changed.
     write(message(1), '(a10,1x,a10,1x,a20,1x,a18)') 'Iter ', 'Time ',  'Maxwell energy', 'Elapsed Time'
@@ -602,8 +601,7 @@ contains
     call td_write_mxll_iter(this%write_handler, this%gr, this%st, this%hm, this%prop%dt, iter)
 
     if ((this%outp%output_interval > 0 .and. mod(iter, this%outp%output_interval) == 0) .or. stopping) then
-      call td_write_mxll_free_data(this%write_handler, this%namespace, this%gr, this%st, this%hm, this%geo, this%outp, &
-        iter, this%prop%dt)
+      call td_write_mxll_free_data(this%write_handler, this%namespace, this%gr, this%st, this%hm, this%geo, this%outp, this%clock)
     end if
 
     POP_SUB(system_mxll_output_write)
