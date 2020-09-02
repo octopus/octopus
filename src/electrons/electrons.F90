@@ -366,9 +366,8 @@ contains
   end subroutine electrons_output_start
 
   ! ---------------------------------------------------------
-  subroutine electrons_output_write(this, iter)
+  subroutine electrons_output_write(this)
     class(electrons_t), intent(inout) :: this
-    integer,            intent(in)    :: iter
 
     PUSH_SUB(electrons_output_write)
 
