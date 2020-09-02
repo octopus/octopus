@@ -35,7 +35,7 @@ module clock_oct_m
 
   type clock_t
     private
-    integer :: clock_tick  !< internal clock counter which is incremented by one when the clock is advanced
+    integer :: tick        !< internal clock counter which is incremented by one when the clock is advanced
     integer :: granularity !< one clock tick corresponds to an advancement of 'granularity' steps on the finest scale in the system
     FLOAT   :: time_step   !< physical simulation time increment which corresponds to a single clock tick
     character(len=MAX_LABEL_LEN) :: label !< string used for printing and labelling the clock
@@ -108,7 +108,7 @@ contains
       call messages_fatal(2)
     endif
 
-    this%clock_tick = optional_default(initial_tick, 0)
+    this%tick = optional_default(initial_tick, 0)
     this%time_step = time_step
 
     POP_SUB(clock_init)
@@ -122,16 +122,16 @@ contains
     PUSH_SUB(clock_print_str)
 
     write(clock_string,'(A7,A12,A,F16.6,A,I8.8,A,I8.8,A,I8.8,A)') &
-        '[Clock:',                         &
-        trim(this%label),                  &
-        '|',                               &
-        this%time_step*this%clock_tick,    &
-        '|',                               &
-        this%clock_tick,                   &
-        '|',                               &
-        this%granularity,                  &
-        '|',                               &
-        this%clock_tick*this%granularity,  &
+        '[Clock:',                   &
+        trim(this%label),            &
+        '|',                         &
+        this%time_step*this%tick,    &
+        '|',                         &
+        this%tick,                   &
+        '|',                         &
+        this%granularity,            &
+        '|',                         &
+        this%tick*this%granularity,  &
         ']'
 
     POP_SUB(clock_print_str)
@@ -156,7 +156,7 @@ contains
 
     PUSH_SUB(clock_set_time)
 
-    this%clock_tick = clock_in%clock_tick
+    this%tick = clock_in%tick
     this%granularity = clock_in%granularity
     this%time_step = clock_in%time_step
 
@@ -182,7 +182,7 @@ contains
 
     PUSH_SUB(clock_get_tick)
 
-    current_global_tick = this%clock_tick * this%granularity
+    current_global_tick = this%tick * this%granularity
 
     POP_SUB(clock_get_tick)
   end function clock_get_tick
@@ -193,7 +193,7 @@ contains
 
     PUSH_SUB(clock_time)
 
-    clock_time = this%clock_tick * this%time_step
+    clock_time = this%tick * this%time_step
 
     POP_SUB(clock_time)
   end function clock_time
@@ -205,7 +205,7 @@ contains
 
     PUSH_SUB(clock_increment)
 
-    this%clock_tick = this%clock_tick + optional_default(steps, 1)
+    this%tick = this%tick + optional_default(steps, 1)
 
     POP_SUB(clock_increment)
   end subroutine clock_increment
@@ -217,7 +217,7 @@ contains
 
     PUSH_SUB(clock_decrement)
 
-    this%clock_tick = this%clock_tick - optional_default(steps, 1)
+    this%tick = this%tick - optional_default(steps, 1)
 
     POP_SUB(clock_decrement)
   end subroutine clock_decrement
@@ -228,7 +228,7 @@ contains
 
     PUSH_SUB(clock_reset)
 
-    this%clock_tick = 0
+    this%tick = 0
 
     POP_SUB(clock_reset)
   end subroutine clock_reset
