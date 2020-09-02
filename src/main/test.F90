@@ -1071,7 +1071,7 @@ contains
     write(message(1),'(A,x,I10.10)') &
 	'clock_get_tick', test_clock_a%get_tick()
     write(message(2),'(A,x,F15.10)') &
-	'clock_get_sim_time', test_clock_a%get_sim_time()
+	'clock_time', test_clock_a%time()
     write(message(3),'(A,x,I1)')     &
 	'clock_is_earlier', abs(transfer(test_clock_a .lt. test_clock_b, 0))
     write(message(4),'(A,x,I1)')     &

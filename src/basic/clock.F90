@@ -46,7 +46,7 @@ module clock_oct_m
     procedure :: set_time => clock_set_time           !< set the clock only to the time of a given input clock
     procedure :: copy => clock_copy                   !< set the clock to the state of a given input clock
     procedure :: get_tick => clock_get_tick           !< get value of internal clock counter
-    procedure :: get_sim_time => clock_get_sim_time   !< get the current physical simulation time of the clock
+    procedure :: time => clock_time                   !< get the current physical simulation time of the clock
     procedure :: increment => clock_increment         !< increment the internal clock counter by one or several steps
     procedure :: decrement => clock_decrement         !< decrement the internal clock counter by one or several steps
     procedure :: reset => clock_reset                 !< set the internal clock counter back to zero
@@ -188,15 +188,15 @@ contains
   end function clock_get_tick
 
   ! ---------------------------------------------------------
-  FLOAT function clock_get_sim_time(this) result(current_time)
+  FLOAT function clock_time(this)
     class(clock_t), intent(in) :: this
 
-    PUSH_SUB(clock_get_sim_time)
+    PUSH_SUB(clock_time)
 
-    current_time = this%clock_tick * this%time_step
+    clock_time = this%clock_tick * this%time_step
 
-    POP_SUB(clock_get_sim_time)
-  end function clock_get_sim_time
+    POP_SUB(clock_time)
+  end function clock_time
 
   ! ---------------------------------------------------------
   subroutine clock_increment(this, steps)

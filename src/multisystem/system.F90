@@ -425,8 +425,8 @@ contains
 
       if (debug%info) then
         write(message(1), '(a,a,a)') "Debug: ---- Updated exposed quantity ", trim(QUANTITY_LABEL(q_id)), "'"
-        write(message(2), '(a,f16.6,a,f16.6)') "Debug: ------ Requested time is ", requested_time%get_sim_time(), &
-          ", quantity time is ", partner%quantities(q_id)%clock%get_sim_time()
+        write(message(2), '(a,f16.6,a,f16.6)') "Debug: ------ Requested time is ", requested_time%time(), &
+          ", quantity time is ", partner%quantities(q_id)%clock%time()
         call messages_info(2)
       end if
 
@@ -436,9 +436,9 @@ contains
 
       if (debug%info) then
         write(message(1), '(a,a,a)') "Debug: ---- Did not update exposed quantity '", trim(QUANTITY_LABEL(q_id)), "'"
-        write(message(2), '(a,f16.6,a,f16.6,a,f16.6)') "Debug: ------ Requested time is ", requested_time%get_sim_time(), &
-          ", quantity time is ", partner%quantities(q_id)%clock%get_sim_time(), &
-          " and partner propagator time is ", partner%prop%clock%get_sim_time()
+        write(message(2), '(a,f16.6,a,f16.6,a,f16.6)') "Debug: ------ Requested time is ", requested_time%time(), &
+          ", quantity time is ", partner%quantities(q_id)%clock%time(), &
+          " and partner propagator time is ", partner%prop%clock%time()
         call messages_info(2)
       end if
 
@@ -449,8 +449,8 @@ contains
       if (debug%info) then
         write(message(1), '(a,a,a)') "Debug: ---- Skip update of quantity '", trim(QUANTITY_LABEL(q_id)), &
           "' as it is protected"
-        write(message(2), '(a,f16.6,a,f16.6)') "Debug: ------ Requested time is ", requested_time%get_sim_time(), &
-          ", quantity time is ", partner%quantities(q_id)%clock%get_sim_time()
+        write(message(2), '(a,f16.6,a,f16.6)') "Debug: ------ Requested time is ", requested_time%time(), &
+          ", quantity time is ", partner%quantities(q_id)%clock%time()
         call messages_info(2)
       end if
 
@@ -754,7 +754,7 @@ contains
 
     PUSH_SUB(system_has_reached_final_propagation_time)
 
-    system_has_reached_final_propagation_time = (this%clock%get_sim_time() >= final_time)
+    system_has_reached_final_propagation_time = (this%clock%time() >= final_time)
 
     POP_SUB(system_has_reached_final_propagation_time)
   end function system_has_reached_final_propagation_time

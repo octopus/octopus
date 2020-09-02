@@ -418,13 +418,13 @@ contains
       ! calculation of external RS density at time (time-dt)
       this%rs_current_density_ext_t1 = M_z0
       if (this%hm%current_density_ext_flag) then
-        call get_rs_density_ext(this%st, this%gr%mesh, this%clock%get_sim_time(), this%rs_current_density_ext_t1)
+        call get_rs_density_ext(this%st, this%gr%mesh, this%clock%time(), this%rs_current_density_ext_t1)
       end if
 
       ! calculation of external RS density at time (time)
       this%rs_current_density_ext_t2 = M_z0
       if (this%hm%current_density_ext_flag) then
-        call get_rs_density_ext(this%st, this%gr%mesh, this%clock%get_sim_time()+this%prop%dt, this%rs_current_density_ext_t2)
+        call get_rs_density_ext(this%st, this%gr%mesh, this%clock%time()+this%prop%dt, this%rs_current_density_ext_t2)
       end if
 
       this%rs_charge_density_ext_t1 = M_z0
@@ -433,7 +433,7 @@ contains
       ! Propagation dt with H_maxwell
       call mxll_propagation_step(this%hm, this%namespace, this%gr, this%st, this%tr_mxll,&
           this%st%rs_state, this%rs_current_density_ext_t1, this%rs_current_density_ext_t2,&
-          this%rs_charge_density_ext_t1, this%rs_charge_density_ext_t2, this%clock%get_sim_time(), this%prop%dt)
+          this%rs_charge_density_ext_t1, this%rs_charge_density_ext_t2, this%clock%time(), this%prop%dt)
 
       this%st%rs_state_trans(:,:) = this%st%rs_state
 
@@ -468,7 +468,7 @@ contains
     class(system_mxll_t), intent(in) :: this
 
     write(message(1), '(i8,1x,f13.6,2x,f13.6,6x,f13.6)') this%clock%get_tick(), &
-      units_from_atomic(units_out%time, this%clock%get_sim_time()),             &
+      units_from_atomic(units_out%time, this%clock%time()),                     &
       units_from_atomic(units_out%energy, this%hm%energy%energy),               &
       loct_clock() - this%etime
     call messages_info(1)

@@ -74,16 +74,16 @@ contains
       if (debug%info) then
         write(message(1), '(a,a,a,a,a)') "Debug: -- Updated '", trim(this%label), "' interaction with '", &
           trim(this%partner%namespace%get()), "'"
-        write(message(2), '(a,f16.6,a,f16.6)') "Debug: ---- Requested time is ", requested_time%get_sim_time(), &
-          " and partner time is ", this%partner%clock%get_sim_time()
+        write(message(2), '(a,f16.6,a,f16.6)') "Debug: ---- Requested time is ", requested_time%time(), &
+          " and partner time is ", this%partner%clock%time()
         call messages_info(2)
       end if
     else
       if (debug%info) then
         write(message(1), '(a,a,a,a,a)') "Debug: -- Cannot update yet the '", trim(this%label), "' interaction with '", &
           trim(this%partner%namespace%get()), "'"
-        write(message(2), '(a,f16.6,a,f16.6)') "Debug: ---- Requested time is ", requested_time%get_sim_time(), &
-          " and partner time is ", this%partner%clock%get_sim_time()
+        write(message(2), '(a,f16.6,a,f16.6)') "Debug: ---- Requested time is ", requested_time%time(), &
+          " and partner time is ", this%partner%clock%time()
         call messages_info(2)
       end if
       updated = .false.

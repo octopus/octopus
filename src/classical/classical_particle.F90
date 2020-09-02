@@ -417,7 +417,7 @@ contains
     write(message(4),fmt) "Acceleration:", (this%acc(idir), idir = 1, this%space%dim)
     write(message(5),fmt) "Force:       ", (this%tot_force(idir), idir = 1, this%space%dim)
     write(message(6),'(4x,A,I8.7)')  'Clock tick:      ', this%clock%get_tick()
-    write(message(7),'(4x,A,e14.6)') 'Simulation time: ', this%clock%get_sim_time()
+    write(message(7),'(4x,A,e14.6)') 'Simulation time: ', this%clock%time()
     call messages_info(7)
 
     POP_SUB(classical_particle_iteration_info)
