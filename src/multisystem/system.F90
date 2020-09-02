@@ -27,6 +27,7 @@ module system_oct_m
   use interaction_partner_oct_m
   use interaction_with_partner_oct_m
   use messages_oct_m
+  use mpi_oct_m
   use namespace_oct_m
   use linked_list_oct_m
   use parser_oct_m
@@ -60,6 +61,8 @@ module system_oct_m
 
     type(integer_list_t), public :: supported_interactions
     type(interaction_list_t), public :: interactions !< List with all the interactions of this system
+
+    type(mpi_grp_t), public :: grp  !< mpi group for this system
   contains
     procedure :: dt_operation =>  system_dt_operation
     procedure :: init_clocks => system_init_clocks
@@ -67,6 +70,7 @@ module system_oct_m
     procedure :: update_exposed_quantities => system_update_exposed_quantities
     procedure :: init_propagator => system_init_propagator
     procedure :: init_all_interactions => system_init_all_interactions
+    procedure :: init_parallelization => system_init_parallelization
     procedure :: update_interactions => system_update_interactions
     procedure :: update_interactions_start => system_update_interactions_start
     procedure :: update_interactions_finish => system_update_interactions_finish
@@ -809,6 +813,16 @@ contains
     POP_SUB(system_iterator_get_next)
   end function system_iterator_get_next
 
+  ! ---------------------------------------------------------
+  !< Basic functionality: copy the MPI group.
+  !< This function needs to be implemented by extended types
+  !< that need more initialization for their parallelization.
+  subroutine system_init_parallelization(this, grp)
+    class(system_t), intent(inout) :: this
+    type(mpi_grp_t), intent(in)    :: grp
+
+    call mpi_grp_copy(this%grp, grp)
+  end subroutine system_init_parallelization
 end module system_oct_m
 
 !! Local Variables:

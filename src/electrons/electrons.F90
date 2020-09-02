@@ -71,8 +71,10 @@ module electrons_oct_m
     type(multicomm_t)            :: mc    !< index and domain communicators
     type(hamiltonian_elec_t)     :: hm
     type(td_t)                   :: td
+    logical :: generate_epot
   contains
     procedure :: init_interaction => electrons_init_interaction
+    procedure :: init_parallelization => electrons_init_parallelization
     procedure :: initial_conditions => electrons_initial_conditions
     procedure :: do_td_operation => electrons_do_td_operation
     procedure :: is_tolerance_reached => electrons_is_tolerance_reached
@@ -95,14 +97,12 @@ module electrons_oct_m
 contains
   
   !----------------------------------------------------------
-  function electrons_constructor(namespace, mpi_grp, generate_epot) result(sys)
+  function electrons_constructor(namespace, generate_epot) result(sys)
     class(electrons_t), pointer    :: sys
     type(namespace_t),  intent(in) :: namespace
-    type(mpi_grp_t),    intent(in) :: mpi_grp
     logical,  optional, intent(in) :: generate_epot
 
     type(profile_t), save :: prof
-    FLOAT :: mesh_global, mesh_local, wfns
 
     PUSH_SUB(electrons_constructor)
     call profiling_in(prof,"ELECTRONS_CONSTRUCTOR")
@@ -126,107 +126,13 @@ contains
     ! if independent particles in N dimensions are being used, need to initialize them
     !  after masses are set to 1 in grid_init_stage_1 -> derivatives_init
     call modelmb_copy_masses (sys%st%modelmbparticles, sys%gr%der%masses)
-
-    call parallel_init()
-
-    call geometry_partition(sys%geo, sys%mc)
-    call kpoints_distribute(sys%st%d, sys%mc)
-    call states_elec_distribute_nodes(sys%st, sys%namespace, sys%mc)
-    call grid_init_stage_2(sys%gr, sys%namespace, sys%mc, sys%geo)
-    if(sys%st%symmetrize_density) call mesh_check_symmetries(sys%gr%mesh, sys%gr%sb)
-
     call v_ks_nullify(sys%ks)
-    call output_init(sys%outp, sys%namespace, sys%gr%sb, sys%st, sys%st%nst, sys%ks)
-    call states_elec_densities_init(sys%st, sys%gr, sys%geo)
-    call states_elec_exec_init(sys%st, sys%namespace, sys%mc)
     call elf_init(sys%namespace)
 
-    call v_ks_init(sys%ks, sys%namespace, sys%gr, sys%st, sys%geo, sys%mc)
-
-    call hamiltonian_elec_init(sys%hm, sys%namespace, sys%gr, sys%geo, sys%st, sys%ks%theory_level, &
-      sys%ks%xc, sys%mc, need_exchange = output_need_exchange(sys%outp) .or. sys%ks%oep%level /= XC_OEP_NONE)
-    
-    if(poisson_is_multigrid(sys%hm%psolver)) call grid_create_multigrid(sys%gr, sys%namespace, sys%geo, sys%mc)
-
-    if (sys%hm%pcm%run_pcm .and. sys%mc%par_strategy /= P_STRATEGY_SERIAL .and. sys%mc%par_strategy /= P_STRATEGY_STATES) then
-      call messages_experimental('Parallel in domain calculations with PCM')
-    end if
-
-    ! Print memory requirements
-    call messages_print_stress(stdout, 'Approximate memory requirements', namespace=sys%namespace)
-
-    mesh_global = mesh_global_memory(sys%gr%mesh)
-    mesh_local  = mesh_local_memory(sys%gr%mesh)
-
-    call messages_write('Mesh')
-    call messages_new_line()
-    call messages_write('  global  :')
-    call messages_write(mesh_global, units = unit_megabytes, fmt = '(f10.1)')
-    call messages_new_line()
-    call messages_write('  local   :')
-    call messages_write(mesh_local, units = unit_megabytes, fmt = '(f10.1)')
-    call messages_new_line()
-    call messages_write('  total   :')
-    call messages_write(mesh_global + mesh_local, units = unit_megabytes, fmt = '(f10.1)')
-    call messages_new_line()
-    call messages_info()
-
-    wfns = states_elec_wfns_memory(sys%st, sys%gr%mesh)
-    call messages_write('States')
-    call messages_new_line()
-    call messages_write('  real    :')
-    call messages_write(wfns, units = unit_megabytes, fmt = '(f10.1)')
-    call messages_write(' (par_kpoints + par_states + par_domains)')
-    call messages_new_line()
-    call messages_write('  complex :')
-    call messages_write(2.0_8*wfns, units = unit_megabytes, fmt = '(f10.1)')
-    call messages_write(' (par_kpoints + par_states + par_domains)')
-    call messages_new_line()
-    call messages_info()
-
-    call messages_print_stress(stdout)
-
-    if (optional_default(generate_epot, .false.)) then
-      message(1) = "Info: Generating external potential"
-      call messages_info(1)
-      call hamiltonian_elec_epot_generate(sys%hm, sys%namespace, sys%gr, sys%geo, sys%st)
-      message(1) = "      done."
-      call messages_info(1)
-    end if
-
-    if (sys%ks%theory_level /= INDEPENDENT_PARTICLES) then
-      call poisson_async_init(sys%hm%psolver, sys%mc)
-      ! slave nodes do not call the calculation routine
-      if (multicomm_is_slave(sys%mc))then
-        !for the moment we only have one type of slave
-        call poisson_slave_work(sys%hm%psolver)
-      end if
-    end if
+    sys%generate_epot = optional_default(generate_epot, .false.)
 
     call profiling_out(prof)
     POP_SUB(electrons_constructor)
-  contains
-
-    ! ---------------------------------------------------------
-    subroutine parallel_init()
-      integer :: index_range(4)
-
-      PUSH_SUB(electrons_constructor.parallel_init)
-
-      ! store the ranges for these two indices (serves as initial guess
-      ! for parallelization strategy)
-      index_range(1) = sys%gr%mesh%np_global  ! Number of points in mesh
-      index_range(2) = sys%st%nst             ! Number of states
-      index_range(3) = sys%st%d%nik           ! Number of k-points
-      index_range(4) = 100000                 ! Some large number
-
-      ! create index and domain communicators
-      call multicomm_init(sys%mc, sys%namespace, mpi_grp, calc_mode_par_parallel_mask(), calc_mode_par_default_parallel_mask(), &
-        mpi_world%size, index_range, (/ 5000, 1, 1, 1 /))
-
-      POP_SUB(electrons_constructor.parallel_init)
-    end subroutine parallel_init
-
   end function electrons_constructor
 
   ! ---------------------------------------------------------
@@ -244,6 +150,105 @@ contains
 
     POP_SUB(electrons_init_interactions)
   end subroutine electrons_init_interaction
+
+  ! ---------------------------------------------------------
+  subroutine electrons_init_parallelization(this, grp)
+    class(electrons_t), intent(inout) :: this
+    type(mpi_grp_t),    intent(in)    :: grp
+
+    integer :: index_range(4)
+    FLOAT :: mesh_global, mesh_local, wfns
+
+    PUSH_SUB(electrons_init_parallelization)
+
+    call mpi_grp_copy(this%grp, grp)
+
+    ! store the ranges for these two indices (serves as initial guess
+    ! for parallelization strategy)
+    index_range(1) = this%gr%mesh%np_global  ! Number of points in mesh
+    index_range(2) = this%st%nst             ! Number of states
+    index_range(3) = this%st%d%nik           ! Number of k-points
+    index_range(4) = 100000                 ! Some large number
+
+    ! create index and domain communicators
+    call multicomm_init(this%mc, this%namespace, this%grp, calc_mode_par_parallel_mask(), calc_mode_par_default_parallel_mask(), &
+      mpi_world%size, index_range, (/ 5000, 1, 1, 1 /))
+
+    call geometry_partition(this%geo, this%mc)
+    call kpoints_distribute(this%st%d, this%mc)
+    call states_elec_distribute_nodes(this%st, this%namespace, this%mc)
+    call grid_init_stage_2(this%gr, this%namespace, this%mc, this%geo)
+    if(this%st%symmetrize_density) call mesh_check_symmetries(this%gr%mesh, this%gr%sb)
+
+    call output_init(this%outp, this%namespace, this%gr%sb, this%st, this%st%nst, this%ks)
+    call states_elec_densities_init(this%st, this%gr, this%geo)
+    call states_elec_exec_init(this%st, this%namespace, this%mc)
+
+    call v_ks_init(this%ks, this%namespace, this%gr, this%st, this%geo, this%mc)
+
+    call hamiltonian_elec_init(this%hm, this%namespace, this%gr, this%geo, this%st, this%ks%theory_level, &
+      this%ks%xc, this%mc, need_exchange = output_need_exchange(this%outp) .or. this%ks%oep%level /= XC_OEP_NONE)
+    
+    if(poisson_is_multigrid(this%hm%psolver)) call grid_create_multigrid(this%gr, this%namespace, this%geo, this%mc)
+
+    if (this%hm%pcm%run_pcm .and. this%mc%par_strategy /= P_STRATEGY_SERIAL .and. this%mc%par_strategy /= P_STRATEGY_STATES) then
+      call messages_experimental('Parallel in domain calculations with PCM')
+    end if
+
+    ! Print memory requirements
+    call messages_print_stress(stdout, 'Approximate memory requirements', namespace=this%namespace)
+
+    mesh_global = mesh_global_memory(this%gr%mesh)
+    mesh_local  = mesh_local_memory(this%gr%mesh)
+
+    call messages_write('Mesh')
+    call messages_new_line()
+    call messages_write('  global  :')
+    call messages_write(mesh_global, units = unit_megabytes, fmt = '(f10.1)')
+    call messages_new_line()
+    call messages_write('  local   :')
+    call messages_write(mesh_local, units = unit_megabytes, fmt = '(f10.1)')
+    call messages_new_line()
+    call messages_write('  total   :')
+    call messages_write(mesh_global + mesh_local, units = unit_megabytes, fmt = '(f10.1)')
+    call messages_new_line()
+    call messages_info()
+
+    wfns = states_elec_wfns_memory(this%st, this%gr%mesh)
+    call messages_write('States')
+    call messages_new_line()
+    call messages_write('  real    :')
+    call messages_write(wfns, units = unit_megabytes, fmt = '(f10.1)')
+    call messages_write(' (par_kpoints + par_states + par_domains)')
+    call messages_new_line()
+    call messages_write('  complex :')
+    call messages_write(2.0_8*wfns, units = unit_megabytes, fmt = '(f10.1)')
+    call messages_write(' (par_kpoints + par_states + par_domains)')
+    call messages_new_line()
+    call messages_info()
+
+    call messages_print_stress(stdout)
+
+    if (this%generate_epot) then
+      message(1) = "Info: Generating external potential"
+      call messages_info(1)
+      call hamiltonian_elec_epot_generate(this%hm, this%namespace, this%gr, this%geo, this%st)
+      message(1) = "      done."
+      call messages_info(1)
+    end if
+
+    if (this%ks%theory_level /= INDEPENDENT_PARTICLES) then
+      call poisson_async_init(this%hm%psolver, this%mc)
+      ! slave nodes do not call the calculation routine
+      if (multicomm_is_slave(this%mc))then
+        !for the moment we only have one type of slave
+        call poisson_slave_work(this%hm%psolver)
+      end if
+    end if
+
+
+    POP_SUB(electrons_init_parallelization)
+  end subroutine electrons_init_parallelization
 
   ! ---------------------------------------------------------
   subroutine electrons_initial_conditions(this, from_scratch)

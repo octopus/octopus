@@ -152,11 +152,14 @@ contains
     ! Create systems
     if (parse_is_defined(namespace, "Systems")) then
       ! We are running in multi-system mode
-      systems => multisystem_basic_t(namespace, system_factory, mpi_world)
+      systems => multisystem_basic_t(namespace, system_factory)
     else
       ! Fall back to old behaviour
-      systems => electrons_t(namespace, mpi_world, generate_epot = calc_mode_id /= OPTION__CALCULATIONMODE__DUMMY)
+      systems => electrons_t(namespace, generate_epot = calc_mode_id /= OPTION__CALCULATIONMODE__DUMMY)
     end if
+
+    ! initialize everything that needs parallelization
+    call systems%init_parallelization(mpi_world)
 
     ! Create list of partners (currently missing partners that are not systems)
     select type (systems)

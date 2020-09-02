@@ -95,6 +95,7 @@ module system_mxll_oct_m
 
   contains
     procedure :: init_interaction => system_mxll_init_interaction
+    procedure :: init_parallelization => system_mxll_init_parallelization
     procedure :: initial_conditions => system_mxll_initial_conditions
     procedure :: do_td_operation => system_mxll_do_td
     procedure :: iteration_info => system_mxll_iteration_info
@@ -116,26 +117,24 @@ module system_mxll_oct_m
 contains
 
   ! ---------------------------------------------------------
-  function system_mxll_constructor(namespace, mpi_grp) result(sys)
+  function system_mxll_constructor(namespace) result(sys)
     class(system_mxll_t), pointer  :: sys
     type(namespace_t),  intent(in) :: namespace
-    type(mpi_grp_t),    intent(in) :: mpi_grp
 
     PUSH_SUB(system_mxll_constructor)
 
     SAFE_ALLOCATE(sys)
 
-    call system_mxll_init(sys, namespace, mpi_grp)
+    call system_mxll_init(sys, namespace)
 
     POP_SUB(system_mxll_constructor)
   end function system_mxll_constructor
 
 
   ! ---------------------------------------------------------
-  subroutine system_mxll_init(this, namespace, mpi_grp)
+  subroutine system_mxll_init(this, namespace)
     class(system_mxll_t), intent(inout) :: this
     type(namespace_t),    intent(in)    :: namespace
-    type(mpi_grp_t),      intent(in)    :: mpi_grp
 
     type(profile_t), save :: prof
 
@@ -169,11 +168,6 @@ contains
     call grid_init_stage_0(this%gr, this%namespace, this%geo, this%space)
     call states_mxll_init(this%st, this%namespace, this%gr, this%geo)
     call grid_init_stage_1(this%gr, this%namespace, this%geo)
-    call parallel_mxll_init(this)
-    call grid_init_stage_2(this%gr, this%namespace, this%mc, this%geo)
-    call output_mxll_init(this%outp, this%namespace, this%gr%sb)
-    call hamiltonian_mxll_init(this%hm, this%namespace, this%gr, this%st)
-    call profiling_out(prof)
 
     this%quantities(E_FIELD)%required = .true.
     this%quantities(B_FIELD)%required = .true.
@@ -182,31 +176,9 @@ contains
 
     call this%supported_interactions_as_partner%add(LORENTZ_FORCE)
 
+    call profiling_out(prof)
+
     POP_SUB(system_mxll_init)
-  contains
-
-    ! ---------------------------------------------------------
-    subroutine parallel_mxll_init(sys)
-      type(system_mxll_t), intent(inout) :: sys
-
-      integer :: index_range(4)
-
-      PUSH_SUB(system_mxll_init.parallel_init)
-
-      ! store the ranges for these two indices (serves as initial guess
-      ! for parallelization strategy)
-      index_range(1) = sys%gr%mesh%np_global  ! Number of points in mesh
-      index_range(2) = sys%st%nst             ! Number of states
-      index_range(3) = 1                      ! Number of k-points
-      index_range(4) = 100000                 ! Some large number
-
-      ! create index and domain communicators
-      call multicomm_init(sys%mc, sys%namespace, mpi_grp, calc_mode_par_parallel_mask(), &
-           &calc_mode_par_default_parallel_mask(),mpi_world%size, index_range, (/ 5000, 1, 1, 1 /))
-
-      POP_SUB(system_mxll_init.parallel_init)
-    end subroutine parallel_mxll_init
-
   end subroutine system_mxll_init
 
   ! ---------------------------------------------------------
@@ -225,6 +197,35 @@ contains
 
     POP_SUB(system_mxll_init_interaction)
   end subroutine system_mxll_init_interaction
+
+  ! ---------------------------------------------------------
+  subroutine system_mxll_init_parallelization(this, grp)
+    class(system_mxll_t), intent(inout) :: this
+    type(mpi_grp_t),      intent(in)    :: grp
+
+    integer :: index_range(4)
+
+    PUSH_SUB(system_mxll_init_parallelization)
+
+    call mpi_grp_copy(this%grp, grp)
+
+    ! store the ranges for these two indices (serves as initial guess
+    ! for parallelization strategy)
+    index_range(1) = this%gr%mesh%np_global  ! Number of points in mesh
+    index_range(2) = this%st%nst             ! Number of states
+    index_range(3) = 1                      ! Number of k-points
+    index_range(4) = 100000                 ! Some large number
+
+    ! create index and domain communicators
+    call multicomm_init(this%mc, this%namespace, mpi_world, calc_mode_par_parallel_mask(), &
+         &calc_mode_par_default_parallel_mask(),mpi_world%size, index_range, (/ 5000, 1, 1, 1 /))
+
+    call grid_init_stage_2(this%gr, this%namespace, this%mc, this%geo)
+    call output_mxll_init(this%outp, this%namespace, this%gr%sb)
+    call hamiltonian_mxll_init(this%hm, this%namespace, this%gr, this%st)
+
+    POP_SUB(system_mxll_init_parallelization)
+  end subroutine system_mxll_init_parallelization
 
   ! ---------------------------------------------------------
   subroutine system_mxll_initial_conditions(this, from_scratch)

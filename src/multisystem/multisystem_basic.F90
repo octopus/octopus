@@ -21,7 +21,6 @@
 module multisystem_basic_oct_m
   use global_oct_m
   use messages_oct_m
-  use mpi_oct_m
   use multisystem_oct_m
   use namespace_oct_m
   use profiling_oct_m
@@ -45,31 +44,29 @@ module multisystem_basic_oct_m
 contains
 
   ! ---------------------------------------------------------------------------------------
-  recursive function multisystem_basic_constructor(namespace, factory, mpi_grp) result(system)
+  recursive function multisystem_basic_constructor(namespace, factory) result(system)
     type(namespace_t),            intent(in) :: namespace
     class(system_factory_abst_t), intent(in) :: factory
-    type(mpi_grp_t),              intent(in) :: mpi_grp
     class(multisystem_basic_t),   pointer    :: system
 
     PUSH_SUB(multisystem_basic_constructor)
 
     SAFE_ALLOCATE(system)
 
-    call multisystem_basic_init(system, namespace, factory, mpi_grp)
+    call multisystem_basic_init(system, namespace, factory)
 
     POP_SUB(multisystem_basic_constructor)
   end function multisystem_basic_constructor
 
   ! ---------------------------------------------------------------------------------------
-  recursive subroutine multisystem_basic_init(this, namespace, factory, mpi_grp)
+  recursive subroutine multisystem_basic_init(this, namespace, factory)
     class(multisystem_t),      intent(inout) :: this
     type(namespace_t),            intent(in) :: namespace
     class(system_factory_abst_t), intent(in) :: factory
-    type(mpi_grp_t),              intent(in) :: mpi_grp
 
     PUSH_SUB(multisystem_init)
 
-    call multisystem_init(this, namespace, factory, mpi_grp)
+    call multisystem_init(this, namespace, factory)
 
     POP_SUB(multisystem_basic_init)
   end subroutine multisystem_basic_init

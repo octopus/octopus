@@ -92,7 +92,8 @@ program oct_local_multipoles
   call restart_module_init(global_namespace)
 
   call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
-  sys => electrons_t(global_namespace, mpi_world)
+  sys => electrons_t(global_namespace)
+  call sys%init_parallelization(mpi_world)
   call simul_box_init(sb, global_namespace, sys%geo, sys%space)
 
   call local_domains()

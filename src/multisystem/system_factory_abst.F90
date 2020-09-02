@@ -17,7 +17,6 @@
 !!
 
 module system_factory_abst_oct_m
-  use mpi_oct_m
   use namespace_oct_m
   use system_oct_m
   implicit none
@@ -33,16 +32,14 @@ module system_factory_abst_oct_m
   end type system_factory_abst_t
 
   abstract interface
-    function system_factory_abst_create(this, namespace, name, type, mpi_grp) result(system)
+    function system_factory_abst_create(this, namespace, name, type) result(system)
       import :: system_factory_abst_t
       import system_t
       import namespace_t
-      import mpi_grp_t
       class(system_factory_abst_t), intent(in) :: this
       type(namespace_t),            intent(in) :: namespace
       character(len=*),             intent(in) :: name
       integer,                      intent(in) :: type
-      type(mpi_grp_t),              intent(in) :: mpi_grp
       class(system_t),              pointer    :: system
     end function system_factory_abst_create
 
