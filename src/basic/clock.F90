@@ -1,4 +1,4 @@
-!! Copyright (C) 2020 Heiko Appel
+!! Copyright (C) 2020 Heiko Appel, M. Oliveira
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -30,8 +30,11 @@ module clock_oct_m
 
   integer, parameter :: MAX_LABEL_LEN = 128
 
+  integer, parameter :: CLOCK_TICK = 1
+
   public ::                &
-    clock_t
+    clock_t,               &
+    CLOCK_TICK
 
   type clock_t
     private
@@ -47,12 +50,7 @@ module clock_oct_m
     procedure :: copy => clock_copy                   !< set the clock to the state of a given input clock
     procedure :: get_tick => clock_get_tick           !< get value of internal clock counter
     procedure :: time => clock_time                   !< get the current physical simulation time of the clock
-    procedure :: increment => clock_increment         !< increment the internal clock counter by one or several steps
-    procedure :: decrement => clock_decrement         !< decrement the internal clock counter by one or several steps
     procedure :: reset => clock_reset                 !< set the internal clock counter back to zero
-    procedure :: is_later_with_step => clock_is_later_with_step !< compare two clocks and indicate if the first clock plus
-                                                                !! one step is later than the second clock
-    procedure :: is_earlier_with_step => clock_is_earlier_with_step
     procedure :: clock_is_equal
     generic   :: operator(.eq.) => clock_is_equal
     procedure :: clock_is_earlier
@@ -65,6 +63,10 @@ module clock_oct_m
     generic   :: operator(.ge.) => clock_is_equal_or_later
     procedure :: clock_copy
     generic   :: assignment(=) => clock_copy
+    procedure :: clock_add_tick
+    generic   :: operator(+) => clock_add_tick
+    procedure :: clock_subtract_tick
+    generic   :: operator(-) => clock_subtract_tick
   end type clock_t
 
   interface clock_t
@@ -177,6 +179,32 @@ contains
   end subroutine clock_copy
 
   ! ---------------------------------------------------------
+  type(clock_t) function clock_add_tick(clock, tick) result(new_clock)
+    class(clock_t), intent(in) :: clock
+    integer,        intent(in) :: tick
+
+    PUSH_SUB(clock_add_tick)
+
+    new_clock = clock
+    new_clock%tick = new_clock%tick + tick
+
+    POP_SUB(clock_add_tick)
+  end function clock_add_tick
+
+  ! ---------------------------------------------------------
+  type(clock_t) function clock_subtract_tick(clock, tick) result(new_clock)
+    class(clock_t), intent(in) :: clock
+    integer,        intent(in) :: tick
+
+    PUSH_SUB(clock_subtract_tick)
+
+    new_clock = clock
+    new_clock%tick = new_clock%tick - tick
+
+    POP_SUB(clock_subtract_tick)
+  end function clock_subtract_tick
+
+  ! ---------------------------------------------------------
   integer function clock_get_tick(this) result(current_global_tick)
     class(clock_t), intent(in) :: this
 
@@ -197,30 +225,6 @@ contains
 
     POP_SUB(clock_time)
   end function clock_time
-
-  ! ---------------------------------------------------------
-  subroutine clock_increment(this, steps)
-    class(clock_t), intent(inout) :: this
-    integer, optional, intent(in) :: steps
-
-    PUSH_SUB(clock_increment)
-
-    this%tick = this%tick + optional_default(steps, 1)
-
-    POP_SUB(clock_increment)
-  end subroutine clock_increment
-
-  ! ---------------------------------------------------------
-  subroutine clock_decrement(this, steps)
-    class(clock_t), intent(inout) :: this
-    integer, optional, intent(in) :: steps
-
-    PUSH_SUB(clock_decrement)
-
-    this%tick = this%tick - optional_default(steps, 1)
-
-    POP_SUB(clock_decrement)
-  end subroutine clock_decrement
 
   ! ---------------------------------------------------------
   subroutine clock_reset(this)
@@ -287,33 +291,6 @@ contains
 
     POP_SUB(clock_is_equal)
   end function clock_is_equal
-
-  ! ---------------------------------------------------------
-  !> This function returns true if taking clock_a and adding one
-  !! time step is later in time than the current time of clock_b
-  logical function clock_is_later_with_step(clock_a, clock_b) result(is_later_with_step)
-    class(clock_t), intent(in) :: clock_a, clock_b
-
-    PUSH_SUB(clock_is_later_with_step)
-
-    is_later_with_step = (clock_a%get_tick() + clock_a%granularity) > clock_b%get_tick()
-
-    POP_SUB(clock_is_later_with_step)
-  end function clock_is_later_with_step
-
-  ! ---------------------------------------------------------
-  !> This function returns true if taking clock_a and adding one
-  !! time step is earlier in time than the current time of clock_b
-  logical function clock_is_earlier_with_step(clock_a, clock_b) result(is_earlier_with_step)
-    class(clock_t), intent(in) :: clock_a, clock_b
-
-    PUSH_SUB(clock_is_earlier_with_step)
-
-    is_earlier_with_step = (clock_a%get_tick() + clock_a%granularity) < clock_b%get_tick()
-
-    POP_SUB(clock_is_earlier_with_step)
-  end function clock_is_earlier_with_step
-
 
 end module clock_oct_m
 

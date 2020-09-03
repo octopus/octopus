@@ -183,13 +183,13 @@ contains
       ! Do nothing
     case (FINISHED)
       if (.not. this%prop%step_is_done()) then
-        call this%clock%increment()
+        this%clock = this%clock + CLOCK_TICK
       end if
       call this%prop%finished()
 
     case (UPDATE_INTERACTIONS)
       ! We increment by one algorithmic step
-      call this%prop%clock%increment()
+      this%prop%clock = this%prop%clock + CLOCK_TICK
 
       ! Try to update all the interactions
       all_updated = this%update_interactions(this%prop%clock)
@@ -200,7 +200,7 @@ contains
         this%accumulated_loop_ticks = this%accumulated_loop_ticks + 1
         call this%prop%next()
       else
-        call this%prop%clock%decrement()
+      this%prop%clock = this%prop%clock - CLOCK_TICK
       end if
 
     case (START_SCF_LOOP)
@@ -296,27 +296,27 @@ contains
     class(system_t),      intent(inout) :: this
     integer,              intent(in)    :: accumulated_ticks
 
-    integer :: it, iq
+    integer :: iq
     type(interaction_iterator_t) :: iter
     class(interaction_t), pointer :: interaction
 
     PUSH_SUB(system_reset_clocks)
 
-    do it = 1, accumulated_ticks
-      ! Propagator clock
-      call this%prop%clock%decrement()
+    ! Propagator clock
+    this%prop%clock = this%prop%clock - accumulated_ticks*CLOCK_TICK
 
-      ! Interaction clocks
-      call iter%start(this%interactions)
-      do while (iter%has_next())
-        interaction => iter%get_next()
-        call interaction%clock%decrement()
-      end do
+    ! Interaction clocks
+    call iter%start(this%interactions)
+    do while (iter%has_next())
+      interaction => iter%get_next()
+      interaction%clock = interaction%clock - accumulated_ticks*CLOCK_TICK
+    end do
 
-      ! Internal quantities clocks
-      do iq = 1, MAX_QUANTITIES
-        if (this%quantities(iq)%required) call this%quantities(iq)%clock%decrement()
-      end do
+    ! Internal quantities clocks
+    do iq = 1, MAX_QUANTITIES
+      if (this%quantities(iq)%required) then
+        this%quantities(iq)%clock = this%quantities(iq)%clock - accumulated_ticks*CLOCK_TICK
+      end if
     end do
 
     POP_SUB(system_reset_clocks)
@@ -342,8 +342,7 @@ contains
     select type (interaction)
     class is (interaction_with_partner_t)
 
-      if (partner%prop%inside_scf .or. &
-          partner%prop%clock%is_earlier_with_step(requested_time)) then
+      if (partner%prop%inside_scf .or. partner%prop%clock + CLOCK_TICK < requested_time) then
         ! we are inside an SCF cycle and therefore are not allowed to expose any quantities.
         ! or we are too much behind the requested time
         allowed_to_update = .false.
@@ -361,7 +360,7 @@ contains
           if (.not.partner%quantities(q_id)%protected) then
             if (.not. (partner%quantities(q_id)%clock == requested_time .or. &
               (partner%quantities(q_id)%clock < requested_time .and. &
-              partner%quantities(q_id)%clock%is_later_with_step(requested_time)))) then
+              partner%quantities(q_id)%clock + CLOCK_TICK > requested_time))) then
               ! We can update because the partner will reach this time in the next sub-timestep
               ! This is not a protected quantity, so we update it
               call partner%update_exposed_quantity(q_id, requested_time)

@@ -14,4 +14,3 @@ match ; clock_is_equal_or_earlier ; GREPFIELD(out, 'clock_is_equal_or_earlier', 
 match ; clock_is_later            ; GREPFIELD(out, 'clock_is_later', 2)            ; 1
 match ; clock_is_equal_or_later   ; GREPFIELD(out, 'clock_is_equal_or_later', 2)   ; 1
 match ; clock_is_equal            ; GREPFIELD(out, 'clock_is_equal', 2)            ; 0
-match ; clock_is_later_with_step  ; GREPFIELD(out, 'clock_is_later_with_step', 2)  ; 1

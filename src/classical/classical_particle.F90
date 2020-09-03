@@ -241,7 +241,7 @@ contains
       this%pos(1:this%space%dim) = this%pos(1:this%space%dim) + this%prop%dt * this%vel(1:this%space%dim) &
                                  + M_HALF * this%prop%dt**2 * this%acc(1:this%space%dim)
 
-      call this%quantities(POSITION)%clock%increment()
+      this%quantities(POSITION)%clock = this%quantities(POSITION)%clock + CLOCK_TICK
 
     case (VERLET_COMPUTE_ACC)
       do ii = size(this%prev_acc, dim=2) - 1, 1, -1
@@ -254,8 +254,7 @@ contains
       this%vel(1:this%space%dim) = this%vel(1:this%space%dim) &
         + M_HALF * this%prop%dt * (this%prev_acc(1:this%space%dim, 1) + this%acc(1:this%space%dim))
 
-      call this%quantities(VELOCITY)%clock%increment()
-
+      this%quantities(VELOCITY)%clock = this%quantities(VELOCITY)%clock + CLOCK_TICK
 
     case (BEEMAN_START)
       SAFE_ALLOCATE(this%prev_acc(1:this%space%dim, 2))
@@ -268,7 +267,7 @@ contains
                                  * (M_FOUR*this%acc(1:this%space%dim) - this%prev_acc(1:this%space%dim, 1))
 
       if (.not. this%prop%predictor_corrector) then
-        call this%quantities(POSITION)%clock%increment()
+        this%quantities(POSITION)%clock = this%quantities(POSITION)%clock + CLOCK_TICK
       end if
 
     case (BEEMAN_PREDICT_VEL)
@@ -276,7 +275,7 @@ contains
         + M_ONE/CNST(6.0) * this%prop%dt * ( M_TWO * this%acc(1:this%space%dim) + &
         CNST(5.0) * this%prev_acc(1:this%space%dim, 1) - this%prev_acc(1:this%space%dim, 2))
 
-      call this%quantities(VELOCITY)%clock%increment()
+      this%quantities(VELOCITY)%clock = this%quantities(VELOCITY)%clock + CLOCK_TICK
 
     case (BEEMAN_CORRECT_POS)
       this%pos(1:this%space%dim) = this%save_pos(1:this%space%dim) + this%prop%dt * this%save_vel(1:this%space%dim) &
@@ -310,8 +309,8 @@ contains
                          CNST(0.5)*this%prev_vel(1:sdim, 1)
       this%prev_pos(1:sdim, 1) = this%save_pos(1:sdim)
       this%prev_vel(1:sdim, 1) = this%save_vel(1:sdim)
-      call this%quantities(POSITION)%clock%increment()
-      call this%quantities(VELOCITY)%clock%increment()
+      this%quantities(POSITION)%clock = this%quantities(POSITION)%clock + CLOCK_TICK
+      this%quantities(VELOCITY)%clock = this%quantities(VELOCITY)%clock + CLOCK_TICK
 
     case (UPDATE_HAMILTONIAN)
       this%hamiltonian_elements(1:sdim) = this%tot_force(1:sdim) / (this%mass * this%pos(1:sdim))
@@ -344,8 +343,8 @@ contains
       end do
       SAFE_DEALLOCATE_A(tmp_pos)
       SAFE_DEALLOCATE_A(tmp_vel)
-      call this%quantities(POSITION)%clock%increment()
-      call this%quantities(VELOCITY)%clock%increment()
+      this%quantities(POSITION)%clock = this%quantities(POSITION)%clock + CLOCK_TICK
+      this%quantities(VELOCITY)%clock = this%quantities(VELOCITY)%clock + CLOCK_TICK
 
     case (EXPMID_CORRECT_DT_2)
       ! only correct for dt/2 if not converged yet
@@ -354,8 +353,8 @@ contains
                                       this%save_pos(1:sdim))
         this%vel(1:sdim) = CNST(0.5)*(this%vel(1:sdim) + &
                                       this%save_vel(1:sdim))
-        call this%quantities(POSITION)%clock%increment()
-        call this%quantities(VELOCITY)%clock%increment()
+        this%quantities(POSITION)%clock = this%quantities(POSITION)%clock + CLOCK_TICK
+        this%quantities(VELOCITY)%clock = this%quantities(VELOCITY)%clock + CLOCK_TICK
       end if
 
     case default
