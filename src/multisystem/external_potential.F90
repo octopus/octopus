@@ -122,12 +122,15 @@ contains
   end subroutine external_potential_deallocate
 
   ! ---------------------------------------------------------
-  logical function external_potential_update_exposed_quantities(partner, requested_time, interaction)
+  logical function external_potential_update_exposed_quantities(partner, requested_time, interaction) &
+    result(allowed_to_update)
     class(external_potential_t), intent(inout) :: partner
     type(clock_t),               intent(in)    :: requested_time
     class(interaction_t),        intent(inout) :: interaction
 
     PUSH_SUB(external_potential_update_exposed_quantities)
+
+    allowed_to_update = .false.
 
     POP_SUB(external_potential_update_exposed_quantities)
 
