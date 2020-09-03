@@ -91,6 +91,7 @@ program oct_floquet
 
   call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
   sys => electrons_t(global_namespace)
+  call sys%init_parallelization(mpi_world)
   call simul_box_init(sb, global_namespace, sys%geo, sys%space)
   ! make shortcut copies
   st = sys%st

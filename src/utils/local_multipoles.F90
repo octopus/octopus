@@ -35,6 +35,7 @@ program oct_local_multipoles
   use local_write_oct_m
   use mesh_oct_m
   use messages_oct_m
+  use mpi_oct_m
   use multicomm_oct_m
   use namespace_oct_m
   use parser_oct_m
@@ -92,6 +93,7 @@ program oct_local_multipoles
 
   call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
   sys => electrons_t(global_namespace)
+  call sys%init_parallelization(mpi_world)
   call simul_box_init(sb, global_namespace, sys%geo, sys%space)
 
   call local_domains()

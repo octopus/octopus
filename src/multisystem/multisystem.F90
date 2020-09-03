@@ -46,6 +46,7 @@ module multisystem_oct_m
   contains
     procedure :: dt_operation =>  multisystem_dt_operation
     procedure :: init_clocks => multisystem_init_clocks
+    procedure :: init_parallelization => multisystem_init_parallelization
     procedure :: reset_clocks => multisystem_reset_clocks
     procedure :: init_propagator => multisystem_init_propagator
     procedure :: propagation_start => multisystem_propagation_start
@@ -152,6 +153,30 @@ contains
     POP_SUB(multisystem_create_system)
   end subroutine multisystem_create_system
 
+  ! ---------------------------------------------------------------------------------------
+  recursive subroutine multisystem_init_parallelization(this, grp)
+    class(multisystem_t), intent(inout) :: this
+    type(mpi_grp_t),      intent(in)    :: grp
+
+    type(system_iterator_t) :: iter
+    class(system_t), pointer :: sys
+    type(mpi_grp_t) :: sys_grp
+
+    PUSH_SUB(multisystem_init_parallelization)
+
+    call mpi_grp_copy(this%grp, grp)
+
+    ! Now parallelize over systems in this multisystem
+    call iter%start(this%list)
+    do while (iter%has_next())
+      sys => iter%get_next()
+      ! for now, duplicate communicator - more complicated parallelization schemes can be implemented here
+      call mpi_grp_duplicate(sys_grp, grp)
+      call sys%init_parallelization(sys_grp)
+    end do
+
+    POP_SUB(multisystem_init_parallelization)
+  end subroutine multisystem_init_parallelization
   ! ---------------------------------------------------------------------------------------
   recursive subroutine multisystem_dt_operation(this)
     class(multisystem_t),     intent(inout) :: this
