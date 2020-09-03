@@ -821,7 +821,11 @@ contains
     class(system_t), intent(inout) :: this
     type(mpi_grp_t), intent(in)    :: grp
 
+    PUSH_SUB(system_init_parallelization)
+
     call mpi_grp_copy(this%grp, grp)
+
+    POP_SUB(system_init_parallelization)
   end subroutine system_init_parallelization
 end module system_oct_m
 
