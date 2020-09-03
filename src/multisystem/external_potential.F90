@@ -296,7 +296,7 @@ contains
     integer,                    intent(in)    :: row
     integer,                    intent(out)   :: read_data
 
-    integer :: ncols, icol, flag, set_read_data, ierr
+    integer :: ncols, icol, flag
     type(iihash_t) :: read_parameters
 
 
