@@ -170,7 +170,9 @@ contains
     call grid_init_stage_1(this%gr, this%namespace, this%geo)
 
     this%quantities(E_FIELD)%required = .true.
+    this%quantities(E_FIELD)%protected = .true.
     this%quantities(B_FIELD)%required = .true.
+    this%quantities(B_FIELD)%protected = .true.
 
     call mesh_interpolation_init(this%mesh_interpolate, this%gr%mesh)
 
@@ -407,6 +409,9 @@ contains
 
     case (EXPMID_PREDICT_DT_2)  ! predict: psi(t+dt/2) = 0.5*(U_H(dt) psi(t) + psi(t)) or via extrapolation
       ! Empty for the moment
+
+      this%quantities(E_FIELD)%clock = this%quantities(E_FIELD)%clock + CLOCK_TICK
+      this%quantities(B_FIELD)%clock = this%quantities(B_FIELD)%clock + CLOCK_TICK
     case (UPDATE_HAMILTONIAN)   ! update: H(t+dt/2) from psi(t+dt/2)
       ! Empty for the moment
     case (EXPMID_PREDICT_DT)    ! predict: psi(t+dt) = U_H(t+dt/2) psi(t)
@@ -450,6 +455,9 @@ contains
       ! get RS state values for selected points
       call get_rs_state_at_point(this%st%selected_points_rs_state(:,:), this%st%rs_state, this%st%selected_points_coordinate(:,:), &
         this%st, this%gr%mesh)
+
+      this%quantities(E_FIELD)%clock = this%quantities(E_FIELD)%clock + CLOCK_TICK
+      this%quantities(B_FIELD)%clock = this%quantities(B_FIELD)%clock + CLOCK_TICK
 
       this%etime = loct_clock()
 
@@ -526,8 +534,6 @@ contains
     ASSERT(.not. partner%quantities(iq)%protected)
 
     select case (iq)
-    case(E_FIELD,B_FIELD)
-!      call partner%quantities(iq)%clock%set_time(requested_time)
     case default
       message(1) = "Incompatible quantity."
       call messages_fatal(1)
