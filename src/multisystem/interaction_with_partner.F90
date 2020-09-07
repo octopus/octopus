@@ -72,15 +72,17 @@ contains
       call this%clock%set_time(requested_time)
 
       if (debug%info) then
-        write(message(1), '(a,a)') "Debug: -- Updated interaction with ", trim(this%partner%namespace%get())
-        write(message(2), '(a,i3,a,i3)') "Debug: ---- requested time is ", requested_time%get_tick(), &
+        write(message(1), '(a,a,a,a)') "Debug: -- Updated ", trim(this%label), " interaction with ", &
+          trim(this%partner%namespace%get())
+        write(message(2), '(a,i3,a,i3)') "Debug: ---- Requested time is ", requested_time%get_tick(), &
           " and partner time is ", this%partner%clock%get_tick()
         call messages_info(2)
       end if
     else
       if (debug%info) then
-        write(message(1), '(a,a)') "Debug: -- Cannot update yet the interaction with ", trim(this%partner%namespace%get())
-        write(message(2), '(a,i3,a,i3)') "Debug: ---- requested time is ", requested_time%get_tick(), &
+        write(message(1), '(a,a,a,a)') "Debug: -- Cannot update yet the ", trim(this%label), " interaction with ", &
+          trim(this%partner%namespace%get())
+        write(message(2), '(a,i3,a,i3)') "Debug: ---- Requested time is ", requested_time%get_tick(), &
           " and partner time is ", this%partner%clock%get_tick()
         call messages_info(2)
       end if

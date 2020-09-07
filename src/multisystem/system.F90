@@ -335,7 +335,7 @@ contains
     PUSH_SUB(system_update_exposed_quantities)
 
     if (debug%info) then
-      write(message(1), '(a,a)') "Debug: ----- updating exposed quantities for partner ", trim(partner%namespace%get())
+      write(message(1), '(a,a)') "Debug: -- Updating exposed quantities for partner ", trim(partner%namespace%get())
       call messages_info(1)
     end if
 
@@ -363,8 +363,31 @@ contains
               ! We can update because the partner will reach this time in the next sub-timestep
               ! This is not a protected quantity, so we update it
               call partner%update_exposed_quantity(q_id, requested_time)
+
+              if (debug%info) then
+                write(message(1), '(a,i3)') "Debug: ---- Updated exposed quantity ", q_id
+                write(message(2), '(a,i3,a,i3)') "Debug: ------ Requested time is ", requested_time%get_tick(), &
+                  ", quantity time is ", partner%quantities(q_id)%clock%get_tick()
+                call messages_info(2)
+              end if
+            else
+              if (debug%info) then
+                write(message(1), '(a,i3)') "Debug: ---- Did not update exposed quantity ", q_id
+                write(message(2), '(a,i3,a,i3,a,i3)') "Debug: ------ Requested time is ", requested_time%get_tick(), &
+                  ", quantity time is ", partner%quantities(q_id)%clock%get_tick(), &
+                  " and partner propagator time is ", partner%prop%clock%get_tick()
+                call messages_info(2)
+              end if
+            end if
+          else
+            if (debug%info) then
+              write(message(1), '(a,i3,a)') "Debug: ---- Skip update of quantity ", q_id, " as it is protected"
+              write(message(2), '(a,i3,a,i3)') "Debug: ------ Requested time is ", requested_time%get_tick(), &
+                ", quantity time is ", partner%quantities(q_id)%clock%get_tick()
+              call messages_info(2)
             end if
           end if
+
 
           ! Now compare the times
           ahead_in_time = partner%quantities(q_id)%clock > requested_time
@@ -383,14 +406,6 @@ contains
           case default
             call messages_not_implemented("Method for interaction quantity timing")
           end select
-
-          ! Debug stuff
-          if (debug%info) then
-            write(message(1), '(a,i3)') "Debug: ------ updating exposed quantities ", q_id
-            write(message(2), '(a,i3,a,i3)') "Debug: ------ requested time is ", requested_time%get_tick(), &
-              " and partner time is ", partner%quantities(q_id)%clock%get_tick()
-            call messages_info(2)
-          end if
 
         end do
 
@@ -411,6 +426,10 @@ contains
       call messages_fatal(1, namespace=partner%namespace)
     end select
 
+    if (debug%info) then
+      write(message(1), '(a,a)') "Debug: -- Finished updating exposed quantities for partner ", trim(partner%namespace%get())
+      call messages_info(1)
+    end if
 
     POP_SUB(system_update_exposed_quantities)
   end function system_update_exposed_quantities
