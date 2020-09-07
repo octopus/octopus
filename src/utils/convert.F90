@@ -111,6 +111,7 @@ contains
 
     call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
     sys => electrons_t(global_namespace)
+    call sys%init_parallelization(mpi_world)
 
     message(1) = 'Info: Converting files'
     message(2) = ''

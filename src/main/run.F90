@@ -159,6 +159,9 @@ contains
       systems => electrons_t(namespace, generate_epot = calc_mode_id /= OPTION__CALCULATIONMODE__DUMMY)
     end if
 
+    ! initialize everything that needs parallelization
+    call systems%init_parallelization(mpi_world)
+
     ! Create list of partners (currently missing partners that are not systems)
     select type (systems)
     class is (multisystem_basic_t)

@@ -1177,6 +1177,7 @@ contains
       mx_energy_plane_waves = M_ZERO
     end if
 
+    tmp = M_ZERO
     if (present(mx_energy_boundary)) then
       do ip_in = 1, st%boundary_points_number
         ip = st%boundary_points_map(ip_in)

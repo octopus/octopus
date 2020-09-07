@@ -37,6 +37,7 @@ module test_oct_m
   use mesh_function_oct_m
   use mesh_interpolation_oct_m
   use messages_oct_m
+  use mpi_oct_m
   use multicomm_oct_m
   use namespace_oct_m
   use orbitalbasis_oct_m
@@ -237,6 +238,7 @@ contains
     call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
 
     sys => electrons_t(namespace)
+    call sys%init_parallelization(mpi_world)
     call poisson_test(sys%hm%psolver, sys%gr%mesh, namespace, param%repetitions)
     SAFE_DEALLOCATE_P(sys)
 
@@ -263,6 +265,7 @@ contains
     call messages_info()
 
     sys => electrons_t(namespace)
+    call sys%init_parallelization(mpi_world)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh, wfs_type = TYPE_CMPLX)
     call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
@@ -320,6 +323,7 @@ contains
     call messages_info()
 
     sys => electrons_t(namespace)
+    call sys%init_parallelization(mpi_world)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
     call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
@@ -414,6 +418,7 @@ contains
     call messages_info()
 
     sys => electrons_t(namespace)
+    call sys%init_parallelization(mpi_world)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
     call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
@@ -477,6 +482,7 @@ contains
     call messages_info()
 
     sys => electrons_t(namespace)
+    call sys%init_parallelization(mpi_world)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
     call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
@@ -514,6 +520,7 @@ contains
     call messages_info()
 
     sys => electrons_t(namespace)
+    call sys%init_parallelization(mpi_world)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
     call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
@@ -551,6 +558,7 @@ contains
     call messages_info()
 
     sys => electrons_t(namespace)
+    call sys%init_parallelization(mpi_world)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh, wfs_type=TYPE_CMPLX)
     call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
@@ -601,6 +609,7 @@ contains
     call messages_info()
 
     sys => electrons_t(namespace)
+    call sys%init_parallelization(mpi_world)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
     call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
@@ -682,6 +691,7 @@ contains
     call messages_info()
 
     sys => electrons_t(namespace)
+    call sys%init_parallelization(mpi_world)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
     call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
@@ -865,6 +875,7 @@ contains
     PUSH_SUB(test_derivatives)
 
     sys => electrons_t(namespace)
+    call sys%init_parallelization(mpi_world)
 
     message(1) = 'Info: Testing the finite-differences derivatives.'
     message(2) = ''
@@ -898,6 +909,7 @@ contains
     call calc_mode_par_set_scalapack_compat()
 
     sys => electrons_t(namespace)
+    call sys%init_parallelization(mpi_world)
 
     message(1) = 'Info: Testing orthogonalization.'
     message(2) = ''
@@ -935,6 +947,7 @@ contains
     PUSH_SUB(test_interpolation)
 
     sys => electrons_t(namespace)
+    call sys%init_parallelization(mpi_world)
 
     if(param%type == OPTION__TESTTYPE__ALL .or. param%type == OPTION__TESTTYPE__REAL) then
       call messages_write('Info: Testing real interpolation routines')
@@ -971,6 +984,7 @@ contains
     PUSH_SUB(test_ion_interaction)
 
     sys => electrons_t(namespace)
+    call sys%init_parallelization(mpi_world)
 
     call ion_interaction_test(sys%geo, sys%namespace, sys%gr%sb, sys%mc)
 

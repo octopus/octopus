@@ -21,6 +21,7 @@
 module hamiltonian_mxll_oct_m
   use batch_oct_m
   use batch_ops_oct_m
+  use boundaries_oct_m
   use cube_oct_m
   use derivatives_oct_m
   use energy_mxll_oct_m
@@ -479,8 +480,9 @@ contains
       ! This part uses the old non-batch implementation
       SAFE_ALLOCATE(rs_aux_in(1:hm%der%mesh%np_part, 1:3))
       SAFE_ALLOCATE(rs_aux_out(1:hm%der%mesh%np, 1:3))
+      call boundaries_set(hm%der%boundaries, psib)
       do ii = 1, 3
-        call batch_get_state(psib, ii, hm%der%mesh%np, rs_aux_in(:, ii))
+        call batch_get_state(psib, ii, hm%der%mesh%np_part, rs_aux_in(:, ii))
       end do
       call maxwell_hamiltonian_apply_fd(hm, hm%der, rs_aux_in, rs_aux_out)
       do ii = 1, 3
@@ -522,7 +524,7 @@ contains
 
     case (FARADAY_AMPERE)
 
-      SAFE_ALLOCATE(tmp(np_part,2))
+      SAFE_ALLOCATE(tmp(np,2))
       oppsi       = M_z0
 
       if (hm%diamag_current) then
@@ -538,7 +540,7 @@ contains
       tmp = rs_sign * P_c * tmp
       call maxwell_pml_hamiltonian(hm, der, psi, 2, 3, tmp(:,1))
       call maxwell_pml_hamiltonian(hm, der, psi, 3, 2, tmp(:,2))
-      oppsi(1:np_part,1) = ( tmp(1:np_part,1)-tmp(1:np_part,2) )
+      oppsi(1:np,1) = ( tmp(1:np,1)-tmp(1:np,2) )
 
       !-----------------------------------------------------------------------------------------------
       ! Riemann-Silberstein vector component 2 calculation:
@@ -548,7 +550,7 @@ contains
       tmp = rs_sign * P_c * tmp
       call maxwell_pml_hamiltonian(hm, der, psi, 3, 1, tmp(:,1))
       call maxwell_pml_hamiltonian(hm, der, psi, 1, 3, tmp(:,2))
-      oppsi(1:np_part,2) = ( tmp(1:np_part,1)-tmp(1:np_part,2) )
+      oppsi(1:np,2) = ( tmp(1:np,1)-tmp(1:np,2) )
 
       !-----------------------------------------------------------------------------------------------
       ! Riemann-Silberstein vector component 3 calculation:
@@ -558,7 +560,7 @@ contains
       tmp = rs_sign * P_c * tmp
       call maxwell_pml_hamiltonian(hm, der, psi, 1, 2, tmp(:,1))
       call maxwell_pml_hamiltonian(hm, der, psi, 2, 1, tmp(:,2))
-      oppsi(1:np_part,3) = ( tmp(1:np_part,1)-tmp(1:np_part,2) )
+      oppsi(1:np,3) = ( tmp(1:np,1)-tmp(1:np,2) )
 
       if (hm%bc_constant) then
         do ip_in = 1, hm%bc%constant_points_number
@@ -575,7 +577,7 @@ contains
 
     case (FARADAY_AMPERE_MEDIUM)
 
-      SAFE_ALLOCATE(tmp(np_part,4))
+      SAFE_ALLOCATE(tmp(np,4))
       oppsi       = M_z0
 
       !-----------------------------------------------------------------------------------------------
@@ -588,8 +590,8 @@ contains
       tmp = P_c * tmp
       call maxwell_pml_hamiltonian_medium(hm, der, psi, 2, 3, tmp(:,1:2))
       call maxwell_pml_hamiltonian_medium(hm, der, psi, 3, 2, tmp(:,3:4))
-      oppsi(1:np_part,1) =   ( tmp(1:np_part,1)-tmp(1:np_part,3) )
-      oppsi(1:np_part,4) = - ( tmp(1:np_part,2)-tmp(1:np_part,4) )
+      oppsi(1:np,1) =   ( tmp(1:np,1)-tmp(1:np,3) )
+      oppsi(1:np,4) = - ( tmp(1:np,2)-tmp(1:np,4) )
 
       !-----------------------------------------------------------------------------------------------
       ! Riemann-Silberstein vector component 2 calculation:
@@ -601,8 +603,8 @@ contains
       tmp = P_c * tmp
       call maxwell_pml_hamiltonian_medium(hm, der, psi, 3, 1, tmp(:,1:2))
       call maxwell_pml_hamiltonian_medium(hm, der, psi, 1, 3, tmp(:,3:4))
-      oppsi(1:np_part,2) =   ( tmp(1:np_part,1)-tmp(1:np_part,3) )
-      oppsi(1:np_part,5) = - ( tmp(1:np_part,2)-tmp(1:np_part,4) )
+      oppsi(1:np,2) =   ( tmp(1:np,1)-tmp(1:np,3) )
+      oppsi(1:np,5) = - ( tmp(1:np,2)-tmp(1:np,4) )
 
       !-----------------------------------------------------------------------------------------------
       ! Riemann-Silberstein vector component 3 calculation:
@@ -614,8 +616,8 @@ contains
       tmp = P_c * tmp
       call maxwell_pml_hamiltonian_medium(hm, der, psi, 1, 2, tmp(:,1:2))
       call maxwell_pml_hamiltonian_medium(hm, der, psi, 2, 1, tmp(:,3:4))
-      oppsi(1:np_part,3) =   ( tmp(1:np_part,1)-tmp(1:np_part,3) )
-      oppsi(1:np_part,6) = - ( tmp(1:np_part,2)-tmp(1:np_part,4) )
+      oppsi(1:np,3) =   ( tmp(1:np,1)-tmp(1:np,3) )
+      oppsi(1:np,6) = - ( tmp(1:np,2)-tmp(1:np,4) )
 
 
       SAFE_DEALLOCATE_A(tmp)
@@ -634,29 +636,29 @@ contains
 
     case (FARADAY_AMPERE_GAUSS)
 
-      SAFE_ALLOCATE(tmp(np_part,3))
+      SAFE_ALLOCATE(tmp(np,3))
       oppsi       = M_z0
       tmp = M_z0
 
       call zderivatives_partial(der, psi(:,1), tmp(:,1), 3, set_bc = .false.)
       call zderivatives_partial(der, psi(:,3), tmp(:,2), 2, set_bc = .false.)
       call zderivatives_partial(der, psi(:,3), tmp(:,3), 1, set_bc = .false.)
-      oppsi(1:np_part,1) = rs_sign * P_c * ( - M_zI*tmp(1:np_part,1) - tmp(1:np_part,2) - M_zI*tmp(1:np_part,3) )
+      oppsi(1:np,1) = rs_sign * P_c * ( - M_zI*tmp(1:np,1) - tmp(1:np,2) - M_zI*tmp(1:np,3) )
 
       call zderivatives_partial(der, psi(:,2), tmp(:,1), 3, set_bc = .false.)
       call zderivatives_partial(der, psi(:,4), tmp(:,2), 2, set_bc = .false.)
       call zderivatives_partial(der, psi(:,4), tmp(:,3), 1, set_bc = .false.)
-      oppsi(1:np_part,2) = rs_sign * P_c * ( - M_zI*tmp(1:np_part,1) - tmp(1:np_part,2) - M_zI*tmp(1:np_part,3) )
+      oppsi(1:np,2) = rs_sign * P_c * ( - M_zI*tmp(1:np,1) - tmp(1:np,2) - M_zI*tmp(1:np,3) )
 
       call zderivatives_partial(der, psi(:,1), tmp(:,1), 2, set_bc = .false.)
       call zderivatives_partial(der, psi(:,1), tmp(:,2), 1, set_bc = .false.)
       call zderivatives_partial(der, psi(:,3), tmp(:,3), 3, set_bc = .false.)
-      oppsi(1:np_part,3) = rs_sign * P_c * ( tmp(1:np_part,1) - M_zI*tmp(1:np_part,2) + M_zI*tmp(1:np_part,3) )
+      oppsi(1:np,3) = rs_sign * P_c * ( tmp(1:np,1) - M_zI*tmp(1:np,2) + M_zI*tmp(1:np,3) )
 
       call zderivatives_partial(der, psi(:,2), tmp(:,1), 2, set_bc = .false.)
       call zderivatives_partial(der, psi(:,2), tmp(:,2), 1, set_bc = .false.)
       call zderivatives_partial(der, psi(:,4), tmp(:,3), 3, set_bc = .false.)
-      oppsi(1:np_part,4) = rs_sign * P_c * ( tmp(1:np_part,1) - M_zI*tmp(1:np_part,2) + M_zI*tmp(1:np_part,3) )
+      oppsi(1:np,4) = rs_sign * P_c * ( tmp(1:np,1) - M_zI*tmp(1:np,2) + M_zI*tmp(1:np,3) )
 
       SAFE_DEALLOCATE_A(tmp)
 
@@ -666,49 +668,49 @@ contains
 
     case (FARADAY_AMPERE_GAUSS_MEDIUM)
 
-      SAFE_ALLOCATE(tmp(np_part,3))
+      SAFE_ALLOCATE(tmp(np,3))
       oppsi       = M_z0
       tmp = M_z0
 
       call zderivatives_partial(der, psi(:,1), tmp(:,1), 3, set_bc = .false.)
       call zderivatives_partial(der, psi(:,3), tmp(:,2), 2, set_bc = .false.)
       call zderivatives_partial(der, psi(:,3), tmp(:,3), 1, set_bc = .false.)
-      oppsi(1:np_part,1) = P_c*(-M_zI*tmp(1:np_part,1)-tmp(1:np_part,2)-M_zI*tmp(1:np_part,3))
+      oppsi(1:np,1) = P_c*(-M_zI*tmp(1:np,1)-tmp(1:np,2)-M_zI*tmp(1:np,3))
 
       call zderivatives_partial(der, psi(:,2), tmp(:,1), 3, set_bc = .false.)
       call zderivatives_partial(der, psi(:,4), tmp(:,2), 2, set_bc = .false.)
       call zderivatives_partial(der, psi(:,4), tmp(:,3), 1, set_bc = .false.)
-      oppsi(1:np_part,2) = P_c*(-M_zI*tmp(1:np_part,1)-tmp(1:np_part,2)-M_zI*tmp(1:np_part,3))
+      oppsi(1:np,2) = P_c*(-M_zI*tmp(1:np,1)-tmp(1:np,2)-M_zI*tmp(1:np,3))
 
       call zderivatives_partial(der, psi(:,1), tmp(:,1), 2, set_bc = .false.)
       call zderivatives_partial(der, psi(:,1), tmp(:,2), 1, set_bc = .false.)
       call zderivatives_partial(der, psi(:,3), tmp(:,3), 3, set_bc = .false.)
-      oppsi(1:np_part,3) = P_c*(tmp(1:np_part,1)-M_zI*tmp(1:np_part,2)+M_zI*tmp(1:np_part,3))
+      oppsi(1:np,3) = P_c*(tmp(1:np,1)-M_zI*tmp(1:np,2)+M_zI*tmp(1:np,3))
 
       call zderivatives_partial(der, psi(:,2), tmp(:,1), 2, set_bc = .false.)
       call zderivatives_partial(der, psi(:,2), tmp(:,2), 1, set_bc = .false.)
       call zderivatives_partial(der, psi(:,4), tmp(:,3), 3, set_bc = .false.)
-      oppsi(1:np_part,4) = P_c*(tmp(1:np_part,1)-M_zI*tmp(1:np_part,2)+M_zI*tmp(1:np_part,3))
+      oppsi(1:np,4) = P_c*(tmp(1:np,1)-M_zI*tmp(1:np,2)+M_zI*tmp(1:np,3))
 
       call zderivatives_partial(der, psi(:,5), tmp(:,1), 3, set_bc = .false.)
       call zderivatives_partial(der, psi(:,7), tmp(:,2), 2, set_bc = .false.)
       call zderivatives_partial(der, psi(:,7), tmp(:,3), 1, set_bc = .false.)
-      oppsi(1:np_part,5) = - P_c*(-M_zI*tmp(1:np_part,1)-tmp(1:np_part,2)-M_zI*tmp(1:np_part,3))
+      oppsi(1:np,5) = - P_c*(-M_zI*tmp(1:np,1)-tmp(1:np,2)-M_zI*tmp(1:np,3))
 
       call zderivatives_partial(der, psi(:,6), tmp(:,1), 3, set_bc = .false.)
       call zderivatives_partial(der, psi(:,8), tmp(:,2), 2, set_bc = .false.)
       call zderivatives_partial(der, psi(:,8), tmp(:,3), 1, set_bc = .false.)
-      oppsi(1:np_part,6) = - P_c*(-M_zI*tmp(1:np_part,1)-tmp(1:np_part,2)-M_zI*tmp(1:np_part,3))
+      oppsi(1:np,6) = - P_c*(-M_zI*tmp(1:np,1)-tmp(1:np,2)-M_zI*tmp(1:np,3))
 
       call zderivatives_partial(der, psi(:,5), tmp(:,1), 2, set_bc = .false.)
       call zderivatives_partial(der, psi(:,5), tmp(:,2), 1, set_bc = .false.)
       call zderivatives_partial(der, psi(:,7), tmp(:,3), 3, set_bc = .false.)
-      oppsi(1:np_part,7) = - P_c*(tmp(1:np_part,1)-M_zI*tmp(1:np_part,2)+M_zI*tmp(1:np_part,3))
+      oppsi(1:np,7) = - P_c*(tmp(1:np,1)-M_zI*tmp(1:np,2)+M_zI*tmp(1:np,3))
 
       call zderivatives_partial(der, psi(:,6), tmp(:,1), 2, set_bc = .false.)
       call zderivatives_partial(der, psi(:,6), tmp(:,2), 1, set_bc = .false.)
       call zderivatives_partial(der, psi(:,7), tmp(:,3), 3, set_bc = .false.)
-      oppsi(1:np_part,8) = - P_c*(tmp(1:np_part,1)-M_zI*tmp(1:np_part,2)+M_zI*tmp(1:np_part,3))
+      oppsi(1:np,8) = - P_c*(tmp(1:np,1)-M_zI*tmp(1:np,2)+M_zI*tmp(1:np,3))
 
       SAFE_DEALLOCATE_A(tmp)
 
@@ -818,7 +820,7 @@ contains
     integer,                  intent(in)    :: field_dir
     CMPLX,                    intent(inout) :: pml(:,:)
 
-    integer            :: ip, ip_in, np_part
+    integer            :: ip, ip_in, np
     FLOAT              :: pml_c(3)
     CMPLX, allocatable :: tmp_partial(:,:)
     CMPLX              :: pml_a(3), pml_b(3), pml_g_p(3), pml_g_m(3)
@@ -827,8 +829,8 @@ contains
 
     if (hm%cpml_hamiltonian) then
 
-      np_part = der%mesh%np_part
-      SAFE_ALLOCATE(tmp_partial(np_part,1:2))
+      np = der%mesh%np
+      SAFE_ALLOCATE(tmp_partial(np,1:2))
 
       call zderivatives_partial(der, psi(:,field_dir  ), tmp_partial(:,1), pml_dir, set_bc = .false.)
       call zderivatives_partial(der, psi(:,field_dir+3), tmp_partial(:,2), pml_dir, set_bc = .false.)
@@ -930,13 +932,11 @@ contains
     CMPLX,                    intent(in)    :: psi(:,:)
     CMPLX,                    intent(inout) :: oppsi(:,:)
 
-    integer            :: ip, ip_in, il, np_part
+    integer            :: ip, ip_in, il
     FLOAT              :: cc, aux_ep(3), aux_mu(3), sigma_e, sigma_m
     CMPLX              :: ff_plus(3), ff_minus(3)
 
     PUSH_SUB(maxwell_medium_boxes_calculation)
-
-    np_part = der%mesh%np_part
 
     if (hm%medium_box .and. &
          (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RS) ) then

@@ -156,8 +156,7 @@ module maxwell_boundary_op_oct_m
   integer, public, parameter ::   &
     MXLL_AB_NOT_ABSORBING = 0,    &
     MXLL_AB_MASK          = 1,    &
-    MXLL_AB_MAXWELL_MASK  = 2,    &
-    MXLL_AB_CPML          = 3,    &
+    MXLL_AB_CPML          = 2,    &
     MXLL_AB_MASK_ZERO     = 7
 
 contains
@@ -201,9 +200,7 @@ contains
     !% No absorbing boundaries.
     !%Option mask 1
     !% A mask equal to the wavefunctions mask is applied to the Maxwell states at the boundaries
-    !%Option maxwell_mask 2
-    !% A different mask than the wavefunctions mask is applied on Maxwell states
-    !%Option cpml 3
+    !%Option cpml 2
     !% Perfectly matched layer absorbing boundary
     !%Option mask_zero 7
     !% Absorbing boundary region is set to zero
@@ -585,7 +582,7 @@ contains
     FLOAT,               intent(inout) :: bounds(:,:), ab_bounds(:,:)
     integer,             intent(in)    :: idim
 
-    FLOAT               :: width
+    FLOAT               :: default_width
 
     PUSH_SUB(bc_mxll_ab_bounds_init)
 
@@ -597,17 +594,17 @@ contains
     !% the derivative order.
     !%End
 
-    width = 2*gr%der%order
-    call parse_variable(namespace, 'MaxwellABWidth', width, bc%ab_width, units_inp%length)
+    default_width = M_TWO * gr%der%order * maxval(gr%mesh%spacing(1:3))
+    call parse_variable(namespace, 'MaxwellABWidth', default_width, bc%ab_width, units_inp%length)
 
-    if (any(width < gr%der%order*gr%mesh%spacing(1:3))) then
-       width = gr%der%order * maxval(gr%mesh%spacing(1:3))
-       write(message(1),'(a)') 'Absorbing boundary width has to be larger or equal than derivatives order times spacing!'
-       write(message(2),'(a,es10.3)') 'Absorbing boundary width is set to: ', width
-       call messages_info(2)
+    if (bc%ab_width < default_width) then
+      bc%ab_width = default_width
+      write(message(1),'(a)') 'Absorbing boundary width has to be larger or equal than twice the derivatives order times spacing!'
+      write(message(2),'(a,es10.3)') 'Absorbing boundary width is set to: ', default_width
+      call messages_info(2)
     end if
 
-    ab_bounds(1, idim) = ab_bounds(2, idim) - width
+    ab_bounds(1, idim) = ab_bounds(2, idim) - bc%ab_width
 
     POP_SUB(bc_mxll_ab_bounds_init)
   end subroutine bc_mxll_ab_bounds_init
@@ -1107,12 +1104,12 @@ contains
     pml%conv_plus_old         = M_z0
     pml%conv_minus_old        = M_z0
 
-    width(:) = bounds(2, :) - bounds(1, :)
+    width(1:3) = bounds(2, 1:3) - bounds(1, 1:3)
 
     ! PML variables for all boundary points
     do ip_in = 1, pml%points_number
       ip = pml%points_map(ip_in)
-      ddv(:) = abs(gr%mesh%x(ip, :)) - bounds(1, :)
+      ddv(1:3) = abs(gr%mesh%x(ip, 1:3)) - bounds(1, 1:3)
       do idim = 1, gr%mesh%sb%dim
         if (ddv(idim) >= M_ZERO) then
           gg     = (ddv(idim)/pml%width)**pml%power
@@ -1200,18 +1197,17 @@ contains
 
     ip_in_max = maxval(bc%mask_points_number(:))
 
-    SAFE_ALLOCATE(bc%mask(ip_in_max, 3))
     SAFE_ALLOCATE(mask(mesh%np))
 
     mask(:) = M_ONE
 
-    width(:) = bounds(2, :) - bounds(1, :)
+    width(1:3) = bounds(2, 1:3) - bounds(1, 1:3)
     tmp(:)   = M_ZERO
 
     do ip = 1, mesh%np
       tmp = M_ONE
       mask(ip) = M_ONE
-      ddv(:) = abs(mesh%x(ip, :)) - bounds(1, :)
+      ddv(1:3) = abs(mesh%x(ip, 1:3)) - bounds(1, 1:3)
       do idim = 1, mesh%sb%dim
         if(ddv(idim) >= M_ZERO ) then
           if (ddv(idim)  <=  width(idim)) then
@@ -1616,7 +1612,7 @@ contains
 
     point_info = 0
 
-    width(:) = bounds(2, :) - bounds(1, :)
+    width(1:3) = bounds(2, 1:3) - bounds(1, 1:3)
     xx = M_ZERO
     xx(1:mesh%sb%dim) = mesh%x(ip, 1:mesh%sb%dim)
     rr = sqrt(dot_product(xx(1:mesh%sb%dim), xx(1:mesh%sb%dim)))
