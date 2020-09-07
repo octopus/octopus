@@ -521,10 +521,9 @@ contains
   end subroutine classical_particle_output_write
 
   ! ---------------------------------------------------------
-  subroutine classical_particle_update_quantity(this, iq, requested_time)
-    class(classical_particle_t),   intent(inout) :: this
-    integer,                   intent(in)    :: iq
-    class(clock_t),            intent(in)    :: requested_time
+  subroutine classical_particle_update_quantity(this, iq)
+    class(classical_particle_t), intent(inout) :: this
+    integer,                     intent(in)    :: iq
 
     PUSH_SUB(classical_particle_update_quantity)
 
@@ -534,7 +533,8 @@ contains
     select case (iq)
     case (MASS)
       ! The classical particle has a mass, but it is not necessary to update it, as it does not change with time.
-      call this%quantities(iq)%clock%set_time(requested_time)
+      ! We still need to set its clock, so we set it to be in sync with the particle position.
+      call this%quantities(iq)%clock%set_time(this%quantities(POSITION)%clock)
     case default
       message(1) = "Incompatible quantity."
       call messages_fatal(1)
@@ -544,10 +544,9 @@ contains
   end subroutine classical_particle_update_quantity
 
   ! ---------------------------------------------------------
-  subroutine classical_particle_update_exposed_quantity(partner, iq, requested_time)
-    class(classical_particle_t),   intent(inout) :: partner
-    integer,                   intent(in)    :: iq
-    class(clock_t),            intent(in)    :: requested_time
+  subroutine classical_particle_update_exposed_quantity(partner, iq)
+    class(classical_particle_t), intent(inout) :: partner
+    integer,                     intent(in)    :: iq
 
     PUSH_SUB(classical_particle_update_exposed_quantity)
 
@@ -557,7 +556,8 @@ contains
     select case (iq)
     case (MASS)
       ! The classical particle has a mass, but it does not require any update, as it does not change with time.
-      call partner%quantities(iq)%clock%set_time(requested_time)
+      ! We still need to set its clock, so we set it to be in sync with the particle position.
+      call partner%quantities(iq)%clock%set_time(partner%quantities(POSITION)%clock)
     case default
       message(1) = "Incompatible quantity."
       call messages_fatal(1)

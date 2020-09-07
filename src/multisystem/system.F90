@@ -134,12 +134,11 @@ module system_oct_m
     end subroutine system_store_current_status
 
     ! ---------------------------------------------------------
-    subroutine system_update_quantity(this, iq, requested_time)
+    subroutine system_update_quantity(this, iq)
       import system_t
       import clock_t
       class(system_t),      intent(inout) :: this
       integer,              intent(in)    :: iq
-      class(clock_t),       intent(in)    :: requested_time
     end subroutine system_update_quantity
 
   end interface
@@ -191,7 +190,7 @@ contains
       this%prop%clock = this%prop%clock + CLOCK_TICK
 
       ! Try to update all the interactions
-      all_updated = this%update_interactions(this%prop%clock)
+      all_updated = this%update_interactions()
 
       ! Move to next propagator step if all interactions have been
       ! updated. Otherwise try again later.
@@ -331,7 +330,7 @@ contains
               partner%quantities(q_id)%clock + CLOCK_TICK > requested_time))) then
               ! We can update because the partner will reach this time in the next sub-timestep
               ! This is not a protected quantity, so we update it
-              call partner%update_exposed_quantity(q_id, requested_time)
+              call partner%update_exposed_quantity(q_id)
 
               call updated_quantity_debug()
             else
@@ -449,9 +448,8 @@ contains
   end subroutine system_init_all_interactions
 
   ! ---------------------------------------------------------
-  logical function system_update_interactions(this, requested_time) result(all_updated)
+  logical function system_update_interactions(this) result(all_updated)
     class(system_t),      intent(inout) :: this
-    type(clock_t),        intent(in)    :: requested_time !< Requested time for the update
 
     logical :: none_updated
     integer :: iq, q_id
@@ -467,7 +465,7 @@ contains
     call iter%start(this%interactions)
     do while (iter%has_next())
       interaction => iter%get_next()
-      if (interaction%clock == requested_time) then
+      if (interaction%clock == this%prop%clock) then
         none_updated = .false.
         exit
       end if
@@ -482,7 +480,7 @@ contains
     do while (iter%has_next())
       interaction => iter%get_next()
 
-      if (.not. interaction%clock == requested_time) then
+      if (.not. interaction%clock == this%prop%clock) then
         ! Update the system quantities that will be needed for computing the interaction
         do iq = 1, interaction%n_system_quantities
           ! Get requested quantity ID
@@ -494,23 +492,23 @@ contains
           ! We do not need to update the protected quantities, the propagator takes care of that
           if (this%quantities(q_id)%protected) cycle
 
-          if (.not. this%quantities(q_id)%clock == requested_time) then
+          if (.not. this%quantities(q_id)%clock == this%prop%clock) then
             ! The requested quantity is not at the requested time, so we try to update it
 
             ! Sanity check: it should never happen that the quantity is in advance
             ! with respect to the requested time.
-            if (this%quantities(q_id)%clock > requested_time) then
+            if (this%quantities(q_id)%clock > this%prop%clock) then
               message(1) = "The quantity clock is in advance compared to the requested time."
               call messages_fatal(1, namespace=this%namespace)
             end if
 
-            call this%update_quantity(q_id, requested_time)
+            call this%update_quantity(q_id)
           end if
 
         end do
 
         ! We can now try to update the interaction
-        all_updated = interaction%update(this%namespace, requested_time) .and. all_updated
+        all_updated = interaction%update(this%namespace, this%prop%clock) .and. all_updated
       end if
     end do
 
@@ -695,7 +693,7 @@ contains
     PUSH_SUB(system_propagation_start)
 
     ! Update interactions at initial time
-    all_updated = this%update_interactions(this%clock)
+    all_updated = this%update_interactions()
     if (.not. all_updated) then
       message(1) = "Unable to update interactions when initializing the propagation."
       call messages_fatal(1, namespace=this%namespace)

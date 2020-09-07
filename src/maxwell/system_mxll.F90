@@ -497,10 +497,9 @@ contains
   end subroutine system_mxll_store_current_status
 
   ! ---------------------------------------------------------
-  subroutine system_mxll_update_quantity(this, iq, requested_time)
+  subroutine system_mxll_update_quantity(this, iq)
     class(system_mxll_t),      intent(inout) :: this
     integer,                   intent(in)    :: iq
-    class(clock_t),            intent(in)    :: requested_time
 
     PUSH_SUB(system_mxll_update_quantity)
 
@@ -517,10 +516,9 @@ contains
   end subroutine system_mxll_update_quantity
 
  ! ---------------------------------------------------------
- subroutine system_mxll_update_exposed_quantity(partner, iq, requested_time)
+ subroutine system_mxll_update_exposed_quantity(partner, iq)
     class(system_mxll_t),      intent(inout) :: partner
     integer,                   intent(in)    :: iq
-    class(clock_t),            intent(in)    :: requested_time
 
     PUSH_SUB(system_mxll_update_exposed_quantity)
 
@@ -529,7 +527,7 @@ contains
 
     select case (iq)
     case(E_FIELD,B_FIELD)
-      call partner%quantities(iq)%clock%set_time(requested_time)
+!      call partner%quantities(iq)%clock%set_time(requested_time)
     case default
       message(1) = "Incompatible quantity."
       call messages_fatal(1)

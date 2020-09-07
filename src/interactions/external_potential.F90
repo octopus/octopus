@@ -137,10 +137,9 @@ contains
   end function external_potential_update_exposed_quantities
 
   ! ---------------------------------------------------------
-  subroutine external_potential_update_exposed_quantity(partner, iq, requested_time)
+  subroutine external_potential_update_exposed_quantity(partner, iq)
     class(external_potential_t),      intent(inout) :: partner
     integer,                          intent(in)    :: iq
-    class(clock_t),                   intent(in)    :: requested_time
 
     PUSH_SUB(external_potential_update_exposed_quantities)
 
