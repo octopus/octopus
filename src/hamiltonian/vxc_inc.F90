@@ -76,7 +76,7 @@ subroutine xc_get_vxc(der, xcs, st, psolver, namespace, rho, ispin, vxc, ex, ec,
   type(profile_t), save :: prof_gather
   
   PUSH_SUB(xc_get_vxc)
-  call profiling_in(prof, TOSTRING(X(XC_LOCAL)))
+  call profiling_in(prof, TOSTRING(XC_LOCAL))
 
   nullify(ex_per_vol)
   nullify(ec_per_vol)
@@ -200,7 +200,7 @@ subroutine xc_get_vxc(der, xcs, st, psolver, namespace, rho, ispin, vxc, ex, ec,
 
       if(functl(ixc)%family == XC_FAMILY_NONE) cycle
 
-      call profiling_in(prof_libxc, TOSTRING(X(LIBXC)))
+      call profiling_in(prof_libxc, TOSTRING(LIBXC))
 
       if(calc_energy .and. bitand(functl(ixc)%flags, XC_FLAGS_HAVE_EXC) /= 0) then
         ! we get the xc energy and potential
@@ -345,7 +345,7 @@ subroutine xc_get_vxc(der, xcs, st, psolver, namespace, rho, ispin, vxc, ex, ec,
 
   if(xcs%parallel) then
     if(distribution%parallel) then
-      call profiling_in(prof_gather, TOSTRING(X(XC_GATHER)))
+      call profiling_in(prof_gather, TOSTRING(XC_GATHER))
       
       do isp = 1, spin_channels
         call distributed_allgather(distribution, dedd(:, isp))
@@ -943,7 +943,7 @@ subroutine xc_density_correction_calc(xcs, der, psolver, namespace, nspin, densi
 
   PUSH_SUB(xc_density_correction_calc)
 
-  call profiling_in(prof, TOSTRING(X(XC_DENSITY_CORRECTION)))
+  call profiling_in(prof, TOSTRING(XC_DENSITY_CORRECTION))
 
   SAFE_ALLOCATE(nxc(1:der%mesh%np))
   SAFE_ALLOCATE(lrvxc(1:der%mesh%np_part))

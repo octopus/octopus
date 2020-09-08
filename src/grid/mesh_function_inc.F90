@@ -27,7 +27,7 @@ R_TYPE function X(mf_integrate) (mesh, ff, mask, reduce) result(dd)
 
   integer :: ip
 
-  call profiling_in(C_PROFILING_MF_INTEGRATE, TOSTRING(X(MF_INTEGRATE)))
+  call profiling_in(X(PROFILING_MF_INTEGRATE), TOSTRING(X(MF_INTEGRATE)))
   PUSH_SUB(X(mf_integrate))
 
   ASSERT(ubound(ff, dim = 1) == mesh%np .or. ubound(ff, dim = 1) == mesh%np_part)
@@ -50,13 +50,13 @@ R_TYPE function X(mf_integrate) (mesh, ff, mask, reduce) result(dd)
   dd = dd*mesh%volume_element
 
   if(mesh%parallel_in_domains .and. optional_default(reduce, .true.)) then
-    call profiling_in(C_PROFILING_MF_REDUCE, TOSTRING(X(MF_REDUCE)))
+    call profiling_in(X(PROFILING_MF_REDUCE), TOSTRING(X(MF_REDUCE)))
     call comm_allreduce(mesh%mpi_grp%comm, dd)
-    call profiling_out(C_PROFILING_MF_REDUCE)
+    call profiling_out(X(PROFILING_MF_REDUCE))
   end if
   
   POP_SUB(X(mf_integrate))
-  call profiling_out(C_PROFILING_MF_INTEGRATE)
+  call profiling_out(X(PROFILING_MF_INTEGRATE))
 
 end function X(mf_integrate)
 
@@ -154,7 +154,7 @@ R_TYPE function X(mf_dotp_1)(mesh, f1, f2, reduce, dotu, np) result(dotp)
 #endif
   integer             :: ip, np_
 
-  call profiling_in(C_PROFILING_MF_DOTP, TOSTRING(X(MF_DOTP)))
+  call profiling_in(X(PROFILING_MF_DOTP), TOSTRING(X(MF_DOTP)))
   PUSH_SUB(X(mf_dotp_1))
 
   np_ = optional_default(np, mesh%np)
@@ -201,13 +201,13 @@ R_TYPE function X(mf_dotp_1)(mesh, f1, f2, reduce, dotu, np) result(dotp)
   dotp = dotp*mesh%volume_element
 
   if(mesh%parallel_in_domains .and. optional_default(reduce, .true.)) then
-    call profiling_in(C_PROFILING_MF_REDUCE, TOSTRING(X(MF_REDUCE)))
+    call profiling_in(X(PROFILING_MF_REDUCE), TOSTRING(X(MF_REDUCE)))
     call comm_allreduce(mesh%vp%comm, dotp)
-    call profiling_out(C_PROFILING_MF_REDUCE)
+    call profiling_out(X(PROFILING_MF_REDUCE))
   end if
 
   POP_SUB(X(mf_dotp_1))
-  call profiling_out(C_PROFILING_MF_DOTP)
+  call profiling_out(X(PROFILING_MF_DOTP))
 
 end function X(mf_dotp_1)
 
@@ -233,9 +233,9 @@ R_TYPE function X(mf_dotp_2)(mesh, dim, f1, f2, reduce, dotu, np) result(dotp)
   end do
 
   if(mesh%parallel_in_domains .and. optional_default(reduce, .true.)) then
-    call profiling_in(C_PROFILING_MF_REDUCE, TOSTRING(X(MF_REDUCE)))
+    call profiling_in(X(PROFILING_MF_REDUCE), TOSTRING(X(MF_REDUCE)))
     call comm_allreduce(mesh%vp%comm, dotp)
-    call profiling_out(C_PROFILING_MF_REDUCE)
+    call profiling_out(X(PROFILING_MF_REDUCE))
   end if
 
   POP_SUB(X(mf_dotp_2))
@@ -252,7 +252,7 @@ FLOAT function X(mf_nrm2_1)(mesh, ff, reduce) result(nrm2)
  
   R_TYPE, allocatable :: ll(:)
 
-  call profiling_in(C_PROFILING_MF_NRM2, TOSTRING(X(MF_NRM2)))
+  call profiling_in(X(PROFILING_MF_NRM2), TOSTRING(X(MF_NRM2)))
   PUSH_SUB(X(mf_nrm2_1))
 
   if(mesh%use_curvilinear) then
@@ -267,15 +267,15 @@ FLOAT function X(mf_nrm2_1)(mesh, ff, reduce) result(nrm2)
   nrm2 = nrm2*sqrt(mesh%volume_element)
 
   if(mesh%parallel_in_domains .and. optional_default(reduce, .true.)) then
-    call profiling_in(C_PROFILING_MF_REDUCE, TOSTRING(X(MF_REDUCE)))
+    call profiling_in(X(PROFILING_MF_REDUCE), TOSTRING(X(MF_REDUCE)))
     nrm2 = nrm2**2
     call comm_allreduce(mesh%vp%comm, nrm2)
     nrm2 = sqrt(nrm2)
-    call profiling_out(C_PROFILING_MF_REDUCE)
+    call profiling_out(X(PROFILING_MF_REDUCE))
   end if
 
   POP_SUB(X(mf_nrm2_1))
-  call profiling_out(C_PROFILING_MF_NRM2)
+  call profiling_out(X(PROFILING_MF_NRM2))
 
 end function X(mf_nrm2_1)
 

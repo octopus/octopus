@@ -24,6 +24,7 @@ R_TYPE function X(sm_integrate)(mesh, sm, ff, reduce) result(res)
   logical, optional, intent(in) :: reduce
 
   integer :: is
+  type(profile_t), save :: prof_sm_reduce
 
   PUSH_SUB(X(sm_integrate))
 
@@ -46,9 +47,9 @@ R_TYPE function X(sm_integrate)(mesh, sm, ff, reduce) result(res)
   end if
 
   if(mesh%parallel_in_domains .and. optional_default(reduce, .true.)) then
-    call profiling_in(C_PROFILING_SM_REDUCE, TOSTRING(X(SM_REDUCE)))
+    call profiling_in(prof_sm_reduce, TOSTRING(X(SM_REDUCE)))
     call comm_allreduce(mesh%vp%comm, res)
-    call profiling_out(C_PROFILING_SM_REDUCE)
+    call profiling_out(prof_sm_reduce)
   end if 
  
   POP_SUB(X(sm_integrate))
@@ -60,6 +61,8 @@ R_TYPE function X(sm_integrate_frommesh)(mesh, sm, ff, reduce) result(res)
   type(submesh_t),   intent(in) :: sm
   R_TYPE, optional,  intent(in) :: ff(:)
   logical, optional, intent(in) :: reduce
+
+  type(profile_t), save :: prof_sm_reduce
 
   PUSH_SUB(X(sm_integrate_frommesh))
 
@@ -76,9 +79,9 @@ R_TYPE function X(sm_integrate_frommesh)(mesh, sm, ff, reduce) result(res)
   end if
 
   if(mesh%parallel_in_domains .and. optional_default(reduce, .true.)) then
-    call profiling_in(C_PROFILING_SM_REDUCE, TOSTRING(X(SM_REDUCE)))
+    call profiling_in(prof_sm_reduce, TOSTRING(X(SM_REDUCE_MESH)))
     call comm_allreduce(mesh%vp%comm, res)
-    call profiling_out(C_PROFILING_SM_REDUCE)
+    call profiling_out(prof_sm_reduce)
   end if
 
   POP_SUB(X(sm_integrate_frommesh))
@@ -210,8 +213,10 @@ FLOAT function X(sm_nrm2)(sm, ff, reduce) result(nrm2)
   logical, optional, intent(in) :: reduce
 
   R_TYPE, allocatable :: ll(:)
+  type(profile_t), save :: prof_sm_nrm2
+  type(profile_t), save :: prof_sm_reduce
 
-  call profiling_in(C_PROFILING_SM_NRM2, TOSTRING(X(SM_NRM2)))
+  call profiling_in(prof_sm_nrm2, TOSTRING(X(SM_NRM2)))
   PUSH_SUB(X(sm_nrm2))
 
   if(sm%mesh%use_curvilinear) then
@@ -226,15 +231,15 @@ FLOAT function X(sm_nrm2)(sm, ff, reduce) result(nrm2)
   nrm2 = nrm2*sqrt(sm%mesh%volume_element)
 
   if(sm%mesh%parallel_in_domains .and. optional_default(reduce, .true.)) then
-    call profiling_in(C_PROFILING_SM_REDUCE, TOSTRING(X(SM_REDUCE)))
+    call profiling_in(prof_sm_reduce, TOSTRING(X(SM_REDUCE_NRM2)))
     nrm2 = nrm2**2
     call comm_allreduce(sm%mesh%vp%comm, nrm2)
     nrm2 = sqrt(nrm2)
-    call profiling_out(C_PROFILING_SM_REDUCE)
+    call profiling_out(prof_sm_reduce)
   end if
 
   POP_SUB(X(sm_nrm2))
-  call profiling_out(C_PROFILING_SM_NRM2)
+  call profiling_out(prof_sm_nrm2)
 
 end function X(sm_nrm2)
 

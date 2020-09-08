@@ -217,6 +217,7 @@ subroutine X(mesh_to_cube)(mesh, mf, cube, cf, local)
   R_TYPE, pointer :: gmf(:)
   type(accel_mem_t)         :: mf_buffer
   type(accel_kernel_t), save :: kernel
+  type(profile_t), save :: prof_m2c
 
   PUSH_SUB(X(mesh_to_cube))
   call profiling_in(prof_m2c, TOSTRING(X(MESH_TO_CUBE)))
@@ -316,6 +317,7 @@ subroutine X(cube_to_mesh) (cube, cf, mesh, mf, local)
   integer                    :: bsize
   type(accel_mem_t)         :: mf_buffer
   type(accel_kernel_t), save :: kernel
+  type(profile_t), save :: prof_c2m
 
   PUSH_SUB(X(cube_to_mesh))
 
@@ -412,6 +414,7 @@ subroutine X(mesh_to_cube_parallel)(mesh, mf, cube, cf, map)
   integer :: im, ii, nn
   integer :: min_x, min_y, min_z, max_x, max_y, max_z
   R_TYPE, allocatable :: in(:), out(:)
+  type(profile_t), save :: prof_m2c
 
   PUSH_SUB(X(mesh_to_cube_parallel))
   call profiling_in(prof_m2c, TOSTRING(X(MESH_TO_CUBE_PARALLEL)))
@@ -500,6 +503,7 @@ subroutine X(cube_to_mesh_parallel) (cube, cf, mesh, mf, map)
   integer :: ip, ix, iy, iz, im, ii, nn, ixyz(3)
   R_TYPE, allocatable :: gcf(:,:,:)
   R_TYPE, allocatable :: in(:), out(:)
+  type(profile_t), save :: prof_c2m
 
   PUSH_SUB(X(cube_to_mesh_parallel))
   call profiling_in(prof_c2m, TOSTRING(X(CUBE_TO_MESH_PARALLEL)))

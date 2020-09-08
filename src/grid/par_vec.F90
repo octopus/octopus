@@ -199,9 +199,6 @@ module par_vec_oct_m
     module procedure ivec_allgather
   end interface vec_allgather
   
-  type(profile_t), save :: prof_scatter
-  type(profile_t), save :: prof_allgather
-
 #endif
   
 contains

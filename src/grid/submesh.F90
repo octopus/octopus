@@ -103,10 +103,6 @@ module submesh_oct_m
     module procedure ddsubmesh_to_mesh_dotp, zdsubmesh_to_mesh_dotp, zzsubmesh_to_mesh_dotp
   end interface submesh_to_mesh_dotp
 
-   type(profile_t), save ::           &
-       C_PROFILING_SM_REDUCE,         &
-       C_PROFILING_SM_NRM2
-
 contains
   
   subroutine submesh_null(sm)
@@ -726,6 +722,7 @@ contains
     logical, optional, intent(in) :: reduce
   
     integer :: is, m, ip
+    type(profile_t), save :: prof_sm_reduce
   
     PUSH_SUB(zzsubmesh_to_mesh_dotp)
   
@@ -752,9 +749,9 @@ contains
     end if
   
     if(optional_default(reduce, .true.) .and. this%mesh%parallel_in_domains) then
-      call profiling_in(C_PROFILING_SM_REDUCE, "SM_REDUCE")
+      call profiling_in(prof_sm_reduce, "SM_REDUCE_DOTP")
       call comm_allreduce(this%mesh%vp%comm, dotp)
-      call profiling_out(C_PROFILING_SM_REDUCE)
+      call profiling_out(prof_sm_reduce)
     end if 
  
     POP_SUB(zzsubmesh_to_mesh_dotp)

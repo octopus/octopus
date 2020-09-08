@@ -74,8 +74,6 @@ module cube_function_oct_m
     type(accel_mem_t) :: fourier_space_buffer
   end type cube_function_t
 
-  type(profile_t), save :: prof_m2c, prof_c2m
-  
 contains
 
   ! ---------------------------------------------------------

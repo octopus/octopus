@@ -141,8 +141,6 @@ module nl_operator_oct_m
   integer :: cfunction_global = -1  
   integer :: function_opencl
 
-  type(profile_t), save :: operate_batch_prof
-
 contains
   
   ! ---------------------------------------------------------

@@ -28,6 +28,7 @@ subroutine X(vec_ghost_update)(vp, v_local)
 
   R_TYPE,  allocatable :: ghost_send(:)
   integer              :: nsend
+  type(profile_t), save :: prof_update
   
   call profiling_in(prof_update, TOSTRING(X(GHOST_UPDATE)))
 
@@ -60,6 +61,7 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
   type(pv_handle_batch_t),  intent(out)   :: handle
 
   integer :: ipart, pos, ii, tag, nn, offset
+  type(profile_t), save :: prof_start, prof_irecv, prof_isend
 
   call profiling_in(prof_start, TOSTRING(X(GHOST_UPDATE_START)))
   PUSH_SUB(X(ghost_update_batch_start))
@@ -72,6 +74,7 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
 
   SAFE_ALLOCATE(handle%requests(1:2*vp%npart*v_local%nst_linear))
 
+  call profiling_in(prof_irecv, TOSTRING(X(GHOST_UPDATE_IRECV)))
   ! first post the receptions
   select case(v_local%status())
 
@@ -129,6 +132,7 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
     end do
 
   end select
+  call profiling_out(prof_irecv)
 
   call X(batch_init)(handle%ghost_send, v_local%dim, 1, v_local%nst, subarray_size(vp%ghost_spoints), &
     packed=v_local%status()==BATCH_PACKED)
@@ -148,6 +152,7 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
     end if
   end if
 
+  call profiling_in(prof_isend, TOSTRING(X(GHOST_UPDATE_ISEND)))
   select case(v_local%status())
 
   case(BATCH_DEVICE_PACKED)
@@ -187,6 +192,7 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
       end do
     end do
   end select
+  call profiling_out(prof_isend)
 
   POP_SUB(X(ghost_update_batch_start))
   call profiling_out(prof_start)
@@ -199,6 +205,7 @@ subroutine X(ghost_update_batch_finish)(handle)
   type(pv_handle_batch_t),  intent(inout)   :: handle
 
   integer, allocatable :: status(:, :)
+  type(profile_t), save :: prof_wait
 
   call profiling_in(prof_wait, TOSTRING(X(GHOST_UPDATE_WAIT)))
   PUSH_SUB(X(ghost_update_batch_finish))
@@ -244,6 +251,10 @@ subroutine X(boundaries_set_batch)(boundaries, ffb, phase_correction)
   CMPLX,  optional,       intent(in)    :: phase_correction(:)
 
   integer :: bndry_start, bndry_end
+  type(profile_t), save :: set_bc_prof
+  type(profile_t), save :: set_bc_comm_prof
+  type(profile_t), save :: set_bc_precomm_prof
+  type(profile_t), save :: set_bc_postcomm_prof
 
   PUSH_SUB(X(boundaries_set_batch))
   call profiling_in(set_bc_prof, TOSTRING(X(SET_BC)))

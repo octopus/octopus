@@ -40,6 +40,7 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
   integer, parameter :: logldf = 1
 #endif
   integer :: nri_loc, ini
+  type(profile_t), save :: operate_batch_prof
   
   PUSH_SUB(X(nl_operator_operate_batch))
 
