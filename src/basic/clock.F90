@@ -243,7 +243,7 @@ contains
 
     PUSH_SUB(clock_is_earlier)
 
-    is_earlier = clock_a%get_tick() < clock_b%get_tick()
+    is_earlier = clock_a%tick * clock_a%granularity < clock_b%tick * clock_b%granularity
 
     POP_SUB(clock_is_earlier)
   end function clock_is_earlier
@@ -254,7 +254,7 @@ contains
 
     PUSH_SUB(clock_is_later)
 
-    is_later = clock_a%get_tick() > clock_b%get_tick()
+    is_later = clock_a%tick * clock_a%granularity > clock_b%tick * clock_b%granularity
 
     POP_SUB(clock_is_later)
   end function clock_is_later
@@ -265,7 +265,7 @@ contains
 
     PUSH_SUB(clock_is_equal_or_earlier)
 
-    is_earlier = clock_a%get_tick() <= clock_b%get_tick()
+    is_earlier = clock_a%tick * clock_a%granularity <= clock_b%tick * clock_b%granularity
 
     POP_SUB(clock_is_equal_or_earlier)
   end function clock_is_equal_or_earlier
@@ -276,7 +276,7 @@ contains
 
     PUSH_SUB(clock_is_equal_or_later)
 
-    is_later = clock_a%get_tick() >= clock_b%get_tick()
+    is_later = clock_a%tick * clock_a%granularity >= clock_b%tick * clock_b%granularity
 
     POP_SUB(clock_is_equal_or_later)
   end function clock_is_equal_or_later
