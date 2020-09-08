@@ -39,6 +39,19 @@ module quantity_oct_m
     CHARGE                       = 10,  &
     MAX_QUANTITIES               = 10
 
+  character(len=17), public, parameter :: QUANTITY_LABEL(MAX_QUANTITIES) = (/ &
+    "position        ", &
+    "velocity        ", &
+    "current         ", &
+    "density         ", &
+    "scalar potential", &
+    "vector potential", &
+    "E field         ", &
+    "B field         ", &
+    "mass            ", &
+    "charge          "  &
+    /)
+
   !> Systems can expose quantities that can be used to calculate interactions
   !! with other systems.
   !!

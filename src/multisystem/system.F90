@@ -365,14 +365,14 @@ contains
               call partner%update_exposed_quantity(q_id, requested_time)
 
               if (debug%info) then
-                write(message(1), '(a,i3)') "Debug: ---- Updated exposed quantity ", q_id
+                write(message(1), '(a,a)') "Debug: ---- Updated exposed quantity ", trim(QUANTITY_LABEL(q_id))
                 write(message(2), '(a,i3,a,i3)') "Debug: ------ Requested time is ", requested_time%get_tick(), &
                   ", quantity time is ", partner%quantities(q_id)%clock%get_tick()
                 call messages_info(2)
               end if
             else
               if (debug%info) then
-                write(message(1), '(a,i3)') "Debug: ---- Did not update exposed quantity ", q_id
+                write(message(1), '(a,a)') "Debug: ---- Did not update exposed quantity ", trim(QUANTITY_LABEL(q_id))
                 write(message(2), '(a,i3,a,i3,a,i3)') "Debug: ------ Requested time is ", requested_time%get_tick(), &
                   ", quantity time is ", partner%quantities(q_id)%clock%get_tick(), &
                   " and partner propagator time is ", partner%prop%clock%get_tick()
@@ -381,7 +381,7 @@ contains
             end if
           else
             if (debug%info) then
-              write(message(1), '(a,i3,a)') "Debug: ---- Skip update of quantity ", q_id, " as it is protected"
+              write(message(1), '(a,a,a)') "Debug: ---- Skip update of quantity ", trim(QUANTITY_LABEL(q_id)), " as it is protected"
               write(message(2), '(a,i3,a,i3)') "Debug: ------ Requested time is ", requested_time%get_tick(), &
                 ", quantity time is ", partner%quantities(q_id)%clock%get_tick()
               call messages_info(2)
