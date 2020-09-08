@@ -153,7 +153,8 @@ module lalg_basic_oct_m
     module procedure trmm_1_4
   end interface lalg_trmm
 
-  type(profile_t), save :: axpy_profile, copy_profile, gemv_profile, symv_profile
+  type(profile_t), save :: axpy_profile_2, copy_profile_2, gemv_profile_2, symv_profile_2
+  type(profile_t), save :: axpy_profile_4, copy_profile_4, gemv_profile_4, symv_profile_4
 
 contains
 

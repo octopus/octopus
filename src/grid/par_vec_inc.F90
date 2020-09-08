@@ -35,6 +35,7 @@ subroutine X(vec_scatter)(vp, root, v_local, v)
   integer              :: ii        !< Counter.
   integer, allocatable :: displs(:) !< Displacements for scatter.
   R_TYPE,  allocatable :: v_tmp(:)  !< Send buffer.
+  type(profile_t), save :: prof_scatter
 
   PUSH_SUB(X(vec_scatter))
   call profiling_in(prof_scatter, TOSTRING(X(VEC_SCATTER)))
@@ -148,6 +149,7 @@ subroutine X(vec_allgather)(vp, v, v_local)
   integer              :: ii        !< Counter.
   integer, allocatable :: displs(:) !< Displacements for scatter.
   R_TYPE,  allocatable :: v_tmp(:)  !< Receive buffer.
+  type(profile_t), save :: prof_allgather
 
   PUSH_SUB(X(vec_allgather))
   call profiling_in(prof_allgather, TOSTRING(X(VEC_ALLGATHER)))

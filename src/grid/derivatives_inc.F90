@@ -194,6 +194,7 @@ subroutine X(derivatives_grad)(der, ff, op_ff, ghost_update, set_bc)
 
   integer :: idir,ip
   logical :: set_bc_, ghost_update_
+  type(profile_t), save :: gradient_prof
 
   PUSH_SUB(X(derivatives_grad))
   call profiling_in(gradient_prof, TOSTRING(X(GRADIENT)))
@@ -233,6 +234,7 @@ subroutine X(derivatives_div)(der, ff, op_ff, ghost_update, set_bc)
   R_TYPE, allocatable :: tmp(:)
   R_TYPE, pointer     :: ff_uvw(:,:)
   integer             :: idir, ii, ip
+  type(profile_t), save :: divergence_prof
 
   PUSH_SUB(X(derivatives_div))
   call profiling_in(divergence_prof, TOSTRING(X(DIVERGENCE)))
@@ -287,6 +289,7 @@ subroutine X(derivatives_curl)(der, ff, op_ff, ghost_update, set_bc)
   integer, parameter  :: curl_dim(3) = (/-1, 1, 3/)
   R_TYPE, allocatable :: tmp(:)
   integer             :: ii, np
+  type(profile_t), save :: curl_prof
 
   PUSH_SUB(X(derivatives_curl))
   call profiling_in(curl_prof, TOSTRING(X(CURL)))
@@ -658,6 +661,7 @@ subroutine X(derivatives_batch_grad)(der, ffb, opffb, ghost_update, set_bc)
 
   integer :: idir
   logical :: set_bc_, ghost_update_
+  type(profile_t), save :: batch_gradient_prof
 
   PUSH_SUB(X(derivatives_batch_grad))
   call profiling_in(batch_gradient_prof, TOSTRING(X(BATCH_GRADIENT)))
@@ -803,6 +807,7 @@ subroutine X(derivatives_batch_curl)(der, ffb, gradb, ghost_update, set_bc)
 
   class(batch_t), pointer :: gradb_(:)
   integer :: idir
+  type(profile_t), save :: curl_batch_prof
 
   PUSH_SUB(X(derivatives_batch_curl))
   call profiling_in(curl_batch_prof, TOSTRING(X(CURL_BATCH)))

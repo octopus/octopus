@@ -28,6 +28,7 @@ subroutine X(vec_ghost_update)(vp, v_local)
 
   R_TYPE,  allocatable :: ghost_send(:)
   integer              :: nsend
+  type(profile_t), save :: prof_update
   
   call profiling_in(prof_update, TOSTRING(X(GHOST_UPDATE)))
 
@@ -60,6 +61,7 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
   type(pv_handle_batch_t),  intent(out)   :: handle
 
   integer :: ipart, pos, ii, tag, nn, offset
+  type(profile_t), save :: prof_start
 
   call profiling_in(prof_start, TOSTRING(X(GHOST_UPDATE_START)))
   PUSH_SUB(X(ghost_update_batch_start))
@@ -199,6 +201,7 @@ subroutine X(ghost_update_batch_finish)(handle)
   type(pv_handle_batch_t),  intent(inout)   :: handle
 
   integer, allocatable :: status(:, :)
+  type(profile_t), save :: prof_wait
 
   call profiling_in(prof_wait, TOSTRING(X(GHOST_UPDATE_WAIT)))
   PUSH_SUB(X(ghost_update_batch_finish))
@@ -244,6 +247,10 @@ subroutine X(boundaries_set_batch)(boundaries, ffb, phase_correction)
   CMPLX,  optional,       intent(in)    :: phase_correction(:)
 
   integer :: bndry_start, bndry_end
+  type(profile_t), save :: set_bc_prof
+  type(profile_t), save :: set_bc_comm_prof
+  type(profile_t), save :: set_bc_precomm_prof
+  type(profile_t), save :: set_bc_postcomm_prof
 
   PUSH_SUB(X(boundaries_set_batch))
   call profiling_in(set_bc_prof, TOSTRING(X(SET_BC)))
