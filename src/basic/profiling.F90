@@ -108,6 +108,8 @@ module profiling_oct_m
     logical                  :: initialized = .false.
     logical                  :: active = .false.
     logical                  :: exclude
+    integer                  :: number_children
+    integer                  :: children(MAX_PROFILES)
   end type profile_t
 
   type profile_pointer_t
@@ -168,6 +170,7 @@ module profiling_oct_m
     logical                  :: all_nodes
 
     logical                  :: output_yaml
+    logical                  :: output_tree
   end type profile_vars_t
 
   type(profile_vars_t), target, public :: prof_vars
@@ -306,6 +309,16 @@ contains
     !%End
     call parse_variable(namespace, 'ProfilingOutputYAML', .false., prof_vars%output_yaml)
 
+    !%Variable ProfilingOutputTree
+    !%Default no
+    !%Type logical
+    !%Section Execution::Optimization
+    !%Description
+    !% This variable controls whether the profiling output is additionally
+    !% written as a tree.
+    !%End
+    call parse_variable(namespace, 'ProfilingOutputTree', .false., prof_vars%output_tree)
+
     call profiling_in(C_PROFILING_COMPLETE_RUN, 'COMPLETE_RUN')
 
     POP_SUB(profiling_init)
@@ -435,6 +448,8 @@ contains
     this%tr_count_child        = M_ZERO
     this%active = .false.
     nullify(this%parent)
+    this%number_children       = 0
+    this%children              = 0
 
     if(.not. in_profiling_mode) then
       POP_SUB(profile_init)
@@ -447,6 +462,14 @@ contains
 
     prof_vars%profile_list(prof_vars%last_profile)%p => this
     this%initialized = .true.
+
+    ! add the current profile as a child to the currently active profile
+    if(associated(prof_vars%current%p)) then
+      associate (parent => prof_vars%current%p)
+        parent%number_children = parent%number_children + 1
+        parent%children(parent%number_children) = prof_vars%last_profile
+      end associate
+    end if 
 
     POP_SUB(profile_init)
   end subroutine profile_init
@@ -978,8 +1001,61 @@ contains
 
     SAFE_DEALLOCATE_A(selftime)
     SAFE_DEALLOCATE_A(position)
+
+    if(prof_vars%output_tree) then
+      filename = trim(prof_vars%output_dir)//'/time.'//prof_vars%file_number//'.tree'
+      iunit = io_open(trim(filename), namespace, action='write')
+      if(iunit < 0) then
+        message(1) = 'Failed to open file ' // trim(filename) // ' to write profiling results.'
+        call messages_warning(1)
+        POP_SUB(profiling_output)
+        return
+      end if
+      write(iunit, '(a29,a25,a11,a11)')         &
+        "Tree level, percent of total time", &
+        "Region                    ", &
+        "  Full time", "  Self time"
+
+      call output_tree_level(C_PROFILING_COMPLETE_RUN, 0, total_time, iunit)
+      call io_close(iunit)
+    end if
     
     POP_SUB(profiling_output)
+    contains
+      ! Traverse the tree depth-first, pre-order
+      ! 
+      ! Because the children are added at initialization of the profiles,
+      ! each profile is the children of the first parent it occured as the
+      ! initialization happens at the first call of profile_init. This means
+      ! that a profile at deeper levels of the tree can contain data from
+      ! different parents. This is not captured by the simple tree data
+      ! structure because it is in principle a graph. Displaying that would
+      ! be much more difficult, however.
+      recursive subroutine output_tree_level(profile, level, total_time, iunit)
+        type(profile_t), intent(in) :: profile
+        integer,         intent(in) :: level
+        FLOAT,           intent(in) :: total_time
+        integer,         intent(in) :: iunit
+
+        integer :: ichild, width
+
+        PUSH_SUB(profiling_output.output_tree_level)
+        width = 20
+        ! print out information on current node with the first marker
+        ! placed according to the level of the tree
+        write(iunit, '(a,f7.2,a,a,a25,e11.3,e11.3)')         &
+             repeat('-', level) // '| ', &
+             profile_total_time(profile)/total_time * 100, "% ", &
+             repeat(' ', width-level-2), &
+             profile_label(profile), profile_total_time(profile), &
+             profile_self_time(profile)
+        ! loop over children
+        do ichild = 1, profile%number_children
+          call output_tree_level(prof_vars%profile_list(profile%children(ichild))%p, &
+            level+1, total_time, iunit)
+        end do
+        POP_SUB(profiling_output.output_tree_level)
+      end subroutine output_tree_level
   end subroutine profiling_output
 
 
