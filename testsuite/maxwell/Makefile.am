@@ -27,6 +27,8 @@ dist_share_DATA =                                                   \
         02-external-current.test                                    \
         02-external-current.01-gaussian_current_pulse.inp           \
         02-external-current.02-gaussian_current_pulse_with_pml.inp  \
-        02-external-current.03-gaussian_current_pulse_with_mask.inp
+        02-external-current.03-gaussian_current_pulse_with_mask.inp \
+        03-linear-medium.test                                       \
+	03-linear-medium.01-cosinoidal_pulse_td.inp
 
 CLEANFILES = *~ *.bak
