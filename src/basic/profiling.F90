@@ -108,8 +108,9 @@ module profiling_oct_m
     logical                  :: initialized = .false.
     logical                  :: active = .false.
     logical                  :: exclude
-    integer                  :: number_children
-    integer                  :: children(MAX_PROFILES)
+    integer                  :: index
+    logical                  :: has_child(MAX_PROFILES)
+    FLOAT                    :: timings(MAX_PROFILES)
   end type profile_t
 
   type profile_pointer_t
@@ -448,8 +449,9 @@ contains
     this%tr_count_child        = M_ZERO
     this%active = .false.
     nullify(this%parent)
-    this%number_children       = 0
-    this%children              = 0
+    this%has_child = .false.
+    this%timings = M_ZERO
+    this%index = 0
 
     if(.not. in_profiling_mode) then
       POP_SUB(profile_init)
@@ -461,15 +463,8 @@ contains
     ASSERT(prof_vars%last_profile  <=  MAX_PROFILES)
 
     prof_vars%profile_list(prof_vars%last_profile)%p => this
+    this%index = prof_vars%last_profile
     this%initialized = .true.
-
-    ! add the current profile as a child to the currently active profile
-    if(associated(prof_vars%current%p)) then
-      associate (parent => prof_vars%current%p)
-        parent%number_children = parent%number_children + 1
-        parent%children(parent%number_children) = prof_vars%last_profile
-      end associate
-    end if 
 
     POP_SUB(profile_init)
   end subroutine profile_init
@@ -516,6 +511,7 @@ contains
     if(associated(prof_vars%current%p)) then
       !keep a pointer to the parent
       this%parent => prof_vars%current%p
+      this%parent%has_child(this%index) = .true.
     else 
       !we are orphans
       nullify(this%parent)
@@ -590,6 +586,8 @@ contains
         + this%op_count_current + this%op_count_child_current
       this%parent%tr_count_child_current = this%parent%tr_count_child_current &
         + this%tr_count_current + this%tr_count_child_current
+
+      this%parent%timings(this%index) = this%parent%timings(this%index) + time_spent
 
       !and set parent as current
       prof_vars%current%p => this%parent
@@ -1011,12 +1009,19 @@ contains
         POP_SUB(profiling_output)
         return
       end if
-      write(iunit, '(a29,a25,a11,a11)')         &
-        "Tree level, percent of total time", &
+      write(iunit, '(a39,a25,a11)')         &
+        "Tree level, % of total, % of parent    ", &
         "Region                    ", &
-        "  Full time", "  Self time"
+        "  Full time"
 
-      call output_tree_level(C_PROFILING_COMPLETE_RUN, 0, total_time, iunit)
+      ! output of top-level node
+      write(iunit, '(a,f7.2,a,f7.2,a,a,a25,e11.3)')         &
+           repeat('-', 0) // '| ',  100.0, "%  ", 100.0, "% ", &
+           repeat(' ', 18), profile_label(C_PROFILING_COMPLETE_RUN), &
+           total_time
+      call output_tree_level(C_PROFILING_COMPLETE_RUN, 1, total_time, iunit)
+      write(iunit, '(a)') "// modeline for vim to enable folding (put in ~/.vimrc: set modeline modelineexpr)"
+      write(iunit, '(a)') "// vim: fdm=expr fde=getline(v\:lnum)=~'.*\|.*'?len(split(getline(v\:lnum))[0])\:0"
       call io_close(iunit)
     end if
     
@@ -1041,18 +1046,21 @@ contains
 
         PUSH_SUB(profiling_output.output_tree_level)
         width = 20
-        ! print out information on current node with the first marker
-        ! placed according to the level of the tree
-        write(iunit, '(a,f7.2,a,a,a25,e11.3,e11.3)')         &
-             repeat('-', level) // '| ', &
-             profile_total_time(profile)/total_time * 100, "% ", &
-             repeat(' ', width-level-2), &
-             profile_label(profile), profile_total_time(profile), &
-             profile_self_time(profile)
         ! loop over children
-        do ichild = 1, profile%number_children
-          call output_tree_level(prof_vars%profile_list(profile%children(ichild))%p, &
-            level+1, total_time, iunit)
+        do ichild = 1, MAX_PROFILES
+          if (profile%has_child(ichild)) then
+            ! print out information on current child with the first marker
+            ! placed according to the level of the tree
+            write(iunit, '(a,f7.2,a,f7.2,a,a,a25,e11.3)')         &
+                 repeat('-', level) // '| ', &
+                 profile%timings(ichild)/total_time * 100, "%  ", &
+                 profile%timings(ichild)/profile%total_time * 100, "% ", &
+                 repeat(' ', width-level-2), &
+                 profile_label(prof_vars%profile_list(ichild)%p), &
+                 profile%timings(ichild)
+            call output_tree_level(prof_vars%profile_list(ichild)%p, &
+              level+1, total_time, iunit)
+          end if
         end do
         POP_SUB(profiling_output.output_tree_level)
       end subroutine output_tree_level
