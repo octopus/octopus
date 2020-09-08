@@ -250,6 +250,7 @@ contains
       hm%dim = hm%dim+1
     else if (hm%operator == FARADAY_AMPERE_MEDIUM) then
       hm%dim = 2*hm%dim
+      hm%medium_box = .true.
     end if
 
     !%Variable ExternalCurrent
@@ -478,14 +479,14 @@ contains
 
     else
       ! This part uses the old non-batch implementation
-      SAFE_ALLOCATE(rs_aux_in(1:hm%der%mesh%np_part, 1:3))
-      SAFE_ALLOCATE(rs_aux_out(1:hm%der%mesh%np, 1:3))
+      SAFE_ALLOCATE(rs_aux_in(1:hm%der%mesh%np_part, 1:hm%dim))
+      SAFE_ALLOCATE(rs_aux_out(1:hm%der%mesh%np, 1:hm%dim))
       call boundaries_set(hm%der%boundaries, psib)
-      do ii = 1, 3
+      do ii = 1, hm%dim
         call batch_get_state(psib, ii, hm%der%mesh%np_part, rs_aux_in(:, ii))
       end do
       call maxwell_hamiltonian_apply_fd(hm, hm%der, rs_aux_in, rs_aux_out)
-      do ii = 1, 3
+      do ii = 1, hm%dim
         call batch_set_state(hpsib, ii, hm%der%mesh%np, rs_aux_out(:, ii))
       end do
       SAFE_DEALLOCATE_A(rs_aux_in)
@@ -928,7 +929,7 @@ contains
   ! > Maxwell Hamiltonian including medium boxes
   subroutine maxwell_medium_boxes_calculation(hm, der, psi, oppsi)
     type(hamiltonian_mxll_t), intent(in)    :: hm
-     type(derivatives_t),      intent(in)    :: der
+    type(derivatives_t),      intent(in)    :: der
     CMPLX,                    intent(in)    :: psi(:,:)
     CMPLX,                    intent(inout) :: oppsi(:,:)
 
