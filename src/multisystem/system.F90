@@ -174,7 +174,7 @@ contains
     tdop = this%prop%get_td_operation()
 
     if (debug%info) then
-      write(message(1), '(a,a,1X,a)') "Debug: ", trim(propagator_step_debug_message(tdop)), trim(this%namespace%get())
+      write(message(1), '(a,a,1X,a)') "Debug: ", trim(propagator_step_debug_message(tdop)), "'" + trim(this%namespace%get()) + "'"
       call messages_info(1)
     end if
 
@@ -211,7 +211,7 @@ contains
       this%accumulated_loop_ticks = 0
 
       if (debug%info) then
-        write(message(1), '(a,i3,a)') "Debug: -- SCF iter ", this%prop%scf_count, " for " + trim(this%namespace%get())
+        write(message(1), '(a,i3,a)') "Debug: -- SCF iter ", this%prop%scf_count, " for '" + trim(this%namespace%get()) + "'"
         call messages_info(1)
       end if
 
@@ -220,7 +220,7 @@ contains
       ! Otherwise, we need check the tolerance
       if(this%prop%scf_count == this%prop%max_scf_count) then
         if (debug%info) then
-          message(1) = "Debug: -- Max SCF Iter reached for " + trim(this%namespace%get())
+          message(1) = "Debug: -- Max SCF Iter reached for '" + trim(this%namespace%get()) + "'"
           call messages_info(1)
         end if
         this%prop%inside_scf = .false.
@@ -229,7 +229,7 @@ contains
         ! We reset the pointer to the begining of the scf loop
         if(this%is_tolerance_reached(this%prop%scf_tol)) then
           if (debug%info) then
-            message(1) = "Debug: -- SCF tolerance reached for " + trim(this%namespace%get())
+            message(1) = "Debug: -- SCF tolerance reached for '" + trim(this%namespace%get()) + "'"
             call messages_info(1)
           end if
           this%prop%inside_scf = .false.
@@ -242,7 +242,7 @@ contains
           call this%reset_clocks(this%accumulated_loop_ticks)
           this%accumulated_loop_ticks = 0
           if (debug%info) then
-            write(message(1), '(a,i3,a)') "Debug: -- SCF iter ", this%prop%scf_count, " for " + trim(this%namespace%get())
+            write(message(1), '(a,i3,a,a)') "Debug: -- SCF iter ", this%prop%scf_count, " for '" + trim(this%namespace%get()), "'"
            call messages_info(1)
          end if
         end if
@@ -335,7 +335,7 @@ contains
     PUSH_SUB(system_update_exposed_quantities)
 
     if (debug%info) then
-      write(message(1), '(a,a)') "Debug: -- Updating exposed quantities for partner ", trim(partner%namespace%get())
+      write(message(1), '(a,a,a)') "Debug: -- Updating exposed quantities for partner '", trim(partner%namespace%get()), "'"
       call messages_info(1)
     end if
 
@@ -365,14 +365,14 @@ contains
               call partner%update_exposed_quantity(q_id, requested_time)
 
               if (debug%info) then
-                write(message(1), '(a,a)') "Debug: ---- Updated exposed quantity ", trim(QUANTITY_LABEL(q_id))
+                write(message(1), '(a,a,a)') "Debug: ---- Updated exposed quantity ", trim(QUANTITY_LABEL(q_id)), "'"
                 write(message(2), '(a,i3,a,i3)') "Debug: ------ Requested time is ", requested_time%get_tick(), &
                   ", quantity time is ", partner%quantities(q_id)%clock%get_tick()
                 call messages_info(2)
               end if
             else
               if (debug%info) then
-                write(message(1), '(a,a)') "Debug: ---- Did not update exposed quantity ", trim(QUANTITY_LABEL(q_id))
+                write(message(1), '(a,a,a)') "Debug: ---- Did not update exposed quantity '", trim(QUANTITY_LABEL(q_id)), "'"
                 write(message(2), '(a,i3,a,i3,a,i3)') "Debug: ------ Requested time is ", requested_time%get_tick(), &
                   ", quantity time is ", partner%quantities(q_id)%clock%get_tick(), &
                   " and partner propagator time is ", partner%prop%clock%get_tick()
@@ -381,7 +381,8 @@ contains
             end if
           else
             if (debug%info) then
-              write(message(1), '(a,a,a)') "Debug: ---- Skip update of quantity ", trim(QUANTITY_LABEL(q_id)), " as it is protected"
+              write(message(1), '(a,a,a)') "Debug: ---- Skip update of quantity '", trim(QUANTITY_LABEL(q_id)), &
+                "' as it is protected"
               write(message(2), '(a,i3,a,i3)') "Debug: ------ Requested time is ", requested_time%get_tick(), &
                 ", quantity time is ", partner%quantities(q_id)%clock%get_tick()
               call messages_info(2)
@@ -427,7 +428,8 @@ contains
     end select
 
     if (debug%info) then
-      write(message(1), '(a,a)') "Debug: -- Finished updating exposed quantities for partner ", trim(partner%namespace%get())
+      write(message(1), '(a,a,a)') "Debug: -- Finished updating exposed quantities for partner '", &
+        trim(partner%namespace%get()), "'"
       call messages_info(1)
     end if
 
