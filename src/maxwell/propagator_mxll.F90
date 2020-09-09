@@ -690,7 +690,7 @@ contains
     CMPLX,                    intent(inout)      :: ff_rs_state(:,:)
     integer,                  intent(in)         :: sign
 
-    CMPLX, allocatable :: rs_state_plus(:,:), rs_state_minus(:,:)
+    CMPLX, allocatable :: rs_state_minus(:,:)
 
     ASSERT(sign == RS_TRANS_FORWARD .or. sign == RS_TRANS_BACKWARD)
 
