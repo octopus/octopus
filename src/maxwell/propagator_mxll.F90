@@ -430,13 +430,6 @@ contains
     end do
 
     ff_dim = hm%dim
-!    if (hm%operator == FARADAY_AMPERE_MEDIUM) then
-!      ff_dim = 6
-!    else if (hm%operator == FARADAY_AMPERE_GAUSS) then
-!      ff_dim = 4
-!    else
-!      ff_dim = 3
-!    end if
 
     ! intermediate step variables
     inter_steps   = tr%inter_steps
