@@ -1009,19 +1009,19 @@ contains
         POP_SUB(profiling_output)
         return
       end if
-      write(iunit, '(a39,a25,a11)')         &
+      write(iunit, '(a39,a25,a12)')         &
         "Tree level, % of total, % of parent    ", &
         "Region                    ", &
-        "  Full time"
+        "   Full time"
 
       ! output of top-level node
-      write(iunit, '(a,f7.2,a,f7.2,a,a,a25,e11.3)')         &
+      write(iunit, '(a,f7.2,a,f7.2,a,a,a25,f12.4)')         &
            repeat('-', 0) // '| ',  100.0, "%  ", 100.0, "% ", &
            repeat(' ', 18), profile_label(C_PROFILING_COMPLETE_RUN), &
            total_time
       call output_tree_level(C_PROFILING_COMPLETE_RUN, 1, total_time, iunit)
       write(iunit, '(a)') "// modeline for vim to enable folding (put in ~/.vimrc: set modeline modelineexpr)"
-      write(iunit, '(a)') "// vim: fdm=expr fde=getline(v\:lnum)=~'.*\|.*'?len(split(getline(v\:lnum))[0])\:0"
+      write(iunit, '(a)') "// vim: fdm=expr fde=getline(v\:lnum)=~'.*\|.*'?len(split(getline(v\:lnum))[0])-1\:0"
       call io_close(iunit)
     end if
     
@@ -1051,7 +1051,7 @@ contains
           if (profile%has_child(ichild)) then
             ! print out information on current child with the first marker
             ! placed according to the level of the tree
-            write(iunit, '(a,f7.2,a,f7.2,a,a,a25,e11.3)')         &
+            write(iunit, '(a,f7.2,a,f7.2,a,a,a25,f12.4)')         &
                  repeat('-', level) // '| ', &
                  profile%timings(ichild)/total_time * 100, "%  ", &
                  profile%timings(ichild)/profile%total_time * 100, "% ", &
