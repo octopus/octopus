@@ -1009,15 +1009,18 @@ contains
         POP_SUB(profiling_output)
         return
       end if
-      write(iunit, '(a39,a25,a12)')         &
-        "Tree level, % of total, % of parent    ", &
-        "Region                    ", &
+      write(iunit, '(a40,a11,a11,a12)') &
+        "Tree level, region                      ", &
+        "% of total ", "% of parent", &
         "   Full time"
 
       ! output of top-level node
-      write(iunit, '(a,f7.2,a,f7.2,a,a,a25,f12.4)')         &
-           repeat('-', 0) // '| ',  100.0, "%  ", 100.0, "% ", &
-           repeat(' ', 18), profile_label(C_PROFILING_COMPLETE_RUN), &
+      write(iunit, '(a,a25,a,f8.2,a,f8.2,a,f12.4)') &
+           repeat('-', 0) // '| ', &
+           profile_label(C_PROFILING_COMPLETE_RUN), &
+           repeat(' ', 15-0-2), &
+           100.0, "%  ", &
+           100.0, "%  ", &
            total_time
       call output_tree_level(C_PROFILING_COMPLETE_RUN, 1, total_time, iunit)
       write(iunit, '(a)') "// modeline for vim to enable folding (put in ~/.vimrc: set modeline modelineexpr)"
@@ -1045,18 +1048,18 @@ contains
         integer :: ichild, width
 
         PUSH_SUB(profiling_output.output_tree_level)
-        width = 20
+        width = 15
         ! loop over children
         do ichild = 1, MAX_PROFILES
           if (profile%has_child(ichild)) then
             ! print out information on current child with the first marker
             ! placed according to the level of the tree
-            write(iunit, '(a,f7.2,a,f7.2,a,a,a25,f12.4)')         &
+            write(iunit, '(a,a25,a,f8.2,a,f8.2,a,f12.4)') &
                  repeat('-', level) // '| ', &
-                 profile%timings(ichild)/total_time * 100, "%  ", &
-                 profile%timings(ichild)/profile%total_time * 100, "% ", &
-                 repeat(' ', width-level-2), &
                  profile_label(prof_vars%profile_list(ichild)%p), &
+                 repeat(' ', width-level-2), &
+                 profile%timings(ichild)/total_time * 100, "%  ", &
+                 profile%timings(ichild)/profile%total_time * 100, "%  ", &
                  profile%timings(ichild)
             call output_tree_level(prof_vars%profile_list(ichild)%p, &
               level+1, total_time, iunit)
