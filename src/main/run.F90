@@ -23,6 +23,7 @@ module run_oct_m
   use accel_oct_m
   use casida_oct_m
   use em_resp_oct_m
+  use external_potential_oct_m
   use fft_oct_m
   use geom_opt_oct_m
   use global_oct_m
@@ -168,6 +169,9 @@ contains
     type is (electrons_t)
       call partners%add(systems)
     end select
+
+    !Loading the external potnetials as interaction partners
+    call load_external_potentials(partners, namespace)
 
     ! Create and initialize interactions
     call interactions_factory%create_interactions(systems, partners)
