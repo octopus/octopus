@@ -1031,14 +1031,6 @@ contains
     POP_SUB(profiling_output)
     contains
       ! Traverse the tree depth-first, pre-order
-      ! 
-      ! Because the children are added at initialization of the profiles,
-      ! each profile is the children of the first parent it occured as the
-      ! initialization happens at the first call of profile_init. This means
-      ! that a profile at deeper levels of the tree can contain data from
-      ! different parents. This is not captured by the simple tree data
-      ! structure because it is in principle a graph. Displaying that would
-      ! be much more difficult, however.
       recursive subroutine output_tree_level(profile, level, total_time, iunit)
         type(profile_t), intent(in) :: profile
         integer,         intent(in) :: level
