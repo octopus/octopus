@@ -519,17 +519,22 @@ contains
     CMPLX, allocatable ::  temp_state1(:,:), temp_state2(:,:)
     FLOAT, allocatable :: eigenval(:), bands(:,:)
     character(len=80) :: filename
-    integer :: it, ik, nst,ip, idim, ispin
+    integer :: it, ik, nst,ip, idim, ispin, ist, jst, ierr
     type(mesh_t) :: mesh
-    type(states_t) :: hm_st
+    type(states_t) :: gs_st
     FLOAT :: time_step, time
     type(scf_t) :: scf ! used for frozen_phonon
     integer :: ia, space_dim
     type(ion_dynamics_t) :: ions
     FLOAT, allocatable :: frozen_bands(:,:)
 
+    CMPLX, allocatable :: psi_i(:,:), psi_j(:,:), hpsi1(:,:), hpsi2(:,:), gmat(:,:) 
+    type(restart_t) :: restart
+!     FLOAT  :: tmp(4,2)
 
     PUSH_SUB(floquet_hamiltonian_init)
+
+
 
     mesh = gr%der%mesh
     nst = st%nst
@@ -575,9 +580,13 @@ contains
               frozen_bands(1:st%nst,1:gr%sb%kpoints%reduced%npoints) + &
                      M_ONE/this%F%nT*st%eigenval(1:st%nst,1:gr%sb%kpoints%reduced%npoints)
 
-         write(filename,'(I5)') it
-         filename = 'BO_bands_'//trim(adjustl(filename))
-         call states_write_bandstructure(FLOQUET_DIR, st%nst, st, gr%sb, filename)
+! tmp(1:4,it) = st%eigenval(1:4,1)
+
+         if(simul_box_is_periodic(gr%sb)) then
+           write(filename,'(I5)') it
+           filename = 'BO_bands_'//trim(adjustl(filename))
+           call states_write_bandstructure(FLOQUET_DIR, st%nst, st, gr%sb, filename)
+         end if
 
          call floquet_save_td_hamiltonian(this%td_hm(it), sys, it)
 
@@ -607,8 +616,80 @@ contains
 
      if(this%F%mode == FLOQUET_FROZEN_PHONON) then
         st%eigenval(1:st%nst,1:gr%sb%kpoints%reduced%npoints) = frozen_bands(1:st%nst,1:gr%sb%kpoints%reduced%npoints)
-        filename = 'frozen_bands'
-        call states_write_bandstructure(FLOQUET_DIR, st%nst, st, gr%sb, filename)
+        if(simul_box_is_periodic(gr%sb)) then
+          filename = 'frozen_bands'
+          call states_write_bandstructure(FLOQUET_DIR, st%nst, st, gr%sb, filename)
+        end if
+
+
+        call states_init(gs_st, gr, sys%geo)
+        call kpoints_distribute(gs_st%d,sys%mc)
+        call states_distribute_nodes(gs_st,sys%mc)
+        call states_exec_init(gs_st, sys%mc)
+        call states_densities_init(gs_st, sys%gr, sys%geo)
+        
+        
+        call states_allocate_wfns(gs_st, gr%mesh, wfs_type = TYPE_CMPLX)
+      
+        call restart_init(restart, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh, exact=.true.)
+
+        if(ierr == 0) call states_load(restart, gs_st, gr, ierr, label = ": gs")
+        if (ierr /= 0) then
+          message(1) = 'Unable to read ground-state wavefunctions.'
+          call messages_fatal(1)
+        end if
+        call restart_end(restart)
+        
+        ! Calculate the deformation potential matrix elements 
+        SAFE_ALLOCATE(gmat(1:gs_st%nst, 1:gs_st%d%nik))
+        SAFE_ALLOCATE(psi_i(1:gr%der%mesh%np_part,gs_st%d%dim)) 
+        SAFE_ALLOCATE(psi_j(1:gr%der%mesh%np_part,gs_st%d%dim)) 
+        SAFE_ALLOCATE(hpsi1(1:gr%der%mesh%np_part,gs_st%d%dim)) 
+        SAFE_ALLOCATE(hpsi2(1:gr%der%mesh%np_part,gs_st%d%dim)) 
+
+        do ist=gs_st%st_start,gs_st%st_end
+          gmat = M_z0
+
+          do ik=gs_st%d%kpt%start,gs_st%d%kpt%end
+
+            call states_get_state(gs_st,gr%der%mesh,ist,ik,psi_i)
+
+            call zhamiltonian_apply(this%td_hm(1), gr%der, psi_i, hpsi1, ist, ik)            
+            call zhamiltonian_apply(this%td_hm(2), gr%der, psi_i, hpsi2, ist, ik)                        
+
+
+            do jst=gs_st%st_start,gs_st%st_end
+              call states_get_state(gs_st,gr%der%mesh,jst,ik,psi_j)
+              
+              gmat(jst,ik) = zmf_dotp(gr%mesh, gs_st%d%dim, psi_j, hpsi1)
+              gmat(jst,ik) = gmat(jst,ik) - zmf_dotp(gr%mesh, st%d%dim, psi_j, hpsi2)
+            
+!               print *, ist, jst, gmat(jst,ik), tmp(jst,2)-tmp(jst,1), gmat(jst,ik)/(tmp(jst,2)-tmp(jst,1))
+            end do
+            
+          enddo
+          
+          if(gs_st%parallel_in_states .or. gs_st%d%kpt%parallel) then
+            call comm_allreduce(st%st_kpt_mpi_grp%comm, gmat(1:gs_st%nst, 1:gs_st%d%nik))
+          end if
+          
+          if(simul_box_is_periodic(gr%sb)) then
+            write(filename,'(a,i6)') 'Re_deformation_pot_i-', ist
+            call states_write_bandstructure(FLOQUET_DIR, gs_st%nst, gs_st, gr%sb, filename, vec = real(gmat))
+            write(filename,'(a,i6)') 'Im_deformation_pot_i-', ist
+            call states_write_bandstructure(FLOQUET_DIR, gs_st%nst, gs_st, gr%sb, filename, vec = aimag(gmat))
+          end if
+        enddo          
+
+        SAFE_DEALLOCATE_A(gmat)
+        SAFE_DEALLOCATE_A(psi_i)
+        SAFE_DEALLOCATE_A(psi_j)
+        SAFE_DEALLOCATE_A(hpsi1)
+        SAFE_DEALLOCATE_A(hpsi2)
+        
+        call states_deallocate_wfns(gs_st)
+        
+        call exit()
      end if
 
 
