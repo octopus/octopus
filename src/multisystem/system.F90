@@ -280,7 +280,7 @@ contains
     call iter%start(this%interactions)
     do while (iter%has_next())
       interaction => iter%get_next()
-      call interaction%init_clock(this%namespace%get(), this%prop%dt, smallest_algo_dt)
+      call interaction%init_clock(this%namespace%get(), this%prop%dt/this%prop%algo_steps, smallest_algo_dt)
     end do
 
     ! Required quantities clocks
@@ -343,7 +343,7 @@ contains
     class is (interaction_with_partner_t)
 
       if (partner%prop%inside_scf .or. &
-          partner%clock%is_earlier_with_step(requested_time)) then
+          partner%prop%clock%is_earlier_with_step(requested_time)) then
         ! we are inside an SCF cycle and therefore are not allowed to expose any quantities.
         ! or we are too much behind the requested time
         allowed_to_update = .false.
@@ -359,7 +359,9 @@ contains
 
           ! First update the exposed quantities that are not protected
           if (.not.partner%quantities(q_id)%protected) then
-            if (partner%quantities(q_id)%clock%get_tick() + 1 >= requested_time%get_tick()) then
+            if (.not. (partner%quantities(q_id)%clock == requested_time .or. &
+              (partner%quantities(q_id)%clock < requested_time .and. &
+              partner%quantities(q_id)%clock%is_later_with_step(requested_time)))) then
               ! We can update because the partner will reach this time in the next sub-timestep
               ! This is not a protected quantity, so we update it
               call partner%update_exposed_quantity(q_id, requested_time)
