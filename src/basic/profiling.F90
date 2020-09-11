@@ -311,14 +311,14 @@ contains
     call parse_variable(namespace, 'ProfilingOutputYAML', .false., prof_vars%output_yaml)
 
     !%Variable ProfilingOutputTree
-    !%Default no
+    !%Default yes
     !%Type logical
     !%Section Execution::Optimization
     !%Description
     !% This variable controls whether the profiling output is additionally
     !% written as a tree.
     !%End
-    call parse_variable(namespace, 'ProfilingOutputTree', .false., prof_vars%output_tree)
+    call parse_variable(namespace, 'ProfilingOutputTree', .true., prof_vars%output_tree)
 
     call profiling_in(C_PROFILING_COMPLETE_RUN, 'COMPLETE_RUN')
 
