@@ -280,7 +280,7 @@ contains
     call iter%start(this%interactions)
     do while (iter%has_next())
       interaction => iter%get_next()
-      call interaction%init_clock(this%namespace%get(), this%prop%dt, smallest_algo_dt)
+      call interaction%init_clock(this%namespace%get(), this%prop%dt/this%prop%algo_steps, smallest_algo_dt)
     end do
 
     ! Required quantities clocks
