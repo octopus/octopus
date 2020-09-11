@@ -1025,7 +1025,7 @@ contains
     type(profile_t), save :: prof
 
     PUSH_SUB(td_write_output)
-    call profiling_in(prof, "TD_WRITE_DATA")
+    call profiling_in(prof, "TD_WRITE_OUTPUT")
 
     ! now write down the rest
     write(filename, '(a,a,i7.7)') trim(outp%iter_dir),"td.", iter  ! name of directory
