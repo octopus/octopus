@@ -2417,6 +2417,7 @@ contains
     hm%medium_box_number = nr_of_boxes
 
     ip_in_max = 0
+    ip_bd_max = 0
     do il= 1, nr_of_boxes
       do idim = 1, 3
         bounds(1,idim) = hm%medium_box_center(idim,il) - hm%medium_box_size(idim,il)/M_TWO
