@@ -359,7 +359,9 @@ contains
 
           ! First update the exposed quantities that are not protected
           if (.not.partner%quantities(q_id)%protected) then
-            if (partner%quantities(q_id)%clock%get_tick() + 1 >= requested_time%get_tick()) then
+            if (.not. (partner%quantities(q_id)%clock == requested_time .or. &
+              (partner%quantities(q_id)%clock < requested_time .and. &
+              partner%quantities(q_id)%clock%is_later_with_step(requested_time)))) then
               ! We can update because the partner will reach this time in the next sub-timestep
               ! This is not a protected quantity, so we update it
               call partner%update_exposed_quantity(q_id, requested_time)
