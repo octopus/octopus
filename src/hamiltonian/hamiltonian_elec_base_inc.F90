@@ -356,6 +356,125 @@ subroutine X(hamiltonian_elec_base_magnetic)(this, mesh, der, std, ep, ispin, ps
   call profiling_out(prof_magnetic)
 end subroutine X(hamiltonian_elec_base_magnetic)
 
+! -----------------------------------------------------------------------------
+! This routine adds to the Hamiltonian the term
+! e\hbar/(8*m*c^2) \Pi \ldotp (\sigma \times E ) + (\sigma \times E ) \ldotp \Pi
+! where \Pi is the canonical momentum.
+! Only the contribution of the laser field is considered, as the contribution for the electron-ion
+! potential is already taken into account via the pseudopotential.
+! Assuming the dipole approximation for the external laser, as applying this term to the
+! accelerated wavefunction, this term reduces to
+! e\hbar/(4*m*c^2) \epsilon_{pqr} E_r \sigma_q \partial_p 
+subroutine X(hamiltonian_elec_base_field_spin_orbit)(this, mesh, der, std, ep, epsib, vpsib)
+  type(hamiltonian_elec_base_t),  intent(in)    :: this
+  type(mesh_t),                   intent(in)    :: mesh
+  type(derivatives_t),            intent(in)    :: der
+  type(states_elec_dim_t),        intent(in)    :: std
+  type(epot_t),                   intent(in)    :: ep
+  type(wfs_elec_t), target,       intent(in)    :: epsib
+  type(wfs_elec_t), target,       intent(inout) :: vpsib
+
+  integer :: ist, idim, ip
+  R_TYPE, allocatable :: epsi(:, :), vpsi(:, :), grad(:, :, :)
+  FLOAT :: Efield(1:MAX_DIM)
+  CMPLX :: cc
+  type(profile_t), save :: prof
+
+  if(std%ispin /= SPINORS) return
+
+  call profiling_in(prof, TOSTRING(X(FIELD_SO)))
+  PUSH_SUB(X(hamiltonian_elec_base_field_spin_orbit))
+
+  SAFE_ALLOCATE(epsi(1:mesh%np_part, 1:std%dim))
+  SAFE_ALLOCATE(vpsi(1:mesh%np, 1:std%dim))
+  SAFE_ALLOCATE(grad(1:mesh%np, 1:mesh%sb%dim, 1:std%dim))
+
+  do ist = 1, epsib%nst
+    call batch_get_state(epsib, ist, mesh%np_part, epsi)
+    call batch_get_state(vpsib, ist, mesh%np, vpsi)
+
+    do idim = 1, std%dim
+      call X(derivatives_grad)(der, epsi(:, idim), grad(:, :, idim), ghost_update = .false., set_bc = .false.)
+    end do
+
+    !TODO: use here the gyromagnetic ratio
+    cc = M_ONE/(M_FOUR*P_C**2)*(-M_zI)
+    efield(:) = this%uniform_electric_field(:)    
+
+    do ip = 1, mesh%np
+      vpsi(ip, 1) = vpsi(ip, 1) + cc*((-Efield(2))*grad(ip, 1, 1) + (-M_zI*Efield(3))*grad(ip, 1, 2) &
+                                       +Efield(1) *grad(ip, 2, 1) + (-Efield(3))*grad(ip, 2, 2) &
+                                       +(Efield(2)+M_zI*Efield(1))*grad(ip, 3, 2))
+      vpsi(ip, 2) = vpsi(ip, 2) + cc*(M_zI*Efield(3)*grad(ip, 1, 1) +  Efield(2)*grad(ip, 1, 2) &
+                                      +(-Efield(3))*grad(ip, 2, 1) - Efield(1)*grad(ip, 2, 2)   &
+                                      +(Efield(2)-M_zI*Efield(1))*grad(ip, 3, 1))
+    end do
+
+    call batch_set_state(vpsib, ist, mesh%np, vpsi)
+  end do
+
+  SAFE_DEALLOCATE_A(grad)
+  SAFE_DEALLOCATE_A(vpsi)
+  SAFE_DEALLOCATE_A(epsi)
+  
+  POP_SUB(X(hamiltonian_elec_base_field_spin_orbit))
+  call profiling_out(prof)
+end subroutine X(hamiltonian_elec_base_field_spin_orbit)
+
+! ---------------------------------------------------------------------------------------
+! Commutator between the field-induced SO and the position operator
+! The commutator is treated analytically, using the fact that [r_i,p_j]=i\hbar\delta_{ij}
+! This leads to a term proportional to  \sigma x E, where m is the magnetization and E the electric field
+subroutine X(hamiltonian_elec_base_comm_field_spin_orbit)(this, mesh, der, std, ep, epsib, current)
+  type(hamiltonian_elec_base_t),  intent(in)    :: this
+  type(mesh_t),                   intent(in)    :: mesh
+  type(derivatives_t),            intent(in)    :: der
+  type(states_elec_dim_t),        intent(in)    :: std
+  type(epot_t),                   intent(in)    :: ep
+  type(wfs_elec_t), target,       intent(in)    :: epsib
+  FLOAT,                        intent(inout)   :: current(:, :, :) !< current(1:der%mesh%np_part, 1:der%mesh%sb%dim, 1:st%d%nspin)
+
+  integer :: ist, idim, ip
+  R_TYPE, allocatable :: epsi(:, :)
+  FLOAT :: Efield(1:MAX_DIM)
+  CMPLX :: cc
+  type(profile_t), save :: prof
+
+  if(std%ispin /= SPINORS) return
+
+  call profiling_in(prof, TOSTRING(X(FIELD_SO_COM)))
+  PUSH_SUB(X(hamiltonian_elec_base_comm_field_spin_orbit))
+
+  SAFE_ALLOCATE(epsi(1:mesh%np, 1:std%dim))
+
+  ASSERT(mesh%sb%dim == 3)
+  ASSERT(ep%reltype == FULL_SPIN_ORBIT)
+
+  do ist = 1, epsib%nst
+    call batch_get_state(epsib, ist, mesh%np, epsi)
+
+    !TODO: use here the gyromagnetic ratio
+    cc = M_ONE/(M_FOUR*P_C**2)
+    efield(:) = this%uniform_electric_field(:)
+
+    do ip = 1, mesh%np
+      current(ip, 1, 1) = current(ip, 1, 1) + cc*((-Efield(2))*epsi(ip, 1) + (-M_zI*Efield(3))*epsi(ip, 2))
+      current(ip, 1, 2) = current(ip, 1, 2) + cc*(M_zI*Efield(3)*epsi(ip, 1) +  Efield(2)*epsi(ip, 2))
+
+      current(ip, 2, 1) = current(ip, 2, 1) + cc*(Efield(1) *epsi(ip, 1) + (-Efield(3))*epsi(ip, 2))
+      current(ip, 2, 2) = current(ip, 2, 2) + cc*((-Efield(3))*epsi(ip, 1) - Efield(1)*epsi(ip, 2))
+
+      current(ip, 3, 1) = current(ip, 3, 1) + cc*((Efield(2)+M_zI*Efield(1))*epsi(ip, 2))
+      current(ip, 3, 2) = current(ip, 3, 2) + cc*((Efield(2)-M_zI*Efield(1))*epsi(ip, 1))
+    end do
+  end do
+
+  SAFE_DEALLOCATE_A(epsi)
+
+  POP_SUB(X(hamiltonian_elec_base_comm_field_spin_orbit))
+  call profiling_out(prof)
+end subroutine X(hamiltonian_elec_base_comm_field_spin_orbit)
+
 ! ---------------------------------------------------------------------------------------
 
 subroutine X(hamiltonian_elec_base_nlocal_start)(this, mesh, std, bnd, psib, projection)

@@ -61,7 +61,8 @@ module lasers_oct_m
     laser_set_frequency,          &
     laser_set_polarization,       &
     vlaser_operator_linear,       &
-    vlaser_operator_quadratic
+    vlaser_operator_quadratic,    &
+    laser_total_electric_field
 
 
   integer, public, parameter ::     &
@@ -733,11 +734,12 @@ contains
   ! ---------------------------------------------------------
   !> Returns a vector with the electric field, no matter whether the laser is described directly as
   !! an electric field, or with a vector potential in the velocity gauge.
-  subroutine laser_electric_field(laser, field, time, dt)
+  subroutine laser_electric_field(laser, field, time, dt, accumulate)
     type(laser_t),     intent(in)    :: laser
     FLOAT,             intent(inout) :: field(:)
     FLOAT,             intent(in)    :: time
     FLOAT,             intent(in)    :: dt
+    logical, optional, intent(in)    :: accumulate
 
     integer :: dim
     FLOAT, allocatable :: field1(:), field2(:)
@@ -746,9 +748,12 @@ contains
 
     dim = size(field)
 
+    if(optional_default(accumulate, .false.)) then
+      field = M_ZERO
+    end if
+
     select case(laser%field)
     case(E_FIELD_ELECTRIC)
-      field = M_ZERO
       call laser_field(laser, field(1:dim), time)
     case(E_FIELD_VECTOR_POTENTIAL)
       SAFE_ALLOCATE(field1(1:dim))
@@ -757,11 +762,11 @@ contains
       field2 = M_ZERO
       call laser_field(laser, field1(1:dim), time - dt)
       call laser_field(laser, field2(1:dim), time + dt)
-      field = - (field2 - field1) / (M_TWO * P_C * dt)
+      field = field - (field2 - field1) / (M_TWO * P_C * dt)
       SAFE_DEALLOCATE_A(field1)
       SAFE_DEALLOCATE_A(field2)
     case default
-      field = M_ZERO
+      !Do nothing here
     end select
 
   end subroutine laser_electric_field
@@ -991,6 +996,34 @@ contains
 
     POP_SUB(vlaser_operator_linear)
   end subroutine vlaser_operator_linear
+
+  subroutine laser_total_electric_field(lasers, field, time, dt)
+    type(laser_t),     intent(in)    :: lasers(:)
+    FLOAT,             intent(inout) :: field(:)
+    FLOAT,             intent(in)    :: time
+    FLOAT,             intent(in)    :: dt
+
+    integer :: no_l, il
+
+    PUSH_SUB(laser_total_electric_field)
+
+    no_l = size(lasers)
+
+    field = M_ZERO
+
+    do il = 1, no_l
+      call laser_electric_field(lasers(il), field, time, dt, accumulate=.true.)
+      !This is not supported by the routine laser_electric_field
+      ASSERT(lasers(il)%field /= E_FIELD_SCALAR_POTENTIAL)
+    end do
+
+    if(mpi_grp_is_root(mpi_world)) then
+      write(13,*) time, field
+    end if
+
+    POP_SUB(laser_total_electric_field)
+
+  end subroutine laser_total_electric_field
 
 end module lasers_oct_m
 

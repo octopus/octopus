@@ -236,6 +236,10 @@ subroutine X(hamiltonian_elec_apply_batch) (hm, namespace, mesh, psib, hpsib, te
     call X(lda_u_apply)(hm%lda_u, hm%d, mesh, epsib, hpsib)
   end if  
 
+  if(bitand(TERM_OTHERS, terms_) /= 0 .and. hm%ep%reltype == FULL_SPIN_ORBIT) then
+    call X(hamiltonian_elec_base_field_spin_orbit)(hm%hm_base, mesh, hm%der, hm%d, hm%ep, epsib, hpsib)
+  end if
+
   if(apply_phase .and. set_phase) then
     call hamiltonian_elec_base_phase(hm%hm_base, mesh, mesh%np, .true., hpsib)
     call epsib%end(copy = .false.)

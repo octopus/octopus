@@ -76,7 +76,8 @@ module epot_oct_m
      
   integer, public, parameter :: &
     NOREL      = 0,             &
-    SPIN_ORBIT = 1
+    SPIN_ORBIT = 1,             &
+    FULL_SPIN_ORBIT = 2 
 
   type epot_t
     ! Components are public by default
@@ -265,12 +266,16 @@ contains
     !% No relativistic corrections.
     !%Option spin_orbit 1
     !% Spin-orbit.
+    !%Option full_spin_orbit 2
+    !% The contribution from the laser field to the spin-orbit coupling term. 
+    !% This is different from <tt>spin_orbit</tt> which includes only 
+    !% the contribution from the pseudopotential.
     !%End
     call parse_variable(namespace, 'RelativisticCorrection', NOREL, ep%reltype)
     if(.not.varinfo_valid_option('RelativisticCorrection', ep%reltype)) then
       call messages_input_error(namespace, 'RelativisticCorrection')
     end if
-    if (ispin /= SPINORS .and. ep%reltype == SPIN_ORBIT) then
+    if (ispin /= SPINORS .and. ep%reltype >= SPIN_ORBIT) then
       message(1) = "The spin-orbit term can only be applied when using spinors."
       call messages_fatal(1, namespace=namespace)
     end if
@@ -285,7 +290,7 @@ contains
     !% Tuning of the spin-orbit coupling strength: setting this value to zero turns off spin-orbit terms in
     !% the Hamiltonian, and setting it to one corresponds to full spin-orbit.
     !%End
-    if (ep%reltype == SPIN_ORBIT) then
+    if (ep%reltype >= SPIN_ORBIT) then
       call parse_variable(namespace, 'SOStrength', M_ONE, ep%so_strength)
     else
       ep%so_strength = M_ONE

@@ -361,9 +361,9 @@ contains
     default = 10
     call parse_variable(namespace, 'TDEnergyUpdateIter', default, td%energy_update_iter)
 
-    if(gr%der%boundaries%spiralBC .and. hm%ep%reltype == SPIN_ORBIT) then
-       message(1) = "Generalized Bloch theorem cannot be used with spin-orbit coupling."
-       call messages_fatal(1, namespace=namespace)
+    if(gr%der%boundaries%spiralBC .and. hm%ep%reltype >= SPIN_ORBIT) then
+      message(1) = "Generalized Bloch theorem cannot be used with spin-orbit coupling."
+      call messages_fatal(1, namespace=namespace)
     end if
 
     if (gr%der%boundaries%spiralBC .and. any(abs(hm%ep%kick%easy_axis(1:2)) > M_EPSILON)) then

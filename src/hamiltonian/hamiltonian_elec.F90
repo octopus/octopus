@@ -1014,6 +1014,9 @@ contains
         end select
       end do
 
+      ! we get the uniform electric field coming from the lasers
+      call laser_total_electric_field(this%ep%lasers, this%hm_base%uniform_electric_field, time_, CNST(0.1))
+
       ! the gauge field
       if(gauge_field_is_applied(this%ep%gfield)) then
         call hamiltonian_elec_base_allocate(this%hm_base, mesh, FIELD_UNIFORM_VECTOR_POTENTIAL, .false.)

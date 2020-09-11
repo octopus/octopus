@@ -26,6 +26,7 @@ module current_oct_m
   use comm_oct_m
   use derivatives_oct_m
   use exchange_operator_oct_m
+  use epot_oct_m
   use geometry_oct_m
   use global_oct_m
   use hamiltonian_elec_base_oct_m
@@ -400,6 +401,11 @@ contains
             call zhamiltonian_elec_base_nlocal_position_commutator(hm%hm_base, der%mesh, st%d, &
                     der%boundaries, epsib, commpsib)
 
+            if(hm%ep%reltype == FULL_SPIN_ORBIT) then
+              call zhamiltonian_elec_base_comm_field_spin_orbit(hm%hm_base, der%mesh, der, st%d, hm%ep, &
+                      epsib, st%current)
+            end if
+
 
             call current_batch_accumulate(st, der, ik, ib, epsib, commpsib)
 
@@ -414,6 +420,8 @@ contains
         end do
 
       else
+
+        ASSERT(.not. hm%ep%reltype == FULL_SPIN_ORBIT)
 
         ! use the slow non-packed version
         

@@ -60,6 +60,10 @@ module hamiltonian_elec_base_oct_m
     zhamiltonian_elec_base_local_sub,               &
     dhamiltonian_elec_base_magnetic,                &
     zhamiltonian_elec_base_magnetic,                &
+    dhamiltonian_elec_base_field_spin_orbit,        &
+    zhamiltonian_elec_base_field_spin_orbit,        &
+    dhamiltonian_elec_base_comm_field_spin_orbit,   &
+    zhamiltonian_elec_base_comm_field_spin_orbit,   &
     dhamiltonian_elec_base_nlocal_start,            &
     zhamiltonian_elec_base_nlocal_start,            &
     dhamiltonian_elec_base_nlocal_finish,           &
@@ -98,6 +102,7 @@ module hamiltonian_elec_base_oct_m
     FLOAT,                    allocatable, public :: Impotential(:, :)
     FLOAT,                    allocatable, public :: uniform_magnetic_field(:)
     FLOAT,                    allocatable, public :: uniform_vector_potential(:)
+    FLOAT,                    allocatable, public :: uniform_electric_field(:)
     FLOAT,                    allocatable, public :: vector_potential(:, :)
     integer,                               public :: nprojector_matrices
     logical,                               public :: apply_projector_matrices
@@ -199,6 +204,7 @@ contains
     SAFE_DEALLOCATE_A(this%Impotential)
     SAFE_DEALLOCATE_A(this%vector_potential)
     SAFE_DEALLOCATE_A(this%uniform_vector_potential)
+    SAFE_DEALLOCATE_A(this%uniform_electric_field)
     SAFE_DEALLOCATE_A(this%uniform_magnetic_field)
     call hamiltonian_elec_base_destroy_proj(this)
 
@@ -220,6 +226,7 @@ contains
     if(allocated(this%potential))                this%potential = M_ZERO
     if(allocated(this%Impotential))              this%Impotential = M_ZERO
     if(allocated(this%uniform_vector_potential)) this%uniform_vector_potential = M_ZERO
+    if(allocated(this%uniform_electric_field))   this%uniform_electric_field = M_ZERO
     if(allocated(this%vector_potential))         this%vector_potential = M_ZERO
     if(allocated(this%uniform_magnetic_field))   this%uniform_magnetic_field = M_ZERO
 
@@ -269,6 +276,13 @@ contains
       if(.not. allocated(this%uniform_magnetic_field)) then
         SAFE_ALLOCATE(this%uniform_magnetic_field(1:max(mesh%sb%dim, 3)))
         this%uniform_magnetic_field = M_ZERO
+      end if
+    end if
+
+    if(bitand(FIELD_POTENTIAL, field) /= 0 .or. bitand(FIELD_UNIFORM_VECTOR_POTENTIAL, field) /= 0) then
+      if(.not. allocated(this%uniform_electric_field)) then
+        SAFE_ALLOCATE(this%uniform_electric_field(1:mesh%sb%dim))
+        this%uniform_electric_field = M_ZERO
       end if
     end if
 
@@ -575,10 +589,10 @@ contains
           end do
           
           call projector_matrix_allocate(pmat, epot%proj(iatom)%sphere%np, nmat, has_mix_matrix = .true., &
-                                            is_cmplx = (epot%reltype == SPIN_ORBIT) )
+                                            is_cmplx = (epot%reltype >= SPIN_ORBIT) )
 
           ! generate the matrix
-          if(epot%reltype == SPIN_ORBIT) then
+          if(epot%reltype >= SPIN_ORBIT) then
             pmat%zprojectors = M_ZERO
             pmat%zmix = M_ZERO
           else
@@ -594,7 +608,7 @@ contains
 
               ! HGH pseudos mix different components, so we need to
               ! generate a matrix that mixes the projections
-              if(epot%reltype == SPIN_ORBIT) then
+              if(epot%reltype >= SPIN_ORBIT) then
                 do ic = 1, 3
                   do jc = 1, 3
                     pmat%zmix(imat - 1 + ic, imat - 1 + jc, 1) = hgh_p%h(ic, jc) + M_HALF*mm*hgh_p%k(ic, jc)
@@ -618,7 +632,7 @@ contains
               end if
 
               do ic = 1, 3
-                if(epot%reltype == SPIN_ORBIT) then
+                if(epot%reltype >= SPIN_ORBIT) then
                   do ip = 1, pmat%npoints
                     pmat%zprojectors(ip, imat) = hgh_p%zp(ip, ic)
                   end do
