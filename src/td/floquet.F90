@@ -689,7 +689,6 @@ contains
         
         call states_deallocate_wfns(gs_st)
         
-        call exit()
      end if
 
 
