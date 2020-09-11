@@ -364,29 +364,12 @@ contains
               ! This is not a protected quantity, so we update it
               call partner%update_exposed_quantity(q_id, requested_time)
 
-              if (debug%info) then
-                write(message(1), '(a,a,a)') "Debug: ---- Updated exposed quantity ", trim(QUANTITY_LABEL(q_id)), "'"
-                write(message(2), '(a,f16.6,a,f16.6)') "Debug: ------ Requested time is ", requested_time%get_sim_time(), &
-                  ", quantity time is ", partner%quantities(q_id)%clock%get_sim_time()
-                call messages_info(2)
-              end if
+              call updated_quantity_debug()
             else
-              if (debug%info) then
-                write(message(1), '(a,a,a)') "Debug: ---- Did not update exposed quantity '", trim(QUANTITY_LABEL(q_id)), "'"
-                write(message(2), '(a,f16.6,a,f16.6,a,f16.6)') "Debug: ------ Requested time is ", requested_time%get_sim_time(), &
-                  ", quantity time is ", partner%quantities(q_id)%clock%get_sim_time(), &
-                  " and partner propagator time is ", partner%prop%clock%get_sim_time()
-                call messages_info(2)
-              end if
+              call not_updated_quantity_debug()
             end if
           else
-            if (debug%info) then
-              write(message(1), '(a,a,a)') "Debug: ---- Skip update of quantity '", trim(QUANTITY_LABEL(q_id)), &
-                "' as it is protected"
-              write(message(2), '(a,f16.6,a,f16.6)') "Debug: ------ Requested time is ", requested_time%get_sim_time(), &
-                ", quantity time is ", partner%quantities(q_id)%clock%get_sim_time()
-              call messages_info(2)
-            end if
+            call protected_quantity_debug()
           end if
 
 
@@ -434,6 +417,43 @@ contains
     end if
 
     POP_SUB(system_update_exposed_quantities)
+  contains
+
+    subroutine updated_quantity_debug()
+
+      if (debug%info) then
+        write(message(1), '(a,a,a)') "Debug: ---- Updated exposed quantity ", trim(QUANTITY_LABEL(q_id)), "'"
+        write(message(2), '(a,f16.6,a,f16.6)') "Debug: ------ Requested time is ", requested_time%get_sim_time(), &
+          ", quantity time is ", partner%quantities(q_id)%clock%get_sim_time()
+        call messages_info(2)
+      end if
+
+    end subroutine updated_quantity_debug
+
+    subroutine not_updated_quantity_debug()
+
+      if (debug%info) then
+        write(message(1), '(a,a,a)') "Debug: ---- Did not update exposed quantity '", trim(QUANTITY_LABEL(q_id)), "'"
+        write(message(2), '(a,f16.6,a,f16.6,a,f16.6)') "Debug: ------ Requested time is ", requested_time%get_sim_time(), &
+          ", quantity time is ", partner%quantities(q_id)%clock%get_sim_time(), &
+          " and partner propagator time is ", partner%prop%clock%get_sim_time()
+        call messages_info(2)
+      end if
+
+    end subroutine not_updated_quantity_debug
+
+    subroutine protected_quantity_debug()
+
+      if (debug%info) then
+        write(message(1), '(a,a,a)') "Debug: ---- Skip update of quantity '", trim(QUANTITY_LABEL(q_id)), &
+          "' as it is protected"
+        write(message(2), '(a,f16.6,a,f16.6)') "Debug: ------ Requested time is ", requested_time%get_sim_time(), &
+          ", quantity time is ", partner%quantities(q_id)%clock%get_sim_time()
+        call messages_info(2)
+      end if
+
+    end subroutine protected_quantity_debug
+
   end function system_update_exposed_quantities
 
   ! ---------------------------------------------------------
