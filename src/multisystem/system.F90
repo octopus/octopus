@@ -65,7 +65,6 @@ module system_oct_m
     type(mpi_grp_t), public :: grp  !< mpi group for this system
   contains
     procedure :: dt_operation =>  system_dt_operation
-    procedure :: init_clocks => system_init_clocks
     procedure :: reset_clocks => system_reset_clocks
     procedure :: update_exposed_quantities => system_update_exposed_quantities
     procedure :: init_propagator => system_init_propagator
@@ -259,36 +258,6 @@ contains
 
     POP_SUB(system_dt_operation)
   end subroutine system_dt_operation
-
-  ! ---------------------------------------------------------
-  subroutine system_init_clocks(this)
-    class(system_t), intent(inout) :: this
-
-    type(interaction_iterator_t) :: iter
-    class(interaction_t), pointer :: interaction
-
-    PUSH_SUB(system_init_clocks)
-
-    ! Internal clock
-    this%clock = clock_t(this%namespace%get(), this%prop%dt)
-
-    ! Propagator clock
-    this%prop%clock = clock_t(this%namespace%get(), this%prop%dt/this%prop%algo_steps)
-
-    ! Interaction clocks
-    call iter%start(this%interactions)
-    do while (iter%has_next())
-      interaction => iter%get_next()
-      call interaction%init_clock(this%namespace%get(), this%prop%dt/this%prop%algo_steps)
-    end do
-
-    ! Required quantities clocks
-    where (this%quantities%required)
-      this%quantities%clock = clock_t(this%namespace%get(), this%prop%dt/this%prop%algo_steps)
-    end where
-
-    POP_SUB(system_init_clocks)
-  end subroutine system_init_clocks
 
   ! ---------------------------------------------------------
   subroutine system_reset_clocks(this, accumulated_ticks)
@@ -621,6 +590,8 @@ contains
 
     integer :: prop
     FLOAT :: dt
+    type(interaction_iterator_t) :: iter
+    class(interaction_t), pointer :: interaction
 
     PUSH_SUB(system_init_propagator)
 
@@ -673,6 +644,24 @@ contains
     end select
 
     call this%prop%rewind()
+
+    ! Initialize propagator clock
+    this%prop%clock = clock_t(this%namespace%get(), this%prop%dt/this%prop%algo_steps)
+
+    ! Initialize system clock
+    this%clock = clock_t(this%namespace%get(), this%prop%dt)
+
+    ! Interaction clocks
+    call iter%start(this%interactions)
+    do while (iter%has_next())
+      interaction => iter%get_next()
+      call interaction%init_clock(this%namespace%get(), this%prop%dt/this%prop%algo_steps)
+    end do
+
+    ! Required quantities clocks
+    where (this%quantities%required)
+      this%quantities%clock = clock_t(this%namespace%get(), this%prop%dt/this%prop%algo_steps)
+    end where
 
     !%Variable InteractionTiming
     !%Type integer

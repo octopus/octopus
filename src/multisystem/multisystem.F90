@@ -45,7 +45,6 @@ module multisystem_oct_m
     type(system_list_t) :: list
   contains
     procedure :: dt_operation =>  multisystem_dt_operation
-    procedure :: init_clocks => multisystem_init_clocks
     procedure :: init_parallelization => multisystem_init_parallelization
     procedure :: reset_clocks => multisystem_reset_clocks
     procedure :: init_propagator => multisystem_init_propagator
@@ -194,24 +193,6 @@ contains
 
     POP_SUB(multisystem_dt_operation)
   end subroutine multisystem_dt_operation
-
-  ! ---------------------------------------------------------------------------------------
-  recursive subroutine multisystem_init_clocks(this)
-    class(multisystem_t), intent(inout) :: this
-
-    type(system_iterator_t) :: iter
-    class(system_t), pointer :: system
-
-    PUSH_SUB(multisystem_init_clocks)
-
-    call iter%start(this%list)
-    do while (iter%has_next())
-      system => iter%get_next()
-      call system%init_clocks()
-    end do
-
-    POP_SUB(multisystem_init_clocks)
-  end subroutine multisystem_init_clocks
 
   ! ---------------------------------------------------------------------------------------
   recursive subroutine multisystem_reset_clocks(this, accumulated_ticks)

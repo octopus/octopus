@@ -81,9 +81,6 @@ contains
     ! Initialize all propagators
     call systems%init_propagator()
 
-    ! Initialize all the clocks
-    call systems%init_clocks()
-
     ! Set initial conditions
     call systems%initial_conditions(from_scratch)
 
