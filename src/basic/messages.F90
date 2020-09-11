@@ -250,7 +250,7 @@ contains
     logical :: only_root_writes_, should_write
     integer, allocatable :: recv_buf(:), recv_req(:)
 #ifdef HAVE_MPI
-    integer, parameter :: FATAL_TAG = 1620299
+    integer, parameter :: FATAL_TAG = 32767
     logical :: received
     integer :: send_req
 #endif
