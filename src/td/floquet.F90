@@ -674,9 +674,9 @@ contains
           end if
           
           if(simul_box_is_periodic(gr%sb)) then
-            write(filename,'(a,i6)') 'Re_deformation_pot_i-', ist
+            write(filename,'(a,i0.6)') 'Re_deformation_pot_i-', ist
             call states_write_bandstructure(FLOQUET_DIR, gs_st%nst, gs_st, gr%sb, filename, vec = real(gmat))
-            write(filename,'(a,i6)') 'Im_deformation_pot_i-', ist
+            write(filename,'(a,i0.6)') 'Im_deformation_pot_i-', ist
             call states_write_bandstructure(FLOQUET_DIR, gs_st%nst, gs_st, gr%sb, filename, vec = aimag(gmat))
           end if
         enddo          
