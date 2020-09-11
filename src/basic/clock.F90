@@ -205,12 +205,12 @@ contains
   end function clock_subtract_tick
 
   ! ---------------------------------------------------------
-  integer function clock_get_tick(this) result(current_global_tick)
+  integer function clock_get_tick(this) result(tick)
     class(clock_t), intent(in) :: this
 
     PUSH_SUB(clock_get_tick)
 
-    current_global_tick = this%tick * this%granularity
+    tick = this%tick
 
     POP_SUB(clock_get_tick)
   end function clock_get_tick
