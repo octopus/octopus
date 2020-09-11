@@ -60,7 +60,7 @@ contains
 
     integer :: it, internal_loop
     integer, parameter :: MAX_PROPAGATOR_STEPS = 1000
-    FLOAT :: final_time, smallest_algo_dt
+    FLOAT :: final_time
 
     PUSH_SUB(time_dependent_run_multisystem)
 
@@ -78,12 +78,11 @@ contains
     end if
     call messages_print_var_value(stdout, 'TDPropagationTime', final_time)
 
-    ! Initialize all propagators and find the smallest time-step
-    smallest_algo_dt = CNST(1e10)
-    call systems%init_propagator(smallest_algo_dt)
+    ! Initialize all propagators
+    call systems%init_propagator()
 
     ! Initialize all the clocks
-    call systems%init_clocks(smallest_algo_dt)
+    call systems%init_clocks()
 
     ! Set initial conditions
     call systems%initial_conditions(from_scratch)

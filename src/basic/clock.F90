@@ -39,7 +39,6 @@ module clock_oct_m
   type clock_t
     private
     integer :: tick        !< internal clock counter which is incremented by one when the clock is advanced
-    integer :: granularity !< one clock tick corresponds to an advancement of 'granularity' steps on the finest scale in the system
     FLOAT   :: time_step   !< physical simulation time increment which corresponds to a single clock tick
     character(len=MAX_LABEL_LEN) :: label !< string used for printing and labelling the clock
 
@@ -79,17 +78,9 @@ contains
   !> Initialize the clock with a given label and associated physical time step.
   !! The internal clock counter starts at zero or if the optional argument initial_tick is given
   !! at the value of initial_tick.
-  !! When several clocks are used simultaneously, then smallest_dt is the smallest time step of
-  !! all the clocks, or equivalently the time step of the fastest ticking clock. If only a single
-  !! clock is used or all clocks run with the same time step, then smallest_dt is identical to
-  !! time_step. 
-  !! All clocks are compared on the finest scale. The granularity tells how many steps on the finest 
-  !! scale an increase of the clock tick corresponds to. In other words, it tells in which 'units'
-  !! an increment of the internal clock counter is counting the time on the finest scale.
-  !! So far the implementation assumes that all clocks in the system have commensurable time steps.
-  type(clock_t) function clock_init(label, time_step, smallest_dt, initial_tick) result(this)
+  type(clock_t) function clock_init(label, time_step, initial_tick) result(this)
     character(len=*), intent(in) :: label
-    FLOAT,            intent(in) :: time_step, smallest_dt
+    FLOAT,            intent(in) :: time_step
     integer, optional            :: initial_tick
 
     PUSH_SUB(clock_init)
@@ -101,14 +92,6 @@ contains
       write(message(2),'(a,i4,a)') 'Clock labels are limited to ', MAX_LABEL_LEN, ' characters'
       call messages_fatal(2)
     end if
-
-    if (ceiling(time_step/smallest_dt) == floor(time_step/smallest_dt)) then
-      this%granularity = ceiling(time_step/smallest_dt)
-    else
-      message(1) = 'Timesteps of the clocks are not commensurable.'
-      message(2) = 'Please adapt the time steps of your subsystems to make them compatible.'
-      call messages_fatal(2)
-    endif
 
     this%tick = optional_default(initial_tick, 0)
     this%time_step = time_step
@@ -123,17 +106,13 @@ contains
 
     PUSH_SUB(clock_print_str)
 
-    write(clock_string,'(A7,A12,A,F16.6,A,I8.8,A,I8.8,A,I8.8,A)') &
+    write(clock_string,'(A7,A12,A,F16.6,A,I8.8,A)') &
         '[Clock:',                   &
         trim(this%label),            &
         '|',                         &
         this%time_step*this%tick,    &
         '|',                         &
         this%tick,                   &
-        '|',                         &
-        this%granularity,            &
-        '|',                         &
-        this%tick*this%granularity,  &
         ']'
 
     POP_SUB(clock_print_str)
@@ -159,7 +138,6 @@ contains
     PUSH_SUB(clock_set_time)
 
     this%tick = clock_in%tick
-    this%granularity = clock_in%granularity
     this%time_step = clock_in%time_step
 
     POP_SUB(clock_set_time)

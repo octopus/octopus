@@ -261,9 +261,8 @@ contains
   end subroutine system_dt_operation
 
   ! ---------------------------------------------------------
-  subroutine system_init_clocks(this, smallest_algo_dt)
+  subroutine system_init_clocks(this)
     class(system_t), intent(inout) :: this
-    FLOAT,           intent(in)    :: smallest_algo_dt
 
     type(interaction_iterator_t) :: iter
     class(interaction_t), pointer :: interaction
@@ -271,21 +270,21 @@ contains
     PUSH_SUB(system_init_clocks)
 
     ! Internal clock
-    this%clock = clock_t(this%namespace%get(), this%prop%dt, smallest_algo_dt)
+    this%clock = clock_t(this%namespace%get(), this%prop%dt)
 
     ! Propagator clock
-    this%prop%clock = clock_t(this%namespace%get(), this%prop%dt/this%prop%algo_steps, smallest_algo_dt)
+    this%prop%clock = clock_t(this%namespace%get(), this%prop%dt/this%prop%algo_steps)
 
     ! Interaction clocks
     call iter%start(this%interactions)
     do while (iter%has_next())
       interaction => iter%get_next()
-      call interaction%init_clock(this%namespace%get(), this%prop%dt/this%prop%algo_steps, smallest_algo_dt)
+      call interaction%init_clock(this%namespace%get(), this%prop%dt/this%prop%algo_steps)
     end do
 
     ! Required quantities clocks
     where (this%quantities%required)
-      this%quantities%clock = clock_t(this%namespace%get(), this%prop%dt/this%prop%algo_steps, smallest_algo_dt)
+      this%quantities%clock = clock_t(this%namespace%get(), this%prop%dt/this%prop%algo_steps)
     end where
 
     POP_SUB(system_init_clocks)
@@ -617,9 +616,8 @@ contains
   end subroutine system_output_finish
 
   ! ---------------------------------------------------------
-  subroutine system_init_propagator(this, smallest_algo_dt)
+  subroutine system_init_propagator(this)
     class(system_t),      intent(inout) :: this
-    FLOAT,                intent(inout) :: smallest_algo_dt
 
     integer :: prop
     FLOAT :: dt
@@ -675,10 +673,6 @@ contains
     end select
 
     call this%prop%rewind()
-
-    ! Check if this propagators dt is smaller then the current smallest dt.
-    ! If so, replace the current smallest dt by the one from this propagator.
-    smallest_algo_dt = min(smallest_algo_dt, this%prop%dt/this%prop%algo_steps)
 
     !%Variable InteractionTiming
     !%Type integer

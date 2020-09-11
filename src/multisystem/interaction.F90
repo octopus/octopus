@@ -80,15 +80,14 @@ module interaction_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine interaction_init_clock(this, label, dt, algo_dt)
+  subroutine interaction_init_clock(this, label, dt)
     class(interaction_t),      intent(inout) :: this
     character(len=*),          intent(in)    :: label
     FLOAT,                     intent(in)    :: dt
-    FLOAT,                     intent(in)    :: algo_dt
 
     PUSH_SUB(interaction_init_clock)
 
-    this%clock = clock_t(label, dt, algo_dt, initial_tick=-1)
+    this%clock = clock_t(label, dt, initial_tick=-1)
 
     POP_SUB(interaction_init_clock)
   end subroutine interaction_init_clock

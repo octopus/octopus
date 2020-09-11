@@ -1046,8 +1046,8 @@ contains
 
     PUSH_SUB(test_clock)
 
-    test_clock_a = clock_t('test_clock_a', CNST(2.0), CNST(1.0), 100)
-    test_clock_b = clock_t('test_clock_b', CNST(1.0), CNST(1.0))
+    test_clock_a = clock_t('test_clock_a', CNST(2.0), 100)
+    test_clock_b = clock_t('test_clock_b', CNST(1.0))
     call test_clock_a%print()
     call test_clock_b%print()
 

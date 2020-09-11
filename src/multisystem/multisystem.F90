@@ -196,9 +196,8 @@ contains
   end subroutine multisystem_dt_operation
 
   ! ---------------------------------------------------------------------------------------
-  recursive subroutine multisystem_init_clocks(this, smallest_algo_dt)
+  recursive subroutine multisystem_init_clocks(this)
     class(multisystem_t), intent(inout) :: this
-    FLOAT,                intent(in)    :: smallest_algo_dt
 
     type(system_iterator_t) :: iter
     class(system_t), pointer :: system
@@ -208,7 +207,7 @@ contains
     call iter%start(this%list)
     do while (iter%has_next())
       system => iter%get_next()
-      call system%init_clocks(smallest_algo_dt)
+      call system%init_clocks()
     end do
 
     POP_SUB(multisystem_init_clocks)
@@ -234,9 +233,8 @@ contains
   end subroutine multisystem_reset_clocks
 
   ! ---------------------------------------------------------------------------------------
-  recursive subroutine multisystem_init_propagator(this, smallest_algo_dt)
+  recursive subroutine multisystem_init_propagator(this)
     class(multisystem_t),      intent(inout) :: this
-    FLOAT,                     intent(inout) :: smallest_algo_dt
 
     type(system_iterator_t) :: iter
     class(system_t), pointer :: system
@@ -246,7 +244,7 @@ contains
     call iter%start(this%list)
     do while (iter%has_next())
       system => iter%get_next()
-      call system%init_propagator(smallest_algo_dt)
+      call system%init_propagator()
     end do
 
     POP_SUB(multisystem_init_propagator)
