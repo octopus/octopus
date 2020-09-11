@@ -432,6 +432,8 @@ contains
   subroutine profile_init(this, label)
     type(profile_t), target, intent(out)   :: this
     character(*),            intent(in)    :: label 
+
+    integer :: iprofile
     
     PUSH_SUB(profile_init)
 
@@ -465,6 +467,15 @@ contains
     prof_vars%profile_list(prof_vars%last_profile)%p => this
     this%index = prof_vars%last_profile
     this%initialized = .true.
+
+    ! print out a warning if a name is used more than once
+    do iprofile = 1, prof_vars%last_profile - 1
+      if (prof_vars%profile_list(iprofile)%p%label == this%label) then
+        message(1) = "Info: label "//label//" used more than once."
+        call messages_info(1)
+        exit
+      end if
+    end do
 
     POP_SUB(profile_init)
   end subroutine profile_init
