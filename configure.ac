@@ -38,7 +38,7 @@ AC_PROG_LN_S
 AC_PROG_MAKE_SET
 AC_PROG_MKDIR_P
 
-LT_INIT([disable-static])
+LT_INIT([disable-shared])
 AC_SUBST([AM_CFLAGS], [-fPIC])
 AC_SUBST([AM_CXXFLAGS], [-fPIC])
 AC_SUBST([AM_FCFLAGS], [-fPIC])
