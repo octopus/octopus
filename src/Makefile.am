@@ -726,7 +726,7 @@ liboct_la_LIBADD = $(all_LIBS)
 
 #octopus_SOURCES = $(octopus_f_srcs) $(all_srcs)
 octopus_SOURCES = main/main.F90
-octopus_LDADD = $(oct_library)
+octopus_LDADD = $(oct_library) $(all_LIBS)
 octopus_LINK = $(FCLINK)
 
 
@@ -758,59 +758,59 @@ bin_PROGRAMS += @UTILITY_PROGRAMS@
 
 oct_propagation_spectrum_SOURCES = utils/propagation_spectrum.F90
 oct_propagation_spectrum_LINK = $(FCLINK)
-oct_propagation_spectrum_LDADD = $(oct_library)
+oct_propagation_spectrum_LDADD = $(oct_library) $(all_LIBS)
 
 oct_oscillator_strength_SOURCES = utils/oscillator_strength.F90
 oct_oscillator_strength_LINK = $(FCLINK)
-oct_oscillator_strength_LDADD = $(oct_library)
+oct_oscillator_strength_LDADD = $(oct_library) $(all_LIBS)
 
 oct_dielectric_function_SOURCES = utils/dielectric_function.F90
 oct_dielectric_function_LINK = $(FCLINK)
-oct_dielectric_function_LDADD = $(oct_library)
+oct_dielectric_function_LDADD = $(oct_library) $(all_LIBS)
 
 oct_harmonic_spectrum_SOURCES = utils/harmonic_spectrum.F90
 oct_harmonic_spectrum_LINK = $(FCLINK)
-oct_harmonic_spectrum_LDADD = $(oct_library)
+oct_harmonic_spectrum_LDADD = $(oct_library) $(all_LIBS)
 
 oct_photoelectron_spectrum_SOURCES = utils/photoelectron_spectrum.F90
 oct_photoelectron_spectrum_LINK = $(FCLINK)
-oct_photoelectron_spectrum_LDADD = $(oct_library)
+oct_photoelectron_spectrum_LDADD = $(oct_library) $(all_LIBS)
 
 oct_xyz_anim_SOURCES = utils/xyzanim.F90
 oct_xyz_anim_LINK = $(FCLINK)
-oct_xyz_anim_LDADD = $(oct_library)
+oct_xyz_anim_LDADD = $(oct_library) $(all_LIBS)
 
 oct_casida_spectrum_SOURCES = utils/casida_spectrum.F90
 oct_casida_spectrum_LINK = $(FCLINK)
-oct_casida_spectrum_LDADD = $(oct_library)
+oct_casida_spectrum_LDADD = $(oct_library) $(all_LIBS)
 
 oct_vibrational_spectrum_SOURCES = utils/vibrational.F90
 oct_vibrational_spectrum_LINK = $(FCLINK)
-oct_vibrational_spectrum_LDADD = $(oct_library)
+oct_vibrational_spectrum_LDADD = $(oct_library) $(all_LIBS)
 
 oct_infrared_spectrum_SOURCES = utils/infrared.F90
 oct_infrared_spectrum_LINK = $(FCLINK)
-oct_infrared_spectrum_LDADD = $(oct_library)
+oct_infrared_spectrum_LDADD = $(oct_library) $(all_LIBS)
 
 oct_center_geom_SOURCES = utils/centergeom.F90
 oct_center_geom_LINK = $(FCLINK)
-oct_center_geom_LDADD = $(oct_library)
+oct_center_geom_LDADD = $(oct_library) $(all_LIBS)
 
 oct_convert_SOURCES = utils/convert.F90
 oct_convert_LINK = $(FCLINK)
-oct_convert_LDADD = $(oct_library)
+oct_convert_LDADD = $(oct_library) $(all_LIBS)
 
 oct_local_multipoles_SOURCES = utils/local_multipoles.F90 utils/local_write.F90
 oct_local_multipoles_LINK = $(FCLINK)
-oct_local_multipoles_LDADD = $(oct_library)
+oct_local_multipoles_LDADD = $(oct_library) $(all_LIBS)
 
 oct_conductivity_SOURCES = utils/conductivity.F90
 oct_conductivity_LINK = $(FCLINK)
-oct_conductivity_LDADD = $(oct_library)
+oct_conductivity_LDADD = $(oct_library) $(all_LIBS)
 
 oct_help_SOURCES = utils/help.F90
 oct_help_LINK = $(FCLINK)
-oct_help_LDADD = $(oct_library)
+oct_help_LDADD = $(oct_library) $(all_LIBS)
 
 oct_floquet_SOURCES = utils/floquet.F90
 oct_floquet_LINK = $(FCLINK)
@@ -818,11 +818,11 @@ oct_floquet_LDADD = $(oct_library) $(all_LIBS)
 
 oct_spin_susceptibility_SOURCES = utils/spin_susceptibility.F90
 oct_spin_susceptibility_LINK = $(FCLINK)
-oct_spin_susceptibility_LDADD = $(oct_library)
+oct_spin_susceptibility_LDADD = $(oct_library) $(all_LIBS)
 
 oct_unfold_SOURCES = utils/unfold.F90
 oct_unfold_LINK = $(FCLINK)
-oct_unfold_LDADD = $(oct_library)
+oct_unfold_LDADD = $(oct_library) $(all_LIBS)
 
 utils_f_srcs = \
 	utils/casida_spectrum.F90        \
@@ -852,7 +852,7 @@ include/defaults.h: $(all_f_srcs) $(octopus_f_srcs) $(utils_f_srcs) $(noinst_HEA
 
 oct_wannier90_SOURCES = utils/wannier90_interface.F90 
 oct_wannier90_LINK = $(FCLINK)
-oct_wannier90_LDADD = $(oct_library)
+oct_wannier90_LDADD = $(oct_library) $(all_LIBS)
 
 
 # debug files from MacOS gcc with -g
