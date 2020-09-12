@@ -655,12 +655,12 @@ contains
     call iter%start(this%interactions)
     do while (iter%has_next())
       interaction => iter%get_next()
-      call interaction%init_clock(this%namespace%get(), this%prop%dt/this%prop%algo_steps)
+      interaction%clock = this%prop%clock - CLOCK_TICK
     end do
 
     ! Required quantities clocks
     where (this%quantities%required)
-      this%quantities%clock = clock_t(this%namespace%get(), this%prop%dt/this%prop%algo_steps)
+      this%quantities%clock = this%prop%clock
     end where
 
     !%Variable InteractionTiming

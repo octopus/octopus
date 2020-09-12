@@ -41,7 +41,6 @@ module interaction_oct_m
     type(clock_t), public :: clock !< Clock storing the time at which the interaction was last updated.
     character(len=:), public, allocatable :: label
   contains
-    procedure :: init_clock => interaction_init_clock
     procedure(interaction_update),    deferred :: update
     procedure(interaction_calculate), deferred :: calculate
   end type interaction_t
@@ -78,19 +77,6 @@ module interaction_oct_m
   end type interaction_iterator_t
 
 contains
-
-  ! ---------------------------------------------------------
-  subroutine interaction_init_clock(this, label, dt)
-    class(interaction_t),      intent(inout) :: this
-    character(len=*),          intent(in)    :: label
-    FLOAT,                     intent(in)    :: dt
-
-    PUSH_SUB(interaction_init_clock)
-
-    this%clock = clock_t(label, dt, initial_tick=-1)
-
-    POP_SUB(interaction_init_clock)
-  end subroutine interaction_init_clock
 
   ! ---------------------------------------------------------
   subroutine interaction_end(this)
