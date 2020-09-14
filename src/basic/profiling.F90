@@ -108,6 +108,9 @@ module profiling_oct_m
     logical                  :: initialized = .false.
     logical                  :: active = .false.
     logical                  :: exclude
+    integer                  :: index
+    logical                  :: has_child(MAX_PROFILES)
+    FLOAT                    :: timings(MAX_PROFILES)
   end type profile_t
 
   type profile_pointer_t
@@ -168,6 +171,7 @@ module profiling_oct_m
     logical                  :: all_nodes
 
     logical                  :: output_yaml
+    logical                  :: output_tree
   end type profile_vars_t
 
   type(profile_vars_t), target, public :: prof_vars
@@ -306,6 +310,16 @@ contains
     !%End
     call parse_variable(namespace, 'ProfilingOutputYAML', .false., prof_vars%output_yaml)
 
+    !%Variable ProfilingOutputTree
+    !%Default yes
+    !%Type logical
+    !%Section Execution::Optimization
+    !%Description
+    !% This variable controls whether the profiling output is additionally
+    !% written as a tree.
+    !%End
+    call parse_variable(namespace, 'ProfilingOutputTree', .true., prof_vars%output_tree)
+
     call profiling_in(C_PROFILING_COMPLETE_RUN, 'COMPLETE_RUN')
 
     POP_SUB(profiling_init)
@@ -418,6 +432,8 @@ contains
   subroutine profile_init(this, label)
     type(profile_t), target, intent(out)   :: this
     character(*),            intent(in)    :: label 
+
+    integer :: iprofile
     
     PUSH_SUB(profile_init)
 
@@ -435,6 +451,9 @@ contains
     this%tr_count_child        = M_ZERO
     this%active = .false.
     nullify(this%parent)
+    this%has_child = .false.
+    this%timings = M_ZERO
+    this%index = 0
 
     if(.not. in_profiling_mode) then
       POP_SUB(profile_init)
@@ -446,7 +465,17 @@ contains
     ASSERT(prof_vars%last_profile  <=  MAX_PROFILES)
 
     prof_vars%profile_list(prof_vars%last_profile)%p => this
+    this%index = prof_vars%last_profile
     this%initialized = .true.
+
+    ! print out a warning if a name is used more than once
+    do iprofile = 1, prof_vars%last_profile - 1
+      if (prof_vars%profile_list(iprofile)%p%label == this%label) then
+        message(1) = "Label "//label//" used more than once."
+        call messages_warning(1)
+        exit
+      end if
+    end do
 
     POP_SUB(profile_init)
   end subroutine profile_init
@@ -493,6 +522,7 @@ contains
     if(associated(prof_vars%current%p)) then
       !keep a pointer to the parent
       this%parent => prof_vars%current%p
+      this%parent%has_child(this%index) = .true.
     else 
       !we are orphans
       nullify(this%parent)
@@ -567,6 +597,8 @@ contains
         + this%op_count_current + this%op_count_child_current
       this%parent%tr_count_child_current = this%parent%tr_count_child_current &
         + this%tr_count_current + this%tr_count_child_current
+
+      this%parent%timings(this%index) = this%parent%timings(this%index) + time_spent
 
       !and set parent as current
       prof_vars%current%p => this%parent
@@ -978,8 +1010,66 @@ contains
 
     SAFE_DEALLOCATE_A(selftime)
     SAFE_DEALLOCATE_A(position)
+
+    if(prof_vars%output_tree) then
+      filename = trim(prof_vars%output_dir)//'/time.'//prof_vars%file_number//'.tree'
+      iunit = io_open(trim(filename), namespace, action='write')
+      if(iunit < 0) then
+        message(1) = 'Failed to open file ' // trim(filename) // ' to write profiling results.'
+        call messages_warning(1)
+        POP_SUB(profiling_output)
+        return
+      end if
+      write(iunit, '(a40,a11,a11,a12)') &
+        "Tree level, region                      ", &
+        "% of total ", "% of parent", &
+        "   Full time"
+
+      ! output of top-level node
+      write(iunit, '(a,a25,a,f8.2,a,f8.2,a,f12.4)') &
+           repeat('-', 0) // '| ', &
+           profile_label(C_PROFILING_COMPLETE_RUN), &
+           repeat(' ', 15-0-2), &
+           100.0, "%  ", &
+           100.0, "%  ", &
+           total_time
+      call output_tree_level(C_PROFILING_COMPLETE_RUN, 1, total_time, iunit)
+      write(iunit, '(a)') "// modeline for vim to enable folding (put in ~/.vimrc: set modeline modelineexpr)"
+      write(iunit, '(a)') "// vim: fdm=expr fde=getline(v\:lnum)=~'.*\|.*'?len(split(getline(v\:lnum))[0])-1\:0"
+      call io_close(iunit)
+    end if
     
     POP_SUB(profiling_output)
+    contains
+      ! Traverse the tree depth-first, pre-order
+      recursive subroutine output_tree_level(profile, level, total_time, iunit)
+        type(profile_t), intent(in) :: profile
+        integer,         intent(in) :: level
+        FLOAT,           intent(in) :: total_time
+        integer,         intent(in) :: iunit
+
+        integer :: ichild, width
+
+        PUSH_SUB(profiling_output.output_tree_level)
+        width = 15
+        ! loop over children
+        do ichild = 1, MAX_PROFILES
+          if (profile%has_child(ichild)) then
+            ! print out information on current child with the first marker
+            ! placed according to the level of the tree
+            write(iunit, '(a,a25,a,f8.2,a,f8.2,a,f12.4)') &
+                 repeat('-', level) // '| ', &
+                 profile_label(prof_vars%profile_list(ichild)%p), &
+                 repeat(' ', width-level-2), &
+                 profile%timings(ichild)/total_time * 100, "%  ", &
+                 profile%timings(ichild)/profile%total_time * 100, "%  ", &
+                 profile%timings(ichild)
+            call output_tree_level(prof_vars%profile_list(ichild)%p, &
+              level+1, total_time, iunit)
+          end if
+        end do
+        POP_SUB(profiling_output.output_tree_level)
+      end subroutine output_tree_level
   end subroutine profiling_output
 
 
