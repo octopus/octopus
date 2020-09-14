@@ -471,8 +471,8 @@ contains
     ! print out a warning if a name is used more than once
     do iprofile = 1, prof_vars%last_profile - 1
       if (prof_vars%profile_list(iprofile)%p%label == this%label) then
-        message(1) = "Info: label "//label//" used more than once."
-        call messages_info(1)
+        message(1) = "Label "//label//" used more than once."
+        call messages_warning(1)
         exit
       end if
     end do
