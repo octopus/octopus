@@ -560,6 +560,7 @@ electrons_f_srcs =                                 \
 electrons_srcs = $(electrons_f_srcs)
 
 noinst_HEADERS +=                                  \
+        electrons/eigensolver_inc.F90              \
 	electrons/eigen_cg_inc.F90                 \
 	electrons/eigen_evolution_inc.F90          \
 	electrons/eigen_lobpcg_inc.F90             \
