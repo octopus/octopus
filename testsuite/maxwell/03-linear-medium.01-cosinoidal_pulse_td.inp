@@ -64,7 +64,7 @@
 
  TDSystemPropagator = exp_mid
  TDTimeStep                        = 1 / ( sqrt(c^2/dx_mx^2 + c^2/dx_mx^2 + c^2/dx_mx^2) )
- TDPropagationTime                 = 70*TDTimeStep
+ TDPropagationTime                 = 50*TDTimeStep
 
 
 # ----- Maxwell field variables -------------------------------------------------------------------
