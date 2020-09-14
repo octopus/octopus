@@ -32,7 +32,7 @@
     character(len=MAX_PATH_LEN) :: fname
     FLOAT, allocatable :: v0(:,:), nxc(:), potential(:)
     FLOAT, allocatable :: current_kpt(:, :)
-    FLOAT, allocatable :: density_kpt(:), density_tmp(:,:)
+    FLOAT, allocatable :: density_kpt(:, :), density_tmp(:,:)
     type(density_calc_t) :: dens_calc
     FLOAT, allocatable :: gradvh(:, :), heat_current(:, :, :)
 
@@ -257,25 +257,21 @@
     end if
     
     if(bitand(outp%whatBZ, OPTION__OUTPUT_KPT__DENSITY_KPT) /= 0) then
-      SAFE_ALLOCATE(density_kpt(1:st%d%nik))
-      density_kpt(1:st%d%nik) = M_ZERO
+      SAFE_ALLOCATE(density_kpt(1:st%d%nik, 1:st%d%nspin))
+      density_kpt(1:st%d%nik, 1:st%d%nspin) = M_ZERO
 
       SAFE_ALLOCATE(density_tmp(1:gr%fine%mesh%np, st%d%nspin))
 
-      !These two conditions should be copied from the density_calc_end routine
-      !We cannot call this routine as we must not symmetrize of reduce on kpoints
-      ASSERT(.not.st%are_packed())
-      ASSERT(.not.gr%have_fine_mesh)
-
+      !Compute the k-resolved density and integrate it over the mesh
       do ik = st%d%kpt%start,st%d%kpt%end
         call density_calc_init(dens_calc, st, gr, density_tmp)
         do ib = st%group%block_start, st%group%block_end
           call density_calc_accumulate(dens_calc, st%group%psib(ib, ik))
         end do
+        call density_calc_end(dens_calc, allreduce=.false., symmetrize=.false.)
  
-        density_kpt(ik) = M_ZERO
         do is = 1, st%d%nspin
-          density_kpt(ik) = density_kpt(ik) + dmf_integrate(der%mesh, density_tmp(:,is), reduce = .false.)
+          density_kpt(ik, is) = density_kpt(ik, is) + dmf_integrate(der%mesh, density_tmp(:,is), reduce = .false.)
         end do
       end do
     
@@ -283,8 +279,15 @@
         call comm_allreduce(st%dom_st_kpt_mpi_grp%comm, density_kpt)
       end if
 
-      call io_function_output_global_BZ(outp%how, dir, "density_kpt", namespace, &
-        gr%mesh, density_kpt, unit_one, err)
+      do is = 1, st%d%nspin
+        if(st%d%nspin == 1) then
+          write(fname, '(2a)') 'density_kpt'
+        else
+          write(fname, '(a,i1)') 'density_kpt-sp', is
+        end if
+        call io_function_output_global_BZ(outp%how, dir, fname, namespace, &
+          gr%mesh, density_kpt(:, is), unit_one, err)
+      end do
       SAFE_DEALLOCATE_A(density_tmp)
       SAFE_DEALLOCATE_A(density_kpt)
     end if
