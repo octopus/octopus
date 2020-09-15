@@ -125,6 +125,9 @@ contains
     !% the pseudopotentials. The orbitals are not orthonormalized, in order to preserve their 
     !% atomic orbitals character. As a consequence, the sum of the different PDOS does not integrate 
     !% to the total DOS.
+    !%
+    !% The radii of the orbitals are controled by the threshold defined by <tt>AOThreshold<\tt>,
+    !% and the fact that they are normalized or not by <tt>AONormalize<\tt>.
     !%End
     call parse_variable(namespace, 'DOSComputePDOS', .false., this%computepdos)
 
@@ -162,10 +165,11 @@ contains
     FLOAT   :: tdos
     FLOAT, allocatable :: dos(:,:,:)
     character(len=64)  :: filename
+    logical :: normalize
 
     integer :: ii, ll, mm, nn, work, norb, work2
     integer :: ia, iorb, idim, ip
-    FLOAT   :: norm
+    FLOAT   :: norm, threshold
     FLOAT, allocatable :: dpsi(:,:), ddot(:,:)
     CMPLX, allocatable :: zpsi(:,:), zdot(:,:)
     FLOAT, allocatable :: weight(:,:)
@@ -280,6 +284,10 @@ contains
 
     if(this%computepdos) then
 
+      !These variables are defined in basis_set/orbitalbasis.F90
+      call parse_variable(namespace, 'AOThreshold', CNST(0.01), threshold)
+      call parse_variable(namespace, 'AONormalize', .true., normalize)
+
       if (states_are_real(st)) then
         SAFE_ALLOCATE(dpsi(1:mesh%np, 1:st%d%dim))
       else
@@ -306,7 +314,7 @@ contains
               os%nn = nn
               os%ii = ii
               os%radius = atomic_orbital_get_radius(geo, mesh, ia, iorb, 1, &
-                                OPTION__AOTRUNCATION__AO_FULL, CNST(0.01))
+                                OPTION__AOTRUNCATION__AO_FULL, threshold)
               work2 = work2 + 1
             end if
           end do
@@ -325,7 +333,12 @@ contains
               do idim = 1, os%ndim
                 norm = norm + dsm_nrm2(os%sphere, os%dorb(1:os%sphere%np,idim,work))**2
               end do
-             norm = sqrt(norm)
+              norm = sqrt(norm)
+              if(normalize) then
+                do idim = 1, os%ndim
+                  os%dorb(1:os%sphere%np, idim, work) = os%dorb(1:os%sphere%np, idim, work)/norm
+                end do
+              end if
             else
               call zget_atomic_orbital(geo, mesh, os%sphere, ia, os%ii, os%ll, os%jj, &
                                                 os, work, os%radius, os%ndim)
@@ -333,7 +346,12 @@ contains
               do idim = 1, os%ndim
                 norm = norm + zsm_nrm2(os%sphere, os%zorb(1:os%sphere%np,idim,work))**2
               end do
-             norm = sqrt(norm)
+              norm = sqrt(norm)
+              if(normalize) then
+                do idim = 1, os%ndim
+                  os%zorb(1:os%sphere%np, idim, work) = os%zorb(1:os%sphere%np, idim, work)/norm
+                end do
+              end if
             end if
           end do
 
