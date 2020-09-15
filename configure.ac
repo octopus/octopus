@@ -38,7 +38,6 @@ AC_PROG_LN_S
 AC_PROG_MAKE_SET
 AC_PROG_MKDIR_P
 
-LT_INIT([disable-shared])
 AC_SUBST([AM_CFLAGS], [-fPIC])
 AC_SUBST([AM_CXXFLAGS], [-fPIC])
 AC_SUBST([AM_FCFLAGS], [-fPIC])
@@ -364,6 +363,8 @@ AC_SUBST(FCEXTRALIBS)
 
 m4_include([src/fdep/fortran_dependencies.m4])
 FDEP_F90_GNU_MAKE_DEPS
+
+LT_INIT([disable-shared])
 
 ACX_OCTOPUS_COMPILATION_INFO
 
