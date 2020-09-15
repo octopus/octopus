@@ -517,9 +517,10 @@ contains
 
   ! ---------------------------------------------------
 
-  subroutine density_calc_end(this, allreduce)
+  subroutine density_calc_end(this, allreduce, symmetrize)
     type(density_calc_t), intent(inout) :: this
     logical, optional,    intent(in)    :: allreduce 
+    logical, optional,    intent(in)    :: symmetrize
 
     type(symmetrizer_t) :: symmetrizer
     FLOAT, allocatable :: tmpdensity(:)
@@ -565,7 +566,7 @@ contains
       call profiling_out(reduce_prof)
     end if
 
-    if(this%st%symmetrize_density) then
+    if(this%st%symmetrize_density .and. optional_default(symmetrize, .true.)) then
       SAFE_ALLOCATE(tmpdensity(1:this%gr%fine%mesh%np))
       call symmetrizer_init(symmetrizer, this%gr%fine%mesh)
 
