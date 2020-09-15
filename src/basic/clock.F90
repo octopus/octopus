@@ -131,14 +131,22 @@ contains
   end subroutine clock_print
 
   ! ---------------------------------------------------------
-  subroutine clock_set_time(this, clock_in)
-    class(clock_t), intent(in)    :: clock_in
+  subroutine clock_set_time(this, new_time)
     class(clock_t), intent(inout) :: this
+    class(clock_t), intent(in)    :: new_time
+
+    integer :: this_granularity, new_granularity
 
     PUSH_SUB(clock_set_time)
 
-    this%tick = clock_in%tick
-    this%time_step = clock_in%time_step
+    call clock_commensurability(this, new_time, this_granularity, new_granularity)
+
+    if (mod(new_time%tick * new_granularity, this_granularity) /= 0) then
+      message(1) = 'Cannot set clock new time, as it is not commensurable with clock time-step.'
+      call messages_fatal(1)
+    end if
+
+    this%tick = (new_time%tick * new_granularity) / this_granularity
 
     POP_SUB(clock_set_time)
   end subroutine clock_set_time
@@ -150,7 +158,8 @@ contains
 
     PUSH_SUB(clock_copy)
 
-    call this%set_time(clock_in)
+    this%tick = clock_in%tick
+    this%time_step = clock_in%time_step
     this%label = clock_in%label
 
     POP_SUB(clock_copy)

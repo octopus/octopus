@@ -8,7 +8,7 @@ Enabled    : Yes
 Processors: 2
 Input: 27-clock.01.inp
 match ; clock_get_tick            ; GREPFIELD(out, 'clock_get_tick', 2)            ; 0000000001
-match ; clock_time                ; GREPFIELD(out, 'clock_time', 2)                ; 1.0000000000
+match ; clock_time                ; GREPFIELD(out, 'clock_time', 2)                ; 2.0000000000
 match ; clock_is_earlier          ; GREPFIELD(out, 'clock_is_earlier', 2)          ; 0
 match ; clock_is_equal_or_earlier ; GREPFIELD(out, 'clock_is_equal_or_earlier', 2) ; 0
 match ; clock_is_later            ; GREPFIELD(out, 'clock_is_later', 2)            ; 1
