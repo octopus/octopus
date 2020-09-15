@@ -355,10 +355,6 @@ contains
     default = 10
     call parse_variable(sys%namespace, 'TDEnergyUpdateIter', default, td%energy_update_iter)
 
-    if(ion_dynamics_ions_move(td%ions) .and. td%energy_update_iter /= 1) then
-       call messages_experimental('TDEnergyUpdateIter /= 1 when moving ions')
-    end if
-
     if(sys%gr%der%boundaries%spiralBC .and. sys%hm%ep%reltype == SPIN_ORBIT) then
        message(1) = "Generalized Bloch theorem cannot be used with spin-orbit coupling."
        call messages_fatal(1, namespace=sys%namespace)
