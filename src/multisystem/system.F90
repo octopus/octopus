@@ -776,7 +776,7 @@ contains
     ! By default an MPI process is not a slave
     system_process_is_slave = .false.
 
-    PUSH_SUB(system_process_is_slave)
+    POP_SUB(system_process_is_slave)
   end function system_process_is_slave
 
   ! ---------------------------------------------------------

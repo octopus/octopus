@@ -64,7 +64,7 @@ contains
     type(namespace_t),            intent(in) :: namespace
     class(system_factory_abst_t), intent(in) :: factory
 
-    PUSH_SUB(multisystem_init)
+    PUSH_SUB(multisystem_basic_init)
 
     call multisystem_init(this, namespace, factory)
 
