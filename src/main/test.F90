@@ -1046,24 +1046,24 @@ contains
 
     PUSH_SUB(test_clock)
 
-    test_clock_a = clock_t('test_clock_a', CNST(2.0), CNST(1.0), 100)
-    test_clock_b = clock_t('test_clock_b', CNST(1.0), CNST(1.0))
+    test_clock_a = clock_t('test_clock_a', CNST(2.0), 100)
+    test_clock_b = clock_t('test_clock_b', CNST(1.0))
     call test_clock_a%print()
     call test_clock_b%print()
 
     call test_clock_a%set_time(test_clock_b)
     call test_clock_a%print()
-    call test_clock_a%increment()
+    test_clock_a = test_clock_a + CLOCK_TICK
     call test_clock_a%print()
-    call test_clock_a%decrement()
+    test_clock_a = test_clock_a - CLOCK_TICK
     call test_clock_a%print()
-    call test_clock_a%increment()
+    test_clock_a = test_clock_a + CLOCK_TICK
     call test_clock_a%print()
     call test_clock_a%reset()
     call test_clock_a%print()
-    call test_clock_a%increment(3)
+    test_clock_a = test_clock_a + 3*CLOCK_TICK
     call test_clock_a%print()
-    call test_clock_a%decrement(2)
+    test_clock_a = test_clock_a - 2*CLOCK_TICK
     call test_clock_a%print()
     message(1) = test_clock_a%print_str()
     call messages_info(1)
@@ -1071,7 +1071,7 @@ contains
     write(message(1),'(A,x,I10.10)') &
 	'clock_get_tick', test_clock_a%get_tick()
     write(message(2),'(A,x,F15.10)') &
-	'clock_get_sim_time', test_clock_a%get_sim_time()
+	'clock_time', test_clock_a%time()
     write(message(3),'(A,x,I1)')     &
 	'clock_is_earlier', abs(transfer(test_clock_a .lt. test_clock_b, 0))
     write(message(4),'(A,x,I1)')     &
@@ -1082,10 +1082,7 @@ contains
 	'clock_is_equal_or_later', abs(transfer(test_clock_a .ge. test_clock_b, 0))
     write(message(7),'(A,x,I1)')     &
 	'clock_is_equal', abs(transfer(test_clock_a .eq. test_clock_b, 0))
-    write(message(8),'(A,x,I1)')     &
-	'clock_is_later_with_step', abs(transfer(test_clock_a%is_later_with_step(test_clock_b), 0))
-    call messages_info(8)
-
+    call messages_info(7)
 
     POP_SUB(test_clock)
   end subroutine test_clock

@@ -65,7 +65,6 @@ module system_oct_m
     type(mpi_grp_t), public :: grp  !< mpi group for this system
   contains
     procedure :: dt_operation =>  system_dt_operation
-    procedure :: init_clocks => system_init_clocks
     procedure :: reset_clocks => system_reset_clocks
     procedure :: update_exposed_quantities => system_update_exposed_quantities
     procedure :: init_propagator => system_init_propagator
@@ -183,13 +182,13 @@ contains
       ! Do nothing
     case (FINISHED)
       if (.not. this%prop%step_is_done()) then
-        call this%clock%increment()
+        this%clock = this%clock + CLOCK_TICK
       end if
       call this%prop%finished()
 
     case (UPDATE_INTERACTIONS)
       ! We increment by one algorithmic step
-      call this%prop%clock%increment()
+      this%prop%clock = this%prop%clock + CLOCK_TICK
 
       ! Try to update all the interactions
       all_updated = this%update_interactions(this%prop%clock)
@@ -200,7 +199,7 @@ contains
         this%accumulated_loop_ticks = this%accumulated_loop_ticks + 1
         call this%prop%next()
       else
-        call this%prop%clock%decrement()
+      this%prop%clock = this%prop%clock - CLOCK_TICK
       end if
 
     case (START_SCF_LOOP)
@@ -261,62 +260,31 @@ contains
   end subroutine system_dt_operation
 
   ! ---------------------------------------------------------
-  subroutine system_init_clocks(this, smallest_algo_dt)
-    class(system_t), intent(inout) :: this
-    FLOAT,           intent(in)    :: smallest_algo_dt
-
-    type(interaction_iterator_t) :: iter
-    class(interaction_t), pointer :: interaction
-
-    PUSH_SUB(system_init_clocks)
-
-    ! Internal clock
-    this%clock = clock_t(this%namespace%get(), this%prop%dt, smallest_algo_dt)
-
-    ! Propagator clock
-    this%prop%clock = clock_t(this%namespace%get(), this%prop%dt/this%prop%algo_steps, smallest_algo_dt)
-
-    ! Interaction clocks
-    call iter%start(this%interactions)
-    do while (iter%has_next())
-      interaction => iter%get_next()
-      call interaction%init_clock(this%namespace%get(), this%prop%dt/this%prop%algo_steps, smallest_algo_dt)
-    end do
-
-    ! Required quantities clocks
-    where (this%quantities%required)
-      this%quantities%clock = clock_t(this%namespace%get(), this%prop%dt/this%prop%algo_steps, smallest_algo_dt)
-    end where
-
-    POP_SUB(system_init_clocks)
-  end subroutine system_init_clocks
-
-  ! ---------------------------------------------------------
   subroutine system_reset_clocks(this, accumulated_ticks)
     class(system_t),      intent(inout) :: this
     integer,              intent(in)    :: accumulated_ticks
 
-    integer :: it, iq
+    integer :: iq
     type(interaction_iterator_t) :: iter
     class(interaction_t), pointer :: interaction
 
     PUSH_SUB(system_reset_clocks)
 
-    do it = 1, accumulated_ticks
-      ! Propagator clock
-      call this%prop%clock%decrement()
+    ! Propagator clock
+    this%prop%clock = this%prop%clock - accumulated_ticks*CLOCK_TICK
 
-      ! Interaction clocks
-      call iter%start(this%interactions)
-      do while (iter%has_next())
-        interaction => iter%get_next()
-        call interaction%clock%decrement()
-      end do
+    ! Interaction clocks
+    call iter%start(this%interactions)
+    do while (iter%has_next())
+      interaction => iter%get_next()
+      interaction%clock = interaction%clock - accumulated_ticks*CLOCK_TICK
+    end do
 
-      ! Internal quantities clocks
-      do iq = 1, MAX_QUANTITIES
-        if (this%quantities(iq)%required) call this%quantities(iq)%clock%decrement()
-      end do
+    ! Internal quantities clocks
+    do iq = 1, MAX_QUANTITIES
+      if (this%quantities(iq)%required) then
+        this%quantities(iq)%clock = this%quantities(iq)%clock - accumulated_ticks*CLOCK_TICK
+      end if
     end do
 
     POP_SUB(system_reset_clocks)
@@ -342,8 +310,7 @@ contains
     select type (interaction)
     class is (interaction_with_partner_t)
 
-      if (partner%prop%inside_scf .or. &
-          partner%prop%clock%is_earlier_with_step(requested_time)) then
+      if (partner%prop%inside_scf .or. partner%prop%clock + CLOCK_TICK < requested_time) then
         ! we are inside an SCF cycle and therefore are not allowed to expose any quantities.
         ! or we are too much behind the requested time
         allowed_to_update = .false.
@@ -361,7 +328,7 @@ contains
           if (.not.partner%quantities(q_id)%protected) then
             if (.not. (partner%quantities(q_id)%clock == requested_time .or. &
               (partner%quantities(q_id)%clock < requested_time .and. &
-              partner%quantities(q_id)%clock%is_later_with_step(requested_time)))) then
+              partner%quantities(q_id)%clock + CLOCK_TICK > requested_time))) then
               ! We can update because the partner will reach this time in the next sub-timestep
               ! This is not a protected quantity, so we update it
               call partner%update_exposed_quantity(q_id, requested_time)
@@ -425,8 +392,8 @@ contains
 
       if (debug%info) then
         write(message(1), '(a,a,a)') "Debug: ---- Updated exposed quantity ", trim(QUANTITY_LABEL(q_id)), "'"
-        write(message(2), '(a,f16.6,a,f16.6)') "Debug: ------ Requested time is ", requested_time%get_sim_time(), &
-          ", quantity time is ", partner%quantities(q_id)%clock%get_sim_time()
+        write(message(2), '(a,f16.6,a,f16.6)') "Debug: ------ Requested time is ", requested_time%time(), &
+          ", quantity time is ", partner%quantities(q_id)%clock%time()
         call messages_info(2)
       end if
 
@@ -436,9 +403,9 @@ contains
 
       if (debug%info) then
         write(message(1), '(a,a,a)') "Debug: ---- Did not update exposed quantity '", trim(QUANTITY_LABEL(q_id)), "'"
-        write(message(2), '(a,f16.6,a,f16.6,a,f16.6)') "Debug: ------ Requested time is ", requested_time%get_sim_time(), &
-          ", quantity time is ", partner%quantities(q_id)%clock%get_sim_time(), &
-          " and partner propagator time is ", partner%prop%clock%get_sim_time()
+        write(message(2), '(a,f16.6,a,f16.6,a,f16.6)') "Debug: ------ Requested time is ", requested_time%time(), &
+          ", quantity time is ", partner%quantities(q_id)%clock%time(), &
+          " and partner propagator time is ", partner%prop%clock%time()
         call messages_info(2)
       end if
 
@@ -449,8 +416,8 @@ contains
       if (debug%info) then
         write(message(1), '(a,a,a)') "Debug: ---- Skip update of quantity '", trim(QUANTITY_LABEL(q_id)), &
           "' as it is protected"
-        write(message(2), '(a,f16.6,a,f16.6)') "Debug: ------ Requested time is ", requested_time%get_sim_time(), &
-          ", quantity time is ", partner%quantities(q_id)%clock%get_sim_time()
+        write(message(2), '(a,f16.6,a,f16.6)') "Debug: ------ Requested time is ", requested_time%time(), &
+          ", quantity time is ", partner%quantities(q_id)%clock%time()
         call messages_info(2)
       end if
 
@@ -618,12 +585,13 @@ contains
   end subroutine system_output_finish
 
   ! ---------------------------------------------------------
-  subroutine system_init_propagator(this, smallest_algo_dt)
+  subroutine system_init_propagator(this)
     class(system_t),      intent(inout) :: this
-    FLOAT,                intent(inout) :: smallest_algo_dt
 
     integer :: prop
     FLOAT :: dt
+    type(interaction_iterator_t) :: iter
+    class(interaction_t), pointer :: interaction
 
     PUSH_SUB(system_init_propagator)
 
@@ -677,9 +645,23 @@ contains
 
     call this%prop%rewind()
 
-    ! Check if this propagators dt is smaller then the current smallest dt.
-    ! If so, replace the current smallest dt by the one from this propagator.
-    smallest_algo_dt = min(smallest_algo_dt, this%prop%dt/this%prop%algo_steps)
+    ! Initialize propagator clock
+    this%prop%clock = clock_t(this%namespace%get(), this%prop%dt/this%prop%algo_steps)
+
+    ! Initialize system clock
+    this%clock = clock_t(this%namespace%get(), this%prop%dt)
+
+    ! Interaction clocks
+    call iter%start(this%interactions)
+    do while (iter%has_next())
+      interaction => iter%get_next()
+      interaction%clock = this%prop%clock - CLOCK_TICK
+    end do
+
+    ! Required quantities clocks
+    where (this%quantities%required)
+      this%quantities%clock = this%prop%clock
+    end where
 
     !%Variable InteractionTiming
     !%Type integer
@@ -754,7 +736,7 @@ contains
 
     PUSH_SUB(system_has_reached_final_propagation_time)
 
-    system_has_reached_final_propagation_time = (this%clock%get_sim_time() >= final_time)
+    system_has_reached_final_propagation_time = (this%clock%time() >= final_time)
 
     POP_SUB(system_has_reached_final_propagation_time)
   end function system_has_reached_final_propagation_time
