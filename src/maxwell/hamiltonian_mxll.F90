@@ -137,7 +137,7 @@ module hamiltonian_mxll_oct_m
     FLOAT, pointer                 :: medium_box_sigma_e(:,:)
     FLOAT, pointer                 :: medium_box_sigma_m(:,:)
     integer, pointer               :: medium_box_points_number(:)
-    FLOAT, pointer                 :: medium_box_points_map(:,:)
+    integer, pointer               :: medium_box_points_map(:,:)
     FLOAT, pointer                 :: medium_box_aux_ep(:,:,:)
     FLOAT, pointer                 :: medium_box_aux_mu(:,:,:)
     integer, pointer               :: medium_box_bdry_number(:)

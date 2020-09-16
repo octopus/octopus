@@ -2490,7 +2490,7 @@ contains
           hm%medium_box_c(ip_in,il) = M_ONE/sqrt(hm%medium_box_ep(ip_in, il)*hm%medium_box_mu(ip_in, il))
           hm%medium_box_sigma_e(ip_in,il) = hm%medium_box_sigma_e_factor(il) &
             * M_ONE/(M_ONE + exp(-M_FIVE/dd_max * (dd_min - M_TWO*dd_max)) )
-          hm%medium_box_sigma_m(ip_in,il) = hm%medium_box_sigma_m(ip_in,il) &
+          hm%medium_box_sigma_m(ip_in,il) = hm%medium_box_sigma_m_factor(il) &
             * M_ONE/(M_ONE + exp(-M_FIVE/dd_max * (dd_min - M_TWO*dd_max)) )
 
         else if (hm%medium_box_shape(il) == OPTION__LINEARMEDIUMBOX__EDGED) then
@@ -2499,7 +2499,7 @@ contains
           hm%medium_box_mu(ip_in, il) = P_mu * hm%medium_box_mu_factor(il)
           hm%medium_box_c(ip_in, il) = M_ONE/sqrt(hm%medium_box_ep(ip_in, il)*hm%medium_box_mu(ip_in, il))
           hm%medium_box_sigma_e(ip_in, il) = hm%medium_box_sigma_e_factor(il)
-          hm%medium_box_sigma_m(ip_in, il) = hm%medium_box_sigma_m(ip_in, il)
+          hm%medium_box_sigma_m(ip_in, il) = hm%medium_box_sigma_m_factor(il)
 
         end if
       end do
