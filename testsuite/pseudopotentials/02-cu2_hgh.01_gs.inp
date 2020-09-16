@@ -20,4 +20,4 @@ SmearingFunction = fermi_dirac
 ConvRelDens = 1e-6
 StatesPack = yes
 
-SCFCalculateForces = no
+SCFCalculateForces = yes
