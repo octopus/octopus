@@ -490,6 +490,7 @@ multisystem_f_srcs =                                 \
 	multisystem/propagator_exp_mid.F90           \
 	multisystem/propagator_verlet.F90            \
 	multisystem/quantity.F90                     \
+	multisystem/replicas.F90                     \
 	multisystem/system.F90                       \
 	multisystem/system_factory_abst.F90
 
@@ -511,7 +512,8 @@ interactions_srcs = $(interactions_f_srcs)
 # Sources in classical
 classical_f_srcs =                                 \
 	classical/charged_particle.F90             \
-	classical/classical_particle.F90
+	classical/classical_particle.F90           \
+	classical/classical_replicas.F90           
 
 classical_srcs = $(classical_f_srcs)
 

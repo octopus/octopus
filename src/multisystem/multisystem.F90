@@ -45,6 +45,7 @@ module multisystem_oct_m
   type, extends(system_t), abstract :: multisystem_t
     type(system_list_t) :: list
   contains
+    procedure :: create_system => multisystem_create_system
     procedure :: dt_operation =>  multisystem_dt_operation
     procedure :: init_parallelization => multisystem_init_parallelization
     procedure :: smallest_algo_dt => multisystem_smallest_algo_dt
@@ -101,7 +102,7 @@ contains
         end do
         call parse_block_integer(blk, isys - 1, 1, system_type)
 
-        call multisystem_create_system(this, system_name, system_type, isys, factory)
+        call this%create_system(system_name, system_type, isys, factory)
       end do
       call parse_block_end(blk)
     else

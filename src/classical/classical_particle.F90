@@ -47,7 +47,9 @@ module classical_particle_oct_m
   private
   public ::                  &
     classical_particle_t,    &
-    classical_particle_init
+    classical_particle_init, &
+    classical_particle_get_pos, &
+    classical_particle_set_pos
 
    type, extends(system_t) :: classical_particle_t
     FLOAT :: mass
@@ -79,6 +81,8 @@ module classical_particle_oct_m
     procedure :: copy_quantities_to_interaction => classical_particle_copy_quantities_to_interaction
     procedure :: update_interactions_start => classical_particle_update_interactions_start
     procedure :: update_interactions_finish => classical_particle_update_interactions_finish
+    procedure :: get_pos => classical_particle_get_pos
+    procedure :: set_pos => classical_particle_set_pos
     final :: classical_particle_finalize
   end type classical_particle_t
 
@@ -619,6 +623,30 @@ contains
 
     POP_SUB(classical_particle_update_interactions_finish)
   end subroutine classical_particle_update_interactions_finish
+
+  ! ---------------------------------------------------------
+  function classical_particle_get_pos(this) result(pos)
+    class(classical_particle_t), intent(inout) :: this
+    FLOAT :: pos(1:MAX_DIM)
+
+    PUSH_SUB(classical_particle_get_pos)
+
+    pos = this%pos
+
+    POP_SUB(classical_particle_get_pos)
+  end function classical_particle_get_pos
+
+  ! ---------------------------------------------------------
+  subroutine classical_particle_set_pos(this, pos)
+    class(classical_particle_t), intent(inout) :: this
+    FLOAT,                          intent(in) :: pos(1:MAX_DIM)
+
+    PUSH_SUB(classical_particle_set_pos)
+
+    this%pos = pos
+
+    POP_SUB(classical_particle_set_pos)
+  end subroutine classical_particle_set_pos
 
   ! ---------------------------------------------------------
   subroutine classical_particle_finalize(this)
