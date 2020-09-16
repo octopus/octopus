@@ -566,6 +566,10 @@ contains
     !TODO: Once the abstract Hamiltonian knows about an abstract basis, we might move this to the 
     !      abstract Hamiltonian 
     call load_external_potentials(hm%external_potentials, namespace)
+
+    !Some checks which are electron specific, like k-points
+    call external_potentials_checks()
+
     !At the moment we do only have static external potential, so we never update them
     call build_external_potentials()
 
@@ -677,7 +681,38 @@ contains
 
           call potential%allocate_memory(gr%mesh)
           call potential%calculate(namespace, gr%mesh, hm%psolver)
-          call lalg_axpy(gr%mesh%np, M_ONE, potential%pot, hm%v_ext_pot)
+          !To preserve the old behavior, we are adding the various potentials
+          !to the corresponding arrays
+          select case(potential%type)
+          case(EXTERNAL_POT_USDEF, EXTERNAL_POT_FROM_FILE, EXTERNAL_POT_CHARGE_DENSITY)
+            call lalg_axpy(gr%mesh%np, M_ONE, potential%pot, hm%v_ext_pot)
+
+          case(EXTERNAL_POT_STATIC_BFIELD)
+            if(.not.associated(hm%ep%B_field)) then
+              SAFE_ALLOCATE(hm%ep%B_field(1:3)) !Cannot be gr%sb%dim
+            end if
+            hm%ep%B_field(1:gr%sb%dim) = hm%ep%B_field(1:gr%sb%dim) + potential%B_field(1:gr%sb%dim)
+            
+            if(.not.associated(hm%ep%A_static)) then
+              SAFE_ALLOCATE(hm%ep%A_static(1:gr%mesh%np, 1:gr%sb%dim))
+            end if
+            call lalg_axpy(gr%mesh%np, gr%sb%dim, M_ONE, potential%A_static, hm%ep%A_static)
+
+          case(EXTERNAL_POT_STATIC_EFIELD)
+            if(.not.associated(hm%ep%E_field)) then
+              SAFE_ALLOCATE(hm%ep%E_field(1:gr%sb%dim))
+            end if
+            hm%ep%E_field(1:gr%sb%dim) = hm%ep%E_field(1:gr%sb%dim) + potential%E_field(1:gr%sb%dim)
+
+            if(.not.associated(hm%ep%v_static)) then
+              SAFE_ALLOCATE(hm%ep%v_static(1:gr%mesh%np))
+            end if
+            if(.not.allocated(hm%ep%v_ext)) then
+              SAFE_ALLOCATE(hm%ep%v_ext(1:gr%mesh%np_part))
+            end if     
+            call lalg_axpy(gr%mesh%np, M_ONE, potential%v_static, hm%ep%v_static)
+            call lalg_axpy(gr%mesh%np, M_ONE, potential%v_ext, hm%ep%v_ext)
+          end select
           call potential%deallocate_memory()
 
         class default
@@ -687,6 +722,34 @@ contains
 
       POP_SUB(hamiltonian_elec_init.build_external_potentials)
     end subroutine build_external_potentials
+
+    ! ---------------------------------------------------------
+    subroutine external_potentials_checks()
+      type(list_iterator_t) :: iter
+      class(*), pointer :: potential
+
+      PUSH_SUB(hamiltonian_elec_init.external_potentials_checks)
+
+      call iter%start(hm%external_potentials)
+      do while (iter%has_next())
+        potential => iter%get_next()
+        select type (potential)
+        class is (external_potential_t)
+
+          if(potential%type == EXTERNAL_POT_STATIC_EFIELD .and. hm%d%nik > 1) then
+            message(1) = "Applying StaticElectricField in a periodic direction is only accurate for large supercells."
+            message(2) = "Single-point Berry phase is not appropriate when k-point sampling is needed."
+            call messages_warning(2, namespace=namespace)
+          end if
+
+        class default
+          ASSERT(.false.)
+        end select
+      end do
+
+      POP_SUB(hamiltonian_elec_init.external_potentials_checks)
+    end subroutine external_potentials_checks
+
 
   end subroutine hamiltonian_elec_init
 
