@@ -64,7 +64,7 @@
 
  TDSystemPropagator = exp_mid
  TDTimeStep                        = 1 / ( sqrt(c^2/dx_mx^2 + c^2/dx_mx^2 + c^2/dx_mx^2) )
- TDPropagationTime                 = 50*TDTimeStep
+ TDPropagationTime                 = 30*TDTimeStep
 
 
 # ----- Maxwell field variables -------------------------------------------------------------------
@@ -91,5 +91,5 @@
  %
 
 % LinearMediumBox
- 0.0 | 0.0 | 0.0 | 10.0 | 10.0 | 10.0 | 2.0 | 2.0 | 0.0 | 0.0 | edged
+ 0.0 | 0.0 | 0.0 | 10.0 | 10.0 | 10.0 | 2.0 | 2.0 | 100.0 | 100.0 | edged
 % 
