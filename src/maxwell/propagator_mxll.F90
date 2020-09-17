@@ -255,66 +255,67 @@ contains
     if(parse_block(namespace, 'LinearMediumBox', blk) == 0) then
 
       call messages_print_stress(stdout, trim('Maxwell Medium box:'))
-      hm%medium_box = .true.
+      hm%calc_medium_box = .true.
 
       ! find out how many lines (i.e. states) the block has
       nlines = parse_block_n(blk)
-      SAFE_ALLOCATE(hm%medium_box_center(1:3,1:nlines))
-      SAFE_ALLOCATE(hm%medium_box_size(1:3,1:nlines))
-      SAFE_ALLOCATE(hm%medium_box_ep_factor(1:nlines))
-      SAFE_ALLOCATE(hm%medium_box_mu_factor(1:nlines))
-      SAFE_ALLOCATE(hm%medium_box_sigma_e_factor(1:nlines))
-      SAFE_ALLOCATE(hm%medium_box_sigma_m_factor(1:nlines))
-      SAFE_ALLOCATE(hm%medium_box_shape(1:nlines))
+      SAFE_ALLOCATE(hm%medium_box%center(1:3,1:nlines))
+      SAFE_ALLOCATE(hm%medium_box%lsize(1:3,1:nlines))
+      SAFE_ALLOCATE(hm%medium_box%ep_factor(1:nlines))
+      SAFE_ALLOCATE(hm%medium_box%mu_factor(1:nlines))
+      SAFE_ALLOCATE(hm%medium_box%sigma_e_factor(1:nlines))
+      SAFE_ALLOCATE(hm%medium_box%sigma_m_factor(1:nlines))
+      SAFE_ALLOCATE(hm%medium_box%shape(1:nlines))
       do il=1, nlines
         ncols = parse_block_cols(blk, il-1)
         if (ncols /= 11) then
           call messages_input_error(namespace, 'LinearMediumBox', 'should consist of eleven columns', row=il-1)
         end if
         do idim = 1, 3
-          call parse_block_float(blk, il-1, idim-1, hm%medium_box_center(idim,il))
-          call parse_block_float(blk, il-1, idim+2, hm%medium_box_size(idim,il))
+          call parse_block_float(blk, il-1, idim-1, hm%medium_box%center(idim,il))
+          call parse_block_float(blk, il-1, idim+2, hm%medium_box%lsize(idim,il))
         end do
-        call parse_block_float(blk, il-1, 6, hm%medium_box_ep_factor(il))
-        call parse_block_float(blk, il-1, 7, hm%medium_box_mu_factor(il))
-        call parse_block_float(blk, il-1, 8, hm%medium_box_sigma_e_factor(il))
-        call parse_block_float(blk, il-1, 9, hm%medium_box_sigma_m_factor(il))
-        call parse_block_integer(blk, il-1, 10, hm%medium_box_shape(il))
+        call parse_block_float(blk, il-1, 6, hm%medium_box%ep_factor(il))
+        call parse_block_float(blk, il-1, 7, hm%medium_box%mu_factor(il))
+        call parse_block_float(blk, il-1, 8, hm%medium_box%sigma_e_factor(il))
+        call parse_block_float(blk, il-1, 9, hm%medium_box%sigma_m_factor(il))
+        call parse_block_integer(blk, il-1, 10, hm%medium_box%shape(il))
         if (il > 1) then
           write(message(1),'(a)') ""
           write(message(2),'(a,I1)')    'Medium box number:  ', il
-          write(message(3),'(a,es9.2,a,es9.2,a,es9.2)') 'Box center:         ', hm%medium_box_center(1,il), ' | ',&
-                hm%medium_box_center(2,il), ' | ', hm%medium_box_center(3,il)
-          write(message(4),'(a,es9.2,a,es9.2,a,es9.2)') 'Box size  :         ', hm%medium_box_size(1,il), ' | ', &
-                hm%medium_box_size(2,il), ' | ', hm%medium_box_size(3,il)
-          write(message(5),'(a,es9.2)') 'Box epsilon factor: ', hm%medium_box_ep_factor(il)
-          write(message(6),'(a,es9.2)') 'Box mu factor:      ', hm%medium_box_mu_factor(il)
-          write(message(7),'(a,es9.2)') 'Box electric sigma: ', hm%medium_box_sigma_e_factor(il)
-          write(message(8),'(a,es9.2)') 'Box magnetic sigma: ', hm%medium_box_sigma_m_factor(il)
-          if (hm%medium_box_shape(il) == OPTION__LINEARMEDIUMBOX__EDGED) then
+          write(message(3),'(a,es9.2,a,es9.2,a,es9.2)') 'Box center:         ', hm%medium_box%center(1,il), ' | ',&
+                hm%medium_box%center(2,il), ' | ', hm%medium_box%center(3,il)
+          write(message(4),'(a,es9.2,a,es9.2,a,es9.2)') 'Box size  :         ', hm%medium_box%lsize(1,il), ' | ', &
+                hm%medium_box%lsize(2,il), ' | ', hm%medium_box%lsize(3,il)
+          write(message(5),'(a,es9.2)') 'Box epsilon factor: ', hm%medium_box%ep_factor(il)
+          write(message(6),'(a,es9.2)') 'Box mu factor:      ', hm%medium_box%mu_factor(il)
+          write(message(7),'(a,es9.2)') 'Box electric sigma: ', hm%medium_box%sigma_e_factor(il)
+          write(message(8),'(a,es9.2)') 'Box magnetic sigma: ', hm%medium_box%sigma_m_factor(il)
+          if (hm%medium_box%shape(il) == OPTION__LINEARMEDIUMBOX__EDGED) then
             write(message(9),'(a,a)')   'Box shape:          ', 'edged'
-          else if (hm%medium_box_shape(il) == OPTION__LINEARMEDIUMBOX__SMOOTH) then
+          else if (hm%medium_box%shape(il) == OPTION__LINEARMEDIUMBOX__SMOOTH) then
             write(message(9),'(a,a)')   'Box shape:          ', 'smooth'
           end if
           call messages_info(9)
         else
           write(message(1),'(a,I1)')    'Medium box number:  ', il
-          write(message(2),'(a,es9.2,a,es9.2,a,es9.2)') 'Box center:         ', hm%medium_box_center(1,il), ' | ',&
-                hm%medium_box_center(2,il), ' | ', hm%medium_box_center(3,il)
-          write(message(3),'(a,es9.2,a,es9.2,a,es9.2)') 'Box size  :         ', hm%medium_box_size(1,il), ' | ', &
-                hm%medium_box_size(2,il), ' | ', hm%medium_box_size(3,il)
-          write(message(4),'(a,es9.2)') 'Box epsilon factor: ', hm%medium_box_ep_factor(il)
-          write(message(5),'(a,es9.2)') 'Box mu factor:      ', hm%medium_box_mu_factor(il)
-          write(message(6),'(a,es9.2)') 'Box electric sigma: ', hm%medium_box_sigma_e_factor(il)
-          write(message(7),'(a,es9.2)') 'Box magnetic sigma: ', hm%medium_box_sigma_m_factor(il)
-          if (hm%medium_box_shape(il) == OPTION__LINEARMEDIUMBOX__EDGED) then
+          write(message(2),'(a,es9.2,a,es9.2,a,es9.2)') 'Box center:         ', hm%medium_box%center(1,il), ' | ',&
+                hm%medium_box%center(2,il), ' | ', hm%medium_box%center(3,il)
+          write(message(3),'(a,es9.2,a,es9.2,a,es9.2)') 'Box size  :         ', hm%medium_box%lsize(1,il), ' | ', &
+                hm%medium_box%lsize(2,il), ' | ', hm%medium_box%lsize(3,il)
+          write(message(4),'(a,es9.2)') 'Box epsilon factor: ', hm%medium_box%ep_factor(il)
+          write(message(5),'(a,es9.2)') 'Box mu factor:      ', hm%medium_box%mu_factor(il)
+          write(message(6),'(a,es9.2)') 'Box electric sigma: ', hm%medium_box%sigma_e_factor(il)
+          write(message(7),'(a,es9.2)') 'Box magnetic sigma: ', hm%medium_box%sigma_m_factor(il)
+          if (hm%medium_box%shape(il) == OPTION__LINEARMEDIUMBOX__EDGED) then
             write(message(8),'(a,a)')   'Box shape:          ', 'edged'
-          else if (hm%medium_box_shape(il) == OPTION__LINEARMEDIUMBOX__SMOOTH) then
+          else if (hm%medium_box%shape(il) == OPTION__LINEARMEDIUMBOX__SMOOTH) then
             write(message(8),'(a,a)')   'Box shape:          ', 'smooth'
           end if
           call messages_info(8)
         end if
       end do
+      call parse_block_end(blk)
 
       call generate_medium_boxes(hm, gr, nlines)
 
@@ -651,12 +652,12 @@ contains
     SAFE_ALLOCATE(st%mu(1:gr%mesh%np_part))
     st%ep = P_ep
     st%mu = P_mu
-    if (hm%medium_box) then
-      do il = 1, hm%medium_box_number
-        do ip_in = 1, hm%medium_box_points_number(il)
-          ip = hm%medium_box_points_map(ip_in, il)
-          st%ep(ip) = hm%medium_box_ep(ip_in, il)
-          st%mu(ip) = hm%medium_box_mu(ip_in, il)
+    if (hm%calc_medium_box) then
+      do il = 1, hm%medium_box%number
+        do ip_in = 1, hm%medium_box%points_number(il)
+          ip = hm%medium_box%points_map(ip_in, il)
+          st%ep(ip) = hm%medium_box%ep(ip_in, il)
+          st%mu(ip) = hm%medium_box%mu(ip_in, il)
         end do
       end do
     end if
@@ -2412,16 +2413,16 @@ contains
     SAFE_ALLOCATE(tmp(gr%mesh%np_part))
     SAFE_ALLOCATE(tmp_grad(gr%mesh%np_part,1:gr%mesh%sb%dim))
 
-    SAFE_ALLOCATE(hm%medium_box_points_number(nr_of_boxes))
-    SAFE_ALLOCATE(hm%medium_box_bdry_number(nr_of_boxes))
-    hm%medium_box_number = nr_of_boxes
+    SAFE_ALLOCATE(hm%medium_box%points_number(nr_of_boxes))
+    SAFE_ALLOCATE(hm%medium_box%bdry_number(nr_of_boxes))
+    hm%medium_box%number = nr_of_boxes
 
     ip_in_max = 0
     ip_bd_max = 0
     do il= 1, nr_of_boxes
       do idim = 1, 3
-        bounds(1,idim) = hm%medium_box_center(idim,il) - hm%medium_box_size(idim,il)/M_TWO
-        bounds(2,idim) = hm%medium_box_center(idim,il) + hm%medium_box_size(idim,il)/M_TWO
+        bounds(1,idim) = hm%medium_box%center(idim,il) - hm%medium_box%lsize(idim,il)/M_TWO
+        bounds(2,idim) = hm%medium_box%center(idim,il) + hm%medium_box%lsize(idim,il)/M_TWO
       end do
       ip_in = 0
       ip_bd = 0
@@ -2436,21 +2437,21 @@ contains
       end do
       if (ip_in > ip_in_max) ip_in_max = ip_in
       if (ip_bd > ip_bd_max) ip_bd_max = ip_bd
-      hm%medium_box_points_number(il) = ip_in
-      hm%medium_box_bdry_number(il) = ip_bd
+      hm%medium_box%points_number(il) = ip_in
+      hm%medium_box%bdry_number(il) = ip_bd
     end do
 
     dd_max = max(2*gr%mesh%spacing(1), 2*gr%mesh%spacing(2), 2*gr%mesh%spacing(3))
 
-    SAFE_ALLOCATE(hm%medium_box_points_map(ip_in_max,nr_of_boxes))
-    SAFE_ALLOCATE(hm%medium_box_bdry_map(ip_bd_max,nr_of_boxes))
-    SAFE_ALLOCATE(hm%medium_box_aux_ep(ip_in_max,1:3,nr_of_boxes))
-    SAFE_ALLOCATE(hm%medium_box_aux_mu(ip_in_max,1:3,nr_of_boxes))
-    SAFE_ALLOCATE(hm%medium_box_c(ip_in_max,nr_of_boxes))
-    SAFE_ALLOCATE(hm%medium_box_ep(ip_in_max,nr_of_boxes))
-    SAFE_ALLOCATE(hm%medium_box_mu(ip_in_max,nr_of_boxes))
-    SAFE_ALLOCATE(hm%medium_box_sigma_e(ip_in_max,nr_of_boxes))
-    SAFE_ALLOCATE(hm%medium_box_sigma_m(ip_in_max,nr_of_boxes))
+    SAFE_ALLOCATE(hm%medium_box%points_map(ip_in_max,nr_of_boxes))
+    SAFE_ALLOCATE(hm%medium_box%bdry_map(ip_bd_max,nr_of_boxes))
+    SAFE_ALLOCATE(hm%medium_box%aux_ep(ip_in_max,1:3,nr_of_boxes))
+    SAFE_ALLOCATE(hm%medium_box%aux_mu(ip_in_max,1:3,nr_of_boxes))
+    SAFE_ALLOCATE(hm%medium_box%c(ip_in_max,nr_of_boxes))
+    SAFE_ALLOCATE(hm%medium_box%ep(ip_in_max,nr_of_boxes))
+    SAFE_ALLOCATE(hm%medium_box%mu(ip_in_max,nr_of_boxes))
+    SAFE_ALLOCATE(hm%medium_box%sigma_e(ip_in_max,nr_of_boxes))
+    SAFE_ALLOCATE(hm%medium_box%sigma_m(ip_in_max,nr_of_boxes))
 
     do il = 1, nr_of_boxes
       ip_in = 0
@@ -2459,71 +2460,71 @@ contains
         xx(1:3) = gr%mesh%x(ip,1:3)
         if (check_point_in_bounds(xx, bounds)) then
           ip_in = ip_in + 1
-          hm%medium_box_points_map(ip_in,il) = ip
+          hm%medium_box%points_map(ip_in,il) = ip
         end if
         if (check_point_on_bounds(xx, bounds)) then
           ip_bd = ip_bd + 1
-          hm%medium_box_bdry_map(ip_bd,il) = ip
+          hm%medium_box%bdry_map(ip_bd,il) = ip
         end if
       end do
     end do
 
     do il = 1, nr_of_boxes
 
-      do ip_in = 1, hm%medium_box_points_number(il)
-        ip = hm%medium_box_points_map(ip_in,il)
-        if (hm%medium_box_shape(il) == OPTION__LINEARMEDIUMBOX__SMOOTH) then
+      do ip_in = 1, hm%medium_box%points_number(il)
+        ip = hm%medium_box%points_map(ip_in,il)
+        if (hm%medium_box%shape(il) == OPTION__LINEARMEDIUMBOX__SMOOTH) then
           xx(1:3) = gr%mesh%x(ip,1:3)
           dd_min = M_HUGE
 
-          do ip_bd = 1, hm%medium_box_bdry_number(il)
-            ipp = hm%medium_box_bdry_map(ip_bd, il)
+          do ip_bd = 1, hm%medium_box%bdry_number(il)
+            ipp = hm%medium_box%bdry_map(ip_bd, il)
             xxp(1:3) = gr%mesh%x(ipp,1:3)
             dd = sqrt((xx(1) - xxp(1))**2 + (xx(2) - xxp(2))**2 + (xx(3) - xxp(3))**2)
             if (dd < dd_min) dd_min = dd
           end do
 
-          hm%medium_box_ep(ip_in,il) = P_ep + ((P_ep * hm%medium_box_ep_factor(il) - P_ep)  &
+          hm%medium_box%ep(ip_in,il) = P_ep + ((P_ep * hm%medium_box%ep_factor(il) - P_ep)  &
             * M_ONE/(M_ONE + exp(-M_FIVE/dd_max * (dd_min - M_TWO*dd_max))))
-          hm%medium_box_mu(ip_in,il) = P_mu + ((P_mu * hm%medium_box_mu_factor(il) - P_mu) &
+          hm%medium_box%mu(ip_in,il) = P_mu + ((P_mu * hm%medium_box%mu_factor(il) - P_mu) &
             * M_ONE/(M_ONE + exp(-M_FIVE/dd_max * (dd_min - M_TWO*dd_max))))
-          hm%medium_box_c(ip_in,il) = M_ONE/sqrt(hm%medium_box_ep(ip_in, il)*hm%medium_box_mu(ip_in, il))
-          hm%medium_box_sigma_e(ip_in,il) = hm%medium_box_sigma_e_factor(il) &
+          hm%medium_box%c(ip_in,il) = M_ONE/sqrt(hm%medium_box%ep(ip_in, il)*hm%medium_box%mu(ip_in, il))
+          hm%medium_box%sigma_e(ip_in,il) = hm%medium_box%sigma_e_factor(il) &
             * M_ONE/(M_ONE + exp(-M_FIVE/dd_max * (dd_min - M_TWO*dd_max)) )
-          hm%medium_box_sigma_m(ip_in,il) = hm%medium_box_sigma_m_factor(il) &
+          hm%medium_box%sigma_m(ip_in,il) = hm%medium_box%sigma_m_factor(il) &
             * M_ONE/(M_ONE + exp(-M_FIVE/dd_max * (dd_min - M_TWO*dd_max)) )
 
-        else if (hm%medium_box_shape(il) == OPTION__LINEARMEDIUMBOX__EDGED) then
+        else if (hm%medium_box%shape(il) == OPTION__LINEARMEDIUMBOX__EDGED) then
 
-          hm%medium_box_ep(ip_in, il) = P_ep * hm%medium_box_ep_factor(il)
-          hm%medium_box_mu(ip_in, il) = P_mu * hm%medium_box_mu_factor(il)
-          hm%medium_box_c(ip_in, il) = M_ONE/sqrt(hm%medium_box_ep(ip_in, il)*hm%medium_box_mu(ip_in, il))
-          hm%medium_box_sigma_e(ip_in, il) = hm%medium_box_sigma_e_factor(il)
-          hm%medium_box_sigma_m(ip_in, il) = hm%medium_box_sigma_m_factor(il)
+          hm%medium_box%ep(ip_in, il) = P_ep * hm%medium_box%ep_factor(il)
+          hm%medium_box%mu(ip_in, il) = P_mu * hm%medium_box%mu_factor(il)
+          hm%medium_box%c(ip_in, il) = M_ONE/sqrt(hm%medium_box%ep(ip_in, il)*hm%medium_box%mu(ip_in, il))
+          hm%medium_box%sigma_e(ip_in, il) = hm%medium_box%sigma_e_factor(il)
+          hm%medium_box%sigma_m(ip_in, il) = hm%medium_box%sigma_m_factor(il)
 
         end if
       end do
 
       tmp = P_ep
-      do  ip_in = 1, hm%medium_box_points_number(il)
-        ip = hm%medium_box_points_map(ip_in, il)
-        tmp(ip)= hm%medium_box_ep(ip_in, il)
+      do  ip_in = 1, hm%medium_box%points_number(il)
+        ip = hm%medium_box%points_map(ip_in, il)
+        tmp(ip)= hm%medium_box%ep(ip_in, il)
       end do
       call dderivatives_grad(gr%der, tmp, tmp_grad, set_bc = .false.)
-      do ip_in = 1, hm%medium_box_points_number(il)
-        ip = hm%medium_box_points_map(ip_in, il)
-        hm%medium_box_aux_ep(ip_in, :, il) = tmp_grad(ip, :)/(M_FOUR * hm%medium_box_ep(ip_in, il))
+      do ip_in = 1, hm%medium_box%points_number(il)
+        ip = hm%medium_box%points_map(ip_in, il)
+        hm%medium_box%aux_ep(ip_in, :, il) = tmp_grad(ip, :)/(M_FOUR * hm%medium_box%ep(ip_in, il))
       end do
 
       tmp = P_mu
-      do ip_in = 1, hm%medium_box_points_number(il)
-        ip = hm%medium_box_points_map(ip_in, il)
-        tmp(ip) = hm%medium_box_mu(ip_in, il)
+      do ip_in = 1, hm%medium_box%points_number(il)
+        ip = hm%medium_box%points_map(ip_in, il)
+        tmp(ip) = hm%medium_box%mu(ip_in, il)
       end do
       call dderivatives_grad(gr%der, tmp, tmp_grad, set_bc = .false.)
-      do ip_in = 1, hm%medium_box_points_number(il)
-        ip = hm%medium_box_points_map(ip_in, il)
-        hm%medium_box_aux_mu(ip_in, :, il) = tmp_grad(ip, :)/(M_FOUR * hm%medium_box_mu(ip_in, il))
+      do ip_in = 1, hm%medium_box%points_number(il)
+        ip = hm%medium_box%points_map(ip_in, il)
+        hm%medium_box%aux_mu(ip_in, :, il) = tmp_grad(ip, :)/(M_FOUR * hm%medium_box%mu(ip_in, il))
       end do
 
       ! print information about the medium box -- get from Renes version in maxwell_propagator.F90
@@ -2581,8 +2582,8 @@ contains
 
       integer :: ip, ip_in
 
-      do ip_in = 1, hm%medium_box_points_number(il)
-        ip = hm%medium_box_points_map(ip_in, il)
+      do ip_in = 1, hm%medium_box%points_number(il)
+        ip = hm%medium_box%points_map(ip_in, il)
         io_func(ip) = medium_func(ip_in)
       end do
 

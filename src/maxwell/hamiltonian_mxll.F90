@@ -66,6 +66,28 @@ module hamiltonian_mxll_oct_m
     maxwell_helmholtz_decomposition_trans_field,&
     maxwell_helmholtz_decomposition_long_field
 
+   type :: medium_box_t
+     integer                        :: number
+     integer, allocatable           :: shape(:)
+     FLOAT, allocatable             :: center(:,:)
+     FLOAT, allocatable             :: lsize(:,:)
+     FLOAT, allocatable             :: ep(:,:)
+     FLOAT, allocatable             :: mu(:,:)
+     FLOAT, allocatable             :: c(:,:)
+     FLOAT, allocatable             :: ep_factor(:)
+     FLOAT, allocatable             :: mu_factor(:)
+     FLOAT, allocatable             :: sigma_e_factor(:)
+     FLOAT, allocatable             :: sigma_m_factor(:)
+     FLOAT, allocatable             :: sigma_e(:,:)
+     FLOAT, allocatable             :: sigma_m(:,:)
+     integer, allocatable           :: points_number(:)
+     integer, allocatable           :: points_map(:,:)
+     FLOAT, allocatable             :: aux_ep(:,:,:)
+     FLOAT, allocatable             :: aux_mu(:,:,:)
+     integer, allocatable           :: bdry_number(:)
+     FLOAT, allocatable             :: bdry_map(:,:)
+   end type medium_box_t
+
    type, extends(hamiltonian_abst_t) :: hamiltonian_mxll_t
     integer                        :: dim
     !> absorbing boundaries
@@ -122,27 +144,9 @@ module hamiltonian_mxll_oct_m
     ! TODO: add medium object file
     integer                        :: medium_calculation
 
-    logical                        :: medium_box = .false.
-    integer                        :: medium_box_number
-    integer, pointer               :: medium_box_shape(:)
-    FLOAT, pointer                 :: medium_box_center(:,:)
-    FLOAT, pointer                 :: medium_box_size(:,:)
-    FLOAT, pointer                 :: medium_box_ep(:,:)
-    FLOAT, pointer                 :: medium_box_mu(:,:)
-    FLOAT, pointer                 :: medium_box_c(:,:)
-    FLOAT, pointer                 :: medium_box_ep_factor(:)
-    FLOAT, pointer                 :: medium_box_mu_factor(:)
-    FLOAT, pointer                 :: medium_box_sigma_e_factor(:)
-    FLOAT, pointer                 :: medium_box_sigma_m_factor(:)
-    FLOAT, pointer                 :: medium_box_sigma_e(:,:)
-    FLOAT, pointer                 :: medium_box_sigma_m(:,:)
-    integer, pointer               :: medium_box_points_number(:)
-    integer, pointer               :: medium_box_points_map(:,:)
-    FLOAT, pointer                 :: medium_box_aux_ep(:,:,:)
-    FLOAT, pointer                 :: medium_box_aux_mu(:,:,:)
-    integer, pointer               :: medium_box_bdry_number(:)
-    FLOAT, pointer                 :: medium_box_bdry_map(:,:)
-  
+    logical                        :: calc_medium_box = .false.
+    type(medium_box_t)             :: medium_box
+
     !> maxwell hamiltonian_mxll
     integer                        :: operator
     logical                        :: current_density_ext_flag = .false.
@@ -250,7 +254,7 @@ contains
       hm%dim = hm%dim+1
     else if (hm%operator == FARADAY_AMPERE_MEDIUM) then
       hm%dim = 2*hm%dim
-      hm%medium_box = .true.
+      hm%calc_medium_box = .true.
     end if
 
     !%Variable ExternalCurrent
@@ -312,6 +316,8 @@ contains
     call energy_mxll_end(hm%energy)
 
     call bc_mxll_end(hm%bc)
+
+    call medium_box_end(hm)
 
     POP_SUB(hamiltonian_mxll_end)
   end subroutine hamiltonian_mxll_end
@@ -939,16 +945,16 @@ contains
 
     PUSH_SUB(maxwell_medium_boxes_calculation)
 
-    if (hm%medium_box .and. &
+    if (hm%calc_medium_box .and. &
          (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RS) ) then
-      do il = 1, hm%medium_box_number
-        do ip_in = 1, hm%medium_box_points_number(il)
-          ip           = hm%medium_box_points_map(ip_in, il)
-          cc           = hm%medium_box_c(ip_in,il)/P_c
-          aux_ep(1:3)  = hm%medium_box_aux_ep(ip_in, 1:3, il)
-          aux_mu(1:3)  = hm%medium_box_aux_mu(ip_in, 1:3, il)
-          sigma_e      = hm%medium_box_sigma_e(ip_in, il)
-          sigma_m      = hm%medium_box_sigma_m(ip_in, il)
+      do il = 1, hm%medium_box%number
+        do ip_in = 1, hm%medium_box%points_number(il)
+          ip           = hm%medium_box%points_map(ip_in, il)
+          cc           = hm%medium_box%c(ip_in,il)/P_c
+          aux_ep(1:3)  = hm%medium_box%aux_ep(ip_in, 1:3, il)
+          aux_mu(1:3)  = hm%medium_box%aux_mu(ip_in, 1:3, il)
+          sigma_e      = hm%medium_box%sigma_e(ip_in, il)
+          sigma_m      = hm%medium_box%sigma_m(ip_in, il)
           ff_plus(1)   = psi(ip, 1)
           ff_plus(2)   = psi(ip, 2)
           ff_plus(3)   = psi(ip, 3)
@@ -1093,6 +1099,35 @@ contains
     call messages_not_implemented ('zhamiltonian_mxll_magnus_apply', namespace=namespace)
 
   end subroutine zhamiltonian_mxll_magnus_apply
+
+  subroutine medium_box_end(hm)
+    class(hamiltonian_mxll_t),   intent(inout)    :: hm
+
+    PUSH_SUB(medium_box_end)
+
+    SAFE_DEALLOCATE_A(hm%medium_box%center)
+    SAFE_DEALLOCATE_A(hm%medium_box%lsize)
+    SAFE_DEALLOCATE_A(hm%medium_box%ep_factor)
+    SAFE_DEALLOCATE_A(hm%medium_box%mu_factor)
+    SAFE_DEALLOCATE_A(hm%medium_box%sigma_e_factor)
+    SAFE_DEALLOCATE_A(hm%medium_box%sigma_m_factor)
+    SAFE_DEALLOCATE_A(hm%medium_box%shape)
+    SAFE_DEALLOCATE_A(hm%medium_box%points_number)
+    SAFE_DEALLOCATE_A(hm%medium_box%bdry_number)
+    SAFE_DEALLOCATE_A(hm%medium_box%points_map)
+    SAFE_DEALLOCATE_A(hm%medium_box%bdry_map)
+    SAFE_DEALLOCATE_A(hm%medium_box%aux_ep)
+    SAFE_DEALLOCATE_A(hm%medium_box%aux_mu)
+    SAFE_DEALLOCATE_A(hm%medium_box%c)
+    SAFE_DEALLOCATE_A(hm%medium_box%ep)
+    SAFE_DEALLOCATE_A(hm%medium_box%mu)
+    SAFE_DEALLOCATE_A(hm%medium_box%sigma_e)
+    SAFE_DEALLOCATE_A(hm%medium_box%sigma_m)
+
+    POP_SUB(medium_box_end)
+
+  end subroutine medium_box_end
+
 
 end module hamiltonian_mxll_oct_m
 
