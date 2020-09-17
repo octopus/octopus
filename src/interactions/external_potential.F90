@@ -19,12 +19,15 @@
 
 module external_potential_oct_m
   use clock_oct_m
+  use ghost_interaction_oct_m
   use global_oct_m
   use iihash_oct_m
   use interaction_oct_m
+  use interactions_factory_oct_m
   use interaction_partner_oct_m
   use io_function_oct_m
   use linked_list_oct_m
+  use lorentz_force_oct_m
   use mesh_oct_m
   use messages_oct_m
   use namespace_oct_m
@@ -60,7 +63,6 @@ module external_potential_oct_m
     FLOAT, pointer, public :: E_field(:)           !< static electric field
     !Auxiliary arrays for the electrons only
     !TODO: Suppress once electrons fully use the new framework
-    FLOAT, pointer, public :: v_static(:)          !< static scalar potential
     FLOAT, allocatable, public :: v_ext(:)             !< static scalar potential - 1:gr%mesh%np_part
 
   contains
@@ -95,12 +97,12 @@ contains
 
     SAFE_ALLOCATE(this)
 
-    this%namespace = namespace
+    this%namespace = namespace_t("ExternalPotential", parent=namespace)
 
+    this%type = -1
     nullify(this%B_field)
     nullify(this%A_static)
     nullify(this%E_field)
-    nullify(this%v_static)
 
     POP_SUB(external_potential_init)
   end function external_potential_init
@@ -130,7 +132,7 @@ contains
     case(EXTERNAL_POT_STATIC_BFIELD)
       SAFE_ALLOCATE(this%A_static(1:mesh%np, 1:mesh%sb%dim))
     case(EXTERNAL_POT_STATIC_EFIELD)
-      SAFE_ALLOCATE(this%v_static(1:mesh%np))
+      SAFE_ALLOCATE(this%pot(1:mesh%np))
       SAFE_ALLOCATE(this%v_ext(1:mesh%np_part))
     end select
 
@@ -148,7 +150,6 @@ contains
     SAFE_DEALLOCATE_P(this%B_field)
     SAFE_DEALLOCATE_P(this%A_static)
     SAFE_DEALLOCATE_P(this%E_field)
-    SAFE_DEALLOCATE_P(this%v_static)
     SAFE_DEALLOCATE_A(this%v_ext)
 
     POP_SUB(external_potential_deallocate)
@@ -164,7 +165,14 @@ contains
 
     PUSH_SUB(external_potential_update_exposed_quantities)
 
-    allowed_to_update = .false.
+    allowed_to_update = .true.
+    select type (interaction)
+    type is (ghost_interaction_t)
+      ! Nothing to copy. We still need to check that we are at the right
+      ! time for the update though!
+    class default
+      call partner%copy_quantities_to_interaction(interaction)
+    end select
 
     POP_SUB(external_potential_update_exposed_quantities)
 
@@ -177,6 +185,15 @@ contains
 
     PUSH_SUB(external_potential_update_exposed_quantities)
 
+    ! We are not allowed to update protected quantities!
+    ASSERT(.not. partner%quantities(iq)%protected)
+
+    select case (iq)
+    case default
+      message(1) = "Incompatible quantity."
+      call messages_fatal(1)
+    end select
+
     POP_SUB(external_potential_update_exposed_quantities)
 
   end subroutine external_potential_update_exposed_quantity
@@ -187,6 +204,23 @@ contains
     class(interaction_t),            intent(inout) :: interaction
 
     PUSH_SUB(external_potential_copy_quantities_to_interaction)
+
+    select type (interaction)
+    type is (lorentz_force_t)
+      if(partner%type == EXTERNAL_POT_STATIC_EFIELD) then
+        interaction%partner_E_field = partner%E_field
+        interaction%partner_B_field = M_ZERO
+      else if(partner%type == EXTERNAL_POT_STATIC_BFIELD) then 
+        interaction%partner_E_field = M_ZERO
+        interaction%partner_B_field = partner%B_field
+      else
+        ASSERT(.false.) !This should never occur.
+      end if 
+
+    class default
+      message(1) = "Unsupported interaction."
+      call messages_fatal(1)
+    end select
 
     POP_SUB(external_potential_copy_quantities_to_interaction)
 
@@ -297,12 +331,13 @@ contains
         ! NTD: This comment is very confusing and prone to error
         ! TODO: Fix this to have physically sound quantities and interactions
         do ip = 1, mesh%np
-          this%v_static(ip) = sum(mesh%x(ip, mesh%sb%periodic_dim + 1:mesh%sb%dim) &
+          this%pot(ip) = sum(mesh%x(ip, mesh%sb%periodic_dim + 1:mesh%sb%dim) &
                                     * this%E_field(mesh%sb%periodic_dim + 1:mesh%sb%dim))
         end do
         ! The following is needed to make interpolations.
         ! It is used by PCM.
-        do ip = 1, mesh%np_part
+        this%v_ext(1:mesh%np) = this%pot(1:mesh%np)
+        do ip = mesh%np+1, mesh%np_part
           this%v_ext(ip) = sum(mesh%x(ip, mesh%sb%periodic_dim + 1:mesh%sb%dim) &
                                  * this%E_field(mesh%sb%periodic_dim + 1:mesh%sb%dim))
         end do
@@ -415,6 +450,7 @@ contains
       !Create a potential
       pot => external_potential_t(namespace)
       pot%type = EXTERNAL_POT_STATIC_BFIELD
+      call pot%supported_interactions_as_partner%add(LORENTZ_FORCE)
 
       !%Variable StaticMagneticField2DGauge
       !%Type integer
@@ -469,7 +505,7 @@ contains
 
       !The corresponding A field on the mesh is computed in the routine external_potential_calculate 
 
-  end if
+    end if
 
     !%Variable StaticElectricField
     !%Type block
@@ -487,6 +523,7 @@ contains
       !Create a potential
       pot => external_potential_t(namespace) 
       pot%type = EXTERNAL_POT_STATIC_EFIELD
+      call pot%supported_interactions_as_partner%add(LORENTZ_FORCE)
    
       SAFE_ALLOCATE(pot%E_field(1:dim))
       do idir = 1, dim

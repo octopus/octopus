@@ -699,7 +699,7 @@ contains
               SAFE_ALLOCATE(hm%ep%v_ext(1:gr%mesh%np_part))
               hm%ep%v_ext(1:gr%mesh%np_part) = M_ZERO
             end if     
-            call lalg_axpy(gr%mesh%np, M_ONE, potential%v_static, hm%ep%v_static)
+            call lalg_axpy(gr%mesh%np, M_ONE, potential%pot, hm%ep%v_static)
             call lalg_axpy(gr%mesh%np, M_ONE, potential%v_ext, hm%ep%v_ext)
           end select
           call potential%deallocate_memory()
