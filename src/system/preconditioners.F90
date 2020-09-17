@@ -68,7 +68,9 @@ module preconditioners_oct_m
     private
     integer :: which
 
-    type(nl_operator_t) :: op
+    type(nl_operator_t), pointer :: op_array(:)  !< this array is necessary for derivatives_get_lapl() to work
+    type(nl_operator_t), pointer :: op           !< pointer to access op_array(1) simply as op
+
     FLOAT, pointer      :: diag_lapl(:) !< diagonal of the laplacian
     integer             :: npre, npost, nmiddle
 
@@ -85,12 +87,16 @@ contains
     type(geometry_t),       intent(in)     :: geo
     type(multicomm_t),      intent(in)     :: mc
 
-    FLOAT :: alpha, default_alpha
+    FLOAT :: alpha, default_alpha, omega
     FLOAT :: vol
     integer :: default
     integer :: maxp, is, ns, ip, ip2
+    character(len=32) :: name
 
     PUSH_SUB(preconditioner_init)
+
+    SAFE_ALLOCATE(this%op_array(1))
+    this%op => this%op_array(1)
 
     !%Variable Preconditioner
     !%Type integer
@@ -126,10 +132,9 @@ contains
 
     select case(this%which)
     case(PRE_FILTER)
-      ! the smoothing has a star stencil like the laplacian
-      call nl_operator_init(this%op, "Preconditioner")
-      call stencil_star_get_lapl(this%op%stencil, gr%mesh%sb%dim, 1)
-      call nl_operator_build(gr%mesh, this%op, gr%mesh%np, const_w = .not. gr%mesh%use_curvilinear)
+      ! the smoothing is performed uing the same stencil as the Laplacian
+      name = "Preconditioner"
+      call derivatives_get_lapl(gr%der, this%op_array, name, 1)
 
       !%Variable PreconditionerFilterFactor
       !%Type float
@@ -169,21 +174,37 @@ contains
         maxp = gr%mesh%np
       end if
 
+      !We change the weights to be the one of the kinetic energy operator
+      this%op%w = -M_HALF * this%op%w
+      
+      SAFE_ALLOCATE(this%diag_lapl(1:gr%mesh%np))
+      call dnl_operator_operate_diag(this%op, this%diag_lapl)
+
       do ip = 1,maxp
 
         if(gr%mesh%use_curvilinear) vol = sum(gr%mesh%vol_pp(ip + this%op%ri(1:ns, this%op%rimap(ip))))
 
+        !The filter preconditioner is given by two iterations of the Relaxation Jacobi method
+        !This leads to \tilde{\psi} =  \omega D^{-1}(2\psi - \omega D^{-1} (-0.5\Laplacian) \psi),
+        ! where \omega = 2(1-\alpha), and D is the diagonal part of (-0.5\Laplacian)
+        !In order to have this to work in all cases, such as different spacings, nonorthogonal cells, ...
+        !We directly apply this formula to renormalize the weights of the Laplacian 
+        !and get the correct preconditioner
+
+        omega = M_TWO * (M_ONE-alpha)
+
         do is = 1, ns
-          if(is /= this%op%stencil%center) then
-            this%op%w(is, ip) = M_HALF*(M_ONE - alpha)/gr%mesh%sb%dim
-          else
-            this%op%w(is, ip) = alpha
+          this%op%w(is, ip) = - omega / this%diag_lapl(ip) * this%op%w(is, ip)
+          if(is == this%op%stencil%center) then
+            this%op%w(is, ip) = this%op%w(is, ip) + M_TWO
           end if
-          this%op%w(is, ip) = this%op%w(is, ip) * M_TWO * M_TWO*(M_ONE - alpha)/gr%mesh%sb%dim
+          this%op%w(is, ip) = this%op%w(is, ip) * omega / this%diag_lapl(ip)
           ip2 = ip + this%op%ri(is, this%op%rimap(ip))
           if(gr%mesh%use_curvilinear) this%op%w(is, ip) = this%op%w(is, ip)*(ns*gr%mesh%vol_pp(ip2)/vol)
         end do
       end do
+
+      SAFE_DEALLOCATE_P(this%diag_lapl)
 
       call nl_operator_update_weights(this%op)
 
@@ -259,6 +280,9 @@ contains
       SAFE_DEALLOCATE_P(this%mgrid)
 
     end select
+
+    nullify(this%op)
+    SAFE_DEALLOCATE_P(this%op_array)
 
     call preconditioner_null(this)
     POP_SUB(preconditioner_end)

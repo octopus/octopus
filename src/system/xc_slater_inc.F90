@@ -61,10 +61,14 @@ subroutine X(slater) (namespace, mesh, psolver, st, isp, ex, vxc)
 
   integer :: ii, jst, ist, i_max, node_to, node_fr, ist_s, ist_r, idm, ip
   integer, allocatable :: recv_stack(:), send_stack(:)
-  FLOAT :: rr, socc, nn
+  FLOAT :: rr, socc, nn, mm, alpha, betar, betai, alpha2, beta2
   R_TYPE, allocatable:: bij(:,:)
   R_TYPE, allocatable :: rho_ij(:), pot_ij(:), psi(:,:), wf_ist(:,:)
   R_TYPE :: tmp
+  FLOAT, allocatable :: tmp_vxc(:)
+  FLOAT :: global_b(4), local_b(4), local_v(4), global_v(4)
+  FLOAT :: nup, ndn, sqmod_updn
+
 
 #if defined(HAVE_MPI)
   integer :: send_req, status(MPI_STATUS_SIZE)
@@ -87,6 +91,11 @@ subroutine X(slater) (namespace, mesh, psolver, st, isp, ex, vxc)
   if(st%d%ispin == SPINORS) then
     SAFE_ALLOCATE(bij(1:mesh%np, 1:3))
     bij(:,:) = M_ZERO
+  end if
+
+  if(present(vxc) .and. st%d%ispin /= SPINORS) then
+    SAFE_ALLOCATE(tmp_vxc(1:mesh%np))
+    tmp_vxc(:) = M_ZERO
   end if
 
   ! This is the maximum number of blocks for each processor
@@ -174,6 +183,8 @@ subroutine X(slater) (namespace, mesh, psolver, st, isp, ex, vxc)
         ist = recv_stack(ist_r)
         do jst = st%st_start, st%st_end
 
+          if(abs(st%occ(ist, isp)) < M_EPSILON .or. abs(st%occ(jst, isp)) < M_EPSILON) cycle
+
           if((st%node(ist) == st%mpi_grp%rank).and.(jst < ist)) cycle
           if((st%occ(ist, isp) <= M_EPSILON).or.(st%occ(jst, isp) <= M_EPSILON)) cycle
 
@@ -195,8 +206,7 @@ subroutine X(slater) (namespace, mesh, psolver, st, isp, ex, vxc)
             if( st%d%ispin /= SPINORS) then
               do ip = 1, mesh%np
                 !If there is no density at this point, we simply ignore it
-                if(st%rho(ip, isp) < CNST(1e-10)) cycle        
-                vxc(ip, isp) = vxc(ip, isp) - rr * R_REAL(R_CONJ(rho_ij(ip)) * pot_ij(ip)) / st%rho(ip, isp)
+                tmp_vxc(ip) = tmp_vxc(ip) - rr * R_REAL(R_CONJ(rho_ij(ip)) * pot_ij(ip)) / (st%rho(ip, isp) + M_EPSILON)
               end do
             else
               !This is given by Eq. 19 in SI of PRB 98, 035140 (2018)
@@ -206,16 +216,16 @@ subroutine X(slater) (namespace, mesh, psolver, st, isp, ex, vxc)
                 bij(1:mesh%np, 2) = bij(1:mesh%np, 2) - M_TWO * rr &
                       * R_REAL(wf_ist(1:mesh%np, 2)*R_CONJ(psi(1:mesh%np, 2)) * pot_ij(1:mesh%np))
                 !As we only compute the terms ist >= jst, we get a symmetric form
-                bij(1:mesh%np, 3) = bij(1:mesh%np, 3) - rr * &
-                              ( wf_ist(1:mesh%np, 1)*R_CONJ(psi(1:mesh%np, 2)) * pot_ij(1:mesh%np) &
-                              + psi(1:mesh%np, 1)*R_CONJ(wf_ist(1:mesh%np, 2) * pot_ij(1:mesh%np)))
+                bij(1:mesh%np, 3) = bij(1:mesh%np, 3) - rr &
+                      * ( wf_ist(1:mesh%np, 1)* R_CONJ(psi(1:mesh%np, 2)) * pot_ij(1:mesh%np) &
+                        + psi(1:mesh%np, 1)   * R_CONJ(wf_ist(1:mesh%np, 2) * pot_ij(1:mesh%np)))
               else
                 bij(1:mesh%np, 1) = bij(1:mesh%np, 1) - rr &
                       * R_REAL(wf_ist(1:mesh%np, 1)*R_CONJ(psi(1:mesh%np, 1)) * pot_ij(1:mesh%np))
                 bij(1:mesh%np, 2) = bij(1:mesh%np, 2) - rr &
                       * R_REAL(wf_ist(1:mesh%np, 2)*R_CONJ(psi(1:mesh%np, 2)) * pot_ij(1:mesh%np))
                 bij(1:mesh%np, 3) = bij(1:mesh%np, 3) - rr &
-                      * wf_ist(1:mesh%np, 1)*R_CONJ(psi(1:mesh%np, 2)) * pot_ij(1:mesh%np)
+                      * wf_ist(1:mesh%np, 1) * R_CONJ(psi(1:mesh%np, 2)) * pot_ij(1:mesh%np)
               end if
               !The last component is simply the complex conjuguate of bij(3), so we do not compute it.
             end if
@@ -239,11 +249,15 @@ subroutine X(slater) (namespace, mesh, psolver, st, isp, ex, vxc)
       if(st%d%ispin == SPINORS) then
         call comm_allreduce(st%mpi_grp%comm, bij)
       else
-        call comm_allreduce(st%mpi_grp%comm, vxc)
+        call comm_allreduce(st%mpi_grp%comm, tmp_vxc)
       end if
     end if
   end if
 #endif
+  if(present(vxc) .and. st%d%ispin /= SPINORS) then
+    vxc(:, isp) = vxc(:, isp) + tmp_vxc
+  end if
+  SAFE_DEALLOCATE_A(tmp_vxc)
 
   !We now construct the full potential from the density and the quantity b_ij
   !Note that the final potential is real and stored as v_upup, v_downdown, Re(v_updown), and Im(updown)
@@ -251,30 +265,69 @@ subroutine X(slater) (namespace, mesh, psolver, st, isp, ex, vxc)
   if(present(vxc) .and. st%d%ispin == SPINORS) then
     do ip = 1, mesh%np
 
-      nn = st%rho(ip, 1) + st%rho(ip, 2)
-      !If there is no density at this point, we simply ignore it
-      if(nn < CNST(1e-10)) cycle 
+      nn = st%rho(ip, 1) + st%rho(ip, 2) + M_EPSILON
+      sqmod_updn = st%rho(ip, 3)**2 + st%rho(ip, 4)**2
+
       ! 1/(2nD), where n is the charge density and D = n_uu*n_dd - n_ud*n_du
       ! where D is the determinant of the spin-density matrix
-      rr = (st%rho(ip, 1) * st%rho(ip, 2)  - (st%rho(ip, 3)**2 + st%rho(ip, 4)**2))
-      if(abs(rr) < CNST(1.0e-10)) then !The matrix is singular, we are fully spin polarized along one direction
-        vxc(ip, 1) = vxc(ip, 1) +  M_HALF/nn*bij(ip, 1) 
-        vxc(ip, 2) = vxc(ip, 2) +  M_HALF/nn*bij(ip, 2)
+      rr = (st%rho(ip, 1) * st%rho(ip, 2)  - sqmod_updn)
+      if(abs(rr) < CNST(1.0e-13) ) then !The matrix is singular
+        !For determining the potential, we go to the local frame given by the local magnetization
+        !In this frame, the spin density matrix has a single non-zero element on the diagonal (because wthe matrix is singular)
+        !This allows us to determine the potential in this frame, and to rotate it back in the original frame
+        !We start by finding the non-zero component in the local rotated frame
+        mm = sqrt((st%rho(ip, 1) - st%rho(ip, 2))**2 + M_FOUR*sqmod_updn)
+        if((st%rho(ip, 1) - st%rho(ip, 2)) > 0) then
+          nup = max(M_HALF*(nn + mm), M_ZERO)
+          ndn = max(M_HALF*(nn - mm), M_ZERO)
+        else
+          nup = max(M_HALF*(nn - mm), M_ZERO)
+          ndn = max(M_HALF*(nn + mm), M_ZERO)
+        end if
+
+        !Coefficients of the rotation matrix
+        call get_rotation_matrix(st%rho(ip, :), alpha, betar, betai)
+        alpha2 = alpha**2
+        beta2 = betar**2 + betai**2
+
+        !We rotate to the local frame
+        !We add here the factor of two that is originally in the Sylvester equation
+        !In the non singular case, this is cancelled by a factor one half
+        global_b(1) = M_TWO*TOFLOAT(bij(ip, 1))
+        global_b(2) = M_TWO*TOFLOAT(bij(ip, 2))
+        global_b(3) = M_TWO*TOFLOAT(bij(ip, 3))
+        global_b(4) = M_TWO*R_AIMAG(bij(ip, 3))
+        call rotate_to_local(global_b, alpha, betar, betai, alpha2, beta2, local_b)
+       
+        local_v(1:4) = M_ZERO
+        if(nup > ndn) then !We are up
+          local_v(1) = local_b(1) / (M_TWO * nup)
+          local_v(3) = local_b(3) / nup
+          local_v(4) = local_b(4) / nup
+        else !We are down
+          local_v(2) = local_b(2) / (M_TWO * ndn)
+          local_v(3) = local_b(3) / ndn
+          local_v(4) = local_b(4) / ndn
+        end if
+
+        !We rotate to the original frame and we accumulate the result
+        call rotate_to_global(local_v, alpha, betar, betai, alpha2, beta2, global_v)
+        vxc(ip, 1:4) = vxc(ip, 1:4) + global_v(1:4)   
+
       else
 
-        rr = M_ONE/(M_TWO * nn * rr)
+        rr = M_ONE/(nn * rr)
 
         vxc(ip, 1) = vxc(ip, 1) + rr * ( &
-           ( nn * st%rho(ip, 2) - (st%rho(ip, 3)**2 + st%rho(ip, 4)**2)) * bij(ip, 1) &
-          +( (st%rho(ip, 3)**2 + st%rho(ip, 4)**2) ) * bij(ip, 2) &
+           (nn * st%rho(ip, 2) - sqmod_updn) * bij(ip, 1) + sqmod_updn * bij(ip, 2) &
           - M_TWO * st%rho(ip,2) * ( st%rho(ip,3) * R_REAL(bij(ip,3)) + st%rho(ip,4) * R_AIMAG(bij(ip,3))))
 
         vxc(ip, 2) = vxc(ip, 2) + rr * ( &
-           ( nn * st%rho(ip, 1) - (st%rho(ip, 3)**2 + st%rho(ip, 4)**2)) * bij(ip, 2) &
-          +( (st%rho(ip, 3)**2 + st%rho(ip, 4)**2) ) * bij(ip, 1) &
+           (nn * st%rho(ip, 1) - sqmod_updn) * bij(ip, 2) + sqmod_updn * bij(ip, 1) &
           - M_TWO * st%rho(ip,1) * ( st%rho(ip,3) * R_REAL(bij(ip,3)) + st%rho(ip,4) * R_AIMAG(bij(ip,3)))) 
-         tmp = -cmplx(st%rho(ip, 3), st%rho(ip,4)) * (st%rho(ip, 2) * bij(ip,1) + st%rho(ip, 1) * bij(ip,2)) &
-       + (M_TWO *st%rho(ip, 1) * st%rho(ip, 2)  - (st%rho(ip, 3)**2 + st%rho(ip, 4)**2)) * bij(ip, 3) &
+
+         tmp = -cmplx(st%rho(ip, 3), st%rho(ip,4)) * (st%rho(ip, 2) * bij(ip, 1) + st%rho(ip, 1) * bij(ip,2)) &
+               + (M_TWO *st%rho(ip, 1) * st%rho(ip, 2)  - sqmod_updn) * bij(ip, 3) &
                + (cmplx(st%rho(ip, 3),st%rho(ip,4)))**2 * R_CONJ(bij(ip,3))
   
          vxc(ip, 3) = vxc(ip, 3) + rr * R_REAL(tmp)

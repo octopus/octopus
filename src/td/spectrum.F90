@@ -2288,6 +2288,8 @@ contains
 
     ! count number of time_steps
     time_steps = 0
+    t1 = M_ZERO
+    t2 = M_ZERO
     do
       read(iunit, *, end=100) trash, dummy
       time_steps = time_steps + 1
