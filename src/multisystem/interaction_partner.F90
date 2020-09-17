@@ -65,12 +65,11 @@ module interaction_partner_oct_m
     end function interaction_partner_update_exposed_quantities
 
     ! ---------------------------------------------------------
-    subroutine interaction_partner_update_exposed_quantity(partner, iq, requested_time)
+    subroutine interaction_partner_update_exposed_quantity(partner, iq)
       import interaction_partner_t
       import clock_t
       class(interaction_partner_t),      intent(inout) :: partner
       integer,                           intent(in)    :: iq
-      class(clock_t),                    intent(in)    :: requested_time
     end subroutine interaction_partner_update_exposed_quantity
 
     ! ---------------------------------------------------------

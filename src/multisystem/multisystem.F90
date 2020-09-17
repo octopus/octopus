@@ -567,10 +567,9 @@ contains
   end subroutine multisystem_output_write
 
   ! ---------------------------------------------------------
-  subroutine multisystem_update_quantity(this, iq, requested_time)
+  subroutine multisystem_update_quantity(this, iq)
     class(multisystem_t), intent(inout) :: this
     integer,              intent(in)    :: iq
-    class(clock_t),       intent(in)    :: requested_time
 
     PUSH_SUB(multisystem_update_quantity)
 
@@ -584,10 +583,9 @@ contains
   end subroutine multisystem_update_quantity
 
   ! ---------------------------------------------------------
-  subroutine multisystem_update_exposed_quantity(partner, iq, requested_time)
+  subroutine multisystem_update_exposed_quantity(partner, iq)
     class(multisystem_t), intent(inout) :: partner
     integer,              intent(in)    :: iq
-    class(clock_t),       intent(in)    :: requested_time
 
     PUSH_SUB(multisystem_update_exposed_quantity)
 

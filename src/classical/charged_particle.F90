@@ -193,40 +193,40 @@ contains
   end subroutine charged_particle_iteration_info
 
   ! ---------------------------------------------------------
-  subroutine charged_particle_update_quantity(this, iq, requested_time)
+  subroutine charged_particle_update_quantity(this, iq)
     class(charged_particle_t), intent(inout) :: this
     integer,                   intent(in)    :: iq
-    class(clock_t),            intent(in)    :: requested_time
 
     PUSH_SUB(charged_particle_update_quantity)
 
     select case (iq)
     case (CHARGE)
       ! The charged particle has a charge, but it is not necessary to update it, as it does not change with time.
-      call this%quantities(iq)%clock%set_time(requested_time)
+      ! We still need to set its clock, so we set it to be in sync with the particle position.
+      call this%quantities(iq)%clock%set_time(this%quantities(POSITION)%clock)
     case default
       ! Other quantities should be handled by the parent class
-      call this%classical_particle_t%update_quantity(iq, requested_time)
+      call this%classical_particle_t%update_quantity(iq)
     end select
 
     POP_SUB(charged_particle_update_quantity)
   end subroutine charged_particle_update_quantity
 
  ! ---------------------------------------------------------
- subroutine charged_particle_update_exposed_quantity(partner, iq, requested_time)
+ subroutine charged_particle_update_exposed_quantity(partner, iq)
     class(charged_particle_t), intent(inout) :: partner
     integer,                   intent(in)    :: iq
-    class(clock_t),            intent(in)    :: requested_time
 
     PUSH_SUB(charged_particle_update_exposed_quantity)
 
     select case (iq)
     case (CHARGE)
       ! The charged particle has a charge, but it is not necessary to update it, as it does not change with time.
-      call partner%quantities(iq)%clock%set_time(requested_time)
+      ! We still need to set its clock, so we set it to be in sync with the particle position.
+      call partner%quantities(iq)%clock%set_time(partner%quantities(POSITION)%clock)
     case default
       ! Other quantities should be handled by the parent class
-      call partner%classical_particle_t%update_exposed_quantity(iq, requested_time)
+      call partner%classical_particle_t%update_exposed_quantity(iq)
     end select
 
     POP_SUB(charged_particle_update_exposed_quantity)

@@ -301,10 +301,9 @@ contains
   end subroutine electrons_store_current_status
 
   ! ---------------------------------------------------------
-  subroutine electrons_update_quantity(this, iq, requested_time)
+  subroutine electrons_update_quantity(this, iq)
     class(electrons_t),   intent(inout) :: this
     integer,              intent(in)    :: iq
-    class(clock_t),       intent(in)    :: requested_time
 
     PUSH_SUB(electrons_update_quantity)
 
@@ -321,10 +320,9 @@ contains
   end subroutine electrons_update_quantity
 
   ! ---------------------------------------------------------
-  subroutine electrons_update_exposed_quantity(partner, iq, requested_time)
+  subroutine electrons_update_exposed_quantity(partner, iq)
     class(electrons_t), intent(inout) :: partner
     integer,            intent(in)    :: iq
-    class(clock_t),     intent(in)    :: requested_time
 
     PUSH_SUB(electrons_update_exposed_quantity)
 
