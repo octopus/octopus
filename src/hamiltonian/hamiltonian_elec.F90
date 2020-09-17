@@ -218,8 +218,7 @@ contains
     type(block_t) :: blk
     type(profile_t), save :: prof
 
-    logical :: external_potentials_present
-    logical :: kick_present, need_exchange_
+    logical :: need_exchange_
     FLOAT :: rashba_coupling
 
 
@@ -319,23 +318,13 @@ contains
     ! Calculate initial value of the gauge vector field
     call gauge_field_init(hm%ep%gfield, namespace, gr%sb)
 
-    nullify(hm%vberry)
-    if(associated(hm%ep%E_field) .and. simul_box_is_periodic(gr%sb) .and. .not. gauge_field_is_applied(hm%ep%gfield)) then
-      ! only need vberry if there is a field in a periodic direction
-      ! and we are not setting a gauge field
-      if(any(abs(hm%ep%E_field(1:gr%sb%periodic_dim)) > M_EPSILON)) then
-        SAFE_ALLOCATE(hm%vberry(1:gr%mesh%np, 1:hm%d%nspin))
-      end if
-    end if
-
     !Static magnetic field requires complex wavefunctions
     !Static magnetic field or rashba spin-orbit interaction requires complex wavefunctions
-    if (associated(hm%ep%B_field) .or. gauge_field_is_applied(hm%ep%gfield) .or. &
+    if (parse_is_defined(namespace, 'StaticMagneticField') .or. gauge_field_is_applied(hm%ep%gfield) .or. &
       parse_is_defined(namespace, 'RashbaSpinOrbitCoupling')) then
       call states_set_complex(st)
     end if
 
-    call parse_variable(namespace, 'CalculateSelfInducedMagneticField', .false., hm%self_induced_magnetic)
     !%Variable CalculateSelfInducedMagneticField
     !%Type logical
     !%Default no
@@ -359,6 +348,7 @@ contains
     !% and printed out, if the <tt>Output</tt> variable contains the <tt>potential</tt> keyword (the prefix
     !% of the output files is <tt>Bind</tt>).
     !%End
+    call parse_variable(namespace, 'CalculateSelfInducedMagneticField', .false., hm%self_induced_magnetic)
     if(hm%self_induced_magnetic) then
       SAFE_ALLOCATE(hm%a_ind(1:gr%mesh%np_part, 1:gr%sb%dim))
       SAFE_ALLOCATE(hm%b_ind(1:gr%mesh%np_part, 1:gr%sb%dim))
@@ -455,15 +445,6 @@ contains
     !%End
     call parse_variable(namespace, 'HamiltonianApplyPacked', .true., hm%apply_packed)
 
-    external_potentials_present = epot_have_external_potentials(hm%ep)
-
-    kick_present = epot_have_kick(hm%ep)
-
-    call pcm_init(hm%pcm, namespace, geo, gr, st%qtot, st%val_charge, external_potentials_present, kick_present )  !< initializes PCM
-    if (hm%pcm%run_pcm) then
-      if (hm%theory_level /= KOHN_SHAM_DFT) call messages_not_implemented("PCM for TheoryLevel /= DFT", namespace=namespace)
-      if (gr%have_fine_mesh) call messages_not_implemented("PCM with UseFineMesh", namespace=namespace)
-    end if
     
     !%Variable SCDM_EXX
     !%Type logical
@@ -572,6 +553,10 @@ contains
 
     !At the moment we do only have static external potential, so we never update them
     call build_external_potentials()
+
+    !Build the resulting interactions
+    !TODO: This will be moved to the actual interactions
+    call build_interactions()
 
     call profiling_out(prof)
     POP_SUB(hamiltonian_elec_init)
@@ -749,6 +734,38 @@ contains
 
       POP_SUB(hamiltonian_elec_init.external_potentials_checks)
     end subroutine external_potentials_checks
+
+
+    !The code in this routines needs to know about the external potentials.
+    !This will be treated in the future by the interactions directly.
+    subroutine build_interactions()
+      logical :: external_potentials_present
+      logical :: kick_present
+
+      PUSH_SUB(hamiltonian_elec_init.build_interactions)      
+
+      nullify(hm%vberry)
+      if(associated(hm%ep%E_field) .and. simul_box_is_periodic(gr%sb) .and. .not. gauge_field_is_applied(hm%ep%gfield)) then
+        ! only need vberry if there is a field in a periodic direction
+        ! and we are not setting a gauge field
+        if(any(abs(hm%ep%E_field(1:gr%sb%periodic_dim)) > M_EPSILON)) then
+          SAFE_ALLOCATE(hm%vberry(1:gr%mesh%np, 1:hm%d%nspin))
+        end if
+      end if
+
+      external_potentials_present = epot_have_external_potentials(hm%ep)
+
+      kick_present = epot_have_kick(hm%ep)
+
+      call pcm_init(hm%pcm, namespace, geo, gr, st%qtot, st%val_charge, external_potentials_present, kick_present )  !< initializes PCM
+      if (hm%pcm%run_pcm) then
+        if (hm%theory_level /= KOHN_SHAM_DFT) call messages_not_implemented("PCM for TheoryLevel /= DFT", namespace=namespace)
+        if (gr%have_fine_mesh) call messages_not_implemented("PCM with UseFineMesh", namespace=namespace)
+      end if
+
+      POP_SUB(hamiltonian_elec_init.build_interactions)
+
+    end subroutine build_interactions
 
 
   end subroutine hamiltonian_elec_init
