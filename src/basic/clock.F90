@@ -52,6 +52,8 @@ module clock_oct_m
     procedure :: reset => clock_reset                 !< set the internal clock counter back to zero
     procedure :: clock_is_equal
     generic   :: operator(.eq.) => clock_is_equal
+    procedure :: clock_is_different
+    generic   :: operator(/=) => clock_is_different
     procedure :: clock_is_earlier
     generic   :: operator(.lt.) => clock_is_earlier
     procedure :: clock_is_later
@@ -298,6 +300,21 @@ contains
 
     POP_SUB(clock_is_equal)
   end function clock_is_equal
+
+  ! ---------------------------------------------------------
+  logical function clock_is_different(clock_a, clock_b) result(are_diff)
+    class(clock_t), intent(in) :: clock_a, clock_b
+
+    integer :: granularity_a, granularity_b
+
+    PUSH_SUB(clock_is_different)
+
+    call clock_commensurability(clock_a, clock_b, granularity_a, granularity_b)
+
+    are_diff = clock_a%tick * granularity_a /= clock_b%tick * granularity_b
+
+    POP_SUB(clock_is_different)
+  end function clock_is_different
 
   ! ---------------------------------------------------------
   subroutine clock_commensurability(clock_a, clock_b, granularity_a, granularity_b)
