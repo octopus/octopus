@@ -51,8 +51,8 @@ module external_potential_oct_m
     integer, public :: type   !< Type of external potential
 
     character(len=1024) :: potential_formula !< for the user-defined potential
-    character(len=200) :: density_formula !< If we have a charge distribution creating the potential
-    character(len=MAX_PATH_LEN) :: filename !< for the potential read from a file.
+    character(len=200)  :: density_formula   !< If we have a charge distribution creating the potential
+    character(len=MAX_PATH_LEN) :: filename  !< for the potential read from a file.
     FLOAT :: omega
 
     FLOAT, allocatable, public :: pot(:)

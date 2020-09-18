@@ -779,6 +779,10 @@ contains
   subroutine hamiltonian_elec_end(hm)
     type(hamiltonian_elec_t), intent(inout) :: hm
 
+    type(list_iterator_t) :: iter
+    class(*), pointer :: potential
+
+
     PUSH_SUB(hamiltonian_elec_end)
 
     call hamiltonian_elec_base_end(hm%hm_base)
@@ -834,6 +838,13 @@ contains
     nullify(hm%namespace)
      
     if (hm%pcm%run_pcm) call pcm_end(hm%pcm)
+
+    call iter%start(hm%external_potentials)
+    do while (iter%has_next())
+      potential => iter%get_next()
+      SAFE_DEALLOCATE_P(potential)
+    end do
+
     POP_SUB(hamiltonian_elec_end)
   end subroutine hamiltonian_elec_end
 
