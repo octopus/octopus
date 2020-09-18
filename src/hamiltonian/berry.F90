@@ -196,6 +196,14 @@ contains
 
     PUSH_SUB(berry_potential)
 
+    if(mesh%sb%nonorthogonal) then
+      call messages_not_implemented("Berry phase for non-orthogonal cells.")
+    end if
+  
+    if(st%d%nik > 1) then
+      call messages_not_implemented("Berry phase with k-points.")
+    end if
+
     pot(1:mesh%np, 1:st%d%nspin) = M_ZERO
 
     do ispin = 1, st%d%nspin
