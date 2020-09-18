@@ -2415,7 +2415,7 @@ contains
     integer,             intent(in)         :: nr_of_boxes
 
     integer :: il, ip, ip_in, ip_in_max, ip_bd, ip_bd_max, ipp, idim
-    FLOAT   :: bounds(2,gr%sb%dim), xx(gr%sb%dim), xxp(gr%sb%dim), dd, dd_max, dd_min
+    FLOAT   :: bounds(nr_of_boxes,2,gr%sb%dim), xx(gr%sb%dim), xxp(gr%sb%dim), dd, dd_max, dd_min
     FLOAT, allocatable  :: tmp(:), tmp_grad(:,:)
 
     PUSH_SUB(generate_medium_boxes)
@@ -2431,17 +2431,17 @@ contains
     ip_bd_max = 0
     do il = 1, nr_of_boxes
       do idim = 1, 3
-        bounds(1,idim) = hm%medium_box%center(idim,il) - hm%medium_box%lsize(idim,il)/M_TWO
-        bounds(2,idim) = hm%medium_box%center(idim,il) + hm%medium_box%lsize(idim,il)/M_TWO
+        bounds(il,1,idim) = hm%medium_box%center(idim,il) - hm%medium_box%lsize(idim,il)/M_TWO
+        bounds(il,2,idim) = hm%medium_box%center(idim,il) + hm%medium_box%lsize(idim,il)/M_TWO
       end do
       ip_in = 0
       ip_bd = 0
       do ip = 1, gr%mesh%np
         xx(1:3) = gr%mesh%x(ip, 1:3)
-        if (check_point_in_bounds(xx, bounds)) then
+        if (check_point_in_bounds(xx, bounds(il,:,:))) then
           ip_in = ip_in + 1
         end if
-        if (check_point_on_bounds(xx, bounds)) then
+        if (check_point_on_bounds(xx, bounds(il,:,:))) then
           ip_bd = ip_bd + 1
         end if
       end do
@@ -2468,11 +2468,16 @@ contains
       ip_bd = 0
       do ip = 1, gr%mesh%np
         xx(1:3) = gr%mesh%x(ip,1:3)
-        if (check_point_in_bounds(xx, bounds)) then
+        if (check_point_in_bounds(xx, bounds(il,:,:))) then
           ip_in = ip_in + 1
-          hm%medium_box%points_map(ip_in,il) = ip
+          if (any(hm%medium_box%points_map == ip)) then
+            message(1) = 'Linear media boxes overlap.'
+            call messages_fatal(1)
+          else
+            hm%medium_box%points_map(ip_in,il) = ip
+          end if
         end if
-        if (check_point_on_bounds(xx, bounds)) then
+        if (check_point_on_bounds(xx, bounds(il,:,:))) then
           ip_bd = ip_bd + 1
           hm%medium_box%bdry_map(ip_bd,il) = ip
         end if
@@ -2515,7 +2520,7 @@ contains
         end if
       end do
 
-      tmp = P_ep
+      tmp(:) = P_ep
       do  ip_in = 1, hm%medium_box%points_number(il)
         ip = hm%medium_box%points_map(ip_in, il)
         tmp(ip)= hm%medium_box%ep(ip_in, il)
@@ -2526,7 +2531,7 @@ contains
         hm%medium_box%aux_ep(ip_in, :, il) = tmp_grad(ip, :)/(M_FOUR * hm%medium_box%ep(ip_in, il))
       end do
 
-      tmp = P_mu
+      tmp(:) = P_mu
       do ip_in = 1, hm%medium_box%points_number(il)
         ip = hm%medium_box%points_map(ip_in, il)
         tmp(ip) = hm%medium_box%mu(ip_in, il)
@@ -2539,7 +2544,6 @@ contains
 
       ! print information about the medium box -- get from Renes version in maxwell_propagator.F90
 
-      SAFE_DEALLOCATE_A(tmp)
     end do
 
     SAFE_DEALLOCATE_A(tmp)
