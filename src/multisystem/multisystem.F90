@@ -53,8 +53,6 @@ module multisystem_oct_m
     procedure :: propagation_start => multisystem_propagation_start
     procedure :: propagation_finish => multisystem_propagation_finish
     procedure :: has_reached_final_propagation_time => multisystem_has_reached_final_propagation_time
-    procedure :: propagation_step_finish => multisystem_propagation_step_finish
-    procedure :: propagation_step_is_done => multisystem_propagation_step_is_done
     procedure :: init_all_interactions => multisystem_init_all_interactions
     procedure :: init_interaction => multisystem_init_interaction
     procedure :: write_interaction_graph => multisystem_write_interaction_graph
@@ -356,53 +354,6 @@ contains
 
     POP_SUB(multisystem_has_reached_final_propagation_time)
   end function multisystem_has_reached_final_propagation_time
-
-  ! ---------------------------------------------------------
-  recursive subroutine multisystem_propagation_step_finish(this)
-    class(multisystem_t),      intent(inout) :: this
-
-    type(system_iterator_t) :: iter
-    class(system_t), pointer :: system
-
-    PUSH_SUB(multisystem_propagation_step_finish)
-
-    ! Multisystem
-    if (this%propagation_step_is_done()) then
-      call system_propagation_step_finish(this)
-    end if
-
-    ! Subsystems
-    call iter%start(this%list)
-    do while (iter%has_next())
-      system => iter%get_next()
-      if (system%propagation_step_is_done()) then
-        call system%propagation_step_finish()
-      end if
-    end do
-
-    call system_propagation_step_finish(this)
-
-    POP_SUB(multisystem_propagation_step_finish)
-  end subroutine multisystem_propagation_step_finish
-
-  ! ---------------------------------------------------------------------------------------
-  recursive logical function multisystem_propagation_step_is_done(this)
-    class(multisystem_t),      intent(inout) :: this
-
-    type(system_iterator_t) :: iter
-    class(system_t), pointer :: system
-
-    PUSH_SUB(multisystem_propagation_step_is_done)
-
-    multisystem_propagation_step_is_done = system_propagation_step_is_done(this)
-    call iter%start(this%list)
-    do while (iter%has_next())
-      system => iter%get_next()
-      multisystem_propagation_step_is_done = multisystem_propagation_step_is_done .or. system%propagation_step_is_done()
-    end do
-
-    POP_SUB(multisystem_propagation_step_is_done)
-  end function multisystem_propagation_step_is_done
 
   ! ---------------------------------------------------------
   recursive subroutine multisystem_init_all_interactions(this)

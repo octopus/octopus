@@ -91,11 +91,15 @@ contains
     ! The full TD loop
     do while (.not. systems%has_reached_final_propagation_time(final_time))
       internal_loop = 1
-      do while (.not. systems%propagation_step_is_done() .and. internal_loop < MAX_PROPAGATOR_STEPS)
+      do while (internal_loop < MAX_PROPAGATOR_STEPS)
+        ! Do one algorithmic operation
         call systems%dt_operation()
+
+        ! Exit loop if a propagation step is done
+        if (systems%prop%step_is_done()) exit
+
         internal_loop = internal_loop + 1
       end do
-      call systems%propagation_step_finish()
 
       write (message(1), '(a)') repeat ('-', 71)
       call messages_info(1)
