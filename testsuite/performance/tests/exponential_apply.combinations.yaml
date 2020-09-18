@@ -11,4 +11,4 @@ parameters:
   spin_components: [unpolarized, spinors]
   #spin_components: [unpolarized, spin_polarized, spinors]
   test_type: [complex]
-timings_tags: [EXPONENTIAL]
+timings_tags: [EXPONENTIAL_BATCH]
