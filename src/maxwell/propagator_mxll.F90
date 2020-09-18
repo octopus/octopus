@@ -18,6 +18,8 @@
 !! $Id: propagator.F90 13908 2015-05-05 06:02:30Z xavier $
 
 #include "global.h"
+#include "undef.F90"
+#include "complex.F90"
 
 module propagator_mxll_oct_m
   use boundary_op_oct_m
@@ -266,7 +268,7 @@ contains
       SAFE_ALLOCATE(hm%medium_box%sigma_e_factor(1:nlines))
       SAFE_ALLOCATE(hm%medium_box%sigma_m_factor(1:nlines))
       SAFE_ALLOCATE(hm%medium_box%shape(1:nlines))
-      do il=1, nlines
+      do il = 1, nlines
         ncols = parse_block_cols(blk, il-1)
         if (ncols /= 11) then
           call messages_input_error(namespace, 'LinearMediumBox', 'should consist of eleven columns', row=il-1)
@@ -686,12 +688,14 @@ contains
 
     CMPLX, allocatable :: rs_state_minus(:,:)
 
+    PUSH_SUB(transform_rs_state)
+
     ASSERT(sign == RS_TRANS_FORWARD .or. sign == RS_TRANS_BACKWARD)
 
     if (hm%operator == FARADAY_AMPERE_MEDIUM) then
       if (sign == RS_TRANS_FORWARD) then
         SAFE_ALLOCATE(rs_state_minus(1:gr%mesh%np_part,1:st%dim))
-        rs_state_minus = TOFLOAT(rs_state) - M_zI * aimag(rs_state)
+        rs_state_minus = R_CONJ(rs_state)
         call transform_rs_state_to_6x6_rs_state_forward(rs_state, rs_state_minus, ff_rs_state)
         SAFE_DEALLOCATE_A(rs_state_minus)
       else
@@ -713,6 +717,8 @@ contains
       end if
     end if
 
+    POP_SUB(transform_rs_state)
+
   end subroutine transform_rs_state
 
   ! ---------------------------------------------------------
@@ -724,6 +730,8 @@ contains
     integer,                  intent(in)    :: sign
 
     ASSERT(sign == RS_TRANS_FORWARD .or. sign == RS_TRANS_BACKWARD)
+
+    PUSH_SUB(transform_rs_densities)
 
     if (hm%operator == FARADAY_AMPERE_MEDIUM) then
       if (sign == RS_TRANS_FORWARD) then
@@ -746,6 +754,8 @@ contains
         rs_current_density(:, 1:3) = ff_density(:, 1:3)
       end if
     end if
+
+    POP_SUB(transform_rs_densities)
 
   end subroutine transform_rs_densities
 
@@ -2419,7 +2429,7 @@ contains
 
     ip_in_max = 0
     ip_bd_max = 0
-    do il= 1, nr_of_boxes
+    do il = 1, nr_of_boxes
       do idim = 1, 3
         bounds(1,idim) = hm%medium_box%center(idim,il) - hm%medium_box%lsize(idim,il)/M_TWO
         bounds(2,idim) = hm%medium_box%center(idim,il) + hm%medium_box%lsize(idim,il)/M_TWO
