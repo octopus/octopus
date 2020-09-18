@@ -319,7 +319,7 @@ contains
       end do
       call parse_block_end(blk)
 
-      call generate_medium_boxes(hm, gr, nlines)
+      call generate_medium_boxes(hm, gr, nlines, namespace)
 
       call messages_print_stress(stdout)
 
@@ -417,7 +417,7 @@ contains
 
     if (hm%ma_mx_coupling_apply) then
       message(1) = "Maxwell-matter coupling not implemented yet"
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
 
     if (tr%plane_waves_in_box) then
@@ -2409,10 +2409,11 @@ contains
   end subroutine cpml_conv_function_update_via_e_b_fields
 
   ! ---------------------------------------------------------
-  subroutine generate_medium_boxes(hm, gr, nr_of_boxes)
+  subroutine generate_medium_boxes(hm, gr, nr_of_boxes, namespace)
     type(hamiltonian_mxll_t), intent(inout) :: hm
     type(grid_t),        intent(in)         :: gr
     integer,             intent(in)         :: nr_of_boxes
+    type(namespace_t),   intent(in)         :: namespace
 
     integer :: il, ip, ip_in, ip_in_max, ip_bd, ip_bd_max, ipp, idim
     FLOAT   :: bounds(nr_of_boxes,2,gr%sb%dim), xx(gr%sb%dim), xxp(gr%sb%dim), dd, dd_max, dd_min
@@ -2472,7 +2473,7 @@ contains
           ip_in = ip_in + 1
           if (any(hm%medium_box%points_map == ip)) then
             message(1) = 'Linear media boxes overlap.'
-            call messages_fatal(1)
+            call messages_fatal(1, namespace=namespace)
           else
             hm%medium_box%points_map(ip_in,il) = ip
           end if
