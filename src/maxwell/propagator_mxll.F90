@@ -18,6 +18,8 @@
 !! $Id: propagator.F90 13908 2015-05-05 06:02:30Z xavier $
 
 #include "global.h"
+#include "undef.F90"
+#include "complex.F90"
 
 module propagator_mxll_oct_m
   use boundary_op_oct_m
@@ -231,91 +233,93 @@ contains
       st%rs_state_const = M_z0
     end if
 
-    !%Variable MaxwellMediumBox
+    !%Variable LinearMediumBox
     !%Type block
     !%Section Time-Dependent::Propagation
     !%Description
-    !% Defines parameters for the box.
+    !% Defines parameters for a linear medium box.
     !%
     !% Example:
     !%
-    !% <tt>%MaxwellMediumBox
+    !% <tt>%LinearMediumBox
     !% <br>&nbsp;&nbsp;   center_x | center_y | center_z | x_length | y_length | z_length | epsilon_factor | mu_factor | sigma_e | sigma_m | edged/smooth
     !% <br>%</tt>
     !%
     !% Position of center (three components) and length (three components), followed by permittivity
-    !% factor, electric conductivity and magnetic conductivity, and finally type of edge.
+    !% factor, electric conductivity and magnetic conductivity, and finally type of numerical
+    !% approximation used for the derivatives at the edges.
     !%
     !%Option edged 1
-    !% Medium box edges are steep.
+    !% Medium box edges are considered steep for derivatives.
     !%Option smooth 2
-    !% Medium box edged and softened.
+    !% Medium box edged and softened for derivatives.
     !%End
-    if(parse_block(namespace, 'MaxwellMediumBox', blk) == 0) then
+    if(parse_block(namespace, 'LinearMediumBox', blk) == 0) then
 
       call messages_print_stress(stdout, trim('Maxwell Medium box:'))
-      hm%medium_box = .true.
+      hm%calc_medium_box = .true.
 
       ! find out how many lines (i.e. states) the block has
       nlines = parse_block_n(blk)
-      SAFE_ALLOCATE(hm%medium_box_center(1:3,1:nlines))
-      SAFE_ALLOCATE(hm%medium_box_size(1:3,1:nlines))
-      SAFE_ALLOCATE(hm%medium_box_ep_factor(1:nlines))
-      SAFE_ALLOCATE(hm%medium_box_mu_factor(1:nlines))
-      SAFE_ALLOCATE(hm%medium_box_sigma_e_factor(1:nlines))
-      SAFE_ALLOCATE(hm%medium_box_sigma_m_factor(1:nlines))
-      SAFE_ALLOCATE(hm%medium_box_shape(1:nlines))
-      do il=1, nlines
+      SAFE_ALLOCATE(hm%medium_box%center(1:3,1:nlines))
+      SAFE_ALLOCATE(hm%medium_box%lsize(1:3,1:nlines))
+      SAFE_ALLOCATE(hm%medium_box%ep_factor(1:nlines))
+      SAFE_ALLOCATE(hm%medium_box%mu_factor(1:nlines))
+      SAFE_ALLOCATE(hm%medium_box%sigma_e_factor(1:nlines))
+      SAFE_ALLOCATE(hm%medium_box%sigma_m_factor(1:nlines))
+      SAFE_ALLOCATE(hm%medium_box%shape(1:nlines))
+      do il = 1, nlines
         ncols = parse_block_cols(blk, il-1)
         if (ncols /= 11) then
-          call messages_input_error(namespace, 'MaxwellMedium', 'should consist of eleven columns', row=il-1)
+          call messages_input_error(namespace, 'LinearMediumBox', 'should consist of eleven columns', row=il-1)
         end if
-        do idim=1,3
-          call parse_block_float(blk, il-1, idim-1, hm%medium_box_center(idim,il))
-          call parse_block_float(blk, il-1, idim+2, hm%medium_box_size(idim,il))
+        do idim = 1, 3
+          call parse_block_float(blk, il-1, idim-1, hm%medium_box%center(idim,il))
+          call parse_block_float(blk, il-1, idim+2, hm%medium_box%lsize(idim,il))
         end do
-        call parse_block_float(blk, il-1, 6, hm%medium_box_ep_factor(il))
-        call parse_block_float(blk, il-1, 7, hm%medium_box_mu_factor(il))
-        call parse_block_float(blk, il-1, 8, hm%medium_box_sigma_e_factor(il))
-        call parse_block_float(blk, il-1, 9, hm%medium_box_sigma_m_factor(il))
-        call parse_block_integer(blk, il-1, 10, hm%medium_box_shape(il))
+        call parse_block_float(blk, il-1, 6, hm%medium_box%ep_factor(il))
+        call parse_block_float(blk, il-1, 7, hm%medium_box%mu_factor(il))
+        call parse_block_float(blk, il-1, 8, hm%medium_box%sigma_e_factor(il))
+        call parse_block_float(blk, il-1, 9, hm%medium_box%sigma_m_factor(il))
+        call parse_block_integer(blk, il-1, 10, hm%medium_box%shape(il))
         if (il > 1) then
           write(message(1),'(a)') ""
           write(message(2),'(a,I1)')    'Medium box number:  ', il
-          write(message(3),'(a,es9.2,a,es9.2,a,es9.2)') 'Box center:         ', hm%medium_box_center(1,il), ' | ',&
-                hm%medium_box_center(2,il), ' | ', hm%medium_box_center(3,il)
-          write(message(4),'(a,es9.2,a,es9.2,a,es9.2)') 'Box size  :         ', hm%medium_box_size(1,il), ' | ', &
-                hm%medium_box_size(2,il), ' | ', hm%medium_box_size(3,il)
-          write(message(5),'(a,es9.2)') 'Box epsilon factor: ', hm%medium_box_ep_factor(il)
-          write(message(6),'(a,es9.2)') 'Box mu factor:      ', hm%medium_box_mu_factor(il)
-          write(message(7),'(a,es9.2)') 'Box electric sigma: ', hm%medium_box_sigma_e_factor(il)
-          write(message(8),'(a,es9.2)') 'Box magnetic sigma: ', hm%medium_box_sigma_m_factor(il)
-          if (hm%medium_box_shape(il) == OPTION__MAXWELLMEDIUMBOX__EDGED) then
+          write(message(3),'(a,es9.2,a,es9.2,a,es9.2)') 'Box center:         ', hm%medium_box%center(1,il), ' | ',&
+                hm%medium_box%center(2,il), ' | ', hm%medium_box%center(3,il)
+          write(message(4),'(a,es9.2,a,es9.2,a,es9.2)') 'Box size  :         ', hm%medium_box%lsize(1,il), ' | ', &
+                hm%medium_box%lsize(2,il), ' | ', hm%medium_box%lsize(3,il)
+          write(message(5),'(a,es9.2)') 'Box epsilon factor: ', hm%medium_box%ep_factor(il)
+          write(message(6),'(a,es9.2)') 'Box mu factor:      ', hm%medium_box%mu_factor(il)
+          write(message(7),'(a,es9.2)') 'Box electric sigma: ', hm%medium_box%sigma_e_factor(il)
+          write(message(8),'(a,es9.2)') 'Box magnetic sigma: ', hm%medium_box%sigma_m_factor(il)
+          if (hm%medium_box%shape(il) == OPTION__LINEARMEDIUMBOX__EDGED) then
             write(message(9),'(a,a)')   'Box shape:          ', 'edged'
-          else if (hm%medium_box_shape(il) == OPTION__MAXWELLMEDIUMBOX__SMOOTH) then
+          else if (hm%medium_box%shape(il) == OPTION__LINEARMEDIUMBOX__SMOOTH) then
             write(message(9),'(a,a)')   'Box shape:          ', 'smooth'
           end if
           call messages_info(9)
         else
           write(message(1),'(a,I1)')    'Medium box number:  ', il
-          write(message(2),'(a,es9.2,a,es9.2,a,es9.2)') 'Box center:         ', hm%medium_box_center(1,il), ' | ',&
-                hm%medium_box_center(2,il), ' | ', hm%medium_box_center(3,il)
-          write(message(3),'(a,es9.2,a,es9.2,a,es9.2)') 'Box size  :         ', hm%medium_box_size(1,il), ' | ', &
-                hm%medium_box_size(2,il), ' | ', hm%medium_box_size(3,il)
-          write(message(4),'(a,es9.2)') 'Box epsilon factor: ', hm%medium_box_ep_factor(il)
-          write(message(5),'(a,es9.2)') 'Box mu factor:      ', hm%medium_box_mu_factor(il)
-          write(message(6),'(a,es9.2)') 'Box electric sigma: ', hm%medium_box_sigma_e_factor(il)
-          write(message(7),'(a,es9.2)') 'Box magnetic sigma: ', hm%medium_box_sigma_m_factor(il)
-          if (hm%medium_box_shape(il) == OPTION__MAXWELLMEDIUMBOX__EDGED) then
+          write(message(2),'(a,es9.2,a,es9.2,a,es9.2)') 'Box center:         ', hm%medium_box%center(1,il), ' | ',&
+                hm%medium_box%center(2,il), ' | ', hm%medium_box%center(3,il)
+          write(message(3),'(a,es9.2,a,es9.2,a,es9.2)') 'Box size  :         ', hm%medium_box%lsize(1,il), ' | ', &
+                hm%medium_box%lsize(2,il), ' | ', hm%medium_box%lsize(3,il)
+          write(message(4),'(a,es9.2)') 'Box epsilon factor: ', hm%medium_box%ep_factor(il)
+          write(message(5),'(a,es9.2)') 'Box mu factor:      ', hm%medium_box%mu_factor(il)
+          write(message(6),'(a,es9.2)') 'Box electric sigma: ', hm%medium_box%sigma_e_factor(il)
+          write(message(7),'(a,es9.2)') 'Box magnetic sigma: ', hm%medium_box%sigma_m_factor(il)
+          if (hm%medium_box%shape(il) == OPTION__LINEARMEDIUMBOX__EDGED) then
             write(message(8),'(a,a)')   'Box shape:          ', 'edged'
-          else if (hm%medium_box_shape(il) == OPTION__MAXWELLMEDIUMBOX__SMOOTH) then
+          else if (hm%medium_box%shape(il) == OPTION__LINEARMEDIUMBOX__SMOOTH) then
             write(message(8),'(a,a)')   'Box shape:          ', 'smooth'
           end if
           call messages_info(8)
         end if
       end do
+      call parse_block_end(blk)
 
-      call generate_medium_boxes(hm, gr, nlines)
+      call generate_medium_boxes(hm, gr, nlines, namespace)
 
       call messages_print_stress(stdout)
 
@@ -413,7 +417,7 @@ contains
 
     if (hm%ma_mx_coupling_apply) then
       message(1) = "Maxwell-matter coupling not implemented yet"
-      call messages_fatal(1)
+      call messages_fatal(1, namespace=namespace)
     end if
 
     if (tr%plane_waves_in_box) then
@@ -428,13 +432,7 @@ contains
       end if
     end do
 
-    if (hm%operator == FARADAY_AMPERE_MEDIUM) then
-      ff_dim = 6
-    else if (hm%operator == FARADAY_AMPERE_GAUSS) then
-      ff_dim = 4
-    else
-      ff_dim = 3
-    end if
+    ff_dim = hm%dim
 
     ! intermediate step variables
     inter_steps   = tr%inter_steps
@@ -488,7 +486,7 @@ contains
       inter_time = time + inter_dt * (ii-1)
 
       ! transformation of RS state into 3x3 or 4x4 representation
-      call transform_rs_state(hm, rs_state, ff_rs_state, RS_TRANS_FORWARD)
+      call transform_rs_state(hm, gr, st, rs_state, ff_rs_state, RS_TRANS_FORWARD)
 
       if ((hm%ma_mx_coupling_apply) .or. hm%current_density_ext_flag) then
 
@@ -569,7 +567,7 @@ contains
       end if
 
       ! back tranformation of RS state representation
-      call transform_rs_state(hm, rs_state, ff_rs_state, RS_TRANS_BACKWARD)
+      call transform_rs_state(hm, gr, st, rs_state, ff_rs_state, RS_TRANS_BACKWARD)
 
       if (tr%bc_constant) then
         ! Propagation dt with H(inter_time+inter_dt) for constant boundaries
@@ -623,9 +621,9 @@ contains
 
     PUSH_SUB(exponential_mxll_apply)
 
-    call zbatch_init(ffbatch, 1, 1, st%dim, gr%mesh%np_part)
+    call zbatch_init(ffbatch, 1, 1, hm%dim, gr%mesh%np_part)
 
-    do istate = 1, st%dim
+    do istate = 1, hm%dim
       call batch_set_state(ffbatch, istate, gr%mesh%np_part, ff(:, istate))
     end do
 
@@ -633,7 +631,7 @@ contains
 
     call exponential_apply_batch(tr%te, namespace, gr%mesh, hm, ffbatch, dt)
 
-    do istate = 1, st%dim
+    do istate = 1, hm%dim
       call batch_get_state(ffbatch, istate, gr%mesh%np_part, ff(:, istate))
     end do
 
@@ -656,12 +654,12 @@ contains
     SAFE_ALLOCATE(st%mu(1:gr%mesh%np_part))
     st%ep = P_ep
     st%mu = P_mu
-    if (hm%medium_box) then
-      do il = 1, hm%medium_box_number
-        do ip_in = 1, hm%medium_box_points_number(il)
-          ip = hm%medium_box_points_map(ip_in, il)
-          st%ep(ip) = hm%medium_box_ep(ip_in, il)
-          st%mu(ip) = hm%medium_box_mu(ip_in, il)
+    if (hm%calc_medium_box) then
+      do il = 1, hm%medium_box%number
+        do ip_in = 1, hm%medium_box%points_number(il)
+          ip = hm%medium_box%points_map(ip_in, il)
+          st%ep(ip) = hm%medium_box%ep(ip_in, il)
+          st%mu(ip) = hm%medium_box%mu(ip_in, il)
         end do
       end do
     end if
@@ -680,23 +678,37 @@ contains
   end subroutine set_medium_rs_state
 
   ! ---------------------------------------------------------
-  subroutine transform_rs_state(hm, rs_state, ff_rs_state, sign)
-    type(hamiltonian_mxll_t), intent(in)    :: hm
+  subroutine transform_rs_state(hm, gr, st, rs_state, ff_rs_state, sign)
+    type(hamiltonian_mxll_t), intent(in)         :: hm
+    type(grid_t),             intent(in)         :: gr
+    type(states_mxll_t),      intent(in)         :: st
     CMPLX,                    intent(inout)      :: rs_state(:,:)
     CMPLX,                    intent(inout)      :: ff_rs_state(:,:)
     integer,                  intent(in)         :: sign
 
+    CMPLX, allocatable :: rs_state_minus(:,:)
+
+    PUSH_SUB(transform_rs_state)
+
     ASSERT(sign == RS_TRANS_FORWARD .or. sign == RS_TRANS_BACKWARD)
 
     if (hm%operator == FARADAY_AMPERE_MEDIUM) then
-      message(1) = "Maxwell solver in linear media not yet implemented"
-      call messages_fatal(1)
+      if (sign == RS_TRANS_FORWARD) then
+        SAFE_ALLOCATE(rs_state_minus(1:gr%mesh%np_part,1:st%dim))
+        rs_state_minus = R_CONJ(rs_state)
+        call transform_rs_state_to_6x6_rs_state_forward(rs_state, rs_state_minus, ff_rs_state)
+        SAFE_DEALLOCATE_A(rs_state_minus)
+      else
+        call transform_rs_state_to_6x6_rs_state_backward(ff_rs_state, rs_state)
+      end if
+
     else if (hm%operator == FARADAY_AMPERE_GAUSS) then
       if (sign == RS_TRANS_FORWARD) then
          call transform_rs_state_to_4x4_rs_state_forward(rs_state, ff_rs_state)
       else
         call transform_rs_state_to_4x4_rs_state_backward(ff_rs_state, rs_state)
       end if
+
     else
       if (sign == RS_TRANS_FORWARD) then
         ff_rs_state(:, 1:3) = rs_state(:, 1:3)
@@ -704,6 +716,8 @@ contains
         rs_state(:, 1:3) = ff_rs_state(:, 1:3)
       end if
     end if
+
+    POP_SUB(transform_rs_state)
 
   end subroutine transform_rs_state
 
@@ -717,9 +731,14 @@ contains
 
     ASSERT(sign == RS_TRANS_FORWARD .or. sign == RS_TRANS_BACKWARD)
 
+    PUSH_SUB(transform_rs_densities)
+
     if (hm%operator == FARADAY_AMPERE_MEDIUM) then
-      message(1) = "Maxwell solver in linear media not yet implemented"
-      call messages_fatal(1)
+      if (sign == RS_TRANS_FORWARD) then
+        call transform_rs_densities_to_6x6_rs_densities_forward(rs_charge_density, rs_current_density, ff_density)
+      else
+        call transform_rs_densities_to_6x6_rs_densities_backward(ff_density, rs_charge_density, rs_current_density)
+      end if
     else if (hm%operator == FARADAY_AMPERE_GAUSS) then
       if (sign == RS_TRANS_FORWARD) then
         call transform_rs_densities_to_4x4_rs_densities_forward(rs_charge_density,&
@@ -736,6 +755,8 @@ contains
       end if
     end if
 
+    POP_SUB(transform_rs_densities)
+
   end subroutine transform_rs_densities
 
   !----------------------------------------------------------
@@ -749,7 +770,7 @@ contains
     ! no push_sub, called to frequently
     do ii = 1, 3
       rs_state_6x6(:, ii) = rs_state_3x3_plus(:, ii)
-      rs_state_6x6(:, ii+3) = rs_state_3x3_plus(:, ii)
+      rs_state_6x6(:, ii+3) = rs_state_3x3_minus(:, ii)
     end do
 
   end subroutine transform_rs_state_to_6x6_rs_state_forward
@@ -794,7 +815,7 @@ contains
 
     ! no push_sub, called to frequently
     do ii = 1, 3
-       rs_current_density(:, ii) = M_HALF * real(rs_density_6x6(:, ii) + rs_density_6x6(:, ii+3))
+      rs_current_density(:, ii) = M_HALF * TOFLOAT(rs_density_6x6(:, ii) + rs_density_6x6(:, ii+3))
     end do
 
   end subroutine transform_rs_densities_to_6x6_rs_densities_backward
@@ -1979,7 +2000,7 @@ contains
       ff_points = size(ff_rs_state(:,1))
       ff_dim    = size(ff_rs_state(1,:))
       SAFE_ALLOCATE(ff_rs_state_plane_waves(1:ff_points,1:ff_dim))
-      call transform_rs_state(hm, st%rs_state_plane_waves, ff_rs_state_plane_waves, RS_TRANS_FORWARD)
+      call transform_rs_state(hm, gr, st, st%rs_state_plane_waves, ff_rs_state_plane_waves, RS_TRANS_FORWARD)
       ff_rs_state_pml = ff_rs_state - ff_rs_state_plane_waves
       SAFE_DEALLOCATE_A(ff_rs_state_plane_waves)
     else if (tr%bc_constant .and. hm%spatial_constant_apply) then
@@ -1987,7 +2008,7 @@ contains
       SAFE_ALLOCATE(rs_state_constant(1,1:3))
       SAFE_ALLOCATE(ff_rs_state_constant(1,1:ff_dim))
       rs_state_constant(1,:) = st%rs_state_const(:)
-      call transform_rs_state(hm, rs_state_constant, ff_rs_state_constant, RS_TRANS_FORWARD)
+      call transform_rs_state(hm, gr, st, rs_state_constant, ff_rs_state_constant, RS_TRANS_FORWARD)
       do ip=1, gr%mesh%np_part
         ff_rs_state_pml(ip,:) = ff_rs_state(ip,:) - ff_rs_state_constant(1,:)
       end do
@@ -2026,7 +2047,7 @@ contains
       hm%cpml_hamiltonian = .false.
       call plane_waves_propagation(hm, st, gr, time, dt, time_delay)
       SAFE_ALLOCATE(ff_rs_state_plane_waves(1:ff_points,1:ff_dim))
-      call transform_rs_state(hm, st%rs_state_plane_waves, ff_rs_state_plane_waves, RS_TRANS_FORWARD)
+      call transform_rs_state(hm, gr, st, st%rs_state_plane_waves, ff_rs_state_plane_waves, RS_TRANS_FORWARD)
       do ip_in=1, hm%bc%plane_wave%points_number
         ip = hm%bc%plane_wave%points_map(ip_in)
         ff_rs_state(ip,:) = ff_rs_state_pml(ip,:) + ff_rs_state_plane_waves(ip,:)
@@ -2040,7 +2061,7 @@ contains
       SAFE_ALLOCATE(rs_state_constant(1,1:ff_dim))
       SAFE_ALLOCATE(ff_rs_state_constant(1,1:ff_dim))
       rs_state_constant(1,:) = st%rs_state_const(:)
-      call transform_rs_state(hm, rs_state_constant, ff_rs_state_constant, RS_TRANS_BACKWARD)
+      call transform_rs_state(hm, gr, st, rs_state_constant, ff_rs_state_constant, RS_TRANS_BACKWARD)
       do ip_in=1, hm%bc%constant_points_number
         ip = hm%bc%constant_points_map(ip_in)
         ff_rs_state(ip,:) = ff_rs_state_pml(ip,:) + ff_rs_state_constant(1,:)
@@ -2388,13 +2409,14 @@ contains
   end subroutine cpml_conv_function_update_via_e_b_fields
 
   ! ---------------------------------------------------------
-  subroutine generate_medium_boxes(hm, gr, nr_of_boxes)
+  subroutine generate_medium_boxes(hm, gr, nr_of_boxes, namespace)
     type(hamiltonian_mxll_t), intent(inout) :: hm
     type(grid_t),        intent(in)         :: gr
     integer,             intent(in)         :: nr_of_boxes
+    type(namespace_t),   intent(in)         :: namespace
 
     integer :: il, ip, ip_in, ip_in_max, ip_bd, ip_bd_max, ipp, idim
-    FLOAT   :: bounds(2,gr%sb%dim), xx(gr%sb%dim), xxp(gr%sb%dim), dd, dd_max, dd_min
+    FLOAT   :: bounds(nr_of_boxes,2,gr%sb%dim), xx(gr%sb%dim), xxp(gr%sb%dim), dd, dd_max, dd_min
     FLOAT, allocatable  :: tmp(:), tmp_grad(:,:)
 
     PUSH_SUB(generate_medium_boxes)
@@ -2402,122 +2424,130 @@ contains
     SAFE_ALLOCATE(tmp(gr%mesh%np_part))
     SAFE_ALLOCATE(tmp_grad(gr%mesh%np_part,1:gr%mesh%sb%dim))
 
-    SAFE_ALLOCATE(hm%medium_box_points_number(nr_of_boxes))
-    SAFE_ALLOCATE(hm%medium_box_bdry_number(nr_of_boxes))
-    hm%medium_box_number = nr_of_boxes
+    SAFE_ALLOCATE(hm%medium_box%points_number(nr_of_boxes))
+    SAFE_ALLOCATE(hm%medium_box%bdry_number(nr_of_boxes))
+    hm%medium_box%number = nr_of_boxes
 
     ip_in_max = 0
-    do il=1, nr_of_boxes
-      do idim=1, 3
-        bounds(1,idim) = hm%medium_box_center(idim,il) - hm%medium_box_size(idim,il)/M_TWO
-        bounds(2,idim) = hm%medium_box_center(idim,il) + hm%medium_box_size(idim,il)/M_TWO
+    ip_bd_max = 0
+    do il = 1, nr_of_boxes
+      do idim = 1, 3
+        bounds(il,1,idim) = hm%medium_box%center(idim,il) - hm%medium_box%lsize(idim,il)/M_TWO
+        bounds(il,2,idim) = hm%medium_box%center(idim,il) + hm%medium_box%lsize(idim,il)/M_TWO
       end do
-      ip_in=0
-      ip_bd=0
-      do ip=1, gr%mesh%np
-        xx(:) = gr%mesh%x(ip,:)
-        if (check_point_in_bounds(xx, bounds)) then
-          ip_in = ip_in+1
+      ip_in = 0
+      ip_bd = 0
+      do ip = 1, gr%mesh%np
+        xx(1:3) = gr%mesh%x(ip, 1:3)
+        if (check_point_in_bounds(xx, bounds(il,:,:))) then
+          ip_in = ip_in + 1
         end if
-        if (check_point_on_bounds(xx, bounds)) then
-          ip_bd = ip_bd+1
+        if (check_point_on_bounds(xx, bounds(il,:,:))) then
+          ip_bd = ip_bd + 1
         end if
       end do
       if (ip_in > ip_in_max) ip_in_max = ip_in
       if (ip_bd > ip_bd_max) ip_bd_max = ip_bd
-      hm%medium_box_points_number(il) = ip_in
-      hm%medium_box_bdry_number(il) = ip_bd
+      hm%medium_box%points_number(il) = ip_in
+      hm%medium_box%bdry_number(il) = ip_bd
     end do
 
-    dd_max = max(2*gr%mesh%spacing(1),2*gr%mesh%spacing(2),2*gr%mesh%spacing(3))
+    dd_max = max(2*gr%mesh%spacing(1), 2*gr%mesh%spacing(2), 2*gr%mesh%spacing(3))
 
-    SAFE_ALLOCATE(hm%medium_box_points_map(ip_in_max,nr_of_boxes))
-    SAFE_ALLOCATE(hm%medium_box_bdry_map(ip_bd_max,nr_of_boxes))
-    SAFE_ALLOCATE(hm%medium_box_aux_ep(ip_in_max,1:3,nr_of_boxes))
-    SAFE_ALLOCATE(hm%medium_box_aux_mu(ip_in_max,1:3,nr_of_boxes))
-    SAFE_ALLOCATE(hm%medium_box_c(ip_in_max,nr_of_boxes))
-    SAFE_ALLOCATE(hm%medium_box_ep(ip_in_max,nr_of_boxes))
-    SAFE_ALLOCATE(hm%medium_box_mu(ip_in_max,nr_of_boxes))
-    SAFE_ALLOCATE(hm%medium_box_sigma_e(ip_in_max,nr_of_boxes))
-    SAFE_ALLOCATE(hm%medium_box_sigma_m(ip_in_max,nr_of_boxes))
+    SAFE_ALLOCATE(hm%medium_box%points_map(ip_in_max,nr_of_boxes))
+    SAFE_ALLOCATE(hm%medium_box%bdry_map(ip_bd_max,nr_of_boxes))
+    SAFE_ALLOCATE(hm%medium_box%aux_ep(ip_in_max,1:3,nr_of_boxes))
+    SAFE_ALLOCATE(hm%medium_box%aux_mu(ip_in_max,1:3,nr_of_boxes))
+    SAFE_ALLOCATE(hm%medium_box%c(ip_in_max,nr_of_boxes))
+    SAFE_ALLOCATE(hm%medium_box%ep(ip_in_max,nr_of_boxes))
+    SAFE_ALLOCATE(hm%medium_box%mu(ip_in_max,nr_of_boxes))
+    SAFE_ALLOCATE(hm%medium_box%sigma_e(ip_in_max,nr_of_boxes))
+    SAFE_ALLOCATE(hm%medium_box%sigma_m(ip_in_max,nr_of_boxes))
 
-    do il=1, nr_of_boxes
-      ip_in=0
-      ip_bd=0
-      do ip=1, gr%mesh%np
-        xx(:) = gr%mesh%x(ip,:)
-        if (check_point_in_bounds(xx, bounds)) then
-          ip_in = ip_in+1
-          hm%medium_box_points_map(ip_in,il) = ip
+    hm%medium_box%points_map = int(M_zero)
+    hm%medium_box%bdry_map = int(M_zero)
+
+    do il = 1, nr_of_boxes
+      ip_in = 0
+      ip_bd = 0
+      do ip = 1, gr%mesh%np
+        xx(1:3) = gr%mesh%x(ip,1:3)
+        if (check_point_in_bounds(xx, bounds(il,:,:))) then
+          ip_in = ip_in + 1
+          if (any(hm%medium_box%points_map == ip)) then
+            message(1) = 'Linear media boxes overlap.'
+            call messages_fatal(1, namespace=namespace)
+          else
+            hm%medium_box%points_map(ip_in,il) = ip
+          end if
         end if
-        if (check_point_on_bounds(xx, bounds)) then
-          ip_bd = ip_bd+1
-          hm%medium_box_bdry_map(ip_bd,il) = ip
+        if (check_point_on_bounds(xx, bounds(il,:,:))) then
+          ip_bd = ip_bd + 1
+          hm%medium_box%bdry_map(ip_bd,il) = ip
         end if
       end do
     end do
 
     do il = 1, nr_of_boxes
 
-      do ip_in = 1, hm%medium_box_points_number(il)
-        ip = hm%medium_box_points_map(ip_in,il)
-        if (hm%medium_box_shape(il) == OPTION__MAXWELLMEDIUMBOX__SMOOTH) then
-          xx(:) = gr%mesh%x(ip,:)
+      do ip_in = 1, hm%medium_box%points_number(il)
+        ip = hm%medium_box%points_map(ip_in,il)
+        if (hm%medium_box%shape(il) == OPTION__LINEARMEDIUMBOX__SMOOTH) then
+          xx(1:3) = gr%mesh%x(ip,1:3)
           dd_min = M_HUGE
 
-          do ip_bd = 1, hm%medium_box_bdry_number(il)
-            ipp = hm%medium_box_bdry_map(ip_bd, il)
-            xxp(:) = gr%mesh%x(ipp,:)
+          do ip_bd = 1, hm%medium_box%bdry_number(il)
+            ipp = hm%medium_box%bdry_map(ip_bd, il)
+            xxp(1:3) = gr%mesh%x(ipp,1:3)
             dd = sqrt((xx(1) - xxp(1))**2 + (xx(2) - xxp(2))**2 + (xx(3) - xxp(3))**2)
             if (dd < dd_min) dd_min = dd
           end do
 
-          hm%medium_box_ep(ip_in,il) = P_ep + ((P_ep * hm%medium_box_ep_factor(il) - P_ep)  &
+          hm%medium_box%ep(ip_in,il) = P_ep + ((P_ep * hm%medium_box%ep_factor(il) - P_ep)  &
             * M_ONE/(M_ONE + exp(-M_FIVE/dd_max * (dd_min - M_TWO*dd_max))))
-          hm%medium_box_mu(ip_in,il) = P_mu + ((P_mu * hm%medium_box_mu_factor(il) - P_mu) &
+          hm%medium_box%mu(ip_in,il) = P_mu + ((P_mu * hm%medium_box%mu_factor(il) - P_mu) &
             * M_ONE/(M_ONE + exp(-M_FIVE/dd_max * (dd_min - M_TWO*dd_max))))
-          hm%medium_box_c(ip_in,il) = M_ONE/sqrt(hm%medium_box_ep(ip_in, il)*hm%medium_box_mu(ip_in, il))
-          hm%medium_box_sigma_e(ip_in,il) = hm%medium_box_sigma_e_factor(il) &
+          hm%medium_box%c(ip_in,il) = M_ONE/sqrt(hm%medium_box%ep(ip_in, il)*hm%medium_box%mu(ip_in, il))
+          hm%medium_box%sigma_e(ip_in,il) = hm%medium_box%sigma_e_factor(il) &
             * M_ONE/(M_ONE + exp(-M_FIVE/dd_max * (dd_min - M_TWO*dd_max)) )
-          hm%medium_box_sigma_m(ip_in,il) = hm%medium_box_sigma_m(ip_in,il) &
+          hm%medium_box%sigma_m(ip_in,il) = hm%medium_box%sigma_m_factor(il) &
             * M_ONE/(M_ONE + exp(-M_FIVE/dd_max * (dd_min - M_TWO*dd_max)) )
 
-        else if (hm%medium_box_shape(il) == OPTION__MAXWELLMEDIUMBOX__EDGED) then
+        else if (hm%medium_box%shape(il) == OPTION__LINEARMEDIUMBOX__EDGED) then
 
-          hm%medium_box_ep(ip_in, il) = P_ep * hm%medium_box_ep_factor(il)
-          hm%medium_box_mu(ip_in, il) = P_mu * hm%medium_box_mu_factor(il)
-          hm%medium_box_c(ip_in, il) = M_ONE/sqrt(hm%medium_box_ep(ip_in, il)*hm%medium_box_mu(ip_in, il))
-          hm%medium_box_sigma_e(ip_in, il) = hm%medium_box_sigma_e_factor(il)
-          hm%medium_box_sigma_m(ip_in, il) = hm%medium_box_sigma_m(ip_in, il)
+          hm%medium_box%ep(ip_in, il) = P_ep * hm%medium_box%ep_factor(il)
+          hm%medium_box%mu(ip_in, il) = P_mu * hm%medium_box%mu_factor(il)
+          hm%medium_box%c(ip_in, il) = M_ONE/sqrt(hm%medium_box%ep(ip_in, il)*hm%medium_box%mu(ip_in, il))
+          hm%medium_box%sigma_e(ip_in, il) = hm%medium_box%sigma_e_factor(il)
+          hm%medium_box%sigma_m(ip_in, il) = hm%medium_box%sigma_m_factor(il)
 
         end if
       end do
 
-      tmp = P_ep
-      do  ip_in = 1, hm%medium_box_points_number(il)
-        ip = hm%medium_box_points_map(ip_in, il)
-        tmp(ip)= hm%medium_box_ep(ip_in, il)
+      tmp(:) = P_ep
+      do  ip_in = 1, hm%medium_box%points_number(il)
+        ip = hm%medium_box%points_map(ip_in, il)
+        tmp(ip)= hm%medium_box%ep(ip_in, il)
       end do
       call dderivatives_grad(gr%der, tmp, tmp_grad, set_bc = .false.)
-      do ip_in = 1, hm%medium_box_points_number(il)
-        ip = hm%medium_box_points_map(ip_in, il)
-        hm%medium_box_aux_ep(ip_in, :, il) = tmp_grad(ip, :)/(M_FOUR * hm%medium_box_ep(ip_in, il))
+      do ip_in = 1, hm%medium_box%points_number(il)
+        ip = hm%medium_box%points_map(ip_in, il)
+        hm%medium_box%aux_ep(ip_in, :, il) = tmp_grad(ip, :)/(M_FOUR * hm%medium_box%ep(ip_in, il))
       end do
 
-      tmp = P_mu
-      do ip_in = 1, hm%medium_box_points_number(il)
-        ip = hm%medium_box_points_map(ip_in, il)
-        tmp(ip) = hm%medium_box_mu(ip_in, il)
+      tmp(:) = P_mu
+      do ip_in = 1, hm%medium_box%points_number(il)
+        ip = hm%medium_box%points_map(ip_in, il)
+        tmp(ip) = hm%medium_box%mu(ip_in, il)
       end do
       call dderivatives_grad(gr%der, tmp, tmp_grad, set_bc = .false.)
-      do ip_in = 1, hm%medium_box_points_number(il)
-        ip = hm%medium_box_points_map(ip_in, il)
-        hm%medium_box_aux_mu(ip_in, :, il) = tmp_grad(ip, :)/(M_FOUR * hm%medium_box_mu(ip_in, il))
+      do ip_in = 1, hm%medium_box%points_number(il)
+        ip = hm%medium_box%points_map(ip_in, il)
+        hm%medium_box%aux_mu(ip_in, :, il) = tmp_grad(ip, :)/(M_FOUR * hm%medium_box%mu(ip_in, il))
       end do
 
       ! print information about the medium box -- get from Renes version in maxwell_propagator.F90
 
-      SAFE_DEALLOCATE_A(tmp)
     end do
 
     SAFE_DEALLOCATE_A(tmp)
@@ -2570,8 +2600,8 @@ contains
 
       integer :: ip, ip_in
 
-      do ip_in = 1, hm%medium_box_points_number(il)
-        ip = hm%medium_box_points_map(ip_in, il)
+      do ip_in = 1, hm%medium_box%points_number(il)
+        ip = hm%medium_box%points_map(ip_in, il)
         io_func(ip) = medium_func(ip_in)
       end do
 
@@ -2843,12 +2873,12 @@ contains
 
     SAFE_ALLOCATE(ff_rs_state(1:gr%mesh%np_part,ff_dim))
 
-    call transform_rs_state(hm, st%rs_state_plane_waves, ff_rs_state, RS_TRANS_FORWARD)
+    call transform_rs_state(hm, gr, st, st%rs_state_plane_waves, ff_rs_state, RS_TRANS_FORWARD)
 
     ! Time evolution of RS plane waves state without any coupling with H(inter_time)
     call hamiltonian_mxll_update(hm, time=time)
     !call exponential_apply(tr%te, gr%mesh, hm, ff_rs_state, 1, 1, dt, time)
-    call transform_rs_state(hm, st%rs_state_plane_waves, ff_rs_state, RS_TRANS_BACKWARD)
+    call transform_rs_state(hm, gr, st, st%rs_state_plane_waves, ff_rs_state, RS_TRANS_BACKWARD)
     call plane_waves_boundaries_calculation(hm, st, gr%mesh, time+dt, time_delay, st%rs_state_plane_waves)
 
     SAFE_DEALLOCATE_A(ff_rs_state)
