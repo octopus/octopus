@@ -2464,6 +2464,9 @@ contains
     SAFE_ALLOCATE(hm%medium_box%sigma_e(ip_in_max,nr_of_boxes))
     SAFE_ALLOCATE(hm%medium_box%sigma_m(ip_in_max,nr_of_boxes))
 
+    hm%medium_box%points_map = int(M_zero)
+    hm%medium_box%bdry_map = int(M_zero)
+
     do il = 1, nr_of_boxes
       ip_in = 0
       ip_bd = 0
