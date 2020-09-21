@@ -39,6 +39,7 @@ module propagator_elec_oct_m
   use output_oct_m
   use potential_interpolation_oct_m
   use profiling_oct_m
+  use propagator_oct_m
   use propagator_base_oct_m
   use propagator_cn_oct_m
   use propagator_etrs_oct_m
@@ -575,7 +576,7 @@ contains
     end if
 
     if(gauge_field_is_applied(hm%ep%gfield) .and. .not. propagator_elec_ions_are_propagated(tr)) then
-      call gauge_field_propagate(hm%ep%gfield, dt, time, namespace)
+      call gauge_field_do_td(hm%ep%gfield, VERLET_COMPUTE_ACC, dt, time, namespace)
     end if
 
     if(generate .or. geometry_species_time_dependent(geo)) then
@@ -599,7 +600,7 @@ contains
 
     if(gauge_field_is_applied(hm%ep%gfield)) then
       call gauge_field_get_force(hm%ep%gfield, gr, st)
-      call gauge_field_propagate_vel(hm%ep%gfield, dt)
+      call gauge_field_do_td(hm%ep%gfield, VERLET_COMPUTE_VEL, dt, time, namespace)
     end if
 
     !We update the occupation matrices
@@ -664,7 +665,7 @@ contains
       gs_run = .false., verbosity = VERB_COMPACT, iters_done = scsteps)
 
     if(gauge_field_is_applied(hm%ep%gfield)) then
-      call gauge_field_propagate(hm%ep%gfield, dt, iter*dt, namespace)
+      call gauge_field_do_td(hm%ep%gfield, VERLET_COMPUTE_ACC, dt, iter*dt, namespace)
     end if
 
     !TODO: we should update the occupation matrices here 
@@ -685,7 +686,7 @@ contains
      geo%kinetic_energy = ion_dynamics_kinetic_energy(geo)
 
     if(gauge_field_is_applied(hm%ep%gfield)) then
-      call gauge_field_propagate_vel(hm%ep%gfield, dt)
+      call gauge_field_do_td(hm%ep%gfield, VERLET_COMPUTE_VEL, dt, iter*dt, namespace)
     end if
 
     POP_SUB(propagator_elec_dt_bo)

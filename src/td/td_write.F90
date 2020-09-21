@@ -86,17 +86,6 @@ module td_write_oct_m
     td_write_mxll_iter, &
     td_write_mxll_free_data
 
-  type td_write_prop_t
-    private
-    type(c_ptr)          :: handle
-    type(c_ptr), pointer :: mult_handles(:)
-    type(mpi_grp_t)      :: mpi_grp
-    integer              :: hand_start
-    integer              :: hand_end
-    logical              :: write = .false.
-    logical              :: resolve_states = .false.    !< Whether to resolve output by state
-  end type td_write_prop_t
-
   integer, parameter ::   &
     OUT_MULTIPOLES  =  1, &
     OUT_ANGULAR     =  2, &
@@ -141,6 +130,16 @@ module td_write_oct_m
     OUT_B_FIELD_SURFACE_Y       = 8, &
     OUT_B_FIELD_SURFACE_Z       = 9, &
     OUT_MAXWELL_MAX             = 9
+
+  type td_write_prop_t
+    type(c_ptr)          :: handle
+    type(c_ptr), pointer :: mult_handles(:)
+    type(mpi_grp_t)      :: mpi_grp
+    integer              :: hand_start
+    integer              :: hand_end
+    logical              :: write = .false.
+    logical              :: resolve_states = .false.    !< Whether to resolve output by state
+  end type td_write_prop_t
 
 
   type td_write_t
@@ -939,7 +938,7 @@ contains
       call td_write_energy(writ%out(OUT_ENERGY)%handle, hm, iter, geo%kinetic_energy)
 
     if(writ%out(OUT_GAUGE_FIELD)%write) &
-      call td_write_gauge_field(writ%out(OUT_GAUGE_FIELD)%handle, hm, gr, iter)
+      call gauge_field_output_write(hm%ep%gfield, writ%out(OUT_GAUGE_FIELD)%handle, iter)
 
     if(writ%out(OUT_EIGS)%write) &
       call td_write_eigs(writ%out(OUT_EIGS)%handle, st, iter)
@@ -2272,80 +2271,6 @@ contains
 
     POP_SUB(td_write_ionch)
   end subroutine td_write_ionch
-
-
-  ! ---------------------------------------------------------
-  subroutine td_write_gauge_field(out_gauge, hm, gr, iter)
-    type(c_ptr),         intent(inout) :: out_gauge
-    type(hamiltonian_elec_t), intent(in) :: hm
-    type(grid_t),        intent(in) :: gr
-    integer,             intent(in) :: iter
-    
-    integer :: idir
-    character(len=50) :: aux
-    FLOAT :: temp(1:MAX_DIM)
-    
-    if(.not.mpi_grp_is_root(mpi_world)) return ! only first node outputs
-
-    PUSH_SUB(td_write_gauge_field)
-    
-    if(iter == 0) then
-      call td_write_print_header_init(out_gauge)
-
-      ! first line: column names
-      call write_iter_header_start(out_gauge)
-
-      do idir = 1, gr%mesh%sb%dim
-        write(aux, '(a2,i1,a1)') 'A(', idir, ')'
-        call write_iter_header(out_gauge, aux)
-      end do
-      do idir = 1, gr%mesh%sb%dim
-        write(aux, '(a6,i1,a1)') 'dA/dt(', idir, ')'
-        call write_iter_header(out_gauge, aux)
-      end do
-      do idir = 1, gr%mesh%sb%dim
-        write(aux, '(a10,i1,a1)') 'd^2A/dt^2(', idir, ')'
-        call write_iter_header(out_gauge, aux)
-      end do
-      call write_iter_nl(out_gauge)
-
-      ! second line: units
-      !call write_iter_string(out_gauge, '#[Iter n.]')
-      !call write_iter_header(out_gauge, '[' // trim(units_abbrev(units_out%time)) // ']')
-      !call write_iter_string(out_gauge, &
-      !  'A Vector potential in '   // trim(units_abbrev(units_out%length)) &
-      !  'A dot in '                // trim(units_abbrev(units_out%length)) &
-      !  'A dot dot in '            // trim(units_abbrev(units_out%length))
-      !call write_iter_nl(out_gauge)
-
-      call td_write_print_header_end(out_gauge)
-    end if
-
-    call write_iter_start(out_gauge)
-
-    ! this complicated stuff here is a workaround for a PGI compiler bug in versions before 9.0-3
-    call gauge_field_get_vec_pot(hm%ep%gfield, temp)
-    do idir = 1, gr%mesh%sb%dim
-      temp(idir) = units_from_atomic(units_out%energy, temp(idir))
-    end do
-    call write_iter_double(out_gauge, temp, gr%mesh%sb%dim)
-
-    call gauge_field_get_vec_pot_vel(hm%ep%gfield, temp)
-    do idir = 1, gr%mesh%sb%dim
-      temp(idir) = units_from_atomic(units_out%energy / units_out%time, temp(idir))
-    end do
-    call write_iter_double(out_gauge, temp, gr%mesh%sb%dim)
-
-    call gauge_field_get_vec_pot_acc(hm%ep%gfield, temp)
-    do idir = 1, gr%mesh%sb%dim
-      temp(idir) = units_from_atomic(units_out%energy / units_out%time**2, temp(idir))
-    end do
-    call write_iter_double(out_gauge, temp, gr%mesh%sb%dim)
-
-    call write_iter_nl(out_gauge)
-    POP_SUB(td_write_gauge_field)
-    
-  end subroutine td_write_gauge_field
 
   ! ---------------------------------------------------------
   subroutine td_write_proj(out_proj, gr, geo, st, gs_st, kick, iter)
@@ -4090,6 +4015,7 @@ contains
 
     POP_SUB(td_write_print_header_end)
   end subroutine td_write_print_header_end
+
 
 end module td_write_oct_m
 
