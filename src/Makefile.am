@@ -627,7 +627,6 @@ td_f_srcs =                                 \
 	td/td_calc.F90                      \
 	td/td.F90                           \
 	td/td_write.F90                     \
-        td/td_write_base.F90                \
         td/propagation_ops_elec.F90
 
 td_srcs = $(td_f_srcs)
@@ -844,7 +843,7 @@ oct_spin_susceptibility_LINK = $(FCLINK)
 oct_spin_susceptibility_LDADD = $(all_LIBS)
 
 
-oct_unfold_SOURCES    = $(td_srcs) $(scf_srcs) $(electrons_srcs) $(output_srcs) \
+oct_unfold_SOURCES    = $(electrons_srcs) $(output_srcs) \
                         $(multisystem_srcs) $(hamiltonian_srcs) $(basis_set_srcs) \
 			$(interactions_srcs) $(poisson_srcs) $(states_srcs) $(grid_srcs) $(ions_srcs) \
 			$(species_srcs) $(math_srcs) $(basic_srcs) \

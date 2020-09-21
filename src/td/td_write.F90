@@ -63,7 +63,6 @@ module td_write_oct_m
   use states_mxll_oct_m
   use states_mxll_restart_oct_m
   use td_calc_oct_m
-  use td_write_base_oct_m
   use types_oct_m
   use unit_oct_m
   use unit_system_oct_m
@@ -76,6 +75,7 @@ module td_write_oct_m
   private
   public ::         &
     td_write_t,     &
+    td_write_prop_t,&
     td_write_init,  &
     td_write_end,   &
     td_write_iter,  &
@@ -131,6 +131,16 @@ module td_write_oct_m
     OUT_B_FIELD_SURFACE_Y       = 8, &
     OUT_B_FIELD_SURFACE_Z       = 9, &
     OUT_MAXWELL_MAX             = 9
+
+  type td_write_prop_t
+    type(c_ptr)          :: handle
+    type(c_ptr), pointer :: mult_handles(:)
+    type(mpi_grp_t)      :: mpi_grp
+    integer              :: hand_start
+    integer              :: hand_end
+    logical              :: write = .false.
+    logical              :: resolve_states = .false.    !< Whether to resolve output by state
+  end type td_write_prop_t
 
 
   type td_write_t
@@ -3977,6 +3987,36 @@ contains
     call profiling_out(prof)
     POP_SUB(td_write_maxwell_free_data)
   end subroutine td_write_mxll_free_data
+
+
+  ! ---------------------------------------------------------
+  subroutine td_write_print_header_init(out)
+    type(c_ptr), intent(inout) :: out
+
+    PUSH_SUB(td_write_print_header_init)
+
+    call write_iter_clear(out)
+    call write_iter_string(out,'################################################################################')
+    call write_iter_nl(out)
+    call write_iter_string(out,'# HEADER')
+    call write_iter_nl(out)
+
+    POP_SUB(td_write_print_header_init)
+  end subroutine td_write_print_header_init
+
+
+  ! ---------------------------------------------------------
+  subroutine td_write_print_header_end(out)
+    type(c_ptr), intent(inout) :: out
+
+    PUSH_SUB(td_write_print_header_end)
+
+    call write_iter_string(out,'################################################################################')
+    call write_iter_nl(out)
+
+    POP_SUB(td_write_print_header_end)
+  end subroutine td_write_print_header_end
+
 
 end module td_write_oct_m
 

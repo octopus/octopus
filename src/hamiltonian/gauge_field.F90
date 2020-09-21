@@ -37,7 +37,6 @@ module gauge_field_oct_m
   use states_elec_dim_oct_m
   use symmetries_oct_m
   use symm_op_oct_m
-  use td_write_base_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use write_iter_oct_m
@@ -559,6 +558,35 @@ contains
     POP_SUB(gauge_field_output_write)
     
   end subroutine gauge_field_output_write
+
+  ! ---------------------------------------------------------
+  subroutine td_write_print_header_init(out)
+    type(c_ptr), intent(inout) :: out
+
+    PUSH_SUB(td_write_print_header_init)
+
+    call write_iter_clear(out)
+    call write_iter_string(out,'################################################################################')
+    call write_iter_nl(out)
+    call write_iter_string(out,'# HEADER')
+    call write_iter_nl(out)
+
+    POP_SUB(td_write_print_header_init)
+  end subroutine td_write_print_header_init
+
+
+  ! ---------------------------------------------------------
+  subroutine td_write_print_header_end(out)
+    type(c_ptr), intent(inout) :: out
+
+    PUSH_SUB(td_write_print_header_end)
+
+    call write_iter_string(out,'################################################################################')
+    call write_iter_nl(out)
+
+    POP_SUB(td_write_print_header_end)
+  end subroutine td_write_print_header_end
+
 
 
 end module gauge_field_oct_m
