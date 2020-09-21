@@ -75,7 +75,6 @@ module td_write_oct_m
   private
   public ::         &
     td_write_t,     &
-    td_write_prop_t,&
     td_write_init,  &
     td_write_end,   &
     td_write_iter,  &

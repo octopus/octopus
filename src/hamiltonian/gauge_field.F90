@@ -506,7 +506,11 @@ contains
     PUSH_SUB(td_write_gauge_field)
     
     if(iter == 0) then
-      call td_write_print_header_init(out_gauge)
+      call write_iter_clear(out_gauge)
+      call write_iter_string(out_gauge,'################################################################################')
+      call write_iter_nl(out_gauge)
+      call write_iter_string(out_gauge,'# HEADER')
+      call write_iter_nl(out_gauge)
 
       ! first line: column names
       call write_iter_header_start(out_gauge)
@@ -534,7 +538,9 @@ contains
       !  'A dot dot in '            // trim(units_abbrev(units_out%length))
       !call write_iter_nl(out_gauge)
 
-      call td_write_print_header_end(out_gauge)
+      call write_iter_string(out_gauge,'################################################################################')
+      call write_iter_nl(out_gauge)
+
     end if
 
     call write_iter_start(out_gauge)
@@ -558,35 +564,6 @@ contains
     POP_SUB(gauge_field_output_write)
     
   end subroutine gauge_field_output_write
-
-  ! ---------------------------------------------------------
-  subroutine td_write_print_header_init(out)
-    type(c_ptr), intent(inout) :: out
-
-    PUSH_SUB(td_write_print_header_init)
-
-    call write_iter_clear(out)
-    call write_iter_string(out,'################################################################################')
-    call write_iter_nl(out)
-    call write_iter_string(out,'# HEADER')
-    call write_iter_nl(out)
-
-    POP_SUB(td_write_print_header_init)
-  end subroutine td_write_print_header_init
-
-
-  ! ---------------------------------------------------------
-  subroutine td_write_print_header_end(out)
-    type(c_ptr), intent(inout) :: out
-
-    PUSH_SUB(td_write_print_header_end)
-
-    call write_iter_string(out,'################################################################################')
-    call write_iter_nl(out)
-
-    POP_SUB(td_write_print_header_end)
-  end subroutine td_write_print_header_end
-
 
 
 end module gauge_field_oct_m
