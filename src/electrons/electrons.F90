@@ -423,6 +423,8 @@ contains
 
     SAFE_DEALLOCATE_P(sys%gr)
 
+    call system_end(sys)
+
     POP_SUB(electrons_finalize)
   end subroutine electrons_finalize
 
