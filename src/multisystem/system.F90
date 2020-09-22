@@ -42,10 +42,15 @@ module system_oct_m
   implicit none
 
   private
-  public ::               &
-    system_t,             &
-    system_end,           &
-    system_list_t,        &
+  public ::                                    &
+    system_t,                                  &
+    system_dt_operation,                       &
+    system_reset_clocks,                       &
+    system_propagation_start,                  &
+    system_propagation_finish,                 &
+    system_has_reached_final_propagation_time, &
+    system_end,                                &
+    system_list_t,                             &
     system_iterator_t
 
   type, extends(interaction_partner_t), abstract :: system_t
@@ -56,7 +61,7 @@ module system_oct_m
 
     integer :: accumulated_loop_ticks
 
-    integer :: interaction_timing  !< parameter to determine if interactions
+    integer, public :: interaction_timing  !< parameter to determine if interactions
       !< should use the quantities at the exact time or if retardation is allowed
 
     type(integer_list_t), public :: supported_interactions
@@ -76,8 +81,6 @@ module system_oct_m
     procedure :: propagation_start => system_propagation_start
     procedure :: propagation_finish => system_propagation_finish
     procedure :: has_reached_final_propagation_time => system_has_reached_final_propagation_time
-    procedure :: propagation_step_finish => system_propagation_step_finish
-    procedure :: propagation_step_is_done => system_propagation_step_is_done
     procedure :: output_start => system_output_start
     procedure :: output_write => system_output_write
     procedure :: output_finish => system_output_finish
@@ -177,13 +180,21 @@ contains
     end if
 
     select case (tdop)
-    case (SKIP)
-      ! Do nothing
     case (FINISHED)
       if (.not. this%prop%step_is_done()) then
+        ! Increment the system clock by one time-step
         this%clock = this%clock + CLOCK_TICK
+
+        ! Print information about the current iteration and write output
+        call this%output_write()
+        call this%iteration_info()
+
+        ! Mark propagation step as finished
+        call this%prop%finished()
+      else
+        ! Reset propagator for next step
+        call this%prop%rewind()
       end if
-      call this%prop%finished()
 
     case (UPDATE_INTERACTIONS)
       ! We increment by one algorithmic step
@@ -198,7 +209,7 @@ contains
         this%accumulated_loop_ticks = this%accumulated_loop_ticks + 1
         call this%prop%next()
       else
-      this%prop%clock = this%prop%clock - CLOCK_TICK
+        this%prop%clock = this%prop%clock - CLOCK_TICK
       end if
 
     case (START_SCF_LOOP)
@@ -735,33 +746,6 @@ contains
 
     POP_SUB(system_has_reached_final_propagation_time)
   end function system_has_reached_final_propagation_time
-
-  ! ---------------------------------------------------------
-  subroutine system_propagation_step_finish(this)
-    class(system_t),      intent(inout) :: this
-
-    PUSH_SUB(system_propagation_step_finish)
-
-    ! Print information about the current iteration and write output
-    call this%output_write()
-    call this%iteration_info()
-
-    ! Reset propagator for next step
-    call this%prop%rewind()
-
-    POP_SUB(system_propagation_step_finish)
-  end subroutine system_propagation_step_finish
-
-  ! ---------------------------------------------------------
-  logical function system_propagation_step_is_done(this)
-    class(system_t),      intent(inout) :: this
-
-    PUSH_SUB(system_propagation_step_is_done)
-
-    system_propagation_step_is_done = this%prop%step_is_done()
-
-    POP_SUB(system_propagation_step_is_done)
-  end function system_propagation_step_is_done
 
   ! ---------------------------------------------------------
   logical function system_process_is_slave(this)
