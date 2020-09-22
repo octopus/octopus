@@ -20,7 +20,6 @@
 
 module sparskit_oct_m
   use global_oct_m
-  use loct_pointer_oct_m
   use messages_oct_m
   use namespace_oct_m
   use parser_oct_m
@@ -357,9 +356,9 @@ contains
     sko%residual_norm   = ski%residual_norm
     sko%rel_tolerance   = ski%rel_tolerance
     sko%abs_tolerance   = ski%abs_tolerance
-    call loct_allocatable_copy(sko%sk_work, ski%sk_work)
-    call loct_allocatable_copy(sko%sk_b,    ski%sk_b)
-    call loct_allocatable_copy(sko%sk_y,    ski%sk_y)
+    SAFE_ALLOCATE_SOURCE_A(sko%sk_work, ski%sk_work)
+    SAFE_ALLOCATE_SOURCE_A(sko%sk_b,    ski%sk_b)
+    SAFE_ALLOCATE_SOURCE_A(sko%sk_y,    ski%sk_y)
     sko%ipar            = ski%ipar
     sko%fpar            = ski%fpar
     sko%verbose         = ski%verbose

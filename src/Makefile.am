@@ -59,7 +59,6 @@ basic_f_srcs =                                 \
 	basic/linked_list.F90                  \
 	basic/list_node.F90                    \
 	basic/loct.F90                         \
-	basic/loct_pointer.F90                 \
 	basic/lookup.F90                       \
 	basic/messages.F90                     \
 	basic/mpi_debug.F90                    \
@@ -107,7 +106,6 @@ noinst_HEADERS +=                  \
 	basic/comm_inc.F90         \
 	basic/io_binary.h          \
         basic/io_binary_f_inc.F90  \
-	basic/loct_pointer_inc.F90 \
 	basic/mpi_debug_inc.F90    \
 	basic/mpi_lib_inc.F90      \
 	basic/sort_inc.F90         \

@@ -22,7 +22,6 @@ module species_oct_m
   use global_oct_m
   use iihash_oct_m
   use io_oct_m
-  use loct_pointer_oct_m
   use math_oct_m
   use messages_oct_m
   use mpi_oct_m
@@ -1514,11 +1513,11 @@ contains
     this%def_h=that%def_h
     this%niwfs=that%niwfs
     nullify(this%iwf_n, this%iwf_l, this%iwf_m, this%iwf_i)
-    call loct_pointer_copy(this%iwf_n, that%iwf_n)
-    call loct_pointer_copy(this%iwf_l, that%iwf_l)
-    call loct_pointer_copy(this%iwf_m, that%iwf_m)
-    call loct_pointer_copy(this%iwf_i, that%iwf_i)
-    call loct_pointer_copy(this%iwf_j, that%iwf_j)
+    SAFE_ALLOCATE_SOURCE_P(this%iwf_n, that%iwf_n)
+    SAFE_ALLOCATE_SOURCE_P(this%iwf_l, that%iwf_l)
+    SAFE_ALLOCATE_SOURCE_P(this%iwf_m, that%iwf_m)
+    SAFE_ALLOCATE_SOURCE_P(this%iwf_i, that%iwf_i)
+    SAFE_ALLOCATE_SOURCE_P(this%iwf_j, that%iwf_j)
     this%hubbard_l=that%hubbard_l
     this%hubbard_U=that%hubbard_U
     this%hubbard_alpha=that%hubbard_alpha

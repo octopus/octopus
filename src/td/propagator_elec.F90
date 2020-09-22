@@ -29,7 +29,6 @@ module propagator_elec_oct_m
   use hamiltonian_elec_oct_m
   use ion_dynamics_oct_m
   use lda_u_oct_m
-  use loct_pointer_oct_m
   use parser_oct_m
   use mesh_function_oct_m
   use messages_oct_m
@@ -102,7 +101,7 @@ contains
 
     select case(tro%method)
     case(PROP_MAGNUS)
-      call loct_pointer_copy(tro%vmagnus, tri%vmagnus)
+      SAFE_ALLOCATE_SOURCE_P(tro%vmagnus, tri%vmagnus)
 
     case(PROP_CRANK_NICOLSON_SPARSKIT)
       SAFE_ALLOCATE(tro%tdsk)
