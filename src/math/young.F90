@@ -20,7 +20,6 @@
 
 module young_oct_m
   use global_oct_m
-  use loct_pointer_oct_m
   use math_oct_m
   use messages_oct_m
   use profiling_oct_m
@@ -303,8 +302,8 @@ contains
     young_out%ndown = young_in%ndown
     young_out%nyoung = young_in%nyoung
 
-    call loct_pointer_copy(young_out%young_up,young_in%young_up)
-    call loct_pointer_copy(young_out%young_down,young_in%young_down)
+    SAFE_ALLOCATE_SOURCE_P(young_out%young_up,young_in%young_up)
+    SAFE_ALLOCATE_SOURCE_P(young_out%young_down,young_in%young_down)
 
     POP_SUB(young_copy)
   end subroutine young_copy

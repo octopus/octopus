@@ -20,7 +20,6 @@
 
 module permutations_oct_m
   use global_oct_m
-  use loct_pointer_oct_m
   use math_oct_m
   use messages_oct_m
   use profiling_oct_m
@@ -119,8 +118,8 @@ contains
     perm_out%npermutations = perm_in%npermutations
     perm_out%npairs = perm_in%npairs
 
-    call loct_pointer_copy(perm_out%allpermutations,perm_in%allpermutations)
-    call loct_pointer_copy(perm_out%permsign,perm_in%permsign)
+    SAFE_ALLOCATE_SOURCE_P(perm_out%allpermutations,perm_in%allpermutations)
+    SAFE_ALLOCATE_SOURCE_P(perm_out%permsign,perm_in%permsign)
 
     POP_SUB(permutations_copy)
   end subroutine permutations_copy

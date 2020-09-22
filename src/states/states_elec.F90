@@ -32,7 +32,6 @@ module states_elec_oct_m
   use grid_oct_m
   use kpoints_oct_m
   use loct_oct_m
-  use loct_pointer_oct_m
   use math_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
@@ -1347,9 +1346,9 @@ contains
 
     call modelmb_particles_copy(stout%modelmbparticles, stin%modelmbparticles)
     if (stin%modelmbparticles%nparticle > 0) then
-      call loct_pointer_copy(stout%mmb_nspindown, stin%mmb_nspindown)
-      call loct_pointer_copy(stout%mmb_iyoung, stin%mmb_iyoung)
-      call loct_pointer_copy(stout%mmb_proj, stin%mmb_proj)
+      SAFE_ALLOCATE_SOURCE_P(stout%mmb_nspindown, stin%mmb_nspindown)
+      SAFE_ALLOCATE_SOURCE_P(stout%mmb_iyoung, stin%mmb_iyoung)
+      SAFE_ALLOCATE_SOURCE_P(stout%mmb_proj, stin%mmb_proj)
     end if
 
     stout%wfs_type = stin%wfs_type
@@ -1357,31 +1356,33 @@ contains
 
     stout%only_userdef_istates = stin%only_userdef_istates
 
-    if(.not. exclude_wfns_) call loct_pointer_copy(stout%rho, stin%rho)
+    if(.not. exclude_wfns_) then
+      SAFE_ALLOCATE_SOURCE_P(stout%rho, stin%rho)
+    end if
 
     stout%calc_eigenval = stin%calc_eigenval
     stout%uniform_occ = stin%uniform_occ
     
     if(.not. optional_default(exclude_eigenval, .false.)) then
-      call loct_pointer_copy(stout%eigenval, stin%eigenval)
-      call loct_pointer_copy(stout%occ, stin%occ)
-      call loct_pointer_copy(stout%spin, stin%spin)
+      SAFE_ALLOCATE_SOURCE_P(stout%eigenval, stin%eigenval)
+      SAFE_ALLOCATE_SOURCE_P(stout%occ, stin%occ)
+      SAFE_ALLOCATE_SOURCE_P(stout%spin, stin%spin)
     end if
 
     ! the call to init_block is done at the end of this subroutine
     ! it allocates iblock, psib, block_is_local
     stout%group%nblocks = stin%group%nblocks
 
-    call loct_allocatable_copy(stout%user_def_states, stin%user_def_states)
+    SAFE_ALLOCATE_SOURCE_A(stout%user_def_states, stin%user_def_states)
 
-    call loct_pointer_copy(stout%current, stin%current)
-    call loct_pointer_copy(stout%current_kpt, stin%current_kpt)
+    SAFE_ALLOCATE_SOURCE_P(stout%current, stin%current)
+    SAFE_ALLOCATE_SOURCE_P(stout%current_kpt, stin%current_kpt)
  
-    call loct_pointer_copy(stout%rho_core, stin%rho_core)
-    call loct_pointer_copy(stout%frozen_rho, stin%frozen_rho)
-    call loct_pointer_copy(stout%frozen_tau, stin%frozen_tau)
-    call loct_pointer_copy(stout%frozen_gdens, stin%frozen_gdens)
-    call loct_pointer_copy(stout%frozen_ldens, stin%frozen_ldens)
+    SAFE_ALLOCATE_SOURCE_P(stout%rho_core, stin%rho_core)
+    SAFE_ALLOCATE_SOURCE_P(stout%frozen_rho, stin%frozen_rho)
+    SAFE_ALLOCATE_SOURCE_P(stout%frozen_tau, stin%frozen_tau)
+    SAFE_ALLOCATE_SOURCE_P(stout%frozen_gdens, stin%frozen_gdens)
+    SAFE_ALLOCATE_SOURCE_P(stout%frozen_ldens, stin%frozen_ldens)
 
     stout%fixed_occ = stin%fixed_occ
     stout%restart_fixed_occ = stin%restart_fixed_occ
@@ -1397,7 +1398,7 @@ contains
     call mpi_grp_copy(stout%mpi_grp, stin%mpi_grp)
     stout%dom_st_kpt_mpi_grp = stin%dom_st_kpt_mpi_grp
     stout%st_kpt_mpi_grp     = stin%st_kpt_mpi_grp
-    call loct_pointer_copy(stout%node, stin%node)
+    SAFE_ALLOCATE_SOURCE_P(stout%node, stin%node)
 
 #ifdef HAVE_SCALAPACK
     call blacs_proc_grid_copy(stin%dom_st_proc_grid, stout%dom_st_proc_grid)

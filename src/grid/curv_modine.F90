@@ -28,7 +28,6 @@
 module curv_modine_oct_m
   use geometry_oct_m
   use global_oct_m
-  use loct_pointer_oct_m
   use messages_oct_m
   use namespace_oct_m
   use parser_oct_m
@@ -305,10 +304,10 @@ contains
     this_out%L=this_in%L
     this_out%xbar=this_in%xbar
     this_out%Jbar=this_in%Jbar
-    call loct_pointer_copy(this_out%Jlocal, this_in%Jlocal)
-    call loct_pointer_copy(this_out%Jrange, this_in%Jrange)
-    call loct_pointer_copy(this_out%chi_atoms, this_in%chi_atoms)
-    call loct_pointer_copy(this_out%csi, this_in%csi)
+    SAFE_ALLOCATE_SOURCE_P(this_out%Jlocal, this_in%Jlocal)
+    SAFE_ALLOCATE_SOURCE_P(this_out%Jrange, this_in%Jrange)
+    SAFE_ALLOCATE_SOURCE_P(this_out%chi_atoms, this_in%chi_atoms)
+    SAFE_ALLOCATE_SOURCE_P(this_out%csi, this_in%csi)
     this_out%natoms=this_in%natoms
     POP_SUB(curv_modine_copy)
     return

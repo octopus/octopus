@@ -22,7 +22,6 @@ module potential_interpolation_oct_m
   use grid_oct_m
   use global_oct_m
   use lalg_basic_oct_m
-  use loct_pointer_oct_m
   use math_oct_m
   use messages_oct_m
   use namespace_oct_m
@@ -77,8 +76,8 @@ contains
     
     PUSH_SUB(potential_interpolation_copy)
 
-    call loct_pointer_copy(vkso%v_old, vksi%v_old)
-    call loct_pointer_copy(vkso%vtau_old, vksi%vtau_old)
+    SAFE_ALLOCATE_SOURCE_P(vkso%v_old, vksi%v_old)
+    SAFE_ALLOCATE_SOURCE_P(vkso%vtau_old, vksi%vtau_old)
 
     POP_SUB(potential_interpolation_copy)
   end subroutine potential_interpolation_copy

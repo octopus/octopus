@@ -29,7 +29,6 @@ module controlfunction_oct_m
   use io_oct_m
   use lalg_adv_oct_m
   use lasers_oct_m
-  use loct_pointer_oct_m
   use math_oct_m
   use messages_oct_m
   use mpi_oct_m
@@ -554,7 +553,7 @@ contains
     cp%w0                  = cf_common%w0
     cp%no_controlfunctions = cf_common%no_controlfunctions
     cp%current_representation = ctr_internal
-    call loct_pointer_copy(cp%alpha, cf_common%alpha)
+    SAFE_ALLOCATE_SOURCE_P(cp%alpha, cf_common%alpha)
 
     SAFE_ALLOCATE(cp%f(1:cp%no_controlfunctions))
     do ipar = 1, cp%no_controlfunctions
@@ -1229,7 +1228,7 @@ contains
     cp_out%current_representation = cp_in%current_representation
     cp_out%w0 = cp_in%w0
 
-    call loct_pointer_copy(cp_out%alpha, cp_in%alpha)
+    SAFE_ALLOCATE_SOURCE_P(cp_out%alpha, cp_in%alpha)
     SAFE_ALLOCATE(cp_out%f(1:cp_out%no_controlfunctions))
 
     do ipar = 1, cp_in%no_controlfunctions
@@ -1237,10 +1236,10 @@ contains
       call tdf_copy(cp_out%f(ipar), cp_in%f(ipar))
     end do
 
-    call loct_pointer_copy(cp_out%u, cp_in%u)
-    call loct_pointer_copy(cp_out%utransf, cp_in%utransf)
-    call loct_pointer_copy(cp_out%utransfi, cp_in%utransfi)
-    call loct_pointer_copy(cp_out%theta, cp_in%theta)
+    SAFE_ALLOCATE_SOURCE_P(cp_out%u, cp_in%u)
+    SAFE_ALLOCATE_SOURCE_P(cp_out%utransf, cp_in%utransf)
+    SAFE_ALLOCATE_SOURCE_P(cp_out%utransfi, cp_in%utransfi)
+    SAFE_ALLOCATE_SOURCE_P(cp_out%theta, cp_in%theta)
 
     POP_SUB(controlfunction_copy)
   end subroutine controlfunction_copy

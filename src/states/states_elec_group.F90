@@ -21,7 +21,6 @@
 module states_elec_group_oct_m
   use batch_oct_m
   use global_oct_m
-  use loct_pointer_oct_m
   use messages_oct_m
   use profiling_oct_m
   use states_elec_dim_oct_m
@@ -137,12 +136,12 @@ contains
         end do
       end do
       
-      call loct_pointer_copy(group_out%iblock, group_in%iblock)
-      call loct_pointer_copy(group_out%block_range, group_in%block_range)
-      call loct_pointer_copy(group_out%block_size, group_in%block_size)
-      call loct_pointer_copy(group_out%block_is_local, group_in%block_is_local)
-      call loct_allocatable_copy(group_out%block_node, group_in%block_node)
-      call loct_allocatable_copy(group_out%rma_win, group_in%rma_win)
+      SAFE_ALLOCATE_SOURCE_P(group_out%iblock, group_in%iblock)
+      SAFE_ALLOCATE_SOURCE_P(group_out%block_range, group_in%block_range)
+      SAFE_ALLOCATE_SOURCE_P(group_out%block_size, group_in%block_size)
+      SAFE_ALLOCATE_SOURCE_P(group_out%block_is_local, group_in%block_is_local)
+      SAFE_ALLOCATE_SOURCE_A(group_out%block_node, group_in%block_node)
+      SAFE_ALLOCATE_SOURCE_A(group_out%rma_win, group_in%rma_win)
     
     end if
 
