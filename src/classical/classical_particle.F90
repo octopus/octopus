@@ -245,7 +245,7 @@ contains
 
       this%quantities(POSITION)%clock = this%quantities(POSITION)%clock + CLOCK_TICK
 
-    case (VERLET_COMPUTE_ACC)
+    case (VERLET_COMPUTE_ACC, BEEMAN_COMPUTE_ACC)
       do ii = size(this%prev_acc, dim=2) - 1, 1, -1
         this%prev_acc(1:this%space%dim, ii + 1) = this%prev_acc(1:this%space%dim, ii)
       end do

@@ -84,16 +84,17 @@ module propagator_oct_m
     STORE_CURRENT_STATUS         = 10,  &
     BEEMAN_START                 = 11,  &
     BEEMAN_FINISH                = 12,  &
-    BEEMAN_PREDICT_POS           = 13,  &
-    BEEMAN_PREDICT_VEL           = 14,  &
-    BEEMAN_CORRECT_POS           = 15,  &
-    BEEMAN_CORRECT_VEL           = 16,  &
-    EXPMID_START                 = 17,  &
-    EXPMID_FINISH                = 18,  &
-    EXPMID_PREDICT_DT_2          = 19,  &
-    EXPMID_PREDICT_DT            = 20,  &
-    EXPMID_CORRECT_DT_2          = 21,  &
-    UPDATE_HAMILTONIAN           = 22
+    BEEMAN_COMPUTE_ACC           = 13,  &
+    BEEMAN_PREDICT_POS           = 14,  &
+    BEEMAN_PREDICT_VEL           = 15,  &
+    BEEMAN_CORRECT_POS           = 16,  &
+    BEEMAN_CORRECT_VEL           = 17,  &
+    EXPMID_START                 = 18,  &
+    EXPMID_FINISH                = 19,  &
+    EXPMID_PREDICT_DT_2          = 20,  &
+    EXPMID_PREDICT_DT            = 21,  &
+    EXPMID_CORRECT_DT_2          = 22,  &
+    UPDATE_HAMILTONIAN           = 23
 
   ! Known multisystem propagators
   integer, public, parameter ::        &
@@ -241,6 +242,8 @@ contains
       description = "Propagation step - Computing acceleration for"
     case (VERLET_COMPUTE_VEL)
       description = "Propagation step - Computing velocity for"
+    case (BEEMAN_COMPUTE_ACC)
+      description = "Propagation step - Computing acceleration for"
     case (BEEMAN_PREDICT_POS)
       description = "Prediction step  - Computing position for"
     case (BEEMAN_PREDICT_VEL)

@@ -62,7 +62,7 @@ contains
       call this%add(BEEMAN_PREDICT_POS)
       call this%add(START_SCF_LOOP)
       call this%add(UPDATE_INTERACTIONS)
-      call this%add(VERLET_COMPUTE_ACC)
+      call this%add(BEEMAN_COMPUTE_ACC)
       call this%add(BEEMAN_CORRECT_POS)
       call this%add(BEEMAN_CORRECT_VEL)
       call this%add(END_SCF_LOOP)
@@ -75,7 +75,7 @@ contains
 
       call this%add(BEEMAN_PREDICT_POS)
       call this%add(UPDATE_INTERACTIONS)
-      call this%add(VERLET_COMPUTE_ACC)
+      call this%add(BEEMAN_COMPUTE_ACC)
       call this%add(BEEMAN_PREDICT_VEL)
       call this%add(FINISHED)
 
