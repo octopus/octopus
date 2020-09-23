@@ -90,7 +90,6 @@ module system_oct_m
     procedure(system_do_td_op),                       deferred :: do_td_operation
     procedure(system_iteration_info),                 deferred :: iteration_info
     procedure(system_is_tolerance_reached),           deferred :: is_tolerance_reached
-    procedure(system_store_current_status),           deferred :: store_current_status
     procedure(system_update_quantity),                deferred :: update_quantity
   end type system_t
 
@@ -256,10 +255,6 @@ contains
          end if
         end if
       end if
-
-    case (STORE_CURRENT_STATUS)
-      call this%store_current_status()
-      call this%prop%next()
 
     case default
       call this%do_td_operation(tdop)

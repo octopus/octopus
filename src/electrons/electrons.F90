@@ -79,7 +79,6 @@ module electrons_oct_m
     procedure :: do_td_operation => electrons_do_td_operation
     procedure :: is_tolerance_reached => electrons_is_tolerance_reached
     procedure :: iteration_info => electrons_iteration_info
-    procedure :: store_current_status => electrons_store_current_status
     procedure :: update_quantity => electrons_update_quantity
     procedure :: update_exposed_quantity => electrons_update_exposed_quantity
     procedure :: copy_quantities_to_interaction => electrons_copy_quantities_to_interaction
@@ -290,15 +289,6 @@ contains
 
     POP_SUB(electrons_is_tolerance_reached)
   end function electrons_is_tolerance_reached
-
-  ! ---------------------------------------------------------
-  subroutine electrons_store_current_status(this)
-    class(electrons_t), intent(inout) :: this
-
-    PUSH_SUB(electrons_store_current_status)
-
-    POP_SUB(electrons_store_current_status)
-  end subroutine electrons_store_current_status
 
   ! ---------------------------------------------------------
   subroutine electrons_update_quantity(this, iq)

@@ -60,7 +60,6 @@ module multisystem_oct_m
     procedure :: do_td_operation => multisystem_do_td_operation
     procedure :: iteration_info => multisystem_iteration_info
     procedure :: is_tolerance_reached => multisystem_is_tolerance_reached
-    procedure :: store_current_status => multisystem_store_current_status
     procedure :: update_quantity => multisystem_update_quantity
     procedure :: update_exposed_quantity => multisystem_update_exposed_quantity
     procedure :: copy_quantities_to_interaction => multisystem_copy_quantities_to_interaction
@@ -502,19 +501,6 @@ contains
 
     POP_SUB(multisystem_is_tolerance_reached)
   end function multisystem_is_tolerance_reached
-
-  ! ---------------------------------------------------------
-  subroutine multisystem_store_current_status(this)
-    class(multisystem_t), intent(inout)    :: this
-
-    PUSH_SUB(multisystem_store_current_status)
-
-    ! The multitystem class does not have any status to be stored.
-    ! Classes that extend it might need to override this method in order to
-    ! support certain propagators.
-
-    POP_SUB(multisystem_store_current_status)
-  end subroutine multisystem_store_current_status
 
   ! ---------------------------------------------------------
   subroutine multisystem_iteration_info(this)

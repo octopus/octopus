@@ -56,7 +56,6 @@ module charged_particle_oct_m
     procedure :: do_td_operation => charged_particle_do_td
     procedure :: iteration_info => charged_particle_iteration_info
     procedure :: is_tolerance_reached => charged_particle_is_tolerance_reached
-    procedure :: store_current_status => charged_particle_store_current_status
     procedure :: update_quantity => charged_particle_update_quantity
     procedure :: update_exposed_quantity => charged_particle_update_exposed_quantity
     procedure :: copy_quantities_to_interaction => charged_particle_copy_quantities_to_interaction
@@ -169,17 +168,6 @@ contains
 
     POP_SUB(charged_particle_is_tolerance_reached)
    end function charged_particle_is_tolerance_reached
-
-   ! ---------------------------------------------------------
-   subroutine charged_particle_store_current_status(this)
-     class(charged_particle_t), intent(inout) :: this
-
-     PUSH_SUB(charged_particle_store_current_status)
-
-     call this%classical_particle_t%store_current_status()
-
-     POP_SUB(charged_particle_store_current_status)
-   end subroutine charged_particle_store_current_status
 
   ! ---------------------------------------------------------
   subroutine charged_particle_iteration_info(this)

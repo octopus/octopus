@@ -73,7 +73,6 @@ module classical_particle_oct_m
     procedure :: output_write => classical_particle_output_write
     procedure :: output_finish => classical_particle_output_finish
     procedure :: is_tolerance_reached => classical_particle_is_tolerance_reached
-    procedure :: store_current_status => classical_particle_store_current_status
     procedure :: update_quantity => classical_particle_update_quantity
     procedure :: update_exposed_quantity => classical_particle_update_exposed_quantity
     procedure :: copy_quantities_to_interaction => classical_particle_copy_quantities_to_interaction
@@ -232,6 +231,10 @@ contains
     select case(operation)
     case (SKIP)
       ! Do nothing
+    case (STORE_CURRENT_STATUS)
+      this%save_pos(1:this%space%dim) = this%pos(1:this%space%dim)
+      this%save_vel(1:this%space%dim) = this%vel(1:this%space%dim)
+
     case (VERLET_START)
       SAFE_ALLOCATE(this%prev_acc(1:this%space%dim, 1))
       this%acc(1:this%space%dim) = this%tot_force(1:this%space%dim) / this%mass
@@ -388,18 +391,6 @@ contains
 
     POP_SUB(classical_particle_is_tolerance_reached)
   end function classical_particle_is_tolerance_reached
-
-  ! ---------------------------------------------------------
-  subroutine classical_particle_store_current_status(this)
-    class(classical_particle_t),   intent(inout)    :: this
-
-    PUSH_SUB(classical_particle_store_current_status) 
-
-    this%save_pos(1:this%space%dim) = this%pos(1:this%space%dim)
-    this%save_vel(1:this%space%dim) = this%vel(1:this%space%dim)
-
-    POP_SUB(classical_particle_store_current_status)
-  end subroutine classical_particle_store_current_status
 
   ! ---------------------------------------------------------
   subroutine classical_particle_iteration_info(this)
