@@ -24,7 +24,6 @@ module propagator_oct_m
   use linked_list_oct_m
   use messages_oct_m
   use namespace_oct_m
-  use parser_oct_m
   use profiling_oct_m
 
   implicit none
