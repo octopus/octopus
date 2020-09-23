@@ -31,6 +31,7 @@ module run_oct_m
   use interactions_factory_oct_m
   use interaction_partner_oct_m
   use invert_ks_oct_m
+  use linked_list_oct_m
   use messages_oct_m
   use mpi_debug_oct_m
   use mpi_oct_m
@@ -116,6 +117,8 @@ contains
     type(profile_t), save :: calc_mode_prof
     logical :: from_scratch
     integer :: iunit_out
+    type(list_iterator_t) :: iter
+    class(*), pointer :: partner
 
     PUSH_SUB(run)
 
@@ -253,6 +256,17 @@ contains
 
     ! Finalize systems
     SAFE_DEALLOCATE_P(systems)
+
+    !Deallocate the remaining external potentials
+    call iter%start(partners)
+    do while (iter%has_next())
+      partner => iter%get_next()
+      select type(partner)
+      class is(external_potential_t)
+        SAFE_DEALLOCATE_P(partner)
+      end select
+    end do
+
 
     call fft_all_end()
 
