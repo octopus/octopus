@@ -77,7 +77,6 @@ module propagator_oct_m
     VERLET_UPDATE_POS            =  3,  &
     VERLET_COMPUTE_ACC           =  4,  &
     VERLET_COMPUTE_VEL           =  5,  &
-    SYNC                         =  6,  &
     UPDATE_INTERACTIONS          =  7,  &
     START_SCF_LOOP               =  8,  &
     END_SCF_LOOP                 =  9,  &
