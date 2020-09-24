@@ -38,7 +38,6 @@ module propagator_elec_oct_m
   use output_oct_m
   use potential_interpolation_oct_m
   use profiling_oct_m
-  use propagator_oct_m
   use propagator_base_oct_m
   use propagator_cn_oct_m
   use propagator_etrs_oct_m
@@ -46,6 +45,7 @@ module propagator_elec_oct_m
   use propagator_magnus_oct_m
   use propagator_qoct_oct_m
   use propagator_rk_oct_m
+  use propagator_verlet_oct_m
   use scdm_oct_m
   use scf_oct_m
   use sparskit_oct_m

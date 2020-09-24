@@ -36,7 +36,7 @@ module propagation_ops_elec_oct_m
   use namespace_oct_m
   use potential_interpolation_oct_m
   use profiling_oct_m
-  use propagator_oct_m
+  use propagator_verlet_oct_m
   use states_elec_oct_m
   use varinfo_oct_m
   use wfs_elec_oct_m

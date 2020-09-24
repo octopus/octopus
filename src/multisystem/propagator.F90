@@ -70,57 +70,22 @@ module propagator_oct_m
   end type propagator_t
 
   ! Known propagation operations
-  character(len=30), public, parameter ::         &
-    SKIP                         = 'SKIP',  &
-    FINISHED                     = 'FINISHED',  &
-    VERLET_START                 = 'VERLET_START',  &
-    VERLET_FINISH                = 'VERLET_FINISH',  &
-    VERLET_UPDATE_POS            = 'VERLET_UPDATE_POS',  &
-    VERLET_COMPUTE_ACC           = 'VERLET_COMPUTE_ACC',  &
-    VERLET_COMPUTE_VEL           = 'VERLET_COMPUTE_VEL',  &
-    UPDATE_INTERACTIONS          = 'UPDATE_INTERACTIONS',  &
-    START_SCF_LOOP               = 'START_SCF_LOOP',  &
-    END_SCF_LOOP                 = 'END_SCF_LOOP',  &
-    STORE_CURRENT_STATUS         = 'STORE_CURRENT_STATUS',  &
-    BEEMAN_START                 = 'BEEMAN_START',  &
-    BEEMAN_FINISH                = 'BEEMAN_FINISH',  &
-    BEEMAN_COMPUTE_ACC           = 'BEEMAN_COMPUTE_ACC',  &
-    BEEMAN_PREDICT_POS           = 'BEEMAN_PREDICT_POS',  &
-    BEEMAN_PREDICT_VEL           = 'BEEMAN_PREDICT_VEL',  &
-    BEEMAN_CORRECT_POS           = 'BEEMAN_CORRECT_POS',  &
-    BEEMAN_CORRECT_VEL           = 'BEEMAN_CORRECT_VEL',  &
-    EXPMID_START                 = 'EXPMID_START',  &
-    EXPMID_FINISH                = 'EXPMID_FINISH',  &
-    EXPMID_PREDICT_DT_2          = 'EXPMID_PREDICT_DT_2',  &
-    EXPMID_PREDICT_DT            = 'EXPMID_PREDICT_DT',  &
-    EXPMID_CORRECT_DT_2          = 'EXPMID_CORRECT_DT_2',  &
-    UPDATE_HAMILTONIAN           = 'UPDATE_HAMILTONIAN'
+  character(len=30), public, parameter ::          &
+    SKIP                 = 'SKIP',                 &
+    FINISHED             = 'FINISHED',             &
+    UPDATE_INTERACTIONS  = 'UPDATE_INTERACTIONS',  &
+    START_SCF_LOOP       = 'START_SCF_LOOP',       &
+    END_SCF_LOOP         = 'END_SCF_LOOP',         &
+    STORE_CURRENT_STATUS = 'STORE_CURRENT_STATUS'
 
   type(algorithmic_operation_t), public, parameter :: &
-    OP_SKIP                 = algorithmic_operation_t(SKIP, 'Skipping propagation step'), &
-    OP_FINISHED             = algorithmic_operation_t(FINISHED, 'Propagation step finished'), &
-    OP_VERLET_START         = algorithmic_operation_t(VERLET_START, ''), &
-    OP_VERLET_FINISH        = algorithmic_operation_t(VERLET_FINISH, ''), &
-    OP_VERLET_UPDATE_POS    = algorithmic_operation_t(VERLET_UPDATE_POS, 'Propagation step - Updating positions'), &
-    OP_VERLET_COMPUTE_ACC   = algorithmic_operation_t(VERLET_COMPUTE_ACC, 'Propagation step - Computing acceleration'), &
-    OP_VERLET_COMPUTE_VEL   = algorithmic_operation_t(VERLET_COMPUTE_VEL, 'Propagation step - Computing velocity'), &
-    OP_UPDATE_INTERACTIONS  = algorithmic_operation_t(UPDATE_INTERACTIONS, 'Updating interactions'), &
-    OP_START_SCF_LOOP       = algorithmic_operation_t(START_SCF_LOOP, 'Starting SCF loop'), &
-    OP_END_SCF_LOOP         = algorithmic_operation_t(END_SCF_LOOP, 'End of SCF iteration'), &
-    OP_STORE_CURRENT_STATUS = algorithmic_operation_t(STORE_CURRENT_STATUS, ''), &
-    OP_BEEMAN_START         = algorithmic_operation_t(BEEMAN_START, ''), &
-    OP_BEEMAN_FINISH        = algorithmic_operation_t(BEEMAN_FINISH, ''), &
-    OP_BEEMAN_COMPUTE_ACC   = algorithmic_operation_t(BEEMAN_COMPUTE_ACC, 'Propagation step - Computing acceleration'), &
-    OP_BEEMAN_PREDICT_POS   = algorithmic_operation_t(BEEMAN_PREDICT_POS, 'Prediction step  - Computing position'), &
-    OP_BEEMAN_PREDICT_VEL   = algorithmic_operation_t(BEEMAN_PREDICT_VEL, 'Prediction step  - Computing velocity'), &
-    OP_BEEMAN_CORRECT_POS   = algorithmic_operation_t(BEEMAN_CORRECT_POS, 'Correction step  - Computing position'), &
-    OP_BEEMAN_CORRECT_VEL   = algorithmic_operation_t(BEEMAN_CORRECT_VEL, 'Correction step  - Computing velocity'), &
-    OP_EXPMID_START         = algorithmic_operation_t(EXPMID_START, ''), &
-    OP_EXPMID_FINISH        = algorithmic_operation_t(EXPMID_FINISH, ''), &
-    OP_EXPMID_PREDICT_DT_2  = algorithmic_operation_t(EXPMID_PREDICT_DT_2, 'Predict state at dt/2 '), &
-    OP_EXPMID_PREDICT_DT    = algorithmic_operation_t(EXPMID_PREDICT_DT, 'Predict state at dt'), &
-    OP_EXPMID_CORRECT_DT_2  = algorithmic_operation_t(EXPMID_CORRECT_DT_2, 'Correct state at dt/2'), &
-    OP_UPDATE_HAMILTONIAN   = algorithmic_operation_t(UPDATE_HAMILTONIAN, 'Updating Hamiltonian')
+    OP_SKIP                 = algorithmic_operation_t(SKIP,                 'Skipping propagation step'), &
+    OP_FINISHED             = algorithmic_operation_t(FINISHED,             'Propagation step finished'), &
+    OP_UPDATE_INTERACTIONS  = algorithmic_operation_t(UPDATE_INTERACTIONS,  'Updating interactions'),     &
+    OP_START_SCF_LOOP       = algorithmic_operation_t(START_SCF_LOOP,       'Starting SCF loop'),         &
+    OP_END_SCF_LOOP         = algorithmic_operation_t(END_SCF_LOOP,         'End of SCF iteration'),      &
+    OP_STORE_CURRENT_STATUS = algorithmic_operation_t(STORE_CURRENT_STATUS, '')
+
 
   ! Known multisystem propagators
   integer, public, parameter ::        &

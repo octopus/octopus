@@ -44,6 +44,7 @@ module system_mxll_oct_m
   use parser_oct_m
   use poisson_oct_m
   use profiling_oct_m
+  use propagator_exp_mid_oct_m
   use propagator_oct_m
   use propagator_mxll_oct_m
   use quantity_oct_m

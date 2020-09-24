@@ -19,6 +19,7 @@
 #include "global.h"
 
 module propagator_exp_mid_oct_m
+  use algorithm_oct_m
   use clock_oct_m
   use global_oct_m
   use messages_oct_m
@@ -39,6 +40,24 @@ module propagator_exp_mid_oct_m
   interface propagator_exp_mid_t
     procedure propagator_exp_mid_constructor
   end interface propagator_exp_mid_t
+
+  ! Specific exponential mid-point propagation operations identifiers
+  character(len=30), public, parameter ::        &
+    EXPMID_START        = 'EXPMID_START',        &
+    EXPMID_FINISH       = 'EXPMID_FINISH',       &
+    EXPMID_PREDICT_DT_2 = 'EXPMID_PREDICT_DT_2', &
+    EXPMID_PREDICT_DT   = 'EXPMID_PREDICT_DT',   &
+    EXPMID_CORRECT_DT_2 = 'EXPMID_CORRECT_DT_2', &
+    UPDATE_HAMILTONIAN  = 'UPDATE_HAMILTONIAN'
+
+  ! Specific exponential mid-point propagation operations
+  type(algorithmic_operation_t), public, parameter :: &
+    OP_EXPMID_START        = algorithmic_operation_t(EXPMID_START, ''),                              &
+    OP_EXPMID_FINISH       = algorithmic_operation_t(EXPMID_FINISH, ''),                             &
+    OP_EXPMID_PREDICT_DT_2 = algorithmic_operation_t(EXPMID_PREDICT_DT_2, 'Predict state at dt/2 '), &
+    OP_EXPMID_PREDICT_DT   = algorithmic_operation_t(EXPMID_PREDICT_DT,   'Predict state at dt'),    &
+    OP_EXPMID_CORRECT_DT_2 = algorithmic_operation_t(EXPMID_CORRECT_DT_2, 'Correct state at dt/2'),  &
+    OP_UPDATE_HAMILTONIAN  = algorithmic_operation_t(UPDATE_HAMILTONIAN,  'Updating Hamiltonian')
 
 contains
 

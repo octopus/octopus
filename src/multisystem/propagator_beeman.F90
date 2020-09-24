@@ -19,6 +19,7 @@
 #include "global.h"
 
 module propagator_beeman_oct_m
+  use algorithm_oct_m
   use global_oct_m
   use messages_oct_m
   use namespace_oct_m
@@ -38,6 +39,26 @@ module propagator_beeman_oct_m
   interface propagator_beeman_t
     procedure propagator_beeman_constructor
   end interface propagator_beeman_t
+
+  ! Specific beeman propagation operations identifiers
+  character(len=30), public, parameter ::      &
+    BEEMAN_START       = 'BEEMAN_START',        &
+    BEEMAN_FINISH      = 'BEEMAN_FINISH',       &
+    BEEMAN_COMPUTE_ACC = 'BEEMAN_COMPUTE_ACC',  &
+    BEEMAN_PREDICT_POS = 'BEEMAN_PREDICT_POS',  &
+    BEEMAN_PREDICT_VEL = 'BEEMAN_PREDICT_VEL',  &
+    BEEMAN_CORRECT_POS = 'BEEMAN_CORRECT_POS',  &
+    BEEMAN_CORRECT_VEL = 'BEEMAN_CORRECT_VEL'
+
+  ! Specific beeman propagation operations
+  type(algorithmic_operation_t), public, parameter :: &
+    OP_BEEMAN_START       = algorithmic_operation_t(BEEMAN_START,       ''),                                          &
+    OP_BEEMAN_FINISH      = algorithmic_operation_t(BEEMAN_FINISH,      ''),                                          &
+    OP_BEEMAN_COMPUTE_ACC = algorithmic_operation_t(BEEMAN_COMPUTE_ACC, 'Propagation step - Computing acceleration'), &
+    OP_BEEMAN_PREDICT_POS = algorithmic_operation_t(BEEMAN_PREDICT_POS, 'Prediction step  - Computing position'),     &
+    OP_BEEMAN_PREDICT_VEL = algorithmic_operation_t(BEEMAN_PREDICT_VEL, 'Prediction step  - Computing velocity'),     &
+    OP_BEEMAN_CORRECT_POS = algorithmic_operation_t(BEEMAN_CORRECT_POS, 'Correction step  - Computing position'),     &
+    OP_BEEMAN_CORRECT_VEL = algorithmic_operation_t(BEEMAN_CORRECT_VEL, 'Correction step  - Computing velocity')
 
 contains
 

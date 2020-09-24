@@ -35,7 +35,10 @@ module classical_particle_oct_m
   use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
+  use propagator_beeman_oct_m
+  use propagator_exp_mid_oct_m
   use propagator_oct_m
+  use propagator_verlet_oct_m
   use quantity_oct_m
   use space_oct_m
   use system_oct_m
