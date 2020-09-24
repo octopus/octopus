@@ -41,7 +41,6 @@ module kdotp_calc_oct_m
     dcalc_eff_mass_inv,            &
     zcalc_eff_mass_inv,            &
     zcalc_band_velocity,           &
-    zcalc_dipole_periodic,         &
     dkdotp_add_occ,                &
     zkdotp_add_occ,                &
     dkdotp_add_diagonal,           &
@@ -107,53 +106,6 @@ subroutine zcalc_band_velocity(sys, pert, velocity)
 
   POP_SUB(zkdotp_calc_band_velocity)
 end subroutine zcalc_band_velocity
-
-! ---------------------------------------------------------
-!> This routine cannot be used with d/dk wavefunctions calculated
-!! by perturbation theory.
-!! mu_i = sum(m occ, k) <u_mk(0)|(-id/dk_i|u_mk(0)>)
-!!      = Im sum(m occ, k) <u_mk(0)|(d/dk_i|u_mk(0)>)
-subroutine zcalc_dipole_periodic(sys, lr, dipole)
-  type(electrons_t),   target, intent(inout) :: sys
-  type(lr_t),                  intent(in)    :: lr(:,:)
-  CMPLX,                       intent(out)   :: dipole(:)
-
-  integer idir, ist, ik, idim
-  type(mesh_t), pointer :: mesh
-  CMPLX :: term, moment
-  CMPLX, allocatable :: psi(:, :)
-  mesh => sys%gr%mesh
-
-  PUSH_SUB(zcalc_dipole_periodic)
-
-  SAFE_ALLOCATE(psi(1:sys%gr%mesh%np, 1:sys%st%d%dim))
-  
-  do idir = 1, sys%gr%sb%periodic_dim
-    moment = M_ZERO
-
-    do ik = 1, sys%st%d%nik
-      term = M_ZERO
-
-      do ist = 1, sys%st%nst
-
-        call states_elec_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
-        
-        do idim = 1, sys%st%d%dim
-          term = term + zmf_dotp(mesh, psi(1:mesh%np, idim), lr(1, idir)%zdl_psi(1:mesh%np, idim, ist, ik))
-        end do
-        
-      end do
-
-      moment = moment + term*sys%st%d%kweights(ik)*sys%st%smear%el_per_state
-    end do
-
-    dipole(idir) = -moment
-  end do
-
-  SAFE_DEALLOCATE_A(psi)
-
-  POP_SUB(zcalc_dipole_periodic)
-end subroutine zcalc_dipole_periodic
 
 #include "undef.F90"
 #include "real.F90"
