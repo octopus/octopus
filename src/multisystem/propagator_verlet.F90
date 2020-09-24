@@ -51,8 +51,8 @@ module propagator_verlet_oct_m
 
   ! Specific verlet propagation operations
   type(algorithmic_operation_t), public, parameter :: &
-    OP_VERLET_START       = algorithmic_operation_t(VERLET_START,       ''),                                          &
-    OP_VERLET_FINISH      = algorithmic_operation_t(VERLET_FINISH,      ''),                                          &
+    OP_VERLET_START       = algorithmic_operation_t(VERLET_START,       'Starting Verlet propagation'),               &
+    OP_VERLET_FINISH      = algorithmic_operation_t(VERLET_FINISH,      'Finishing Verlet propagation'),              &
     OP_VERLET_UPDATE_POS  = algorithmic_operation_t(VERLET_UPDATE_POS,  'Propagation step - Updating positions'),     &
     OP_VERLET_COMPUTE_ACC = algorithmic_operation_t(VERLET_COMPUTE_ACC, 'Propagation step - Computing acceleration'), &
     OP_VERLET_COMPUTE_VEL = algorithmic_operation_t(VERLET_COMPUTE_VEL, 'Propagation step - Computing velocity')

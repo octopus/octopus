@@ -52,8 +52,8 @@ module propagator_beeman_oct_m
 
   ! Specific beeman propagation operations
   type(algorithmic_operation_t), public, parameter :: &
-    OP_BEEMAN_START       = algorithmic_operation_t(BEEMAN_START,       ''),                                          &
-    OP_BEEMAN_FINISH      = algorithmic_operation_t(BEEMAN_FINISH,      ''),                                          &
+    OP_BEEMAN_START       = algorithmic_operation_t(BEEMAN_START,       'Starting Beeman propagation'),               &
+    OP_BEEMAN_FINISH      = algorithmic_operation_t(BEEMAN_FINISH,      'Finishing Beeman propagation'),              &
     OP_BEEMAN_COMPUTE_ACC = algorithmic_operation_t(BEEMAN_COMPUTE_ACC, 'Propagation step - Computing acceleration'), &
     OP_BEEMAN_PREDICT_POS = algorithmic_operation_t(BEEMAN_PREDICT_POS, 'Prediction step  - Computing position'),     &
     OP_BEEMAN_PREDICT_VEL = algorithmic_operation_t(BEEMAN_PREDICT_VEL, 'Prediction step  - Computing velocity'),     &

@@ -52,11 +52,11 @@ module propagator_exp_mid_oct_m
 
   ! Specific exponential mid-point propagation operations
   type(algorithmic_operation_t), public, parameter :: &
-    OP_EXPMID_START        = algorithmic_operation_t(EXPMID_START, ''),                              &
-    OP_EXPMID_FINISH       = algorithmic_operation_t(EXPMID_FINISH, ''),                             &
-    OP_EXPMID_PREDICT_DT_2 = algorithmic_operation_t(EXPMID_PREDICT_DT_2, 'Predict state at dt/2 '), &
-    OP_EXPMID_PREDICT_DT   = algorithmic_operation_t(EXPMID_PREDICT_DT,   'Predict state at dt'),    &
-    OP_EXPMID_CORRECT_DT_2 = algorithmic_operation_t(EXPMID_CORRECT_DT_2, 'Correct state at dt/2'),  &
+    OP_EXPMID_START        = algorithmic_operation_t(EXPMID_START,        'Starting exponential mid-point propagation'),  &
+    OP_EXPMID_FINISH       = algorithmic_operation_t(EXPMID_FINISH,       'Finishing exponential mid-point propagation'), &
+    OP_EXPMID_PREDICT_DT_2 = algorithmic_operation_t(EXPMID_PREDICT_DT_2, 'Prediction step - Predicting state at dt/2 '), &
+    OP_EXPMID_PREDICT_DT   = algorithmic_operation_t(EXPMID_PREDICT_DT,   'Prediction step - Predicting state at dt'),    &
+    OP_EXPMID_CORRECT_DT_2 = algorithmic_operation_t(EXPMID_CORRECT_DT_2, 'Correction step - Correcting state at dt/2'),  &
     OP_UPDATE_HAMILTONIAN  = algorithmic_operation_t(UPDATE_HAMILTONIAN,  'Updating Hamiltonian')
 
 contains
