@@ -260,7 +260,7 @@ contains
     !Deallocate the remaining external potentials
     call iter%start(partners)
     do while (iter%has_next())
-      select type(ptr => partner)
+      select type(ptr => iter%get_next())
       class is(external_potential_t)
         partner => ptr
         SAFE_DEALLOCATE_P(partner)

@@ -176,6 +176,9 @@ module hamiltonian_elec_oct_m
     type(exchange_operator_t), public :: exxop
     type(namespace_t), pointer :: namespace
 
+    type(partner_list_t) :: external_potentials  !< List with all the external potentials
+    FLOAT, allocatable, public  :: v_ext_pot(:)  !< the potential comming from external potentials
+
   contains
     procedure :: update_span => hamiltonian_elec_span
     procedure :: dapply => dhamiltonian_elec_apply
@@ -779,8 +782,8 @@ contains
   subroutine hamiltonian_elec_end(hm)
     type(hamiltonian_elec_t), intent(inout) :: hm
 
-    type(list_iterator_t) :: iter
-    class(*), pointer :: potential
+    type(partner_iterator_t) :: iter
+    class(interaction_partner_t), pointer :: potential
 
 
     PUSH_SUB(hamiltonian_elec_end)
