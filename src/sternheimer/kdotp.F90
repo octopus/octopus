@@ -141,11 +141,6 @@ contains
        call messages_fatal(1)
     end if
 
-    SAFE_ALLOCATE(kdotp_vars%eff_mass_inv(1:pdim, 1:pdim, 1:sys%st%nst, 1:sys%st%d%nik))
-    SAFE_ALLOCATE(kdotp_vars%velocity(1:pdim, 1:sys%st%nst, 1:sys%st%d%nik))
-    kdotp_vars%eff_mass_inv(:,:,:,:) = 0 
-    kdotp_vars%velocity(:,:,:) = 0 
-
     call pert_init(kdotp_vars%perturbation, sys%namespace, PERTURBATION_KDOTP, sys%gr, sys%geo)
     SAFE_ALLOCATE(kdotp_vars%lr(1:1, 1:pdim))
 
@@ -194,10 +189,10 @@ contains
 
     message(1) = 'Calculating band velocities.'
     call messages_info(1)
-
-    if(states_are_real(sys%st)) then
-      kdotp_vars%velocity(:,:,:) = M_ZERO
-    else
+ 
+    SAFE_ALLOCATE(kdotp_vars%velocity(1:pdim, 1:sys%st%nst, 1:sys%st%d%nik))
+    kdotp_vars%velocity(:,:,:) = M_ZERO
+    if(states_are_complex(sys%st)) then
       call zcalc_band_velocity(sys, kdotp_vars%perturbation, kdotp_vars%velocity(:,:,:))
     end if
 
@@ -205,6 +200,7 @@ contains
       call io_mkdir(KDOTP_DIR, sys%namespace) ! data output
       call kdotp_write_band_velocity(sys%st, pdim, kdotp_vars%velocity(:,:,:), sys%namespace)
     end if
+    SAFE_DEALLOCATE_P(kdotp_vars%velocity)
 
     call sternheimer_obsolete_variables(sys%namespace, 'KdotP_', 'KdotP')
     call sternheimer_init(sh, sys, complex_response, set_ham_var = 0, &
@@ -337,6 +333,10 @@ contains
       message(1) = "Info: Calculating effective masses."
       call messages_info(1)
 
+      SAFE_ALLOCATE(kdotp_vars%eff_mass_inv(1:pdim, 1:pdim, 1:sys%st%nst, 1:sys%st%d%nik))
+      kdotp_vars%eff_mass_inv(:,:,:,:) = M_ZERO
+
+
       if(states_are_real(sys%st)) then
         call dcalc_eff_mass_inv(sys, kdotp_vars%lr, kdotp_vars%perturbation, &
           kdotp_vars%eff_mass_inv, kdotp_vars%degen_thres)
@@ -347,6 +347,8 @@ contains
 
       call kdotp_write_degeneracies(sys%st, kdotp_vars%degen_thres)
       call kdotp_write_eff_mass(sys%st, sys%gr, kdotp_vars, sys%namespace)
+
+      SAFE_DEALLOCATE_P(kdotp_vars%eff_mass_inv)
     end if
 
     ! clean up some things
@@ -374,8 +376,6 @@ contains
     end if
 
     call states_elec_deallocate_wfns(sys%st)
-    SAFE_DEALLOCATE_P(kdotp_vars%eff_mass_inv)
-    SAFE_DEALLOCATE_P(kdotp_vars%velocity)
 
     POP_SUB(kdotp_lr_run_legacy)
 
