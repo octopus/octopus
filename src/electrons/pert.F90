@@ -195,10 +195,8 @@ contains
 
     PUSH_SUB(pert_end)
 
-    if(this%pert_type == PERTURBATION_IONIC) then
-      SAFE_DEALLOCATE_P(this%ionic%mix1)
-      SAFE_DEALLOCATE_P(this%ionic%mix2)
-    end if
+    SAFE_DEALLOCATE_P(this%ionic%mix1)
+    SAFE_DEALLOCATE_P(this%ionic%mix2)
 
     POP_SUB(pert_end)
   end subroutine pert_end
