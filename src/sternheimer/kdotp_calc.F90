@@ -19,6 +19,7 @@
 #include "global.h"
 
 module kdotp_calc_oct_m
+  use comm_oct_m
   use global_oct_m
   use hamiltonian_elec_oct_m
   use linear_response_oct_m
@@ -73,11 +74,11 @@ subroutine zcalc_band_velocity(sys, pert, velocity)
 
   integer :: ik, ist, idir
   CMPLX, allocatable :: psi(:, :), pertpsi(:,:)
-#ifdef HAVE_MPI
-  FLOAT, allocatable :: vel_temp(:,:,:)
-#endif
+  type(profile_t), save :: prof
 
   PUSH_SUB(zkdotp_calc_band_velocity)
+
+  call profiling_in(prof, "CALC_BAND_VELOCITY")
 
   SAFE_ALLOCATE(psi(1:sys%gr%mesh%np, 1:sys%st%d%dim))
   SAFE_ALLOCATE(pertpsi(1:sys%gr%mesh%np, 1:sys%st%d%dim))
@@ -100,17 +101,9 @@ subroutine zcalc_band_velocity(sys, pert, velocity)
   SAFE_DEALLOCATE_A(psi)
   SAFE_DEALLOCATE_A(pertpsi)
 
-#ifdef HAVE_MPI
-  if(sys%st%parallel_in_states .or. sys%st%d%kpt%parallel) then
-    SAFE_ALLOCATE(vel_temp(1:sys%gr%sb%periodic_dim, 1:sys%st%nst, 1:sys%st%d%nik))
+  call comm_allreduce(sys%st%st_kpt_mpi_grp%comm, velocity)
 
-    call MPI_Allreduce(velocity, vel_temp, sys%gr%sb%periodic_dim * sys%st%nst * sys%st%d%nik, &
-      MPI_FLOAT, MPI_SUM, sys%st%st_kpt_mpi_grp%comm, mpi_err)
-
-    velocity(:,:,:) = vel_temp(:,:,:)
-    SAFE_DEALLOCATE_A(vel_temp)
-  end if
-#endif
+  call profiling_out(prof)
 
   POP_SUB(zkdotp_calc_band_velocity)
 end subroutine zcalc_band_velocity
