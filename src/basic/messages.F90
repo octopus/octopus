@@ -565,6 +565,7 @@ contains
     call loct_rm('exec/oct-status-running')
     call loct_rm('exec/oct-status-finished')
     call loct_rm('exec/oct-status-aborted')
+    call loct_rm('exec/oct-status-walltimer-aborted')
     
     ! create empty status file to indicate 'aborted state'
     open(unit=iunit_err, file='exec/oct-status-'//trim(status), &

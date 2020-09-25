@@ -176,7 +176,6 @@ contains
     logical, optional, intent(in) :: print
 
     FLOAT :: now
-    integer :: iunit
 
     PUSH_SUB(walltimer_alarm)
 
@@ -195,11 +194,9 @@ contains
     if(walltimer_alarm) then
       write(message(1), '("Walltimer stopping execution after = ",F6.2," minutes.")') (now - start_time)/CNST(60.0)
       call messages_info(1)
-      ! create empty file in the current run directory to indicate that the code was stopped
-      ! by the walltimer. This can be used to communicate the status of octopus to a queuing system
-      ! and to daisy-chain jobs
-      iunit = io_open('walltimer_abort', global_namespace, action='write')
-      call io_close(iunit)
+      ! Switch status to indicate that the walltimer aborted the calculation.
+      ! This can be used to communicate the status of octopus to a queuing system and to daisy-chain jobs.
+      call messages_switch_status('walltimer-aborted')
     end if
 
     POP_SUB(walltimer_alarm)
