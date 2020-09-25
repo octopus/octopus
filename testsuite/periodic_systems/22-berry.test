@@ -7,13 +7,13 @@ Enabled    : Yes
 Processors : 4
 Input      : 22-berry.01-cubic_Si.inp
 
-match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 64
-match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 4
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 1
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 1
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 227
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ;  24
 
 match ; SCF convergence    ; GREPCOUNT(static/info, 'SCF converged') ; 1
-match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -31.80434624
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ;  20.02480964
 match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -31.43120280
 match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -235.43011583
 match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ;  35.95886636
