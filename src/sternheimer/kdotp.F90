@@ -126,6 +126,9 @@ contains
       call messages_not_implemented("PCM for CalculationMode /= gs or td")
     end if
 
+    !TODO: This test belongs to the pert.F90 file, in the case of the velocity operator not been defined 
+    ! from the Hamiltonian
+    ! In this case, there are other terms missing (MGGA, DFT+U for instance).
     if(sys%hm%theory_level == HARTREE_FOCK) then
       call messages_not_implemented('Commutator of Fock operator')
     end if
