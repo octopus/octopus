@@ -1489,16 +1489,21 @@ end subroutine assert_die
 
 !-------------------------------------------------------
 
-subroutine dump_call_stack(isignal)
+subroutine handle_segv(isignal) bind(c)
   use messages_oct_m
+  use iso_c_binding
 
   implicit none
   
-  integer, intent(in) :: isignal
-  
+  integer(c_int), intent(in) :: isignal
+
+  ! Switch status to aborted
+  call messages_switch_status('aborted')
+
+  ! Dump stack
   call messages_dump_stack(isignal)
-  
-end subroutine dump_call_stack
+
+end subroutine handle_segv
 
 
 !! Local Variables:
