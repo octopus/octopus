@@ -167,16 +167,15 @@ contains
 
     !%Variable DebugTrapSignals
     !%Type logical
+    !%Default yes
     !%Section Execution::Debug
     !%Description
     !% If true, trap signals to handle them in octopus itself and
     !% print a custom backtrace. If false, do not trap signals; then,
     !% core dumps can be produced or gdb can be used to stop at the
-    !% point a signal was produced (e.g. a segmentation fault). This
-    !% variable is enabled if <tt>Debug</tt> is set to trace mode
-    !% (<tt>trace</tt>, <tt>trace_term</tt> or <tt>trace_file</tt>).
+    !% point a signal was produced (e.g. a segmentation fault).
     !%End
-    call parse_variable(global_namespace, 'DebugTrapSignals', debug%trace, trap_signals)
+    call parse_variable(global_namespace, 'DebugTrapSignals', .true., trap_signals)
 
     if (trap_signals) call trap_segfault()
 
@@ -1433,6 +1432,14 @@ contains
     write(msg, '(a,i2)') ''
     call flush_msg(stderr, msg)
     write(msg, '(a,i2,2a)') '  Octopus was killed by signal ', isignal, ': ', trim(description)
+    call flush_msg(stderr, msg)
+    write(msg, '(a,i2)') ''
+    call flush_msg(stderr, msg)
+    write(msg, '(a)')    '  Note: Octopus is currently trapping signals. This might prevent the'
+    call flush_msg(stderr, msg)
+    write(msg, '(a)')    '  use of debuggers or the generation of core dumps. To change this'
+    call flush_msg(stderr, msg)
+    write(msg, '(a)')    '  behavior, use the DebugTrapSignals input option.'
     call flush_msg(stderr, msg)
     write(msg, '(a,i2)') ''
     call flush_msg(stderr, msg)
