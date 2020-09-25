@@ -346,6 +346,11 @@ subroutine X(sternheimer_solve)(                           &
 
     abs_dens = M_ZERO
 
+    !NTD: This is quite different from the scf criterium.
+    ! In the scf routine, we use a norm 1 to evaluate the change in density
+    ! whereas here we evaluate a norm 2.
+    ! For the spinor case, the present version is most likely not correct, as the off-diagonal term
+    ! will not cancel each other at convergence and the normalization by the charge is thus not correct
     do ispin = 1, st%d%nspin
       do ip = 1, mesh%np
         tmp(ip) = dl_rhoin(ip, ispin, 1) - dl_rhotmp(ip, ispin, 1)

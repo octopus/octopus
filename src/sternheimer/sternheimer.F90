@@ -262,9 +262,7 @@ contains
     call scf_tol_end(this%scf_tol)
     call mix_end(this%mixer)
 
-    if (this%add_fxc) then
-      SAFE_DEALLOCATE_P(this%fxc)
-    end if
+    SAFE_DEALLOCATE_P(this%fxc)
 
     POP_SUB(sternheimer_end)
   end subroutine sternheimer_end
@@ -327,9 +325,7 @@ contains
     
     PUSH_SUB(sternheimer_unset_kxc)
 
-    if(this%add_fxc) then
-      SAFE_DEALLOCATE_P(this%kxc)
-    end if
+    SAFE_DEALLOCATE_P(this%kxc)
 
     POP_SUB(sternheimer_unset_kxc)
   end subroutine sternheimer_unset_kxc
