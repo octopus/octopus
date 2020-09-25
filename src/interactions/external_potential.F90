@@ -349,12 +349,12 @@ contains
   end subroutine external_potential_calculate
 
   subroutine load_external_potentials(external_potentials, namespace)
-    type(partner_list_t), intent(inout)  :: external_potentials
+    class(partner_list_t), intent(inout)  :: external_potentials
     type(namespace_t),    intent(in)     :: namespace
 
     integer :: n_pot_block, row, read_data
     type(block_t) :: blk
-    type(external_potential_t), pointer :: pot
+    class(external_potential_t), pointer :: pot
 
     integer :: dim, periodic_dim, idir
 
