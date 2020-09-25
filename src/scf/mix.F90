@@ -27,6 +27,7 @@ module mix_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
+  use mixing_preconditioner_oct_m
   use nl_operator_oct_m
   use namespace_oct_m
   use parser_oct_m
@@ -121,6 +122,8 @@ module mix_oct_m
     type(nl_operator_t)          :: preconditioner
 
     FLOAT :: residual_coeff
+
+    type(mixing_preconditioner_t) :: precond
     
   end type mix_t
 
@@ -292,6 +295,8 @@ contains
 
     if(smix%precondition) call init_preconditioner()
 
+    call mixing_preconditioner_init(smix%precond)
+
     POP_SUB(mix_init)
 
   contains
@@ -378,6 +383,8 @@ contains
     do ii = 1,MAX_AUXMIXFIELD
       nullify(smix%auxmixfield(ii)%p)
     end do
+
+    call mixing_preconditioner_end(smix%precond)
 
     POP_SUB(mix_end)
   end subroutine mix_end

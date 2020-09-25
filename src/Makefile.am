@@ -594,6 +594,7 @@ scf_f_srcs =                                 \
 	scf/lda_u_mixer.F90                  \
 	scf/mix.F90                          \
 	scf/mixing_metric.F90                \
+        scf/mixing_preconditioner.F90        \
 	scf/rdmft.F90                        \
 	scf/scf.F90                          \
         scf/unocc.F90
