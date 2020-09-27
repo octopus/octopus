@@ -1,4 +1,5 @@
 !! Copyright (C)  2019 N. Tancogne-Dejean
+!! Copyright (C)  2020 M. Oliveira
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -19,6 +20,7 @@
 #include "global.h"
 
 module propagator_oct_m
+  use algorithm_oct_m
   use clock_oct_m
   use global_oct_m
   use linked_list_oct_m
@@ -30,18 +32,17 @@ module propagator_oct_m
 
   private
   public ::                       &
-    propagator_t,                 &
-    propagator_step_debug_message
+    propagator_t
 
-  type, extends(integer_list_t) :: propagator_t
+  type, extends(algorithm_t) :: propagator_t
     private
 
-    type(integer_iterator_t) :: iter
-    type(integer_iterator_t) :: scf_start
-    integer               :: current_ops
+    type(algorithm_iterator_t) :: iter
+    type(algorithm_iterator_t) :: scf_start
+    type(algorithmic_operation_t) :: current_ops
 
-    integer, public       :: start_step
-    integer, public       :: final_step
+    type(algorithmic_operation_t), public       :: start_step
+    type(algorithmic_operation_t), public       :: final_step
 
     integer, public :: algo_steps
     FLOAT, public   :: dt
@@ -69,31 +70,57 @@ module propagator_oct_m
   end type propagator_t
 
   ! Known propagation operations
-  integer, public, parameter ::         &
-    SKIP                         = -1,  &
-    FINISHED                     =  0,  &
-    VERLET_START                 =  1,  &
-    VERLET_FINISH                =  2,  &
-    VERLET_UPDATE_POS            =  3,  &
-    VERLET_COMPUTE_ACC           =  4,  &
-    VERLET_COMPUTE_VEL           =  5,  &
-    UPDATE_INTERACTIONS          =  7,  &
-    START_SCF_LOOP               =  8,  &
-    END_SCF_LOOP                 =  9,  &
-    STORE_CURRENT_STATUS         = 10,  &
-    BEEMAN_START                 = 11,  &
-    BEEMAN_FINISH                = 12,  &
-    BEEMAN_COMPUTE_ACC           = 13,  &
-    BEEMAN_PREDICT_POS           = 14,  &
-    BEEMAN_PREDICT_VEL           = 15,  &
-    BEEMAN_CORRECT_POS           = 16,  &
-    BEEMAN_CORRECT_VEL           = 17,  &
-    EXPMID_START                 = 18,  &
-    EXPMID_FINISH                = 19,  &
-    EXPMID_PREDICT_DT_2          = 20,  &
-    EXPMID_PREDICT_DT            = 21,  &
-    EXPMID_CORRECT_DT_2          = 22,  &
-    UPDATE_HAMILTONIAN           = 23
+  character(len=30), public, parameter ::         &
+    SKIP                         = 'SKIP',  &
+    FINISHED                     = 'FINISHED',  &
+    VERLET_START                 = 'VERLET_START',  &
+    VERLET_FINISH                = 'VERLET_FINISH',  &
+    VERLET_UPDATE_POS            = 'VERLET_UPDATE_POS',  &
+    VERLET_COMPUTE_ACC           = 'VERLET_COMPUTE_ACC',  &
+    VERLET_COMPUTE_VEL           = 'VERLET_COMPUTE_VEL',  &
+    UPDATE_INTERACTIONS          = 'UPDATE_INTERACTIONS',  &
+    START_SCF_LOOP               = 'START_SCF_LOOP',  &
+    END_SCF_LOOP                 = 'END_SCF_LOOP',  &
+    STORE_CURRENT_STATUS         = 'STORE_CURRENT_STATUS',  &
+    BEEMAN_START                 = 'BEEMAN_START',  &
+    BEEMAN_FINISH                = 'BEEMAN_FINISH',  &
+    BEEMAN_COMPUTE_ACC           = 'BEEMAN_COMPUTE_ACC',  &
+    BEEMAN_PREDICT_POS           = 'BEEMAN_PREDICT_POS',  &
+    BEEMAN_PREDICT_VEL           = 'BEEMAN_PREDICT_VEL',  &
+    BEEMAN_CORRECT_POS           = 'BEEMAN_CORRECT_POS',  &
+    BEEMAN_CORRECT_VEL           = 'BEEMAN_CORRECT_VEL',  &
+    EXPMID_START                 = 'EXPMID_START',  &
+    EXPMID_FINISH                = 'EXPMID_FINISH',  &
+    EXPMID_PREDICT_DT_2          = 'EXPMID_PREDICT_DT_2',  &
+    EXPMID_PREDICT_DT            = 'EXPMID_PREDICT_DT',  &
+    EXPMID_CORRECT_DT_2          = 'EXPMID_CORRECT_DT_2',  &
+    UPDATE_HAMILTONIAN           = 'UPDATE_HAMILTONIAN'
+
+  type(algorithmic_operation_t), public, parameter :: &
+    OP_SKIP                 = algorithmic_operation_t(SKIP, 'Skipping propagation step'), &
+    OP_FINISHED             = algorithmic_operation_t(FINISHED, 'Propagation step finished'), &
+    OP_VERLET_START         = algorithmic_operation_t(VERLET_START, ''), &
+    OP_VERLET_FINISH        = algorithmic_operation_t(VERLET_FINISH, ''), &
+    OP_VERLET_UPDATE_POS    = algorithmic_operation_t(VERLET_UPDATE_POS, 'Propagation step - Updating positions'), &
+    OP_VERLET_COMPUTE_ACC   = algorithmic_operation_t(VERLET_COMPUTE_ACC, 'Propagation step - Computing acceleration'), &
+    OP_VERLET_COMPUTE_VEL   = algorithmic_operation_t(VERLET_COMPUTE_VEL, 'Propagation step - Computing velocity'), &
+    OP_UPDATE_INTERACTIONS  = algorithmic_operation_t(UPDATE_INTERACTIONS, 'Updating interactions'), &
+    OP_START_SCF_LOOP       = algorithmic_operation_t(START_SCF_LOOP, 'Starting SCF loop'), &
+    OP_END_SCF_LOOP         = algorithmic_operation_t(END_SCF_LOOP, 'End of SCF iteration'), &
+    OP_STORE_CURRENT_STATUS = algorithmic_operation_t(STORE_CURRENT_STATUS, ''), &
+    OP_BEEMAN_START         = algorithmic_operation_t(BEEMAN_START, ''), &
+    OP_BEEMAN_FINISH        = algorithmic_operation_t(BEEMAN_FINISH, ''), &
+    OP_BEEMAN_COMPUTE_ACC   = algorithmic_operation_t(BEEMAN_COMPUTE_ACC, 'Propagation step - Computing acceleration'), &
+    OP_BEEMAN_PREDICT_POS   = algorithmic_operation_t(BEEMAN_PREDICT_POS, 'Prediction step  - Computing position'), &
+    OP_BEEMAN_PREDICT_VEL   = algorithmic_operation_t(BEEMAN_PREDICT_VEL, 'Prediction step  - Computing velocity'), &
+    OP_BEEMAN_CORRECT_POS   = algorithmic_operation_t(BEEMAN_CORRECT_POS, 'Correction step  - Computing position'), &
+    OP_BEEMAN_CORRECT_VEL   = algorithmic_operation_t(BEEMAN_CORRECT_VEL, 'Correction step  - Computing velocity'), &
+    OP_EXPMID_START         = algorithmic_operation_t(EXPMID_START, ''), &
+    OP_EXPMID_FINISH        = algorithmic_operation_t(EXPMID_FINISH, ''), &
+    OP_EXPMID_PREDICT_DT_2  = algorithmic_operation_t(EXPMID_PREDICT_DT_2, 'Predict state at dt/2 '), &
+    OP_EXPMID_PREDICT_DT    = algorithmic_operation_t(EXPMID_PREDICT_DT, 'Predict state at dt'), &
+    OP_EXPMID_CORRECT_DT_2  = algorithmic_operation_t(EXPMID_CORRECT_DT_2, 'Correct state at dt/2'), &
+    OP_UPDATE_HAMILTONIAN   = algorithmic_operation_t(UPDATE_HAMILTONIAN, 'Updating Hamiltonian')
 
   ! Known multisystem propagators
   integer, public, parameter ::        &
@@ -118,11 +145,11 @@ contains
 
     SAFE_ALLOCATE(this)
 
-    this%start_step = SKIP
-    this%final_step = SKIP
+    this%start_step = OP_SKIP
+    this%final_step = OP_SKIP
 
-    call this%add(UPDATE_INTERACTIONS)
-    call this%add(FINISHED)
+    call this%add_operation(OP_UPDATE_INTERACTIONS)
+    call this%add_operation(OP_FINISHED)
 
     this%algo_steps = 1
 
@@ -167,7 +194,7 @@ contains
   end subroutine propagator_next
 
   ! ---------------------------------------------------------
-  integer function propagator_get_tdop(this) result(tdop)
+  type(algorithmic_operation_t) function propagator_get_tdop(this) result(tdop)
     class(propagator_t), intent(in) :: this
 
     PUSH_SUB(propagator_get_tdop)
@@ -214,57 +241,6 @@ contains
     POP_SUB(propagator_rewind_scf_loop)
 
   end subroutine propagator_rewind_scf_loop
-
-  ! ---------------------------------------------------------
-  function propagator_step_debug_message(tdop) result(description)
-    integer, intent(in) :: tdop
-    character(len=100) :: description
-
-    PUSH_SUB(propagator_step_debug_message)
-
-    select case (tdop)
-    case (SKIP)
-      description = "Skipping propagation step for"
-    case (FINISHED)
-      description = "Propagation step finished for"
-    case (UPDATE_INTERACTIONS)
-      description = "Updating interactions for"
-    case (START_SCF_LOOP)
-      description = "Starting SCF loop for"
-    case (END_SCF_LOOP)
-      description = "End of SCF iteration for"
-    case (STORE_CURRENT_STATUS)
-      description = "Storing the current status for"
-    case (VERLET_UPDATE_POS)
-      description = "Propagation step - Updating positions for"
-    case (VERLET_COMPUTE_ACC)
-      description = "Propagation step - Computing acceleration for"
-    case (VERLET_COMPUTE_VEL)
-      description = "Propagation step - Computing velocity for"
-    case (BEEMAN_COMPUTE_ACC)
-      description = "Propagation step - Computing acceleration for"
-    case (BEEMAN_PREDICT_POS)
-      description = "Prediction step  - Computing position for"
-    case (BEEMAN_PREDICT_VEL)
-      description = "Prediction step  - Computing velocity for"
-    case (BEEMAN_CORRECT_POS)
-      description = "Correction step  - Computing position for"
-    case (BEEMAN_CORRECT_VEL)
-      description = "Correction step  - Computing velocity for"
-    case (EXPMID_PREDICT_DT_2)
-      description = "Predict state at dt/2 for"
-    case (EXPMID_PREDICT_DT)
-      description = "Predict state at dt for"
-    case (EXPMID_CORRECT_DT_2)
-      description = "Correct state at dt/2 for"
-    case (UPDATE_HAMILTONIAN)
-      description = "Updating Hamiltonian for"
-    case default
-      description = "Unknown step for "
-    end select
-
-    POP_SUB(propagator_step_debug_message)
-  end function propagator_step_debug_message
 
 end module propagator_oct_m
 

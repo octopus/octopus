@@ -20,6 +20,7 @@
 #include "global.h"
 
 module classical_particle_oct_m
+  use algorithm_oct_m
   use clock_oct_m
   use force_interaction_oct_m
   use global_oct_m
@@ -217,8 +218,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine classical_particle_do_td(this, operation)
-    class(classical_particle_t), intent(inout) :: this
-    integer,                     intent(in)    :: operation
+    class(classical_particle_t),    intent(inout) :: this
+    class(algorithmic_operation_t), intent(in)    :: operation
 
     integer :: ii, sdim
     FLOAT, allocatable :: tmp_pos(:, :), tmp_vel(:, :)
@@ -228,7 +229,7 @@ contains
 
     sdim = this%space%dim
 
-    select case(operation)
+    select case (operation%id)
     case (SKIP)
       ! Do nothing
     case (STORE_CURRENT_STATUS)

@@ -19,6 +19,7 @@
 #include "global.h"
 
 module charged_particle_oct_m
+  use algorithm_oct_m
   use classical_particle_oct_m
   use clock_oct_m
   use global_oct_m
@@ -147,8 +148,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine charged_particle_do_td(this, operation)
-    class(charged_particle_t), intent(inout) :: this
-    integer,                   intent(in)    :: operation
+    class(charged_particle_t),      intent(inout) :: this
+    class(algorithmic_operation_t), intent(in)    :: operation
 
     PUSH_SUB(charged_particle_do_td)
 

@@ -19,6 +19,7 @@
 #include "global.h"
 
 module multisystem_oct_m
+  use algorithm_oct_m
   use clock_oct_m
   use global_oct_m
   use ghost_interaction_oct_m
@@ -466,12 +467,12 @@ contains
 
   ! ---------------------------------------------------------
   subroutine multisystem_do_td_operation(this, operation)
-    class(multisystem_t), intent(inout) :: this
-    integer,              intent(in)    :: operation
+    class(multisystem_t),           intent(inout) :: this
+    class(algorithmic_operation_t), intent(in)    :: operation
 
     PUSH_SUB(multisystem_do_td_operation)
 
-    select case (operation)
+    select case (operation%id)
     case (SKIP)
       ! Nothing to do
     case default

@@ -53,31 +53,31 @@ contains
 
     this%predictor_corrector = predictor_corrector
 
-    this%start_step = BEEMAN_START
-    this%final_step = BEEMAN_FINISH
+    this%start_step = OP_BEEMAN_START
+    this%final_step = OP_BEEMAN_FINISH
 
     if(predictor_corrector) then
 
-      call this%add(STORE_CURRENT_STATUS)
-      call this%add(BEEMAN_PREDICT_POS)
-      call this%add(START_SCF_LOOP)
-      call this%add(UPDATE_INTERACTIONS)
-      call this%add(BEEMAN_COMPUTE_ACC)
-      call this%add(BEEMAN_CORRECT_POS)
-      call this%add(BEEMAN_CORRECT_VEL)
-      call this%add(END_SCF_LOOP)
-      call this%add(FINISHED)
+      call this%add_operation(OP_STORE_CURRENT_STATUS)
+      call this%add_operation(OP_BEEMAN_PREDICT_POS)
+      call this%add_operation(OP_START_SCF_LOOP)
+      call this%add_operation(OP_UPDATE_INTERACTIONS)
+      call this%add_operation(OP_BEEMAN_COMPUTE_ACC)
+      call this%add_operation(OP_BEEMAN_CORRECT_POS)
+      call this%add_operation(OP_BEEMAN_CORRECT_VEL)
+      call this%add_operation(OP_END_SCF_LOOP)
+      call this%add_operation(OP_FINISHED)
 
       this%max_scf_count = 2 !From Wikipedia
       this%scf_tol = CNST(1e-6) !At the moment arbitrary
  
     else
 
-      call this%add(BEEMAN_PREDICT_POS)
-      call this%add(UPDATE_INTERACTIONS)
-      call this%add(BEEMAN_COMPUTE_ACC)
-      call this%add(BEEMAN_PREDICT_VEL)
-      call this%add(FINISHED)
+      call this%add_operation(OP_BEEMAN_PREDICT_POS)
+      call this%add_operation(OP_UPDATE_INTERACTIONS)
+      call this%add_operation(OP_BEEMAN_COMPUTE_ACC)
+      call this%add_operation(OP_BEEMAN_PREDICT_VEL)
+      call this%add_operation(OP_FINISHED)
 
     end if
 

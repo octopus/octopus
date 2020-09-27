@@ -163,7 +163,7 @@ contains
         call gauge_field_get_vec_pot(hm%ep%gfield, wo%vecpot)
         call gauge_field_get_vec_pot_vel(hm%ep%gfield, wo%vecpot_vel)
       end if
-      call gauge_field_do_td(hm%ep%gfield, VERLET_COMPUTE_ACC, dt, time, namespace)
+      call gauge_field_do_td(hm%ep%gfield, OP_VERLET_COMPUTE_ACC, dt, time, namespace)
     end if
 
     call profiling_out(prof)

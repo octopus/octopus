@@ -22,6 +22,7 @@
 
 module electrons_oct_m
   use accel_oct_m
+  use algorithm_oct_m
   use calc_mode_par_oct_m
   use clock_oct_m
   use density_oct_m
@@ -261,8 +262,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine electrons_do_td_operation(this, operation)
-    class(electrons_t), intent(inout) :: this
-    integer,         intent(in)    :: operation
+    class(electrons_t),             intent(inout) :: this
+    class(algorithmic_operation_t), intent(in)    :: operation
 
     PUSH_SUB(electrons_do_td_operation)
 

@@ -21,7 +21,6 @@
 module propagator_verlet_oct_m
   use clock_oct_m
   use global_oct_m
-  use gauge_field_oct_m
   use messages_oct_m
   use namespace_oct_m
   use profiling_oct_m
@@ -52,14 +51,14 @@ contains
 
     SAFE_ALLOCATE(this)
 
-    this%start_step = VERLET_START
-    this%final_step = VERLET_FINISH
+    this%start_step = OP_VERLET_START
+    this%final_step = OP_VERLET_FINISH
 
-    call this%add(VERLET_UPDATE_POS)
-    call this%add(UPDATE_INTERACTIONS)
-    call this%add(VERLET_COMPUTE_ACC)
-    call this%add(VERLET_COMPUTE_VEL)
-    call this%add(FINISHED)
+    call this%add_operation(OP_VERLET_UPDATE_POS)
+    call this%add_operation(OP_UPDATE_INTERACTIONS)
+    call this%add_operation(OP_VERLET_COMPUTE_ACC)
+    call this%add_operation(OP_VERLET_COMPUTE_VEL)
+    call this%add_operation(OP_FINISHED)
 
     ! Verlet has only one algorithmic step
     this%algo_steps = 1

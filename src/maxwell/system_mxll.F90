@@ -19,6 +19,7 @@
 #include "global.h"
 
 module system_mxll_oct_m
+  use algorithm_oct_m
   use calc_mode_par_oct_m
   use clock_oct_m
   use current_oct_m
@@ -381,14 +382,14 @@ contains
 
   ! ---------------------------------------------------------
   subroutine system_mxll_do_td(this, operation)
-    class(system_mxll_t), intent(inout) :: this
-    integer,              intent(in)    :: operation
+    class(system_mxll_t),           intent(inout) :: this
+    class(algorithmic_operation_t), intent(in)    :: operation
 
     type(profile_t), save :: prof
 
     PUSH_SUB(system_mxll_do_td)
 
-    select case(operation)
+    select case (operation%id)
     case (SKIP)
       ! Do nothing
 
