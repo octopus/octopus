@@ -167,16 +167,15 @@ contains
 
     !%Variable DebugTrapSignals
     !%Type logical
+    !%Default yes
     !%Section Execution::Debug
     !%Description
     !% If true, trap signals to handle them in octopus itself and
     !% print a custom backtrace. If false, do not trap signals; then,
     !% core dumps can be produced or gdb can be used to stop at the
-    !% point a signal was produced (e.g. a segmentation fault). This
-    !% variable is enabled if <tt>Debug</tt> is set to trace mode
-    !% (<tt>trace</tt>, <tt>trace_term</tt> or <tt>trace_file</tt>).
+    !% point a signal was produced (e.g. a segmentation fault).
     !%End
-    call parse_variable(global_namespace, 'DebugTrapSignals', debug%trace, trap_signals)
+    call parse_variable(global_namespace, 'DebugTrapSignals', .true., trap_signals)
 
     if (trap_signals) call trap_segfault()
 
@@ -561,12 +560,13 @@ contains
     ! only root node is taking care of file I/O
     if (.not.mpi_grp_is_root(mpi_world)) return     
 
-    ! remove old status files first, before we switch to state aborted   
+    ! remove old status files first, before we switch to a new state
     call loct_rm('exec/oct-status-running')
     call loct_rm('exec/oct-status-finished')
     call loct_rm('exec/oct-status-aborted')
+    call loct_rm('exec/oct-status-walltimer-aborted')
     
-    ! create empty status file to indicate 'aborted state'
+    ! create empty status file to indicate new state
     open(unit=iunit_err, file='exec/oct-status-'//trim(status), &
       action='write', status='unknown')
     close(iunit_err)
@@ -1435,6 +1435,14 @@ contains
     call flush_msg(stderr, msg)
     write(msg, '(a,i2)') ''
     call flush_msg(stderr, msg)
+    write(msg, '(a)')    '  Note: Octopus is currently trapping signals. This might prevent the'
+    call flush_msg(stderr, msg)
+    write(msg, '(a)')    '  use of debuggers or the generation of core dumps. To change this'
+    call flush_msg(stderr, msg)
+    write(msg, '(a)')    '  behavior, use the DebugTrapSignals input option.'
+    call flush_msg(stderr, msg)
+    write(msg, '(a,i2)') ''
+    call flush_msg(stderr, msg)
     write(msg, '(a,i2)') '%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%'
     call flush_msg(stderr, msg)
     
@@ -1488,16 +1496,21 @@ end subroutine assert_die
 
 !-------------------------------------------------------
 
-subroutine dump_call_stack(isignal)
+subroutine handle_segv(isignal) bind(c)
   use messages_oct_m
+  use iso_c_binding
 
   implicit none
   
-  integer, intent(in) :: isignal
-  
+  integer(c_int), intent(in) :: isignal
+
+  ! Switch status to aborted
+  call messages_switch_status('aborted')
+
+  ! Dump stack
   call messages_dump_stack(isignal)
-  
-end subroutine dump_call_stack
+
+end subroutine handle_segv
 
 
 !! Local Variables:
