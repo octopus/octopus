@@ -560,13 +560,13 @@ contains
     ! only root node is taking care of file I/O
     if (.not.mpi_grp_is_root(mpi_world)) return     
 
-    ! remove old status files first, before we switch to state aborted   
+    ! remove old status files first, before we switch to a new state
     call loct_rm('exec/oct-status-running')
     call loct_rm('exec/oct-status-finished')
     call loct_rm('exec/oct-status-aborted')
     call loct_rm('exec/oct-status-walltimer-aborted')
     
-    ! create empty status file to indicate 'aborted state'
+    ! create empty status file to indicate new state
     open(unit=iunit_err, file='exec/oct-status-'//trim(status), &
       action='write', status='unknown')
     close(iunit_err)
