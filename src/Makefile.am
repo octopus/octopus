@@ -476,6 +476,7 @@ noinst_HEADERS +=                                    \
 
 # Sources in multisystem
 multisystem_f_srcs =                                 \
+	multisystem/algorithm.F90                    \
 	multisystem/ghost_interaction.F90            \
 	multisystem/interaction.F90                  \
 	multisystem/interaction_partner.F90          \
