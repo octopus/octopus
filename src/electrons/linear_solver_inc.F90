@@ -805,9 +805,9 @@ subroutine X(linear_solver_qmr_dotp)(this, namespace, hm, gr, st, xb, bb, shift,
   FLOAT,                    intent(in)    :: threshold    !< convergence threshold
 
   type(wfs_elec_t) :: vvb, res, zzb, qqb, ppb, deltax, deltar
-  FLOAT               :: oldgamma
   integer             :: ii, iter
   FLOAT, allocatable  :: rho(:), oldrho(:), norm_b(:), xsi(:), gamma(:), alpha(:), theta(:), oldtheta(:), saved_res(:)
+  FLOAT, allocatable  :: oldgamma(:)
   R_TYPE, allocatable :: eta(:), beta(:), delta(:), eps(:), exception_saved(:, :, :)
   integer, allocatable :: status(:), saved_iter(:)
 
@@ -828,6 +828,7 @@ subroutine X(linear_solver_qmr_dotp)(this, namespace, hm, gr, st, xb, bb, shift,
   SAFE_ALLOCATE(norm_b(1:xb%nst))
   SAFE_ALLOCATE(xsi(1:xb%nst))
   SAFE_ALLOCATE(gamma(1:xb%nst))
+  SAFE_ALLOCATE(oldgamma(1:xb%nst))
   SAFE_ALLOCATE(alpha(1:xb%nst))
   SAFE_ALLOCATE(eta(1:xb%nst))
   SAFE_ALLOCATE(theta(1:xb%nst))
@@ -850,19 +851,13 @@ subroutine X(linear_solver_qmr_dotp)(this, namespace, hm, gr, st, xb, bb, shift,
   call xb%copy_to(deltax)
   call xb%copy_to(deltar)
 
-  !vvb = (H-shift)*xb
-  call X(linear_solver_operator_batch)(hm, namespace, gr, st, shift, xb, vvb)
-
-  !This is the residue
-  !vvb = (H-shift)*xb - bb
-  call batch_xpay(gr%mesh%np, bb, CNST(-1.0), vvb)
+  !We have  r^(0)=v^(1)=b
+  call bb%copy_data_to(gr%mesh%np, vvb)
   call vvb%copy_data_to(gr%mesh%np, res)
 
-  !FIXME: According to the paper, we should have r^(0)=v^(1)=b
-
-  !Norm of the residue and of the right-hand side
-  call mesh_batch_nrm2(gr%mesh, vvb, rho)
+  !Norm of the right-hand side
   call mesh_batch_nrm2(gr%mesh, bb, norm_b)
+  rho = norm_b
 
   status = QMR_NOT_CONVERGED
 
@@ -897,6 +892,7 @@ subroutine X(linear_solver_qmr_dotp)(this, namespace, hm, gr, st, xb, bb, shift,
   call mesh_batch_nrm2(gr%mesh, zzb, xsi)
 
   gamma = CNST(1.0)
+  oldgamma = gamma
   eta   = CNST(-1.0)
   alpha = CNST(1.0)
   theta = CNST(0.0)
@@ -984,10 +980,9 @@ subroutine X(linear_solver_qmr_dotp)(this, namespace, hm, gr, st, xb, bb, shift,
 
     do ii = 1, xb%nst
       oldtheta(ii) = theta(ii)
-      !FIXME: This should be old_gamma here
       ! \theta_i = \rho_{i+1}/(\gamma_{i-1} |\beta_i|)
-      theta(ii) = rho(ii)/(gamma(ii)*abs(beta(ii)))
-      oldgamma = gamma(ii)
+      theta(ii) = rho(ii)/(oldgamma(ii)*abs(beta(ii)))
+      oldgamma(ii) = gamma(ii)
       !\gamma_i = 1/sqrt(1+\theta_i^2)
       gamma(ii) = CNST(1.0)/sqrt(CNST(1.0) + theta(ii)**2)
 
@@ -1000,7 +995,7 @@ subroutine X(linear_solver_qmr_dotp)(this, namespace, hm, gr, st, xb, bb, shift,
       end if
 
       !\eta_i = -\eta_{i-1}\rho_i \gamma_i^2/ (\beta_i \gamma_{i-1}^2)
-      eta(ii) = -eta(ii)*oldrho(ii)*gamma(ii)**2/(beta(ii)*oldgamma**2)
+      eta(ii) = -eta(ii)*oldrho(ii)*gamma(ii)**2/(beta(ii)*oldgamma(ii)**2)
     end do
 
     if(iter == 1) then
@@ -1041,6 +1036,10 @@ subroutine X(linear_solver_qmr_dotp)(this, namespace, hm, gr, st, xb, bb, shift,
     do ii = 1, xb%nst
       if(status(ii) == QMR_NOT_CONVERGED .and. residue(ii) < threshold) then
         status(ii) = QMR_CONVERGED
+        if(debug%info) then
+          write(message(1),*) 'Debug: State ', xb%ist(ii), ' converged in ', iter, ' iterations.'
+          call messages_info(1)
+        end if
       end if
     end do
 
@@ -1048,7 +1047,8 @@ subroutine X(linear_solver_qmr_dotp)(this, namespace, hm, gr, st, xb, bb, shift,
 
   do ii = 1, xb%nst
     if(status(ii) == QMR_NOT_CONVERGED .or. status(ii) == QMR_CONVERGED) then
-      iter_used(ii) = iter
+      !We stop at the entrance of the next iteraction, so we substract one here 
+      iter_used(ii) = iter-1
     else
       call batch_set_state(xb, ii, gr%mesh%np, exception_saved(:, :, ii))
       iter_used(ii) = saved_iter(ii)
@@ -1090,6 +1090,7 @@ subroutine X(linear_solver_qmr_dotp)(this, namespace, hm, gr, st, xb, bb, shift,
   SAFE_DEALLOCATE_A(norm_b)
   SAFE_DEALLOCATE_A(xsi)
   SAFE_DEALLOCATE_A(gamma)
+  SAFE_DEALLOCATE_A(oldgamma)
   SAFE_DEALLOCATE_A(alpha)
   SAFE_DEALLOCATE_A(eta)
   SAFE_DEALLOCATE_A(theta)
