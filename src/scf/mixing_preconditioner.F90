@@ -48,7 +48,7 @@ module mixing_preconditioner_oct_m
 
     integer :: tt !> Order of the fiting expansion 
 
-    FLOAT :: coeff !> Coefficient of the nonlinear fit of the preconditioner
+    FLOAT, allocatable :: coeff(:) !> Coefficient of the nonlinear fit of the preconditioner
 
   end type mixing_preconditioner_t
 
@@ -87,6 +87,8 @@ contains
     SAFE_ALLOCATE(coeff(1:ncoeff))
     SAFE_ALLOCATE(covar(1:ncoeff, 1:ncoeff))
     SAFE_ALLOCATE(alpha(1:ncoeff, 1:ncoeff))
+
+    SAFE_ALLOCATE(this%coeff(1:ncoeff))
     
     alamda = -M_ONE !Initialization
     !Initial guess
@@ -118,10 +120,11 @@ contains
 
   ! ---------------------------------------------------------
   subroutine mixing_preconditioner_end(this)
-    type(mixing_preconditioner_t), intent(in) :: this
+    type(mixing_preconditioner_t), intent(inout) :: this
 
     PUSH_SUB(mixing_preconditioner_end)
 
+    SAFE_DEALLOCATE_A(this%coeff)
 
     POP_SUB(mixing_preconditioner_end)
   end subroutine mixing_preconditioner_end
