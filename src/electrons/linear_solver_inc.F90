@@ -858,6 +858,8 @@ subroutine X(linear_solver_qmr_dotp)(this, namespace, hm, gr, st, xb, bb, shift,
   call batch_xpay(gr%mesh%np, bb, CNST(-1.0), vvb)
   call vvb%copy_data_to(gr%mesh%np, res)
 
+  !FIXME: According to the paper, we should have r^(0)=v^(1)=b
+
   !Norm of the residue and of the right-hand side
   call mesh_batch_nrm2(gr%mesh, vvb, rho)
   call mesh_batch_nrm2(gr%mesh, bb, norm_b)
@@ -890,6 +892,7 @@ subroutine X(linear_solver_qmr_dotp)(this, namespace, hm, gr, st, xb, bb, shift,
 
   end do
 
+  !We compute z = Pb and compute its norm \xsi^(1)
   call X(preconditioner_apply_batch)(this%pre, namespace, gr, hm, vvb, zzb, 1, omega = shift)
   call mesh_batch_nrm2(gr%mesh, zzb, xsi)
 
@@ -901,8 +904,10 @@ subroutine X(linear_solver_qmr_dotp)(this, namespace, hm, gr, st, xb, bb, shift,
   do while(iter < this%max_iter)
     iter = iter + 1
 
+    !Exit condition
     if(all(status /= QMR_NOT_CONVERGED)) exit
 
+    !Failure of the algorithm
     do ii = 1, xb%nst
       if(status(ii) == QMR_NOT_CONVERGED .and. (abs(rho(ii)) < M_EPSILON .or. abs(xsi(ii)) < M_EPSILON)) then
         call batch_get_state(xb, ii, gr%mesh%np, exception_saved(:, :, ii))
@@ -914,11 +919,14 @@ subroutine X(linear_solver_qmr_dotp)(this, namespace, hm, gr, st, xb, bb, shift,
       alpha(ii) = alpha(ii)*xsi(ii)/rho(ii)
     end do
 
+    ! v^(i) = v^(i) / \rho_i
     call batch_scal(gr%mesh%np, CNST(1.0)/rho, vvb, a_full = .false.)
+    ! z^(i) = z^(i) / \xsi_i
     call batch_scal(gr%mesh%np, CNST(1.0)/xsi, zzb, a_full = .false.)
-
+    ! \delta_i = v^(i)\ldotp z^(i)
     call X(mesh_batch_dotp_vector)(gr%mesh, vvb, zzb, delta)
 
+    !If \delta_i = 0, method fails
     do ii = 1, xb%nst
       if(status(ii) == QMR_NOT_CONVERGED .and. abs(delta(ii)) < M_EPSILON) then
         call batch_get_state(xb, ii, gr%mesh%np, exception_saved(:, :, ii))
@@ -929,17 +937,22 @@ subroutine X(linear_solver_qmr_dotp)(this, namespace, hm, gr, st, xb, bb, shift,
     end do
 
     if(iter == 1) then
+      !q^(1) = z^(1)
       call zzb%copy_data_to(gr%mesh%np, qqb)
     else
+      !q^(i) = z^(i) - (\rho_i\delta_i)/(\eps_{i-1})q^(i-1)
       call batch_xpay(gr%mesh%np, zzb, -rho*delta/eps, qqb, a_full = .false.)
     end if
 
+    ! ppb = (H-shift)*qqb
     call X(linear_solver_operator_batch)(hm, namespace, gr, st, shift, qqb, ppb)
 
+    ! p^(i) = \alpha_{i+1} (H-shift)*q^(i) 
     call batch_scal(gr%mesh%np, alpha, ppb, a_full = .false.)
-
+    ! \eps_i = q^{(i)}\ldotp p^{(i)}
     call X(mesh_batch_dotp_vector)(gr%mesh, qqb, ppb, eps)
 
+    !If \eps_i == 0, method fails
     do ii = 1, xb%nst
       if(status(ii) == QMR_NOT_CONVERGED .and. abs(eps(ii)) < M_EPSILON) then
         call batch_get_state(xb, ii, gr%mesh%np, exception_saved(:, :, ii))
@@ -951,26 +964,34 @@ subroutine X(linear_solver_qmr_dotp)(this, namespace, hm, gr, st, xb, bb, shift,
       beta(ii) = eps(ii)/delta(ii)
     end do
 
+    ! v^(i+1) = p^(i) - \beta_i v^(i)
     call batch_xpay(gr%mesh%np, ppb, -beta, vvb, a_full = .false.)
 
     do ii = 1, xb%nst
       oldrho(ii) = rho(ii)
     end do
 
+    ! \rho_{i+1} = ||v^{i+1}||_2
     call mesh_batch_nrm2(gr%mesh, vvb, rho)
 
+    ! z^{i+1} = P v^{i+1}
     call X(preconditioner_apply_batch)(this%pre, namespace, gr, hm, vvb, zzb, 1, omega = shift)
-
+    ! z^{i+1} = P v^{i+1}/ \alpha^{i+1}
     call batch_scal(gr%mesh%np, CNST(1.0)/alpha, zzb, a_full = .false.)
 
+    !\xsi_{i+1} = ||z^{i+1}||_2
     call mesh_batch_nrm2(gr%mesh, zzb, xsi)
 
     do ii = 1, xb%nst
       oldtheta(ii) = theta(ii)
+      !FIXME: This should be old_gamma here
+      ! \theta_i = \rho_{i+1}/(\gamma_{i-1} |\beta_i|)
       theta(ii) = rho(ii)/(gamma(ii)*abs(beta(ii)))
       oldgamma = gamma(ii)
+      !\gamma_i = 1/sqrt(1+\theta_i^2)
       gamma(ii) = CNST(1.0)/sqrt(CNST(1.0) + theta(ii)**2)
 
+      !If \gamma_i == 0, method fails
       if(status(ii) == QMR_NOT_CONVERGED .and. abs(gamma(ii)) < M_EPSILON) then
         call batch_get_state(xb, ii, gr%mesh%np, exception_saved(:, :, ii))
         status(ii) = QMR_BREAKDOWN_GAMMA
@@ -978,36 +999,45 @@ subroutine X(linear_solver_qmr_dotp)(this, namespace, hm, gr, st, xb, bb, shift,
         saved_res(ii) = residue(ii)
       end if
 
+      !\eta_i = -\eta_{i-1}\rho_i \gamma_i^2/ (\beta_i \gamma_{i-1}^2)
       eta(ii) = -eta(ii)*oldrho(ii)*gamma(ii)**2/(beta(ii)*oldgamma**2)
     end do
 
     if(iter == 1) then
-
+      
+      !\delta_x^(1) = \eta_1 \alpha_2 q^{(1)}
       call qqb%copy_data_to(gr%mesh%np, deltax)
       call batch_scal(gr%mesh%np, eta*alpha, deltax, a_full = .false.)
-      call batch_axpy(gr%mesh%np, CNST(1.0), deltax, xb)
       
+      !\delta_r^(1) = \eta_1 p^1
       call ppb%copy_data_to(gr%mesh%np, deltar)
       call batch_scal(gr%mesh%np, eta, deltar, a_full = .false.)
-      call batch_axpy(gr%mesh%np, CNST(-1.0), deltar, res)
 
     else
 
+      !\delta_x^{i} = (\theta_{i-1}\gamma_i)^2 \delta_x^{i-1} + \eta_i\alpha_{i+1} q^i
       call batch_scal(gr%mesh%np, (oldtheta*gamma)**2, deltax, a_full = .false.)
       call batch_axpy(gr%mesh%np, eta*alpha, qqb, deltax, a_full = .false.)
-      call batch_axpy(gr%mesh%np, CNST(1.0), deltax, xb)
 
+      !\delta_r^{i} = (\theta_{i-1}\gamma_i)^2 \delta_r^{i-1} + \eta_i p^i
       call batch_scal(gr%mesh%np, (oldtheta*gamma)**2, deltar, a_full = .false.)
       call batch_axpy(gr%mesh%np, eta, ppb, deltar, a_full = .false.)
-      call batch_axpy(gr%mesh%np, CNST(-1.0), deltar, res)
 
     end if
 
+    !FIXME: if the states are converged, why changing them here
+    !x^{i} = x^{i-1} + \delta_x^{i}
+    call batch_axpy(gr%mesh%np, CNST(1.0), deltax, xb)
+    !r^{i} = r^{i-1} - \delta_r^i
+    call batch_axpy(gr%mesh%np, CNST(-1.0), deltar, res)
+
+    !We compute the norm of the residual
     call mesh_batch_nrm2(gr%mesh, res, residue)
     do ii = 1, xb%nst
       residue(ii) = residue(ii)/norm_b(ii)
     end do
 
+    !Convergence is reached once the residues are smaller than the threshold
     do ii = 1, xb%nst
       if(status(ii) == QMR_NOT_CONVERGED .and. residue(ii) < threshold) then
         status(ii) = QMR_CONVERGED
