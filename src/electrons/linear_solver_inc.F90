@@ -850,11 +850,15 @@ subroutine X(linear_solver_qmr_dotp)(this, namespace, hm, gr, st, xb, bb, shift,
   call xb%copy_to(deltax)
   call xb%copy_to(deltar)
 
+  !vvb = (H-shift)*xb
   call X(linear_solver_operator_batch)(hm, namespace, gr, st, shift, xb, vvb)
 
+  !This is the residue
+  !vvb = (H-shift)*xb - bb
   call batch_xpay(gr%mesh%np, bb, CNST(-1.0), vvb)
   call vvb%copy_data_to(gr%mesh%np, res)
 
+  !Norm of the residue and of the right-hand side
   call mesh_batch_nrm2(gr%mesh, vvb, rho)
   call mesh_batch_nrm2(gr%mesh, bb, norm_b)
 
