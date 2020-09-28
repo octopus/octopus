@@ -117,7 +117,7 @@ contains
     type(profile_t), save :: calc_mode_prof
     logical :: from_scratch
     integer :: iunit_out
-    type(partner_list_t) :: iter
+    type(partner_iterator_t) :: iter
     class(interaction_partner_t), pointer :: partner
 
     PUSH_SUB(run)

@@ -68,7 +68,7 @@ contains
 
     call multisystem_init(this, namespace, factory)
 
-    POP_SUB(multisystem_init)
+    POP_SUB(multisystem_basic_init)
   end subroutine multisystem_basic_init
 
   ! ---------------------------------------------------------
