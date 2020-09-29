@@ -8,7 +8,6 @@ FromScratch = yes
 Dimensions = 3
 
 %Systems
-#  'Maxwell' | maxwell
   'ChargedParticle' | charged_particle
 %
 
@@ -32,10 +31,6 @@ ChargedParticle.TDSystemPropagator = exp_mid
 %StaticElectricField
  1 | 0 | 0
 %
-
-# ----- Output variables ------------------------------------------------------
-
-OutputFormat = plane_x + plane_y + plane_z + vtk + xyz + axis_x
 
 # ----- Time step variables ---------------------------------------------------
 

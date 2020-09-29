@@ -31,7 +31,6 @@ module run_oct_m
   use interactions_factory_oct_m
   use interaction_partner_oct_m
   use invert_ks_oct_m
-  use linked_list_oct_m
   use messages_oct_m
   use mpi_debug_oct_m
   use mpi_oct_m
