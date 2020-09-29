@@ -94,6 +94,7 @@ module system_mxll_oct_m
     integer                      :: mxll_ks_relax_iter
 
   contains
+    procedure :: copy_system => system_mxll_copy_system
     procedure :: init_interaction => system_mxll_init_interaction
     procedure :: init_parallelization => system_mxll_init_parallelization
     procedure :: initial_conditions => system_mxll_initial_conditions
@@ -379,6 +380,22 @@ contains
 
     POP_SUB(system_mxll_initial_conditions)
   end subroutine system_mxll_initial_conditions
+
+  ! ---------------------------------------------------------
+  subroutine system_mxll_copy_system(lhs, rhs)
+    class(system_mxll_t), intent(out) :: lhs
+    class(*), intent(in) :: rhs
+
+    PUSH_SUB(system_mxll_copy_system)
+    
+    select type (rhs)
+    class is (system_mxll_t)
+      !Do stuff
+    end select 
+
+    POP_SUB(system_mxll_copy_system)
+  
+  end subroutine system_mxll_copy_system  
 
   ! ---------------------------------------------------------
   subroutine system_mxll_do_td(this, operation)

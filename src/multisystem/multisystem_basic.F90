@@ -34,6 +34,7 @@ module multisystem_basic_oct_m
   type, extends(multisystem_t) :: multisystem_basic_t
 
   contains
+    !procedure :: copy_system => multisystem_basic_copy
     final :: multisystem_basic_finalizer
   end type multisystem_basic_t
 
@@ -42,6 +43,12 @@ module multisystem_basic_oct_m
   end interface multisystem_basic_t
 
 contains
+
+  ! ---------------------------------------------------------------------------------------
+  !subroutine multisystem_basic_copy_system(lhs, rhs)
+  !  class(multisystem_basic_t), intent(out)  :: lhs
+  !  class(*), intent(in) :: rhs
+  !end subroutine multisystem_basic_copy_system
 
   ! ---------------------------------------------------------------------------------------
   recursive function multisystem_basic_constructor(namespace, factory) result(system)

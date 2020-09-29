@@ -69,6 +69,7 @@ module system_oct_m
 
     type(mpi_grp_t), public :: grp  !< mpi group for this system
   contains
+    generic   :: assignment(=) => copy_system
     procedure :: dt_operation =>  system_dt_operation
     procedure :: reset_clocks => system_reset_clocks
     procedure :: update_exposed_quantities => system_update_exposed_quantities
@@ -85,9 +86,10 @@ module system_oct_m
     procedure :: output_write => system_output_write
     procedure :: output_finish => system_output_finish
     procedure :: process_is_slave => system_process_is_slave
+    procedure(system_copy_system),                    deferred :: copy_system
+    procedure(system_do_td_op),                       deferred :: do_td_operation
     procedure(system_init_interaction),               deferred :: init_interaction
     procedure(system_initial_conditions),             deferred :: initial_conditions
-    procedure(system_do_td_op),                       deferred :: do_td_operation
     procedure(system_iteration_info),                 deferred :: iteration_info
     procedure(system_is_tolerance_reached),           deferred :: is_tolerance_reached
     procedure(system_store_current_status),           deferred :: store_current_status
@@ -95,6 +97,21 @@ module system_oct_m
   end type system_t
 
   abstract interface
+
+    ! ---------------------------------------------------------
+    subroutine system_copy_system(lhs, rhs)
+      import system_t
+      class(system_t), intent(out)  :: lhs
+      class(*), intent(in) :: rhs
+    end subroutine system_copy_system
+
+    ! ---------------------------------------------------------
+    subroutine system_do_td_op(this, operation)
+      import system_t
+      class(system_t), intent(inout) :: this
+      integer,         intent(in)    :: operation
+    end subroutine system_do_td_op
+
     ! ---------------------------------------------------------
     subroutine system_init_interaction(this, interaction)
       import system_t
@@ -109,13 +126,6 @@ module system_oct_m
       class(system_t), intent(inout) :: this
       logical,         intent(in)    :: from_scratch
     end subroutine system_initial_conditions
-
-    ! ---------------------------------------------------------
-    subroutine system_do_td_op(this, operation)
-      import system_t
-      class(system_t), intent(inout) :: this
-      integer,         intent(in)    :: operation
-    end subroutine system_do_td_op
 
     ! ---------------------------------------------------------
     subroutine system_iteration_info(this)

@@ -63,10 +63,13 @@ module classical_particle_oct_m
     FLOAT, allocatable :: prev_vel(:, :) !< Used for extrapolation
     FLOAT :: hamiltonian_elements(1:MAX_DIM)
 
+
+
     type(c_ptr) :: output_handle
   contains
     procedure :: init_interaction => classical_particle_init_interaction
     procedure :: initial_conditions => classical_particle_initial_conditions
+    procedure :: copy_system => classical_particle_copy_system
     procedure :: do_td_operation => classical_particle_do_td
     procedure :: iteration_info => classical_particle_iteration_info
     procedure :: output_start => classical_particle_output_start
@@ -142,6 +145,8 @@ contains
 
     call messages_print_stress(stdout, namespace=namespace)
 
+
+
     POP_SUB(classical_particle_init)
   end subroutine classical_particle_init
 
@@ -212,9 +217,58 @@ contains
       call parse_block_end(blk)
     end if
     call messages_print_var_value(stdout, 'ParticleInitialVelocity', this%vel(1:this%space%dim))
+    
+    
+
 
     POP_SUB(classical_particle_initial_conditions)
   end subroutine classical_particle_initial_conditions
+
+  ! ---------------------------------------------------------
+  subroutine classical_particle_copy_system(lhs, rhs)
+    class(classical_particle_t), intent(out) :: lhs
+    class(*), intent(in) :: rhs
+
+    PUSH_SUB(classical_particle_copy_system)
+    !FLOAT :: mass
+    !FLOAT :: pos(1:MAX_DIM)
+    !FLOAT :: vel(1:MAX_DIM)
+    !FLOAT :: acc(1:MAX_DIM)
+    !FLOAT, allocatable :: prev_acc(:,:) !< A storage of the prior times.
+    !FLOAT :: save_pos(1:MAX_DIM)   !< A storage for the SCF loops
+    !FLOAT :: save_vel(1:MAX_DIM)   !< A storage for the SCF loops
+    !FLOAT :: tot_force(1:MAX_DIM)
+    !FLOAT :: prev_tot_force(1:MAX_DIM) !< Used for the SCF convergence criterium
+    !FLOAT, allocatable :: prev_pos(:, :) !< Used for extrapolation
+    !FLOAT, allocatable :: prev_vel(:, :) !< Used for extrapolation
+    !FLOAT :: hamiltonian_elements(1:MAX_DIM)
+
+    select type (rhs)
+    class is (classical_particle_t)
+        write(*,*) "Before Copy"
+        write(*,*) "Sys Mass: ", rhs%mass
+        write(*,*) "Dummy Mass: ", lhs%mass
+        write(*,*) "Copying info to dumy"
+        lhs%clock = rhs%clock
+        lhs%mass = rhs%mass
+        lhs%pos = rhs%pos
+        lhs%vel = rhs%vel
+        lhs%acc = rhs%acc
+        lhs%prev_acc = rhs%prev_acc
+        lhs%save_pos = rhs%save_pos
+        lhs%save_vel = rhs%save_vel
+        lhs%tot_force = rhs%tot_force
+        lhs%prev_tot_force = rhs%prev_tot_force
+        lhs%prev_pos = rhs%prev_pos
+        lhs%prev_vel = rhs%prev_vel
+        lhs%hamiltonian_elements = rhs%hamiltonian_elements
+        write(*,*) "After Copy"
+        write(*,*) "Sys Mass: ", rhs%mass
+        write(*,*) "Dummy Mass: ", lhs%mass
+    end select 
+
+    POP_SUB(classical_particle_copy_system)
+  end subroutine classical_particle_copy_system
 
   ! ---------------------------------------------------------
   subroutine classical_particle_do_td(this, operation)

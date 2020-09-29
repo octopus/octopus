@@ -73,10 +73,11 @@ module electrons_oct_m
     type(td_t)                   :: td
     logical :: generate_epot
   contains
+    procedure :: copy_system => electrons_copy_system
+    procedure :: do_td_operation => electrons_do_td_operation
     procedure :: init_interaction => electrons_init_interaction
     procedure :: init_parallelization => electrons_init_parallelization
     procedure :: initial_conditions => electrons_initial_conditions
-    procedure :: do_td_operation => electrons_do_td_operation
     procedure :: is_tolerance_reached => electrons_is_tolerance_reached
     procedure :: iteration_info => electrons_iteration_info
     procedure :: store_current_status => electrons_store_current_status
@@ -260,6 +261,21 @@ contains
     POP_SUB(electrons_initial_conditions)
   end subroutine electrons_initial_conditions
 
+  ! ---------------------------------------------------------
+  subroutine electrons_copy_system(lhs, rhs)
+    class(electrons_t), intent(out) :: lhs
+    class(*), intent(in) :: rhs
+
+    PUSH_SUB(electrons_copy_system)
+    
+    select type (rhs)
+    class is (electrons_t)
+      !Do stuff
+    end select 
+
+    POP_SUB(electrons_copy_system)
+  end subroutine electrons_copy_system  
+  
   ! ---------------------------------------------------------
   subroutine electrons_do_td_operation(this, operation)
     class(electrons_t), intent(inout) :: this

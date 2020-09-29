@@ -45,6 +45,7 @@ module multisystem_oct_m
   type, extends(system_t), abstract :: multisystem_t
     type(system_list_t) :: list
   contains
+    procedure :: copy_system => multisystem_copy_system
     procedure :: dt_operation =>  multisystem_dt_operation
     procedure :: init_parallelization => multisystem_init_parallelization
     procedure :: smallest_algo_dt => multisystem_smallest_algo_dt
@@ -117,6 +118,7 @@ contains
     integer,                      intent(in) :: system_type
     integer,                      intent(in) :: isys
     class(system_factory_abst_t), intent(in) :: factory
+    class(system_t), pointer       :: dummy
 
     type(system_iterator_t) :: iter
     class(system_t), pointer :: sys, other
@@ -142,7 +144,12 @@ contains
           row=isys-1, column=0)
       end if
     end do
+    
+    if(system_type == 3) then
+        dummy => factory%create(this%namespace, "dummy", system_type)
 
+        dummy = sys
+    endif
     ! Add system to list of systems
     call this%list%add(sys)
 
@@ -198,6 +205,17 @@ contains
 
     POP_SUB(multisystem_smallest_algo_dt)
   end function multisystem_smallest_algo_dt
+
+  ! ---------------------------------------------------------------------------------------
+  subroutine multisystem_copy_system(lhs, rhs)
+    class(multisystem_t), intent(out)  :: lhs
+    class(*), intent(in) :: rhs
+
+    select type (rhs)
+    class is (multisystem_t)
+      !Do stuff
+    end select 
+  end subroutine multisystem_copy_system
 
   ! ---------------------------------------------------------------------------------------
   recursive subroutine multisystem_dt_operation(this)
