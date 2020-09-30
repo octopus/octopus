@@ -46,9 +46,9 @@ module mixing_preconditioner_oct_m
     FLOAT :: kf
     FLOAT :: eps0
 
-    integer :: tt !> Order of the fiting expansion 
+    integer, public :: tt !> Order of the fiting expansion 
 
-    FLOAT, allocatable :: coeff(:) !> Coefficient of the nonlinear fit of the preconditioner
+    FLOAT, allocatable, public :: coeff(:) !> Coefficient of the nonlinear fit of the preconditioner
 
   end type mixing_preconditioner_t
 

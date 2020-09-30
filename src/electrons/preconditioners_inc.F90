@@ -48,6 +48,9 @@ subroutine X(preconditioner_apply)(pre, namespace, gr, hm, a, b, ik, omega)
     end do
 
   case(PRE_FILTER)
+    !At the moment the imaginary part of the shift is neglected
+    call preconditioner_prefilter_weight(pre, gr, R_REAL(omega_))
+
     call wfs_elec_init(batch_a, hm%d%dim, 1, 1, a, ik)
     call wfs_elec_init(batch_b, hm%d%dim, 1, 1, b, ik)
     call boundaries_set(hm%der%boundaries, batch_a)
@@ -270,19 +273,19 @@ subroutine X(preconditioner_apply_batch)(pre, namespace, gr, hm, aa, bb, ik, ome
 
   call aa%check_compatibility_with(bb)
 
-  if(pre%which == PRE_FILTER) then
-
-    call X(derivatives_batch_perform)(pre%op, gr%der, aa, bb)
-
-  else if(pre%which == PRE_NONE) then
+  if(pre%which == PRE_NONE) then
 
     call aa%copy_data_to(gr%der%mesh%np, bb)
 
+  else if(pre%which == PRE_FILTER .and. .not. present(omega)) then
+
+    call X(derivatives_batch_perform)(pre%op, gr%der, aa, bb)
+
   else
-    SAFE_ALLOCATE(psia(1:gr%mesh%np, 1:hm%d%dim))
+    SAFE_ALLOCATE(psia(1:gr%mesh%np_part, 1:hm%d%dim))
     SAFE_ALLOCATE(psib(1:gr%mesh%np, 1:hm%d%dim))
     do ii = 1, aa%nst
-      call batch_get_state(aa, ii, gr%mesh%np, psia)
+      call batch_get_state(aa, ii, gr%mesh%np_part, psia)
       call X(preconditioner_apply)(pre, namespace, gr, hm, psia, psib, ik, omega(ii))
       call batch_set_state(bb, ii, gr%mesh%np, psib)
     end do

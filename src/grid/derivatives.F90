@@ -644,7 +644,7 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine derivatives_make_discretization(dim, mesh, masses, pol, rhs, nderiv, op, name, force_orthogonal)
+  subroutine derivatives_make_discretization(dim, mesh, masses, pol, rhs, nderiv, op, name, force_orthogonal, verbose)
     integer,                intent(in)    :: dim
     type(mesh_t),           intent(in)    :: mesh
     FLOAT,                  intent(in)    :: masses(:)
@@ -654,6 +654,7 @@ contains
     type(nl_operator_t),    intent(inout) :: op(:)
     character(len=32),      intent(in)    :: name
     logical, optional,      intent(in)    :: force_orthogonal
+    logical, optional,      intent(in)    :: verbose
 
     integer :: p, p_max, i, j, k, pow_max
     FLOAT   :: x(MAX_DIM)
@@ -664,8 +665,10 @@ contains
     SAFE_ALLOCATE(mat(1:op(1)%stencil%npoly, 1:op(1)%stencil%size))
     SAFE_ALLOCATE(sol(1:op(1)%stencil%size, 1:nderiv))
 
-    message(1) = 'Info: Generating weights for finite-difference discretization of ' // trim(name)
-    call messages_info(1)
+    if(optional_default(verbose, .true.)) then
+      message(1) = 'Info: Generating weights for finite-difference discretization of ' // trim(name)
+      call messages_info(1)
+    end if
 
     ! use to generate power lookup table
     pow_max = maxval(pol)
@@ -811,7 +814,7 @@ contains
       end do
     end do
     call derivatives_make_discretization(this%dim, this%mesh, this%masses, &
-             polynomials, rhs, 1, op(1:1), name, force_orthogonal = .true.)
+             polynomials, rhs, 1, op(1:1), name, force_orthogonal = .true., verbose=.false.)
     SAFE_DEALLOCATE_A(polynomials)
     SAFE_DEALLOCATE_A(rhs)
 

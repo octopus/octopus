@@ -21,6 +21,7 @@
 module mix_oct_m
   use comm_oct_m
   use derivatives_oct_m
+  use eigensolver_oct_m
   use global_oct_m
   use lalg_adv_oct_m
   use lalg_basic_oct_m
@@ -31,8 +32,10 @@ module mix_oct_m
   use nl_operator_oct_m
   use namespace_oct_m
   use parser_oct_m
+  use preconditioners_oct_m
   use profiling_oct_m
   use restart_oct_m
+  use solvers_oct_m
   use stencil_cube_oct_m
   use types_oct_m
   use varinfo_oct_m
@@ -63,6 +66,10 @@ module mix_oct_m
     mixfield_set_vout,          &
     mixfield_get_vnew,          &
     mix_add_auxmixfield
+
+  FLOAT :: shift_aux
+  type(derivatives_t), pointer :: der_aux
+  type(preconditioner_t), pointer, public :: pre
 
   type mixfield_t
     private
@@ -164,6 +171,7 @@ contains
     PUSH_SUB(mix_init)
 
     smix%der => der
+    der_aux => der
 
     def = OPTION__MIXINGSCHEME__BROYDEN
     if(present(def_)) def = def_

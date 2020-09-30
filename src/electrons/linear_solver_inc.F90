@@ -111,7 +111,8 @@ end subroutine X(linear_solver_solve_HXeY)
 
 ! ---------------------------------------------------------
 
-subroutine X(linear_solver_solve_HXeY_batch) (this, namespace, hm, gr, st, xb, yb, shift, tol, residue, iter_used, occ_response)
+subroutine X(linear_solver_solve_HXeY_batch) (this, namespace, hm, gr, st, xb, yb, shift, tol, & 
+  residue, iter_used, occ_response, use_initial_guess)
   type(linear_solver_t),    target, intent(inout) :: this
   type(namespace_t),                intent(in)    :: namespace
   type(hamiltonian_elec_t), target, intent(in)    :: hm
@@ -124,6 +125,7 @@ subroutine X(linear_solver_solve_HXeY_batch) (this, namespace, hm, gr, st, xb, y
   FLOAT,                            intent(out)   :: residue(:)
   integer,                          intent(out)   :: iter_used(:)
   logical, optional,                intent(in)    :: occ_response
+  logical, optional,                intent(in)    :: use_initial_guess
 
   integer :: ii
 
@@ -138,7 +140,8 @@ subroutine X(linear_solver_solve_HXeY_batch) (this, namespace, hm, gr, st, xb, y
       call xb%do_pack()
       call yb%do_pack()
     end if
-    call X(linear_solver_qmr_dotp)(this, namespace, hm, gr, st, xb, yb, shift, iter_used, residue, tol)
+    call X(linear_solver_qmr_dotp)(this, namespace, hm, gr, st, xb, yb, shift, iter_used, &
+             residue, tol, use_initial_guess)
     if (hamiltonian_elec_apply_packed(hm)) then
       call yb%do_unpack()
       call xb%do_unpack()
@@ -791,7 +794,8 @@ end subroutine X(linear_solver_sos)
 ! ---------------------------------------------------------
 !> for complex symmetric matrices
 !! W Chen and B Poirier, J Comput Phys 219, 198-209 (2006)
-subroutine X(linear_solver_qmr_dotp)(this, namespace, hm, gr, st, xb, bb, shift, iter_used, residue, threshold)
+subroutine X(linear_solver_qmr_dotp)(this, namespace, hm, gr, st, xb, bb, shift, iter_used, residue, threshold, &
+        use_initial_guess)
   type(linear_solver_t),    intent(inout) :: this
   type(namespace_t),        intent(in)    :: namespace
   type(hamiltonian_elec_t), intent(in)    :: hm
@@ -803,6 +807,7 @@ subroutine X(linear_solver_qmr_dotp)(this, namespace, hm, gr, st, xb, bb, shift,
   integer,                  intent(out)   :: iter_used(:) 
   FLOAT,                    intent(out)   :: residue(:)   !< the residue = abs(Ax-b)
   FLOAT,                    intent(in)    :: threshold    !< convergence threshold
+  logical, optional,        intent(in)    :: use_initial_guess
 
   type(wfs_elec_t) :: vvb, res, zzb, qqb, ppb, deltax, deltar
   integer             :: ii, iter
@@ -851,13 +856,38 @@ subroutine X(linear_solver_qmr_dotp)(this, namespace, hm, gr, st, xb, bb, shift,
   call xb%copy_to(deltax)
   call xb%copy_to(deltar)
 
-  !We have  r^(0)=v^(1)=b
-  call bb%copy_data_to(gr%mesh%np, vvb)
-  call vvb%copy_data_to(gr%mesh%np, res)
+  if(optional_default(use_initial_guess, .false.)) then
+    !Compared to the original algorithm, we assume that we have an initial guess
+    !This means that instead of setting x^(0)=0, we have x^(0)=xb
+    call X(linear_solver_operator_batch)(hm, namespace, gr, st, shift, xb, vvb)
 
-  !Norm of the right-hand side
-  call mesh_batch_nrm2(gr%mesh, bb, norm_b)
-  rho = norm_b
+    call batch_xpay(gr%mesh%np, bb, CNST(-1.0), vvb)
+    call vvb%copy_data_to(gr%mesh%np, res)
+
+    !Norm of the right-hand side
+    call mesh_batch_nrm2(gr%mesh, vvb, rho)
+    call mesh_batch_nrm2(gr%mesh, bb, norm_b)
+
+    do ii = 1, xb%nst
+      ! If the initial guess is a good enough solution
+      if(abs(rho(ii)) <= threshold) then
+        status(ii) = QMR_RES_ZERO
+        residue(ii) = rho(ii)
+        call batch_get_state(xb, ii, gr%mesh%np, exception_saved(:, :, ii))
+        saved_iter(ii) = iter
+        saved_res(ii) = residue(ii)
+      end if
+    end do
+
+  else !If we don't know any guess, let's stick to the original algorithm
+ 
+    call batch_set_zero(xb)
+    call bb%copy_data_to(gr%mesh%np, vvb)
+    call vvb%copy_data_to(gr%mesh%np, res)
+    call mesh_batch_nrm2(gr%mesh, bb, norm_b)
+    rho = norm_b
+
+  end if
 
   status = QMR_NOT_CONVERGED
 
@@ -866,16 +896,6 @@ subroutine X(linear_solver_qmr_dotp)(this, namespace, hm, gr, st, xb, bb, shift,
   do ii = 1, xb%nst
 
     residue(ii) = rho(ii)
-
-    ! If rho(ii) is basically zero we are already done.
-    if(abs(rho(ii)) <= M_EPSILON) then
-      status(ii) = QMR_RES_ZERO
-      residue(ii) = rho(ii)
-      call batch_get_state(xb, ii, gr%mesh%np, exception_saved(:, :, ii))
-      saved_iter(ii) = iter
-      saved_res(ii) = residue(ii)
-    end if
-
     ! if b is zero, the solution is trivial
     if(status(ii) == QMR_NOT_CONVERGED .and. abs(norm_b(ii)) <= M_EPSILON) then
       exception_saved = CNST(0.0)
@@ -916,9 +936,9 @@ subroutine X(linear_solver_qmr_dotp)(this, namespace, hm, gr, st, xb, bb, shift,
     end do
 
     ! v^(i) = v^(i) / \rho_i
-    call batch_scal(gr%mesh%np, CNST(1.0)/rho, vvb, a_full = .false.)
+    call batch_scal(gr%mesh%np, M_ONE/rho, vvb, a_full = .false.)
     ! z^(i) = z^(i) / \xsi_i
-    call batch_scal(gr%mesh%np, CNST(1.0)/xsi, zzb, a_full = .false.)
+    call batch_scal(gr%mesh%np, M_ONE/xsi, zzb, a_full = .false.)
     ! \delta_i = v^(i)\ldotp z^(i)
     call X(mesh_batch_dotp_vector)(gr%mesh, vvb, zzb, delta)
 
@@ -942,9 +962,9 @@ subroutine X(linear_solver_qmr_dotp)(this, namespace, hm, gr, st, xb, bb, shift,
 
     ! ppb = (H-shift)*qqb
     call X(linear_solver_operator_batch)(hm, namespace, gr, st, shift, qqb, ppb)
-
     ! p^(i) = \alpha_{i+1} (H-shift)*q^(i) 
     call batch_scal(gr%mesh%np, alpha, ppb, a_full = .false.)
+
     ! \eps_i = q^{(i)}\ldotp p^{(i)}
     call X(mesh_batch_dotp_vector)(gr%mesh, qqb, ppb, eps)
 
@@ -979,9 +999,11 @@ subroutine X(linear_solver_qmr_dotp)(this, namespace, hm, gr, st, xb, bb, shift,
     call mesh_batch_nrm2(gr%mesh, zzb, xsi)
 
     do ii = 1, xb%nst
+
       oldtheta(ii) = theta(ii)
       ! \theta_i = \rho_{i+1}/(\gamma_{i-1} |\beta_i|)
-      theta(ii) = rho(ii)/(oldgamma(ii)*abs(beta(ii)))
+      theta(ii) = rho(ii)/(gamma(ii)*abs(beta(ii)))
+
       oldgamma(ii) = gamma(ii)
       !\gamma_i = 1/sqrt(1+\theta_i^2)
       gamma(ii) = CNST(1.0)/sqrt(CNST(1.0) + theta(ii)**2)
@@ -1024,6 +1046,7 @@ subroutine X(linear_solver_qmr_dotp)(this, namespace, hm, gr, st, xb, bb, shift,
     !x^{i} = x^{i-1} + \delta_x^{i}
     call batch_axpy(gr%mesh%np, CNST(1.0), deltax, xb)
     !r^{i} = r^{i-1} - \delta_r^i
+    ! This is given by r^{i} = b - Hx^{i}
     call batch_axpy(gr%mesh%np, CNST(-1.0), deltar, res)
 
     !We compute the norm of the residual
@@ -1048,7 +1071,7 @@ subroutine X(linear_solver_qmr_dotp)(this, namespace, hm, gr, st, xb, bb, shift,
   do ii = 1, xb%nst
     if(status(ii) == QMR_NOT_CONVERGED .or. status(ii) == QMR_CONVERGED) then
       !We stop at the entrance of the next iteraction, so we substract one here 
-      iter_used(ii) = iter-1
+      iter_used(ii) = iter !-1
     else
       call batch_set_state(xb, ii, gr%mesh%np, exception_saved(:, :, ii))
       iter_used(ii) = saved_iter(ii)

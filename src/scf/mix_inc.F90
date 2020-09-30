@@ -147,6 +147,10 @@ subroutine X(broyden_extrapolation)(this, coeff, d1, d2, d3, vin, vnew, iter_use
   R_TYPE    :: gamma
   R_TYPE, allocatable :: beta(:, :), work(:)
 
+  R_TYPE, allocatable :: rhs(:,:,:), lrhs(:), Prhs(:)
+  integer :: iter_used_precond
+  FLOAT :: residue
+
   PUSH_SUB(X(broyden_extrapolation))
   
   if (iter_used == 0) then
@@ -198,14 +202,64 @@ subroutine X(broyden_extrapolation)(this, coeff, d1, d2, d3, vin, vnew, iter_use
     if(this%der%mesh%parallel_in_domains) call comm_allreduce(this%der%mesh%mpi_grp%comm,  work(i))
   end do
 
-  ! linear mixing term
-  vnew(1:d1, 1:d2, 1:d3) = vin(1:d1, 1:d2, 1:d3) + coeff*f(1:d1, 1:d2, 1:d3)
+  if(this%precondition .and. this%der%mesh%np == d1) then
+    SAFE_ALLOCATE( rhs(1:this%der%mesh%np_part, 1:d2, 1:d3))
+    SAFE_ALLOCATE(lrhs(1:this%der%mesh%np_part))
+    SAFE_ALLOCATE(Prhs(1:this%der%mesh%np_part))
+
+    vnew(1:d1, 1:d2, 1:d3) = vin(1:d1, 1:d2, 1:d3)
+    rhs(1:d1, 1:d2, 1:d3) = f(1:d1, 1:d2, 1:d3)
+
+    ! other terms
+    do i = 1, iter_used
+      gamma = ww*sum(beta(:, i)*work(:))
+      rhs(1:d1, 1:d2, 1:d3) = rhs(1:d1, 1:d2, 1:d3) - ww*gamma*df(1:d1, 1:d2, 1:d3, i)
+      vnew(1:d1, 1:d2, 1:d3) = vnew(1:d1, 1:d2, 1:d3) - ww*gamma*dv(1:d1, 1:d2, 1:d3, i)
+    end do
+
+    call mesh_init_mesh_aux(this%der%mesh)
+
+    do k = 1, d2
+      do l = 1, d3
+
+        !We compute the Laplacian of -<f>
+        call X(derivatives_lapl)(this%der, rhs(:, k, l), lrhs(:))
+        call lalg_scal(this%der%mesh%np, -R_TOTYPE(M_HALF), lrhs)
+
+        vnew(1:d1, k, l) = vnew(1:d1, k, l) + coeff*this%precond%coeff(1)*rhs(1:d1, k, l)
+
+        do i = 1, this%precond%tt
+
+         shift_aux = this%precond%coeff(2*i+1)
+
+         iter_used_precond = 100
+         call X(qmr_sym_gen_dotu)(d1, Prhs, lrhs, &
+            X(linear_solver_operator), X(mf_dotu_aux), X(mf_nrm2_aux), X(linear_solver_preconditioner), &
+            iter_used_precond, residue=residue, threshold = CNST(1e-6))
+         print *, 'Iter used = ', iter_used_precond
+         print *, 'Residue = ', residue
+          
+          !We add a factor of two, as we used an equation divided by two, 
+          !in order to reuse the usual preconditioner for the kinetic energy operator
+          vnew(1:d1, k, l) = vnew(1:d1, k, l) + M_TWO*coeff*this%precond%coeff(2*i)*Prhs(1:d1)
+        end do
+      end do
+    end do
+
+
+    SAFE_DEALLOCATE_A(Prhs)
+    SAFE_DEALLOCATE_A(lrhs)
+    SAFE_DEALLOCATE_A(rhs)
+  else
+    ! linear mixing term
+    vnew(1:d1, 1:d2, 1:d3) = vin(1:d1, 1:d2, 1:d3) + coeff*f(1:d1, 1:d2, 1:d3)
   
-  ! other terms
-  do i = 1, iter_used
-    gamma = ww*sum(beta(:, i)*work(:))
-    vnew(1:d1, 1:d2, 1:d3) = vnew(1:d1, 1:d2, 1:d3) - ww*gamma*(coeff*df(1:d1, 1:d2, 1:d3, i) + dv(1:d1, 1:d2, 1:d3, i))
-  end do
+    ! other terms
+    do i = 1, iter_used
+      gamma = ww*sum(beta(:, i)*work(:))
+      vnew(1:d1, 1:d2, 1:d3) = vnew(1:d1, 1:d2, 1:d3) - ww*gamma*(coeff*df(1:d1, 1:d2, 1:d3, i) + dv(1:d1, 1:d2, 1:d3, i))
+    end do
+  end if
   
   do i = 1, this%nauxmixfield
    if(this%auxmixfield(i)%p%func_type == TYPE_FLOAT) then
@@ -536,21 +590,21 @@ R_TYPE function X(mix_dotp)(this, xx, yy, reduce) result(dotp)
 
   ASSERT(this%mixfield%d1 == this%der%mesh%np)
   
-  if(this%precondition) then
+  !if(this%precondition) then
 
-    SAFE_ALLOCATE(ff(1:this%der%mesh%np_part))
-    SAFE_ALLOCATE(precff(1:this%der%mesh%np))
-
-    ff(1:this%der%mesh%np) = yy(1:this%der%mesh%np)
-    call X(derivatives_perform)(this%preconditioner, this%der, ff, precff)
-    dotp = X(mf_dotp)(this%der%mesh, xx, precff, reduce = reduce_)
-
-    SAFE_DEALLOCATE_A(precff)
-    SAFE_DEALLOCATE_A(ff)
-      
-  else
+  !  SAFE_ALLOCATE(ff(1:this%der%mesh%np_part))
+  !  SAFE_ALLOCATE(precff(1:this%der%mesh%np))
+  !
+  !  ff(1:this%der%mesh%np) = yy(1:this%der%mesh%np)
+  !  call X(derivatives_perform)(this%preconditioner, this%der, ff, precff)
+  !  dotp = X(mf_dotp)(this%der%mesh, xx, precff, reduce = reduce_)
+  !
+  !  SAFE_DEALLOCATE_A(precff)
+  !  SAFE_DEALLOCATE_A(ff)
+  !    
+  !else
     dotp = X(mf_dotp)(this%der%mesh, xx, yy, reduce = reduce_)
-  end if
+  !end if
 
   POP_SUB(X(mix_dotp))
   
@@ -615,6 +669,48 @@ end function X(mix_dotp)
 
     POP_SUB(X(mixfield_get_vnew))
   end subroutine X(mixfield_get_vnew)
+
+  ! ---------------------------------------------------------
+  !> Computes Hx = (-\Laplacian + shift) x
+  subroutine X(linear_solver_operator) (x, hx)
+    R_TYPE,                intent(in)    :: x(:)   
+    R_TYPE,                intent(out)   :: Hx(:) 
+
+    R_TYPE, allocatable :: tmpx(:)
+
+    ASSERT(associated(mesh_aux))
+
+    SAFE_ALLOCATE(tmpx(mesh_aux%np_part))
+
+
+    call lalg_copy(mesh_aux%np, x, tmpx)
+    call X(derivatives_lapl)(der_aux, tmpx, Hx)
+    call lalg_scal(mesh_aux%np, -R_TOTYPE(M_HALF), hx)
+    call lalg_axpy(mesh_aux%np, shift_aux, x, hx)
+
+    SAFE_DEALLOCATE_A(tmpx)
+
+  end subroutine X(linear_solver_operator)
+
+  ! ---------------------------------------------------------
+  subroutine X(linear_solver_preconditioner) (x, hx)
+    R_TYPE,                intent(in)    :: x(:)   !<  x(gr%mesh%np, st%d%dim)
+    R_TYPE,                intent(out)   :: hx(:)  !< Hx(gr%mesh%np, st%d%dim)
+
+    R_TYPE, allocatable :: tmpx(:)
+
+    ASSERT(associated(mesh_aux))
+
+    SAFE_ALLOCATE(tmpx(mesh_aux%np_part))
+
+    call lalg_copy(mesh_aux%np, x, tmpx)
+    call X(derivatives_perform)(pre%op, der_aux, tmpx, hx) 
+
+    SAFE_DEALLOCATE_A(tmpx) 
+  end subroutine X(linear_solver_preconditioner)
+
+
+
 
 
 !! Local Variables:

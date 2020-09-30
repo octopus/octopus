@@ -387,13 +387,17 @@ end subroutine X(bi_conjugate_gradients)
     SAFE_ALLOCATE(deltax(1:np))
     SAFE_ALLOCATE(deltar(1:np))
 
-    ! use v as temp var
-    call op(x, v)
+    !The initial starting point is zero
+    x = M_ZERO
+    call lalg_copy(np, b, r)
+    call lalg_copy(np, b, v)
 
-    do ip = 1, np
-      r(ip) = b(ip) - v(ip)
-      v(ip) = r(ip)
-    end do
+    !! use v as temp var
+    ! call op(x, v)
+    !do ip = 1, np
+    !  r(ip) = b(ip) - v(ip)
+    !  v(ip) = r(ip)
+    !end do
 
     rho      = nrm2(v)
     norm_b   = nrm2(b)
@@ -426,15 +430,12 @@ end subroutine X(bi_conjugate_gradients)
           err = 1
           exit
         end if
+
         alpha = alpha*xsi/rho
-        tmp = M_ONE/rho
-        do ip = 1, np
-          v(ip) = tmp*v(ip)
-        end do
-        tmp = M_ONE/xsi
-        do ip = 1, np
-          z(ip) = tmp*z(ip)
-        end do
+
+        call lalg_scal(np, M_ONE/rho, v)
+  
+        call lalg_scal(np, M_ONE/xsi, z)
 
         delta = dotu(v, z)
 
@@ -442,20 +443,18 @@ end subroutine X(bi_conjugate_gradients)
           err = 2
           exit
         end if
+
         if(iter == 1) then
-          do ip = 1, np
-            q(ip) = z(ip)
-          end do
+          call lalg_copy(np, z, q)
         else
           rtmp = -rho*delta/epsilon
           do ip = 1, np
             q(ip) = rtmp*q(ip) + z(ip)
           end do
         end if
+
         call op(q, p)
-        do ip = 1, np
-          p(ip) = alpha*p(ip)
-        end do
+        call lalg_scal(np, alpha, p)
 
         epsilon = dotu(q, p)
 
@@ -463,30 +462,31 @@ end subroutine X(bi_conjugate_gradients)
           err = 3
           exit
         end if
+
         beta = epsilon/delta
         do ip = 1, np
           v(ip) = -beta*v(ip) + p(ip)
         end do
-        oldrho = rho
 
+        oldrho = rho
         rho = nrm2(v)
 
         call prec(v, z)
-        tmp = M_ONE/alpha
-        do ip = 1, np
-          z(ip) = tmp*z(ip)
-        end do
+        call lalg_scal(np, M_ONE/alpha, z)
 
         xsi = nrm2(z)
 
         oldtheta = theta
         theta    = rho/(gamma*abs(beta))
+
         oldgamma = gamma
         gamma    = M_ONE/sqrt(M_ONE+theta**2)
+
         if(abs(gamma) < M_EPSILON) then
           err = 4
           exit
         end if
+
         eta = -eta*oldrho*gamma**2/(beta*oldgamma**2)
 
         rtmp = eta*alpha
@@ -528,7 +528,7 @@ end subroutine X(bi_conjugate_gradients)
           ilog_res = CNST(100.0)*max(M_ZERO, -log(res))
           call loct_progress_bar(ilog_res, ilog_thr)
         end if
-        
+
         if(res < threshold_) exit
       end do
     end if

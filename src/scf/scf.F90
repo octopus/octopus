@@ -129,7 +129,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine scf_init(scf, namespace, gr, geo, st, mc, hm, conv_force)
-    type(scf_t),              intent(inout) :: scf
+    type(scf_t),  target,            intent(inout) :: scf
     type(namespace_t),        intent(in)    :: namespace
     type(grid_t),     target, intent(inout) :: gr
     type(geometry_t),         intent(in)    :: geo
@@ -407,6 +407,8 @@ contains
 
     ! now the eigensolver stuff
     call eigensolver_init(scf%eigens, namespace, gr, st, geo, mc)
+
+    pre => scf%eigens%pre
 
     !The evolution operator is a very specific propagation that requires a specific 
     !setting to work in the current framework
