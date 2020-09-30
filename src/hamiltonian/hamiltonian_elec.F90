@@ -176,6 +176,9 @@ module hamiltonian_elec_oct_m
     type(exchange_operator_t), public :: exxop
     type(namespace_t), pointer :: namespace
 
+    type(partner_list_t) :: external_potentials  !< List with all the external potentials
+    FLOAT, allocatable, public  :: v_ext_pot(:)  !< the potential comming from external potentials
+
   contains
     procedure :: update_span => hamiltonian_elec_span
     procedure :: dapply => dhamiltonian_elec_apply
@@ -218,8 +221,7 @@ contains
     type(block_t) :: blk
     type(profile_t), save :: prof
 
-    logical :: external_potentials_present
-    logical :: kick_present, need_exchange_
+    logical :: need_exchange_
     FLOAT :: rashba_coupling
 
 
@@ -319,23 +321,12 @@ contains
     ! Calculate initial value of the gauge vector field
     call gauge_field_init(hm%ep%gfield, namespace, gr%sb)
 
-    nullify(hm%vberry)
-    if(associated(hm%ep%E_field) .and. simul_box_is_periodic(gr%sb) .and. .not. gauge_field_is_applied(hm%ep%gfield)) then
-      ! only need vberry if there is a field in a periodic direction
-      ! and we are not setting a gauge field
-      if(any(abs(hm%ep%E_field(1:gr%sb%periodic_dim)) > M_EPSILON)) then
-        SAFE_ALLOCATE(hm%vberry(1:gr%mesh%np, 1:hm%d%nspin))
-      end if
-    end if
-
-    !Static magnetic field requires complex wavefunctions
     !Static magnetic field or rashba spin-orbit interaction requires complex wavefunctions
-    if (associated(hm%ep%B_field) .or. gauge_field_is_applied(hm%ep%gfield) .or. &
+    if (parse_is_defined(namespace, 'StaticMagneticField') .or. gauge_field_is_applied(hm%ep%gfield) .or. &
       parse_is_defined(namespace, 'RashbaSpinOrbitCoupling')) then
       call states_set_complex(st)
     end if
 
-    call parse_variable(namespace, 'CalculateSelfInducedMagneticField', .false., hm%self_induced_magnetic)
     !%Variable CalculateSelfInducedMagneticField
     !%Type logical
     !%Default no
@@ -359,6 +350,7 @@ contains
     !% and printed out, if the <tt>Output</tt> variable contains the <tt>potential</tt> keyword (the prefix
     !% of the output files is <tt>Bind</tt>).
     !%End
+    call parse_variable(namespace, 'CalculateSelfInducedMagneticField', .false., hm%self_induced_magnetic)
     if(hm%self_induced_magnetic) then
       SAFE_ALLOCATE(hm%a_ind(1:gr%mesh%np_part, 1:gr%sb%dim))
       SAFE_ALLOCATE(hm%b_ind(1:gr%mesh%np_part, 1:gr%sb%dim))
@@ -455,15 +447,6 @@ contains
     !%End
     call parse_variable(namespace, 'HamiltonianApplyPacked', .true., hm%apply_packed)
 
-    external_potentials_present = epot_have_external_potentials(hm%ep)
-
-    kick_present = epot_have_kick(hm%ep)
-
-    call pcm_init(hm%pcm, namespace, geo, gr, st%qtot, st%val_charge, external_potentials_present, kick_present )  !< initializes PCM
-    if (hm%pcm%run_pcm) then
-      if (hm%theory_level /= KOHN_SHAM_DFT) call messages_not_implemented("PCM for TheoryLevel /= DFT", namespace=namespace)
-      if (gr%have_fine_mesh) call messages_not_implemented("PCM with UseFineMesh", namespace=namespace)
-    end if
     
     !%Variable SCDM_EXX
     !%Type logical
@@ -566,8 +549,16 @@ contains
     !TODO: Once the abstract Hamiltonian knows about an abstract basis, we might move this to the 
     !      abstract Hamiltonian 
     call load_external_potentials(hm%external_potentials, namespace)
+
+    !Some checks which are electron specific, like k-points
+    call external_potentials_checks()
+
     !At the moment we do only have static external potential, so we never update them
     call build_external_potentials()
+
+    !Build the resulting interactions
+    !TODO: This will be moved to the actual interactions
+    call build_interactions()
 
     call profiling_out(prof)
     POP_SUB(hamiltonian_elec_init)
@@ -677,7 +668,43 @@ contains
 
           call potential%allocate_memory(gr%mesh)
           call potential%calculate(namespace, gr%mesh, hm%psolver)
-          call lalg_axpy(gr%mesh%np, M_ONE, potential%pot, hm%v_ext_pot)
+          !To preserve the old behavior, we are adding the various potentials
+          !to the corresponding arrays
+          select case(potential%type)
+          case(EXTERNAL_POT_USDEF, EXTERNAL_POT_FROM_FILE, EXTERNAL_POT_CHARGE_DENSITY)
+            call lalg_axpy(gr%mesh%np, M_ONE, potential%pot, hm%v_ext_pot)
+
+          case(EXTERNAL_POT_STATIC_BFIELD)
+            if(.not.associated(hm%ep%B_field)) then
+              SAFE_ALLOCATE(hm%ep%B_field(1:3)) !Cannot be gr%sb%dim
+              hm%ep%B_field(1:3) = M_ZERO
+            end if
+            hm%ep%B_field(1:3) = hm%ep%B_field(1:3) + potential%B_field(1:3)
+            
+            if(.not.associated(hm%ep%A_static)) then
+              SAFE_ALLOCATE(hm%ep%A_static(1:gr%mesh%np, 1:gr%sb%dim))
+              hm%ep%A_static(1:gr%mesh%np, 1:gr%sb%dim) = M_ZERO
+            end if
+            call lalg_axpy(gr%mesh%np, gr%sb%dim, M_ONE, potential%A_static, hm%ep%A_static)
+
+          case(EXTERNAL_POT_STATIC_EFIELD)
+            if(.not.associated(hm%ep%E_field)) then
+              SAFE_ALLOCATE(hm%ep%E_field(1:gr%sb%dim))
+              hm%ep%E_field(1:gr%sb%dim) = M_ZERO
+            end if
+            hm%ep%E_field(1:gr%sb%dim) = hm%ep%E_field(1:gr%sb%dim) + potential%E_field(1:gr%sb%dim)
+
+            if(.not.associated(hm%ep%v_static)) then
+              SAFE_ALLOCATE(hm%ep%v_static(1:gr%mesh%np))
+              hm%ep%v_static(1:gr%mesh%np) = M_ZERO
+            end if
+            if(.not.allocated(hm%ep%v_ext)) then
+              SAFE_ALLOCATE(hm%ep%v_ext(1:gr%mesh%np_part))
+              hm%ep%v_ext(1:gr%mesh%np_part) = M_ZERO
+            end if     
+            call lalg_axpy(gr%mesh%np, M_ONE, potential%pot, hm%ep%v_static)
+            call lalg_axpy(gr%mesh%np, M_ONE, potential%v_ext, hm%ep%v_ext)
+          end select
           call potential%deallocate_memory()
 
         class default
@@ -688,12 +715,76 @@ contains
       POP_SUB(hamiltonian_elec_init.build_external_potentials)
     end subroutine build_external_potentials
 
+    ! ---------------------------------------------------------
+    subroutine external_potentials_checks()
+      type(list_iterator_t) :: iter
+      class(*), pointer :: potential
+
+      PUSH_SUB(hamiltonian_elec_init.external_potentials_checks)
+
+      call iter%start(hm%external_potentials)
+      do while (iter%has_next())
+        potential => iter%get_next()
+        select type (potential)
+        class is (external_potential_t)
+
+          if(potential%type == EXTERNAL_POT_STATIC_EFIELD .and. hm%d%nik > 1) then
+            message(1) = "Applying StaticElectricField in a periodic direction is only accurate for large supercells."
+            message(2) = "Single-point Berry phase is not appropriate when k-point sampling is needed."
+            call messages_warning(2, namespace=namespace)
+          end if
+
+        class default
+          ASSERT(.false.)
+        end select
+      end do
+
+      POP_SUB(hamiltonian_elec_init.external_potentials_checks)
+    end subroutine external_potentials_checks
+
+
+    !The code in this routines needs to know about the external potentials.
+    !This will be treated in the future by the interactions directly.
+    subroutine build_interactions()
+      logical :: external_potentials_present
+      logical :: kick_present
+
+      PUSH_SUB(hamiltonian_elec_init.build_interactions)      
+
+      nullify(hm%vberry)
+      if(associated(hm%ep%E_field) .and. simul_box_is_periodic(gr%sb) .and. .not. gauge_field_is_applied(hm%ep%gfield)) then
+        ! only need vberry if there is a field in a periodic direction
+        ! and we are not setting a gauge field
+        if(any(abs(hm%ep%E_field(1:gr%sb%periodic_dim)) > M_EPSILON)) then
+          SAFE_ALLOCATE(hm%vberry(1:gr%mesh%np, 1:hm%d%nspin))
+        end if
+      end if
+
+      external_potentials_present = epot_have_external_potentials(hm%ep)
+
+      kick_present = epot_have_kick(hm%ep)
+
+      call pcm_init(hm%pcm, namespace, geo, gr, st%qtot, st%val_charge, external_potentials_present, kick_present )  !< initializes PCM
+      if (hm%pcm%run_pcm) then
+        if (hm%theory_level /= KOHN_SHAM_DFT) call messages_not_implemented("PCM for TheoryLevel /= DFT", namespace=namespace)
+        if (gr%have_fine_mesh) call messages_not_implemented("PCM with UseFineMesh", namespace=namespace)
+      end if
+
+      POP_SUB(hamiltonian_elec_init.build_interactions)
+
+    end subroutine build_interactions
+
+
   end subroutine hamiltonian_elec_init
 
   
   ! ---------------------------------------------------------
   subroutine hamiltonian_elec_end(hm)
     type(hamiltonian_elec_t), intent(inout) :: hm
+
+    type(partner_iterator_t) :: iter
+    class(interaction_partner_t), pointer :: potential
+
 
     PUSH_SUB(hamiltonian_elec_end)
 
@@ -750,6 +841,13 @@ contains
     nullify(hm%namespace)
      
     if (hm%pcm%run_pcm) call pcm_end(hm%pcm)
+
+    call iter%start(hm%external_potentials)
+    do while (iter%has_next())
+      potential => iter%get_next()
+      SAFE_DEALLOCATE_P(potential)
+    end do
+
     POP_SUB(hamiltonian_elec_end)
   end subroutine hamiltonian_elec_end
 

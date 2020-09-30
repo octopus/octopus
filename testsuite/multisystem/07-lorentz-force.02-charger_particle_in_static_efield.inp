@@ -1,0 +1,41 @@
+# ----- Calculation mode and parallelization ----------------------------------
+
+CalculationMode   = td
+RestartWrite = no
+ExperimentalFeatures = yes
+FromScratch = yes
+
+Dimensions = 3
+
+%Systems
+  'ChargedParticle' | charged_particle
+%
+
+# ----- Charged particle ------------------------------------------------------
+
+ChargedParticle.ParticleMass = 1
+ChargedParticle.ParticleCharge = 1
+
+%ChargedParticle.ParticleInitialPosition
+ 1 | 0.0001 | 0.0001
+%
+%ChargedParticle.ParticleInitialVelocity
+ 0 | 0 | 0.01
+%
+
+ChargedParticle.TDSystemPropagator = exp_mid
+
+
+# ----- External potential ---------------------------------------------------
+
+%StaticElectricField
+ 1 | 0 | 0
+%
+
+# ----- Time step variables ---------------------------------------------------
+
+TDTimeStep = 0.2
+TDPropagationTime = 2
+
+
+Debug = info

@@ -51,6 +51,7 @@ dist_share_DATA =                                                       \
 	06-propagation_expmid.06-two_body_verlet.inp                    \
 	07-lorentz-force.test                                           \
 	07-lorentz-force.01-charged_particle_coupled_to_maxwell.inp     \
+	07-lorentz-force.02-charger_particle_in_static_efield.inp       \
 	08-coulomb_force.test                                           \
 	08-coulomb_force.01-classical_helium.inp                        \
 	09-illegal_system_names.test                                    \

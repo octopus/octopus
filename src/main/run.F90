@@ -116,6 +116,8 @@ contains
     type(profile_t), save :: calc_mode_prof
     logical :: from_scratch
     integer :: iunit_out
+    type(partner_iterator_t) :: iter
+    class(interaction_partner_t), pointer :: partner
 
     PUSH_SUB(run)
 
@@ -253,6 +255,17 @@ contains
 
     ! Finalize systems
     SAFE_DEALLOCATE_P(systems)
+
+    !Deallocate the remaining external potentials
+    call iter%start(partners)
+    do while (iter%has_next())
+      select type(ptr => iter%get_next())
+      class is(external_potential_t)
+        partner => ptr
+        SAFE_DEALLOCATE_P(partner)
+      end select
+    end do
+
 
     call fft_all_end()
 
