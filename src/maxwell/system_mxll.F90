@@ -19,6 +19,7 @@
 #include "global.h"
 
 module system_mxll_oct_m
+  use algorithm_oct_m
   use calc_mode_par_oct_m
   use clock_oct_m
   use current_oct_m
@@ -43,6 +44,7 @@ module system_mxll_oct_m
   use parser_oct_m
   use poisson_oct_m
   use profiling_oct_m
+  use propagator_exp_mid_oct_m
   use propagator_oct_m
   use propagator_mxll_oct_m
   use quantity_oct_m
@@ -100,7 +102,6 @@ module system_mxll_oct_m
     procedure :: do_td_operation => system_mxll_do_td
     procedure :: iteration_info => system_mxll_iteration_info
     procedure :: is_tolerance_reached => system_mxll_is_tolerance_reached
-    procedure :: store_current_status => system_mxll_store_current_status
     procedure :: update_quantity => system_mxll_update_quantity
     procedure :: update_exposed_quantity => system_mxll_update_exposed_quantity
     procedure :: copy_quantities_to_interaction => system_mxll_copy_quantities_to_interaction
@@ -382,16 +383,20 @@ contains
 
   ! ---------------------------------------------------------
   subroutine system_mxll_do_td(this, operation)
-    class(system_mxll_t), intent(inout) :: this
-    integer,              intent(in)    :: operation
+    class(system_mxll_t),           intent(inout) :: this
+    class(algorithmic_operation_t), intent(in)    :: operation
 
     type(profile_t), save :: prof
 
     PUSH_SUB(system_mxll_do_td)
 
-    select case(operation)
+    select case (operation%id)
     case (SKIP)
       ! Do nothing
+
+    case (STORE_CURRENT_STATUS)
+      ! For the moment we do nothing
+
     case (EXPMID_START)
       SAFE_ALLOCATE(this%rs_current_density_ext_t1(1:this%gr%mesh%np_part,1:this%st%dim))
       SAFE_ALLOCATE(this%rs_current_density_ext_t2(1:this%gr%mesh%np_part,1:this%st%dim))
@@ -496,15 +501,6 @@ contains
 
     POP_SUB(system_mxll_is_tolerance_reached)
    end function system_mxll_is_tolerance_reached
-
-  ! ---------------------------------------------------------
-  subroutine system_mxll_store_current_status(this)
-    class(system_mxll_t),   intent(inout)    :: this
-
-    PUSH_SUB(system_mxll_store_current_status)
-
-    POP_SUB(system_mxll_store_current_status)
-  end subroutine system_mxll_store_current_status
 
   ! ---------------------------------------------------------
   subroutine system_mxll_update_quantity(this, iq)

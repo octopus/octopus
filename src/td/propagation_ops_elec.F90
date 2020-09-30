@@ -36,7 +36,7 @@ module propagation_ops_elec_oct_m
   use namespace_oct_m
   use potential_interpolation_oct_m
   use profiling_oct_m
-  use propagator_oct_m
+  use propagator_verlet_oct_m
   use states_elec_oct_m
   use varinfo_oct_m
   use wfs_elec_oct_m
@@ -163,7 +163,7 @@ contains
         call gauge_field_get_vec_pot(hm%ep%gfield, wo%vecpot)
         call gauge_field_get_vec_pot_vel(hm%ep%gfield, wo%vecpot_vel)
       end if
-      call gauge_field_do_td(hm%ep%gfield, VERLET_COMPUTE_ACC, dt, time, namespace)
+      call gauge_field_do_td(hm%ep%gfield, OP_VERLET_COMPUTE_ACC, dt, time, namespace)
     end if
 
     call profiling_out(prof)

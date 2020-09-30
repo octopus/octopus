@@ -19,6 +19,7 @@
 #include "global.h"
 
 module propagator_exp_mid_oct_m
+  use algorithm_oct_m
   use clock_oct_m
   use global_oct_m
   use messages_oct_m
@@ -40,6 +41,24 @@ module propagator_exp_mid_oct_m
     procedure propagator_exp_mid_constructor
   end interface propagator_exp_mid_t
 
+  ! Specific exponential mid-point propagation operations identifiers
+  character(len=30), public, parameter ::        &
+    EXPMID_START        = 'EXPMID_START',        &
+    EXPMID_FINISH       = 'EXPMID_FINISH',       &
+    EXPMID_PREDICT_DT_2 = 'EXPMID_PREDICT_DT_2', &
+    EXPMID_PREDICT_DT   = 'EXPMID_PREDICT_DT',   &
+    EXPMID_CORRECT_DT_2 = 'EXPMID_CORRECT_DT_2', &
+    UPDATE_HAMILTONIAN  = 'UPDATE_HAMILTONIAN'
+
+  ! Specific exponential mid-point propagation operations
+  type(algorithmic_operation_t), public, parameter :: &
+    OP_EXPMID_START        = algorithmic_operation_t(EXPMID_START,        'Starting exponential mid-point propagation'),  &
+    OP_EXPMID_FINISH       = algorithmic_operation_t(EXPMID_FINISH,       'Finishing exponential mid-point propagation'), &
+    OP_EXPMID_PREDICT_DT_2 = algorithmic_operation_t(EXPMID_PREDICT_DT_2, 'Prediction step - Predicting state at dt/2 '), &
+    OP_EXPMID_PREDICT_DT   = algorithmic_operation_t(EXPMID_PREDICT_DT,   'Prediction step - Predicting state at dt'),    &
+    OP_EXPMID_CORRECT_DT_2 = algorithmic_operation_t(EXPMID_CORRECT_DT_2, 'Correction step - Correcting state at dt/2'),  &
+    OP_UPDATE_HAMILTONIAN  = algorithmic_operation_t(UPDATE_HAMILTONIAN,  'Updating Hamiltonian')
+
 contains
 
   ! ---------------------------------------------------------
@@ -53,34 +72,34 @@ contains
     SAFE_ALLOCATE(this)
 
     this%predictor_corrector = predictor_corrector
-    this%start_step = EXPMID_START
-    this%final_step = EXPMID_FINISH
+    this%start_step = OP_EXPMID_START
+    this%final_step = OP_EXPMID_FINISH
 
     if(predictor_corrector) then
 
-      call this%add(STORE_CURRENT_STATUS)
-      call this%add(EXPMID_PREDICT_DT_2)  ! predict: psi(t+dt/2) = 0.5*(U_H(dt) psi(t) + psi(t)) or via extrapolation
-      call this%add(START_SCF_LOOP)
-      call this%add(UPDATE_INTERACTIONS)
-      call this%add(UPDATE_HAMILTONIAN)   ! update: H(t+dt/2) from psi(t+dt/2)
-      call this%add(EXPMID_PREDICT_DT)    ! predict: psi(t+dt) = U_H(t+dt/2) psi(t)
-      call this%add(EXPMID_CORRECT_DT_2)  ! correct: psi(t+dt/2) = 0.5*(psi(t+dt) + psi(t))
-      call this%add(END_SCF_LOOP) 
-      call this%add(FINISHED)
+      call this%add_operation(OP_STORE_CURRENT_STATUS)
+      call this%add_operation(OP_EXPMID_PREDICT_DT_2)  ! predict: psi(t+dt/2) = 0.5*(U_H(dt) psi(t) + psi(t)) or via extrapolation
+      call this%add_operation(OP_START_SCF_LOOP)
+      call this%add_operation(OP_UPDATE_INTERACTIONS)
+      call this%add_operation(OP_UPDATE_HAMILTONIAN)   ! update: H(t+dt/2) from psi(t+dt/2)
+      call this%add_operation(OP_EXPMID_PREDICT_DT)    ! predict: psi(t+dt) = U_H(t+dt/2) psi(t)
+      call this%add_operation(OP_EXPMID_CORRECT_DT_2)  ! correct: psi(t+dt/2) = 0.5*(psi(t+dt) + psi(t))
+      call this%add_operation(OP_END_SCF_LOOP) 
+      call this%add_operation(OP_FINISHED)
 
       this%max_scf_count = 10
       this%scf_tol = CNST(1e-6) ! At the moment arbitrary. This is system specific and should be adapted.
 
     else
 
-      call this%add(STORE_CURRENT_STATUS)
-      call this%add(EXPMID_PREDICT_DT_2)  ! predict: psi(t+dt/2) = 0.5*(U_H(dt) psi(t) + psi(t)) or via extrapolation
-      call this%add(UPDATE_INTERACTIONS)
-      call this%add(UPDATE_HAMILTONIAN)   ! update: H(t+dt/2) from psi(t+dt/2)
-      call this%add(EXPMID_PREDICT_DT)    ! predict: psi(t+dt) = U_H(t+dt/2) psi(t)
-      call this%add(UPDATE_INTERACTIONS)
-      call this%add(UPDATE_HAMILTONIAN)   ! update: H(t+dt) from psi(t+dt)
-      call this%add(FINISHED)
+      call this%add_operation(OP_STORE_CURRENT_STATUS)
+      call this%add_operation(OP_EXPMID_PREDICT_DT_2)  ! predict: psi(t+dt/2) = 0.5*(U_H(dt) psi(t) + psi(t)) or via extrapolation
+      call this%add_operation(OP_UPDATE_INTERACTIONS)
+      call this%add_operation(OP_UPDATE_HAMILTONIAN)   ! update: H(t+dt/2) from psi(t+dt/2)
+      call this%add_operation(OP_EXPMID_PREDICT_DT)    ! predict: psi(t+dt) = U_H(t+dt/2) psi(t)
+      call this%add_operation(OP_UPDATE_INTERACTIONS)
+      call this%add_operation(OP_UPDATE_HAMILTONIAN)   ! update: H(t+dt) from psi(t+dt)
+      call this%add_operation(OP_FINISHED)
 
     end if
 

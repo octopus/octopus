@@ -19,9 +19,9 @@
 #include "global.h"
 
 module propagator_verlet_oct_m
+  use algorithm_oct_m
   use clock_oct_m
   use global_oct_m
-  use gauge_field_oct_m
   use messages_oct_m
   use namespace_oct_m
   use profiling_oct_m
@@ -41,6 +41,22 @@ module propagator_verlet_oct_m
     procedure propagator_verlet_constructor
   end interface propagator_verlet_t
 
+  ! Specific verlet propagation operations identifiers
+  character(len=30), public, parameter ::      &
+    VERLET_START       = 'VERLET_START',       &
+    VERLET_FINISH      = 'VERLET_FINISH',      &
+    VERLET_UPDATE_POS  = 'VERLET_UPDATE_POS',  &
+    VERLET_COMPUTE_ACC = 'VERLET_COMPUTE_ACC', &
+    VERLET_COMPUTE_VEL = 'VERLET_COMPUTE_VEL'
+
+  ! Specific verlet propagation operations
+  type(algorithmic_operation_t), public, parameter :: &
+    OP_VERLET_START       = algorithmic_operation_t(VERLET_START,       'Starting Verlet propagation'),               &
+    OP_VERLET_FINISH      = algorithmic_operation_t(VERLET_FINISH,      'Finishing Verlet propagation'),              &
+    OP_VERLET_UPDATE_POS  = algorithmic_operation_t(VERLET_UPDATE_POS,  'Propagation step - Updating positions'),     &
+    OP_VERLET_COMPUTE_ACC = algorithmic_operation_t(VERLET_COMPUTE_ACC, 'Propagation step - Computing acceleration'), &
+    OP_VERLET_COMPUTE_VEL = algorithmic_operation_t(VERLET_COMPUTE_VEL, 'Propagation step - Computing velocity')
+
 contains
 
   ! ---------------------------------------------------------
@@ -52,14 +68,14 @@ contains
 
     SAFE_ALLOCATE(this)
 
-    this%start_step = VERLET_START
-    this%final_step = VERLET_FINISH
+    this%start_step = OP_VERLET_START
+    this%final_step = OP_VERLET_FINISH
 
-    call this%add(VERLET_UPDATE_POS)
-    call this%add(UPDATE_INTERACTIONS)
-    call this%add(VERLET_COMPUTE_ACC)
-    call this%add(VERLET_COMPUTE_VEL)
-    call this%add(FINISHED)
+    call this%add_operation(OP_VERLET_UPDATE_POS)
+    call this%add_operation(OP_UPDATE_INTERACTIONS)
+    call this%add_operation(OP_VERLET_COMPUTE_ACC)
+    call this%add_operation(OP_VERLET_COMPUTE_VEL)
+    call this%add_operation(OP_FINISHED)
 
     ! Verlet has only one algorithmic step
     this%algo_steps = 1

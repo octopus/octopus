@@ -22,6 +22,7 @@
 
 module electrons_oct_m
   use accel_oct_m
+  use algorithm_oct_m
   use calc_mode_par_oct_m
   use clock_oct_m
   use density_oct_m
@@ -79,7 +80,6 @@ module electrons_oct_m
     procedure :: do_td_operation => electrons_do_td_operation
     procedure :: is_tolerance_reached => electrons_is_tolerance_reached
     procedure :: iteration_info => electrons_iteration_info
-    procedure :: store_current_status => electrons_store_current_status
     procedure :: update_quantity => electrons_update_quantity
     procedure :: update_exposed_quantity => electrons_update_exposed_quantity
     procedure :: copy_quantities_to_interaction => electrons_copy_quantities_to_interaction
@@ -262,8 +262,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine electrons_do_td_operation(this, operation)
-    class(electrons_t), intent(inout) :: this
-    integer,         intent(in)    :: operation
+    class(electrons_t),             intent(inout) :: this
+    class(algorithmic_operation_t), intent(in)    :: operation
 
     PUSH_SUB(electrons_do_td_operation)
 
@@ -290,15 +290,6 @@ contains
 
     POP_SUB(electrons_is_tolerance_reached)
   end function electrons_is_tolerance_reached
-
-  ! ---------------------------------------------------------
-  subroutine electrons_store_current_status(this)
-    class(electrons_t), intent(inout) :: this
-
-    PUSH_SUB(electrons_store_current_status)
-
-    POP_SUB(electrons_store_current_status)
-  end subroutine electrons_store_current_status
 
   ! ---------------------------------------------------------
   subroutine electrons_update_quantity(this, iq)

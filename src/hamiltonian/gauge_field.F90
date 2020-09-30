@@ -20,6 +20,7 @@
 #include "global.h"
 
 module gauge_field_oct_m
+  use algorithm_oct_m
   use global_oct_m
   use grid_oct_m
   use iso_c_binding
@@ -29,7 +30,7 @@ module gauge_field_oct_m
   use mpi_oct_m
   use namespace_oct_m
   use parser_oct_m
-  use propagator_oct_m
+  use propagator_verlet_oct_m
   use profiling_oct_m
   use restart_oct_m
   use simul_box_oct_m
@@ -461,15 +462,15 @@ contains
   ! ---------------------------------------------------------
 
   subroutine gauge_field_do_td(this, operation, dt, time, namespace)
-    class(gauge_field_t), intent(inout) :: this
-    integer,              intent(in)    :: operation
-    FLOAT,                intent(in)    :: dt
-    FLOAT,                intent(in)    :: time
-    type(namespace_t),    intent(in)    :: namespace
+    class(gauge_field_t),          intent(inout) :: this
+    type(algorithmic_operation_t), intent(in)    :: operation
+    FLOAT,                         intent(in)    :: dt
+    FLOAT,                         intent(in)    :: time
+    type(namespace_t),             intent(in)    :: namespace
 
     PUSH_SUB(gauge_field_do_td)
 
-    select case(operation)
+    select case (operation%id)
     case (VERLET_START)
       !Does nothing at the moment
     case (VERLET_FINISH)

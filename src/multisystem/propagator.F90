@@ -1,4 +1,5 @@
 !! Copyright (C)  2019 N. Tancogne-Dejean
+!! Copyright (C)  2020 M. Oliveira
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -19,30 +20,29 @@
 #include "global.h"
 
 module propagator_oct_m
+  use algorithm_oct_m
   use clock_oct_m
   use global_oct_m
   use linked_list_oct_m
   use messages_oct_m
   use namespace_oct_m
-  use parser_oct_m
   use profiling_oct_m
 
   implicit none
 
   private
   public ::                       &
-    propagator_t,                 &
-    propagator_step_debug_message
+    propagator_t
 
-  type, extends(integer_list_t) :: propagator_t
+  type, extends(algorithm_t) :: propagator_t
     private
 
-    type(integer_iterator_t) :: iter
-    type(integer_iterator_t) :: scf_start
-    integer               :: current_ops
+    type(algorithm_iterator_t) :: iter
+    type(algorithm_iterator_t) :: scf_start
+    type(algorithmic_operation_t) :: current_ops
 
-    integer, public       :: start_step
-    integer, public       :: final_step
+    type(algorithmic_operation_t), public       :: start_step
+    type(algorithmic_operation_t), public       :: final_step
 
     integer, public :: algo_steps
     FLOAT, public   :: dt
@@ -70,31 +70,22 @@ module propagator_oct_m
   end type propagator_t
 
   ! Known propagation operations
-  integer, public, parameter ::         &
-    SKIP                         = -1,  &
-    FINISHED                     =  0,  &
-    VERLET_START                 =  1,  &
-    VERLET_FINISH                =  2,  &
-    VERLET_UPDATE_POS            =  3,  &
-    VERLET_COMPUTE_ACC           =  4,  &
-    VERLET_COMPUTE_VEL           =  5,  &
-    SYNC                         =  6,  &
-    UPDATE_INTERACTIONS          =  7,  &
-    START_SCF_LOOP               =  8,  &
-    END_SCF_LOOP                 =  9,  &
-    STORE_CURRENT_STATUS         = 10,  &
-    BEEMAN_START                 = 11,  &
-    BEEMAN_FINISH                = 12,  &
-    BEEMAN_PREDICT_POS           = 13,  &
-    BEEMAN_PREDICT_VEL           = 14,  &
-    BEEMAN_CORRECT_POS           = 15,  &
-    BEEMAN_CORRECT_VEL           = 16,  &
-    EXPMID_START                 = 17,  &
-    EXPMID_FINISH                = 18,  &
-    EXPMID_PREDICT_DT_2          = 19,  &
-    EXPMID_PREDICT_DT            = 20,  &
-    EXPMID_CORRECT_DT_2          = 21,  &
-    UPDATE_HAMILTONIAN           = 22
+  character(len=30), public, parameter ::          &
+    SKIP                 = 'SKIP',                 &
+    FINISHED             = 'FINISHED',             &
+    UPDATE_INTERACTIONS  = 'UPDATE_INTERACTIONS',  &
+    START_SCF_LOOP       = 'START_SCF_LOOP',       &
+    END_SCF_LOOP         = 'END_SCF_LOOP',         &
+    STORE_CURRENT_STATUS = 'STORE_CURRENT_STATUS'
+
+  type(algorithmic_operation_t), public, parameter :: &
+    OP_SKIP                 = algorithmic_operation_t(SKIP,                 'Skipping propagation step'), &
+    OP_FINISHED             = algorithmic_operation_t(FINISHED,             'Propagation step finished'), &
+    OP_UPDATE_INTERACTIONS  = algorithmic_operation_t(UPDATE_INTERACTIONS,  'Updating interactions'),     &
+    OP_START_SCF_LOOP       = algorithmic_operation_t(START_SCF_LOOP,       'Starting SCF loop'),         &
+    OP_END_SCF_LOOP         = algorithmic_operation_t(END_SCF_LOOP,         'End of SCF iteration'),      &
+    OP_STORE_CURRENT_STATUS = algorithmic_operation_t(STORE_CURRENT_STATUS, '')
+
 
   ! Known multisystem propagators
   integer, public, parameter ::        &
@@ -119,11 +110,11 @@ contains
 
     SAFE_ALLOCATE(this)
 
-    this%start_step = SKIP
-    this%final_step = SKIP
+    this%start_step = OP_SKIP
+    this%final_step = OP_SKIP
 
-    call this%add(UPDATE_INTERACTIONS)
-    call this%add(FINISHED)
+    call this%add_operation(OP_UPDATE_INTERACTIONS)
+    call this%add_operation(OP_FINISHED)
 
     this%algo_steps = 1
 
@@ -168,7 +159,7 @@ contains
   end subroutine propagator_next
 
   ! ---------------------------------------------------------
-  integer function propagator_get_tdop(this) result(tdop)
+  type(algorithmic_operation_t) function propagator_get_tdop(this) result(tdop)
     class(propagator_t), intent(in) :: this
 
     PUSH_SUB(propagator_get_tdop)
@@ -215,55 +206,6 @@ contains
     POP_SUB(propagator_rewind_scf_loop)
 
   end subroutine propagator_rewind_scf_loop
-
-  ! ---------------------------------------------------------
-  function propagator_step_debug_message(tdop) result(description)
-    integer, intent(in) :: tdop
-    character(len=100) :: description
-
-    PUSH_SUB(propagator_step_debug_message)
-
-    select case (tdop)
-    case (SKIP)
-      description = "Skipping propagation step for"
-    case (FINISHED)
-      description = "Propagation step finished for"
-    case (UPDATE_INTERACTIONS)
-      description = "Updating interactions for"
-    case (START_SCF_LOOP)
-      description = "Starting SCF loop for"
-    case (END_SCF_LOOP)
-      description = "End of SCF iteration for"
-    case (STORE_CURRENT_STATUS)
-      description = "Storing the current status for"
-    case (VERLET_UPDATE_POS)
-      description = "Propagation step - Updating positions for"
-    case (VERLET_COMPUTE_ACC)
-      description = "Propagation step - Computing acceleration for"
-    case (VERLET_COMPUTE_VEL)
-      description = "Propagation step - Computing velocity for"
-    case (BEEMAN_PREDICT_POS)
-      description = "Prediction step  - Computing position for"
-    case (BEEMAN_PREDICT_VEL)
-      description = "Prediction step  - Computing velocity for"
-    case (BEEMAN_CORRECT_POS)
-      description = "Correction step  - Computing position for"
-    case (BEEMAN_CORRECT_VEL)
-      description = "Correction step  - Computing velocity for"
-    case (EXPMID_PREDICT_DT_2)
-      description = "Predict state at dt/2 for"
-    case (EXPMID_PREDICT_DT)
-      description = "Predict state at dt for"
-    case (EXPMID_CORRECT_DT_2)
-      description = "Correct state at dt/2 for"
-    case (UPDATE_HAMILTONIAN)
-      description = "Updating Hamiltonian for"
-    case default
-      description = "Unknown step for "
-    end select
-
-    POP_SUB(propagator_step_debug_message)
-  end function propagator_step_debug_message
 
 end module propagator_oct_m
 

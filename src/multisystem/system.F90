@@ -20,6 +20,7 @@
 #include "global.h"
 
 module system_oct_m
+  use algorithm_oct_m
   use clock_oct_m
   use ghost_interaction_oct_m
   use global_oct_m
@@ -90,7 +91,6 @@ module system_oct_m
     procedure(system_do_td_op),                       deferred :: do_td_operation
     procedure(system_iteration_info),                 deferred :: iteration_info
     procedure(system_is_tolerance_reached),           deferred :: is_tolerance_reached
-    procedure(system_store_current_status),           deferred :: store_current_status
     procedure(system_update_quantity),                deferred :: update_quantity
   end type system_t
 
@@ -113,8 +113,9 @@ module system_oct_m
     ! ---------------------------------------------------------
     subroutine system_do_td_op(this, operation)
       import system_t
-      class(system_t), intent(inout) :: this
-      integer,         intent(in)    :: operation
+      import algorithmic_operation_t
+      class(system_t),                intent(inout) :: this
+      class(algorithmic_operation_t), intent(in)    :: operation
     end subroutine system_do_td_op
 
     ! ---------------------------------------------------------
@@ -167,7 +168,7 @@ contains
   subroutine system_dt_operation(this)
     class(system_t),     intent(inout) :: this
 
-    integer :: tdop
+    type(algorithmic_operation_t) :: tdop
     logical :: all_updated
 
     PUSH_SUB(system_dt_operation)
@@ -175,11 +176,11 @@ contains
     tdop = this%prop%get_td_operation()
 
     if (debug%info) then
-      write(message(1), '(a,a,1X,a)') "Debug: ", trim(propagator_step_debug_message(tdop)), "'" + trim(this%namespace%get()) + "'"
+      write(message(1), '(a,a,1X,a)') "Debug: ", trim(tdop%label), " for '" + trim(this%namespace%get()) + "'"
       call messages_info(1)
     end if
 
-    select case (tdop)
+    select case (tdop%id)
     case (FINISHED)
       if (.not. this%prop%step_is_done()) then
         ! Increment the system clock by one time-step
@@ -256,10 +257,6 @@ contains
          end if
         end if
       end if
-
-    case (STORE_CURRENT_STATUS)
-      call this%store_current_status()
-      call this%prop%next()
 
     case default
       call this%do_td_operation(tdop)
