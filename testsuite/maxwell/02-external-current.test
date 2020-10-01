@@ -3,7 +3,7 @@
 
 Test       : Free Maxwell propagation with external current
 Program    : octopus
-TestGroups : short-run, maxwell
+TestGroups : long-run, maxwell
 Enabled    : Yes
 
 
