@@ -196,13 +196,13 @@ match ; Etz (x=  0,y=  0,z= 10) [step 30] ; LINEFIELD(Maxwell/output_iter/td.000
 
 
 # 1 pulse with pml
-Input      : 01-free-propagation.03-pulse-pml.inp
+Input      : 01-free-propagation.03-pulse_pml.inp
 
-Precision: 1e-15
+Precision: 1e-4
 match ;  Tot. Maxwell energy [step 10]  ; LINEFIELD(Maxwell/td.general/maxwell_energy, 16, 3) ; 0.4106678488002
 match ;  Tot. Maxwell energy [step 20]  ; LINEFIELD(Maxwell/td.general/maxwell_energy, 26, 3) ; 0.4150812583066
 
-Precision: 1e-15
+Precision: 1e-7
 match ;  Ez  (x=-10,y=  0,z=  0) [step 10]  ; LINEFIELD(Maxwell/output_iter/td.0000010/e_field-z\.y=0\,z=0, 12, 2) ; 0.00373095164687411
 match ;  Ez  (x= 10,y=  0,z=  0) [step 10]  ; LINEFIELD(Maxwell/output_iter/td.0000010/e_field-z\.y=0\,z=0, 32, 2) ; 0.048263496878693246
 match ;  Ez  (x=-10,y=  0,z=  0) [step 20]  ; LINEFIELD(Maxwell/output_iter/td.0000020/e_field-z\.y=0\,z=0, 12, 2) ; 0.0
