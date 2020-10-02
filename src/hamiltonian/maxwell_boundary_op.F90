@@ -1471,7 +1471,7 @@ contains
           e_field  = units_to_atomic(units_inp%energy/units_inp%length, e_field)
           k_vector(:) = bc%plane_wave%mx_function(il)%k_vector(:)
 
-          test = ddot_product(k_vector, e_field)
+          test = ddot_product(k_vector(1:3), e_field(1:3))
           if (abs(test) > test_limit) then
             message(1) = 'The wave vector k(:) or its electric field E-field(:) '
             message(2) = 'is not perpendicular enough.'
