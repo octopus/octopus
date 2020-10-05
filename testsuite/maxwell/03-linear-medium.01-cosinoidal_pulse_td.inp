@@ -86,8 +86,8 @@
 
  # cosinoidal pulse
  %UserDefinedInitialMaxwellStates
-  3 | formula | electric_field | "      Ez*cos(kx*(x-ps))*cos(pi/2*(x-ps-2*pw)/pw + pi) * step(pw-abs((kx*x-kx*ps)/kx^2)) " 
-  2 | formula | magnetic_field | " -1/c*Ez*cos(kx*(x-ps))*cos(pi/2*(x-ps-2*pw)/pw + pi) * step(pw-abs((kx*x-kx*ps)/kx^2)) " 
+  3 | formula | electric_field | "      Ez*cos(kx*(x-ps))*(-cos(pi/2*(x-ps-2*pw)/pw)) * step(pw-abs((kx*x-kx*ps)/kx^2)) "
+  2 | formula | magnetic_field | " -1/c*Ez*cos(kx*(x-ps))*(-cos(pi/2*(x-ps-2*pw)/pw)) * step(pw-abs((kx*x-kx*ps)/kx^2)) "
  %
 
 % LinearMediumBox
