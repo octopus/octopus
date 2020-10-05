@@ -157,7 +157,7 @@ subroutine X(update_occ_matrices)(this, namespace, mesh, st, lda_u_energy, phase
   FLOAT   :: weight, renorm_weight
   type(orbitalset_t), pointer :: os, os2
   type(profile_t), save :: prof
-  integer :: spec_ind
+  integer :: spec_ind, spec_ind2
   FLOAT, allocatable :: muliken_charge(:)
 
   call profiling_in(prof, TOSTRING(X(DFTU_OCC_MATRICES)))
@@ -254,13 +254,23 @@ subroutine X(update_occ_matrices)(this, namespace, mesh, st, lda_u_energy, phase
               !Generalized occupation matrices
               if(this%intersite) then
 
-                renorm_weight = (muliken_charge(ios)+muliken_charge(ios))*weight
-
                 do inn = 1, os%nneighbors
                   ios2 = os%map_os(inn)
                   os2 => this%orbsets(ios2)
+
+                  if(this%basisfromstates) then
+                    spec_ind2 = 1
+                  else
+                    spec_ind2 = species_index(os2%spec)
+                  end if
                   
-                  renorm_weight = (muliken_charge(ios)+muliken_charge(ios2))*weight
+                  if(spec_ind /= spec_ind2) then
+                    renorm_weight = (this%renorm_occ(spec_ind, os%nn, os%ll, ist, ik) + & 
+                                     this%renorm_occ(spec_ind2, os2%nn, os2%ll, ist, ik) ) * weight
+                  else
+                    renorm_weight = this%renorm_occ(spec_ind, os%nn, os%ll, ist, ik) * weight
+                  end if
+                       
                   this%X(n_alt_ii)(1, im, ispin, ios, inn) = this%X(n_alt_ii)(1, im, ispin, ios, inn) &
                     + renorm_weight * dot(1, im, ios) * R_CONJ(dot(1, im, ios))
 
