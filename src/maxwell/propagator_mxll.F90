@@ -584,7 +584,7 @@ contains
       call mirror_pmc_boundaries_calculation(hm%bc, st, rs_state)
 
       ! Apply mask absorbing boundaries
-      call mask_absorbing_boundaries(gr, hm, st, tr, inter_time, inter_dt, delay, rs_state)
+      call mask_absorbing_boundaries(namespace, gr, hm, st, tr, inter_time, inter_dt, delay, rs_state)
 
       if (tr%bc_plane_waves) then
         ! Propagation dt with H(inter_time+inter_dt) for plane waves boundaries
@@ -1914,11 +1914,12 @@ contains
   end subroutine fields_through_box_surfaces_plane_waves
 
   ! ---------------------------------------------------------
-  subroutine mask_absorbing_boundaries(gr, hm, st, tr, time, dt, time_delay, rs_state)
+  subroutine mask_absorbing_boundaries(namespace, gr, hm, st, tr, time, dt, time_delay, rs_state)
+    type(namespace_t),          intent(in)    :: namespace
     type(grid_t),               intent(in)    :: gr
     type(hamiltonian_mxll_t),   intent(inout) :: hm
     type(states_mxll_t),        intent(inout) :: st
-    type(propagator_mxll_t),    intent(in)    :: tr
+    type(propagator_mxll_t),    intent(inout) :: tr
     FLOAT,                      intent(in)    :: time
     FLOAT,                      intent(in)    :: dt
     FLOAT,                      intent(in)    :: time_delay
@@ -1937,7 +1938,7 @@ contains
 
     if (mask_check) then
       if (tr%bc_plane_waves .and. hm%plane_waves_apply) then
-        call plane_waves_propagation(hm, st, gr, time, dt, time_delay)
+        call plane_waves_propagation(hm, tr, namespace, st, gr, time, dt, time_delay)
         rs_state = rs_state - st%rs_state_plane_waves
         call maxwell_mask(hm, rs_state)
         rs_state = rs_state + st%rs_state_plane_waves
@@ -2045,7 +2046,7 @@ contains
       hm%cpml_hamiltonian = .true.
       call exponential_mxll_apply(hm, namespace, gr, st, tr, dt, ff_rs_state_pml)
       hm%cpml_hamiltonian = .false.
-      call plane_waves_propagation(hm, st, gr, time, dt, time_delay)
+      call plane_waves_propagation(hm, tr, namespace, st, gr, time, dt, time_delay)
       SAFE_ALLOCATE(ff_rs_state_plane_waves(1:ff_points,1:ff_dim))
       call transform_rs_state(hm, gr, st, st%rs_state_plane_waves, ff_rs_state_plane_waves, RS_TRANS_FORWARD)
       do ip_in=1, hm%bc%plane_wave%points_number
@@ -2820,24 +2821,24 @@ contains
 
     if (hm%plane_waves_apply) then
       do wn = 1, hm%bc%plane_wave%number
-        do ip_in = 1, hm%bc%plane_wave%points_number
+         k_vector(:) = hm%bc%plane_wave%k_vector(1:mesh%sb%dim, wn)
+         k_vector_abs = sqrt(sum(k_vector(1:mesh%sb%dim)**2))
+         vv(:) = hm%bc%plane_wave%v_vector(1:mesh%sb%dim, wn)
+         do ip_in = 1, hm%bc%plane_wave%points_number
           ip = hm%bc%plane_wave%points_map(ip_in)
-            if (wn == 1) rs_state(ip,:) = M_Z0
-            nn = sqrt(st%ep(ip)/P_ep*st%mu(ip)/P_mu)
-            vv(:) = hm%bc%plane_wave%v_vector(1:mesh%sb%dim, wn)
-            k_vector(:) = hm%bc%plane_wave%k_vector(1:mesh%sb%dim, wn)
-            k_vector_abs = sqrt(sum(k_vector(1:mesh%sb%dim)**2))
-            x_prop(1:mesh%sb%dim) = mesh%x(ip,1:mesh%sb%dim) - vv(1:mesh%sb%dim) * (time - time_delay)
-            rr = sqrt(sum(x_prop(1:mesh%sb%dim)**2))
-            if (hm%bc%plane_wave%modus(wn) == OPTION__MAXWELLINCIDENTWAVES__PLANE_WAVE_MX_FUNCTION) then
-              e0(1:mesh%sb%dim)      = hm%bc%plane_wave%e_field(1:mesh%sb%dim, wn)
-              e_field(1:mesh%sb%dim) = e0(1:mesh%sb%dim) * mxf(hm%bc%plane_wave%mx_function(wn), x_prop(1:mesh%sb%dim))
-            end if
-            b_field(1:3) = M_ONE/P_c * M_ONE/k_vector_abs * dcross_product(k_vector, e_field)
-            call build_rs_vector(e_field, b_field, st%rs_sign, rs_state_add, st%ep(ip), st%mu(ip))
-            rs_state(ip, :) =  rs_state(ip, :) + rs_state_add(:)
-          end do
+          if (wn == 1) rs_state(ip,:) = M_Z0
+          nn = sqrt(st%ep(ip)/P_ep*st%mu(ip)/P_mu)
+          x_prop(1:mesh%sb%dim) = mesh%x(ip,1:mesh%sb%dim) - vv(1:mesh%sb%dim) * (time - time_delay)
+          rr = sqrt(sum(x_prop(1:mesh%sb%dim)**2))
+          if (hm%bc%plane_wave%modus(wn) == OPTION__MAXWELLINCIDENTWAVES__PLANE_WAVE_MX_FUNCTION) then
+            e0(1:mesh%sb%dim)      = hm%bc%plane_wave%e_field(1:mesh%sb%dim, wn)
+            e_field(1:mesh%sb%dim) = e0(1:mesh%sb%dim) * mxf(hm%bc%plane_wave%mx_function(wn), x_prop(1:mesh%sb%dim))
+          end if
+          b_field(1:3) = dcross_product(k_vector, e_field) / P_c / k_vector_abs
+          call build_rs_vector(e_field, b_field, st%rs_sign, rs_state_add, st%ep(ip), st%mu(ip))
+          rs_state(ip, :) =  rs_state(ip, :) + rs_state_add(:)
         end do
+      end do
       else
         do ip_in = 1, hm%bc%plane_wave%points_number
           ip             = hm%bc%plane_wave%points_map(ip_in)
@@ -2849,11 +2850,13 @@ contains
   end subroutine plane_waves_boundaries_calculation
 
   ! ---------------------------------------------------------
-  subroutine plane_waves_propagation(hm, st, gr, time, dt, time_delay)
+  subroutine plane_waves_propagation(hm, tr, namespace, st, gr, time, dt, time_delay)
     type(hamiltonian_mxll_t), intent(inout) :: hm
+    type(propagator_mxll_t),  intent(inout) :: tr
+    type(namespace_t),        intent(in)    :: namespace
     type(states_mxll_t),      intent(inout) :: st
     type(grid_t),             intent(in)    :: gr
-    FLOAT,                    intent(in )   :: time
+    FLOAT,                    intent(in)    :: time
     FLOAT,                    intent(in)    :: dt
     FLOAT,                    intent(in)    :: time_delay
 
@@ -2862,14 +2865,7 @@ contains
 
     PUSH_SUB(plane_waves_propagation)
 
-    select case (hm%operator)
-    case (FARADAY_AMPERE_MEDIUM)
-      ff_dim = 6
-    case (FARADAY_AMPERE_GAUSS)
-      ff_dim = 4
-    case default
-      ff_dim = 3
-    end select
+    ff_dim = hm%dim
 
     SAFE_ALLOCATE(ff_rs_state(1:gr%mesh%np_part,ff_dim))
 
@@ -2877,7 +2873,7 @@ contains
 
     ! Time evolution of RS plane waves state without any coupling with H(inter_time)
     call hamiltonian_mxll_update(hm, time=time)
-    !call exponential_apply(tr%te, gr%mesh, hm, ff_rs_state, 1, 1, dt, time)
+    call exponential_mxll_apply(hm, namespace, gr, st, tr, dt, ff_rs_state)
     call transform_rs_state(hm, gr, st, st%rs_state_plane_waves, ff_rs_state, RS_TRANS_BACKWARD)
     call plane_waves_boundaries_calculation(hm, st, gr%mesh, time+dt, time_delay, st%rs_state_plane_waves)
 

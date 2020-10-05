@@ -147,7 +147,7 @@ contains
     !% <br>&nbsp;&nbsp; "function-name" | mxf_cosinoidal_wave | kx | ky | kz | x0 | y0 | z0 | width
     !% <br>%</tt>
     !%
-    !% <math> f(t) =  \cos( \frac{\pi}{2} \frac{kx*(x-x0)+ky*(y-y0)+kz*(z-z0)-2\width}{width} + pi )  </math>
+    !% <math> f(x,y,z) =  \cos( \frac{\pi}{2} \frac{kx*(x-x0)+ky*(y-y0)+kz*(z-z0)-2 width}{width} + \pi )  </math>
     !%
     !% If <math> | k_x*x+k_y*y+k_z*z - x_0 | > \xi_0 </math>, then <math> f(x,y,z) = 0 </math>.
     !%
