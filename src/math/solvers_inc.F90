@@ -82,12 +82,12 @@ subroutine X(sym_conjugate_gradients)(np, x, b, op, dotp, iter, residue, thresho
   interface
     subroutine op(x, y)
       implicit none
-      R_TYPE, intent(inout) :: x(:)
+      R_TYPE, intent(in)    :: x(:)
       R_TYPE, intent(out)   :: y(:)
     end subroutine op
     R_TYPE function dotp(x, y) result(res)
       implicit none
-      R_TYPE, intent(inout) :: x(:)
+      R_TYPE, intent(in)    :: x(:)
       R_TYPE, intent(in)    :: y(:)
     end function dotp
   end interface
@@ -152,14 +152,14 @@ subroutine X(bi_conjugate_gradients)(np, x, b, op, opt, dotp, iter, residue, thr
   interface
     subroutine op(x, y)
       implicit none
-      R_TYPE, intent(inout) :: x(:)
+      R_TYPE, intent(in)    :: x(:)
       R_TYPE, intent(out)   :: y(:)
     end subroutine op
   end interface
   interface
     subroutine opt(x, y)
       implicit none
-      R_TYPE, intent(inout) :: x(:)
+      R_TYPE, intent(in)    :: x(:)
       R_TYPE, intent(out)   :: y(:)
     end subroutine opt
     R_TYPE function dotp(x, y) result(res)
