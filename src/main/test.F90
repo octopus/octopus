@@ -23,6 +23,7 @@ module test_oct_m
   use batch_ops_oct_m
   use boundaries_oct_m
   use calc_mode_par_oct_m
+  use cgal_polyhedra_oct_m
   use clock_oct_m
   use density_oct_m
   use derivatives_oct_m
@@ -32,6 +33,7 @@ module test_oct_m
   use grid_oct_m
   use hamiltonian_elec_oct_m
   use ion_interaction_oct_m
+  use iso_c_binding
   use io_oct_m
   use mesh_batch_oct_m
   use mesh_function_oct_m
@@ -119,6 +121,8 @@ contains
     !% Tests the batch operations
     !%Option clock 18
     !% Tests for clock
+    !%Option cgal 19
+    !% Tests for cgal interface
     !%End
     call parse_variable(namespace, 'TestMode', OPTION__TESTMODE__HARTREE, test_mode)
 
@@ -221,6 +225,8 @@ contains
       call test_batch_ops(param, namespace)
     case(OPTION__TESTMODE__CLOCK)
       call test_clock()
+    case(OPTION__TESTMODE__CGAL)
+      call test_cgal()
     end select
 
     POP_SUB(test_run)
@@ -1086,6 +1092,33 @@ contains
 
     POP_SUB(test_clock)
   end subroutine test_clock
+
+
+  ! ---------------------------------------------------------
+  subroutine test_cgal()
+
+    type(c_ptr) :: ptr
+
+    ! outside reference point
+    real :: refx = 1000., refy = 1000., refz = 1000.
+    ! bounding box
+    real :: xmin,ymin,zmin, xmax,ymax,zmax
+    ! closest point
+    real :: xclose, yclose, zclose
+
+    PUSH_SUB(test_cgal)
+
+    call cgal_polyhedron_read(ptr, "28-cgal.02-X.off")
+    call cgal_polyhedron_bbox(ptr, xmin,ymin,zmin, xmax,ymax,zmax)
+    print *, "Bounding box:", xmin,ymin,zmin, xmax,ymax,zmax
+    print *, "Is point (30., 10., 30.) inside?:", cgal_polyhedron_inside(ptr, 30., 10., 30., refx, refy, refz)
+    print *, "Is point (0., 0., 0.) inside?:", cgal_polyhedron_inside(ptr, 0., 0., 0., refx, refy, refz)
+    call cgal_polyhedron_closest(ptr, 0., 0., 0., xclose, yclose, zclose)
+    print *, "Closest point to (0., 0., 0.):", xclose, yclose, zclose
+    call cgal_polyhedron_finalize(ptr)
+
+    POP_SUB(test_cgal)
+  end subroutine test_cgal
 
 end module test_oct_m
 
