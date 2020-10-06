@@ -12,7 +12,7 @@ Spacing = 0.5
   "H" | 0 | 0 | 0
 %
 
-Output = density + geometry + wfs + bader + potential + forces + el_pressure + ELF + potential_gradient
+Output = density + geometry + wfs + bader + potential + forces + el_pressure + ELF + potential_gradient + pol_density + mesh_r + kinetic_energy_density + dos + tpa + wfs_fourier + xc_density + wfs_sqmod + energy_density + heat_current + photon_correlator + current + ELF_basins
 OutputFormat = axis_x + plane_x + dx + xyz + xcrysden + mesh_index
 OutputInterval = 4
 OutputDuringSCF = yes
