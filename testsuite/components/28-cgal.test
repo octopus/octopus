@@ -1,0 +1,13 @@
+# -*- coding: utf-8 mode: shell-script -*-
+
+Test       : Oct-test cgal
+Program    : octopus
+TestGroups : short-run, components
+Enabled    : Yes
+
+Processors: 2
+Input: 28-cgal.01.inp
+ExtraFile: 28-cgal.02-X.off
+
+match ; cgal_facets            ; GREPFIELD(out, 'facets:', 2)         ; 5484
+match ; cgal_halfedges         ; GREPFIELD(out, 'halfedges:', 2)      ; 16452
