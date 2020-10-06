@@ -476,9 +476,9 @@ contains
         call messages_write('No orbital with half-occupancy found. TPA output is not written.')
         call messages_warning(namespace=namespace)
 
-        POP_SUB(states_elec_write_tpa)
-        return
       end if
+      POP_SUB(states_elec_write_tpa)
+      return
     end if
 
     !%Variable MomentumTransfer
