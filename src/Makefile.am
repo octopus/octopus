@@ -44,6 +44,7 @@ basic_f_srcs =                                 \
 	basic/blacs.F90                        \
 	basic/blacs_proc_grid.F90              \
 	basic/calc_mode_par.F90                \
+	basic/cgal_polyhedra.F90               \
 	basic/command_line.F90                 \
 	basic/comm.F90                         \
 	basic/cuda.F90                         \
@@ -83,6 +84,7 @@ basic_f_srcs =                                 \
 
 basic_c_srcs =                                 \
 	basic/alloc_cache_low.cc               \
+	basic/cgal_polyhedra_low.cc            \
 	basic/cublas.cc                        \
 	basic/cuda_low.cc                      \
 	basic/getopt_f.c                       \
