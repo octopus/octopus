@@ -124,7 +124,7 @@ contains
     type(hamiltonian_mxll_t),     intent(inout) :: hm
     type(propagator_mxll_t),      intent(inout) :: tr
 
-    integer :: default_propagator, il, nlines, ncols, icol, idim
+    integer :: default_propagator, nlines, ncols, icol
     type(block_t) :: blk
     character(len=256) :: string
     logical :: plane_waves_set = .false.

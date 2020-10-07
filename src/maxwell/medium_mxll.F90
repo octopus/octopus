@@ -74,7 +74,7 @@ module medium_mxll_oct_m
     type(medium_box_t),     intent(inout) :: medium_box
     logical,                intent(out)   :: calc_medium_box
 
-    integer :: nlines, ncols, icol, idim, il
+    integer :: nlines, ncols, idim, il
     type(block_t) :: blk
 
     !%Variable LinearMediumBox
