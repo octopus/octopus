@@ -76,7 +76,7 @@ module medium_mxll_oct_m
 
     integer :: nlines, ncols, icol, idim, il
     type(block_t) :: blk
-    
+
     !%Variable LinearMediumBox
     !%Type block
     !%Section Time-Dependent::Propagation
@@ -194,7 +194,6 @@ module medium_mxll_oct_m
       call messages_print_stress(stdout, trim('Maxwell Medium box:'))
       calc_medium_box = .true.
 
-      ! find out how many lines (i.e. states) the block has
       nlines = parse_block_n(blk)
       SAFE_ALLOCATE(medium_box%filename(1:nlines))
       SAFE_ALLOCATE(medium_box%ep_factor(1:nlines))
@@ -204,29 +203,29 @@ module medium_mxll_oct_m
       SAFE_ALLOCATE(medium_box%shape(1:nlines))
       do il = 1, nlines
         ncols = parse_block_cols(blk, il-1)
-        call parse_block_string(blk, il-1, 1, medium_box%filename(il))
-        call parse_block_float(blk, il-1, 2, medium_box%ep_factor(il))
-        call parse_block_float(blk, il-1, 3, medium_box%mu_factor(il))
-        call parse_block_float(blk, il-1, 4, medium_box%sigma_e_factor(il))
-        call parse_block_float(blk, il-1, 5, medium_box%sigma_m_factor(il))
-        call parse_block_integer(blk, il-1, 6, medium_box%shape(il))
+        call parse_block_string(blk, il-1, 0, medium_box%filename(il))
+        call parse_block_float(blk, il-1, 1, medium_box%ep_factor(il))
+        call parse_block_float(blk, il-1, 2, medium_box%mu_factor(il))
+        call parse_block_float(blk, il-1, 3, medium_box%sigma_e_factor(il))
+        call parse_block_float(blk, il-1, 4, medium_box%sigma_m_factor(il))
+        call parse_block_integer(blk, il-1, 5, medium_box%shape(il))
         if (medium_box%shape(il) /= OPTION__LINEARMEDIUMBOX__EDGED) then
          call messages_not_implemented("Medium box from file only implemented with edged boundaries.", namespace=namespace)
        end if
-          write(message(1),'(a)') ""
-          write(message(2),'(a,I1)')    'Medium box number:  ', il
-          write(message(3),'(a,es9.2)') 'Box surface file: ', medium_box%filename(il)
-          write(message(4),'(a,es9.2)') 'Box epsilon factor: ', medium_box%ep_factor(il)
-          write(message(5),'(a,es9.2)') 'Box mu factor:      ', medium_box%mu_factor(il)
-          write(message(6),'(a,es9.2)') 'Box electric sigma: ', medium_box%sigma_e_factor(il)
-          write(message(7),'(a,es9.2)') 'Box magnetic sigma: ', medium_box%sigma_m_factor(il)
-          if (medium_box%shape(il) == OPTION__LINEARMEDIUMBOX__EDGED) then
-            write(message(8),'(a,a)')   'Box shape:          ', 'edged'
-          else if (medium_box%shape(il) == OPTION__LINEARMEDIUMBOX__SMOOTH) then
-            write(message(8),'(a,a)')   'Box shape:          ', 'smooth'
-          end if
-          call messages_info(8)
-      end do
+!       write(message(1),'(a)') ""
+!       write(message(2),'(a,I1)')    'Medium box number:  ', il
+!       write(message(3),'(a,a)') 'Box surface file: ', medium_box%filename(il)
+!       write(message(4),'(a,es9.2)') 'Box epsilon factor: ', medium_box%ep_factor(il)
+!       write(message(5),'(a,es9.2)') 'Box mu factor:      ', medium_box%mu_factor(il)
+!       write(message(6),'(a,es9.2)') 'Box electric sigma: ', medium_box%sigma_e_factor(il)
+!       write(message(7),'(a,es9.2)') 'Box magnetic sigma: ', medium_box%sigma_m_factor(il)
+!       if (medium_box%shape(il) == OPTION__LINEARMEDIUMBOX__EDGED) then
+!         write(message(8),'(a,a)')   'Box shape:          ', 'edged'
+!       else if (medium_box%shape(il) == OPTION__LINEARMEDIUMBOX__SMOOTH) then
+!         write(message(8),'(a,a)')   'Box shape:          ', 'smooth'
+!       end if
+!       call messages_info(8)
+     end do
       call parse_block_end(blk)
 
       call generate_medium_boxes(medium_box, gr, nlines, namespace)
@@ -265,7 +264,7 @@ module medium_mxll_oct_m
     if (allocated(medium_box%filename)) then
 
     do il = 1, nr_of_boxes
-      call cgal_polyhedron_read(ptr, medium_box%filename(il))
+      call cgal_polyhedron_read(ptr, trim(medium_box%filename(il)))
 
       ip_in = 0
       do ip = 1, gr%mesh%np
@@ -282,13 +281,13 @@ module medium_mxll_oct_m
     dd_max = max(2*gr%mesh%spacing(1), 2*gr%mesh%spacing(2), 2*gr%mesh%spacing(3))
 
     SAFE_ALLOCATE(medium_box%points_map(ip_in_max,nr_of_boxes))
-    !AFE_ALLOCATE(medium_box%bdry_map(ip_bd_max,nr_of_boxes))
+    SAFE_ALLOCATE(medium_box%bdry_map(1,nr_of_boxes))
 
     medium_box%points_map = int(M_zero)
     medium_box%bdry_map = int(M_zero)
 
     do il = 1, nr_of_boxes
-      call cgal_polyhedron_read(ptr, medium_box%filename(il))
+      call cgal_polyhedron_read(ptr, trim(medium_box%filename(il)))
       ip_in = 0
       do ip = 1, gr%mesh%np
         xx(1:3) = gr%mesh%x(ip,1:3)
