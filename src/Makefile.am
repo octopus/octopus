@@ -585,6 +585,7 @@ noinst_HEADERS +=                                  \
 maxwell_f_srcs =                                 \
 	maxwell/energy_mxll.F90                  \
 	maxwell/hamiltonian_mxll.F90             \
+	maxwell/medium_mxll.F90                  \
 	maxwell/propagator_mxll.F90              \
 	maxwell/system_mxll.F90
 
