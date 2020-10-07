@@ -1,4 +1,4 @@
-  !! Copyright (C) 2019 R. Jestaedt, F. Bonafe, H. Appel
+!! Copyright (C) 2019 R. Jestaedt, F. Bonafe, H. Appel
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -22,8 +22,10 @@
 #include "complex.F90"
 
 module medium_mxll_oct_m
+  use cgal_polyhedra_oct_m
   use derivatives_oct_m
   use global_oct_m
+  use iso_c_binding
   use messages_oct_m
   use profiling_oct_m
   use comm_oct_m
@@ -41,25 +43,26 @@ module medium_mxll_oct_m
       generate_medium_boxes
 
    type :: medium_box_t
-     integer                        :: number   !< number of linear media boxes
-     integer, allocatable           :: shape(:)  !< edge shape profile (smooth or steep)
-     FLOAT, allocatable             :: center(:,:) !< center of each box
-     FLOAT, allocatable             :: lsize(:,:)  !< length in each direction of each box
-     FLOAT, allocatable             :: ep(:,:) !< permitivity of the linear media
-     FLOAT, allocatable             :: mu(:,:) !< permeability of the linear media
-     FLOAT, allocatable             :: c(:,:) !< speed of light in the linear media
-     FLOAT, allocatable             :: ep_factor(:) !< permitivity before applying edge profile
-     FLOAT, allocatable             :: mu_factor(:) !< permeability before applying edge profile
-     FLOAT, allocatable             :: sigma_e_factor(:) !< electric conductivy before applying edge profile
-     FLOAT, allocatable             :: sigma_m_factor(:) !< magnetic conductivity before applying edge4 profile
-     FLOAT, allocatable             :: sigma_e(:,:) !< electric conductivy of (lossy) medium
-     FLOAT, allocatable             :: sigma_m(:,:) !< magnetic conductivy of (lossy) medium
-     integer, allocatable           :: points_number(:)
-     integer, allocatable           :: points_map(:,:)
-     FLOAT, allocatable             :: aux_ep(:,:,:) !< auxiliary array for storing the epsilon derivative profile
-     FLOAT, allocatable             :: aux_mu(:,:,:) !< auxiliary array for storing the softened mu profile
-     integer, allocatable           :: bdry_number(:)
-     FLOAT, allocatable             :: bdry_map(:,:)
+     integer                         :: number   !< number of linear media boxes
+     integer, allocatable            :: shape(:)  !< edge shape profile (smooth or steep)
+     FLOAT, allocatable              :: center(:,:) !< center of each box
+     FLOAT, allocatable              :: lsize(:,:)  !< length in each direction of each box
+     FLOAT, allocatable              :: ep(:,:) !< permitivity of the linear media
+     FLOAT, allocatable              :: mu(:,:) !< permeability of the linear media
+     FLOAT, allocatable              :: c(:,:) !< speed of light in the linear media
+     FLOAT, allocatable              :: ep_factor(:) !< permitivity before applying edge profile
+     FLOAT, allocatable              :: mu_factor(:) !< permeability before applying edge profile
+     FLOAT, allocatable              :: sigma_e_factor(:) !< electric conductivy before applying edge profile
+     FLOAT, allocatable              :: sigma_m_factor(:) !< magnetic conductivity before applying edge4 profile
+     FLOAT, allocatable              :: sigma_e(:,:) !< electric conductivy of (lossy) medium
+     FLOAT, allocatable              :: sigma_m(:,:) !< magnetic conductivy of (lossy) medium
+     integer, allocatable            :: points_number(:)
+     integer, allocatable            :: points_map(:,:)
+     FLOAT, allocatable              :: aux_ep(:,:,:) !< auxiliary array for storing the epsilon derivative profile
+     FLOAT, allocatable              :: aux_mu(:,:,:) !< auxiliary array for storing the softened mu profile
+     integer, allocatable            :: bdry_number(:)
+     FLOAT, allocatable              :: bdry_map(:,:)
+     character(len=256), allocatable :: filename(:)
    end type medium_box_t
 
  contains
@@ -165,6 +168,72 @@ module medium_mxll_oct_m
       call messages_print_stress(stdout)
     end if
 
+    !%Variable LinearMediumFromFile
+    !%Type block
+    !%Section Time-Dependent::Propagation
+    !%Description
+    !% Defines parameters and geometry to create a new linear medium box.
+    !%
+    !% Example:
+    !%
+    !% <tt>%LinearMediumFromFile
+    !% <br>&nbsp;&nbsp;   medium_surface_file | epsilon_factor | mu_factor | sigma_e | sigma_m | edged/smooth
+    !% <br>%</tt>
+    !%
+    !% Medium surface file, followed by permittivity
+    !% factor, electric conductivity and magnetic conductivity, and finally type of numerical
+    !% approximation used for the derivatives at the edges.
+    !%
+    !%Option edged 1
+    !% Medium box edges are considered steep for derivatives.
+    !%Option smooth 2
+    !% Medium box edged and softened for derivatives.
+    !%End
+    if(parse_block(namespace, 'LinearMediumFromFile', blk) == 0) then
+
+      call messages_print_stress(stdout, trim('Maxwell Medium box:'))
+      calc_medium_box = .true.
+
+      ! find out how many lines (i.e. states) the block has
+      nlines = parse_block_n(blk)
+      SAFE_ALLOCATE(medium_box%filename(1:nlines))
+      SAFE_ALLOCATE(medium_box%ep_factor(1:nlines))
+      SAFE_ALLOCATE(medium_box%mu_factor(1:nlines))
+      SAFE_ALLOCATE(medium_box%sigma_e_factor(1:nlines))
+      SAFE_ALLOCATE(medium_box%sigma_m_factor(1:nlines))
+      SAFE_ALLOCATE(medium_box%shape(1:nlines))
+      do il = 1, nlines
+        ncols = parse_block_cols(blk, il-1)
+        call parse_block_string(blk, il-1, 1, medium_box%filename(il))
+        call parse_block_float(blk, il-1, 2, medium_box%ep_factor(il))
+        call parse_block_float(blk, il-1, 3, medium_box%mu_factor(il))
+        call parse_block_float(blk, il-1, 4, medium_box%sigma_e_factor(il))
+        call parse_block_float(blk, il-1, 5, medium_box%sigma_m_factor(il))
+        call parse_block_integer(blk, il-1, 6, medium_box%shape(il))
+        if (medium_box%shape(il) /= OPTION__LINEARMEDIUMBOX__EDGED) then
+         call messages_not_implemented("Medium box from file only implemented with edged boundaries.", namespace=namespace)
+       end if
+          write(message(1),'(a)') ""
+          write(message(2),'(a,I1)')    'Medium box number:  ', il
+          write(message(3),'(a,es9.2)') 'Box surface file: ', medium_box%filename(il)
+          write(message(4),'(a,es9.2)') 'Box epsilon factor: ', medium_box%ep_factor(il)
+          write(message(5),'(a,es9.2)') 'Box mu factor:      ', medium_box%mu_factor(il)
+          write(message(6),'(a,es9.2)') 'Box electric sigma: ', medium_box%sigma_e_factor(il)
+          write(message(7),'(a,es9.2)') 'Box magnetic sigma: ', medium_box%sigma_m_factor(il)
+          if (medium_box%shape(il) == OPTION__LINEARMEDIUMBOX__EDGED) then
+            write(message(8),'(a,a)')   'Box shape:          ', 'edged'
+          else if (medium_box%shape(il) == OPTION__LINEARMEDIUMBOX__SMOOTH) then
+            write(message(8),'(a,a)')   'Box shape:          ', 'smooth'
+          end if
+          call messages_info(8)
+      end do
+      call parse_block_end(blk)
+
+      call generate_medium_boxes(medium_box, gr, nlines, namespace)
+
+      call messages_print_stress(stdout)
+    end if
+
   end subroutine medium_box_init
 
   ! ---------------------------------------------------------
@@ -177,6 +246,9 @@ module medium_mxll_oct_m
     integer :: il, ip, ip_in, ip_in_max, ip_bd, ip_bd_max, ipp, idim
     FLOAT   :: bounds(nr_of_boxes,2,gr%sb%dim), xx(gr%sb%dim), xxp(gr%sb%dim), dd, dd_max, dd_min
     FLOAT, allocatable  :: tmp(:), tmp_grad(:,:)
+    type(c_ptr) :: ptr
+    FLOAT :: refx = CNST(1000.), refy = CNST(1000.), refz = CNST(1000.)
+    logical :: inside
 
     PUSH_SUB(generate_medium_boxes)
 
@@ -189,6 +261,51 @@ module medium_mxll_oct_m
 
     ip_in_max = 0
     ip_bd_max = 0
+
+    if (allocated(medium_box%filename)) then
+
+    do il = 1, nr_of_boxes
+      call cgal_polyhedron_read(ptr, medium_box%filename(il))
+
+      ip_in = 0
+      do ip = 1, gr%mesh%np
+        xx(1:3) = gr%mesh%x(ip, 1:3)
+        inside = cgal_polyhedron_inside(ptr, xx(1), xx(2), xx(3), refx, refy, refz)
+        if (inside) then
+          ip_in = ip_in + 1
+        end if
+      end do
+      if (ip_in > ip_in_max) ip_in_max = ip_in
+      medium_box%points_number(il) = ip_in
+    end do
+
+    dd_max = max(2*gr%mesh%spacing(1), 2*gr%mesh%spacing(2), 2*gr%mesh%spacing(3))
+
+    SAFE_ALLOCATE(medium_box%points_map(ip_in_max,nr_of_boxes))
+    !AFE_ALLOCATE(medium_box%bdry_map(ip_bd_max,nr_of_boxes))
+
+    medium_box%points_map = int(M_zero)
+    medium_box%bdry_map = int(M_zero)
+
+    do il = 1, nr_of_boxes
+      call cgal_polyhedron_read(ptr, medium_box%filename(il))
+      ip_in = 0
+      do ip = 1, gr%mesh%np
+        xx(1:3) = gr%mesh%x(ip,1:3)
+        if (cgal_polyhedron_inside(ptr, xx(1), xx(2), xx(3), refx, refy, refz)) then
+          ip_in = ip_in + 1
+          if (any(medium_box%points_map == ip)) then
+            message(1) = 'Linear media boxes overlap.'
+            call messages_fatal(1, namespace=namespace)
+          else
+            medium_box%points_map(ip_in,il) = ip
+          end if
+        end if
+      end do
+    end do
+
+    else
+
     do il = 1, nr_of_boxes
       do idim = 1, 3
         bounds(il,1,idim) = medium_box%center(idim,il) - medium_box%lsize(idim,il)/M_TWO
@@ -215,13 +332,6 @@ module medium_mxll_oct_m
 
     SAFE_ALLOCATE(medium_box%points_map(ip_in_max,nr_of_boxes))
     SAFE_ALLOCATE(medium_box%bdry_map(ip_bd_max,nr_of_boxes))
-    SAFE_ALLOCATE(medium_box%aux_ep(ip_in_max,1:3,nr_of_boxes))
-    SAFE_ALLOCATE(medium_box%aux_mu(ip_in_max,1:3,nr_of_boxes))
-    SAFE_ALLOCATE(medium_box%c(ip_in_max,nr_of_boxes))
-    SAFE_ALLOCATE(medium_box%ep(ip_in_max,nr_of_boxes))
-    SAFE_ALLOCATE(medium_box%mu(ip_in_max,nr_of_boxes))
-    SAFE_ALLOCATE(medium_box%sigma_e(ip_in_max,nr_of_boxes))
-    SAFE_ALLOCATE(medium_box%sigma_m(ip_in_max,nr_of_boxes))
 
     medium_box%points_map = int(M_zero)
     medium_box%bdry_map = int(M_zero)
@@ -246,6 +356,16 @@ module medium_mxll_oct_m
         end if
       end do
     end do
+
+    end if
+
+    SAFE_ALLOCATE(medium_box%aux_ep(ip_in_max,1:3,nr_of_boxes))
+    SAFE_ALLOCATE(medium_box%aux_mu(ip_in_max,1:3,nr_of_boxes))
+    SAFE_ALLOCATE(medium_box%c(ip_in_max,nr_of_boxes))
+    SAFE_ALLOCATE(medium_box%ep(ip_in_max,nr_of_boxes))
+    SAFE_ALLOCATE(medium_box%mu(ip_in_max,nr_of_boxes))
+    SAFE_ALLOCATE(medium_box%sigma_e(ip_in_max,nr_of_boxes))
+    SAFE_ALLOCATE(medium_box%sigma_m(ip_in_max,nr_of_boxes))
 
     do il = 1, nr_of_boxes
 
