@@ -340,8 +340,19 @@ subroutine X(update_occ_matrices)(this, namespace, mesh, st, lda_u_energy, phase
                   ios2 = os%map_os(inn)
                   os2 => this%orbsets(ios2)
 
-                  renorm_weight = sqrt(this%renorm_occ(species_index(os%spec), os%nn, os%ll, ist, ik) &
-                           *this%renorm_occ(species_index(os2%spec), os2%nn, os2%ll, ist, ik))*weight
+                  if(this%basisfromstates) then
+                    spec_ind2 = 1
+                  else
+                    spec_ind2 = species_index(os2%spec)
+                  end if
+
+                  if(spec_ind /= spec_ind2) then
+                    renorm_weight = (this%renorm_occ(spec_ind, os%nn, os%ll, ist, ik) + &
+                                     this%renorm_occ(spec_ind2, os2%nn, os2%ll, ist, ik) ) * weight
+                  else
+                    renorm_weight = this%renorm_occ(spec_ind, os%nn, os%ll, ist, ik) * weight
+                  end if
+
                   do im2 = 1, os2%norbs
                     if(present(phase)) then
                       this%X(n_ij)(im, im2, 1, ios, inn) = this%X(n_ij)(im, im2, 1, ios, inn) &
