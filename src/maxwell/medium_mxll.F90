@@ -246,7 +246,7 @@ module medium_mxll_oct_m
     FLOAT   :: bounds(nr_of_boxes,2,gr%sb%dim), xx(gr%sb%dim), xxp(gr%sb%dim), dd, dd_max, dd_min
     FLOAT, allocatable  :: tmp(:), tmp_grad(:,:)
     type(c_ptr) :: ptr
-    FLOAT :: refx = CNST(1000.), refy = CNST(1000.), refz = CNST(1000.)
+    FLOAT :: refx = CNST(100.), refy = CNST(200.), refz = CNST(300.)
     logical :: inside
 
     PUSH_SUB(generate_medium_boxes)
@@ -268,8 +268,8 @@ module medium_mxll_oct_m
 
       ip_in = 0
       do ip = 1, gr%mesh%np
-        xx(1:3) = gr%mesh%x(ip, 1:3)
-        inside = cgal_polyhedron_inside(ptr, xx(1), xx(2), xx(3), refx, refy, refz)
+        xx(1:3) = CNST(0.99) * gr%mesh%x(ip, 1:3)
+        inside = cgal_polyhedron_point_inside(ptr, xx(1), xx(2), xx(3))
         if (inside) then
           ip_in = ip_in + 1
         end if
@@ -286,12 +286,15 @@ module medium_mxll_oct_m
     medium_box%points_map = int(M_zero)
     medium_box%bdry_map = int(M_zero)
 
+    open(unit=678, file='mediumpoints.dat')
     do il = 1, nr_of_boxes
       call cgal_polyhedron_read(ptr, trim(medium_box%filename(il)))
       ip_in = 0
       do ip = 1, gr%mesh%np
-        xx(1:3) = gr%mesh%x(ip,1:3)
-        if (cgal_polyhedron_inside(ptr, xx(1), xx(2), xx(3), refx, refy, refz)) then
+        xx(1:3) = CNST(0.99) * gr%mesh%x(ip, 1:3)
+        inside = cgal_polyhedron_point_inside(ptr, xx(1), xx(2), xx(3))
+        write(678,*) ip, xx(1), xx(2), xx(3), inside
+        if (inside) then
           ip_in = ip_in + 1
           if (any(medium_box%points_map == ip)) then
             message(1) = 'Linear media boxes overlap.'
@@ -302,9 +305,10 @@ module medium_mxll_oct_m
         end if
       end do
     end do
-
+    close(678)
     else
 
+    open(unit=678, file='mediumpoints.dat')
     do il = 1, nr_of_boxes
       do idim = 1, 3
         bounds(il,1,idim) = medium_box%center(idim,il) - medium_box%lsize(idim,il)/M_TWO
@@ -314,6 +318,8 @@ module medium_mxll_oct_m
       ip_bd = 0
       do ip = 1, gr%mesh%np
         xx(1:3) = gr%mesh%x(ip, 1:3)
+        inside = check_point_in_bounds(xx, bounds(il,:,:))
+        write(678,*)ip, xx(1), xx(2), xx(3), inside
         if (check_point_in_bounds(xx, bounds(il,:,:))) then
           ip_in = ip_in + 1
         end if
@@ -326,6 +332,7 @@ module medium_mxll_oct_m
       medium_box%points_number(il) = ip_in
       medium_box%bdry_number(il) = ip_bd
     end do
+    close(678)
 
     dd_max = max(2*gr%mesh%spacing(1), 2*gr%mesh%spacing(2), 2*gr%mesh%spacing(3))
 

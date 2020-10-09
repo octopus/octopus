@@ -1100,7 +1100,7 @@ contains
     type(c_ptr) :: ptr
 
     ! outside reference point
-    real :: refx = 1000., refy = 1000., refz = 1000.
+    real :: refx = 200., refy = 400., refz = 500.
     ! bounding box
     real :: xmin,ymin,zmin, xmax,ymax,zmax
     ! closest point
@@ -1109,13 +1109,16 @@ contains
     PUSH_SUB(test_cgal)
 
     call cgal_polyhedron_read(ptr, "28-cgal.02-X.off")
-    call cgal_polyhedron_bbox(ptr, xmin,ymin,zmin, xmax,ymax,zmax)
-    print *, "Bounding box:", xmin,ymin,zmin, xmax,ymax,zmax
-    print *, "Is point (30., 10., 30.) inside?:", cgal_polyhedron_inside(ptr, 30., 10., 30., refx, refy, refz)
-    print *, "Is point (0., 0., 0.) inside?:", cgal_polyhedron_inside(ptr, 0., 0., 0., refx, refy, refz)
-    call cgal_polyhedron_closest(ptr, 0., 0., 0., xclose, yclose, zclose)
+    write(*,*) ptr
+    !call cgal_polyhedron_bbox(ptr, xmin,ymin,zmin, xmax,ymax,zmax)
+    !print *, "Bounding box:", xmin,ymin,zmin, xmax,ymax,zmax
+    print *, "Is point (30., 10., 30.) inside?:", cgal_polyhedron_point_inside(ptr, 30., 10., 30.)
+    print *, "Is point (0., 0., 0.) inside?:", cgal_polyhedron_point_inside(ptr, 0., 0., 0.)
+    print *, "Is point (5., 0., 0.) inside?:", cgal_polyhedron_point_inside(ptr, 5., 0., 0.)
+    print *, "Is point (-14., -13.5, -14.) inside?:", cgal_polyhedron_point_inside(ptr, -14., -13.5, -14.)
+    !call cgal_polyhedron_closest(ptr, 0., 0., 0., xclose, yclose, zclose)
     print *, "Closest point to (0., 0., 0.):", xclose, yclose, zclose
-    call cgal_polyhedron_finalize(ptr)
+    !call cgal_polyhedron_finalize(ptr)
 
     POP_SUB(test_cgal)
   end subroutine test_cgal
