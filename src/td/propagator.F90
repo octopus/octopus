@@ -519,7 +519,7 @@ contains
     PUSH_SUB(propagator_dt)
 
     update_energy_ = optional_default(update_energy, .true.)
-    move_ions_ = optional_default(update_energy, .true.)
+    move_ions_ = optional_default(move_ions, .true.)
 
     if (family_is_mgga_with_exc(hm%xc)) then
       call potential_interpolation_new(tr%vksold, gr%mesh%np, st%d%nspin, time, dt, &
@@ -574,7 +574,7 @@ contains
     end select
 
     generate = .false.
-    if(move_ions) then
+    if(move_ions_) then
       if(.not. propagator_ions_are_propagated(tr)) then
         call ion_dynamics_propagate(ions, gr%sb, geo, abs(nt*dt), ionic_scale*dt, namespace)
         generate = .true.
