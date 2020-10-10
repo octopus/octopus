@@ -126,40 +126,22 @@ module medium_mxll_oct_m
         call parse_block_float(blk, il-1, 8, medium_box%sigma_e_factor(il))
         call parse_block_float(blk, il-1, 9, medium_box%sigma_m_factor(il))
         call parse_block_integer(blk, il-1, 10, medium_box%shape(il))
-        if (il > 1) then
-          write(message(1),'(a)') ""
-          write(message(2),'(a,I1)')    'Medium box number:  ', il
-          write(message(3),'(a,es9.2,a,es9.2,a,es9.2)') 'Box center:         ', medium_box%center(1,il), ' | ',&
-                medium_box%center(2,il), ' | ', medium_box%center(3,il)
-          write(message(4),'(a,es9.2,a,es9.2,a,es9.2)') 'Box size  :         ', medium_box%lsize(1,il), ' | ', &
-                medium_box%lsize(2,il), ' | ', medium_box%lsize(3,il)
-          write(message(5),'(a,es9.2)') 'Box epsilon factor: ', medium_box%ep_factor(il)
-          write(message(6),'(a,es9.2)') 'Box mu factor:      ', medium_box%mu_factor(il)
-          write(message(7),'(a,es9.2)') 'Box electric sigma: ', medium_box%sigma_e_factor(il)
-          write(message(8),'(a,es9.2)') 'Box magnetic sigma: ', medium_box%sigma_m_factor(il)
-          if (medium_box%shape(il) == OPTION__LINEARMEDIUMBOX__EDGED) then
-            write(message(9),'(a,a)')   'Box shape:          ', 'edged'
-          else if (medium_box%shape(il) == OPTION__LINEARMEDIUMBOX__SMOOTH) then
-            write(message(9),'(a,a)')   'Box shape:          ', 'smooth'
-          end if
-          call messages_info(9)
-        else
-          write(message(1),'(a,I1)')    'Medium box number:  ', il
-          write(message(2),'(a,es9.2,a,es9.2,a,es9.2)') 'Box center:         ', medium_box%center(1,il), ' | ',&
-                medium_box%center(2,il), ' | ', medium_box%center(3,il)
-          write(message(3),'(a,es9.2,a,es9.2,a,es9.2)') 'Box size  :         ', medium_box%lsize(1,il), ' | ', &
-                medium_box%lsize(2,il), ' | ', medium_box%lsize(3,il)
-          write(message(4),'(a,es9.2)') 'Box epsilon factor: ', medium_box%ep_factor(il)
-          write(message(5),'(a,es9.2)') 'Box mu factor:      ', medium_box%mu_factor(il)
-          write(message(6),'(a,es9.2)') 'Box electric sigma: ', medium_box%sigma_e_factor(il)
-          write(message(7),'(a,es9.2)') 'Box magnetic sigma: ', medium_box%sigma_m_factor(il)
-          if (medium_box%shape(il) == OPTION__LINEARMEDIUMBOX__EDGED) then
-            write(message(8),'(a,a)')   'Box shape:          ', 'edged'
-          else if (medium_box%shape(il) == OPTION__LINEARMEDIUMBOX__SMOOTH) then
-            write(message(8),'(a,a)')   'Box shape:          ', 'smooth'
-          end if
-          call messages_info(8)
+        write(message(1),'(a,I1)')    'Medium box number:  ', il
+        write(message(2),'(a,es9.2,a,es9.2,a,es9.2)') 'Box center:         ', medium_box%center(1,il), ' | ',&
+            medium_box%center(2,il), ' | ', medium_box%center(3,il)
+        write(message(3),'(a,es9.2,a,es9.2,a,es9.2)') 'Box size  :         ', medium_box%lsize(1,il), ' | ', &
+            medium_box%lsize(2,il), ' | ', medium_box%lsize(3,il)
+        write(message(4),'(a,es9.2)') 'Box epsilon factor: ', medium_box%ep_factor(il)
+        write(message(5),'(a,es9.2)') 'Box mu factor:      ', medium_box%mu_factor(il)
+        write(message(6),'(a,es9.2)') 'Box electric sigma: ', medium_box%sigma_e_factor(il)
+        write(message(7),'(a,es9.2)') 'Box magnetic sigma: ', medium_box%sigma_m_factor(il)
+        if (medium_box%shape(il) == OPTION__LINEARMEDIUMBOX__EDGED) then
+          write(message(8),'(a,a)')   'Box shape:          ', 'edged'
+        else if (medium_box%shape(il) == OPTION__LINEARMEDIUMBOX__SMOOTH) then
+          write(message(8),'(a,a)')   'Box shape:          ', 'smooth'
         end if
+        write(message(9),'(a)') ""
+        call messages_info(9)
       end do
       call parse_block_end(blk)
 
@@ -212,19 +194,15 @@ module medium_mxll_oct_m
         if (medium_box%shape(il) /= OPTION__LINEARMEDIUMBOX__EDGED) then
          call messages_not_implemented("Medium box from file only implemented with edged boundaries.", namespace=namespace)
        end if
-!       write(message(1),'(a)') ""
-!       write(message(2),'(a,I1)')    'Medium box number:  ', il
-!       write(message(3),'(a,a)') 'Box surface file: ', medium_box%filename(il)
-!       write(message(4),'(a,es9.2)') 'Box epsilon factor: ', medium_box%ep_factor(il)
-!       write(message(5),'(a,es9.2)') 'Box mu factor:      ', medium_box%mu_factor(il)
-!       write(message(6),'(a,es9.2)') 'Box electric sigma: ', medium_box%sigma_e_factor(il)
-!       write(message(7),'(a,es9.2)') 'Box magnetic sigma: ', medium_box%sigma_m_factor(il)
-!       if (medium_box%shape(il) == OPTION__LINEARMEDIUMBOX__EDGED) then
-!         write(message(8),'(a,a)')   'Box shape:          ', 'edged'
-!       else if (medium_box%shape(il) == OPTION__LINEARMEDIUMBOX__SMOOTH) then
-!         write(message(8),'(a,a)')   'Box shape:          ', 'smooth'
-!       end if
-!       call messages_info(8)
+       write(message(1),'(a,I1)')    'Medium box number:  ', il
+       write(message(2),'(a,a)') 'Box surface file: ', trim(medium_box%filename(il))
+       write(message(3),'(a,es9.2)') 'Box epsilon factor: ', medium_box%ep_factor(il)
+       write(message(4),'(a,es9.2)') 'Box mu factor:      ', medium_box%mu_factor(il)
+       write(message(5),'(a,es9.2)') 'Box electric sigma: ', medium_box%sigma_e_factor(il)
+       write(message(6),'(a,es9.2)') 'Box magnetic sigma: ', medium_box%sigma_m_factor(il)
+       write(message(7),'(a,a)')   'Box shape:          ', 'edged'
+       write(message(8),'(a)') ""
+       call messages_info(8)
      end do
       call parse_block_end(blk)
 
