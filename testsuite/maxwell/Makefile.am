@@ -30,6 +30,8 @@ dist_share_DATA =                                                   \
         02-external-current.03-gaussian_current_pulse_with_mask.inp \
         03-linear-medium.test                                       \
 	03-linear-medium.01-cosinoidal_pulse_td.inp                 \
+	03-linear-medium.02-cube_medium_from_file.inp               \
+	03-linear-medium.03-cube.off                                \
         04-plane_waves.test                                         \
         04-plane_waves.01-pulse_pml.inp
 
