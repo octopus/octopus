@@ -221,6 +221,7 @@ module medium_mxll_oct_m
     type(namespace_t),   intent(in)         :: namespace
 
     integer :: il, ip, ip_in, ip_in_max, ip_bd, ip_bd_max, ipp, idim
+    integer, allocatable :: tmp_points_map(:,:), tmp_bdry_map(:,:)
     FLOAT   :: bounds(nr_of_boxes,2,gr%sb%dim), xx(gr%sb%dim), xxp(gr%sb%dim), dd, dd_max, dd_min
     FLOAT, allocatable  :: tmp(:), tmp_grad(:,:)
     type(c_ptr) :: ptr
@@ -231,6 +232,10 @@ module medium_mxll_oct_m
 
     SAFE_ALLOCATE(tmp(gr%mesh%np_part))
     SAFE_ALLOCATE(tmp_grad(gr%mesh%np_part,1:gr%mesh%sb%dim))
+    SAFE_ALLOCATE(tmp_points_map(gr%mesh%np, nr_of_boxes))
+    SAFE_ALLOCATE(tmp_bdry_map(gr%mesh%np, nr_of_boxes))
+    tmp_points_map = int(M_zero)
+    tmp_bdry_map = int(M_zero)
 
     SAFE_ALLOCATE(medium_box%points_number(nr_of_boxes))
     SAFE_ALLOCATE(medium_box%bdry_number(nr_of_boxes))
@@ -246,10 +251,11 @@ module medium_mxll_oct_m
 
       ip_in = 0
       do ip = 1, gr%mesh%np
-        xx(1:3) = CNST(0.99) * gr%mesh%x(ip, 1:3)
+        xx(1:3) = gr%mesh%x(ip, 1:3)
         inside = cgal_polyhedron_point_inside(ptr, xx(1), xx(2), xx(3))
         if (inside) then
           ip_in = ip_in + 1
+          tmp_points_map(ip_in, il) = ip
         end if
       end do
       if (ip_in > ip_in_max) ip_in_max = ip_in
@@ -258,35 +264,16 @@ module medium_mxll_oct_m
 
     dd_max = max(2*gr%mesh%spacing(1), 2*gr%mesh%spacing(2), 2*gr%mesh%spacing(3))
 
-    SAFE_ALLOCATE(medium_box%points_map(ip_in_max,nr_of_boxes))
-    SAFE_ALLOCATE(medium_box%bdry_map(1,nr_of_boxes))
+    SAFE_ALLOCATE(medium_box%points_map(ip_in_max, nr_of_boxes))
+    SAFE_ALLOCATE(medium_box%bdry_map(1, nr_of_boxes))
 
     medium_box%points_map = int(M_zero)
     medium_box%bdry_map = int(M_zero)
 
-    open(unit=678, file='mediumpoints.dat')
-    do il = 1, nr_of_boxes
-      call cgal_polyhedron_read(ptr, trim(medium_box%filename(il)))
-      ip_in = 0
-      do ip = 1, gr%mesh%np
-        xx(1:3) = CNST(0.99) * gr%mesh%x(ip, 1:3)
-        inside = cgal_polyhedron_point_inside(ptr, xx(1), xx(2), xx(3))
-        write(678,*) ip, xx(1), xx(2), xx(3), inside
-        if (inside) then
-          ip_in = ip_in + 1
-          if (any(medium_box%points_map == ip)) then
-            message(1) = 'Linear media boxes overlap.'
-            call messages_fatal(1, namespace=namespace)
-          else
-            medium_box%points_map(ip_in,il) = ip
-          end if
-        end if
-      end do
-    end do
-    close(678)
+    medium_box%points_map(:,:) = tmp_points_map(1:ip_in_max,:)
+
     else
 
-    open(unit=678, file='mediumpoints.dat')
     do il = 1, nr_of_boxes
       do idim = 1, 3
         bounds(il,1,idim) = medium_box%center(idim,il) - medium_box%lsize(idim,il)/M_TWO
@@ -297,12 +284,13 @@ module medium_mxll_oct_m
       do ip = 1, gr%mesh%np
         xx(1:3) = gr%mesh%x(ip, 1:3)
         inside = check_point_in_bounds(xx, bounds(il,:,:))
-        write(678,*)ip, xx(1), xx(2), xx(3), inside
         if (check_point_in_bounds(xx, bounds(il,:,:))) then
           ip_in = ip_in + 1
+          tmp_points_map(ip_in, il) = ip
         end if
         if (check_point_on_bounds(xx, bounds(il,:,:))) then
           ip_bd = ip_bd + 1
+          tmp_bdry_map(ip_bd, il) = ip
         end if
       end do
       if (ip_in > ip_in_max) ip_in_max = ip_in
@@ -310,7 +298,6 @@ module medium_mxll_oct_m
       medium_box%points_number(il) = ip_in
       medium_box%bdry_number(il) = ip_bd
     end do
-    close(678)
 
     dd_max = max(2*gr%mesh%spacing(1), 2*gr%mesh%spacing(2), 2*gr%mesh%spacing(3))
 
@@ -319,29 +306,20 @@ module medium_mxll_oct_m
 
     medium_box%points_map = int(M_zero)
     medium_box%bdry_map = int(M_zero)
+    medium_box%points_map = tmp_points_map(1:ip_in_max,1:nr_of_boxes)
+    medium_box%bdry_map = tmp_bdry_map(1:ip_bd_max,1:nr_of_boxes)
+
+    end if
 
     do il = 1, nr_of_boxes
-      ip_in = 0
-      ip_bd = 0
-      do ip = 1, gr%mesh%np
-        xx(1:3) = gr%mesh%x(ip,1:3)
-        if (check_point_in_bounds(xx, bounds(il,:,:))) then
-          ip_in = ip_in + 1
-          if (any(medium_box%points_map == ip)) then
-            message(1) = 'Linear media boxes overlap.'
-            call messages_fatal(1, namespace=namespace)
-          else
-            medium_box%points_map(ip_in,il) = ip
-          end if
-        end if
-        if (check_point_on_bounds(xx, bounds(il,:,:))) then
-          ip_bd = ip_bd + 1
-          medium_box%bdry_map(ip_bd,il) = ip
+      do ip_in = 1, medium_box%points_number(il) - 1
+        if (any(medium_box%points_map(ip_in+1:, il) == medium_box%points_map(ip_in, il)) .or. &
+            any(medium_box%points_map(:, il+1:) == medium_box%points_map(ip_in, il))) then
+          message(1) = 'Linear medium boxes overlap.'
+          call messages_fatal(1, namespace=namespace)
         end if
       end do
     end do
-
-    end if
 
     SAFE_ALLOCATE(medium_box%aux_ep(ip_in_max,1:3,nr_of_boxes))
     SAFE_ALLOCATE(medium_box%aux_mu(ip_in_max,1:3,nr_of_boxes))
