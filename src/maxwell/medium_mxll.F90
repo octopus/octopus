@@ -74,8 +74,11 @@ module medium_mxll_oct_m
     type(medium_box_t),     intent(inout) :: medium_box
     logical,                intent(out)   :: calc_medium_box
 
-    integer :: nlines, ncols, idim, il
+    integer :: nlines, ncols, idim, il, ip_in_max2
+    integer, allocatable :: tmp(:,:)
     type(block_t) :: blk
+    type(medium_box_t), allocatable :: medium_box_aux
+    logical :: checkmediumpoints
 
     !%Variable LinearMediumBox
     !%Type block
@@ -192,24 +195,59 @@ module medium_mxll_oct_m
         call parse_block_float(blk, il-1, 4, medium_box%sigma_m_factor(il))
         call parse_block_integer(blk, il-1, 5, medium_box%shape(il))
         if (medium_box%shape(il) /= OPTION__LINEARMEDIUMBOX__EDGED) then
-         call messages_not_implemented("Medium box from file only implemented with edged boundaries.", namespace=namespace)
-       end if
-       write(message(1),'(a,I1)')    'Medium box number:  ', il
-       write(message(2),'(a,a)') 'Box surface file: ', trim(medium_box%filename(il))
-       write(message(3),'(a,es9.2)') 'Box epsilon factor: ', medium_box%ep_factor(il)
-       write(message(4),'(a,es9.2)') 'Box mu factor:      ', medium_box%mu_factor(il)
-       write(message(5),'(a,es9.2)') 'Box electric sigma: ', medium_box%sigma_e_factor(il)
-       write(message(6),'(a,es9.2)') 'Box magnetic sigma: ', medium_box%sigma_m_factor(il)
-       write(message(7),'(a,a)')   'Box shape:          ', 'edged'
-       write(message(8),'(a)') ""
-       call messages_info(8)
-     end do
+          call messages_not_implemented("Medium box from file only implemented with edged boundaries.", namespace=namespace)
+        end if
+        write(message(1),'(a,I1)')    'Medium box number:  ', il
+        write(message(2),'(a,a)') 'Box surface file: ', trim(medium_box%filename(il))
+        write(message(3),'(a,es9.2)') 'Box epsilon factor: ', medium_box%ep_factor(il)
+        write(message(4),'(a,es9.2)') 'Box mu factor:      ', medium_box%mu_factor(il)
+        write(message(5),'(a,es9.2)') 'Box electric sigma: ', medium_box%sigma_e_factor(il)
+        write(message(6),'(a,es9.2)') 'Box magnetic sigma: ', medium_box%sigma_m_factor(il)
+        write(message(7),'(a,a)')   'Box shape:          ', 'edged'
+        write(message(8),'(a)') ""
+        call messages_info(8)
+      end do
       call parse_block_end(blk)
 
       call generate_medium_boxes(medium_box, gr, nlines, namespace)
 
+      !%Variable CheckPointsMediumFromFile
+      !%Type logical
+      !%Default no
+      !%Section Maxwell
+      !%Description
+      !% Whether to re-calculate the points map by artificially shrinking the coordinate system by a factor of
+      !% 0.99 to check if the points inside the medium surface are properly detected. This works for only one
+      !% medium surface which is centered in the origin of the coordinate system.
+      !%End
+      call parse_variable(namespace, 'CheckPointsMediumFromFile', .false., checkmediumpoints)
+
+      if (checkmediumpoints .and. (nlines > 1)) then
+        message(1) = 'Check for points only works for one medium surface, centered at the origin.'
+        call messages_fatal(1, namespace=namespace)
+      end if
+
+      if (checkmediumpoints) then
+        allocate(medium_box_aux, source=medium_box)
+        SAFE_ALLOCATE(tmp(gr%mesh%np, nlines))
+        ip_in_max2 = 0
+        write(message(1),'(a, a, a)')   'Check of points inside surface of medium ', trim(medium_box%filename(1)), ":"
+        call messages_info(1)
+        call get_points_map_from_file(medium_box_aux, ip_in_max2, gr%mesh, tmp, CNST(0.99))
+
+        write(message(1),'(a, I8)')  'Number of points inside medium with the normal coordinates:', medium_box%points_number(1)
+        write(message(2),'(a, I8)')  'Number of points inside medium rescaling the coordinates:', medium_box_aux%points_number(1)
+        write(message(3), '(a)') ""
+        call messages_info(3)
+
+        deallocate(medium_box_aux)
+        SAFE_DEALLOCATE_A(tmp)
+      end if
+
       call messages_print_stress(stdout)
     end if
+
+
 
   end subroutine medium_box_init
 
@@ -442,7 +480,7 @@ module medium_mxll_oct_m
     integer,                  intent(inout) :: tmp_map(:,:)
     FLOAT, optional,          intent(in)    :: scale_factor
 
-    integer :: il, nr_of_boxes, ip_in, ip
+    integer :: il, ip_in, ip
     FLOAT   :: scale_factor_, xx(3)
     type(c_ptr) :: ptr
 
@@ -452,9 +490,7 @@ module medium_mxll_oct_m
       scale_factor_ = M_ONE
     end if
 
-    nr_of_boxes = size(tmp_map, dim=2)
-
-    do il = 1, nr_of_boxes
+    do il = 1, medium_box%number
       call cgal_polyhedron_read(ptr, trim(medium_box%filename(il)))
 
       ip_in = 0
