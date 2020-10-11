@@ -224,7 +224,6 @@ module medium_mxll_oct_m
     integer, allocatable :: tmp_points_map(:,:), tmp_bdry_map(:,:)
     FLOAT   :: bounds(nr_of_boxes,2,gr%sb%dim), xx(gr%sb%dim), xxp(gr%sb%dim), dd, dd_max, dd_min
     FLOAT, allocatable  :: tmp(:), tmp_grad(:,:)
-    type(c_ptr) :: ptr
     FLOAT :: refx = CNST(100.), refy = CNST(200.), refz = CNST(300.)
     logical :: inside
 
@@ -246,23 +245,7 @@ module medium_mxll_oct_m
 
     if (allocated(medium_box%filename)) then
 
-    do il = 1, nr_of_boxes
-      call cgal_polyhedron_read(ptr, trim(medium_box%filename(il)))
-
-      ip_in = 0
-      do ip = 1, gr%mesh%np
-        xx(1:3) = gr%mesh%x(ip, 1:3)
-        inside = cgal_polyhedron_point_inside(ptr, xx(1), xx(2), xx(3))
-        if (inside) then
-          ip_in = ip_in + 1
-          tmp_points_map(ip_in, il) = ip
-        end if
-      end do
-      if (ip_in > ip_in_max) ip_in_max = ip_in
-      medium_box%points_number(il) = ip_in
-    end do
-
-    dd_max = max(2*gr%mesh%spacing(1), 2*gr%mesh%spacing(2), 2*gr%mesh%spacing(3))
+    call get_points_map_from_file(medium_box, ip_in_max, gr%mesh, tmp_points_map)
 
     SAFE_ALLOCATE(medium_box%points_map(ip_in_max, nr_of_boxes))
     SAFE_ALLOCATE(medium_box%bdry_map(1, nr_of_boxes))
@@ -299,8 +282,6 @@ module medium_mxll_oct_m
       medium_box%bdry_number(il) = ip_bd
     end do
 
-    dd_max = max(2*gr%mesh%spacing(1), 2*gr%mesh%spacing(2), 2*gr%mesh%spacing(3))
-
     SAFE_ALLOCATE(medium_box%points_map(ip_in_max,nr_of_boxes))
     SAFE_ALLOCATE(medium_box%bdry_map(ip_bd_max,nr_of_boxes))
 
@@ -310,6 +291,8 @@ module medium_mxll_oct_m
     medium_box%bdry_map = tmp_bdry_map(1:ip_bd_max,1:nr_of_boxes)
 
     end if
+
+    dd_max = max(2*gr%mesh%spacing(1), 2*gr%mesh%spacing(2), 2*gr%mesh%spacing(3))
 
     do il = 1, nr_of_boxes
       do ip_in = 1, medium_box%points_number(il) - 1
@@ -449,6 +432,44 @@ module medium_mxll_oct_m
     end subroutine get_medium_io_function
 
   end subroutine generate_medium_boxes
+
+  ! ----------------------------------------------------------
+  !> Populate list of point indices for points inside the polyhedron
+  subroutine get_points_map_from_file(medium_box, ip_in_max, mesh, tmp_map, scale_factor)
+    type(medium_box_t),       intent(inout) :: medium_box
+    integer,                  intent(inout) :: ip_in_max
+    type(mesh_t),             intent(in)    :: mesh
+    integer,                  intent(inout) :: tmp_map(:,:)
+    FLOAT, optional,          intent(in)    :: scale_factor
+
+    integer :: il, nr_of_boxes, ip_in, ip
+    FLOAT   :: scale_factor_, xx(3)
+    type(c_ptr) :: ptr
+
+    if (present(scale_factor)) then
+      scale_factor_ = scale_factor
+    else
+      scale_factor_ = M_ONE
+    end if
+
+    nr_of_boxes = size(tmp_map, dim=2)
+
+    do il = 1, nr_of_boxes
+      call cgal_polyhedron_read(ptr, trim(medium_box%filename(il)))
+
+      ip_in = 0
+      do ip = 1, mesh%np
+        xx(1:3) = scale_factor_ * mesh%x(ip, 1:3)
+        if (cgal_polyhedron_point_inside(ptr, xx(1), xx(2), xx(3))) then
+          ip_in = ip_in + 1
+          tmp_map(ip_in, il) = ip
+        end if
+      end do
+      if (ip_in > ip_in_max) ip_in_max = ip_in
+      medium_box%points_number(il) = ip_in
+    end do
+
+  end subroutine get_points_map_from_file
 
   ! ---------------------------------------------------------
   !> Deallocation of medium_box components
