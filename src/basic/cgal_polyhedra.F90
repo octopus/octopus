@@ -18,6 +18,7 @@
 
 module cgal_polyhedra_oct_m
   use iso_c_binding
+  use messages_oct_m
 
   implicit none
 
@@ -72,11 +73,11 @@ contains
     call polyhedron_from_file(ptree, fname//c_null_char, 1, ierr)
 
     if (ierr==1) then
-      write (*,*) "Error reading file "//fname//", it appears to be empty."
-      stop
+      message(1) = "Error reading file "//fname//", it appears to be empty."
+      call messages_fatal(1)
     else if (ierr==2) then
-      write (*,*) "Error reading file "//fname//"."
-      stop
+      message(1) = "Error reading file "//fname//"."
+      call messages_fatal(1)
     end if
   end subroutine
 
