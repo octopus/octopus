@@ -262,7 +262,6 @@ module medium_mxll_oct_m
     integer, allocatable :: tmp_points_map(:,:), tmp_bdry_map(:,:)
     FLOAT   :: bounds(nr_of_boxes,2,gr%sb%dim), xx(gr%sb%dim), xxp(gr%sb%dim), dd, dd_max, dd_min
     FLOAT, allocatable  :: tmp(:), tmp_grad(:,:)
-    FLOAT :: refx = CNST(100.), refy = CNST(200.), refz = CNST(300.)
     logical :: inside
 
     PUSH_SUB(generate_medium_boxes)
