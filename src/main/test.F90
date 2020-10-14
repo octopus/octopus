@@ -1101,7 +1101,7 @@ contains
 
     PUSH_SUB(test_cgal)
 
-    call cgal_polyhedron_read(ptr, "28-cgal.02-X.off")
+    call cgal_polyhedron_read(ptr, "28-cgal.02-X.off", verbose = .true.)
 
     write(message(1), '(a,l)') "Is point (30., 10., 30.) inside?:", cgal_polyhedron_point_inside(ptr, 30., 10., 30.)
     write(message(2), '(a,l)') "Is point (0., 0., 0.) inside?:", cgal_polyhedron_point_inside(ptr, 0., 0., 0.)

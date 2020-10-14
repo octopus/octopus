@@ -65,12 +65,15 @@ module cgal_polyhedra_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine cgal_polyhedron_read(ptree, fname)
+  subroutine cgal_polyhedron_read(ptree, fname, verbose)
     type(c_ptr), intent(out) :: ptree
     character(*), intent(in) :: fname
-    integer(c_int) :: ierr
+    logical,      intent(in) :: verbose
 
-    call polyhedron_from_file(ptree, fname//c_null_char, 1, ierr)
+    integer(c_int) :: verb = 0, ierr
+
+    if (verbose) verb = 1
+    call polyhedron_from_file(ptree, fname//c_null_char, verb, ierr)
 
     if (ierr==1) then
       message(1) = "Error reading file "//fname//", it appears to be empty."

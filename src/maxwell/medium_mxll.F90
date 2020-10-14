@@ -483,7 +483,7 @@ module medium_mxll_oct_m
     type(c_ptr) :: ptr
 
     do il = 1, medium_box%number
-      call cgal_polyhedron_read(ptr, trim(medium_box%filename(il)))
+      call cgal_polyhedron_read(ptr, trim(medium_box%filename(il)), verbose = .false.)
 
       ip_in = 0
       do ip = 1, mesh%np
