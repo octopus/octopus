@@ -86,10 +86,11 @@ extern "C" {
     // Construct AABB tree with a KdTree
     Tree tree(faces(*polyhedron).first, faces(*polyhedron).second, *polyhedron);
     tree.accelerate_distance_queries();
+
     // Initialize the point-in-polyhedron tester
     Point_inside inside_tester(tree);
 
-    // Determine the side and return true if outside!
+    // Determine the side and return true if inside or on the boundary.
     return inside_tester(*query) == CGAL::ON_BOUNDED_SIDE || inside_tester(*query) == CGAL::ON_BOUNDARY;
   }
 
@@ -98,5 +99,4 @@ extern "C" {
     delete (*pptree)->poly; (*pptree)->poly = NULL;
     delete *pptree; *pptree = NULL;
   }
-
 }
