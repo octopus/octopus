@@ -32,6 +32,7 @@ module cgal_polyhedra_oct_m
     real(c_double) :: x, y, z
   end type
 
+#ifdef HAVE_CGAL
   interface
 
     subroutine polyhedron_from_file(ptree, fname, verbose, ierr) bind(C,name="polyhedron_from_file")
@@ -55,6 +56,7 @@ module cgal_polyhedra_oct_m
     end subroutine
 
   end interface
+#endif
 
   interface cgal_polyhedron_point_inside
     module procedure cgal_polyhedron_point_inside_s
@@ -73,7 +75,9 @@ contains
     integer(c_int) :: verb = 0, ierr
 
     if (verbose) verb = 1
+#ifdef HAVE_CGAL
     call polyhedron_from_file(ptree, fname//c_null_char, verb, ierr)
+#endif
 
     if (ierr==1) then
       message(1) = "Error reading file "//fname//", it appears to be empty."
@@ -92,7 +96,9 @@ contains
     type(d3) :: query
 
     query = d3(real(xq,c_double),real(yq,c_double),real(zq,c_double))
+#ifdef HAVE_CGAL
     res = polyhedron_point_inside(poly, query)
+#endif
   end function
 
   ! ---------------------------------------------------------
@@ -103,14 +109,18 @@ contains
     type(d3) :: query
 
     query = d3(xq,yq,zq)
+#ifdef HAVE_CGAL
     res = polyhedron_point_inside(poly, query)
+#endif
   end function
 
   ! ---------------------------------------------------------
   subroutine cgal_polyhedron_finalize(ptree)
     type(c_ptr), intent(inout) :: ptree
 
+#ifdef HAVE_CGAL
     call polyhedron_finalize(ptree)
+#endif
   end subroutine
 
 end module cgal_polyhedra_oct_m

@@ -18,6 +18,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 */
 
 
+#ifdef HAVE_CGAL
 #include <iostream>
 #include <fstream>
 #include <list>
@@ -100,3 +101,4 @@ extern "C" {
     delete *pptree; *pptree = NULL;
   }
 }
+#endif
