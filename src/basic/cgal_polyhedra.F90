@@ -92,10 +92,11 @@ contains
   function cgal_polyhedron_point_inside_s(poly, xq,yq,zq) result(res)
     logical :: res
     type(c_ptr), intent(in) :: poly
-    real(c_float), intent(in) :: xq,yq,zq
+    real(c_float), intent(in) :: xq, yq, zq
     type(d3) :: query
 
-    query = d3(real(xq,c_double),real(yq,c_double),real(zq,c_double))
+    res = .false.
+    query = d3(real(xq, c_double),real(yq, c_double),real(zq, c_double))
 #ifdef HAVE_CGAL
     res = polyhedron_point_inside(poly, query)
 #endif
@@ -105,10 +106,11 @@ contains
   function cgal_polyhedron_point_inside_d(poly, xq,yq,zq) result(res)
     logical :: res
     type(c_ptr), intent(in) :: poly
-    real(c_double), intent(in) :: xq,yq,zq
+    real(c_double), intent(in) :: xq, yq, zq
     type(d3) :: query
 
-    query = d3(xq,yq,zq)
+    res = .false.
+    query = d3(xq, yq, zq)
 #ifdef HAVE_CGAL
     res = polyhedron_point_inside(poly, query)
 #endif
