@@ -50,15 +50,16 @@ AC_ARG_WITH([cgal],
 AC_LANG_PUSH([C++])
 
 AC_CHECK_LIB(gmp, __gmpz_init, ,
-  [AC_MSG_ERROR([GNU MP not found (a CGAL dependency), see https://gmplib.org/])])
+  [AC_MSG_WARN([GNU MP not found (a CGAL dependency), see https://gmplib.org/])])
+AX_BOOST_BASE([1.66], , AC_MSG_WARN([BOOST not found (a CGAL dependency)]))
 
 for ac_cgal_iterate in $ac_cgal_dirs ; do
 	CPPFLAGS_SAVED="$CPPFLAGS"
-	CGAL_CPPFLAGS="-I$ac_cgal_iterate/include"
-	CPPFLAGS="$CPPFLAGS $CGAL_CPPFLAGS $BOOST_CPPFLAGS"
+	CGAL_CPPFLAGS="-I$ac_cgal_iterate/include $BOOST_CPPFLAGS"
+	CPPFLAGS="$CPPFLAGS $CGAL_CPPFLAGS"
 	export CPPFLAGS
 
-	CGAL_LDFLAGS="-L$ac_cgal_iterate/lib -lCGAL -lCGAL_Core -lgmp ${BOOST_THREAD_LIB}"
+	CGAL_LDFLAGS="-lgmp $BOOST_LDFLAGS"
 	LDFLAGS_SAVED="$LDFLAGS"
 	LDFLAGS="$LDFLAGS $CGAL_LDFLAGS"
 	export LDFLAGS
