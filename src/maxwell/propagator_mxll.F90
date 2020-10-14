@@ -577,10 +577,10 @@ contains
 
     do idim = 1, st%dim
       if (hm%bc%bc_type(idim) == MXLL_BC_MEDIUM) then
-        do ip_in = 1, hm%bc%mxmedium%points_number(idim)
-          ip = hm%bc%mxmedium%points_map(ip_in, idim)
-          st%ep(ip) = hm%bc%mxmedium%ep(ip_in, idim)
-          st%mu(ip) = hm%bc%mxmedium%mu(ip_in, idim)
+        do ip_in = 1, hm%bc%medium%points_number(idim)
+          ip = hm%bc%medium%points_map(ip_in, idim)
+          st%ep(ip) = hm%bc%medium%ep(ip_in, idim)
+          st%mu(ip) = hm%bc%medium%mu(ip_in, idim)
         end do
       end if
     end do

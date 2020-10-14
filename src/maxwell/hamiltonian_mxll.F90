@@ -863,13 +863,13 @@ contains
     do idim = 1, 3
       if ( (hm%bc%bc_type(idim) == MXLL_BC_MEDIUM) .and. &
            (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RS) ) then
-        do ip_in = 1, hm%bc%mxmedium%points_number(idim)
-          ip          = hm%bc%mxmedium%points_map(ip_in, idim)
-          cc          = hm%bc%mxmedium%c(ip_in, idim)/P_c
-          aux_ep(:)   = hm%bc%mxmedium%aux_ep(ip_in, :, idim)
-          aux_mu(:)   = hm%bc%mxmedium%aux_mu(ip_in, :, idim)
-          sigma_e     = hm%bc%mxmedium%sigma_e(ip_in, idim)
-          sigma_m     = hm%bc%mxmedium%sigma_m(ip_in, idim)
+        do ip_in = 1, hm%bc%medium%points_number(idim)
+          ip          = hm%bc%medium%points_map(ip_in, idim)
+          cc          = hm%bc%medium%c(ip_in, idim)/P_c
+          aux_ep(:)   = hm%bc%medium%aux_ep(ip_in, :, idim)
+          aux_mu(:)   = hm%bc%medium%aux_mu(ip_in, :, idim)
+          sigma_e     = hm%bc%medium%sigma_e(ip_in, idim)
+          sigma_m     = hm%bc%medium%sigma_m(ip_in, idim)
           ff_plus(1)  = psi(ip, 1)
           ff_plus(2)  = psi(ip, 2)
           ff_plus(3)  = psi(ip, 3)

@@ -438,7 +438,6 @@ hamiltonian_f_srcs =                                 \
 	hamiltonian/lda_u.F90                        \
 	hamiltonian/lda_u_io.F90                     \
 	hamiltonian/libvdwxc.F90                     \
-	hamiltonian/maxwell_boundary_op.F90           \
 	hamiltonian/oct_exchange.F90                 \
 	hamiltonian/pcm.F90                          \
 	hamiltonian/pcm_eom.F90                      \
@@ -583,6 +582,7 @@ noinst_HEADERS +=                                  \
 
 # Sources in maxwell
 maxwell_f_srcs =                                 \
+	maxwell/maxwell_boundary_op.F90          \
 	maxwell/energy_mxll.F90                  \
 	maxwell/hamiltonian_mxll.F90             \
 	maxwell/medium_mxll.F90                  \

@@ -18,8 +18,6 @@
 !! $Id: propagator.F90 13908 2015-05-05 06:02:30Z xavier $
 
 #include "global.h"
-#include "undef.F90"
-#include "complex.F90"
 
 module medium_mxll_oct_m
   use cgal_polyhedra_oct_m
@@ -35,14 +33,16 @@ module medium_mxll_oct_m
   use parser_oct_m
   use profiling_oct_m
 
-  private
-  public ::             &
-      medium_box_t,     &
-      medium_box_init,  &
-      medium_box_end,   &
-      generate_medium_boxes
+  implicit none
 
-   type :: medium_box_t
+  private
+  public ::           &
+    medium_box_t,     &
+    medium_box_init,  &
+    medium_box_end,   &
+    generate_medium_boxes
+
+   type medium_box_t
      integer                         :: number   !< number of linear media boxes
      integer, allocatable            :: shape(:)  !< edge shape profile (smooth or steep)
      FLOAT, allocatable              :: center(:,:) !< center of each box
@@ -63,6 +63,7 @@ module medium_mxll_oct_m
      integer, allocatable            :: bdry_number(:)
      FLOAT, allocatable              :: bdry_map(:,:)
      character(len=256), allocatable :: filename(:)
+     FLOAT                           :: width !< width of medium medium when used as boundary condition
    end type medium_box_t
 
  contains
@@ -246,8 +247,6 @@ module medium_mxll_oct_m
 
       call messages_print_stress(stdout)
     end if
-
-
 
   end subroutine medium_box_init
 
@@ -510,7 +509,7 @@ module medium_mxll_oct_m
   ! ---------------------------------------------------------
   !> Deallocation of medium_box components
   subroutine medium_box_end(medium_box)
-    class(medium_box_t),   intent(inout)    :: medium_box
+    type(medium_box_t),   intent(inout)    :: medium_box
 
     PUSH_SUB(medium_box_end)
 
@@ -538,3 +537,8 @@ module medium_mxll_oct_m
   end subroutine medium_box_end
 
 end module medium_mxll_oct_m
+
+!! Local Variables:
+!! mode: f90
+!! coding: utf-8
+!! End:
