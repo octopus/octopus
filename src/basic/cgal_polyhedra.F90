@@ -73,7 +73,7 @@ contains
     character(*), intent(in) :: fname
     logical,      intent(in) :: verbose
 
-    integer(c_int) :: verb = 0, ierr
+    integer(c_int) :: verb = 0, ierr = 0
 
     if (verbose) verb = 1
 #ifdef HAVE_CGAL
