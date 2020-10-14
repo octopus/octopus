@@ -15,6 +15,7 @@
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
 
+#include "global.h"
 
 module cgal_polyhedra_oct_m
   use iso_c_binding
