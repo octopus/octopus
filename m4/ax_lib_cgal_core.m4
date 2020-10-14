@@ -62,7 +62,7 @@ else
   else
     for ac_cgal_iterate in $ac_cgal_dirs ; do
       # test version with libraries and header only version
-      for ac_cgal_version in "lib header_only"; do
+      for ac_cgal_version in lib header_only; do
 
         CPPFLAGS_SAVED="$CPPFLAGS"
         CGAL_CPPFLAGS="-I$ac_cgal_iterate/include $BOOST_CPPFLAGS"
