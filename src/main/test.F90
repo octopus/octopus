@@ -759,7 +759,7 @@ contains
     end if
 
     if(bitand(ops, OPTION__TESTBATCHOPS__OPS_DOTP_MATRIX) /= 0) then
-    
+
       message(1) = 'Info: Testing dotp_matrix'
       call messages_info(1)
 
@@ -791,11 +791,11 @@ contains
         end do
         SAFE_DEALLOCATE_A(zdot)
       end if
-  
+
       call xx%end()
       call yy%end()    
     end if
-  
+
     if(bitand(ops, OPTION__TESTBATCHOPS__OPS_DOTP_VECTOR) /= 0) then
     
       message(1) = 'Info: Testing dotp_vector'
@@ -824,13 +824,13 @@ contains
         call messages_info(nst)
         SAFE_DEALLOCATE_A(zdotv)
       end if
-  
+
       call xx%end()
       call yy%end()    
     end if
 
     if(bitand(ops, OPTION__TESTBATCHOPS__OPS_DOTP_SELF) /= 0) then
-    
+
       message(1) = 'Info: Testing dotp_self'
       call messages_info(1)
 
@@ -860,7 +860,7 @@ contains
         end do
         SAFE_DEALLOCATE_A(zdot)
       end if
-  
+
       call xx%end()
     end if
 
@@ -1075,19 +1075,19 @@ contains
     call messages_info(1)
 
     write(message(1),'(A,x,I10.10)') &
-	'clock_get_tick', test_clock_a%get_tick()
+          'clock_get_tick', test_clock_a%get_tick()
     write(message(2),'(A,x,F15.10)') &
-	'clock_time', test_clock_a%time()
+          'clock_time', test_clock_a%time()
     write(message(3),'(A,x,I1)')     &
-	'clock_is_earlier', abs(transfer(test_clock_a .lt. test_clock_b, 0))
+          'clock_is_earlier', abs(transfer(test_clock_a .lt. test_clock_b, 0))
     write(message(4),'(A,x,I1)')     &
-	'clock_is_equal_or_earlier', abs(transfer(test_clock_a .le. test_clock_b, 0))
+          'clock_is_equal_or_earlier', abs(transfer(test_clock_a .le. test_clock_b, 0))
     write(message(5),'(A,x,I1)')     &
-	'clock_is_later', abs(transfer(test_clock_a .gt. test_clock_b, 0))
+          'clock_is_later', abs(transfer(test_clock_a .gt. test_clock_b, 0))
     write(message(6),'(A,x,I1)')     &
-	'clock_is_equal_or_later', abs(transfer(test_clock_a .ge. test_clock_b, 0))
+          'clock_is_equal_or_later', abs(transfer(test_clock_a .ge. test_clock_b, 0))
     write(message(7),'(A,x,I1)')     &
-	'clock_is_equal', abs(transfer(test_clock_a .eq. test_clock_b, 0))
+          'clock_is_equal', abs(transfer(test_clock_a .eq. test_clock_b, 0))
     call messages_info(7)
 
     POP_SUB(test_clock)
@@ -1097,16 +1097,20 @@ contains
   ! ---------------------------------------------------------
   subroutine test_cgal()
 
-    type(c_ptr) :: ptr
+    type(c_ptr) :: file_io_ptr
 
     PUSH_SUB(test_cgal)
 
-    call cgal_polyhedron_read(ptr, "28-cgal.02-X.off", verbose = .true.)
+    call cgal_polyhedron_read(file_io_ptr, "28-cgal.02-X.off", verbose = .true.)
 
-    write(message(1), '(a,l)') "Is point (30., 10., 30.) inside?:", cgal_polyhedron_point_inside(ptr, 30., 10., 30.)
-    write(message(2), '(a,l)') "Is point (0., 0., 0.) inside?:", cgal_polyhedron_point_inside(ptr, 0., 0., 0.)
-    write(message(3), '(a,l)') "Is point (5., 0., 0.) inside?:", cgal_polyhedron_point_inside(ptr, 5., 0., 0.)
-    write(message(4), '(a,l)') "Is point (-14., -13.5, -14.) inside?:", cgal_polyhedron_point_inside(ptr, -14., -13.5, -14.)
+    write(message(1), '(a,l)') "Is point (30., 10., 30.) inside?:",  &
+                               cgal_polyhedron_point_inside(file_io_ptr, 30., 10., 30.)
+    write(message(2), '(a,l)') "Is point (0., 0., 0.) inside?:",     &
+                               cgal_polyhedron_point_inside(file_io_ptr, 0., 0., 0.)
+    write(message(3), '(a,l)') "Is point (5., 0., 0.) inside?:",     &
+                               cgal_polyhedron_point_inside(file_io_ptr, 5., 0., 0.)
+    write(message(4), '(a,l)') "Is point (-14., -13.5, -14.) inside?:", &
+                               cgal_polyhedron_point_inside(file_io_ptr, -14., -13.5, -14.)
     call messages_info(4)
 
     POP_SUB(test_cgal)
