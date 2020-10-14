@@ -8,6 +8,7 @@ Enabled    : Yes
 Processors: 2
 ExtraFile: 28-cgal.02-X.off
 Input: 28-cgal.01.inp
-
-match ; cgal_facets            ; GREPFIELD(out, 'facets:', 2)         ; 5484
-match ; cgal_halfedges         ; GREPFIELD(out, 'halfedges:', 2)      ; 16452
+if(available cgal); then
+  match ; cgal_facets            ; GREPFIELD(out, 'facets:', 2)         ; 5484
+  match ; cgal_halfedges         ; GREPFIELD(out, 'halfedges:', 2)      ; 16452
+endif
