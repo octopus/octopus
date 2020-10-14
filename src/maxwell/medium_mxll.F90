@@ -480,21 +480,19 @@ module medium_mxll_oct_m
     FLOAT, optional,          intent(in)    :: scale_factor
 
     integer :: il, ip_in, ip
-    FLOAT   :: scale_factor_, xx(3)
+    FLOAT   :: xx(3)
     type(c_ptr) :: ptr
-
-    if (present(scale_factor)) then
-      scale_factor_ = scale_factor
-    else
-      scale_factor_ = M_ONE
-    end if
 
     do il = 1, medium_box%number
       call cgal_polyhedron_read(ptr, trim(medium_box%filename(il)))
 
       ip_in = 0
       do ip = 1, mesh%np
-        xx(1:3) = scale_factor_ * mesh%x(ip, 1:3)
+        if (present(scale_factor)) then
+          xx(1:3) = scale_factor * mesh%x(ip, 1:3)
+        else
+          xx(1:3) = mesh%x(ip, 1:3)
+        end if
         if (cgal_polyhedron_point_inside(ptr, xx(1), xx(2), xx(3))) then
           ip_in = ip_in + 1
           tmp_map(ip_in, il) = ip
