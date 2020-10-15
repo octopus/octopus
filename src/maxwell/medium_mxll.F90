@@ -480,10 +480,12 @@ module medium_mxll_oct_m
 
     integer :: il, ip_in, ip
     FLOAT   :: xx(3)
-    type(cgal_polyhedra_t) :: cgal_poly
+    type(cgal_polyhedra_t), allocatable :: cgal_poly(:)
+
+    SAFE_ALLOCATE(cgal_poly(1:medium_box%number))
 
     do il = 1, medium_box%number
-      call cgal_polyhedron_init(cgal_poly, trim(medium_box%filename(il)), verbose = .false.)
+      call cgal_polyhedron_init(cgal_poly(il), trim(medium_box%filename(il)), verbose = .false.)
 
       ip_in = 0
       do ip = 1, mesh%np
@@ -492,16 +494,17 @@ module medium_mxll_oct_m
         else
           xx(1:3) = mesh%x(ip, 1:3)
         end if
-        if (cgal_polyhedron_point_inside(cgal_poly, xx(1), xx(2), xx(3))) then
+        if (cgal_polyhedron_point_inside(cgal_poly(il), xx(1), xx(2), xx(3))) then
           ip_in = ip_in + 1
           tmp_map(ip_in, il) = ip
         end if
       end do
       if (ip_in > ip_in_max) ip_in_max = ip_in
       medium_box%points_number(il) = ip_in
-      call cgal_polyhedron_end(cgal_poly)
+      call cgal_polyhedron_end(cgal_poly(il))
     end do
 
+    SAFE_DEALLOCATE_A(cgal_poly)
   end subroutine get_points_map_from_file
 
   ! ---------------------------------------------------------
