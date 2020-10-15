@@ -1053,11 +1053,9 @@ contains
     FLOAT :: alpha, beta, rr, delta, ralpha, hartree_nrg_num, &
          hartree_nrg_analyt, lcl_hartree_nrg
     FLOAT :: total_charge
-    integer :: ip, idir, ierr, iunit, nn, n_gaussians, itime, icell
+    integer :: ip, ierr, iunit, nn, n_gaussians, itime, icell
     FLOAT :: threshold
     type(periodic_copy_t) :: pp
-    integer :: n1, n2, n3
-    FLOAT :: alpha1, alpha2, alpha3, vh_exact_mean, vh_mean
 
     PUSH_SUB(poisson_test)
 
