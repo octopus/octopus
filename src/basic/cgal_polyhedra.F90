@@ -69,9 +69,12 @@ contains
     character(*), intent(in) :: fname
     logical,      intent(in) :: verbose
 
-    integer(c_int) :: verb = 0, ierr = 0
+    integer(c_int) :: verb, ierr
 
     PUSH_SUB(cgal_polyhedron_read)
+
+    verb = 0
+    ierr = 0
 
     if (verbose) verb = 1
 #ifdef HAVE_CGAL
