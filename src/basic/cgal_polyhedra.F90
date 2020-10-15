@@ -80,6 +80,9 @@ contains
 #ifdef HAVE_CGAL
     call polyhedron_from_file(ptree, fname//c_null_char, verb, ierr)
 #endif
+#ifndef HAVE_CGAL
+    ierr = 3
+#endif
 
     select case(ierr)
     case(0)
@@ -91,6 +94,10 @@ contains
     case(2)
       message(1) = "Error reading file " // fname // "."
       call messages_fatal(1)
+    case(3)
+      message(1) = "You are trying to read polyhedron data from " // fname
+      message(2) = "For this feature Octopus has to be linked with the CGAL library."
+      call messages_fatal(2)
     case default
       message(1) = "Error: Error status not implemented in CGAL Fortran interface."
       call messages_fatal(1)

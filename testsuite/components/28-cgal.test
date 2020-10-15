@@ -11,4 +11,6 @@ Input: 28-cgal.01.inp
 if(available cgal); then
   match ; cgal_facets            ; GREPFIELD(out, 'facets:', 2)         ; 5484
   match ; cgal_halfedges         ; GREPFIELD(out, 'halfedges:', 2)      ; 16452
+else
+  match ; cgal_not_linked        ; GREPCOUNT(err, 'CGAL'); 1
 endif
