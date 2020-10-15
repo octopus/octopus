@@ -26,8 +26,9 @@ module cgal_polyhedra_oct_m
 
   private
 
-  public cgal_polyhedron_read, &
-         cgal_polyhedron_point_inside, &
+  public cgal_polyhedron_read,            &
+         cgal_polyhedron_build_AABB_tree, &
+         cgal_polyhedron_point_inside,    &
          cgal_polyhedron_finalize
 
   type, bind(C) :: d3
@@ -45,10 +46,16 @@ module cgal_polyhedra_oct_m
       integer(c_int), intent(out) :: ierr
     end subroutine
 
-    function polyhedron_point_inside(poly, vec) result(res) bind(C,name="polyhedron_point_inside")
+    subroutine polyhedron_build_AABB_tree(poly, tree) bind(C,name="polyhedron_build_AABB_tree")
+      import
+      type(c_ptr), value :: poly
+      type(c_ptr), value :: tree
+    end subroutine
+
+    function polyhedron_point_inside(tree, vec) result(res) bind(C,name="polyhedron_point_inside")
       import
       logical(c_bool) :: res
-      type(c_ptr), value :: poly
+      type(c_ptr), value :: tree
       type(d3),intent(in) :: vec
     end function
 
@@ -106,10 +113,26 @@ contains
     POP_SUB(cgal_polyhedron_read)
   end subroutine cgal_polyhedron_read
 
+
   ! ---------------------------------------------------------
-  function cgal_polyhedron_point_inside(poly, xq, yq, zq) result(res)
-    logical :: res
+  subroutine cgal_polyhedron_build_AABB_tree(poly, tree)
     type(c_ptr), intent(in) :: poly
+    type(c_ptr), intent(out) :: tree
+
+    PUSH_SUB(cgal_polyhedron_build_AABB_tree)
+
+#ifdef HAVE_CGAL
+    call polyhedron_build_AABB_tree(poly, tree)
+#endif
+
+    POP_SUB(cgal_polyhedron_build_AABB_tree)
+  end subroutine cgal_polyhedron_build_AABB_tree
+
+
+  ! ---------------------------------------------------------
+  function cgal_polyhedron_point_inside(tree, xq, yq, zq) result(res)
+    logical :: res
+    type(c_ptr), intent(in) :: tree
     real(c_double), intent(in) :: xq, yq, zq
     type(d3) :: query
 
@@ -117,7 +140,7 @@ contains
     res = .false.
     query = d3(xq, yq, zq)
 #ifdef HAVE_CGAL
-    res = polyhedron_point_inside(poly, query)
+    res = polyhedron_point_inside(tree, query)
 #endif
 
   end function cgal_polyhedron_point_inside

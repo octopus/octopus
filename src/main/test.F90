@@ -1097,20 +1097,21 @@ contains
   ! ---------------------------------------------------------
   subroutine test_cgal()
 
-    type(c_ptr) :: file_io_ptr
+    type(c_ptr) :: file_io_ptr, tree_ptr
 
     PUSH_SUB(test_cgal)
 
     call cgal_polyhedron_read(file_io_ptr, "28-cgal.02-X.off", verbose = .true.)
+    call cgal_polyhedron_build_AABB_tree(file_io_ptr, tree_ptr)
 
     write(message(1), '(a,l)') "Is point (30., 10., 30.) inside?:",  &
-                               cgal_polyhedron_point_inside(file_io_ptr, CNST(30.), CNST(10.), CNST(30.))
+                               cgal_polyhedron_point_inside(tree_ptr, CNST(30.), CNST(10.), CNST(30.))
     write(message(2), '(a,l)') "Is point (0., 0., 0.) inside?:",     &
-                               cgal_polyhedron_point_inside(file_io_ptr, CNST(0.), CNST(0.), CNST(0.))
+                               cgal_polyhedron_point_inside(tree_ptr, CNST(0.), CNST(0.), CNST(0.))
     write(message(3), '(a,l)') "Is point (5., 0., 0.) inside?:",     &
-                               cgal_polyhedron_point_inside(file_io_ptr, CNST(5.), CNST(0.), CNST(0.))
+                               cgal_polyhedron_point_inside(tree_ptr, CNST(5.), CNST(0.), CNST(0.))
     write(message(4), '(a,l)') "Is point (-14., -13.5, -14.) inside?:", &
-                               cgal_polyhedron_point_inside(file_io_ptr, CNST(-14.), CNST(-13.5), CNST(-14.))
+                               cgal_polyhedron_point_inside(tree_ptr, CNST(-14.), CNST(-13.5), CNST(-14.))
     call messages_info(4)
 
     POP_SUB(test_cgal)

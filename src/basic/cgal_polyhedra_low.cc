@@ -86,13 +86,16 @@ extern "C" {
     *ierr = 0;
   }
 
-  bool polyhedron_point_inside(Polyhedron *polyhedron, Point *query) {
+  void polyhedron_build_AABB_tree(Polyhedron *polyhedron, Tree **tree_out){
     // Construct AABB tree with a KdTree
-    Tree tree(faces(*polyhedron).first, faces(*polyhedron).second, *polyhedron);
-    tree.accelerate_distance_queries();
+    Tree *tree = new Tree(faces(*polyhedron).first, faces(*polyhedron).second, *polyhedron);
+    tree->accelerate_distance_queries();
+    *tree_out = tree;
+  }
 
+  bool polyhedron_point_inside(Tree **tree, Point *query) {
     // Initialize the point-in-polyhedron tester
-    Point_inside inside_tester(tree);
+    Point_inside inside_tester(**tree);
 
     // Determine the side and return true if inside or on the boundary.
     return inside_tester(*query) == CGAL::ON_BOUNDED_SIDE || inside_tester(*query) == CGAL::ON_BOUNDARY;
