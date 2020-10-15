@@ -94,6 +94,7 @@ Processors : 4
 ExtraFile  : 03-linear-medium.03-cube.off
 Input      : 03-linear-medium.02-cube_medium_from_file.inp
 
+if(available cgal); then
 Precision: 1e-12
 match ;  Tot. Maxwell energy [step 10]  ; LINEFIELD(Maxwell/td.general/maxwell_energy, 16, 3) ; 26.44226450938
 Precision: 1e-5
@@ -149,3 +150,6 @@ match ;  By  (x=  0,y=  0,z= 10) [step 30]  ; LINEFIELD(Maxwell/output_iter/td.0
 
 match ;  By  (x= 10,y=  0,z=  0) [step 30]  ; LINEFIELD(Maxwell/output_iter/td.0000030/b_field-y\.y=0\,z=0, 40, 2) ; 1.197024762854885e-08
 match ;  By  (x=  0,y=  0,z=  0) [step 30]  ; LINEFIELD(Maxwell/output_iter/td.0000030/b_field-y\.y=0\,z=0, 30, 2) ; 6.992328973746255e-09
+else
+  match ; cgal_not_linked        ; GREPCOUNT(err, 'CGAL'); 1
+endif
