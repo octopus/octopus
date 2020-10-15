@@ -45,6 +45,7 @@ module poisson_oct_m
   use par_vec_oct_m
   use parser_oct_m
   use partition_oct_m
+  use periodic_copy_oct_m
   use photon_mode_oct_m
   use poisson_cg_oct_m
   use poisson_corrections_oct_m
@@ -1042,24 +1043,44 @@ contains
   !> This routine checks the Hartree solver selected in the input
   !! file by calculating numerically and analytically the Hartree
   !! potential originated by a Gaussian distribution of charge.
-  !! This only makes sense for finite systems.
+  !! For periodic systems, the periodic copies of the Gaussian
+  !! are taken into account up to to a certain threshold that can
+  !! be specified in the input file.
   subroutine poisson_test(this, mesh, namespace, repetitions)
     type(poisson_t),   intent(in) :: this
     type(mesh_t),      intent(in) :: mesh
     type(namespace_t), intent(in) :: namespace
     integer,           intent(in) :: repetitions
 
-    FLOAT, allocatable :: rho(:), vh(:), vh_exact(:), xx(:, :)
+    FLOAT, allocatable :: rho(:), vh(:), vh_exact(:), xx(:, :), xx_per(:)
     FLOAT :: alpha, beta, rr, delta, ralpha, hartree_nrg_num, &
          hartree_nrg_analyt, lcl_hartree_nrg
     FLOAT :: total_charge
-    integer :: ip, idir, ierr, iunit, nn, n_gaussians, itime
+    integer :: ip, idir, ierr, iunit, nn, n_gaussians, itime, icell
+    FLOAT :: threshold
+    type(periodic_copy_t) :: pp
+    integer :: n1, n2, n3
+    FLOAT :: alpha1, alpha2, alpha3, vh_exact_mean, vh_mean
 
     PUSH_SUB(poisson_test)
 
     if(mesh%sb%dim == 1) then
       call messages_not_implemented('Poisson test for 1D case')
     end if
+
+    !%Variable PoissonTestPeriodicThreshold
+    !%Type float
+    !%Default 1e-5
+    !%Section Hamiltonian::Poisson
+    !%Description
+    !% This threshold determines the accuracy of the periodic copies of
+    !% the Gaussian charge distribution that are taken into account when
+    !% computing the analytical solution for periodic systems.
+    !% Be aware that the default leads to good results for systems
+    !% that are periodic in 1D - for 3D it is very costly because of the
+    !% large number of copies needed.
+    !%End
+    call parse_variable(namespace, 'PoissonTestPeriodicThreshold', CNST(1e-5), threshold)
 
     ! Use two gaussians with different sign
     n_gaussians = 2
@@ -1068,6 +1089,7 @@ contains
     SAFE_ALLOCATE(      vh(1:mesh%np))
     SAFE_ALLOCATE(vh_exact(1:mesh%np))
     SAFE_ALLOCATE(xx(1:mesh%sb%dim, 1:n_gaussians))
+    SAFE_ALLOCATE(xx_per(1:mesh%sb%dim))
 
     rho = M_ZERO; vh = M_ZERO; vh_exact = M_ZERO
 
@@ -1103,29 +1125,42 @@ contains
     write(message(1), '(a,f14.6)') 'Total charge of the Gaussian distribution', total_charge
     call messages_info(1)
 
+    write(message(1), '(a)') 'Computing exact potential.'
+    call messages_info(1)
+
     ! This builds analytically its potential
     vh_exact = M_ZERO
     do nn = 1, n_gaussians
-      do ip = 1, mesh%np
-        call mesh_r(mesh, ip, rr, origin = xx(:, nn))
-        select case(mesh%sb%dim)
-        case(3)
-          if(rr > R_SMALL) then
-            vh_exact(ip) = vh_exact(ip) + (-1)**nn * loct_erf(rr/alpha)/rr
-          else
-            vh_exact(ip) = vh_exact(ip) + (-1)**nn * (M_TWO/sqrt(M_PI))/alpha
-          end if
-        case(2)
-          ralpha = rr**2/(M_TWO*alpha**2)
-          if(ralpha < CNST(100.0)) then
-            vh_exact(ip) = vh_exact(ip) + (-1)**nn * beta * (M_PI)**(M_THREE*M_HALF) * alpha * exp(-rr**2/(M_TWO*alpha**2)) * &
-              loct_bessel_in(0, rr**2/(M_TWO*alpha**2))
-          else
-            vh_exact(ip) = vh_exact(ip) + (-1)**nn * beta * (M_PI)**(M_THREE*M_HALF) * alpha * &
-                          (M_ONE/sqrt(M_TWO*M_PI*ralpha))
-          end if
-        end select
+      ! sum over all periodic copies for each Gaussian
+      call periodic_copy_init(pp, mesh%sb, xx(:, nn), range=M_ONE/threshold)
+      write(message(1), '(a,i2,a,i9,a)') 'Computing Gaussian ', nn, ' for ', periodic_copy_num(pp), ' periodic copies.'
+      call messages_info(1)
+
+      do icell = 1, periodic_copy_num(pp)
+        xx_per(1:mesh%sb%dim) = periodic_copy_position(pp, mesh%sb, icell)
+        !$omp parallel do private(rr, ralpha)
+        do ip = 1, mesh%np
+          call mesh_r(mesh, ip, rr, origin=xx_per(1:mesh%sb%dim))
+          select case(mesh%sb%dim)
+          case(3)
+            if(rr > R_SMALL) then
+              vh_exact(ip) = vh_exact(ip) + (-1)**nn * loct_erf(rr/alpha)/rr
+            else
+              vh_exact(ip) = vh_exact(ip) + (-1)**nn * (M_TWO/sqrt(M_PI))/alpha
+            end if
+          case(2)
+            ralpha = rr**2/(M_TWO*alpha**2)
+            if(ralpha < CNST(100.0)) then
+              vh_exact(ip) = vh_exact(ip) + (-1)**nn * beta * (M_PI)**(M_THREE*M_HALF) * alpha * exp(-rr**2/(M_TWO*alpha**2)) * &
+                loct_bessel_in(0, rr**2/(M_TWO*alpha**2))
+            else
+              vh_exact(ip) = vh_exact(ip) + (-1)**nn * beta * (M_PI)**(M_THREE*M_HALF) * alpha * &
+                            (M_ONE/sqrt(M_TWO*M_PI*ralpha))
+            end if
+          end select
+        end do
       end do
+     call periodic_copy_end(pp)
     end do
 
     ! This calculates the numerical potential
