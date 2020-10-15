@@ -26,9 +26,7 @@ endif
 Precision : 0.00008
 Input: 10-hartree_pfft.03-3d_1d_periodic.inp
 if (available pfft); then
-    # not yet impemented
-    #match ; Difference Hartree potential ; GREPFIELD(hartree_results, 'Hartree test (abs.) =', 5) ; 0.0
-    match; Error PFFT support; GREPCOUNT(err, 'PFFT'); 1
+    match ; Difference Hartree potential ; GREPFIELD(hartree_results, 'Hartree test (abs.) =', 5) ; 0.0
 else
     match; Error PFFT missing; GREPCOUNT(err, 'PFFT'); 1
 endif   
@@ -44,9 +42,7 @@ endif
 Precision : 0.0001
 Input: 10-hartree_pfft.05-3d_2d_periodic.inp
 if (available pfft); then
-    # not yet impemented
-    #match ; Hartree energy (numerical)  ; GREPFIELD(hartree_results, 'Hartree Energy (numerical) =', 5) ; 0.3746060551984
-    match; Error PFFT support; GREPCOUNT(err, 'PFFT'); 1
+    match ; Hartree energy (numerical)  ; GREPFIELD(hartree_results, 'Hartree Energy (numerical) =', 5) ; 0.3746060551984
 else
     match; Error PFFT missing; GREPCOUNT(err, 'PFFT'); 1
 endif   
