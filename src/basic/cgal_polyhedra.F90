@@ -28,10 +28,11 @@ module cgal_polyhedra_oct_m
 
   public ::                          &
     cgal_polyhedra_t,                &
+    cgal_polyhedron_init,            &
     cgal_polyhedron_read,            &
     cgal_polyhedron_build_AABB_tree, &
     cgal_polyhedron_point_inside,    &
-    cgal_polyhedron_finalize
+    cgal_polyhedron_end
 
   type, bind(C) :: d3
     real(c_double) :: x, y, z
@@ -67,9 +68,14 @@ module cgal_polyhedra_oct_m
       type(d3),    intent(in) :: vec
     end function
 
-    subroutine polyhedron_finalize(ptree) bind(C,name="polyhedron_finalize")
+    subroutine polyhedron_finalize_AABB_tree(tree) bind(C,name="polyhedron_finalize_AABB_tree")
       import
-      type(c_ptr), intent(inout) :: ptree
+      type(c_ptr), intent(inout) :: tree
+    end subroutine
+
+    subroutine polyhedron_finalize_polyhedron(polyhedron) bind(C,name="polyhedron_finalize_polyhedron")
+      import
+      type(c_ptr), intent(inout) :: polyhedron
     end subroutine
 
   end interface
@@ -77,6 +83,21 @@ module cgal_polyhedra_oct_m
 
 
 contains
+
+  ! ---------------------------------------------------------
+  subroutine cgal_polyhedron_init(cgal_poly, fname, verbose)
+    type(cgal_polyhedra_t), intent(inout) :: cgal_poly
+    character(*),              intent(in) :: fname
+    logical,                   intent(in) :: verbose
+
+    PUSH_SUB(cgal_polyhedron_init)
+
+    call cgal_polyhedron_read(cgal_poly, fname, verbose)
+    call cgal_polyhedron_build_AABB_tree(cgal_poly)
+
+    POP_SUB(cgal_polyhedron_init)
+  end subroutine cgal_polyhedron_init
+
 
   ! ---------------------------------------------------------
   subroutine cgal_polyhedron_read(cgal_poly, fname, verbose)
@@ -153,16 +174,17 @@ contains
   end function cgal_polyhedron_point_inside
 
   ! ---------------------------------------------------------
-  subroutine cgal_polyhedron_finalize(ptree)
-    type(c_ptr), intent(inout) :: ptree
+  subroutine cgal_polyhedron_end(cgal_poly)
+    type(cgal_polyhedra_t), intent(inout) :: cgal_poly
 
-    PUSH_SUB(cgal_polyhedron_finalize)
+    PUSH_SUB(cgal_polyhedron_end)
 
 #ifdef HAVE_CGAL
-    call polyhedron_finalize(ptree)
+    call polyhedron_finalize_AABB_tree(cgal_poly%AABB_tree)
+    call polyhedron_finalize_polyhedron(cgal_poly%polyhedron)
 #endif
 
-    POP_SUB(cgal_polyhedron_finalize)
-  end subroutine cgal_polyhedron_finalize
+    POP_SUB(cgal_polyhedron_end)
+  end subroutine cgal_polyhedron_end
 
 end module cgal_polyhedra_oct_m

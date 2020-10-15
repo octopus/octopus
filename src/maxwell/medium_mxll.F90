@@ -483,8 +483,7 @@ module medium_mxll_oct_m
     type(cgal_polyhedra_t) :: cgal_poly
 
     do il = 1, medium_box%number
-      call cgal_polyhedron_read(cgal_poly, trim(medium_box%filename(il)), verbose = .false.)
-      call cgal_polyhedron_build_AABB_tree(cgal_poly)
+      call cgal_polyhedron_init(cgal_poly, trim(medium_box%filename(il)), verbose = .false.)
 
       ip_in = 0
       do ip = 1, mesh%np
@@ -500,6 +499,7 @@ module medium_mxll_oct_m
       end do
       if (ip_in > ip_in_max) ip_in_max = ip_in
       medium_box%points_number(il) = ip_in
+      call cgal_polyhedron_end(cgal_poly)
     end do
 
   end subroutine get_points_map_from_file

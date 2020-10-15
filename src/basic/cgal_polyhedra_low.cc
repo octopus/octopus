@@ -45,7 +45,6 @@ typedef CGAL::Side_of_triangle_mesh<Polyhedron, K> Point_inside;
 typedef CGAL::Bbox_3 Bbox_3;
 
 typedef struct {double x,y,z;} d3;
-typedef struct {Polyhedron *poly; Tree *tree;} Polytree;
 
 using std::cout;
 using std::endl;
@@ -101,10 +100,12 @@ extern "C" {
     return inside_tester(*query) == CGAL::ON_BOUNDED_SIDE || inside_tester(*query) == CGAL::ON_BOUNDARY;
   }
 
-  void polyhedron_finalize(Polytree **pptree){
-    delete (*pptree)->tree; (*pptree)->tree = NULL;
-    delete (*pptree)->poly; (*pptree)->poly = NULL;
-    delete *pptree; *pptree = NULL;
+  void polyhedron_finalize_AABB_tree(Tree **tree){
+    delete *tree; *tree = NULL;
+  }
+
+  void polyhedron_finalize_polyhedron(Polyhedron **polyhedron){
+    delete *polyhedron; *polyhedron = NULL;
   }
 }
 #endif

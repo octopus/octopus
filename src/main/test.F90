@@ -1101,13 +1101,14 @@ contains
 
     PUSH_SUB(test_cgal)
 
-    call cgal_polyhedron_read(cgal_poly, "28-cgal.02-X.off", verbose = .true.)
-    call cgal_polyhedron_build_AABB_tree(cgal_poly)
+    call cgal_polyhedron_init(cgal_poly, "28-cgal.02-X.off", verbose = .true.)
 
     if(cgal_polyhedron_point_inside(cgal_poly, CNST(30.), CNST(10.), CNST(30.))) then
        message(1) = "cgal_polyhedron_point_inside"
        call messages_info(1)
     end if
+
+    call cgal_polyhedron_end(cgal_poly)
 
     POP_SUB(test_cgal)
   end subroutine test_cgal
