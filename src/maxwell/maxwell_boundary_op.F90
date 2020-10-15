@@ -249,7 +249,7 @@ contains
         bc%do_plane_waves = .true.
 
       case (MXLL_BC_MEDIUM)
-        call bc_mxll_medium_init(bc, gr, namespace, bounds, idim)
+        call bc_mxll_medium_init(bc%medium, gr, namespace, bounds, idim)
         call maxwell_medium_points_mapping(bc, gr%mesh, st, bounds, geo)
         call bc_mxll_generate_medium(bc, gr, bounds, geo)
 
@@ -474,8 +474,8 @@ contains
   end subroutine plane_wave_end
 
   ! ---------------------------------------------------------
-  subroutine bc_mxll_medium_init(bc, gr, namespace, bounds, idim)
-    type(bc_mxll_t),     intent(inout) :: bc
+  subroutine bc_mxll_medium_init(medium, gr, namespace, bounds, idim)
+    type(medium_box_t),  intent(inout) :: medium
     type(grid_t),        intent(in)    :: gr
     type(namespace_t),   intent(in)    :: namespace
     FLOAT,               intent(inout) :: bounds(:,:)
@@ -483,10 +483,10 @@ contains
 
     PUSH_SUB(bc_mxll_medium_init)
 
-    SAFE_ALLOCATE(bc%medium%ep_factor(1))
-    SAFE_ALLOCATE(bc%medium%mu_factor(1))
-    SAFE_ALLOCATE(bc%medium%sigma_e_factor(1))
-    SAFE_ALLOCATE(bc%medium%sigma_m_factor(1))
+    SAFE_ALLOCATE(medium%ep_factor(1))
+    SAFE_ALLOCATE(medium%mu_factor(1))
+    SAFE_ALLOCATE(medium%sigma_e_factor(1))
+    SAFE_ALLOCATE(medium%sigma_m_factor(1))
 
     !%Variable MediumWidth
     !%Type float
@@ -495,9 +495,9 @@ contains
     !%Description
     !% Width of the boundary region with medium
     !%End
-    call parse_variable(namespace, 'MediumWidth', M_ZERO, bc%medium%width, units_inp%length)
+    call parse_variable(namespace, 'MediumWidth', M_ZERO, medium%width, units_inp%length)
     bounds(1,idim) = ( gr%mesh%idx%nr(2, idim) - gr%mesh%idx%enlarge(idim) ) * gr%mesh%spacing(idim)
-    bounds(1,idim) = bounds(1,idim) - bc%medium%width
+    bounds(1,idim) = bounds(1,idim) - medium%width
     bounds(2,idim) = ( gr%mesh%idx%nr(2, idim) ) * gr%mesh%spacing(idim)
 
     !%Variable MediumEpsilonFactor
@@ -507,7 +507,7 @@ contains
     !%Description
     !% Linear medium electric susceptibility.
     !%End
-    call parse_variable(namespace, 'MediumEpsilonFactor', M_ONE, bc%medium%ep_factor(1), unit_one)
+    call parse_variable(namespace, 'MediumEpsilonFactor', M_ONE, medium%ep_factor(1), unit_one)
 
     !%Variable MediumMuFactor
     !%Type float
@@ -516,7 +516,7 @@ contains
     !%Description
     !% Linear medium magnetic susceptibility.
     !%End
-    call parse_variable(namespace, 'MediumMuFactor', M_ONE, bc%medium%mu_factor(1), unit_one)
+    call parse_variable(namespace, 'MediumMuFactor', M_ONE, medium%mu_factor(1), unit_one)
 
     !%Variable MediumElectricSigma
     !%Type float
@@ -526,7 +526,7 @@ contains
     !% Electric conductivity of the linear medium.
     !%End
 
-    call parse_variable(namespace, 'MediumElectricSigma', M_ZERO, bc%medium%sigma_e_factor(1), unit_one)
+    call parse_variable(namespace, 'MediumElectricSigma', M_ZERO, medium%sigma_e_factor(1), unit_one)
     !%Variable MediumMagneticSigma
     !%Type float
     !%Default 0.
@@ -534,7 +534,7 @@ contains
     !%Description
     !% Magnetic conductivity of the linear medium.
     !%End
-    call parse_variable(namespace, 'MediumMagneticSigma', M_ZERO, bc%medium%sigma_m_factor(1), unit_one)
+    call parse_variable(namespace, 'MediumMagneticSigma', M_ZERO, medium%sigma_m_factor(1), unit_one)
 
     POP_SUB(bc_mxll_medium_init)
   end subroutine bc_mxll_medium_init
@@ -1199,7 +1199,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine bc_mxll_generate_medium(bc, gr, bounds, geo)
-    type(bc_mxll_t),        intent(inout)  :: bc
+    type(bc_mxll_t),         intent(inout) :: bc
     type(grid_t),            intent(in)    :: gr
     FLOAT,                   intent(in)    :: bounds(:,:)
     type(geometry_t),        intent(in)    :: geo
