@@ -18,6 +18,7 @@
 #include "global.h"
 
 module cgal_polyhedra_oct_m
+  use global_oct_m
   use iso_c_binding
   use messages_oct_m
 
@@ -70,6 +71,8 @@ contains
 
     integer(c_int) :: verb = 0, ierr = 0
 
+    PUSH_SUB(cgal_polyhedron_read)
+
     if (verbose) verb = 1
 #ifdef HAVE_CGAL
     call polyhedron_from_file(ptree, fname//c_null_char, verb, ierr)
@@ -88,29 +91,37 @@ contains
       message(1) = "Error: Error status not implemented in CGAL Fortran interface."
       call messages_fatal(1)
     end if
+
+    POP_SUB(cgal_polyhedron_read)
   end subroutine cgal_polyhedron_read
 
   ! ---------------------------------------------------------
-  function cgal_polyhedron_point_inside(poly, xq,yq,zq) result(res)
+  function cgal_polyhedron_point_inside(poly, xq, yq, zq) result(res)
     logical :: res
     type(c_ptr), intent(in) :: poly
     real(c_double), intent(in) :: xq, yq, zq
     type(d3) :: query
 
+    ! no push/pop here since this is called too frequently
     res = .false.
     query = d3(xq, yq, zq)
 #ifdef HAVE_CGAL
     res = polyhedron_point_inside(poly, query)
 #endif
+
   end function cgal_polyhedron_point_inside
 
   ! ---------------------------------------------------------
   subroutine cgal_polyhedron_finalize(ptree)
     type(c_ptr), intent(inout) :: ptree
 
+    PUSH_SUB(cgal_polyhedron_finalize)
+
 #ifdef HAVE_CGAL
     call polyhedron_finalize(ptree)
 #endif
+
+    POP_SUB(cgal_polyhedron_finalize)
   end subroutine cgal_polyhedron_finalize
 
 end module cgal_polyhedra_oct_m
