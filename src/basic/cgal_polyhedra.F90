@@ -59,11 +59,6 @@ module cgal_polyhedra_oct_m
   end interface
 #endif
 
-  interface cgal_polyhedron_point_inside
-    module procedure cgal_polyhedron_point_inside_s
-    module procedure cgal_polyhedron_point_inside_d
-  end interface
-
 
 contains
 
@@ -93,24 +88,10 @@ contains
       message(1) = "Error: Error status not implemented in CGAL Fortran interface."
       call messages_fatal(1)
     end if
-  end subroutine
+  end subroutine cgal_polyhedron_read
 
   ! ---------------------------------------------------------
-  function cgal_polyhedron_point_inside_s(poly, xq,yq,zq) result(res)
-    logical :: res
-    type(c_ptr), intent(in) :: poly
-    real(c_float), intent(in) :: xq, yq, zq
-    type(d3) :: query
-
-    res = .false.
-    query = d3(real(xq, c_double),real(yq, c_double),real(zq, c_double))
-#ifdef HAVE_CGAL
-    res = polyhedron_point_inside(poly, query)
-#endif
-  end function
-
-  ! ---------------------------------------------------------
-  function cgal_polyhedron_point_inside_d(poly, xq,yq,zq) result(res)
+  function cgal_polyhedron_point_inside(poly, xq,yq,zq) result(res)
     logical :: res
     type(c_ptr), intent(in) :: poly
     real(c_double), intent(in) :: xq, yq, zq
@@ -121,7 +102,7 @@ contains
 #ifdef HAVE_CGAL
     res = polyhedron_point_inside(poly, query)
 #endif
-  end function
+  end function cgal_polyhedron_point_inside
 
   ! ---------------------------------------------------------
   subroutine cgal_polyhedron_finalize(ptree)
@@ -130,6 +111,6 @@ contains
 #ifdef HAVE_CGAL
     call polyhedron_finalize(ptree)
 #endif
-  end subroutine
+  end subroutine cgal_polyhedron_finalize
 
 end module cgal_polyhedra_oct_m
