@@ -281,42 +281,42 @@ module medium_mxll_oct_m
 
     if (allocated(medium_box%filename)) then
 
-    call get_points_map_from_file(medium_box, ip_in_max, gr%mesh, tmp_points_map)
+       call get_points_map_from_file(medium_box, ip_in_max, gr%mesh, tmp_points_map)
 
-    SAFE_ALLOCATE(medium_box%points_map(ip_in_max, nr_of_boxes))
-    SAFE_ALLOCATE(medium_box%bdry_map(1, nr_of_boxes))
+       SAFE_ALLOCATE(medium_box%points_map(ip_in_max, nr_of_boxes))
+       SAFE_ALLOCATE(medium_box%bdry_map(1, nr_of_boxes))
 
-    medium_box%points_map = int(M_zero)
-    medium_box%bdry_map = int(M_zero)
+       medium_box%points_map = int(M_zero)
+       medium_box%bdry_map = int(M_zero)
 
-    medium_box%points_map(:,:) = tmp_points_map(1:ip_in_max,:)
+       medium_box%points_map(:,:) = tmp_points_map(1:ip_in_max,:)
 
     else
 
-    do il = 1, nr_of_boxes
-      do idim = 1, 3
-        bounds(il,1,idim) = medium_box%center(idim,il) - medium_box%lsize(idim,il)/M_TWO
-        bounds(il,2,idim) = medium_box%center(idim,il) + medium_box%lsize(idim,il)/M_TWO
-      end do
-      ip_in = 0
-      ip_bd = 0
-      do ip = 1, gr%mesh%np
-        xx(1:3) = gr%mesh%x(ip, 1:3)
-        inside = check_point_in_bounds(xx, bounds(il,:,:))
-        if (check_point_in_bounds(xx, bounds(il,:,:))) then
-          ip_in = ip_in + 1
-          tmp_points_map(ip_in, il) = ip
-        end if
-        if (check_point_on_bounds(xx, bounds(il,:,:))) then
-          ip_bd = ip_bd + 1
-          tmp_bdry_map(ip_bd, il) = ip
-        end if
-      end do
-      if (ip_in > ip_in_max) ip_in_max = ip_in
-      if (ip_bd > ip_bd_max) ip_bd_max = ip_bd
-      medium_box%points_number(il) = ip_in
-      medium_box%bdry_number(il) = ip_bd
-    end do
+       do il = 1, nr_of_boxes
+          do idim = 1, 3
+             bounds(il,1,idim) = medium_box%center(idim,il) - medium_box%lsize(idim,il)/M_TWO
+             bounds(il,2,idim) = medium_box%center(idim,il) + medium_box%lsize(idim,il)/M_TWO
+          end do
+          ip_in = 0
+          ip_bd = 0
+          do ip = 1, gr%mesh%np
+             xx(1:3) = gr%mesh%x(ip, 1:3)
+             inside = check_point_in_bounds(xx, bounds(il,:,:))
+             if (check_point_in_bounds(xx, bounds(il,:,:))) then
+                ip_in = ip_in + 1
+                tmp_points_map(ip_in, il) = ip
+             end if
+             if (check_point_on_bounds(xx, bounds(il,:,:))) then
+                ip_bd = ip_bd + 1
+                tmp_bdry_map(ip_bd, il) = ip
+             end if
+          end do
+          if (ip_in > ip_in_max) ip_in_max = ip_in
+          if (ip_bd > ip_bd_max) ip_bd_max = ip_bd
+          medium_box%points_number(il) = ip_in
+          medium_box%bdry_number(il) = ip_bd
+       end do
 
     SAFE_ALLOCATE(medium_box%points_map(ip_in_max,nr_of_boxes))
     SAFE_ALLOCATE(medium_box%bdry_map(ip_bd_max,nr_of_boxes))
@@ -406,7 +406,7 @@ module medium_mxll_oct_m
         medium_box%aux_mu(ip_in, :, il) = tmp_grad(ip, :)/(M_FOUR * medium_box%mu(ip_in, il))
       end do
 
-      ! print information about the medium box -- get from Renes version in maxwell_propagator.F90
+      !TODO: add print information about the medium box
 
     end do
 
