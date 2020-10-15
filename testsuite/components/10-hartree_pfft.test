@@ -33,7 +33,7 @@ else
     match; Error PFFT missing; GREPCOUNT(err, 'PFFT'); 1
 endif   
 
-Precision : 0.0001
+Precision : 1e-8
 Input: 10-hartree_pfft.04-3d_3d_periodic.inp
 if (available pfft); then
     match ; Hartree energy (numerical)  ; GREPFIELD(hartree_results, 'Hartree Energy (numerical) =', 5) ; 0.3698445391010
