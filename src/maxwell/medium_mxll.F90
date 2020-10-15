@@ -484,7 +484,7 @@ module medium_mxll_oct_m
 
     do il = 1, medium_box%number
       call cgal_polyhedron_read(ptr, trim(medium_box%filename(il)), verbose = .false.)
-      call cgal_polyhedron_build_AABB_tree(ptr, tree_ptr)
+      call cgal_polyhedron_build_AABB_tree(tree_ptr, ptr)
 
       ip_in = 0
       do ip = 1, mesh%np

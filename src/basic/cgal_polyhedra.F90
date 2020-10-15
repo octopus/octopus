@@ -40,23 +40,23 @@ module cgal_polyhedra_oct_m
 
     subroutine polyhedron_from_file(ptree, fname, verbose, ierr) bind(C,name="polyhedron_from_file")
       import
-      type(c_ptr), intent(out) :: ptree
+      type(c_ptr), intent(out)           :: ptree
       character(kind=c_char), intent(in) :: fname(*)
-      integer(c_int), value :: verbose                 ! avoid bool in C++, not equal to c_bool
-      integer(c_int), intent(out) :: ierr
+      integer(c_int), value              :: verbose    ! avoid bool in C++, not equal to c_bool
+      integer(c_int), intent(out)        :: ierr
     end subroutine
 
-    subroutine polyhedron_build_AABB_tree(poly, tree) bind(C,name="polyhedron_build_AABB_tree")
+    subroutine polyhedron_build_AABB_tree(tree, poly) bind(C,name="polyhedron_build_AABB_tree")
       import
-      type(c_ptr), value :: poly
-      type(c_ptr), value :: tree
+      type(c_ptr), intent(out) :: tree
+      type(c_ptr), intent(in)  :: poly
     end subroutine
 
     function polyhedron_point_inside(tree, vec) result(res) bind(C,name="polyhedron_point_inside")
       import
-      logical(c_bool) :: res
-      type(c_ptr), value :: tree
-      type(d3),intent(in) :: vec
+      logical(c_bool)         :: res
+      type(c_ptr), intent(in) :: tree
+      type(d3),    intent(in) :: vec
     end function
 
     subroutine polyhedron_finalize(ptree) bind(C,name="polyhedron_finalize")
@@ -115,14 +115,14 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine cgal_polyhedron_build_AABB_tree(poly, tree)
-    type(c_ptr), intent(in) :: poly
+  subroutine cgal_polyhedron_build_AABB_tree(tree, poly)
     type(c_ptr), intent(out) :: tree
+    type(c_ptr), intent(in)  :: poly
 
     PUSH_SUB(cgal_polyhedron_build_AABB_tree)
 
 #ifdef HAVE_CGAL
-    call polyhedron_build_AABB_tree(poly, tree)
+    call polyhedron_build_AABB_tree(tree, poly)
 #endif
 
     POP_SUB(cgal_polyhedron_build_AABB_tree)
@@ -132,7 +132,7 @@ contains
   ! ---------------------------------------------------------
   function cgal_polyhedron_point_inside(tree, xq, yq, zq) result(res)
     logical :: res
-    type(c_ptr), intent(in) :: tree
+    type(c_ptr),    intent(in) :: tree
     real(c_double), intent(in) :: xq, yq, zq
     type(d3) :: query
 

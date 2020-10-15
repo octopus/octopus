@@ -86,9 +86,9 @@ extern "C" {
     *ierr = 0;
   }
 
-  void polyhedron_build_AABB_tree(Polyhedron *polyhedron, Tree **tree_out){
+  void polyhedron_build_AABB_tree(Tree **tree_out, Polyhedron **polyhedron){
     // Construct AABB tree with a KdTree
-    Tree *tree = new Tree(faces(*polyhedron).first, faces(*polyhedron).second, *polyhedron);
+    Tree *tree = new Tree(faces(**polyhedron).first, faces(**polyhedron).second, **polyhedron);
     tree->accelerate_distance_queries();
     *tree_out = tree;
   }
