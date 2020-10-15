@@ -78,19 +78,20 @@ contains
     call polyhedron_from_file(ptree, fname//c_null_char, verb, ierr)
 #endif
 
-    if (ierr == 0) then
+    select case(ierr)
+    case(0)
       message(1) = "Info: finished reading polyhedron from file " // fname
       call messages_info(1)
-    else if (ierr == 1) then
+    case(1)
       message(1) = "Error reading file " // fname // ", it appears to be empty."
       call messages_fatal(1)
-    else if (ierr == 2) then
+    case(2)
       message(1) = "Error reading file " // fname // "."
       call messages_fatal(1)
-    else
+    case default
       message(1) = "Error: Error status not implemented in CGAL Fortran interface."
       call messages_fatal(1)
-    end if
+    end select
 
     POP_SUB(cgal_polyhedron_read)
   end subroutine cgal_polyhedron_read
