@@ -229,7 +229,7 @@ contains
     type(cube_t),             intent(in)    :: cube
     type(fourier_space_op_t), intent(inout) :: coulb
 
-    integer :: ix, iy, iz, ixx(3), db(3)
+    integer :: ix, iy, iz, ixx(3), db(3), n1, n2, n3, lx, ly, lz
     FLOAT :: temp(3), modg2, inv_four_mu2
     FLOAT :: gg(3)
     FLOAT, allocatable :: fft_Coulb_FS(:,:,:)
@@ -242,17 +242,23 @@ contains
       inv_four_mu2 = M_ONE/((M_TWO*coulb%mu)**2)
     end if
 
+    n1 = max(1, cube%fs_n(1))
+    n2 = max(1, cube%fs_n(2))
+    n3 = max(1, cube%fs_n(3))
     ! store the Fourier transform of the Coulomb interaction
-    SAFE_ALLOCATE(fft_Coulb_FS(1:cube%fs_n_global(1), 1:cube%fs_n_global(2), 1:cube%fs_n_global(3)))
+    SAFE_ALLOCATE(fft_Coulb_FS(1:n1, 1:n2, 1:n3))
     fft_Coulb_FS = M_ZERO
 
     temp(1:3) = M_TWO*M_PI/(db(1:3)*mesh%spacing(1:3))
 
-    do ix = 1, cube%fs_n_global(1)
+    do lx = 1, n1
+      ix = cube%fs_istart(1) + lx - 1
       ixx(1) = pad_feq(ix, db(1), .true.)
-      do iy = 1, cube%fs_n_global(2)
+      do ly = 1, n2
+        iy = cube%fs_istart(2) + ly - 1
         ixx(2) = pad_feq(iy, db(2), .true.)
-        do iz = 1, cube%fs_n_global(3)
+        do lz = 1, n3
+          iz = cube%fs_istart(3) + lz - 1
           ixx(3) = pad_feq(iz, db(3), .true.)
 
          call poisson_fft_gg_transform(ixx, temp, mesh%sb, coulb%qq, gg, modg2)
@@ -263,18 +269,18 @@ contains
          if(abs(modg2) > CNST(1e-6)) then
            !Screened coulomb potential (erfc function)
            if(coulb%mu > M_EPSILON) then
-             fft_Coulb_FS(ix, iy, iz) = M_FOUR*M_PI/modg2*(M_ONE-exp(-modg2*inv_four_mu2))
+             fft_Coulb_FS(lx, ly, lz) = M_FOUR*M_PI/modg2*(M_ONE-exp(-modg2*inv_four_mu2))
            else
-             fft_Coulb_FS(ix, iy, iz) = M_FOUR*M_PI/modg2
+             fft_Coulb_FS(lx, ly, lz) = M_FOUR*M_PI/modg2
            end if
          else
            !Screened coulomb potential (erfc function)
            if(coulb%mu > M_EPSILON) then
              !Analytical limit of 1/|q|^2*(1-exp(-|q|^2/4mu^2))
-             fft_Coulb_FS(ix, iy, iz) =  M_FOUR*M_PI*inv_four_mu2
+             fft_Coulb_FS(lx, ly, lz) =  M_FOUR*M_PI*inv_four_mu2
            else
              !We use the user-defined value of the singularity
-             fft_Coulb_FS(ix, iy, iz) = coulb%singularity
+             fft_Coulb_FS(lx, ly, lz) = coulb%singularity
            end if
          end if
 
