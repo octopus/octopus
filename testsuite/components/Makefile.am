@@ -37,6 +37,7 @@ dist_share_DATA =                                  \
 	05-hartree_3d_fft.02-fft_corrected.inp     \
 	05-hartree_3d_fft.03-3d_1d_periodic.inp    \
 	05-hartree_3d_fft.04-3d_3d_periodic.inp    \
+	05-hartree_3d_fft.05-3d_2d_periodic.inp    \
 	06-hartree_3d_isf.test                     \
 	06-hartree_3d_isf.01-isf.inp               \
 	07-cholesky_serial.test                    \

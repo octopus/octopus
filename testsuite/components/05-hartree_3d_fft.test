@@ -18,5 +18,9 @@ Input: 05-hartree_3d_fft.03-3d_1d_periodic.inp
 match ; Difference Hartree potential ; GREPFIELD(hartree_results, 'Hartree test (abs.) =', 5) ; 0.0
 
 Precision : 0.0001
-Input: 05-hartree_3d_fft.03-3d_3d_periodic.inp
+Input: 05-hartree_3d_fft.04-3d_3d_periodic.inp
 match ; Hartree energy (numerical)  ; GREPFIELD(hartree_results, 'Hartree Energy (numerical) =', 5) ; 0.3698445391010
+
+Precision : 0.0001
+Input: 05-hartree_3d_fft.05-3d_2d_periodic.inp
+match ; Hartree energy (numerical)  ; GREPFIELD(hartree_results, 'Hartree Energy (numerical) =', 5) ; 0.3746060551984

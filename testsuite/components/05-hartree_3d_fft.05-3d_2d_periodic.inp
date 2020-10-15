@@ -7,7 +7,8 @@ CalculationMode = test
 BoxShape = parallelepiped
 Lsize  = 8.0*angstrom
 Spacing = 0.2*angstrom
-PeriodicDimensions = 3
+PeriodicDimensions = 2
+ExperimentalFeatures = yes
 
 PoissonSolver = fft
 PoissonTestPeriodicThreshold = 1e-1
