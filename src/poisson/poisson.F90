@@ -548,10 +548,6 @@ contains
       if (der%mesh%sb%dim /= 3 .and. fft_library == FFTLIB_PFFT) then
         call messages_not_implemented('PFFT support for dimensionality other than 3')
       end if
-      if ((der%mesh%sb%periodic_dim == 1 .or. der%mesh%sb%periodic_dim == 2) &
-          .and. fft_library == FFTLIB_PFFT) then
-        call messages_not_implemented('PFFT support for periodic dimensions 1 and 2')
-      end if
 
       select case (der%mesh%sb%dim)
 
