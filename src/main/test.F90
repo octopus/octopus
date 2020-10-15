@@ -1097,14 +1097,14 @@ contains
   ! ---------------------------------------------------------
   subroutine test_cgal()
 
-    type(c_ptr) :: polygon_ptr, tree_ptr
+    type(cgal_polyhedra_t) :: cgal_poly
 
     PUSH_SUB(test_cgal)
 
-    call cgal_polyhedron_read(polygon_ptr, "28-cgal.02-X.off", verbose = .true.)
-    call cgal_polyhedron_build_AABB_tree(tree_ptr, polygon_ptr)
+    call cgal_polyhedron_read(cgal_poly, "28-cgal.02-X.off", verbose = .true.)
+    call cgal_polyhedron_build_AABB_tree(cgal_poly)
 
-    if(cgal_polyhedron_point_inside(tree_ptr, CNST(30.), CNST(10.), CNST(30.))) then
+    if(cgal_polyhedron_point_inside(cgal_poly, CNST(30.), CNST(10.), CNST(30.))) then
        message(1) = "cgal_polyhedron_point_inside"
        call messages_info(1)
     end if

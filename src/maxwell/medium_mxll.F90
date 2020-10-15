@@ -480,11 +480,11 @@ module medium_mxll_oct_m
 
     integer :: il, ip_in, ip
     FLOAT   :: xx(3)
-    type(c_ptr) :: ptr, tree_ptr
+    type(cgal_polyhedra_t) :: cgal_poly
 
     do il = 1, medium_box%number
-      call cgal_polyhedron_read(ptr, trim(medium_box%filename(il)), verbose = .false.)
-      call cgal_polyhedron_build_AABB_tree(tree_ptr, ptr)
+      call cgal_polyhedron_read(cgal_poly, trim(medium_box%filename(il)), verbose = .false.)
+      call cgal_polyhedron_build_AABB_tree(cgal_poly)
 
       ip_in = 0
       do ip = 1, mesh%np
@@ -493,7 +493,7 @@ module medium_mxll_oct_m
         else
           xx(1:3) = mesh%x(ip, 1:3)
         end if
-        if (cgal_polyhedron_point_inside(tree_ptr, xx(1), xx(2), xx(3))) then
+        if (cgal_polyhedron_point_inside(cgal_poly, xx(1), xx(2), xx(3))) then
           ip_in = ip_in + 1
           tmp_map(ip_in, il) = ip
         end if

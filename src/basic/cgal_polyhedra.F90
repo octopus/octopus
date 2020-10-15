@@ -26,24 +26,32 @@ module cgal_polyhedra_oct_m
 
   private
 
-  public cgal_polyhedron_read,            &
-         cgal_polyhedron_build_AABB_tree, &
-         cgal_polyhedron_point_inside,    &
-         cgal_polyhedron_finalize
+  public ::                          &
+    cgal_polyhedra_t,                &
+    cgal_polyhedron_read,            &
+    cgal_polyhedron_build_AABB_tree, &
+    cgal_polyhedron_point_inside,    &
+    cgal_polyhedron_finalize
 
   type, bind(C) :: d3
     real(c_double) :: x, y, z
   end type
+
+  type cgal_polyhedra_t
+    private
+    type(c_ptr) :: AABB_tree
+    type(c_ptr) :: polyhedron
+  end type cgal_polyhedra_t
 
 #ifdef HAVE_CGAL
   interface
 
     subroutine polyhedron_from_file(ptree, fname, verbose, ierr) bind(C,name="polyhedron_from_file")
       import
-      type(c_ptr), intent(out)           :: ptree
-      character(kind=c_char), intent(in) :: fname(*)
-      integer(c_int), value              :: verbose    ! avoid bool in C++, not equal to c_bool
-      integer(c_int), intent(out)        :: ierr
+      type(c_ptr), intent(out)            :: ptree
+      character(kind=c_char), intent(in)  :: fname(*)
+      integer(c_int), value               :: verbose    ! avoid bool in C++, not equal to c_bool
+      integer(c_int), intent(out)         :: ierr
     end subroutine
 
     subroutine polyhedron_build_AABB_tree(tree, poly) bind(C,name="polyhedron_build_AABB_tree")
@@ -71,10 +79,10 @@ module cgal_polyhedra_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine cgal_polyhedron_read(ptree, fname, verbose)
-    type(c_ptr), intent(out) :: ptree
-    character(*), intent(in) :: fname
-    logical,      intent(in) :: verbose
+  subroutine cgal_polyhedron_read(cgal_poly, fname, verbose)
+    type(cgal_polyhedra_t), intent(out) :: cgal_poly
+    character(*),            intent(in) :: fname
+    logical,                 intent(in) :: verbose
 
     integer(c_int) :: verb, ierr
 
@@ -85,7 +93,7 @@ contains
 
     if (verbose) verb = 1
 #ifdef HAVE_CGAL
-    call polyhedron_from_file(ptree, fname//c_null_char, verb, ierr)
+    call polyhedron_from_file(cgal_poly%polyhedron, fname//c_null_char, verb, ierr)
 #endif
 #ifndef HAVE_CGAL
     ierr = 3
@@ -115,14 +123,13 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine cgal_polyhedron_build_AABB_tree(tree, poly)
-    type(c_ptr), intent(out) :: tree
-    type(c_ptr), intent(in)  :: poly
+  subroutine cgal_polyhedron_build_AABB_tree(cgal_poly)
+    type(cgal_polyhedra_t), intent(inout) :: cgal_poly
 
     PUSH_SUB(cgal_polyhedron_build_AABB_tree)
 
 #ifdef HAVE_CGAL
-    call polyhedron_build_AABB_tree(tree, poly)
+    call polyhedron_build_AABB_tree(cgal_poly%AABB_tree, cgal_poly%polyhedron)
 #endif
 
     POP_SUB(cgal_polyhedron_build_AABB_tree)
@@ -130,9 +137,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  function cgal_polyhedron_point_inside(tree, xq, yq, zq) result(res)
+  function cgal_polyhedron_point_inside(cgal_poly, xq, yq, zq) result(res)
     logical :: res
-    type(c_ptr),    intent(in) :: tree
+    type(cgal_polyhedra_t), intent(in) :: cgal_poly
     real(c_double), intent(in) :: xq, yq, zq
     type(d3) :: query
 
@@ -140,7 +147,7 @@ contains
     res = .false.
     query = d3(xq, yq, zq)
 #ifdef HAVE_CGAL
-    res = polyhedron_point_inside(tree, query)
+    res = polyhedron_point_inside(cgal_poly%AABB_tree, query)
 #endif
 
   end function cgal_polyhedron_point_inside
