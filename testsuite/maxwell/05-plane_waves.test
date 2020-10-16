@@ -7,7 +7,7 @@ Enabled    : Yes
 
 # one cosinoidal pulse with pml
 Processors : 1
-Input      : 04-plane_waves.01-pulse_pml.inp
+Input      : 05-plane_waves.01-pulse_pml.inp
 
 Precision: 1e-4
 match ;  Tot. Maxwell energy [step 10]  ; LINEFIELD(Maxwell/td.general/maxwell_energy, 16, 3) ; 0.4106678488002
