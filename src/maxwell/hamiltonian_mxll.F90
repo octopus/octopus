@@ -148,8 +148,6 @@ module hamiltonian_mxll_oct_m
     procedure :: is_hermitian => hamiltonian_mxll_hermitian
   end type hamiltonian_mxll_t
 
-  type(profile_t), save :: prof_hamiltonian_mxll
-
   integer, public, parameter ::      &
     FARADAY_AMPERE_OLD          = 0, &
     FARADAY_AMPERE              = 1, &
@@ -287,6 +285,8 @@ contains
   subroutine hamiltonian_mxll_end(hm)
     type(hamiltonian_mxll_t), intent(inout) :: hm
 
+    type(profile_t), save :: prof
+
     PUSH_SUB(hamiltonian_mxll_end)
 
     nullify(hm%operators)
@@ -399,7 +399,7 @@ contains
     logical, optional,         intent(in)    :: set_bc !< If set to .false. the boundary conditions are assumed to be set previously.
 
     PUSH_SUB(hamiltonian_mxll_apply_batch)
-    call profiling_in(prof_hamiltonian_mxll, "MXLL_HAMILTONIAN")
+    call profiling_in(prof, "HAMILTONIAN_MXLL_APPLY_BATCH")
 
     ASSERT(psib%status() == hpsib%status())
 
@@ -421,7 +421,7 @@ contains
     call zderivatives_batch_curl(der, hpsib)
     call batch_scal(der%mesh%np, hm%rs_sign * P_c, hpsib)
   
-    call profiling_out(prof_hamiltonian_mxll)
+    call profiling_out(prof)
     POP_SUB(hamiltonian_mxll_apply_batch)
   end subroutine hamiltonian_mxll_apply_batch
 
@@ -455,8 +455,11 @@ contains
 
     CMPLX, allocatable :: rs_aux_in(:,:), rs_aux_out(:,:)
     integer :: ii
+    type(profile_t), save :: prof
 
     PUSH_SUB(zhamiltonian_mxll_apply)
+
+    call profiling_in(prof, ZHAMILTONIAN_MXLL_APPLY)
 
     if (hm%operator == FARADAY_AMPERE .and. all(hm%bc%bc_ab_type(1:3) /= MXLL_AB_CPML)) then
       ! This part is already batchified
@@ -479,6 +482,8 @@ contains
       
     end if
 
+    call profiling_out(prof)
+
     POP_SUB(zhamiltonian_mxll_apply)
   end subroutine zhamiltonian_mxll_apply
 
@@ -495,8 +500,11 @@ contains
     CMPLX, allocatable :: tmp(:,:)
     CMPLX, pointer     :: kappa_psi(:,:)
     integer            :: np, np_part, ip, ip_in, rs_sign
+    type(profile_t), save :: prof
 
     PUSH_SUB(maxwell_hamiltonian_apply_fd)
+
+    call profiling_in(prof, 'MAXWELL_HAMILTONIAN_APPLY_FD')
 
     np = der%mesh%np
     np_part = der%mesh%np_part
@@ -702,6 +710,8 @@ contains
 
     end select
 
+    call profiling_out(prof)
+
     POP_SUB(maxwell_hamiltonian_apply_fd)
   end subroutine maxwell_hamiltonian_apply_fd
 
@@ -716,13 +726,19 @@ contains
     integer,                  intent(in)    :: dir2
     CMPLX,                    intent(inout) :: tmp(:)
 
+    type(profile_t), save :: prof
+
     PUSH_SUB(maxwell_pml_hamiltonian)
+
+    call profiling_in(prof, 'MAXWELL_PML_HAMILTONIAN')
 
     if ( (hm%bc%bc_ab_type(dir1) == MXLL_AB_CPML) .and. hm%cpml_hamiltonian ) then
       if (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RS) then
         call maxwell_pml_calculation_via_riemann_silberstein(hm, der, psi, dir1, dir2, tmp(:))
       end if
     end if
+
+   call profiling_out(prof)
 
     POP_SUB(maxwell_pml_hamiltonian)
   end subroutine maxwell_pml_hamiltonian
@@ -737,7 +753,11 @@ contains
     integer,                  intent(in)    :: dir2
     CMPLX,                    intent(inout) :: tmp(:,:)
 
+    type(profile_t), save :: prof
+
     PUSH_SUB(maxwell_pml_hamiltonian_medium)
+
+    call profiling_in(prof, 'MAXWELL_PML_HAMILTONIAN_MEDIUM')
 
     if ( (hm%bc%bc_ab_type(dir1) == MXLL_AB_CPML) .and. hm%cpml_hamiltonian ) then
       if (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RS) then
@@ -746,6 +766,8 @@ contains
 !        call maxwell_pml_calculation_via_e_b_fields_medium(hm, der, psi, dir1, dir2, tmp(:,:))
       end if
     end if
+
+    call profiling_out(prof)
 
     POP_SUB(maxwell_pml_hamiltonian_medium)
   end subroutine maxwell_pml_hamiltonian_medium
