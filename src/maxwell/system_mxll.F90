@@ -239,7 +239,11 @@ contains
     integer :: relax_iter_default
     FLOAT   :: courant
 
+    type(profile_t), save :: prof
+
     PUSH_SUB(system_mxll_initial_conditions)
+
+    call profiling_in(prof,"SYSTEM_MXLL_INITIAL_CONDITIONS")
 
     courant = M_ONE/(P_c * sqrt(M_ONE/this%gr%mesh%spacing(1)**2 + M_ONE/this%gr%mesh%spacing(2)**2 + &
          M_ONE/this%gr%mesh%spacing(3)**2) )
@@ -377,6 +381,8 @@ contains
 
     call get_rs_state_at_point(this%st%selected_points_rs_state(:,:), this%st%rs_state, &
       this%st%selected_points_coordinate(:,:), this%st, this%gr%mesh)
+
+    call profiling_out(prof)
 
     POP_SUB(system_mxll_initial_conditions)
   end subroutine system_mxll_initial_conditions
@@ -548,8 +554,11 @@ contains
     CMPLX :: interpolated_value(3)
     FLOAT :: e_field(3)
     FLOAT :: b_field(3)
+    type(profile_t), save :: prof
 
     PUSH_SUB(system_mxll_copy_quantities_to_interaction)
+
+    call profiling_in(prof, "SYSTEM_MXLL_COPY_QUANTITIES_TO_INTERACTION")
 
     select type (interaction)
     type is (lorentz_force_t)
@@ -568,6 +577,8 @@ contains
       call messages_fatal(1)
     end select
 
+    call profiling_out(prof)
+
     POP_SUB(system_mxll_copy_quantities_to_interaction)
   end subroutine system_mxll_copy_quantities_to_interaction
 
@@ -575,7 +586,11 @@ contains
   subroutine system_mxll_output_start(this)
     class(system_mxll_t), intent(inout) :: this
 
+    type(profile_t), save :: prof
+
     PUSH_SUB(system_mxll_output_start)
+
+    call profiling_in(prof, "SYSTEM_MXLL_OUTPUT_START")
 
     call td_write_mxll_init(this%write_handler, this%namespace, this%gr, this%st, this%hm, 0, this%prop%dt)
     call td_write_mxll_iter(this%write_handler, this%gr, this%st, this%hm, this%prop%dt, 0)
@@ -586,6 +601,8 @@ contains
     call messages_info(1)
     call messages_print_stress(stdout)
 
+    call profiling_out(prof)
+
     POP_SUB(system_mxll_output_start)
   end subroutine system_mxll_output_start
 
@@ -594,8 +611,11 @@ contains
     class(system_mxll_t), intent(inout) :: this
 
     logical :: stopping
+    type(profile_t), save :: prof
 
     PUSH_SUB(system_mxll_output_write)
+
+    call profiling_in(prof, "SYSTEM_MXLL_OUTPUT_WRITE")
 
     stopping = clean_stop(this%mc%master_comm)
 
@@ -605,6 +625,8 @@ contains
       call td_write_mxll_free_data(this%write_handler, this%namespace, this%gr, this%st, this%hm, this%geo, this%outp, this%clock)
     end if
 
+    call profiling_out(prof)
+
     POP_SUB(system_mxll_output_write)
   end subroutine system_mxll_output_write
 
@@ -612,9 +634,15 @@ contains
   subroutine system_mxll_output_finish(this)
     class(system_mxll_t), intent(inout) :: this
 
+    type(profile_t), save :: prof
+
     PUSH_SUB(system_mxll_output_finish)
 
+    call profiling_in(prof, "SYSTEM_MXLL_OUTPUT_FINISH")
+
     call td_write_mxll_end(this%write_handler)
+
+    call profiling_out(prof)
 
     POP_SUB(system_mxll_output_finish)
   end subroutine system_mxll_output_finish
@@ -623,7 +651,11 @@ contains
   subroutine system_mxll_finalize(this)
     type(system_mxll_t), intent(inout) :: this
 
+    type(profile_t), save :: prof
+
     PUSH_SUB(system_mxll_finalize)
+
+    call profiling_in(prof, "SYSTEM_MXLL_FINALIZE")
 
     call system_end(this)
 
@@ -645,6 +677,8 @@ contains
     call space_end(this%space)
 
     SAFE_DEALLOCATE_P(this%gr)
+
+    call profiling_out(prof)
 
     POP_SUB(system_mxll_finalize)
   end subroutine system_mxll_finalize

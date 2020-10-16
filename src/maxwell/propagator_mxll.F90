@@ -128,8 +128,11 @@ contains
     type(block_t) :: blk
     character(len=256) :: string
     logical :: plane_waves_set = .false.
+    type(profile_t), save :: prof
 
     PUSH_SUB(propagator_mxll_init)
+
+    call profiling_in(prof,"PROPAGATOR_MXLL_INIT")
 
     hm%bc%bc_type(:) = MXLL_BC_ZERO ! default boundary condition is zero
 
@@ -299,6 +302,8 @@ contains
     !tr%te%exp = .true.
     call exponential_init(tr%te, namespace) ! initialize Maxwell propagator
 
+    call profiling_out(prof)
+
     POP_SUB(propagator_mxll_init)
   end subroutine propagator_mxll_init
 
@@ -323,8 +328,11 @@ contains
     CMPLX, allocatable :: ff_rs_state(:,:), ff_rs_inhom_1(:,:), ff_rs_inhom_2(:,:)
     CMPLX, allocatable :: ff_rs_state_pml(:,:), ff_rs_inhom_mean(:,:)
     logical            :: pml_check = .false.
+    type(profile_t), save :: prof
 
     PUSH_SUB(mxll_propagation_step)
+
+    call profiling_in(prof, 'MXLL_PROPAGATOR_STEP')
 
     if (hm%ma_mx_coupling_apply) then
       message(1) = "Maxwell-matter coupling not implemented yet"
@@ -514,6 +522,8 @@ contains
       SAFE_DEALLOCATE_A(ff_rs_state_pml)
     end if
 
+    call profiling_out(prof)
+
     POP_SUB(mxll_propagation_step)
   end subroutine mxll_propagation_step
 
@@ -529,8 +539,11 @@ contains
 
     type(batch_t) :: ffbatch
     integer :: istate
+    type(profile_t), save :: prof
 
     PUSH_SUB(exponential_mxll_apply)
+
+    call profiling_in(prof, 'EXPONENTIAL_MXLL_APPLY')
 
     call zbatch_init(ffbatch, 1, 1, hm%dim, gr%mesh%np_part)
 
@@ -548,6 +561,8 @@ contains
 
     call ffbatch%end()
 
+    call profiling_out(prof)
+
     POP_SUB(exponential_mxll_apply)
   end subroutine exponential_mxll_apply
 
@@ -558,8 +573,11 @@ contains
     type(hamiltonian_mxll_t), intent(in)    :: hm
 
     integer :: ip, ip_in, il, idim
+    type(profile_t), save :: prof
 
     PUSH_SUB(set_medium_rs_state)
+
+    call profiling_in(prof, 'SET_MEDIUM_RS_STATE')
 
     SAFE_ALLOCATE(st%ep(1:gr%mesh%np_part))
     SAFE_ALLOCATE(st%mu(1:gr%mesh%np_part))
@@ -585,6 +603,8 @@ contains
       end if
     end do
 
+    call profiling_out(prof)
+
     POP_SUB(set_medium_rs_state)
   end subroutine set_medium_rs_state
 
@@ -598,8 +618,11 @@ contains
     integer,                  intent(in)         :: sign
 
     CMPLX, allocatable :: rs_state_minus(:,:)
+    type(profile_t), save :: prof
 
     PUSH_SUB(transform_rs_state)
+
+    call profiling_in(prof, 'TRANSFORM_RS_STATE')
 
     ASSERT(sign == RS_TRANS_FORWARD .or. sign == RS_TRANS_BACKWARD)
 
@@ -628,6 +651,8 @@ contains
       end if
     end if
 
+    call profiling_out(prof)
+
     POP_SUB(transform_rs_state)
 
   end subroutine transform_rs_state
@@ -640,9 +665,13 @@ contains
     CMPLX,                    intent(inout) :: ff_density(:,:)
     integer,                  intent(in)    :: sign
 
+    type(profile_t), save :: prof
+
     ASSERT(sign == RS_TRANS_FORWARD .or. sign == RS_TRANS_BACKWARD)
 
     PUSH_SUB(transform_rs_densities)
+
+    call profiling_in(prof, 'TRANSFORM_RS_DENSITIES')
 
     if (hm%operator == FARADAY_AMPERE_MEDIUM) then
       if (sign == RS_TRANS_FORWARD) then
@@ -665,6 +694,8 @@ contains
         rs_current_density(:, 1:3) = ff_density(:, 1:3)
       end if
     end if
+
+    call profiling_out(prof)
 
     POP_SUB(transform_rs_densities)
 
@@ -915,9 +946,11 @@ contains
     FLOAT   :: bounds(2, mesh%sb%dim), xx(mesh%sb%dim)
     FLOAT   :: ddv(mesh%sb%dim), tmp(mesh%sb%dim), width(mesh%sb%dim)
     FLOAT, allocatable :: mask(:)
+    type(profile_t), save :: prof
 
     PUSH_SUB(derivatives_boundary_mask)
 
+    call profiling_in(prof, 'DERIVATIVES_BOUNDARY_MASK')
     dim = mesh%sb%dim
 
     if (hm%bc_zero .or. hm%bc_constant .or. hm%bc_plane_waves) then
@@ -992,6 +1025,7 @@ contains
     end do
 
     SAFE_DEALLOCATE_A(mask)
+    call profiling_out(prof)
 
     POP_SUB(derivatives_boundary_mask)
   end subroutine derivatives_boundary_mask
@@ -1011,8 +1045,11 @@ contains
 
     CMPLX, allocatable :: ztmp(:,:)
     integer            :: idim, ip
+    type(profile_t), save :: prof
 
     PUSH_SUB(energy_density_calc)
+
+    call profiling_in(prof, 'ENERGY_DENSITY_CALC')
 
     SAFE_ALLOCATE(ztmp(1:gr%mesh%np_part,1:st%dim))
 
@@ -1050,6 +1087,7 @@ contains
     end if
 
     SAFE_DEALLOCATE_A(ztmp)
+    call profiling_out(prof)
 
     POP_SUB(energy_density_calc)
   end subroutine energy_density_calc
@@ -1072,8 +1110,11 @@ contains
     FLOAT, allocatable :: energy_density(:), energy_density_plane_waves(:), tmp(:), tmp_pw(:)
     FLOAT, allocatable :: e_energy_density(:), tmp_e(:)
     FLOAT, allocatable :: b_energy_density(:), tmp_b(:)
+    type(profile_t), save :: prof
 
     PUSH_SUB(energy_mxll_calc)
+
+    call profiling_in(prof, 'ENERGY_MXLL_CALC')
 
     SAFE_ALLOCATE(energy_density(1:gr%mesh%np))
     SAFE_ALLOCATE(energy_density_plane_waves(1:gr%mesh%np))
@@ -1129,6 +1170,8 @@ contains
     SAFE_DEALLOCATE_A(tmp_b)
     SAFE_DEALLOCATE_A(tmp_pw)
 
+    call profiling_out(prof)
+
     POP_SUB(energy_mxll_calc)
   end subroutine energy_mxll_calc
 
@@ -1146,8 +1189,11 @@ contains
     integer             :: idim, ip_surf, ix, ix_max, iy, iy_max, iz, iz_max, ii_max
     FLOAT               :: tmp_sum
     FLOAT,  allocatable :: poynting_vector(:,:), tmp_global(:,:), tmp_surf(:,:,:,:,:)
+    type(profile_t), save :: prof
 
     PUSH_SUB(energy_rate_calc)
+
+    call profiling_in(prof, 'ENERGY_RATE_CALC')
 
     SAFE_ALLOCATE(poynting_vector(1:gr%mesh%np,1:st%dim))
     SAFE_ALLOCATE(tmp_global(1:gr%mesh%np_global,1:st%dim))
@@ -1239,6 +1285,8 @@ contains
     SAFE_DEALLOCATE_A(poynting_vector)
     SAFE_DEALLOCATE_A(tmp_global)
 
+    call profiling_out(prof)
+
     POP_SUB(energy_rate_calc)
   end subroutine energy_rate_calc
 
@@ -1257,8 +1305,11 @@ contains
     integer             :: idim, ip_surf, ix, ix_max, iy, iy_max, iz, iz_max, ii_max
     FLOAT               :: tmp_sum
     FLOAT,  allocatable :: poynting_vector(:,:), tmp_global(:,:), tmp_surf(:,:,:,:,:)
+    type(profile_t), save :: prof
 
     PUSH_SUB(energy_rate_calc_plane_waves)
+
+    call profiling_in(prof, 'ENERGY_RATE_CALC_PLANE_WAVES')
 
     SAFE_ALLOCATE(poynting_vector(1:gr%mesh%np,1:st%dim))
     SAFE_ALLOCATE(tmp_global(1:gr%mesh%np_global,1:st%dim))
@@ -1350,6 +1401,8 @@ contains
     SAFE_DEALLOCATE_A(poynting_vector)
     SAFE_DEALLOCATE_A(tmp_global)
 
+    call profiling_out(prof)
+
     POP_SUB(energy_rate_calc_plane_waves)
   end subroutine energy_rate_calc_plane_waves
 
@@ -1363,8 +1416,11 @@ contains
 
     integer             :: idim, ip_surf, ix, ix_max, iy, iy_max, iz, iz_max, ii_max
     FLOAT,  allocatable :: poynting_vector(:,:), tmp_global(:,:), tmp_surf(:,:,:,:,:)
+    type(profile_t), save :: prof
 
     PUSH_SUB(poynting_vector_through_box_surfaces)
+
+    call profiling_in(prof, 'PONYTING_VECTOR_THROUGH_BOX_SURFACES')
 
     SAFE_ALLOCATE(poynting_vector(1:gr%mesh%np,1:st%dim))
     SAFE_ALLOCATE(tmp_global(1:gr%mesh%np_global,1:st%dim))
@@ -1446,6 +1502,8 @@ contains
     SAFE_DEALLOCATE_A(poynting_vector)
     SAFE_DEALLOCATE_A(tmp_global)
 
+    call profiling_out(prof)
+
     POP_SUB(poynting_vector_through_box_surfaces)
   end subroutine poynting_vector_through_box_surfaces
 
@@ -1459,8 +1517,11 @@ contains
 
     integer             :: idim, ip_surf, ix, ix_max, iy, iy_max, iz, iz_max, ii_max
     FLOAT,  allocatable :: poynting_vector(:,:), tmp_global(:,:), tmp_surf(:,:,:,:,:)
+    type(profile_t), save :: prof
 
     PUSH_SUB(poynting_vector_through_box_surfaces_plane_waves)
+
+    call profiling_in(prof, 'POYNTING_VECTOR_TROUGH_BOX_SURFACES_PLANE_WAVES')
 
     SAFE_ALLOCATE(poynting_vector(1:gr%mesh%np,1:st%dim))
     SAFE_ALLOCATE(tmp_global(1:gr%mesh%np_global,1:st%dim))
@@ -1542,6 +1603,8 @@ contains
     SAFE_DEALLOCATE_A(poynting_vector)
     SAFE_DEALLOCATE_A(tmp_global)
 
+    call profiling_out(prof)
+
     POP_SUB(poynting_vector_through_box_surfaces_plane_waves)
   end subroutine poynting_vector_through_box_surfaces_plane_waves
 
@@ -1558,8 +1621,11 @@ contains
     integer             :: idim, ip_surf, ix, ix_max, iy, iy_max, iz, iz_max, ii_max
     FLOAT, allocatable :: e_surf(:,:,:,:,:), b_surf(:,:,:,:,:), e_field(:,:), e_field_global(:,:), b_field(:,:), &
       b_field_global(:,:)
+    type(profile_t), save :: prof
 
     PUSH_SUB(fields_through_box_surfaces)
+
+    call profiling_in(prof, 'FIELDS_THROUGH_BOX_SURFACES')
 
     SAFE_ALLOCATE(e_field(1:gr%mesh%np, 1:st%dim))
     SAFE_ALLOCATE(b_field(1:gr%mesh%np, 1:st%dim))
@@ -1680,6 +1746,8 @@ contains
     SAFE_DEALLOCATE_A(e_field_global)
     SAFE_DEALLOCATE_A(b_field_global)
 
+    call profiling_out(prof)
+
     POP_SUB(fields_through_box_surfaces)
   end subroutine fields_through_box_surfaces
 
@@ -1695,8 +1763,11 @@ contains
     integer             :: idim, ip_surf, ix, ix_max, iy, iy_max, iz, iz_max, ii_max
     FLOAT, allocatable :: e_surf(:,:,:,:,:), b_surf(:,:,:,:,:), e_field(:,:), e_field_global(:,:), b_field(:,:), &
       b_field_global(:,:)
+    type(profile_t), save :: prof
 
     PUSH_SUB(fields_through_box_surfaces_plane_waves)
+
+    call profiling_in(prof, 'FIELDS_THROUGH_BOX_SURFACES_PLANE_WAVES')
 
     SAFE_ALLOCATE(e_field(1:gr%mesh%np, 1:st%dim))
     SAFE_ALLOCATE(b_field(1:gr%mesh%np, 1:st%dim))
@@ -1821,6 +1892,8 @@ contains
     SAFE_DEALLOCATE_A(e_field_global)
     SAFE_DEALLOCATE_A(b_field_global)
 
+    call profiling_out(prof)
+
     POP_SUB(fields_through_box_surfaces_plane_waves)
   end subroutine fields_through_box_surfaces_plane_waves
 
@@ -1838,8 +1911,11 @@ contains
 
     integer            :: ip, ip_in, idim
     logical            :: mask_check = .false.
+    type(profile_t), save :: prof
 
     PUSH_SUB(mask_absorbing_boundaries)
+
+    call profiling_in(prof, 'MASK_ABSORBING_BOUNDARIES')
 
     do idim = 1, 3
       if (hm%bc%bc_ab_type(idim) == OPTION__MAXWELLABSORBINGBOUNDARIES__MASK) then
@@ -1870,6 +1946,8 @@ contains
       end if
     end if
 
+    call profiling_out(prof)
+
     POP_SUB(mask_absorbing_boundaries)
   end subroutine mask_absorbing_boundaries
 
@@ -1879,8 +1957,11 @@ contains
     CMPLX,                    intent(inout) :: rs_state(:,:)
 
     integer :: ip, ip_in, idim
+    type(profile_t), save :: prof
 
     PUSH_SUB(maxwell_mask)
+
+    call profiling_in(prof, 'MAXWELL_MASK')
 
     do idim = 1, 3
       if (hm%bc%bc_ab_type(idim) == OPTION__MAXWELLABSORBINGBOUNDARIES__MASK) then
@@ -1890,6 +1971,8 @@ contains
         end do
       end if
     end do
+
+    call profiling_out(prof)
 
     POP_SUB(maxwell_mask)
   end subroutine maxwell_mask
@@ -1905,8 +1988,11 @@ contains
 
     integer            :: ip, ff_points, ff_dim
     CMPLX, allocatable :: ff_rs_state_plane_waves(:,:), rs_state_constant(:,:), ff_rs_state_constant(:,:)
+    type(profile_t), save :: prof
 
     PUSH_SUB(pml_propagation_stage_1)
+
+    call profiling_in(prof, 'PML_PROPAGATION_STAGE_1')
 
     if (tr%bc_plane_waves .and. hm%plane_waves_apply) then
       ff_points = size(ff_rs_state(:,1))
@@ -1930,6 +2016,8 @@ contains
       ff_rs_state_pml = ff_rs_state
     end if
 
+    call profiling_out(prof)
+
     POP_SUB(pml_propagation_stage_1)
   end subroutine pml_propagation_stage_1
 
@@ -1948,8 +2036,11 @@ contains
 
     integer            :: ip, ip_in, ff_points, ff_dim
     CMPLX, allocatable :: ff_rs_state_plane_waves(:,:), rs_state_constant(:,:), ff_rs_state_constant(:,:)
+    type(profile_t), save :: prof
 
     PUSH_SUB(pml_propagation_stage_2)
+
+    call profiling_in(prof, 'PML_PROPAGATION_STAGE_2')
 
     if (tr%bc_plane_waves .and. hm%plane_waves_apply) then
       ff_points = size(ff_rs_state(:,1))
@@ -1982,6 +2073,8 @@ contains
       SAFE_DEALLOCATE_A(ff_rs_state_constant)
     end if
 
+    call profiling_out(prof)
+
     POP_SUB(pml_propagation_stage_2)
   end subroutine pml_propagation_stage_2
 
@@ -1992,13 +2085,19 @@ contains
     CMPLX,               intent(inout) :: ff_rs_state_pml(:,:)
     integer,             intent(in)    :: ff_dim
 
+    type(profile_t), save :: prof
+
     PUSH_SUB(cpml_conv_function_update)
+
+    call profiling_in(prof, 'CPML_CONV_FUNCTION_UPDATE')
 
     if (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RS) then
       call cpml_conv_function_update_via_riemann_silberstein(hm, gr, ff_rs_state_pml, ff_dim)
     else if (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__EM) then
       call cpml_conv_function_update_via_e_b_fields(hm, gr, ff_rs_state_pml, ff_dim)
     end if
+
+    call profiling_out(prof)
 
     POP_SUB(cpml_conv_function_update)
   end subroutine cpml_conv_function_update
@@ -2013,8 +2112,11 @@ contains
     integer :: ip, ip_in, np_part, rs_sign
     CMPLX, allocatable :: tmp_partial(:), tmp_partial_2(:,:)
     CMPLX              :: pml_a(3), pml_b(3), pml_g(3), pml_g_p(3), pml_g_m(3)
+    type(profile_t), save :: prof
 
     PUSH_SUB(cpml_conv_function_update_via_riemann_silberstein)
+
+    call profiling_in(prof, 'CPML_CONV_FUNCTION_UPDATE_VIA_RIEMANN_SILBERSTEIN')
 
     np_part = gr%der%mesh%np_part
     rs_sign = hm%rs_sign
@@ -2197,6 +2299,8 @@ contains
 
     end if
 
+    call profiling_out(prof)
+
     POP_SUB(cpml_conv_function_update_via_riemann_silberstein)
   end subroutine cpml_conv_function_update_via_riemann_silberstein
 
@@ -2210,8 +2314,11 @@ contains
     integer :: ip, ip_in, np_part
     FLOAT, allocatable :: tmp_e(:,:), tmp_b(:,:), tmp_partial_e(:), tmp_partial_b(:)
     CMPLX              :: pml_a(3), pml_b(3), pml_g(3)
+    type(profile_t), save :: prof
 
     PUSH_SUB(cpml_conv_function_update_via_e_b_fields)
+
+    call profiling_in(prof, 'CPML_CONV_FUNCTION_UPDATE_VIA_E_B_FIELDS')
 
     np_part = gr%der%mesh%np_part
     SAFE_ALLOCATE(tmp_e(np_part,3))
@@ -2317,6 +2424,8 @@ contains
     SAFE_DEALLOCATE_A(tmp_b)
     SAFE_DEALLOCATE_A(tmp_partial_b)
 
+    call profiling_out(prof)
+
     POP_SUB(cpml_conv_function_update_via_e_b_fields)
   end subroutine cpml_conv_function_update_via_e_b_fields
 
@@ -2330,8 +2439,11 @@ contains
     integer              :: il, nlines, idim, ncols, ierr
     FLOAT                :: e_field(st%dim), b_field(st%dim)
     character(len=1024)  :: mxf_expression
+    type(profile_t), save :: prof
 
     PUSH_SUB(td_function_mxll_init)
+
+    call profiling_in(prof, 'TD_FUNCTION_MXLL_INIT')
 
     !%Variable UserDefinedConstantSpatialMaxwellField
     !%Type block
@@ -2390,6 +2502,8 @@ contains
 
     call parse_variable(namespace, 'PropagateSpatialMaxwellField', .true., hm%spatial_constant_propagate)
 
+    call profiling_out(prof)
+
     POP_SUB(td_function_mxll_init)
   end subroutine td_function_mxll_init
 
@@ -2408,8 +2522,11 @@ contains
     integer :: ip, ic, icn
     FLOAT   :: tf_old, tf_new
     logical :: set_initial_state_
+    type(profile_t), save :: prof
 
     PUSH_SUB(spatial_constant_calculation)
+
+    call profiling_in(prof, 'SPATIAL_CONSTANT_CALCULATION')
 
     set_initial_state_ = .false.
     if (present(set_initial_state)) set_initial_state_ = set_initial_state
@@ -2434,6 +2551,8 @@ contains
       end if
     end if
 
+    call profiling_out(prof)
+
     POP_SUB(spatial_constant_calculation)
   end subroutine spatial_constant_calculation
 
@@ -2446,8 +2565,10 @@ contains
     CMPLX,                     intent(inout) :: rs_state(:,:)
 
     integer :: ip_in, ip
+    type(profile_t), save :: prof
 
     PUSH_SUB(constant_boundaries_calculation)
+    call profiling_in(prof, 'CONSTANT_BOUNDARIES_CALCULATION')
 
     if (hm%spatial_constant_apply) then
       if (constant_calc) then
@@ -2458,6 +2579,8 @@ contains
         end do
       end if
     end if
+
+    call profiling_out(prof)
 
     POP_SUB(constant_boundaries_calculation)
   end subroutine constant_boundaries_calculation
@@ -2526,8 +2649,11 @@ contains
     FLOAT                      :: k_vector_abs, nn
     FLOAT                      :: e0(mesh%sb%dim), e_field(mesh%sb%dim), b_field(mesh%sb%dim)
     CMPLX                      :: rs_state_add(mesh%sb%dim)
+    type(profile_t), save :: prof
 
     PUSH_SUB(plane_waves_boundaries_calculation)
+
+    call profiling_in(prof, 'PLANE_WAVES_BOUNDARIES_CALCULATION')
 
     if (hm%plane_waves_apply) then
       do wn = 1, hm%bc%plane_wave%number
@@ -2556,6 +2682,8 @@ contains
         end do
       end if
 
+      call profiling_out(prof)
+
     POP_SUB(plane_waves_boundaries_calculation)
   end subroutine plane_waves_boundaries_calculation
 
@@ -2572,8 +2700,11 @@ contains
 
     integer            :: ff_dim
     CMPLX, allocatable :: ff_rs_state(:,:)
+    type(profile_t), save :: prof
 
     PUSH_SUB(plane_waves_propagation)
+
+    call profiling_in(prof, 'PLANE_WAVES_PROPAGATION')
 
     ff_dim = hm%dim
 
@@ -2605,8 +2736,11 @@ contains
     FLOAT                :: x_prop(gr%sb%dim), rr, vv(gr%sb%dim), k_vector(gr%sb%dim), k_vector_abs, nn
     FLOAT                :: e0(gr%sb%dim), e_field(gr%sb%dim), b_field(gr%sb%dim), dummy(gr%sb%dim)
     CMPLX                :: rs_state_add(st%dim)
+    type(profile_t), save :: prof
 
     PUSH_SUB(plane_waves_in_box_calculation)
+
+    call profiling_in(prof, 'PLANE_WAVES_IN_BOX_CALCULATION')
 
     np = gr%mesh%np_part
     do wn = 1, bc%plane_wave%number
@@ -2635,6 +2769,8 @@ contains
         rs_state(ip,:) = rs_state(ip,:) + rs_state_add(:)
       end do
     end do
+
+    call profiling_out(prof)
 
     POP_SUB(plane_waves_in_box_calculation)
   end subroutine plane_waves_in_box_calculation
