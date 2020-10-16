@@ -7,7 +7,7 @@ Enabled    : Yes
 
 
 # Cosinoidal pulse polarized in z-direction passing through medium box
-Processors : 4
+Processors : 2
 Input      : 03-linear-medium.01-cosinoidal_pulse_td.inp
 
 Precision: 1e-14
@@ -90,7 +90,7 @@ Enabled    : Yes
 
 
 # Cosinoidal pulse polarized in z-direction passing through medium box read from file
-Processors : 4
+Processors : 2
 ExtraFile  : 03-linear-medium.03-cube.off
 Input      : 03-linear-medium.02-cube_medium_from_file.inp
 
@@ -151,5 +151,5 @@ match ;  By  (x=  0,y=  0,z= 10) [step 30]  ; LINEFIELD(Maxwell/output_iter/td.0
 match ;  By  (x= 10,y=  0,z=  0) [step 30]  ; LINEFIELD(Maxwell/output_iter/td.0000030/b_field-y\.y=0\,z=0, 40, 2) ; 1.197024762854885e-08
 match ;  By  (x=  0,y=  0,z=  0) [step 30]  ; LINEFIELD(Maxwell/output_iter/td.0000030/b_field-y\.y=0\,z=0, 30, 2) ; 6.992328973746255e-09
 else
-  match ; cgal_not_linked        ; GREPCOUNT(err, 'CGAL'); 1
+  match ; Error cgal_not_linked        ; GREPCOUNT(err, 'CGAL'); 1
 endif
