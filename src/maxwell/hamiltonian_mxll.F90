@@ -398,6 +398,8 @@ contains
     integer, optional,         intent(in)    :: terms
     logical, optional,         intent(in)    :: set_bc !< If set to .false. the boundary conditions are assumed to be set previously.
 
+    type(profile_t), save :: prof
+
     PUSH_SUB(hamiltonian_mxll_apply_batch)
     call profiling_in(prof, "HAMILTONIAN_MXLL_APPLY_BATCH")
 
@@ -459,7 +461,7 @@ contains
 
     PUSH_SUB(zhamiltonian_mxll_apply)
 
-    call profiling_in(prof, ZHAMILTONIAN_MXLL_APPLY)
+    call profiling_in(prof, 'ZHAMILTONIAN_MXLL_APPLY')
 
     if (hm%operator == FARADAY_AMPERE .and. all(hm%bc%bc_ab_type(1:3) /= MXLL_AB_CPML)) then
       ! This part is already batchified
