@@ -625,7 +625,7 @@ contains
 
     PUSH_SUB(get_magnetic_field_state)
 
-    call profiling_in(prof, 'GET_ELECTRIC_FIELD_STATE')
+    call profiling_in(prof, 'GET_MAGNETIC_FIELD_STATE')
 
     np_ = optional_default(np, mesh%np)
 
