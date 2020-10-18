@@ -289,6 +289,8 @@ contains
 
     PUSH_SUB(hamiltonian_mxll_end)
 
+    call profiling_in(prof, "HAMILTONIAN_MXLL_APPLY_BATCH")
+
     nullify(hm%operators)
 
     SAFE_DEALLOCATE_P(hm%vector_potential)
@@ -297,6 +299,8 @@ contains
     call bc_mxll_end(hm%bc)
 
     call medium_box_end(hm%medium_box)
+
+    call profiling_out(prof)
 
     POP_SUB(hamiltonian_mxll_end)
   end subroutine hamiltonian_mxll_end
