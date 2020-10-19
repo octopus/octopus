@@ -406,8 +406,8 @@ contains
     class(batch_t), pointer :: gradb(:)
     integer :: idir, field_dir, pml_dir
     integer            :: ip, ip_in
-    FLOAT              :: pml_c(3)
-    CMPLX              :: pml_a(3), pml_b(3), pml_g(3), pml
+    FLOAT              :: pml_c
+    CMPLX              :: pml_a, pml_b, pml_g, grad
 
     PUSH_SUB(hamiltonian_mxll_apply_batch)
     call profiling_in(prof, "HAMILTONIAN_MXLL_APPLY_BATCH")
@@ -434,38 +434,37 @@ contains
     end do
     call zderivatives_batch_grad(der, psib, gradb)
 
-    do idir = 1, der%dim
-      call batch_scal(der%mesh%np, hm%rs_sign * P_c, gradb(idir))
-    end do
-
     if (hm%cpml_hamiltonian) then
+      ! to do: encapsulate this part
+      do idir = 1, der%dim
+        call batch_scal(der%mesh%np, hm%rs_sign * P_c, gradb(idir))
+      end do
+
       do pml_dir = 1, 3
         if (hm%bc%bc_ab_type(pml_dir) == MXLL_AB_CPML) then
           do field_dir = 1, 3
             if (pml_dir == field_dir) cycle
             do ip_in = 1, hm%bc%pml%points_number
               ip       = hm%bc%pml%points_map(ip_in)
-              pml_c(1:3) = hm%bc%pml%c(ip_in, 1:3)
-              pml_a(1:3) = hm%bc%pml%a(ip_in, 1:3)
-              pml_b(1:3) = hm%bc%pml%b(ip_in, 1:3)
-              pml_g(1:3) = hm%bc%pml%conv_plus(ip_in, pml_dir, 1:3)
+              pml_c = hm%bc%pml%c(ip_in, pml_dir)
+              pml_a = hm%bc%pml%a(ip_in, pml_dir)
+              pml_b = hm%bc%pml%b(ip_in, pml_dir)
+              pml_g = hm%bc%pml%conv_plus(ip_in, pml_dir, field_dir)
               select case(gradb(pml_dir)%status())
               case(BATCH_NOT_PACKED)
-                pml = gradb(pml_dir)%zff_linear(ip, field_dir)
+                grad = gradb(pml_dir)%zff_linear(ip, field_dir)
               case(BATCH_PACKED)
-                pml = gradb(pml_dir)%zff_pack(field_dir, ip)
+                grad = gradb(pml_dir)%zff_pack(field_dir, ip)
               end select
-              pml = pml / (hm%rs_sign * P_c)
-              pml  = hm%rs_sign * pml_c(pml_dir) * pml &
-                   + hm%rs_sign * pml_c(pml_dir) * TOFLOAT(pml_a(pml_dir)) * TOFLOAT(pml) &
-                   + hm%rs_sign * M_zI * pml_c(pml_dir) * aimag(pml_a(pml_dir)) * aimag(pml) &
-                   + hm%rs_sign * pml_c(pml_dir) * TOFLOAT(pml_b(pml_dir)) * TOFLOAT(pml_g(field_dir)) &
-                   + hm%rs_sign * M_zI * pml_c(pml_dir) * aimag(pml_b(pml_dir)) * aimag(pml_g(field_dir))
+              grad  = pml_c * (M_ONE/P_c * &
+                TOCMPLX((M_ONE + TOFLOAT(pml_a))*TOFLOAT(grad), (M_ONE + aimag(pml_a)) * aimag(grad)) &
+                   + hm%rs_sign * &
+                 TOCMPLX(TOFLOAT(pml_b)*TOFLOAT(pml_g), aimag(pml_b) * aimag(pml_g)))
               select case(gradb(pml_dir)%status())
               case(BATCH_NOT_PACKED)
-                gradb(pml_dir)%zff_linear(ip, field_dir) = pml
+                gradb(pml_dir)%zff_linear(ip, field_dir) = grad
               case(BATCH_PACKED)
-                gradb(pml_dir)%zff_pack(field_dir, ip) = pml
+                gradb(pml_dir)%zff_pack(field_dir, ip) = grad
               end select
             end do
           end do
@@ -474,6 +473,11 @@ contains
     end if
 
     call zderivatives_batch_curl(der, hpsib, gradb=gradb)
+
+    ! if we do not need pml, scale after the curl because it is cheaper
+    if (.not. hm%cpml_hamiltonian) then
+      call batch_scal(der%mesh%np, hm%rs_sign * P_c, hpsib)
+    end if
 
     if (hm%bc_constant) then
       do ip_in = 1, hm%bc%constant_points_number
@@ -532,7 +536,6 @@ contains
 
     call profiling_in(prof, 'ZHAMILTONIAN_MXLL_APPLY')
 
-    !if (hm%operator == FARADAY_AMPERE .and. all(hm%bc%bc_ab_type(1:3) /= MXLL_AB_CPML)) then
     if (hm%operator == FARADAY_AMPERE) then
       ! This part is already batchified
       call hamiltonian_mxll_apply_batch(hm, namespace, hm%der, psib, hpsib)
