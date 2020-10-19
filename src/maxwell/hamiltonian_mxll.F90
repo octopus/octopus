@@ -148,8 +148,6 @@ module hamiltonian_mxll_oct_m
     procedure :: is_hermitian => hamiltonian_mxll_hermitian
   end type hamiltonian_mxll_t
 
-  type(profile_t), save :: prof_hamiltonian_mxll
-
   integer, public, parameter ::      &
     FARADAY_AMPERE_OLD          = 0, &
     FARADAY_AMPERE              = 1, &
@@ -287,7 +285,11 @@ contains
   subroutine hamiltonian_mxll_end(hm)
     type(hamiltonian_mxll_t), intent(inout) :: hm
 
+    type(profile_t), save :: prof
+
     PUSH_SUB(hamiltonian_mxll_end)
+
+    call profiling_in(prof, "HAMILTONIAN_MXLL_END")
 
     nullify(hm%operators)
 
@@ -297,6 +299,8 @@ contains
     call bc_mxll_end(hm%bc)
 
     call medium_box_end(hm%medium_box)
+
+    call profiling_out(prof)
 
     POP_SUB(hamiltonian_mxll_end)
   end subroutine hamiltonian_mxll_end
@@ -398,8 +402,10 @@ contains
     integer, optional,         intent(in)    :: terms
     logical, optional,         intent(in)    :: set_bc !< If set to .false. the boundary conditions are assumed to be set previously.
 
+    type(profile_t), save :: prof
+
     PUSH_SUB(hamiltonian_mxll_apply_batch)
-    call profiling_in(prof_hamiltonian_mxll, "MXLL_HAMILTONIAN")
+    call profiling_in(prof, "HAMILTONIAN_MXLL_APPLY_BATCH")
 
     ASSERT(psib%status() == hpsib%status())
 
@@ -421,7 +427,7 @@ contains
     call zderivatives_batch_curl(der, hpsib)
     call batch_scal(der%mesh%np, hm%rs_sign * P_c, hpsib)
   
-    call profiling_out(prof_hamiltonian_mxll)
+    call profiling_out(prof)
     POP_SUB(hamiltonian_mxll_apply_batch)
   end subroutine hamiltonian_mxll_apply_batch
 
@@ -455,8 +461,11 @@ contains
 
     CMPLX, allocatable :: rs_aux_in(:,:), rs_aux_out(:,:)
     integer :: ii
+    type(profile_t), save :: prof
 
     PUSH_SUB(zhamiltonian_mxll_apply)
+
+    call profiling_in(prof, 'ZHAMILTONIAN_MXLL_APPLY')
 
     if (hm%operator == FARADAY_AMPERE .and. all(hm%bc%bc_ab_type(1:3) /= MXLL_AB_CPML)) then
       ! This part is already batchified
@@ -479,6 +488,8 @@ contains
       
     end if
 
+    call profiling_out(prof)
+
     POP_SUB(zhamiltonian_mxll_apply)
   end subroutine zhamiltonian_mxll_apply
 
@@ -495,8 +506,11 @@ contains
     CMPLX, allocatable :: tmp(:,:)
     CMPLX, pointer     :: kappa_psi(:,:)
     integer            :: np, np_part, ip, ip_in, rs_sign
+    type(profile_t), save :: prof, prof_method
 
     PUSH_SUB(maxwell_hamiltonian_apply_fd)
+
+    call profiling_in(prof, 'MAXWELL_HAMILTONIAN_APPLY_FD')
 
     np = der%mesh%np
     np_part = der%mesh%np_part
@@ -509,6 +523,7 @@ contains
     ! Maxwell Hamiltonian - Hamiltonian operation in vacuum via partial derivatives:
 
     case (FARADAY_AMPERE)
+      call profiling_in(prof_method, 'MXLL_HAM_APPLY_FD_FARADAY_AMP')
 
       SAFE_ALLOCATE(tmp(np,2))
       oppsi       = M_z0
@@ -557,11 +572,12 @@ contains
 
       SAFE_DEALLOCATE_A(tmp)
 
-
+      call profiling_out(prof_method)
     !=================================================================================================
     ! Maxwell Hamiltonian - Hamiltonian operation in medium via partial derivatives:
 
     case (FARADAY_AMPERE_MEDIUM)
+      call profiling_in(prof_method, 'MXLL_HAM_APP_FAR_AMP_MED')
 
       SAFE_ALLOCATE(tmp(np,4))
       oppsi       = M_z0
@@ -616,11 +632,13 @@ contains
       ! Riemann-Silberstein vector calculation for medium boxes:
       call maxwell_medium_boxes_calculation(hm, der, psi, oppsi)
 
-
+      call profiling_out(prof_method)
     !=================================================================================================
     ! Maxwell Hamiltonian - Hamiltonian operation in vacuum with Gauss condition via partial derivatives:
 
     case (FARADAY_AMPERE_GAUSS)
+
+      call profiling_in(prof_method, 'MXLL_HAM_APP_FAR_AMP_GAUSS')
 
       SAFE_ALLOCATE(tmp(np,3))
       oppsi       = M_z0
@@ -647,13 +665,14 @@ contains
       oppsi(1:np,4) = rs_sign * P_c * ( tmp(1:np,1) - M_zI*tmp(1:np,2) + M_zI*tmp(1:np,3) )
 
       SAFE_DEALLOCATE_A(tmp)
-
+      call profiling_out(prof_method)
 
     !=================================================================================================
     ! Maxwell Hamiltonian - Hamiltonian operation in medium with Gauss condition via partial derivatives:
 
     case (FARADAY_AMPERE_GAUSS_MEDIUM)
 
+      call profiling_in(prof_method, 'MXLL_HAM_AP_FAR_AMP_GA_MED')
       SAFE_ALLOCATE(tmp(np,3))
       oppsi       = M_z0
       tmp = M_z0
@@ -699,8 +718,11 @@ contains
       oppsi(1:np,8) = - P_c*(tmp(1:np,1)-M_zI*tmp(1:np,2)+M_zI*tmp(1:np,3))
 
       SAFE_DEALLOCATE_A(tmp)
+      call profiling_out(prof_method)
 
     end select
+
+    call profiling_out(prof)
 
     POP_SUB(maxwell_hamiltonian_apply_fd)
   end subroutine maxwell_hamiltonian_apply_fd
@@ -716,13 +738,19 @@ contains
     integer,                  intent(in)    :: dir2
     CMPLX,                    intent(inout) :: tmp(:)
 
+    type(profile_t), save :: prof
+
     PUSH_SUB(maxwell_pml_hamiltonian)
+
+    call profiling_in(prof, 'MAXWELL_PML_HAMILTONIAN')
 
     if ( (hm%bc%bc_ab_type(dir1) == MXLL_AB_CPML) .and. hm%cpml_hamiltonian ) then
       if (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RS) then
         call maxwell_pml_calculation_via_riemann_silberstein(hm, der, psi, dir1, dir2, tmp(:))
       end if
     end if
+
+   call profiling_out(prof)
 
     POP_SUB(maxwell_pml_hamiltonian)
   end subroutine maxwell_pml_hamiltonian
@@ -737,7 +765,11 @@ contains
     integer,                  intent(in)    :: dir2
     CMPLX,                    intent(inout) :: tmp(:,:)
 
+    type(profile_t), save :: prof
+
     PUSH_SUB(maxwell_pml_hamiltonian_medium)
+
+    call profiling_in(prof, 'MAXWELL_PML_HAMILTONIAN_MEDIUM')
 
     if ( (hm%bc%bc_ab_type(dir1) == MXLL_AB_CPML) .and. hm%cpml_hamiltonian ) then
       if (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RS) then
@@ -746,6 +778,8 @@ contains
 !        call maxwell_pml_calculation_via_e_b_fields_medium(hm, der, psi, dir1, dir2, tmp(:,:))
       end if
     end if
+
+    call profiling_out(prof)
 
     POP_SUB(maxwell_pml_hamiltonian_medium)
   end subroutine maxwell_pml_hamiltonian_medium
