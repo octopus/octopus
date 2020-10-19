@@ -325,6 +325,10 @@ AC_LANG_POP(C)
 ACX_FUTILE
 ACX_PSOLVER
 
+dnl check for CGAL library.
+dnl ACX_CGAL
+AX_LIB_CGAL_CORE
+
 dnl If PSolver was not found, we check for older versions of the library (1.7.x),
 dnl which we named ISF
 if test "x$acx_psolver_ok" = "xno"; then

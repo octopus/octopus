@@ -96,6 +96,9 @@ dist_share_DATA =                                  \
 	26-batch_ops.03-jellium-spinor.inp         \
 	26-batch_ops.test                          \
 	27-clock.01.inp                            \
-	27-clock.test
+	27-clock.test                              \
+	28-cgal.01.inp                             \
+	28-cgal.02-X.off                           \
+	28-cgal.test
 
 CLEANFILES = *~ *.bak

@@ -36,10 +36,10 @@ fftw_program="AC_LANG_PROGRAM([],[
   include 'fftw3.f03'
 
   type(C_PTR) :: plan
-  integer(C_INT) :: n0
+  integer(C_INT) :: n0 = 32
   COMPLEX(C_DOUBLE_COMPLEX) :: in(10),out(10)
   integer(C_INT) :: sign=FFTW_FORWARD
-  INTEGER(C_INT) :: flags
+  INTEGER(C_INT) :: flags = 0
 
   plan = fftw_plan_dft_1d(n0, in, out, sign, flags)
 ])"

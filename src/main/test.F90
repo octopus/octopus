@@ -23,6 +23,7 @@ module test_oct_m
   use batch_ops_oct_m
   use boundaries_oct_m
   use calc_mode_par_oct_m
+  use cgal_polyhedra_oct_m
   use clock_oct_m
   use density_oct_m
   use derivatives_oct_m
@@ -32,6 +33,7 @@ module test_oct_m
   use grid_oct_m
   use hamiltonian_elec_oct_m
   use ion_interaction_oct_m
+  use iso_c_binding
   use io_oct_m
   use mesh_batch_oct_m
   use mesh_function_oct_m
@@ -119,6 +121,8 @@ contains
     !% Tests the batch operations
     !%Option clock 18
     !% Tests for clock
+    !%Option cgal 19
+    !% Tests for cgal interface
     !%End
     call parse_variable(namespace, 'TestMode', OPTION__TESTMODE__HARTREE, test_mode)
 
@@ -221,6 +225,8 @@ contains
       call test_batch_ops(param, namespace)
     case(OPTION__TESTMODE__CLOCK)
       call test_clock()
+    case(OPTION__TESTMODE__CGAL)
+      call test_cgal()
     end select
 
     POP_SUB(test_run)
@@ -753,7 +759,7 @@ contains
     end if
 
     if(bitand(ops, OPTION__TESTBATCHOPS__OPS_DOTP_MATRIX) /= 0) then
-    
+
       message(1) = 'Info: Testing dotp_matrix'
       call messages_info(1)
 
@@ -785,11 +791,11 @@ contains
         end do
         SAFE_DEALLOCATE_A(zdot)
       end if
-  
+
       call xx%end()
       call yy%end()    
     end if
-  
+
     if(bitand(ops, OPTION__TESTBATCHOPS__OPS_DOTP_VECTOR) /= 0) then
     
       message(1) = 'Info: Testing dotp_vector'
@@ -818,13 +824,13 @@ contains
         call messages_info(nst)
         SAFE_DEALLOCATE_A(zdotv)
       end if
-  
+
       call xx%end()
       call yy%end()    
     end if
 
     if(bitand(ops, OPTION__TESTBATCHOPS__OPS_DOTP_SELF) /= 0) then
-    
+
       message(1) = 'Info: Testing dotp_self'
       call messages_info(1)
 
@@ -854,7 +860,7 @@ contains
         end do
         SAFE_DEALLOCATE_A(zdot)
       end if
-  
+
       call xx%end()
     end if
 
@@ -1069,23 +1075,43 @@ contains
     call messages_info(1)
 
     write(message(1),'(A,x,I10.10)') &
-	'clock_get_tick', test_clock_a%get_tick()
+          'clock_get_tick', test_clock_a%get_tick()
     write(message(2),'(A,x,F15.10)') &
-	'clock_time', test_clock_a%time()
+          'clock_time', test_clock_a%time()
     write(message(3),'(A,x,I1)')     &
-	'clock_is_earlier', abs(transfer(test_clock_a .lt. test_clock_b, 0))
+          'clock_is_earlier', abs(transfer(test_clock_a .lt. test_clock_b, 0))
     write(message(4),'(A,x,I1)')     &
-	'clock_is_equal_or_earlier', abs(transfer(test_clock_a .le. test_clock_b, 0))
+          'clock_is_equal_or_earlier', abs(transfer(test_clock_a .le. test_clock_b, 0))
     write(message(5),'(A,x,I1)')     &
-	'clock_is_later', abs(transfer(test_clock_a .gt. test_clock_b, 0))
+          'clock_is_later', abs(transfer(test_clock_a .gt. test_clock_b, 0))
     write(message(6),'(A,x,I1)')     &
-	'clock_is_equal_or_later', abs(transfer(test_clock_a .ge. test_clock_b, 0))
+          'clock_is_equal_or_later', abs(transfer(test_clock_a .ge. test_clock_b, 0))
     write(message(7),'(A,x,I1)')     &
-	'clock_is_equal', abs(transfer(test_clock_a .eq. test_clock_b, 0))
+          'clock_is_equal', abs(transfer(test_clock_a .eq. test_clock_b, 0))
     call messages_info(7)
 
     POP_SUB(test_clock)
   end subroutine test_clock
+
+
+  ! ---------------------------------------------------------
+  subroutine test_cgal()
+
+    type(cgal_polyhedra_t) :: cgal_poly
+
+    PUSH_SUB(test_cgal)
+
+    call cgal_polyhedron_init(cgal_poly, "28-cgal.02-X.off", verbose = .true.)
+
+    if(cgal_polyhedron_point_inside(cgal_poly, CNST(30.), CNST(10.), CNST(30.))) then
+       message(1) = "cgal_polyhedron_point_inside"
+       call messages_info(1)
+    end if
+
+    call cgal_polyhedron_end(cgal_poly)
+
+    POP_SUB(test_cgal)
+  end subroutine test_cgal
 
 end module test_oct_m
 

@@ -44,6 +44,7 @@ basic_f_srcs =                                 \
 	basic/blacs.F90                        \
 	basic/blacs_proc_grid.F90              \
 	basic/calc_mode_par.F90                \
+	basic/cgal_polyhedra.F90               \
 	basic/command_line.F90                 \
 	basic/comm.F90                         \
 	basic/cuda.F90                         \
@@ -83,6 +84,7 @@ basic_f_srcs =                                 \
 
 basic_c_srcs =                                 \
 	basic/alloc_cache_low.cc               \
+	basic/cgal_polyhedra_low.cc            \
 	basic/cublas.cc                        \
 	basic/cuda_low.cc                      \
 	basic/getopt_f.c                       \
@@ -436,7 +438,6 @@ hamiltonian_f_srcs =                                 \
 	hamiltonian/lda_u.F90                        \
 	hamiltonian/lda_u_io.F90                     \
 	hamiltonian/libvdwxc.F90                     \
-	hamiltonian/maxwell_boundary_op.F90           \
 	hamiltonian/oct_exchange.F90                 \
 	hamiltonian/pcm.F90                          \
 	hamiltonian/pcm_eom.F90                      \
@@ -581,8 +582,10 @@ noinst_HEADERS +=                                  \
 
 # Sources in maxwell
 maxwell_f_srcs =                                 \
+	maxwell/maxwell_boundary_op.F90          \
 	maxwell/energy_mxll.F90                  \
 	maxwell/hamiltonian_mxll.F90             \
+	maxwell/medium_mxll.F90                  \
 	maxwell/propagator_mxll.F90              \
 	maxwell/system_mxll.F90
 

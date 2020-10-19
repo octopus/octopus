@@ -50,6 +50,7 @@ module propagator_mxll_oct_m
   use math_oct_m
   use maxwell_boundary_op_oct_m
   use maxwell_function_oct_m
+  use medium_mxll_oct_m
   use mesh_oct_m
   use mesh_cube_parallel_map_oct_m
   use mesh_function_oct_m
@@ -123,7 +124,7 @@ contains
     type(hamiltonian_mxll_t),     intent(inout) :: hm
     type(propagator_mxll_t),      intent(inout) :: tr
 
-    integer :: default_propagator, il, nlines, ncols, icol, idim
+    integer :: default_propagator, nlines, ncols, icol
     type(block_t) :: blk
     character(len=256) :: string
     logical :: plane_waves_set = .false.
@@ -233,97 +234,7 @@ contains
       st%rs_state_const = M_z0
     end if
 
-    !%Variable LinearMediumBox
-    !%Type block
-    !%Section Time-Dependent::Propagation
-    !%Description
-    !% Defines parameters for a linear medium box.
-    !%
-    !% Example:
-    !%
-    !% <tt>%LinearMediumBox
-    !% <br>&nbsp;&nbsp;   center_x | center_y | center_z | x_length | y_length | z_length | epsilon_factor | mu_factor | sigma_e | sigma_m | edged/smooth
-    !% <br>%</tt>
-    !%
-    !% Position of center (three components) and length (three components), followed by permittivity
-    !% factor, electric conductivity and magnetic conductivity, and finally type of numerical
-    !% approximation used for the derivatives at the edges.
-    !%
-    !%Option edged 1
-    !% Medium box edges are considered steep for derivatives.
-    !%Option smooth 2
-    !% Medium box edged and softened for derivatives.
-    !%End
-    if(parse_block(namespace, 'LinearMediumBox', blk) == 0) then
-
-      call messages_print_stress(stdout, trim('Maxwell Medium box:'))
-      hm%calc_medium_box = .true.
-
-      ! find out how many lines (i.e. states) the block has
-      nlines = parse_block_n(blk)
-      SAFE_ALLOCATE(hm%medium_box%center(1:3,1:nlines))
-      SAFE_ALLOCATE(hm%medium_box%lsize(1:3,1:nlines))
-      SAFE_ALLOCATE(hm%medium_box%ep_factor(1:nlines))
-      SAFE_ALLOCATE(hm%medium_box%mu_factor(1:nlines))
-      SAFE_ALLOCATE(hm%medium_box%sigma_e_factor(1:nlines))
-      SAFE_ALLOCATE(hm%medium_box%sigma_m_factor(1:nlines))
-      SAFE_ALLOCATE(hm%medium_box%shape(1:nlines))
-      do il = 1, nlines
-        ncols = parse_block_cols(blk, il-1)
-        if (ncols /= 11) then
-          call messages_input_error(namespace, 'LinearMediumBox', 'should consist of eleven columns', row=il-1)
-        end if
-        do idim = 1, 3
-          call parse_block_float(blk, il-1, idim-1, hm%medium_box%center(idim,il))
-          call parse_block_float(blk, il-1, idim+2, hm%medium_box%lsize(idim,il))
-        end do
-        call parse_block_float(blk, il-1, 6, hm%medium_box%ep_factor(il))
-        call parse_block_float(blk, il-1, 7, hm%medium_box%mu_factor(il))
-        call parse_block_float(blk, il-1, 8, hm%medium_box%sigma_e_factor(il))
-        call parse_block_float(blk, il-1, 9, hm%medium_box%sigma_m_factor(il))
-        call parse_block_integer(blk, il-1, 10, hm%medium_box%shape(il))
-        if (il > 1) then
-          write(message(1),'(a)') ""
-          write(message(2),'(a,I1)')    'Medium box number:  ', il
-          write(message(3),'(a,es9.2,a,es9.2,a,es9.2)') 'Box center:         ', hm%medium_box%center(1,il), ' | ',&
-                hm%medium_box%center(2,il), ' | ', hm%medium_box%center(3,il)
-          write(message(4),'(a,es9.2,a,es9.2,a,es9.2)') 'Box size  :         ', hm%medium_box%lsize(1,il), ' | ', &
-                hm%medium_box%lsize(2,il), ' | ', hm%medium_box%lsize(3,il)
-          write(message(5),'(a,es9.2)') 'Box epsilon factor: ', hm%medium_box%ep_factor(il)
-          write(message(6),'(a,es9.2)') 'Box mu factor:      ', hm%medium_box%mu_factor(il)
-          write(message(7),'(a,es9.2)') 'Box electric sigma: ', hm%medium_box%sigma_e_factor(il)
-          write(message(8),'(a,es9.2)') 'Box magnetic sigma: ', hm%medium_box%sigma_m_factor(il)
-          if (hm%medium_box%shape(il) == OPTION__LINEARMEDIUMBOX__EDGED) then
-            write(message(9),'(a,a)')   'Box shape:          ', 'edged'
-          else if (hm%medium_box%shape(il) == OPTION__LINEARMEDIUMBOX__SMOOTH) then
-            write(message(9),'(a,a)')   'Box shape:          ', 'smooth'
-          end if
-          call messages_info(9)
-        else
-          write(message(1),'(a,I1)')    'Medium box number:  ', il
-          write(message(2),'(a,es9.2,a,es9.2,a,es9.2)') 'Box center:         ', hm%medium_box%center(1,il), ' | ',&
-                hm%medium_box%center(2,il), ' | ', hm%medium_box%center(3,il)
-          write(message(3),'(a,es9.2,a,es9.2,a,es9.2)') 'Box size  :         ', hm%medium_box%lsize(1,il), ' | ', &
-                hm%medium_box%lsize(2,il), ' | ', hm%medium_box%lsize(3,il)
-          write(message(4),'(a,es9.2)') 'Box epsilon factor: ', hm%medium_box%ep_factor(il)
-          write(message(5),'(a,es9.2)') 'Box mu factor:      ', hm%medium_box%mu_factor(il)
-          write(message(6),'(a,es9.2)') 'Box electric sigma: ', hm%medium_box%sigma_e_factor(il)
-          write(message(7),'(a,es9.2)') 'Box magnetic sigma: ', hm%medium_box%sigma_m_factor(il)
-          if (hm%medium_box%shape(il) == OPTION__LINEARMEDIUMBOX__EDGED) then
-            write(message(8),'(a,a)')   'Box shape:          ', 'edged'
-          else if (hm%medium_box%shape(il) == OPTION__LINEARMEDIUMBOX__SMOOTH) then
-            write(message(8),'(a,a)')   'Box shape:          ', 'smooth'
-          end if
-          call messages_info(8)
-        end if
-      end do
-      call parse_block_end(blk)
-
-      call generate_medium_boxes(hm, gr, nlines, namespace)
-
-      call messages_print_stress(stdout)
-
-    end if
+    call medium_box_init(namespace, hm%medium_box, hm%calc_medium_box, gr)
 
     !%Variable MaxwellTDETRSApprox
     !%Type integer
@@ -666,10 +577,10 @@ contains
 
     do idim = 1, st%dim
       if (hm%bc%bc_type(idim) == MXLL_BC_MEDIUM) then
-        do ip_in = 1, hm%bc%mxmedium%points_number(idim)
-          ip = hm%bc%mxmedium%points_map(ip_in, idim)
-          st%ep(ip) = hm%bc%mxmedium%ep(ip_in, idim)
-          st%mu(ip) = hm%bc%mxmedium%mu(ip_in, idim)
+        do ip_in = 1, hm%bc%medium%points_number(idim)
+          ip = hm%bc%medium%points_map(ip_in, idim)
+          st%ep(ip) = hm%bc%medium%ep(ip_in, idim)
+          st%mu(ip) = hm%bc%medium%mu(ip_in, idim)
         end do
       end if
     end do
@@ -2408,207 +2319,6 @@ contains
 
     POP_SUB(cpml_conv_function_update_via_e_b_fields)
   end subroutine cpml_conv_function_update_via_e_b_fields
-
-  ! ---------------------------------------------------------
-  subroutine generate_medium_boxes(hm, gr, nr_of_boxes, namespace)
-    type(hamiltonian_mxll_t), intent(inout) :: hm
-    type(grid_t),        intent(in)         :: gr
-    integer,             intent(in)         :: nr_of_boxes
-    type(namespace_t),   intent(in)         :: namespace
-
-    integer :: il, ip, ip_in, ip_in_max, ip_bd, ip_bd_max, ipp, idim
-    FLOAT   :: bounds(nr_of_boxes,2,gr%sb%dim), xx(gr%sb%dim), xxp(gr%sb%dim), dd, dd_max, dd_min
-    FLOAT, allocatable  :: tmp(:), tmp_grad(:,:)
-
-    PUSH_SUB(generate_medium_boxes)
-
-    SAFE_ALLOCATE(tmp(gr%mesh%np_part))
-    SAFE_ALLOCATE(tmp_grad(gr%mesh%np_part,1:gr%mesh%sb%dim))
-
-    SAFE_ALLOCATE(hm%medium_box%points_number(nr_of_boxes))
-    SAFE_ALLOCATE(hm%medium_box%bdry_number(nr_of_boxes))
-    hm%medium_box%number = nr_of_boxes
-
-    ip_in_max = 0
-    ip_bd_max = 0
-    do il = 1, nr_of_boxes
-      do idim = 1, 3
-        bounds(il,1,idim) = hm%medium_box%center(idim,il) - hm%medium_box%lsize(idim,il)/M_TWO
-        bounds(il,2,idim) = hm%medium_box%center(idim,il) + hm%medium_box%lsize(idim,il)/M_TWO
-      end do
-      ip_in = 0
-      ip_bd = 0
-      do ip = 1, gr%mesh%np
-        xx(1:3) = gr%mesh%x(ip, 1:3)
-        if (check_point_in_bounds(xx, bounds(il,:,:))) then
-          ip_in = ip_in + 1
-        end if
-        if (check_point_on_bounds(xx, bounds(il,:,:))) then
-          ip_bd = ip_bd + 1
-        end if
-      end do
-      if (ip_in > ip_in_max) ip_in_max = ip_in
-      if (ip_bd > ip_bd_max) ip_bd_max = ip_bd
-      hm%medium_box%points_number(il) = ip_in
-      hm%medium_box%bdry_number(il) = ip_bd
-    end do
-
-    dd_max = max(2*gr%mesh%spacing(1), 2*gr%mesh%spacing(2), 2*gr%mesh%spacing(3))
-
-    SAFE_ALLOCATE(hm%medium_box%points_map(ip_in_max,nr_of_boxes))
-    SAFE_ALLOCATE(hm%medium_box%bdry_map(ip_bd_max,nr_of_boxes))
-    SAFE_ALLOCATE(hm%medium_box%aux_ep(ip_in_max,1:3,nr_of_boxes))
-    SAFE_ALLOCATE(hm%medium_box%aux_mu(ip_in_max,1:3,nr_of_boxes))
-    SAFE_ALLOCATE(hm%medium_box%c(ip_in_max,nr_of_boxes))
-    SAFE_ALLOCATE(hm%medium_box%ep(ip_in_max,nr_of_boxes))
-    SAFE_ALLOCATE(hm%medium_box%mu(ip_in_max,nr_of_boxes))
-    SAFE_ALLOCATE(hm%medium_box%sigma_e(ip_in_max,nr_of_boxes))
-    SAFE_ALLOCATE(hm%medium_box%sigma_m(ip_in_max,nr_of_boxes))
-
-    hm%medium_box%points_map = int(M_zero)
-    hm%medium_box%bdry_map = int(M_zero)
-
-    do il = 1, nr_of_boxes
-      ip_in = 0
-      ip_bd = 0
-      do ip = 1, gr%mesh%np
-        xx(1:3) = gr%mesh%x(ip,1:3)
-        if (check_point_in_bounds(xx, bounds(il,:,:))) then
-          ip_in = ip_in + 1
-          if (any(hm%medium_box%points_map == ip)) then
-            message(1) = 'Linear media boxes overlap.'
-            call messages_fatal(1, namespace=namespace)
-          else
-            hm%medium_box%points_map(ip_in,il) = ip
-          end if
-        end if
-        if (check_point_on_bounds(xx, bounds(il,:,:))) then
-          ip_bd = ip_bd + 1
-          hm%medium_box%bdry_map(ip_bd,il) = ip
-        end if
-      end do
-    end do
-
-    do il = 1, nr_of_boxes
-
-      do ip_in = 1, hm%medium_box%points_number(il)
-        ip = hm%medium_box%points_map(ip_in,il)
-        if (hm%medium_box%shape(il) == OPTION__LINEARMEDIUMBOX__SMOOTH) then
-          xx(1:3) = gr%mesh%x(ip,1:3)
-          dd_min = M_HUGE
-
-          do ip_bd = 1, hm%medium_box%bdry_number(il)
-            ipp = hm%medium_box%bdry_map(ip_bd, il)
-            xxp(1:3) = gr%mesh%x(ipp,1:3)
-            dd = sqrt((xx(1) - xxp(1))**2 + (xx(2) - xxp(2))**2 + (xx(3) - xxp(3))**2)
-            if (dd < dd_min) dd_min = dd
-          end do
-
-          hm%medium_box%ep(ip_in,il) = P_ep + ((P_ep * hm%medium_box%ep_factor(il) - P_ep)  &
-            * M_ONE/(M_ONE + exp(-M_FIVE/dd_max * (dd_min - M_TWO*dd_max))))
-          hm%medium_box%mu(ip_in,il) = P_mu + ((P_mu * hm%medium_box%mu_factor(il) - P_mu) &
-            * M_ONE/(M_ONE + exp(-M_FIVE/dd_max * (dd_min - M_TWO*dd_max))))
-          hm%medium_box%c(ip_in,il) = M_ONE/sqrt(hm%medium_box%ep(ip_in, il)*hm%medium_box%mu(ip_in, il))
-          hm%medium_box%sigma_e(ip_in,il) = hm%medium_box%sigma_e_factor(il) &
-            * M_ONE/(M_ONE + exp(-M_FIVE/dd_max * (dd_min - M_TWO*dd_max)) )
-          hm%medium_box%sigma_m(ip_in,il) = hm%medium_box%sigma_m_factor(il) &
-            * M_ONE/(M_ONE + exp(-M_FIVE/dd_max * (dd_min - M_TWO*dd_max)) )
-
-        else if (hm%medium_box%shape(il) == OPTION__LINEARMEDIUMBOX__EDGED) then
-
-          hm%medium_box%ep(ip_in, il) = P_ep * hm%medium_box%ep_factor(il)
-          hm%medium_box%mu(ip_in, il) = P_mu * hm%medium_box%mu_factor(il)
-          hm%medium_box%c(ip_in, il) = M_ONE/sqrt(hm%medium_box%ep(ip_in, il)*hm%medium_box%mu(ip_in, il))
-          hm%medium_box%sigma_e(ip_in, il) = hm%medium_box%sigma_e_factor(il)
-          hm%medium_box%sigma_m(ip_in, il) = hm%medium_box%sigma_m_factor(il)
-
-        end if
-      end do
-
-      tmp(:) = P_ep
-      do  ip_in = 1, hm%medium_box%points_number(il)
-        ip = hm%medium_box%points_map(ip_in, il)
-        tmp(ip)= hm%medium_box%ep(ip_in, il)
-      end do
-      call dderivatives_grad(gr%der, tmp, tmp_grad, set_bc = .false.)
-      do ip_in = 1, hm%medium_box%points_number(il)
-        ip = hm%medium_box%points_map(ip_in, il)
-        hm%medium_box%aux_ep(ip_in, :, il) = tmp_grad(ip, :)/(M_FOUR * hm%medium_box%ep(ip_in, il))
-      end do
-
-      tmp(:) = P_mu
-      do ip_in = 1, hm%medium_box%points_number(il)
-        ip = hm%medium_box%points_map(ip_in, il)
-        tmp(ip) = hm%medium_box%mu(ip_in, il)
-      end do
-      call dderivatives_grad(gr%der, tmp, tmp_grad, set_bc = .false.)
-      do ip_in = 1, hm%medium_box%points_number(il)
-        ip = hm%medium_box%points_map(ip_in, il)
-        hm%medium_box%aux_mu(ip_in, :, il) = tmp_grad(ip, :)/(M_FOUR * hm%medium_box%mu(ip_in, il))
-      end do
-
-      ! print information about the medium box -- get from Renes version in maxwell_propagator.F90
-
-    end do
-
-    SAFE_DEALLOCATE_A(tmp)
-    SAFE_DEALLOCATE_A(tmp_grad)
-
-    POP_SUB(generate_medium_boxes)
-  contains
-
-    logical pure function check_point_in_bounds(xx, bounds) result (check)
-      FLOAT, intent(in) :: xx(:)
-      FLOAT, intent(in) :: bounds(:,:)
-
-      check = .false.
-      if ((xx(1) >= bounds(1,1)) .and. (xx(1) <= bounds(2,1)) .and. &
-          (xx(2) >= bounds(1,2)) .and. (xx(2) <= bounds(2,2)) .and. &
-          (xx(3) >= bounds(1,3)) .and. (xx(3) <= bounds(2,3)) ) then
-        check = .true.
-      end if
-
-    end function check_point_in_bounds
-
-    logical pure function check_point_on_bounds(xx, bounds) result (check)
-      FLOAT, intent(in) :: xx(:)
-      FLOAT, intent(in) :: bounds(:,:)
-
-      check = .false.
-      if (xx(1) == bounds(1,1) .and. (xx(2) >= bounds(1,2) .and. xx(3) >= bounds(1,3)) &
-                               .and. (xx(2) <= bounds(2,2) .and. xx(3) <= bounds(2,3)) .or. &
-          xx(2) == bounds(1,2) .and. (xx(1) >= bounds(1,1) .and. xx(3) >= bounds(1,3)) &
-                               .and. (xx(1) <= bounds(2,1) .and. xx(3) <= bounds(2,3)) .or. &
-          xx(3) == bounds(1,3) .and. (xx(1) >= bounds(1,1) .and. xx(2) >= bounds(1,2)) &
-                               .and. (xx(1) <= bounds(2,1) .and. xx(2) <= bounds(2,2)) .or. &
-          xx(1) == bounds(2,1) .and. (xx(2) >= bounds(1,2) .and. xx(3) >= bounds(1,3)) &
-                               .and. (xx(2) <= bounds(2,2) .and. xx(3) <= bounds(2,3)) .or. &
-          xx(2) == bounds(2,2) .and. (xx(1) >= bounds(1,1) .and. xx(3) >= bounds(1,3)) &
-                               .and. (xx(1) <= bounds(2,1) .and. xx(3) <= bounds(2,3)) .or. &
-          xx(3) == bounds(2,3) .and. (xx(1) >= bounds(1,1) .and. xx(2) >= bounds(1,2)) &
-                               .and. (xx(1) <= bounds(2,1) .and. xx(2) <= bounds(2,2)) ) then
-        check = .true.
-      end if
-
-    end function check_point_on_bounds
-
-    subroutine get_medium_io_function(medium_func, hm, mesh, il, io_func)
-      FLOAT,                    intent(in)    :: medium_func(:)
-      type(hamiltonian_mxll_t), intent(in)    :: hm
-      type(mesh_t),             intent(in)    :: mesh
-      integer,                  intent(in)    :: il
-      FLOAT,                    intent(inout) :: io_func(:)
-
-      integer :: ip, ip_in
-
-      do ip_in = 1, hm%medium_box%points_number(il)
-        ip = hm%medium_box%points_map(ip_in, il)
-        io_func(ip) = medium_func(ip_in)
-      end do
-
-    end subroutine get_medium_io_function
-
-  end subroutine generate_medium_boxes
 
   ! ---------------------------------------------------------
   subroutine td_function_mxll_init(st, namespace, hm)

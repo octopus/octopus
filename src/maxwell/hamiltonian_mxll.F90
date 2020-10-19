@@ -31,6 +31,7 @@ module hamiltonian_mxll_oct_m
   use hamiltonian_elec_oct_m
   use math_oct_m
   use maxwell_boundary_op_oct_m
+  use medium_mxll_oct_m
   use mesh_cube_parallel_map_oct_m
   use mesh_oct_m
   use messages_oct_m
@@ -65,28 +66,6 @@ module hamiltonian_mxll_oct_m
     hamiltonian_mxll_apply_packed,              &
     maxwell_helmholtz_decomposition_trans_field,&
     maxwell_helmholtz_decomposition_long_field
-
-   type :: medium_box_t
-     integer                        :: number   !< number of linear media boxes
-     integer, allocatable           :: shape(:)  !< edge shape profile (smooth or steep)
-     FLOAT, allocatable             :: center(:,:) !< center of each box
-     FLOAT, allocatable             :: lsize(:,:)  !< length in each direction of each box
-     FLOAT, allocatable             :: ep(:,:) !< permitivity of the linear media
-     FLOAT, allocatable             :: mu(:,:) !< permeability of the linear media
-     FLOAT, allocatable             :: c(:,:) !< speed of light in the linear media
-     FLOAT, allocatable             :: ep_factor(:) !< permitivity before applying edge profile
-     FLOAT, allocatable             :: mu_factor(:) !< permeability before applying edge profile
-     FLOAT, allocatable             :: sigma_e_factor(:) !< electric conductivy before applying edge profile
-     FLOAT, allocatable             :: sigma_m_factor(:) !< magnetic conductivity before applying edge4 profile
-     FLOAT, allocatable             :: sigma_e(:,:) !< electric conductivy of (lossy) medium
-     FLOAT, allocatable             :: sigma_m(:,:) !< magnetic conductivy of (lossy) medium
-     integer, allocatable           :: points_number(:)
-     integer, allocatable           :: points_map(:,:)
-     FLOAT, allocatable             :: aux_ep(:,:,:) !< auxiliary array for storing the epsilon derivative profile
-     FLOAT, allocatable             :: aux_mu(:,:,:) !< auxiliary array for storing the softened mu profile
-     integer, allocatable           :: bdry_number(:)
-     FLOAT, allocatable             :: bdry_map(:,:)
-   end type medium_box_t
 
    type, extends(hamiltonian_abst_t) :: hamiltonian_mxll_t
     integer                        :: dim
@@ -884,13 +863,13 @@ contains
     do idim = 1, 3
       if ( (hm%bc%bc_type(idim) == MXLL_BC_MEDIUM) .and. &
            (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RS) ) then
-        do ip_in = 1, hm%bc%mxmedium%points_number(idim)
-          ip          = hm%bc%mxmedium%points_map(ip_in, idim)
-          cc          = hm%bc%mxmedium%c(ip_in, idim)/P_c
-          aux_ep(:)   = hm%bc%mxmedium%aux_ep(ip_in, :, idim)
-          aux_mu(:)   = hm%bc%mxmedium%aux_mu(ip_in, :, idim)
-          sigma_e     = hm%bc%mxmedium%sigma_e(ip_in, idim)
-          sigma_m     = hm%bc%mxmedium%sigma_m(ip_in, idim)
+        do ip_in = 1, hm%bc%medium%points_number(idim)
+          ip          = hm%bc%medium%points_map(ip_in, idim)
+          cc          = hm%bc%medium%c(ip_in, idim)/P_c
+          aux_ep(:)   = hm%bc%medium%aux_ep(ip_in, :, idim)
+          aux_mu(:)   = hm%bc%medium%aux_mu(ip_in, :, idim)
+          sigma_e     = hm%bc%medium%sigma_e(ip_in, idim)
+          sigma_m     = hm%bc%medium%sigma_m(ip_in, idim)
           ff_plus(1)  = psi(ip, 1)
           ff_plus(2)  = psi(ip, 2)
           ff_plus(3)  = psi(ip, 3)
@@ -1099,37 +1078,6 @@ contains
     call messages_not_implemented ('zhamiltonian_mxll_magnus_apply', namespace=namespace)
 
   end subroutine zhamiltonian_mxll_magnus_apply
-
-  ! ---------------------------------------------------------
-  !> Deallocation of medium_box components
-  subroutine medium_box_end(medium_box)
-    class(medium_box_t),   intent(inout)    :: medium_box
-
-    PUSH_SUB(medium_box_end)
-
-    SAFE_DEALLOCATE_A(medium_box%center)
-    SAFE_DEALLOCATE_A(medium_box%lsize)
-    SAFE_DEALLOCATE_A(medium_box%ep_factor)
-    SAFE_DEALLOCATE_A(medium_box%mu_factor)
-    SAFE_DEALLOCATE_A(medium_box%sigma_e_factor)
-    SAFE_DEALLOCATE_A(medium_box%sigma_m_factor)
-    SAFE_DEALLOCATE_A(medium_box%shape)
-    SAFE_DEALLOCATE_A(medium_box%points_number)
-    SAFE_DEALLOCATE_A(medium_box%bdry_number)
-    SAFE_DEALLOCATE_A(medium_box%points_map)
-    SAFE_DEALLOCATE_A(medium_box%bdry_map)
-    SAFE_DEALLOCATE_A(medium_box%aux_ep)
-    SAFE_DEALLOCATE_A(medium_box%aux_mu)
-    SAFE_DEALLOCATE_A(medium_box%c)
-    SAFE_DEALLOCATE_A(medium_box%ep)
-    SAFE_DEALLOCATE_A(medium_box%mu)
-    SAFE_DEALLOCATE_A(medium_box%sigma_e)
-    SAFE_DEALLOCATE_A(medium_box%sigma_m)
-
-    POP_SUB(medium_box_end)
-
-  end subroutine medium_box_end
-
 
 end module hamiltonian_mxll_oct_m
 
