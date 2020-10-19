@@ -403,6 +403,8 @@ contains
     logical, optional,         intent(in)    :: set_bc !< If set to .false. the boundary conditions are assumed to be set previously.
 
     type(profile_t), save :: prof
+    class(batch_t), pointer :: gradb(:)
+    integer :: idir
 
     PUSH_SUB(hamiltonian_mxll_apply_batch)
     call profiling_in(prof, "HAMILTONIAN_MXLL_APPLY_BATCH")
@@ -423,9 +425,19 @@ contains
       endif
     end if
 
-    call psib%copy_data_to(der%mesh%np, hpsib)
-    call zderivatives_batch_curl(der, hpsib)
+    allocate(gradb(1:der%dim), mold=psib)
+    do idir = 1, der%dim
+      call psib%copy_to(gradb(idir))
+    end do
+    call zderivatives_batch_grad(der, psib, gradb)
+
+    call zderivatives_batch_curl(der, hpsib, gradb=gradb)
     call batch_scal(der%mesh%np, hm%rs_sign * P_c, hpsib)
+
+    do idir = 1, der%dim
+      call gradb(idir)%end()
+    end do
+    SAFE_DEALLOCATE_P(gradb)
   
     call profiling_out(prof)
     POP_SUB(hamiltonian_mxll_apply_batch)
