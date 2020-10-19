@@ -1009,47 +1009,29 @@ contains
     CMPLX,     optional, intent(in)    :: rs_field_plane_waves(:,:)
     FLOAT,     optional, intent(inout) :: energy_dens_plane_waves(:)
 
-    CMPLX, allocatable :: ztmp(:,:)
     integer            :: idim, ip
 
     PUSH_SUB(energy_density_calc)
 
-    SAFE_ALLOCATE(ztmp(1:gr%mesh%np_part,1:st%dim))
-
-    ztmp(:,:) = rs_field(:,:)
-
-    energy_dens(:) = M_ZERO
-    do ip = 1, gr%mesh%np
-      do idim = 1, st%dim
-        energy_dens(ip) = energy_dens(ip) + conjg(ztmp(ip,idim)) * ztmp(ip,idim)
-      end do
-    end do
-
     e_energy_dens(:) = M_ZERO
-    do ip = 1, gr%mesh%np
-      do idim = 1, st%dim
-        e_energy_dens(ip) = e_energy_dens(ip) + real(ztmp(ip,idim))**2
-      end do
-    end do
-
     b_energy_dens(:) = M_ZERO
     do ip = 1, gr%mesh%np
       do idim = 1, st%dim
-        b_energy_dens(ip) = b_energy_dens(ip) + aimag(ztmp(ip,idim))**2
+        e_energy_dens(ip) = e_energy_dens(ip) + real(rs_field(ip,idim))**2
+        b_energy_dens(ip) = b_energy_dens(ip) + aimag(rs_field(ip,idim))**2
       end do
+      energy_dens(ip) = e_energy_dens(ip) + b_energy_dens(ip)
     end do
 
     if (present(rs_field_plane_waves) .and. present(energy_dens_plane_waves) .and. plane_waves_check) then
-      ztmp(:,:) = rs_field_plane_waves(:,:)
       energy_dens_plane_waves(:) = M_ZERO
       do ip = 1, gr%mesh%np
         do idim = 1, st%dim
-          energy_dens_plane_waves(ip) = energy_dens_plane_waves(ip) + conjg(ztmp(ip,idim)) * ztmp(ip,idim)
+          energy_dens_plane_waves(ip) = energy_dens_plane_waves(ip) &
+                + conjg(rs_field_plane_waves(ip,idim)) * rs_field_plane_waves(ip,idim)
         end do
       end do
     end if
-
-    SAFE_DEALLOCATE_A(ztmp)
 
     POP_SUB(energy_density_calc)
   end subroutine energy_density_calc
