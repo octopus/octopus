@@ -131,6 +131,9 @@ contains
     this%atom1 = -1
     this%atom2 = -1
 
+    nullify(this%ionic%mix1)
+    nullify(this%ionic%mix2)
+
     if ( this%pert_type == PERTURBATION_MAGNETIC ) then
 
       !%Variable MagneticGaugeCorrection
