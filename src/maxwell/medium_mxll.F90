@@ -25,7 +25,6 @@ module medium_mxll_oct_m
   use global_oct_m
   use iso_c_binding
   use messages_oct_m
-  use profiling_oct_m
   use comm_oct_m
   use grid_oct_m
   use mesh_oct_m

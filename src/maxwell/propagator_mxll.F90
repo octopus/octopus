@@ -2116,7 +2116,7 @@ contains
 
     PUSH_SUB(cpml_conv_function_update_via_riemann_silberstein)
 
-    call profiling_in(prof, 'CPML_CONV_FUNCTION_UPDATE_VIA_RIEMANN_SILBERSTEIN')
+    call profiling_in(prof, 'CPML_CONV_FUN_UPDATE_VIA_RS')
 
     np_part = gr%der%mesh%np_part
     rs_sign = hm%rs_sign
@@ -2720,6 +2720,7 @@ contains
 
     SAFE_DEALLOCATE_A(ff_rs_state)
 
+    call profiling_out(prof)
     POP_SUB(plane_waves_propagation)
   end subroutine plane_waves_propagation
 
