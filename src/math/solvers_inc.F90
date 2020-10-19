@@ -387,10 +387,16 @@ end subroutine X(bi_conjugate_gradients)
     SAFE_ALLOCATE(deltax(1:np))
     SAFE_ALLOCATE(deltar(1:np))
 
-    !The initial starting point is zero
-    x = M_ZERO
-    call lalg_copy(np, b, r)
-    call lalg_copy(np, b, v)
+    !!The initial starting point is zero
+    !x = M_ZERO
+    !call lalg_copy(np, b, r)
+    !call lalg_copy(np, b, v)
+    ! use v as temp var
+    call op(x, v)
+    do ip = 1, np
+      r(ip) = b(ip) - v(ip)
+      v(ip) = r(ip)
+    end do
 
 
     rho      = nrm2(v)
