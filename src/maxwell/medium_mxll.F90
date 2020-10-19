@@ -80,6 +80,11 @@ module medium_mxll_oct_m
     type(block_t) :: blk
     type(medium_box_t), allocatable :: medium_box_aux
     logical :: checkmediumpoints
+    type(profile_t), save :: prof
+
+    PUSH_SUB(medium_box_init)
+
+    call profiling_in(prof, 'MEDIUM_BOX_INIT')
 
     !%Variable LinearMediumBox
     !%Type block
@@ -248,6 +253,10 @@ module medium_mxll_oct_m
       call messages_print_stress(stdout)
     end if
 
+    call profiling_out(prof)
+
+    POP_SUB(medium_box_init)
+
   end subroutine medium_box_init
 
   ! ---------------------------------------------------------
@@ -262,8 +271,11 @@ module medium_mxll_oct_m
     FLOAT   :: bounds(nr_of_boxes,2,gr%sb%dim), xx(gr%sb%dim), xxp(gr%sb%dim), dd, dd_max, dd_min
     FLOAT, allocatable  :: tmp(:), tmp_grad(:,:)
     logical :: inside
+    type(profile_t), save :: prof
 
     PUSH_SUB(generate_medium_boxes)
+
+    call profiling_in(prof, 'GENERATE_MEDIUM_BOXES')
 
     SAFE_ALLOCATE(tmp(gr%mesh%np_part))
     SAFE_ALLOCATE(tmp_grad(gr%mesh%np_part,1:gr%mesh%sb%dim))
@@ -413,6 +425,8 @@ module medium_mxll_oct_m
     SAFE_DEALLOCATE_A(tmp)
     SAFE_DEALLOCATE_A(tmp_grad)
 
+    call profiling_out(prof)
+
     POP_SUB(generate_medium_boxes)
   contains
 
@@ -481,6 +495,11 @@ module medium_mxll_oct_m
     integer :: il, ip_in, ip
     FLOAT   :: xx(3)
     type(cgal_polyhedra_t), allocatable :: cgal_poly(:)
+    type(profile_t), save :: prof
+
+    PUSH_SUB(get_points_map_from_file)
+
+    call profiling_in(prof, 'GET_POINTS_MAP_FROM_FILE')
 
     SAFE_ALLOCATE(cgal_poly(1:medium_box%number))
 
@@ -505,6 +524,11 @@ module medium_mxll_oct_m
     end do
 
     SAFE_DEALLOCATE_A(cgal_poly)
+
+    call profiling_out(prof)
+
+    POP_SUB(get_points_map_from_file)
+
   end subroutine get_points_map_from_file
 
   ! ---------------------------------------------------------
@@ -512,7 +536,11 @@ module medium_mxll_oct_m
   subroutine medium_box_end(medium_box)
     type(medium_box_t),   intent(inout)    :: medium_box
 
+    type(profile_t), save :: prof
+
     PUSH_SUB(medium_box_end)
+
+    call profiling_in(prof, 'MEDIUM_BOX_END')
 
     SAFE_DEALLOCATE_A(medium_box%center)
     SAFE_DEALLOCATE_A(medium_box%lsize)
@@ -532,6 +560,8 @@ module medium_mxll_oct_m
     SAFE_DEALLOCATE_A(medium_box%mu)
     SAFE_DEALLOCATE_A(medium_box%sigma_e)
     SAFE_DEALLOCATE_A(medium_box%sigma_m)
+
+    call profiling_out(prof)
 
     POP_SUB(medium_box_end)
 
