@@ -115,7 +115,10 @@ contains
     integer, allocatable :: istart(:), lsize(:)
 
     type(profile_t), save :: prof
-    integer :: default, ierr
+    integer :: default
+#ifdef HAVE_METIS
+    integer ::ierr
+#endif
 
     call profiling_in(prof, "MESH_PARTITION")
     PUSH_SUB(mesh_partition)
