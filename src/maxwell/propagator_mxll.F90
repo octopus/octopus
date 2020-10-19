@@ -1420,7 +1420,7 @@ contains
 
     PUSH_SUB(poynting_vector_through_box_surfaces)
 
-    call profiling_in(prof, 'PONYTING_VECTOR_THROUGH_BOX_SURFACES')
+    call profiling_in(prof, 'POYN_VEC_THROUGH_BOX_SURF')
 
     SAFE_ALLOCATE(poynting_vector(1:gr%mesh%np,1:st%dim))
     SAFE_ALLOCATE(tmp_global(1:gr%mesh%np_global,1:st%dim))
@@ -1521,7 +1521,7 @@ contains
 
     PUSH_SUB(poynting_vector_through_box_surfaces_plane_waves)
 
-    call profiling_in(prof, 'POYNTING_VECTOR_TROUGH_BOX_SURFACES_PLANE_WAVES')
+    call profiling_in(prof, 'POYN_VEC_BOX_SURF_PL_WAVES')
 
     SAFE_ALLOCATE(poynting_vector(1:gr%mesh%np,1:st%dim))
     SAFE_ALLOCATE(tmp_global(1:gr%mesh%np_global,1:st%dim))
@@ -1625,7 +1625,7 @@ contains
 
     PUSH_SUB(fields_through_box_surfaces)
 
-    call profiling_in(prof, 'FIELDS_THROUGH_BOX_SURFACES')
+    call profiling_in(prof, 'FIELDS_THROUGH_BOX_SURF')
 
     SAFE_ALLOCATE(e_field(1:gr%mesh%np, 1:st%dim))
     SAFE_ALLOCATE(b_field(1:gr%mesh%np, 1:st%dim))
@@ -1767,7 +1767,7 @@ contains
 
     PUSH_SUB(fields_through_box_surfaces_plane_waves)
 
-    call profiling_in(prof, 'FIELDS_THROUGH_BOX_SURFACES_PLANE_WAVES')
+    call profiling_in(prof, 'FIELDS_THROUGH_BOX_SURF_PW')
 
     SAFE_ALLOCATE(e_field(1:gr%mesh%np, 1:st%dim))
     SAFE_ALLOCATE(b_field(1:gr%mesh%np, 1:st%dim))
@@ -2318,7 +2318,7 @@ contains
 
     PUSH_SUB(cpml_conv_function_update_via_e_b_fields)
 
-    call profiling_in(prof, 'CPML_CONV_FUNCTION_UPDATE_VIA_E_B_FIELDS')
+    call profiling_in(prof, 'CPML_CONV_FUNC_UPD_VIA_E_B')
 
     np_part = gr%der%mesh%np_part
     SAFE_ALLOCATE(tmp_e(np_part,3))
@@ -2568,7 +2568,7 @@ contains
     type(profile_t), save :: prof
 
     PUSH_SUB(constant_boundaries_calculation)
-    call profiling_in(prof, 'CONSTANT_BOUNDARIES_CALCULATION')
+    call profiling_in(prof, 'CONSTANT_BOUNDARIES_CALC')
 
     if (hm%spatial_constant_apply) then
       if (constant_calc) then
@@ -2653,7 +2653,7 @@ contains
 
     PUSH_SUB(plane_waves_boundaries_calculation)
 
-    call profiling_in(prof, 'PLANE_WAVES_BOUNDARIES_CALCULATION')
+    call profiling_in(prof, 'PLANE_WAVES_BOUNDARIES_CALC')
 
     if (hm%plane_waves_apply) then
       do wn = 1, hm%bc%plane_wave%number
