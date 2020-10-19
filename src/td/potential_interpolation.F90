@@ -22,7 +22,6 @@ module potential_interpolation_oct_m
   use grid_oct_m
   use global_oct_m
   use lalg_basic_oct_m
-  use loct_pointer_oct_m
   use math_oct_m
   use messages_oct_m
   use namespace_oct_m
@@ -77,8 +76,8 @@ contains
     
     PUSH_SUB(potential_interpolation_copy)
 
-    call loct_pointer_copy(vkso%v_old, vksi%v_old)
-    call loct_pointer_copy(vkso%vtau_old, vksi%vtau_old)
+    SAFE_ALLOCATE_SOURCE_P(vkso%v_old, vksi%v_old)
+    SAFE_ALLOCATE_SOURCE_P(vkso%vtau_old, vksi%vtau_old)
 
     POP_SUB(potential_interpolation_copy)
   end subroutine potential_interpolation_copy
@@ -133,18 +132,26 @@ contains
     FLOAT, optional,   intent(in)    :: vtau(:, :)
 
     integer :: i, ispin, ip
-    
+
     PUSH_SUB(potential_interpolation_run_zero_iter)
 
-    forall(i = 1:interpolation_steps, ispin = 1:nspin, ip = 1:np)
-      potential_interpolation%v_old(ip, ispin, i) = vhxc(ip, ispin)
-    end forall
-    
+    do i = 1, interpolation_steps
+      do ispin = 1, nspin
+        do ip = 1, np
+          potential_interpolation%v_old(ip, ispin, i) = vhxc(ip, ispin)
+        end do
+      end do
+    end do
+
    if(present(vtau)) then
-      forall(i = 1:interpolation_steps, ispin = 1:nspin, ip = 1:np)
-        potential_interpolation%vtau_old(ip, ispin, i) = vtau(ip, ispin)
-      end forall
-    end if 
+      do i = 1, interpolation_steps
+        do ispin = 1, nspin
+          do ip = 1, np
+            potential_interpolation%vtau_old(ip, ispin, i) = vtau(ip, ispin)
+          end do
+        end do
+      end do
+    end if
 
     POP_SUB(potential_interpolation_run_zero_iter)
   end subroutine potential_interpolation_run_zero_iter

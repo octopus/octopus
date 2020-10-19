@@ -1010,7 +1010,9 @@ contains
 
     SAFE_ALLOCATE(mesh%vol_pp(1:np))
 
-    forall(ip = 1:np) mesh%vol_pp(ip) = product(mesh%spacing(1:sb%dim))
+    do ip = 1, np
+      mesh%vol_pp(ip) = product(mesh%spacing(1:sb%dim))
+    end do
 
     jj(sb%dim + 1:MAX_DIM) = 0
 

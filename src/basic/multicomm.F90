@@ -66,9 +66,7 @@ module multicomm_oct_m
   
   public ::                          &
     multicomm_divide_range,          &
-#ifdef HAVE_OPENMP
     multicomm_divide_range_omp,      &
-#endif
 #if defined(HAVE_MPI)
     multicomm_create_all_pairs,      &
 #endif
@@ -169,7 +167,7 @@ contains
   subroutine multicomm_init(mc, namespace, base_grp, parallel_mask, default_mask, n_node, index_range, min_range)
     type(multicomm_t), intent(out)   :: mc
     type(namespace_t), intent(in)    :: namespace
-    type(mpi_grp_t),   intent(inout) :: base_grp
+    type(mpi_grp_t),   intent(in)    :: base_grp
     integer,           intent(in)    :: parallel_mask
     integer,           intent(in)    :: default_mask
     integer,           intent(in)    :: n_node
@@ -537,7 +535,7 @@ contains
         if(.not. multicomm_strategy_is_parallel(mc, kk)) cycle
         ii = ii + 1
         if(kk == slave_level) INCR(real_group_sizes(kk), -num_slaves)
-        write(message(ii),'(3a,i6,a,i8,a)') 'Info: Number of nodes in ', &
+        write(message(ii),'(3a,i6,a,i12,a)') 'Info: Number of nodes in ', &
           par_types(kk), ' group:', real_group_sizes(kk), ' (', index_range(kk), ')'
       end do
       call messages_info(ii)
@@ -645,7 +643,6 @@ contains
             call messages_fatal(1)
           end if
           call mpi_grp_init(reorder_grp, reorder_comm)
-          call mpi_grp_copy(base_grp, reorder_grp)
         else
           call mpi_grp_copy(reorder_grp, base_grp)
         end if
@@ -958,32 +955,33 @@ contains
   !! between nprocs processors.
   !! THREADSAFE
   subroutine multicomm_divide_range(nobjs, nprocs, istart, ifinal, lsize, scalapack_compat)
-    integer,           intent(in)    :: nobjs !< Number of points to divide
-    integer,           intent(in)    :: nprocs !< Number of processors
+    integer,           intent(in)  :: nobjs !< Number of points to divide
+    integer,           intent(in)  :: nprocs !< Number of processors
     integer,           intent(out) :: istart(:)
     integer,           intent(out) :: ifinal(:)
     integer, optional, intent(out) :: lsize(:) !< Number of objects in each partition
-    logical, optional, intent(in)    :: scalapack_compat
+    logical, optional, intent(in)  :: scalapack_compat
 
     integer :: ii, jj, rank
     logical :: scalapack_compat_
-#ifdef HAVE_SCALAPACK
     integer :: nbl, size
-#endif
-    
-    scalapack_compat_ = .false.
-#ifdef HAVE_SCALAPACK
-    if(present(scalapack_compat)) scalapack_compat_ = scalapack_compat
-#endif
+
     ! no push_sub, threadsafe
-    if(scalapack_compat_) then
-#ifdef HAVE_SCALAPACK      
+
+    scalapack_compat_ = optional_default(scalapack_compat, .false.)
+#ifndef HAVE_SCALAPACK
+    scalapack_compat_ = .false.
+#endif
+
+    if (scalapack_compat_) then
       nbl = nobjs/nprocs
       if (mod(nobjs, nprocs) /= 0) INCR(nbl, 1)
       
       istart(1) = 1
       do rank = 1, nprocs
+#ifdef HAVE_SCALAPACK
         size = numroc(nobjs, nbl, rank - 1, 0, nprocs)
+#endif
         if(size > 0) then
           if(rank > 1) istart(rank) = ifinal(rank - 1) + 1
           ifinal(rank) = istart(rank) + size - 1
@@ -992,7 +990,6 @@ contains
           ifinal(rank) = 0
         end if
       end do
-#endif
     else
       
       if(nprocs <= nobjs) then

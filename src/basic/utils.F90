@@ -224,14 +224,18 @@ contains
          "C compiler             : "//trim(conf%cc)
     message(2) = &
          "C compiler flags       : "//trim(conf%cflags)
-#ifdef HAVE_FC_COMPILER_VERSION
-    message(3) = "Fortran compiler       : "//trim(conf%fc) //" ("//compiler_version()//")"
-#else
-    message(3) = "Fortran compiler       : "//trim(conf%fc)
-#endif
+    message(3) = &
+         "C++ compiler           : "//trim(conf%cxx)
     message(4) = &
+         "C++ compiler flags     : "//trim(conf%cxxflags)
+#ifdef HAVE_FC_COMPILER_VERSION
+    message(5) = "Fortran compiler       : "//trim(conf%fc) //" ("//compiler_version()//")"
+#else
+    message(5) = "Fortran compiler       : "//trim(conf%fc)
+#endif
+    message(6) = &
          "Fortran compiler flags : "//trim(conf%fcflags)
-    call messages_info(4)
+    call messages_info(6)
 
     message(1) = ""
     call messages_info(1)
@@ -276,6 +280,12 @@ contains
 #ifdef HAVE_BLUE_GENE_Q
     get_config_opts = trim(get_config_opts)//' bluegene/q'
 #endif
+#ifdef HAVE_LIBXC4
+    get_config_opts = trim(get_config_opts)//' libxc4'
+#endif
+#ifdef HAVE_LIBXC5
+    get_config_opts = trim(get_config_opts)//' libxc5'
+#endif
 
   end function get_config_opts
 
@@ -288,6 +298,9 @@ contains
 #endif
 #ifdef HAVE_BERKELEYGW
     get_optional_libraries = trim(get_optional_libraries)//' berkeleygw'
+#endif
+#ifdef HAVE_CGAL
+    get_optional_libraries = trim(get_optional_libraries)//' cgal'
 #endif
 #ifdef HAVE_CLFFT
     get_optional_libraries = trim(get_optional_libraries)//' clamdfft'

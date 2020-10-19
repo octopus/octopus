@@ -530,7 +530,7 @@ subroutine qshep3 ( n, x, y, z, f, nq, nw, nr, lcell, lnext, xyzmin, &
 !
 !  N, NQ, NW, or NR is out of range.
 !
-20 continue
+!20 continue
 
   ier = 1
   return

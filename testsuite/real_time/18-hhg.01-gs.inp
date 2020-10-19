@@ -21,7 +21,7 @@ TheoryLevel = independent_particles
 "Hydrogen1D" | 0
 %
 
-EigenSolverTolerance = 1e-5
+MaximumIter = 300
 
 # Frequency corresponding to 800nm.
 omega = 0.05655

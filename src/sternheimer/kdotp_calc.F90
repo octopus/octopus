@@ -30,7 +30,7 @@ module kdotp_calc_oct_m
   use profiling_oct_m
   use states_elec_oct_m
   use states_elec_calc_oct_m
-  use system_oct_m
+  use electrons_oct_m
   use utils_oct_m
 
   implicit none
@@ -67,7 +67,7 @@ contains
 !> v = (dE_nk/dk)/hbar = -Im < u_nk | -i grad | u_nk >
 !! This is identically zero for real wavefunctions.
 subroutine zcalc_band_velocity(sys, pert, velocity)
-  type(system_t),      intent(inout) :: sys
+  type(electrons_t),   intent(inout) :: sys
   type(pert_t),        intent(inout) :: pert
   FLOAT,               intent(out)   :: velocity(:,:,:)
 
@@ -121,9 +121,9 @@ end subroutine zcalc_band_velocity
 !! mu_i = sum(m occ, k) <u_mk(0)|(-id/dk_i|u_mk(0)>)
 !!      = Im sum(m occ, k) <u_mk(0)|(d/dk_i|u_mk(0)>)
 subroutine zcalc_dipole_periodic(sys, lr, dipole)
-  type(system_t), target, intent(inout) :: sys
-  type(lr_t),             intent(in)    :: lr(:,:)
-  CMPLX,                  intent(out)   :: dipole(:)
+  type(electrons_t),   target, intent(inout) :: sys
+  type(lr_t),                  intent(in)    :: lr(:,:)
+  CMPLX,                       intent(out)   :: dipole(:)
 
   integer idir, ist, ik, idim
   type(mesh_t), pointer :: mesh

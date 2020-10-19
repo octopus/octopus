@@ -23,7 +23,6 @@ module fourier_space_oct_m
   use cube_oct_m
   use cube_function_oct_m
   use global_oct_m
-  use loct_pointer_oct_m
   use math_oct_m
   use messages_oct_m
   use fft_oct_m
@@ -64,6 +63,7 @@ module fourier_space_oct_m
     !Parameters used to generate this kernel
     FLOAT, public :: qq(1:MAX_DIM)
     FLOAT, public :: singularity
+    FLOAT, public :: mu !< Range separation for the exchange operator
   end type fourier_space_op_t
 
 contains
@@ -81,6 +81,7 @@ contains
     !We just set a very large q to guaranty that the kernel is always
     this%qq = CNST(1e5)  
     this%singularity = M_ZERO
+    this%mu = M_ZERO
 
     POP_SUB(fourier_space_op_end)
 

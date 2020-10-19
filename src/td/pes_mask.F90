@@ -243,7 +243,7 @@ contains
     !% wavefunctions on the region <i>r</i> > <i>R1</i>. This mode employs a step masking function by default.
     !%End
     call parse_variable(namespace, 'PESMaskMode', PES_MASK_MODE_MASK, mask%mode)
-    if(.not.varinfo_valid_option('PESMaskMode', mask%mode)) call messages_input_error('PESMaskMode')
+    if(.not.varinfo_valid_option('PESMaskMode', mask%mode)) call messages_input_error(namespace, 'PESMaskMode')
     call messages_print_var_option(stdout, "PESMaskMode", mask%mode)
     
     select case(mask%mode)
@@ -301,7 +301,7 @@ contains
     call parse_variable(namespace, 'PESMaskPlaneWaveProjection', PW_MAP_FFT, mask%pw_map_how)
     
     if(.not.varinfo_valid_option('PESMaskPlaneWaveProjection', mask%pw_map_how)) then
-      call messages_input_error('PESMaskPlaneWaveProjection')
+      call messages_input_error(namespace, 'PESMaskPlaneWaveProjection')
     end if
     
     call messages_print_var_option(stdout, "PESMaskPlaneWaveProjection", mask%pw_map_how)
@@ -570,7 +570,7 @@ contains
     !%Error function. Not Implemented.
     !%End
     call parse_variable(namespace, 'PESMaskShape', defaultMask, mask%shape)
-    if(.not.varinfo_valid_option('PESMaskShape', mask%shape)) call messages_input_error('PESMaskShape')
+    if(.not.varinfo_valid_option('PESMaskShape', mask%shape)) call messages_input_error(namespace, 'PESMaskShape')
     call messages_print_var_option(stdout, "PESMaskShape", mask%shape)
     
     !%Variable PESMaskSize
@@ -644,7 +644,9 @@ contains
         xx = M_ZERO
         xx(1:sb%dim) = mesh%x(ip, 1:sb%dim)
         r = units_from_atomic(units_inp%length, sqrt(sum(xx(1:sb%dim)**2)))
-        forall(idim = 1:sb%dim) xx(idim) = units_from_atomic(units_inp%length, xx(idim))
+        do idim = 1, sb%dim
+          xx(idim) = units_from_atomic(units_inp%length, xx(idim))
+        end do
         call parse_expression(ufn_re, ufn_im, sb%dim, xx, r, M_ZERO, user_def_expr)
         mask%ufn(ip) = ufn_re
       end do
@@ -817,8 +819,8 @@ contains
     PUSH_SUB(pes_mask_generate_Lk)
 
     dim = mask%mesh%sb%dim
-    
-    do ii=1, maxval(mask%ll(:))    
+
+    do ii = 1, maxval(mask%ll(:))
       mask%Lk(ii,1:dim)= matmul(sb%klattice_primitive(1:dim,1:dim), mask%cube%Lfs(ii,1:dim))
     end do
 
@@ -1118,11 +1120,10 @@ contains
   !---------------------------------------------------------
   !> Project the wavefunction on plane waves
   !---------------------------------------------------------
-  subroutine pes_mask_X_to_K(mask,mesh,wfin,wfout)
-    type(pes_mask_t), intent(in)  :: mask
-    type(mesh_t),     intent(in)  :: mesh
-    CMPLX,              intent(inout):: wfin(:,:,:)
-    CMPLX,             intent(out):: wfout(:,:,:)
+  subroutine pes_mask_X_to_K(mask, wfin, wfout)
+    type(pes_mask_t), intent(in)    :: mask
+    CMPLX,            intent(inout) :: wfin(:,:,:)
+    CMPLX,            intent(out)   :: wfout(:,:,:)
     
     type(profile_t), save :: prof
     type(cube_function_t) :: cf_tmp
@@ -1182,11 +1183,10 @@ contains
   end subroutine pes_mask_X_to_K
   
   ! ------------------------------------------------
-  subroutine pes_mask_K_to_X(mask,mesh,wfin,wfout)
-    type(pes_mask_t), intent(in)  :: mask
-    type(mesh_t),     intent(in)  :: mesh
-    CMPLX,            intent(inout)  :: wfin(:,:,:)
-    CMPLX,            intent(out) :: wfout(:,:,:)
+  subroutine pes_mask_K_to_X(mask, wfin, wfout)
+    type(pes_mask_t), intent(in)    :: mask
+    CMPLX,            intent(inout) :: wfin(:,:,:)
+    CMPLX,            intent(out)   :: wfout(:,:,:)
     
     type(profile_t), save :: prof
     type(cube_function_t) :: cf_tmp
@@ -1354,7 +1354,7 @@ contains
             case(PES_MASK_MODE_MASK)
               
               cf1%zRs = (M_ONE - mask%cM%zRs) * cf1%zRs                               ! cf1 =(1-M)*\Psi_A(x,t2)
-              call pes_mask_X_to_K(mask,mesh,cf1%zRs,cf2%Fs)                          ! cf2 = \tilde{\Psi}_A(k,t2)
+              call pes_mask_X_to_K(mask, cf1%zRs, cf2%Fs)                             ! cf2 = \tilde{\Psi}_A(k,t2)
 
 
               if ( mask%filter_k ) then ! apply a filter to the Fourier transform to remove unwanted energies
@@ -1374,14 +1374,14 @@ contains
               if(mask%back_action .eqv. .true.) then
                 
                 ! Apply Back-action to wavefunction in A
-                call pes_mask_K_to_X(mask,mesh,cf1%Fs,cf2%zRs)                       ! cf2 = \Psi_B(x,t2)
+                call pes_mask_K_to_X(mask, cf1%Fs, cf2%zRs)                       ! cf2 = \Psi_B(x,t2)
                 call pes_mask_cube_to_mesh(mask, cf2, mf)
                 psi(1:mask%mesh%np) = psi(1:mask%mesh%np) + mf(1:mask%mesh%np)
                 call states_elec_set_state(st, mask%mesh, idim, ist, ik, psi)
                 
                 ! Apply correction to wavefunction in B
                 cf2%zRs= (mask%cM%zRs) * cf2%zRs                                     ! cf2 = M*\Psi_B(x,t1)
-                call pes_mask_X_to_K(mask,mesh,cf2%zRs,cf1%Fs)
+                call pes_mask_X_to_K(mask, cf2%zRs, cf1%Fs)
                 
                 mask%k(:,:,:, idim, ist, ik) = mask%k(:,:,:, idim, ist, ik) - cf1%Fs
                 
@@ -1395,7 +1395,7 @@ contains
               
               
               cf1%zRs = (M_ONE-mask%cM%zRs) * cf1%zRs
-              call pes_mask_X_to_K(mask,mesh,cf1%zRs,cf2%Fs) 
+              call pes_mask_X_to_K(mask, cf1%zRs, cf2%Fs) 
               
               mask%k(:,:,:, idim, ist, ik) = cf2%Fs(:,:,:)
               

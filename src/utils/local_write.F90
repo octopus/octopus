@@ -134,7 +134,7 @@ contains
 
     call parse_variable(namespace, 'LDOutput', default, flags)
 
-    if(.not.varinfo_valid_option('LDOutput', flags, is_flag = .true.)) call messages_input_error('LDOutput')
+    if(.not.varinfo_valid_option('LDOutput', flags, is_flag = .true.)) call messages_input_error(namespace, 'LDOutput')
 
     SAFE_ALLOCATE(writ%out(1:LOCAL_OUT_MAX, 1:nd))
     do iout = 1, LOCAL_OUT_MAX
@@ -153,7 +153,7 @@ contains
     !%End
     call parse_variable(namespace, 'LDOutputFormat', 0, writ%how)
     if(.not.varinfo_valid_option('OutputFormat', writ%how, is_flag=.true.)) then
-      call messages_input_error('LDOutputFormat')
+      call messages_input_error(namespace, 'LDOutputFormat')
     end if
 
     !%Variable LDMultipoleLmax

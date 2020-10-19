@@ -35,6 +35,9 @@ dist_share_DATA =                                  \
 	05-hartree_3d_fft.test                     \
 	05-hartree_3d_fft.01-fft.inp               \
 	05-hartree_3d_fft.02-fft_corrected.inp     \
+	05-hartree_3d_fft.03-3d_1d_periodic.inp    \
+	05-hartree_3d_fft.04-3d_3d_periodic.inp    \
+	05-hartree_3d_fft.05-3d_2d_periodic.inp    \
 	06-hartree_3d_isf.test                     \
 	06-hartree_3d_isf.01-isf.inp               \
 	07-cholesky_serial.test                    \
@@ -44,13 +47,16 @@ dist_share_DATA =                                  \
 	08-gs.test                                 \
 	08-gs.01-cgs_real.inp                      \
 	08-gs.02-cgs_complex.inp                   \
-        08-gs.03-mgs_real.inp                      \
-        08-gs.04-mgs_complex.inp                   \
-        08-gs.05-drcgs_real.inp                    \
-        08-gs.06-drcgs_complex.inp                 \
+	08-gs.03-mgs_real.inp                      \
+	08-gs.04-mgs_complex.inp                   \
+	08-gs.05-drcgs_real.inp                    \
+	08-gs.06-drcgs_complex.inp                 \
 	10-hartree_pfft.test                       \
 	10-hartree_pfft.01-fft.inp                 \
 	10-hartree_pfft.02-fft_corrected.inp       \
+	10-hartree_pfft.03-3d_1d_periodic.inp      \
+	10-hartree_pfft.04-3d_3d_periodic.inp      \
+	10-hartree_pfft.05-3d_2d_periodic.inp      \
 	11-hartree_cl.test                         \
 	11-hartree_cl.01-fft.inp                   \
 	12-hartree_direct_3d.test                  \
@@ -66,19 +72,19 @@ dist_share_DATA =                                  \
 	16-hartree_3d_psolver.01-psolver.inp       \
 	16-hartree_3d_psolver.02-psolver.inp       \
 	17-recipe.inp                              \
-        17-recipe.test                             \
+	17-recipe.test                             \
 	18-interpolation.01-1d.inp                 \
 	18-interpolation.02-2d.inp                 \
 	18-interpolation.03-3d.inp                 \
 	18-interpolation.test                      \
 	19-hgh_soc.01-3d.inp                       \
-        19-hgh_soc.test                            \
+	19-hgh_soc.test                            \
 	20-dft_u.01-NiO.inp                        \
 	20-dft_u.test                              \
 	21-hamiltonian_apply.01-Si.inp             \
 	21-hamiltonian_apply.test                  \
-        22-density_calc.01-Si.inp                  \
-        22-density_calc.test                       \
+	22-density_calc.01-Si.inp                  \
+	22-density_calc.test                       \
 	23-exponential_apply.01-jellium.inp        \
 	23-exponential_apply.test                  \
 	24-boundaries.01-jellium.inp               \
@@ -86,10 +92,13 @@ dist_share_DATA =                                  \
 	25-subspace.01-jellium.inp                 \
 	25-subspace.test                           \
 	26-batch_ops.01-jellium.inp                \
+	26-batch_ops.02-jellium-complex.inp        \
+	26-batch_ops.03-jellium-spinor.inp         \
 	26-batch_ops.test                          \
-        27-celestial_dynamics.01-three_body.inp    \
-        27-celestial_dynamics.test                 \
-        28-clock.01.inp                            \
-        28-clock.test
+	27-clock.01.inp                            \
+	27-clock.test                              \
+	28-cgal.01.inp                             \
+	28-cgal.02-X.off                           \
+	28-cgal.test
 
 CLEANFILES = *~ *.bak

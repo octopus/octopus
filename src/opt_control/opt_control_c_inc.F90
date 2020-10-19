@@ -95,7 +95,7 @@
       call iteration_manager_direct(TOFLOAT(-f), par_, iterator, sys_)
       SAFE_ALLOCATE(dff(1:n))
       dff = df
-      call controlfunction_gradient(par_, sys_%namespace, par_new, dff)
+      call controlfunction_gradient(par_, par_new, dff)
       df = dff
 
       ! Check if the gradient has been computed properly... This should be done only

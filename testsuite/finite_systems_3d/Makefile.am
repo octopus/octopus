@@ -25,6 +25,7 @@ dist_share_DATA = \
 	01-carbon_atom.02-psf_l1.inp \
 	01-carbon_atom.03-ground_state_double_grid.inp \
 	01-carbon_atom.04-static_field.inp \
+        01-carbon_atom.05-smear.inp \
 	01-carbon_atom.test \
 	02-curvilinear_coordinates.01-gygi.inp \
 	02-curvilinear_coordinates.test \
@@ -137,6 +138,9 @@ dist_share_DATA = \
 	34-walltime.02-restart_gs.inp \
 	34-walltime.03-td_walltime.inp \
 	34-walltime.04-restart_td.inp \
-	34-walltime.test
+	34-walltime.test \
+        35-slater_x.01-gs.inp \
+        35-slater_x.02-gs_spinors.inp \
+        35-slater_x.test
 
 CLEANFILES = *~ *.bak

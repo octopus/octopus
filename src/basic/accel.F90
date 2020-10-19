@@ -60,6 +60,7 @@ module accel_oct_m
     accel_kernel_t,               &
     accel_t,                      &
     accel_is_enabled,             &
+    accel_allow_CPU_only,         &
     accel_init,                   &
     accel_end,                    &
     accel_padded_size,            &
@@ -135,6 +136,7 @@ module accel_oct_m
     integer(8)             :: local_memory_size
     integer(8)             :: global_memory_size
     logical                :: enabled
+    logical                :: allow_CPU_only
     logical                :: shared_mem
     logical                :: cuda_mpi
     integer                :: warp_size
@@ -190,6 +192,10 @@ module accel_oct_m
   type(accel_kernel_t), public, target, save :: dkernel_dot_matrix
   type(accel_kernel_t), public, target, save :: zkernel_dot_matrix
   type(accel_kernel_t), public, target, save :: zkernel_dot_matrix_spinors
+  type(accel_kernel_t), public, target, save :: dkernel_batch_axpy
+  type(accel_kernel_t), public, target, save :: zkernel_batch_axpy
+  type(accel_kernel_t), public, target, save :: dkernel_batch_dotp
+  type(accel_kernel_t), public, target, save :: zkernel_batch_dotp
   type(accel_kernel_t), public, target, save :: dzmul
   type(accel_kernel_t), public, target, save :: zzmul
   type(accel_kernel_t), public, target, save :: set_one
@@ -263,6 +269,16 @@ contains
     enabled = .false.
 #endif
   end function accel_is_enabled
+
+  ! ------------------------------------------
+
+  pure logical function accel_allow_CPU_only() result(allow)
+#ifdef HAVE_ACCEL
+    allow = accel%allow_CPU_only
+#else
+    allow = .true.
+#endif
+  end function accel_allow_CPU_only
 
   ! ------------------------------------------
 
@@ -580,6 +596,10 @@ contains
     call accel_kernel_start_call(kernel_vpsi_spinors, 'vpsi.cl', "vpsi_spinors")
     call accel_kernel_start_call(kernel_daxpy, 'axpy.cl', "daxpy", flags = '-DRTYPE_DOUBLE')
     call accel_kernel_start_call(kernel_zaxpy, 'axpy.cl', "zaxpy", flags = '-DRTYPE_COMPLEX')
+    call accel_kernel_start_call(dkernel_batch_axpy, 'axpy.cl', "dbatch_axpy_function", flags = '-lineinfo -DRTYPE_DOUBLE')
+    call accel_kernel_start_call(zkernel_batch_axpy, 'axpy.cl', "zbatch_axpy_function", flags = '-lineinfo -DRTYPE_COMPLEX')
+    call accel_kernel_start_call(dkernel_batch_dotp, 'mesh_batch_single.cl', "dbatch_mf_dotp", flags = '-lineinfo')
+    call accel_kernel_start_call(zkernel_batch_dotp, 'mesh_batch_single.cl', "zbatch_mf_dotp", flags = '-lineinfo')
     call accel_kernel_start_call(dpack, 'pack.cl', "dpack")
     call accel_kernel_start_call(zpack, 'pack.cl', "zpack")
     call accel_kernel_start_call(dunpack, 'pack.cl', "dunpack")
@@ -593,6 +613,8 @@ contains
     call accel_kernel_start_call(dkernel_dot_matrix, 'mesh_batch.cl', "ddot_matrix")
     call accel_kernel_start_call(zkernel_dot_matrix, 'mesh_batch.cl', "zdot_matrix")
     call accel_kernel_start_call(zkernel_dot_matrix_spinors, 'mesh_batch.cl', "zdot_matrix_spinors")
+
+    
     call accel_kernel_start_call(dzmul, 'mul.cl', "dzmul", flags = '-DRTYPE_DOUBLE')
     call accel_kernel_start_call(zzmul, 'mul.cl', "zzmul", flags = '-DRTYPE_COMPLEX')
 
@@ -634,6 +656,24 @@ contains
       call messages_write("Using CUDA-aware MPI.")
       call messages_info()
     end if
+
+
+    !%Variable AllowCPUonly
+    !%Type logical
+    !%Section Execution::Accel
+    !%Description
+    !% In order to prevent waste of resources, the code will normally stop when the GPU is disabled due to 
+    !% incomplete implementations or incompatibilities. AllowCPUonly = yes overrides this and allows the 
+    !% code execution also in these cases.
+    !%End
+#if defined (HAVE_ACCEL)
+    default = .false.
+#else
+    default = .true.
+#endif
+    call parse_variable(namespace, 'AllowCPUonly', default, accel%allow_CPU_only)
+
+
 
     call messages_print_stress(stdout)
 
@@ -763,11 +803,11 @@ contains
 #endif
 
       call messages_write('      Device memory          :')
-      call messages_write(accel%global_memory_size, units = unit_megabytes)
+      call messages_write(accel%global_memory_size, units=unit_megabytes)
       call messages_new_line()
 
       call messages_write('      Local/shared memory    :')
-      call messages_write(accel%local_memory_size, units = unit_kilobytes)
+      call messages_write(accel%local_memory_size, units=unit_kilobytes)
       call messages_new_line()
       
     
@@ -1211,16 +1251,18 @@ contains
   integer function accel_kernel_workgroup_size(kernel) result(workgroup_size)
     type(accel_kernel_t), intent(inout) :: kernel
 
-    integer(8) :: workgroup_size8
 #ifdef HAVE_OPENCL
+    integer(8) :: workgroup_size8
     integer :: ierr
 #endif
+
+    workgroup_size = 0
 
 #ifdef HAVE_OPENCL
     call clGetKernelWorkGroupInfo(kernel%kernel, accel%device%cl_device, CL_KERNEL_WORK_GROUP_SIZE, workgroup_size8, ierr)
     if(ierr /= CL_SUCCESS) call opencl_print_error(ierr, "EnqueueNDRangeKernel")
-#endif
     workgroup_size = workgroup_size8
+#endif
 
 #ifdef HAVE_CUDA
     workgroup_size = accel%max_workgroup_size

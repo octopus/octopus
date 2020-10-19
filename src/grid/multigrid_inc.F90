@@ -31,7 +31,7 @@
 
     PUSH_SUB(X(multigrid_coarse2fine))
 
-    call profiling_in(interp_prof, "MG_INTERPOLATION")
+    call profiling_in(interp_prof, TOSTRING(X(MG_INTERPOLATION)))
 
     ASSERT(ubound(f_coarse, dim = 1) == coarse_der%mesh%np_part)
     ASSERT(coarse_der%mesh%np == tt%n_coarse)
@@ -42,7 +42,9 @@
     SAFE_ALLOCATE(points(1:2*order_))
     SAFE_ALLOCATE(factor(1:2*order_))
 
-    forall(ii = 1:2*order_) points(ii) = ii
+    do ii = 1, 2*order_
+      points(ii) = ii
+    end do
 
     call interpolation_coefficients(2*order_, points, order_ + M_HALF, factor)
 
@@ -131,7 +133,7 @@
     integer :: ii
 
     PUSH_SUB(X(multigrid_injection))
-    call profiling_in(injection_prof, "MG_INJECTION")
+    call profiling_in(injection_prof, TOSTRING(X(MG_INJECTION)))
 
     do ii = 1, tt%n_coarse
       f_coarse(ii) = f_fine(tt%to_coarse(ii))
@@ -154,7 +156,7 @@
     integer :: nn, fn, di, dj, dk, dd, fi(MAX_DIM)
 
     PUSH_SUB(X(multigrid_restriction))
-    call profiling_in(restrict_prof, "MG_RESTRICTION")
+    call profiling_in(restrict_prof, TOSTRING(X(MG_RESTRICTION)))
 
     do di = -1, 1
       do dj = -1, 1

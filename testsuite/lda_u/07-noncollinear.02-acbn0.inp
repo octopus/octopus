@@ -40,18 +40,8 @@ PseudopotentialSet=hscv_lda
 Spacing = 0.5
 
 FromScratch = no
-ParDomains = no
 
 SpinComponents = spinors
-GuessMagnetDensity = user_defined
-%AtomsMagnetDirection
- 8.0 | 0.0 | 0.0
--8.0 | 0.0 | 0.0
- 0.0 | 0.0 | 0.0 
- 0.0 | 0.0 | 0.0 
-%
-
-LCAOStart= lcao_states
 
 %KPointsGrid
 2 | 2 | 1
@@ -63,3 +53,4 @@ AOTruncation = ao_box
 OutputLDA_U = occ_matrices
 
 StatesPack = yes
+

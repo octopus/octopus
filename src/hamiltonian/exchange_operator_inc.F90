@@ -97,7 +97,8 @@ subroutine X(exchange_operator_apply)(this, namespace, der, st_d, psib, hpsib, r
   use_external_kernel = (st_d%nik > st_d%spin_channels .or. this%cam_omega > M_EPSILON)
   if(use_external_kernel) then
     call fourier_space_op_nullify(coulb)
-    call poisson_build_kernel(this%psolver, namespace, der%mesh%sb, coulb, qq)
+    qq = M_ZERO
+    call poisson_build_kernel(this%psolver, namespace, der%mesh%sb, coulb, qq, this%cam_omega)
   end if
 
 
@@ -120,7 +121,7 @@ subroutine X(exchange_operator_apply)(this, namespace, der, st_d, psib, hpsib, r
       ! In case of k-points, the poisson solver must contains k-q
       ! in the Coulomb potential, and must be changed for each q point
       if(use_external_kernel) then
-        call poisson_build_kernel(this%psolver, namespace, der%mesh%sb, coulb, qq, &
+        call poisson_build_kernel(this%psolver, namespace, der%mesh%sb, coulb, qq, this%cam_omega, &
                   -(der%mesh%sb%kpoints%full%npoints-npath)*der%mesh%sb%rcell_volume  &
                      *(this%singul%Fk(ik2)-this%singul%FF))
       end if
@@ -146,7 +147,7 @@ subroutine X(exchange_operator_apply)(this, namespace, der, st_d, psib, hpsib, r
 
           call batch_get_state(psi2b, ii, der%mesh%np, psi2)
 
-          call profiling_in(prof, "CODENSITIES")
+          call profiling_in(prof, TOSTRING(X(CODENSITIES)))
           rho = R_TOTYPE(M_ZERO)          !We compute rho_ij
           pot = R_TOTYPE(M_ZERO)
 
@@ -165,11 +166,11 @@ subroutine X(exchange_operator_apply)(this, namespace, der, st_d, psib, hpsib, r
           end if
 
           !Accumulate the result
-          call profiling_in(prof2, "EXCHANGE_ACCUMULATE")
+          call profiling_in(prof2, TOSTRING(X(EXCHANGE_ACCUMULATE)))
           do idim = 1, st_d%dim
-            forall(ip = 1:der%mesh%np)
+            do ip = 1, der%mesh%np
               hpsi(ip, idim) = hpsi(ip, idim) - ff*psi2(ip, idim)*pot(ip)
-            end forall
+            end do
           end do 
           call profiling_out(prof2)
 
@@ -244,9 +245,9 @@ subroutine X(exchange_operator_hartree_apply) (this, namespace, der, st_d, exx_c
       call states_elec_get_state(this%st, der%mesh, ist, ik2, psi2)
 
       do idim = 1, this%st%d%dim
-        forall(ip = 1:der%mesh%np)
+        do ip = 1, der%mesh%np
           rho(ip) = rho(ip) + R_CONJ(psi2(ip, idim))*psi(ip, idim)
-        end forall
+        end do
       end do
 
       call X(poisson_solve)(this%psolver, pot, rho, all_nodes = .false.)
@@ -255,15 +256,15 @@ subroutine X(exchange_operator_hartree_apply) (this, namespace, der, st_d, exx_c
       if(st_d%ispin == UNPOLARIZED) ff = M_HALF*ff
 
       do idim = 1, this%st%d%dim
-        forall(ip = 1:der%mesh%np)
+        do ip = 1, der%mesh%np
           hpsi(ip, idim) = hpsi(ip, idim) - exx_coef*ff*psi2(ip, idim)*pot(ip)
-        end forall
+        end do
       end do
 
     end do
 
     call batch_set_state(hpsib, ibatch, der%mesh%np, hpsi)
-    
+
   end do
 
   SAFE_DEALLOCATE_A(psi)
@@ -296,7 +297,7 @@ subroutine X(exchange_operator_scdm_apply) (this, namespace, scdm, der, st_d, ps
 
   PUSH_SUB(X(exchange_operator_scdm_apply))
   
-  call profiling_in(prof_exx_scdm, 'SCDM_EXX_OPERATOR')
+  call profiling_in(prof_exx_scdm, TOSTRING(X(SCDM_EXX_OPERATOR)))
 
   if(der%mesh%sb%kpoints%full%npoints > 1) call messages_not_implemented("exchange operator with k-points", namespace=namespace)
   

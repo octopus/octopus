@@ -21,11 +21,11 @@
 !! for each state, spin, and k-point
 !! The off-diagonal elements are not correct in a degenerate subspace
 subroutine X(calc_eff_mass_inv)(sys, lr, perturbation, eff_mass_inv, degen_thres)
-  type(system_t), target, intent(inout) :: sys
-  type(lr_t),             intent(in)    :: lr(:,:) !< (1, pdim)
-  type(pert_t),           intent(inout) :: perturbation
-  FLOAT,                  intent(out)   :: eff_mass_inv(:,:,:,:) !< (pdim, pdim, nik, nst)
-  FLOAT,                  intent(in)    :: degen_thres
+  type(electrons_t),   target, intent(inout) :: sys
+  type(lr_t),                  intent(in)    :: lr(:,:) !< (1, pdim)
+  type(pert_t),                intent(inout) :: perturbation
+  FLOAT,                       intent(out)   :: eff_mass_inv(:,:,:,:) !< (pdim, pdim, nik, nst)
+  FLOAT,                       intent(in)    :: degen_thres
 
   integer :: ik, ist, ist2, idir1, idir2, pdim
   R_TYPE :: term
@@ -135,7 +135,7 @@ end subroutine X(calc_eff_mass_inv)
 ! ---------------------------------------------------------
 !> add projection onto occupied states, by sum over states
 subroutine X(kdotp_add_occ)(sys, pert, kdotp_lr, degen_thres)
-  type(system_t),      intent(inout) :: sys
+  type(electrons_t),   intent(inout) :: sys
   type(pert_t),        intent(in)    :: pert
   type(lr_t),          intent(inout) :: kdotp_lr
   FLOAT,               intent(in)    :: degen_thres
@@ -198,7 +198,7 @@ end subroutine X(kdotp_add_occ)
 
 ! ---------------------------------------------------------
 subroutine X(kdotp_add_diagonal)(sys, em_pert, kdotp_lr)
-  type(system_t),      intent(inout) :: sys
+  type(electrons_t),   intent(inout) :: sys
   type(pert_t),        intent(inout) :: em_pert
   type(lr_t),          intent(inout) :: kdotp_lr(:)
 

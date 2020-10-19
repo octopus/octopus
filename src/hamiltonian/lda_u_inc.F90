@@ -17,13 +17,12 @@
 !!
 
 
-subroutine X(lda_u_apply)(this, d, mesh, sb, psib, hpsib)
+subroutine X(lda_u_apply)(this, d, mesh, psib, hpsib)
   type(lda_u_t),           intent(in)    :: this
   type(mesh_t),            intent(in)    :: mesh
   type(wfs_elec_t),        intent(in)    :: psib
   type(wfs_elec_t),        intent(inout) :: hpsib
   type(states_elec_dim_t), intent(in)    :: d
-  type(simul_box_t),       intent(in)    :: sb
 
   integer :: ibatch, ios, imp, im, ispin, bind1, bind2, inn, ios2
   R_TYPE, allocatable :: dot(:,:,:,:), reduced(:,:,:), psi(:,:)
@@ -32,7 +31,7 @@ subroutine X(lda_u_apply)(this, d, mesh, sb, psib, hpsib)
   integer :: el_per_state
   R_TYPE :: weight
 
-  call profiling_in(prof, "DFTU_APPLY")
+  call profiling_in(prof, TOSTRING(X(DFTU_APPLY)))
 
   PUSH_SUB(lda_u_apply)
 
@@ -161,7 +160,7 @@ subroutine X(update_occ_matrices)(this, namespace, mesh, st, lda_u_energy, phase
   type(profile_t), save :: prof
   integer :: spec_ind
 
-  call profiling_in(prof, "DFTU_OCC_MATRICES")
+  call profiling_in(prof, TOSTRING(X(DFTU_OCC_MATRICES)))
   
   PUSH_SUB(update_occ_matrices)
 
@@ -486,7 +485,7 @@ subroutine X(lda_u_update_potential)(this, st)
   type(profile_t), save :: prof
   FLOAT :: nsigma
 
-  call profiling_in(prof, "DFTU_POTENTIAL")
+  call profiling_in(prof, TOSTRING(X(DFTU_POTENTIAL)))
 
   PUSH_SUB(lda_u_update_potential)
 
@@ -1054,7 +1053,7 @@ subroutine X(compute_coulomb_integrals) (this, namespace, mesh, der, psolver)
   type(orbitalset_t), pointer :: os
   type(profile_t), save :: prof
 
-  call profiling_in(prof, "DFTU_COULOMB_INTEGRALS")
+  call profiling_in(prof, TOSTRING(X(DFTU_COULOMB_INTEGRALS)))
 
   PUSH_SUB(X(compute_coulomb_integrals))
 
@@ -1083,10 +1082,14 @@ subroutine X(compute_coulomb_integrals) (this, namespace, mesh, der, psolver)
     call submesh_build_global(os%sphere)
 
     select case (this%sm_poisson)
-    case(DFT_U_POISSON_DIRECT)
+    case(SM_POISSON_DIRECT)
       call poisson_init_sm(os%poisson, namespace, psolver, der, os%sphere, method = POISSON_DIRECT_SUM) 
-    case(DFT_U_POISSON_ISF)
+    case(SM_POISSON_ISF)
       call poisson_init_sm(os%poisson, namespace, psolver, der, os%sphere, method = POISSON_ISF)
+    case(SM_POISSON_PSOLVER)
+      call poisson_init_sm(os%poisson, namespace, psolver, der, os%sphere, method = POISSON_PSOLVER)
+    case(SM_POISSON_FFT)
+      call poisson_init_sm(os%poisson, namespace, psolver, der, os%sphere, method = POISSON_FFT)
     end select
  
     ijst=0
@@ -1097,7 +1100,7 @@ subroutine X(compute_coulomb_integrals) (this, namespace, mesh, der, psolver)
         ijst=ijst+1
 
         !$omp parallel do
-        do ip=1,np_sphere
+        do ip = 1,np_sphere
           nn(ip)  = TOFLOAT(os%X(orb)(ip,1,ist))*TOFLOAT(os%X(orb)(ip,1,jst))
         end do
         !$omp end parallel do    
@@ -1113,7 +1116,7 @@ subroutine X(compute_coulomb_integrals) (this, namespace, mesh, der, psolver)
             if(klst > ijst) cycle
 
             !$omp parallel do
-            do ip=1,np_sphere
+            do ip = 1,np_sphere
               tmp(ip) = vv(ip)*TOFLOAT(os%X(orb)(ip,1,kst))*TOFLOAT(os%X(orb)(ip,1,lst))
             end do
             !$omp end parallel do
@@ -1173,7 +1176,7 @@ subroutine X(compute_periodic_coulomb_integrals)(this, namespace, der, mc)
   type(orbitalset_t), pointer :: os
   type(profile_t), save :: prof
 
-  call profiling_in(prof, "DFTU_PER_COULOMB")
+  call profiling_in(prof, TOSTRING(X(DFTU_PER_COULOMB)))
 
   !At the moment the basis is not spin polarized
   ASSERT(this%nspins == 1)
@@ -1207,7 +1210,7 @@ subroutine X(compute_periodic_coulomb_integrals)(this, namespace, der, mc)
       ijst=ijst+1
 
       !$omp parallel do
-      do ip=1,np
+      do ip = 1,np
         nn(ip)  = TOFLOAT(os%X(orb)(ip,1,ist))*TOFLOAT(os%X(orb)(ip,1,jst))
       end do
       !$omp end parallel do    
@@ -1223,7 +1226,7 @@ subroutine X(compute_periodic_coulomb_integrals)(this, namespace, der, mc)
           if(klst > ijst) cycle
 
           !$omp parallel do
-          do ip=1,np
+          do ip = 1,np
             tmp(ip) = vv(ip)*TOFLOAT(os%X(orb)(ip,1,lst))*TOFLOAT(os%X(orb)(ip,1,kst))
           end do
           !$omp end parallel do
@@ -1279,7 +1282,7 @@ end subroutine X(compute_periodic_coulomb_integrals)
    type(orbitalset_t), pointer  :: os 
    type(profile_t), save :: prof
 
-   call profiling_in(prof, "DFTU_COMMUTE_R")
+   call profiling_in(prof, TOSTRING(X(DFTU_COMMUTE_R)))
 
    PUSH_SUB(lda_u_commute_r)
 
@@ -1434,9 +1437,9 @@ end subroutine X(compute_periodic_coulomb_integrals)
      !
      !
      if(simul_box_is_periodic(mesh%sb) .and. .not. this%basis%submeshforperiodic) then
-       forall(is = 1:mesh%np)
+       do is = 1, mesh%np
          epsi(is,1) = mesh%x(is,idir)*psi(is,1)
-       end forall
+       end do
      else
        !$omp parallel do 
        do is = 1, os%sphere%np
@@ -1560,6 +1563,7 @@ end subroutine X(compute_periodic_coulomb_integrals)
    R_TYPE, allocatable :: psi(:,:), gpsi(:,:)
    R_TYPE, allocatable :: dot(:,:), gdot(:,:,:), gradn(:,:,:,:)
    FLOAT :: weight
+   type(profile_t), save :: prof
 
    if(this%level == DFT_U_NONE) return
    !In this casem there is no contribution to the force
@@ -1570,6 +1574,8 @@ end subroutine X(compute_periodic_coulomb_integrals)
    end if
 
    PUSH_SUB(X(lda_u_force))
+
+   call profiling_in(prof, TOSTRING(X(FORCES_DFTU)))
 
    !TODO: Implement
    if(this%intersite) then
@@ -1677,6 +1683,8 @@ end subroutine X(compute_periodic_coulomb_integrals)
    SAFE_DEALLOCATE_A(dot)
    SAFE_DEALLOCATE_A(gdot)
    SAFE_DEALLOCATE_A(gradn)
+
+   call profiling_out(prof)
 
    POP_SUB(X(lda_u_force))
  end subroutine X(lda_u_force)

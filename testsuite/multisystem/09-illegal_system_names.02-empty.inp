@@ -1,0 +1,6 @@
+CalculationMode = td
+ExperimentalFeatures = yes
+
+%Systems
+ ' ' | classical_particle
+%

@@ -36,8 +36,10 @@ module em_resp_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use multisystem_basic_oct_m
   use namespace_oct_m
   use parser_oct_m
+  use pcm_oct_m
   use pert_oct_m
   use profiling_oct_m
   use restart_oct_m
@@ -50,12 +52,13 @@ module em_resp_oct_m
   use states_elec_restart_oct_m
   use sternheimer_oct_m
   use string_oct_m
-  use system_oct_m
+  use electrons_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use utils_oct_m
   use v_ks_oct_m
-  
+  use v_ks_oct_m  
+
   implicit none
 
   private
@@ -116,9 +119,27 @@ module em_resp_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine em_resp_run(sys, fromScratch)
-    type(system_t), target, intent(inout) :: sys
-    logical,                intent(inout) :: fromScratch
+  subroutine em_resp_run(system, from_scratch)
+    class(*),        intent(inout) :: system
+    logical,         intent(in)    :: from_scratch
+
+    PUSH_SUB(em_resp_run)
+
+    select type (system)
+    class is (multisystem_basic_t)
+      message(1) = "CalculationMode = em_resp not implemented for multi-system calculations"
+      call messages_fatal(1)
+    type is (electrons_t)
+      call em_resp_run_legacy(system, from_scratch)
+    end select
+
+    POP_SUB(em_resp_run)
+  end subroutine em_resp_run
+
+  ! ---------------------------------------------------------
+  subroutine em_resp_run_legacy(sys, fromScratch)
+    type(electrons_t), target, intent(inout) :: sys
+    logical,                   intent(in)    :: fromScratch
 
     type(grid_t),   pointer :: gr
     type(em_resp_t)         :: em_vars
@@ -143,10 +164,18 @@ contains
     type(restart_t) :: gs_restart, restart_load, restart_dump, kdotp_restart
     integer, parameter :: PB = 1, PK2 = 2, PKB = 3, PKE = 4, PE = 5
 
-    PUSH_SUB(em_resp_run)
+    PUSH_SUB(em_resp_run_legacy)
+
+    if (sys%hm%pcm%run_pcm) then
+      call messages_not_implemented("PCM for CalculationMode /= gs or td")
+    end if
 
     gr => sys%gr
     ndim = sys%gr%sb%dim
+
+    if (gr%sb%kpoints%use_symmetries) then
+      call messages_experimental("em_resp with k-points symmetries")
+    end if
 
     if(gr%sb%kpoints%reduced%npoints /= gr%sb%kpoints%full%npoints) then
       call messages_experimental('em_resp with reduced k-grid')
@@ -192,7 +221,7 @@ contains
     ! setup Hamiltonian
     message(1) = 'Info: Setting up Hamiltonian for linear response'
     call messages_info(1)
-    call system_h_setup(sys)
+    call v_ks_h_setup(sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm)
 
     use_kdotp = simul_box_is_periodic(gr%sb) .and. .not. em_vars%force_no_kdotp
 
@@ -663,7 +692,7 @@ contains
     end do
     call states_elec_deallocate_wfns(sys%st)
 
-    POP_SUB(em_resp_run)
+    POP_SUB(em_resp_run_legacy)
 
   contains
 
@@ -675,7 +704,7 @@ contains
       FLOAT :: omega_ini, omega_fin, domega
       logical :: freq_sort  
 
-      PUSH_SUB(em_resp_run.parse_input)
+      PUSH_SUB(em_resp_run_legacy.parse_input)
 
       call messages_obsolete_variable(sys%namespace, 'PolFreqs               ', 'EMFreqs             ')
       call messages_obsolete_variable(sys%namespace, 'PolHyper               ', 'EMHyperpol          ')
@@ -929,7 +958,7 @@ contains
 
       call parse_variable(sys%namespace, 'EMWavefunctionsFromScratch', .false., em_vars%wfns_from_scratch)
 
-      POP_SUB(em_resp_run.parse_input)
+      POP_SUB(em_resp_run_legacy.parse_input)
 
     end subroutine parse_input
 
@@ -937,7 +966,7 @@ contains
     ! ---------------------------------------------------------
     subroutine info()
 
-      PUSH_SUB(em_resp_run.info)
+      PUSH_SUB(em_resp_run_legacy.info)
 
       call pert_info(em_vars%perturbation)
       if(pert_type(em_vars%perturbation) == PERTURBATION_ELECTRIC) then
@@ -965,7 +994,7 @@ contains
 
       call messages_print_stress(stdout)
 
-      POP_SUB(em_resp_run.info)
+      POP_SUB(em_resp_run_legacy.info)
 
     end subroutine info
 
@@ -978,7 +1007,7 @@ contains
 #include "complex.F90"
 #include "em_resp_inc.F90"
 
-  end subroutine em_resp_run
+  end subroutine em_resp_run_legacy
 
 
   ! ---------------------------------------------------------
@@ -1033,9 +1062,6 @@ contains
     else if(pert_type(em_vars%perturbation) == PERTURBATION_MAGNETIC) then
       call out_susceptibility()
     end if
-
-!      call out_projections()
-!      This routine does not give any useful information.
 
     call out_wfn_and_densities()
 
@@ -1337,74 +1363,6 @@ contains
       call io_close(iunit)      
       POP_SUB(em_resp_output.out_susceptibility)
     end subroutine out_susceptibility
-
-    ! ---------------------------------------------------------
-    subroutine out_projections()
-      CMPLX   :: proj
-      FLOAT, allocatable :: dpsi(:, :)
-      CMPLX, allocatable :: zpsi(:, :)
-      integer :: ist, ivar, ik, idir, sigma
-      character(len=80) :: fname
-
-      PUSH_SUB(em_resp_output.out_projections)
-
-      do ik = st%d%kpt%start, st%d%kpt%end
-        do idir = 1, gr%sb%dim
-
-          write(fname, '(2a,i1,2a)') trim(dirname), '/projection-k', ik, '-', index2axis(idir)
-          iunit = io_open(trim(fname), namespace, action='write')
-
-          if (.not.em_vars%ok(ifactor)) write(iunit, '(a)') "# WARNING: not converged"
-
-          write(iunit, '(a)', advance='no') '# state '
-          do ivar = 1, st%nst
-            do sigma = 1, em_vars%nsigma
-
-              if( sigma == em_vars%nsigma .and. ivar == st%nst) then 
-                write(iunit, '(i3)', advance='yes') (3 - 2*sigma)*ivar
-              else 
-                write(iunit, '(i3)', advance='no') (3 - 2*sigma)*ivar
-              end if
-
-            end do
-          end do
-
-          do ist = 1, st%nst
-            write(iunit, '(i3)', advance='no') ist
-
-            do ivar = 1, st%nst
-              do sigma = 1, em_vars%nsigma
-
-                if(states_are_complex(st)) then
-                  SAFE_ALLOCATE(zpsi(1:gr%mesh%np, 1:st%d%dim))
-                  call states_elec_get_state(st, gr%mesh, ist, ik, zpsi)
-                  proj = zmf_dotp(gr%mesh, st%d%dim, zpsi, em_vars%lr(idir, sigma, ifactor)%zdl_psi(:, :, ivar, ik))
-                  SAFE_DEALLOCATE_A(zpsi)
-                else
-                  SAFE_ALLOCATE(dpsi(1:gr%mesh%np, 1:st%d%dim))
-                  call states_elec_get_state(st, gr%mesh, ist, ik, dpsi)
-                  proj = dmf_dotp(gr%mesh, st%d%dim, dpsi, em_vars%lr(idir, sigma, ifactor)%ddl_psi(:, :, ivar, ik))
-                  SAFE_DEALLOCATE_A(dpsi)
-                end if
-                  
-                if( sigma == em_vars%nsigma .and. ivar == st%nst) then 
-                  write(iunit, '(f12.6)', advance='yes') abs(proj)
-                else 
-                  write(iunit, '(f12.6,a)', advance='no') abs(proj), ' '
-                end if
-
-              end do
-            end do
-
-          end do
-          call io_close(iunit)
-
-        end do ! dir
-      end do !ik
-
-      POP_SUB(em_resp_output.out_projections)
-
-    end subroutine out_projections
 
 
     ! ---------------------------------------------------------

@@ -80,11 +80,29 @@ contains
       message(1) = 'Info: ode_solver: Using Prince-Dormand, 8th/9th order.'
       call messages_info(1)
     end select
-    
+
     SAFE_ALLOCATE(os%a(1:os%vsize, 1:os%vsize))
     SAFE_ALLOCATE(os%b(1:os%vsize))
     SAFE_ALLOCATE(os%c(1:os%vsize))
     SAFE_ALLOCATE(os%e(1:os%vsize))
+
+    ! setup coefficients
+    select case(os%solver_type)
+    case(ODE_RK4)
+      call ode_rk4_coeff(os)
+    case(ODE_FB78)
+      call ode_fb78_coeff(os)
+    case(ODE_VR89)
+      call ode_vr89_coeff(os)
+    case(ODE_PD89)
+      call ode_pd89_coeff(os)
+    case default
+      write(message(1), '(a,i4,a)') "Input: '", os%solver_type, &
+	"' is not a valid ODE solver"
+      message(2) = '( ODE solver =  ode_rk4 | ode_fb7 | ode_vr8 | ode_pd8 )'
+      call messages_fatal(2)
+    end select
+
 
     POP_SUB(ode_solver_create)
   end subroutine ode_solver_create

@@ -18,18 +18,21 @@
 
 ! --------------------------------------------------------------
 
+!> This routine applies an 'pair-wise' axpy operation to all functions 
+!! of the batches xx and yy, where the same constant aa is used for all functions.
 subroutine X(batch_axpy_const)(np, aa, xx, yy)
   integer,           intent(in)    :: np
   R_TYPE,            intent(in)    :: aa
   class(batch_t),    intent(in)    :: xx
   class(batch_t),    intent(inout) :: yy
 
+  type(profile_t), save :: prof 
   integer :: ist, dim2, dim3
   integer :: localsize
   CMPLX :: zaa
 
   PUSH_SUB(X(batch_axpy_const))
-  call profiling_in(axpy_const_prof, "BATCH_AXPY_CONST")
+  call profiling_in(prof, TOSTRING(X(BATCH_AXPY_CONST)))
 
   call xx%check_compatibility_with(yy)
 #ifdef R_TCOMPLEX
@@ -96,14 +99,17 @@ subroutine X(batch_axpy_const)(np, aa, xx, yy)
     end do
   end select
 
-  call profiling_count_operations(xx%nst*np*(R_ADD + R_MUL)*types_get_size(xx%type())/types_get_size(TYPE_FLOAT))
+  call profiling_count_operations(xx%nst_linear*np*(R_ADD + R_MUL))
 
-  call profiling_out(axpy_const_prof)
+  call profiling_out(prof)
   POP_SUB(X(batch_axpy_const))
 end subroutine X(batch_axpy_const)
 
 ! --------------------------------------------------------------
 
+!> This routine applies an 'pair-wise' axpy operation to all functions 
+!! of the batches xx and yy, where the constant aa(ist) is used for the 
+!! functions xx(ist), yy(ist).
 subroutine X(batch_axpy_vec)(np, aa, xx, yy, a_start, a_full)
   integer,            intent(in)    :: np
   R_TYPE,             intent(in)    :: aa(:)
@@ -112,6 +118,7 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy, a_start, a_full)
   integer,  optional, intent(in)    :: a_start
   logical,  optional, intent(in)    :: a_full
 
+  type(profile_t), save :: prof 
   integer :: ist, ip, effsize, iaa, dim2, dim3
   R_TYPE, allocatable     :: aa_linear(:)
   integer :: localsize
@@ -121,7 +128,7 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy, a_start, a_full)
   type(accel_kernel_t), save :: kernel
   
   PUSH_SUB(X(batch_axpy_vec))
-  call profiling_in(axpy_vec_prof, "BATCH_AXPY_VEC")
+  call profiling_in(prof, TOSTRING(X(BATCH_AXPY_VEC)))
 
   call xx%check_compatibility_with(yy)
 #ifdef R_TCOMPLEX
@@ -183,7 +190,7 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy, a_start, a_full)
     if(yy%type() == TYPE_CMPLX) then
       !$omp parallel do private(ip, ist)
       do ip = 1, np
-        do ist = 1, yy%pack_size(1)
+        do ist = 1, yy%nst_linear
           yy%zff_pack(ist, ip) = aa_linear(ist)*xx%zff_pack(ist, ip) + yy%zff_pack(ist, ip)
         end do
       end do
@@ -191,7 +198,7 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy, a_start, a_full)
 #ifdef R_TREAL
       !$omp parallel do private(ip, ist)
       do ip = 1, np
-        do ist = 1, yy%pack_size(1)
+        do ist = 1, yy%nst_linear
           yy%dff_pack(ist, ip) = aa_linear(ist)*xx%dff_pack(ist, ip) + yy%dff_pack(ist, ip)
         end do
       end do
@@ -212,11 +219,120 @@ subroutine X(batch_axpy_vec)(np, aa, xx, yy, a_start, a_full)
 
   SAFE_DEALLOCATE_A(aa_linear)
 
-  call profiling_count_operations(xx%nst*np*(R_ADD + R_MUL)*types_get_size(xx%type())/types_get_size(TYPE_FLOAT))
+  call profiling_count_operations(xx%nst_linear*np*(R_ADD + R_MUL))
 
-  call profiling_out(axpy_vec_prof)
+  call profiling_out(prof)
   POP_SUB(X(batch_axpy_vec))
 end subroutine X(batch_axpy_vec)
+
+! --------------------------------------------------------------
+
+! --------------------------------------------------------------------------
+!> This routine performs a set of axpy operations for each function x of a batch (xx), 
+!! and accumulate the result to y (psi in this case), a single function.
+subroutine X(batch_axpy_function)(np, aa, xx, psi, nst)
+  integer,           intent(in)    :: np
+  class(batch_t),    intent(in)    :: xx
+  R_TYPE,            intent(inout) :: psi(:,:) 
+  R_TYPE,            intent(in)    :: aa(:)
+  integer, optional, intent(in)    :: nst
+
+  integer :: ist, indb, idim, nst_
+  type(profile_t), save :: prof
+  R_TYPE, allocatable :: phi(:,:)
+
+  ! GPU related variables
+  type(accel_mem_t) :: aa_buffer
+  type(accel_mem_t) :: psi_buffer
+  integer :: wgsize, np_padded
+  integer :: local_sizes(3)
+  integer :: global_sizes(3)
+
+  PUSH_SUB(X(batch_axpy_function))
+  call profiling_in(prof, TOSTRING(X(BATCH_AXPY_FUNCTION)))
+
+  ASSERT(xx%dim == ubound(psi,dim=2))
+
+  nst_ = xx%nst
+  if(present(nst)) nst_ = nst
+
+
+  select case(xx%status())
+  case(BATCH_NOT_PACKED)
+    do ist = 1, nst_
+      do idim = 1, xx%dim
+        indb = xx%ist_idim_to_linear((/ist, idim/))
+        if(abs(aa(ist)) < M_EPSILON) cycle
+        call lalg_axpy(np, aa(ist), xx%X(ff_linear)(:, indb), psi(1:np, idim))
+      end do
+    end do
+
+  case(BATCH_PACKED)
+
+    if(xx%dim == 1) then 
+
+      call blas_gemv('T', nst_, np, R_TOTYPE(M_ONE), xx%X(ff_pack)(1,1), &
+                    ubound(xx%X(ff_pack), dim=1), aa(1), 1, R_TOTYPE(M_ONE), psi(1,1), 1)
+
+    else !Spinor case
+
+      SAFE_ALLOCATE(phi(1:np, 1:xx%dim))
+
+      do ist = 1, nst_
+        if(abs(aa(ist)) < M_EPSILON) cycle
+        call batch_get_state(xx, ist, np, phi) 
+        do idim = 1, xx%dim
+          call lalg_axpy(np, aa(ist), phi(1:np, idim), psi(1:np, idim))
+        end do
+      end do
+
+      SAFE_DEALLOCATE_A(phi)
+
+    end if
+
+  case(BATCH_DEVICE_PACKED)
+
+    call accel_create_buffer(aa_buffer, ACCEL_MEM_READ_ONLY, R_TYPE_VAL, nst_) 
+    call accel_write_buffer(aa_buffer, nst_, aa)
+
+    np_padded = pad_pow2(np)
+
+    call accel_create_buffer(psi_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, np_padded * xx%dim)
+    do idim= 1, xx%dim
+      call accel_write_buffer(psi_buffer, np, psi(1:np,idim), offset=(idim-1)*np_padded)
+    end do
+
+    call accel_set_kernel_arg(X(kernel_batch_axpy), 0, np)
+    call accel_set_kernel_arg(X(kernel_batch_axpy), 1, nst_)
+    call accel_set_kernel_arg(X(kernel_batch_axpy), 2, xx%dim)
+    call accel_set_kernel_arg(X(kernel_batch_axpy), 3, xx%ff_device)
+    call accel_set_kernel_arg(X(kernel_batch_axpy), 4, log2(xx%pack_size(1)))
+    call accel_set_kernel_arg(X(kernel_batch_axpy), 5, aa_buffer)
+    call accel_set_kernel_arg(X(kernel_batch_axpy), 6, psi_buffer)
+    call accel_set_kernel_arg(X(kernel_batch_axpy), 7, log2(np_padded))
+
+    wgsize = accel_kernel_workgroup_size(X(kernel_batch_axpy))
+
+    global_sizes = (/ pad(np, wgsize/xx%dim), xx%dim, 1 /)
+    local_sizes  = (/ wgsize/xx%dim,          xx%dim, 1 /)
+
+    call accel_kernel_run(X(kernel_batch_axpy), global_sizes, local_sizes)
+    call accel_finish()
+
+    do idim = 1, xx%dim
+      call accel_read_buffer(psi_buffer, np, psi(1:np,idim), offset=(idim-1)*np_padded)
+    end do
+
+    call accel_release_buffer(aa_buffer)
+    call accel_release_buffer(psi_buffer)
+    
+
+  end select
+
+  call profiling_out(prof)
+  POP_SUB(X(batch_axpy_function))
+end subroutine X(batch_axpy_function)
+
 
 ! --------------------------------------------------------------
 
@@ -249,6 +365,7 @@ subroutine X(batch_scal_vec)(np, aa, xx, a_start, a_full)
   integer, optional, intent(in)    :: a_start
   logical, optional, intent(in)    :: a_full
 
+  type(profile_t), save :: prof 
   integer :: ist, ip, effsize, iaa, dim2, dim3
   R_TYPE, allocatable     :: aa_linear(:)
   integer :: localsize
@@ -258,7 +375,7 @@ subroutine X(batch_scal_vec)(np, aa, xx, a_start, a_full)
   type(accel_kernel_t), save :: kernel
   
   PUSH_SUB(X(batch_scal_vec))
-  call profiling_in(scal_prof, "BATCH_SCAL")
+  call profiling_in(prof, TOSTRING(X(BATCH_SCAL)))
 
 #ifdef R_TCOMPLEX
   !if aa is complex, the functions must be complex
@@ -345,7 +462,7 @@ subroutine X(batch_scal_vec)(np, aa, xx, a_start, a_full)
 
   SAFE_DEALLOCATE_A(aa_linear)
 
-  call profiling_out(scal_prof)
+  call profiling_out(prof)
   POP_SUB(X(batch_scal_vec))
 end subroutine X(batch_scal_vec)
 
@@ -359,6 +476,7 @@ subroutine X(batch_xpay_vec)(np, xx, aa, yy, a_start, a_full)
   integer, optional, intent(in)    :: a_start
   logical, optional, intent(in)    :: a_full
 
+  type(profile_t), save :: prof 
   integer :: ist, ip, effsize, iaa, dim2, dim3
   R_TYPE, allocatable     :: aa_linear(:)
   integer :: size_factor, localsize
@@ -367,7 +485,7 @@ subroutine X(batch_xpay_vec)(np, xx, aa, yy, a_start, a_full)
   type(accel_kernel_t), save :: kernel
   
   PUSH_SUB(X(batch_xpay_vec))
-  call profiling_in(xpay_prof, "BATCH_XPAY")
+  call profiling_in(prof, TOSTRING(X(BATCH_XPAY)))
 
   call xx%check_compatibility_with(yy)
 #ifdef R_TCOMPLEX
@@ -428,7 +546,7 @@ subroutine X(batch_xpay_vec)(np, xx, aa, yy, a_start, a_full)
     if(yy%type() == TYPE_CMPLX) then
       !$omp parallel do private(ip, ist)
       do ip = 1, np
-        do ist = 1, yy%pack_size(1)
+        do ist = 1, yy%nst_linear
           yy%zff_pack(ist, ip) = xx%zff_pack(ist, ip) + aa_linear(ist)*yy%zff_pack(ist, ip)
         end do
       end do
@@ -436,7 +554,7 @@ subroutine X(batch_xpay_vec)(np, xx, aa, yy, a_start, a_full)
 #ifdef R_TREAL
       !$omp parallel do private(ip, ist)
       do ip = 1, np
-        do ist = 1, yy%pack_size(1)
+        do ist = 1, yy%nst_linear
           yy%dff_pack(ist, ip) = xx%dff_pack(ist, ip) + aa_linear(ist)*yy%dff_pack(ist, ip)
         end do
       end do
@@ -465,7 +583,7 @@ subroutine X(batch_xpay_vec)(np, xx, aa, yy, a_start, a_full)
 
   SAFE_DEALLOCATE_A(aa_linear)
 
-  call profiling_out(xpay_prof)
+  call profiling_out(prof)
   POP_SUB(X(batch_xpay_vec))
 end subroutine X(batch_xpay_vec)
 
@@ -513,7 +631,7 @@ subroutine X(batch_set_state1)(this, ist, np, psi)
   type(accel_mem_t) :: tmp
   FLOAT, allocatable :: zpsi(:)
   
-  call profiling_in(prof, "BATCH_SET_STATE")
+  call profiling_in(prof, TOSTRING(X(BATCH_SET_STATE)))
 
   PUSH_SUB(X(batch_set_state1))
 
@@ -640,7 +758,7 @@ subroutine X(batch_get_state1)(this, ist, np, psi)
 
   PUSH_SUB(X(batch_get_state1))
 
-  call profiling_in(prof, "BATCH_GET_STATE")
+  call profiling_in(prof, TOSTRING(X(BATCH_GET_STATE)))
 
   ASSERT(ubound(psi, dim = 1) >= np)
   ASSERT(ist >= 1 .and. ist <= this%nst_linear)
@@ -785,10 +903,11 @@ subroutine X(batch_get_points)(this, sp, ep, psi)
   integer,        intent(in)    :: ep
   R_TYPE,         intent(inout) :: psi(:, :, sp:)
 
+  type(profile_t), save :: prof 
   integer :: idim, ist, ii, ip
   
   PUSH_SUB(X(batch_get_points))
-  call profiling_in(get_points_prof, 'GET_POINTS')
+  call profiling_in(prof, TOSTRING(X(GET_POINTS)))
 
 #ifdef R_TREAL
   ! cannot get a real value from a complex batch
@@ -848,7 +967,7 @@ subroutine X(batch_get_points)(this, sp, ep, psi)
     call messages_not_implemented('batch_get_points for CL packed batches')
   end select
 
-  call profiling_out(get_points_prof)
+  call profiling_out(prof)
 
   POP_SUB(X(batch_get_points))
 end subroutine X(batch_get_points)
@@ -861,11 +980,12 @@ subroutine X(batch_set_points)(this, sp, ep, psi)
   integer,        intent(in)    :: ep
   R_TYPE,         intent(in)    :: psi(:, :, sp:)
 
+  type(profile_t), save :: prof 
   integer :: idim, ist, ii, ip
 
   PUSH_SUB(X(batch_set_points))
 
-  call profiling_in(set_points_prof, 'SET_POINTS')
+  call profiling_in(prof, TOSTRING(X(SET_POINTS)))
 
 #ifdef R_TCOMPLEX
   ! cannot set a real batch with complex values
@@ -925,7 +1045,7 @@ subroutine X(batch_set_points)(this, sp, ep, psi)
     call messages_not_implemented('batch_set_points for CL packed batches')
   end select
 
-  call profiling_out(set_points_prof)
+  call profiling_out(prof)
 
   POP_SUB(X(batch_set_points))
 end subroutine X(batch_set_points)
@@ -938,6 +1058,7 @@ subroutine X(batch_mul)(np, ff,  xx, yy)
   class(batch_t),    intent(in)    :: xx
   class(batch_t),    intent(inout) :: yy
 
+  type(profile_t), save :: prof 
   integer :: ist, ip
   R_TYPE :: mul
 #if defined(R_TREAL)
@@ -946,7 +1067,7 @@ subroutine X(batch_mul)(np, ff,  xx, yy)
 #endif
   
   PUSH_SUB(X(batch_mul))
-  call profiling_in(mul_prof, "BATCH_MUL")
+  call profiling_in(prof, TOSTRING(X(BATCH_MUL)))
 
   call xx%check_compatibility_with(yy)
 #ifdef R_TCOMPLEX
@@ -1028,7 +1149,7 @@ subroutine X(batch_mul)(np, ff,  xx, yy)
     end if
   end select
 
-  call profiling_out(mul_prof)
+  call profiling_out(prof)
   POP_SUB(X(batch_mul))
 
 end subroutine X(batch_mul)

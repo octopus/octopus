@@ -353,8 +353,8 @@ subroutine check_box_in_index(idx,center,size,out)
   corner(:,7) = (/-1,-1,1/)
   corner(:,8) = (/-1,-1,-1/)
   
-  do idim=1,3
-    do i1=1,8
+  do idim = 1,3
+    do i1 = 1,8
       ix(:)=center(:) + size*corner(:,i1)
       if (ix(idim).lt.idx%nr(1,idim).or.ix(idim).gt.idx%nr(2,idim)) then
         out(idim) = .true. 

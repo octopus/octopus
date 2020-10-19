@@ -24,6 +24,7 @@ R_TYPE function X(sm_integrate)(mesh, sm, ff, reduce) result(res)
   logical, optional, intent(in) :: reduce
 
   integer :: is
+  type(profile_t), save :: prof_sm_reduce
 
   PUSH_SUB(X(sm_integrate))
 
@@ -46,9 +47,9 @@ R_TYPE function X(sm_integrate)(mesh, sm, ff, reduce) result(res)
   end if
 
   if(mesh%parallel_in_domains .and. optional_default(reduce, .true.)) then
-    call profiling_in(C_PROFILING_SM_REDUCE, "SM_REDUCE")
+    call profiling_in(prof_sm_reduce, TOSTRING(X(SM_REDUCE)))
     call comm_allreduce(mesh%vp%comm, res)
-    call profiling_out(C_PROFILING_SM_REDUCE)
+    call profiling_out(prof_sm_reduce)
   end if 
  
   POP_SUB(X(sm_integrate))
@@ -60,6 +61,8 @@ R_TYPE function X(sm_integrate_frommesh)(mesh, sm, ff, reduce) result(res)
   type(submesh_t),   intent(in) :: sm
   R_TYPE, optional,  intent(in) :: ff(:)
   logical, optional, intent(in) :: reduce
+
+  type(profile_t), save :: prof_sm_reduce
 
   PUSH_SUB(X(sm_integrate_frommesh))
 
@@ -76,9 +79,9 @@ R_TYPE function X(sm_integrate_frommesh)(mesh, sm, ff, reduce) result(res)
   end if
 
   if(mesh%parallel_in_domains .and. optional_default(reduce, .true.)) then
-    call profiling_in(C_PROFILING_SM_REDUCE, "SM_REDUCE")
+    call profiling_in(prof_sm_reduce, TOSTRING(X(SM_REDUCE_MESH)))
     call comm_allreduce(mesh%vp%comm, res)
-    call profiling_out(C_PROFILING_SM_REDUCE)
+    call profiling_out(prof_sm_reduce)
   end if
 
   POP_SUB(X(sm_integrate_frommesh))
@@ -166,7 +169,7 @@ subroutine X(submesh_copy_from_mesh_batch)(this, psib, spsi)
   integer :: ip, ist, ii, m, ip_map
   type(profile_t), save :: prof
 
-  call profiling_in(prof, "SM_CP_MESH_BATCH")
+  call profiling_in(prof, TOSTRING(X(SM_CP_MESH_BATCH)))
   PUSH_SUB(X(submesh_copy_from_mesh_batch))
 
   ASSERT(psib%status()/= BATCH_DEVICE_PACKED)
@@ -210,8 +213,10 @@ FLOAT function X(sm_nrm2)(sm, ff, reduce) result(nrm2)
   logical, optional, intent(in) :: reduce
 
   R_TYPE, allocatable :: ll(:)
+  type(profile_t), save :: prof_sm_nrm2
+  type(profile_t), save :: prof_sm_reduce
 
-  call profiling_in(C_PROFILING_SM_NRM2, "SM_NRM2")
+  call profiling_in(prof_sm_nrm2, TOSTRING(X(SM_NRM2)))
   PUSH_SUB(X(sm_nrm2))
 
   if(sm%mesh%use_curvilinear) then
@@ -226,15 +231,15 @@ FLOAT function X(sm_nrm2)(sm, ff, reduce) result(nrm2)
   nrm2 = nrm2*sqrt(sm%mesh%volume_element)
 
   if(sm%mesh%parallel_in_domains .and. optional_default(reduce, .true.)) then
-    call profiling_in(C_PROFILING_SM_REDUCE, "SM_REDUCE")
+    call profiling_in(prof_sm_reduce, TOSTRING(X(SM_REDUCE_NRM2)))
     nrm2 = nrm2**2
     call comm_allreduce(sm%mesh%vp%comm, nrm2)
     nrm2 = sqrt(nrm2)
-    call profiling_out(C_PROFILING_SM_REDUCE)
+    call profiling_out(prof_sm_reduce)
   end if
 
   POP_SUB(X(sm_nrm2))
-  call profiling_out(C_PROFILING_SM_NRM2)
+  call profiling_out(prof_sm_nrm2)
 
 end function X(sm_nrm2)
 
@@ -296,7 +301,7 @@ subroutine X(submesh_batch_add_matrix)(this, factor, ss, mm)
   type(profile_t), save :: prof
   
   PUSH_SUB(X(submesh_batch_add_matrix))
-  call profiling_in(prof, 'SUBMESH_ADD_MATRIX')
+  call profiling_in(prof, TOSTRING(X(SUBMESH_ADD_MATRIX)))
 
   ASSERT(.not. ss%is_packed())
   
@@ -312,22 +317,22 @@ subroutine X(submesh_batch_add_matrix)(this, factor, ss, mm)
         jdim = min(idim, ss%dim)
         do jst = 1, ss%nst
           if(ss%type() == TYPE_FLOAT) then
-            forall(is = 1:this%np)
+            do is = 1, this%np
               mm%X(ff)(this%map(is), idim, ist) = &
                 mm%X(ff)(this%map(is), idim, ist) + factor(jst, ist)*ss%dff(is, jdim, jst)
-            end forall
+            end do
           else
-            
+
 #ifdef R_TCOMPLEX
-            forall(is = 1:this%np)
+            do is = 1, this%np
               mm%X(ff)(this%map(is), idim, ist) = &
                 mm%X(ff)(this%map(is), idim, ist) + factor(jst, ist)*ss%zff(is, jdim, jst)
-            end forall
+            end do
 #else
             message(1) = "Internal error: cannot call dsubmesh_batch_add_matrix with complex batch ss"
             call messages_fatal(1)
 #endif
-            
+
           end if
         end do
       end do
@@ -339,25 +344,25 @@ subroutine X(submesh_batch_add_matrix)(this, factor, ss, mm)
     do ist =  1, min(mm%nst, ubound(factor, 2))
       do idim = 1, mm%dim
         ii = mm%ist_idim_to_linear((/ist, idim/))
-        
+
         ! FIXME: this line should instead be assert(mm%dim == ss%dim)!!
         jdim = min(idim, ss%dim)
         do jst = 1, ss%nst
           if(ss%type() == TYPE_FLOAT) then
-            forall(is = 1:this%np)
+            do is = 1, this%np
               mm%X(ff_pack)(ii, this%map(is)) = mm%X(ff_pack)(ii, this%map(is)) + factor(jst, ist)*ss%dff(is, jdim, jst)
-            end forall
+            end do
           else
-            
+
 #ifdef R_TCOMPLEX
-            forall(is = 1:this%np)
+            do is = 1, this%np
               mm%X(ff_pack)(ii, this%map(is)) = mm%X(ff_pack)(ii, this%map(is)) + factor(jst, ist)*ss%zff(is, jdim, jst)
-            end forall
+            end do
 #else
             message(1) = "Internal error: cannot call dsubmesh_batch_add_matrix with complex batch ss"
             call messages_fatal(1)
 #endif
-            
+
           end if
         end do
       end do
@@ -402,23 +407,23 @@ subroutine X(submesh_batch_add)(this, ss, mm)
 
       if(ss%type() == TYPE_FLOAT) then
 
-        forall(is = 1:this%np)
+        do is = 1, this%np
           mm%X(ff)(this%map(is), idim, ist) = &
             mm%X(ff)(this%map(is), idim, ist) + ss%dff(is, jdim, ist)
-        end forall
-        
+        end do
+
       else
 
-#ifdef R_TCOMPLEX        
-        forall(is = 1:this%np)
+#ifdef R_TCOMPLEX
+        do is = 1, this%np
           mm%X(ff)(this%map(is), idim, ist) = &
             mm%X(ff)(this%map(is), idim, ist) + ss%zff(is, jdim, ist)
-        end forall
+        end do
 #else
         message(1) = "Internal error: cannot call dsubmesh_batch_add with complex batch ss"
         call messages_fatal(1)
 #endif
-        
+
       end if
     end do
   end do
@@ -519,11 +524,9 @@ subroutine X(submesh_batch_dotp_matrix)(this, mm, ss, dot, reduce)
     
   end if
 
-#if defined(HAVE_MPI)
   if(optional_default(reduce, .true.) .and. this%mesh%parallel_in_domains) then
     call comm_allreduce(this%mesh%mpi_grp%comm, dot, dim = (/mm%nst, ss%nst/))
   end if
-#endif
 
   POP_SUB(X(submesh_batch_dotp_matrix))
 end subroutine X(submesh_batch_dotp_matrix)

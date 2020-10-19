@@ -12,83 +12,87 @@ match ; Total k-points     ; GREPFIELD(static/info, 'Total number of k-points', 
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 225
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ;  48
 
-match ; SCF convergence    ; GREPCOUNT(static/info, 'SCF converged') ; 1
-match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -9.62876971
-match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -9.99517178
-match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ;  0.46958539
-match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ;  0.01305025
-match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -3.74590750
-match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.69700933
-match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;  3.22476407
-match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ;  1.57150681
+Precision: 1.7e-07
+match ;  Total energy        ; GREPFIELD(static/info, 'Total       =', 3) ; -9.743506095
+match ;  Ion-ion energy      ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -9.99517178
+match ;  Eigenvalues sum     ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; 0.35445004
+match ;  Hartree energy      ; GREPFIELD(static/info, 'Hartree     =', 3) ; 0.012499125
+match ;  Exchange energy     ; GREPFIELD(static/info, 'Exchange    =', 3) ; -3.7455420349999997
+match ;  Correlation energy  ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.696982805
+match ;  Kinetic energy      ; GREPFIELD(static/info, 'Kinetic     =', 3) ; 3.09381646
+match ;  External energy     ; GREPFIELD(static/info, 'External    =', 3) ; 1.587874885
 
-match ; Eigenvalue      [ k = 1, n = 1 ] ; GREPFIELD(static/info, '#k =   1', 3, 1) ; -0.023422
-match ; Eigenvalue      [ k = 1, n = 2 ] ; GREPFIELD(static/info, '#k =   1', 3, 2) ; -0.023422
-match ; Eigenvalue      [ k = 1, n = 3 ] ; GREPFIELD(static/info, '#k =   1', 3, 3) ; -0.023419
-match ; Eigenvalue      [ k = 1, n = 4 ] ; GREPFIELD(static/info, '#k =   1', 3, 4) ; -0.023419
-match ; Eigenvalue      [ k = 1, n = 5 ] ; GREPFIELD(static/info, '#k =   1', 3, 5) ;  0.210412
-match ; Eigenvalue      [ k = 1, n = 6 ] ; GREPFIELD(static/info, '#k =   1', 3, 6) ;  0.210419
-match ; Eigenvalue      [ k = 1, n = 7 ] ; GREPFIELD(static/info, '#k =   1', 3, 7) ;  0.210419
-match ; Eigenvalue      [ k = 1, n = 8 ] ; GREPFIELD(static/info, '#k =   1', 3, 8) ;  0.561939
-
-match ; Eigenvalue      [ k = 2, n = 1 ] ; GREPFIELD(static/info, '#k =   2', 3, 1) ; -0.023422
-match ; Eigenvalue      [ k = 2, n = 2 ] ; GREPFIELD(static/info, '#k =   2', 3, 2) ; -0.023422
-match ; Eigenvalue      [ k = 2, n = 3 ] ; GREPFIELD(static/info, '#k =   2', 3, 3) ; -0.023419
-match ; Eigenvalue      [ k = 2, n = 4 ] ; GREPFIELD(static/info, '#k =   2', 3, 4) ; -0.023419
-match ; Eigenvalue      [ k = 2, n = 5 ] ; GREPFIELD(static/info, '#k =   2', 3, 5) ;  0.210412
-match ; Eigenvalue      [ k = 2, n = 6 ] ; GREPFIELD(static/info, '#k =   2', 3, 6) ;  0.210419
-match ; Eigenvalue      [ k = 2, n = 7 ] ; GREPFIELD(static/info, '#k =   2', 3, 7) ;  0.210419
-match ; Eigenvalue      [ k = 2, n = 8 ] ; GREPFIELD(static/info, '#k =   2', 3, 8) ;  0.561939
-
-match ; Eigenvalue      [ k = 3, n = 1 ] ; GREPFIELD(static/info, '#k =   3', 3, 1) ; 0.016464
-match ; Eigenvalue      [ k = 3, n = 2 ] ; GREPFIELD(static/info, '#k =   3', 3, 2) ; 0.016464
-match ; Eigenvalue      [ k = 3, n = 3 ] ; GREPFIELD(static/info, '#k =   3', 3, 3) ; 0.016473
-match ; Eigenvalue      [ k = 3, n = 4 ] ; GREPFIELD(static/info, '#k =   3', 3, 4) ; 0.016473
-match ; Eigenvalue      [ k = 3, n = 5 ] ; GREPFIELD(static/info, '#k =   3', 3, 5) ; 0.095649
-match ; Eigenvalue      [ k = 3, n = 6 ] ; GREPFIELD(static/info, '#k =   3', 3, 6) ; 0.095664
-match ; Eigenvalue      [ k = 3, n = 7 ] ; GREPFIELD(static/info, '#k =   3', 3, 7) ; 0.095664
-match ; Eigenvalue      [ k = 3, n = 8 ] ; GREPFIELD(static/info, '#k =   3', 3, 8) ; 0.597249
-
-match ; Eigenvalue      [ k = 4, n = 1 ] ; GREPFIELD(static/info, '#k =   4', 3, 1) ; 0.016464
-match ; Eigenvalue      [ k = 4, n = 2 ] ; GREPFIELD(static/info, '#k =   4', 3, 2) ; 0.016464
-match ; Eigenvalue      [ k = 4, n = 3 ] ; GREPFIELD(static/info, '#k =   4', 3, 3) ; 0.016464
-match ; Eigenvalue      [ k = 4, n = 4 ] ; GREPFIELD(static/info, '#k =   4', 3, 4) ; 0.016464
-match ; Eigenvalue      [ k = 4, n = 5 ] ; GREPFIELD(static/info, '#k =   4', 3, 5) ; 0.095649
-match ; Eigenvalue      [ k = 4, n = 6 ] ; GREPFIELD(static/info, '#k =   4', 3, 6) ; 0.095649
-match ; Eigenvalue      [ k = 4, n = 7 ] ; GREPFIELD(static/info, '#k =   4', 3, 7) ; 0.095649
-match ; Eigenvalue      [ k = 4, n = 8 ] ; GREPFIELD(static/info, '#k =   4', 3, 8) ; 0.597249
+Precision: 5.0e-6
+match ;  Eigenvalue      [ k = 1, n = 1 ]  ; GREPFIELD(static/info, '#k =   1', 3, 1) ; -0.023446
+match ;  Eigenvalue      [ k = 1, n = 2 ]  ; GREPFIELD(static/info, '#k =   1', 3, 2) ; -0.023446
+match ;  Eigenvalue      [ k = 1, n = 4 ]  ; GREPFIELD(static/info, '#k =   1', 3, 4) ; -0.023446
+match ;  Eigenvalue      [ k = 1, n = 5 ]  ; GREPFIELD(static/info, '#k =   1', 3, 5) ; 0.210327
+match ;  Eigenvalue      [ k = 1, n = 6 ]  ; GREPFIELD(static/info, '#k =   1', 3, 6) ; 0.210327
+match ;  Eigenvalue      [ k = 1, n = 7 ]  ; GREPFIELD(static/info, '#k =   1', 3, 7) ; 0.210327
+match ;  Eigenvalue      [ k = 1, n = 8 ]  ; GREPFIELD(static/info, '#k =   1', 3, 8) ; 0.210328
+match ;  Eigenvalue      [ k = 2, n = 1 ]  ; GREPFIELD(static/info, '#k =   2', 3, 1) ; -0.023446
+match ;  Eigenvalue      [ k = 2, n = 2 ]  ; GREPFIELD(static/info, '#k =   2', 3, 2) ; -0.023446
+match ;  Eigenvalue      [ k = 2, n = 3 ]  ; GREPFIELD(static/info, '#k =   2', 3, 3) ; -0.023446
+match ;  Eigenvalue      [ k = 2, n = 4 ]  ; GREPFIELD(static/info, '#k =   2', 3, 4) ; -0.023446
+match ;  Eigenvalue      [ k = 2, n = 5 ]  ; GREPFIELD(static/info, '#k =   2', 3, 5) ; 0.210327
+match ;  Eigenvalue      [ k = 2, n = 6 ]  ; GREPFIELD(static/info, '#k =   2', 3, 6) ; 0.210327
+match ;  Eigenvalue      [ k = 2, n = 7 ]  ; GREPFIELD(static/info, '#k =   2', 3, 7) ; 0.210327
+match ;  Eigenvalue      [ k = 2, n = 8 ]  ; GREPFIELD(static/info, '#k =   2', 3, 8) ; 0.2103315
+match ;  Eigenvalue      [ k = 3, n = 1 ]  ; GREPFIELD(static/info, '#k =   3', 3, 1) ; 0.016441
+match ;  Eigenvalue      [ k = 3, n = 2 ]  ; GREPFIELD(static/info, '#k =   3', 3, 2) ; 0.016441
+match ;  Eigenvalue      [ k = 3, n = 3 ]  ; GREPFIELD(static/info, '#k =   3', 3, 3) ; 0.016441
+match ;  Eigenvalue      [ k = 3, n = 4 ]  ; GREPFIELD(static/info, '#k =   3', 3, 4) ; 0.016441
+match ;  Eigenvalue      [ k = 3, n = 5 ]  ; GREPFIELD(static/info, '#k =   3', 3, 5) ; 0.095617
+match ;  Eigenvalue      [ k = 3, n = 6 ]  ; GREPFIELD(static/info, '#k =   3', 3, 6) ; 0.095617
+match ;  Eigenvalue      [ k = 3, n = 7 ]  ; GREPFIELD(static/info, '#k =   3', 3, 7) ; 0.095617
+match ;  Eigenvalue      [ k = 3, n = 8 ]  ; GREPFIELD(static/info, '#k =   3', 3, 8) ; 0.095617
+match ;  Eigenvalue      [ k = 4, n = 1 ]  ; GREPFIELD(static/info, '#k =   4', 3, 1) ; 0.016441
+match ;  Eigenvalue      [ k = 4, n = 2 ]  ; GREPFIELD(static/info, '#k =   4', 3, 2) ; 0.016441
+match ;  Eigenvalue      [ k = 4, n = 3 ]  ; GREPFIELD(static/info, '#k =   4', 3, 3) ; 0.016441
+match ;  Eigenvalue      [ k = 4, n = 4 ]  ; GREPFIELD(static/info, '#k =   4', 3, 4) ; 0.016441
+match ;  Eigenvalue      [ k = 4, n = 5 ]  ; GREPFIELD(static/info, '#k =   4', 3, 5) ; 0.095617
+match ;  Eigenvalue      [ k = 4, n = 6 ]  ; GREPFIELD(static/info, '#k =   4', 3, 6) ; 0.095617
+match ;  Eigenvalue      [ k = 4, n = 7 ]  ; GREPFIELD(static/info, '#k =   4', 3, 7) ; 0.095617
+match ;  Eigenvalue      [ k = 4, n = 8 ]  ; GREPFIELD(static/info, '#k =   4', 3, 8) ; 0.095617
 
 Input      : 17-aluminium.02-td.inp
 
-match ; Energy       [step   1] ; LINEFIELD(td.general/energy, -151, 3) ; 9.836363246698e+04
-match ; Energy       [step  25] ; LINEFIELD(td.general/energy, -126, 3) ; 9.836374090925e+04
-match ; Energy       [step  50] ; LINEFIELD(td.general/energy, -101, 3) ; 9.836363595037e+04
-match ; Energy       [step  75] ; LINEFIELD(td.general/energy, -76, 3)  ; 9.836381146816e+04
-match ; Energy       [step 100] ; LINEFIELD(td.general/energy, -51, 3)  ; 9.836367616468e+04
-match ; Energy       [step 125] ; LINEFIELD(td.general/energy, -26, 3)  ; 9.836394286061e+04
-match ; Energy       [step 150] ; LINEFIELD(td.general/energy, -1, 3)   ; 9.836399458690e+04
+Precision: 8.3e-08
+match ;  Energy       [step   1]  ; LINEFIELD(td.general/energy, -151, 3) ; 98364.810123135
+match ;  Energy       [step  25]  ; LINEFIELD(td.general/energy, -126, 3) ; 98364.970606145
+match ;  Energy       [step  50]  ; LINEFIELD(td.general/energy, -101, 3) ; 98364.808932455
+match ;  Energy       [step  75]  ; LINEFIELD(td.general/energy, -76, 3) ; 98365.08447254001
+match ;  Energy       [step 100]  ; LINEFIELD(td.general/energy, -51, 3) ; 98364.86927940001
+match ;  Energy       [step 125]  ; LINEFIELD(td.general/energy, -26, 3) ; 98365.238883985
+match ;  Energy       [step 150]  ; LINEFIELD(td.general/energy, -1, 3) ; 98365.18448595001
 
-match ; Gauge field  [step   1] ; LINEFIELD(td.general/gauge_field, -151, 3) ;  1.370359991390e+02
-match ; Gauge field  [step  25] ; LINEFIELD(td.general/gauge_field, -126, 3) ; -6.996792469006e+00
-match ; Gauge field  [step  50] ; LINEFIELD(td.general/gauge_field, -101, 3) ; -1.058200355375e+02
-match ; Gauge field  [step  75] ; LINEFIELD(td.general/gauge_field, -76, 3)  ; -5.738196033531e+00
-match ; Gauge field  [step 100] ; LINEFIELD(td.general/gauge_field, -51, 3)  ; -3.465399093295e+01
-match ; Gauge field  [step 125] ; LINEFIELD(td.general/gauge_field, -26, 3)  ; -1.664223418840e+02
-match ; Gauge field  [step 150] ; LINEFIELD(td.general/gauge_field, -1, 3)   ; -1.574129218916e+02
+Precision: 6.1e-6
+match ;  Gauge field  [step   1]  ; LINEFIELD(td.general/gauge_field, -151, 3) ; 137.035999139
+match ;  Gauge field  [step  25]  ; LINEFIELD(td.general/gauge_field, -126, 3) ; -33.782480720704996
+match ;  Gauge field  [step  50]  ; LINEFIELD(td.general/gauge_field, -101, 3) ; -146.7338577896
+match ;  Gauge field  [step  75]  ; LINEFIELD(td.general/gauge_field, -76, 3) ; -19.979106916025
+match ;  Gauge field  [step 100]  ; LINEFIELD(td.general/gauge_field, -51, 3) ; -45.350951737735
+match ;  Gauge field  [step 125]  ; LINEFIELD(td.general/gauge_field, -26, 3) ; -195.19498242794998
+match ;  Gauge field  [step 150]  ; LINEFIELD(td.general/gauge_field, -1, 3) ; -165.6051198051
 
-match ; Current      [step   1] ; LINEFIELD(td.general/total_current, -151, 3) ;  9.851289746552e+00
-match ; Current      [step  25] ; LINEFIELD(td.general/total_current, -126, 3) ; -1.873277130303e+00
-match ; Current      [step  50] ; LINEFIELD(td.general/total_current, -101, 3) ; -6.533162382381e+00
-match ; Current      [step  75] ; LINEFIELD(td.general/total_current, -76, 3)  ;  4.496401667119e+00
-match ; Current      [step 100] ; LINEFIELD(td.general/total_current, -51, 3)  ;  3.206235605726e+00
-match ; Current      [step 125] ; LINEFIELD(td.general/total_current, -26, 3)  ; -4.884506058949e+00
-match ; Current      [step 150] ; LINEFIELD(td.general/total_current, -1, 3)   ; -5.265792486885e-02
+Precision: 4.2e-07
+match ;  Current      [step   1]  ; LINEFIELD(td.general/total_current, -151, 3) ; 11.674928889705
+match ;  Current      [step  25]  ; LINEFIELD(td.general/total_current, -126, 3) ; -2.358497041425
+match ;  Current      [step  50]  ; LINEFIELD(td.general/total_current, -101, 3) ; -7.8853829660485
+match ;  Current      [step  75]  ; LINEFIELD(td.general/total_current, -76, 3) ; 5.2745430293455
+match ;  Current      [step 100]  ; LINEFIELD(td.general/total_current, -51, 3) ; 4.0367694816095
+match ;  Current      [step 125]  ; LINEFIELD(td.general/total_current, -26, 3) ; -6.3973757642799995
+match ;  Current      [step 150]  ; LINEFIELD(td.general/total_current, -1, 3) ; 0.53332828891175
+Precision: 0.0001
+
 
 Util : oct-conductivity
 Input      : 17-aluminium.03-conductivity.inp
 
 match ; conductivity  energy 0 ; LINEFIELD(td.general/conductivity, 5, 1) ; 0.000000E+00
+Precision: 0.00025
 match ; Re cond xx energy 0 ; LINEFIELD(td.general/conductivity, 5, 2) ; 0.8229720145E-02
+Precision: 0.0001
 match ; Im cond xx energy 0 ; LINEFIELD(td.general/conductivity, 5, 3) ; 0.000000E+00
 match ; Re cond yy energy 0 ; LINEFIELD(td.general/conductivity, 5, 4) ; -0.2244449363E-04
 match ; Im cond yy energy 0 ; LINEFIELD(td.general/conductivity, 5, 5) ; 0.000000E+00

@@ -68,8 +68,7 @@ contains
   !> If the argument defaults is present and set to true, then the routine
   !! will not try to read anything from the inp file, but set everything
   !! to the default values.
-  subroutine io_init(namespace, defaults)
-    type(namespace_t), intent(in)    :: namespace
+  subroutine io_init(defaults)
     logical, optional, intent(in)    :: defaults
 
     character(len=MAX_PATH_LEN) :: filename
@@ -106,7 +105,7 @@ contains
     !% be changed by setting this variable: if you give it a name (other than "-")
     !% the output stream is printed in that file instead.
     !%End
-    call parse_variable(namespace, 'stdout', '-', filename)
+    call parse_variable(global_namespace, 'stdout', '-', filename)
     stdout = 6
     if(trim(filename) /= '-') then
       close(stdout)
@@ -122,7 +121,7 @@ contains
     !% be changed by setting this variable: if you give it a name (other than "-")
     !% the output stream is printed in that file instead.
     !%End
-    call parse_variable(namespace, 'stderr', '-', filename)
+    call parse_variable(global_namespace, 'stderr', '-', filename)
     stderr = 0
     if(trim(filename) /= '-') then
       close(stderr)
@@ -156,7 +155,7 @@ contains
     !% Furthermore, some of the debug information (see <tt>Debug</tt>) is also written to <tt>WorkDir</tt> and
     !% the non-absolute paths defined in <tt>OutputIterDir</tt> are relative to <tt>WorkDir</tt>.
     !%End
-    call parse_variable(namespace, 'WorkDir', '.', work_dir)
+    call parse_variable(global_namespace, 'WorkDir', '.', work_dir)
     ! ... and if necessary create workdir (will not harm if work_dir is already there)
     if (work_dir /= '.') call loct_mkdir(trim(work_dir))
 
@@ -169,7 +168,7 @@ contains
     !% flushed to <tt>messages.stdout</tt> and <tt>messages.stderr</tt>, if this variable is
     !% set to yes.
     !%End
-    call parse_variable(namespace, 'FlushMessages', .false., flush_messages)
+    call parse_variable(global_namespace, 'FlushMessages', .false., flush_messages)
 
     ! delete files so that we start writing to empty ones
     if(flush_messages) then
@@ -177,8 +176,8 @@ contains
       call loct_rm('messages.stderr')
     end if
 
-    if(debug%info) then
-      call io_mkdir('debug', namespace)
+    if (debug%info .or. debug%interaction_graph) then
+      call io_mkdir('debug', global_namespace)
     end if
 
     if(debug%trace_file) then
@@ -203,7 +202,7 @@ contains
       !% reversing the file creation of the node hooks, to run the master first followed
       !% by a compute node.
       !%End
-      call parse_variable(namespace, 'MPIDebugHook', .false., mpi_debug_hook)
+      call parse_variable(global_namespace, 'MPIDebugHook', .false., mpi_debug_hook)
       if (mpi_debug_hook) then
         call loct_gettimeofday(sec, usec)
         call epoch_time_diff(sec,usec)
@@ -272,7 +271,6 @@ contains
     end do
 
     POP_SUB(io_assign)
-
   end subroutine io_assign
 
 
@@ -286,49 +284,59 @@ contains
       lun_is_free(lun) = .true.
 
     POP_SUB(io_free)
-
   end subroutine io_free
 
 
   ! ---------------------------------------------------------
   character(len=MAX_PATH_LEN) function io_workpath(path, namespace) result(wpath)
-    character(len=*),  intent(in) :: path
-    type(namespace_t),    intent(in) :: namespace
+    character(len=*),            intent(in) :: path
+    type(namespace_t), optional, intent(in) :: namespace
+
     logical :: absolute_path
+    integer :: total_len
 
     PUSH_SUB(io_workpath)
 
     ! use the logical to avoid problems with the string length
     absolute_path = .false.
-    if(len(path) > 0) then
-      if(path(1:1)  ==  '/') then
-        absolute_path = .true.
-      end if
+    if (len_trim(path) > 0) then
+      absolute_path = path(1:1) == '/'
     end if
 
-    if(absolute_path) then
+    ! check that the path is not longer than the maximum allowed
+    total_len = len_trim(path)
+    if (.not. absolute_path) then
+      total_len = total_len + len_trim(work_dir) + 1
+      if (present(namespace)) then
+        if (namespace%len() > 0) total_len = total_len + namespace%len() + 1
+      end if
+    end if
+    if (total_len > MAX_PATH_LEN) then
+      write(message(1),"(A,I5)") "Path is longer than the maximum path length of ", MAX_PATH_LEN
+      call messages_fatal(1, namespace=namespace)
+    end if
+
+    if (absolute_path) then
       ! we do not change absolute path names
       wpath = trim(path)
     else
-      if(namespace%get() == "") then
-        write(wpath, '(3a)') trim(work_dir), "/", trim(path)
-      else
-        ! inamespaceert namespace into path
-        write(wpath, '(5a)') trim(work_dir), "/", trim(namespace%get()), &
-          "/",  trim(path)
+      wpath = trim(work_dir)
+      if (present(namespace)) then
+        ! insert namespace into path
+        if (namespace%len() > 0) wpath = trim(wpath) + "/" + trim(namespace%get('/'))
       end if
+      wpath = trim(wpath) + "/" + trim(path)
     end if
 
     POP_SUB(io_workpath)
-
   end function io_workpath
 
 
   ! ---------------------------------------------------------
   subroutine io_mkdir(fname, namespace, parents)
-    character(len=*),  intent(in) :: fname
-    type(namespace_t),    intent(in) :: namespace
-    logical, optional, intent(in) :: parents
+    character(len=*),            intent(in) :: fname
+    type(namespace_t), optional, intent(in) :: namespace
+    logical,           optional, intent(in) :: parents
 
     logical :: parents_
     integer :: last_slash, pos, length
@@ -339,14 +347,14 @@ contains
     if (present(parents)) parents_ = parents
 
     if (.not. parents_) then
-      call loct_mkdir(trim(io_workpath("", namespace)))
-      call loct_mkdir(trim(io_workpath(fname, namespace)))
+      call loct_mkdir(trim(io_workpath("", namespace=namespace)))
+      call loct_mkdir(trim(io_workpath(fname, namespace=namespace)))
     else
       last_slash = max(index(fname, "/", .true.), len_trim(fname))
       pos = 1
       length = index(fname, '/') - 1
       do while (pos < last_slash)
-        call loct_mkdir(trim(io_workpath(fname(1:pos+length-1), namespace)))
+        call loct_mkdir(trim(io_workpath(fname(1:pos+length-1), namespace=namespace)))
         pos = pos + length + 1
         length = index(fname(pos:), "/") - 1
         if (length < 1) length = len_trim(fname(pos:))
@@ -360,12 +368,12 @@ contains
 
   ! ---------------------------------------------------------
   subroutine io_rm(fname, namespace)
-    character(len=*),  intent(in) :: fname
-    type(namespace_t),    intent(in) :: namespace
+    character(len=*),            intent(in) :: fname
+    type(namespace_t), optional, intent(in) :: namespace
 
     PUSH_SUB(io_rm)
 
-    call loct_rm(trim(io_workpath(fname, namespace)))
+    call loct_rm(trim(io_workpath(fname, namespace=namespace)))
 
     POP_SUB(io_rm)
   end subroutine io_rm
@@ -373,8 +381,8 @@ contains
 
   ! ---------------------------------------------------------
   integer function io_open(file, namespace, action, status, form, position, die, recl, grp) result(iunit)
-    character(len=*), intent(in) :: file, action
-    type(namespace_t),intent(in) :: namespace
+    character(len=*), intent(in)           :: file, action
+    type(namespace_t),intent(in), optional :: namespace
     character(len=*), intent(in), optional :: status, form, position
     logical,          intent(in), optional :: die
     integer,          intent(in), optional :: recl
@@ -418,7 +426,7 @@ contains
         return
       end if
 
-      file_ = io_workpath(file, namespace)
+      file_ = io_workpath(file, namespace=namespace)
 
       if(present(recl)) then
         open(unit=iunit, file=trim(file_), status=trim(status_), form=trim(form_), &
@@ -449,7 +457,6 @@ contains
 #endif
 
     POP_SUB(io_open)
-
   end function io_open
 
 
@@ -484,7 +491,6 @@ contains
 #endif
 
     POP_SUB(io_close)
-
   end subroutine io_close
 
 
@@ -517,7 +523,6 @@ contains
     write(iunit,'(a)') '********           ********'
 
     POP_SUB(io_status)
-
   end subroutine io_status
 
 
@@ -556,8 +561,8 @@ contains
     end if
 
     call io_close(iunit)
-    POP_SUB(io_dump_file)
 
+    POP_SUB(io_dump_file)
   end subroutine io_dump_file
 
 
@@ -580,7 +585,6 @@ contains
     end if
 
     POP_SUB(io_get_extension)
-
   end function io_get_extension
 
 
@@ -625,7 +629,6 @@ contains
     end if
 
     POP_SUB(io_debug_on_the_fly)
-
   end subroutine io_debug_on_the_fly
 
 
@@ -708,7 +711,6 @@ contains
     end if
 
     POP_SUB(iopar_backspace)
-
   end subroutine iopar_backspace
 
 
@@ -760,7 +762,6 @@ contains
     backspace(iunit)
 
     POP_SUB(io_skip_header)
-
   end subroutine io_skip_header
 
   ! ---------------------------------------------------------
@@ -802,7 +803,6 @@ contains
     io_close_count = io_close_count + iio - open_count * 100
 
   end subroutine io_incr_counters
-
 
 end module io_oct_m
 

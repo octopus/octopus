@@ -49,17 +49,19 @@
     type(space_t)     :: space
     type(simul_box_t) :: sb
     type(spectrum_t) :: spectrum
-    type(grid_t)     :: gr
-    type(states_elec_t) :: st
     type(block_t)     :: blk
     type(batch_t) :: currb, ftcurrb, heatcurrb, ftheatcurrb
     FLOAT :: ww, curtime, deltat, velcm(1:MAX_DIM), vel0(1:MAX_DIM), current(1:MAX_DIM), integral(1:2), v0
+    character(len=MAX_PATH_LEN) :: ref_filename
+    integer :: ref_file, time_steps_ref, kk
+    FLOAT, allocatable :: current_ref(:, :)
+    FLOAT :: dt_ref, tt, start_time
     integer :: ifreq, max_freq
     integer :: skip
     logical :: from_forces
-    type(namespace_t) :: default_namespace    
     character(len=120) :: header
-    
+    FLOAT :: excess_charge, val_charge, qtot    
+
     ! Initialize stuff
     call global_init(is_serial = .true.) 
 
@@ -67,17 +69,16 @@
     call getopt_end()
 
     call parser_init()
-    default_namespace = namespace_t("")
 
-    call messages_init(default_namespace)
+    call messages_init()
 
     call messages_experimental('oct-conductivity')
 
-    call io_init(default_namespace)
+    call io_init()
 
-    call unit_system_init(default_namespace)
+    call unit_system_init(global_namespace)
 
-    call spectrum_init(spectrum, default_namespace, default_energy_step = CNST(0.0001), default_max_energy  = CNST(1.0))
+    call spectrum_init(spectrum, global_namespace, default_energy_step = CNST(0.0001), default_max_energy  = CNST(1.0))
  
     !%Variable ConductivitySpectrumTimeStepFactor
     !%Type integer
@@ -90,9 +91,9 @@
     !% time step used to calculate the conductivity.
     !%End
 
-    call messages_obsolete_variable(default_namespace, 'PropagationSpectrumTimeStepFactor', 'ConductivitySpectrumTimeStepFactor')
-    call parse_variable(default_namespace, 'ConductivitySpectrumTimeStepFactor', 1, skip)
-    if(skip <= 0) call messages_input_error('ConductivitySpectrumTimeStepFactor')
+    call messages_obsolete_variable(global_namespace, 'PropagationSpectrumTimeStepFactor', 'ConductivitySpectrumTimeStepFactor')
+    call parse_variable(global_namespace, 'ConductivitySpectrumTimeStepFactor', 1, skip)
+    if(skip <= 0) call messages_input_error(global_namespace, 'ConductivitySpectrumTimeStepFactor')
 
     !%Variable ConductivityFromForces
     !%Type logical
@@ -101,19 +102,21 @@
     !%Description
     !% (Experimental) If enabled, Octopus will attempt to calculate the conductivity from the forces instead of the current. 
     !%End
-    call parse_variable(default_namespace, 'ConductivityFromForces', .false., from_forces)
+    call parse_variable(global_namespace, 'ConductivityFromForces', .false., from_forces)
     if(from_forces) call messages_experimental('ConductivityFromForces')
     
     max_freq = spectrum_nenergy_steps(spectrum)
     
     if (spectrum%end_time < M_ZERO) spectrum%end_time = huge(spectrum%end_time)
 
-    call space_init(space, default_namespace)
-    call geometry_init(geo, default_namespace, space)
-    call simul_box_init(sb, default_namespace, geo, space)
+    call space_init(space, global_namespace)
+    call geometry_init(geo, global_namespace, space)
+    call simul_box_init(sb, global_namespace, geo, space)
 
-    call grid_init_stage_0(gr, default_namespace, geo, space)
-    call states_elec_init(st, default_namespace, gr, geo)
+    !We need the total charge
+    call parse_variable(global_namespace, 'ExcessCharge', M_ZERO, excess_charge)
+    call geometry_val_charge(geo, val_charge)
+    qtot = -(val_charge + excess_charge)
 
     if(from_forces) then
 
@@ -121,10 +124,10 @@
       call messages_info()
 
       ! Opens the coordinates files.
-      iunit = io_open('td.general/coordinates', default_namespace, action='read')
+      iunit = io_open('td.general/coordinates', global_namespace, action='read')
 
       call io_skip_header(iunit)
-      call spectrum_count_time_steps(default_namespace, iunit, ntime, deltat)
+      call spectrum_count_time_steps(global_namespace, iunit, ntime, deltat)
       call io_close(iunit)
 
       nvel = geo%natoms*space%dim
@@ -133,7 +136,7 @@
       SAFE_ALLOCATE(velocities(1:nvel, 1:ntime))
 
       ! Opens the coordinates files.
-      iunit = io_open('td.general/coordinates', default_namespace, action='read', status='old', die=.false.)
+      iunit = io_open('td.general/coordinates', global_namespace, action='read', status='old', die=.false.)
 
       call io_skip_header(iunit)
 
@@ -184,12 +187,12 @@
       call messages_write('Info: Reading total current from td.general/total_current')
       call messages_info()
 
-      iunit = io_open('td.general/total_current', default_namespace, action='read')
+      iunit = io_open('td.general/total_current', global_namespace, action='read')
       
       if(iunit > 0) then
         
         call io_skip_header(iunit)
-        call spectrum_count_time_steps(default_namespace, iunit, ntime, deltat)
+        call spectrum_count_time_steps(global_namespace, iunit, ntime, deltat)
         ntime = ntime + 1
 
         call io_skip_header(iunit)
@@ -203,6 +206,45 @@
         end do
         
         call io_close(iunit)
+
+        if(parse_is_defined(global_namespace, 'TransientAbsorptionReference')) then
+          call parse_variable(global_namespace, 'TransientAbsorptionReference', '.', ref_filename)
+          ref_file = io_open(trim(ref_filename)//'/total_current', action='read', status='old', die=.false.)
+          if(ref_file < 0) then
+            message(1) = "Cannot open reference file '"//trim(io_workpath(trim(ref_filename)//'/total_current'))//"'"
+            call messages_fatal(1)
+          end if
+          call io_skip_header(ref_file)
+          call spectrum_count_time_steps(global_namespace, ref_file, time_steps_ref, dt_ref)
+          if(time_steps_ref < ntime) then
+            message(1) = "The reference calculation does not contain enought time steps"
+            call messages_fatal(1)
+          end if
+
+          if(dt_ref /= time(2)-time(1)) then
+            message(1) = "The time step of the reference calculation is different from the current calculation"
+            call messages_fatal(1)
+          end if
+
+          !We remove the reference
+          time_steps_ref = time_steps_ref + 1
+          SAFE_ALLOCATE(current_ref(1:space%dim, 1:time_steps_ref))
+          call io_skip_header(ref_file)
+          do ii = 1, time_steps_ref
+            read(ref_file, *) jj, tt, (current_ref(kk, ii), kk = 1, space%dim)
+          end do
+          call io_close(ref_file)
+          do iter = 1, ntime
+            do kk = 1, space%dim
+              total_current(kk, iter) = total_current(kk, iter) - current_ref(kk, iter)
+            end do
+          end do
+          SAFE_DEALLOCATE_A(current_ref)
+
+          start_time = spectrum%start_time
+          call parse_variable(global_namespace, 'GaugeFieldDelay', start_time, spectrum%start_time )
+        end if
+
         
       else
         
@@ -219,13 +261,13 @@
         
       end if
 
-      iunit = io_open('td.general/total_heat_current', default_namespace, action='read', status='old', die=.false.)
+      iunit = io_open('td.general/total_heat_current', global_namespace, action='read', status='old', die=.false.)
       
       if(iunit > 0) then
 
         if(ntime == 1) then
           call io_skip_header(iunit)
-          call spectrum_count_time_steps(default_namespace, iunit, ntime, deltat)
+          call spectrum_count_time_steps(global_namespace, iunit, ntime, deltat)
           ntime = ntime + 1  
         end if
         
@@ -253,7 +295,7 @@
    SAFE_ALLOCATE(heatcurr(ntime, 1:space%dim, 1:1))
    integral = M_ZERO
 
-   if(from_forces) iunit = io_open('td.general/current_from_forces', default_namespace, action='write')
+   if(from_forces) iunit = io_open('td.general/current_from_forces', global_namespace, action='write')
 
    do iter = 1, ntime
 
@@ -281,10 +323,10 @@
          end do
        end do
         
-       integral(1) = integral(1) + deltat/vel0(1)*(vel0(1)*st%qtot/sb%rcell_volume + current(1))
-       integral(2) = integral(2) + deltat/vel0(1)*(vel0(1)*st%qtot/sb%rcell_volume - total_current(1, iter)/sb%rcell_volume)
+       integral(1) = integral(1) + deltat/vel0(1)*(vel0(1)*qtot/sb%rcell_volume + current(1))
+       integral(2) = integral(2) + deltat/vel0(1)*(vel0(1)*qtot/sb%rcell_volume - total_current(1, iter)/sb%rcell_volume)
 
-       curr(iter, 1:space%dim) = vel0(1:space%dim)*st%qtot/sb%rcell_volume + current(1:space%dim)
+       curr(iter, 1:space%dim) = vel0(1:space%dim)*qtot/sb%rcell_volume + current(1:space%dim)
        
      else
        curr(iter, 1:space%dim)    = total_current(1:space%dim, iter)/sb%rcell_volume
@@ -323,7 +365,7 @@
 
 
    !and print the spectrum
-   iunit = io_open('td.general/conductivity', default_namespace, action='write')
+   iunit = io_open('td.general/conductivity', global_namespace, action='write')
 
     
    write(unit = iunit, iostat = ierr, fmt = '(a)') &
@@ -337,8 +379,8 @@
     v0 = sqrt(sum(vel0(1:space%dim)**2))
     if(.not. from_forces .or. v0 < epsilon(v0)) v0 = CNST(1.0)
 
-    if( .not. from_forces .and. parse_is_defined(default_namespace, 'GaugeVectorField')) then
-      if(parse_block(default_namespace, 'GaugeVectorField', blk) == 0) then
+    if( .not. from_forces .and. parse_is_defined(global_namespace, 'GaugeVectorField')) then
+      if(parse_block(global_namespace, 'GaugeVectorField', blk) == 0) then
         do ii = 1, space%dim
           call parse_block_float(blk, 0, ii - 1, vel0(ii))
         end do
@@ -363,14 +405,14 @@
     ! and \epsilon^-1 = 1 + 4 \pi \chi
     SAFE_ALLOCATE(invdielectric(1:space%dim, 1:energy_steps))
     do ifreq = 1, energy_steps
-      ww = (ifreq-1)*spectrum%energy_step + spectrum%min_energy
+      ww = max((ifreq-1)*spectrum%energy_step + spectrum%min_energy, M_EPSILON)
 
       invdielectric(1:space%dim, ifreq) = (vel0(1:space%dim) + M_FOUR * M_PI * &
                   TOCMPLX(ftcurr(ifreq, 1:space%dim, 2),-ftcurr(ifreq, 1:space%dim, 1)) / ww )/v0
 
     end do
 
-    out_file = io_open('td.general/inverse_dielectric_function_from_current', default_namespace, action='write')
+    out_file = io_open('td.general/inverse_dielectric_function_from_current', global_namespace, action='write')
     write(header, '(7a15)') '#        energy', 'Re x', 'Im x', 'Re y', 'Im y', 'Re z', 'Im z'
     write(out_file,'(a)') trim(header)
     do ifreq = 1, energy_steps
@@ -409,7 +451,7 @@
 
 
     !and print the spectrum
-    iunit = io_open('td.general/heat_conductivity', default_namespace, action='write')
+    iunit = io_open('td.general/heat_conductivity', global_namespace, action='write')
 
     
     write(unit = iunit, iostat = ierr, fmt = '(a)') &

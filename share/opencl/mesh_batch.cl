@@ -23,9 +23,9 @@
 
 
 __kernel void ddot_matrix(const int np,
-			  __global double const * restrict xx, const int ldxx,
-			  __global double const * restrict yy, const int ldyy,
-			  __global double * restrict dot, const int lddot){
+        __global double const * restrict xx, const int ldxx,
+        __global double const * restrict yy, const int ldyy,
+        __global double * restrict dot, const int lddot){
   
   int ist = get_global_id(0);
   int jst = get_global_id(1);
@@ -41,15 +41,15 @@ __kernel void ddot_matrix(const int np,
 }
 
 __kernel void zdot_matrix(const int np,
-			  __global double2 const * restrict xx, const int ldxx,
-			  __global double2 const * restrict yy, const int ldyy,
-			  __global double2 * restrict dot, const int lddot){
+        __global double2 const * restrict xx, const int ldxx,
+        __global double2 const * restrict yy, const int ldyy,
+        __global double2 * restrict dot, const int lddot){
   
   int ist = get_global_id(0);
   int jst = get_global_id(1);
 
   if(ist >= lddot) return;
-		 
+     
   double2 tmp = (double2) (0.0);
   for(int ip = 0; ip < np; ip++){
     double2 a1 = xx[(ip<<ldxx) + ist];
@@ -60,27 +60,28 @@ __kernel void zdot_matrix(const int np,
 }
 
 __kernel void zdot_matrix_spinors(const int np,
-				  __global double4 const * restrict xx, const int ldxx,
-				  __global double4 const * restrict yy, const int ldyy,
-				  __global double2 * restrict dot, const int lddot){
+          const int nst_xx,
+          const int nst_yy,
+          __global double2 const * restrict xx, const int ldxx,
+          __global double2 const * restrict yy, const int ldyy,
+          __global double2 * restrict dot, const int lddot){
   
   int ist = get_global_id(0);
   int jst = get_global_id(1);
 
-  if(ist >= lddot) return;
+  if(ist >= nst_xx || jst >= nst_yy) return;
 
   double2 tmp1 = (double2) (0.0);
   double2 tmp2 = (double2) (0.0);
+
   for(int ip = 0; ip < np; ip++){
-    double4 a1 = xx[(ip<<ldxx) + ist];
-    double4 a2 = yy[(ip<<ldyy) + jst];
-#ifdef CUDA
-    tmp1 += complex_mul(complex_conj(double2(a1.x, a1.y)), double2(a2.x, a2.y));
-    tmp2 += complex_mul(complex_conj(double2(a1.z, a1.w)), double2(a2.z, a2.w));
-#else
-    tmp1 += complex_mul(complex_conj((double2)(a1.x, a1.y)), (double2)(a2.x, a2.y));
-    tmp2 += complex_mul(complex_conj((double2)(a1.z, a1.w)), (double2)(a2.z, a2.w));
-#endif
+    double2 a1 = xx[(ip<<ldxx) + 2*ist];
+    double2 a2 = yy[(ip<<ldyy) + 2*jst];
+    double2 b1 = xx[(ip<<ldxx) + 2*ist+1];
+    double2 b2 = yy[(ip<<ldyy) + 2*jst+1];
+
+    tmp1 += complex_mul(complex_conj(a1), a2);
+    tmp2 += complex_mul(complex_conj(b1), b2);
   }
   dot[ist + lddot*jst] = tmp1 + tmp2;
 }

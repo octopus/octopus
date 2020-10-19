@@ -18,3 +18,4 @@ SpinComponents = spinors
 
 ConvRelDens = 1e-8
 EigensolverTolerance = 1e-9
+LCAOStart = lcao_full

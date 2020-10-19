@@ -75,6 +75,7 @@ module hamiltonian_elec_base_oct_m
     hamiltonian_elec_base_clear,                    &
     hamiltonian_elec_base_build_proj,               &
     hamiltonian_elec_base_update,                   &
+    hamiltonian_elec_base_accel_copy_pot,           &
     dhamiltonian_elec_base_phase,                   &
     zhamiltonian_elec_base_phase,                   &
     dhamiltonian_elec_base_phase_spiral,            &
@@ -103,6 +104,7 @@ module hamiltonian_elec_base_oct_m
     FLOAT,                    allocatable, public :: vector_potential(:, :)
     integer,                               public :: nprojector_matrices
     logical,                               public :: apply_projector_matrices
+    logical,                               public :: has_non_local_potential
     integer                                       :: full_projection_size
     integer,                               public :: max_npoints
     integer,                               public :: total_points
@@ -111,6 +113,7 @@ module hamiltonian_elec_base_oct_m
     CMPLX,                    allocatable, public :: projector_phases(:, :, :, :)
     integer,                  allocatable, public :: projector_to_atom(:)
     integer                                       :: nregions
+    integer,                               public :: nphase
     integer,                  allocatable         :: regions(:)
     type(accel_mem_t)                             :: potential_opencl
     type(accel_mem_t)                             :: buff_offsets
@@ -137,6 +140,7 @@ module hamiltonian_elec_base_oct_m
     FLOAT, allocatable     :: dprojection(:, :)
     CMPLX, allocatable     :: zprojection(:, :)
     type(accel_mem_t)      :: buff_projection
+    type(accel_mem_t)      :: buff_spin_to_phase
   end type projection_t
 
   integer, parameter, public ::          &
@@ -156,7 +160,7 @@ module hamiltonian_elec_base_oct_m
     FIELD_UNIFORM_VECTOR_POTENTIAL = 4,    &
     FIELD_UNIFORM_MAGNETIC_FIELD   = 8
 
-  type(profile_t), save :: prof_vnlpsi_start, prof_vnlpsi_finish, prof_magnetic, prof_vlpsi, prof_gather, prof_scatter, &
+  type(profile_t), save :: prof_vnlpsi_start, prof_vnlpsi_finish, prof_magnetic, prof_vlpsi, prof_scatter, &
     prof_matelement, prof_matelement_gather, prof_matelement_reduce
 
 contains
@@ -175,6 +179,7 @@ contains
     this%rashba_coupling = rashba_coupling
 
     this%apply_projector_matrices = .false.
+    this%has_non_local_potential = .false.
     this%nprojector_matrices = 0
 
     nullify(this%spin)
@@ -283,34 +288,11 @@ contains
     type(hamiltonian_elec_base_t), intent(inout) :: this
     type(mesh_t),             intent(in)    :: mesh
 
-    integer :: ispin
-    integer :: offset
+    integer :: idir, ip
 
     PUSH_SUB(hamiltonian_elec_base_update)
 
     if(allocated(this%uniform_vector_potential) .and. allocated(this%vector_potential)) then
-      call unify_vector_potentials()
-    end if
-
-    if(allocated(this%potential) .and. accel_is_enabled()) then
-
-      offset = 0
-      do ispin = 1, this%nspin
-        call accel_write_buffer(this%potential_opencl, mesh%np, this%potential(:, ispin), offset = offset)
-        offset = offset + accel_padded_size(mesh%np)
-      end do
-
-    end if
-
-    POP_SUB(hamiltonian_elec_base_update)
-
-  contains
-
-    subroutine unify_vector_potentials()
-      integer :: idir, ip
-
-      PUSH_SUB(hamiltonian_elec_base_update.unify_vector_potentials)
-      
       ! copy the uniform vector potential onto the non-uniform one
       do idir = 1, mesh%sb%dim
         !$omp parallel do schedule(static)
@@ -319,13 +301,34 @@ contains
             this%vector_potential(idir, ip) + this%uniform_vector_potential(idir)
         end do
       end do
-      
-      ! and deallocate
       SAFE_DEALLOCATE_A(this%uniform_vector_potential)
-      POP_SUB(hamiltonian_elec_base_update.unify_vector_potentials)      
-    end subroutine unify_vector_potentials
+    end if
 
+    POP_SUB(hamiltonian_elec_base_update)
   end subroutine hamiltonian_elec_base_update
+
+
+  !--------------------------------------------------------
+
+  subroutine hamiltonian_elec_base_accel_copy_pot(this, mesh)
+    type(hamiltonian_elec_base_t), intent(inout) :: this
+    type(mesh_t),             intent(in)    :: mesh
+    
+    integer :: offset, ispin
+
+    PUSH_SUB(hamiltonian_elec_base_accel_copy_pot)
+
+    if(allocated(this%potential) .and. accel_is_enabled()) then
+      offset = 0
+      do ispin = 1, this%nspin
+        call accel_write_buffer(this%potential_opencl, mesh%np, this%potential(:, ispin), offset = offset)
+        offset = offset + accel_padded_size(mesh%np)
+      end do
+    end if
+
+    POP_SUB(hamiltonian_elec_base_accel_copy_pot)
+  end subroutine hamiltonian_elec_base_accel_copy_pot
+
   
   !--------------------------------------------------------
 
@@ -460,11 +463,22 @@ contains
     ! count projectors
     this%nprojector_matrices = 0
     this%apply_projector_matrices = .false.
+    this%has_non_local_potential = .false.
     this%nregions = nregion
 
+    !We determine if we have only local potential or not.
     do iorder = 1, epot%natoms
       iatom = order(iorder)
 
+      if(.not. projector_is_null(epot%proj(iatom))) then
+        this%has_non_local_potential = .true.
+        exit
+      end if
+    end do
+
+    do iorder = 1, epot%natoms
+      iatom = order(iorder)
+  
       if(projector_is(epot%proj(iatom), PROJ_KB) .or. projector_is(epot%proj(iatom), PROJ_HGH)) then
         INCR(this%nprojector_matrices, 1)
         this%apply_projector_matrices = .true.
@@ -539,7 +553,9 @@ contains
             do mm = -ll, ll
               kb_p =>  epot%proj(iatom)%kb_p(ll, mm)
               do ic = 1, kb_p%n_c
-                forall(ip = 1:pmat%npoints) pmat%dprojectors(ip, imat) = kb_p%p(ip, ic)
+                do ip = 1, pmat%npoints
+                  pmat%dprojectors(ip, imat) = kb_p%p(ip, ic)
+                end do
                 pmat%scal(imat) = kb_p%e(ic)*mesh%vol_pp(1)
                 INCR(imat, 1)
               end do
@@ -603,30 +619,34 @@ contains
                   end do
                 end do
               end if
-              
+
               do ic = 1, 3
                 if(epot%reltype == SPIN_ORBIT) then
-                  forall(ip = 1:pmat%npoints) pmat%zprojectors(ip, imat) = hgh_p%zp(ip, ic)
+                  do ip = 1, pmat%npoints
+                    pmat%zprojectors(ip, imat) = hgh_p%zp(ip, ic)
+                  end do
                 else
-                  forall(ip = 1:pmat%npoints) pmat%dprojectors(ip, imat) = hgh_p%dp(ip, ic)
+                  do ip = 1, pmat%npoints
+                    pmat%dprojectors(ip, imat) = hgh_p%dp(ip, ic)
+                  end do
                 end if
                 pmat%scal(imat) = mesh%volume_element
                 INCR(imat, 1)
               end do
-              
+
             end do
           end do
 
           this%projector_self_overlap = this%projector_self_overlap .or. epot%proj(iatom)%sphere%overlap
-          
+
         else
-          cycle          
+          cycle
         end if
 
-        forall(ip = 1:pmat%npoints)
+        do ip = 1, pmat%npoints
           pmat%map(ip) = epot%proj(iatom)%sphere%map(ip)
           pmat%position(1:3, ip) = epot%proj(iatom)%sphere%x(ip, 1:3)
-        end forall
+        end do
 
         INCR(this%full_projection_size, pmat%nprojs)
 
@@ -677,6 +697,19 @@ contains
       SAFE_ALLOCATE(cnt(1:mesh%np))
 
       cnt = 0
+
+      ! Here we construct the offsets for accessing various arrays within the GPU kernels.
+      ! The offset(:,:) array contains a number of sizes and offsets, describing how to address the arrays.
+      ! This allows to transfer all these number to the GPU in one memory transfer.
+      !
+      ! For each projection matrix (addressed by imap), we have:
+      !
+      ! offset(POINTS, imap) : number of points of the sphere imap
+      ! offset(PROJS, imap)  : number of projectors for imap
+      ! offset(MATRIX, imap) : address offset: cumulative of pmat%npoints * pmat%nprojs
+      ! offset(MAP, imap)    : address offset: cumulative of pmat%npoints for each imap
+      ! offset(SCAL, imap)   : address_offset: cumulative of pmat%nprojs
+      ! offset(MIX, imap)    : address_offset: cumulative of pmat%nprojs**2
 
       ! first we count
       matrix_size = 0
@@ -816,7 +849,6 @@ contains
     ! check if we only want a phase correction for the boundary points
     phase_correction = .false.
     if(associated(hm_base%phase)) phase_correction = .true.
-    if(accel_is_enabled()) phase_correction = .false.
 
     !We apply the phase only to np points, and the phase for the np+1 to np_part points
     !will be treated as a phase correction in the Hamiltonian
@@ -842,7 +874,6 @@ contains
     ! check if we only want a phase correction for the boundary points
     phase_correction = .false.
     if(associated(hm_base%phase)) phase_correction = .true.
-    if(accel_is_enabled()) phase_correction = .false.
 
     !We apply the phase only to np points, and the phase for the np+1 to np_part points
     !will be treated as a phase correction in the Hamiltonian

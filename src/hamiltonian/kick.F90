@@ -55,7 +55,8 @@ module kick_oct_m
     kick_read,            &
     kick_write,           &
     kick_apply,           &
-    kick_function_get
+    kick_function_get,    &
+    kick_get_type
 
 
   integer, public, parameter ::        &
@@ -83,7 +84,7 @@ module kick_oct_m
     !> The time which the kick is applied (normally, this is zero)
     FLOAT             :: time
     !> The strength, and strength "mode".
-    integer           :: delta_strength_mode
+    integer, private  :: delta_strength_mode
     FLOAT             :: delta_strength
     !> In case we use a normal dipole kick:
     FLOAT             :: pol(MAX_DIM, MAX_DIM)
@@ -222,9 +223,9 @@ contains
     case (KICK_DENSITY_MODE)
     case (KICK_SPIN_MODE, KICK_SPIN_DENSITY_MODE)
     case (KICK_MAGNON_MODE)
-      if(nspin /= SPINORS) call messages_input_error('TDDeltaStrengthMode')
+      if(nspin /= SPINORS) call messages_input_error(namespace, 'TDDeltaStrengthMode', 'Magnon kick is incompatible with spinors')
     case default
-      call messages_input_error('TDDeltaStrengthMode')
+      call messages_input_error(namespace, 'TDDeltaStrengthMode', 'Unknown mode')
     end select
 
     if(parse_is_defined(namespace, 'TDDeltaUserDefined')) then
@@ -271,7 +272,9 @@ contains
         call parse_block_integer(blk, irow - 1, 0, kick%l(irow))
         call parse_block_integer(blk, irow - 1, 1, kick%m(irow))
         call parse_block_float(blk, irow - 1, 2, kick%weight(irow))
-        if( (kick%l(irow) < 0) .or. (abs(kick%m(irow)) > abs(kick%l(irow))) ) call messages_input_error('TDkickFunction')
+        if( (kick%l(irow) < 0) .or. (abs(kick%m(irow)) > abs(kick%l(irow))) ) then
+          call messages_input_error(namespace, 'TDkickFunction')
+        end if
       end do
 
     else
@@ -309,7 +312,7 @@ contains
       call parse_variable(namespace, 'TDPolarizationDirection', 0, kick%pol_dir)
 
       if(kick%delta_strength_mode /= KICK_MAGNON_MODE) then
-        if(kick%pol_dir < 1 .or. kick%pol_dir > dim) call messages_input_error('TDPolarizationDirection')
+        if(kick%pol_dir < 1 .or. kick%pol_dir > dim) call messages_input_error(namespace, 'TDPolarizationDirection')
       end if
 
       !%Variable TDPolarization
@@ -351,7 +354,7 @@ contains
       if(parse_block(namespace, 'TDPolarization', blk)==0) then
         n_rows = parse_block_n(blk)
 
-        if(n_rows < dim) call messages_input_error('TDPolarization')
+        if(n_rows < dim) call messages_input_error(namespace, 'TDPolarization', 'There should be one line per dimension')
 
         do irow = 1, n_rows
           do idir = 1, 3
@@ -856,12 +859,11 @@ contains
 
   ! ---------------------------------------------------------
   !
-  subroutine kick_function_get(mesh, kick, kick_function, iq, theta, to_interpolate)
+  subroutine kick_function_get(mesh, kick, kick_function, iq, to_interpolate)
     type(mesh_t),         intent(in)    :: mesh
     type(kick_t),         intent(in)    :: kick
     CMPLX,                intent(out)   :: kick_function(:)
     integer,              intent(in)    :: iq
-    FLOAT, optional,      intent(in)    :: theta
     logical, optional,    intent(in)    :: to_interpolate
 
     integer :: ip, im
@@ -936,10 +938,10 @@ contains
           end do
         end do
       else
-        forall(ip = 1:np)
+        do ip = 1, np
           kick_function(ip) = sum(mesh%x(ip, 1:mesh%sb%dim) * &
             kick%pol(1:mesh%sb%dim, kick%pol_dir))
-        end forall
+        end do
       end if
     end if
 
@@ -949,13 +951,12 @@ contains
 
   ! ---------------------------------------------------------
   !
-  subroutine kick_pcm_function_get(mesh, kick, psolver, pcm, kick_pcm_function, theta)
+  subroutine kick_pcm_function_get(mesh, kick, psolver, pcm, kick_pcm_function)
     type(mesh_t),         intent(in)    :: mesh
     type(kick_t),         intent(in)    :: kick
     type(poisson_t),      intent(in)    :: psolver
     type(pcm_t),          intent(inout) :: pcm
     CMPLX,                intent(out)   :: kick_pcm_function(:)
-    FLOAT, optional,      intent(in)    :: theta
 
     CMPLX, allocatable :: kick_function_interpolate(:)
     FLOAT, allocatable :: kick_function_real(:)
@@ -991,14 +992,13 @@ contains
   ! ---------------------------------------------------------
   !> Applies the delta-function electric field \f$ E(t) = E_0 \Delta(t) \f$
   !! where \f$ E_0 = \frac{- k \hbar}{e} \f$ k = kick\%delta_strength.
-  subroutine kick_apply(mesh, st, ions, geo, kick, psolver, theta, pcm)
+  subroutine kick_apply(mesh, st, ions, geo, kick, psolver, pcm)
     type(mesh_t),          intent(in)    :: mesh
     type(states_elec_t),   intent(inout) :: st
     type(ion_dynamics_t),  intent(in)    :: ions
     type(geometry_t),      intent(inout) :: geo
     type(kick_t),          intent(in)    :: kick
     type(poisson_t),       intent(in)    :: psolver
-    FLOAT, optional,       intent(in)    :: theta
     type(pcm_t), optional, intent(inout) :: pcm
 
     integer :: iqn, ist, idim, ip, ispin, iatom
@@ -1018,13 +1018,13 @@ contains
 
       SAFE_ALLOCATE(kick_function(1:mesh%np))
       if(kick%delta_strength_mode /= KICK_MAGNON_MODE .or. kick%nqvec == 1) then
-        call kick_function_get(mesh, kick, kick_function, 1, theta)
+        call kick_function_get(mesh, kick, kick_function, 1)
       end if
 
       ! PCM - computing polarization due to kick
       if( present(pcm) ) then
         SAFE_ALLOCATE(kick_pcm_function(1:mesh%np))
-        call kick_pcm_function_get(mesh, kick, psolver, pcm, kick_pcm_function, theta)
+        call kick_pcm_function_get(mesh, kick, psolver, pcm, kick_pcm_function)
         kick_function = kick_function + kick_pcm_function
       end if
 
@@ -1060,9 +1060,11 @@ contains
 
             select case (kick%delta_strength_mode)
             case (KICK_DENSITY_MODE)
-              forall(idim = 1:st%d%dim, ip = 1:mesh%np)
-                psi(ip, idim) = exp(M_zI*kick%delta_strength*kick_function(ip))*psi(ip, idim)
-               end forall
+              do idim = 1, st%d%dim
+                do ip = 1, mesh%np
+                  psi(ip, idim) = exp(M_zI*kick%delta_strength*kick_function(ip))*psi(ip, idim)
+                end do
+              end do
 
             case (KICK_SPIN_MODE)
               ispin = states_elec_dim_get_spin_index(st%d, iqn)
@@ -1214,6 +1216,13 @@ contains
 
     POP_SUB(kick_apply)
   end subroutine kick_apply
+
+  pure integer function kick_get_type(kick) result(kick_type)
+    type(kick_t),    intent(in) :: kick
+
+    kick_type = kick%delta_strength_mode
+ 
+  end function kick_get_type
 
 end module kick_oct_m
 

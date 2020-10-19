@@ -29,7 +29,6 @@ module debug_oct_m
   public ::             &
     debug_t,            &
     debug_init,         &
-    debug_end,          &
     debug_enable,       &
     debug_disable
 
@@ -84,13 +83,6 @@ contains
     call from_bits(this)
     
   end subroutine debug_init
-
-  !--------------------------------------------------
-
-  subroutine debug_end(this)
-    type(debug_t), intent(inout) :: this
-
-  end subroutine debug_end
 
   !--------------------------------------------------
   

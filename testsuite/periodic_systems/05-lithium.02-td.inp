@@ -36,8 +36,6 @@ TDMaxSteps = 20
 
 ExperimentalFeatures = yes
 
-ParDomains = no
-
 TDEnergyUpdateIter = 5
 
 FilterPotentials = filter_none

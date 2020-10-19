@@ -74,16 +74,19 @@ module submesh_oct_m
     submesh_init_cube_map,       &
     submesh_end_cube_map
 
+  !> A submesh is a type of mesh, used for the projectors in the pseudopotentials
+  !! It contains points on a regular mesh confined to a sphere of a given radius. 
   type submesh_t
     ! Components are public by default
     FLOAT                 :: center(1:MAX_DIM)
     FLOAT                 :: radius
     integer               :: np             !< number of points inside the submesh
     integer               :: np_part        !< number of points inside the submesh including ghost points
-    integer,      pointer :: map(:)         !< index in the mesh of the points inside the sphere
-    FLOAT,        pointer :: x(:,:)
-    type(mesh_t), pointer :: mesh
-    logical               :: overlap        !< .true. if the submesh has more than one point that is mapped to a mesh point
+    integer,      pointer :: map(:)         !< maps point inside the submesh to a point inside the underlying mesh
+    FLOAT,        pointer :: x(:,:)         !< x(1:np_part, 0:sb%dim): zeroth component is distance from centre of the submesh.
+    type(mesh_t), pointer :: mesh           !< pointer to the underlying mesh
+    logical               :: overlap        !< .true. if the submesh has more than one point that is mapped to a mesh point,
+                                            !! i.e. the submesh overlaps with itself (as can happen in periodic systems)
     integer               :: np_global      !< total number of points in the entire mesh
     FLOAT,    allocatable :: x_global(:,:)  
     integer,  allocatable :: part_v(:)
@@ -99,10 +102,6 @@ module submesh_oct_m
   interface submesh_to_mesh_dotp
     module procedure ddsubmesh_to_mesh_dotp, zdsubmesh_to_mesh_dotp, zzsubmesh_to_mesh_dotp
   end interface submesh_to_mesh_dotp
-
-   type(profile_t), save ::           &
-       C_PROFILING_SM_REDUCE,         &
-       C_PROFILING_SM_NRM2
 
 contains
   
@@ -125,6 +124,24 @@ contains
 
   ! -------------------------------------------------------------
 
+  ! Multipliers for recursive formulation of n-ellipsoid volume 
+  ! simplifying the Gamma function
+  ! f(n) = 2f(n-2)/n, f(0)=1, f(1)=2
+  recursive FLOAT function f_n(dims) result(fn)
+
+    integer :: dims
+
+    if (dims == 0) then
+      fn = 1.0
+    else if (dims == 1) then
+      fn = 2.0
+    else
+      fn = 2.0 * f_n(dims - 2) / dims
+    end if
+  end function f_n
+
+! -------------------------------------------------------------
+
   subroutine submesh_init(this, sb, mesh, center, rc)
     type(submesh_t),      intent(inout)  :: this !< valgrind objects to intent(out) due to the initializations above
     type(simul_box_t),    intent(in)     :: sb
@@ -132,12 +149,12 @@ contains
     FLOAT,                intent(in)     :: center(:)
     FLOAT,                intent(in)     :: rc
     
-    FLOAT :: r2, xx(1:MAX_DIM)
+    FLOAT :: r2, rc2, xx(1:MAX_DIM), rc_norm_n
     FLOAT, allocatable :: center_copies(:, :), xtmp(:, :)
-    integer :: icell, is, isb, ip, ix, iy, iz
+    integer :: icell, is, isb, ip, ix, iy, iz, max_elements_count
     type(profile_t), save :: submesh_init_prof
     type(periodic_copy_t) :: pp
-    integer, allocatable :: map_inv(:)
+    integer, allocatable :: map_inv(:), map_temp(:)
     integer :: nmax(1:MAX_DIM), nmin(1:MAX_DIM)
     integer, allocatable :: order(:)
 
@@ -152,6 +169,7 @@ contains
     this%center(1:sb%dim) = center(1:sb%dim)
 
     this%radius = rc
+    rc2 = rc**2
 
     ! The spheres are generated differently for periodic coordinates,
     ! mainly for performance reasons.
@@ -168,6 +186,7 @@ contains
       nmax(1:sb%dim) = int((center(1:sb%dim) + abs(rc))/mesh%spacing(1:sb%dim)) + 1
 
       ! make sure that the cube is inside the grid
+      ! parts of the cube which would fall outside the simulation box are chopped off.
       nmin(1:sb%dim) = max(mesh%idx%nr(1, 1:sb%dim), nmin(1:sb%dim))
       nmax(1:sb%dim) = min(mesh%idx%nr(2, 1:sb%dim), nmax(1:sb%dim))
 
@@ -184,7 +203,7 @@ contains
 #endif
             if(ip == 0) cycle
             r2 = sum((mesh%x(ip, 1:sb%dim) - center(1:sb%dim))**2)
-            if(r2 <= rc**2) then
+            if(r2 <= rc2) then
               if(ip > mesh%np) then
                 ! boundary points are marked as negative values
                 isb = isb + 1
@@ -244,36 +263,36 @@ contains
         center_copies(1:sb%dim, icell) = periodic_copy_position(pp, sb, icell)
       end do
 
+      !Recursive formulation for the volume of n-ellipsoid 
+      !Garry Tee, NZ J. Mathematics Vol. 34 (2005) p. 165 eqs. 53,55
+      rc_norm_n = product(ceiling(rc / mesh%spacing(1:sb%dim)) + 1.0)
+      if (mesh%use_curvilinear) rc_norm_n = rc_norm_n / mesh%cv%min_mesh_scaling_product
+      max_elements_count = 3**sb%dim * int(M_PI**floor(0.5 * sb%dim) * rc_norm_n * f_n(sb%dim)) 
+
+      SAFE_ALLOCATE(map_temp(1:max_elements_count))
+      SAFE_ALLOCATE(xtmp(1:max_elements_count, 0:sb%dim))
+            
       is = 0
       do ip = 1, mesh%np_part
         do icell = 1, periodic_copy_num(pp)
           xx(1:sb%dim) = mesh%x(ip, 1:sb%dim) - center_copies(1:sb%dim, icell)
           r2 = sum(xx(1:sb%dim)**2)
-          if(r2 > rc**2 ) cycle
+          if(r2 > rc2) cycle
           is = is + 1
+          map_temp(is) = ip
+          xtmp(is, 0) = sqrt(r2)
+          xtmp(is, 1:sb%dim) = xx(1:sb%dim)
+          ! Note that xx can be outside the unit cell
         end do
         if (ip == mesh%np) this%np = is
       end do
-      
+
       this%np_part = is
 
       SAFE_ALLOCATE(this%map(1:this%np_part))
-      SAFE_ALLOCATE(xtmp(1:this%np_part, 0:sb%dim))
-            
-      !iterate again to fill the tables
-      is = 0
-      do ip = 1, mesh%np_part
-        do icell = 1, periodic_copy_num(pp)
-          xx(1:sb%dim) = mesh%x(ip, 1:sb%dim) - center_copies(1:sb%dim, icell)
-          r2 = sum(xx(1:sb%dim)**2)
-          if(r2 > rc**2 ) cycle
-          is = is + 1
-          this%map(is) = ip
-          xtmp(is, 0) = sqrt(r2)
-          xtmp(is, 1:sb%dim) = xx(1:sb%dim)
-         end do
-      end do
+      this%map(1:this%np_part) = map_temp(1:this%np_part)
 
+      SAFE_DEALLOCATE_A(map_temp)
       SAFE_DEALLOCATE_A(center_copies)
       
       call periodic_copy_end(pp)
@@ -281,21 +300,26 @@ contains
     end if
 
     ! now order points for better locality
-    
+
     SAFE_ALLOCATE(order(1:this%np_part))
     SAFE_ALLOCATE(this%x(1:this%np_part, 0:sb%dim))
 
-    forall(ip = 1:this%np_part) order(ip) = ip
+    do ip = 1, this%np_part
+      order(ip) = ip
+    end do
 
     call sort(this%map, order)
 
-    forall(ip = 1:this%np_part) this%x(ip, 0:sb%dim) = xtmp(order(ip), 0:sb%dim)
+    do ip = 1, this%np_part
+      this%x(ip, 0:sb%dim) = xtmp(order(ip), 0:sb%dim)
+    end do
 
-    !check whether points overlap
-    
+    !check whether points overlap (i.e. whetehr a submesh contains the same point more than once)
+
     this%overlap = .false.
     do ip = 1, this%np_part - 1
       if(this%map(ip) == this%map(ip + 1)) then
+        ! this simplified test works, as the points are ordered.
         this%overlap = .true.
         exit
       end if
@@ -521,9 +545,11 @@ contains
     integer :: is
 
     PUSH_SUB(submesh_get_inv)
-    
+
     map_inv(1:this%mesh%np_part) = 0
-    forall (is = 1:this%np) map_inv(this%map(is)) = is
+    do is = 1, this%np
+      map_inv(this%map(is)) = is
+    end do
 
     POP_SUB(submesh_get_inv)
   end subroutine submesh_get_inv
@@ -696,6 +722,7 @@ contains
     logical, optional, intent(in) :: reduce
   
     integer :: is, m, ip
+    type(profile_t), save :: prof_sm_reduce
   
     PUSH_SUB(zzsubmesh_to_mesh_dotp)
   
@@ -722,9 +749,9 @@ contains
     end if
   
     if(optional_default(reduce, .true.) .and. this%mesh%parallel_in_domains) then
-      call profiling_in(C_PROFILING_SM_REDUCE, "SM_REDUCE")
+      call profiling_in(prof_sm_reduce, "SM_REDUCE_DOTP")
       call comm_allreduce(this%mesh%vp%comm, dotp)
-      call profiling_out(C_PROFILING_SM_REDUCE)
+      call profiling_out(prof_sm_reduce)
     end if 
  
     POP_SUB(zzsubmesh_to_mesh_dotp)
@@ -761,9 +788,8 @@ contains
   end subroutine submesh_get_cube_dim
 
   !------------------------------------------------------------
-  subroutine submesh_init_cube_map(sm, db, dim)
+  subroutine submesh_init_cube_map(sm, dim)
     type(submesh_t),   intent(inout)  :: sm
-    integer,           intent(in)     :: db(:)
     integer,           intent(in)     :: dim
 
     integer :: ip, idir

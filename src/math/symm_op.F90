@@ -30,7 +30,6 @@ module symm_op_oct_m
        symm_op_t,                      &
        symm_op_init,                   &
        symm_op_copy,                   &
-       symm_op_end,                    &
        symm_op_apply_red,              &
        symm_op_apply_inv_red,          &
        symm_op_apply_transpose_red,    &
@@ -164,18 +163,7 @@ contains
 
     POP_SUB(symm_op_copy)
   end subroutine symm_op_copy
-  
-  ! -------------------------------------------------------------------------------
-  subroutine symm_op_end(this)
-    type(symm_op_t),  intent(inout) :: this
 
-    PUSH_SUB(symm_op_end)
-
-    !nothing to do for the moment
-
-    POP_SUB(symm_op_end)
-  end subroutine symm_op_end
-  
   ! -------------------------------------------------------------------------------
   logical pure function symm_op_has_translation(this, prec) result(has)
     type(symm_op_t),  intent(in)  :: this

@@ -7,13 +7,21 @@ Enabled    : Yes
 # Na ground state
 Processors : 2
 Input      : 06-2D.01-Na_gs.inp
-match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
-match ; Total energy ; GREPFIELD(static/info, 'Total       =', 3) ; -0.21408824
+if(available cuda); then
+  match ; Error match ; GREPCOUNT(err, 'Calculation will not be continued.') ; 1
+else
+  match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
+  match ; Total energy ; GREPFIELD(static/info, 'Total       =', 3) ; -0.21408824
+endif
 
 # Na check velocity map 
 Input      : 06-2D.02-Na_few_cy.inp
-match ; Momentum grid [val  1] ; LINEFIELD(td.general/PESM_map.pz=0, 24012, 1) ; -4.662846239094E-01
-match ; Momentum grid [val  2] ; LINEFIELD(td.general/PESM_map.pz=0, 29580, 2) ;  0.000000000000E+00
-match ; Velocity map [val  1] ; LINEFIELD(td.general/PESM_map.pz=0, 29580, 3) ; 4.891005437139
-match ; Velocity map [val  2] ; LINEFIELD(td.general/PESM_map.pz=0, 29578, 3) ; 3.602401145186E+00
-match ; Velocity map [val  3] ; LINEFIELD(td.general/PESM_map.pz=0, 24012, 3) ; 7.794815103098E-03
+if(available cuda); then
+  match ; Error match ; GREPCOUNT(err, 'Calculation will not be continued.') ; 1
+else
+  match ; Momentum grid [val  1] ; LINEFIELD(td.general/PESM_map.pz=0, 24012, 1) ; -4.662846239094E-01
+  match ; Momentum grid [val  2] ; LINEFIELD(td.general/PESM_map.pz=0, 29580, 2) ;  0.000000000000E+00
+  match ; Velocity map [val  1] ; LINEFIELD(td.general/PESM_map.pz=0, 29580, 3) ; 4.891005437139
+  match ; Velocity map [val  2] ; LINEFIELD(td.general/PESM_map.pz=0, 29578, 3) ; 3.602401145186E+00
+  match ; Velocity map [val  3] ; LINEFIELD(td.general/PESM_map.pz=0, 24012, 3) ; 7.794815103098E-03
+endif

@@ -299,7 +299,7 @@ void io_read_header(header_t * hp, int * correct_endianness, int * ierr, int * i
   }
 
   close(fd);
-  *iio++;
+  (*iio)++;
 }
 
 void read_binary(const int * np, const int * offset, byte * ff, int * output_type, int * ierr, int * iio, char * fname)
@@ -355,7 +355,7 @@ void read_binary(const int * np, const int * offset, byte * ff, int * output_typ
   moved = read(fd, read_f, (*np)*size_of[hp->type]);
 
   close(fd);
-  *iio++;
+  (*iio)++;
   
   if ( moved != (*np)*size_of[hp->type]) { 
     /* we couldn't read the whole dataset */

@@ -26,6 +26,7 @@ module ion_interaction_oct_m
   use loct_math_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use multicomm_oct_m
   use namespace_oct_m
   use parser_oct_m
   use periodic_copy_oct_m
@@ -47,6 +48,8 @@ module ion_interaction_oct_m
   type ion_interaction_t
     ! Components are public by default
     FLOAT                      :: alpha
+
+    type(distributed_t) :: dist
   end type ion_interaction_t
 
   integer, parameter ::            &
@@ -57,9 +60,11 @@ module ion_interaction_oct_m
   
 contains
 
-  subroutine ion_interaction_init(this, namespace)
+  subroutine ion_interaction_init(this, namespace, geo, mc)
     type(ion_interaction_t), intent(out)   :: this
     type(namespace_t),       intent(in)    :: namespace
+    type(geometry_t),        intent(in)    :: geo
+    type(multicomm_t),       intent(in)    :: mc
 
     PUSH_SUB(ion_interaction_init)
 
@@ -74,6 +79,10 @@ contains
     !% of the calculation, normally users do not need to modify it.
     !%End
     call parse_variable(namespace, 'EwaldAlpha', CNST(0.21), this%alpha)
+
+    !As the code below is not parallelized with any of k-point, states not domain
+    !we can safely parallelize it over atoms
+    call distributed_init(this%dist, geo%natoms, mc%master_comm, "Ions")
     
     POP_SUB(ion_interaction_init)
   end subroutine ion_interaction_init
@@ -86,6 +95,8 @@ contains
     PUSH_SUB(ion_interaction_end)
 
     this%alpha = -CNST(1.0)
+
+    call distributed_end(this%dist)
 
     POP_SUB(ion_interaction_end)
   end subroutine ion_interaction_end
@@ -159,7 +170,7 @@ contains
       end if
       
       ! only interaction inside the cell
-      do iatom = 1, geo%natoms
+      do iatom = this%dist%start, this%dist%end
         if(ignore_external_ions) then
           if(.not. in_box(iatom)) cycle
         end if
@@ -202,8 +213,8 @@ contains
           
         end do !jatom
       end do !iatom
-      
-      do iatom = 1, geo%natoms
+
+      do iatom = this%dist%start, this%dist%end
 
         if(ignore_external_ions) then
           if(.not. in_box(iatom)) cycle
@@ -225,6 +236,9 @@ contains
           
         end do !jatom
       end do !iatom
+
+      call comm_allreduce(this%dist%mpi_grp%comm, energy)
+      call comm_allreduce(this%dist%mpi_grp%comm, force)
       
     end if
 
@@ -269,7 +283,7 @@ contains
     call profiling_in(prof_short, "EWALD_SHORT")
     
     ! the short-range part is calculated directly
-    do iatom = geo%atoms_dist%start, geo%atoms_dist%end
+    do iatom = this%dist%start, this%dist%end
       if (.not. species_represents_real_atom(geo%atom(iatom)%species)) cycle
       zi = species_zval(geo%atom(iatom)%species)
 
@@ -300,10 +314,8 @@ contains
       call periodic_copy_end(pc)
     end do
 
-    if(geo%atoms_dist%parallel) then
-      call comm_allreduce(geo%atoms_dist%mpi_grp%comm, ereal)
-      call comm_allreduce(geo%atoms_dist%mpi_grp%comm, force)
-    end if
+    call comm_allreduce(this%dist%mpi_grp%comm, ereal)
+    call comm_allreduce(this%dist%mpi_grp%comm, force)
 
     if(present(force_components)) then
       force_components(1:sb%dim, 1:geo%natoms, ION_COMPONENT_REAL) = force(1:sb%dim, 1:geo%natoms)
@@ -316,11 +328,13 @@ contains
     ! self-interaction
     eself = M_ZERO
     charge = M_ZERO
-    do iatom = 1, geo%natoms
+    do iatom = this%dist%start, this%dist%end
       zi = species_zval(geo%atom(iatom)%species)
       charge = charge + zi
       eself = eself - this%alpha/sqrt(M_PI)*zi**2
     end do
+    call comm_allreduce(this%dist%mpi_grp%comm, eself)
+    call comm_allreduce(this%dist%mpi_grp%comm, charge)
 
 ! Long range part of Ewald sum
     select case(sb%periodic_dim)
@@ -328,7 +342,7 @@ contains
 !Temporarily, the 3D Ewald sum is employed for the 1D mixed-periodic system.
       call Ewald_long_3D(this, geo, sb, efourier, force, charge)
     case(2)
-      call Ewald_long_2D(this, geo, sb, efourier, force, charge)
+      call Ewald_long_2D(this, geo, sb, efourier, force)
     case(3)
       call Ewald_long_3D(this, geo, sb, efourier, force, charge)
     end select
@@ -354,7 +368,7 @@ contains
        ! Previously unaccounted G = 0 term from pseudopotentials. 
        ! See J. Ihm, A. Zunger, M.L. Cohen, J. Phys. C 12, 4409 (1979)
 
-       do iatom = 1, geo%natoms
+       do iatom = this%dist%start, this%dist%end
           if(species_is_ps(geo%atom(iatom)%species)) then
              zi = species_zval(geo%atom(iatom)%species)
              spec_ps = species_ps(geo%atom(iatom)%species)
@@ -362,6 +376,7 @@ contains
                   (spec_ps%sigma_erf*sqrt(M_TWO))**2/sb%rcell_volume*charge
           end if
        end do
+       call comm_allreduce(this%dist%mpi_grp%comm, epseudo)
 
        energy = energy + epseudo
     end if
@@ -461,13 +476,12 @@ contains
 
   ! ---------------------------------------------------------
   !> In-Chul Yeh and Max L. Berkowitz, J. Chem. Phys. 111, 3155 (1999).
-  subroutine Ewald_long_2D(this, geo, sb, efourier, force, charge)
+  subroutine Ewald_long_2D(this, geo, sb, efourier, force)
     type(ion_interaction_t),   intent(in)    :: this
     type(geometry_t),          intent(in)    :: geo
     type(simul_box_t),         intent(in)    :: sb
     FLOAT,                     intent(inout)   :: efourier
     FLOAT,                     intent(inout)   :: force(:, :) !< (sb%dim, geo%natoms)
-    FLOAT,                     intent(in)   :: charge
 
     FLOAT :: rcut
     integer :: iatom, jatom
@@ -475,6 +489,7 @@ contains
     FLOAT   :: gg(1:MAX_DIM), gg2, gx, gg_abs
     FLOAT   :: factor,factor1,factor2, coeff
     FLOAT   :: dz_max, dz_ij, area_cell, erfc1, erfc2, tmp_erf
+    FLOAT, allocatable :: force_tmp(:,:)
 
     PUSH_SUB(Ewald_long_2d)
 
@@ -490,6 +505,7 @@ contains
       end do
     end do
 
+
     !get a converged value for the cutoff in g
     rcut = M_TWO*this%alpha*CNST(4.6) + M_TWO*this%alpha**2*dz_max
     do 
@@ -499,16 +515,18 @@ contains
       rcut = rcut * CNST(1.414)
     end do
 
-
     ix_max = ceiling(rcut/sqrt(sum(sb%klattice(1:sb%dim, 1)**2)))
     iy_max = ceiling(rcut/sqrt(sum(sb%klattice(1:sb%dim, 2)**2)))
 
     area_cell = abs(sb%rlattice(1, 1)*sb%rlattice(2, 2) - sb%rlattice(1, 2)*sb%rlattice(2, 1))
 
+    SAFE_ALLOCATE(force_tmp(1:sb%dim, 1:geo%natoms))
+    force_tmp = M_ZERO
+
     ! First the G = 0 term (charge was calculated previously)
     efourier = M_ZERO
     factor = M_PI/(area_cell)
-    do iatom = 1, geo%natoms
+    do iatom = this%dist%start, this%dist%end
       do jatom = 1, geo%natoms
 ! efourier
         dz_ij = geo%atom(iatom)%x(3)-geo%atom(jatom)%x(3)
@@ -525,14 +543,12 @@ contains
         if(iatom == jatom)cycle
         if(abs(tmp_erf) < M_EPSILON) cycle
 
-        force(3,iatom) = force(3,iatom) - (- M_TWO*factor) &
+        force_tmp(3,iatom) = force_tmp(3,iatom) - (- M_TWO*factor) &
           * species_zval(geo%atom(iatom)%species)*species_zval(geo%atom(jatom)%species) &
           * tmp_erf
 
       end do
     end do
-
-
 
     do ix = -ix_max, ix_max
       do iy = -iy_max, iy_max
@@ -548,7 +564,7 @@ contains
         gg_abs = sqrt(gg2)
         factor = M_HALF*M_PI/(area_cell*gg_abs)
           
-        do iatom = 1, geo%natoms
+        do iatom = this%dist%start, this%dist%end
           do jatom = iatom, geo%natoms
 ! efourier
             gx = gg(1)*(geo%atom(iatom)%x(1)-geo%atom(jatom)%x(1)) &
@@ -582,12 +598,12 @@ contains
 ! force
             if(iatom == jatom)cycle
 
-            force(1:2, iatom) = force(1:2, iatom) &
+            force_tmp(1:2, iatom) = force_tmp(1:2, iatom) &
               - (CNST(-1.0)* M_TWO*factor )* gg(1:2) &
               * species_zval(geo%atom(iatom)%species)*species_zval(geo%atom(jatom)%species) &
               *sin(gx)*(factor1 + factor2)
 
-            force(1:2, jatom) = force(1:2, jatom) &
+            force_tmp(1:2, jatom) = force_tmp(1:2, jatom) &
               + (CNST(-1.0)* M_TWO*factor )* gg(1:2) &
               * species_zval(geo%atom(iatom)%species)*species_zval(geo%atom(jatom)%species) &
               *sin(gx)*(factor1 + factor2)
@@ -609,11 +625,11 @@ contains
             end if
              
 
-            force(3, iatom) = force(3, iatom) &
+            force_tmp(3, iatom) = force_tmp(3, iatom) &
               - M_TWO*factor &
               * species_zval(geo%atom(iatom)%species)*species_zval(geo%atom(jatom)%species) &
               * cos(gx)* ( factor1 - factor2)
-            force(3, jatom) = force(3, jatom) &
+            force_tmp(3, jatom) = force_tmp(3, jatom) &
               + M_TWO*factor &
               * species_zval(geo%atom(iatom)%species)*species_zval(geo%atom(jatom)%species) &
               * cos(gx)* ( factor1 - factor2)
@@ -626,6 +642,13 @@ contains
       end do
     end do
 
+    call comm_allreduce(this%dist%mpi_grp%comm, efourier)
+    call comm_allreduce(this%dist%mpi_grp%comm, force_tmp)
+
+    force = force + force_tmp
+
+    SAFE_DEALLOCATE_A(force_tmp)
+
     POP_SUB(Ewald_long_2d)
 
 
@@ -633,10 +656,11 @@ contains
 
   ! ---------------------------------------------------------
   
-  subroutine ion_interaction_test(geo, namespace, sb)
+  subroutine ion_interaction_test(geo, namespace, sb, mc)
     type(geometry_t),         intent(in)    :: geo
     type(namespace_t),        intent(in)    :: namespace
     type(simul_box_t),        intent(in)    :: sb
+    type(multicomm_t),        intent(in)    :: mc
 
     type(ion_interaction_t) :: ion_interaction
     FLOAT :: energy
@@ -646,7 +670,7 @@ contains
     
     PUSH_SUB(ion_interaction_test)
 
-    call ion_interaction_init(ion_interaction, namespace)
+    call ion_interaction_init(ion_interaction, namespace, geo, mc)
 
     SAFE_ALLOCATE(force(1:sb%dim, 1:geo%natoms))
     SAFE_ALLOCATE(force_components(1:sb%dim, 1:geo%natoms, ION_NUM_COMPONENTS))

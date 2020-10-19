@@ -62,7 +62,6 @@ module grid_oct_m
     type(derivatives_t)         :: der
     type(curvilinear_t)         :: cv
     type(multigrid_t), pointer  :: mgrid
-    type(multigrid_t), pointer  :: mgrid_prec  ! the multigrid object for the preconditioner
     type(double_grid_t)         :: dgrid
     logical                     :: have_fine_mesh
     type(stencil_t)             :: stencil
@@ -152,7 +151,7 @@ contains
     !%End
 
     if(parse_block(namespace, 'Spacing', blk) == 0) then
-      if(parse_block_cols(blk,0) < gr%sb%dim) call messages_input_error('Spacing')
+      if(parse_block_cols(blk,0) < gr%sb%dim) call messages_input_error(namespace, 'Spacing')
       do idir = 1, gr%sb%dim
         call parse_block_float(blk, 0, idir - 1, grid_spacing(idir), units_inp%length)
         if(def_h > M_ZERO) call messages_check_def(grid_spacing(idir), .true., def_h, 'Spacing', units_out%length)

@@ -92,7 +92,7 @@ contains
 
     PUSH_SUB(hgh_init)
 
-    iunit = io_open(trim(filename), namespace, action='read', form='formatted', status='old')
+    iunit = io_open(trim(filename), action='read', form='formatted', status='old')
     i = load_params(iunit, psp)
     if(i /= 0) then
       call messages_write('Error reading hgh file')
@@ -460,7 +460,7 @@ contains
     PUSH_SUB(projectorr_vector)
 
     SAFE_ALLOCATE(projectorr_vector(1:size(r)))
-    do j=1, size(r)
+    do j = 1, size(r)
       projectorr_vector(j) = projectorr_scalar(r(j), p, i, l)
     end do
 
@@ -670,7 +670,7 @@ contains
 
     ! Open files.
     dirname = trim(dir)//'/hgh.'//trim(psp%atom_name)
-    call io_mkdir(trim(dir), namespace)
+    call io_mkdir(trim(dirname), namespace)
     hgh_unit = io_open(trim(dirname)//'/hgh', namespace, action='write')
     loc_unit = io_open(trim(dirname)//'/local', namespace, action='write')
     dat_unit = io_open(trim(dirname)//'/info', namespace, action='write')

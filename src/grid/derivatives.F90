@@ -88,7 +88,8 @@ module derivatives_oct_m
     dderivatives_batch_curl,            &
     zderivatives_batch_curl,            &
     dderivatives_partial,               &
-    zderivatives_partial
+    zderivatives_partial,               &
+    derivatives_get_lapl
 
 
   integer, parameter ::     &
@@ -151,8 +152,6 @@ module derivatives_oct_m
   end type derivatives_handle_batch_t
 
   type(accel_kernel_t) :: kernel_uvw_xyz, kernel_dcurl, kernel_zcurl
-
-  type(profile_t), save :: gradient_prof, divergence_prof, curl_prof, batch_gradient_prof, curl_batch_prof
 
 contains
 
@@ -223,10 +222,12 @@ contains
 
     call parse_variable(namespace, 'DerivativesStencil', default_stencil, der%stencil_type)
     
-    if(.not.varinfo_valid_option('DerivativesStencil', der%stencil_type)) call messages_input_error('DerivativesStencil')
+    if(.not.varinfo_valid_option('DerivativesStencil', der%stencil_type)) then
+      call messages_input_error(namespace, 'DerivativesStencil')
+    end if
     call messages_print_var_option(stdout, "DerivativesStencil", der%stencil_type)
 
-    if(use_curvilinear  .and.  der%stencil_type < DER_CUBE) call messages_input_error('DerivativesStencil')
+    if(use_curvilinear  .and.  der%stencil_type < DER_CUBE) call messages_input_error(namespace, 'DerivativesStencil')
     if(der%stencil_type == DER_VARIATIONAL) then
       call parse_variable(namespace, 'DerivativesLaplacianFilter', M_ONE, der%lapl_cutoff)
     end if
@@ -272,7 +273,7 @@ contains
     call parse_variable(namespace, 'ParallelizationOfDerivatives', NON_BLOCKING, der%comm_method)
     
     if(.not. varinfo_valid_option('ParallelizationOfDerivatives', der%comm_method)) then
-      call messages_input_error('ParallelizationOfDerivatives')
+      call messages_input_error(namespace, 'ParallelizationOfDerivatives')
     end if
 
     call messages_obsolete_variable(namespace, 'OverlapDerivatives', 'ParallelizationOfDerivatives')
@@ -423,20 +424,6 @@ contains
     POP_SUB(derivatives_get_stencil_grad)
 
   end subroutine derivatives_get_stencil_grad
-
-
-  ! ---------------------------------------------------------
-  subroutine derivatives_update(der, namespace, mesh)
-    type(derivatives_t),    intent(inout) :: der
-    type(namespace_t),      intent(in)    :: namespace
-    type(mesh_t),   target, intent(in)    :: mesh
-    
-    call derivatives_get_stencil_lapl(der)
-    call derivatives_get_stencil_grad(der)
-    
-    call derivatives_build(der, namespace, mesh)
-    
-  end subroutine derivatives_update
 
   ! ---------------------------------------------------------
   subroutine derivatives_build(der, namespace, mesh)
@@ -695,16 +682,22 @@ contains
       ! i indexes the point in the stencil
       do i = 1, op(1)%stencil%size
         if(mesh%use_curvilinear) then
-          forall(j = 1:dim) x(j) = mesh%x(p + op(1)%ri(i, op(1)%rimap(p)), j) - mesh%x(p, j)
+          do j = 1, dim
+            x(j) = mesh%x(p + op(1)%ri(i, op(1)%rimap(p)), j) - mesh%x(p, j)
+          end do
         else
-          forall(j = 1:dim) x(j) = TOFLOAT(op(1)%stencil%points(j, i))*mesh%spacing(j)
+          do j = 1, dim
+            x(j) = TOFLOAT(op(1)%stencil%points(j, i))*mesh%spacing(j)
+          end do
           ! TODO : this internal if clause is inefficient - the condition is determined globally
           if (mesh%sb%nonorthogonal .and. .not. optional_default(force_orthogonal, .false.))  & 
               x(1:dim) = matmul(mesh%sb%rlattice_primitive(1:dim,1:dim), x(1:dim))
         end if
                          
 ! NB: these masses are applied on the cartesian directions. Should add a check for non-orthogonal axes
-        forall(j = 1:dim) x(j) = x(j)*sqrt(masses(j))
+        do j = 1, dim
+          x(j) = x(j)*sqrt(masses(j))
+        end do
 
         ! calculate powers
         do j = 1, dim
@@ -769,6 +762,61 @@ contains
     POP_SUB(derivatives_overlap)
   end function derivatives_overlap
 #endif
+
+  ! ---------------------------------------------------------
+  subroutine derivatives_get_lapl(this, op, name, order) 
+    type(derivatives_t),         intent(in)    :: this
+    type(nl_operator_t),         intent(inout) :: op(:) 
+    character(len=32),           intent(in)    :: name
+    integer,                     intent(in)    :: order
+
+    integer, allocatable :: polynomials(:,:)
+    FLOAT, allocatable :: rhs(:,:)
+    integer :: i, j, k
+    logical :: this_one
+  
+    PUSH_SUB(derivatives_get_lapl)
+
+    call nl_operator_init(op(1), name)
+    if(this%mesh%sb%nonorthogonal) then
+      call stencil_stargeneral_get_arms(op(1)%stencil, this%mesh%sb)
+      call stencil_stargeneral_get_lapl(op(1)%stencil, this%dim, order)
+    else
+      call stencil_star_get_lapl(op(1)%stencil, this%dim, order)
+    end if
+    call nl_operator_build(this%mesh, op(1), this%mesh%np, const_w = .not. this%mesh%use_curvilinear)
+
+    !At the moment this code is almost copy-pasted from derivatives_build.
+    if(this%mesh%sb%nonorthogonal) then
+      op(1)%stencil%npoly = op(1)%stencil%size &
+         + order*(2*order-1)*op(1)%stencil%stargeneral%narms
+    end if
+    SAFE_ALLOCATE(polynomials(1:this%dim, 1:op(1)%stencil%npoly))
+    SAFE_ALLOCATE(rhs(1:op(1)%stencil%size, 1:1))
+    if(this%mesh%sb%nonorthogonal) then
+      call stencil_stargeneral_pol_lapl(op(1)%stencil, this%dim, order, polynomials)
+    else
+      call stencil_star_polynomials_lapl(this%dim, order, polynomials)
+    end if
+    ! find right-hand side for operator
+    rhs(:,1) = M_ZERO
+    do i = 1, this%dim
+      do j = 1, op(1)%stencil%npoly
+        this_one = .true.
+        do k = 1, this%dim
+          if(k == i .and. polynomials(k, j) /= 2) this_one = .false.
+          if(k /= i .and. polynomials(k, j) /= 0) this_one = .false.
+        end do
+        if(this_one) rhs(j,1) = M_TWO
+      end do
+    end do
+    call derivatives_make_discretization(this%dim, this%mesh, this%masses, &
+             polynomials, rhs, 1, op(1:1), name, force_orthogonal = .true.)
+    SAFE_DEALLOCATE_A(polynomials)
+    SAFE_DEALLOCATE_A(rhs)
+
+    POP_SUB(derivatives_get_lapl)
+  end subroutine derivatives_get_lapl
 
   
 #include "undef.F90"

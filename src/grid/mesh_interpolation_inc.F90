@@ -119,9 +119,11 @@ subroutine X(mesh_interpolation_evaluate_vec)(this, npoints, values, positions, 
       end do
 #endif
     else
-      forall(ipt = 1:npt) lvalues(ipt) = values(pt(ipt))
+      do ipt=1, npt
+        lvalues(ipt) = values(pt(ipt))
+      end do
     end if
-    
+
     select case(mesh%sb%dim)
     case(3)
 

@@ -23,7 +23,6 @@
 module modelmb_particles_oct_m
   use global_oct_m
   use grid_oct_m
-  use loct_pointer_oct_m
   use messages_oct_m
   use namespace_oct_m
   use parser_oct_m
@@ -229,11 +228,11 @@ contains
       
       ncols = parse_block_cols(blk, 0)
       if(ncols /= 5 ) then
-        call messages_input_error("DescribeParticlesModelmb")
+        call messages_input_error(namespace, "DescribeParticlesModelmb")
       end if
       nline = parse_block_n(blk)
       if (nline /= this%nparticle) then
-        call messages_input_error("DescribeParticlesModelmb")
+        call messages_input_error(namespace, "DescribeParticlesModelmb")
       end if
       
       do ipart = 1, this%nparticle
@@ -307,17 +306,17 @@ contains
     modelmb_out%nparticle = modelmb_in%nparticle
     modelmb_out%ndensities_to_calculate = modelmb_in%ndensities_to_calculate
     
-    call loct_allocatable_copy(modelmb_out%labels_particles,modelmb_in%labels_particles)
-    call loct_pointer_copy(modelmb_out%particletype,modelmb_in%particletype)
-    call loct_pointer_copy(modelmb_out%mass_particle,modelmb_in%mass_particle)
-    call loct_pointer_copy(modelmb_out%charge_particle,modelmb_in%charge_particle)
-    call loct_pointer_copy(modelmb_out%nparticles_per_type,modelmb_in%nparticles_per_type)
-    call loct_pointer_copy(modelmb_out%particles_of_type,modelmb_in%particles_of_type)
-    call loct_pointer_copy(modelmb_out%exchange_symmetry,modelmb_in%exchange_symmetry)
-    call loct_pointer_copy(modelmb_out%bosonfermion,modelmb_in%bosonfermion)
+    SAFE_ALLOCATE_SOURCE_A(modelmb_out%labels_particles,modelmb_in%labels_particles)
+    SAFE_ALLOCATE_SOURCE_P(modelmb_out%particletype,modelmb_in%particletype)
+    SAFE_ALLOCATE_SOURCE_P(modelmb_out%mass_particle,modelmb_in%mass_particle)
+    SAFE_ALLOCATE_SOURCE_P(modelmb_out%charge_particle,modelmb_in%charge_particle)
+    SAFE_ALLOCATE_SOURCE_P(modelmb_out%nparticles_per_type,modelmb_in%nparticles_per_type)
+    SAFE_ALLOCATE_SOURCE_P(modelmb_out%particles_of_type,modelmb_in%particles_of_type)
+    SAFE_ALLOCATE_SOURCE_P(modelmb_out%exchange_symmetry,modelmb_in%exchange_symmetry)
+    SAFE_ALLOCATE_SOURCE_P(modelmb_out%bosonfermion,modelmb_in%bosonfermion)
     
-    call loct_allocatable_copy(modelmb_out%labels_densities,modelmb_in%labels_densities)
-    call loct_pointer_copy(modelmb_out%particle_kept_densities,modelmb_in%particle_kept_densities)
+    SAFE_ALLOCATE_SOURCE_A(modelmb_out%labels_densities,modelmb_in%labels_densities)
+    SAFE_ALLOCATE_SOURCE_P(modelmb_out%particle_kept_densities,modelmb_in%particle_kept_densities)
     
     POP_SUB(modelmb_particles_copy)
 

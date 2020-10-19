@@ -26,8 +26,6 @@ Spacing = 0.6
  3 | 3 | 3
 %
 
-ParDomains = no
-
 DFTULevel = dft_u_acbn0
 DFTUDoubleCounting = dft_u_amf
 SCFCalculateForces = no
@@ -40,3 +38,5 @@ MaximumIter = 1
 ACBN0IntersiteInteraction = yes
 ACBN0IntersiteCutoff = 7
 StatesPack = yes
+
+LCAOStart = lcao_full

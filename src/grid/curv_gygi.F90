@@ -24,7 +24,6 @@
 module curv_gygi_oct_m
   use geometry_oct_m
   use global_oct_m
-  use loct_pointer_oct_m
   use messages_oct_m
   use namespace_oct_m
   use parser_oct_m
@@ -63,11 +62,12 @@ module curv_gygi_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine curv_gygi_init(cv, namespace, sb, geo)
+  subroutine curv_gygi_init(cv, namespace, sb, geo, min_scaling_product)
     type(curv_gygi_t), intent(out) :: cv
     type(namespace_t), intent(in)  :: namespace
     type(simul_box_t), intent(in)  :: sb
     type(geometry_t),  intent(in)  :: geo
+    FLOAT,             intent(out) :: min_scaling_product
 
     integer :: ipos, idir
 
@@ -110,14 +110,20 @@ contains
     !%End
     call parse_variable(namespace, 'CurvGygiBeta', M_FOUR, cv%beta, units_inp%length)
 
-    if(cv%a<=M_ZERO)     call messages_input_error('CurvGygiA')
-    if(cv%alpha<=M_ZERO) call messages_input_error('CurvGygiAlpha')
-    if(cv%beta<=M_ZERO)  call messages_input_error('CurvGygiBeta')
+    if(cv%a<=M_ZERO)     call messages_input_error(namespace, 'CurvGygiA')
+    if(cv%alpha<=M_ZERO) call messages_input_error(namespace, 'CurvGygiAlpha')
+    if(cv%beta<=M_ZERO)  call messages_input_error(namespace, 'CurvGygiBeta')
 
     cv%npos = geo%natoms
     SAFE_ALLOCATE(cv%pos(1:cv%npos, 1:sb%dim))
-    forall(ipos = 1:cv%npos, idir = 1:sb%dim) cv%pos(ipos, idir) = geo%atom(ipos)%x(idir)
-    
+    do idir = 1, sb%dim
+      do ipos = 1, cv%npos
+        cv%pos(ipos, idir) = geo%atom(ipos)%x(idir)
+      end do
+    end do
+
+    call curv_gygi_min_scaling(sb, cv, min_scaling_product)
+
     POP_SUB(curv_gygi_init)
   end subroutine curv_gygi_init
 
@@ -130,7 +136,7 @@ contains
     this_out%A=this_in%A
     this_out%alpha=this_in%alpha
     this_out%beta=this_in%beta
-    call loct_pointer_copy(this_out%pos, this_in%pos)
+    SAFE_ALLOCATE_SOURCE_P(this_out%pos, this_in%pos)
     this_out%npos=this_in%npos
     POP_SUB(curv_gygi_copy)
     return
@@ -161,20 +167,17 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine curv_gygi_chi2x(sb, cv, chi, x)
-    type(simul_box_t), target, intent(in)  :: sb
-    type(curv_gygi_t), target, intent(in)  :: cv
+  subroutine curv_gygi_chi2x(sb, cv, rs, chi, x)
+    type(simul_box_t), target, intent(in)   :: sb
+    type(curv_gygi_t), target, intent(in)   :: cv
+    type(root_solver_t), intent(in)         :: rs
     FLOAT,                     intent(in)  :: chi(:)  !< chi(sb%dim)
     FLOAT,                     intent(out) :: x(:)    !< x(sb%dim)
 
     integer :: i
     logical :: conv
-    type(root_solver_t) :: rs
 
     ! no push_sub, called too frequently
-
-    call root_solver_init(rs, sb%dim,  &
-      solver_type = ROOT_NEWTON, maxiter = 500, abs_tolerance = CNST(1.0e-10))
 
     sb_p            => sb
     cv_p            => cv
@@ -277,6 +280,16 @@ contains
     end do
 
   end subroutine curv_gygi_jacobian
+
+
+  ! ---------------------------------------------------------
+  subroutine curv_gygi_min_scaling(sb, cv, min_scaling_product)
+    type(simul_box_t), intent(in)  :: sb
+    type(curv_gygi_t), intent(in)  :: cv
+    FLOAT,             intent(out) :: min_scaling_product
+    
+    min_scaling_product = (1.0 / (1.0 + cv%A))**sb%dim
+  end subroutine curv_gygi_min_scaling
 
 end module curv_gygi_oct_m
 

@@ -1,0 +1,84 @@
+# ----- Calculation mode and parallelization ------------------------------------------------------
+
+ CalculationMode   = td
+ RestartWrite = no
+ ExperimentalFeatures = yes
+
+%Systems
+  'Maxwell' | maxwell
+%
+
+ Maxwell.ParDomains = auto
+ Maxwell.ParStates  = no
+
+# ----- Maxwell box variables ---------------------------------------------------------------------
+
+ lsize_mx = 17.0
+ dx_mx    = 0.5
+
+ Maxwell.BoxShape   = parallelepiped
+
+ %Maxwell.Lsize
+  lsize_mx | lsize_mx | lsize_mx
+ %
+
+ %Maxwell.Spacing
+  dx_mx | dx_mx | dx_mx
+ %
+
+# ----- Maxwell calculation variables -------------------------------------------------------------
+
+ MaxwellHamiltonianOperator = faraday_ampere
+
+ %MaxwellBoundaryConditions
+  plane_waves | plane_waves | plane_waves
+ %
+
+ %MaxwellAbsorbingBoundaries
+  cpml | cpml | cpml
+ %
+MaxwellABWidth                 = 5.0
+MaxwellABPMLPower              = 2.0
+MaxwellABPMLReflectionError    = 1e-16
+
+
+# ----- Output variables --------------------------------------------------------------------------
+
+ OutputFormat                      = plane_x + plane_y + plane_z + axis_x + axis_y + axis_z
+
+# ----- Maxwell output variables ------------------------------------------------------------------
+
+ MaxwellOutput = electric_field + magnetic_field + maxwell_energy_density + trans_electric_field
+
+ MaxwellOutputInterval = 10
+ MaxwellTDOutput       = maxwell_energy + maxwell_fields
+
+
+# ----- Time step variables -----------------------------------------------------------------------
+
+ TDSystemPropagator = exp_mid
+ TDTimeStep                        = 1/(4*c)
+ TDPropagationTime                 = 20*TDTimeStep
+
+# Maxwell field variables
+
+ lambda      = 10.0
+ omega       = 2 * pi * c / lambda
+ kx          = omega / c
+ Ez          = 0.05
+ pw = 10.0
+ ps =  - 5.0
+
+ %MaxwellIncidentWaves
+   plane_wave_mx_function | 0 | 0 | Ez | "plane_waves_function"
+ %
+
+ %MaxwellFunctions
+   "plane_waves_function" | mxf_cosinoidal_wave | kx | 0 | 0 | ps | 0 | 0 | pw
+ %
+
+ # cosinoidal pulse
+ %UserDefinedInitialMaxwellStates
+  3 | formula | electric_field | "      Ez*cos(kx*(x-ps))*(-cos(pi/2*(x-ps-2*pw)/pw)) * step(pw-abs((kx*x-kx*ps)/kx^2)) "
+  2 | formula | magnetic_field | " -1/c*Ez*cos(kx*(x-ps))*(-cos(pi/2*(x-ps-2*pw)/pw)) * step(pw-abs((kx*x-kx*ps)/kx^2)) "
+ %

@@ -51,7 +51,7 @@ module propagator_cn_oct_m
   type(namespace_t),        pointer, private :: namespace_p
   type(mesh_t),             pointer, private :: mesh_p
   type(hamiltonian_elec_t), pointer, private :: hm_p
-  type(propagator_t),       pointer, private :: tr_p
+  type(propagator_base_t),  pointer, private :: tr_p
   integer,                           private :: ik_op, ist_op, dim_op
   FLOAT,                             private :: t_op, dt_op
 
@@ -64,7 +64,7 @@ contains
     type(namespace_t),        target, intent(in)    :: namespace
     type(grid_t),             target, intent(inout) :: gr
     type(states_elec_t),      target, intent(inout) :: st
-    type(propagator_t),       target, intent(inout) :: tr
+    type(propagator_base_t),  target, intent(inout) :: tr
     FLOAT,                            intent(in)    :: time
     FLOAT,                            intent(in)    :: dt
     type(ion_dynamics_t),             intent(inout) :: ions
@@ -135,7 +135,9 @@ contains
           SAFE_ALLOCATE(inhpsi(1:gr%mesh%np))
           do idim = 1, st%d%dim
             call states_elec_get_state(hm%inh_st, gr%mesh, idim, ist, ik, inhpsi)
-            forall(ip = 1:gr%mesh%np) zpsi_rhs(ip, idim) = zpsi_rhs(ip, idim) + dt*inhpsi(ip)
+            do ip = 1, gr%mesh%np
+              zpsi_rhs(ip, idim) = zpsi_rhs(ip, idim) + dt*inhpsi(ip)
+            end do
           end do
           SAFE_DEALLOCATE_A(inhpsi)
         end if
@@ -199,17 +201,17 @@ contains
 
     SAFE_ALLOCATE(zpsi(1:mesh_p%np_part, 1:dim_op))
     zpsi = M_z0
-    forall(idim = 1:dim_op)
+    do idim = 1, dim_op
       zpsi(1:mesh_p%np, idim) = xre((idim-1)*mesh_p%np+1:idim*mesh_p%np) + &
         M_zI * xim((idim-1)*mesh_p%np+1:idim*mesh_p%np)
-    end forall
+    end do
 
     call exponential_apply(tr_p%te, namespace_p, mesh_p, hm_p, zpsi, ist_op, ik_op, -dt_op/M_TWO)
 
-    forall(idim = 1:dim_op)
+    do idim = 1, dim_op
       yre((idim-1)*mesh_p%np+1:idim*mesh_p%np) = TOFLOAT(zpsi(1:mesh_p%np, idim))
       yim((idim-1)*mesh_p%np+1:idim*mesh_p%np) = aimag(zpsi(1:mesh_p%np, idim))
-    end forall
+    end do
 
     SAFE_DEALLOCATE_A(zpsi)
 
@@ -236,17 +238,17 @@ contains
     ! for scattering wavefunctions anymore).
     SAFE_ALLOCATE(zpsi(1:mesh_p%np_part, 1:dim_op))
     zpsi = M_z0
-    forall(idim = 1:dim_op)
+    do idim = 1, dim_op
       zpsi(1:mesh_p%np, idim) = xre((idim-1)*mesh_p%np+1:idim*mesh_p%np) - &
         M_zI * xim((idim-1)*mesh_p%np+1:idim*mesh_p%np)
-    end forall
+    end do
 
     call exponential_apply(tr_p%te, namespace_p, mesh_p, hm_p, zpsi, ist_op, ik_op, -dt_op/M_TWO)
 
-    forall(idim = 1:dim_op)
+    do idim = 1, dim_op
       yre((idim-1)*mesh_p%np+1:idim*mesh_p%np) =   TOFLOAT(zpsi(1:mesh_p%np, idim))
       yim((idim-1)*mesh_p%np+1:idim*mesh_p%np) = - aimag(zpsi(1:mesh_p%np, idim))
-    end forall
+    end do
 
     SAFE_DEALLOCATE_A(zpsi)
     POP_SUB(td_zopt)
@@ -267,15 +269,15 @@ contains
 
     SAFE_ALLOCATE(zpsi(1:mesh_p%np_part, 1:dim_op))
     zpsi = M_z0
-    forall(idim = 1:dim_op)
+    do idim = 1, dim_op
       zpsi(1:mesh_p%np, idim) = x((idim-1)*mesh_p%np+1:idim*mesh_p%np)
-    end forall
+    end do
 
     call exponential_apply(tr_p%te, namespace_p, mesh_p, hm_p, zpsi, ist_op, ik_op, -dt_op/M_TWO)
 
-    forall(idim = 1:dim_op)
+    do idim = 1, dim_op
       y((idim-1)*mesh_p%np+1:idim*mesh_p%np) = zpsi(1:mesh_p%np, idim)
-    end forall
+    end do
 
     SAFE_DEALLOCATE_A(zpsi)
     POP_SUB(propagator_qmr_op)

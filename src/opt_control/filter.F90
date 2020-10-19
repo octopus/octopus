@@ -120,7 +120,7 @@ contains
       SAFE_ALLOCATE(filter%expression(1:no_f))
       SAFE_ALLOCATE(filter%domain(1:no_f))
 
-      do i=1, no_f
+      do i = 1, no_f
         call parse_block_integer(blk, i-1, 0, filter%domain(i))
         call parse_block_string(blk, i-1, 1, filter%expression(i))
         call conv_to_C_string(filter%expression(i))

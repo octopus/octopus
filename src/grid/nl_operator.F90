@@ -25,14 +25,11 @@ module nl_operator_oct_m
   use global_oct_m
   use index_oct_m
   use iso_c_binding
-  use loct_pointer_oct_m
   use math_oct_m
   use mesh_oct_m
   use messages_oct_m
   use mpi_oct_m
-#ifdef HAVE_OPENMP
   use multicomm_oct_m
-#endif
   use namespace_oct_m
   use operate_f_oct_m
   use par_vec_oct_m
@@ -128,7 +125,6 @@ module nl_operator_oct_m
 
   integer, public, parameter :: OP_ALL = 3, OP_INNER = 1, OP_OUTER = 2
 
-  logical :: initialized = .false.
   logical :: compact_boundaries
 
   interface
@@ -143,8 +139,6 @@ module nl_operator_oct_m
   integer :: sfunction_global = -1
   integer :: cfunction_global = -1  
   integer :: function_opencl
-
-  type(profile_t), save :: operate_batch_prof
 
 contains
   
@@ -185,10 +179,10 @@ contains
     default = OP_VEC
 
     call parse_variable(namespace, 'OperateDouble', default, dfunction_global)
-    if(.not.varinfo_valid_option('OperateDouble', dfunction_global)) call messages_input_error('OperateDouble')
+    if(.not.varinfo_valid_option('OperateDouble', dfunction_global)) call messages_input_error(namespace, 'OperateDouble')
 
     call parse_variable(namespace, 'OperateComplex', default, zfunction_global)
-    if(.not.varinfo_valid_option('OperateComplex', zfunction_global)) call messages_input_error('OperateComplex')
+    if(.not.varinfo_valid_option('OperateComplex', zfunction_global)) call messages_input_error(namespace, 'OperateComplex')
 
 
     !%Variable OperateSingle
@@ -218,10 +212,12 @@ contains
     !%End
     
     call parse_variable(namespace, 'OperateSingle', OP_FORTRAN, sfunction_global)
-    if(.not.varinfo_valid_option('OperateSingle', sfunction_global)) call messages_input_error('OperateSingle')
+    if(.not.varinfo_valid_option('OperateSingle', sfunction_global)) call messages_input_error(namespace, 'OperateSingle')
     
     call parse_variable(namespace, 'OperateComplexSingle', OP_FORTRAN, cfunction_global)
-    if(.not.varinfo_valid_option('OperateComplexSingle', cfunction_global)) call messages_input_error('OperateComplexSingle')
+    if(.not.varinfo_valid_option('OperateComplexSingle', cfunction_global)) then
+      call messages_input_error(namespace, 'OperateComplexSingle')
+    end if
 
     if(accel_is_enabled()) then
 
@@ -274,21 +270,6 @@ contains
   end subroutine nl_operator_global_end
 
   ! ---------------------------------------------------------
-
-  character(len=8) function op_function_name(id) result(str)
-    integer, intent(in) :: id
-
-    PUSH_SUB(op_function_name)
-    
-    str = 'unknown'
-    if(id == OP_FORTRAN) str = 'Fortran'
-    if(id == OP_VEC)     str = 'Vector'
-    
-    POP_SUB(op_function_name)
-  end function op_function_name
-
-
-  ! ---------------------------------------------------------
   subroutine nl_operator_init(op, label)
     type(nl_operator_t), intent(out) :: op
     character(len=*),    intent(in)  :: label
@@ -302,6 +283,17 @@ contains
 
     op%label = label
 
+    call accel_mem_nullify(op%buff_imin)
+    call accel_mem_nullify(op%buff_imax)
+    call accel_mem_nullify(op%buff_ri)
+    call accel_mem_nullify(op%buff_map)
+    call accel_mem_nullify(op%buff_all)
+    call accel_mem_nullify(op%buff_inner)
+    call accel_mem_nullify(op%buff_outer)
+    call accel_mem_nullify(op%buff_stencil)
+    call accel_mem_nullify(op%buff_ip_to_xyz)
+    call accel_mem_nullify(op%buff_xyz_to_ip)
+
     POP_SUB(nl_operator_init)
   end subroutine nl_operator_init
 
@@ -313,6 +305,9 @@ contains
 
     PUSH_SUB(nl_operator_copy)
 
+    ! We cannot currently copy the GPU kernel for the nl_operator
+    ASSERT(.not. accel_is_enabled())
+
     call nl_operator_init(opo, opi%label)
 
     call stencil_copy(opi%stencil, opo%stencil)
@@ -320,30 +315,31 @@ contains
     opo%np           =  opi%np
     opo%mesh         => opi%mesh
 
-    call loct_pointer_copy(opo%nn, opi%nn)
-    call loct_pointer_copy(opo%index, opi%index)
-    call loct_pointer_copy(opo%w, opi%w)
+    SAFE_ALLOCATE_SOURCE_P(opo%nn, opi%nn)
+    SAFE_ALLOCATE_SOURCE_P(opo%index, opi%index)
+    SAFE_ALLOCATE_SOURCE_P(opo%w, opi%w)
 
     opo%const_w   = opi%const_w
 
     opo%nri       =  opi%nri
     ASSERT(associated(opi%ri))
 
-    call loct_pointer_copy(opo%ri, opi%ri)
-    call loct_pointer_copy(opo%rimap, opi%rimap)
-    call loct_pointer_copy(opo%rimap_inv, opi%rimap_inv)
+    SAFE_ALLOCATE_SOURCE_P(opo%ri, opi%ri)
+    SAFE_ALLOCATE_SOURCE_P(opo%rimap, opi%rimap)
+    SAFE_ALLOCATE_SOURCE_P(opo%rimap_inv, opi%rimap_inv)
     
     if(opi%mesh%parallel_in_domains) then
       opo%inner%nri = opi%inner%nri
-      call loct_pointer_copy(opo%inner%imin, opi%inner%imin)
-      call loct_pointer_copy(opo%inner%imax, opi%inner%imax)
-      call loct_pointer_copy(opo%inner%ri,   opi%inner%ri)      
+      SAFE_ALLOCATE_SOURCE_P(opo%inner%imin, opi%inner%imin)
+      SAFE_ALLOCATE_SOURCE_P(opo%inner%imax, opi%inner%imax)
+      SAFE_ALLOCATE_SOURCE_P(opo%inner%ri,   opi%inner%ri)      
 
       opo%outer%nri = opi%outer%nri
-      call loct_pointer_copy(opo%outer%imin, opi%outer%imin)
-      call loct_pointer_copy(opo%outer%imax, opi%outer%imax)
-      call loct_pointer_copy(opo%outer%ri,   opi%outer%ri)
+      SAFE_ALLOCATE_SOURCE_P(opo%outer%imin, opi%outer%imin)
+      SAFE_ALLOCATE_SOURCE_P(opo%outer%imax, opi%outer%imax)
+      SAFE_ALLOCATE_SOURCE_P(opo%outer%ri,   opi%outer%ri)
     end if
+
 
     POP_SUB(nl_operator_copy)
   end subroutine nl_operator_copy
@@ -636,11 +632,12 @@ contains
           call accel_create_buffer(op%buff_outer, ACCEL_MEM_READ_ONLY, TYPE_INTEGER, pad(op%nouter, accel_max_workgroup_size()))
           call accel_write_buffer(op%buff_outer, op%nouter, outer_points)
 
+          SAFE_DEALLOCATE_A(inner_points)
+          SAFE_DEALLOCATE_A(outer_points)
+          SAFE_DEALLOCATE_A(all_points)
+  
         end if
-        
-        SAFE_DEALLOCATE_A(inner_points)
-        SAFE_DEALLOCATE_A(outer_points)
-        
+                
       case(OP_NOMAP)
 
         ASSERT(op%mesh%sb%dim == 3)
@@ -931,33 +928,6 @@ contains
   ! End of private routines.
   ! ---------------------------------------------------------
 #endif
-
-
-  ! ---------------------------------------------------------
-  subroutine nl_operator_matrix_to_op(op_ref, op, aa, bb)
-    FLOAT, intent(in)                :: aa(:, :)
-    FLOAT, optional, intent(in)      :: bb(:, :)
-    type(nl_operator_t), intent(in)  :: op_ref
-    type(nl_operator_t), intent(out) :: op
-
-    integer :: ip, jp, index
-
-    PUSH_SUB(nl_operator_matrix_to_op)
-
-    ASSERT(associated(op_ref%index))
-
-    call nl_operator_copy(op, op_ref)
-    do ip = 1, op%np
-      do jp = 1, op%stencil%size
-        index = nl_operator_get_index(op, jp, ip)
-        if(index <= op%np) &
-          op%w(jp, ip) = aa(ip, index)
-      end do
-    end do
-
-    POP_SUB(nl_operator_matrix_to_op)
-  end subroutine nl_operator_matrix_to_op
-
 
   ! ---------------------------------------------------------
   subroutine nl_operator_end(op)

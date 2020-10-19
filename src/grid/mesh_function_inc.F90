@@ -27,7 +27,7 @@ R_TYPE function X(mf_integrate) (mesh, ff, mask, reduce) result(dd)
 
   integer :: ip
 
-  call profiling_in(C_PROFILING_MF_INTEGRATE, 'MF_INTEGRATE')
+  call profiling_in(X(PROFILING_MF_INTEGRATE), TOSTRING(X(MF_INTEGRATE)))
   PUSH_SUB(X(mf_integrate))
 
   ASSERT(ubound(ff, dim = 1) == mesh%np .or. ubound(ff, dim = 1) == mesh%np_part)
@@ -50,13 +50,13 @@ R_TYPE function X(mf_integrate) (mesh, ff, mask, reduce) result(dd)
   dd = dd*mesh%volume_element
 
   if(mesh%parallel_in_domains .and. optional_default(reduce, .true.)) then
-    call profiling_in(C_PROFILING_MF_REDUCE, "MF_REDUCE")
+    call profiling_in(X(PROFILING_MF_REDUCE), TOSTRING(X(MF_REDUCE)))
     call comm_allreduce(mesh%mpi_grp%comm, dd)
-    call profiling_out(C_PROFILING_MF_REDUCE)
+    call profiling_out(X(PROFILING_MF_REDUCE))
   end if
   
   POP_SUB(X(mf_integrate))
-  call profiling_out(C_PROFILING_MF_INTEGRATE)
+  call profiling_out(X(PROFILING_MF_INTEGRATE))
 
 end function X(mf_integrate)
 
@@ -154,7 +154,7 @@ R_TYPE function X(mf_dotp_1)(mesh, f1, f2, reduce, dotu, np) result(dotp)
 #endif
   integer             :: ip, np_
 
-  call profiling_in(C_PROFILING_MF_DOTP, "MF_DOTP")
+  call profiling_in(X(PROFILING_MF_DOTP), TOSTRING(X(MF_DOTP)))
   PUSH_SUB(X(mf_dotp_1))
 
   np_ = optional_default(np, mesh%np)
@@ -173,13 +173,13 @@ R_TYPE function X(mf_dotp_1)(mesh, f1, f2, reduce, dotu, np) result(dotp)
 #endif
       !$omp parallel do reduction(+:dotp)
       do ip = 1, np_
-        dotp = dotp + mesh%vol_pp(ip)*f1(ip)*f2(ip)
+        dotp = dotp + mesh%vol_pp(ip)*R_CONJ(f1(ip))*f2(ip)
       end do
 #ifdef R_TCOMPLEX
     else
       !$omp parallel do reduction(+:dotp)
       do ip = 1, np_
-        dotp = dotp + mesh%vol_pp(ip)*R_CONJ(f1(ip))*f2(ip)
+        dotp = dotp + mesh%vol_pp(ip)*f1(ip)*f2(ip)
       end do
     end if
 #endif
@@ -201,13 +201,13 @@ R_TYPE function X(mf_dotp_1)(mesh, f1, f2, reduce, dotu, np) result(dotp)
   dotp = dotp*mesh%volume_element
 
   if(mesh%parallel_in_domains .and. optional_default(reduce, .true.)) then
-    call profiling_in(C_PROFILING_MF_REDUCE, "MF_REDUCE")
+    call profiling_in(X(PROFILING_MF_REDUCE), TOSTRING(X(MF_REDUCE)))
     call comm_allreduce(mesh%vp%comm, dotp)
-    call profiling_out(C_PROFILING_MF_REDUCE)
+    call profiling_out(X(PROFILING_MF_REDUCE))
   end if
 
   POP_SUB(X(mf_dotp_1))
-  call profiling_out(C_PROFILING_MF_DOTP)
+  call profiling_out(X(PROFILING_MF_DOTP))
 
 end function X(mf_dotp_1)
 
@@ -233,9 +233,9 @@ R_TYPE function X(mf_dotp_2)(mesh, dim, f1, f2, reduce, dotu, np) result(dotp)
   end do
 
   if(mesh%parallel_in_domains .and. optional_default(reduce, .true.)) then
-    call profiling_in(C_PROFILING_MF_REDUCE, "MF_REDUCE")
+    call profiling_in(X(PROFILING_MF_REDUCE), TOSTRING(X(MF_REDUCE)))
     call comm_allreduce(mesh%vp%comm, dotp)
-    call profiling_out(C_PROFILING_MF_REDUCE)
+    call profiling_out(X(PROFILING_MF_REDUCE))
   end if
 
   POP_SUB(X(mf_dotp_2))
@@ -252,7 +252,7 @@ FLOAT function X(mf_nrm2_1)(mesh, ff, reduce) result(nrm2)
  
   R_TYPE, allocatable :: ll(:)
 
-  call profiling_in(C_PROFILING_MF_NRM2, "MF_NRM2")
+  call profiling_in(X(PROFILING_MF_NRM2), TOSTRING(X(MF_NRM2)))
   PUSH_SUB(X(mf_nrm2_1))
 
   if(mesh%use_curvilinear) then
@@ -267,15 +267,15 @@ FLOAT function X(mf_nrm2_1)(mesh, ff, reduce) result(nrm2)
   nrm2 = nrm2*sqrt(mesh%volume_element)
 
   if(mesh%parallel_in_domains .and. optional_default(reduce, .true.)) then
-    call profiling_in(C_PROFILING_MF_REDUCE, "MF_REDUCE")
+    call profiling_in(X(PROFILING_MF_REDUCE), TOSTRING(X(MF_REDUCE)))
     nrm2 = nrm2**2
     call comm_allreduce(mesh%vp%comm, nrm2)
     nrm2 = sqrt(nrm2)
-    call profiling_out(C_PROFILING_MF_REDUCE)
+    call profiling_out(X(PROFILING_MF_REDUCE))
   end if
 
   POP_SUB(X(mf_nrm2_1))
-  call profiling_out(C_PROFILING_MF_NRM2)
+  call profiling_out(X(PROFILING_MF_NRM2))
 
 end function X(mf_nrm2_1)
 
@@ -327,14 +327,13 @@ R_TYPE function X(mf_moment) (mesh, ff, idir, order) result(rr)
 
 end function X(mf_moment)
 
-#ifndef SINGLE_PRECISION
-
 ! ---------------------------------------------------------
 !> This subroutine fills a function with randon values.
-subroutine X(mf_random)(mesh, ff, shift, seed, normalized)
+subroutine X(mf_random)(mesh, ff, pre_shift, post_shift, seed, normalized)
   type(mesh_t),      intent(in)  :: mesh
   R_TYPE,            intent(out) :: ff(:)
-  integer, optional, intent(in)  :: shift
+  integer, optional, intent(in)  :: pre_shift
+  integer, optional, intent(in)  :: post_shift
   integer, optional, intent(in)  :: seed
   logical, optional, intent(in)  :: normalized !< whether generate states should have norm 1, true by default
   
@@ -344,18 +343,32 @@ subroutine X(mf_random)(mesh, ff, shift, seed, normalized)
 
   PUSH_SUB(X(mf_random))
 
-  call profiling_in(prof, "RANDOMIZE")
+  call profiling_in(prof, TOSTRING(X(RANDOMIZE)))
 
   if(present(seed)) then
     iseed = iseed + seed
   end if
 
-  if(present(shift)) then
-    !We skip shift times the seed 
-    call shiftseed(iseed, shift)
+  if(present(pre_shift)) then
+    !We skip shift times the seed to compensate for MPI tasks dealing with previous mesh points
+    call shiftseed(iseed, pre_shift)
+#if defined(R_TCOMPLEX)
+    ! for complex wave functions we need to shift twice (real and imag part).
+    call shiftseed(iseed, pre_shift)
+#endif    
   end if
 
   call quickrnd(iseed, mesh%np, ff(1:mesh%np))
+
+  if(present(post_shift)) then
+    !We skip shift times the seed to compensate for MPI tasks dealing with posteriour mesh points
+    call shiftseed(iseed, post_shift)
+#if defined(R_TCOMPLEX)
+    ! for complex wave functions we need to shift twice (real and imag part).
+    call shiftseed(iseed, post_shift)
+#endif    
+  end if
+
 
   if(optional_default(normalized, .true.)) then
     rr = X(mf_nrm2)(mesh, ff)
@@ -410,7 +423,7 @@ subroutine X(mf_interpolate_points) (ndim, npoints_in, x_in, f_in, npoints_out, 
     call messages_fatal(1)
 #else
     call spline_init(interp1d)
-    call spline_fit(npoints_in, R_REAL(x_in(:, 1)), f_in, interp1d)
+    call spline_fit(npoints_in, x_in(:, 1), f_in, interp1d)
     do ip = 1, npoints_out
       f_out(ip) = spline_eval(interp1d, x_out(ip, 1))
     end do
@@ -622,7 +635,6 @@ R_TYPE function X(mf_line_integral_vector) (mesh, ff, line) result(dd)
   POP_SUB(X(mf_line_integral_vector))
 end function X(mf_line_integral_vector)
 
-#endif
 
 ! -----------------------------------------------------------------------------
 !> This routine calculates the multipoles of a function ff,

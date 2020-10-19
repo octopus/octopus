@@ -69,14 +69,6 @@ module fft_oct_m
     zfft_forward,      &
     dfft_backward,     &
     zfft_backward,     &
-    dfft_forward_cl,   &
-    zfft_forward_cl,   &
-    dfft_backward_cl,  &
-    zfft_backward_cl,  &
-    dfft_forward1,     &
-    zfft_forward1,     &
-    dfft_backward1,    &
-    zfft_backward1,    &
     fft_scaling_factor
 
 
@@ -138,6 +130,22 @@ module fft_oct_m
 
     logical, public :: aligned_memory
   end type fft_t
+
+  interface dfft_forward
+    module procedure dfft_forward_1d, dfft_forward_cl, dfft_forward_3d
+  end interface dfft_forward
+
+  interface zfft_forward
+    module procedure zfft_forward_1d, zfft_forward_cl, zfft_forward_3d
+  end interface zfft_forward
+
+  interface dfft_backward
+    module procedure dfft_backward_1d, dfft_backward_cl, dfft_backward_3d
+  end interface dfft_backward
+
+  interface zfft_backward
+    module procedure zfft_backward_1d, zfft_backward_cl, zfft_backward_3d
+  end interface zfft_backward
 
   logical, save, public :: fft_initialized = .false.
   integer, save         :: fft_refs(FFT_MAX)
@@ -226,7 +234,9 @@ contains
     !%  plan but with a substantially increased planning time.
     !%End
     call parse_variable(namespace, 'FFTPreparePlan', FFTW_MEASURE, fft_prepare_plan)
-    if(.not. varinfo_valid_option('FFTPreparePlan', fft_prepare_plan)) call messages_input_error('FFTPreparePlan')
+    if(.not. varinfo_valid_option('FFTPreparePlan', fft_prepare_plan)) then
+      call messages_input_error(namespace, 'FFTPreparePlan')
+    end if
 
     !%Variable FFTLibrary
     !%Type integer
@@ -593,7 +603,7 @@ contains
     case(FFTLIB_NFFT)
      call nfft_copy_info(this%nfft,fft_array(jj)%nfft) !copy default parameters set in the calling routine 
      call nfft_init(fft_array(jj)%nfft, nfft_options, fft_array(jj)%rs_n_global, &
-                    fft_dim, fft_array(jj)%rs_n_global , type, optimize = .true.)
+                    fft_dim, fft_array(jj)%rs_n_global, optimize = .true.)
 
     case (FFTLIB_PFFT)
 #ifdef HAVE_PFFT     

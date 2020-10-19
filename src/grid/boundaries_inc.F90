@@ -1,4 +1,4 @@
-!! Copyright (C) 2005-2006 Florian Lorenzen, Heiko Appel
+!! Copyright (C) 2005-2020 Florian Lorenzen, Heiko Appel, Martin Lueders
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -28,8 +28,9 @@ subroutine X(vec_ghost_update)(vp, v_local)
 
   R_TYPE,  allocatable :: ghost_send(:)
   integer              :: nsend
+  type(profile_t), save :: prof_update
   
-  call profiling_in(prof_update, "GHOST_UPDATE")
+  call profiling_in(prof_update, TOSTRING(X(GHOST_UPDATE)))
 
   PUSH_SUB(X(vec_ghost_update))
 
@@ -60,8 +61,9 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
   type(pv_handle_batch_t),  intent(out)   :: handle
 
   integer :: ipart, pos, ii, tag, nn, offset
+  type(profile_t), save :: prof_start, prof_irecv, prof_isend
 
-  call profiling_in(prof_start, "GHOST_UPDATE_START")
+  call profiling_in(prof_start, TOSTRING(X(GHOST_UPDATE_START)))
   PUSH_SUB(X(ghost_update_batch_start))
 
   ASSERT(v_local%nst_linear > 0)
@@ -72,6 +74,7 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
 
   SAFE_ALLOCATE(handle%requests(1:2*vp%npart*v_local%nst_linear))
 
+  call profiling_in(prof_irecv, TOSTRING(X(GHOST_UPDATE_IRECV)))
   ! first post the receptions
   select case(v_local%status())
 
@@ -129,6 +132,7 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
     end do
 
   end select
+  call profiling_out(prof_irecv)
 
   call X(batch_init)(handle%ghost_send, v_local%dim, 1, v_local%nst, subarray_size(vp%ghost_spoints), &
     packed=v_local%status()==BATCH_PACKED)
@@ -148,6 +152,7 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
     end if
   end if
 
+  call profiling_in(prof_isend, TOSTRING(X(GHOST_UPDATE_ISEND)))
   select case(v_local%status())
 
   case(BATCH_DEVICE_PACKED)
@@ -187,6 +192,7 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
       end do
     end do
   end select
+  call profiling_out(prof_isend)
 
   POP_SUB(X(ghost_update_batch_start))
   call profiling_out(prof_start)
@@ -199,8 +205,9 @@ subroutine X(ghost_update_batch_finish)(handle)
   type(pv_handle_batch_t),  intent(inout)   :: handle
 
   integer, allocatable :: status(:, :)
+  type(profile_t), save :: prof_wait
 
-  call profiling_in(prof_wait, "GHOST_UPDATE_WAIT")
+  call profiling_in(prof_wait, TOSTRING(X(GHOST_UPDATE_WAIT)))
   PUSH_SUB(X(ghost_update_batch_finish))
   
   ASSERT(handle%nnb > 0)
@@ -244,15 +251,15 @@ subroutine X(boundaries_set_batch)(boundaries, ffb, phase_correction)
   CMPLX,  optional,       intent(in)    :: phase_correction(:)
 
   integer :: bndry_start, bndry_end
+  type(profile_t), save :: set_bc_prof
+  type(profile_t), save :: set_bc_comm_prof
+  type(profile_t), save :: set_bc_precomm_prof
+  type(profile_t), save :: set_bc_postcomm_prof
 
   PUSH_SUB(X(boundaries_set_batch))
-  call profiling_in(set_bc_prof, 'SET_BC')
+  call profiling_in(set_bc_prof, TOSTRING(X(SET_BC)))
   
   ASSERT(ffb%type() == R_TYPE_VAL)
-  ! phase correction not implemented for OpenCL
-  if(present(phase_correction)) then
-    ASSERT(ffb%status() /= BATCH_DEVICE_PACKED)
-  end if
 
   ! The boundary points are at different locations depending on the presence
   ! of ghost points due to domain parallelization.
@@ -310,16 +317,13 @@ contains
 
   ! ---------------------------------------------------------
   subroutine multiresolution()
-#ifndef SINGLE_PRECISION
     integer :: ist, ip
     integer :: ii, jj, kk, ix, iy, iz, dx, dy, dz, i_lev
     FLOAT :: weight
     R_TYPE, allocatable :: ff(:)
-#endif
 
     PUSH_SUB(X(boundaries_set_batch).multiresolution)
 
-#ifndef SINGLE_PRECISION
     SAFE_ALLOCATE(ff(1:boundaries%mesh%np_part))
     
     do ist = 1, ffb%nst_linear
@@ -360,9 +364,6 @@ contains
     end do ! ist
 
     SAFE_DEALLOCATE_A(ff)
-#else
-    ASSERT(.false.)
-#endif
     
     POP_SUB(X(boundaries_set_batch).multiresolution)
   end subroutine multiresolution
@@ -377,16 +378,17 @@ contains
     integer, allocatable :: send_disp(:), send_count(:)
     integer, allocatable :: recv_disp(:), recv_count(:)
     integer :: ipart, npart, maxsend, maxrecv, ldbuffer, ip2
-    type(accel_kernel_t), save :: kernel_send, kernel_recv, kernel
+    type(accel_kernel_t), save :: kernel_send, kernel_recv, kernel_recv_corr, kernel, kernel_corr
     integer :: wgsize
     type(accel_mem_t) :: buff_send
     type(accel_mem_t) :: buff_recv
+    type(accel_mem_t) :: buff_phase_corr
 
     PUSH_SUB(X(boundaries_set_batch).periodic)
 
     if(boundaries%mesh%parallel_in_domains) then
 
-      call profiling_in(set_bc_precomm_prof, 'SET_BC_PRECOMM')
+      call profiling_in(set_bc_precomm_prof, TOSTRING(X(SET_BC_PRECOMM)))
 
       npart = boundaries%mesh%vp%npart
       maxsend = maxval(boundaries%nsend(1:npart))
@@ -465,7 +467,7 @@ contains
 
       call profiling_out(set_bc_precomm_prof)
 
-      call profiling_in(set_bc_comm_prof, 'SET_BC_COMM')
+      call profiling_in(set_bc_comm_prof, TOSTRING(X(SET_BC_COMM)))
 
 #ifdef HAVE_MPI
       call mpi_debug_in(boundaries%mesh%vp%comm, C_MPI_ALLTOALLV)
@@ -479,7 +481,7 @@ contains
 
       call profiling_out(set_bc_comm_prof)
 
-      call profiling_in(set_bc_postcomm_prof, 'SET_BC_POSTCOMM')
+      call profiling_in(set_bc_postcomm_prof, TOSTRING(X(SET_BC_POSTCOMM)))
 
       SAFE_DEALLOCATE_A(send_count)
       SAFE_DEALLOCATE_A(send_disp)
@@ -548,27 +550,61 @@ contains
         end if
 
       case(BATCH_DEVICE_PACKED)
-        call accel_create_buffer(buff_recv, ACCEL_MEM_READ_ONLY, R_TYPE_VAL, ffb%pack_size(1)*maxrecv*npart)
-        call accel_write_buffer(buff_recv, ffb%pack_size(1)*maxrecv*npart, recvbuffer)
+        if(.not.present(phase_correction)) then
+          call accel_create_buffer(buff_recv, ACCEL_MEM_READ_ONLY, R_TYPE_VAL, ffb%pack_size(1)*maxrecv*npart)
+          call accel_write_buffer(buff_recv, ffb%pack_size(1)*maxrecv*npart, recvbuffer)
 
-        call accel_kernel_start_call(kernel_recv, 'boundaries.cl', 'boundaries_periodic_recv')
+          call accel_kernel_start_call(kernel_recv, 'boundaries.cl', 'boundaries_periodic_recv')
 
-        call accel_set_kernel_arg(kernel_recv, 0, maxrecv)
-        call accel_set_kernel_arg(kernel_recv, 1, boundaries%buff_nrecv)
-        call accel_set_kernel_arg(kernel_recv, 2, boundaries%buff_per_recv)
-        call accel_set_kernel_arg(kernel_recv, 3, ubound(boundaries%per_recv, dim = 1))
-        call accel_set_kernel_arg(kernel_recv, 4, buff_recv)
-        call accel_set_kernel_arg(kernel_recv, 5, ffb%ff_device)
-        call accel_set_kernel_arg(kernel_recv, 6, log2(ffb%pack_size_real(1)))
+          call accel_set_kernel_arg(kernel_recv, 0, maxrecv)
+          call accel_set_kernel_arg(kernel_recv, 1, boundaries%buff_nrecv)
+          call accel_set_kernel_arg(kernel_recv, 2, boundaries%buff_per_recv)
+          call accel_set_kernel_arg(kernel_recv, 3, ubound(boundaries%per_recv, dim = 1))
+          call accel_set_kernel_arg(kernel_recv, 4, buff_recv)
+          call accel_set_kernel_arg(kernel_recv, 5, ffb%ff_device)
+          call accel_set_kernel_arg(kernel_recv, 6, log2(ffb%pack_size_real(1)))
 
-        wgsize = accel_kernel_workgroup_size(kernel_recv)/ffb%pack_size_real(1)
+          wgsize = accel_kernel_workgroup_size(kernel_recv)/ffb%pack_size_real(1)
 
-        call accel_kernel_run(kernel_recv, (/ffb%pack_size_real(1), pad(maxrecv, wgsize), npart/), &
-          (/ffb%pack_size_real(1), wgsize, 1/))
+          call accel_kernel_run(kernel_recv, (/ffb%pack_size_real(1), pad(maxrecv, wgsize), npart/), &
+            (/ffb%pack_size_real(1), wgsize, 1/))
 
-        call accel_finish()
+          call accel_finish()
 
-        call accel_release_buffer(buff_recv)
+          call accel_release_buffer(buff_recv)
+        else
+          ASSERT(lbound(phase_correction, 1) == 1)
+          ASSERT(ubound(phase_correction, 1) == boundaries%mesh%np_part - boundaries%mesh%np)
+          ASSERT(R_TYPE_VAL == TYPE_CMPLX)
+
+          call accel_create_buffer(buff_recv, ACCEL_MEM_READ_ONLY, R_TYPE_VAL, ffb%pack_size(1)*maxrecv*npart)
+          call accel_write_buffer(buff_recv, ffb%pack_size(1)*maxrecv*npart, recvbuffer)
+  
+          call accel_create_buffer(buff_phase_corr, ACCEL_MEM_READ_ONLY, TYPE_CMPLX, boundaries%mesh%np_part - boundaries%mesh%np)
+          call accel_write_buffer(buff_phase_corr, boundaries%mesh%np_part - boundaries%mesh%np, phase_correction )
+  
+          call accel_kernel_start_call(kernel_recv_corr, 'boundaries.cl', 'boundaries_periodic_recv_corr')
+
+          call accel_set_kernel_arg(kernel_recv_corr, 0, maxrecv)
+          call accel_set_kernel_arg(kernel_recv_corr, 1, boundaries%buff_nrecv)
+          call accel_set_kernel_arg(kernel_recv_corr, 2, boundaries%buff_per_recv)
+          call accel_set_kernel_arg(kernel_recv_corr, 3, ubound(boundaries%per_recv, dim = 1))
+          call accel_set_kernel_arg(kernel_recv_corr, 4, buff_recv)
+          call accel_set_kernel_arg(kernel_recv_corr, 5, ffb%ff_device)
+          call accel_set_kernel_arg(kernel_recv_corr, 6, log2(ffb%pack_size(1)))
+          call accel_set_kernel_arg(kernel_recv_corr, 7, buff_phase_corr)
+          call accel_set_kernel_arg(kernel_recv_corr, 8, boundaries%mesh%np)
+  
+          wgsize = accel_kernel_workgroup_size(kernel_recv_corr)/ffb%pack_size(1)
+
+          call accel_kernel_run(kernel_recv_corr, (/ffb%pack_size(1), pad(maxrecv, wgsize), npart/), &
+            (/ffb%pack_size(1), wgsize, 1/))
+
+          call accel_finish()
+
+          call accel_release_buffer(buff_recv)
+          call accel_release_buffer(buff_phase_corr)
+        end if
       end select
 
       SAFE_DEALLOCATE_A(recvbuffer)        
@@ -584,21 +620,21 @@ contains
       if(.not. present(phase_correction)) then
         ! do not apply phase correction; phase is set in another step
         do ist = 1, ffb%nst_linear
-          forall (ip = 1:boundaries%nper)
+          do ip = 1, boundaries%nper
             ffb%X(ff_linear)(boundaries%per_points(POINT_BOUNDARY, ip), ist) = &
               ffb%X(ff_linear)(boundaries%per_points(POINT_INNER, ip), ist)
-          end forall
+          end do
         end do
       else
         ! apply phase correction when setting the BCs -> avoids unnecessary memory access
         ASSERT(lbound(phase_correction, 1) == 1)
         ASSERT(ubound(phase_correction, 1) == boundaries%mesh%np_part - boundaries%mesh%np)
         do ist = 1, ffb%nst_linear
-          forall (ip = 1:boundaries%nper)
+          do ip = 1, boundaries%nper
             ffb%X(ff_linear)(boundaries%per_points(POINT_BOUNDARY, ip), ist) = &
               ffb%X(ff_linear)(boundaries%per_points(POINT_INNER, ip), ist) * &
               phase_correction(boundaries%per_points(POINT_BOUNDARY, ip)-boundaries%mesh%np)
-          end forall
+          end do
         end do
       end if
 
@@ -610,7 +646,9 @@ contains
         do ip = 1, boundaries%nper
           ip_bnd = boundaries%per_points(POINT_BOUNDARY, ip)
           ip_inn = boundaries%per_points(POINT_INNER, ip)
-          forall(ist = 1:ffb%nst_linear) ffb%X(ff_pack)(ist, ip_bnd) = ffb%X(ff_pack)(ist, ip_inn)
+          do ist = 1, ffb%nst_linear
+            ffb%X(ff_pack)(ist, ip_bnd) = ffb%X(ff_pack)(ist, ip_inn)
+          end do
         end do
       else
         ! apply phase correction when setting the BCs -> avoids unnecessary memory access
@@ -620,29 +658,57 @@ contains
         do ip = 1, boundaries%nper
           ip_bnd = boundaries%per_points(POINT_BOUNDARY, ip)
           ip_inn = boundaries%per_points(POINT_INNER, ip)
-          forall(ist = 1:ffb%nst_linear)
+          do ist = 1, ffb%nst_linear
             ffb%X(ff_pack)(ist, ip_bnd) = ffb%X(ff_pack)(ist, ip_inn) * phase_correction(ip_bnd-boundaries%mesh%np)
-          end forall
+          end do
         end do
       end if
 
     case(BATCH_DEVICE_PACKED)
-      if(boundaries%nper > 0) then
-        call accel_kernel_start_call(kernel, 'boundaries.cl', 'boundaries_periodic')
+      if(.not.present(phase_correction)) then
+        if(boundaries%nper > 0) then
+          call accel_kernel_start_call(kernel, 'boundaries.cl', 'boundaries_periodic')
 
-        call accel_set_kernel_arg(kernel, 0, boundaries%nper)
-        call accel_set_kernel_arg(kernel, 1, boundaries%buff_per_points)
-        call accel_set_kernel_arg(kernel, 2, ffb%ff_device)
-        call accel_set_kernel_arg(kernel, 3, log2(ffb%pack_size_real(1)))
+          call accel_set_kernel_arg(kernel, 0, boundaries%nper)
+          call accel_set_kernel_arg(kernel, 1, boundaries%buff_per_points)
+          call accel_set_kernel_arg(kernel, 2, ffb%ff_device)
+          call accel_set_kernel_arg(kernel, 3, log2(ffb%pack_size_real(1)))
 
-        wgsize = accel_kernel_workgroup_size(kernel)/ffb%pack_size_real(1)
+          wgsize = accel_kernel_workgroup_size(kernel)/ffb%pack_size_real(1)
 
-        call accel_kernel_run(kernel, (/ffb%pack_size_real(1), pad(boundaries%nper, wgsize)/), &
-          (/ffb%pack_size_real(1), wgsize/))
+          call accel_kernel_run(kernel, (/ffb%pack_size_real(1), pad(boundaries%nper, wgsize)/), &
+            (/ffb%pack_size_real(1), wgsize/))
+
+          call accel_finish()
+        end if
+      else
+
+        ASSERT(lbound(phase_correction, 1) == 1)
+        ASSERT(ubound(phase_correction, 1) == boundaries%mesh%np_part - boundaries%mesh%np)
+        ASSERT(R_TYPE_VAL == TYPE_CMPLX)
+
+        call accel_create_buffer(buff_phase_corr, ACCEL_MEM_READ_ONLY, TYPE_CMPLX, boundaries%mesh%np_part - boundaries%mesh%np)
+        call accel_write_buffer(buff_phase_corr, boundaries%mesh%np_part - boundaries%mesh%np, phase_correction )
+
+        call accel_kernel_start_call(kernel_corr, 'boundaries.cl', 'boundaries_periodic_corr')
+
+        call accel_set_kernel_arg(kernel_corr, 0, boundaries%nper)
+        call accel_set_kernel_arg(kernel_corr, 1, boundaries%buff_per_points)
+        call accel_set_kernel_arg(kernel_corr, 2, ffb%ff_device)
+        call accel_set_kernel_arg(kernel_corr, 3, log2(ffb%pack_size(1)))
+        call accel_set_kernel_arg(kernel_corr, 4, buff_phase_corr)
+        call accel_set_kernel_arg(kernel_corr, 5, boundaries%mesh%np)
+
+        wgsize = accel_kernel_workgroup_size(kernel_corr)/ffb%pack_size(1)
+
+        call accel_kernel_run(kernel_corr, (/ffb%pack_size(1), pad(boundaries%nper, wgsize)/), &
+          (/ffb%pack_size(1), wgsize/))
 
         call accel_finish()
-      end if
 
+        call accel_release_buffer(buff_phase_corr)
+
+      end if
     end select
 
     POP_SUB(X(boundaries_set_batch).periodic)

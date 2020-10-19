@@ -36,6 +36,9 @@ __kernel void X(density_gradient)(const int idir,
 
   double dd = 0.0;
 
+#ifdef CUDA
+#pragma unroll 8
+#endif
   for(int ist = 0; ist < nst; ist ++){
     rtype ff = psi[(ip<<ldpsi) + ist];
     rtype gff = grad_psi[(ip<<ldpsi) + ist];

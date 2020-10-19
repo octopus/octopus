@@ -127,7 +127,9 @@ contains
     SAFE_ALLOCATE(rhs(1:der%mesh%np))
     SAFE_ALLOCATE(potc(1:der%mesh%np_part))
 
-    forall (ip = 1:der%mesh%np) rhs(ip) = CNST(-4.0)*M_PI*rho(ip)
+    do ip = 1, der%mesh%np
+      rhs(ip) = CNST(-4.0)*M_PI*rho(ip)
+    end do
     call lalg_copy(der%mesh%np, pot, potc)
 
     call dconjugate_gradients(der%mesh%np, potc, rhs, internal_laplacian_op, internal_dotp, iter, res, threshold)

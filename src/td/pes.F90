@@ -109,8 +109,10 @@ contains
     call pes_spm_nullify(this%spm)
     !this%calc_mask=.false.
     call pes_mask_nullify(this%mask)
+    
+    call pes_flux_nullify(this%flux)
+    
     POP_SUB(pes_nullify)
-    return
   end subroutine pes_nullify
 
   ! ---------------------------------------------------------
@@ -160,7 +162,7 @@ contains
 
     call parse_variable(namespace, 'PhotoElectronSpectrum', PHOTOELECTRON_NONE, photoelectron_flags)
     if(.not.varinfo_valid_option('PhotoElectronSpectrum', photoelectron_flags, is_flag = .true.)) then
-      call messages_input_error('PhotoElectronSpectrum')
+      call messages_input_error(namespace, 'PhotoElectronSpectrum')
     end if
     
     pes%calc_spm  = bitand(photoelectron_flags, PHOTOELECTRON_SPM) /= 0
@@ -242,7 +244,7 @@ contains
 
     if(pes%calc_mask) call pes_mask_output (pes%mask, mesh, st, outp, namespace, "td.general/PESM", gr, geo,iter)
 
-    if(pes%calc_flux) call pes_flux_output(pes%flux, mesh, mesh%sb, st, namespace, dt)
+    if(pes%calc_flux) call pes_flux_output(pes%flux, mesh, mesh%sb, st, namespace)
 
     POP_SUB(pes_output)
   end subroutine pes_output
@@ -293,12 +295,11 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine pes_load(pes, namespace, restart, st, mesh, ierr)
+  subroutine pes_load(pes, namespace, restart, st, ierr)
     type(pes_t),         intent(inout) :: pes
     type(namespace_t),   intent(in)    :: namespace
     type(restart_t),     intent(in)    :: restart
     type(states_elec_t), intent(inout) :: st
-    type(mesh_t),        intent(in)    :: mesh
     integer,             intent(out)   :: ierr
 
     PUSH_SUB(pes_load)
@@ -321,7 +322,7 @@ contains
     end if
 
     if(pes%calc_flux) then
-      call pes_flux_load(restart, pes%flux, mesh, st, ierr)
+      call pes_flux_load(restart, pes%flux, st, ierr)
     end if
 
     if (pes%calc_spm) then

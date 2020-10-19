@@ -170,16 +170,18 @@ contains
         SAFE_ALLOCATE(position(1:3, natoms))
         SAFE_ALLOCATE(typs(1:natoms))
 
-        forall(iatom = 1:geo%natoms)
+        do iatom = 1, geo%natoms
           position(1:3, iatom) = M_ZERO
           position(1:dim4syms, iatom) = geo%atom(iatom)%x(1:dim4syms)
           typs(iatom) = species_index(geo%atom(iatom)%species)
-        end forall
+        end do
 
         if (this%symmetries_compute) then
           call symmetries_finite_init(geo%natoms, typs(1), position(1, 1), verbosity, point_group)
-          call symmetries_finite_get_group_name(point_group, this%group_name)
-          call symmetries_finite_get_group_elements(point_group, this%group_elements)
+          if(point_group > -1) then
+            call symmetries_finite_get_group_name(point_group, this%group_name)
+            call symmetries_finite_get_group_elements(point_group, this%group_elements)
+          end if
           call symmetries_finite_end()
         end if
         SAFE_DEALLOCATE_A(position)
@@ -328,7 +330,6 @@ contains
           this%nops = this%nops + 1
           call symm_op_copy(tmpop, this%ops(this%nops))
         end if
-        call symm_op_end(tmpop)
       end do
 
       SAFE_DEALLOCATE_A(position)
@@ -410,17 +411,9 @@ contains
   subroutine symmetries_end(this)
     type(symmetries_t),  intent(inout) :: this
 
-    integer :: iop
-
     PUSH_SUB(symmetries_end)
 
-    if(allocated(this%ops)) then
-      do iop = 1, this%nops
-        call symm_op_end(this%ops(iop))
-      end do
-
-      SAFE_DEALLOCATE_A(this%ops)
-    end if
+    SAFE_DEALLOCATE_A(this%ops)
 
     POP_SUB(symmetries_end)
   end subroutine symmetries_end

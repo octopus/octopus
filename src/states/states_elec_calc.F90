@@ -70,6 +70,8 @@ module states_elec_calc_oct_m
     zstates_elec_orthogonalization,      &
     dstates_elec_orthogonalize_single,   &
     zstates_elec_orthogonalize_single,   &
+    dstates_elec_orthogonalize_single_batch,   &
+    zstates_elec_orthogonalize_single_batch,   &
     dstates_elec_orthogonalization_full, &
     zstates_elec_orthogonalization_full, &
     dstates_elec_residue,                &

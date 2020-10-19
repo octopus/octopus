@@ -45,7 +45,7 @@ program oct_convert
   use restart_oct_m
   use spectrum_oct_m
   use string_oct_m
-  use system_oct_m
+  use electrons_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use utils_oct_m
@@ -54,7 +54,6 @@ program oct_convert
 
   character(len=256) :: config_str
   integer :: ierr
-  type(namespace_t) :: default_namespace
   
   call getopt_init(ierr)
   config_str = trim(get_config_opts()) // trim(get_optional_libraries())
@@ -65,12 +64,11 @@ program oct_convert
   call calc_mode_par_init()
 
   call parser_init()
-  default_namespace = namespace_t("")
   
-  call messages_init(default_namespace)
+  call messages_init()
 
-  call io_init(default_namespace)
-  call profiling_init(default_namespace)
+  call io_init()
+  call profiling_init(global_namespace)
   call messages_experimental("oct-convert utility")
 
   call print_header()
@@ -78,14 +76,14 @@ program oct_convert
   call messages_print_stress(stdout, "Convert mode")
   call messages_print_stress(stdout)
 
-  call restart_module_init(default_namespace)
-  call fft_all_init(default_namespace)
-  call unit_system_init(default_namespace)
+  call restart_module_init(global_namespace)
+  call fft_all_init(global_namespace)
+  call unit_system_init(global_namespace)
 
   call convert()
 
   call fft_all_end()
-  call profiling_end(default_namespace)
+  call profiling_end(global_namespace)
   call io_end()
   call print_date("Calculation ended on ")
   call messages_end()
@@ -102,7 +100,7 @@ contains
   !! This is a high-level interface that reads the input file and
   !! calls the proper function.
   subroutine convert()
-    type(system_t), pointer :: sys
+    type(electrons_t), pointer :: sys
 
     character(MAX_PATH_LEN)  :: basename, folder, ref_name, ref_folder, folder_default
     integer                  :: c_start, c_end, c_step, c_start_default, length, c_how
@@ -112,7 +110,8 @@ contains
     PUSH_SUB(convert)
 
     call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
-    sys => system_init(default_namespace)
+    sys => electrons_t(global_namespace)
+    call sys%init_parallelization(mpi_world)
 
     message(1) = 'Info: Converting files'
     message(2) = ''
@@ -128,7 +127,7 @@ contains
     !% only contain the beginning of the name. For instance, in the case of the restart 
     !% files, it should be one space ' '.
     !%End
-    call parse_variable(default_namespace, 'ConvertFilename', 'density', basename)
+    call parse_variable(global_namespace, 'ConvertFilename', 'density', basename)
     if ( basename == " " ) basename = ""
     ! Delete the extension if present
     length = len_trim(basename)
@@ -154,7 +153,7 @@ contains
     !% Convert utility will generate a new mesh function constructed by linear 
     !% combination of scalar function of different mesh functions,
     !%End
-    call parse_variable(default_namespace, 'ConvertHow', CONVERT_FORMAT, c_how)
+    call parse_variable(global_namespace, 'ConvertHow', CONVERT_FORMAT, c_how)
 
     !%Variable ConvertIterateFolder
     !%Type logical
@@ -164,7 +163,7 @@ contains
     !% This variable decides if a folder is going to be iterated or the 
     !% filename is going to be iterated.
     !%End
-    call parse_variable(default_namespace, 'ConvertIterateFolder', .true., iterate_folder)
+    call parse_variable(global_namespace, 'ConvertIterateFolder', .true., iterate_folder)
 
     if (iterate_folder) then
       folder_default  = 'td.'
@@ -181,7 +180,7 @@ contains
     !% The folder name where the input files are. The default is
     !% <tt>td.</tt> if <tt>ConvertIterateFolder = true</tt>, otherwise <tt>restart</tt>.
     !%End
-    call parse_variable(default_namespace, 'ConvertFolder', folder_default, folder)
+    call parse_variable(global_namespace, 'ConvertFolder', folder_default, folder)
     call add_last_slash(folder)
 
     !%Variable ConvertStart
@@ -191,7 +190,7 @@ contains
     !% The starting number of the filename or folder.
     !% Default is 0 if <tt>ConvertIterateFolder = true</tt>, otherwise 1.
     !%End
-    call parse_variable(default_namespace, 'ConvertStart', c_start_default, c_start)
+    call parse_variable(global_namespace, 'ConvertStart', c_start_default, c_start)
 
     !%Variable ConvertEnd
     !%Type integer
@@ -200,7 +199,7 @@ contains
     !%Description
     !% The last number of the filename or folder.
     !%End
-    call parse_variable(default_namespace, 'ConvertEnd', 1, c_end)
+    call parse_variable(global_namespace, 'ConvertEnd', 1, c_end)
 
     !%Variable ConvertStep
     !%Type integer
@@ -209,7 +208,7 @@ contains
     !%Description
     !% The padding between the filenames or folder.
     !%End
-    call parse_variable(default_namespace, 'ConvertStep', 1, c_step)
+    call parse_variable(global_namespace, 'ConvertStep', 1, c_step)
 
     !%Variable ConvertSubtractFilename
     !%Type string
@@ -218,7 +217,7 @@ contains
     !%Description
     !% Input filename. The file which is going to subtracted to rest of the files.
     !%End
-    call parse_variable(default_namespace, 'ConvertSubtractFilename', 'density', ref_name)
+    call parse_variable(global_namespace, 'ConvertSubtractFilename', 'density', ref_name)
     if ( ref_name == " " ) ref_name = ""
     ! Delete the extension if present
     length = len_trim(ref_name)
@@ -235,7 +234,7 @@ contains
     !%Description
     !% Decides if a reference file is going to be subtracted.
     !%End
-    call parse_variable(default_namespace, 'ConvertSubtract', .false., subtract_file)
+    call parse_variable(global_namespace, 'ConvertSubtract', .false., subtract_file)
 
     !%Variable ConvertSubtractFolder
     !%Type string
@@ -244,21 +243,21 @@ contains
     !%Description
     !% The folder name which is going to be subtracted.
     !%End
-    call parse_variable(default_namespace, 'ConvertSubtractFolder', '.', ref_folder)
+    call parse_variable(global_namespace, 'ConvertSubtractFolder', '.', ref_folder)
     call add_last_slash(folder)
     
     select case (c_how)
     CASE(OPERATION)
-      call convert_operate(sys%gr%mesh, default_namespace, sys%geo, sys%mc, sys%outp)
+      call convert_operate(sys%gr%mesh, global_namespace, sys%geo, sys%mc, sys%outp)
 
     CASE(FOURIER_TRANSFORM)
       ! Compute Fourier transform 
-      call convert_transform(sys%gr%mesh, default_namespace, sys%geo, sys%mc, basename, folder, &
+      call convert_transform(sys%gr%mesh, global_namespace, sys%geo, sys%mc, basename, folder, &
          c_start, c_end, c_step, sys%outp, subtract_file, &
          ref_name, ref_folder)
 
     CASE(CONVERT_FORMAT)
-      call convert_low(sys%gr%mesh, default_namespace, sys%geo, sys%hm%psolver, sys%mc, basename, folder, &
+      call convert_low(sys%gr%mesh, global_namespace, sys%geo, sys%hm%psolver, sys%mc, basename, folder, &
          c_start, c_end, c_step, sys%outp, iterate_folder, &
          subtract_file, ref_name, ref_folder)
     end select
@@ -454,7 +453,7 @@ contains
     end if
 
     call io_mkdir('wd.general', namespace)
-    wd_info = io_open('wd.general/wd.info', default_namespace, action='write')
+    wd_info = io_open('wd.general/wd.info', global_namespace, action='write')
     call messages_print_stress(wd_info, "Fourier Transform Options")
 
     !%Variable ConvertEnergyMin
@@ -670,7 +669,7 @@ contains
       select case (ft_method)
       case (FAST_FOURIER)
         call profiling_in(prof_fftw, "CONVERT_FFTW")
-        call dfft_forward1(fft, read_ft, out_fft)
+        call dfft_forward(fft, read_ft, out_fft)
         call profiling_out(prof_fftw)
         ! Should the value be multiplied by dt ??? as in standard discrete Fourier Transform ?
         point_tmp(read_count, 0:time_steps) = AIMAG(out_fft(0:time_steps)) * dt

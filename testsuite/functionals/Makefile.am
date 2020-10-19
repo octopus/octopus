@@ -40,6 +40,7 @@ dist_share_DATA =                                  \
 	03-xc.01-gs.inp                            \
 	03-xc.exx.inp                              \
 	03-xc.kli.inp                              \
+        03-xc.slater.inp                           \
 	03-xc.lda_c_vbh.inp                        \
 	03-xc.lda_c_rpa.inp                        \
 	03-xc.lda_c_pw.inp                         \
@@ -150,6 +151,8 @@ dist_share_DATA =                                  \
         17-oep-photons.01-kli-spinpolarized.inp    \
         17-oep-photons.02-kli.inp                  \
         17-oep-photons.03-oep.inp                  \
-        17-oep-photons.test
+        17-oep-photons.test                        \
+        18-mgga.01-br89.inp                        \
+        18-mgga.test
 
 CLEANFILES = *~ *.bak

@@ -39,9 +39,8 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
 #else
   integer, parameter :: logldf = 1
 #endif
-#ifndef SINGLE_PRECISION
   integer :: nri_loc, ini
-#endif
+  type(profile_t), save :: operate_batch_prof
   
   PUSH_SUB(X(nl_operator_operate_batch))
 
@@ -53,7 +52,7 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
 
   profile_ = .true.
   if(present(profile)) profile_ = profile
-  if(profile_) call profiling_in(operate_batch_prof, "NL_OPERATOR_BATCH")
+  if(profile_) call profiling_in(operate_batch_prof, TOSTRING(X(NL_OPERATOR_BATCH)))
 
   call select_op()
 
@@ -93,15 +92,8 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
     else
       
 ! for the moment this is not implemented
-#ifndef SINGLE_PRECISION
-
       !$omp parallel private(ini, nri_loc, ist)
-#ifdef HAVE_OPENMP
       call multicomm_divide_range_omp(nri, ini, nri_loc)
-#else 
-      ini = 1
-      nri_loc = nri
-#endif
       
       if(fi%status() == BATCH_PACKED) then
         
@@ -121,7 +113,6 @@ subroutine X(nl_operator_operate_batch)(op, fi, fo, ghost_update, profile, point
         end do
       end if
       !$omp end parallel
-#endif
     end if
 
     ! count operations
@@ -230,15 +221,17 @@ contains
     case(BATCH_DEVICE_PACKED)
 
       ASSERT(.false.)
-      
+
     case(BATCH_NOT_PACKED)
-      
+
       !$omp parallel do private(ll, ist, ii, nn)
       do ll = 1, nri
         nn = op%nn(ll)
-        forall(ist = 1:fi%nst_linear, ii = imin(ll) + 1:imax(ll))
-          fo%X(ff_linear)(ii, ist) = factor_*sum(op%w(1:nn, ii)*fi%X(ff_linear)(ii + ri(1:nn, ll), ist))
-        end forall
+        do ist = 1, fi%nst_linear
+          do ii = imin(ll) + 1, imax(ll)
+            fo%X(ff_linear)(ii, ist) = factor_*sum(op%w(1:nn, ii)*fi%X(ff_linear)(ii + ri(1:nn, ll), ist))
+          end do
+        end do
       end do
       !$omp end parallel do
 
@@ -247,14 +240,16 @@ contains
       !$omp parallel do private(ll, ist, ii, nn)
       do ll = 1, nri
         nn = op%nn(ll)
-        forall(ist = 1:fi%nst_linear, ii = imin(ll) + 1:imax(ll))
-          fo%X(ff_pack)(ist, ii) = factor_*sum(op%w(1:nn, ii)*fi%X(ff_pack)(ist, ii + ri(1:nn, ll)))
-        end forall
+        do ist = 1, fi%nst_linear
+          do ii = imin(ll) + 1, imax(ll)
+            fo%X(ff_pack)(ist, ii) = factor_*sum(op%w(1:nn, ii)*fi%X(ff_pack)(ist, ii + ri(1:nn, ll)))
+          end do
+        end do
       end do
       !$omp end parallel do
-      
+
     end select
-      
+
     POP_SUB(X(nl_operator_operate_batch).operate_non_const_weights)
   end subroutine operate_non_const_weights
 
@@ -267,7 +262,7 @@ contains
     type(accel_kernel_t) :: kernel_operate
 
     PUSH_SUB(X(nl_operator_operate_batch).operate_opencl)
-    call profiling_in(prof, "CL_NL_OPERATOR")
+    call profiling_in(prof, TOSTRING(X(CL_NL_OPERATOR)))
 
     ASSERT(accel_buffer_is_allocated(fi%ff_device))
     ASSERT(accel_buffer_is_allocated(fo%ff_device))

@@ -26,7 +26,7 @@
     type(td_t),        intent(in)    :: td
     type(restart_t),   intent(in)    :: restart
 
-    integer :: ierr, ip
+    integer :: ierr, nik, dim
 
     PUSH_SUB(target_init_excited)
 
@@ -36,7 +36,7 @@
     tg%move_ions = ion_dynamics_ions_move(td%ions)
     tg%dt = td%dt
 
-    call states_elec_look(restart, ip, ip, tg%st%nst, ierr)
+    call states_elec_look(restart, nik, dim, tg%st%nst, ierr)
     if (ierr /= 0) then
       message(1) = "Unable to read states information."
       call messages_fatal(1)
@@ -125,7 +125,6 @@
     type(states_elec_t),    intent(in)    :: psi_in
     type(states_elec_t),    intent(inout) :: chi_out
 
-    CMPLX :: zdet
     CMPLX, allocatable :: cI(:), dI(:), mat(:, :, :), mm(:, :, :, :), mk(:, :), lambda(:, :)
     CMPLX, allocatable :: zpsi(:, :), zchi(:, :)
     integer :: ik, ist, jst, ia, ib, n_pairs, nst, kpoints, jj, idim, ip
@@ -154,7 +153,7 @@
       dI(ia) = zstates_elec_mpdotp(namespace, gr%mesh, tg%est%st, psi_in, mat)
       if(abs(dI(ia)) > CNST(1.0e-12)) then
         do ik = 1, kpoints
-          zdet = lalg_inverter(nst, mm(1:nst, 1:nst, ik, ia))
+          call lalg_inverter(nst, mm(1:nst, 1:nst, ik, ia))
         end do
       end if
       call zstates_elec_matrix_swap(mat, tg%est%pair(ia))

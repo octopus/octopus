@@ -1,0 +1,27 @@
+# -*- coding: utf-8 mode: shell-script -*-
+
+Test       : Multisystem Illegal Names
+Program    : octopus
+TestGroups : short-run, multisystem
+Enabled    : Yes
+
+Processors: 1
+
+FailingInput: 09-illegal_system_names.01-duplicated.inp
+
+match ; Error message ; GREPCOUNT(err, 'Duplicated system in multisystem') ; 1
+
+FailingInput: 09-illegal_system_names.02-empty.inp
+
+match ; Error message ; GREPCOUNT(err, 'All systems must have a name') ; 1
+
+FailingInput: 09-illegal_system_names.03-illegal_character.inp
+
+match ; Error message ; GREPCOUNT(err, 'Illegal character "." in system name') ; 1
+
+FailingInput: 09-illegal_system_names.04-white_space.inp
+
+match ; Error message ; GREPCOUNT(err, 'Illegal character " " in system name') ; 1
+
+
+

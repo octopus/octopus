@@ -4524,7 +4524,7 @@ contains
       ! write(*,*)'gdisp:',disp
     end if
 
-451 continue
+!451 continue
 
     sigma_abc=0.0d0
     sigma=0.0d0

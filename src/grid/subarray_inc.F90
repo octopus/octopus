@@ -26,10 +26,12 @@ subroutine X(subarray_gather)(this, array, subarray)
   type(profile_t), save :: prof
   integer :: iblock, ii
 
-  call profiling_in(prof, "SUBARRAY_GATHER")
+  call profiling_in(prof, TOSTRING(X(SUBARRAY_GATHER)))
 
   do iblock = 1, this%nblocks
-    forall(ii = 1:this%blength(iblock)) subarray(this%dest(iblock) + ii) = array(this%offsets(iblock) + ii - 1)
+    do ii = 1, this%blength(iblock)
+      subarray(this%dest(iblock) + ii) = array(this%offsets(iblock) + ii - 1)
+    end do
   end do
 
   call profiling_count_transfers(this%npoints, array(1))
@@ -54,7 +56,7 @@ subroutine X(subarray_gather_batch)(this, arrayb, subarrayb)
 
   PUSH_SUB(X(subarray_gather_batch))
 
-  call profiling_in(prof, "SUBARRAY_GATHER_BATCH")
+  call profiling_in(prof, TOSTRING(X(SUBARRAY_GATHER_BATCH)))
 
 
   ASSERT(arrayb%status() == subarrayb%status())
@@ -89,27 +91,27 @@ subroutine X(subarray_gather_batch)(this, arrayb, subarrayb)
     call accel_release_buffer(blength_buff)
     call accel_release_buffer(offsets_buff)
     call accel_release_buffer(dest_buff)
-    
+
   case(BATCH_PACKED)
     do iblock = 1, this%nblocks
-      forall(ii = 1:this%blength(iblock))
-        forall(ist = 1:arrayb%pack_size(1))
+      do ii = 1, this%blength(iblock)
+        do ist = 1, arrayb%pack_size(1)
           subarrayb%X(ff_pack)(ist, this%dest(iblock) + ii) = arrayb%X(ff_pack)(ist, this%offsets(iblock) + ii - 1)
-        end forall
-      end forall
+        end do
+      end do
     end do
-    
+
   case(BATCH_NOT_PACKED)
     !$omp parallel do private(iblock, ii)
     do ist = 1, arrayb%nst_linear
       do iblock = 1, this%nblocks
-        forall(ii = 1:this%blength(iblock))
+        do ii = 1, this%blength(iblock)
           subarrayb%X(ff_linear)(this%dest(iblock) + ii, ist) = &
             arrayb%X(ff_linear)(this%offsets(iblock) + ii - 1, ist)
-        end forall
+        end do
       end do
     end do
-    
+
   end select
 
   ! Avoid warning: 'aa' is used uninitialized; it is just to define which type

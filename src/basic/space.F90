@@ -77,7 +77,7 @@ contains
       !%End
       call parse_variable(namespace, 'Dimensions', default_ndim, this%dim)
     end if
-    if((this%dim>MAX_DIM).or.(this%dim<1)) call messages_input_error('Dimensions')
+    if((this%dim>MAX_DIM).or.(this%dim<1)) call messages_input_error(namespace, 'Dimensions')
 
     POP_SUB(space_init_simple)
   end subroutine space_init

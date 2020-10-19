@@ -77,7 +77,6 @@ contains
     character(len=512) :: filename
     type(cube_t) :: cube
     type(cube_function_t) :: cf
-    integer :: ii
     FLOAT :: dk(3)  
 
     PUSH_SUB(pes_out_velocity_map)
@@ -92,9 +91,6 @@ contains
       ! Ignore Lk and use pmesh
       dk(:) = M_ZERO
       dk(1:sb%dim) = abs(Lk(2,1:sb%dim)-Lk(1,1:sb%dim))
-      do ii = 1, sb%dim
-        dk(ii) = units_from_atomic(sqrt(units_out%energy), dk(ii))
-      end do
     end if
   
 #if defined(HAVE_NETCDF)  
@@ -105,7 +101,7 @@ contains
       call messages_info(1)
   
       call dout_cf_netcdf(filename, ierr, cf, cube, sb%dim, dk(:) , & 
-            .false., sqrt(units_out%energy)**sb%dim)
+            .false., unit_one/units_out%length)
 
     end if
 
@@ -118,10 +114,10 @@ contains
     
       if (present(pmesh)) then          
         call dvtk_out_cf_structured(filename, namespace, 'PES_vel_map', ierr, cf, cube,& 
-          sqrt(units_out%energy)**sb%dim, pmesh, ascii = .false.)
+           unit_one/units_out%length, pmesh, ascii = .false.)
       else 
         call dvtk_out_cf(filename, namespace, 'PES_vel_map', ierr, cf, cube, dk(:),& 
-          sqrt(units_out%energy)**sb%dim)
+          unit_one/units_out%length)
       end if        
     end if
   
@@ -460,6 +456,8 @@ contains
 
     call io_close(iunit)
 
+    call pes_out_interpolator_end(cube_f, interp)
+
     SAFE_DEALLOCATE_A(idx)
     SAFE_DEALLOCATE_A(Lk_)
 
@@ -586,12 +584,6 @@ contains
 
     POP_SUB(pes_out_interpolator_end)
   end subroutine pes_out_interpolator_end
-
-
-
-
-
-
 
 end module pes_out_oct_m
 

@@ -33,6 +33,7 @@ module casida_oct_m
   use io_function_oct_m
   use kpoints_oct_m
   use lalg_adv_oct_m
+  use lda_u_oct_m
   use loct_oct_m
   use linear_response_oct_m
   use mesh_oct_m
@@ -40,8 +41,10 @@ module casida_oct_m
   use messages_oct_m
   use mpi_oct_m
   use multicomm_oct_m
+  use multisystem_basic_oct_m
   use namespace_oct_m
   use parser_oct_m
+  use pcm_oct_m
   use pert_oct_m
   use phonons_lr_oct_m
   use poisson_oct_m
@@ -54,7 +57,7 @@ module casida_oct_m
   use states_elec_dim_oct_m
   use states_elec_restart_oct_m
   use sternheimer_oct_m
-  use system_oct_m
+  use electrons_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use utils_oct_m
@@ -170,9 +173,27 @@ contains
   end subroutine casida_run_init
 
   ! ---------------------------------------------------------
-  subroutine casida_run(sys, fromScratch)
-    type(system_t),      intent(inout) :: sys
-    logical,             intent(inout) :: fromScratch
+  subroutine casida_run(system, from_scratch)
+    class(*),        intent(inout) :: system
+    logical,         intent(in)    :: from_scratch
+
+    PUSH_SUB(casida_run)
+
+    select type (system)
+    class is (multisystem_basic_t)
+      message(1) = "CalculationMode = casida not implemented for multi-system calculations"
+      call messages_fatal(1)
+    type is (electrons_t)
+      call casida_run_legacy(system, from_scratch)
+    end select
+
+    POP_SUB(casida_run)
+  end subroutine casida_run
+
+  ! ---------------------------------------------------------
+  subroutine casida_run_legacy(sys, fromScratch)
+    type(electrons_t), intent(inout) :: sys
+    logical,           intent(in)    :: fromScratch
 
     type(casida_t) :: cas
     type(block_t) :: blk
@@ -182,8 +203,12 @@ contains
     logical :: is_frac_occ
     type(restart_t) :: gs_restart
 
-    PUSH_SUB(casida_run)
+    PUSH_SUB(casida_run_legacy)
     call profiling_in(prof, 'CASIDA')
+
+    if (sys%hm%pcm%run_pcm) then
+      call messages_not_implemented("PCM for CalculationMode /= gs or td")
+    end if
 
     if (simul_box_is_periodic(sys%gr%sb)) then
       message(1) = "Casida oscillator strengths will be incorrect in periodic systems."
@@ -193,6 +218,15 @@ contains
     if(kpoints_number(sys%gr%sb%kpoints) > 1) then
       ! Hartree matrix elements may not be correct, not tested anyway. --DAS
       call messages_not_implemented("Casida with k-points")
+    end if
+    if (family_is_mgga_with_exc(sys%hm%xc)) then
+      call messages_not_implemented("Casida with MGGA and non-local terms")
+    end if
+    if(sys%hm%lda_u_level /= DFT_U_NONE) then
+      call messages_not_implemented("Casida with DFT+U")
+    end if
+    if(sys%hm%theory_level == HARTREE_FOCK) then
+      call messages_not_implemented("Casida for Hartree-Fock")
     end if
 
     message(1) = 'Info: Starting Casida linear-response calculation.'
@@ -237,7 +271,7 @@ contains
     ! setup Hamiltonian, without recalculating eigenvalues (use the ones from the restart information)
     message(1) = 'Info: Setting up Hamiltonian.'
     call messages_info(1)
-    call system_h_setup(sys, calc_eigenval=.false.)
+    call v_ks_h_setup(sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, calc_eigenval=.false.)
 
     !%Variable CasidaTheoryLevel
     !%Type flag
@@ -506,14 +540,14 @@ contains
     call casida_type_end(cas)
 
     call profiling_out(prof)
-    POP_SUB(casida_run)
-  end subroutine casida_run
+    POP_SUB(casida_run_legacy)
+  end subroutine casida_run_legacy
 
   ! ---------------------------------------------------------
   !> allocates stuff, and constructs the arrays pair_i and pair_j
   subroutine casida_type_init(cas, sys)
-    type(casida_t),    intent(inout) :: cas
-    type(system_t),    intent(in)    :: sys
+    type(casida_t),      intent(inout) :: cas
+    type(electrons_t),   intent(in)    :: sys
 
     integer :: ist, ast, jpair, ik, ierr
 
@@ -645,8 +679,8 @@ contains
   !> this subroutine calculates electronic excitation energies using
   !! the matrix formulation of M. Petersilka, or of M. Casida
   subroutine casida_work(sys, cas)
-    type(system_t), target, intent(inout) :: sys
-    type(casida_t),         intent(inout) :: cas
+    type(electrons_t),   target, intent(inout) :: sys
+    type(casida_t),              intent(inout) :: cas
 
     type(states_elec_t), pointer :: st
     type(mesh_t),   pointer :: mesh
@@ -835,8 +869,8 @@ contains
 
   ! ---------------------------------------------------------
   FLOAT function casida_matrix_factor(cas, sys)
-    type(casida_t), intent(in)    :: cas
-    type(system_t), intent(in)    :: sys
+    type(casida_t),      intent(in)    :: cas
+    type(electrons_t),   intent(in)    :: sys
     
     PUSH_SUB(casida_matrix_factor)
     

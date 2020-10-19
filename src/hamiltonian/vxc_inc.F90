@@ -16,8 +16,7 @@
 !! 02110-1301, USA.
 !!
 
-subroutine xc_get_vxc(der, xcs, st, psolver, namespace, rho, ispin, &
-    exx_op, vxc, ex, ec, deltaxc, vtau, ex_density, ec_density)
+subroutine xc_get_vxc(der, xcs, st, psolver, namespace, rho, ispin, vxc, ex, ec, deltaxc, vtau, ex_density, ec_density)
   type(derivatives_t),    intent(in)    :: der             !< Discretization and the derivative operators and details
   type(xc_t), target,     intent(inout) :: xcs             !< Details about the xc functional used
   type(states_elec_t),    intent(in)    :: st              !< State of the system (wavefunction,eigenvalues...)
@@ -25,7 +24,6 @@ subroutine xc_get_vxc(der, xcs, st, psolver, namespace, rho, ispin, &
   type(namespace_t),      intent(in)    :: namespace
   FLOAT,                  intent(in)    :: rho(:, :)       !< Electronic density 
   integer,                intent(in)    :: ispin           !< Number of spin channels 
-  type(exchange_operator_t), intent(in) :: exx_op
   FLOAT, optional,        intent(inout) :: vxc(:,:)        !< XC potential
   FLOAT, optional,        intent(inout) :: ex              !< Exchange energy.
   FLOAT, optional,        intent(inout) :: ec              !< Correlation energy.
@@ -78,7 +76,7 @@ subroutine xc_get_vxc(der, xcs, st, psolver, namespace, rho, ispin, &
   type(profile_t), save :: prof_gather
   
   PUSH_SUB(xc_get_vxc)
-  call profiling_in(prof, "XC_LOCAL")
+  call profiling_in(prof, TOSTRING(XC_LOCAL))
 
   nullify(ex_per_vol)
   nullify(ec_per_vol)
@@ -202,21 +200,19 @@ subroutine xc_get_vxc(der, xcs, st, psolver, namespace, rho, ispin, &
 
       if(functl(ixc)%family == XC_FAMILY_NONE) cycle
 
-      call profiling_in(prof_libxc, "LIBXC")
+      call profiling_in(prof_libxc, TOSTRING(LIBXC))
 
       if(calc_energy .and. bitand(functl(ixc)%flags, XC_FLAGS_HAVE_EXC) /= 0) then
         ! we get the xc energy and potential
         select case(functl(ixc)%family)
         case(XC_FAMILY_LDA, XC_FAMILY_LIBVDWXC)
-          call XC_F90(lda_exc_vxc)(functl(ixc)%conf, n_block, l_dens(1,1), l_zk(1), l_dedd(1,1))
+          call XC_F90(lda_exc_vxc)(functl(ixc)%conf, int(n_block, XC_SIZE_T), l_dens, l_zk, l_dedd)
 
         case(XC_FAMILY_GGA, XC_FAMILY_HYB_GGA)
-          call XC_F90(gga_exc_vxc)(functl(ixc)%conf, n_block, l_dens(1,1), l_sigma(1,1), &
-            l_zk(1), l_dedd(1,1), l_vsigma(1,1))
-
+          call XC_F90(gga_exc_vxc)(functl(ixc)%conf, int(n_block, XC_SIZE_T), l_dens, l_sigma, l_zk, l_dedd, l_vsigma)
         case(XC_FAMILY_MGGA, XC_FAMILY_HYB_MGGA)
-          call XC_F90(mgga_exc_vxc)(functl(ixc)%conf, n_block, l_dens(1,1), l_sigma(1,1), l_ldens(1,1), l_tau(1,1), &
-            l_zk(1), l_dedd(1,1), l_vsigma(1,1), l_dedldens(1,1), l_dedtau(1,1))
+          call XC_F90(mgga_exc_vxc)(functl(ixc)%conf, int(n_block, XC_SIZE_T), l_dens, l_sigma, l_ldens, l_tau, l_zk, l_dedd, &
+            l_vsigma, l_dedldens, l_dedtau)
 
         case default
           call profiling_out(prof_libxc)
@@ -228,15 +224,14 @@ subroutine xc_get_vxc(der, xcs, st, psolver, namespace, rho, ispin, &
 
         select case(functl(ixc)%family)
         case(XC_FAMILY_LDA, XC_FAMILY_LIBVDWXC)
-          call XC_F90(lda_vxc)(functl(ixc)%conf, n_block, l_dens(1,1), l_dedd(1,1))
+          call XC_F90(lda_vxc)(functl(ixc)%conf, int(n_block, XC_SIZE_T), l_dens, l_dedd)
 
         case(XC_FAMILY_GGA, XC_FAMILY_HYB_GGA)
-          call XC_F90(gga_vxc)(functl(ixc)%conf, n_block, l_dens(1,1), l_sigma(1,1), &
-            l_dedd(1,1), l_vsigma(1,1))
+          call XC_F90(gga_vxc)(functl(ixc)%conf, int(n_block, XC_SIZE_T), l_dens, l_sigma, l_dedd, l_vsigma)
 
         case(XC_FAMILY_MGGA, XC_FAMILY_HYB_MGGA)
-          call XC_F90(mgga_vxc)(functl(ixc)%conf, n_block, l_dens(1,1), l_sigma(1,1), l_ldens(1,1), l_tau(1,1), &
-            l_dedd(1,1), l_vsigma(1,1), l_dedldens(1,1), l_dedtau(1,1))
+          call XC_F90(mgga_vxc)(functl(ixc)%conf, int(n_block, XC_SIZE_T), l_dens, l_sigma, l_ldens, l_tau, l_dedd, &
+            l_vsigma, l_dedldens, l_dedtau)
 
         case default
           call profiling_out(prof_libxc)
@@ -274,13 +269,12 @@ subroutine xc_get_vxc(der, xcs, st, psolver, namespace, rho, ispin, &
         
         select case(functl(ixc)%family)
         case(XC_FAMILY_LDA)
-          call XC_F90(lda_vxc)(xcs%functional(ixc, 1)%conf, n_block, unp_dens(1), unp_dedd(1))
+          call XC_F90(lda_vxc)(xcs%functional(ixc, 1)%conf, int(n_block, XC_SIZE_T), unp_dens, unp_dedd)
           
         case(XC_FAMILY_GGA, XC_FAMILY_HYB_GGA, XC_FAMILY_MGGA, XC_FAMILY_HYB_MGGA)
           call messages_not_implemented('XC density correction for GGA/mGGA', namespace=namespace)
           
-          call XC_F90(gga_vxc)(xcs%functional(ixc, 1)%conf, n_block, unp_dens(1), l_sigma(1,1), &
-            unp_dedd(1), l_vsigma(1,1))
+          call XC_F90(gga_vxc)(xcs%functional(ixc, 1)%conf, int(n_block, XC_SIZE_T), unp_dens, l_sigma, unp_dedd, l_vsigma)
         end select
         
         do ib = 1, n_block
@@ -351,7 +345,7 @@ subroutine xc_get_vxc(der, xcs, st, psolver, namespace, rho, ispin, &
 
   if(xcs%parallel) then
     if(distribution%parallel) then
-      call profiling_in(prof_gather, "XC_GATHER")
+      call profiling_in(prof_gather, TOSTRING(XC_GATHER))
       
       do isp = 1, spin_channels
         call distributed_allgather(distribution, dedd(:, isp))
@@ -701,7 +695,7 @@ contains
     FLOAT :: tb09_c, alpha
     FLOAT :: gn(MAX_DIM), n
     integer :: ii
-#ifdef HAVE_LIBXC4
+#if defined HAVE_LIBXC4 || defined HAVE_LIBXC5
     FLOAT :: parameters(3)
 #endif
 
@@ -741,13 +735,13 @@ contains
       end if
 
 
-#ifdef HAVE_LIBXC4
+#if defined HAVE_LIBXC4 || defined HAVE_LIBXC5
       parameters(1) = alpha
       parameters(2) = xcs%cam_omega
       parameters(3) = xcs%cam_omega
-      call XC_F90(func_set_ext_params)(functl(FUNC_C)%conf, parameters(1))
+      call XC_F90(func_set_ext_params)(functl(FUNC_C)%conf, parameters)
 #else
-      call XC_F90(hyb_gga_xc_hse_set_par)(functl(FUNC_C)%conf, alpha, xcs%cam_omega)
+      call XC_F90(hyb_gga_xc_hse_set_params)(functl(FUNC_C)%conf, alpha, xcs%cam_omega)
 #endif
       !The name is confusing. Here alpha is the beta of hybrids in functionals, 
       !but is called alpha in the original paper.
@@ -767,10 +761,13 @@ contains
         alpha = CNST(0.25)
       end if
 
-#ifdef HAVE_LIBXC4
-      call messages_not_implemented("MVORB with PBE0 and libxc >= 4.0", namespace=namespace)
+#if defined HAVE_LIBXC5
+      parameters(1) = alpha
+      call XC_F90(func_set_ext_params)(functl(FUNC_C)%conf, parameters)
+#elif defined HAVE_LIBXC4
+      call messages_not_implemented("MVORB with PBE0 requires libxc 3 or libxc 5", namespace=namespace)
 #else
-      call XC_F90(hyb_gga_xc_pbeh_set_par)(functl(FUNC_C)%conf, alpha)
+      call XC_F90(hyb_gga_xc_pbeh_set_params)(functl(FUNC_C)%conf, alpha)
 #endif
       xcs%cam_alpha = alpha
     case default
@@ -785,8 +782,9 @@ contains
 
   subroutine calc_tb09_c()
     FLOAT, allocatable :: gnon(:)
-    FLOAT :: gn(MAX_DIM), n, tb09_c
+    FLOAT :: gn(MAX_DIM), n
     integer :: ii
+    FLOAT :: parameters(1)
 
     PUSH_SUB(xc_get_vxc.calc_tb09_c)
 
@@ -808,12 +806,12 @@ contains
       end if
     end do
 
-    tb09_c =  -CNST(0.012) + CNST(1.023)*sqrt(dmf_integrate(der%mesh, gnon)/der%mesh%sb%rcell_volume)
+    parameters(1) =  -CNST(0.012) + CNST(1.023)*sqrt(dmf_integrate(der%mesh, gnon)/der%mesh%sb%rcell_volume)
 
-#ifdef HAVE_LIBXC4
-    call XC_F90(func_set_ext_params)(functl(1)%conf, tb09_c)
+#if defined HAVE_LIBXC4 || defined HAVE_LIBXC5
+    call XC_F90(func_set_ext_params)(functl(1)%conf, parameters)
 #else
-    call XC_F90(mgga_x_tb09_set_par)(functl(1)%conf, tb09_c)
+    call XC_F90(mgga_x_tb09_set_params)(functl(1)%conf, parameters(1))
 #endif
     
     SAFE_DEALLOCATE_A(gnon)
@@ -945,12 +943,14 @@ subroutine xc_density_correction_calc(xcs, der, psolver, namespace, nspin, densi
 
   PUSH_SUB(xc_density_correction_calc)
 
-  call profiling_in(prof, "XC_DENSITY_CORRECTION")
+  call profiling_in(prof, TOSTRING(XC_DENSITY_CORRECTION))
 
   SAFE_ALLOCATE(nxc(1:der%mesh%np))
   SAFE_ALLOCATE(lrvxc(1:der%mesh%np_part))
 
-  forall(ip = 1:der%mesh%np) lrvxc(ip) = CNST(-1.0)/(CNST(4.0)*M_PI)*refvx(ip)
+  do ip = 1, der%mesh%np
+    lrvxc(ip) = CNST(-1.0)/(CNST(4.0)*M_PI)*refvx(ip)
+  end do
   call dderivatives_lapl(der, lrvxc, nxc)
 
   if(debug%info) then
@@ -1084,10 +1084,10 @@ subroutine xc_density_correction_calc(xcs, der, psolver, namespace, nspin, densi
       der%mesh, lrvxc, unit_one, ierr)
   end if
 
-  forall(ip = 1:der%mesh%np) 
+  do ip = 1, der%mesh%np
     vxc(ip, 1:nspin) = vxc(ip, 1:nspin) + lrvxc(ip)
     refvx(ip) = lrvxc(ip)
-  end forall
+  end do
 
   maxdd = -HUGE(maxdd)
   mindd =  HUGE(maxdd)

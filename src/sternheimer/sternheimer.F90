@@ -46,7 +46,7 @@ module sternheimer_oct_m
   use states_elec_oct_m
   use states_elec_dim_oct_m
   use states_elec_restart_oct_m
-  use system_oct_m
+  use electrons_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use types_oct_m
@@ -117,7 +117,7 @@ contains
   subroutine sternheimer_init(this, sys, wfs_are_cplx, &
     set_ham_var, set_occ_response, set_last_occ_response, occ_response_by_sternheimer, set_default_solver)
     type(sternheimer_t),  intent(out)   :: this
-    type(system_t),       intent(inout) :: sys
+    type(electrons_t),    intent(inout) :: sys
     logical,              intent(in)    :: wfs_are_cplx
     integer,    optional, intent(in)    :: set_ham_var
     logical,    optional, intent(in)    :: set_occ_response
@@ -233,14 +233,7 @@ contains
     end if
     call messages_info(3) 
 
-    call linear_solver_init(this%solver, sys%namespace, sys%gr, states_are_real(sys%st), set_default_solver)
-
-    if(this%solver%solver == OPTION__LINEARSOLVER__MULTIGRID .or. preconditioner_is_multigrid(this%solver%pre)) then
-      if(.not. associated(sys%gr%mgrid)) then
-        SAFE_ALLOCATE(sys%gr%mgrid)
-        call multigrid_init(sys%gr%mgrid, sys%namespace, sys%geo, sys%gr%cv, sys%gr%mesh, sys%gr%der, sys%gr%stencil, sys%mc)
-      end if
-    end if
+    call linear_solver_init(this%solver, sys%namespace, sys%gr, states_are_real(sys%st), sys%geo, sys%mc, set_default_solver)
 
     ! will not converge for non-self-consistent calculation unless LRTolScheme = fixed
     if (ham_var == 0) then

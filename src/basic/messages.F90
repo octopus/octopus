@@ -121,15 +121,29 @@ module messages_oct_m
 
   type(debug_t), save :: debug
   
+  !> from signals.c
+  interface
+    subroutine get_signal_description(signum, signame)
+      implicit none
+      integer, intent(in) :: signum
+      character(len=*), intent(out) :: signame
+    end subroutine get_signal_description
+
+    subroutine trap_segfault()
+      implicit none
+    end subroutine trap_segfault
+  end interface
+
+
+
 contains
 
   ! ---------------------------------------------------------
-  subroutine messages_init(namespace)
-    type(namespace_t), intent(in) :: namespace
+  subroutine messages_init()
     
     logical :: trap_signals
 
-    call messages_obsolete_variable(namespace, 'DevelVersion', 'ExperimentalFeatures')
+    call messages_obsolete_variable(global_namespace, 'DevelVersion', 'ExperimentalFeatures')
 
     !%Variable ExperimentalFeatures
     !%Type logical
@@ -142,27 +156,26 @@ contains
     !% See details on
     !% <a href=http://octopus-code.org/experimental_features>wiki page</a>.
     !%End
-    call parse_variable(namespace, 'ExperimentalFeatures', .false., conf%devel_version)
+    call parse_variable(global_namespace, 'ExperimentalFeatures', .false., conf%devel_version)
     
-    call messages_obsolete_variable(namespace, 'DebugLevel', 'Debug')
+    call messages_obsolete_variable(global_namespace, 'DebugLevel', 'Debug')
 
-    call debug_init(debug, namespace)
+    call debug_init(debug, global_namespace)
     
     warnings = 0
     experimentals = 0
 
     !%Variable DebugTrapSignals
     !%Type logical
+    !%Default yes
     !%Section Execution::Debug
     !%Description
     !% If true, trap signals to handle them in octopus itself and
     !% print a custom backtrace. If false, do not trap signals; then,
     !% core dumps can be produced or gdb can be used to stop at the
-    !% point a signal was produced (e.g. a segmentation fault). This
-    !% variable is enabled if <tt>Debug</tt> is set to trace mode
-    !% (<tt>trace</tt>, <tt>trace_term</tt> or <tt>trace_file</tt>).
+    !% point a signal was produced (e.g. a segmentation fault).
     !%End
-    call parse_variable(namespace, 'DebugTrapSignals', debug%trace, trap_signals)
+    call parse_variable(global_namespace, 'DebugTrapSignals', .true., trap_signals)
 
     if (trap_signals) call trap_segfault()
 
@@ -223,8 +236,6 @@ contains
       close(iunit_out)
  
     end if
-
-    call debug_end(debug)
   
   end subroutine messages_end
 
@@ -238,7 +249,7 @@ contains
     logical :: only_root_writes_, should_write
     integer, allocatable :: recv_buf(:), recv_req(:)
 #ifdef HAVE_MPI
-    integer, parameter :: FATAL_TAG = 1620299
+    integer, parameter :: FATAL_TAG = 32767
     logical :: received
     integer :: send_req
 #endif
@@ -366,10 +377,7 @@ contains
     type(namespace_t), optional, intent(in) :: namespace
 
     integer :: il, no_lines_
-    logical :: have_to_write
-#ifdef HAVE_MPI
-    logical :: all_nodes_
-#endif
+    logical :: have_to_write, all_nodes_
     
     no_lines_ = current_line
     if(present(no_lines)) no_lines_ = no_lines
@@ -378,13 +386,11 @@ contains
 
     have_to_write = mpi_grp_is_root(mpi_world)
 
-#ifdef HAVE_MPI
     all_nodes_ = .false.
     if(present(all_nodes)) then
       have_to_write = have_to_write .or. all_nodes
       all_nodes_ = all_nodes
     end if
-#endif
 
     if(have_to_write) then
 
@@ -554,12 +560,13 @@ contains
     ! only root node is taking care of file I/O
     if (.not.mpi_grp_is_root(mpi_world)) return     
 
-    ! remove old status files first, before we switch to state aborted   
+    ! remove old status files first, before we switch to a new state
     call loct_rm('exec/oct-status-running')
     call loct_rm('exec/oct-status-finished')
     call loct_rm('exec/oct-status-aborted')
+    call loct_rm('exec/oct-status-walltimer-aborted')
     
-    ! create empty status file to indicate 'aborted state'
+    ! create empty status file to indicate new state
     open(unit=iunit_err, file='exec/oct-status-'//trim(status), &
       action='write', status='unknown')
     close(iunit_err)
@@ -620,25 +627,40 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine messages_input_error(var, details)
+  subroutine messages_input_error(namespace, var, details, row, column)
+    type(namespace_t),          intent(in) :: namespace
     character(len=*),           intent(in) :: var
     character(len=*), optional, intent(in) :: details
+    integer,          optional, intent(in) :: row
+    integer,          optional, intent(in) :: column
+
+    character(len=10) :: row_str, column_str
 
     call messages_write('Input error in the input variable '// trim(var))
     
+    if (present(row)) then
+      ! Print row and, if available, the column. We add one to both values
+      ! in order to translate from the C numbering used by the parser to a
+      ! more human-friendly numbering.
+      write(row_str, '(I10)') row + 1
+      call messages_write(' at row '//adjustl(row_str))
+      if (present(column)) then
+        write(column_str, '(I10)') column + 1
+        call messages_write(', column '//adjustl(column_str))
+      end if
+    end if
     if(present(details)) then
       call messages_write(':', new_line = .true.)
       call messages_new_line()
-      call messages_write('  '//trim(details)//'.', new_line = .true.)
-    else
-      call messages_write('.', new_line = .true.)
+      call messages_write('  '//trim(details))
     end if
+    call messages_write('.', new_line = .true.)
     
     call messages_new_line()
     
     call messages_write('You can get the documentation of the variable with the command:', new_line = .true.)
     call messages_write('  oct-help -p '//trim(var))
-    call messages_fatal()
+    call messages_fatal(namespace=namespace)
 
   end subroutine messages_input_error
   ! ---------------------------------------------------------
@@ -1276,22 +1298,33 @@ contains
     type(unit_t),     optional, intent(in) :: units
     logical,          optional, intent(in) :: print_units
 
-    character(len=10) :: number
-    integer(8) :: val_conv
+    character(len=20) :: number
+    FLOAT      :: val_conv_float
 
-    val_conv = val
-    if(present(units)) val_conv = int(nint(units_from_atomic(units, dble(val))), 8)
+    if(present(units)) then
+      val_conv_float = units_from_atomic(units, dble(val))
 
-    if(present(fmt)) then
-      write(message(current_line), '(a, '//trim(fmt)//')') trim(message(current_line)), val_conv
+      if(present(fmt)) then
+        write(message(current_line), '(a, '//trim(fmt)//')') trim(message(current_line)), val_conv_float
+      else
+        write(number, '(f15.3)') val_conv_float
+        write(message(current_line), '(3a)') trim(message(current_line)), ' ', trim(adjustl(number))
+      end if
+
     else
-      write(number, '(i10)') val_conv
-      write(message(current_line), '(3a)') trim(message(current_line)), ' ', trim(adjustl(number))
+
+      if(present(fmt)) then
+        write(message(current_line), '(a, '//trim(fmt)//')') trim(message(current_line)), val
+      else
+        write(number, '(i10)') val
+        write(message(current_line), '(3a)') trim(message(current_line)), ' ', trim(adjustl(number))
+      end if
+
     end if
 
 
     if(present(units) .and. optional_default(print_units, .true.)) then
-      write(message(current_line), '(a, a, a)') trim(message(current_line)), ' ', trim(units_abbrev(units))
+      write(message(current_line), '(a, a, a)') trim(message(current_line)), ' ', trim(adjustl(units_abbrev(units)))
     end if
 
     if(present(new_line)) then
@@ -1402,6 +1435,14 @@ contains
     call flush_msg(stderr, msg)
     write(msg, '(a,i2)') ''
     call flush_msg(stderr, msg)
+    write(msg, '(a)')    '  Note: Octopus is currently trapping signals. This might prevent the'
+    call flush_msg(stderr, msg)
+    write(msg, '(a)')    '  use of debuggers or the generation of core dumps. To change this'
+    call flush_msg(stderr, msg)
+    write(msg, '(a)')    '  behavior, use the DebugTrapSignals input option.'
+    call flush_msg(stderr, msg)
+    write(msg, '(a,i2)') ''
+    call flush_msg(stderr, msg)
     write(msg, '(a,i2)') '%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%'
     call flush_msg(stderr, msg)
     
@@ -1455,16 +1496,21 @@ end subroutine assert_die
 
 !-------------------------------------------------------
 
-subroutine dump_call_stack(isignal)
+subroutine handle_segv(isignal) bind(c)
   use messages_oct_m
+  use iso_c_binding
 
   implicit none
   
-  integer, intent(in) :: isignal
-  
+  integer(c_int), intent(in) :: isignal
+
+  ! Switch status to aborted
+  call messages_switch_status('aborted')
+
+  ! Dump stack
   call messages_dump_stack(isignal)
-  
-end subroutine dump_call_stack
+
+end subroutine handle_segv
 
 
 !! Local Variables:

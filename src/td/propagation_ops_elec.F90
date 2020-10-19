@@ -36,9 +36,9 @@ module propagation_ops_elec_oct_m
   use namespace_oct_m
   use potential_interpolation_oct_m
   use profiling_oct_m
+  use propagator_verlet_oct_m
   use states_elec_oct_m
   use varinfo_oct_m
-  use propagation_ops_abst_oct_m
   use wfs_elec_oct_m
   use xc_oct_m
 
@@ -56,36 +56,14 @@ module propagation_ops_elec_oct_m
     propagation_ops_elec_restore_gauge_field,    &
     propagation_ops_elec_interpolate_get
 
-  type, extends(propagation_ops_abst_t) :: propagation_ops_elec_t
+  type :: propagation_ops_elec_t
     private
-
     type(ion_state_t) :: ions_state
     FLOAT :: vecpot(1:MAX_DIM), vecpot_vel(1:MAX_DIM)
-
-  contains
-
-    procedure :: init => propagation_ops_elec_init
-    procedure :: end => propagation_ops_elec_end
   end type propagation_ops_elec_t
 
 
 contains
-
-  subroutine propagation_ops_elec_init(wo)
-    class(propagation_ops_elec_t),  intent(inout) :: wo
-
-    PUSH_SUB(propagation_ops_elec_init)
-
-    POP_SUB(propagation_ops_elec_init)
-  end subroutine
-
-  subroutine propagation_ops_elec_end(wo)
-    class(propagation_ops_elec_t),  intent(inout) :: wo
-
-    PUSH_SUB(propagation_ops_elec_end)
-
-    POP_SUB(propagation_ops_elec_end)
-  end subroutine
 
   ! ---------------------------------------------------------
   subroutine propagation_ops_elec_update_hamiltonian(namespace, st, mesh, hm, time)
@@ -185,7 +163,7 @@ contains
         call gauge_field_get_vec_pot(hm%ep%gfield, wo%vecpot)
         call gauge_field_get_vec_pot_vel(hm%ep%gfield, wo%vecpot_vel)
       end if
-      call gauge_field_propagate(hm%ep%gfield, dt, time, namespace)
+      call gauge_field_do_td(hm%ep%gfield, OP_VERLET_COMPUTE_ACC, dt, time, namespace)
     end if
 
     call profiling_out(prof)
@@ -296,10 +274,10 @@ contains
           !propagate the state to dt/2 and dt, simultaneously, with H(time - dt)
           if (hamiltonian_elec_inh_term(hm)) then
             call exponential_apply_batch(te, namespace, gr%mesh, hm, st%group%psib(ib, ik), dt, psib2 = zpsib_dt, &
-              deltat2 = M_TWO*dt, inh_psib = hm%inh_st%group%psib(ib, ik))
+              deltat2 = dt2, inh_psib = hm%inh_st%group%psib(ib, ik))
           else
             call exponential_apply_batch(te, namespace, gr%mesh, hm, st%group%psib(ib, ik), dt, psib2 = zpsib_dt, &
-              deltat2 = M_TWO*dt)
+              deltat2 = dt2)
           end if
           call hamiltonian_elec_base_unset_phase_corr(hm%hm_base, gr%mesh, st%group%psib(ib, ik))
           call hamiltonian_elec_base_unset_phase_corr(hm%hm_base, gr%mesh, zpsib_dt)

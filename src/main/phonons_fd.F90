@@ -28,6 +28,7 @@ module phonons_fd_oct_m
   use mesh_oct_m
   use messages_oct_m
   use multicomm_oct_m
+  use multisystem_basic_oct_m
   use namespace_oct_m
   use output_oct_m
   use parser_oct_m
@@ -36,7 +37,7 @@ module phonons_fd_oct_m
   use scf_oct_m
   use states_elec_oct_m
   use states_elec_restart_oct_m
-  use system_oct_m
+  use electrons_oct_m
   use unit_system_oct_m
   use utils_oct_m
   use v_ks_oct_m
@@ -50,14 +51,35 @@ module phonons_fd_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine phonons_run(sys)
-    type(system_t),      intent(inout) :: sys
+  subroutine phonons_run(system)
+    class(*), intent(inout) :: system
+
+    PUSH_SUB(phonons_run)
+
+    select type (system)
+    class is (multisystem_basic_t)
+      message(1) = "CalculationMode = vib_modes not implemented for multi-system calculations"
+      call messages_fatal(1)
+    type is (electrons_t)
+      call phonons_run_legacy(system)
+    end select
+
+    POP_SUB(phonons_run)
+  end subroutine phonons_run
+
+  ! ---------------------------------------------------------
+  subroutine phonons_run_legacy(sys)
+    type(electrons_t),      intent(inout) :: sys
 
     type(vibrations_t) :: vib
     integer :: ierr
     type(restart_t) :: gs_restart
 
-    PUSH_SUB(phonons_run)
+    PUSH_SUB(phonons_run_legacy)
+
+    if (sys%hm%pcm%run_pcm) then
+      call messages_not_implemented("PCM for CalculationMode /= gs or td")
+    end if
 
     ! Why not? The symmetries are computed only for the unperturbed geometry,
     ! and are not valid when the atoms are displaced.
@@ -82,7 +104,7 @@ contains
     ! setup Hamiltonian
     message(1) = 'Info: Setting up Hamiltonian.'
     call messages_info(1)
-    call system_h_setup(sys)
+    call v_ks_h_setup(sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm)
 
     call vibrations_init(vib, sys%geo, sys%gr%sb, "fd", sys%namespace)
 
@@ -106,29 +128,29 @@ contains
     call vibrations_end(vib)
 
     call end_()
-    POP_SUB(phonons_run)
+    POP_SUB(phonons_run_legacy)
 
   contains
 
     ! ---------------------------------------------------------
     subroutine init_()
 
-      PUSH_SUB(phonons_run.init_)
+      PUSH_SUB(phonons_run_legacy.init_)
       call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
 
-      POP_SUB(phonons_run.init_)
+      POP_SUB(phonons_run_legacy.init_)
     end subroutine init_
 
     ! ---------------------------------------------------------
     subroutine end_()
 
-      PUSH_SUB(phonons_run.end_)
+      PUSH_SUB(phonons_run_legacy.end_)
       call states_elec_deallocate_wfns(sys%st)
 
-      POP_SUB(phonons_run.end_)
+      POP_SUB(phonons_run_legacy.end_)
     end subroutine end_
 
-  end subroutine phonons_run
+  end subroutine phonons_run_legacy
 
 
   ! ---------------------------------------------------------

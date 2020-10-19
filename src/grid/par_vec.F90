@@ -199,9 +199,6 @@ module par_vec_oct_m
     module procedure ivec_allgather
   end interface vec_allgather
   
-  type(profile_t), save :: prof_scatter
-  type(profile_t), save :: prof_allgather
-
 #endif
   
 contains
@@ -327,7 +324,7 @@ contains
     ! Mark and count ghost points and neighbours
     ! (set vp%np_ghost_neigh, vp%np_ghost, ghost_flag).
     do inode = 1, npart
-      call iihash_init(ghost_flag(inode), vp%np_local_vec(inode))
+      call iihash_init(ghost_flag(inode))
     end do
 
     do jj = 1, stencil%size
@@ -608,7 +605,7 @@ contains
       ! initialize to zero all input
       do inode = 1, npart
         if (inode /= vp%partno) then
-          call iihash_init(vp%global(inode),1)
+          call iihash_init(vp%global(inode))
         end if
       end do
       ii = xbndry_tmp(vp%partno) + np_bndry_tmp(vp%partno)
@@ -627,8 +624,7 @@ contains
     
     do inode = ip, jp
       ! Create hash table.
-      call iihash_init(vp%global(inode), vp%np_local_vec(inode) + &
-           np_ghost_tmp(inode) + np_bndry_tmp(inode))
+      call iihash_init(vp%global(inode))
       ! Insert local points.
       do kp = 1, vp%np_local_vec(inode)
         call iihash_insert(vp%global(inode), vp%local_vec(vp%xlocal_vec(inode) + kp - 1), kp)

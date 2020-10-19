@@ -5,12 +5,13 @@ Program    : octopus
 TestGroups : short-run, functionals
 Enabled    : Yes
 
-
+Processors : 1
 Input: 16-dressed-rdmft.01-ip.inp
 match ; SCF convergence               ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; IP energy                     ; GREPFIELD(static/info, 'Total       =', 3) ; -1.58545076
 match ; IP eigenvalue                 ; GREPFIELD(static/info, '  1   --', 3) ; -0.792725
 
+Processors : 2
 Input: 16-dressed-rdmft.02-hf.inp
 Precision: 0.001
 match ; SCF convergence               ; GREPCOUNT(static/info, 'SCF converged') ; 1
@@ -25,8 +26,8 @@ Input: 16-dressed-rdmft.03-rdmft.inp
 Precision: 0.001
 match ; SCF convergence                  ; GREPCOUNT(static/info, 'SCF converged') ; 1.0
 Precision: 1.e-04
-match ; dRDMFT converged energy          ; GREPFIELD(static/info, 'Total Energy ', 4) ; -0.888984225125
+match ; dRDMFT converged energy          ; GREPFIELD(static/info, 'Total Energy ', 4) ; -0.888946553975
 Precision: 0.0004
-match ; dRDMFT total mode occupation     ; GREPFIELD(static/info, 'Total mode occupation', 4) ; 0.083088691071
+match ; dRDMFT total mode occupation     ; GREPFIELD(static/info, 'Total mode occupation', 4) ; 0.083221597038
 Precision: 0.003
-match ; dRDMFT highest occupation number ; GREPFIELD(static/info, 'Natural occupation numbers', 2, 2) ; 1.9237626622815
+match ; dRDMFT highest occupation number ; GREPFIELD(static/info, 'Natural occupation numbers', 2, 2) ; 1.9229920342595

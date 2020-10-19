@@ -130,7 +130,7 @@ subroutine X(cube_function_allgather)(cube, cf, cf_local, order, gatherfs)
   PUSH_SUB(X(cube_function_allgather))
 
 #ifdef HAVE_MPI
-  call profiling_in(prof_allgather, "CF_ALLGATHER")
+  call profiling_in(prof_allgather, TOSTRING(X(CF_ALLGATHER)))
 
   if(cube_getFFTLibrary(cube) == FFTLIB_PFFT .or. &
     (cube_getFFTLibrary(cube) == FFTLIB_PNFFT .and. .not. optional_default(gatherfs, .false.))) then
@@ -217,9 +217,10 @@ subroutine X(mesh_to_cube)(mesh, mf, cube, cf, local)
   R_TYPE, pointer :: gmf(:)
   type(accel_mem_t)         :: mf_buffer
   type(accel_kernel_t), save :: kernel
+  type(profile_t), save :: prof_m2c
 
   PUSH_SUB(X(mesh_to_cube))
-  call profiling_in(prof_m2c, "MESH_TO_CUBE")
+  call profiling_in(prof_m2c, TOSTRING(X(MESH_TO_CUBE)))
 
   local_ = optional_default(local, .false.) .and. mesh%parallel_in_domains
 
@@ -256,7 +257,9 @@ subroutine X(mesh_to_cube)(mesh, mf, cube, cf, local)
 
       ip = mesh%cube_map%map(MCM_POINT, im)
       nn = mesh%cube_map%map(MCM_COUNT, im)
-      forall(ii = 0:nn - 1) cf%X(rs)(ix, iy, iz + ii) = gmf(ip + ii)
+      do ii = 0, nn - 1
+        cf%X(rs)(ix, iy, iz + ii) = gmf(ip + ii)
+      end do
     end do
     !$omp end parallel do
 
@@ -317,10 +320,11 @@ subroutine X(cube_to_mesh) (cube, cf, mesh, mf, local)
   integer                    :: bsize
   type(accel_mem_t)         :: mf_buffer
   type(accel_kernel_t), save :: kernel
+  type(profile_t), save :: prof_c2m
 
   PUSH_SUB(X(cube_to_mesh))
 
-  call profiling_in(prof_c2m, "CUBE_TO_MESH")
+  call profiling_in(prof_c2m, TOSTRING(X(CUBE_TO_MESH)))
 
   local_ = optional_default(local, .false.) .and. mesh%parallel_in_domains
 
@@ -346,7 +350,9 @@ subroutine X(cube_to_mesh) (cube, cf, mesh, mf, local)
       ip = mesh%cube_map%map(MCM_POINT, im)
       nn = mesh%cube_map%map(MCM_COUNT, im)
 
-      forall(ii = 0:nn - 1) gmf(ip + ii) = cf%X(rs)(ix, iy, iz + ii)
+      do ii = 0, nn - 1
+        gmf(ip + ii) = cf%X(rs)(ix, iy, iz + ii)
+      end do
     end do
     !$omp end parallel do
 
@@ -411,9 +417,10 @@ subroutine X(mesh_to_cube_parallel)(mesh, mf, cube, cf, map)
   integer :: im, ii, nn
   integer :: min_x, min_y, min_z, max_x, max_y, max_z
   R_TYPE, allocatable :: in(:), out(:)
+  type(profile_t), save :: prof_m2c
 
   PUSH_SUB(X(mesh_to_cube_parallel))
-  call profiling_in(prof_m2c, "MESH_TO_CUBE_PARALLEL")
+  call profiling_in(prof_m2c, TOSTRING(X(MESH_TO_CUBE_PARALLEL)))
 
   ASSERT(ubound(mf, dim = 1) == mesh%np .or. ubound(mf, dim = 1) == mesh%np_part)
 
@@ -449,15 +456,21 @@ subroutine X(mesh_to_cube_parallel)(mesh, mf, cube, cf, map)
     max_x = cube%rs_istart(1) + cube%rs_n(1)
     max_y = cube%rs_istart(2) + cube%rs_n(2)
     max_z = cube%rs_istart(3) + cube%rs_n(3)
-  
+
     ! Initialize to zero the input matrix
-    forall(iz = 1:cube%rs_n(3), iy = 1:cube%rs_n(2), ix = 1:cube%rs_n(1)) cf%X(rs)(ix, iy, iz) = M_ZERO
+    do iz = 1, cube%rs_n(3)
+      do iy = 1, cube%rs_n(2)
+        do ix = 1, cube%rs_n(1)
+          cf%X(rs)(ix, iy, iz) = M_ZERO
+        end do
+      end do
+    end do
 
     ! Do the actual transform, only for the output values
     do im = 1, mesh%cube_map%nmap
       ip = mesh%cube_map%map(MCM_POINT, im)
       nn = mesh%cube_map%map(MCM_COUNT, im)
-    
+
       ix = mesh%cube_map%map(1, im) + cube%center(1)
       if (ix >= min_x .and. ix < max_x) then
         iy = mesh%cube_map%map(2, im) + cube%center(2)
@@ -493,9 +506,10 @@ subroutine X(cube_to_mesh_parallel) (cube, cf, mesh, mf, map)
   integer :: ip, ix, iy, iz, im, ii, nn, ixyz(3)
   R_TYPE, allocatable :: gcf(:,:,:)
   R_TYPE, allocatable :: in(:), out(:)
+  type(profile_t), save :: prof_c2m
 
   PUSH_SUB(X(cube_to_mesh_parallel))
-  call profiling_in(prof_c2m, "CUBE_TO_MESH_PARALLEL")
+  call profiling_in(prof_c2m, TOSTRING(X(CUBE_TO_MESH_PARALLEL)))
 
   ASSERT(.not. cf%in_device_memory)
   ASSERT(ubound(mf, dim = 1) == mesh%np .or. ubound(mf, dim = 1) == mesh%np_part)
@@ -540,7 +554,9 @@ subroutine X(cube_to_mesh_parallel) (cube, cf, mesh, mf, map)
 
       ixyz(1:3) = mesh%cube_map%map(1:3, im) + cube%center(1:3)
 
-      forall(ii = 0:nn - 1) mf(ip + ii) = gcf(ixyz(1), ixyz(2), ixyz(3) + ii)
+      do ii = 0, nn - 1
+        mf(ip + ii) = gcf(ixyz(1), ixyz(2), ixyz(3) + ii)
+      end do
     end do
 
     SAFE_DEALLOCATE_A(gcf)
@@ -616,7 +632,7 @@ subroutine X(submesh_to_cube)(sm, mf, cube, cf)
   type(profile_t), save :: prof_sm2c
 
   PUSH_SUB(X(submesh_to_cube))
-  call profiling_in(prof_sm2c, "SUBMESH_TO_CUBE")
+  call profiling_in(prof_sm2c, TOSTRING(X(SUBMESH_TO_CUBE)))
 
   ASSERT(ubound(mf, dim = 1) == sm%np)
   ASSERT(.not. sm%mesh%parallel_in_domains)
@@ -671,7 +687,7 @@ subroutine X(cube_to_submesh) (cube, cf, sm, mf)
 
   PUSH_SUB(X(cube_to_submesh))
 
-  call profiling_in(prof_c2sm, "CUBE_TO_SUBMESH")
+  call profiling_in(prof_c2sm, TOSTRING(X(CUBE_TO_SUBMESH)))
 
   ASSERT(ubound(mf, dim = 1) == sm%np)
   ASSERT(.not. sm%mesh%parallel_in_domains)

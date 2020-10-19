@@ -33,6 +33,7 @@ module epot_oct_m
   use mesh_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use multicomm_oct_m
   use namespace_oct_m
   use parser_oct_m
   use poisson_oct_m
@@ -135,7 +136,7 @@ module epot_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine epot_init(ep, namespace, gr, geo, psolver, ispin, nik, xc_family)
+  subroutine epot_init(ep, namespace, gr, geo, psolver, ispin, nik, xc_family, mc)
     type(epot_t),                       intent(out)   :: ep
     type(namespace_t),                  intent(in)    :: namespace
     type(grid_t),                       intent(in)    :: gr
@@ -144,11 +145,10 @@ contains
     integer,                            intent(in)    :: ispin
     integer,                            intent(in)    :: nik
     integer,                            intent(in)    :: xc_family
+    type(multicomm_t),                  intent(in)    :: mc
 
 
-    integer :: ispec, ip, idir, ia, gauge_2d, ierr
-    type(block_t) :: blk
-    FLOAT, allocatable :: grx(:)
+    integer :: ispec, ia, ierr
     integer :: filter
     character(len=100)  :: function_name
 
@@ -172,13 +172,13 @@ contains
     !% The filter of E. L. Briggs, D. J. Sullivan, and J. Bernholc, <i>Phys. Rev. B</i> <b>54</b>, 14362 (1996).
     !%End
     call parse_variable(namespace, 'FilterPotentials', PS_FILTER_TS, filter)
-    if(.not.varinfo_valid_option('FilterPotentials', filter)) call messages_input_error('FilterPotentials')
+    if(.not.varinfo_valid_option('FilterPotentials', filter)) call messages_input_error(namespace, 'FilterPotentials')
     call messages_print_var_option(stdout, "FilterPotentials", filter)
 
     if(family_is_mgga(xc_family) .and. filter /= PS_FILTER_NONE) &
       call messages_not_implemented("FilterPotentials different from filter_none with MGGA", namespace=namespace)
 
-    if(filter == PS_FILTER_TS) call spline_filter_mask_init(namespace)
+    if(filter == PS_FILTER_TS) call spline_filter_mask_init()
     do ispec = 1, geo%nspecies
       call species_pot_init(geo%species(ispec), namespace, mesh_gcutoff(gr%mesh), filter)
     end do
@@ -234,163 +234,8 @@ contains
     ! No more "UserDefinedTDPotential" from this version on.
     call messages_obsolete_variable(namespace, 'UserDefinedTDPotential', 'TDExternalFields')
 
-    !%Variable StaticElectricField
-    !%Type block
-    !%Default 0
-    !%Section Hamiltonian
-    !%Description
-    !% A static constant electric field may be added to the usual Hamiltonian,
-    !% by setting the block <tt>StaticElectricField</tt>.
-    !% The three possible components of the block (which should only have one
-    !% line) are the three components of the electric field vector.
-    !% It can be applied in a periodic direction of a large supercell via
-    !% the single-point Berry phase.
-    !%End
-    nullify(ep%E_field, ep%v_static)
-    if(parse_block(namespace, 'StaticElectricField', blk)==0) then
-      SAFE_ALLOCATE(ep%E_field(1:gr%sb%dim))
-      do idir = 1, gr%sb%dim
-        call parse_block_float(blk, 0, idir - 1, ep%E_field(idir), units_inp%energy / units_inp%length)
+    nullify(ep%B_field, ep%A_static, ep%E_field, ep%v_static)
 
-        if(idir <= gr%sb%periodic_dim .and. abs(ep%E_field(idir)) > M_EPSILON) then
-          message(1) = "Applying StaticElectricField in a periodic direction is only accurate for large supercells."
-          if(nik == 1) then
-            call messages_warning(1, namespace=namespace)
-          else
-            message(2) = "Single-point Berry phase is not appropriate when k-point sampling is needed."
-            call messages_warning(2, namespace=namespace)
-          end if
-        end if
-      end do
-      call parse_block_end(blk)
-
-      if(gr%sb%periodic_dim < gr%sb%dim) then
-        ! Compute the scalar potential
-        !
-        ! Note that the -1 sign is missing. This is because we
-        ! consider the electrons with +1 charge. The electric field
-        ! however retains the sign because we also consider protons to
-        ! have +1 charge when calculating the force.
-        SAFE_ALLOCATE(ep%v_static(1:gr%mesh%np))
-        forall(ip = 1:gr%mesh%np)
-          ep%v_static(ip) = sum(gr%mesh%x(ip, gr%sb%periodic_dim + 1:gr%sb%dim) * ep%E_field(gr%sb%periodic_dim + 1:gr%sb%dim))
-        end forall
-        ! The following is needed to make interpolations.
-        ! It is used by PCM.
-        SAFE_ALLOCATE(ep%v_ext(1:gr%mesh%np_part))
-        forall(ip = 1:gr%mesh%np_part)
-          ep%v_ext(ip) = sum(gr%mesh%x(ip, gr%sb%periodic_dim + 1:gr%sb%dim) * ep%E_field(gr%sb%periodic_dim + 1:gr%sb%dim))
-        end forall
-      end if
-    end if
-
-
-    !%Variable StaticMagneticField
-    !%Type block
-    !%Section Hamiltonian
-    !%Description
-    !% A static constant magnetic field may be added to the usual Hamiltonian,
-    !% by setting the block <tt>StaticMagneticField</tt>.
-    !% The three possible components of the block (which should only have one
-    !% line) are the three components of the magnetic field vector. Note that
-    !% if you are running the code in 1D mode, this will not work, and if you
-    !% are running the code in 2D mode the magnetic field will have to be in
-    !% the <i>z</i>-direction, so that the first two columns should be zero.
-    !% Possible in periodic system only in these cases: 2D system, 1D periodic,
-    !% with <tt>StaticMagneticField2DGauge = linear_y</tt>;
-    !% 3D system, 1D periodic, field is zero in <i>y</i>- and <i>z</i>-directions (given
-    !% currently implemented gauges).
-    !%
-    !% The magnetic field should always be entered in atomic units, regardless
-    !% of the <tt>Units</tt> variable. Note that we use the "Gaussian" system
-    !% meaning 1 au[B] = <math>1.7152553 \times 10^7</math> Gauss, which corresponds to
-    !% <math>1.7152553 \times 10^3</math> Tesla.
-    !%End
-    nullify(ep%B_field, ep%A_static)
-    if(parse_block(namespace, 'StaticMagneticField', blk) == 0) then
-
-      !%Variable StaticMagneticField2DGauge
-      !%Type integer
-      !%Default linear_xy
-      !%Section Hamiltonian
-      !%Description
-      !% The gauge of the static vector potential <math>A</math> when a magnetic field
-      !% <math>B = \left( 0, 0, B_z \right)</math> is applied to a 2D-system.
-      !%Option linear_xy 0
-      !% Linear gauge with <math>A = \frac{1}{2c} \left( -y, x \right) B_z</math>. (Cannot be used for periodic systems.)
-      !%Option linear_y 1
-      !% Linear gauge with <math>A = \frac{1}{c} \left( -y, 0 \right) B_z</math>. Can be used for <tt>PeriodicDimensions = 1</tt>
-      !% but not <tt>PeriodicDimensions = 2</tt>.
-      !%End
-      call parse_variable(namespace, 'StaticMagneticField2DGauge', 0, gauge_2d)
-      if(.not.varinfo_valid_option('StaticMagneticField2DGauge', gauge_2d)) &
-        call messages_input_error('StaticMagneticField2DGauge')
-
-      SAFE_ALLOCATE(ep%B_field(1:3))
-      do idir = 1, 3
-        call parse_block_float(blk, 0, idir - 1, ep%B_field(idir))
-      end do
-      select case(gr%sb%dim)
-      case(1)
-        call messages_input_error('StaticMagneticField')
-      case(2)
-        if(gr%sb%periodic_dim == 2) then
-          message(1) = "StaticMagneticField cannot be applied in a 2D, 2D-periodic system."
-          call messages_fatal(1, namespace=namespace)
-        end if
-        if(ep%B_field(1)**2 + ep%B_field(2)**2 > M_ZERO) call messages_input_error('StaticMagneticField')
-      case(3)
-        ! Consider cross-product below: if grx(1:sb%periodic_dim) is used, it is not ok.
-        ! Therefore, if idir is periodic, B_field for all other directions must be zero.
-        ! 1D-periodic: only Bx. 2D-periodic or 3D-periodic: not allowed. Other gauges could allow 2D-periodic case.
-        if(gr%sb%periodic_dim >= 2) then
-          message(1) = "In 3D, StaticMagneticField cannot be applied when the system is 2D- or 3D-periodic."
-          call messages_fatal(1, namespace=namespace)
-        else if(gr%sb%periodic_dim == 1 .and. any(abs(ep%B_field(2:3)) > M_ZERO)) then
-          message(1) = "In 3D, 1D-periodic, StaticMagneticField must be zero in the y- and z-directions."
-          call messages_fatal(1, namespace=namespace)
-        end if
-      end select
-      call parse_block_end(blk)
-
-      if(gr%sb%dim > 3) call messages_not_implemented('Magnetic field for dim > 3', namespace=namespace)
-
-      ! Compute the vector potential
-      SAFE_ALLOCATE(ep%A_static(1:gr%mesh%np, 1:gr%sb%dim))
-      SAFE_ALLOCATE(grx(1:gr%sb%dim))
-
-      select case(gr%sb%dim)
-      case(2)
-        select case(gauge_2d)
-        case(0) ! linear_xy
-          if(gr%sb%periodic_dim == 1) then
-            message(1) = "For 2D system, 1D-periodic, StaticMagneticField can only be "
-            message(2) = "applied for StaticMagneticField2DGauge = linear_y."
-            call messages_fatal(2, namespace=namespace)
-          end if
-          do ip = 1, gr%mesh%np
-            grx(1:gr%sb%dim) = gr%mesh%x(ip, 1:gr%sb%dim)
-            ep%A_static(ip, :) = M_HALF/P_C*(/grx(2), -grx(1)/) * ep%B_field(3)
-          end do
-        case(1) ! linear y
-          do ip = 1, gr%mesh%np
-            grx(1:gr%sb%dim) = gr%mesh%x(ip, 1:gr%sb%dim)
-            ep%A_static(ip, :) = M_ONE/P_C*(/grx(2), M_ZERO/) * ep%B_field(3)
-          end do
-        end select
-      case(3)
-        do ip = 1, gr%mesh%np
-          grx(1:gr%sb%dim) = gr%mesh%x(ip, 1:gr%sb%dim)
-          ep%A_static(ip, :) = M_HALF/P_C*(/grx(2) * ep%B_field(3) - grx(3) * ep%B_field(2), &
-                               grx(3) * ep%B_field(1) - grx(1) * ep%B_field(3), &
-                               grx(1) * ep%B_field(2) - grx(2) * ep%B_field(1)/)
-        end do
-      end select
-
-      SAFE_DEALLOCATE_A(grx)
-
-    end if
-    
     !%Variable GyromagneticRatio
     !%Type float
     !%Default 2.0023193043768
@@ -422,7 +267,9 @@ contains
     !% Spin-orbit.
     !%End
     call parse_variable(namespace, 'RelativisticCorrection', NOREL, ep%reltype)
-    if(.not.varinfo_valid_option('RelativisticCorrection', ep%reltype)) call messages_input_error('RelativisticCorrection')
+    if(.not.varinfo_valid_option('RelativisticCorrection', ep%reltype)) then
+      call messages_input_error(namespace, 'RelativisticCorrection')
+    end if
     if (ispin /= SPINORS .and. ep%reltype == SPIN_ORBIT) then
       message(1) = "The spin-orbit term can only be applied when using spinors."
       call messages_fatal(1, namespace=namespace)
@@ -458,7 +305,7 @@ contains
     !%End
     call parse_variable(namespace, 'IgnoreExternalIons', .false., ep%ignore_external_ions)
     if(ep%ignore_external_ions) then
-      if(gr%sb%periodic_dim > 0) call messages_input_error('IgnoreExternalIons')
+      if(gr%sb%periodic_dim > 0) call messages_input_error(namespace, 'IgnoreExternalIons')
     end if
 
     !%Variable ForceTotalEnforce
@@ -507,7 +354,7 @@ contains
       nullify(ep%poisson_solver)
     end if
 
-    call ion_interaction_init(ep%ion_interaction, namespace)
+    call ion_interaction_init(ep%ion_interaction, namespace, geo, mc)
 
     !%Variable TDGlobalForce
     !%Type string
@@ -653,7 +500,9 @@ contains
       SAFE_ALLOCATE(tmp(1:gr%mesh%np_part))
       if(poisson_solver_is_iterative(ep%poisson_solver)) tmp(1:mesh%np) = M_ZERO
       call dpoisson_solve(ep%poisson_solver, tmp, density)
-      forall(ip = 1:mesh%np) ep%vpsl(ip) = ep%vpsl(ip) + tmp(ip)
+      do ip = 1, mesh%np
+        ep%vpsl(ip) = ep%vpsl(ip) + tmp(ip)
+      end do
       SAFE_DEALLOCATE_A(tmp)
 
     end if
@@ -734,7 +583,9 @@ contains
 
     if(ep%local_potential_precalculated) then
 
-      forall(ip = 1:der%mesh%np) vpsl(ip) = vpsl(ip) + ep%local_potential(ip, iatom)
+      do ip = 1, der%mesh%np
+        vpsl(ip) = vpsl(ip) + ep%local_potential(ip, iatom)
+      end do
     else
 
       !Local potential, we can get it by solving the Poisson equation
@@ -747,7 +598,9 @@ contains
         call species_get_density(geo%atom(iatom)%species, namespace, geo%atom(iatom)%x, der%mesh, rho)
 
         if(present(density)) then
-          forall(ip = 1:der%mesh%np) density(ip) = density(ip) + rho(ip)
+          do ip = 1, der%mesh%np
+            density(ip) = density(ip) + rho(ip)
+          end do
         else
 
           SAFE_ALLOCATE(vl(1:der%mesh%np))
@@ -771,7 +624,9 @@ contains
       end if
 
       if(allocated(vl)) then
-        forall(ip = 1:der%mesh%np) vpsl(ip) = vpsl(ip) + vl(ip)
+        do ip = 1, der%mesh%np
+          vpsl(ip) = vpsl(ip) + vl(ip)
+        end do
         SAFE_DEALLOCATE_A(vl)
       end if
 
@@ -804,7 +659,9 @@ contains
       species_is_ps(geo%atom(iatom)%species)) then
       SAFE_ALLOCATE(rho(1:der%mesh%np))
       call species_get_nlcc(geo%atom(iatom)%species, geo%atom(iatom)%x, der%mesh, rho)
-      forall(ip = 1:der%mesh%np) rho_core(ip) = rho_core(ip) + rho(ip)
+      do ip = 1, der%mesh%np
+        rho_core(ip) = rho_core(ip) + rho(ip)
+      end do
       SAFE_DEALLOCATE_A(rho)
     end if
 
@@ -830,7 +687,7 @@ contains
         call mesh_r(mesh, ip, rr, origin=geo%catom(ia)%x)
         select case(ep%classical_pot)
         case(CLASSICAL_POINT)
-          if(rr < r_small) rr = r_small
+          if(rr < R_SMALL) rr = R_SMALL
           ep%Vclassical(ip) = ep%Vclassical(ip) - geo%catom(ia)%charge/rr
         case(CLASSICAL_GAUSSIAN)
           select case(geo%catom(ia)%label(1:1)) ! covalent radii
@@ -841,10 +698,11 @@ contains
           case default
             rc = CNST(0.7) * P_Ang
           end select
-          if(abs(rr - rc) < r_small) rr = rc + sign(r_small, rr - rc)
+          if(abs(rr - rc) < R_SMALL) rr = rc + sign(R_SMALL, rr - rc)
           ep%Vclassical(ip) = ep%Vclassical(ip) - geo%catom(ia)%charge * (rr**4 - rc**4) / (rr**5 - rc**5)
         case default
-          call messages_input_error('ClassicalPotential')
+          message(1) = 'Unknown type of classical potential in epot_generate_classical'
+          call messages_fatal(1)
         end select
       end do
     end do

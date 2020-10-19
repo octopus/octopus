@@ -31,7 +31,7 @@ Spacing = 0.4
 
 Smearing = 0.1*eV
 SmearingFunction = fermi_dirac
-ExtraStates = 2
+ExtraStates = 4
 
 ConvRelDens = 1e-6
 EigensolverTolerance = 1e-7
@@ -39,3 +39,5 @@ EigensolverMaxIter = 50
 
 ProfilingMode = prof_io
 StatesPack = yes
+LCAOStart = lcao_full
+

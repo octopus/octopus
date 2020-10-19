@@ -32,6 +32,7 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir)/liboct_parser \
         $(GSL_CFLAGS) $(GD_CFLAGS) \
 	@METIS_CFLAGS@ @PARMETIS_CFLAGS@ @CFLAGS_NFFT@ @CFLAGS_FFTW@ @CFLAGS_CUDA@ \
+        @CGAL_CPPFLAGS@ \
 	-DSHARE_DIR='"$(pkgdatadir)"'
 
 AM_CCASFLAGS = \
@@ -86,7 +87,7 @@ outside_LIBS = @LIBS_PSPIO@ @LIBS_POKE@ @LIBS_PSOLVER@ @LIBS_ISF@ @LIBS_FUTILE@	
   @LIBS_LIBYAML@ @LIBS_NFFT@ @LIBS_PNFFT@ @LIBS_PFFT@ @LIBS_SPARSKIT@		\
   @LIBS_ETSF_IO@ @LIBS_NETCDF@ @LIBS_LIBFM@ @LIBS_LIBVDWXC@ @LIBS_BERKELEYGW@	\
   @LIBS_NLOPT@ @GD_LIBS@ @LIBS_PARMETIS@ @LIBS_METIS@ @LIBS_LIKWID@ @LIBS_CUDA@	\
-  @LIBS_MPI@
+  @LIBS_MPI@ @CGAL_LDFLAGS@
 
 other_LIBS = $(external_LIBS) $(scalapack_LIBS) $(outside_LIBS) $(core_LIBS) @CXXLIBS@
 all_LIBS = $(octopus_LIBS) $(other_LIBS)
@@ -112,7 +113,7 @@ fc_verbose_0 = @echo "  FC       $@";
 .F90.o:
 	$(cpp_verbose)@FCCPP@ @CPPFLAGS@ $(AM_CPPFLAGS) -I. $< | \
 	  $(top_srcdir)/build/preprocess.pl - \
-	  "@DEBUG@" "@F90_ACCEPTS_LINE_NUMBERS@" "@F90_FORALL@" > $*_oct.f90
+	  "@DEBUG@" "@F90_ACCEPTS_LINE_NUMBERS@" > $*_oct.f90
 	$(fc_verbose)@FC@ @FCFLAGS@ $(FCFLAGS_MODS) -c @FCFLAGS_f90@ -o $@ $*_oct.f90
 	@rm -f $*_oct.f90
 
@@ -122,7 +123,7 @@ fc_verbose_0 = @echo "  FC       $@";
 .F90_oct.f90:
 	$(cpp_verbose)@FCCPP@ @CPPFLAGS@ $(AM_CPPFLAGS) -I. $< | \
 	  $(top_srcdir)/build/preprocess.pl - \
-	  "@DEBUG@" "@F90_ACCEPTS_LINE_NUMBERS@" "@F90_FORALL@" > $*_oct.f90
+	  "@DEBUG@" "@F90_ACCEPTS_LINE_NUMBERS@" > $*_oct.f90
 
 
 # ---------------------------------------------------------------

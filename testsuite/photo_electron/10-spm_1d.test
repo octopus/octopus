@@ -9,8 +9,12 @@ Enabled    : Yes
 # Sample point method
 Processors : 2
 Input      : 10-spm_1d.h1d_lin.inp
-Precision  : 1.0e-6
-match ; PES [val  1] ; LINEFIELD(td.general/PES_spm.power.sum, 188, 2) ; 0.4720202849E-003
-match ; PES [val  2] ; LINEFIELD(td.general/PES_spm.power.sum, 205, 2) ; 0.1583593472E-002
-match ; PES [val  3] ; LINEFIELD(td.general/PES_spm.power.sum, 219, 2) ; 0.6180372081E-003
+if(available cuda); then
+  match ; Error match ; GREPCOUNT(err, 'Calculation will not be continued.') ; 1
+else
+  Precision  : 1.0e-6
+  match ; PES [val  1] ; LINEFIELD(td.general/PES_spm.power.sum, 188, 2) ; 0.4720202849E-003
+  match ; PES [val  2] ; LINEFIELD(td.general/PES_spm.power.sum, 205, 2) ; 0.1583593472E-002
+  match ; PES [val  3] ; LINEFIELD(td.general/PES_spm.power.sum, 219, 2) ; 0.6180372081E-003
+endif
 

@@ -38,3 +38,5 @@ FilterPotentials = filter_none
 
 ExperimentalFeatures = yes
 MixField = density
+
+LCAOStart = lcao_full

@@ -13,7 +13,7 @@ dt = 0.02
 TDPropagator = exp_mid
 # use default Taylor expansion -> much faster on GPUs
 #TDExponentialMethod = lanczos
-#TDExponentialOrder = 30
+#TDExpOrder = 30
 #TDLanczosTol = 1.0e-4
 TDMaxSteps = stime/dt
 TDTimeStep = dt
@@ -36,8 +36,6 @@ OCTTargetOperator = oct_tg_gstransformation
 
 OCTScheme  = oct_zbr98
 OCTDoubleCheck = No	
-gamma1 = 0.1
-gamma2 = 80
 
 #----------------------------
 # Laser field = Initial guess

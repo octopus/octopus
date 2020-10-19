@@ -68,7 +68,7 @@ contains
     integer            :: il, nlines, idim, ncols, ip, state_from, ierr, maxwell_field
     FLOAT              :: xx(MAX_DIM), rr, e_value, dummy, b_value
     FLOAT, allocatable :: e_field(:), b_field(:)
-    CMPLX, allocatable :: rs_state(:,:), rs_state_add(:,:)
+    CMPLX, allocatable :: rs_state_add(:)
     character(len=150), pointer :: filename_e_field, filename_b_field
     character(1) :: cdim
     
@@ -77,13 +77,6 @@ contains
       STATE_FROM_FILE     = -10010
 
     PUSH_SUB(states_mxll_read_user_def)
-
-    SAFE_ALLOCATE(rs_state(1:mesh%np_part,1:st%d%dim))
-    SAFE_ALLOCATE(rs_state_add(1:mesh%np_part,1:st%d%dim))
-
-    ! Set electromagnetic field equal to zero in the whole simulation box.
-    rs_state(:,:) = M_ZERO
-    rs_state_add(:,:) = M_ZERO
 
     !%Variable UserDefinedInitialMaxwellStates
     !%Type block
@@ -129,7 +122,10 @@ contains
 
     if(parse_block(namespace, 'UserDefinedInitialMaxwellStates', blk) == 0) then
 
-      !call messages_print_stress(stdout, trim('Substitution of the electromagnetic fields'), namespace=namespace)
+      SAFE_ALLOCATE(rs_state_add(1:mesh%np_part))
+
+      ! Set electromagnetic field equal to zero in the whole simulation box.
+      user_def_rs_state(:,:) = M_ZERO
 
       ! find out how many lines (i.e. states) the block has
       nlines = parse_block_n(blk)
@@ -153,6 +149,8 @@ contains
 
         ! Calculate from expression or read from file?
         call parse_block_integer(blk, il - 1, 1, state_from)
+    
+        rs_state_add(:) = M_ZERO
 
         select case(state_from)
 
@@ -168,24 +166,25 @@ contains
             call messages_write("  B-field in dimension "//trim(cdim)//" : "//trim(st%user_def_b_field(idim)), fmt='(a,i1,2a)')
             call conv_to_C_string(st%user_def_b_field(idim))
           end if
+
           ! fill Maxwell states with user-defined formulas
-          do ip = 1, mesh%np_part
+          do ip = 1, mesh%np
             xx = mesh%x(ip, :)
             rr = sqrt(sum(xx(:)**2))
             ! parse user-defined expressions
             if (maxwell_field == OPTION__USERDEFINEDINITIALMAXWELLSTATES__ELECTRIC_FIELD) then
-              call parse_expression(e_value, dummy, st%d%dim, xx, rr, M_ZERO, &
+              call parse_expression(e_value, dummy, st%dim, xx, rr, M_ZERO, &
                                     st%user_def_e_field(idim))
               b_value = M_ZERO
             else if (maxwell_field == OPTION__USERDEFINEDINITIALMAXWELLSTATES__MAGNETIC_FIELD) then
-              call parse_expression(b_value, dummy, st%d%dim, xx, rr, M_ZERO, &
+              call parse_expression(b_value, dummy, st%dim, xx, rr, M_ZERO, &
                                     st%user_def_b_field(idim))
               e_value = M_ZERO
             end if
             e_value = units_to_atomic(units_inp%energy/units_inp%length, e_value)
             b_value = units_to_atomic(unit_one/(units_inp%length**2), b_value)
             ! fill state
-            call build_rs_element(e_value, b_value, st%rs_sign, rs_state_add(ip,idim), &
+            call build_rs_element(e_value, b_value, st%rs_sign, rs_state_add(ip), &
                                           st%ep(ip), st%mu(ip))
           end do
 
@@ -220,7 +219,7 @@ contains
             b_field = units_to_atomic(unit_one/units_inp%length**2, b_field)
           end if
           ! fill state
-          call build_rs_vector(e_field(:), b_field(:), st%rs_sign, rs_state_add(:,idim), &
+          call build_rs_vector(e_field(:), b_field(:), st%rs_sign, rs_state_add(:), &
                                        st%ep(ip), st%mu(ip))
 
           SAFE_DEALLOCATE_A(e_field)
@@ -232,15 +231,10 @@ contains
           call messages_fatal(2, namespace=namespace)
         end select
 
-        rs_state(:,idim) = rs_state(:,idim) + rs_state_add(:,idim)
+        call lalg_axpy(mesh%np, M_ONE, rs_state_add, user_def_rs_state(:,idim))
 
       end do
 
-      do ip=1, mesh%np
-        user_def_rs_state(ip,:) = rs_state(ip,:)
-      end do
-
-      SAFE_DEALLOCATE_A(rs_state)
       SAFE_DEALLOCATE_A(rs_state_add)
       call parse_block_end(blk)
       !call messages_print_stress(stdout, namespace=namespace)
@@ -272,7 +266,6 @@ contains
     character(len=MAX_PATH_LEN) :: filename
     character(len=300) :: lines(3)
     logical :: should_write, verbose_
-    CMPLX,  allocatable :: zff_global(:)
 
     PUSH_SUB(states_mxll_dump)
 
@@ -306,7 +299,6 @@ contains
     call restart_write(restart, iunit_wfns, lines, 2, err)
     if (err /= 0) ierr = ierr + 2
 
-    SAFE_ALLOCATE(zff_global(1:gr%mesh%np_global))
 
     itot = 1
     root = 0
@@ -329,16 +321,13 @@ contains
        end if
 
        if (should_write) then
-          call batch_get_state(st%rsb, (/ist, idim/), gr%mesh%np, zff_global)
-          call zrestart_write_mesh_function(restart, filename, gr%mesh, zff_global, err, root = root)
+          call zrestart_write_mesh_function(restart, filename, gr%mesh, zff(:,idim), err, root = root)
           if (err /= 0) err2(2) = err2(2) + 1
        end if
     end do ! zff_dim
 
     if (err2(1) /= 0) ierr = ierr + 8
     if (err2(2) /= 0) ierr = ierr + 16
-
-    SAFE_DEALLOCATE_A(zff_global)
 
     lines(1) = '%'
     call restart_write(restart, iunit_wfns, lines, 1, err) 
@@ -509,7 +498,6 @@ contains
 
        call zrestart_read_mesh_function(restart, restart_file(idim, ist), gr%mesh, &
             zff(:,idim), err)
-       call batch_set_state(st%rsb, (/ist, idim/), gr%mesh%np, zff(:,idim))
 
 
        if (err == 0) then
