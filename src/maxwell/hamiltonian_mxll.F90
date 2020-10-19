@@ -289,7 +289,7 @@ contains
 
     PUSH_SUB(hamiltonian_mxll_end)
 
-    call profiling_in(prof, "HAMILTONIAN_MXLL_APPLY_BATCH")
+    call profiling_in(prof, "HAMILTONIAN_MXLL_END")
 
     nullify(hm%operators)
 
@@ -506,7 +506,7 @@ contains
     CMPLX, allocatable :: tmp(:,:)
     CMPLX, pointer     :: kappa_psi(:,:)
     integer            :: np, np_part, ip, ip_in, rs_sign
-    type(profile_t), save :: prof
+    type(profile_t), save :: prof, prof_method
 
     PUSH_SUB(maxwell_hamiltonian_apply_fd)
 
@@ -523,6 +523,7 @@ contains
     ! Maxwell Hamiltonian - Hamiltonian operation in vacuum via partial derivatives:
 
     case (FARADAY_AMPERE)
+      call profiling_in(prof_method, 'MXLL_HAM_APPLY_FD_FARADAY_AMP')
 
       SAFE_ALLOCATE(tmp(np,2))
       oppsi       = M_z0
@@ -571,11 +572,12 @@ contains
 
       SAFE_DEALLOCATE_A(tmp)
 
-
+      call profiling_out(prof_method)
     !=================================================================================================
     ! Maxwell Hamiltonian - Hamiltonian operation in medium via partial derivatives:
 
     case (FARADAY_AMPERE_MEDIUM)
+      call profiling_in(prof_method, 'MXLL_HAM_APP_FAR_AMP_MED')
 
       SAFE_ALLOCATE(tmp(np,4))
       oppsi       = M_z0
@@ -630,11 +632,13 @@ contains
       ! Riemann-Silberstein vector calculation for medium boxes:
       call maxwell_medium_boxes_calculation(hm, der, psi, oppsi)
 
-
+      call profiling_out(prof_method)
     !=================================================================================================
     ! Maxwell Hamiltonian - Hamiltonian operation in vacuum with Gauss condition via partial derivatives:
 
     case (FARADAY_AMPERE_GAUSS)
+
+      call profiling_in(prof_method, 'MXLL_HAM_APP_FAR_AMP_GAUSS')
 
       SAFE_ALLOCATE(tmp(np,3))
       oppsi       = M_z0
@@ -661,13 +665,14 @@ contains
       oppsi(1:np,4) = rs_sign * P_c * ( tmp(1:np,1) - M_zI*tmp(1:np,2) + M_zI*tmp(1:np,3) )
 
       SAFE_DEALLOCATE_A(tmp)
-
+      call profiling_out(prof_method)
 
     !=================================================================================================
     ! Maxwell Hamiltonian - Hamiltonian operation in medium with Gauss condition via partial derivatives:
 
     case (FARADAY_AMPERE_GAUSS_MEDIUM)
 
+      call profiling_in(prof_method, 'MXLL_HAM_AP_FAR_AMP_GA_MED')
       SAFE_ALLOCATE(tmp(np,3))
       oppsi       = M_z0
       tmp = M_z0
@@ -713,6 +718,7 @@ contains
       oppsi(1:np,8) = - P_c*(tmp(1:np,1)-M_zI*tmp(1:np,2)+M_zI*tmp(1:np,3))
 
       SAFE_DEALLOCATE_A(tmp)
+      call profiling_out(prof_method)
 
     end select
 
