@@ -410,7 +410,7 @@ contains
     FLOAT :: pml_c, grad_real, grad_imag
     CMPLX :: pml_a, pml_b, pml_g, grad
     integer, parameter :: field_dirs(3, 2) = reshape([2, 3, 1, 3, 1, 2], [3, 2])
-    FLOAT :: cc, aux_ep(3), aux_mu(3), sigma_e, sigma_m
+    FLOAT :: cc, aux_ep(3), aux_mu(3), sigma_e, sigma_m, ff_real(3), ff_imag(3)
     CMPLX :: ff_plus(3), ff_minus(3), hpsi(6)
     integer :: sign_medium(6) = [1, 1, 1, -1, -1, -1]
 
@@ -528,8 +528,8 @@ contains
         do ip_in = 1, hm%bc%medium%points_number(idir)
           ip          = hm%bc%medium%points_map(ip_in, idir)
           cc          = hm%bc%medium%c(ip_in, idir)/P_c
-          aux_ep(:)   = hm%bc%medium%aux_ep(ip_in, :, idir)
-          aux_mu(:)   = hm%bc%medium%aux_mu(ip_in, :, idir)
+          aux_ep(1:3) = hm%bc%medium%aux_ep(ip_in, 1:3, idir)
+          aux_mu(1:3) = hm%bc%medium%aux_mu(ip_in, 1:3, idir)
           sigma_e     = hm%bc%medium%sigma_e(ip_in, idir)
           sigma_m     = hm%bc%medium%sigma_m(ip_in, idir)
           select case(hpsib%status())
@@ -542,32 +542,18 @@ contains
             ff_minus(1:3) = psib%zff_pack(4:6, ip)
             hpsi(1:6) = hpsib%zff_pack(1:6, ip)
           end select
-          aux_ep      = dcross_product(aux_ep,TOFLOAT(ff_plus+ff_minus))
-          aux_mu      = dcross_product(aux_mu,aimag(ff_plus-ff_minus))
-          hpsi(1) = hpsi(1)*cc                                         &
-                       - cc * aux_ep(1) - cc * M_zI * aux_mu(1)                  &
-                       - M_zI * sigma_e * TOFLOAT(ff_plus(1) + ff_minus(1))         &
-                       - M_zI * sigma_m * M_zI * aimag(ff_plus(1) - ff_minus(1))
-          hpsi(4) = hpsi(4)*cc                                         &
-                       + cc * aux_ep(1) - cc * M_zI * aux_mu(1)                  &
-                       - M_zI * sigma_e * TOFLOAT(ff_plus(1) + ff_minus(1))         &
-                       + M_zI * sigma_m * M_zI * aimag(ff_plus(1) - ff_minus(1))
-          hpsi(2) = hpsi(2)*cc                                         &
-                       - cc * aux_ep(2) - cc * M_zI * aux_mu(2)                  &
-                       - M_zI * sigma_e * TOFLOAT(ff_plus(2) + ff_minus(2))         &
-                       - M_zI * sigma_m * M_zI * aimag(ff_plus(2) - ff_minus(2))
-          hpsi(5) = hpsi(5)*cc                                     &
-                       + cc * aux_ep(2) - cc * M_zI * aux_mu(2)                  &
-                       - M_zI * sigma_e * TOFLOAT(ff_plus(2) + ff_minus(2))         &
-                       + M_zI * sigma_m * M_zI * aimag(ff_plus(2) - ff_minus(2))
-          hpsi(3) = hpsi(3)*cc                                         &
-                       - cc * aux_ep(3) - cc * M_zI * aux_mu(3)                  &
-                       - M_zI * sigma_e * TOFLOAT(ff_plus(3) + ff_minus(3))         &
-                       - M_zI * sigma_m * M_zI * aimag(ff_plus(3) - ff_minus(3))
-          hpsi(6) = hpsi(6)*cc                                         &
-                       + cc * aux_ep(3) - cc * M_zI * aux_mu(3)                  &
-                       - M_zI * sigma_e * TOFLOAT(ff_plus(3) + ff_minus(3))         &
-                       + M_zI * sigma_m * M_zI * aimag(ff_plus(3) - ff_minus(3))
+          ff_real = TOFLOAT(ff_plus+ff_minus)
+          ff_imag = aimag(ff_plus-ff_minus)
+          aux_ep = dcross_product(aux_ep, ff_real)
+          aux_mu = dcross_product(aux_mu, ff_imag)
+          ff_real = sigma_e * ff_real
+          ff_imag = sigma_m * ff_imag
+          do il = 1, 3
+            hpsi(il) = cc * (hpsi(il) + TOCMPLX(-aux_ep(il), -aux_mu(il))) &
+                         + TOCMPLX(ff_imag(il), -ff_real(il))
+            hpsi(il+3) = cc * (hpsi(il+3) + TOCMPLX(aux_ep(il), -aux_mu(il))) &
+                         + TOCMPLX(-ff_imag(il), -ff_real(il))
+          end do
           select case(hpsib%status())
           case(BATCH_NOT_PACKED)
             hpsib%zff_linear(ip, 1:6) = hpsi(1:6)
@@ -598,32 +584,18 @@ contains
             ff_minus(1:3) = psib%zff_pack(4:6, ip)
             hpsi(1:6) = hpsib%zff_pack(1:6, ip)
           end select
-          aux_ep       = dcross_product(aux_ep, TOFLOAT(ff_plus+ff_minus))
-          aux_mu       = dcross_product(aux_mu, aimag(ff_plus-ff_minus))
-          hpsi(1) = hpsi(1)*cc                                          &
-                       - cc * aux_ep(1) - cc * M_zI * aux_mu(1)                  &
-                       - M_zI * sigma_e * TOFLOAT(ff_plus(1) + ff_minus(1))         &
-                       - M_zI * sigma_m * M_zI * aimag(ff_plus(1) - ff_minus(1))
-          hpsi(4) = hpsi(4)*cc                                          &
-                       + cc * aux_ep(1) - cc * M_zI * aux_mu(1)                  &
-                       - M_zI * sigma_e * TOFLOAT(ff_plus(1) + ff_minus(1))         &
-                       + M_zI * sigma_m * M_zI * aimag(ff_plus(1) - ff_minus(1))
-          hpsi(2) = hpsi(2)*cc                                          &
-                       - cc * aux_ep(2) - cc * M_zI * aux_mu(2)                  &
-                       - M_zI * sigma_e * TOFLOAT(ff_plus(2) + ff_minus(2))         &
-                       - M_zI * sigma_m * M_zI * aimag(ff_plus(2) - ff_minus(2))
-          hpsi(5) = hpsi(5)*cc                                          &
-                       + cc * aux_ep(2) - cc * M_zI * aux_mu(2)                  &
-                       - M_zI * sigma_e * TOFLOAT(ff_plus(2) + ff_minus(2))         &
-                       + M_zI * sigma_m * M_zI * aimag(ff_plus(2) - ff_minus(2))
-          hpsi(3) = hpsi(3)*cc                                          &
-                       - cc * aux_ep(3) - cc * M_zI * aux_mu(3)                  &
-                       - M_zI * sigma_e * TOFLOAT(ff_plus(3) + ff_minus(3))         &
-                       - M_zI * sigma_m * M_zI * aimag(ff_plus(3) - ff_minus(3))
-          hpsi(6) = hpsi(6)*cc                                          &
-                       + cc * aux_ep(3) - cc * M_zI * aux_mu(3)                  &
-                       - M_zI * sigma_e * TOFLOAT(ff_plus(3) + ff_minus(3))         &
-                       + M_zI * sigma_m * M_zI * aimag(ff_plus(3) - ff_minus(3))
+          ff_real = TOFLOAT(ff_plus+ff_minus)
+          ff_imag = aimag(ff_plus-ff_minus)
+          aux_ep = dcross_product(aux_ep, ff_real)
+          aux_mu = dcross_product(aux_mu, ff_imag)
+          ff_real = sigma_e * ff_real
+          ff_imag = sigma_m * ff_imag
+          do idir = 1, 3
+            hpsi(idir) = cc * (hpsi(idir) + TOCMPLX(-aux_ep(idir), -aux_mu(idir))) &
+                         + TOCMPLX(ff_imag(idir), -ff_real(idir))
+            hpsi(idir+3) = cc * (hpsi(idir+3) + TOCMPLX(aux_ep(idir), -aux_mu(idir))) &
+                         + TOCMPLX(-ff_imag(idir), -ff_real(idir))
+          end do
           select case(hpsib%status())
           case(BATCH_NOT_PACKED)
             hpsib%zff_linear(ip, 1:6) = hpsi(1:6)
