@@ -445,6 +445,7 @@ contains
           case(BATCH_NOT_PACKED)
             do field_dir = 1, 3
               if (pml_dir == field_dir) cycle
+              !$omp parallel do private(ip, pml_c, pml_a, pml_b, pml_g, grad, grad_real, grad_imag)
               do ip_in = 1, hm%bc%pml%points_number
                 ip = hm%bc%pml%points_map(ip_in)
                 pml_c = hm%bc%pml%c(ip_in, pml_dir)
@@ -460,6 +461,7 @@ contains
               end do
             end do
           case(BATCH_PACKED)
+            !$omp parallel do private(ip, pml_c, pml_a, pml_b, pml_g, grad, grad_real, grad_imag)
             do ip_in = 1, hm%bc%pml%points_number
               ip = hm%bc%pml%points_map(ip_in)
               pml_c = hm%bc%pml%c(ip_in, pml_dir)
