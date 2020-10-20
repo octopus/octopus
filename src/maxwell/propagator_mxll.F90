@@ -32,6 +32,7 @@ module propagator_mxll_oct_m
   use derivatives_oct_m
   use density_oct_m
   use energy_calc_oct_m
+  use energy_mxll_oct_m
   use exponential_oct_m
   use fft_oct_m
   use fourier_space_oct_m

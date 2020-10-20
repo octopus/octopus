@@ -132,9 +132,11 @@ module states_mxll_oct_m
     FLOAT                        :: poynting_mean_plane_waves(MAX_DIM)
 
     integer                      :: inner_points_number
-    integer, pointer             :: inner_points_map(:)
+    integer, allocatable         :: inner_points_map(:)
+    logical, allocatable         :: inner_points_mask(:)
     integer                      :: boundary_points_number
-    integer, pointer             :: boundary_points_map(:)
+    integer, allocatable         :: boundary_points_map(:)
+    logical, allocatable         :: boundary_points_mask(:)
 
     integer                      :: surface_points_number(MAX_DIM)
     integer, pointer             :: surface_points_map(:,:,:)
@@ -390,8 +392,10 @@ contains
     SAFE_DEALLOCATE_P(st%surface_grid_center)
     SAFE_DEALLOCATE_P(st%surface_grid_points_number)
     SAFE_DEALLOCATE_P(st%surface_grid_points_map)
-    SAFE_DEALLOCATE_P(st%inner_points_map)
-    SAFE_DEALLOCATE_P(st%boundary_points_map)
+    SAFE_DEALLOCATE_A(st%inner_points_map)
+    SAFE_DEALLOCATE_A(st%boundary_points_map)
+    SAFE_DEALLOCATE_A(st%inner_points_mask)
+    SAFE_DEALLOCATE_A(st%boundary_points_mask)
     SAFE_DEALLOCATE_P(st%ep)
     SAFE_DEALLOCATE_P(st%mu)
 #ifdef HAVE_SCALAPACK
