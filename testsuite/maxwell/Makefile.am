@@ -32,7 +32,7 @@ dist_share_DATA =                                                   \
 	03-linear-medium.01-cosinoidal_pulse_td.inp                 \
         04-linear-medium-from-file.test                             \
 	04-linear-medium-from-file.01-cube_medium_from_file.inp     \
-	04-linear-medium-from-file.02-cube.off                      \
+	04-linear-medium-from-file.01-cube.off                      \
         05-plane_waves.test                                         \
         05-plane_waves.01-pulse_pml.inp
 
