@@ -674,7 +674,9 @@ contains
 
     call profiling_in(prof, 'ZHAMILTONIAN_MXLL_APPLY')
 
-    if (hm%operator == FARADAY_AMPERE .or. hm%operator == FARADAY_AMPERE_MEDIUM) then
+    if (hm%operator == FARADAY_AMPERE .or. &
+      (hm%operator == FARADAY_AMPERE_MEDIUM .and. &
+      .not. psib%status() == BATCH_DEVICE_PACKED)) then
       ! This part is already batchified
       call hamiltonian_mxll_apply_batch(hm, namespace, hm%der, psib, hpsib, set_bc=set_bc)
     else
