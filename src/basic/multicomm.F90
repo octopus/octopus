@@ -535,7 +535,7 @@ contains
         if(.not. multicomm_strategy_is_parallel(mc, kk)) cycle
         ii = ii + 1
         if(kk == slave_level) INCR(real_group_sizes(kk), -num_slaves)
-        write(message(ii),'(3a,i6,a,i8,a)') 'Info: Number of nodes in ', &
+        write(message(ii),'(3a,i6,a,i12,a)') 'Info: Number of nodes in ', &
           par_types(kk), ' group:', real_group_sizes(kk), ' (', index_range(kk), ')'
       end do
       call messages_info(ii)

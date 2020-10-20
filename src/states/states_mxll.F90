@@ -222,8 +222,11 @@ contains
     logical :: defaultl
     FLOAT, allocatable   :: pos(:)
     integer :: ix_max, iy_max, iz_max
+    type(profile_t), save :: prof
 
     PUSH_SUB(states_mxll_init)
+
+    call profiling_in(prof, 'STATES_MXLL_INIT')
 
     st%fromScratch = .true. ! this will be reset if restart_read is called
     call states_mxll_null(st)
@@ -323,6 +326,8 @@ contains
     SAFE_ALLOCATE(st%surface_grid_center(1:2, 1:st%dim, 1:ix_max, 1:iy_max))
     SAFE_ALLOCATE(st%surface_grid_points_number(1:st%dim, 1:ix_max, 1:iy_max))
 
+    call profiling_out(prof)
+
     POP_SUB(states_mxll_init)
 
   end subroutine states_mxll_init
@@ -360,7 +365,11 @@ contains
   subroutine states_mxll_end(st)
     type(states_mxll_t), intent(inout) :: st
 
+    type(profile_t), save :: prof
+
     PUSH_SUB(states_mxll_end)
+
+    call profiling_in(prof, 'STATES_MXLL_END')
 
     SAFE_DEALLOCATE_A(st%rs_state)
     SAFE_DEALLOCATE_A(st%rs_state_trans)
@@ -397,6 +406,8 @@ contains
 
     call distributed_end(st%dist)
     SAFE_DEALLOCATE_P(st%node)
+
+    call profiling_out(prof)
 
     POP_SUB(states_mxll_end)
   end subroutine states_mxll_end
@@ -451,8 +462,11 @@ contains
     integer, optional, intent(in)    :: np
 
     integer :: ip, np_
+    type(profile_t), save :: prof
 
     PUSH_SUB(build_rs_state)
+
+    call profiling_in(prof, 'BUILD_RS_STATE')
 
     np_ = optional_default(np, mesh%np)
 
@@ -465,6 +479,8 @@ contains
                        + M_zI * rs_sign * sqrt(M_ONE/(M_TWO*P_mu)) * b_field(ip, :)
       end if
     end do
+
+   call profiling_out(prof)
 
     POP_SUB(build_rs_state)
 
@@ -572,8 +588,11 @@ contains
     integer, optional, intent(in)    :: np
 
     integer :: ip, np_
+    type(profile_t), save :: prof
 
     PUSH_SUB(get_electric_field_state)
+
+    call profiling_in(prof, 'GET_ELECTRIC_FIELD_STATE')
 
     np_ = optional_default(np, mesh%np)
 
@@ -584,6 +603,8 @@ contains
         electric_field(ip,:) = sqrt(M_TWO/P_ep) * TOFLOAT(rs_state(ip, :))
       end if
     end do
+
+    call profiling_out(prof)
 
     POP_SUB(get_electric_field_state)
 
@@ -600,8 +621,11 @@ contains
     integer, optional, intent(in)    :: np
 
     integer :: ip, np_
+    type(profile_t), save :: prof
 
     PUSH_SUB(get_magnetic_field_state)
+
+    call profiling_in(prof, 'GET_MAGNETIC_FIELD_STATE')
 
     np_ = optional_default(np, mesh%np)
 
@@ -612,6 +636,8 @@ contains
         magnetic_field(ip, :) = sqrt(M_TWO*P_mu) * rs_sign * aimag(rs_state(ip, :))
       end if
    end do
+
+   call profiling_out(prof)
 
    POP_SUB(get_magnetic_field_state)
 
