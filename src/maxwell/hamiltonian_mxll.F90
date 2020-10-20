@@ -405,7 +405,7 @@ contains
 
     type(profile_t), save :: prof
     class(batch_t), pointer :: gradb(:)
-    integer :: idir, ifield, field_dir, pml_dir
+    integer :: idir, ifield, field_dir, pml_dir, rs_sign
     integer :: ip, ip_in, il
     FLOAT :: pml_c, grad_real, grad_imag
     CMPLX :: pml_a, pml_b, pml_g, grad
@@ -441,8 +441,13 @@ contains
 
     if (hm%cpml_hamiltonian) then
       ! to do: encapsulate this part
+      if (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RS) then
+        rs_sign = 1
+      else
+        rs_sign = hm%rs_sign
+      end if
       do idir = 1, der%dim
-        call batch_scal(der%mesh%np, hm%rs_sign * P_c, gradb(idir))
+        call batch_scal(der%mesh%np, rs_sign * P_c, gradb(idir))
       end do
 
       do pml_dir = 1, hm%st%dim
@@ -460,10 +465,19 @@ contains
                 pml_g = hm%bc%pml%conv_plus(ip_in, pml_dir, field_dir)
                 grad = gradb(pml_dir)%zff_linear(ip, field_dir)
                 grad_real = pml_c * ((M_ONE + TOFLOAT(pml_a))*TOFLOAT(grad)/P_c &
-                     + hm%rs_sign * TOFLOAT(pml_b)*TOFLOAT(pml_g))
+                     + rs_sign * TOFLOAT(pml_b)*TOFLOAT(pml_g))
                 grad_imag = pml_c * ((M_ONE + aimag(pml_a)) * aimag(grad)/P_c &
-                     + hm%rs_sign * aimag(pml_b) * aimag(pml_g))
+                     + rs_sign * aimag(pml_b) * aimag(pml_g))
                 gradb(pml_dir)%zff_linear(ip, field_dir) = TOCMPLX(grad_real, grad_imag)
+                if (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RS) then
+                  pml_g = hm%bc%pml%conv_minus(ip_in, pml_dir, field_dir)
+                  grad = gradb(pml_dir)%zff_linear(ip, field_dir+3)
+                  grad_real = pml_c * ((M_ONE + TOFLOAT(pml_a))*TOFLOAT(grad)/P_c &
+                       + rs_sign * TOFLOAT(pml_b)*TOFLOAT(pml_g))
+                  grad_imag = pml_c * ((M_ONE + aimag(pml_a)) * aimag(grad)/P_c &
+                       + rs_sign * aimag(pml_b) * aimag(pml_g))
+                  gradb(pml_dir)%zff_linear(ip, field_dir+3) = TOCMPLX(grad_real, grad_imag)
+                end if
               end do
             end do
           case(BATCH_PACKED)
@@ -478,10 +492,19 @@ contains
                 pml_g = hm%bc%pml%conv_plus(ip_in, pml_dir, field_dir)
                 grad = gradb(pml_dir)%zff_pack(field_dir, ip)
                 grad_real = pml_c * ((M_ONE + TOFLOAT(pml_a))*TOFLOAT(grad)/P_c &
-                     + hm%rs_sign * TOFLOAT(pml_b)*TOFLOAT(pml_g))
+                     + rs_sign * TOFLOAT(pml_b)*TOFLOAT(pml_g))
                 grad_imag = pml_c * ((M_ONE + aimag(pml_a)) * aimag(grad)/P_c &
-                    + hm%rs_sign * aimag(pml_b) * aimag(pml_g))
+                     + rs_sign * aimag(pml_b) * aimag(pml_g))
                 gradb(pml_dir)%zff_pack(field_dir, ip) = TOCMPLX(grad_real, grad_imag)
+                if (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RS) then
+                  pml_g = hm%bc%pml%conv_minus(ip_in, pml_dir, field_dir)
+                  grad = gradb(pml_dir)%zff_pack(field_dir+3, ip)
+                  grad_real = pml_c * ((M_ONE + TOFLOAT(pml_a))*TOFLOAT(grad)/P_c &
+                       + rs_sign * TOFLOAT(pml_b)*TOFLOAT(pml_g))
+                  grad_imag = pml_c * ((M_ONE + aimag(pml_a)) * aimag(grad)/P_c &
+                       + rs_sign * aimag(pml_b) * aimag(pml_g))
+                  gradb(pml_dir)%zff_pack(field_dir+3, ip) = TOCMPLX(grad_real, grad_imag)
+                end if
               end do
             end do
           case(BATCH_DEVICE_PACKED)
@@ -495,11 +518,17 @@ contains
 
     ! if we do not need pml, scale after the curl because it is cheaper
     if (.not. hm%cpml_hamiltonian) then
-      if(hpsib%nst == 3) then
-        call batch_scal(der%mesh%np, hm%rs_sign * P_c, hpsib)
-      else if(hpsib%nst == 6) then
+      if (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RS) then
         ! in case of a medium, multiply first 3 components with +, others with -
         call batch_scal(der%mesh%np, sign_medium * P_c, hpsib)
+      else
+        call batch_scal(der%mesh%np, hm%rs_sign * P_c, hpsib)
+      end if
+    else
+      ! this is needed for PML computations
+      if (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RS) then
+        ! in case of a medium, multiply first 3 components with +, others with -
+        call batch_scal(der%mesh%np, sign_medium * M_ONE, hpsib)
       end if
     end if
 
