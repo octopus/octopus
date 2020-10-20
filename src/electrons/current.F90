@@ -892,15 +892,18 @@ contains
   !----------------------------------------------------------
   subroutine external_current_calculation(st, mesh, time, current)
     type(states_mxll_t), intent(inout) :: st
-    type(mesh_t),   intent(in)    :: mesh
-    FLOAT,          intent(in)    :: time
-    FLOAT,          intent(inout) :: current(:,:)
+    type(mesh_t),        intent(in)    :: mesh
+    FLOAT,               intent(in)    :: time
+    FLOAT,               intent(inout) :: current(:,:)
 
     integer :: ip, jn, idir
     FLOAT   :: xx(MAX_DIM), rr, tt, j_vector(MAX_DIM), dummy(MAX_DIM), amp(MAX_DIM)
     CMPLX   :: exp_arg
+    type(profile_t), save :: prof
 
     PUSH_SUB(external_current_calculation)
+
+    call profiling_in(prof, "EXTERNAL_CURRENT_CALC")
 
     current(:,:) = M_ZERO
     do jn = 1, st%external_current_number
@@ -925,6 +928,8 @@ contains
         end do
       end if
     end do
+
+    call profiling_out(prof)
 
     POP_SUB(external_current_calculation)
   end subroutine external_current_calculation

@@ -430,23 +430,41 @@ contains
               ff_rs_inhom_1, RS_TRANS_FORWARD)
           call transform_rs_densities(hm, rs_charge_density_t2, rs_current_density_t2,&
               ff_rs_inhom_2, RS_TRANS_FORWARD)
-          ff_rs_inhom_mean(:,:) = ff_rs_inhom_2 - ff_rs_inhom_1 ! not mean, used as auxiliary variable
-          ff_rs_inhom_2(:,:) = ff_rs_inhom_1 + ff_rs_inhom_mean * inter_dt * ii / TOFLOAT(inter_steps)
-          ff_rs_inhom_1(:,:) = ff_rs_inhom_1 + ff_rs_inhom_mean * inter_dt * (ii-1) / TOFLOAT(inter_steps)
+
+          do idim = 1, ff_dim
+            ! not mean, used as auxiliary variable
+            ff_rs_inhom_mean(1:gr%mesh%np, idim) = ff_rs_inhom_2(1:gr%mesh%np, idim) - ff_rs_inhom_1(1:gr%mesh%np, idim)
+            ff_rs_inhom_2(1:gr%mesh%np, idim) = ff_rs_inhom_1(1:gr%mesh%np, idim) &
+                  + ff_rs_inhom_mean(1:gr%mesh%np, idim) * inter_dt * ii / TOFLOAT(inter_steps)
+            ff_rs_inhom_1(1:gr%mesh%np, idim) = ff_rs_inhom_1(1:gr%mesh%np, idim) &
+                  + ff_rs_inhom_mean(1:gr%mesh%np, idim) * inter_dt * (ii-1) / TOFLOAT(inter_steps)  
+          end do
+
           call exponential_mxll_apply(hm, namespace, gr, st, tr, inter_dt, ff_rs_inhom_1)
           ! add terms U(time+dt,time)J(time) and J(time+dt)
-          ff_rs_state(:,:) = ff_rs_state + M_FOURTH * inter_dt * (ff_rs_inhom_1 + ff_rs_inhom_2)
+          do idim = 1, ff_dim
+            ff_rs_state(1:gr%mesh%np, idim) = ff_rs_state(1:gr%mesh%np, idim) + M_FOURTH * inter_dt * (ff_rs_inhom_1(1:gr%mesh%np, idim) + ff_rs_inhom_2(1:gr%mesh%np, idim))
+          end do
 
           call transform_rs_densities(hm, rs_charge_density_t1, rs_current_density_t1,&
               ff_rs_inhom_1, RS_TRANS_FORWARD)
           call transform_rs_densities(hm, rs_charge_density_t2, rs_current_density_t2,&
               ff_rs_inhom_2, RS_TRANS_FORWARD)
-          ff_rs_inhom_1(:,:) = M_HALF * (ff_rs_inhom_1 + ff_rs_inhom_2)
-          ff_rs_inhom_2(:,:) = ff_rs_inhom_1 ! changed from the old code
+
+          do idim = 1, ff_dim
+            ff_rs_inhom_1(1:gr%mesh%np, idim) = M_HALF * (ff_rs_inhom_1(1:gr%mesh%np, idim) + ff_rs_inhom_2(1:gr%mesh%np, idim))
+            call lalg_copy(gr%mesh%np, ff_rs_inhom_1(:, idim), ff_rs_inhom_2(:, idim)) ! changed from the old code       
+          end do
+
           call exponential_mxll_apply(hm, namespace, gr, st, tr, inter_dt/M_TWO, ff_rs_inhom_1)
           call exponential_mxll_apply(hm, namespace, gr, st, tr, -inter_dt/M_TWO, ff_rs_inhom_2)
+
           ! add terms U(time+dt/2,time)J(time) and U(time,time+dt/2)J(time+dt)
-          ff_rs_state(:,:) = ff_rs_state + M_FOURTH * inter_dt * (ff_rs_inhom_1 + ff_rs_inhom_2)
+          do idim = 1, ff_dim
+            ff_rs_state(1:gr%mesh%np, idim) = ff_rs_state(1:gr%mesh%np, idim) &
+               + M_FOURTH * inter_dt * (ff_rs_inhom_1(1:gr%mesh%np, idim) + ff_rs_inhom_2(1:gr%mesh%np, idim))
+          end do
+
           SAFE_DEALLOCATE_A(ff_rs_inhom_1)
           SAFE_DEALLOCATE_A(ff_rs_inhom_2)
           SAFE_DEALLOCATE_A(ff_rs_inhom_mean)

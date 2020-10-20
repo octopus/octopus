@@ -529,8 +529,12 @@ contains
     integer, optional, intent(in)    :: np
 
     integer :: ip, np_
+    type(profile_t), save :: prof
 
     ! no PUSH_SUB, called too often
+
+    call profiling_in(prof, "BUILD_RS_CURRENT_STATE")
+
     np_ = optional_default(np, mesh%np)
 
     do ip = 1, np_
@@ -540,6 +544,8 @@ contains
         rs_current_state(ip, :) = M_ONE/sqrt(M_TWO*P_ep) * current_state(ip, :)
       end if
     end do
+
+    call profiling_out(prof)
 
   end subroutine build_rs_current_state
 
