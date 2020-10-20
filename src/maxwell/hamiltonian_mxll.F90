@@ -669,14 +669,17 @@ contains
     CMPLX, allocatable :: rs_aux_in(:,:), rs_aux_out(:,:)
     integer :: ii
     type(profile_t), save :: prof
+    logical :: pml_and_gpu, on_gpu
 
     PUSH_SUB(zhamiltonian_mxll_apply)
 
     call profiling_in(prof, 'ZHAMILTONIAN_MXLL_APPLY')
 
-    if (hm%operator == FARADAY_AMPERE .or. &
-      (hm%operator == FARADAY_AMPERE_MEDIUM .and. &
-      .not. psib%status() == BATCH_DEVICE_PACKED)) then
+
+    on_gpu = psib%status() == BATCH_DEVICE_PACKED
+    pml_and_gpu = hm%cpml_hamiltonian .and. on_gpu
+    if ((hm%operator == FARADAY_AMPERE .and. .not. pml_and_gpu) .or. &
+      (hm%operator == FARADAY_AMPERE_MEDIUM .and. .not. on_gpu)) then
       ! This part is already batchified
       call hamiltonian_mxll_apply_batch(hm, namespace, hm%der, psib, hpsib, set_bc=set_bc)
     else
