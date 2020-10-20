@@ -525,6 +525,7 @@ contains
     do idir = 1, 3
       if ((hm%bc%bc_type(idir) == MXLL_BC_MEDIUM) .and. &
           (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RS)) then
+        !$omp parallel do private(ip, cc, aux_ep, aux_mu, sigma_e, sigma_m, ff_plus, ff_minus, hpsi, ff_real, ff_imag, il)
         do ip_in = 1, hm%bc%medium%points_number(idir)
           ip          = hm%bc%medium%points_map(ip_in, idir)
           cc          = hm%bc%medium%c(ip_in, idir)/P_c
@@ -567,6 +568,7 @@ contains
     if (hm%calc_medium_box .and. &
          (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RS) ) then
       do il = 1, hm%medium_box%number
+        !$omp parallel do private(ip, cc, aux_ep, aux_mu, sigma_e, sigma_m, ff_plus, ff_minus, hpsi, ff_real, ff_imag, idir)
         do ip_in = 1, hm%medium_box%points_number(il)
           ip           = hm%medium_box%points_map(ip_in, il)
           cc           = hm%medium_box%c(ip_in,il)/P_c
