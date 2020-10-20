@@ -418,7 +418,6 @@ contains
 
     !Not implemented at the moment
     ASSERT(.not.present(terms))
-    ASSERT(.not.present(set_bc))
 
     if(present(time)) then
       if(abs(time - hm%current_time) > CNST(1e-10)) then
@@ -432,7 +431,7 @@ contains
     do idir = 1, der%dim
       call psib%copy_to(gradb(idir))
     end do
-    call zderivatives_batch_grad(der, psib, gradb)
+    call zderivatives_batch_grad(der, psib, gradb, set_bc=set_bc)
 
     if (hm%cpml_hamiltonian) then
       ! to do: encapsulate this part
@@ -538,7 +537,7 @@ contains
 
     if (hm%operator == FARADAY_AMPERE) then
       ! This part is already batchified
-      call hamiltonian_mxll_apply_batch(hm, namespace, hm%der, psib, hpsib)
+      call hamiltonian_mxll_apply_batch(hm, namespace, hm%der, psib, hpsib, set_bc=set_bc)
 
     else
       ! This part uses the old non-batch implementation
