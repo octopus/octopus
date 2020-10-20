@@ -367,15 +367,9 @@ contains
 
     call hamiltonian_mxll_update(this%hm, time = M_ZERO)
 
-    ! calculate Maxwell energy density
-    call energy_density_calc(this%gr, this%st, this%st%rs_state, this%hm%energy%energy_density(:), &
-         this%hm%energy%e_energy_density(:), this%hm%energy%b_energy_density(:), this%hm%plane_waves, &
-         this%st%rs_state_plane_waves, this%hm%energy%energy_density_plane_waves(:))
-
     ! calculate Maxwell energy
-    call energy_mxll_calc(this%gr, this%st, this%hm, this%st%rs_state, &
-         this%hm%energy%energy, this%hm%energy%e_energy, this%hm%energy%b_energy, &
-         this%hm%energy%boundaries, this%st%rs_state_plane_waves, this%hm%energy%energy_plane_waves)
+    call energy_mxll_calc(this%gr, this%st, this%hm, this%hm%energy, this%st%rs_state, &
+         this%st%rs_state_plane_waves)
 
     this%st%rs_state_trans(:,:) = this%st%rs_state
 
@@ -455,15 +449,9 @@ contains
 
       this%st%rs_state_trans(:,:) = this%st%rs_state
 
-      ! calculate Maxwell energy density
-      call energy_density_calc(this%gr, this%st, this%st%rs_state, this%hm%energy%energy_density, &
-           this%hm%energy%e_energy_density, this%hm%energy%b_energy_density, this%hm%plane_waves, &
-           this%st%rs_state_plane_waves, this%hm%energy%energy_density_plane_waves(:))
-
       ! calculate Maxwell energy
-      call energy_mxll_calc(this%gr, this%st, this%hm, this%st%rs_state, this%hm%energy%energy, &
-           this%hm%energy%e_energy, this%hm%energy%b_energy, this%hm%energy%boundaries, &
-           this%st%rs_state_plane_waves, this%hm%energy%energy_plane_waves)
+      call energy_mxll_calc(this%gr, this%st, this%hm, this%hm%energy, this%st%rs_state, &
+           this%st%rs_state_plane_waves)
 
       ! get RS state values for selected points
       call get_rs_state_at_point(this%st%selected_points_rs_state(:,:), this%st%rs_state, this%st%selected_points_coordinate(:,:), &
