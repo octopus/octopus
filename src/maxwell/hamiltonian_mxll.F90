@@ -404,10 +404,11 @@ contains
 
     type(profile_t), save :: prof
     class(batch_t), pointer :: gradb(:)
-    integer :: idir, field_dir, pml_dir
-    integer            :: ip, ip_in
-    FLOAT              :: pml_c, grad_real, grad_imag
-    CMPLX              :: pml_a, pml_b, pml_g, grad
+    integer :: idir, ifield, field_dir, pml_dir
+    integer :: ip, ip_in
+    FLOAT :: pml_c, grad_real, grad_imag
+    CMPLX :: pml_a, pml_b, pml_g, grad
+    integer, parameter :: field_dirs(3, 2) = reshape([2, 3, 1, 3, 1, 2], [3, 2])
 
     PUSH_SUB(hamiltonian_mxll_apply_batch)
     call profiling_in(prof, "HAMILTONIAN_MXLL_APPLY_BATCH")
@@ -443,8 +444,8 @@ contains
         if (hm%bc%bc_ab_type(pml_dir) == MXLL_AB_CPML) then
           select case(gradb(pml_dir)%status())
           case(BATCH_NOT_PACKED)
-            do field_dir = 1, 3
-              if (pml_dir == field_dir) cycle
+            do ifield = 1, 2
+              field_dir = field_dirs(pml_dir, ifield)
               !$omp parallel do private(ip, pml_c, pml_a, pml_b, pml_g, grad, grad_real, grad_imag)
               do ip_in = 1, hm%bc%pml%points_number
                 ip = hm%bc%pml%points_map(ip_in)
@@ -461,14 +462,14 @@ contains
               end do
             end do
           case(BATCH_PACKED)
-            !$omp parallel do private(ip, pml_c, pml_a, pml_b, pml_g, grad, grad_real, grad_imag)
+            !$omp parallel do private(ip, field_dir, pml_c, pml_a, pml_b, pml_g, grad, grad_real, grad_imag)
             do ip_in = 1, hm%bc%pml%points_number
               ip = hm%bc%pml%points_map(ip_in)
               pml_c = hm%bc%pml%c(ip_in, pml_dir)
               pml_a = hm%bc%pml%a(ip_in, pml_dir)
               pml_b = hm%bc%pml%b(ip_in, pml_dir)
-              do field_dir = 1, 3
-                if (pml_dir == field_dir) cycle
+              do ifield = 1, 2
+                field_dir = field_dirs(pml_dir, ifield)
                 pml_g = hm%bc%pml%conv_plus(ip_in, pml_dir, field_dir)
                 grad = gradb(pml_dir)%zff_pack(field_dir, ip)
                 grad_real = pml_c * ((M_ONE + TOFLOAT(pml_a))*TOFLOAT(grad)/P_c &
