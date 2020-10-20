@@ -1983,9 +1983,9 @@ contains
 
     do idim = 1, 3
       if (hm%bc%bc_ab_type(idim) == OPTION__MAXWELLABSORBINGBOUNDARIES__MASK) then
-        do ip_in=1, hm%bc%mask_points_number(idim)
+        do ip_in = 1, hm%bc%mask_points_number(idim)
           ip = hm%bc%mask_points_map(ip_in,idim)
-          rs_state(ip,:) = rs_state(ip,:)*hm%bc%mask(ip_in,idim)
+          rs_state(ip,:) = rs_state(ip,:) * hm%bc%mask(ip_in,idim)
         end do
       end if
     end do
@@ -2013,25 +2013,34 @@ contains
     call profiling_in(prof, 'PML_PROPAGATION_STAGE_1')
 
     if (tr%bc_plane_waves .and. hm%plane_waves_apply) then
+ 
       ff_points = size(ff_rs_state(:,1))
       ff_dim    = size(ff_rs_state(1,:))
       SAFE_ALLOCATE(ff_rs_state_plane_waves(1:ff_points,1:ff_dim))
       call transform_rs_state(hm, gr, st, st%rs_state_plane_waves, ff_rs_state_plane_waves, RS_TRANS_FORWARD)
       ff_rs_state_pml = ff_rs_state - ff_rs_state_plane_waves
       SAFE_DEALLOCATE_A(ff_rs_state_plane_waves)
+
     else if (tr%bc_constant .and. hm%spatial_constant_apply) then
+
       ff_dim    = size(ff_rs_state(1,:))
+
       SAFE_ALLOCATE(rs_state_constant(1,1:3))
       SAFE_ALLOCATE(ff_rs_state_constant(1,1:ff_dim))
       rs_state_constant(1,:) = st%rs_state_const(:)
+
       call transform_rs_state(hm, gr, st, rs_state_constant, ff_rs_state_constant, RS_TRANS_FORWARD)
-      do ip=1, gr%mesh%np_part
+
+      do ip = 1, gr%mesh%np_part
         ff_rs_state_pml(ip,:) = ff_rs_state(ip,:) - ff_rs_state_constant(1,:)
       end do
+
       SAFE_DEALLOCATE_A(rs_state_constant)
       SAFE_DEALLOCATE_A(ff_rs_state_constant)
     else
+
       ff_rs_state_pml = ff_rs_state
+
     end if
 
     call profiling_out(prof)
@@ -2061,32 +2070,37 @@ contains
     call profiling_in(prof, 'PML_PROPAGATION_STAGE_2')
 
     if (tr%bc_plane_waves .and. hm%plane_waves_apply) then
-      ff_points = size(ff_rs_state(:,1))
-      ff_dim    = size(ff_rs_state(1,:))
+      ff_points = size(ff_rs_state(:, 1))
+      ff_dim    = size(ff_rs_state(1, :))
       hm%cpml_hamiltonian = .true.
       call exponential_mxll_apply(hm, namespace, gr, st, tr, dt, ff_rs_state_pml)
       hm%cpml_hamiltonian = .false.
       call plane_waves_propagation(hm, tr, namespace, st, gr, time, dt, time_delay)
-      SAFE_ALLOCATE(ff_rs_state_plane_waves(1:ff_points,1:ff_dim))
+
+      SAFE_ALLOCATE(ff_rs_state_plane_waves(1:ff_points, 1:ff_dim))
       call transform_rs_state(hm, gr, st, st%rs_state_plane_waves, ff_rs_state_plane_waves, RS_TRANS_FORWARD)
-      do ip_in=1, hm%bc%plane_wave%points_number
+      do ip_in = 1, hm%bc%plane_wave%points_number
         ip = hm%bc%plane_wave%points_map(ip_in)
-        ff_rs_state(ip,:) = ff_rs_state_pml(ip,:) + ff_rs_state_plane_waves(ip,:)
+        ff_rs_state(ip, :) = ff_rs_state_pml(ip, :) + ff_rs_state_plane_waves(ip, :)
       end do
       SAFE_DEALLOCATE_A(ff_rs_state_plane_waves)
+
     else if (tr%bc_constant .and. hm%spatial_constant_apply) then
-      ff_dim    = size(ff_rs_state(1,:))
+      ff_dim    = size(ff_rs_state(1, :))
       hm%cpml_hamiltonian = .true.
       call exponential_mxll_apply(hm, namespace, gr, st, tr, dt, ff_rs_state_pml)
       hm%cpml_hamiltonian = .false.
-      SAFE_ALLOCATE(rs_state_constant(1,1:ff_dim))
-      SAFE_ALLOCATE(ff_rs_state_constant(1,1:ff_dim))
-      rs_state_constant(1,:) = st%rs_state_const(:)
+
+      SAFE_ALLOCATE(rs_state_constant(1, 1:ff_dim))
+      SAFE_ALLOCATE(ff_rs_state_constant(1, 1:ff_dim))
+      rs_state_constant(1, :) = st%rs_state_const(:)
+
       call transform_rs_state(hm, gr, st, rs_state_constant, ff_rs_state_constant, RS_TRANS_BACKWARD)
-      do ip_in=1, hm%bc%constant_points_number
+      do ip_in = 1, hm%bc%constant_points_number
         ip = hm%bc%constant_points_map(ip_in)
-        ff_rs_state(ip,:) = ff_rs_state_pml(ip,:) + ff_rs_state_constant(1,:)
+        ff_rs_state(ip, :) = ff_rs_state_pml(ip, :) + ff_rs_state_constant(1, :)
       end do
+ 
       SAFE_DEALLOCATE_A(rs_state_constant)
       SAFE_DEALLOCATE_A(ff_rs_state_constant)
     end if
