@@ -410,7 +410,7 @@ contains
     FLOAT :: pml_c, grad_real, grad_imag
     CMPLX :: pml_a, pml_b, pml_g, grad
     integer, parameter :: field_dirs(3, 2) = reshape([2, 3, 1, 3, 1, 2], [3, 2])
-    FLOAT :: cc, aux_ep(3), aux_mu(3), sigma_e, sigma_m, ff_real(3), ff_imag(3)
+    FLOAT :: cc, aux_ep(3), aux_mu(3), sigma_e, sigma_m, ff_real(3), ff_imag(3), coeff_real, coeff_imag
     CMPLX :: ff_plus(3), ff_minus(3), hpsi(6)
     integer :: sign_medium(6) = [1, 1, 1, -1, -1, -1]
 
@@ -525,7 +525,8 @@ contains
     do idir = 1, 3
       if ((hm%bc%bc_type(idir) == MXLL_BC_MEDIUM) .and. &
           (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RS)) then
-        !$omp parallel do private(ip, cc, aux_ep, aux_mu, sigma_e, sigma_m, ff_plus, ff_minus, hpsi, ff_real, ff_imag, il)
+        !$omp parallel do private(ip, cc, aux_ep, aux_mu, sigma_e, sigma_m, &
+        !$omp ff_plus, ff_minus, hpsi, ff_real, ff_imag, il, coeff_real, coeff_imag)
         do ip_in = 1, hm%bc%medium%points_number(idir)
           ip          = hm%bc%medium%points_map(ip_in, idir)
           cc          = hm%bc%medium%c(ip_in, idir)/P_c
@@ -547,13 +548,11 @@ contains
           ff_imag = aimag(ff_plus-ff_minus)
           aux_ep = dcross_product(aux_ep, ff_real)
           aux_mu = dcross_product(aux_mu, ff_imag)
-          ff_real = sigma_e * ff_real
-          ff_imag = sigma_m * ff_imag
           do il = 1, 3
-            hpsi(il) = cc * (hpsi(il) + TOCMPLX(-aux_ep(il), -aux_mu(il))) &
-                         + TOCMPLX(ff_imag(il), -ff_real(il))
-            hpsi(il+3) = cc * (hpsi(il+3) + TOCMPLX(aux_ep(il), -aux_mu(il))) &
-                         + TOCMPLX(-ff_imag(il), -ff_real(il))
+            coeff_real = - cc * aux_ep(il) + sigma_m * ff_imag(il)
+            coeff_imag = - cc * aux_mu(il) - sigma_e * ff_real(il)
+            hpsi(il) = cc * hpsi(il) + TOCMPLX(coeff_real, coeff_imag)
+            hpsi(il+3) = cc * hpsi(il+3) + TOCMPLX(-coeff_real, coeff_imag)
           end do
           select case(hpsib%status())
           case(BATCH_NOT_PACKED)
@@ -568,7 +567,8 @@ contains
     if (hm%calc_medium_box .and. &
          (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RS) ) then
       do il = 1, hm%medium_box%number
-        !$omp parallel do private(ip, cc, aux_ep, aux_mu, sigma_e, sigma_m, ff_plus, ff_minus, hpsi, ff_real, ff_imag, idir)
+        !$omp parallel do private(ip, cc, aux_ep, aux_mu, sigma_e, sigma_m, &
+        !$omp ff_plus, ff_minus, hpsi, ff_real, ff_imag, idir, coeff_real, coeff_imag)
         do ip_in = 1, hm%medium_box%points_number(il)
           ip           = hm%medium_box%points_map(ip_in, il)
           cc           = hm%medium_box%c(ip_in,il)/P_c
@@ -590,13 +590,11 @@ contains
           ff_imag = aimag(ff_plus-ff_minus)
           aux_ep = dcross_product(aux_ep, ff_real)
           aux_mu = dcross_product(aux_mu, ff_imag)
-          ff_real = sigma_e * ff_real
-          ff_imag = sigma_m * ff_imag
           do idir = 1, 3
-            hpsi(idir) = cc * (hpsi(idir) + TOCMPLX(-aux_ep(idir), -aux_mu(idir))) &
-                         + TOCMPLX(ff_imag(idir), -ff_real(idir))
-            hpsi(idir+3) = cc * (hpsi(idir+3) + TOCMPLX(aux_ep(idir), -aux_mu(idir))) &
-                         + TOCMPLX(-ff_imag(idir), -ff_real(idir))
+            coeff_real = - cc * aux_ep(idir) + sigma_m * ff_imag(idir)
+            coeff_imag = - cc * aux_mu(idir) - sigma_e * ff_real(idir)
+            hpsi(idir) = cc * hpsi(idir) + TOCMPLX(coeff_real, coeff_imag)
+            hpsi(idir+3) = cc * hpsi(idir+3) + TOCMPLX(-coeff_real, coeff_imag)
           end do
           select case(hpsib%status())
           case(BATCH_NOT_PACKED)
