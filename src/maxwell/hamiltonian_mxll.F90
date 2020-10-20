@@ -406,7 +406,7 @@ contains
     class(batch_t), pointer :: gradb(:)
     integer :: idir, field_dir, pml_dir
     integer            :: ip, ip_in
-    FLOAT              :: pml_c
+    FLOAT              :: pml_c, grad_real, grad_imag
     CMPLX              :: pml_a, pml_b, pml_g, grad
 
     PUSH_SUB(hamiltonian_mxll_apply_batch)
@@ -441,32 +441,44 @@ contains
 
       do pml_dir = 1, 3
         if (hm%bc%bc_ab_type(pml_dir) == MXLL_AB_CPML) then
-          do field_dir = 1, 3
-            if (pml_dir == field_dir) cycle
+          select case(gradb(pml_dir)%status())
+          case(BATCH_NOT_PACKED)
+            do field_dir = 1, 3
+              if (pml_dir == field_dir) cycle
+              do ip_in = 1, hm%bc%pml%points_number
+                ip = hm%bc%pml%points_map(ip_in)
+                pml_c = hm%bc%pml%c(ip_in, pml_dir)
+                pml_a = hm%bc%pml%a(ip_in, pml_dir)
+                pml_b = hm%bc%pml%b(ip_in, pml_dir)
+                pml_g = hm%bc%pml%conv_plus(ip_in, pml_dir, field_dir)
+                grad = gradb(pml_dir)%zff_linear(ip, field_dir)
+                grad_real = pml_c * ((M_ONE + TOFLOAT(pml_a))*TOFLOAT(grad)/P_c &
+                     + hm%rs_sign * TOFLOAT(pml_b)*TOFLOAT(pml_g))
+                grad_imag = pml_c * ((M_ONE + aimag(pml_a)) * aimag(grad)/P_c &
+                     + hm%rs_sign * aimag(pml_b) * aimag(pml_g))
+                gradb(pml_dir)%zff_linear(ip, field_dir) = TOCMPLX(grad_real, grad_imag)
+              end do
+            end do
+          case(BATCH_PACKED)
             do ip_in = 1, hm%bc%pml%points_number
-              ip       = hm%bc%pml%points_map(ip_in)
+              ip = hm%bc%pml%points_map(ip_in)
               pml_c = hm%bc%pml%c(ip_in, pml_dir)
               pml_a = hm%bc%pml%a(ip_in, pml_dir)
               pml_b = hm%bc%pml%b(ip_in, pml_dir)
-              pml_g = hm%bc%pml%conv_plus(ip_in, pml_dir, field_dir)
-              select case(gradb(pml_dir)%status())
-              case(BATCH_NOT_PACKED)
-                grad = gradb(pml_dir)%zff_linear(ip, field_dir)
-              case(BATCH_PACKED)
+              do field_dir = 1, 3
+                if (pml_dir == field_dir) cycle
+                pml_g = hm%bc%pml%conv_plus(ip_in, pml_dir, field_dir)
                 grad = gradb(pml_dir)%zff_pack(field_dir, ip)
-              end select
-              grad  = pml_c * (M_ONE/P_c * &
-                TOCMPLX((M_ONE + TOFLOAT(pml_a))*TOFLOAT(grad), (M_ONE + aimag(pml_a)) * aimag(grad)) &
-                   + hm%rs_sign * &
-                 TOCMPLX(TOFLOAT(pml_b)*TOFLOAT(pml_g), aimag(pml_b) * aimag(pml_g)))
-              select case(gradb(pml_dir)%status())
-              case(BATCH_NOT_PACKED)
-                gradb(pml_dir)%zff_linear(ip, field_dir) = grad
-              case(BATCH_PACKED)
-                gradb(pml_dir)%zff_pack(field_dir, ip) = grad
-              end select
+                grad_real = pml_c * ((M_ONE + TOFLOAT(pml_a))*TOFLOAT(grad)/P_c &
+                     + hm%rs_sign * TOFLOAT(pml_b)*TOFLOAT(pml_g))
+                grad_imag = pml_c * ((M_ONE + aimag(pml_a)) * aimag(grad)/P_c &
+                    + hm%rs_sign * aimag(pml_b) * aimag(pml_g))
+                gradb(pml_dir)%zff_pack(field_dir, ip) = TOCMPLX(grad_real, grad_imag)
+              end do
             end do
-          end do
+          case(BATCH_DEVICE_PACKED)
+            call messages_not_implemented("Maxwell PML on GPU")
+          end select
         end if
       end do
     end if
