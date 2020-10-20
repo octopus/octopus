@@ -406,10 +406,13 @@ contains
     type(profile_t), save :: prof
     class(batch_t), pointer :: gradb(:)
     integer :: idir, ifield, field_dir, pml_dir
-    integer :: ip, ip_in
+    integer :: ip, ip_in, il
     FLOAT :: pml_c, grad_real, grad_imag
     CMPLX :: pml_a, pml_b, pml_g, grad
     integer, parameter :: field_dirs(3, 2) = reshape([2, 3, 1, 3, 1, 2], [3, 2])
+    FLOAT :: cc, aux_ep(3), aux_mu(3), sigma_e, sigma_m
+    CMPLX :: ff_plus(3), ff_minus(3), hpsi(6)
+    integer :: sign_medium(6) = [1, 1, 1, -1, -1, -1]
 
     PUSH_SUB(hamiltonian_mxll_apply_batch)
     call profiling_in(prof, "HAMILTONIAN_MXLL_APPLY_BATCH")
@@ -492,7 +495,12 @@ contains
 
     ! if we do not need pml, scale after the curl because it is cheaper
     if (.not. hm%cpml_hamiltonian) then
-      call batch_scal(der%mesh%np, hm%rs_sign * P_c, hpsib)
+      if(hpsib%nst == 3) then
+        call batch_scal(der%mesh%np, hm%rs_sign * P_c, hpsib)
+      else if(hpsib%nst == 6) then
+        ! in case of a medium, multiply first 3 components with +, others with -
+        call batch_scal(der%mesh%np, sign_medium * P_c, hpsib)
+      end if
     end if
 
     if (hm%bc_constant) then
@@ -512,6 +520,118 @@ contains
           end do
         end do
       end select
+    end if
+
+    do idir = 1, 3
+      if ((hm%bc%bc_type(idir) == MXLL_BC_MEDIUM) .and. &
+          (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RS)) then
+        do ip_in = 1, hm%bc%medium%points_number(idir)
+          ip          = hm%bc%medium%points_map(ip_in, idir)
+          cc          = hm%bc%medium%c(ip_in, idir)/P_c
+          aux_ep(:)   = hm%bc%medium%aux_ep(ip_in, :, idir)
+          aux_mu(:)   = hm%bc%medium%aux_mu(ip_in, :, idir)
+          sigma_e     = hm%bc%medium%sigma_e(ip_in, idir)
+          sigma_m     = hm%bc%medium%sigma_m(ip_in, idir)
+          select case(hpsib%status())
+          case(BATCH_NOT_PACKED)
+            ff_plus(1:3)  = psib%zff_linear(ip, 1:3)
+            ff_minus(1:3) = psib%zff_linear(ip, 4:6)
+            hpsi(1:6) = hpsib%zff_linear(ip, 1:6)
+          case(BATCH_PACKED)
+            ff_plus(1:3)  = psib%zff_pack(1:3, ip)
+            ff_minus(1:3) = psib%zff_pack(4:6, ip)
+            hpsi(1:6) = hpsib%zff_pack(1:6, ip)
+          end select
+          aux_ep      = dcross_product(aux_ep,TOFLOAT(ff_plus+ff_minus))
+          aux_mu      = dcross_product(aux_mu,aimag(ff_plus-ff_minus))
+          hpsi(1) = hpsi(1)*cc                                         &
+                       - cc * aux_ep(1) - cc * M_zI * aux_mu(1)                  &
+                       - M_zI * sigma_e * TOFLOAT(ff_plus(1) + ff_minus(1))         &
+                       - M_zI * sigma_m * M_zI * aimag(ff_plus(1) - ff_minus(1))
+          hpsi(4) = hpsi(4)*cc                                         &
+                       + cc * aux_ep(1) - cc * M_zI * aux_mu(1)                  &
+                       - M_zI * sigma_e * TOFLOAT(ff_plus(1) + ff_minus(1))         &
+                       + M_zI * sigma_m * M_zI * aimag(ff_plus(1) - ff_minus(1))
+          hpsi(2) = hpsi(2)*cc                                         &
+                       - cc * aux_ep(2) - cc * M_zI * aux_mu(2)                  &
+                       - M_zI * sigma_e * TOFLOAT(ff_plus(2) + ff_minus(2))         &
+                       - M_zI * sigma_m * M_zI * aimag(ff_plus(2) - ff_minus(2))
+          hpsi(5) = hpsi(5)*cc                                     &
+                       + cc * aux_ep(2) - cc * M_zI * aux_mu(2)                  &
+                       - M_zI * sigma_e * TOFLOAT(ff_plus(2) + ff_minus(2))         &
+                       + M_zI * sigma_m * M_zI * aimag(ff_plus(2) - ff_minus(2))
+          hpsi(3) = hpsi(3)*cc                                         &
+                       - cc * aux_ep(3) - cc * M_zI * aux_mu(3)                  &
+                       - M_zI * sigma_e * TOFLOAT(ff_plus(3) + ff_minus(3))         &
+                       - M_zI * sigma_m * M_zI * aimag(ff_plus(3) - ff_minus(3))
+          hpsi(6) = hpsi(6)*cc                                         &
+                       + cc * aux_ep(3) - cc * M_zI * aux_mu(3)                  &
+                       - M_zI * sigma_e * TOFLOAT(ff_plus(3) + ff_minus(3))         &
+                       + M_zI * sigma_m * M_zI * aimag(ff_plus(3) - ff_minus(3))
+          select case(hpsib%status())
+          case(BATCH_NOT_PACKED)
+            hpsib%zff_linear(ip, 1:6) = hpsi(1:6)
+          case(BATCH_PACKED)
+            hpsib%zff_pack(1:6, ip) = hpsi(1:6)
+          end select
+        end do
+      end if
+    end do
+
+    if (hm%calc_medium_box .and. &
+         (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RS) ) then
+      do il = 1, hm%medium_box%number
+        do ip_in = 1, hm%medium_box%points_number(il)
+          ip           = hm%medium_box%points_map(ip_in, il)
+          cc           = hm%medium_box%c(ip_in,il)/P_c
+          aux_ep(1:3)  = hm%medium_box%aux_ep(ip_in, 1:3, il)
+          aux_mu(1:3)  = hm%medium_box%aux_mu(ip_in, 1:3, il)
+          sigma_e      = hm%medium_box%sigma_e(ip_in, il)
+          sigma_m      = hm%medium_box%sigma_m(ip_in, il)
+          select case(hpsib%status())
+          case(BATCH_NOT_PACKED)
+            ff_plus(1:3)  = psib%zff_linear(ip, 1:3)
+            ff_minus(1:3) = psib%zff_linear(ip, 4:6)
+            hpsi(1:6) = hpsib%zff_linear(ip, 1:6)
+          case(BATCH_PACKED)
+            ff_plus(1:3)  = psib%zff_pack(1:3, ip)
+            ff_minus(1:3) = psib%zff_pack(4:6, ip)
+            hpsi(1:6) = hpsib%zff_pack(1:6, ip)
+          end select
+          aux_ep       = dcross_product(aux_ep, TOFLOAT(ff_plus+ff_minus))
+          aux_mu       = dcross_product(aux_mu, aimag(ff_plus-ff_minus))
+          hpsi(1) = hpsi(1)*cc                                          &
+                       - cc * aux_ep(1) - cc * M_zI * aux_mu(1)                  &
+                       - M_zI * sigma_e * TOFLOAT(ff_plus(1) + ff_minus(1))         &
+                       - M_zI * sigma_m * M_zI * aimag(ff_plus(1) - ff_minus(1))
+          hpsi(4) = hpsi(4)*cc                                          &
+                       + cc * aux_ep(1) - cc * M_zI * aux_mu(1)                  &
+                       - M_zI * sigma_e * TOFLOAT(ff_plus(1) + ff_minus(1))         &
+                       + M_zI * sigma_m * M_zI * aimag(ff_plus(1) - ff_minus(1))
+          hpsi(2) = hpsi(2)*cc                                          &
+                       - cc * aux_ep(2) - cc * M_zI * aux_mu(2)                  &
+                       - M_zI * sigma_e * TOFLOAT(ff_plus(2) + ff_minus(2))         &
+                       - M_zI * sigma_m * M_zI * aimag(ff_plus(2) - ff_minus(2))
+          hpsi(5) = hpsi(5)*cc                                          &
+                       + cc * aux_ep(2) - cc * M_zI * aux_mu(2)                  &
+                       - M_zI * sigma_e * TOFLOAT(ff_plus(2) + ff_minus(2))         &
+                       + M_zI * sigma_m * M_zI * aimag(ff_plus(2) - ff_minus(2))
+          hpsi(3) = hpsi(3)*cc                                          &
+                       - cc * aux_ep(3) - cc * M_zI * aux_mu(3)                  &
+                       - M_zI * sigma_e * TOFLOAT(ff_plus(3) + ff_minus(3))         &
+                       - M_zI * sigma_m * M_zI * aimag(ff_plus(3) - ff_minus(3))
+          hpsi(6) = hpsi(6)*cc                                          &
+                       + cc * aux_ep(3) - cc * M_zI * aux_mu(3)                  &
+                       - M_zI * sigma_e * TOFLOAT(ff_plus(3) + ff_minus(3))         &
+                       + M_zI * sigma_m * M_zI * aimag(ff_plus(3) - ff_minus(3))
+          select case(hpsib%status())
+          case(BATCH_NOT_PACKED)
+            hpsib%zff_linear(ip, 1:6) = hpsi(1:6)
+          case(BATCH_PACKED)
+            hpsib%zff_pack(1:6, ip) = hpsi(1:6)
+          end select
+        end do
+      end do
     end if
 
     do idir = 1, der%dim
@@ -559,10 +679,9 @@ contains
 
     call profiling_in(prof, 'ZHAMILTONIAN_MXLL_APPLY')
 
-    if (hm%operator == FARADAY_AMPERE) then
+    if (hm%operator == FARADAY_AMPERE .or. (hm%operator == FARADAY_AMPERE_MEDIUM .and. .not.hm%cpml_hamiltonian)) then
       ! This part is already batchified
       call hamiltonian_mxll_apply_batch(hm, namespace, hm%der, psib, hpsib, set_bc=set_bc)
-
     else
       ! This part uses the old non-batch implementation
       SAFE_ALLOCATE(rs_aux_in(1:hm%der%mesh%np_part, 1:hm%dim))
@@ -1019,7 +1138,7 @@ contains
           oppsi(ip, 5) = oppsi(ip, 5)*cc                                         &
                        + cc * aux_ep(2) - cc * M_zI * aux_mu(2)                  &
                        - M_zI * sigma_e * TOFLOAT(ff_plus(2) + ff_minus(2))         &
-                       + M_zI * sigma_m * M_zI * aimag(ff_plus(2) - ff_minus(2)) 
+                       + M_zI * sigma_m * M_zI * aimag(ff_plus(2) - ff_minus(2))
           oppsi(ip, 3) = oppsi(ip, 3)*cc                                         &
                        - cc * aux_ep(3) - cc * M_zI * aux_mu(3)                  &
                        - M_zI * sigma_e * TOFLOAT(ff_plus(3) + ff_minus(3))         &
