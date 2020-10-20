@@ -114,6 +114,7 @@ match ;  Ez  (x=  0,y=-10,z=  0) [step 30]  ; LINEFIELD(Maxwell/output_iter/td.0
 
 match ;  Ez  (x=  0,y= 10,z=  0) [step 30]  ; LINEFIELD(Maxwell/output_iter/td.0000030/e_field-z\.x=0\,z=0, 62, 2) ; -8.32389442297851E-004
 
+Precision: 1e-15
 match ;  Ez  (x=  0,y=  0,z=-10) [step 30]  ; LINEFIELD(Maxwell/output_iter/td.0000030/e_field-z\.x=0\,y=0, 22, 2) ; 1.23612359023596E-003
 match ;  Ez  (x=  0,y=  0,z= 10) [step 30]  ; LINEFIELD(Maxwell/output_iter/td.0000030/e_field-z\.x=0\,y=0, 62, 2) ; 1.23612359023598E-003
 
@@ -153,6 +154,6 @@ match ;  By  (x=  0,y=  0,z=-10) [step 10]  ; LINEFIELD(Maxwell/output_iter/td.0
 match ;  By  (x=  0,y=  0,z= 10) [step 10]  ; LINEFIELD(Maxwell/output_iter/td.0000010/b_field-y\.x=0\,y=0, 62, 2) ; 9.55175823030101E-010
 match ;  By  (x=  0,y=  0,z=  0) [step 10]  ; LINEFIELD(Maxwell/output_iter/td.0000010/b_field-y\.x=0\,y=0, 42, 2) ; 2.69837934011612E-015
 
-Precision: 1e-25
+Precision: 1e-20
 match ;  Bz  (x=  0,y=  0,z=  0) [step 30]  ; LINEFIELD(Maxwell/output_iter/td.0000030/b_field-z\.y=0\,z=0, 42, 2) ; -1.49410371890771E-023
 
