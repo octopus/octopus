@@ -191,6 +191,7 @@ contains
     call hamiltonian_mxll_null(hm)
 
     hm%dim = st%dim
+    hm%st => st
 
     ASSERT(associated(gr%der%lapl))
 
@@ -416,6 +417,7 @@ contains
     ASSERT(psib%status() == hpsib%status())
 
     ASSERT(psib%nst == hpsib%nst)
+    ASSERT(hm%st%dim == 3)
 
     !Not implemented at the moment
     ASSERT(.not.present(terms))
@@ -440,7 +442,7 @@ contains
         call batch_scal(der%mesh%np, hm%rs_sign * P_c, gradb(idir))
       end do
 
-      do pml_dir = 1, 3
+      do pml_dir = 1, hm%st%dim
         if (hm%bc%bc_ab_type(pml_dir) == MXLL_AB_CPML) then
           select case(gradb(pml_dir)%status())
           case(BATCH_NOT_PACKED)
@@ -494,15 +496,22 @@ contains
     end if
 
     if (hm%bc_constant) then
-      do ip_in = 1, hm%bc%constant_points_number
-        ip = hm%bc%constant_points_map(ip_in)
-        select case(hpsib%status())
-        case(BATCH_NOT_PACKED)
-          hpsib%zff_linear(ip, :) = hm%st%rs_state_const(:)
-        case(BATCH_PACKED)
-          hpsib%zff_pack(:, ip) = hm%st%rs_state_const(:)
-        end select
-      end do
+      select case(hpsib%status())
+      case(BATCH_NOT_PACKED)
+        do field_dir = 1, hm%st%dim
+          do ip_in = 1, hm%bc%constant_points_number
+            ip = hm%bc%constant_points_map(ip_in)
+            hpsib%zff_linear(ip, field_dir) = hm%st%rs_state_const(field_dir)
+          end do
+        end do
+      case(BATCH_PACKED)
+        do ip_in = 1, hm%bc%constant_points_number
+          ip = hm%bc%constant_points_map(ip_in)
+          do field_dir = 1, hm%st%dim
+            hpsib%zff_pack(field_dir, ip) = hm%st%rs_state_const(field_dir)
+          end do
+        end do
+      end select
     end if
 
     do idir = 1, der%dim
