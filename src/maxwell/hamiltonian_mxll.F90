@@ -415,7 +415,7 @@ contains
     integer :: sign_medium(6) = [1, 1, 1, -1, -1, -1]
 
     PUSH_SUB(hamiltonian_mxll_apply_batch)
-    call profiling_in(prof, "HAMILTONIAN_MXLL_APPLY_BATCH")
+    call profiling_in(prof, "H_MXLL_APPLY_BATCH")
 
     ASSERT(psib%status() == hpsib%status())
 
@@ -475,7 +475,9 @@ contains
 
     contains
       subroutine apply_pml_boundary
+        type(profile_t), save :: prof_pml
         PUSH_SUB(hamiltonian_mxll_apply_batch.apply_pml_boundary)
+        call profiling_in(prof_pml, "APPLY_PML_BOUNDARY")
         if (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RS) then
           rs_sign = 1
         else
@@ -547,11 +549,14 @@ contains
             end select
           end if
         end do
+        call profiling_out(prof_pml)
         POP_SUB(hamiltonian_mxll_apply_batch.apply_pml_boundary)
       end subroutine apply_pml_boundary
 
       subroutine scale_after_curl
+        type(profile_t), save :: prof_scale
         PUSH_SUB(hamiltonian_mxll_apply_batch.scale_after_curl)
+        call profiling_in(prof_scale, "SCALE_AFTER_CURL")
         if (.not. hm%cpml_hamiltonian) then
           ! if we do not need pml, scale after the curl because it is cheaper
           if (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RS) then
@@ -567,11 +572,14 @@ contains
             call batch_scal(der%mesh%np, sign_medium * M_ONE, hpsib)
           end if
         end if
+        call profiling_out(prof_scale)
         POP_SUB(hamiltonian_mxll_apply_batch.scale_after_curl)
       end subroutine scale_after_curl
 
       subroutine apply_constant_boundary
+        type(profile_t), save :: prof_bc_const
         PUSH_SUB(hamiltonian_mxll_apply_batch.apply_constant_boundary)
+        call profiling_in(prof_bc_const, 'APPLY_CONSTANT_BC')
         select case(hpsib%status())
         case(BATCH_NOT_PACKED)
           do field_dir = 1, hm%st%dim
@@ -588,6 +596,7 @@ contains
             end do
           end do
         end select
+        call profiling_out(prof_bc_const)
         POP_SUB(hamiltonian_mxll_apply_batch.apply_constant_boundary)
       end subroutine apply_constant_boundary
 
@@ -596,8 +605,10 @@ contains
         integer,             intent(in) :: idir
 
         integer :: ifield
+        type(profile_t), save :: prof_medium_box
 
         PUSH_SUB(hamiltonian_mxll_apply_batch.apply_medium_box)
+        call profiling_in(prof_medium_box, "MEDIUM_BOX")
         !$omp parallel do private(ip, cc, aux_ep, aux_mu, sigma_e, sigma_m, &
         !$omp ff_plus, ff_minus, hpsi, ff_real, ff_imag, ifield, coeff_real, coeff_imag)
         do ip_in = 1, medium%points_number(idir)
@@ -634,6 +645,7 @@ contains
             hpsib%zff_pack(1:6, ip) = hpsi(1:6)
           end select
         end do
+        call profiling_out(prof_medium_box)
         POP_SUB(hamiltonian_mxll_apply_batch.apply_medium_box)
       end subroutine apply_medium_box
   end subroutine hamiltonian_mxll_apply_batch
