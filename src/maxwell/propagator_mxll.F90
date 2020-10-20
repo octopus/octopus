@@ -1052,9 +1052,9 @@ contains
 
     call profiling_in(prof, 'ENERGY_DENSITY_CALC')
 
-    SAFE_ALLOCATE(ztmp(1:gr%mesh%np_part,1:st%dim))
+    SAFE_ALLOCATE(ztmp(1:gr%mesh%np,1:st%dim))
 
-    ztmp(:,:) = rs_field(:,:)
+    ztmp(1:gr%mesh%np,:) = rs_field(1:gr%mesh%np,:)
 
     energy_dens(:) = M_ZERO
     do ip = 1, gr%mesh%np
@@ -1078,7 +1078,7 @@ contains
     end do
 
     if (present(rs_field_plane_waves) .and. present(energy_dens_plane_waves) .and. plane_waves_check) then
-      ztmp(:,:) = rs_field_plane_waves(:,:)
+      ztmp(1:gr%mesh%np,:) = rs_field_plane_waves(1:gr%mesh%np,:)
       energy_dens_plane_waves(:) = M_ZERO
       do ip = 1, gr%mesh%np
         do idim = 1, st%dim
@@ -1098,7 +1098,7 @@ contains
     type(grid_t),             intent(in)  :: gr
     type(states_mxll_t),      intent(in)  :: st
     type(hamiltonian_mxll_t), intent(in)  :: hm
-    type(energy_mxll_t),      intent(out) :: energy_mxll
+    type(energy_mxll_t),      intent(inout) :: energy_mxll
     CMPLX,                    intent(in)  :: rs_field(:,:)
     CMPLX, optional,          intent(in)  :: rs_field_plane_waves(:,:)
 
