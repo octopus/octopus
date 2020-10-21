@@ -31,6 +31,7 @@ dist_share_DATA =                                                   \
         03-linear-medium.test                                       \
 	03-linear-medium.01-cosinoidal_pulse_td.inp                 \
 	03-linear-medium.02-cosinoidal_pulse_td_pml.inp             \
+	03-linear-medium.03-cosinoidal_pulse_td_pml_unpacked.inp    \
         04-linear-medium-from-file.test                             \
 	04-linear-medium-from-file.01-cube_medium_from_file.inp     \
 	04-linear-medium-from-file.02-cube.off                      \
