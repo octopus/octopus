@@ -780,9 +780,6 @@ contains
 
     call external_current_calculation(st, mesh, time, current(:, :, 1))
     call build_rs_current_state(current(:, :, 1), mesh, rs_current_density_ext(:, :), st%ep(:), mesh%np)
-    do idim = 1, mesh%sb%dim
-      call lalg_scal(mesh%np, -M_ONE, rs_current_density_ext(:, idim))
-    end do
 
     SAFE_DEALLOCATE_A(current)
 

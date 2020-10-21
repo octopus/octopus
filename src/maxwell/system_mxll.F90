@@ -433,18 +433,18 @@ contains
 
       ! Propagation
 
-      ! calculation of external RS density at time (time-dt)
-      this%rs_current_density_ext_t1 = M_z0
+      !We get the external currents
       if (this%hm%current_density_ext_flag) then
+        ! calculation of external RS density at time (time-dt)
         call get_rs_density_ext(this%st, this%gr%mesh, this%clock%time(), this%rs_current_density_ext_t1)
-      end if
-
-      ! calculation of external RS density at time (time)
-      this%rs_current_density_ext_t2 = M_z0
-      if (this%hm%current_density_ext_flag) then
+        ! calculation of external RS density at time (time)
         call get_rs_density_ext(this%st, this%gr%mesh, this%clock%time()+this%prop%dt, this%rs_current_density_ext_t2)
+      else
+        this%rs_current_density_ext_t1 = M_z0
+        this%rs_current_density_ext_t2 = M_z0
       end if
 
+      !External densities
       this%rs_charge_density_ext_t1 = M_z0
       this%rs_charge_density_ext_t2 = M_z0
 
