@@ -407,23 +407,23 @@ contains
       ! transformation of RS state into 3x3 or 4x4 representation
       call transform_rs_state(hm, gr, st, rs_state, ff_rs_state, RS_TRANS_FORWARD)
 
+      ! RS state propagation
+      call hamiltonian_mxll_update(hm, time=inter_time)
+      if (pml_check) then
+        call pml_propagation_stage_1(hm, gr, st, tr, ff_rs_state, ff_rs_state_pml)
+      end if
+      call exponential_mxll_apply(hm, namespace, gr, st, tr, inter_dt, ff_rs_state, pml_check)
+      if (pml_check) then
+        call pml_propagation_stage_2(hm, namespace, gr, st, tr, inter_time, inter_dt, delay, ff_rs_state_pml, ff_rs_state)
+      end if
+
+      !Below we add the contribution from the inhomogeneous terms
       if ((hm%ma_mx_coupling_apply) .or. hm%current_density_ext_flag) then
 
         if (tr%tr_etrs_approx == OPTION__MAXWELLTDETRSAPPROX__NO) then
           SAFE_ALLOCATE(ff_rs_inhom_1(1:gr%mesh%np_part, ff_dim))
           SAFE_ALLOCATE(ff_rs_inhom_2(1:gr%mesh%np_part, ff_dim))
           SAFE_ALLOCATE(ff_rs_inhom_mean(1:gr%mesh%np_part, ff_dim))
-          ! RS state propagation
-          call hamiltonian_mxll_update(hm, time=inter_time)
-          if (pml_check) then
-            call pml_propagation_stage_1(hm, gr, st, tr, ff_rs_state, ff_rs_state_pml)
-            hm%cpml_hamiltonian = .true.
-          end if
-          call exponential_mxll_apply(hm, namespace, gr, st, tr, inter_dt, ff_rs_state, .false.)
-          if (pml_check) then
-            hm%cpml_hamiltonian = .false.
-            call pml_propagation_stage_2(hm, namespace, gr, st, tr, inter_time, inter_dt, delay, ff_rs_state_pml, ff_rs_state)
-          end if
 
           ! inhomogeneity propagation
           call transform_rs_densities(hm, rs_charge_density_t1, rs_current_density_t1,&
@@ -474,28 +474,11 @@ contains
           SAFE_DEALLOCATE_A(ff_rs_inhom_mean)
 
         else if (tr%tr_etrs_approx == OPTION__MAXWELLTDETRSAPPROX__CONST_STEPS) then
-          ! RS state propagation
-          call hamiltonian_mxll_update(hm, time=inter_time)
-          if (pml_check) then
-            call pml_propagation_stage_1(hm, gr, st, tr, ff_rs_state, ff_rs_state_pml)
-          end if
-          call exponential_mxll_apply(hm, namespace, gr, st, tr, inter_dt, ff_rs_state, pml_check)
-          if (pml_check) then
-            call pml_propagation_stage_2(hm, namespace, gr, st, tr, inter_time, inter_dt, delay, ff_rs_state_pml, ff_rs_state)
-          end if
-          ff_rs_state(:,:) = ff_rs_state + M_FOURTH * inter_dt * ff_rs_inhom_1
-        end if
-      else
-        ! RS state propagation
-        call hamiltonian_mxll_update(hm, time=inter_time)
-        if (pml_check) then
-          call pml_propagation_stage_1(hm, gr, st, tr, ff_rs_state, ff_rs_state_pml)
-        end if
-        call exponential_mxll_apply(hm, namespace, gr, st, tr, inter_dt, ff_rs_state, pml_check)
 
-        if (pml_check) then
-          call pml_propagation_stage_2(hm, namespace, gr, st, tr, inter_time, inter_dt, delay, ff_rs_state_pml, ff_rs_state)
+          ff_rs_state(:,:) = ff_rs_state + M_FOURTH * inter_dt * ff_rs_inhom_1
+
         end if
+
       end if
 
       ! PML convolution function update
