@@ -794,10 +794,10 @@ contains
     integer,                  intent(in)    :: field_dir
     CMPLX,                    intent(inout) :: pml(:)
 
-    integer            :: ip, ip_in, np_part, rs_sign
-    FLOAT              :: pml_c(3)
+    integer            :: ip, ip_in, rs_sign
+    FLOAT              :: pml_c
     CMPLX, allocatable :: tmp_partial(:)
-    CMPLX              :: pml_a(3), pml_b(3), pml_g(3)
+    CMPLX              :: pml_a, pml_b, pml_g
 
     PUSH_SUB(maxwell_pml_calculation_via_riemann_silberstein)
 
@@ -805,21 +805,20 @@ contains
 
       rs_sign = hm%rs_sign
 
-      np_part = der%mesh%np_part
-      SAFE_ALLOCATE(tmp_partial(np_part))
+      SAFE_ALLOCATE(tmp_partial(der%mesh%np_part))
 
       call zderivatives_partial(der, psi(:,field_dir), tmp_partial(:), pml_dir, set_bc = .false.)
       do ip_in = 1, hm%bc%pml%points_number
         ip       = hm%bc%pml%points_map(ip_in)
-        pml_c(1:3) = hm%bc%pml%c(ip_in, 1:3)
-        pml_a(1:3) = hm%bc%pml%a(ip_in, 1:3)
-        pml_b(1:3) = hm%bc%pml%b(ip_in, 1:3)
-        pml_g(1:3) = hm%bc%pml%conv_plus(ip_in, pml_dir, 1:3)
-        pml(ip)  = rs_sign * pml_c(pml_dir) * tmp_partial(ip) &
-                 + rs_sign * pml_c(pml_dir) * TOFLOAT(pml_a(pml_dir)) * TOFLOAT(tmp_partial(ip)) &
-                 + rs_sign * M_zI * pml_c(pml_dir) * aimag(pml_a(pml_dir)) * aimag(tmp_partial(ip)) &
-                 + rs_sign * pml_c(pml_dir) * TOFLOAT(pml_b(pml_dir)) * TOFLOAT(pml_g(field_dir)) &
-                 + rs_sign * M_zI * pml_c(pml_dir) * aimag(pml_b(pml_dir)) * aimag(pml_g(field_dir))
+        pml_c = hm%bc%pml%c(ip_in, pml_dir)
+        pml_a = hm%bc%pml%a(ip_in, pml_dir)
+        pml_b = hm%bc%pml%b(ip_in, pml_dir)
+        pml_g = hm%bc%pml%conv_plus(ip_in, pml_dir, field_dir)
+        pml(ip)  = rs_sign * pml_c * ( tmp_partial(ip) &
+                 +  TOFLOAT(pml_a) * TOFLOAT(tmp_partial(ip)) &
+                 +  M_zI * aimag(pml_a) * aimag(tmp_partial(ip)) &
+                 +  TOFLOAT(pml_b) * TOFLOAT(pml_g) &
+                 +  M_zI * aimag(pml_b) * aimag(pml_g))
       end do
 
       SAFE_DEALLOCATE_A(tmp_partial)
