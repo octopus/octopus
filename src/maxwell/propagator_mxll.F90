@@ -77,6 +77,7 @@ module propagator_mxll_oct_m
     propagator_mxll_init,                    &
     mxll_propagation_step,                   &
     transform_rs_state,                      &
+    transform_rs_densities,                  &
     calculate_matter_longitudinal_field,     &
     get_vector_pot_and_transverse_field,     &
     energy_density_calc,                     &
@@ -111,8 +112,12 @@ module propagator_mxll_oct_m
   end type propagator_mxll_t
 
   integer, public, parameter ::   &
-     RS_TRANS_FORWARD = 1,        &
+     RS_TRANS_FORWARD  = 1,       &
      RS_TRANS_BACKWARD = 2
+
+  integer, parameter ::    & 
+    MXWLL_ETRS_FULL  = 0,  &
+    MXWLL_ETRS_CONST = 1
 
 contains
 
@@ -250,7 +255,7 @@ contains
     !%Option const_steps 1
     !% Use constant current density.
     !%End
-    call parse_variable(namespace, 'MaxwellTDETRSApprox', OPTION__MAXWELLTDETRSAPPROX__NO, tr%tr_etrs_approx)
+    call parse_variable(namespace, 'MaxwellTDETRSApprox', MXWLL_ETRS_FULL, tr%tr_etrs_approx)
     call messages_print_var_option(stdout, 'MaxwellTDETRSApprox', tr%tr_etrs_approx)
 
     !%Variable MaxwellTDOperatorMethod
@@ -308,18 +313,15 @@ contains
   end subroutine propagator_mxll_init
 
   ! ---------------------------------------------------------
-  subroutine mxll_propagation_step(hm, namespace, gr, st, tr, rs_state, rs_current_density_t1,&
-      rs_current_density_t2, rs_charge_density_t1, rs_charge_density_t2, time, dt)
+  subroutine mxll_propagation_step(hm, namespace, gr, st, tr, rs_state, rs_inhom_t1, rs_inhom_t2, time, dt)
     type(hamiltonian_mxll_t),   intent(inout) :: hm
     type(namespace_t),          intent(in)    :: namespace
     type(grid_t),               intent(inout) :: gr
     type(states_mxll_t),        intent(inout) :: st
     type(propagator_mxll_t),    intent(inout) :: tr
     CMPLX,                      intent(inout) :: rs_state(:,:)
-    CMPLX,                      intent(inout) :: rs_current_density_t1(:,:)
-    CMPLX,                      intent(inout) :: rs_current_density_t2(:,:)
-    CMPLX,                      intent(inout) :: rs_charge_density_t1(:)
-    CMPLX,                      intent(inout) :: rs_charge_density_t2(:)
+    CMPLX,                      intent(in)    :: rs_inhom_t1(:,:) !> Inhomogeneous term at t
+    CMPLX,                      intent(in)    :: rs_inhom_t2(:,:) !> Inhomogeneous term at t+dt
     FLOAT,                      intent(in)    :: time
     FLOAT,                      intent(in)    :: dt
 
@@ -327,6 +329,8 @@ contains
     FLOAT              :: inter_dt, inter_time, delay
     CMPLX, allocatable :: ff_rs_state(:,:), ff_rs_inhom_1(:,:), ff_rs_inhom_2(:,:)
     CMPLX, allocatable :: ff_rs_state_pml(:,:), ff_rs_inhom_mean(:,:)
+
+
     logical            :: pml_check = .false.
     type(profile_t), save :: prof
 
@@ -368,15 +372,13 @@ contains
 
     ! first step of Maxwell inhomogeneity propagation with constant current density
     if ((hm%ma_mx_coupling_apply .or. hm%current_density_ext_flag) .and. &
-        tr%tr_etrs_approx == OPTION__MAXWELLTDETRSAPPROX__CONST_STEPS) then
+        tr%tr_etrs_approx == MXWLL_ETRS_CONST) then
 
       SAFE_ALLOCATE(ff_rs_inhom_1(1:gr%mesh%np_part, ff_dim))
       SAFE_ALLOCATE(ff_rs_inhom_2(1:gr%mesh%np_part, ff_dim))
       SAFE_ALLOCATE(ff_rs_inhom_mean(1:gr%mesh%np_part, ff_dim))
       ! inhomogeneity propagation
-      call transform_rs_densities(hm, rs_charge_density_t1, rs_current_density_t1, ff_rs_inhom_1, RS_TRANS_FORWARD)
-      call transform_rs_densities(hm, rs_charge_density_t2, rs_current_density_t2, ff_rs_inhom_2, RS_TRANS_FORWARD)
-      ff_rs_inhom_mean(:,:) = (ff_rs_inhom_1 + ff_rs_inhom_2)/M_TWO
+      ff_rs_inhom_mean(:,:) = (rs_inhom_t1 + rs_inhom_t2)/M_TWO
       ! add term J(time)
       ff_rs_inhom_1(:,:) = ff_rs_inhom_mean
       ff_rs_inhom_2(:,:) = ff_rs_inhom_mean
@@ -420,28 +422,20 @@ contains
       !Below we add the contribution from the inhomogeneous terms
       if ((hm%ma_mx_coupling_apply) .or. hm%current_density_ext_flag) then
 
-        if (tr%tr_etrs_approx == OPTION__MAXWELLTDETRSAPPROX__NO) then
+        if (tr%tr_etrs_approx == MXWLL_ETRS_FULL) then
           SAFE_ALLOCATE(ff_rs_inhom_1(1:gr%mesh%np_part, ff_dim))
           SAFE_ALLOCATE(ff_rs_inhom_2(1:gr%mesh%np_part, ff_dim))
           SAFE_ALLOCATE(ff_rs_inhom_mean(1:gr%mesh%np_part, ff_dim))
 
-          ! inhomogeneity propagation
-          call transform_rs_densities(hm, rs_charge_density_t1, rs_current_density_t1,&
-              ff_rs_inhom_1, RS_TRANS_FORWARD)
-          call transform_rs_densities(hm, rs_charge_density_t2, rs_current_density_t2,&
-              ff_rs_inhom_2, RS_TRANS_FORWARD)
-
           !Interpolation of the external current
-          if(inter_steps > 1) then
-            do idim = 1, ff_dim
-              ! not mean, used as auxiliary variable
-              ff_rs_inhom_mean(1:gr%mesh%np, idim) = ff_rs_inhom_2(1:gr%mesh%np, idim) - ff_rs_inhom_1(1:gr%mesh%np, idim)
-              ff_rs_inhom_2(1:gr%mesh%np, idim) = ff_rs_inhom_1(1:gr%mesh%np, idim) &
-                    + ff_rs_inhom_mean(1:gr%mesh%np, idim) * inter_dt * ii / TOFLOAT(inter_steps)
-              ff_rs_inhom_1(1:gr%mesh%np, idim) = ff_rs_inhom_1(1:gr%mesh%np, idim) &
-                  + ff_rs_inhom_mean(1:gr%mesh%np, idim) * inter_dt * (ii-1) / TOFLOAT(inter_steps)  
-            end do
-          end if
+          do idim = 1, ff_dim
+            ! not mean, used as auxiliary variable
+            ff_rs_inhom_mean(1:gr%mesh%np, idim) = rs_inhom_t2(1:gr%mesh%np, idim) - rs_inhom_t1(1:gr%mesh%np, idim)
+            ff_rs_inhom_2(1:gr%mesh%np, idim) = rs_inhom_t1(1:gr%mesh%np, idim) &
+                  + ff_rs_inhom_mean(1:gr%mesh%np, idim) * inter_dt * ii / TOFLOAT(inter_steps)
+            ff_rs_inhom_1(1:gr%mesh%np, idim) = rs_inhom_t1(1:gr%mesh%np, idim) &
+                + ff_rs_inhom_mean(1:gr%mesh%np, idim) * inter_dt * (ii-1) / TOFLOAT(inter_steps)  
+          end do
 
           call exponential_mxll_apply(hm, namespace, gr, st, tr, inter_dt, ff_rs_inhom_1, .false.)
           ! add terms U(time+dt,time)J(time) and J(time+dt)
@@ -450,13 +444,8 @@ contains
               + M_FOURTH * inter_dt * (ff_rs_inhom_1(1:gr%mesh%np, idim) + ff_rs_inhom_2(1:gr%mesh%np, idim))
           end do
 
-          call transform_rs_densities(hm, rs_charge_density_t1, rs_current_density_t1,&
-              ff_rs_inhom_1, RS_TRANS_FORWARD)
-          call transform_rs_densities(hm, rs_charge_density_t2, rs_current_density_t2,&
-              ff_rs_inhom_2, RS_TRANS_FORWARD)
-
           do idim = 1, ff_dim
-            ff_rs_inhom_1(1:gr%mesh%np, idim) = M_HALF * (ff_rs_inhom_1(1:gr%mesh%np, idim) + ff_rs_inhom_2(1:gr%mesh%np, idim))
+            ff_rs_inhom_1(1:gr%mesh%np, idim) = M_HALF * (rs_inhom_t1(1:gr%mesh%np, idim) + rs_inhom_t2(1:gr%mesh%np, idim))
             call lalg_copy(gr%mesh%np, ff_rs_inhom_1(:, idim), ff_rs_inhom_2(:, idim)) ! changed from the old code       
           end do
 
@@ -473,9 +462,12 @@ contains
           SAFE_DEALLOCATE_A(ff_rs_inhom_2)
           SAFE_DEALLOCATE_A(ff_rs_inhom_mean)
 
-        else if (tr%tr_etrs_approx == OPTION__MAXWELLTDETRSAPPROX__CONST_STEPS) then
+        else if (tr%tr_etrs_approx == MXWLL_ETRS_CONST) then
 
-          ff_rs_state(:,:) = ff_rs_state + M_FOURTH * inter_dt * ff_rs_inhom_1
+          do idim = 1, ff_dim
+            ff_rs_state(1:gr%mesh%np, idim) = ff_rs_state(1:gr%mesh%np, idim) &
+                  + M_FOURTH * inter_dt * ff_rs_inhom_1(1:gr%mesh%np, idim)
+          end do
 
         end if
 
