@@ -430,16 +430,14 @@ contains
               ff_rs_inhom_2, RS_TRANS_FORWARD)
 
           !Interpolation of the external current
-          if(inter_steps > 1) then
-            do idim = 1, ff_dim
-              ! not mean, used as auxiliary variable
-              ff_rs_inhom_mean(1:gr%mesh%np, idim) = ff_rs_inhom_2(1:gr%mesh%np, idim) - ff_rs_inhom_1(1:gr%mesh%np, idim)
-              ff_rs_inhom_2(1:gr%mesh%np, idim) = ff_rs_inhom_1(1:gr%mesh%np, idim) &
-                    + ff_rs_inhom_mean(1:gr%mesh%np, idim) * inter_dt * ii / TOFLOAT(inter_steps)
-              ff_rs_inhom_1(1:gr%mesh%np, idim) = ff_rs_inhom_1(1:gr%mesh%np, idim) &
-                  + ff_rs_inhom_mean(1:gr%mesh%np, idim) * inter_dt * (ii-1) / TOFLOAT(inter_steps)  
-            end do
-          end if
+          do idim = 1, ff_dim
+            ! not mean, used as auxiliary variable
+            ff_rs_inhom_mean(1:gr%mesh%np, idim) = ff_rs_inhom_2(1:gr%mesh%np, idim) - ff_rs_inhom_1(1:gr%mesh%np, idim)
+            ff_rs_inhom_2(1:gr%mesh%np, idim) = ff_rs_inhom_1(1:gr%mesh%np, idim) &
+                  + ff_rs_inhom_mean(1:gr%mesh%np, idim) * inter_dt * ii / TOFLOAT(inter_steps)
+            ff_rs_inhom_1(1:gr%mesh%np, idim) = ff_rs_inhom_1(1:gr%mesh%np, idim) &
+                + ff_rs_inhom_mean(1:gr%mesh%np, idim) * inter_dt * (ii-1) / TOFLOAT(inter_steps)  
+          end do
 
           call exponential_mxll_apply(hm, namespace, gr, st, tr, inter_dt, ff_rs_inhom_1, .false.)
           ! add terms U(time+dt,time)J(time) and J(time+dt)
