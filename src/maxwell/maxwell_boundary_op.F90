@@ -1680,8 +1680,12 @@ contains
     end do
     st%inner_points_number = ip_in
     SAFE_ALLOCATE(st%inner_points_map(1:ip_in))
+    SAFE_ALLOCATE(st%inner_points_mask(1:mesh%np))
     st%boundary_points_number = ip_bd
     SAFE_ALLOCATE(st%boundary_points_map(1:ip_bd))
+    SAFE_ALLOCATE(st%boundary_points_mask(1:mesh%np))
+    st%inner_points_mask = .false.
+    st%boundary_points_mask = .false.
 
     ! inner and boundary points mapping
     ip_in = 0
@@ -1700,9 +1704,11 @@ contains
       if (point_info == 0) then
         ip_in = ip_in + 1
         st%inner_points_map(ip_in) = ip
+        st%inner_points_mask(ip) = .true.
       else
         ip_bd = ip_bd + 1
         st%boundary_points_map(ip_bd) = ip
+        st%boundary_points_mask(ip) = .true.
       end if
     end do
 
