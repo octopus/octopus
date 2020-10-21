@@ -446,7 +446,8 @@ contains
           call exponential_mxll_apply(hm, namespace, gr, st, tr, inter_dt, ff_rs_inhom_1, .false.)
           ! add terms U(time+dt,time)J(time) and J(time+dt)
           do idim = 1, ff_dim
-            ff_rs_state(1:gr%mesh%np, idim) = ff_rs_state(1:gr%mesh%np, idim) + M_FOURTH * inter_dt * (ff_rs_inhom_1(1:gr%mesh%np, idim) + ff_rs_inhom_2(1:gr%mesh%np, idim))
+            ff_rs_state(1:gr%mesh%np, idim) = ff_rs_state(1:gr%mesh%np, idim) &
+              + M_FOURTH * inter_dt * (ff_rs_inhom_1(1:gr%mesh%np, idim) + ff_rs_inhom_2(1:gr%mesh%np, idim))
           end do
 
           call transform_rs_densities(hm, rs_charge_density_t1, rs_current_density_t1,&
