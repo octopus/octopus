@@ -692,16 +692,15 @@ contains
     pml_and_gpu = hm%cpml_hamiltonian .and. on_gpu
     if ((hm%operator == FARADAY_AMPERE .and. .not. pml_and_gpu) .or. &
       (hm%operator == FARADAY_AMPERE_MEDIUM .and. .not. on_gpu)) then
-      ! This part is already batchified
       call hamiltonian_mxll_apply_batch(hm, namespace, hm%der, psib, hpsib, set_bc=set_bc)
     else
-      ! This part uses the old non-batch implementation
       SAFE_ALLOCATE(rs_aux_in(1:hm%der%mesh%np_part, 1:hm%dim))
       SAFE_ALLOCATE(rs_aux_out(1:hm%der%mesh%np, 1:hm%dim))
       call boundaries_set(hm%der%boundaries, psib)
       do ii = 1, hm%dim
         call batch_get_state(psib, ii, hm%der%mesh%np_part, rs_aux_in(:, ii))
       end do
+      ! This uses the old non-batch implementation
       call maxwell_hamiltonian_apply_fd(hm, hm%der, rs_aux_in, rs_aux_out)
       do ii = 1, hm%dim
         call batch_set_state(hpsib, ii, hm%der%mesh%np, rs_aux_out(:, ii))
