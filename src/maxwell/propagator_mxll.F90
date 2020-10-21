@@ -14,12 +14,8 @@
 !! along with this program; if not, write to the Free Software
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
-!!
-!! $Id: propagator.F90 13908 2015-05-05 06:02:30Z xavier $
 
 #include "global.h"
-#include "undef.F90"
-#include "complex.F90"
 
 module propagator_mxll_oct_m
   use boundary_op_oct_m
@@ -629,7 +625,7 @@ contains
     if (hm%operator == FARADAY_AMPERE_MEDIUM) then
       if (sign == RS_TRANS_FORWARD) then
         SAFE_ALLOCATE(rs_state_minus(1:gr%mesh%np_part,1:st%dim))
-        rs_state_minus = R_CONJ(rs_state)
+        rs_state_minus = conjg(rs_state)
         call transform_rs_state_to_6x6_rs_state_forward(rs_state, rs_state_minus, ff_rs_state)
         SAFE_DEALLOCATE_A(rs_state_minus)
       else

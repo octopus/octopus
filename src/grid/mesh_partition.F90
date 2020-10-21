@@ -116,6 +116,9 @@ contains
 
     type(profile_t), save :: prof
     integer :: default
+#ifdef HAVE_METIS
+    integer ::ierr
+#endif
 
     call profiling_in(prof, "MESH_PARTITION")
     PUSH_SUB(mesh_partition)
@@ -347,13 +350,15 @@ contains
       case(RCB)
         message(1) = 'Info: Using METIS 5 multilevel recursive bisection to partition the mesh.'
         call messages_info(1)
-        call oct_metis_partgraphrecursive(nv_global, 1, xadj_global(1), adjncy_global(1), vsize, &
+        ierr = oct_metis_partgraphrecursive(nv_global, 1, xadj_global(1), adjncy_global(1), vsize, &
                                           tpwgts(1), 1.01_4, options(1), edgecut, part_global(1))
+        call metis_error_code(ierr)
       case(GRAPH)
         message(1) = 'Info: Using METIS 5 multilevel k-way algorithm to partition the mesh.'
         call messages_info(1)
-        call oct_metis_partgraphkway(nv_global, 1, xadj_global(1), adjncy_global(1), vsize, &
+        ierr = oct_metis_partgraphkway(nv_global, 1, xadj_global(1), adjncy_global(1), vsize, &
                                      tpwgts(1), 1.01_4, options(1), edgecut, part_global(1))
+        call metis_error_code(ierr) 
       case default
         message(1) = 'Selected partition method is not available in METIS 5.'
         call messages_fatal(1)
@@ -405,6 +410,30 @@ contains
     call stencil_end(stencil)
     POP_SUB(mesh_partition)
     call profiling_out(prof)
+
+    contains
+
+      subroutine metis_error_code(ierr)
+        integer, intent(in) :: ierr 
+
+        PUSH_SUB(mesh_partition.metis_error_code)
+
+        select case(ierr)
+        case(METIS_OK)
+          !Everything OK
+        case(METIS_ERROR_INPUT)
+          message(1) = "Metis: Input error."
+          call messages_fatal(1, namespace=namespace)
+        case(METIS_ERROR_MEMORY)
+          message(1) = "Metis: Unable to allocate required memory."
+          call messages_fatal(1, namespace=namespace)
+        case(METIS_ERROR)
+          message(1) = "Metis: Some type of error."
+          call messages_fatal(1, namespace=namespace)
+        end select
+
+        POP_SUB(mesh_partition.metis_error_code)
+      end subroutine metis_error_code
 
   end subroutine mesh_partition
 
