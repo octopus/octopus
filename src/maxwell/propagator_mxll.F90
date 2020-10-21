@@ -28,11 +28,11 @@ module propagator_mxll_oct_m
   use comm_oct_m
   use cube_function_oct_m
   use cube_oct_m
-  use current_oct_m
   use derivatives_oct_m
   use density_oct_m
   use energy_calc_oct_m
   use exponential_oct_m
+  use external_densities_oct_m
   use fft_oct_m
   use fourier_space_oct_m
   use grid_oct_m
