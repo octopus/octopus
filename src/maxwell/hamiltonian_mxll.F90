@@ -413,6 +413,7 @@ contains
     FLOAT :: cc, aux_ep(3), aux_mu(3), sigma_e, sigma_m, ff_real(3), ff_imag(3), coeff_real, coeff_imag
     CMPLX :: ff_plus(3), ff_minus(3), hpsi(6)
     integer :: sign_medium(6) = [1, 1, 1, -1, -1, -1]
+    logical :: with_medium
 
     PUSH_SUB(hamiltonian_mxll_apply_batch)
     call profiling_in(prof, "H_MXLL_APPLY_BATCH")
@@ -424,6 +425,7 @@ contains
 
     !Not implemented at the moment
     ASSERT(.not.present(terms))
+    with_medium = hm%operator == FARADAY_AMPERE_MEDIUM
 
     if(present(time)) then
       if(abs(time - hm%current_time) > CNST(1e-10)) then
@@ -451,18 +453,20 @@ contains
       call apply_constant_boundary()
     end if
 
-    do idir = 1, 3
-      if ((hm%bc%bc_type(idir) == MXLL_BC_MEDIUM) .and. &
-          (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RS)) then
-        call apply_medium_box(hm%bc%medium, idir)
-      end if
-    end do
-
-    if (hm%calc_medium_box .and. &
-         (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RS) ) then
-      do il = 1, hm%medium_box%number
-        call apply_medium_box(hm%medium_box, il)
+    if (with_medium) then
+      do idir = 1, 3
+        if ((hm%bc%bc_type(idir) == MXLL_BC_MEDIUM) .and. &
+            (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RS)) then
+          call apply_medium_box(hm%bc%medium, idir)
+        end if
       end do
+
+      if (hm%calc_medium_box .and. &
+           (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RS) ) then
+        do il = 1, hm%medium_box%number
+          call apply_medium_box(hm%medium_box, il)
+        end do
+      end if
     end if
 
     do idir = 1, der%dim
@@ -478,7 +482,7 @@ contains
         type(profile_t), save :: prof_pml
         PUSH_SUB(hamiltonian_mxll_apply_batch.apply_pml_boundary)
         call profiling_in(prof_pml, "APPLY_PML_BOUNDARY")
-        if (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RS) then
+        if (with_medium) then
           rs_sign = 1
         else
           rs_sign = hm%rs_sign
@@ -506,7 +510,7 @@ contains
                   grad_imag = pml_c * ((M_ONE + aimag(pml_a)) * aimag(grad)/P_c &
                        + rs_sign * aimag(pml_b) * aimag(pml_g))
                   gradb(pml_dir)%zff_linear(ip, field_dir) = TOCMPLX(grad_real, grad_imag)
-                  if (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RS) then
+                  if (with_medium) then
                     pml_g = hm%bc%pml%conv_minus(ip_in, pml_dir, field_dir)
                     grad = gradb(pml_dir)%zff_linear(ip, field_dir+3)
                     grad_real = pml_c * ((M_ONE + TOFLOAT(pml_a))*TOFLOAT(grad)/P_c &
@@ -533,7 +537,7 @@ contains
                   grad_imag = pml_c * ((M_ONE + aimag(pml_a)) * aimag(grad)/P_c &
                        + rs_sign * aimag(pml_b) * aimag(pml_g))
                   gradb(pml_dir)%zff_pack(field_dir, ip) = TOCMPLX(grad_real, grad_imag)
-                  if (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RS) then
+                  if (with_medium) then
                     pml_g = hm%bc%pml%conv_minus(ip_in, pml_dir, field_dir)
                     grad = gradb(pml_dir)%zff_pack(field_dir+3, ip)
                     grad_real = pml_c * ((M_ONE + TOFLOAT(pml_a))*TOFLOAT(grad)/P_c &
@@ -559,7 +563,7 @@ contains
         call profiling_in(prof_scale, "SCALE_AFTER_CURL")
         if (.not. hm%cpml_hamiltonian) then
           ! if we do not need pml, scale after the curl because it is cheaper
-          if (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RS) then
+          if (with_medium) then
             ! in case of a medium, multiply first 3 components with +, others with -
             call batch_scal(der%mesh%np, sign_medium * P_c, hpsib)
           else
@@ -567,7 +571,7 @@ contains
           end if
         else
           ! this is needed for PML computations with medium
-          if (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RS) then
+          if (with_medium) then
             ! in case of a medium, multiply first 3 components with +, others with -
             call batch_scal(der%mesh%np, sign_medium * M_ONE, hpsib)
           end if
