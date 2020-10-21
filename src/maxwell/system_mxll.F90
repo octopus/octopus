@@ -409,7 +409,13 @@ contains
       ! are intermingled. Therefore it needs to be changed (maybe have the propagator handle it?)
       this%etime = loct_clock()
 
+      SAFE_ALLOCATE(this%rs_inhom_t1(1:this%gr%mesh%np_part, 1:this%st%dim))
+      SAFE_ALLOCATE(this%rs_inhom_t2(1:this%gr%mesh%np_part, 1:this%st%dim))
+
     case (EXPMID_FINISH)
+
+      SAFE_DEALLOCATE_A(this%rs_inhom_t1)
+      SAFE_DEALLOCATE_A(this%rs_inhom_t2)
 
     case (EXPMID_PREDICT_DT_2)  ! predict: psi(t+dt/2) = 0.5*(U_H(dt) psi(t) + psi(t)) or via extrapolation
       ! Empty for the moment
