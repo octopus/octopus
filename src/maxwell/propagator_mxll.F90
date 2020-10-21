@@ -1052,9 +1052,9 @@ contains
 
     call profiling_in(prof, 'ENERGY_DENSITY_CALC')
 
-    SAFE_ALLOCATE(ztmp(1:gr%mesh%np,1:st%dim))
+    SAFE_ALLOCATE(ztmp(1:gr%mesh%np_part,1:st%dim))
 
-    ztmp(1:gr%mesh%np,:) = rs_field(1:gr%mesh%np,:)
+    ztmp(:,:) = rs_field(:,:)
 
     energy_dens(:) = M_ZERO
     do ip = 1, gr%mesh%np
@@ -1078,7 +1078,7 @@ contains
     end do
 
     if (present(rs_field_plane_waves) .and. present(energy_dens_plane_waves) .and. plane_waves_check) then
-      ztmp(1:gr%mesh%np,:) = rs_field_plane_waves(1:gr%mesh%np,:)
+      ztmp(:,:) = rs_field_plane_waves(:,:)
       energy_dens_plane_waves(:) = M_ZERO
       do ip = 1, gr%mesh%np
         do idim = 1, st%dim
