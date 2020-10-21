@@ -83,7 +83,7 @@ module messages_oct_m
   integer, parameter, private :: unit_offset = 1000
   character(len=512), private :: msg
   integer, parameter, private :: SLEEPYTIME_ALL = 1, SLEEPYTIME_NONWRITERS = 60 !< seconds
-  character(len=64),  private :: oct_status
+  character(len=64),  private :: oct_status = 'undefined' !< start with an undefined status
 
 
   ! ---------------------------------------------------------
