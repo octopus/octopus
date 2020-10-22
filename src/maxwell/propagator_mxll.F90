@@ -2098,8 +2098,8 @@ contains
     type(batch_t),              intent(in)    :: ff_rs_stateb
     type(batch_t),              intent(inout) :: ff_rs_state_pmlb
 
-    integer            :: ip, ff_points, ff_dim, ii
-    CMPLX, allocatable :: ff_rs_state_plane_waves(:,:), rs_state_constant(:,:), ff_rs_state_constant(:,:)
+    integer            :: ii
+    CMPLX, allocatable :: rs_state_constant(:,:)
     type(profile_t), save :: prof
 
     PUSH_SUB(pml_propagation_stage_1_batch)
