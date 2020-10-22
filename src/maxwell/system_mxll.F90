@@ -22,17 +22,17 @@ module system_mxll_oct_m
   use algorithm_oct_m
   use calc_mode_par_oct_m
   use clock_oct_m
-  use current_oct_m
   use distributed_oct_m
+  use external_densities_oct_m
   use geometry_oct_m
-  use interactions_factory_oct_m
-  use lorentz_force_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_mxll_oct_m
   use interaction_oct_m
+  use interactions_factory_oct_m
   use iso_c_binding
   use loct_oct_m
+  use lorentz_force_oct_m
   use maxwell_boundary_op_oct_m
   use mesh_oct_m
   use messages_oct_m
