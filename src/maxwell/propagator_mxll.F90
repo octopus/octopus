@@ -310,15 +310,15 @@ contains
   end subroutine propagator_mxll_init
 
   ! ---------------------------------------------------------
-  subroutine mxll_propagation_step(hm, namespace, gr, st, tr, rs_state, rs_inhom_t1, rs_inhom_t2, time, dt)
+  subroutine mxll_propagation_step(hm, namespace, gr, st, tr, rs_state, ff_rs_inhom_t1, ff_rs_inhom_t2, time, dt)
     type(hamiltonian_mxll_t),   intent(inout) :: hm
     type(namespace_t),          intent(in)    :: namespace
     type(grid_t),               intent(inout) :: gr
     type(states_mxll_t),        intent(inout) :: st
     type(propagator_mxll_t),    intent(inout) :: tr
     CMPLX,                      intent(inout) :: rs_state(:,:)
-    CMPLX,                      intent(in)    :: rs_inhom_t1(:,:) !> Inhomogeneous term at t
-    CMPLX,                      intent(in)    :: rs_inhom_t2(:,:) !> Inhomogeneous term at t+dt
+    CMPLX,                      intent(in)    :: ff_rs_inhom_t1(:,:) !> Inhomogeneous term at t
+    CMPLX,                      intent(in)    :: ff_rs_inhom_t2(:,:) !> Inhomogeneous term at t+dt
     FLOAT,                      intent(in)    :: time
     FLOAT,                      intent(in)    :: dt
 
@@ -379,7 +379,7 @@ contains
       SAFE_ALLOCATE(ff_rs_inhom_2(1:gr%mesh%np_part, ff_dim))
       SAFE_ALLOCATE(ff_rs_inhom_mean(1:gr%mesh%np_part, ff_dim))
       ! inhomogeneity propagation
-      ff_rs_inhom_mean(:,:) = (rs_inhom_t1 + rs_inhom_t2)/M_TWO
+      ff_rs_inhom_mean(:,:) = (ff_rs_inhom_t1 + ff_rs_inhom_t2)/M_TWO
       ! add term J(time)
       ff_rs_inhom_1(:,:) = ff_rs_inhom_mean
       ff_rs_inhom_2(:,:) = ff_rs_inhom_mean
@@ -438,10 +438,10 @@ contains
           !Interpolation of the external current
           do idim = 1, ff_dim
             ! not mean, used as auxiliary variable
-            ff_rs_inhom_mean(1:gr%mesh%np, idim) = rs_inhom_t2(1:gr%mesh%np, idim) - rs_inhom_t1(1:gr%mesh%np, idim)
-            ff_rs_inhom_2(1:gr%mesh%np, idim) = rs_inhom_t1(1:gr%mesh%np, idim) &
+            ff_rs_inhom_mean(1:gr%mesh%np, idim) = ff_rs_inhom_t2(1:gr%mesh%np, idim) - ff_rs_inhom_t1(1:gr%mesh%np, idim)
+            ff_rs_inhom_2(1:gr%mesh%np, idim) = ff_rs_inhom_t1(1:gr%mesh%np, idim) &
                   + ff_rs_inhom_mean(1:gr%mesh%np, idim) * inter_dt * ii / TOFLOAT(inter_steps)
-            ff_rs_inhom_1(1:gr%mesh%np, idim) = rs_inhom_t1(1:gr%mesh%np, idim) &
+            ff_rs_inhom_1(1:gr%mesh%np, idim) = ff_rs_inhom_t1(1:gr%mesh%np, idim) &
                 + ff_rs_inhom_mean(1:gr%mesh%np, idim) * inter_dt * (ii-1) / TOFLOAT(inter_steps)  
           end do
 
@@ -453,7 +453,7 @@ contains
           end do
 
           do idim = 1, ff_dim
-            ff_rs_inhom_1(1:gr%mesh%np, idim) = M_HALF * (rs_inhom_t1(1:gr%mesh%np, idim) + rs_inhom_t2(1:gr%mesh%np, idim))
+            ff_rs_inhom_1(1:gr%mesh%np, idim) = M_HALF * (ff_rs_inhom_t1(1:gr%mesh%np, idim) + ff_rs_inhom_t2(1:gr%mesh%np, idim))
             call lalg_copy(gr%mesh%np, ff_rs_inhom_1(:, idim), ff_rs_inhom_2(:, idim)) ! changed from the old code       
           end do
 
