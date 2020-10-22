@@ -322,7 +322,7 @@ contains
     FLOAT,                      intent(in)    :: time
     FLOAT,                      intent(in)    :: dt
 
-    integer            :: ii, inter_steps, ff_dim, idim
+    integer            :: ii, inter_steps, ff_dim, idim, istate
     FLOAT              :: inter_dt, inter_time, delay
     CMPLX, allocatable :: ff_rs_state(:,:), ff_rs_inhom_1(:,:), ff_rs_inhom_2(:,:)
     CMPLX, allocatable :: ff_rs_state_pml(:,:), ff_rs_inhom_mean(:,:)
@@ -330,6 +330,7 @@ contains
 
     logical            :: pml_check = .false.
     type(profile_t), save :: prof
+    type(batch_t) :: ff_rs_stateb, ff_rs_state_pmlb
 
     PUSH_SUB(mxll_propagation_step)
 
@@ -362,9 +363,12 @@ contains
     delay = tr%delay_time
 
     SAFE_ALLOCATE(ff_rs_state(1:gr%mesh%np_part, ff_dim))
+    call zbatch_init(ff_rs_stateb, 1, 1, hm%dim, gr%mesh%np_part)
+    if (st%pack_states) call ff_rs_stateb%do_pack()
 
     if (pml_check) then
       SAFE_ALLOCATE(ff_rs_state_pml(1:gr%mesh%np_part, ff_dim))
+      call ff_rs_stateb%copy_to(ff_rs_state_pmlb)
     end if
 
     ! first step of Maxwell inhomogeneity propagation with constant current density
@@ -404,20 +408,33 @@ contains
       inter_time = time + inter_dt * (ii-1)
 
       ! transformation of RS state into 3x3 or 4x4 representation
-      call transform_rs_state(hm, gr, st, rs_state, ff_rs_state, RS_TRANS_FORWARD)
+      call transform_rs_state_batch(hm, gr, st, rs_state, ff_rs_stateb, RS_TRANS_FORWARD)
 
       ! RS state propagation
       call hamiltonian_mxll_update(hm, time=inter_time)
       if (pml_check) then
-        call pml_propagation_stage_1(hm, gr, st, tr, ff_rs_state, ff_rs_state_pml)
+        call pml_propagation_stage_1_batch(hm, gr, st, tr, ff_rs_stateb, ff_rs_state_pmlb)
       end if
-      call exponential_mxll_apply(hm, namespace, gr, st, tr, inter_dt, ff_rs_state, pml_check)
+
+      hm%cpml_hamiltonian = pml_check
+      call exponential_apply_batch(tr%te, namespace, gr%mesh, hm, ff_rs_stateb, dt)
+      hm%cpml_hamiltonian = .false.
+
       if (pml_check) then
-        call pml_propagation_stage_2(hm, namespace, gr, st, tr, inter_time, inter_dt, delay, ff_rs_state_pml, ff_rs_state)
+        call pml_propagation_stage_2_batch(hm, namespace, gr, st, tr, inter_time, inter_dt, delay, ff_rs_state_pmlb, ff_rs_stateb)
       end if
 
       !Below we add the contribution from the inhomogeneous terms
       if ((hm%ma_mx_coupling_apply) .or. hm%current_density_ext_flag) then
+        do istate = 1, hm%dim
+          call batch_get_state(ff_rs_stateb, istate, gr%mesh%np_part, ff_rs_state(:, istate))
+        end do
+        if (pml_check) then
+          do istate = 1, hm%dim
+            call batch_get_state(ff_rs_state_pmlb, istate, gr%mesh%np_part, ff_rs_state_pml(:, istate))
+          end do
+        end if
+
 
         if (tr%tr_etrs_approx == MXWLL_ETRS_FULL) then
           SAFE_ALLOCATE(ff_rs_inhom_1(1:gr%mesh%np_part, ff_dim))
@@ -468,15 +485,28 @@ contains
 
         end if
 
+        do istate = 1, hm%dim
+          call batch_set_state(ff_rs_stateb, istate, gr%mesh%np_part, ff_rs_state(:, istate))
+        end do
+        if (pml_check) then
+          do istate = 1, hm%dim
+            call batch_set_state(ff_rs_state_pmlb, istate, gr%mesh%np_part, ff_rs_state_pml(:, istate))
+          end do
+        end if
+
       end if
 
       ! PML convolution function update
       if (pml_check) then
+        do istate = 1, hm%dim
+          call batch_get_state(ff_rs_state_pmlb, istate, gr%mesh%np, ff_rs_state_pml(:, istate))
+        end do
         call cpml_conv_function_update(hm, gr, ff_rs_state_pml, ff_dim)
+        ! no need to set states again since ff_rs_state_pml is not changed
       end if
 
       ! back tranformation of RS state representation
-      call transform_rs_state(hm, gr, st, rs_state, ff_rs_state, RS_TRANS_BACKWARD)
+      call transform_rs_state_batch(hm, gr, st, rs_state, ff_rs_stateb, RS_TRANS_BACKWARD)
 
       if (tr%bc_constant) then
         ! Propagation dt with H(inter_time+inter_dt) for constant boundaries
@@ -507,9 +537,11 @@ contains
     end if
 
     SAFE_DEALLOCATE_A(ff_rs_state)
+    call ff_rs_stateb%end()
 
     if (pml_check) then
       SAFE_DEALLOCATE_A(ff_rs_state_pml)
+      call ff_rs_state_pmlb%end()
     end if
 
     call profiling_out(prof)
@@ -649,6 +681,85 @@ contains
     POP_SUB(transform_rs_state)
 
   end subroutine transform_rs_state
+
+  ! ---------------------------------------------------------
+  subroutine transform_rs_state_batch(hm, gr, st, rs_state, ff_rs_stateb, sign)
+    type(hamiltonian_mxll_t), intent(in)         :: hm
+    type(grid_t),             intent(in)         :: gr
+    type(states_mxll_t),      intent(in)         :: st
+    CMPLX,                    intent(inout)      :: rs_state(:,:)
+    type(batch_t),            intent(inout)      :: ff_rs_stateb
+    integer,                  intent(in)         :: sign
+
+    CMPLX, allocatable :: rs_state_tmp(:,:)
+    type(profile_t), save :: prof
+    integer :: ii, np
+
+    PUSH_SUB(transform_rs_state_batch)
+
+    call profiling_in(prof, 'TRANSFORM_RS_STATE')
+
+    ASSERT(sign == RS_TRANS_FORWARD .or. sign == RS_TRANS_BACKWARD)
+
+    np = gr%mesh%np
+
+    if (hm%operator == FARADAY_AMPERE_MEDIUM) then
+      if (sign == RS_TRANS_FORWARD) then
+        ! 3 to 6
+        do ii = 1, 3
+          call batch_set_state(ff_rs_stateb, ii, np, rs_state(:, ii))
+          call batch_set_state(ff_rs_stateb, ii+3, np, conjg(rs_state(:, ii)))
+        end do
+      else
+        ! 6 to 3
+        SAFE_ALLOCATE(rs_state_tmp(gr%mesh%np, st%dim))
+        do ii = 1, 3
+          call batch_get_state(ff_rs_stateb, ii, np, rs_state(:, ii))
+          call batch_get_state(ff_rs_stateb, ii+3, np, rs_state_tmp(:, ii))
+          rs_state(1:np, ii) = M_HALF * (rs_state(1:np, ii) + conjg(rs_state_tmp(1:np, ii)))
+        end do
+        SAFE_DEALLOCATE_A(rs_state_tmp)
+      end if
+
+    else if (hm%operator == FARADAY_AMPERE_GAUSS) then
+      if (sign == RS_TRANS_FORWARD) then
+        ! 3 to 4
+        call batch_set_state(ff_rs_stateb, 1, np, -rs_state(1:np, 1)+rs_state(1:np, 2))
+        call batch_set_state(ff_rs_stateb, 2, np, rs_state(1:np, 3))
+        call batch_set_state(ff_rs_stateb, 3, np, rs_state(1:np, 3))
+        call batch_set_state(ff_rs_stateb, 4, np, rs_state(1:np, 1)+rs_state(1:np, 2))
+      else
+        ! 4 to 3
+        SAFE_ALLOCATE(rs_state_tmp(gr%mesh%np, 2))
+        call batch_get_state(ff_rs_stateb, 1, np, rs_state_tmp(:, 1))
+        call batch_get_state(ff_rs_stateb, 4, np, rs_state_tmp(:, 2))
+        rs_state(1:np, 1) = M_HALF * (-rs_state_tmp(1:np, 1) + rs_state_tmp(1:np, 2))
+        rs_state(1:np, 2) = M_HALF * (-rs_state_tmp(1:np, 1) - rs_state_tmp(1:np, 2))
+        call batch_get_state(ff_rs_stateb, 2, np, rs_state_tmp(:, 1))
+        call batch_get_state(ff_rs_stateb, 3, np, rs_state_tmp(:, 2))
+        rs_state(1:np, 3) = M_HALF * (rs_state_tmp(1:np, 1) + rs_state_tmp(1:np, 2))
+        SAFE_DEALLOCATE_A(rs_state_tmp)
+      end if
+
+    else
+      if (sign == RS_TRANS_FORWARD) then
+        ! 3 to 3
+        do ii = 1, 3
+          call batch_set_state(ff_rs_stateb, ii, np, rs_state(:, ii))
+        end do
+      else
+        ! 3 to 3
+        do ii = 1, 3
+          call batch_get_state(ff_rs_stateb, ii, np, rs_state(:, ii))
+        end do
+      end if
+    end if
+
+    call profiling_out(prof)
+
+    POP_SUB(transform_rs_state_batch)
+
+  end subroutine transform_rs_state_batch
 
   ! ---------------------------------------------------------
   subroutine transform_rs_densities(hm, mesh, rs_charge_density, rs_current_density, ff_density, sign)
@@ -1979,6 +2090,53 @@ contains
   end subroutine pml_propagation_stage_1
 
   ! ---------------------------------------------------------
+  subroutine pml_propagation_stage_1_batch(hm, gr, st, tr, ff_rs_stateb, ff_rs_state_pmlb)
+    type(hamiltonian_mxll_t),   intent(inout) :: hm
+    type(grid_t),               intent(in)    :: gr
+    type(states_mxll_t),        intent(inout) :: st
+    type(propagator_mxll_t),    intent(inout) :: tr
+    type(batch_t),              intent(in)    :: ff_rs_stateb
+    type(batch_t),              intent(inout) :: ff_rs_state_pmlb
+
+    integer            :: ip, ff_points, ff_dim, ii
+    CMPLX, allocatable :: ff_rs_state_plane_waves(:,:), rs_state_constant(:,:), ff_rs_state_constant(:,:)
+    type(profile_t), save :: prof
+
+    PUSH_SUB(pml_propagation_stage_1_batch)
+
+    call profiling_in(prof, 'PML_PROP_STAGE_1_BATCH')
+
+    if (tr%bc_plane_waves .and. hm%plane_waves_apply) then
+      call transform_rs_state_batch(hm, gr, st, st%rs_state_plane_waves, &
+        ff_rs_state_pmlb, RS_TRANS_FORWARD)
+      call batch_xpay(gr%mesh%np, ff_rs_stateb, -M_ONE, ff_rs_state_pmlb)
+    else if (tr%bc_constant .and. hm%spatial_constant_apply) then
+      ! this could be optimized: right now we broadcast the constant value
+      !  to the full mesh to be able to use the batch functions easily.
+      ! in principle, we would need to do the transform only for one point
+      !  and then subtract that value from all points of the state
+      SAFE_ALLOCATE(rs_state_constant(1:gr%mesh%np,1:3))
+      do ii = 1, 3
+        rs_state_constant(1:gr%mesh%np, ii) = st%rs_state_const(ii)
+      end do
+
+      call transform_rs_state_batch(hm, gr, st, rs_state_constant, &
+        ff_rs_state_pmlb, RS_TRANS_FORWARD)
+      call batch_xpay(gr%mesh%np, ff_rs_stateb, -M_ONE, ff_rs_state_pmlb)
+
+      SAFE_DEALLOCATE_A(rs_state_constant)
+    else
+      ! this copy should not be needed
+      call ff_rs_stateb%copy_data_to(gr%mesh%np, ff_rs_state_pmlb)
+    end if
+
+    call profiling_out(prof)
+
+    POP_SUB(pml_propagation_stage_1_batch)
+  end subroutine pml_propagation_stage_1_batch
+
+
+  ! ---------------------------------------------------------
   subroutine pml_propagation_stage_2(hm, namespace, gr, st, tr, time, dt, time_delay, ff_rs_state_pml, ff_rs_state)
     type(hamiltonian_mxll_t),   intent(inout) :: hm
     type(namespace_t),          intent(in)    :: namespace
@@ -2035,6 +2193,97 @@ contains
 
     POP_SUB(pml_propagation_stage_2)
   end subroutine pml_propagation_stage_2
+
+  ! ---------------------------------------------------------
+  subroutine pml_propagation_stage_2_batch(hm, namespace, gr, st, tr, time, dt, time_delay, ff_rs_state_pmlb, ff_rs_stateb)
+    type(hamiltonian_mxll_t),   intent(inout) :: hm
+    type(namespace_t),          intent(in)    :: namespace
+    type(grid_t),               intent(in)    :: gr
+    type(states_mxll_t),        intent(inout) :: st
+    type(propagator_mxll_t),    intent(inout) :: tr
+    FLOAT,                      intent(in)    :: time
+    FLOAT,                      intent(in)    :: dt
+    FLOAT,                      intent(in)    :: time_delay
+    type(batch_t),              intent(inout) :: ff_rs_state_pmlb
+    type(batch_t),              intent(inout) :: ff_rs_stateb
+
+    integer            :: ip, ip_in, ii, ff_dim
+    CMPLX, allocatable :: rs_state_constant(:,:), ff_rs_state_constant(:,:)
+    type(profile_t), save :: prof
+    type(batch_t) :: ff_rs_state_plane_wavesb
+
+    PUSH_SUB(pml_propagation_stage_2_batch)
+
+    call profiling_in(prof, 'PML_PROP_STAGE_2_BATCH')
+
+    if (tr%bc_plane_waves .and. hm%plane_waves_apply) then
+      hm%cpml_hamiltonian = .true.
+      call exponential_apply_batch(tr%te, namespace, gr%mesh, hm, ff_rs_state_pmlb, dt)
+      hm%cpml_hamiltonian = .false.
+      call plane_waves_propagation(hm, tr, namespace, st, gr, time, dt, time_delay)
+
+      call ff_rs_stateb%copy_to(ff_rs_state_plane_wavesb)
+      call transform_rs_state_batch(hm, gr, st, st%rs_state_plane_waves, ff_rs_state_plane_wavesb, RS_TRANS_FORWARD)
+
+      ! TODO: create generalization of this masked operation
+      select case(ff_rs_stateb%status())
+      case(BATCH_NOT_PACKED)
+        do ii = 1, ff_rs_stateb%nst_linear
+          do ip_in = 1, hm%bc%plane_wave%points_number
+            ip = hm%bc%plane_wave%points_map(ip_in)
+            ff_rs_stateb%zff_linear(ip, ii) = ff_rs_state_pmlb%zff_linear(ip, ii) + &
+              ff_rs_state_plane_wavesb%zff_linear(ip, ii)
+          end do
+        end do
+      case(BATCH_PACKED)
+        do ip_in = 1, hm%bc%plane_wave%points_number
+          ip = hm%bc%plane_wave%points_map(ip_in)
+          do ii = 1, ff_rs_stateb%nst_linear
+            ff_rs_stateb%zff_pack(ii, ip) = ff_rs_state_pmlb%zff_pack(ii, ip) + &
+              ff_rs_state_plane_wavesb%zff_pack(ii, ip)
+          end do
+        end do
+      end select
+
+    else if (tr%bc_constant .and. hm%spatial_constant_apply) then
+      hm%cpml_hamiltonian = .true.
+      call exponential_apply_batch(tr%te, namespace, gr%mesh, hm, ff_rs_state_pmlb, dt)
+      hm%cpml_hamiltonian = .false.
+
+      ff_dim = ff_rs_stateb%nst_linear
+      SAFE_ALLOCATE(rs_state_constant(1, 1:ff_dim))
+      SAFE_ALLOCATE(ff_rs_state_constant(1, 1:ff_dim))
+      rs_state_constant(1, :) = st%rs_state_const(:)
+
+      call transform_rs_state(hm, gr, st, rs_state_constant, ff_rs_state_constant, RS_TRANS_BACKWARD)
+      select case(ff_rs_stateb%status())
+      case(BATCH_NOT_PACKED)
+        do ii = 1, ff_rs_stateb%nst_linear
+          do ip_in = 1, hm%bc%constant_points_number
+            ip = hm%bc%constant_points_map(ip_in)
+            ff_rs_stateb%zff_linear(ip, ii) = ff_rs_state_pmlb%zff_linear(ip, ii) + &
+              ff_rs_state_constant(1, ii)
+          end do
+        end do
+      case(BATCH_PACKED)
+        do ip_in = 1, hm%bc%constant_points_number
+          ip = hm%bc%constant_points_map(ip_in)
+          do ii = 1, ff_rs_stateb%nst_linear
+            ff_rs_stateb%zff_linear(ii, ip) = ff_rs_state_pmlb%zff_linear(ii, ip) + &
+              ff_rs_state_constant(1, ii)
+          end do
+        end do
+      end select
+ 
+      SAFE_DEALLOCATE_A(rs_state_constant)
+      SAFE_DEALLOCATE_A(ff_rs_state_constant)
+    end if
+
+    call profiling_out(prof)
+
+    POP_SUB(pml_propagation_stage_2_batch)
+  end subroutine pml_propagation_stage_2_batch
+
 
   ! ---------------------------------------------------------
   subroutine cpml_conv_function_update(hm, gr, ff_rs_state_pml, ff_dim)
