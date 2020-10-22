@@ -1942,10 +1942,11 @@ contains
 
     call profiling_in(prof, 'PML_PROPAGATION_STAGE_1')
 
+    ff_dim    = size(ff_rs_state, dim=2)
+
     if (tr%bc_plane_waves .and. hm%plane_waves_apply) then
  
       ff_points = size(ff_rs_state(:,1))
-      ff_dim    = size(ff_rs_state(1,:))
       SAFE_ALLOCATE(ff_rs_state_plane_waves(1:ff_points,1:ff_dim))
       call transform_rs_state(hm, gr, st, st%rs_state_plane_waves, ff_rs_state_plane_waves, RS_TRANS_FORWARD)
       ff_rs_state_pml = ff_rs_state - ff_rs_state_plane_waves
@@ -1953,7 +1954,6 @@ contains
 
     else if (tr%bc_constant .and. hm%spatial_constant_apply) then
 
-      ff_dim    = size(ff_rs_state(1,:))
 
       SAFE_ALLOCATE(rs_state_constant(1,1:3))
       SAFE_ALLOCATE(ff_rs_state_constant(1,1:ff_dim))
@@ -1969,7 +1969,7 @@ contains
       SAFE_DEALLOCATE_A(ff_rs_state_constant)
     else
 
-      ff_rs_state_pml = ff_rs_state
+      ff_rs_state_pml(1:gr%mesh%np, 1:ff_dim)  = ff_rs_state(1:gr%mesh%np, 1:ff_dim)
 
     end if
 
