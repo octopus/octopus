@@ -532,18 +532,31 @@ contains
     FLOAT,   optional, intent(in)    :: ep_field(:)
     integer, optional, intent(in)    :: np
 
-    integer :: ip, np_
+    integer :: ip, idim, np_, ff_dim
+    type(profile_t), save :: prof
 
     ! no PUSH_SUB, called too often
-    np_ = optional_default(np, mesh%np)
 
-    do ip = 1, np_
-      if (present(ep_field)) then
-        rs_current_state(ip, :) = M_ONE/sqrt(M_TWO*ep_field(ip)) * current_state(ip, :)
-      else
-        rs_current_state(ip, :) = M_ONE/sqrt(M_TWO*P_ep) * current_state(ip, :)
-      end if
-    end do
+    call profiling_in(prof, "BUILD_RS_CURRENT_STATE")
+
+    np_ = optional_default(np, mesh%np)
+    ff_dim = size(current_state, dim=2)
+
+    if(present(ep_field)) then
+      do idim = 1, ff_dim
+        do ip = 1, np_
+          rs_current_state(ip, idim) = M_ONE/sqrt(M_TWO*ep_field(ip)) * current_state(ip, idim)
+        end do
+      end do
+    else
+      do idim = 1, ff_dim
+        do ip = 1, np_
+          rs_current_state(ip, idim) = M_ONE/sqrt(M_TWO*P_ep) * current_state(ip, idim)
+        end do
+      end do
+    end if
+
+    call profiling_out(prof)
 
   end subroutine build_rs_current_state
 

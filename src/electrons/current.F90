@@ -772,6 +772,7 @@ contains
     CMPLX,     optional, intent(inout) :: rs_current_density_ext(:,:)
 
     FLOAT, allocatable :: current(:,:,:)
+    integer :: idim
 
     PUSH_SUB(get_rs_density_ext)
 
@@ -779,7 +780,9 @@ contains
 
     call external_current_calculation(st, mesh, time, current(:, :, 1))
     call build_rs_current_state(current(:, :, 1), mesh, rs_current_density_ext(:, :), st%ep(:), mesh%np)
-    rs_current_density_ext = - rs_current_density_ext
+    do idim = 1, mesh%sb%dim
+      call lalg_scal(mesh%np, -M_ONE, rs_current_density_ext(:, idim))
+    end do
 
     SAFE_DEALLOCATE_A(current)
 
@@ -892,15 +895,19 @@ contains
   !----------------------------------------------------------
   subroutine external_current_calculation(st, mesh, time, current)
     type(states_mxll_t), intent(inout) :: st
-    type(mesh_t),   intent(in)    :: mesh
-    FLOAT,          intent(in)    :: time
-    FLOAT,          intent(inout) :: current(:,:)
+    type(mesh_t),        intent(in)    :: mesh
+    FLOAT,               intent(in)    :: time
+    FLOAT,               intent(inout) :: current(:,:)
 
     integer :: ip, jn, idir
     FLOAT   :: xx(MAX_DIM), rr, tt, j_vector(MAX_DIM), dummy(MAX_DIM), amp(MAX_DIM)
     CMPLX   :: exp_arg
+    type(profile_t), save :: prof
+    FLOAT   :: tmp_amp, phase
 
     PUSH_SUB(external_current_calculation)
+
+    call profiling_in(prof, "EXTERNAL_CURRENT_CALC")
 
     current(:,:) = M_ZERO
     do jn = 1, st%external_current_number
@@ -917,14 +924,17 @@ contains
         end do
 
       else if(st%external_current_modus(jn) == EXTERNAL_CURRENT_TD_FUNCTION) then
+        exp_arg = st%external_current_omega(jn) * time + tdf(st%external_current_td_phase(jn),time)
+        phase = TOFLOAT(exp(-M_zI*exp_arg))
+        tmp_amp = tdf(st%external_current_td_function(jn), time)
         do ip = 1, mesh%np
-          exp_arg = st%external_current_omega(jn) * time + tdf(st%external_current_td_phase(jn),time)
-          amp(1:st%dim) = st%external_current_amplitude(ip, 1:st%dim, jn)*tdf(st%external_current_td_function(jn), time)
-          j_vector(1:st%dim) = TOFLOAT(amp(1:st%dim) * exp(-M_zI*exp_arg))
-          current(ip, 1:st%dim) = current(ip, 1:st%dim) + j_vector(1:st%dim)
+          amp(1:st%dim) = st%external_current_amplitude(ip, 1:st%dim, jn) * tmp_amp
+          current(ip, 1:st%dim) = current(ip, 1:st%dim) + amp(1:st%dim) * phase
         end do
       end if
     end do
+
+    call profiling_out(prof)
 
     POP_SUB(external_current_calculation)
   end subroutine external_current_calculation
