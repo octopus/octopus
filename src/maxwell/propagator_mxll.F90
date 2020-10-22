@@ -482,12 +482,6 @@ contains
         do istate = 1, hm%dim
           call batch_set_state(ff_rs_stateb, istate, gr%mesh%np, ff_rs_state(:, istate))
         end do
-        if (pml_check) then
-          do istate = 1, hm%dim
-            call batch_set_state(ff_rs_state_pmlb, istate, gr%mesh%np, ff_rs_state_pml(:, istate))
-          end do
-        end if
-
       end if
 
       ! PML convolution function update
