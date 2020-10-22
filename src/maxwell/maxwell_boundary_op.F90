@@ -160,8 +160,11 @@ contains
     character(len=50)   :: str, ab_type_str
     logical             :: plane_waves_check = .false., ab_mask_check = .false., ab_pml_check = .false.
     logical             :: constant_check = .false., zero_check = .false.
+    type(profile_t), save :: prof
 
     PUSH_SUB(bc_mxll_init)
+
+    call profiling_in(prof, 'BC_MXLL_INIT')
 
     bc%ab_user_def = .false.
     bc%bc_ab_type(:) = MXLL_AB_NOT_ABSORBING ! default option
@@ -397,6 +400,8 @@ contains
       call messages_print_stress(stdout, namespace=namespace)
     end if
 
+    call profiling_out(prof)
+
     POP_SUB(bc_mxll_init)
   end subroutine bc_mxll_init
 
@@ -481,7 +486,11 @@ contains
     FLOAT,               intent(inout) :: bounds(:,:)
     integer,             intent(in)    :: idim
 
+    type(profile_t), save :: prof
+
     PUSH_SUB(bc_mxll_medium_init)
+
+    call profiling_in(prof, 'BC_MXLL_MEDIUM_INIT')
 
     SAFE_ALLOCATE(medium%ep_factor(1))
     SAFE_ALLOCATE(medium%mu_factor(1))
@@ -535,6 +544,8 @@ contains
     !% Magnetic conductivity of the linear medium.
     !%End
     call parse_variable(namespace, 'MediumMagneticSigma', M_ZERO, medium%sigma_m_factor(1), unit_one)
+
+    call profiling_out(prof)
 
     POP_SUB(bc_mxll_medium_init)
   end subroutine bc_mxll_medium_init
@@ -619,8 +630,11 @@ contains
     FLOAT, allocatable :: tmp(:)
     logical :: mask_check, pml_check, medium_check
     character(1) :: dim_label(3)
+    type(profile_t), save :: prof
 
     PUSH_SUB(bc_mxll_write_info)
+
+    call profiling_in(prof, 'BC_MXLL_WRITE_INFO')
 
     mask_check = .false.
     pml_check = .false.
@@ -704,6 +718,8 @@ contains
       SAFE_DEALLOCATE_A(tmp)
     end if
 
+    call profiling_out(prof)
+
     POP_SUB(bc_mxll_write_info)
   contains
 
@@ -775,9 +791,11 @@ contains
     type(geometry_t),    intent(in)    :: geo
 
     integer :: ip, ip_in, ip_in_max, point_info, idim
+    type(profile_t), save :: prof
 
     PUSH_SUB(maxwell_mask_points_mapping)
 
+    call profiling_in(prof, 'MAXWELL_MASK_POINTS_MAPPING')
     ip_in_max = 1
     do idim = 1, 3
       if (bc%bc_ab_type(idim) == MXLL_AB_MASK) then
@@ -810,6 +828,7 @@ contains
       end if
     end do
 
+    call profiling_out(prof)
     POP_SUB(maxwell_mask_points_mapping)
   end subroutine maxwell_mask_points_mapping
 
@@ -821,8 +840,11 @@ contains
     type(geometry_t),    intent(in)    :: geo
 
     integer :: ip, ip_in, point_info
+    type(profile_t), save :: prof
 
     PUSH_SUB(maxwell_pml_points_mapping)
+
+    call profiling_in(prof, 'MAXWELL_PML_POINTS_MAPPING')
 
     ! allocate pml points map
     ip_in = 0
@@ -847,6 +869,8 @@ contains
       end if
     end do
 
+    call profiling_out(prof)
+
     POP_SUB(maxwell_pml_points_mapping)
   end subroutine maxwell_pml_points_mapping
 
@@ -858,8 +882,11 @@ contains
     type(geometry_t),    intent(in)    :: geo
 
     integer :: ip, ip_in, point_info
+    type(profile_t), save :: prof
 
     PUSH_SUB(maxwell_constant_points_mapping)
+
+    call profiling_in(prof, 'MAXWELL_CONSTANT_POINTS_MAP')
 
     ! allocate constant points map
     ip_in = 0
@@ -883,6 +910,8 @@ contains
       end if
     end do
 
+    call profiling_out(prof)
+
     POP_SUB(maxwell_constant_points_mapping)
   end subroutine maxwell_constant_points_mapping
 
@@ -894,8 +923,11 @@ contains
     type(geometry_t),    intent(in)    :: geo
 
     integer :: ip, ip_in, point_info
+    type(profile_t), save :: prof
 
     PUSH_SUB(maxwell_plane_waves_points_mapping)
+
+    call profiling_in(prof, 'MXLL_PLANE_WAVES_POINTS_MAP')
 
     ! allocate zero points map
     ip_in = 0
@@ -918,6 +950,8 @@ contains
       end if
     end do
 
+    call profiling_out(prof)
+
     POP_SUB(maxwell_plane_waves_points_mapping)
   end subroutine maxwell_plane_waves_points_mapping
 
@@ -929,8 +963,11 @@ contains
     type(geometry_t),    intent(in)    :: geo
 
     integer :: ip, ip_in, ip_in_max, point_info, idim
+    type(profile_t), save :: prof
 
     PUSH_SUB(maxwell_zero_points_mapping)
+
+    call profiling_in(prof, 'MXLL_ZERO_POINTS_MAPPING')
 
     ip_in_max = 0
     do idim = 1, 3
@@ -964,6 +1001,8 @@ contains
       end if
     end do
 
+    call profiling_out(prof)
+
     POP_SUB(maxwell_zero_points_mapping)
   end subroutine maxwell_zero_points_mapping
 
@@ -976,8 +1015,11 @@ contains
     type(geometry_t),    intent(in)    :: geo
 
     integer :: ip, ip_in, ip_in_max, ip_bd, ip_bd_max, point_info, boundary_info, idim
+    type(profile_t), save :: prof
 
     PUSH_SUB(maxwell_medium_points_mapping)
+
+    call profiling_in(prof, 'MXLL_MEDIUM_POINTS_MAPPING')
 
     ip_in_max = 0
     ip_bd_max = 0
@@ -1024,6 +1066,8 @@ contains
       end if
     end do
 
+    call profiling_out(prof)
+
     POP_SUB(maxwell_medium_points_mapping)
   end subroutine maxwell_medium_points_mapping
 
@@ -1037,8 +1081,11 @@ contains
     integer :: ip, ip_in, idim
     FLOAT   :: width(3), ddv(3), ss_e, ss_m, ss_max, aa_e, aa_m, bb_e, bb_m, gg, hh, kk, ll_e, ll_m
     FLOAT, allocatable  :: tmp(:), tmp_grad(:,:)
+    type(profile_t), save :: prof
 
     PUSH_SUB(bc_mxll_generate_pml)
+
+    call profiling_in(prof, 'BC_MXLL_GENERATE_PML')
 
     SAFE_ALLOCATE(tmp(gr%mesh%np_part))
     SAFE_ALLOCATE(tmp_grad(gr%mesh%np, 1:gr%mesh%sb%dim))
@@ -1145,6 +1192,8 @@ contains
       end do
     end do
 
+    call profiling_out(prof)
+
     POP_SUB(bc_mxll_generate_pml)
   end subroutine bc_mxll_generate_pml
 
@@ -1157,8 +1206,11 @@ contains
     integer :: ip, ip_in, idim, ip_in_max
     FLOAT   :: ddv(3), tmp(3), width(3)
     FLOAT, allocatable :: mask(:)
+    type(profile_t), save :: prof
 
     PUSH_SUB(bc_mxll_generate_mask)
+
+    call profiling_in(prof, 'BC_MXLL_GENERATE_MASK')
 
     ip_in_max = maxval(bc%mask_points_number(:))
 
@@ -1194,6 +1246,8 @@ contains
 
     SAFE_DEALLOCATE_A(mask)
 
+    call profiling_out(prof)
+
     POP_SUB(bc_mxll_generate_mask)
   end subroutine bc_mxll_generate_mask
 
@@ -1207,8 +1261,11 @@ contains
     integer :: ip, ipp, ip_in, ip_in_max, ip_bd, idim, point_info
     FLOAT   :: dd, dd_min, dd_max, xx(3), xxp(3)
     FLOAT, allocatable  :: tmp(:), tmp_grad(:,:)
+    type(profile_t), save :: prof
 
     PUSH_SUB(bc_mxll_generate_medium)
+
+    call profiling_in(prof, 'BC_MXLL_GENERATE_MEDIUM')
 
     ip_in_max = maxval(bc%medium%points_number(:))
 
@@ -1300,7 +1357,9 @@ contains
 
     SAFE_DEALLOCATE_A(tmp)
     SAFE_DEALLOCATE_A(tmp_grad)
- 
+
+    call profiling_out(prof)
+
     POP_SUB(bc_mxll_generate_medium)
   end subroutine bc_mxll_generate_medium
 
@@ -1314,8 +1373,11 @@ contains
     FLOAT                :: k_vector(MAX_DIM), e_field(MAX_DIM), vv(MAX_DIM), xx(MAX_DIM), rr, dummy(MAX_DIM), test, test_limit!, angle, sigma
     character(len=1024)  :: k_string(MAX_DIM)
     character(len=1024)  :: mxf_expression
+    type(profile_t), save :: prof
 
     PUSH_SUB(maxwell_plane_waves_boundaries_init)
+
+    call profiling_in(prof, 'MXLL_PLANE_WAVES_BOUND_INI')
 
     test_limit = CNST(10.0e-9)
 
@@ -1460,6 +1522,8 @@ contains
 
     end if
 
+    call profiling_out(prof)
+
     POP_SUB(maxwell_plane_waves_boundaries_init)
   end subroutine maxwell_plane_waves_boundaries_init
 
@@ -1469,7 +1533,11 @@ contains
     type(states_mxll_t),      intent(inout) :: st
     FLOAT,                    intent(in)    :: bounds(:,:)
 
+    type(profile_t), save :: prof
+
     PUSH_SUB(maxwell_surfaces_init)
+
+    call profiling_in(prof, 'MAXWELL_SURFACES_INIT')
 
     ! y-z surface at -x boundary
     st%surface(1, 1)%spacing   = M_HALF*(mesh%spacing(2) + mesh%spacing(3))
@@ -1560,6 +1628,8 @@ contains
     st%surface(2, 3)%mu   =  int(bounds(1, 1)/mesh%spacing(1))
     st%surface(2, 3)%nv   = -int(bounds(1, 2)/mesh%spacing(2))
     st%surface(2, 3)%mv   =  int(bounds(1, 2)/mesh%spacing(2))
+
+    call profiling_out(prof)
 
     POP_SUB(maxwell_surfaces_init)
   end subroutine maxwell_surfaces_init
@@ -1655,8 +1725,11 @@ contains
 
     integer :: ip, ip_in, ip_bd, point_info
     FLOAT   :: xx(mesh%sb%dim)
+    type(profile_t), save :: prof
 
     PUSH_SUB(inner_and_outer_points_mapping)
+
+    call profiling_in(prof, 'INNER_AND_OUTER_POINTS_MAP')
 
     ! allocate inner and boundary points points map
     ip_in = 0
@@ -1712,6 +1785,8 @@ contains
       end if
     end do
 
+    call profiling_out(prof)
+
     POP_SUB(inner_and_outer_points_mapping)
   end subroutine inner_and_outer_points_mapping
 
@@ -1724,8 +1799,11 @@ contains
     integer :: ix, ix_max, iix, iy, iy_max, iiy, iz, iz_max, iiz, idx1, idx2, ip_global, nn_max
     integer, allocatable :: nn(:,:,:,:)
     FLOAT   :: rr(3), delta(3), vec(2), min_1(3), max_1(3), min_2(3), max_2(3)
+    type(profile_t), save :: prof
 
     PUSH_SUB(surface_grid_points_mapping)
+
+    call profiling_in(prof, 'SURFACE_GRID_POINTS_MAPPING')
 
     st%surface_grid_rows_number(1) = 3
     ix_max  = st%surface_grid_rows_number(1)
@@ -1973,6 +2051,8 @@ contains
     end do
 
     SAFE_DEALLOCATE_A(nn)
+
+    call profiling_out(prof)
 
     POP_SUB(surface_grid_points_mapping)
   contains

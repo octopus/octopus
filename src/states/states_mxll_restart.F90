@@ -71,12 +71,15 @@ contains
     CMPLX, allocatable :: rs_state_add(:)
     character(len=150), pointer :: filename_e_field, filename_b_field
     character(1) :: cdim
+    type(profile_t), save :: prof
     
     integer, parameter ::           &
       STATE_FROM_FORMULA  = 1,      &
       STATE_FROM_FILE     = -10010
 
     PUSH_SUB(states_mxll_read_user_def)
+
+    call profiling_in(prof, 'STATES_MXLL_READ_USER_DEF')
 
     !%Variable UserDefinedInitialMaxwellStates
     !%Type block
@@ -243,6 +246,8 @@ contains
       message(1) = "'UserDefineInitialdStates' has to be specified as block."
       call messages_fatal(1, namespace=namespace)
     end if
+
+    call profiling_out(prof)
 
     POP_SUB(states_mxll_read_user_def)
   end subroutine states_mxll_read_user_def

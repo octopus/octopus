@@ -340,7 +340,11 @@ contains
     type(states_mxll_t),    intent(inout)   :: st
     type(mesh_t),           intent(in)      :: mesh
 
+    type(profile_t), save :: prof
+
     PUSH_SUB(states_mxll_allocate)
+
+    call profiling_in(prof, 'STATES_MXLL_ALLOCATE')
 
     SAFE_ALLOCATE(st%rs_state(1:mesh%np_part, 1:st%dim))
     st%rs_state(:,:) = M_z0
@@ -359,6 +363,8 @@ contains
 
     SAFE_ALLOCATE(st%rs_current_density_restart_t2(1:mesh%np_part, 1:st%dim))
     st%rs_current_density_restart_t2 = M_z0
+
+    call profiling_out(prof)
 
     POP_SUB(states_mxll_allocate)
   end subroutine states_mxll_allocate
