@@ -427,14 +427,8 @@ contains
       !Below we add the contribution from the inhomogeneous terms
       if ((hm%ma_mx_coupling_apply) .or. hm%current_density_ext_flag) then
         do istate = 1, hm%dim
-          call batch_get_state(ff_rs_stateb, istate, gr%mesh%np_part, ff_rs_state(:, istate))
+          call batch_get_state(ff_rs_stateb, istate, gr%mesh%np, ff_rs_state(:, istate))
         end do
-        if (pml_check) then
-          do istate = 1, hm%dim
-            call batch_get_state(ff_rs_state_pmlb, istate, gr%mesh%np_part, ff_rs_state_pml(:, istate))
-          end do
-        end if
-
 
         if (tr%tr_etrs_approx == MXWLL_ETRS_FULL) then
           SAFE_ALLOCATE(ff_rs_inhom_1(1:gr%mesh%np_part, ff_dim))
@@ -486,11 +480,11 @@ contains
         end if
 
         do istate = 1, hm%dim
-          call batch_set_state(ff_rs_stateb, istate, gr%mesh%np_part, ff_rs_state(:, istate))
+          call batch_set_state(ff_rs_stateb, istate, gr%mesh%np, ff_rs_state(:, istate))
         end do
         if (pml_check) then
           do istate = 1, hm%dim
-            call batch_set_state(ff_rs_state_pmlb, istate, gr%mesh%np_part, ff_rs_state_pml(:, istate))
+            call batch_set_state(ff_rs_state_pmlb, istate, gr%mesh%np, ff_rs_state_pml(:, istate))
           end do
         end if
 
@@ -2060,7 +2054,8 @@ contains
       ff_points = size(ff_rs_state(:,1))
       SAFE_ALLOCATE(ff_rs_state_plane_waves(1:ff_points,1:ff_dim))
       call transform_rs_state(hm, gr, st, st%rs_state_plane_waves, ff_rs_state_plane_waves, RS_TRANS_FORWARD)
-      ff_rs_state_pml = ff_rs_state - ff_rs_state_plane_waves
+      ff_rs_state_pml(1:gr%mesh%np, 1:ff_dim) = ff_rs_state(1:gr%mesh%np, 1:ff_dim) - &
+        ff_rs_state_plane_waves(1:gr%mesh%np, 1:ff_dim)
       SAFE_DEALLOCATE_A(ff_rs_state_plane_waves)
 
     else if (tr%bc_constant .and. hm%spatial_constant_apply) then
@@ -2072,7 +2067,7 @@ contains
 
       call transform_rs_state(hm, gr, st, rs_state_constant, ff_rs_state_constant, RS_TRANS_FORWARD)
 
-      do ip = 1, gr%mesh%np_part
+      do ip = 1, gr%mesh%np
         ff_rs_state_pml(ip,:) = ff_rs_state(ip,:) - ff_rs_state_constant(1,:)
       end do
 
