@@ -440,7 +440,7 @@ contains
           ! add terms U(time+dt,time)J(time) and J(time+dt)
           do idim = 1, ff_dim
             ff_rs_state(1:gr%mesh%np, idim) = ff_rs_state(1:gr%mesh%np, idim) &
-              + M_FOURTH * inter_dt * (ff_rs_inhom_1(1:gr%mesh%np, idim) + ff_rs_inhom_2(1:gr%mesh%np, idim))
+              - M_FOURTH * inter_dt * (ff_rs_inhom_1(1:gr%mesh%np, idim) + ff_rs_inhom_2(1:gr%mesh%np, idim))
           end do
 
           call transform_rs_densities(hm, rs_charge_density_t1, rs_current_density_t1,&
@@ -459,7 +459,7 @@ contains
           ! add terms U(time+dt/2,time)J(time) and U(time,time+dt/2)J(time+dt)
           do idim = 1, ff_dim
             ff_rs_state(1:gr%mesh%np, idim) = ff_rs_state(1:gr%mesh%np, idim) &
-               + M_FOURTH * inter_dt * (ff_rs_inhom_1(1:gr%mesh%np, idim) + ff_rs_inhom_2(1:gr%mesh%np, idim))
+               - M_FOURTH * inter_dt * (ff_rs_inhom_1(1:gr%mesh%np, idim) + ff_rs_inhom_2(1:gr%mesh%np, idim))
           end do
 
           SAFE_DEALLOCATE_A(ff_rs_inhom_1)
@@ -476,7 +476,7 @@ contains
           if (pml_check) then
             call pml_propagation_stage_2(hm, namespace, gr, st, tr, inter_time, inter_dt, delay, ff_rs_state_pml, ff_rs_state)
           end if
-          ff_rs_state(:,:) = ff_rs_state + M_FOURTH * inter_dt * ff_rs_inhom_1
+          ff_rs_state(:,:) = ff_rs_state - M_FOURTH * inter_dt * ff_rs_inhom_1
         end if
       else
         ! RS state propagation

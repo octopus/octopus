@@ -544,7 +544,6 @@
         SAFE_ALLOCATE(dtmp(1:gr%mesh%np,1:st%dim))
         call get_rs_density_ext(st, gr%mesh, time, ztmp)
         call get_current_state(ztmp, dtmp, gr%mesh, st%ep, gr%mesh%np)
-        dtmp = - dtmp
         do idim = 1, st%dim
           write(fname, '(2a)') 'external_current-', index2axis(idim)
           call dio_function_output(outp%how, dir, fname, namespace, gr%mesh, dtmp(:, idim), fn_unit, ierr, geo = geo)
