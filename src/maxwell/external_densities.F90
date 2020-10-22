@@ -91,7 +91,11 @@ contains
     FLOAT                :: j_vector(MAX_DIM), dummy(MAX_DIM), xx(MAX_DIM), rr, omega
     character(len=1024)  :: tdf_expression, phase_expression
 
+    type(profile_t), save :: prof
+
     PUSH_SUB(external_current_init)
+
+    call profiling_in(prof, 'EXTERNAL_CURRENT_INIT')
 
     !%Variable UserDefinedMaxwellExternalCurrent
     !%Type block
@@ -177,10 +181,10 @@ contains
       call parse_block_end(blk)
     end if
 
+    call profiling_out(prof)
 
     POP_SUB(external_current_init)
   end subroutine external_current_init
-
 
   !----------------------------------------------------------
   subroutine external_current_calculation(st, mesh, time, current)
