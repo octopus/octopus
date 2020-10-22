@@ -465,7 +465,7 @@ contains
 
     SAFE_DEALLOCATE_A(iunit)
     SAFE_DEALLOCATE_A(dos)
-
+  
     POP_SUB(dos_write_dos)
   end subroutine dos_write_dos
 

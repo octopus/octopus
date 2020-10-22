@@ -33,6 +33,7 @@ module output_oct_m
   use etsf_io_tools
 #endif
   use exchange_operator_oct_m
+  use external_densities_oct_m
   use fft_oct_m
   use fourier_shell_oct_m
   use fourier_space_oct_m

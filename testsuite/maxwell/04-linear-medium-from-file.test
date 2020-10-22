@@ -8,7 +8,7 @@ Enabled    : Yes
 
 # Cosinoidal pulse polarized in z-direction passing through medium box read from file
 Processors : 2
-ExtraFile  : 04-linear-medium-from-file.02-cube.off
+ExtraFile  : 04-linear-medium-from-file.01-cube.off
 Input      : 04-linear-medium-from-file.01-cube_medium_from_file.inp
 
 if(available cgal); then

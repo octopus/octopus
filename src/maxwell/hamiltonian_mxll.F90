@@ -191,6 +191,7 @@ contains
     call hamiltonian_mxll_null(hm)
 
     hm%dim = st%dim
+    hm%st => st
 
     ASSERT(associated(gr%der%lapl))
 
@@ -403,17 +404,28 @@ contains
     logical, optional,         intent(in)    :: set_bc !< If set to .false. the boundary conditions are assumed to be set previously.
 
     type(profile_t), save :: prof
+    class(batch_t), pointer :: gradb(:)
+    integer :: idir, ifield, field_dir, pml_dir, rs_sign
+    integer :: ip, ip_in, il
+    FLOAT :: pml_c, grad_real, grad_imag
+    CMPLX :: pml_a, pml_b, pml_g, grad
+    integer, parameter :: field_dirs(3, 2) = reshape([2, 3, 1, 3, 1, 2], [3, 2])
+    FLOAT :: cc, aux_ep(3), aux_mu(3), sigma_e, sigma_m, ff_real(3), ff_imag(3), coeff_real, coeff_imag
+    CMPLX :: ff_plus(3), ff_minus(3), hpsi(6)
+    integer :: sign_medium(6) = [1, 1, 1, -1, -1, -1]
+    logical :: with_medium
 
     PUSH_SUB(hamiltonian_mxll_apply_batch)
-    call profiling_in(prof, "HAMILTONIAN_MXLL_APPLY_BATCH")
+    call profiling_in(prof, "H_MXLL_APPLY_BATCH")
 
     ASSERT(psib%status() == hpsib%status())
 
     ASSERT(psib%nst == hpsib%nst)
+    ASSERT(hm%st%dim == 3)
 
     !Not implemented at the moment
     ASSERT(.not.present(terms))
-    ASSERT(.not.present(set_bc))
+    with_medium = hm%operator == FARADAY_AMPERE_MEDIUM
 
     if(present(time)) then
       if(abs(time - hm%current_time) > CNST(1e-10)) then
@@ -423,12 +435,223 @@ contains
       endif
     end if
 
-    call psib%copy_data_to(der%mesh%np, hpsib)
-    call zderivatives_batch_curl(der, hpsib)
-    call batch_scal(der%mesh%np, hm%rs_sign * P_c, hpsib)
-  
+    allocate(gradb(1:der%dim), mold=psib)
+    do idir = 1, der%dim
+      call psib%copy_to(gradb(idir))
+    end do
+    call zderivatives_batch_grad(der, psib, gradb, set_bc=set_bc)
+
+    if (hm%cpml_hamiltonian) then
+      call apply_pml_boundary()
+    end if
+
+    call zderivatives_batch_curl(der, hpsib, gradb=gradb)
+
+    call scale_after_curl()
+
+    if (hm%bc_constant) then
+      call apply_constant_boundary()
+    end if
+
+    if (with_medium) then
+      do idir = 1, 3
+        if ((hm%bc%bc_type(idir) == MXLL_BC_MEDIUM) .and. &
+            (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RS)) then
+          call apply_medium_box(hm%bc%medium, idir)
+        end if
+      end do
+
+      if (hm%calc_medium_box .and. &
+           (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RS) ) then
+        do il = 1, hm%medium_box%number
+          call apply_medium_box(hm%medium_box, il)
+        end do
+      end if
+    end if
+
+    do idir = 1, der%dim
+      call gradb(idir)%end()
+    end do
+    SAFE_DEALLOCATE_P(gradb)
+
     call profiling_out(prof)
     POP_SUB(hamiltonian_mxll_apply_batch)
+
+    contains
+      subroutine apply_pml_boundary
+        type(profile_t), save :: prof_pml
+        PUSH_SUB(hamiltonian_mxll_apply_batch.apply_pml_boundary)
+        call profiling_in(prof_pml, "APPLY_PML_BOUNDARY")
+        if (with_medium) then
+          rs_sign = 1
+        else
+          rs_sign = hm%rs_sign
+        end if
+        do idir = 1, der%dim
+          call batch_scal(der%mesh%np, rs_sign * P_c, gradb(idir))
+        end do
+
+        do pml_dir = 1, hm%st%dim
+          if (hm%bc%bc_ab_type(pml_dir) == MXLL_AB_CPML) then
+            select case(gradb(pml_dir)%status())
+            case(BATCH_NOT_PACKED)
+              do ifield = 1, 2
+                field_dir = field_dirs(pml_dir, ifield)
+                !$omp parallel do private(ip, pml_c, pml_a, pml_b, pml_g, grad, grad_real, grad_imag)
+                do ip_in = 1, hm%bc%pml%points_number
+                  ip = hm%bc%pml%points_map(ip_in)
+                  pml_c = hm%bc%pml%c(ip_in, pml_dir)
+                  pml_a = hm%bc%pml%a(ip_in, pml_dir)
+                  pml_b = hm%bc%pml%b(ip_in, pml_dir)
+                  pml_g = hm%bc%pml%conv_plus(ip_in, pml_dir, field_dir)
+                  grad = gradb(pml_dir)%zff_linear(ip, field_dir)
+                  grad_real = pml_c * ((M_ONE + TOFLOAT(pml_a))*TOFLOAT(grad)/P_c &
+                       + rs_sign * TOFLOAT(pml_b)*TOFLOAT(pml_g))
+                  grad_imag = pml_c * ((M_ONE + aimag(pml_a)) * aimag(grad)/P_c &
+                       + rs_sign * aimag(pml_b) * aimag(pml_g))
+                  gradb(pml_dir)%zff_linear(ip, field_dir) = TOCMPLX(grad_real, grad_imag)
+                  if (with_medium) then
+                    pml_g = hm%bc%pml%conv_minus(ip_in, pml_dir, field_dir)
+                    grad = gradb(pml_dir)%zff_linear(ip, field_dir+3)
+                    grad_real = pml_c * ((M_ONE + TOFLOAT(pml_a))*TOFLOAT(grad)/P_c &
+                         + rs_sign * TOFLOAT(pml_b)*TOFLOAT(pml_g))
+                    grad_imag = pml_c * ((M_ONE + aimag(pml_a)) * aimag(grad)/P_c &
+                         + rs_sign * aimag(pml_b) * aimag(pml_g))
+                    gradb(pml_dir)%zff_linear(ip, field_dir+3) = TOCMPLX(grad_real, grad_imag)
+                  end if
+                end do
+              end do
+            case(BATCH_PACKED)
+              !$omp parallel do private(ip, field_dir, pml_c, pml_a, pml_b, pml_g, grad, grad_real, grad_imag)
+              do ip_in = 1, hm%bc%pml%points_number
+                ip = hm%bc%pml%points_map(ip_in)
+                pml_c = hm%bc%pml%c(ip_in, pml_dir)
+                pml_a = hm%bc%pml%a(ip_in, pml_dir)
+                pml_b = hm%bc%pml%b(ip_in, pml_dir)
+                do ifield = 1, 2
+                  field_dir = field_dirs(pml_dir, ifield)
+                  pml_g = hm%bc%pml%conv_plus(ip_in, pml_dir, field_dir)
+                  grad = gradb(pml_dir)%zff_pack(field_dir, ip)
+                  grad_real = pml_c * ((M_ONE + TOFLOAT(pml_a))*TOFLOAT(grad)/P_c &
+                       + rs_sign * TOFLOAT(pml_b)*TOFLOAT(pml_g))
+                  grad_imag = pml_c * ((M_ONE + aimag(pml_a)) * aimag(grad)/P_c &
+                       + rs_sign * aimag(pml_b) * aimag(pml_g))
+                  gradb(pml_dir)%zff_pack(field_dir, ip) = TOCMPLX(grad_real, grad_imag)
+                  if (with_medium) then
+                    pml_g = hm%bc%pml%conv_minus(ip_in, pml_dir, field_dir)
+                    grad = gradb(pml_dir)%zff_pack(field_dir+3, ip)
+                    grad_real = pml_c * ((M_ONE + TOFLOAT(pml_a))*TOFLOAT(grad)/P_c &
+                         + rs_sign * TOFLOAT(pml_b)*TOFLOAT(pml_g))
+                    grad_imag = pml_c * ((M_ONE + aimag(pml_a)) * aimag(grad)/P_c &
+                         + rs_sign * aimag(pml_b) * aimag(pml_g))
+                    gradb(pml_dir)%zff_pack(field_dir+3, ip) = TOCMPLX(grad_real, grad_imag)
+                  end if
+                end do
+              end do
+            case(BATCH_DEVICE_PACKED)
+              call messages_not_implemented("Maxwell PML on GPU")
+            end select
+          end if
+        end do
+        call profiling_out(prof_pml)
+        POP_SUB(hamiltonian_mxll_apply_batch.apply_pml_boundary)
+      end subroutine apply_pml_boundary
+
+      subroutine scale_after_curl
+        type(profile_t), save :: prof_scale
+        PUSH_SUB(hamiltonian_mxll_apply_batch.scale_after_curl)
+        call profiling_in(prof_scale, "SCALE_AFTER_CURL")
+        if (.not. hm%cpml_hamiltonian) then
+          ! if we do not need pml, scale after the curl because it is cheaper
+          if (with_medium) then
+            ! in case of a medium, multiply first 3 components with +, others with -
+            call batch_scal(der%mesh%np, sign_medium * P_c, hpsib)
+          else
+            call batch_scal(der%mesh%np, hm%rs_sign * P_c, hpsib)
+          end if
+        else
+          ! this is needed for PML computations with medium
+          if (with_medium) then
+            ! in case of a medium, multiply first 3 components with +, others with -
+            call batch_scal(der%mesh%np, sign_medium * M_ONE, hpsib)
+          end if
+        end if
+        call profiling_out(prof_scale)
+        POP_SUB(hamiltonian_mxll_apply_batch.scale_after_curl)
+      end subroutine scale_after_curl
+
+      subroutine apply_constant_boundary
+        type(profile_t), save :: prof_bc_const
+        PUSH_SUB(hamiltonian_mxll_apply_batch.apply_constant_boundary)
+        call profiling_in(prof_bc_const, 'APPLY_CONSTANT_BC')
+        select case(hpsib%status())
+        case(BATCH_NOT_PACKED)
+          do field_dir = 1, hm%st%dim
+            do ip_in = 1, hm%bc%constant_points_number
+              ip = hm%bc%constant_points_map(ip_in)
+              hpsib%zff_linear(ip, field_dir) = hm%st%rs_state_const(field_dir)
+            end do
+          end do
+        case(BATCH_PACKED)
+          do ip_in = 1, hm%bc%constant_points_number
+            ip = hm%bc%constant_points_map(ip_in)
+            do field_dir = 1, hm%st%dim
+              hpsib%zff_pack(field_dir, ip) = hm%st%rs_state_const(field_dir)
+            end do
+          end do
+        end select
+        call profiling_out(prof_bc_const)
+        POP_SUB(hamiltonian_mxll_apply_batch.apply_constant_boundary)
+      end subroutine apply_constant_boundary
+
+      subroutine apply_medium_box(medium, idir)
+        type(medium_box_t),  intent(in) :: medium
+        integer,             intent(in) :: idir
+
+        integer :: ifield
+        type(profile_t), save :: prof_medium_box
+
+        PUSH_SUB(hamiltonian_mxll_apply_batch.apply_medium_box)
+        call profiling_in(prof_medium_box, "MEDIUM_BOX")
+        !$omp parallel do private(ip, cc, aux_ep, aux_mu, sigma_e, sigma_m, &
+        !$omp ff_plus, ff_minus, hpsi, ff_real, ff_imag, ifield, coeff_real, coeff_imag)
+        do ip_in = 1, medium%points_number(idir)
+          ip          = medium%points_map(ip_in, idir)
+          cc          = medium%c(ip_in, idir)/P_c
+          aux_ep(1:3) = medium%aux_ep(ip_in, 1:3, idir)
+          aux_mu(1:3) = medium%aux_mu(ip_in, 1:3, idir)
+          sigma_e     = medium%sigma_e(ip_in, idir)
+          sigma_m     = medium%sigma_m(ip_in, idir)
+          select case(hpsib%status())
+          case(BATCH_NOT_PACKED)
+            ff_plus(1:3)  = psib%zff_linear(ip, 1:3)
+            ff_minus(1:3) = psib%zff_linear(ip, 4:6)
+            hpsi(1:6) = hpsib%zff_linear(ip, 1:6)
+          case(BATCH_PACKED)
+            ff_plus(1:3)  = psib%zff_pack(1:3, ip)
+            ff_minus(1:3) = psib%zff_pack(4:6, ip)
+            hpsi(1:6) = hpsib%zff_pack(1:6, ip)
+          end select
+          ff_real = TOFLOAT(ff_plus+ff_minus)
+          ff_imag = aimag(ff_plus-ff_minus)
+          aux_ep = dcross_product(aux_ep, ff_real)
+          aux_mu = dcross_product(aux_mu, ff_imag)
+          do ifield = 1, 3
+            coeff_real = - cc * aux_ep(ifield) + sigma_m * ff_imag(ifield)
+            coeff_imag = - cc * aux_mu(ifield) - sigma_e * ff_real(ifield)
+            hpsi(ifield) = cc * hpsi(ifield) + TOCMPLX(coeff_real, coeff_imag)
+            hpsi(ifield+3) = cc * hpsi(ifield+3) + TOCMPLX(-coeff_real, coeff_imag)
+          end do
+          select case(hpsib%status())
+          case(BATCH_NOT_PACKED)
+            hpsib%zff_linear(ip, 1:6) = hpsi(1:6)
+          case(BATCH_PACKED)
+            hpsib%zff_pack(1:6, ip) = hpsi(1:6)
+          end select
+        end do
+        call profiling_out(prof_medium_box)
+        POP_SUB(hamiltonian_mxll_apply_batch.apply_medium_box)
+      end subroutine apply_medium_box
   end subroutine hamiltonian_mxll_apply_batch
 
 
@@ -462,23 +685,26 @@ contains
     CMPLX, allocatable :: rs_aux_in(:,:), rs_aux_out(:,:)
     integer :: ii
     type(profile_t), save :: prof
+    logical :: pml_and_gpu, on_gpu
 
     PUSH_SUB(zhamiltonian_mxll_apply)
 
     call profiling_in(prof, 'ZHAMILTONIAN_MXLL_APPLY')
 
-    if (hm%operator == FARADAY_AMPERE .and. all(hm%bc%bc_ab_type(1:3) /= MXLL_AB_CPML)) then
-      ! This part is already batchified
-      call hamiltonian_mxll_apply_batch(hm, namespace, hm%der, psib, hpsib)
 
+    on_gpu = psib%status() == BATCH_DEVICE_PACKED
+    pml_and_gpu = hm%cpml_hamiltonian .and. on_gpu
+    if ((hm%operator == FARADAY_AMPERE .and. .not. pml_and_gpu) .or. &
+      (hm%operator == FARADAY_AMPERE_MEDIUM .and. .not. on_gpu)) then
+      call hamiltonian_mxll_apply_batch(hm, namespace, hm%der, psib, hpsib, set_bc=set_bc)
     else
-      ! This part uses the old non-batch implementation
       SAFE_ALLOCATE(rs_aux_in(1:hm%der%mesh%np_part, 1:hm%dim))
       SAFE_ALLOCATE(rs_aux_out(1:hm%der%mesh%np, 1:hm%dim))
       call boundaries_set(hm%der%boundaries, psib)
       do ii = 1, hm%dim
         call batch_get_state(psib, ii, hm%der%mesh%np_part, rs_aux_in(:, ii))
       end do
+      ! This uses the old non-batch implementation
       call maxwell_hamiltonian_apply_fd(hm, hm%der, rs_aux_in, rs_aux_out)
       do ii = 1, hm%dim
         call batch_set_state(hpsib, ii, hm%der%mesh%np, rs_aux_out(:, ii))
@@ -794,10 +1020,10 @@ contains
     integer,                  intent(in)    :: field_dir
     CMPLX,                    intent(inout) :: pml(:)
 
-    integer            :: ip, ip_in, np_part, rs_sign
-    FLOAT              :: pml_c(3)
+    integer            :: ip, ip_in, rs_sign
+    FLOAT              :: pml_c
     CMPLX, allocatable :: tmp_partial(:)
-    CMPLX              :: pml_a(3), pml_b(3), pml_g(3)
+    CMPLX              :: pml_a, pml_b, pml_g
 
     PUSH_SUB(maxwell_pml_calculation_via_riemann_silberstein)
 
@@ -805,21 +1031,20 @@ contains
 
       rs_sign = hm%rs_sign
 
-      np_part = der%mesh%np_part
-      SAFE_ALLOCATE(tmp_partial(np_part))
+      SAFE_ALLOCATE(tmp_partial(der%mesh%np_part))
 
       call zderivatives_partial(der, psi(:,field_dir), tmp_partial(:), pml_dir, set_bc = .false.)
       do ip_in = 1, hm%bc%pml%points_number
         ip       = hm%bc%pml%points_map(ip_in)
-        pml_c(1:3) = hm%bc%pml%c(ip_in, 1:3)
-        pml_a(1:3) = hm%bc%pml%a(ip_in, 1:3)
-        pml_b(1:3) = hm%bc%pml%b(ip_in, 1:3)
-        pml_g(1:3) = hm%bc%pml%conv_plus(ip_in, pml_dir, 1:3)
-        pml(ip)  = rs_sign * pml_c(pml_dir) * tmp_partial(ip) &
-                 + rs_sign * pml_c(pml_dir) * TOFLOAT(pml_a(pml_dir)) * TOFLOAT(tmp_partial(ip)) &
-                 + rs_sign * M_zI * pml_c(pml_dir) * aimag(pml_a(pml_dir)) * aimag(tmp_partial(ip)) &
-                 + rs_sign * pml_c(pml_dir) * TOFLOAT(pml_b(pml_dir)) * TOFLOAT(pml_g(field_dir)) &
-                 + rs_sign * M_zI * pml_c(pml_dir) * aimag(pml_b(pml_dir)) * aimag(pml_g(field_dir))
+        pml_c = hm%bc%pml%c(ip_in, pml_dir)
+        pml_a = hm%bc%pml%a(ip_in, pml_dir)
+        pml_b = hm%bc%pml%b(ip_in, pml_dir)
+        pml_g = hm%bc%pml%conv_plus(ip_in, pml_dir, field_dir)
+        pml(ip)  = rs_sign * pml_c * ( tmp_partial(ip) &
+                 +  TOFLOAT(pml_a) * TOFLOAT(tmp_partial(ip)) &
+                 +  M_zI * aimag(pml_a) * aimag(tmp_partial(ip)) &
+                 +  TOFLOAT(pml_b) * TOFLOAT(pml_g) &
+                 +  M_zI * aimag(pml_b) * aimag(pml_g))
       end do
 
       SAFE_DEALLOCATE_A(tmp_partial)
@@ -927,7 +1152,7 @@ contains
           oppsi(ip, 5) = oppsi(ip, 5)*cc                                         &
                        + cc * aux_ep(2) - cc * M_zI * aux_mu(2)                  &
                        - M_zI * sigma_e * TOFLOAT(ff_plus(2) + ff_minus(2))         &
-                       + M_zI * sigma_m * M_zI * aimag(ff_plus(2) - ff_minus(2)) 
+                       + M_zI * sigma_m * M_zI * aimag(ff_plus(2) - ff_minus(2))
           oppsi(ip, 3) = oppsi(ip, 3)*cc                                         &
                        - cc * aux_ep(3) - cc * M_zI * aux_mu(3)                  &
                        - M_zI * sigma_e * TOFLOAT(ff_plus(3) + ff_minus(3))         &

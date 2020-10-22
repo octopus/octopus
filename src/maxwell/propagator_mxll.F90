@@ -14,12 +14,8 @@
 !! along with this program; if not, write to the Free Software
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
-!!
-!! $Id: propagator.F90 13908 2015-05-05 06:02:30Z xavier $
 
 #include "global.h"
-#include "undef.F90"
-#include "complex.F90"
 
 module propagator_mxll_oct_m
   use boundary_op_oct_m
@@ -28,11 +24,12 @@ module propagator_mxll_oct_m
   use comm_oct_m
   use cube_function_oct_m
   use cube_oct_m
-  use current_oct_m
   use derivatives_oct_m
   use density_oct_m
   use energy_calc_oct_m
+  use energy_mxll_oct_m
   use exponential_oct_m
+  use external_densities_oct_m
   use fft_oct_m
   use fourier_space_oct_m
   use grid_oct_m
@@ -625,7 +622,7 @@ contains
     if (hm%operator == FARADAY_AMPERE_MEDIUM) then
       if (sign == RS_TRANS_FORWARD) then
         SAFE_ALLOCATE(rs_state_minus(1:gr%mesh%np, 1:st%dim))
-        rs_state_minus(1:gr%mesh%np, 1:st%dim) = R_CONJ(rs_state(1:gr%mesh%np, 1:st%dim))
+        rs_state_minus(1:gr%mesh%np, 1:st%dim) = conjg(rs_state(1:gr%mesh%np, 1:st%dim))
         call transform_rs_state_to_6x6_rs_state_forward(gr%mesh, rs_state, rs_state_minus, ff_rs_state)
         SAFE_DEALLOCATE_A(rs_state_minus)
       else
@@ -1060,7 +1057,6 @@ contains
     CMPLX,     optional, intent(in)    :: rs_field_plane_waves(:,:)
     FLOAT,     optional, intent(inout) :: energy_dens_plane_waves(:)
 
-    CMPLX, allocatable :: ztmp(:,:)
     integer            :: idim, ip
     type(profile_t), save :: prof
 
@@ -1068,124 +1064,59 @@ contains
 
     call profiling_in(prof, 'ENERGY_DENSITY_CALC')
 
-    SAFE_ALLOCATE(ztmp(1:gr%mesh%np_part,1:st%dim))
-
-    ztmp(:,:) = rs_field(:,:)
-
-    energy_dens(:) = M_ZERO
-    do ip = 1, gr%mesh%np
-      do idim = 1, st%dim
-        energy_dens(ip) = energy_dens(ip) + conjg(ztmp(ip,idim)) * ztmp(ip,idim)
-      end do
-    end do
-
     e_energy_dens(:) = M_ZERO
-    do ip = 1, gr%mesh%np
-      do idim = 1, st%dim
-        e_energy_dens(ip) = e_energy_dens(ip) + real(ztmp(ip,idim))**2
-      end do
-    end do
-
     b_energy_dens(:) = M_ZERO
     do ip = 1, gr%mesh%np
       do idim = 1, st%dim
-        b_energy_dens(ip) = b_energy_dens(ip) + aimag(ztmp(ip,idim))**2
+        e_energy_dens(ip) = e_energy_dens(ip) + real(rs_field(ip,idim))**2
+        b_energy_dens(ip) = b_energy_dens(ip) + aimag(rs_field(ip,idim))**2
       end do
+      energy_dens(ip) = e_energy_dens(ip) + b_energy_dens(ip)
     end do
 
     if (present(rs_field_plane_waves) .and. present(energy_dens_plane_waves) .and. plane_waves_check) then
-      ztmp(:,:) = rs_field_plane_waves(:,:)
       energy_dens_plane_waves(:) = M_ZERO
       do ip = 1, gr%mesh%np
         do idim = 1, st%dim
-          energy_dens_plane_waves(ip) = energy_dens_plane_waves(ip) + conjg(ztmp(ip,idim)) * ztmp(ip,idim)
+          energy_dens_plane_waves(ip) = energy_dens_plane_waves(ip) &
+                + conjg(rs_field_plane_waves(ip,idim)) * rs_field_plane_waves(ip,idim)
         end do
       end do
     end if
 
-    SAFE_DEALLOCATE_A(ztmp)
     call profiling_out(prof)
 
     POP_SUB(energy_density_calc)
   end subroutine energy_density_calc
 
   !----------------------------------------------------------
-  subroutine energy_mxll_calc(gr, st, hm, rs_field, mx_energy, mx_e_energy, mx_b_energy, mx_energy_boundary, &
-    rs_field_plane_waves, mx_energy_plane_waves)
+  subroutine energy_mxll_calc(gr, st, hm, energy_mxll, rs_field, rs_field_plane_waves)
     type(grid_t),             intent(in)  :: gr
     type(states_mxll_t),      intent(in)  :: st
     type(hamiltonian_mxll_t), intent(in)  :: hm
+    type(energy_mxll_t),      intent(inout) :: energy_mxll
     CMPLX,                    intent(in)  :: rs_field(:,:)
-    FLOAT,                    intent(out) :: mx_energy
-    FLOAT,                    intent(out) :: mx_e_energy
-    FLOAT,                    intent(out) :: mx_b_energy
-    FLOAT, optional,          intent(out) :: mx_energy_boundary
     CMPLX, optional,          intent(in)  :: rs_field_plane_waves(:,:)
-    FLOAT, optional,          intent(out) :: mx_energy_plane_waves
 
-    integer            :: ip, ip_in
-    FLOAT, allocatable :: energy_density(:), energy_density_plane_waves(:), tmp(:), tmp_pw(:)
-    FLOAT, allocatable :: e_energy_density(:), tmp_e(:)
-    FLOAT, allocatable :: b_energy_density(:), tmp_b(:)
     type(profile_t), save :: prof
 
     PUSH_SUB(energy_mxll_calc)
 
     call profiling_in(prof, 'ENERGY_MXLL_CALC')
 
-    SAFE_ALLOCATE(energy_density(1:gr%mesh%np))
-    SAFE_ALLOCATE(energy_density_plane_waves(1:gr%mesh%np))
-    SAFE_ALLOCATE(e_energy_density(1:gr%mesh%np))
-    SAFE_ALLOCATE(b_energy_density(1:gr%mesh%np))
-    SAFE_ALLOCATE(tmp(1:gr%mesh%np))
-    SAFE_ALLOCATE(tmp_e(1:gr%mesh%np))
-    SAFE_ALLOCATE(tmp_b(1:gr%mesh%np))
-    SAFE_ALLOCATE(tmp_pw(1:gr%mesh%np))
+    call energy_density_calc(gr, st, rs_field, energy_mxll%energy_density, energy_mxll%e_energy_density, &
+         energy_mxll%b_energy_density, hm%plane_waves, rs_field_plane_waves, energy_mxll%energy_density_plane_waves)
 
-    call energy_density_calc(gr, st, rs_field, energy_density, e_energy_density, b_energy_density, hm%plane_waves, &
-      rs_field_plane_waves, energy_density_plane_waves)
-
-    tmp    = M_ZERO
-    tmp_e  = M_ZERO
-    tmp_b  = M_ZERO
-    tmp_pw = M_ZERO
-
-    do ip_in = 1, st%inner_points_number
-      ip =  st%inner_points_map(ip_in)
-      tmp(ip)    = energy_density(ip)
-      tmp_e(ip)  = e_energy_density(ip)
-      tmp_b(ip)  = b_energy_density(ip)
-      if (present(rs_field_plane_waves) .and. present(mx_energy_plane_waves)) tmp_pw(ip) = energy_density_plane_waves(ip)
-    end do
-
-    mx_energy             = dmf_integrate(gr%mesh, tmp)
-    mx_e_energy           = dmf_integrate(gr%mesh, tmp_e)
-    mx_b_energy           = dmf_integrate(gr%mesh, tmp_b)
-    if (present(rs_field_plane_waves) .and. present(mx_energy_plane_waves) .and. hm%plane_waves) then
-      mx_energy_plane_waves = dmf_integrate(gr%mesh, tmp_pw)
+    energy_mxll%energy    = dmf_integrate(gr%mesh, energy_mxll%energy_density, mask=st%inner_points_mask)
+    energy_mxll%e_energy  = dmf_integrate(gr%mesh, energy_mxll%e_energy_density, mask=st%inner_points_mask)
+    energy_mxll%b_energy  = dmf_integrate(gr%mesh, energy_mxll%b_energy_density, mask=st%inner_points_mask)
+    if (present(rs_field_plane_waves) .and. hm%plane_waves) then
+      energy_mxll%energy_plane_waves = dmf_integrate(gr%mesh, energy_mxll%energy_density_plane_waves, mask=st%inner_points_mask)
     else
-      mx_energy_plane_waves = M_ZERO
+      energy_mxll%energy_plane_waves = M_ZERO
     end if
 
-    tmp = M_ZERO
-    if (present(mx_energy_boundary)) then
-      do ip_in = 1, st%boundary_points_number
-        ip = st%boundary_points_map(ip_in)
-        tmp(ip) = energy_density(ip)
-      end do
-      mx_energy_boundary = dmf_integrate(gr%mesh, tmp)
-    else
-      mx_energy_boundary = M_ZERO
-    end if
-
-    SAFE_DEALLOCATE_A(energy_density)
-    SAFE_DEALLOCATE_A(energy_density_plane_waves)
-    SAFE_DEALLOCATE_A(e_energy_density)
-    SAFE_DEALLOCATE_A(b_energy_density)
-    SAFE_DEALLOCATE_A(tmp)
-    SAFE_DEALLOCATE_A(tmp_e)
-    SAFE_DEALLOCATE_A(tmp_b)
-    SAFE_DEALLOCATE_A(tmp_pw)
+    energy_mxll%boundaries = dmf_integrate(gr%mesh, energy_mxll%energy_density, mask=st%boundary_points_mask)
 
     call profiling_out(prof)
 
