@@ -324,13 +324,14 @@ contains
 
     integer            :: ii, inter_steps, ff_dim, idim, istate
     FLOAT              :: inter_dt, inter_time, delay
-    CMPLX, allocatable :: ff_rs_state(:,:), ff_rs_inhom_1(:,:), ff_rs_inhom_2(:,:)
-    CMPLX, allocatable :: ff_rs_state_pml(:,:), ff_rs_inhom_mean(:,:)
+    CMPLX, allocatable :: ff_rs_state(:,:), ff_rs_inhom_1(:,:)
+    CMPLX, allocatable :: ff_rs_state_pml(:,:)
 
 
     logical            :: pml_check = .false.
     type(profile_t), save :: prof
     type(batch_t) :: ff_rs_stateb, ff_rs_state_pmlb
+    type(batch_t) :: ff_rs_inhom_1b, ff_rs_inhom_2b, ff_rs_inhom_meanb
 
     PUSH_SUB(mxll_propagation_step)
 
@@ -374,32 +375,39 @@ contains
     ! first step of Maxwell inhomogeneity propagation with constant current density
     if ((hm%ma_mx_coupling_apply .or. hm%current_density_ext_flag) .and. &
         tr%tr_etrs_approx == MXWLL_ETRS_CONST) then
+      call ff_rs_stateb%copy_to(ff_rs_inhom_1b)
+      call ff_rs_stateb%copy_to(ff_rs_inhom_2b)
+      call ff_rs_stateb%copy_to(ff_rs_inhom_meanb)
 
-      SAFE_ALLOCATE(ff_rs_inhom_1(1:gr%mesh%np_part, ff_dim))
-      SAFE_ALLOCATE(ff_rs_inhom_2(1:gr%mesh%np_part, ff_dim))
-      SAFE_ALLOCATE(ff_rs_inhom_mean(1:gr%mesh%np_part, ff_dim))
+      do istate = 1, hm%dim
+        call batch_set_state(ff_rs_inhom_meanb, istate, gr%mesh%np, ff_rs_inhom_t1(:, istate))
+        call batch_set_state(ff_rs_inhom_2b, istate, gr%mesh%np, ff_rs_inhom_t2(:, istate))
+      end do
+      call batch_axpy(gr%mesh%np, M_ONE, ff_rs_inhom_2b, ff_rs_inhom_meanb)
+      call batch_scal(gr%mesh%np, M_HALF, ff_rs_inhom_meanb)
+
       ! inhomogeneity propagation
-      ff_rs_inhom_mean(:,:) = (ff_rs_inhom_t1 + ff_rs_inhom_t2)/M_TWO
-      ! add term J(time)
-      ff_rs_inhom_1(:,:) = ff_rs_inhom_mean
-      ff_rs_inhom_2(:,:) = ff_rs_inhom_mean
-      call hamiltonian_mxll_update(hm, time=time)
-      call exponential_mxll_apply(hm, namespace, gr, st, tr, inter_dt, ff_rs_inhom_2, .false.)
-      ! add term U(time+dt,time)J(time)
-      ff_rs_inhom_1(:,:) = ff_rs_inhom_1 + ff_rs_inhom_2
-      ff_rs_inhom_2(:,:) = ff_rs_inhom_mean
-      call hamiltonian_mxll_update(hm, time=time)
-      call exponential_mxll_apply(hm, namespace, gr, st, tr, inter_dt/M_TWO, ff_rs_inhom_2, .false.)
-      ! add term U(time+dt/2,time)J(time)
-      ff_rs_inhom_1(:,:) = ff_rs_inhom_1 + ff_rs_inhom_2
-      ff_rs_inhom_2(:,:) = ff_rs_inhom_mean
-      call hamiltonian_mxll_update(hm, time=time)
-      call exponential_mxll_apply(hm, namespace, gr, st, tr, -inter_dt/M_TWO, ff_rs_inhom_2, .false.)
-      ! add term U(time,time+dt/2)J(time)
-      ff_rs_inhom_1 = ff_rs_inhom_1 + ff_rs_inhom_2
-      SAFE_DEALLOCATE_A(ff_rs_inhom_2)
-      SAFE_DEALLOCATE_A(ff_rs_inhom_mean)
+      call ff_rs_inhom_meanb%copy_data_to(gr%mesh%np, ff_rs_inhom_1b)
+      call ff_rs_inhom_meanb%copy_data_to(gr%mesh%np, ff_rs_inhom_2b)
 
+      call hamiltonian_mxll_update(hm, time=time)
+      hm%cpml_hamiltonian = .false.
+      call exponential_apply_batch(tr%te, namespace, gr%mesh, hm, ff_rs_inhom_2b, inter_dt)
+
+      ! add term U(time+dt,time)J(time)
+      call batch_axpy(gr%mesh%np, M_ONE, ff_rs_inhom_2b, ff_rs_inhom_1b)
+      call ff_rs_inhom_meanb%copy_data_to(gr%mesh%np, ff_rs_inhom_2b)
+      call hamiltonian_mxll_update(hm, time=time)
+      call exponential_apply_batch(tr%te, namespace, gr%mesh, hm, ff_rs_inhom_2b, inter_dt*M_HALF)
+      ! add term U(time+dt/2,time)J(time)
+      call batch_axpy(gr%mesh%np, M_ONE, ff_rs_inhom_2b, ff_rs_inhom_1b)
+      call ff_rs_inhom_meanb%copy_data_to(gr%mesh%np, ff_rs_inhom_2b)
+      call hamiltonian_mxll_update(hm, time=time)
+      call exponential_apply_batch(tr%te, namespace, gr%mesh, hm, ff_rs_inhom_2b, -inter_dt*M_HALF)
+      ! add term U(time,time+dt/2)J(time)
+      call batch_axpy(gr%mesh%np, M_ONE, ff_rs_inhom_2b, ff_rs_inhom_1b)
+      call ff_rs_inhom_2b%end()
+      call ff_rs_inhom_meanb%end()
     end if
 
     do ii = 1, inter_steps
@@ -426,62 +434,51 @@ contains
 
       !Below we add the contribution from the inhomogeneous terms
       if ((hm%ma_mx_coupling_apply) .or. hm%current_density_ext_flag) then
-        do istate = 1, hm%dim
-          call batch_get_state(ff_rs_stateb, istate, gr%mesh%np, ff_rs_state(:, istate))
-        end do
-
         if (tr%tr_etrs_approx == MXWLL_ETRS_FULL) then
-          SAFE_ALLOCATE(ff_rs_inhom_1(1:gr%mesh%np_part, ff_dim))
-          SAFE_ALLOCATE(ff_rs_inhom_2(1:gr%mesh%np_part, ff_dim))
-          SAFE_ALLOCATE(ff_rs_inhom_mean(1:gr%mesh%np_part, ff_dim))
+          call ff_rs_stateb%copy_to(ff_rs_inhom_1b)
+          call ff_rs_stateb%copy_to(ff_rs_inhom_2b)
+          call ff_rs_stateb%copy_to(ff_rs_inhom_meanb)
 
-          !Interpolation of the external current
-          do idim = 1, ff_dim
-            ! not mean, used as auxiliary variable
-            ff_rs_inhom_mean(1:gr%mesh%np, idim) = ff_rs_inhom_t2(1:gr%mesh%np, idim) - ff_rs_inhom_t1(1:gr%mesh%np, idim)
-            ff_rs_inhom_2(1:gr%mesh%np, idim) = ff_rs_inhom_t1(1:gr%mesh%np, idim) &
-                  + ff_rs_inhom_mean(1:gr%mesh%np, idim) * inter_dt * ii / TOFLOAT(inter_steps)
-            ff_rs_inhom_1(1:gr%mesh%np, idim) = ff_rs_inhom_t1(1:gr%mesh%np, idim) &
-                + ff_rs_inhom_mean(1:gr%mesh%np, idim) * inter_dt * (ii-1) / TOFLOAT(inter_steps)  
+          ! Interpolation of the external current
+          do istate = 1, hm%dim
+            call batch_set_state(ff_rs_inhom_meanb, istate, gr%mesh%np, ff_rs_inhom_t2(:, istate))
+            call batch_set_state(ff_rs_inhom_1b, istate, gr%mesh%np, ff_rs_inhom_t1(:, istate))
           end do
+          ! store t1 - t2 for the interpolation in mean
+          call batch_axpy(gr%mesh%np, -M_ONE, ff_rs_inhom_1b, ff_rs_inhom_meanb)
+          call ff_rs_inhom_1b%copy_data_to(gr%mesh%np, ff_rs_inhom_2b)
+          call batch_axpy(gr%mesh%np, inter_dt * ii / TOFLOAT(inter_steps), &
+            ff_rs_inhom_meanb, ff_rs_inhom_2b)
+          call batch_axpy(gr%mesh%np, inter_dt * (ii-1) / TOFLOAT(inter_steps), &
+            ff_rs_inhom_meanb, ff_rs_inhom_1b)
 
-          call exponential_mxll_apply(hm, namespace, gr, st, tr, inter_dt, ff_rs_inhom_1, .false.)
+          hm%cpml_hamiltonian = .false.
+          call exponential_apply_batch(tr%te, namespace, gr%mesh, hm, ff_rs_inhom_1b, inter_dt)
           ! add terms U(time+dt,time)J(time) and J(time+dt)
-          do idim = 1, ff_dim
-            ff_rs_state(1:gr%mesh%np, idim) = ff_rs_state(1:gr%mesh%np, idim) &
-              - M_FOURTH * inter_dt * (ff_rs_inhom_1(1:gr%mesh%np, idim) + ff_rs_inhom_2(1:gr%mesh%np, idim))
-          end do
+          call batch_axpy(gr%mesh%np, -M_FOURTH * inter_dt, ff_rs_inhom_1b, ff_rs_stateb)
+          call batch_axpy(gr%mesh%np, -M_FOURTH * inter_dt, ff_rs_inhom_2b, ff_rs_stateb)
 
-          do idim = 1, ff_dim
-            ff_rs_inhom_1(1:gr%mesh%np, idim) = M_HALF * (ff_rs_inhom_t1(1:gr%mesh%np, idim) + ff_rs_inhom_t2(1:gr%mesh%np, idim))
-            call lalg_copy(gr%mesh%np, ff_rs_inhom_1(:, idim), ff_rs_inhom_2(:, idim)) ! changed from the old code       
+          do istate = 1, hm%dim
+            call batch_set_state(ff_rs_inhom_1b, istate, gr%mesh%np, ff_rs_inhom_t1(:, istate))
+            call batch_set_state(ff_rs_inhom_2b, istate, gr%mesh%np, ff_rs_inhom_t2(:, istate))
           end do
+          call batch_axpy(gr%mesh%np, M_ONE, ff_rs_inhom_2b, ff_rs_inhom_1b)
+          call batch_scal(gr%mesh%np, M_HALF, ff_rs_inhom_1b)
+          call ff_rs_inhom_1b%copy_data_to(gr%mesh%np, ff_rs_inhom_2b)
 
-          call exponential_mxll_apply(hm, namespace, gr, st, tr, inter_dt/M_TWO, ff_rs_inhom_1, .false.)
-          call exponential_mxll_apply(hm, namespace, gr, st, tr, -inter_dt/M_TWO, ff_rs_inhom_2, .false.)
+          call exponential_apply_batch(tr%te, namespace, gr%mesh, hm, ff_rs_inhom_1b, inter_dt/M_TWO)
+          call exponential_apply_batch(tr%te, namespace, gr%mesh, hm, ff_rs_inhom_2b, -inter_dt/M_TWO)
 
           ! add terms U(time+dt/2,time)J(time) and U(time,time+dt/2)J(time+dt)
-          do idim = 1, ff_dim
-            ff_rs_state(1:gr%mesh%np, idim) = ff_rs_state(1:gr%mesh%np, idim) &
-               - M_FOURTH * inter_dt * (ff_rs_inhom_1(1:gr%mesh%np, idim) + ff_rs_inhom_2(1:gr%mesh%np, idim))
-          end do
+          call batch_axpy(gr%mesh%np, -M_FOURTH * inter_dt, ff_rs_inhom_1b, ff_rs_stateb)
+          call batch_axpy(gr%mesh%np, -M_FOURTH * inter_dt, ff_rs_inhom_2b, ff_rs_stateb)
 
-          SAFE_DEALLOCATE_A(ff_rs_inhom_1)
-          SAFE_DEALLOCATE_A(ff_rs_inhom_2)
-          SAFE_DEALLOCATE_A(ff_rs_inhom_mean)
-
+          call ff_rs_inhom_1b%end()
+          call ff_rs_inhom_2b%end()
+          call ff_rs_inhom_meanb%end()
         else if (tr%tr_etrs_approx == MXWLL_ETRS_CONST) then
-
-          do idim = 1, ff_dim
-            ff_rs_state(1:gr%mesh%np, idim) = ff_rs_state(1:gr%mesh%np, idim) &
-                  - M_FOURTH * inter_dt * ff_rs_inhom_1(1:gr%mesh%np, idim)
-          end do
-
+          call batch_axpy(gr%mesh%np, -M_FOURTH * inter_dt, ff_rs_inhom_1b, ff_rs_stateb)
         end if
-
-        do istate = 1, hm%dim
-          call batch_set_state(ff_rs_stateb, istate, gr%mesh%np, ff_rs_state(:, istate))
-        end do
       end if
 
       ! PML convolution function update
@@ -522,6 +519,7 @@ contains
 
     if (tr%tr_etrs_approx == OPTION__MAXWELLTDETRSAPPROX__CONST_STEPS) then
       SAFE_DEALLOCATE_A(ff_rs_inhom_1)
+      call ff_rs_inhom_1b%end()
     end if
 
     SAFE_DEALLOCATE_A(ff_rs_state)
