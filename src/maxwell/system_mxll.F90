@@ -409,8 +409,8 @@ contains
       ! are intermingled. Therefore it needs to be changed (maybe have the propagator handle it?)
       this%etime = loct_clock()
 
-      SAFE_ALLOCATE(this%rs_inhom_t1(1:this%gr%mesh%np_part, 1:this%st%dim))
-      SAFE_ALLOCATE(this%rs_inhom_t2(1:this%gr%mesh%np_part, 1:this%st%dim))
+      SAFE_ALLOCATE(this%rs_inhom_t1(1:this%gr%mesh%np_part, 1:this%hm%dim))
+      SAFE_ALLOCATE(this%rs_inhom_t2(1:this%gr%mesh%np_part, 1:this%hm%dim))
 
     case (EXPMID_FINISH)
 
@@ -444,7 +444,8 @@ contains
       !No charge density at the moment
       charge_density_ext = M_z0
 
-      call transform_rs_densities(this%hm, charge_density_ext, current_density_ext, this%rs_inhom_t1, RS_TRANS_FORWARD)
+      call transform_rs_densities(this%hm, this%gr%mesh, charge_density_ext, &
+                     current_density_ext, this%rs_inhom_t1, RS_TRANS_FORWARD)
 
       ! calculation of external RS density at time (time)
       if (this%hm%current_density_ext_flag) then
@@ -452,7 +453,8 @@ contains
       end if
       !No charge density at the moment
 
-      call transform_rs_densities(this%hm, charge_density_ext, current_density_ext, this%rs_inhom_t2, RS_TRANS_FORWARD)
+      call transform_rs_densities(this%hm, this%gr%mesh, charge_density_ext, &
+                     current_density_ext, this%rs_inhom_t2, RS_TRANS_FORWARD)
 
       SAFE_DEALLOCATE_A(current_density_ext)
       SAFE_DEALLOCATE_A(charge_density_ext)
