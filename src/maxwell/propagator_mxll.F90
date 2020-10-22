@@ -324,7 +324,6 @@ contains
 
     integer            :: ii, inter_steps, ff_dim, idim, istate
     FLOAT              :: inter_dt, inter_time, delay
-    CMPLX, allocatable :: ff_rs_state(:,:), ff_rs_inhom_1(:,:)
     CMPLX, allocatable :: ff_rs_state_pml(:,:)
 
 
@@ -363,7 +362,6 @@ contains
     ! delay time
     delay = tr%delay_time
 
-    SAFE_ALLOCATE(ff_rs_state(1:gr%mesh%np_part, ff_dim))
     call zbatch_init(ff_rs_stateb, 1, 1, hm%dim, gr%mesh%np_part)
     if (st%pack_states) call ff_rs_stateb%do_pack()
 
@@ -484,7 +482,7 @@ contains
       ! PML convolution function update
       if (pml_check) then
         do istate = 1, hm%dim
-          call batch_get_state(ff_rs_state_pmlb, istate, gr%mesh%np, ff_rs_state_pml(:, istate))
+          call batch_get_state(ff_rs_state_pmlb, istate, gr%mesh%np_part, ff_rs_state_pml(:, istate))
         end do
         call cpml_conv_function_update(hm, gr, ff_rs_state_pml, ff_dim)
         ! no need to set states again since ff_rs_state_pml is not changed
@@ -518,11 +516,9 @@ contains
     end do
 
     if (tr%tr_etrs_approx == OPTION__MAXWELLTDETRSAPPROX__CONST_STEPS) then
-      SAFE_DEALLOCATE_A(ff_rs_inhom_1)
       call ff_rs_inhom_1b%end()
     end if
 
-    SAFE_DEALLOCATE_A(ff_rs_state)
     call ff_rs_stateb%end()
 
     if (pml_check) then
