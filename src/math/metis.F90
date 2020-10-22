@@ -55,6 +55,14 @@ module metis_oct_m
        METIS_OPTION_GTYPE     = 24, &
        METIS_OPTION_UBVEC     = 25
 
+  !Error code from metis.h
+  integer, parameter ::         &
+    METIS_OK              = 1,  & !< Returned normally 
+    METIS_ERROR_INPUT     = -2, & !< Returned due to erroneous inputs and/or options
+    METIS_ERROR_MEMORY    = -3, & !< Returned due to insufficient memory 
+    METIS_ERROR           = -4    !< Some other errors
+
+
   interface 
 
 #if defined(HAVE_PARMETIS) || defined(HAVE_METIS)
@@ -63,7 +71,7 @@ module metis_oct_m
       integer, intent(inout) :: options
     end subroutine oct_metis_setdefaultoptions
 
-    subroutine oct_metis_partgraphrecursive(nvtxs, ncon, xadj, adjncy, nparts, tpwgts, ubvec, options, objval, part)
+    integer function oct_metis_partgraphrecursive(nvtxs, ncon, xadj, adjncy, nparts, tpwgts, ubvec, options, objval, part)
       implicit none
       integer,     intent(in)  :: nvtxs      !< The number of vertices in the graph.
       integer,     intent(in)  :: ncon       !< The number of balancing constraints. It should be at least 1.
@@ -79,9 +87,9 @@ module metis_oct_m
                                              !! communication volume of the partitioning solution.
       integer,     intent(out) :: part       !< This is a vector of size nvtxs that upon successful completion stores the 
                                              !! partition vector of the graph.
-    end subroutine oct_metis_partgraphrecursive
+    end function oct_metis_partgraphrecursive
 
-    subroutine oct_metis_partgraphkway(nvtxs, ncon, xadj, adjncy, nparts, tpwgts, ubvec, options, objval, part)
+    integer function oct_metis_partgraphkway(nvtxs, ncon, xadj, adjncy, nparts, tpwgts, ubvec, options, objval, part)
       implicit none
       integer,     intent(in)  :: nvtxs      !< The number of vertices in the graph.
       integer,     intent(in)  :: ncon       !< The number of balancing constraints. It should be at least 1.
@@ -97,7 +105,7 @@ module metis_oct_m
                                              !! communication volume of the partitioning solution.
       integer,     intent(out) :: part       !< This is a vector of size nvtxs that upon successful completion stores the 
                                              !! partition vector of the graph.
-    end subroutine oct_metis_partgraphkway
+    end function oct_metis_partgraphkway
 
 #endif
 #if defined(HAVE_PARMETIS)

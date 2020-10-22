@@ -22,17 +22,17 @@ module system_mxll_oct_m
   use algorithm_oct_m
   use calc_mode_par_oct_m
   use clock_oct_m
-  use current_oct_m
   use distributed_oct_m
+  use external_densities_oct_m
   use geometry_oct_m
-  use interactions_factory_oct_m
-  use lorentz_force_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_mxll_oct_m
   use interaction_oct_m
+  use interactions_factory_oct_m
   use iso_c_binding
   use loct_oct_m
+  use lorentz_force_oct_m
   use maxwell_boundary_op_oct_m
   use mesh_oct_m
   use messages_oct_m
@@ -367,15 +367,9 @@ contains
 
     call hamiltonian_mxll_update(this%hm, time = M_ZERO)
 
-    ! calculate Maxwell energy density
-    call energy_density_calc(this%gr, this%st, this%st%rs_state, this%hm%energy%energy_density(:), &
-         this%hm%energy%e_energy_density(:), this%hm%energy%b_energy_density(:), this%hm%plane_waves, &
-         this%st%rs_state_plane_waves, this%hm%energy%energy_density_plane_waves(:))
-
     ! calculate Maxwell energy
-    call energy_mxll_calc(this%gr, this%st, this%hm, this%st%rs_state, &
-         this%hm%energy%energy, this%hm%energy%e_energy, this%hm%energy%b_energy, &
-         this%hm%energy%boundaries, this%st%rs_state_plane_waves, this%hm%energy%energy_plane_waves)
+    call energy_mxll_calc(this%gr, this%st, this%hm, this%hm%energy, this%st%rs_state, &
+         this%st%rs_state_plane_waves)
 
     this%st%rs_state_trans(:,:) = this%st%rs_state
 
@@ -455,15 +449,9 @@ contains
 
       this%st%rs_state_trans(:,:) = this%st%rs_state
 
-      ! calculate Maxwell energy density
-      call energy_density_calc(this%gr, this%st, this%st%rs_state, this%hm%energy%energy_density, &
-           this%hm%energy%e_energy_density, this%hm%energy%b_energy_density, this%hm%plane_waves, &
-           this%st%rs_state_plane_waves, this%hm%energy%energy_density_plane_waves(:))
-
       ! calculate Maxwell energy
-      call energy_mxll_calc(this%gr, this%st, this%hm, this%st%rs_state, this%hm%energy%energy, &
-           this%hm%energy%e_energy, this%hm%energy%b_energy, this%hm%energy%boundaries, &
-           this%st%rs_state_plane_waves, this%hm%energy%energy_plane_waves)
+      call energy_mxll_calc(this%gr, this%st, this%hm, this%hm%energy, this%st%rs_state, &
+           this%st%rs_state_plane_waves)
 
       ! get RS state values for selected points
       call get_rs_state_at_point(this%st%selected_points_rs_state(:,:), this%st%rs_state, this%st%selected_points_coordinate(:,:), &

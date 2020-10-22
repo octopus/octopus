@@ -45,23 +45,24 @@ void FC_FUNC_(oct_metis_setdefaultoptions, OCT_METIS_SETDEFAULTOPTIONS)
 }
 
 
-void FC_FUNC_(oct_metis_partgraphrecursive, OCT_METIS_PARTGRAPHRECURSIVE)
+int FC_FUNC_(oct_metis_partgraphrecursive, OCT_METIS_PARTGRAPHRECURSIVE)
      (idx_t *nvtxs, idx_t *ncon, idx_t *xadj, idx_t *adjncy, idx_t *nparts, 
       real_t *tpwgts, real_t *ubvec, idx_t *options, idx_t *objval, idx_t *part)
 {
 
-  METIS_PartGraphRecursive(nvtxs, ncon, xadj, adjncy, NULL, NULL, NULL, nparts, 
+  return METIS_PartGraphRecursive(nvtxs, ncon, xadj, adjncy, NULL, NULL, NULL, nparts, 
 			   tpwgts, ubvec, options, objval, part);
 }
 
 
-void FC_FUNC_(oct_metis_partgraphkway, OCT_METIS_PARTGRAPHKWAY)
+int FC_FUNC_(oct_metis_partgraphkway, OCT_METIS_PARTGRAPHKWAY)
      (idx_t *nvtxs, idx_t *ncon, idx_t *xadj, idx_t *adjncy, idx_t *nparts, 
       real_t *tpwgts, real_t *ubvec, idx_t *options, idx_t *objval, idx_t *part)
 {
 
-  METIS_PartGraphKway(nvtxs, ncon, xadj, adjncy, NULL, NULL, NULL, nparts, 
+  return METIS_PartGraphKway(nvtxs, ncon, xadj, adjncy, NULL, NULL, NULL, nparts, 
 		      tpwgts, ubvec, options, objval, part);
+  
 }
 
 #endif
