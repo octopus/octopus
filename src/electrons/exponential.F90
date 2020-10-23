@@ -622,8 +622,10 @@ contains
     class(batch_t),           optional, intent(inout) :: inh_psib
     
     CMPLX :: deltat_, deltat2_
+    type(profile_t), save :: exp_prof
 
     PUSH_SUB(exponential_apply_batch)    
+    call profiling_in(exp_prof, "EXPONENTIAL_BATCH")
     
     ASSERT(psib%type() == TYPE_CMPLX)
 
@@ -697,6 +699,7 @@ contains
 
     end select
 
+    call profiling_out(exp_prof)
     POP_SUB(exponential_apply_batch)
   end subroutine exponential_apply_batch
 
