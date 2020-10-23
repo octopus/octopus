@@ -330,7 +330,7 @@ end subroutine X(bi_conjugate_gradients)
   !> for complex symmetric matrices
   !! W Chen and B Poirier, J Comput Phys 219, 198-209 (2006)
   subroutine X(qmr_sym_gen_dotu)(np, x, b, op, dotu, nrm2, prec, iter, &
-    residue, threshold, showprogress, converged)
+    residue, threshold, showprogress, converged, use_initial_guess)
     integer, intent(in)    :: np    !< number of points
     R_TYPE,  intent(inout) :: x(:)  !< the initial guess and the result
     R_TYPE,  intent(in)    :: b(:)  !< the right side
@@ -366,6 +366,7 @@ end subroutine X(bi_conjugate_gradients)
     FLOAT, optional,   intent(in)    :: threshold    !< convergence threshold
     logical, optional, intent(in)    :: showprogress !< should there be a progress bar
     logical, optional, intent(out)   :: converged    !< has the algorithm converged
+    logical, optional, intent(in)    :: use_initial_guess !< do we have a guess or not
 
     R_TYPE, allocatable :: r(:), v(:), z(:), q(:), p(:), deltax(:), deltar(:)
     R_TYPE              :: eta, delta, epsilon, beta, rtmp
@@ -387,17 +388,18 @@ end subroutine X(bi_conjugate_gradients)
     SAFE_ALLOCATE(deltax(1:np))
     SAFE_ALLOCATE(deltar(1:np))
 
-    !!The initial starting point is zero
-    !x = M_ZERO
-    !call lalg_copy(np, b, r)
-    !call lalg_copy(np, b, v)
-    ! use v as temp var
-    call op(x, v)
-    do ip = 1, np
-      r(ip) = b(ip) - v(ip)
-      v(ip) = r(ip)
-    end do
-
+    if(optional_default(use_initial_guess, .true.)) then
+      call op(x, v)
+      do ip = 1, np
+        r(ip) = b(ip) - v(ip)
+        v(ip) = r(ip)
+      end do
+    else
+      !The initial starting point is zero
+      x = M_ZERO
+      call lalg_copy(np, b, r)
+      call lalg_copy(np, b, v)
+    end if
 
     rho      = nrm2(v)
     norm_b   = nrm2(b)
