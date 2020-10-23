@@ -40,7 +40,6 @@ EigensolverMaxIter = 50
 %KPointsGrid  
  3 | 3 | 1
 %
-ParKPoints = no
 
 DFTULevel = dft_u_acbn0
 SCFCalculateForces = no
