@@ -74,6 +74,7 @@ module propagator_mxll_oct_m
     propagator_mxll_init,                    &
     mxll_propagation_step,                   &
     transform_rs_state,                      &
+    transform_rs_densities,                  &
     calculate_matter_longitudinal_field,     &
     get_vector_pot_and_transverse_field,     &
     energy_density_calc,                     &
@@ -108,8 +109,12 @@ module propagator_mxll_oct_m
   end type propagator_mxll_t
 
   integer, public, parameter ::   &
-     RS_TRANS_FORWARD = 1,        &
+     RS_TRANS_FORWARD  = 1,       &
      RS_TRANS_BACKWARD = 2
+
+  integer, parameter ::    & 
+    MXWLL_ETRS_FULL  = 0,  &
+    MXWLL_ETRS_CONST = 1
 
 contains
 
@@ -247,7 +252,7 @@ contains
     !%Option const_steps 1
     !% Use constant current density.
     !%End
-    call parse_variable(namespace, 'MaxwellTDETRSApprox', OPTION__MAXWELLTDETRSAPPROX__NO, tr%tr_etrs_approx)
+    call parse_variable(namespace, 'MaxwellTDETRSApprox', MXWLL_ETRS_FULL, tr%tr_etrs_approx)
     call messages_print_var_option(stdout, 'MaxwellTDETRSApprox', tr%tr_etrs_approx)
 
     !%Variable MaxwellTDOperatorMethod
@@ -305,18 +310,15 @@ contains
   end subroutine propagator_mxll_init
 
   ! ---------------------------------------------------------
-  subroutine mxll_propagation_step(hm, namespace, gr, st, tr, rs_state, rs_current_density_t1,&
-      rs_current_density_t2, rs_charge_density_t1, rs_charge_density_t2, time, dt)
+  subroutine mxll_propagation_step(hm, namespace, gr, st, tr, rs_state, rs_inhom_t1, rs_inhom_t2, time, dt)
     type(hamiltonian_mxll_t),   intent(inout) :: hm
     type(namespace_t),          intent(in)    :: namespace
     type(grid_t),               intent(inout) :: gr
     type(states_mxll_t),        intent(inout) :: st
     type(propagator_mxll_t),    intent(inout) :: tr
     CMPLX,                      intent(inout) :: rs_state(:,:)
-    CMPLX,                      intent(inout) :: rs_current_density_t1(:,:)
-    CMPLX,                      intent(inout) :: rs_current_density_t2(:,:)
-    CMPLX,                      intent(inout) :: rs_charge_density_t1(:)
-    CMPLX,                      intent(inout) :: rs_charge_density_t2(:)
+    CMPLX,                      intent(in)    :: rs_inhom_t1(:,:) !> Inhomogeneous term at t
+    CMPLX,                      intent(in)    :: rs_inhom_t2(:,:) !> Inhomogeneous term at t+dt
     FLOAT,                      intent(in)    :: time
     FLOAT,                      intent(in)    :: dt
 
@@ -324,6 +326,8 @@ contains
     FLOAT              :: inter_dt, inter_time, delay
     CMPLX, allocatable :: ff_rs_state(:,:), ff_rs_inhom_1(:,:), ff_rs_inhom_2(:,:)
     CMPLX, allocatable :: ff_rs_state_pml(:,:), ff_rs_inhom_mean(:,:)
+
+
     logical            :: pml_check = .false.
     type(profile_t), save :: prof
 
@@ -365,15 +369,13 @@ contains
 
     ! first step of Maxwell inhomogeneity propagation with constant current density
     if ((hm%ma_mx_coupling_apply .or. hm%current_density_ext_flag) .and. &
-        tr%tr_etrs_approx == OPTION__MAXWELLTDETRSAPPROX__CONST_STEPS) then
+        tr%tr_etrs_approx == MXWLL_ETRS_CONST) then
 
       SAFE_ALLOCATE(ff_rs_inhom_1(1:gr%mesh%np_part, ff_dim))
       SAFE_ALLOCATE(ff_rs_inhom_2(1:gr%mesh%np_part, ff_dim))
       SAFE_ALLOCATE(ff_rs_inhom_mean(1:gr%mesh%np_part, ff_dim))
       ! inhomogeneity propagation
-      call transform_rs_densities(hm, rs_charge_density_t1, rs_current_density_t1, ff_rs_inhom_1, RS_TRANS_FORWARD)
-      call transform_rs_densities(hm, rs_charge_density_t2, rs_current_density_t2, ff_rs_inhom_2, RS_TRANS_FORWARD)
-      ff_rs_inhom_mean(:,:) = (ff_rs_inhom_1 + ff_rs_inhom_2)/M_TWO
+      ff_rs_inhom_mean(:,:) = (rs_inhom_t1 + rs_inhom_t2)/M_TWO
       ! add term J(time)
       ff_rs_inhom_1(:,:) = ff_rs_inhom_mean
       ff_rs_inhom_2(:,:) = ff_rs_inhom_mean
@@ -404,35 +406,31 @@ contains
       ! transformation of RS state into 3x3 or 4x4 representation
       call transform_rs_state(hm, gr, st, rs_state, ff_rs_state, RS_TRANS_FORWARD)
 
+      ! RS state propagation
+      call hamiltonian_mxll_update(hm, time=inter_time)
+      if (pml_check) then
+        call pml_propagation_stage_1(hm, gr, st, tr, ff_rs_state, ff_rs_state_pml)
+      end if
+      call exponential_mxll_apply(hm, namespace, gr, st, tr, inter_dt, ff_rs_state, pml_check)
+      if (pml_check) then
+        call pml_propagation_stage_2(hm, namespace, gr, st, tr, inter_time, inter_dt, delay, ff_rs_state_pml, ff_rs_state)
+      end if
+
+      !Below we add the contribution from the inhomogeneous terms
       if ((hm%ma_mx_coupling_apply) .or. hm%current_density_ext_flag) then
 
-        if (tr%tr_etrs_approx == OPTION__MAXWELLTDETRSAPPROX__NO) then
+        if (tr%tr_etrs_approx == MXWLL_ETRS_FULL) then
           SAFE_ALLOCATE(ff_rs_inhom_1(1:gr%mesh%np_part, ff_dim))
           SAFE_ALLOCATE(ff_rs_inhom_2(1:gr%mesh%np_part, ff_dim))
           SAFE_ALLOCATE(ff_rs_inhom_mean(1:gr%mesh%np_part, ff_dim))
-          ! RS state propagation
-          call hamiltonian_mxll_update(hm, time=inter_time)
-          if (pml_check) then
-            call pml_propagation_stage_1(hm, gr, st, tr, ff_rs_state, ff_rs_state_pml)
-          end if
-          call exponential_mxll_apply(hm, namespace, gr, st, tr, inter_dt, ff_rs_state, pml_check)
-          if (pml_check) then
-            call pml_propagation_stage_2(hm, namespace, gr, st, tr, inter_time, inter_dt, delay, ff_rs_state_pml, ff_rs_state)
-          end if
-
-          ! inhomogeneity propagation
-          call transform_rs_densities(hm, rs_charge_density_t1, rs_current_density_t1,&
-              ff_rs_inhom_1, RS_TRANS_FORWARD)
-          call transform_rs_densities(hm, rs_charge_density_t2, rs_current_density_t2,&
-              ff_rs_inhom_2, RS_TRANS_FORWARD)
 
           !Interpolation of the external current
           do idim = 1, ff_dim
             ! not mean, used as auxiliary variable
-            ff_rs_inhom_mean(1:gr%mesh%np, idim) = ff_rs_inhom_2(1:gr%mesh%np, idim) - ff_rs_inhom_1(1:gr%mesh%np, idim)
-            ff_rs_inhom_2(1:gr%mesh%np, idim) = ff_rs_inhom_1(1:gr%mesh%np, idim) &
+            ff_rs_inhom_mean(1:gr%mesh%np, idim) = rs_inhom_t2(1:gr%mesh%np, idim) - rs_inhom_t1(1:gr%mesh%np, idim)
+            ff_rs_inhom_2(1:gr%mesh%np, idim) = rs_inhom_t1(1:gr%mesh%np, idim) &
                   + ff_rs_inhom_mean(1:gr%mesh%np, idim) * inter_dt * ii / TOFLOAT(inter_steps)
-            ff_rs_inhom_1(1:gr%mesh%np, idim) = ff_rs_inhom_1(1:gr%mesh%np, idim) &
+            ff_rs_inhom_1(1:gr%mesh%np, idim) = rs_inhom_t1(1:gr%mesh%np, idim) &
                 + ff_rs_inhom_mean(1:gr%mesh%np, idim) * inter_dt * (ii-1) / TOFLOAT(inter_steps)  
           end do
 
@@ -443,13 +441,8 @@ contains
               - M_FOURTH * inter_dt * (ff_rs_inhom_1(1:gr%mesh%np, idim) + ff_rs_inhom_2(1:gr%mesh%np, idim))
           end do
 
-          call transform_rs_densities(hm, rs_charge_density_t1, rs_current_density_t1,&
-              ff_rs_inhom_1, RS_TRANS_FORWARD)
-          call transform_rs_densities(hm, rs_charge_density_t2, rs_current_density_t2,&
-              ff_rs_inhom_2, RS_TRANS_FORWARD)
-
           do idim = 1, ff_dim
-            ff_rs_inhom_1(1:gr%mesh%np, idim) = M_HALF * (ff_rs_inhom_1(1:gr%mesh%np, idim) + ff_rs_inhom_2(1:gr%mesh%np, idim))
+            ff_rs_inhom_1(1:gr%mesh%np, idim) = M_HALF * (rs_inhom_t1(1:gr%mesh%np, idim) + rs_inhom_t2(1:gr%mesh%np, idim))
             call lalg_copy(gr%mesh%np, ff_rs_inhom_1(:, idim), ff_rs_inhom_2(:, idim)) ! changed from the old code       
           end do
 
@@ -466,29 +459,15 @@ contains
           SAFE_DEALLOCATE_A(ff_rs_inhom_2)
           SAFE_DEALLOCATE_A(ff_rs_inhom_mean)
 
-        else if (tr%tr_etrs_approx == OPTION__MAXWELLTDETRSAPPROX__CONST_STEPS) then
-          ! RS state propagation
-          call hamiltonian_mxll_update(hm, time=inter_time)
-          if (pml_check) then
-            call pml_propagation_stage_1(hm, gr, st, tr, ff_rs_state, ff_rs_state_pml)
-          end if
-          call exponential_mxll_apply(hm, namespace, gr, st, tr, inter_dt, ff_rs_state, pml_check)
-          if (pml_check) then
-            call pml_propagation_stage_2(hm, namespace, gr, st, tr, inter_time, inter_dt, delay, ff_rs_state_pml, ff_rs_state)
-          end if
-          ff_rs_state(:,:) = ff_rs_state - M_FOURTH * inter_dt * ff_rs_inhom_1
-        end if
-      else
-        ! RS state propagation
-        call hamiltonian_mxll_update(hm, time=inter_time)
-        if (pml_check) then
-          call pml_propagation_stage_1(hm, gr, st, tr, ff_rs_state, ff_rs_state_pml)
-        end if
-        call exponential_mxll_apply(hm, namespace, gr, st, tr, inter_dt, ff_rs_state, pml_check)
+        else if (tr%tr_etrs_approx == MXWLL_ETRS_CONST) then
 
-        if (pml_check) then
-          call pml_propagation_stage_2(hm, namespace, gr, st, tr, inter_time, inter_dt, delay, ff_rs_state_pml, ff_rs_state)
+          do idim = 1, ff_dim
+            ff_rs_state(1:gr%mesh%np, idim) = ff_rs_state(1:gr%mesh%np, idim) &
+                  - M_FOURTH * inter_dt * ff_rs_inhom_1(1:gr%mesh%np, idim)
+          end do
+
         end if
+
       end if
 
       ! PML convolution function update
@@ -642,26 +621,26 @@ contains
 
     if (hm%operator == FARADAY_AMPERE_MEDIUM) then
       if (sign == RS_TRANS_FORWARD) then
-        SAFE_ALLOCATE(rs_state_minus(1:gr%mesh%np_part,1:st%dim))
-        rs_state_minus = conjg(rs_state)
-        call transform_rs_state_to_6x6_rs_state_forward(rs_state, rs_state_minus, ff_rs_state)
+        SAFE_ALLOCATE(rs_state_minus(1:gr%mesh%np, 1:st%dim))
+        rs_state_minus(1:gr%mesh%np, 1:st%dim) = conjg(rs_state(1:gr%mesh%np, 1:st%dim))
+        call transform_rs_state_to_6x6_rs_state_forward(gr%mesh, rs_state, rs_state_minus, ff_rs_state)
         SAFE_DEALLOCATE_A(rs_state_minus)
       else
-        call transform_rs_state_to_6x6_rs_state_backward(ff_rs_state, rs_state)
+        call transform_rs_state_to_6x6_rs_state_backward(gr%mesh, ff_rs_state, rs_state)
       end if
 
     else if (hm%operator == FARADAY_AMPERE_GAUSS) then
       if (sign == RS_TRANS_FORWARD) then
-         call transform_rs_state_to_4x4_rs_state_forward(rs_state, ff_rs_state)
+         call transform_rs_state_to_4x4_rs_state_forward(gr%mesh, rs_state, ff_rs_state)
       else
-        call transform_rs_state_to_4x4_rs_state_backward(ff_rs_state, rs_state)
+        call transform_rs_state_to_4x4_rs_state_backward(gr%mesh, ff_rs_state, rs_state)
       end if
 
     else
       if (sign == RS_TRANS_FORWARD) then
-        ff_rs_state(:, 1:3) = rs_state(:, 1:3)
+        ff_rs_state(1:gr%mesh%np, 1:3) = rs_state(1:gr%mesh%np, 1:3)
       else
-        rs_state(:, 1:3) = ff_rs_state(:, 1:3)
+        rs_state(1:gr%mesh%np, 1:3) = ff_rs_state(1:gr%mesh%np, 1:3)
       end if
     end if
 
@@ -672,8 +651,9 @@ contains
   end subroutine transform_rs_state
 
   ! ---------------------------------------------------------
-  subroutine transform_rs_densities(hm, rs_charge_density, rs_current_density, ff_density, sign)
+  subroutine transform_rs_densities(hm, mesh, rs_charge_density, rs_current_density, ff_density, sign)
     type(hamiltonian_mxll_t), intent(in)    :: hm
+    type(mesh_t),             intent(in)    :: mesh
     CMPLX,                    intent(inout) :: rs_charge_density(:)
     CMPLX,                    intent(inout) :: rs_current_density(:,:)
     CMPLX,                    intent(inout) :: ff_density(:,:)
@@ -682,6 +662,9 @@ contains
     type(profile_t), save :: prof
 
     ASSERT(sign == RS_TRANS_FORWARD .or. sign == RS_TRANS_BACKWARD)
+    ASSERT(size(rs_charge_density) == mesh%np .or. size(rs_charge_density) == mesh%np_part)
+    ASSERT(size(rs_current_density, dim=1) == size(rs_charge_density))
+    ASSERT(size(rs_current_density, dim=2) == 3)
 
     PUSH_SUB(transform_rs_densities)
 
@@ -689,23 +672,25 @@ contains
 
     if (hm%operator == FARADAY_AMPERE_MEDIUM) then
       if (sign == RS_TRANS_FORWARD) then
-        call transform_rs_densities_to_6x6_rs_densities_forward(rs_charge_density, rs_current_density, ff_density)
+        call transform_rs_densities_to_6x6_rs_densities_forward(mesh, rs_charge_density, &
+                               rs_current_density, ff_density)
       else
-        call transform_rs_densities_to_6x6_rs_densities_backward(ff_density, rs_charge_density, rs_current_density)
+        call transform_rs_densities_to_6x6_rs_densities_backward(mesh, ff_density, &
+                               rs_charge_density, rs_current_density)
       end if
     else if (hm%operator == FARADAY_AMPERE_GAUSS) then
       if (sign == RS_TRANS_FORWARD) then
-        call transform_rs_densities_to_4x4_rs_densities_forward(rs_charge_density,&
+        call transform_rs_densities_to_4x4_rs_densities_forward(mesh, rs_charge_density,&
             rs_current_density, ff_density)
       else
-        call transform_rs_densities_to_4x4_rs_densities_backward(ff_density, rs_charge_density,&
+        call transform_rs_densities_to_4x4_rs_densities_backward(mesh, ff_density, rs_charge_density,&
             rs_current_density)
       end if
     else
       if (sign == RS_TRANS_FORWARD) then
-        ff_density(:, 1:3) = rs_current_density(:, 1:3)
+        ff_density(1:mesh%np, 1:3) = rs_current_density(1:mesh%np, 1:3)
       else
-        rs_current_density(:, 1:3) = ff_density(:, 1:3)
+        rs_current_density(1:mesh%np, 1:3) = ff_density(1:mesh%np, 1:3)
       end if
     end if
 
@@ -716,116 +701,131 @@ contains
   end subroutine transform_rs_densities
 
   !----------------------------------------------------------
-  subroutine transform_rs_state_to_6x6_rs_state_forward(rs_state_3x3_plus, rs_state_3x3_minus, rs_state_6x6)
-    CMPLX, intent(in)    :: rs_state_3x3_plus(:,:)
-    CMPLX, intent(in)    :: rs_state_3x3_minus(:,:)
-    CMPLX, intent(inout) :: rs_state_6x6(:,:)
+  subroutine transform_rs_state_to_6x6_rs_state_forward(mesh, rs_state_3x3_plus, rs_state_3x3_minus, rs_state_6x6)
+    type(mesh_t),   intent(in)    :: mesh
+    CMPLX,          intent(in)    :: rs_state_3x3_plus(:,:)
+    CMPLX,          intent(in)    :: rs_state_3x3_minus(:,:)
+    CMPLX,          intent(inout) :: rs_state_6x6(:,:)
 
     integer :: ii
 
     ! no push_sub, called to frequently
     do ii = 1, 3
-      rs_state_6x6(:, ii) = rs_state_3x3_plus(:, ii)
-      rs_state_6x6(:, ii+3) = rs_state_3x3_minus(:, ii)
+      rs_state_6x6(1:mesh%np, ii) = rs_state_3x3_plus(1:mesh%np, ii)
+      rs_state_6x6(1:mesh%np, ii+3) = rs_state_3x3_minus(1:mesh%np, ii)
     end do
 
   end subroutine transform_rs_state_to_6x6_rs_state_forward
 
   !----------------------------------------------------------
-  subroutine transform_rs_state_to_6x6_rs_state_backward(rs_state_6x6, rs_state)
-    CMPLX, intent(in)    :: rs_state_6x6(:,:)
-    CMPLX, intent(inout) :: rs_state(:,:)
+  subroutine transform_rs_state_to_6x6_rs_state_backward(mesh, rs_state_6x6, rs_state)
+    type(mesh_t),             intent(in)    :: mesh
+    CMPLX,                    intent(in)    :: rs_state_6x6(:,:)
+    CMPLX,                    intent(inout) :: rs_state(:,:)
 
     integer :: ii
 
     ! no push_sub, called to frequently
     do ii = 1, 3
-      rs_state(:, ii) = M_HALF * (rs_state_6x6(:, ii) + conjg(rs_state_6x6(:, ii+3)))
+      rs_state(1:mesh%np, ii) = M_HALF * (rs_state_6x6(1:mesh%np, ii) + conjg(rs_state_6x6(1:mesh%np, ii+3)))
     end do
 
   end subroutine transform_rs_state_to_6x6_rs_state_backward
 
   !----------------------------------------------------------
-  subroutine transform_rs_densities_to_6x6_rs_densities_forward(rs_charge_density, rs_current_density, rs_density_6x6)
-    CMPLX, intent(in)    :: rs_charge_density(:)
-    CMPLX, intent(in)    :: rs_current_density(:,:)
-    CMPLX, intent(inout) :: rs_density_6x6(:,:)
+  subroutine transform_rs_densities_to_6x6_rs_densities_forward(mesh, rs_charge_density, rs_current_density, rs_density_6x6)
+    type(mesh_t),             intent(in)    :: mesh
+    CMPLX,                    intent(in)    :: rs_charge_density(:)
+    CMPLX,                    intent(in)    :: rs_current_density(:,:)
+    CMPLX,                    intent(inout) :: rs_density_6x6(:,:)
 
     integer :: ii
 
+    ASSERT(size(rs_current_density, dim=2) == 3)
+    ASSERT(size(rs_density_6x6, dim=2) == 6)
+
     ! no push_sub, called to frequently
     do ii = 1, 3
-      rs_density_6x6(:, ii) = rs_current_density(:, ii)
-      rs_density_6x6(:, ii+3) = rs_current_density(:, ii)
+      rs_density_6x6(1:mesh%np, ii) = rs_current_density(1:mesh%np, ii)
+      rs_density_6x6(1:mesh%np, ii+3) = rs_current_density(1:mesh%np, ii)
     end do
 
   end subroutine transform_rs_densities_to_6x6_rs_densities_forward
 
   !----------------------------------------------------------
-  subroutine transform_rs_densities_to_6x6_rs_densities_backward(rs_density_6x6, rs_charge_density, rs_current_density)
-    CMPLX, intent(in)    :: rs_density_6x6(:,:)
-    CMPLX, intent(inout) :: rs_charge_density(:)
-    CMPLX, intent(inout) :: rs_current_density(:,:)
+  subroutine transform_rs_densities_to_6x6_rs_densities_backward(mesh, rs_density_6x6, rs_charge_density, rs_current_density)
+    type(mesh_t),             intent(in)    :: mesh
+    CMPLX,                    intent(in)    :: rs_density_6x6(:,:)
+    CMPLX,                    intent(inout) :: rs_charge_density(:)
+    CMPLX,                    intent(inout) :: rs_current_density(:,:)
 
     integer :: ii
 
+    ASSERT(size(rs_current_density, dim=2) == 3)
+    ASSERT(size(rs_density_6x6, dim=2) == 6)
+
     ! no push_sub, called to frequently
     do ii = 1, 3
-      rs_current_density(:, ii) = M_HALF * TOFLOAT(rs_density_6x6(:, ii) + rs_density_6x6(:, ii+3))
+      rs_current_density(1:mesh%np, ii) = M_HALF * &
+                TOFLOAT(rs_density_6x6(1:mesh%np, ii) + rs_density_6x6(1:mesh%np, ii+3))
     end do
 
   end subroutine transform_rs_densities_to_6x6_rs_densities_backward
 
   !----------------------------------------------------------
-  subroutine transform_rs_state_to_4x4_rs_state_forward(rs_state_3x3, rs_state_4x4)
-    CMPLX, intent(in)    :: rs_state_3x3(:,:)
-    CMPLX, intent(inout) :: rs_state_4x4(:,:)
+  subroutine transform_rs_state_to_4x4_rs_state_forward(mesh, rs_state_3x3, rs_state_4x4)
+    type(mesh_t),             intent(in)    :: mesh
+    CMPLX,                    intent(in)    :: rs_state_3x3(:,:)
+    CMPLX,                    intent(inout) :: rs_state_4x4(:,:)
 
     ! no push_sub, called to frequently
-    rs_state_4x4(:,1) = M_z1 * (-rs_state_3x3(:,1) + rs_state_3x3(:,2))
-    rs_state_4x4(:,2) = M_z1 * rs_state_3x3(:,3)
-    rs_state_4x4(:,3) = M_z1 * rs_state_3x3(:,3)
-    rs_state_4x4(:,4) = M_z1 * (rs_state_3x3(:,1) + rs_state_3x3(:,2))
+    rs_state_4x4(1:mesh%np, 1) = M_z1 * (-rs_state_3x3(1:mesh%np,1) + rs_state_3x3(1:mesh%np,2))
+    rs_state_4x4(1:mesh%np, 2) = M_z1 * rs_state_3x3(1:mesh%np,3)
+    rs_state_4x4(1:mesh%np, 3) = M_z1 * rs_state_3x3(1:mesh%np,3)
+    rs_state_4x4(1:mesh%np, 4) = M_z1 * (rs_state_3x3(1:mesh%np,1) + rs_state_3x3(1:mesh%np,2))
 
   end subroutine transform_rs_state_to_4x4_rs_state_forward
 
   !----------------------------------------------------------
-  subroutine transform_rs_state_to_4x4_rs_state_backward(rs_state_4x4, rs_state_3x3)
-    CMPLX, intent(in)    :: rs_state_4x4(:,:)
-    CMPLX, intent(inout) :: rs_state_3x3(:,:)
+  subroutine transform_rs_state_to_4x4_rs_state_backward(mesh, rs_state_4x4, rs_state_3x3)
+    type(mesh_t),             intent(in)    :: mesh
+    CMPLX,                    intent(in)    :: rs_state_4x4(:,:)
+    CMPLX,                    intent(inout) :: rs_state_3x3(:,:)
 
     ! no push_sub, called to frequently
-    rs_state_3x3(:,1) = M_z1 * M_HALF * (-rs_state_4x4(:,1) + rs_state_4x4(:,4))
-    rs_state_3x3(:,2) = M_zI * M_HALF * (-rs_state_4x4(:,1) - rs_state_4x4(:,4))
-    rs_state_3x3(:,3) = M_z1 * M_HALF * (rs_state_4x4(:,2) + rs_state_4x4(:,3))
+    rs_state_3x3(1:mesh%np, 1) = M_z1 * M_HALF * (-rs_state_4x4(1:mesh%np, 1) + rs_state_4x4(1:mesh%np, 4))
+    rs_state_3x3(1:mesh%np, 2) = M_zI * M_HALF * (-rs_state_4x4(1:mesh%np, 1) - rs_state_4x4(1:mesh%np, 4))
+    rs_state_3x3(1:mesh%np, 3) = M_z1 * M_HALF * (rs_state_4x4(1:mesh%np, 2) + rs_state_4x4(1:mesh%np, 3))
 
   end subroutine transform_rs_state_to_4x4_rs_state_backward
 
   !----------------------------------------------------------
-  subroutine transform_rs_densities_to_4x4_rs_densities_forward(rs_charge_density, rs_current_density, rs_density_4x4)
-    CMPLX, intent(in)    :: rs_charge_density(:)
-    CMPLX, intent(in)    :: rs_current_density(:,:)
-    CMPLX, intent(inout) :: rs_density_4x4(:,:)
+  subroutine transform_rs_densities_to_4x4_rs_densities_forward(mesh, rs_charge_density, rs_current_density, rs_density_4x4)
+    type(mesh_t),             intent(in)    :: mesh
+    CMPLX,                    intent(in)    :: rs_charge_density(:)
+    CMPLX,                    intent(in)    :: rs_current_density(:,:)
+    CMPLX,                    intent(inout) :: rs_density_4x4(:,:)
 
     ! no push_sub, called to frequently
-    rs_density_4x4(:,1) = M_z1 * (-rs_current_density(:,1) + rs_current_density(:,2))
-    rs_density_4x4(:,2) = M_z1 * (rs_current_density(:,3) - rs_charge_density(:))
-    rs_density_4x4(:,3) = M_z1 * (rs_current_density(:,3) + rs_charge_density(:))
-    rs_density_4x4(:,4) = M_z1 * (rs_current_density(:,1) + rs_current_density(:,2))
+    rs_density_4x4(1:mesh%np, 1) = M_z1 * (-rs_current_density(1:mesh%np, 1) + rs_current_density(1:mesh%np, 2))
+    rs_density_4x4(1:mesh%np, 2) = M_z1 * (rs_current_density(1:mesh%np, 3) - rs_charge_density(1:mesh%np))
+    rs_density_4x4(1:mesh%np, 3) = M_z1 * (rs_current_density(1:mesh%np, 3) + rs_charge_density(1:mesh%np))
+    rs_density_4x4(1:mesh%np, 4) = M_z1 * (rs_current_density(1:mesh%np, 1) + rs_current_density(1:mesh%np, 2))
 
   end subroutine transform_rs_densities_to_4x4_rs_densities_forward
 
   !----------------------------------------------------------
-  subroutine transform_rs_densities_to_4x4_rs_densities_backward(rs_density_4x4, rs_charge_density, rs_current_density)
-    CMPLX, intent(in)    :: rs_density_4x4(:,:)
-    CMPLX, intent(inout) :: rs_charge_density(:)
-    CMPLX, intent(inout) :: rs_current_density(:,:)
+  subroutine transform_rs_densities_to_4x4_rs_densities_backward(mesh, rs_density_4x4, rs_charge_density, rs_current_density)
+    type(mesh_t),             intent(in)    :: mesh
+    CMPLX,                    intent(in)    :: rs_density_4x4(:,:)
+    CMPLX,                    intent(inout) :: rs_charge_density(:)
+    CMPLX,                    intent(inout) :: rs_current_density(:,:)
 
     ! no push_sub, called to frequently
-    rs_charge_density(:)    = M_z1 * M_HALF * (-rs_density_4x4(:,2) + rs_density_4x4(:,3))
-    rs_current_density(:,1) = M_z1 * M_HALF * (-rs_density_4x4(:,1) + rs_density_4x4(:,4))
-    rs_current_density(:,2) = M_zI * M_HALF * (-rs_density_4x4(:,1) - rs_density_4x4(:,4))
-    rs_current_density(:,3) = M_z1 * M_HALF * (-rs_density_4x4(:,2) + rs_density_4x4(:,3))
+    rs_charge_density(1:mesh%np)     = M_z1 * M_HALF * (-rs_density_4x4(1:mesh%np,2) + rs_density_4x4(1:mesh%np,3))
+    rs_current_density(1:mesh%np, 1) = M_z1 * M_HALF * (-rs_density_4x4(1:mesh%np,1) + rs_density_4x4(1:mesh%np,4))
+    rs_current_density(1:mesh%np, 2) = M_zI * M_HALF * (-rs_density_4x4(1:mesh%np,1) - rs_density_4x4(1:mesh%np,4))
+    rs_current_density(1:mesh%np, 3) = M_z1 * M_HALF * (-rs_density_4x4(1:mesh%np,2) + rs_density_4x4(1:mesh%np,3))
 
   end subroutine transform_rs_densities_to_4x4_rs_densities_backward
 
@@ -1942,10 +1942,11 @@ contains
 
     call profiling_in(prof, 'PML_PROPAGATION_STAGE_1')
 
+    ff_dim    = size(ff_rs_state, dim=2)
+
     if (tr%bc_plane_waves .and. hm%plane_waves_apply) then
  
       ff_points = size(ff_rs_state(:,1))
-      ff_dim    = size(ff_rs_state(1,:))
       SAFE_ALLOCATE(ff_rs_state_plane_waves(1:ff_points,1:ff_dim))
       call transform_rs_state(hm, gr, st, st%rs_state_plane_waves, ff_rs_state_plane_waves, RS_TRANS_FORWARD)
       ff_rs_state_pml = ff_rs_state - ff_rs_state_plane_waves
@@ -1953,7 +1954,6 @@ contains
 
     else if (tr%bc_constant .and. hm%spatial_constant_apply) then
 
-      ff_dim    = size(ff_rs_state(1,:))
 
       SAFE_ALLOCATE(rs_state_constant(1,1:3))
       SAFE_ALLOCATE(ff_rs_state_constant(1,1:ff_dim))
@@ -1969,7 +1969,7 @@ contains
       SAFE_DEALLOCATE_A(ff_rs_state_constant)
     else
 
-      ff_rs_state_pml = ff_rs_state
+      ff_rs_state_pml(1:gr%mesh%np, 1:ff_dim)  = ff_rs_state(1:gr%mesh%np, 1:ff_dim)
 
     end if
 

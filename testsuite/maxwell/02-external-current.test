@@ -181,7 +181,7 @@ match ; Etz (x=  0,y=  0,z= 10) [step 50] ; LINEFIELD(Maxwell/output_iter/td.000
 # gaussian pulse with pml
 Processors : 4
 Input      : 02-external-current.02-gaussian_current_pulse_with_pml.inp
-Precision: 1e-15
+Precision: 1e-14
 match ;  Tot. Maxwell energy [step 10]  ; LINEFIELD(Maxwell/td.general/maxwell_energy, 16, 3) ; 0.004802711492116
 match ;  Tot. Maxwell energy [step 30]  ; LINEFIELD(Maxwell/td.general/maxwell_energy, 36, 3) ; 0.004344990992013
 match ;  Tot. Maxwell energy [step 50]  ; LINEFIELD(Maxwell/td.general/maxwell_energy, 56, 3) ; 0.003640763552202

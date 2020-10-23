@@ -86,8 +86,7 @@ module system_mxll_oct_m
     type(td_write_t)             :: write_handler
     type(c_ptr)                  :: output_handle
 
-    CMPLX, allocatable           :: rs_current_density_ext_t1(:,:), rs_current_density_ext_t2(:,:)
-    CMPLX, allocatable           :: rs_charge_density_ext_t1(:), rs_charge_density_ext_t2(:)
+    CMPLX, allocatable           :: rs_inhom_t1(:,:), rs_inhom_t2(:,:)
     CMPLX, allocatable           :: rs_state_init(:,:)
     FLOAT                        :: bc_bounds(2,MAX_DIM), dt_bounds(2,MAX_DIM)
     FLOAT                        :: etime
@@ -386,6 +385,7 @@ contains
     class(system_mxll_t),           intent(inout) :: this
     class(algorithmic_operation_t), intent(in)    :: operation
 
+    CMPLX, allocatable :: current_density_ext(:,:), charge_density_ext(:)
     type(profile_t), save :: prof
 
     PUSH_SUB(system_mxll_do_td)
@@ -398,21 +398,18 @@ contains
       ! For the moment we do nothing
 
     case (EXPMID_START)
-      SAFE_ALLOCATE(this%rs_current_density_ext_t1(1:this%gr%mesh%np_part,1:this%st%dim))
-      SAFE_ALLOCATE(this%rs_current_density_ext_t2(1:this%gr%mesh%np_part,1:this%st%dim))
-      SAFE_ALLOCATE(this%rs_charge_density_ext_t1(1:this%gr%mesh%np_part))
-      SAFE_ALLOCATE(this%rs_charge_density_ext_t2(1:this%gr%mesh%np_part))
-
       ! This variable is used to compute the elapsed time during the time-step.
       ! This is incorrect when there is more than one system, as the operations for the different systems
       ! are intermingled. Therefore it needs to be changed (maybe have the propagator handle it?)
       this%etime = loct_clock()
 
+      SAFE_ALLOCATE(this%rs_inhom_t1(1:this%gr%mesh%np_part, 1:this%hm%dim))
+      SAFE_ALLOCATE(this%rs_inhom_t2(1:this%gr%mesh%np_part, 1:this%hm%dim))
+
     case (EXPMID_FINISH)
-      SAFE_DEALLOCATE_A(this%rs_current_density_ext_t1)
-      SAFE_DEALLOCATE_A(this%rs_current_density_ext_t2)
-      SAFE_DEALLOCATE_A(this%rs_charge_density_ext_t1)
-      SAFE_DEALLOCATE_A(this%rs_charge_density_ext_t2)
+
+      SAFE_DEALLOCATE_A(this%rs_inhom_t1)
+      SAFE_DEALLOCATE_A(this%rs_inhom_t2)
 
     case (EXPMID_PREDICT_DT_2)  ! predict: psi(t+dt/2) = 0.5*(U_H(dt) psi(t) + psi(t)) or via extrapolation
       ! Empty for the moment
@@ -427,25 +424,37 @@ contains
 
       ! Propagation
 
-      !We get the external currents
-      if (this%hm%current_density_ext_flag) then
-        ! calculation of external RS density at time (time-dt)
-        call get_rs_density_ext(this%st, this%gr%mesh, this%clock%time(), this%rs_current_density_ext_t1)
-        ! calculation of external RS density at time (time)
-        call get_rs_density_ext(this%st, this%gr%mesh, this%clock%time()+this%prop%dt, this%rs_current_density_ext_t2)
-      else
-        this%rs_current_density_ext_t1 = M_z0
-        this%rs_current_density_ext_t2 = M_z0
-      end if
+      !We first compute thre external charge and current densities and we convert them as RS vectors
+      SAFE_ALLOCATE(current_density_ext(1:this%gr%mesh%np, 1:this%gr%sb%dim))
+      SAFE_ALLOCATE(charge_density_ext(1:this%gr%mesh%np))
 
-      !External densities
-      this%rs_charge_density_ext_t1 = M_z0
-      this%rs_charge_density_ext_t2 = M_z0
+      ! calculation of external RS density at time (time-dt)
+      if (this%hm%current_density_ext_flag) then
+        call get_rs_density_ext(this%st, this%gr%mesh, this%clock%time(), current_density_ext)
+      else
+        current_density_ext = M_z0
+      end if
+      !No charge density at the moment
+      charge_density_ext = M_z0
+
+      call transform_rs_densities(this%hm, this%gr%mesh, charge_density_ext, &
+                     current_density_ext, this%rs_inhom_t1, RS_TRANS_FORWARD)
+
+      ! calculation of external RS density at time (time)
+      if (this%hm%current_density_ext_flag) then
+        call get_rs_density_ext(this%st, this%gr%mesh, this%clock%time()+this%prop%dt, current_density_ext)
+      end if
+      !No charge density at the moment
+
+      call transform_rs_densities(this%hm, this%gr%mesh, charge_density_ext, &
+                     current_density_ext, this%rs_inhom_t2, RS_TRANS_FORWARD)
+
+      SAFE_DEALLOCATE_A(current_density_ext)
+      SAFE_DEALLOCATE_A(charge_density_ext)
 
       ! Propagation dt with H_maxwell
       call mxll_propagation_step(this%hm, this%namespace, this%gr, this%st, this%tr_mxll,&
-          this%st%rs_state, this%rs_current_density_ext_t1, this%rs_current_density_ext_t2,&
-          this%rs_charge_density_ext_t1, this%rs_charge_density_ext_t2, this%clock%time(), this%prop%dt)
+          this%st%rs_state, this%rs_inhom_t1, this%rs_inhom_t2, this%clock%time(), this%prop%dt)
 
       this%st%rs_state_trans(:,:) = this%st%rs_state
 
