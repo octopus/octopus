@@ -519,7 +519,7 @@ contains
     PUSH_SUB(propagator_dt)
 
     update_energy_ = optional_default(update_energy, .true.)
-    move_ions_ = optional_default(move_ions, .true.)
+    move_ions_ = optional_default(move_ions, .false.)
 
     if (family_is_mgga_with_exc(hm%xc)) then
       call potential_interpolation_new(tr%vksold, gr%mesh%np, st%d%nspin, time, dt, &
