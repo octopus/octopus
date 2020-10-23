@@ -2117,7 +2117,7 @@ contains
       SAFE_ALLOCATE(ff_rs_state_constant(1, 1:ff_dim))
       rs_state_constant(1, :) = st%rs_state_const(:)
 
-      call transform_rs_state(hm, gr, st, rs_state_constant, ff_rs_state_constant, RS_TRANS_BACKWARD)
+      call transform_rs_state(hm, gr, st, rs_state_constant, ff_rs_state_constant, RS_TRANS_FORWARD)
       select case(ff_rs_stateb%status())
       case(BATCH_NOT_PACKED)
         do ii = 1, ff_rs_stateb%nst_linear
