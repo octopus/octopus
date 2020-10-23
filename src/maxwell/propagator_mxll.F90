@@ -324,7 +324,6 @@ contains
 
     integer            :: ii, inter_steps, ff_dim, idim, istate
     FLOAT              :: inter_dt, inter_time, delay
-    CMPLX, allocatable :: ff_rs_state_pml(:,:)
 
 
     logical            :: pml_check = .false.
@@ -366,7 +365,6 @@ contains
     if (st%pack_states) call ff_rs_stateb%do_pack()
 
     if (pml_check) then
-      SAFE_ALLOCATE(ff_rs_state_pml(1:gr%mesh%np_part, ff_dim))
       call ff_rs_stateb%copy_to(ff_rs_state_pmlb)
     end if
 
@@ -481,11 +479,7 @@ contains
 
       ! PML convolution function update
       if (pml_check) then
-        do istate = 1, hm%dim
-          call batch_get_state(ff_rs_state_pmlb, istate, gr%mesh%np_part, ff_rs_state_pml(:, istate))
-        end do
-        call cpml_conv_function_update(hm, gr, ff_rs_state_pml, ff_dim)
-        ! no need to set states again since ff_rs_state_pml is not changed
+        call cpml_conv_function_update(hm, gr, ff_rs_state_pmlb)
       end if
 
       ! back tranformation of RS state representation
@@ -522,7 +516,6 @@ contains
     call ff_rs_stateb%end()
 
     if (pml_check) then
-      SAFE_DEALLOCATE_A(ff_rs_state_pml)
       call ff_rs_state_pmlb%end()
     end if
 
@@ -2269,22 +2262,29 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine cpml_conv_function_update(hm, gr, ff_rs_state_pml, ff_dim)
+  subroutine cpml_conv_function_update(hm, gr, ff_rs_state_pmlb)
     type(hamiltonian_mxll_t), intent(inout) :: hm
-    type(grid_t),        intent(in)    :: gr
-    CMPLX,               intent(inout) :: ff_rs_state_pml(:,:)
-    integer,             intent(in)    :: ff_dim
+    type(grid_t),             intent(in)    :: gr
+    type(batch_t),            intent(inout) :: ff_rs_state_pmlb
 
+    integer :: ff_dim, istate
     type(profile_t), save :: prof
+    CMPLX, allocatable :: ff_rs_state_pml(:,:)
 
     PUSH_SUB(cpml_conv_function_update)
 
     call profiling_in(prof, 'CPML_CONV_FUNCTION_UPDATE')
 
     if (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RS) then
-      call cpml_conv_function_update_via_riemann_silberstein(hm, gr, ff_rs_state_pml, ff_dim)
+      call cpml_conv_function_update_via_riemann_silberstein(hm, gr, ff_rs_state_pmlb)
     else if (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__EM) then
+      ff_dim = hm%dim
+      SAFE_ALLOCATE(ff_rs_state_pml(1:gr%mesh%np_part, ff_dim))
+      do istate = 1, hm%dim
+        call batch_get_state(ff_rs_state_pmlb, istate, gr%mesh%np_part, ff_rs_state_pml(:, istate))
+      end do
       call cpml_conv_function_update_via_e_b_fields(hm, gr, ff_rs_state_pml, ff_dim)
+      SAFE_DEALLOCATE_A(ff_rs_state_pml)
     end if
 
     call profiling_out(prof)
@@ -2293,76 +2293,90 @@ contains
   end subroutine cpml_conv_function_update
 
   ! ---------------------------------------------------------
-  subroutine cpml_conv_function_update_via_riemann_silberstein(hm, gr, ff_rs_state_pml, ff_dim)
+  subroutine cpml_conv_function_update_via_riemann_silberstein(hm, gr, ff_rs_state_pmlb)
     type(hamiltonian_mxll_t), intent(inout) :: hm
     type(grid_t),        intent(in)         :: gr
-    CMPLX,               intent(inout)      :: ff_rs_state_pml(:,:)
-    integer,             intent(in)         :: ff_dim
+    type(batch_t),       intent(inout)      :: ff_rs_state_pmlb
 
     integer :: ip, ip_in, np_part, rs_sign
-    CMPLX, allocatable :: tmp_partial(:), tmp_partial_2(:,:)
-    CMPLX              :: pml_a, pml_b, pml_g, pml_g_p, pml_g_m
+    CMPLX :: pml_a, pml_b, pml_g, grad
+    FLOAT :: g_real, g_imag
     type(profile_t), save :: prof
-    integer :: pml_dir, field_dir, ifield
+    integer :: pml_dir, field_dir, ifield, idir
     integer, parameter :: field_dirs(3, 2) = reshape([2, 3, 1, 3, 1, 2], [3, 2])
+    logical :: with_medium
+    class(batch_t), pointer :: gradb(:)
 
     PUSH_SUB(cpml_conv_function_update_via_riemann_silberstein)
 
     call profiling_in(prof, 'CPML_CONV_FUN_UPDATE_VIA_RS')
 
+    ASSERT(hm%dim == 3 .or. hm%dim == 6)
+
     np_part = gr%der%mesh%np_part
     rs_sign = hm%rs_sign
 
-    if (ff_dim == 3) then
+    allocate(gradb(1:hm%der%dim), mold=ff_rs_state_pmlb)
+    do idir = 1, hm%der%dim
+      call ff_rs_state_pmlb%copy_to(gradb(idir))
+    end do
+    call zderivatives_batch_grad(hm%der, ff_rs_state_pmlb, gradb)
 
-      SAFE_ALLOCATE(tmp_partial(np_part))
+    with_medium = hm%dim == 6
 
-      do pml_dir = 1, hm%st%dim
-        do ifield = 1, 2
-          field_dir = field_dirs(pml_dir, ifield)
-          call zderivatives_partial(gr%der, ff_rs_state_pml(:,field_dir), tmp_partial(:), pml_dir, set_bc = .false.)
-          do ip_in=1, hm%bc%pml%points_number
-            ip       = hm%bc%pml%points_map(ip_in)
-            pml_a = hm%bc%pml%a(ip_in,pml_dir)
-            pml_b = hm%bc%pml%b(ip_in,pml_dir)
-            pml_g = hm%bc%pml%conv_plus(ip_in,pml_dir,field_dir)
-            pml_g = TOFLOAT(pml_a) * TOFLOAT(tmp_partial(ip)) + TOFLOAT(pml_b) * TOFLOAT(pml_g) + &
-                       M_zI * ( aimag(pml_a) * aimag(tmp_partial(ip)) + aimag(pml_b) * aimag(pml_g) )
-            hm%bc%pml%conv_plus(ip_in,pml_dir,field_dir) = pml_g
+    do pml_dir = 1, hm%st%dim
+      select case(gradb(pml_dir)%status())
+      case(BATCH_NOT_PACKED)
+        do ip_in=1, hm%bc%pml%points_number
+          ip       = hm%bc%pml%points_map(ip_in)
+          pml_a = hm%bc%pml%a(ip_in,pml_dir)
+          pml_b = hm%bc%pml%b(ip_in,pml_dir)
+          do ifield = 1, 2
+            field_dir = field_dirs(pml_dir, ifield)
+            grad = gradb(pml_dir)%zff_linear(ip, field_dir)
+            pml_g = hm%bc%pml%conv_plus(ip_in, pml_dir, field_dir)
+            g_real = TOFLOAT(pml_a) * TOFLOAT(grad) + TOFLOAT(pml_b) * TOFLOAT(pml_g)
+            g_imag = aimag(pml_a) * aimag(grad) + aimag(pml_b) * aimag(pml_g)
+            hm%bc%pml%conv_plus(ip_in, pml_dir, field_dir) = TOCMPLX(g_real, g_imag)
+            if (with_medium) then
+              grad = gradb(pml_dir)%zff_linear(ip, field_dir+3)
+              pml_g = hm%bc%pml%conv_minus(ip_in, pml_dir, field_dir)
+              g_real = TOFLOAT(pml_a) * TOFLOAT(grad) + TOFLOAT(pml_b) * TOFLOAT(pml_g)
+              g_imag = aimag(pml_a) * aimag(grad) + aimag(pml_b) * aimag(pml_g)
+              hm%bc%pml%conv_minus(ip_in, pml_dir, field_dir) = TOCMPLX(g_real, g_imag)
+            end if
           end do
         end do
-      end do
-
-      SAFE_DEALLOCATE_A(tmp_partial)
-
-    else if (ff_dim == 6) then
-
-      SAFE_ALLOCATE(tmp_partial_2(np_part,2))
-
-      do pml_dir = 1, hm%st%dim
-        do ifield = 1, 2
-          field_dir = field_dirs(pml_dir, ifield)
-          call zderivatives_partial(gr%der, ff_rs_state_pml(:,field_dir), tmp_partial_2(:,1), pml_dir, set_bc = .false.)
-          call zderivatives_partial(gr%der, ff_rs_state_pml(:,field_dir+3), tmp_partial_2(:,2), pml_dir, set_bc = .false.)
-          do ip_in=1, hm%bc%pml%points_number
-            ip       = hm%bc%pml%points_map(ip_in)
-            pml_a = hm%bc%pml%a(ip_in,pml_dir)
-            pml_b = hm%bc%pml%b(ip_in,pml_dir)
-            pml_g_p = hm%bc%pml%conv_plus(ip_in,pml_dir,field_dir)
-            pml_g_m = hm%bc%pml%conv_minus(ip_in,pml_dir,field_dir)
-            pml_g_p = real(pml_a) * real(tmp_partial_2(ip,1)) + real(pml_b) * real(pml_g_p) + &
-                       M_zI * ( aimag(pml_a) * aimag(tmp_partial_2(ip,1)) + aimag(pml_b) * aimag(pml_g_p) )
-            pml_g_m = real(pml_a) * real(tmp_partial_2(ip,2)) + real(pml_b) * real(pml_g_m) + &
-                       M_zI * ( aimag(pml_a) * aimag(tmp_partial_2(ip,2)) + aimag(pml_b) * aimag(pml_g_m) )
-            hm%bc%pml%conv_plus(ip_in,pml_dir,field_dir) = pml_g_p
-            hm%bc%pml%conv_minus(ip_in,pml_dir,field_dir) = pml_g_m
+      case(BATCH_PACKED)
+        do ip_in=1, hm%bc%pml%points_number
+          ip       = hm%bc%pml%points_map(ip_in)
+          pml_a = hm%bc%pml%a(ip_in,pml_dir)
+          pml_b = hm%bc%pml%b(ip_in,pml_dir)
+          do ifield = 1, 2
+            field_dir = field_dirs(pml_dir, ifield)
+            grad = gradb(pml_dir)%zff_pack(field_dir, ip)
+            pml_g = hm%bc%pml%conv_plus(ip_in, pml_dir, field_dir)
+            g_real = TOFLOAT(pml_a) * TOFLOAT(grad) + TOFLOAT(pml_b) * TOFLOAT(pml_g)
+            g_imag = aimag(pml_a) * aimag(grad) + aimag(pml_b) * aimag(pml_g)
+            hm%bc%pml%conv_plus(ip_in, pml_dir, field_dir) = TOCMPLX(g_real, g_imag)
+            if (with_medium) then
+              grad = gradb(pml_dir)%zff_pack(field_dir+3, ip)
+              pml_g = hm%bc%pml%conv_minus(ip_in, pml_dir, field_dir)
+              g_real = TOFLOAT(pml_a) * TOFLOAT(grad) + TOFLOAT(pml_b) * TOFLOAT(pml_g)
+              g_imag = aimag(pml_a) * aimag(grad) + aimag(pml_b) * aimag(pml_g)
+              hm%bc%pml%conv_minus(ip_in, pml_dir, field_dir) = TOCMPLX(g_real, g_imag)
+            end if
           end do
         end do
-      end do
+      case(BATCH_DEVICE_PACKED)
+        call messages_not_implemented("PML on GPU")
+      end select
+    end do
 
-      SAFE_DEALLOCATE_A(tmp_partial_2)
-
-    end if
+    do idir = 1, hm%der%dim
+      call gradb(idir)%end()
+    end do
+    SAFE_DEALLOCATE_P(gradb)
 
     call profiling_out(prof)
 
