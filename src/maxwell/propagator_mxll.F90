@@ -310,26 +310,26 @@ contains
   end subroutine propagator_mxll_init
 
   ! ---------------------------------------------------------
-  subroutine mxll_propagation_step(hm, namespace, gr, st, tr, rs_state, rs_inhom_t1, rs_inhom_t2, time, dt)
+  subroutine mxll_propagation_step(hm, namespace, gr, st, tr, rs_state, ff_rs_inhom_t1, ff_rs_inhom_t2, time, dt)
     type(hamiltonian_mxll_t),   intent(inout) :: hm
     type(namespace_t),          intent(in)    :: namespace
     type(grid_t),               intent(inout) :: gr
     type(states_mxll_t),        intent(inout) :: st
     type(propagator_mxll_t),    intent(inout) :: tr
     CMPLX,                      intent(inout) :: rs_state(:,:)
-    CMPLX,                      intent(in)    :: rs_inhom_t1(:,:) !> Inhomogeneous term at t
-    CMPLX,                      intent(in)    :: rs_inhom_t2(:,:) !> Inhomogeneous term at t+dt
+    CMPLX,                      intent(in)    :: ff_rs_inhom_t1(:,:) !> Inhomogeneous term at t
+    CMPLX,                      intent(in)    :: ff_rs_inhom_t2(:,:) !> Inhomogeneous term at t+dt
     FLOAT,                      intent(in)    :: time
     FLOAT,                      intent(in)    :: dt
 
-    integer            :: ii, inter_steps, ff_dim, idim
+    integer            :: ii, inter_steps, ff_dim, idim, istate
     FLOAT              :: inter_dt, inter_time, delay
-    CMPLX, allocatable :: ff_rs_state(:,:), ff_rs_inhom_1(:,:), ff_rs_inhom_2(:,:)
-    CMPLX, allocatable :: ff_rs_state_pml(:,:), ff_rs_inhom_mean(:,:)
 
 
     logical            :: pml_check = .false.
     type(profile_t), save :: prof
+    type(batch_t) :: ff_rs_stateb, ff_rs_state_pmlb
+    type(batch_t) :: ff_rs_inhom_1b, ff_rs_inhom_2b, ff_rs_inhom_meanb
 
     PUSH_SUB(mxll_propagation_step)
 
@@ -361,41 +361,49 @@ contains
     ! delay time
     delay = tr%delay_time
 
-    SAFE_ALLOCATE(ff_rs_state(1:gr%mesh%np_part, ff_dim))
+    call zbatch_init(ff_rs_stateb, 1, 1, hm%dim, gr%mesh%np_part)
+    if (st%pack_states) call ff_rs_stateb%do_pack()
 
     if (pml_check) then
-      SAFE_ALLOCATE(ff_rs_state_pml(1:gr%mesh%np_part, ff_dim))
+      call ff_rs_stateb%copy_to(ff_rs_state_pmlb)
     end if
 
     ! first step of Maxwell inhomogeneity propagation with constant current density
     if ((hm%ma_mx_coupling_apply .or. hm%current_density_ext_flag) .and. &
         tr%tr_etrs_approx == MXWLL_ETRS_CONST) then
+      call ff_rs_stateb%copy_to(ff_rs_inhom_1b)
+      call ff_rs_stateb%copy_to(ff_rs_inhom_2b)
+      call ff_rs_stateb%copy_to(ff_rs_inhom_meanb)
 
-      SAFE_ALLOCATE(ff_rs_inhom_1(1:gr%mesh%np_part, ff_dim))
-      SAFE_ALLOCATE(ff_rs_inhom_2(1:gr%mesh%np_part, ff_dim))
-      SAFE_ALLOCATE(ff_rs_inhom_mean(1:gr%mesh%np_part, ff_dim))
+      do istate = 1, hm%dim
+        call batch_set_state(ff_rs_inhom_meanb, istate, gr%mesh%np, ff_rs_inhom_t1(:, istate))
+        call batch_set_state(ff_rs_inhom_2b, istate, gr%mesh%np, ff_rs_inhom_t2(:, istate))
+      end do
+      call batch_axpy(gr%mesh%np, M_ONE, ff_rs_inhom_2b, ff_rs_inhom_meanb)
+      call batch_scal(gr%mesh%np, M_HALF, ff_rs_inhom_meanb)
+
       ! inhomogeneity propagation
-      ff_rs_inhom_mean(:,:) = (rs_inhom_t1 + rs_inhom_t2)/M_TWO
-      ! add term J(time)
-      ff_rs_inhom_1(:,:) = ff_rs_inhom_mean
-      ff_rs_inhom_2(:,:) = ff_rs_inhom_mean
-      call hamiltonian_mxll_update(hm, time=time)
-      call exponential_mxll_apply(hm, namespace, gr, st, tr, inter_dt, ff_rs_inhom_2, .false.)
-      ! add term U(time+dt,time)J(time)
-      ff_rs_inhom_1(:,:) = ff_rs_inhom_1 + ff_rs_inhom_2
-      ff_rs_inhom_2(:,:) = ff_rs_inhom_mean
-      call hamiltonian_mxll_update(hm, time=time)
-      call exponential_mxll_apply(hm, namespace, gr, st, tr, inter_dt/M_TWO, ff_rs_inhom_2, .false.)
-      ! add term U(time+dt/2,time)J(time)
-      ff_rs_inhom_1(:,:) = ff_rs_inhom_1 + ff_rs_inhom_2
-      ff_rs_inhom_2(:,:) = ff_rs_inhom_mean
-      call hamiltonian_mxll_update(hm, time=time)
-      call exponential_mxll_apply(hm, namespace, gr, st, tr, -inter_dt/M_TWO, ff_rs_inhom_2, .false.)
-      ! add term U(time,time+dt/2)J(time)
-      ff_rs_inhom_1 = ff_rs_inhom_1 + ff_rs_inhom_2
-      SAFE_DEALLOCATE_A(ff_rs_inhom_2)
-      SAFE_DEALLOCATE_A(ff_rs_inhom_mean)
+      call ff_rs_inhom_meanb%copy_data_to(gr%mesh%np, ff_rs_inhom_1b)
+      call ff_rs_inhom_meanb%copy_data_to(gr%mesh%np, ff_rs_inhom_2b)
 
+      call hamiltonian_mxll_update(hm, time=time)
+      hm%cpml_hamiltonian = .false.
+      call exponential_apply_batch(tr%te, namespace, gr%mesh, hm, ff_rs_inhom_2b, inter_dt)
+
+      ! add term U(time+dt,time)J(time)
+      call batch_axpy(gr%mesh%np, M_ONE, ff_rs_inhom_2b, ff_rs_inhom_1b)
+      call ff_rs_inhom_meanb%copy_data_to(gr%mesh%np, ff_rs_inhom_2b)
+      call hamiltonian_mxll_update(hm, time=time)
+      call exponential_apply_batch(tr%te, namespace, gr%mesh, hm, ff_rs_inhom_2b, inter_dt*M_HALF)
+      ! add term U(time+dt/2,time)J(time)
+      call batch_axpy(gr%mesh%np, M_ONE, ff_rs_inhom_2b, ff_rs_inhom_1b)
+      call ff_rs_inhom_meanb%copy_data_to(gr%mesh%np, ff_rs_inhom_2b)
+      call hamiltonian_mxll_update(hm, time=time)
+      call exponential_apply_batch(tr%te, namespace, gr%mesh, hm, ff_rs_inhom_2b, -inter_dt*M_HALF)
+      ! add term U(time,time+dt/2)J(time)
+      call batch_axpy(gr%mesh%np, M_ONE, ff_rs_inhom_2b, ff_rs_inhom_1b)
+      call ff_rs_inhom_2b%end()
+      call ff_rs_inhom_meanb%end()
     end if
 
     do ii = 1, inter_steps
@@ -404,79 +412,78 @@ contains
       inter_time = time + inter_dt * (ii-1)
 
       ! transformation of RS state into 3x3 or 4x4 representation
-      call transform_rs_state(hm, gr, st, rs_state, ff_rs_state, RS_TRANS_FORWARD)
+      call transform_rs_state_batch(hm, gr, st, rs_state, ff_rs_stateb, RS_TRANS_FORWARD)
 
       ! RS state propagation
       call hamiltonian_mxll_update(hm, time=inter_time)
       if (pml_check) then
-        call pml_propagation_stage_1(hm, gr, st, tr, ff_rs_state, ff_rs_state_pml)
+        call pml_propagation_stage_1_batch(hm, gr, st, tr, ff_rs_stateb, ff_rs_state_pmlb)
       end if
-      call exponential_mxll_apply(hm, namespace, gr, st, tr, inter_dt, ff_rs_state, pml_check)
+
+      hm%cpml_hamiltonian = pml_check
+      call exponential_apply_batch(tr%te, namespace, gr%mesh, hm, ff_rs_stateb, dt)
+      hm%cpml_hamiltonian = .false.
+
       if (pml_check) then
-        call pml_propagation_stage_2(hm, namespace, gr, st, tr, inter_time, inter_dt, delay, ff_rs_state_pml, ff_rs_state)
+        call pml_propagation_stage_2_batch(hm, namespace, gr, st, tr, inter_time, inter_dt, delay, ff_rs_state_pmlb, ff_rs_stateb)
       end if
 
       !Below we add the contribution from the inhomogeneous terms
       if ((hm%ma_mx_coupling_apply) .or. hm%current_density_ext_flag) then
-
         if (tr%tr_etrs_approx == MXWLL_ETRS_FULL) then
-          SAFE_ALLOCATE(ff_rs_inhom_1(1:gr%mesh%np_part, ff_dim))
-          SAFE_ALLOCATE(ff_rs_inhom_2(1:gr%mesh%np_part, ff_dim))
-          SAFE_ALLOCATE(ff_rs_inhom_mean(1:gr%mesh%np_part, ff_dim))
+          call ff_rs_stateb%copy_to(ff_rs_inhom_1b)
+          call ff_rs_stateb%copy_to(ff_rs_inhom_2b)
+          call ff_rs_stateb%copy_to(ff_rs_inhom_meanb)
 
-          !Interpolation of the external current
-          do idim = 1, ff_dim
-            ! not mean, used as auxiliary variable
-            ff_rs_inhom_mean(1:gr%mesh%np, idim) = rs_inhom_t2(1:gr%mesh%np, idim) - rs_inhom_t1(1:gr%mesh%np, idim)
-            ff_rs_inhom_2(1:gr%mesh%np, idim) = rs_inhom_t1(1:gr%mesh%np, idim) &
-                  + ff_rs_inhom_mean(1:gr%mesh%np, idim) * inter_dt * ii / TOFLOAT(inter_steps)
-            ff_rs_inhom_1(1:gr%mesh%np, idim) = rs_inhom_t1(1:gr%mesh%np, idim) &
-                + ff_rs_inhom_mean(1:gr%mesh%np, idim) * inter_dt * (ii-1) / TOFLOAT(inter_steps)  
+          ! Interpolation of the external current
+          do istate = 1, hm%dim
+            call batch_set_state(ff_rs_inhom_meanb, istate, gr%mesh%np, ff_rs_inhom_t2(:, istate))
+            call batch_set_state(ff_rs_inhom_1b, istate, gr%mesh%np, ff_rs_inhom_t1(:, istate))
           end do
+          ! store t1 - t2 for the interpolation in mean
+          call batch_axpy(gr%mesh%np, -M_ONE, ff_rs_inhom_1b, ff_rs_inhom_meanb)
+          call ff_rs_inhom_1b%copy_data_to(gr%mesh%np, ff_rs_inhom_2b)
+          call batch_axpy(gr%mesh%np, inter_dt * ii / TOFLOAT(inter_steps), &
+            ff_rs_inhom_meanb, ff_rs_inhom_2b)
+          call batch_axpy(gr%mesh%np, inter_dt * (ii-1) / TOFLOAT(inter_steps), &
+            ff_rs_inhom_meanb, ff_rs_inhom_1b)
 
-          call exponential_mxll_apply(hm, namespace, gr, st, tr, inter_dt, ff_rs_inhom_1, .false.)
+          hm%cpml_hamiltonian = .false.
+          call exponential_apply_batch(tr%te, namespace, gr%mesh, hm, ff_rs_inhom_1b, inter_dt)
           ! add terms U(time+dt,time)J(time) and J(time+dt)
-          do idim = 1, ff_dim
-            ff_rs_state(1:gr%mesh%np, idim) = ff_rs_state(1:gr%mesh%np, idim) &
-              - M_FOURTH * inter_dt * (ff_rs_inhom_1(1:gr%mesh%np, idim) + ff_rs_inhom_2(1:gr%mesh%np, idim))
-          end do
+          call batch_axpy(gr%mesh%np, -M_FOURTH * inter_dt, ff_rs_inhom_1b, ff_rs_stateb)
+          call batch_axpy(gr%mesh%np, -M_FOURTH * inter_dt, ff_rs_inhom_2b, ff_rs_stateb)
 
-          do idim = 1, ff_dim
-            ff_rs_inhom_1(1:gr%mesh%np, idim) = M_HALF * (rs_inhom_t1(1:gr%mesh%np, idim) + rs_inhom_t2(1:gr%mesh%np, idim))
-            call lalg_copy(gr%mesh%np, ff_rs_inhom_1(:, idim), ff_rs_inhom_2(:, idim)) ! changed from the old code       
+          do istate = 1, hm%dim
+            call batch_set_state(ff_rs_inhom_1b, istate, gr%mesh%np, ff_rs_inhom_t1(:, istate))
+            call batch_set_state(ff_rs_inhom_2b, istate, gr%mesh%np, ff_rs_inhom_t2(:, istate))
           end do
+          call batch_axpy(gr%mesh%np, M_ONE, ff_rs_inhom_2b, ff_rs_inhom_1b)
+          call batch_scal(gr%mesh%np, M_HALF, ff_rs_inhom_1b)
+          call ff_rs_inhom_1b%copy_data_to(gr%mesh%np, ff_rs_inhom_2b)
 
-          call exponential_mxll_apply(hm, namespace, gr, st, tr, inter_dt/M_TWO, ff_rs_inhom_1, .false.)
-          call exponential_mxll_apply(hm, namespace, gr, st, tr, -inter_dt/M_TWO, ff_rs_inhom_2, .false.)
+          call exponential_apply_batch(tr%te, namespace, gr%mesh, hm, ff_rs_inhom_1b, inter_dt/M_TWO)
+          call exponential_apply_batch(tr%te, namespace, gr%mesh, hm, ff_rs_inhom_2b, -inter_dt/M_TWO)
 
           ! add terms U(time+dt/2,time)J(time) and U(time,time+dt/2)J(time+dt)
-          do idim = 1, ff_dim
-            ff_rs_state(1:gr%mesh%np, idim) = ff_rs_state(1:gr%mesh%np, idim) &
-               - M_FOURTH * inter_dt * (ff_rs_inhom_1(1:gr%mesh%np, idim) + ff_rs_inhom_2(1:gr%mesh%np, idim))
-          end do
+          call batch_axpy(gr%mesh%np, -M_FOURTH * inter_dt, ff_rs_inhom_1b, ff_rs_stateb)
+          call batch_axpy(gr%mesh%np, -M_FOURTH * inter_dt, ff_rs_inhom_2b, ff_rs_stateb)
 
-          SAFE_DEALLOCATE_A(ff_rs_inhom_1)
-          SAFE_DEALLOCATE_A(ff_rs_inhom_2)
-          SAFE_DEALLOCATE_A(ff_rs_inhom_mean)
-
+          call ff_rs_inhom_1b%end()
+          call ff_rs_inhom_2b%end()
+          call ff_rs_inhom_meanb%end()
         else if (tr%tr_etrs_approx == MXWLL_ETRS_CONST) then
-
-          do idim = 1, ff_dim
-            ff_rs_state(1:gr%mesh%np, idim) = ff_rs_state(1:gr%mesh%np, idim) &
-                  - M_FOURTH * inter_dt * ff_rs_inhom_1(1:gr%mesh%np, idim)
-          end do
-
+          call batch_axpy(gr%mesh%np, -M_FOURTH * inter_dt, ff_rs_inhom_1b, ff_rs_stateb)
         end if
-
       end if
 
       ! PML convolution function update
       if (pml_check) then
-        call cpml_conv_function_update(hm, gr, ff_rs_state_pml, ff_dim)
+        call cpml_conv_function_update(hm, gr, ff_rs_state_pmlb)
       end if
 
       ! back tranformation of RS state representation
-      call transform_rs_state(hm, gr, st, rs_state, ff_rs_state, RS_TRANS_BACKWARD)
+      call transform_rs_state_batch(hm, gr, st, rs_state, ff_rs_stateb, RS_TRANS_BACKWARD)
 
       if (tr%bc_constant) then
         ! Propagation dt with H(inter_time+inter_dt) for constant boundaries
@@ -503,13 +510,13 @@ contains
     end do
 
     if (tr%tr_etrs_approx == OPTION__MAXWELLTDETRSAPPROX__CONST_STEPS) then
-      SAFE_DEALLOCATE_A(ff_rs_inhom_1)
+      call ff_rs_inhom_1b%end()
     end if
 
-    SAFE_DEALLOCATE_A(ff_rs_state)
+    call ff_rs_stateb%end()
 
     if (pml_check) then
-      SAFE_DEALLOCATE_A(ff_rs_state_pml)
+      call ff_rs_state_pmlb%end()
     end if
 
     call profiling_out(prof)
@@ -649,6 +656,85 @@ contains
     POP_SUB(transform_rs_state)
 
   end subroutine transform_rs_state
+
+  ! ---------------------------------------------------------
+  subroutine transform_rs_state_batch(hm, gr, st, rs_state, ff_rs_stateb, sign)
+    type(hamiltonian_mxll_t), intent(in)         :: hm
+    type(grid_t),             intent(in)         :: gr
+    type(states_mxll_t),      intent(in)         :: st
+    CMPLX,                    intent(inout)      :: rs_state(:,:)
+    type(batch_t),            intent(inout)      :: ff_rs_stateb
+    integer,                  intent(in)         :: sign
+
+    CMPLX, allocatable :: rs_state_tmp(:,:)
+    type(profile_t), save :: prof
+    integer :: ii, np
+
+    PUSH_SUB(transform_rs_state_batch)
+
+    call profiling_in(prof, 'TRANSFORM_RS_STATE')
+
+    ASSERT(sign == RS_TRANS_FORWARD .or. sign == RS_TRANS_BACKWARD)
+
+    np = gr%mesh%np
+
+    if (hm%operator == FARADAY_AMPERE_MEDIUM) then
+      if (sign == RS_TRANS_FORWARD) then
+        ! 3 to 6
+        do ii = 1, 3
+          call batch_set_state(ff_rs_stateb, ii, np, rs_state(:, ii))
+          call batch_set_state(ff_rs_stateb, ii+3, np, conjg(rs_state(:, ii)))
+        end do
+      else
+        ! 6 to 3
+        SAFE_ALLOCATE(rs_state_tmp(gr%mesh%np, st%dim))
+        do ii = 1, 3
+          call batch_get_state(ff_rs_stateb, ii, np, rs_state(:, ii))
+          call batch_get_state(ff_rs_stateb, ii+3, np, rs_state_tmp(:, ii))
+          rs_state(1:np, ii) = M_HALF * (rs_state(1:np, ii) + conjg(rs_state_tmp(1:np, ii)))
+        end do
+        SAFE_DEALLOCATE_A(rs_state_tmp)
+      end if
+
+    else if (hm%operator == FARADAY_AMPERE_GAUSS) then
+      if (sign == RS_TRANS_FORWARD) then
+        ! 3 to 4
+        call batch_set_state(ff_rs_stateb, 1, np, -rs_state(1:np, 1)+rs_state(1:np, 2))
+        call batch_set_state(ff_rs_stateb, 2, np, rs_state(1:np, 3))
+        call batch_set_state(ff_rs_stateb, 3, np, rs_state(1:np, 3))
+        call batch_set_state(ff_rs_stateb, 4, np, rs_state(1:np, 1)+rs_state(1:np, 2))
+      else
+        ! 4 to 3
+        SAFE_ALLOCATE(rs_state_tmp(gr%mesh%np, 2))
+        call batch_get_state(ff_rs_stateb, 1, np, rs_state_tmp(:, 1))
+        call batch_get_state(ff_rs_stateb, 4, np, rs_state_tmp(:, 2))
+        rs_state(1:np, 1) = M_HALF * (-rs_state_tmp(1:np, 1) + rs_state_tmp(1:np, 2))
+        rs_state(1:np, 2) = M_HALF * (-rs_state_tmp(1:np, 1) - rs_state_tmp(1:np, 2))
+        call batch_get_state(ff_rs_stateb, 2, np, rs_state_tmp(:, 1))
+        call batch_get_state(ff_rs_stateb, 3, np, rs_state_tmp(:, 2))
+        rs_state(1:np, 3) = M_HALF * (rs_state_tmp(1:np, 1) + rs_state_tmp(1:np, 2))
+        SAFE_DEALLOCATE_A(rs_state_tmp)
+      end if
+
+    else
+      if (sign == RS_TRANS_FORWARD) then
+        ! 3 to 3
+        do ii = 1, 3
+          call batch_set_state(ff_rs_stateb, ii, np, rs_state(:, ii))
+        end do
+      else
+        ! 3 to 3
+        do ii = 1, 3
+          call batch_get_state(ff_rs_stateb, ii, np, rs_state(:, ii))
+        end do
+      end if
+    end if
+
+    call profiling_out(prof)
+
+    POP_SUB(transform_rs_state_batch)
+
+  end subroutine transform_rs_state_batch
 
   ! ---------------------------------------------------------
   subroutine transform_rs_densities(hm, mesh, rs_charge_density, rs_current_density, ff_density, sign)
@@ -1926,60 +2012,53 @@ contains
   end subroutine maxwell_mask
 
   ! ---------------------------------------------------------
-  subroutine pml_propagation_stage_1(hm, gr, st, tr, ff_rs_state, ff_rs_state_pml)
+  subroutine pml_propagation_stage_1_batch(hm, gr, st, tr, ff_rs_stateb, ff_rs_state_pmlb)
     type(hamiltonian_mxll_t),   intent(inout) :: hm
     type(grid_t),               intent(in)    :: gr
     type(states_mxll_t),        intent(inout) :: st
     type(propagator_mxll_t),    intent(inout) :: tr
-    CMPLX,                      intent(in)    :: ff_rs_state(:,:)
-    CMPLX,                      intent(inout) :: ff_rs_state_pml(:,:)
+    type(batch_t),              intent(in)    :: ff_rs_stateb
+    type(batch_t),              intent(inout) :: ff_rs_state_pmlb
 
-    integer            :: ip, ff_points, ff_dim
-    CMPLX, allocatable :: ff_rs_state_plane_waves(:,:), rs_state_constant(:,:), ff_rs_state_constant(:,:)
+    integer            :: ii
+    CMPLX, allocatable :: rs_state_constant(:,:)
     type(profile_t), save :: prof
 
-    PUSH_SUB(pml_propagation_stage_1)
+    PUSH_SUB(pml_propagation_stage_1_batch)
 
-    call profiling_in(prof, 'PML_PROPAGATION_STAGE_1')
-
-    ff_dim    = size(ff_rs_state, dim=2)
+    call profiling_in(prof, 'PML_PROP_STAGE_1_BATCH')
 
     if (tr%bc_plane_waves .and. hm%plane_waves_apply) then
- 
-      ff_points = size(ff_rs_state(:,1))
-      SAFE_ALLOCATE(ff_rs_state_plane_waves(1:ff_points,1:ff_dim))
-      call transform_rs_state(hm, gr, st, st%rs_state_plane_waves, ff_rs_state_plane_waves, RS_TRANS_FORWARD)
-      ff_rs_state_pml = ff_rs_state - ff_rs_state_plane_waves
-      SAFE_DEALLOCATE_A(ff_rs_state_plane_waves)
-
+      call transform_rs_state_batch(hm, gr, st, st%rs_state_plane_waves, &
+        ff_rs_state_pmlb, RS_TRANS_FORWARD)
+      call batch_xpay(gr%mesh%np, ff_rs_stateb, -M_ONE, ff_rs_state_pmlb)
     else if (tr%bc_constant .and. hm%spatial_constant_apply) then
-
-
-      SAFE_ALLOCATE(rs_state_constant(1,1:3))
-      SAFE_ALLOCATE(ff_rs_state_constant(1,1:ff_dim))
-      rs_state_constant(1,:) = st%rs_state_const(:)
-
-      call transform_rs_state(hm, gr, st, rs_state_constant, ff_rs_state_constant, RS_TRANS_FORWARD)
-
-      do ip = 1, gr%mesh%np_part
-        ff_rs_state_pml(ip,:) = ff_rs_state(ip,:) - ff_rs_state_constant(1,:)
+      ! this could be optimized: right now we broadcast the constant value
+      !  to the full mesh to be able to use the batch functions easily.
+      ! in principle, we would need to do the transform only for one point
+      !  and then subtract that value from all points of the state
+      SAFE_ALLOCATE(rs_state_constant(1:gr%mesh%np,1:3))
+      do ii = 1, 3
+        rs_state_constant(1:gr%mesh%np, ii) = st%rs_state_const(ii)
       end do
 
+      call transform_rs_state_batch(hm, gr, st, rs_state_constant, &
+        ff_rs_state_pmlb, RS_TRANS_FORWARD)
+      call batch_xpay(gr%mesh%np, ff_rs_stateb, -M_ONE, ff_rs_state_pmlb)
+
       SAFE_DEALLOCATE_A(rs_state_constant)
-      SAFE_DEALLOCATE_A(ff_rs_state_constant)
     else
-
-      ff_rs_state_pml(1:gr%mesh%np, 1:ff_dim)  = ff_rs_state(1:gr%mesh%np, 1:ff_dim)
-
+      ! this copy should not be needed
+      call ff_rs_stateb%copy_data_to(gr%mesh%np, ff_rs_state_pmlb)
     end if
 
     call profiling_out(prof)
 
-    POP_SUB(pml_propagation_stage_1)
-  end subroutine pml_propagation_stage_1
+    POP_SUB(pml_propagation_stage_1_batch)
+  end subroutine pml_propagation_stage_1_batch
 
   ! ---------------------------------------------------------
-  subroutine pml_propagation_stage_2(hm, namespace, gr, st, tr, time, dt, time_delay, ff_rs_state_pml, ff_rs_state)
+  subroutine pml_propagation_stage_2_batch(hm, namespace, gr, st, tr, time, dt, time_delay, ff_rs_state_pmlb, ff_rs_stateb)
     type(hamiltonian_mxll_t),   intent(inout) :: hm
     type(namespace_t),          intent(in)    :: namespace
     type(grid_t),               intent(in)    :: gr
@@ -1988,44 +2067,75 @@ contains
     FLOAT,                      intent(in)    :: time
     FLOAT,                      intent(in)    :: dt
     FLOAT,                      intent(in)    :: time_delay
-    CMPLX,                      intent(inout) :: ff_rs_state_pml(:,:)
-    CMPLX,                      intent(inout) :: ff_rs_state(:,:)
+    type(batch_t),              intent(inout) :: ff_rs_state_pmlb
+    type(batch_t),              intent(inout) :: ff_rs_stateb
 
-    integer            :: ip, ip_in, ff_points, ff_dim
-    CMPLX, allocatable :: ff_rs_state_plane_waves(:,:), rs_state_constant(:,:), ff_rs_state_constant(:,:)
+    integer            :: ip, ip_in, ii, ff_dim
+    CMPLX, allocatable :: rs_state_constant(:,:), ff_rs_state_constant(:,:)
     type(profile_t), save :: prof
+    type(batch_t) :: ff_rs_state_plane_wavesb
 
-    PUSH_SUB(pml_propagation_stage_2)
+    PUSH_SUB(pml_propagation_stage_2_batch)
 
-    call profiling_in(prof, 'PML_PROPAGATION_STAGE_2')
+    call profiling_in(prof, 'PML_PROP_STAGE_2_BATCH')
 
     if (tr%bc_plane_waves .and. hm%plane_waves_apply) then
-      ff_points = size(ff_rs_state(:, 1))
-      ff_dim    = size(ff_rs_state(1, :))
-      call exponential_mxll_apply(hm, namespace, gr, st, tr, dt, ff_rs_state_pml, .true.)
+      hm%cpml_hamiltonian = .true.
+      call exponential_apply_batch(tr%te, namespace, gr%mesh, hm, ff_rs_state_pmlb, dt)
+      hm%cpml_hamiltonian = .false.
       call plane_waves_propagation(hm, tr, namespace, st, gr, time, dt, time_delay)
 
-      SAFE_ALLOCATE(ff_rs_state_plane_waves(1:ff_points, 1:ff_dim))
-      call transform_rs_state(hm, gr, st, st%rs_state_plane_waves, ff_rs_state_plane_waves, RS_TRANS_FORWARD)
-      do ip_in = 1, hm%bc%plane_wave%points_number
-        ip = hm%bc%plane_wave%points_map(ip_in)
-        ff_rs_state(ip, :) = ff_rs_state_pml(ip, :) + ff_rs_state_plane_waves(ip, :)
-      end do
-      SAFE_DEALLOCATE_A(ff_rs_state_plane_waves)
+      call ff_rs_stateb%copy_to(ff_rs_state_plane_wavesb)
+      call transform_rs_state_batch(hm, gr, st, st%rs_state_plane_waves, ff_rs_state_plane_wavesb, RS_TRANS_FORWARD)
+
+      select case(ff_rs_stateb%status())
+      case(BATCH_NOT_PACKED)
+        do ii = 1, ff_rs_stateb%nst_linear
+          do ip_in = 1, hm%bc%plane_wave%points_number
+            ip = hm%bc%plane_wave%points_map(ip_in)
+            ff_rs_stateb%zff_linear(ip, ii) = ff_rs_state_pmlb%zff_linear(ip, ii) + &
+              ff_rs_state_plane_wavesb%zff_linear(ip, ii)
+          end do
+        end do
+      case(BATCH_PACKED)
+        do ip_in = 1, hm%bc%plane_wave%points_number
+          ip = hm%bc%plane_wave%points_map(ip_in)
+          do ii = 1, ff_rs_stateb%nst_linear
+            ff_rs_stateb%zff_pack(ii, ip) = ff_rs_state_pmlb%zff_pack(ii, ip) + &
+              ff_rs_state_plane_wavesb%zff_pack(ii, ip)
+          end do
+        end do
+      end select
 
     else if (tr%bc_constant .and. hm%spatial_constant_apply) then
-      ff_dim    = size(ff_rs_state(1, :))
-      call exponential_mxll_apply(hm, namespace, gr, st, tr, dt, ff_rs_state_pml, .true.)
+      hm%cpml_hamiltonian = .true.
+      call exponential_apply_batch(tr%te, namespace, gr%mesh, hm, ff_rs_state_pmlb, dt)
+      hm%cpml_hamiltonian = .false.
 
+      ff_dim = ff_rs_stateb%nst_linear
       SAFE_ALLOCATE(rs_state_constant(1, 1:ff_dim))
       SAFE_ALLOCATE(ff_rs_state_constant(1, 1:ff_dim))
       rs_state_constant(1, :) = st%rs_state_const(:)
 
-      call transform_rs_state(hm, gr, st, rs_state_constant, ff_rs_state_constant, RS_TRANS_BACKWARD)
-      do ip_in = 1, hm%bc%constant_points_number
-        ip = hm%bc%constant_points_map(ip_in)
-        ff_rs_state(ip, :) = ff_rs_state_pml(ip, :) + ff_rs_state_constant(1, :)
-      end do
+      call transform_rs_state(hm, gr, st, rs_state_constant, ff_rs_state_constant, RS_TRANS_FORWARD)
+      select case(ff_rs_stateb%status())
+      case(BATCH_NOT_PACKED)
+        do ii = 1, ff_rs_stateb%nst_linear
+          do ip_in = 1, hm%bc%constant_points_number
+            ip = hm%bc%constant_points_map(ip_in)
+            ff_rs_stateb%zff_linear(ip, ii) = ff_rs_state_pmlb%zff_linear(ip, ii) + &
+              ff_rs_state_constant(1, ii)
+          end do
+        end do
+      case(BATCH_PACKED)
+        do ip_in = 1, hm%bc%constant_points_number
+          ip = hm%bc%constant_points_map(ip_in)
+          do ii = 1, ff_rs_stateb%nst_linear
+            ff_rs_stateb%zff_linear(ii, ip) = ff_rs_state_pmlb%zff_linear(ii, ip) + &
+              ff_rs_state_constant(1, ii)
+          end do
+        end do
+      end select
  
       SAFE_DEALLOCATE_A(rs_state_constant)
       SAFE_DEALLOCATE_A(ff_rs_state_constant)
@@ -2033,26 +2143,33 @@ contains
 
     call profiling_out(prof)
 
-    POP_SUB(pml_propagation_stage_2)
-  end subroutine pml_propagation_stage_2
+    POP_SUB(pml_propagation_stage_2_batch)
+  end subroutine pml_propagation_stage_2_batch
 
   ! ---------------------------------------------------------
-  subroutine cpml_conv_function_update(hm, gr, ff_rs_state_pml, ff_dim)
+  subroutine cpml_conv_function_update(hm, gr, ff_rs_state_pmlb)
     type(hamiltonian_mxll_t), intent(inout) :: hm
-    type(grid_t),        intent(in)    :: gr
-    CMPLX,               intent(inout) :: ff_rs_state_pml(:,:)
-    integer,             intent(in)    :: ff_dim
+    type(grid_t),             intent(in)    :: gr
+    type(batch_t),            intent(inout) :: ff_rs_state_pmlb
 
+    integer :: ff_dim, istate
     type(profile_t), save :: prof
+    CMPLX, allocatable :: ff_rs_state_pml(:,:)
 
     PUSH_SUB(cpml_conv_function_update)
 
     call profiling_in(prof, 'CPML_CONV_FUNCTION_UPDATE')
 
     if (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RS) then
-      call cpml_conv_function_update_via_riemann_silberstein(hm, gr, ff_rs_state_pml, ff_dim)
+      call cpml_conv_function_update_via_riemann_silberstein(hm, gr, ff_rs_state_pmlb)
     else if (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__EM) then
+      ff_dim = hm%dim
+      SAFE_ALLOCATE(ff_rs_state_pml(1:gr%mesh%np_part, ff_dim))
+      do istate = 1, hm%dim
+        call batch_get_state(ff_rs_state_pmlb, istate, gr%mesh%np_part, ff_rs_state_pml(:, istate))
+      end do
       call cpml_conv_function_update_via_e_b_fields(hm, gr, ff_rs_state_pml, ff_dim)
+      SAFE_DEALLOCATE_A(ff_rs_state_pml)
     end if
 
     call profiling_out(prof)
@@ -2061,201 +2178,90 @@ contains
   end subroutine cpml_conv_function_update
 
   ! ---------------------------------------------------------
-  subroutine cpml_conv_function_update_via_riemann_silberstein(hm, gr, ff_rs_state_pml, ff_dim)
+  subroutine cpml_conv_function_update_via_riemann_silberstein(hm, gr, ff_rs_state_pmlb)
     type(hamiltonian_mxll_t), intent(inout) :: hm
     type(grid_t),        intent(in)         :: gr
-    CMPLX,               intent(inout)      :: ff_rs_state_pml(:,:)
-    integer,             intent(in)         :: ff_dim
+    type(batch_t),       intent(inout)      :: ff_rs_state_pmlb
 
     integer :: ip, ip_in, np_part, rs_sign
-    CMPLX, allocatable :: tmp_partial(:), tmp_partial_2(:,:)
-    CMPLX              :: pml_a(3), pml_b(3), pml_g(3), pml_g_p(3), pml_g_m(3)
+    CMPLX :: pml_a, pml_b, pml_g, grad
+    FLOAT :: g_real, g_imag
     type(profile_t), save :: prof
+    integer :: pml_dir, field_dir, ifield, idir
+    integer, parameter :: field_dirs(3, 2) = reshape([2, 3, 1, 3, 1, 2], [3, 2])
+    logical :: with_medium
+    class(batch_t), pointer :: gradb(:)
 
     PUSH_SUB(cpml_conv_function_update_via_riemann_silberstein)
 
     call profiling_in(prof, 'CPML_CONV_FUN_UPDATE_VIA_RS')
 
+    ASSERT(hm%dim == 3 .or. hm%dim == 6)
+
     np_part = gr%der%mesh%np_part
     rs_sign = hm%rs_sign
 
-    if (ff_dim == 3) then
+    allocate(gradb(1:hm%der%dim), mold=ff_rs_state_pmlb)
+    do idir = 1, hm%der%dim
+      call ff_rs_state_pmlb%copy_to(gradb(idir))
+    end do
+    call zderivatives_batch_grad(hm%der, ff_rs_state_pmlb, gradb)
 
-      SAFE_ALLOCATE(tmp_partial(np_part))
+    with_medium = hm%dim == 6
 
-      ! calculation g(1,2)
-      call zderivatives_partial(gr%der, ff_rs_state_pml(:,2), tmp_partial(:), 1, set_bc = .false.)
-      do ip_in=1, hm%bc%pml%points_number
-        ip       = hm%bc%pml%points_map(ip_in)
-        pml_a(:) = hm%bc%pml%a(ip_in,:)
-        pml_b(:) = hm%bc%pml%b(ip_in,:)
-        pml_g(:) = hm%bc%pml%conv_plus(ip_in,1,:)
-        pml_g(2) = real(pml_a(1)) * real(tmp_partial(ip)) + real(pml_b(1)) * real(pml_g(2)) + &
-                   M_zI * ( aimag(pml_a(1)) * aimag(tmp_partial(ip)) + aimag(pml_b(1)) * aimag(pml_g(2)) )
-        hm%bc%pml%conv_plus(ip_in,1,:) = pml_g(:)
-      end do
-      ! calculation g(2,1)
-      call zderivatives_partial(gr%der, ff_rs_state_pml(:,1), tmp_partial(:), 2, set_bc = .false.)
-      do ip_in=1, hm%bc%pml%points_number
-        ip       = hm%bc%pml%points_map(ip_in)
-        pml_a(:) = hm%bc%pml%a(ip_in,:)
-        pml_b(:) = hm%bc%pml%b(ip_in,:)
-        pml_g(:) = hm%bc%pml%conv_plus(ip_in,2,:)
-        pml_g(1) = real(pml_a(2)) * real(tmp_partial(ip)) + real(pml_b(2)) * real(pml_g(1)) + &
-                   M_zI * ( aimag(pml_a(2)) * aimag(tmp_partial(ip)) + aimag(pml_b(2)) * aimag(pml_g(1)) )
-        hm%bc%pml%conv_plus(ip_in,2,:) = pml_g(:)
-      end do
-      ! calculation g(1,3)
-      call zderivatives_partial(gr%der, ff_rs_state_pml(:,3), tmp_partial(:), 1, set_bc = .false.)
-      do ip_in=1, hm%bc%pml%points_number
-        ip       = hm%bc%pml%points_map(ip_in)
-        pml_a(:) = hm%bc%pml%a(ip_in,:)
-        pml_b(:) = hm%bc%pml%b(ip_in,:)
-        pml_g(:) = hm%bc%pml%conv_plus(ip_in,1,:)
-        pml_g(3) = real(pml_a(1)) * real(tmp_partial(ip)) + real(pml_b(1)) * real(pml_g(3)) + &
-                   M_zI * ( aimag(pml_a(1)) * aimag(tmp_partial(ip)) + aimag(pml_b(1)) * aimag(pml_g(3)) )
-        hm%bc%pml%conv_plus(ip_in,1,:) = pml_g(:)
-      end do
-      ! calculation g(3,1)
-      call zderivatives_partial(gr%der, ff_rs_state_pml(:,1), tmp_partial(:), 3, set_bc = .false.)
-      do ip_in=1, hm%bc%pml%points_number
-        ip       = hm%bc%pml%points_map(ip_in)
-        pml_a(:) = hm%bc%pml%a(ip_in,:)
-        pml_b(:) = hm%bc%pml%b(ip_in,:)
-        pml_g(:) = hm%bc%pml%conv_plus(ip_in,3,:)
-        pml_g(1) = real(pml_a(3)) * real(tmp_partial(ip)) + real(pml_b(3)) * real(pml_g(1)) + &
-                   M_zI * ( aimag(pml_a(3)) * aimag(tmp_partial(ip)) + aimag(pml_b(3)) * aimag(pml_g(1)) )
-        hm%bc%pml%conv_plus(ip_in,3,:) = pml_g(:)
-      end do
-      ! calculation g(2,3)
-      call zderivatives_partial(gr%der, ff_rs_state_pml(:,3), tmp_partial(:), 2, set_bc = .false.)
-      do ip_in=1, hm%bc%pml%points_number
-        ip       = hm%bc%pml%points_map(ip_in)
-        pml_a(:) = hm%bc%pml%a(ip_in,:)
-        pml_b(:) = hm%bc%pml%b(ip_in,:)
-        pml_g(:) = hm%bc%pml%conv_plus(ip_in,2,:)
-        pml_g(3) = real(pml_a(2)) * real(tmp_partial(ip)) + real(pml_b(2)) * real(pml_g(3)) + &
-                   M_zI * ( aimag(pml_a(2)) * aimag(tmp_partial(ip)) + aimag(pml_b(2)) * aimag(pml_g(3)) )
-        hm%bc%pml%conv_plus(ip_in,2,:) = pml_g(:)
-      end do
-      ! calculation g(3,2)
-      call zderivatives_partial(gr%der, ff_rs_state_pml(:,2), tmp_partial(:), 3, set_bc = .false.)
-      do ip_in=1, hm%bc%pml%points_number
-        ip       = hm%bc%pml%points_map(ip_in)
-        pml_a(:) = hm%bc%pml%a(ip_in,:)
-        pml_b(:) = hm%bc%pml%b(ip_in,:)
-        pml_g(:) = hm%bc%pml%conv_plus(ip_in,3,:)
-        pml_g(2) = real(pml_a(3)) * real(tmp_partial(ip)) + real(pml_b(3)) * real(pml_g(2)) + &
-                   M_zI * ( aimag(pml_a(3)) * aimag(tmp_partial(ip)) + aimag(pml_b(3)) * aimag(pml_g(2)) )
-        hm%bc%pml%conv_plus(ip_in,3,:) = pml_g(:)
-      end do
+    do pml_dir = 1, hm%st%dim
+      select case(gradb(pml_dir)%status())
+      case(BATCH_NOT_PACKED)
+        do ip_in=1, hm%bc%pml%points_number
+          ip       = hm%bc%pml%points_map(ip_in)
+          pml_a = hm%bc%pml%a(ip_in,pml_dir)
+          pml_b = hm%bc%pml%b(ip_in,pml_dir)
+          do ifield = 1, 2
+            field_dir = field_dirs(pml_dir, ifield)
+            grad = gradb(pml_dir)%zff_linear(ip, field_dir)
+            pml_g = hm%bc%pml%conv_plus(ip_in, pml_dir, field_dir)
+            g_real = TOFLOAT(pml_a) * TOFLOAT(grad) + TOFLOAT(pml_b) * TOFLOAT(pml_g)
+            g_imag = aimag(pml_a) * aimag(grad) + aimag(pml_b) * aimag(pml_g)
+            hm%bc%pml%conv_plus(ip_in, pml_dir, field_dir) = TOCMPLX(g_real, g_imag)
+            if (with_medium) then
+              grad = gradb(pml_dir)%zff_linear(ip, field_dir+3)
+              pml_g = hm%bc%pml%conv_minus(ip_in, pml_dir, field_dir)
+              g_real = TOFLOAT(pml_a) * TOFLOAT(grad) + TOFLOAT(pml_b) * TOFLOAT(pml_g)
+              g_imag = aimag(pml_a) * aimag(grad) + aimag(pml_b) * aimag(pml_g)
+              hm%bc%pml%conv_minus(ip_in, pml_dir, field_dir) = TOCMPLX(g_real, g_imag)
+            end if
+          end do
+        end do
+      case(BATCH_PACKED)
+        do ip_in=1, hm%bc%pml%points_number
+          ip       = hm%bc%pml%points_map(ip_in)
+          pml_a = hm%bc%pml%a(ip_in,pml_dir)
+          pml_b = hm%bc%pml%b(ip_in,pml_dir)
+          do ifield = 1, 2
+            field_dir = field_dirs(pml_dir, ifield)
+            grad = gradb(pml_dir)%zff_pack(field_dir, ip)
+            pml_g = hm%bc%pml%conv_plus(ip_in, pml_dir, field_dir)
+            g_real = TOFLOAT(pml_a) * TOFLOAT(grad) + TOFLOAT(pml_b) * TOFLOAT(pml_g)
+            g_imag = aimag(pml_a) * aimag(grad) + aimag(pml_b) * aimag(pml_g)
+            hm%bc%pml%conv_plus(ip_in, pml_dir, field_dir) = TOCMPLX(g_real, g_imag)
+            if (with_medium) then
+              grad = gradb(pml_dir)%zff_pack(field_dir+3, ip)
+              pml_g = hm%bc%pml%conv_minus(ip_in, pml_dir, field_dir)
+              g_real = TOFLOAT(pml_a) * TOFLOAT(grad) + TOFLOAT(pml_b) * TOFLOAT(pml_g)
+              g_imag = aimag(pml_a) * aimag(grad) + aimag(pml_b) * aimag(pml_g)
+              hm%bc%pml%conv_minus(ip_in, pml_dir, field_dir) = TOCMPLX(g_real, g_imag)
+            end if
+          end do
+        end do
+      case(BATCH_DEVICE_PACKED)
+        call messages_not_implemented("PML on GPU")
+      end select
+    end do
 
-      SAFE_DEALLOCATE_A(tmp_partial)
-
-    else if (ff_dim == 6) then
-
-      SAFE_ALLOCATE(tmp_partial_2(np_part,2))
-
-      ! calculation g(1,2)
-      call zderivatives_partial(gr%der, ff_rs_state_pml(:,2), tmp_partial_2(:,1), 1, set_bc = .false.)
-      call zderivatives_partial(gr%der, ff_rs_state_pml(:,5), tmp_partial_2(:,2), 1, set_bc = .false.)
-      do ip_in=1, hm%bc%pml%points_number
-        ip         = hm%bc%pml%points_map(ip_in)
-        pml_a(:)   = hm%bc%pml%a(ip_in,:)
-        pml_b(:)   = hm%bc%pml%b(ip_in,:)
-        pml_g_p(:) = hm%bc%pml%conv_plus(ip_in,1,:)
-        pml_g_m(:) = hm%bc%pml%conv_minus(ip_in,1,:)
-        pml_g_p(2) = real(pml_a(1)) * real(tmp_partial_2(ip,1)) + real(pml_b(1)) * real(pml_g_p(2)) + &
-                     M_zI * ( aimag(pml_a(1)) * aimag(tmp_partial_2(ip,1)) + aimag(pml_b(1)) * aimag(pml_g_p(2)) )
-        pml_g_m(2) = real(pml_a(1)) * real(tmp_partial_2(ip,2)) + real(pml_b(1)) * real(pml_g_m(2)) + &
-                     M_zI * ( aimag(pml_a(1)) * aimag(tmp_partial_2(ip,2)) + aimag(pml_b(1)) * aimag(pml_g_m(2)) )
-        hm%bc%pml%conv_plus(ip_in,1,:) = pml_g_p(:)
-        hm%bc%pml%conv_minus(ip_in,1,:) = pml_g_m(:)
-      end do
-      ! calculation g(2,1)
-      call zderivatives_partial(gr%der, ff_rs_state_pml(:,1), tmp_partial_2(:,1), 2, set_bc = .false.)
-      call zderivatives_partial(gr%der, ff_rs_state_pml(:,4), tmp_partial_2(:,2), 2, set_bc = .false.)
-      do ip_in=1, hm%bc%pml%points_number
-        ip         = hm%bc%pml%points_map(ip_in)
-        pml_a(:)   = hm%bc%pml%a(ip_in,:)
-        pml_b(:)   = hm%bc%pml%b(ip_in,:)
-        pml_g_p(:) = hm%bc%pml%conv_plus(ip_in,2,:)
-        pml_g_m(:) = hm%bc%pml%conv_minus(ip_in,2,:)
-        pml_g_p(1) = real(pml_a(2)) * real(tmp_partial_2(ip,1)) + real(pml_b(2)) * real(pml_g_p(1)) + &
-                     M_zI * ( aimag(pml_a(2)) * aimag(tmp_partial_2(ip,1)) + aimag(pml_b(2)) * aimag(pml_g_p(1)) )
-        pml_g_m(1) = real(pml_a(2)) * real(tmp_partial_2(ip,2)) + real(pml_b(2)) * real(pml_g_m(1)) + &
-                     M_zI * ( aimag(pml_a(2)) * aimag(tmp_partial_2(ip,2)) + aimag(pml_b(2)) * aimag(pml_g_m(1)) )
-        hm%bc%pml%conv_plus(ip_in,2,:) = pml_g_p(:)
-        hm%bc%pml%conv_minus(ip_in,2,:) = pml_g_m(:)
-      end do
-      ! calculation g(1,3)
-      call zderivatives_partial(gr%der, ff_rs_state_pml(:,3), tmp_partial_2(:,1), 1, set_bc = .false.)
-      call zderivatives_partial(gr%der, ff_rs_state_pml(:,6), tmp_partial_2(:,2), 1, set_bc = .false.)
-      do ip_in=1, hm%bc%pml%points_number
-        ip         = hm%bc%pml%points_map(ip_in)
-        pml_a(:)   = hm%bc%pml%a(ip_in,:)
-        pml_b(:)   = hm%bc%pml%b(ip_in,:)
-        pml_g_p(:) = hm%bc%pml%conv_plus(ip_in,1,:)
-        pml_g_m(:) = hm%bc%pml%conv_minus(ip_in,1,:)
-        pml_g_p(3) = real(pml_a(1)) * real(tmp_partial_2(ip,1)) + real(pml_b(1)) * real(pml_g_p(3)) + &
-                     M_zI * ( aimag(pml_a(1)) * aimag(tmp_partial_2(ip,1)) + aimag(pml_b(1)) * aimag(pml_g_p(3)) )
-        pml_g_m(3) = real(pml_a(1)) * real(tmp_partial_2(ip,2)) + real(pml_b(1)) * real(pml_g_m(3)) + &
-                     M_zI * ( aimag(pml_a(1)) * aimag(tmp_partial_2(ip,2)) + aimag(pml_b(1)) * aimag(pml_g_m(3)) )
-        hm%bc%pml%conv_plus(ip_in,1,:) = pml_g_p(:)
-        hm%bc%pml%conv_minus(ip_in,1,:) = pml_g_m(:)
-      end do
-      ! calculation g(3,1)
-      call zderivatives_partial(gr%der, ff_rs_state_pml(:,1), tmp_partial_2(:,1), 3, set_bc = .false.)
-      call zderivatives_partial(gr%der, ff_rs_state_pml(:,4), tmp_partial_2(:,2), 3, set_bc = .false.)
-      do ip_in=1, hm%bc%pml%points_number
-        ip         = hm%bc%pml%points_map(ip_in)
-        pml_a(:)   = hm%bc%pml%a(ip_in,:)
-        pml_b(:)   = hm%bc%pml%b(ip_in,:)
-        pml_g_p(:) = hm%bc%pml%conv_plus(ip_in,3,:)
-        pml_g_m(:) = hm%bc%pml%conv_minus(ip_in,3,:)
-        pml_g_p(1) = real(pml_a(3)) * real(tmp_partial_2(ip,1)) + real(pml_b(3)) * real(pml_g_p(1)) + &
-                     M_zI * ( aimag(pml_a(3)) * aimag(tmp_partial_2(ip,1)) + aimag(pml_b(3)) * aimag(pml_g_p(1)) )
-        pml_g_m(1) = real(pml_a(3)) * real(tmp_partial_2(ip,2)) + real(pml_b(3)) * real(pml_g_m(1)) + &
-                     M_zI * ( aimag(pml_a(3)) * aimag(tmp_partial_2(ip,2)) + aimag(pml_b(3)) * aimag(pml_g_m(1)) )
-        hm%bc%pml%conv_plus(ip_in,3,:) = pml_g_p(:)
-        hm%bc%pml%conv_minus(ip_in,3,:) = pml_g_m(:)
-      end do
-      ! calculation g(2,3)
-      call zderivatives_partial(gr%der, ff_rs_state_pml(:,3), tmp_partial_2(:,1), 2, set_bc = .false.)
-      call zderivatives_partial(gr%der, ff_rs_state_pml(:,6), tmp_partial_2(:,2), 2, set_bc = .false.)
-      do ip_in=1, hm%bc%pml%points_number
-        ip         = hm%bc%pml%points_map(ip_in)
-        pml_a(:)   = hm%bc%pml%a(ip_in,:)
-        pml_b(:)   = hm%bc%pml%b(ip_in,:)
-        pml_g_p(:) = hm%bc%pml%conv_plus(ip_in,2,:)
-        pml_g_m(:) = hm%bc%pml%conv_minus(ip_in,2,:)
-        pml_g_p(3) = real(pml_a(2)) * real(tmp_partial_2(ip,1)) + real(pml_b(2)) * real(pml_g_p(3)) + &
-                     M_zI * ( aimag(pml_a(2)) * aimag(tmp_partial_2(ip,1)) + aimag(pml_b(2)) * aimag(pml_g_p(3)) )
-        pml_g_m(3) = real(pml_a(2)) * real(tmp_partial_2(ip,2)) + real(pml_b(2)) * real(pml_g_m(3)) + &
-                     M_zI * ( aimag(pml_a(2)) * aimag(tmp_partial_2(ip,2)) + aimag(pml_b(2)) * aimag(pml_g_m(3)) )
-        hm%bc%pml%conv_plus(ip_in,2,:) = pml_g_p(:)
-        hm%bc%pml%conv_minus(ip_in,2,:) = pml_g_m(:)
-      end do
-      ! calculation g(3,2)
-      call zderivatives_partial(gr%der, ff_rs_state_pml(:,2), tmp_partial_2(:,1), 3, set_bc = .false.)
-      call zderivatives_partial(gr%der, ff_rs_state_pml(:,5), tmp_partial_2(:,2), 3, set_bc = .false.)
-      do ip_in=1, hm%bc%pml%points_number
-        ip         = hm%bc%pml%points_map(ip_in)
-        pml_a(:)   = hm%bc%pml%a(ip_in,:)
-        pml_b(:)   = hm%bc%pml%b(ip_in,:)
-        pml_g_p(:) = hm%bc%pml%conv_plus(ip_in,3,:)
-        pml_g_m(:) = hm%bc%pml%conv_minus(ip_in,3,:)
-        pml_g_p(2) = real(pml_a(3)) * real(tmp_partial_2(ip,1)) + real(pml_b(3)) * real(pml_g_p(2)) + &
-                     M_zI * ( aimag(pml_a(3)) * aimag(tmp_partial_2(ip,1)) + aimag(pml_b(3)) * aimag(pml_g_p(2)) )
-        pml_g_m(2) = real(pml_a(3)) * real(tmp_partial_2(ip,2)) + real(pml_b(3)) * real(pml_g_m(2)) + &
-                     M_zI * ( aimag(pml_a(3)) * aimag(tmp_partial_2(ip,2)) + aimag(pml_b(3)) * aimag(pml_g_m(2)) )
-        hm%bc%pml%conv_plus(ip_in,3,:) = pml_g_p(:)
-        hm%bc%pml%conv_minus(ip_in,3,:) = pml_g_m(:)
-      end do
-
-      SAFE_DEALLOCATE_A(tmp_partial_2)
-
-    end if
+    do idir = 1, hm%der%dim
+      call gradb(idir)%end()
+    end do
+    SAFE_DEALLOCATE_P(gradb)
 
     call profiling_out(prof)
 

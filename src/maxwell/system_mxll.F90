@@ -86,7 +86,7 @@ module system_mxll_oct_m
     type(td_write_t)             :: write_handler
     type(c_ptr)                  :: output_handle
 
-    CMPLX, allocatable           :: rs_inhom_t1(:,:), rs_inhom_t2(:,:)
+    CMPLX, allocatable           :: ff_rs_inhom_t1(:,:), ff_rs_inhom_t2(:,:)
     CMPLX, allocatable           :: rs_state_init(:,:)
     FLOAT                        :: bc_bounds(2,MAX_DIM), dt_bounds(2,MAX_DIM)
     FLOAT                        :: etime
@@ -403,13 +403,13 @@ contains
       ! are intermingled. Therefore it needs to be changed (maybe have the propagator handle it?)
       this%etime = loct_clock()
 
-      SAFE_ALLOCATE(this%rs_inhom_t1(1:this%gr%mesh%np_part, 1:this%hm%dim))
-      SAFE_ALLOCATE(this%rs_inhom_t2(1:this%gr%mesh%np_part, 1:this%hm%dim))
+      SAFE_ALLOCATE(this%ff_rs_inhom_t1(1:this%gr%mesh%np_part, 1:this%hm%dim))
+      SAFE_ALLOCATE(this%ff_rs_inhom_t2(1:this%gr%mesh%np_part, 1:this%hm%dim))
 
     case (EXPMID_FINISH)
 
-      SAFE_DEALLOCATE_A(this%rs_inhom_t1)
-      SAFE_DEALLOCATE_A(this%rs_inhom_t2)
+      SAFE_DEALLOCATE_A(this%ff_rs_inhom_t1)
+      SAFE_DEALLOCATE_A(this%ff_rs_inhom_t2)
 
     case (EXPMID_PREDICT_DT_2)  ! predict: psi(t+dt/2) = 0.5*(U_H(dt) psi(t) + psi(t)) or via extrapolation
       ! Empty for the moment
@@ -438,7 +438,7 @@ contains
       charge_density_ext = M_z0
 
       call transform_rs_densities(this%hm, this%gr%mesh, charge_density_ext, &
-                     current_density_ext, this%rs_inhom_t1, RS_TRANS_FORWARD)
+                     current_density_ext, this%ff_rs_inhom_t1, RS_TRANS_FORWARD)
 
       ! calculation of external RS density at time (time)
       if (this%hm%current_density_ext_flag) then
@@ -447,14 +447,14 @@ contains
       !No charge density at the moment
 
       call transform_rs_densities(this%hm, this%gr%mesh, charge_density_ext, &
-                     current_density_ext, this%rs_inhom_t2, RS_TRANS_FORWARD)
+                     current_density_ext, this%ff_rs_inhom_t2, RS_TRANS_FORWARD)
 
       SAFE_DEALLOCATE_A(current_density_ext)
       SAFE_DEALLOCATE_A(charge_density_ext)
 
       ! Propagation dt with H_maxwell
       call mxll_propagation_step(this%hm, this%namespace, this%gr, this%st, this%tr_mxll,&
-          this%st%rs_state, this%rs_inhom_t1, this%rs_inhom_t2, this%clock%time(), this%prop%dt)
+          this%st%rs_state, this%ff_rs_inhom_t1, this%ff_rs_inhom_t2, this%clock%time(), this%prop%dt)
 
       this%st%rs_state_trans(:,:) = this%st%rs_state
 
