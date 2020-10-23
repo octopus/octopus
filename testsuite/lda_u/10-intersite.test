@@ -33,7 +33,7 @@ if(available cuda); then
   match ; Error match ; GREPCOUNT(err, 'Calculation will not be continued.') ; 1
 else
   #Units are in eV_angstrom
-  Precision : 0.00017
+  Precision : 0.00019
   match ;  Total energy        ; GREPFIELD(static/info, 'Total       =', 3) ; -597.673500415
   match ;  Ion-ion energy      ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -389.65192243
   match ;  Eigenvalues sum     ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -113.78433401000001
