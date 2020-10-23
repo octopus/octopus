@@ -2662,8 +2662,8 @@ contains
     FLOAT,                    intent(in)    :: dt
     FLOAT,                    intent(in)    :: time_delay
 
-    integer            :: ff_dim
-    CMPLX, allocatable :: ff_rs_state(:,:)
+    type(batch_t) :: ff_rs_stateb
+    integer :: ff_dim
     type(profile_t), save :: prof
 
     PUSH_SUB(plane_waves_propagation)
@@ -2671,18 +2671,17 @@ contains
     call profiling_in(prof, 'PLANE_WAVES_PROPAGATION')
 
     ff_dim = hm%dim
+    call zbatch_init(ff_rs_stateb, 1, 1, hm%dim, gr%mesh%np_part)
 
-    SAFE_ALLOCATE(ff_rs_state(1:gr%mesh%np_part,ff_dim))
-
-    call transform_rs_state(hm, gr, st, st%rs_state_plane_waves, ff_rs_state, RS_TRANS_FORWARD)
+    call transform_rs_state_batch(hm, gr, st, st%rs_state_plane_waves, ff_rs_stateb, RS_TRANS_FORWARD)
 
     ! Time evolution of RS plane waves state without any coupling with H(inter_time)
     call hamiltonian_mxll_update(hm, time=time)
-    call exponential_mxll_apply(hm, namespace, gr, st, tr, dt, ff_rs_state, .false.)
-    call transform_rs_state(hm, gr, st, st%rs_state_plane_waves, ff_rs_state, RS_TRANS_BACKWARD)
-    call plane_waves_boundaries_calculation(hm, st, gr%mesh, time+dt, time_delay, st%rs_state_plane_waves)
+    hm%cpml_hamiltonian = .false.
+    call exponential_apply_batch(tr%te, namespace, gr%mesh, hm, ff_rs_stateb, dt)
 
-    SAFE_DEALLOCATE_A(ff_rs_state)
+    call transform_rs_state_batch(hm, gr, st, st%rs_state_plane_waves, ff_rs_stateb, RS_TRANS_BACKWARD)
+    call plane_waves_boundaries_calculation(hm, st, gr%mesh, time+dt, time_delay, st%rs_state_plane_waves)
 
     call profiling_out(prof)
     POP_SUB(plane_waves_propagation)
