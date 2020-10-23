@@ -424,7 +424,6 @@ contains
 
       ! Propagation
 
-
       !We first compute thre external charge and current densities and we convert them as RS vectors
       SAFE_ALLOCATE(current_density_ext(1:this%gr%mesh%np, 1:this%gr%sb%dim))
       SAFE_ALLOCATE(charge_density_ext(1:this%gr%mesh%np))
@@ -452,7 +451,6 @@ contains
 
       SAFE_DEALLOCATE_A(current_density_ext)
       SAFE_DEALLOCATE_A(charge_density_ext)
-
 
       ! Propagation dt with H_maxwell
       call mxll_propagation_step(this%hm, this%namespace, this%gr, this%st, this%tr_mxll,&

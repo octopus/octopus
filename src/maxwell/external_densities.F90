@@ -62,7 +62,6 @@ contains
     CMPLX,     optional, intent(inout) :: rs_current_density_ext(:,:)
 
     FLOAT, allocatable :: current(:,:,:)
-    integer :: idim
 
     PUSH_SUB(get_rs_density_ext)
 
@@ -70,9 +69,6 @@ contains
 
     call external_current_calculation(st, mesh, time, current(:, :, 1))
     call build_rs_current_state(current(:, :, 1), mesh, rs_current_density_ext(:, :), st%ep(:), mesh%np)
-    do idim = 1, mesh%sb%dim
-      call lalg_scal(mesh%np, -M_ONE, rs_current_density_ext(:, idim))
-    end do
 
     SAFE_DEALLOCATE_A(current)
 
@@ -91,7 +87,11 @@ contains
     FLOAT                :: j_vector(MAX_DIM), dummy(MAX_DIM), xx(MAX_DIM), rr, omega
     character(len=1024)  :: tdf_expression, phase_expression
 
+    type(profile_t), save :: prof
+
     PUSH_SUB(external_current_init)
+
+    call profiling_in(prof, 'EXTERNAL_CURRENT_INIT')
 
     !%Variable UserDefinedMaxwellExternalCurrent
     !%Type block
@@ -177,10 +177,10 @@ contains
       call parse_block_end(blk)
     end if
 
+    call profiling_out(prof)
 
     POP_SUB(external_current_init)
   end subroutine external_current_init
-
 
   !----------------------------------------------------------
   subroutine external_current_calculation(st, mesh, time, current)

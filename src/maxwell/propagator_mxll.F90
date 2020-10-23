@@ -438,7 +438,7 @@ contains
           ! add terms U(time+dt,time)J(time) and J(time+dt)
           do idim = 1, ff_dim
             ff_rs_state(1:gr%mesh%np, idim) = ff_rs_state(1:gr%mesh%np, idim) &
-              + M_FOURTH * inter_dt * (ff_rs_inhom_1(1:gr%mesh%np, idim) + ff_rs_inhom_2(1:gr%mesh%np, idim))
+              - M_FOURTH * inter_dt * (ff_rs_inhom_1(1:gr%mesh%np, idim) + ff_rs_inhom_2(1:gr%mesh%np, idim))
           end do
 
           do idim = 1, ff_dim
@@ -452,7 +452,7 @@ contains
           ! add terms U(time+dt/2,time)J(time) and U(time,time+dt/2)J(time+dt)
           do idim = 1, ff_dim
             ff_rs_state(1:gr%mesh%np, idim) = ff_rs_state(1:gr%mesh%np, idim) &
-               + M_FOURTH * inter_dt * (ff_rs_inhom_1(1:gr%mesh%np, idim) + ff_rs_inhom_2(1:gr%mesh%np, idim))
+               - M_FOURTH * inter_dt * (ff_rs_inhom_1(1:gr%mesh%np, idim) + ff_rs_inhom_2(1:gr%mesh%np, idim))
           end do
 
           SAFE_DEALLOCATE_A(ff_rs_inhom_1)
@@ -463,7 +463,7 @@ contains
 
           do idim = 1, ff_dim
             ff_rs_state(1:gr%mesh%np, idim) = ff_rs_state(1:gr%mesh%np, idim) &
-                  + M_FOURTH * inter_dt * ff_rs_inhom_1(1:gr%mesh%np, idim)
+                  - M_FOURTH * inter_dt * ff_rs_inhom_1(1:gr%mesh%np, idim)
           end do
 
         end if
