@@ -2073,7 +2073,7 @@ contains
     integer            :: ip, ip_in, ii, ff_dim
     CMPLX, allocatable :: rs_state_constant(:,:), ff_rs_state_constant(:,:)
     type(profile_t), save :: prof
-    type(batch_t) :: ff_rs_state_plane_wavesb
+    type(batch_t) :: ff_rs_state_plane_wavesb, ff_rs_constantb
 
     PUSH_SUB(pml_propagation_stage_2_batch)
 
@@ -2112,27 +2112,31 @@ contains
       call exponential_apply_batch(tr%te, namespace, gr%mesh, hm, ff_rs_state_pmlb, dt)
       hm%cpml_hamiltonian = .false.
 
+      call ff_rs_stateb%copy_to(ff_rs_constantb)
       ff_dim = ff_rs_stateb%nst_linear
-      SAFE_ALLOCATE(rs_state_constant(1, 1:ff_dim))
-      SAFE_ALLOCATE(ff_rs_state_constant(1, 1:ff_dim))
-      rs_state_constant(1, :) = st%rs_state_const(:)
+      SAFE_ALLOCATE(rs_state_constant(1:gr%mesh%np, 1:st%dim))
+      ! copy the value to the full mesh to be able to use batches
+      ! this is in principle unneeded, but otherwise we could not use batches...
+      do ii = 1, st%dim
+        rs_state_constant(1:gr%mesh%np, ii) = st%rs_state_const(ii)
+      end do
 
-      call transform_rs_state(hm, gr, st, rs_state_constant, ff_rs_state_constant, RS_TRANS_FORWARD)
+      call transform_rs_state_batch(hm, gr, st, rs_state_constant, ff_rs_constantb, RS_TRANS_FORWARD)
       select case(ff_rs_stateb%status())
       case(BATCH_NOT_PACKED)
         do ii = 1, ff_rs_stateb%nst_linear
           do ip_in = 1, hm%bc%constant_points_number
             ip = hm%bc%constant_points_map(ip_in)
             ff_rs_stateb%zff_linear(ip, ii) = ff_rs_state_pmlb%zff_linear(ip, ii) + &
-              ff_rs_state_constant(1, ii)
+              ff_rs_constantb%zff_linear(ip, ii)
           end do
         end do
       case(BATCH_PACKED)
         do ip_in = 1, hm%bc%constant_points_number
           ip = hm%bc%constant_points_map(ip_in)
           do ii = 1, ff_rs_stateb%nst_linear
-            ff_rs_stateb%zff_linear(ii, ip) = ff_rs_state_pmlb%zff_linear(ii, ip) + &
-              ff_rs_state_constant(1, ii)
+            ff_rs_stateb%zff_pack(ii, ip) = ff_rs_state_pmlb%zff_pack(ii, ip) + &
+              ff_rs_constantb%zff_pack(ii, ip)
           end do
         end do
       end select
