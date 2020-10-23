@@ -349,17 +349,11 @@ contains
     !% updates the total energy during a time-propagation run. For
     !% iterations where the energy is not updated, the last calculated
     !% value is reported. If you set this variable to 1, the energy
-    !% will be calculated in each step. The default value is 10,
-    !% unless the ions move, in which case the default is 1.
+    !% will be calculated in each step.
     !%End
 
     default = 10
-    if(ion_dynamics_ions_move(td%ions)) default = 1
     call parse_variable(sys%namespace, 'TDEnergyUpdateIter', default, td%energy_update_iter)
-
-    if(ion_dynamics_ions_move(td%ions) .and. td%energy_update_iter /= 1) then
-       call messages_experimental('TDEnergyUpdateIter /= 1 when moving ions')
-    end if
 
     if(sys%gr%der%boundaries%spiralBC .and. sys%hm%ep%reltype == SPIN_ORBIT) then
        message(1) = "Generalized Bloch theorem cannot be used with spin-orbit coupling."
@@ -543,8 +537,9 @@ contains
        select case(td%dynamics)
        case(EHRENFEST)
           call propagator_dt(sys%ks, sys%namespace, sys%hm, gr, st, td%tr, iter*td%dt, td%dt, &
-               td%energy_update_iter*td%mu, iter, td%ions, geo, sys%outp, scsteps = scsteps, &
-               update_energy = (mod(iter, td%energy_update_iter) == 0) .or. (iter == td%max_iter) )
+               td%mu, iter, td%ions, geo, sys%outp, scsteps = scsteps, &
+               update_energy = (mod(iter, td%energy_update_iter) == 0) .or. (iter == td%max_iter), &
+               move_ions = ion_dynamics_ions_move(td%ions) )
        case(BO)
           call propagator_dt_bo(td%scf, sys%namespace, gr, sys%ks, st, sys%hm, geo, sys%mc, sys%outp, iter, td%dt, &
                td%ions, scsteps)
