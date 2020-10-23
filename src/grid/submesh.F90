@@ -726,7 +726,7 @@ contains
   
     PUSH_SUB(zzsubmesh_to_mesh_dotp)
   
-    dotp = cmplx(M_ZERO, M_ZERO)
+    dotp = M_z0
   
     if(this%mesh%use_curvilinear) then
       do is = 1, this%np

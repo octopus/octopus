@@ -326,9 +326,9 @@ subroutine X(slater) (namespace, mesh, psolver, st, isp, ex, vxc)
            (nn * st%rho(ip, 1) - sqmod_updn) * bij(ip, 2) + sqmod_updn * bij(ip, 1) &
           - M_TWO * st%rho(ip,1) * ( st%rho(ip,3) * R_REAL(bij(ip,3)) + st%rho(ip,4) * R_AIMAG(bij(ip,3)))) 
 
-         tmp = -cmplx(st%rho(ip, 3), st%rho(ip,4)) * (st%rho(ip, 2) * bij(ip, 1) + st%rho(ip, 1) * bij(ip,2)) &
+         tmp = -TOCMPLX(st%rho(ip, 3), st%rho(ip,4)) * (st%rho(ip, 2) * bij(ip, 1) + st%rho(ip, 1) * bij(ip,2)) &
                + (M_TWO *st%rho(ip, 1) * st%rho(ip, 2)  - sqmod_updn) * bij(ip, 3) &
-               + (cmplx(st%rho(ip, 3),st%rho(ip,4)))**2 * R_CONJ(bij(ip,3))
+               + (TOCMPLX(st%rho(ip, 3),st%rho(ip,4)))**2 * R_CONJ(bij(ip,3))
   
          vxc(ip, 3) = vxc(ip, 3) + rr * R_REAL(tmp)
          vxc(ip, 4) = vxc(ip, 4) + rr * R_AIMAG(tmp) 
