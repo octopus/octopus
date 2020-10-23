@@ -2012,60 +2012,6 @@ contains
   end subroutine maxwell_mask
 
   ! ---------------------------------------------------------
-  subroutine pml_propagation_stage_1(hm, gr, st, tr, ff_rs_state, ff_rs_state_pml)
-    type(hamiltonian_mxll_t),   intent(inout) :: hm
-    type(grid_t),               intent(in)    :: gr
-    type(states_mxll_t),        intent(inout) :: st
-    type(propagator_mxll_t),    intent(inout) :: tr
-    CMPLX,                      intent(in)    :: ff_rs_state(:,:)
-    CMPLX,                      intent(inout) :: ff_rs_state_pml(:,:)
-
-    integer            :: ip, ff_points, ff_dim
-    CMPLX, allocatable :: ff_rs_state_plane_waves(:,:), rs_state_constant(:,:), ff_rs_state_constant(:,:)
-    type(profile_t), save :: prof
-
-    PUSH_SUB(pml_propagation_stage_1)
-
-    call profiling_in(prof, 'PML_PROPAGATION_STAGE_1')
-
-    ff_dim    = size(ff_rs_state, dim=2)
-
-    if (tr%bc_plane_waves .and. hm%plane_waves_apply) then
- 
-      ff_points = size(ff_rs_state(:,1))
-      SAFE_ALLOCATE(ff_rs_state_plane_waves(1:ff_points,1:ff_dim))
-      call transform_rs_state(hm, gr, st, st%rs_state_plane_waves, ff_rs_state_plane_waves, RS_TRANS_FORWARD)
-      ff_rs_state_pml(1:gr%mesh%np, 1:ff_dim) = ff_rs_state(1:gr%mesh%np, 1:ff_dim) - &
-        ff_rs_state_plane_waves(1:gr%mesh%np, 1:ff_dim)
-      SAFE_DEALLOCATE_A(ff_rs_state_plane_waves)
-
-    else if (tr%bc_constant .and. hm%spatial_constant_apply) then
-
-
-      SAFE_ALLOCATE(rs_state_constant(1,1:3))
-      SAFE_ALLOCATE(ff_rs_state_constant(1,1:ff_dim))
-      rs_state_constant(1,:) = st%rs_state_const(:)
-
-      call transform_rs_state(hm, gr, st, rs_state_constant, ff_rs_state_constant, RS_TRANS_FORWARD)
-
-      do ip = 1, gr%mesh%np
-        ff_rs_state_pml(ip,:) = ff_rs_state(ip,:) - ff_rs_state_constant(1,:)
-      end do
-
-      SAFE_DEALLOCATE_A(rs_state_constant)
-      SAFE_DEALLOCATE_A(ff_rs_state_constant)
-    else
-
-      ff_rs_state_pml(1:gr%mesh%np, 1:ff_dim)  = ff_rs_state(1:gr%mesh%np, 1:ff_dim)
-
-    end if
-
-    call profiling_out(prof)
-
-    POP_SUB(pml_propagation_stage_1)
-  end subroutine pml_propagation_stage_1
-
-  ! ---------------------------------------------------------
   subroutine pml_propagation_stage_1_batch(hm, gr, st, tr, ff_rs_stateb, ff_rs_state_pmlb)
     type(hamiltonian_mxll_t),   intent(inout) :: hm
     type(grid_t),               intent(in)    :: gr
@@ -2111,65 +2057,6 @@ contains
     POP_SUB(pml_propagation_stage_1_batch)
   end subroutine pml_propagation_stage_1_batch
 
-
-  ! ---------------------------------------------------------
-  subroutine pml_propagation_stage_2(hm, namespace, gr, st, tr, time, dt, time_delay, ff_rs_state_pml, ff_rs_state)
-    type(hamiltonian_mxll_t),   intent(inout) :: hm
-    type(namespace_t),          intent(in)    :: namespace
-    type(grid_t),               intent(in)    :: gr
-    type(states_mxll_t),        intent(inout) :: st
-    type(propagator_mxll_t),    intent(inout) :: tr
-    FLOAT,                      intent(in)    :: time
-    FLOAT,                      intent(in)    :: dt
-    FLOAT,                      intent(in)    :: time_delay
-    CMPLX,                      intent(inout) :: ff_rs_state_pml(:,:)
-    CMPLX,                      intent(inout) :: ff_rs_state(:,:)
-
-    integer            :: ip, ip_in, ff_points, ff_dim
-    CMPLX, allocatable :: ff_rs_state_plane_waves(:,:), rs_state_constant(:,:), ff_rs_state_constant(:,:)
-    type(profile_t), save :: prof
-
-    PUSH_SUB(pml_propagation_stage_2)
-
-    call profiling_in(prof, 'PML_PROPAGATION_STAGE_2')
-
-    if (tr%bc_plane_waves .and. hm%plane_waves_apply) then
-      ff_points = size(ff_rs_state(:, 1))
-      ff_dim    = size(ff_rs_state(1, :))
-      call exponential_mxll_apply(hm, namespace, gr, st, tr, dt, ff_rs_state_pml, .true.)
-      call plane_waves_propagation(hm, tr, namespace, st, gr, time, dt, time_delay)
-
-      SAFE_ALLOCATE(ff_rs_state_plane_waves(1:ff_points, 1:ff_dim))
-      call transform_rs_state(hm, gr, st, st%rs_state_plane_waves, ff_rs_state_plane_waves, RS_TRANS_FORWARD)
-      do ip_in = 1, hm%bc%plane_wave%points_number
-        ip = hm%bc%plane_wave%points_map(ip_in)
-        ff_rs_state(ip, :) = ff_rs_state_pml(ip, :) + ff_rs_state_plane_waves(ip, :)
-      end do
-      SAFE_DEALLOCATE_A(ff_rs_state_plane_waves)
-
-    else if (tr%bc_constant .and. hm%spatial_constant_apply) then
-      ff_dim    = size(ff_rs_state(1, :))
-      call exponential_mxll_apply(hm, namespace, gr, st, tr, dt, ff_rs_state_pml, .true.)
-
-      SAFE_ALLOCATE(rs_state_constant(1, 1:ff_dim))
-      SAFE_ALLOCATE(ff_rs_state_constant(1, 1:ff_dim))
-      rs_state_constant(1, :) = st%rs_state_const(:)
-
-      call transform_rs_state(hm, gr, st, rs_state_constant, ff_rs_state_constant, RS_TRANS_BACKWARD)
-      do ip_in = 1, hm%bc%constant_points_number
-        ip = hm%bc%constant_points_map(ip_in)
-        ff_rs_state(ip, :) = ff_rs_state_pml(ip, :) + ff_rs_state_constant(1, :)
-      end do
- 
-      SAFE_DEALLOCATE_A(rs_state_constant)
-      SAFE_DEALLOCATE_A(ff_rs_state_constant)
-    end if
-
-    call profiling_out(prof)
-
-    POP_SUB(pml_propagation_stage_2)
-  end subroutine pml_propagation_stage_2
-
   ! ---------------------------------------------------------
   subroutine pml_propagation_stage_2_batch(hm, namespace, gr, st, tr, time, dt, time_delay, ff_rs_state_pmlb, ff_rs_stateb)
     type(hamiltonian_mxll_t),   intent(inout) :: hm
@@ -2201,7 +2088,6 @@ contains
       call ff_rs_stateb%copy_to(ff_rs_state_plane_wavesb)
       call transform_rs_state_batch(hm, gr, st, st%rs_state_plane_waves, ff_rs_state_plane_wavesb, RS_TRANS_FORWARD)
 
-      ! TODO: create generalization of this masked operation
       select case(ff_rs_stateb%status())
       case(BATCH_NOT_PACKED)
         do ii = 1, ff_rs_stateb%nst_linear
@@ -2259,7 +2145,6 @@ contains
 
     POP_SUB(pml_propagation_stage_2_batch)
   end subroutine pml_propagation_stage_2_batch
-
 
   ! ---------------------------------------------------------
   subroutine cpml_conv_function_update(hm, gr, ff_rs_state_pmlb)
