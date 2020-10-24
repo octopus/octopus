@@ -449,7 +449,7 @@ contains
 
     call scale_after_curl()
 
-    if (hm%bc_constant) then
+    if (hm%bc_constant .and. .not. with_medium) then
       call apply_constant_boundary()
     end if
 

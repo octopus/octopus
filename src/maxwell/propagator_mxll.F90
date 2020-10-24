@@ -73,7 +73,6 @@ module propagator_mxll_oct_m
     propagator_mxll_t,                       &
     propagator_mxll_init,                    &
     mxll_propagation_step,                   &
-    transform_rs_state,                      &
     transform_rs_densities,                  &
     calculate_matter_longitudinal_field,     &
     get_vector_pot_and_transverse_field,     &
@@ -609,55 +608,6 @@ contains
   end subroutine set_medium_rs_state
 
   ! ---------------------------------------------------------
-  subroutine transform_rs_state(hm, gr, st, rs_state, ff_rs_state, sign)
-    type(hamiltonian_mxll_t), intent(in)         :: hm
-    type(grid_t),             intent(in)         :: gr
-    type(states_mxll_t),      intent(in)         :: st
-    CMPLX,                    intent(inout)      :: rs_state(:,:)
-    CMPLX,                    intent(inout)      :: ff_rs_state(:,:)
-    integer,                  intent(in)         :: sign
-
-    CMPLX, allocatable :: rs_state_minus(:,:)
-    type(profile_t), save :: prof
-
-    PUSH_SUB(transform_rs_state)
-
-    call profiling_in(prof, 'TRANSFORM_RS_STATE')
-
-    ASSERT(sign == RS_TRANS_FORWARD .or. sign == RS_TRANS_BACKWARD)
-
-    if (hm%operator == FARADAY_AMPERE_MEDIUM) then
-      if (sign == RS_TRANS_FORWARD) then
-        SAFE_ALLOCATE(rs_state_minus(1:gr%mesh%np, 1:st%dim))
-        rs_state_minus(1:gr%mesh%np, 1:st%dim) = conjg(rs_state(1:gr%mesh%np, 1:st%dim))
-        call transform_rs_state_to_6x6_rs_state_forward(gr%mesh, rs_state, rs_state_minus, ff_rs_state)
-        SAFE_DEALLOCATE_A(rs_state_minus)
-      else
-        call transform_rs_state_to_6x6_rs_state_backward(gr%mesh, ff_rs_state, rs_state)
-      end if
-
-    else if (hm%operator == FARADAY_AMPERE_GAUSS) then
-      if (sign == RS_TRANS_FORWARD) then
-         call transform_rs_state_to_4x4_rs_state_forward(gr%mesh, rs_state, ff_rs_state)
-      else
-        call transform_rs_state_to_4x4_rs_state_backward(gr%mesh, ff_rs_state, rs_state)
-      end if
-
-    else
-      if (sign == RS_TRANS_FORWARD) then
-        ff_rs_state(1:gr%mesh%np, 1:3) = rs_state(1:gr%mesh%np, 1:3)
-      else
-        rs_state(1:gr%mesh%np, 1:3) = ff_rs_state(1:gr%mesh%np, 1:3)
-      end if
-    end if
-
-    call profiling_out(prof)
-
-    POP_SUB(transform_rs_state)
-
-  end subroutine transform_rs_state
-
-  ! ---------------------------------------------------------
   subroutine transform_rs_state_batch(hm, gr, st, rs_state, ff_rs_stateb, sign)
     type(hamiltonian_mxll_t), intent(in)         :: hm
     type(grid_t),             intent(in)         :: gr
@@ -787,38 +737,6 @@ contains
   end subroutine transform_rs_densities
 
   !----------------------------------------------------------
-  subroutine transform_rs_state_to_6x6_rs_state_forward(mesh, rs_state_3x3_plus, rs_state_3x3_minus, rs_state_6x6)
-    type(mesh_t),   intent(in)    :: mesh
-    CMPLX,          intent(in)    :: rs_state_3x3_plus(:,:)
-    CMPLX,          intent(in)    :: rs_state_3x3_minus(:,:)
-    CMPLX,          intent(inout) :: rs_state_6x6(:,:)
-
-    integer :: ii
-
-    ! no push_sub, called to frequently
-    do ii = 1, 3
-      rs_state_6x6(1:mesh%np, ii) = rs_state_3x3_plus(1:mesh%np, ii)
-      rs_state_6x6(1:mesh%np, ii+3) = rs_state_3x3_minus(1:mesh%np, ii)
-    end do
-
-  end subroutine transform_rs_state_to_6x6_rs_state_forward
-
-  !----------------------------------------------------------
-  subroutine transform_rs_state_to_6x6_rs_state_backward(mesh, rs_state_6x6, rs_state)
-    type(mesh_t),             intent(in)    :: mesh
-    CMPLX,                    intent(in)    :: rs_state_6x6(:,:)
-    CMPLX,                    intent(inout) :: rs_state(:,:)
-
-    integer :: ii
-
-    ! no push_sub, called to frequently
-    do ii = 1, 3
-      rs_state(1:mesh%np, ii) = M_HALF * (rs_state_6x6(1:mesh%np, ii) + conjg(rs_state_6x6(1:mesh%np, ii+3)))
-    end do
-
-  end subroutine transform_rs_state_to_6x6_rs_state_backward
-
-  !----------------------------------------------------------
   subroutine transform_rs_densities_to_6x6_rs_densities_forward(mesh, rs_charge_density, rs_current_density, rs_density_6x6)
     type(mesh_t),             intent(in)    :: mesh
     CMPLX,                    intent(in)    :: rs_charge_density(:)
@@ -857,33 +775,6 @@ contains
     end do
 
   end subroutine transform_rs_densities_to_6x6_rs_densities_backward
-
-  !----------------------------------------------------------
-  subroutine transform_rs_state_to_4x4_rs_state_forward(mesh, rs_state_3x3, rs_state_4x4)
-    type(mesh_t),             intent(in)    :: mesh
-    CMPLX,                    intent(in)    :: rs_state_3x3(:,:)
-    CMPLX,                    intent(inout) :: rs_state_4x4(:,:)
-
-    ! no push_sub, called to frequently
-    rs_state_4x4(1:mesh%np, 1) = M_z1 * (-rs_state_3x3(1:mesh%np,1) + rs_state_3x3(1:mesh%np,2))
-    rs_state_4x4(1:mesh%np, 2) = M_z1 * rs_state_3x3(1:mesh%np,3)
-    rs_state_4x4(1:mesh%np, 3) = M_z1 * rs_state_3x3(1:mesh%np,3)
-    rs_state_4x4(1:mesh%np, 4) = M_z1 * (rs_state_3x3(1:mesh%np,1) + rs_state_3x3(1:mesh%np,2))
-
-  end subroutine transform_rs_state_to_4x4_rs_state_forward
-
-  !----------------------------------------------------------
-  subroutine transform_rs_state_to_4x4_rs_state_backward(mesh, rs_state_4x4, rs_state_3x3)
-    type(mesh_t),             intent(in)    :: mesh
-    CMPLX,                    intent(in)    :: rs_state_4x4(:,:)
-    CMPLX,                    intent(inout) :: rs_state_3x3(:,:)
-
-    ! no push_sub, called to frequently
-    rs_state_3x3(1:mesh%np, 1) = M_z1 * M_HALF * (-rs_state_4x4(1:mesh%np, 1) + rs_state_4x4(1:mesh%np, 4))
-    rs_state_3x3(1:mesh%np, 2) = M_zI * M_HALF * (-rs_state_4x4(1:mesh%np, 1) - rs_state_4x4(1:mesh%np, 4))
-    rs_state_3x3(1:mesh%np, 3) = M_z1 * M_HALF * (rs_state_4x4(1:mesh%np, 2) + rs_state_4x4(1:mesh%np, 3))
-
-  end subroutine transform_rs_state_to_4x4_rs_state_backward
 
   !----------------------------------------------------------
   subroutine transform_rs_densities_to_4x4_rs_densities_forward(mesh, rs_charge_density, rs_current_density, rs_density_4x4)
@@ -2073,7 +1964,7 @@ contains
     integer            :: ip, ip_in, ii, ff_dim
     CMPLX, allocatable :: rs_state_constant(:,:), ff_rs_state_constant(:,:)
     type(profile_t), save :: prof
-    type(batch_t) :: ff_rs_state_plane_wavesb
+    type(batch_t) :: ff_rs_state_plane_wavesb, ff_rs_constantb
 
     PUSH_SUB(pml_propagation_stage_2_batch)
 
@@ -2112,27 +2003,31 @@ contains
       call exponential_apply_batch(tr%te, namespace, gr%mesh, hm, ff_rs_state_pmlb, dt)
       hm%cpml_hamiltonian = .false.
 
+      call ff_rs_stateb%copy_to(ff_rs_constantb)
       ff_dim = ff_rs_stateb%nst_linear
-      SAFE_ALLOCATE(rs_state_constant(1, 1:ff_dim))
-      SAFE_ALLOCATE(ff_rs_state_constant(1, 1:ff_dim))
-      rs_state_constant(1, :) = st%rs_state_const(:)
+      SAFE_ALLOCATE(rs_state_constant(1:gr%mesh%np, 1:st%dim))
+      ! copy the value to the full mesh to be able to use batches
+      ! this is in principle unneeded, but otherwise we could not use batches...
+      do ii = 1, st%dim
+        rs_state_constant(1:gr%mesh%np, ii) = st%rs_state_const(ii)
+      end do
 
-      call transform_rs_state(hm, gr, st, rs_state_constant, ff_rs_state_constant, RS_TRANS_FORWARD)
+      call transform_rs_state_batch(hm, gr, st, rs_state_constant, ff_rs_constantb, RS_TRANS_FORWARD)
       select case(ff_rs_stateb%status())
       case(BATCH_NOT_PACKED)
         do ii = 1, ff_rs_stateb%nst_linear
           do ip_in = 1, hm%bc%constant_points_number
             ip = hm%bc%constant_points_map(ip_in)
             ff_rs_stateb%zff_linear(ip, ii) = ff_rs_state_pmlb%zff_linear(ip, ii) + &
-              ff_rs_state_constant(1, ii)
+              ff_rs_constantb%zff_linear(ip, ii)
           end do
         end do
       case(BATCH_PACKED)
         do ip_in = 1, hm%bc%constant_points_number
           ip = hm%bc%constant_points_map(ip_in)
           do ii = 1, ff_rs_stateb%nst_linear
-            ff_rs_stateb%zff_linear(ii, ip) = ff_rs_state_pmlb%zff_linear(ii, ip) + &
-              ff_rs_state_constant(1, ii)
+            ff_rs_stateb%zff_pack(ii, ip) = ff_rs_state_pmlb%zff_pack(ii, ip) + &
+              ff_rs_constantb%zff_pack(ii, ip)
           end do
         end do
       end select
@@ -2662,8 +2557,8 @@ contains
     FLOAT,                    intent(in)    :: dt
     FLOAT,                    intent(in)    :: time_delay
 
-    integer            :: ff_dim
-    CMPLX, allocatable :: ff_rs_state(:,:)
+    type(batch_t) :: ff_rs_stateb
+    integer :: ff_dim
     type(profile_t), save :: prof
 
     PUSH_SUB(plane_waves_propagation)
@@ -2671,18 +2566,17 @@ contains
     call profiling_in(prof, 'PLANE_WAVES_PROPAGATION')
 
     ff_dim = hm%dim
+    call zbatch_init(ff_rs_stateb, 1, 1, hm%dim, gr%mesh%np_part)
 
-    SAFE_ALLOCATE(ff_rs_state(1:gr%mesh%np_part,ff_dim))
-
-    call transform_rs_state(hm, gr, st, st%rs_state_plane_waves, ff_rs_state, RS_TRANS_FORWARD)
+    call transform_rs_state_batch(hm, gr, st, st%rs_state_plane_waves, ff_rs_stateb, RS_TRANS_FORWARD)
 
     ! Time evolution of RS plane waves state without any coupling with H(inter_time)
     call hamiltonian_mxll_update(hm, time=time)
-    call exponential_mxll_apply(hm, namespace, gr, st, tr, dt, ff_rs_state, .false.)
-    call transform_rs_state(hm, gr, st, st%rs_state_plane_waves, ff_rs_state, RS_TRANS_BACKWARD)
-    call plane_waves_boundaries_calculation(hm, st, gr%mesh, time+dt, time_delay, st%rs_state_plane_waves)
+    hm%cpml_hamiltonian = .false.
+    call exponential_apply_batch(tr%te, namespace, gr%mesh, hm, ff_rs_stateb, dt)
 
-    SAFE_DEALLOCATE_A(ff_rs_state)
+    call transform_rs_state_batch(hm, gr, st, st%rs_state_plane_waves, ff_rs_stateb, RS_TRANS_BACKWARD)
+    call plane_waves_boundaries_calculation(hm, st, gr%mesh, time+dt, time_delay, st%rs_state_plane_waves)
 
     call profiling_out(prof)
     POP_SUB(plane_waves_propagation)
