@@ -73,7 +73,6 @@ module propagator_mxll_oct_m
     propagator_mxll_t,                       &
     propagator_mxll_init,                    &
     mxll_propagation_step,                   &
-    transform_rs_state,                      &
     transform_rs_densities,                  &
     calculate_matter_longitudinal_field,     &
     get_vector_pot_and_transverse_field,     &
