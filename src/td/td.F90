@@ -429,7 +429,7 @@ contains
        end if
     else
        call states_elec_allocate_wfns(st, gr%mesh, packed=.true.)
-       call scf_init(td%scf, sys%namespace, sys%gr, sys%geo, sys%st, sys%mc, sys%hm)
+       call scf_init(td%scf, sys%namespace, sys%gr, sys%geo, sys%st, sys%mc, sys%hm, sys%ks)
     end if
 
     if(sys%hm%scdm_EXX) then
