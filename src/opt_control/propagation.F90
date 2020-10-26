@@ -941,10 +941,10 @@ contains
           
           zoppsi = M_z0
           if(associated(hm%ep%a_static)) then
-            call zvlaser_operator_linear(hm%ep%lasers(j), gr%der, hm%d, zpsi, &
+            call vlaser_operator_linear(hm%ep%lasers(j), gr%der, hm%d, zpsi, &
               zoppsi, ik, hm%ep%gyromagnetic_ratio, hm%ep%a_static)
           else
-            call zvlaser_operator_linear(hm%ep%lasers(j), gr%der, hm%d, zpsi, &
+            call vlaser_operator_linear(hm%ep%lasers(j), gr%der, hm%d, zpsi, &
               zoppsi, ik, hm%ep%gyromagnetic_ratio)
           end if
 
@@ -962,7 +962,7 @@ contains
             zoppsi = M_z0
 
             call states_elec_get_state(psi, gr%mesh, p, ik, zpsi)
-            call zvlaser_operator_quadratic(hm%ep%lasers(j), gr%der, zpsi, zoppsi)
+            call vlaser_operator_quadratic(hm%ep%lasers(j), gr%der, zpsi, zoppsi)
 
             call states_elec_get_state(chi, gr%mesh, p, ik, zpsi)
             dq(j) = dq(j) + zmf_dotp(gr%mesh, psi%d%dim, zpsi, zoppsi)

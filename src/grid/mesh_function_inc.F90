@@ -32,6 +32,11 @@ R_TYPE function X(mf_integrate) (mesh, ff, mask, reduce) result(dd)
 
   ASSERT(ubound(ff, dim = 1) == mesh%np .or. ubound(ff, dim = 1) == mesh%np_part)
 
+  !TODO: This case need to be implemented
+  if(present(mask)) then
+    ASSERT(.not. mesh%use_curvilinear)
+  end if
+
   dd = R_TOTYPE(M_ZERO)
   if (mesh%use_curvilinear) then
     !$omp parallel do reduction(+:dd)

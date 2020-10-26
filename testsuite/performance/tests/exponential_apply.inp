@@ -8,6 +8,7 @@ TestType = $test_type
 
 Dimensions = $dimensions
 PeriodicDimensions = $periodic_dimensions
+TDExponentialMethod = $exponential_method
 DerivativesOrder = 4
 
 number_gridpoints = $number_gridpoints

@@ -14,12 +14,8 @@
 !! along with this program; if not, write to the Free Software
 !! Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 !! 02110-1301, USA.
-!!
-!! $Id: propagator.F90 13908 2015-05-05 06:02:30Z xavier $
 
 #include "global.h"
-#include "undef.F90"
-#include "complex.F90"
 
 module propagator_mxll_oct_m
   use boundary_op_oct_m
@@ -28,11 +24,12 @@ module propagator_mxll_oct_m
   use comm_oct_m
   use cube_function_oct_m
   use cube_oct_m
-  use current_oct_m
   use derivatives_oct_m
   use density_oct_m
   use energy_calc_oct_m
+  use energy_mxll_oct_m
   use exponential_oct_m
+  use external_densities_oct_m
   use fft_oct_m
   use fourier_space_oct_m
   use grid_oct_m
@@ -50,6 +47,7 @@ module propagator_mxll_oct_m
   use math_oct_m
   use maxwell_boundary_op_oct_m
   use maxwell_function_oct_m
+  use medium_mxll_oct_m
   use mesh_oct_m
   use mesh_cube_parallel_map_oct_m
   use mesh_function_oct_m
@@ -75,7 +73,7 @@ module propagator_mxll_oct_m
     propagator_mxll_t,                       &
     propagator_mxll_init,                    &
     mxll_propagation_step,                   &
-    transform_rs_state,                      &
+    transform_rs_densities,                  &
     calculate_matter_longitudinal_field,     &
     get_vector_pot_and_transverse_field,     &
     energy_density_calc,                     &
@@ -110,8 +108,12 @@ module propagator_mxll_oct_m
   end type propagator_mxll_t
 
   integer, public, parameter ::   &
-     RS_TRANS_FORWARD = 1,        &
+     RS_TRANS_FORWARD  = 1,       &
      RS_TRANS_BACKWARD = 2
+
+  integer, parameter ::    & 
+    MXWLL_ETRS_FULL  = 0,  &
+    MXWLL_ETRS_CONST = 1
 
 contains
 
@@ -123,12 +125,15 @@ contains
     type(hamiltonian_mxll_t),     intent(inout) :: hm
     type(propagator_mxll_t),      intent(inout) :: tr
 
-    integer :: default_propagator, il, nlines, ncols, icol, idim
+    integer :: default_propagator, nlines, ncols, icol
     type(block_t) :: blk
     character(len=256) :: string
     logical :: plane_waves_set = .false.
+    type(profile_t), save :: prof
 
     PUSH_SUB(propagator_mxll_init)
+
+    call profiling_in(prof,"PROPAGATOR_MXLL_INIT")
 
     hm%bc%bc_type(:) = MXLL_BC_ZERO ! default boundary condition is zero
 
@@ -233,97 +238,7 @@ contains
       st%rs_state_const = M_z0
     end if
 
-    !%Variable LinearMediumBox
-    !%Type block
-    !%Section Time-Dependent::Propagation
-    !%Description
-    !% Defines parameters for a linear medium box.
-    !%
-    !% Example:
-    !%
-    !% <tt>%LinearMediumBox
-    !% <br>&nbsp;&nbsp;   center_x | center_y | center_z | x_length | y_length | z_length | epsilon_factor | mu_factor | sigma_e | sigma_m | edged/smooth
-    !% <br>%</tt>
-    !%
-    !% Position of center (three components) and length (three components), followed by permittivity
-    !% factor, electric conductivity and magnetic conductivity, and finally type of numerical
-    !% approximation used for the derivatives at the edges.
-    !%
-    !%Option edged 1
-    !% Medium box edges are considered steep for derivatives.
-    !%Option smooth 2
-    !% Medium box edged and softened for derivatives.
-    !%End
-    if(parse_block(namespace, 'LinearMediumBox', blk) == 0) then
-
-      call messages_print_stress(stdout, trim('Maxwell Medium box:'))
-      hm%calc_medium_box = .true.
-
-      ! find out how many lines (i.e. states) the block has
-      nlines = parse_block_n(blk)
-      SAFE_ALLOCATE(hm%medium_box%center(1:3,1:nlines))
-      SAFE_ALLOCATE(hm%medium_box%lsize(1:3,1:nlines))
-      SAFE_ALLOCATE(hm%medium_box%ep_factor(1:nlines))
-      SAFE_ALLOCATE(hm%medium_box%mu_factor(1:nlines))
-      SAFE_ALLOCATE(hm%medium_box%sigma_e_factor(1:nlines))
-      SAFE_ALLOCATE(hm%medium_box%sigma_m_factor(1:nlines))
-      SAFE_ALLOCATE(hm%medium_box%shape(1:nlines))
-      do il = 1, nlines
-        ncols = parse_block_cols(blk, il-1)
-        if (ncols /= 11) then
-          call messages_input_error(namespace, 'LinearMediumBox', 'should consist of eleven columns', row=il-1)
-        end if
-        do idim = 1, 3
-          call parse_block_float(blk, il-1, idim-1, hm%medium_box%center(idim,il))
-          call parse_block_float(blk, il-1, idim+2, hm%medium_box%lsize(idim,il))
-        end do
-        call parse_block_float(blk, il-1, 6, hm%medium_box%ep_factor(il))
-        call parse_block_float(blk, il-1, 7, hm%medium_box%mu_factor(il))
-        call parse_block_float(blk, il-1, 8, hm%medium_box%sigma_e_factor(il))
-        call parse_block_float(blk, il-1, 9, hm%medium_box%sigma_m_factor(il))
-        call parse_block_integer(blk, il-1, 10, hm%medium_box%shape(il))
-        if (il > 1) then
-          write(message(1),'(a)') ""
-          write(message(2),'(a,I1)')    'Medium box number:  ', il
-          write(message(3),'(a,es9.2,a,es9.2,a,es9.2)') 'Box center:         ', hm%medium_box%center(1,il), ' | ',&
-                hm%medium_box%center(2,il), ' | ', hm%medium_box%center(3,il)
-          write(message(4),'(a,es9.2,a,es9.2,a,es9.2)') 'Box size  :         ', hm%medium_box%lsize(1,il), ' | ', &
-                hm%medium_box%lsize(2,il), ' | ', hm%medium_box%lsize(3,il)
-          write(message(5),'(a,es9.2)') 'Box epsilon factor: ', hm%medium_box%ep_factor(il)
-          write(message(6),'(a,es9.2)') 'Box mu factor:      ', hm%medium_box%mu_factor(il)
-          write(message(7),'(a,es9.2)') 'Box electric sigma: ', hm%medium_box%sigma_e_factor(il)
-          write(message(8),'(a,es9.2)') 'Box magnetic sigma: ', hm%medium_box%sigma_m_factor(il)
-          if (hm%medium_box%shape(il) == OPTION__LINEARMEDIUMBOX__EDGED) then
-            write(message(9),'(a,a)')   'Box shape:          ', 'edged'
-          else if (hm%medium_box%shape(il) == OPTION__LINEARMEDIUMBOX__SMOOTH) then
-            write(message(9),'(a,a)')   'Box shape:          ', 'smooth'
-          end if
-          call messages_info(9)
-        else
-          write(message(1),'(a,I1)')    'Medium box number:  ', il
-          write(message(2),'(a,es9.2,a,es9.2,a,es9.2)') 'Box center:         ', hm%medium_box%center(1,il), ' | ',&
-                hm%medium_box%center(2,il), ' | ', hm%medium_box%center(3,il)
-          write(message(3),'(a,es9.2,a,es9.2,a,es9.2)') 'Box size  :         ', hm%medium_box%lsize(1,il), ' | ', &
-                hm%medium_box%lsize(2,il), ' | ', hm%medium_box%lsize(3,il)
-          write(message(4),'(a,es9.2)') 'Box epsilon factor: ', hm%medium_box%ep_factor(il)
-          write(message(5),'(a,es9.2)') 'Box mu factor:      ', hm%medium_box%mu_factor(il)
-          write(message(6),'(a,es9.2)') 'Box electric sigma: ', hm%medium_box%sigma_e_factor(il)
-          write(message(7),'(a,es9.2)') 'Box magnetic sigma: ', hm%medium_box%sigma_m_factor(il)
-          if (hm%medium_box%shape(il) == OPTION__LINEARMEDIUMBOX__EDGED) then
-            write(message(8),'(a,a)')   'Box shape:          ', 'edged'
-          else if (hm%medium_box%shape(il) == OPTION__LINEARMEDIUMBOX__SMOOTH) then
-            write(message(8),'(a,a)')   'Box shape:          ', 'smooth'
-          end if
-          call messages_info(8)
-        end if
-      end do
-      call parse_block_end(blk)
-
-      call generate_medium_boxes(hm, gr, nlines, namespace)
-
-      call messages_print_stress(stdout)
-
-    end if
+    call medium_box_init(namespace, hm%medium_box, hm%calc_medium_box, gr)
 
     !%Variable MaxwellTDETRSApprox
     !%Type integer
@@ -336,7 +251,7 @@ contains
     !%Option const_steps 1
     !% Use constant current density.
     !%End
-    call parse_variable(namespace, 'MaxwellTDETRSApprox', OPTION__MAXWELLTDETRSAPPROX__NO, tr%tr_etrs_approx)
+    call parse_variable(namespace, 'MaxwellTDETRSApprox', MXWLL_ETRS_FULL, tr%tr_etrs_approx)
     call messages_print_var_option(stdout, 'MaxwellTDETRSApprox', tr%tr_etrs_approx)
 
     !%Variable MaxwellTDOperatorMethod
@@ -388,32 +303,36 @@ contains
     !tr%te%exp = .true.
     call exponential_init(tr%te, namespace) ! initialize Maxwell propagator
 
+    call profiling_out(prof)
+
     POP_SUB(propagator_mxll_init)
   end subroutine propagator_mxll_init
 
   ! ---------------------------------------------------------
-  subroutine mxll_propagation_step(hm, namespace, gr, st, tr, rs_state, rs_current_density_t1,&
-      rs_current_density_t2, rs_charge_density_t1, rs_charge_density_t2, time, dt)
+  subroutine mxll_propagation_step(hm, namespace, gr, st, tr, rs_state, ff_rs_inhom_t1, ff_rs_inhom_t2, time, dt)
     type(hamiltonian_mxll_t),   intent(inout) :: hm
     type(namespace_t),          intent(in)    :: namespace
     type(grid_t),               intent(inout) :: gr
     type(states_mxll_t),        intent(inout) :: st
     type(propagator_mxll_t),    intent(inout) :: tr
     CMPLX,                      intent(inout) :: rs_state(:,:)
-    CMPLX,                      intent(inout) :: rs_current_density_t1(:,:)
-    CMPLX,                      intent(inout) :: rs_current_density_t2(:,:)
-    CMPLX,                      intent(inout) :: rs_charge_density_t1(:)
-    CMPLX,                      intent(inout) :: rs_charge_density_t2(:)
+    CMPLX,                      intent(in)    :: ff_rs_inhom_t1(:,:) !> Inhomogeneous term at t
+    CMPLX,                      intent(in)    :: ff_rs_inhom_t2(:,:) !> Inhomogeneous term at t+dt
     FLOAT,                      intent(in)    :: time
     FLOAT,                      intent(in)    :: dt
 
-    integer            :: ii, inter_steps, ff_dim, idim
+    integer            :: ii, inter_steps, ff_dim, idim, istate
     FLOAT              :: inter_dt, inter_time, delay
-    CMPLX, allocatable :: ff_rs_state(:,:), ff_rs_inhom_1(:,:), ff_rs_inhom_2(:,:)
-    CMPLX, allocatable :: ff_rs_state_pml(:,:), ff_rs_inhom_mean(:,:)
+
+
     logical            :: pml_check = .false.
+    type(profile_t), save :: prof
+    type(batch_t) :: ff_rs_stateb, ff_rs_state_pmlb
+    type(batch_t) :: ff_rs_inhom_1b, ff_rs_inhom_2b, ff_rs_inhom_meanb
 
     PUSH_SUB(mxll_propagation_step)
+
+    call profiling_in(prof, 'MXLL_PROPAGATOR_STEP')
 
     if (hm%ma_mx_coupling_apply) then
       message(1) = "Maxwell-matter coupling not implemented yet"
@@ -441,43 +360,49 @@ contains
     ! delay time
     delay = tr%delay_time
 
-    SAFE_ALLOCATE(ff_rs_state(1:gr%mesh%np_part, ff_dim))
+    call zbatch_init(ff_rs_stateb, 1, 1, hm%dim, gr%mesh%np_part)
+    if (st%pack_states) call ff_rs_stateb%do_pack()
 
     if (pml_check) then
-      SAFE_ALLOCATE(ff_rs_state_pml(1:gr%mesh%np_part, ff_dim))
+      call ff_rs_stateb%copy_to(ff_rs_state_pmlb)
     end if
 
     ! first step of Maxwell inhomogeneity propagation with constant current density
     if ((hm%ma_mx_coupling_apply .or. hm%current_density_ext_flag) .and. &
-        tr%tr_etrs_approx == OPTION__MAXWELLTDETRSAPPROX__CONST_STEPS) then
+        tr%tr_etrs_approx == MXWLL_ETRS_CONST) then
+      call ff_rs_stateb%copy_to(ff_rs_inhom_1b)
+      call ff_rs_stateb%copy_to(ff_rs_inhom_2b)
+      call ff_rs_stateb%copy_to(ff_rs_inhom_meanb)
 
-      SAFE_ALLOCATE(ff_rs_inhom_1(1:gr%mesh%np_part, ff_dim))
-      SAFE_ALLOCATE(ff_rs_inhom_2(1:gr%mesh%np_part, ff_dim))
-      SAFE_ALLOCATE(ff_rs_inhom_mean(1:gr%mesh%np_part, ff_dim))
+      do istate = 1, hm%dim
+        call batch_set_state(ff_rs_inhom_meanb, istate, gr%mesh%np, ff_rs_inhom_t1(:, istate))
+        call batch_set_state(ff_rs_inhom_2b, istate, gr%mesh%np, ff_rs_inhom_t2(:, istate))
+      end do
+      call batch_axpy(gr%mesh%np, M_ONE, ff_rs_inhom_2b, ff_rs_inhom_meanb)
+      call batch_scal(gr%mesh%np, M_HALF, ff_rs_inhom_meanb)
+
       ! inhomogeneity propagation
-      call transform_rs_densities(hm, rs_charge_density_t1, rs_current_density_t1, ff_rs_inhom_1, RS_TRANS_FORWARD)
-      call transform_rs_densities(hm, rs_charge_density_t2, rs_current_density_t2, ff_rs_inhom_2, RS_TRANS_FORWARD)
-      ff_rs_inhom_mean(:,:) = (ff_rs_inhom_1 + ff_rs_inhom_2)/M_TWO
-      ! add term J(time)
-      ff_rs_inhom_1(:,:) = ff_rs_inhom_mean
-      ff_rs_inhom_2(:,:) = ff_rs_inhom_mean
-      call hamiltonian_mxll_update(hm, time=time)
-      call exponential_mxll_apply(hm, namespace, gr, st, tr, inter_dt, ff_rs_inhom_2)
-      ! add term U(time+dt,time)J(time)
-      ff_rs_inhom_1(:,:) = ff_rs_inhom_1 + ff_rs_inhom_2
-      ff_rs_inhom_2(:,:) = ff_rs_inhom_mean
-      call hamiltonian_mxll_update(hm, time=time)
-      call exponential_mxll_apply(hm, namespace, gr, st, tr, inter_dt/M_TWO, ff_rs_inhom_2)
-      ! add term U(time+dt/2,time)J(time)
-      ff_rs_inhom_1(:,:) = ff_rs_inhom_1 + ff_rs_inhom_2
-      ff_rs_inhom_2(:,:) = ff_rs_inhom_mean
-      call hamiltonian_mxll_update(hm, time=time)
-      call exponential_mxll_apply(hm, namespace, gr, st, tr, -inter_dt/M_TWO, ff_rs_inhom_2)
-      ! add term U(time,time+dt/2)J(time)
-      ff_rs_inhom_1 = ff_rs_inhom_1 + ff_rs_inhom_2
-      SAFE_DEALLOCATE_A(ff_rs_inhom_2)
-      SAFE_DEALLOCATE_A(ff_rs_inhom_mean)
+      call ff_rs_inhom_meanb%copy_data_to(gr%mesh%np, ff_rs_inhom_1b)
+      call ff_rs_inhom_meanb%copy_data_to(gr%mesh%np, ff_rs_inhom_2b)
 
+      call hamiltonian_mxll_update(hm, time=time)
+      hm%cpml_hamiltonian = .false.
+      call exponential_apply_batch(tr%te, namespace, gr%mesh, hm, ff_rs_inhom_2b, inter_dt)
+
+      ! add term U(time+dt,time)J(time)
+      call batch_axpy(gr%mesh%np, M_ONE, ff_rs_inhom_2b, ff_rs_inhom_1b)
+      call ff_rs_inhom_meanb%copy_data_to(gr%mesh%np, ff_rs_inhom_2b)
+      call hamiltonian_mxll_update(hm, time=time)
+      call exponential_apply_batch(tr%te, namespace, gr%mesh, hm, ff_rs_inhom_2b, inter_dt*M_HALF)
+      ! add term U(time+dt/2,time)J(time)
+      call batch_axpy(gr%mesh%np, M_ONE, ff_rs_inhom_2b, ff_rs_inhom_1b)
+      call ff_rs_inhom_meanb%copy_data_to(gr%mesh%np, ff_rs_inhom_2b)
+      call hamiltonian_mxll_update(hm, time=time)
+      call exponential_apply_batch(tr%te, namespace, gr%mesh, hm, ff_rs_inhom_2b, -inter_dt*M_HALF)
+      ! add term U(time,time+dt/2)J(time)
+      call batch_axpy(gr%mesh%np, M_ONE, ff_rs_inhom_2b, ff_rs_inhom_1b)
+      call ff_rs_inhom_2b%end()
+      call ff_rs_inhom_meanb%end()
     end if
 
     do ii = 1, inter_steps
@@ -486,88 +411,78 @@ contains
       inter_time = time + inter_dt * (ii-1)
 
       ! transformation of RS state into 3x3 or 4x4 representation
-      call transform_rs_state(hm, gr, st, rs_state, ff_rs_state, RS_TRANS_FORWARD)
+      call transform_rs_state_batch(hm, gr, st, rs_state, ff_rs_stateb, RS_TRANS_FORWARD)
 
+      ! RS state propagation
+      call hamiltonian_mxll_update(hm, time=inter_time)
+      if (pml_check) then
+        call pml_propagation_stage_1_batch(hm, gr, st, tr, ff_rs_stateb, ff_rs_state_pmlb)
+      end if
+
+      hm%cpml_hamiltonian = pml_check
+      call exponential_apply_batch(tr%te, namespace, gr%mesh, hm, ff_rs_stateb, dt)
+      hm%cpml_hamiltonian = .false.
+
+      if (pml_check) then
+        call pml_propagation_stage_2_batch(hm, namespace, gr, st, tr, inter_time, inter_dt, delay, ff_rs_state_pmlb, ff_rs_stateb)
+      end if
+
+      !Below we add the contribution from the inhomogeneous terms
       if ((hm%ma_mx_coupling_apply) .or. hm%current_density_ext_flag) then
+        if (tr%tr_etrs_approx == MXWLL_ETRS_FULL) then
+          call ff_rs_stateb%copy_to(ff_rs_inhom_1b)
+          call ff_rs_stateb%copy_to(ff_rs_inhom_2b)
+          call ff_rs_stateb%copy_to(ff_rs_inhom_meanb)
 
-        if (tr%tr_etrs_approx == OPTION__MAXWELLTDETRSAPPROX__NO) then
-          SAFE_ALLOCATE(ff_rs_inhom_1(1:gr%mesh%np_part, ff_dim))
-          SAFE_ALLOCATE(ff_rs_inhom_2(1:gr%mesh%np_part, ff_dim))
-          SAFE_ALLOCATE(ff_rs_inhom_mean(1:gr%mesh%np_part, ff_dim))
-          ! RS state propagation
-          call hamiltonian_mxll_update(hm, time=inter_time)
-          if (pml_check) then
-            call pml_propagation_stage_1(hm, gr, st, tr, ff_rs_state, ff_rs_state_pml)
-            hm%cpml_hamiltonian = .true.
-          end if
-          call exponential_mxll_apply(hm, namespace, gr, st, tr, inter_dt, ff_rs_state)
-          if (pml_check) then
-            hm%cpml_hamiltonian = .false.
-            call pml_propagation_stage_2(hm, namespace, gr, st, tr, inter_time, inter_dt, delay, ff_rs_state_pml, ff_rs_state)
-          end if
+          ! Interpolation of the external current
+          do istate = 1, hm%dim
+            call batch_set_state(ff_rs_inhom_meanb, istate, gr%mesh%np, ff_rs_inhom_t2(:, istate))
+            call batch_set_state(ff_rs_inhom_1b, istate, gr%mesh%np, ff_rs_inhom_t1(:, istate))
+          end do
+          ! store t1 - t2 for the interpolation in mean
+          call batch_axpy(gr%mesh%np, -M_ONE, ff_rs_inhom_1b, ff_rs_inhom_meanb)
+          call ff_rs_inhom_1b%copy_data_to(gr%mesh%np, ff_rs_inhom_2b)
+          call batch_axpy(gr%mesh%np, inter_dt * ii / TOFLOAT(inter_steps), &
+            ff_rs_inhom_meanb, ff_rs_inhom_2b)
+          call batch_axpy(gr%mesh%np, inter_dt * (ii-1) / TOFLOAT(inter_steps), &
+            ff_rs_inhom_meanb, ff_rs_inhom_1b)
 
-          ! inhomogeneity propagation
-          call transform_rs_densities(hm, rs_charge_density_t1, rs_current_density_t1,&
-              ff_rs_inhom_1, RS_TRANS_FORWARD)
-          call transform_rs_densities(hm, rs_charge_density_t2, rs_current_density_t2,&
-              ff_rs_inhom_2, RS_TRANS_FORWARD)
-          ff_rs_inhom_mean(:,:) = ff_rs_inhom_2 - ff_rs_inhom_1 ! not mean, used as auxiliary variable
-          ff_rs_inhom_2(:,:) = ff_rs_inhom_1 + ff_rs_inhom_mean * inter_dt * ii / TOFLOAT(inter_steps)
-          ff_rs_inhom_1(:,:) = ff_rs_inhom_1 + ff_rs_inhom_mean * inter_dt * (ii-1) / TOFLOAT(inter_steps)
-          call exponential_mxll_apply(hm, namespace, gr, st, tr, inter_dt, ff_rs_inhom_1)
-          ! add terms U(time+dt,time)J(time) and J(time+dt)
-          ff_rs_state(:,:) = ff_rs_state + M_FOURTH * inter_dt * (ff_rs_inhom_1 + ff_rs_inhom_2)
-
-          call transform_rs_densities(hm, rs_charge_density_t1, rs_current_density_t1,&
-              ff_rs_inhom_1, RS_TRANS_FORWARD)
-          call transform_rs_densities(hm, rs_charge_density_t2, rs_current_density_t2,&
-              ff_rs_inhom_2, RS_TRANS_FORWARD)
-          ff_rs_inhom_1(:,:) = M_HALF * (ff_rs_inhom_1 + ff_rs_inhom_2)
-          ff_rs_inhom_2(:,:) = ff_rs_inhom_1 ! changed from the old code
-          call exponential_mxll_apply(hm, namespace, gr, st, tr, inter_dt/M_TWO, ff_rs_inhom_1)
-          call exponential_mxll_apply(hm, namespace, gr, st, tr, -inter_dt/M_TWO, ff_rs_inhom_2)
-          ! add terms U(time+dt/2,time)J(time) and U(time,time+dt/2)J(time+dt)
-          ff_rs_state(:,:) = ff_rs_state + M_FOURTH * inter_dt * (ff_rs_inhom_1 + ff_rs_inhom_2)
-          SAFE_DEALLOCATE_A(ff_rs_inhom_1)
-          SAFE_DEALLOCATE_A(ff_rs_inhom_2)
-          SAFE_DEALLOCATE_A(ff_rs_inhom_mean)
-
-        else if (tr%tr_etrs_approx == OPTION__MAXWELLTDETRSAPPROX__CONST_STEPS) then
-          ! RS state propagation
-          call hamiltonian_mxll_update(hm, time=inter_time)
-          if (pml_check) then
-            call pml_propagation_stage_1(hm, gr, st, tr, ff_rs_state, ff_rs_state_pml)
-            hm%cpml_hamiltonian = .true.
-          end if
-          call exponential_mxll_apply(hm, namespace, gr, st, tr, inter_dt, ff_rs_state)
-          if (pml_check) then
-            hm%cpml_hamiltonian = .false.
-            call pml_propagation_stage_2(hm, namespace, gr, st, tr, inter_time, inter_dt, delay, ff_rs_state_pml, ff_rs_state)
-          end if
-          ff_rs_state(:,:) = ff_rs_state + M_FOURTH * inter_dt * ff_rs_inhom_1
-        end if
-      else
-        ! RS state propagation
-        call hamiltonian_mxll_update(hm, time=inter_time)
-        if (pml_check) then
-          call pml_propagation_stage_1(hm, gr, st, tr, ff_rs_state, ff_rs_state_pml)
-          hm%cpml_hamiltonian = .true.
-        end if
-        call exponential_mxll_apply(hm, namespace, gr, st, tr, inter_dt, ff_rs_state)
-
-        if (pml_check) then
           hm%cpml_hamiltonian = .false.
-          call pml_propagation_stage_2(hm, namespace, gr, st, tr, inter_time, inter_dt, delay, ff_rs_state_pml, ff_rs_state)
+          call exponential_apply_batch(tr%te, namespace, gr%mesh, hm, ff_rs_inhom_1b, inter_dt)
+          ! add terms U(time+dt,time)J(time) and J(time+dt)
+          call batch_axpy(gr%mesh%np, -M_FOURTH * inter_dt, ff_rs_inhom_1b, ff_rs_stateb)
+          call batch_axpy(gr%mesh%np, -M_FOURTH * inter_dt, ff_rs_inhom_2b, ff_rs_stateb)
+
+          do istate = 1, hm%dim
+            call batch_set_state(ff_rs_inhom_1b, istate, gr%mesh%np, ff_rs_inhom_t1(:, istate))
+            call batch_set_state(ff_rs_inhom_2b, istate, gr%mesh%np, ff_rs_inhom_t2(:, istate))
+          end do
+          call batch_axpy(gr%mesh%np, M_ONE, ff_rs_inhom_2b, ff_rs_inhom_1b)
+          call batch_scal(gr%mesh%np, M_HALF, ff_rs_inhom_1b)
+          call ff_rs_inhom_1b%copy_data_to(gr%mesh%np, ff_rs_inhom_2b)
+
+          call exponential_apply_batch(tr%te, namespace, gr%mesh, hm, ff_rs_inhom_1b, inter_dt/M_TWO)
+          call exponential_apply_batch(tr%te, namespace, gr%mesh, hm, ff_rs_inhom_2b, -inter_dt/M_TWO)
+
+          ! add terms U(time+dt/2,time)J(time) and U(time,time+dt/2)J(time+dt)
+          call batch_axpy(gr%mesh%np, -M_FOURTH * inter_dt, ff_rs_inhom_1b, ff_rs_stateb)
+          call batch_axpy(gr%mesh%np, -M_FOURTH * inter_dt, ff_rs_inhom_2b, ff_rs_stateb)
+
+          call ff_rs_inhom_1b%end()
+          call ff_rs_inhom_2b%end()
+          call ff_rs_inhom_meanb%end()
+        else if (tr%tr_etrs_approx == MXWLL_ETRS_CONST) then
+          call batch_axpy(gr%mesh%np, -M_FOURTH * inter_dt, ff_rs_inhom_1b, ff_rs_stateb)
         end if
       end if
 
       ! PML convolution function update
       if (pml_check) then
-        call cpml_conv_function_update(hm, gr, ff_rs_state_pml, ff_dim)
+        call cpml_conv_function_update(hm, gr, ff_rs_state_pmlb)
       end if
 
       ! back tranformation of RS state representation
-      call transform_rs_state(hm, gr, st, rs_state, ff_rs_state, RS_TRANS_BACKWARD)
+      call transform_rs_state_batch(hm, gr, st, rs_state, ff_rs_stateb, RS_TRANS_BACKWARD)
 
       if (tr%bc_constant) then
         ! Propagation dt with H(inter_time+inter_dt) for constant boundaries
@@ -594,20 +509,22 @@ contains
     end do
 
     if (tr%tr_etrs_approx == OPTION__MAXWELLTDETRSAPPROX__CONST_STEPS) then
-      SAFE_DEALLOCATE_A(ff_rs_inhom_1)
+      call ff_rs_inhom_1b%end()
     end if
 
-    SAFE_DEALLOCATE_A(ff_rs_state)
+    call ff_rs_stateb%end()
 
     if (pml_check) then
-      SAFE_DEALLOCATE_A(ff_rs_state_pml)
+      call ff_rs_state_pmlb%end()
     end if
+
+    call profiling_out(prof)
 
     POP_SUB(mxll_propagation_step)
   end subroutine mxll_propagation_step
 
   ! ---------------------------------------------------------
-  subroutine exponential_mxll_apply(hm, namespace, gr, st, tr, dt, ff)
+  subroutine exponential_mxll_apply(hm, namespace, gr, st, tr, dt, ff, cpml_hamiltonian)
     type(hamiltonian_mxll_t),   intent(inout) :: hm
     type(namespace_t),          intent(in)    :: namespace
     type(grid_t),               intent(in)    :: gr
@@ -615,11 +532,15 @@ contains
     type(propagator_mxll_t),    intent(inout) :: tr
     FLOAT,                      intent(in)    :: dt
     CMPLX,                      intent(inout) :: ff(:,:)
+    logical,                    intent(in)    :: cpml_hamiltonian
 
     type(batch_t) :: ffbatch
     integer :: istate
+    type(profile_t), save :: prof
 
     PUSH_SUB(exponential_mxll_apply)
+
+    call profiling_in(prof, 'EXPONENTIAL_MXLL_APPLY')
 
     call zbatch_init(ffbatch, 1, 1, hm%dim, gr%mesh%np_part)
 
@@ -629,13 +550,17 @@ contains
 
     if (st%pack_states) call ffbatch%do_pack()
 
+    hm%cpml_hamiltonian = cpml_hamiltonian
     call exponential_apply_batch(tr%te, namespace, gr%mesh, hm, ffbatch, dt)
+    hm%cpml_hamiltonian = .false.
 
     do istate = 1, hm%dim
       call batch_get_state(ffbatch, istate, gr%mesh%np_part, ff(:, istate))
     end do
 
     call ffbatch%end()
+
+    call profiling_out(prof)
 
     POP_SUB(exponential_mxll_apply)
   end subroutine exponential_mxll_apply
@@ -647,8 +572,11 @@ contains
     type(hamiltonian_mxll_t), intent(in)    :: hm
 
     integer :: ip, ip_in, il, idim
+    type(profile_t), save :: prof
 
     PUSH_SUB(set_medium_rs_state)
+
+    call profiling_in(prof, 'SET_MEDIUM_RS_STATE')
 
     SAFE_ALLOCATE(st%ep(1:gr%mesh%np_part))
     SAFE_ALLOCATE(st%mu(1:gr%mesh%np_part))
@@ -666,210 +594,215 @@ contains
 
     do idim = 1, st%dim
       if (hm%bc%bc_type(idim) == MXLL_BC_MEDIUM) then
-        do ip_in = 1, hm%bc%mxmedium%points_number(idim)
-          ip = hm%bc%mxmedium%points_map(ip_in, idim)
-          st%ep(ip) = hm%bc%mxmedium%ep(ip_in, idim)
-          st%mu(ip) = hm%bc%mxmedium%mu(ip_in, idim)
+        do ip_in = 1, hm%bc%medium%points_number(idim)
+          ip = hm%bc%medium%points_map(ip_in, idim)
+          st%ep(ip) = hm%bc%medium%ep(ip_in, idim)
+          st%mu(ip) = hm%bc%medium%mu(ip_in, idim)
         end do
       end if
     end do
+
+    call profiling_out(prof)
 
     POP_SUB(set_medium_rs_state)
   end subroutine set_medium_rs_state
 
   ! ---------------------------------------------------------
-  subroutine transform_rs_state(hm, gr, st, rs_state, ff_rs_state, sign)
+  subroutine transform_rs_state_batch(hm, gr, st, rs_state, ff_rs_stateb, sign)
     type(hamiltonian_mxll_t), intent(in)         :: hm
     type(grid_t),             intent(in)         :: gr
     type(states_mxll_t),      intent(in)         :: st
     CMPLX,                    intent(inout)      :: rs_state(:,:)
-    CMPLX,                    intent(inout)      :: ff_rs_state(:,:)
+    type(batch_t),            intent(inout)      :: ff_rs_stateb
     integer,                  intent(in)         :: sign
 
-    CMPLX, allocatable :: rs_state_minus(:,:)
+    CMPLX, allocatable :: rs_state_tmp(:,:)
+    type(profile_t), save :: prof
+    integer :: ii, np
 
-    PUSH_SUB(transform_rs_state)
+    PUSH_SUB(transform_rs_state_batch)
+
+    call profiling_in(prof, 'TRANSFORM_RS_STATE')
 
     ASSERT(sign == RS_TRANS_FORWARD .or. sign == RS_TRANS_BACKWARD)
 
+    np = gr%mesh%np
+
     if (hm%operator == FARADAY_AMPERE_MEDIUM) then
       if (sign == RS_TRANS_FORWARD) then
-        SAFE_ALLOCATE(rs_state_minus(1:gr%mesh%np_part,1:st%dim))
-        rs_state_minus = R_CONJ(rs_state)
-        call transform_rs_state_to_6x6_rs_state_forward(rs_state, rs_state_minus, ff_rs_state)
-        SAFE_DEALLOCATE_A(rs_state_minus)
+        ! 3 to 6
+        do ii = 1, 3
+          call batch_set_state(ff_rs_stateb, ii, np, rs_state(:, ii))
+          call batch_set_state(ff_rs_stateb, ii+3, np, conjg(rs_state(:, ii)))
+        end do
       else
-        call transform_rs_state_to_6x6_rs_state_backward(ff_rs_state, rs_state)
+        ! 6 to 3
+        SAFE_ALLOCATE(rs_state_tmp(gr%mesh%np, st%dim))
+        do ii = 1, 3
+          call batch_get_state(ff_rs_stateb, ii, np, rs_state(:, ii))
+          call batch_get_state(ff_rs_stateb, ii+3, np, rs_state_tmp(:, ii))
+          rs_state(1:np, ii) = M_HALF * (rs_state(1:np, ii) + conjg(rs_state_tmp(1:np, ii)))
+        end do
+        SAFE_DEALLOCATE_A(rs_state_tmp)
       end if
 
     else if (hm%operator == FARADAY_AMPERE_GAUSS) then
       if (sign == RS_TRANS_FORWARD) then
-         call transform_rs_state_to_4x4_rs_state_forward(rs_state, ff_rs_state)
+        ! 3 to 4
+        call batch_set_state(ff_rs_stateb, 1, np, -rs_state(1:np, 1)+rs_state(1:np, 2))
+        call batch_set_state(ff_rs_stateb, 2, np, rs_state(1:np, 3))
+        call batch_set_state(ff_rs_stateb, 3, np, rs_state(1:np, 3))
+        call batch_set_state(ff_rs_stateb, 4, np, rs_state(1:np, 1)+rs_state(1:np, 2))
       else
-        call transform_rs_state_to_4x4_rs_state_backward(ff_rs_state, rs_state)
+        ! 4 to 3
+        SAFE_ALLOCATE(rs_state_tmp(gr%mesh%np, 2))
+        call batch_get_state(ff_rs_stateb, 1, np, rs_state_tmp(:, 1))
+        call batch_get_state(ff_rs_stateb, 4, np, rs_state_tmp(:, 2))
+        rs_state(1:np, 1) = M_HALF * (-rs_state_tmp(1:np, 1) + rs_state_tmp(1:np, 2))
+        rs_state(1:np, 2) = M_HALF * (-rs_state_tmp(1:np, 1) - rs_state_tmp(1:np, 2))
+        call batch_get_state(ff_rs_stateb, 2, np, rs_state_tmp(:, 1))
+        call batch_get_state(ff_rs_stateb, 3, np, rs_state_tmp(:, 2))
+        rs_state(1:np, 3) = M_HALF * (rs_state_tmp(1:np, 1) + rs_state_tmp(1:np, 2))
+        SAFE_DEALLOCATE_A(rs_state_tmp)
       end if
 
     else
       if (sign == RS_TRANS_FORWARD) then
-        ff_rs_state(:, 1:3) = rs_state(:, 1:3)
+        ! 3 to 3
+        do ii = 1, 3
+          call batch_set_state(ff_rs_stateb, ii, np, rs_state(:, ii))
+        end do
       else
-        rs_state(:, 1:3) = ff_rs_state(:, 1:3)
+        ! 3 to 3
+        do ii = 1, 3
+          call batch_get_state(ff_rs_stateb, ii, np, rs_state(:, ii))
+        end do
       end if
     end if
 
-    POP_SUB(transform_rs_state)
+    call profiling_out(prof)
 
-  end subroutine transform_rs_state
+    POP_SUB(transform_rs_state_batch)
+
+  end subroutine transform_rs_state_batch
 
   ! ---------------------------------------------------------
-  subroutine transform_rs_densities(hm, rs_charge_density, rs_current_density, ff_density, sign)
+  subroutine transform_rs_densities(hm, mesh, rs_charge_density, rs_current_density, ff_density, sign)
     type(hamiltonian_mxll_t), intent(in)    :: hm
+    type(mesh_t),             intent(in)    :: mesh
     CMPLX,                    intent(inout) :: rs_charge_density(:)
     CMPLX,                    intent(inout) :: rs_current_density(:,:)
     CMPLX,                    intent(inout) :: ff_density(:,:)
     integer,                  intent(in)    :: sign
 
+    type(profile_t), save :: prof
+
     ASSERT(sign == RS_TRANS_FORWARD .or. sign == RS_TRANS_BACKWARD)
+    ASSERT(size(rs_charge_density) == mesh%np .or. size(rs_charge_density) == mesh%np_part)
+    ASSERT(size(rs_current_density, dim=1) == size(rs_charge_density))
+    ASSERT(size(rs_current_density, dim=2) == 3)
 
     PUSH_SUB(transform_rs_densities)
 
+    call profiling_in(prof, 'TRANSFORM_RS_DENSITIES')
+
     if (hm%operator == FARADAY_AMPERE_MEDIUM) then
       if (sign == RS_TRANS_FORWARD) then
-        call transform_rs_densities_to_6x6_rs_densities_forward(rs_charge_density, rs_current_density, ff_density)
+        call transform_rs_densities_to_6x6_rs_densities_forward(mesh, rs_charge_density, &
+                               rs_current_density, ff_density)
       else
-        call transform_rs_densities_to_6x6_rs_densities_backward(ff_density, rs_charge_density, rs_current_density)
+        call transform_rs_densities_to_6x6_rs_densities_backward(mesh, ff_density, &
+                               rs_charge_density, rs_current_density)
       end if
     else if (hm%operator == FARADAY_AMPERE_GAUSS) then
       if (sign == RS_TRANS_FORWARD) then
-        call transform_rs_densities_to_4x4_rs_densities_forward(rs_charge_density,&
+        call transform_rs_densities_to_4x4_rs_densities_forward(mesh, rs_charge_density,&
             rs_current_density, ff_density)
       else
-        call transform_rs_densities_to_4x4_rs_densities_backward(ff_density, rs_charge_density,&
+        call transform_rs_densities_to_4x4_rs_densities_backward(mesh, ff_density, rs_charge_density,&
             rs_current_density)
       end if
     else
       if (sign == RS_TRANS_FORWARD) then
-        ff_density(:, 1:3) = rs_current_density(:, 1:3)
+        ff_density(1:mesh%np, 1:3) = rs_current_density(1:mesh%np, 1:3)
       else
-        rs_current_density(:, 1:3) = ff_density(:, 1:3)
+        rs_current_density(1:mesh%np, 1:3) = ff_density(1:mesh%np, 1:3)
       end if
     end if
+
+    call profiling_out(prof)
 
     POP_SUB(transform_rs_densities)
 
   end subroutine transform_rs_densities
 
   !----------------------------------------------------------
-  subroutine transform_rs_state_to_6x6_rs_state_forward(rs_state_3x3_plus, rs_state_3x3_minus, rs_state_6x6)
-    CMPLX, intent(in)    :: rs_state_3x3_plus(:,:)
-    CMPLX, intent(in)    :: rs_state_3x3_minus(:,:)
-    CMPLX, intent(inout) :: rs_state_6x6(:,:)
+  subroutine transform_rs_densities_to_6x6_rs_densities_forward(mesh, rs_charge_density, rs_current_density, rs_density_6x6)
+    type(mesh_t),             intent(in)    :: mesh
+    CMPLX,                    intent(in)    :: rs_charge_density(:)
+    CMPLX,                    intent(in)    :: rs_current_density(:,:)
+    CMPLX,                    intent(inout) :: rs_density_6x6(:,:)
 
     integer :: ii
 
-    ! no push_sub, called to frequently
-    do ii = 1, 3
-      rs_state_6x6(:, ii) = rs_state_3x3_plus(:, ii)
-      rs_state_6x6(:, ii+3) = rs_state_3x3_minus(:, ii)
-    end do
-
-  end subroutine transform_rs_state_to_6x6_rs_state_forward
-
-  !----------------------------------------------------------
-  subroutine transform_rs_state_to_6x6_rs_state_backward(rs_state_6x6, rs_state)
-    CMPLX, intent(in)    :: rs_state_6x6(:,:)
-    CMPLX, intent(inout) :: rs_state(:,:)
-
-    integer :: ii
+    ASSERT(size(rs_current_density, dim=2) == 3)
+    ASSERT(size(rs_density_6x6, dim=2) == 6)
 
     ! no push_sub, called to frequently
     do ii = 1, 3
-      rs_state(:, ii) = M_HALF * (rs_state_6x6(:, ii) + conjg(rs_state_6x6(:, ii+3)))
-    end do
-
-  end subroutine transform_rs_state_to_6x6_rs_state_backward
-
-  !----------------------------------------------------------
-  subroutine transform_rs_densities_to_6x6_rs_densities_forward(rs_charge_density, rs_current_density, rs_density_6x6)
-    CMPLX, intent(in)    :: rs_charge_density(:)
-    CMPLX, intent(in)    :: rs_current_density(:,:)
-    CMPLX, intent(inout) :: rs_density_6x6(:,:)
-
-    integer :: ii
-
-    ! no push_sub, called to frequently
-    do ii = 1, 3
-      rs_density_6x6(:, ii) = rs_current_density(:, ii)
-      rs_density_6x6(:, ii+3) = rs_current_density(:, ii)
+      rs_density_6x6(1:mesh%np, ii) = rs_current_density(1:mesh%np, ii)
+      rs_density_6x6(1:mesh%np, ii+3) = rs_current_density(1:mesh%np, ii)
     end do
 
   end subroutine transform_rs_densities_to_6x6_rs_densities_forward
 
   !----------------------------------------------------------
-  subroutine transform_rs_densities_to_6x6_rs_densities_backward(rs_density_6x6, rs_charge_density, rs_current_density)
-    CMPLX, intent(in)    :: rs_density_6x6(:,:)
-    CMPLX, intent(inout) :: rs_charge_density(:)
-    CMPLX, intent(inout) :: rs_current_density(:,:)
+  subroutine transform_rs_densities_to_6x6_rs_densities_backward(mesh, rs_density_6x6, rs_charge_density, rs_current_density)
+    type(mesh_t),             intent(in)    :: mesh
+    CMPLX,                    intent(in)    :: rs_density_6x6(:,:)
+    CMPLX,                    intent(inout) :: rs_charge_density(:)
+    CMPLX,                    intent(inout) :: rs_current_density(:,:)
 
     integer :: ii
 
+    ASSERT(size(rs_current_density, dim=2) == 3)
+    ASSERT(size(rs_density_6x6, dim=2) == 6)
+
     ! no push_sub, called to frequently
     do ii = 1, 3
-      rs_current_density(:, ii) = M_HALF * TOFLOAT(rs_density_6x6(:, ii) + rs_density_6x6(:, ii+3))
+      rs_current_density(1:mesh%np, ii) = M_HALF * &
+                TOFLOAT(rs_density_6x6(1:mesh%np, ii) + rs_density_6x6(1:mesh%np, ii+3))
     end do
 
   end subroutine transform_rs_densities_to_6x6_rs_densities_backward
 
   !----------------------------------------------------------
-  subroutine transform_rs_state_to_4x4_rs_state_forward(rs_state_3x3, rs_state_4x4)
-    CMPLX, intent(in)    :: rs_state_3x3(:,:)
-    CMPLX, intent(inout) :: rs_state_4x4(:,:)
+  subroutine transform_rs_densities_to_4x4_rs_densities_forward(mesh, rs_charge_density, rs_current_density, rs_density_4x4)
+    type(mesh_t),             intent(in)    :: mesh
+    CMPLX,                    intent(in)    :: rs_charge_density(:)
+    CMPLX,                    intent(in)    :: rs_current_density(:,:)
+    CMPLX,                    intent(inout) :: rs_density_4x4(:,:)
 
     ! no push_sub, called to frequently
-    rs_state_4x4(:,1) = M_z1 * (-rs_state_3x3(:,1) + rs_state_3x3(:,2))
-    rs_state_4x4(:,2) = M_z1 * rs_state_3x3(:,3)
-    rs_state_4x4(:,3) = M_z1 * rs_state_3x3(:,3)
-    rs_state_4x4(:,4) = M_z1 * (rs_state_3x3(:,1) + rs_state_3x3(:,2))
-
-  end subroutine transform_rs_state_to_4x4_rs_state_forward
-
-  !----------------------------------------------------------
-  subroutine transform_rs_state_to_4x4_rs_state_backward(rs_state_4x4, rs_state_3x3)
-    CMPLX, intent(in)    :: rs_state_4x4(:,:)
-    CMPLX, intent(inout) :: rs_state_3x3(:,:)
-
-    ! no push_sub, called to frequently
-    rs_state_3x3(:,1) = M_z1 * M_HALF * (-rs_state_4x4(:,1) + rs_state_4x4(:,4))
-    rs_state_3x3(:,2) = M_zI * M_HALF * (-rs_state_4x4(:,1) - rs_state_4x4(:,4))
-    rs_state_3x3(:,3) = M_z1 * M_HALF * (rs_state_4x4(:,2) + rs_state_4x4(:,3))
-
-  end subroutine transform_rs_state_to_4x4_rs_state_backward
-
-  !----------------------------------------------------------
-  subroutine transform_rs_densities_to_4x4_rs_densities_forward(rs_charge_density, rs_current_density, rs_density_4x4)
-    CMPLX, intent(in)    :: rs_charge_density(:)
-    CMPLX, intent(in)    :: rs_current_density(:,:)
-    CMPLX, intent(inout) :: rs_density_4x4(:,:)
-
-    ! no push_sub, called to frequently
-    rs_density_4x4(:,1) = M_z1 * (-rs_current_density(:,1) + rs_current_density(:,2))
-    rs_density_4x4(:,2) = M_z1 * (rs_current_density(:,3) - rs_charge_density(:))
-    rs_density_4x4(:,3) = M_z1 * (rs_current_density(:,3) + rs_charge_density(:))
-    rs_density_4x4(:,4) = M_z1 * (rs_current_density(:,1) + rs_current_density(:,2))
+    rs_density_4x4(1:mesh%np, 1) = M_z1 * (-rs_current_density(1:mesh%np, 1) + rs_current_density(1:mesh%np, 2))
+    rs_density_4x4(1:mesh%np, 2) = M_z1 * (rs_current_density(1:mesh%np, 3) - rs_charge_density(1:mesh%np))
+    rs_density_4x4(1:mesh%np, 3) = M_z1 * (rs_current_density(1:mesh%np, 3) + rs_charge_density(1:mesh%np))
+    rs_density_4x4(1:mesh%np, 4) = M_z1 * (rs_current_density(1:mesh%np, 1) + rs_current_density(1:mesh%np, 2))
 
   end subroutine transform_rs_densities_to_4x4_rs_densities_forward
 
   !----------------------------------------------------------
-  subroutine transform_rs_densities_to_4x4_rs_densities_backward(rs_density_4x4, rs_charge_density, rs_current_density)
-    CMPLX, intent(in)    :: rs_density_4x4(:,:)
-    CMPLX, intent(inout) :: rs_charge_density(:)
-    CMPLX, intent(inout) :: rs_current_density(:,:)
+  subroutine transform_rs_densities_to_4x4_rs_densities_backward(mesh, rs_density_4x4, rs_charge_density, rs_current_density)
+    type(mesh_t),             intent(in)    :: mesh
+    CMPLX,                    intent(in)    :: rs_density_4x4(:,:)
+    CMPLX,                    intent(inout) :: rs_charge_density(:)
+    CMPLX,                    intent(inout) :: rs_current_density(:,:)
 
     ! no push_sub, called to frequently
-    rs_charge_density(:)    = M_z1 * M_HALF * (-rs_density_4x4(:,2) + rs_density_4x4(:,3))
-    rs_current_density(:,1) = M_z1 * M_HALF * (-rs_density_4x4(:,1) + rs_density_4x4(:,4))
-    rs_current_density(:,2) = M_zI * M_HALF * (-rs_density_4x4(:,1) - rs_density_4x4(:,4))
-    rs_current_density(:,3) = M_z1 * M_HALF * (-rs_density_4x4(:,2) + rs_density_4x4(:,3))
+    rs_charge_density(1:mesh%np)     = M_z1 * M_HALF * (-rs_density_4x4(1:mesh%np,2) + rs_density_4x4(1:mesh%np,3))
+    rs_current_density(1:mesh%np, 1) = M_z1 * M_HALF * (-rs_density_4x4(1:mesh%np,1) + rs_density_4x4(1:mesh%np,4))
+    rs_current_density(1:mesh%np, 2) = M_zI * M_HALF * (-rs_density_4x4(1:mesh%np,1) - rs_density_4x4(1:mesh%np,4))
+    rs_current_density(1:mesh%np, 3) = M_z1 * M_HALF * (-rs_density_4x4(1:mesh%np,2) + rs_density_4x4(1:mesh%np,3))
 
   end subroutine transform_rs_densities_to_4x4_rs_densities_backward
 
@@ -1004,9 +937,11 @@ contains
     FLOAT   :: bounds(2, mesh%sb%dim), xx(mesh%sb%dim)
     FLOAT   :: ddv(mesh%sb%dim), tmp(mesh%sb%dim), width(mesh%sb%dim)
     FLOAT, allocatable :: mask(:)
+    type(profile_t), save :: prof
 
     PUSH_SUB(derivatives_boundary_mask)
 
+    call profiling_in(prof, 'DERIVATIVES_BOUNDARY_MASK')
     dim = mesh%sb%dim
 
     if (hm%bc_zero .or. hm%bc_constant .or. hm%bc_plane_waves) then
@@ -1081,6 +1016,7 @@ contains
     end do
 
     SAFE_DEALLOCATE_A(mask)
+    call profiling_out(prof)
 
     POP_SUB(derivatives_boundary_mask)
   end subroutine derivatives_boundary_mask
@@ -1098,125 +1034,68 @@ contains
     CMPLX,     optional, intent(in)    :: rs_field_plane_waves(:,:)
     FLOAT,     optional, intent(inout) :: energy_dens_plane_waves(:)
 
-    CMPLX, allocatable :: ztmp(:,:)
     integer            :: idim, ip
+    type(profile_t), save :: prof
 
     PUSH_SUB(energy_density_calc)
 
-    SAFE_ALLOCATE(ztmp(1:gr%mesh%np_part,1:st%dim))
-
-    ztmp(:,:) = rs_field(:,:)
-
-    energy_dens(:) = M_ZERO
-    do ip = 1, gr%mesh%np
-      do idim = 1, st%dim
-        energy_dens(ip) = energy_dens(ip) + conjg(ztmp(ip,idim)) * ztmp(ip,idim)
-      end do
-    end do
+    call profiling_in(prof, 'ENERGY_DENSITY_CALC')
 
     e_energy_dens(:) = M_ZERO
-    do ip = 1, gr%mesh%np
-      do idim = 1, st%dim
-        e_energy_dens(ip) = e_energy_dens(ip) + real(ztmp(ip,idim))**2
-      end do
-    end do
-
     b_energy_dens(:) = M_ZERO
     do ip = 1, gr%mesh%np
       do idim = 1, st%dim
-        b_energy_dens(ip) = b_energy_dens(ip) + aimag(ztmp(ip,idim))**2
+        e_energy_dens(ip) = e_energy_dens(ip) + real(rs_field(ip,idim))**2
+        b_energy_dens(ip) = b_energy_dens(ip) + aimag(rs_field(ip,idim))**2
       end do
+      energy_dens(ip) = e_energy_dens(ip) + b_energy_dens(ip)
     end do
 
     if (present(rs_field_plane_waves) .and. present(energy_dens_plane_waves) .and. plane_waves_check) then
-      ztmp(:,:) = rs_field_plane_waves(:,:)
       energy_dens_plane_waves(:) = M_ZERO
       do ip = 1, gr%mesh%np
         do idim = 1, st%dim
-          energy_dens_plane_waves(ip) = energy_dens_plane_waves(ip) + conjg(ztmp(ip,idim)) * ztmp(ip,idim)
+          energy_dens_plane_waves(ip) = energy_dens_plane_waves(ip) &
+                + conjg(rs_field_plane_waves(ip,idim)) * rs_field_plane_waves(ip,idim)
         end do
       end do
     end if
 
-    SAFE_DEALLOCATE_A(ztmp)
+    call profiling_out(prof)
 
     POP_SUB(energy_density_calc)
   end subroutine energy_density_calc
 
   !----------------------------------------------------------
-  subroutine energy_mxll_calc(gr, st, hm, rs_field, mx_energy, mx_e_energy, mx_b_energy, mx_energy_boundary, &
-    rs_field_plane_waves, mx_energy_plane_waves)
+  subroutine energy_mxll_calc(gr, st, hm, energy_mxll, rs_field, rs_field_plane_waves)
     type(grid_t),             intent(in)  :: gr
     type(states_mxll_t),      intent(in)  :: st
     type(hamiltonian_mxll_t), intent(in)  :: hm
+    type(energy_mxll_t),      intent(inout) :: energy_mxll
     CMPLX,                    intent(in)  :: rs_field(:,:)
-    FLOAT,                    intent(out) :: mx_energy
-    FLOAT,                    intent(out) :: mx_e_energy
-    FLOAT,                    intent(out) :: mx_b_energy
-    FLOAT, optional,          intent(out) :: mx_energy_boundary
     CMPLX, optional,          intent(in)  :: rs_field_plane_waves(:,:)
-    FLOAT, optional,          intent(out) :: mx_energy_plane_waves
 
-    integer            :: ip, ip_in
-    FLOAT, allocatable :: energy_density(:), energy_density_plane_waves(:), tmp(:), tmp_pw(:)
-    FLOAT, allocatable :: e_energy_density(:), tmp_e(:)
-    FLOAT, allocatable :: b_energy_density(:), tmp_b(:)
+    type(profile_t), save :: prof
 
     PUSH_SUB(energy_mxll_calc)
 
-    SAFE_ALLOCATE(energy_density(1:gr%mesh%np))
-    SAFE_ALLOCATE(energy_density_plane_waves(1:gr%mesh%np))
-    SAFE_ALLOCATE(e_energy_density(1:gr%mesh%np))
-    SAFE_ALLOCATE(b_energy_density(1:gr%mesh%np))
-    SAFE_ALLOCATE(tmp(1:gr%mesh%np))
-    SAFE_ALLOCATE(tmp_e(1:gr%mesh%np))
-    SAFE_ALLOCATE(tmp_b(1:gr%mesh%np))
-    SAFE_ALLOCATE(tmp_pw(1:gr%mesh%np))
+    call profiling_in(prof, 'ENERGY_MXLL_CALC')
 
-    call energy_density_calc(gr, st, rs_field, energy_density, e_energy_density, b_energy_density, hm%plane_waves, &
-      rs_field_plane_waves, energy_density_plane_waves)
+    call energy_density_calc(gr, st, rs_field, energy_mxll%energy_density, energy_mxll%e_energy_density, &
+         energy_mxll%b_energy_density, hm%plane_waves, rs_field_plane_waves, energy_mxll%energy_density_plane_waves)
 
-    tmp    = M_ZERO
-    tmp_e  = M_ZERO
-    tmp_b  = M_ZERO
-    tmp_pw = M_ZERO
-
-    do ip_in = 1, st%inner_points_number
-      ip =  st%inner_points_map(ip_in)
-      tmp(ip)    = energy_density(ip)
-      tmp_e(ip)  = e_energy_density(ip)
-      tmp_b(ip)  = b_energy_density(ip)
-      if (present(rs_field_plane_waves) .and. present(mx_energy_plane_waves)) tmp_pw(ip) = energy_density_plane_waves(ip)
-    end do
-
-    mx_energy             = dmf_integrate(gr%mesh, tmp)
-    mx_e_energy           = dmf_integrate(gr%mesh, tmp_e)
-    mx_b_energy           = dmf_integrate(gr%mesh, tmp_b)
-    if (present(rs_field_plane_waves) .and. present(mx_energy_plane_waves) .and. hm%plane_waves) then
-      mx_energy_plane_waves = dmf_integrate(gr%mesh, tmp_pw)
+    energy_mxll%energy    = dmf_integrate(gr%mesh, energy_mxll%energy_density, mask=st%inner_points_mask)
+    energy_mxll%e_energy  = dmf_integrate(gr%mesh, energy_mxll%e_energy_density, mask=st%inner_points_mask)
+    energy_mxll%b_energy  = dmf_integrate(gr%mesh, energy_mxll%b_energy_density, mask=st%inner_points_mask)
+    if (present(rs_field_plane_waves) .and. hm%plane_waves) then
+      energy_mxll%energy_plane_waves = dmf_integrate(gr%mesh, energy_mxll%energy_density_plane_waves, mask=st%inner_points_mask)
     else
-      mx_energy_plane_waves = M_ZERO
+      energy_mxll%energy_plane_waves = M_ZERO
     end if
 
-    tmp = M_ZERO
-    if (present(mx_energy_boundary)) then
-      do ip_in = 1, st%boundary_points_number
-        ip = st%boundary_points_map(ip_in)
-        tmp(ip) = energy_density(ip)
-      end do
-      mx_energy_boundary = dmf_integrate(gr%mesh, tmp)
-    else
-      mx_energy_boundary = M_ZERO
-    end if
+    energy_mxll%boundaries = dmf_integrate(gr%mesh, energy_mxll%energy_density, mask=st%boundary_points_mask)
 
-    SAFE_DEALLOCATE_A(energy_density)
-    SAFE_DEALLOCATE_A(energy_density_plane_waves)
-    SAFE_DEALLOCATE_A(e_energy_density)
-    SAFE_DEALLOCATE_A(b_energy_density)
-    SAFE_DEALLOCATE_A(tmp)
-    SAFE_DEALLOCATE_A(tmp_e)
-    SAFE_DEALLOCATE_A(tmp_b)
-    SAFE_DEALLOCATE_A(tmp_pw)
+    call profiling_out(prof)
 
     POP_SUB(energy_mxll_calc)
   end subroutine energy_mxll_calc
@@ -1235,8 +1114,11 @@ contains
     integer             :: idim, ip_surf, ix, ix_max, iy, iy_max, iz, iz_max, ii_max
     FLOAT               :: tmp_sum
     FLOAT,  allocatable :: poynting_vector(:,:), tmp_global(:,:), tmp_surf(:,:,:,:,:)
+    type(profile_t), save :: prof
 
     PUSH_SUB(energy_rate_calc)
+
+    call profiling_in(prof, 'ENERGY_RATE_CALC')
 
     SAFE_ALLOCATE(poynting_vector(1:gr%mesh%np,1:st%dim))
     SAFE_ALLOCATE(tmp_global(1:gr%mesh%np_global,1:st%dim))
@@ -1328,6 +1210,8 @@ contains
     SAFE_DEALLOCATE_A(poynting_vector)
     SAFE_DEALLOCATE_A(tmp_global)
 
+    call profiling_out(prof)
+
     POP_SUB(energy_rate_calc)
   end subroutine energy_rate_calc
 
@@ -1346,8 +1230,11 @@ contains
     integer             :: idim, ip_surf, ix, ix_max, iy, iy_max, iz, iz_max, ii_max
     FLOAT               :: tmp_sum
     FLOAT,  allocatable :: poynting_vector(:,:), tmp_global(:,:), tmp_surf(:,:,:,:,:)
+    type(profile_t), save :: prof
 
     PUSH_SUB(energy_rate_calc_plane_waves)
+
+    call profiling_in(prof, 'ENERGY_RATE_CALC_PLANE_WAVES')
 
     SAFE_ALLOCATE(poynting_vector(1:gr%mesh%np,1:st%dim))
     SAFE_ALLOCATE(tmp_global(1:gr%mesh%np_global,1:st%dim))
@@ -1439,6 +1326,8 @@ contains
     SAFE_DEALLOCATE_A(poynting_vector)
     SAFE_DEALLOCATE_A(tmp_global)
 
+    call profiling_out(prof)
+
     POP_SUB(energy_rate_calc_plane_waves)
   end subroutine energy_rate_calc_plane_waves
 
@@ -1452,8 +1341,11 @@ contains
 
     integer             :: idim, ip_surf, ix, ix_max, iy, iy_max, iz, iz_max, ii_max
     FLOAT,  allocatable :: poynting_vector(:,:), tmp_global(:,:), tmp_surf(:,:,:,:,:)
+    type(profile_t), save :: prof
 
     PUSH_SUB(poynting_vector_through_box_surfaces)
+
+    call profiling_in(prof, 'POYN_VEC_THROUGH_BOX_SURF')
 
     SAFE_ALLOCATE(poynting_vector(1:gr%mesh%np,1:st%dim))
     SAFE_ALLOCATE(tmp_global(1:gr%mesh%np_global,1:st%dim))
@@ -1535,6 +1427,8 @@ contains
     SAFE_DEALLOCATE_A(poynting_vector)
     SAFE_DEALLOCATE_A(tmp_global)
 
+    call profiling_out(prof)
+
     POP_SUB(poynting_vector_through_box_surfaces)
   end subroutine poynting_vector_through_box_surfaces
 
@@ -1548,8 +1442,11 @@ contains
 
     integer             :: idim, ip_surf, ix, ix_max, iy, iy_max, iz, iz_max, ii_max
     FLOAT,  allocatable :: poynting_vector(:,:), tmp_global(:,:), tmp_surf(:,:,:,:,:)
+    type(profile_t), save :: prof
 
     PUSH_SUB(poynting_vector_through_box_surfaces_plane_waves)
+
+    call profiling_in(prof, 'POYN_VEC_BOX_SURF_PL_WAVES')
 
     SAFE_ALLOCATE(poynting_vector(1:gr%mesh%np,1:st%dim))
     SAFE_ALLOCATE(tmp_global(1:gr%mesh%np_global,1:st%dim))
@@ -1631,6 +1528,8 @@ contains
     SAFE_DEALLOCATE_A(poynting_vector)
     SAFE_DEALLOCATE_A(tmp_global)
 
+    call profiling_out(prof)
+
     POP_SUB(poynting_vector_through_box_surfaces_plane_waves)
   end subroutine poynting_vector_through_box_surfaces_plane_waves
 
@@ -1647,8 +1546,11 @@ contains
     integer             :: idim, ip_surf, ix, ix_max, iy, iy_max, iz, iz_max, ii_max
     FLOAT, allocatable :: e_surf(:,:,:,:,:), b_surf(:,:,:,:,:), e_field(:,:), e_field_global(:,:), b_field(:,:), &
       b_field_global(:,:)
+    type(profile_t), save :: prof
 
     PUSH_SUB(fields_through_box_surfaces)
+
+    call profiling_in(prof, 'FIELDS_THROUGH_BOX_SURF')
 
     SAFE_ALLOCATE(e_field(1:gr%mesh%np, 1:st%dim))
     SAFE_ALLOCATE(b_field(1:gr%mesh%np, 1:st%dim))
@@ -1769,6 +1671,8 @@ contains
     SAFE_DEALLOCATE_A(e_field_global)
     SAFE_DEALLOCATE_A(b_field_global)
 
+    call profiling_out(prof)
+
     POP_SUB(fields_through_box_surfaces)
   end subroutine fields_through_box_surfaces
 
@@ -1784,8 +1688,11 @@ contains
     integer             :: idim, ip_surf, ix, ix_max, iy, iy_max, iz, iz_max, ii_max
     FLOAT, allocatable :: e_surf(:,:,:,:,:), b_surf(:,:,:,:,:), e_field(:,:), e_field_global(:,:), b_field(:,:), &
       b_field_global(:,:)
+    type(profile_t), save :: prof
 
     PUSH_SUB(fields_through_box_surfaces_plane_waves)
+
+    call profiling_in(prof, 'FIELDS_THROUGH_BOX_SURF_PW')
 
     SAFE_ALLOCATE(e_field(1:gr%mesh%np, 1:st%dim))
     SAFE_ALLOCATE(b_field(1:gr%mesh%np, 1:st%dim))
@@ -1910,6 +1817,8 @@ contains
     SAFE_DEALLOCATE_A(e_field_global)
     SAFE_DEALLOCATE_A(b_field_global)
 
+    call profiling_out(prof)
+
     POP_SUB(fields_through_box_surfaces_plane_waves)
   end subroutine fields_through_box_surfaces_plane_waves
 
@@ -1927,8 +1836,11 @@ contains
 
     integer            :: ip, ip_in, idim
     logical            :: mask_check = .false.
+    type(profile_t), save :: prof
 
     PUSH_SUB(mask_absorbing_boundaries)
+
+    call profiling_in(prof, 'MASK_ABSORBING_BOUNDARIES')
 
     do idim = 1, 3
       if (hm%bc%bc_ab_type(idim) == OPTION__MAXWELLABSORBINGBOUNDARIES__MASK) then
@@ -1959,6 +1871,8 @@ contains
       end if
     end if
 
+    call profiling_out(prof)
+
     POP_SUB(mask_absorbing_boundaries)
   end subroutine mask_absorbing_boundaries
 
@@ -1968,62 +1882,74 @@ contains
     CMPLX,                    intent(inout) :: rs_state(:,:)
 
     integer :: ip, ip_in, idim
+    type(profile_t), save :: prof
 
     PUSH_SUB(maxwell_mask)
 
+    call profiling_in(prof, 'MAXWELL_MASK')
+
     do idim = 1, 3
       if (hm%bc%bc_ab_type(idim) == OPTION__MAXWELLABSORBINGBOUNDARIES__MASK) then
-        do ip_in=1, hm%bc%mask_points_number(idim)
+        do ip_in = 1, hm%bc%mask_points_number(idim)
           ip = hm%bc%mask_points_map(ip_in,idim)
-          rs_state(ip,:) = rs_state(ip,:)*hm%bc%mask(ip_in,idim)
+          rs_state(ip,:) = rs_state(ip,:) * hm%bc%mask(ip_in,idim)
         end do
       end if
     end do
+
+    call profiling_out(prof)
 
     POP_SUB(maxwell_mask)
   end subroutine maxwell_mask
 
   ! ---------------------------------------------------------
-  subroutine pml_propagation_stage_1(hm, gr, st, tr, ff_rs_state, ff_rs_state_pml)
+  subroutine pml_propagation_stage_1_batch(hm, gr, st, tr, ff_rs_stateb, ff_rs_state_pmlb)
     type(hamiltonian_mxll_t),   intent(inout) :: hm
     type(grid_t),               intent(in)    :: gr
     type(states_mxll_t),        intent(inout) :: st
     type(propagator_mxll_t),    intent(inout) :: tr
-    CMPLX,                      intent(in)    :: ff_rs_state(:,:)
-    CMPLX,                      intent(inout) :: ff_rs_state_pml(:,:)
+    type(batch_t),              intent(in)    :: ff_rs_stateb
+    type(batch_t),              intent(inout) :: ff_rs_state_pmlb
 
-    integer            :: ip, ff_points, ff_dim
-    CMPLX, allocatable :: ff_rs_state_plane_waves(:,:), rs_state_constant(:,:), ff_rs_state_constant(:,:)
+    integer            :: ii
+    CMPLX, allocatable :: rs_state_constant(:,:)
+    type(profile_t), save :: prof
 
-    PUSH_SUB(pml_propagation_stage_1)
+    PUSH_SUB(pml_propagation_stage_1_batch)
+
+    call profiling_in(prof, 'PML_PROP_STAGE_1_BATCH')
 
     if (tr%bc_plane_waves .and. hm%plane_waves_apply) then
-      ff_points = size(ff_rs_state(:,1))
-      ff_dim    = size(ff_rs_state(1,:))
-      SAFE_ALLOCATE(ff_rs_state_plane_waves(1:ff_points,1:ff_dim))
-      call transform_rs_state(hm, gr, st, st%rs_state_plane_waves, ff_rs_state_plane_waves, RS_TRANS_FORWARD)
-      ff_rs_state_pml = ff_rs_state - ff_rs_state_plane_waves
-      SAFE_DEALLOCATE_A(ff_rs_state_plane_waves)
+      call transform_rs_state_batch(hm, gr, st, st%rs_state_plane_waves, &
+        ff_rs_state_pmlb, RS_TRANS_FORWARD)
+      call batch_xpay(gr%mesh%np, ff_rs_stateb, -M_ONE, ff_rs_state_pmlb)
     else if (tr%bc_constant .and. hm%spatial_constant_apply) then
-      ff_dim    = size(ff_rs_state(1,:))
-      SAFE_ALLOCATE(rs_state_constant(1,1:3))
-      SAFE_ALLOCATE(ff_rs_state_constant(1,1:ff_dim))
-      rs_state_constant(1,:) = st%rs_state_const(:)
-      call transform_rs_state(hm, gr, st, rs_state_constant, ff_rs_state_constant, RS_TRANS_FORWARD)
-      do ip=1, gr%mesh%np_part
-        ff_rs_state_pml(ip,:) = ff_rs_state(ip,:) - ff_rs_state_constant(1,:)
+      ! this could be optimized: right now we broadcast the constant value
+      !  to the full mesh to be able to use the batch functions easily.
+      ! in principle, we would need to do the transform only for one point
+      !  and then subtract that value from all points of the state
+      SAFE_ALLOCATE(rs_state_constant(1:gr%mesh%np,1:3))
+      do ii = 1, 3
+        rs_state_constant(1:gr%mesh%np, ii) = st%rs_state_const(ii)
       end do
+
+      call transform_rs_state_batch(hm, gr, st, rs_state_constant, &
+        ff_rs_state_pmlb, RS_TRANS_FORWARD)
+      call batch_xpay(gr%mesh%np, ff_rs_stateb, -M_ONE, ff_rs_state_pmlb)
+
       SAFE_DEALLOCATE_A(rs_state_constant)
-      SAFE_DEALLOCATE_A(ff_rs_state_constant)
     else
-      ff_rs_state_pml = ff_rs_state
+      ! this copy should not be needed
+      call ff_rs_stateb%copy_data_to(gr%mesh%np, ff_rs_state_pmlb)
     end if
 
-    POP_SUB(pml_propagation_stage_1)
-  end subroutine pml_propagation_stage_1
+    call profiling_out(prof)
+
+    POP_SUB(pml_propagation_stage_1_batch)
+  end subroutine pml_propagation_stage_1_batch
 
   ! ---------------------------------------------------------
-  subroutine pml_propagation_stage_2(hm, namespace, gr, st, tr, time, dt, time_delay, ff_rs_state_pml, ff_rs_state)
+  subroutine pml_propagation_stage_2_batch(hm, namespace, gr, st, tr, time, dt, time_delay, ff_rs_state_pmlb, ff_rs_stateb)
     type(hamiltonian_mxll_t),   intent(inout) :: hm
     type(namespace_t),          intent(in)    :: namespace
     type(grid_t),               intent(in)    :: gr
@@ -2032,259 +1958,207 @@ contains
     FLOAT,                      intent(in)    :: time
     FLOAT,                      intent(in)    :: dt
     FLOAT,                      intent(in)    :: time_delay
-    CMPLX,                      intent(inout) :: ff_rs_state_pml(:,:)
-    CMPLX,                      intent(inout) :: ff_rs_state(:,:)
+    type(batch_t),              intent(inout) :: ff_rs_state_pmlb
+    type(batch_t),              intent(inout) :: ff_rs_stateb
 
-    integer            :: ip, ip_in, ff_points, ff_dim
-    CMPLX, allocatable :: ff_rs_state_plane_waves(:,:), rs_state_constant(:,:), ff_rs_state_constant(:,:)
+    integer            :: ip, ip_in, ii, ff_dim
+    CMPLX, allocatable :: rs_state_constant(:,:), ff_rs_state_constant(:,:)
+    type(profile_t), save :: prof
+    type(batch_t) :: ff_rs_state_plane_wavesb, ff_rs_constantb
 
-    PUSH_SUB(pml_propagation_stage_2)
+    PUSH_SUB(pml_propagation_stage_2_batch)
+
+    call profiling_in(prof, 'PML_PROP_STAGE_2_BATCH')
 
     if (tr%bc_plane_waves .and. hm%plane_waves_apply) then
-      ff_points = size(ff_rs_state(:,1))
-      ff_dim    = size(ff_rs_state(1,:))
       hm%cpml_hamiltonian = .true.
-      call exponential_mxll_apply(hm, namespace, gr, st, tr, dt, ff_rs_state_pml)
+      call exponential_apply_batch(tr%te, namespace, gr%mesh, hm, ff_rs_state_pmlb, dt)
       hm%cpml_hamiltonian = .false.
       call plane_waves_propagation(hm, tr, namespace, st, gr, time, dt, time_delay)
-      SAFE_ALLOCATE(ff_rs_state_plane_waves(1:ff_points,1:ff_dim))
-      call transform_rs_state(hm, gr, st, st%rs_state_plane_waves, ff_rs_state_plane_waves, RS_TRANS_FORWARD)
-      do ip_in=1, hm%bc%plane_wave%points_number
-        ip = hm%bc%plane_wave%points_map(ip_in)
-        ff_rs_state(ip,:) = ff_rs_state_pml(ip,:) + ff_rs_state_plane_waves(ip,:)
-      end do
-      SAFE_DEALLOCATE_A(ff_rs_state_plane_waves)
+
+      call ff_rs_stateb%copy_to(ff_rs_state_plane_wavesb)
+      call transform_rs_state_batch(hm, gr, st, st%rs_state_plane_waves, ff_rs_state_plane_wavesb, RS_TRANS_FORWARD)
+
+      select case(ff_rs_stateb%status())
+      case(BATCH_NOT_PACKED)
+        do ii = 1, ff_rs_stateb%nst_linear
+          do ip_in = 1, hm%bc%plane_wave%points_number
+            ip = hm%bc%plane_wave%points_map(ip_in)
+            ff_rs_stateb%zff_linear(ip, ii) = ff_rs_state_pmlb%zff_linear(ip, ii) + &
+              ff_rs_state_plane_wavesb%zff_linear(ip, ii)
+          end do
+        end do
+      case(BATCH_PACKED)
+        do ip_in = 1, hm%bc%plane_wave%points_number
+          ip = hm%bc%plane_wave%points_map(ip_in)
+          do ii = 1, ff_rs_stateb%nst_linear
+            ff_rs_stateb%zff_pack(ii, ip) = ff_rs_state_pmlb%zff_pack(ii, ip) + &
+              ff_rs_state_plane_wavesb%zff_pack(ii, ip)
+          end do
+        end do
+      end select
+
     else if (tr%bc_constant .and. hm%spatial_constant_apply) then
-      ff_dim    = size(ff_rs_state(1,:))
       hm%cpml_hamiltonian = .true.
-      call exponential_mxll_apply(hm, namespace, gr, st, tr, dt, ff_rs_state_pml)
+      call exponential_apply_batch(tr%te, namespace, gr%mesh, hm, ff_rs_state_pmlb, dt)
       hm%cpml_hamiltonian = .false.
-      SAFE_ALLOCATE(rs_state_constant(1,1:ff_dim))
-      SAFE_ALLOCATE(ff_rs_state_constant(1,1:ff_dim))
-      rs_state_constant(1,:) = st%rs_state_const(:)
-      call transform_rs_state(hm, gr, st, rs_state_constant, ff_rs_state_constant, RS_TRANS_BACKWARD)
-      do ip_in=1, hm%bc%constant_points_number
-        ip = hm%bc%constant_points_map(ip_in)
-        ff_rs_state(ip,:) = ff_rs_state_pml(ip,:) + ff_rs_state_constant(1,:)
+
+      call ff_rs_stateb%copy_to(ff_rs_constantb)
+      ff_dim = ff_rs_stateb%nst_linear
+      SAFE_ALLOCATE(rs_state_constant(1:gr%mesh%np, 1:st%dim))
+      ! copy the value to the full mesh to be able to use batches
+      ! this is in principle unneeded, but otherwise we could not use batches...
+      do ii = 1, st%dim
+        rs_state_constant(1:gr%mesh%np, ii) = st%rs_state_const(ii)
       end do
+
+      call transform_rs_state_batch(hm, gr, st, rs_state_constant, ff_rs_constantb, RS_TRANS_FORWARD)
+      select case(ff_rs_stateb%status())
+      case(BATCH_NOT_PACKED)
+        do ii = 1, ff_rs_stateb%nst_linear
+          do ip_in = 1, hm%bc%constant_points_number
+            ip = hm%bc%constant_points_map(ip_in)
+            ff_rs_stateb%zff_linear(ip, ii) = ff_rs_state_pmlb%zff_linear(ip, ii) + &
+              ff_rs_constantb%zff_linear(ip, ii)
+          end do
+        end do
+      case(BATCH_PACKED)
+        do ip_in = 1, hm%bc%constant_points_number
+          ip = hm%bc%constant_points_map(ip_in)
+          do ii = 1, ff_rs_stateb%nst_linear
+            ff_rs_stateb%zff_pack(ii, ip) = ff_rs_state_pmlb%zff_pack(ii, ip) + &
+              ff_rs_constantb%zff_pack(ii, ip)
+          end do
+        end do
+      end select
+ 
       SAFE_DEALLOCATE_A(rs_state_constant)
       SAFE_DEALLOCATE_A(ff_rs_state_constant)
     end if
 
-    POP_SUB(pml_propagation_stage_2)
-  end subroutine pml_propagation_stage_2
+    call profiling_out(prof)
+
+    POP_SUB(pml_propagation_stage_2_batch)
+  end subroutine pml_propagation_stage_2_batch
 
   ! ---------------------------------------------------------
-  subroutine cpml_conv_function_update(hm, gr, ff_rs_state_pml, ff_dim)
+  subroutine cpml_conv_function_update(hm, gr, ff_rs_state_pmlb)
     type(hamiltonian_mxll_t), intent(inout) :: hm
-    type(grid_t),        intent(in)    :: gr
-    CMPLX,               intent(inout) :: ff_rs_state_pml(:,:)
-    integer,             intent(in)    :: ff_dim
+    type(grid_t),             intent(in)    :: gr
+    type(batch_t),            intent(inout) :: ff_rs_state_pmlb
+
+    integer :: ff_dim, istate
+    type(profile_t), save :: prof
+    CMPLX, allocatable :: ff_rs_state_pml(:,:)
 
     PUSH_SUB(cpml_conv_function_update)
 
+    call profiling_in(prof, 'CPML_CONV_FUNCTION_UPDATE')
+
     if (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__RS) then
-      call cpml_conv_function_update_via_riemann_silberstein(hm, gr, ff_rs_state_pml, ff_dim)
+      call cpml_conv_function_update_via_riemann_silberstein(hm, gr, ff_rs_state_pmlb)
     else if (hm%medium_calculation == OPTION__MAXWELLMEDIUMCALCULATION__EM) then
+      ff_dim = hm%dim
+      SAFE_ALLOCATE(ff_rs_state_pml(1:gr%mesh%np_part, ff_dim))
+      do istate = 1, hm%dim
+        call batch_get_state(ff_rs_state_pmlb, istate, gr%mesh%np_part, ff_rs_state_pml(:, istate))
+      end do
       call cpml_conv_function_update_via_e_b_fields(hm, gr, ff_rs_state_pml, ff_dim)
+      SAFE_DEALLOCATE_A(ff_rs_state_pml)
     end if
+
+    call profiling_out(prof)
 
     POP_SUB(cpml_conv_function_update)
   end subroutine cpml_conv_function_update
 
   ! ---------------------------------------------------------
-  subroutine cpml_conv_function_update_via_riemann_silberstein(hm, gr, ff_rs_state_pml, ff_dim)
+  subroutine cpml_conv_function_update_via_riemann_silberstein(hm, gr, ff_rs_state_pmlb)
     type(hamiltonian_mxll_t), intent(inout) :: hm
     type(grid_t),        intent(in)         :: gr
-    CMPLX,               intent(inout)      :: ff_rs_state_pml(:,:)
-    integer,             intent(in)         :: ff_dim
+    type(batch_t),       intent(inout)      :: ff_rs_state_pmlb
 
     integer :: ip, ip_in, np_part, rs_sign
-    CMPLX, allocatable :: tmp_partial(:), tmp_partial_2(:,:)
-    CMPLX              :: pml_a(3), pml_b(3), pml_g(3), pml_g_p(3), pml_g_m(3)
+    CMPLX :: pml_a, pml_b, pml_g, grad
+    FLOAT :: g_real, g_imag
+    type(profile_t), save :: prof
+    integer :: pml_dir, field_dir, ifield, idir
+    integer, parameter :: field_dirs(3, 2) = reshape([2, 3, 1, 3, 1, 2], [3, 2])
+    logical :: with_medium
+    class(batch_t), pointer :: gradb(:)
 
     PUSH_SUB(cpml_conv_function_update_via_riemann_silberstein)
+
+    call profiling_in(prof, 'CPML_CONV_FUN_UPDATE_VIA_RS')
+
+    ASSERT(hm%dim == 3 .or. hm%dim == 6)
 
     np_part = gr%der%mesh%np_part
     rs_sign = hm%rs_sign
 
-    if (ff_dim == 3) then
+    allocate(gradb(1:hm%der%dim), mold=ff_rs_state_pmlb)
+    do idir = 1, hm%der%dim
+      call ff_rs_state_pmlb%copy_to(gradb(idir))
+    end do
+    call zderivatives_batch_grad(hm%der, ff_rs_state_pmlb, gradb)
 
-      SAFE_ALLOCATE(tmp_partial(np_part))
+    with_medium = hm%dim == 6
 
-      ! calculation g(1,2)
-      call zderivatives_partial(gr%der, ff_rs_state_pml(:,2), tmp_partial(:), 1, set_bc = .false.)
-      do ip_in=1, hm%bc%pml%points_number
-        ip       = hm%bc%pml%points_map(ip_in)
-        pml_a(:) = hm%bc%pml%a(ip_in,:)
-        pml_b(:) = hm%bc%pml%b(ip_in,:)
-        pml_g(:) = hm%bc%pml%conv_plus(ip_in,1,:)
-        pml_g(2) = real(pml_a(1)) * real(tmp_partial(ip)) + real(pml_b(1)) * real(pml_g(2)) + &
-                   M_zI * ( aimag(pml_a(1)) * aimag(tmp_partial(ip)) + aimag(pml_b(1)) * aimag(pml_g(2)) )
-        hm%bc%pml%conv_plus(ip_in,1,:) = pml_g(:)
-      end do
-      ! calculation g(2,1)
-      call zderivatives_partial(gr%der, ff_rs_state_pml(:,1), tmp_partial(:), 2, set_bc = .false.)
-      do ip_in=1, hm%bc%pml%points_number
-        ip       = hm%bc%pml%points_map(ip_in)
-        pml_a(:) = hm%bc%pml%a(ip_in,:)
-        pml_b(:) = hm%bc%pml%b(ip_in,:)
-        pml_g(:) = hm%bc%pml%conv_plus(ip_in,2,:)
-        pml_g(1) = real(pml_a(2)) * real(tmp_partial(ip)) + real(pml_b(2)) * real(pml_g(1)) + &
-                   M_zI * ( aimag(pml_a(2)) * aimag(tmp_partial(ip)) + aimag(pml_b(2)) * aimag(pml_g(1)) )
-        hm%bc%pml%conv_plus(ip_in,2,:) = pml_g(:)
-      end do
-      ! calculation g(1,3)
-      call zderivatives_partial(gr%der, ff_rs_state_pml(:,3), tmp_partial(:), 1, set_bc = .false.)
-      do ip_in=1, hm%bc%pml%points_number
-        ip       = hm%bc%pml%points_map(ip_in)
-        pml_a(:) = hm%bc%pml%a(ip_in,:)
-        pml_b(:) = hm%bc%pml%b(ip_in,:)
-        pml_g(:) = hm%bc%pml%conv_plus(ip_in,1,:)
-        pml_g(3) = real(pml_a(1)) * real(tmp_partial(ip)) + real(pml_b(1)) * real(pml_g(3)) + &
-                   M_zI * ( aimag(pml_a(1)) * aimag(tmp_partial(ip)) + aimag(pml_b(1)) * aimag(pml_g(3)) )
-        hm%bc%pml%conv_plus(ip_in,1,:) = pml_g(:)
-      end do
-      ! calculation g(3,1)
-      call zderivatives_partial(gr%der, ff_rs_state_pml(:,1), tmp_partial(:), 3, set_bc = .false.)
-      do ip_in=1, hm%bc%pml%points_number
-        ip       = hm%bc%pml%points_map(ip_in)
-        pml_a(:) = hm%bc%pml%a(ip_in,:)
-        pml_b(:) = hm%bc%pml%b(ip_in,:)
-        pml_g(:) = hm%bc%pml%conv_plus(ip_in,3,:)
-        pml_g(1) = real(pml_a(3)) * real(tmp_partial(ip)) + real(pml_b(3)) * real(pml_g(1)) + &
-                   M_zI * ( aimag(pml_a(3)) * aimag(tmp_partial(ip)) + aimag(pml_b(3)) * aimag(pml_g(1)) )
-        hm%bc%pml%conv_plus(ip_in,3,:) = pml_g(:)
-      end do
-      ! calculation g(2,3)
-      call zderivatives_partial(gr%der, ff_rs_state_pml(:,3), tmp_partial(:), 2, set_bc = .false.)
-      do ip_in=1, hm%bc%pml%points_number
-        ip       = hm%bc%pml%points_map(ip_in)
-        pml_a(:) = hm%bc%pml%a(ip_in,:)
-        pml_b(:) = hm%bc%pml%b(ip_in,:)
-        pml_g(:) = hm%bc%pml%conv_plus(ip_in,2,:)
-        pml_g(3) = real(pml_a(2)) * real(tmp_partial(ip)) + real(pml_b(2)) * real(pml_g(3)) + &
-                   M_zI * ( aimag(pml_a(2)) * aimag(tmp_partial(ip)) + aimag(pml_b(2)) * aimag(pml_g(3)) )
-        hm%bc%pml%conv_plus(ip_in,2,:) = pml_g(:)
-      end do
-      ! calculation g(3,2)
-      call zderivatives_partial(gr%der, ff_rs_state_pml(:,2), tmp_partial(:), 3, set_bc = .false.)
-      do ip_in=1, hm%bc%pml%points_number
-        ip       = hm%bc%pml%points_map(ip_in)
-        pml_a(:) = hm%bc%pml%a(ip_in,:)
-        pml_b(:) = hm%bc%pml%b(ip_in,:)
-        pml_g(:) = hm%bc%pml%conv_plus(ip_in,3,:)
-        pml_g(2) = real(pml_a(3)) * real(tmp_partial(ip)) + real(pml_b(3)) * real(pml_g(2)) + &
-                   M_zI * ( aimag(pml_a(3)) * aimag(tmp_partial(ip)) + aimag(pml_b(3)) * aimag(pml_g(2)) )
-        hm%bc%pml%conv_plus(ip_in,3,:) = pml_g(:)
-      end do
+    do pml_dir = 1, hm%st%dim
+      select case(gradb(pml_dir)%status())
+      case(BATCH_NOT_PACKED)
+        do ip_in=1, hm%bc%pml%points_number
+          ip       = hm%bc%pml%points_map(ip_in)
+          pml_a = hm%bc%pml%a(ip_in,pml_dir)
+          pml_b = hm%bc%pml%b(ip_in,pml_dir)
+          do ifield = 1, 2
+            field_dir = field_dirs(pml_dir, ifield)
+            grad = gradb(pml_dir)%zff_linear(ip, field_dir)
+            pml_g = hm%bc%pml%conv_plus(ip_in, pml_dir, field_dir)
+            g_real = TOFLOAT(pml_a) * TOFLOAT(grad) + TOFLOAT(pml_b) * TOFLOAT(pml_g)
+            g_imag = aimag(pml_a) * aimag(grad) + aimag(pml_b) * aimag(pml_g)
+            hm%bc%pml%conv_plus(ip_in, pml_dir, field_dir) = TOCMPLX(g_real, g_imag)
+            if (with_medium) then
+              grad = gradb(pml_dir)%zff_linear(ip, field_dir+3)
+              pml_g = hm%bc%pml%conv_minus(ip_in, pml_dir, field_dir)
+              g_real = TOFLOAT(pml_a) * TOFLOAT(grad) + TOFLOAT(pml_b) * TOFLOAT(pml_g)
+              g_imag = aimag(pml_a) * aimag(grad) + aimag(pml_b) * aimag(pml_g)
+              hm%bc%pml%conv_minus(ip_in, pml_dir, field_dir) = TOCMPLX(g_real, g_imag)
+            end if
+          end do
+        end do
+      case(BATCH_PACKED)
+        do ip_in=1, hm%bc%pml%points_number
+          ip       = hm%bc%pml%points_map(ip_in)
+          pml_a = hm%bc%pml%a(ip_in,pml_dir)
+          pml_b = hm%bc%pml%b(ip_in,pml_dir)
+          do ifield = 1, 2
+            field_dir = field_dirs(pml_dir, ifield)
+            grad = gradb(pml_dir)%zff_pack(field_dir, ip)
+            pml_g = hm%bc%pml%conv_plus(ip_in, pml_dir, field_dir)
+            g_real = TOFLOAT(pml_a) * TOFLOAT(grad) + TOFLOAT(pml_b) * TOFLOAT(pml_g)
+            g_imag = aimag(pml_a) * aimag(grad) + aimag(pml_b) * aimag(pml_g)
+            hm%bc%pml%conv_plus(ip_in, pml_dir, field_dir) = TOCMPLX(g_real, g_imag)
+            if (with_medium) then
+              grad = gradb(pml_dir)%zff_pack(field_dir+3, ip)
+              pml_g = hm%bc%pml%conv_minus(ip_in, pml_dir, field_dir)
+              g_real = TOFLOAT(pml_a) * TOFLOAT(grad) + TOFLOAT(pml_b) * TOFLOAT(pml_g)
+              g_imag = aimag(pml_a) * aimag(grad) + aimag(pml_b) * aimag(pml_g)
+              hm%bc%pml%conv_minus(ip_in, pml_dir, field_dir) = TOCMPLX(g_real, g_imag)
+            end if
+          end do
+        end do
+      case(BATCH_DEVICE_PACKED)
+        call messages_not_implemented("PML on GPU")
+      end select
+    end do
 
-      SAFE_DEALLOCATE_A(tmp_partial)
+    do idir = 1, hm%der%dim
+      call gradb(idir)%end()
+    end do
+    SAFE_DEALLOCATE_P(gradb)
 
-    else if (ff_dim == 6) then
-
-      SAFE_ALLOCATE(tmp_partial_2(np_part,2))
-
-      ! calculation g(1,2)
-      call zderivatives_partial(gr%der, ff_rs_state_pml(:,2), tmp_partial_2(:,1), 1, set_bc = .false.)
-      call zderivatives_partial(gr%der, ff_rs_state_pml(:,5), tmp_partial_2(:,2), 1, set_bc = .false.)
-      do ip_in=1, hm%bc%pml%points_number
-        ip         = hm%bc%pml%points_map(ip_in)
-        pml_a(:)   = hm%bc%pml%a(ip_in,:)
-        pml_b(:)   = hm%bc%pml%b(ip_in,:)
-        pml_g_p(:) = hm%bc%pml%conv_plus(ip_in,1,:)
-        pml_g_m(:) = hm%bc%pml%conv_minus(ip_in,1,:)
-        pml_g_p(2) = real(pml_a(1)) * real(tmp_partial_2(ip,1)) + real(pml_b(1)) * real(pml_g_p(2)) + &
-                     M_zI * ( aimag(pml_a(1)) * aimag(tmp_partial_2(ip,1)) + aimag(pml_b(1)) * aimag(pml_g_p(2)) )
-        pml_g_m(2) = real(pml_a(1)) * real(tmp_partial_2(ip,2)) + real(pml_b(1)) * real(pml_g_m(2)) + &
-                     M_zI * ( aimag(pml_a(1)) * aimag(tmp_partial_2(ip,2)) + aimag(pml_b(1)) * aimag(pml_g_m(2)) )
-        hm%bc%pml%conv_plus(ip_in,1,:) = pml_g_p(:)
-        hm%bc%pml%conv_minus(ip_in,1,:) = pml_g_m(:)
-      end do
-      ! calculation g(2,1)
-      call zderivatives_partial(gr%der, ff_rs_state_pml(:,1), tmp_partial_2(:,1), 2, set_bc = .false.)
-      call zderivatives_partial(gr%der, ff_rs_state_pml(:,4), tmp_partial_2(:,2), 2, set_bc = .false.)
-      do ip_in=1, hm%bc%pml%points_number
-        ip         = hm%bc%pml%points_map(ip_in)
-        pml_a(:)   = hm%bc%pml%a(ip_in,:)
-        pml_b(:)   = hm%bc%pml%b(ip_in,:)
-        pml_g_p(:) = hm%bc%pml%conv_plus(ip_in,2,:)
-        pml_g_m(:) = hm%bc%pml%conv_minus(ip_in,2,:)
-        pml_g_p(1) = real(pml_a(2)) * real(tmp_partial_2(ip,1)) + real(pml_b(2)) * real(pml_g_p(1)) + &
-                     M_zI * ( aimag(pml_a(2)) * aimag(tmp_partial_2(ip,1)) + aimag(pml_b(2)) * aimag(pml_g_p(1)) )
-        pml_g_m(1) = real(pml_a(2)) * real(tmp_partial_2(ip,2)) + real(pml_b(2)) * real(pml_g_m(1)) + &
-                     M_zI * ( aimag(pml_a(2)) * aimag(tmp_partial_2(ip,2)) + aimag(pml_b(2)) * aimag(pml_g_m(1)) )
-        hm%bc%pml%conv_plus(ip_in,2,:) = pml_g_p(:)
-        hm%bc%pml%conv_minus(ip_in,2,:) = pml_g_m(:)
-      end do
-      ! calculation g(1,3)
-      call zderivatives_partial(gr%der, ff_rs_state_pml(:,3), tmp_partial_2(:,1), 1, set_bc = .false.)
-      call zderivatives_partial(gr%der, ff_rs_state_pml(:,6), tmp_partial_2(:,2), 1, set_bc = .false.)
-      do ip_in=1, hm%bc%pml%points_number
-        ip         = hm%bc%pml%points_map(ip_in)
-        pml_a(:)   = hm%bc%pml%a(ip_in,:)
-        pml_b(:)   = hm%bc%pml%b(ip_in,:)
-        pml_g_p(:) = hm%bc%pml%conv_plus(ip_in,1,:)
-        pml_g_m(:) = hm%bc%pml%conv_minus(ip_in,1,:)
-        pml_g_p(3) = real(pml_a(1)) * real(tmp_partial_2(ip,1)) + real(pml_b(1)) * real(pml_g_p(3)) + &
-                     M_zI * ( aimag(pml_a(1)) * aimag(tmp_partial_2(ip,1)) + aimag(pml_b(1)) * aimag(pml_g_p(3)) )
-        pml_g_m(3) = real(pml_a(1)) * real(tmp_partial_2(ip,2)) + real(pml_b(1)) * real(pml_g_m(3)) + &
-                     M_zI * ( aimag(pml_a(1)) * aimag(tmp_partial_2(ip,2)) + aimag(pml_b(1)) * aimag(pml_g_m(3)) )
-        hm%bc%pml%conv_plus(ip_in,1,:) = pml_g_p(:)
-        hm%bc%pml%conv_minus(ip_in,1,:) = pml_g_m(:)
-      end do
-      ! calculation g(3,1)
-      call zderivatives_partial(gr%der, ff_rs_state_pml(:,1), tmp_partial_2(:,1), 3, set_bc = .false.)
-      call zderivatives_partial(gr%der, ff_rs_state_pml(:,4), tmp_partial_2(:,2), 3, set_bc = .false.)
-      do ip_in=1, hm%bc%pml%points_number
-        ip         = hm%bc%pml%points_map(ip_in)
-        pml_a(:)   = hm%bc%pml%a(ip_in,:)
-        pml_b(:)   = hm%bc%pml%b(ip_in,:)
-        pml_g_p(:) = hm%bc%pml%conv_plus(ip_in,3,:)
-        pml_g_m(:) = hm%bc%pml%conv_minus(ip_in,3,:)
-        pml_g_p(1) = real(pml_a(3)) * real(tmp_partial_2(ip,1)) + real(pml_b(3)) * real(pml_g_p(1)) + &
-                     M_zI * ( aimag(pml_a(3)) * aimag(tmp_partial_2(ip,1)) + aimag(pml_b(3)) * aimag(pml_g_p(1)) )
-        pml_g_m(1) = real(pml_a(3)) * real(tmp_partial_2(ip,2)) + real(pml_b(3)) * real(pml_g_m(1)) + &
-                     M_zI * ( aimag(pml_a(3)) * aimag(tmp_partial_2(ip,2)) + aimag(pml_b(3)) * aimag(pml_g_m(1)) )
-        hm%bc%pml%conv_plus(ip_in,3,:) = pml_g_p(:)
-        hm%bc%pml%conv_minus(ip_in,3,:) = pml_g_m(:)
-      end do
-      ! calculation g(2,3)
-      call zderivatives_partial(gr%der, ff_rs_state_pml(:,3), tmp_partial_2(:,1), 2, set_bc = .false.)
-      call zderivatives_partial(gr%der, ff_rs_state_pml(:,6), tmp_partial_2(:,2), 2, set_bc = .false.)
-      do ip_in=1, hm%bc%pml%points_number
-        ip         = hm%bc%pml%points_map(ip_in)
-        pml_a(:)   = hm%bc%pml%a(ip_in,:)
-        pml_b(:)   = hm%bc%pml%b(ip_in,:)
-        pml_g_p(:) = hm%bc%pml%conv_plus(ip_in,2,:)
-        pml_g_m(:) = hm%bc%pml%conv_minus(ip_in,2,:)
-        pml_g_p(3) = real(pml_a(2)) * real(tmp_partial_2(ip,1)) + real(pml_b(2)) * real(pml_g_p(3)) + &
-                     M_zI * ( aimag(pml_a(2)) * aimag(tmp_partial_2(ip,1)) + aimag(pml_b(2)) * aimag(pml_g_p(3)) )
-        pml_g_m(3) = real(pml_a(2)) * real(tmp_partial_2(ip,2)) + real(pml_b(2)) * real(pml_g_m(3)) + &
-                     M_zI * ( aimag(pml_a(2)) * aimag(tmp_partial_2(ip,2)) + aimag(pml_b(2)) * aimag(pml_g_m(3)) )
-        hm%bc%pml%conv_plus(ip_in,2,:) = pml_g_p(:)
-        hm%bc%pml%conv_minus(ip_in,2,:) = pml_g_m(:)
-      end do
-      ! calculation g(3,2)
-      call zderivatives_partial(gr%der, ff_rs_state_pml(:,2), tmp_partial_2(:,1), 3, set_bc = .false.)
-      call zderivatives_partial(gr%der, ff_rs_state_pml(:,5), tmp_partial_2(:,2), 3, set_bc = .false.)
-      do ip_in=1, hm%bc%pml%points_number
-        ip         = hm%bc%pml%points_map(ip_in)
-        pml_a(:)   = hm%bc%pml%a(ip_in,:)
-        pml_b(:)   = hm%bc%pml%b(ip_in,:)
-        pml_g_p(:) = hm%bc%pml%conv_plus(ip_in,3,:)
-        pml_g_m(:) = hm%bc%pml%conv_minus(ip_in,3,:)
-        pml_g_p(2) = real(pml_a(3)) * real(tmp_partial_2(ip,1)) + real(pml_b(3)) * real(pml_g_p(2)) + &
-                     M_zI * ( aimag(pml_a(3)) * aimag(tmp_partial_2(ip,1)) + aimag(pml_b(3)) * aimag(pml_g_p(2)) )
-        pml_g_m(2) = real(pml_a(3)) * real(tmp_partial_2(ip,2)) + real(pml_b(3)) * real(pml_g_m(2)) + &
-                     M_zI * ( aimag(pml_a(3)) * aimag(tmp_partial_2(ip,2)) + aimag(pml_b(3)) * aimag(pml_g_m(2)) )
-        hm%bc%pml%conv_plus(ip_in,3,:) = pml_g_p(:)
-        hm%bc%pml%conv_minus(ip_in,3,:) = pml_g_m(:)
-      end do
-
-      SAFE_DEALLOCATE_A(tmp_partial_2)
-
-    end if
+    call profiling_out(prof)
 
     POP_SUB(cpml_conv_function_update_via_riemann_silberstein)
   end subroutine cpml_conv_function_update_via_riemann_silberstein
@@ -2299,8 +2173,11 @@ contains
     integer :: ip, ip_in, np_part
     FLOAT, allocatable :: tmp_e(:,:), tmp_b(:,:), tmp_partial_e(:), tmp_partial_b(:)
     CMPLX              :: pml_a(3), pml_b(3), pml_g(3)
+    type(profile_t), save :: prof
 
     PUSH_SUB(cpml_conv_function_update_via_e_b_fields)
+
+    call profiling_in(prof, 'CPML_CONV_FUNC_UPD_VIA_E_B')
 
     np_part = gr%der%mesh%np_part
     SAFE_ALLOCATE(tmp_e(np_part,3))
@@ -2406,209 +2283,10 @@ contains
     SAFE_DEALLOCATE_A(tmp_b)
     SAFE_DEALLOCATE_A(tmp_partial_b)
 
+    call profiling_out(prof)
+
     POP_SUB(cpml_conv_function_update_via_e_b_fields)
   end subroutine cpml_conv_function_update_via_e_b_fields
-
-  ! ---------------------------------------------------------
-  subroutine generate_medium_boxes(hm, gr, nr_of_boxes, namespace)
-    type(hamiltonian_mxll_t), intent(inout) :: hm
-    type(grid_t),        intent(in)         :: gr
-    integer,             intent(in)         :: nr_of_boxes
-    type(namespace_t),   intent(in)         :: namespace
-
-    integer :: il, ip, ip_in, ip_in_max, ip_bd, ip_bd_max, ipp, idim
-    FLOAT   :: bounds(nr_of_boxes,2,gr%sb%dim), xx(gr%sb%dim), xxp(gr%sb%dim), dd, dd_max, dd_min
-    FLOAT, allocatable  :: tmp(:), tmp_grad(:,:)
-
-    PUSH_SUB(generate_medium_boxes)
-
-    SAFE_ALLOCATE(tmp(gr%mesh%np_part))
-    SAFE_ALLOCATE(tmp_grad(gr%mesh%np_part,1:gr%mesh%sb%dim))
-
-    SAFE_ALLOCATE(hm%medium_box%points_number(nr_of_boxes))
-    SAFE_ALLOCATE(hm%medium_box%bdry_number(nr_of_boxes))
-    hm%medium_box%number = nr_of_boxes
-
-    ip_in_max = 0
-    ip_bd_max = 0
-    do il = 1, nr_of_boxes
-      do idim = 1, 3
-        bounds(il,1,idim) = hm%medium_box%center(idim,il) - hm%medium_box%lsize(idim,il)/M_TWO
-        bounds(il,2,idim) = hm%medium_box%center(idim,il) + hm%medium_box%lsize(idim,il)/M_TWO
-      end do
-      ip_in = 0
-      ip_bd = 0
-      do ip = 1, gr%mesh%np
-        xx(1:3) = gr%mesh%x(ip, 1:3)
-        if (check_point_in_bounds(xx, bounds(il,:,:))) then
-          ip_in = ip_in + 1
-        end if
-        if (check_point_on_bounds(xx, bounds(il,:,:))) then
-          ip_bd = ip_bd + 1
-        end if
-      end do
-      if (ip_in > ip_in_max) ip_in_max = ip_in
-      if (ip_bd > ip_bd_max) ip_bd_max = ip_bd
-      hm%medium_box%points_number(il) = ip_in
-      hm%medium_box%bdry_number(il) = ip_bd
-    end do
-
-    dd_max = max(2*gr%mesh%spacing(1), 2*gr%mesh%spacing(2), 2*gr%mesh%spacing(3))
-
-    SAFE_ALLOCATE(hm%medium_box%points_map(ip_in_max,nr_of_boxes))
-    SAFE_ALLOCATE(hm%medium_box%bdry_map(ip_bd_max,nr_of_boxes))
-    SAFE_ALLOCATE(hm%medium_box%aux_ep(ip_in_max,1:3,nr_of_boxes))
-    SAFE_ALLOCATE(hm%medium_box%aux_mu(ip_in_max,1:3,nr_of_boxes))
-    SAFE_ALLOCATE(hm%medium_box%c(ip_in_max,nr_of_boxes))
-    SAFE_ALLOCATE(hm%medium_box%ep(ip_in_max,nr_of_boxes))
-    SAFE_ALLOCATE(hm%medium_box%mu(ip_in_max,nr_of_boxes))
-    SAFE_ALLOCATE(hm%medium_box%sigma_e(ip_in_max,nr_of_boxes))
-    SAFE_ALLOCATE(hm%medium_box%sigma_m(ip_in_max,nr_of_boxes))
-
-    hm%medium_box%points_map = int(M_zero)
-    hm%medium_box%bdry_map = int(M_zero)
-
-    do il = 1, nr_of_boxes
-      ip_in = 0
-      ip_bd = 0
-      do ip = 1, gr%mesh%np
-        xx(1:3) = gr%mesh%x(ip,1:3)
-        if (check_point_in_bounds(xx, bounds(il,:,:))) then
-          ip_in = ip_in + 1
-          if (any(hm%medium_box%points_map == ip)) then
-            message(1) = 'Linear media boxes overlap.'
-            call messages_fatal(1, namespace=namespace)
-          else
-            hm%medium_box%points_map(ip_in,il) = ip
-          end if
-        end if
-        if (check_point_on_bounds(xx, bounds(il,:,:))) then
-          ip_bd = ip_bd + 1
-          hm%medium_box%bdry_map(ip_bd,il) = ip
-        end if
-      end do
-    end do
-
-    do il = 1, nr_of_boxes
-
-      do ip_in = 1, hm%medium_box%points_number(il)
-        ip = hm%medium_box%points_map(ip_in,il)
-        if (hm%medium_box%shape(il) == OPTION__LINEARMEDIUMBOX__SMOOTH) then
-          xx(1:3) = gr%mesh%x(ip,1:3)
-          dd_min = M_HUGE
-
-          do ip_bd = 1, hm%medium_box%bdry_number(il)
-            ipp = hm%medium_box%bdry_map(ip_bd, il)
-            xxp(1:3) = gr%mesh%x(ipp,1:3)
-            dd = sqrt((xx(1) - xxp(1))**2 + (xx(2) - xxp(2))**2 + (xx(3) - xxp(3))**2)
-            if (dd < dd_min) dd_min = dd
-          end do
-
-          hm%medium_box%ep(ip_in,il) = P_ep + ((P_ep * hm%medium_box%ep_factor(il) - P_ep)  &
-            * M_ONE/(M_ONE + exp(-M_FIVE/dd_max * (dd_min - M_TWO*dd_max))))
-          hm%medium_box%mu(ip_in,il) = P_mu + ((P_mu * hm%medium_box%mu_factor(il) - P_mu) &
-            * M_ONE/(M_ONE + exp(-M_FIVE/dd_max * (dd_min - M_TWO*dd_max))))
-          hm%medium_box%c(ip_in,il) = M_ONE/sqrt(hm%medium_box%ep(ip_in, il)*hm%medium_box%mu(ip_in, il))
-          hm%medium_box%sigma_e(ip_in,il) = hm%medium_box%sigma_e_factor(il) &
-            * M_ONE/(M_ONE + exp(-M_FIVE/dd_max * (dd_min - M_TWO*dd_max)) )
-          hm%medium_box%sigma_m(ip_in,il) = hm%medium_box%sigma_m_factor(il) &
-            * M_ONE/(M_ONE + exp(-M_FIVE/dd_max * (dd_min - M_TWO*dd_max)) )
-
-        else if (hm%medium_box%shape(il) == OPTION__LINEARMEDIUMBOX__EDGED) then
-
-          hm%medium_box%ep(ip_in, il) = P_ep * hm%medium_box%ep_factor(il)
-          hm%medium_box%mu(ip_in, il) = P_mu * hm%medium_box%mu_factor(il)
-          hm%medium_box%c(ip_in, il) = M_ONE/sqrt(hm%medium_box%ep(ip_in, il)*hm%medium_box%mu(ip_in, il))
-          hm%medium_box%sigma_e(ip_in, il) = hm%medium_box%sigma_e_factor(il)
-          hm%medium_box%sigma_m(ip_in, il) = hm%medium_box%sigma_m_factor(il)
-
-        end if
-      end do
-
-      tmp(:) = P_ep
-      do  ip_in = 1, hm%medium_box%points_number(il)
-        ip = hm%medium_box%points_map(ip_in, il)
-        tmp(ip)= hm%medium_box%ep(ip_in, il)
-      end do
-      call dderivatives_grad(gr%der, tmp, tmp_grad, set_bc = .false.)
-      do ip_in = 1, hm%medium_box%points_number(il)
-        ip = hm%medium_box%points_map(ip_in, il)
-        hm%medium_box%aux_ep(ip_in, :, il) = tmp_grad(ip, :)/(M_FOUR * hm%medium_box%ep(ip_in, il))
-      end do
-
-      tmp(:) = P_mu
-      do ip_in = 1, hm%medium_box%points_number(il)
-        ip = hm%medium_box%points_map(ip_in, il)
-        tmp(ip) = hm%medium_box%mu(ip_in, il)
-      end do
-      call dderivatives_grad(gr%der, tmp, tmp_grad, set_bc = .false.)
-      do ip_in = 1, hm%medium_box%points_number(il)
-        ip = hm%medium_box%points_map(ip_in, il)
-        hm%medium_box%aux_mu(ip_in, :, il) = tmp_grad(ip, :)/(M_FOUR * hm%medium_box%mu(ip_in, il))
-      end do
-
-      ! print information about the medium box -- get from Renes version in maxwell_propagator.F90
-
-    end do
-
-    SAFE_DEALLOCATE_A(tmp)
-    SAFE_DEALLOCATE_A(tmp_grad)
-
-    POP_SUB(generate_medium_boxes)
-  contains
-
-    logical pure function check_point_in_bounds(xx, bounds) result (check)
-      FLOAT, intent(in) :: xx(:)
-      FLOAT, intent(in) :: bounds(:,:)
-
-      check = .false.
-      if ((xx(1) >= bounds(1,1)) .and. (xx(1) <= bounds(2,1)) .and. &
-          (xx(2) >= bounds(1,2)) .and. (xx(2) <= bounds(2,2)) .and. &
-          (xx(3) >= bounds(1,3)) .and. (xx(3) <= bounds(2,3)) ) then
-        check = .true.
-      end if
-
-    end function check_point_in_bounds
-
-    logical pure function check_point_on_bounds(xx, bounds) result (check)
-      FLOAT, intent(in) :: xx(:)
-      FLOAT, intent(in) :: bounds(:,:)
-
-      check = .false.
-      if (xx(1) == bounds(1,1) .and. (xx(2) >= bounds(1,2) .and. xx(3) >= bounds(1,3)) &
-                               .and. (xx(2) <= bounds(2,2) .and. xx(3) <= bounds(2,3)) .or. &
-          xx(2) == bounds(1,2) .and. (xx(1) >= bounds(1,1) .and. xx(3) >= bounds(1,3)) &
-                               .and. (xx(1) <= bounds(2,1) .and. xx(3) <= bounds(2,3)) .or. &
-          xx(3) == bounds(1,3) .and. (xx(1) >= bounds(1,1) .and. xx(2) >= bounds(1,2)) &
-                               .and. (xx(1) <= bounds(2,1) .and. xx(2) <= bounds(2,2)) .or. &
-          xx(1) == bounds(2,1) .and. (xx(2) >= bounds(1,2) .and. xx(3) >= bounds(1,3)) &
-                               .and. (xx(2) <= bounds(2,2) .and. xx(3) <= bounds(2,3)) .or. &
-          xx(2) == bounds(2,2) .and. (xx(1) >= bounds(1,1) .and. xx(3) >= bounds(1,3)) &
-                               .and. (xx(1) <= bounds(2,1) .and. xx(3) <= bounds(2,3)) .or. &
-          xx(3) == bounds(2,3) .and. (xx(1) >= bounds(1,1) .and. xx(2) >= bounds(1,2)) &
-                               .and. (xx(1) <= bounds(2,1) .and. xx(2) <= bounds(2,2)) ) then
-        check = .true.
-      end if
-
-    end function check_point_on_bounds
-
-    subroutine get_medium_io_function(medium_func, hm, mesh, il, io_func)
-      FLOAT,                    intent(in)    :: medium_func(:)
-      type(hamiltonian_mxll_t), intent(in)    :: hm
-      type(mesh_t),             intent(in)    :: mesh
-      integer,                  intent(in)    :: il
-      FLOAT,                    intent(inout) :: io_func(:)
-
-      integer :: ip, ip_in
-
-      do ip_in = 1, hm%medium_box%points_number(il)
-        ip = hm%medium_box%points_map(ip_in, il)
-        io_func(ip) = medium_func(ip_in)
-      end do
-
-    end subroutine get_medium_io_function
-
-  end subroutine generate_medium_boxes
 
   ! ---------------------------------------------------------
   subroutine td_function_mxll_init(st, namespace, hm)
@@ -2620,8 +2298,11 @@ contains
     integer              :: il, nlines, idim, ncols, ierr
     FLOAT                :: e_field(st%dim), b_field(st%dim)
     character(len=1024)  :: mxf_expression
+    type(profile_t), save :: prof
 
     PUSH_SUB(td_function_mxll_init)
+
+    call profiling_in(prof, 'TD_FUNCTION_MXLL_INIT')
 
     !%Variable UserDefinedConstantSpatialMaxwellField
     !%Type block
@@ -2680,6 +2361,8 @@ contains
 
     call parse_variable(namespace, 'PropagateSpatialMaxwellField', .true., hm%spatial_constant_propagate)
 
+    call profiling_out(prof)
+
     POP_SUB(td_function_mxll_init)
   end subroutine td_function_mxll_init
 
@@ -2698,8 +2381,11 @@ contains
     integer :: ip, ic, icn
     FLOAT   :: tf_old, tf_new
     logical :: set_initial_state_
+    type(profile_t), save :: prof
 
     PUSH_SUB(spatial_constant_calculation)
+
+    call profiling_in(prof, 'SPATIAL_CONSTANT_CALCULATION')
 
     set_initial_state_ = .false.
     if (present(set_initial_state)) set_initial_state_ = set_initial_state
@@ -2724,6 +2410,8 @@ contains
       end if
     end if
 
+    call profiling_out(prof)
+
     POP_SUB(spatial_constant_calculation)
   end subroutine spatial_constant_calculation
 
@@ -2736,8 +2424,10 @@ contains
     CMPLX,                     intent(inout) :: rs_state(:,:)
 
     integer :: ip_in, ip
+    type(profile_t), save :: prof
 
     PUSH_SUB(constant_boundaries_calculation)
+    call profiling_in(prof, 'CONSTANT_BOUNDARIES_CALC')
 
     if (hm%spatial_constant_apply) then
       if (constant_calc) then
@@ -2748,6 +2438,8 @@ contains
         end do
       end if
     end if
+
+    call profiling_out(prof)
 
     POP_SUB(constant_boundaries_calculation)
   end subroutine constant_boundaries_calculation
@@ -2816,8 +2508,11 @@ contains
     FLOAT                      :: k_vector_abs, nn
     FLOAT                      :: e0(mesh%sb%dim), e_field(mesh%sb%dim), b_field(mesh%sb%dim)
     CMPLX                      :: rs_state_add(mesh%sb%dim)
+    type(profile_t), save :: prof
 
     PUSH_SUB(plane_waves_boundaries_calculation)
+
+    call profiling_in(prof, 'PLANE_WAVES_BOUNDARIES_CALC')
 
     if (hm%plane_waves_apply) then
       do wn = 1, hm%bc%plane_wave%number
@@ -2846,6 +2541,8 @@ contains
         end do
       end if
 
+      call profiling_out(prof)
+
     POP_SUB(plane_waves_boundaries_calculation)
   end subroutine plane_waves_boundaries_calculation
 
@@ -2860,25 +2557,28 @@ contains
     FLOAT,                    intent(in)    :: dt
     FLOAT,                    intent(in)    :: time_delay
 
-    integer            :: ff_dim
-    CMPLX, allocatable :: ff_rs_state(:,:)
+    type(batch_t) :: ff_rs_stateb
+    integer :: ff_dim
+    type(profile_t), save :: prof
 
     PUSH_SUB(plane_waves_propagation)
 
+    call profiling_in(prof, 'PLANE_WAVES_PROPAGATION')
+
     ff_dim = hm%dim
+    call zbatch_init(ff_rs_stateb, 1, 1, hm%dim, gr%mesh%np_part)
 
-    SAFE_ALLOCATE(ff_rs_state(1:gr%mesh%np_part,ff_dim))
-
-    call transform_rs_state(hm, gr, st, st%rs_state_plane_waves, ff_rs_state, RS_TRANS_FORWARD)
+    call transform_rs_state_batch(hm, gr, st, st%rs_state_plane_waves, ff_rs_stateb, RS_TRANS_FORWARD)
 
     ! Time evolution of RS plane waves state without any coupling with H(inter_time)
     call hamiltonian_mxll_update(hm, time=time)
-    call exponential_mxll_apply(hm, namespace, gr, st, tr, dt, ff_rs_state)
-    call transform_rs_state(hm, gr, st, st%rs_state_plane_waves, ff_rs_state, RS_TRANS_BACKWARD)
+    hm%cpml_hamiltonian = .false.
+    call exponential_apply_batch(tr%te, namespace, gr%mesh, hm, ff_rs_stateb, dt)
+
+    call transform_rs_state_batch(hm, gr, st, st%rs_state_plane_waves, ff_rs_stateb, RS_TRANS_BACKWARD)
     call plane_waves_boundaries_calculation(hm, st, gr%mesh, time+dt, time_delay, st%rs_state_plane_waves)
 
-    SAFE_DEALLOCATE_A(ff_rs_state)
-
+    call profiling_out(prof)
     POP_SUB(plane_waves_propagation)
   end subroutine plane_waves_propagation
 
@@ -2895,8 +2595,11 @@ contains
     FLOAT                :: x_prop(gr%sb%dim), rr, vv(gr%sb%dim), k_vector(gr%sb%dim), k_vector_abs, nn
     FLOAT                :: e0(gr%sb%dim), e_field(gr%sb%dim), b_field(gr%sb%dim), dummy(gr%sb%dim)
     CMPLX                :: rs_state_add(st%dim)
+    type(profile_t), save :: prof
 
     PUSH_SUB(plane_waves_in_box_calculation)
+
+    call profiling_in(prof, 'PLANE_WAVES_IN_BOX_CALCULATION')
 
     np = gr%mesh%np_part
     do wn = 1, bc%plane_wave%number
@@ -2925,6 +2628,8 @@ contains
         rs_state(ip,:) = rs_state(ip,:) + rs_state_add(:)
       end do
     end do
+
+    call profiling_out(prof)
 
     POP_SUB(plane_waves_in_box_calculation)
   end subroutine plane_waves_in_box_calculation

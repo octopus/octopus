@@ -11,12 +11,14 @@
  Maxwell.ParDomains = auto
  Maxwell.ParStates  = no
 
+ StatesPack = no
+
 # ----- Maxwell box variables ---------------------------------------------------------------------
 
  # free maxwell box limit of 12.0 plus 2.0 for the incident wave boundaries with
  # der_order = 4 times dx_mx
 
- lsize_mx = 14.0
+ lsize_mx = 20.0
  dx_mx    = 0.5
 
  Maxwell.BoxShape   = parallelepiped
@@ -39,9 +41,12 @@
  %
 
  %MaxwellAbsorbingBoundaries
-  not_absorbing | not_absorbing | not_absorbing
+  cpml | cpml | cpml
  %
 
+MaxwellABWidth                 = 5.0
+MaxwellABPMLPower              = 2.0
+MaxwellABPMLReflectionError    = 1e-16
 
 # ----- Output variables --------------------------------------------------------------------------
 
@@ -92,4 +97,4 @@
 
 % LinearMediumBox
  0.0 | 0.0 | 0.0 | 10.0 | 10.0 | 10.0 | 2.0 | 2.0 | 100.0 | 100.0 | edged
-% 
+%

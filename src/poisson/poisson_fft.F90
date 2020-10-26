@@ -229,7 +229,7 @@ contains
     type(cube_t),             intent(in)    :: cube
     type(fourier_space_op_t), intent(inout) :: coulb
 
-    integer :: ix, iy, iz, ixx(3), db(3)
+    integer :: ix, iy, iz, ixx(3), db(3), n1, n2, n3, lx, ly, lz
     FLOAT :: temp(3), modg2, inv_four_mu2
     FLOAT :: gg(3)
     FLOAT, allocatable :: fft_Coulb_FS(:,:,:)
@@ -242,17 +242,23 @@ contains
       inv_four_mu2 = M_ONE/((M_TWO*coulb%mu)**2)
     end if
 
+    n1 = max(1, cube%fs_n(1))
+    n2 = max(1, cube%fs_n(2))
+    n3 = max(1, cube%fs_n(3))
     ! store the Fourier transform of the Coulomb interaction
-    SAFE_ALLOCATE(fft_Coulb_FS(1:cube%fs_n_global(1), 1:cube%fs_n_global(2), 1:cube%fs_n_global(3)))
+    SAFE_ALLOCATE(fft_Coulb_FS(1:n1, 1:n2, 1:n3))
     fft_Coulb_FS = M_ZERO
 
     temp(1:3) = M_TWO*M_PI/(db(1:3)*mesh%spacing(1:3))
 
-    do ix = 1, cube%fs_n_global(1)
+    do lx = 1, n1
+      ix = cube%fs_istart(1) + lx - 1
       ixx(1) = pad_feq(ix, db(1), .true.)
-      do iy = 1, cube%fs_n_global(2)
+      do ly = 1, n2
+        iy = cube%fs_istart(2) + ly - 1
         ixx(2) = pad_feq(iy, db(2), .true.)
-        do iz = 1, cube%fs_n_global(3)
+        do lz = 1, n3
+          iz = cube%fs_istart(3) + lz - 1
           ixx(3) = pad_feq(iz, db(3), .true.)
 
          call poisson_fft_gg_transform(ixx, temp, mesh%sb, coulb%qq, gg, modg2)
@@ -263,18 +269,18 @@ contains
          if(abs(modg2) > CNST(1e-6)) then
            !Screened coulomb potential (erfc function)
            if(coulb%mu > M_EPSILON) then
-             fft_Coulb_FS(ix, iy, iz) = M_FOUR*M_PI/modg2*(M_ONE-exp(-modg2*inv_four_mu2))
+             fft_Coulb_FS(lx, ly, lz) = M_FOUR*M_PI/modg2*(M_ONE-exp(-modg2*inv_four_mu2))
            else
-             fft_Coulb_FS(ix, iy, iz) = M_FOUR*M_PI/modg2
+             fft_Coulb_FS(lx, ly, lz) = M_FOUR*M_PI/modg2
            end if
          else
            !Screened coulomb potential (erfc function)
            if(coulb%mu > M_EPSILON) then
              !Analytical limit of 1/|q|^2*(1-exp(-|q|^2/4mu^2))
-             fft_Coulb_FS(ix, iy, iz) =  M_FOUR*M_PI*inv_four_mu2
+             fft_Coulb_FS(lx, ly, lz) =  M_FOUR*M_PI*inv_four_mu2
            else
              !We use the user-defined value of the singularity
-             fft_Coulb_FS(ix, iy, iz) = coulb%singularity
+             fft_Coulb_FS(lx, ly, lz) = coulb%singularity
            end if
          end if
 
@@ -391,7 +397,12 @@ contains
                                                  TOFLOAT( fft_Coulb_small_FS(1:nfs_s(1),1:nfs_s(2),1:nfs_s(3)))
 
 
-    call dfourier_space_op_init(coulb, cube, fft_Coulb_small_RS(1:nfs_s(1),1:nfs_s(2),1:nfs_s(3)))
+    ! Restrict array to local part to support pfft
+    ! For FFTW this reduces simply to the full array
+    call dfourier_space_op_init(coulb, cube, &
+      fft_Coulb_small_RS(cube%fs_istart(1):cube%fs_istart(1)+cube%fs_n(1), &
+                         cube%fs_istart(2):cube%fs_istart(2)+cube%fs_n(2), &
+                         cube%fs_istart(3):cube%fs_istart(3)+cube%fs_n(3)))
 
     SAFE_DEALLOCATE_A(fft_Coulb_FS)
     SAFE_DEALLOCATE_A(fft_Coulb_RS)
@@ -411,6 +422,7 @@ contains
     type(fourier_space_op_t), intent(inout) :: coulb
 
     integer :: ix, iy, iz, ixx(3), db(3)
+    integer :: lx, ly, lz, n1, n2, n3
     FLOAT :: temp(3), modg2
     FLOAT :: gpar, gz, r_c, gg(3), default_r_c
     FLOAT, allocatable :: fft_coulb_FS(:,:,:)
@@ -433,17 +445,23 @@ contains
     default_r_c = db(3)*mesh%spacing(3)/M_TWO
     call get_cutoff(namespace, default_r_c, r_c)
 
-    ! store the fourier transform of the Coulomb interaction
-    SAFE_ALLOCATE(fft_Coulb_FS(1:cube%fs_n_global(1), 1:cube%fs_n_global(2), 1:cube%fs_n_global(3)))
+    n1 = max(1, cube%fs_n(1))
+    n2 = max(1, cube%fs_n(2))
+    n3 = max(1, cube%fs_n(3))
+    ! store the Fourier transform of the Coulomb interaction
+    SAFE_ALLOCATE(fft_Coulb_FS(1:n1, 1:n2, 1:n3))
     fft_Coulb_FS = M_ZERO
 
     temp(1:3) = M_TWO*M_PI/(db(1:3)*mesh%spacing(1:3))
 
-    do ix = 1, cube%fs_n_global(1)
+    do lx = 1, n1
+      ix = cube%fs_istart(1) + lx - 1
       ixx(1) = pad_feq(ix, db(1), .true.)
-      do iy = 1, cube%fs_n_global(2)
+      do ly = 1, n2
+        iy = cube%fs_istart(2) + ly - 1
         ixx(2) = pad_feq(iy, db(2), .true.)
-        do iz = 1, cube%fs_n_global(3)
+        do lz = 1, n3
+          iz = cube%fs_istart(3) + lz - 1
           ixx(3) = pad_feq(iz, db(3), .true.)
 
           call poisson_fft_gg_transform(ixx, temp, mesh%sb, coulb%qq, gg, modg2)
@@ -452,21 +470,14 @@ contains
             gz = abs(gg(3))
             gpar = hypot(gg(1), gg(2))
             ! note: if gpar = 0, then modg2 = gz**2
-            fft_Coulb_FS(ix, iy, iz) = poisson_cutoff_3D_2D(gpar,gz,r_c)/modg2
+            fft_Coulb_FS(lx, ly, lz) = poisson_cutoff_3D_2D(gpar,gz,r_c)/modg2
           else
-            fft_Coulb_FS(ix, iy, iz) = -M_HALF*r_c**2
+            fft_Coulb_FS(lx, ly, lz) = -M_HALF*r_c**2
           end if
+          fft_Coulb_FS(lx, ly, lz) = M_FOUR*M_PI*fft_Coulb_FS(lx, ly, lz)
         end do
       end do
 
-    end do
-
-    do iz = 1, cube%fs_n_global(3)
-      do iy = 1, cube%fs_n_global(2)
-        do ix = 1, cube%fs_n_global(1)
-          fft_Coulb_FS(ix, iy, iz) = M_FOUR*M_PI*fft_Coulb_FS(ix, iy, iz)
-        end do
-      end do
     end do
 
     call dfourier_space_op_init(coulb, cube, fft_Coulb_FS)
@@ -488,6 +499,7 @@ contains
     type(spline_t)     :: cylinder_cutoff_f
     FLOAT, allocatable :: x(:), y(:)
     integer :: ix, iy, iz, ixx(3), db(3), k, ngp
+    integer :: lx, ly, lz, n1, n2, n3, lxx(3)
     FLOAT :: temp(3), modg2, xmax
     FLOAT :: gperp, gx, gy, gz, r_c, gg(3), default_r_c
     FLOAT, allocatable :: fft_coulb_FS(:,:,:)
@@ -499,8 +511,11 @@ contains
     default_r_c = maxval(db(2:3)*mesh%spacing(2:3)/M_TWO)
     call get_cutoff(namespace, default_r_c, r_c)
 
-    ! store the fourier transform of the Coulomb interaction
-    SAFE_ALLOCATE(fft_Coulb_FS(1:cube%fs_n_global(1), 1:cube%fs_n_global(2), 1:cube%fs_n_global(3)))
+    n1 = max(1, cube%fs_n(1))
+    n2 = max(1, cube%fs_n(2))
+    n3 = max(1, cube%fs_n(3))
+    ! store the Fourier transform of the Coulomb interaction
+    SAFE_ALLOCATE(fft_Coulb_FS(1:n1, 1:n2, 1:n3))
     fft_Coulb_FS = M_ZERO
 
     temp(1:3) = M_TWO*M_PI/(db(1:3)*mesh%spacing(1:3))
@@ -512,8 +527,10 @@ contains
     end if
 
 
-    do ix = 1, cube%fs_n_global(1)
+    do lx = 1, n1
+      ix = cube%fs_istart(1) + lx - 1
       ixx(1) = pad_feq(ix, db(1), .true.)
+      lxx(1) = ixx(1) - cube%fs_istart(1) + 1
       gx = temp(1)*ixx(1)
 
       if( mesh%sb%periodic_dim == 0 ) then
@@ -526,55 +543,52 @@ contains
         call spline_fit(ngp, x, y, cylinder_cutoff_f)
       end if
 
-      do iy = 1, cube%fs_n_global(2)
+      do ly = 1, n2
+        iy = cube%fs_istart(2) + ly - 1
         ixx(2) = pad_feq(iy, db(2), .true.)
-        do iz = 1, db(3)
+        lxx(2) = ixx(2) - cube%fs_istart(2) + 1
+        do lz = 1, n3
+          iz = cube%fs_istart(3) + lz - 1
           ixx(3) = pad_feq(iz, db(3), .true.)
+          lxx(3) = ixx(3) - cube%fs_istart(3) + 1
 
           call poisson_fft_gg_transform(ixx, temp, mesh%sb, coulb%qq, gg, modg2)
 
           if(abs(modg2) > M_EPSILON) then
             gperp = hypot(gg(2), gg(3))
             if (mesh%sb%periodic_dim==1) then
-              fft_Coulb_FS(ix, iy, iz) = poisson_cutoff_3D_1D(abs(gx), gperp, r_c)/modg2
+              fft_Coulb_FS(lx, ly, lz) = poisson_cutoff_3D_1D(abs(gx), gperp, r_c)/modg2
             else if (mesh%sb%periodic_dim==0) then
               gy = gg(2)
               gz = gg(3)
               if ((gz >= M_ZERO) .and. (gy >= M_ZERO)) then
-                fft_Coulb_FS(ix, iy, iz) = spline_eval(cylinder_cutoff_f, gperp)
+                fft_Coulb_FS(lx, ly, lz) = spline_eval(cylinder_cutoff_f, gperp)
               end if
               if ((gz >= M_ZERO) .and. (gy < M_ZERO)) then
-                fft_Coulb_FS(ix, iy, iz) = fft_Coulb_FS(ix, -ixx(2) + 1, iz)
+                fft_Coulb_FS(lx, ly, lz) = fft_Coulb_FS(lx, -lxx(2) + 1, lz)
               end if
               if ((gz < M_ZERO) .and. (gy >= M_ZERO)) then
-                fft_Coulb_FS(ix, iy, iz) = fft_Coulb_FS(ix, iy, -ixx(3) + 1)
+                fft_Coulb_FS(lx, ly, lz) = fft_Coulb_FS(lx, ly, -lxx(3) + 1)
               end if
               if ((gz < M_ZERO) .and. (gy < M_ZERO) ) then
-                fft_Coulb_FS(ix, iy, iz) = fft_Coulb_FS(ix, -ixx(2) + 1, -ixx(3) + 1)
+                fft_Coulb_FS(lx, ly, lz) = fft_Coulb_FS(lx, -lxx(2) + 1, -lxx(3) + 1)
               end if
             end if
 
           else
             if (mesh%sb%periodic_dim == 1) then
-              fft_Coulb_FS(ix, iy, iz) = -(M_HALF*log(r_c) - M_FOURTH)*r_c**2
+              fft_Coulb_FS(lx, ly, lz) = -(M_HALF*log(r_c) - M_FOURTH)*r_c**2
             else if (mesh%sb%periodic_dim == 0) then
-              fft_Coulb_FS(ix, iy, iz) = poisson_cutoff_3D_1D_finite(M_ZERO, M_ZERO, &
+              fft_Coulb_FS(lx, ly, lz) = poisson_cutoff_3D_1D_finite(M_ZERO, M_ZERO, &
                 M_TWO*mesh%sb%xsize, M_TWO*mesh%sb%rsize)
             end if
 
           end if
+          fft_Coulb_FS(lx, ly, lz) = M_FOUR*M_PI*fft_Coulb_FS(lx, ly, lz)
         end do
       end do
 
       if( mesh%sb%periodic_dim == 0 ) call spline_end(cylinder_cutoff_f)
-    end do
-
-    do iz = 1, cube%fs_n_global(3)
-      do iy = 1, cube%fs_n_global(2)
-        do ix = 1, cube%fs_n_global(1)
-          fft_Coulb_FS(ix, iy, iz) = M_FOUR*M_PI*fft_Coulb_FS(ix, iy, iz)
-        end do
-      end do
     end do
 
     call dfourier_space_op_init(coulb, cube, fft_Coulb_FS)

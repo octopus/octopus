@@ -11,4 +11,5 @@ parameters:
   spin_components: [unpolarized, spinors]
   #spin_components: [unpolarized, spin_polarized, spinors]
   test_type: [complex]
-timings_tags: [EXPONENTIAL]
+  exponential_method: [taylor, lanczos]
+timings_tags: [EXP_CHEBY_BATCH, EXP_TAYLOR_BATCH, EXP_LANCZOS_BATCH]

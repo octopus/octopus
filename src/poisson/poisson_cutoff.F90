@@ -40,112 +40,35 @@ module poisson_cutoff_oct_m
     real(8) function c_poisson_cutoff_3d_1d_finite(gx, gperp, xsize, rsize)
       real(8), intent(in) :: gx, gperp, rsize, xsize
     end function c_poisson_cutoff_3d_1d_finite
-    module procedure poisson_cutoff_3d_1d_finite4
   end interface poisson_cutoff_3D_1D_finite
 
   interface poisson_cutoff_2D_0D
     real(8) function c_poisson_cutoff_2d_0d(x, y)
       real(8), intent(in) :: x, y
     end function c_poisson_cutoff_2d_0d
-    module procedure poisson_cutoff_2d_0d4
   end interface poisson_cutoff_2D_0D
 
   interface poisson_cutoff_2D_1D
     real(8) function c_poisson_cutoff_2d_1d(gy, gx, r_c)
       real(8), intent(in) :: gy, gx, r_c
     end function c_poisson_cutoff_2d_1d
-    module procedure poisson_cutoff_2d_1d4
   end interface poisson_cutoff_2D_1D
 
   interface poisson_cutoff_1D_0D
     real(8) function c_poisson_cutoff_1d_0d(g, a, r_c)
       real(8), intent(in) :: g, a, r_c
     end function c_poisson_cutoff_1d_0d
-    module procedure poisson_cutoff_1d_0d4
   end interface poisson_cutoff_1D_0D
 
   interface poisson_cutoff_intcoslog
     real(8) function intcoslog(mu, gy, gx)
       real(8), intent(in) :: mu, gy, gx
     end function intcoslog
-    module procedure poisson_cutoff_intcoslog4
   end interface poisson_cutoff_intcoslog
 
-  
+
 contains
 
-
-  ! ---------------------------------------------------------
-  real(4) function poisson_cutoff_intcoslog4(mu, gy, gx)
-    real(4), intent(in) :: mu, gx, gy
-
-    !no PUSH_SUB, called too often
-
-    poisson_cutoff_intcoslog4 = intcoslog(real(mu, 8), real(gy, 8), real(gx, 8))
-
-  end function poisson_cutoff_intcoslog4
-  ! ---------------------------------------------------------
-
-
-  ! ---------------------------------------------------------
-  real(4) function poisson_cutoff_2d_0d4(x, y)
-    real(4), intent(in) :: x, y
-
-    real(8) :: res8
-
-    !no PUSH_SUB, called too often
-
-    res8 = c_poisson_cutoff_2d_0d(real(x, 8), real(y, 8))
-    poisson_cutoff_2d_0d4 = real(res8, 4)
-
-  end function poisson_cutoff_2d_0d4
-  ! ---------------------------------------------------------
-
-
-  ! ---------------------------------------------------------
-  real(4) function poisson_cutoff_2d_1d4(gy, gx, r_c)
-    real(4), intent(in) :: gy, gx, r_c
-
-    real(8) :: res8
-
-    !no PUSH_SUB, called too often
-
-    res8 = c_poisson_cutoff_2d_1d(real(gy, 8), real(gx, 8), real(r_c, 8))
-    poisson_cutoff_2d_1d4 = real(res8, 4)
-
-  end function poisson_cutoff_2d_1d4
-  ! ---------------------------------------------------------
-
-
-  ! ---------------------------------------------------------
-  real(4) function poisson_cutoff_1d_0d4(g, a, r_c)
-    real(4), intent(in) :: g, a, r_c
-
-    real(8) :: res8
-
-    !no PUSH_SUB, called too often
-
-    res8 = c_poisson_cutoff_1d_0d(real(g, 8), real(a, 8), real(r_c, 8))
-    poisson_cutoff_1d_0d4 = real(res8, 4)
-
-  end function poisson_cutoff_1d_0d4
-  ! ---------------------------------------------------------
-
-
-  ! ---------------------------------------------------------
-  real(4) function poisson_cutoff_3d_1d_finite4(gx, gperp, xsize, rsize)
-    real(4), intent(in) :: gx, gperp, rsize, xsize
-
-    real(8) :: res8
-
-    !no PUSH_SUB, called too often
-
-    res8 = c_poisson_cutoff_3d_1d_finite(real(gx, 8), real(gperp, 8), real(xsize, 8), real(rsize, 8))
-    poisson_cutoff_3d_1d_finite4 = real(res8, 4)
-
-  end function poisson_cutoff_3d_1d_finite4
-  ! ---------------------------------------------------------
-  
 
   ! ---------------------------------------------------------
   FLOAT function poisson_cutoff_3D_0D(x, r) result(cutoff)

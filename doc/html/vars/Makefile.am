@@ -31,6 +31,7 @@ dist_doc_DATA = \
 	Hamiltonian.html \
 	Linear_Response.html \
 	Math.html \
+	Maxwell.html \
 	MaxwellStates.html \
 	Mesh.html \
 	Output.html \
@@ -55,6 +56,7 @@ Mesh.html: RUN_SCRIPT
 Output.html: RUN_SCRIPT
 SCF.html: RUN_SCRIPT
 States.html: RUN_SCRIPT
+Maxwell.html: RUN_SCRIPT
 MaxwellStates.html: RUN_SCRIPT
 System.html: RUN_SCRIPT
 Time-Dependent.html: RUN_SCRIPT
