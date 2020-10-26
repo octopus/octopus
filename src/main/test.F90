@@ -75,7 +75,7 @@ module test_oct_m
 
   !Auxiliary quantities needed by the linear solver
   FLOAT :: shift_aux
-  type(derivatives_t), pointer :: der_aux
+  type(derivatives_t), pointer :: der_aux  => null()
   type(preconditioner_t)       :: prec_aux
 
   public :: test_run
@@ -285,7 +285,7 @@ contains
     ! Preconditioner used for the QMR algorithm
     call preconditioner_init(prec_aux, namespace, sys%gr, sys%geo, sys%mc)
     ! Derivative object needed 
-    der_aux => sys%gr%der
+    call set_der_aux(sys%gr%der)
 
     ! Here we put a Gaussian as the right-hand side of the linear solver
     ! Values are taken from the poisson_test routine
@@ -326,6 +326,13 @@ contains
 
     POP_SUB(test_linear_solver)
     contains 
+
+    subroutine set_der_aux(der)
+      type(derivatives_t), target, intent(in) :: der
+      PUSH_SUB(test_linear_solver.set_der_aux)
+      der_aux => der
+      POP_SUB(test_linear_solver.set_der_aux)
+    end subroutine set_der_aux
 
     ! ---------------------------------------------------------
     !> Computes Hx = (-\Laplacian + shift) x
