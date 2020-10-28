@@ -1370,7 +1370,8 @@ contains
 
     type(block_t)        :: blk
     integer              :: il, nlines, ncols, ierr
-    FLOAT                :: k_vector(MAX_DIM), e_field(MAX_DIM), vv(MAX_DIM), xx(MAX_DIM), rr, dummy(MAX_DIM), test, test_limit!, angle, sigma
+    FLOAT                :: k_vector(MAX_DIM), vv(MAX_DIM), xx(MAX_DIM), rr, dummy(MAX_DIM), test, test_limit!, angle, sigma
+    CMPLX                :: e_field(MAX_DIM)
     character(len=1024)  :: k_string(MAX_DIM)
     character(len=1024)  :: mxf_expression
     type(profile_t), save :: prof
@@ -1476,17 +1477,17 @@ contains
           bc%plane_wave%v_vector(:,il) = vv(:)
 
         else if (bc%plane_wave%modus(il) == OPTION__MAXWELLINCIDENTWAVES__PLANE_WAVE_MX_FUNCTION) then
-          call parse_block_float( blk, il - 1, 1, e_field(1))
-          call parse_block_float( blk, il - 1, 2, e_field(2))
-          call parse_block_float( blk, il - 1, 3, e_field(3))
+          call parse_block_cmplx( blk, il - 1, 1, e_field(1))
+          call parse_block_cmplx( blk, il - 1, 2, e_field(2))
+          call parse_block_cmplx( blk, il - 1, 3, e_field(3))
           call parse_block_string( blk, il - 1, 4, mxf_expression)
 
           write(message(1), '(a,i2) ') 'Substituting electromagnetic incident wave ', il
           write(message(3), '(a)'    ) 'with the expression: '
           call messages_info(2)
-          write(message(1), '(a,es9.2)')     '  E-field(x) amplitude       = ', e_field(1)
-          write(message(2), '(a,es9.2)')     '  E-field(y) amplitude       = ', e_field(2)
-          write(message(3), '(a,es9.2)')     '  E-field(z) amplitude       = ', e_field(3)
+          write(message(1), '(a,f9.4,sp,f9.4,"i")') '  E-field(x) complex amplitude  = ', real(e_field(1)), aimag(e_field(1))
+          write(message(2), '(a,f9.4,sp,f9.4,"i")') '  E-field(y) complex amplitude  = ', real(e_field(2)), aimag(e_field(2))
+          write(message(3), '(a,f9.4,sp,f9.4,"i")') '  E-field(z) complex amplitude  = ', real(e_field(3)), aimag(e_field(3))
           write(message(4), '(2a)'    )      '  Maxwell wave function name = ', trim(mxf_expression)
           call messages_info(4)
           call mxf_read(bc%plane_wave%mx_function(il), namespace, trim(mxf_expression), ierr)
@@ -1498,7 +1499,7 @@ contains
           e_field  = units_to_atomic(units_inp%energy/units_inp%length, e_field)
           k_vector(:) = bc%plane_wave%mx_function(il)%k_vector(:)
 
-          test = TOFLOAT(ddot_product(k_vector(1:3), e_field(1:3)))
+          test = TOFLOAT(dot_product(k_vector(1:3), e_field(1:3)))
           if (abs(test) > test_limit) then
             message(1) = 'The wave vector k(:) or its electric field E-field(:) '
             message(2) = 'is not perpendicular enough.'
