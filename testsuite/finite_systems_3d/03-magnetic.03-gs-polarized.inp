@@ -29,3 +29,5 @@ MixField = density
 
 ParKpoints = no
 StatesPack = yes
+
+SCFCalculateForces = no

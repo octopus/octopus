@@ -115,7 +115,7 @@ contains
     call write_canonicalized_xyz_file("exec", "initial_coordinates", geo, gr%mesh, namespace)
 
     if (ks%theory_level /= RDMFT) then
-      call scf_init(scfv, namespace, gr, geo, st, mc, hm)
+      call scf_init(scfv, namespace, gr, geo, st, mc, hm, ks)
     end if
 
     if (fromScratch .and. ks%theory_level /= RDMFT) then

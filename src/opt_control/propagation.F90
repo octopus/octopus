@@ -217,7 +217,7 @@ contains
       ! time-iterate wavefunctions
 
       call propagator_elec_dt(sys%ks, sys%namespace, sys%hm, gr, psi, td%tr, istep*td%dt, td%dt, td%mu, istep, td%ions, &
-        sys%geo, sys%outp)
+        sys%geo, sys%outp, move_ions = ion_dynamics_ions_move(td%ions))
 
       if(present(prop)) then
         call oct_prop_dump_states(prop, istep, psi, gr, ierr)
@@ -312,7 +312,8 @@ contains
 
     do istep = td%max_iter, 1, -1
       call propagator_elec_dt(sys%ks, sys%namespace, sys%hm, gr, psi, td%tr, &
-        (istep - 1)*td%dt, -td%dt, td%mu, istep-1, td%ions, sys%geo, sys%outp)
+        (istep - 1)*td%dt, -td%dt, td%mu, istep-1, td%ions, sys%geo, sys%outp, &
+        move_ions = ion_dynamics_ions_move(td%ions))
 
       call oct_prop_dump_states(prop, istep - 1, psi, gr, ierr)
       if (ierr /= 0) then
@@ -421,16 +422,16 @@ contains
       call update_hamiltonian_elec_chi(i, sys%namespace, gr, sys%ks, sys%hm, td, tg, par_chi, sys%geo, psi2)
       call hamiltonian_elec_update(sys%hm, gr%mesh, sys%namespace, time = (i - 1)*td%dt)
       call propagator_elec_dt(sys%ks, sys%namespace, sys%hm, gr, chi, tr_chi, i*td%dt, td%dt, td%mu, i, td%ions, sys%geo, &
-        sys%outp)
+        sys%outp, move_ions = ion_dynamics_ions_move(td%ions))
       if(aux_fwd_propagation) then
         call update_hamiltonian_elec_psi(i, sys%namespace, gr, sys%ks, sys%hm, td, tg, par_prev, psi2, sys%geo)
         call propagator_elec_dt(sys%ks, sys%namespace, sys%hm, gr, psi2, tr_psi2, i*td%dt, td%dt, td%mu, i, td%ions, &
-          sys%geo, sys%outp)
+          sys%geo, sys%outp, move_ions = ion_dynamics_ions_move(td%ions))
       end if
       call update_hamiltonian_elec_psi(i, sys%namespace, gr, sys%ks, sys%hm, td, tg, par, psi, sys%geo)
       call hamiltonian_elec_update(sys%hm, gr%mesh, sys%namespace, time = (i - 1)*td%dt)
       call propagator_elec_dt(sys%ks, sys%namespace, sys%hm, gr, psi, td%tr, i*td%dt, td%dt, td%mu, i, td%ions, sys%geo, &
-        sys%outp)
+        sys%outp, move_ions = ion_dynamics_ions_move(td%ions))
       call target_tdcalc(tg, sys%namespace, sys%hm, gr, sys%geo, psi, i, td%max_iter) 
 
       call oct_prop_dump_states(prop_psi, i, psi, gr, ierr)
@@ -533,7 +534,7 @@ contains
       call update_hamiltonian_elec_chi(i-1, sys%namespace, gr, sys%ks, sys%hm, td, tg, par_chi, sys%geo, psi)
       call hamiltonian_elec_update(sys%hm, gr%mesh, sys%namespace, time = abs(i*td%dt))
       call propagator_elec_dt(sys%ks, sys%namespace, sys%hm, gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%mu, i-1, &
-        td%ions, sys%geo, sys%outp)
+        td%ions, sys%geo, sys%outp, move_ions = ion_dynamics_ions_move(td%ions))
       call oct_prop_dump_states(prop_chi, i-1, chi, gr, ierr)
       if (ierr /= 0) then
         message(1) = "Unable to write OCT states restart."
@@ -542,7 +543,7 @@ contains
       call update_hamiltonian_elec_psi(i-1, sys%namespace, gr, sys%ks, sys%hm, td, tg, par, psi, sys%geo)
       call hamiltonian_elec_update(sys%hm, gr%mesh, sys%namespace, time = abs(i*td%dt))
       call propagator_elec_dt(sys%ks, sys%namespace, sys%hm, gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%mu, i-1, &
-        td%ions, sys%geo, sys%outp)
+        td%ions, sys%geo, sys%outp, move_ions = ion_dynamics_ions_move(td%ions))
     end do
     td%dt = -td%dt
     call update_field(0, par_chi, gr, sys%hm, sys%geo, qcpsi, qcchi, par, dir = 'b')
@@ -661,7 +662,7 @@ contains
 
         call update_hamiltonian_elec_psi(i-1, sys%namespace, gr, sys%ks, sys%hm, td, tg, par, psi, sys%geo)
         call propagator_elec_dt(sys%ks, sys%namespace, sys%hm, gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%mu, i-1, &
-          td%ions, sys%geo, sys%outp, qcchi = qcchi)
+          td%ions, sys%geo, sys%outp, qcchi = qcchi, move_ions = ion_dynamics_ions_move(td%ions))
 
       case default
 
@@ -694,7 +695,7 @@ contains
 
         vhxc(:, :) = sys%hm%vhxc(:, :)
         call propagator_elec_dt(sys%ks, sys%namespace, sys%hm, gr, psi, td%tr, abs((i-1)*td%dt), td%dt, td%mu, i-1, &
-          td%ions, sys%geo, sys%outp)
+          td%ions, sys%geo, sys%outp, move_ions = ion_dynamics_ions_move(td%ions))
 
         if(ion_dynamics_ions_move(td%ions)) then
           call ion_dynamics_save_state(td%ions, sys%geo, ions_state_final)
@@ -716,7 +717,7 @@ contains
           qtildehalf)
         freeze = ion_dynamics_freeze(td%ions)
         call propagator_elec_dt(sys%ks, sys%namespace, sys%hm, gr, chi, tr_chi, abs((i-1)*td%dt), td%dt, td%mu, i-1, &
-          td%ions, sys%geo, sys%outp)
+          td%ions, sys%geo, sys%outp, move_ions = ion_dynamics_ions_move(td%ions))
         if(freeze) call ion_dynamics_unfreeze(td%ions)
 
         if(ion_dynamics_ions_move(td%ions)) then

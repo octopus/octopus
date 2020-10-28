@@ -37,6 +37,7 @@ Spacing=0.55
 Radius=8
 
 TDIonicTimeScale = 10
+TDEnergyUpdateIter = 5
 
 TDTimeStep = 0.1 * TDIonicTimeScale
 TDMaxSteps = 20

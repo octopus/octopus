@@ -11,6 +11,8 @@ Spacing = a/14
 BoxShape = parallelepiped
 Lsize = a/2
 
+PseudopotentialSet = pseudodojo_lda
+
 %ReducedCoordinates
   "Si" |   0.1       | -0.02     | 0.03
   "Si" |   1/2       | 1/2       | 0.0
@@ -27,7 +29,7 @@ Lsize = a/2
  1/2 | 1/2 | 1/2
 %
 
-KPointsUseSymmetries = yes
+KPointsUseSymmetries = no
 ExperimentalFeatures = yes
 SymmetrizeDensity = yes
 
@@ -35,6 +37,6 @@ ExtraStates = 1
 ConvRelDens = 1e-7
 MaximumIter = 1
 
-SCFCalculateStress = no
+SCFCalculateStress = yes
 StatesPack = yes
 LCAOStart = lcao_full

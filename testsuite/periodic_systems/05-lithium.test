@@ -96,6 +96,14 @@ match ; XSF npoints  ; GREPFIELD(static/density.xsf, 'DATAGRID_3D_function', 1, 
 match ; XSF latvec   ; GREPFIELD(static/density.xsf, 'DATAGRID_3D_function', 1, 3) ;  6.632939
 match ; XSF value    ; GREPFIELD(static/density.xsf, 'DATAGRID_3D_function', 1, 100) ; 0.007355993308159
 
+match ; Forces Li1 - x   [step 20] ; LINEFIELD(static/forces.xsf, -2, 5) ;  0.000000
+match ; Forces Li1 - y   [step 20] ; LINEFIELD(static/forces.xsf, -2, 6) ;  0.000000
+match ; Forces Li1 - z   [step 20] ; LINEFIELD(static/forces.xsf, -2, 7) ;  0.000000
+match ; Forces Li1 - x   [step 20] ; LINEFIELD(static/forces.xsf, -1, 5) ;  0.000000
+match ; Forces Li1 - y   [step 20] ; LINEFIELD(static/forces.xsf, -1, 6) ;  0.000000
+match ; Forces Li1 - z   [step 20] ; LINEFIELD(static/forces.xsf, -1, 7) ;  0.000000
+
+
 Input      : 05-lithium.02-td.inp
 
 match ; Energy           [step  1] ; LINEFIELD(td.general/energy, -21, 3) ; -5.155523867410e-01
@@ -109,14 +117,6 @@ match ; Vector potential [step  5] ; LINEFIELD(td.general/gauge_field, -16, 3) ;
 match ; Vector potential [step 10] ; LINEFIELD(td.general/gauge_field, -11, 3) ; 9.983252137589e+00
 match ; Vector potential [step 15] ; LINEFIELD(td.general/gauge_field, -6, 3) ;  9.962363794105e+00
 match ; Vector potential [step 20] ; LINEFIELD(td.general/gauge_field, -1, 3) ;  9.933201084410e+00
-
-match ; Forces Li1 - x   [step 20] ; LINEFIELD(output_iter/td.0000020/forces.xsf, -2, 5) ;  0.001422
-match ; Forces Li1 - y   [step 20] ; LINEFIELD(output_iter/td.0000020/forces.xsf, -2, 6) ;  0.000000
-match ; Forces Li1 - z   [step 20] ; LINEFIELD(output_iter/td.0000020/forces.xsf, -2, 7) ;  0.000000
-match ; Forces Li1 - x   [step 20] ; LINEFIELD(output_iter/td.0000020/forces.xsf, -1, 5) ;  0.001422
-match ; Forces Li1 - y   [step 20] ; LINEFIELD(output_iter/td.0000020/forces.xsf, -1, 6) ;  0.000000
-match ; Forces Li1 - z   [step 20] ; LINEFIELD(output_iter/td.0000020/forces.xsf, -1, 7) ;  0.000000
-
 
 Input      : 05-lithium.03-td-restart.inp
 
