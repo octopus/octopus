@@ -75,7 +75,7 @@ subroutine poisson_kernel_init(this, namespace, all_nodes_comm)
   !%Variable PoissonSolverThreshold
   !%Type float
   !%Section Hamiltonian::Poisson
-  !%Default 1e-5
+  !%Default 1e-6
   !%Description
   !% The tolerance for the Poisson solution, used by the <tt>cg</tt>,
   !% <tt>cg_corrected</tt>, and <tt>multigrid</tt> solvers.
