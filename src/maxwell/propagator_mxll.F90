@@ -2506,7 +2506,8 @@ contains
     integer                    :: ip, ip_in, wn
     FLOAT                      :: x_prop(mesh%sb%dim), rr, vv(mesh%sb%dim), k_vector(mesh%sb%dim)
     FLOAT                      :: k_vector_abs, nn
-    FLOAT                      :: e0(mesh%sb%dim), e_field(mesh%sb%dim), b_field(mesh%sb%dim)
+    CMPLX                      :: e0(mesh%sb%dim)
+    FLOAT                      :: e_field(mesh%sb%dim), b_field(mesh%sb%dim)
     CMPLX                      :: rs_state_add(mesh%sb%dim)
     type(profile_t), save :: prof
 
@@ -2527,7 +2528,7 @@ contains
           rr = sqrt(sum(x_prop(1:mesh%sb%dim)**2))
           if (hm%bc%plane_wave%modus(wn) == OPTION__MAXWELLINCIDENTWAVES__PLANE_WAVE_MX_FUNCTION) then
             e0(1:mesh%sb%dim)      = hm%bc%plane_wave%e_field(1:mesh%sb%dim, wn)
-            e_field(1:mesh%sb%dim) = e0(1:mesh%sb%dim) * mxf(hm%bc%plane_wave%mx_function(wn), x_prop(1:mesh%sb%dim))
+            e_field(1:mesh%sb%dim) = TOFLOAT(e0(1:mesh%sb%dim) * mxf(hm%bc%plane_wave%mx_function(wn), x_prop(1:mesh%sb%dim)))
           end if
           b_field(1:3) = dcross_product(k_vector, e_field) / P_c / k_vector_abs
           call build_rs_vector(e_field, b_field, st%rs_sign, rs_state_add, st%ep(ip), st%mu(ip))
@@ -2593,8 +2594,8 @@ contains
 
     integer              :: ip, wn, idim, np
     FLOAT                :: x_prop(gr%sb%dim), rr, vv(gr%sb%dim), k_vector(gr%sb%dim), k_vector_abs, nn
-    FLOAT                :: e0(gr%sb%dim), e_field(gr%sb%dim), b_field(gr%sb%dim), dummy(gr%sb%dim)
-    CMPLX                :: rs_state_add(st%dim)
+    FLOAT                :: e_field(gr%sb%dim), b_field(gr%sb%dim), dummy(gr%sb%dim)
+    CMPLX                :: rs_state_add(st%dim), e0(gr%sb%dim)
     type(profile_t), save :: prof
 
     PUSH_SUB(plane_waves_in_box_calculation)
@@ -2621,7 +2622,7 @@ contains
           end do
         case (OPTION__MAXWELLINCIDENTWAVES__PLANE_WAVE_MX_FUNCTION)
           e0(:) = bc%plane_wave%e_field(:,wn)
-          e_field(:) = e0(:) * mxf(bc%plane_wave%mx_function(wn), x_prop(:))
+          e_field(:) = TOFLOAT(e0(:) * mxf(bc%plane_wave%mx_function(wn), x_prop(:)))
         end select
         b_field(1:3) = M_ONE/(P_c * k_vector_abs) * dcross_product(k_vector, e_field)
         call build_rs_vector(e_field, b_field, st%rs_sign, rs_state_add, st%ep(ip), st%mu(ip))

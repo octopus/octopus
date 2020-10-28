@@ -85,7 +85,7 @@ module maxwell_boundary_op_oct_m
     character(len=1024), allocatable :: e_field_string(:,:)
     FLOAT,               allocatable :: k_vector(:,:)
     FLOAT,               allocatable :: v_vector(:,:)
-    FLOAT,               allocatable :: e_field(:,:)
+    CMPLX,               allocatable :: e_field(:,:)
     type(mxf_t),         allocatable :: mx_function(:)
     type(mxf_t),         allocatable :: mx_phase(:)
   end type plane_wave_t
@@ -1498,7 +1498,7 @@ contains
           e_field  = units_to_atomic(units_inp%energy/units_inp%length, e_field)
           k_vector(:) = bc%plane_wave%mx_function(il)%k_vector(:)
 
-          test = ddot_product(k_vector(1:3), e_field(1:3))
+          test = TOFLOAT(ddot_product(k_vector(1:3), e_field(1:3)))
           if (abs(test) > test_limit) then
             message(1) = 'The wave vector k(:) or its electric field E-field(:) '
             message(2) = 'is not perpendicular enough.'

@@ -441,7 +441,7 @@ contains
 
 
   !------------------------------------------------------------
-  FLOAT function mxft(f, x) result(y)
+  CMPLX function mxft(f, x) result(y)
     type(mxf_t), intent(in) :: f
     FLOAT,       intent(in) :: x(:)
 
@@ -455,7 +455,7 @@ contains
     select case(f%mode)
     case (MXF_CONST_WAVE)
 
-      y = f%a0 * cos( sum(f%k_vector(1:xdim)*(x(:) - f%r0(1:xdim))) )
+      y = f%a0 * exp( M_zI * sum(f%k_vector(1:xdim)*(x(:) - f%r0(1:xdim))) )
 
     case (MXF_CONST_PHASE)
 
@@ -465,7 +465,7 @@ contains
 
        r = exp( - ( ( sum(f%k_vector(1:xdim)*(x(:) - f%r0(1:xdim))) &
             / sqrt(sum(f%k_vector(1:xdim)**2)) )**2 / (M_TWO*f%width**2) ) )
-      y = f%a0 * r * cos( sum(f%k_vector(1:xdim)*(x(:) - f%r0(1:xdim))) )
+      y = f%a0 * r * exp( M_zI * sum(f%k_vector(1:xdim)*(x(:) - f%r0(1:xdim))) )
 
     case (MXF_COSINOIDAL_WAVE)
 
@@ -473,7 +473,7 @@ contains
       if(abs( sum( f%k_vector(1:xdim)*(x(:) - f%r0(1:xdim))/sqrt(sum(f%k_vector(1:xdim)**2)) ) ) <= f%width) then
          r = - cos((M_Pi/M_TWO) * ((sum(f%k_vector(1:xdim)*(x(:) - f%r0(1:xdim))) &
               / sqrt(sum(f%k_vector(1:xdim)**2)) - M_TWO*f%width) / f%width))
-        r = r * cos( sum(f%k_vector(1:xdim)*(x(:) - f%r0(1:xdim))) )
+        r = r * exp( M_zI * sum(f%k_vector(1:xdim)*(x(:) - f%r0(1:xdim))) )
       end if
       y = f%a0 * r
 
@@ -483,7 +483,7 @@ contains
             / sqrt(sum(f%k_vector(1:xdim)**2)) - f%width/M_TWO))) &
             + M_ONE/(M_ONE + exp(-f%growth*(sum(f%k_vector(1:xdim)*(x(:) - f%r0(1:xdim))) &
             / sqrt(sum(f%k_vector(1:xdim)**2)) + f%width/M_TWO))) - M_ONE
-      y = f%a0 * r * cos( sum(f%k_vector(1:xdim)*(x(:) - f%r0(1:xdim))) )
+      y = f%a0 * r * exp( M_zI * sum(f%k_vector(1:xdim)*(x(:) - f%r0(1:xdim))) )
 
     case (MXF_TRAPEZOIDAL_WAVE)
 
@@ -501,7 +501,7 @@ contains
       else
         r = M_ZERO
       end if
-      y = f%a0 * r * cos( sum(f%k_vector(1:xdim)*(x(:) - f%r0(1:xdim))) )
+      y = f%a0 * r * exp( M_zI * sum(f%k_vector(1:xdim)*(x(:) - f%r0(1:xdim))) )
 
     case default
 
