@@ -33,18 +33,17 @@ if(available cuda); then
   match ; Error match ; GREPCOUNT(err, 'Calculation will not be continued.') ; 1
 else
   #Units are in eV_angstrom
-  Precision : 0.002
-  match ; SCF convergence    ; GREPCOUNT(static/info, 'SCF converged') ; 1
-  match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ;  -597.37055186
-  match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ;  -389.65192243
-  match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ;  -113.93962823
-  match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ;   156.80224203
-  match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ;  -194.96051888
-  match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ;  -27.29431678
-  match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;   386.92507718
-  match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ;  -543.70305661
-  match ; Hubbard energy     ; GREPFIELD(static/info, 'Hubbard     =', 3) ;   14.51196369
-  
-  match ; V C1-C2 ;  GREPFIELD(static/info, '1         C  2p 1 2p  2.470', 7); 2.494068
+  Precision : 0.00019
+  match ;  Total energy        ; GREPFIELD(static/info, 'Total       =', 3) ; -597.673500415
+  match ;  Ion-ion energy      ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -389.65192243
+  match ;  Eigenvalues sum     ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -113.78433401000001
+  match ;  Hartree energy      ; GREPFIELD(static/info, 'Hartree     =', 3) ; 156.78658152999998
+  match ;  Exchange energy     ; GREPFIELD(static/info, 'Exchange    =', 3) ; -194.958180075
+  match ;  Correlation energy  ; GREPFIELD(static/info, 'Correlation =', 3) ; -27.29421208
+  match ;  Kinetic energy      ; GREPFIELD(static/info, 'Kinetic     =', 3) ; 386.90405561
+  match ;  External energy     ; GREPFIELD(static/info, 'External    =', 3) ; -543.663708875
+  match ;  Hubbard energy      ; GREPFIELD(static/info, 'Hubbard     =', 3) ; 14.203855964999999
+
+  match ;  V C1-C2  ; GREPFIELD(static/info, '1         C  2p 1 2p  2.470', 7) ; 2.493678
 endif
 

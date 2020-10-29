@@ -144,7 +144,8 @@ contains
   !%Default yes
   !%Section Atomic Orbitals
   !%Description
-  !% If set to yes, Octopus will normalize the atomic orbitals
+  !% If set to yes, Octopus will normalize the atomic orbitals individually.
+  !% This variable is ignored is <tt>AOLoewdin<\tt> is set to yes.
   !%End
   call parse_variable(namespace, 'AONormalize', .true., this%normalize)
   call messages_print_var_value(stdout, 'AONormalize', this%normalize)
@@ -175,6 +176,7 @@ contains
   call parse_variable(namespace, 'AOLoewdin', .false., this%orthogonalization)
   call messages_print_var_value(stdout, 'AOLoewdin', this%orthogonalization)
   if(this%orthogonalization) call messages_experimental("AOLoewdin")
+  if(this%orthogonalization) this%normalize = .false.
 
   if(this%orthogonalization .and. this%submeshforperiodic) &
     call messages_not_implemented("AOLoewdin=yes with AOSubmeshForPeriodic=yes.") 
