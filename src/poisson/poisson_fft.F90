@@ -620,10 +620,14 @@ contains
     db(1:3) = cube%rs_n_global(1:3)
 
     if (kernel /= POISSON_FFT_KERNEL_CORRECTED) then
-      temp(1:3) = db(1:3)*mesh%spacing(1:3)/M_TWO
-      temp(1:3) = matmul(mesh%sb%klattice_primitive(1:3,1:3),temp(1:3)) 
-      default_r_c = maxval(temp(1:3))
-      call get_cutoff(namespace, default_r_c, r_c)
+      default_r_c = M_ZERO
+      do ix = 1, 3  
+        temp(1:3) = M_ZERO
+        temp(ix) = db(ix)*mesh%spacing(ix)/M_TWO
+        temp(1:3) = matmul(mesh%sb%klattice_primitive(1:3,1:3),temp(1:3)) 
+        default_r_c = maxval(temp(1:3))
+     end do
+     call get_cutoff(namespace, default_r_c, r_c)
     end if
 
     n1 = max(1, cube%fs_n(1))

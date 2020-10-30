@@ -40,15 +40,14 @@ EigensolverMaxIter = 50
 %KPointsGrid  
  3 | 3 | 1
 %
-ParKPoints = no
 
 DFTULevel = dft_u_acbn0
 SCFCalculateForces = no
-#AOOverlapTreatment = overlap
 AOLoewdin = yes
 UseAllAtomicOrbitals = yes
 ACBN0IntersiteInteraction = yes
 ACBN0IntersiteCutoff = 7
+DFTUPoissonSolver = dft_u_poisson_fft
 
 UnitsOutput = ev_angstrom
 StatesPack = yes
