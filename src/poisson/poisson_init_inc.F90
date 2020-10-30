@@ -66,7 +66,7 @@ subroutine poisson_kernel_init(this, namespace, all_nodes_comm)
   !%Variable PoissonSolverMaxIter
   !%Type integer
   !%Section Hamiltonian::Poisson
-  !%Default 400
+  !%Default 500
   !%Description
   !% The maximum number of iterations for conjugate-gradient
   !% Poisson solvers.
@@ -75,7 +75,7 @@ subroutine poisson_kernel_init(this, namespace, all_nodes_comm)
   !%Variable PoissonSolverThreshold
   !%Type float
   !%Section Hamiltonian::Poisson
-  !%Default 1e-5
+  !%Default 1e-6
   !%Description
   !% The tolerance for the Poisson solution, used by the <tt>cg</tt>,
   !% <tt>cg_corrected</tt>, and <tt>multigrid</tt> solvers.
@@ -136,14 +136,14 @@ subroutine poisson_kernel_init(this, namespace, all_nodes_comm)
     call parse_variable(namespace, 'PoissonSolverMaxMultipole', 4, maxl)
     write(message(1),'(a,i2)')'Info: Boundary conditions fixed up to L =',  maxl
     call messages_info(1)
-    call parse_variable(namespace, 'PoissonSolverMaxIter', 400, iter)
+    call parse_variable(namespace, 'PoissonSolverMaxIter', 500, iter)
     call parse_variable(namespace, 'PoissonSolverThreshold', CNST(1.0e-6), threshold)
     call poisson_corrections_init(this%corrector, namespace, maxl, this%der%mesh)
     call poisson_cg_init(threshold, iter)
 
   case(POISSON_CG_CORRECTED)
     call parse_variable(namespace, 'PoissonSolverMaxMultipole', 4, maxl)
-    call parse_variable(namespace, 'PoissonSolverMaxIter', 400, iter)
+    call parse_variable(namespace, 'PoissonSolverMaxIter', 500, iter)
     call parse_variable(namespace, 'PoissonSolverThreshold', CNST(1.0e-6), threshold)
     write(message(1),'(a,i2)')'Info: Multipoles corrected up to L =',  maxl
     call messages_info(1)
