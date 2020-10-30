@@ -445,7 +445,8 @@ contains
     type(mxf_t), intent(in) :: f
     FLOAT,       intent(in) :: x(:)
 
-    FLOAT :: r, xx, limit_1, limit_2, limit_3, limit_4
+    FLOAT :: xx, limit_1, limit_2, limit_3, limit_4
+    CMPLX :: r
     integer :: xdim
 
     ! no push_sub because it is called too frequently

@@ -2604,15 +2604,15 @@ contains
 
     np = gr%mesh%np_part
     do wn = 1, bc%plane_wave%number
-      vv(:) = hm%bc%plane_wave%v_vector(:, wn)
-      k_vector(:) = hm%bc%plane_wave%k_vector(:, wn)
-      k_vector_abs = sqrt(sum(k_vector(:)**2))
-      e0(:) = hm%bc%plane_wave%e_field(:, wn)
+      vv(:) = hm%bc%plane_wave%v_vector(1:gr%sb%dim, wn)
+      k_vector(:) = hm%bc%plane_wave%k_vector(1:gr%sb%dim, wn)
+      k_vector_abs = sqrt(sum(k_vector(1:gr%sb%dim)**2))
+      e0(:) = hm%bc%plane_wave%e_field(1:gr%sb%dim, wn)
       do ip = 1, gr%mesh%np
         if (wn == 1) rs_state(ip,:) = M_Z0
         nn = sqrt(st%ep(ip)/P_ep*st%mu(ip)/P_mu)
-        x_prop(:) = gr%mesh%x(ip,:) - vv(:) * time
-        rr = sqrt(sum(x_prop(:)**2))
+        x_prop(:) = gr%mesh%x(ip,1:gr%sb%dim) - vv(:) * time
+        rr = sqrt(sum(x_prop(1:gr%sb%dim)**2))
         select case (bc%plane_wave%modus(wn))
         case (OPTION__MAXWELLINCIDENTWAVES__PLANE_WAVE_PARSER)
           do idim = 1, gr%mesh%sb%dim
@@ -2621,8 +2621,7 @@ contains
             e_field(idim) = units_to_atomic(units_inp%energy/units_inp%length, e_field(idim))
           end do
         case (OPTION__MAXWELLINCIDENTWAVES__PLANE_WAVE_MX_FUNCTION)
-          e0(:) = bc%plane_wave%e_field(:,wn)
-          e_field(:) = TOFLOAT(e0(:) * mxf(bc%plane_wave%mx_function(wn), x_prop(:)))
+          e_field(:) = TOFLOAT(e0(1:gr%sb%dim) * mxf(bc%plane_wave%mx_function(wn), x_prop(1:gr%sb%dim)))
         end select
         b_field(1:3) = M_ONE/(P_c * k_vector_abs) * dcross_product(k_vector, e_field)
         call build_rs_vector(e_field, b_field, st%rs_sign, rs_state_add, st%ep(ip), st%mu(ip))
