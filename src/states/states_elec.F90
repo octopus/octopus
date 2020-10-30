@@ -240,7 +240,7 @@ contains
     type(geometry_t),            intent(in)    :: geo
 
     FLOAT :: excess_charge
-    integer :: nempty, ntot, default, nthreads
+    integer :: nempty, ntot, default
     integer :: nempty_conv
     logical :: force
 
@@ -439,23 +439,14 @@ contains
     !% Some routines work over blocks of eigenfunctions, which
     !% generally improves performance at the expense of increased
     !% memory consumption. This variable selects the size of the
-    !% blocks to be used. If OpenCl is enabled, the default is 32;
-    !% otherwise it is max(4, 2*nthreads).
+    !% blocks to be used. If GPUs are used, the default is 32;
+    !% otherwise it is 4.
     !%End
-
-    nthreads = 1
-#ifdef HAVE_OPENMP
-    !$omp parallel
-    !$omp master
-    nthreads = omp_get_num_threads()
-    !$omp end master
-    !$omp end parallel
-#endif    
 
     if(accel_is_enabled()) then
       default = 32
     else
-      default = max(4, 2*nthreads)
+      default = 4
     end if
 
     if(default > pad_pow2(st%nst)) default = pad_pow2(st%nst)
