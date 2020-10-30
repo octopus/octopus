@@ -132,8 +132,10 @@ contains
     case(EXTERNAL_POT_STATIC_BFIELD)
       SAFE_ALLOCATE(this%A_static(1:mesh%np, 1:mesh%sb%dim))
     case(EXTERNAL_POT_STATIC_EFIELD)
-      SAFE_ALLOCATE(this%pot(1:mesh%np))
-      SAFE_ALLOCATE(this%v_ext(1:mesh%np_part))
+      if(mesh%sb%periodic_dim < mesh%sb%dim) then
+        SAFE_ALLOCATE(this%pot(1:mesh%np))
+        SAFE_ALLOCATE(this%v_ext(1:mesh%np_part))
+      end if
     end select
 
     POP_SUB(external_potential_allocate)
