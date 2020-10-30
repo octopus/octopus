@@ -2520,6 +2520,7 @@ contains
          k_vector(:) = hm%bc%plane_wave%k_vector(1:mesh%sb%dim, wn)
          k_vector_abs = sqrt(sum(k_vector(1:mesh%sb%dim)**2))
          vv(:) = hm%bc%plane_wave%v_vector(1:mesh%sb%dim, wn)
+         e0(:) = hm%bc%plane_wave%e_field(1:mesh%sb%dim, wn)
          do ip_in = 1, hm%bc%plane_wave%points_number
           ip = hm%bc%plane_wave%points_map(ip_in)
           if (wn == 1) rs_state(ip,:) = M_Z0
@@ -2527,7 +2528,6 @@ contains
           x_prop(1:mesh%sb%dim) = mesh%x(ip,1:mesh%sb%dim) - vv(1:mesh%sb%dim) * (time - time_delay)
           rr = sqrt(sum(x_prop(1:mesh%sb%dim)**2))
           if (hm%bc%plane_wave%modus(wn) == OPTION__MAXWELLINCIDENTWAVES__PLANE_WAVE_MX_FUNCTION) then
-            e0(1:mesh%sb%dim)      = hm%bc%plane_wave%e_field(1:mesh%sb%dim, wn)
             e_field(1:mesh%sb%dim) = TOFLOAT(e0(1:mesh%sb%dim) * mxf(hm%bc%plane_wave%mx_function(wn), x_prop(1:mesh%sb%dim)))
           end if
           b_field(1:3) = dcross_product(k_vector, e_field) / P_c / k_vector_abs
