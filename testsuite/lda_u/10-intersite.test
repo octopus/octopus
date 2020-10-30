@@ -41,15 +41,15 @@ else
   match ;  Ion-ion energy      ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -389.65192243
   Precision: 0.00025
   match ;  Eigenvalues sum     ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -113.82360309
-  Precision: 4.0e-05
+  Precision: 4.5e-05
   match ;  Hartree energy      ; GREPFIELD(static/info, 'Hartree     =', 3) ; 156.78972720
   Precision: 2e-05
   match ;  Exchange energy     ; GREPFIELD(static/info, 'Exchange    =', 3) ; -194.95878258
-  Precision: 7.0e-07
+  Precision: 1.0e-06
   match ;  Correlation energy  ; GREPFIELD(static/info, 'Correlation =', 3) ; -27.294241585
-  Precision: 6.0e-05
+  Precision: 8.0e-05
   match ;  Kinetic energy      ; GREPFIELD(static/info, 'Kinetic     =', 3) ; 386.90504105499997
-  Precision: 9.0e-05
+  Precision: 2.0e-04
   match ;  External energy     ; GREPFIELD(static/info, 'External    =', 3) ; -543.671482215
   Precision: 1.2e-05
   match ;  Hubbard energy      ; GREPFIELD(static/info, 'Hubbard     =', 3) ; 14.220706015

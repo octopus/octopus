@@ -1517,7 +1517,7 @@ contains
             if(.not. state_kpt_is_local(st, ist, ik)) cycle
             if(states_are_complex(st)) then !Gamma point
               do ip = 1, mesh%np
-                zpsi(ip,1) = cmplx(dpsi(ip,1), M_ZERO)
+                zpsi(ip,1) = TOCMPLX(dpsi(ip,1), M_ZERO)
               end do
               call states_elec_set_state(st, mesh, ist,  ik, zpsi)
             else
@@ -1558,7 +1558,7 @@ contains
                 if(.not. state_kpt_is_local(st, ist, ik)) cycle
               end if
               do ip = 1, mesh%np
-                zpsi(ip,1) = cmplx(dpsi(ip,1), M_ZERO)
+                zpsi(ip,1) = TOCMPLX(dpsi(ip,1), M_ZERO)
               end do
               call states_elec_set_state(st, mesh, ist,  ik, zpsi)
             else

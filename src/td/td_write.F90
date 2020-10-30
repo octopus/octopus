@@ -2670,18 +2670,18 @@ contains
        
       ! compute the overlaps as a matrix product
       proj(1:gs_st%nst,1:gs_st%nst) = M_ZERO
-      call zgemm('n',                               &
-                 'c',                               &
-                 gs_st%nst,                         &
-                 gs_st%nst,                         &
-                 mesh%np_global*gs_st%d%dim,        &
-                 cmplx(mesh%volume_element,kind=8), &
-                 psi(1, 1, 1),                      &
-                 ubound(psi, dim = 1),              &
-                 gs_psi(1, 1, 1),                   &
-                 ubound(gs_psi, dim = 1),           &
-                 cmplx(0.,kind=8),                  &
-                 proj(1, 1),                        &
+      call zgemm('n',                                  &
+                 'c',                                  &
+                 gs_st%nst,                            &
+                 gs_st%nst,                            &
+                 mesh%np_global*gs_st%d%dim,           &
+                 TOCMPLX(mesh%volume_element, M_ZERO), &
+                 psi(1, 1, 1),                         &
+                 ubound(psi, dim = 1),                 &
+                 gs_psi(1, 1, 1),                      &
+                 ubound(gs_psi, dim = 1),              &
+                 M_z0,                                 &
+                 proj(1, 1),                           &
                  ubound(proj, dim = 1))
 
       ! write to file 
@@ -2842,18 +2842,18 @@ contains
         call comm_allreduce(mpi_world%comm, psi)
         call comm_allreduce(mpi_world%comm, hpsi)
         hmss(1:nst,1:nst) = M_ZERO
-        call zgemm( 'n',                               &
-                    'c',                               &
-                    nst,                               &
-                    nst,                               &
-                    mesh%np_global*st%d%dim,           &
-                    cmplx(mesh%volume_element,kind=8), &
-                    hpsi(1, 1, 1),                     &
-                    ubound(hpsi, dim = 1),             &
-                    psi(1, 1, 1),                      &
-                    ubound(psi, dim = 1),              &
-                    cmplx(0.,kind=8),                  &
-                    hmss(1, 1),                        &
+        call zgemm( 'n',                                  &
+                    'c',                                  &
+                    nst,                                  &
+                    nst,                                  &
+                    mesh%np_global*st%d%dim,              &
+                    TOCMPLX(mesh%volume_element, M_ZERO), &
+                    hpsi(1, 1, 1),                        &
+                    ubound(hpsi, dim = 1),                &
+                    psi(1, 1, 1),                         &
+                    ubound(psi, dim = 1),                 &
+                    M_z0,                                 &
+                    hmss(1, 1),                           &
                     ubound(hmss, dim = 1))
 
         hmss(1:nst,1:nst) = CONJG(hmss(1:nst,1:nst))
