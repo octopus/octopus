@@ -6,57 +6,69 @@ TestGroups : long-run, finite_systems_3d
 Enabled    : Yes
 
 Input: 03-magnetic.01-gs-unpolarized.inp
-match ; SCF convergence  ; GREPCOUNT(static/info, 'SCF converged') ; 1
-match ; Eigenvalue  1    ; GREPFIELD(static/info, '  1   --', 3) ; -0.248426
-match ; Eigenvalue  2    ; GREPFIELD(static/info, '  2   --', 3) ; -0.056939
-match ; Eigenvalue  3    ; GREPFIELD(static/info, '  3   --', 3) ; -0.048611
-match ; Eigenvalue  4    ; GREPFIELD(static/info, '  4   --', 3) ; -0.039065
-match ; Total energy     ; GREPFIELD(static/info, 'Total       =', 3) ; -1.91221164
-match ; Free energy      ; GREPFIELD(static/info, 'Free        =', 3) ; -1.93735493
-match ; Fermi energy     ; GREPFIELD(static/info, 'Fermi energy =', 4); -0.066015
+match ;  SCF convergence   ; GREPCOUNT(static/info, 'SCF converged') ; 1.0
+match ;  Eigenvalue  1     ; GREPFIELD(static/info, '  1   --', 3) ; -0.248425
+Precision: 5.50e-07
+match ;  Eigenvalue  2     ; GREPFIELD(static/info, '  2   --', 3) ; -0.0569385
+Precision: 8.25e-08
+match ;  Eigenvalue  3     ; GREPFIELD(static/info, '  3   --', 3) ; -0.04861
+match ;  Eigenvalue  4     ; GREPFIELD(static/info, '  4   --', 3) ; -0.039065
+match ;  Total energy      ; GREPFIELD(static/info, 'Total       =', 3) ; -1.912211975
+Precision: 7.70e-08
+match ;  Free energy       ; GREPFIELD(static/info, 'Free        =', 3) ; -1.93735519
+match ;  Fermi energy      ; GREPFIELD(static/info, 'Fermi energy =', 4) ; -0.066015
 
 Input: 03-magnetic.02-td-unpolarized.inp
-match ; Energy [step  1] ; LINEFIELD(td.general/energy, -21, 3) ; -1.912211890243e+00
-match ; Energy [step  5] ; LINEFIELD(td.general/energy, -16, 3) ; -1.897585403351e+00
-match ; Energy [step 10] ; LINEFIELD(td.general/energy, -11, 3) ; -1.897585391868e+00
-match ; Energy [step 15] ; LINEFIELD(td.general/energy, -6, 3) ; -1.897585897744e+00
-match ; Energy [step 20] ; LINEFIELD(td.general/energy, -1, 3) ; -1.897585936817e+00
+Precision: 8.19e-11
+match ;  Energy [step  1]  ; LINEFIELD(td.general/energy, -21, 3) ; -1.9122118917405
+Precision: 3.37e-10
+match ;  Energy [step  5]  ; LINEFIELD(td.general/energy, -16, 3) ; -1.8975681556869999
+Precision: 3.37e-10
+match ;  Energy [step 10]  ; LINEFIELD(td.general/energy, -11, 3) ; -1.8975681356890002
+Precision: 3.37e-10
+match ;  Energy [step 15]  ; LINEFIELD(td.general/energy, -6, 3) ; -1.8975686324
+Precision: 3.37e-10
+match ;  Energy [step 20]  ; LINEFIELD(td.general/energy, -1, 3) ; -1.8975686638620002
 
 Input: 03-magnetic.03-gs-polarized.inp
 match ; SCF convergence  ; GREPCOUNT(static/info, 'SCF converged') ; 1
-match ; Eigenvalue  1 up ; GREPFIELD(static/info, '  1   up', 3) ; -0.223895
-match ; Eigenvalue  2 up ; GREPFIELD(static/info, '  2   up', 3) ; -0.033319
-match ; Eigenvalue  3 up ; GREPFIELD(static/info, '  3   up', 3) ; -0.025279
-match ; Eigenvalue  4 up ; GREPFIELD(static/info, '  4   up', 3) ; -0.015446
-match ; Eigenvalue  1 dn ; GREPFIELD(static/info, '  1   dn', 3) ; -0.269533
-match ; Eigenvalue  2 dn ; GREPFIELD(static/info, '  2   dn', 3) ; -0.077346
-match ; Eigenvalue  3 dn ; GREPFIELD(static/info, '  3   dn', 3) ; -0.068474
-match ; Eigenvalue  4 dn ; GREPFIELD(static/info, '  4   dn', 3) ; -0.059473
-match ; Total energy     ; GREPFIELD(static/info, 'Total       =', 3) ; -1.92627692
-match ; Free energy      ; GREPFIELD(static/info, 'Free        =', 3) ; -1.94485861
-match ; Fermi energy     ; GREPFIELD(static/info, 'Fermi energy =', 4); -0.076598
+Precision: 8.25e-08
+match ;  Eigenvalue  1 up  ; GREPFIELD(static/info, '  1   up', 3) ; -0.223895
+match ;  Eigenvalue  2 up  ; GREPFIELD(static/info, '  2   up', 3) ; -0.033319
+match ;  Eigenvalue  3 up  ; GREPFIELD(static/info, '  3   up', 3) ; -0.025279
+match ;  Eigenvalue  4 up  ; GREPFIELD(static/info, '  4   up', 3) ; -0.015446
+match ;  Eigenvalue  1 dn  ; GREPFIELD(static/info, '  1   dn', 3) ; -0.269533
+match ;  Eigenvalue  2 dn  ; GREPFIELD(static/info, '  2   dn', 3) ; -0.077346
+match ;  Eigenvalue  3 dn  ; GREPFIELD(static/info, '  3   dn', 3) ; -0.068474
+match ;  Eigenvalue  4 dn  ; GREPFIELD(static/info, '  4   dn', 3) ; -0.059473
+match ;  Total energy      ; GREPFIELD(static/info, 'Total       =', 3) ; -1.926276225
+match ;  Free energy       ; GREPFIELD(static/info, 'Free        =', 3) ; -1.944858295
+match ;  Fermi energy      ; GREPFIELD(static/info, 'Fermi energy =', 4) ; -0.076598
 
 Input: 03-magnetic.04-td-polarized.inp
-match ; Energy [step  1] ; LINEFIELD(td.general/energy, -21, 3) ; -1.926276211519e+00
-match ; Energy [step  5] ; LINEFIELD(td.general/energy, -16, 3) ; -1.911651562369e+00
-match ; Energy [step 10] ; LINEFIELD(td.general/energy, -11, 3) ; -1.911651557924e+00
-match ; Energy [step 15] ; LINEFIELD(td.general/energy, -6, 3) ; -1.911652069280e+00
-match ; Energy [step 20] ; LINEFIELD(td.general/energy, -1, 3) ; -1.911652106716e+00
+Precision: 1.71e-10
+match ;  Energy [step  1]  ; LINEFIELD(td.general/energy, -21, 3) ; -1.9262762036195
+Precision: 9.54e-10
+match ;  Energy [step  5]  ; LINEFIELD(td.general/energy, -16, 3) ; -1.911634710849
+match ;  Energy [step 10]  ; LINEFIELD(td.general/energy, -11, 3) ; -1.9116346978395
+match ;  Energy [step 15]  ; LINEFIELD(td.general/energy, -6, 3) ; -1.911635199899
+match ;  Energy [step 20] ; LINEFIELD(td.general/energy, -1, 3) ; -1.911652106716e+00
 
 Input: 03-magnetic.05-gs-spinors.inp
 match ; SCF convergence  ; GREPCOUNT(static/info, 'SCF converged') ; 1
-match ; Eigenvalue  1    ; GREPFIELD(static/info, '  1   --', 3) ; -0.270007
-match ; Eigenvalue  2    ; GREPFIELD(static/info, '  2   --', 3) ; -0.223101
-match ; Eigenvalue  3    ; GREPFIELD(static/info, '  3   --', 3) ; -0.077802
-match ; Eigenvalue  4    ; GREPFIELD(static/info, '  4   --', 3) ; -0.068886
-match ; Eigenvalue  5    ; GREPFIELD(static/info, '  4   --', 3) ; -0.068886
-match ; Total energy     ; GREPFIELD(static/info, 'Total       =', 3) ; -1.92715542
-match ; Free energy      ; GREPFIELD(static/info, 'Free        =', 3) ; -1.94465527
-match ; Fermi energy     ; GREPFIELD(static/info, 'Fermi energy =', 4); -0.076684
+Precision: 2.20e-08
+match ;  Eigenvalue  1     ; GREPFIELD(static/info, '  1   --', 3) ; -0.270007
+match ;  Eigenvalue  2     ; GREPFIELD(static/info, '  2   --', 3) ; -0.223101
+match ;  Eigenvalue  3     ; GREPFIELD(static/info, '  3   --', 3) ; -0.077802
+match ;  Eigenvalue  4     ; GREPFIELD(static/info, '  4   --', 3) ; -0.068886
+match ;  Total energy      ; GREPFIELD(static/info, 'Total       =', 3) ; -1.92715532
+match ;  Free energy       ; GREPFIELD(static/info, 'Free        =', 3) ; -1.94465509
+match ;  Fermi energy      ; GREPFIELD(static/info, 'Fermi energy =', 4) ; -0.076684
 
 Input: 03-magnetic.06-td-spinors.inp
-match ; Energy [step  1] ; LINEFIELD(td.general/energy, -21, 3) ; -1.927155329551e+00
-match ; Energy [step  5] ; LINEFIELD(td.general/energy, -16, 3) ; -1.912530841625e+00
-match ; Energy [step 10] ; LINEFIELD(td.general/energy, -11, 3) ; -1.912530837840e+00
-match ; Energy [step 15] ; LINEFIELD(td.general/energy, -6, 3) ; -1.912531349756e+00
-match ; Energy [step 20] ; LINEFIELD(td.general/energy, -1, 3) ; -1.912531387073e+00
+Precision: 6.16e-11
+match ;  Energy [step  1]  ; LINEFIELD(td.general/energy, -21, 3) ; -1.927155330019
+match ;  Energy [step  5]  ; LINEFIELD(td.general/energy, -16, 3) ; -1.912514037583
+match ;  Energy [step 10]  ; LINEFIELD(td.general/energy, -11, 3) ; -1.9125140252269999
+match ;  Energy [step 15]  ; LINEFIELD(td.general/energy, -6, 3) ; -1.9125145278335
+match ;  Energy [step 20]  ; LINEFIELD(td.general/energy, -1, 3) ; -1.9125145575045
