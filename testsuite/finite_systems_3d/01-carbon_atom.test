@@ -22,46 +22,50 @@ Enabled    : Yes
 # discrepancy...
 Input: 01-carbon_atom.01-psf_l0.inp
 match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
-Precision: 0.00011
-match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -146.74144572
-match ; Eigenvalue   [1up] ; GREPFIELD(static/info, '1   up', 3) ; -14.461702
+Precision: 7.04e-07
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -146.74152634
+match ; Eigenvalue   [1up] ; GREPFIELD(static/info, '1   up', 3) ; -14.461741
 match ; Occupation   [1up] ; GREPFIELD(static/info, '1   up', 4) ; 1.000000
-match ; Eigenvalue [4down] ; GREPFIELD(static/info, '4   dn', 3) ; -3.682119
+match ; Eigenvalue [4down] ; GREPFIELD(static/info, '4   dn', 3) ; -3.682153
 match ; Occupation [4down] ; GREPFIELD(static/info, '4   dn', 4) ; 0.000000
 
 # Now we repeat the calculation but making use of the l=1 component
 # of the pseudopotential to build the local component.
 Input: 01-carbon_atom.02-psf_l1.inp
 match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
-match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -146.81362567
-match ; Eigenvalue   [1up] ; GREPFIELD(static/info, '1   up', 3) ; -14.466513
-match ; Occupation   [1up] ; GREPFIELD(static/info, '1   up', 4) ; 1.000000
-match ; Eigenvalue [4down] ; GREPFIELD(static/info, '4   dn', 3) ; -3.683360
-match ; Occupation [4down] ; GREPFIELD(static/info, '4   dn', 4) ; 0.000000
+Precision: 1.67e-06
+match ;  Total energy        ; GREPFIELD(static/info, 'Total       =', 3) ; -146.81355602000002
+match ;  Eigenvalue   [1up]  ; GREPFIELD(static/info, '1   up', 3) ; -14.466519
+match ;  Occupation   [1up]  ; GREPFIELD(static/info, '1   up', 4) ; 1.0
+match ;  Eigenvalue [4down]  ; GREPFIELD(static/info, '4   dn', 3) ; -3.683368
+match ;  Occupation [4down]  ; GREPFIELD(static/info, '4   dn', 4) ; 0.0
 
 #The same using double grid
 Processors: 1
 # double grid not working in parallel
 Input: 01-carbon_atom.03-ground_state_double_grid.inp
 match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
-match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -146.66216092
-match ; Eigenvalue   [1up] ; GREPFIELD(static/info, '1   up', 3) ; -14.418842
-match ; Occupation   [1up] ; GREPFIELD(static/info, '1   up', 4) ; 1.000000
-match ; Eigenvalue [4down] ; GREPFIELD(static/info, '4   dn', 3) ; -3.694731
-match ; Occupation [4down] ; GREPFIELD(static/info, '4   dn', 4) ; 0.000000
+match ;  Total energy        ; GREPFIELD(static/info, 'Total       =', 3) ; -146.66215026
+match ;  Eigenvalue   [1up]  ; GREPFIELD(static/info, '1   up', 3) ; -14.418831
+match ;  Occupation   [1up]  ; GREPFIELD(static/info, '1   up', 4) ; 1.0
+match ;  Eigenvalue [4down]  ; GREPFIELD(static/info, '4   dn', 3) ; -3.694716
+match ;  Occupation [4down]  ; GREPFIELD(static/info, '4   dn', 4) ; 0.0
 
 #The same but with a static electric field along the x axis
 Input: 01-carbon_atom.04-static_field.inp
 match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
-match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -146.81294303
-match ; Int[n*v_E]         ; GREPFIELD(static/info, 'Int\[n\*v\_E\]  =', 3) ; -0.00136244
+match ;  Total energy        ; GREPFIELD(static/info, 'Total       =', 3) ; -146.81293144
+match ;  Int[n*v_E]          ; GREPFIELD(static/info, 'Int\[n\*v\_E\]  =', 3) ; -0.00136289
+match ;  Eigenvalue   [1up]  ; GREPFIELD(static/info, '1   up', 3) ; -14.467189
+match ;  Occupation   [1up]  ; GREPFIELD(static/info, '1   up', 4) ; 1.0
+match ;  Eigenvalue [4down]  ; GREPFIELD(static/info, '4   dn', 3) ; -3.684115
+match ;  Occupation [4down]  ; GREPFIELD(static/info, '4   dn', 4) ; 0.0
 
 Input: 01-carbon_atom.05-smear.inp
 match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
-Precision: 0.00011
-match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -146.74144572
-match ; Eigenvalue   [1up] ; GREPFIELD(static/info, '1   up', 3) ; -14.461702
-match ; Occupation   [1up] ; GREPFIELD(static/info, '1   up', 4) ; 1.000000
-match ; Eigenvalue [4down] ; GREPFIELD(static/info, '4   dn', 3) ; -3.682119
-match ; Occupation [4down] ; GREPFIELD(static/info, '4   dn', 4) ; 0.000000
-
+Precision: 4.35e-07
+match ;  Total energy        ; GREPFIELD(static/info, 'Total       =', 3) ; -146.741526545
+match ;  Eigenvalue   [1up]  ; GREPFIELD(static/info, '1   up', 3) ; -14.461741
+match ;  Occupation   [1up]  ; GREPFIELD(static/info, '1   up', 4) ; 1.0
+match ;  Eigenvalue [4down]  ; GREPFIELD(static/info, '4   dn', 3) ; -3.682153
+match ;  Occupation [4down]  ; GREPFIELD(static/info, '4   dn', 4) ; 0.0
