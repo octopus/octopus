@@ -14,7 +14,10 @@ Enabled    : Yes
 
 Input: 04-jellium.01-ground_state.inp
 match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
-match ; Total energy   ; GREPFIELD(static/info, 'Total       =', 3) ; -0.57652032
-match ; Eigenvalue [s] ; GREPFIELD(static/info, '1   --', 3) ; -0.167698
-match ; Eigenvalue [p] ; GREPFIELD(static/info, '2   --', 3) ; -0.122636
-
+match ;  SCF convergence  ; GREPCOUNT(static/info, 'SCF converged') ; 1.0
+Precision: 8.69e-07
+match ;  Total energy    ; GREPFIELD(static/info, 'Total       =', 3) ; -0.57652082
+match ;  Eigenvalue [s]  ; GREPFIELD(static/info, '1   --', 3) ; -0.1677
+match ;  Eigenvalue [p1]  ; GREPFIELD(static/info, '2   --', 3) ; -0.122637
+match ;  Eigenvalue [p2]  ; GREPFIELD(static/info, '2   --', 3) ; -0.122637
+match ;  Eigenvalue [p3]  ; GREPFIELD(static/info, '2   --', 3) ; -0.122637
