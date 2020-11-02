@@ -11,7 +11,7 @@ if(available cuda); then
 else
   match ;  Total k-points    ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 8.0
   match ;  Reduced k-points  ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 4.0
-  
+
   Precision: 1.8e-05
   match ;  Total energy         ; GREPFIELD(static/info, 'Total       =', 3) ; -246.88938204
   match ;  Ion-ion energy      ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -177.00987193
@@ -25,7 +25,7 @@ else
   match ;  External energy      ; GREPFIELD(static/info, 'External    =', 3) ; -210.12058083
   match ;  Hubbard energy      ; GREPFIELD(static/info, 'Hubbard     =', 3) ; 0.21352926
   match ;  Fermi energy        ; GREPFIELD(static/info, 'Fermi energy =', 4) ; 0.417533
-
+  
   Precision: 1e-05
   match ;  Total Magnetic Moment  ; GREPFIELD(static/info, 'mz = ', 3) ; 4.999999999999999e-07
   

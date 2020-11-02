@@ -28,6 +28,7 @@ module forces_oct_m
   use density_oct_m
   use derivatives_oct_m
   use epot_oct_m
+  use gauge_field_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
@@ -382,6 +383,7 @@ contains
           ! The full force taking account of the spatial dependence of A should be:
           ! F = q [- dA/dt + v x \nabla x A]
 
+          !TODO: Add the gauge-field here
           x(1:gr%sb%dim) = M_ZERO
           call laser_electric_field(hm%ep%lasers(j), x(1:gr%sb%dim), t, dt) !convert in E field (E = -dA/ c dt)
           do iatom = 1, geo%natoms
@@ -409,7 +411,19 @@ contains
                + species_zval(geo%atom(iatom)%species)*hm%ep%E_field(1:gr%mesh%sb%dim)
       end do
     end if
-    
+
+    if(associated(hm%ep%B_field) .or. associated(hm%ep%A_static)) then
+      write(message(1),'(a)') 'The forces are currently not properly calculated if static'
+      write(message(2),'(a)') 'magnetic fields or static vector potentials are present.'
+      call messages_fatal(2, namespace=namespace)
+    end if
+
+    if(gauge_field_is_applied(hm%ep%gfield)) then
+      write(message(1),'(a)') 'The forces are currently not properly calculated if gauge-field'
+      write(message(2),'(a)') 'is applied.'
+      call messages_fatal(2, namespace=namespace)
+    end if
+
     POP_SUB(forces_calculate)
     call profiling_out(forces_prof)
 
