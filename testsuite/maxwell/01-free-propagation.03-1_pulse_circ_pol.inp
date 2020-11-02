@@ -45,14 +45,14 @@
 
 # ----- Output variables --------------------------------------------------------------------------
 
- OutputFormat = plane_x + plane_y + plane_z + vtk + xyz + axis_x
+ OutputFormat = axis_x + axis_y + axis_z
 
 
 # ----- Maxwell output variables ------------------------------------------------------------------
 
  MaxwellOutput = electric_field + magnetic_field + maxwell_energy_density
 
- MaxwellOutputInterval = 50
+ MaxwellOutputInterval = 10
  MaxwellTDOutput       = maxwell_energy + maxwell_fields
 
  %MaxwellFieldsCoordinate
