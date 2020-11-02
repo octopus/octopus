@@ -1740,7 +1740,7 @@ subroutine X(states_elec_calc_projections)(st, gs_st, namespace, mesh, ik, proj,
     proj(1:gs_nst_, 1:st%nst) = CNST(0.0)
     
     SAFE_ALLOCATE(psi(1:st%nst, 1:st%d%dim, 1:block_size))
-    SAFE_ALLOCATE(gspsi(1:gs_nst_, 1:gs_st%d%dim, 1:block_size))
+    SAFE_ALLOCATE(gspsi(1:max(gs_nst_, st%nst), 1:gs_st%d%dim, 1:block_size))
 
     do sp = 1, mesh%np, block_size
       size = min(block_size, mesh%np - sp + 1)

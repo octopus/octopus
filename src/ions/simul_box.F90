@@ -735,7 +735,11 @@ contains
           call messages_fatal(1, namespace=namespace)
         end if
 
-        if(any(angles/=CNST(90.0))) sb%nonorthogonal = .true.
+        if(any(abs(angles-CNST(90.0)) > M_EPSILON )) then
+          sb%nonorthogonal = .true.
+        else
+          sb%nonorthogonal = .false.
+        end if
         
       else  
 
