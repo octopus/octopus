@@ -436,9 +436,14 @@ contains
 
     PUSH_SUB(symmetries_apply_kpoint_red)
 
-    ASSERT(0 < iop .and. iop <= this%nops)
+    ASSERT(iop /= 0 .and. abs(iop) <= this%nops)
 
-    bb(1:3) = symm_op_apply_transpose_red(this%ops(iop), aa(1:3))
+    !Time-reversal symmetry
+    if(iop < 0) then
+      bb(1:3) = symm_op_apply_transpose_red(this%ops(abs(iop)), -aa(1:3))
+    else
+      bb(1:3) = symm_op_apply_transpose_red(this%ops(abs(iop)), aa(1:3))
+    end if
 
     POP_SUB(symmetries_apply_kpoint_red)
   end subroutine symmetries_apply_kpoint_red

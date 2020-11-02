@@ -90,7 +90,8 @@ module states_elec_oct_m
     states_elec_block_size,                &
     states_elec_count_pairs,               &
     occupied_states,                       &
-    states_elec_set_phase
+    states_elec_set_phase,                 &
+    states_elec_set_zero
 
   type, extends(states_abst_t) :: states_elec_t
     ! Components are public by default
@@ -159,6 +160,7 @@ module states_elec_oct_m
     integer                     :: lnst               !< Number of states on local node.
     integer                     :: st_start, st_end   !< Range of states processed by local node.
     integer, pointer            :: node(:)            !< To which node belongs each state.
+    integer, pointer            :: st_kpt_task(:,:)   !< For a given task, what are kpt and st start/end
     type(multicomm_all_pairs_t), private :: ap        !< All-pairs schedule.
 
     logical                     :: symmetrize_density
@@ -224,6 +226,7 @@ contains
     call blacs_proc_grid_nullify(st%dom_st_proc_grid)
 #endif
     nullify(st%node)
+    nullify(st%st_kpt_task)
     nullify(st%ap%schedule)
 
     st%packed = .false.
@@ -1389,7 +1392,9 @@ contains
     call mpi_grp_copy(stout%mpi_grp, stin%mpi_grp)
     stout%dom_st_kpt_mpi_grp = stin%dom_st_kpt_mpi_grp
     stout%st_kpt_mpi_grp     = stin%st_kpt_mpi_grp
+    stout%dom_st_mpi_grp     = stin%dom_st_mpi_grp
     SAFE_ALLOCATE_SOURCE_P(stout%node, stin%node)
+    SAFE_ALLOCATE_SOURCE_P(stout%st_kpt_task, stin%st_kpt_task)
 
 #ifdef HAVE_SCALAPACK
     call blacs_proc_grid_copy(stin%dom_st_proc_grid, stout%dom_st_proc_grid)
@@ -1407,7 +1412,7 @@ contains
 
     stout%symmetrize_density = stin%symmetrize_density
 
-    if(.not. exclude_wfns_) call states_elec_group_copy(stin%d,stin%group, stout%group)
+    if(.not. exclude_wfns_) call states_elec_group_copy(stin%d, stin%group, stout%group)
 
     stout%packed = stin%packed
 
@@ -1457,6 +1462,7 @@ contains
     call distributed_end(st%dist)
 
     SAFE_DEALLOCATE_P(st%node)
+    SAFE_DEALLOCATE_P(st%st_kpt_task)
 
     if(st%parallel_in_states) then
       SAFE_DEALLOCATE_P(st%ap%schedule)
@@ -1790,6 +1796,8 @@ contains
       st%parallel_in_states = st%dist%parallel
 
     end if
+
+    call states_elec_kpoints_distribution(st)
 
     POP_SUB(states_elec_distribute_nodes)
   end subroutine states_elec_distribute_nodes
@@ -2584,6 +2592,33 @@ subroutine states_elec_set_phase(st_d, psi, phase, np, conjugate)
   POP_SUB(states_elec_set_phase)
 
 end subroutine  states_elec_set_phase
+
+  ! ---------------------------------------------------------
+  ! The routine attributes the rank index for the states-kpoint distribution
+  ! They might a better of doing this
+  subroutine states_elec_kpoints_distribution(st)
+    type(states_elec_t),    intent(inout) :: st
+
+    integer :: ist, ik
+
+    PUSH_SUB(states_elec_kpoints_distribution)
+
+    !We want to know for a fiven task the start and end of the states contained
+    if(.not.associated(st%st_kpt_task)) &
+      SAFE_ALLOCATE(st%st_kpt_task(0:st%st_kpt_mpi_grp%size-1,1:4))
+    st%st_kpt_task(0:st%st_kpt_mpi_grp%size-1,1:4) = 0
+    st%st_kpt_task(st%st_kpt_mpi_grp%rank,1) = st%st_start
+    st%st_kpt_task(st%st_kpt_mpi_grp%rank,2) = st%st_end
+    st%st_kpt_task(st%st_kpt_mpi_grp%rank,3) = st%d%kpt%start
+    st%st_kpt_task(st%st_kpt_mpi_grp%rank,4) = st%d%kpt%end
+	#if defined(HAVE_MPI)        
+    if(st%parallel_in_states .or. st%d%kpt%parallel) then
+      call comm_allreduce(st%st_kpt_mpi_grp%comm, st%st_kpt_task)
+    end if
+	#endif 
+
+    POP_SUB(states_elec_kpoints_distribution)
+  end subroutine states_elec_kpoints_distribution
 
   
 #include "undef.F90"

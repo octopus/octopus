@@ -105,7 +105,10 @@ dist_share_DATA =                                \
 	21-magnon.01-gs.inp                      \
         21-magnon.02-td.inp                      \
         21-magnon.test                           \
-        22-berry.01-cubic_Si.inp                 \
-        22-berry.test 
+	22-berry.01-cubic_Si.inp                 \
+        22-berry.test                            \
+        22-hybrids.01-ace.inp                    \
+        22-hybrids.test
+
 
 CLEANFILES = *~ *.bak

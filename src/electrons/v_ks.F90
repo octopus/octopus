@@ -1275,6 +1275,25 @@ contains
           SAFE_DEALLOCATE_P(hm%exxop%st)
         end if
 
+        !At the moment this block is called before the reinit call. This way the LCAO does not call the 
+        !exchange operator.
+        !This should be changed and the CAM parameters should also be obtained from the restart information
+        !Maybe the parameters should be mixed too.
+        if((ks%theory_level == HARTREE_FOCK .or. ks%theory_level == RDMFT) .and. hm%exxop%useACE) then
+          if(states_are_real(ks%calc%hf_st)) then
+            call dexchange_operator_compute_potentials(hm%exxop, namespace, ks%gr%der, ks%gr%sb, ks%calc%hf_st)
+            call dexchange_operator_ACE(hm%exxop, ks%gr%der, ks%calc%hf_st)
+          else
+            call zexchange_operator_compute_potentials(hm%exxop, namespace, ks%gr%der, ks%gr%sb, ks%calc%hf_st)
+            if(associated(hm%hm_base%phase)) then
+              call zexchange_operator_ACE(hm%exxop, ks%gr%der, ks%calc%hf_st, &
+                    hm%hm_base%phase(1:ks%gr%der%mesh%np, ks%calc%hf_st%d%kpt%start:ks%calc%hf_st%d%kpt%end))
+            else
+              call zexchange_operator_ACE(hm%exxop, ks%gr%der, ks%calc%hf_st)
+            end if
+          end if
+        end if
+
         select case(ks%theory_level)
         case(HARTREE_FOCK)
           call exchange_operator_reinit(hm%exxop, ks%calc%hf_st, ks%xc%cam_omega, ks%xc%cam_alpha, ks%xc%cam_beta)

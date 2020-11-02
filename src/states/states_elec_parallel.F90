@@ -174,7 +174,7 @@ contains
     integer,                     intent(in) :: iqn
     class(wfs_elec_t),           pointer    :: psib
 
-    type(profile_t), save :: prof
+    type(profile_t), save :: prof, prof_mpi
     
     PUSH_SUB(states_elec_parallel_get_block)
 
@@ -201,6 +201,8 @@ contains
       call psib%do_pack(copy = .false.)
       
 #ifdef HAVE_MPI2
+
+      call profiling_in(prof_mpi, "STATES_GET_BLOCK_MPI")
       call MPI_Win_lock(MPI_LOCK_SHARED, this%group%block_node(ib), 0, this%group%rma_win(ib, iqn),  mpi_err)
 
       if(states_are_real(this)) then
@@ -214,6 +216,8 @@ contains
       end if
         
       call MPI_Win_unlock(this%group%block_node(ib), this%group%rma_win(ib, iqn),  mpi_err)
+
+      call profiling_out(prof_mpi)
 #endif
     end if
 
