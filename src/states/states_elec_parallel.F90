@@ -174,7 +174,10 @@ contains
     integer,                     intent(in) :: iqn
     class(wfs_elec_t),           pointer    :: psib
 
-    type(profile_t), save :: prof, prof_mpi
+    type(profile_t), save :: prof
+#ifdef HAVE_MPI2
+    type(profile_t), save :: prof_mpi
+#endif
     
     PUSH_SUB(states_elec_parallel_get_block)
 

@@ -2599,8 +2599,6 @@ end subroutine  states_elec_set_phase
   subroutine states_elec_kpoints_distribution(st)
     type(states_elec_t),    intent(inout) :: st
 
-    integer :: ist, ik
-
     PUSH_SUB(states_elec_kpoints_distribution)
 
     !We want to know for a fiven task the start and end of the states contained

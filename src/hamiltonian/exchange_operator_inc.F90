@@ -321,8 +321,8 @@ subroutine X(exchange_operator_compute_potentials)(this, namespace, der, sb, st)
   type(simul_box_t),         intent(in)    :: sb
   type(states_elec_t),       intent(inout) :: st !We modify the states in xpsib
 
-  integer :: ib, ii, ik, ist, ikloc, istloc, node_fr, node_to
-  integer :: ip, idim, is, nsend, nreceiv, icom
+  integer :: ib, ii, ik, ist, ikloc, node_fr, node_to
+  integer :: ip, idim, is, nsend, nreceiv
   integer :: kpt_start, kpt_end, st_start, st_end
   integer :: ncom, ncom_full
 
@@ -331,12 +331,14 @@ subroutine X(exchange_operator_compute_potentials)(this, namespace, der, sb, st)
   R_TYPE, allocatable :: xpsi_ret(:,:,:), xpsi_rec(:,:,:)
   FLOAT :: qq(1:MAX_DIM), exx_coef
   integer :: ikpoint, ikpoint2
-  type(profile_t), save :: prof_full, prof_acc, prof_comm
+  type(profile_t), save :: prof_full, prof_acc
   logical :: double_sided_communication
   type(symmetrizer_t) :: symmetrizer
 
 #if defined(HAVE_MPI)
   integer :: send_req, status(MPI_STATUS_SIZE), mpi_err
+  integer :: icom, istloc
+  type(profile_t), save :: prof_comm
 #endif
 
   PUSH_SUB(X(exchange_operator_compute_potentials))
@@ -611,7 +613,7 @@ subroutine X(exchange_operator_compute_potentials)(this, namespace, der, sb, st)
     type(profile_t), save :: prof_full
     FLOAT :: ff, ff2, kpt1(1:MAX_DIM), kpt2(1:MAX_DIM)
     R_TYPE, allocatable :: pot(:,:), rho(:,:), ff_psi_sym(:,:)
-    R_TYPE, pointer :: psi_sym(:,:), pot_sym(:), psi_sym_conj(:,:)
+    R_TYPE, pointer :: psi_sym(:,:), psi_sym_conj(:,:)
     integer :: iop, npath
     type(fourier_space_op_t) :: coulb
     logical :: use_external_kernel
