@@ -32,7 +32,7 @@
 
 # ----- Maxwell calculation variables -------------------------------------------------------------
 
- HamiltonianOperator = faraday_ampere
+ MaxwellHamiltonianOperator = faraday_ampere
 
  %MaxwellBoundaryConditions
   plane_waves | plane_waves | plane_waves
@@ -52,7 +52,7 @@
 
  MaxwellOutput = electric_field + magnetic_field + maxwell_energy_density
 
- MaxwellOutputInterval = 25
+ MaxwellOutputInterval = 50
  MaxwellTDOutput       = maxwell_energy + maxwell_fields
 
  %MaxwellFieldsCoordinate
@@ -64,7 +64,7 @@
 
  TDSystemPropagator = exp_mid
  TDTimeStep                        = 0.002
- TDPropagationTime                 = 0.2
+ TDPropagationTime                 = 0.1
 
 
 # ----- Maxwell field variables -------------------------------------------------------------------
