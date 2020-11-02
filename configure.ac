@@ -327,7 +327,10 @@ ACX_PSOLVER
 
 dnl check for CGAL library.
 dnl ACX_CGAL
-AX_LIB_CGAL_CORE
+AC_ARG_ENABLE(cgal, AS_HELP_STRING([--disable-cgal], [Disable cgal library check.]), [enable_cgal=$enableval], [enable_cgal=yes])
+if test "x$enable_cgal" = "xyes"; then
+  AX_LIB_CGAL_CORE
+fi
 
 dnl If PSolver was not found, we check for older versions of the library (1.7.x),
 dnl which we named ISF
