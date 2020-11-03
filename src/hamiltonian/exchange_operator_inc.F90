@@ -25,8 +25,8 @@ subroutine X(exchange_operator_single)(this, namespace, der, st_d, ist, ik, psi,
   type(states_elec_dim_t),   intent(in)    :: st_d
   integer,                   intent(in)    :: ist
   integer,                   intent(in)    :: ik
-  R_TYPE,                    intent(in)    :: psi(:, :)
-  R_TYPE,                    intent(inout) :: hpsi(:, :)
+  R_TYPE, contiguous,        intent(inout) :: psi(:, :)
+  R_TYPE, contiguous,        intent(inout) :: hpsi(:, :)
   logical,                   intent(in)    :: rdmft
 
   type(wfs_elec_t) :: psib, hpsib

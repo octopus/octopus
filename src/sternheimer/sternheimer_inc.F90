@@ -44,7 +44,7 @@ subroutine X(sternheimer_solve)(                           &
   FLOAT  :: abs_dens, rel_dens
   R_TYPE :: omega_sigma, proj
   logical, allocatable :: orth_mask(:)
-  type(wfs_elec_t) :: rhsb, dlpsib, orhsb
+  type(wfs_elec_t) :: rhsb, dlpsib
   logical :: conv_last, conv, states_conv, have_restart_rho_
   type(mesh_t), pointer :: mesh
   type(states_elec_t), pointer :: st
@@ -159,9 +159,10 @@ subroutine X(sternheimer_solve)(                           &
         call wfs_elec_init(rhsb, st%d%dim, sst, est, rhs_tmp, ik)
 
         if(sternheimer_have_rhs(this)) then
-          call wfs_elec_init(orhsb, st%d%dim, sst, est, this%X(rhs)(:, :, sst:, ik - st%d%kpt%start + 1), ik)
-          call orhsb%copy_data_to(mesh%np, rhsb)
-          call orhsb%end()
+          do ist = sst, est
+            call batch_set_state(rhsb, ist-sst+1, mesh%np, &
+              this%X(rhs)(:, :, ist, ik - st%d%kpt%start + 1))
+          end do
         else
           call X(pert_apply_batch)(perturbation, sys%namespace, sys%gr, sys%geo, sys%hm, st%group%psib(ib, ik), rhsb)
         end if
@@ -215,13 +216,19 @@ subroutine X(sternheimer_solve)(                           &
           end do
 
           !solve the Sternheimer equation
-          call wfs_elec_init(dlpsib, st%d%dim, sst, est, lr(sigma)%X(dl_psi)(:, :, sst:, ik), ik)
+          call X(wfs_elec_init)(dlpsib, st%d%dim, sst, est, mesh%np_part, ik)
+          do ist = sst, est
+            call batch_set_state(dlpsib, ist-sst+1, mesh%np, lr(sigma)%X(dl_psi)(:, :, ist, ik))
+          end do
           call wfs_elec_init(rhsb, st%d%dim, sst, est, rhs, ik)
 
           call X(linear_solver_solve_HXeY_batch)(this%solver, sys%namespace, sys%hm, sys%gr, sys%st, dlpsib, rhsb, &
             -sys%st%eigenval(sst:est, ik) + omega_sigma, tol, residue(sigma, sst:est), conv_iters(sigma, sst:est), &
             occ_response = this%occ_response)
 
+          do ist = sst, est
+            call batch_get_state(dlpsib, ist-sst+1, mesh%np, lr(sigma)%X(dl_psi)(:, :, ist, ik))
+          end do
           call dlpsib%end()
           call rhsb%end()
 

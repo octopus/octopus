@@ -103,11 +103,11 @@ end subroutine X(restart_write_mesh_function)
 !> In domain parallel case each process reads a part of the file.
 !! At the end all the processes have the corresponding mesh part
 subroutine X(restart_read_mesh_function)(restart, filename, mesh, ff, ierr)
-  type(restart_t),  intent(in)    :: restart
-  character(len=*), intent(in)    :: filename
-  type(mesh_t),     intent(in)    :: mesh
-  R_TYPE, target,   intent(inout) :: ff(:)
-  integer,          intent(out)   :: ierr
+  type(restart_t),            intent(in)    :: restart
+  character(len=*),           intent(in)    :: filename
+  type(mesh_t),               intent(in)    :: mesh
+  R_TYPE, target, contiguous, intent(inout) :: ff(:)
+  integer,                    intent(out)   :: ierr
 
   integer :: ip, np, offset, file_size
   R_TYPE, pointer :: read_ff(:)
