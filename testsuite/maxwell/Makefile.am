@@ -36,6 +36,8 @@ dist_share_DATA =                                                   \
 	04-linear-medium-from-file.01-cube_medium_from_file.inp     \
 	04-linear-medium-from-file.01-cube.off                      \
         05-plane_waves.test                                         \
-        05-plane_waves.01-pulse_pml.inp
+        05-plane_waves.01-pulse_pml.inp                             \
+        06-circular-polarization.test                               \
+        06-circular-polarization.01-1_puse_circ_pol.inp
 
 CLEANFILES = *~ *.bak
