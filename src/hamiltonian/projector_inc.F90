@@ -20,14 +20,14 @@
 !> X(project_psi) calculates the action of a projector on the psi wavefunction.
 !! The result is summed up to ppsi
 subroutine X(project_psi)(mesh, bnd, pj, npj, dim, psi, ppsi, ik)
-  type(mesh_t),      intent(in)    :: mesh
-  type(boundaries_t),intent(in)    :: bnd
-  type(projector_t), intent(in)    :: pj(:)
-  integer,           intent(in)    :: npj
-  integer,           intent(in)    :: dim
-  R_TYPE,            intent(in)    :: psi(:, :)   !< (1:mesh%np, dim)
-  R_TYPE,            intent(inout) :: ppsi(:, :)  !< (1:mesh%np, dim)
-  integer,           intent(in)    :: ik
+  type(mesh_t),       intent(in)    :: mesh
+  type(boundaries_t), intent(in)    :: bnd
+  type(projector_t),  intent(in)    :: pj(:)
+  integer,            intent(in)    :: npj
+  integer,            intent(in)    :: dim
+  R_TYPE, contiguous, intent(inout)    :: psi(:, :)   !< (1:mesh%np, dim)
+  R_TYPE, contiguous, intent(inout) :: ppsi(:, :)  !< (1:mesh%np, dim)
+  integer,            intent(in)    :: ik
 
   type(wfs_elec_t) :: psib, ppsib
 

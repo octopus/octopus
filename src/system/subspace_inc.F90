@@ -161,7 +161,7 @@ subroutine X(subspace_diag_scalapack)(namespace, mesh, st, hm, ik, eigenval, psi
   type(hamiltonian_elec_t), intent(in)    :: hm
   integer,                  intent(in)    :: ik
   FLOAT,                    intent(out)   :: eigenval(:)
-  R_TYPE,                   intent(inout) :: psi(:, :, st%st_start:)
+  R_TYPE, contiguous,       intent(inout) :: psi(:, :, st%st_start:)
   FLOAT, optional,          intent(out)   :: diff(:)
  
 #ifdef HAVE_SCALAPACK
