@@ -78,16 +78,15 @@ module maxwell_boundary_op_oct_m
   end type pml_t
 
   type plane_wave_t
-    integer                          :: points_number
-    integer,             allocatable :: points_map(:)
-    integer                          :: number
-    integer,             allocatable :: modus(:)
-    character(len=1024), allocatable :: e_field_string(:,:)
-    FLOAT,               allocatable :: k_vector(:,:)
-    FLOAT,               allocatable :: v_vector(:,:)
-    CMPLX,               allocatable :: e_field(:,:)
-    type(mxf_t),         allocatable :: mx_function(:)
-    type(mxf_t),         allocatable :: mx_phase(:)
+    integer                          :: points_number  !< number of points of plane wave boundary
+    integer,             allocatable :: points_map(:) !< points map for plane waves boundary
+    integer                          :: number !< number of plane waves given by user
+    integer,             allocatable :: modus(:) !< input file modus, either parser or Maxwell function
+    character(len=1024), allocatable :: e_field_string(:,:) !< string in case of parser
+    FLOAT,               allocatable :: k_vector(:,:) !< k vector for each plane wave
+    FLOAT,               allocatable :: v_vector(:,:) !< velocity vector for each plane wave
+    CMPLX,               allocatable :: e_field(:,:) !< field amplitude for each plane wave
+    type(mxf_t),         allocatable :: mx_function(:) !< Maxwell function for each plane wave
   end type plane_wave_t
 
   type bc_mxll_t
@@ -473,7 +472,6 @@ contains
     SAFE_DEALLOCATE_A(plane_wave%v_vector)
     SAFE_DEALLOCATE_A(plane_wave%e_field)
     SAFE_DEALLOCATE_A(plane_wave%mx_function)
-    SAFE_DEALLOCATE_A(plane_wave%mx_phase)
 
     POP_SUB(plane_wave_end)
   end subroutine plane_wave_end
@@ -1422,7 +1420,6 @@ contains
       SAFE_ALLOCATE(bc%plane_wave%k_vector(MAX_DIM, nlines))
       SAFE_ALLOCATE(bc%plane_wave%v_vector(MAX_DIM, nlines))
       SAFE_ALLOCATE(bc%plane_wave%mx_function(nlines))
-      SAFE_ALLOCATE(bc%plane_wave%mx_phase(nlines))
 
       ! read all lines
       do il = 1, nlines
