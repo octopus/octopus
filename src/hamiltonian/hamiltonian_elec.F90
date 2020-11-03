@@ -694,16 +694,19 @@ contains
             end if
             hm%ep%E_field(1:gr%sb%dim) = hm%ep%E_field(1:gr%sb%dim) + potential%E_field(1:gr%sb%dim)
 
-            if(.not.associated(hm%ep%v_static)) then
-              SAFE_ALLOCATE(hm%ep%v_static(1:gr%mesh%np))
-              hm%ep%v_static(1:gr%mesh%np) = M_ZERO
+            !In the fully periodic case, we use Berry phases
+            if(gr%mesh%sb%periodic_dim < gr%mesh%sb%dim) then
+              if(.not.associated(hm%ep%v_static)) then
+                SAFE_ALLOCATE(hm%ep%v_static(1:gr%mesh%np))
+                hm%ep%v_static(1:gr%mesh%np) = M_ZERO
+              end if
+              if(.not.allocated(hm%ep%v_ext)) then
+                SAFE_ALLOCATE(hm%ep%v_ext(1:gr%mesh%np_part))
+                hm%ep%v_ext(1:gr%mesh%np_part) = M_ZERO
+              end if     
+              call lalg_axpy(gr%mesh%np, M_ONE, potential%pot, hm%ep%v_static)
+              call lalg_axpy(gr%mesh%np, M_ONE, potential%v_ext, hm%ep%v_ext)
             end if
-            if(.not.allocated(hm%ep%v_ext)) then
-              SAFE_ALLOCATE(hm%ep%v_ext(1:gr%mesh%np_part))
-              hm%ep%v_ext(1:gr%mesh%np_part) = M_ZERO
-            end if     
-            call lalg_axpy(gr%mesh%np, M_ONE, potential%pot, hm%ep%v_static)
-            call lalg_axpy(gr%mesh%np, M_ONE, potential%v_ext, hm%ep%v_ext)
           end select
           call potential%deallocate_memory()
 
