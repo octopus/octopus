@@ -828,6 +828,11 @@ subroutine X(exchange_operator_compute_potentials)(this, namespace, der, sb, st)
      end do !ik2
    end do !ii
 
+   if(use_external_kernel) then
+    call fourier_space_op_end(coulb)
+   end if
+
+
    SAFE_DEALLOCATE_A(rho)
    SAFE_DEALLOCATE_A(pot)
    SAFE_DEALLOCATE_A(ff_psi_sym)
