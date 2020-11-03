@@ -86,7 +86,7 @@ module maxwell_function_oct_m
   end type mxf_t
 
   interface mxf
-    module procedure mxft
+    module procedure mxf_eval
   end interface mxf
 
 contains
@@ -441,7 +441,7 @@ contains
 
 
   !------------------------------------------------------------
-  CMPLX function mxft(f, x) result(y)
+  CMPLX function mxf_eval(f, x) result(y)
     type(mxf_t), intent(in) :: f
     FLOAT,       intent(in) :: x(:)
 
@@ -510,7 +510,7 @@ contains
 
     end select
 
-  end function mxft
+  end function mxf_eval
   !------------------------------------------------------------
 
 
