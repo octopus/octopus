@@ -24,7 +24,6 @@ dist_share_DATA =                                                   \
 	01-free-propagation.test                                    \
 	01-free-propagation.01-1_pulse_td.inp                       \
         01-free-propagation.02-2_pulses_td.inp                      \
-        01-free-propagation.03-1_pulse_circ_pol.inp                 \
         02-external-current.test                                    \
         02-external-current.01-gaussian_current_pulse.inp           \
         02-external-current.02-gaussian_current_pulse_with_pml.inp  \
@@ -37,6 +36,8 @@ dist_share_DATA =                                                   \
 	04-linear-medium-from-file.01-cube_medium_from_file.inp     \
 	04-linear-medium-from-file.01-cube.off                      \
         05-plane_waves.test                                         \
-        05-plane_waves.01-pulse_pml.inp
+        05-plane_waves.01-pulse_pml.inp                             \
+        06-circular-polarization.test                               \
+        06-circular-polarization.01-1_puse_circ_pol.inp
 
 CLEANFILES = *~ *.bak
