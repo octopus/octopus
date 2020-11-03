@@ -1,3 +1,4 @@
+!! Copyright (C) 2019 R. Jestaedt, H. Appel
 !! Copyright (C) 2020 N. Tancogne-Dejean
 !!
 !! This program is free software; you can redistribute it and/or modify
