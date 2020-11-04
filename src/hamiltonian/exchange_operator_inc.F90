@@ -329,7 +329,7 @@ subroutine X(exchange_operator_compute_potentials)(this, namespace, der, sb, st)
   R_TYPE, allocatable :: psi2(:, :), xpsi(:,:), send_buffer(:,:,:)
   R_TYPE, allocatable, target :: rec_buffer(:,:,:)
   R_TYPE, allocatable :: xpsi_ret(:,:,:), xpsi_rec(:,:,:)
-  FLOAT :: qq(1:MAX_DIM), exx_coef
+  FLOAT :: exx_coef
   integer :: ikpoint, ikpoint2
   type(profile_t), save :: prof_full, prof_acc
   logical :: double_sided_communication
@@ -611,7 +611,7 @@ subroutine X(exchange_operator_compute_potentials)(this, namespace, der, sb, st)
 
     integer :: ib2, ii2, ist2, ik2
     type(profile_t), save :: prof_full
-    FLOAT :: ff, ff2, kpt1(1:MAX_DIM), kpt2(1:MAX_DIM)
+    FLOAT :: ff, ff2, kpt1(1:MAX_DIM), kpt2(1:MAX_DIM), qq(1:MAX_DIM)
     R_TYPE, allocatable :: pot(:,:), rho(:,:), ff_psi_sym(:,:)
     R_TYPE, pointer :: psi_sym(:,:), psi_sym_conj(:,:)
     integer :: iop, npath
@@ -623,6 +623,7 @@ subroutine X(exchange_operator_compute_potentials)(this, namespace, der, sb, st)
     call profiling_in(prof_full, "EXCHANGE_LOCAL")
      
     npath = SIZE(sb%kpoints%coord_along_path)
+    qq(1:der%dim) = M_ZERO
 
     use_external_kernel = (st%d%nik > st%d%spin_channels .or. this%cam_omega > M_EPSILON)
     if(use_external_kernel) then
@@ -639,8 +640,6 @@ subroutine X(exchange_operator_compute_potentials)(this, namespace, der, sb, st)
     if(.not. local) xpsi_ret = R_TOTYPE(M_ZERO)
 
     SAFE_ALLOCATE(ff_psi_sym(1:der%mesh%np, 1:st%d%dim))
-
-    qq(1:der%dim) = M_ZERO
 
     do ii = 1, kpoints_get_num_symmetry_ops(sb%kpoints, ikpoint)
       iop = kpoints_get_symmetry_ops(sb%kpoints, ikpoint, ii)
