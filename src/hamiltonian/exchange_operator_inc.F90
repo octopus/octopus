@@ -669,7 +669,7 @@ subroutine X(exchange_operator_compute_potentials)(this, namespace, der, sb, st)
         ! In case of k-points, the poisson solver must contains k-q 
         ! in the Coulomb potential, and must be changed for each q point
         if(use_external_kernel) then
-          call poisson_build_kernel(this%psolver, namespace, sb, coulb, qq, &
+          call poisson_build_kernel(this%psolver, namespace, sb, coulb, qq, this%cam_omega, &
                   -(sb%kpoints%full%npoints-npath)*sb%rcell_volume  &
                      *(this%singul%Fk(ik2)-this%singul%FF))
         end if
