@@ -313,8 +313,8 @@ subroutine X(hamiltonian_elec_apply_single) (hm, namespace, mesh, psi, hpsi, ist
   type(mesh_t),             intent(in)    :: mesh
   integer,                  intent(in)    :: ist       !< the index of the state
   integer,                  intent(in)    :: ik        !< the index of the k-point
-  R_TYPE,           target, intent(inout) :: psi(:,:)  !< (gr%mesh%np_part, hm%d%dim)
-  R_TYPE,           target, intent(inout) :: hpsi(:,:) !< (gr%mesh%np, hm%d%dim)
+  R_TYPE, contiguous, target, intent(inout) :: psi(:,:)  !< (gr%mesh%np_part, hm%d%dim)
+  R_TYPE, contiguous, target, intent(inout) :: hpsi(:,:) !< (gr%mesh%np, hm%d%dim)
   integer, optional,        intent(in)    :: terms
   logical, optional,        intent(in)    :: set_bc
   logical, optional,        intent(in)    :: set_phase

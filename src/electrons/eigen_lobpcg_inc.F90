@@ -146,7 +146,7 @@ subroutine X(lobpcg)(namespace, gr, st, hm, st_start, st_end, psi, constr_start,
   type(hamiltonian_elec_t), intent(in)    :: hm
   integer,                  intent(in)    :: st_start
   integer,                  intent(in)    :: st_end
-  R_TYPE, target,           intent(inout) :: psi(:, :, st_start:) !< (gr%mesh%np_part, st%d%dim, st_start:st_end)
+  R_TYPE, target, contiguous, intent(inout) :: psi(:, :, st_start:) !< (gr%mesh%np_part, st%d%dim, st_start:st_end)
   integer,                  intent(in)    :: constr_start
   integer,                  intent(in)    :: constr_end
   integer,                  intent(in)    :: ik
