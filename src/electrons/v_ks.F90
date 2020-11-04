@@ -1535,7 +1535,7 @@ contains
 
     rot_mat(1) = alpha2 * mat(1) + beta2 * mat(2) + M_TWO * alpha * (betar * mat(3) + betai * mat(4))
     rot_mat(2) = alpha2 * mat(2) + beta2 * mat(1) - M_TWO * alpha * (betar * mat(3) + betai * mat(4))
-    cross = (cmplx(betar, betai))**2 * cmplx(mat(3), -mat(4))
+    cross = (TOCMPLX(betar, betai))**2 * TOCMPLX(mat(3), -mat(4))
     rot_mat(3) = alpha2 * mat(3) + alpha * betar * (mat(2)-mat(1)) - real(cross)
     rot_mat(4) = alpha2 * mat(4) + alpha * betai * (mat(2)-mat(1)) - aimag(cross)
 
@@ -1553,7 +1553,7 @@ contains
 
     rot_mat(1) = alpha2 * mat(1) + beta2 * mat(2) - M_TWO * alpha * (betar * mat(3) + betai * mat(4))
     rot_mat(2) = alpha2 * mat(2) + beta2 * mat(1) + M_TWO * alpha * (betar * mat(3) + betai * mat(4))
-    cross = (cmplx(betar, betai))**2 * cmplx(mat(3), -mat(4))
+    cross = (TOCMPLX(betar, betai))**2 * TOCMPLX(mat(3), -mat(4))
     rot_mat(3) = alpha2 * mat(3) - alpha * betar * (mat(2)-mat(1)) - real(cross)
     rot_mat(4) = alpha2 * mat(4) - alpha * betai * (mat(2)-mat(1)) - aimag(cross)
 

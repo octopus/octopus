@@ -122,7 +122,7 @@ subroutine X(sym_conjugate_gradients)(np, x, b, op, dotp, iter, residue, thresho
   iter = 1
   do while(iter < max_iter)
     gamma = dotp(r, r)
-    if(abs(gamma) < threshold_) exit
+    if(abs(gamma) < threshold_**2) exit
     call op(p, ap)
     alpha   = gamma/dotp(p, ap)
     call lalg_axpy(np, -alpha, ap, r)
@@ -133,7 +133,7 @@ subroutine X(sym_conjugate_gradients)(np, x, b, op, dotp, iter, residue, thresho
     end do
     iter    = iter + 1
   end do
-  if(present(residue)) residue = gamma
+  if(present(residue)) residue = sqrt(abs(gamma))
 
   SAFE_DEALLOCATE_A(r)
   SAFE_DEALLOCATE_A(ax)
@@ -204,7 +204,7 @@ subroutine X(bi_conjugate_gradients)(np, x, b, op, opt, dotp, iter, residue, thr
   do while(iter < max_iter)
     gamma = R_REAL(dotp(rr, r))
     err   = dotp(r, r)
-    if(abs(err) < threshold_) exit
+    if(abs(err) < threshold_**2) exit
     call op (p,  ap)
     call opt(pp, atp)
     alpha = gamma/R_REAL(dotp(pp, ap))
@@ -218,7 +218,7 @@ subroutine X(bi_conjugate_gradients)(np, x, b, op, opt, dotp, iter, residue, thr
     call lalg_axpy(np, R_TOTYPE(M_ONE), rr, pp)
     iter = iter + 1
   end do
-  if(present(residue)) residue = err
+  if(present(residue)) residue = sqrt(abs(err))
 
   SAFE_DEALLOCATE_A(r)
   SAFE_DEALLOCATE_A(rr)

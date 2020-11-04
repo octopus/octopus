@@ -22,8 +22,8 @@ subroutine X(preconditioner_apply)(pre, namespace, gr, hm, a, b, ik, omega)
   type(namespace_t),        intent(in)    :: namespace
   type(grid_t), target,     intent(in)    :: gr
   type(hamiltonian_elec_t), intent(in)    :: hm
-  R_TYPE,                   intent(inout) :: a(:,:)
-  R_TYPE,                   intent(inout) :: b(:,:)
+  R_TYPE, contiguous,       intent(inout) :: a(:,:)
+  R_TYPE, contiguous,       intent(inout) :: b(:,:)
   integer,                  intent(in)    :: ik
   R_TYPE,         optional, intent(in)    :: omega
 

@@ -42,6 +42,7 @@ OutputMatrixElements = momentum + ang_momentum
 # + one_body + two_body + ks_multipoles
 
 FilterPotentials = filter_none
+SCFCalculateForces = no
 
 Debug = trace
 StatesPack = yes

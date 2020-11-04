@@ -22,16 +22,16 @@
 !! res <- psi1(xpsi1)^+ * psi2(xpsi2) with the index sets xpsi1 and xpsi2.
 subroutine X(states_elec_blockt_mul)(mesh, st, psi1_start, psi2_start, &
   psi1, psi2, res, xpsi1, xpsi2, symm)
-  type(mesh_t),        intent(in)  :: mesh
-  type(states_elec_t), intent(in)  :: st
-  integer,             intent(in)  :: psi1_start
-  integer,             intent(in)  :: psi2_start
-  R_TYPE, target,      intent(in)  :: psi1(:, :, psi1_start:)
-  R_TYPE, target,      intent(in)  :: psi2(:, :, psi2_start:)
-  R_TYPE,              intent(out) :: res(:, :)
-  integer, optional,   intent(in)  :: xpsi1(:)
-  integer, optional,   intent(in)  :: xpsi2(:)
-  logical, optional,   intent(in)  :: symm    !< Indicates if res(j, i) can be calculated as res(i, j)*.
+  type(mesh_t),                   intent(in)  :: mesh
+  type(states_elec_t),            intent(in)  :: st
+  integer,                        intent(in)  :: psi1_start
+  integer,                        intent(in)  :: psi2_start
+  R_TYPE, target, contiguous,     intent(in)  :: psi1(:, :, psi1_start:)
+  R_TYPE, target, contiguous,     intent(in)  :: psi2(:, :, psi2_start:)
+  R_TYPE,                         intent(out) :: res(:, :)
+  integer, optional, contiguous,  intent(in)  :: xpsi1(:)
+  integer, optional, contiguous,  intent(in)  :: xpsi2(:)
+  logical, optional,              intent(in)  :: symm    !< Indicates if res(j, i) can be calculated as res(i, j)*.
 
   logical              :: symm_
   integer              :: ii

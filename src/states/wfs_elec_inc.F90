@@ -18,12 +18,12 @@
 
 !--------------------------------------------------------------
 subroutine X(wfs_elec_init_with_memory_3)(this, dim, st_start, st_end, psi, ik)
-  type(wfs_elec_t), intent(out)   :: this
-  integer,          intent(in)    :: dim
-  integer,          intent(in)    :: st_start
-  integer,          intent(in)    :: st_end
-  integer,          intent(in)    :: ik
-  R_TYPE,   target, intent(in)    :: psi(:, :, st_start:)
+  type(wfs_elec_t),           intent(out)   :: this
+  integer,                    intent(in)    :: dim
+  integer,                    intent(in)    :: st_start
+  integer,                    intent(in)    :: st_end
+  integer,                    intent(in)    :: ik
+  R_TYPE, target, contiguous, intent(inout) :: psi(:, :, st_start:)
 
   PUSH_SUB(X(wfs_elec_init_with_memory_3))
 
@@ -35,12 +35,12 @@ subroutine X(wfs_elec_init_with_memory_3)(this, dim, st_start, st_end, psi, ik)
 end subroutine X(wfs_elec_init_with_memory_3)
 
 subroutine X(wfs_elec_init_with_memory_2)(this, dim, st_start, st_end, psi, ik)
-  type(wfs_elec_t), intent(out)   :: this
-  integer,          intent(in)    :: dim
-  integer,          intent(in)    :: st_start
-  integer,          intent(in)    :: st_end
-  integer,          intent(in)    :: ik
-  R_TYPE,   target, intent(in)    :: psi(:, :)
+  type(wfs_elec_t),           intent(out)   :: this
+  integer,                    intent(in)    :: dim
+  integer,                    intent(in)    :: st_start
+  integer,                    intent(in)    :: st_end
+  integer,                    intent(in)    :: ik
+  R_TYPE, target, contiguous, intent(inout) :: psi(:, :)
 
   PUSH_SUB(X(wfs_elec_init_with_memory_2))
 

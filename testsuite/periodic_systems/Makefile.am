@@ -63,6 +63,7 @@ dist_share_DATA =                                \
 	11-silicon_force.test                    \
 	11-silicon_force.01-gs.inp               \
 	11-silicon_force.02-nlcc.inp             \
+        11-silicon_force.03-nosym.inp            \
 	12-boron_nitride.test                    \
 	12-boron_nitride.01-gs.inp               \
 	12-boron_nitride.02-gs_gamma.inp         \

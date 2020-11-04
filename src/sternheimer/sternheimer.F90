@@ -20,6 +20,7 @@
 
 module sternheimer_oct_m
   use batch_oct_m
+  use batch_ops_oct_m
   use density_oct_m
   use global_oct_m
   use grid_oct_m
@@ -129,6 +130,8 @@ contains
     logical :: default_preorthog
 
     PUSH_SUB(sternheimer_init)
+
+    call sternheimer_nullify(this)
 
     if(sys%st%smear%method  ==  SMEAR_FIXED_OCC) then
       call messages_experimental("Sternheimer equation for arbitrary occupations")
@@ -244,13 +247,24 @@ contains
 
     if(this%add_fxc) call sternheimer_build_fxc(this, sys%namespace, sys%gr%mesh, sys%st, sys%ks)
 
+    POP_SUB(sternheimer_init)
+  end subroutine sternheimer_init
+
+  !-----------------------------------------------------------
+  subroutine sternheimer_nullify(this)
+    type(sternheimer_t), intent(inout) :: this
+
+    PUSH_SUB(sternheimer_nullify)
+
     nullify(this%drhs)
     nullify(this%zrhs)
     nullify(this%dinhomog)
     nullify(this%zinhomog)
-    POP_SUB(sternheimer_init)
-  end subroutine sternheimer_init
+    nullify(this%fxc)
+    nullify(this%kxc)
 
+    POP_SUB(sternheimer_nullify)
+  end subroutine sternheimer_nullify
 
   !-----------------------------------------------------------
   subroutine sternheimer_end(this)
@@ -262,9 +276,7 @@ contains
     call scf_tol_end(this%scf_tol)
     call mix_end(this%mixer)
 
-    if (this%add_fxc) then
-      SAFE_DEALLOCATE_P(this%fxc)
-    end if
+    SAFE_DEALLOCATE_P(this%fxc)
 
     POP_SUB(sternheimer_end)
   end subroutine sternheimer_end
@@ -327,9 +339,7 @@ contains
     
     PUSH_SUB(sternheimer_unset_kxc)
 
-    if(this%add_fxc) then
-      SAFE_DEALLOCATE_P(this%kxc)
-    end if
+    SAFE_DEALLOCATE_P(this%kxc)
 
     POP_SUB(sternheimer_unset_kxc)
   end subroutine sternheimer_unset_kxc

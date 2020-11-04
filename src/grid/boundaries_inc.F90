@@ -719,9 +719,9 @@ end subroutine X(boundaries_set_batch)
 ! ---------------------------------------------------------
 
 subroutine X(boundaries_set_single)(boundaries, ff, phase_correction)
-  type(boundaries_t),  intent(in)    :: boundaries
-  R_TYPE, target,      intent(inout) :: ff(:)
-  CMPLX, optional,     intent(in)    :: phase_correction(:)
+  type(boundaries_t),         intent(in)    :: boundaries
+  R_TYPE, target, contiguous, intent(inout) :: ff(:)
+  CMPLX, optional,            intent(in)    :: phase_correction(:)
 
   type(batch_t) :: batch_ff
 

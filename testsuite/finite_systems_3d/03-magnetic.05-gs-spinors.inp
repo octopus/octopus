@@ -28,3 +28,5 @@ LCAOStart = no
 FilterPotentials = filter_none
 
 MixField = density
+
+SCFCalculateForces = no
