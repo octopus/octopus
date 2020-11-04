@@ -315,7 +315,8 @@ contains
     call dconjugate_gradients(sys%gr%mesh%np, x, rho, laplacian_op, dmf_dotp_aux, iter, res, threshold)
     write(message(1),'(a,i6,a)')  "Info: CG converged with ", iter, " iterations."
     write(message(2),'(a,e14.6)')    "Info: The residue is ", res
-    call messages_info(2)
+    write(message(3),'(a,e14.6)') "Info: Norm solution CG ", dmf_nrm2(sys%gr%mesh, x)
+    call messages_info(3)
 
     !Test the QMR linear solver
     x = M_ZERO
@@ -323,7 +324,8 @@ contains
     call dqmr_sym_spec_dotu(sys%gr%mesh%np, x, rho, laplacian_op, prec_op, iter, res, threshold)
     write(message(1),'(a,i6,a)')  "Info: QMR converged with ", iter, " iterations."
     write(message(2),'(a,e14.6)')    "Info: The residue is ", res
-    call messages_info(2)
+    write(message(3),'(a,e14.6)') "Info: Norm solution QMR ", dmf_nrm2(sys%gr%mesh, x)
+    call messages_info(3)
 
     call preconditioner_end(prec_aux)
     SAFE_DEALLOCATE_A(x)
