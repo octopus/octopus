@@ -5,7 +5,7 @@ Program    : octopus
 TestGroups : short-run, periodic_systems
 Enabled    : Yes
 
-Input      : 22-hybrids.01-ace.inp
+Input      : 23-hybrids.01-ace.inp
 
 match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
 
