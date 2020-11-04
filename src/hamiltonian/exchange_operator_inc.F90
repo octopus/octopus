@@ -319,7 +319,7 @@ subroutine X(exchange_operator_compute_potentials)(this, namespace, der, sb, st)
   type(namespace_t),         intent(in)    :: namespace
   type(derivatives_t),       intent(in)    :: der
   type(simul_box_t),         intent(in)    :: sb
-  type(states_elec_t),       intent(inout) :: st !We modify the states in xpsib
+  type(states_elec_t),       intent(in)    :: st 
 
   integer :: ib, ii, ik, ist, ikloc, node_fr, node_to
   integer :: ip, idim, is, nsend, nreceiv
@@ -393,7 +393,7 @@ subroutine X(exchange_operator_compute_potentials)(this, namespace, der, sb, st)
     call states_elec_copy(this%xst, st)
   end if
 
-  !We set to zero xpsib before doing the accumulation
+  !We set to zero before doing the accumulation
   call states_elec_set_zero(this%xst)
 
   !We do the symmetrization on the received states, to reduce the amount of Poisson equation solved
