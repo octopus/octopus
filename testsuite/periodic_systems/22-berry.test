@@ -14,9 +14,11 @@ match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ;
 
 match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
 
-Precision: 3.50e-06
+Precision: 8.e-06
 match ;  Total energy        ; GREPFIELD(static/info, 'Total       =', 3) ; 20.024809814999998
+Precision: 3.50e-06
 match ;  Ion-ion energy      ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -31.4312028
+Precision: 8.e-06
 match ;  Eigenvalues sum     ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -235.43011087
 Precision: 1.05e-07
 match ;  Hartree energy      ; GREPFIELD(static/info, 'Hartree     =', 3) ; 35.958866355
@@ -34,6 +36,7 @@ Precision: 1.00e-10
 match ;  k-point 1 (x)  ; GREPFIELD(static/info, '#k =   1', 7) ; 0.0
 match ;  k-point 1 (y)  ; GREPFIELD(static/info, '#k =   1', 8) ; 0.0
 match ;  k-point 1 (z)  ; GREPFIELD(static/info, '#k =   1', 9) ; 0.0
+Precision: 2.e-6
 match ;  Eigenvalue  1  ; GREPFIELD(static/info, '#k =   1', 3, 1) ; -7.831651
 match ;  Eigenvalue  8  ; GREPFIELD(static/info, '#k =   1', 3, 8) ; -7.470475
 match ;  Eigenvalue 16  ; GREPFIELD(static/info, '#k =   1', 3, 16) ; -6.985576
