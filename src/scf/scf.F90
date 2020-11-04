@@ -98,7 +98,6 @@ module scf_oct_m
   type scf_t
     private
     integer, public :: max_iter   !< maximum number of SCF iterations
-    integer :: max_iter_berry  !< max number of electronic iterations before updating density, for Berry potential
 
     FLOAT, public :: lmm_r
 
@@ -123,6 +122,7 @@ module scf_oct_m
     logical :: forced_finish !< remember if 'touch stop' was triggered earlier.
     type(lda_u_mixer_t) :: lda_u_mix
     type(grid_t), pointer :: gr 
+    type(berry_t) :: berry
   end type scf_t
 
 contains
@@ -160,19 +160,8 @@ contains
     !%End
     call parse_variable(namespace, 'MaximumIter', 200, scf%max_iter)
 
-    !%Variable MaximumIterBerry
-    !%Type integer
-    !%Default 10
-    !%Section SCF::Convergence
-    !%Description
-    !% Maximum number of iterations for the Berry potential, within each SCF iteration.
-    !% Only applies if a <tt>StaticElectricField</tt> is applied in a periodic direction.
-    !% The code will move on to the next SCF iteration even if convergence
-    !% has not been achieved. -1 means unlimited.
-    !%End
     if(associated(hm%vberry)) then
-      call parse_variable(namespace, 'MaximumIterBerry', 10, scf%max_iter_berry)
-      if(scf%max_iter_berry < 0) scf%max_iter_berry = huge(scf%max_iter_berry)
+      call berry_init(scf%berry, namespace)
     end if
     
     !%Variable ConvEnergy
@@ -604,9 +593,9 @@ contains
     type(restart_t), optional, intent(in)    :: restart_load
     type(restart_t), optional, intent(in)    :: restart_dump
 
-    logical :: finish, converged_current, converged_last, gs_run_, berry_conv
+    logical :: finish, converged_current, converged_last, gs_run_
     integer :: iter, is, iatom, nspin, ierr, iberry, idir, verbosity_, ib, iqn
-    FLOAT :: evsum_out, evsum_in, forcetmp, dipole(MAX_DIM), dipole_prev(MAX_DIM)
+    FLOAT :: evsum_out, evsum_in, forcetmp
     FLOAT :: etime, itime
     character(len=MAX_PATH_LEN) :: dirname
     type(lcao_t) :: lcao    !< Linear combination of atomic orbitals
@@ -787,27 +776,16 @@ contains
         call lcao_init_orbitals(lcao, st, gr, geo)
         call lcao_wf(lcao, st, gr, geo, hm, namespace)
       else
+
+        !We check if the system is coupled with a partner that requires self-consistency
+      !  if(hamiltonian_has_scf_partner(hm)) then
         if(associated(hm%vberry)) then
+          !In this case, v_Hxc is frozen and we do an internal SCF loop over the 
+          ! partners that require SCF
           ks%frozen_hxc = .true.
-          do iberry = 1, scf%max_iter_berry
-            scf%eigens%converged = 0
-            call eigensolver_run(scf%eigens, namespace, gr, st, hm, iter)
-
-            call v_ks_calc(ks, namespace, hm, st, geo, calc_current=outp%duringscf)
-
-            dipole_prev = dipole
-            call calc_dipole(dipole)
-            write(message(1),'(a,9f12.6)') 'Dipole = ', dipole(1:gr%sb%dim)
-            call messages_info(1)
-
-            berry_conv = .true.
-            do idir = 1, gr%sb%periodic_dim
-              berry_conv = berry_conv .and. &
-                (abs((dipole(idir) - dipole_prev(idir)) / dipole_prev(idir)) < CNST(1e-5) &
-                .or. abs(dipole(idir) - dipole_prev(idir)) < CNST(1e-5))
-            end do
-            if(berry_conv) exit
-          end do
+         ! call perform_scf_partners()
+          call berry_perform_internal_scf(scf%berry, namespace, scf%eigens, gr, st, hm, iter, ks, geo)
+          !and we unfreeze the potential once finished
           ks%frozen_hxc = .false.
         else
           scf%eigens%converged = 0
@@ -1127,6 +1105,7 @@ contains
     ! ---------------------------------------------------------
     subroutine scf_write_iter()
       character(len=50) :: str
+      FLOAT :: dipole(1:MAX_DIM)
 
       PUSH_SUB(scf_run.scf_write_iter)
 
@@ -1157,7 +1136,7 @@ contains
         end if
 
         if(associated(hm%vberry)) then
-          call calc_dipole(dipole)
+          call calc_dipole(dipole, gr, st, geo)
           call write_dipole(stdout, dipole)
         end if
 
@@ -1209,6 +1188,7 @@ contains
 
       integer :: iunit, iatom
       FLOAT, allocatable :: hirshfeld_charges(:)
+      FLOAT :: dipole(1:MAX_DIM)
 
       PUSH_SUB(scf_run.scf_write_static)
 
@@ -1267,7 +1247,7 @@ contains
         end if 
 
       if(scf%calc_dipole) then
-        call calc_dipole(dipole)
+        call calc_dipole(dipole, gr, st, geo)
         call write_dipole(iunit, dipole)
       end if
 
@@ -1335,44 +1315,6 @@ contains
 
       POP_SUB(scf_run.scf_write_static)
     end subroutine scf_write_static
-
-
-    ! ---------------------------------------------------------
-    subroutine calc_dipole(dipole)
-      FLOAT, intent(out) :: dipole(:)
-
-      integer :: ispin, idir
-      FLOAT :: e_dip(MAX_DIM + 1, st%d%nspin), n_dip(MAX_DIM), nquantumpol
-
-      PUSH_SUB(scf_run.calc_dipole)
-
-      dipole(1:MAX_DIM) = M_ZERO
-
-      do ispin = 1, st%d%nspin
-        call dmf_multipoles(gr%fine%mesh, st%rho(:, ispin), 1, e_dip(:, ispin))
-      end do
-
-      call geometry_dipole(geo, n_dip)
-
-      do idir = 1, gr%sb%dim
-        ! in periodic directions use single-point Berry`s phase calculation
-        if(idir  <=  gr%sb%periodic_dim) then
-          dipole(idir) = -n_dip(idir) - berry_dipole(st, gr%mesh, idir)
-
-          ! use quantum of polarization to reduce to smallest possible magnitude
-          nquantumpol = NINT(dipole(idir)/(CNST(2.0)*gr%sb%lsize(idir)))
-          dipole(idir) = dipole(idir) - nquantumpol * (CNST(2.0) * gr%sb%lsize(idir))
-
-          ! in aperiodic directions use normal dipole formula
-        else
-          e_dip(idir + 1, 1) = sum(e_dip(idir + 1, :))
-          dipole(idir) = -n_dip(idir) - e_dip(idir + 1, 1)
-        end if
-      end do
-
-      POP_SUB(scf_run.calc_dipole)
-    end subroutine calc_dipole
-
 
     ! ---------------------------------------------------------
     subroutine write_dipole(iunit, dipole)
