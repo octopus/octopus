@@ -89,7 +89,7 @@ contains
 
     FLOAT :: alpha, default_alpha, omega
     FLOAT :: vol
-    integer :: default
+    integer :: default, order
     integer :: maxp, is, ns, ip, ip2
     character(len=32) :: name
 
@@ -132,9 +132,20 @@ contains
 
     select case(this%which)
     case(PRE_FILTER)
+
+      !%Variable PreconditionerFilterOrder
+      !%Type integer
+      !%Section SCF::Eigensolver
+      !%Description
+      !% This variable controls the order of the Laplacian used in the 
+      !% filter preconditioning. The default value is 1.
+      !%End
+      call parse_variable(namespace, 'PreconditionerFilterOrder', 1, order)
+      call messages_print_var_value(stdout, 'PreconditionerFilterOrder', order)
+
       ! the smoothing is performed uing the same stencil as the Laplacian
       name = "Preconditioner"
-      call derivatives_get_lapl(gr%der, this%op_array, name, 1)
+      call derivatives_get_lapl(gr%der, this%op_array, name, order)
 
       !%Variable PreconditionerFilterFactor
       !%Type float
