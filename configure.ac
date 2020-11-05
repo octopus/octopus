@@ -23,6 +23,8 @@ AC_INIT([Octopus],[arborescens],[octopus-devel@tddft.org],[octopus])
 AC_CONFIG_SRCDIR([src/basic/global.F90])
 AC_CONFIG_AUX_DIR([build-aux])
 AM_INIT_AUTOMAKE([subdir-objects tar-ustar])
+# enable silent rules by default (use --disable-silent-rules for disabling)
+AM_SILENT_RULES([yes])
 
 AC_CONFIG_HEADERS([config.h])
 
