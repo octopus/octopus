@@ -19,7 +19,7 @@ Precision: 3.50e-06
 match ;  Ion-ion energy      ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -31.4312028
 Precision: 8.e-06
 match ;  Eigenvalues sum     ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -235.43011087
-Precision: 1.05e-07
+Precision: 2.e-07
 match ;  Hartree energy      ; GREPFIELD(static/info, 'Hartree     =', 3) ; 35.958866355
 Precision: 2.20e-08
 match ;  Exchange energy     ; GREPFIELD(static/info, 'Exchange    =', 3) ; -12.59947899

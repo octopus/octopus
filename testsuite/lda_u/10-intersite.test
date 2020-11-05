@@ -35,11 +35,11 @@ else
   #Units are in eV_angstrom
   match ;  SCF convergence     ; GREPCOUNT(static/info, 'SCF converged') ; 1.0
 
-  Precision: 0.0003
+  Precision: 0.0004
   match ;  Total energy        ; GREPFIELD(static/info, 'Total       =', 3) ; -597.66093601
   Precision: 1e-15
   match ;  Ion-ion energy      ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -389.65192243
-  Precision: 0.0004
+  Precision: 0.0005
   match ;  Eigenvalues sum     ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -113.82360309
   Precision: 6.0e-05
   match ;  Hartree energy      ; GREPFIELD(static/info, 'Hartree     =', 3) ; 156.78972720
