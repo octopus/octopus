@@ -82,7 +82,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine berry_perform_internal_scf(this, namespace, eigens, gr, st, hm, iter, ks, geo)
-    type(berry_t),            intent(inout) :: this
+    type(berry_t),            intent(in)    :: this
     type(namespace_t),        intent(in)    :: namespace
     type(eigensolver_t),      intent(inout) :: eigens
     type(grid_t),             intent(in)    :: gr
@@ -105,6 +105,7 @@ contains
       call messages_not_implemented("Berry phase parallel in states", namespace=namespace)
     end if
 
+    call calc_dipole(dipole, gr, st, geo)
 
     do iberry = 1, this%max_iter_berry
       eigens%converged = 0
@@ -200,6 +201,10 @@ contains
     CMPLX :: det
 
     PUSH_SUB(berry_dipole)
+
+    !There is a missing reduction here. 
+    !However, as we are limited to a single k-point at the moment, this is not a problem.
+    ASSERT(st%d%nik == 1)
 
     dipole = M_ZERO
     do ik = st%d%kpt%start, st%d%kpt%end ! determinants for different spins and k-points multiply since matrix is block-diagonal
