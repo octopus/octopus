@@ -723,8 +723,9 @@ oct_library = liboct.la
 lib_LTLIBRARIES = $(oct_library)
 liboct_la_SOURCES = $(octopus_f_srcs) $(all_srcs)
 liboct_la_LIBADD = $(all_LIBS)
+# we should add version when we plan to publish the shared library
+#liboct_la_LDFLAGS = -version-info a:b:c
 
-#octopus_SOURCES = $(octopus_f_srcs) $(all_srcs)
 octopus_SOURCES = main/main.F90
 octopus_LDADD = $(oct_library) $(all_LIBS)
 octopus_LINK = $(FCLINK)
