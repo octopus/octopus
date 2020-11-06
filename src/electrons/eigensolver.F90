@@ -72,7 +72,6 @@ module eigensolver_oct_m
     FLOAT,   public :: tolerance
     integer, public :: es_maxiter
 
-    FLOAT,   public :: current_rel_dens_error
     FLOAT           :: imag_time
 
     !> Stores information about how well it performed.

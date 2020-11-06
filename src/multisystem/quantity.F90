@@ -37,7 +37,9 @@ module quantity_oct_m
     B_FIELD                      =  8,  &
     MASS                         =  9,  &
     CHARGE                       = 10,  &
-    MAX_QUANTITIES               = 10
+    ENERGY                       = 11,  &
+    EIGENVAL                     = 12,  &
+    MAX_QUANTITIES               = 12
 
   character(len=17), public, parameter :: QUANTITY_LABEL(MAX_QUANTITIES) = (/ &
     "position        ", &
@@ -49,7 +51,9 @@ module quantity_oct_m
     "E field         ", &
     "B field         ", &
     "mass            ", &
-    "charge          "  &
+    "charge          ", &
+    "total energy    ", &
+    "sum of eigenval "  &
     /)
 
   !> Systems can expose quantities that can be used to calculate interactions

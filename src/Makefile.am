@@ -598,6 +598,8 @@ dftbplus_srcs = $(dftplus_f_srcs)
 # Sources in scf
 scf_f_srcs =                                 \
 	scf/electrons_ground_state.F90       \
+        scf/convergence_criteria.F90         \
+        scf/criteria_factory.F90             \
 	scf/lcao.F90                         \
 	scf/lda_u_mixer.F90                  \
 	scf/mix.F90                          \
