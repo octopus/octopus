@@ -594,7 +594,7 @@ contains
     type(restart_t), optional, intent(in)    :: restart_dump
 
     logical :: finish, converged_current, converged_last, gs_run_
-    integer :: iter, is, iatom, nspin, ierr, iberry, idir, verbosity_, ib, iqn
+    integer :: iter, is, iatom, nspin, ierr, verbosity_, ib, iqn
     FLOAT :: evsum_out, evsum_in, forcetmp
     FLOAT :: etime, itime
     character(len=MAX_PATH_LEN) :: dirname
