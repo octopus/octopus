@@ -78,17 +78,18 @@ contains
     !%Description
     !% Each line of the block should specify one photon mode. The syntax is the following:
     !%
-    !%PhotonModes
-    !%omega1 | lambda1| PolX1 | PolY1 | PolZ1
-    !%...
-    !%
-    !%End
+    !% %PhotonModes
+    !%  omega1 | lambda1| PolX1 | PolY1 | PolZ1
+    !%  ...
+    !% %
     !%
     !% The first column is the mode frequency, in units of energy.
     !% The second column is the coupling strength, in units of energy.
     !% The remaining columns specify the polarization direction of the mode.
     !% If the polarization vector should be normalized to one. If that is not the case
     !% the code will normalize it.
+    !%End
+
     this%nmodes = 0
     if(parse_block(namespace, 'PhotonModes', blk) == 0) then
 
