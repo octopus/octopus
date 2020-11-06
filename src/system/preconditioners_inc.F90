@@ -283,7 +283,11 @@ subroutine X(preconditioner_apply_batch)(pre, namespace, gr, hm, aa, bb, ik, ome
     SAFE_ALLOCATE(psib(1:gr%mesh%np, 1:hm%d%dim))
     do ii = 1, aa%nst
       call batch_get_state(aa, ii, gr%mesh%np, psia)
-      call X(preconditioner_apply)(pre, namespace, gr, hm, psia, psib, ik, omega(ii))
+      if(present(omega)) then
+        call X(preconditioner_apply)(pre, namespace, gr, hm, psia, psib, ik, omega(ii))
+      else
+        call X(preconditioner_apply)(pre, namespace, gr, hm, psia, psib, ik)
+      end if
       call batch_set_state(bb, ii, gr%mesh%np, psib)
     end do
     SAFE_DEALLOCATE_A(psia)
