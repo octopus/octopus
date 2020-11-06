@@ -90,6 +90,19 @@
 
 #  define SAFE_ALLOCATE_TYPE_ARRAY(type, x, bounds) allocate(type::x bounds)
 
+#  define SAFE_ALLOCATE_SOURCE_A(x, y) \
+  if(allocated(y)) then;   CARDINAL \
+    allocate(x, source=y); CARDINAL \
+  end if; \
+  CARDINAL
+#  define SAFE_ALLOCATE_SOURCE_P(x, y) \
+  if(associated(y)) then;  CARDINAL \
+    allocate(x, source=y); CARDINAL \
+  else;                    CARDINAL \
+    nullify(x);            CARDINAL \
+  end if; \
+  CARDINAL
+
 #  define SAFE_DEALLOCATE_P(x) \
   if(associated(x)) then; CARDINAL \
     deallocate(x);        CARDINAL \
@@ -133,8 +146,24 @@
     call alloc_error(global_sizeof, ACARDINAL __FILE__, ACARDINAL __LINE__); \
   CARDINAL
 
+#  define SAFE_ALLOCATE_SOURCE_P(x, y) \
+  if(associated(y)) then;     CARDINAL \
+    allocate( ACARDINAL x, ACARDINAL source=y, ACARDINAL stat=global_alloc_err); CARDINAL \
+    SAFE_ALLOCATE_PROFILE(x); CARDINAL \
+  else;                       CARDINAL \
+    nullify(x);               CARDINAL \
+  end if; \
+  CARDINAL
+
+#  define SAFE_ALLOCATE_SOURCE_A(x, y) \
+  if(allocated(y)) then; CARDINAL \
+    allocate( ACARDINAL x, ACARDINAL source=y, ACARDINAL stat=global_alloc_err); CARDINAL \
+    SAFE_ALLOCATE_PROFILE(x); CARDINAL \
+  end if; \
+  CARDINAL
+
 #  define MY_DEALLOCATE(x) \
-  global_sizeof = SIZEOF(x); \
+  global_sizeof = SIZEOF(x) ; \
   CARDINAL \
   deallocate(x, stat=global_alloc_err); CARDINAL \
   if(not_in_openmp() .and. iand(prof_vars%mode, PROFILING_MEMORY).ne.0) ACARDINAL \

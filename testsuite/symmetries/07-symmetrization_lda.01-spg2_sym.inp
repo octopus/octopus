@@ -12,7 +12,6 @@ BoxShape = parallelepiped
  1.7364817767E-01 | 3.2813435772E-01 | 9.2853333471E-01
 %
 Spacing = 0.55
-LCAOStart = lcao_states
 FilterPotentials = filter_none
 %KpointsGrid
  4 | 4 | 4 

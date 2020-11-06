@@ -413,7 +413,7 @@ contains
           do idim = 1, mesh%sb%dim
             xx(idim) = mesh%idx%lxyz(ip_global,idim) * mesh%spacing(idim)
           end do
-          dd = sqrt(sum((pos(:) - xx(:))**2))
+          dd = sqrt(sum((pos(1:3) - xx(1:3))**2))
           if (dd < dmin_global) then
             imin_local  = ip
             rankmin     = ipart-1
@@ -427,7 +427,7 @@ contains
         do idim = 1, mesh%sb%dim
           xx(idim) = mesh%idx%lxyz(ip,idim) * mesh%spacing(idim)
         end do
-        dd = sqrt(sum((pos(:) - xx(:))**2))
+        dd = sqrt(sum((pos(1:3) - xx(1:3))**2))
         if (dd < dmin_global) then
           imin_local  = ip
           rankmin     = 0

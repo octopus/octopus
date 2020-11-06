@@ -159,7 +159,7 @@ subroutine X(symmetrizer_apply_single)(this, np, iop, field, symmfield)
 
   PUSH_SUB(X(symmetrizer_apply_single))
 
-  call profiling_in(prof, 'SYMMETRIZE_SINGLE')
+  call profiling_in(prof, TOSTRING(X(SYMMETRIZE_SINGLE)))
 
   ASSERT(ubound(field, dim = 1) >= np)
   ASSERT(ubound(symmfield, dim = 1) >= np)

@@ -32,8 +32,10 @@ module geom_opt_oct_m
   use messages_oct_m
   use minimizer_oct_m
   use mpi_oct_m
+  use multisystem_basic_oct_m
   use namespace_oct_m
   use parser_oct_m
+  use pcm_oct_m
   use profiling_oct_m
   use read_coords_oct_m
   use restart_oct_m
@@ -42,7 +44,7 @@ module geom_opt_oct_m
   use species_oct_m
   use states_elec_oct_m
   use states_elec_restart_oct_m
-  use system_oct_m
+  use electrons_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use v_ks_oct_m
@@ -67,16 +69,16 @@ module geom_opt_oct_m
     integer  :: what2minimize
 
     !> shortcuts
-    type(scf_t)                  :: scfv
-    type(geometry_t),    pointer :: geo
+    type(scf_t)                       :: scfv
+    type(geometry_t),         pointer :: geo
     type(hamiltonian_elec_t), pointer :: hm
-    type(system_t),      pointer :: syst
-    type(mesh_t),        pointer :: mesh
-    type(states_elec_t), pointer :: st
-    integer                      :: dim
-    integer                      :: size
-    integer                      :: fixed_atom
-    type(restart_t)              :: restart_dump
+    type(electrons_t),        pointer :: syst
+    type(mesh_t),             pointer :: mesh
+    type(states_elec_t),      pointer :: st
+    integer                           :: dim
+    integer                           :: size
+    integer                           :: fixed_atom
+    type(restart_t)                   :: restart_dump
     
   end type geom_opt_t
 
@@ -89,8 +91,26 @@ module geom_opt_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine geom_opt_run(sys, fromscratch)
-    type(system_t), target,      intent(inout) :: sys
+  subroutine geom_opt_run(system, from_scratch)
+    class(*),        intent(inout) :: system
+    logical,         intent(inout) :: from_scratch
+
+    PUSH_SUB(geom_opt_run)
+
+    select type (system)
+    class is (multisystem_basic_t)
+      message(1) = "CalculationMode = go not implemented for multi-system calculations"
+      call messages_fatal(1)
+    type is (electrons_t)
+      call geom_opt_run_legacy(system, from_scratch)
+    end select
+
+    POP_SUB(geom_opt_run)
+  end subroutine geom_opt_run
+
+  ! ---------------------------------------------------------
+  subroutine geom_opt_run_legacy(sys, fromscratch)
+    type(electrons_t),   target, intent(inout) :: sys
     logical,                     intent(inout) :: fromscratch
 
     integer :: ierr
@@ -101,10 +121,17 @@ contains
     integer :: iatom, imass
     type(restart_t) :: restart_load
 
-    PUSH_SUB(geom_opt_run)
+    PUSH_SUB(geom_opt_run_legacy)
+
+    if (sys%hm%pcm%run_pcm) then
+      call messages_not_implemented("PCM for CalculationMode /= gs or td")
+    end if
+
+    if (sys%gr%sb%kpoints%use_symmetries) then
+      call messages_experimental("KPoints symmetries with CalculationMode = go")
+    end if
 
     call init_(fromscratch)
-    
 
     ! load wavefunctions
     if(.not. fromscratch) then
@@ -118,15 +145,15 @@ contains
       end if
     end if
 
-    call scf_init(g_opt%scfv, sys%namespace, sys%gr, sys%geo, sys%st, sys%mc, sys%hm, conv_force = CNST(1e-8))
+    call scf_init(g_opt%scfv, sys%namespace, sys%gr, sys%geo, sys%st, sys%mc, sys%hm, sys%ks, conv_force = CNST(1e-8))
 
     if(fromScratch) then
-      call lcao_run(sys, lmm_r = g_opt%scfv%lmm_r)
+      call lcao_run(sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, lmm_r = g_opt%scfv%lmm_r)
     else
       ! setup Hamiltonian
       message(1) = 'Info: Setting up Hamiltonian.'
       call messages_info(1)
-      call system_h_setup(sys)
+      call v_ks_h_setup(sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm)
     end if
 
     !Initial point
@@ -188,7 +215,7 @@ contains
     SAFE_DEALLOCATE_A(coords)
     call scf_end(g_opt%scfv)
     call end_()
-    POP_SUB(geom_opt_run)
+    POP_SUB(geom_opt_run_legacy)
 
   contains
 
@@ -203,7 +230,7 @@ contains
       FLOAT :: default_step
       type(read_coords_info) :: xyz
 
-      PUSH_SUB(geom_opt_run.init_)
+      PUSH_SUB(geom_opt_run_legacy.init_)
 
       if (sys%gr%sb%periodic_dim > 0) then
         call messages_experimental('Geometry optimization for periodic systems')
@@ -535,13 +562,13 @@ contains
 
       call restart_init(g_opt%restart_dump, sys%namespace, RESTART_GS, RESTART_TYPE_DUMP, sys%mc, ierr, mesh=sys%gr%mesh)
 
-      POP_SUB(geom_opt_run.init_)
+      POP_SUB(geom_opt_run_legacy.init_)
     end subroutine init_
 
 
     ! ---------------------------------------------------------
     subroutine end_()
-      PUSH_SUB(geom_opt_run.end_)
+      PUSH_SUB(geom_opt_run_legacy.end_)
 
       call states_elec_deallocate_wfns(sys%st)
 
@@ -553,10 +580,10 @@ contains
       nullify(g_opt%hm)
       nullify(g_opt%syst)
 
-      POP_SUB(geom_opt_run.end_)
+      POP_SUB(geom_opt_run_legacy.end_)
     end subroutine end_
 
-  end subroutine geom_opt_run
+  end subroutine geom_opt_run_legacy
 
 
   ! ---------------------------------------------------------

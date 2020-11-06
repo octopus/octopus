@@ -30,7 +30,7 @@
 
    PUSH_SUB(X(loewdin_orthogonalize))
 
-   call profiling_in(prof, "LOEWDIN")
+   call profiling_in(prof, TOSTRING(X(LOEWDIN)))
 
    SAFE_ALLOCATE(overlap(1:basis%size,1:basis%size))
    SAFE_ALLOCATE(overlap2(1:basis%size,1:basis%size))

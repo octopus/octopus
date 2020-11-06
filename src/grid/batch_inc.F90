@@ -49,7 +49,7 @@ subroutine X(batch_init_with_memory_2)(this, dim, st_start, st_end, psi)
   integer,        intent(in)    :: st_end
   R_TYPE, target, contiguous, intent(in)    :: psi(:, :)
 
-  R_TYPE, pointer :: psip(:, :, :)
+  R_TYPE, pointer, contiguous :: psip(:, :, :)
 
   PUSH_SUB(X(batch_init_with_memory_2))
 
@@ -66,7 +66,7 @@ subroutine X(batch_init_with_memory_1)(this, psi)
   class(batch_t),             intent(out)   :: this
   R_TYPE, target, contiguous, intent(in)    :: psi(:)
 
-  R_TYPE, pointer :: psip(:, :, :)
+  R_TYPE, pointer, contiguous :: psip(:, :, :)
   PUSH_SUB(X(batch_init_with_memory_1))
 
   psip(1:ubound(psi, dim=1), 1:1, 1:1) => psi(:)
@@ -149,7 +149,7 @@ subroutine X(batch_pack_copy)(this)
   type(profile_t), save :: prof_copy
   ! no push_sub, called too frequently
 
-  call profiling_in(prof_copy, "BATCH_PACK_COPY")
+  call profiling_in(prof_copy, TOSTRING(X(BATCH_PACK_COPY)))
 
   bsize = hardware%X(block_size)
 
@@ -175,7 +175,7 @@ subroutine X(batch_unpack_copy)(this)
   type(profile_t), save :: prof_copy
   ! no push_sub, called too frequently
 
-  call profiling_in(prof_copy, "BATCH_UNPACK_COPY")
+  call profiling_in(prof_copy, TOSTRING(X(BATCH_UNPACK_COPY)))
 
   !$omp parallel do private(ist)
   do ip = 1, this%pack_size(2)

@@ -56,8 +56,8 @@ module boundaries_oct_m
     type(accel_mem_t) :: buff_per_recv
     type(accel_mem_t) :: buff_nsend
     type(accel_mem_t) :: buff_nrecv
-    logical, public   :: spiral
-    logical, public   :: spiralBC
+    logical, public   :: spiralBC           !< set .true. when SpiralBoundaryCondition are set in the input file
+    logical, public   :: spiral             !< set .true. after first time step IF spiralBC == .true. (see td_run in td.F90)
     FLOAT,   public   :: spiral_q(MAX_DIM)
   end type boundaries_t
 
@@ -95,14 +95,6 @@ module boundaries_oct_m
     type(pv_t),      pointer :: vp
   end type pv_handle_batch_t
 
-  type(profile_t), save :: prof_start
-  type(profile_t), save :: prof_wait
-  type(profile_t), save :: prof_update
-  type(profile_t), save :: set_bc_prof
-  type(profile_t), save :: set_bc_comm_prof
-  type(profile_t), save :: set_bc_precomm_prof
-  type(profile_t), save :: set_bc_postcomm_prof
-    
   interface boundaries_set
     module procedure boundaries_set_batch
     module procedure dboundaries_set_single

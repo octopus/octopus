@@ -20,12 +20,12 @@
 ## $Id$
 
 if COMPILE_METIS
-  noinst_LIBRARIES = libmetis.a
+  noinst_LTLIBRARIES = libmetis.la
 endif
 
 
 
-libmetis_a_SOURCES = \
+libmetis_la_SOURCES = \
 	auxapi.c      contig.c   graph.c       mesh.c      options.c    srefine.c \
 	balance.c     debug.c    initpart.c    meshpart.c  parmetis.c   stat.c    \
 	bucketsort.c  fm.c       kmetis.c      minconn.c   pmetis.c     timing.c  \

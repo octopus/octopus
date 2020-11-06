@@ -104,7 +104,7 @@ contains
     call berry_phase_matrix(st, mesh, noccst, ik, ik, gvector, matrix)
       
     if(noccst > 0) then
-      det = lalg_determinant(noccst, matrix(1:noccst, 1:noccst), invert = .false.) ** st%smear%el_per_state
+      det = lalg_determinant(noccst, matrix(1:noccst, 1:noccst), preserve_mat=.false.) ** st%smear%el_per_state
     else
       det = M_ONE
     end if
@@ -195,6 +195,14 @@ contains
     CMPLX :: factor, det
 
     PUSH_SUB(berry_potential)
+
+    if(mesh%sb%nonorthogonal) then
+      call messages_not_implemented("Berry phase for non-orthogonal cells.")
+    end if
+  
+    if(st%d%nik > 1) then
+      call messages_not_implemented("Berry phase with k-points.")
+    end if
 
     pot(1:mesh%np, 1:st%d%nspin) = M_ZERO
 

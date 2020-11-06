@@ -1,4 +1,4 @@
-#Lithium Floride (LiF) simple cubi
+#Lithium Floride (LiF) simple cubic
 
 CalculationMode = gs
 PeriodicDimensions = 3
@@ -27,10 +27,6 @@ PseudopotentialSet = hscv_lda
 Spacing = 0.4
 
 FromScratch = yes
-ParStates = no
-ParDomains = no
-
-LCAOStart= lcao_states
 
 nk = 2
 %KPointsGrid
@@ -50,3 +46,4 @@ AONormalize = no
 AOSubmeshForPeriodic = yes
 OutputLDA_U = occ_matrices + effectiveU
 ACBN0Screening = 0.5
+

@@ -120,6 +120,202 @@ contains
 
   ! ---------------------------------------------------
 
+  subroutine density_calc_state(this, psib, istin)
+    type(density_calc_t),         intent(inout) :: this
+    type(wfs_elec_t),             intent(in)    :: psib
+    integer,                      intent(in)    :: istin
+
+    integer :: ist, ip, ispin, istin_
+    FLOAT   :: nrm
+    CMPLX   :: term, psi1, psi2
+    CMPLX, allocatable :: psi(:), fpsi(:)
+    FLOAT, allocatable :: weight(:), sqpsi(:)
+    type(profile_t), save :: prof
+    integer            :: wgsize
+    type(accel_mem_t) :: buff_weight
+    type(accel_kernel_t), pointer :: kernel
+
+    PUSH_SUB(density_calc_state)
+    call profiling_in(prof, "CALC_STATE_DENSITY")
+
+    ispin = states_elec_dim_get_spin_index(this%st%d, psib%ik)
+
+    istin_= 0
+
+    SAFE_ALLOCATE(weight(1:psib%nst))
+    do ist = 1, psib%nst
+      weight(ist) = this%st%d%kweights(psib%ik)*this%st%occ(psib%ist(ist), psib%ik)
+      if (psib%ist(ist) == istin) istin_ = ist
+    end do
+
+    if(abs(weight(istin_)) <= M_EPSILON) then
+      return
+      POP_SUB(density_calc_state)
+    end if
+    
+    !fix ist for the remaining code
+    ist = istin_
+
+
+    if (.not. this%gr%have_fine_mesh) then 
+
+      select case(psib%status())
+      case(BATCH_NOT_PACKED)
+        select case (this%st%d%ispin)
+        case (UNPOLARIZED, SPIN_POLARIZED)
+          if(states_are_real(this%st)) then
+            !$omp parallel do simd schedule(static)
+            do ip = 1, this%gr%mesh%np
+              this%density(ip, ispin) = this%density(ip, ispin) + weight(ist)*psib%dff(ip, 1, ist)**2
+            end do
+          else
+            !$omp parallel do schedule(static)
+            do ip = 1, this%gr%mesh%np
+              this%density(ip, ispin) = this%density(ip, ispin) + weight(ist)* &
+                TOFLOAT(conjg(psib%zff(ip, 1, ist))*psib%zff(ip, 1, ist))
+            end do
+          end if
+        case (SPINORS)
+          !$omp parallel do schedule(static) private(psi1, psi2, term)
+          do ip = 1, this%gr%mesh%np          
+            psi1 = psib%zff(ip, 1, ist)
+            psi2 = psib%zff(ip, 2, ist)
+            this%density(ip, 1) = this%density(ip, 1) + weight(ist)*TOFLOAT(conjg(psi1)*psi1)
+            this%density(ip, 2) = this%density(ip, 2) + weight(ist)*TOFLOAT(conjg(psi2)*psi2)
+            term = weight(ist)*psi1*conjg(psi2)
+            this%density(ip, 3) = this%density(ip, 3) + TOFLOAT(term)
+            this%density(ip, 4) = this%density(ip, 4) + aimag(term)
+          end do
+        end select
+
+      case(BATCH_PACKED)
+
+        select case (this%st%d%ispin)
+        case (UNPOLARIZED, SPIN_POLARIZED)
+          if(states_are_real(this%st)) then
+            !$omp parallel do schedule(static)
+            do ip = 1, this%gr%mesh%np
+              this%density(ip, ispin) = this%density(ip, ispin) + weight(ist)*psib%dff_pack(ist, ip)**2
+            end do
+          else
+
+            !$omp parallel do schedule(static)
+            do ip = 1, this%gr%mesh%np
+              this%density(ip, ispin) = this%density(ip, ispin) + weight(ist)* &
+                TOFLOAT(conjg(psib%zff_pack(ist, ip))*psib%zff_pack(ist, ip))
+            end do
+          end if
+        case (SPINORS)
+          ASSERT(mod(psib%nst_linear, 2) == 0)
+          !$omp parallel do schedule(static) private(ist, psi1, psi2, term)
+          do ip = 1, this%gr%mesh%np
+            psi1 = psib%zff_pack(2*ist - 1, ip)
+            psi2 = psib%zff_pack(2*ist,     ip)
+            term = weight(ist)*psi1*conjg(psi2)
+
+            this%density(ip, 1) = this%density(ip, 1) + weight(ist)*TOFLOAT(conjg(psi1)*psi1)
+            this%density(ip, 2) = this%density(ip, 2) + weight(ist)*TOFLOAT(conjg(psi2)*psi2)
+            this%density(ip, 3) = this%density(ip, 3) + TOFLOAT(term)
+            this%density(ip, 4) = this%density(ip, 4) + aimag(term)
+          end do
+        end select
+
+      case(BATCH_DEVICE_PACKED)
+        if(.not. this%packed) call density_calc_pack(this)
+
+        call accel_create_buffer(buff_weight, ACCEL_MEM_READ_ONLY, TYPE_FLOAT, psib%nst)
+        call accel_write_buffer(buff_weight, psib%nst, weight)
+
+        select case (this%st%d%ispin)
+        case (UNPOLARIZED, SPIN_POLARIZED)        
+          if(states_are_real(this%st)) then
+            kernel => kernel_density_real
+          else
+            kernel => kernel_density_complex
+          end if
+
+          call accel_set_kernel_arg(kernel, 0, psib%nst)
+          call accel_set_kernel_arg(kernel, 1, this%gr%mesh%np)
+          call accel_set_kernel_arg(kernel, 2, this%pnp*(ispin - 1))
+          call accel_set_kernel_arg(kernel, 3, buff_weight)
+          call accel_set_kernel_arg(kernel, 4, psib%ff_device)
+          call accel_set_kernel_arg(kernel, 5, log2(psib%pack_size(1)))
+          call accel_set_kernel_arg(kernel, 6, this%buff_density)
+        
+        case (SPINORS)
+          kernel => kernel_density_spinors
+
+          call accel_set_kernel_arg(kernel, 0, psib%nst)
+          call accel_set_kernel_arg(kernel, 1, this%gr%mesh%np)
+          call accel_set_kernel_arg(kernel, 2, this%pnp)
+          call accel_set_kernel_arg(kernel, 3, buff_weight)
+          call accel_set_kernel_arg(kernel, 4, psib%ff_device)
+          call accel_set_kernel_arg(kernel, 5, log2(psib%pack_size(1)))
+          call accel_set_kernel_arg(kernel, 6, this%buff_density)
+        end select
+
+        wgsize = accel_kernel_workgroup_size(kernel)
+
+        call accel_kernel_run(kernel, (/pad(this%gr%mesh%np, wgsize)/), (/wgsize/))
+
+        call accel_finish()
+        
+        call accel_release_buffer(buff_weight)
+        
+      end select
+
+    else if(this%gr%have_fine_mesh) then
+      ! Non-collinear density not implemented with fine grid
+      ASSERT(this%st%d%ispin /= SPINORS)
+
+      SAFE_ALLOCATE(psi(1:this%gr%mesh%np_part))
+      SAFE_ALLOCATE(fpsi(1:this%gr%fine%mesh%np))
+      SAFE_ALLOCATE(sqpsi(1:this%gr%fine%mesh%np))
+
+
+      call batch_get_state(psib, ist, this%gr%mesh%np, psi)
+
+      call zmultigrid_coarse2fine(this%gr%fine%tt, this%gr%der, this%gr%fine%mesh, psi, fpsi, order = 2)
+
+      !$omp parallel do schedule(static)
+      do ip = 1, this%gr%fine%mesh%np
+        sqpsi(ip) = TOFLOAT(conjg(fpsi(ip))*fpsi(ip))
+      end do
+
+      nrm = dmf_integrate(this%gr%fine%mesh, sqpsi)
+      
+      !$omp parallel do schedule(static)
+      do ip = 1, this%gr%fine%mesh%np
+        this%density(ip, ispin) = this%density(ip, ispin) + weight(ist)*sqpsi(ip)/nrm
+      end do
+        
+
+
+      ! For this to work again, a namespace has to be available. I don`t make
+      ! the change now because this debugging output has been commented out for
+      ! 4 years. - SO
+      ! some debugging output that I will keep here for the moment, XA
+      !      call dio_function_output(1, "./", "n_fine", this%gr%fine%mesh, frho, unit_one, ierr)
+      !      call dio_function_output(1, "./", "n_coarse", this%gr%mesh, crho, unit_one, ierr)
+      !        do ip = 1, this%gr%fine%mesh%np
+      !            this%density(ip, ispin) = this%density(ip, ispin) + frho(ip)
+      !        end do
+
+      SAFE_DEALLOCATE_A(psi)
+      SAFE_DEALLOCATE_A(fpsi)
+      SAFE_DEALLOCATE_A(sqpsi)
+
+    end if
+
+    SAFE_DEALLOCATE_A(weight)
+
+    call profiling_out(prof)
+
+    POP_SUB(density_calc_state)
+  end subroutine density_calc_state
+
+  ! ---------------------------------------------------
+
   subroutine density_calc_accumulate(this, psib)
     type(density_calc_t),         intent(inout) :: this
     type(wfs_elec_t),             intent(in)    :: psib
@@ -321,8 +517,10 @@ contains
 
   ! ---------------------------------------------------
 
-  subroutine density_calc_end(this)
+  subroutine density_calc_end(this, allreduce, symmetrize)
     type(density_calc_t), intent(inout) :: this
+    logical, optional,    intent(in)    :: allreduce 
+    logical, optional,    intent(in)    :: symmetrize
 
     type(symmetrizer_t) :: symmetrizer
     FLOAT, allocatable :: tmpdensity(:)
@@ -362,13 +560,13 @@ contains
     end if
 
     ! reduce over states and k-points
-    if(this%st%parallel_in_states .or. this%st%d%kpt%parallel) then
+    if((this%st%parallel_in_states .or. this%st%d%kpt%parallel) .and. optional_default(allreduce, .true.)) then
       call profiling_in(reduce_prof, "DENSITY_REDUCE")
       call comm_allreduce(this%st%st_kpt_mpi_grp%comm, this%density, dim = (/this%gr%fine%mesh%np, this%st%d%nspin/))
       call profiling_out(reduce_prof)
     end if
 
-    if(this%st%symmetrize_density) then
+    if(this%st%symmetrize_density .and. optional_default(symmetrize, .true.)) then
       SAFE_ALLOCATE(tmpdensity(1:this%gr%fine%mesh%np))
       call symmetrizer_init(symmetrizer, this%gr%fine%mesh)
 
@@ -388,10 +586,11 @@ contains
 
   ! ---------------------------------------------------------
   !> Computes the density from the orbitals in st. 
-  subroutine density_calc(st, gr, density)
+  subroutine density_calc(st, gr, density, istin)
     type(states_elec_t),     intent(in)  :: st
     type(grid_t),            intent(in)  :: gr
     FLOAT,                   intent(out) :: density(:, :)
+    integer, optional,       intent(in)  :: istin 
 
     integer :: ik, ib
     type(density_calc_t) :: dens_calc
@@ -401,14 +600,28 @@ contains
     ASSERT(ubound(density, dim = 1) == gr%fine%mesh%np .or. ubound(density, dim = 1) == gr%fine%mesh%np_part)
 
     call density_calc_init(dens_calc, st, gr, density)
-    
-    do ik = st%d%kpt%start, st%d%kpt%end
-      do ib = st%group%block_start, st%group%block_end
-        call density_calc_accumulate(dens_calc, st%group%psib(ib, ik))
-      end do
-    end do
 
-    call density_calc_end(dens_calc)
+    if (.not. present(istin)) then
+      ! ordinary density accumulate
+      do ik = st%d%kpt%start, st%d%kpt%end
+        do ib = st%group%block_start, st%group%block_end
+          call density_calc_accumulate(dens_calc, st%group%psib(ib, ik))
+        end do
+      end do
+    else
+      ! state-resolved density
+      do ik = st%d%kpt%start, st%d%kpt%end
+        do ib = st%group%block_start, st%group%block_end
+          if (st%group%psib(ib, ik)%ist(1) <= istin .and. st%group%psib(ib, ik)%ist(st%group%psib(ib, ik)%nst) >= istin) then 
+            call density_calc_state(dens_calc, st%group%psib(ib, ik), istin)
+          end if
+        end do
+      end do
+
+    end if
+    
+
+    call density_calc_end(dens_calc, allreduce = .not. present(istin))
 
     POP_SUB(density_calc)
   end subroutine density_calc

@@ -1,0 +1,19 @@
+# -*- coding: utf-8 mode: shell-script -*-
+
+Test       : Oct-test cgal
+Program    : octopus
+TestGroups : short-run, components
+Enabled    : Yes
+
+Processors: 1
+
+ExtraFile: 28-cgal.02-X.off
+Input: 28-cgal.01.inp
+
+if (available cgal); then
+  match ; cgal_facets            ; GREPFIELD(out, 'facets:', 2)         ; 5484
+  match ; cgal_halfedges         ; GREPFIELD(out, 'halfedges:', 2)      ; 16452
+  match ; cgal_point_inside      ; GREPCOUNT(out, 'cgal_polyhedron_point_inside'); 1
+else
+  match ; Error cgal_not_linked ; GREPCOUNT(err, 'CGAL'); 1
+endif

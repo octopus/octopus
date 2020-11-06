@@ -1,12 +1,12 @@
 # To be installed:
-dynlibdir        = $(libdir)
-noinst_LIBRARIES = $(flib_noinst)
-lib_LIBRARIES    = $(flib_lib)
+dynlibdir          = $(libdir)
+noinst_LTLIBRARIES = $(flib_noinst)
+lib_LTLIBRARIES    = $(flib_lib)
 #module_DATA      = $(modules)
-dynlib_DATA      = $(flib_dynlib)
-noinst_DATA      = $(flib_linklib)
+dynlib_DATA        = $(flib_dynlib)
+noinst_DATA        = $(flib_linklib)
 
-flib_noinst = libflib-1.a
+flib_noinst = libflib-1.la
 
 # Source code.
 #if HAVE_FC_FLUSH
@@ -14,7 +14,7 @@ flib_noinst = libflib-1.a
 #flush_object= flush.o
 #else
 flush_files = flush_fake.f90
-flush_object= flush_fake.o
+flush_object= flush_fake.lo
 #endif
 if USE_MPI
 mpi_source =
@@ -30,7 +30,7 @@ getarg_files =
 #else
 #getarg_files = get_command_argument_fake.f90
 #endif
-libflib_1_a_SOURCES = utils.c utilsadd.c \
+libflib_1_la_SOURCES = utils.c utilsadd.c \
 	yaml_strings.f90 dictionaries_base.f90 dictionaries.f90 \
 	callbacks.f90 f_malloc.f90 \
 	f_utils.f90 \
@@ -104,25 +104,25 @@ AM_FCFLAGS = -I.
 AM_CFLAGS = @LIB_YAML_CFLAGS@
 
 # Dependencies
-$(modules): $(libflib_1_a_OBJECTS)
-yaml_strings.o: $(STRINGS_INCLUDES)
-dictionaries_base.o: yaml_strings.o
-dictionaries.o: yaml_strings.o dictionaries_base.o $(DICT_INCLUDES) callbacks.o
-dictionaries_base.o: yaml_strings.o
-callbacks.o: $(NOOMP_INCLUDES)
-#mem_profiling.o : error_handling.o
-yaml_output.o : dictionaries.o f_utils.o $(YAML_INCLUDES)
-yaml_parse.o : dictionaries.o yaml_output.o
-#error_handling.o: dictionaries.o callbacks.o yaml_output.o $(ERR_INCLUDES)
-f_malloc.o: dictionaries.o $(F_MALLOC_INCLUDES)
-dynamic_memory.o: getadd.o yaml_strings.o yaml_output.o yaml_parse.o mem_profiling.o f_malloc.o $(DYN_INCLUDES)
-mem_profiling.o: yaml_output.o $(mpi_include) yaml_parse.o
-f_lib_highlev.o: dictionaries.o yaml_output.o dynamic_memory.o yaml_parse.o time.o
-f_utils.o: dictionaries.o yaml_strings.o f_utils.inc
-getadd.o: yaml_strings.o $(GETADD_INCLUDES)
-$(flush_object): yaml_output.o dictionaries.o
+$(modules): $(libflib_1_la_OBJECTS)
+yaml_strings.lo: $(STRINGS_INCLUDES)
+dictionaries_base.lo: yaml_strings.lo
+dictionaries.lo: yaml_strings.lo dictionaries_base.lo $(DICT_INCLUDES) callbacks.lo
+dictionaries_base.lo: yaml_strings.lo
+callbacks.lo: $(NOOMP_INCLUDES)
+#mem_profiling.lo : error_handling.lo
+yaml_output.lo : dictionaries.lo f_utils.lo $(YAML_INCLUDES)
+yaml_parse.lo : dictionaries.lo yaml_output.lo
+#error_handling.lo: dictionaries.lo callbacks.lo yaml_output.lo $(ERR_INCLUDES)
+f_malloc.lo: dictionaries.lo $(F_MALLOC_INCLUDES)
+dynamic_memory.lo: getadd.lo yaml_strings.lo yaml_output.lo yaml_parse.lo mem_profiling.lo f_malloc.lo $(DYN_INCLUDES)
+mem_profiling.lo: yaml_output.lo $(mpi_include) yaml_parse.lo
+f_lib_highlev.lo: dictionaries.lo yaml_output.lo dynamic_memory.lo yaml_parse.lo time.lo
+f_utils.lo: dictionaries.lo yaml_strings.lo f_utils.inc
+getadd.lo: yaml_strings.lo $(GETADD_INCLUDES)
+$(flush_object): yaml_output.lo dictionaries.lo
 
-time.o: $(NOOMP_INCLUDES) dynamic_memory.o $(mpi_include) #this is temporary, mpif.h should only be in wrappers
+time.lo: $(NOOMP_INCLUDES) dynamic_memory.lo $(mpi_include) #this is temporary, mpif.h should only be in wrappers
 
 #Fake mpif.h for serial compilation
 mpif.h:

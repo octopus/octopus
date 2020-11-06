@@ -33,7 +33,7 @@ module initst_oct_m
   use states_elec_oct_m
   use states_elec_restart_oct_m
   use string_oct_m
-  use system_oct_m
+  use electrons_oct_m
   use td_oct_m
   use v_ks_oct_m
   use varinfo_oct_m
@@ -57,7 +57,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine initial_state_init(sys, qcstate)
-    type(system_t),      intent(inout) :: sys
+    type(electrons_t),                 intent(inout) :: sys
     type(opt_control_state_t), target, intent(inout) :: qcstate
 
     integer           :: ik, ib, idim, inst, inik, id, is, ip, ierr, &
@@ -143,7 +143,7 @@ contains
         call messages_fatal(1)
       end if
       
-      call transform_states(psi, sys%namespace, restart, sys%gr, prefix = "OCTInitial")
+      call states_elec_transform(psi, sys%namespace, restart, sys%gr, prefix = "OCTInitial")
       call restart_end(restart)
 
     case(oct_is_userdefined) 

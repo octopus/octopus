@@ -116,10 +116,10 @@ contains
     if(present(allocate_rho)) lr%is_allocated_rho = allocate_rho
 
     if (states_are_complex(st)) then
-      SAFE_ALLOCATE(lr%zdl_psi(1:mesh%np_part, 1:st%d%dim, 1:st%nst, st%d%kpt%start:st%d%kpt%end))
+      SAFE_ALLOCATE(lr%zdl_psi(1:mesh%np_part, 1:st%d%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
       if(lr%is_allocated_rho) SAFE_ALLOCATE(lr%zdl_rho(1:mesh%np, 1:st%d%nspin))
     else
-      SAFE_ALLOCATE(lr%ddl_psi(1:mesh%np_part, 1:st%d%dim, 1:st%nst, st%d%kpt%start:st%d%kpt%end))
+      SAFE_ALLOCATE(lr%ddl_psi(1:mesh%np_part, 1:st%d%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
       if(lr%is_allocated_rho) SAFE_ALLOCATE(lr%ddl_rho(1:mesh%np, 1:st%d%nspin))
     end if
 
@@ -208,7 +208,7 @@ contains
     end if
 
     do ik = st%d%kpt%start, st%d%kpt%end
-      do ist = 1, st%nst
+      do ist = st%st_start, st%st_end
         do idim = 1, st%d%dim
           if(states_are_complex(st)) then
             call lalg_copy(mesh%np_part, src%zdl_psi(:, idim, ist, ik), dest%zdl_psi(:, idim, ist, ik))

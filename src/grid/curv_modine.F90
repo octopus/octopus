@@ -28,7 +28,6 @@
 module curv_modine_oct_m
   use geometry_oct_m
   use global_oct_m
-  use loct_pointer_oct_m
   use messages_oct_m
   use namespace_oct_m
   use parser_oct_m
@@ -51,12 +50,12 @@ module curv_modine_oct_m
 
   type curv_modine_t
     private
-    FLOAT :: L(MAX_DIM)    !< size of the box
-    FLOAT :: xbar          !< size of central flat region (in units of L)
-    FLOAT :: Jbar          !< increase in density of points is 1/J
+    FLOAT          :: L(MAX_DIM) !< size of the box
+    FLOAT          :: xbar       !< size of central flat region (in units of L)
+    FLOAT          :: Jbar       !< increase in density of points is 1/J
 
-    FLOAT,            pointer :: Jlocal(:)  !< local (around the atoms) refinement
-    FLOAT,            pointer :: Jrange(:)  !< local refinement range
+    FLOAT, pointer :: Jlocal(:)  !< local (around the atoms) refinement
+    FLOAT, pointer :: Jrange(:)  !< local refinement range
 
     FLOAT, pointer :: chi_atoms(:,:)
     FLOAT, pointer :: csi(:,:)
@@ -130,12 +129,13 @@ contains
   end subroutine getf2
 
   ! ---------------------------------------------------------
-  subroutine curv_modine_init(cv, namespace, sb, geo, spacing)
+  subroutine curv_modine_init(cv, namespace, sb, geo, spacing, min_scaling_product)
     type(curv_modine_t), target, intent(out) :: cv
     type(namespace_t),           intent(in)  :: namespace
     type(simul_box_t),   target, intent(in)  :: sb
     type(geometry_t),            intent(in)  :: geo
     FLOAT,                       intent(in)  :: spacing(:)
+    FLOAT,                       intent(out) :: min_scaling_product
 
     type(root_solver_t) :: rs
 
@@ -210,6 +210,8 @@ contains
     call optimize()
 
     cv%natoms = geo%natoms
+
+    call curv_modine_min_scaling(sb, cv, min_scaling_product)
 
     POP_SUB(curv_modine_init)
 
@@ -302,10 +304,10 @@ contains
     this_out%L=this_in%L
     this_out%xbar=this_in%xbar
     this_out%Jbar=this_in%Jbar
-    call loct_pointer_copy(this_out%Jlocal, this_in%Jlocal)
-    call loct_pointer_copy(this_out%Jrange, this_in%Jrange)
-    call loct_pointer_copy(this_out%chi_atoms, this_in%chi_atoms)
-    call loct_pointer_copy(this_out%csi, this_in%csi)
+    SAFE_ALLOCATE_SOURCE_P(this_out%Jlocal, this_in%Jlocal)
+    SAFE_ALLOCATE_SOURCE_P(this_out%Jrange, this_in%Jrange)
+    SAFE_ALLOCATE_SOURCE_P(this_out%chi_atoms, this_in%chi_atoms)
+    SAFE_ALLOCATE_SOURCE_P(this_out%csi, this_in%csi)
     this_out%natoms=this_in%natoms
     POP_SUB(curv_modine_copy)
     return
@@ -486,6 +488,16 @@ contains
 
     POP_SUB(curv_modine_x2chi)
   end subroutine curv_modine_x2chi
+
+
+  ! ---------------------------------------------------------
+  subroutine curv_modine_min_scaling(sb, cv, min_scaling_product)
+    type(simul_box_t),   intent(in)  :: sb
+    type(curv_modine_t), intent(in)  :: cv
+    FLOAT,               intent(out) :: min_scaling_product
+    
+    min_scaling_product = cv%Jbar**sb%dim
+  end subroutine curv_modine_min_scaling
 
 end module curv_modine_oct_m
 

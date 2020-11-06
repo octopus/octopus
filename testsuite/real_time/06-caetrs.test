@@ -1,7 +1,6 @@
 # -*- coding: utf-8 mode: shell-script -*-
 
 Test       : Corrected approximated enforced time-reversal symmetry propagator
-Options_MPI : mpi2
 Program    : octopus
 TestGroups : short-run, real_time
 Enabled    : Yes

@@ -1,0 +1,71 @@
+CalculationMode                   = td
+ExperimentalFeatures = yes
+
+%Systems
+  'Maxwell' | maxwell
+%
+
+Maxwell.ParStates                 = no
+
+# Maxwell box variables
+lsize_mx = 10.0
+
+Maxwell.BoxShape                   = parallelepiped
+
+%Maxwell.Lsize
+ lsize_mx | lsize_mx | lsize_mx
+%
+
+dx_mx = 0.5
+
+%Maxwell.Spacing
+ dx_mx | dx_mx | dx_mx
+%
+
+# Maxwell calculation variables
+%MaxwellBoundaryConditions
+ plane_waves | plane_waves | plane_waves
+%
+
+%MaxwellAbsorbingBoundaries
+ not_absorbing | not_absorbing | not_absorbing
+%
+
+# Output variables
+OutputFormat                      = axis_x + axis_y + axis_z
+
+# Maxwell output variables
+MaxwellOutput                     = electric_field + magnetic_field + maxwell_energy_density + trans_electric_field
+MaxwellOutputInterval             = 10
+MaxwellTDOutput                   = maxwell_energy + maxwell_fields
+
+# Time step variables
+TDSystemPropagator = exp_mid
+td = 1 / ( sqrt(c^2/dx_mx^2 + c^2/dx_mx^2 + c^2/dx_mx^2) )
+TDTimeStep                        = td
+TDPropagationTime                 = 30*td
+
+# laser propagates in x direction
+k_1_x       =  0.707107
+k_1_y       = -0.707107
+k_2_x       = -0.447214
+k_2_y       = -0.223607
+E_1_z       =  0.5
+E_2_z       =  0.5
+pw_1        =  5.0
+pw_2        =  7.5
+ps_1_x      = -sqrt(1/2) * 20.0
+ps_1_y      =  sqrt(1/2) * 20.0
+ps_2_x      =  sqrt(2/3) * 20.0
+ps_2_y      =  sqrt(1/3) * 20.0
+
+%MaxwellIncidentWaves
+  plane_wave_mx_function | 0 | 0 | E_1_z | "plane_waves_function_1"
+  plane_wave_mx_function | 0 | 0 | E_2_z | "plane_waves_function_2"
+%
+
+%MaxwellFunctions
+  "plane_waves_function_1" | mxf_cosinoidal_wave | k_1_x | k_1_y | 0 | ps_1_x | ps_1_y | 0 | pw_1
+  "plane_waves_function_2" | mxf_cosinoidal_wave | k_2_x | k_2_y | 0 | ps_2_x | ps_2_y | 0 | pw_2
+%
+

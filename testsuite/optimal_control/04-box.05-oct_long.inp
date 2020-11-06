@@ -34,8 +34,6 @@ OCTTargetOperator = oct_tg_gstransformation
 %
 OCTScheme  = oct_wg05
 OCTDoubleCheck = No	
-gamma1 = 0.1
-gamma2 = 80
 
 
 #----------------------------

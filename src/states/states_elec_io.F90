@@ -400,19 +400,19 @@ contains
     do ik = 1, st%d%nik
       if(abs(st%d%kweights(ik)) < M_EPSILON) cycle
       do ist = 1,st%nst-1
-        if(st%occ(ist,ik) > M_EPSILON .and. st%eigenval(ist,ik) > homo) then
-          homo = st%eigenval(ist,ik)
+        if(st%occ(ist, ik) > M_EPSILON .and. st%eigenval(ist, ik) > homo) then
+          homo = st%eigenval(ist, ik)
           homok = ik
         end if
 
-        if(st%occ(ist+1,ik) <= M_EPSILON .and. st%eigenval(ist+1,ik) < lumo) then
-          lumo = st%eigenval(ist+1,ik)
+        if(st%occ(ist+1, ik) <= M_EPSILON .and. st%eigenval(ist+1, ik) < lumo) then
+          lumo = st%eigenval(ist+1, ik)
           lumok = ik
         end if
 
-        if(st%occ(ist,ik) > M_EPSILON .and. st%occ(ist+1,ik) <= M_EPSILON &
-          .and. (st%eigenval(ist+1,ik)-st%eigenval(ist,ik))< egdir) then
-          egdir = (st%eigenval(ist+1,ik)-st%eigenval(ist,ik))
+        if(st%occ(ist, ik) > M_EPSILON .and. st%occ(ist+1, ik) <= M_EPSILON &
+          .and. (st%eigenval(ist+1, ik) - st%eigenval(ist, ik)) < egdir) then
+          egdir = (st%eigenval(ist+1, ik) - st%eigenval(ist, ik))
           egdirk = ik 
         end if
       end do
@@ -420,7 +420,7 @@ contains
 
     egindir = lumo-homo
 
-    if(lumo == -1 .or. egdir <= M_EPSILON) then
+    if(lumok == -1 .or. egdir <= M_EPSILON) then
       write(message(1),'(a)') 'The system seems to have no gap.'
       call messages_info(1, iunit)
     else
@@ -476,9 +476,9 @@ contains
         call messages_write('No orbital with half-occupancy found. TPA output is not written.')
         call messages_warning(namespace=namespace)
 
-        POP_SUB(states_elec_write_tpa)
-        return
       end if
+      POP_SUB(states_elec_write_tpa)
+      return
     end if
 
     !%Variable MomentumTransfer

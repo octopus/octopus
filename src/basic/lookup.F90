@@ -20,7 +20,6 @@
 
 module lookup_oct_m
   use global_oct_m
-  use loct_pointer_oct_m
   use messages_oct_m
   use profiling_oct_m
 
@@ -90,7 +89,7 @@ contains
 
     cout%nobjs = cin%nobjs
     cout%dim = cin%dim
-    call loct_pointer_copy(cout%pos, cin%pos)
+    SAFE_ALLOCATE_SOURCE_P(cout%pos, cin%pos)
    
     POP_SUB(lookup_copy)
   end subroutine lookup_copy

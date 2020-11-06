@@ -25,12 +25,13 @@ dist_doc_DATA = \
 	sections.js \
 	vars_index.html \
 	Atomic_Orbitals.html \
-	CelestialDynamics.html \
+	ClassicalParticles.html \
 	Execution.html \
 	Calculation_Modes.html \
 	Hamiltonian.html \
 	Linear_Response.html \
 	Math.html \
+	Maxwell.html \
 	MaxwellStates.html \
 	Mesh.html \
 	Output.html \
@@ -55,10 +56,11 @@ Mesh.html: RUN_SCRIPT
 Output.html: RUN_SCRIPT
 SCF.html: RUN_SCRIPT
 States.html: RUN_SCRIPT
+Maxwell.html: RUN_SCRIPT
 MaxwellStates.html: RUN_SCRIPT
 System.html: RUN_SCRIPT
 Time-Dependent.html: RUN_SCRIPT
-CelestialDynamics.html: RUN_SCRIPT
+ClassicalParticles.html: RUN_SCRIPT
 Utilities.html: RUN_SCRIPT
 
 RUN_SCRIPT:

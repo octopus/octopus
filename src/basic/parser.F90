@@ -55,40 +55,43 @@ module parser_oct_m
     integer, pointer :: p
   end type block_t
 
+  ! The following characters should not be allowed in variable names.
+  character(len=27), parameter, public :: parser_varname_excluded_characters = '|!''"#$%&/\()=?{}+-*^.,;:<> '
+
   interface parse_init
     integer function oct_parse_init(file_out, mpiv_node)
       implicit none
-      character(len=*), intent(in)  :: file_out
-      integer, intent(in) :: mpiv_node
+      character(len=*), intent(in) :: file_out
+      integer,          intent(in) :: mpiv_node
     end function oct_parse_init
   end interface parse_init
 
   interface parse_putsym
     subroutine oct_parse_putsym_int(sym, i)
       implicit none
-      character(len=*), intent(in)  :: sym
-      integer, intent(in) :: i
+      character(len=*), intent(in) :: sym
+      integer,          intent(in) :: i
     end subroutine oct_parse_putsym_int
+
     subroutine oct_parse_putsym_double(sym, d)
       implicit none
-      character(len=*), intent(in)  :: sym
-      real(8), intent(in) :: d
+      character(len=*), intent(in) :: sym
+      real(8),          intent(in) :: d
     end subroutine oct_parse_putsym_double
-    module procedure oct_parse_putsym_double4
   end interface parse_putsym
 
   interface parse_input_file
     integer function oct_parse_input(file_in, set_used)
       implicit none
-      character(len=*), intent(in)  :: file_in
-      integer,          intent(in)  :: set_used
+      character(len=*), intent(in) :: file_in
+      integer,          intent(in) :: set_used
     end function oct_parse_input
   end interface parse_input_file
 
   interface parse_environment
     subroutine oct_parse_environment(prefix)
       implicit none
-      character(len=*), intent(in)  :: prefix
+      character(len=*), intent(in) :: prefix
     end subroutine oct_parse_environment
   end interface parse_environment
 
@@ -116,9 +119,9 @@ module parser_oct_m
   interface
     subroutine oct_parse_int(name, def, res)
       implicit none
-      character(len=*), intent(in) :: name
-      integer(8), intent(in)       :: def
-      integer(8), intent(out)      :: res
+      character(len=*), intent(in)  :: name
+      integer(8),       intent(in)  :: def
+      integer(8),       intent(out) :: res
     end subroutine oct_parse_int
 
     subroutine oct_parse_double(name, def, res)
@@ -130,24 +133,23 @@ module parser_oct_m
 
     subroutine oct_parse_complex(name, def, res)
       implicit none
-      character(len=*), intent(in) :: name
-      complex(8), intent(in)       :: def
-      complex(8), intent(out)      :: res
+      character(len=*), intent(in)  :: name
+      complex(8),       intent(in)  :: def
+      complex(8),       intent(out) :: res
     end subroutine oct_parse_complex
 
     subroutine oct_parse_string(name, def, res)
       implicit none
-      character(len=*), intent(in) :: name, def
-      character(len=*), intent(out):: res
+      character(len=*), intent(in)  :: name, def
+      character(len=*), intent(out) :: res
     end subroutine oct_parse_string
 
     integer function oct_parse_block(name, blk)
       import block_t
       implicit none
-      character(len=*), intent(in) :: name
-      type(block_t), intent(out) :: blk
+      character(len=*), intent(in)  :: name
+      type(block_t),    intent(out) :: blk
     end function oct_parse_block
-
   end interface
 
   interface parse_variable
@@ -158,8 +160,7 @@ module parser_oct_m
     module procedure parse_logical
     module procedure parse_string
     module procedure parse_cmplx
-    module procedure oct_parse_double4_unit
-    module procedure oct_parse_double8_unit
+    module procedure oct_parse_double_unit
   end interface parse_variable
 
   interface parse_block_end
@@ -183,7 +184,7 @@ module parser_oct_m
       import block_t
       implicit none
       type(block_t), intent(in) :: blk
-      integer, intent(in) :: line
+      integer,       intent(in) :: line
     end function oct_parse_block_cols
   end interface parse_block_cols
 
@@ -191,9 +192,9 @@ module parser_oct_m
     subroutine oct_parse_block_int(blk, l, c, res)
       import block_t
       implicit none
-      type(block_t), intent(in) :: blk
-      integer, intent(in)          :: l, c
-      integer, intent(out)         :: res
+      type(block_t), intent(in)  :: blk
+      integer,       intent(in)  :: l, c
+      integer,       intent(out) :: res
     end subroutine oct_parse_block_int
   end interface parse_block_integer
 
@@ -201,33 +202,31 @@ module parser_oct_m
     subroutine oct_parse_block_double(blk, l, c, res)
       import block_t
       implicit none
-      type(block_t), intent(in) :: blk
-      integer, intent(in)          :: l, c
-      real(8), intent(out)         :: res
+      type(block_t), intent(in)  :: blk
+      integer,       intent(in)  :: l, c
+      real(8),       intent(out) :: res
     end subroutine oct_parse_block_double
-    module procedure oct_parse_block_double4
-    module procedure oct_parse_block_double4_unit
-    module procedure oct_parse_block_double8_unit
+
+    module procedure oct_parse_block_double_unit
   end interface parse_block_float
 
   interface parse_block_cmplx
     subroutine oct_parse_block_complex(blk, l, c, res)
       import block_t
       implicit none
-      type(block_t), intent(in) :: blk
-      integer, intent(in)          :: l, c
-      complex(8), intent(out)      :: res
+      type(block_t), intent(in)  :: blk
+      integer,       intent(in)  :: l, c
+      complex(8),    intent(out) :: res
     end subroutine oct_parse_block_complex
-    module procedure oct_parse_block_complex4
   end interface parse_block_cmplx
 
   interface parse_block_string
     subroutine oct_parse_block_string(blk, l, c, res)
       import block_t
       implicit none
-      type(block_t), intent(in) :: blk
-      integer, intent(in)          :: l, c
-      character(len=*), intent(out):: res
+      type(block_t),    intent(in)  :: blk
+      integer,          intent(in)  :: l, c
+      character(len=*), intent(out) :: res
     end subroutine oct_parse_block_string
   end interface parse_block_string
 
@@ -262,9 +261,8 @@ module parser_oct_m
       real(8),          intent(in)  :: x
       character(len=*), intent(in)  :: string
     end subroutine oct_parse_expression1
+
     module procedure oct_parse_expression_vec
-    module procedure oct_parse_expression_vec4
-    module procedure oct_parse_expression14
   end interface
 
 contains
@@ -475,9 +473,9 @@ contains
   ! ---------------------------------------------------------
 
   subroutine parse_block_logical(blk, l, c, res)
-    type(block_t), intent(in) :: blk
-    integer, intent(in)          :: l, c
-    logical, intent(out)         :: res
+    type(block_t), intent(in)  :: blk
+    integer,       intent(in)  :: l, c
+    logical,       intent(out) :: res
 
     integer :: ires
 
@@ -486,49 +484,13 @@ contains
 
   end subroutine parse_block_logical
 
-  !> The code may want to compile in single-precision mode.
-  !! As I did not want to change the parser library, these
-  !! driver functions just convert their arguments.
-
-  ! ---------------------------------------------------------
-  subroutine oct_parse_putsym_double4(sym, d4)
-    character(len=*), intent(in) :: sym
-    real(4), intent(in) :: d4
-
-    call oct_parse_putsym_double(sym, real(d4, 8))
-  end subroutine oct_parse_putsym_double4
-
-
   ! ---------------------------------------------------------
 
-  subroutine oct_parse_double4_unit(namespace, name, def4, res4, unit)
+  subroutine oct_parse_double_unit(namespace, name, def, res, unit)
     type(namespace_t),      intent(in)  :: namespace
     character(len=*),       intent(in)  :: name
-    real(4),                intent(in)  :: def4
-    real(4),                intent(out) :: res4
-    type(unit_t), optional, intent(in)  :: unit
-
-    real(8) :: res8
-
-    call parse_check_varinfo(name)
-
-    if(present(unit)) then
-      call oct_parse_double(parse_get_full_name(namespace, name), units_from_atomic(unit, real(def4, 8)), res8)
-      res4 = real(units_to_atomic(unit, res8), kind=4)
-    else
-      call oct_parse_double(parse_get_full_name(namespace, name), real(def4, 8), res8)
-      res4 = real(res8, kind=4)
-    end if
-
-  end subroutine oct_parse_double4_unit
-
-  ! ---------------------------------------------------------
-
-  subroutine oct_parse_double8_unit(namespace, name, def, res, unit)
-    type(namespace_t),   intent(in)  :: namespace
-    character(len=*), intent(in)  :: name
-    real(8),          intent(in)  :: def
-    real(8),          intent(out) :: res
+    real(8),                intent(in)  :: def
+    real(8),                intent(out) :: res
     type(unit_t), optional, intent(in)  :: unit
 
     call parse_check_varinfo(name)
@@ -540,35 +502,11 @@ contains
       call oct_parse_double(parse_get_full_name(namespace, name), def, res)
     end if
 
-  end subroutine oct_parse_double8_unit
-
-  ! ---------------------------------------------------------
-  subroutine oct_parse_block_double4(blk, l, c, res4)
-    type(block_t), intent(in) :: blk
-    integer, intent(in)          :: l, c
-    real(4), intent(out)         :: res4
-
-    real(8) :: res8
-    call oct_parse_block_double(blk, l, c, res8)
-    res4 = real(res8, kind=4)
-  end subroutine oct_parse_block_double4
+  end subroutine oct_parse_double_unit
 
   ! ---------------------------------------------------------
 
-  subroutine oct_parse_block_double4_unit(blk, l, c, res4, unit)
-    type(block_t), intent(in)  :: blk
-    integer,       intent(in)  :: l, c
-    real(4),       intent(out) :: res4
-    type(unit_t),  intent(in)  :: unit
-
-    real(8) :: res8
-    call oct_parse_block_double(blk, l, c, res8)
-    res4 = real(units_to_atomic(unit, res8), kind=4)
-  end subroutine oct_parse_block_double4_unit
-
-  ! ---------------------------------------------------------
-
-  subroutine oct_parse_block_double8_unit(blk, l, c, res, unit)
+  subroutine oct_parse_block_double_unit(blk, l, c, res, unit)
     type(block_t), intent(in)  :: blk
     integer,       intent(in)  :: l, c
     real(8),       intent(out) :: res
@@ -577,25 +515,14 @@ contains
     call oct_parse_block_double(blk, l, c, res)
     res = units_to_atomic(unit, res)
 
-  end subroutine oct_parse_block_double8_unit
-
-  ! ---------------------------------------------------------
-  subroutine oct_parse_block_complex4(blk, l, c, res4)
-    type(block_t), intent(in) :: blk
-    integer, intent(in)          :: l, c
-    complex(4), intent(out)      :: res4
-
-    complex(8) :: res8
-    call oct_parse_block_complex(blk, l, c, res8)
-    res4 = cmplx(res8, kind=4)
-  end subroutine oct_parse_block_complex4
+  end subroutine oct_parse_block_double_unit
 
   ! ---------------------------------------------------------
   subroutine oct_parse_expression_vec(re, im, ndim, x, r, t, pot)
-    real(8), intent(out) :: re, im
-    integer, intent(in)  :: ndim
-    real(8), intent(in)  :: x(:), r, t
-    character(len=*), intent(in) :: pot
+    real(8),          intent(out) :: re, im
+    integer,          intent(in)  :: ndim
+    real(8),          intent(in)  :: x(:), r, t
+    character(len=*), intent(in)  :: pot
 
     real(8) :: xc(1:MAX_DIM)
 
@@ -604,35 +531,6 @@ contains
     call oct_parse_expression(re, im, ndim, xc(1), r, t, pot)
   end subroutine oct_parse_expression_vec
 
-  ! ---------------------------------------------------------
-  subroutine oct_parse_expression_vec4(re, im, ndim, x, r, t, pot)
-    real(4), intent(out) :: re, im
-    integer, intent(in)  :: ndim
-    real(4), intent(in)  :: x(:), r, t
-    character(len=*), intent(in) :: pot
-
-    real(8) :: xc(1:MAX_DIM)
-    real(8) :: re8, im8
-
-    xc = M_ZERO
-    xc(1:ndim) = real(x(1:ndim), 8)
-    call oct_parse_expression(re8, im8, ndim, xc(1), real(r, 8), real(t, 8), pot)
-    re = real(re8, 4)
-    im = real(im8, 4)
-  end subroutine oct_parse_expression_vec4
-
-  ! ---------------------------------------------------------
-  subroutine oct_parse_expression14(re, im, c, x, string)
-    real(4), intent(out) :: re, im
-    character(len=*), intent(in) :: c
-    real(4), intent(in) :: x
-    character(len=*), intent(in) :: string
-    real(8) :: re8, im8
-    call oct_parse_expression1(re8, im8, c, real(x, 8), string)
-    re = real(re8, 4)
-    im = real(im8, 4)
-  end subroutine oct_parse_expression14
-
 
   ! ----------------------------------------------------------------------
   !> A very primitive way to "preprocess" a string that contains reference
@@ -640,10 +538,11 @@ contains
   !! the values of the array x. This way the string can be processed by
   !! the parser later.
   subroutine parse_array(inp_string, x, arraychar)
-    character(len=*), intent(inout)  :: inp_string
-    FLOAT, intent(in) :: x(:, :)
-    character(len=1), intent(in) :: arraychar
-    integer              :: i,m,n_atom,coord,string_length
+    character(len=*), intent(inout) :: inp_string
+    FLOAT,            intent(in)    :: x(:, :)
+    character(len=1), intent(in)    :: arraychar
+
+    integer              :: i, m, n_atom, coord, string_length
     character (LEN=100)  :: v_string
 
     string_length = len(inp_string)
@@ -679,21 +578,68 @@ contains
 
   end subroutine parse_check_varinfo
 
+  ! ----------------------------------------------------------------------
+  !> Given a namespace and a variable name, this function will iterate over all
+  !! namespace ancestors contained in the namespace, until it finds one for
+  !! which the variable is defined. If it finds such namespace it returns the
+  !! variable name prefixed with the namespace. If it does not find any suitable
+  !! namespace it returns the variable name without any prefix.
+  !!
+  !! To make it clear what we mean by all namespace ancestors contained in a
+  !! given namesspace, lets suppose that we have the following namespace:
+  !!
+  !!   "A.B.C"
+  !!
+  !! Clearly "A" and "B" are ancestors of "C", but also the full path to "B",
+  !! that is "A.B", is an ancestor. For practical purposes we will also consider
+  !! that "C" is an ancestor of itself. So "C", "B.C" and "A.B.C" are also
+  !! ancestors.
+  !!
+  !! The order in which the function iterates over the possible namespace
+  !! ancestors is crucial, as it effectively determines namespace precedence in
+  !! the input file. The order is such that it goes from the rigth-most ancestor
+  !! to the left-most, and form the more complete path to the least complete. So
+  !! for the above example, the order will be the following:
+  !!
+  !!   "A.B.C", "B.C", "C", "A.B", "B", "A"
+  !!
+  !! as "C" is the right-most ancestor while "A" is the left-most and "A.B.C" is
+  !! the most complete path while "C" is the least complete.
+  function parse_get_full_name(namespace, varname) result(name)
+    type(namespace_t), target, intent(in)  :: namespace
+    character(len=*),          intent(in)  :: varname
+    character(len=:),          allocatable :: name
 
-  ! this function returns the full name, possibly including the namespace
-  ! of the current parser
-  function parse_get_full_name(namespace, varname) result(full_name)
-    type(namespace_t), intent(in)  :: namespace
-    character(len=*),  intent(in)  :: varname
-    character(len=:),  allocatable :: full_name
+    logical :: found
+    integer :: is
+    type(namespace_t), pointer :: ancestor
+    character(len=MAX_NAMESPACE_LEN) :: ancestor_name
 
-    ! try first the variable prefixed by namespace
-    full_name = trim(namespace%get()) // "." // trim(varname)
-    if (parse_isdef(full_name) == 0) then
-      full_name = varname
-    end if
+    found = .false.
+
+    ! Loop over all ancestors, starting from the right-most
+    ancestor => namespace
+    do while (associated(ancestor) .and. .not. found)
+
+      ! Loop over all paths to this ancestor, starting from the most complete path
+      ancestor_name = ancestor%get()
+      is = -1
+      do while (len_trim(ancestor_name) > 0 .and. is /= 0 .and. .not. found)
+        ! Check if the current path is found in the input file
+        name = trim(ancestor_name) // "." // trim(varname)
+        found = parse_isdef(trim(name)) /= 0
+
+        ! Remove the left-most namespace ("is" will be zero if there is only one namespace left)
+        is = index(ancestor_name, ".")
+        ancestor_name = ancestor_name(is+1:)
+      end do
+      ancestor => ancestor%parent
+    end do
+
+    ! If no suitable namespace found, just return the variable name
+    if (.not. found) name = varname
+
   end function parse_get_full_name
-
 
   ! ----------------------------------------------------------------------
   subroutine parse_fatal()

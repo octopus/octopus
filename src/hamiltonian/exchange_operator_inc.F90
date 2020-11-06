@@ -25,8 +25,8 @@ subroutine X(exchange_operator_single)(this, namespace, der, st_d, ist, ik, psi,
   type(states_elec_dim_t),   intent(in)    :: st_d
   integer,                   intent(in)    :: ist
   integer,                   intent(in)    :: ik
-  R_TYPE,                    intent(in)    :: psi(:, :)
-  R_TYPE,                    intent(inout) :: hpsi(:, :)
+  R_TYPE, contiguous,        intent(inout) :: psi(:, :)
+  R_TYPE, contiguous,        intent(inout) :: hpsi(:, :)
   logical,                   intent(in)    :: rdmft
 
   type(wfs_elec_t) :: psib, hpsib
@@ -147,7 +147,7 @@ subroutine X(exchange_operator_apply)(this, namespace, der, st_d, psib, hpsib, r
 
           call batch_get_state(psi2b, ii, der%mesh%np, psi2)
 
-          call profiling_in(prof, "CODENSITIES")
+          call profiling_in(prof, TOSTRING(X(CODENSITIES)))
           rho = R_TOTYPE(M_ZERO)          !We compute rho_ij
           pot = R_TOTYPE(M_ZERO)
 
@@ -166,7 +166,7 @@ subroutine X(exchange_operator_apply)(this, namespace, der, st_d, psib, hpsib, r
           end if
 
           !Accumulate the result
-          call profiling_in(prof2, "EXCHANGE_ACCUMULATE")
+          call profiling_in(prof2, TOSTRING(X(EXCHANGE_ACCUMULATE)))
           do idim = 1, st_d%dim
             do ip = 1, der%mesh%np
               hpsi(ip, idim) = hpsi(ip, idim) - ff*psi2(ip, idim)*pot(ip)
@@ -297,7 +297,7 @@ subroutine X(exchange_operator_scdm_apply) (this, namespace, scdm, der, st_d, ps
 
   PUSH_SUB(X(exchange_operator_scdm_apply))
   
-  call profiling_in(prof_exx_scdm, 'SCDM_EXX_OPERATOR')
+  call profiling_in(prof_exx_scdm, TOSTRING(X(SCDM_EXX_OPERATOR)))
 
   if(der%mesh%sb%kpoints%full%npoints > 1) call messages_not_implemented("exchange operator with k-points", namespace=namespace)
   

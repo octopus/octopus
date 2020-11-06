@@ -23,7 +23,6 @@ module fourier_space_oct_m
   use cube_oct_m
   use cube_function_oct_m
   use global_oct_m
-  use loct_pointer_oct_m
   use math_oct_m
   use messages_oct_m
   use fft_oct_m

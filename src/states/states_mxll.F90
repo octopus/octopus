@@ -18,9 +18,11 @@
 #include "global.h"
 
 module states_mxll_oct_m
+  use accel_oct_m
   use blacs_proc_grid_oct_m
   use batch_oct_m
   use batch_ops_oct_m
+  use comm_oct_m
   use derivatives_oct_m
   use distributed_oct_m
   use geometry_oct_m
@@ -47,7 +49,7 @@ module states_mxll_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use varinfo_oct_m
-  
+
   implicit none
 
   private
@@ -77,34 +79,24 @@ module states_mxll_oct_m
     get_poynting_vector_plane_waves,  &
     state_diff
 
-  type states_mxll_priv_t
-    private
-    type(type_t) :: wfs_type             !< always complex (TYPE_CMPLX) states
-  end type states_mxll_priv_t
-
-  type states_mxll_t
+  type :: states_mxll_t
     ! Components are public by default
-    type(states_elec_dim_t)      :: d
-    type(states_mxll_priv_t)     :: priv          !< the private components
-    integer                      :: nst           !< Number of states in each irreducible subspace
+    integer                      :: dim         !< Space dimension
     integer                      :: rs_sign
-!    type(states_elec_group_t)    :: group
+    logical                      :: pack_states
     logical                      :: parallel_in_states !< Am I parallel in states?
+    type(type_t), public         :: wfs_type         !< complex (TYPE_CMPLX)
+    integer, public              :: nst          !< Number of RS states, currently set to 1, we keep it for future uses
+    logical, public              :: packed
 
-    type(batch_t), pointer       :: rsb
-    type(batch_t), pointer       :: rs_transb
-    type(batch_t), pointer       :: rs_longb
-    type(batch_t), pointer       :: rs_curr_dens_rest1b
-    type(batch_t), pointer       :: rs_curr_dens_rest2b
-    
-    CMPLX, pointer               :: rs_state_plane_waves(:,:)
-!   CMPLX, pointer               :: rs_state(:,:)
-!    CMPLX, pointer              :: rs_state_trans(:,:)
-!    CMPLX, pointer              :: rs_state_long(:,:)
-    
+    CMPLX, allocatable           :: rs_state_plane_waves(:,:)
+    CMPLX, allocatable           :: rs_state(:,:)
+    CMPLX, allocatable           :: rs_state_trans(:,:)
+    CMPLX, allocatable           :: rs_state_long(:,:)
+
     logical                      :: rs_current_density_restart = .false.
-!    CMPLX, pointer              :: rs_current_density_restart_t1(:,:)
-!    CMPLX, pointer              :: rs_current_density_restart_t2(:,:)
+    CMPLX, allocatable           :: rs_current_density_restart_t1(:,:)
+    CMPLX, allocatable           :: rs_current_density_restart_t2(:,:)
 
     FLOAT, pointer               :: ep(:)
     FLOAT, pointer               :: mu(:)
@@ -112,37 +104,39 @@ module states_mxll_oct_m
     integer, pointer             :: rs_state_fft_map(:,:,:)
     integer, pointer             :: rs_state_fft_map_inv(:,:)
 
-    FLOAT, pointer               :: energy_rate(:)
-    FLOAT, pointer               :: delta_energy(:)
-    FLOAT, pointer               :: energy_via_flux_calc(:)
+    FLOAT                        :: energy_rate
+    FLOAT                        :: delta_energy
+    FLOAT                        :: energy_via_flux_calc
 
-    FLOAT, pointer               :: trans_energy_rate(:)
-    FLOAT, pointer               :: trans_delta_energy(:)
-    FLOAT, pointer               :: trans_energy_via_flux_calc(:)
+    FLOAT                        :: trans_energy_rate
+    FLOAT                        :: trans_delta_energy
+    FLOAT                        :: trans_energy_via_flux_calc
 
-    FLOAT, pointer               :: plane_waves_energy_rate(:)
-    FLOAT, pointer               :: plane_waves_delta_energy(:)
-    FLOAT, pointer               :: plane_waves_energy_via_flux_calc(:)
+    FLOAT                        :: plane_waves_energy_rate
+    FLOAT                        :: plane_waves_delta_energy
+    FLOAT                        :: plane_waves_energy_via_flux_calc
 
-    FLOAT                        :: poynting_vector_box_surface(1:2,1:3,1:3) = M_ZERO
-    FLOAT                        :: poynting_vector_box_surface_plane_waves(1:2,1:3,1:3) = M_ZERO
-    FLOAT                        :: electric_field_box_surface(1:2,1:3,1:3) = M_ZERO
-    FLOAT                        :: electric_field_box_surface_plane_waves(1:2,1:3,1:3) = M_ZERO
-    FLOAT                        :: magnetic_field_box_surface(1:2,1:3,1:3) = M_ZERO
-    FLOAT                        :: magnetic_field_box_surface_plane_waves(1:2,1:3,1:3) = M_ZERO
+    FLOAT                        :: poynting_vector_box_surface(1:2,1:MAX_DIM,1:MAX_DIM) = M_ZERO
+    FLOAT                        :: poynting_vector_box_surface_plane_waves(1:2,1:MAX_DIM,1:MAX_DIM) = M_ZERO
+    FLOAT                        :: electric_field_box_surface(1:2,1:MAX_DIM,1:MAX_DIM) = M_ZERO
+    FLOAT                        :: electric_field_box_surface_plane_waves(1:2,1:MAX_DIM,1:MAX_DIM) = M_ZERO
+    FLOAT                        :: magnetic_field_box_surface(1:2,1:MAX_DIM,1:MAX_DIM) = M_ZERO
+    FLOAT                        :: magnetic_field_box_surface_plane_waves(1:2,1:MAX_DIM,1:MAX_DIM) = M_ZERO
 
     logical                      :: rs_state_const_external = .false.
-    CMPLX, pointer               :: rs_state_const(:)
-    CMPLX, pointer               :: rs_state_const_amp(:,:)
-    type(tdf_t), pointer         :: rs_state_const_td_function(:)
+    CMPLX, allocatable           :: rs_state_const(:)
+    CMPLX, allocatable           :: rs_state_const_amp(:,:)
+    type(tdf_t), allocatable     :: rs_state_const_td_function(:)
 
-    FLOAT                        :: poynting_mean(3)
-    FLOAT                        :: poynting_mean_plane_waves(3)
+    FLOAT                        :: poynting_mean(MAX_DIM)
+    FLOAT                        :: poynting_mean_plane_waves(MAX_DIM)
 
     integer                      :: inner_points_number
-    integer, pointer             :: inner_points_map(:)
+    integer, allocatable         :: inner_points_map(:)
+    logical, allocatable         :: inner_points_mask(:)
     integer                      :: boundary_points_number
-    integer, pointer             :: boundary_points_map(:)
+    integer, allocatable         :: boundary_points_map(:)
+    logical, allocatable         :: boundary_points_mask(:)
 
     integer                      :: surface_points_number(MAX_DIM)
     integer, pointer             :: surface_points_map(:,:,:)
@@ -154,12 +148,12 @@ module states_mxll_oct_m
     integer, pointer             :: surface_grid_center(:,:,:,:)
     FLOAT                        :: surface_grid_element(MAX_DIM)
 
-    type(mesh_plane_t)           :: surface(2,3)
+    type(mesh_plane_t)           :: surface(2,MAX_DIM)
 
     integer                      :: selected_points_number
-    FLOAT, pointer               :: selected_points_coordinate(:,:)
-    CMPLX, pointer               :: selected_points_rs_state(:,:)
-    CMPLX, pointer               :: selected_points_rs_state_trans(:,:)
+    FLOAT, allocatable           :: selected_points_coordinate(:,:)
+    CMPLX, allocatable           :: selected_points_rs_state(:,:)
+    CMPLX, allocatable           :: selected_points_rs_state_trans(:,:)
     FLOAT                        :: rs_state_trans_var
 
     FLOAT, pointer               :: grid_rho(:,:)
@@ -173,16 +167,15 @@ module states_mxll_oct_m
 
     ! external current variables
     integer                      :: external_current_number
-    integer,             pointer :: external_current_modus(:)
-    character(len=1024), pointer :: external_current_string(:,:)
-    FLOAT,               pointer :: external_current_amplitude(:,:,:)
-    type(tdf_t),         pointer :: external_current_td_function(:)
-    type(tdf_t),         pointer :: external_current_td_phase(:)
-    FLOAT,               pointer :: external_current_omega(:)
-    FLOAT,               pointer :: external_current_phase(:)
+    integer,             allocatable :: external_current_modus(:)
+    character(len=1024), allocatable :: external_current_string(:,:)
+    FLOAT,               allocatable :: external_current_amplitude(:,:,:)
+    type(tdf_t),         allocatable :: external_current_td_function(:)
+    type(tdf_t),         allocatable :: external_current_td_phase(:)
+    FLOAT,               allocatable :: external_current_omega(:)
+    FLOAT,               allocatable :: external_current_phase(:)
 
     !> used for the user-defined wavefunctions (they are stored as formula strings)
-    !! (st%d%dim, st%nst, st%d%nik)
     character(len=1024), allocatable :: user_def_states(:,:,:)
     logical                     :: fromScratch
     type(mpi_grp_t)             :: mpi_grp
@@ -196,22 +189,19 @@ module states_mxll_oct_m
     integer                     :: lnst
     integer                     :: st_start, st_end
     integer, pointer            :: node(:)
-    logical, private            :: packed
+
   end type states_mxll_t
 
 contains
 
   ! ---------------------------------------------------------
   subroutine states_mxll_null(st)
-    type(states_mxll_t), intent(inout) :: st
+    class(states_mxll_t), intent(inout) :: st
 
     PUSH_SUB(states_mxll_null)
 
-    call states_elec_dim_null(st%d)
-!    call states_elec_group_null(st%group)
-    call distributed_nullify(st%dist) 
-    st%priv%wfs_type = TYPE_CMPLX
-    st%d%orth_method = 0
+    call distributed_nullify(st%dist)
+    st%wfs_type = TYPE_CMPLX
     st%parallel_in_states = .false.
 #ifdef HAVE_SCALAPACK
     call blacs_proc_grid_nullify(st%dom_st_proc_grid)
@@ -221,6 +211,7 @@ contains
     POP_SUB(states_mxll_null)
   end subroutine states_mxll_null
 
+
   ! ---------------------------------------------------------
   subroutine states_mxll_init(st, namespace, gr, geo)
     type(states_mxll_t), target, intent(inout) :: st
@@ -228,23 +219,27 @@ contains
     type(grid_t),                intent(in)    :: gr
     type(geometry_t),            intent(in)    :: geo
     type(block_t)        :: blk
+
     integer :: idim, nlines, ncols, il
-    FLOAT   :: pos(MAX_DIM)
+    logical :: defaultl
+    FLOAT, allocatable   :: pos(:)
+    integer :: ix_max, iy_max, iz_max
+    type(profile_t), save :: prof
 
     PUSH_SUB(states_mxll_init)
 
+    call profiling_in(prof, 'STATES_MXLL_INIT')
+
     st%fromScratch = .true. ! this will be reset if restart_read is called
     call states_mxll_null(st)
-    
-    st%d%dim = 3
-    st%nst   = 1
-    st%d%ispin = UNPOLARIZED
-    st%d%nspin = 1
-    st%d%spin_channels = 1
-    call states_elec_choose_kpoints(st%d, gr%sb, namespace)
 
-    SAFE_ALLOCATE(st%user_def_e_field(1:st%d%dim))
-    SAFE_ALLOCATE(st%user_def_b_field(1:st%d%dim))
+    ASSERT(MAX_DIM >= gr%sb%dim)
+    ASSERT(gr%sb%dim == 3)
+    st%dim = gr%sb%dim
+    st%nst = 1
+
+    SAFE_ALLOCATE(st%user_def_e_field(1:st%dim))
+    SAFE_ALLOCATE(st%user_def_b_field(1:st%dim))
 
     st%st_start = 1
     st%st_end = st%nst
@@ -256,9 +251,14 @@ contains
     call mpi_grp_init(st%mpi_grp, -1)
     st%parallel_in_states = .false.
     st%packed = .false.
-    
-    st%d%block_size = 1    
-    call distributed_nullify(st%d%kpt, st%d%nik)
+
+    defaultl = .true.
+    if(accel_is_enabled()) then
+      defaultl = .false.
+    end if
+    call parse_variable(namespace, 'StatesPack', defaultl, st%pack_states)
+
+    call messages_print_var_value(stdout, 'StatesPack', st%pack_states)
 
     !%Variable RiemannSilbersteinSign
     !%Type integer
@@ -279,71 +279,92 @@ contains
     !%Description
     !%
     !% <tt>%Coordinates
-    !% <br>&nbsp;&nbsp;    -1.0 | 2.0 |  4.0 
+    !% <br>&nbsp;&nbsp;    -1.0 | 2.0 |  4.0
     !% <br>&npsp;&nbsp;     0.0 | 1.0 | -2.0
     !% <br>%</tt>
     !%
     !%End
 
+    SAFE_ALLOCATE(pos(1:st%dim))
     st%selected_points_number = 1
     if(parse_block(namespace, 'MaxwellFieldsCoordinate', blk) == 0) then
       nlines = parse_block_n(blk)
       st%selected_points_number = nlines
-      SAFE_ALLOCATE(st%selected_points_coordinate(1:st%d%dim,1:nlines))
-      SAFE_ALLOCATE(st%selected_points_rs_state(1:st%d%dim,1:nlines))
-      SAFE_ALLOCATE(st%selected_points_rs_state_trans(1:st%d%dim,1:nlines))
-      do il=1, nlines
+      SAFE_ALLOCATE(st%selected_points_coordinate(1:st%dim,1:nlines))
+      SAFE_ALLOCATE(st%selected_points_rs_state(1:st%dim,1:nlines))
+      SAFE_ALLOCATE(st%selected_points_rs_state_trans(1:st%dim,1:nlines))
+      do il = 1, nlines
         ncols = parse_block_cols(blk,0)
         if (ncols < 3 .or. ncols > 3) then
             message(1) = 'MaxwellFieldCoordinate must have 3 columns.'
             call messages_fatal(1, namespace=namespace)
         end if
-        do idim = 1, st%d%dim
+        do idim = 1, st%dim
           call parse_block_float(blk, il-1, idim-1, pos(idim), units_inp%length)
         end do
         st%selected_points_coordinate(:,il) = pos
         st%selected_points_rs_state(:,il)  = M_z0
         st%selected_points_rs_state_trans(:,il) = M_z0
       end do
+    call parse_block_end(blk)
     else
-      SAFE_ALLOCATE(st%selected_points_coordinate(1:st%d%dim,1))
-      SAFE_ALLOCATE(st%selected_points_rs_state(1:st%d%dim,1))
-      SAFE_ALLOCATE(st%selected_points_rs_state_trans(1:st%d%dim,1))
+      SAFE_ALLOCATE(st%selected_points_coordinate(1:st%dim, 1))
+      SAFE_ALLOCATE(st%selected_points_rs_state(1:st%dim, 1))
+      SAFE_ALLOCATE(st%selected_points_rs_state_trans(1:st%dim, 1))
       st%selected_points_coordinate(:,:) = M_ZERO
       st%selected_points_rs_state(:,:) = M_z0
       st%selected_points_rs_state_trans(:,:) = M_z0
     end if
 
+    SAFE_DEALLOCATE_A(pos)
+
+    st%surface_grid_rows_number(1) = 3
+    ix_max  = st%surface_grid_rows_number(1)
+    st%surface_grid_rows_number(2) = 3
+    iy_max  = st%surface_grid_rows_number(2)
+    st%surface_grid_rows_number(3) = 3
+    iz_max  = st%surface_grid_rows_number(3)
+
+    SAFE_ALLOCATE(st%surface_grid_center(1:2, 1:st%dim, 1:ix_max, 1:iy_max))
+    SAFE_ALLOCATE(st%surface_grid_points_number(1:st%dim, 1:ix_max, 1:iy_max))
+
+    call profiling_out(prof)
+
     POP_SUB(states_mxll_init)
-      
+
   end subroutine states_mxll_init
-  
+
   ! ---------------------------------------------------------
   !> Allocates the Maxwell states defined within a states_mxll_t structure.
   subroutine states_mxll_allocate(st, mesh)
     type(states_mxll_t),    intent(inout)   :: st
     type(mesh_t),           intent(in)      :: mesh
 
+    type(profile_t), save :: prof
+
     PUSH_SUB(states_mxll_allocate)
 
-    call zbatch_init(st%rsb, st%d%dim, 1, 1, mesh%np_part)
-    call batch_set_zero(st%rsb)
+    call profiling_in(prof, 'STATES_MXLL_ALLOCATE')
 
-    call zbatch_init(st%rs_transb, st%d%dim, 1, 1, mesh%np_part)
-    call batch_set_zero(st%rs_transb)
- 
-    call zbatch_init(st%rs_longb, st%d%dim, 1, 1, mesh%np_part)
-    call batch_set_zero(st%rs_longb)
+    SAFE_ALLOCATE(st%rs_state(1:mesh%np_part, 1:st%dim))
+    st%rs_state(:,:) = M_z0
 
-    call zbatch_init(st%rs_curr_dens_rest1b, st%d%dim, 1, 1, mesh%np_part)
-    call batch_set_zero(st%rs_curr_dens_rest1b)
-    
-    call zbatch_init(st%rs_curr_dens_rest2b, st%d%dim, 1, 1, mesh%np_part)
-    call batch_set_zero(st%rs_curr_dens_rest2b)
-   
-!    Another alternative
-!    call batch_init(st%rs_state_transb, hm%d%dim, 1, 1, st%rs_state_trans)
-!    call st%rs_state_transb%end()
+    SAFE_ALLOCATE(st%rs_state_trans(1:mesh%np_part, 1:st%dim))
+    st%rs_state_trans(:,:) = M_z0
+
+    SAFE_ALLOCATE(st%rs_state_long(1:mesh%np_part, 1:st%dim))
+    st%rs_state_long(:,:) = M_z0
+
+    SAFE_ALLOCATE(st%rs_state_plane_waves(1:mesh%np_part, 1:st%dim))
+    st%rs_state_plane_waves(:,:) = M_z0
+
+    SAFE_ALLOCATE(st%rs_current_density_restart_t1(1:mesh%np_part, 1:st%dim))
+    st%rs_current_density_restart_t1 = M_z0
+
+    SAFE_ALLOCATE(st%rs_current_density_restart_t2(1:mesh%np_part, 1:st%dim))
+    st%rs_current_density_restart_t2 = M_z0
+
+    call profiling_out(prof)
 
     POP_SUB(states_mxll_allocate)
   end subroutine states_mxll_allocate
@@ -352,25 +373,55 @@ contains
   subroutine states_mxll_end(st)
     type(states_mxll_t), intent(inout) :: st
 
+    type(profile_t), save :: prof
+
     PUSH_SUB(states_mxll_end)
 
-    call states_elec_dim_end(st%d)
-    call st%rsb%end()
-    call st%rs_transb%end()
-    call st%rs_longb%end()
-    call st%rs_curr_dens_rest1b%end()
-    call st%rs_curr_dens_rest2b%end()
+    call profiling_in(prof, 'STATES_MXLL_END')
 
+    SAFE_DEALLOCATE_A(st%rs_state)
+    SAFE_DEALLOCATE_A(st%rs_state_trans)
+    SAFE_DEALLOCATE_A(st%selected_points_coordinate)
+    SAFE_DEALLOCATE_A(st%selected_points_rs_state)
+    SAFE_DEALLOCATE_A(st%selected_points_rs_state_trans)
+    SAFE_DEALLOCATE_A(st%rs_state_long)
+    SAFE_DEALLOCATE_A(st%rs_current_density_restart_t1)
+    SAFE_DEALLOCATE_A(st%rs_current_density_restart_t2)
+    SAFE_DEALLOCATE_P(st%user_def_e_field)
+    SAFE_DEALLOCATE_P(st%user_def_b_field)
+
+    SAFE_DEALLOCATE_A(st%rs_state_const)
+    SAFE_DEALLOCATE_A(st%rs_state_const_td_function)
+    SAFE_DEALLOCATE_A(st%rs_state_const_amp)
+    SAFE_DEALLOCATE_A(st%rs_state_plane_waves)
+
+    SAFE_DEALLOCATE_P(st%surface_grid_center)
+    SAFE_DEALLOCATE_P(st%surface_grid_points_number)
+    SAFE_DEALLOCATE_P(st%surface_grid_points_map)
+    SAFE_DEALLOCATE_A(st%inner_points_map)
+    SAFE_DEALLOCATE_A(st%boundary_points_map)
+    SAFE_DEALLOCATE_A(st%inner_points_mask)
+    SAFE_DEALLOCATE_A(st%boundary_points_mask)
+    SAFE_DEALLOCATE_P(st%ep)
+    SAFE_DEALLOCATE_P(st%mu)
 #ifdef HAVE_SCALAPACK
     call blacs_proc_grid_end(st%dom_st_proc_grid)
 #endif
+    SAFE_DEALLOCATE_A(st%external_current_modus)
+    SAFE_DEALLOCATE_A(st%external_current_string)
+    SAFE_DEALLOCATE_A(st%external_current_amplitude)
+    SAFE_DEALLOCATE_A(st%external_current_td_function)
+    SAFE_DEALLOCATE_A(st%external_current_omega)
+    SAFE_DEALLOCATE_A(st%external_current_td_phase)
 
     call distributed_end(st%dist)
     SAFE_DEALLOCATE_P(st%node)
 
+    call profiling_out(prof)
+
     POP_SUB(states_mxll_end)
   end subroutine states_mxll_end
-  
+
 
   !----------------------------------------------------------
   subroutine build_rs_element(e_element, b_element, rs_sign, rs_element, ep_element, mu_element)
@@ -382,12 +433,11 @@ contains
 
     ! no PUSH_SUB, called too often
 
-
     if (present(ep_element) .and. present(mu_element)) then
       rs_element = sqrt(ep_element/M_TWO) * e_element + M_zI * rs_sign * sqrt(M_ONE/(M_TWO*mu_element)) * b_element
     else
       rs_element = sqrt(P_ep/M_TWO) * e_element + M_zI * rs_sign * sqrt(M_ONE/(M_TWO*P_mu)) * b_element
-    end if 
+    end if
 
   end subroutine build_rs_element
 
@@ -422,20 +472,25 @@ contains
     integer, optional, intent(in)    :: np
 
     integer :: ip, np_
+    type(profile_t), save :: prof
 
     PUSH_SUB(build_rs_state)
+
+    call profiling_in(prof, 'BUILD_RS_STATE')
 
     np_ = optional_default(np, mesh%np)
 
     do ip = 1, np_
       if (present(ep_field) .and. present(mu_field)) then
-        rs_state(ip, :) = sqrt(ep_field(ip)/M_TWO) * e_field(ip, :) & 
+        rs_state(ip, :) = sqrt(ep_field(ip)/M_TWO) * e_field(ip, :) &
                        + M_zI * rs_sign * sqrt(M_ONE/(M_TWO*mu_field(ip))) * b_field(ip, :)
       else
         rs_state(ip, :) = sqrt(P_ep/M_TWO) * e_field(ip, :) &
                        + M_zI * rs_sign * sqrt(M_ONE/(M_TWO*P_mu)) * b_field(ip, :)
-      end if 
+      end if
     end do
+
+   call profiling_out(prof)
 
     POP_SUB(build_rs_state)
 
@@ -483,18 +538,31 @@ contains
     FLOAT,   optional, intent(in)    :: ep_field(:)
     integer, optional, intent(in)    :: np
 
-    integer :: ip, np_
+    integer :: ip, idim, np_, ff_dim
+    type(profile_t), save :: prof
 
     ! no PUSH_SUB, called too often
+
+    call profiling_in(prof, "BUILD_RS_CURRENT_STATE")
+
     np_ = optional_default(np, mesh%np)
- 
-    do ip = 1, np_
-      if (present(ep_field)) then
-        rs_current_state(ip, :) = M_ONE/sqrt(M_TWO*ep_field(ip)) * current_state(ip, :)
-      else
-        rs_current_state(ip, :) = M_ONE/sqrt(M_TWO*P_ep) * current_state(ip, :)
-      end if
-    end do
+    ff_dim = size(current_state, dim=2)
+
+    if(present(ep_field)) then
+      do idim = 1, ff_dim
+        do ip = 1, np_
+          rs_current_state(ip, idim) = M_ONE/sqrt(M_TWO*ep_field(ip)) * current_state(ip, idim)
+        end do
+      end do
+    else
+      do idim = 1, ff_dim
+        do ip = 1, np_
+          rs_current_state(ip, idim) = M_ONE/sqrt(M_TWO*P_ep) * current_state(ip, idim)
+        end do
+      end do
+    end if
+
+    call profiling_out(prof)
 
   end subroutine build_rs_current_state
 
@@ -525,7 +593,7 @@ contains
 
     ! no PUSH_SUB, called too often
 
-    if (present(mu_element)) then    
+    if (present(mu_element)) then
       magnetic_field_vector(:) = sqrt(M_TWO*mu_element) * rs_sign * aimag(rs_state_vector(:))
     else
       magnetic_field_vector(:) = sqrt(M_TWO*P_mu) * rs_sign * aimag(rs_state_vector(:))
@@ -535,34 +603,31 @@ contains
 
 
   !----------------------------------------------------------
-  subroutine get_electric_field_state(rsb, mesh, electric_field, ep_field, np)
-    type(batch_t),     intent(in)    :: rsb
+  subroutine get_electric_field_state(rs_state, mesh, electric_field, ep_field, np)
+    CMPLX,             intent(in)    :: rs_state(:,:)
     type(mesh_t),      intent(in)    :: mesh
     FLOAT,             intent(inout) :: electric_field(:,:)
     FLOAT,   optional, intent(in)    :: ep_field(:)
     integer, optional, intent(in)    :: np
 
-    CMPLX, allocatable :: rs_aux(:,:)
-    integer :: ip, ii, np_
+    integer :: ip, np_
+    type(profile_t), save :: prof
 
     PUSH_SUB(get_electric_field_state)
 
+    call profiling_in(prof, 'GET_ELECTRIC_FIELD_STATE')
+
     np_ = optional_default(np, mesh%np)
-    SAFE_ALLOCATE(rs_aux(1:np_, 1:3))
-    
-    do ii = 1, 3
-       call batch_get_state(rsb, np_, ii, rs_aux(:, ii))
-    end do
-     
+
     do ip = 1, np_
       if (present(ep_field)) then
-        electric_field(ip, :) = sqrt(M_TWO/ep_field(ip)) * TOFLOAT(rs_aux(ip, :))
-      else 
-        electric_field(ip,:) = sqrt(M_TWO/P_ep) * TOFLOAT(rs_aux(ip, :))
+        electric_field(ip, :) = sqrt(M_TWO/ep_field(ip)) * TOFLOAT(rs_state(ip, :))
+      else
+        electric_field(ip,:) = sqrt(M_TWO/P_ep) * TOFLOAT(rs_state(ip, :))
       end if
     end do
 
-    SAFE_DEALLOCATE_A(rs_aux)
+    call profiling_out(prof)
 
     POP_SUB(get_electric_field_state)
 
@@ -570,36 +635,32 @@ contains
 
 
   !----------------------------------------------------------
-  subroutine get_magnetic_field_state(rsb, mesh, rs_sign, magnetic_field, mu_field, np)
-    type(batch_t),     intent(in)    :: rsb
+  subroutine get_magnetic_field_state(rs_state, mesh, rs_sign, magnetic_field, mu_field, np)
+    CMPLX,             intent(in)    :: rs_state(:,:)
     type(mesh_t),      intent(in)    :: mesh
     integer,           intent(in)    :: rs_sign
     FLOAT,             intent(inout) :: magnetic_field(:,:)
     FLOAT,   optional, intent(in)    :: mu_field(:)
     integer, optional, intent(in)    :: np
 
-    CMPLX, allocatable :: rs_aux(:,:)
-    integer :: ip, ii, np_
+    integer :: ip, np_
+    type(profile_t), save :: prof
 
     PUSH_SUB(get_magnetic_field_state)
 
+    call profiling_in(prof, 'GET_MAGNETIC_FIELD_STATE')
+
     np_ = optional_default(np, mesh%np)
-    SAFE_ALLOCATE(rs_aux(1:np_, 1:3))
 
-    do ii = 1, 3
-      call batch_get_state(rsb, np, ii, rs_aux(:, ii))
-    end do
-
-    
     do ip = 1, np_
       if (present(mu_field)) then
-        magnetic_field(ip, :) = sqrt(M_TWO*mu_field(ip)) * rs_sign * aimag(rs_aux(ip, :))
+        magnetic_field(ip, :) = sqrt(M_TWO*mu_field(ip)) * rs_sign * aimag(rs_state(ip, :))
       else
-        magnetic_field(ip, :) = sqrt(M_TWO*P_mu) * rs_sign * aimag(rs_aux(ip, :))
+        magnetic_field(ip, :) = sqrt(M_TWO*P_mu) * rs_sign * aimag(rs_state(ip, :))
       end if
    end do
 
-   SAFE_DEALLOCATE_A(rs_aux)
+   call profiling_out(prof)
 
    POP_SUB(get_magnetic_field_state)
 
@@ -651,7 +712,7 @@ contains
     integer :: ip, np_
 
     PUSH_SUB(get_current_state)
-    
+
     np_ = optional_default(np, mesh%np)
 
     do ip = 1, np_
@@ -678,7 +739,7 @@ contains
 
     integer :: ip, pos_index_local, pos_index_global, rankmin
     FLOAT   :: dmin
-    CMPLX   :: ztmp(MAX_DIM)
+    CMPLX   :: ztmp(mesh%sb%dim)
     CMPLX, allocatable :: ztmp_global(:)
 
     PUSH_SUB(get_rs_state_at_point)
@@ -691,7 +752,7 @@ contains
       if (mesh%parallel_in_domains) then
         ztmp(:) = rs_state(pos_index_local,:)
 #ifdef HAVE_MPI
-        call MPI_Bcast(ztmp, st%d%dim, MPI_CMPLX, rankmin, mesh%mpi_grp%comm, mpi_err)
+        call MPI_Bcast(ztmp, st%dim, MPI_CMPLX, rankmin, mesh%mpi_grp%comm, mpi_err)
         call MPI_Barrier(mesh%mpi_grp%comm, mpi_err)
 #endif
       else
@@ -726,37 +787,47 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine get_poynting_vector(gr, st, rsb, rs_sign, poynting_vector, ep_field, mu_field)
+  subroutine get_poynting_vector(gr, st, rs_state, rs_sign, poynting_vector, ep_field, mu_field, mean_value)
     type(grid_t),             intent(in)    :: gr
     type(states_mxll_t),      intent(in)    :: st
-    type(batch_t),            intent(in)    :: rsb
+    CMPLX,                    intent(in)    :: rs_state(:,:)
     integer,                  intent(in)    :: rs_sign
     FLOAT,                    intent(inout) :: poynting_vector(:,:)
     FLOAT,          optional, intent(in)    :: ep_field(:)
     FLOAT,          optional, intent(in)    :: mu_field(:)
+    FLOAT,          optional, intent(inout) :: mean_value(:)
 
-    integer            :: ip, ii
-    CMPLX, allocatable :: rs_aux(:,:)
+    integer            :: ip, ip_in
 
     PUSH_SUB(get_poynting_vector)
 
-    SAFE_ALLOCATE(rs_aux(1:gr%mesh%np, 1:3))
-    do ii = 1, 3
-       call batch_get_state(rsb, gr%mesh%np, ii, rs_aux(:, ii))
-    end do
-
     if (present(ep_field) .and. present(mu_field)) then
       do ip = 1, gr%mesh%np
-        poynting_vector(ip, :) = M_ONE/mu_field(ip) * sqrt(M_TWO/ep_field(ip)) &
-                              * sqrt(M_TWO*mu_field(ip)) &
-                              * dcross_product(TOFLOAT(rs_aux(ip, :)), rs_sign*aimag(rs_aux(ip, :)))
+        poynting_vector(ip, 1:3) = M_ONE/mu_field(ip) * sqrt(M_TWO/ep_field(ip)) &
+                                * sqrt(M_TWO*mu_field(ip)) &
+                                * dcross_product(TOFLOAT(rs_state(ip, 1:3)), &
+                                rs_sign*aimag(rs_state(ip,1:3)))
       end do
     else
       do ip = 1, gr%mesh%np
-        poynting_vector(ip,:) = M_ONE/st%mu(ip) * sqrt(M_TWO/st%ep(ip)) &
-                              * sqrt(M_TWO*st%mu(ip)) &
-                              * dcross_product(TOFLOAT(rs_aux(ip, :)), rs_sign*aimag(rs_aux(ip, :)))
+        poynting_vector(ip, 1:3) = M_ONE/st%mu(ip) * sqrt(M_TWO/st%ep(ip)) &
+                                * sqrt(M_TWO*st%mu(ip)) &
+                                * dcross_product(TOFLOAT(rs_state(ip, 1:3)), &
+                                rs_sign*aimag(rs_state(ip, 1:3)))
       end do
+    end if
+
+    if (present (mean_value)) then
+      ASSERT(.not. gr%mesh%use_curvilinear)
+      mean_value = M_ZERO
+      do ip_in = 1, st%inner_points_number
+        ip = st%inner_points_map(ip_in)
+        mean_value(1:3)   = mean_value(1:3) + poynting_vector(ip, 1:3)
+      end do
+      mean_value(1:3) = mean_value(1:3) * gr%mesh%volume_element
+      if(gr%mesh%parallel_in_domains) then
+        call comm_allreduce(gr%mesh%mpi_grp%comm, mean_value(1:3))
+      end if
     end if
 
     POP_SUB(get_poynting_vector)
@@ -764,13 +835,14 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine get_poynting_vector_plane_waves(gr, st, rs_sign, poynting_vector)
+  subroutine get_poynting_vector_plane_waves(gr, st, rs_sign, poynting_vector, mean_value)
     type(grid_t),             intent(in)    :: gr
     type(states_mxll_t),      intent(in)    :: st
     integer,                  intent(in)    :: rs_sign
     FLOAT,                    intent(inout) :: poynting_vector(:,:)
+    FLOAT,          optional, intent(inout) :: mean_value(:)
 
-    integer            :: ip
+    integer            :: ip, ip_in
 
     PUSH_SUB(get_poynting_vector_plane_waves)
 
@@ -779,6 +851,18 @@ contains
                & * dcross_product(TOFLOAT(st%rs_state_plane_waves(ip,:)), &
                & rs_sign*aimag(st%rs_state_plane_waves(ip,:)))
     end do
+
+    if (present(mean_value)) then
+      mean_value = M_ZERO
+      do ip_in = 1, st%inner_points_number
+        ip = st%inner_points_map(ip_in)
+        mean_value(:)   = mean_value(:) + poynting_vector(ip,:)
+      end do
+      mean_value(:) = mean_value(:) * gr%mesh%volume_element
+      if(gr%mesh%parallel_in_domains) then
+        call comm_allreduce(gr%mesh%mpi_grp%comm, mean_value(:))
+      end if
+    end if
 
     POP_SUB(get_poynting_vector_plane_waves)
   end subroutine get_poynting_vector_plane_waves

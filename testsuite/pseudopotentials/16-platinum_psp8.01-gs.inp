@@ -15,14 +15,12 @@ Spacing = 0.32
 
 FromScratch = yes
 
-ExtraStates = 4
+ExtraStates = 7
 
 Smearing = 0.1*eV
 SmearingFunction = fermi_dirac
 
 EigenSolver = rmmdiis
-
-PreconditionerFilterFactor=0.6
 
 ConvRelDens = 1e-07
 StatesPack = yes

@@ -50,10 +50,6 @@ The test files consist of lines beginning with one of a set of tags, parsed by t
 # A comment line. Will be ignored.
 Test : title
   Write a title to output to identify the test. Should be the first tag in the file.
-Options:
-  Specify that this test can only be run if the code was compiled with certain options, e.g. scalapack, netcdf, etc. The code is run with "-c" argument to query for options.
-Options_MPI:
-  Like Options, except only applies if the code is being run with MPI, and overrules the Options tag. This is used when a parallel run would require e.g. scalapack or mpi2, but a serial run does not have any option requirement.
 Program :
   Which executable will be used. Typically either "octopus" for normal runs or "oct-test" for special test runs. Anything that does not run properly for both serial and parallel executables is not acceptable.
 TestGroups : group-name, [group-name2, [...]]
@@ -68,6 +64,8 @@ Util : util-name
   Perform a run of a utility in serial (e.g. oct-dielectric_function).
 Input : file-name
   Perform a run, after copying the input file to working directory.
+FailingInput : file-name
+  Same as 'Input', but indicates to the user that the input file will lead to an error of the code, which will be probed by the match line.
 match ; name ; COMMAND(..); reference-value
   Extracts a calculated number from a run and tests it against the reference value. The name is an identifier printed to output. The number is extracted as the standard output from the listed COMMAND, after filtering to remove non-numeric results. Note that an internal comma in the filename can be escaped as '\,'. Also, '_COMMA_' will be converted to ',' and '_COLUMN_' to ';' in any parameters. The COMMAND is one of this set:
   . GREPFIELD(filename, 'search-regex', field, offset)
@@ -82,3 +80,42 @@ match ; name ; COMMAND(..); reference-value
       Returns the specified column of the specified line number from the file. Negative number means from the end of the file. Use GREP instead if possible. Deprecated.
   . SHELL(shell-command)
       The result is the standard output of the listed command. Deprecated; use GREP(FIELD) or LINE(FIELD) unless absolutely necessary.
+
+
+Conditional tests can now be written in the form:
+
+if(available OPTION ); then
+  MATCH1
+else
+  MATCH2
+endif
+
+or
+
+if(available OPTION1); then
+  MATCH1
+elseif(available OPTION2); then
+  MATCH2
+else 
+  MATCH3
+endif
+
+where the MATCHX represents a match line as described above.
+The main purpose of this is to also check whether features, not implemented, give the correct error message.
+In this case, the match line should contain a GREPCOUNT() and check that the error message was printed once.
+
+In order to allow the testing of error messages, a return value different from zero does not automatically trigger a FAIL,
+but rather sets an internal flag, which can be cleared by a correct error match. Error matches are specified by having the word error in the match name.
+
+
+
+
+
+Obsolete and removed features: 
+
+Options:
+  Specify that this test can only be run if the code was compiled with certain options, e.g. scalapack, netcdf, etc. The code is run with "-c" argument to query for options.
+Options_MPI:
+  Like Options, except only applies if the code is being run with MPI, and overrules the Options tag. This is used when a parallel run would require e.g. scalapack or mpi2, but a serial run does not have any option requirement.
+
+are now replaced by the if(); then .. elseif(); then .. else .. endif construction

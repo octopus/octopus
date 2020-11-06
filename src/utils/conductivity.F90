@@ -52,6 +52,10 @@
     type(block_t)     :: blk
     type(batch_t) :: currb, ftcurrb, heatcurrb, ftheatcurrb
     FLOAT :: ww, curtime, deltat, velcm(1:MAX_DIM), vel0(1:MAX_DIM), current(1:MAX_DIM), integral(1:2), v0
+    character(len=MAX_PATH_LEN) :: ref_filename
+    integer :: ref_file, time_steps_ref, kk
+    FLOAT, allocatable :: current_ref(:, :)
+    FLOAT :: dt_ref, tt, start_time
     integer :: ifreq, max_freq
     integer :: skip
     logical :: from_forces
@@ -202,6 +206,45 @@
         end do
         
         call io_close(iunit)
+
+        if(parse_is_defined(global_namespace, 'TransientAbsorptionReference')) then
+          call parse_variable(global_namespace, 'TransientAbsorptionReference', '.', ref_filename)
+          ref_file = io_open(trim(ref_filename)//'/total_current', action='read', status='old', die=.false.)
+          if(ref_file < 0) then
+            message(1) = "Cannot open reference file '"//trim(io_workpath(trim(ref_filename)//'/total_current'))//"'"
+            call messages_fatal(1)
+          end if
+          call io_skip_header(ref_file)
+          call spectrum_count_time_steps(global_namespace, ref_file, time_steps_ref, dt_ref)
+          if(time_steps_ref < ntime) then
+            message(1) = "The reference calculation does not contain enought time steps"
+            call messages_fatal(1)
+          end if
+
+          if(dt_ref /= time(2)-time(1)) then
+            message(1) = "The time step of the reference calculation is different from the current calculation"
+            call messages_fatal(1)
+          end if
+
+          !We remove the reference
+          time_steps_ref = time_steps_ref + 1
+          SAFE_ALLOCATE(current_ref(1:space%dim, 1:time_steps_ref))
+          call io_skip_header(ref_file)
+          do ii = 1, time_steps_ref
+            read(ref_file, *) jj, tt, (current_ref(kk, ii), kk = 1, space%dim)
+          end do
+          call io_close(ref_file)
+          do iter = 1, ntime
+            do kk = 1, space%dim
+              total_current(kk, iter) = total_current(kk, iter) - current_ref(kk, iter)
+            end do
+          end do
+          SAFE_DEALLOCATE_A(current_ref)
+
+          start_time = spectrum%start_time
+          call parse_variable(global_namespace, 'GaugeFieldDelay', start_time, spectrum%start_time )
+        end if
+
         
       else
         
@@ -362,7 +405,7 @@
     ! and \epsilon^-1 = 1 + 4 \pi \chi
     SAFE_ALLOCATE(invdielectric(1:space%dim, 1:energy_steps))
     do ifreq = 1, energy_steps
-      ww = (ifreq-1)*spectrum%energy_step + spectrum%min_energy
+      ww = max((ifreq-1)*spectrum%energy_step + spectrum%min_energy, M_EPSILON)
 
       invdielectric(1:space%dim, ifreq) = (vel0(1:space%dim) + M_FOUR * M_PI * &
                   TOCMPLX(ftcurr(ifreq, 1:space%dim, 2),-ftcurr(ifreq, 1:space%dim, 1)) / ww )/v0

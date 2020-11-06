@@ -59,7 +59,7 @@ program oct_unfold
   use states_elec_oct_m
   use states_elec_restart_oct_m
   use states_elec_dim_oct_m
-  use system_oct_m
+  use electrons_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use utils_oct_m
@@ -69,7 +69,7 @@ program oct_unfold
 
   implicit none
 
-  type(system_t), pointer :: sys
+  type(electrons_t), pointer :: sys
   type(simul_box_t)     :: sb
   integer               :: ik, idim, nkpoints
   type(restart_t)       :: restart
@@ -108,7 +108,8 @@ program oct_unfold
   call restart_module_init(global_namespace)
 
   call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
-  sys => system_init(global_namespace)
+  sys => electrons_t(global_namespace)
+  call sys%init_parallelization(mpi_world)
   call simul_box_init(sb, global_namespace, sys%geo, sys%space)
 
   if(sb%periodic_dim == 0) then

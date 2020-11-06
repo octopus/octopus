@@ -1,0 +1,117 @@
+# ----- Calculation mode and parallelization ----------------------------------
+
+CalculationMode   = td
+RestartWrite = no
+ExperimentalFeatures = yes
+FromScratch = yes
+
+Dimensions = 3
+
+%Systems
+  'Maxwell' | maxwell
+  'ChargedParticle' | charged_particle
+%
+
+# ----- Charged particle ------------------------------------------------------
+
+ChargedParticle.ParticleMass = 1
+ChargedParticle.ParticleCharge = 1
+
+%ChargedParticle.ParticleInitialPosition
+ 1 | 0.0001 | 0.0001
+%
+%ChargedParticle.ParticleInitialVelocity
+ 0 | 0 | 0.01
+%
+
+ChargedParticle.TDSystemPropagator = exp_mid
+
+
+# ----- Maxwell variables -----------------------------------------------------
+
+Maxwell.ParDomains = auto
+Maxwell.ParStates  = no
+
+HamiltonianOperator = faraday_ampere
+
+Maxwell.TDSystemPropagator = exp_mid
+
+%MaxwellBoundaryConditions
+ constant | constant | constant
+%
+
+%MaxwellAbsorbingBoundaries
+ not_absorbing | not_absorbing | not_absorbing
+%
+
+# ----- Maxwell box variables -------------------------------------------------
+
+lsize_mx = 12.0
+dx_mx    = 0.5
+
+Maxwell.BoxShape   = parallelepiped
+
+%Maxwell.Lsize
+ lsize_mx | lsize_mx | lsize_mx
+%
+
+%Maxwell.Spacing
+ dx_mx | dx_mx | dx_mx
+%
+
+
+# ----- Output variables ------------------------------------------------------
+
+OutputFormat = plane_x + plane_y + plane_z + vtk + xyz + axis_x
+
+
+# ----- Maxwell output variables ----------------------------------------------
+
+MaxwellOutput = electric_field + magnetic_field + maxwell_energy_density
+
+MaxwellOutputInterval = 50
+MaxwellTDOutput       = maxwell_energy + maxwell_fields
+
+%MaxwellFieldsCoordinate
+  0.00 | 0.00 | 0.00
+%
+
+
+# ----- Time step variables ---------------------------------------------------
+
+TDTimeStep = 0.2
+TDPropagationTime = 2
+
+
+# ----- Spatially constant magnetic field -------------------------------------
+
+Ez           = 0.00000000
+By           = 0.010000000
+pulse_width  = 500.0
+pulse_shift  = 270.0
+pulse_slope  = 100.0
+
+# Column 1: constant electric field component in x-direction
+# Column 2: constant electric field component in y-direction
+# Column 3: constant electric field component in z-direction
+# Column 4: constant magnetic field component in x-direction
+# Column 5: constant magnetic field component in y-direction
+# Column 6: constant magnetic field component in z-direction
+# Column 7: name of the td function
+
+%UserDefinedConstantSpatialMaxwellField
+0 | 0 | Ez | 0 | By | 0 | "time_function"
+%
+
+PropagateSpatialMaxwellField = no
+
+# Column 1: name of the td function
+# Column 2: function
+# Column 3: amplitude
+# Column 4: pulse slope
+# Column 5: pulse width
+# Column 6: pulse shift
+
+%TDFunctions
+"time_function" | tdf_cw | 1.0
+%

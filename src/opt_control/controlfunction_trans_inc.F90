@@ -224,7 +224,7 @@
     type(controlfunction_t), intent(inout) :: par
     
     integer :: i, mm, nn, n, j, k
-    FLOAT :: t, det, w1, dt
+    FLOAT :: t, w1, dt
     FLOAT, allocatable :: neigenvec(:, :), eigenvec(:, :), eigenval(:)
 
     type(tdf_t), allocatable :: fnn(:)
@@ -363,7 +363,7 @@
 
       par%utransf = transpose(eigenvec)
       par%utransfi = par%utransf
-      det = lalg_inverter(par%dim, par%utransfi)
+      call lalg_inverter(par%dim, par%utransfi)
 
       SAFE_DEALLOCATE_A(eigenvec)
       SAFE_DEALLOCATE_A(eigenval)
@@ -448,7 +448,7 @@
       end do
       par%utransf = transpose(eigenvec)
       par%utransfi = par%utransf
-      det = lalg_inverter(n-1, par%utransfi)
+      call lalg_inverter(n-1, par%utransfi)
 
       SAFE_DEALLOCATE_A(eigenvec)
       SAFE_DEALLOCATE_A(neigenvec)

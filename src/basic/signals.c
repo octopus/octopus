@@ -55,13 +55,12 @@ void FC_FUNC_(unblock_signals, UNBLOCK_SIGNALS)(){
 #endif
 }
 
-void FC_FUNC_(dump_call_stack, DUMP_CALL_STACK)(fint *);
+void handle_segv(int *);
 
 #if defined(HAVE_SIGACTION) && defined(HAVE_SIGNAL_H)
 					       
 void segv_handler(int signum, siginfo_t * si, void * vd){
-  fint isignal = signum;
-  FC_FUNC_(dump_call_stack, DUMP_CALL_STACK)(&isignal);
+  handle_segv(&signum);
   signal(signum, SIG_DFL);
   kill(getpid(), signum);
 }

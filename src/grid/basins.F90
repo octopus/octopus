@@ -128,11 +128,10 @@ contains
 
       integer :: ii_max
 
-      PUSH_SUB(basins_analyze.steep_fill)
-
+      ! No PUSH/POP_SUB in a recursive routine, as the recursion limit of 50 can be reached.
+      
       if(this%map(ii) >= 0) then
         color = this%map(ii)
-        POP_SUB(basins_analyze.steep_fill)
         return
       end if
       this%map(ii) = -2
@@ -150,7 +149,6 @@ contains
       end if
       this%map(ii) = color
 
-      POP_SUB(basins_analyze.steep_fill)
     end function steep_fill
 
 

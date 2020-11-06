@@ -24,7 +24,6 @@
 module curv_gygi_oct_m
   use geometry_oct_m
   use global_oct_m
-  use loct_pointer_oct_m
   use messages_oct_m
   use namespace_oct_m
   use parser_oct_m
@@ -63,11 +62,12 @@ module curv_gygi_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine curv_gygi_init(cv, namespace, sb, geo)
+  subroutine curv_gygi_init(cv, namespace, sb, geo, min_scaling_product)
     type(curv_gygi_t), intent(out) :: cv
     type(namespace_t), intent(in)  :: namespace
     type(simul_box_t), intent(in)  :: sb
     type(geometry_t),  intent(in)  :: geo
+    FLOAT,             intent(out) :: min_scaling_product
 
     integer :: ipos, idir
 
@@ -122,6 +122,8 @@ contains
       end do
     end do
 
+    call curv_gygi_min_scaling(sb, cv, min_scaling_product)
+
     POP_SUB(curv_gygi_init)
   end subroutine curv_gygi_init
 
@@ -134,7 +136,7 @@ contains
     this_out%A=this_in%A
     this_out%alpha=this_in%alpha
     this_out%beta=this_in%beta
-    call loct_pointer_copy(this_out%pos, this_in%pos)
+    SAFE_ALLOCATE_SOURCE_P(this_out%pos, this_in%pos)
     this_out%npos=this_in%npos
     POP_SUB(curv_gygi_copy)
     return
@@ -278,6 +280,16 @@ contains
     end do
 
   end subroutine curv_gygi_jacobian
+
+
+  ! ---------------------------------------------------------
+  subroutine curv_gygi_min_scaling(sb, cv, min_scaling_product)
+    type(simul_box_t), intent(in)  :: sb
+    type(curv_gygi_t), intent(in)  :: cv
+    FLOAT,             intent(out) :: min_scaling_product
+    
+    min_scaling_product = (1.0 / (1.0 + cv%A))**sb%dim
+  end subroutine curv_gygi_min_scaling
 
 end module curv_gygi_oct_m
 

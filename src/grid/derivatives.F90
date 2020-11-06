@@ -88,7 +88,8 @@ module derivatives_oct_m
     dderivatives_batch_curl,            &
     zderivatives_batch_curl,            &
     dderivatives_partial,               &
-    zderivatives_partial
+    zderivatives_partial,               &
+    derivatives_get_lapl
 
 
   integer, parameter ::     &
@@ -151,8 +152,6 @@ module derivatives_oct_m
   end type derivatives_handle_batch_t
 
   type(accel_kernel_t) :: kernel_uvw_xyz, kernel_dcurl, kernel_zcurl
-
-  type(profile_t), save :: gradient_prof, divergence_prof, curl_prof, batch_gradient_prof, curl_batch_prof
 
 contains
 
@@ -763,6 +762,61 @@ contains
     POP_SUB(derivatives_overlap)
   end function derivatives_overlap
 #endif
+
+  ! ---------------------------------------------------------
+  subroutine derivatives_get_lapl(this, op, name, order) 
+    type(derivatives_t),         intent(in)    :: this
+    type(nl_operator_t),         intent(inout) :: op(:) 
+    character(len=32),           intent(in)    :: name
+    integer,                     intent(in)    :: order
+
+    integer, allocatable :: polynomials(:,:)
+    FLOAT, allocatable :: rhs(:,:)
+    integer :: i, j, k
+    logical :: this_one
+  
+    PUSH_SUB(derivatives_get_lapl)
+
+    call nl_operator_init(op(1), name)
+    if(this%mesh%sb%nonorthogonal) then
+      call stencil_stargeneral_get_arms(op(1)%stencil, this%mesh%sb)
+      call stencil_stargeneral_get_lapl(op(1)%stencil, this%dim, order)
+    else
+      call stencil_star_get_lapl(op(1)%stencil, this%dim, order)
+    end if
+    call nl_operator_build(this%mesh, op(1), this%mesh%np, const_w = .not. this%mesh%use_curvilinear)
+
+    !At the moment this code is almost copy-pasted from derivatives_build.
+    if(this%mesh%sb%nonorthogonal) then
+      op(1)%stencil%npoly = op(1)%stencil%size &
+         + order*(2*order-1)*op(1)%stencil%stargeneral%narms
+    end if
+    SAFE_ALLOCATE(polynomials(1:this%dim, 1:op(1)%stencil%npoly))
+    SAFE_ALLOCATE(rhs(1:op(1)%stencil%size, 1:1))
+    if(this%mesh%sb%nonorthogonal) then
+      call stencil_stargeneral_pol_lapl(op(1)%stencil, this%dim, order, polynomials)
+    else
+      call stencil_star_polynomials_lapl(this%dim, order, polynomials)
+    end if
+    ! find right-hand side for operator
+    rhs(:,1) = M_ZERO
+    do i = 1, this%dim
+      do j = 1, op(1)%stencil%npoly
+        this_one = .true.
+        do k = 1, this%dim
+          if(k == i .and. polynomials(k, j) /= 2) this_one = .false.
+          if(k /= i .and. polynomials(k, j) /= 0) this_one = .false.
+        end do
+        if(this_one) rhs(j,1) = M_TWO
+      end do
+    end do
+    call derivatives_make_discretization(this%dim, this%mesh, this%masses, &
+             polynomials, rhs, 1, op(1:1), name, force_orthogonal = .true.)
+    SAFE_DEALLOCATE_A(polynomials)
+    SAFE_DEALLOCATE_A(rhs)
+
+    POP_SUB(derivatives_get_lapl)
+  end subroutine derivatives_get_lapl
 
   
 #include "undef.F90"

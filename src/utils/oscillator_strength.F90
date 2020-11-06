@@ -607,7 +607,7 @@ contains
     logical :: file_exists
     integer :: i, j, nspin, time_steps, lmax, nfiles, k, add_lm, l, m, max_add_lm
     integer, allocatable :: iunit(:)
-    FLOAT :: dt, lambda, det, dump, o0
+    FLOAT :: dt, lambda, dump, o0
     type(unit_t) :: mp_unit
     FLOAT, allocatable :: q(:), mu(:), qq(:, :), c(:)
     character(len=20) :: filename
@@ -733,7 +733,7 @@ contains
      end do
     end do
   
-    det = lalg_inverter(nfiles, qq, invert = .true.)
+    call lalg_inverter(nfiles, qq)
   
     mu = matmul(qq, c)
   

@@ -27,10 +27,11 @@ subroutine X(cholesky)(n, a, bof, err_code)
 
   integer :: info
 
-  call profiling_in(cholesky_prof, "CHOLESKY")
+  call profiling_in(cholesky_prof, TOSTRING(X(CHOLESKY)))
   PUSH_SUB(X(cholesky))
 
   ASSERT(n > 0)
+  ASSERT(not_in_openmp())
 
   call lapack_potrf('U', n, a(1, 1), lead_dim(a), info)
   if(info /= 0) then
@@ -87,10 +88,11 @@ subroutine X(geneigensolve)(n, a, b, e, preserve_mat, bof, err_code)
 #endif
   R_TYPE, allocatable :: work(:), diag(:)
 
-  call profiling_in(eigensolver_prof, "DENSE_EIGENSOLVER")
+  call profiling_in(eigensolver_prof, TOSTRING(X(DENSE_EIGENSOLVER)))
   PUSH_SUB(X(geneigensolve))
 
   ASSERT(n > 0)
+  ASSERT(not_in_openmp())
 
   if(preserve_mat) then
     SAFE_ALLOCATE(diag(1:n))
@@ -190,6 +192,7 @@ subroutine X(eigensolve_nonh)(n, a, e, err_code, side, sort_eigenvectors)
   PUSH_SUB(X(eigensolve_nonh))
 
   ASSERT(n > 0)
+  ASSERT(not_in_openmp())
 
   if (present(side)) then
     side_ = side
@@ -310,6 +313,7 @@ subroutine X(lowest_geneigensolve)(k, n, a, b, e, v, preserve_mat, bof, err_code
   PUSH_SUB(X(lowest_geneigensolve))
 
   ASSERT(n > 0)
+  ASSERT(not_in_openmp())
 
   abstol = 2*sfmin()
 
@@ -439,9 +443,10 @@ subroutine X(eigensolve)(n, a, e, bof, err_code)
 #endif
 
   PUSH_SUB(X(eigensolve))
-  call profiling_in(eigensolver_prof, "DENSE_EIGENSOLVER")
+  call profiling_in(eigensolver_prof, TOSTRING(X(DENSE_EIGENSOLVER)))
 
   ASSERT(n > 0)
+  ASSERT(not_in_openmp())
 
   lwork = 6*n ! query?
   SAFE_ALLOCATE(work(1:lwork))
@@ -511,6 +516,7 @@ subroutine X(lowest_eigensolve)(k, n, a, e, v, preserve_mat)
   PUSH_SUB(X(lowest_eigensolve))
 
   ASSERT(n > 0)
+  ASSERT(not_in_openmp())
 
   abstol = 2*sfmin()
 
@@ -599,10 +605,57 @@ end subroutine X(lowest_eigensolve)
 
 ! ---------------------------------------------------------
 !> Invert a real symmetric or complex Hermitian square matrix a
-R_TYPE function X(determinant)(n, a, invert) result(d)
+R_TYPE function X(determinant)(n, a, preserve_mat) result(d)
   integer, intent(in)           :: n
-  R_TYPE,   intent(inout)       :: a(:,:) !< (n,n)
-  logical, intent(in), optional :: invert
+  R_TYPE, target, intent(inout) :: a(:,:) !< (n,n)
+  logical, intent(in)           :: preserve_mat
+
+  integer :: info, i
+  integer, allocatable :: ipiv(:)
+  R_TYPE, pointer :: tmp_a(:,:)
+
+  ! No PUSH_SUB, called too often
+
+  ASSERT(n > 0)
+  ASSERT(not_in_openmp())
+
+  SAFE_ALLOCATE(ipiv(1:n))
+
+  if(preserve_mat) then
+    SAFE_ALLOCATE(tmp_a(1:n, 1:n))
+    tmp_a(1:n, 1:n) = a(1:n, 1:n)
+  else
+    tmp_a => a
+  end if
+
+  call lapack_getrf(n, n, tmp_a(1, 1), lead_dim(tmp_a), ipiv(1), info)
+  if(info < 0) then
+    write(message(1), '(5a, i5)') 'In ', TOSTRING(X(determinant)), ', LAPACK ', TOSTRING(X(getrf)), ' returned info = ', info
+    call messages_fatal(1)
+  end if
+
+  d = M_ONE
+  do i = 1, n
+    if(ipiv(i) /= i) then
+      d = - d*tmp_a(i, i)
+    else
+      d = d*tmp_a(i, i)
+    end if
+  end do
+
+  SAFE_DEALLOCATE_A(ipiv)
+  if(preserve_mat) then
+    SAFE_DEALLOCATE_P(tmp_a)
+  end if
+
+end function X(determinant)
+
+! ---------------------------------------------------------
+!> Invert a real symmetric or complex Hermitian square matrix a
+subroutine X(inverter)(n, a, det)
+  integer,           intent(in)     :: n
+  R_TYPE,            intent(inout)  :: a(:,:) !< (n,n)
+  R_TYPE,  optional, intent(out)    :: det
 
   integer :: info, i
   integer, allocatable :: ipiv(:)
@@ -611,6 +664,7 @@ R_TYPE function X(determinant)(n, a, invert) result(d)
   ! No PUSH_SUB, called too often
 
   ASSERT(n > 0)
+  ASSERT(not_in_openmp())
 
   SAFE_ALLOCATE(work(1:n)) ! query?
   SAFE_ALLOCATE(ipiv(1:n))
@@ -621,38 +675,39 @@ R_TYPE function X(determinant)(n, a, invert) result(d)
     call messages_fatal(1)
   end if
 
-  d = M_ONE
-  do i = 1, n
-    if(ipiv(i) /= i) then
-      d = - d*a(i, i)
-    else
-      d = d*a(i, i)
-    end if
-  end do
+  if(present(det)) then
+    det = M_ONE
+    do i = 1, n
+      if(ipiv(i) /= i) then
+        det = - det*a(i, i)
+      else
+        det = det*a(i, i)
+      end if
+    end do
+  end if
 
-  if(optional_default(invert, .true.)) then
-    call lapack_getri(n, a(1, 1), lead_dim(a), ipiv(1), work(1), n, info)
-    if(info /= 0) then
-      write(message(1), '(5a, i5)') 'In ', TOSTRING(X(determinant)), ', LAPACK ', TOSTRING(X(getri)), ' returned info = ', info
+
+  call lapack_getri(n, a(1, 1), lead_dim(a), ipiv(1), work(1), n, info)
+  if(info /= 0) then
+    write(message(1), '(5a, i5)') 'In ', TOSTRING(X(determinant)), ', LAPACK ', TOSTRING(X(getri)), ' returned info = ', info
 !    http://www.netlib.org/lapack/explore-3.1.1-html/zgetri.f.html
 !*  INFO    (output) INTEGER
 !*          = 0:  successful exit
 !*          < 0:  if INFO = -i, the i-th argument had an illegal value
 !*          > 0:  if INFO = i, U(i,i) is exactly zero; the matrix is
 !*                singular and its inverse could not be computed.
-    if(info < 0) then
-      write(message(2), '(a,i5,a)') 'Argument number ', -info, ' had an illegal value.'
-    else
-      write(message(2), '(a,i5,a)') 'Diagonal element ', info, ' of U is 0; matrix is singular.'
-    end if
-    call messages_fatal(2)
-    end if
+  if(info < 0) then
+    write(message(2), '(a,i5,a)') 'Argument number ', -info, ' had an illegal value.'
+  else
+    write(message(2), '(a,i5,a)') 'Diagonal element ', info, ' of U is 0; matrix is singular.'
+  end if
+  call messages_fatal(2)
   end if
 
   SAFE_DEALLOCATE_A(work)
   SAFE_DEALLOCATE_A(ipiv)
 
-end function X(determinant)
+end subroutine X(inverter)
 
 
 ! ---------------------------------------------------------
@@ -669,6 +724,7 @@ subroutine X(sym_inverter)(uplo, n, a)
   PUSH_SUB(X(sym_inverter))
 
   ASSERT(n > 0)
+  ASSERT(not_in_openmp())
 
   SAFE_ALLOCATE(work(1:n)) ! query?
   SAFE_ALLOCATE(ipiv(1:n))
@@ -722,6 +778,13 @@ subroutine dlinsyssolve(n, nrhs, a, b, x)
   ! no PUSH_SUB, called too often
 
   ASSERT(n > 0)
+  ASSERT(not_in_openmp())
+  ASSERT(ubound(a, dim=1) >= n)
+  ASSERT(ubound(a, dim=2) >= n)
+  ASSERT(ubound(b, dim=1) >= n)
+  ASSERT(ubound(b, dim=2) >= nrhs)
+  ASSERT(ubound(x, dim=1) >= n)
+  ASSERT(ubound(x, dim=2) >= nrhs)
 
   SAFE_ALLOCATE(ipiv(1:n))
   SAFE_ALLOCATE(iwork(1:n)) ! query?
@@ -732,8 +795,8 @@ subroutine dlinsyssolve(n, nrhs, a, b, x)
   SAFE_ALLOCATE(c(1:n))
   SAFE_ALLOCATE(af(1:n, 1:n))
 
-  call X(gesvx) ("N", "N", n, nrhs, a(1, 1), n, af(1, 1), n, ipiv(1), equed, r(1), c(1), b(1, 1), n, x(1, 1), n, &
-    rcond, ferr(1), berr(1), work(1), iwork(1), info)
+  call X(gesvx) ("N", "N", n, nrhs, a(1, 1), lead_dim(a), af(1, 1), n, ipiv(1), equed, r(1), c(1), &
+    b(1, 1), lead_dim(b), x(1, 1), lead_dim(x), rcond, ferr(1), berr(1), work(1), iwork(1), info)
 
   if(info /= 0) then
     write(message(1), '(3a, i5)') 'In dlinsyssolve, LAPACK ', TOSTRING(X(gesvx)), ' returned info = ', info
@@ -796,6 +859,7 @@ subroutine zlinsyssolve(n, nrhs, a, b, x)
   PUSH_SUB(zlinsyssolve)
 
   ASSERT(n > 0)
+  ASSERT(not_in_openmp())
 
   SAFE_ALLOCATE(ipiv(1:n)) ! query?
   SAFE_ALLOCATE(rwork(1:2*n))
@@ -884,6 +948,7 @@ subroutine dsingular_value_decomp(m, n, a, u, vt, sg_values)
 
   ASSERT(n > 0)
   ASSERT(m > 0)
+  ASSERT(not_in_openmp())
 
 
   ! double minimum lwork size to increase performance (see manpage)
@@ -932,6 +997,7 @@ subroutine dsvd_inverse(m, n, a, threshold)
 
   ASSERT(n > 0)
   ASSERT(m > 0)
+  ASSERT(not_in_openmp())
   minmn = min(m,n)
 
   SAFE_ALLOCATE( u(1:m, 1:m))
@@ -1001,6 +1067,7 @@ subroutine zsingular_value_decomp(m, n, a, u, vt, sg_values)
 
   ASSERT(n > 0)
   ASSERT(m > 0)
+  ASSERT(not_in_openmp())
 
   ! double minimum lwork size to increase performance (see manpage)
   lwork = 2*( 2*min(m, n) + max(m, n) )
@@ -1050,6 +1117,7 @@ subroutine zsvd_inverse(m, n, a, threshold)
 
   ASSERT(n > 0)
   ASSERT(m > 0)
+  ASSERT(not_in_openmp())
   minmn = min(m,n)
 
   SAFE_ALLOCATE( u(1:m, 1:m))
@@ -1112,6 +1180,7 @@ subroutine X(invert_upper_triangular)(n, a)
   PUSH_SUB(X(invert_upper_triangular))
 
   ASSERT(n > 0)
+  ASSERT(not_in_openmp())
 
   call X(trtri)('U', 'N', n, a(1, 1), lead_dim(a), info)
 
@@ -1137,11 +1206,12 @@ end subroutine X(invert_upper_triangular)
 
 
 
-subroutine X(least_squares_vec)(nn, aa, bb, xx)
-  integer, intent(in)    :: nn
-  R_TYPE,  intent(inout) :: aa(:, :)
-  R_TYPE,  intent(in)    :: bb(:)
-  R_TYPE,  intent(out)   :: xx(:)
+subroutine X(least_squares_vec)(nn, aa, bb, xx, preserve_mat)
+  integer, intent(in)            :: nn
+  R_TYPE,  intent(inout), target :: aa(:, :)
+  R_TYPE,  intent(in)            :: bb(:)
+  R_TYPE,  intent(out)           :: xx(:)
+  logical, intent(in)            :: preserve_mat
 
   R_TYPE :: dlwork
   R_TYPE, allocatable :: work(:)
@@ -1150,31 +1220,43 @@ subroutine X(least_squares_vec)(nn, aa, bb, xx)
 #ifndef R_TREAL
   FLOAT, allocatable :: rwork(:)
 #endif 
+  R_TYPE, pointer :: tmp_aa(:,:)
   
   PUSH_SUB(X(least_squares_vec))
 
+  ASSERT(not_in_openmp())
+
+  if(preserve_mat) then
+    SAFE_ALLOCATE(tmp_aa(1:nn, 1:nn))
+    tmp_aa(1:nn, 1:nn) = aa(1:nn, 1:nn)
+  else
+    tmp_aa => aa
+  end if
 
   xx(1:nn) = bb(1:nn)
 
   SAFE_ALLOCATE(ss(1:nn))
 
-! MJV 2016 11 09 : TODO: this is callable with complex, but does nothing!!!
 #ifdef R_TREAL
-  
-  call lapack_gelss(nn, nn, 1, aa(1, 1), lead_dim(aa), xx(1), nn, ss(1), CNST(-1.0), rank, dlwork, -1, info)
+  call lapack_gelss(nn, nn, 1, tmp_aa(1, 1), lead_dim(tmp_aa), xx(1), nn, ss(1), CNST(-1.0), rank, dlwork, -1, info)
 
   SAFE_ALLOCATE(work(1:int(dlwork)))
 
-  call lapack_gelss(nn, nn, 1, aa(1, 1), lead_dim(aa), xx(1), nn, ss(1), CNST(-1.0), rank, work(1), int(dlwork), info)
+  call lapack_gelss(nn, nn, 1, tmp_aa(1, 1), lead_dim(tmp_aa), xx(1), nn, ss(1), CNST(-1.0), rank, work(1), int(dlwork), info)
 #else
   SAFE_ALLOCATE(rwork(1:5*nn))
-  call lapack_gelss(nn, nn, 1, aa(1, 1), lead_dim(aa), xx(1), nn, ss(1), CNST(-1.0), rank, dlwork, -1, rwork(1), info)
+  call lapack_gelss(nn, nn, 1, tmp_aa(1, 1), lead_dim(tmp_aa), xx(1), nn, ss(1), CNST(-1.0), rank, dlwork, -1, rwork(1), info)
 
   SAFE_ALLOCATE(work(1:int(dlwork)))
 
-  call lapack_gelss(nn, nn, 1, aa(1, 1), lead_dim(aa), xx(1), nn, ss(1), CNST(-1.0), rank, work(1), int(dlwork), rwork(1), info)
+  call lapack_gelss(nn, nn, 1, tmp_aa(1, 1), lead_dim(tmp_aa), xx(1), nn, ss(1), CNST(-1.0), rank, work(1), int(dlwork), rwork(1), info)
   SAFE_DEALLOCATE_A(rwork)
 #endif
+
+  SAFE_DEALLOCATE_A(ss)
+  if(preserve_mat) then
+    SAFE_DEALLOCATE_P(tmp_aa)
+  end if
 
   if(info /= 0) then
     write(message(1), '(5a,i5)') &

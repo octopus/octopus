@@ -89,3 +89,5 @@ ConvAbsEv = 1e-5
 0.000000 | 0.000000 | 0.055556 | 0.000000
 %
 StatesPack = yes
+LCAOStart = lcao_full
+

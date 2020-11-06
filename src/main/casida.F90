@@ -42,8 +42,10 @@ module casida_oct_m
   use messages_oct_m
   use mpi_oct_m
   use multicomm_oct_m
+  use multisystem_basic_oct_m
   use namespace_oct_m
   use parser_oct_m
+  use pcm_oct_m
   use pert_oct_m
   use phonons_lr_oct_m
   use poisson_oct_m
@@ -56,7 +58,7 @@ module casida_oct_m
   use states_elec_dim_oct_m
   use states_elec_restart_oct_m
   use sternheimer_oct_m
-  use system_oct_m
+  use electrons_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use utils_oct_m
@@ -111,37 +113,37 @@ module casida_oct_m
     
     logical, allocatable :: is_included(:,:,:) !< (i, a, k) is in the basis?
     integer           :: n_pairs        !< number of pairs to take into account
-    type(states_pair_t), pointer :: pair(:)
-    integer, pointer  :: index(:,:,:)   !< index(pair(j)%i, pair(j)%a, pair(j)%kk) = j
-    integer, pointer  :: ind(:)         !< ordering in energy of solutions
+    type(states_pair_t), allocatable :: pair(:)
+    integer, allocatable  :: index(:,:,:)   !< index(pair(j)%i, pair(j)%a, pair(j)%kk) = j
+    integer, allocatable  :: ind(:)         !< ordering in energy of solutions
 
-    FLOAT,   pointer  :: dmat(:,:)      !< general-purpose matrix
-    FLOAT,   pointer  :: dmat_save(:,:) !< to save mat when it gets turned into the eigenvectors
-    CMPLX,   pointer  :: zmat(:,:)      !< general-purpose matrix
-    CMPLX,   pointer  :: zmat_save(:,:) !< to save mat when it gets turned into the eigenvectors
-    FLOAT,   pointer  :: w(:)           !< The excitation energies.
-    FLOAT,   pointer  :: dtm(:, :)      !< The transition matrix elements (between the many-particle states)
-    CMPLX,   pointer  :: ztm(:, :)      !< The transition matrix elements (between the many-particle states)
-    FLOAT,   pointer  :: f(:)           !< The (dipole) strengths
-    FLOAT,   pointer  :: s(:)           !< The diagonal part of the S-matrix
+    FLOAT,   allocatable  :: dmat(:,:)      !< general-purpose matrix
+    FLOAT,   allocatable  :: dmat_save(:,:) !< to save mat when it gets turned into the eigenvectors
+    CMPLX,   allocatable  :: zmat(:,:)      !< general-purpose matrix
+    CMPLX,   allocatable  :: zmat_save(:,:) !< to save mat when it gets turned into the eigenvectors
+    FLOAT,   allocatable  :: w(:)           !< The excitation energies.
+    FLOAT,   allocatable  :: dtm(:, :)      !< The transition matrix elements (between the many-particle states)
+    CMPLX,   allocatable  :: ztm(:, :)      !< The transition matrix elements (between the many-particle states)
+    FLOAT,   allocatable  :: f(:)           !< The (dipole) strengths
+    FLOAT,   allocatable  :: s(:)           !< The diagonal part of the S-matrix
 
-    FLOAT,   pointer  :: rho(:,:)       !< density
-    FLOAT,   pointer  :: fxc(:,:,:)     !< derivative of xc potential
+    FLOAT,   allocatable  :: rho(:,:)       !< density
+    FLOAT,   allocatable  :: fxc(:,:,:)     !< derivative of xc potential
     FLOAT             :: kernel_lrc_alpha
 
-    FLOAT,   pointer  :: dmat2(:,:)     !< matrix to diagonalize for forces
-    CMPLX,   pointer  :: zmat2(:,:)     !< matrix to diagonalize for forces
-    FLOAT,   pointer  :: dlr_hmat2(:,:) !< derivative of single-particle contribution to mat
-    CMPLX,   pointer  :: zlr_hmat2(:,:) !< derivative of single-particle contribution to mat
-    FLOAT,   pointer  :: forces(:,:,:)  !< excited-state forces
-    FLOAT,   pointer  :: dw2(:)         !< perturbed excitation energies.
-    FLOAT,   pointer  :: zw2(:)         !< perturbed excitation energies.
+    FLOAT,   allocatable  :: dmat2(:,:)     !< matrix to diagonalize for forces
+    CMPLX,   allocatable  :: zmat2(:,:)     !< matrix to diagonalize for forces
+    FLOAT,   allocatable  :: dlr_hmat2(:,:) !< derivative of single-particle contribution to mat
+    CMPLX,   allocatable  :: zlr_hmat2(:,:) !< derivative of single-particle contribution to mat
+    FLOAT,   allocatable  :: forces(:,:,:)  !< excited-state forces
+    FLOAT,   allocatable  :: dw2(:)         !< perturbed excitation energies.
+    FLOAT,   allocatable  :: zw2(:)         !< perturbed excitation energies.
 
     ! variables for momentum-transfer-dependent calculation
     logical           :: qcalc
     FLOAT             :: qvector(MAX_DIM)
-    FLOAT,   pointer  :: qf(:)
-    FLOAT,   pointer  :: qf_avg(:)      !< Directionally averaged intensity
+    FLOAT,   allocatable  :: qf(:)
+    FLOAT,   allocatable  :: qf_avg(:)      !< Directionally averaged intensity
     integer           :: avg_order      !< Quadrature order for directional averaging (Gauss-Legendre scheme) 
 
     logical           :: parallel_in_eh_pairs
@@ -201,9 +203,27 @@ contains
   end subroutine casida_run_init
 
   ! ---------------------------------------------------------
-  subroutine casida_run(sys, fromScratch)
-    type(system_t),      intent(inout) :: sys
-    logical,             intent(inout) :: fromScratch
+  subroutine casida_run(system, from_scratch)
+    class(*),        intent(inout) :: system
+    logical,         intent(in)    :: from_scratch
+
+    PUSH_SUB(casida_run)
+
+    select type (system)
+    class is (multisystem_basic_t)
+      message(1) = "CalculationMode = casida not implemented for multi-system calculations"
+      call messages_fatal(1)
+    type is (electrons_t)
+      call casida_run_legacy(system, from_scratch)
+    end select
+
+    POP_SUB(casida_run)
+  end subroutine casida_run
+
+  ! ---------------------------------------------------------
+  subroutine casida_run_legacy(sys, fromScratch)
+    type(electrons_t), intent(inout) :: sys
+    logical,           intent(in)    :: fromScratch
 
     type(casida_t) :: cas
     type(block_t) :: blk
@@ -213,8 +233,12 @@ contains
     logical :: is_frac_occ
     type(restart_t) :: gs_restart
 
-    PUSH_SUB(casida_run)
+    PUSH_SUB(casida_run_legacy)
     call profiling_in(prof, 'CASIDA')
+
+    if (sys%hm%pcm%run_pcm) then
+      call messages_not_implemented("PCM for CalculationMode /= gs or td")
+    end if
 
     if (simul_box_is_periodic(sys%gr%sb)) then
       message(1) = "Casida oscillator strengths will be incorrect in periodic systems."
@@ -277,7 +301,7 @@ contains
     ! setup Hamiltonian, without recalculating eigenvalues (use the ones from the restart information)
     message(1) = 'Info: Setting up Hamiltonian.'
     call messages_info(1)
-    call system_h_setup(sys, calc_eigenval=.false.)
+    call v_ks_h_setup(sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, calc_eigenval=.false.)
 
     !%Variable CasidaTheoryLevel
     !%Type flag
@@ -335,7 +359,7 @@ contains
     cas%pt_nmodes = 0
     if (cas%has_photons) then
       if(cas%has_photons) call messages_experimental('Photons = yes')  
-      call photon_mode_init(cas%pt, sys%namespace, sys%gr)
+      call photon_mode_init(cas%pt, sys%namespace, sys%gr%mesh, sys%gr%sb%dim, sys%st%qtot)
       write(message(1), '(a,i7,a)') 'Happy to have Casida with ', cas%pt%nmodes, ' photon modes.'
       call messages_info(1)
       cas%pt_nmodes = cas%pt%nmodes
@@ -597,14 +621,14 @@ contains
     call casida_type_end(cas)
 
     call profiling_out(prof)
-    POP_SUB(casida_run)
-  end subroutine casida_run
+    POP_SUB(casida_run_legacy)
+  end subroutine casida_run_legacy
 
   ! ---------------------------------------------------------
   !> allocates stuff, and constructs the arrays pair_i and pair_j
   subroutine casida_type_init(cas, sys)
-    type(casida_t),    intent(inout) :: cas
-    type(system_t),    intent(in)    :: sys
+    type(casida_t),      intent(inout) :: cas
+    type(electrons_t),   intent(in)    :: sys
 
     integer :: ist, ast, jpair, ik, ierr
     integer :: np, np_rows, np_cols, ii, info
@@ -767,23 +791,23 @@ contains
     PUSH_SUB(casida_type_end)
 
     !SSERT(allocated(cas%pair))
-    SAFE_DEALLOCATE_P(cas%pair)
-    SAFE_DEALLOCATE_P(cas%index)
+    SAFE_DEALLOCATE_A(cas%pair)
+    SAFE_DEALLOCATE_A(cas%index)
     if(cas%states_are_real) then
-      SAFE_DEALLOCATE_P(cas%dmat)
-      SAFE_DEALLOCATE_P(cas%dtm)
+      SAFE_DEALLOCATE_A(cas%dmat)
+      SAFE_DEALLOCATE_A(cas%dtm)
     else
-      SAFE_DEALLOCATE_P(cas%zmat)
-      SAFE_DEALLOCATE_P(cas%ztm)
+      SAFE_DEALLOCATE_A(cas%zmat)
+      SAFE_DEALLOCATE_A(cas%ztm)
     end if
-    SAFE_DEALLOCATE_P(cas%s)
-    SAFE_DEALLOCATE_P(cas%f)
-    SAFE_DEALLOCATE_P(cas%w)
-    SAFE_DEALLOCATE_P(cas%ind)
+    SAFE_DEALLOCATE_A(cas%s)
+    SAFE_DEALLOCATE_A(cas%f)
+    SAFE_DEALLOCATE_A(cas%w)
+    SAFE_DEALLOCATE_A(cas%ind)
 
     if(cas%qcalc) then
-      SAFE_DEALLOCATE_P(cas%qf)
-      SAFE_DEALLOCATE_P(cas%qf_avg)
+      SAFE_DEALLOCATE_A(cas%qf)
+      SAFE_DEALLOCATE_A(cas%qf_avg)
     end if
 
     SAFE_DEALLOCATE_A(cas%n_occ)
@@ -791,11 +815,11 @@ contains
 
     if(cas%calc_forces) then
       if(cas%states_are_real) then
-        SAFE_DEALLOCATE_P(cas%dmat_save)
+        SAFE_DEALLOCATE_A(cas%dmat_save)
       else
-        SAFE_DEALLOCATE_P(cas%zmat_save)
+        SAFE_DEALLOCATE_A(cas%zmat_save)
       end if
-      SAFE_DEALLOCATE_P(cas%forces)
+      SAFE_DEALLOCATE_A(cas%forces)
     end if
 
     call restart_end(cas%restart_dump)
@@ -818,8 +842,8 @@ contains
   !> this subroutine calculates electronic excitation energies using
   !! the matrix formulation of M. Petersilka, or of M. Casida
   subroutine casida_work(sys, cas)
-    type(system_t), target, intent(inout) :: sys
-    type(casida_t),         intent(inout) :: cas
+    type(electrons_t),   target, intent(inout) :: sys
+    type(casida_t),              intent(inout) :: cas
 
     type(states_elec_t), pointer :: st
     type(mesh_t),   pointer :: mesh
@@ -892,10 +916,10 @@ contains
     case(CASIDA_TAMM_DANCOFF,CASIDA_VARIATIONAL,CASIDA_CASIDA,CASIDA_PETERSILKA)
       if(cas%states_are_real) then
         call dcasida_get_matrix(cas, sys%hm, st, sys%ks, mesh, cas%dmat, cas%fxc, restart_filename)
-        call dcasida_solve(cas, st)
+        call dcasida_solve(cas, sys)
       else
         call zcasida_get_matrix(cas, sys%hm, st, sys%ks, mesh, cas%zmat, cas%fxc, restart_filename)
-        call zcasida_solve(cas, st)
+        call zcasida_solve(cas, sys)
       end if
     end select
 
@@ -924,8 +948,8 @@ contains
 
     ! clean up
     if(cas%type /= CASIDA_EPS_DIFF .or. cas%calc_forces) then
-      SAFE_DEALLOCATE_P(cas%fxc)
-      SAFE_DEALLOCATE_P(cas%rho)
+      SAFE_DEALLOCATE_A(cas%fxc)
+      SAFE_DEALLOCATE_A(cas%rho)
     end if
 
     POP_SUB(casida_work)
@@ -1006,9 +1030,9 @@ contains
   end subroutine casida_work
 
   ! ---------------------------------------------------------
-  FLOAT function casida_matrix_factor(cas, st)
+  FLOAT function casida_matrix_factor(cas, sys)
     type(casida_t),      intent(in)    :: cas
-    type(states_elec_t), intent(in)    :: st
+    type(electrons_t),   intent(in)    :: sys
     
     PUSH_SUB(casida_matrix_factor)
     
@@ -1018,7 +1042,7 @@ contains
       casida_matrix_factor = M_TWO * casida_matrix_factor
     end if
     
-    if(st%d%ispin == UNPOLARIZED) then
+    if(sys%st%d%ispin == UNPOLARIZED) then
       casida_matrix_factor = M_TWO * casida_matrix_factor
     end if
     

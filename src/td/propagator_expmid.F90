@@ -49,7 +49,7 @@ contains
     type(namespace_t),                intent(in)    :: namespace
     type(grid_t),             target, intent(inout) :: gr
     type(states_elec_t),      target, intent(inout) :: st
-    type(propagator_t),       target, intent(inout) :: tr
+    type(propagator_base_t),  target, intent(inout) :: tr
     FLOAT,                            intent(in)    :: time
     FLOAT,                            intent(in)    :: dt
     FLOAT,                            intent(in)    :: ionic_scale

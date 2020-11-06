@@ -29,11 +29,11 @@ match ; Eigenvalue  3  ; GREPFIELD(static/info, '#k =   2', 3, 3) ; -1.908756
 match ; Eigenvalue  4  ; GREPFIELD(static/info, '#k =   2', 3, 5) ; -1.897163
 
 Input      : 21-magnon.02-td.inp
-Precision : 0.00025
-match ; Total magnet. [step  49] ; LINEFIELD(td.general/total_magnetization, -52, 3) ;  2.206286837159e-03
-match ; Total magnet. [step  49] ; LINEFIELD(td.general/total_magnetization, -52, 4) ;  1.688634069626e-02
-match ; Total magnet. [step  50] ; LINEFIELD(td.general/total_magnetization, -51, 3) ;  2.218246909015e-03
-match ; Total magnet. [step  50] ; LINEFIELD(td.general/total_magnetization, -51, 4) ;  1.811105114827e-02
+Precision : 0.0001
+match ; Total magnet. [step  99] ; LINEFIELD(td.general/total_magnetization, -2, 3) ;  -3.191972641737e-03
+match ; Total magnet. [step  99] ; LINEFIELD(td.general/total_magnetization, -2, 4) ;  -5.503746916110e-02
+match ; Total magnet. [step 100] ; LINEFIELD(td.general/total_magnetization, -1, 3) ;  -3.470772277670e-03
+match ; Total magnet. [step 100] ; LINEFIELD(td.general/total_magnetization, -1, 4) ;  -5.468013650141e-02
 
 Util : oct-spin_susceptibility
 Input : 21-magnon.02-td.inp

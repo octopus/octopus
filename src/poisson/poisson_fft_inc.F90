@@ -18,15 +18,16 @@
 
   !-----------------------------------------------------------------
 
-  subroutine X(poisson_fft_solve)(this, mesh, cube, pot, rho, mesh_cube_map, average_to_zero, kernel)
+  subroutine X(poisson_fft_solve)(this, mesh, cube, pot, rho, mesh_cube_map, average_to_zero, kernel, sm)
     type(poisson_fft_t),            intent(in)    :: this
     type(mesh_t),                   intent(in)    :: mesh
     type(cube_t),                   intent(in)    :: cube
-    R_TYPE,                          intent(out)   :: pot(:)
-    R_TYPE,                          intent(in)    :: rho(:)
+    R_TYPE,                         intent(out)   :: pot(:)
+    R_TYPE,                         intent(in)    :: rho(:)
     type(mesh_cube_parallel_map_t), intent(in)    :: mesh_cube_map
     logical,              optional, intent(in)    :: average_to_zero !< default is false
     type(fourier_space_op_t), optional, intent(in):: kernel
+    type(submesh_t),      optional, intent(in)    :: sm
 
     logical :: average_to_zero_
     R_TYPE :: average
@@ -47,13 +48,17 @@
     call X(cube_function_alloc_RS)(cube, cf, in_device = (this%kernel /= POISSON_FFT_KERNEL_CORRECTED))
 
     ! put the density in the cube
-    if (cube%parallel_in_domains) then
-      call X(mesh_to_cube_parallel)(mesh, rho, cube, cf, mesh_cube_map)
+    if(present(sm)) then
+      call X(submesh_to_cube)(sm, rho, cube, cf) 
     else
-      if(mesh%parallel_in_domains) then
-        call X(mesh_to_cube)(mesh, rho, cube, cf, local = .true.)
+      if (cube%parallel_in_domains) then
+        call X(mesh_to_cube_parallel)(mesh, rho, cube, cf, mesh_cube_map)
       else
-        call X(mesh_to_cube)(mesh, rho, cube, cf)
+        if(mesh%parallel_in_domains) then
+          call X(mesh_to_cube)(mesh, rho, cube, cf, local = .true.)
+        else
+          call X(mesh_to_cube)(mesh, rho, cube, cf)
+        end if
       end if
     end if
 
@@ -68,13 +73,17 @@
     if(average_to_zero_) average = X(cube_function_surface_average)(cube, cf)
 
     ! move the potential back to the mesh
-    if (cube%parallel_in_domains) then
-      call X(cube_to_mesh_parallel)(cube, cf, mesh, pot, mesh_cube_map)
+    if(present(sm)) then
+      call X(cube_to_submesh)(cube, cf, sm, pot)
     else
-      if(mesh%parallel_in_domains) then
-        call X(cube_to_mesh)(cube, cf, mesh, pot, local=.true.)
+      if (cube%parallel_in_domains) then
+        call X(cube_to_mesh_parallel)(cube, cf, mesh, pot, mesh_cube_map)
       else
-        call X(cube_to_mesh)(cube, cf, mesh, pot)
+        if(mesh%parallel_in_domains) then
+          call X(cube_to_mesh)(cube, cf, mesh, pot, local=.true.)
+        else
+          call X(cube_to_mesh)(cube, cf, mesh, pot)
+        end if
       end if
     end if
 

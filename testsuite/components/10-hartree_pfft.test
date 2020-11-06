@@ -1,15 +1,48 @@
 # -*- coding: utf-8 mode: shell-script -*-
 
-Test       : Hartree pfft
-Options    : pfft
-Program    : octopus
-TestGroups : short-run, components
-Enabled    : Yes
+Test         : Hartree pfft
+Program      : octopus
+TestGroups   : short-run, components
+Enabled      : Yes
 
-Precision : 0.005
+# Tests and values are copied over from the 05-hartree_3d_fft tests, please keep them in sync so we test against the same values!
+
+Precision : 1e-8
 Input: 10-hartree_pfft.01-fft.inp
-match ; FFT           ; GREPFIELD(hartree_results, 'Hartree test (abs.) =', 5) ; 0.00035839
+if (available pfft); then
+    match ; Difference Hartree potential ; GREPFIELD(hartree_results, 'Hartree test (abs.) =', 5) ; 0.0
+else
+    match; Error PFFT missing; GREPCOUNT(err, 'PFFT'); 1
+endif   
 
+Precision : 0.0008
 Input: 10-hartree_pfft.02-fft_corrected.inp
-match ; FFT Corrected ; GREPFIELD(hartree_results, 'Hartree test (abs.) =', 5) ; 0.00154839
+if (available pfft); then
+    match ; Difference Hartree potential ; GREPFIELD(hartree_results, 'Hartree test (abs.) =', 5) ; 0.0
+else
+    match; Error PFFT missing; GREPCOUNT(err, 'PFFT'); 1
+endif   
 
+Precision : 0.00008
+Input: 10-hartree_pfft.03-3d_1d_periodic.inp
+if (available pfft); then
+    match ; Difference Hartree potential ; GREPFIELD(hartree_results, 'Hartree test (abs.) =', 5) ; 0.0
+else
+    match; Error PFFT missing; GREPCOUNT(err, 'PFFT'); 1
+endif   
+
+Precision : 1e-8
+Input: 10-hartree_pfft.04-3d_3d_periodic.inp
+if (available pfft); then
+    match ; Hartree energy (numerical)  ; GREPFIELD(hartree_results, 'Hartree Energy (numerical) =', 5) ; 0.3698445391010
+else
+    match; Error PFFT missing; GREPCOUNT(err, 'PFFT'); 1
+endif   
+
+Precision : 0.0001
+Input: 10-hartree_pfft.05-3d_2d_periodic.inp
+if (available pfft); then
+    match ; Hartree energy (numerical)  ; GREPFIELD(hartree_results, 'Hartree Energy (numerical) =', 5) ; 0.3746060551984
+else
+    match; Error PFFT missing; GREPCOUNT(err, 'PFFT'); 1
+endif   

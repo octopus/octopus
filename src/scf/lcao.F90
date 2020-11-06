@@ -48,6 +48,7 @@ module lcao_oct_m
   use quickrnd_oct_m
   use simul_box_oct_m
   use scalapack_oct_m
+  use smear_oct_m
   use species_oct_m
   use species_pot_oct_m
   use states_abst_oct_m
@@ -56,7 +57,7 @@ module lcao_oct_m
   use states_elec_dim_oct_m
   use states_elec_io_oct_m
   use submesh_oct_m
-  use system_oct_m
+  use symmetrizer_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use v_ks_oct_m
@@ -174,7 +175,7 @@ contains
 
     ! The initial LCAO calculation is done by default if we have species representing atoms.
     ! Otherwise, it is not the default value and has to be enforced in the input file.
-    mode_default = OPTION__LCAOSTART__LCAO_FULL
+    mode_default = OPTION__LCAOSTART__LCAO_STATES
     if(geo%only_user_def) mode_default = OPTION__LCAOSTART__LCAO_NONE
     
     !%Variable LCAOStart
@@ -186,7 +187,7 @@ contains
     !% These can provide <tt>Octopus</tt> with a good set
     !% of initial wavefunctions and with a new guess for the density.
     !% (Up to the current version, only a minimal basis set is used.)
-    !% The default is <tt>lcao_full</tt> if at least one species representing an atom is present.
+    !% The default is <tt>lcao_states</tt> if at least one species representing an atom is present.
     !% The default is <tt>lcao_none</tt> if all species are <tt>species_user_defined</tt>,
     !% <tt>species_charge_density</tt>, <tt>species_from_file</tt>, or <tt>species_jellium_slab</tt>.
     !%
@@ -218,19 +219,11 @@ contains
     !% guess density and a new KS potential.
     !% Using the LCAO density as a new guess density may improve the convergence, but can
     !% also slow it down or yield wrong results (especially for spin-polarized calculations).
-    !%Option lcao_simple 4
-    !% States are initialized using atomic orbitals. This produces a
-    !% less optimal starting point, but it is faster and uses less
-    !% memory than other methods.
     !%End
     call parse_variable(namespace, 'LCAOStart', mode_default, this%mode)
     if(.not.varinfo_valid_option('LCAOStart', this%mode)) call messages_input_error(namespace, 'LCAOStart')
 
     call messages_print_var_option(stdout, 'LCAOStart', this%mode)
-
-    if(this%mode == OPTION__LCAOSTART__LCAO_SIMPLE) then
-      call messages_experimental('LCAOStart = lcao_simple')
-    end if
 
     if(this%mode == OPTION__LCAOSTART__LCAO_NONE) then
       POP_SUB(lcao_init)
@@ -469,8 +462,6 @@ contains
         this%norbs = this%maxorbs
       end if
 
-      if(this%mode == OPTION__LCAOSTART__LCAO_SIMPLE) this%norbs = this%maxorbs
-      
       ASSERT(this%norbs <= this%maxorbs)
 
       SAFE_ALLOCATE(this%cst(1:this%norbs, 1:st%d%spin_channels))
@@ -694,10 +685,15 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine lcao_run(sys, st_start, lmm_r)
-    type(system_t),      intent(inout) :: sys
-    integer, optional,   intent(in)    :: st_start !< use for unoccupied-states run
-    FLOAT,   optional,   intent(in)    :: lmm_r !< used only if not present(st_start)
+  subroutine lcao_run(namespace, gr, geo, st, ks, hm, st_start, lmm_r)
+    type(namespace_t),        intent(in)    :: namespace
+    type(grid_t),             intent(in)    :: gr
+    type(geometry_t),         intent(in)    :: geo
+    type(states_elec_t),      intent(inout) :: st
+    type(v_ks_t),             intent(inout) :: ks
+    type(hamiltonian_elec_t), intent(inout) :: hm
+    integer,        optional, intent(in)    :: st_start !< use for unoccupied-states run
+    FLOAT,          optional, intent(in)    :: lmm_r !< used only if not present(st_start)
 
     type(lcao_t) :: lcao
     integer :: st_start_random
@@ -709,10 +705,10 @@ contains
     if (present(st_start)) then
       ! If we are doing unocc calculation, do not mess with the correct eigenvalues
       ! of the occupied states.
-      call v_ks_calc(sys%ks, sys%namespace, sys%hm, sys%st, sys%geo, calc_eigenval=.not. present(st_start), calc_current=.false.)
+      call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval=.not. present(st_start), calc_current=.false.)
 
       ASSERT(st_start >= 1)
-      if(st_start > sys%st%nst) then ! nothing to be done in LCAO
+      if (st_start > st%nst) then ! nothing to be done in LCAO
         POP_SUB(lcao_run)
         return
       end if
@@ -720,31 +716,32 @@ contains
 
     call profiling_in(prof, 'LCAO_RUN')
 
-    call lcao_init(lcao, sys%namespace, sys%gr, sys%geo, sys%st)
+    call lcao_init(lcao, namespace, gr, geo, st)
 
-    if(lcao%mode /= OPTION__LCAOSTART__LCAO_SIMPLE) then
-      call lcao_init_orbitals(lcao, sys%st, sys%gr, sys%geo, start = st_start)
-    end if
+    call lcao_init_orbitals(lcao, st, gr, geo, start = st_start)
 
     if (.not. present(st_start)) then
-      call lcao_guess_density(lcao, sys%namespace, sys%st, sys%gr, sys%gr%sb, sys%geo, sys%st%qtot, sys%st%d%nspin, &
-        sys%st%d%spin_channels, sys%st%rho)
+      call lcao_guess_density(lcao, namespace, st, gr, gr%sb, geo, st%qtot, st%d%nspin, st%d%spin_channels, st%rho)
 
-      if(sys%st%d%ispin > UNPOLARIZED) then
+      if (st%d%ispin > UNPOLARIZED) then
         ASSERT(present(lmm_r))
-        call write_magnetic_moments(stdout, sys%gr%fine%mesh, sys%st, sys%geo, sys%gr%der%boundaries, lmm_r)
+        call write_magnetic_moments(stdout, gr%fine%mesh, st, geo, gr%der%boundaries, lmm_r)
       end if
 
-      ! set up Hamiltonian (we do not call system_h_setup here because we do not want to
+      ! set up Hamiltonian (we do not call v_ks_h_setup here because we do not want to
       ! overwrite the guess density)
       message(1) = 'Info: Setting up Hamiltonian.'
       call messages_info(1)
 
       ! get the effective potential (we don`t need the eigenvalues yet)
-      call v_ks_calc(sys%ks, sys%namespace, sys%hm, sys%st, sys%geo, calc_eigenval=.false., &
-                      calc_berry=.false., calc_current=.false.)
+      call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval=.false., calc_berry=.false., calc_current=.false.)
       ! eigenvalues have nevertheless to be initialized to something
-      sys%st%eigenval = M_ZERO
+      if(st%smear%method == SMEAR_SEMICONDUCTOR .and. lcao_is_available(lcao)) then
+        st%eigenval = M_HUGE
+      else
+        !For smearing functions with finite temperature, we cannot set them to M_HUGE
+        st%eigenval = M_ZERO
+      end if
 
     end if
 
@@ -759,32 +756,24 @@ contains
         call messages_info(1)
       end if
 
-      if(lcao%mode == OPTION__LCAOSTART__LCAO_SIMPLE) then
-        if (states_are_real(sys%st)) then
-          call dlcao_simple(lcao, sys%namespace, sys%st, sys%gr, sys%geo, start = st_start)
-        else
-          call zlcao_simple(lcao, sys%namespace, sys%st, sys%gr, sys%geo, start = st_start)
-        end if
-      else
-        call lcao_wf(lcao, sys%st, sys%gr, sys%geo, sys%hm, sys%namespace, start = st_start)
-      end if
+      call lcao_wf(lcao, st, gr, geo, hm, namespace, start = st_start)
 
-      if (lcao%mode /= OPTION__LCAOSTART__LCAO_SIMPLE .and. .not. present(st_start)) then
-        call states_elec_fermi(sys%st, sys%namespace, sys%gr%mesh)
-        call states_elec_write_eigenvalues(stdout, min(sys%st%nst, lcao%norbs), sys%st, sys%gr%sb)
+      if (.not. present(st_start)) then
+        call states_elec_fermi(st, namespace, gr%mesh)
+        call states_elec_write_eigenvalues(stdout, min(st%nst, lcao%norbs), st, gr%sb)
 
         ! Update the density and the Hamiltonian
         if (lcao%mode == OPTION__LCAOSTART__LCAO_FULL) then
-          call system_h_setup(sys, calc_eigenval = .false., calc_current=.false.)
-          if(sys%st%d%ispin > UNPOLARIZED) then
+          call v_ks_h_setup(namespace, gr, geo, st, ks, hm, calc_eigenval = .false., calc_current=.false.)
+          if (st%d%ispin > UNPOLARIZED) then
             ASSERT(present(lmm_r))
-            call write_magnetic_moments(stdout, sys%gr%fine%mesh, sys%st, sys%geo, sys%gr%der%boundaries, lmm_r)
+            call write_magnetic_moments(stdout, gr%fine%mesh, st, geo, gr%der%boundaries, lmm_r)
           end if
         end if
       end if
     end if
 
-    if(.not. lcao_done .or. lcao%norbs < sys%st%nst) then
+    if (.not. lcao_done .or. lcao%norbs < st%nst) then
 
       if(lcao_done) then
         st_start_random = lcao%norbs + 1
@@ -799,18 +788,18 @@ contains
       end if
 
       ! Randomly generate the initial wavefunctions.
-      call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb, ist_start_ = st_start_random, normalized = .false.)
+      call states_elec_generate_random(st, gr%mesh, gr%sb, ist_start_ = st_start_random, normalized = .false.)
 
       call messages_write('Orthogonalizing wavefunctions.')
       call messages_info()
-      call states_elec_orthogonalize(sys%st, sys%namespace, sys%gr%mesh)
+      call states_elec_orthogonalize(st, namespace, gr%mesh)
 
       if(.not. lcao_done) then
         ! If we are doing unocc calculation, do not mess with the correct eigenvalues and occupations
         ! of the occupied states.
-        call v_ks_calc(sys%ks, sys%namespace, sys%hm, sys%st, sys%geo, calc_eigenval=.not. present(st_start), calc_current=.false.) ! get potentials
+        call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval=.not. present(st_start), calc_current=.false.) ! get potentials
         if(.not. present(st_start)) then
-          call states_elec_fermi(sys%st, sys%namespace, sys%gr%mesh) ! occupations
+          call states_elec_fermi(st, namespace, gr%mesh) ! occupations
         end if
 
       end if
@@ -820,7 +809,7 @@ contains
       if(st_start > 1) then
         call messages_write('Orthogonalizing wavefunctions.')
         call messages_info()
-        call states_elec_orthogonalize(sys%st, sys%namespace, sys%gr%mesh)
+        call states_elec_orthogonalize(st, namespace, gr%mesh)
       end if
 
     end if
@@ -992,13 +981,16 @@ contains
 
     use_stored_orbitals = species_is_ps(geo%atom(iatom)%species) &
       .and. states_are_real(st) .and. spin_channels == 1 .and. lcao_is_available(this) &
-      .and. st%d%dim == 1 .and. .not. gr%have_fine_mesh
+      .and. st%d%dim == 1 .and. .not. gr%have_fine_mesh .and. .not. sb%periodic_dim > 0
 
     ps => species_ps(geo%atom(iatom)%species)
 
     ! we can use the orbitals we already have calculated
     if(use_stored_orbitals) then
       ASSERT(.not. gr%have_fine_mesh)
+   
+      !There is no periodic copies here, so this will not work for periodic systems
+      ASSERT(.not. sb%periodic_dim > 0)
 
       if(.not. this%alternative) then
         
@@ -1088,6 +1080,7 @@ contains
     FLOAT :: rr, rnd, phi, theta, mag(1:3), lmag, n1, n2
     FLOAT, allocatable :: atom_rho(:,:)
     logical :: parallelized_in_atoms
+    type(symmetrizer_t) :: symmetrizer
 
 
     PUSH_SUB(lcao_guess_density)
@@ -1149,7 +1142,6 @@ contains
 
       parallelized_in_atoms = .true.
 
-      atom_rho = M_ZERO
       rho = M_ZERO
       do ia = geo%atoms_dist%start, geo%atoms_dist%end
         call lcao_atom_density(this, namespace, st, gr, sb, geo, ia, 2, atom_rho(1:gr%fine%mesh%np, 1:2))
@@ -1340,6 +1332,18 @@ contains
 
     write(message(1),'(a,f13.6)')'Info: Renormalized total charge = ', rr
     call messages_info(1)
+
+    if(st%symmetrize_density) then
+      call symmetrizer_init(symmetrizer, gr%fine%mesh)
+
+      do is = 1, st%d%nspin
+        call dsymmetrizer_apply(symmetrizer, gr%fine%mesh%np, field = rho(:, is), &
+                                 symmfield = atom_rho(:, 1))
+        rho(1:gr%fine%mesh%np, is) = atom_rho(1:gr%fine%mesh%np, 1)
+      end do
+
+      call symmetrizer_end(symmetrizer)
+    end if
 
     SAFE_DEALLOCATE_A(atom_rho)
     POP_SUB(lcao_guess_density)

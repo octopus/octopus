@@ -19,10 +19,12 @@
 AC_PREREQ(2.59)
 # Note: the version string is written into ETSF_IO files, so when you update
 # this, update the results for test periodic_systems/09-etsf_io.test too.
-AC_INIT([Octopus],[selene],[octopus-devel@tddft.org],[octopus])
+AC_INIT([Octopus],[arborescens],[octopus-devel@tddft.org],[octopus])
 AC_CONFIG_SRCDIR([src/basic/global.F90])
 AC_CONFIG_AUX_DIR([build-aux])
-AM_INIT_AUTOMAKE([subdir-objects])
+AM_INIT_AUTOMAKE([subdir-objects tar-ustar])
+# enable silent rules by default (use --disable-silent-rules for disabling)
+AM_SILENT_RULES([yes])
 
 AC_CONFIG_HEADERS([config.h])
 
@@ -36,7 +38,6 @@ AC_CANONICAL_HOST
 AC_PROG_INSTALL
 AC_PROG_LN_S
 AC_PROG_MAKE_SET
-AC_PROG_RANLIB
 AC_PROG_MKDIR_P
 
 dnl check whether mpi is enabled
@@ -111,14 +112,10 @@ dnl and with OpenMP threads.
 dnl these are the --enable/--disable possible in octopus
 AC_ARG_ENABLE(debug, AS_HELP_STRING([--disable-debug], [debug mode]), [DEBUG=${enableval}])
 AC_ARG_ENABLE(openmp, AS_HELP_STRING([--enable-openmp], [Multi-threaded parallel version using OpenMP from Fortran]))
-AC_ARG_ENABLE(openmp_simd, AS_HELP_STRING([--enable-openmp_simd], [OpenMP SIMD from Fortran]))
 AC_ARG_ENABLE(opencl, AS_HELP_STRING([--enable-opencl], [OpenCL support (experimental)]))
 
 if test -n "${enable_openmp}" -a x"${enable_openmp}" != x"no"; then
   HAVE_OPENMP=1
-fi
-if test -n "${enable_openmp_simd}" -a x"${enable_openmp_simd}" != x"no"; then
-  HAVE_OPENMP_SIMD=1
 fi
 
 
@@ -233,11 +230,6 @@ if test "${HAVE_OPENMP}"; then
   FCFLAGS="$FCFLAGS $OPENMP_FCFLAGS"
 fi
 
-if test "${HAVE_OPENMP_SIMD}"; then
-  AX_OPENMP_SIMD(,AC_MSG_ERROR([Fortran compiler does not support OpenMP SIMD]))
-  FCFLAGS="$FCFLAGS $OPENMP_SIMD_FCFLAGS"
-fi
-
 
 dnl debug mode
 if test x"${DEBUG}" = x"no" ; then
@@ -334,6 +326,9 @@ AC_LANG_POP(C)
 ACX_FUTILE
 ACX_PSOLVER
 
+dnl check for CGAL library.
+AX_LIB_CGAL_CORE
+
 dnl If PSolver was not found, we check for older versions of the library (1.7.x),
 dnl which we named ISF
 if test "x$acx_psolver_ok" = "xno"; then
@@ -362,6 +357,8 @@ AC_SUBST(FCEXTRALIBS)
 
 m4_include([src/fdep/fortran_dependencies.m4])
 FDEP_F90_GNU_MAKE_DEPS
+
+LT_INIT([disable-shared])
 
 ACX_OCTOPUS_COMPILATION_INFO
 
@@ -426,6 +423,7 @@ AC_CONFIG_FILES([Makefile
   testsuite/performance/Makefile
   testsuite/performance/tests/Makefile
   testsuite/components/Makefile 
+  testsuite/errors/Makefile 
   testsuite/finite_systems_1d/Makefile 
   testsuite/finite_systems_2d/Makefile
   testsuite/finite_systems_3d/Makefile
@@ -433,6 +431,7 @@ AC_CONFIG_FILES([Makefile
   testsuite/real_time/Makefile
   testsuite/lda_u/Makefile
   testsuite/linear_response/Makefile
+  testsuite/maxwell/Makefile
   testsuite/multisystem/Makefile
   testsuite/optimal_control/Makefile
   testsuite/periodic_systems/Makefile

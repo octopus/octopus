@@ -1183,7 +1183,7 @@ subroutine pes_mask_output_ar_polar_M(pesK, file, namespace, Lk, ll, dim, dir, E
   FLOAT :: eGrid(3), thGrid(3), phiBounds(2)
   type(profile_t), save :: prof
 
-  call profiling_in(prof, "pesMask_ar_polar")
+  call profiling_in(prof, TOSTRING(X(pesMask_ar_polar)))
 
   PUSH_SUB(pes_mask_output_ar_polar_M)
 
@@ -1303,7 +1303,7 @@ subroutine pes_mask_output_ar_plane_M(pesK, file, namespace, Lk, ll, dim, dir, E
   FLOAT :: vref(1:dim), rotation(1:dim,1:dim)
   type(profile_t), save :: prof
 
-  call profiling_in(prof, "PESMask_ar_plane")
+  call profiling_in(prof, TOSTRING(X(PESMask_ar_plane)))
 
   PUSH_SUB(pes_mask_output_ar_plane_M)
 
@@ -1435,7 +1435,7 @@ subroutine pes_mask_output_ar_spherical_cut_M(pesK, file, namespace, Lk, ll, dim
   FLOAT :: phGrid(3), thGrid(3), eBounds(2)
   type(profile_t), save :: prof
 
-  call profiling_in(prof, "PESMask_ar_spherical_cut")
+  call profiling_in(prof, TOSTRING(X(PESMask_ar_spherical_cut)))
 
   PUSH_SUB(pes_mask_output_ar_spherical_cut_M)
 
@@ -1894,7 +1894,7 @@ subroutine pes_mask_output(mask, mesh, st, outp, namespace, file, gr, geo, iter)
   type(profile_t), save :: prof
 
   PUSH_SUB(pes_mask_output)
-  call profiling_in(prof, "PESMASK_out")
+  call profiling_in(prof, TOSTRING(X(PESMASK_out)))
   
   !Output info for easy post-process
   if(mpi_grp_is_root(mpi_world)) call pes_mask_write_info(mask, "td.general", namespace)
@@ -2130,7 +2130,7 @@ subroutine pes_mask_dump(mask, namespace, restart, st, ierr)
     call messages_info(1)
   end if
 
-  call profiling_in(prof, "PESMASK_dump")
+  call profiling_in(prof, TOSTRING(X(PESMASK_dump)))
 
   iunit = restart_open(restart, 'pes_mask')
   write(lines(1), '(a10,2x,es19.12)') 'Mask R1', mask%mask_r(1)

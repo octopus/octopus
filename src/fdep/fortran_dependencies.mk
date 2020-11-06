@@ -9,7 +9,7 @@ $(subst -,_,$(subst .,_,$1))
 endef
 
 _f90_verbose = $(_f90_verbose_$(V))
-_f90_verbose_ := $(_f90_verbose_$(AM_DEFAULT_VERBOSITY))
+_f90_verbose_ = $(_f90_verbose_$(AM_DEFAULT_VERBOSITY))
 _f90_verbose_0 = @echo "  $1";
 _f90_only_verbose = $(_f90_only_verbose_$(V))
 _f90_only_verbose_ = @

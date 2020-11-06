@@ -11,8 +11,12 @@ Precision : 1e-6
 Processors: 1
 # segfaults on two processors
 Input: 25-multiresolution.01-Hatom.inp
-match ; SCF convergence               ; GREPCOUNT(static/info, 'SCF converged') ; 1
-match ; Total energy                  ; GREPFIELD(static/info, 'Total       =', 3) ; -0.50011825
-match ; Species displacement          ; GREPFIELD(out, 'H_f atom displaced', 7)    ;  0.0
-match ; Eigenvalue                    ; GREPFIELD(static/info, ' 1   -- ', 3)      ; -0.500118
-match ; Occupation                    ; GREPFIELD(static/info, ' 1   -- ', 4)      ;  1.0
+if(available cuda); then
+  match ; Error match ; GREPCOUNT(err, 'Calculation will not be continued.') ; 1
+else
+  match ; SCF convergence               ; GREPCOUNT(static/info, 'SCF converged') ; 1
+  match ; Total energy                  ; GREPFIELD(static/info, 'Total       =', 3) ; -0.50013273
+  match ; Species displacement          ; GREPFIELD(out, 'H_f atom displaced', 7)    ;  0.0
+  match ; Eigenvalue                    ; GREPFIELD(static/info, ' 1   -- ', 3)      ; -0.50013273 
+  match ; Occupation                    ; GREPFIELD(static/info, ' 1   -- ', 4)      ;  1.0
+endif

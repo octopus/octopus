@@ -19,16 +19,18 @@
 ##
 
 SUBDIRS = \
-        performance      \
-        components       \
+	performance       \
+	components        \
+	errors            \
 	finite_systems_1d \
 	finite_systems_2d \
 	finite_systems_3d \
 	functionals      \
 	real_time        \
-        symmetries       \
+	symmetries       \
 	linear_response  \
-        lda_u            \
+	lda_u            \
+	maxwell          \
 	multisystem      \
 	optimal_control  \
 	periodic_systems \

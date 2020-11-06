@@ -1,0 +1,29 @@
+# -*- coding: utf-8 mode: shell-script -*-
+
+Test       : Multisystem classical He atom
+Program    : octopus
+TestGroups : short-run, multisystem
+Enabled    : Yes
+
+Processors: 1
+
+Input: 08-coulomb_force.01-classical_helium.inp
+
+match ; Nucleus    pos x (t=10) ; LINEFIELD(Nucleus/td.general/coordinates, -1, 3) ; 0.000000000000e+00
+match ; Nucleus    pos y (t=10) ; LINEFIELD(Nucleus/td.general/coordinates, -1, 4) ; 0.000000000000e+00
+match ; Nucleus    pos z (t=10) ; LINEFIELD(Nucleus/td.general/coordinates, -1, 5) ; 0.000000000000e+00
+match ; Nucleus    vel x (t=10) ; LINEFIELD(Nucleus/td.general/coordinates, -1, 6) ; 0.000000000000e+00
+match ; Nucleus    vel y (t=10) ; LINEFIELD(Nucleus/td.general/coordinates, -1, 7) ; 0.000000000000e+00
+match ; Nucleus    vel z (t=10) ; LINEFIELD(Nucleus/td.general/coordinates, -1, 8) ; 0.000000000000e+00
+match ; Electron 1 pos x (t=10) ; LINEFIELD(Electrons/e1/td.general/coordinates, -1, 3) ; 7.979131499959e-01
+match ; Electron 1 pos y (t=10) ; LINEFIELD(Electrons/e1/td.general/coordinates, -1, 4) ; 8.580941528530e-01
+match ; Electron 1 pos z (t=10) ; LINEFIELD(Electrons/e1/td.general/coordinates, -1, 5) ; 0.000000000000e+00
+match ; Electron 1 vel x (t=10) ; LINEFIELD(Electrons/e1/td.general/coordinates, -1, 6) ; 8.543794801182e-01
+match ; Electron 1 vel y (t=10) ; LINEFIELD(Electrons/e1/td.general/coordinates, -1, 7) ; -9.610845037419e-01
+match ; Electron 1 vel z (t=10) ; LINEFIELD(Electrons/e1/td.general/coordinates, -1, 8) ; 0.000000000000e+00
+match ; Electron 2 pos x (t=10) ; LINEFIELD(Electrons/e2/td.general/coordinates, -1, 3) ; -7.979131499959e-01
+match ; Electron 2 pos y (t=10) ; LINEFIELD(Electrons/e2/td.general/coordinates, -1, 4) ; -8.580941528530e-01
+match ; Electron 2 pos z (t=10) ; LINEFIELD(Electrons/e2/td.general/coordinates, -1, 5) ; 0.000000000000e+00
+match ; Electron 2 vel x (t=10) ; LINEFIELD(Electrons/e2/td.general/coordinates, -1, 6) ; -8.543794801182e-01
+match ; Electron 2 vel y (t=10) ; LINEFIELD(Electrons/e2/td.general/coordinates, -1, 7) ; 9.610845037419e-01
+match ; Electron 2 vel z (t=10) ; LINEFIELD(Electrons/e2/td.general/coordinates, -1, 8) ; 0.000000000000e+00

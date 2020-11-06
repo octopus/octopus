@@ -43,7 +43,7 @@ module messages_oct_m
     messages_debug_marker,      &
     messages_debug_newlines,    &
     messages_switch_status,     &
-    delete_debug_trace,         &    
+    delete_debug_trace,         &
     print_date,                 &
     time_diff,                  &
     time_sum,                   &
@@ -72,7 +72,6 @@ module messages_oct_m
   character(len=68),      parameter, public :: hyphens = &
     '--------------------------------------------------------------------'
   character(len=69),      parameter, public :: shyphens = '*'//hyphens
-
   logical,                           public :: flush_messages
 
 
@@ -84,6 +83,7 @@ module messages_oct_m
   integer, parameter, private :: unit_offset = 1000
   character(len=512), private :: msg
   integer, parameter, private :: SLEEPYTIME_ALL = 1, SLEEPYTIME_NONWRITERS = 60 !< seconds
+  character(len=64),  private :: oct_status = 'undefined' !< start with an undefined status
 
 
   ! ---------------------------------------------------------
@@ -114,13 +114,13 @@ module messages_oct_m
     module procedure messages_print_var_option_4
     module procedure messages_print_var_option_8
   end interface messages_print_var_option
-  
+
   integer :: warnings
   integer :: experimentals
   integer :: current_line
 
   type(debug_t), save :: debug
-  
+
   !> from signals.c
   interface
     subroutine get_signal_description(signum, signame)
@@ -140,7 +140,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine messages_init()
-    
+
     logical :: trap_signals
 
     call messages_obsolete_variable(global_namespace, 'DevelVersion', 'ExperimentalFeatures')
@@ -157,26 +157,25 @@ contains
     !% <a href=http://octopus-code.org/experimental_features>wiki page</a>.
     !%End
     call parse_variable(global_namespace, 'ExperimentalFeatures', .false., conf%devel_version)
-    
+
     call messages_obsolete_variable(global_namespace, 'DebugLevel', 'Debug')
 
     call debug_init(debug, global_namespace)
-    
+
     warnings = 0
     experimentals = 0
 
     !%Variable DebugTrapSignals
     !%Type logical
+    !%Default yes
     !%Section Execution::Debug
     !%Description
     !% If true, trap signals to handle them in octopus itself and
     !% print a custom backtrace. If false, do not trap signals; then,
     !% core dumps can be produced or gdb can be used to stop at the
-    !% point a signal was produced (e.g. a segmentation fault). This
-    !% variable is enabled if <tt>Debug</tt> is set to trace mode
-    !% (<tt>trace</tt>, <tt>trace_term</tt> or <tt>trace_file</tt>).
+    !% point a signal was produced (e.g. a segmentation fault).
     !%End
-    call parse_variable(global_namespace, 'DebugTrapSignals', debug%trace, trap_signals)
+    call parse_variable(global_namespace, 'DebugTrapSignals', .true., trap_signals)
 
     if (trap_signals) call trap_segfault()
 
@@ -189,13 +188,13 @@ contains
   subroutine messages_end()
 
     if(mpi_grp_is_root(mpi_world)) then
-  
+
       if(experimentals > 0 .or. warnings > 0) then
         message(1) = ''
-        call messages_info(1)      
+        call messages_info(1)
       end if
 
-      
+
       if(warnings > 0) then
         call messages_write('Octopus emitted ')
         call messages_write(warnings)
@@ -206,7 +205,7 @@ contains
         end if
         call messages_info()
       end if
-      
+
       if(experimentals > 0) then
         call messages_new_line()
         call messages_write('Octopus used ')
@@ -230,14 +229,14 @@ contains
         call messages_new_line()
         call messages_info()
       end if
-      
+
       open(unit = iunit_out, file = 'exec/messages', action = 'write')
       write(iunit_out, '(a, i9)') "warnings          = ", warnings
       write(iunit_out, '(a, i9)') "experimental      = ", experimentals
       close(iunit_out)
- 
+
     end if
-  
+
   end subroutine messages_end
 
   ! ---------------------------------------------------------
@@ -250,11 +249,11 @@ contains
     logical :: only_root_writes_, should_write
     integer, allocatable :: recv_buf(:), recv_req(:)
 #ifdef HAVE_MPI
-    integer, parameter :: FATAL_TAG = 1620299
+    integer, parameter :: FATAL_TAG = 32767
     logical :: received
     integer :: send_req
 #endif
-    
+
     no_lines_ = current_line
     if(present(no_lines)) no_lines_ = no_lines
 
@@ -274,7 +273,7 @@ contains
 
     if(.not. only_root_writes_) then
       if(mpi_world%rank == 0) then
-        
+
         allocate(recv_buf(1:mpi_world%size - 1))
         allocate(recv_req(1:mpi_world%size - 1))
         do ii = 1, mpi_world%size - 1
@@ -286,7 +285,7 @@ contains
         deallocate(recv_req)
 
       else
-        
+
 #ifdef HAVE_MPI
         call MPI_Send_init(1, 1, MPI_INTEGER, 0, FATAL_TAG, mpi_world%comm, send_req, mpi_err)
 #endif
@@ -294,9 +293,9 @@ contains
         call loct_nanosleep(SLEEPYTIME_ALL, 0)
 #ifdef HAVE_MPI
         call MPI_Test(send_req, received, MPI_STATUS_IGNORE, mpi_err)
-#endif        
+#endif
         should_write = .false.
-        
+
       end if
     end if
 
@@ -379,7 +378,7 @@ contains
 
     integer :: il, no_lines_
     logical :: have_to_write, all_nodes_
-    
+
     no_lines_ = current_line
     if(present(no_lines)) no_lines_ = no_lines
 
@@ -396,7 +395,7 @@ contains
     if(have_to_write) then
 
       if(flush_messages) open(unit=iunit_err, file='messages.stderr', action='write', position='append')
-      
+
       call flush_msg(stderr, '')
       write(msg, '(a)') '** Warning:'
       call flush_msg(stderr, msg)
@@ -424,9 +423,9 @@ contains
 #ifdef HAVE_FLUSH
       call flush(stderr)
 #endif
-      
+
       if(flush_messages) close(iunit_err)
-      
+
     end if
 
     call messages_reset_lines()
@@ -444,7 +443,7 @@ contains
 
     integer :: il, iu, no_lines_
 
-    if(.not. mpi_grp_is_root(mpi_world) .and. .not. optional_default(all_nodes, .false.)) then 
+    if(.not. mpi_grp_is_root(mpi_world) .and. .not. optional_default(all_nodes, .false.)) then
       call messages_reset_lines()
       return
     end if
@@ -559,18 +558,23 @@ contains
     character(len=*), intent(in) :: status
 
     ! only root node is taking care of file I/O
-    if (.not.mpi_grp_is_root(mpi_world)) return     
+    if (.not.mpi_grp_is_root(mpi_world)) return
 
-    ! remove old status files first, before we switch to state aborted   
+    ! remove old status files first, before we switch to a new state
     call loct_rm('exec/oct-status-running')
     call loct_rm('exec/oct-status-finished')
     call loct_rm('exec/oct-status-aborted')
-    
-    ! create empty status file to indicate 'aborted state'
+    if (oct_status /= 'walltimer-aborted') then
+      call loct_rm('exec/oct-status-walltimer-aborted')
+    end if
+
+    oct_status = status
+
+    ! create empty status file to indicate new state
     open(unit=iunit_err, file='exec/oct-status-'//trim(status), &
       action='write', status='unknown')
     close(iunit_err)
-    
+
   end subroutine messages_switch_status
 
 
@@ -627,23 +631,37 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine messages_input_error(namespace, var, details)
+  subroutine messages_input_error(namespace, var, details, row, column)
     type(namespace_t),          intent(in) :: namespace
     character(len=*),           intent(in) :: var
     character(len=*), optional, intent(in) :: details
+    integer,          optional, intent(in) :: row
+    integer,          optional, intent(in) :: column
+
+    character(len=10) :: row_str, column_str
 
     call messages_write('Input error in the input variable '// trim(var))
-    
+
+    if (present(row)) then
+      ! Print row and, if available, the column. We add one to both values
+      ! in order to translate from the C numbering used by the parser to a
+      ! more human-friendly numbering.
+      write(row_str, '(I10)') row + 1
+      call messages_write(' at row '//adjustl(row_str))
+      if (present(column)) then
+        write(column_str, '(I10)') column + 1
+        call messages_write(', column '//adjustl(column_str))
+      end if
+    end if
     if(present(details)) then
       call messages_write(':', new_line = .true.)
       call messages_new_line()
-      call messages_write('  '//trim(details)//'.', new_line = .true.)
-    else
-      call messages_write('.', new_line = .true.)
+      call messages_write('  '//trim(details))
     end if
-    
+    call messages_write('.', new_line = .true.)
+
     call messages_new_line()
-    
+
     call messages_write('You can get the documentation of the variable with the command:', new_line = .true.)
     call messages_write('  oct-help -p '//trim(var))
     call messages_fatal(namespace=namespace)
@@ -739,7 +757,7 @@ contains
     if(.not. mpi_grp_is_root(mpi_world)) return
 
     call messages_write('Input: ['//trim(var)//' = (')
-    do ii = 1, size(val)      
+    do ii = 1, size(val)
       write(floatstring,'(g10.4)') val(ii)
       call messages_write(trim(adjustl(floatstring)))
       if(ii < size(val)) call messages_write(', ')
@@ -749,7 +767,7 @@ contains
       call messages_write(' '//trim(units_abbrev(unit))//']')
     else
       call messages_write(']')
-    end if           
+    end if
     call messages_info(iunit = iunit)
 
   end subroutine messages_print_var_valuear
@@ -777,7 +795,7 @@ contains
     integer :: option4
 
     option4 = int(option)
-    
+
     if(.not. mpi_grp_is_root(mpi_world)) return
 
     if(flush_messages) then
@@ -812,7 +830,7 @@ contains
     call messages_print_var_option_8(iunit, var, int(option, 8), pre)
 
   end subroutine messages_print_var_option_4
-  
+
   ! ---------------------------------------------------------
   subroutine messages_print_stress(iunit, msg, namespace)
     integer,                     intent(in) :: iunit
@@ -857,10 +875,10 @@ contains
         str(jj:jj) = '*'
         jj = jj + 1
       end do
- 
+
       str(jj:jj) = ' '
       jj = jj + 1
-     
+
       do ii = 1, length
         str(jj:jj) = msg_combined(ii:ii)
         jj = jj + 1
@@ -1052,7 +1070,7 @@ contains
   ! ---------------------------------------------------------
   subroutine pop_sub(sub_name)
     character(len=*), intent(in) :: sub_name
-    
+
     character(len=80) :: sub_name_short
 
     integer iunit, sec, usec
@@ -1116,14 +1134,14 @@ contains
 
   end subroutine pop_sub
 #endif
-  
+
   ! ---------------------------------------------------------
   subroutine messages_obsolete_variable(namespace, name, rep)
     type(namespace_t),          intent(in) :: namespace
     character(len=*),           intent(in) :: name
     character(len=*), optional, intent(in) :: rep
-    
-    if(parse_is_defined(namespace, trim(name))) then 
+
+    if(parse_is_defined(namespace, trim(name))) then
 
       write(message(1), '(a)') 'Input variable '//trim(name)//' is obsolete.'
 
@@ -1138,13 +1156,13 @@ contains
       end if
 
     end if
-    
+
   end subroutine messages_obsolete_variable
 
   ! ---------------------------------------------------------
   subroutine messages_experimental(name)
     character(len=*), intent(in) :: name
-    
+
     INCR(experimentals, 1)
 
     if(.not. conf%devel_version) then
@@ -1167,7 +1185,7 @@ contains
     end if
 
   end subroutine messages_experimental
-  
+
 
   !--------------------------------------------------------------
   subroutine messages_check_def(var, should_be_less, def, name, unit)
@@ -1224,18 +1242,18 @@ contains
 
     current_line = 1
     message(1) = ''
-    
+
   end subroutine messages_reset_lines
 
   ! ------------------------------------------------------------
 
   subroutine messages_new_line()
-    
+
     current_line = current_line + 1
     message(current_line) = ''
 
     if(current_line > max_lines) stop 'Too many message lines.'
-   
+
   end subroutine messages_new_line
 
   ! ------------------------------------------------------------
@@ -1253,7 +1271,7 @@ contains
 
     tval = val
     if(present(units)) tval = units_from_atomic(units, val)
-    
+
     if(present(fmt)) then
       write(number, '('//trim(fmt)//')') tval
     else
@@ -1284,22 +1302,33 @@ contains
     type(unit_t),     optional, intent(in) :: units
     logical,          optional, intent(in) :: print_units
 
-    character(len=10) :: number
-    integer(8) :: val_conv
+    character(len=20) :: number
+    FLOAT      :: val_conv_float
 
-    val_conv = val
-    if(present(units)) val_conv = int(nint(units_from_atomic(units, dble(val))), 8)
+    if(present(units)) then
+      val_conv_float = units_from_atomic(units, dble(val))
 
-    if(present(fmt)) then
-      write(message(current_line), '(a, '//trim(fmt)//')') trim(message(current_line)), val_conv
+      if(present(fmt)) then
+        write(message(current_line), '(a, '//trim(fmt)//')') trim(message(current_line)), val_conv_float
+      else
+        write(number, '(f15.3)') val_conv_float
+        write(message(current_line), '(3a)') trim(message(current_line)), ' ', trim(adjustl(number))
+      end if
+
     else
-      write(number, '(i10)') val_conv
-      write(message(current_line), '(3a)') trim(message(current_line)), ' ', trim(adjustl(number))
+
+      if(present(fmt)) then
+        write(message(current_line), '(a, '//trim(fmt)//')') trim(message(current_line)), val
+      else
+        write(number, '(i10)') val
+        write(message(current_line), '(3a)') trim(message(current_line)), ' ', trim(adjustl(number))
+      end if
+
     end if
 
 
     if(present(units) .and. optional_default(print_units, .true.)) then
-      write(message(current_line), '(a, a, a)') trim(message(current_line)), ' ', trim(units_abbrev(units))
+      write(message(current_line), '(a, a, a)') trim(message(current_line)), ' ', trim(adjustl(units_abbrev(units)))
     end if
 
     if(present(new_line)) then
@@ -1410,12 +1439,20 @@ contains
     call flush_msg(stderr, msg)
     write(msg, '(a,i2)') ''
     call flush_msg(stderr, msg)
+    write(msg, '(a)')    '  Note: Octopus is currently trapping signals. This might prevent the'
+    call flush_msg(stderr, msg)
+    write(msg, '(a)')    '  use of debuggers or the generation of core dumps. To change this'
+    call flush_msg(stderr, msg)
+    write(msg, '(a)')    '  behavior, use the DebugTrapSignals input option.'
+    call flush_msg(stderr, msg)
+    write(msg, '(a,i2)') ''
+    call flush_msg(stderr, msg)
     write(msg, '(a,i2)') '%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%'
     call flush_msg(stderr, msg)
-    
+
     if(debug%trace) then
       call flush_msg(stderr, shyphens)
-      
+
       write(msg, '(a)') 'Octopus debug trace: '
       call flush_msg(stderr, msg)
       do ii = 1, no_sub_stack
@@ -1429,7 +1466,7 @@ contains
     end if
 
   end subroutine messages_dump_stack
-  
+
 end module messages_oct_m
 
 ! ---------------------------------------------------------
@@ -1444,7 +1481,7 @@ subroutine assert_die(s, f, l)
 
   character(len=*), intent(in) :: s, f
   integer, intent(in) :: l
-    
+
   call messages_write('Node ')
   call messages_write(mpi_world%rank)
   call messages_write(':')
@@ -1463,16 +1500,21 @@ end subroutine assert_die
 
 !-------------------------------------------------------
 
-subroutine dump_call_stack(isignal)
+subroutine handle_segv(isignal) bind(c)
   use messages_oct_m
+  use iso_c_binding
 
   implicit none
-  
-  integer, intent(in) :: isignal
-  
+
+  integer(c_int), intent(in) :: isignal
+
+  ! Switch status to aborted
+  call messages_switch_status('aborted')
+
+  ! Dump stack
   call messages_dump_stack(isignal)
-  
-end subroutine dump_call_stack
+
+end subroutine handle_segv
 
 
 !! Local Variables:

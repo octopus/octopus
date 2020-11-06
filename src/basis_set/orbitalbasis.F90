@@ -111,10 +111,12 @@ contains
   !% This option determines how Octopus will truncate the orbitals used for LDA+U.
   !% Except for the full method, the other options are only there to get a quick idea.
   !%Option ao_full bit(0)
-  !% The full size of the orbitals used. The radius is controled by variable OrbitalThreshold_LDAU
+  !% The full size of the orbitals used. The radius is controled by variable AOThreshold.
   !%Option ao_box bit(1)
   !% The radius of the orbitals are restricted to the size of the simulation box. 
   !% This reduces the number of points used to discretize the orbitals.
+  !% This is mostly a debug option, and one should be aware that changing the size of the simulation box
+  !% will affect the result of the calculation. It is recommended to use ao_nlradius instead.
   !%Option ao_nlradius bit(2)
   !% The radius of the orbitals are restricted to the radius of the non-local part of the pseudopotential 
   !% of the corresponding atom.
@@ -142,7 +144,8 @@ contains
   !%Default yes
   !%Section Atomic Orbitals
   !%Description
-  !% If set to yes, Octopus will normalize the atomic orbitals
+  !% If set to yes, Octopus will normalize the atomic orbitals individually.
+  !% This variable is ignored is <tt>AOLoewdin<\tt> is set to yes.
   !%End
   call parse_variable(namespace, 'AONormalize', .true., this%normalize)
   call messages_print_var_value(stdout, 'AONormalize', this%normalize)
@@ -173,6 +176,7 @@ contains
   call parse_variable(namespace, 'AOLoewdin', .false., this%orthogonalization)
   call messages_print_var_value(stdout, 'AOLoewdin', this%orthogonalization)
   if(this%orthogonalization) call messages_experimental("AOLoewdin")
+  if(this%orthogonalization) this%normalize = .false.
 
   if(this%orthogonalization .and. this%submeshforperiodic) &
     call messages_not_implemented("AOLoewdin=yes with AOSubmeshForPeriodic=yes.") 

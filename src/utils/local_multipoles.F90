@@ -35,6 +35,7 @@ program oct_local_multipoles
   use local_write_oct_m
   use mesh_oct_m
   use messages_oct_m
+  use mpi_oct_m
   use multicomm_oct_m
   use namespace_oct_m
   use parser_oct_m
@@ -44,7 +45,7 @@ program oct_local_multipoles
   use species_oct_m
   use species_pot_oct_m
   use simul_box_oct_m
-  use system_oct_m
+  use electrons_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use utils_oct_m
@@ -65,7 +66,7 @@ program oct_local_multipoles
     type(local_write_t)             :: writ            !< write option for local domains analysis.
   end type local_domain_t
 
-  type(system_t), pointer :: sys
+  type(electrons_t), pointer :: sys
   type(simul_box_t)     :: sb
   integer, parameter    :: BADER = 512
   FLOAT                 :: BaderThreshold
@@ -91,7 +92,8 @@ program oct_local_multipoles
   call restart_module_init(global_namespace)
 
   call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
-  sys => system_init(global_namespace)
+  sys => electrons_t(global_namespace)
+  call sys%init_parallelization(mpi_world)
   call simul_box_init(sb, global_namespace, sys%geo, sys%space)
 
   call local_domains()
@@ -521,7 +523,7 @@ contains
           call messages_fatal(2)
         end if
         call parse_block_float(blk, row, 2, rsize, unit = units_inp%length)
-        if(rsize < M_ZERO) call messages_input_error(namespace, 'radius')
+        if(rsize < M_ZERO) call messages_input_error(namespace, 'radius', row=row, column=2)
         call parse_block_string(blk, row, 3, clist)
         nb = 0
         do ic = 1, sys%geo%natoms
@@ -529,13 +531,13 @@ contains
         end do
       case(SPHERE)
         call parse_block_float(blk, row, 2, rsize, unit = units_inp%length)
-        if(rsize < M_ZERO) call messages_input_error(namespace, 'radius')
+        if(rsize < M_ZERO) call messages_input_error(namespace, 'radius', row=row, column=2)
         do ic = 1, dim 
           call parse_block_float(blk, row, 2 + ic, center(ic), unit = units_inp%length)
         end do
       case(CYLINDER)
         call parse_block_float(blk, row, 2, rsize, unit = units_inp%length)
-        if(rsize < M_ZERO) call messages_input_error(namespace, 'radius')
+        if(rsize < M_ZERO) call messages_input_error(namespace, 'radius', row=row, column=2)
         call parse_block_float(blk, row, 3, xsize, unit = units_inp%length)
         do ic = 1, dim 
           call parse_block_float(blk, row, 3 + ic, center(ic), unit = units_inp%length)

@@ -1,4 +1,5 @@
 !! Copyright (C) 2008 X. Andrade
+!! Copyright (C) 2020 N. Tancogne-Dejean 
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -19,13 +20,17 @@
 #include "global.h"
 
 module gauge_field_oct_m
+  use algorithm_oct_m
   use global_oct_m
   use grid_oct_m
+  use iso_c_binding
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
+  use mpi_oct_m
   use namespace_oct_m
   use parser_oct_m
+  use propagator_verlet_oct_m
   use profiling_oct_m
   use restart_oct_m
   use simul_box_oct_m
@@ -35,6 +40,7 @@ module gauge_field_oct_m
   use symm_op_oct_m
   use unit_oct_m
   use unit_system_oct_m
+  use write_iter_oct_m
 
   implicit none
 
@@ -51,13 +57,13 @@ module gauge_field_oct_m
     gauge_field_get_vec_pot,              &
     gauge_field_get_vec_pot_vel,          &
     gauge_field_get_vec_pot_acc,          &
-    gauge_field_propagate,                &
-    gauge_field_propagate_vel,            &
     gauge_field_get_energy,               &
     gauge_field_dump,                     &
     gauge_field_load,                     &
     gauge_field_end,                      &
-    gauge_field_get_force
+    gauge_field_get_force,                &
+    gauge_field_do_td,                    &
+    gauge_field_output_write
 
   type gauge_field_t
     private
@@ -312,20 +318,6 @@ contains
   end subroutine gauge_field_propagate
 
   ! ---------------------------------------------------------
-  subroutine gauge_field_propagate_vel(this, dt)
-    type(gauge_field_t),  intent(inout) :: this
-    FLOAT,                intent(in)    :: dt
-
-    PUSH_SUB(gauge_field_propagate_vel)
-
-    this%vecpot_vel(1:this%ndim) = this%vecpot_vel(1:this%ndim) + &
-      M_HALF * dt * (this%vecpot_acc(1:this%ndim) + this%force(1:this%ndim))
-
-    POP_SUB(gauge_field_propagate_vel)
-  end subroutine gauge_field_propagate_vel
-
-
-  ! ---------------------------------------------------------
   subroutine gauge_field_init_vec_pot(this, sb, st)
     type(gauge_field_t),  intent(inout) :: this
     type(simul_box_t),    intent(in)    :: sb
@@ -442,7 +434,7 @@ contains
     type(grid_t),         intent(in)    :: gr
     type(states_elec_t),  intent(in)    :: st
 
-    integer :: idir,ispin,istot
+    integer :: idir, ispin
 
     PUSH_SUB(gauge_field_get_force)
 
@@ -452,11 +444,9 @@ contains
       this%force(1:gr%sb%dim) = M_ZERO 
 
     case(OPTION__GAUGEFIELDDYNAMICS__POLARIZATION)
-      istot = 1
-      if (st%d%nspin > 1) istot = 2
       do idir = 1, gr%sb%periodic_dim
         this%force(idir) = M_ZERO
-        do ispin = 1, istot                      
+        do ispin = 1, st%d%spin_channels
           this%force(idir) = this%force(idir) - &
                                CNST(4.0)*M_PI*P_c/gr%sb%rcell_volume*dmf_integrate(gr%mesh, st%current(:, idir, ispin))
         end do
@@ -468,6 +458,113 @@ contains
 
     POP_SUB(gauge_field_get_force)
   end subroutine gauge_field_get_force
+
+  ! ---------------------------------------------------------
+
+  subroutine gauge_field_do_td(this, operation, dt, time, namespace)
+    class(gauge_field_t),          intent(inout) :: this
+    type(algorithmic_operation_t), intent(in)    :: operation
+    FLOAT,                         intent(in)    :: dt
+    FLOAT,                         intent(in)    :: time
+    type(namespace_t),             intent(in)    :: namespace
+
+    PUSH_SUB(gauge_field_do_td)
+
+    select case (operation%id)
+    case (VERLET_START)
+      !Does nothing at the moment
+    case (VERLET_FINISH)
+      !Does nothing at the moment
+    case (VERLET_UPDATE_POS)
+      !This is inside the gauge_field_propagate routine at the moment
+    case (VERLET_COMPUTE_ACC)
+      call gauge_field_propagate(this, dt, time, namespace)
+
+    case (VERLET_COMPUTE_VEL)
+      this%vecpot_vel(1:this%ndim) = this%vecpot_vel(1:this%ndim) + &
+        M_HALF * dt * (this%vecpot_acc(1:this%ndim) + this%force(1:this%ndim))
+    case default
+      message(1) = "Unsupported TD operation."
+      call messages_fatal(1, namespace=namespace)
+    end select
+
+    POP_SUB(gauge_field_do_td)
+  end subroutine gauge_field_do_td
+
+
+  ! ---------------------------------------------------------
+  subroutine gauge_field_output_write(this, out_gauge, iter)
+    type(gauge_field_t), intent(in)    :: this
+    type(c_ptr),         intent(inout) :: out_gauge
+    integer,             intent(in)    :: iter
+    
+    integer :: idir
+    character(len=50) :: aux
+    FLOAT :: temp(1:MAX_DIM)
+    
+    if(.not.mpi_grp_is_root(mpi_world)) return ! only first node outputs
+
+    PUSH_SUB(td_write_gauge_field)
+    
+    if(iter == 0) then
+      call write_iter_clear(out_gauge)
+      call write_iter_string(out_gauge,'################################################################################')
+      call write_iter_nl(out_gauge)
+      call write_iter_string(out_gauge,'# HEADER')
+      call write_iter_nl(out_gauge)
+
+      ! first line: column names
+      call write_iter_header_start(out_gauge)
+
+      do idir = 1, this%ndim
+        write(aux, '(a2,i1,a1)') 'A(', idir, ')'
+        call write_iter_header(out_gauge, aux)
+      end do
+      do idir = 1, this%ndim
+        write(aux, '(a6,i1,a1)') 'dA/dt(', idir, ')'
+        call write_iter_header(out_gauge, aux)
+      end do
+      do idir = 1, this%ndim
+        write(aux, '(a10,i1,a1)') 'd^2A/dt^2(', idir, ')'
+        call write_iter_header(out_gauge, aux)
+      end do
+      call write_iter_nl(out_gauge)
+
+      ! second line: units
+      !call write_iter_string(out_gauge, '#[Iter n.]')
+      !call write_iter_header(out_gauge, '[' // trim(units_abbrev(units_out%time)) // ']')
+      !call write_iter_string(out_gauge, &
+      !  'A Vector potential in '   // trim(units_abbrev(units_out%length)) &
+      !  'A dot in '                // trim(units_abbrev(units_out%length)) &
+      !  'A dot dot in '            // trim(units_abbrev(units_out%length))
+      !call write_iter_nl(out_gauge)
+
+      call write_iter_string(out_gauge,'################################################################################')
+      call write_iter_nl(out_gauge)
+
+    end if
+
+    call write_iter_start(out_gauge)
+
+    do idir = 1, this%ndim
+      temp(idir) = units_from_atomic(units_out%energy, this%vecpot(idir))
+    end do
+    call write_iter_double(out_gauge, temp, this%ndim)
+
+    do idir = 1, this%ndim
+      temp(idir) = units_from_atomic(units_out%energy / units_out%time, this%vecpot_vel(idir))
+    end do
+    call write_iter_double(out_gauge, temp, this%ndim)
+
+    do idir = 1, this%ndim
+      temp(idir) = units_from_atomic(units_out%energy / units_out%time**2, this%vecpot_acc(idir))
+    end do
+    call write_iter_double(out_gauge, temp, this%ndim)
+
+    call write_iter_nl(out_gauge)
+    POP_SUB(gauge_field_output_write)
+    
+  end subroutine gauge_field_output_write
 
 
 end module gauge_field_oct_m

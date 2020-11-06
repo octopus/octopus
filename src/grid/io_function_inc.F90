@@ -119,7 +119,7 @@ subroutine X(io_function_input_global)(filename, namespace, mesh, ff, ierr, map)
 #endif
   R_TYPE, pointer :: read_ff(:)
 
-  call profiling_in(read_prof, "DISK_READ")
+  call profiling_in(read_prof, TOSTRING(X(DISK_READ)))
   PUSH_SUB(X(io_function_input_global))
 
   ierr = 0
@@ -815,7 +815,7 @@ subroutine X(io_function_output_global) (how, dir, fname, namespace, mesh, ff, u
   integer            :: iunit, ip, idir, jj, np_max
   FLOAT              :: x0
 
-  call profiling_in(write_prof, "DISK_WRITE")
+  call profiling_in(write_prof, TOSTRING(X(DISK_WRITE)))
   PUSH_SUB(X(io_function_output_global))
 
   call io_mkdir(dir, namespace)
@@ -1247,7 +1247,6 @@ contains
   subroutine out_cube()
 
     integer :: ix, iy, iz, idir, idir2, iatom
-    integer :: int_unit(3)
     FLOAT   :: offset(MAX_DIM)
     type(cube_t) :: cube
     type(cube_function_t) :: cf
@@ -1265,10 +1264,10 @@ contains
 
     ! the offset is different in periodic directions
     offset = M_ZERO
-    offset(1:3) = units_from_atomic(units_out%length, -matmul(mesh%sb%rlattice_primitive(1:3,1:3), mesh%sb%lsize(1:3)))
+    offset(1:3) = -matmul(mesh%sb%rlattice_primitive(1:3,1:3), mesh%sb%lsize(1:3))
 
     do idir = mesh%sb%periodic_dim+1, 3
-      offset(idir) = units_from_atomic(units_out%length, -(cube%rs_n_global(idir) - 1)/2*mesh%spacing(idir))
+      offset(idir) = -(cube%rs_n_global(idir) - 1)/2*mesh%spacing(idir)
     end do
 
     iunit = io_open(trim(dir)//'/'//trim(fname)//".cube", namespace, action='write')
@@ -1277,20 +1276,15 @@ contains
     write(iunit, '(4a)') 'git: ', trim(conf%git_commit), " build: ",  trim(conf%build_time)
     write(iunit, '(i5,3f12.6)') geo%natoms, offset(1:3)
 
-    ! According to http://gaussian.com/cubegen/
-    ! If N1<0 the input cube coordinates are assumed to be in Bohr, otherwise, they are interpreted as Angstroms. 
-    int_unit(1:3) = 1
-    if (units_out%length%abbrev == "b") then
-      int_unit(1) = -1
-    end if
-
+    ! According to http://gaussian.com/cubegen/, cube files are always in atomic units.
+    ! Although the specifications mention a way of indicating Angstrom units,
+    ! this is only for Gaussian input files, not for output files.
     do idir = 1, 3
-      write(iunit, '(i5,3f12.6)') int_unit(idir)*cube%rs_n_global(idir), (units_from_atomic(units_out%length, &
-        mesh%spacing(idir)*mesh%sb%rlattice_primitive(idir2, idir)), idir2 = 1, 3)
+      write(iunit, '(i5,3f12.6)') cube%rs_n_global(idir), &
+        (mesh%spacing(idir)*mesh%sb%rlattice_primitive(idir2, idir), idir2 = 1, 3)
     end do
     do iatom = 1, geo%natoms
-      write(iunit, '(i5,4f12.6)') int(species_z(geo%atom(iatom)%species)),  M_ZERO, &
-        (units_from_atomic(units_out%length, geo%atom(iatom)%x(idir)), idir = 1, 3)
+      write(iunit, '(i5,4f12.6)') int(species_z(geo%atom(iatom)%species)),  M_ZERO, (geo%atom(iatom)%x(idir), idir = 1, 3)
     end do
 
     do ix = 1, cube%rs_n_global(1)
@@ -1298,10 +1292,10 @@ contains
         do iz = 1, cube%rs_n_global(3), 6
 
           if(iz + 6 - 1 <= cube%rs_n_global(3)) then
-            write(iunit,'(6e14.6)') units_from_atomic(unit, R_REAL(cf%X(RS)(ix, iy, iz:iz + 6 - 1)))
+            write(iunit,'(6e14.6)') R_REAL(cf%X(RS)(ix, iy, iz:iz + 6 - 1))
           else
             write(fmt, '(a,i1,a)') '(', cube%rs_n_global(3) - iz + 1, 'e14.6)'
-            write(iunit, trim(fmt)) units_from_atomic(unit, R_REAL(cf%X(RS)(ix, iy, iz:cube%rs_n_global(3))))
+            write(iunit, trim(fmt)) R_REAL(cf%X(RS)(ix, iy, iz:cube%rs_n_global(3)))
           end if
         
         end do
@@ -1532,7 +1526,7 @@ subroutine X(io_function_output_global_BZ) (how, dir, fname, namespace, mesh, ff
   character(len=20)  :: mformat, mformat2, mfmtheader
   integer            :: iunit, np_max
 
-  call profiling_in(write_prof, "DISK_WRITE")
+  call profiling_in(write_prof, TOSTRING(X(DISK_WRITE)))
   PUSH_SUB(X(io_function_output_global_BZ))
 
   call io_mkdir(dir, namespace)

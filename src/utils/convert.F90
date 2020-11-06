@@ -45,7 +45,7 @@ program oct_convert
   use restart_oct_m
   use spectrum_oct_m
   use string_oct_m
-  use system_oct_m
+  use electrons_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use utils_oct_m
@@ -100,7 +100,7 @@ contains
   !! This is a high-level interface that reads the input file and
   !! calls the proper function.
   subroutine convert()
-    type(system_t), pointer :: sys
+    type(electrons_t), pointer :: sys
 
     character(MAX_PATH_LEN)  :: basename, folder, ref_name, ref_folder, folder_default
     integer                  :: c_start, c_end, c_step, c_start_default, length, c_how
@@ -110,7 +110,8 @@ contains
     PUSH_SUB(convert)
 
     call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
-    sys => system_init(global_namespace)
+    sys => electrons_t(global_namespace)
+    call sys%init_parallelization(mpi_world)
 
     message(1) = 'Info: Converting files'
     message(2) = ''

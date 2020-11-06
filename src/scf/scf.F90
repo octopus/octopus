@@ -128,7 +128,7 @@ module scf_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine scf_init(scf, namespace, gr, geo, st, mc, hm, conv_force)
+  subroutine scf_init(scf, namespace, gr, geo, st, mc, hm, ks, conv_force)
     type(scf_t),              intent(inout) :: scf
     type(namespace_t),        intent(in)    :: namespace
     type(grid_t),     target, intent(inout) :: gr
@@ -136,6 +136,7 @@ contains
     type(states_elec_t),      intent(in)    :: st
     type(multicomm_t),        intent(in)    :: mc
     type(hamiltonian_elec_t), intent(inout) :: hm
+    type(v_ks_t),             intent(in)    :: ks
     FLOAT,          optional, intent(in)    :: conv_force
 
     FLOAT :: rmin
@@ -153,6 +154,9 @@ contains
     !% has not been achieved. -1 means unlimited.
     !% 0 means just do LCAO (or read from restart), compute the eigenvalues and energy,
     !% and stop, without updating the wavefunctions or density.
+    !%
+    !% If convergence criteria are set, the SCF loop will only stop once the criteria
+    !% are fulfilled for two consecutive iterations.
     !%End
     call parse_variable(namespace, 'MaximumIter', 200, scf%max_iter)
 
@@ -180,6 +184,9 @@ contains
     !% one SCF iteration is smaller than this value.
     !%
     !%A zero value (the default) means do not use this criterion.
+    !%
+    !% If this criterion is used, the SCF loop will only stop once it is
+    !% fulfilled for two consecutive iterations.
     !%End
     call parse_variable(namespace, 'ConvEnergy', M_ZERO, scf%conv_energy_diff, unit = units_inp%energy)
     
@@ -193,12 +200,15 @@ contains
     !% <math>\varepsilon = \int {\rm d}^3r \left| \rho^{out}(\bf r) -\rho^{inp}(\bf r) \right|</math>.
     !%
     !% A zero value (the default) means do not use this criterion.
+    !%
+    !% If this criterion is used, the SCF loop will only stop once it is
+    !% fulfilled for two consecutive iterations.
     !%End
     call parse_variable(namespace, 'ConvAbsDens', M_ZERO, scf%conv_abs_dens)
 
     !%Variable ConvRelDens
     !%Type float
-    !%Default 1e-5
+    !%Default 1e-6
     !%Section SCF::Convergence
     !%Description
     !% Relative convergence of the density: 
@@ -211,8 +221,11 @@ contains
     !% If you reduce this value, you should also reduce
     !% <tt>EigensolverTolerance</tt> to a value of roughly 1/10 of
     !% <tt>ConvRelDens</tt> to avoid convergence problems.
+    !%
+    !% If this criterion is used, the SCF loop will only stop once it is
+    !% fulfilled for two consecutive iterations.
     !%End
-    call parse_variable(namespace, 'ConvRelDens', CNST(1e-5), scf%conv_rel_dens)
+    call parse_variable(namespace, 'ConvRelDens', CNST(1e-6), scf%conv_rel_dens)
 
     !%Variable ConvAbsEv
     !%Type float
@@ -225,6 +238,9 @@ contains
     !% \sum_{j=1}^{N_{occ}} \varepsilon_j^{inp} \right| </math>
     !%
     !% A zero value (the default) means do not use this criterion.
+    !%
+    !% If this criterion is used, the SCF loop will only stop once it is
+    !% fulfilled for two consecutive iterations.
     !%End
     call parse_variable(namespace, 'ConvAbsEv', M_ZERO, scf%conv_abs_ev, unit = units_inp%energy)
 
@@ -239,6 +255,9 @@ contains
     !% {\left| \sum_{j=1}^{N_{occ}} \varepsilon_j^{out} \right|} </math>
     !%
     !%A zero value (the default) means do not use this criterion.
+    !%
+    !% If this criterion is used, the SCF loop will only stop once it is
+    !% fulfilled for two consecutive iterations.
     !%End
     call parse_variable(namespace, 'ConvRelEv', M_ZERO, scf%conv_rel_ev, unit = units_inp%energy)
 
@@ -254,6 +273,9 @@ contains
     !% zero value means do not use this criterion. The default is
     !% zero, except for geometry optimization, which sets a default of
     !% 1e-8 H/b.
+    !%
+    !% If this criterion is used, the SCF loop will only stop once it is
+    !% fulfilled for two consecutive iterations.
     !%End
     call parse_variable(namespace, 'ConvForce', optional_default(conv_force, M_ZERO), scf%conv_abs_force, unit = units_inp%force)
 
@@ -286,6 +308,9 @@ contains
     !%Description
     !% If true, the calculation will not be considered converged unless all states have
     !% individual errors less than <tt>EigensolverTolerance</tt>.
+    !%
+    !% If this criterion is used, the SCF loop will only stop once it is
+    !% fulfilled for two consecutive iterations.
     !%End
     call parse_variable(namespace, 'ConvEigenError', .false., scf%conv_eigen_error)
 
@@ -384,6 +409,23 @@ contains
     ! now the eigensolver stuff
     call eigensolver_init(scf%eigens, namespace, gr, st, geo, mc)
 
+    !The evolution operator is a very specific propagation that requires a specific 
+    !setting to work in the current framework
+    if(scf%eigens%es_type == RS_EVO) then
+      if(scf%mix_field /= OPTION__MIXFIELD__DENSITY) then
+        message(1) = "Evolution eigensolver is only compatible with MixField = density."
+        call messages_fatal(1)
+      end if
+      if(mix_coefficient(scf%smix) /= M_ONE) then
+        message(1) = "Evolution eigensolver is only compatible with Mixing = 1."
+        call messages_fatal(1)
+      end if
+      if(mix_scheme(scf%smix) /= OPTION__MIXINGSCHEME__LINEAR) then
+        message(1) = "Evolution eigensolver is only compatible with MixingScheme = linear."
+        call messages_fatal(1)
+      end if
+    end if
+
     !%Variable SCFinLCAO
     !%Type logical
     !%Default no
@@ -418,6 +460,19 @@ contains
     !%End
     call parse_variable(namespace, 'SCFCalculateForces', .not. geo%only_user_def, scf%calc_force)
 
+    if(scf%calc_force .and. gr%der%boundaries%spiralBC) then
+      message(1) = 'Forces cannot be calculated when using spiral boundary conditions.'
+      write(message(2),'(a)') 'Please use SCFCalculateForces = no.'
+      call messages_fatal(2, namespace=namespace)
+    end if
+    if(scf%calc_force) then
+      if(associated(hm%ep%B_field) .or. associated(hm%ep%A_static)) then
+        write(message(1),'(a)') 'The forces are currently not properly calculated if static'
+        write(message(2),'(a)') 'magnetic fields or static vector potentials are present.'
+        write(message(3),'(a)') 'Please use SCFCalculateForces = no.'
+        call messages_fatal(3, namespace=namespace)
+      end if
+    end if
 
     !%Variable SCFCalculateStress
     !%Type logical
@@ -428,6 +483,19 @@ contains
     !% default is no.
     !%End
     call parse_variable(namespace, 'SCFCalculateStress', .false. , scf%calc_stress)
+    if(scf%calc_stress) then
+      if(ks%theory_level == HARTREE .or. ks%theory_level == HARTREE_FOCK .or. &
+        (ks%theory_level == KOHN_SHAM_DFT .and. bitand(hm%xc%family, XC_FAMILY_LDA) == 0)) then
+        write(message(1),'(a)') 'The stress tensor is currently only properly computed at the DFT-LDA level'
+        write(message(2),'(a)') 'Please use SCFCalculateStress = no.'
+        call messages_fatal(2, namespace=namespace)
+      end if
+      if(ks%vdw_correction /= OPTION__VDWCORRECTION__NONE) then
+        write(message(1),'(a)') 'The stress tensor is currently not properly computed with vdW corrections'
+        write(message(2),'(a)') 'Please use SCFCalculateStress = no.'
+        call messages_fatal(2, namespace=namespace)
+      end if
+    end if 
     
     !%Variable SCFCalculateDipole
     !%Type logical
@@ -536,7 +604,7 @@ contains
     type(restart_t), optional, intent(in)    :: restart_load
     type(restart_t), optional, intent(in)    :: restart_dump
 
-    logical :: finish, gs_run_, berry_conv
+    logical :: finish, converged_current, converged_last, gs_run_, berry_conv
     integer :: iter, is, iatom, nspin, ierr, iberry, idir, verbosity_, ib, iqn
     FLOAT :: evsum_out, evsum_in, forcetmp, dipole(MAX_DIM), dipole_prev(MAX_DIM)
     FLOAT :: etime, itime
@@ -693,6 +761,7 @@ contains
       end if
       call messages_info(1)
     end if
+    converged_current = .false.
 
     ! SCF cycle
     itime = loct_clock()
@@ -822,7 +891,8 @@ contains
       scf%eigens%current_rel_dens_error = scf%rel_dens
 
       ! are we finished?
-      finish = scf%check_conv .and. &
+      converged_last = converged_current
+      converged_current = scf%check_conv .and. &
         (scf%conv_abs_dens  <= M_ZERO .or. scf%abs_dens  <= scf%conv_abs_dens)  .and. &
         (scf%conv_rel_dens  <= M_ZERO .or. scf%rel_dens  <= scf%conv_rel_dens)  .and. &
         (scf%conv_abs_force <= M_ZERO .or. scf%abs_force <= scf%conv_abs_force) .and. &
@@ -830,6 +900,9 @@ contains
         (scf%conv_rel_ev    <= M_ZERO .or. scf%rel_ev    <= scf%conv_rel_ev)    .and. &
         (scf%conv_energy_diff <= M_ZERO .or. abs(scf%energy_diff) <= scf%conv_energy_diff) .and. &
         (.not. scf%conv_eigen_error .or. all(scf%eigens%converged == st%nst))
+      ! only finish if the convergence criterion is fulfilled in two
+      ! consecutive iterations
+      finish = converged_last .and. converged_current
 
       etime = loct_clock() - itime
       itime = etime + itime
@@ -854,7 +927,7 @@ contains
         call mixing(scf%smix)
         call mixfield_get_vnew(scf%mixfield, hm%vhxc)
         call lda_u_mixer_get_vnew(hm%lda_u, scf%lda_u_mix, st)
-        call hamiltonian_elec_update(hm, gr%mesh, namespace)
+        call hamiltonian_elec_update_pot(hm, gr%mesh, accel_copy=.true.)
         
       case(OPTION__MIXFIELD__STATES)
 
@@ -1018,7 +1091,7 @@ contains
     end if
 
     ! calculate stress
-    if(scf%calc_stress) call stress_calculate(namespace, gr, hm, st, geo)
+    if(scf%calc_stress) call stress_calculate(namespace, gr, hm, st, geo, ks)
     
     if(scf%max_iter == 0) then
       call energy_calc_eigenvalues(namespace, hm, gr%der, st)
@@ -1217,7 +1290,7 @@ contains
         if (bitand(ks%xc_family, XC_FAMILY_OEP) /= 0 .and. ks%theory_level /= HARTREE_FOCK) then
           if (((ks%oep%level == XC_OEP_FULL) .or. (ks%oep%level == XC_OEP_KLI)) .and. ks%oep%has_photons) then
             write(iunit, '(a)') 'Photon observables:'
-            write(iunit, '(6x, a, es15.8,a,es15.8,a)') 'Photon number = ', ks%oep%pt%pt_number(1)
+            write(iunit, '(6x, a, es15.8,a,es15.8,a)') 'Photon number = ', ks%oep%pt%number(1)
             write(iunit, '(6x, a, es15.8,a,es15.8,a)') 'Photon ex. = ', ks%oep%pt%ex
             write(iunit,'(1x)')
           end if

@@ -27,13 +27,9 @@ PseudopotentialSet = hscv_lda
 Spacing = 0.4
 
 FromScratch = yes
-ParStates = no
-ParDomains = no
 
 SpinComponents = polarized
 GuessMagnetDensity = paramagnetic
-
-LCAOStart= lcao_states
 
 nk = 2
 %KPointsGrid
@@ -50,3 +46,5 @@ AOThreshold = 0.05
 AONormalize = no
 OutputLDA_U = occ_matrices + effectiveU + kanamoriU
 ACBN0Screening = 0.5
+
+DFTUPoissonSolver = dft_u_poisson_fft

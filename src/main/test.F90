@@ -23,6 +23,7 @@ module test_oct_m
   use batch_ops_oct_m
   use boundaries_oct_m
   use calc_mode_par_oct_m
+  use cgal_polyhedra_oct_m
   use clock_oct_m
   use density_oct_m
   use derivatives_oct_m
@@ -32,11 +33,13 @@ module test_oct_m
   use grid_oct_m
   use hamiltonian_elec_oct_m
   use ion_interaction_oct_m
+  use iso_c_binding
   use io_oct_m
   use mesh_batch_oct_m
   use mesh_function_oct_m
   use mesh_interpolation_oct_m
   use messages_oct_m
+  use mpi_oct_m
   use multicomm_oct_m
   use namespace_oct_m
   use orbitalbasis_oct_m
@@ -51,7 +54,7 @@ module test_oct_m
   use states_elec_calc_oct_m
   use states_elec_dim_oct_m
   use subspace_oct_m
-  use system_oct_m
+  use electrons_oct_m
   use types_oct_m
   use v_ks_oct_m
   use wfs_elec_oct_m
@@ -116,9 +119,10 @@ contains
     !% Tests the subspace diagonalization
     !%Option batch_ops 13
     !% Tests the batch operations
-    !%Calculation of the density.
     !%Option clock 18
     !% Tests for clock
+    !%Option cgal 19
+    !% Tests for cgal interface
     !%End
     call parse_variable(namespace, 'TestMode', OPTION__TESTMODE__HARTREE, test_mode)
 
@@ -221,6 +225,8 @@ contains
       call test_batch_ops(param, namespace)
     case(OPTION__TESTMODE__CLOCK)
       call test_clock()
+    case(OPTION__TESTMODE__CGAL)
+      call test_cgal()
     end select
 
     POP_SUB(test_run)
@@ -231,13 +237,14 @@ contains
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
 
-    type(system_t), pointer :: sys
+    type(electrons_t), pointer :: sys
 
     PUSH_SUB(test_hartree)
 
     call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
 
-    sys => system_init(namespace)
+    sys => electrons_t(namespace)
+    call sys%init_parallelization(mpi_world)
     call poisson_test(sys%hm%psolver, sys%gr%mesh, namespace, param%repetitions)
     SAFE_DEALLOCATE_P(sys)
 
@@ -249,7 +256,7 @@ contains
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
 
-    type(system_t), pointer :: sys
+    type(electrons_t), pointer :: sys
     type(wfs_elec_t), pointer :: epsib
     integer :: itime
     CMPLX, allocatable :: psi(:, :)
@@ -263,7 +270,8 @@ contains
     call messages_new_line()
     call messages_info()
 
-    sys => system_init(namespace)
+    sys => electrons_t(namespace)
+    call sys%init_parallelization(mpi_world)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh, wfs_type = TYPE_CMPLX)
     call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
@@ -304,7 +312,7 @@ contains
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
 
-    type(system_t), pointer :: sys
+    type(electrons_t), pointer :: sys
     type(wfs_elec_t), pointer :: epsib
     integer :: itime
     type(orbitalbasis_t) :: basis
@@ -320,7 +328,8 @@ contains
     call messages_new_line()
     call messages_info()
 
-    sys => system_init(namespace)
+    sys => electrons_t(namespace)
+    call sys%init_parallelization(mpi_world)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
     call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
@@ -382,10 +391,9 @@ contains
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
 
-    type(system_t), pointer :: sys
+    type(electrons_t), pointer :: sys
     type(wfs_elec_t), pointer :: hpsib
     integer :: itime, terms
-    type(simul_box_t) :: sb
 
     PUSH_SUB(test_hamiltonian)
 
@@ -415,13 +423,13 @@ contains
     call messages_new_line()
     call messages_info()
 
-    sys => system_init(namespace)
+    sys => electrons_t(namespace)
+    call sys%init_parallelization(mpi_world)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
     call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
 
     !Initialize external potential
-    call simul_box_init(sb, sys%namespace, sys%geo, sys%space)
     if(sys%st%d%pack_states .and. hamiltonian_elec_apply_packed(sys%hm)) call sys%st%pack()
     call hamiltonian_elec_epot_generate(sys%hm, sys%namespace, sys%gr, sys%geo, sys%st)
     call density_calc(sys%st, sys%gr, sys%st%rho)
@@ -455,7 +463,6 @@ contains
 
     call hpsib%end(copy = .false.)
     SAFE_DEALLOCATE_P(hpsib)
-    call simul_box_end(sb)
     call states_elec_deallocate_wfns(sys%st)
     SAFE_DEALLOCATE_P(sys)
 
@@ -468,7 +475,7 @@ contains
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
 
-    type(system_t), pointer :: sys
+    type(electrons_t), pointer :: sys
     integer :: itime
 
     PUSH_SUB(test_density_calc)
@@ -480,7 +487,8 @@ contains
     call messages_new_line()
     call messages_info()
 
-    sys => system_init(namespace)
+    sys => electrons_t(namespace)
+    call sys%init_parallelization(mpi_world)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
     call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
@@ -505,7 +513,7 @@ contains
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
 
-    type(system_t), pointer :: sys
+    type(electrons_t), pointer :: sys
     integer :: itime
 
     PUSH_SUB(test_density_calc)
@@ -517,7 +525,8 @@ contains
     call messages_new_line()
     call messages_info()
 
-    sys => system_init(namespace)
+    sys => electrons_t(namespace)
+    call sys%init_parallelization(mpi_world)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
     call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
@@ -541,7 +550,7 @@ contains
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
 
-    type(system_t), pointer :: sys
+    type(electrons_t), pointer :: sys
     type(exponential_t) :: te
     integer :: itime
 
@@ -554,7 +563,8 @@ contains
     call messages_new_line()
     call messages_info()
 
-    sys => system_init(namespace)
+    sys => electrons_t(namespace)
+    call sys%init_parallelization(mpi_world)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh, wfs_type=TYPE_CMPLX)
     call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
@@ -591,7 +601,7 @@ contains
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
 
-    type(system_t), pointer :: sys
+    type(electrons_t), pointer :: sys
     integer :: itime
     type(subspace_t) :: sdiag
 
@@ -604,7 +614,8 @@ contains
     call messages_new_line()
     call messages_info()
 
-    sys => system_init(namespace)
+    sys => electrons_t(namespace)
+    call sys%init_parallelization(mpi_world)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
     call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
@@ -638,15 +649,17 @@ contains
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
 
-    type(system_t), pointer :: sys
+    type(electrons_t), pointer :: sys
     integer :: itime, ops, ops_default, ist, jst, nst
     type(wfs_elec_t) :: xx, yy
     FLOAT, allocatable :: tmp(:)
+    FLOAT, allocatable :: ddotv(:)
+    CMPLX, allocatable :: zdotv(:)
     FLOAT, allocatable :: ddot(:,:)
     CMPLX, allocatable :: zdot(:,:)
 
 
-    PUSH_SUB(test_density_calc)
+    PUSH_SUB(test_batch_ops)
 
     !%Variable TestBatchOps
     !%Type flag
@@ -662,11 +675,17 @@ contains
     !% Tests batch_nrm2 operation
     !%Option ops_dotp_matrix bit(4)
     !% Tests X(mesh_batch_dotp_matrix)
+    !%Option ops_dotp_self bit(5)
+    !% Tests X(mesh_batch_dotp_self)
+    !%Option ops_dotp_vector bit(6)
+    !% Tests X(mesh_batch_dotp_vector)
     !%End
     ops_default = OPTION__TESTBATCHOPS__OPS_AXPY &
                 + OPTION__TESTBATCHOPS__OPS_SCAL &
                 + OPTION__TESTBATCHOPS__OPS_NRM2 &
-                + OPTION__TESTBATCHOPS__OPS_DOTP_MATRIX
+                + OPTION__TESTBATCHOPS__OPS_DOTP_MATRIX &
+                + OPTION__TESTBATCHOPS__OPS_DOTP_SELF &
+                + OPTION__TESTBATCHOPS__OPS_DOTP_VECTOR
 
     call parse_variable(namespace, 'TestBatchOps', ops_default, ops)
 
@@ -677,7 +696,8 @@ contains
     call messages_new_line()
     call messages_info()
 
-    sys => system_init(namespace)
+    sys => electrons_t(namespace)
+    call sys%init_parallelization(mpi_world)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
     call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
@@ -693,7 +713,7 @@ contains
       do itime = 1, param%repetitions
         call batch_axpy(sys%gr%mesh%np, CNST(0.1), xx, yy)
       end do
-      call test_prints_info_batch(sys%st, sys%gr, yy)
+      call test_prints_info_batch(sys%st, sys%gr, yy, string = "axpy")
 
       call xx%end()
       call yy%end()
@@ -709,7 +729,7 @@ contains
       do itime = 1, param%repetitions
         call batch_scal(sys%gr%mesh%np, CNST(0.1), yy)
       end do
-      call test_prints_info_batch(sys%st, sys%gr, yy)
+      call test_prints_info_batch(sys%st, sys%gr, yy, string="scal")
 
       call xx%end()
       call yy%end()
@@ -739,7 +759,7 @@ contains
     end if
 
     if(bitand(ops, OPTION__TESTBATCHOPS__OPS_DOTP_MATRIX) /= 0) then
-    
+
       message(1) = 'Info: Testing dotp_matrix'
       call messages_info(1)
 
@@ -754,32 +774,100 @@ contains
 
         do ist = 1, nst
           do jst = 1, nst
-            write(message(jst+nst*(ist-1)), '(a,2i3,3x,e13.6)') 'Dotp_matrix states', ist, jst, ddot(ist,jst)
+            write(message(jst), '(a,2i3,3x,e13.6)') 'Dotp_matrix states', ist, jst, ddot(ist,jst)
           end do
+          call messages_info(nst)
         end do
-        call messages_info(nst*nst)
         SAFE_DEALLOCATE_A(ddot)
       else
         SAFE_ALLOCATE(zdot(nst, nst))
         call zmesh_batch_dotp_matrix(sys%gr%mesh, xx, yy, zdot)
+
         do ist = 1, nst
           do jst = 1, nst
-            write(message(jst+nst*(ist-1)), '(a,2i3,3x,2e14.6)') 'Dotp_matrix states', ist, jst, zdot(ist,jst)
+            write(message(jst), '(a,2i3,3x,2e14.6)') 'Dotp_matrix states', ist, jst, zdot(ist,jst)
           end do
+          call messages_info(nst)
         end do
-        call messages_info(nst*nst)
         SAFE_DEALLOCATE_A(zdot)
       end if
-  
+
       call xx%end()
       call yy%end()    
     end if
-  
+
+    if(bitand(ops, OPTION__TESTBATCHOPS__OPS_DOTP_VECTOR) /= 0) then
+    
+      message(1) = 'Info: Testing dotp_vector'
+      call messages_info(1)
+
+      call sys%st%group%psib(1, 1)%copy_to(xx, copy_data = .true.)
+      call sys%st%group%psib(1, 1)%copy_to(yy, copy_data = .true.)
+
+      nst = sys%st%group%psib(1, 1)%nst
+
+      if(states_are_real(sys%st)) then
+        SAFE_ALLOCATE(ddotv(nst))
+        call dmesh_batch_dotp_vector(sys%gr%mesh, xx, yy, ddotv)
+
+        do ist = 1, nst
+          write(message(ist), '(a,i3,3x,e13.6)') 'Dotp_vector state', ist, ddotv(ist)
+        end do
+        call messages_info(nst)
+        SAFE_DEALLOCATE_A(ddotv)
+      else
+        SAFE_ALLOCATE(zdotv(nst))
+        call zmesh_batch_dotp_vector(sys%gr%mesh, xx, yy, zdotv)
+        do ist = 1, nst
+          write(message(ist), '(a,i3,3x,2e14.6)') 'Dotp_vector state', ist, zdotv(ist)
+        end do
+        call messages_info(nst)
+        SAFE_DEALLOCATE_A(zdotv)
+      end if
+
+      call xx%end()
+      call yy%end()    
+    end if
+
+    if(bitand(ops, OPTION__TESTBATCHOPS__OPS_DOTP_SELF) /= 0) then
+
+      message(1) = 'Info: Testing dotp_self'
+      call messages_info(1)
+
+      call sys%st%group%psib(1, 1)%copy_to(xx, copy_data = .true.)
+
+      nst = sys%st%group%psib(1, 1)%nst
+
+      if(states_are_real(sys%st)) then
+        SAFE_ALLOCATE(ddot(nst, nst))
+        call dmesh_batch_dotp_self(sys%gr%mesh, xx, ddot)
+
+        do ist = 1, nst
+          do jst = 1, nst
+            write(message(jst), '(a,2i3,3x,e13.6)') 'Dotp_self states', ist, jst, ddot(ist,jst)
+          end do
+          call messages_info(nst*nst)
+        end do
+        SAFE_DEALLOCATE_A(ddot)
+      else
+        SAFE_ALLOCATE(zdot(nst, nst))
+        call zmesh_batch_dotp_self(sys%gr%mesh, xx, zdot)
+        do ist = 1, nst
+          do jst = 1, nst
+            write(message(jst), '(a,2i3,3x,2e14.6)') 'Dotp_self states', ist, jst, zdot(ist,jst)
+          end do
+          call messages_info(nst*nst)
+        end do
+        SAFE_DEALLOCATE_A(zdot)
+      end if
+
+      call xx%end()
+    end if
 
     call states_elec_deallocate_wfns(sys%st)
     SAFE_DEALLOCATE_P(sys)
 
-    POP_SUB(test_density_calc)
+    POP_SUB(test_batch_ops)
   end subroutine test_batch_ops
 
 
@@ -788,11 +876,12 @@ contains
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
 
-    type(system_t), pointer :: sys
+    type(electrons_t), pointer :: sys
 
     PUSH_SUB(test_derivatives)
 
-    sys => system_init(namespace)
+    sys => electrons_t(namespace)
+    call sys%init_parallelization(mpi_world)
 
     message(1) = 'Info: Testing the finite-differences derivatives.'
     message(2) = ''
@@ -817,7 +906,7 @@ contains
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
 
-    type(system_t), pointer :: sys
+    type(electrons_t), pointer :: sys
     integer :: itime
 
     PUSH_SUB(test_orthogonalization)
@@ -825,7 +914,8 @@ contains
     call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
     call calc_mode_par_set_scalapack_compat()
 
-    sys => system_init(namespace)
+    sys => electrons_t(namespace)
+    call sys%init_parallelization(mpi_world)
 
     message(1) = 'Info: Testing orthogonalization.'
     message(2) = ''
@@ -858,11 +948,12 @@ contains
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
 
-    type(system_t), pointer :: sys
+    type(electrons_t), pointer :: sys
 
     PUSH_SUB(test_interpolation)
 
-    sys => system_init(namespace)
+    sys => electrons_t(namespace)
+    call sys%init_parallelization(mpi_world)
 
     if(param%type == OPTION__TESTTYPE__ALL .or. param%type == OPTION__TESTTYPE__REAL) then
       call messages_write('Info: Testing real interpolation routines')
@@ -894,13 +985,14 @@ contains
   subroutine test_ion_interaction(namespace)
     type(namespace_t),        intent(in) :: namespace
 
-    type(system_t), pointer :: sys
+    type(electrons_t), pointer :: sys
 
     PUSH_SUB(test_ion_interaction)
 
-    sys => system_init(namespace)
+    sys => electrons_t(namespace)
+    call sys%init_parallelization(mpi_world)
 
-    call ion_interaction_test(sys%geo, sys%namespace, sys%gr%sb)
+    call ion_interaction_test(sys%geo, sys%namespace, sys%gr%sb, sys%mc)
 
     SAFE_DEALLOCATE_P(sys)
 
@@ -909,14 +1001,19 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine test_prints_info_batch(st, gr, psib)
+  subroutine test_prints_info_batch(st, gr, psib, string)
     type(states_elec_t), intent(in)    :: st
     type(grid_t),        intent(in)    :: gr
     class(batch_t),      intent(inout) :: psib
+    character(*), optional,  intent(in)    :: string      
 
     integer :: itime
     CMPLX, allocatable :: zpsi(:, :)
     FLOAT, allocatable :: dpsi(:, :)
+
+    character(80)      :: string_
+
+    string_ = optional_default(string, "")
 
     PUSH_SUB(test_prints_info_batch)
 
@@ -929,10 +1026,10 @@ contains
     do itime = 1, psib%nst
       if(states_are_real(st)) then
         call batch_get_state(psib, itime, gr%mesh%np, dpsi)
-        write(message(1),'(a,i1,3x,e13.6)') "Norm state  ", itime, dmf_nrm2(gr%mesh, st%d%dim, dpsi)
+        write(message(1),'(a,i1,3x,e13.6)') "Norm state "//trim(string_)//" ", itime, dmf_nrm2(gr%mesh, st%d%dim, dpsi)
       else
         call batch_get_state(psib, itime, gr%mesh%np, zpsi)
-        write(message(1),'(a,i1,3x,e13.6)') "Norm state  ", itime, zmf_nrm2(gr%mesh, st%d%dim, zpsi)
+        write(message(1),'(a,i1,3x,e13.6)') "Norm state "//trim(string_)//" ", itime, zmf_nrm2(gr%mesh, st%d%dim, zpsi)
       end if
       call messages_info(1)
     end do
@@ -955,49 +1052,66 @@ contains
 
     PUSH_SUB(test_clock)
 
-    test_clock_a = clock_t('test_clock_a', CNST(2.0), CNST(1.0), 100)
-    test_clock_b = clock_t('test_clock_b', CNST(1.0), CNST(1.0))
+    test_clock_a = clock_t('test_clock_a', CNST(2.0), 100)
+    test_clock_b = clock_t('test_clock_b', CNST(1.0))
     call test_clock_a%print()
     call test_clock_b%print()
 
     call test_clock_a%set_time(test_clock_b)
     call test_clock_a%print()
-    call test_clock_a%increment()
+    test_clock_a = test_clock_a + CLOCK_TICK
     call test_clock_a%print()
-    call test_clock_a%decrement()
+    test_clock_a = test_clock_a - CLOCK_TICK
     call test_clock_a%print()
-    call test_clock_a%increment()
+    test_clock_a = test_clock_a + CLOCK_TICK
     call test_clock_a%print()
     call test_clock_a%reset()
     call test_clock_a%print()
-    call test_clock_a%increment(3)
+    test_clock_a = test_clock_a + 3*CLOCK_TICK
     call test_clock_a%print()
-    call test_clock_a%decrement(2)
+    test_clock_a = test_clock_a - 2*CLOCK_TICK
     call test_clock_a%print()
     message(1) = test_clock_a%print_str()
     call messages_info(1)
 
     write(message(1),'(A,x,I10.10)') &
-	'clock_get_tick', test_clock_a%get_tick()
+          'clock_get_tick', test_clock_a%get_tick()
     write(message(2),'(A,x,F15.10)') &
-	'clock_get_sim_time', test_clock_a%get_sim_time()
+          'clock_time', test_clock_a%time()
     write(message(3),'(A,x,I1)')     &
-	'clock_is_earlier', abs(transfer(test_clock_a .lt. test_clock_b, 0))
+          'clock_is_earlier', abs(transfer(test_clock_a .lt. test_clock_b, 0))
     write(message(4),'(A,x,I1)')     &
-	'clock_is_equal_or_earlier', abs(transfer(test_clock_a .le. test_clock_b, 0))
+          'clock_is_equal_or_earlier', abs(transfer(test_clock_a .le. test_clock_b, 0))
     write(message(5),'(A,x,I1)')     &
-	'clock_is_later', abs(transfer(test_clock_a .gt. test_clock_b, 0))
+          'clock_is_later', abs(transfer(test_clock_a .gt. test_clock_b, 0))
     write(message(6),'(A,x,I1)')     &
-	'clock_is_equal_or_later', abs(transfer(test_clock_a .ge. test_clock_b, 0))
+          'clock_is_equal_or_later', abs(transfer(test_clock_a .ge. test_clock_b, 0))
     write(message(7),'(A,x,I1)')     &
-	'clock_is_equal', abs(transfer(test_clock_a .eq. test_clock_b, 0))
-    write(message(8),'(A,x,I1)')     &
-	'clock_is_later_with_step', abs(transfer(test_clock_a%is_later_with_step(test_clock_b), 0))
-    call messages_info(8)
-
+          'clock_is_equal', abs(transfer(test_clock_a .eq. test_clock_b, 0))
+    call messages_info(7)
 
     POP_SUB(test_clock)
   end subroutine test_clock
+
+
+  ! ---------------------------------------------------------
+  subroutine test_cgal()
+
+    type(cgal_polyhedra_t) :: cgal_poly
+
+    PUSH_SUB(test_cgal)
+
+    call cgal_polyhedron_init(cgal_poly, "28-cgal.02-X.off", verbose = .true.)
+
+    if(cgal_polyhedron_point_inside(cgal_poly, CNST(30.), CNST(10.), CNST(30.))) then
+       message(1) = "cgal_polyhedron_point_inside"
+       call messages_info(1)
+    end if
+
+    call cgal_polyhedron_end(cgal_poly)
+
+    POP_SUB(test_cgal)
+  end subroutine test_cgal
 
 end module test_oct_m
 

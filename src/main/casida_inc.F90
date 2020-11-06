@@ -35,7 +35,7 @@ subroutine X(oscillator_strengths)(cas, mesh, st)
 
   PUSH_SUB(X(oscillator_strengths))
 
-  call profiling_in(prof, "CASIDA_OSCILLATOR_STRENGTHS")
+  call profiling_in(prof, TOSTRING(X(CASIDA_OSCILLATOR_STRENGTHS)))
 
   if(cas%qcalc) then
     SAFE_ALLOCATE(zf(1:mesh%np))
@@ -168,7 +168,7 @@ function X(ks_matrix_elements) (cas, st, mesh, dv) result(xx)
   type(profile_t), save :: prof
 
   PUSH_SUB(X(ks_matrix_elements))
-  call profiling_in(prof, 'CASIDA_KS')
+  call profiling_in(prof, TOSTRING(X(CASIDA_KS)))
 
   SAFE_ALLOCATE(ff(1:mesh%np))
   SAFE_ALLOCATE(psii(1:mesh%np, 1:st%d%dim))
@@ -281,8 +281,8 @@ end subroutine X(transition_density)
 
 ! ---------------------------------------------------------
 subroutine X(get_transition_densities) (cas, sys)
-  type(casida_t),    intent(in) :: cas
-  type(system_t),    intent(in) :: sys
+  type(casida_t),      intent(in) :: cas
+  type(electrons_t),   intent(in) :: sys
 
   integer :: ia, ierr
   character(len=5) :: intstr
@@ -325,7 +325,7 @@ subroutine X(casida_get_rho)(st, mesh, ii, ia, kk, rho)
   type(profile_t), save :: prof
 
   PUSH_SUB(X(casida_get_rho))
-  call profiling_in(prof, 'CASIDA_GET_RHO')
+  call profiling_in(prof, TOSTRING(X(CASIDA_GET_RHO)))
 
   ! For performance reasons we don`t use states_elec_get_states, but we access the states directly
 
@@ -352,7 +352,7 @@ end subroutine X(casida_get_rho)
 
 !> one-particle matrix elements of perturbation
 subroutine X(casida_calc_lr_hmat1)(sys, pert, hvar, lr_hmat1, is_saved, st_start, st_end, ik)
-  type(system_t),      intent(inout) :: sys
+  type(electrons_t),   intent(inout) :: sys
   type(pert_t),        intent(in)    :: pert
   FLOAT,               intent(in)    :: hvar(:,:,:)
   R_TYPE,              intent(out)   :: lr_hmat1(:,:,:)
@@ -557,16 +557,16 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
     buffery(1:mesh%np) = R_TOTYPE(M_ZERO)
     bufferz(1:mesh%np) = R_TOTYPE(M_ZERO)
     do ii = 1, cas%pt_nmodes
-        buffer(1:mesh%np) = (cas%pt%lambda_array(ii)* &
-             ( cas%pt%pol_array(ii,1)*mesh%x(1:mesh%np, 1)  &
-             + cas%pt%pol_array(ii,2)*mesh%x(1:mesh%np, 2)  &
-             + cas%pt%pol_array(ii,3)*mesh%x(1:mesh%np, 3)))
+        buffer(1:mesh%np) = (cas%pt%lambda(ii)* &
+             ( cas%pt%pol(ii,1)*mesh%x(1:mesh%np, 1)  &
+             + cas%pt%pol(ii,2)*mesh%x(1:mesh%np, 2)  &
+             + cas%pt%pol(ii,3)*mesh%x(1:mesh%np, 3)))
         bufferx(1:mesh%np) = bufferx(1:mesh%np) + &
-            buffer(1:mesh%np)*cas%pt%lambda_array(ii)*cas%pt%pol_array(ii,1)
+            buffer(1:mesh%np)*cas%pt%lambda(ii)*cas%pt%pol(ii,1)
         buffery(1:mesh%np) = buffery(1:mesh%np) + &
-            buffer(1:mesh%np)*cas%pt%lambda_array(ii)*cas%pt%pol_array(ii,2)
+            buffer(1:mesh%np)*cas%pt%lambda(ii)*cas%pt%pol(ii,2)
         bufferz(1:mesh%np) = bufferz(1:mesh%np) + &
-            buffer(1:mesh%np)*cas%pt%lambda_array(ii)*cas%pt%pol_array(ii,3)
+            buffer(1:mesh%np)*cas%pt%lambda(ii)*cas%pt%pol(ii,3)
     end do
 
   end if
@@ -676,15 +676,15 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
 
             iimode = ia - cas%n_pairs
   !           do idir = 1, mesh%sb%dim
-            deltav(1:mesh%np) = cas%pt%lambda_array(iimode)*&
-                         ( cas%pt%pol_array(iimode,1)*mesh%x(1:mesh%np, 1)  &
-                         + cas%pt%pol_array(iimode,2)*mesh%x(1:mesh%np, 2)  &
-                         + cas%pt%pol_array(iimode,3)*mesh%x(1:mesh%np, 3))
+            deltav(1:mesh%np) = cas%pt%lambda(iimode)*&
+                         ( cas%pt%pol(iimode,1)*mesh%x(1:mesh%np, 1)  &
+                         + cas%pt%pol(iimode,2)*mesh%x(1:mesh%np, 2)  &
+                         + cas%pt%pol(iimode,3)*mesh%x(1:mesh%np, 3))
 
             xx(jb) = X(mf_integrate)(mesh, deltav(1:mesh%np)*rho_j(1:mesh%np))
   !           end do
 
-            matrix(jb_local, ia_local) = sqrt(M_HALF*cas%pt%omega_array(ia-cas%n_pairs))*xx(jb)
+            matrix(jb_local, ia_local) = sqrt(M_HALF*cas%pt%omega(ia-cas%n_pairs))*xx(jb)
           end if
           if(.not. cas%use_scalapack) then
             matrix(ia, jb) = matrix(jb, ia)
@@ -769,7 +769,7 @@ contains
     type(profile_t), save :: prof
 
     PUSH_SUB(X(casida_get_matrix).X(K_term))
-    call profiling_in(prof, 'CASIDA_K')
+    call profiling_in(prof, TOSTRING(X(CASIDA_K)))
     
     if(cas%herm_conj) then
       pi = qq%i
@@ -923,8 +923,8 @@ end subroutine X(write_K_term)
 ! ---------------------------------------------------------
 subroutine X(casida_forces)(cas, sys, mesh, st)
   type(casida_t),      intent(inout) :: cas
-  type(system_t),      intent(inout) :: sys
-  type(mesh_t),           intent(in) :: mesh
+  type(electrons_t),   intent(inout) :: sys
+  type(mesh_t),        intent(in) :: mesh
   type(states_elec_t), intent(inout) :: st
   
   integer :: ip, iatom, idir, is1, is2, ierr, ik, ia
@@ -1019,7 +1019,7 @@ subroutine X(casida_forces)(cas, sys, mesh, st)
         
         call X(casida_get_matrix)(cas, sys%hm, st, sys%ks, mesh, cas%X(mat2), lr_fxc, restart_filename, &
           is_forces = .true.)
-        cas%X(mat2) = cas%X(mat2) * casida_matrix_factor(cas, st)
+        cas%X(mat2) = cas%X(mat2) * casida_matrix_factor(cas, sys)
       else
         cas%X(mat2) = M_ZERO
       end if
@@ -1044,9 +1044,9 @@ subroutine X(casida_forces)(cas, sys, mesh, st)
   SAFE_DEALLOCATE_A(zdl_rho)
 
   SAFE_DEALLOCATE_A(lr_hmat1)
-  SAFE_DEALLOCATE_P(cas%X(lr_hmat2))
-  SAFE_DEALLOCATE_P(cas%X(mat2))
-  SAFE_DEALLOCATE_P(cas%X(w2))
+  SAFE_DEALLOCATE_A(cas%X(lr_hmat2))
+  SAFE_DEALLOCATE_A(cas%X(mat2))
+  SAFE_DEALLOCATE_A(cas%X(w2))
   
   if(cas%calc_forces_scf) then
     call forces_calculate(sys%gr, sys%namespace, sys%geo, sys%hm, st, sys%ks)
@@ -1066,7 +1066,7 @@ end subroutine X(casida_forces)
 ! ---------------------------------------------------------
 subroutine X(casida_get_lr_hmat1)(cas, sys, iatom, idir, dl_rho, lr_hmat1)
   type(casida_t),      intent(in)     :: cas
-  type(system_t),      intent(inout)  :: sys
+  type(electrons_t),   intent(inout)  :: sys
   integer,             intent(in)     :: iatom
   integer,             intent(in)     :: idir
   FLOAT,               intent(in)     :: dl_rho(:,:)
@@ -1199,9 +1199,9 @@ subroutine X(casida_save_pot_end)(this)
 end subroutine X(casida_save_pot_end)
 
 ! ---------------------------------------------------------
-subroutine X(casida_solve)(cas, st)
+subroutine X(casida_solve)(cas, sys)
   type(casida_t),      intent(inout) :: cas
-  type(states_elec_t), intent(in)    :: st
+  type(electrons_t),   intent(in)    :: sys
 
   FLOAT :: eig_diff
   FLOAT, allocatable :: occ_diffs(:)
@@ -1221,10 +1221,10 @@ subroutine X(casida_solve)(cas, st)
 
   PUSH_SUB(X(casida_solve))
 
-  cas%X(mat) = cas%X(mat) * casida_matrix_factor(cas, st)
+  cas%X(mat) = cas%X(mat) * casida_matrix_factor(cas, sys)
 
   ! Note: this is not just a matter of implementation. CASIDA_CASIDA assumes real wfns in the derivation.
-  if(states_are_complex(st) .and. (cas%type == CASIDA_VARIATIONAL .or. cas%type == CASIDA_CASIDA)) then
+  if(states_are_complex(sys%st) .and. (cas%type == CASIDA_VARIATIONAL .or. cas%type == CASIDA_CASIDA)) then
     message(1) = "Variational and full Casida theory levels cannot be used with complex wavefunctions."
     call messages_fatal(1, only_root_writes = .true.)
     ! see section II.D of CV(2) paper regarding this assumption. Would be Eq. 30 with complex wfns.
@@ -1233,15 +1233,15 @@ subroutine X(casida_solve)(cas, st)
   if(cas%type == CASIDA_CASIDA) then
     do ia = 1, cas%n_pairs
       cas%s(ia) = cas%el_per_state / ( &
-        ( st%eigenval(cas%pair(ia)%a, cas%pair(ia)%kk) - st%eigenval(cas%pair(ia)%i, cas%pair(ia)%kk) ) &
-        * ( st%occ(cas%pair(ia)%i, cas%pair(ia)%kk) - st%occ(cas%pair(ia)%a, cas%pair(ia)%kk) ) )
+        ( sys%st%eigenval(cas%pair(ia)%a, cas%pair(ia)%kk) - sys%st%eigenval(cas%pair(ia)%i, cas%pair(ia)%kk) ) &
+        * ( sys%st%occ(cas%pair(ia)%i, cas%pair(ia)%kk) - sys%st%occ(cas%pair(ia)%a, cas%pair(ia)%kk) ) )
     end do
   end if
 
   if(cas%type /= CASIDA_CASIDA) then
     SAFE_ALLOCATE(occ_diffs(1:cas%n_pairs))
     do ia = 1, cas%n_pairs
-      occ_diffs(ia) = (st%occ(cas%pair(ia)%i, cas%pair(ia)%kk) - st%occ(cas%pair(ia)%a, cas%pair(ia)%kk)) &
+      occ_diffs(ia) = (sys%st%occ(cas%pair(ia)%i, cas%pair(ia)%kk) - sys%st%occ(cas%pair(ia)%a, cas%pair(ia)%kk)) &
         / cas%el_per_state
     end do
   end if
@@ -1250,9 +1250,7 @@ subroutine X(casida_solve)(cas, st)
   do jb_local = 1, cas%nb_rows
     jb = get_global_row(cas, jb_local)
     if(jb > cas%n_pairs) cycle
-
-    p => cas%pair(jb)
-    eig_diff = st%eigenval(p%a, p%kk) - st%eigenval(p%i, p%kk)
+      eig_diff = sys%st%eigenval(cas%pair(jb)%a, cas%pair(jb)%kk) - sys%st%eigenval(cas%pair(jb)%i, cas%pair(jb)%kk)
 
     do ia_local = 1, cas%nb_cols
       ia = get_global_col(cas, ia_local)
@@ -1286,7 +1284,7 @@ subroutine X(casida_solve)(cas, st)
       do ia_local = 1, cas%nb_cols
         ia = get_global_col(cas, ia_local)
         if(ia <= cas%n_pairs) cycle
-        if(ia == jb) cas%X(mat)(jb_local,ia_local) = (cas%pt%omega_array(ia-cas%n_pairs))**2
+        if(ia == jb) cas%X(mat)(jb_local,ia_local) = (cas%pt%omega(ia-cas%n_pairs))**2
       end do
     end do
     ! now other photon-electron elements
@@ -1297,12 +1295,12 @@ subroutine X(casida_solve)(cas, st)
         ! lower left part
         if(jb > cas%n_pairs .and. ia <= cas%n_pairs) then
           cas%X(mat)(jb_local,ia_local) = M_TWO*cas%X(mat)(jb_local,ia_local) &
-             *sqrt(cas%pt%omega_array(jb-cas%n_pairs))/sqrt(cas%s(ia))/sqrt(M_TWO)
+             *sqrt(cas%pt%omega(jb-cas%n_pairs))/sqrt(cas%s(ia))/sqrt(M_TWO)
         end if
         ! upper right part
         if(jb <= cas%n_pairs .and. ia > cas%n_pairs) then
           cas%X(mat)(jb_local,ia_local) = M_TWO*cas%X(mat)(jb_local,ia_local) &
-             *sqrt(cas%pt%omega_array(ia-cas%n_pairs))/sqrt(cas%s(jb))/sqrt(M_TWO)
+             *sqrt(cas%pt%omega(ia-cas%n_pairs))/sqrt(cas%s(jb))/sqrt(M_TWO)
         end if
       end do
     end do
@@ -1470,8 +1468,8 @@ end subroutine X(casida_solve)
 
 ! ---------------------------------------------------------
 subroutine X(casida_write)(cas, sys)
-  type(casida_t), intent(in) :: cas
-  type(system_t), intent(in) :: sys
+  type(casida_t),      intent(in) :: cas
+  type(electrons_t),   intent(in) :: sys
   
   character(len=5) :: str
   character(len=50) :: dir_name

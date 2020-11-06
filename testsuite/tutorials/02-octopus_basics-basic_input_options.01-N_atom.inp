@@ -18,3 +18,4 @@ BoxShape = sphere
 Radius = 5.0*angstrom
 Spacing = 0.18*angstrom
 StatesPack = yes
+LCAOStart = lcao_full

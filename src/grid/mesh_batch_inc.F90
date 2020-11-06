@@ -30,11 +30,15 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
   logical :: use_blas, conj
   type(accel_mem_t) :: dot_buffer
   type(profile_t), save :: prof_copy, prof_gemmcl, prof, profgemm
+  integer :: wgsize
+  integer :: local_sizes(3)
+  integer :: global_sizes(3)
+
   logical :: reduce_
   type(profile_t), save :: profcomm
   
   PUSH_SUB(X(mesh_batch_dotp_matrix))
-  call profiling_in(prof, "DOTP_BATCH")
+  call profiling_in(prof, TOSTRING(X(DOTP_BATCH)))
 
   reduce_ = .true.
   if(present(reduce)) reduce_ = reduce
@@ -53,12 +57,12 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
     use_blas = associated(aa%X(ff)) .and. associated(bb%X(ff)) .and. (.not. mesh%use_curvilinear) .and. (aa%dim == 1)
 
     if(use_blas) then
-      call profiling_in(profgemm, "DOTP_BATCH_GEMM")
+      call profiling_in(profgemm, TOSTRING(X(DOTP_BATCH_GEMM)))
 
       ldaa = size(aa%X(ff), dim = 1)
       ldbb = size(bb%X(ff), dim = 1)
 
-      call lalg_gemmt(aa%nst, bb%nst, mesh%np, R_TOTYPE(mesh%volume_element), &
+      call lalg_gemmt(aa%nst, aa%dim, bb%nst, bb%dim, mesh%np, R_TOTYPE(mesh%volume_element), &
         aa%X(ff), bb%X(ff), R_TOTYPE(M_ZERO), dd)
 
     else
@@ -108,7 +112,7 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
 
     if(use_blas) then
       conj = .true.
-      call profiling_in(profgemm, "DOTP_BATCH_GEMM")
+      call profiling_in(profgemm, TOSTRING(X(DOTP_BATCH_GEMM)))
 
       ldaa = aa%pack_size(1)
       ldbb = bb%pack_size(1)
@@ -137,28 +141,76 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
   case(BATCH_DEVICE_PACKED)
     ASSERT(.not. mesh%use_curvilinear)
 
-    call accel_create_buffer(dot_buffer, ACCEL_MEM_WRITE_ONLY, R_TYPE_VAL, aa%nst*bb%nst)
+    if(aa%dim==1) then
+ 
+      call accel_create_buffer(dot_buffer, ACCEL_MEM_WRITE_ONLY, R_TYPE_VAL, aa%nst*bb%nst)
 
-    call profiling_in(prof_gemmcl, "DOTP_BATCH_CL_GEMM")
-    
-    call X(accel_gemm)(transA = CUBLAS_OP_N, transB = CUBLAS_OP_T, &
-      M = int(aa%nst, 8), N = int(bb%nst, 8), K = int(mesh%np, 8), alpha = R_TOTYPE(M_ONE), &
-      A = aa%ff_device, offA = 0_8, lda = int(aa%pack_size(1), 8), &
-      B = bb%ff_device, offB = 0_8, ldb = int(bb%pack_size(1), 8), beta = R_TOTYPE(M_ZERO), &
-      C = dot_buffer, offC = 0_8, ldc = int(aa%nst, 8))
+      call profiling_in(prof_gemmcl, TOSTRING(X(DOTP_BATCH_CL_GEMM)))
+      
+      call X(accel_gemm)(transA = CUBLAS_OP_N, transB = CUBLAS_OP_T, &
+        M = int(aa%nst, 8), N = int(bb%nst, 8), K = int(mesh%np, 8), alpha = R_TOTYPE(M_ONE), &
+        A = aa%ff_device, offA = 0_8, lda = int(aa%pack_size(1), 8), &
+        B = bb%ff_device, offB = 0_8, ldb = int(bb%pack_size(1), 8), beta = R_TOTYPE(M_ZERO), &
+        C = dot_buffer, offC = 0_8, ldc = int(aa%nst, 8))
+  
+      call profiling_count_operations(TOFLOAT(mesh%np)*aa%nst*bb%nst*(R_ADD + R_MUL))
+  
+      call accel_finish()
+      call profiling_out(prof_gemmcl)
+  
+      call profiling_in(prof_copy, TOSTRING(X(DOTP_BATCH_COPY)))
+      call accel_read_buffer(dot_buffer, aa%nst*bb%nst, dd)
+      call profiling_count_transfers(aa%nst*bb%nst, dd(1, 1))
+      call accel_finish()
+      call profiling_out(prof_copy)
+  
+      call accel_release_buffer(dot_buffer)
 
-    call profiling_count_operations(TOFLOAT(mesh%np)*aa%nst*bb%nst*(R_ADD + R_MUL))
+    else
 
-    call accel_finish()
-    call profiling_out(prof_gemmcl)
+      ASSERT(R_TYPE_VAL == TYPE_CMPLX)
 
-    call profiling_in(prof_copy, 'DOTP_BATCH_COPY')
-    call accel_read_buffer(dot_buffer, aa%nst*bb%nst, dd)
-    call profiling_count_transfers(aa%nst*bb%nst, dd(1, 1))
-    call accel_finish()
-    call profiling_out(prof_copy)
+      call accel_create_buffer(dot_buffer, ACCEL_MEM_WRITE_ONLY, R_TYPE_VAL, aa%nst*bb%nst)
 
-    call accel_release_buffer(dot_buffer)
+      wgsize = accel_kernel_workgroup_size(zkernel_dot_matrix_spinors)
+
+      global_sizes = (/ pad(aa%nst, wgsize/bb%nst),  bb%nst, 1 /)
+      local_sizes  = (/ wgsize/bb%nst,               bb%nst, 1 /)
+     
+      ASSERT(accel_buffer_is_allocated(aa%ff_device))
+      ASSERT(accel_buffer_is_allocated(bb%ff_device))
+      ASSERT(accel_buffer_is_allocated(dot_buffer))
+
+      call profiling_in(prof_gemmcl, TOSTRING(X(DOTP_BATCH_CL_KERNEL)))
+
+      call accel_set_kernel_arg(zkernel_dot_matrix_spinors, 0, mesh%np)
+      call accel_set_kernel_arg(zkernel_dot_matrix_spinors, 1, aa%nst)
+      call accel_set_kernel_arg(zkernel_dot_matrix_spinors, 2, bb%nst)
+      call accel_set_kernel_arg(zkernel_dot_matrix_spinors, 3, aa%ff_device)
+      call accel_set_kernel_arg(zkernel_dot_matrix_spinors, 4, log2(aa%pack_size(1)))
+      call accel_set_kernel_arg(zkernel_dot_matrix_spinors, 5, bb%ff_device)
+      call accel_set_kernel_arg(zkernel_dot_matrix_spinors, 6, log2(bb%pack_size(1)))
+      call accel_set_kernel_arg(zkernel_dot_matrix_spinors, 7, dot_buffer)
+      call accel_set_kernel_arg(zkernel_dot_matrix_spinors, 8, aa%nst)
+
+
+      call accel_kernel_run(zkernel_dot_matrix_spinors, global_sizes, local_sizes)
+  
+      call accel_finish()
+      call profiling_count_operations(TOFLOAT(aa%nst*bb%nst*(mesh%np*(R_ADD + R_MUL)) + R_ADD )) ! check !!
+
+
+      call profiling_out(prof_gemmcl)
+  
+      call profiling_in(prof_copy, TOSTRING(X(DOTP_BATCH_COPY)))
+      call accel_read_buffer(dot_buffer, aa%nst*bb%nst, dd)
+      call profiling_count_transfers(aa%nst*bb%nst, dd(1, 1))
+      call accel_finish()
+      call profiling_out(prof_copy)
+  
+      call accel_release_buffer(dot_buffer)
+
+    end if
 
     do ist = 1, aa%nst
       do jst = 1, bb%nst
@@ -182,7 +234,7 @@ subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
   if(use_blas) call profiling_out(profgemm)
 
   if(mesh%parallel_in_domains .and. reduce_) then
-    call profiling_in(profcomm, "DOTP_BATCH_REDUCE")
+    call profiling_in(profcomm, TOSTRING(X(DOTP_BATCH_REDUCE)))
     call comm_allreduce(mesh%mpi_grp%comm, dd)
     call profiling_out(profcomm)
   end if
@@ -241,10 +293,10 @@ subroutine X(mesh_batch_dotp_self)(mesh, aa, dot, reduce)
   ! This has to be set to zero by hand since NaN * 0 = NaN.
   dd(1:aa%nst, 1:aa%nst) = R_TOTYPE(CNST(0.0))
 
-  call profiling_in(prof, "BATCH_DOTP_SELF")
+  call profiling_in(prof, TOSTRING(X(BATCH_DOTP_SELF)))
 
   if(use_blas) then
-    call profiling_in(profgemm, "BATCH_HERK")
+    call profiling_in(profgemm, TOSTRING(X(BATCH_HERK)))
 
     lda = size(aa%X(ff), dim = 1)*aa%dim
 
@@ -304,13 +356,13 @@ subroutine X(mesh_batch_dotp_self)(mesh, aa, dot, reduce)
   if(use_blas) call profiling_out(profgemm)
 
   if(mesh%parallel_in_domains .and. reduce_) then
-    call profiling_in(profcomm, "BATCH_SELF_REDUCE")
+    call profiling_in(profcomm, TOSTRING(X(BATCH_SELF_REDUCE)))
     call comm_allreduce(mesh%mpi_grp%comm, dd)
     call profiling_out(profcomm)
   end if
 
-  do jst = 1, aa%nst
-    do ist = 1, aa%nst
+  do ist = 1, aa%nst
+    do jst = 1, ist
       dot(aa%ist(ist), aa%ist(jst)) = dd(ist, jst)
       dot(aa%ist(jst), aa%ist(ist)) = R_CONJ(dd(ist, jst))
     end do
@@ -339,7 +391,7 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
   type(accel_mem_t)  :: dot_buffer
 
   PUSH_SUB(X(mesh_batch_dotp_vector))
-  call profiling_in(prof, "DOTPV_BATCH")
+  call profiling_in(prof, TOSTRING(X(DOTPV_BATCH)))
 
   cproduct_ = optional_default(cproduct, .false.)
   
@@ -441,7 +493,7 @@ subroutine X(mesh_batch_dotp_vector)(mesh, aa, bb, dot, reduce, cproduct)
   end select
 
   if(mesh%parallel_in_domains .and. optional_default(reduce, .true.)) then
-    call profiling_in(profcomm, "DOTPV_BATCH_REDUCE")
+    call profiling_in(profcomm, TOSTRING(X(DOTPV_BATCH_REDUCE)))
     call comm_allreduce(mesh%mpi_grp%comm, dot, dim = aa%nst)
     call profiling_out(profcomm)
   end if
@@ -474,7 +526,7 @@ subroutine X(mesh_batch_mf_dotp)(mesh, aa, psi, dot, reduce, nst)
   integer :: global_sizes(3)
 
   PUSH_SUB(X(mesh_batch_mf_dotp))
-  call profiling_in(prof, "DOTPV_MF_BATCH")
+  call profiling_in(prof, TOSTRING(X(DOTPV_MF_BATCH)))
 
   ASSERT(aa%dim == ubound(psi,dim=2))
 
@@ -584,7 +636,7 @@ subroutine X(mesh_batch_mf_dotp)(mesh, aa, psi, dot, reduce, nst)
   end select
 
   if(mesh%parallel_in_domains .and. optional_default(reduce, .true.)) then
-    call profiling_in(profcomm, "DOTPV_MF_BATCH_REDUCE")
+    call profiling_in(profcomm, TOSTRING(X(DOTPV_MF_BATCH_REDUCE)))
     call comm_allreduce(mesh%mpi_grp%comm, dot, dim = nst_)
     call profiling_out(profcomm)
   end if
@@ -831,14 +883,14 @@ subroutine X(priv_mesh_batch_nrm2)(mesh, aa, nrm2)
   class(batch_t),          intent(in)    :: aa
   FLOAT,                   intent(out)   :: nrm2(:)
 
-  integer :: ist, idim, indb, ip
-  R_TYPE :: a0
-  FLOAT, allocatable :: scal(:), ssq(:)
+  integer :: ist, idim, indb, ip, sp, np, num_threads, ithread
+  FLOAT :: a0
+  FLOAT, allocatable :: scal(:,:), ssq(:,:)
   type(accel_mem_t)  :: nrm2_buffer
   type(profile_t), save :: prof
 
   PUSH_SUB(X(priv_mesh_batch_nrm2))
-  call profiling_in(prof, 'MESH_BATCH_NRM2')
+  call profiling_in(prof, TOSTRING(X(MESH_BATCH_NRM2)))
 
   select case(aa%status())
   case(BATCH_NOT_PACKED)
@@ -852,59 +904,125 @@ subroutine X(priv_mesh_batch_nrm2)(mesh, aa, nrm2)
 
   case(BATCH_PACKED)
     
-    SAFE_ALLOCATE(scal(1:aa%nst_linear))
-    SAFE_ALLOCATE(ssq(1:aa%nst_linear))
+
+    num_threads = 1
+    !$omp parallel shared(num_threads)
+    !$ num_threads = omp_get_num_threads()
+    !$omp end parallel
+
+    SAFE_ALLOCATE(scal(1:aa%nst_linear, 1:num_threads))
+    SAFE_ALLOCATE(ssq(1:aa%nst_linear, 1:num_threads))
 
     scal = M_ZERO
     ssq  = M_ONE
+
+    ! divide the range from 1:mesh%np across the OpenMP threads and sum independently
+    ! the reduction is done outside the parallel region
+    !$omp parallel private(ithread, sp, np, a0, ip, ist) shared(ssq, scal, num_threads)
+    call multicomm_divide_range_omp(mesh%np, sp, np)
+    ithread = 1
+    !$ ithread = omp_get_thread_num() + 1
     
+    ! The algorithm for the squared sum is the same as used, e.g., in openblas.
+    ! The idea is that one wants to avoid an overflow caused by squaring a big
+    ! number by using separate values for the sum of squares and the scale.
+    ! Only at the end, the norm is computed as scal*sqrt(ssq) - in this way
+    ! the largest number which is stored in scal is never squared.
     if(.not. mesh%use_curvilinear) then
 
-      !$omp parallel do private(a0)
-      do ip = 1, mesh%np
+      do ip = sp, sp + np - 1
         do ist = 1, aa%nst_linear
-          a0 = aa%X(ff_pack)(ist, ip)
-          if(abs(a0) <= M_EPSILON) cycle
-          if(scal(ist) < abs(a0)) then
-            ssq(ist) = M_ONE + ssq(ist)*(scal(ist)/abs(a0))**2
-            scal(ist) = abs(a0)
-          else
-            ssq(ist) = ssq(ist) + (abs(a0)/scal(ist))**2
+          ! first add real part
+          a0 = abs(R_REAL(aa%X(ff_pack)(ist, ip)))
+          ! only add a0 if it is non-zero
+          if(a0 > M_EPSILON) then
+            if(scal(ist, ithread) < a0) then
+              ssq(ist, ithread) = M_ONE + ssq(ist, ithread)*(scal(ist, ithread)/a0)**2
+              scal(ist, ithread) = a0
+            else
+              ssq(ist, ithread) = ssq(ist, ithread) + (a0/scal(ist, ithread))**2
+            end if
           end if
+#ifdef R_TCOMPLEX
+          ! then add imaginary part for complex numbers
+          a0 = abs(R_AIMAG(aa%X(ff_pack)(ist, ip)))
+          ! only add a0 if it is non-zero
+          if(a0 > M_EPSILON) then
+            if(scal(ist, ithread) < a0) then
+              ssq(ist, ithread) = M_ONE + ssq(ist, ithread)*(scal(ist, ithread)/a0)**2
+              scal(ist, ithread) = a0
+            else
+              ssq(ist, ithread) = ssq(ist, ithread) + (a0/scal(ist, ithread))**2
+            end if
+          end if
+#endif
         end do
       end do
 
     else
 
-      !$omp parallel do private(a0)
-      do ip = 1, mesh%np
+      do ip = sp, sp + np - 1
         do ist = 1, aa%nst_linear
-          a0 = aa%X(ff_pack)(ist, ip)
-          if(a0 == R_TOTYPE(M_ZERO)) cycle
-          if(scal(ist) < abs(a0)) then
-            ssq(ist) =  mesh%vol_pp(ip)*M_ONE + ssq(ist)*(scal(ist)/abs(a0))**2
-            scal(ist) = abs(a0)
-          else
-            ssq(ist) = ssq(ist) + mesh%vol_pp(ip)*(abs(a0)/scal(ist))**2
+          ! first add real part
+          a0 = abs(R_REAL(aa%X(ff_pack)(ist, ip)))
+          ! only add a0 if it is non-zero
+          if(a0 > M_EPSILON) then
+            if(scal(ist, ithread) < a0) then
+              ssq(ist, ithread) =  mesh%vol_pp(ip) + ssq(ist, ithread)*(scal(ist, ithread)/a0)**2
+              scal(ist, ithread) = a0
+            else
+              ssq(ist, ithread) = ssq(ist, ithread) + mesh%vol_pp(ip)*(a0/scal(ist, ithread))**2
+            end if
           end if
+#ifdef R_TCOMPLEX
+          ! then add imaginary part for complex numbers
+          a0 = abs(R_AIMAG(aa%X(ff_pack)(ist, ip)))
+          ! only add a0 if it is non-zero
+          if(a0 > M_EPSILON) then
+            if(scal(ist, ithread) < a0) then
+              ssq(ist, ithread) =  mesh%vol_pp(ip) + ssq(ist, ithread)*(scal(ist, ithread)/a0)**2
+              scal(ist, ithread) = a0
+            else
+              ssq(ist, ithread) = ssq(ist, ithread) + mesh%vol_pp(ip)*(a0/scal(ist, ithread))**2
+            end if
+          end if
+#endif
         end do
       end do
 
     end if
+    !$omp end parallel
 
+    ! now do the reduction: sum the components of the different threads without overflow
+    do ithread = 2, num_threads
+      do ist = 1, aa%nst_linear
+        if (scal(ist, ithread) < M_EPSILON) cycle
+        if (scal(ist, 1) < scal(ist, ithread)) then
+          ssq(ist, 1) = ssq(ist, 1) * (scal(ist, 1)/scal(ist, ithread))**2 + ssq(ist, ithread)
+          scal(ist, 1) = scal(ist, ithread)
+        else
+          ssq(ist, 1) = ssq(ist, 1) + ssq(ist, ithread) * (scal(ist, ithread)/scal(ist, 1))**2
+        end if
+      end do
+    end do
+
+    ! the result is in scal(ist, 1) and ssq(ist, 1)
     do ist = 1, aa%nst
       nrm2(ist) = M_ZERO
       do idim = 1, aa%dim
         indb = aa%ist_idim_to_linear((/ist, idim/))
-        nrm2(ist) = hypot(nrm2(ist), scal(indb)*sqrt(mesh%volume_element*ssq(indb)))
+        nrm2(ist) = hypot(nrm2(ist), scal(indb, 1)*sqrt(mesh%volume_element*ssq(indb, 1)))
       end do
     end do
+
+    SAFE_DEALLOCATE_A(scal)
+    SAFE_DEALLOCATE_A(ssq)
 
   case(BATCH_DEVICE_PACKED)
 
     ASSERT(.not. mesh%use_curvilinear)
 
-    SAFE_ALLOCATE(ssq(1:aa%pack_size(1)))
+    SAFE_ALLOCATE(ssq(1:aa%pack_size(1), 1))
 
     call accel_create_buffer(nrm2_buffer, ACCEL_MEM_WRITE_ONLY, TYPE_FLOAT, aa%pack_size(1))
 
@@ -924,7 +1042,7 @@ subroutine X(priv_mesh_batch_nrm2)(mesh, aa, nrm2)
       nrm2(ist) = M_ZERO
       do idim = 1, aa%dim
         indb = aa%ist_idim_to_linear((/ist, idim/))
-        nrm2(ist) = hypot(nrm2(ist), sqrt(mesh%volume_element)*ssq(indb))
+        nrm2(ist) = hypot(nrm2(ist), sqrt(mesh%volume_element)*ssq(indb, 1))
       end do
     end do
 
@@ -961,7 +1079,7 @@ subroutine X(mesh_batch_orthogonalization)(mesh, nst, psib, phib,  &
   logical :: drcgs
   integer :: nsteps
 
-  call profiling_in(prof, "BATCH_GRAM_SCHMIDT")
+  call profiling_in(prof, TOSTRING(X(BATCH_GRAM_SCHMIDT)))
   PUSH_SUB(X(mesh_batch_orthogonalization))
 
   SAFE_ALLOCATE(ss(1:phib%nst, 1:nst))
@@ -996,7 +1114,7 @@ subroutine X(mesh_batch_orthogonalization)(mesh, nst, psib, phib,  &
     end do
 
     if(mesh%parallel_in_domains) then
-      call profiling_in(reduce_prof, "BATCH_GRAM_SCHMIDT_REDUCE")
+      call profiling_in(reduce_prof, TOSTRING(X(BATCH_GRAM_SCHMIDT_REDUCE)))
       call comm_allreduce(mesh%mpi_grp%comm, ss, dim = (/phib%nst, nst/))
       call profiling_out(reduce_prof)
     end if

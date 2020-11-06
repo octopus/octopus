@@ -21,3 +21,5 @@ MixField = density
 StatesPack = no
 
 ProfilingMode = prof_io
+
+LCAOStart = lcao_full

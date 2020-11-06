@@ -30,6 +30,3 @@ TestRepetitions = 1
 
 TestMaxBlockSize = 32
 
-
-
-StatesPack = yes

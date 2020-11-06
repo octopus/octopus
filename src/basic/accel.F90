@@ -60,6 +60,7 @@ module accel_oct_m
     accel_kernel_t,               &
     accel_t,                      &
     accel_is_enabled,             &
+    accel_allow_CPU_only,         &
     accel_init,                   &
     accel_end,                    &
     accel_padded_size,            &
@@ -135,6 +136,7 @@ module accel_oct_m
     integer(8)             :: local_memory_size
     integer(8)             :: global_memory_size
     logical                :: enabled
+    logical                :: allow_CPU_only
     logical                :: shared_mem
     logical                :: cuda_mpi
     integer                :: warp_size
@@ -267,6 +269,16 @@ contains
     enabled = .false.
 #endif
   end function accel_is_enabled
+
+  ! ------------------------------------------
+
+  pure logical function accel_allow_CPU_only() result(allow)
+#ifdef HAVE_ACCEL
+    allow = accel%allow_CPU_only
+#else
+    allow = .true.
+#endif
+  end function accel_allow_CPU_only
 
   ! ------------------------------------------
 
@@ -645,6 +657,24 @@ contains
       call messages_info()
     end if
 
+
+    !%Variable AllowCPUonly
+    !%Type logical
+    !%Section Execution::Accel
+    !%Description
+    !% In order to prevent waste of resources, the code will normally stop when the GPU is disabled due to 
+    !% incomplete implementations or incompatibilities. AllowCPUonly = yes overrides this and allows the 
+    !% code execution also in these cases.
+    !%End
+#if defined (HAVE_ACCEL)
+    default = .false.
+#else
+    default = .true.
+#endif
+    call parse_variable(namespace, 'AllowCPUonly', default, accel%allow_CPU_only)
+
+
+
     call messages_print_stress(stdout)
 
     POP_SUB(accel_init)
@@ -773,11 +803,11 @@ contains
 #endif
 
       call messages_write('      Device memory          :')
-      call messages_write(accel%global_memory_size, units = unit_megabytes)
+      call messages_write(accel%global_memory_size, units=unit_megabytes)
       call messages_new_line()
 
       call messages_write('      Local/shared memory    :')
-      call messages_write(accel%local_memory_size, units = unit_kilobytes)
+      call messages_write(accel%local_memory_size, units=unit_kilobytes)
       call messages_new_line()
       
     
