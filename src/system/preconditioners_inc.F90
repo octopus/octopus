@@ -279,7 +279,7 @@ subroutine X(preconditioner_apply_batch)(pre, namespace, gr, hm, aa, bb, ik, ome
     call aa%copy_data_to(gr%der%mesh%np, bb)
 
   else
-    SAFE_ALLOCATE(psia(1:gr%mesh%np, 1:hm%d%dim))
+    SAFE_ALLOCATE(psia(1:gr%mesh%np_part, 1:hm%d%dim))
     SAFE_ALLOCATE(psib(1:gr%mesh%np, 1:hm%d%dim))
     do ii = 1, aa%nst
       call batch_get_state(aa, ii, gr%mesh%np, psia)
