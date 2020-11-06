@@ -1,5 +1,5 @@
 # To be installed:
-noinst_LIBRARIES = libwrappers.a
+noinst_LTLIBRARIES = libwrappers.la
 #module_DATA = $(modules)
 
 MPI_INCLUDES = allreduce-inc.f90 allreduce-arr-inc.f90 gather-inc.f90 \
@@ -32,7 +32,7 @@ DGEMMSY_SOURCES = interface_dgemmsy_fake.f90
 CUBLAS_SOURCES = cublas_fake.f90 interface_cuda_fake.f90
 OCL_SOURCES = interface_ocl_fake.f90
 
-libwrappers_a_SOURCES = $(DGEMMSY_SOURCES) $(CUBLAS_SOURCES) $(OCL_SOURCES) \
+libwrappers_la_SOURCES = $(DGEMMSY_SOURCES) $(CUBLAS_SOURCES) $(OCL_SOURCES) \
 	fft2d.f90 \
 	fft3d.f90 \
 	linalg.f90 \
@@ -40,11 +40,11 @@ libwrappers_a_SOURCES = $(DGEMMSY_SOURCES) $(CUBLAS_SOURCES) $(OCL_SOURCES) \
 
 # Dependencies
 $(modules): $(libwrappers_a_OBJECTS)
-interface_cuda_fake.o: linalg.o
-interface_dgemmsy_fake.o: linalg.o
+interface_cuda_fake.lo: linalg.lo
+interface_dgemmsy_fake.lo: linalg.lo
 
-interface_dgemmsy_fake.o: linalg.o
-mpi.o: $(mpi_include)
+interface_dgemmsy_fake.lo: linalg.lo
+mpi.lo: $(mpi_include)
 
 # Compilation is a two-step process: first we preprocess F90 files
 # to generate _oct.f90 files. Then, we compile this _oct.f90 into
@@ -53,6 +53,15 @@ mpi.o: $(mpi_include)
 	@FCCPP@ @CPPFLAGS@ $(DEFS) $(DEFAULT_INCLUDES) $(AM_CPPFLAGS) -I. $< > $*_oct.f90
 	$(top_srcdir)/build/preprocess.pl $*_oct.f90 "@DEBUG@" "@F90_ACCEPTS_LINE_NUMBERS@"
 	@FC@ @FCFLAGS@ $(AM_FCFLAGS) -c @FCFLAGS_f90@ -o $@ $*_oct.f90
+	@rm -f $*_oct.f90
+
+.F90.lo:
+	$(cpp_verbose)@FCCPP@ @CPPFLAGS@ $(AM_CPPFLAGS) -I. $< | \
+	  $(top_srcdir)/build/preprocess.pl - \
+	  "@DEBUG@" "@F90_ACCEPTS_LINE_NUMBERS@" > $*_oct.f90
+	$(fc_verbose)$(LIBTOOL) $(AM_V_lt) --tag=FC $(AM_LIBTOOLFLAGS) \
+	  $(LIBTOOLFLAGS) --mode=compile \
+	  @FC@ @FCFLAGS@ $(FCFLAGS_MODS) -c @FCFLAGS_f90@ -o $@ $*_oct.f90
 	@rm -f $*_oct.f90
 
 #AM_FCFLAGS = -I$(top_builddir)/includes 

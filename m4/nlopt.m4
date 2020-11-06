@@ -16,8 +16,8 @@ acx_nlopt_save_FCFLAGS="$FCFLAGS"
 dnl The tests
 AC_MSG_CHECKING([for NLOPT])
 if test "$acx_nlopt_ok" != disabled; then
-  for libdir in "lib" "lib64"; do
-    if test "$libdir" = "lib"; then
+  for librarydir in "lib" "lib64"; do
+    if test "$librarydir" = "lib"; then
       LIBS_NLOPT="-L$with_nlopt_prefix/lib -lnlopt"; 
       FCFLAGS_NLOPT="$ax_cv_f90_modflag$with_nlopt_prefix/include";
     else

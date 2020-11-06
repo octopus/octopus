@@ -20,12 +20,12 @@
 ## $Id$
 
 if COMPILE_METIS
-  noinst_LIBRARIES = libgk.a
+  noinst_LTLIBRARIES = libgk.la
 endif
 
 AM_CPPFLAGS = -DNDEBUG -DNDEBUG2 
 
-libgk_a_SOURCES = \
+libgk_la_SOURCES = \
 	b64.c       fkvkselect.c  htable.c    omp.c     seq.c       \
 	blas.c      fs.c          io.c        pdb.c     sort.c      \
 	csr.c       getopt.c      itemsets.c  pqueue.c  string.c    \
