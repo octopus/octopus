@@ -68,7 +68,7 @@ contains
     FLOAT,                intent(in)  :: n_electrons
 
     type(block_t)         :: blk
-    integer               :: ii, ip, idir, iunit, ncols
+    integer               :: ii, ip, idir, iunit, ierr, ncols
     logical               :: file_exists
     character(MAX_PATH_LEN) :: filename
 
