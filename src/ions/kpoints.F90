@@ -165,11 +165,11 @@ contains
     PUSH_SUB(kpoints_grid_copy)
     
     call kpoints_grid_init(bb%dim, aa, bb%npoints, bb%nshifts)
-    aa%weight = bb%weight
-    aa%point  = bb%point
-    aa%point1BZ = bb%point1BZ
-    aa%red_point = bb%red_point
-    aa%shifts = bb%shifts
+    aa%weight(1:bb%npoints) = bb%weight(1:bb%npoints)
+    aa%point(1:bb%dim, 1:bb%npoints)  = bb%point(1:bb%dim, 1:bb%npoints)
+    aa%point1BZ(1:bb%dim, 1:bb%npoints) = bb%point1BZ(1:bb%dim, 1:bb%npoints)
+    aa%red_point(1:bb%dim, 1:bb%npoints) = bb%red_point(1:bb%dim, 1:bb%npoints)
+    aa%shifts(1:bb%dim, 1:bb%nshifts) = bb%shifts(1:bb%dim, 1:bb%nshifts)
 
     POP_SUB(kpoints_grid_copy)
   end subroutine kpoints_grid_copy
@@ -576,7 +576,6 @@ contains
 
       call kpoints_grid_copy(this%full, this%reduced)
 
-      SAFE_ALLOCATE(this%num_symmetry_ops(1:this%reduced%npoints))
 
       if(this%use_symmetries) then
 
@@ -606,6 +605,7 @@ contains
         end do
 
         SAFE_ALLOCATE(this%symmetry_ops(1:this%reduced%npoints, 1:maxval(num_symm_ops)))
+        SAFE_ALLOCATE(this%num_symmetry_ops(1:this%reduced%npoints))
         
         this%num_symmetry_ops(1:this%reduced%npoints) = num_symm_ops(1:this%reduced%npoints)
         this%symmetry_ops(1:this%reduced%npoints, 1:maxval(num_symm_ops)) = &
@@ -616,6 +616,7 @@ contains
 
       else
 
+        SAFE_ALLOCATE(this%num_symmetry_ops(1:this%reduced%npoints))
         SAFE_ALLOCATE(this%symmetry_ops(1:this%reduced%npoints, 1:1))
         this%num_symmetry_ops(1:this%reduced%npoints) = 1
         this%symmetry_ops(1:this%reduced%npoints, 1) = 1

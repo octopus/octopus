@@ -25,6 +25,7 @@ module dos_oct_m
   use global_oct_m
   use hamiltonian_elec_oct_m
   use io_oct_m
+  use kpoints_oct_m
   use mesh_oct_m
   use messages_oct_m
   use mpi_oct_m
@@ -63,17 +64,22 @@ module dos_oct_m
 
 contains
 
-  subroutine dos_init(this, namespace, st)
+  subroutine dos_init(this, namespace, st, sb)
     type(dos_t),         intent(out)   :: this
     type(namespace_t),   intent(in)    :: namespace
     type(states_elec_t), intent(in)    :: st
+    type(simul_box_t),   intent(in)    :: sb
 
     FLOAT :: evalmin, evalmax, eextend
+    integer :: npath
 
     PUSH_SUB(dos_init)
 
-    evalmin = minval(st%eigenval)
-    evalmax = maxval(st%eigenval)
+    !The range of the dos is only calculated for physical points,
+    !without the one from a k-point path
+    npath = kpoints_nkpt_in_path(sb%kpoints)
+    evalmin = minval(st%eigenval(1:st%nst, 1:(st%d%nik-npath)))
+    evalmax = maxval(st%eigenval(1:st%nst, 1:(st%d%nik-npath)))
     ! we extend the energy mesh by this amount
     eextend  = (evalmax - evalmin) / M_FOUR
 

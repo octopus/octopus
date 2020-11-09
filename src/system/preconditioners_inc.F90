@@ -22,8 +22,8 @@ subroutine X(preconditioner_apply)(pre, namespace, gr, hm, a, b, ik, omega)
   type(namespace_t),        intent(in)    :: namespace
   type(grid_t), target,     intent(in)    :: gr
   type(hamiltonian_elec_t), intent(in)    :: hm
-  R_TYPE,                   intent(inout) :: a(:,:)
-  R_TYPE,                   intent(inout) :: b(:,:)
+  R_TYPE, contiguous,       intent(inout) :: a(:,:)
+  R_TYPE, contiguous,       intent(inout) :: b(:,:)
   integer,                  intent(in)    :: ik
   R_TYPE,         optional, intent(in)    :: omega
 
@@ -279,11 +279,15 @@ subroutine X(preconditioner_apply_batch)(pre, namespace, gr, hm, aa, bb, ik, ome
     call aa%copy_data_to(gr%der%mesh%np, bb)
 
   else
-    SAFE_ALLOCATE(psia(1:gr%mesh%np, 1:hm%d%dim))
+    SAFE_ALLOCATE(psia(1:gr%mesh%np_part, 1:hm%d%dim))
     SAFE_ALLOCATE(psib(1:gr%mesh%np, 1:hm%d%dim))
     do ii = 1, aa%nst
       call batch_get_state(aa, ii, gr%mesh%np, psia)
-      call X(preconditioner_apply)(pre, namespace, gr, hm, psia, psib, ik, omega(ii))
+      if(present(omega)) then
+        call X(preconditioner_apply)(pre, namespace, gr, hm, psia, psib, ik, omega(ii))
+      else
+        call X(preconditioner_apply)(pre, namespace, gr, hm, psia, psib, ik)
+      end if
       call batch_set_state(bb, ii, gr%mesh%np, psib)
     end do
     SAFE_DEALLOCATE_A(psia)
