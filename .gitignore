@@ -25,6 +25,8 @@ build-stamp
 semantic.cache
 *.gcno
 *.gcda
+*.la
+*.lo
 
 # new dependencies files
 *.dirstamp
