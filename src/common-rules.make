@@ -50,14 +50,14 @@ scalapack_LIBS = @LIBS_ELPA@ @LIBS_SCALAPACK@ @LIBS_BLACS@
 
 core_LIBS = \
 	@LIBS_FFTW@  @LIBS_LAPACK@ @LIBS_BLAS@                     \
-	$(top_builddir)/liboct_parser/liboct_parser.a \
+	$(top_builddir)/liboct_parser/liboct_parser.la \
 	@GSL_LIBS@ @LIBS_LIBXC@ @FCEXTRALIBS@
 
 external_LIBS = \
-	$(top_builddir)/external_libs/qshep/libqshep.a                  \
-	$(top_builddir)/external_libs/spglib-1.9.9/src/libsymspg.a      \
-	$(top_builddir)/external_libs/bpdn/libbpdn.a                    \
-	$(top_builddir)/external_libs/dftd3/libdftd3.a
+	$(top_builddir)/external_libs/qshep/libqshep.la                  \
+	$(top_builddir)/external_libs/spglib-1.9.9/src/libsymspg.la      \
+	$(top_builddir)/external_libs/bpdn/libbpdn.la                    \
+	$(top_builddir)/external_libs/dftd3/libdftd3.la
 # we should not have libyaml here if we used an external one...
 
 FCFLAGS_MODS += @FCFLAGS_LIBXC@ @FCFLAGS_PSPIO@ @FCFLAGS_PSOLVER@ @FCFLAGS_ISF@	\
@@ -67,18 +67,18 @@ FCFLAGS_MODS += @FCFLAGS_LIBXC@ @FCFLAGS_PSPIO@ @FCFLAGS_PSOLVER@ @FCFLAGS_ISF@	
   @FCFLAGS_LIKWID@
 
 if COMPILE_OPENCL
-  external_LIBS += $(top_builddir)/external_libs/fortrancl/libfortrancl.a @LIBS_CLBLAS@ @LIBS_CLFFT@ @CL_LIBS@
+  external_LIBS += $(top_builddir)/external_libs/fortrancl/libfortrancl.la @LIBS_CLBLAS@ @LIBS_CLFFT@ @CL_LIBS@
   FCFLAGS_MODS += @F90_MODULE_FLAG@$(top_builddir)/external_libs/fortrancl
 endif
 
 if COMPILE_METIS
-  external_LIBS += $(top_builddir)/external_libs/metis-5.1/libmetis/libmetis.a
-  external_LIBS += $(top_builddir)/external_libs/metis-5.1/GKlib/libgk.a
+  external_LIBS += $(top_builddir)/external_libs/metis-5.1/libmetis/libmetis.la
+  external_LIBS += $(top_builddir)/external_libs/metis-5.1/GKlib/libgk.la
   AM_CPPFLAGS += -I$(top_srcdir)/external_libs/metis-5.1/include/
 endif
 
 if COMPILE_LIBYAML
-  external_LIBS += $(top_builddir)/external_libs/yaml-0.1.4/src/libyaml.a
+  external_LIBS += $(top_builddir)/external_libs/yaml-0.1.4/src/libyaml.la
 endif
 
 # These must be arranged so if LIB1 depends on LIB2, LIB1 must occur before LIB2.
@@ -96,7 +96,7 @@ all_LIBS = $(octopus_LIBS) $(other_LIBS)
 # How to compile F90 files.
 # ---------------------------------------------------------------
 
-SUFFIXES = _oct.f90 .F90 .o
+SUFFIXES = _oct.f90 .F90 .o .lo
 
 # some definitions for silencing make
 cpp_verbose = $(cpp_verbose_@AM_V@)
@@ -114,8 +114,18 @@ fc_verbose_0 = @echo "  FC       $@";
 	$(cpp_verbose)@FCCPP@ @CPPFLAGS@ $(AM_CPPFLAGS) -I. $< | \
 	  $(top_srcdir)/build/preprocess.pl - \
 	  "@DEBUG@" "@F90_ACCEPTS_LINE_NUMBERS@" > $*_oct.f90
-	$(fc_verbose)@FC@ @FCFLAGS@ $(FCFLAGS_MODS) -c @FCFLAGS_f90@ -o $@ $*_oct.f90
+	  $(fc_verbose)@FC@ @FCFLAGS@ $(FCFLAGS_MODS) -c @FCFLAGS_f90@ -o $@ $*_oct.f90
 	@rm -f $*_oct.f90
+
+.F90.lo:
+	$(cpp_verbose)@FCCPP@ @CPPFLAGS@ $(AM_CPPFLAGS) -I. $< | \
+	  $(top_srcdir)/build/preprocess.pl - \
+	  "@DEBUG@" "@F90_ACCEPTS_LINE_NUMBERS@" > $*_oct.f90
+	$(fc_verbose)$(LIBTOOL) $(AM_V_lt) --tag=FC $(AM_LIBTOOLFLAGS) \
+	  $(LIBTOOLFLAGS) --mode=compile \
+	  @FC@ @FCFLAGS@ $(FCFLAGS_MODS) -c @FCFLAGS_f90@ -o $@ $*_oct.f90
+	@rm -f $*_oct.f90
+
 
 # This rule is basically to create a _oct.f90 file by hand for
 # debugging purposes. It is identical to the first part of

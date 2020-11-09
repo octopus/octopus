@@ -163,6 +163,12 @@ R_TYPE function X(mf_dotp_1)(mesh, f1, f2, reduce, dotu, np) result(dotp)
   PUSH_SUB(X(mf_dotp_1))
 
   np_ = optional_default(np, mesh%np)
+
+  if(np_ == 0) then
+    POP_SUB(X(mf_dotp_1))
+    return
+  end if
+
   ASSERT(ubound(f1, dim = 1) == np_ .or. ubound(f1, dim = 1) == mesh%np_part)
   ASSERT(ubound(f2, dim = 1) == np_ .or. ubound(f2, dim = 1) == mesh%np_part)
 

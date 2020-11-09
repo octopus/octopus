@@ -12,6 +12,8 @@ match ; Total k-points     ; GREPFIELD(static/info, 'Total number of k-points', 
 match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 225
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ;  48
 
+match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
+
 Precision: 1.7e-07
 match ;  Total energy        ; GREPFIELD(static/info, 'Total       =', 3) ; -9.743506095
 match ;  Ion-ion energy      ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -9.99517178

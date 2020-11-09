@@ -576,7 +576,6 @@ contains
 
       call kpoints_grid_copy(this%full, this%reduced)
 
-      SAFE_ALLOCATE(this%num_symmetry_ops(1:this%reduced%npoints))
 
       if(this%use_symmetries) then
 
@@ -606,6 +605,7 @@ contains
         end do
 
         SAFE_ALLOCATE(this%symmetry_ops(1:this%reduced%npoints, 1:maxval(num_symm_ops)))
+        SAFE_ALLOCATE(this%num_symmetry_ops(1:this%reduced%npoints))
         
         this%num_symmetry_ops(1:this%reduced%npoints) = num_symm_ops(1:this%reduced%npoints)
         this%symmetry_ops(1:this%reduced%npoints, 1:maxval(num_symm_ops)) = &
@@ -616,6 +616,7 @@ contains
 
       else
 
+        SAFE_ALLOCATE(this%num_symmetry_ops(1:this%reduced%npoints))
         SAFE_ALLOCATE(this%symmetry_ops(1:this%reduced%npoints, 1:1))
         this%num_symmetry_ops(1:this%reduced%npoints) = 1
         this%symmetry_ops(1:this%reduced%npoints, 1) = 1

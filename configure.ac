@@ -23,6 +23,8 @@ AC_INIT([Octopus],[arborescens],[octopus-devel@tddft.org],[octopus])
 AC_CONFIG_SRCDIR([src/basic/global.F90])
 AC_CONFIG_AUX_DIR([build-aux])
 AM_INIT_AUTOMAKE([subdir-objects tar-ustar])
+# enable silent rules by default (use --disable-silent-rules for disabling)
+AM_SILENT_RULES([yes])
 
 AC_CONFIG_HEADERS([config.h])
 
@@ -36,7 +38,6 @@ AC_CANONICAL_HOST
 AC_PROG_INSTALL
 AC_PROG_LN_S
 AC_PROG_MAKE_SET
-AC_PROG_RANLIB
 AC_PROG_MKDIR_P
 
 dnl check whether mpi is enabled
@@ -326,11 +327,7 @@ ACX_FUTILE
 ACX_PSOLVER
 
 dnl check for CGAL library.
-dnl ACX_CGAL
-AC_ARG_ENABLE(cgal, AS_HELP_STRING([--disable-cgal], [Disable cgal library check.]), [enable_cgal=$enableval], [enable_cgal=yes])
-if test "x$enable_cgal" = "xyes"; then
-  AX_LIB_CGAL_CORE
-fi
+AX_LIB_CGAL_CORE
 
 dnl If PSolver was not found, we check for older versions of the library (1.7.x),
 dnl which we named ISF
@@ -360,6 +357,8 @@ AC_SUBST(FCEXTRALIBS)
 
 m4_include([src/fdep/fortran_dependencies.m4])
 FDEP_F90_GNU_MAKE_DEPS
+
+LT_INIT([disable-shared])
 
 ACX_OCTOPUS_COMPILATION_INFO
 

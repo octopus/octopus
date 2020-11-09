@@ -7,7 +7,9 @@ AC_INIT([spglib], 1.9.9, [atz.togo@gmail.com])
 AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([src/spglib.c])
 AC_CONFIG_HEADER([config.h])
-AC_CONFIG_MACRO_DIR([m4])
+dnl AC_CONFIG_MACRO_DIR([m4])
+
+LT_INIT
 
 # Checks for programs.
 AC_PROG_CC
