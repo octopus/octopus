@@ -1077,15 +1077,10 @@ contains
     CMPLX, allocatable :: kick_function(:), psi(:, :)
     
     CMPLX, allocatable :: kick_pcm_function(:)
-<<<<<<< HEAD
     integer :: ns, iq
     FLOAT :: uvec(MAX_DIM), vvec(MAX_DIM), Gvec(MAX_DIM,MAX_DIM)
     FLOAT :: xx(MAX_DIM), rr
 
-=======
-    logical :: jk_list
-    
->>>>>>> 0737f83d0... add optional type(states_t) in kick_apply, use logical array
     PUSH_SUB(kick_apply)
 
     ! The wavefunctions at time delta t read
