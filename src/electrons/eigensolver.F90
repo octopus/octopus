@@ -109,8 +109,6 @@ module eigensolver_oct_m
        RS_EVO     =  9,         &
        RS_LOBPCG  =  8,         &
        RS_RMMDIIS = 10,         &
-       RS_ARPACK  = 12,         &
-       RS_FEAST   = 13,         &
        RS_PSD     = 14
   
 contains
@@ -329,8 +327,7 @@ contains
     !%Type float
     !%Section SCF::Eigensolver
     !%Description
-    !% This is the tolerance for the eigenvectors. The default is 1e-7,
-    !% except for the ARPACK solver for which it is 0.
+    !% This is the tolerance for the eigenvectors. The default is 1e-7.
     !%End
     call parse_variable(namespace, 'EigensolverTolerance', default_tol, eigens%tolerance)
 
@@ -373,9 +370,6 @@ contains
     eigens%converged(1:st%d%nik) = 0
     eigens%matvec = 0
 
-    ! FEAST: subspace diagonalization or not?  I guess not.
-    ! But perhaps something could be gained by changing this.
-    !
     ! In case of the evolution eigensolver, this makes no sense to use subspace diagonalization
     ! as orthogonalization is done internally at each time-step
     if(eigens%es_type == RS_EVO) then
