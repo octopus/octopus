@@ -42,9 +42,10 @@ module global_oct_m
     not_in_openmp,    &
     operator(+),      &
     bitand
-    
-  
+
+
   integer, public, parameter :: MAX_PATH_LEN=256
+  integer, public, parameter :: LABEL_LEN=50
 
   type conf_t
     ! Components are public by default

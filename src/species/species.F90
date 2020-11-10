@@ -91,8 +91,6 @@ module species_oct_m
     species_x_functional,          &
     species_c_functional
 
-  integer, public, parameter :: LABEL_LEN=15
-
   integer, public, parameter ::  &
     SPECIES_JELLIUM        = 3,             & !< jellium sphere.
     SPECIES_JELLIUM_SLAB   = 4,             & !< jellium slab.
