@@ -155,14 +155,14 @@ module fft_oct_m
   integer, public       :: fft_default_lib = -1
   type(nfft_t), save    :: nfft_options
   type(pnfft_t), save   :: pnfft_options
-  
+
   integer, parameter ::  &
-    CUFFT_R2C = z'2a',   &
-    CUFFT_C2R = z'2c',   &
-    CUFFT_C2C = z'29',   &
-    CUFFT_D2Z = z'6a',   &
-    CUFFT_Z2D = z'6c',   &
-    CUFFT_Z2Z = z'69'
+    CUFFT_R2C = int(z'2a'),   &
+    CUFFT_C2R = int(z'2c'),   &
+    CUFFT_C2C = int(z'29'),   &
+    CUFFT_D2Z = int(z'6a'),   &
+    CUFFT_Z2D = int(z'6c'),   &
+    CUFFT_Z2Z = int(z'69')
 
 contains
 
