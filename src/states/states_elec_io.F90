@@ -301,10 +301,10 @@ contains
     subroutine print_dos()
 
       integer, parameter :: ndiv = 70, height = 10
-      integer :: histogram(1:ndiv), iev, ien, iline, maxhist, ife
+      integer :: histogram(1:ndiv), iev, ien, iline, ife
       FLOAT :: dhistogram(1:ndiv)
       character(len=ndiv) :: line
-      FLOAT :: emin, emax, de
+      FLOAT :: emin, emax, de, maxhist
       
       PUSH_SUB(states_elec_write_eigenvalues.print_dos)
 
@@ -329,12 +329,10 @@ contains
       end do
 
       !normalize
-      if(maxval(dhistogram) > real(height)) then
-        maxhist = nint(maxval(dhistogram))
-        do ien = 1, ndiv
-          histogram(ien) = nint((dhistogram(ien)*height)/maxhist)
-        end do
-      end if
+      maxhist = maxval(dhistogram)
+      do ien = 1, ndiv
+        histogram(ien) = nint(dhistogram(ien)*height/maxhist)
+      end do
 
       call messages_new_line()
       call messages_write('Density of states:')
