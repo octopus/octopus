@@ -22,7 +22,10 @@ AC_PREREQ(2.59)
 AC_INIT([Octopus],[arborescens],[octopus-devel@tddft.org],[octopus])
 AC_CONFIG_SRCDIR([src/basic/global.F90])
 AC_CONFIG_AUX_DIR([build-aux])
+AC_CONFIG_MACRO_DIR([m4])
 AM_INIT_AUTOMAKE([subdir-objects tar-ustar])
+# enable silent rules by default (use --disable-silent-rules for disabling)
+AM_SILENT_RULES([yes])
 
 AC_CONFIG_HEADERS([config.h])
 
@@ -36,7 +39,6 @@ AC_CANONICAL_HOST
 AC_PROG_INSTALL
 AC_PROG_LN_S
 AC_PROG_MAKE_SET
-AC_PROG_RANLIB
 AC_PROG_MKDIR_P
 
 dnl check whether mpi is enabled
@@ -356,6 +358,8 @@ AC_SUBST(FCEXTRALIBS)
 
 m4_include([src/fdep/fortran_dependencies.m4])
 FDEP_F90_GNU_MAKE_DEPS
+
+LT_INIT([disable-shared])
 
 ACX_OCTOPUS_COMPILATION_INFO
 

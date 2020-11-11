@@ -20,12 +20,12 @@
 ## $Id$
 
 if COMPILE_OPENCL
-  noinst_LIBRARIES = libfortrancl.a
+  noinst_LTLIBRARIES = libfortrancl.la
 endif
 
 AM_CFLAGS = @CFLAGS_CLBLAS@ @CFLAGS_CLFFT@ @CL_CFLAGS@
 
-libfortrancl_a_SOURCES =       \
+libfortrancl_la_SOURCES =       \
 	cl_types.f90           \
 	cl_buffer.f90          \
 	cl_command_queue.f90   \
@@ -41,7 +41,7 @@ libfortrancl_a_SOURCES =       \
 	clfft.f90
 
 if COMPILE_OPENCL
- libfortrancl_a_SOURCES +=           \
+ libfortrancl_la_SOURCES +=           \
 	utils.c                      \
 	cl_buffer_low.c              \
 	cl_command_queue_low.c       \
@@ -59,19 +59,19 @@ noinst_HEADERS =               \
 	string_f.h             \
 	localcl.h
 
-cl_types.o     : cl_types.f90
-cl_constants.o : cl_constants.f90
-cl_platform.o  : cl_platform.f90 cl_types.o
-cl_program.o   : cl_program.f90 cl_types.o
-cl_kernel.o    : cl_kernel.f90 cl_types.o
-cl_device.o    : cl_device.f90 cl_types.o
-cl_context.o   : cl_context.f90 cl_types.o
-cl_command_queue.o : cl_command_queue.f90 cl_types.o
-cl_buffer.o    : cl_buffer.f90  cl_types.o
-cl_event.o     : cl_event.f90  cl_types.o
-cl.o           : cl.f90 cl_constants.o cl_types.o cl_device.o cl_kernel.o cl_program.o cl_platform.o cl_context.o cl_command_queue.o cl_buffer.o cl_event.o
-clblas.o       : clblas.f90 cl.o
-clfft.o        : clfft.f90 cl.o
+cl_types.lo     : cl_types.f90
+cl_constants.lo : cl_constants.f90
+cl_platform.lo  : cl_platform.f90 cl_types.lo
+cl_program.lo   : cl_program.f90 cl_types.lo
+cl_kernel.lo    : cl_kernel.f90 cl_types.lo
+cl_device.lo    : cl_device.f90 cl_types.lo
+cl_context.lo   : cl_context.f90 cl_types.lo
+cl_command_queue.lo : cl_command_queue.f90 cl_types.lo
+cl_buffer.lo    : cl_buffer.f90  cl_types.lo
+cl_event.lo     : cl_event.f90  cl_types.lo
+cl.lo           : cl.f90 cl_constants.lo cl_types.lo cl_device.lo cl_kernel.lo cl_program.lo cl_platform.lo cl_context.lo cl_command_queue.lo cl_buffer.lo cl_event.lo
+clblas.lo       : clblas.f90 cl.lo
+clfft.lo        : clfft.f90 cl.lo
 
 CLEANFILES = *~ *.bak *.mod *.MOD *.il *.d *.pc* ifc*
 

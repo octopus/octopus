@@ -18,9 +18,9 @@
 ## 02110-1301, USA.
 ##
 
-lib_LIBRARIES = liboct_parser.a
+lib_LTLIBRARIES = liboct_parser.la
 
-liboct_parser_a_SOURCES = symbols.c parse.c parse_exp.c parser_f.c gsl_userdef.c
+liboct_parser_la_SOURCES = symbols.c parse.c parse_exp.c parser_f.c gsl_userdef.c
 ## bison is not always installed, so it is better to avoid the possibility of regenerating grammar.c
 ## EXTRA_liboct_parser_a_SOURCES = grammar.y
 
