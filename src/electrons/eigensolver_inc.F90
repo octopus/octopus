@@ -69,7 +69,6 @@
       call X(eigensolver_rmmdiis_min)(namespace, gr, st, hm, eigens%pre, maxiter, eigens%converged(ik), ik)
     end select
 
-    ! FEAST: subspace diag or not?
     if(st%calc_eigenval) then
       if(eigens%es_type /= RS_RMMDIIS .and. eigens%es_type /= RS_PSD) then
         call X(subspace_diag)(eigens%sdiag, namespace, gr%mesh, st, hm, ik, st%eigenval(:, ik), eigens%diff(:, ik))
