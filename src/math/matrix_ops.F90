@@ -275,6 +275,8 @@ contains
       ASSERT(.false.)
       
     end if
+#else
+    eigenvalues = M_ZERO
 #endif
     
     call blacs_proc_grid_end(proc_grid)

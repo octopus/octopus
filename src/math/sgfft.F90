@@ -4604,6 +4604,8 @@ subroutine kernelfft(n1,n2,n3,nd1,nd2,nd3,nproc,iproc,zf,zr,comm)
   if (nproc > 1) then
     SAFE_DEALLOCATE_A(zmpi1)
   end if
+#else
+  zr = M_ZERO
 #endif
 end subroutine kernelfft
 

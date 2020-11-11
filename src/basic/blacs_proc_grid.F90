@@ -31,7 +31,6 @@ module blacs_proc_grid_oct_m
 
   public ::                      &
     blacs_proc_grid_t,           &
-    blacs_proc_grid_nullify,     &
     blacs_proc_grid_init,        &
     blacs_proc_grid_end,         &
     blacs_proc_grid_copy,        &
@@ -39,7 +38,7 @@ module blacs_proc_grid_oct_m
 
   type blacs_proc_grid_t
     ! Components are public by default
-    integer          :: context       !< The blacs context, -1 is object is null.
+    integer          :: context = -1  !< The blacs context, -1 is object is null.
     integer          :: nprocs        !< Number of processors.
     integer          :: nprow         !< Number of processors per row.
     integer          :: npcol         !< Number of processors per column.
@@ -51,18 +50,6 @@ module blacs_proc_grid_oct_m
 
 contains
 
-  ! ----------------------------------------------------
-
-  subroutine blacs_proc_grid_nullify(this)
-    type(blacs_proc_grid_t), intent(inout) :: this
-
-    PUSH_SUB(blacs_proc_grid_nullify)
-
-    this%context = -1
-
-    POP_SUB(blacs_proc_grid_nullify)
-  end subroutine blacs_proc_grid_nullify
-
   ! -----------------------------------------------------------------------
   !> Initializes a blacs context from an MPI communicator with
   !! topological information.
@@ -70,9 +57,9 @@ contains
   !! \Warning: For the moment this function only works if mpi_grp holds
   !! all the nodes of mpi_world.
   subroutine blacs_proc_grid_init(this, mpi_grp, procdim)
-    type(blacs_proc_grid_t),           intent(out) :: this
-    type(mpi_grp_t),                   intent(in)  :: mpi_grp
-    integer,                 optional, intent(in)  :: procdim(:)
+    type(blacs_proc_grid_t),           intent(inout) :: this
+    type(mpi_grp_t),                   intent(in)    :: mpi_grp
+    integer,                 optional, intent(in)    :: procdim(:)
 
 #ifdef HAVE_SCALAPACK
     
@@ -159,30 +146,31 @@ contains
   subroutine blacs_proc_grid_end(this)
     type(blacs_proc_grid_t), intent(inout) :: this
 
-#ifdef HAVE_SCALAPACK
-
     PUSH_SUB(blacs_proc_grid_end)
 
     if(this%context /= -1) then
+  #ifdef HAVE_SCALAPACK
       call blacs_gridexit(this%context)
+  #endif
       SAFE_DEALLOCATE_P(this%usermap)
     end if
 
     POP_SUB(blacs_proc_grid_end)
-#endif
   end subroutine blacs_proc_grid_end
 
   ! ----------------------------------------------------
 
   subroutine blacs_proc_grid_copy(cin, cout)
-    type(blacs_proc_grid_t), intent(in)  :: cin
-    type(blacs_proc_grid_t), intent(out) :: cout
+    type(blacs_proc_grid_t), intent(in)    :: cin
+    type(blacs_proc_grid_t), intent(inout) :: cout
 
-#ifdef HAVE_SCALAPACK
-    
     PUSH_SUB(blacs_proc_grid_copy)
 
+    call blacs_proc_grid_end(cout)
+     
     cout%context = cin%context 
+
+#ifdef HAVE_SCALAPACK
     cout%nprocs  = cin%nprocs
     cout%nprow   = cin%nprow
     cout%npcol   = cin%npcol
@@ -198,8 +186,8 @@ contains
       call blacs_gridmap(cout%context, cout%usermap(1, 1), cout%nprow, cout%nprow, cout%npcol)
     end if
     
-    POP_SUB(blacs_proc_grid_copy)
 #endif
+    POP_SUB(blacs_proc_grid_copy)
   end subroutine blacs_proc_grid_copy
 
   ! ----------------------------------------------------

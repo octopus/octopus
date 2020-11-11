@@ -136,9 +136,9 @@ contains
         integer(8),            intent(in)    :: size
         integer,               intent(in)    :: found
 #ifdef HAVE_OPENCL
-        type(cl_mem),          intent(in)    :: loc
+        type(cl_mem),          intent(out)   :: loc
 #else
-        type(c_ptr),           intent(in)    :: loc
+        type(c_ptr),           intent(out)   :: loc
 #endif
       end subroutine alloc_cache_get_low
     end interface
