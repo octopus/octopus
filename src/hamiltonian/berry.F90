@@ -128,9 +128,12 @@ contains
   
       berry_conv = .true.
       do idir = 1, gr%sb%periodic_dim
-        berry_conv = berry_conv .and. &
-         (abs((dipole(idir) - dipole_prev(idir)) / dipole_prev(idir)) < tol &
-         .or. abs(dipole(idir) - dipole_prev(idir)) < tol)
+        if(abs(dipole_prev(idir)) > CNST(1e-10)) then
+          berry_conv = berry_conv .and. (abs(dipole(idir) - dipole_prev(idir)) < tol &
+            .or.(abs((dipole(idir) - dipole_prev(idir)) / dipole_prev(idir)) < tol))
+        else
+          berry_conv = berry_conv .and. (abs(dipole(idir) - dipole_prev(idir)) < tol)
+        end if
       end do
 
       if(berry_conv) exit
