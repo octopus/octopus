@@ -203,9 +203,6 @@ contains
     call distributed_nullify(st%dist)
     st%wfs_type = TYPE_CMPLX
     st%parallel_in_states = .false.
-#ifdef HAVE_SCALAPACK
-    call blacs_proc_grid_nullify(st%dom_st_proc_grid)
-#endif
     nullify(st%node)
 
     POP_SUB(states_mxll_null)

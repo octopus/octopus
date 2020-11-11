@@ -220,9 +220,6 @@ contains
     nullify(st%eigenval, st%occ, st%spin)
 
     st%parallel_in_states = .false.
-#ifdef HAVE_SCALAPACK
-    call blacs_proc_grid_nullify(st%dom_st_proc_grid)
-#endif
     nullify(st%node)
     nullify(st%ap%schedule)
 
@@ -554,10 +551,6 @@ contains
     !%End
     call parse_variable(namespace, 'SymmetrizeDensity', gr%sb%kpoints%use_symmetries, st%symmetrize_density)
     call messages_print_var_value(stdout, 'SymmetrizeDensity', st%symmetrize_density)
-
-#ifdef HAVE_SCALAPACK
-    call blacs_proc_grid_nullify(st%dom_st_proc_grid)
-#endif
 
     !%Variable ForceComplex
     !%Type logical
@@ -1762,8 +1755,6 @@ contains
       if(multicomm_have_slaves(mc)) &
         call messages_not_implemented("ScaLAPACK usage with task parallelization (slaves)", namespace=namespace)
       call blacs_proc_grid_init(st%dom_st_proc_grid, st%dom_st_mpi_grp)
-    else
-      call blacs_proc_grid_nullify(st%dom_st_proc_grid)
     end if
 #else
     st%scalapack_compatible = .false.
