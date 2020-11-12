@@ -745,11 +745,8 @@ contains
       call messages_info(1)
     end if
 
-    ks%calc%time_present = present(time) 
-
-    if(present(time)) then
-      ks%calc%time = time
-    end if
+    ks%calc%time_present = present(time)
+    ks%calc%time = optional_default(time, M_ZERO)
 
     ks%calc%calc_energy = optional_default(calc_energy, .true.)
 
