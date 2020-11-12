@@ -155,6 +155,8 @@ contains
       SAFE_DEALLOCATE_P(this%usermap)
     end if
 
+    this%context = -1
+
     POP_SUB(blacs_proc_grid_end)
   end subroutine blacs_proc_grid_end
 
