@@ -32,6 +32,7 @@ module test_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_elec_oct_m
+  use hamiltonian_elec_base_oct_m
   use ion_interaction_oct_m
   use iso_c_binding
   use io_oct_m
@@ -313,7 +314,7 @@ contains
     type(namespace_t),       intent(in) :: namespace
 
     type(electrons_t), pointer :: sys
-    type(wfs_elec_t), pointer :: epsib
+    type(wfs_elec_t), pointer :: epsib, epsib2
     integer :: itime
     type(orbitalbasis_t) :: basis
     FLOAT, allocatable :: ddot(:,:,:), dweight(:,:)
@@ -336,33 +337,49 @@ contains
     if(sys%st%d%pack_states) call sys%st%pack()
 
     SAFE_ALLOCATE(epsib)
-    call sys%st%group%psib(1, 1)%copy_to(epsib, copy_data = .true.)
+    SAFE_ALLOCATE(epsib2)
+    call sys%st%group%psib(1, 1)%copy_to(epsib2, copy_data = .true.)
+
+    !We set the phase of the batch if needed
+    if(.not.associated(sys%hm%hm_base%phase)) then
+      call sys%st%group%psib(1, 1)%copy_to(epsib, copy_data = .true.)
+    else
+      call sys%st%group%psib(1, 1)%copy_to(epsib)
+      call zhamiltonian_elec_base_phase(sys%hm%hm_base, sys%gr%mesh, sys%gr%mesh%np, &
+               .false., epsib, src=sys%st%group%psib(1, 1))
+    end if
 
     !Initialize the orbital basis
     call orbitalbasis_init(basis, sys%namespace)
     if (states_are_real(sys%st)) then
       call dorbitalbasis_build(basis, sys%geo, sys%gr%mesh, sys%st%d%kpt, sys%st%d%dim, .false., .false.)
-      SAFE_ALLOCATE(dweight(1:basis%orbsets(1)%sphere%np,1:epsib%nst_linear))
-      SAFE_ALLOCATE(ddot(1:sys%st%d%dim,1:basis%orbsets(1)%norbs, 1:epsib%nst))
+      SAFE_ALLOCATE(dweight(1:basis%orbsets(1)%norbs, 1:epsib%nst_linear))
+      SAFE_ALLOCATE(ddot(1:sys%st%d%dim, 1:basis%orbsets(1)%norbs, 1:epsib%nst))
     else
       call zorbitalbasis_build(basis, sys%geo, sys%gr%mesh, sys%st%d%kpt, sys%st%d%dim, .false., .false.)
       call orbitalset_update_phase(basis%orbsets(1), sys%gr%sb, sys%st%d%kpt, (sys%st%d%ispin==SPIN_POLARIZED))
-      SAFE_ALLOCATE(zweight(1:basis%orbsets(1)%sphere%np,1:epsib%nst_linear))
-      SAFE_ALLOCATE(zdot(1:sys%st%d%dim,1:basis%orbsets(1)%norbs, 1:epsib%nst))
+      SAFE_ALLOCATE(zweight(1:basis%orbsets(1)%norbs, 1:epsib%nst_linear))
+      SAFE_ALLOCATE(zdot(1:sys%st%d%dim, 1:basis%orbsets(1)%norbs, 1:epsib%nst))
+
+      !We set the phase of the orbitals if needed
+      if(associated(sys%hm%hm_base%phase)) then
+        call orbitalset_update_phase(basis%orbsets(1), sys%gr%mesh%sb, sys%st%d%kpt, &
+                   (sys%st%d%ispin==SPIN_POLARIZED))
+      end if
     end if
 
     do itime = 1, param%repetitions
-      call batch_set_zero(epsib)
+      call batch_set_zero(epsib2)
       if(states_are_real(sys%st)) then
         dweight = M_ONE
         ddot = M_ZERO
         call dorbitalset_get_coeff_batch(basis%orbsets(1), 1, sys%st%group%psib(1, 1), .false., ddot)
-        call dorbitalset_add_to_batch(basis%orbsets(1), 1, epsib, .false., dweight)
+        call dorbitalset_add_to_batch(basis%orbsets(1), 1, epsib2, .false., dweight)
       else
         zweight = M_ONE
         zdot = M_ZERO
-        call zorbitalset_get_coeff_batch(basis%orbsets(1), sys%st%d%dim, sys%st%group%psib(1, 1), .false., zdot)
-        call zorbitalset_add_to_batch(basis%orbsets(1), sys%st%d%dim, epsib, .false., zweight)
+        call zorbitalset_get_coeff_batch(basis%orbsets(1), sys%st%d%dim, epsib, .false., zdot)
+        call zorbitalset_add_to_batch(basis%orbsets(1), sys%st%d%dim, epsib2, .false., zweight)
       end if
     end do
 
@@ -370,7 +387,7 @@ contains
       call epsib%do_unpack(force = .true.)
     end if
 
-    call test_prints_info_batch(sys%st, sys%gr, epsib)
+    call test_prints_info_batch(sys%st, sys%gr, epsib2)
 
     SAFE_DEALLOCATE_A(dweight)
     SAFE_DEALLOCATE_A(zweight)
@@ -379,6 +396,8 @@ contains
 
     call epsib%end()
     SAFE_DEALLOCATE_P(epsib)
+    call epsib2%end()
+    SAFE_DEALLOCATE_P(epsib2)
     call orbitalbasis_end(basis)
     call states_elec_deallocate_wfns(sys%st)
     SAFE_DEALLOCATE_P(sys)
