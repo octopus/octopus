@@ -203,7 +203,7 @@ namespace pseudopotential {
 	for(unsigned ii = 0; ii < energy.size(); ii++){
 	  if(energy[ii] < etol) return spacing[ii];
 	}
-	
+        return -1.0;	
 	
       } else {      
 	return map_.at(el.symbol()).spacing_;
