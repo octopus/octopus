@@ -42,12 +42,12 @@ module propagator_exp_mid_oct_m
   end interface propagator_exp_mid_t
 
   ! Specific exponential mid-point propagation operations identifiers
-  character(len=LABEL_LEN), public, parameter :: &
-    EXPMID_START        = 'EXPMID_START',        &
-    EXPMID_FINISH       = 'EXPMID_FINISH',       &
-    EXPMID_PREDICT_DT_2 = 'EXPMID_PREDICT_DT_2', &
-    EXPMID_PREDICT_DT   = 'EXPMID_PREDICT_DT',   &
-    EXPMID_CORRECT_DT_2 = 'EXPMID_CORRECT_DT_2', &
+  character(len=ALGO_LABEL_LEN), public, parameter :: &
+    EXPMID_START        = 'EXPMID_START',             &
+    EXPMID_FINISH       = 'EXPMID_FINISH',            &
+    EXPMID_PREDICT_DT_2 = 'EXPMID_PREDICT_DT_2',      &
+    EXPMID_PREDICT_DT   = 'EXPMID_PREDICT_DT',        &
+    EXPMID_CORRECT_DT_2 = 'EXPMID_CORRECT_DT_2',      &
     UPDATE_HAMILTONIAN  = 'UPDATE_HAMILTONIAN'
 
   ! Specific exponential mid-point propagation operations

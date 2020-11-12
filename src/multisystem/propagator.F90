@@ -70,12 +70,12 @@ module propagator_oct_m
   end type propagator_t
 
   ! Known propagation operations
-  character(len=LABEL_LEN), public, parameter ::   &
-    SKIP                 = 'SKIP',                 &
-    FINISHED             = 'FINISHED',             &
-    UPDATE_INTERACTIONS  = 'UPDATE_INTERACTIONS',  &
-    START_SCF_LOOP       = 'START_SCF_LOOP',       &
-    END_SCF_LOOP         = 'END_SCF_LOOP',         &
+  character(len=ALGO_LABEL_LEN), public, parameter ::   &
+    SKIP                 = 'SKIP',                      &
+    FINISHED             = 'FINISHED',                  &
+    UPDATE_INTERACTIONS  = 'UPDATE_INTERACTIONS',       &
+    START_SCF_LOOP       = 'START_SCF_LOOP',            &
+    END_SCF_LOOP         = 'END_SCF_LOOP',              &
     STORE_CURRENT_STATUS = 'STORE_CURRENT_STATUS'
 
   type(algorithmic_operation_t), public, parameter :: &

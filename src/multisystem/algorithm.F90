@@ -32,9 +32,11 @@ module algorithm_oct_m
     algorithm_t,             &
     algorithm_iterator_t
 
+  integer, parameter, public :: ALGO_LABEL_LEN = 50
+
   type :: algorithmic_operation_t
-    character(len=LABEL_LEN) :: id !< Operation identifier. We use a string instead of an integer to minimize the chance of having duplicated identifiers.
-    character(len=LABEL_LEN) :: label !< Label describing what the code is doing when performing this operation.
+    character(len=ALGO_LABEL_LEN) :: id !< Operation identifier. We use a string instead of an integer to minimize the chance of having duplicated identifiers.
+    character(len=ALGO_LABEL_LEN) :: label !< Label describing what the code is doing when performing this operation.
   end type algorithmic_operation_t
 
   !> An algorithm is a list of algorithmic operations
