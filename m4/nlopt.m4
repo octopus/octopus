@@ -13,6 +13,10 @@ dnl Backup LIBS and FCFLAGS
 acx_nlopt_save_LIBS="$LIBS"
 acx_nlopt_save_FCFLAGS="$FCFLAGS"
 
+if test "x$with_nlopt_prefix" = x; then
+  with_nlopt_prefix=/usr
+fi
+
 dnl The tests
 AC_MSG_CHECKING([for NLOPT])
 if test "$acx_nlopt_ok" != disabled; then
@@ -28,7 +32,6 @@ if test "$acx_nlopt_ok" != disabled; then
     FCFLAGS="$FCFLAGS_NLOPT $acx_nlopt_save_FCFLAGS"
     LIBS="$LIBS_NLOPT $acx_nlopt_save_LIBS"
     AC_LINK_IFELSE(AC_LANG_PROGRAM([],[
-      integer(8) :: nlopt
       integer :: nparams
       include 'nlopt.f'
       call nlo_create(opt, NLOPT_LD_LBFGS, nparams)
