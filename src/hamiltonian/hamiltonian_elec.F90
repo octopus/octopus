@@ -760,6 +760,7 @@ contains
         ! and we are not setting a gauge field
         if(any(abs(hm%ep%E_field(1:gr%sb%periodic_dim)) > M_EPSILON)) then
           SAFE_ALLOCATE(hm%vberry(1:gr%mesh%np, 1:hm%d%nspin))
+          hm%vberry = M_ZERO
         end if
       end if
 
