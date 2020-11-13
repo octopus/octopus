@@ -102,8 +102,8 @@ module scf_oct_m
     FLOAT, public :: lmm_r
 
     ! several convergence criteria
-    FLOAT :: conv_abs_dens, conv_rel_dens, conv_abs_ev, conv_rel_ev, conv_abs_force
-    FLOAT :: abs_dens, rel_dens, abs_ev, rel_ev, abs_force
+    FLOAT :: conv_abs_dens, conv_rel_dens, conv_abs_ev, conv_rel_ev
+    FLOAT :: abs_dens, rel_dens, abs_ev, rel_ev
     FLOAT :: conv_energy_diff
     FLOAT :: energy_diff
     logical :: conv_eigen_error
@@ -128,7 +128,7 @@ module scf_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine scf_init(scf, namespace, gr, geo, st, mc, hm, ks, conv_force)
+  subroutine scf_init(scf, namespace, gr, geo, st, mc, hm, ks)
     type(scf_t),              intent(inout) :: scf
     type(namespace_t),        intent(in)    :: namespace
     type(grid_t),     target, intent(inout) :: gr
@@ -137,7 +137,6 @@ contains
     type(multicomm_t),        intent(in)    :: mc
     type(hamiltonian_elec_t), intent(inout) :: hm
     type(v_ks_t),             intent(in)    :: ks
-    FLOAT,          optional, intent(in)    :: conv_force
 
     FLOAT :: rmin
     integer :: mixdefault, ierr
@@ -250,29 +249,14 @@ contains
     !%End
     call parse_variable(namespace, 'ConvRelEv', M_ZERO, scf%conv_rel_ev, unit = units_inp%energy)
 
-    call messages_obsolete_variable(namespace, 'ConvAbsForce', 'ConvForce')
-    call messages_obsolete_variable(namespace, 'ConvRelForce', 'ConvForce')
-
-    !%Variable ConvForce
-    !%Type float
-    !%Section SCF::Convergence
-    !%Description
-    !% Absolute convergence of the forces: maximum variation of any
-    !% component of the ionic forces in consecutive iterations.  A
-    !% zero value means do not use this criterion. The default is
-    !% zero, except for geometry optimization, which sets a default of
-    !% 1e-8 H/b.
-    !%
-    !% If this criterion is used, the SCF loop will only stop once it is
-    !% fulfilled for two consecutive iterations.
-    !%End
-    call parse_variable(namespace, 'ConvForce', optional_default(conv_force, M_ZERO), scf%conv_abs_force, unit = units_inp%force)
+    call messages_obsolete_variable(namespace, 'ConvAbsForce')
+    call messages_obsolete_variable(namespace, 'ConvRelForce')
+    call messages_obsolete_variable(namespace, 'ConvForce')
 
     scf%check_conv = &
       scf%conv_energy_diff > M_ZERO .or. &
       scf%conv_abs_dens > M_ZERO .or. scf%conv_rel_dens > M_ZERO .or. &
-      scf%conv_abs_ev > M_ZERO .or. scf%conv_rel_ev > M_ZERO .or. &
-      scf%conv_abs_force > M_ZERO
+      scf%conv_abs_ev > M_ZERO .or. scf%conv_rel_ev > M_ZERO 
 
     if(.not. scf%check_conv .and. scf%max_iter < 0) then
       call messages_write("All convergence criteria are disabled. Octopus is cowardly refusing")
@@ -285,7 +269,7 @@ contains
       call messages_new_line()
       call messages_write(" | MaximumIter | ConvEnergy | ConvAbsDens | ConvRelDens |")
       call messages_new_line()
-      call messages_write(" |  ConvAbsEv  | ConvRelEv  |  ConvForce  |")
+      call messages_write(" |  ConvAbsEv  | ConvRelEv  |")
       call messages_new_line()
       call messages_fatal()
     end if
@@ -594,15 +578,15 @@ contains
     type(restart_t), optional, intent(in)    :: restart_dump
 
     logical :: finish, converged_current, converged_last, gs_run_
-    integer :: iter, is, iatom, nspin, ierr, verbosity_, ib, iqn
-    FLOAT :: evsum_out, evsum_in, forcetmp
+    integer :: iter, is, nspin, ierr, verbosity_, ib, iqn
+    FLOAT :: evsum_out, evsum_in
     FLOAT :: etime, itime
     character(len=MAX_PATH_LEN) :: dirname
     type(lcao_t) :: lcao    !< Linear combination of atomic orbitals
     type(profile_t), save :: prof
     FLOAT, allocatable :: rhoout(:,:,:), rhoin(:,:,:)
     FLOAT, allocatable :: vhxc_old(:,:)
-    FLOAT, allocatable :: forceout(:,:), forcein(:,:), forcediff(:), tmp(:)
+    FLOAT, allocatable :: tmp(:)
     class(wfs_elec_t), allocatable :: psioutb(:, :)
 #ifdef HAVE_MPI
     logical :: forced_finish_tmp    
@@ -696,13 +680,12 @@ contains
     rhoout = M_ZERO
 
     !We store the Hxc potential for the contribution to the forces
-    if(scf%calc_force .or. scf%conv_abs_force > M_ZERO &
-        .or. (outp%duringscf .and. bitand(outp%what, OPTION__OUTPUT__FORCES) /= 0)) then
+    if(scf%calc_force .or. (outp%duringscf .and. bitand(outp%what, OPTION__OUTPUT__FORCES) /= 0)) then
       SAFE_ALLOCATE(vhxc_old(1:gr%mesh%np, 1:nspin))
       vhxc_old(1:gr%mesh%np, 1:nspin) = hm%vhxc(1:gr%mesh%np, 1:nspin)
     end if
     
-
+  
     select case(scf%mix_field)
     case(OPTION__MIXFIELD__POTENTIAL)
       call mixfield_set_vin(scf%mixfield, hm%vhxc)
@@ -726,17 +709,6 @@ contains
     if(scf%mix_field /= OPTION__MIXFIELD__STATES) call lda_u_mixer_set_vin(hm%lda_u, scf%lda_u_mix)
 
     evsum_in = states_elec_eigenvalues_sum(st)
-
-    ! allocate and compute forces only if they are used as convergence criteria
-    if (scf%conv_abs_force > M_ZERO) then
-      SAFE_ALLOCATE(  forcein(1:geo%natoms, 1:gr%sb%dim))
-      SAFE_ALLOCATE( forceout(1:geo%natoms, 1:gr%sb%dim))
-      SAFE_ALLOCATE(forcediff(1:gr%sb%dim))
-      call forces_calculate(gr, namespace, geo, hm, st, ks)
-      do iatom = 1, geo%natoms
-        forcein(iatom, 1:gr%sb%dim) = geo%atom(iatom)%f(1:gr%sb%dim)
-      end do
-    end if
 
     call create_convergence_file(STATIC_DIR, "convergence")
     
@@ -768,9 +740,9 @@ contains
       scf%energy_diff = hm%energy%total
 
       !Used for the contribution to the forces
-      if(scf%calc_force .or. scf%conv_abs_force > M_ZERO .or. &
-          (outp%duringscf .and. bitand(outp%what, OPTION__OUTPUT__FORCES) /= 0)) & 
+      if(scf%calc_force .or. (outp%duringscf .and. bitand(outp%what, OPTION__OUTPUT__FORCES) /= 0)) then
         vhxc_old(1:gr%mesh%np, 1:nspin) = hm%vhxc(1:gr%mesh%np, 1:nspin)
+      end if
       
       if(scf%lcao_restricted) then
         call lcao_init_orbitals(lcao, st, gr, geo)
@@ -835,22 +807,10 @@ contains
       SAFE_DEALLOCATE_A(tmp)
 
       ! compute forces only if they are used as convergence criterion
-      if (scf%conv_abs_force > M_ZERO) then
+      if(outp%duringscf .and. bitand(outp%what, OPTION__OUTPUT__FORCES) /= 0 &
+         .and. outp%output_interval /= 0 &
+         .and. gs_run_ .and. mod(iter, outp%output_interval) == 0) then
         call forces_calculate(gr, namespace, geo, hm, st, ks, vhxc_old=vhxc_old)
-        scf%abs_force = M_ZERO
-        do iatom = 1, geo%natoms
-          forceout(iatom,1:gr%sb%dim) = geo%atom(iatom)%f(1:gr%sb%dim)
-          forcediff(1:gr%sb%dim) = abs( forceout(iatom,1:gr%sb%dim) - forcein(iatom,1:gr%sb%dim) )
-          forcetmp = maxval( forcediff )
-          if ( forcetmp > scf%abs_force ) then
-            scf%abs_force = forcetmp
-          end if
-        end do
-      else
-        if(outp%duringscf .and. bitand(outp%what, OPTION__OUTPUT__FORCES) /= 0 &
-           .and. outp%output_interval /= 0 &
-           .and. gs_run_ .and. mod(iter, outp%output_interval) == 0)  &
-          call forces_calculate(gr, namespace, geo, hm, st, ks, vhxc_old=vhxc_old)
       end if
 
       if(abs(st%qtot) <= M_EPSILON) then
@@ -873,7 +833,6 @@ contains
       converged_current = scf%check_conv .and. &
         (scf%conv_abs_dens  <= M_ZERO .or. scf%abs_dens  <= scf%conv_abs_dens)  .and. &
         (scf%conv_rel_dens  <= M_ZERO .or. scf%rel_dens  <= scf%conv_rel_dens)  .and. &
-        (scf%conv_abs_force <= M_ZERO .or. scf%abs_force <= scf%conv_abs_force) .and. &
         (scf%conv_abs_ev    <= M_ZERO .or. scf%abs_ev    <= scf%conv_abs_ev)    .and. &
         (scf%conv_rel_ev    <= M_ZERO .or. scf%rel_ev    <= scf%conv_rel_ev)    .and. &
         (scf%conv_energy_diff <= M_ZERO .or. abs(scf%energy_diff) <= scf%conv_energy_diff) .and. &
@@ -1016,10 +975,6 @@ contains
       if(scf%mix_field /= OPTION__MIXFIELD__STATES) call lda_u_mixer_set_vin(hm%lda_u, scf%lda_u_mix)
 
       evsum_in = evsum_out
-      if (scf%conv_abs_force > M_ZERO) then
-        forcein(1:geo%natoms, 1:gr%sb%dim) = forceout(1:geo%natoms, 1:gr%sb%dim)
-      end if
-
 
       if(scf%forced_finish) then
         call profiling_out(prof)
@@ -1117,14 +1072,7 @@ contains
           ' abs_ev   = ', units_from_atomic(units_out%energy, scf%abs_ev), ' rel_ev   = ', scf%rel_ev
         write(message(2),'(a,es15.2,2(a,es9.2))') &
           ' ediff = ', scf%energy_diff, ' abs_dens = ', scf%abs_dens, ' rel_dens = ', scf%rel_dens
-        ! write info about forces only if they are used as convergence criteria
-        if (scf%conv_abs_force > M_ZERO) then
-          write(message(3),'(23x,a,es9.2)') &
-            ' force    = ', units_from_atomic(units_out%force, scf%abs_force)
-          call messages_info(3)
-        else
-          call messages_info(2)
-        end if
+        call messages_info(2)
 
         if(.not.scf%lcao_restricted) then
           write(message(1),'(a,i6)') 'Matrix vector products: ', scf%eigens%matvec
@@ -1160,21 +1108,11 @@ contains
       end if
 
       if ( verbosity_ == VERB_COMPACT ) then
-        ! write info about forces only if they are used as convergence criteria
-        if (scf%conv_abs_force > M_ZERO) then
-          write(message(1),'(a,i4,a,es15.8, 2(a,es9.2), a, f7.1, a)') &
-            'iter ', iter, &
-            ' : etot ', units_from_atomic(units_out%energy, hm%energy%total), &
-            ' : abs_dens', scf%abs_dens, &
-            ' : force ', units_from_atomic(units_out%force, scf%abs_force), &
-            ' : etime ', etime, 's'
-        else
-          write(message(1),'(a,i4,a,es15.8, a,es9.2, a, f7.1, a)') &
-            'iter ', iter, &
-            ' : etot ', units_from_atomic(units_out%energy, hm%energy%total), &
-            ' : abs_dens', scf%abs_dens, &
-            ' : etime ', etime, 's'
-        end if
+        write(message(1),'(a,i4,a,es15.8, a,es9.2, a, f7.1, a)') &
+          'iter ', iter, &
+          ' : etot ', units_from_atomic(units_out%energy, hm%energy%total), &
+          ' : abs_dens', scf%abs_dens, &
+          ' : etime ', etime, 's'
         call messages_info(1)
       end if
 
@@ -1370,10 +1308,6 @@ contains
         write(iunit, '(1x,a)', advance = 'no') label
         label = 'rel_ev'
         write(iunit, '(1x,a)', advance = 'no') label
-        if (scf%conv_abs_force > M_ZERO) then
-          label = 'force_diff'
-          write(iunit, '(1x,a)', advance = 'no') label
-        end if
         if (bitand(ks%xc_family, XC_FAMILY_OEP) /= 0 .and. ks%theory_level /= HARTREE_FOCK) then
           if (ks%oep%level == XC_OEP_FULL) then
             label = 'OEP norm2ss'
@@ -1403,9 +1337,6 @@ contains
         write(iunit, '(es13.5)', advance = 'no') scf%rel_dens
         write(iunit, '(es13.5)', advance = 'no') units_from_atomic(units_out%energy, scf%abs_ev)
         write(iunit, '(es13.5)', advance = 'no') units_from_atomic(units_out%energy, scf%rel_ev)
-        if (scf%conv_abs_force > M_ZERO) then
-          write(iunit, '(es13.5)', advance = 'no') units_from_atomic(units_out%force, scf%abs_force)
-        end if
         if (bitand(ks%xc_family, XC_FAMILY_OEP) /= 0 .and. ks%theory_level /= HARTREE_FOCK) then
           if (ks%oep%level == XC_OEP_FULL) &
             write(iunit, '(es13.5)', advance = 'no') ks%oep%norm2ss
