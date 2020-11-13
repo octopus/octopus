@@ -104,7 +104,7 @@ module io_binary_oct_m
       integer(c_int),         intent(in)    :: offset
       type(c_ptr),            value         :: ff
       integer(c_int),         intent(in)    :: output_type
-      integer(c_int),         intent(in)    :: ierr
+      integer(c_int),         intent(out)   :: ierr
       integer(c_int),         intent(inout) :: iio
       character(kind=c_char), intent(in)    :: fname(*)
     end subroutine read_binary
