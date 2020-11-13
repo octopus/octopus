@@ -125,7 +125,7 @@ contains
     dist3 = sum((this%partner_pos(1:this%dim) - this%system_pos(1:this%dim))**2)**(M_THREE/M_TWO)
 
     this%force(1:this%dim) = (this%partner_pos(1:this%dim) - this%system_pos(1:this%dim)) &
-      / dist3 * (GG * this%system_mass * this%partner_mass)
+      / (dist3 + M_EPSILON) * (GG * this%system_mass * this%partner_mass)
 
     POP_SUB(gravity_calculate)
   end subroutine gravity_calculate

@@ -16,8 +16,8 @@ match ; Geometry         ; LINEFIELD(static/geometry.xyz, 3, 3) ; 0.000000
 # DX output
 match ; DX Origin        ; LINEFIELD(static/density.dx, 2, 2) ; -2.645886
 match ; DX Delta         ; LINEFIELD(static/density.dx, 3, 2) ; 0.264589
-Precision : 0.000000001
 
+Precision : 2e-9
 match ; DX value 1       ; LINEFIELD(static/density.dx, 1195, 1) ; 0.000166986832631
 match ; DX value 2       ; LINEFIELD(static/density.dx, 1489, 1) ; 0.001133466426887
 
