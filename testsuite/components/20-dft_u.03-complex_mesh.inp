@@ -1,0 +1,41 @@
+CalculationMode = test
+
+TestMode = dft_u
+TestRepetitions = 10
+
+PeriodicDimensions = 3
+BoxShape = parallelepiped
+ExperimentalFeatures = yes
+
+a = 7.8809
+%Species
+"Ni" | species_pseudo | hubbard_l | 2 | hubbard_u | 5.0*eV
+%
+DFTULevel = dft_u_empirical
+PseudopotentialSet=hscv_pbe
+
+%LatticeParameters
+  a | a | a
+%
+%LatticeVectors
+ 0.0 | 1/2 | 1/2
+ 1/2 | 0.0 | 1/2
+ 1.0 | 1.0 | 0.0
+%
+
+%ReducedCoordinates
+ "Ni" | 0.0 | 0.0 | 0.0
+ "Ni" | 0.0 | 0.0 | 0.5
+ "O"  | 0.5 | 0.5 | 0.25
+ "O"  | 0.5 | 0.5 | 0.75
+%
+
+Spacing = 0.5
+
+SpinComponents = polarized
+FilterPotentials = filter_none
+Debug = trace
+
+AOSubmesh = no
+ForceComplex = yes
+StatesPack = yes

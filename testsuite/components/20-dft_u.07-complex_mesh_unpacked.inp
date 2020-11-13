@@ -36,5 +36,6 @@ SpinComponents = polarized
 FilterPotentials = filter_none
 Debug = trace
 
-AOSubmeshForPeriodic = no
-StatesPack = yes
+AOSubmesh = no
+ForceComplex = yes
+StatesPack = no

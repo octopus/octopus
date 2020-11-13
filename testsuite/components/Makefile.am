@@ -79,7 +79,14 @@ dist_share_DATA =                                  \
 	18-interpolation.test                      \
 	19-hgh_soc.01-3d.inp                       \
 	19-hgh_soc.test                            \
-	20-dft_u.01-NiO.inp                        \
+	20-dft_u.01-real_mesh.inp                  \
+	20-dft_u.02-real_submesh.inp               \
+	20-dft_u.03-complex_mesh.inp               \
+	20-dft_u.04-complex_submesh.inp            \
+        20-dft_u.05-real_mesh_unpacked.inp         \
+        20-dft_u.06-real_submesh_unpacked.inp      \
+        20-dft_u.07-complex_mesh_unpacked.inp      \
+        20-dft_u.08-complex_submesh_unpacked.inp   \
 	20-dft_u.test                              \
 	21-hamiltonian_apply.01-Si.inp             \
 	21-hamiltonian_apply.test                  \
