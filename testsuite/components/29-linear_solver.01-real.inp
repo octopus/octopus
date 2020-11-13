@@ -1,0 +1,18 @@
+CalculationMode = test
+TestMode = linear_solver
+
+# coordinates are not used at all
+%Coordinates
+"dummy" | 0.0 | 0.0 | 0.0
+%
+%Species
+"dummy" | species_user_defined | potential_formula | "0" | valence | 1
+%
+
+BoxShape = sphere
+Radius  = 4.0
+Spacing = 0.5
+
+TestRepetitions = 1
+
+~                 

@@ -99,6 +99,8 @@ dist_share_DATA =                                  \
 	27-clock.test                              \
 	28-cgal.01.inp                             \
 	28-cgal.02-X.off                           \
-	28-cgal.test
+	28-cgal.test                               \
+        29-linear_solver.01-real.inp               \
+        29-linear_solver.test
 
 CLEANFILES = *~ *.bak

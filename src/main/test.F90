@@ -35,6 +35,8 @@ module test_oct_m
   use ion_interaction_oct_m
   use iso_c_binding
   use io_oct_m
+  use lalg_basic_oct_m
+  use mesh_oct_m
   use mesh_batch_oct_m
   use mesh_function_oct_m
   use mesh_interpolation_oct_m
@@ -46,9 +48,11 @@ module test_oct_m
   use orbitalset_oct_m
   use parser_oct_m
   use poisson_oct_m
+  use preconditioners_oct_m
   use profiling_oct_m
   use projector_oct_m
   use simul_box_oct_m
+  use solvers_oct_m
   use states_abst_oct_m
   use states_elec_oct_m
   use states_elec_calc_oct_m
@@ -70,6 +74,11 @@ module test_oct_m
     integer :: min_blocksize
     integer :: max_blocksize
   end type test_parameters_t
+
+  !Auxiliary quantities needed by the linear solver
+  FLOAT :: shift_aux
+  type(derivatives_t), pointer :: der_aux  => null()
+  type(preconditioner_t)       :: prec_aux
 
   public :: test_run
 
@@ -121,7 +130,9 @@ contains
     !% Tests the batch operations
     !%Option clock 18
     !% Tests for clock
-    !%Option cgal 19
+    !%Option linear_solver 19
+    !% Tests the linear solvers
+    !%Option cgal 20
     !% Tests for cgal interface
     !%End
     call parse_variable(namespace, 'TestMode', OPTION__TESTMODE__HARTREE, test_mode)
@@ -225,6 +236,8 @@ contains
       call test_batch_ops(param, namespace)
     case(OPTION__TESTMODE__CLOCK)
       call test_clock()
+    case(OPTION__TESTMODE__LINEAR_SOLVER)
+      call test_linear_solver(param, namespace)
     case(OPTION__TESTMODE__CGAL)
       call test_cgal()
     end select
@@ -250,6 +263,122 @@ contains
 
     POP_SUB(test_hartree)
   end subroutine test_hartree
+
+  ! ---------------------------------------------------------
+  subroutine test_linear_solver(param, namespace)
+    type(test_parameters_t), intent(in) :: param
+    type(namespace_t),       intent(in) :: namespace
+
+    type(electrons_t), pointer :: sys
+    FLOAT, allocatable :: rho(:), x(:)
+    FLOAT :: center(MAX_DIM)
+    FLOAT :: rr, alpha, beta, res
+    integer :: ip, iter
+
+    FLOAT, parameter :: threshold = CNST(1e-7)
+
+    PUSH_SUB(test_linear_solver)
+
+    call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
+
+    sys => electrons_t(namespace)
+    call sys%init_parallelization(mpi_world)
+
+    ! We need to set up some auxiliary quantities called by the linear solver
+    call mesh_init_mesh_aux(sys%gr%mesh)
+    ! Shift of the linear equation
+    shift_aux = CNST(0.25)
+    ! Preconditioner used for the QMR algorithm
+    call preconditioner_init(prec_aux, namespace, sys%gr, sys%geo, sys%mc)
+    ! Derivative object needed 
+    call set_der_aux(sys%gr%der)
+
+    ! Here we put a Gaussian as the right-hand side of the linear solver
+    ! Values are taken from the poisson_test routine
+    alpha = CNST(4.0)*sys%gr%mesh%spacing(1)
+    beta = M_ONE / ( alpha**sys%gr%mesh%sb%dim * sqrt(M_PI)**sys%gr%mesh%sb%dim )
+    ! The Gaussian is centered around the origin
+    center = M_ZERO
+
+    SAFE_ALLOCATE(rho(sys%gr%mesh%np))
+    rho = M_ZERO
+    do ip = 1, sys%gr%mesh%np
+      call mesh_r(sys%gr%mesh, ip, rr, origin = center(:))
+      rho(ip) = beta*exp(-(rr/alpha)**2)
+    end do
+
+    SAFE_ALLOCATE(x(sys%gr%mesh%np))
+
+    !Test the CG linear solver
+    x = M_ZERO
+    iter = 1000
+    call dconjugate_gradients(sys%gr%mesh%np, x, rho, laplacian_op, dmf_dotp_aux, iter, res, threshold)
+    write(message(1),'(a,i6,a)')  "Info: CG converged with ", iter, " iterations."
+    write(message(2),'(a,e14.6)')    "Info: The residue is ", res
+    write(message(3),'(a,e14.6)') "Info: Norm solution CG ", dmf_nrm2(sys%gr%mesh, x)
+    call messages_info(3)
+
+    !Test the QMR linear solver
+    x = M_ZERO
+    iter = 1000
+    call dqmr_sym_spec_dotu(sys%gr%mesh%np, x, rho, laplacian_op, prec_op, iter, res, threshold)
+    write(message(1),'(a,i6,a)')  "Info: QMR converged with ", iter, " iterations."
+    write(message(2),'(a,e14.6)')    "Info: The residue is ", res
+    write(message(3),'(a,e14.6)') "Info: Norm solution QMR ", dmf_nrm2(sys%gr%mesh, x)
+    call messages_info(3)
+
+    call preconditioner_end(prec_aux)
+    SAFE_DEALLOCATE_A(x)
+    SAFE_DEALLOCATE_A(rho)
+    SAFE_DEALLOCATE_P(sys)
+
+    POP_SUB(test_linear_solver)
+    contains 
+
+    subroutine set_der_aux(der)
+      type(derivatives_t), target, intent(in) :: der
+      PUSH_SUB(test_linear_solver.set_der_aux)
+      der_aux => der
+      POP_SUB(test_linear_solver.set_der_aux)
+    end subroutine set_der_aux
+
+    ! ---------------------------------------------------------
+    !> Computes Hx = (-\Laplacian + shift) x
+    subroutine laplacian_op(x, hx)
+      FLOAT,            intent(in)    :: x(:)
+      FLOAT,            intent(out)   :: Hx(:)
+
+      FLOAT, allocatable :: tmpx(:)
+
+      ASSERT(associated(mesh_aux))
+
+      SAFE_ALLOCATE(tmpx(mesh_aux%np_part))
+      call lalg_copy(mesh_aux%np, x, tmpx)
+      call dderivatives_lapl(der_aux, tmpx, Hx)
+      call lalg_scal(mesh_aux%np, -M_ONE, hx)
+      call lalg_axpy(mesh_aux%np, shift_aux, x, hx)
+      SAFE_DEALLOCATE_A(tmpx)
+
+     end subroutine laplacian_op
+
+     ! ---------------------------------------------------------
+     subroutine prec_op (x, hx)
+       FLOAT,      intent(in)    :: x(:)   !<  x(gr%mesh%np)
+       FLOAT,      intent(out)   :: hx(:)  !< Hx(gr%mesh%np)
+ 
+       FLOAT, allocatable :: tmpx(:)
+ 
+       ASSERT(associated(mesh_aux))
+  
+       SAFE_ALLOCATE(tmpx(mesh_aux%np_part))
+       call lalg_copy(mesh_aux%np, x, tmpx)
+       call dderivatives_perform(prec_aux%op, der_aux, tmpx, hx)
+       SAFE_DEALLOCATE_A(tmpx)
+
+     end subroutine prec_op
+
+   end subroutine test_linear_solver
+
 
  ! ---------------------------------------------------------
   subroutine test_projector(param, namespace)
