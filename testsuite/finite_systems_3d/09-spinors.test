@@ -36,14 +36,23 @@ match ; mz           ; GREPFIELD(static/info, 'Local Magnetic Moments', 5, 2) ; 
 # It is due to the small radius and large spacing.
 
 Input: 09-spinors.03-rmmdiis_extra_states.inp
+
 match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
-match ; Total energy ; GREPFIELD(static/info, 'Total       =', 3) ; -0.17669585
-match ; External energy ; GREPFIELD(static/info, 'External    =', 3) ; -0.29125110
-match ; Eigenvalue   ; GREPFIELD(static/info, '1   --', 3) ; -0.085321
-match ; <Sx>         ; GREPFIELD(static/info, '1   --', 5) ; 0.0492
-match ; <Sy>         ; GREPFIELD(static/info, '1   --', 6) ; 0.0492
-match ; <Sz>         ; GREPFIELD(static/info, '1   --', 7) ; 0.4951
-Precision : 0.00021
-match ; mx           ; GREPFIELD(static/info, 'Local Magnetic Moments', 3, 2) ; 0.098387
-match ; my           ; GREPFIELD(static/info, 'Local Magnetic Moments', 4, 2) ; 0.098387
-match ; mz           ; GREPFIELD(static/info, 'Local Magnetic Moments', 5, 2) ; 0.990273
+
+Precision: 1.10e-08
+match ;  Total energy  ; GREPFIELD(static/info, 'Total       =', 3) ; -0.17669589
+Precision: 5.50e-09
+match ;  External energy  ; GREPFIELD(static/info, 'External    =', 3) ; -0.29125116500000003
+
+Precision: 8.53e-17
+match ;  Eigenvalue    ; GREPFIELD(static/info, '1   --', 3) ; -0.085321
+
+Precision: 4.87e-16
+match ;  <Sx>          ; GREPFIELD(static/info, '1   --', 5) ; 0.0793
+match ;  <Sy>          ; GREPFIELD(static/info, '1   --', 6) ; 0.0793
+match ;  <Sz>          ; GREPFIELD(static/info, '1   --', 7) ; 0.4873
+
+Precision: 3.85e-06
+match ;  mx            ; GREPFIELD(static/info, 'Local Magnetic Moments', 3, 2) ; 0.1585125
+match ;  my            ; GREPFIELD(static/info, 'Local Magnetic Moments', 4, 2) ; 0.1585125
+match ;  mz            ; GREPFIELD(static/info, 'Local Magnetic Moments', 5, 2) ; 0.97455
