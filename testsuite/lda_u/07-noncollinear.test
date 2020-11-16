@@ -17,51 +17,53 @@ else
   match ;  Total k-points    ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 4.0
   match ;  Reduced k-points  ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 2.0
 
-  Precision: 2.6e-3
-  match ;   Total energy         ; GREPFIELD(static/info, 'Total       =', 3) ; -246.660892745
-  Precision: 1e-8
-  match ;   Ion-ion energy       ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -177.00987193
-  Precision: 1.8e-3
-  match ;   Eigenvalues sum      ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -31.85600557
-  Precision: 7.7e-4
-  match ;   Hartree energy       ; GREPFIELD(static/info, 'Hartree     =', 3) ; 48.182984535
-  Precision: 1.2e-4
-  match ;   Exchange energy      ; GREPFIELD(static/info, 'Exchange    =', 3) ; -26.555601510000002
-  Precision: 6.8e-06
-  match ;   Correlation energy   ; GREPFIELD(static/info, 'Correlation =', 3) ; -2.784742805
-  Precision: 1.2e-3
-  match ;   Kinetic energy       ; GREPFIELD(static/info, 'Kinetic     =', 3) ; 125.150107255
-  Precision: 1.9e-3
-  match ;   External energy      ; GREPFIELD(static/info, 'External    =', 3) ; -213.95688684499999
-  Precision: 8.4e-06
-  match ;   Hubbard energy       ; GREPFIELD(static/info, 'Hubbard     =', 3) ; 0.311138435
+  Precision: 1.98e-07
+  match ;   Total energy         ; GREPFIELD(static/info, 'Total       =', 3) ; -90.19531039
+  Precision: 8.54e-14
+  match ;   Ion-ion energy       ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -85.44424755
+  Precision: 2.75e-08
+  match ;   Eigenvalues sum      ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; 1.988860715
+  Precision: 1.92e-07
+  match ;   Hartree energy       ; GREPFIELD(static/info, 'Hartree     =', 3) ; 13.264719894999999
+  Precision: 2.75e-08
+  match ;   Exchange energy      ; GREPFIELD(static/info, 'Exchange    =', 3) ; -15.819583775
+  Precision: 1.79e-15
+  match ;   Correlation energy   ; GREPFIELD(static/info, 'Correlation =', 3) ; -1.7891743
+  Precision: 4.18e-07
+  match ;   Kinetic energy       ; GREPFIELD(static/info, 'Kinetic     =', 3) ; 80.69671914
+  Precision: 5.72e-07
+  match ;   External energy      ; GREPFIELD(static/info, 'External    =', 3) ; -81.37603782
+  Precision: 1.10e-08
+  match ;   Hubbard energy       ; GREPFIELD(static/info, 'Hubbard     =', 3) ; 0.27230894
 
-  Precision: 1e-8
+  Precision: 1.00e-15
   match ;   Total Magnetic Moment x   ; GREPFIELD(static/info, 'mx = ', 3) ; 0.0
   match ;   Total Magnetic Moment y   ; GREPFIELD(static/info, 'my = ', 3) ; 0.0
   match ;   Total Magnetic Moment z   ; GREPFIELD(static/info, 'mz = ', 3) ; 0.0
 
-  Precision: 4.5e-4
-  match ;   Local Magnetic Moment (Ni1)   ; GREPFIELD(static/info, '1        Ni', 3) ; 2.5479575
-  match ;   Local Magnetic Moment (Ni2)   ; GREPFIELD(static/info, '2        Ni', 3) ; -2.5479575
-  Precision: 1e-8
+  Precision: 3.64e-15
+  match ;   Local Magnetic Moment (Ni1)   ; GREPFIELD(static/info, '1        Ni', 3) ; 3.644446
+  match ;   Local Magnetic Moment (Ni2)   ; GREPFIELD(static/info, '2        Ni', 3) ; -3.644446
+
+  Precision: 1.00e-15
   match ;   Local Magnetic Moment (O1)   ; GREPFIELD(static/info, '3         O', 3) ; 0.0
   match ;   Local Magnetic Moment (O2)   ; GREPFIELD(static/info, '4         O', 3) ; 0.0
 
-  Precision: 1e-15
+  Precision: 1.00e-15
   match ;   k-point 1 (x)   ; GREPFIELD(static/info, '#k =   1', 7) ; 0.0
   match ;   k-point 1 (y)   ; GREPFIELD(static/info, '#k =   1', 8) ; 0.0
   match ;   k-point 1 (z)   ; GREPFIELD(static/info, '#k =   1', 9) ; 0.0
 
-  Precision: 7.3e-05
-  match ;   Eigenvalue  1   ; GREPFIELD(static/info, '#k =   1', 3, 1) ; -2.945946
-  match ;   Eigenvalue  8   ; GREPFIELD(static/info, '#k =   1', 3, 8) ; -2.8461204999999996
-  match ;   Eigenvalue 16   ; GREPFIELD(static/info, '#k =   1', 3, 16) ; -0.46941900000000003
-  match ;   Eigenvalue 17   ; GREPFIELD(static/info, '#k =   1', 3, 17) ; -0.17454150000000002
+  Precision: 3.84e-16
+  match ;   Eigenvalue  1   ; GREPFIELD(static/info, '#k =   1', 3, 1) ; -0.383971
+  match ;   Eigenvalue  8   ; GREPFIELD(static/info, '#k =   1', 3, 8) ; -0.013981
+  match ;   Eigenvalue 16   ; GREPFIELD(static/info, '#k =   1', 3, 16) ; 0.086589
+  match ;   Eigenvalue 17   ; GREPFIELD(static/info, '#k =   1', 3, 17) ; 0.109796
 
-  Precision: 1.4e-4
-  match ;   Occupation Ni2 up-down 3d4   ; LINEFIELD(static/occ_matrices, -2, 7) ; -0.035771315
-  match ;   Occupation Ni2 up-down 3d5   ; LINEFIELD(static/occ_matrices, -1, 9) ; -0.390588
+  Precision: 3.30e-08
+  match ;   Occupation Ni2 up-down 3d4   ; LINEFIELD(static/occ_matrices, -2, 7) ; -0.06310971
+  match ;   Occupation Ni2 up-down 3d5   ; LINEFIELD(static/occ_matrices, -1, 9) ; -0.395657735  
+
 endif
 
 Input      : 07-noncollinear.02-acbn0.inp
@@ -75,42 +77,45 @@ else
   match ;  Total k-points    ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 4.0
   match ;  Reduced k-points  ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 2.0
 
-  Precision: 5.9e-05
-  match ;   Total energy          ; GREPFIELD(static/info, 'Total       =', 3) ; -246.55616835
-  match ;   Ion-ion energy        ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -177.00987193
-  match ;   Eigenvalues sum       ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -31.99700357
-  match ;   Hartree energy        ; GREPFIELD(static/info, 'Hartree     =', 3) ; 48.40937667
-  match ;   Exchange energy       ; GREPFIELD(static/info, 'Exchange    =', 3) ; -26.607014784999997
-  match ;   Correlation energy    ; GREPFIELD(static/info, 'Correlation =', 3) ; -2.7837793399999997
-  match ;   Kinetic energy        ; GREPFIELD(static/info, 'Kinetic     =', 3) ; 125.52313426
-  match ;   External energy       ; GREPFIELD(static/info, 'External    =', 3) ; -214.48432551
-  match ;   Hubbard energy        ; GREPFIELD(static/info, 'Hubbard     =', 3) ; 0.39648781
+  Precision: 1.10e-07
+  match ;   Total energy          ; GREPFIELD(static/info, 'Total       =', 3) ; -90.16833377
+  Precision: 8.54e-14
+  match ;   Ion-ion energy        ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -85.44424755
+  Precision: 2.14e-07
+  match ;   Eigenvalues sum       ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; 1.927523815
+  Precision: 8.25e-08
+  match ;   Hartree energy        ; GREPFIELD(static/info, 'Hartree     =', 3) ; 13.285469145
+  Precision: 1.65e-08
+  match ;   Exchange energy       ; GREPFIELD(static/info, 'Exchange    =', 3) ; -15.829389675
+  Precision: 1.79e-15
+  match ;   Correlation energy    ; GREPFIELD(static/info, 'Correlation =', 3) ; -1.78830358
+  Precision: 3.52e-07
+  match ;   Kinetic energy        ; GREPFIELD(static/info, 'Kinetic     =', 3) ; 80.7637349
+  Precision: 3.91e-07
+  match ;   External energy       ; GREPFIELD(static/info, 'External    =', 3) ; -81.451291905
+  Precision: 4.40e-08
+  match ;   Hubbard energy        ; GREPFIELD(static/info, 'Hubbard     =', 3) ; 0.29570872000000004
 
-  Precision: 1e-8
+  Precision: 1.00e-15
   match ;   Total Magnetic Moment x   ; GREPFIELD(static/info, 'mx = ', 3) ; 0.0
   match ;   Total Magnetic Moment y   ; GREPFIELD(static/info, 'my = ', 3) ; 0.0
   match ;   Total Magnetic Moment z   ; GREPFIELD(static/info, 'mz = ', 3) ; 0.0
 
-  Precision: 3.2e-05
-  match ;   Local Magnetic Moment (Ni1)   ; GREPFIELD(static/info, '1        Ni', 3) ; 2.6312755
-  match ;   Local Magnetic Moment (Ni2)   ; GREPFIELD(static/info, '2        Ni', 3) ; -2.6312755
+  Precision: 3.66e-15
+  match ;   Local Magnetic Moment (Ni1)   ; GREPFIELD(static/info, '1        Ni', 3) ; 3.659809
+  match ;   Local Magnetic Moment (Ni2)   ; GREPFIELD(static/info, '2        Ni', 3) ; -3.659809
 
-  Precision: 1e-8
+  Precision: 1.00e-15
   match ;   Local Magnetic Moment (O1)    ; GREPFIELD(static/info, '3         O', 3) ; 0.0
   match ;   Local Magnetic Moment (O2)    ; GREPFIELD(static/info, '4         O', 3) ; 0.0
 
-  Precision: 1.4e-05
-  match ;   Effective U (Ni1)   ; GREPFIELD(static/info, '1        Ni   d', 4) ; 0.34851449999999995
-  match ;   Effective U (Ni2)   ; GREPFIELD(static/info, '2        Ni   d', 4) ; 0.34851449999999995
+  Precision: 3.84e-16
+  match ;   Eigenvalue  1   ; GREPFIELD(static/info, '#k =   1', 3, 1) ; -0.383692
+  match ;   Eigenvalue  8   ; GREPFIELD(static/info, '#k =   1', 3, 8) ; -0.018126
+  match ;   Eigenvalue 16   ; GREPFIELD(static/info, '#k =   1', 3, 16) ; 0.080942
+  match ;   Eigenvalue 17   ; GREPFIELD(static/info, '#k =   1', 3, 17) ; 0.11072
 
-  Precision: 1.2e-05
-  match ;   Eigenvalue  1   ; GREPFIELD(static/info, '#k =   1', 3, 1) ; -2.9385494999999997
-  Precision: 3.4e-06
-  match ;   Eigenvalue  8   ; GREPFIELD(static/info, '#k =   1', 3, 8) ; -2.835246
-  match ;   Eigenvalue 16   ; GREPFIELD(static/info, '#k =   1', 3, 16) ; -0.46682049999999997
-  match ;   Eigenvalue 17   ; GREPFIELD(static/info, '#k =   1', 3, 17) ; -0.1737665
-
-  Precision: 9e-06
-  match ;   Occupation Ni2 up-down 3d4   ; LINEFIELD(static/occ_matrices, -2, 7) ; -0.038094695
-  match ;   Occupation Ni2 up-down 3d5   ; LINEFIELD(static/occ_matrices, -1, 9) ; -0.40489267
+  Precision: 3.30e-08
+  match ;   Occupation Ni2 up-down 3d4   ; LINEFIELD(static/occ_matrices, -2, 7) ; -0.06347823999999999
+  match ;   Occupation Ni2 up-down 3d5   ; LINEFIELD(static/occ_matrices, -1, 9) ; -0.39815366500000005
 endif
