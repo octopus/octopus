@@ -78,8 +78,13 @@ contains
     !The range of the dos is only calculated for physical points,
     !without the one from a k-point path
     npath = kpoints_nkpt_in_path(sb%kpoints)
-    evalmin = minval(st%eigenval(1:st%nst, 1:(st%d%nik-npath)))
-    evalmax = maxval(st%eigenval(1:st%nst, 1:(st%d%nik-npath)))
+    if(st%d%nik > npath) then
+      evalmin = minval(st%eigenval(1:st%nst, 1:(st%d%nik-npath)))
+      evalmax = maxval(st%eigenval(1:st%nst, 1:(st%d%nik-npath)))
+    else !In case we only have a path, e.g., a bandstructure calculation
+      evalmin = minval(st%eigenval(1:st%nst, 1:st%d%nik))
+      evalmax = maxval(st%eigenval(1:st%nst, 1:st%d%nik))
+    end if
     ! we extend the energy mesh by this amount
     eextend  = (evalmax - evalmin) / M_FOUR
 
