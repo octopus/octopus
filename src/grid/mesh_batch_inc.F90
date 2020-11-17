@@ -648,6 +648,58 @@ subroutine X(mesh_batch_mf_dotp)(mesh, aa, psi, dot, reduce, nst)
 end subroutine X(mesh_batch_mf_dotp)
 
 
+!--------------------------------------------------------------------------------------
+subroutine X(mesh_batch_codensity)(mesh, aa, psi, rho)
+  type(mesh_t),      intent(in)    :: mesh    !< The mesh descriptor.
+  class(batch_t),    intent(in)    :: aa      !< A batch which contains the mesh functions
+  R_TYPE,            intent(in)    :: psi(:,:)!< A mesh function        
+  R_TYPE,            intent(out)   :: rho(:,:)!< An array containing the result of the co-density
+
+  integer :: ii, ip, idim,  block_size, sp, size
+  type(profile_t), save :: prof
+
+  PUSH_SUB(X(mesh_batch_codensity))
+  call profiling_in(prof, "CODENSITIES")
+
+  ASSERT((aa%status()) /= BATCH_DEVICE_PACKED)
+
+  block_size = hardware%X(block_size)
+
+  select case(aa%status())
+  case(BATCH_PACKED)
+    do sp = 1, mesh%np, block_size
+      size = min(block_size, mesh%np - sp + 1)
+      do  ii = 1, aa%nst
+        do ip = sp, sp + size - 1
+          rho(ip, ii) = psi(ip, 1) * aa%X(ff_pack)((ii - 1) * aa%dim + 1, ip)
+        end do
+        do idim = 2, aa%dim
+          do ip = sp, sp + size - 1
+            rho(ip, ii) = rho(ip, ii) + psi(ip, idim) * aa%X(ff_pack)((ii - 1) * aa%dim + idim, ip)
+          end do
+        end do
+      end do
+    end do
+
+  case(BATCH_NOT_PACKED)
+    do sp = 1, mesh%np, block_size
+      size = min(block_size, mesh%np - sp + 1)
+      do  ii = 1, aa%nst
+        do ip = sp, sp + size - 1
+          rho(ip, ii) = psi(ip, 1) * aa%X(ff)(ip, 1, ii)
+        end do
+        do idim = 2, aa%dim
+           do ip = sp, sp + size - 1
+            rho(ip, ii) = rho(ip, ii) + psi(ip, idim) * aa%X(ff)(ip, idim, ii)
+          end do
+        end do
+      end do
+    end do
+  end select
+
+  call profiling_out(prof)
+  POP_SUB(X(mesh_batch_codensity))
+end subroutine X(mesh_batch_codensity)
 
 !--------------------------------------------------------------------------------------
 

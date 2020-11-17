@@ -56,10 +56,10 @@ if test x"$ac_cgal_dirs" != x"no" ; then
   AC_CHECK_LIB(mpfr, mpfr_add, [acx_mpfr_ok=yes], [acx_mpfr_ok=no], [$acx_cgal_save_LIBS])
 
 
-  if test x"$ac_gmp_ok" == x"no" ; then
+  if test x"$acx_gmp_ok" == x"no" ; then
     AC_MSG_WARN([GMP not found (a CGAL dependency)])
   else
-    if test x"$ac_mpfr_ok" == x"no" ; then
+    if test x"$acx_mpfr_ok" == x"no" ; then
       AC_MSG_WARN([MPFR not found (a CGAL dependency)])
     else
       AX_BOOST_BASE([1.62], [acx_boost_ok=yes], [acx_boost_ok=no])
@@ -81,9 +81,6 @@ if test x"$ac_cgal_dirs" != x"no" ; then
             else
               CGAL_LDFLAGS="-lmpfr -lgmp $BOOST_LDFLAGS"
             fi
-            #LDFLAGS_SAVED="$LDFLAGS"
-            #LDFLAGS="$LDFLAGS $CGAL_LDFLAGS"
-            #export LDFLAGS
             LIBS_SAVED="$LIBS"
             LIBS="$LIBS $CGAL_LDFLAGS"
             export LIBS
@@ -115,8 +112,6 @@ if test x"$ac_cgal_dirs" != x"no" ; then
 
             LIBS="$LIBS_SAVED"
             export LIBS
-            LDFLAGS="$LDFLAGS_SAVED"
-            export LDFLAGS
             CPPFLAGS="$CPPFLAGS_SAVED"
             export CPPFLAGS
 

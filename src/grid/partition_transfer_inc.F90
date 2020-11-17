@@ -31,6 +31,8 @@ subroutine X(partition_transfer)(this, f_in, f_out)
        f_out, this%rcounts(1), this%rdispls(1), R_MPITYPE,    &
        this%comm, mpi_err)
   call mpi_debug_out(this%comm, C_MPI_ALLTOALLV)
+#else
+  f_out = f_in
 #endif
 
   call profiling_out(prof_transfer)

@@ -7,7 +7,6 @@ ResponseMethod = finite_differences
 BoxShape = minimum
 Spacing = 0.4
 Radius = 6
-ConvForce = 1e-10
 ConvRelDens = 1e-7
 
 %Coordinates

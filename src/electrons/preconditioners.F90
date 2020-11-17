@@ -69,7 +69,7 @@ module preconditioners_oct_m
     integer :: which
 
     type(nl_operator_t), pointer :: op_array(:)  !< this array is necessary for derivatives_get_lapl() to work
-    type(nl_operator_t), pointer :: op           !< pointer to access op_array(1) simply as op
+    type(nl_operator_t), pointer, public :: op   !< pointer to access op_array(1) simply as op
 
     FLOAT, pointer      :: diag_lapl(:) !< diagonal of the laplacian
     integer             :: npre, npost, nmiddle
