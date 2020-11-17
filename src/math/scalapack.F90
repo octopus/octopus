@@ -426,6 +426,45 @@ module scalapack_oct_m
     end subroutine pzpotrf
   end interface scalapack_potrf
 
+  interface
+    subroutine pzlacp3(m, i, a, desca, b, ldb, ii, jj, rev)
+      implicit none
+      integer            i, ii, jj, ldb, m, rev
+      integer            desca
+      complex(8)         a, b
+    end subroutine pzlacp3
+  end interface
+
+  interface
+    subroutine pdlacp3(m, i, a, desca, b, ldb, ii, jj, rev)
+      implicit none
+      integer            i, ii, jj, ldb, m, rev
+      integer            desca
+      real(8)            a, b
+    end subroutine pdlacp3
+  end interface
+
+  interface
+    integer function indxl2g(indxloc, nb, iproc, isrcproc, nprocs)
+      implicit none
+      integer            indxloc, iproc, isrcproc, nb, nprocs
+    end function
+  end interface
+
+  interface
+    integer function indxg2l(indxglob, nb, iproc, isrcproc, nprocs)
+      implicit none
+      integer            indxglob, iproc, isrcproc, nb, nprocs
+    end function
+  end interface
+
+  interface
+    integer function indxg2p(indxglob, nb, iproc, isrcproc, nprocs)
+      implicit none
+      integer            indxglob, iproc, isrcproc, nb, nprocs
+    end function
+  end interface
+
 #endif
 end module scalapack_oct_m
 

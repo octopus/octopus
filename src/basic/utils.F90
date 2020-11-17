@@ -305,6 +305,9 @@ contains
 #ifdef HAVE_CLBLAS
     get_optional_libraries = trim(get_optional_libraries)//' clblas'
 #endif
+#ifdef HAVE_ELPA
+    get_optional_libraries = trim(get_optional_libraries)//' ELPA'
+#endif
 #ifdef HAVE_ETSF_IO
     get_optional_libraries = trim(get_optional_libraries)//' etsf_io'
 #endif

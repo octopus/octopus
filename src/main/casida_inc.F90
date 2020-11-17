@@ -826,7 +826,9 @@ subroutine X(casida_forces)(cas, sys, mesh, st)
       end if
       
       cas%X(mat2) = cas%X(mat_save) * factor + cas%X(lr_hmat2) + cas%X(mat2)
-      call lalg_eigensolve(cas%n_pairs, cas%X(mat2), cas%X(w2))
+      ! use parallel eigensolver here; falls back to serial solver if ScaLAPACK
+      ! not available
+      call lalg_eigensolve_parallel(cas%n_pairs, cas%X(mat2), cas%X(w2))
       do ia = 1, cas%n_pairs
         cas%forces(iatom, idir, cas%ind(ia)) = factor * cas%w(cas%ind(ia)) - R_REAL(cas%X(w2)(ia))
       end do
