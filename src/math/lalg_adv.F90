@@ -19,12 +19,19 @@
 #include "global.h"
 
 module lalg_adv_oct_m
+  use blacs_proc_grid_oct_m
+  use blacs_oct_m
   use global_oct_m
   use lapack_oct_m
   use messages_oct_m
+  use mpi_oct_m
   use profiling_oct_m
+  use scalapack_oct_m
   use sort_oct_m
   use utils_oct_m
+#ifdef HAVE_ELPA
+  use elpa
+#endif
   
   implicit none
 
@@ -34,6 +41,7 @@ module lalg_adv_oct_m
     lalg_geneigensolve,           &
     lalg_eigensolve,              &
     lalg_eigensolve_nonh,         &
+    lalg_eigensolve_parallel,     &
     lalg_determinant,             &
     lalg_inverter,                &
     lalg_sym_inverter,            &
@@ -70,6 +78,13 @@ module lalg_adv_oct_m
   interface lalg_eigensolve
     module procedure deigensolve, zeigensolve
   end interface lalg_eigensolve
+
+  interface lalg_eigensolve_parallel
+    module procedure deigensolve_parallel, zeigensolve_parallel
+  end interface lalg_eigensolve_parallel
+
+  !> Note that lalg_determinant and lalg_inverter are just wrappers
+  !! over the same routine.
 
   interface lalg_determinant
     module procedure ddeterminant, zdeterminant
