@@ -20,10 +20,13 @@
 #include "global.h"
 
 module photon_mode_oct_m
+  use comm_oct_m
   use global_oct_m
+  use io_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
+  use mpi_oct_m
   use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
@@ -65,12 +68,77 @@ contains
     FLOAT,                intent(in)  :: n_electrons
 
     type(block_t)         :: blk
-    integer               :: ii, ip, idir, ncols
+    integer               :: ii, ip, idir, iunit, ncols
+#ifdef HAVE_MPI
+    integer               :: ierr
+#endif
+    logical               :: file_exists
+    character(MAX_PATH_LEN) :: filename
 
     PUSH_SUB(photon_mode_init)
 
     this%dim = dim
     this%n_electrons = n_electrons
+
+    !%Variable PhotonmodesFilename
+    !%Type string
+    !%Default "photonmodes"
+    !%Section Linear Response::Casida
+    !%Description
+    !% Filename for photon modes in text format
+    !%  - first line contains 2 integers: number of photon modes and number of
+    !%    columns
+    !%  - each further line contains the given number of floats for one photon
+    !%    mode
+    !%End
+    call parse_variable(namespace, 'PhotonmodesFilename', 'photonmodes', filename)
+    inquire(file=trim(filename), exist=file_exists)
+    if(file_exists) then
+      if(mpi_grp_is_root(mpi_world)) then
+        message(1) = 'Opening '//trim(filename)
+        call messages_info(1)
+        ! open file on root
+        iunit = io_open(trim(filename), namespace, action='read', form='formatted')
+
+        ! get dimensions from first line
+        read(iunit, *) this%nmodes, ncols
+
+        write(message(1), '(3a,i7,a,i3,a)') 'Reading file ', trim(filename), ' with ', &
+          this%nmodes, ' photon modes and ', ncols, ' columns.'
+        call messages_info(1)
+
+        SAFE_ALLOCATE(this%omega(1:this%nmodes))
+        SAFE_ALLOCATE(this%lambda(1:this%nmodes))
+        SAFE_ALLOCATE(this%pol(1:this%nmodes,3))
+
+        ! now read in all modes
+        do ii = 1, this%nmodes
+          if(ncols == 5) then
+            read(iunit, *) this%omega(ii), this%lambda(ii), &
+              this%pol(ii,1), this%pol(ii,2), this%pol(ii,3)
+          else
+            ! error if not 5 columns
+            message(1) = 'Error: unexpected number of columns in file:'
+            message(2) = filename
+            call messages_fatal(2)
+          end if
+        end do
+        call io_close(iunit)
+      end if
+#ifdef HAVE_MPI
+      ! broadcast first array dimensions, then allocate and broadcast arrays
+      call MPI_Bcast(this%nmodes, 1, MPI_INTEGER, 0, mpi_world%comm, ierr)
+      call MPI_Bcast(ncols, 1, MPI_INTEGER, 0, mpi_world%comm, ierr)
+      if(.not. mpi_grp_is_root(mpi_world)) then
+        SAFE_ALLOCATE(this%omega(1:this%nmodes))
+        SAFE_ALLOCATE(this%lambda(1:this%nmodes))
+        SAFE_ALLOCATE(this%pol(1:this%nmodes,3))
+      end if
+      call MPI_Bcast(this%omega(1), this%nmodes, MPI_FLOAT, 0, mpi_world%comm, ierr)
+      call MPI_Bcast(this%lambda(1), this%nmodes, MPI_FLOAT, 0, mpi_world%comm, ierr)
+      call MPI_Bcast(this%pol(1,1), this%nmodes*3, MPI_FLOAT, 0, mpi_world%comm, ierr)
+#endif
+    end if
 
     !%Variable PhotonModes
     !%Type block
@@ -78,17 +146,18 @@ contains
     !%Description
     !% Each line of the block should specify one photon mode. The syntax is the following:
     !%
-    !%PhotonModes
-    !%omega1 | lambda1| PolX1 | PolY1 | PolZ1
-    !%...
-    !%
-    !%End
+    !% %PhotonModes
+    !%  omega1 | lambda1| PolX1 | PolY1 | PolZ1
+    !%  ...
+    !% %
     !%
     !% The first column is the mode frequency, in units of energy.
     !% The second column is the coupling strength, in units of energy.
     !% The remaining columns specify the polarization direction of the mode.
     !% If the polarization vector should be normalized to one. If that is not the case
     !% the code will normalize it.
+    !%End
+
     this%nmodes = 0
     if(parse_block(namespace, 'PhotonModes', blk) == 0) then
 
@@ -110,7 +179,7 @@ contains
           call parse_block_float(blk, ii-1, 0, this%omega(ii), units_inp%energy)  ! frequency
           call parse_block_float(blk, ii-1, 1, this%lambda(ii), units_inp%energy) ! coupling strength
           do idir = 1, this%dim
-            call parse_block_float(blk, 0, idir + 1, this%pol(ii, idir)) ! polarization vector components
+            call parse_block_float(blk, ii-1, idir + 1, this%pol(ii, idir)) ! polarization vector components
           end do
 
           ! Normalize polarization vector
