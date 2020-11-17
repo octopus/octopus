@@ -122,7 +122,8 @@ contains
     dist3 = sum((this%partner_pos(1:this%dim) - this%system_pos(1:this%dim))**2)**(M_THREE/M_TWO)
 
     this%force(1:this%dim) = -(this%partner_pos(1:this%dim) - this%system_pos(1:this%dim)) &
-      / dist3 * (COULCONST * this%system_charge * this%partner_charge)
+      / (dist3 + M_EPSILON) * (COULCONST * this%system_charge * this%partner_charge)
+
 
     POP_SUB(coulomb_force_calculate)
   end subroutine coulomb_force_calculate
