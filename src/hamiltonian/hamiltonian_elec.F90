@@ -911,7 +911,7 @@ contains
 
       PUSH_SUB(hamiltonian_elec_update.build_phase)
 
-      if(simul_box_is_periodic(mesh%sb) .or. allocated(this%hm_base%uniform_vector_potential)) then
+      if ((.not. kpoints_gamma_only(mesh%sb%kpoints)) .or. allocated(this%hm_base%uniform_vector_potential)) then
 
         call profiling_in(prof_phases, 'UPDATE_PHASES')
         ! now regenerate the phases for the pseudopotentials
@@ -1475,7 +1475,7 @@ contains
 
       PUSH_SUB(hamiltonian_elec_update2.build_phase)
 
-      if(simul_box_is_periodic(mesh%sb) .or. allocated(this%hm_base%uniform_vector_potential)) then
+      if ((.not. kpoints_gamma_only(mesh%sb%kpoints)) .or. allocated(this%hm_base%uniform_vector_potential)) then
 
         call profiling_in(prof_phases, 'UPDATE_PHASES')
         ! now regenerate the phases for the pseudopotentials
