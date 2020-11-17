@@ -1,5 +1,6 @@
 !! Copyright (C) 2017 Johannes Flick
 !! Copyright (C) 2019 F. Buchholz, M. Oliveira
+!! Copyright (C) 2020 S. Ohlmann
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
