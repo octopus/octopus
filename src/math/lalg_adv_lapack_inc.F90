@@ -1295,20 +1295,23 @@ subroutine X(eigensolve_parallel)(n, a, e, bof, err_code)
   logical, optional, intent(inout) :: bof      !< Bomb on failure.
   integer, optional, intent(out)   :: err_code
 
+#ifdef HAVE_SCALAPACK
   integer :: info, ii
   integer :: np, np_rows, np_cols, block_size
   type(blacs_proc_grid_t) :: proc_grid
   integer :: desc(BLACS_DLEN)
   integer :: nb_rows, nb_cols
   R_TYPE, allocatable :: b(:,:), eigenvectors(:,:)
+#ifdef HAVE_ELPA
+  class(elpa_t), pointer :: elpa
+#else
   R_TYPE, allocatable :: work(:)
   R_TYPE :: worksize
 #ifdef R_TCOMPLEX
   R_TYPE, allocatable :: rwork(:)
   R_TYPE :: rworksize
 #endif
-#ifdef HAVE_ELPA
-  class(elpa_t), pointer :: elpa
+#endif
 #endif
 
 
