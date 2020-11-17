@@ -108,6 +108,8 @@ dist_share_DATA =                                  \
 	28-cgal.02-X.off                           \
 	28-cgal.test                               \
         29-linear_solver.01-real.inp               \
-        29-linear_solver.test
+        29-linear_solver.test                      \
+        30-eigensolver.01.inp                      \
+        30-eigensolver.test
 
 CLEANFILES = *~ *.bak

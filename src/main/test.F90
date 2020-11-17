@@ -37,6 +37,7 @@ module test_oct_m
   use iso_c_binding
   use io_oct_m
   use lalg_basic_oct_m
+  use lalg_adv_oct_m
   use mesh_oct_m
   use mesh_batch_oct_m
   use mesh_function_oct_m
@@ -135,6 +136,8 @@ contains
     !% Tests the linear solvers
     !%Option cgal 20
     !% Tests for cgal interface
+    !%Option dense_eigensolver 21
+    !% Tests for dense eigensolvers (especially parallel ones)
     !%End
     call parse_variable(namespace, 'TestMode', OPTION__TESTMODE__HARTREE, test_mode)
 
@@ -241,6 +244,8 @@ contains
       call test_linear_solver(param, namespace)
     case(OPTION__TESTMODE__CGAL)
       call test_cgal()
+    case(OPTION__TESTMODE__DENSE_EIGENSOLVER)
+      call test_dense_eigensolver()
     end select
 
     POP_SUB(test_run)
@@ -1261,6 +1266,66 @@ contains
     POP_SUB(test_cgal)
   end subroutine test_cgal
 
+
+  ! ---------------------------------------------------------
+  subroutine test_dense_eigensolver()
+    integer :: N, ii, jj, N_list(4), i_N
+    FLOAT, allocatable :: matrix(:, :), eigenvectors(:, :), eigenvalues(:), test(:)
+    FLOAT, allocatable :: differences(:)
+
+    PUSH_SUB(test_dense_eigensolver)
+
+    N_list = [15, 32, 100, 500]
+
+    do i_N = 1, 4
+      N = N_list(i_N)
+      SAFE_ALLOCATE(matrix(N, N))
+      SAFE_ALLOCATE(eigenvectors(N, N))
+      SAFE_ALLOCATE(eigenvalues(N))
+      SAFE_ALLOCATE(test(N))
+      SAFE_ALLOCATE(differences(N))
+
+
+      ! set up symmetrix matrix
+      do jj = 1, N
+        do ii = 1, N
+          matrix(ii, jj) = ii * jj
+        end do
+      end do
+
+      ! parallel solver
+      eigenvectors(1:N, 1:N) = matrix(1:N, 1:N)
+      call lalg_eigensolve_parallel(N, eigenvectors, eigenvalues)
+
+      do ii = 1, N
+        test(:) = matmul(matrix, eigenvectors(:, ii)) - eigenvalues(ii) * eigenvectors(:, ii)
+        differences(ii) = sum(abs(test)) / sum(abs(eigenvectors(:, ii)))
+      end do
+      write(message(1), "(A, I3, A, E13.6)") "Parallel solver - N: ", N, &
+        ", average difference: ", sum(differences)/N
+      call messages_info(1)
+
+      ! serial solver
+      eigenvectors(1:N, 1:N) = matrix(1:N, 1:N)
+      call lalg_eigensolve(N, eigenvectors, eigenvalues)
+
+      do ii = 1, N
+        test(:) = matmul(matrix, eigenvectors(:, ii)) - eigenvalues(ii) * eigenvectors(:, ii)
+        differences(ii) = sum(abs(test)) / sum(abs(eigenvectors(:, ii)))
+      end do
+      write(message(1), "(A, I3, A, E13.6)") "Serial solver   - N: ", N, &
+        ", average difference: ", sum(differences)/N
+      call messages_info(1)
+
+      SAFE_DEALLOCATE_A(matrix)
+      SAFE_DEALLOCATE_A(eigenvectors)
+      SAFE_DEALLOCATE_A(eigenvalues)
+      SAFE_DEALLOCATE_A(test)
+      SAFE_DEALLOCATE_A(differences)
+    end do
+
+    POP_SUB(test_dense_eigensolver)
+  end subroutine test_dense_eigensolver
 end module test_oct_m
 
 !! Local Variables:
