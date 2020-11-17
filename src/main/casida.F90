@@ -53,6 +53,7 @@ module casida_oct_m
   use pcm_oct_m
   use pert_oct_m
   use phonons_lr_oct_m
+  use photon_mode_oct_m
   use poisson_oct_m
   use profiling_oct_m
   use restart_oct_m
@@ -154,6 +155,9 @@ module casida_oct_m
     integer              :: parallel_solver
     type(mpi_grp_t)      :: mpi_grp
     logical              :: fromScratch
+    logical              :: has_photons
+    integer              :: pt_nmodes
+    type(photon_mode_t)  :: pt
 
     integer              :: n, nb_rows, nb_cols, block_size !< parallel matrix layout
     type(blacs_proc_grid_t) :: proc_grid       !< BLACS process grid type
@@ -194,6 +198,7 @@ contains
     ! better performance - STO
 
     call calc_mode_par_set_parallelization(P_STRATEGY_OTHER, default = .false.) ! enabled, but not default
+
     call calc_mode_par_unset_parallelization(P_STRATEGY_KPOINTS) ! disabled. FIXME: could be implemented.
 
     POP_SUB(casida_run_init)
@@ -343,6 +348,24 @@ contains
         call messages_fatal(1, only_root_writes = .true.)
         ! see section II.D of CV(2) paper regarding this assumption. Would be Eq. 30 with complex wfns.
       end if
+    end if
+
+    !%Variable Photons
+    !%Type logical
+    !%Default .false.
+    !%Section Hamiltonian::XC
+    !%Description
+    !% Activate the photon Casida
+    !%End
+    call parse_variable(sys%namespace, 'Photons', .false., cas%has_photons)
+    cas%pt_nmodes = 0
+    if (cas%has_photons) then
+      if(cas%has_photons) call messages_experimental('Photons = yes')
+      call photon_mode_init(cas%pt, sys%namespace, sys%gr%mesh, sys%gr%sb%dim, sys%st%qtot)
+      write(message(1), '(a,i7,a)') 'INFO: Solving Casida equation with ', &
+        cas%pt%nmodes, ' photon modes.'
+      call messages_info(1)
+      cas%pt_nmodes = cas%pt%nmodes
     end if
 
     !%Variable CasidaTransitionDensities
@@ -681,7 +704,7 @@ contains
     end if
 
     ! dimension of matrix
-    cas%n = cas%n_pairs
+    cas%n = cas%n_pairs + cas%pt_nmodes
 
     ! initialize block-cyclic matrix
     if(cas%distributed_matrix) then
@@ -702,7 +725,7 @@ contains
 
       ! recommended block size: 64, take smaller value for smaller matrices for
       ! better load balancing
-      cas%block_size = min(64, cas%n_pairs / np_rows)
+      cas%block_size = min(64, cas%n / np_rows)
       ! limit to a minimum block size of 5 for diagonalization efficiency
       cas%block_size = max(5, cas%block_size)
       write(message(1), '(A,I5,A,I5,A,I5,A)') 'Parallel layout: using block size of ',&
@@ -728,20 +751,20 @@ contains
 
 
     ! allocate stuff
-    SAFE_ALLOCATE(cas%pair(1:cas%n_pairs))
+    SAFE_ALLOCATE(cas%pair(1:cas%n))
     if(cas%states_are_real) then
       SAFE_ALLOCATE( cas%dmat(1:cas%nb_rows, 1:cas%nb_cols))
-      SAFE_ALLOCATE(  cas%dtm(1:cas%n_pairs, 1:cas%sb_dim))
+      SAFE_ALLOCATE(  cas%dtm(1:cas%n, 1:cas%sb_dim))
     else
       ! caution: ScaLAPACK layout not yet tested for complex wavefunctions!
       SAFE_ALLOCATE( cas%zmat(1:cas%nb_rows, 1:cas%nb_cols))
-      SAFE_ALLOCATE(  cas%ztm(1:cas%n_pairs, 1:cas%sb_dim))
+      SAFE_ALLOCATE(  cas%ztm(1:cas%n, 1:cas%sb_dim))
     end if
-    SAFE_ALLOCATE(   cas%f(1:cas%n_pairs))
+    SAFE_ALLOCATE(   cas%f(1:cas%n))
     SAFE_ALLOCATE(   cas%s(1:cas%n_pairs))
-    SAFE_ALLOCATE(   cas%w(1:cas%n_pairs))
+    SAFE_ALLOCATE(   cas%w(1:cas%n))
     SAFE_ALLOCATE(cas%index(1:maxval(cas%n_occ), cas%nst - maxval(cas%n_unocc) + 1:cas%nst, cas%nik))
-    SAFE_ALLOCATE( cas%ind(1:cas%n_pairs))
+    SAFE_ALLOCATE( cas%ind(1:cas%n))
 
     if(cas%calc_forces) then
       if(cas%states_are_real) then
@@ -774,6 +797,15 @@ contains
         end do
       end do
     end do
+
+    if (cas%has_photons) then
+    ! create pairs for photon modes (negative number refers to photonic excitation)
+      do ik = 1, cas%pt_nmodes
+         cas%pair(cas%n_pairs + ik)%i = 1
+         cas%pair(cas%n_pairs + ik)%a = -ik
+         cas%pair(cas%n_pairs + ik)%kk = -ik
+      end do
+    end if
 
     SAFE_DEALLOCATE_A(cas%is_included)
 
@@ -825,6 +857,9 @@ contains
     call restart_end(cas%restart_dump)
     call restart_end(cas%restart_load)
 
+    if (cas%has_photons) then
+      call photon_mode_end(cas%pt)
+    end if
     if(cas%distributed_matrix) then
 #ifdef HAVE_SCALAPACK
       call blacs_proc_grid_end(cas%proc_grid)

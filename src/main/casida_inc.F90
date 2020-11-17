@@ -137,14 +137,15 @@ subroutine X(oscillator_strengths)(cas, mesh, st)
     ! let us get now the x vector.
     xx = X(ks_matrix_elements)(cas, st, mesh, deltav)
     ! And now we are able to get the transition matrix elements between many-electron states.
-    do ia = 1, cas%n_pairs
+    do ia = 1, cas%n
       cas%X(tm)(ia, idir) = X(transition_matrix_element)(cas, ia, xx)
     end do
   end do
   SAFE_DEALLOCATE_A(xx)
+  SAFE_DEALLOCATE_A(deltav)
 
   ! And the oscillator strengths.
-  do ia = 1, cas%n_pairs
+  do ia = 1, cas%n
     cas%f(ia) = (M_TWO / mesh%sb%dim) * cas%w(ia) * sum( (abs(cas%X(tm)(ia, :)))**2 )
   end do
 
@@ -184,9 +185,9 @@ function X(ks_matrix_elements) (cas, st, mesh, dv) result(xx)
     xx(ia) = X(mf_integrate)(mesh, ff, reduce = .false.)
   end do
 
-   if(mesh%parallel_in_domains) then
-     call comm_allreduce(mesh%mpi_grp%comm, xx)
-   end if
+  if(mesh%parallel_in_domains) then
+    call comm_allreduce(mesh%mpi_grp%comm, xx)
+  end if
 
   SAFE_DEALLOCATE_A(ff)
 
@@ -447,31 +448,46 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
   integer :: ia, jb, iunit, ia_length, ii
   integer :: ia_local, jb_local
   integer :: maxcount, actual, counter
-  R_TYPE :: mtxel_vh, mtxel_xc, save_value
+  R_TYPE :: mtxel_vh, mtxel_xc, mtxel_vm, save_value
+  R_TYPE :: rhobufferx, rhobuffery, rhobufferz
   logical, allocatable :: is_saved(:, :), is_calcd(:, :)
   logical :: is_forces_, write_value, on_this_processor
+  R_TYPE, allocatable :: xx(:)
+  R_TYPE, allocatable :: X(pot)(:)
+  R_TYPE, allocatable :: buffer(:)
+  R_TYPE, allocatable :: bufferx(:)
+  R_TYPE, allocatable :: buffery(:)
+  R_TYPE, allocatable :: bufferz(:)
 #ifdef HAVE_SCALAPACK
   integer :: mpi_status(mpi_status_size), src
   R_TYPE, allocatable :: buffer_transpose(:,:)
 #endif
   integer, allocatable :: rank_of_element(:, :)
-  R_TYPE, allocatable :: X(pot)(:)
 
   type(profile_t), save :: prof
 
   R_TYPE, allocatable :: rho_i(:), rho_j(:), integrand_xc(:,:)
   FLOAT :: coeff_vh
+  integer :: iimode
+  FLOAT, allocatable  :: deltav(:)
 
   PUSH_SUB(X(casida_get_matrix))
   call profiling_in(prof, 'CASIDA_GET_MATRIX')
 
+  SAFE_ALLOCATE(xx(1:cas%n_pairs))
+
   mtxel_vh = M_ZERO
   mtxel_xc = M_ZERO
+  mtxel_vm = M_ZERO
   is_forces_ = optional_default(is_forces, .false.)
 
   ! load saved matrix elements
   SAFE_ALLOCATE(is_saved(1:cas%n_pairs, 1:cas%n_pairs))
-  call load_saved(matrix, is_saved, restart_file)
+  if(.not. cas%has_photons) then
+    call load_saved(matrix, is_saved, restart_file)
+  else
+    is_saved = .false.
+  end if
 
   SAFE_ALLOCATE(is_calcd(1:cas%n_pairs, 1:cas%n_pairs))
   is_calcd = .true.
@@ -503,8 +519,7 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
   if(cas%type == CASIDA_PETERSILKA) then
     maxcount = cas%n_pairs
   else
-    !maxcount = ceiling((cas%n_pairs*(M_ONE + cas%n_pairs)/M_TWO)/cas%mpi_grp%size)
-    maxcount = ceiling((cas%n_pairs*(M_ONE + cas%n_pairs)/M_TWO + cas%n_pairs) &
+    maxcount = ceiling((cas%n_pairs*(M_ONE + cas%n_pairs)/M_TWO + cas%n_pairs*cas%pt_nmodes) &
       * cas%nb_rows/cas%n * cas%nb_cols/cas%n)
   end if
   counter = 0
@@ -527,15 +542,37 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
   SAFE_ALLOCATE(rho_j(1:mesh%np))
   SAFE_ALLOCATE(integrand_xc(1:mesh%np, 1:cas%nik))
   SAFE_ALLOCATE(X(pot)(1:mesh%np))
+  SAFE_ALLOCATE(buffer(1:mesh%np))
+  SAFE_ALLOCATE(bufferx(1:mesh%np))
+  SAFE_ALLOCATE(buffery(1:mesh%np))
+  SAFE_ALLOCATE(bufferz(1:mesh%np))
+  SAFE_ALLOCATE(deltav(1:mesh%np))
 
   ! coefficients for Hartree potential
   coeff_vh = - cas%kernel_lrc_alpha / (M_FOUR * M_PI)
   if(.not. cas%triplet) coeff_vh = coeff_vh + M_ONE
   if (ks%sic_type == SIC_ADSIC) coeff_vh = coeff_vh*(M_ONE - M_ONE/st%qtot)
 
+  ! precompute buffer once for photon terms
+  if ((cas%has_photons).and.(cas%type == CASIDA_CASIDA)) then
+    bufferx(1:mesh%np) = R_TOTYPE(M_ZERO)
+    buffery(1:mesh%np) = R_TOTYPE(M_ZERO)
+    bufferz(1:mesh%np) = R_TOTYPE(M_ZERO)
+    do ii = 1, cas%pt_nmodes
+        buffer(1:mesh%np) = (cas%pt%lambda(ii)* &
+             ( cas%pt%pol(ii,1)*mesh%x(1:mesh%np, 1)  &
+             + cas%pt%pol(ii,2)*mesh%x(1:mesh%np, 2)  &
+             + cas%pt%pol(ii,3)*mesh%x(1:mesh%np, 3)))
+        bufferx(1:mesh%np) = bufferx(1:mesh%np) + &
+            buffer(1:mesh%np)*cas%pt%lambda(ii)*cas%pt%pol(ii,1)
+        buffery(1:mesh%np) = buffery(1:mesh%np) + &
+            buffer(1:mesh%np)*cas%pt%lambda(ii)*cas%pt%pol(ii,2)
+        bufferz(1:mesh%np) = bufferz(1:mesh%np) + &
+            buffer(1:mesh%np)*cas%pt%lambda(ii)*cas%pt%pol(ii,3)
+    end do
+  end if
 
   ! calculate the matrix elements of (v + fxc)
-
   do jb_local = 1, cas%nb_rows
     if(.not. cas%distributed_matrix) then
       actual = actual + 1
@@ -563,6 +600,12 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
       do ii = 1, cas%nik
         integrand_xc(1:mesh%np, ii) = rho_j(1:mesh%np)*xc(1:mesh%np, ii, cas%pair(jb)%kk)
       end do
+
+      if ((cas%has_photons).and.(cas%type == CASIDA_CASIDA)) then
+        rhobufferx = X(mf_integrate)(mesh, rho_j(1:mesh%np)*mesh%x(1:mesh%np, 1))
+        rhobuffery = X(mf_integrate)(mesh, rho_j(1:mesh%np)*mesh%x(1:mesh%np, 2))
+        rhobufferz = X(mf_integrate)(mesh, rho_j(1:mesh%np)*mesh%x(1:mesh%np, 3))
+      end if
 
       ! take care of not computing elements twice for the symmetric matrix
       ia_length = cas%n_pairs / 2
@@ -612,7 +655,16 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
           ! now the exchange part
           mtxel_xc = X(mf_dotp)(mesh, rho_i(:), integrand_xc(:, cas%pair(ia)%kk))
 
-          matrix(jb_local, ia_local) = mtxel_vh + mtxel_xc
+          mtxel_vm = M_ZERO
+          if ((cas%has_photons).and.(cas%type == CASIDA_CASIDA)) then
+            ! buffer is precomputed once before double loop
+            mtxel_vm = mtxel_vm + &
+            rhobufferx * X(mf_dotp)(mesh, rho_i(:), bufferx(:)) + &
+            rhobuffery * X(mf_dotp)(mesh, rho_i(:), buffery(:)) + &
+            rhobufferz * X(mf_dotp)(mesh, rho_i(:), bufferz(:))
+          end if
+
+          matrix(jb_local, ia_local) = mtxel_vh + mtxel_xc + mtxel_vm
 
         end if
         if(.not. cas%distributed_matrix) then
@@ -621,6 +673,26 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
         if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(counter, maxcount)
       end do
 
+      ! compute photon part, reuse rho_j to avoid excessive memory access
+      if ((cas%has_photons).and.(cas%type == CASIDA_CASIDA)) then
+        do ia_local = 1, cas%nb_cols
+          ia = get_global_col(cas, ia_local)
+          if(ia <= cas%n_pairs) cycle
+          iimode = ia - cas%n_pairs
+          deltav(1:mesh%np) = cas%pt%lambda(iimode)*&
+                       ( cas%pt%pol(iimode,1)*mesh%x(1:mesh%np, 1)  &
+                       + cas%pt%pol(iimode,2)*mesh%x(1:mesh%np, 2)  &
+                       + cas%pt%pol(iimode,3)*mesh%x(1:mesh%np, 3))
+
+
+          xx(jb) = X(mf_integrate)(mesh, deltav(1:mesh%np)*rho_j(1:mesh%np))
+
+          matrix(jb_local, ia_local) = sqrt(M_HALF*cas%pt%omega(ia-cas%n_pairs))*xx(jb)
+          if(.not. cas%distributed_matrix) then
+            matrix(ia, jb) = matrix(jb, ia)
+          end if
+        end do
+      end if
     end if
     if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(counter, maxcount)
   end do
@@ -629,6 +701,8 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
   SAFE_DEALLOCATE_A(rho_j)
   SAFE_DEALLOCATE_A(integrand_xc)
   SAFE_DEALLOCATE_A(X(pot))
+  SAFE_DEALLOCATE_A(buffer)
+  SAFE_DEALLOCATE_A(deltav)
 
   if(mpi_grp_is_root(mpi_world)) then
     call loct_progress_bar(maxcount, maxcount)
@@ -660,59 +734,64 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
 #endif
   end if
 
-  if(cas%distributed_matrix) then
-    call comm_allreduce(cas%mpi_grp%comm, rank_of_element)
-    ! we subtract 1 again here; thus elements not associated to any rank
-    ! are now negative
-    rank_of_element = rank_of_element - 1
+  if(.not. cas%has_photons) then
+    if(cas%distributed_matrix) then
+      call comm_allreduce(cas%mpi_grp%comm, rank_of_element)
+      ! we subtract 1 again here; thus elements not associated to any rank
+      ! are now negative
+      rank_of_element = rank_of_element - 1
+    end if
+
+    ! now write out the restart files
+    iunit = restart_open(cas%restart_dump, restart_file, position='append')
+    if(mpi_grp_is_root(mesh%mpi_grp)) then
+      do ia = 1, cas%n_pairs
+        do jb = 1, cas%n_pairs
+          if(cas%distributed_matrix) then
+            if(rank_of_element(ia, jb) < 0) cycle
+          else
+            if(jb < ia) cycle
+          end if
+          call local_indices(cas, ia, jb, on_this_processor, ia_local, jb_local)
+          if(on_this_processor) then
+            save_value = matrix(jb_local, ia_local)
+            write_value = .not. is_saved(ia, jb) .and. is_calcd(ia, jb)
+          end if
+          if(mpi_grp_is_root(mpi_world)) then
+            if(.not.on_this_processor .and. cas%distributed_matrix) then
+#ifdef HAVE_SCALAPACK
+              src = rank_of_element(ia, jb)
+              call MPI_Recv(write_value, 1, MPI_LOGICAL, src, 0, cas%mpi_grp%comm, mpi_status, mpi_err)
+              call MPI_Recv(save_value, 1, R_MPITYPE, src, 0, cas%mpi_grp%comm, mpi_status, mpi_err)
+#else
+              ! if scalapack is not used, this branch is never taken
+              ASSERT(.false.)
+#endif
+            end if
+            if (write_value) call X(write_K_term)(cas, save_value, iunit, ia, jb)
+          else
+            if(on_this_processor .and. cas%distributed_matrix) then
+#ifdef HAVE_SCALAPACK
+              call MPI_Send(write_value, 1, MPI_LOGICAL, 0, 0, cas%mpi_grp%comm, mpi_err)
+              call MPI_Send(save_value, 1, R_MPITYPE, 0, 0, cas%mpi_grp%comm, mpi_err)
+#else
+              ! if scalapack is not used, this branch is never taken
+              ASSERT(.false.)
+#endif
+            end if
+          end if
+        end do
+      end do
+    end if
+    if (iunit > 0) call restart_close(cas%restart_dump, iunit)
   end if
 
-  ! now write out the restart files
-  iunit = restart_open(cas%restart_dump, restart_file, position='append')
-  if(mpi_grp_is_root(mesh%mpi_grp)) then
-    do ia = 1, cas%n_pairs
-      do jb = 1, cas%n_pairs
-        if(cas%distributed_matrix) then
-          if(rank_of_element(ia, jb) < 0) cycle
-        else
-          if(jb < ia) cycle
-        end if
-        call local_indices(cas, ia, jb, on_this_processor, ia_local, jb_local)
-        if(on_this_processor) then
-          save_value = matrix(jb_local, ia_local)
-          write_value = .not. is_saved(ia, jb) .and. is_calcd(ia, jb)
-        end if
-        if(mpi_grp_is_root(mpi_world)) then
-          if(.not.on_this_processor .and. cas%distributed_matrix) then
-#ifdef HAVE_SCALAPACK
-            src = rank_of_element(ia, jb)
-            call MPI_Recv(write_value, 1, MPI_LOGICAL, src, 0, cas%mpi_grp%comm, mpi_status, mpi_err)
-            call MPI_Recv(save_value, 1, R_MPITYPE, src, 0, cas%mpi_grp%comm, mpi_status, mpi_err)
-#else
-            ! if scalapack is not used, this branch is never taken
-            ASSERT(.false.)
-#endif
-          end if
-          if (write_value) call X(write_K_term)(cas, save_value, iunit, ia, jb)
-        else
-          if(on_this_processor .and. cas%distributed_matrix) then
-#ifdef HAVE_SCALAPACK
-            call MPI_Send(write_value, 1, MPI_LOGICAL, 0, 0, cas%mpi_grp%comm, mpi_err)
-            call MPI_Send(save_value, 1, R_MPITYPE, 0, 0, cas%mpi_grp%comm, mpi_err)
-#else
-            ! if scalapack is not used, this branch is never taken
-            ASSERT(.false.)
-#endif
-          end if
-        end if
-      end do
-    end do
-  end if
-  call restart_close(cas%restart_dump, iunit)
   SAFE_DEALLOCATE_A(is_saved)
   if(cas%distributed_matrix) then
     SAFE_DEALLOCATE_A(rank_of_element)
   end if
+
+  SAFE_DEALLOCATE_A(xx)
 
   call profiling_out(prof)
   POP_SUB(X(casida_get_matrix))
@@ -1168,6 +1247,36 @@ subroutine X(casida_solve)(cas, sys)
     SAFE_DEALLOCATE_A(occ_diffs)
   end if
 
+  if ((cas%has_photons).and.(cas%type == CASIDA_CASIDA)) then
+    ! first diagonal for photon-photon interaction
+    do jb_local = 1, cas%nb_rows
+      jb = get_global_row(cas, jb_local)
+      if(jb <= cas%n_pairs) cycle
+      do ia_local = 1, cas%nb_cols
+        ia = get_global_col(cas, ia_local)
+        if(ia <= cas%n_pairs) cycle
+        if(ia == jb) cas%X(mat)(jb_local,ia_local) = (cas%pt%omega(ia-cas%n_pairs))**2
+      end do
+    end do
+    ! now other photon-electron elements
+    do jb_local = 1, cas%nb_rows
+      jb = get_global_row(cas, jb_local)
+      do ia_local = 1, cas%nb_cols
+        ia = get_global_col(cas, ia_local)
+        ! lower left part
+        if(jb > cas%n_pairs .and. ia <= cas%n_pairs) then
+          cas%X(mat)(jb_local,ia_local) = M_TWO*cas%X(mat)(jb_local,ia_local) &
+             *sqrt(cas%pt%omega(jb-cas%n_pairs))/sqrt(cas%s(ia))/sqrt(M_TWO)
+        end if
+        ! upper right part
+        if(jb <= cas%n_pairs .and. ia > cas%n_pairs) then
+          cas%X(mat)(jb_local,ia_local) = M_TWO*cas%X(mat)(jb_local,ia_local) &
+             *sqrt(cas%pt%omega(ia-cas%n_pairs))/sqrt(cas%s(jb))/sqrt(M_TWO)
+        end if
+      end do
+    end do
+  end if
+
   if(cas%parallel_in_eh_pairs) then
 #ifdef HAVE_MPI
     ! wait here instead of in diagonalization for better profiling
@@ -1182,7 +1291,7 @@ subroutine X(casida_solve)(cas, sys)
   if(cas%calc_forces) cas%X(mat_save) = cas%X(mat) ! save before gets turned into eigenvectors
 
   if(.not. cas%distributed_matrix) then
-    call lalg_eigensolve_parallel(cas%n_pairs, cas%X(mat), cas%w)
+    call lalg_eigensolve_parallel(cas%n, cas%X(mat), cas%w)
   else
 #ifdef HAVE_SCALAPACK
     SAFE_ALLOCATE(eigenvectors(cas%nb_rows, cas%nb_cols))
@@ -1225,7 +1334,7 @@ subroutine X(casida_solve)(cas, sys)
 #endif
     else
 #ifdef HAVE_SCALAPACK
-      ! use ScaLAPACK solver if ELPA not chosen
+      ! use ScaLAPACK solver if ELPA not available
       ! eigensolver settings (allocate workspace)
       ! workspace query
 #ifdef R_TREAL
@@ -1261,7 +1370,7 @@ subroutine X(casida_solve)(cas, sys)
         a=cas%X(mat)(1, 1), ia=1, ja=1, desca=cas%desc(1), w=cas%w(1), &
         z=eigenvectors(1, 1), iz=1, jz=1, descz=cas%desc(1), &
         work=work(1), lwork=int(worksize), &
-      rwork=rwork(1), lrwork=int(rworksize), info=info)
+        rwork=rwork(1), lrwork=int(rworksize), info=info)
 #endif
 
       SAFE_DEALLOCATE_A(work)
@@ -1308,7 +1417,7 @@ subroutine X(casida_solve)(cas, sys)
   end if
   call profiling_out(prof)
 
-  do ia = 1, cas%n_pairs
+  do ia = 1, cas%n
     if(cas%type == CASIDA_CASIDA) then
       if(cas%w(ia) < -M_EPSILON) then
         write(message(1),'(a,i4,a)') 'Casida excitation energy', ia, ' is imaginary.'
@@ -1338,9 +1447,10 @@ subroutine X(casida_write)(cas, sys)
   
   character(len=5) :: str
   character(len=50) :: dir_name
-  integer :: iunit, ia, jb, idim, index
-  logical :: full_printing
+  integer :: iunit, ia, jb, idim, index, ia_local, jb_local
+  logical :: full_printing, on_this_processor
   R_TYPE  :: temp
+  FLOAT   :: norm, norm_e, norm_p
   
   PUSH_SUB(X(casida_write))
 
@@ -1370,7 +1480,7 @@ subroutine X(casida_write)(cas, sys)
     end do
     write(iunit, '(1x,a15)') '<f>'
     
-    do ia = 1, cas%n_pairs
+    do ia = 1, cas%n
       if((cas%type == CASIDA_EPS_DIFF)) then
         write(iunit, '(2i4)', advance='no') cas%pair(cas%ind(ia))%i, cas%pair(cas%ind(ia))%a
         if(cas%nik > 1) then
@@ -1392,7 +1502,7 @@ subroutine X(casida_write)(cas, sys)
         call io_mkdir(trim(dir_name), sys%namespace)
       end if
       
-      do ia = 1, cas%n_pairs
+      do ia = 1, cas%n
         if(loct_isinstringlist(ia, cas%print_exst) .or. full_printing) then 
           write(str,'(i5.5)') ia
           
@@ -1411,10 +1521,29 @@ subroutine X(casida_write)(cas, sys)
             ! make the largest component positive and real, to specify the phase
             index = maxloc(abs(cas%X(mat)(:, cas%ind(ia))), dim = 1)
             temp = abs(cas%X(mat)(index, cas%ind(ia))) / cas%X(mat)(index, cas%ind(ia))
+
+            norm_e = M_ZERO
             do jb = 1, cas%n_pairs
-              if ( abs( temp * cas%X(mat)(jb, cas%ind(ia)) ) >= cas%weight_thresh ) &
-                write(iunit,*) cas%pair(jb)%i, cas%pair(jb)%a, cas%pair(jb)%kk, temp * cas%X(mat)(jb, cas%ind(ia))
+                  if ( abs( temp * cas%X(mat)(jb, cas%ind(ia)) ) >= cas%weight_thresh ) &
+              write(iunit,*) cas%pair(jb)%i, cas%pair(jb)%a, cas%pair(jb)%kk, temp * cas%X(mat)(jb, cas%ind(ia))
+              norm_e = norm_e + abs(cas%X(mat)(jb, cas%ind(ia)))**2
             end do
+
+            norm_p = M_ZERO
+            if ((cas%has_photons).and.(cas%type == CASIDA_CASIDA)) then
+            ! negative number refers to photonic excitation
+              do jb = 1, cas%pt_nmodes
+                write(iunit,*) cas%pair(cas%n_pairs + jb)%i, cas%pair(cas%n_pairs + jb)%a, &
+                  cas%pair(cas%n_pairs + jb)%kk, temp * cas%X(mat)(cas%n_pairs + jb, cas%ind(ia))
+                norm_p = norm_p + abs(cas%X(mat)(cas%n_pairs + jb, cas%ind(ia)))**2
+              end do
+            write(iunit,'(a,es14.5)') '# Electronic contribution = ', &
+              norm_e
+            write(iunit,'(a,es14.5)') '# Photonic contribution = ', &
+              norm_p
+            write(iunit,'(a,i5.5,a,i5.5,a)') '# (electronic pairs, photon modes) = (', &
+              cas%n_pairs,',', cas%pt_nmodes,')'
+            end if
 
             if(cas%type == CASIDA_TAMM_DANCOFF .or. cas%type == CASIDA_VARIATIONAL .or. cas%type == CASIDA_PETERSILKA) then
               call X(write_implied_occupations)(cas, iunit, cas%ind(ia))
@@ -1432,10 +1561,50 @@ subroutine X(casida_write)(cas, sys)
     end if
   end if
 
-  if(cas%distributed_matrix) then
-    if(mpi_grp_is_root(sys%gr%mesh%mpi_grp)) then
+  if(cas%distributed_matrix .and. mpi_grp_is_root(sys%gr%mesh%mpi_grp)) then
       call X(write_distributed_matrix)(cas, cas%X(mat), &
         CASIDA_DIR//trim(theory_name(cas))//"_matrix")
+  end if
+
+  ! Output the norm files always in photon mode
+  if(cas%has_photons) then
+    ! compute and write norms
+    if(mpi_grp_is_root(mpi_world)) then
+      iunit = io_open(CASIDA_DIR//trim(theory_name(cas))//"_norms", sys%namespace, action='write')
+      ! first, a header line
+      write(iunit, '(6x)', advance='no')
+      write(iunit, '(1x,a15)', advance='no') 'E [' // trim(units_abbrev(units_out%energy)) // ']'
+      write(iunit, '(1x,a15)', advance='no') 'Electron part'
+      write(iunit, '(1x,a15)') 'Photon part'
+    end if
+    do ia = 1, cas%n
+      norm = M_ZERO
+      norm_e = M_ZERO
+      norm_p = M_ZERO
+      do jb = 1, cas%n
+        call local_indices(cas, cas%ind(ia), jb, on_this_processor, ia_local, jb_local)
+        if(on_this_processor) then
+          ! sum up norm, electronic norm and photonic norm on each processor
+          norm = norm + abs(cas%X(mat)(jb_local, ia_local))**2
+          if(jb <= cas%n_pairs) then
+            norm_e = norm_e + abs(cas%X(mat)(jb_local, ia_local))**2
+          else
+            norm_p = norm_p + abs(cas%X(mat)(jb_local, ia_local))**2
+          end if
+        end if
+      end do
+      norm = dallreduce_sum(cas, norm)
+      norm_e = dallreduce_sum(cas, norm_e)
+      norm_p = dallreduce_sum(cas, norm_p)
+      if(mpi_grp_is_root(mpi_world)) then
+        ! write contributions to norm to file
+        write(iunit, '(i6)', advance='no') cas%ind(ia)
+        write(iunit, '(99(1x,es15.8))') units_from_atomic(units_out%energy, cas%w(cas%ind(ia))), &
+          norm_e/norm, norm_p/norm
+      end if
+    end do
+    if(mpi_grp_is_root(mpi_world)) then
+      call io_close(iunit)
     end if
   end if
 
