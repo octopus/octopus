@@ -433,8 +433,7 @@ contains
  
 
     nullify(hm%hm_base%phase)
-    if (simul_box_is_periodic(gr%sb) .and. &
-      .not. (kpoints_number(gr%sb%kpoints) == 1 .and. kpoints_point_is_gamma(gr%sb%kpoints, 1))) then
+    if (.not. kpoints_gamma_only(gr%sb%kpoints)) then
       call init_phase()
     end if
     ! no e^ik phase needed for Gamma-point-only periodic calculations
