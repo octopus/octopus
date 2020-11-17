@@ -442,10 +442,8 @@ contains
           ! store t1 - t2 for the interpolation in mean
           call batch_axpy(gr%mesh%np, -M_ONE, ff_rs_inhom_1b, ff_rs_inhom_meanb)
           call ff_rs_inhom_1b%copy_data_to(gr%mesh%np, ff_rs_inhom_2b)
-          call batch_axpy(gr%mesh%np, inter_dt * ii / TOFLOAT(inter_steps), &
-            ff_rs_inhom_meanb, ff_rs_inhom_2b)
-          call batch_axpy(gr%mesh%np, inter_dt * (ii-1) / TOFLOAT(inter_steps), &
-            ff_rs_inhom_meanb, ff_rs_inhom_1b)
+          call batch_axpy(gr%mesh%np, ii / TOFLOAT(inter_steps), ff_rs_inhom_meanb, ff_rs_inhom_2b)
+          call batch_axpy(gr%mesh%np, (ii-1) / TOFLOAT(inter_steps), ff_rs_inhom_meanb, ff_rs_inhom_1b)
 
           hm%cpml_hamiltonian = .false.
           call exponential_apply_batch(tr%te, namespace, gr%mesh, hm, ff_rs_inhom_1b, inter_dt)
