@@ -38,7 +38,7 @@ def is_number(s):
     """Returns True is string is a number. """
     return s.replace('.','',1).isdigit()
 
-def print_varinfo(file=sys.stdout, filter=leavehtml):
+def print_varinfo(variables, file=sys.stdout, filter=leavehtml):
     """Print the varinfo files with optional filtering of the HTML tags.
 
        Arguments:
@@ -67,7 +67,7 @@ def print_varinfo(file=sys.stdout, filter=leavehtml):
         print('END\n', file=file)
     
 
-def print_defaults(variables, file):
+def print_defaults_header(variables, file):
     """Generate the defaults.h file."""
 
     for var in sorted(variables.keys()):
@@ -83,7 +83,18 @@ def print_defaults(variables, file):
                 print('#define DEFAULT__'+var.upper()+' ('+value+')', file=file)
 
 
-def print_variables(file):
+def print_options_header(variables, file):
+    for var in sorted(variables.keys()):
+        current = variables[var]
+        for option in sorted(current['Options'],key=lambda opt: opt['Name']):
+            if 'Value' in option:
+                value = option['Value']
+                if 'bit(' in value:
+                    value = str(bit(extract_arg(value)))
+                print('#define OPTION__'+var.upper()+'__'+option['Name'].upper()+' ('+value+'_8)', file=file)
+
+
+def print_variables(variables, file):
     """Generate the variables file."""
     
     option_values = dict()
@@ -103,52 +114,26 @@ def print_variables(file):
 varinfo = open('../share/new_varinfo','w')
 varinfo_ORIG = open('../share/new_varinfo_ORIG','w')
 
-print_varinfo(file=varinfo_ORIG, filter=leavehtml)
-print_varinfo(file=varinfo, filter=cleanhtml)
+file_variables = open('../share/new_variables','w')
+file_defaults_header = open('defaults.h','w')
+file_options_header = open('options.h','w')
+
+
+print_varinfo(variables, file=varinfo_ORIG, filter=leavehtml)
+print_varinfo(variables, file=varinfo, filter=cleanhtml)
+
+print_variables(variables, file_variables)
+print_defaults_header(variables, file_defaults_header)
+print_options_header(variables, file_options_header)
+
 
 varinfo.close()
 varinfo_ORIG.close()
 
-file_variables = open('../share/new_variables','w')
-
-print_variables(file_variables)
-
 file_variables.close()
-
-
-file_defaults_header = open('defaults.h','w')
-
-print_defaults(variables, file_defaults_header)
-
 file_defaults_header.close()
-
-
-file_options_header = open('options.h','w')
-
-for var in sorted(variables.keys()):
-    current = variables[var]
-    for option in sorted(current['Options'],key=lambda opt: opt['Name']):
-        if 'Value' in option:
-            value = option['Value']
-            if 'bit(' in value:
-                value = str(bit(extract_arg(value)))
-            print('#define OPTION__'+var.upper()+'__'+option['Name'].upper()+' ('+value+'_8)', file=file_options_header)
-
 file_options_header.close()
 
-quit()
-
-for var in variables.keys():
-    current = variables[var]
-
-    if 'Call' in current:
-        call_line = current['Call'].split()
-        while('parse_variable' not in call_line[0]):
-            call_line.pop(0)
-        name = call_line[1].replace('\'','').replace(',','')
-        if len(call_line) > 4:
-            default = call_line[2].replace('\'','').replace(',','')
-            print(name,' ',default, ' ',call_line[4:], ' ',current['Default'])
 
 
 

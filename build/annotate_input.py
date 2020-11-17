@@ -54,7 +54,7 @@ for (opt, arg) in options:
         input_file_name = arg
     elif opt == '-o':
         output_file_name = arg
-    elif opt == '-v':
+    elif opt in ['-d', 'definitions']:
         variable_defs_name = arg
     elif opt == '-m':
         if arg in implemented_modes:

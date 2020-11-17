@@ -10,32 +10,37 @@ import getopt
 
 # set up directories and file names:
 
-topdir = "../"
+top_srcdir = "../"
+top_builddir = "../"
 verbose = False
 variable_defs_name = ''
 
 # Parse command line options:
 
+# change to resemble mk_varinfo.pl behaviour:
+# -s top_srcdir
+# -b top_builddir
+
 try:
-    options, args = getopt.getopt(sys.argv[1:], "i:o:v:m:", ['verbose', 'topdir', ])
+    options, args = getopt.getopt(sys.argv[1:], "s:b:d:v", ['srcdir','builddir','definitions','verbose' ])
 except  getopt.GetoptError:
     sys.exit(-1)
 
 for (opt, arg) in options:
-    if opt in ['-t', '--topdir']:
-        topdir = arg
-    elif opt == '-o':
-        output_file_name = arg
-    elif opt == '-v':
+    if opt in ['-s', '--top_srcdir']:
+        top_srcdir = arg
+    if opt in ['-b', '--top_builddir']:
+        top_builddir = arg
+    elif opt in ['-d','--definitions']:
         variable_defs_name = arg
-    elif opt == '--verbose':
+    elif opt in ['-v','--verbose']:
         verbose = True
         
 
 
-testdir  = topdir+"testsuite/"
-srcdir   = topdir+"src/"
-sharedir = topdir+"share/"
+testdir  = top_srcdir+"testsuite/"
+srcdir   = top_srcdir+"src/"
+sharedir = top_builddir+"share/"
 
 if variable_defs_name == '':
     variable_defs_name = sharedir+'varinfo.json'
