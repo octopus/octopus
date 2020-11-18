@@ -20,6 +20,8 @@
 
 EXTRA_DIST =                   \
 	mk_varinfo.pl          \
+	variables.py           \
+	parse_variables.py     \
 	mk_functionals_list.pl \
 	mk_kfunctionals_list.pl \
 	preprocess.pl          \

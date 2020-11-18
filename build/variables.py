@@ -38,14 +38,12 @@ def is_number(s):
 
 
 class Variables:
-
     """
     The Variables class is a wrapper around the dictionary, which contains the full info about all Octopus variables.
 
     """
 
-    def __init__(self, verbose=False, sources=None, tests=None):
-
+    def __init__(self, verbose=False, sources=None, tests=None, json=None):
         """
         Constructor of the Variables class.
 
@@ -53,7 +51,12 @@ class Variables:
         
         When the optional arguments sources or tests are given, the corresponding files are parsed. 
         The arguments should be the directories, in which the sources or tests can be found.
+        Alternatively, the dictionary can be imported from a JSON file (no validation is performed).
         """
+
+        if json and sources:
+            print('Variables cannot be initialized from source files and a json file at the same time.')
+            raise RuntimeError
 
         self.variables = dict()
         self.verbose = verbose
@@ -64,6 +67,8 @@ class Variables:
         if tests:
             self.parse_testfiles(tests)
 
+        if json:
+            self.import_json(variable_defs_filename=json)
 
 
     def __getitem__(self, key):
@@ -95,8 +100,9 @@ class Variables:
 
 
     def parse_sources(self, srcdir):
-    
-        parse_calls = []
+        """
+        Parse all file in srcdir/*/*.F90 and fill in dictionary.
+        """
     
         srcfiles = glob.glob(srcdir+"*/*.F90")
     
@@ -105,7 +111,10 @@ class Variables:
                 print("Parsing "+f)
         
             with open(f,'r') as source:
-        
+
+                parse_calls = []
+                keys_in_file = []
+
                 # first parse calls in the source:
         
                 line = source.readline()
@@ -180,6 +189,7 @@ class Variables:
         
                         if "!%end" in line.lower():
                             parsing_mode = 0
+                            keys_in_file.append(var_name.lower())
                             self.variables[var_name.lower()] = {
                                 'Name': var_name,
                                 'Type':var_type, 
@@ -190,20 +200,22 @@ class Variables:
                                 'Testfiles':[],
                                 'Sourcefile':f.replace(srcdir,'')
                                 }
+
+            # associate calls with the variable description:
+            #
+            #    (we seperated this to relax the requirement that the description is before the call)
+
+            for key in keys_in_file:
+            
+                for call in parse_calls:
+                    if key in call[0].lower():
+                        self.variables[key]['CallLine'] = call[0]
+                        self.variables[key]['LineNumber'] = call[1]
+                
         
+
             source.close()
         
-        # associate calls with the variable description:
-        #
-        #    (we seperated this to relax the requirement that the description is before the call)
-        
-        for key in self.variables.keys():
-        
-            for call in parse_calls:
-                if key in call[0]:
-                    self.variables[key]['CallLine'] = call[0]
-                    self.variables[key]['LineNumber'] = call[1]
-                
     
     def parse_testfiles(self, testdir):
 
@@ -229,8 +241,15 @@ class Variables:
         varinfo_json.close()
 
 
-    def print_varinfo(self, filename='-', filterHTML=True):
-        """Print the varinfo files with optional filtering of the HTML tags.
+    def import_json(self, variable_defs_filename):
+
+        varinfo_json = open(variable_defs_filename,'w')
+        self.variables = json.load(varinfo_json)
+        varinfo_json.close()
+
+
+    def write_varinfo(self, filename='-', filterHTML=True):
+        """Write the varinfo files with optional filtering of the HTML tags.
     
            Arguments:
            - file: file object into which the variable info will be written
@@ -271,7 +290,7 @@ class Variables:
             file.close()
 
 
-    def print_defaults_header(self, filename):
+    def write_defaults_header(self, filename):
         """Generate the defaults.h file."""
     
         if filename == '-':
@@ -295,7 +314,7 @@ class Variables:
             file.close()    
 
 
-    def print_options_header(self, filename):
+    def write_options_header(self, filename):
         """Generate the options.h file."""
 
         file = open(filename, 'w')
@@ -312,7 +331,7 @@ class Variables:
         file.close()
 
 
-    def print_variables(self, filename):
+    def write_variables_file(self, filename):
         """Generate the variables file."""
         
         file = open(filename,'w')
