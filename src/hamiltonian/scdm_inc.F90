@@ -382,7 +382,7 @@ subroutine X(invert)(nn, A)
 
   if( ierror == 0 ) then
     !workspace query
-    call X(getri)(nn, A, nn, ipiv, temp, -1, ierror )
+    call X(getri)(nn, A, nn, ipiv(1), temp, -1, ierror )
     lwork = temp ! dimension of workspace
     allocate(work(lwork*2))
     call X(getri)(nn, A, nn, ipiv, work, lwork, ierror )
@@ -417,7 +417,9 @@ subroutine X(scdm_rrqr)(scdm, namespace, st, mesh, nst, root, ik, jpvt)
   integer :: total_np, nref, info, wsize
   R_TYPE, allocatable :: tau(:), work(:)
   R_TYPE :: tmp
+#ifndef R_TREAL
   FLOAT, allocatable :: rwork(:)
+#endif
   R_TYPE, allocatable ::  state_global(:), temp_state(:,:)
   R_TYPE, allocatable :: KSt(:,:)
   R_TYPE, allocatable :: psi(:, :)
@@ -599,12 +601,12 @@ subroutine X(scdm_rrqr)(scdm, namespace, st, mesh, nst, root, ik, jpvt)
     if(root) then
       SAFE_ALLOCATE(work(1:1))
       SAFE_ALLOCATE(tau(1:nst))
-      if(.not.states_are_real(st)) then
-         SAFE_ALLOCATE(rwork(1:2*mesh%np_global))
-         call zgeqp3(nst, mesh%np_global, kst, nst, jpvt, tau, work, -1, rwork, info)
-      else
-         call dgeqp3(nst, mesh%np_global, kst, nst, jpvt, tau, work, -1, info)
-      endif
+#ifdef R_TREAL
+      call dgeqp3(nst, mesh%np_global, kst, nst, jpvt, tau, work, -1, info)
+#else
+      SAFE_ALLOCATE(rwork(1:2*mesh%np_global))
+      call zgeqp3(nst, mesh%np_global, kst, nst, jpvt, tau, work, -1, rwork, info)
+#endif
       if (info /= 0) then
          write(message(1),'(A28,I2)') 'Illegal argument in ZGEQP3: ', info
          call messages_fatal(1, namespace=namespace)
@@ -617,11 +619,11 @@ subroutine X(scdm_rrqr)(scdm, namespace, st, mesh, nst, root, ik, jpvt)
       jpvt(:) = 0
       tau(:) = 0.
       ! actual call
-      if(.not.states_are_real(st)) then
-         call zgeqp3(nst, mesh%np_global, kst, nst, jpvt, tau, work, wsize, rwork, info)
-      else
+#ifdef R_TREAL
          call dgeqp3(nst, mesh%np_global, kst, nst, jpvt, tau, work, wsize, info)
-      endif
+#else
+         call zgeqp3(nst, mesh%np_global, kst, nst, jpvt, tau, work, wsize, rwork, info)
+#endif
       if (info /= 0)then
          write(message(1),'(A28,I2)') 'Illegal argument in ZGEQP3: ', info
          call messages_fatal(1, namespace=namespace)

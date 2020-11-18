@@ -25,6 +25,14 @@ build-stamp
 semantic.cache
 *.gcno
 *.gcda
+*.la
+*.lo
+
+m4/libtool.m4
+m4/ltoptions.m4
+m4/ltsugar.m4
+m4/ltversion.m4
+m4/lt~obsolete.m4
 
 # new dependencies files
 *.dirstamp

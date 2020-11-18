@@ -409,6 +409,10 @@ contains
       ASSERT(all(part_global(:) > 0))
     end if
 
+#ifndef HAVE_MPI
+    part_global = partition%part
+#endif
+
     SAFE_DEALLOCATE_A(rdispls)
     SAFE_DEALLOCATE_A(rcounts)
 

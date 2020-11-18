@@ -69,7 +69,20 @@ module exchange_operator_oct_m
     zexchange_operator_hartree_apply,&
     dexchange_operator_scdm_apply,   &
     zexchange_operator_scdm_apply,   &
-    exchange_operator_rdmft_occ_apply
+    exchange_operator_rdmft_occ_apply,&
+    dexchange_operator_compute_potentials, &
+    zexchange_operator_compute_potentials, &
+    dexchange_operator_commute_r, &
+    zexchange_operator_commute_r, &
+    dexchange_operator_ACE, &
+    zexchange_operator_ACE
+
+
+  type ACE_t
+    integer :: nst
+    FLOAT, allocatable :: dchi(:,:,:,:)
+    CMPLX, allocatable :: zchi(:,:,:,:)
+  end type ACE_t
 
   type exchange_operator_t
     type(states_elec_t), public, pointer :: st
@@ -82,6 +95,11 @@ module exchange_operator_oct_m
     type(scdm_t)  :: scdm
 
     type(singularity_t) :: singul !< Coulomb singularity
+
+    logical       :: useACE
+    type(ACE_t)   :: ace
+    type(states_elec_t) :: xst !< The states after the application of the Fock operator
+                               !! This is needed to construct the ACE operator
   end type exchange_operator_t
  
 contains
@@ -96,6 +114,8 @@ contains
     this%cam_omega = M_ZERO
     this%cam_alpha = M_ZERO
     this%cam_beta  = M_ZERO
+
+    this%useACE = .false.
 
     POP_SUB(exchange_operator_nullify)
   end subroutine exchange_operator_nullify
@@ -114,6 +134,22 @@ contains
     this%cam_omega = omega
     this%cam_alpha = alpha
     this%cam_beta  = beta
+
+    !%Variable AdaptivelyCompressedExchange
+    !%Type logical
+    !%Default false
+    !%Section Hamiltonian
+    !%Description
+    !% (Experimental) If set to yes, Octopus will use the adaptively compressed exchange
+    !% operator (ACE) for HF and hybrid calculations, as defined in
+    !%  Lin, J. Chem. Theory Comput. 2016, 12, 2242.
+    !%End
+    call parse_variable(namespace, 'AdaptivelyCompressedExchange', .false., this%useACE)
+    if(this%useACE) call messages_experimental('AdaptivelyCompressedExchange')
+
+    if(this%useACE) then
+      call this%xst%nullify()
+    end if
 
     call singularity_init(this%singul, namespace, st, sb)
     if(states_are_real(st)) then
@@ -154,6 +190,13 @@ contains
       SAFE_DEALLOCATE_P(this%st)
     end if
     nullify(this%st)
+
+    if(this%useACE) then
+      call states_elec_end(this%xst)
+      this%ace%nst = 0
+      SAFE_DEALLOCATE_A(this%ace%dchi)
+      SAFE_DEALLOCATE_A(this%ace%zchi)
+    end if
 
     call singularity_end(this%singul)
     call poisson_end(this%psolver)

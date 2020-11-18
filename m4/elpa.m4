@@ -33,7 +33,7 @@ AC_DEFUN([ACX_ELPA],
   # Set FCFLAGS_ELPA only if not set from environment
   if test x"$FCFLAGS_ELPA" = x; then
     case $with_elpa_prefix in
-      "") FCFLAGS_ELPA="-I/usr/include" ;;
+      "") FCFLAGS_ELPA="-I/usr/include -I/usr/include/elpa/modules" ;;
       *)  FCFLAGS_ELPA="-I$with_elpa_prefix/include" ;;
     esac
   fi

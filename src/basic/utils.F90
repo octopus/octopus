@@ -293,9 +293,6 @@ contains
 
     ! keep in alphabetical order, for ease in seeing if something is listed
     get_optional_libraries = ''
-#ifdef HAVE_ARPACK
-    get_optional_libraries = trim(get_optional_libraries)//' arpack'
-#endif
 #ifdef HAVE_BERKELEYGW
     get_optional_libraries = trim(get_optional_libraries)//' berkeleygw'
 #endif
@@ -313,9 +310,6 @@ contains
 #endif
 #ifdef HAVE_ETSF_IO
     get_optional_libraries = trim(get_optional_libraries)//' etsf_io'
-#endif
-#ifdef HAVE_FEAST
-    get_optional_libraries = trim(get_optional_libraries)//' feast'
 #endif
 #ifdef HAVE_GDLIB
     get_optional_libraries = trim(get_optional_libraries)//' gdlib'
@@ -343,9 +337,6 @@ contains
 #endif
 #ifdef HAVE_PARMETIS
     get_optional_libraries = trim(get_optional_libraries)//' parmetis'
-#endif
-#ifdef HAVE_PARPACK
-    get_optional_libraries = trim(get_optional_libraries)//' parpack'
 #endif
 #ifdef HAVE_PFFT
     get_optional_libraries = trim(get_optional_libraries)//' pfft'

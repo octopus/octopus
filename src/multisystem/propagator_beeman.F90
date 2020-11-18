@@ -41,13 +41,13 @@ module propagator_beeman_oct_m
   end interface propagator_beeman_t
 
   ! Specific beeman propagation operations identifiers
-  character(len=30), public, parameter ::      &
-    BEEMAN_START       = 'BEEMAN_START',        &
-    BEEMAN_FINISH      = 'BEEMAN_FINISH',       &
-    BEEMAN_COMPUTE_ACC = 'BEEMAN_COMPUTE_ACC',  &
-    BEEMAN_PREDICT_POS = 'BEEMAN_PREDICT_POS',  &
-    BEEMAN_PREDICT_VEL = 'BEEMAN_PREDICT_VEL',  &
-    BEEMAN_CORRECT_POS = 'BEEMAN_CORRECT_POS',  &
+  character(len=ALGO_LABEL_LEN), public, parameter ::  &
+    BEEMAN_START       = 'BEEMAN_START',               &
+    BEEMAN_FINISH      = 'BEEMAN_FINISH',              &
+    BEEMAN_COMPUTE_ACC = 'BEEMAN_COMPUTE_ACC',         &
+    BEEMAN_PREDICT_POS = 'BEEMAN_PREDICT_POS',         &
+    BEEMAN_PREDICT_VEL = 'BEEMAN_PREDICT_VEL',         &
+    BEEMAN_CORRECT_POS = 'BEEMAN_CORRECT_POS',         &
     BEEMAN_CORRECT_VEL = 'BEEMAN_CORRECT_VEL'
 
   ! Specific beeman propagation operations

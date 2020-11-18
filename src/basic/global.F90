@@ -42,8 +42,8 @@ module global_oct_m
     not_in_openmp,    &
     operator(+),      &
     bitand
-    
-  
+
+
   integer, public, parameter :: MAX_PATH_LEN=256
 
   type conf_t
