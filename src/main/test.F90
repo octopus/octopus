@@ -474,7 +474,7 @@ contains
       call sys%st%group%psib(1, 1)%copy_to(epsib, copy_data = .true.)
     else
       call sys%st%group%psib(1, 1)%copy_to(epsib)
-      call zhamiltonian_elec_base_phase(sys%hm%hm_base, sys%gr%mesh, sys%gr%mesh%np, &
+      call hamiltonian_elec_base_phase(sys%hm%hm_base, sys%gr%mesh, sys%gr%mesh%np, &
                .false., epsib, src=sys%st%group%psib(1, 1))
     end if
 

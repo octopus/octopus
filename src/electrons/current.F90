@@ -401,7 +401,7 @@ contains
             call boundaries_set(der%boundaries, st%group%psib(ib, ik))
 
             if(associated(hm%hm_base%phase)) then
-              call zhamiltonian_elec_base_phase(hm%hm_base, der%mesh, der%mesh%np_part, &
+              call hamiltonian_elec_base_phase(hm%hm_base, der%mesh, der%mesh%np_part, &
                 conjugate = .false., psib = epsib, src = st%group%psib(ib, ik))
             else
               call st%group%psib(ib, ik)%copy_data_to(der%mesh%np_part, epsib)

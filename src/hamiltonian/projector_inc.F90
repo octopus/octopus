@@ -119,9 +119,14 @@ subroutine X(project_psi_batch)(mesh, bnd, pj, npj, dim, psib, ppsib)
         do idim = 1, dim
           bind = psib%ist_idim_to_linear((/ist, idim/))
           if(associated(pj(ipj)%phase)) then
+#ifdef R_TCOMPLEX
             do is = 1, ns
-              lpsi(is, idim) = psib%X(ff_linear)(pj(ipj)%sphere%map(is), bind)*pj(ipj)%phase(is, 1, psib%ik)
+              lpsi(is, idim) = psib%zff_linear(pj(ipj)%sphere%map(is), bind)*pj(ipj)%phase(is, 1, psib%ik)
             end do
+#else
+            ! Phase not allowed for real batches
+            ASSERT(.false.)
+#endif
           else
             do is = 1, ns
               lpsi(is, idim) = psib%X(ff_linear)(pj(ipj)%sphere%map(is), bind)
@@ -133,9 +138,14 @@ subroutine X(project_psi_batch)(mesh, bnd, pj, npj, dim, psib, ppsib)
         do idim = 1, dim
           bind = psib%ist_idim_to_linear((/ist, idim/))
           if(associated(pj(ipj)%phase)) then
+#ifdef R_TCOMPLEX
             do is = 1, ns
-              lpsi(is, idim) = psib%X(ff_pack)(bind, pj(ipj)%sphere%map(is))*pj(ipj)%phase(is, 1, psib%ik)
+              lpsi(is, idim) = psib%zff_pack(bind, pj(ipj)%sphere%map(is))*pj(ipj)%phase(is, 1, psib%ik)
             end do
+#else
+            ! Phase not allowed for real batches
+            ASSERT(.false.)
+#endif  
           else
             do is = 1, ns
               lpsi(is, idim) = psib%X(ff_pack)(bind, pj(ipj)%sphere%map(is))
@@ -232,10 +242,15 @@ subroutine X(project_psi_batch)(mesh, bnd, pj, npj, dim, psib, ppsib)
         do idim = 1, dim
           bind = psib%ist_idim_to_linear((/ist, idim/))
           if(associated(pj(ipj)%phase)) then
+#ifdef R_TCOMPLEX
             do is = 1, ns
-              ppsib%X(ff_linear)(pj(ipj)%sphere%map(is), bind) = &
-                ppsib%X(ff_linear)(pj(ipj)%sphere%map(is), bind) + lpsi(is, idim)*conjg(pj(ipj)%phase(is, 1, psib%ik))
+              ppsib%zff_linear(pj(ipj)%sphere%map(is), bind) = &
+                ppsib%zff_linear(pj(ipj)%sphere%map(is), bind) + lpsi(is, idim)*conjg(pj(ipj)%phase(is, 1, psib%ik))
             end do
+#else
+            ! Phase not allowed for real batches
+            ASSERT(.false.)
+#endif
           else
             do is = 1, ns
               ppsib%X(ff_linear)(pj(ipj)%sphere%map(is), bind) = &
@@ -248,10 +263,15 @@ subroutine X(project_psi_batch)(mesh, bnd, pj, npj, dim, psib, ppsib)
         do idim = 1, dim
           bind = psib%ist_idim_to_linear((/ist, idim/))
           if(associated(pj(ipj)%phase)) then
+#ifdef R_TCOMPLEX
             do is = 1, ns
-              ppsib%X(ff_pack)(bind, pj(ipj)%sphere%map(is)) = &
-                ppsib%X(ff_pack)(bind, pj(ipj)%sphere%map(is)) + lpsi(is, idim)*conjg(pj(ipj)%phase(is, 1, psib%ik))
+              ppsib%zff_pack(bind, pj(ipj)%sphere%map(is)) = &
+                ppsib%zff_pack(bind, pj(ipj)%sphere%map(is)) + lpsi(is, idim)*conjg(pj(ipj)%phase(is, 1, psib%ik))
             end do
+#else
+            ! Phase not allowed for real batches
+            ASSERT(.false.)
+#endif
           else
             do is = 1, ns
               ppsib%X(ff_pack)(bind, pj(ipj)%sphere%map(is)) = &
@@ -307,9 +327,14 @@ R_TYPE function X(projector_matrix_element)(pj, bnd, dim, ik, psia, psib) result
 
   do idim = 1, dim
     if(associated(pj%phase)) then
+#ifdef R_TCOMPLEX
       do is = 1, ns
         lpsi(is, idim) = psib(pj%sphere%map(is), idim)*pj%phase(is, 1, ik)
       end do
+#else
+      ! Phase not allowed for real functions
+      ASSERT(.false.)
+#endif
     else
       do is = 1, ns
         lpsi(is, idim) = psib(pj%sphere%map(is), idim)
@@ -322,9 +347,14 @@ R_TYPE function X(projector_matrix_element)(pj, bnd, dim, ik, psia, psib) result
   apb = M_ZERO
   do idim = 1, dim
     if(associated(pj%phase)) then
+#ifdef R_TCOMPLEX
       do is = 1, ns
         plpsi(is, idim) = R_CONJ(psia(pj%sphere%map(is), idim))*plpsi(is, idim)*conjg(pj%phase(is, 1, ik))
       end do
+#else
+      ! Phase not allowed for real functions
+      ASSERT(.false.)
+#endif
     else
       do is = 1, ns
         plpsi(is, idim) = R_CONJ(psia(pj%sphere%map(is), idim))*plpsi(is, idim)
@@ -421,9 +451,14 @@ subroutine X(projector_commute_r)(pj, mesh, bnd, dim, idir, ik, psi, cpsi)
     SAFE_ALLOCATE(pxlpsi(1:ns, 1:dim))
 
     if(associated(pj%phase)) then
+#ifdef R_TCOMPLEX
       do idim = 1, dim
         lpsi(1:ns, idim) = psi(map(1:ns), idim)*pj%phase(1:ns, 1, ik)
       end do
+#else
+      ! Phase not allowed for real functions
+      ASSERT(.false.)
+#endif
     else
       do idim = 1, dim
         lpsi(1:ns, idim) = psi(map(1:ns), idim)
@@ -444,10 +479,15 @@ subroutine X(projector_commute_r)(pj, mesh, bnd, dim, idir, ik, psi, cpsi)
     
     ! |cpsi> += x V_nl |psi> - V_nl x |psi> 
     if(associated(pj%phase)) then
+#ifdef R_TCOMPLEX
       do idim = 1, dim
         cpsi(map(1:ns), idim) = cpsi(map(1:ns), idim) + &
           (xplpsi(1:ns, idim) - pxlpsi(1:ns, idim)) * R_CONJ(pj%phase(1:ns, 1, ik))
       end do
+#else
+      ! Phase not allowed for real functions
+      ASSERT(.false.)
+#endif
     else
       do idim = 1, dim
         cpsi(map(1:ns), idim) = cpsi(map(1:ns), idim) + xplpsi(1:ns, idim) - pxlpsi(1:ns, idim)
@@ -503,9 +543,14 @@ subroutine X(projector_commute_r_allatoms_alldir)(pj, geo, mesh, dim, bnd, ik, p
       phase = associated(pj(iatom)%phase)
 
       if(phase) then
+#ifdef R_TCOMPLEX
         do idim = 1, dim 
           lpsi(1:ns, idim) = psi(map(1:ns), idim)*pj(iatom)%phase(1:ns, 1, ik) 
         end do
+#else
+        ! Phase not allowed for real functions
+        ASSERT(.false.)
+#endif
       else
         do idim = 1, dim 
           lpsi(1:ns, idim) = psi(map(1:ns), idim)
@@ -528,10 +573,15 @@ subroutine X(projector_commute_r_allatoms_alldir)(pj, geo, mesh, dim, bnd, ik, p
      
         ! |cpsi> += x V_nl |psi> - V_nl x |psi> 
         if(phase) then
+#ifdef R_TCOMPLEX
           do idim = 1, dim
            cpsi(map(1:ns), idir, idim) = cpsi(map(1:ns), idir, idim) + &
              (xplpsi(1:ns, idim) - pxlpsi(1:ns, idim)) * R_CONJ(pj(iatom)%phase(1:ns, 1, ik))
           end do
+#else
+          ! Phase not allowed for real functions
+          ASSERT(.false.)
+#endif
         else
           do idim = 1, dim
            cpsi(map(1:ns), idir, idim) = cpsi(map(1:ns), idir, idim) + xplpsi(1:ns, idim) - pxlpsi(1:ns, idim)
@@ -562,7 +612,10 @@ subroutine X(r_project_psi)(pj, mesh, dim, ik, psi, cpsi)
   R_TYPE,                    intent(in)     :: psi(:, :)
   R_TYPE,                    intent(inout)  :: cpsi(:,:,:)
 
-  integer ::  ns, idim, ip, sb_dim, isb_dim
+  integer ::  ns, idim, sb_dim, isb_dim
+#ifdef R_TCOMPLEX
+  integer :: ip
+#endif
   R_TYPE, allocatable :: lpsi(:, :), xplpsi(:, :), xplpsi_t(:, :, :)
   integer, pointer :: map(:)
   FLOAT,   pointer :: smx(:, :)
@@ -584,9 +637,14 @@ subroutine X(r_project_psi)(pj, mesh, dim, ik, psi, cpsi)
     SAFE_ALLOCATE(xplpsi_t(1:ns, 1:sb_dim+1, 1:dim))
 
     if(associated(pj%phase)) then
+#ifdef R_TCOMPLEX
       do idim = 1, dim
         lpsi(1:ns, idim) = psi(map(1:ns), idim)*pj%phase(1:ns, 1, ik)
       end do
+#else
+      ! Phase not allowed for real functions
+      ASSERT(.false.)
+#endif
     else
       do idim = 1, dim
         lpsi(1:ns, idim) = psi(map(1:ns), idim)
@@ -606,12 +664,17 @@ subroutine X(r_project_psi)(pj, mesh, dim, ik, psi, cpsi)
 
     ! |cpsi> += x V_nl |psi> 
     if(associated(pj%phase)) then
-       do idim = 1, dim
-          do ip = 1, ns
-             cpsi(map(ip), 1:sb_dim+1, idim) = cpsi(map(ip), 1:sb_dim+1, idim) + &
-                  xplpsi_t(ip, 1:sb_dim+1, idim) * R_CONJ(pj%phase(ip, 1, ik))
-          end do
-       end do
+#ifdef R_TCOMPLEX
+      do idim = 1, dim
+        do ip = 1, ns
+          cpsi(map(ip), 1:sb_dim+1, idim) = cpsi(map(ip), 1:sb_dim+1, idim) + &
+            xplpsi_t(ip, 1:sb_dim+1, idim) * R_CONJ(pj%phase(ip, 1, ik))
+        end do
+      end do
+#else
+      ! Phase not allowed for real functions
+      ASSERT(.false.)
+#endif
    else
       do idim = 1, dim
          cpsi(map(1:ns), 1:sb_dim+1, idim) = cpsi(map(1:ns), 1:sb_dim+1, idim) &
