@@ -39,10 +39,10 @@ contains
   
   ! ---------------------------------------------------------
   subroutine criteria_factory_init(list, namespace, max_iter, check_conv)
-    type(criteria_list_t), intent(inout) :: list
-    type(namespace_t),     intent(in)    :: namespace
-    integer,               intent(in)    :: max_iter
-    logical,               intent(out)   :: check_conv
+    class(criteria_list_t), intent(inout) :: list
+    type(namespace_t),      intent(in)    :: namespace
+    integer,                intent(in)    :: max_iter
+    logical,                intent(out)   :: check_conv
 
     FLOAT :: conv_abs_dens, conv_rel_dens, conv_abs_ev, conv_rel_ev
     FLOAT :: abs_dens, rel_dens, abs_ev, rel_ev

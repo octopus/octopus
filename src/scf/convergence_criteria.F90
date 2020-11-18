@@ -131,6 +131,12 @@ contains
     class(convergence_criteria_t),  intent(inout) :: this
 
     PUSH_SUB(convergence_criteria_is_converged)
+   
+    if(this%tol <= M_ZERO) then
+      convergence_criteria_is_converged = .true.
+      POP_SUB(convergence_criteria_is_converged)
+      return
+    end if
 
     this%val = abs(this%value_diff)
     if(.not. this%absolute) then

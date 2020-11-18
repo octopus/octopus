@@ -456,6 +456,9 @@ contains
   ! ---------------------------------------------------------
   subroutine scf_end(scf)
     type(scf_t),  intent(inout) :: scf
+
+    class(convergence_criteria_t), pointer    :: crit
+    type(criteria_iterator_t) :: iter
     
     PUSH_SUB(scf_end)
 
@@ -466,6 +469,12 @@ contains
     nullify(scf%mixfield)
 
     if(scf%mix_field /= OPTION__MIXFIELD__STATES) call lda_u_mixer_end(scf%lda_u_mix, scf%smix)
+
+    call iter%start(scf%criteria_list)
+    do while (iter%has_next())
+      crit => iter%get_next()
+      SAFE_DEALLOCATE_P(crit)
+    end do
 
 
     POP_SUB(scf_end)
