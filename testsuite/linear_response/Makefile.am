@@ -50,6 +50,11 @@ dist_share_DATA = \
 	05-polarizability.test                   \
 	06-vib_modes_fd.01-ground_state.inp      \
 	06-vib_modes_fd.01-vib_modes_fd.inp      \
-	06-vib_modes_fd.test                        
+	06-vib_modes_fd.test                     \
+	07-casida-photons.test                   \
+	07-casida-photons.01-gs.inp              \
+	07-casida-photons.02-photons.inp         \
+	07-casida-photons.03-spectrum.inp
+	
 
 CLEANFILES = *~ *.bak
