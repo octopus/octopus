@@ -2425,9 +2425,7 @@ contains
       SAFE_DEALLOCATE_A(gspsi)
       SAFE_DEALLOCATE_A(psi)
 
-#ifdef HAVE_MPI
       call comm_allreduce(st%dom_st_kpt_mpi_grp%comm, projections)
-#endif
 
       ! n_dip is not defined for more than space%dim
       call geometry_dipole(geo, n_dip)
@@ -2533,11 +2531,9 @@ contains
      end if
     end do
 
-#if defined(HAVE_MPI)        
    if(st%parallel_in_states .or. st%d%kpt%parallel) then
      call comm_allreduce(st%st_kpt_mpi_grp%comm, Nex_kpt)
    end if
-#endif  
 
   Nex = sum(Nex_kpt)
 
@@ -2595,9 +2591,7 @@ contains
     SAFE_DEALLOCATE_A(psi)
     SAFE_DEALLOCATE_A(gspsi)
 
-    #ifdef HAVE_MPI
-      call comm_allreduce(st%dom_st_kpt_mpi_grp%comm, projections)
-    #endif
+    call comm_allreduce(st%dom_st_kpt_mpi_grp%comm, projections)
 
 
     POP_SUB(calc_projections)

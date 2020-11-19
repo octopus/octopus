@@ -656,9 +656,7 @@ subroutine X(io_function_output_vector_BZ)(how, dir, fname, namespace, mesh, kpt
     do ivd = 1, vector_dim
       ff_global(kpt%start:kpt%end, ivd) = ff(lbound(ff, 1):ubound(ff, 1), ivd) 
     end do
-#ifdef HAVE_MPI
     call comm_allreduce(comm, ff_global)
-#endif
   else
     ff_global => ff
   end if

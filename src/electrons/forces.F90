@@ -559,13 +559,11 @@ subroutine forces_from_nlcc(gr, geo, hm, st, force_nlcc)
 
   if(geo%atoms_dist%parallel) call dforces_gather(geo, force_nlcc)
 
-#if defined(HAVE_MPI)
   if(gr%mesh%parallel_in_domains) then
     call profiling_in(prof_comm, "FORCES_COMM")
     call comm_allreduce(gr%mesh%mpi_grp%comm, force_nlcc)
     call profiling_out(prof_comm)
   end if
-#endif
  
   call profiling_out(prof)
 
@@ -627,13 +625,11 @@ subroutine forces_from_scf(namespace, gr, geo, hm, force_scf, vhxc_old)
 
   if(geo%atoms_dist%parallel) call dforces_gather(geo, force_scf) 
 
-#if defined(HAVE_MPI)
   if(gr%mesh%parallel_in_domains) then
     call profiling_in(prof_comm, "FORCES_COMM")
     call comm_allreduce(gr%mesh%mpi_grp%comm, force_scf)
     call profiling_out(prof_comm)
   end if
-#endif
 
   call profiling_out(prof)
   

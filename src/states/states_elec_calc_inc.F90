@@ -1278,11 +1278,9 @@ subroutine X(states_elec_matrix)(st1, st2, mesh, aa)
 
   end do
 
-#if defined(HAVE_MPI)        
   if(st1%d%kpt%parallel) then
     call comm_allreduce(st1%d%kpt%mpi_grp%comm, aa)
   end if
-#endif
 
 
   SAFE_DEALLOCATE_A(psi1)

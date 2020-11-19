@@ -842,11 +842,9 @@ contains
       end do
     end do
 
-#if defined(HAVE_MPI)        
     if(st%parallel_in_states .or. st%d%kpt%parallel) then
       call comm_allreduce(st%st_kpt_mpi_grp%comm, st%qtot)
     end if
-#endif  
 
 
     POP_SUB(states_elec_freeze_adjust_qtot)
