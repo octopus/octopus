@@ -28,6 +28,7 @@ module medium_mxll_oct_m
   use comm_oct_m
   use grid_oct_m
   use mesh_oct_m
+  use mpi_oct_m
   use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
@@ -56,6 +57,7 @@ module medium_mxll_oct_m
      FLOAT, allocatable              :: sigma_e(:,:) !< electric conductivy of (lossy) medium
      FLOAT, allocatable              :: sigma_m(:,:) !< magnetic conductivy of (lossy) medium
      integer, allocatable            :: points_number(:)
+     integer, allocatable            :: global_points_number(:)
      integer, allocatable            :: points_map(:,:)
      FLOAT, allocatable              :: aux_ep(:,:,:) !< auxiliary array for storing the epsilon derivative profile
      FLOAT, allocatable              :: aux_mu(:,:,:) !< auxiliary array for storing the softened mu profile
@@ -240,8 +242,8 @@ module medium_mxll_oct_m
         call messages_info(1)
         call get_points_map_from_file(medium_box_aux, ip_in_max2, gr%mesh, tmp, CNST(0.99))
 
-        write(message(1),'(a, I8)')  'Number of points inside medium with the normal coordinates:', medium_box%points_number(1)
-        write(message(2),'(a, I8)')  'Number of points inside medium rescaling the coordinates:', medium_box_aux%points_number(1)
+        write(message(1),'(a, I8)')'Number of points inside medium (normal coordinates):', medium_box%global_points_number(1)
+        write(message(2),'(a, I8)')'Number of points inside medium (rescaled coordinates):', medium_box_aux%global_points_number(1)
         write(message(3), '(a)') ""
         call messages_info(3)
 
@@ -284,6 +286,7 @@ module medium_mxll_oct_m
     tmp_bdry_map = int(M_zero)
 
     SAFE_ALLOCATE(medium_box%points_number(nr_of_boxes))
+    SAFE_ALLOCATE(medium_box%global_points_number(nr_of_boxes))
     SAFE_ALLOCATE(medium_box%bdry_number(nr_of_boxes))
     medium_box%number = nr_of_boxes
 
@@ -520,6 +523,13 @@ module medium_mxll_oct_m
       if (ip_in > ip_in_max) ip_in_max = ip_in
       medium_box%points_number(il) = ip_in
       call cgal_polyhedron_end(cgal_poly(il))
+
+#ifdef HAVE_MPI
+      call MPI_Allreduce(ip_in, medium_box%global_points_number(il), 1, &
+          MPI_INT, MPI_SUM, MPI_COMM_WORLD, mpi_err)
+#else
+      medium_box%global_points_number(il) = medium_box%points_number(il)
+#endif
     end do
 
     SAFE_DEALLOCATE_A(cgal_poly)
