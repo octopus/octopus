@@ -527,6 +527,8 @@ module medium_mxll_oct_m
 #ifdef HAVE_MPI
       call MPI_Allreduce(ip_in, medium_box%global_points_number(il), 1, &
           MPI_INT, MPI_SUM, MPI_COMM_WORLD, mpi_err)
+#else
+      medium_box%global_points_number(il) = medium_box%points_number(il)
 #endif
     end do
 
