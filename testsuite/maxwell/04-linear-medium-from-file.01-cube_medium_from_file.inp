@@ -93,3 +93,5 @@
 % LinearMediumFromFile
   "04-linear-medium-from-file.01-cube.off" | 2.0 | 2.0 | 100.0 | 100.0 | edged
 % 
+
+CheckPointsMediumFromFile = yes

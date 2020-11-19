@@ -12,6 +12,7 @@ ExtraFile  : 04-linear-medium-from-file.01-cube.off
 Input      : 04-linear-medium-from-file.01-cube_medium_from_file.inp
 
 if(available cgal); then
+match ; medium_points            ; GREPFIELD(out, 'Number of points inside medium with the normal coordinates:', 10) ; 9261
 Precision: 1.0e-13
 match ;  Tot. Maxwell energy [step 10]  ; LINEFIELD(Maxwell/td.general/maxwell_energy, 16, 3) ; 26.44226450938
 Precision: 1.0e-12
