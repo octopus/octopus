@@ -149,7 +149,7 @@ contains
     !% fulfilled for two consecutive iterations.
     !%End
     call parse_variable(namespace, 'ConvRelEv', M_ZERO, conv_rel_ev, unit = units_inp%energy)
-    crit => energy_criteria_t(conv_abs_ev, absolute = .false.)
+    crit => energy_criteria_t(conv_rel_ev, absolute = .false.)
     call list%add(crit)
 
     call messages_obsolete_variable(namespace, 'ConvForce')
