@@ -179,7 +179,7 @@ contains
         call crit%set_pointers(scf%energy_diff, scf%energy_in)
       case(DENSITY)
         call crit%set_pointers(scf%abs_dens_diff, st%qtot)
-      case(EIGENVAL)
+      case(SUMEIGENVAL)
         call crit%set_pointers(scf%evsum_diff, scf%evsum_in)
       case default
         ASSERT(.false.)
@@ -1343,7 +1343,7 @@ contains
       scf%energy_in = hm%energy%total
     case(DENSITY)
       !Do nothing here
-    case(EIGENVAL)
+    case(SUMEIGENVAL)
       scf%evsum_in = states_elec_eigenvalues_sum(st)
     case default
       ASSERT(.false.)
@@ -1382,7 +1382,7 @@ contains
       end do
       SAFE_DEALLOCATE_A(tmp)
 
-    case(EIGENVAL)
+    case(SUMEIGENVAL)
 
       scf%evsum_diff = abs(states_elec_eigenvalues_sum(st) - scf%evsum_in)
 

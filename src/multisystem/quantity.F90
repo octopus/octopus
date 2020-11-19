@@ -38,7 +38,7 @@ module quantity_oct_m
     MASS                         =  9,  &
     CHARGE                       = 10,  &
     ENERGY                       = 11,  &
-    EIGENVAL                     = 12,  &
+    SUMEIGENVAL                  = 12,  &
     MAX_QUANTITIES               = 12
 
   character(len=17), public, parameter :: QUANTITY_LABEL(MAX_QUANTITIES) = (/ &

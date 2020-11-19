@@ -20,6 +20,9 @@
 
 module criteria_factory_oct_m
   use convergence_criteria_oct_m
+  use density_criteria_oct_m
+  use eigenval_criteria_oct_m
+  use energy_criteria_oct_m
   use global_oct_m
   use namespace_oct_m
   use messages_oct_m
@@ -67,7 +70,7 @@ contains
     !% fulfilled for two consecutive iterations.
     !%End
     call parse_variable(namespace, 'ConvEnergy', M_ZERO, conv_energy_diff, unit = units_inp%energy)
-    crit => convergence_criteria_t(conv_energy_diff, EIGENVAL, absolute = .true.)
+    crit => eigenval_criteria_t(conv_energy_diff, absolute = .true.)
     call list%add(crit)
 
     !%Variable ConvAbsDens
@@ -85,7 +88,7 @@ contains
     !% fulfilled for two consecutive iterations.
     !%End
     call parse_variable(namespace, 'ConvAbsDens', M_ZERO, conv_abs_dens)
-    crit => convergence_criteria_t(conv_abs_dens, DENSITY, absolute = .true.)
+    crit => density_criteria_t(conv_abs_dens, absolute = .true.)
     call list%add(crit)
 
     !%Variable ConvRelDens
@@ -108,7 +111,7 @@ contains
     !% fulfilled for two consecutive iterations.
     !%End
     call parse_variable(namespace, 'ConvRelDens', CNST(1e-6), conv_rel_dens)
-    crit => convergence_criteria_t(conv_rel_dens, DENSITY, absolute = .false.)
+    crit => density_criteria_t(conv_rel_dens, absolute = .false.)
     call list%add(crit)
 
     !%Variable ConvAbsEv
@@ -127,7 +130,7 @@ contains
     !% fulfilled for two consecutive iterations.
     !%End
     call parse_variable(namespace, 'ConvAbsEv', M_ZERO, conv_abs_ev, unit = units_inp%energy)
-    crit => convergence_criteria_t(conv_abs_ev, ENERGY, absolute = .true.)
+    crit => energy_criteria_t(conv_abs_ev, absolute = .true.)
     call list%add(crit)
 
     !%Variable ConvRelEv
@@ -146,7 +149,7 @@ contains
     !% fulfilled for two consecutive iterations.
     !%End
     call parse_variable(namespace, 'ConvRelEv', M_ZERO, conv_rel_ev, unit = units_inp%energy)
-    crit => convergence_criteria_t(conv_abs_ev, ENERGY, absolute = .false.)
+    crit => energy_criteria_t(conv_abs_ev, absolute = .false.)
     call list%add(crit)
 
     call messages_obsolete_variable(namespace, 'ConvForce')
