@@ -124,7 +124,7 @@ module scf_oct_m
     type(berry_t) :: berry
 
     type(criteria_list_t) :: criteria_list
-    FLOAT :: energy_in, energy_diff, abs_dens_diff, evsum_in, evsum_diff
+    FLOAT :: energy_in, energy_out, energy_diff, abs_dens_diff, evsum_in, evsum_diff
   end type scf_t
 
 contains
@@ -176,7 +176,7 @@ contains
       crit => iter%get_next()
       select case(crit%quantity)
       case(ENERGY)
-        call crit%set_pointers(scf%energy_diff, scf%energy_in)
+        call crit%set_pointers(scf%energy_diff, scf%energy_out)
       case(DENSITY)
         call crit%set_pointers(scf%abs_dens_diff, st%qtot)
       case(SUMEIGENVAL)
@@ -1005,7 +1005,7 @@ contains
         call messages_print_stress(stdout, trim(str))
         write(message(1),'(a,es15.8,2(a,es9.2))') ' etot  = ', units_from_atomic(units_out%energy, hm%energy%total), &
           ' abs_ev   = ', units_from_atomic(units_out%energy, scf%energy_diff), &
-          ' rel_ev   = ', scf%energy_diff/abs(scf%energy_in)
+          ' rel_ev   = ', scf%energy_diff/abs(scf%energy_out)
         write(message(2),'(a,es15.2,2(a,es9.2))') &
           ' ediff = ', scf%energy_diff, ' abs_dens = ', scf%abs_dens_diff, &
           ' rel_dens = ', scf%abs_dens_diff/st%qtot
@@ -1370,7 +1370,8 @@ contains
     select case(quantity)
     case(ENERGY)
 
-      scf%energy_diff = abs(hm%energy%total - scf%energy_diff)
+      scf%energy_out = hm%energy%total
+      scf%energy_diff = abs(scf%energy_out - scf%energy_in)
 
     case(DENSITY)
 
