@@ -26,7 +26,9 @@ dist_share_DATA = \
 	01-casida.02-unocc.inp                   \
 	01-casida.022-unocc_restart.inp          \
 	01-casida.03-casida.inp                  \
-	01-casida.032-casida_restart.inp         \
+	01-casida.031-casida_scalapack.inp       \
+	01-casida.032-casida_elpa.inp            \
+	01-casida.033-casida_restart.inp         \
 	01-casida.04-spectrum.inp                \
 	01-casida.test                           \
 	02-h2o_pol_lr.01_h2o_gs.inp              \

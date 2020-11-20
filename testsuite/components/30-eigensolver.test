@@ -1,0 +1,20 @@
+# -*- coding: utf-8 mode: shell-script -*-
+
+Test       : Oct-test dense eigensolver
+Program    : octopus
+TestGroups : short-run, components
+Enabled    : Yes
+
+Input: 30-eigensolver.01.inp
+Precision: 1e-11
+match ; Difference parallel N 15 ; GREPFIELD(out, 'Parallel solver - N:  15', 8)  ; 0.0
+match ; Difference serial N 15 ; GREPFIELD(out, 'Serial solver   - N:  15', 8)  ; 0.0
+Precision: 1e-10
+match ; Difference parallel N 32 ; GREPFIELD(out, 'Parallel solver - N:  32', 8)  ; 0.0
+match ; Difference serial N 32 ; GREPFIELD(out, 'Serial solver   - N:  32', 8)  ; 0.0
+Precision: 1e-9
+match ; Difference parallel N 100 ; GREPFIELD(out, 'Parallel solver - N: 100', 8)  ; 0.0
+match ; Difference serial N 100 ; GREPFIELD(out, 'Serial solver   - N: 100', 8)  ; 0.0
+Precision: 5e-8
+match ; Difference parallel N 500 ; GREPFIELD(out, 'Parallel solver - N: 500', 8)  ; 0.0
+match ; Difference serial N 500 ; GREPFIELD(out, 'Serial solver   - N: 500', 8)  ; 0.0
