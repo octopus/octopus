@@ -32,7 +32,7 @@ esac
 
 dnl additional libraries for mpi
 if test "x$acx_mpi_ok" == xyes; then
-  LIBS_DFTBPLUS="$LIBS_DFTBPLUS -lmpifx -lscalapackfx"
+  LIBS_DFTBPLUS="$LIBS_DFTBPLUS -lmpifx -lscalapackfx $LIBS_SCALAPACK $LIBS_BLACS"
 fi
 
 dnl Backup LIBS and FCFLAGS
