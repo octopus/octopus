@@ -23,7 +23,7 @@ Radius=8
 
 
 MaximumIter = 100
-Walltime = 0.05
+Walltime = 0.02
 
 FilterPotentials = filter_none
 

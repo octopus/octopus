@@ -274,7 +274,7 @@ end subroutine X(accel_read_buffer_2)
 ! ---------------------------------------------------------------------------
 
 subroutine X(accel_read_buffer_3)(this, size, data, offset, async)
-  type(accel_mem_t),               intent(in)    :: this
+  type(accel_mem_t),               intent(in)     :: this
   integer,                          intent(in)    :: size
   R_TYPE,                           intent(out)   :: data(:, :, :)
   integer,                optional, intent(in)    :: offset

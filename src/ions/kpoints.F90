@@ -64,7 +64,8 @@ module kpoints_oct_m
     kpoints_is_compatible_downsampling, &
     kpoints_is_valid_symmetry,    &
     kpoints_grid_end,             & 
-    kpoints_nkpt_in_path
+    kpoints_nkpt_in_path,         &
+    kpoints_gamma_only
 
   type kpoints_grid_t
     ! Components are public by default
@@ -708,9 +709,6 @@ contains
       end do
 
       call parse_block_end(blk)
-
-      !We do not use axis
-      this%nik_axis(1:MAX_DIM) = 1
 
       !We do not have shifts
       nshifts = 1
@@ -1734,6 +1732,17 @@ contains
     if(associated(this%coord_along_path)) npath = SIZE(this%coord_along_path)
 
   end function kpoints_nkpt_in_path
+
+  ! ---------------------------------------------------------
+  logical function kpoints_gamma_only(this) result(gamma_only)
+    type(kpoints_t), intent(in) :: this
+
+    PUSH_SUB(kpoints_gamma_only)
+
+    gamma_only = kpoints_number(this) == 1 .and. kpoints_point_is_gamma(this, 1)
+
+    POP_SUB(kpoints_gamma_only)
+  end function kpoints_gamma_only
 
 end module kpoints_oct_m
 

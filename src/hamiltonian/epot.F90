@@ -117,8 +117,8 @@ module epot_oct_m
     FLOAT, pointer :: fii(:, :)
     FLOAT, allocatable :: vdw_forces(:, :)
     
-    real(4), pointer, private :: local_potential(:,:)
-    logical,          private :: local_potential_precalculated
+    FLOAT, pointer, private :: local_potential(:,:)
+    logical,        private :: local_potential_precalculated
 
     logical          :: ignore_external_ions
     logical,                  private :: have_density
@@ -717,7 +717,6 @@ contains
     type(geometry_t),  intent(in)    :: geo
 
     integer :: iatom
-    FLOAT, allocatable :: tmp(:)
     
     PUSH_SUB(epot_precalc_local_potential)
     
@@ -725,19 +724,14 @@ contains
       SAFE_ALLOCATE(ep%local_potential(1:gr%mesh%np, 1:geo%natoms))
     end if
 
-
     ep%local_potential_precalculated = .false.
 
-    SAFE_ALLOCATE(tmp(1:gr%mesh%np))
-    
     do iatom = 1, geo%natoms
-      tmp(1:gr%mesh%np) = M_ZERO
-      call epot_local_potential(ep, namespace, gr%der, gr%dgrid, geo, iatom, tmp)!, time)
-      ep%local_potential(1:gr%mesh%np, iatom) = real(tmp(1:gr%mesh%np), 4)
+      ep%local_potential(1:gr%mesh%np, iatom) = M_ZERO 
+      call epot_local_potential(ep, namespace, gr%der, gr%dgrid, geo, iatom, ep%local_potential(1:gr%mesh%np, iatom))!, time)
     end do
     ep%local_potential_precalculated = .true.
 
-    SAFE_DEALLOCATE_A(tmp)
     POP_SUB(epot_precalc_local_potential)
   end subroutine epot_precalc_local_potential
 

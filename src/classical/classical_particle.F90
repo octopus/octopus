@@ -410,11 +410,10 @@ contains
     write(fmt,'("(4X,A,1X,",I2,"e14.6)")') this%space%dim
     write(message(2),fmt) "Coordinates: ", (this%pos(idir), idir = 1, this%space%dim)
     write(message(3),fmt) "Velocity:    ", (this%vel(idir), idir = 1, this%space%dim)
-    write(message(4),fmt) "Acceleration:", (this%acc(idir), idir = 1, this%space%dim)
-    write(message(5),fmt) "Force:       ", (this%tot_force(idir), idir = 1, this%space%dim)
-    write(message(6),'(4x,A,I8.7)')  'Clock tick:      ', this%clock%get_tick()
-    write(message(7),'(4x,A,e14.6)') 'Simulation time: ', this%clock%time()
-    call messages_info(7)
+    write(message(4),fmt) "Force:       ", (this%tot_force(idir), idir = 1, this%space%dim)
+    write(message(5),'(4x,A,I8.7)')  'Clock tick:      ', this%clock%get_tick()
+    write(message(6),'(4x,A,e14.6)') 'Simulation time: ', this%clock%time()
+    call messages_info(6)
 
     POP_SUB(classical_particle_iteration_info)
   end subroutine classical_particle_iteration_info

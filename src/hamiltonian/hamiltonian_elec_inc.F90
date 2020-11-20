@@ -140,13 +140,13 @@ subroutine X(hamiltonian_elec_apply_batch) (hm, namespace, mesh, psib, hpsib, te
   end if
 
   if(apply_phase .and. set_phase) then ! we copy psi to epsi applying the exp(i k.r) phase
-    call X(hamiltonian_elec_base_phase)(hm%hm_base, mesh, mesh%np_part, .false., epsib, src = psib)
+    call hamiltonian_elec_base_phase(hm%hm_base, mesh, mesh%np_part, .false., epsib, src = psib)
     hpsib%has_phase = .true.
   end if
 
   !Apply the spiral BC if needed
   if(hm%der%boundaries%spiral .and. apply_phase) then
-    call X(hamiltonian_elec_base_phase_spiral)(hm%hm_base, hm%der, epsib)
+    call hamiltonian_elec_base_phase_spiral(hm%hm_base, hm%der, epsib)
   end if
 
   if(bitand(TERM_KINETIC, terms_) /= 0) then
@@ -237,7 +237,7 @@ subroutine X(hamiltonian_elec_apply_batch) (hm, namespace, mesh, psib, hpsib, te
   end if  
 
   if(apply_phase .and. set_phase) then
-    call X(hamiltonian_elec_base_phase)(hm%hm_base, mesh, mesh%np, .true., hpsib)
+    call hamiltonian_elec_base_phase(hm%hm_base, mesh, mesh%np, .true., hpsib)
     call epsib%end(copy = .false.)
     SAFE_DEALLOCATE_P(epsib)
   end if

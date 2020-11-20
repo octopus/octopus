@@ -20,7 +20,6 @@
 
 module energy_calc_oct_m
   use batch_oct_m
-  use berry_oct_m
   use comm_oct_m
   use derivatives_oct_m
   use energy_oct_m
@@ -143,8 +142,6 @@ contains
     end if
 
     if(associated(hm%vberry)) then
-      hm%energy%berry = berry_energy_correction(st, gr%mesh, &
-        hm%ep%E_field(1:gr%sb%periodic_dim), hm%vberry(1:gr%mesh%np, 1:hm%d%nspin))
       hm%energy%total = hm%energy%total + hm%energy%berry
     else
       hm%energy%berry = M_ZERO

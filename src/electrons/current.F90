@@ -25,6 +25,7 @@ module current_oct_m
   use boundaries_oct_m
   use comm_oct_m
   use derivatives_oct_m
+  use exchange_operator_oct_m
   use geometry_oct_m
   use global_oct_m
   use hamiltonian_elec_base_oct_m
@@ -386,7 +387,8 @@ contains
     case(CURRENT_GRADIENT, CURRENT_GRADIENT_CORR)
 
       if(this%method == CURRENT_GRADIENT_CORR .and. .not. family_is_mgga_with_exc(hm%xc) &
-        .and. hm%lda_u_level == DFT_U_NONE) then
+        .and. hm%lda_u_level == DFT_U_NONE .and. hm%theory_level /= HARTREE_FOCK &
+        .and. hm%theory_level /= RDMFT) then
 
         ! we can use the packed version
         
@@ -399,7 +401,7 @@ contains
             call boundaries_set(der%boundaries, st%group%psib(ib, ik))
 
             if(associated(hm%hm_base%phase)) then
-              call zhamiltonian_elec_base_phase(hm%hm_base, der%mesh, der%mesh%np_part, &
+              call hamiltonian_elec_base_phase(hm%hm_base, der%mesh, der%mesh%np_part, &
                 conjugate = .false., psib = epsib, src = st%group%psib(ib, ik))
             else
               call st%group%psib(ib, ik)%copy_data_to(der%mesh%np_part, epsib)
@@ -479,6 +481,8 @@ contains
                 call zlda_u_commute_r(hm%lda_u, der%mesh, st%d, namespace, ik, psi, gpsi, &
                   associated(hm%hm_base%phase))
               end if
+
+              call zexchange_operator_commute_r(hm%exxop, der%mesh, st%d, ik, psi, gpsi)
 
             end if
 

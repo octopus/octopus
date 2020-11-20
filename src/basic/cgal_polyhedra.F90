@@ -101,9 +101,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine cgal_polyhedron_read(cgal_poly, fname, verbose)
-    type(cgal_polyhedra_t), intent(out) :: cgal_poly
-    character(*),            intent(in) :: fname
-    logical,                 intent(in) :: verbose
+    type(cgal_polyhedra_t), intent(inout) :: cgal_poly
+    character(*),              intent(in) :: fname
+    logical,                   intent(in) :: verbose
 
     integer(c_int) :: verb, ierr
 
@@ -159,9 +159,10 @@ contains
 
   ! ---------------------------------------------------------
   function cgal_polyhedron_point_inside(cgal_poly, xq, yq, zq) result(res)
-    logical :: res
+    logical                            :: res
     type(cgal_polyhedra_t), intent(in) :: cgal_poly
-    real(c_double), intent(in) :: xq, yq, zq
+    real(c_double),         intent(in) :: xq, yq, zq
+
     type(d3) :: query
 
     ! no push/pop here since this is called too frequently

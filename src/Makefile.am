@@ -145,8 +145,6 @@ math_f_srcs =                                 \
 	math/lapack.F90                       \
 	math/loct_math.F90                    \
 	math/math.F90                         \
-	math/matrix.F90                       \
-	math/matrix_ops.F90                   \
 	math/maxwell_function.F90             \
 	math/metis.F90                        \
 	math/minimizer.F90                    \
@@ -190,8 +188,6 @@ noinst_HEADERS +=                             \
 	math/lalg_basic_blas_inc.F90          \
 	math/lalg_adv_lapack_inc.F90          \
 	math/math_inc.F90                     \
-	math/matrix_inc.F90                   \
-	math/matrix_ops_inc.F90               \
 	math/ode_solver_inc.F90               \
 	math/pnfft_inc.F90                    \
 	math/root_solver_inc.F90              \

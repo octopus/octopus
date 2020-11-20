@@ -513,8 +513,13 @@ contains
             do ip = 1, boundaries%nrecv(ipart)
               ip2 = boundaries%per_recv(ip, ipart)
               do ist = 1, ffb%nst_linear
-                ffb%X(ff_linear)(ip2, ist) = recvbuffer(ist, ip, ipart) * &
+#ifdef R_TCOMPLEX
+                ffb%zff_linear(ip2, ist) = recvbuffer(ist, ip, ipart) * &
                   phase_correction(ip2-boundaries%mesh%np)
+#else
+                ! No phase correction for real batches
+                ASSERT(.false.)
+#endif
               end do
             end do
           end do
@@ -542,8 +547,13 @@ contains
             do ip = 1, boundaries%nrecv(ipart)
               ip2 = boundaries%per_recv(ip, ipart)
               do ist = 1, ffb%nst_linear
-                ffb%X(ff_pack)(ist, ip2) = recvbuffer(ist, ip, ipart) * &
+#ifdef R_TCOMPLEX
+                ffb%zff_pack(ist, ip2) = recvbuffer(ist, ip, ipart) * &
                   phase_correction(ip2-boundaries%mesh%np)
+#else
+                ! No phase correction for real batches
+                ASSERT(.false.)
+#endif
               end do
             end do
           end do
@@ -631,9 +641,14 @@ contains
         ASSERT(ubound(phase_correction, 1) == boundaries%mesh%np_part - boundaries%mesh%np)
         do ist = 1, ffb%nst_linear
           do ip = 1, boundaries%nper
+#ifdef R_TCOMPLEX
             ffb%X(ff_linear)(boundaries%per_points(POINT_BOUNDARY, ip), ist) = &
               ffb%X(ff_linear)(boundaries%per_points(POINT_INNER, ip), ist) * &
               phase_correction(boundaries%per_points(POINT_BOUNDARY, ip)-boundaries%mesh%np)
+#else
+            ! No phase correction for real batches
+            ASSERT(.false.)
+#endif
           end do
         end do
       end if
@@ -659,7 +674,12 @@ contains
           ip_bnd = boundaries%per_points(POINT_BOUNDARY, ip)
           ip_inn = boundaries%per_points(POINT_INNER, ip)
           do ist = 1, ffb%nst_linear
+#ifdef R_TCOMPLEX
             ffb%X(ff_pack)(ist, ip_bnd) = ffb%X(ff_pack)(ist, ip_inn) * phase_correction(ip_bnd-boundaries%mesh%np)
+#else
+            ! No phase correction for real batches
+            ASSERT(.false.)
+#endif
           end do
         end do
       end if

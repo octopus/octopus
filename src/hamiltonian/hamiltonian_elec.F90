@@ -429,8 +429,7 @@ contains
  
 
     nullify(hm%hm_base%phase)
-    if (simul_box_is_periodic(gr%sb) .and. &
-      .not. (kpoints_number(gr%sb%kpoints) == 1 .and. kpoints_point_is_gamma(gr%sb%kpoints, 1))) then
+    if (.not. kpoints_gamma_only(gr%sb%kpoints)) then
       call init_phase()
     end if
     ! no e^ik phase needed for Gamma-point-only periodic calculations
@@ -760,6 +759,7 @@ contains
         ! and we are not setting a gauge field
         if(any(abs(hm%ep%E_field(1:gr%sb%periodic_dim)) > M_EPSILON)) then
           SAFE_ALLOCATE(hm%vberry(1:gr%mesh%np, 1:hm%d%nspin))
+          hm%vberry = M_ZERO
         end if
       end if
 
@@ -1073,7 +1073,7 @@ contains
 
       PUSH_SUB(hamiltonian_elec_update.build_phase)
 
-      if(simul_box_is_periodic(mesh%sb) .or. allocated(this%hm_base%uniform_vector_potential)) then
+      if ((.not. kpoints_gamma_only(mesh%sb%kpoints)) .or. allocated(this%hm_base%uniform_vector_potential)) then
 
         call profiling_in(prof_phases, 'UPDATE_PHASES')
         ! now regenerate the phases for the pseudopotentials
@@ -1649,7 +1649,7 @@ contains
 
       PUSH_SUB(hamiltonian_elec_update2.build_phase)
 
-      if(simul_box_is_periodic(mesh%sb) .or. allocated(this%hm_base%uniform_vector_potential)) then
+      if ((.not. kpoints_gamma_only(mesh%sb%kpoints)) .or. allocated(this%hm_base%uniform_vector_potential)) then
 
         call profiling_in(prof_phases, 'UPDATE_PHASES')
         ! now regenerate the phases for the pseudopotentials

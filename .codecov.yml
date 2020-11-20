@@ -1,2 +1,12 @@
+coverage:
+  status:
+    project:
+      default:
+        target: auto
+        threshold: 0.01%
+    patch:
+      default:
+        target: auto
+        threshold: 0%
 ignore:
   - "external_libs"
