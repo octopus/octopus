@@ -522,48 +522,6 @@ contains
   end subroutine mxll_propagation_step
 
   ! ---------------------------------------------------------
-  subroutine exponential_mxll_apply(hm, namespace, gr, st, tr, dt, ff, cpml_hamiltonian)
-    type(hamiltonian_mxll_t),   intent(inout) :: hm
-    type(namespace_t),          intent(in)    :: namespace
-    type(grid_t),               intent(in)    :: gr
-    type(states_mxll_t),        intent(inout) :: st
-    type(propagator_mxll_t),    intent(inout) :: tr
-    FLOAT,                      intent(in)    :: dt
-    CMPLX,                      intent(inout) :: ff(:,:)
-    logical,                    intent(in)    :: cpml_hamiltonian
-
-    type(batch_t) :: ffbatch
-    integer :: istate
-    type(profile_t), save :: prof
-
-    PUSH_SUB(exponential_mxll_apply)
-
-    call profiling_in(prof, 'EXPONENTIAL_MXLL_APPLY')
-
-    call zbatch_init(ffbatch, 1, 1, hm%dim, gr%mesh%np_part)
-
-    do istate = 1, hm%dim
-      call batch_set_state(ffbatch, istate, gr%mesh%np_part, ff(:, istate))
-    end do
-
-    if (st%pack_states) call ffbatch%do_pack()
-
-    hm%cpml_hamiltonian = cpml_hamiltonian
-    call exponential_apply_batch(tr%te, namespace, gr%mesh, hm, ffbatch, dt)
-    hm%cpml_hamiltonian = .false.
-
-    do istate = 1, hm%dim
-      call batch_get_state(ffbatch, istate, gr%mesh%np_part, ff(:, istate))
-    end do
-
-    call ffbatch%end()
-
-    call profiling_out(prof)
-
-    POP_SUB(exponential_mxll_apply)
-  end subroutine exponential_mxll_apply
-
-  ! ---------------------------------------------------------
   subroutine set_medium_rs_state(st, gr, hm)
     type(states_mxll_t),      intent(inout) :: st
     type(grid_t),             intent(in)    :: gr
