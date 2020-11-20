@@ -1011,9 +1011,7 @@ subroutine pes_flux_out_cartesian_ascii(this, st, namespace, dim, path )
   end do
   
   if(st%parallel_in_states .or. st%d%kpt%parallel) then
-#if defined(HAVE_MPI)
-      call comm_allreduce(st%st_kpt_mpi_grp%comm, spctrout)
-#endif
+    call comm_allreduce(st%st_kpt_mpi_grp%comm, spctrout)
   end if
   
   
@@ -1185,7 +1183,6 @@ subroutine pes_flux_out_polar_ascii(this, st, namespace, dim, efile, mfile)
   end do
 
   if(st%parallel_in_states .or. st%d%kpt%parallel) then
-#if defined(HAVE_MPI)
     ! total spectrum = sum over all states
     if(this%surf_shape == PES_SPHERICAL) then
       call comm_allreduce(st%st_kpt_mpi_grp%comm, spctrout_sph)
@@ -1195,7 +1192,6 @@ subroutine pes_flux_out_polar_ascii(this, st, namespace, dim, efile, mfile)
 
     ! orbital spectra
     call comm_allreduce(st%st_kpt_mpi_grp%comm, spctrsum)
-#endif
   end if
 
 

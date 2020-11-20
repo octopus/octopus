@@ -913,11 +913,9 @@ subroutine X(exchange_operator_ACE)(this, der, st, phase)
   if(this%xst%parallel_in_states) call states_elec_parallel_remote_access_stop(this%xst)
 
   !Reduction
-#if defined(HAVE_MPI)        
-   if(st%parallel_in_states) then
-     call comm_allreduce(st%mpi_grp%comm, MM)
-   end if
-#endif
+  if(st%parallel_in_states) then
+    call comm_allreduce(st%mpi_grp%comm, MM)
+  end if
 
   do ik = st%d%kpt%start, st%d%kpt%end
     do nst = 1, this%ace%nst
@@ -961,11 +959,9 @@ subroutine X(exchange_operator_ACE)(this, der, st, phase)
   end do !ik
 
   !Reduction
-#if defined(HAVE_MPI)        
   if(st%parallel_in_states) then
     call comm_allreduce(st%mpi_grp%comm,this%ace%X(chi))
   end if
-#endif
 
 #ifdef R_TCOMPLEX
   if(present(phase)) then

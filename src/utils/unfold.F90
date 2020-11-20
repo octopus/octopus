@@ -549,11 +549,9 @@ contains
 
     end do !ik
 
-#if defined(HAVE_MPI)        
     if(st%d%kpt%parallel) then
       call comm_allreduce(st%st_kpt_mpi_grp%comm, ake)
     end if
-#endif  
 
     if(mpi_grp_is_root(mpi_world)) then
       file_ake = io_open("static/ake.dat", global_namespace, action='write')

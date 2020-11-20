@@ -618,9 +618,7 @@ contains
     part_np = 0
     part_np(this%mesh%vp%partno) = this%np
 
-  #if defined(HAVE_MPI)
     call comm_allreduce(this%mesh%mpi_grp%comm, part_np)
-  #endif 
     this%np_global = sum(part_np)
 
     SAFE_ALLOCATE(this%x_global(1:this%np_global, 1:this%mesh%sb%dim))
@@ -642,11 +640,9 @@ contains
       ind = ind + part_np(ipart)
     end do 
 
-   #if defined(HAVE_MPI)
     call comm_allreduce(this%mesh%mpi_grp%comm, this%x_global)
     call comm_allreduce(this%mesh%mpi_grp%comm, this%part_v)
     call comm_allreduce(this%mesh%mpi_grp%comm, this%global2local)
-   #endif 
 
     SAFE_DEALLOCATE_A(part_np)
 
