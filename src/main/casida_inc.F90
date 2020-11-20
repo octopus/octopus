@@ -718,90 +718,6 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
   POP_SUB(X(casida_get_matrix))
 
 contains
-
-  ! ---------------------------------------------------------
-  !> calculates the matrix elements <i(p),a(p)|v|j(q),b(q)> and/or <i(p),a(p)|xc|j(q),b(q)>
-  subroutine X(K_term)(pp, qq, saved, mtxel_vh, mtxel_xc)
-    type(states_pair_t),               intent(in)    :: pp
-    type(states_pair_t),               intent(in)    :: qq
-    type(casida_save_pot_t),           intent(inout) :: saved
-    R_TYPE,                  optional, intent(out)   :: mtxel_vh
-    R_TYPE,                  optional, intent(out)   :: mtxel_xc
-
-    integer :: pi, qi, pa, qa, pk, qk
-    R_TYPE, allocatable :: rho_i(:), rho_j(:), integrand(:)
-    FLOAT :: coeff_vh
-    type(profile_t), save :: prof
-
-    PUSH_SUB(X(casida_get_matrix).X(K_term))
-    call profiling_in(prof, TOSTRING(X(CASIDA_K)))
-    
-    if(cas%herm_conj) then
-      pi = qq%i
-      pa = qq%a
-      pk = qq%kk
-
-      qi = pp%i
-      qa = pp%a
-      qk = pp%kk
-    else
-      pi = pp%i
-      pa = pp%a
-      pk = pp%kk
-
-      qi = qq%i
-      qa = qq%a
-      qk = qq%kk
-    end if
-
-    SAFE_ALLOCATE(rho_i(1:mesh%np))
-    SAFE_ALLOCATE(rho_j(1:mesh%np))
-    SAFE_ALLOCATE(integrand(1:mesh%np))
-
-    call X(casida_get_rho)(st, mesh, pa, pi, pk, rho_i)
-    call X(casida_get_rho)(st, mesh, qi, qa, qk, rho_j)
-
-    !  first the Hartree part
-    if(present(mtxel_vh)) then
-      coeff_vh = - cas%kernel_lrc_alpha / (M_FOUR * M_PI)
-      if(.not. cas%triplet) coeff_vh = coeff_vh + M_ONE
-      if (ks%sic_type == SIC_ADSIC) coeff_vh = coeff_vh*(M_ONE - M_ONE/st%qtot)
-      if(abs(coeff_vh) > M_EPSILON) then
-        if(qi /= saved%qi  .or.   qa /= saved%qa .or.  qk /= saved%qk) then
-          saved%X(pot)(1:mesh%np) = M_ZERO
-          if (hm%theory_level /= INDEPENDENT_PARTICLES) then
-            call X(poisson_solve)(hm%psolver, saved%X(pot), rho_j, all_nodes=.false.)
-          end if
-          saved%qi = qi
-          saved%qa = qa
-          saved%qk = qk
-        end if
-        ! value of pot is retained between calls
-        mtxel_vh = coeff_vh * X(mf_dotp)(mesh, rho_i(:), saved%X(pot)(:))
-
-      else
-        mtxel_vh = M_ZERO
-      end if
-    end if
-
-    if(present(mtxel_xc)) then
-      integrand(1:mesh%np) = rho_i(1:mesh%np)*rho_j(1:mesh%np)*xc(1:mesh%np, pk, qk)
-      mtxel_xc = X(mf_integrate)(mesh, integrand)
-    end if
-
-    if(cas%herm_conj) then
-      if(present(mtxel_vh)) mtxel_vh = R_CONJ(mtxel_vh)
-      if(present(mtxel_xc)) mtxel_xc = R_CONJ(mtxel_xc)
-    end if
-
-    SAFE_DEALLOCATE_A(rho_i)
-    SAFE_DEALLOCATE_A(rho_j)
-    SAFE_DEALLOCATE_A(integrand)
-
-    call profiling_out(prof)
-    POP_SUB(X(casida_get_matrix).X(K_term))
-  end subroutine X(K_term)
-
   ! ---------------------------------------------------------
   subroutine load_saved(matrix, is_saved, restart_file)
     R_TYPE,           intent(out) :: matrix(:,:)
@@ -1169,27 +1085,6 @@ subroutine X(casida_get_lr_hmat1)(cas, sys, iatom, idir, dl_rho, lr_hmat1)
 
 end subroutine X(casida_get_lr_hmat1)
 
-! -----------------------------------------------------
-
-subroutine X(casida_save_pot_init)(this, mesh)
-  type(casida_save_pot_t), intent(out)   :: this
-  type(mesh_t),            intent(in)    :: mesh
-  
-  SAFE_ALLOCATE(this%X(pot)(1:mesh%np))
-  this%qi = -1
-  this%qa = -1
-  this%qk = -1
-
-end subroutine X(casida_save_pot_init)
-    
-! -----------------------------------------------------
-
-subroutine X(casida_save_pot_end)(this)
-  type(casida_save_pot_t), intent(inout)   :: this
-
-  SAFE_DEALLOCATE_A(this%X(pot))
-
-end subroutine X(casida_save_pot_end)
 
 ! ---------------------------------------------------------
 subroutine X(casida_solve)(cas, sys)
