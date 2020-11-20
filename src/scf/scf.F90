@@ -581,6 +581,7 @@ contains
     integer :: iter, is, nspin, ierr, verbosity_, ib, iqn
     FLOAT :: evsum_out, evsum_in
     FLOAT :: etime, itime
+    FLOAT :: alpha
     character(len=MAX_PATH_LEN) :: dirname
     type(lcao_t) :: lcao    !< Linear combination of atomic orbitals
     type(profile_t), save :: prof
@@ -840,6 +841,13 @@ contains
       ! only finish if the convergence criterion is fulfilled in two
       ! consecutive iterations
       finish = converged_last .and. converged_current
+
+      alpha = M_ONE + (M_ONE - sqrt(scf%conv_rel_dens/scf%rel_dens))*(scf%eigens%pre%alpha - M_ONE)
+      alpha = max(alpha, scf%eigens%pre%alpha_current)
+      alpha = min(alpha, M_ONE)
+      scf%eigens%pre%alpha_current = alpha
+      call preconditioner_init_filter(scf%eigens%pre, gr, alpha)
+      print *, "Filter alpha: ", alpha
 
       etime = loct_clock() - itime
       itime = etime + itime
