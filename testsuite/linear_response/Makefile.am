@@ -54,7 +54,10 @@ dist_share_DATA = \
 	07-casida-photons.test                   \
 	07-casida-photons.01-gs.inp              \
 	07-casida-photons.02-photons.inp         \
-	07-casida-photons.03-spectrum.inp
+	07-casida-photons.03-scalapack.inp       \
+	07-casida-photons.04-elpa.inp            \
+	07-casida-photons.05-elpa-parother.inp   \
+	07-casida-photons.06-spectrum.inp
 	
 
 CLEANFILES = *~ *.bak

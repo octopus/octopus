@@ -21,6 +21,9 @@ ExtraStates = 26
 ParDomain = 2
 ParOther = 2
 
+CasidaDistributedMatrix = true
+CasidaParallelEigensolver = casida_elpa
+
 CasidaTheoryLevel = lrtddft_casida
 
 Photons = yes

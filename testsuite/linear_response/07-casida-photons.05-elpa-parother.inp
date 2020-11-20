@@ -18,8 +18,11 @@ Poisson1DSoftCoulombParam = 1
 %
 ExtraStates = 26
 
-ParDomain = 2
-ParOther = 2
+ParDomain = 1
+ParOther = 4
+
+CasidaDistributedMatrix = true
+CasidaParallelEigensolver = casida_elpa
 
 CasidaTheoryLevel = lrtddft_casida
 
