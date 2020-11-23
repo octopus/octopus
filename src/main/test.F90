@@ -1076,12 +1076,12 @@ contains
 
     !%Variable SlakoDir
     !%Type string
-    !%Default "."
+    !%Default "./"
     !%Section Execution::IO
     !%Description
     !% Folder containing the Slako files
     !%End
-    call parse_variable(namespace, 'SlakoDir', '.', slako_dir)
+    call parse_variable(namespace, 'SlakoDir', './', slako_dir)
 
     ! Note: setting the global standard output to /dev/null will also suppress run-time error messages
     !open(newunit=devNull, file="/dev/null", action="write")
