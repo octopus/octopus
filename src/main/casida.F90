@@ -751,8 +751,8 @@ contains
       call blacs_proc_grid_init(cas%proc_grid, cas%mpi_grp, procdim = (/np_rows, np_cols/))
 
       ! get size of local matrices
-      cas%nb_rows = max(1, numroc(cas%n, cas%block_size, cas%proc_grid%myrow, 0, cas%proc_grid%nprow))
-      cas%nb_cols = max(1, numroc(cas%n, cas%block_size, cas%proc_grid%mycol, 0, cas%proc_grid%npcol))
+      cas%nb_rows = numroc(cas%n, cas%block_size, cas%proc_grid%myrow, 0, cas%proc_grid%nprow)
+      cas%nb_cols = numroc(cas%n, cas%block_size, cas%proc_grid%mycol, 0, cas%proc_grid%npcol)
 
       ! get ScaLAPACK descriptor
       call descinit(cas%desc(1), cas%n, cas%n, cas%block_size, cas%block_size, 0, 0, &

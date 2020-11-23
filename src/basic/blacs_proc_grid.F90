@@ -74,7 +74,7 @@ contains
 
     call MPI_Topo_test(mpi_grp%comm, topo, mpi_err)
 
-    if(topo /= MPI_CART) then
+    if(topo /= MPI_CART .or. present(procdim)) then
       ! We create a new communicator with Cartesian topology
       if(present(procdim)) then
         dims(1) = procdim(1)
