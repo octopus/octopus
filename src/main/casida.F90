@@ -152,6 +152,7 @@ module casida_oct_m
     logical              :: parallel_in_eh_pairs
     logical              :: parallel_in_domains
     logical              :: distributed_matrix
+    logical              :: write_matrix
     integer              :: parallel_solver
     type(mpi_grp_t)      :: mpi_grp
     logical              :: fromScratch
@@ -475,6 +476,20 @@ contains
       call messages_fatal(1)
     end if
 #endif
+
+    !%Variable CasidaWriteDistributedMatrix
+    !%Type logical
+    !%Section Linear Response::Casida
+    !%Default false
+    !%Description
+    !% Set to true to write out the full distributed Casida matrix to a file
+    !% using MPI-IO.
+    !%End
+    call parse_variable(sys%namespace, 'CasidaWriteDistributedMatrix', .false., cas%write_matrix)
+    if(.not.cas%distributed_matrix .and. cas%write_matrix) then
+      message(1) = "CasidaWriteDistributedMatrix con only be used with CasidaDistributedMatrix"
+      call messages_fatal(1)
+    end if
 
     !%Variable CasidaParallelEigensolver
     !%Type integer

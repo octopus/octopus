@@ -1533,7 +1533,7 @@ subroutine X(casida_write)(cas, sys)
     end if
   end if
 
-  if(cas%distributed_matrix .and. mpi_grp_is_root(sys%gr%mesh%mpi_grp)) then
+  if(cas%write_matrix .and. mpi_grp_is_root(sys%gr%mesh%mpi_grp)) then
       call X(write_distributed_matrix)(cas, cas%X(mat), &
         CASIDA_DIR//trim(theory_name(cas))//"_matrix")
   end if
