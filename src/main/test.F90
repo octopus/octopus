@@ -27,6 +27,9 @@ module test_oct_m
   use clock_oct_m
   use density_oct_m
   use derivatives_oct_m
+#ifdef HAVE_DFTBPLUS
+  use dftbplus
+#endif
   use epot_oct_m
   use exponential_oct_m
   use global_oct_m
@@ -241,7 +244,7 @@ contains
     case(OPTION__TESTMODE__BATCH_OPS)
       call test_batch_ops(param, namespace)
     case(OPTION__TESTMODE__DFTBPLUS)
-      call test_dftbplus(param, namespace)
+      call test_dftbplus(namespace)
     case(OPTION__TESTMODE__CLOCK)
       call test_clock()
     case(OPTION__TESTMODE__LINEAR_SOLVER)
@@ -1031,43 +1034,36 @@ contains
   ! ---------------------------------------------------------
   ! This test is wrapping the dftbplus test example taken from
   ! https://github.com/dftbplus/dftbplus/blob/master/test/api/mm/testers/test_extpot.f90
-  subroutine test_dftbplus(param, namespace)
-#ifdef HAVE_DFTBPLUS
-    use, intrinsic :: iso_fortran_env, only : output_unit
-    use dftbplus
-    use dftbp_constants, only : AA__Bohr
-#endif
-
-    type(test_parameters_t), intent(in) :: param
+  subroutine test_dftbplus(namespace)
     type(namespace_t),       intent(in) :: namespace
 
 #ifdef HAVE_DFTBPLUS
-    integer, parameter :: dp = kind(1.0d0)
     integer, parameter :: nAtom = 3
     integer, parameter :: nExtChrg = 2
     character(len=MAX_PATH_LEN) :: slako_dir
 
     ! H2O coordinates (atomic units)
-    real(dp), parameter :: initialCoords(3, nAtom) = reshape([&
-        & 0.000000000000000E+00_dp, -0.188972598857892E+01_dp,  0.000000000000000E+00_dp,&
-        & 0.000000000000000E+00_dp,  0.000000000000000E+00_dp,  0.147977639152057E+01_dp,&
-        & 0.000000000000000E+00_dp,  0.000000000000000E+00_dp, -0.147977639152057E+01_dp], [3, nAtom])
+    FLOAT, parameter :: initialCoords(3, nAtom) = reshape([ &
+      M_ZERO, CNST(-0.188972598857892E+01), M_ZERO, &
+      M_ZERO, M_ZERO, CNST(0.147977639152057E+01), &
+      M_ZERO, M_ZERO, CNST(-0.147977639152057E+01) &
+      ], [3, nAtom])
 
     ! H2O atom types
     integer, parameter :: species(nAtom) = [1, 2, 2]
 
     ! External charges (positions and charges, again atomic units)
-    real(dp), parameter :: extCharges(4, nExtChrg) = reshape([&
-        &-0.94486343888717805E+00_dp,-0.94486343888717794E+01_dp, 0.17007541899969201E+01_dp, 2.5_dp,&
-        & 0.43463718188810203E+01_dp,-0.58581533211004997E+01_dp, 0.26456176288841000E+01_dp, -1.9_dp&
-        &], [4, nExtChrg])
+    FLOAT, parameter :: extCharges(4, nExtChrg) = reshape([&
+      CNST(-0.94486343888717805E+00), CNST(-0.94486343888717794E+01), CNST(0.17007541899969201E+01), CNST( 2.5), &
+      CNST( 0.43463718188810203E+01), CNST(-0.58581533211004997E+01), CNST(0.26456176288841000E+01), CNST(-1.9)  &
+      ], [4, nExtChrg])
 
+    FLOAT :: merminEnergy
+    FLOAT :: coords(3, nAtom), gradients(3, nAtom), extPot(nAtom), extPotGrad(3, nAtom)
+    FLOAT :: atomCharges(nAtom), extChargeGrads(3, nExtChrg)
+    
     type(TDftbPlus) :: dftbp
     type(TDftbPlusInput) :: input
-
-    real(dp) :: merminEnergy
-    real(dp) :: coords(3, nAtom), gradients(3, nAtom), extPot(nAtom), extPotGrad(3, nAtom)
-    real(dp) :: atomCharges(nAtom), extChargeGrads(3, nExtChrg), grossCharges(nAtom)
     type(fnode), pointer :: pRoot, pGeo, pHam, pDftb, pMaxAng, pSlakos, pType2Files, pAnalysis
     type(fnode), pointer :: pParserOpts
 
@@ -1093,12 +1089,12 @@ contains
     call setChild(pRoot, "Geometry", pGeo)
     call setChildValue(pGeo, "Periodic", .false.)
     call setChildValue(pGeo, "TypeNames", ["O", "H"])
-    coords(:,:) = 0.0_dp
+    coords(:,:) = M_ZERO
     call setChildValue(pGeo, "TypesAndCoordinates", reshape(species, [1, size(species)]), coords)
     call setChild(pRoot, "Hamiltonian", pHam)
     call setChild(pHam, "Dftb", pDftb)
     call setChildValue(pDftb, "Scc", .true.)
-    call setChildValue(pDftb, "SccTolerance", 1e-12_dp)
+    call setChildValue(pDftb, "SccTolerance", CNST(1e-12))
 
     ! sub-block inside hamiltonian for the maximum angular momenta
     call setChild(pDftb, "MaxAngularMomentum", pMaxAng)
@@ -1124,7 +1120,7 @@ contains
 
     message(1) = 'Input tree in HSD format:'
     call messages_info(1)
-    call dumpHsd(input%hsdTree, output_unit)
+    call dumpHsd(input%hsdTree, stdout)
 
     ! initialise the DFTB+ calculator
     call dftbp%setupCalculator(input)
@@ -1156,29 +1152,28 @@ contains
     call TDftbPlus_destruct(dftbp)
 
     POP_SUB(test_dftbplus)
-
   contains
 
     !> Calculate the potential and its first derivatives at DFTB atoms due to external electrostatic
     !> charges (perhaps from a surrounding MM region)
     subroutine getPointChargePotential(coordsMm, chargesMm, coordsQm, extPot, extPotGrad)
       !> Coordinates of the external charges (xyz,:nAtomMm) in atomic units
-      real(dp), intent(in) :: coordsMm(:,:)
+      FLOAT, intent(in) :: coordsMm(:,:)
 
       !> Charges of MM region atoms, in atomic units (:nAtomMm)
-      real(dp), intent(in) :: chargesMm(:)
+      FLOAT, intent(in) :: chargesMm(:)
 
       !> Coordinates of DFTB QM atoms (xyz,:nAtomQm) in atomic units
-      real(dp), intent(in) :: coordsQm(:,:)
+      FLOAT, intent(in) :: coordsQm(:,:)
 
       !> Potentials at DFTB atomic sites (:nAtomQm)
-      real(dp), intent(out) :: extPot(:)
+      FLOAT, intent(out) :: extPot(:)
 
       !> Gradient of potentials with respect to DFTB atom displacement (xyz,:nAtomQm)
-      real(dp), intent(out) :: extPotGrad(:,:)
+      FLOAT, intent(out) :: extPotGrad(:,:)
 
-      real(dp) :: atomPosQm(3), atomPosMm(3)
-      real(dp) :: chargeMm, dist
+      FLOAT :: atomPosQm(3), atomPosMm(3)
+      FLOAT :: chargeMm, dist
       integer :: nAtomQm, nAtomMm
       integer :: iAtQm, iAtMm
 
@@ -1186,8 +1181,8 @@ contains
 
       nAtomQm = size(coordsQm, dim=2)
       nAtomMm = size(coordsMm, dim=2)
-      extPot(:) = 0.0_dp
-      extPotGrad(:,:) = 0.0_dp
+      extPot(:) = M_ZERO
+      extPotGrad(:,:) = M_ZERO
       do iAtQm = 1, nAtomQm
         atomPosQm(:) = coordsQm(:, iAtQm)
         do iAtMm = 1, nAtomMm
@@ -1202,33 +1197,32 @@ contains
       POP_SUB(test_dftbplus.getPointChargePotential)
     end subroutine getPointChargePotential
 
-
     !> Calculate the gradient of the electrostatic energy wrt to external charges in the field from
     !> the charges of DFTB atoms
     subroutine getPointChargeGradients(coordsQm, chargesQm, coordsMm, chargesMm, gradients)
       !> Coordinates of the DFTB QM atoms (xyz,:nAtomQm) in atomic units
-      real(dp), intent(in) :: coordsQm(:,:)
+      FLOAT, intent(in) :: coordsQm(:,:)
 
       !> Charges of QM DFTB region atoms, in atomic units (:nAtomMm)
-      real(dp), intent(in) :: chargesQm(:)
+      FLOAT, intent(in) :: chargesQm(:)
 
       !> Coordinates of the external charges (xyz,:nAtomMm) in atomic units
-      real(dp), intent(in) :: coordsMm(:,:)
+      FLOAT, intent(in) :: coordsMm(:,:)
 
       !> Charges of MM region atoms, in atomic units (:nAtomMm)
-      real(dp), intent(in) :: chargesMm(:)
+      FLOAT, intent(in) :: chargesMm(:)
 
       !> Gradient of potentials with respect to MM atom displacement (xyz,:nAtomMm)
-      real(dp), intent(out) :: gradients(:,:)
+      FLOAT, intent(out) :: gradients(:,:)
 
-      real(dp) :: atomPosQm(3), atomPosMm(3)
-      real(dp) :: chargeQm, chargeMm, dist
+      FLOAT :: atomPosQm(3), atomPosMm(3)
+      FLOAT :: chargeQm, chargeMm, dist
       integer :: nAtomQm, nAtomMm
       integer :: iAtQm, iAtMm
 
       PUSH_SUB(test_dftbplus.getPointChargeGradients)
 
-      gradients(:,:) = 0.0_dp
+      gradients(:,:) = M_ZERO
       nAtomQm = size(coordsQm, dim=2)
       nAtomMm = size(coordsMm, dim=2)
       do iAtMm = 1, nAtomMm
@@ -1239,13 +1233,12 @@ contains
           chargeQm = chargesQm(iAtQm)
           dist = sqrt(sum((atomPosQm - atomPosMm)**2))
           gradients(:, iAtMm) = gradients(:, iAtMm) &
-              & + chargeQm * chargeMm * (atomPosMm - atomPosQm) / dist**3
+            + chargeQm * chargeMm * (atomPosMm - atomPosQm) / dist**3
         end do
       end do
 
       POP_SUB(test_dftbplus.getPointChargeGradients)
     end subroutine getPointChargeGradients
-
 #endif
   end subroutine test_dftbplus
 
