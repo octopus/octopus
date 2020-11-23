@@ -1,4 +1,6 @@
 CalculationMode = casida
+
+Debug = trace
   
 ExperimentalFeatures = yes
 DerivativesOrder = 1
