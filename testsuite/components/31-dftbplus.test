@@ -5,6 +5,8 @@ Program    : octopus
 TestGroups : short-run, components
 Enabled    : Yes
 
+Processors : 1
+
 ExtraFile : H-H.skf
 ExtraFile : H-O.skf
 ExtraFile : O-H.skf
