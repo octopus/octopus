@@ -1194,8 +1194,8 @@ contains
           atomPosMm(:) = coordsMm(1:3, iAtMm)
           chargeMm = chargesMm(iAtMm)
           dist = sqrt(sum((atomPosQm - atomPosMm)**2))
-          extPot(iAtQm) = extPot(iAtQm) - chargeMm / dist
-          extPotGrad(:, iAtQm) = extPotGrad(:, iAtQm) + chargeMm * (atomPosQm - atomPosMm) / dist**3
+          extPot(iAtQm) = extPot(iAtQm) - chargeMm / (dist + M_EPSILON)
+          extPotGrad(:, iAtQm) = extPotGrad(:, iAtQm) + chargeMm * (atomPosQm - atomPosMm) / (dist**3 + M_EPSILON)
         end do
       end do
 
@@ -1238,7 +1238,7 @@ contains
           chargeQm = chargesQm(iAtQm)
           dist = sqrt(sum((atomPosQm - atomPosMm)**2))
           gradients(:, iAtMm) = gradients(:, iAtMm) &
-            + chargeQm * chargeMm * (atomPosMm - atomPosQm) / dist**3
+            + chargeQm * chargeMm * (atomPosMm - atomPosQm) / (dist**3 + M_EPSILON)
         end do
       end do
 
