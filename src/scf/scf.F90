@@ -124,7 +124,7 @@ module scf_oct_m
     type(berry_t) :: berry
 
     type(criteria_list_t) :: criteria_list
-    FLOAT :: energy_in, energy_out, energy_diff, abs_dens_diff, evsum_in, evsum_diff
+    FLOAT :: energy_in, energy_diff, abs_dens_diff, evsum_in, evsum_out, evsum_diff
   end type scf_t
 
 contains
@@ -176,11 +176,11 @@ contains
       crit => iter%get_next()
       select case(crit%quantity)
       case(ENERGY)
-        call crit%set_pointers(scf%energy_diff, scf%energy_out)
+        call crit%set_pointers(scf%energy_diff, scf%energy_in)
       case(DENSITY)
         call crit%set_pointers(scf%abs_dens_diff, st%qtot)
       case(SUMEIGENVAL)
-        call crit%set_pointers(scf%evsum_diff, scf%evsum_in)
+        call crit%set_pointers(scf%evsum_diff, scf%evsum_out)
       case default
         ASSERT(.false.)
       end select
@@ -675,12 +675,14 @@ contains
       scf%eigens%converged = 0
 
       !We update the quantities at the begining of the scf cycle
+      if(iter == 1) then
+        scf%evsum_in = states_elec_eigenvalues_sum(st)
+      end if
       call iterator%start(scf%criteria_list)
       do while (iterator%has_next())
         crit => iterator%get_next()
         call scf_update_initial_quantity(scf, hm, st, gr, crit%quantity)
       end do
-
 
       !Used for computing the imperfect convegence contribution to the forces
       if(scf%calc_force .or. (outp%duringscf .and. bitand(outp%what, OPTION__OUTPUT__FORCES) /= 0)) then
@@ -1004,8 +1006,8 @@ contains
         write(str, '(a,i5)') 'SCF CYCLE ITER #' ,iter
         call messages_print_stress(stdout, trim(str))
         write(message(1),'(a,es15.8,2(a,es9.2))') ' etot  = ', units_from_atomic(units_out%energy, hm%energy%total), &
-          ' abs_ev   = ', units_from_atomic(units_out%energy, scf%energy_diff), &
-          ' rel_ev   = ', scf%energy_diff/abs(scf%energy_out)
+          ' abs_ev   = ', units_from_atomic(units_out%energy, scf%evsum_diff), &
+          ' rel_ev   = ', scf%evsum_diff/abs(scf%evsum_out)
         write(message(2),'(a,es15.2,2(a,es9.2))') &
           ' ediff = ', scf%energy_diff, ' abs_dens = ', scf%abs_dens_diff, &
           ' rel_dens = ', scf%abs_dens_diff/st%qtot
@@ -1268,11 +1270,17 @@ contains
         call iterator%start(scf%criteria_list)
         do while (iterator%has_next())
           crit => iterator%get_next()
-          if(crit%quantity == DENSITY .or. .not. crit%absolute) then
-            write(iunit, '(es13.5)', advance = 'no') crit%val
-          else
-            write(iunit, '(es13.5)', advance = 'no') units_from_atomic(units_out%energy, crit%val)
-          end if
+          select case(crit%quantity)
+          case(ENERGY)
+            write(iunit, '(es13.5)', advance = 'no') units_from_atomic(units_out%energy, crit%val_abs)
+          case(DENSITY)
+            write(iunit, '(2es13.5)', advance = 'no') crit%val_abs, crit%val_rel           
+          case(SUMEIGENVAL)
+            write(iunit, '(es13.5)', advance = 'no') units_from_atomic(units_out%energy, crit%val_abs)
+            write(iunit, '(es13.5)', advance = 'no') crit%val_rel
+          case default 
+            ASSERT(.false.)
+          end select
         end do
         if (bitand(ks%xc_family, XC_FAMILY_OEP) /= 0 .and. ks%theory_level /= HARTREE_FOCK) then
           if (ks%oep%level == XC_OEP_FULL) &
@@ -1344,7 +1352,7 @@ contains
     case(DENSITY)
       !Do nothing here
     case(SUMEIGENVAL)
-      scf%evsum_in = states_elec_eigenvalues_sum(st)
+      !Setting of the value is done in the scf_update_diff_quantity routine
     case default
       ASSERT(.false.)
     end select
@@ -1366,12 +1374,11 @@ contains
     FLOAT, allocatable :: tmp(:)
   
     PUSH_SUB(scf_update_diff_quantity)
-  
+
     select case(quantity)
     case(ENERGY)
 
-      scf%energy_out = hm%energy%total
-      scf%energy_diff = abs(scf%energy_out - scf%energy_in)
+      scf%energy_diff = abs(hm%energy%total - scf%energy_in)
 
     case(DENSITY)
 
@@ -1385,7 +1392,9 @@ contains
 
     case(SUMEIGENVAL)
 
-      scf%evsum_diff = abs(states_elec_eigenvalues_sum(st) - scf%evsum_in)
+      scf%evsum_out = states_elec_eigenvalues_sum(st)
+      scf%evsum_diff = abs(scf%evsum_out - scf%evsum_in)
+      scf%evsum_in = scf%evsum_out
 
     case default
       ASSERT(.false.)

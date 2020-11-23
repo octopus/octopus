@@ -70,7 +70,7 @@ contains
     !% fulfilled for two consecutive iterations.
     !%End
     call parse_variable(namespace, 'ConvEnergy', M_ZERO, conv_energy_diff, unit = units_inp%energy)
-    crit => eigenval_criteria_t(conv_energy_diff, absolute = .true.)
+    crit => energy_criteria_t(conv_energy_diff, M_ZERO)
     call list%add(crit)
 
     !%Variable ConvAbsDens
@@ -88,8 +88,6 @@ contains
     !% fulfilled for two consecutive iterations.
     !%End
     call parse_variable(namespace, 'ConvAbsDens', M_ZERO, conv_abs_dens)
-    crit => density_criteria_t(conv_abs_dens, absolute = .true.)
-    call list%add(crit)
 
     !%Variable ConvRelDens
     !%Type float
@@ -111,7 +109,7 @@ contains
     !% fulfilled for two consecutive iterations.
     !%End
     call parse_variable(namespace, 'ConvRelDens', CNST(1e-6), conv_rel_dens)
-    crit => density_criteria_t(conv_rel_dens, absolute = .false.)
+    crit => density_criteria_t(conv_abs_dens, conv_rel_dens)
     call list%add(crit)
 
     !%Variable ConvAbsEv
@@ -130,7 +128,6 @@ contains
     !% fulfilled for two consecutive iterations.
     !%End
     call parse_variable(namespace, 'ConvAbsEv', M_ZERO, conv_abs_ev, unit = units_inp%energy)
-    crit => energy_criteria_t(conv_abs_ev, absolute = .true.)
     call list%add(crit)
 
     !%Variable ConvRelEv
@@ -148,8 +145,8 @@ contains
     !% If this criterion is used, the SCF loop will only stop once it is
     !% fulfilled for two consecutive iterations.
     !%End
-    call parse_variable(namespace, 'ConvRelEv', M_ZERO, conv_rel_ev, unit = units_inp%energy)
-    crit => energy_criteria_t(conv_rel_ev, absolute = .false.)
+    call parse_variable(namespace, 'ConvRelEv', M_ZERO, conv_rel_ev)
+    crit => eigenval_criteria_t(conv_abs_ev, conv_rel_ev)
     call list%add(crit)
 
     call messages_obsolete_variable(namespace, 'ConvForce')
@@ -160,7 +157,7 @@ contains
     check_conv = iter%has_next()  !If the list is empty, this fails  
     do while (iter%has_next())
       other => iter%get_next()
-      check_conv = check_conv .or. (other%tol > M_ZERO)
+      check_conv = check_conv .or. (other%tol_abs > M_ZERO) .or. (other%tol_rel > M_ZERO)
     end do
 
     POP_SUB(criteria_factory_init)

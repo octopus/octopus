@@ -52,17 +52,17 @@ contains
   !! corresponding type and then calls the init routine which is a type-bound
   !! procedure of the corresponding type. With this design, also derived
   !! classes can use the init routine of the parent class.
-  function eigenval_criteria_constructor(tol, absolute) result(crit)
-    FLOAT,                       intent(in) :: tol
-    logical,                     intent(in) :: absolute
+  function eigenval_criteria_constructor(tol_abs, tol_rel) result(crit)
+    FLOAT,                       intent(in) :: tol_abs
+    FLOAT,                       intent(in) :: tol_rel
     class(eigenval_criteria_t),  pointer :: crit
 
     PUSH_SUB(eigenval_criteria_constructor)
 
     SAFE_ALLOCATE(crit)
 
-    crit%tol = tol
-    crit%absolute = absolute
+    crit%tol_abs = tol_abs
+    crit%tol_rel = tol_rel
     crit%quantity = SUMEIGENVAL
 
     POP_SUB(eigenval_criteria_constructor)
@@ -75,13 +75,12 @@ contains
 
     PUSH_SUB(criteria_write_info)
 
-    if(this%absolute) then
-      write(iunit, '(6x, a, es15.8,a,es15.8,4a)') 'abs_evsum = ', this%val, &
-            ' (', units_from_atomic(units_out%energy, this%tol), ')', &
-            ' [',  trim(units_abbrev(units_out%energy)), ']'
-    else
-      write(iunit, '(6x, a, es15.8,a,es15.8,a)') 'rel_evsum = ', this%val, ' (', this%tol, ')'
-    end if
+    write(iunit, '(6x, a, es15.8,a,es15.8,4a)') 'abs_evsum = ', &
+                units_from_atomic(units_out%energy, this%val_abs), &
+          ' (', units_from_atomic(units_out%energy, this%tol_abs), ')', &
+          ' [',  trim(units_abbrev(units_out%energy)), ']'
+
+    write(iunit, '(6x, a, es15.8,a,es15.8,a)') 'rel_evsum = ', this%val_rel, ' (', this%tol_rel, ')'
      
     POP_SUB(criteria_write_info)
   end subroutine criteria_write_info

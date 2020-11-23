@@ -36,12 +36,13 @@ module convergence_criteria_oct_m
     private
 
     integer, public :: type    !< Type of the quantity
-    FLOAT,   public :: tol     !< Tolerance of the convergence criteria
-    logical, public :: absolute
+    FLOAT,   public :: tol_abs !< Tolerance of the convergence criteria
+    FLOAT,   public :: tol_rel !< Tolerance of the convergence criteria
     
     integer, public :: quantity  !< The quantity that needs to be converged
   
-    FLOAT, public   :: val    !< Current value of the criteria
+    FLOAT, public   :: val_abs    !< Current value of the criteria
+    FLOAT, public   :: val_rel  
     FLOAT, pointer  :: value_diff
     FLOAT, pointer  :: norm
 
@@ -111,23 +112,26 @@ contains
 
     PUSH_SUB(convergence_criteria_is_converged)
    
-    if(this%tol <= M_ZERO) then
+    this%val_abs = abs(this%value_diff)
+
+    ASSERT(associated(this%norm))
+    if(abs(this%norm) <= M_EPSILON) then
+      this%val_rel = M_HUGE
+    else
+      this%val_rel = this%val_abs / abs(this%norm)
+    end if
+
+    if(this%tol_abs <= M_ZERO) then
       convergence_criteria_is_converged = .true.
-      POP_SUB(convergence_criteria_is_converged)
-      return
+    else
+      convergence_criteria_is_converged = this%val_abs < this%tol_abs
+    end if
+    
+    if(this%tol_rel > M_ZERO) then
+      convergence_criteria_is_converged = convergence_criteria_is_converged .and. &
+                                            this%val_rel < this%tol_rel
     end if
 
-    this%val = abs(this%value_diff)
-    if(.not. this%absolute) then
-      ASSERT(associated(this%norm))
-      if(abs(this%norm) <= M_EPSILON) then
-        this%val = M_HUGE
-      else
-        this%val = this%val / abs(this%norm)
-      end if
-    end if
-
-    convergence_criteria_is_converged = this%val < this%tol
 
     POP_SUB(convergence_criteria_is_converged)
   end function convergence_criteria_is_converged
