@@ -702,6 +702,9 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
   SAFE_DEALLOCATE_A(integrand_xc)
   SAFE_DEALLOCATE_A(X(pot))
   SAFE_DEALLOCATE_A(buffer)
+  SAFE_DEALLOCATE_A(bufferx)
+  SAFE_DEALLOCATE_A(buffery)
+  SAFE_DEALLOCATE_A(bufferz)
   SAFE_DEALLOCATE_A(deltav)
 
   if(mpi_grp_is_root(mpi_world)) then
@@ -787,6 +790,7 @@ subroutine X(casida_get_matrix)(cas, hm, st, ks, mesh, matrix, xc, restart_file,
   end if
 
   SAFE_DEALLOCATE_A(is_saved)
+  SAFE_DEALLOCATE_A(is_calcd)
   if(cas%distributed_matrix) then
     SAFE_DEALLOCATE_A(rank_of_element)
   end if
