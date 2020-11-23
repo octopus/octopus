@@ -1637,6 +1637,8 @@ subroutine X(write_distributed_matrix)(cas, matrix, filename)
   integer :: outfile, mpistatus, ierr
 #endif
 
+  PUSH_SUB(X(write_distributed_matrix))
+
   if(.not. cas%distributed_matrix) then
     message(1) = "Cannot write distributed matrix if not using ScaLAPACK layout"
     call messages_info(1)
@@ -1664,6 +1666,7 @@ subroutine X(write_distributed_matrix)(cas, matrix, filename)
   call MPI_File_write_all(outfile, matrix, cas%nb_rows*cas%nb_cols, R_MPITYPE, mpistatus, ierr)
   call MPI_File_close(outfile, ierr)
 #endif
+  POP_SUB(X(write_distributed_matrix))
 end subroutine X(write_distributed_matrix)
 
 ! communication function used for sums over the casida matrix
@@ -1674,6 +1677,7 @@ R_TYPE function X(allreduce_sum)(cas, variable) result(output)
   R_TYPE :: buffer
   integer :: ierr
 #endif
+  PUSH_SUB(X(allreduce_sum))
   if(.not. cas%distributed_matrix) then
     output = variable
   else
@@ -1683,6 +1687,7 @@ R_TYPE function X(allreduce_sum)(cas, variable) result(output)
     output = buffer
 #endif
   end if
+  POP_SUB(X(allreduce_sum))
 end function X(allreduce_sum)
 
 
