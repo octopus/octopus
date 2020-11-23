@@ -1083,7 +1083,7 @@ contains
     ! Note: setting the global standard output to /dev/null will also suppress run-time error messages
     !open(newunit=devNull, file="/dev/null", action="write")
     !call TDftbPlus_init(dftbp, outputUnit=devNull)
-    call TDftbPlus_init(dftbp)
+    call TDftbPlus_init(dftbp, mpicomm=mpi_world%comm)
 
     call dftbp%getEmptyInput(input)
     call input%getRootNode(pRoot)
