@@ -1037,7 +1037,6 @@ contains
   subroutine test_dftbplus(namespace)
     type(namespace_t),       intent(in) :: namespace
 
-#ifdef HAVE_DFTBPLUS
     integer, parameter :: nAtom = 3
     integer, parameter :: nExtChrg = 2
     character(len=MAX_PATH_LEN) :: slako_dir
@@ -1058,6 +1057,7 @@ contains
       CNST( 0.43463718188810203E+01), CNST(-0.58581533211004997E+01), CNST(0.26456176288841000E+01), CNST(-1.9)  &
       ], [4, nExtChrg])
 
+#ifdef HAVE_DFTBPLUS
     FLOAT :: merminEnergy
     FLOAT :: coords(3, nAtom), gradients(3, nAtom), extPot(nAtom), extPotGrad(3, nAtom)
     FLOAT :: atomCharges(nAtom), extChargeGrads(3, nExtChrg)
@@ -1066,7 +1066,7 @@ contains
     type(TDftbPlusInput) :: input
     type(fnode), pointer :: pRoot, pGeo, pHam, pDftb, pMaxAng, pSlakos, pType2Files, pAnalysis
     type(fnode), pointer :: pParserOpts
-
+#endif
 
     PUSH_SUB(test_dftbplus)
 
@@ -1079,6 +1079,7 @@ contains
     !%End
     call parse_variable(namespace, 'SlakoDir', './', slako_dir)
 
+#ifdef HAVE_DFTBPLUS
     ! Note: setting the global standard output to /dev/null will also suppress run-time error messages
     !open(newunit=devNull, file="/dev/null", action="write")
     !call TDftbPlus_init(dftbp, outputUnit=devNull)
@@ -1150,10 +1151,14 @@ contains
     call messages_info(7)
 
     call TDftbPlus_destruct(dftbp)
+#else
+    message(1) = "The DFTB+ API cannot be tested, as Octopus was compiled without DFTB+ support."
+    call messages_fatal(1)
+#endif
 
     POP_SUB(test_dftbplus)
   contains
-
+#ifdef HAVE_DFTBPLUS
     !> Calculate the potential and its first derivatives at DFTB atoms due to external electrostatic
     !> charges (perhaps from a surrounding MM region)
     subroutine getPointChargePotential(coordsMm, chargesMm, coordsQm, extPot, extPotGrad)
