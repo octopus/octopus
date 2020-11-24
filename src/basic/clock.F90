@@ -28,8 +28,6 @@ module clock_oct_m
 
   private
 
-  integer, parameter :: MAX_LABEL_LEN = 128
-
   integer, parameter :: CLOCK_TICK = 1
 
   public ::                &
@@ -41,8 +39,6 @@ module clock_oct_m
     integer :: tick        !< internal clock counter which is incremented by one when the clock is advanced
     FLOAT   :: time_step   !< physical simulation time increment which corresponds to a single clock tick
     FLOAT   :: time_       !< physical simulation time
-    character(len=MAX_LABEL_LEN) :: label !< string used for printing and labelling the clock
-
   contains
     procedure :: print => clock_print                 !< print internal state of the clock
     procedure :: print_str => clock_print_str         !< print internal state of the clock to a string
@@ -81,20 +77,11 @@ contains
   !> Initialize the clock with a given label and associated physical time step.
   !! The internal clock counter starts at zero or if the optional argument initial_tick is given
   !! at the value of initial_tick.
-  type(clock_t) function clock_init(label, time_step, initial_tick) result(this)
-    character(len=*),  intent(in) :: label
+  type(clock_t) function clock_init(time_step, initial_tick) result(this)
     FLOAT,   optional, intent(in) :: time_step
     integer, optional, intent(in) :: initial_tick
 
     PUSH_SUB(clock_init)
-
-    if (len(label) <= MAX_LABEL_LEN) then
-      this%label = label
-    else
-      write(message(1),'(a)') '*** Fatal Error (description follows)'
-      write(message(2),'(a,i4,a)') 'Clock labels are limited to ', MAX_LABEL_LEN, ' characters'
-      call messages_fatal(2)
-    end if
 
     this%tick = optional_default(initial_tick, 0)
     this%time_step = optional_default(time_step, M_ZERO)
@@ -114,10 +101,8 @@ contains
 
     PUSH_SUB(clock_print_str)
 
-    write(clock_string,'(A7,A12,A,F16.6,A,I8.8,A)') &
+    write(clock_string,'(A7,F16.6,A,I8.8,A)') &
         '[Clock:',                   &
-        trim(this%label),            &
-        '|',                         &
         this%time_,                  &
         '|',                         &
         this%tick,                   &
@@ -183,7 +168,6 @@ contains
     this%tick = clock_in%tick
     this%time_step = clock_in%time_step
     this%time_ = clock_in%time_
-    this%label = clock_in%label
 
     POP_SUB(clock_copy)
   end subroutine clock_copy
