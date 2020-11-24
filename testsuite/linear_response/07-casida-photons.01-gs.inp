@@ -3,6 +3,8 @@ CalculationMode = gs
 ExperimentalFeatures = yes
 DerivativesOrder = 1
 
+SymmetriesCompute = false
+
 BoxShape = parallelepiped
 lsize = 5
 spacing = 5
