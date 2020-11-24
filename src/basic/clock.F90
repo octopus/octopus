@@ -40,6 +40,7 @@ module clock_oct_m
     private
     integer :: tick        !< internal clock counter which is incremented by one when the clock is advanced
     FLOAT   :: time_step   !< physical simulation time increment which corresponds to a single clock tick
+    FLOAT   :: time_       !< physical simulation time
     character(len=MAX_LABEL_LEN) :: label !< string used for printing and labelling the clock
 
   contains
@@ -97,6 +98,11 @@ contains
 
     this%tick = optional_default(initial_tick, 0)
     this%time_step = time_step
+    if (time_step <= M_ZERO) then
+      this%time_ = M_ZERO
+    else
+      this%time_ = this%tick*this%time_step
+    end if
 
     POP_SUB(clock_init)
   end function clock_init
@@ -112,7 +118,7 @@ contains
         '[Clock:',                   &
         trim(this%label),            &
         '|',                         &
-        this%time_step*this%tick,    &
+        this%time_,                  &
         '|',                         &
         this%tick,                   &
         ']'
@@ -133,22 +139,36 @@ contains
   end subroutine clock_print
 
   ! ---------------------------------------------------------
-  subroutine clock_set_time(this, new_time)
+  subroutine clock_set_time(this, new)
     class(clock_t), intent(inout) :: this
-    class(clock_t), intent(in)    :: new_time
+    class(clock_t), intent(in)    :: new
 
+    logical :: commensurable
     integer :: this_granularity, new_granularity
 
     PUSH_SUB(clock_set_time)
 
-    call clock_commensurability(this, new_time, this_granularity, new_granularity)
+    if (this%time_step > M_ZERO .and. new%time_step > M_ZERO) then
+      if (this%time_step >= new%time_step) then
+        commensurable = ceiling(this%time_step/new%time_step) == floor(this%time_step/new%time_step)
+        this_granularity = ceiling(this%time_step/new%time_step)
+        new_granularity = 1
+      else
+        commensurable = ceiling(new%time_step/this%time_step) == floor(new%time_step/this%time_step)
+        this_granularity = 1
+        new_granularity = ceiling(new%time_step/this%time_step)
+      end if
 
-    if (mod(new_time%tick * new_granularity, this_granularity) /= 0) then
-      message(1) = 'Cannot set clock new time, as it is not commensurable with clock time-step.'
-      call messages_fatal(1)
+      if (.not. commensurable) then
+        message(1) = 'Cannot set clock new time, as it is not commensurable with clock time-step.'
+        call messages_fatal(1)
+      end if
+
+      this%tick = (new%tick * new_granularity) / this_granularity
+      this%time_ = this%tick*this%time_step
+    else
+      this%time_ = new%time_
     end if
-
-    this%tick = (new_time%tick * new_granularity) / this_granularity
 
     POP_SUB(clock_set_time)
   end subroutine clock_set_time
@@ -162,6 +182,7 @@ contains
 
     this%tick = clock_in%tick
     this%time_step = clock_in%time_step
+    this%time_ = clock_in%time_
     this%label = clock_in%label
 
     POP_SUB(clock_copy)
@@ -176,6 +197,7 @@ contains
 
     new_clock = clock
     new_clock%tick = new_clock%tick + tick
+    new_clock%time_ = new_clock%tick*new_clock%time_step
 
     POP_SUB(clock_add_tick)
   end function clock_add_tick
@@ -189,6 +211,7 @@ contains
 
     new_clock = clock
     new_clock%tick = new_clock%tick - tick
+    new_clock%time_ = new_clock%tick*new_clock%time_step
 
     POP_SUB(clock_subtract_tick)
   end function clock_subtract_tick
@@ -210,7 +233,7 @@ contains
 
     PUSH_SUB(clock_time)
 
-    clock_time = this%tick * this%time_step
+    clock_time = this%time_
 
     POP_SUB(clock_time)
   end function clock_time
@@ -222,6 +245,7 @@ contains
     PUSH_SUB(clock_reset)
 
     this%tick = 0
+    this%time_ = M_ZERO
 
     POP_SUB(clock_reset)
   end subroutine clock_reset
@@ -230,13 +254,9 @@ contains
   logical function clock_is_earlier(clock_a, clock_b) result(is_earlier)
     class(clock_t), intent(in) :: clock_a, clock_b
 
-    integer :: granularity_a, granularity_b
-
     PUSH_SUB(clock_is_earlier)
 
-    call clock_commensurability(clock_a, clock_b, granularity_a, granularity_b)
-
-    is_earlier = clock_a%tick * granularity_a < clock_b%tick * granularity_b
+    is_earlier = clock_a%time_ < clock_b%time_
 
     POP_SUB(clock_is_earlier)
   end function clock_is_earlier
@@ -245,13 +265,9 @@ contains
   logical function clock_is_later(clock_a, clock_b) result(is_later)
     class(clock_t), intent(in) :: clock_a, clock_b
 
-    integer :: granularity_a, granularity_b
-
     PUSH_SUB(clock_is_later)
 
-    call clock_commensurability(clock_a, clock_b, granularity_a, granularity_b)
-
-    is_later = clock_a%tick * granularity_a > clock_b%tick * granularity_b
+    is_later = clock_a%time_ > clock_b%time_
 
     POP_SUB(clock_is_later)
   end function clock_is_later
@@ -260,13 +276,9 @@ contains
   logical function clock_is_equal_or_earlier(clock_a, clock_b) result(is_earlier)
     class(clock_t), intent(in) :: clock_a, clock_b
 
-    integer :: granularity_a, granularity_b
-
     PUSH_SUB(clock_is_equal_or_earlier)
 
-    call clock_commensurability(clock_a, clock_b, granularity_a, granularity_b)
-
-    is_earlier = clock_a%tick * granularity_a <= clock_b%tick * granularity_b
+    is_earlier = clock_a%time_ <= clock_b%time_
 
     POP_SUB(clock_is_equal_or_earlier)
   end function clock_is_equal_or_earlier
@@ -275,13 +287,9 @@ contains
   logical function clock_is_equal_or_later(clock_a, clock_b) result(is_later)
     class(clock_t), intent(in) :: clock_a, clock_b
 
-    integer :: granularity_a, granularity_b
-
     PUSH_SUB(clock_is_equal_or_later)
 
-    call clock_commensurability(clock_a, clock_b, granularity_a, granularity_b)
-
-    is_later = clock_a%tick * granularity_a >= clock_b%tick * granularity_b
+    is_later = clock_a%time_ >= clock_b%time_
 
     POP_SUB(clock_is_equal_or_later)
   end function clock_is_equal_or_later
@@ -290,13 +298,9 @@ contains
   logical function clock_is_equal(clock_a, clock_b) result(are_equal)
     class(clock_t), intent(in) :: clock_a, clock_b
 
-    integer :: granularity_a, granularity_b
-
     PUSH_SUB(clock_is_equal)
 
-    call clock_commensurability(clock_a, clock_b, granularity_a, granularity_b)
-
-    are_equal = clock_a%tick * granularity_a == clock_b%tick * granularity_b
+    are_equal = clock_a%time_ == clock_b%time_
 
     POP_SUB(clock_is_equal)
   end function clock_is_equal
@@ -305,46 +309,12 @@ contains
   logical function clock_is_different(clock_a, clock_b) result(are_diff)
     class(clock_t), intent(in) :: clock_a, clock_b
 
-    integer :: granularity_a, granularity_b
-
     PUSH_SUB(clock_is_different)
 
-    call clock_commensurability(clock_a, clock_b, granularity_a, granularity_b)
-
-    are_diff = clock_a%tick * granularity_a /= clock_b%tick * granularity_b
+    are_diff = clock_a%time_ /= clock_b%time_
 
     POP_SUB(clock_is_different)
   end function clock_is_different
-
-  ! ---------------------------------------------------------
-  subroutine clock_commensurability(clock_a, clock_b, granularity_a, granularity_b)
-    class(clock_t), intent(in)  :: clock_a
-    class(clock_t), intent(in)  :: clock_b
-    integer,        intent(out) :: granularity_a
-    integer,        intent(out) :: granularity_b
-
-    logical :: commensurable
-
-    PUSH_SUB(clock_commensurability)
-
-    if (clock_a%time_step >= clock_b%time_step) then
-      commensurable = ceiling(clock_a%time_step/clock_b%time_step) == floor(clock_a%time_step/clock_b%time_step)
-      granularity_a = ceiling(clock_a%time_step/clock_b%time_step)
-      granularity_b = 1
-    else
-      commensurable = ceiling(clock_b%time_step/clock_a%time_step) == floor(clock_b%time_step/clock_a%time_step)
-      granularity_a = 1
-      granularity_b = ceiling(clock_b%time_step/clock_a%time_step)
-    end if
-
-    if (.not. commensurable) then
-      message(1) = 'Timesteps of the clocks are not commensurable.'
-      message(2) = 'Please adapt the time steps to make them compatible.'
-      call messages_fatal(2)
-    end if
-
-    POP_SUB(clock_commensurability)
-  end subroutine clock_commensurability
 
 end module clock_oct_m
 
