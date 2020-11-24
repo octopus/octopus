@@ -36,6 +36,7 @@ module density_criteria_oct_m
 
   contains
     procedure :: write_info   => criteria_write_info
+    final     :: density_criteria_end
   end type density_criteria_t
 
   interface density_criteria_t
@@ -78,6 +79,18 @@ contains
      
     POP_SUB(criteria_write_info)
   end subroutine criteria_write_info
+
+  ! ---------------------------------------------------------
+  subroutine density_criteria_end(this)
+    type(density_criteria_t),   intent(inout) :: this
+
+    PUSH_SUB(density_criteria_end)
+
+    call convergence_criteria_end(this)
+
+    POP_SUB(density_criteria_end)
+  end subroutine density_criteria_end
+
 
 end module density_criteria_oct_m
 

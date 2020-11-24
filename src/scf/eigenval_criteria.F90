@@ -38,6 +38,7 @@ module eigenval_criteria_oct_m
 
   contains
     procedure :: write_info   => criteria_write_info
+    final     :: eigenval_criteria_end
   end type eigenval_criteria_t
 
   interface eigenval_criteria_t
@@ -84,6 +85,18 @@ contains
      
     POP_SUB(criteria_write_info)
   end subroutine criteria_write_info
+
+  ! ---------------------------------------------------------
+  subroutine eigenval_criteria_end(this)
+    type(eigenval_criteria_t),   intent(inout) :: this
+
+    PUSH_SUB(eigenval_criteria_end)
+
+    call convergence_criteria_end(this)
+
+    POP_SUB(eigenval_criteria_end)
+  end subroutine eigenval_criteria_end
+
 
 end module eigenval_criteria_oct_m
 

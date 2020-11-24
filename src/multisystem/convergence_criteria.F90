@@ -30,7 +30,8 @@ module convergence_criteria_oct_m
   public ::                  &
     convergence_criteria_t,  &
     criteria_list_t,         &
-    criteria_iterator_t
+    criteria_iterator_t,     &
+    convergence_criteria_end
 
   type, abstract :: convergence_criteria_t
     private
@@ -150,6 +151,19 @@ contains
   
     POP_SUB(criteria_set_quantity_pointers)
   end subroutine criteria_set_quantity_pointers
+
+  ! ---------------------------------------------------------
+  subroutine convergence_criteria_end(this)
+    class(convergence_criteria_t),  intent(inout) :: this
+
+    PUSH_SUB(convergence_criteria_end)
+
+    nullify(this%value_diff)
+    nullify(this%norm)
+
+    POP_SUB(convergence_criteria_end)
+
+  end subroutine convergence_criteria_end
 
 end module convergence_criteria_oct_m
 

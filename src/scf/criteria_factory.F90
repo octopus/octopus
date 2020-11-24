@@ -128,7 +128,6 @@ contains
     !% fulfilled for two consecutive iterations.
     !%End
     call parse_variable(namespace, 'ConvAbsEv', M_ZERO, conv_abs_ev, unit = units_inp%energy)
-    call list%add(crit)
 
     !%Variable ConvRelEv
     !%Type float

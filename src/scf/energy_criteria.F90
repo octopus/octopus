@@ -38,6 +38,7 @@ module energy_criteria_oct_m
 
   contains
     procedure :: write_info   => criteria_write_info
+    final     :: energy_criteria_end 
   end type energy_criteria_t
 
   interface energy_criteria_t
@@ -83,6 +84,18 @@ contains
      
     POP_SUB(criteria_write_info)
   end subroutine criteria_write_info
+
+
+  ! ---------------------------------------------------------
+  subroutine energy_criteria_end(this) 
+    type(energy_criteria_t),   intent(inout) :: this
+
+    PUSH_SUB(energy_criteria_end)
+
+    call convergence_criteria_end(this)
+
+    POP_SUB(energy_criteria_end)
+  end subroutine energy_criteria_end
 
 end module energy_criteria_oct_m
 
