@@ -1,16 +1,51 @@
+# Copyright (C) 2020 Martin Lueders 
 #
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2, or (at your option)
+# any later version.
 #
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+# 02110-1301, USA.
+#
+
+# This Python3 module provides the functions to parse and manipulate the 
+# variable descriptions in the Octopus source files. 
+
 
 import sys
 import glob
 import json
 import re
+import textwrap
 
 
 def cleanhtml(raw_html):
     """This function removes HTML tags from the string."""
-    cleanr = re.compile('<.*?>')
-    cleantext = re.sub(cleanr, '', raw_html)
+    cleantext = raw_html
+
+    cleantext = re.sub(re.compile('</*i>'),'_', cleantext)
+    cleantext = re.sub(re.compile('</*b>'),'*', cleantext)
+    cleantext = re.sub(re.compile('</*math>'),'', cleantext)
+    cleantext = re.sub(re.compile('</*ul>'),'', cleantext)
+    cleantext = re.sub(re.compile('<li>'),' *) ', cleantext)
+    cleantext = re.sub(re.compile('</li>'),'', cleantext)
+    cleantext = re.sub(re.compile('&nbsp;'),'~~', cleantext)
+    cleantext = re.sub(re.compile('<hr/*>'),'------------------------------------------\n',cleantext)
+
+    # Check the following!
+    cleantext = re.sub(re.compile('<sup>'), '^', cleantext)
+    cleantext = re.sub(re.compile('</sup>'), '', cleantext)
+    cleantext = re.sub(re.compile('<br/*>'),'\n ', cleantext)
+    cleantext = re.sub(re.compile('</*tt>'),'', cleantext)
+
     return cleantext
 
 def leavehtml(raw_html):
@@ -35,6 +70,49 @@ def bit(x):
 def is_number(s):
     """Returns True is string is a number. """
     return s.replace('.','',1).isdigit()
+
+def pad_line(s, width=70):
+
+    if type(s) is str:
+        words = s.split()
+        i=0
+        while sum(map(lambda x: 1+len(x), words))-1<width:
+            words[i]+=' '
+            i += 1
+            if i>len(words)-1:
+                i=0
+        return ' '.join(words)
+    else:
+        print('pad() requires a string as argument')
+        raise TypeError
+
+
+def format_description(desc, filter=lambda x:x, width=70, indent=''):
+
+    # is a paragraph starts with '%', we must not apply wrap.
+
+    paragraphs=[]
+    new_line = []
+
+    for line in map(filter,desc):
+        if len(line.strip())>0:
+            new_line.append(line)
+        else:
+            paragraphs.append( ' '.join(new_line))
+            new_line.clear()
+    if len(new_line)>0:
+        paragraphs.append( ' '.join(new_line))
+
+    new_paragraphs = list(map(lambda x: textwrap.wrap(x, width) if '%' not in x.strip() else [x], paragraphs))
+
+    result = []
+    for para in new_paragraphs:
+        for i in range(0,len(para)-1):
+            para[i] = pad_line(para[i], width)
+        result.append(indent+('\n'+indent).join(para).replace('~~',' '))
+
+    return result
+
 
 
 class Variables:
@@ -69,6 +147,8 @@ class Variables:
 
         if json:
             self.import_json(variable_defs_filename=json)
+            if verbose: 
+                print('varinfo.json read with',self.length(),'entries.')
 
 
     def __getitem__(self, key):
@@ -161,7 +241,7 @@ class Variables:
                         if "!%section" in line.lower():
                             parsing_mode = 0
                             if len(words)>1:
-                                var_section = words[1]
+                                var_section = ' '.join(words[1:])
                             else:
                                 var_section = ""
         
@@ -169,6 +249,7 @@ class Variables:
                             if len(words)>1:
                                 tmp = dict()
                                 tmp['Name'] = words[1]
+                                tmp['Description'] = []
                                 parsing_mode = 1
                                 if len(words) > 2:
                                     tmp['Value'] = words[2]
@@ -183,10 +264,16 @@ class Variables:
         
                         if "!% " in line.lower():
                             if parsing_mode is 1:
-                                var_options[-1]['Description'] = line.replace('!%','').strip()
+                                var_options[-1]['Description'].append(line.replace('!%','').strip())
                             if parsing_mode is 2:
                                 var_description.append(line.replace('!%','').strip())
         
+                        if "!%" == line.strip():
+                            if parsing_mode is 1:
+                                var_options[-1]['Description'].append(' ')
+                            if parsing_mode is 2:
+                                var_description.append(' ')
+
                         if "!%end" in line.lower():
                             parsing_mode = 0
                             keys_in_file.append(var_name.lower())
@@ -243,9 +330,53 @@ class Variables:
 
     def import_json(self, variable_defs_filename):
 
-        varinfo_json = open(variable_defs_filename,'w')
-        self.variables = json.load(varinfo_json)
+        try:
+            varinfo_json = open(variable_defs_filename,'r')
+        except FileNotFoundError:
+            print(variable_defs_filename+' not found')
+
+        try:
+            self.variables = json.load(varinfo_json)
+        except RuntimeError:
+            print('JSON could not be parsed.')
+
         varinfo_json.close()
+
+    def write_one_variable_info(self, key, file=sys.stdout, filterHTML=True):
+
+        if filterHTML:
+            filter = cleanhtml
+        else:
+            filter = leavehtml
+
+        variable = self.variables[key]
+        print('Variable '+variable['Name'], file=file)
+        print('Type '+variable['Type'], file=file)
+        if( variable['Default']):
+            print('Default '+' '.join(variable['Default']), file=file)
+        print('Section '+variable['Section'], file=file)
+        print('Description', file=file)
+        if filterHTML:
+            desc = format_description((variable['Description']), filter=cleanhtml, width=75, indent=' ')
+            print('\n\n'.join(desc), file=file)
+        else:
+            for desc in variable['Description']:
+                print(' '+ desc, file=file)
+        if 'Options' in variable:
+            max_length = max([0]+list(map(lambda opt: len(opt['Name']), variable['Options'])))
+        for option in variable['Options']:
+            value = option.get('Value')
+            print('Option '+option['Name'] + (max_length - len(option['Name']))*' ', value, file=file )
+            # print( type( option.get('Description')))
+            if filterHTML:
+                if 'Description' in option:
+                    if len(option.get('Description')) > 0:
+                        desc = format_description((option.get('Description')), filter=cleanhtml, width=75, indent=' ')
+                        print('\n\n'.join(desc), file=file)
+            else:
+                if 'Description' in option:
+                    if len(option.get('Description')) > 0:
+                        print(' ' + '\n '.join(option.get('Description')) , file=file)
 
 
     def write_varinfo(self, filename='-', filterHTML=True):
@@ -257,10 +388,6 @@ class Variables:
                      in order to filter the HTML tags, pass file=cleanhtml.
         """
 
-        if filterHTML:
-            filter = cleanhtml
-        else:
-            filter = leavehtml
 
         if filename=='-':
             file = sys.stdout
@@ -268,24 +395,9 @@ class Variables:
             file = open(filename, 'w')
 
         for key in self.variables.keys():
-        
-            variable = self.variables[key]
-            print('Variable '+variable['Name'], file=file)
-            print('Type '+variable['Type'], file=file)
-            if( variable['Default']):
-                print('Default '+' '.join(variable['Default']), file=file)
-            print('Section '+variable['Section'], file=file)
-            print('Description', file=file)
-            for desc in variable['Description']:
-                print(' '+ filter(desc), file=file)
-            for option in variable['Options']:
-                value = option.get('Value')
-                print('Option '+option['Name'] + ' ', value, file=file )
-                # print( type( option.get('Description')))
-                if 'Description' in option:
-                    print(' ', filter(option.get('Description')) , file=file)
+            self.write_one_variable_info(key, file=file, filterHTML=filterHTML)        
             print('END\n', file=file)
-    
+
         if file != sys.stdout:
             file.close()
 

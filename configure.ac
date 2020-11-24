@@ -445,6 +445,7 @@ AC_CONFIG_FILES([Makefile
 AC_CONFIG_FILES([testsuite/oct-run_testsuite.sh], [chmod +x testsuite/oct-run_testsuite.sh])
 AC_CONFIG_FILES([testsuite/performance/oct-run_performance_testsuite.sh], [chmod +x testsuite/performance/oct-run_performance_testsuite.sh])
 AC_CONFIG_FILES([doc/html/varsRightFrame.html])
+AC_CONFIG_FILES([build/annotate_input.py])
 
 AC_CONFIG_SUBDIRS([external_libs/spglib-1.9.9])
 

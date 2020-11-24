@@ -843,9 +843,11 @@ utils_f_srcs = \
 
 include/options.h: $(all_f_srcs) $(octopus_f_srcs) $(utils_f_srcs) $(noinst_HEADERS)
 	$(top_srcdir)/build/parse_variables.py -s $(top_srcdir) -b $(top_builddir)
+##	$(top_srcdir)/build/mk_varinfo.pl -s $(top_srcdir) -b $(top_builddir)
 
 include/defaults.h: $(all_f_srcs) $(octopus_f_srcs) $(utils_f_srcs) $(noinst_HEADERS)
 	$(top_srcdir)/build/parse_variables.py -s $(top_srcdir) -b $(top_builddir)
+##	$(top_srcdir)/build/mk_varinfo.pl -s $(top_srcdir) -b $(top_builddir)
 
 oct_wannier90_SOURCES = utils/wannier90_interface.F90 
 oct_wannier90_LINK = $(FCLINK)

@@ -26,18 +26,23 @@ dist_dta1_DATA = logo                 \
 	gequad.data                   \
 	marching_cubes_edges.data     \
 	marching_cubes_triangles.data \
-        gdlib.png
+	gdlib.png
 
 dta2dir = $(pkgdatadir)
-dist_dta2_DATA = variables varinfo
+dist_dta2_DATA = variables varinfo varinfo.json
 
-CLEANFILES = variables varinfo varinfo_orig
+CLEANFILES = variables varinfo varinfo_orig varinfo.json
+
+varinfo.json:
+	$(top_srcdir)/build/parse_variables.py -s $(top_srcdir) -b $(top_builddir)
 
 varinfo:
-	$(top_srcdir)/build/mk_varinfo.pl -s $(top_srcdir) -b $(top_builddir)
+	$(top_srcdir)/build/parse_variables.py -s $(top_srcdir) -b $(top_builddir)
+##	$(top_srcdir)/build/mk_varinfo.pl -s $(top_srcdir) -b $(top_builddir)
 
 variables:
-	$(top_srcdir)/build/mk_varinfo.pl -s $(top_srcdir) -b $(top_builddir)
+	$(top_srcdir)/build/parse_variables.py -s $(top_srcdir) -b $(top_builddir)
+##	$(top_srcdir)/build/mk_varinfo.pl -s $(top_srcdir) -b $(top_builddir)
 
 check:
 	@for f in $(dist_dta1_DATA) $(dist_dta2_DATA); do \

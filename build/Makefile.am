@@ -18,10 +18,17 @@
 ## 02110-1301, USA.
 ##
 
+bin_SCRIPTS = \
+	annotate_input.py
+
+dta1dir = $(pkgdatadir)
+dist_dta1_DATA = variables.py
+
 EXTRA_DIST =                   \
 	mk_varinfo.pl          \
-	variables.py           \
 	parse_variables.py     \
+	variables.py           \
+	annotate_input.py      \
 	mk_functionals_list.pl \
 	mk_kfunctionals_list.pl \
 	preprocess.pl          \
