@@ -82,9 +82,9 @@ contains
   !! The internal clock counter starts at zero or if the optional argument initial_tick is given
   !! at the value of initial_tick.
   type(clock_t) function clock_init(label, time_step, initial_tick) result(this)
-    character(len=*), intent(in) :: label
-    FLOAT,            intent(in) :: time_step
-    integer, optional            :: initial_tick
+    character(len=*),  intent(in) :: label
+    FLOAT,   optional, intent(in) :: time_step
+    integer, optional, intent(in) :: initial_tick
 
     PUSH_SUB(clock_init)
 
@@ -97,8 +97,8 @@ contains
     end if
 
     this%tick = optional_default(initial_tick, 0)
-    this%time_step = time_step
-    if (time_step <= M_ZERO) then
+    this%time_step = optional_default(time_step, M_ZERO)
+    if (this%time_step <= M_ZERO) then
       this%time_ = M_ZERO
     else
       this%time_ = this%tick*this%time_step

@@ -649,10 +649,10 @@ contains
     call this%prop%rewind()
 
     ! Initialize propagator clock
-    this%prop%clock = clock_t(this%namespace%get(), this%prop%dt/this%prop%algo_steps)
+    this%prop%clock = clock_t(this%namespace%get(), time_step=this%prop%dt/this%prop%algo_steps)
 
     ! Initialize system clock
-    this%clock = clock_t(this%namespace%get(), this%prop%dt)
+    this%clock = clock_t(this%namespace%get(), time_step=this%prop%dt)
 
     ! Interaction clocks
     call iter%start(this%interactions)
