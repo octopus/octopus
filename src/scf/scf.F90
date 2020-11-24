@@ -259,7 +259,7 @@ contains
     !% If this criterion is used, the SCF loop will only stop once it is
     !% fulfilled for two consecutive iterations.
     !%End
-    call parse_variable(namespace, 'ConvRelEv', M_ZERO, scf%conv_rel_ev, unit = units_inp%energy)
+    call parse_variable(namespace, 'ConvRelEv', M_ZERO, scf%conv_rel_ev)
 
     call messages_obsolete_variable(namespace, 'ConvAbsForce', 'ConvForce')
     call messages_obsolete_variable(namespace, 'ConvRelForce', 'ConvForce')
@@ -1278,7 +1278,8 @@ contains
             ' (', scf%conv_abs_dens, ')'
           write(iunit, '(6x, a, es15.8,a,es15.8,a)') 'rel_dens = ', scf%rel_dens, &
             ' (', scf%conv_rel_dens, ')'
-          write(iunit, '(6x, a, es15.8,a,es15.8,4a)') 'abs_ev = ', scf%abs_ev, &
+          write(iunit, '(6x, a, es15.8,a,es15.8,4a)') 'abs_ev = ', &
+                  units_from_atomic(units_out%energy, scf%abs_ev), &
             ' (', units_from_atomic(units_out%energy, scf%conv_abs_ev), ')', &
             ' [',  trim(units_abbrev(units_out%energy)), ']'
           write(iunit, '(6x, a, es15.8,a,es15.8,a)') 'rel_ev = ', scf%rel_ev, &
@@ -1460,7 +1461,7 @@ contains
         write(iunit, '(es13.5)', advance = 'no') scf%abs_dens
         write(iunit, '(es13.5)', advance = 'no') scf%rel_dens
         write(iunit, '(es13.5)', advance = 'no') units_from_atomic(units_out%energy, scf%abs_ev)
-        write(iunit, '(es13.5)', advance = 'no') units_from_atomic(units_out%energy, scf%rel_ev)
+        write(iunit, '(es13.5)', advance = 'no') scf%rel_ev
         if (scf%conv_abs_force > M_ZERO) then
           write(iunit, '(es13.5)', advance = 'no') units_from_atomic(units_out%force, scf%abs_force)
         end if
