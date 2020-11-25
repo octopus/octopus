@@ -38,11 +38,9 @@ varinfo.json:
 
 varinfo:
 	$(top_srcdir)/build/parse_variables.py -s $(top_srcdir) -b $(top_builddir)
-##	$(top_srcdir)/build/mk_varinfo.pl -s $(top_srcdir) -b $(top_builddir)
 
 variables:
 	$(top_srcdir)/build/parse_variables.py -s $(top_srcdir) -b $(top_builddir)
-##	$(top_srcdir)/build/mk_varinfo.pl -s $(top_srcdir) -b $(top_builddir)
 
 check:
 	@for f in $(dist_dta1_DATA) $(dist_dta2_DATA); do \
