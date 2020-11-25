@@ -2,7 +2,7 @@
 
 Test       : Hubbard forces and intersite interaction
 Program    : octopus
-TestGroups : short-run, finite_systems_3d, lda_u
+TestGroups : long-run, finite_systems_3d, lda_u
 Enabled    : Yes
 
 Processors : 1
