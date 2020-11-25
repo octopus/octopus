@@ -104,6 +104,9 @@ contains
     nullify(this%A_static)
     nullify(this%E_field)
 
+    ! Initialize clock without a time-step, as the potential will not be propagated
+    this%clock = clock_t()
+
     POP_SUB(external_potential_init)
   end function external_potential_init
 
@@ -167,7 +170,11 @@ contains
 
     PUSH_SUB(external_potential_update_exposed_quantities)
 
+    ! Always allowed to update, as the external potentials are not propagated
     allowed_to_update = .true.
+
+    call partner%clock%set_time(requested_time)
+
     select type (interaction)
     type is (ghost_interaction_t)
       ! Nothing to copy. We still need to check that we are at the right
