@@ -125,7 +125,7 @@ module poisson_oct_m
     type(poisson_psolver_t) :: psolver_solver
     type(poisson_no_t) :: no_solver
     integer :: nslaves
-    logical, public :: is_dressed
+    logical, public :: is_dressed = .false.
     type(photon_mode_t), public :: photons
     type(poisson_fmm_t)  :: params_fmm
 #ifdef HAVE_MPI2
@@ -681,7 +681,6 @@ contains
 
     end select
     this%method = POISSON_NULL
-    this%is_dressed = .false.
 
     if (has_cube) then
       if (this%cube%parallel_in_domains) then
@@ -693,6 +692,7 @@ contains
     if (this%is_dressed) then
       call photon_mode_end(this%photons)
     end if
+    this%is_dressed = .false.
 
     POP_SUB(poisson_end)
   end subroutine poisson_end
