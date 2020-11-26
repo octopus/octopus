@@ -130,10 +130,10 @@ contains
     ! H2O atom types
     integer, allocatable :: species(:)
 
-#ifdef HAVE_DFTBPLUS
     FLOAT :: merminEnergy
     FLOAT, allocatable :: coords(:,:), gradients(:,:)
 
+#ifdef HAVE_DFTBPLUS
     type(TDftbPlus) :: dftbp
     type(TDftbPlusInput) :: input
     type(fnode), pointer :: pRoot, pGeo, pHam, pDftb, pMaxAng, pSlakos, pType2Files, pAnalysis
