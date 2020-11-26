@@ -466,22 +466,6 @@ module medium_mxll_oct_m
 
     end function check_point_on_bounds
 
-    subroutine get_medium_io_function(medium_func, medium_box, mesh, il, io_func)
-      FLOAT,                    intent(in)    :: medium_func(:)
-      type(medium_box_t),       intent(in)    :: medium_box
-      type(mesh_t),             intent(in)    :: mesh
-      integer,                  intent(in)    :: il
-      FLOAT,                    intent(inout) :: io_func(:)
-
-      integer :: ip, ip_in
-
-      do ip_in = 1, medium_box%points_number(il)
-        ip = medium_box%points_map(ip_in, il)
-        io_func(ip) = medium_func(ip_in)
-      end do
-
-    end subroutine get_medium_io_function
-
   end subroutine generate_medium_boxes
 
   ! ----------------------------------------------------------
