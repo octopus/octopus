@@ -56,14 +56,16 @@ module system_dftb_oct_m
     system_dftb_init
 
    type, extends(system_t) :: system_dftb_t
-    FLOAT :: mass
-    FLOAT :: pos(1:MAX_DIM)
-    FLOAT :: vel(1:MAX_DIM)
-    FLOAT :: acc(1:MAX_DIM)
-    FLOAT, allocatable :: prev_acc(:,:) !< A storage of the prior times.
+    integer :: nAtom
+    FLOAT, allocatable :: coords(:,:), gradients(:,:)
+    FLOAT, allocatable :: acc(:,:)
+    FLOAT, allocatable :: tot_force(:,:)
+    FLOAT, allocatable :: vel(:,:)
+    integer, allocatable :: species(:)
+    FLOAT, allocatable :: mass(:)
+    FLOAT, allocatable :: prev_acc(:,:,:) !< A storage of the prior times.
     FLOAT :: save_pos(1:MAX_DIM)   !< A storage for the SCF loops
     FLOAT :: save_vel(1:MAX_DIM)   !< A storage for the SCF loops
-    FLOAT :: tot_force(1:MAX_DIM)
     FLOAT :: prev_tot_force(1:MAX_DIM) !< Used for the SCF convergence criterium
     FLOAT, allocatable :: prev_pos(:, :) !< Used for extrapolation
     FLOAT, allocatable :: prev_vel(:, :) !< Used for extrapolation
@@ -123,14 +125,8 @@ contains
     class(system_dftb_t), target, intent(inout) :: this
     type(namespace_t),            intent(in)    :: namespace
 
-    integer :: nAtom, ii
-    integer, parameter :: nExtChrg = 2
+    integer :: ii
     character(len=MAX_PATH_LEN) :: slako_dir
-
-    ! H2O atom types
-    integer, allocatable :: species(:)
-
-    FLOAT, allocatable :: coords(:,:), gradients(:,:)
 
 #ifdef HAVE_DFTBPLUS
     type(TDftbPlus) :: dftbp
@@ -148,14 +144,24 @@ contains
     call space_init(this%space, namespace)
     this%geo%space => this%space
     call geometry_init_xyz(this%geo, namespace)
-    nAtom = this%geo%natoms
-    SAFE_ALLOCATE(coords(3, nAtom))
-    SAFE_ALLOCATE(gradients(3, nAtom))
-    SAFE_ALLOCATE(species(nAtom))
-    do ii = 1, nAtom
-      coords(1:3,ii) = this%geo%atom(ii)%x(1:3)
+    this%nAtom = this%geo%natoms
+    SAFE_ALLOCATE(this%coords(3, this%nAtom))
+    SAFE_ALLOCATE(this%acc(3, this%nAtom))
+    SAFE_ALLOCATE(this%vel(3, this%nAtom))
+    SAFE_ALLOCATE(this%tot_force(3, this%nAtom))
+    SAFE_ALLOCATE(this%gradients(3, this%nAtom))
+    SAFE_ALLOCATE(this%species(this%nAtom))
+    SAFE_ALLOCATE(this%mass(this%nAtom))
+
+    do ii = 1, this%nAtom
+      this%coords(1:3,ii) = this%geo%atom(ii)%x(1:3)
     end do
-    species = [1, 2, 2]
+    this%vel = M_ZERO
+    this%tot_force = M_ZERO
+
+    ! ToDo: fix species and mass definition
+    this%species = [1, 2, 2]
+    this%mass = [16.01, 1.008, 1.008]
 
     !%Variable SlakoDir
     !%Type string
@@ -175,7 +181,7 @@ contains
     call setChild(pRoot, "Geometry", pGeo)
     call setChildValue(pGeo, "Periodic", .false.)
     call setChildValue(pGeo, "TypeNames", ["O", "H"])
-    call setChildValue(pGeo, "TypesAndCoordinates", reshape(species, [1, size(species)]), coords)
+    call setChildValue(pGeo, "TypesAndCoordinates", reshape(this%species, [1, size(this%species)]), this%coords)
     call setChild(pRoot, "Hamiltonian", pHam)
     call setChild(pHam, "Dftb", pDftb)
     call setChildValue(pDftb, "Scc", .true.)
@@ -258,7 +264,7 @@ contains
     class(system_dftb_t),    intent(inout) :: this
     class(algorithmic_operation_t), intent(in)    :: operation
 
-    !integer :: ii, sdim
+    integer :: ii, jj !, sdim
     !LOAT, allocatable :: tmp_pos(:, :), tmp_vel(:, :)
     !LOAT :: factor
 
@@ -270,32 +276,38 @@ contains
     case (SKIP)
       ! Do nothing
     case (STORE_CURRENT_STATUS)
-      this%save_pos(1:this%space%dim) = this%pos(1:this%space%dim)
-      this%save_vel(1:this%space%dim) = this%vel(1:this%space%dim)
+      ! Do nothing
 
     case (VERLET_START)
-      SAFE_ALLOCATE(this%prev_acc(1:this%space%dim, 1))
-      !this%acc(1:this%space%dim) = this%tot_force(1:this%space%dim) / this%mass
+      SAFE_ALLOCATE(this%prev_acc(1:this%space%dim, this%nAtom, 1))
+      ! ToDo: compute force
+      !
+      do jj = 1, this%nAtom
+        this%acc(1:this%space%dim, jj) = this%tot_force(1:this%space%dim, jj) / this%mass(jj)
+      end do
 
     case (VERLET_FINISH)
       SAFE_DEALLOCATE_A(this%prev_acc)
 
     case (VERLET_UPDATE_POS)
-      !this%pos(1:this%space%dim) = this%pos(1:this%space%dim) + this%prop%dt * this%vel(1:this%space%dim) &
-      !                           + M_HALF * this%prop%dt**2 * this%acc(1:this%space%dim)
-
+      do jj = 1, this%nAtom
+        this%coords(1:this%space%dim, jj) = this%coords(1:this%space%dim, jj) + this%prop%dt * this%vel(1:this%space%dim, jj) &
+                                         + M_HALF * this%prop%dt**2 * this%acc(1:this%space%dim, jj)
+      end do
       !this%quantities(POSITION)%clock = this%quantities(POSITION)%clock + CLOCK_TICK
 
     case (VERLET_COMPUTE_ACC)
-      !do ii = size(this%prev_acc, dim=2) - 1, 1, -1
-        !this%prev_acc(1:this%space%dim, ii + 1) = this%prev_acc(1:this%space%dim, ii)
-      !end do
-      !this%prev_acc(1:this%space%dim, 1) = this%acc(1:this%space%dim)
-      !this%acc(1:this%space%dim) = this%tot_force(1:this%space%dim) / this%mass
+      do ii = size(this%prev_acc, dim=3) - 1, 1, -1
+        this%prev_acc(1:this%space%dim, 1:this%nAtom, ii + 1) = this%prev_acc(1:this%space%dim, 1:this%nAtom, ii)
+      end do
+      this%prev_acc(1:this%space%dim, 1:this%nAtom, 1) = this%acc(1:this%space%dim, 1:this%nAtom)
+      do jj = 1, this%nAtom
+        this%acc(1:this%space%dim, jj) = this%tot_force(1:this%space%dim, jj) / this%mass(jj)
+      end do
 
     case (VERLET_COMPUTE_VEL)
-      !this%vel(1:this%space%dim) = this%vel(1:this%space%dim) &
-      !  + M_HALF * this%prop%dt * (this%prev_acc(1:this%space%dim, 1) + this%acc(1:this%space%dim))
+      this%vel(1:this%space%dim, 1:this%nAtom) = this%vel(1:this%space%dim, 1:this%nAtom) &
+             + M_HALF * this%prop%dt * (this%prev_acc(1:this%space%dim, 1:this%nAtom, 1) + this%acc(1:this%space%dim, 1:this%nAtom))
 
       !this%quantities(VELOCITY)%clock = this%quantities(VELOCITY)%clock + CLOCK_TICK
 
@@ -315,16 +327,17 @@ contains
     PUSH_SUB(system_dftb_is_tolerance_reached)
 
     ! Here we put the criterion that acceleration change is below the tolerance
-    converged = .false.
-    if ( (sum((this%prev_tot_force(1:this%space%dim) - this%tot_force(1:this%space%dim))**2)/ this%mass) < tol**2) then
-      converged = .true.
-    end if
+    converged = .true.
+    !converged = .false.
+    !if ( (sum((this%prev_tot_force(1:this%space%dim) - this%tot_force(1:this%space%dim))**2)/ this%mass) < tol**2) then
+    !  converged = .true.
+    !end if
 
     if (debug%info) then
-      write(message(1), '(a, e12.6, a, e12.6)') "Debug: -- Change in acceleration  ", &
-        sqrt(sum((this%prev_tot_force(1:this%space%dim) - this%tot_force(1:this%space%dim))**2))/this%mass, &
-        " and tolerance ", tol
-      call messages_info(1)
+      !write(message(1), '(a, e12.6, a, e12.6)') "Debug: -- Change in acceleration  ", &
+      !  sqrt(sum((this%prev_tot_force(1:this%space%dim) - this%tot_force(1:this%space%dim))**2))/this%mass, &
+      !  " and tolerance ", tol
+      !call messages_info(1)
     end if
 
     POP_SUB(system_dftb_is_tolerance_reached)
@@ -342,9 +355,9 @@ contains
     write(message(1),'(2X,A,1X,A)') "DFTB+ System:", trim(this%namespace%get())
 
     write(fmt,'("(4X,A,1X,",I2,"e14.6)")') this%space%dim
-    write(message(2),fmt) "Coordinates: ", (this%pos(idir), idir = 1, this%space%dim)
-    write(message(3),fmt) "Velocity:    ", (this%vel(idir), idir = 1, this%space%dim)
-    write(message(4),fmt) "Force:       ", (this%tot_force(idir), idir = 1, this%space%dim)
+    write(message(2),fmt) "Coordinates: ", (this%coords(idir, 1), idir = 1, this%space%dim)
+    write(message(3),fmt) "Velocity:    ", (this%vel(idir, 1), idir = 1, this%space%dim)
+    write(message(4),fmt) "Force:       ", (this%tot_force(idir, 1), idir = 1, this%space%dim)
     write(message(5),'(4x,A,I8.7)')  'Clock tick:      ', this%clock%get_tick()
     write(message(6),'(4x,A,e14.6)') 'Simulation time: ', this%clock%time()
     call messages_info(6)
@@ -550,6 +563,14 @@ contains
     type(system_dftb_t), intent(inout) :: this
 
     PUSH_SUB(system_dftb_finalize)
+
+    SAFE_DEALLOCATE_A(this%coords)
+    SAFE_DEALLOCATE_A(this%acc)
+    SAFE_DEALLOCATE_A(this%vel)
+    SAFE_DEALLOCATE_A(this%tot_force)
+    SAFE_DEALLOCATE_A(this%gradients)
+    SAFE_DEALLOCATE_A(this%species)
+    SAFE_DEALLOCATE_A(this%mass)
 
     call system_end(this)
 
