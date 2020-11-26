@@ -1088,22 +1088,6 @@ contains
     allocated = this%allocated
   end function accel_buffer_is_allocated
     
-  ! ------------------------------------------
-
-  integer(SIZEOF_SIZE_T) pure function opencl_get_buffer_size(this) result(size)
-    type(accel_mem_t), intent(in) :: this
-
-    size = this%size
-  end function opencl_get_buffer_size
-
-  ! -----------------------------------------
-
-  type(type_t) pure function opencl_get_buffer_type(this) result(type)
-    type(accel_mem_t), intent(in) :: this
-
-    type = this%type
-  end function opencl_get_buffer_type
-
   ! -----------------------------------------
 
   subroutine accel_finish()
