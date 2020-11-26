@@ -130,7 +130,6 @@ contains
     ! H2O atom types
     integer, allocatable :: species(:)
 
-    FLOAT :: merminEnergy
     FLOAT, allocatable :: coords(:,:), gradients(:,:)
 
 #ifdef HAVE_DFTBPLUS
@@ -248,9 +247,6 @@ contains
     class(system_dftb_t), intent(inout) :: this
     logical,                 intent(in)    :: from_scratch
 
-    integer :: n_rows, idir
-    type(block_t) :: blk
-
     PUSH_SUB(system_dftb_initial_conditions)
 
 
@@ -262,13 +258,13 @@ contains
     class(system_dftb_t),    intent(inout) :: this
     class(algorithmic_operation_t), intent(in)    :: operation
 
-    integer :: ii, sdim
-    FLOAT, allocatable :: tmp_pos(:, :), tmp_vel(:, :)
-    FLOAT :: factor
+    !integer :: ii, sdim
+    !LOAT, allocatable :: tmp_pos(:, :), tmp_vel(:, :)
+    !LOAT :: factor
 
     PUSH_SUB(system_dftb_do_td)
 
-    sdim = this%space%dim
+    !sdim = this%space%dim
 
     select case (operation%id)
     case (SKIP)
