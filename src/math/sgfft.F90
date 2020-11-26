@@ -3651,9 +3651,11 @@ contains
     real(8), dimension(md1,md3,md2/nproc), intent(inout) :: zf
     integer, intent(in) :: comm
     
-#if defined(HAVE_MPI)
     integer :: ncache,lzt,lot,ma,mb,nfft,ic1,ic2,ic3,Jp2stb,J2stb,Jp2stf,J2stf
-    integer :: j2,j3,i1,i3,i,j,inzee,ierr
+    integer :: j2,j3,i1,i3,i,j,inzee
+#if defined(HAVE_MPI)
+  integer :: ierr
+#endif
     real(8) :: twopion
     !work arrays for transpositions
     real(8), allocatable :: zt(:,:,:)
@@ -3787,10 +3789,12 @@ contains
     if (nproc > 1) then
       call profiling_in(prof_comm, "SG_ALLTOALL")
       !communication scheduling
+#if defined(HAVE_MPI)
       call MPI_Alltoall(zmpi2(1, 1, 1, 1), n1*(md2/nproc)*(nd3/nproc), &
         MPI_DOUBLE_PRECISION, &
         zmpi1(1, 1, 1, 1, 1), n1*(md2/nproc)*(nd3/nproc), &
         MPI_DOUBLE_PRECISION, comm, ierr)
+#endif
       call profiling_out(prof_comm)
     end if
     !output: I1,J2,j3,Jp2,(jp3)
@@ -3932,11 +3936,13 @@ contains
     if (nproc > 1) then
       call profiling_in(prof_comm, "SG_ALLTOALL")
       !communication scheduling
+#if defined(HAVE_MPI)
       call MPI_ALLTOALL(zmpi1(1, 1, 1, 1, 1), n1*(md2/nproc)*(nd3/nproc), &
         MPI_DOUBLE_PRECISION, &
         zmpi2(1, 1, 1, 1), n1*(md2/nproc)*(nd3/nproc), &
         MPI_DOUBLE_PRECISION, comm, ierr)
       !output: I1,J2,j3,jp3,(Jp2)
+#endif
       call profiling_out(prof_comm)
     end if
 
@@ -3981,8 +3987,8 @@ contains
 
     call profiling_out(prof)
 
-#endif
-  end subroutine convolxc_off
+
+end subroutine convolxc_off
 
 
   !!****h* BigDFT/multkernel
@@ -4431,10 +4437,12 @@ subroutine kernelfft(n1,n2,n3,nd1,nd2,nd3,nproc,iproc,zf,zr,comm)
   real(8), dimension(2,nd1,nd2,nd3/nproc), intent(out) :: zr
   integer, intent(in) :: comm
 
-#if defined(HAVE_MPI)
   !Local variables
   integer :: ncache,lzt,lot,ma,mb,nfft,ic1,ic2,ic3,Jp2st,J2st
-  integer :: j2,j3,i1,i3,i,j,inzee,ierr
+  integer :: j2,j3,i1,i3,i,j,inzee
+#if defined(HAVE_MPI)
+  integer :: ierr
+#endif
   real(8) :: twopion
   !work arrays for transpositions
   real(8), dimension(:,:,:), allocatable :: zt
@@ -4534,11 +4542,13 @@ subroutine kernelfft(n1,n2,n3,nd1,nd2,nd3,nproc,iproc,zf,zr,comm)
   !input: I1,J2,j3,jp3,(Jp2)
   if (nproc > 1) then
      !communication scheduling
+#if defined(HAVE_MPI)
      call MPI_ALLTOALL(zmpi2(:, 1, 1, 1),2*n1*(nd2/nproc)*(nd3/nproc), &
           MPI_DOUBLE_PRECISION, &
           zmpi1(:, 1, 1, 1, 1),2*n1*(nd2/nproc)*(nd3/nproc), &
           MPI_double_precision,comm,ierr)
      ! output: I1,J2,j3,Jp2,(jp3)
+#endif
   end if
 
 
@@ -4633,9 +4643,6 @@ subroutine kernelfft(n1,n2,n3,nd1,nd2,nd3,nproc,iproc,zf,zr,comm)
   if (nproc > 1) then
     SAFE_DEALLOCATE_A(zmpi1)
   end if
-#else
-  zr = M_ZERO
-#endif
 end subroutine kernelfft
 
   ! ---------------------------------------------------------------

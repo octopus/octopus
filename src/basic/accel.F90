@@ -681,9 +681,9 @@ contains
 
   contains
 
+#if defined(HAVE_MPI) && defined(HAVE_OPENCL)
     subroutine select_device(idevice)
       integer, intent(inout) :: idevice
-#if defined(HAVE_MPI) && defined(HAVE_OPENCL)
       integer :: irank
       character(len=256) :: device_name
 
@@ -706,10 +706,10 @@ contains
         end if
         call MPI_Barrier(base_grp%comm, mpi_err)
       end do
-#endif
 
       POP_SUB(accel_init.select_device)
     end subroutine select_device
+#endif
 
     subroutine device_info()
 #ifdef HAVE_OPENCL
@@ -852,7 +852,7 @@ contains
   end subroutine accel_init
 
   ! ------------------------------------------
-
+#ifdef HAVE_OPENCL
   integer function get_platform_id(platform_name) result(platform_id)
     character(len=*), intent(in) :: platform_name
 
@@ -862,7 +862,7 @@ contains
     if(index(platform_name, 'NVIDIA') > 0) platform_id = CL_PLAT_NVIDIA
     if(index(platform_name, 'Intel') > 0)  platform_id = CL_PLAT_INTEL
   end function get_platform_id
-
+#endif
   ! ------------------------------------------
 
   subroutine accel_end()
@@ -1392,7 +1392,7 @@ contains
 #endif
   
   ! ------------------------------------------------
-
+#ifdef HAVE_OPENCL
   subroutine opencl_print_error(ierr, name)
     integer,          intent(in) :: ierr
     character(len=*), intent(in) :: name
@@ -1401,7 +1401,6 @@ contains
 
     PUSH_SUB(opencl_print_error)
 
-#ifdef HAVE_OPENCL
     select case(ierr)
     case(CL_SUCCESS); errcode = 'CL_SUCCESS '
     case(CL_DEVICE_NOT_FOUND); errcode = 'CL_DEVICE_NOT_FOUND '
@@ -1455,13 +1454,13 @@ contains
       write(errcode, '(i10)') ierr
       errcode = 'UNKNOWN ERROR CODE ('//trim(adjustl(errcode))//')'
     end select
-#endif
     
     message(1) = 'OpenCL '//trim(name)//' '//trim(errcode)
     call messages_fatal(1)
 
     POP_SUB(opencl_print_error)
   end subroutine opencl_print_error
+#endif
 
   ! ----------------------------------------------------
 
