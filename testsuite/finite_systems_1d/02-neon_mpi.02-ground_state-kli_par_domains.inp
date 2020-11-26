@@ -25,6 +25,7 @@ Debug = trace
 
 Mixing = 0.05
 EigensolverMaxIter = 300
+Eigencolver = cg_new
 ConvEigenError = true
 Preconditioner = no
 ConvRelDens = 1e-7
