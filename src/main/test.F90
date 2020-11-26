@@ -133,7 +133,7 @@ contains
     !% Tests the subspace diagonalization
     !%Option batch_ops 13
     !% Tests the batch operations
-    !%Option dftbplus 14
+    !%Option testdftbplus 14
     !% Small test to showcase the usage of the dftbplus library in octopus
     !%Option clock 18
     !% Tests for clock
@@ -243,7 +243,7 @@ contains
       call test_subspace_diagonalization(param, namespace)
     case(OPTION__TESTMODE__BATCH_OPS)
       call test_batch_ops(param, namespace)
-    case(OPTION__TESTMODE__DFTBPLUS)
+    case(OPTION__TESTMODE__TESTDFTBPLUS)
       call test_dftbplus(namespace)
     case(OPTION__TESTMODE__CLOCK)
       call test_clock()

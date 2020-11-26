@@ -1,2 +1,2 @@
 CalculationMode = test
-TestMode = dftbplus
+TestMode = testdftbplus
