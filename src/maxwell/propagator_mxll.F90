@@ -76,17 +76,7 @@ module propagator_mxll_oct_m
     transform_rs_densities,                  &
     calculate_matter_longitudinal_field,     &
     get_vector_pot_and_transverse_field,     &
-    energy_density_calc,                     &
     energy_mxll_calc,                        &
-    energy_rate_calc,                        &
-    poynting_vector_through_box_surfaces,    &
-    poynting_vector_through_box_surfaces_plane_waves, &
-    fields_through_box_surfaces,             &
-    fields_through_box_surfaces_plane_waves, &
-    constant_boundaries_calculation,         &
-    maxwell_mask,                            &
-    td_function_mxll_init,                   &
-    plane_waves_in_box_calculation,          &
     spatial_constant_calculation
 
   type propagator_mxll_t

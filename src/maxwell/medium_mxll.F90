@@ -39,8 +39,7 @@ module medium_mxll_oct_m
   public ::           &
     medium_box_t,     &
     medium_box_init,  &
-    medium_box_end,   &
-    generate_medium_boxes
+    medium_box_end
 
    type medium_box_t
      integer                         :: number   !< number of linear media boxes
