@@ -25,6 +25,8 @@ Spacing = 0.2
 
 DerivativesOrder = 4
 
+Eigensolver = cg_new
+
 XCFunctional = lda_x_2d + lda_c_2d_prm
 
 
