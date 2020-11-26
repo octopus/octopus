@@ -74,6 +74,9 @@ module system_dftb_oct_m
 
     type(geometry_t) :: geo
     type(c_ptr) :: output_handle
+#ifdef HAVE_DFTBPLUS
+    type(TDftbPlus) :: dftbp
+#endif
   contains
     procedure :: init_interaction => system_dftb_init_interaction
     procedure :: initial_conditions => system_dftb_initial_conditions
@@ -129,7 +132,6 @@ contains
     character(len=MAX_PATH_LEN) :: slako_dir
 
 #ifdef HAVE_DFTBPLUS
-    type(TDftbPlus) :: dftbp
     type(TDftbPlusInput) :: input
     type(fnode), pointer :: pRoot, pGeo, pHam, pDftb, pMaxAng, pSlakos, pType2Files, pAnalysis
     type(fnode), pointer :: pParserOpts
@@ -174,9 +176,9 @@ contains
 
 
 #ifdef HAVE_DFTBPLUS
-    call TDftbPlus_init(dftbp, mpicomm=mpi_world%comm)
+    call TDftbPlus_init(this%dftbp, mpicomm=mpi_world%comm)
 
-    call dftbp%getEmptyInput(input)
+    call this%dftbp%getEmptyInput(input)
     call input%getRootNode(pRoot)
     call setChild(pRoot, "Geometry", pGeo)
     call setChildValue(pGeo, "Periodic", .false.)
@@ -224,9 +226,9 @@ contains
     call dumpHsd(input%hsdTree, stdout)
 
     ! initialise the DFTB+ calculator
-    call dftbp%setupCalculator(input)
+    call this%dftbp%setupCalculator(input)
 
-    !call dftbp%setGeometry(coords)
+    !call this%dftbp%setGeometry(coords)
 #endif
 
     POP_SUB(system_dftb_init)
@@ -281,7 +283,10 @@ contains
     case (VERLET_START)
       SAFE_ALLOCATE(this%prev_acc(1:this%space%dim, this%nAtom, 1))
       ! ToDo: compute force
-      !
+      call this%dftbp%setGeometry(this%coords)
+      call this%dftbp%getGradients(this%gradients)
+      this%tot_force = -this%gradients
+
       do jj = 1, this%nAtom
         this%acc(1:this%space%dim, jj) = this%tot_force(1:this%space%dim, jj) / this%mass(jj)
       end do
@@ -355,7 +360,7 @@ contains
     write(message(1),'(2X,A,1X,A)') "DFTB+ System:", trim(this%namespace%get())
 
     write(fmt,'("(4X,A,1X,",I2,"e14.6)")') this%space%dim
-    write(message(2),fmt) "Coordinates: ", (this%coords(idir, 1), idir = 1, this%space%dim)
+    write(message(2),fmt) "Coordinates: ", (this%coords(idir, 1)/P_Ang, idir = 1, this%space%dim)
     write(message(3),fmt) "Velocity:    ", (this%vel(idir, 1), idir = 1, this%space%dim)
     write(message(4),fmt) "Force:       ", (this%tot_force(idir, 1), idir = 1, this%space%dim)
     write(message(5),'(4x,A,I8.7)')  'Clock tick:      ', this%clock%get_tick()
