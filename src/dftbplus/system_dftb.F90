@@ -283,9 +283,12 @@ contains
     case (VERLET_START)
       SAFE_ALLOCATE(this%prev_acc(1:this%space%dim, this%nAtom, 1))
       ! ToDo: compute force
+
+#ifdef HAVE_DFTBPLUS
       call this%dftbp%setGeometry(this%coords)
       call this%dftbp%getGradients(this%gradients)
       this%tot_force = -this%gradients
+#endif
 
       do jj = 1, this%nAtom
         this%acc(1:this%space%dim, jj) = this%tot_force(1:this%space%dim, jj) / this%mass(jj)
