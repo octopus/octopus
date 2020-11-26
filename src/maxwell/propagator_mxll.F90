@@ -74,10 +74,15 @@ module propagator_mxll_oct_m
     propagator_mxll_init,                    &
     mxll_propagation_step,                   &
     transform_rs_densities,                  &
-    calculate_matter_longitudinal_field,     &
-    get_vector_pot_and_transverse_field,     &
     energy_mxll_calc,                        &
     spatial_constant_calculation
+
+  ! The following routines are currently unused, but will be used in the near future.
+  ! In order not to generate warnings about them, we declared them as public
+  public ::                                  &
+    calculate_matter_longitudinal_field,     &
+    get_vector_pot_and_transverse_field,     &
+    calculate_vector_potential
 
   type propagator_mxll_t
     integer             :: op_method
@@ -842,36 +847,35 @@ contains
 
     POP_SUB(get_vector_pot_and_transverse_field)
 
-    contains
+  end subroutine  get_vector_pot_and_transverse_field
 
-      subroutine calculate_vector_potential(poisson_solver, gr, st, tr, field, vector_potential)
-        type(poisson_t),            intent(in)    :: poisson_solver
-        type(grid_t),               intent(in)    :: gr
-        type(states_mxll_t),        intent(in)    :: st
-        type(propagator_mxll_t),    intent(in)    :: tr
-        CMPLX,                      intent(in)    :: field(:,:)
-        FLOAT,                      intent(inout) :: vector_potential(:,:)
+  ! ---------------------------------------------------------
+  subroutine calculate_vector_potential(poisson_solver, gr, st, tr, field, vector_potential)
+    type(poisson_t),            intent(in)    :: poisson_solver
+    type(grid_t),               intent(in)    :: gr
+    type(states_mxll_t),        intent(in)    :: st
+    type(propagator_mxll_t),    intent(in)    :: tr
+    CMPLX,                      intent(in)    :: field(:,:)
+    FLOAT,                      intent(inout) :: vector_potential(:,:)
 
-        integer :: idim
-        FLOAT, allocatable :: dtmp(:,:)
+    integer :: idim
+    FLOAT, allocatable :: dtmp(:,:)
 
-        SAFE_ALLOCATE(dtmp(1:gr%mesh%np_part,1:3))
+    SAFE_ALLOCATE(dtmp(1:gr%mesh%np_part,1:3))
 
-        dtmp = M_ZERO
+    dtmp = M_ZERO
 
-        call get_magnetic_field_state(field, gr%mesh, st%rs_sign, vector_potential, st%mu, gr%mesh%np_part)
-        dtmp = vector_potential
-        call dderivatives_curl(gr%der, dtmp, vector_potential, set_bc = .false.)
-        do idim=1, st%dim
-          call dpoisson_solve(poisson_solver, dtmp(:,idim), vector_potential(:,idim), .true.)
-        end do
-        vector_potential = M_ONE / (M_FOUR * M_PI) * vector_potential
+    call get_magnetic_field_state(field, gr%mesh, st%rs_sign, vector_potential, st%mu, gr%mesh%np_part)
+    dtmp = vector_potential
+    call dderivatives_curl(gr%der, dtmp, vector_potential, set_bc = .false.)
+    do idim=1, st%dim
+      call dpoisson_solve(poisson_solver, dtmp(:,idim), vector_potential(:,idim), .true.)
+    end do
+    vector_potential = M_ONE / (M_FOUR * M_PI) * vector_potential
 
-        SAFE_DEALLOCATE_A(dtmp)
+    SAFE_DEALLOCATE_A(dtmp)
 
-      end subroutine calculate_vector_potential
-
-  end subroutine get_vector_pot_and_transverse_field
+  end subroutine calculate_vector_potential
 
   ! ---------------------------------------------------------
   subroutine derivatives_boundary_mask(bc, mesh, hm)
