@@ -850,6 +850,7 @@ contains
       potential => iter%get_next()
       SAFE_DEALLOCATE_P(potential)
     end do
+    call hm%external_potentials%empty()
 
     POP_SUB(hamiltonian_elec_end)
   end subroutine hamiltonian_elec_end

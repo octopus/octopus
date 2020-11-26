@@ -164,16 +164,18 @@ contains
     ! initialize everything that needs parallelization
     call systems%init_parallelization(mpi_world)
 
-    ! Create list of partners (currently missing partners that are not systems)
+    ! Create list of partners
     select type (systems)
     class is (multisystem_basic_t)
+      ! Systems are also partners
       partners = systems%list
+
+      ! Add external potentials to partners list
+      call load_external_potentials(partners, namespace)
+
     type is (electrons_t)
       call partners%add(systems)
     end select
-
-    !Loading the external potnetials as interaction partners
-    call load_external_potentials(partners, namespace)
 
     ! Create and initialize interactions
     call interactions_factory%create_interactions(systems, partners)
@@ -253,19 +255,21 @@ contains
       call profiling_out(calc_mode_prof)
     end if
 
+    select type (systems)
+    class is (multisystem_basic_t)
+      !Deallocate the external potentials
+      call iter%start(partners)
+      do while (iter%has_next())
+        select type(ptr => iter%get_next())
+        class is(external_potential_t)
+          partner => ptr
+          SAFE_DEALLOCATE_P(partner)
+        end select
+      end do
+    end select
+
     ! Finalize systems
     SAFE_DEALLOCATE_P(systems)
-
-    !Deallocate the remaining external potentials
-    call iter%start(partners)
-    do while (iter%has_next())
-      select type(ptr => iter%get_next())
-      class is(external_potential_t)
-        partner => ptr
-        SAFE_DEALLOCATE_P(partner)
-      end select
-    end do
-
 
     call fft_all_end()
 
