@@ -168,8 +168,8 @@ Precision: 3.53e-16
 match ;  Force Local   ; LINEFIELD(static/forces, 2, 12) ; 0.352871
 Precision: 1.20e-16
 match ;  Force NL      ; LINEFIELD(static/forces, 2, 15) ; -0.120225
-Precision: 8.45e-10
-match ;  Force SCF     ; LINEFIELD(static/forces, 2, 24) ; -3.220415e-08
+Precision: 9.07e-10
+match ;   Force SCF      ; LINEFIELD(static/forces, 2, 24) ; -3.217045e-08
 Precision: 6.49e-18
 match ;  Force NLCC    ; LINEFIELD(static/forces, 2, 27) ; 0.00649451
 
@@ -224,7 +224,7 @@ Precision: 3.53e-16
 match ;   Force Local    ; LINEFIELD(static/forces, 2, 12) ; 0.352871
 Precision: 1.20e-16
 match ;   Force NL       ; LINEFIELD(static/forces, 2, 15) ; -0.120225
-Precision: 4.91e-10
+Precision: 1.30e-09
 match ;   Force SCF      ; LINEFIELD(static/forces, 2, 24) ; -3.17924e-08
 Precision: 6.49e-18
 match ;   Force NLCC     ; LINEFIELD(static/forces, 2, 27) ; 0.00649451
