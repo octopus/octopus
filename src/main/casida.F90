@@ -356,7 +356,8 @@ contains
     !%Default .false.
     !%Section Hamiltonian::XC
     !%Description
-    !% Activate the photon Casida
+    !% Enable photon modes for solving the Casida equation.
+    !% The implementation is described in ACS Photonics 2019, 6, 11, 2757-2778.
     !%End
     call parse_variable(sys%namespace, 'EnablePhotons', .false., cas%has_photons)
     cas%pt_nmodes = 0
@@ -365,7 +366,8 @@ contains
       call photon_mode_init(cas%pt, sys%namespace, sys%gr%mesh, sys%gr%sb%dim, sys%st%qtot)
       write(message(1), '(a,i7,a)') 'INFO: Solving Casida equation with ', &
         cas%pt%nmodes, ' photon modes.'
-      call messages_info(1)
+      write(message(2), '(a)') 'as described in ACS Photonics 2019, 6, 11, 2757-2778.'
+      call messages_info(2)
       cas%pt_nmodes = cas%pt%nmodes
     end if
 
