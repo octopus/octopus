@@ -164,6 +164,9 @@ contains
     ! ToDo: fix species and mass definition
     this%species = [1, 2, 2]
     this%mass = [16.01, 1.008, 1.008]
+    do ii = 1, this%nAtom            
+      this%mass(ii) = units_to_atomic(unit_amu, this%mass(ii))
+    end do
 
     !%Variable SlakoDir
     !%Type string
@@ -228,7 +231,9 @@ contains
     ! initialise the DFTB+ calculator
     call this%dftbp%setupCalculator(input)
 
-    !call this%dftbp%setGeometry(coords)
+    call this%dftbp%setGeometry(this%coords)
+    call this%dftbp%getGradients(this%gradients)
+    this%tot_force = -this%gradients
 #endif
 
     POP_SUB(system_dftb_init)
@@ -282,13 +287,6 @@ contains
 
     case (VERLET_START)
       SAFE_ALLOCATE(this%prev_acc(1:this%space%dim, this%nAtom, 1))
-      ! ToDo: compute force
-
-#ifdef HAVE_DFTBPLUS
-      call this%dftbp%setGeometry(this%coords)
-      call this%dftbp%getGradients(this%gradients)
-      this%tot_force = -this%gradients
-#endif
 
       do jj = 1, this%nAtom
         this%acc(1:this%space%dim, jj) = this%tot_force(1:this%space%dim, jj) / this%mass(jj)
@@ -309,6 +307,11 @@ contains
         this%prev_acc(1:this%space%dim, 1:this%nAtom, ii + 1) = this%prev_acc(1:this%space%dim, 1:this%nAtom, ii)
       end do
       this%prev_acc(1:this%space%dim, 1:this%nAtom, 1) = this%acc(1:this%space%dim, 1:this%nAtom)
+#ifdef HAVE_DFTBPLUS
+      call this%dftbp%setGeometry(this%coords)
+      call this%dftbp%getGradients(this%gradients)
+      this%tot_force = -this%gradients
+#endif
       do jj = 1, this%nAtom
         this%acc(1:this%space%dim, jj) = this%tot_force(1:this%space%dim, jj) / this%mass(jj)
       end do
