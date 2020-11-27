@@ -23,7 +23,7 @@ ParOther = 2
 
 CasidaTheoryLevel = lrtddft_casida
 
-Photons = yes
+EnablePhotons = yes
 
 %PhotonModes
 0.1         | 0.03 | 1 | 0 | 0

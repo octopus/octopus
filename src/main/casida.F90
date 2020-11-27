@@ -351,17 +351,17 @@ contains
       end if
     end if
 
-    !%Variable Photons
+    !%Variable EnablePhotons
     !%Type logical
     !%Default .false.
     !%Section Hamiltonian::XC
     !%Description
     !% Activate the photon Casida
     !%End
-    call parse_variable(sys%namespace, 'Photons', .false., cas%has_photons)
+    call parse_variable(sys%namespace, 'EnablePhotons', .false., cas%has_photons)
     cas%pt_nmodes = 0
     if (cas%has_photons) then
-      if(cas%has_photons) call messages_experimental('Photons = yes')
+      if(cas%has_photons) call messages_experimental('EnablePhotons = yes')
       call photon_mode_init(cas%pt, sys%namespace, sys%gr%mesh, sys%gr%sb%dim, sys%st%qtot)
       write(message(1), '(a,i7,a)') 'INFO: Solving Casida equation with ', &
         cas%pt%nmodes, ' photon modes.'
