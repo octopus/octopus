@@ -63,6 +63,7 @@ module system_dftb_oct_m
     FLOAT, allocatable :: vel(:,:)
     integer, allocatable :: species(:)
     FLOAT, allocatable :: mass(:)
+    character(len=2), allocatable  :: labels(:)
     FLOAT, allocatable :: prev_acc(:,:,:) !< A storage of the prior times.
     FLOAT :: save_pos(1:MAX_DIM)   !< A storage for the SCF loops
     FLOAT :: save_vel(1:MAX_DIM)   !< A storage for the SCF loops
@@ -128,7 +129,7 @@ contains
     class(system_dftb_t), target, intent(inout) :: this
     type(namespace_t),            intent(in)    :: namespace
 
-    integer :: ii
+    integer :: ii, jj, ispec
     character(len=MAX_PATH_LEN) :: slako_dir
 
 #ifdef HAVE_DFTBPLUS
@@ -154,15 +155,28 @@ contains
     SAFE_ALLOCATE(this%gradients(3, this%nAtom))
     SAFE_ALLOCATE(this%species(this%nAtom))
     SAFE_ALLOCATE(this%mass(this%nAtom))
+    SAFE_ALLOCATE(this%labels(this%nAtom))
+
+    ispec = 1
+    this%species(1) = 1
+    this%labels(1) = this%geo%atom(1)%label
 
     do ii = 1, this%nAtom
       this%coords(1:3,ii) = this%geo%atom(ii)%x(1:3)
+      if ((ii > 1) .and. .not. (any(this%labels(1:ii-1) == this%geo%atom(ii)%label))) then
+        ispec = ispec + 1
+        this%labels(ispec) = this%geo%atom(ii)%label
+      end if
+      do jj = 1, ispec
+        if (trim(this%geo%atom(ii)%label) == trim(this%labels(jj))) then
+          this%species(ii) = jj
+        end if
+      end do
     end do
     this%vel = M_ZERO
     this%tot_force = M_ZERO
 
-    ! ToDo: fix species and mass definition
-    this%species = [1, 2, 2]
+    ! ToDo: fix mass definition
     this%mass = [16.01, 1.008, 1.008]
     do ii = 1, this%nAtom            
       this%mass(ii) = units_to_atomic(unit_amu, this%mass(ii))
