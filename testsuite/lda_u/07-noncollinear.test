@@ -77,7 +77,7 @@ else
   match ;  Total k-points    ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 4.0
   match ;  Reduced k-points  ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 2.0
 
-  Precision: 1.16e-07
+  Precision: 1.40e-07
   match ;   Total energy          ; GREPFIELD(static/info, 'Total       =', 3) ; -90.168333775
   Precision: 8.54e-14
   match ;   Ion-ion energy        ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -85.44424755
