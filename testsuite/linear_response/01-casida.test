@@ -42,7 +42,7 @@ match ; Total energy   ; GREPFIELD(static/info, 'Total       =', 3) ;  -19.96949
 match ; HOMO-1         ; GREPFIELD(static/info, '4   --', 3) ;  -0.441038
 match ; HOMO           ; GREPFIELD(static/info, '5   --', 3) ;  -0.388160
 
-Input: 01-casida.012-vib_modes.inp
+Input: 01-casida.02-vib_modes.inp
 Precision: 2.25e-12
 match ;  Bond stretch    ; LINEFIELD(vib_modes/normal_frequencies_lr, 1, 2) ; 2254.17971561
 Precision: 2.4e-02
@@ -50,7 +50,7 @@ match ;  Libration 1     ; LINEFIELD(vib_modes/normal_frequencies_lr, 2, 2) ; 32
 
 Precision : 0.0001
 
-Input: 01-casida.02-unocc.inp
+Input: 01-casida.03-unocc.inp
 match ; HOMO-1         ; GREPFIELD(static/eigenvalues,  '4   --', 3) ;  -0.441038
 match ; HOMO           ; GREPFIELD(static/eigenvalues,  '5   --', 3) ;  -0.388160
 match ; LUMO           ; GREPFIELD(static/eigenvalues,  '6   --', 3) ; -0.087476
@@ -60,7 +60,7 @@ match ; LUMO+5         ; GREPFIELD(static/eigenvalues, '11   --', 3) ;  0.045420
 match ; LUMO+8         ; GREPFIELD(static/eigenvalues, '14   --', 3) ;  0.153289
 
 
-Input: 01-casida.022-unocc_restart.inp
+Input: 01-casida.04-unocc_restart.inp
 match ; HOMO-1         ; GREPFIELD(static/eigenvalues,  '4   --', 3) ;  -0.441038
 match ; HOMO           ; GREPFIELD(static/eigenvalues,  '5   --', 3) ;  -0.388160
 match ; LUMO           ; GREPFIELD(static/eigenvalues,  '6   --', 3) ; -0.087476
@@ -70,7 +70,7 @@ match ; LUMO+5         ; GREPFIELD(static/eigenvalues, '11   --', 3) ;  0.045420
 match ; LUMO+8         ; GREPFIELD(static/eigenvalues, '14   --', 3) ;  0.153289
 
 
-Input: 01-casida.03-casida.inp
+Input: 01-casida.05-casida.inp
 match ;  1st eps-diff E ; GREPFIELD(casida/eps_diff, '  5   6', 3) ; 3.00684237E-01
 match ;  3rd eps-diff E ; GREPFIELD(casida/eps_diff, '  4   6', 3) ; 3.53561931E-01
 
@@ -118,7 +118,7 @@ match ; 1st TDA force 1 2 ; LINEFIELD(casida/tamm_dancoff_excitations/forces_000
 match ; 9th TDA force 1 1 ; LINEFIELD(casida/tamm_dancoff_excitations/forces_00009.xsf, 2, 5) ; -0.166306
 
 # check parallel solver
-Input: 01-casida.031-casida_scalapack.inp
+Input: 01-casida.06-casida_scalapack.inp
 if(available scalapack); then
   match ;  1st eps-diff E ; GREPFIELD(casida/eps_diff, '  5   6', 3) ; 3.00684237E-01
   match ;  3rd eps-diff E ; GREPFIELD(casida/eps_diff, '  4   6', 3) ; 3.53561931E-01
@@ -156,7 +156,7 @@ else
   match ; Error match ; GREPCOUNT(err, 'code not compiled with ScaLAPACK') ; 1
 endif
 
-Input: 01-casida.032-casida_elpa.inp
+Input: 01-casida.07-casida_elpa.inp
 if(available ELPA); then
   match ;  1st eps-diff E ; GREPFIELD(casida/eps_diff, '  5   6', 3) ; 3.00684237E-01
   match ;  3rd eps-diff E ; GREPFIELD(casida/eps_diff, '  4   6', 3) ; 3.53561931E-01
@@ -194,7 +194,7 @@ else
   match ; Error match ; GREPCOUNT(err, 'code not compiled with') ; 1
 endif
 
-Input: 01-casida.033-casida_restart.inp
+Input: 01-casida.08-casida_restart.inp
 match ;  1st eps-diff E ; GREPFIELD(casida/eps_diff, '  5   6', 3) ; 3.00684237E-01
 match ;  3rd eps-diff E ; GREPFIELD(casida/eps_diff, '  4   6', 3) ; 3.53561931E-01
 match ; 12th eps-diff E ; GREPFIELD(casida/eps_diff, '  5  11', 3) ; 4.33579704E-01
@@ -245,7 +245,7 @@ match ; 9th TDA force 1 1 ; LINEFIELD(casida/tamm_dancoff_excitations/forces_000
 
 
 Util : oct-casida_spectrum
-Input: 01-casida.04-spectrum.inp
+Input: 01-casida.09-spectrum.inp
 
 # all theory levels have appreciable amplitude at E = 0.53 Ha
 # due to symmetry, the values in y and z must be equal

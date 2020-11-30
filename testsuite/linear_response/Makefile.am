@@ -22,14 +22,14 @@ sharedir = $(pkgdatadir)/testsuite/linear_response
 
 dist_share_DATA = \
 	01-casida.01-gs.inp                      \
-	01-casida.012-vib_modes.inp              \
-	01-casida.02-unocc.inp                   \
-	01-casida.022-unocc_restart.inp          \
-	01-casida.03-casida.inp                  \
-	01-casida.031-casida_scalapack.inp       \
-	01-casida.032-casida_elpa.inp            \
-	01-casida.033-casida_restart.inp         \
-	01-casida.04-spectrum.inp                \
+	01-casida.02-vib_modes.inp               \
+	01-casida.03-unocc.inp                   \
+	01-casida.04-unocc_restart.inp           \
+	01-casida.05-casida.inp                  \
+	01-casida.06-casida_scalapack.inp        \
+	01-casida.07-casida_elpa.inp             \
+	01-casida.08-casida_restart.inp          \
+	01-casida.09-spectrum.inp                \
 	01-casida.test                           \
 	02-h2o_pol_lr.01_h2o_gs.inp              \
 	02-h2o_pol_lr.02_h2o_dyn_pol.inp         \
@@ -42,7 +42,7 @@ dist_share_DATA = \
 	03-vdw_sternheimer.test                  \
 	04-vib_modes.01-ground_state.inp         \
 	04-vib_modes.02-vib_modes.inp            \
-	04-vib_modes.022-vib_modes_restart.inp   \
+	04-vib_modes.03-vib_modes_restart.inp    \
 	04-vib_modes.test                        \
 	05-polarizability.01-gs.inp              \
 	05-polarizability.02-sternheimer.inp     \
@@ -58,6 +58,5 @@ dist_share_DATA = \
 	07-casida-photons.04-elpa.inp            \
 	07-casida-photons.05-elpa-parother.inp   \
 	07-casida-photons.06-spectrum.inp
-	
 
 CLEANFILES = *~ *.bak
