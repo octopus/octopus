@@ -27,6 +27,7 @@ module vdw_ts_oct_m
   use hirshfeld_oct_m
   use io_oct_m
   use io_function_oct_m
+  use lalg_basic_oct_m
   use messages_oct_m
   use mesh_oct_m
   use mpi_oct_m
@@ -296,7 +297,7 @@ contains
     potential = M_ZERO
     do iatom = 1, geo%natoms
       call hirshfeld_density_derivative(hirshfeld, iatom, dvadens)
-      potential(1:der%mesh%np) = potential(1:der%mesh%np) - this%derivative_coeff(iatom)*dvadens(1:der%mesh%np) 
+      call lalg_axpy(der%mesh%np, - this%derivative_coeff(iatom), dvadens, potential)
     end do
 
     if(debug%info) then
@@ -311,7 +312,7 @@ contains
     SAFE_DEALLOCATE_A(dr0dvra)
 
     POP_SUB(vdw_ts_calculate)
-    end subroutine vdw_ts_calculate
+  end subroutine vdw_ts_calculate
 
 
 
@@ -356,7 +357,6 @@ contains
 
 
     call hirshfeld_init(hirshfeld, namespace, der%mesh, geo, st)
-
 
     do iatom = 1, geo%natoms
       call hirshfeld_volume_ratio(hirshfeld, iatom, density, vol_ratio(iatom))

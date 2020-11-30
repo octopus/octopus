@@ -221,7 +221,7 @@ contains
   
   
   ! ---------------------------------------------------------
-  subroutine mesh_r(mesh, ip, rr, origin, coords)
+  pure subroutine mesh_r(mesh, ip, rr, origin, coords)
     type(mesh_t), intent(in)  :: mesh
     integer,      intent(in)  :: ip
     FLOAT,        intent(out) :: rr

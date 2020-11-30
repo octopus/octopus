@@ -310,9 +310,11 @@ contains
     FLOAT :: rr, nrm, rmax
     type(species_t), pointer :: species
     type(ps_t), pointer :: ps
-
+    type(profile_t), save :: prof
 
     PUSH_SUB(species_atom_density_np)
+
+    call profiling_in(prof, "SPECIES_ATOM_DEN_NP")
  
     rho = M_ZERO
     species => atom%species
@@ -371,6 +373,8 @@ contains
       call messages_not_implemented('species_atom_density_np for non-pseudopotential species', namespace=namespace)
 
     end select
+
+    call profiling_out(prof)
 
     POP_SUB(species_atom_density_np)
   end subroutine species_atom_density_np
@@ -441,9 +445,11 @@ contains
     integer :: isp, ip
     FLOAT :: rr
     type(ps_t), pointer :: ps
+    type(profile_t), save :: prof
 
     PUSH_SUB(species_atom_density_derivative_np)
 
+    call profiling_in(prof, "SPECIES_ATOM_DEN_DER_NP")
 
     ps => species_ps(atom%species)
 
@@ -465,6 +471,8 @@ contains
       call messages_write(' does not contain the density.')
       call messages_fatal(namespace=namespace)
     end if
+
+    call profiling_out(prof)
 
     POP_SUB(species_atom_density_derivative_np)
   end subroutine species_atom_density_derivative_np
