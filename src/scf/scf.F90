@@ -516,14 +516,12 @@ contains
 
     logical :: finish, converged_current, converged_last, gs_run_
     integer :: iter, is, nspin, ierr, verbosity_, ib, iqn
-    FLOAT :: evsum_out, evsum_in
     FLOAT :: etime, itime
     character(len=MAX_PATH_LEN) :: dirname
     type(lcao_t) :: lcao    !< Linear combination of atomic orbitals
     type(profile_t), save :: prof
     FLOAT, allocatable :: rhoout(:,:,:), rhoin(:,:,:)
     FLOAT, allocatable :: vhxc_old(:,:)
-    FLOAT, allocatable :: tmp(:)
     class(wfs_elec_t), allocatable :: psioutb(:, :)
 #ifdef HAVE_MPI
     logical :: forced_finish_tmp    
@@ -1341,8 +1339,6 @@ contains
     type(states_elec_t),      intent(in)    :: st
     type(grid_t),             intent(in)    :: gr
     integer,                  intent(in)    :: quantity             
-
-    integer :: is
 
     PUSH_SUB(scf_update_initial_quantity)
 

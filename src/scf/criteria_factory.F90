@@ -48,9 +48,7 @@ contains
     logical,                intent(out)   :: check_conv
 
     FLOAT :: conv_abs_dens, conv_rel_dens, conv_abs_ev, conv_rel_ev
-    FLOAT :: abs_dens, rel_dens, abs_ev, rel_ev
     FLOAT :: conv_energy_diff
-    FLOAT :: energy_diff
     class(convergence_criteria_t), pointer    :: crit, other
     type(criteria_iterator_t) :: iter
 
