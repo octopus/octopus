@@ -28,8 +28,8 @@ Precision: 1.27e-07
 match ;  Kinetic energy      ; GREPFIELD(static/info, 'Kinetic     =', 3) ; 30.343686345000002
 Precision: 2.53e-07
 match ;  External energy     ; GREPFIELD(static/info, 'External    =', 3) ; -0.45927436
-Precision: 7.59e-07
-match ;  Berry energy        ; GREPFIELD(static/info, 'Berry       =', 3) ; 318.41818410999997
+Precision: 8.14e-07
+match ;  Berry energy        ; GREPFIELD(static/info, 'Berry       =', 3) ; 318.41818416
 
 match ;  k-point 1 (x)  ; GREPFIELD(static/info, '#k =   1', 7) ; 0.0
 match ;  k-point 1 (y)  ; GREPFIELD(static/info, '#k =   1', 8) ; 0.0
