@@ -152,14 +152,14 @@ contains
     type(geometry_t),      intent(in)    :: geo
 
     integer :: ispin, idir
-    FLOAT :: e_dip(MAX_DIM + 1, st%d%nspin), n_dip(MAX_DIM), nquantumpol
+    FLOAT :: e_dip(MAX_DIM, st%d%nspin), n_dip(MAX_DIM), nquantumpol
 
     PUSH_SUB(calc_dipole)
 
     dipole(1:MAX_DIM) = M_ZERO
 
     do ispin = 1, st%d%nspin
-      call dmf_multipoles(gr%fine%mesh, st%rho(:, ispin), 1, e_dip(:, ispin))
+      call dmf_dipole(gr%fine%mesh, st%rho(:, ispin), e_dip(:, ispin))
     end do
 
     call geometry_dipole(geo, n_dip)
@@ -175,8 +175,8 @@ contains
        ! in aperiodic directions use normal dipole formula
 
       else
-        e_dip(idir + 1, 1) = sum(e_dip(idir + 1, :))
-        dipole(idir) = -n_dip(idir) - e_dip(idir + 1, 1)
+        e_dip(idir, 1) = sum(e_dip(idir, :))
+        dipole(idir) = -n_dip(idir) - e_dip(idir, 1)
       end if
     end do
 

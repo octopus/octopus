@@ -225,6 +225,7 @@ contains
     !% Outputs the (electric) multipole moments of the density to the file <tt>td.general/multipoles</tt>.
     !% This is required to, <i>e.g.</i>, calculate optical absorption spectra of finite systems. The
     !% maximum value of <math>l</math> can be set with the variable <tt>TDMultipoleLmax</tt>.
+    !% Only for non-fully periodic systems.
     !%Option angular bit(1)
     !% Outputs the orbital angular momentum of the system to <tt>td.general/angular</tt>, which can be used to calculate circular
     !% dichroism.
@@ -316,7 +317,9 @@ contains
     !% This is used to extract the magnon frequency in case of a magnon kick.
     !%End
 
-    default = 2**(OUT_MULTIPOLES - 1) +  2**(OUT_ENERGY - 1)
+    
+    default = 2**(OUT_ENERGY - 1)
+    if(gr%sb%dim > gr%sb%periodic_dim) default = default + 2**(OUT_MULTIPOLES - 1)
     if(ions_move) default = default + 2**(OUT_COORDS - 1) + 2**(OUT_TEMPERATURE - 1)
     if(with_gauge_field) default = default + 2**(OUT_GAUGE_FIELD - 1)
     if(hm%ep%no_lasers > 0) default = default + 2**(OUT_LASER - 1)
@@ -345,6 +348,9 @@ contains
       call messages_not_implemented("TDOutput populations for periodic systems", namespace=namespace)
     end if
 
+    if(gr%sb%dim == gr%sb%periodic_dim .and. writ%out(OUT_MULTIPOLES)%write) then
+      call messages_not_implemented("TDOutput multipole for fully periodic systems", namespace=namespace)
+    end if
 
     if(writ%out(OUT_KP_PROJ)%write.or.writ%out(OUT_FLOQUET)%write) then
       ! make sure this is not domain distributed
