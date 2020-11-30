@@ -481,14 +481,9 @@ contains
       close(iunit)
       io_close_count = io_close_count + 1
       call io_free(iunit)
-      iunit = -1
     end if
-
-#if defined(HAVE_MPI)
-    if(grp_%size > 1) then
-      call MPI_Bcast(iunit, 1, MPI_INTEGER, 0, grp_%comm, mpi_err)
-    end if
-#endif
+    
+    iunit = -1
 
     POP_SUB(io_close)
   end subroutine io_close
