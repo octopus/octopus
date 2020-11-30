@@ -1368,9 +1368,9 @@ contains
 
     type(block_t)        :: blk
     integer              :: il, nlines, ncols, ierr
-    FLOAT                :: k_vector(MAX_DIM), vv(MAX_DIM), xx(MAX_DIM), rr, dummy(MAX_DIM), test, test_limit!, angle, sigma
-    CMPLX                :: e_field(MAX_DIM)
-    character(len=1024)  :: k_string(MAX_DIM)
+    FLOAT                :: k_vector(3), vv(3), xx(3), rr, dummy(3), test, test_limit!, angle, sigma
+    CMPLX                :: e_field(3)
+    character(len=1024)  :: k_string(3)
     character(len=1024)  :: mxf_expression
     type(profile_t), save :: prof
 
@@ -1415,10 +1415,10 @@ contains
 
       bc%plane_wave%number = nlines
       SAFE_ALLOCATE(bc%plane_wave%modus(nlines))
-      SAFE_ALLOCATE(bc%plane_wave%e_field_string(MAX_DIM, nlines))
-      SAFE_ALLOCATE(bc%plane_wave%e_field(MAX_DIM, nlines))
-      SAFE_ALLOCATE(bc%plane_wave%k_vector(MAX_DIM, nlines))
-      SAFE_ALLOCATE(bc%plane_wave%v_vector(MAX_DIM, nlines))
+      SAFE_ALLOCATE(bc%plane_wave%e_field_string(3, nlines))
+      SAFE_ALLOCATE(bc%plane_wave%e_field(3, nlines))
+      SAFE_ALLOCATE(bc%plane_wave%k_vector(3, nlines))
+      SAFE_ALLOCATE(bc%plane_wave%v_vector(3, nlines))
       SAFE_ALLOCATE(bc%plane_wave%mx_function(nlines))
 
       ! read all lines
@@ -1494,7 +1494,7 @@ contains
             call messages_fatal(1, namespace=namespace)
           end if
           e_field  = units_to_atomic(units_inp%energy/units_inp%length, e_field)
-          k_vector(:) = bc%plane_wave%mx_function(il)%k_vector(:)
+          k_vector(1:3) = bc%plane_wave%mx_function(il)%k_vector(1:3)
 
           test = TOFLOAT(dot_product(k_vector(1:3), e_field(1:3)))
           if (abs(test) > test_limit) then
@@ -1641,7 +1641,7 @@ contains
     type(geometry_t),    intent(in)    :: geo
     integer,             intent(out)   :: point_info
 
-    FLOAT   :: rr, dd, xx(MAX_DIM), width(MAX_DIM)
+    FLOAT   :: rr, dd, xx(3), width(3)
 
     point_info = 0
 
