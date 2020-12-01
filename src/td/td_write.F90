@@ -86,6 +86,10 @@ module td_write_oct_m
     td_write_mxll_iter, &
     td_write_mxll_free_data
 
+  ! The following routine is currently unused, but will be used in the near future.
+  ! In order noy to generate warnings about it, we declared it as public
+  public :: td_dump_mxll
+
   integer, parameter ::   &
     OUT_MULTIPOLES  =  1, &
     OUT_ANGULAR     =  2, &

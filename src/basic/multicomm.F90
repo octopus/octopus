@@ -772,8 +772,8 @@ contains
 
     ! -----------------------------------------------------
 
-    subroutine create_slave_intercommunicators()
 #ifdef HAVE_MPI2
+    subroutine create_slave_intercommunicators()
       integer :: remote_leader
       integer :: tag
       integer :: coords(MAX_INDEX)
@@ -798,8 +798,8 @@ contains
       call MPI_Intercomm_create(mc%group_comm(slave_level), 0, base_grp%comm, remote_leader, tag, mc%slave_intercomm, mpi_err)
 
       POP_SUB(multicomm_init.create_slave_intercommunicators)
-#endif
     end subroutine create_slave_intercommunicators
+#endif
 
   end subroutine multicomm_init
   

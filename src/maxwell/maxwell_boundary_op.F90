@@ -50,7 +50,6 @@ module maxwell_boundary_op_oct_m
     bc_mxll_init,              &
     bc_mxll_end,               &
     bc_mxll_t,                 &
-    bc_mxll_write_info,        &
     inner_and_outer_points_mapping,  &
     surface_grid_points_mapping
 

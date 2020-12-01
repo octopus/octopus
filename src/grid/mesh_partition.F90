@@ -115,10 +115,7 @@ contains
     integer, allocatable :: istart(:), lsize(:)
 
     type(profile_t), save :: prof
-    integer :: default
-#ifdef HAVE_METIS
-    integer ::ierr
-#endif
+    integer :: default, ierr
 
     call profiling_in(prof, "MESH_PARTITION")
     PUSH_SUB(mesh_partition)
@@ -345,25 +342,27 @@ contains
       SAFE_ALLOCATE(part_global(1:nv_global))
 
       !Now we can call METIS
-#ifdef HAVE_METIS
       select case(method)
       case(RCB)
         message(1) = 'Info: Using METIS 5 multilevel recursive bisection to partition the mesh.'
         call messages_info(1)
+#ifdef HAVE_METIS
         ierr = oct_metis_partgraphrecursive(nv_global, 1, xadj_global(1), adjncy_global(1), vsize, &
                                           tpwgts(1), 1.01_4, options(1), edgecut, part_global(1))
+#endif
         call metis_error_code(ierr)
       case(GRAPH)
         message(1) = 'Info: Using METIS 5 multilevel k-way algorithm to partition the mesh.'
         call messages_info(1)
+#ifdef HAVE_METIS
         ierr = oct_metis_partgraphkway(nv_global, 1, xadj_global(1), adjncy_global(1), vsize, &
                                      tpwgts(1), 1.01_4, options(1), edgecut, part_global(1))
+#endif
         call metis_error_code(ierr) 
       case default
         message(1) = 'Selected partition method is not available in METIS 5.'
         call messages_fatal(1)
       end select
-#endif
 
       part(1:nv) = part_global(istart(ipart):istart(ipart) + nv - 1)
 
