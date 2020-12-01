@@ -11,22 +11,22 @@ Input      : 13-primitive.01-diamond.inp
 
 match ;  SCF convergence  ; GREPCOUNT(static/info, 'SCF converged') ; 1.0
 
-Precision: 1.15e-14
-match ;  Total energy        ; GREPFIELD(static/info, 'Total       =', 3) ; -11.47107927
+Precision: 3.85e-08
+match ;  Total energy        ; GREPFIELD(static/info, 'Total       =', 3) ; -11.471079244999999
 Precision: 1.07e-14
 match ;  Ion-ion energy      ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -10.73490075
-Precision: 8.27e-16
-match ;  Eigenvalues sum     ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -0.82657397
-Precision: 1.00e-15
-match ;  Hartree energy      ; GREPFIELD(static/info, 'Hartree     =', 3) ; 0.99994867
-Precision: 3.10e-15
-match ;  Exchange energy     ; GREPFIELD(static/info, 'Exchange    =', 3) ; -3.10096961
+Precision: 3.30e-08
+match ;  Eigenvalues sum     ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -0.82657393
+Precision: 1.10e-08
+match ;  Hartree energy      ; GREPFIELD(static/info, 'Hartree     =', 3) ; 0.9999486900000001
+Precision: 5.50e-09
+match ;  Exchange energy     ; GREPFIELD(static/info, 'Exchange    =', 3) ; -3.100969615
 Precision: 4.45e-16
 match ;  Correlation energy  ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.44501265
-Precision: 8.62e-15
-match ;  Kinetic energy      ; GREPFIELD(static/info, 'Kinetic     =', 3) ; 8.61906157
-Precision: 1.10e-08
-match ;  External energy     ; GREPFIELD(static/info, 'External    =', 3) ; -6.80920648
+Precision: 3.30e-08
+match ;  Kinetic energy      ; GREPFIELD(static/info, 'Kinetic     =', 3) ; 8.619061630000001
+Precision: 3.85e-08
+match ;  External energy     ; GREPFIELD(static/info, 'External    =', 3) ; -6.809206554999999
 Precision: 1.00e-15
 match ;  k-point 50 (x)  ; GREPFIELD(static/info, '#k =  50', 7) ; 0.0
 Precision: 1.00e-15
@@ -55,10 +55,10 @@ Precision: 2.11e-16
 match ;  Eigenvalue  3  ; GREPFIELD(static/info, '#k =  75', 3, 3) ; 0.210678
 Precision: 2.11e-16
 match ;  Eigenvalue  4  ; GREPFIELD(static/info, '#k =  75', 3, 4) ; 0.21068
-Precision: 1.4e-05
-match ;  dipole 2-5  ; LINEFIELD(static/ks_me_dipole.k1_x, 4, 4) ; 3.062941894417
-Precision: 3.28e-08
-match ;  dipole 4-7  ; LINEFIELD(static/ks_me_dipole.k1_x, 9, 3) ; 3.17473218408
+Precision: 7.29e-05
+match ;  dipole 2-5  ; LINEFIELD(static/ks_me_dipole.k1_x, 4, 4) ; 3.0635669862404997
+Precision: 6.65e-07
+match ;  dipole 4-7  ; LINEFIELD(static/ks_me_dipole.k1_x, 9, 3) ; 3.174731670029
 
 
 Input      : 13-primitive.02-graphene.inp

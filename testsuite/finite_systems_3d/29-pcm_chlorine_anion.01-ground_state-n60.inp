@@ -25,4 +25,3 @@ PCMCalculation = true
 PCMStaticEpsilon = 78.39
 MixField = density
 StatesPack = yes
-LCAOStart = lcao_full
