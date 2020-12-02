@@ -286,15 +286,13 @@ subroutine X(broyden_extrapolation_aux)(this, ii, coeff, iter_used, dbeta, dwork
   ! other terms
   do i = 1, iter_used
     !Here gamma might be of a different type than the main mixfield type, so we convert it to the proper type
-    if(present(dbeta).and.present(dwork)) then
+    if (present(dbeta) .and. present(dwork)) then
       gamma = ww*sum(dbeta(:, i)*dwork(:))
-    else 
-      if(present(zbeta).and.present(zwork)) then
-        gamma = ww*sum(zbeta(:, i)*zwork(:))
-      else
-        write(message(1), '(a)') 'Internal error in broyden_extrapolation_aux'
-        call messages_fatal(1)
-      end if
+    else if (present(zbeta) .and. present(zwork)) then
+      gamma = ww*sum(zbeta(:, i)*zwork(:))
+    else
+      write(message(1), '(a)') 'Internal error in broyden_extrapolation_aux'
+      call messages_fatal(1)
     end if
     mf%X(vnew)(1:d1, 1:d2, 1:d3) = mf%X(vnew)(1:d1, 1:d2, 1:d3) &
             - ww*gamma*(coeff*mf%X(df)(1:d1, 1:d2, 1:d3, i) + mf%X(dv)(1:d1, 1:d2, 1:d3, i))
