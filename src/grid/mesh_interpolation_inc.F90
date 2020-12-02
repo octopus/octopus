@@ -64,9 +64,7 @@ subroutine X(mesh_interpolation_evaluate_vec)(this, npoints, values, positions, 
     i011 = 7,            &
     i111 = 8
   integer :: pt(1:8), npt, ipt
-#ifdef HAVE_MPI
   logical :: inner_point, boundary_point
-#endif
 
   PUSH_SUB(X(mesh_interpolation_evaluate))
 
@@ -109,7 +107,6 @@ subroutine X(mesh_interpolation_evaluate_vec)(this, npoints, values, positions, 
     end if
 
      if(mesh%parallel_in_domains) then
-#ifdef HAVE_MPI
        do ipt = 1, npt
          pt(ipt) = vec_global2local(mesh%vp, pt(ipt), mesh%vp%partno)
          lvalues(ipt) = CNST(0.0)
@@ -117,7 +114,6 @@ subroutine X(mesh_interpolation_evaluate_vec)(this, npoints, values, positions, 
          inner_point = pt(ipt) > 0 .and. pt(ipt) <= mesh%np
          if(boundary_point .or. inner_point) lvalues(ipt) = values(pt(ipt))
       end do
-#endif
     else
       do ipt=1, npt
         lvalues(ipt) = values(pt(ipt))

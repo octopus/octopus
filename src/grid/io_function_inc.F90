@@ -46,18 +46,14 @@ subroutine X(io_function_input)(filename, namespace, mesh, ff, ierr, map)
   R_TYPE,            intent(inout) :: ff(:)
   integer,           intent(out)   :: ierr
   integer, optional, intent(in)    :: map(:)
-  !
 
-#if defined(HAVE_MPI)
   R_TYPE, allocatable :: ff_global(:)
-#endif
-  !
+
   PUSH_SUB(X(io_function_input))
 
   ASSERT(ubound(ff, dim = 1) == mesh%np .or. ubound(ff, dim = 1) == mesh%np_part)
 
   if(mesh%parallel_in_domains) then
-#if defined(HAVE_MPI)
     ! Only root reads. Therefore, only root needs a buffer
     ! ff_global for the whole function.
     SAFE_ALLOCATE(ff_global(1:1))
@@ -71,7 +67,9 @@ subroutine X(io_function_input)(filename, namespace, mesh, ff, ierr, map)
     ! Only root knows if the file was successfully read.
     ! Now, it tells everybody else.
     call mpi_debug_in(mesh%vp%comm, C_MPI_BCAST)
+#if defined(HAVE_MPI)
     call MPI_Bcast(ierr, 1, MPI_INTEGER, mesh%vp%root, mesh%vp%comm, mpi_err)
+#endif
     call mpi_debug_out(mesh%vp%comm, C_MPI_BCAST)
 
     ! Only scatter, when successfully read the file(s).
@@ -80,10 +78,6 @@ subroutine X(io_function_input)(filename, namespace, mesh, ff, ierr, map)
     end if
 
     SAFE_DEALLOCATE_A(ff_global)
-#else
-    ! internal error
-    ASSERT(.false.) 
-#endif
   else
     call X(io_function_input_global)(filename, namespace, mesh, ff, ierr, map)
   end if
@@ -506,9 +500,7 @@ subroutine X(io_function_output_vector)(how, dir, fname, namespace, mesh, ff, ve
       !lives
 
       do ivd = 1, vector_dim
-#ifdef HAVE_MPI        
         call vec_gather(mesh%vp, root_, ff(:, ivd), ff_global(:, ivd))
-#endif
       end do
       
     else

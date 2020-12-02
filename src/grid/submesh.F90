@@ -197,10 +197,8 @@ contains
         do iy = nmin(2), nmax(2)
           do ix = nmin(1), nmax(1)
             ip = mesh%idx%lxyz_inv(ix, iy, iz)
-#if defined(HAVE_MPI)
             if(ip == 0) cycle
             if(mesh%parallel_in_domains) ip = vec_global2local(mesh%vp, ip, mesh%vp%partno)
-#endif
             if(ip == 0) cycle
             r2 = sum((mesh%x(ip, 1:sb%dim) - center(1:sb%dim))**2)
             if(r2 <= rc2) then
@@ -227,10 +225,8 @@ contains
         do iy = nmin(2), nmax(2)
           do ix = nmin(1), nmax(1)
             ip = mesh%idx%lxyz_inv(ix, iy, iz)
-#if defined(HAVE_MPI)
             if(ip == 0) cycle
             if(mesh%parallel_in_domains) ip = vec_global2local(mesh%vp, ip, mesh%vp%partno)
-#endif
             is = map_inv(ip)
             if(is == 0) cycle
             if(is < 0) then

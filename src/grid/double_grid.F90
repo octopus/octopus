@@ -243,10 +243,8 @@ contains
         do nn = this%interpolation_min, this%interpolation_max
           
           ip = mesh%idx%lxyz_inv(pp, qq, rr)
-#ifdef HAVE_MPI      
           !map the global point to a local point
           if (mesh%parallel_in_domains) ip = vec_global2local(mesh%vp, ip, mesh%vp%partno)
-#endif
           if (ip > 0) then
             is2 = jxyz_inv(ip)
             if(is2 > 0) vs(is2) = vs(is2) + this%co(ll)*this%co(mm)*this%co(nn)*vv

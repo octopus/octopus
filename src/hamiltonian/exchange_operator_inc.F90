@@ -1166,11 +1166,9 @@ subroutine X(exchange_operator_scdm_apply) (this, namespace, scdm, der, st_d, ps
     call batch_get_state(hpsib, ibatch, der%mesh%np, hpsil)
 
     if(der%mesh%parallel_in_domains) then
-#ifdef HAVE_MPI
       ! the gathering is done for the domain distribution, the states are still local to the st%mpi_grp
       call vec_allgather(der%mesh%vp, psi(:, 1), psil(:, 1))
       call vec_allgather(der%mesh%vp, hpsi(:, 1), hpsil(:, 1))
-#endif
     else
       psi(1:der%mesh%np, 1:st_d%dim) = psil(1:der%mesh%np, 1:st_d%dim)
       hpsi(1:der%mesh%np, 1:st_d%dim) = hpsil(1:der%mesh%np, 1:st_d%dim)
@@ -1241,9 +1239,7 @@ subroutine X(exchange_operator_scdm_apply) (this, namespace, scdm, der, st_d, ps
     hpsi(1:der%mesh%np_global, 1) =  hpsi(1:der%mesh%np_global, 1) + temp_state_global(1:der%mesh%np_global, 1)
 
     if(der%mesh%parallel_in_domains) then
-#ifdef HAVE_MPI
       call vec_scatter(der%mesh%vp, 0, hpsil(:, 1), hpsi(:, 1))
-#endif
     else
       hpsil(1:der%mesh%np, 1:st_d%dim) = hpsi(1:der%mesh%np, 1:st_d%dim)
     end if
