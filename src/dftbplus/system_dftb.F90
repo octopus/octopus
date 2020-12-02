@@ -132,6 +132,10 @@ contains
 
     integer :: ii, jj, ispec
     character(len=MAX_PATH_LEN) :: slako_dir
+    character(len=1), allocatable  :: max_ang_mom(:)
+    character(len=LABEL_LEN) :: this_max_ang_mom, this_label
+    integer :: n_maxang_block
+    type(block_t) :: blk
 
 #ifdef HAVE_DFTBPLUS
     type(TDftbPlusInput) :: input
@@ -155,7 +159,8 @@ contains
     SAFE_ALLOCATE(this%gradients(3, this%nAtom))
     SAFE_ALLOCATE(this%species(this%nAtom))
     SAFE_ALLOCATE(this%mass(this%nAtom))
-    SAFE_ALLOCATE(this%labels(this%nAtom))
+    SAFE_ALLOCATE(this%labels(this%geo%nspecies))
+    SAFE_ALLOCATE(max_ang_mom(this%geo%nspecies))
 
     ispec = 1
     this%species(1) = 1
@@ -165,7 +170,7 @@ contains
       this%coords(1:3,ii) = this%geo%atom(ii)%x(1:3)
       ! mass is read from the default pseudopotential files
       this%mass(ii) = species_mass(this%geo%atom(ii)%species)
-      if ((ii > 1) .and. .not. (any(this%labels(1:ii-1) == this%geo%atom(ii)%label))) then
+      if ((ii > 1) .and. .not. (any(this%labels(1:ispec) == this%geo%atom(ii)%label))) then
         ispec = ispec + 1
         this%labels(ispec) = this%geo%atom(ii)%label
       end if
@@ -177,6 +182,42 @@ contains
     end do
     this%vel = M_ZERO
     this%tot_force = M_ZERO
+
+    !%Variable MaxAngularMomentum
+    !%Type block
+    !%Section DftbPlusInterface
+    !%Description
+    !% Specifies the highest angular momentum for each atom type. All orbitals up
+    !% to that angular momentum will be included in the calculation.
+    !% Possible values for the angular momenta are s, p, d, f.
+    !% These are examples:
+    !%
+    !% <tt>%MaxAngularMomentum
+    !% <br>&nbsp;&nbsp;'O'   | 'p'
+    !% <br>&nbsp;&nbsp;'H'   | 's'
+    !% <br>%</tt>
+    !%End
+    n_maxang_block = 0
+    if(parse_block(namespace, 'MaxAngularMomentum', blk) == 0) then
+      n_maxang_block = parse_block_n(blk)
+      if (n_maxang_block /= this%geo%nspecies) then
+        call messages_input_error(namespace, "MaxAngularMomentum", "Wrong number of species.")
+      end if
+
+      do ii = 1, n_maxang_block
+        call parse_block_string(blk, ii-1, 0, this_label)
+        call parse_block_string(blk, ii-1, 1, this_max_ang_mom)
+        if (any(["s","p","d","f"] == trim(this_max_ang_mom))) then
+          call messages_input_error(namespace, "MaxAngularMomentum", "Wrong maximum angular momentum for element"//trim(this_label))
+        end if
+        do jj = 1, this%geo%nspecies
+          if (trim(adjustl(this_label)) == trim(adjustl(this%labels(jj)))) then
+            max_ang_mom(jj) = trim(adjustl(this_max_ang_mom))
+          end if
+        end do
+      end do
+    end if
+    call parse_block_end(blk)
 
     !%Variable SlakoDir
     !%Type string
@@ -215,8 +256,9 @@ contains
     ! sub-block inside hamiltonian for the maximum angular momenta
     call setChild(pDftb, "MaxAngularMomentum", pMaxAng)
     ! explicitly set the maximum angular momenta for the species
-    call setChildValue(pMaxAng, "O", "p")
-    call setChildValue(pMaxAng, "H", "s")
+    do ii = 1, this%geo%nspecies
+      call setChildValue(pMaxAng, this%labels(ii), max_ang_mom(ii))
+    end do
 
     ! get the SK data
     ! You should provide the skfiles as found in the external/slakos/origin/mio-1-1/ folder. These can
