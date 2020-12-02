@@ -728,7 +728,6 @@ contains
 
     call nl_operator_copy(opt, op)
 
-#if defined(HAVE_MPI)
     if(mesh%parallel_in_domains) then
       SAFE_ALLOCATE(opg)
       SAFE_ALLOCATE(opgt)
@@ -738,13 +737,10 @@ contains
       SAFE_ALLOCATE(vol_pp(1:mesh%np_global))
       call vec_allgather(mesh%vp, vol_pp, mesh%vol_pp)
     else
-#endif
       opg  => op
       opgt => opt
       vol_pp => mesh%vol_pp
-#if defined(HAVE_MPI)
     end if
-#endif
 
     opgt%w = M_ZERO
     do ip = 1, mesh%np_global
@@ -765,7 +761,6 @@ contains
       end do
     end do
 
-#if defined(HAVE_MPI)
     if(mesh%parallel_in_domains) then
       SAFE_DEALLOCATE_P(vol_pp)
       do ip = 1, mesh%vp%np_local
@@ -776,7 +771,6 @@ contains
       SAFE_DEALLOCATE_P(opg)
       SAFE_DEALLOCATE_P(opgt)
     end if
-#endif
 
     POP_SUB(nl_operator_skewadjoint)
   end subroutine nl_operator_skewadjoint
@@ -798,7 +792,6 @@ contains
     call nl_operator_copy(opt, op)
 
     if(mesh%parallel_in_domains) then
-#if defined(HAVE_MPI)
       SAFE_ALLOCATE(opg)
       SAFE_ALLOCATE(opgt)
       call nl_operator_allgather(op, opg)
@@ -806,11 +799,6 @@ contains
       opgt = opg
       SAFE_ALLOCATE(vol_pp(1:mesh%np_global))
       call vec_allgather(mesh%vp, vol_pp, mesh%vol_pp)
-#else
-      ! avoid appearance of using vol_pp uninitialized
-      vol_pp => mesh%vol_pp
-      ASSERT(.false.)
-#endif
     else      
       opg  => op
       opgt => opt
@@ -838,7 +826,6 @@ contains
       end do
     end do
 
-#if defined(HAVE_MPI)
     if(mesh%parallel_in_domains) then
       SAFE_DEALLOCATE_P(vol_pp)
       do ip = 1, mesh%vp%np_local
@@ -849,13 +836,10 @@ contains
       SAFE_DEALLOCATE_P(opg)
       SAFE_DEALLOCATE_P(opgt)
     end if
-#endif
 
     POP_SUB(nl_operator_selfadjoint)
   end subroutine nl_operator_selfadjoint
 
-
-#if defined(HAVE_MPI)
 
   ! ---------------------------------------------------------
   !> Like nl_operator_gather but opg is present on all nodes
@@ -927,7 +911,6 @@ contains
   ! ---------------------------------------------------------
   ! End of private routines.
   ! ---------------------------------------------------------
-#endif
 
   ! ---------------------------------------------------------
   subroutine nl_operator_end(op)

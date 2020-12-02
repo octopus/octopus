@@ -166,9 +166,7 @@ subroutine X(scdm_localize)(scdm, namespace, st, mesh)
   SAFE_ALLOCATE(lxyz_local(1:mesh%np))
   do ii = 1,3
     lxyz_global(1:mesh%np_global) = mesh%idx%lxyz(1:mesh%np_global,ii)
-#ifdef HAVE_MPI
     call vec_scatter(mesh%vp, 0, lxyz_local, lxyz_global)
-#endif
     lxyz_domains(1:mesh%np,ii) = lxyz_local(1:mesh%np)
   end do
 
@@ -434,9 +432,7 @@ subroutine X(scdm_rrqr)(scdm, namespace, st, mesh, nst, root, ik, jpvt)
   FLOAT :: tmp2
 #endif
 #endif
-#ifdef HAVE_MPI
   integer :: sender
-#endif
 
   PUSH_SUB(X(scdm_rrqr))
   call profiling_in(prof_scdm_QR,TOSTRING(X(SCDM_QR)))
@@ -569,7 +565,6 @@ subroutine X(scdm_rrqr)(scdm, namespace, st, mesh, nst, root, ik, jpvt)
       do ii = 1,nst
         !we are copying states like this:  KSt(i,:) = st%psi(:,dim,i,nik)
         state_global(1:mesh%np_global) = M_ZERO
-#ifdef HAVE_MPI
         sender = 0
         if(state_is_local(st,ii)) then
           call states_elec_get_state(st, mesh, ii, ik, temp_state)
@@ -577,6 +572,7 @@ subroutine X(scdm_rrqr)(scdm, namespace, st, mesh, nst, root, ik, jpvt)
           if(mesh%mpi_grp%rank ==0) sender = mpi_world%rank
         end if
         call comm_allreduce(mpi_world%comm,sender)
+#ifdef HAVE_MPI
         call MPI_Bcast(state_global,mesh%np_global , R_MPITYPE, sender, mpi_world%comm, mpi_err)
 #endif
         ! keep full Kohn-Sham matrix only on root
