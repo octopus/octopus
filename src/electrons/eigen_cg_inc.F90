@@ -314,7 +314,7 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
       ! Line minimization (eq. 5.23 to 5.38)
       a0 = X(mf_dotp) (gr%mesh, st%d%dim, psi, h_cg, reduce = .false.)
       b0 = X(mf_dotp) (gr%mesh, st%d%dim, cg, h_cg, reduce = .false.)
-      cg0 = X(mf_dotp) (gr%mesh, st%d%dim, cg, cg, reduce = .false.)
+      cg0 = real(X(mf_dotp) (gr%mesh, st%d%dim, cg, cg, reduce = .false.))
 
       if(gr%mesh%parallel_in_domains) then
         sb(1) = a0

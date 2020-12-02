@@ -173,7 +173,7 @@ subroutine X(scdm_localize)(scdm, namespace, st, mesh)
   do vv = scdm%st%st_start,scdm%st%st_end
     call states_elec_get_state(scdm%st, mesh, vv, scdm%st%d%nik, temp_state(1:mesh%np,:))
     do ii = 1,3
-      scdm%center(ii,vv) = sum(temp_state(1:mesh%np,1)*R_CONJ(temp_state(1:mesh%np,1))*&
+      scdm%center(ii,vv) = sum(real(temp_state(1:mesh%np,1)*R_CONJ(temp_state(1:mesh%np,1)))*&
            lxyz_domains(1:mesh%np,ii)*mesh%spacing(ii))*mesh%volume_element
     end do
   end do
@@ -315,7 +315,7 @@ subroutine X(scdm_localize)(scdm, namespace, st, mesh)
     end do
 
     ! compute localization error
-    error = error + M_ONE - dot_product(scdm%X(psi)(:,vv),scdm%X(psi)(:,vv))*mesh%volume_element
+    error = error + M_ONE - real(dot_product(scdm%X(psi)(:,vv),scdm%X(psi)(:,vv)))*mesh%volume_element
 
   end do
 

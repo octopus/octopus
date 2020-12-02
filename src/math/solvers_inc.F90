@@ -203,7 +203,7 @@ subroutine X(bi_conjugate_gradients)(np, x, b, op, opt, dotp, iter, residue, thr
   iter     = 1
   do while(iter < max_iter)
     gamma = R_REAL(dotp(rr, r))
-    err   = dotp(r, r)
+    err   = real(dotp(r, r))
     if(abs(err) < threshold_**2) exit
     call op (p,  ap)
     call opt(pp, atp)
@@ -1315,7 +1315,7 @@ end subroutine X(bi_conjugate_gradients)
       integer :: k
       zfrob_norm = M_ZERO
       do k = 1, size(v, 2)
-        zfrob_norm = zfrob_norm + zdotprod( v(:, k), v(:, k) )
+        zfrob_norm = zfrob_norm + real(zdotprod( v(:, k), v(:, k) ))
       end do
       zfrob_norm = sqrt( zfrob_norm )
     end function zfrob_norm
