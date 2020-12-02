@@ -43,6 +43,7 @@ module system_dftb_oct_m
   use propagator_verlet_oct_m
   use quantity_oct_m
   use space_oct_m
+  use species_oct_m
   use system_oct_m
   use unit_oct_m
   use unit_system_oct_m
@@ -145,8 +146,7 @@ contains
     call messages_print_stress(stdout, "DFTB+ System", namespace=namespace)
 
     call space_init(this%space, namespace)
-    this%geo%space => this%space
-    call geometry_init_xyz(this%geo, namespace)
+    call geometry_init(this%geo, namespace, this%space)
     this%nAtom = this%geo%natoms
     SAFE_ALLOCATE(this%coords(3, this%nAtom))
     SAFE_ALLOCATE(this%acc(3, this%nAtom))
@@ -163,6 +163,8 @@ contains
 
     do ii = 1, this%nAtom
       this%coords(1:3,ii) = this%geo%atom(ii)%x(1:3)
+      ! mass is read from the default pseudopotential files
+      this%mass(ii) = species_mass(this%geo%atom(ii)%species)
       if ((ii > 1) .and. .not. (any(this%labels(1:ii-1) == this%geo%atom(ii)%label))) then
         ispec = ispec + 1
         this%labels(ispec) = this%geo%atom(ii)%label
@@ -175,12 +177,6 @@ contains
     end do
     this%vel = M_ZERO
     this%tot_force = M_ZERO
-
-    ! ToDo: fix mass definition
-    this%mass = [16.01, 1.008, 1.008]
-    do ii = 1, this%nAtom            
-      this%mass(ii) = units_to_atomic(unit_amu, this%mass(ii))
-    end do
 
     !%Variable SlakoDir
     !%Type string
@@ -199,7 +195,7 @@ contains
     call input%getRootNode(pRoot)
     call setChild(pRoot, "Geometry", pGeo)
     call setChildValue(pGeo, "Periodic", .false.)
-    call setChildValue(pGeo, "TypeNames", ["O", "H"])
+    call setChildValue(pGeo, "TypeNames", this%labels(1:this%geo%nspecies))
     call setChildValue(pGeo, "TypesAndCoordinates", reshape(this%species, [1, size(this%species)]), this%coords)
     call setChild(pRoot, "Hamiltonian", pHam)
     call setChild(pHam, "Dftb", pDftb)
