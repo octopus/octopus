@@ -182,7 +182,11 @@ subroutine X(mesh_interpolation_test)(mesh)
   ! generate the field to be interpolated
   if(mesh%mpi_grp%rank == 0) then
     do idir = 1, mesh%sb%dim
-      coeff(idir) = loct_ran_gaussian(random_gen_pointer, CNST(100.0)) + M_ZI*loct_ran_gaussian(random_gen_pointer, CNST(100.0))
+#ifdef R_TCOMPLEX
+      coeff(idir) = TOCMPLX(loct_ran_gaussian(random_gen_pointer, CNST(100.0)), loct_ran_gaussian(random_gen_pointer, CNST(100.0)))
+#else
+      coeff(idir) = loct_ran_gaussian(random_gen_pointer, CNST(100.0))
+#endif
     end do
   end if
 

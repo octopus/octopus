@@ -239,6 +239,11 @@ subroutine X(broyden_extrapolation_aux)(this, ii, coeff, iter_used, dbeta, dwork
 
   PUSH_SUB(X(broyden_extrapolation_aux))
 
+#ifdef R_TREAL
+  ! We cannot have a complex auxiliary field being mixed along with a real field
+  ASSERT(this%auxmixfield(ii)%p%func_type == TYPE_FLOAT)
+#endif
+
   mf => this%auxmixfield(ii)%p
 
   d1 = mf%d1 
@@ -261,7 +266,11 @@ subroutine X(broyden_extrapolation_aux)(this, ii, coeff, iter_used, dbeta, dwork
    if(present(dgamma)) then
      gamma = dgamma
    else
+#ifdef R_TCOMPLEX
      gamma = zgamma
+#else
+     ASSERT(.false.)
+#endif
    end if
 
    call lalg_scal(d1, d2, d3, gamma, mf%X(df)(:, :, :, ipos))
@@ -289,7 +298,11 @@ subroutine X(broyden_extrapolation_aux)(this, ii, coeff, iter_used, dbeta, dwork
     if (present(dbeta) .and. present(dwork)) then
       gamma = ww*sum(dbeta(:, i)*dwork(:))
     else if (present(zbeta) .and. present(zwork)) then
+#ifdef R_TCOMPLX
       gamma = ww*sum(zbeta(:, i)*zwork(:))
+#else
+      ASSERT(.false.)
+#endif
     else
       write(message(1), '(a)') 'Internal error in broyden_extrapolation_aux'
       call messages_fatal(1)
@@ -314,7 +327,7 @@ subroutine X(mixing_diis)(this, vin, vout, vnew, iter)
 
   integer :: size, ii, jj, kk, ll
   integer :: d1, d2, d3
-  FLOAT :: sumalpha
+  R_TYPE :: sumalpha
   R_TYPE, allocatable :: aa(:, :), alpha(:), rhs(:)
 
   PUSH_SUB(X(mixing_diis))

@@ -3114,7 +3114,7 @@ contains
         write(message(2),'(a)') "Use PCMVdWRadii = pcm_vdw_species, for other vdw radii values" 
         call messages_fatal(2, namespace=namespace)
       end if
-      ia = species_z(species)
+      ia = int(species_z(species))
       vdw_r = vdw_radii(ia)*P_Ang
 
     case (PCM_VDW_SPECIES)

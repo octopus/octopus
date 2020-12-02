@@ -1577,6 +1577,7 @@ contains
     
     type(pert_t)  :: pert_kdotp
     integer       :: ip, idim
+    R_TYPE :: frequency0_
 
     PUSH_SUB(X(lr_calc_magneto_optics_periodic).apply_v)
 
@@ -1593,16 +1594,23 @@ contains
     if((nsigma_h == 2) .and. (nsigma_in == 1)) psi_out(:, :, nsigma_h) = psi_out(:, :, 1)
 
     if(add_hartree .or. add_fxc) then
+#ifdef R_TCOMPLEX
+      frequency0_ = frequency0
+#else
+      ! This can only happen if frequency0 has no imaginary part
+      frequency0_ = real(frequency0)
+#endif
+
       do idim = 1, sys%hm%d%dim
         do ip = 1, sys%gr%mesh%np
-          psi_out(ip, idim, 1) = psi_out(ip, idim, 1) + frequency0 * &
+          psi_out(ip, idim, 1) = psi_out(ip, idim, 1) + frequency0_ * &
             factor_e * hvar_in(ip, 1) * lr_in(1)%X(dl_psi)(ip, idim, ist0, ik0)
         end do
       end do
       if(nsigma_h == 2) then 
         do idim = 1, sys%hm%d%dim
           do ip = 1, sys%gr%mesh%np
-            psi_out(ip, idim, nsigma_h) = psi_out(ip, idim, nsigma_h) - R_CONJ(frequency0) * &
+            psi_out(ip, idim, nsigma_h) = psi_out(ip, idim, nsigma_h) - R_CONJ(frequency0_) * &
               factor_e * hvar_in(ip, nsigma_h) * lr_in(nsigma_in)%X(dl_psi)(ip, idim, ist0, ik0)
           end do
         end do

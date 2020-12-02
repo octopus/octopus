@@ -89,9 +89,9 @@
     call states_elec_get_state(psi, gr%mesh, 1, 1, zpsi)
     
     j1 = M_ZERO
-    do i = 1, 2
-      do j = 1, 2
-        j1 = j1 + tg%spin_matrix(i,j)*real(zmf_dotp(gr%mesh, zpsi(:, i), zpsi(:, j)))
+     do i = 1, 2
+       do j = 1, 2
+         j1 = j1 + real(tg%spin_matrix(i,j)*zmf_dotp(gr%mesh, zpsi(:, i), zpsi(:, j)))
       end do
     end do
 

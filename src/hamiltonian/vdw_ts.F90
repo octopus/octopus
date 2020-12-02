@@ -280,7 +280,7 @@ contains
 
       do iatom = 1, geo%natoms
         coordinates(1:sb%dim, iatom) = geo%atom(iatom)%x(1:sb%dim)
-        zatom(iatom) = species_z(geo%atom(iatom)%species)
+        zatom(iatom) = int(species_z(geo%atom(iatom)%species))
 
       end do
       
