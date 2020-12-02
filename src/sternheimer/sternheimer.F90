@@ -115,8 +115,8 @@ module sternheimer_oct_m
 contains
   
   !-----------------------------------------------------------
-  subroutine sternheimer_init(this, sys, wfs_are_cplx, &
-    set_ham_var, set_occ_response, set_last_occ_response, occ_response_by_sternheimer, set_default_solver)
+  subroutine sternheimer_init(this, sys, wfs_are_cplx, set_ham_var, set_occ_response, set_last_occ_response, &
+    occ_response_by_sternheimer)
     type(sternheimer_t),  intent(out)   :: this
     type(electrons_t),    intent(inout) :: sys
     logical,              intent(in)    :: wfs_are_cplx
@@ -124,7 +124,6 @@ contains
     logical,    optional, intent(in)    :: set_occ_response
     logical,    optional, intent(in)    :: set_last_occ_response
     logical,    optional, intent(in)    :: occ_response_by_sternheimer
-    integer(8), optional, intent(in)    :: set_default_solver
 
     integer :: ham_var
     logical :: default_preorthog
@@ -236,7 +235,7 @@ contains
     end if
     call messages_info(3) 
 
-    call linear_solver_init(this%solver, sys%namespace, sys%gr, states_are_real(sys%st), sys%geo, sys%mc, set_default_solver)
+    call linear_solver_init(this%solver, sys%namespace, sys%gr, states_are_real(sys%st), sys%geo, sys%mc)
 
     ! will not converge for non-self-consistent calculation unless LRTolScheme = fixed
     if (ham_var == 0) then

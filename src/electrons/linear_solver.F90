@@ -85,17 +85,16 @@ module linear_solver_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine linear_solver_init(this, namespace, gr, states_are_real, geo, mc, def_solver)
+  subroutine linear_solver_init(this, namespace, gr, states_are_real, geo, mc)
     type(linear_solver_t),  intent(out)   :: this
     type(namespace_t),      intent(in)    :: namespace
     type(grid_t),           intent(inout) :: gr
     logical,                intent(in)    :: states_are_real !< for choosing solver
     type(geometry_t),       intent(in)    :: geo
     type(multicomm_t),      intent(in)    :: mc
-    integer(8), optional,   intent(in)    :: def_solver
 
     integer :: fsolver
-    integer :: defsolver_ 
+    integer :: defsolver
 
     PUSH_SUB(linear_solver_init)
 
@@ -142,22 +141,18 @@ contains
     !% released by M. B. van Gizjen [http://ta.twi.tudelft.nl/nw/users/gijzen/IDR.html].
     !%End
 
-    if(present(def_solver)) then
-      defsolver_ = def_solver
+    if(conf%devel_version) then
+      defsolver = OPTION__LINEARSOLVER__QMR_DOTP
     else
-      if(conf%devel_version) then
-        defsolver_ = OPTION__LINEARSOLVER__QMR_DOTP
+      if(states_are_real) then
+        defsolver = OPTION__LINEARSOLVER__QMR_SYMMETRIC
+        ! in this case, it is equivalent to LS_QMR_DOTP
       else
-        if(states_are_real) then
-          defsolver_ = OPTION__LINEARSOLVER__QMR_SYMMETRIC
-          ! in this case, it is equivalent to LS_QMR_DOTP
-        else
-          defsolver_ = OPTION__LINEARSOLVER__QMR_SYMMETRIZED
-        end if
+        defsolver = OPTION__LINEARSOLVER__QMR_SYMMETRIZED
       end if
     end if
 
-    call parse_variable(namespace, "LinearSolver", defsolver_, fsolver)
+    call parse_variable(namespace, "LinearSolver", defsolver, fsolver)
 
     ! set up pointer for dot product and norm in QMR solvers
     call mesh_init_mesh_aux(gr%mesh)
