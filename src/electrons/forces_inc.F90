@@ -403,7 +403,9 @@ subroutine X(total_force_from_potential)(gr, geo, ep, st, x, lda_u_level)
   R_TYPE, allocatable :: psi(:, :)
   R_TYPE, allocatable :: grad_psi(:, :, :)
   FLOAT,  allocatable :: grad_rho(:, :), force(:, :)
+#ifdef R_TCOMPLEX
   CMPLX :: phase
+#endif
 
   PUSH_SUB(X(total_force_from_potential))
 
@@ -442,10 +444,15 @@ subroutine X(total_force_from_potential)(gr, geo, ep, st, x, lda_u_level)
 
           !Note this phase is not correct in general. We should use the phase from the Hamiltonian
           !Here we recompute it, and moreover the vector potential is missing
+#ifdef R_TCOMPLEX
           do ip = 1, np_part
             phase = exp(-M_zI*sum(kpoint(1:gr%sb%dim)*gr%mesh%x(ip, 1:gr%sb%dim)))
             psi(ip, idim) = phase*psi(ip, idim)
           end do
+#else
+          ! Phase can only be applied to complex wavefunctions
+          ASSERT(.false.)
+#endif
         end if
 
         call X(derivatives_grad)(gr%der, psi(:, idim), grad_psi(:, :, idim), set_bc = .false.)
@@ -520,7 +527,9 @@ subroutine X(forces_derivative)(gr, namespace, geo, ep, st, lr, lr2, force_deriv
   R_TYPE, allocatable :: grad_dl_psi(:, :, :)
   R_TYPE, allocatable :: grad_dl_psi2(:, :, :)
   CMPLX,  allocatable :: grad_rho(:, :)
+#ifdef R_TCOMPLEX
   CMPLX :: phase
+#endif
   CMPLX, allocatable  :: force_local(:, :)
 
   PUSH_SUB(X(forces_derivative))
@@ -566,12 +575,17 @@ subroutine X(forces_derivative)(gr, namespace, geo, ep, st, lr, lr2, force_deriv
 
           !Note this phase is not correct in general. We should use the phase from the Hamiltonian
           !Here we recompute it, and moreover the vector potential is missing
+#ifdef R_TCOMPLEX
           do ip = 1, np_part
             phase = exp(-M_zI*sum(kpoint(1:gr%sb%dim)*gr%mesh%x(ip, 1:gr%sb%dim)))
             psi(ip, idim) = phase*psi(ip, idim)
             dl_psi(ip, idim) = phase*dl_psi(ip, idim)
             dl_psi2(ip, idim) = phase*dl_psi2(ip, idim)
           end do
+#else
+          ! Phase can only be applied to complex wavefunctions
+          ASSERT(.false.)
+#endif
         end if
        
         call X(derivatives_grad)(gr%der, psi(:, idim), grad_psi(:, :, idim), set_bc = .false.)
