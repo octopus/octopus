@@ -86,8 +86,7 @@ module hamiltonian_elec_oct_m
     zhamiltonian_elec_apply_batch,        &
     dhamiltonian_elec_diagonal,           &
     zhamiltonian_elec_diagonal,           &
-    dmagnus,                         &
-    zmagnus,                         &
+    magnus,                               &
     dvmask,                          &
     zvmask,                          &
     hamiltonian_elec_inh_term,            &
@@ -1809,6 +1808,79 @@ contains
 
     POP_SUB(zhamiltonian_elec_apply_all)
   end subroutine zhamiltonian_elec_apply_all
+
+
+  ! ---------------------------------------------------------
+
+  subroutine magnus(hm, namespace, mesh, psi, hpsi, ik, vmagnus, set_phase)
+    type(hamiltonian_elec_t), intent(in)    :: hm
+    type(namespace_t),        intent(in)    :: namespace
+    type(mesh_t),             intent(in)    :: mesh
+    CMPLX,                    intent(inout) :: psi(:,:)
+    CMPLX,                    intent(out)   :: hpsi(:,:)
+    integer,                  intent(in)    :: ik
+    FLOAT,                    intent(in)    :: vmagnus(:, :, :)
+    logical, optional,        intent(in)    :: set_phase !< If set to .false. the phase will not be added to the states.
+
+    CMPLX, allocatable :: auxpsi(:, :), aux2psi(:, :)
+    integer :: idim, ispin
+
+    PUSH_SUB(magnus)
+
+    ! We will assume, for the moment, no spinors.
+    if(hm%d%dim /= 1) &
+      call messages_not_implemented("Magnus with spinors", namespace=namespace)
+
+    SAFE_ALLOCATE( auxpsi(1:mesh%np_part, 1:hm%d%dim))
+    SAFE_ALLOCATE(aux2psi(1:mesh%np,      1:hm%d%dim))
+
+    ispin = states_elec_dim_get_spin_index(hm%d, ik)
+
+    ! Compute (T + Vnl)|psi> and store it
+    call zhamiltonian_elec_apply_single(hm, namespace, mesh, psi, auxpsi, 1, ik, &
+      terms = TERM_KINETIC + TERM_NON_LOCAL_POTENTIAL, set_phase = set_phase)
+
+    ! H|psi>  =  (T + Vnl)|psi> + Vpsl|psi> + Vmagnus(t2)|psi> + Vborders
+    do idim = 1, hm%d%dim
+      call lalg_copy(mesh%np, auxpsi(:, idim), hpsi(:, idim))
+      hpsi(1:mesh%np, idim) = hpsi(1:mesh%np, idim) + hm%ep%Vpsl(1:mesh%np)*psi(1:mesh%np,idim)
+      call vborders(mesh, hm, psi(:, idim), hpsi(:, idim))
+    end do
+    hpsi(1:mesh%np, 1) = hpsi(1:mesh%np, 1) + vmagnus(1:mesh%np, ispin, 2)*psi(1:mesh%np, 1)
+
+    ! Add first term of the commutator:  - i Vmagnus(t1) (T + Vnl) |psi>
+    hpsi(1:mesh%np, 1) = hpsi(1:mesh%np, 1) - M_zI*vmagnus(1:mesh%np, ispin, 1)*auxpsi(1:mesh%np, 1)
+
+    ! Add second term of commutator:  i (T + Vnl) Vmagnus(t1) |psi>
+    auxpsi(1:mesh%np, 1) = vmagnus(1:mesh%np, ispin, 1)*psi(1:mesh%np, 1)
+    call zhamiltonian_elec_apply_single(hm, namespace, mesh, auxpsi, aux2psi, 1, ik, &
+      terms = TERM_KINETIC + TERM_NON_LOCAL_POTENTIAL, set_phase = set_phase)
+    hpsi(1:mesh%np, 1) = hpsi(1:mesh%np, 1) + M_zI*aux2psi(1:mesh%np, 1)
+
+    SAFE_DEALLOCATE_A(auxpsi)
+    SAFE_DEALLOCATE_A(aux2psi)
+    POP_SUB(magnus)
+  end subroutine magnus
+  
+  ! ---------------------------------------------------------
+  subroutine vborders (mesh, hm, psi, hpsi)
+    type(mesh_t),             intent(in)    :: mesh
+    type(hamiltonian_elec_t), intent(in)    :: hm
+    CMPLX,                    intent(in)    :: psi(:)
+    CMPLX,                    intent(inout) :: hpsi(:)
+
+    integer :: ip
+
+    PUSH_SUB(vborders)
+
+    if(hm%bc%abtype == IMAGINARY_ABSORBING) then
+      do ip = 1, mesh%np
+        hpsi(ip) = hpsi(ip) + M_zI*hm%bc%mf(ip)*psi(ip)
+      end do
+    end if
+
+    POP_SUB(vborders)
+  end subroutine vborders
 
 #include "undef.F90"
 #include "real.F90"
