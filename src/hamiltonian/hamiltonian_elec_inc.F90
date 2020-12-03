@@ -192,7 +192,7 @@ subroutine X(hamiltonian_elec_apply_batch) (hm, namespace, mesh, psib, hpsib, te
   end if
   
   if (bitand(TERM_OTHERS, terms_) /= 0 ) then
-    call X(hamiltonian_elec_base_rashba)(hm%hm_base, mesh, hm%der, hm%d, epsib, hpsib)
+    call hamiltonian_elec_base_rashba(hm%hm_base, mesh, hm%der, hm%d, epsib, hpsib)
   end if
 
   ! multiply with occupation number
