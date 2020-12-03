@@ -108,8 +108,9 @@ contains
 
   ! ---------------------------------------------------------
   !> Is the convergence reached ?
-  logical function convergence_criteria_is_converged(this)
+  subroutine convergence_criteria_is_converged(this, is_converged)
     class(convergence_criteria_t),  intent(inout) :: this
+    logical,                        intent(out)   :: is_converged
 
     PUSH_SUB(convergence_criteria_is_converged)
    
@@ -123,19 +124,18 @@ contains
     end if
 
     if(this%tol_abs <= M_ZERO) then
-      convergence_criteria_is_converged = .true.
+      is_converged = .true.
     else
-      convergence_criteria_is_converged = this%val_abs < this%tol_abs
+      is_converged = this%val_abs < this%tol_abs
     end if
     
     if(this%tol_rel > M_ZERO) then
-      convergence_criteria_is_converged = convergence_criteria_is_converged .and. &
-                                            this%val_rel < this%tol_rel
+      is_converged = is_converged .and. this%val_rel < this%tol_rel
     end if
 
 
     POP_SUB(convergence_criteria_is_converged)
-  end function convergence_criteria_is_converged
+  end subroutine convergence_criteria_is_converged
 
   ! ---------------------------------------------------------
   !> Setting pointers to the in, out and norm values

@@ -528,6 +528,7 @@ contains
 #endif
     class(convergence_criteria_t), pointer    :: crit
     type(criteria_iterator_t) :: iterator
+    logical :: is_crit_conv
 
     PUSH_SUB(scf_run)
 
@@ -760,7 +761,8 @@ contains
       call iterator%start(scf%criteria_list)
       do while (iterator%has_next())
         crit => iterator%get_next()
-        converged_current = converged_current .and. crit%is_converged()
+        call crit%is_converged(is_crit_conv)
+        converged_current = converged_current .and. is_crit_conv
       end do
 
       ! only finish if the convergence criterion is fulfilled in two
