@@ -38,13 +38,14 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
   FLOAT, pointer, optional, intent(in)   :: shift(:,:)
 
   R_TYPE, allocatable :: h_psi(:,:), g(:,:), g0(:,:),  cg(:,:), h_cg(:,:), psi(:, :), psi2(:, :), g_prev(:,:), psi_j(:,:)
-  R_TYPE   :: es(2), a0, b0, gg, gg0, gg1, gamma, theta, norma, cg_phi, dot
+  R_TYPE   :: es(2), a0, gg, gg0, gg1, gamma, theta, norma, cg_phi, dot
   FLOAT    :: cg0, e0, res, alpha, beta, old_res, old_energy, first_delta_e, lam, lam_conj
   FLOAT    :: stheta, stheta2, ctheta, ctheta2
   FLOAT, allocatable :: chi(:, :), omega(:, :), fxc(:, :, :), lam_sym(:)
   FLOAT    :: integral_hartree, integral_xc, tmp
   integer  :: ist, jst, iter, maxter, idim, ip, isp, ixc, ib
   R_TYPE   :: sb(3)
+  FLOAT    :: b0
   logical  :: fold_ ! use folded spectrum operator (H-shift)^2
   logical  :: add_xc_term
   type(states_elec_group_t) :: hpsi_j
@@ -226,13 +227,16 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
 
       ! PTA92, eq. 5.18
       dot = X(mf_dotp) (gr%mesh, st%d%dim, psi, g0)
+      !This needs to be done before the orthogonalization_single call, as psi is not guaranted 
+      !to be orthogonal to the other bands here
+      do idim = 1, st%d%dim
+        call lalg_axpy(gr%mesh%np, -dot, psi(:, idim), g0(:, idim))
+      end do
+
       ! orthogonalize against previous or all states, depending on the optional argument orthogonalize_to_all
       call X(states_elec_orthogonalize_single_batch)(st, gr%mesh, ist - 1, ik, g0, normalize = .false., &
           against_all=orthogonalize_to_all)
 
-      do idim = 1, st%d%dim
-        call lalg_axpy(gr%mesh%np, -dot, psi(:, idim), g0(:, idim))
-      end do
 
       ! dot products needed for conjugate gradient
       gg = X(mf_dotp) (gr%mesh, st%d%dim, g0, g, reduce = .false.)
@@ -313,8 +317,8 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
 
       ! Line minimization (eq. 5.23 to 5.38)
       a0 = X(mf_dotp) (gr%mesh, st%d%dim, psi, h_cg, reduce = .false.)
-      b0 = X(mf_dotp) (gr%mesh, st%d%dim, cg, h_cg, reduce = .false.)
-      cg0 = X(mf_dotp) (gr%mesh, st%d%dim, cg, cg, reduce = .false.)
+      b0 = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, cg, h_cg, reduce = .false.))
+      cg0 = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, cg, cg, reduce = .false.))
 
       if(gr%mesh%parallel_in_domains) then
         sb(1) = a0
@@ -322,8 +326,8 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
         sb(3) = cg0
         call comm_allreduce(gr%mesh%vp%comm, sb, dim = 3)
         a0 = sb(1)
-        b0 = sb(2)
-        cg0 = sb(3)
+        b0 = R_REAL(sb(2))
+        cg0 = R_REAL(sb(3))
       end if
       ! compute norm of cg here
       cg0 = sqrt(cg0)
