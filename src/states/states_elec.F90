@@ -1678,11 +1678,9 @@ contains
       end do
       SAFE_DEALLOCATE_A(zpsi)
 
-#if defined(HAVE_MPI)        
-        if(st%parallel_in_states .or. st%d%kpt%parallel) then
-          call comm_allreduce(st%st_kpt_mpi_grp%comm, st%spin)
-        end if
-#endif      
+      if(st%parallel_in_states .or. st%d%kpt%parallel) then
+        call comm_allreduce(st%st_kpt_mpi_grp%comm, st%spin)
+      end if
             
     end if
 
@@ -2598,11 +2596,9 @@ end subroutine  states_elec_set_phase
     st%st_kpt_task(st%st_kpt_mpi_grp%rank,2) = st%st_end
     st%st_kpt_task(st%st_kpt_mpi_grp%rank,3) = st%d%kpt%start
     st%st_kpt_task(st%st_kpt_mpi_grp%rank,4) = st%d%kpt%end
-	#if defined(HAVE_MPI)        
     if(st%parallel_in_states .or. st%d%kpt%parallel) then
       call comm_allreduce(st%st_kpt_mpi_grp%comm, st%st_kpt_task)
     end if
-	#endif 
 
     POP_SUB(states_elec_kpoints_distribution)
   end subroutine states_elec_kpoints_distribution

@@ -148,17 +148,17 @@ contains
 
     if(oep%level /= XC_OEP_NONE) then
 
-      !%Variable Photons
+      !%Variable EnablePhotons
       !%Type logical
       !%Default .false.
       !%Section Hamiltonian::XC
       !%Description
       !% Activate the one-photon OEP
       !%End
-      call messages_obsolete_variable(namespace, 'OEPPtX', 'Photons')
-      call parse_variable(namespace, 'Photons', .false., oep%has_photons)
+      call messages_obsolete_variable(namespace, 'OEPPtX', 'EnablePhotons')
+      call parse_variable(namespace, 'EnablePhotons', .false., oep%has_photons)
       if (oep%has_photons) then
-        call messages_experimental("Photons = yes")
+        call messages_experimental("EnablePhotons = yes")
         call photon_mode_init(oep%pt, namespace, gr%mesh, gr%sb%dim, st%qtot)
         if (oep%pt%nmodes > 1) then
           call messages_not_implemented('Photon OEP for more than one photon mode.')

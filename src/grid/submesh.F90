@@ -197,10 +197,8 @@ contains
         do iy = nmin(2), nmax(2)
           do ix = nmin(1), nmax(1)
             ip = mesh%idx%lxyz_inv(ix, iy, iz)
-#if defined(HAVE_MPI)
             if(ip == 0) cycle
             if(mesh%parallel_in_domains) ip = vec_global2local(mesh%vp, ip, mesh%vp%partno)
-#endif
             if(ip == 0) cycle
             r2 = sum((mesh%x(ip, 1:sb%dim) - center(1:sb%dim))**2)
             if(r2 <= rc2) then
@@ -227,10 +225,8 @@ contains
         do iy = nmin(2), nmax(2)
           do ix = nmin(1), nmax(1)
             ip = mesh%idx%lxyz_inv(ix, iy, iz)
-#if defined(HAVE_MPI)
             if(ip == 0) cycle
             if(mesh%parallel_in_domains) ip = vec_global2local(mesh%vp, ip, mesh%vp%partno)
-#endif
             is = map_inv(ip)
             if(is == 0) cycle
             if(is < 0) then
@@ -618,9 +614,7 @@ contains
     part_np = 0
     part_np(this%mesh%vp%partno) = this%np
 
-  #if defined(HAVE_MPI)
     call comm_allreduce(this%mesh%mpi_grp%comm, part_np)
-  #endif 
     this%np_global = sum(part_np)
 
     SAFE_ALLOCATE(this%x_global(1:this%np_global, 1:this%mesh%sb%dim))
@@ -642,11 +636,9 @@ contains
       ind = ind + part_np(ipart)
     end do 
 
-   #if defined(HAVE_MPI)
     call comm_allreduce(this%mesh%mpi_grp%comm, this%x_global)
     call comm_allreduce(this%mesh%mpi_grp%comm, this%part_v)
     call comm_allreduce(this%mesh%mpi_grp%comm, this%global2local)
-   #endif 
 
     SAFE_DEALLOCATE_A(part_np)
 

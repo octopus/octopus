@@ -46,8 +46,7 @@ module external_densities_oct_m
 
   public ::                               &
     get_rs_density_ext,                   &
-    external_current_init,                &
-    external_current_calculation
+    external_current_init
 
   integer, parameter, public ::           &
     EXTERNAL_CURRENT_PARSER      = 0,     &

@@ -407,7 +407,6 @@ subroutine X(update_occ_matrices)(this, namespace, mesh, st, lda_u_energy, phase
   SAFE_DEALLOCATE_A(psi)
   SAFE_DEALLOCATE_A(muliken_charge)
 
-#if defined(HAVE_MPI)        
   if(st%parallel_in_states .or. st%d%kpt%parallel) then
     call comm_allreduce(st%st_kpt_mpi_grp%comm, this%X(n))
     if(this%level == DFT_U_ACBN0) then
@@ -419,7 +418,6 @@ subroutine X(update_occ_matrices)(this, namespace, mesh, st, lda_u_energy, phase
       end if
     end if
   end if
-#endif      
 
   if(this%level == DFT_U_ACBN0 .and. .not.this%freeze_u) then
     if(this%nspins > 1 ) then

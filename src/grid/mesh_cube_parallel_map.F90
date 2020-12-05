@@ -136,9 +136,7 @@ contains
         
     if (mesh%parallel_in_domains) then
       do ip = 1, this%m2c_nsend
-#ifdef HAVE_MPI
         this%m2c_mf_order(ip) = vec_global2local(mesh%vp, mf_order(ip), mesh%vp%partno)
-#endif
         if (this%m2c_mf_order(ip) == 0) then
           write(message(1),'(a,i4,a,i4)') "Error in mesh_cube_parallel_map_init (m2c): mesh point ", &
                mf_order(ip), " is not stored in partition ", mesh%vp%partno
@@ -214,10 +212,7 @@ contains
     end do
     if (mesh%parallel_in_domains) then
       do ip = 1, this%c2m_nrec
-#ifdef HAVE_MPI
         this%c2m_mf_order(ip) = vec_global2local(mesh%vp, mf_order(ip), mesh%vp%partno)
-      
-#endif
         if (this%c2m_mf_order(ip) == 0) then
           write(message(1),'(a,i3,a,i3)') "Error in mesh_cube_parallel_map_init (c2m): mesh point ", &
                mf_order(ip), " is not stored in partition ", mesh%vp%partno

@@ -913,11 +913,9 @@ subroutine X(exchange_operator_ACE)(this, der, st, phase)
   if(this%xst%parallel_in_states) call states_elec_parallel_remote_access_stop(this%xst)
 
   !Reduction
-#if defined(HAVE_MPI)        
-   if(st%parallel_in_states) then
-     call comm_allreduce(st%mpi_grp%comm, MM)
-   end if
-#endif
+  if(st%parallel_in_states) then
+    call comm_allreduce(st%mpi_grp%comm, MM)
+  end if
 
   do ik = st%d%kpt%start, st%d%kpt%end
     do nst = 1, this%ace%nst
@@ -961,11 +959,9 @@ subroutine X(exchange_operator_ACE)(this, der, st, phase)
   end do !ik
 
   !Reduction
-#if defined(HAVE_MPI)        
   if(st%parallel_in_states) then
     call comm_allreduce(st%mpi_grp%comm,this%ace%X(chi))
   end if
-#endif
 
 #ifdef R_TCOMPLEX
   if(present(phase)) then
@@ -1170,11 +1166,9 @@ subroutine X(exchange_operator_scdm_apply) (this, namespace, scdm, der, st_d, ps
     call batch_get_state(hpsib, ibatch, der%mesh%np, hpsil)
 
     if(der%mesh%parallel_in_domains) then
-#ifdef HAVE_MPI
       ! the gathering is done for the domain distribution, the states are still local to the st%mpi_grp
       call vec_allgather(der%mesh%vp, psi(:, 1), psil(:, 1))
       call vec_allgather(der%mesh%vp, hpsi(:, 1), hpsil(:, 1))
-#endif
     else
       psi(1:der%mesh%np, 1:st_d%dim) = psil(1:der%mesh%np, 1:st_d%dim)
       hpsi(1:der%mesh%np, 1:st_d%dim) = hpsil(1:der%mesh%np, 1:st_d%dim)
@@ -1245,9 +1239,7 @@ subroutine X(exchange_operator_scdm_apply) (this, namespace, scdm, der, st_d, ps
     hpsi(1:der%mesh%np_global, 1) =  hpsi(1:der%mesh%np_global, 1) + temp_state_global(1:der%mesh%np_global, 1)
 
     if(der%mesh%parallel_in_domains) then
-#ifdef HAVE_MPI
       call vec_scatter(der%mesh%vp, 0, hpsil(:, 1), hpsi(:, 1))
-#endif
     else
       hpsil(1:der%mesh%np, 1:st_d%dim) = hpsi(1:der%mesh%np, 1:st_d%dim)
     end if

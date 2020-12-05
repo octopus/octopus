@@ -128,6 +128,7 @@ contains
 
     PUSH_SUB(singularity_end)
 
+    SAFE_DEALLOCATE_A(this%Fk)
     this%coulomb_singularity = -1
     
     POP_SUB(singularity_end)

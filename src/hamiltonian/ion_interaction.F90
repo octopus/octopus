@@ -267,7 +267,7 @@ contains
     type(periodic_copy_t) :: pc
     FLOAT   :: charge
     type(profile_t), save :: prof_short, prof_long
-    type(ps_t) :: spec_ps
+    type(ps_t), pointer :: spec_ps
 
     PUSH_SUB(ion_interaction_periodic)
 
@@ -371,7 +371,7 @@ contains
        do iatom = this%dist%start, this%dist%end
           if(species_is_ps(geo%atom(iatom)%species)) then
              zi = species_zval(geo%atom(iatom)%species)
-             spec_ps = species_ps(geo%atom(iatom)%species)
+             spec_ps => species_ps(geo%atom(iatom)%species)
              epseudo = epseudo + M_PI*zi*&
                   (spec_ps%sigma_erf*sqrt(M_TWO))**2/sb%rcell_volume*charge
           end if

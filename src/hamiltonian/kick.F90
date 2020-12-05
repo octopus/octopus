@@ -745,6 +745,7 @@ contains
     end if
     kick%n_multipoles = 0
     kick%qkick_mode = QKICKMODE_NONE
+    SAFE_DEALLOCATE_A(kick%qvector)
     kick%easy_axis(1:MAX_DIM) = M_ZERO
 
     if (kick%TDPartialKick_mode) then

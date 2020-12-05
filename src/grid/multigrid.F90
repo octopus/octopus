@@ -213,9 +213,7 @@ contains
     type(mesh_t),           intent(in)    :: fine, coarse
 
     integer :: i, i1, i2, i4, i8, pt, ig
-#ifdef HAVE_MPI
     integer :: ii, jj
-#endif
     integer :: x(MAX_DIM), mod2(MAX_DIM)
 
     PUSH_SUB(multigrid_get_transfer_tables)
@@ -226,16 +224,12 @@ contains
     ! GENERATE THE TABLE TO MAP FROM THE FINE TO THE COARSE GRID
     do i = 1, tt%n_coarse
       ig = i
-#ifdef HAVE_MPI
       ! translate to a global index of the coarse grid
       if(coarse%parallel_in_domains) ig = coarse%vp%local(ig - 1 + coarse%vp%xlocal)
-#endif
       ! locate the equivalent global fine grid point
       ig = fine%idx%lxyz_inv(2*coarse%idx%lxyz(ig, 1), 2*coarse%idx%lxyz(ig, 2), 2*coarse%idx%lxyz(ig, 3))
-#ifdef HAVE_MPI
       ! translate to a local number of the fine grid
       if(fine%parallel_in_domains) ig = vec_global2local(fine%vp, ig, fine%vp%partno)
-#endif
       tt%to_coarse(i) = ig
     end do
 
@@ -249,10 +243,8 @@ contains
     tt%n_fine8 = 0
     do i = 1, tt%n_fine
       ig = i
-#ifdef HAVE_MPI
       ! translate to a global index
       if(fine%parallel_in_domains) ig = fine%vp%local(ig - 1 + fine%vp%xlocal)
-#endif
       mod2 = mod(fine%idx%lxyz(ig, :), 2)
       
       pt = sum(abs(mod2(1:3)))
@@ -284,10 +276,8 @@ contains
     i1 = 0;  i2 = 0;  i4 = 0;  i8 = 0
     do i = 1, fine%np
       ig = i
-#ifdef HAVE_MPI
       ! translate to a global index
       if(fine%parallel_in_domains) ig = fine%vp%local(ig - 1 + fine%vp%xlocal)
-#endif
       x(1:3)    = fine%idx%lxyz(ig, 1:3)/2
       mod2(1:3) = mod(fine%idx%lxyz(ig, 1:3), 2)
 
@@ -328,7 +318,6 @@ contains
     ASSERT(i1 == tt%n_fine1 .and. i2 == tt%n_fine2 .and. i4 == tt%n_fine4 .and. i8 == tt%n_fine8)
 
     ! translate to local points.
-#ifdef HAVE_MPI
     if (coarse%parallel_in_domains) then
 
       do ii = 1, tt%n_fine1
@@ -354,7 +343,6 @@ contains
       end do
 
     end if
-#endif
 
     POP_SUB(multigrid_get_transfer_tables)
   end subroutine multigrid_get_transfer_tables

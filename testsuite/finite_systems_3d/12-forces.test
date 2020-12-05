@@ -47,9 +47,9 @@ match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
 Precision: 1.95e-14
 match ;  Total energy  ; GREPFIELD(static/info, 'Total       =', 3) ; -19.49489915
 
-Precision: 1.10e-13
+Precision: 1.32e-13
 match ;  Force         ; GREPFIELD(static/info, 'Forces on the ions', 3, 2) ; -2.63087
 match ;  Force Ion-ion ; LINEFIELD(static/forces, 2, 6) ; -11.1111
 match ;  Force Local   ; LINEFIELD(static/forces, 2, 12) ; 5.50181
 match ;  Force NL      ; LINEFIELD(static/forces, 2, 15) ; 2.97843
-match ;  Force SCF     ; LINEFIELD(static/forces, 2, 24) ; -3.57816e-09
+match ;  Force SCF     ; LINEFIELD(static/forces, 2, 24) ; -3.57814e-09
