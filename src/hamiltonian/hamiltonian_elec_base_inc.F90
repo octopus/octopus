@@ -267,65 +267,6 @@ subroutine X(hamiltonian_elec_base_local_sub)(potential, mesh, std, ispin, psib,
 
 end subroutine X(hamiltonian_elec_base_local_sub)
 
-! ---------------------------------------------------------------------------------------
-
-subroutine X(hamiltonian_elec_base_rashba)(this, mesh, der, std, psib, vpsib)
-  type(hamiltonian_elec_base_t),  intent(in)    :: this
-  type(mesh_t),                   intent(in)    :: mesh
-  type(derivatives_t),            intent(in)    :: der
-  type(states_elec_dim_t),        intent(in)    :: std
-  type(wfs_elec_t), target,       intent(in)    :: psib
-  type(wfs_elec_t), target,       intent(inout) :: vpsib
-
-  integer :: ist, idim, ip
-  R_TYPE, allocatable :: psi(:, :), vpsi(:, :), grad(:, :, :)
-  PUSH_SUB(X(hamiltonian_elec_base_rashba))
-
-  if(abs(this%rashba_coupling) < M_EPSILON) then
-    POP_SUB(X(hamiltonian_elec_base_rashba))
-    return
-  end if
-  ASSERT(std%ispin == SPINORS)
-  ASSERT(mesh%sb%dim == 2)
-
-  SAFE_ALLOCATE(psi(1:mesh%np_part, 1:std%dim))
-  SAFE_ALLOCATE(vpsi(1:mesh%np, 1:std%dim))
-  SAFE_ALLOCATE(grad(1:mesh%np, 1:mesh%sb%dim, 1:std%dim))
-
-  do ist = 1, psib%nst
-    call batch_get_state(psib, ist, mesh%np_part, psi)
-    call batch_get_state(vpsib, ist, mesh%np, vpsi)
-
-    do idim = 1, std%dim
-      call X(derivatives_grad)(der, psi(:, idim), grad(:, :, idim), ghost_update = .false., set_bc = .false.)
-    end do
-
-    if(allocated(this%vector_potential)) then
-      do ip = 1, mesh%np
-        vpsi(ip, 1) = vpsi(ip, 1) + &
-          (this%rashba_coupling) * (this%vector_potential(2, ip) + M_zI * this%vector_potential(1, ip)) * psi(ip, 2)
-        vpsi(ip, 2) = vpsi(ip, 2) + &
-          (this%rashba_coupling) * (this%vector_potential(2, ip) - M_zI * this%vector_potential(1, ip)) * psi(ip, 1)
-      end do
-    end if
-
-    do ip = 1, mesh%np
-      vpsi(ip, 1) = vpsi(ip, 1) - &
-        this%rashba_coupling*( grad(ip, 1, 2) - M_zI*grad(ip, 2, 2) )
-      vpsi(ip, 2) = vpsi(ip, 2) + &
-        this%rashba_coupling*( grad(ip, 1, 1) + M_zI*grad(ip, 2, 1) )
-    end do
-
-    call batch_set_state(vpsib, ist, mesh%np, vpsi)
-  end do
-
-  SAFE_DEALLOCATE_A(grad)
-  SAFE_DEALLOCATE_A(vpsi)
-  SAFE_DEALLOCATE_A(psi)
-  
-  POP_SUB(X(hamiltonian_elec_base_rashba))
-end subroutine X(hamiltonian_elec_base_rashba)
-
 ! -----------------------------------------------------------------------------
 
 subroutine X(hamiltonian_elec_base_magnetic)(this, mesh, der, std, ep, ispin, psib, vpsib)
@@ -363,9 +304,14 @@ subroutine X(hamiltonian_elec_base_magnetic)(this, mesh, der, std, ep, ispin, ps
     if(allocated(this%vector_potential)) then
       do idim = 1, std%dim
         do ip = 1, mesh%np
+#ifdef R_TCOMPLEX
           vpsi(ip, idim) = vpsi(ip, idim) + (M_HALF / this%mass) * &
             sum(this%vector_potential(1:mesh%sb%dim, ip)**2)*psi(ip, idim) &
             + (M_ONE / this%mass) * M_zI*dot_product(this%vector_potential(1:mesh%sb%dim, ip), grad(ip, 1:mesh%sb%dim, idim))
+#else
+          ! Vector potential not allowed with real wavefunctions
+          ASSERT(.false.)
+#endif
         end do
       end do
     end if
@@ -387,8 +333,13 @@ subroutine X(hamiltonian_elec_base_magnetic)(this, mesh, der, std, ep, ispin, ps
 
       case (SPINORS)
         do ip = 1, mesh%np
+#ifdef R_TCOMPLEX
           vpsi(ip, 1) = vpsi(ip, 1) + cc*(bb(3)*psi(ip, 1) + b12*psi(ip, 2))
           vpsi(ip, 2) = vpsi(ip, 2) + cc*(-bb(3)*psi(ip, 2) + conjg(b12)*psi(ip, 1))
+#else
+          ! Spinors require complex wavefunctions
+          ASSERT(.false.)
+#endif
         end do
 
       end select
@@ -1112,7 +1063,8 @@ subroutine X(hamiltonian_elec_base_nlocal_force)(this, mesh, st, bnd, iqn, ndim,
 
   integer :: ii, ist, ip, iproj, imat, nreal, iprojection, iatom, idir
   integer :: npoints, nprojs, nst
-  R_TYPE, allocatable :: psi(:, :, :), projs(:, :, :), ff(:)
+  FLOAT, allocatable :: ff(:)
+  R_TYPE, allocatable :: psi(:, :, :), projs(:, :, :)
   type(projector_matrix_t), pointer :: pmat
 #ifdef R_TCOMPLEX
   integer :: idim
@@ -1296,8 +1248,8 @@ subroutine X(hamiltonian_elec_base_nlocal_force)(this, mesh, st, bnd, iqn, ndim,
       if(st%d%kweights(iqn)*abs(st%occ(ist, iqn)) <= M_EPSILON) cycle
       do iproj = 1, nprojs
         do idir = 1, ndim
-          ff(idir) = ff(idir) - M_TWO*st%d%kweights(iqn)*st%occ(ist, iqn)*pmat%scal(iproj)*mesh%volume_element*&
-            R_CONJ(projs(0, ii, iprojection + iproj))*projs(idir, ii, iprojection + iproj)
+          ff(idir) = ff(idir) - M_TWO*st%d%kweights(iqn)*st%occ(ist, iqn)*pmat%scal(iproj)*mesh%volume_element* &
+            R_REAL(R_CONJ(projs(0, ii, iprojection + iproj))*projs(idir, ii, iprojection + iproj))
         end do
       end do
     end do

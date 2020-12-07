@@ -173,7 +173,7 @@ subroutine X(scdm_localize)(scdm, namespace, st, mesh)
   do vv = scdm%st%st_start,scdm%st%st_end
     call states_elec_get_state(scdm%st, mesh, vv, scdm%st%d%nik, temp_state(1:mesh%np,:))
     do ii = 1,3
-      scdm%center(ii,vv) = sum(temp_state(1:mesh%np,1)*R_CONJ(temp_state(1:mesh%np,1))*&
+      scdm%center(ii,vv) = sum(R_REAL(temp_state(1:mesh%np,1)*R_CONJ(temp_state(1:mesh%np,1)))*&
            lxyz_domains(1:mesh%np,ii)*mesh%spacing(ii))*mesh%volume_element
     end do
   end do
@@ -197,7 +197,7 @@ subroutine X(scdm_localize)(scdm, namespace, st, mesh)
 
     ! find integer index of center
     do ii = 1, 3
-      icenter(ii) = scdm%center(ii,vv)/mesh%spacing(ii)
+      icenter(ii) = int(scdm%center(ii,vv)/mesh%spacing(ii))
     end do
     ! find index of center in the mesh
     ind_center = mesh%idx%lxyz_inv(icenter(1),icenter(2),icenter(3))
@@ -315,7 +315,7 @@ subroutine X(scdm_localize)(scdm, namespace, st, mesh)
     end do
 
     ! compute localization error
-    error = error + M_ONE - dot_product(scdm%X(psi)(:,vv),scdm%X(psi)(:,vv))*mesh%volume_element
+    error = error + M_ONE - R_REAL(dot_product(scdm%X(psi)(:,vv),scdm%X(psi)(:,vv)))*mesh%volume_element
 
   end do
 
@@ -381,7 +381,7 @@ subroutine X(invert)(nn, A)
   if( ierror == 0 ) then
     !workspace query
     call X(getri)(nn, A, nn, ipiv(1), temp, -1, ierror )
-    lwork = temp ! dimension of workspace
+    lwork = int(temp) ! dimension of workspace
     allocate(work(lwork*2))
     call X(getri)(nn, A, nn, ipiv, work, lwork, ierror )
   else
@@ -608,7 +608,7 @@ subroutine X(scdm_rrqr)(scdm, namespace, st, mesh, nst, root, ik, jpvt)
          call messages_fatal(1, namespace=namespace)
       end if
 
-      wsize = work(1)
+      wsize = int(work(1))
       SAFE_DEALLOCATE_A(work)
       SAFE_ALLOCATE(work(1:wsize))
 

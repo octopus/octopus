@@ -1006,7 +1006,7 @@ contains
       do ip = 1, gr%mesh%np
         do idim = 1, st%dim
           energy_dens_plane_waves(ip) = energy_dens_plane_waves(ip) &
-                + conjg(rs_field_plane_waves(ip,idim)) * rs_field_plane_waves(ip,idim)
+                + real(conjg(rs_field_plane_waves(ip,idim)) * rs_field_plane_waves(ip,idim))
         end do
       end do
     end if

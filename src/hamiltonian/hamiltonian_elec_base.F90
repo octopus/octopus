@@ -60,8 +60,6 @@ module hamiltonian_elec_base_oct_m
     zhamiltonian_elec_base_local_sub,               &
     dhamiltonian_elec_base_magnetic,                &
     zhamiltonian_elec_base_magnetic,                &
-    dhamiltonian_elec_base_rashba,                  &
-    zhamiltonian_elec_base_rashba,                  &
     dhamiltonian_elec_base_nlocal_start,            &
     zhamiltonian_elec_base_nlocal_start,            &
     dhamiltonian_elec_base_nlocal_finish,           &
@@ -78,6 +76,7 @@ module hamiltonian_elec_base_oct_m
     hamiltonian_elec_base_accel_copy_pot,           &
     hamiltonian_elec_base_phase,                    &
     hamiltonian_elec_base_phase_spiral,             &
+    hamiltonian_elec_base_rashba,                   &
     dhamiltonian_elec_base_nlocal_force,            &
     zhamiltonian_elec_base_nlocal_force,            &
     projection_t,                                   &
@@ -1104,6 +1103,67 @@ contains
     call profiling_out(phase_prof)
     POP_SUB(hamiltonian_elec_base_phase_spiral)
   end subroutine hamiltonian_elec_base_phase_spiral
+
+  ! ---------------------------------------------------------------------------------------
+  subroutine hamiltonian_elec_base_rashba(this, mesh, der, std, psib, vpsib)
+    type(hamiltonian_elec_base_t),  intent(in)    :: this
+    type(mesh_t),                   intent(in)    :: mesh
+    type(derivatives_t),            intent(in)    :: der
+    type(states_elec_dim_t),        intent(in)    :: std
+    type(wfs_elec_t), target,       intent(in)    :: psib
+    type(wfs_elec_t), target,       intent(inout) :: vpsib
+
+    integer :: ist, idim, ip
+    CMPLX, allocatable :: psi(:, :), vpsi(:, :), grad(:, :, :)
+
+    PUSH_SUB(hamiltonian_elec_base_rashba)
+
+    if(abs(this%rashba_coupling) < M_EPSILON) then
+      POP_SUB(hamiltonian_elec_base_rashba)
+      return
+    end if
+    ASSERT(std%ispin == SPINORS)
+    ASSERT(mesh%sb%dim == 2)
+    ASSERT(psib%type() == TYPE_CMPLX)
+    ASSERT(vpsib%type() == TYPE_CMPLX)
+
+    SAFE_ALLOCATE(psi(1:mesh%np_part, 1:std%dim))
+    SAFE_ALLOCATE(vpsi(1:mesh%np, 1:std%dim))
+    SAFE_ALLOCATE(grad(1:mesh%np, 1:mesh%sb%dim, 1:std%dim))
+
+    do ist = 1, psib%nst
+      call batch_get_state(psib, ist, mesh%np_part, psi)
+      call batch_get_state(vpsib, ist, mesh%np, vpsi)
+
+      do idim = 1, std%dim
+        call zderivatives_grad(der, psi(:, idim), grad(:, :, idim), ghost_update = .false., set_bc = .false.)
+      end do
+
+      if(allocated(this%vector_potential)) then
+        do ip = 1, mesh%np
+          vpsi(ip, 1) = vpsi(ip, 1) + &
+            (this%rashba_coupling) * (this%vector_potential(2, ip) + M_zI * this%vector_potential(1, ip)) * psi(ip, 2)
+          vpsi(ip, 2) = vpsi(ip, 2) + &
+            (this%rashba_coupling) * (this%vector_potential(2, ip) - M_zI * this%vector_potential(1, ip)) * psi(ip, 1)
+        end do
+      end if
+
+      do ip = 1, mesh%np
+        vpsi(ip, 1) = vpsi(ip, 1) - &
+          this%rashba_coupling*( grad(ip, 1, 2) - M_zI*grad(ip, 2, 2) )
+        vpsi(ip, 2) = vpsi(ip, 2) + &
+          this%rashba_coupling*( grad(ip, 1, 1) + M_zI*grad(ip, 2, 1) )
+      end do
+
+      call batch_set_state(vpsib, ist, mesh%np, vpsi)
+    end do
+
+    SAFE_DEALLOCATE_A(grad)
+    SAFE_DEALLOCATE_A(vpsi)
+    SAFE_DEALLOCATE_A(psi)
+  
+    POP_SUB(hamiltonian_elec_base_rashba)
+  end subroutine hamiltonian_elec_base_rashba
 
 #include "undef.F90"
 #include "real.F90"

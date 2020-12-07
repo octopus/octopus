@@ -2062,7 +2062,7 @@ contains
          call zderivatives_grad(der, wf_psi(:,1), gwf_psi(:,:,1), set_bc = .false.)
          do is = 1, st%d%spin_channels
            density_gradient(1:der%mesh%np, 1:der%mesh%sb%dim, is) = density_gradient(1:der%mesh%np, 1:der%mesh%sb%dim, is) + &
-                                                                    gwf_psi(1:der%mesh%np, 1:der%mesh%sb%dim,1)
+                                                                    real(gwf_psi(1:der%mesh%np, 1:der%mesh%sb%dim,1))
          end do
        end if
 
@@ -2071,7 +2071,7 @@ contains
          call zderivatives_lapl(der, wf_psi(:,1), lwf_psi(:,1), set_bc = .false.)
 
          do is = 1, st%d%spin_channels
-           density_laplacian(1:der%mesh%np, is) = density_laplacian(1:der%mesh%np, is) + lwf_psi(1:der%mesh%np, 1)
+           density_laplacian(1:der%mesh%np, is) = density_laplacian(1:der%mesh%np, is) + real(lwf_psi(1:der%mesh%np, 1))
          end do
       end if
     end if

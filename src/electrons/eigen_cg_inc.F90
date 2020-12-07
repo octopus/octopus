@@ -38,8 +38,8 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
   FLOAT, pointer, optional, intent(in)   :: shift(:,:)
 
   R_TYPE, allocatable :: h_psi(:,:), g(:,:), g0(:,:),  cg(:,:), h_cg(:,:), psi(:, :), psi2(:, :), g_prev(:,:), psi_j(:,:)
-  R_TYPE   :: es(2), a0, b0, gg, gg0, gg1, gamma, theta, norma, cg_phi
-  FLOAT    :: cg0, e0, res, alpha, beta, dot, old_res, old_energy, first_delta_e, lam, lam_conj
+  R_TYPE   :: es(2), a0, b0, gg, gg0, gg1, gamma, norma
+  FLOAT    :: cg0, e0, res, alpha, beta, theta, dot, old_res, old_energy, first_delta_e, lam, lam_conj, cg_phi
   FLOAT    :: stheta, stheta2, ctheta, ctheta2
   FLOAT, allocatable :: chi(:, :), omega(:, :), fxc(:, :, :), lam_sym(:)
   FLOAT    :: integral_hartree, integral_xc, tmp
@@ -314,7 +314,7 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
       ! Line minimization (eq. 5.23 to 5.38)
       a0 = X(mf_dotp) (gr%mesh, st%d%dim, psi, h_cg, reduce = .false.)
       b0 = X(mf_dotp) (gr%mesh, st%d%dim, cg, h_cg, reduce = .false.)
-      cg0 = X(mf_dotp) (gr%mesh, st%d%dim, cg, cg, reduce = .false.)
+      cg0 = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, cg, cg, reduce = .false.))
 
       if(gr%mesh%parallel_in_domains) then
         sb(1) = a0
@@ -323,7 +323,7 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
         call comm_allreduce(gr%mesh%vp%comm, sb, dim = 3)
         a0 = sb(1)
         b0 = sb(2)
-        cg0 = sb(3)
+        cg0 = R_REAL(sb(3))
       end if
       ! compute norm of cg here
       cg0 = sqrt(cg0)
@@ -367,8 +367,8 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
       if(hm%theory_level == RDMFT) then
         do jst = 1, st%nst
           call states_elec_get_state(st, gr%mesh, jst, ik, psi_j)
-          cg_phi = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, psi_j, cg))
-          beta = beta - M_TWO * cg_phi / cg0 * lam_sym(jst)
+          cg_phi = M_TWO*R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, psi_j, cg))
+          beta = beta - cg_phi / cg0 * lam_sym(jst)
         end do
       end if
 
@@ -449,7 +449,7 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
     ! if the folded operator was used, compute the actual eigenvalue
     if(fold_) then
       call X(hamiltonian_elec_apply_single)(hm, namespace, gr%mesh, psi, h_psi, ist, ik)
-      st%eigenval(ist, ik) = X(mf_dotp) (gr%mesh, st%d%dim, psi, h_psi, reduce = .true.)
+      st%eigenval(ist, ik) = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, psi, h_psi, reduce = .true.))
       res = X(states_elec_residue)(gr%mesh, st%d%dim, h_psi, st%eigenval(ist, ik), psi)
     end if
 
@@ -568,7 +568,7 @@ subroutine X(eigensolver_cg2_new) (namespace, gr, st, hm, tol, niter, converged,
       end if
 
       ! lambda = <psi|H|psi> = <psi|phi>
-      lambda = X(mf_dotp)(gr%mesh, dim, psi, phi)
+      lambda = R_REAL(X(mf_dotp)(gr%mesh, dim, psi, phi))
 
       ! Check convergence
       res = X(states_elec_residue)(gr%mesh, dim, phi, lambda, psi)

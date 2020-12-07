@@ -384,7 +384,12 @@ subroutine X(init_orbitals)(this, st, gr, geo, start)
     do iorb = iorb, this%norbs
       do ispin = 1, spin_channels
         call X(lcao_atomic_orbital)(this, iorb, gr%mesh, st, geo, ao, ispin)
-        this%X(buff)(1:gr%mesh%np, 1:st%d%dim, iorb, ispin) = ao(1:gr%mesh%np, 1:st%d%dim)
+        ! Atomic orbitals used for the LCAO are in single-precision, so we need to convert them
+#ifdef R_TCOMPLEX
+        this%X(buff)(1:gr%mesh%np, 1:st%d%dim, iorb, ispin) = cmplx(ao(1:gr%mesh%np, 1:st%d%dim), kind=4)
+#else
+        this%X(buff)(1:gr%mesh%np, 1:st%d%dim, iorb, ispin) = real(ao(1:gr%mesh%np, 1:st%d%dim), 4)
+#endif
       end do
     end do
 

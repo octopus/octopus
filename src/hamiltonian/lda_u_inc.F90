@@ -94,6 +94,9 @@ subroutine X(lda_u_apply)(this, d, mesh, psib, hpsib)
         if(psib%has_phase) then
 #ifdef R_TCOMPLEX
           weight = os%phase_shift(inn, psib%ik)*os%V_ij(inn, 0)/el_per_state
+#else
+          !Phase can only be applied to complex wavefunctions
+          ASSERT(.false.)
 #endif
         else
           weight = os%V_ij(inn, 0)/el_per_state
@@ -285,10 +288,15 @@ subroutine X(update_occ_matrices)(this, namespace, mesh, st, lda_u_energy, phase
 
 
                     if(present(phase)) then
+#ifdef R_TCOMPLEX
                       this%X(n_ij)(im, im2, ispin, ios, inn) = this%X(n_ij)(im, im2, ispin, ios, inn) &
                              + weight*dot(1, im2, ios2)*R_CONJ(dot(1, im, ios))*os%phase_shift(inn, ik)
                       this%X(n_alt_ij)(im, im2, ispin, ios, inn) = this%X(n_alt_ij)(im, im2, ispin, ios, inn) &
                              + renorm_weight * dot(1, im2, ios2)*R_CONJ(dot(1, im, ios))*os%phase_shift(inn, ik)
+#else
+                      ! Phase can only be applied to complex wavefunctions
+                      ASSERT(.false.)
+#endif
                     else
                       this%X(n_ij)(im, im2, ispin, ios, inn) = this%X(n_ij)(im, im2, ispin, ios, inn) &
                                     + weight*dot(1, im2, ios2)*R_CONJ(dot(1, im, ios))
@@ -355,24 +363,29 @@ subroutine X(update_occ_matrices)(this, namespace, mesh, st, lda_u_energy, phase
 
                   do im2 = 1, os2%norbs
                     if(present(phase)) then
-                      this%X(n_ij)(im, im2, 1, ios, inn) = this%X(n_ij)(im, im2, 1, ios, inn) &
-                             + weight*dot(1, im, ios)*R_CONJ(dot(1, im2, ios2)*os%phase_shift(inn, ik))
-                      this%X(n_ij)(im, im2, 2, ios, inn) = this%X(n_ij)(im, im2, 2, ios, inn) &
-                             + weight*dot(2, im, ios)*R_CONJ(dot(2, im2, ios2)*os%phase_shift(inn, ik))
-                      this%X(n_ij)(im, im2, 3, ios, inn) = this%X(n_ij)(im, im2, 3, ios, inn) &
-                             + weight*dot(1, im, ios)*R_CONJ(dot(2, im2, ios2)*os%phase_shift(inn, ik))
-                      this%X(n_ij)(im, im2, 4, ios, inn) = this%X(n_ij)(im, im2, 4, ios, inn) &
-                             + weight*dot(2, im, ios)*R_CONJ(dot(1, im2, ios2)*os%phase_shift(inn, ik))
+#ifdef R_TCOMPLEX
+                      this%zn_ij(im, im2, 1, ios, inn) = this%zn_ij(im, im2, 1, ios, inn) &
+                        + weight*dot(1, im, ios)*R_CONJ(dot(1, im2, ios2)*os%phase_shift(inn, ik))
+                      this%zn_ij(im, im2, 2, ios, inn) = this%zn_ij(im, im2, 2, ios, inn) &
+                        + weight*dot(2, im, ios)*R_CONJ(dot(2, im2, ios2)*os%phase_shift(inn, ik))
+                      this%zn_ij(im, im2, 3, ios, inn) = this%zn_ij(im, im2, 3, ios, inn) &
+                        + weight*dot(1, im, ios)*R_CONJ(dot(2, im2, ios2)*os%phase_shift(inn, ik))
+                      this%zn_ij(im, im2, 4, ios, inn) = this%zn_ij(im, im2, 4, ios, inn) &
+                        + weight*dot(2, im, ios)*R_CONJ(dot(1, im2, ios2)*os%phase_shift(inn, ik))
                       
 
-                      this%X(n_alt_ij)(im, im2, 1, ios, inn) = this%X(n_alt_ij)(im, im2, 1, ios, inn) &
-                             + renorm_weight*dot(1, im, ios)*R_CONJ(dot(1, im2,ios2)*os%phase_shift(inn,ik))
-                      this%X(n_alt_ij)(im, im2, 2, ios, inn) = this%X(n_alt_ij)(im, im2, 2, ios, inn) &
-                             + renorm_weight*dot(2, im, ios)*R_CONJ(dot(2, im2,ios2)*os%phase_shift(inn,ik))
-                      this%X(n_alt_ij)(im, im2, 3, ios, inn) = this%X(n_alt_ij)(im, im2, 3, ios, inn) &
-                             + renorm_weight*dot(1, im, ios)*R_CONJ(dot(2, im2,ios2)*os%phase_shift(inn,ik))
-                      this%X(n_alt_ij)(im, im2, 4, ios, inn) = this%X(n_alt_ij)(im, im2, 4, ios, inn) &
-                             + renorm_weight*dot(2, im, ios)*R_CONJ(dot(1, im2,ios2)*os%phase_shift(inn,ik))
+                      this%zn_alt_ij(im, im2, 1, ios, inn) = this%zn_alt_ij(im, im2, 1, ios, inn) &
+                        + renorm_weight*dot(1, im, ios)*R_CONJ(dot(1, im2,ios2)*os%phase_shift(inn,ik))
+                      this%zn_alt_ij(im, im2, 2, ios, inn) = this%zn_alt_ij(im, im2, 2, ios, inn) &
+                        + renorm_weight*dot(2, im, ios)*R_CONJ(dot(2, im2,ios2)*os%phase_shift(inn,ik))
+                      this%zn_alt_ij(im, im2, 3, ios, inn) = this%zn_alt_ij(im, im2, 3, ios, inn) &
+                        + renorm_weight*dot(1, im, ios)*R_CONJ(dot(2, im2,ios2)*os%phase_shift(inn,ik))
+                      this%zn_alt_ij(im, im2, 4, ios, inn) = this%zn_alt_ij(im, im2, 4, ios, inn) &
+                        + renorm_weight*dot(2, im, ios)*R_CONJ(dot(1, im2,ios2)*os%phase_shift(inn,ik))
+#else
+                      ! Phase can only by applied when having complex wavefunctions
+                      ASSERT(.false.)
+#endif
                     else
                       this%X(n_ij)(im, im2, 1, ios, inn) = this%X(n_ij)(im, im2, 1, ios, inn) &
                              + weight*dot(1, im, ios)*R_CONJ(dot(1, im2, ios2))
@@ -1391,12 +1404,16 @@ end subroutine X(compute_periodic_coulomb_integrals)
 
          do im = 1,os%norbs
            do imp = 1, this%orbsets(ios2)%norbs
-              if(has_phase) then
-                reduced(1,im,ios) = reduced(1,im,ios) - dot(1,imp,ios2)*os%phase_shift(inn, ik) &
-                         *this%X(n_ij)(im,imp,ispin,ios,inn)*M_HALF*os%V_ij(inn,0)/el_per_state
-                reduced(1,imp,ios2) = reduced(1,imp,ios2) - dot(1, im, ios)*R_CONJ(os%phase_shift(inn, ik)) &
-                         *R_CONJ(this%X(n_ij)(im,imp,ispin,ios,inn))*M_HALF*os%V_ij(inn,0)/el_per_state
-
+             if(has_phase) then
+#ifdef R_TCOMPLEX
+               reduced(1,im,ios) = reduced(1,im,ios) - dot(1,imp,ios2)*os%phase_shift(inn, ik) &
+                 *this%zn_ij(im,imp,ispin,ios,inn)*M_HALF*os%V_ij(inn,0)/el_per_state
+               reduced(1,imp,ios2) = reduced(1,imp,ios2) - dot(1, im, ios)*R_CONJ(os%phase_shift(inn, ik)) &
+                 *R_CONJ(this%zn_ij(im,imp,ispin,ios,inn))*M_HALF*os%V_ij(inn,0)/el_per_state
+#else
+               ! Phase can only be applied to complex wavefunctions
+               ASSERT(.false.)
+#endif
               else
                 reduced(1,im,ios) = reduced(1,im,ios) - dot(1,imp,ios2) &
                            *this%X(n_ij)(im,imp,ispin,ios,inn)*M_HALF*os%V_ij(inn,0)/el_per_state
@@ -1512,6 +1529,9 @@ end subroutine X(compute_periodic_coulomb_integrals)
              end do
            end do
          end if
+#else
+         ! Phase can only be applied to complex wavefunctions
+         ASSERT(.false.)
 #endif
        else
          if(this%basisfromstates) then
@@ -1561,9 +1581,13 @@ end subroutine X(compute_periodic_coulomb_integrals)
            do im = 1,os%norbs
              do imp = 1, this%orbsets(ios2)%norbs
                if(has_phase) then
+#ifdef R_TCOMPLEX
                  reduced(1,im, ios) = reduced(1,im,ios) - dot(1,imp,ios2)*os%phase_shift(inn, ik) &
-                       *this%X(n_ij)(im,imp,ispin,ios,inn)*os%V_ij(inn,0)/el_per_state
-
+                       *this%zn_ij(im,imp,ispin,ios,inn)*os%V_ij(inn,0)/el_per_state
+#else
+                 ! Phase can only be applied to complex wavefunctions
+               ASSERT(.false.)
+#endif
                else
                  reduced(1,im,ios) = reduced(1,im,ios) - dot(1,imp,ios2) &
                          *this%X(n_ij)(im,imp,ispin,ios,inn)*os%V_ij(inn,0)/el_per_state

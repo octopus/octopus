@@ -64,7 +64,7 @@ subroutine X(slater) (namespace, mesh, psolver, st, isp, ex, vxc)
   FLOAT :: rr, socc, nn, mm, alpha, betar, betai, alpha2, beta2
   R_TYPE, allocatable:: bij(:,:)
   R_TYPE, allocatable :: rho_ij(:), pot_ij(:), psi(:,:), wf_ist(:,:)
-  R_TYPE :: tmp
+  CMPLX :: tmp
   FLOAT, allocatable :: tmp_vxc(:)
   FLOAT :: global_b(4), local_b(4), local_v(4), global_v(4)
   FLOAT :: nup, ndn, sqmod_updn
@@ -319,19 +319,19 @@ subroutine X(slater) (namespace, mesh, psolver, st, isp, ex, vxc)
         rr = M_ONE/(nn * rr)
 
         vxc(ip, 1) = vxc(ip, 1) + rr * ( &
-           (nn * st%rho(ip, 2) - sqmod_updn) * bij(ip, 1) + sqmod_updn * bij(ip, 2) &
+           (nn * st%rho(ip, 2) - sqmod_updn) * R_REAL(bij(ip, 1)) + sqmod_updn * R_REAL(bij(ip, 2)) &
           - M_TWO * st%rho(ip,2) * ( st%rho(ip,3) * R_REAL(bij(ip,3)) + st%rho(ip,4) * R_AIMAG(bij(ip,3))))
 
         vxc(ip, 2) = vxc(ip, 2) + rr * ( &
-           (nn * st%rho(ip, 1) - sqmod_updn) * bij(ip, 2) + sqmod_updn * bij(ip, 1) &
+           (nn * st%rho(ip, 1) - sqmod_updn) * R_REAL(bij(ip, 2)) + sqmod_updn * R_REAL(bij(ip, 1)) &
           - M_TWO * st%rho(ip,1) * ( st%rho(ip,3) * R_REAL(bij(ip,3)) + st%rho(ip,4) * R_AIMAG(bij(ip,3)))) 
 
-         tmp = -TOCMPLX(st%rho(ip, 3), st%rho(ip,4)) * (st%rho(ip, 2) * bij(ip, 1) + st%rho(ip, 1) * bij(ip,2)) &
-               + (M_TWO *st%rho(ip, 1) * st%rho(ip, 2)  - sqmod_updn) * bij(ip, 3) &
-               + (TOCMPLX(st%rho(ip, 3),st%rho(ip,4)))**2 * R_CONJ(bij(ip,3))
-  
-         vxc(ip, 3) = vxc(ip, 3) + rr * R_REAL(tmp)
-         vxc(ip, 4) = vxc(ip, 4) + rr * R_AIMAG(tmp) 
+        tmp = -TOCMPLX(st%rho(ip, 3), st%rho(ip,4)) * (st%rho(ip, 2) * bij(ip, 1) + st%rho(ip, 1) * bij(ip,2)) &
+              + (M_TWO *st%rho(ip, 1) * st%rho(ip, 2)  - sqmod_updn) * bij(ip, 3) &
+              + (TOCMPLX(st%rho(ip, 3),st%rho(ip,4)))**2 * R_CONJ(bij(ip,3))
+
+         vxc(ip, 3) = vxc(ip, 3) + rr * real(tmp)
+         vxc(ip, 4) = vxc(ip, 4) + rr * aimag(tmp)
       end if
     end do 
   end if

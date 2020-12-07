@@ -203,7 +203,7 @@ subroutine X(bi_conjugate_gradients)(np, x, b, op, opt, dotp, iter, residue, thr
   iter     = 1
   do while(iter < max_iter)
     gamma = R_REAL(dotp(rr, r))
-    err   = dotp(r, r)
+    err   = R_REAL(dotp(r, r))
     if(abs(err) < threshold_**2) exit
     call op (p,  ap)
     call opt(pp, atp)
@@ -422,7 +422,7 @@ end subroutine X(bi_conjugate_gradients)
 
       ! initialize progress bar
       if(showprogress_) then
-        ilog_thr = max(M_ZERO, -CNST(100.0)*log(threshold_))
+        ilog_thr = max(0, -int(CNST(100.0)*log(threshold_)))
         call loct_progress_bar(-1, ilog_thr)
       end if
 
@@ -527,7 +527,7 @@ end subroutine X(bi_conjugate_gradients)
         end if
 
         if(showprogress_) then
-          ilog_res = CNST(100.0)*max(M_ZERO, -log(res))
+          ilog_res = max(0, -int(CNST(100.0)*log(res)))
           call loct_progress_bar(ilog_res, ilog_thr)
         end if
 
@@ -675,7 +675,7 @@ end subroutine X(bi_conjugate_gradients)
 
       ! initialize progress bar
       if(showprogress_) then
-        ilog_thr = max(M_ZERO, -CNST(100.0)*log(threshold_))
+        ilog_thr = max(0, -int(CNST(100.0)*log(threshold_)))
         call loct_progress_bar(-1, ilog_thr)
       end if
 
@@ -752,7 +752,7 @@ end subroutine X(bi_conjugate_gradients)
         end if
 
         if(showprogress_) then
-          ilog_res = max(M_ZERO, -CNST(100.0)*log(res))
+          ilog_res = max(0, -int(CNST(100.0)*log(res)))
           call loct_progress_bar(ilog_res, ilog_thr)
         end if
         
@@ -1010,8 +1010,7 @@ end subroutine X(bi_conjugate_gradients)
       call RANDOM_NUMBER(P)
       do j = 1,s
          do k = 1,j-1
-            alpha(k) = dtrace_dot( P(:,:,k),P(:,:,j) )
-            P(:,:,j) = P(:,:,j) - alpha(k)*P(:,:,k)
+            P(:,:,j) = P(:,:,j) - dtrace_dot( P(:,:,k),P(:,:,j) )*P(:,:,k)
          end do
          P(:,:,j) = P(:,:,j)/dfrob_norm(P(:,:,j))
       end do
@@ -1315,7 +1314,7 @@ end subroutine X(bi_conjugate_gradients)
       integer :: k
       zfrob_norm = M_ZERO
       do k = 1, size(v, 2)
-        zfrob_norm = zfrob_norm + zdotprod( v(:, k), v(:, k) )
+        zfrob_norm = zfrob_norm + real(zdotprod( v(:, k), v(:, k) ))
       end do
       zfrob_norm = sqrt( zfrob_norm )
     end function zfrob_norm

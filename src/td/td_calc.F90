@@ -226,12 +226,12 @@ subroutine td_calc_ionch(gr, st, ch, Nch)
   ii = 1
   do ik = 1, st%d%nik
     do ist = 1, st%nst
-      do idim = 1, st%d%dim        
+      do idim = 1, st%d%dim
 
         if (st%st_start <= ist .and. ist <= st%st_end .and. &
               st%d%kpt%start <= ik .and. ik <= st%d%kpt%end) then
           call states_elec_get_state(st, gr%mesh, idim, ist, ik, zpsi)
-          N(ii) = zmf_integrate(gr%mesh, zpsi(:) * conjg(zpsi(:)) ) 
+          N(ii) = real(zmf_dotp(gr%mesh, zpsi, zpsi))
           Nnot(ii) = M_ONE - N(ii)
         end if
 

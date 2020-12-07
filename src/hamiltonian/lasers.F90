@@ -412,11 +412,11 @@ contains
             xx(1:mesh%sb%dim) = mesh%x(ip, 1:mesh%sb%dim)
             select case(mesh%sb%dim)
             case(2)
-              lasers(il)%a(ip, :) = (/xx(2), -xx(1)/) * sign(CNST(1.0), TOFLOAT(lasers(il)%pol(3)))
+              lasers(il)%a(ip, :) = (/xx(2), -xx(1)/) * sign(CNST(1.0), real(lasers(il)%pol(3)))
             case(3)
-              lasers(il)%a(ip, :) = (/ xx(2)*lasers(il)%pol(3) - xx(3)*lasers(il)%pol(2), &
-                                xx(3)*lasers(il)%pol(1) - xx(1)*lasers(il)%pol(3), &
-                                xx(1)*lasers(il)%pol(2) - xx(2)*lasers(il)%pol(1)  /)
+              lasers(il)%a(ip, :) = (/ xx(2)*real(lasers(il)%pol(3)) - xx(3)*real(lasers(il)%pol(2)), &
+                                xx(3)*real(lasers(il)%pol(1)) - xx(1)*real(lasers(il)%pol(3)), &
+                                xx(1)*real(lasers(il)%pol(2)) - xx(2)*real(lasers(il)%pol(1))  /)
             end select
           end do
           lasers(il)%a = -M_HALF * lasers(il)%a 
