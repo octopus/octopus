@@ -31,8 +31,7 @@ module stencil_oct_m
     stencil_allocate,              &
     stencil_copy,                  &
     stencil_end,                   &
-    stencil_init_center,           &
-    stencil_union
+    stencil_init_center
 
   type stargeneral_arms_t
     ! Components are public by default
@@ -99,62 +98,6 @@ contains
   end subroutine stencil_end
 
   
-  !-------------------------------------------------------
-  subroutine stencil_union(dim, st1, st2, stu)
-    integer,         intent(in)    :: dim
-    type(stencil_t), intent(inout) :: st1
-    type(stencil_t), intent(inout) :: st2
-    type(stencil_t), intent(inout) :: stu
-
-    integer :: idir, ii, jj, nstu
-    logical :: not_in_st1
-
-    PUSH_SUB(stencil_union)
-
-    call stencil_allocate(stu, st1%size + st2%size)
-
-    ! copy the first stencil
-    do ii = 1, st1%size
-      do idir = 1, dim
-        stu%points(idir, ii) = st1%points(idir, ii)
-      end do
-    end do
-
-    nstu = st1%size
-
-    do ii = 1, st2%size
-
-      not_in_st1 = .true.
-
-      ! check whether that point was already in the stencil
-      do jj = 1, st1%size
-        if(all(st1%points(1:dim, jj) == st2%points(1:dim, ii))) then
-          not_in_st1 = .false.
-          exit
-        end if
-      end do
-
-      if(not_in_st1) then !add it
-        nstu = nstu + 1
-        stu%points(1:dim, nstu) = st2%points(1:dim, ii)
-      end if
-
-    end do
-
-    stu%points(dim + 1:MAX_DIM, 1:nstu) = 0
-
-    stu%size = nstu
-
-    ! this is not defined for a union, which could be any combination. The
-    ! weights should already be known here
-    stu%npoly = -1
-
-    call stencil_init_center(stu)
-
-    POP_SUB(stencil_union)
-  end subroutine stencil_union
-
-
   !-------------------------------------------------------  
   subroutine stencil_init_center(this)
     type(stencil_t), intent(inout) :: this
