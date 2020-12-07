@@ -110,12 +110,8 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, namespace, start)
   R_TYPE, allocatable :: hamilt(:, :, :), lcaopsi(:, :, :), lcaopsi2(:, :), zeropsi(:)
   integer :: kstart, kend, ispin
   integer :: spin_channels
-
-#ifdef LCAO_DEBUG
   integer :: iunit_h, iunit_s, iunit_e, ierr
   character(len=256) :: filename
-#endif
-
 #ifdef HAVE_MPI
   FLOAT, allocatable :: tmp(:, :)
 #endif
@@ -153,32 +149,26 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, namespace, start)
 
   if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(-1, maxmtxel)
 
-#ifdef LCAO_DEBUG
-! This code (and related below) is commented out because it causes mysterious optimization
-! problems with PGI 12.4.0 -- LAPACK fails in diagonalization, only if mesh partition from scratch!
   if(this%debug .and. mpi_grp_is_root(mpi_world)) then
-    iunit_h = io_open(file=trim(STATIC_DIR)//'lcao_hamiltonian', namespace, action='write')
-    iunit_s = io_open(file=trim(STATIC_DIR)//'lcao_overlap', namespace, action='write')
-    iunit_e = io_open(file=trim(STATIC_DIR)//'lcao_eigenvectors', namespace, action='write')
+    iunit_h = io_open(trim(STATIC_DIR)//'lcao_hamiltonian', namespace, action='write')
+    iunit_s = io_open(trim(STATIC_DIR)//'lcao_overlap', namespace, action='write')
+    iunit_e = io_open(trim(STATIC_DIR)//'lcao_eigenvectors', namespace, action='write')
     write(iunit_h,'(4a6,a15)') 'iorb', 'jorb', 'ik', 'spin', 'hamiltonian'
     write(iunit_s,'(3a6,a15)') 'iorb', 'jorb', 'spin', 'overlap'
     write(iunit_e,'(4a6,a15)') 'ieig', 'jorb', 'ik', 'spin', 'coefficient'
   end if
-#endif
 
   do n1 = 1, this%norbs
     
     do ispin = 1, spin_channels
       call X(get_ao)(this, st, gr%mesh, geo, n1, ispin, lcaopsi(:, :, ispin), use_psi = .true.)
 
-#ifdef LCAO_DEBUG
       if(this%debug .and. mpi_grp_is_root(mpi_world)) then
         write(filename, '(a,i4.4,a,i1)') 'lcao-orb', n1, '-sp', ispin
-        call X(io_function_output)(OPTION__OUTPUTFORMAT__XCRYSDEN, "./static", filename, namespace &
+        call X(io_function_output)(OPTION__OUTPUTFORMAT__XCRYSDEN, "./static", filename, namespace, &
           gr%mesh, lcaopsi(:, 1, ispin),  sqrt(units_out%length**(-gr%mesh%sb%dim)), &
           ierr, geo = geo)
       end if
-#endif
     end do
 
     do ik = kstart, kend
@@ -193,20 +183,19 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, namespace, start)
 
         overlap(n1, n2, ispin) = X(mf_dotp)(gr%mesh, st%d%dim, lcaopsi(:, :, ispin), lcaopsi2)
         overlap(n2, n1, ispin) = R_CONJ(overlap(n1, n2, ispin))
-#ifdef LCAO_DEBUG
-        if(this%debug .and. mpi_grp_is_root(mpi_world)) &
+
+        if(this%debug .and. mpi_grp_is_root(mpi_world)) then
           write(iunit_s,'(3i6,2f15.6)') n1, n2, ispin, overlap(n1, n2, ispin)
-#endif
+        end if
 
         do ik = kstart, kend
           if(ispin /= states_elec_dim_get_spin_index(st%d, ik)) cycle
           hamilt(n1, n2, ik) = X(mf_dotp)(gr%mesh, st%d%dim, hpsi(:, :, ik), lcaopsi2)
           hamilt(n2, n1, ik) = R_CONJ(hamilt(n1, n2, ik))
 
-#ifdef LCAO_DEBUG
-          if(this%debug .and. mpi_grp_is_root(mpi_world)) &
+          if(this%debug .and. mpi_grp_is_root(mpi_world)) then
             write(iunit_h,'(4i6,2f15.6)') n1, n2, ik, ispin, units_from_atomic(units_out%energy, hamilt(n1, n2, ik))
-#endif
+          end if
         end do
       end do
       
@@ -219,12 +208,10 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, namespace, start)
 
   if(mpi_grp_is_root(mpi_world)) write(stdout, '(1x)')
 
-#ifdef LCAO_DEBUG
   if(this%debug .and. mpi_grp_is_root(mpi_world)) then
     call io_close(iunit_h)
     call io_close(iunit_s)
   end if
-#endif
 
   SAFE_DEALLOCATE_A(hpsi)
 
@@ -255,9 +242,9 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, namespace, start)
 
   SAFE_DEALLOCATE_A(zeropsi)
 
-#ifdef LCAO_DEBUG
   if(this%debug .and. mpi_grp_is_root(mpi_world)) then
     do ik =  kstart, kend
+      ispin = states_elec_dim_get_spin_index(st%d, ik) 
       do n2 = 1, this%norbs
         do n1 = 1, this%norbs
           write(iunit_e,'(4i6,2f15.6)') n2, n1, ik, ispin, hamilt(n1, n2, ik)
@@ -266,7 +253,6 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, namespace, start)
     end do
     call io_close(iunit_e)
   end if
-#endif
 
 #ifdef HAVE_MPI
   if(st%d%kpt%parallel) then
@@ -358,15 +344,18 @@ subroutine X(init_orbitals)(this, st, gr, geo, start)
       if(ispin < st%d%spin_channels .and. st%d%ispin /= SPINORS) then
         ispin = ispin + 1
       else
-        ispin = 1
         iorb = iorb + 1
         if(iorb > this%norbs) exit ist_loop
+        ispin = 1
       end if
 
     end do
   end do ist_loop
 
-  if(ispin < st%d%spin_channels .and. st%d%ispin /= SPINORS) iorb = iorb - 1 ! we have not completed all the spin channels
+  if(ispin < st%d%spin_channels .and. st%d%ispin /= SPINORS) then
+    iorb = iorb - 1 ! we have not completed all the spin channels
+    this%ck(iorb, 1:st%d%spin_channels) = 0
+  end if
 
   ! if there are any orbitals left, allocate extra space for them
 
@@ -499,26 +488,21 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, namespace, start)
   R_TYPE, allocatable :: evec(:, :), levec(:, :), block_evec(:, :)
   FLOAT :: dist2
   type(profile_t), save :: prof_matrix, prof_wavefunction
-#ifdef LCAO_DEBUG
   integer :: iunit_h, iunit_s, iunit_e, ierr
   character(len=256) :: filename
-#endif
 
   PUSH_SUB(X(lcao_alt_wf))
 
   ASSERT(start == 1)
 
-#ifdef LCAO_DEBUG
   if(this%debug .and. mpi_grp_is_root(mpi_world)) then
-    iunit_h = io_open(file=trim(STATIC_DIR)//'lcao_hamiltonian', namespace, action='write')
-    iunit_s = io_open(file=trim(STATIC_DIR)//'lcao_overlap', namespace, action='write')
-    iunit_e = io_open(file=trim(STATIC_DIR)//'lcao_eigenvectors', namespace, action='write')
+    iunit_h = io_open(trim(STATIC_DIR)//'lcao_hamiltonian', namespace, action='write')
+    iunit_s = io_open(trim(STATIC_DIR)//'lcao_overlap', namespace, action='write')
+    iunit_e = io_open(trim(STATIC_DIR)//'lcao_eigenvectors', namespace, action='write')
     write(iunit_h,'(4a6,a15)') 'iorb', 'jorb', 'ik', 'spin', 'hamiltonian'
     write(iunit_s,'(3a6,a15)') 'iorb', 'jorb', 'spin', 'overlap'
     write(iunit_e,'(4a6,a15)') 'ieig', 'jorb', 'ik', 'spin', 'coefficient'
   end if
-#endif
-
 
   if(.not. this%parallel) then
     if (mpi_grp_is_root(gr%mesh%mpi_grp)) then
@@ -628,14 +612,12 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, namespace, start)
               do iorb = 1, norbs
                 n1 = ibasis - 1 + iorb
 
-#ifdef LCAO_DEBUG
                 if(this%debug .and. mpi_grp_is_root(mpi_world)) then
                   write(filename, '(a,i4.4,a,i1)') 'lcao-orb', n1
                   call X(io_function_output)(OPTION__OUTPUTFORMAT__XCRYSDEN, "./static", filename, namespace, &
                     gr%mesh, psii(:, 1, iorb), sqrt(units_out%length**(-gr%mesh%sb%dim)), &
                     ierr, geo = geo)
                 end if
-#endif
 
                 do jorb = 1, this%norb_atom(jatom)
                   n2 = jbasis - 1 + jorb
@@ -644,12 +626,10 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, namespace, start)
                   hamiltonian(n1, n2) = aa(iorb, jorb)
                   overlap(n1, n2) = bb(iorb, jorb)
 
-#ifdef LCAO_DEBUG
                   if(this%debug) then
                     write(iunit_h,'(4i6,2f15.6)') n1, n2, ik, ispin, units_from_atomic(units_out%energy, hamiltonian(n1, n2))
                     write(iunit_s,'(3i6,2f15.6)') n1, n2, ispin, overlap(n1, n2)
                   end if
-#endif
 
                 end do
               end do
@@ -678,12 +658,10 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, namespace, start)
         if(mpi_grp_is_root(mpi_world)) call loct_progress_bar(iatom, geo%natoms)
       end do ! iatom
 
-#ifdef LCAO_DEBUG
       if(this%debug .and. mpi_grp_is_root(mpi_world)) then
         call io_close(iunit_h)
         call io_close(iunit_s)
       end if
-#endif
 
       if(mpi_grp_is_root(mpi_world)) write(stdout, '(1x)')
 
@@ -1109,7 +1087,6 @@ contains
 #endif
     end if
 
-#ifdef LCAO_DEBUG
     if(this%debug .and. mpi_grp_is_root(mpi_world)) then
       do n2 = 1, this%norbs
         do n1 = 1, this%norbs
@@ -1118,7 +1095,6 @@ contains
       end do
       call io_close(iunit_e)
     end if
-#endif
 
     call profiling_out(prof)
 
