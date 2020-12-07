@@ -2,8 +2,8 @@
 
 CalculationMode = gs
 fromScratch = yes
-ConvRelDens = 1e-7
-EigensolverTolerance = 1e-8
+ConvRelDens = 1e-8
+EigensolverTolerance = 1e-9
 
 BoxShape = minimum
 Spacing = 0.4
@@ -15,4 +15,4 @@ Radius = 6
 %
 
 StatesPack = yes
-LCAOStart = lcao_full
+
