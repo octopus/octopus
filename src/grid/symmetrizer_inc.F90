@@ -249,7 +249,7 @@ subroutine X(symmetrize_magneto_optics_cart)(symm, tensor)
   
   integer :: iop, nops
   R_TYPE  :: tensor_symm(3, 3, 3)
-  FLOAT   :: rot(3, 3)
+  integer :: rot(3, 3)
   integer :: idir1, idir2, idir3, ndir
   integer :: i1, i2, i3, det
   

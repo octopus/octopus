@@ -1819,60 +1819,60 @@ contains
 
     SAFE_ALLOCATE(nn(1:2, 1:3, 1:3, 1:3))
 
-    st%surface_grid_center(1, 1, :, :) = -bounds(1,1)
+    st%surface_grid_center(1, 1, :, :) = -int(bounds(1,1))
     do iy = 1, iy_max
       do iz = 1, iz_max
         rr(2) = -bounds(1,2) + delta(2)/M_TWO + (iy-1) * delta(2)
         rr(3) = -bounds(1,3) + delta(3)/M_TWO + (iz-1) * delta(3)
-        st%surface_grid_center(1, 2, iy, iz) = rr(2)
-        st%surface_grid_center(1, 3, iy, iz) = rr(3)
+        st%surface_grid_center(1, 2, iy, iz) = int(rr(2))
+        st%surface_grid_center(1, 3, iy, iz) = int(rr(3))
       end do
     end do
-    st%surface_grid_center(2, 1, :, :) = bounds(1,1)
+    st%surface_grid_center(2, 1, :, :) = int(bounds(1,1))
     do iy = 1, iy_max
       do iz = 1, iz_max
         rr(2) = -bounds(1,2) + delta(2)/M_TWO + (iy-1) * delta(2)
         rr(3) = -bounds(1,3) + delta(3)/M_TWO + (iz-1) * delta(3)
-        st%surface_grid_center(2, 2, iy, iz) = rr(2)
-        st%surface_grid_center(2, 3, iy, iz) = rr(3)
+        st%surface_grid_center(2, 2, iy, iz) = int(rr(2))
+        st%surface_grid_center(2, 3, iy, iz) = int(rr(3))
       end do
     end do
 
-    st%surface_grid_center(1, 2, :, :) = -bounds(1,2)
+    st%surface_grid_center(1, 2, :, :) = -int(bounds(1,2))
     do ix = 1, ix_max
       do iz = 1, iz_max
         rr(1) = -bounds(1,1) + delta(1)/M_TWO + (ix-1) * delta(1)
         rr(3) = -bounds(1,3) + delta(3)/M_TWO + (iz-1) * delta(3)
-        st%surface_grid_center(1, 1, ix, iz) = rr(1)
-        st%surface_grid_center(1, 3, ix, iz) = rr(3)
+        st%surface_grid_center(1, 1, ix, iz) = int(rr(1))
+        st%surface_grid_center(1, 3, ix, iz) = int(rr(3))
       end do
     end do
-    st%surface_grid_center(2, 2, :, :) = bounds(1,2)
+    st%surface_grid_center(2, 2, :, :) = int(bounds(1,2))
     do ix = 1, ix_max
       do iz = 1, iz_max
         rr(1) = -bounds(1,2) + delta(1)/M_TWO + (ix-1) * delta(1)
         rr(3) = -bounds(1,3) + delta(3)/M_TWO + (iz-1) * delta(3)
-        st%surface_grid_center(2, 1, ix, iz) = rr(1)
-        st%surface_grid_center(2, 3, ix, iz) = rr(3)
+        st%surface_grid_center(2, 1, ix, iz) = int(rr(1))
+        st%surface_grid_center(2, 3, ix, iz) = int(rr(3))
       end do
     end do
 
-    st%surface_grid_center(1, 3, :, :) = -bounds(1,3)
+    st%surface_grid_center(1, 3, :, :) = -int(bounds(1,3))
     do ix = 1, ix_max
       do iy = 1, iy_max
         rr(1) = -bounds(1,1) + delta(1)/M_TWO + (ix-1) * delta(1)
         rr(2) = -bounds(1,2) + delta(2)/M_TWO + (iy-1) * delta(2)
-        st%surface_grid_center(1, 1, ix, iy) = rr(1)
-        st%surface_grid_center(1, 2, ix, iy) = rr(2)
+        st%surface_grid_center(1, 1, ix, iy) = int(rr(1))
+        st%surface_grid_center(1, 2, ix, iy) = int(rr(2))
       end do
     end do
-    st%surface_grid_center(2, 3, :, :) = bounds(1,3)
+    st%surface_grid_center(2, 3, :, :) = int(bounds(1,3))
     do ix = 1, ix_max
       do iy = 1, iy_max
         rr(1) = -bounds(1,2) + delta(1)/M_TWO + (ix-1) * delta(1)
         rr(2) = -bounds(1,2) + delta(2)/M_TWO + (iy-1) * delta(2)
-        st%surface_grid_center(2, 1, ix, iy) = rr(1)
-        st%surface_grid_center(2, 2, ix, iy) = rr(2)
+        st%surface_grid_center(2, 1, ix, iy) = int(rr(1))
+        st%surface_grid_center(2, 2, ix, iy) = int(rr(2))
       end do
     end do
 
