@@ -63,7 +63,6 @@ module grid_oct_m
     type(multigrid_t), pointer  :: mgrid
     type(double_grid_t)         :: dgrid
     logical                     :: have_fine_mesh
-    type(stencil_t)             :: stencil
   end type grid_t
 
 
@@ -213,8 +212,6 @@ contains
     call derivatives_nullify(gr%der)
     call derivatives_init(gr%der, namespace, gr%sb, gr%cv%method /= CURV_METHOD_UNIFORM)
 
-    call stencil_copy(gr%der%lapl%stencil, gr%stencil)
-
     call double_grid_init(gr%dgrid, namespace, gr%sb)
 
     enlarge = 0
@@ -224,7 +221,7 @@ contains
     ! now we generate the mesh and the derivatives
     call mesh_init_stage_1(gr%mesh, gr%sb, gr%cv, grid_spacing, enlarge)
 
-    call mesh_init_stage_2(gr%mesh, gr%sb, geo, gr%cv, gr%stencil, namespace)
+    call mesh_init_stage_2(gr%mesh, gr%sb, geo, gr%cv, gr%der%lapl%stencil, namespace)
 
     POP_SUB(grid_init_stage_1)
 
@@ -240,7 +237,7 @@ contains
 
     PUSH_SUB(grid_init_stage_2)
 
-    call mesh_init_stage_3(gr%mesh, namespace, gr%stencil, mc)
+    call mesh_init_stage_3(gr%mesh, namespace, gr%der%lapl%stencil, mc)
 
     call nl_operator_global_init(namespace)
     if(gr%have_fine_mesh) then
@@ -262,12 +259,12 @@ contains
       SAFE_ALLOCATE(gr%fine%mesh)
       SAFE_ALLOCATE(gr%fine%der)
       
-      call multigrid_mesh_double(geo, gr%cv, gr%mesh, gr%fine%mesh, gr%stencil, namespace)
+      call multigrid_mesh_double(geo, gr%cv, gr%mesh, gr%fine%mesh, gr%der%lapl%stencil, namespace)
 
       call derivatives_nullify(gr%fine%der)      
       call derivatives_init(gr%fine%der, namespace, gr%mesh%sb, gr%cv%method /= CURV_METHOD_UNIFORM)
       
-      call mesh_init_stage_3(gr%fine%mesh, namespace, gr%stencil, mc)
+      call mesh_init_stage_3(gr%fine%mesh, namespace, gr%der%lapl%stencil, mc)
       
       call multigrid_get_transfer_tables(gr%fine%tt, gr%fine%mesh, gr%mesh)
       
@@ -326,8 +323,6 @@ contains
       call multigrid_end(gr%mgrid)
       SAFE_DEALLOCATE_P(gr%mgrid)
     end if
-
-    call stencil_end(gr%stencil)
 
     POP_SUB(grid_end)
   end subroutine grid_end
