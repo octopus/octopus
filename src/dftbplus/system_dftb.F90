@@ -463,7 +463,7 @@ contains
   subroutine system_dftb_output_write(this)
     class(system_dftb_t), intent(inout) :: this
 
-    integer :: idir
+    integer :: idir, iat
     character(len=50) :: aux
     FLOAT :: tmp(MAX_DIM)
 
@@ -482,17 +482,23 @@ contains
       ! first line: column names
       call write_iter_header_start(this%output_handle)
 
-      do idir = 1, this%space%dim
-        write(aux, '(a2,i3,a1)') 'x(', idir, ')'
-        call write_iter_header(this%output_handle, aux)
+      do iat = 1, this%nAtom
+        do idir = 1, this%space%dim
+          write(aux, '(a2,i3,a1,i3,a1)') 'x(', iat, ',', idir, ')'
+          call write_iter_header(this%output_handle, aux)
+        end do
       end do
-      do idir = 1, this%space%dim
-        write(aux, '(a2,i3,a1)') 'v(', idir, ')'
-        call write_iter_header(this%output_handle, aux)
+      do iat = 1, this%nAtom
+        do idir = 1, this%space%dim
+          write(aux, '(a2,i3,a1,i3,a1)') 'v(', iat, ',', idir, ')'
+          call write_iter_header(this%output_handle, aux)
+        end do
       end do
-      do idir = 1, this%space%dim
-        write(aux, '(a2,i3,a1)') 'f(', idir, ')'
-        call write_iter_header(this%output_handle, aux)
+      do iat = 1, this%nAtom
+        do idir = 1, this%space%dim
+          write(aux, '(a2,i3,a1,i3,a1)') 'f(', iat, ',', idir, ')'
+          call write_iter_header(this%output_handle, aux)
+        end do
       end do
       call write_iter_nl(this%output_handle)
 
@@ -512,14 +518,20 @@ contains
     call write_iter_start(this%output_handle)
 
     ! Position
-    !tmp(1:this%space%dim) = units_from_atomic(units_out%length, this%pos(1:this%space%dim))
-    !call write_iter_double(this%output_handle, tmp, this%space%dim)
+    do iat = 1, this%nAtom
+      tmp(1:this%space%dim) = units_from_atomic(units_out%length, this%coords(1:this%space%dim, iat))
+      call write_iter_double(this%output_handle, tmp, this%space%dim)
+    end do
     ! Velocity
-    !tmp(1:this%space%dim) = units_from_atomic(units_out%velocity, this%vel(1:this%space%dim))
-    !call write_iter_double(this%output_handle, tmp, this%space%dim)
+    do iat = 1, this%nAtom
+      tmp(1:this%space%dim) = units_from_atomic(units_out%velocity, this%vel(1:this%space%dim, iat))
+      call write_iter_double(this%output_handle, tmp, this%space%dim)
+    end do
     ! Force
-    !tmp(1:this%space%dim) = units_from_atomic(units_out%force, this%tot_force(1:this%space%dim))
-    !call write_iter_double(this%output_handle, tmp, this%space%dim)
+    do iat = 1, this%nAtom
+      tmp(1:this%space%dim) = units_from_atomic(units_out%force, this%tot_force(1:this%space%dim, iat))
+      call write_iter_double(this%output_handle, tmp, this%space%dim)
+    end do
 
     call write_iter_nl(this%output_handle)
 
