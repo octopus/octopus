@@ -38,7 +38,6 @@ module grid_oct_m
   use space_oct_m
   use simul_box_oct_m
   use stencil_oct_m
-  use stencil_cube_oct_m
   use unit_oct_m
   use unit_system_oct_m
 
@@ -93,7 +92,6 @@ contains
     type(namespace_t), intent(in)    :: namespace
     type(geometry_t),  intent(in)    :: geo
 
-    type(stencil_t) :: cube
     integer :: enlarge(1:MAX_DIM)
     type(block_t) :: blk
     integer :: idir
@@ -215,21 +213,16 @@ contains
     call derivatives_nullify(gr%der)
     call derivatives_init(gr%der, namespace, gr%sb, gr%cv%method /= CURV_METHOD_UNIFORM)
 
+    call stencil_copy(gr%der%lapl%stencil, gr%stencil)
+
     call double_grid_init(gr%dgrid, namespace, gr%sb)
 
     enlarge = 0
-    enlarge(1:gr%sb%dim) = 2
     enlarge = max(enlarge, double_grid_enlarge(gr%dgrid))
     enlarge = max(enlarge, gr%der%n_ghost)
 
     ! now we generate the mesh and the derivatives
     call mesh_init_stage_1(gr%mesh, gr%sb, gr%cv, grid_spacing, enlarge)
-
-    ! the stencil used to generate the grid is a union of a cube (for
-    ! multigrid) and the Laplacian.
-    call stencil_cube_get_lapl(cube, gr%sb%dim, order = 2)
-    call stencil_union(gr%sb%dim, cube, gr%der%lapl%stencil, gr%stencil)
-    call stencil_end(cube)
 
     call mesh_init_stage_2(gr%mesh, gr%sb, geo, gr%cv, gr%stencil, namespace)
 
