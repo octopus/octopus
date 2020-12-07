@@ -184,7 +184,6 @@ contains
       if (err /= 0) ierr = ierr + 1
     end if
     call MPI_Bcast(ierr, 1, MPI_INTEGER, 0, partition%mpi_grp%comm, mpi_err)
-    call MPI_Barrier(partition%mpi_grp%comm, mpi_err)
 
     ASSERT(all(partition%part(:) > 0))
     
@@ -220,7 +219,6 @@ contains
     end if
 #ifdef HAVE_MPI
     call MPI_Bcast(ierr, 1, MPI_INTEGER, 0, partition%mpi_grp%comm, mpi_err)
-    call MPI_Barrier(partition%mpi_grp%comm, mpi_err)
 #endif
 
     SAFE_DEALLOCATE_A(part_global)
@@ -523,10 +521,8 @@ contains
       if (rbuffer(ip) == 0) cycle
       rbuffer(ip) = partition%part(rbuffer(ip) - partition%istart + 1)
     end do
+
 #ifdef HAVE_MPI
-    !Barrier to ensure that a deadlock is not possible
-    call MPI_Barrier(partition%mpi_grp%comm, mpi_err)
-    
     !Now we send the information backwards
     call mpi_debug_in(partition%mpi_grp%comm, C_MPI_ALLTOALLV)
     call MPI_Alltoallv(rbuffer, rcounts(1), rdispls(1), MPI_INTEGER, &

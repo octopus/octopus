@@ -541,8 +541,6 @@ subroutine X(io_function_output_vector)(how, dir, fname, namespace, mesh, ff, ve
   if(comm /= MPI_COMM_NULL .and. comm /= 0 .and. .not. is_global_) then
     ! I have to broadcast the error code
     call MPI_Bcast(ierr, 1, MPI_INTEGER, 0, comm, mpi_err)
-    ! Add a barrier to ensure that the process are synchronized
-    call MPI_Barrier(comm, mpi_err)
   end if
 #endif
   
@@ -681,8 +679,6 @@ subroutine X(io_function_output_vector_BZ)(how, dir, fname, namespace, mesh, kpt
   if(comm /= MPI_COMM_NULL .and. comm /= 0 ) then
     ! I have to broadcast the error code
     call MPI_Bcast(ierr, 1, MPI_INTEGER, 0, comm, mpi_err)
-    ! Add a barrier to ensure that the process are synchronized
-    call MPI_Barrier(comm, mpi_err)
   end if
 #endif
   
@@ -767,8 +763,6 @@ subroutine X(io_function_output) (how, dir, fname, namespace, mesh, ff, unit, ie
   if(comm /= MPI_COMM_NULL .and. comm /= 0 .and. .not. is_global_) then
     ! I have to broadcast the error code
     call MPI_Bcast(ierr, 1, MPI_INTEGER, 0, comm, mpi_err)
-    ! Add a barrier to ensure that the process are synchronized
-    call MPI_Barrier(comm, mpi_err)
   end if
 
   if(mesh%parallel_in_domains .and. .not. is_global_) then
