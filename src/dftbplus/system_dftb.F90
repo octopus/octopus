@@ -75,7 +75,7 @@ module system_dftb_oct_m
     FLOAT :: scc_tolerance
 
     type(geometry_t) :: geo
-    type(c_ptr) :: output_handle
+    type(c_ptr) :: output_handle(2)
 #ifdef HAVE_DFTBPLUS
     type(TDftbPlus) :: dftbp
 #endif
@@ -437,7 +437,8 @@ contains
     ! Create output handle
     call io_mkdir('td.general', this%namespace)
     if (mpi_grp_is_root(mpi_world)) then
-      call write_iter_init(this%output_handle, 0, this%prop%dt, trim(io_workpath("td.general/coordinates", this%namespace)))
+      call write_iter_init(this%output_handle(1), 0, this%prop%dt, trim(io_workpath("td.general/coordinates", this%namespace)))
+      call write_iter_init(this%output_handle(2), 0, this%prop%dt, trim(io_workpath("td.general/forces", this%namespace)))
     end if
 
     ! Output info for first iteration
@@ -453,7 +454,8 @@ contains
     PUSH_SUB(system_dftb_output_finish)
 
     if (mpi_grp_is_root(mpi_world)) then
-      call write_iter_end(this%output_handle)
+      call write_iter_end(this%output_handle(1))
+      call write_iter_end(this%output_handle(2))
     end if
 
     POP_SUB(system_dftb_output_finish)
@@ -463,77 +465,69 @@ contains
   subroutine system_dftb_output_write(this)
     class(system_dftb_t), intent(inout) :: this
 
-    integer :: idir, iat
+    integer :: idir, iat, iout
     character(len=50) :: aux
+    character(1) :: out_label(2)
     FLOAT :: tmp(MAX_DIM)
 
     if(.not.mpi_grp_is_root(mpi_world)) return ! only first node outputs
 
     PUSH_SUB(system_dftb_output_write)
 
+    out_label(1) = "x"
+    out_label(2) = "f"
+
     if (this%clock%get_tick() == 0) then
-      ! header
-      call write_iter_clear(this%output_handle)
-      call write_iter_string(this%output_handle,'################################################################################')
-      call write_iter_nl(this%output_handle)
-      call write_iter_string(this%output_handle,'# HEADER')
-      call write_iter_nl(this%output_handle)
+       ! header
+      do iout = 1, 2
+        call write_iter_clear(this%output_handle(iout))
+        call write_iter_string(this%output_handle(iout),'#####################################################################')
+        call write_iter_nl(this%output_handle(iout))
+        call write_iter_string(this%output_handle(iout),'# HEADER')
+        call write_iter_nl(this%output_handle(iout))
 
-      ! first line: column names
-      call write_iter_header_start(this%output_handle)
+        ! first line: column names
+        call write_iter_header_start(this%output_handle(iout))
 
-      do iat = 1, this%nAtom
-        do idir = 1, this%space%dim
-          write(aux, '(a2,i3,a1,i3,a1)') 'x(', iat, ',', idir, ')'
-          call write_iter_header(this%output_handle, aux)
+        do iat = 1, this%nAtom
+          do idir = 1, this%space%dim
+            write(aux, '(a1,a1,i3,a1,i3,a1)') out_label(iout),'(', iat, ',', idir, ')'
+            call write_iter_header(this%output_handle(iout), aux)
+          end do
         end do
-      end do
-      do iat = 1, this%nAtom
-        do idir = 1, this%space%dim
-          write(aux, '(a2,i3,a1,i3,a1)') 'v(', iat, ',', idir, ')'
-          call write_iter_header(this%output_handle, aux)
-        end do
-      end do
-      do iat = 1, this%nAtom
-        do idir = 1, this%space%dim
-          write(aux, '(a2,i3,a1,i3,a1)') 'f(', iat, ',', idir, ')'
-          call write_iter_header(this%output_handle, aux)
-        end do
-      end do
-      call write_iter_nl(this%output_handle)
+        call write_iter_nl(this%output_handle(iout))
 
-      ! second line: units
-      call write_iter_string(this%output_handle, '#[Iter n.]')
-      call write_iter_header(this%output_handle, '[' // trim(units_abbrev(units_out%time)) // ']')
-      call write_iter_string(this%output_handle, &
-        'Position in '   // trim(units_abbrev(units_out%length))   //   &
-        ', Velocity in '// trim(units_abbrev(units_out%velocity)) //   &
+        ! second line: units
+        call write_iter_string(this%output_handle(iout), '#[Iter n.]')
+        call write_iter_header(this%output_handle(iout), '[' // trim(units_abbrev(units_out%time)) // ']')
+      end do
+
+      call write_iter_string(this%output_handle(1), &
+        'Position in '   // trim(units_abbrev(units_out%length)))
+      call write_iter_string(this%output_handle(2), &
         ', Force in '    // trim(units_abbrev(units_out%force)))
-      call write_iter_nl(this%output_handle)
 
-      call write_iter_string(this%output_handle,'################################################################################')
-      call write_iter_nl(this%output_handle)
+      do iout = 1, 2
+        call write_iter_nl(this%output_handle(iout))
+        call write_iter_string(this%output_handle(iout),'#######################################################################')
+        call write_iter_nl(this%output_handle(iout))
+      end do
     end if
 
-    call write_iter_start(this%output_handle)
+    call write_iter_start(this%output_handle(1))
+    call write_iter_start(this%output_handle(2))
 
+    do iat = 1, this%nAtom
     ! Position
-    do iat = 1, this%nAtom
       tmp(1:this%space%dim) = units_from_atomic(units_out%length, this%coords(1:this%space%dim, iat))
-      call write_iter_double(this%output_handle, tmp, this%space%dim)
-    end do
-    ! Velocity
-    do iat = 1, this%nAtom
-      tmp(1:this%space%dim) = units_from_atomic(units_out%velocity, this%vel(1:this%space%dim, iat))
-      call write_iter_double(this%output_handle, tmp, this%space%dim)
-    end do
+      call write_iter_double(this%output_handle(1), tmp, this%space%dim) 
     ! Force
-    do iat = 1, this%nAtom
       tmp(1:this%space%dim) = units_from_atomic(units_out%force, this%tot_force(1:this%space%dim, iat))
-      call write_iter_double(this%output_handle, tmp, this%space%dim)
+      call write_iter_double(this%output_handle(2), tmp, this%space%dim)
     end do
 
-    call write_iter_nl(this%output_handle)
+    call write_iter_nl(this%output_handle(1))
+    call write_iter_nl(this%output_handle(2))
 
     POP_SUB(system_dftb_output_write)
   end subroutine system_dftb_output_write
