@@ -105,11 +105,11 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, namespace, start)
   integer, optional,        intent(in)    :: start
 
   integer :: nst, ik, n1, n2, idim, lcao_start, ie, maxmtxel
-  R_TYPE, allocatable :: hpsi(:, :, :), overlap(:, :, :)
+  R_TYPE, allocatable :: hpsi(:, :, :), overlap(:, :)
   FLOAT, allocatable :: ev(:)
   R_TYPE, allocatable :: hamilt(:, :, :), lcaopsi(:, :, :), lcaopsi2(:, :), zeropsi(:)
-  integer :: kstart, kend, ispin
-  integer :: spin_channels
+  integer :: kstart, kend, ispin, ispin2
+  integer :: spin_channels, norbs_full
   integer :: iunit_h, iunit_s, iunit_e, ierr
   character(len=256) :: filename
 #ifdef HAVE_MPI
@@ -132,17 +132,25 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, namespace, start)
   !In case of spinors, everything is taken care of by st%d%dim
   spin_channels = st%d%spin_channels
   if(st%d%ispin == SPINORS) spin_channels = 1
+  !Remove the following line to allow spin unrestricted LCAO.
+  !Only works with PSF pseudopotential for the moment
+  spin_channels = 1
+
+  !The basis needs to be doubled to accomodate for time-reversal symmetry
+  norbs_full = this%norbs * spin_channels
 
   ! Allocation of variables
 
   SAFE_ALLOCATE(lcaopsi(1:gr%mesh%np_part, 1:st%d%dim, 1:spin_channels))
   SAFE_ALLOCATE(lcaopsi2(1:gr%mesh%np, 1:st%d%dim))
-  SAFE_ALLOCATE(hpsi(1:gr%mesh%np, 1:st%d%dim, kstart:kend))
-  SAFE_ALLOCATE(hamilt(1:this%norbs, 1:this%norbs, kstart:kend))
-  SAFE_ALLOCATE(overlap(1:this%norbs, 1:this%norbs, 1:spin_channels))
+  SAFE_ALLOCATE(hpsi(1:gr%mesh%np, 1:st%d%dim, ((kstart-1)*spin_channels+1):kend*spin_channels))
+  SAFE_ALLOCATE(hamilt(1:norbs_full, 1:norbs_full, kstart:kend))
+  hamilt = R_TOTYPE(M_ZERO)
+  SAFE_ALLOCATE(overlap(1:norbs_full, 1:norbs_full))
+  overlap = R_TOTYPE(M_ZERO)
 
   ie = 0
-  maxmtxel = this%norbs * (this%norbs + 1)/2
+  maxmtxel = norbs_full * (norbs_full + 1)/2
 
   message(1) = "Info: Getting Hamiltonian matrix elements."
   call messages_info(1)
@@ -153,9 +161,9 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, namespace, start)
     iunit_h = io_open(trim(STATIC_DIR)//'lcao_hamiltonian', namespace, action='write')
     iunit_s = io_open(trim(STATIC_DIR)//'lcao_overlap', namespace, action='write')
     iunit_e = io_open(trim(STATIC_DIR)//'lcao_eigenvectors', namespace, action='write')
-    write(iunit_h,'(4a6,a15)') 'iorb', 'jorb', 'ik', 'spin', 'hamiltonian'
-    write(iunit_s,'(3a6,a15)') 'iorb', 'jorb', 'spin', 'overlap'
-    write(iunit_e,'(4a6,a15)') 'ieig', 'jorb', 'ik', 'spin', 'coefficient'
+    write(iunit_h,'(3a6,a15)') 'iorb', 'jorb', 'ik', 'hamiltonian'
+    write(iunit_s,'(2a6,a15)') 'iorb', 'jorb', 'overlap'
+    write(iunit_e,'(3a6,a15)') 'ieig', 'jorb', 'ik', 'coefficient'
   end if
 
   do n1 = 1, this%norbs
@@ -172,30 +180,38 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, namespace, start)
     end do
 
     do ik = kstart, kend
-      ispin = states_elec_dim_get_spin_index(st%d, ik)
-      call X(hamiltonian_elec_apply_single)(hm, namespace, gr%mesh, lcaopsi(:, :, ispin), hpsi(:, :, ik), n1, ik)
+      !We apply the Hamiltonian to the doubled basis, for each k-point
+      do ispin = 1, spin_channels
+      call X(hamiltonian_elec_apply_single)(hm, namespace, gr%mesh, lcaopsi(:, :, ispin), &
+                hpsi(:, :, (ik-1)*spin_channels+ispin), n1, ik)
+      end do
     end do
 
     do n2 = n1, this%norbs
-      do ispin = 1, spin_channels
-
-        call X(get_ao)(this, st, gr%mesh, geo, n2, ispin, lcaopsi2, use_psi = .true.)
-
-        overlap(n1, n2, ispin) = X(mf_dotp)(gr%mesh, st%d%dim, lcaopsi(:, :, ispin), lcaopsi2)
-        overlap(n2, n1, ispin) = R_CONJ(overlap(n1, n2, ispin))
-
-        if(this%debug .and. mpi_grp_is_root(mpi_world)) then
-          write(iunit_s,'(3i6,2f15.6)') n1, n2, ispin, overlap(n1, n2, ispin)
-        end if
-
-        do ik = kstart, kend
-          if(ispin /= states_elec_dim_get_spin_index(st%d, ik)) cycle
-          hamilt(n1, n2, ik) = X(mf_dotp)(gr%mesh, st%d%dim, hpsi(:, :, ik), lcaopsi2)
-          hamilt(n2, n1, ik) = R_CONJ(hamilt(n1, n2, ik))
+      do ispin2 = 1, spin_channels
+        call X(get_ao)(this, st, gr%mesh, geo, n2, ispin2, lcaopsi2, use_psi = .true.)
+        do ispin = 1, spin_channels
+          overlap((n1-1)*spin_channels+ispin, (n2-1)*spin_channels+ispin2) = &
+                              X(mf_dotp)(gr%mesh, st%d%dim, lcaopsi(:, :, ispin), lcaopsi2)
+          overlap((n2-1)*spin_channels+ispin2, (n1-1)*spin_channels+ispin) = &
+                            R_CONJ(overlap((n1-1)*spin_channels+ispin, (n2-1)*spin_channels+ispin2))
 
           if(this%debug .and. mpi_grp_is_root(mpi_world)) then
-            write(iunit_h,'(4i6,2f15.6)') n1, n2, ik, ispin, units_from_atomic(units_out%energy, hamilt(n1, n2, ik))
+            write(iunit_s,'(2i6,2f15.6)') (n1-1)*spin_channels+ispin, (n2-1)*spin_channels+ispin2, &
+                     overlap((n1-1)*spin_channels+ispin, (n2-1)*spin_channels+ispin2)
           end if
+
+          do ik = kstart, kend
+            hamilt((n1-1)*spin_channels+ispin, (n2-1)*spin_channels+ispin2, ik) = &
+                         X(mf_dotp)(gr%mesh, st%d%dim, hpsi(:, :, (ik-1)*spin_channels+ispin), lcaopsi2)
+            hamilt((n2-1)*spin_channels+ispin2, (n1-1)*spin_channels+ispin, ik) = &
+                        R_CONJ(hamilt((n1-1)*spin_channels+ispin, (n2-1)*spin_channels+ispin2, ik))
+
+            if(this%debug .and. mpi_grp_is_root(mpi_world)) then
+              write(iunit_h,'(3i6,2f15.6)') (n1-1)*spin_channels+ispin, (n2-1)*spin_channels+ispin2, ik, &
+                  units_from_atomic(units_out%energy, hamilt((n1-1)*spin_channels+ispin, (n2-1)*spin_channels+ispin2, ik))
+            end if
+          end do
         end do
       end do
       
@@ -215,19 +231,18 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, namespace, start)
 
   SAFE_DEALLOCATE_A(hpsi)
 
-  SAFE_ALLOCATE(ev(1:this%norbs))
+  SAFE_ALLOCATE(ev(1:norbs_full))
   SAFE_ALLOCATE(zeropsi(1:gr%mesh%np))
   zeropsi = R_TOTYPE(M_ZERO)
 
   do ik = kstart, kend
-    ispin = states_elec_dim_get_spin_index(st%d, ik)
-    call lalg_geneigensolve(this%norbs, hamilt(:, :, ik), overlap(:, :, ispin), ev, preserve_mat=.true.)
+    call lalg_geneigensolve(norbs_full, hamilt(:, :, ik), overlap(:, :), ev, preserve_mat=.true.)
 
 #ifdef HAVE_MPI
     ! the eigenvectors are not unique due to phases and degenerate subspaces, but
     ! they must be consistent among processors in domain parallelization
     if(gr%mesh%parallel_in_domains) &
-      call MPI_Bcast(hamilt(1, 1, ik), this%norbs**2, R_MPITYPE, 0, gr%mesh%mpi_grp%comm, mpi_err)
+      call MPI_Bcast(hamilt(1, 1, ik), norbs_full**2, R_MPITYPE, 0, gr%mesh%mpi_grp%comm, mpi_err)
 #endif
 
     ! each node should receive all the eigenvalues
@@ -244,10 +259,9 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, namespace, start)
 
   if(this%debug .and. mpi_grp_is_root(mpi_world)) then
     do ik =  kstart, kend
-      ispin = states_elec_dim_get_spin_index(st%d, ik) 
-      do n2 = 1, this%norbs
-        do n1 = 1, this%norbs
-          write(iunit_e,'(4i6,2f15.6)') n2, n1, ik, ispin, hamilt(n1, n2, ik)
+      do n2 = 1, norbs_full
+        do n1 = 1, norbs_full
+          write(iunit_e,'(3i6,2f15.6)') n2, n1, ik, hamilt(n1, n2, ik)
         end do
       end do
     end do
@@ -276,10 +290,10 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, namespace, start)
       call X(get_ao)(this, st, gr%mesh, geo, n2, ispin, lcaopsi2, use_psi = .false.)
 
       do ik = kstart, kend
-        if(ispin /= states_elec_dim_get_spin_index(st%d, ik)) cycle
         do n1 = max(lcao_start, st%st_start), min(this%norbs, st%st_end)
           call states_elec_get_state(st, gr%mesh, idim, n1, ik, lcaopsi(:, 1, 1))
-          call lalg_axpy(gr%mesh%np, hamilt(n2, n1, ik), lcaopsi2(:, idim), lcaopsi(:, 1, 1))
+          call lalg_axpy(gr%mesh%np, hamilt((n2-1)*spin_channels+ispin, n1, ik), &
+                  lcaopsi2(:, idim), lcaopsi(:, 1, 1))
           call states_elec_set_state(st, gr%mesh, idim, n1, ik, lcaopsi(:, 1, 1))
         end do
       end do

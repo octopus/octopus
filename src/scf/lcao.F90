@@ -709,6 +709,9 @@ contains
     call lcao_init_orbitals(lcao, st, gr, geo, start = st_start)
 
     if (.not. present(st_start)) then
+      message(1) = 'Info: Guessing the density from atomic densities.'
+      call messages_info(1)
+
       call lcao_guess_density(lcao, namespace, st, gr, gr%sb, geo, st%qtot, st%d%nspin, st%d%spin_channels, st%rho)
 
       if (st%d%ispin > UNPOLARIZED) then
@@ -770,10 +773,8 @@ contains
       end if
       if(present(st_start)) st_start_random = max(st_start, st_start_random)
 
-      if(st_start_random > 1) then
-        write(message(1),'(a,i8,a)') 'Generating random wavefunctions for states ', st_start_random, ' and above'
-        call messages_info(1)
-      end if
+      write(message(1),'(a,i8,a)') 'Generating random wavefunctions for states ', st_start_random, ' and above'
+      call messages_info(1)
 
       ! Randomly generate the initial wavefunctions.
       call states_elec_generate_random(st, gr%mesh, gr%sb, ist_start_ = st_start_random, normalized = .false.)

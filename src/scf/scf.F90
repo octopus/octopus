@@ -726,7 +726,7 @@ contains
 
     ! SCF cycle
     itime = loct_clock()
-    
+
     do iter = 1, scf%max_iter
       call profiling_in(prof, "SCF_CYCLE")
 

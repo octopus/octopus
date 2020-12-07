@@ -93,6 +93,9 @@ subroutine X(geneigensolve)(n, a, b, e, preserve_mat, bof, err_code)
 
   ASSERT(n > 0)
   ASSERT(not_in_openmp())
+  ASSERT(lead_dim(a) >= n)
+  ASSERT(lead_dim(b) >= n)
+  ASSERT(ubound(e,dim=1) >= n)
 
   if(preserve_mat) then
     SAFE_ALLOCATE(diag(1:n))
