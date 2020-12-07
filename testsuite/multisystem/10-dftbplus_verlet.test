@@ -1,0 +1,36 @@
+# -*- coding: utf-8 mode: shell-script -*-
+
+Test       : Multisystem DFTB+ Verlet
+Program    : octopus
+TestGroups : short-run, multisystem
+Enabled    : Yes
+
+Processors: 1
+
+ExtraFile: O-H.skf
+ExtraFile: O-O.skf
+ExtraFile: H-O.skf
+ExtraFile: H-H.skf
+Input: 10-dftbplus_verlet.01-water.inp
+
+# Final coordinates
+match ; x (O) (t=200 au) ; LINEFIELD(dftbplus/td.general/coordinates, -1, 3) ; 5.029474818285e-15
+match ; y (O) (t=200 au) ; LINEFIELD(dftbplus/td.general/coordinates, -1, 4) ; -9.292331809823e-18
+match ; z (O) (t=200 au) ; LINEFIELD(dftbplus/td.general/coordinates, -1, 5) ;-3.468238009257e-01
+match ; x (H) (t=200 au) ; LINEFIELD(dftbplus/td.general/coordinates, -1, 6) ; 1.447837823412e+00
+match ; y (H) (t=200 au) ; LINEFIELD(dftbplus/td.general/coordinates, -1, 7) ; 6.025029371038e-17
+match ; z (H) (t=200 au) ; LINEFIELD(dftbplus/td.general/coordinates, -1, 8); 7.390503166185e-01
+match ; x (H) (t=200 au) ; LINEFIELD(dftbplus/td.general/coordinates, -1, 9) ; -1.447837823412e+00
+match ; y (H) (t=200 au) ; LINEFIELD(dftbplus/td.general/coordinates, -1, 10) ; 8.726150915050e-17
+match ; z (H) (t=200 au) ; LINEFIELD(dftbplus/td.general/coordinates, -1, 11) ; 7.390503166185e-01
+
+# Final forces
+match ; Fx (O) (t=200 au) ; LINEFIELD(dftbplus/td.general/forces, -1, 3) ; 5.599062880002e-13
+match ; Fy (O) (t=200 au) ; LINEFIELD(dftbplus/td.general/forces, -1, 4) ; -1.115290118012e-16
+match ; Fz (O) (t=200 au) ; LINEFIELD(dftbplus/td.general/forces, -1, 5) ; -9.060493832761e-03
+match ; Fx (H) (t=200 au) ; LINEFIELD(dftbplus/td.general/forces, -1, 6) ; 8.710019608157e-03
+match ; Fy (H) (t=200 au) ; LINEFIELD(dftbplus/td.general/forces, -1, 7) ; 5.219451523246e-17
+match ; Fz (H) (t=200 au) ; LINEFIELD(dftbplus/td.general/forces, -1, 8) ; 4.530246916375e-03
+match ; Fx (H) (t=200 au) ; LINEFIELD(dftbplus/td.general/forces, -1, 9) ; -8.710019608717e-03
+match ; Fy (H) (t=200 au) ; LINEFIELD(dftbplus/td.general/forces, -1, 10) ; 5.933449656873e-17
+match ; Fz (H) (t=200 au) ; LINEFIELD(dftbplus/td.general/forces, -1, 11) ; 4.530246916387e-03
