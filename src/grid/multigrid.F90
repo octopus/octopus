@@ -171,13 +171,13 @@ contains
       SAFE_ALLOCATE(mgrid%level(i)%mesh)
       SAFE_ALLOCATE(mgrid%level(i)%der)
       
+      call multigrid_mesh_half(geo, cv, mgrid%level(i-1)%mesh, mgrid%level(i)%mesh, &
+        der%lapl%stencil, namespace)
+
       call derivatives_nullify(mgrid%level(i)%der)
       call derivatives_init(mgrid%level(i)%der, namespace, mesh%sb, cv%method /= CURV_METHOD_UNIFORM, order=order)
 
-      call multigrid_mesh_half(geo, cv, mgrid%level(i-1)%mesh, mgrid%level(i)%mesh, &
-        mgrid%level(i)%der%lapl%stencil, namespace)
-
-      call mesh_init_stage_3(mgrid%level(i)%mesh, namespace, mgrid%level(i)%der%lapl%stencil, &
+      call mesh_init_stage_3(mgrid%level(i)%mesh, namespace, der%lapl%stencil, &
         mc, parent = mgrid%level(i - 1)%mesh)
 
       call multigrid_get_transfer_tables(mgrid%level(i)%tt, mgrid%level(i-1)%mesh, mgrid%level(i)%mesh)
