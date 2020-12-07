@@ -243,7 +243,7 @@ contains
       call parse_variable(namespace, 'PreconditionerIterationsPost', 2, this%npost)
 
       SAFE_ALLOCATE(this%mgrid)
-      call multigrid_init(this%mgrid, namespace, geo, gr%cv, gr%mesh, gr%der, gr%stencil, mc, used_for_preconditioner = .true.)
+      call multigrid_init(this%mgrid, namespace, geo, gr%cv, gr%mesh, gr%der, mc, used_for_preconditioner = .true.)
     end if
 
     POP_SUB(preconditioner_init)

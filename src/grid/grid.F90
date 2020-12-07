@@ -381,7 +381,7 @@ contains
     PUSH_SUB(grid_create_multigrid)
 
     SAFE_ALLOCATE(gr%mgrid)
-    call multigrid_init(gr%mgrid, namespace, geo, gr%cv, gr%mesh, gr%der, gr%stencil, mc)
+    call multigrid_init(gr%mgrid, namespace, geo, gr%cv, gr%mesh, gr%der, mc)
 
     POP_SUB(grid_create_multigrid)
   end subroutine grid_create_multigrid

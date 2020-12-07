@@ -90,14 +90,13 @@ contains
   end subroutine multigrid_level_nullify
 
   ! ---------------------------------------------------------
-  subroutine multigrid_init(mgrid, namespace, geo, cv, mesh, der, stencil, mc, used_for_preconditioner)
+  subroutine multigrid_init(mgrid, namespace, geo, cv, mesh, der, mc, used_for_preconditioner)
     type(multigrid_t),     target, intent(out) :: mgrid
     type(namespace_t),             intent(in)    :: namespace
     type(geometry_t),              intent(in)  :: geo
     type(curvilinear_t),           intent(in)  :: cv
     type(mesh_t),          target, intent(in)  :: mesh
     type(derivatives_t),   target, intent(in)  :: der
-    type(stencil_t),               intent(in)  :: stencil
     type(multicomm_t),             intent(in)  :: mc
     logical, optional,             intent(in)  :: used_for_preconditioner
 
@@ -172,12 +171,14 @@ contains
       SAFE_ALLOCATE(mgrid%level(i)%mesh)
       SAFE_ALLOCATE(mgrid%level(i)%der)
       
-      call multigrid_mesh_half(geo, cv, mgrid%level(i-1)%mesh, mgrid%level(i)%mesh, stencil, namespace)
-
       call derivatives_nullify(mgrid%level(i)%der)
       call derivatives_init(mgrid%level(i)%der, namespace, mesh%sb, cv%method /= CURV_METHOD_UNIFORM, order=order)
 
-      call mesh_init_stage_3(mgrid%level(i)%mesh, namespace, stencil, mc, parent = mgrid%level(i - 1)%mesh)
+      call multigrid_mesh_half(geo, cv, mgrid%level(i-1)%mesh, mgrid%level(i)%mesh, &
+        mgrid%level(i)%der%lapl%stencil, namespace)
+
+      call mesh_init_stage_3(mgrid%level(i)%mesh, namespace, mgrid%level(i)%der%lapl%stencil, &
+        mc, parent = mgrid%level(i - 1)%mesh)
 
       call multigrid_get_transfer_tables(mgrid%level(i)%tt, mgrid%level(i-1)%mesh, mgrid%level(i)%mesh)
 

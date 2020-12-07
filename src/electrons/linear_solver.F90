@@ -214,7 +214,7 @@ contains
 
       if (.not. associated(gr%mgrid)) then
         SAFE_ALLOCATE(gr%mgrid)
-        call multigrid_init(gr%mgrid, namespace, geo, gr%cv, gr%mesh, gr%der, gr%stencil, mc)
+        call multigrid_init(gr%mgrid, namespace, geo, gr%cv, gr%mesh, gr%der, mc)
       end if
     end if
 
