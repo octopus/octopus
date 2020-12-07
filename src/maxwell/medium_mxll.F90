@@ -61,7 +61,7 @@ module medium_mxll_oct_m
      FLOAT, allocatable              :: aux_ep(:,:,:) !< auxiliary array for storing the epsilon derivative profile
      FLOAT, allocatable              :: aux_mu(:,:,:) !< auxiliary array for storing the softened mu profile
      integer, allocatable            :: bdry_number(:)
-     FLOAT, allocatable              :: bdry_map(:,:)
+     integer, allocatable            :: bdry_map(:,:)
      character(len=256), allocatable :: filename(:)
      FLOAT                           :: width !< width of medium medium when used as boundary condition
    end type medium_box_t
@@ -281,8 +281,8 @@ module medium_mxll_oct_m
     SAFE_ALLOCATE(tmp_grad(gr%mesh%np_part,1:gr%sb%dim))
     SAFE_ALLOCATE(tmp_points_map(gr%mesh%np, nr_of_boxes))
     SAFE_ALLOCATE(tmp_bdry_map(gr%mesh%np, nr_of_boxes))
-    tmp_points_map = int(M_zero)
-    tmp_bdry_map = int(M_zero)
+    tmp_points_map = 0
+    tmp_bdry_map = 0
 
     SAFE_ALLOCATE(medium_box%points_number(nr_of_boxes))
     SAFE_ALLOCATE(medium_box%global_points_number(nr_of_boxes))
@@ -299,8 +299,8 @@ module medium_mxll_oct_m
        SAFE_ALLOCATE(medium_box%points_map(ip_in_max, nr_of_boxes))
        SAFE_ALLOCATE(medium_box%bdry_map(1, nr_of_boxes))
 
-       medium_box%points_map = int(M_zero)
-       medium_box%bdry_map = int(M_zero)
+       medium_box%points_map = 0
+       medium_box%bdry_map = 0
 
        medium_box%points_map(:,:) = tmp_points_map(1:ip_in_max,:)
 
@@ -334,8 +334,8 @@ module medium_mxll_oct_m
     SAFE_ALLOCATE(medium_box%points_map(ip_in_max,nr_of_boxes))
     SAFE_ALLOCATE(medium_box%bdry_map(ip_bd_max,nr_of_boxes))
 
-    medium_box%points_map = int(M_zero)
-    medium_box%bdry_map = int(M_zero)
+    medium_box%points_map = 0
+    medium_box%bdry_map = 0
     medium_box%points_map = tmp_points_map(1:ip_in_max,1:nr_of_boxes)
     medium_box%bdry_map = tmp_bdry_map(1:ip_bd_max,1:nr_of_boxes)
 
