@@ -750,7 +750,6 @@ contains
         ztmp(:) = rs_state(pos_index_local,:)
 #ifdef HAVE_MPI
         call MPI_Bcast(ztmp, st%dim, MPI_CMPLX, rankmin, mesh%mpi_grp%comm, mpi_err)
-        call MPI_Barrier(mesh%mpi_grp%comm, mpi_err)
 #endif
       else
         ztmp(:) = rs_state(pos_index_global, :)

@@ -2339,7 +2339,6 @@ contains
             if(mesh%parallel_in_domains) then
               call MPI_Bcast(s1_act, (lmax + 1) * (2 * lmax + 1) * 3, MPI_CMPLX, itstep - 1, mesh%mpi_grp%comm, mpi_err)
               call MPI_Bcast(s2_act, (lmax + 1) * (2 * lmax + 1), MPI_CMPLX, itstep - 1, mesh%mpi_grp%comm, mpi_err)
-              call MPI_Barrier(mesh%mpi_grp%comm, mpi_err)
             end if
 #endif
 

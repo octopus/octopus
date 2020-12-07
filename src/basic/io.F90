@@ -684,10 +684,6 @@ contains
     if(grp%size > 1) then
       call MPI_Bcast(ierr, 1, MPI_INTEGER, 0, grp%comm, mpi_err)
       call MPI_Bcast(lines(1), len(lines(1))*n_lines, MPI_CHARACTER, 0, grp%comm, mpi_err)
-      ! MPI_Bcast is not a synchronization point, this can cause
-      ! problems when iopar_read is called several times (in a loop,
-      ! for example). So we add a barrier to make sure the calls are properly synchronized.
-      call MPI_Barrier(grp%comm, mpi_err)
     end if
 #endif
 
@@ -731,9 +727,6 @@ contains
 #if defined(HAVE_MPI)
     if(grp%size > 1) then
       call MPI_Bcast(ierr, 1, MPI_INTEGER, 0, grp%comm, mpi_err)
-      ! MPI_Bcast is not a synchronization point, so we add a barrier
-      ! to make sure the calls are properly synchronized.
-      call MPI_Barrier(grp%comm, mpi_err)
     end if
 #endif
 

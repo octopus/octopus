@@ -273,7 +273,6 @@ contains
 
 #if defined(HAVE_MPI)
       call MPI_Bcast(ierr, 1, MPI_INTEGER, 0, mpi_grp%comm, mpi_err)
-      call MPI_Barrier(mpi_grp%comm, mpi_err)
 #endif
     end if
 
@@ -316,7 +315,6 @@ contains
       if (ierr == 0) then
         call MPI_Bcast(idx%lxyz(1,1), np*idx%dim, MPI_INTEGER, 0, mpi_grp%comm, mpi_err)
       end if
-      call MPI_Barrier(mpi_grp%comm, mpi_err)
 #endif
 
       ! Compute lxyz_inv from lxyz

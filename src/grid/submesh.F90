@@ -460,7 +460,6 @@ contains
 
 #ifdef HAVE_MPI
       call MPI_Bcast(nparray, 3, MPI_INTEGER, root, mpi_grp%comm, mpi_err)
-      call MPI_Barrier(mpi_grp%comm, mpi_err)
 #endif
       this%np = nparray(1)
       this%np_part = nparray(2)
@@ -475,7 +474,6 @@ contains
       if(this%np_part > 0) then
         call MPI_Bcast(this%map(1), this%np_part, MPI_INTEGER, root, mpi_grp%comm, mpi_err)
         call MPI_Bcast(this%x(1, 0), this%np_part*(mesh%sb%dim + 1), MPI_FLOAT, root, mpi_grp%comm, mpi_err)
-        call MPI_Barrier(mpi_grp%comm, mpi_err)
       end if
 #endif
 
