@@ -30,6 +30,7 @@ module lcao_oct_m
   use grid_oct_m
   use hamiltonian_elec_oct_m
   use io_oct_m
+  use io_function_oct_m
   use lalg_adv_oct_m
   use lalg_basic_oct_m
   use lapack_oct_m
@@ -129,9 +130,6 @@ module lcao_oct_m
 
 contains
 
-! uncomment below to use LCAODebug
-!#define LCAO_DEBUG
-
   ! ---------------------------------------------------------
   subroutine lcao_init(this, namespace, gr, geo, st)
     type(lcao_t),         intent(out) :: this
@@ -144,9 +142,7 @@ contains
     integer :: ii, ll, mm
     integer :: mode_default
     FLOAT   :: max_orb_radius
-#ifdef LCAO_DEBUG
     integer :: iunit_o
-#endif
 
     PUSH_SUB(lcao_init)
 
@@ -269,25 +265,23 @@ contains
       this%complex_ylms = .false.
     end if
 
-    !!%Variable LCAODebug
-    !!%Type logical
-    !!%Default false
-    !!%Section SCF::LCAO
-    !!%Description
-    !!% If this variable is set, detailed information about LCAO will be written to the <tt>static</tt>
-    !!% directory: Hamiltonian matrix (<tt>lcao_hamiltonian</tt>), overlap matrix (<tt>lcao_overlap</tt>),
-    !!% eigenvectors after diagonalization (<tt>lcao_eigenvectors</tt>), and orbital indices (<tt>lcao_orbitals</tt>).
-    !!%End
-#ifdef LCAO_DEBUG
+    !%Variable LCAODebug
+    !%Type logical
+    !%Default false
+    !%Section SCF::LCAO
+    !%Description
+    !% If this variable is set, detailed information about LCAO will be written to the <tt>static</tt>
+    !% directory: Hamiltonian matrix (<tt>lcao_hamiltonian</tt>), overlap matrix (<tt>lcao_overlap</tt>),
+    !% eigenvectors after diagonalization (<tt>lcao_eigenvectors</tt>), and orbital indices (<tt>lcao_orbitals</tt>).
+    !%End
     call parse_variable(namespace, 'LCAODebug', .false., this%debug)
 ! The code to do this exists but is hidden by ifdefs, in src/scf/lcao_inc.F90, because it causes
 ! mysterious problems with optimization on PGI 12.4.0.
 
     if(this%debug .and. mpi_grp_is_root(mpi_world)) then
-      iunit_o = io_open(file=trim(STATIC_DIR)//'lcao_orbitals', namespace, action='write')
+      iunit_o = io_open(trim(STATIC_DIR)//'lcao_orbitals', namespace, action='write')
       write(iunit_o,'(7a6)') 'iorb', 'atom', 'level', 'i', 'l', 'm', 'spin'
     end if
-#endif
 
     if(.not. this%alternative) then
 
@@ -375,21 +369,18 @@ contains
             this%level(iorb) = jj
             this%ddim(iorb) = idim
 
-#ifdef LCAO_DEBUG
             if(this%debug .and. mpi_grp_is_root(mpi_world)) then
               write(iunit_o,'(7i6)') iorb, this%atom(iorb), this%level(iorb), ii, ll, mm, this%ddim(iorb)
             end if
-#endif
 
             iorb = iorb + 1
           end do
         end do
       end do
 
-#ifdef LCAO_DEBUG
-      if(this%debug .and. mpi_grp_is_root(mpi_world)) &
+      if(this%debug .and. mpi_grp_is_root(mpi_world)) then
         call io_close(iunit_o)
-#endif
+      end if
 
       ! some orbitals might have been removed because of their radii
       if(this%maxorbs /= iorb - 1) then
@@ -587,20 +578,17 @@ contains
           this%basis_atom(ibasis) = iatom
           this%basis_orb(ibasis) = iorb
 
-#ifdef LCAO_DEBUG
           ! no stored spin index in alternative mode
           if(this%debug .and. mpi_grp_is_root(mpi_world)) then
             call species_iwf_ilm(geo%atom(iatom)%species, iorb, 1, ii, ll, mm)
             write(iunit_o,'(7i6)') ibasis, iatom, iorb, ii, ll, mm, 1
           end if
-#endif
         end do
       end do
 
-#ifdef LCAO_DEBUG
-      if(this%debug .and. mpi_grp_is_root(mpi_world)) &
+      if(this%debug .and. mpi_grp_is_root(mpi_world)) then
         call io_close(iunit_o)
-#endif
+      end if
 
       ! this is determined by the stencil we are using and the spacing
       this%lapdist = maxval(abs(gr%mesh%idx%enlarge)*gr%mesh%spacing)
@@ -1214,6 +1202,7 @@ contains
         !Read from AtomsMagnetDirection block 
         if (nspin == 2) then
           call parse_block_float(blk, ia-1, 0, mag(1))
+          mag(2:3) = M_ZERO !Else, this is unitialized and lead to a FPE in the case (lmag > n1+n2) 
           lmag = abs(mag(1))
         elseif (nspin == 4) then
           do idir = 1, 3
