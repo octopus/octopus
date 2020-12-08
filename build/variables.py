@@ -40,6 +40,9 @@ def cleanhtml(raw_html):
     cleantext = re.sub(re.compile('&nbsp;'),'~~', cleantext)
     cleantext = re.sub(re.compile('<hr/*>'),'------------------------------------------\n',cleantext)
 
+    cleantext = re.sub(re.compile('</*pre>'), '\n', cleantext)
+    cleantext = cleantext.replace('$','')
+
     # Check the following!
     cleantext = re.sub(re.compile('<sup>'), '^', cleantext)
     cleantext = re.sub(re.compile('</sup>'), '', cleantext)
@@ -51,6 +54,20 @@ def cleanhtml(raw_html):
 def leavehtml(raw_html):
     """This is a dummy function which leaves the HTML tags in the string."""
     return raw_html
+
+def toHugo(raw_html):
+
+    cleantext = raw_html
+
+    cleantext = cleantext.replace('<math>','`$')
+    cleantext = cleantext.replace('</math>','$`')
+#    cleantext = cleantext.replace('[','&lsqb;')
+#    cleantext = cleantext.replace(']','&rsqb;')
+#    cleantext = cleantext.replace('*','&ast;')
+
+
+    return cleantext
+
 
 def extract_arg(string):
     """Extract the number x from a 'bit(x)' string."""
@@ -200,7 +217,7 @@ class Variables:
                 line = source.readline()
                 line_number = 1
                 while line != '':
-                    if 'call parse_variable(' in line:
+                    if 'call parse_variable(' in line or 'parse_block(' in line:
                         parse_line= line.strip()
                         if parse_line[-1] is '&':
                             line = source.readline()
@@ -341,6 +358,42 @@ class Variables:
             print('JSON could not be parsed.')
 
         varinfo_json.close()
+
+
+    def write_variable_md(self, key, file=sys.stdout):
+
+        variable = self.variables[key]
+
+        print('#### '+variable['Name']+'<br>', file=file)
+
+        print('*Section* '+variable['Section']+'<br>', file=file)
+        print('*Type* '+variable['Type']+'<br>', file=file)
+        if( variable['Default']):
+            print('*Default* '+' '.join(variable['Default'])+'<br>', file=file)
+        # print('*Description*', file=file)
+        print('<br>',file=file)
+        for desc in variable['Description']:
+            print(toHugo(desc), file=file)
+        print('<br><br>',file=file)
+        if 'Options' in variable:
+            max_length = max([0]+list(map(lambda opt: len(opt['Name']), variable['Options'])))
+            if len(variable['Options'])>0:
+                print('*Options*:<br>',file=file)
+                print('<ul>',file=file)
+        for option in variable['Options']:
+            value = option.get('Value')
+            print('<li>   <b>'+option['Name']+'</b>: ' , file=file )
+            # print( type( option.get('Description')))
+            if 'Description' in option:
+                if len(option.get('Description')) > 0:
+                    print(toHugo('\n '.join(option.get('Description')).lstrip()) , file=file)
+                    print('<br>',file=file)
+            print('</li>',file=file)
+        if 'Options' in variable:
+            if len(variable['Options'])>0:
+                print('</ul>',file=file)
+
+
 
     def write_one_variable_info(self, key, file=sys.stdout, filterHTML=True):
 

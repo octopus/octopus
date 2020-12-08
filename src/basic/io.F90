@@ -137,7 +137,7 @@ contains
     !% <i>i.e.</i> the directory from which the executable was launched. This behavior can
     !% be changed by setting this variable. If you set <tt>WorkDir</tt> to a name other than ".",
     !% the following directories are written and read in that directory:
-    !%<ul>
+    !% <ul>
     !% <li>"casida/"</li>
     !% <li>"em_resp_fd/"</li>
     !% <li>"em_resp/"</li>
@@ -151,7 +151,7 @@ contains
     !% <li>"td.general/"</li>
     !% <li>"vdw/"</li>
     !% <li>"vib_modes/"</li>
-    !%</ul>
+    !% </ul>
     !% Furthermore, some of the debug information (see <tt>Debug</tt>) is also written to <tt>WorkDir</tt> and
     !% the non-absolute paths defined in <tt>OutputIterDir</tt> are relative to <tt>WorkDir</tt>.
     !%End

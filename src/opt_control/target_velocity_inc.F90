@@ -72,17 +72,17 @@
     !% <tt>Coordinates</tt> block, and <tt>vec_comp</tt> is the corresponding
     !% vector component of the velocity. The first line of the 
     !% <tt>OCTVelocityDerivatives</tt> block contains the derivatives
-    !% with respect to <tt>v[1,*]</tt>, the second with respect to <tt>v[2,*]</tt> and so
-    !% on. The first column contains all derivatives with respect <tt>v[*,1]</tt>,
-    !% the second with respect to <tt>v[*,2]</tt> and the third w.r.t. <tt>v[*,3]</tt>.
+    !% with respect to <math>v[1,*]</math>, the second with respect to $v[2,*]$ and so
+    !% on. The first column contains all derivatives with respect $v[*,1]$,
+    !% the second with respect to $v[*,2]$ and the third w.r.t. $v[*,3]$.
     !% As an example, we show the <tt>OCTVelocityDerivatives</tt> block
     !% corresponding to the target shown in the <tt>OCTVelocityTarget</tt>
     !% help section:
     !%
-    !% <tt>%OCTVelocityDerivatives
+    !% <pre>%OCTVelocityDerivatives
     !% <br> " 2*(v[1,1]-v[2,1])" | " 2*(v[1,2]-v[2,2])" | " 2*(v[1,3]-v[2,3])"
     !% <br> "-2*(v[1,1]-v[2,1])" | "-2*(v[1,2]-v[2,2])" | "-2*(v[1,3]-v[2,3])"
-    !% <br>%</tt>
+    !% <br>%</pre>
     !%
     !%End
        

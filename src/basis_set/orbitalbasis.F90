@@ -145,7 +145,7 @@ contains
   !%Section Atomic Orbitals
   !%Description
   !% If set to yes, Octopus will normalize the atomic orbitals individually.
-  !% This variable is ignored is <tt>AOLoewdin<\tt> is set to yes.
+  !% This variable is ignored is <tt>AOLoewdin</tt> is set to yes.
   !%End
   call parse_variable(namespace, 'AONormalize', .true., this%normalize)
   call messages_print_var_value(stdout, 'AONormalize', this%normalize)

@@ -137,8 +137,8 @@ contains
     !% atomic orbitals character. As a consequence, the sum of the different PDOS does not integrate 
     !% to the total DOS.
     !%
-    !% The radii of the orbitals are controled by the threshold defined by <tt>AOThreshold<\tt>,
-    !% and the fact that they are normalized or not by <tt>AONormalize<\tt>.
+    !% The radii of the orbitals are controled by the threshold defined by <tt>AOThreshold</tt>,
+    !% and the fact that they are normalized or not by <tt>AONormalize</tt>.
     !%End
     call parse_variable(namespace, 'DOSComputePDOS', .false., this%computepdos)
 

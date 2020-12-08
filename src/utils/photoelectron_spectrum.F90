@@ -272,7 +272,7 @@ program photoelectron_spectrum
   !% Ionization probability integrated on spherical cuts: (theta, phi).
   !%Option velocity_map bit(6)
   !% Full momentum-resolved ionization probability: (px, py, pz).     
-  !% The output format can be controlled with <tt>OutputHow<\tt> and can be vtk, ncdf or ascii.  
+  !% The output format can be controlled with <tt>OutputHow</tt> and can be vtk, ncdf or ascii.  
   !%Option arpes bit(7)
   !% Full ARPES for semi-periodic systems (vtk).
   !%Option arpes_cut bit(8)

@@ -40,7 +40,7 @@
     !%Section Calculation Modes::Optimal Control
     !%Description
     !% If <tt>OCTTargetOperator = oct_tg_classical</tt>, the you must supply this block.
-    !% It should contain a string (e.g. "(q[1,1]-q[1,2])*p[2,1]") with a mathematical
+    !% It should contain a string (e.g. <math>(q[1,1]-q[1,2])*p[2,1]</math>) with a mathematical
     !% expression in terms of two arrays, q and p, that represent the position and momenta
     !% of the classical variables. The first index runs through the various classical particles,
     !% and the second index runs through the spatial dimensions.
@@ -70,8 +70,8 @@
     !% This block should contain the derivatives of the expression given in  
     !% <tt>OCTClassicalTarget</tt> with respect to the p array components.
     !% Each line corresponds to a different classical particle, whereas the 
-    !% columns correspond to each spatial dimension: the (i,j) block component
-    !% corresponds with the derivative wrt p[i,j].
+    !% columns correspond to each spatial dimension: the $(i,j)$ block component
+    !% corresponds with the derivative wrt $p[i,j]$.
     !%End
     if( parse_block(namespace, 'OCTMomentumDerivatives', blk)==0   ) then
       SAFE_ALLOCATE(tg%mom_der_array(1:geo%natoms,1:geo%space%dim))
