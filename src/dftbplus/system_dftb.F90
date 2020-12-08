@@ -24,11 +24,9 @@ module system_dftb_oct_m
 #ifdef HAVE_DFTBPLUS
   use dftbplus
 #endif
-  use force_interaction_oct_m
   use geometry_oct_m
   use global_oct_m
   use interaction_oct_m
-  use lorentz_force_oct_m
   use interactions_factory_oct_m
   use io_oct_m
   use iso_c_binding
@@ -37,11 +35,8 @@ module system_dftb_oct_m
   use namespace_oct_m
   use parser_oct_m
   use profiling_oct_m
-  use propagator_beeman_oct_m
-  use propagator_exp_mid_oct_m
   use propagator_oct_m
   use propagator_verlet_oct_m
-  use quantity_oct_m
   use space_oct_m
   use species_oct_m
   use system_oct_m
@@ -57,23 +52,17 @@ module system_dftb_oct_m
     system_dftb_init
 
    type, extends(system_t) :: system_dftb_t
-    integer :: nAtom
+    integer :: n_atom
     FLOAT, allocatable :: coords(:,:), gradients(:,:)
     FLOAT, allocatable :: acc(:,:)
     FLOAT, allocatable :: tot_force(:,:)
     FLOAT, allocatable :: vel(:,:)
+    FLOAT, allocatable :: prev_tot_force(:,:) !< Used for the SCF convergence criterium
     integer, allocatable :: species(:)
     FLOAT, allocatable :: mass(:)
     character(len=2), allocatable  :: labels(:)
     FLOAT, allocatable :: prev_acc(:,:,:) !< A storage of the prior times.
-    FLOAT :: save_pos(1:MAX_DIM)   !< A storage for the SCF loops
-    FLOAT :: save_vel(1:MAX_DIM)   !< A storage for the SCF loops
-    FLOAT :: prev_tot_force(1:MAX_DIM) !< Used for the SCF convergence criterium
-    FLOAT, allocatable :: prev_pos(:, :) !< Used for extrapolation
-    FLOAT, allocatable :: prev_vel(:, :) !< Used for extrapolation
-    FLOAT :: hamiltonian_elements(1:MAX_DIM)
     FLOAT :: scc_tolerance
-
     type(geometry_t) :: geo
     type(c_ptr) :: output_handle(2)
 #ifdef HAVE_DFTBPLUS
@@ -151,14 +140,15 @@ contains
 
     call space_init(this%space, namespace)
     call geometry_init(this%geo, namespace, this%space)
-    this%nAtom = this%geo%natoms
-    SAFE_ALLOCATE(this%coords(3, this%nAtom))
-    SAFE_ALLOCATE(this%acc(3, this%nAtom))
-    SAFE_ALLOCATE(this%vel(3, this%nAtom))
-    SAFE_ALLOCATE(this%tot_force(3, this%nAtom))
-    SAFE_ALLOCATE(this%gradients(3, this%nAtom))
-    SAFE_ALLOCATE(this%species(this%nAtom))
-    SAFE_ALLOCATE(this%mass(this%nAtom))
+    this%n_atom = this%geo%natoms
+    SAFE_ALLOCATE(this%coords(3, this%n_atom))
+    SAFE_ALLOCATE(this%acc(3, this%n_atom))
+    SAFE_ALLOCATE(this%vel(3, this%n_atom))
+    SAFE_ALLOCATE(this%tot_force(3, this%n_atom))
+    SAFE_ALLOCATE(this%prev_tot_force(3, this%n_atom))
+    SAFE_ALLOCATE(this%gradients(3, this%n_atom))
+    SAFE_ALLOCATE(this%species(this%n_atom))
+    SAFE_ALLOCATE(this%mass(this%n_atom))
     SAFE_ALLOCATE(this%labels(this%geo%nspecies))
     SAFE_ALLOCATE(max_ang_mom(this%geo%nspecies))
 
@@ -166,7 +156,7 @@ contains
     this%species(1) = 1
     this%labels(1) = this%geo%atom(1)%label
 
-    do ii = 1, this%nAtom
+    do ii = 1, this%n_atom
       this%coords(1:3,ii) = this%geo%atom(ii)%x(1:3)
       ! mass is read from the default pseudopotential files
       this%mass(ii) = species_mass(this%geo%atom(ii)%species)
@@ -338,9 +328,9 @@ contains
       ! Do nothing
 
     case (VERLET_START)
-      SAFE_ALLOCATE(this%prev_acc(1:this%space%dim, this%nAtom, 1))
+      SAFE_ALLOCATE(this%prev_acc(1:this%space%dim, this%n_atom, 1))
 
-      do jj = 1, this%nAtom
+      do jj = 1, this%n_atom
         this%acc(1:this%space%dim, jj) = this%tot_force(1:this%space%dim, jj) / this%mass(jj)
       end do
 
@@ -348,31 +338,29 @@ contains
       SAFE_DEALLOCATE_A(this%prev_acc)
 
     case (VERLET_UPDATE_POS)
-      do jj = 1, this%nAtom
+      do jj = 1, this%n_atom
         this%coords(1:this%space%dim, jj) = this%coords(1:this%space%dim, jj) + this%prop%dt * this%vel(1:this%space%dim, jj) &
                                          + M_HALF * this%prop%dt**2 * this%acc(1:this%space%dim, jj)
       end do
-      !this%quantities(POSITION)%clock = this%quantities(POSITION)%clock + CLOCK_TICK
 
     case (VERLET_COMPUTE_ACC)
       do ii = size(this%prev_acc, dim=3) - 1, 1, -1
-        this%prev_acc(1:this%space%dim, 1:this%nAtom, ii + 1) = this%prev_acc(1:this%space%dim, 1:this%nAtom, ii)
+        this%prev_acc(1:this%space%dim, 1:this%n_atom, ii + 1) = this%prev_acc(1:this%space%dim, 1:this%n_atom, ii)
       end do
-      this%prev_acc(1:this%space%dim, 1:this%nAtom, 1) = this%acc(1:this%space%dim, 1:this%nAtom)
+      this%prev_acc(1:this%space%dim, 1:this%n_atom, 1) = this%acc(1:this%space%dim, 1:this%n_atom)
 #ifdef HAVE_DFTBPLUS
       call this%dftbp%setGeometry(this%coords)
       call this%dftbp%getGradients(this%gradients)
       this%tot_force = -this%gradients
 #endif
-      do jj = 1, this%nAtom
+      do jj = 1, this%n_atom
         this%acc(1:this%space%dim, jj) = this%tot_force(1:this%space%dim, jj) / this%mass(jj)
       end do
 
     case (VERLET_COMPUTE_VEL)
-      this%vel(1:this%space%dim, 1:this%nAtom) = this%vel(1:this%space%dim, 1:this%nAtom) &
-             + M_HALF * this%prop%dt * (this%prev_acc(1:this%space%dim, 1:this%nAtom, 1) + this%acc(1:this%space%dim, 1:this%nAtom))
-
-      !this%quantities(VELOCITY)%clock = this%quantities(VELOCITY)%clock + CLOCK_TICK
+      this%vel(1:this%space%dim, 1:this%n_atom) = this%vel(1:this%space%dim, 1:this%n_atom) &
+           + M_HALF * this%prop%dt * (this%prev_acc(1:this%space%dim, 1:this%n_atom, 1) + &
+           this%acc(1:this%space%dim, 1:this%n_atom))
 
     case default
       message(1) = "Unsupported TD operation."
@@ -389,19 +377,8 @@ contains
 
     PUSH_SUB(system_dftb_is_tolerance_reached)
 
-    ! Here we put the criterion that acceleration change is below the tolerance
-    converged = .true.
-    !converged = .false.
-    !if ( (sum((this%prev_tot_force(1:this%space%dim) - this%tot_force(1:this%space%dim))**2)/ this%mass) < tol**2) then
-    !  converged = .true.
-    !end if
-
-    if (debug%info) then
-      !write(message(1), '(a, e12.6, a, e12.6)') "Debug: -- Change in acceleration  ", &
-      !  sqrt(sum((this%prev_tot_force(1:this%space%dim) - this%tot_force(1:this%space%dim))**2))/this%mass, &
-      !  " and tolerance ", tol
-      !call messages_info(1)
-    end if
+    ! this routine is never called at present, no reason to be here
+    ASSERT(.false.)
 
     POP_SUB(system_dftb_is_tolerance_reached)
   end function system_dftb_is_tolerance_reached
@@ -489,7 +466,7 @@ contains
         ! first line: column names
         call write_iter_header_start(this%output_handle(iout))
 
-        do iat = 1, this%nAtom
+        do iat = 1, this%n_atom
           do idir = 1, this%space%dim
             write(aux, '(a1,a1,i3,a1,i3,a1)') out_label(iout),'(', iat, ',', idir, ')'
             call write_iter_header(this%output_handle(iout), aux)
@@ -517,7 +494,7 @@ contains
     call write_iter_start(this%output_handle(1))
     call write_iter_start(this%output_handle(2))
 
-    do iat = 1, this%nAtom
+    do iat = 1, this%n_atom
     ! Position
       tmp(1:this%space%dim) = units_from_atomic(units_out%length, this%coords(1:this%space%dim, iat))
       call write_iter_double(this%output_handle(1), tmp, this%space%dim) 
@@ -543,10 +520,6 @@ contains
     ASSERT(.not. this%quantities(iq)%protected)
 
     select case (iq)
-    case (MASS)
-      ! The classical particle has a mass, but it is not necessary to update it, as it does not change with time.
-      ! We still need to set its clock, so we set it to be in sync with the particle position.
-      call this%quantities(iq)%clock%set_time(this%quantities(POSITION)%clock)
     case default
       message(1) = "Incompatible quantity."
       call messages_fatal(1)
@@ -566,10 +539,6 @@ contains
     ASSERT(.not. partner%quantities(iq)%protected)
 
     select case (iq)
-    case (MASS)
-      ! The classical particle has a mass, but it does not require any update, as it does not change with time.
-      ! We still need to set its clock, so we set it to be in sync with the particle position.
-      call partner%quantities(iq)%clock%set_time(partner%quantities(POSITION)%clock)
     case default
       message(1) = "Incompatible quantity."
       call messages_fatal(1)
@@ -601,7 +570,7 @@ contains
     PUSH_SUB(system_dftb_update_interactions_start)
 
     ! Store previous force, as it is used as SCF criterium
-    ! this%prev_tot_force(1:this%space%dim) = this%tot_force(1:this%space%dim)
+    this%prev_tot_force(1:this%space%dim, 1:this%n_atom) = this%tot_force(1:this%space%dim, 1:this%n_atom)
 
     POP_SUB(system_dftb_update_interactions_start)
   end subroutine system_dftb_update_interactions_start
@@ -614,13 +583,12 @@ contains
 
     PUSH_SUB(system_dftb_update_interactions_finish)
 
-    ! Compute the total force acting on the classical particle
-    ! this%tot_force(1:this%space%dim) = M_ZERO
     call iter%start(this%interactions)
     do while (iter%has_next())
       select type (interaction => iter%get_next())
-      class is (force_interaction_t)
-        ! this%tot_force(1:this%space%dim) = this%tot_force(1:this%space%dim) + interaction%force(1:this%space%dim)
+      class default
+        message(1) = "Interactions not implemented for DFTB+ systems."
+        call messages_fatal(1)
       end select
     end do
 
@@ -637,6 +605,7 @@ contains
     SAFE_DEALLOCATE_A(this%acc)
     SAFE_DEALLOCATE_A(this%vel)
     SAFE_DEALLOCATE_A(this%tot_force)
+    SAFE_DEALLOCATE_A(this%prev_tot_force)
     SAFE_DEALLOCATE_A(this%gradients)
     SAFE_DEALLOCATE_A(this%species)
     SAFE_DEALLOCATE_A(this%mass)
