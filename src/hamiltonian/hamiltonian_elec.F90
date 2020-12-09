@@ -49,6 +49,7 @@ module hamiltonian_elec_oct_m
   use messages_oct_m
   use mpi_oct_m
   use multicomm_oct_m
+  use multigrid_oct_m
   use namespace_oct_m
   use oct_exchange_oct_m
   use parser_oct_m
@@ -305,6 +306,12 @@ contains
     nullify(hm%psolver)
     SAFE_ALLOCATE(hm%psolver)
     call poisson_init(hm%psolver, namespace, gr%der, mc, st%qtot)
+
+    if(poisson_is_multigrid(hm%psolver)) then
+      SAFE_ALLOCATE(hm%psolver%mgrid)
+      call multigrid_init(hm%psolver%mgrid, namespace, gr%cv, gr%mesh, gr%der, gr%stencil, mc)
+    end if
+
 
     nullify(hm%psolver_fine)
     if (gr%have_fine_mesh) then

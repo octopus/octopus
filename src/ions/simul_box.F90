@@ -109,6 +109,8 @@ module simul_box_oct_m
 
     type(lookup_t), private :: atom_lookup
 
+    type(geometry_t), pointer, private :: geo
+
     character(len=1024), private :: user_def !< for the user-defined box
 
     logical :: mr_flag                 !< .true. when using multiresolution
@@ -146,7 +148,7 @@ contains
   subroutine simul_box_init(sb, namespace, geo, space)
     type(simul_box_t),                   intent(inout) :: sb
     type(namespace_t),                   intent(in)    :: namespace
-    type(geometry_t),                    intent(inout) :: geo
+    type(geometry_t), target,            intent(inout) :: geo
     type(space_t),                       intent(in)    :: space
 
     ! some local stuff
@@ -156,6 +158,8 @@ contains
     PUSH_SUB(simul_box_init)
 
     call geometry_grid_defaults(geo, def_h, def_rsize)
+
+    sb%geo => geo
 
     call read_misc()                       ! Miscellaneous stuff.
     call read_box()                        ! Parameters defining the simulation box.
@@ -855,7 +859,7 @@ contains
         geo%atom(iatom)%x(pd + 1:sb%dim) = M_TWO*sb%lsize(pd + 1:sb%dim)*geo%atom(iatom)%x(pd + 1:sb%dim)
       end if
 
-      if( .not. simul_box_in_box(sb, geo, geo%atom(iatom)%x, namespace) ) then
+      if( .not. simul_box_in_box(sb, geo%atom(iatom)%x, namespace) ) then
         write(message(1), '(a,i5,a)') "Atom ", iatom, " is outside the box." 
         if (sb%periodic_dim /= sb%dim) then
           ! FIXME: This could fail for partial periodicity systems
@@ -1133,9 +1137,8 @@ contains
 
   !--------------------------------------------------------------
   !> Checks if a mesh point belongs to the actual mesh.
-  logical function simul_box_in_box(sb, geo, yy, namespace) result(in_box)
+  logical function simul_box_in_box(sb, yy, namespace) result(in_box)
     type(simul_box_t),  intent(in) :: sb
-    type(geometry_t),   intent(in) :: geo
     FLOAT,              intent(in) :: yy(:)
     type(namespace_t),  intent(in) :: namespace
 
@@ -1146,7 +1149,7 @@ contains
 
     xx(1:sb%dim, 1) = yy(1:sb%dim)
 
-    call simul_box_in_box_vec(sb, geo, 1, xx, in_box2, namespace)
+    call simul_box_in_box_vec(sb, 1, xx, in_box2, namespace)
     in_box = in_box2(1)
 
   end function simul_box_in_box
@@ -1154,9 +1157,8 @@ contains
 
   !--------------------------------------------------------------
   !> Checks if a group of mesh points belong to the actual mesh.
-  subroutine simul_box_in_box_vec(sb, geo, npoints, point, in_box, namespace)
+  subroutine simul_box_in_box_vec(sb, npoints, point, in_box, namespace)
     type(simul_box_t),  intent(in)  :: sb
-    type(geometry_t),   intent(in)  :: geo
     integer,            intent(in)  :: npoints
     FLOAT,              intent(in)  :: point(:, :)
     logical,            intent(out) :: in_box(:)
@@ -1209,14 +1211,14 @@ contains
         radius = sb%rsize
       else
         radius = M_ZERO
-        do iatom = 1, geo%natoms
-          if(species_def_rsize(geo%atom(iatom)%species) < -M_EPSILON) then
+        do iatom = 1, sb%geo%natoms
+          if(species_def_rsize(sb%geo%atom(iatom)%species) < -M_EPSILON) then
             write(message(1),'(a,a,a)') 'Using default radii for minimum box, but radius for ', &
-              trim(species_label(geo%atom(iatom)%species)), ' is negative or undefined.'
+              trim(species_label(sb%geo%atom(iatom)%species)), ' is negative or undefined.'
             message(2) = "Define it properly in the Species block or set the Radius variable explicitly."
             call messages_fatal(2, namespace=namespace)
           end if
-          radius = max(radius, species_def_rsize(geo%atom(iatom)%species))
+          radius = max(radius, species_def_rsize(sb%geo%atom(iatom)%species))
         end do
       end if
 
@@ -1240,8 +1242,8 @@ contains
           in_box(ip) = .false.
           do ilist = 1, nlist(ip)
             iatom = list(ilist, ip)
-            dist2 = sum((xx(1:sb%dim, ip) - geo%atom(iatom)%x(1:sb%dim))**2)
-            if(dist2 < species_def_rsize(geo%atom(iatom)%species)**2) then
+            dist2 = sum((xx(1:sb%dim, ip) - sb%geo%atom(iatom)%x(1:sb%dim))**2)
+            if(dist2 < species_def_rsize(sb%geo%atom(iatom)%species)**2) then
               in_box(ip) = .true.
               exit
             end if

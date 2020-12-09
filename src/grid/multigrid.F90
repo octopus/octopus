@@ -22,7 +22,6 @@ module multigrid_oct_m
   use boundaries_oct_m
   use curvilinear_oct_m
   use derivatives_oct_m
-  use geometry_oct_m
   use global_oct_m
   use math_oct_m
   use mesh_oct_m
@@ -90,10 +89,9 @@ contains
   end subroutine multigrid_level_nullify
 
   ! ---------------------------------------------------------
-  subroutine multigrid_init(mgrid, namespace, geo, cv, mesh, der, stencil, mc, used_for_preconditioner)
+  subroutine multigrid_init(mgrid, namespace, cv, mesh, der, stencil, mc, used_for_preconditioner)
     type(multigrid_t),     target, intent(out) :: mgrid
     type(namespace_t),             intent(in)    :: namespace
-    type(geometry_t),              intent(in)  :: geo
     type(curvilinear_t),           intent(in)  :: cv
     type(mesh_t),          target, intent(in)  :: mesh
     type(derivatives_t),   target, intent(in)  :: der
@@ -172,7 +170,7 @@ contains
       SAFE_ALLOCATE(mgrid%level(i)%mesh)
       SAFE_ALLOCATE(mgrid%level(i)%der)
       
-      call multigrid_mesh_half(geo, cv, mgrid%level(i-1)%mesh, mgrid%level(i)%mesh, stencil, namespace)
+      call multigrid_mesh_half(cv, mgrid%level(i-1)%mesh, mgrid%level(i)%mesh, stencil, namespace)
 
       call derivatives_nullify(mgrid%level(i)%der)
       call derivatives_init(mgrid%level(i)%der, namespace, mesh%sb, cv%method /= CURV_METHOD_UNIFORM, order=order)
@@ -351,8 +349,7 @@ contains
   !> Creates a mesh that has twice the spacing betwen the points than the in mesh.
   !! This is used in the multi-grid routines
   !---------------------------------------------------------------------------------
-  subroutine multigrid_mesh_half(geo, cv, mesh_in, mesh_out, stencil, namespace)
-    type(geometry_t),           intent(in)    :: geo
+  subroutine multigrid_mesh_half(cv, mesh_in, mesh_out, stencil, namespace)
     type(curvilinear_t),        intent(in)    :: cv
     type(mesh_t),       target, intent(in)    :: mesh_in
     type(mesh_t),               intent(inout) :: mesh_out
@@ -373,14 +370,13 @@ contains
 
     mesh_out%idx%enlarge = mesh_in%idx%enlarge
     
-    call mesh_init_stage_2(mesh_out, mesh_out%sb, geo, cv, stencil, namespace)
+    call mesh_init_stage_2(mesh_out, mesh_out%sb, cv, stencil, namespace)
 
     POP_SUB(multigrid_mesh_half)
   end subroutine multigrid_mesh_half
 
   !---------------------------------------------------------------------------------
-  subroutine multigrid_mesh_double(geo, cv, mesh_in, mesh_out, stencil, namespace)
-    type(geometry_t),           intent(in)    :: geo
+  subroutine multigrid_mesh_double(cv, mesh_in, mesh_out, stencil, namespace)
     type(curvilinear_t),        intent(in)    :: cv
     type(mesh_t),       target, intent(in)    :: mesh_in
     type(mesh_t),               intent(inout) :: mesh_out
@@ -401,7 +397,7 @@ contains
     
     mesh_out%idx%enlarge = mesh_in%idx%enlarge
     
-    call mesh_init_stage_2(mesh_out, mesh_out%sb, geo, cv, stencil, namespace)
+    call mesh_init_stage_2(mesh_out, mesh_out%sb, cv, stencil, namespace)
 
     POP_SUB(multigrid_mesh_double)
   end subroutine multigrid_mesh_double

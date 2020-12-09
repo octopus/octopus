@@ -473,7 +473,7 @@ contains
     if(geo%nlcc) st%rho_core = M_ZERO
 
     do ia = geo%atoms_dist%start, geo%atoms_dist%end
-      if(.not.simul_box_in_box(sb, geo, geo%atom(ia)%x, namespace) .and. ep%ignore_external_ions) cycle
+      if(.not.simul_box_in_box(sb, geo%atom(ia)%x, namespace) .and. ep%ignore_external_ions) cycle
       if(geo%nlcc) then
         call epot_local_potential(ep, namespace, gr%der, gr%dgrid, geo, ia, ep%vpsl, &
           rho_core = st%rho_core, density = density)
@@ -515,7 +515,7 @@ contains
     do ia = 1, geo%natoms
       atm => geo%atom(ia)
       if(.not. species_is_ps(atm%species)) cycle
-      if(.not.simul_box_in_box(sb, geo, geo%atom(ia)%x, namespace) .and. ep%ignore_external_ions) cycle
+      if(.not.simul_box_in_box(sb, geo%atom(ia)%x, namespace) .and. ep%ignore_external_ions) cycle
       call projector_end(ep%proj(ia))
       call projector_init(ep%proj(ia), atm, namespace, st%d%dim, ep%reltype)
     end do

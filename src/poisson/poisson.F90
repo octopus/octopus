@@ -38,6 +38,7 @@ module poisson_oct_m
   use messages_oct_m
   use mpi_oct_m
   use multicomm_oct_m
+  use multigrid_oct_m
   use namespace_oct_m
 #ifdef HAVE_OPENMP
   use omp_lib
@@ -137,6 +138,7 @@ module poisson_oct_m
     type(PokeGrid)   :: poke_grid
     type(PokeSolver) :: poke_solver
 #endif
+    type(multigrid_t), public, pointer  :: mgrid => null()
   end type poisson_t
 
   integer, parameter ::             &
@@ -693,6 +695,11 @@ contains
       call photon_mode_end(this%photons)
     end if
     this%is_dressed = .false.
+
+    if(associated(this%mgrid)) then
+      call multigrid_end(this%mgrid)
+      SAFE_DEALLOCATE_P(this%mgrid)
+    end if
 
     POP_SUB(poisson_end)
   end subroutine poisson_end

@@ -162,10 +162,10 @@ contains
       if(ignore_external_ions) then
         SAFE_ALLOCATE(in_box(1:natom))
         do iatom = 1, geo%natoms
-          in_box(iatom) = simul_box_in_box(sb, geo, geo%atom(iatom)%x, namespace)
+          in_box(iatom) = simul_box_in_box(sb, geo%atom(iatom)%x, namespace)
         end do
         do iatom = 1, geo%ncatoms
-          in_box(geo%natoms + iatom) = simul_box_in_box(sb, geo, geo%catom(iatom)%x, namespace)
+          in_box(geo%natoms + iatom) = simul_box_in_box(sb, geo%catom(iatom)%x, namespace)
         end do
       end if
       
