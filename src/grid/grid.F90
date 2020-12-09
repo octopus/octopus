@@ -51,8 +51,7 @@ module grid_oct_m
     grid_init_stage_1,     &
     grid_init_stage_2,     &
     grid_end,              &
-    grid_write_info,       &
-    grid_create_multigrid
+    grid_write_info
 
   type grid_t
     ! Components are public by default
@@ -61,7 +60,6 @@ module grid_oct_m
     type(multigrid_level_t)     :: fine
     type(derivatives_t)         :: der
     type(curvilinear_t)         :: cv
-    type(multigrid_t), pointer  :: mgrid
     type(double_grid_t)         :: dgrid
     logical                     :: have_fine_mesh
     type(stencil_t)             :: stencil
@@ -231,7 +229,7 @@ contains
     call stencil_union(gr%sb%dim, cube, gr%der%lapl%stencil, gr%stencil)
     call stencil_end(cube)
 
-    call mesh_init_stage_2(gr%mesh, gr%sb, geo, gr%cv, gr%stencil, namespace)
+    call mesh_init_stage_2(gr%mesh, gr%sb, gr%cv, gr%stencil, namespace)
 
     POP_SUB(grid_init_stage_1)
 
@@ -269,7 +267,7 @@ contains
       SAFE_ALLOCATE(gr%fine%mesh)
       SAFE_ALLOCATE(gr%fine%der)
       
-      call multigrid_mesh_double(geo, gr%cv, gr%mesh, gr%fine%mesh, gr%stencil, namespace)
+      call multigrid_mesh_double(gr%cv, gr%mesh, gr%fine%mesh, gr%stencil, namespace)
 
       call derivatives_nullify(gr%fine%der)      
       call derivatives_init(gr%fine%der, namespace, gr%mesh%sb, gr%cv%method /= CURV_METHOD_UNIFORM)
@@ -291,9 +289,6 @@ contains
       gr%fine%mesh => gr%mesh
       gr%fine%der => gr%der
     end if
-
-    ! multigrids are not initialized by default
-    nullify(gr%mgrid)
 
     ! print info concerning the grid
     call grid_write_info(gr, geo, stdout)
@@ -328,11 +323,6 @@ contains
     call derivatives_end(gr%der)
     call curvilinear_end(gr%cv)
     call mesh_end(gr%mesh)
-
-    if(associated(gr%mgrid)) then
-      call multigrid_end(gr%mgrid)
-      SAFE_DEALLOCATE_P(gr%mgrid)
-    end if
 
     call stencil_end(gr%stencil)
 
@@ -376,22 +366,6 @@ contains
 
     POP_SUB(grid_write_info)
   end subroutine grid_write_info
-
-
-  !-------------------------------------------------------------------
-  subroutine grid_create_multigrid(gr, namespace, geo, mc)
-    type(grid_t),      intent(inout) :: gr
-    type(namespace_t), intent(in)    :: namespace
-    type(geometry_t),  intent(in)    :: geo
-    type(multicomm_t), intent(in)    :: mc
-
-    PUSH_SUB(grid_create_multigrid)
-
-    SAFE_ALLOCATE(gr%mgrid)
-    call multigrid_init(gr%mgrid, namespace, geo, gr%cv, gr%mesh, gr%der, gr%stencil, mc)
-
-    POP_SUB(grid_create_multigrid)
-  end subroutine grid_create_multigrid
 
 end module grid_oct_m
 

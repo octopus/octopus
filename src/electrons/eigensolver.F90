@@ -357,7 +357,7 @@ contains
     end if
 
     if (any(eigens%es_type == (/RS_PLAN, RS_CG, RS_LOBPCG, RS_RMMDIIS, RS_PSD/))) then
-      call preconditioner_init(eigens%pre, namespace, gr, geo, mc)
+      call preconditioner_init(eigens%pre, namespace, gr, mc)
     else
       call preconditioner_null(eigens%pre)
     end if

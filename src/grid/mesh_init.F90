@@ -21,7 +21,6 @@
 module mesh_init_oct_m
   use checksum_interface_oct_m
   use curvilinear_oct_m
-  use geometry_oct_m
   use global_oct_m
   use hypercube_oct_m
   use index_oct_m
@@ -166,10 +165,9 @@ end subroutine mesh_init_stage_1
 !> This subroutine checks if every grid point belongs to the internal
 !! mesh, based on the global lxyz_inv matrix. Afterwards, it counts
 !! how many points has the mesh and the enlargement.
-subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil, namespace)
+subroutine mesh_init_stage_2(mesh, sb, cv, stencil, namespace)
   type(mesh_t),        intent(inout) :: mesh
   type(simul_box_t),   intent(in)    :: sb
-  type(geometry_t),    intent(in)    :: geo
   type(curvilinear_t), intent(in)    :: cv
   type(stencil_t),     intent(in)    :: stencil
   type(namespace_t),   intent(in)    :: namespace
@@ -250,7 +248,7 @@ subroutine mesh_init_stage_2(mesh, sb, geo, cv, stencil, namespace)
         call curvilinear_chi2x(sb, cv, chi(:), xx(:, ix))
       end do
 
-      call simul_box_in_box_vec(sb, geo, mesh%idx%nr(2,1) - mesh%idx%nr(1,1) + 1, xx, in_box, namespace)
+      call simul_box_in_box_vec(sb, mesh%idx%nr(2,1) - mesh%idx%nr(1,1) + 1, xx, in_box, namespace)
 
       do ix = mesh%idx%nr(1,1), mesh%idx%nr(2,1)
         ! With multiresolution, only inner (not enlargement) points are marked now

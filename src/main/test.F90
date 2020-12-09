@@ -302,7 +302,7 @@ contains
     ! Shift of the linear equation
     shift_aux = CNST(0.25)
     ! Preconditioner used for the QMR algorithm
-    call preconditioner_init(prec_aux, namespace, sys%gr, sys%geo, sys%mc)
+    call preconditioner_init(prec_aux, namespace, sys%gr, sys%mc)
     ! Derivative object needed 
     call set_der_aux(sys%gr%der)
 

@@ -189,8 +189,6 @@ contains
     call hamiltonian_elec_init(this%hm, this%namespace, this%gr, this%geo, this%st, this%ks%theory_level, &
       this%ks%xc, this%mc, need_exchange = output_need_exchange(this%outp) .or. this%ks%oep%level /= XC_OEP_NONE)
     
-    if(poisson_is_multigrid(this%hm%psolver)) call grid_create_multigrid(this%gr, this%namespace, this%geo, this%mc)
-
     if (this%hm%pcm%run_pcm .and. this%mc%par_strategy /= P_STRATEGY_SERIAL .and. this%mc%par_strategy /= P_STRATEGY_STATES) then
       call messages_experimental('Parallel in domain calculations with PCM')
     end if

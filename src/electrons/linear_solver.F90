@@ -63,6 +63,7 @@ module linear_solver_oct_m
     integer,                public :: solver
     type(preconditioner_t), public :: pre
     integer                        :: max_iter
+    type(multigrid_t), pointer     :: mgrid => null()
   end type linear_solver_t
 
   type(profile_t), save :: prof, prof_batch
@@ -160,7 +161,7 @@ contains
     !the last 2 digits select the linear solver
     this%solver = mod(fsolver, 100)
 
-    call preconditioner_init(this%pre, namespace, gr, geo, mc)
+    call preconditioner_init(this%pre, namespace, gr, mc)
 
     !%Variable LinearSolverMaxIter
     !%Type integer
@@ -212,10 +213,8 @@ contains
     if (this%solver == OPTION__LINEARSOLVER__MULTIGRID) then
       call messages_experimental("Multigrid linear solver")
 
-      if (.not. associated(gr%mgrid)) then
-        SAFE_ALLOCATE(gr%mgrid)
-        call multigrid_init(gr%mgrid, namespace, geo, gr%cv, gr%mesh, gr%der, gr%stencil, mc)
-      end if
+      SAFE_ALLOCATE(this%mgrid)
+      call multigrid_init(this%mgrid, namespace, gr%cv, gr%mesh, gr%der, gr%stencil, mc)
     end if
 
     if (this%solver == OPTION__LINEARSOLVER__QMR_DOTP) then
@@ -232,6 +231,10 @@ contains
     this%solver = -1
 
     call preconditioner_end(this%pre)
+    if(associated(this%mgrid)) then
+      call multigrid_end(this%mgrid)
+      SAFE_DEALLOCATE_P(this%mgrid)
+    end if
 
   end subroutine linear_solver_end
 

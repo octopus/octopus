@@ -23,7 +23,6 @@ module preconditioners_oct_m
   use batch_ops_oct_m
   use boundaries_oct_m
   use derivatives_oct_m
-  use geometry_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_elec_oct_m
@@ -80,11 +79,10 @@ module preconditioners_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine preconditioner_init(this, namespace, gr, geo, mc)
+  subroutine preconditioner_init(this, namespace, gr, mc)
     type(preconditioner_t), intent(out)    :: this
     type(namespace_t),      intent(in)     :: namespace
     type(grid_t),           intent(in)     :: gr
-    type(geometry_t),       intent(in)     :: geo
     type(multicomm_t),      intent(in)     :: mc
 
     FLOAT :: alpha, default_alpha, omega
@@ -243,7 +241,7 @@ contains
       call parse_variable(namespace, 'PreconditionerIterationsPost', 2, this%npost)
 
       SAFE_ALLOCATE(this%mgrid)
-      call multigrid_init(this%mgrid, namespace, geo, gr%cv, gr%mesh, gr%der, gr%stencil, mc, used_for_preconditioner = .true.)
+      call multigrid_init(this%mgrid, namespace, gr%cv, gr%mesh, gr%der, gr%stencil, mc, used_for_preconditioner = .true.)
     end if
 
     POP_SUB(preconditioner_init)
