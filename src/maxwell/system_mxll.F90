@@ -165,9 +165,8 @@ contains
     this%geo%periodic_dim = 0
     this%geo%lsize = M_ZERO
 
-    call simul_box_init(this%gr%sb, this%namespace, this%geo, this%space)
+    call grid_init_stage_1(this%gr, this%namespace, this%geo, this%space)
     call states_mxll_init(this%st, this%namespace, this%gr, this%geo)
-    call grid_init_stage_1(this%gr, this%namespace, this%geo)
 
     this%quantities(E_FIELD)%required = .true.
     this%quantities(E_FIELD)%protected = .true.

@@ -68,10 +68,11 @@ module grid_oct_m
 contains
 
   !-------------------------------------------------------------------
-  subroutine grid_init_stage_1(gr, namespace, geo)
+  subroutine grid_init_stage_1(gr, namespace, geo, space)
     type(grid_t),      intent(inout) :: gr
     type(namespace_t), intent(in)    :: namespace
-    type(geometry_t),  intent(in)    :: geo
+    type(geometry_t),  intent(inout) :: geo
+    type(space_t),     intent(in)    :: space
 
     type(stencil_t) :: cube
     integer :: enlarge(1:MAX_DIM)
@@ -81,6 +82,8 @@ contains
     FLOAT :: grid_spacing(1:MAX_DIM)
 
     PUSH_SUB(grid_init_stage_1)
+
+    call simul_box_init(gr%sb, namespace, geo, space)
 
     !%Variable UseFineMesh
     !%Type logical
