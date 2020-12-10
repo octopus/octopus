@@ -590,7 +590,7 @@ subroutine X(calc_hvar_photons)(this, mesh, st, lr_rho, nsigma, hvar, fxc)
 
   R_TYPE, allocatable :: s_lr_rho(:), vp_dip_self_ener(:), vp_bilinear_el_pt(:)
   R_TYPE, allocatable :: omg2_lmda_r(:), first_moments(:), lambda_dot_r(:)
-  integer :: nm, is, ii, ispin
+  integer :: nm, is, ii
   CMPLX :: integral_result
 
   PUSH_SUB(X(calc_hvar_photons))
@@ -646,7 +646,6 @@ subroutine X(calc_hvar_photons)(this, mesh, st, lr_rho, nsigma, hvar, fxc)
     end do
 
     hvar(1:mesh%np, 1, 1) = hvar(1:mesh%np, 1, 1) + vp_dip_self_ener(1:mesh%np) + vp_bilinear_el_pt(1:mesh%np)
-    write(*,*) 'hvar(1:mesh%np, 1, 1)', hvar(1:mesh%np, 1, 1)
 
     SAFE_DEALLOCATE_A(s_lr_rho)
     SAFE_DEALLOCATE_A(omg2_lmda_r)
