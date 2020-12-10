@@ -43,7 +43,7 @@ UseAllAtomicOrbitals = yes
 AOTruncation = ao_full
 AOThreshold = 0.05
 AONormalize = no
-AOSubmeshForPeriodic = yes
+AOSubmesh = yes
 OutputLDA_U = occ_matrices + effectiveU
 ACBN0Screening = 0.5
 

@@ -35,7 +35,7 @@ subroutine X(lda_u_apply)(this, d, mesh, psib, hpsib)
 
   PUSH_SUB(lda_u_apply)
 
-  SAFE_ALLOCATE(reduced(1:this%maxnorbs,1:psib%nst_linear, 1:this%norbsets))
+  SAFE_ALLOCATE(reduced(1:this%maxnorbs, 1:psib%nst_linear, 1:this%norbsets))
   SAFE_ALLOCATE(dot(1:d%dim,1:this%maxnorbs, 1:this%norbsets, 1:psib%nst))
   SAFE_ALLOCATE(psi(1:mesh%np, 1:d%dim))
 
@@ -56,7 +56,7 @@ subroutine X(lda_u_apply)(this, d, mesh, psib, hpsib)
     call batch_get_state(psib, ibatch, mesh%np, psi)
     do ios = 1, this%norbsets
       os => this%orbsets(ios)
-      call X(orbitalset_get_coefficients)(os, d%dim, psi, psib%ik, psib%has_phase, this%basisfromstates, &
+      call X(orbitalset_get_coefficients)(os, d%dim, psi, psib%ik, psib%has_phase, &
                                                   dot(1:d%dim,1:os%norbs,ios,ibatch))
     end do
   end do
@@ -131,7 +131,7 @@ subroutine X(lda_u_apply)(this, d, mesh, psib, hpsib)
   !We add the orbitals properly weighted to hpsi
   do ios = 1, this%norbsets 
     os => this%orbsets(ios)
-    call X(orbitalset_add_to_batch)(os, d%dim, hpsib, this%basisfromstates, reduced(:,:,ios))
+    call X(orbitalset_add_to_batch)(os, d%dim, hpsib, reduced(:,:,ios))
   end do
  
   SAFE_DEALLOCATE_A(psi)
@@ -205,7 +205,7 @@ subroutine X(update_occ_matrices)(this, namespace, mesh, st, lda_u_energy, phase
         !We first compute the matrix elemets <orb_m |\psi>
         !taking into account phase correction if needed 
         call X(orbitalset_get_coefficients)(os, st%d%dim, psi, ik, present(phase), &
-                        this%basisfromstates, dot(1:st%d%dim,1:os%norbs,ios))
+                          dot(1:st%d%dim,1:os%norbs,ios))
       end do !ios
 
       !We compute the on-site occupation of the site, if needed 
@@ -1349,8 +1349,7 @@ end subroutine X(compute_periodic_coulomb_integrals)
      call messages_not_implemented("Intersite interaction, spinors, and commutator [r,V_u]", namespace=namespace)
    end if
 
-   if((simul_box_is_periodic(mesh%sb) .and. .not. this%basis%submeshforperiodic) &
-       .or. this%basisfromstates) then
+   if(.not.this%basis%submesh) then
      SAFE_ALLOCATE(epsi(1:mesh%np,1:d%dim))
    else
      SAFE_ALLOCATE(epsi(1:this%max_np,1:d%dim))
@@ -1373,7 +1372,7 @@ end subroutine X(compute_periodic_coulomb_integrals)
       !
       os => this%orbsets(ios)
       ! 
-      call X(orbitalset_get_coefficients)(os, d%dim, psi, ik, has_phase, this%basisfromstates, dot(:,:,ios))
+      call X(orbitalset_get_coefficients)(os, d%dim, psi, ik, has_phase, dot(:,:,ios))
    end do
    !
    reduced(:,:,:) = M_ZERO
@@ -1436,7 +1435,7 @@ end subroutine X(compute_periodic_coulomb_integrals)
           !In case of phase, we have to apply the conjugate of the phase here
           if(has_phase) then
 #ifdef R_TCOMPLEX
-            if(simul_box_is_periodic(mesh%sb) .and. .not. this%basis%submeshforperiodic) then
+            if(.not. this%basis%submesh) then
               !If we orthogonalize, the orbital is not anymore zorb*phase
               if(.not.this%basis%orthogonalization) then
                 epsi(:,idim) = R_TOTYPE(M_ZERO)
@@ -1465,7 +1464,7 @@ end subroutine X(compute_periodic_coulomb_integrals)
             end if
 #endif
             else
-              if(this%basisfromstates) then
+              if(.not. this%basis%submesh) then
                  !$omp parallel do
                  do is = 1, mesh%np
                     epsi(is,idim) = os%sphere%x(is,idir)*os%X(orb)(is,idim_orb,im)
@@ -1495,7 +1494,7 @@ end subroutine X(compute_periodic_coulomb_integrals)
      ! We first compute <phi m| r | psi> for all orbitals of the atom
      !
      !
-     if(simul_box_is_periodic(mesh%sb) .and. .not. this%basis%submeshforperiodic) then
+     if(.not. this%basis%submesh) then
        do is = 1, mesh%np
          epsi(is,1) = mesh%x(is,idir)*psi(is,1)
        end do
@@ -1512,7 +1511,7 @@ end subroutine X(compute_periodic_coulomb_integrals)
 
        if(has_phase) then
 #ifdef R_TCOMPLEX
-         if(simul_box_is_periodic(mesh%sb) .and. .not. this%basis%submeshforperiodic) then
+         if(.not. this%basis%submesh) then
            do im = 1, os%norbs
              do idim = 1, d%dim
                idim_orb = min(idim,os%ndim)
@@ -1534,7 +1533,7 @@ end subroutine X(compute_periodic_coulomb_integrals)
          ASSERT(.false.)
 #endif
        else
-         if(this%basisfromstates) then
+         if(.not. this%basis%submesh) then
            do idim = 1, d%dim
              idim_orb = min(idim,os%ndim)
              dot(idim,im,ios) = X(mf_dotp)(mesh, os%X(orb)(1:mesh%np,idim_orb,im),&
@@ -1583,14 +1582,14 @@ end subroutine X(compute_periodic_coulomb_integrals)
                if(has_phase) then
 #ifdef R_TCOMPLEX
                  reduced(1,im, ios) = reduced(1,im,ios) - dot(1,imp,ios2)*os%phase_shift(inn, ik) &
-                       *this%zn_ij(im,imp,ispin,ios,inn)*os%V_ij(inn,0)/el_per_state
+                       *this%zn_ij(im,imp,ispin,ios,inn) * os%V_ij(inn,0) / el_per_state
 #else
                  ! Phase can only be applied to complex wavefunctions
                ASSERT(.false.)
 #endif
                else
                  reduced(1,im,ios) = reduced(1,im,ios) - dot(1,imp,ios2) &
-                         *this%X(n_ij)(im,imp,ispin,ios,inn)*os%V_ij(inn,0)/el_per_state
+                         *this%X(n_ij)(im,imp,ispin,ios,inn) * os%V_ij(inn,0) / el_per_state
                end if
              end do !imp
            end do !im
@@ -1600,8 +1599,8 @@ end subroutine X(compute_periodic_coulomb_integrals)
     
      do ios = 1, this%norbsets
        os => this%orbsets(ios)
-       call X(orbitalset_add_to_psi)(os, d%dim, gpsi(1:mesh%np,idir,1:d%dim), ik, has_phase, &
-                                     this%basisfromstates, reduced(1:d%dim,1:os%norbs, ios)) 
+       call X(orbitalset_add_to_psi)(os, d%dim, gpsi(1:mesh%np, idir, 1:d%dim), ik, has_phase, &
+                                     reduced(1:d%dim, 1:os%norbs, ios)) 
      end do
    end do !idir
 
@@ -1674,7 +1673,7 @@ end subroutine X(compute_periodic_coulomb_integrals)
        !We first compute the matrix elemets <\psi | orb_m>
        !taking into account phase correction if needed   
        ! 
-       call X(orbitalset_get_coefficients)(os, st%d%dim, psi, iq, phase, this%basisfromstates, dot)
+       call X(orbitalset_get_coefficients)(os, st%d%dim, psi, iq, phase, dot)
 
        do idir = 1, ndim
          call batch_get_state(grad_psib(idir), ibatch, mesh%np, gpsi)     
@@ -1684,7 +1683,7 @@ end subroutine X(compute_periodic_coulomb_integrals)
          !No phase here, this is already added
 
          call X(orbitalset_get_coefficients)(os, st%d%dim, gpsi, iq, phase, &
-                     this%basisfromstates, gdot(1:st%d%dim,1:os%norbs,idir))
+                     gdot(1:st%d%dim,1:os%norbs,idir))
 
          if(st%d%ispin /= SPINORS) then
            do im = 1, os%norbs

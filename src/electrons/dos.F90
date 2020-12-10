@@ -180,7 +180,7 @@ contains
 
     integer :: ii, ll, mm, nn, work, norb, work2
     integer :: ia, iorb, idim, ip
-    FLOAT   :: norm, threshold
+    FLOAT   :: threshold
     FLOAT, allocatable :: dpsi(:,:), ddot(:,:)
     CMPLX, allocatable :: zpsi(:,:), zdot(:,:)
     FLOAT, allocatable :: weight(:,:)
@@ -331,7 +331,7 @@ contains
           end do
           os%norbs = work2
           os%ndim = 1
-          os%submeshforperiodic = .false.
+          os%submesh = .false.
           os%spec => geo%atom(ia)%species
           call submesh_null(os%sphere)
  
@@ -339,30 +339,13 @@ contains
             ! We obtain the orbital
             if(states_are_real(st)) then
               call dget_atomic_orbital(geo, mesh, os%sphere, ia, os%ii, os%ll, os%jj, &
-                                                os, work, os%radius, os%ndim)
-              norm = M_ZERO
-              do idim = 1, os%ndim
-                norm = norm + dsm_nrm2(os%sphere, os%dorb(1:os%sphere%np,idim,work))**2
-              end do
-              norm = sqrt(norm)
-              if(normalize) then
-                do idim = 1, os%ndim
-                  os%dorb(1:os%sphere%np, idim, work) = os%dorb(1:os%sphere%np, idim, work)/norm
-                end do
-              end if
+                                       os, work, os%radius, os%ndim, use_mesh=.not.os%submesh, &
+                                       normalize = normalize)
             else
               call zget_atomic_orbital(geo, mesh, os%sphere, ia, os%ii, os%ll, os%jj, &
-                                                os, work, os%radius, os%ndim)
-              norm = M_ZERO
-              do idim = 1, os%ndim
-                norm = norm + zsm_nrm2(os%sphere, os%zorb(1:os%sphere%np,idim,work))**2
-              end do
-              norm = sqrt(norm)
-              if(normalize) then
-                do idim = 1, os%ndim
-                  os%zorb(1:os%sphere%np, idim, work) = os%zorb(1:os%sphere%np, idim, work)/norm
-                end do
-              end if
+                                      os, work, os%radius, os%ndim, &
+                                      use_mesh=.not.associated(hm%hm_base%phase) .and. .not. os%submesh, &
+                                      normalize = normalize)
             end if
           end do
 
@@ -371,7 +354,7 @@ contains
             ! In case of complex wavefunction, we allocate the array for the phase correction
             SAFE_ALLOCATE(os%phase(1:os%sphere%np, st%d%kpt%start:st%d%kpt%end))
             os%phase(:,:) = M_ZERO
-            if(simul_box_is_periodic(mesh%sb) .and. .not. os%submeshforperiodic) then
+            if(.not. os%submesh) then
               SAFE_ALLOCATE(os%eorb_mesh(1:mesh%np, 1:os%norbs, 1:os%ndim, st%d%kpt%start:st%d%kpt%end))
               os%eorb_mesh(:,:,:,:) = M_ZERO
             else
@@ -410,7 +393,7 @@ contains
             if(abs(st%d%kweights(ik)) <= M_EPSILON) cycle
             if(states_are_real(st)) then
               call states_elec_get_state(st, mesh, ist, ik, dpsi )
-              call dorbitalset_get_coefficients(os, st%d%dim, dpsi, ik, .false., .false., ddot(1:st%d%dim,1:os%norbs))
+              call dorbitalset_get_coefficients(os, st%d%dim, dpsi, ik, .false., ddot(1:st%d%dim,1:os%norbs))
               do iorb = 1, os%norbs
                 do idim = 1, st%d%dim
                   weight(ik,ist) = weight(ik,ist) + st%d%kweights(ik)*abs(ddot(idim,iorb))**2
@@ -428,7 +411,7 @@ contains
                   !$omp end parallel do
                 end do
               end if
-              call zorbitalset_get_coefficients(os, st%d%dim, zpsi, ik, associated(hm%hm_base%phase), .false., &
+              call zorbitalset_get_coefficients(os, st%d%dim, zpsi, ik, associated(hm%hm_base%phase), &
                                  zdot(1:st%d%dim,1:os%norbs))
 
               do iorb = 1, os%norbs

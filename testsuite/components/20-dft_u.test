@@ -19,16 +19,16 @@ match ; Norm state  3; GREPFIELD(out, 'Norm state  3', 4) ; 2.253819
 match ; Norm state  4; GREPFIELD(out, 'Norm state  4', 4) ; 2.253819
 
 Input: 20-dft_u.03-complex_mesh.inp
-match ; Norm state  1; GREPFIELD(out, 'Norm state  1', 4) ; 2.253819
-match ; Norm state  2; GREPFIELD(out, 'Norm state  2', 4) ; 2.253819
-match ; Norm state  3; GREPFIELD(out, 'Norm state  3', 4) ; 2.253819
-match ; Norm state  4; GREPFIELD(out, 'Norm state  4', 4) ; 2.253819
+match ; Norm state  1; GREPFIELD(out, 'Norm state  1', 4) ; 2.24284
+match ; Norm state  2; GREPFIELD(out, 'Norm state  2', 4) ; 2.24284
+match ; Norm state  3; GREPFIELD(out, 'Norm state  3', 4) ; 2.24284
+match ; Norm state  4; GREPFIELD(out, 'Norm state  4', 4) ; 2.24284
 
 Input: 20-dft_u.04-complex_submesh.inp
-match ; Norm state  1; GREPFIELD(out, 'Norm state  1', 4) ; 2.253819
-match ; Norm state  2; GREPFIELD(out, 'Norm state  2', 4) ; 2.253819
-match ; Norm state  3; GREPFIELD(out, 'Norm state  3', 4) ; 2.253819
-match ; Norm state  4; GREPFIELD(out, 'Norm state  4', 4) ; 2.253819
+match ; Norm state  1; GREPFIELD(out, 'Norm state  1', 4) ; 2.24284
+match ; Norm state  2; GREPFIELD(out, 'Norm state  2', 4) ; 2.24284
+match ; Norm state  3; GREPFIELD(out, 'Norm state  3', 4) ; 2.24284
+match ; Norm state  4; GREPFIELD(out, 'Norm state  4', 4) ; 2.24284
 
 Input: 20-dft_u.05-real_mesh_unpacked.inp
 match ; Norm state  1; GREPFIELD(out, 'Norm state  1', 4) ; 2.253819
@@ -43,14 +43,14 @@ match ; Norm state  3; GREPFIELD(out, 'Norm state  3', 4) ; 2.253819
 match ; Norm state  4; GREPFIELD(out, 'Norm state  4', 4) ; 2.253819
 
 Input: 20-dft_u.07-complex_mesh_unpacked.inp
-match ; Norm state  1; GREPFIELD(out, 'Norm state  1', 4) ; 2.253819
-match ; Norm state  2; GREPFIELD(out, 'Norm state  2', 4) ; 2.253819
-match ; Norm state  3; GREPFIELD(out, 'Norm state  3', 4) ; 2.253819
-match ; Norm state  4; GREPFIELD(out, 'Norm state  4', 4) ; 2.253819
+match ; Norm state  1; GREPFIELD(out, 'Norm state  1', 4) ; 2.24284
+match ; Norm state  2; GREPFIELD(out, 'Norm state  2', 4) ; 2.24284
+match ; Norm state  3; GREPFIELD(out, 'Norm state  3', 4) ; 2.24284
+match ; Norm state  4; GREPFIELD(out, 'Norm state  4', 4) ; 2.24284
 
 Input: 20-dft_u.08-complex_submesh_unpacked.inp
-match ; Norm state  1; GREPFIELD(out, 'Norm state  1', 4) ; 2.253819
-match ; Norm state  2; GREPFIELD(out, 'Norm state  2', 4) ; 2.253819
-match ; Norm state  3; GREPFIELD(out, 'Norm state  3', 4) ; 2.253819
-match ; Norm state  4; GREPFIELD(out, 'Norm state  4', 4) ; 2.253819
+match ; Norm state  1; GREPFIELD(out, 'Norm state  1', 4) ; 2.24284
+match ; Norm state  2; GREPFIELD(out, 'Norm state  2', 4) ; 2.24284
+match ; Norm state  3; GREPFIELD(out, 'Norm state  3', 4) ; 2.24284
+match ; Norm state  4; GREPFIELD(out, 'Norm state  4', 4) ; 2.24284
 
