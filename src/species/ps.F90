@@ -820,8 +820,15 @@ contains
 
     write(iunit,'(/,a)')    'orbitals:'
     do j = 1, ps%conf%p
-      write(iunit,'(1x,a,i2,3x,a,i2,3x,a,f5.1,3x,a,l1)') 'n = ', ps%conf%n(j), 'l = ', ps%conf%l(j), &
-                                                         'j = ', ps%conf%j(j), 'bound = ', all(ps%bound(j,:))
+      if(ps%ispin == 2) then
+         write(iunit,'(1x,a,i2,3x,a,i2,3x,a,f5.1,3x,a,l1,3x,a,f5.1,3x,a,f5.1)') 'n = ', ps%conf%n(j), 'l = ', ps%conf%l(j), &
+                                  'j = ', ps%conf%j(j), 'bound = ', all(ps%bound(j,:)), &
+                                  'occ(1) = ', ps%conf%occ(j, 1), 'occ(2) = ', ps%conf%occ(j, 2)
+      else
+        write(iunit,'(1x,a,i2,3x,a,i2,3x,a,f5.1,3x,a,l1,3x,a,f5.1)') 'n = ', ps%conf%n(j), 'l = ', ps%conf%l(j), &
+                                  'j = ', ps%conf%j(j), 'bound = ', all(ps%bound(j,:)), &
+                                  'occ = ', ps%conf%occ(j, 1)
+      end if
     end do
 
     
@@ -1138,9 +1145,10 @@ contains
 
     integer :: ll, ip, is, ic, jc, ir, nrc, ii
     FLOAT :: rr, kbcos, kbnorm, dnrm, avgv, volume_element
-    FLOAT, allocatable :: vlocal(:), kbprojector(:), wavefunction(:), nlcc_density(:), dens(:)
+    FLOAT, allocatable :: vlocal(:), kbprojector(:), wavefunction(:), nlcc_density(:), dens(:,:)
     integer, allocatable :: cmap(:, :)
     FLOAT, allocatable :: matrix(:, :), eigenvalues(:)
+    logical :: density_is_known
 
     PUSH_SUB(ps_xml_load)
 
@@ -1149,6 +1157,8 @@ contains
     ps%nlcc = ps_xml%nlcc
 
     ps%z_val = ps_xml%valence_charge
+
+    ps%has_density = ps_xml%has_density
 
     ! the local potential
     SAFE_ALLOCATE(vlocal(1:ps%g%nrval))
@@ -1172,11 +1182,13 @@ contains
     kbprojector = CNST(0.0)
     wavefunction = CNST(0.0)
 
+    density_is_known = .false.
+
     ! the projectors and the orbitals
     if(ps_xml%kleinman_bylander) then
 
       SAFE_ALLOCATE(cmap(0:ps_xml%lmax, 1:ps_xml%nchannels))
-
+ 
       ! the order of the channels is determined by spin orbit and the j value
       do ll = 0, ps_xml%lmax
         do ic = 1, ps_xml%nchannels
@@ -1207,7 +1219,6 @@ contains
       SAFE_ALLOCATE(eigenvalues(1:ps_xml%nchannels))
 
       ps%h = CNST(0.0)
-
 
       if(pseudo_nprojectors(ps_xml%pseudo) > 0) then
         do ll = 0, ps_xml%lmax
@@ -1248,6 +1259,16 @@ contains
       SAFE_DEALLOCATE_A(eigenvalues)
       
       ps%conf%p = ps_xml%nwavefunctions
+
+      ! If we do not have a density but we have wavefunctions, we compute the 
+      ! pseudo-atomic density, from the pseudo-atomic wavefunctions
+      ! In case we are doing a spin-polarized calculation, it is better to use the 
+      ! wavefunctions with spin-dependent occupations, instead the spin unresolved density
+      ! given in the pseudopotential
+      if((.not. ps_has_density(ps) .or. ps%ispin == 2) .and. ps_xml%nwavefunctions > 0) then
+        SAFE_ALLOCATE(dens(1:ps%g%nrval, 1:ps%ispin))
+        dens = M_ZERO
+      end if   
       
       do ii = 1, ps_xml%nwavefunctions
 
@@ -1279,11 +1300,38 @@ contains
           call spline_fit(ps%g%nrval, ps%g%r2ofi, wavefunction, ps%ur_sq(ii, is))
         end do
 
+        if(.not. ps_has_density(ps) .or. ps%ispin == 2) then
+          do is = 1, ps%ispin
+            do ip = 1, ps_xml%grid_size
+              dens(ip, is) = dens(ip, is) + ps%conf%occ(ii, is)*wavefunction(ip)**2/(M_FOUR*M_PI)
+            end do
+          end do
+        end if
+
       end do
+
+      !If we assigned all the valence electrons, we can compute the (spin-resolved) atomic density
+      if((.not. ps_has_density(ps) .or. ps%ispin == 2) .and. ps_xml%nwavefunctions > 0) then
+        do is = 1, ps%ispin
+          call spline_fit(ps%g%nrval, ps%g%rofi, dens(:,is), ps%density(is))
+        end do
+        SAFE_DEALLOCATE_A(dens)
+        density_is_known = .true.
+        ps%has_density = .true.
+      end if
 
       SAFE_DEALLOCATE_A(cmap)
       
     else
+
+      !Get the occupations from the valence charge of the atom
+      ps%conf%occ = M_ZERO
+      call ps_guess_atomic_occupations(ps%z, ps%z_val, ps_xml%lmax, ps%ispin, ps%conf%occ)
+      !If we assigned all the valence electrons, we can compute the (spin-resolved) atomic density
+      if(abs(sum(ps%conf%occ) - ps%z_val ) < M_EPSILON) then
+        SAFE_ALLOCATE(dens(1:ps%g%nrval, 1:ps%ispin))
+        dens = M_ZERO
+      end if
 
       do ll = 0, ps_xml%lmax
         ! we need to build the KB projectors
@@ -1323,21 +1371,38 @@ contains
           call spline_fit(ps%g%nrval, ps%g%rofi, wavefunction, ps%ur(ll + 1, is))
           call spline_fit(ps%g%nrval, ps%g%r2ofi, wavefunction, ps%ur_sq(ll + 1, is))
         end do
+        
+        !If we assigned all the valence electrons, we can compute the (spin-resolved) atomic density
+        if(abs(sum(ps%conf%occ) - ps%z_val ) < M_EPSILON) then
+          do is = 1, ps%ispin
+            do ip = 1, ps_xml%grid_size
+              dens(ip, is) = dens(ip, is) + ps%conf%occ(ll+1, is)*wavefunction(ip)**2/(M_FOUR*M_PI)
+            end do
+          end do
+        end if
       end do
 
+      !If we assigned all the valence electrons, we can compute the (spin-resolved) atomic density
+      if(abs(sum(ps%conf%occ) - ps%z_val ) < M_EPSILON) then
+        do is = 1, ps%ispin
+          call spline_fit(ps%g%nrval, ps%g%rofi, dens(:,is), ps%density(is))
+        end do
+        SAFE_DEALLOCATE_A(dens)
+        density_is_known = .true.
+        ps%has_density = .true.
+      end if
     end if
 
-    ps%has_density = ps_xml%has_density
     
-    if(ps_has_density(ps)) then
+    if(ps_has_density(ps) .and. .not. density_is_known) then
       
-      SAFE_ALLOCATE(dens(1:ps%g%nrval))
+      SAFE_ALLOCATE(dens(1:ps%g%nrval, 1:1))
       
-      dens(1:ps_xml%grid_size) = ps_xml%density(1:ps_xml%grid_size)/ps%ispin
-      dens(ps_xml%grid_size + 1:ps%g%nrval) = CNST(0.0)
+      dens(1:ps_xml%grid_size, 1) = ps_xml%density(1:ps_xml%grid_size)/ps%ispin
+      dens(ps_xml%grid_size + 1:ps%g%nrval, 1) = CNST(0.0)
       
       do is = 1, ps%ispin
-        call spline_fit(ps%g%nrval, ps%g%rofi, dens, ps%density(is))
+        call spline_fit(ps%g%nrval, ps%g%rofi, dens(:, 1), ps%density(is))
       end do
       
       SAFE_DEALLOCATE_A(dens)
@@ -1478,6 +1543,7 @@ contains
   end function ps_density_volume
   
 #include "ps_pspio_inc.F90"
+#include "ps_conf_inc.F90"
  
 end module ps_oct_m
 

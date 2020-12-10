@@ -229,6 +229,7 @@ noinst_HEADERS +=                                \
 	species/base.hpp                         \
 	species/element.hpp                      \
 	species/detect_format.hpp                \
+        species/ps_conf_inc.F90                  \
 	species/ps_pspio_inc.F90                 \
 	species/psml.hpp                         \
 	species/psp8.hpp                         \
