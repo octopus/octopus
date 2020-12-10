@@ -270,7 +270,7 @@ contains
     if(this%add_fxc) call sternheimer_build_fxc(this, namespace, gr%mesh, st, xc)
 
 
-    !%Variable EnableElPtCoupling
+    !%Variable EnablePhotons
     !%Type logical
     !%Default no
     !%Section Linear Response::Sternheimer
