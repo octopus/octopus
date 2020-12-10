@@ -138,6 +138,7 @@ subroutine X(sternheimer_solve)(                           &
     if (calculate_rho) then
       call lalg_copy(mesh%np, st%d%nspin, lr(1)%X(dl_rho)(:, :), dl_rhoin(:, :, 1))
 
+      this%X(omega) = omega
       call X(sternheimer_calc_hvar)(this, sys, lr, nsigma, hvar)
     end if
 
