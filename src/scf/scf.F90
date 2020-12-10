@@ -1134,7 +1134,7 @@ contains
         call io_mkdir(dir, namespace)
         iunit = io_open(trim(dir) // "/" // trim(fname), namespace, action='write')
 
-        call grid_write_info(gr, geo, iunit)
+        call grid_write_info(gr, iunit)
  
         call symmetries_write_info(gr%mesh%sb%symm, namespace, gr%sb%dim, gr%sb%periodic_dim, iunit)
 

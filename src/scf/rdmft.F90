@@ -488,7 +488,7 @@ contains
         call io_mkdir(dir, namespace)
         iunit = io_open(trim(dir) // "/" // trim(fname), namespace, action='write')
 
-        call grid_write_info(gr, geo, iunit)
+        call grid_write_info(gr, iunit)
 
         call v_ks_write_info(ks, iunit, namespace)
         

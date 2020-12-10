@@ -47,7 +47,6 @@ module grid_oct_m
   private
   public ::                &
     grid_t,                &
-    grid_init_stage_0,     &
     grid_init_stage_1,     &
     grid_init_stage_2,     &
     grid_end,              &
@@ -67,23 +66,6 @@ module grid_oct_m
 
 
 contains
-
-  !-------------------------------------------------------------------
-  !>
-  !! "Zero-th" stage of grid initialization. It initializes the simulation box.
-  subroutine grid_init_stage_0(gr, namespace, geo, space)
-    type(grid_t),          intent(inout) :: gr
-    type(namespace_t),     intent(in)    :: namespace
-    type(geometry_t),      intent(inout) :: geo
-    type(space_t),         intent(in)    :: space
-
-    PUSH_SUB(grid_init_stage_0)
-
-    call simul_box_init(gr%sb, namespace, geo, space)
-      
-    POP_SUB(grid_init_stage_0)
-  end subroutine grid_init_stage_0
-
 
   !-------------------------------------------------------------------
   subroutine grid_init_stage_1(gr, namespace, geo)
@@ -237,11 +219,10 @@ contains
 
 
   !-------------------------------------------------------------------
-  subroutine grid_init_stage_2(gr, namespace, mc, geo)
+  subroutine grid_init_stage_2(gr, namespace, mc)
     type(grid_t), target, intent(inout) :: gr
     type(namespace_t),    intent(in)    :: namespace
     type(multicomm_t),    intent(in)    :: mc
-    type(geometry_t),     intent(in)    :: geo
 
     PUSH_SUB(grid_init_stage_2)
 
@@ -270,7 +251,7 @@ contains
     end if
 
     ! print info concerning the grid
-    call grid_write_info(gr, geo, stdout)
+    call grid_write_info(gr, stdout)
 
     POP_SUB(grid_init_stage_2)
 
@@ -338,9 +319,8 @@ contains
 
 
   !-------------------------------------------------------------------
-  subroutine grid_write_info(gr, geo, iunit)
+  subroutine grid_write_info(gr, iunit)
     type(grid_t),     intent(in) :: gr
-    type(geometry_t), intent(in) :: geo
     integer,          intent(in) :: iunit
 
     PUSH_SUB(grid_write_info)
@@ -352,7 +332,7 @@ contains
     end if
 
     call messages_print_stress(iunit, "Grid")
-    call simul_box_write_info(gr%sb, geo, iunit)
+    call simul_box_write_info(gr%sb, iunit)
 
     if(gr%have_fine_mesh) then
       message(1) = "Wave-functions mesh:"
