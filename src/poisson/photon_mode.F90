@@ -47,6 +47,11 @@ module photon_mode_oct_m
 type photon_mode_t
     ! All components are public by default
     integer               :: nmodes             !< Number of photon modes
+    integer               :: n_modevol_dim      !< dimension of the mode volume
+    integer, allocatable  :: n_modes(:)         !< Number of photon modes
+    FLOAT, allocatable    :: cavity_length(:)   !< Mode frequencies
+    FLOAT, allocatable    :: pol_vec(:,:)           !< Polarization of the photon field
+    FLOAT                 :: cavity_volume      !< Total mode volume
     integer               :: dim                !< Dimensionality of the electronic system
     FLOAT, allocatable    :: omega(:)           !< Mode frequencies
     FLOAT, allocatable    :: lambda(:)          !< Interaction strength
@@ -141,6 +146,78 @@ contains
 #endif
     end if
 
+
+    !%Variable AutoGeneratePhotonModes
+    !%Type block
+    !%Section Hamiltonian::XC
+    !%Description
+    !% Parameters for the auto generation of Photon modes
+    !%
+    !% %PhotonModes
+    !%  n_modes_x | cavity_L_x | PolX1 | PolY1 | PolZ1
+    !%  n_modes_y | cavity_L_y | PolX1 | PolY1 | PolZ1
+    !%  n_modes_z | cavity_L_z | PolX1 | PolY1 | PolZ1
+    !% %
+    !%
+    !% The first column contains the number of modes and in the second column the length of the
+    !% cavity is specified. The third, fourth and fifth columns are the polarizations vectors
+    !% of the photons.
+    !% If the block contains only a single line, then a 1D cavity is assumed. When two lines
+    !% are provided, then a 2D mode volume is generated and for three lines a 3D volume is used.
+    !% 
+    !%End
+
+    this%nmodes = 1
+    this%cavity_volume = M_ONE
+    if(parse_block(namespace, 'AutoGeneratePhotonModes', blk) == 0) then
+       this%n_modevol_dim = parse_block_n(blk)
+
+       SAFE_ALLOCATE(this%n_modes(1:this%n_modevol_dim))
+       SAFE_ALLOCATE(this%cavity_length(1:this%n_modevol_dim))
+       SAFE_ALLOCATE(this%pol_vec(1:this%n_modevol_dim, 1:this%dim))
+
+       do ii = 1, this%n_modevol_dim
+          ncols = parse_block_cols(blk, ii-1)
+
+          ! Sanity check
+          if (ncols /= 2) then
+            call messages_input_error(namespace, 'AutoGeneratePhotonModes', 'Incorrect number of columns')
+          end if
+
+          ! Read line
+          call parse_block_integer(blk, ii-1, 0, this%n_modes(ii))
+          call parse_block_float(blk, ii-1, 1, this%cavity_length(ii), units_inp%length) ! cavity length
+          this%nmodes = this%nmodes * this%n_modes(ii)
+          this%cavity_volume = this%cavity_volume * this%cavity_length(ii)
+
+          do idir = 1, this%dim
+            call parse_block_float(blk, ii-1, idir + 1, this%pol_vec(ii, idir)) ! polarization vector components
+          end do
+       end do
+   
+       SAFE_ALLOCATE(this%omega(1:this%nmodes))
+       SAFE_ALLOCATE(this%lambda(1:this%nmodes))
+       SAFE_ALLOCATE(this%pol(1:this%nmodes, this%dim))
+ 
+       select case(this%n_modevol_dim)
+       ! 1D cavity
+       case(1)
+       ! generate modes
+         do ii = 1, this%nmodes 
+           this%omega(ii) = (2*ii-1)*(M_PI*P_c/this%cavity_volume)
+         end do
+         this%lambda = sqrt(M_TWO/(P_ep*this%cavity_volume))
+         do idir = 1, this%dim
+           this%pol(1:this%nmodes, idir) = this%pol_vec(1, idir)
+         end do
+
+       case default
+         call messages_write('Two and three dimensional cavities are not implemented yet')
+         call messages_fatal(namespace=namespace)
+       end select
+    end if
+
+
     !%Variable PhotonModes
     !%Type block
     !%Section Hamiltonian::XC
@@ -158,7 +235,7 @@ contains
     !% If the polarization vector should be normalized to one. If that is not the case
     !% the code will normalize it.
     !%End
-
+   
     this%nmodes = 0
     if(parse_block(namespace, 'PhotonModes', blk) == 0) then
 
@@ -214,6 +291,10 @@ contains
 
     PUSH_SUB(photon_mode_end)
 
+
+    SAFE_DEALLOCATE_A(this%n_modes)
+    SAFE_DEALLOCATE_A(this%cavity_length)
+ 
     SAFE_DEALLOCATE_A(this%correlator)
 
     SAFE_DEALLOCATE_A(this%omega)
