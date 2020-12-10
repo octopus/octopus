@@ -179,7 +179,7 @@ contains
     !%Type block
     !%Section States::ModelMB
     !%Description
-    !% Characterization of different modelmb particles in gr%mesh%sb%dim dimensional space.
+    !% Characterization of different modelmb particles in gr%sb%dim dimensional space.
     !%
     !% <tt>%DescribeParticlesModelmb
     !% <br>&nbsp;&nbsp; proton   | 1 | 1800. | 1. | fermion

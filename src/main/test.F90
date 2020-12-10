@@ -309,7 +309,7 @@ contains
     ! Here we put a Gaussian as the right-hand side of the linear solver
     ! Values are taken from the poisson_test routine
     alpha = CNST(4.0)*sys%gr%mesh%spacing(1)
-    beta = M_ONE / ( alpha**sys%gr%mesh%sb%dim * sqrt(M_PI)**sys%gr%mesh%sb%dim )
+    beta = M_ONE / ( alpha**sys%gr%sb%dim * sqrt(M_PI)**sys%gr%sb%dim )
     ! The Gaussian is centered around the origin
     center = M_ZERO
 
@@ -505,7 +505,7 @@ contains
 
       !We set the phase of the orbitals if needed
       if(associated(sys%hm%hm_base%phase)) then
-        call orbitalset_update_phase(basis%orbsets(1), sys%gr%mesh%sb, sys%st%d%kpt, &
+        call orbitalset_update_phase(basis%orbsets(1), sys%gr%sb, sys%st%d%kpt, &
                    (sys%st%d%ispin==SPIN_POLARIZED))
       end if
     end if

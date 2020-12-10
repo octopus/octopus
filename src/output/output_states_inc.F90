@@ -36,7 +36,7 @@ subroutine output_states(outp, namespace, dir, st, gr, geo, hm)
   PUSH_SUB(output_states)
 
   if(bitand(outp%what, OPTION__OUTPUT__DENSITY) /= 0) then
-    fn_unit = units_out%length**(-gr%mesh%sb%dim)
+    fn_unit = units_out%length**(-gr%sb%dim)
     do is = 1, st%d%nspin
       if(st%d%nspin == 1) then
         write(fname, '(a)') 'density'
@@ -49,7 +49,7 @@ subroutine output_states(outp, namespace, dir, st, gr, geo, hm)
   end if
 
   if(bitand(outp%what, OPTION__OUTPUT__POL_DENSITY) /= 0) then
-    fn_unit = units_out%length**(1-gr%mesh%sb%dim)
+    fn_unit = units_out%length**(1-gr%sb%dim)
     SAFE_ALLOCATE(polarization(1:gr%fine%mesh%np, 1:gr%sb%dim))
 
     do is = 1, st%d%nspin
@@ -72,7 +72,7 @@ subroutine output_states(outp, namespace, dir, st, gr, geo, hm)
   end if
 
   if(bitand(outp%what, OPTION__OUTPUT__WFS) /= 0) then
-    fn_unit = sqrt(units_out%length**(-gr%mesh%sb%dim))
+    fn_unit = sqrt(units_out%length**(-gr%sb%dim))
 
     if (states_are_real(st)) then
       SAFE_ALLOCATE(dtmp(1:gr%mesh%np))
@@ -117,7 +117,7 @@ subroutine output_states(outp, namespace, dir, st, gr, geo, hm)
   end if
 
   if(bitand(outp%what, OPTION__OUTPUT__WFS_SQMOD) /= 0) then
-    fn_unit = units_out%length**(-gr%mesh%sb%dim)
+    fn_unit = units_out%length**(-gr%sb%dim)
     SAFE_ALLOCATE(dtmp(1:gr%mesh%np_part))
     if (states_are_complex(st)) then
       SAFE_ALLOCATE(ztmp(1:gr%mesh%np))
@@ -158,7 +158,7 @@ subroutine output_states(outp, namespace, dir, st, gr, geo, hm)
   end if
 
   if(bitand(outp%what, OPTION__OUTPUT__KINETIC_ENERGY_DENSITY) /= 0) then
-    fn_unit = units_out%energy * units_out%length**(-gr%mesh%sb%dim)
+    fn_unit = units_out%energy * units_out%length**(-gr%sb%dim)
     SAFE_ALLOCATE(elf(1:gr%mesh%np, 1:st%d%nspin))
     call states_elec_calc_quantities(gr%der, st, .false., kinetic_energy_density = elf)
     select case(st%d%ispin)
@@ -223,7 +223,7 @@ subroutine output_current_flow(outp, namespace, dir, gr, st)
     call io_mkdir(dir, namespace)
     iunit = io_open(trim(dir)//'/'//'current-flow', namespace, action='write')
 
-    select case(gr%mesh%sb%dim)
+    select case(gr%sb%dim)
     case(3)
       write(iunit,'(a)')        '# Plane:'
       write(iunit,'(3a,3f9.5)') '# origin [', trim(units_abbrev(units_out%length)), '] = ', &
@@ -253,16 +253,16 @@ subroutine output_current_flow(outp, namespace, dir, gr, st)
   end if
 
   if(states_are_complex(st)) then
-    SAFE_ALLOCATE(j(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:st%d%nspin))
+    SAFE_ALLOCATE(j(1:gr%mesh%np, 1:gr%sb%dim, 1:st%d%nspin))
     call states_elec_calc_quantities(gr%der, st, .false., paramagnetic_current = j)
 
-    do idir = 1, gr%mesh%sb%dim
+    do idir = 1, gr%sb%dim
       do ip = 1, gr%mesh%np
         j(ip, idir, 1) = sum(j(ip, idir, 1:st%d%nspin))
       end do
     end do
 
-    select case(gr%mesh%sb%dim)
+    select case(gr%sb%dim)
     case(3); flow = mf_surface_integral(gr%mesh, j(:, :, 1), outp%plane)
     case(2); flow = mf_line_integral(gr%mesh, j(:, :, 1), outp%line)
     case(1); flow = j(mesh_nearest_point(gr%mesh, outp%line%origin(1), dmin, rankmin), 1, 1)

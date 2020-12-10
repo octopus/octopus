@@ -166,7 +166,7 @@ subroutine X(lcao_wf)(this, st, gr, geo, hm, namespace, start)
       if(this%debug .and. mpi_grp_is_root(mpi_world)) then
         write(filename, '(a,i4.4,a,i1)') 'lcao-orb', n1, '-sp', ispin
         call X(io_function_output)(OPTION__OUTPUTFORMAT__XCRYSDEN, "./static", filename, namespace, &
-          gr%mesh, lcaopsi(:, 1, ispin),  sqrt(units_out%length**(-gr%mesh%sb%dim)), &
+          gr%mesh, lcaopsi(:, 1, ispin),  sqrt(units_out%length**(-gr%sb%dim)), &
           ierr, geo = geo)
       end if
     end do
@@ -458,7 +458,7 @@ subroutine X(lcao_alt_init_orbitals)(this, st, gr, geo, start)
     norbs = species_niwfs(geo%atom(iatom)%species)
 
     ! initialize the radial grid
-    call submesh_init(this%sphere(iatom), gr%mesh%sb, gr%mesh, geo%atom(iatom)%x, this%radius(iatom))
+    call submesh_init(this%sphere(iatom), gr%sb, gr%mesh, geo%atom(iatom)%x, this%radius(iatom))
     INCR(dof, this%sphere(iatom)%np*this%mult*norbs)
   end do
 
@@ -620,7 +620,7 @@ subroutine X(lcao_alt_wf) (this, st, gr, geo, hm, namespace, start)
                 if(this%debug .and. mpi_grp_is_root(mpi_world)) then
                   write(filename, '(a,i4.4,a,i1)') 'lcao-orb', n1
                   call X(io_function_output)(OPTION__OUTPUTFORMAT__XCRYSDEN, "./static", filename, namespace, &
-                    gr%mesh, psii(:, 1, iorb), sqrt(units_out%length**(-gr%mesh%sb%dim)), &
+                    gr%mesh, psii(:, 1, iorb), sqrt(units_out%length**(-gr%sb%dim)), &
                     ierr, geo = geo)
                 end if
 

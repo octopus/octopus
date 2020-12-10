@@ -256,7 +256,7 @@ contains
 
       end select
 
-      select case (gr%mesh%sb%box_shape)
+      select case (gr%sb%box_shape)
       case(SPHERE)
         ab_shape_dim = 1
         if (sb%periodic_dim /= 0) then
@@ -309,7 +309,7 @@ contains
         bc%bc_bounds(:, idim) = bounds(:, idim)
       end select
 
-      if (gr%mesh%sb%box_shape == PARALLELEPIPED) then
+      if (gr%sb%box_shape == PARALLELEPIPED) then
 
         select case (bc%bc_ab_type(idim))
         case(MXLL_AB_CPML)
@@ -1085,13 +1085,13 @@ contains
     call profiling_in(prof, 'BC_MXLL_GENERATE_PML')
 
     SAFE_ALLOCATE(tmp(gr%mesh%np_part))
-    SAFE_ALLOCATE(tmp_grad(gr%mesh%np, 1:gr%mesh%sb%dim))
+    SAFE_ALLOCATE(tmp_grad(gr%mesh%np, 1:gr%sb%dim))
 
-    SAFE_ALLOCATE(pml%kappa(1:pml%points_number, 1:gr%mesh%sb%dim))
-    SAFE_ALLOCATE(pml%sigma_e(1:pml%points_number, 1:gr%mesh%sb%dim))
-    SAFE_ALLOCATE(pml%sigma_m(1:pml%points_number, 1:gr%mesh%sb%dim))
-    SAFE_ALLOCATE(pml%a(1:pml%points_number, 1:gr%mesh%sb%dim))
-    SAFE_ALLOCATE(pml%b(1:pml%points_number, 1:gr%mesh%sb%dim))
+    SAFE_ALLOCATE(pml%kappa(1:pml%points_number, 1:gr%sb%dim))
+    SAFE_ALLOCATE(pml%sigma_e(1:pml%points_number, 1:gr%sb%dim))
+    SAFE_ALLOCATE(pml%sigma_m(1:pml%points_number, 1:gr%sb%dim))
+    SAFE_ALLOCATE(pml%a(1:pml%points_number, 1:gr%sb%dim))
+    SAFE_ALLOCATE(pml%b(1:pml%points_number, 1:gr%sb%dim))
     SAFE_ALLOCATE(pml%c(1:pml%points_number, 1:3))
     SAFE_ALLOCATE(pml%mask(1:pml%points_number))
     SAFE_ALLOCATE(pml%conv_plus(1:pml%points_number, 1:3, 1:3))
@@ -1119,7 +1119,7 @@ contains
     do ip_in = 1, pml%points_number
       ip = pml%points_map(ip_in)
       ddv(1:3) = abs(gr%mesh%x(ip, 1:3)) - bounds(1, 1:3)
-      do idim = 1, gr%mesh%sb%dim
+      do idim = 1, gr%sb%dim
         if (ddv(idim) >= M_ZERO) then
           gg     = (ddv(idim)/pml%width)**pml%power
           hh     = (M_ONE-ddv(idim)/pml%width)**pml%power
@@ -1155,7 +1155,7 @@ contains
     end do
 
     ! PML auxiliary epsilon for all boundary points
-    do idim = 1, gr%mesh%sb%dim
+    do idim = 1, gr%sb%dim
       tmp = P_ep
       do ip_in = 1, pml%points_number
         ip = pml%points_map(ip_in)
@@ -1169,7 +1169,7 @@ contains
     end do
 
     ! PML auxiliary mu
-    do idim = 1, gr%mesh%sb%dim
+    do idim = 1, gr%sb%dim
       tmp = P_mu
       do ip_in = 1, pml%points_number
         ip = pml%points_map(ip_in)
@@ -1183,7 +1183,7 @@ contains
     end do
 
     ! PML auxiliary c for all boundary points
-    do idim = 1, gr%mesh%sb%dim
+    do idim = 1, gr%sb%dim
       do ip_in = 1, pml%points_number
         pml%c(ip_in, idim) = P_c/pml%kappa(ip_in, idim)
       end do
@@ -1266,15 +1266,15 @@ contains
 
     ip_in_max = maxval(bc%medium%points_number(:))
 
-    SAFE_ALLOCATE(bc%medium%aux_ep(ip_in_max,gr%mesh%sb%dim, 3))
-    SAFE_ALLOCATE(bc%medium%aux_mu(ip_in_max,gr%mesh%sb%dim, 3))
+    SAFE_ALLOCATE(bc%medium%aux_ep(ip_in_max,gr%sb%dim, 3))
+    SAFE_ALLOCATE(bc%medium%aux_mu(ip_in_max,gr%sb%dim, 3))
     SAFE_ALLOCATE(bc%medium%ep(ip_in_max, 3))
     SAFE_ALLOCATE(bc%medium%mu(ip_in_max, 3))
     SAFE_ALLOCATE(bc%medium%sigma_e(ip_in_max, 3))
     SAFE_ALLOCATE(bc%medium%sigma_m(ip_in_max, 3))
     SAFE_ALLOCATE(bc%medium%c(ip_in_max, 3))
     SAFE_ALLOCATE(tmp(gr%mesh%np_part))
-    SAFE_ALLOCATE(tmp_grad(gr%mesh%np_part,1:gr%mesh%sb%dim))
+    SAFE_ALLOCATE(tmp_grad(gr%mesh%np_part,1:gr%sb%dim))
     bc%medium%aux_ep = M_ZERO
     bc%medium%aux_mu = M_ZERO
     bc%medium%c = P_c

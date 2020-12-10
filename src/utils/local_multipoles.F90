@@ -315,7 +315,7 @@ contains
       call messages_experimental('Bader volumes in oct-local_multipoles')
     end if
 
-    call kick_init(kick, global_namespace, sys%gr%mesh%sb, sys%st%d%ispin)
+    call kick_init(kick, global_namespace, sys%gr%sb, sys%st%d%ispin)
     call local_write_init(local%writ, global_namespace, local%nd, local%lab, 0, dt)
 
     !TODO: initialize hamiltonian if needed: check for LDOuput = energy or potential, using local_write_check_hm(local%writ)
@@ -857,8 +857,8 @@ contains
           do ip = 1, sys%gr%mesh%np
             if( all(ion_map(:) /= basins%map(ip)) ) then
               do ia = 1, sys%geo%natoms
-                dd = sum((sys%gr%mesh%x(ip, 1:sys%gr%mesh%sb%dim) & 
-                      - sys%geo%atom(ia)%x(1:sys%gr%mesh%sb%dim))**2)
+                dd = sum((sys%gr%mesh%x(ip, 1:sys%gr%sb%dim) & 
+                      - sys%geo%atom(ia)%x(1:sys%gr%sb%dim))**2)
                 dd = sqrt(dd)
                 if ( dd <= species_vdw_radius(sys%geo%atom(ia)%species) ) basins%map(ip) = ion_map(ia)
               end do

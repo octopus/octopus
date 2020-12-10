@@ -701,7 +701,7 @@ contains
         SAFE_ALLOCATE(st%frozen_tau(1:gr%mesh%np, 1:st%d%nspin))
       end if    
       if(.not.associated(st%frozen_gdens)) then
-        SAFE_ALLOCATE(st%frozen_gdens(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:st%d%nspin))
+        SAFE_ALLOCATE(st%frozen_gdens(1:gr%mesh%np, 1:gr%sb%dim, 1:st%d%nspin))
       end if
       if(.not.associated(st%frozen_ldens)) then
         SAFE_ALLOCATE(st%frozen_ldens(1:gr%mesh%np, 1:st%d%nspin))

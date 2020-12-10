@@ -136,14 +136,14 @@ contains
       write(iunit, '(1x)')
 
       write(iunit, '(3a,es20.12)') "C_3  [", &
-        trim(units_abbrev(units_out%energy * units_out%length**sys%gr%mesh%sb%dim)), "] = ", &
-        units_from_atomic(units_out%energy * units_out%length**sys%gr%mesh%sb%dim, c3)
+        trim(units_abbrev(units_out%energy * units_out%length**sys%gr%sb%dim)), "] = ", &
+        units_from_atomic(units_out%energy * units_out%length**sys%gr%sb%dim, c3)
       write(iunit, '(3a,es20.12)') "C_6  [", &
-        trim(units_abbrev(units_out%energy * units_out%length**(2*sys%gr%mesh%sb%dim))), "] = ", &
-        units_from_atomic(units_out%energy * units_out%length**(2*sys%gr%mesh%sb%dim), c6)
+        trim(units_abbrev(units_out%energy * units_out%length**(2*sys%gr%sb%dim))), "] = ", &
+        units_from_atomic(units_out%energy * units_out%length**(2*sys%gr%sb%dim), c6)
       write(iunit, '(3a,es20.12)') "C_AT [", &
-        trim(units_abbrev(units_out%energy * units_out%length**(3*sys%gr%mesh%sb%dim))), "] = ", &
-        units_from_atomic(units_out%energy * units_out%length**(3*sys%gr%mesh%sb%dim), cat)
+        trim(units_abbrev(units_out%energy * units_out%length**(3*sys%gr%sb%dim))), "] = ", &
+        units_from_atomic(units_out%energy * units_out%length**(3*sys%gr%sb%dim), cat)
 
       call io_close(iunit)
     end if
@@ -176,8 +176,8 @@ contains
 
       select case(equiv_axes)
       case(3);      ndir = 1
-      case(2);      ndir = min(2, sys%gr%mesh%sb%dim)
-      case default; ndir = min(3, sys%gr%mesh%sb%dim)
+      case(2);      ndir = min(2, sys%gr%sb%dim)
+      case default; ndir = min(3, sys%gr%sb%dim)
       end select
 
       POP_SUB(vdw_run_legacy.input)
@@ -326,11 +326,11 @@ contains
       do dir = 1, ndir
         get_pol = get_pol + TOFLOAT(alpha(dir, dir))
       end do
-      do dir = ndir+1, sys%gr%mesh%sb%dim
+      do dir = ndir+1, sys%gr%sb%dim
         get_pol = get_pol + TOFLOAT(alpha(ndir, ndir))
       end do
 
-      get_pol = get_pol / TOFLOAT(sys%gr%mesh%sb%dim)
+      get_pol = get_pol / TOFLOAT(sys%gr%sb%dim)
 
       call pert_end(perturbation)
       POP_SUB(vdw_run_legacy.get_pol)

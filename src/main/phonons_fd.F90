@@ -222,7 +222,7 @@ contains
         geo%atom(iatom)%x(alpha) = geo%atom(iatom)%x(alpha) + vib%disp
 
         do jatom = 1, geo%natoms
-          do beta = 1, gr%mesh%sb%dim
+          do beta = 1, gr%sb%dim
             jmat = vibrations_get_index(vib, jatom, beta)
             vib%dyn_matrix(jmat, imat) = &
               (forces0(jatom, beta) - forces(jatom, beta)) / (M_TWO*vib%disp) &

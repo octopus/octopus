@@ -1194,12 +1194,12 @@ contains
     PUSH_SUB(states_elec_allocate_current)
     
     if(.not. associated(st%current)) then
-      SAFE_ALLOCATE(st%current(1:gr%mesh%np_part, 1:gr%mesh%sb%dim, 1:st%d%nspin))
+      SAFE_ALLOCATE(st%current(1:gr%mesh%np_part, 1:gr%sb%dim, 1:st%d%nspin))
       st%current = M_ZERO
     end if
 
     if(.not. associated(st%current_kpt)) then
-      SAFE_ALLOCATE(st%current_kpt(1:gr%mesh%np,1:gr%mesh%sb%dim,st%d%kpt%start:st%d%kpt%end))
+      SAFE_ALLOCATE(st%current_kpt(1:gr%mesh%np,1:gr%sb%dim,st%d%kpt%start:st%d%kpt%end))
       st%current_kpt = M_ZERO
     end if
 

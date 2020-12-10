@@ -835,7 +835,7 @@ contains
       call MPI_Bcast(x, 1, MPI_FLOAT, 0, st%mpi_grp%comm, mpi_err)
     end if
 #endif
-    call hm%update_span(minval(gr%mesh%spacing(1:gr%mesh%sb%dim)), x)
+    call hm%update_span(minval(gr%mesh%spacing(1:gr%sb%dim)), x)
     ! initialize Fermi energy
     call states_elec_fermi(st, namespace, gr%mesh, compute_spin = .not. gr%der%boundaries%spiralBC)
     call energy_calc_total(namespace, hm, gr, st)
@@ -961,15 +961,15 @@ contains
     read(iunit, '(28x)', advance='no') ! skip the time index.
 
     do iatom = 1, geo%natoms
-      read(iunit, '(3es20.12)', advance='no') geo%atom(iatom)%x(1:gr%mesh%sb%dim)
+      read(iunit, '(3es20.12)', advance='no') geo%atom(iatom)%x(1:gr%sb%dim)
       geo%atom(iatom)%x(:) = units_to_atomic(units_out%length, geo%atom(iatom)%x(:))
     end do
     do iatom = 1, geo%natoms
-      read(iunit, '(3es20.12)', advance='no') geo%atom(iatom)%v(1:gr%mesh%sb%dim)
+      read(iunit, '(3es20.12)', advance='no') geo%atom(iatom)%v(1:gr%sb%dim)
       geo%atom(iatom)%v(:) = units_to_atomic(units_out%velocity, geo%atom(iatom)%v(:))
     end do
     do iatom = 1, geo%natoms
-      read(iunit, '(3es20.12)', advance='no') geo%atom(iatom)%f(1:gr%mesh%sb%dim)
+      read(iunit, '(3es20.12)', advance='no') geo%atom(iatom)%f(1:gr%sb%dim)
       geo%atom(iatom)%f(:) = units_to_atomic(units_out%force, geo%atom(iatom)%f(:))
     end do
 

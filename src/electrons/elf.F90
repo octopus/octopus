@@ -94,8 +94,8 @@ contains
     kappa = M_ZERO
     call density_calc(st, gr, rho)
 
-    SAFE_ALLOCATE(grho(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:st%d%nspin))
-    SAFE_ALLOCATE(  jj(1:gr%mesh%np, 1:gr%mesh%sb%dim, 1:st%d%nspin))
+    SAFE_ALLOCATE(grho(1:gr%mesh%np, 1:gr%sb%dim, 1:st%d%nspin))
+    SAFE_ALLOCATE(  jj(1:gr%mesh%np, 1:gr%sb%dim, 1:st%d%nspin))
 
     call states_elec_calc_quantities(gr%der, st, .false., kinetic_energy_density = kappa, &
                                 paramagnetic_current = jj, density_gradient = grho)
@@ -114,8 +114,8 @@ contains
     do_is: do is = 1, st%d%nspin
       do ip = 1, gr%mesh%np
         kappa(ip, is) = kappa(ip, is)*rho(ip, is)        &    ! + tau * rho
-          - M_FOURTH*sum(grho(ip, 1:gr%mesh%sb%dim, is)**2)      &    ! - | nabla rho |^2 / 4
-          - sum(jj(ip, 1:gr%mesh%sb%dim, is)**2)                      ! - j^2
+          - M_FOURTH*sum(grho(ip, 1:gr%sb%dim, is)**2)      &    ! - | nabla rho |^2 / 4
+          - sum(jj(ip, 1:gr%sb%dim, is)**2)                      ! - j^2
       end do
 
       ! pass this information to the caller if requested

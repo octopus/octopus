@@ -265,7 +265,7 @@ contains
         call multigrid_mesh_double(gr%cv, gr%mesh, gr%fine%mesh, gr%stencil, namespace)
 
         call derivatives_nullify(gr%fine%der)
-        call derivatives_init(gr%fine%der, namespace, gr%mesh%sb, gr%cv%method /= CURV_METHOD_UNIFORM)
+        call derivatives_init(gr%fine%der, namespace, gr%sb, gr%cv%method /= CURV_METHOD_UNIFORM)
 
         call mesh_init_stage_3(gr%fine%mesh, namespace, gr%stencil, mc)
 

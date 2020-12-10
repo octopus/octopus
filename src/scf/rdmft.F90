@@ -624,7 +624,7 @@ contains
     PUSH_SUB(calc_photon_number)
 
     ! The photon dimension is always the last
-    dim_photon = gr%mesh%sb%dim
+    dim_photon = gr%sb%dim
 
     SAFE_ALLOCATE(psi(1:gr%mesh%np_part, 1))
     SAFE_ALLOCATE(psi_q2(1:gr%mesh%np))
