@@ -60,7 +60,7 @@ module system_dftb_oct_m
     FLOAT, allocatable :: prev_tot_force(:,:) !< Used for the SCF convergence criterium
     integer, allocatable :: species(:)
     FLOAT, allocatable :: mass(:)
-    character(len=2), allocatable  :: labels(:)
+    character(len=LABEL_LEN), allocatable  :: labels(:)
     FLOAT, allocatable :: prev_acc(:,:,:) !< A storage of the prior times.
     FLOAT :: scc_tolerance
     type(geometry_t) :: geo
@@ -154,7 +154,7 @@ contains
 
     ispec = 1
     this%species(1) = 1
-    this%labels(1) = this%geo%atom(1)%label
+    this%labels(1) = trim(this%geo%atom(1)%label)
 
     do ii = 1, this%n_atom
       this%coords(1:3,ii) = this%geo%atom(ii)%x(1:3)
@@ -162,7 +162,7 @@ contains
       this%mass(ii) = species_mass(this%geo%atom(ii)%species)
       if ((ii > 1) .and. .not. (any(this%labels(1:ispec) == this%geo%atom(ii)%label))) then
         ispec = ispec + 1
-        this%labels(ispec) = this%geo%atom(ii)%label
+        this%labels(ispec) = trim(this%geo%atom(ii)%label)
       end if
       do jj = 1, ispec
         if (trim(this%geo%atom(ii)%label) == trim(this%labels(jj))) then
@@ -379,6 +379,7 @@ contains
 
     ! this routine is never called at present, no reason to be here
     ASSERT(.false.)
+    converged = .false.
 
     POP_SUB(system_dftb_is_tolerance_reached)
   end function system_dftb_is_tolerance_reached
