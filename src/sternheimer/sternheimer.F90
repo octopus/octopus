@@ -262,7 +262,7 @@ contains
     if(this%add_fxc) call sternheimer_build_fxc(this, sys%namespace, sys%gr%mesh, sys%st, sys%ks)
 
 
-    !%Variable EnableElPtCoupling
+    !%Variable EnablePhotons
     !%Type logical
     !%Default no
     !%Section Linear Response::Sternheimer
@@ -270,7 +270,7 @@ contains
     !% If set to yes, the photons are coupled to the electronic subsystem in the frequency-dependent
     !% Sternheimer equation
     !%End
-    call parse_variable(global_namespace, 'EnableElPtCoupling', .false., this%enable_el_pt_coupling)
+    call parse_variable(global_namespace, 'EnablePhotons', .false., this%enable_el_pt_coupling)
     if(this%enable_el_pt_coupling) then
       message(1) = 'Info: Enable electron photon coupling: yes'
     else
