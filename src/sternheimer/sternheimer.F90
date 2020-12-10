@@ -140,9 +140,6 @@ contains
     integer :: ham_var, iunit
     logical :: default_preorthog
 
-    integer :: n_rows, idir
-    type(block_t) :: blk
-
     PUSH_SUB(sternheimer_init)
 
     call sternheimer_nullify(this)
