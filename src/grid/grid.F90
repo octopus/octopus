@@ -258,33 +258,12 @@ contains
     ! multigrid routines
     
     if(gr%have_fine_mesh) then
-
       if(gr%mesh%parallel_in_domains) then
         message(1) = 'UseFineMesh does not work with domain parallelization.'
         call messages_fatal(1)
       end if
 
-      SAFE_ALLOCATE(gr%fine%mesh)
-      SAFE_ALLOCATE(gr%fine%der)
-      
-      call multigrid_mesh_double(gr%cv, gr%mesh, gr%fine%mesh, gr%stencil, namespace)
-
-      call derivatives_nullify(gr%fine%der)      
-      call derivatives_init(gr%fine%der, namespace, gr%mesh%sb, gr%cv%method /= CURV_METHOD_UNIFORM)
-      
-      call mesh_init_stage_3(gr%fine%mesh, namespace, gr%stencil, mc)
-      
-      call multigrid_get_transfer_tables(gr%fine%tt, gr%fine%mesh, gr%mesh)
-      
-      message(1) = "Info: fine mesh"
-      call messages_info(1)
-      call derivatives_build(gr%fine%der, namespace, gr%fine%mesh)
-
-      gr%fine%der%coarser => gr%der
-      gr%der%finer =>  gr%fine%der
-      gr%fine%der%to_coarser => gr%fine%tt
-      gr%der%to_finer => gr%fine%tt
-
+      call initialize_fine_grid()
     else
       gr%fine%mesh => gr%mesh
       gr%fine%der => gr%der
@@ -294,6 +273,34 @@ contains
     call grid_write_info(gr, geo, stdout)
 
     POP_SUB(grid_init_stage_2)
+
+    contains
+      subroutine initialize_fine_grid()
+        PUSH_SUB(grid_init_stage_2.initialize_fine_grid)
+
+        SAFE_ALLOCATE(gr%fine%mesh)
+        SAFE_ALLOCATE(gr%fine%der)
+
+        call multigrid_mesh_double(gr%cv, gr%mesh, gr%fine%mesh, gr%stencil, namespace)
+
+        call derivatives_nullify(gr%fine%der)
+        call derivatives_init(gr%fine%der, namespace, gr%mesh%sb, gr%cv%method /= CURV_METHOD_UNIFORM)
+
+        call mesh_init_stage_3(gr%fine%mesh, namespace, gr%stencil, mc)
+
+        call multigrid_get_transfer_tables(gr%fine%tt, gr%fine%mesh, gr%mesh)
+
+        message(1) = "Info: fine mesh"
+        call messages_info(1)
+        call derivatives_build(gr%fine%der, namespace, gr%fine%mesh)
+
+        gr%fine%der%coarser => gr%der
+        gr%der%finer =>  gr%fine%der
+        gr%fine%der%to_coarser => gr%fine%tt
+        gr%der%to_finer => gr%fine%tt
+
+        POP_SUB(grid_init_stage_2.initialize_fine_grid)
+      end subroutine initialize_fine_grid
   end subroutine grid_init_stage_2
 
 
