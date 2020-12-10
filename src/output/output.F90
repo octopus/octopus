@@ -1530,8 +1530,7 @@ contains
 
     fn_unit = sqrt(units_out%length**(-mesh%sb%dim))
 
-    if(.not.(has_phase .and. .not.this%basis%submeshforperiodic &
-           .and.simul_box_is_periodic(mesh%sb)).and. .not. this%basisfromstates) then
+    if(this%basis%submesh) then
       if(states_are_real(st)) then
         SAFE_ALLOCATE(dtmp(1:mesh%np))
       else
@@ -1558,7 +1557,7 @@ contains
               end if
             end if
             if(has_phase) then
-              if(simul_box_is_periodic(mesh%sb) .and. .not. this%basis%submeshforperiodic) then
+              if(.not. this%basis%submesh) then
                call zio_function_output(outp%how, dir, fname, namespace, mesh, &
                   os%eorb_mesh(1:mesh%np,im,idim,ik), fn_unit, ierr, geo = geo)
               else
@@ -1567,7 +1566,7 @@ contains
                call zio_function_output(outp%how, dir, fname, namespace, mesh, tmp, fn_unit, ierr, geo = geo)
               end if
             else
-              if(this%basisfromstates) then
+              if(.not.this%basis%submesh) then
                 if (states_are_real(st)) then
                   call dio_function_output(outp%how, dir, fname, namespace, mesh, &
                       os%dorb(1:mesh%np,idim,im), fn_unit, ierr, geo = geo)
@@ -1592,11 +1591,8 @@ contains
       end do
     end do
 
-    if(.not.(has_phase .and. .not.this%basis%submeshforperiodic &
-               .and.simul_box_is_periodic(mesh%sb)).and. .not. this%basisfromstates) then
-      SAFE_DEALLOCATE_A(tmp)
-      SAFE_DEALLOCATE_A(dtmp)
-    end if
+    SAFE_DEALLOCATE_A(tmp)
+    SAFE_DEALLOCATE_A(dtmp)
 
     POP_SUB(output_dftu_orbitals)
   end subroutine output_dftu_orbitals

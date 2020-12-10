@@ -400,7 +400,7 @@ contains
 
     if(.not.this%basisfromstates) then
 
-      call orbitalbasis_init(this%basis, namespace)
+      call orbitalbasis_init(this%basis, namespace, gr%mesh%sb)
 
       if (states_are_real(st)) then
         call dorbitalbasis_build(this%basis, geo, gr%mesh, st%d%kpt, st%d%dim, &

@@ -488,10 +488,11 @@ contains
       call sys%st%group%psib(1, 1)%copy_to(epsib)
       call hamiltonian_elec_base_phase(sys%hm%hm_base, sys%gr%mesh, sys%gr%mesh%np, &
                .false., epsib, src=sys%st%group%psib(1, 1))
+      epsib2%has_phase = .true.
     end if
 
     !Initialize the orbital basis
-    call orbitalbasis_init(basis, sys%namespace)
+    call orbitalbasis_init(basis, sys%namespace, sys%gr%mesh%sb)
     if (states_are_real(sys%st)) then
       call dorbitalbasis_build(basis, sys%geo, sys%gr%mesh, sys%st%d%kpt, sys%st%d%dim, .false., .false.)
       SAFE_ALLOCATE(dweight(1:basis%orbsets(1)%norbs, 1:epsib%nst_linear))
@@ -514,13 +515,13 @@ contains
       if(states_are_real(sys%st)) then
         dweight = M_ONE
         ddot = M_ZERO
-        call dorbitalset_get_coeff_batch(basis%orbsets(1), 1, sys%st%group%psib(1, 1), .false., ddot)
-        call dorbitalset_add_to_batch(basis%orbsets(1), 1, epsib2, .false., dweight)
+        call dorbitalset_get_coeff_batch(basis%orbsets(1), sys%st%d%dim, sys%st%group%psib(1, 1), ddot)
+        call dorbitalset_add_to_batch(basis%orbsets(1), sys%st%d%dim, epsib2, dweight)
       else
         zweight = M_ONE
         zdot = M_ZERO
-        call zorbitalset_get_coeff_batch(basis%orbsets(1), sys%st%d%dim, epsib, .false., zdot)
-        call zorbitalset_add_to_batch(basis%orbsets(1), sys%st%d%dim, epsib2, .false., zweight)
+        call zorbitalset_get_coeff_batch(basis%orbsets(1), sys%st%d%dim, epsib, zdot)
+        call zorbitalset_add_to_batch(basis%orbsets(1), sys%st%d%dim, epsib2, zweight)
       end if
     end do
 

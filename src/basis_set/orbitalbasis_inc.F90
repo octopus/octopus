@@ -28,17 +28,25 @@ subroutine X(orbitalbasis_build)(this, geo, mesh, kpt, ndim, skip_s_orb, use_all
   logical,                   intent(in)       :: use_all_orb
   logical, optional,         intent(in)       :: verbose
 
-  integer :: ia, iorb, norb, offset, ios, idim
-  integer ::  hubbardl, ii, nn, ll, mm, work, work2, iorbset
-  FLOAT   :: norm, hubbardj, jj
+  integer :: ia, iorb, norb, offset, ios
+  integer :: hubbardl, ii, nn, ll, mm, work, work2, iorbset
+  FLOAT   :: hubbardj, jj
   integer :: n_s_orb
   type(orbitalset_t), pointer :: os
   logical :: hasjdependence
-  logical :: verbose_
+  logical :: verbose_, use_mesh
 
   PUSH_SUB(X(orbitalbasis_build))
 
   verbose_ = optional_default(verbose,.true.)
+
+  !Do we use a mesh or a submesh to store the orbitals
+  use_mesh = .not. this%submesh
+#ifdef R_TCOMPLEX
+  !In case of a phase, we want to use a submesh, to avoid problem
+  !with periodic systems and self-overlapping submeshes
+  use_mesh = .false.
+#endif
 
   if(verbose_) then
     write(message(1),'(a)')    'Building the LDA+U localized orbital basis.'
@@ -156,10 +164,10 @@ subroutine X(orbitalbasis_build)(this, geo, mesh, kpt, ndim, skip_s_orb, use_all
         end if
         os%Ueff = species_hubbard_u(geo%atom(ia)%species)
         os%alpha = species_hubbard_alpha(geo%atom(ia)%species)
-        os%submeshforperiodic = this%submeshforperiodic
+        os%submesh = this%submesh
         os%spec => geo%atom(ia)%species
         os%iatom = ia
-        call X(orbitalset_utils_getorbitals)(os, geo, mesh)
+        call X(orbitalset_utils_getorbitals)(os, geo, mesh, use_mesh, this%normalize)
       else
         !j = l-1/2
         iorbset = iorbset + 1
@@ -181,10 +189,10 @@ subroutine X(orbitalbasis_build)(this, geo, mesh, kpt, ndim, skip_s_orb, use_all
         os%norbs = norb-1
         os%Ueff = species_hubbard_u(geo%atom(ia)%species)
         os%alpha = species_hubbard_alpha(geo%atom(ia)%species)
-        os%submeshforperiodic = this%submeshforperiodic
+        os%submesh = this%submesh
         os%spec => geo%atom(ia)%species
         os%iatom = ia
-        call X(orbitalset_utils_getorbitals)(os, geo, mesh)
+        call X(orbitalset_utils_getorbitals)(os, geo, mesh, use_mesh, this%normalize)
 
         !j = l+1/2
         iorbset = iorbset + 1
@@ -206,10 +214,10 @@ subroutine X(orbitalbasis_build)(this, geo, mesh, kpt, ndim, skip_s_orb, use_all
         os%norbs = norb+1
         os%Ueff = species_hubbard_u(geo%atom(ia)%species)
         os%alpha = species_hubbard_alpha(geo%atom(ia)%species)
-        os%submeshforperiodic = this%submeshforperiodic
+        os%submesh = this%submesh
         os%spec => geo%atom(ia)%species
         os%iatom = ia
-        call X(orbitalset_utils_getorbitals)(os, geo, mesh)
+        call X(orbitalset_utils_getorbitals)(os, geo, mesh, use_mesh, this%normalize)
       end if
     else !use_all_orbitals
       ASSERT(.not.hasjdependence)
@@ -247,38 +255,13 @@ subroutine X(orbitalbasis_build)(this, geo, mesh, kpt, ndim, skip_s_orb, use_all
         os%ndim = 1
         os%Ueff = species_hubbard_u(geo%atom(ia)%species)
         os%alpha = species_hubbard_alpha(geo%atom(ia)%species)
-        os%submeshforperiodic = this%submeshforperiodic
+        os%submesh = this%submesh
         os%spec => geo%atom(ia)%species
         os%iatom = ia
-        call X(orbitalset_utils_getorbitals)(os, geo, mesh)
+        call X(orbitalset_utils_getorbitals)(os, geo, mesh, use_mesh, this%normalize)
       end do !norb
       iorbset = iorbset + work
     end if
-  end do
-
-  ! We have to normalize the orbitals, 
-  ! in case the orbitals that comes out of the pseudo are not properly normalised
-  do iorbset = 1, this%norbsets
-    os => this%orbsets(iorbset)
-    do iorb = 1, os%norbs
-      norm = M_ZERO
-      do idim = 1, os%ndim
-        norm = norm + X(sm_nrm2)(os%sphere, os%X(orb)(1:os%sphere%np,idim,iorb))**2
-      end do
-      norm = sqrt(norm)
-      if(this%normalize) then
-        do idim = 1, os%ndim
-          os%X(orb)(1:os%sphere%np,idim,iorb) =  &
-            os%X(orb)(1:os%sphere%np,idim,iorb)/norm
-        end do
-      else
-        if(verbose_) then
-          write(message(1),'(a,i3,a,i3,a,f8.5)') 'Info: Orbset ', iorbset, ' Orbital ', iorb, &
-                           ' norm= ',  norm
-          call messages_info(1)
-        end if
-      end if
-    end do
   end do
 
   this%maxnorbs = 0
@@ -292,7 +275,7 @@ subroutine X(orbitalbasis_build)(this, geo, mesh, kpt, ndim, skip_s_orb, use_all
   #ifdef R_TCOMPLEX
     SAFE_ALLOCATE(os%phase(1:os%sphere%np, kpt%start:kpt%end))
     os%phase(:,:) = M_ZERO
-    if(simul_box_is_periodic(mesh%sb) .and. .not. this%submeshforperiodic) then 
+    if(.not. this%submesh) then 
       SAFE_ALLOCATE(os%eorb_mesh(1:mesh%np, 1:os%norbs, 1:os%ndim, kpt%start:kpt%end))
       os%eorb_mesh(:,:,:,:) = M_ZERO
     else
@@ -304,7 +287,6 @@ subroutine X(orbitalbasis_build)(this, geo, mesh, kpt, ndim, skip_s_orb, use_all
     ! We need to know the maximum number of points in order to allocate a temporary array
     ! to apply the phase in lda_u_apply
     if(os%sphere%np > this%max_np) this%max_np = os%sphere%np
-
   end do  
 
   do ios = 1, this%norbsets
@@ -382,11 +364,11 @@ subroutine X(orbitalbasis_build_empty)(this, mesh, kpt, ndim, nstates, verbose)
   os%norbs = nstates
   os%Ueff = M_ZERO
   os%alpha = M_ZERO
-  os%submeshforperiodic = .false.
+  os%submesh = .false.
   os%sphere%mesh => mesh
   nullify(os%spec)
   os%iatom = -1
-  SAFE_ALLOCATE(os%X(orb)(1:mesh%np,1:os%ndim,1:os%norbs))
+  SAFE_ALLOCATE(os%X(orb)(1:mesh%np, 1:os%ndim, 1:os%norbs))
   os%X(orb)(:,:,:) = R_TOTYPE(M_ZERO)
 
   this%maxnorbs = nstates

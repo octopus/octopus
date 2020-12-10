@@ -20,6 +20,7 @@
 module atomic_orbital_oct_m
   use geometry_oct_m
   use global_oct_m
+  use lalg_basic_oct_m
   use loct_math_oct_m
   use math_oct_m
   use mesh_oct_m
