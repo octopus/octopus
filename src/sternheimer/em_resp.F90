@@ -1011,13 +1011,14 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine em_resp_output(st, namespace, gr, hm, geo, outp, em_vars, iomega, ifactor)
+  subroutine em_resp_output(st, namespace, gr, hm, geo, outp, sh, em_vars, iomega, ifactor)
     type(states_elec_t),      intent(inout) :: st
     type(namespace_t),        intent(in)    :: namespace
     type(grid_t),             intent(inout) :: gr
     type(hamiltonian_elec_t), intent(inout) :: hm
     type(geometry_t),         intent(inout) :: geo
     type(output_t),           intent(in)    :: outp
+    type(sternheimer_t),      intent(in)    :: sh
     type(em_resp_t),          intent(inout) :: em_vars
     integer,                  intent(in)    :: iomega
     integer,                  intent(in)    :: ifactor
@@ -1035,6 +1036,15 @@ contains
     if(em_vars%calc_magnetooptics) str_tmp = freq2str(units_from_atomic(units_out%energy, em_vars%omega(iomega)))
     write(dirname, '(a, a)') EM_RESP_DIR//'freq_', trim(str_tmp)
     call io_mkdir(trim(dirname), namespace)
+
+    if (sh%enable_el_pt_coupling) then
+      iunit = io_open(trim(dirname)//'/photon_coord_q', namespace, action='write')
+      write(iunit, '(3a)') 'Photon coordinate Q [', trim(units_abbrev(units_out%energy)), ']'
+      write(iunit, '(3a)') '                 Re                Im'
+      write(iunit, '(f20.6,f20.6)') units_from_atomic(units_out%energy, real(sh%zphoton_coord_q)), &
+                                    units_from_atomic(units_out%energy, aimag(sh%zphoton_coord_q))
+      call io_close(iunit)
+    end if
 
     call write_eta()
 

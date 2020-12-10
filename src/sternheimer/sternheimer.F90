@@ -25,9 +25,11 @@ module sternheimer_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_elec_oct_m
+  use io_oct_m
   use lalg_basic_oct_m
   use linear_response_oct_m
   use linear_solver_oct_m
+  use math_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
@@ -37,6 +39,7 @@ module sternheimer_oct_m
   use namespace_oct_m
   use parser_oct_m
   use pert_oct_m
+  use photon_mode_oct_m
   use poisson_oct_m
   use preconditioners_oct_m
   use profiling_oct_m
@@ -90,6 +93,8 @@ module sternheimer_oct_m
        dcalc_kvar,                &
        zcalc_kvar
 
+  character(len=*), public, parameter :: EM_RESP_PHOTONS_DIR = "em_resp_photons/"
+
   type sternheimer_t
      private
      type(linear_solver_t) :: solver
@@ -108,9 +113,16 @@ module sternheimer_oct_m
      logical               :: last_occ_response
      logical               :: occ_response_by_sternheimer
      logical               :: preorthogonalization
+     logical, public       :: enable_el_pt_coupling  !< switch on photoncoupling
+     FLOAT                 :: domega          !< current frequency for which we solve the freq.-dep. equation
+     CMPLX                 :: zomega          !< current frequency for which we solve the freq.-dep. equation
+     FLOAT, allocatable, public  :: dphoton_coord_q(:) !< canonical photon coordinate
+     CMPLX, allocatable, public  :: zphoton_coord_q(:) !< canonical photon coordinate
+     FLOAT                 :: el_pt_eta      !< broadening for photonic subsystem
+     type(photon_mode_t)   :: pt_modes
   end type sternheimer_t
   
-  type(profile_t), save :: prof, prof_hvar
+  type(profile_t), save :: prof, prof_hvar, prof_hvar_photons
 
 contains
   
@@ -125,8 +137,11 @@ contains
     logical,    optional, intent(in)    :: set_last_occ_response
     logical,    optional, intent(in)    :: occ_response_by_sternheimer
 
-    integer :: ham_var
+    integer :: ham_var, iunit
     logical :: default_preorthog
+
+    integer :: n_rows, idir
+    type(block_t) :: blk
 
     PUSH_SUB(sternheimer_init)
 
@@ -246,6 +261,44 @@ contains
 
     if(this%add_fxc) call sternheimer_build_fxc(this, sys%namespace, sys%gr%mesh, sys%st, sys%ks)
 
+
+    !%Variable EnableElPtCoupling
+    !%Type logical
+    !%Default no
+    !%Section Linear Response::Sternheimer
+    !%Description
+    !% If set to yes, the photons are coupled to the electronic subsystem in the frequency-dependent
+    !% Sternheimer equation
+    !%End
+    call parse_variable(global_namespace, 'EnableElPtCoupling', .false., this%enable_el_pt_coupling)
+    if(this%enable_el_pt_coupling) then
+      message(1) = 'Info: Enable electron photon coupling: yes'
+    else
+      message(1) = 'Info: Enable electron photon coupling: no'
+    end if
+    call messages_info(1)
+
+    if(this%enable_el_pt_coupling) then
+      call photon_mode_init(this%pt_modes, sys%namespace, sys%gr%mesh, sys%gr%mesh%sb%dim, M_ZERO)
+      call io_mkdir(EM_RESP_PHOTONS_DIR, sys%namespace)
+      iunit = io_open(EM_RESP_PHOTONS_DIR // 'photon_modes', sys%namespace, action='write')
+      call photon_mode_write_info(this%pt_modes, iunit)
+      SAFE_ALLOCATE(this%zphoton_coord_q(1:this%pt_modes%nmodes))
+    end if
+
+    !%Variable ElectronPhotonEta
+    !%Type float
+    !%Default 0.000367
+    !%Section Linear Response::Sternheimer
+    !%Description
+    !% This variable provides the value for the broadening of the photonic spectra
+    !% when the coupling of electrons to photons is enabled in the frequency-dependent Sternheimer equation
+    !%End
+    call parse_variable(sys%namespace, 'ElectronPhotonEta', CNST(0.000367), this%el_pt_eta, units_inp%energy)
+    write(message(1), '(a,f12.6)') 'Info: Electron-photon Eta: ', this%el_pt_eta
+    call messages_info(1)
+
+
     POP_SUB(sternheimer_init)
   end subroutine sternheimer_init
 
@@ -271,6 +324,9 @@ contains
 
     PUSH_SUB(sternheimer_end)
 
+    if(this%enable_el_pt_coupling) then
+      SAFE_DEALLOCATE_A(this%zphoton_coord_q)
+    end if
     call linear_solver_end(this%solver)
     call scf_tol_end(this%scf_tol)
     call mix_end(this%mixer)

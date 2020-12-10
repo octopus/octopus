@@ -504,8 +504,10 @@ subroutine X(sternheimer_calc_hvar)(this, sys, lr, nsigma, hvar)
 
   if(this%add_fxc) then
     call X(calc_hvar)(this%add_hartree, sys, lr(1)%X(dl_rho), nsigma, hvar, fxc = this%fxc)
+    call X(calc_hvar_photons)(this, sys, lr(1)%X(dl_rho), nsigma, hvar, fxc = this%fxc)
   else
     call X(calc_hvar)(this%add_hartree, sys, lr(1)%X(dl_rho), nsigma, hvar)
+    call X(calc_hvar_photons)(this, sys, lr(1)%X(dl_rho), nsigma, hvar)
   end if
 
   POP_SUB(X(sternheimer_calc_hvar))
@@ -561,7 +563,7 @@ subroutine X(calc_hvar)(add_hartree, sys, lr_rho, nsigma, hvar, fxc)
       end do
     end if
   end do
-  
+
   if (nsigma == 2) hvar(1:np, 1:sys%st%d%nspin, 2) = R_CONJ(hvar(1:np, 1:sys%st%d%nspin, 1))
 
   if (add_hartree) then
@@ -571,6 +573,91 @@ subroutine X(calc_hvar)(add_hartree, sys, lr_rho, nsigma, hvar, fxc)
   call profiling_out(prof_hvar)
   POP_SUB(X(calc_hvar))
 end subroutine X(calc_hvar)
+
+
+!--------------------------------------------------------------
+subroutine X(calc_hvar_photons)(this, sys, lr_rho, nsigma, hvar, fxc)
+  type(sternheimer_t),    intent(inout) :: this
+  type(electrons_t),      intent(inout) :: sys
+  integer,                intent(in)    :: nsigma
+  R_TYPE,                 intent(in)    :: lr_rho(:,:)
+  R_TYPE,                 intent(inout) :: hvar(:,:,:) !< (1:mesh%np, 1:st%d%nspin, 1:nsigma)
+  FLOAT, optional,        intent(in)    :: fxc(:,:,:) !< (1:mesh%np, 1:st%d%nspin, 1:st%d%nspin)
+
+  R_TYPE, allocatable :: s_lr_rho(:), vp_dip_self_ener(:), vp_bilinear_el_pt(:)
+  R_TYPE, allocatable :: omg2_lmda_r(:), first_moments(:), lambda_dot_r(:)
+  integer :: np, nm, is, ii, ispin
+  CMPLX :: integral_result
+
+  PUSH_SUB(X(calc_hvar_photons))
+  call profiling_in(prof_hvar_photons, TOSTRING(X(CALC_HVAR_PHOTONS)))
+
+  np = sys%gr%mesh%np
+  nm = this%pt_modes%nmodes
+
+  ! photonic terms
+  if(this%enable_el_pt_coupling) then
+    SAFE_ALLOCATE(s_lr_rho(1:np))
+    SAFE_ALLOCATE(omg2_lmda_r(1:np))
+    SAFE_ALLOCATE(lambda_dot_r(1:np))
+    SAFE_ALLOCATE(first_moments(1:nm))
+    SAFE_ALLOCATE(vp_dip_self_ener(1:np))
+    SAFE_ALLOCATE(vp_bilinear_el_pt(1:np))
+
+    ! spin summed density
+    s_lr_rho = M_ZERO
+    do is = 1,sys%st%d%nspin
+      s_lr_rho = s_lr_rho + lr_rho(:, is)
+    end do
+
+    ! Compute photon q_{\alpha}s and potential for bilinear el-pt coupling
+    vp_bilinear_el_pt = M_ZERO
+    do ii = 1, nm
+      omg2_lmda_r(1:np) = - (this%pt_modes%omega(ii))**2*this%pt_modes%lambda(ii) * &
+              (this%pt_modes%pol(ii, 1)*sys%gr%mesh%x(1:np, 1) +  &
+               this%pt_modes%pol(ii, 2)*sys%gr%mesh%x(1:np, 2) +  &
+               this%pt_modes%pol(ii, 3)*sys%gr%mesh%x(1:np, 3))
+      first_moments(ii) = X(mf_integrate)(sys%gr%mesh, omg2_lmda_r(1:np)*s_lr_rho(1:np))
+
+      this%zphoton_coord_q(ii) = (M_ONE/(M_TWO*(this%pt_modes%omega(ii))**2)) * &
+              ((M_ONE/(this%X(omega) - this%pt_modes%omega(ii) + M_zI*this%el_pt_eta)) -  &
+               (M_ONE/(this%X(omega) + this%pt_modes%omega(ii) + M_zI*this%el_pt_eta))) * &
+              first_moments(ii)
+
+      vp_bilinear_el_pt = vp_bilinear_el_pt - &
+              this%pt_modes%omega(ii)*this%pt_modes%lambda(ii) * &
+              (this%pt_modes%pol(ii, 1)*sys%gr%mesh%x(1:np, 1) + &
+               this%pt_modes%pol(ii, 2)*sys%gr%mesh%x(1:np, 2) + &
+               this%pt_modes%pol(ii, 3)*sys%gr%mesh%x(1:np, 3))*this%zphoton_coord_q(ii)
+    end do
+
+    ! Compute potential with dipole-self energy contribution
+    vp_dip_self_ener = M_ZERO
+    do ii = 1, nm
+      lambda_dot_r(1:np) = this%pt_modes%lambda(ii) * &
+              (this%pt_modes%pol(ii, 1)*sys%gr%mesh%x(1:np, 1) + &
+               this%pt_modes%pol(ii, 2)*sys%gr%mesh%x(1:np, 2) + &
+               this%pt_modes%pol(ii, 3)*sys%gr%mesh%x(1:np, 3))
+       integral_result = X(mf_integrate)(sys%gr%mesh, lambda_dot_r(1:np)*s_lr_rho(1:np))
+       vp_dip_self_ener = vp_dip_self_ener + integral_result*lambda_dot_r(1:np)
+    end do
+
+    hvar(1:np, 1, 1) = hvar(1:np, 1, 1) + vp_dip_self_ener(1:np) + vp_bilinear_el_pt(1:np)
+    write(*,*) 'hvar(1:np, 1, 1)', hvar(1:np, 1, 1)
+
+    SAFE_DEALLOCATE_A(s_lr_rho)
+    SAFE_DEALLOCATE_A(omg2_lmda_r)
+    SAFE_DEALLOCATE_A(lambda_dot_r)
+    SAFE_DEALLOCATE_A(first_moments)
+    SAFE_DEALLOCATE_A(vp_dip_self_ener)
+    SAFE_DEALLOCATE_A(vp_bilinear_el_pt)
+  end if
+
+  if (nsigma == 2) hvar(1:np, 1:sys%st%d%nspin, 2) = R_CONJ(hvar(1:np, 1:sys%st%d%nspin, 1))
+
+  call profiling_out(prof_hvar_photons)
+  POP_SUB(X(calc_hvar_photons))
+end subroutine X(calc_hvar_photons)
 
 !--------------------------------------------------------------
 subroutine X(calc_kvar)(this, sys, lr_rho1, lr_rho2, nsigma, kvar)
