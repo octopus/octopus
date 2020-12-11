@@ -27,6 +27,7 @@ module system_factory_oct_m
   use namespace_oct_m
   use electrons_oct_m
   use system_oct_m
+  use system_dftb_oct_m
   use system_factory_abst_oct_m
   use system_mxll_oct_m
   implicit none
@@ -40,7 +41,8 @@ module system_factory_oct_m
     SYSTEM_MAXWELL            = 2,  &
     SYSTEM_CLASSICAL_PARTICLE = 3,  &
     SYSTEM_CHARGED_PARTICLE   = 4,  &
-    SYSTEM_MULTISYSTEM        = 5
+    SYSTEM_DFTBPLUS           = 5,  &
+    SYSTEM_MULTISYSTEM        = 6
 
 
   type, extends(system_factory_abst_t) :: system_factory_t
@@ -77,7 +79,9 @@ contains
     !% A classical particle. Used for testing purposes only.
     !%Option charged_particle 4
     !% A charged classical particle.
-    !%Option multisystem 5
+    !%Option dftbplus 5
+    !% A DFTB+ system
+    !%Option multisystem 6
     !% A system containing other systems.
     !%End
     select case (type)
@@ -91,6 +95,8 @@ contains
       system => classical_particle_t(namespace_t(name, parent=namespace))
     case (SYSTEM_CHARGED_PARTICLE)
       system => charged_particle_t(namespace_t(name, parent=namespace))
+    case (SYSTEM_DFTBPLUS)
+      system => system_dftb_t(namespace_t(name, parent=namespace))
     case default
       system => null()
     end select

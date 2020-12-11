@@ -587,6 +587,12 @@ maxwell_f_srcs =                                 \
 
 maxwell_srcs = $(maxwell_f_srcs)
 
+# Sources in dftbplus
+dftbplus_f_srcs =                                \
+	dftbplus/system_dftb.F90
+
+dftbplus_srcs = $(dftplus_f_srcs)
+
 # Sources in scf
 scf_f_srcs =                                 \
 	scf/electrons_ground_state.F90       \
@@ -689,7 +695,7 @@ noinst_HEADERS +=                                    \
 all_f_srcs = $(basic_f_srcs) $(basis_set_f_srcs) $(math_f_srcs) $(species_f_srcs) \
 	     $(ions_f_srcs) $(grid_f_srcs) $(poisson_f_srcs) $(states_f_srcs) \
 	     $(hamiltonian_f_srcs) $(multisystem_f_srcs) $(interactions_f_srcs) $(classical_f_srcs) \
-	     $(output_f_srcs) $(electrons_f_srcs) $(maxwell_f_srcs) \
+	     $(output_f_srcs) $(electrons_f_srcs) $(maxwell_f_srcs) $(dftbplus_f_srcs)\
 	     $(scf_f_srcs)  $(td_f_srcs) $(opt_control_f_srcs) $(sternheimer_f_srcs)
 
 all_c_srcs = $(basic_c_srcs) $(math_c_srcs) $(species_c_srcs) $(ions_c_srcs) \
