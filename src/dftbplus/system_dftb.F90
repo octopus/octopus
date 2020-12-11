@@ -37,6 +37,7 @@ module system_dftb_oct_m
   use profiling_oct_m
   use propagator_oct_m
   use propagator_verlet_oct_m
+  use quantity_oct_m
   use space_oct_m
   use species_oct_m
   use system_oct_m
@@ -342,6 +343,7 @@ contains
         this%coords(1:this%space%dim, jj) = this%coords(1:this%space%dim, jj) + this%prop%dt * this%vel(1:this%space%dim, jj) &
                                          + M_HALF * this%prop%dt**2 * this%acc(1:this%space%dim, jj)
       end do
+      this%quantities(POSITION)%clock = this%quantities(POSITION)%clock + CLOCK_TICK
 
     case (VERLET_COMPUTE_ACC)
       do ii = size(this%prev_acc, dim=3) - 1, 1, -1
@@ -361,6 +363,7 @@ contains
       this%vel(1:this%space%dim, 1:this%n_atom) = this%vel(1:this%space%dim, 1:this%n_atom) &
            + M_HALF * this%prop%dt * (this%prev_acc(1:this%space%dim, 1:this%n_atom, 1) + &
            this%acc(1:this%space%dim, 1:this%n_atom))
+      this%quantities(VELOCITY)%clock = this%quantities(VELOCITY)%clock + CLOCK_TICK
 
     case default
       message(1) = "Unsupported TD operation."
