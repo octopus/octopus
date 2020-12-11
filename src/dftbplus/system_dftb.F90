@@ -175,7 +175,7 @@ contains
 
     !%Variable MaxAngularMomentum
     !%Type block
-    !%Section DftbPlusInterface
+    !%Section DFTBPlusInterface
     !%Description
     !% Specifies the highest angular momentum for each atom type. All orbitals up
     !% to that angular momentum will be included in the calculation.
