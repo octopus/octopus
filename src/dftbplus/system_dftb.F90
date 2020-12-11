@@ -314,13 +314,9 @@ contains
     class(system_dftb_t),    intent(inout) :: this
     class(algorithmic_operation_t), intent(in)    :: operation
 
-    integer :: ii, jj !, sdim
-    !LOAT, allocatable :: tmp_pos(:, :), tmp_vel(:, :)
-    !LOAT :: factor
+    integer :: ii, jj
 
     PUSH_SUB(system_dftb_do_td)
-
-    !sdim = this%space%dim
 
     select case (operation%id)
     case (SKIP)
