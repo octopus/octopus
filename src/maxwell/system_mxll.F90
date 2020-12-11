@@ -28,6 +28,7 @@ module system_mxll_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_mxll_oct_m
+  use index_oct_m
   use interaction_oct_m
   use interactions_factory_oct_m
   use iso_c_binding
@@ -356,7 +357,7 @@ contains
       call spatial_constant_calculation(this%tr_mxll%bc_constant, this%st, this%gr, this%hm, M_ZERO, &
            this%prop%dt/this%tr_mxll%inter_steps, this%tr_mxll%delay_time, this%st%rs_state, &
            set_initial_state = .true.)
-      this%st%rs_state_const(:) = this%st%rs_state(this%gr%mesh%idx%lxyz_inv(0,0,0),:)
+      this%st%rs_state_const(:) = this%st%rs_state(index_from_coords(this%gr%mesh%idx, [0,0,0]),:)
     end if
 
     if (parse_is_defined(this%namespace, 'UserDefinedInitialMaxwellStates')) then

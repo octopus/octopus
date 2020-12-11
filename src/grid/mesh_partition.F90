@@ -575,7 +575,7 @@ contains
       ix = 2*mesh%idx%lxyz(ip_global, 1)
       iy = 2*mesh%idx%lxyz(ip_global, 2)
       iz = 2*mesh%idx%lxyz(ip_global, 3)
-      ii = parent%idx%lxyz_inv(ix, iy, iz)
+      ii = index_from_coords(parent%idx, [ix, iy, iz])
       points(ip_local) = ii
     end do
     call partition_get_partition_number(parent%inner_partition, np, points, part)

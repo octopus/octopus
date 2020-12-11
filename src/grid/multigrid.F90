@@ -23,6 +23,7 @@ module multigrid_oct_m
   use curvilinear_oct_m
   use derivatives_oct_m
   use global_oct_m
+  use index_oct_m
   use math_oct_m
   use mesh_oct_m
   use mesh_init_oct_m
@@ -225,7 +226,7 @@ contains
       ! translate to a global index of the coarse grid
       if(coarse%parallel_in_domains) ig = coarse%vp%local(ig - 1 + coarse%vp%xlocal)
       ! locate the equivalent global fine grid point
-      ig = fine%idx%lxyz_inv(2*coarse%idx%lxyz(ig, 1), 2*coarse%idx%lxyz(ig, 2), 2*coarse%idx%lxyz(ig, 3))
+      ig = index_from_coords(fine%idx, [2*coarse%idx%lxyz(ig, 1), 2*coarse%idx%lxyz(ig, 2), 2*coarse%idx%lxyz(ig, 3)])
       ! translate to a local number of the fine grid
       if(fine%parallel_in_domains) ig = vec_global2local(fine%vp, ig, fine%vp%partno)
       tt%to_coarse(i) = ig
@@ -284,30 +285,30 @@ contains
       select case(pt)
       case(0)
         i1 = i1 + 1
-        tt%to_fine1(1, i1) = coarse%idx%lxyz_inv(x(1), x(2), x(3))
+        tt%to_fine1(1, i1) = index_from_coords(coarse%idx, [x(1), x(2), x(3)])
         
       case(1)
         i2 = i2 + 1
-        tt%to_fine2(1, i2) = coarse%idx%lxyz_inv(x(1)          , x(2)          , x(3)          )
-        tt%to_fine2(2, i2) = coarse%idx%lxyz_inv(x(1) + mod2(1), x(2) + mod2(2), x(3) + mod2(3))
+        tt%to_fine2(1, i2) = index_from_coords(coarse%idx, [x(1)          , x(2)          , x(3)          ])
+        tt%to_fine2(2, i2) = index_from_coords(coarse%idx, [x(1) + mod2(1), x(2) + mod2(2), x(3) + mod2(3)])
         
       case(2)
         i4 = i4 + 1
-        tt%to_fine4(1, i4) = coarse%idx%lxyz_inv(x(1)          , x(2) + mod2(2), x(3) + mod2(3))
-        tt%to_fine4(2, i4) = coarse%idx%lxyz_inv(x(1) + mod2(1), x(2)          , x(3) + mod2(3))
-        tt%to_fine4(3, i4) = coarse%idx%lxyz_inv(x(1) + mod2(1), x(2) + mod2(2), x(3)          )
-        tt%to_fine4(4, i4) = coarse%idx%lxyz_inv(x(1) + mod2(1), x(2) + mod2(2), x(3) + mod2(3))
+        tt%to_fine4(1, i4) = index_from_coords(coarse%idx, [x(1)          , x(2) + mod2(2), x(3) + mod2(3)])
+        tt%to_fine4(2, i4) = index_from_coords(coarse%idx, [x(1) + mod2(1), x(2)          , x(3) + mod2(3)])
+        tt%to_fine4(3, i4) = index_from_coords(coarse%idx, [x(1) + mod2(1), x(2) + mod2(2), x(3)          ])
+        tt%to_fine4(4, i4) = index_from_coords(coarse%idx, [x(1) + mod2(1), x(2) + mod2(2), x(3) + mod2(3)])
         
       case(3)
         i8 = i8 + 1
-        tt%to_fine8(1, i8) = coarse%idx%lxyz_inv(x(1)          , x(2)          , x(3)          )
-        tt%to_fine8(2, i8) = coarse%idx%lxyz_inv(x(1) + mod2(1), x(2)          , x(3)          )
-        tt%to_fine8(3, i8) = coarse%idx%lxyz_inv(x(1)          , x(2) + mod2(2), x(3)          )
-        tt%to_fine8(4, i8) = coarse%idx%lxyz_inv(x(1)          , x(2)          , x(3) + mod2(3))
-        tt%to_fine8(5, i8) = coarse%idx%lxyz_inv(x(1)          , x(2) + mod2(2), x(3) + mod2(3))
-        tt%to_fine8(6, i8) = coarse%idx%lxyz_inv(x(1) + mod2(1), x(2)          , x(3) + mod2(3))
-        tt%to_fine8(7, i8) = coarse%idx%lxyz_inv(x(1) + mod2(1), x(2) + mod2(2), x(3)          )
-        tt%to_fine8(8, i8) = coarse%idx%lxyz_inv(x(1) + mod2(1), x(2) + mod2(2), x(3) + mod2(3))
+        tt%to_fine8(1, i8) = index_from_coords(coarse%idx, [x(1)          , x(2)          , x(3)          ])
+        tt%to_fine8(2, i8) = index_from_coords(coarse%idx, [x(1) + mod2(1), x(2)          , x(3)          ])
+        tt%to_fine8(3, i8) = index_from_coords(coarse%idx, [x(1)          , x(2) + mod2(2), x(3)          ])
+        tt%to_fine8(4, i8) = index_from_coords(coarse%idx, [x(1)          , x(2)          , x(3) + mod2(3)])
+        tt%to_fine8(5, i8) = index_from_coords(coarse%idx, [x(1)          , x(2) + mod2(2), x(3) + mod2(3)])
+        tt%to_fine8(6, i8) = index_from_coords(coarse%idx, [x(1) + mod2(1), x(2)          , x(3) + mod2(3)])
+        tt%to_fine8(7, i8) = index_from_coords(coarse%idx, [x(1) + mod2(1), x(2) + mod2(2), x(3)          ])
+        tt%to_fine8(8, i8) = index_from_coords(coarse%idx, [x(1) + mod2(1), x(2) + mod2(2), x(3) + mod2(3)])
         
       end select
       

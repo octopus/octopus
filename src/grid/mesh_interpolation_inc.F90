@@ -91,19 +91,19 @@ subroutine X(mesh_interpolation_evaluate_vec)(this, npoints, values, positions, 
 
     ! get the point indices (this could be done in a loop with bit tricks)
     
-    pt(i000) = mesh%idx%lxyz_inv(0 + nm(1), 0 + nm(2), 0 + nm(3))
-    pt(i100) = mesh%idx%lxyz_inv(1 + nm(1), 0 + nm(2), 0 + nm(3))
+    pt(i000) = index_from_coords(mesh%idx, [0 + nm(1), 0 + nm(2), 0 + nm(3)])
+    pt(i100) = index_from_coords(mesh%idx, [1 + nm(1), 0 + nm(2), 0 + nm(3)])
 
     if(mesh%sb%dim >= 2) then
-      pt(i010) = mesh%idx%lxyz_inv(0 + nm(1), 1 + nm(2), 0 + nm(3))
-      pt(i110) = mesh%idx%lxyz_inv(1 + nm(1), 1 + nm(2), 0 + nm(3))
+      pt(i010) = index_from_coords(mesh%idx, [0 + nm(1), 1 + nm(2), 0 + nm(3)])
+      pt(i110) = index_from_coords(mesh%idx, [1 + nm(1), 1 + nm(2), 0 + nm(3)])
     end if
 
     if(mesh%sb%dim >= 3) then
-      pt(i001) = mesh%idx%lxyz_inv(0 + nm(1), 0 + nm(2), 1 + nm(3))
-      pt(i101) = mesh%idx%lxyz_inv(1 + nm(1), 0 + nm(2), 1 + nm(3))
-      pt(i011) = mesh%idx%lxyz_inv(0 + nm(1), 1 + nm(2), 1 + nm(3))
-      pt(i111) = mesh%idx%lxyz_inv(1 + nm(1), 1 + nm(2), 1 + nm(3))
+      pt(i001) = index_from_coords(mesh%idx, [0 + nm(1), 0 + nm(2), 1 + nm(3)])
+      pt(i101) = index_from_coords(mesh%idx, [1 + nm(1), 0 + nm(2), 1 + nm(3)])
+      pt(i011) = index_from_coords(mesh%idx, [0 + nm(1), 1 + nm(2), 1 + nm(3)])
+      pt(i111) = index_from_coords(mesh%idx, [1 + nm(1), 1 + nm(2), 1 + nm(3)])
     end if
 
      if(mesh%parallel_in_domains) then

@@ -20,6 +20,7 @@
 
 module symmetrizer_oct_m
   use global_oct_m
+  use index_oct_m
   use messages_oct_m
   use mesh_oct_m
   use mpi_oct_m
@@ -131,8 +132,10 @@ contains
         ASSERT(all(srcpoint_inv < lsize))
         srcpoint_inv(1:3) = srcpoint_inv(1:3) + offset(1:3)
 
-        this%map(ip, iop) = this%mesh%idx%lxyz_inv(nint(srcpoint(1)), nint(srcpoint(2)), nint(srcpoint(3)))
-        this%map_inv(ip, iop) = this%mesh%idx%lxyz_inv(nint(srcpoint_inv(1)), nint(srcpoint_inv(2)), nint(srcpoint_inv(3)))
+        this%map(ip, iop) = index_from_coords(this%mesh%idx, &
+          [nint(srcpoint(1)), nint(srcpoint(2)), nint(srcpoint(3))])
+        this%map_inv(ip, iop) = index_from_coords(this%mesh%idx, &
+          [nint(srcpoint_inv(1)), nint(srcpoint_inv(2)), nint(srcpoint_inv(3))])
       end do
     end do
 

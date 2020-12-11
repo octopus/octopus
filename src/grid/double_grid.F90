@@ -20,6 +20,7 @@
 
 module double_grid_oct_m
   use global_oct_m
+  use index_oct_m
   use math_oct_m
   use mesh_oct_m
   use messages_oct_m
@@ -242,7 +243,7 @@ contains
         rr = start(3)
         do nn = this%interpolation_min, this%interpolation_max
           
-          ip = mesh%idx%lxyz_inv(pp, qq, rr)
+          ip = index_from_coords(mesh%idx, [pp, qq, rr])
           !map the global point to a local point
           if (mesh%parallel_in_domains) ip = vec_global2local(mesh%vp, ip, mesh%vp%partno)
           if (ip > 0) then

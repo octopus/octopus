@@ -723,7 +723,7 @@ contains
               map(ip) = 0
               grid_reordered = .false.
             else
-              map(ip) = mesh%idx%lxyz_inv(xx(1), xx(2), xx(3))
+              map(ip) = index_from_coords(mesh%idx, [xx(1), xx(2), xx(3)])
               if(map(ip) > mesh%np_global) map(ip) = 0
             end if
           end do
@@ -792,7 +792,7 @@ contains
       if(ix(idim) > nr(2, idim)) ix(idim) = ix(idim) - mesh%idx%ll(idim)
     end do
     
-    ipp = mesh%idx%lxyz_inv(ix(1), ix(2), ix(3))
+    ipp = index_from_coords(mesh%idx, [ix(1), ix(2), ix(3)])
 
     if(mesh%masked_periodic_boundaries) then
       call mesh_r(mesh, ip_local, rr, coords = xx)

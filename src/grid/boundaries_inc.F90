@@ -349,10 +349,10 @@ contains
                   boundaries%mesh%sb%hr_area%interp%ww(jj) *        &
                   boundaries%mesh%sb%hr_area%interp%ww(kk)
 
-                ff(ip) = ff(ip) + weight * ff(boundaries%mesh%idx%lxyz_inv(   &
-                  ix + boundaries%mesh%sb%hr_area%interp%posi(ii) * dx,       &
-                  iy + boundaries%mesh%sb%hr_area%interp%posi(jj) * dy,       &
-                  iz + boundaries%mesh%sb%hr_area%interp%posi(kk) * dz))
+                ff(ip) = ff(ip) + weight * ff(index_from_coords(boundaries%mesh%idx, [ &
+                  ix + boundaries%mesh%sb%hr_area%interp%posi(ii) * dx,   &
+                  iy + boundaries%mesh%sb%hr_area%interp%posi(jj) * dy,   &
+                  iz + boundaries%mesh%sb%hr_area%interp%posi(kk) * dz]))
               end do
             end do
           end do
