@@ -500,7 +500,7 @@ contains
       ! check if input makes sense
       ncols = parse_block_cols(blk, 0)
 
-      if(ncols /= gr%mesh%sb%dim ) then ! wrong size
+      if(ncols /= gr%sb%dim ) then ! wrong size
 
         if(mpi_grp_is_root(mpi_world)) then
           call messages_write('Inconsistent size of momentum-transfer vector. It will not be used in the TPA calculation.')
@@ -510,9 +510,9 @@ contains
       else ! correct size
 
         use_qvector = .true.
-        SAFE_ALLOCATE(qvector(1:gr%mesh%sb%dim))
+        SAFE_ALLOCATE(qvector(1:gr%sb%dim))
 
-        do icoord = 1,gr%mesh%sb%dim    !for x,y,z
+        do icoord = 1,gr%sb%dim    !for x,y,z
           call parse_block_float(blk, 0, icoord-1, qvector(icoord))
           qvector(icoord) = units_to_atomic(unit_one / units_inp%length, qvector(icoord))
         end do
@@ -527,7 +527,7 @@ contains
     if(use_qvector) then
       SAFE_ALLOCATE(cff(1:gr%mesh%np))
     end if
-    SAFE_ALLOCATE(osc(1:gr%mesh%sb%dim))
+    SAFE_ALLOCATE(osc(1:gr%sb%dim))
 
     ! root writes output to file
 
@@ -538,15 +538,15 @@ contains
       ! header
       if(use_qvector) then
         write (message(1),'(a1,a30,3(es14.5,1x),a1)') '#', ' momentum-transfer vector : (', &
-          (units_from_atomic(unit_one / units_out%length, qvector(icoord)), icoord=1, gr%mesh%sb%dim),')'
-        select case(gr%mesh%sb%dim)
+          (units_from_atomic(unit_one / units_out%length, qvector(icoord)), icoord=1, gr%sb%dim),')'
+        select case(gr%sb%dim)
           case(1); write(message(2), '(a1,4(a15,1x))') '#', 'E' , '<x>', '<f>', 'S(q,omega)'
           case(2); write(message(2), '(a1,5(a15,1x))') '#', 'E' , '<x>', '<y>', '<f>', 'S(q,omega)'
           case(3); write(message(2), '(a1,6(a15,1x))') '#', 'E' , '<x>', '<y>', '<z>', '<f>', 'S(q,omega)'
         end select
         call messages_info(2,iunit)
       else
-        select case(gr%mesh%sb%dim)
+        select case(gr%sb%dim)
           case(1); write(message(1), '(a1,3(a15,1x))') '#', 'E' , '<x>', '<f>'
           case(2); write(message(1), '(a1,4(a15,1x))') '#', 'E' , '<x>', '<y>', '<f>'
           case(3); write(message(1), '(a1,5(a15,1x))') '#', 'E' , '<x>', '<y>', '<z>', '<f>'
@@ -573,12 +573,12 @@ contains
         transition_energy = st%eigenval(ist, tpa_initialk) - st%eigenval(tpa_initialst, tpa_initialk)
 
         ! dipole matrix elements <f|x|i> etc. -> oscillator strengths
-        do icoord = 1, gr%mesh%sb%dim    ! for x,y,z
+        do icoord = 1, gr%sb%dim    ! for x,y,z
 
           ff(1:gr%mesh%np) = psi_initial(1:gr%mesh%np, 1)*gr%mesh%x(1:gr%mesh%np, icoord)* &
             psi_ist(1:gr%mesh%np, 1)
           osc(icoord)  = dmf_integrate(gr%mesh, ff)
-          osc_strength = osc_strength + CNST(2.0)/real(gr%mesh%sb%dim)*transition_energy*abs(osc(icoord))**2
+          osc_strength = osc_strength + CNST(2.0)/real(gr%sb%dim)*transition_energy*abs(osc(icoord))**2
 
         end do
 
@@ -587,7 +587,7 @@ contains
 
           cff(1:gr%mesh%np) = psi_initial(1:gr%mesh%np, 1)*psi_ist(1:gr%mesh%np, 1)
 
-          do icoord = 1, gr%mesh%sb%dim    ! for x,y,z
+          do icoord = 1, gr%sb%dim    ! for x,y,z
             cff(1:gr%mesh%np) = cff(1:gr%mesh%np)*exp(M_zI*gr%mesh%x(1:gr%mesh%np, icoord)*qvector(icoord))
           end do
 

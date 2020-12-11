@@ -235,7 +235,7 @@ contains
       if(pseudo_x_functional /= PSEUDO_EXCHANGE_ANY) then
         default = pseudo_x_functional
       else
-        select case(gr%mesh%sb%dim)
+        select case(gr%sb%dim)
         case(3); default = XC_LDA_X   
         case(2); default = XC_LDA_X_2D
         case(1); default = XC_LDA_X_1D
@@ -249,7 +249,7 @@ contains
       if(pseudo_c_functional /= PSEUDO_CORRELATION_ANY) then
         default = default + 1000*pseudo_c_functional
       else
-        select case(gr%mesh%sb%dim)
+        select case(gr%sb%dim)
         case(3); default = default + 1000*XC_LDA_C_PZ_MOD
         case(2); default = default + 1000*XC_LDA_C_2D_AMGB
         case(1); default = default + 1000*XC_LDA_C_1D_CSC
@@ -317,7 +317,7 @@ contains
     ! but it might become Hartree-Fock later. This is safe because it
     ! becomes Hartree-Fock in the cases where the functional is hybrid
     ! and the ifs inside check for both conditions.
-    call xc_init(ks%xc, namespace, gr%mesh%sb%dim, gr%mesh%sb%periodic_dim, st%qtot, &
+    call xc_init(ks%xc, namespace, gr%sb%dim, gr%sb%periodic_dim, st%qtot, &
       x_id, c_id, xk_id, ck_id, hartree_fock = ks%theory_level == HARTREE_FOCK)
 
     if(bitand(ks%xc%family, XC_FAMILY_LIBVDWXC) /= 0) then
@@ -360,13 +360,13 @@ contains
       ks%sic_type = SIC_NONE
     case(HARTREE)
       call messages_experimental("Hartree theory level")
-      if(gr%mesh%sb%periodic_dim == gr%mesh%sb%dim) &
+      if(gr%sb%periodic_dim == gr%sb%dim) &
         call messages_experimental("Hartree in fully periodic system")
-      if(gr%mesh%sb%kpoints%full%npoints > 1) &
+      if(gr%sb%kpoints%full%npoints > 1) &
         call messages_not_implemented("Hartree with k-points", namespace=namespace)
 
     case(HARTREE_FOCK)
-      if(gr%mesh%sb%kpoints%full%npoints > 1) &
+      if(gr%sb%kpoints%full%npoints > 1) &
         call messages_experimental("Hartree-Fock with k-points")
       
       ks%sic_type = SIC_NONE

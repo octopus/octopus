@@ -1128,11 +1128,11 @@ subroutine X(states_elec_angular_momentum)(st, gr, ll, l2)
 
   PUSH_SUB(X(states_elec_angular_momemtum))
 
-  ASSERT(gr%mesh%sb%dim /= 1)
+  ASSERT(gr%sb%dim /= 1)
 
   SAFE_ALLOCATE(psi(1:gr%mesh%np_part))
 
-  select case(gr%mesh%sb%dim)
+  select case(gr%sb%dim)
   case(3)
     SAFE_ALLOCATE(lpsi(1:gr%mesh%np_part, 1:3))
   case(2)
@@ -1153,7 +1153,7 @@ subroutine X(states_elec_angular_momentum)(st, gr, ll, l2)
         call X(physics_op_L)(gr%der, psi, lpsi)
 
         ll(ist, ik, 1) = ll(ist, ik, 1) + TOFLOAT(X(mf_dotp)(gr%mesh, psi, lpsi(:, 1), reduce = .false.))
-        if(gr%mesh%sb%dim == 3) then
+        if(gr%sb%dim == 3) then
           ll(ist, ik, 2) = ll(ist, ik, 2) + TOFLOAT(X(mf_dotp)(gr%mesh, psi, lpsi(:, 2), reduce = .false.))
           ll(ist, ik, 3) = ll(ist, ik, 3) + TOFLOAT(X(mf_dotp)(gr%mesh, psi, lpsi(:, 3), reduce = .false.))
         end if

@@ -423,7 +423,7 @@
 
     ! divergence of the electric field
     if (iand(outp%what, OPTION__MAXWELLOUTPUT__DIV_ELECTRIC_FIELD) /= 0) then
-      fn_unit = units_out%length**(-gr%mesh%sb%dim)
+      fn_unit = units_out%length**(-gr%sb%dim)
       SAFE_ALLOCATE(dtmp_1(1:gr%mesh%np_part, 1:st%dim))
       SAFE_ALLOCATE(dtmp_2(1:gr%mesh%np))
       dtmp_1 = M_ZERO
@@ -575,7 +575,7 @@
 
     ! charge density calculated by the divergence of the electric field
     if (iand(outp%what, OPTION__MAXWELLOUTPUT__CHARGE_DENSITY) /= 0) then
-      fn_unit = units_out%length**(-gr%mesh%sb%dim)
+      fn_unit = units_out%length**(-gr%sb%dim)
       SAFE_ALLOCATE(dtmp_1(1:gr%mesh%np_part,1:st%dim))
       SAFE_ALLOCATE(dtmp_2(1:gr%mesh%np))
       call get_electric_field_state(st%rs_state, gr%mesh, dtmp_1, st%ep, gr%mesh%np)

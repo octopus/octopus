@@ -308,7 +308,7 @@ subroutine X(output_me_dipole)(this, fname, namespace, st, gr, hm, geo, ik)
 
       call states_elec_get_state(st, gr%mesh, ist, ik, psii)
 
-      if(.not. simul_box_is_periodic(gr%mesh%sb)) then
+      if(.not. simul_box_is_periodic(gr%sb)) then
 
         do idim = 1, st%d%dim  
           do ip = 1, gr%mesh%np
@@ -370,7 +370,7 @@ subroutine X(output_me_dipole)(this, fname, namespace, st, gr, hm, geo, ik)
 #endif
 
         dip_element = X(mf_dotp)(gr%mesh, st%d%dim, gpsii(:, idir, :), psij)
-        if(simul_box_is_periodic(gr%mesh%sb)) then
+        if(simul_box_is_periodic(gr%sb)) then
           if(abs(st%eigenval(ist, ik) - st%eigenval(jst, ik)) > CNST(1e-5)) then  
             dip_element = -dip_element/((st%eigenval(ist, ik) - st%eigenval(jst, ik)))
           else

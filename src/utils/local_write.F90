@@ -608,7 +608,7 @@ contains
       end do
     end if
 
-    SAFE_ALLOCATE(ionic_dipole(1:gr%mesh%sb%dim, nd))
+    SAFE_ALLOCATE(ionic_dipole(1:gr%sb%dim, nd))
     SAFE_ALLOCATE(multipole(1:(lmax + 1)**2, 1:st%d%nspin, nd))
     ionic_dipole(:,:) = M_ZERO
     multipole   (:,:,:) = M_ZERO
@@ -619,8 +619,8 @@ contains
     ! Setting center of mass as reference needed for non-neutral systems.
     do id = 1, nd
       do is = 1, st%d%nspin
-        multipole(2:gr%mesh%sb%dim+1, is, id) =  multipole(2:gr%mesh%sb%dim+1, is, id) &
-                                   - center(1:gr%mesh%sb%dim, id)*multipole(1, is, id)
+        multipole(2:gr%sb%dim+1, is, id) =  multipole(2:gr%sb%dim+1, is, id) &
+                                   - center(1:gr%sb%dim, id)*multipole(1, is, id)
       end do
     end do
 
@@ -639,8 +639,8 @@ contains
       call local_geometry_dipole(nd, ions_inside, geo, center, ionic_dipole)
       do is = 1, st%d%nspin
         do id = 1, nd
-          multipole(2:gr%mesh%sb%dim+1, is, id) = -ionic_dipole(1:gr%mesh%sb%dim, id)/st%d%nspin & 
-                                                  - multipole(2:gr%mesh%sb%dim+1, is, id)
+          multipole(2:gr%sb%dim+1, is, id) = -ionic_dipole(1:gr%sb%dim, id)/st%d%nspin & 
+                                                  - multipole(2:gr%sb%dim+1, is, id)
         end do
       end do
     end if

@@ -288,7 +288,7 @@ contains
       if(gr%mesh%parallel_in_domains) then
         call messages_not_implemented("ISF DFT+U Poisson solver with domain parallelization.")
       end if
-      if(gr%mesh%sb%nonorthogonal) then
+      if(gr%sb%nonorthogonal) then
         call messages_not_implemented("ISF DFT+U Poisson solver with non-orthogonal cells.")
       end if
     end if
@@ -300,7 +300,7 @@ contains
       if(gr%mesh%parallel_in_domains) then
         call messages_not_implemented("PSolver DFT+U Poisson solver with domain parallelization.")
       end if
-      if(gr%mesh%sb%nonorthogonal) then
+      if(gr%sb%nonorthogonal) then
         call messages_not_implemented("Psolver DFT+U Poisson solver with non-orthogonal cells.")
       end if
     end if
@@ -400,7 +400,7 @@ contains
 
     if(.not.this%basisfromstates) then
 
-      call orbitalbasis_init(this%basis, namespace, gr%mesh%sb)
+      call orbitalbasis_init(this%basis, namespace, gr%sb)
 
       if (states_are_real(st)) then
         call dorbitalbasis_build(this%basis, geo, gr%mesh, st%d%kpt, st%d%dim, &
@@ -621,7 +621,7 @@ contains
     ! We rebuild the phase for the orbital projection, similarly to the one of the pseudopotentials
     ! In case of a laser field, the phase is recomputed in hamiltonian_elec_update
     if(has_phase) then
-      call lda_u_build_phase_correction(this, gr%mesh%sb, st%d, gr%der%boundaries, namespace)
+      call lda_u_build_phase_correction(this, gr%sb, st%d, gr%der%boundaries, namespace)
     else
       !In case there is no phase, we perform the orthogonalization here
       if(this%basis%orthogonalization) then

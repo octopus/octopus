@@ -488,7 +488,7 @@ contains
         call io_mkdir(dir, namespace)
         iunit = io_open(trim(dir) // "/" // trim(fname), namespace, action='write')
 
-        call grid_write_info(gr, geo, iunit)
+        call grid_write_info(gr, iunit)
 
         call v_ks_write_info(ks, iunit, namespace)
         
@@ -624,7 +624,7 @@ contains
     PUSH_SUB(calc_photon_number)
 
     ! The photon dimension is always the last
-    dim_photon = gr%mesh%sb%dim
+    dim_photon = gr%sb%dim
 
     SAFE_ALLOCATE(psi(1:gr%mesh%np_part, 1))
     SAFE_ALLOCATE(psi_q2(1:gr%mesh%np))

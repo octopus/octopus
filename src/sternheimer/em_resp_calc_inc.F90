@@ -42,23 +42,23 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
 
   ASSERT(.false.)
 
-  SAFE_ALLOCATE(psi(1:gr%mesh%np_part, 1:gr%mesh%sb%dim))
-  SAFE_ALLOCATE(   gpsi(1:gr%mesh%np, 1:gr%mesh%sb%dim))
-  SAFE_ALLOCATE(gdl_psi(1:gr%mesh%np, 1:gr%mesh%sb%dim))
+  SAFE_ALLOCATE(psi(1:gr%mesh%np_part, 1:gr%sb%dim))
+  SAFE_ALLOCATE(   gpsi(1:gr%mesh%np, 1:gr%sb%dim))
+  SAFE_ALLOCATE(gdl_psi(1:gr%mesh%np, 1:gr%sb%dim))
 
   if(present(lr_m)) then
-    SAFE_ALLOCATE(gdl_psi_m(1:gr%mesh%np, 1:gr%mesh%sb%dim))
+    SAFE_ALLOCATE(gdl_psi_m(1:gr%mesh%np, 1:gr%sb%dim))
   end if
 
-  SAFE_ALLOCATE(   grho(1:gr%mesh%np, 1:gr%mesh%sb%dim))
-  SAFE_ALLOCATE(gdl_rho(1:gr%mesh%np, 1:gr%mesh%sb%dim))
+  SAFE_ALLOCATE(   grho(1:gr%mesh%np, 1:gr%sb%dim))
+  SAFE_ALLOCATE(gdl_rho(1:gr%mesh%np, 1:gr%sb%dim))
 
   SAFE_ALLOCATE(   rho(1:gr%mesh%np_part))
   SAFE_ALLOCATE(dl_rho(1:gr%mesh%np_part))
 
   SAFE_ALLOCATE(   elf(1:gr%mesh%np, 1:st%d%nspin))
   SAFE_ALLOCATE(    de(1:gr%mesh%np, 1:st%d%nspin))
-  SAFE_ALLOCATE(current(1:gr%mesh%np_part, 1:gr%mesh%sb%dim, 1:st%d%nspin))
+  SAFE_ALLOCATE(current(1:gr%mesh%np_part, 1:gr%sb%dim, 1:st%d%nspin))
 
   if( .not. associated(lr%X(dl_de)) ) then
     SAFE_ALLOCATE(lr%X(dl_de)(1:gr%mesh%np, 1:st%d%nspin)) 
@@ -114,7 +114,7 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
           rho(1:gr%mesh%np) = rho(1:gr%mesh%np) + ik_weight * abs(psi(1:gr%mesh%np, idim))**2
 
           !the gradient of the density
-          do idir = 1, gr%mesh%sb%dim
+          do idir = 1, gr%sb%dim
             grho(1:gr%mesh%np, idir) = grho(1:gr%mesh%np, idir) + &
                  ik_weight*M_TWO*R_REAL(R_CONJ(psi(1:gr%mesh%np, idim))*gpsi(1:gr%mesh%np, idir))
           end do
@@ -129,7 +129,7 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
               R_CONJ(psi(1:gr%mesh%np, idim))*lr%X(dl_psi)(1:gr%mesh%np, idim, ist, is) + &
               psi(1:gr%mesh%np, idim)*R_CONJ(lr_m%X(dl_psi)(1:gr%mesh%np, idim, ist, is)))
 
-            do idir = 1, gr%mesh%sb%dim
+            do idir = 1, gr%sb%dim
 
               gdl_rho(1:gr%mesh%np, idir) = gdl_rho(1:gr%mesh%np, idir) + ik_weight*( &
                    R_CONJ(psi(1:gr%mesh%np, idim))*gdl_psi(1:gr%mesh%np, idir) + &
@@ -144,7 +144,7 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
             dl_rho(1:gr%mesh%np) = dl_rho(1:gr%mesh%np) + ik_weight*M_TWO* &
                  R_REAL(R_CONJ(psi(1:gr%mesh%np, idim))*lr%X(dl_psi)(1:gr%mesh%np, idim, ist, is))
 
-            do idir = 1, gr%mesh%sb%dim
+            do idir = 1, gr%sb%dim
               gdl_rho(1:gr%mesh%np, idir) = gdl_rho(1:gr%mesh%np, idir) + ik_weight*M_TWO*(&
                 R_CONJ(psi(1:gr%mesh%np, idim))*gdl_psi(1:gr%mesh%np, idir) + &
                 gpsi(1:gr%mesh%np, idir)*R_CONJ(lr%X(dl_psi)(1:gr%mesh%np, idim, ist, is)))
@@ -178,19 +178,19 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
 
             do ip = 1, gr%mesh%np
               lr%X(dl_de)(ip, is) = lr%X(dl_de)(ip, is) + &
-                dl_rho(ip) * ik_weight * sum(abs(gpsi(ip, 1:gr%mesh%sb%dim))**2) + &
+                dl_rho(ip) * ik_weight * sum(abs(gpsi(ip, 1:gr%sb%dim))**2) + &
                 rho(ip) * ik_weight * &
-                sum(R_CONJ(gpsi(ip, 1:gr%mesh%sb%dim))*gdl_psi(ip, 1:gr%mesh%sb%dim) + &
-                gpsi(ip, 1:gr%mesh%sb%dim) * R_CONJ(gdl_psi_m(ip, 1:gr%mesh%sb%dim)))
+                sum(R_CONJ(gpsi(ip, 1:gr%sb%dim))*gdl_psi(ip, 1:gr%sb%dim) + &
+                gpsi(ip, 1:gr%sb%dim) * R_CONJ(gdl_psi_m(ip, 1:gr%sb%dim)))
             end do
 
           else 
 
             do ip = 1, gr%mesh%np
               lr%X(dl_de)(ip, is) = lr%X(dl_de)(ip, is) + &
-                dl_rho(ip) * ik_weight * sum(abs(gpsi(ip, 1:gr%mesh%sb%dim))**2) + &
+                dl_rho(ip) * ik_weight * sum(abs(gpsi(ip, 1:gr%sb%dim))**2) + &
                 rho(ip) * ik_weight * M_TWO * &
-                (sum(R_CONJ(gpsi(ip, 1:gr%mesh%sb%dim)) * gdl_psi(ip, 1:gr%mesh%sb%dim)))
+                (sum(R_CONJ(gpsi(ip, 1:gr%sb%dim)) * gdl_psi(ip, 1:gr%sb%dim)))
             end do
 
           end if
@@ -203,7 +203,7 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
     do ip = 1, gr%mesh%np
       if(abs(st%rho(ip, is)) >= dmin) then
         lr%X(dl_de)(ip, is) = lr%X(dl_de)(ip, is) - &
-          M_HALF * sum(grho(ip, 1:gr%mesh%sb%dim) * gdl_rho(ip, 1:gr%mesh%sb%dim))
+          M_HALF * sum(grho(ip, 1:gr%sb%dim) * gdl_rho(ip, 1:gr%sb%dim))
       end if
     end do
 
@@ -212,7 +212,7 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
       do ip = 1, gr%mesh%np
         if(abs(st%rho(ip, is)) >= dmin) then
           lr%zdl_de(ip, is) = lr%zdl_de(ip, is) + &
-            M_TWO * sum(current(ip, 1:gr%mesh%sb%dim, is) * lr%dl_j(ip, 1:gr%mesh%sb%dim, is))
+            M_TWO * sum(current(ip, 1:gr%sb%dim, is) * lr%dl_j(ip, 1:gr%sb%dim, is))
         end if
       end do
     end if
@@ -874,10 +874,10 @@ subroutine X(em_resp_calc_eigenvalues)(sys, dl_eig)
       do idir = 1, sys%gr%sb%periodic_dim
         do idim = 1, sys%st%d%dim
           do ip = 1, sys%gr%mesh%np
-            integrand(ip) = exp(M_zI*(M_PI/sys%gr%mesh%sb%lsize(idir))*sys%gr%mesh%x(ip, idir)) * abs(psi(ip, idim))**2
+            integrand(ip) = exp(M_zI*(M_PI/sys%gr%sb%lsize(idir))*sys%gr%mesh%x(ip, idir)) * abs(psi(ip, idim))**2
           end do
           dl_eig(ist, ik, idir) = dl_eig(ist, ik, idir) + &
-            (sys%gr%mesh%sb%lsize(idir)/M_PI) * aimag(zmf_integrate(sys%gr%mesh, integrand))
+            (sys%gr%sb%lsize(idir)/M_PI) * aimag(zmf_integrate(sys%gr%mesh, integrand))
         end do
       end do
     end do
@@ -1218,7 +1218,7 @@ subroutine X(lr_calc_magneto_optics_periodic)(sh, sh2, sys, nsigma, nfactor, &
   ASSERT(nfactor == 2)
   
   np = sys%gr%mesh%np
-  ndir = sys%gr%mesh%sb%dim
+  ndir = sys%gr%sb%dim
   ndim = sys%st%d%dim
 
   SAFE_ALLOCATE(gpsi(1:np, 1:ndim, 1:sys%st%nst, 1:nsigma))
@@ -1532,7 +1532,7 @@ subroutine X(lr_calc_magneto_optics_periodic)(sh, sh2, sys, nsigma, nfactor, &
 
   zpol(:,:,:) = -M_zI / (frequency) * zpol(:,:,:) 
   if(nfactor_ke > 1) zpol(:,:,:) = M_HALF * zpol(:,:,:)
-  call zsymmetrize_magneto_optics_cart(sys%gr%mesh%sb%symm, zpol(:,:,:))
+  call zsymmetrize_magneto_optics_cart(sys%gr%sb%symm, zpol(:,:,:))
   
   if(kpt_output) then
     zpol_kout(:,:,:,:) = -M_zI / (frequency) * zpol_kout(:,:,:,:)
@@ -1649,7 +1649,7 @@ subroutine X(lr_calc_magnetization_periodic)(sys, lr_k, magn)
 #endif
   
   np = sys%gr%mesh%np
-  ndir = sys%gr%mesh%sb%dim
+  ndir = sys%gr%sb%dim
   ndim = sys%st%d%dim
 
   SAFE_ALLOCATE(Hdl_psi(1:np, 1:ndim, 1:ndir))
@@ -1736,7 +1736,7 @@ subroutine X(lr_calc_susceptibility_periodic)(sys, nsigma, lr_k, lr_b, &
 #endif
   
   np = sys%gr%mesh%np
-  ndir = sys%gr%mesh%sb%dim
+  ndir = sys%gr%sb%dim
   ndim = sys%st%d%dim
   
   PUSH_SUB(X(lr_calc_susceptibility_periodic))
@@ -2023,7 +2023,7 @@ subroutine X(lr_calc_susceptibility_periodic)(sys, nsigma, lr_k, lr_b, &
   SAFE_DEALLOCATE_A(Hdl_kb)
   SAFE_DEALLOCATE_A(Hdl_kk) 
 
-  call zsymmetrize_tensor_cart(sys%gr%mesh%sb%symm, magn(:,:))
+  call zsymmetrize_tensor_cart(sys%gr%sb%symm, magn(:,:))
 
 #ifdef HAVE_MPI
   if(sys%st%parallel_in_states) then

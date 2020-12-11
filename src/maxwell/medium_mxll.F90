@@ -278,7 +278,7 @@ module medium_mxll_oct_m
     call profiling_in(prof, 'GENERATE_MEDIUM_BOXES')
 
     SAFE_ALLOCATE(tmp(gr%mesh%np_part))
-    SAFE_ALLOCATE(tmp_grad(gr%mesh%np_part,1:gr%mesh%sb%dim))
+    SAFE_ALLOCATE(tmp_grad(gr%mesh%np_part,1:gr%sb%dim))
     SAFE_ALLOCATE(tmp_points_map(gr%mesh%np, nr_of_boxes))
     SAFE_ALLOCATE(tmp_bdry_map(gr%mesh%np, nr_of_boxes))
     tmp_points_map = int(M_zero)

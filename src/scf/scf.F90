@@ -1134,12 +1134,12 @@ contains
         call io_mkdir(dir, namespace)
         iunit = io_open(trim(dir) // "/" // trim(fname), namespace, action='write')
 
-        call grid_write_info(gr, geo, iunit)
+        call grid_write_info(gr, iunit)
  
-        call symmetries_write_info(gr%mesh%sb%symm, namespace, gr%sb%dim, gr%sb%periodic_dim, iunit)
+        call symmetries_write_info(gr%sb%symm, namespace, gr%sb%dim, gr%sb%periodic_dim, iunit)
 
         if(simul_box_is_periodic(gr%sb)) then
-          call kpoints_write_info(gr%mesh%sb%kpoints, namespace, iunit)
+          call kpoints_write_info(gr%sb%kpoints, namespace, iunit)
           write(iunit,'(1x)')
         end if
 
@@ -1263,7 +1263,7 @@ contains
       PUSH_SUB(scf_run.write_dipole)
 
       if(mpi_grp_is_root(mpi_world)) then
-        call output_dipole(iunit, dipole, gr%mesh%sb%dim)
+        call output_dipole(iunit, dipole, gr%sb%dim)
 
         if (simul_box_is_periodic(gr%sb)) then
           write(iunit, '(a)') "Defined only up to quantum of polarization (e * lattice vector)."

@@ -119,10 +119,9 @@ contains
     call space_init(sys%space, sys%namespace)
     
     call geometry_init(sys%geo, sys%namespace, sys%space)
-    call grid_init_stage_0(sys%gr, sys%namespace, sys%geo, sys%space)
+    call grid_init_stage_1(sys%gr, sys%namespace, sys%geo, sys%space)
     call states_elec_init(sys%st, sys%namespace, sys%gr, sys%geo)
     call sys%st%write_info(sys%namespace)
-    call grid_init_stage_1(sys%gr, sys%namespace, sys%geo)
     ! if independent particles in N dimensions are being used, need to initialize them
     !  after masses are set to 1 in grid_init_stage_1 -> derivatives_init
     call modelmb_copy_masses (sys%st%modelmbparticles, sys%gr%der%masses)
@@ -177,7 +176,7 @@ contains
     call geometry_partition(this%geo, this%mc)
     call kpoints_distribute(this%st%d, this%mc)
     call states_elec_distribute_nodes(this%st, this%namespace, this%mc)
-    call grid_init_stage_2(this%gr, this%namespace, this%mc, this%geo)
+    call grid_init_stage_2(this%gr, this%namespace, this%mc)
     if(this%st%symmetrize_density) call mesh_check_symmetries(this%gr%mesh, this%gr%sb)
 
     call output_init(this%outp, this%namespace, this%gr%sb, this%st, this%st%nst, this%ks)

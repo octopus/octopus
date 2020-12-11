@@ -191,7 +191,7 @@ contains
     nullify(ep%Vclassical)
     if(geo%ncatoms > 0) then
 
-      if(simul_box_is_periodic(gr%mesh%sb)) &
+      if(simul_box_is_periodic(gr%sb)) &
         call messages_not_implemented("classical atoms in periodic systems", namespace=namespace)
       
       !%Variable ClassicalPotential
@@ -229,7 +229,7 @@ contains
     ! lasers
     call laser_init(ep%lasers, namespace, ep%no_lasers, gr%mesh)
 
-    call kick_init(ep%kick, namespace, gr%mesh%sb, ispin)
+    call kick_init(ep%kick, namespace, gr%sb, ispin)
 
     ! No more "UserDefinedTDPotential" from this version on.
     call messages_obsolete_variable(namespace, 'UserDefinedTDPotential', 'TDExternalFields')
@@ -342,7 +342,7 @@ contains
 
     ep%have_density = .false.
     do ia = 1, geo%natoms
-      if(local_potential_has_density(gr%mesh%sb, geo%atom(ia))) then
+      if(local_potential_has_density(gr%sb, geo%atom(ia))) then
         ep%have_density = .true.
         exit
       end if

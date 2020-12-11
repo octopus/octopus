@@ -115,9 +115,9 @@
     tg%move_ions = ion_dynamics_ions_move(td%ions)
 
     ! We allocate many things that are perhaps not necessary if we use a direct optimization scheme.
-    SAFE_ALLOCATE(tg%vel(1:td%max_iter+1, 1:gr%mesh%sb%dim))
-    SAFE_ALLOCATE(tg%acc(1:td%max_iter+1, 1:gr%mesh%sb%dim))
-    SAFE_ALLOCATE(tg%gvec(1:td%max_iter+1, 1:gr%mesh%sb%dim))
+    SAFE_ALLOCATE(tg%vel(1:td%max_iter+1, 1:gr%sb%dim))
+    SAFE_ALLOCATE(tg%acc(1:td%max_iter+1, 1:gr%sb%dim))
+    SAFE_ALLOCATE(tg%gvec(1:td%max_iter+1, 1:gr%sb%dim))
     SAFE_ALLOCATE(tg%alpha(1:td%max_iter))
 
     ! The following is a temporary hack, that assumes only one atom at the origin of coordinates.

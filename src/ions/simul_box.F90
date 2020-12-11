@@ -995,9 +995,8 @@ contains
 
 
   !--------------------------------------------------------------
-  recursive subroutine simul_box_write_info(sb, geo, iunit)
+  recursive subroutine simul_box_write_info(sb, iunit)
     type(simul_box_t), intent(in) :: sb
-    type(geometry_t),  intent(in) :: geo
     integer,           intent(in) :: iunit
 
     character(len=15), parameter :: bs(6) = (/ &
@@ -1031,9 +1030,9 @@ contains
     end if
 
     if (sb%box_shape == MINIMUM .and. sb%rsize <= M_ZERO) then
-      do ispec = 1, geo%nspecies     
-        write(message(1), '(a,a5,5x,a,f7.3,2a)') '  Species = ', trim(species_label(geo%species(ispec))), 'Radius = ', &
-          units_from_atomic(units_out%length, species_def_rsize(geo%species(ispec))), ' ', trim(units_abbrev(units_out%length))
+      do ispec = 1, sb%geo%nspecies
+        write(message(1), '(a,a5,5x,a,f7.3,2a)') '  Species = ', trim(species_label(sb%geo%species(ispec))), 'Radius = ', &
+          units_from_atomic(units_out%length, species_def_rsize(sb%geo%species(ispec))), ' ', trim(units_abbrev(units_out%length))
         call messages_info(1, iunit)
       end do
     end if

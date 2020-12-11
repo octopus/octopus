@@ -166,7 +166,7 @@ contains
     call messages_obsolete_variable(sys%namespace, 'UseRestartDontSolve')
 
     natoms = geo%natoms
-    ndim = gr%mesh%sb%dim
+    ndim = gr%sb%dim
 
     call restart_init(gs_restart, sys%namespace, RESTART_GS, RESTART_TYPE_LOAD, sys%mc, ierr, mesh=gr%mesh, exact=.true.)
     if(ierr == 0) then

@@ -47,7 +47,6 @@ module grid_oct_m
   private
   public ::                &
     grid_t,                &
-    grid_init_stage_0,     &
     grid_init_stage_1,     &
     grid_init_stage_2,     &
     grid_end,              &
@@ -69,27 +68,11 @@ module grid_oct_m
 contains
 
   !-------------------------------------------------------------------
-  !>
-  !! "Zero-th" stage of grid initialization. It initializes the simulation box.
-  subroutine grid_init_stage_0(gr, namespace, geo, space)
-    type(grid_t),          intent(inout) :: gr
-    type(namespace_t),     intent(in)    :: namespace
-    type(geometry_t),      intent(inout) :: geo
-    type(space_t),         intent(in)    :: space
-
-    PUSH_SUB(grid_init_stage_0)
-
-    call simul_box_init(gr%sb, namespace, geo, space)
-      
-    POP_SUB(grid_init_stage_0)
-  end subroutine grid_init_stage_0
-
-
-  !-------------------------------------------------------------------
-  subroutine grid_init_stage_1(gr, namespace, geo)
+  subroutine grid_init_stage_1(gr, namespace, geo, space)
     type(grid_t),      intent(inout) :: gr
     type(namespace_t), intent(in)    :: namespace
-    type(geometry_t),  intent(in)    :: geo
+    type(geometry_t),  intent(inout) :: geo
+    type(space_t),     intent(in)    :: space
 
     type(stencil_t) :: cube
     integer :: enlarge(1:MAX_DIM)
@@ -99,6 +82,8 @@ contains
     FLOAT :: grid_spacing(1:MAX_DIM)
 
     PUSH_SUB(grid_init_stage_1)
+
+    call simul_box_init(gr%sb, namespace, geo, space)
 
     !%Variable UseFineMesh
     !%Type logical
@@ -212,6 +197,12 @@ contains
     ! initialize derivatives
     call derivatives_nullify(gr%der)
     call derivatives_init(gr%der, namespace, gr%sb, gr%cv%method /= CURV_METHOD_UNIFORM)
+    ! the stencil used to generate the grid is a union of a cube (for
+    ! multigrid) and the Laplacian.
+    call stencil_cube_get_lapl(cube, gr%sb%dim, order = 2)
+    call stencil_union(gr%sb%dim, cube, gr%der%lapl%stencil, gr%stencil)
+    call stencil_end(cube)
+
 
     call double_grid_init(gr%dgrid, namespace, gr%sb)
 
@@ -220,15 +211,7 @@ contains
     enlarge = max(enlarge, double_grid_enlarge(gr%dgrid))
     enlarge = max(enlarge, gr%der%n_ghost)
 
-    ! now we generate the mesh and the derivatives
     call mesh_init_stage_1(gr%mesh, gr%sb, gr%cv, grid_spacing, enlarge)
-
-    ! the stencil used to generate the grid is a union of a cube (for
-    ! multigrid) and the Laplacian.
-    call stencil_cube_get_lapl(cube, gr%sb%dim, order = 2)
-    call stencil_union(gr%sb%dim, cube, gr%der%lapl%stencil, gr%stencil)
-    call stencil_end(cube)
-
     call mesh_init_stage_2(gr%mesh, gr%sb, gr%cv, gr%stencil, namespace)
 
     POP_SUB(grid_init_stage_1)
@@ -237,11 +220,10 @@ contains
 
 
   !-------------------------------------------------------------------
-  subroutine grid_init_stage_2(gr, namespace, mc, geo)
+  subroutine grid_init_stage_2(gr, namespace, mc)
     type(grid_t), target, intent(inout) :: gr
     type(namespace_t),    intent(in)    :: namespace
     type(multicomm_t),    intent(in)    :: mc
-    type(geometry_t),     intent(in)    :: geo
 
     PUSH_SUB(grid_init_stage_2)
 
@@ -258,42 +240,49 @@ contains
     ! multigrid routines
     
     if(gr%have_fine_mesh) then
-
       if(gr%mesh%parallel_in_domains) then
         message(1) = 'UseFineMesh does not work with domain parallelization.'
         call messages_fatal(1)
       end if
 
-      SAFE_ALLOCATE(gr%fine%mesh)
-      SAFE_ALLOCATE(gr%fine%der)
-      
-      call multigrid_mesh_double(gr%cv, gr%mesh, gr%fine%mesh, gr%stencil, namespace)
-
-      call derivatives_nullify(gr%fine%der)      
-      call derivatives_init(gr%fine%der, namespace, gr%mesh%sb, gr%cv%method /= CURV_METHOD_UNIFORM)
-      
-      call mesh_init_stage_3(gr%fine%mesh, namespace, gr%stencil, mc)
-      
-      call multigrid_get_transfer_tables(gr%fine%tt, gr%fine%mesh, gr%mesh)
-      
-      message(1) = "Info: fine mesh"
-      call messages_info(1)
-      call derivatives_build(gr%fine%der, namespace, gr%fine%mesh)
-
-      gr%fine%der%coarser => gr%der
-      gr%der%finer =>  gr%fine%der
-      gr%fine%der%to_coarser => gr%fine%tt
-      gr%der%to_finer => gr%fine%tt
-
+      call initialize_fine_grid()
     else
       gr%fine%mesh => gr%mesh
       gr%fine%der => gr%der
     end if
 
     ! print info concerning the grid
-    call grid_write_info(gr, geo, stdout)
+    call grid_write_info(gr, stdout)
 
     POP_SUB(grid_init_stage_2)
+
+    contains
+      subroutine initialize_fine_grid()
+        PUSH_SUB(grid_init_stage_2.initialize_fine_grid)
+
+        SAFE_ALLOCATE(gr%fine%mesh)
+        SAFE_ALLOCATE(gr%fine%der)
+
+        call multigrid_mesh_double(gr%cv, gr%mesh, gr%fine%mesh, gr%stencil, namespace)
+
+        call derivatives_nullify(gr%fine%der)
+        call derivatives_init(gr%fine%der, namespace, gr%sb, gr%cv%method /= CURV_METHOD_UNIFORM)
+
+        call mesh_init_stage_3(gr%fine%mesh, namespace, gr%stencil, mc)
+
+        call multigrid_get_transfer_tables(gr%fine%tt, gr%fine%mesh, gr%mesh)
+
+        message(1) = "Info: fine mesh"
+        call messages_info(1)
+        call derivatives_build(gr%fine%der, namespace, gr%fine%mesh)
+
+        gr%fine%der%coarser => gr%der
+        gr%der%finer =>  gr%fine%der
+        gr%fine%der%to_coarser => gr%fine%tt
+        gr%der%to_finer => gr%fine%tt
+
+        POP_SUB(grid_init_stage_2.initialize_fine_grid)
+      end subroutine initialize_fine_grid
   end subroutine grid_init_stage_2
 
 
@@ -331,9 +320,8 @@ contains
 
 
   !-------------------------------------------------------------------
-  subroutine grid_write_info(gr, geo, iunit)
+  subroutine grid_write_info(gr, iunit)
     type(grid_t),     intent(in) :: gr
-    type(geometry_t), intent(in) :: geo
     integer,          intent(in) :: iunit
 
     PUSH_SUB(grid_write_info)
@@ -345,7 +333,7 @@ contains
     end if
 
     call messages_print_stress(iunit, "Grid")
-    call simul_box_write_info(gr%sb, geo, iunit)
+    call simul_box_write_info(gr%sb, iunit)
 
     if(gr%have_fine_mesh) then
       message(1) = "Wave-functions mesh:"

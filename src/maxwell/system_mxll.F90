@@ -165,9 +165,8 @@ contains
     this%geo%periodic_dim = 0
     this%geo%lsize = M_ZERO
 
-    call grid_init_stage_0(this%gr, this%namespace, this%geo, this%space)
+    call grid_init_stage_1(this%gr, this%namespace, this%geo, this%space)
     call states_mxll_init(this%st, this%namespace, this%gr, this%geo)
-    call grid_init_stage_1(this%gr, this%namespace, this%geo)
 
     this%quantities(E_FIELD)%required = .true.
     this%quantities(E_FIELD)%protected = .true.
@@ -222,7 +221,7 @@ contains
     call multicomm_init(this%mc, this%namespace, mpi_world, calc_mode_par_parallel_mask(), &
          &calc_mode_par_default_parallel_mask(),mpi_world%size, index_range, (/ 5000, 1, 1, 1 /))
 
-    call grid_init_stage_2(this%gr, this%namespace, this%mc, this%geo)
+    call grid_init_stage_2(this%gr, this%namespace, this%mc)
     call output_mxll_init(this%outp, this%namespace, this%gr%sb)
     call hamiltonian_mxll_init(this%hm, this%namespace, this%gr, this%st)
 

@@ -248,7 +248,7 @@ contains
       g_opt%st     => sys%st
       g_opt%hm     => sys%hm
       g_opt%syst   => sys
-      g_opt%dim    =  sys%gr%mesh%sb%dim
+      g_opt%dim    =  sys%gr%sb%dim
 
       g_opt%size = g_opt%dim*g_opt%geo%natoms
 

@@ -677,7 +677,7 @@ contains
     end if
 
     if(bitand(outp%what, OPTION__OUTPUT__MESH_R) /= 0) then
-      do idir = 1, gr%mesh%sb%dim
+      do idir = 1, gr%sb%dim
         write(fname, '(a,a)') 'mesh_r-', index2axis(idir)
         call dio_function_output(outp%how, dir, fname, namespace, gr%mesh, gr%mesh%x(:,idir), &
           units_out%length, ierr, geo = geo)
@@ -785,7 +785,7 @@ contains
 
     ! First the ELF in real space
     if(bitand(outp%what, OPTION__OUTPUT__ELF) /= 0 .or. bitand(outp%what, OPTION__OUTPUT__ELF_BASINS) /= 0) then
-      ASSERT(gr%mesh%sb%dim /= 1)
+      ASSERT(gr%sb%dim /= 1)
 
       call elf_calc(st, gr, f_loc)
       
@@ -946,7 +946,7 @@ contains
     PUSH_SUB(output_energy_density)
    
     if(bitand(outp%what, OPTION__OUTPUT__ENERGY_DENSITY) /= 0) then
-      fn_unit = units_out%energy*units_out%length**(-gr%mesh%sb%dim)
+      fn_unit = units_out%energy*units_out%length**(-gr%sb%dim)
       SAFE_ALLOCATE(energy_density(1:gr%mesh%np, 1:st%d%nspin))
 
       ! the kinetic energy density
@@ -1240,7 +1240,7 @@ contains
 
     PUSH_SUB(output_berkeleygw)
 
-    if(gr%mesh%sb%dim /= 3) then
+    if(gr%sb%dim /= 3) then
       message(1) = "BerkeleyGW output only available in 3D."
       call messages_fatal(1, namespace=namespace)
     end if
