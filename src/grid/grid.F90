@@ -197,6 +197,12 @@ contains
     ! initialize derivatives
     call derivatives_nullify(gr%der)
     call derivatives_init(gr%der, namespace, gr%sb, gr%cv%method /= CURV_METHOD_UNIFORM)
+    ! the stencil used to generate the grid is a union of a cube (for
+    ! multigrid) and the Laplacian.
+    call stencil_cube_get_lapl(cube, gr%sb%dim, order = 2)
+    call stencil_union(gr%sb%dim, cube, gr%der%lapl%stencil, gr%stencil)
+    call stencil_end(cube)
+
 
     call double_grid_init(gr%dgrid, namespace, gr%sb)
 
@@ -205,15 +211,7 @@ contains
     enlarge = max(enlarge, double_grid_enlarge(gr%dgrid))
     enlarge = max(enlarge, gr%der%n_ghost)
 
-    ! now we generate the mesh and the derivatives
     call mesh_init_stage_1(gr%mesh, gr%sb, gr%cv, grid_spacing, enlarge)
-
-    ! the stencil used to generate the grid is a union of a cube (for
-    ! multigrid) and the Laplacian.
-    call stencil_cube_get_lapl(cube, gr%sb%dim, order = 2)
-    call stencil_union(gr%sb%dim, cube, gr%der%lapl%stencil, gr%stencil)
-    call stencil_end(cube)
-
     call mesh_init_stage_2(gr%mesh, gr%sb, gr%cv, gr%stencil, namespace)
 
     POP_SUB(grid_init_stage_1)
