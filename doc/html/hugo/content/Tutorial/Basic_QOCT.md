@@ -117,7 +117,7 @@ Let us fix the parameter values to $\omega_0 = B = 1$ and $\beta=\frac{1}{256}$.
  {{< Variable2 "MixingScheme" >}} = linear
 ```
 
-{{< figure src="/Tutorial_basicqoct_potential.png" width="500px" caption="Fig. 1. Black curve: external potential defining the asymmetric double well used in this example. Red and green: ground state and excited state, respectively, corresponding to this system" >}}
+{{< figure src="/images/Tutorial_basicqoct_potential.png" width="500px" caption="Fig. 1. Black curve: external potential defining the asymmetric double well used in this example. Red and green: ground state and excited state, respectively, corresponding to this system" >}}
 
 Note that we have set {{< Variable2 "ExtraStates" >}}=1 because we want to get the first excited state, in order to be able to do QOCT later (the objective will be the maximum population of this state). 
 
@@ -245,8 +245,8 @@ So we ''almost'' achieved a full transfer: $J_1[\Psi]=\vert\langle\Psi(T)\vert\P
 
 ##  Analysis of the results  
 
-{{< figure src="/Tutorial_basicqoct_convergence.png" width="500px" caption="Fig. 2. Convergence history for the $J$ (black) and $J_1$ (red) functionals" >}}
-{{< figure src="/Tutorial_basicqoct_final.png" width="500px" caption="Fig. 3. Initial and target states (red and green). In blue, the final propagated state corresponding to the last iteration field." >}}
+{{< figure src="/images/Tutorial_basicqoct_convergence.png" width="500px" caption="Fig. 2. Convergence history for the $J$ (black) and $J_1$ (red) functionals" >}}
+{{< figure src="/images/Tutorial_basicqoct_final.png" width="500px" caption="Fig. 3. Initial and target states (red and green). In blue, the final propagated state corresponding to the last iteration field." >}}
 
 The run will create a directory called {{< file "opt-control" >}} (among others). In it there is a file called {{< file "convergence" >}} that contains the convergence history of the QOCT run, i.e. the values of the relevant functionals at each QOCT iteration. It is useful to make a plot with these values; you can see the result of this in Fig. 2. Observe the monotonous increase of $J$. Also, in this case, the functional $J_1$ (which is, in fact, the one we are really interested in) grows and approaches unity -- although the final limit will not be one, but in this case something close to 0.95.
 

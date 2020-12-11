@@ -51,7 +51,7 @@ done
 ```
 </pre>
 
-{{< figure src="/Methane Energy vs CH.png" width="500px" caption="420px" >}}
+{{< figure src="/images/Methane Energy vs CH.png" width="500px" caption="420px" >}}
 
 ####  Results  
 Once you run the calculations, you should obtain values very similar to the following ones:

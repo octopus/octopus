@@ -99,7 +99,7 @@ When the propagation completes, run the {{< file "oct-propagation_spectrum" >}} 
 ```
 </pre>
 
-{{< figure src="/Singlet_triplet_spectrum_CH4.png" width="500px" caption="Comparison of absorption spectrum of CH<sub>4</sub> calculated with time-propagation for singlets and triplets." >}}
+{{< figure src="/images/Singlet_triplet_spectrum_CH4.png" width="500px" caption="Comparison of absorption spectrum of CH<sub>4</sub> calculated with time-propagation for singlets and triplets." >}}
 You can see that there are now separate columns for cross-section and strength function for each spin. The physically meaningful strength function for the magnetic excitation is given by <tt>StrengthFunction(1)</tt> - <tt>StrengthFunction(2)</tt> (since the kick was opposite for the two spins). [If we had obtained {{< file "cross_section_tensor" >}}, then the trace in the second column would be the appropriate cross-section to consider.] We can plot and compare to the singlet results obtained before. You can see how this looks on the right. The first triplet transition is found at 9.05 eV, slightly lower energy than the lowest singlet transition. 
 
 If you are interested, you can also repeat the calculation for {{< Variable2 "TDDeltaStrengthMode" >}} = <tt>kick_density</tt> (the default) and confirm that the result is the same as for the non-spin-polarized calculation.
@@ -127,7 +127,7 @@ $f_{\rm Hxc}^{\rm triplet} \left[ \rho \right] = f^{\uparrow}_{\rm Hxc} \left[ \
 
 Therefore, we start by doing a ground-state and unoccupied states runs exactly as was done in the [Optical spectra from Casida](../Optical spectra from Casida) tutorial. Then, do a Casida run with the following input file:
 
-{{< figure src="/Singlet_triplet_spectrum_Casida_CH4.png" width="500px" caption="Comparison of absorption spectrum of CH<sub>4</sub> calculated with the Casida equation for singlets and triplets." >}}
+{{< figure src="/images/Singlet_triplet_spectrum_Casida_CH4.png" width="500px" caption="Comparison of absorption spectrum of CH<sub>4</sub> calculated with the Casida equation for singlets and triplets." >}}
 
 ```text
  {{< Variable2 "CalculationMode" >}} = casida
@@ -158,7 +158,7 @@ Once the Casida calculation is finished, run {{< file "oct-casida_spectrum" >}},
 
 As for the singlet spectrum, we can compare the time-propagation and Casida results. What is the main difference, and what is the reason for it?
 
-{{< figure src="/triplet_casida_td_CH4.png" width="500px" caption="Comparison of triplet absorption spectrum of CH<sub>4</sub> calculated with time-propagation and with the Casida equation." >}}
+{{< figure src="/images/triplet_casida_td_CH4.png" width="500px" caption="Comparison of triplet absorption spectrum of CH<sub>4</sub> calculated with time-propagation and with the Casida equation." >}}
 
 ##  References  
 <references/>

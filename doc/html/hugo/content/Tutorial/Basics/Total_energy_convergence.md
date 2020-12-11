@@ -44,7 +44,7 @@ with the actual path to the executable
   /path/to/octopus >& out-$Spacing
 ```
 
-{{< figure src="/NitrogenSpacing.png" width="500px" caption="Convergence with spacing of N" >}}
+{{< figure src="/images/NitrogenSpacing.png" width="500px" caption="Convergence with spacing of N" >}}
 
 Once the script finishes running, the {{< file "spacing.log" >}} file should look something like this: 
 
@@ -129,7 +129,7 @@ Now the question is whether these values are converged or not. This will depend 
 
 ###  Convergence with the spacing  
 
-{{< figure src="/spacing_CH4.png" width="500px" caption="Convergence with spacing of methane" >}}
+{{< figure src="/images/spacing_CH4.png" width="500px" caption="Convergence with spacing of methane" >}}
 
 As before, we will keep all entries in the input file fixed except for the spacing that we will make smaller by 0.02 Å all the way down to 0.1 Å. So you have to run {{< octopus >}} several times. You can use a similar script as the one from the Nitrogen atom example:
 
@@ -172,7 +172,7 @@ As you can see from this picture, the total energy is converged to within 0.1 eV
 
 ###  Convergence with the radius  
 
-{{< figure src="/radius_CH4.png" width="500px" caption="Convergence with radius of methane" >}}
+{{< figure src="/images/radius_CH4.png" width="500px" caption="Convergence with radius of methane" >}}
 
 Now we will see how the total energy changes with the {{< Variable2 "Radius" >}} of the box. We will change the radius in steps of 0.5 Å. You can change the input file by hand and run Octopus each time, or again use a small script:
 ```text

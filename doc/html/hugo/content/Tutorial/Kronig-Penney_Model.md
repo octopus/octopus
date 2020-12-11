@@ -59,7 +59,7 @@ The following input file will be used for the ground state calculation:
  {{< Variable2 "ConvEigenError" >}} = true
 ```
 
-{{< figure src="/Kp_wavefunctions.png" width="500px" caption="Caption" >}}
+{{< figure src="/images/Kp_wavefunctions.png" width="500px" caption="Caption" >}}
 The first two wavefunctions plotted alongside the potential.
 
 ##  Bandstructure   
@@ -101,7 +101,7 @@ To calculate the bandstructure simply change the {{< Variable2 "CalculationMode"
  {{< Variable2 "ConvEigenError" >}} = true
 ```
 
-{{< figure src="/Kp_bandstructure.png" width="500px" caption="The band structure for Kronig-Penney Model." >}}
+{{< figure src="/images/Kp_bandstructure.png" width="500px" caption="The band structure for Kronig-Penney Model." >}}
 
 To plot the bandstructure, we will use the same command from the [Periodic systems](../Periodic systems) (assuming you are using gnuplot).
 

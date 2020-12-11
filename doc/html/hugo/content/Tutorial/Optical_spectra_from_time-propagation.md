@@ -259,7 +259,7 @@ If all three directions were done, we would have four files: {{< file "cross_sec
 ```
 </pre>
 
-{{< figure src="/Absorption_spectrum_CH4.png" width="500px" caption="Absorption spectrum of CH<sub>4</sub>" >}}
+{{< figure src="/images/Absorption_spectrum_CH4.png" width="500px" caption="Absorption spectrum of CH<sub>4</sub>" >}}
 
 The columns are now the energy, the average absorption coefficient (Tr $\sigma/3$), the anisotropy, and 
 then all the 9 components of the tensor. The third number is the spin component, just 1 here since it is unpolarized. The anisotropy is defined as

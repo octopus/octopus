@@ -135,9 +135,9 @@ Now you can do just the same thing we did for the [harmonic oscillator](../1D_Ha
  {{< Variable2 "ExtraStates" >}} = 5
 ```
 
-{{< figure src="/1D_Helium_1.jpg" width="500px" caption="Ground-state of He in 1D" >}}
-{{< figure src="/1D_Helium_2.jpg" width="500px" caption="1st excited-state of He in 1D" >}}
-{{< figure src="/1D_Helium_3.jpg" width="500px" caption="2nd excited-state of He in 1D" >}}
+{{< figure src="/images/1D_Helium_1.jpg" width="500px" caption="Ground-state of He in 1D" >}}
+{{< figure src="/images/1D_Helium_2.jpg" width="500px" caption="1st excited-state of He in 1D" >}}
+{{< figure src="/images/1D_Helium_3.jpg" width="500px" caption="2nd excited-state of He in 1D" >}}
 
 We have added 5 extra states and also restricted the wavefunctions to plot (<tt>{{< Variable2 "OutputWfsNumber" >}} = "1-2,4,6"</tt>).
 

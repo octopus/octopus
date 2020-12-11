@@ -86,7 +86,7 @@ At this point you might want to play around with the number of ''k''-points unti
 
 We now modify the input file in the following way:
 
-{{< figure src="/Na_chain_bands_1D_3D.png" width="500px" caption="Band structure for a infinite chain of Sodium atoms, calculated for a single chain (purple lines), and a 3D-periodic crystal of chains in a supercell (green lines)." >}}
+{{< figure src="/images/Na_chain_bands_1D_3D.png" width="500px" caption="Band structure for a infinite chain of Sodium atoms, calculated for a single chain (purple lines), and a 3D-periodic crystal of chains in a supercell (green lines)." >}}
 
 ```text
  {{< Variable2 "CalculationMode" >}} = unocc
@@ -235,7 +235,7 @@ After the ground-state calculation, we will now calculate the band structure. Th
  {{< Variable2 "KPointsUseSymmetries" >}} = no
 ```
 
-{{< figure src="/Tutorial_band_structure_HBN.png" width="500px" caption="Band structure of a monolayer h-BN." >}}
+{{< figure src="/images/Tutorial_band_structure_HBN.png" width="500px" caption="Band structure of a monolayer h-BN." >}}
 
 In this case, we chose the following path to calculate the band structure: Gamma-K, K-M, M-Gamma, with a sampling of 12-7-12 ''k''-points.
 

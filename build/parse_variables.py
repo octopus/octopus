@@ -69,8 +69,8 @@ verbose = False
 
 try:
     options, args = getopt.getopt(sys.argv[1:], "s:b:d:vh", ['srcdir:','builddir:','definitions:','verbose','help',
-        'enable-varinfo', 'enable-heders', 'enable-variables', 'enable-json', 'enable-untested',
-        'disable-varinfo','disable-heders','disable-variables','disable-json', 'disable-untested'
+        'enable-varinfo', 'enable-headers', 'enable-variables', 'enable-json', 'enable-untested',
+        'disable-varinfo','disable-headers','disable-variables','disable-json', 'disable-untested'
         ])
 except  getopt.GetoptError:
     print('Error !')

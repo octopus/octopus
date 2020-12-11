@@ -225,9 +225,9 @@ In case you ware wondering what the restart information looks like, you can have
 {{< octopus >}} stores each individual state in a different binary (yet platform-independent) file. In this case, we only have four states (files {{< file "0000000001.obf" >}} to {{< file "0000000004.obf" >}}). Some other useful quantities, like the density, are also stored in binary form. The other files are text files that contain diverse control information. It is unlikely that you will ever have to work directly with these files, but you may take a look around if you are curious. 
 
 
-<!-- {{< figure src="/Nitrogen_pi02.jpg" width="500px" caption="pi orbital of N" >}}
-{{< figure src="/Nitrogen_pi03.jpg" width="500px" caption="pi orbital of N" >}}
-{{< figure src="/Nitrogen_pi04.jpg" width="500px" caption="pi orbital of N" >}}
+<!-- {{< figure src="/images/Nitrogen_pi02.jpg" width="500px" caption="pi orbital of N" >}}
+{{< figure src="/images/Nitrogen_pi03.jpg" width="500px" caption="pi orbital of N" >}}
+{{< figure src="/images/Nitrogen_pi04.jpg" width="500px" caption="pi orbital of N" >}}
 
 Also, please add the following three lines to the {{< file "inp" >}} file:
 

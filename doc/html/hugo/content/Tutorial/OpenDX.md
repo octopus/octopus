@@ -71,7 +71,7 @@ If you followed the instructions given in [[Releases-OpenDX|here]] you should se
 
 Now select '''<tt>Run Visual Programs...</tt>''', select the {{< file "mf.net" >}} file, and click on '''<tt>OK</tt>'''. This will open the main dialog of our application. You will no longer need the main DX window, so it is perhaps better to minimize it to get it out of the way. Before continuing, go to the menu '''<tt>Execute > Execute on Change</tt>''', which instructs to open DX to recalculate out plot whenever we make a change in any parameters.
 
-{{< figure src="/Tutorial_dx_5.png" width="500px" caption="350px" >}}
+{{< figure src="/images/Tutorial_dx_5.png" width="500px" caption="350px" >}}
 
 Now, let us choose a file to plot. As you can see, the field <tt>File</tt> in the mains dialog is <tt>NULL</tt>. If you click on the three dots next to the field a file selector will open. Just select the file {{< file "static/density-1.dx" >}} and press OK. Now we will instruct open DX to draw a iso-surface. Click on <tt>Isosurfaces</tt> and a new dialog box will open (to close that dialog box, please click again on <tt>Isosurfaces</tt> in the main dialog!) In the end you may have lots of windows lying around, so try to be organized. Then click on <tt>Show Isosurface 1</tt> - an image should appear with the density of benzene. You can zoom, rotate, etc the picture if you follow the menu '''<tt>Options > View control...</tt>''' in the menu of the image panel. You can play also around in the isosurfaces dialog with the <tt>Isosurface value</tt> in order to make the picture more appealing, change the color, the opacity, etc. You can even plot two isosurfaces with different values.
 

@@ -152,7 +152,7 @@ These files contain basically the eigenvector of the Casida equation. The first 
 
 ##  Absorption spectrum  
 
-{{< figure src="/Absorption_spectrum_CH4_casida.png" width="500px" caption="Absorption spectrum of CH<sub>4</sub> calculated with time-propagation and with the Casida equation." >}}
+{{< figure src="/images/Absorption_spectrum_CH4_casida.png" width="500px" caption="Absorption spectrum of CH<sub>4</sub> calculated with time-propagation and with the Casida equation." >}}
 
 To visualize the spectrum, we need to broaden these delta functions with the utility {{< file "oct-casida_spectrum" >}} (run in your working directory, not in {{< file "casida" >}}). It convolves the delta functions with Lorentzian functions. The operation of {{< file "oct-casida_spectrum" >}} is controlled by the variables {{< Variable2 "CasidaSpectrumBroadening" >}} (the width of this Lorentzian), {{< Variable2 "CasidaSpectrumEnergyStep" >}}, {{< Variable2 "CasidaSpectrumMinEnergy" >}}, and {{< Variable2 "CasidaSpectrumMaxEnergy" >}}. If you run  {{< file "oct-casida_spectrum" >}} you obtain the file {{< file "casida/spectrum.casida" >}}. It contains all columns of {{< file "casida" >}} broadened. If you are interested in the total absorption spectrum, then you should plot the first and fifth columns. You should obtain a picture like the one on the right.
 

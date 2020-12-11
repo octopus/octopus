@@ -50,7 +50,7 @@ This file is the same as the one used in the previous [tutorial](../Optical spec
 
 And this is the bash script:
 
-{{< figure src="/Absorption_spectrum_CH4_spacing.png" width="500px" caption="Convergence with spacing of methane absorption spectrum." >}}
+{{< figure src="/images/Absorption_spectrum_CH4_spacing.png" width="500px" caption="Convergence with spacing of methane absorption spectrum." >}}
 
 ```text
 
@@ -111,7 +111,7 @@ This file is the same as the prevous one, with the exception of the spacing and 
 
 And this is the bash script:
 
-{{< figure src="/Absorption_spectrum_CH4_radius.png" width="500px" caption="Convergence with spacing of methane absorption spectrum." >}}
+{{< figure src="/images/Absorption_spectrum_CH4_radius.png" width="500px" caption="Convergence with spacing of methane absorption spectrum." >}}
 
 ```text
 

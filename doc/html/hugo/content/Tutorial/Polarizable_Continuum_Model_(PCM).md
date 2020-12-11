@@ -153,7 +153,7 @@ where | indicates column separation (actually, replace by spaces in the ASC_*.da
 
 ##  Exercises  
 
-{{< figure src="/PCM_gs_convergence.png" width="500px" caption="right" >}}
+{{< figure src="/images/PCM_gs_convergence.png" width="500px" caption="right" >}}
 
 * Look first at the convergence of the total energy of the system. <span style="color: red>Carlo: clarify if you mean the energy of the molecule or the solvation energy, and make the figure accordingly</span> It should look like in the Figure. What it is most important to notice is the fact that there is a stabilization of the system in solvent with respect to the ''in vacuo'' case. Find the final value and sign of the energy difference between the both cases obtained upon convergence.
 

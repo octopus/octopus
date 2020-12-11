@@ -14,7 +14,7 @@ This tutorial briefly sketches how to perform calculations with open (or transpa
 
 Open boundary calculations are only possible for the parallelepiped {{< variable "BoxShape" >}}, and only the planes perpendicular to the x-axis are transparent, ''i. e.'' the transport direction is along the ''x''-axis, all other boundaries are rigid walls like for the usual finite-system calculations. As the system is open at the "left" and "right" side we have to specify the character of the outside world here. This is done by giving a unit cell of two semi-infinite leads attached to the central or device region, yielding the following geometry (in 2D):
 
-{{< figure src="/Open_boundaries_geometry.png" width="500px" caption="Open boundaries geometry" >}}
+{{< figure src="/images/Open_boundaries_geometry.png" width="500px" caption="Open boundaries geometry" >}}
 
 The red area is the device region also constituting the simulation box, ''i. e.'' the only part in space we treat explicitly in our simulations, which is attached to semi-infinite periodic leads (shown in green). The blue lines indicate the left and right open boundaries.
 
@@ -39,7 +39,7 @@ We use the multi-dataset capabilities of {{< Octopus >}} to connect the two.
 
 Our first example will calculate the scattering state of an attractive 1D square potential:
 
-{{< figure src="/Open_boundaries_square_well.png" width="500px" caption="1D square well potential" >}}
+{{< figure src="/images/Open_boundaries_square_well.png" width="500px" caption="1D square well potential" >}}
 
 We begin with the calculation of the leads which are, in this case, flat and of zero potential, hence, we know that our result should be plane waves. We write the following input file in which we name our periodic dataset {{< code "lead_" >}} in order to reference it in subsequent calculations:
 
@@ -128,7 +128,7 @@ A few points deserve comments:
 
 Processing this input file with {{< Octopus >}} gives us the following eigenstate ($|\psi(x)|^2$ is plotted):
 
-{{< figure src="/Open_boundaries_square_well_eigenstate.png" width="500px" caption="Extended eigenstate of 1D square well" >}}
+{{< figure src="/images/Open_boundaries_square_well_eigenstate.png" width="500px" caption="Extended eigenstate of 1D square well" >}}
 
 Before we turn our attention to a time-propagation, we briefly describe the console output of {{< Octopus >}} related to open boundaries:
 

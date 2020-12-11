@@ -171,7 +171,7 @@ Now we will add a time-dependent external perturbation (a laser field) to the mo
  {{< Variable2 "TDOutput" >}} = laser + multipoles
 ```
 
-{{< figure src="/Tutorial_TD_Laser.png" width="500px" caption="Laser field used in the tutorial" >}}
+{{< figure src="/images/Tutorial_TD_Laser.png" width="500px" caption="Laser field used in the tutorial" >}}
 
 The most important variables here are the {{< Variable2 "TDExternalFields" >}} block and the associated {{< Variable2 "TDFunctions" >}} block. You should carefully read the manual page dedicated to these variables: the particular laser pulse that we have employed is the one whose envelope function is a cosine.
 

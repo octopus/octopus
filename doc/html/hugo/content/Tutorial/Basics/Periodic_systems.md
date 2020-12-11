@@ -335,7 +335,7 @@ After running {{< octopus >}} with this input file, you should obtain a file nam
 ```
 </pre>
 
-{{< figure src="/Si_bandstructure.png" width="500px" caption="Band structure of bulk silicon. The zero of energy has been shifted to the maximum of the occupied bands." >}}
+{{< figure src="/images/Si_bandstructure.png" width="500px" caption="Band structure of bulk silicon. The zero of energy has been shifted to the maximum of the occupied bands." >}}
 
 The first column is the coordinate of the ''k''-point along the path. The second, third, and fourth columns are the reduced coordinates of the ''k''-point. The following columns are the eigenvalues for the different bands. In this case there are 14 bands (4 occupied and 10 unoccupied).
 
