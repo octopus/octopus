@@ -28,7 +28,7 @@ import getopt
 from variables import Variables
 
 
-variables_top_dir = 'variables'
+variables_top_dir = 'Variables'
 
 
 
