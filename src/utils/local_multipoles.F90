@@ -704,6 +704,7 @@ contains
 
     POP_SUB(local_restart)
   end subroutine local_restart
+
   ! ---------------------------------------------------------
   subroutine local_inside_domain(lcl, namespace, ff)
     type(local_domain_t),   intent(inout) :: lcl
@@ -718,18 +719,37 @@ contains
     character(len=MAX_PATH_LEN)   :: filename, base_folder, folder, frmt
     character(len=140), allocatable  :: lines(:)
     type(restart_t)     :: restart
-    
+    FLOAT, allocatable :: dble_domain_map(:,:), domain_mesh(:)
+
     PUSH_SUB(local_inside_domain)
 
     !TODO: find a parallel algorithm to perform the charge-density fragmentation.
     message(1) = 'Info: Assigning mesh points inside each local domain'
     call messages_info(1)
 
+    !TODO: replace this with the Debug = info flag
+    !%Variable LDExtraWrite
+    !%Type logical
+    !%Default false
+    !%Section Utilities::oct-local_multipoles
+    !%Description
+    !% Writes additional information to files, when computing local multipoles. For
+    !% example, it writes coordinates of each local domain.
+    !%End
+    call parse_variable(global_namespace, 'LDExtraWrite', .false., extra_write)
+    if (extra_write) then
+      call messages_obsolete_variable(namespace, 'LDOutputHow', 'LDOutputFormat')
+      call parse_variable(global_namespace, 'LDOutputFormat', 0, how)
+      if (.not.varinfo_valid_option('OutputFormat', how, is_flag=.true.)) then
+        call messages_input_error(global_namespace, 'LDOutputFormat')
+      end if
+    end if
+
     SAFE_ALLOCATE(ff2(1:sys%gr%mesh%np,1))
     ff2(1:sys%gr%mesh%np,1) = ff(1:sys%gr%mesh%np)
 
+    ! First we do the Bader domains
     if (any(lcl%dshape(:) == BADER)) then
-
       if (sys%gr%mesh%parallel_in_domains) then                                                            
         write(message(1),'(a)') 'Bader volumes can only be computed in serial'                                
         call messages_fatal(1)
@@ -739,15 +759,9 @@ contains
       call basins_init(basins, sys%gr%mesh)
       call parse_variable(namespace, 'LDBaderThreshold', CNST(0.01), BaderThreshold)
       call basins_analyze(basins, sys%gr%mesh, ff2(:,1), ff2, BaderThreshold)
-      call parse_variable(namespace, 'LDExtraWrite', .false., extra_write)
-      call bader_union_inside(basins, lcl%nd, lcl%domain, lcl%lab, lcl%dshape, lcl%inside) 
+      call bader_union_inside(basins, lcl%nd, lcl%domain, lcl%dshape, lcl%inside) 
 
       if (extra_write) then
-        call messages_obsolete_variable(namespace, 'LDOutputHow', 'LDOutputFormat')
-        call parse_variable(namespace, 'LDOutputFormat', 0, how)
-        if(.not.varinfo_valid_option('OutputFormat', how, is_flag=.true.)) then
-          call messages_input_error(namespace, 'LDOutputFormat')
-        end if
         filename = 'basinsmap'
         call dio_function_output(how, trim('local.general'), trim(filename), global_namespace, &
           sys%gr%mesh, DBLE(basins%map(1:sys%gr%mesh%np)), unit_one, ierr, geo = sys%geo)
@@ -756,10 +770,42 @@ contains
         call io_close(iunit)
       end if
       call basins_end(basins)
-    else
-      do id = 1, lcl%nd
-        call box_union_inside_vec(lcl%domain(id), sys%gr%mesh%np, sys%gr%mesh%x, lcl%inside(:,id))
+    end if
+
+    ! Then all the remaining domains
+    do id = 1, lcl%nd
+      if (lcl%dshape(id) == BADER) cycle
+      call box_union_inside_vec(lcl%domain(id), sys%gr%mesh%np, sys%gr%mesh%x, lcl%inside(:,id))
+    end do
+
+    if (extra_write) then
+      ! Write extra information about domains
+      SAFE_ALLOCATE(dble_domain_map(1:lcl%nd, 1:sys%gr%mesh%np))
+      SAFE_ALLOCATE(domain_mesh(1:sys%gr%mesh%np))
+
+      dble_domain_map(1:lcl%nd, 1:sys%gr%mesh%np) = M_ZERO
+      domain_mesh(1:sys%gr%mesh%np) = M_ZERO
+      do ip = 1, sys%gr%mesh%np
+        do id = 1, lcl%nd
+          if (lcl%inside(ip, id)) then
+            dble_domain_map(id, ip) = TOFLOAT(id)
+            domain_mesh(ip) = domain_mesh(ip) + dble_domain_map(id, ip)
+          end if
+        end do
       end do
+
+      write(filename,'(a,a,a)')'domain.mesh'
+      call dio_function_output(how, trim('local.general'), trim(filename), global_namespace, &
+        sys%gr%mesh, domain_mesh(1:sys%gr%mesh%np) , unit_one, ierr, geo = sys%geo)
+
+      do id = 1, lcl%nd
+        write(filename,'(a,a,a)')'domain.',trim(lcl%lab(id))
+        call dio_function_output(how, trim('local.general'), trim(filename), global_namespace, &
+          sys%gr%mesh, dble_domain_map(id, 1:sys%gr%mesh%np) , unit_one, ierr, geo = sys%geo)
+      end do
+
+      SAFE_DEALLOCATE_A(dble_domain_map)
+      SAFE_DEALLOCATE_A(domain_mesh)
     end if
 
     !Check for atom list inside each domain
@@ -799,32 +845,27 @@ contains
     SAFE_DEALLOCATE_A(ff2)
     
     POP_SUB(local_inside_domain)
-
   end subroutine local_inside_domain
 
   ! ---------------------------------------------------------
-  subroutine bader_union_inside(basins, nd, dom, lab, dsh, inside)
+  subroutine bader_union_inside(basins, nd, dom, dsh, inside)
     type(basins_t),    intent(inout) :: basins
     integer,           intent(in)    :: nd 
     type(box_union_t), intent(in)    :: dom(:)
-    character(len=15), intent(in)    :: lab(:)
     integer,           intent(in)    :: dsh(:)
     logical,           intent(out)   :: inside(:,:)
 
-    integer(8)            :: how
-    integer               :: ia, ib, id, ierr, ip, ix, rankmin
+    integer               :: ia, ib, id, ip, ix, rankmin
     integer               :: max_check
     integer, allocatable  :: dunit(:), domain_map(:,:), ion_map(:)
     FLOAT                 :: dmin, dd
-    FLOAT, allocatable    :: xi(:), dble_domain_map(:,:), domain_mesh(:)
-    logical               :: extra_write, lduseatomicradii
-    character(len=64)     :: filename
+    FLOAT, allocatable    :: xi(:)
+    logical               :: lduseatomicradii
 
     PUSH_SUB(bader_union_inside)
 
     SAFE_ALLOCATE(xi(1:sys%space%dim))
     inside = .false.
-
 
     !%Variable LDUseAtomicRadii
     !%Type logical
@@ -844,90 +885,43 @@ contains
     SAFE_ALLOCATE(domain_map(1:nd, 1:max_check))
 
     do id = 1, nd
-      if( dsh(id) /= BADER ) then
-        call box_union_inside_vec(dom(id), sys%gr%mesh%np, sys%gr%mesh%x, inside(:,id))
-      else
+      if( dsh(id) /= BADER ) cycle
+
       ! Assign basins%map to ions
-        if (lduseatomicradii .and. (id == 1)) then
-          ion_map = 0
-          do ia = 1, sys%geo%natoms
-            ion_map(ia) = basins%map(mesh_nearest_point(sys%gr%mesh, sys%geo%atom(ia)%x, dmin, rankmin)) 
-          end do
-      ! Assign lonely pair to ion in a atomic radii distance
-          do ip = 1, sys%gr%mesh%np
-            if( all(ion_map(:) /= basins%map(ip)) ) then
-              do ia = 1, sys%geo%natoms
-                dd = sum((sys%gr%mesh%x(ip, 1:sys%gr%sb%dim) & 
-                      - sys%geo%atom(ia)%x(1:sys%gr%sb%dim))**2)
-                dd = sqrt(dd)
-                if ( dd <= species_vdw_radius(sys%geo%atom(ia)%species) ) basins%map(ip) = ion_map(ia)
-              end do
-            end if
-          end do
-        end if
-        domain_map = 0
-        do ib = 1, box_union_get_nboxes(dom(id))
-          xi = box_union_get_center(dom(id), ib)
-          ix = mesh_nearest_point(sys%gr%mesh, xi, dmin, rankmin)
-          domain_map(id,ib) = basins%map(ix)
+      if (lduseatomicradii .and. (id == 1)) then
+        ion_map = 0
+        do ia = 1, sys%geo%natoms
+          ion_map(ia) = basins%map(mesh_nearest_point(sys%gr%mesh, sys%geo%atom(ia)%x, dmin, rankmin))
         end do
+        ! Assign lonely pair to ion in a atomic radii distance
         do ip = 1, sys%gr%mesh%np
-          if(any( domain_map(id, 1:box_union_get_nboxes(dom(id))) == basins%map(ip) ) ) inside(ip,id) = .true.
+          if( all(ion_map(:) /= basins%map(ip)) ) then
+            do ia = 1, sys%geo%natoms
+              dd = sum((sys%gr%mesh%x(ip, 1:sys%gr%mesh%sb%dim) &
+                - sys%geo%atom(ia)%x(1:sys%gr%mesh%sb%dim))**2)
+              dd = sqrt(dd)
+              if ( dd <= species_vdw_radius(sys%geo%atom(ia)%species) ) basins%map(ip) = ion_map(ia)
+            end do
+          end if
         end do
       end if
+      domain_map = 0
+      do ib = 1, box_union_get_nboxes(dom(id))
+        xi = box_union_get_center(dom(id), ib)
+        ix = mesh_nearest_point(sys%gr%mesh, xi, dmin, rankmin)
+        domain_map(id,ib) = basins%map(ix)
+      end do
+      do ip = 1, sys%gr%mesh%np
+        if(any( domain_map(id, 1:box_union_get_nboxes(dom(id))) == basins%map(ip) ) ) inside(ip,id) = .true.
+      end do
     end do
 
     SAFE_DEALLOCATE_A(domain_map)
     SAFE_DEALLOCATE_A(ion_map)
-
-    !%Variable LDExtraWrite
-    !%Type logical
-    !%Default false
-    !%Section Utilities::oct-local_multipoles
-    !%Description
-    !% Writes additional information to files, when computing local multipoles. For 
-    !% example, it writes coordinates of each local domain.
-    !%End
-    call parse_variable(global_namespace, 'LDExtraWrite', .false., extra_write)
-
-    SAFE_ALLOCATE(dble_domain_map(1:nd, 1:sys%gr%mesh%np))
-    SAFE_ALLOCATE(domain_mesh(1:sys%gr%mesh%np))
-
-    if (extra_write) then
-      call parse_variable(global_namespace, 'LDOutputFormat', 0, how)
-      if(.not.varinfo_valid_option('OutputFormat', how, is_flag=.true.)) then
-        call messages_input_error(global_namespace, 'LDOutputFormat')
-      end if
-      dble_domain_map(1:nd, 1:sys%gr%mesh%np) = M_ZERO
-      domain_mesh(1:sys%gr%mesh%np) = M_ZERO
-      do ip = 1, sys%gr%mesh%np
-        do id = 1, nd
-          if (inside(ip, id)) then 
-            dble_domain_map(id, ip) = TOFLOAT(id)
-            domain_mesh(ip) = domain_mesh(ip) + dble_domain_map(id, ip)
-          end if
-        end do
-      end do
-      
-      write(filename,'(a,a,a)')'domain.mesh'
-      call dio_function_output(how, trim('local.general'), trim(filename), global_namespace, &
-        sys%gr%mesh, domain_mesh(1:sys%gr%mesh%np) , unit_one, ierr, geo = sys%geo)
-      
-      do id = 1, nd
-        write(filename,'(a,a,a)')'domain.',trim(lab(id))
-        call dio_function_output(how, trim('local.general'), trim(filename), global_namespace, &
-          sys%gr%mesh, dble_domain_map(id, 1:sys%gr%mesh%np) , unit_one, ierr, geo = sys%geo)
-      end do
-    end if
-
-    SAFE_DEALLOCATE_A(dble_domain_map)
-    SAFE_DEALLOCATE_A(domain_mesh)
-
     SAFE_DEALLOCATE_A(xi)
     SAFE_DEALLOCATE_A(dunit)
 
     POP_SUB(bader_union_inside)
-
   end subroutine bader_union_inside
 
   ! ---------------------------------------------------------
