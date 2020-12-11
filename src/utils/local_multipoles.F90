@@ -544,10 +544,10 @@ contains
         end do
       case(PARALLELEPIPED)
         do ic = 1, dim 
-          call parse_block_float(blk, row, 2 + ic, lsize(ic), unit = units_inp%length)
+          call parse_block_float(blk, row, 1 + ic, lsize(ic), unit = units_inp%length)
         end do
         do ic = 1, dim 
-          call parse_block_float(blk, row, 2 + dim + ic, center(ic), unit = units_inp%length)
+          call parse_block_float(blk, row, 1 + dim + ic, center(ic), unit = units_inp%length)
         end do
       case(BADER)
         ! FIXME: when input error exists --> segmentation fault appears
