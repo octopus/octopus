@@ -163,8 +163,8 @@ subroutine X(xc_oep_solve) (namespace, gr, hm, st, is, vxc, oep)
   integer :: iter, ist, iter_used
   FLOAT :: vxc_bar, ff, residue
   FLOAT, allocatable :: ss(:), vxc_old(:)
-  R_TYPE, allocatable :: bb(:,:), psi(:, :), psi2(:,:)
-  R_TYPE, allocatable :: phi1(:,:,:)
+  FLOAT, allocatable :: psi2(:,:)
+  R_TYPE, allocatable :: bb(:,:), psi(:, :), phi1(:,:,:)
   logical, allocatable :: orthogonal(:)
   
   call profiling_in(C_PROFILING_XC_OEP_FULL, TOSTRING(X(XC_OEP_FULL)))
@@ -209,10 +209,10 @@ subroutine X(xc_oep_solve) (namespace, gr, hm, st, is, vxc, oep)
 
       if(abs(st%occ(ist,1))<= M_EPSILON) cycle
       call states_elec_get_state(st, gr%mesh, ist, is, psi)
-      psi2(:, 1) = R_CONJ(psi(:, 1))*psi(:,1)
+      psi2(:, 1) = real(R_CONJ(psi(:, 1))*psi(:,1))
 
       ! evaluate right-hand side
-      vxc_bar = X(mf_integrate)(gr%mesh, psi2(:, 1)*oep%vxc(1:gr%mesh%np, is))
+      vxc_bar = dmf_integrate(gr%mesh, psi2(:, 1)*oep%vxc(1:gr%mesh%np, is))
 
       bb(1:gr%mesh%np, 1) = -(oep%vxc(1:gr%mesh%np, is) - (vxc_bar - oep%uxc_bar(ist, is)))* &
         R_CONJ(psi(:, 1)) + oep%X(lxc)(1:gr%mesh%np, ist, is)
@@ -271,8 +271,8 @@ subroutine X(xc_oep_solve) (namespace, gr, hm, st, is, vxc, oep)
     do ist = 1, st%nst
       if(oep%eigen_type(ist) == 2) then
         call states_elec_get_state(st, gr%mesh, ist, is, psi)
-        psi2(:, 1) = R_CONJ(psi(:, 1))*psi(:,1)
-        vxc_bar = X(mf_integrate)(gr%mesh, psi2(:, 1)*oep%vxc(1:gr%mesh%np, is))
+        psi2(:, 1) = real(R_CONJ(psi(:, 1))*psi(:,1))
+        vxc_bar = dmf_integrate(gr%mesh, psi2(:, 1)*oep%vxc(1:gr%mesh%np, is))
         if (oep%has_photons) then
           call X(xc_oep_pt_uxcbar)(gr, st, is, oep, phi1, ist, vxc_bar)
 	end if
