@@ -55,7 +55,6 @@ if input_file_name is '-':
 
 # Read Variable definitions from JSON:
 
-variable_defs_name = '_build_foss-2018b/share/varinfo.json'
 variables = Variables()
 variables.import_json(variable_defs_name)
 

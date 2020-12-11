@@ -138,7 +138,7 @@ if write_headers:
     variables.write_defaults_header(filename=includedir+'defaults.h')
     variables.write_options_header(filename=includedir+'options.h')
 
-if write_variables_file:
+if write_variables:
     print('Generating variables file.')
     variables.write_variables_file(filename=sharedir+'variables')
 
