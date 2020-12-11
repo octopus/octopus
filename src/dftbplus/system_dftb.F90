@@ -610,6 +610,7 @@ contains
     SAFE_DEALLOCATE_A(this%gradients)
     SAFE_DEALLOCATE_A(this%species)
     SAFE_DEALLOCATE_A(this%mass)
+    call geometry_end(this%geo)
 
     call system_end(this)
 
