@@ -101,7 +101,11 @@ subroutine X(pnfft_backward)(pnfft, in, out)
   call pnfft_adj(pnfft%plan)
 #endif
   
+#ifdef R_TREAL
+  out(:,:,:) = R_TOTYPE(pnfft%f_hat(:,:,:))
+#else
   out(:,:,:) = pnfft%f_hat(:,:,:)
+#endif
 
 !   do i1 = 1,pnfft%N_local(1)
 !     do i2 = 1, pnfft%N_local(2)

@@ -192,7 +192,7 @@ contains
 
     my_N = 0
     do ii = 1, dim
-      my_N(ii) = N(ii)*nfft%sigma
+      my_N(ii) = N(ii)*int(nfft%sigma)
       if(optimize_ .or. (.not. nfft%guru)) call loct_fft_optimize(my_N(ii), 1) ! ask for an odd number
     end do
 
