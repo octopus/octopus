@@ -209,6 +209,7 @@ contains
     
     integer :: start(1:3), pp, qq, rr
     integer :: ll, mm, nn, ip, is2
+    integer :: idx(1:3)
     
     ! no push_sub, threadsafe function
     
@@ -232,7 +233,8 @@ contains
 #endif
     end if
     
-    start(1:3) = mesh%idx%lxyz(ip, 1:3) + this%interpolation_min * (/ii, jj, kk/)
+    call index_to_coords(mesh%idx, ip, idx)
+    start(1:3) = idx(1:3) + this%interpolation_min * (/ii, jj, kk/)
     
     pp = start(1)
     do ll = this%interpolation_min, this%interpolation_max

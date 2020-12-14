@@ -60,7 +60,7 @@ contains
     type(symmetrizer_t),         intent(out) :: this
     type(mesh_t),        target, intent(in)  :: mesh
 
-    integer :: nops, ip, iop, idir
+    integer :: nops, ip, iop, idir, idx(MAX_DIM)
     FLOAT :: destpoint(1:3), srcpoint(1:3), srcpoint_inv(1:3), lsize(1:3), offset(1:3)
     type(profile_t), save :: prof
 
@@ -82,10 +82,11 @@ contains
     do ip = 1, mesh%np
       if(mesh%parallel_in_domains) then
         ! convert to global point
-        destpoint(1:3) = TOFLOAT(mesh%idx%lxyz(mesh%vp%local(mesh%vp%xlocal + ip - 1), 1:3)) - offset(1:3)
+        call index_to_coords(mesh%idx, mesh%vp%local(mesh%vp%xlocal + ip - 1), idx)
       else
-        destpoint(1:3) = TOFLOAT(mesh%idx%lxyz(ip, 1:3)) - offset(1:3)
+        call index_to_coords(mesh%idx, ip, idx)
       end if
+      destpoint(1:3) = TOFLOAT(idx(1:3)) - offset(1:3)
       ! offset moves corner of cell to origin, in integer mesh coordinates
 
       ASSERT(all(destpoint >= 0))

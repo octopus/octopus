@@ -213,7 +213,7 @@ contains
 
     integer :: i, i1, i2, i4, i8, pt, ig
     integer :: ii, jj
-    integer :: x(MAX_DIM), mod2(MAX_DIM)
+    integer :: x(MAX_DIM), mod2(MAX_DIM), idx(MAX_DIM)
 
     PUSH_SUB(multigrid_get_transfer_tables)
 
@@ -226,7 +226,8 @@ contains
       ! translate to a global index of the coarse grid
       if(coarse%parallel_in_domains) ig = coarse%vp%local(ig - 1 + coarse%vp%xlocal)
       ! locate the equivalent global fine grid point
-      ig = index_from_coords(fine%idx, [2*coarse%idx%lxyz(ig, 1), 2*coarse%idx%lxyz(ig, 2), 2*coarse%idx%lxyz(ig, 3)])
+      call index_to_coords(coarse%idx, ig, idx)
+      ig = index_from_coords(fine%idx, 2*idx)
       ! translate to a local number of the fine grid
       if(fine%parallel_in_domains) ig = vec_global2local(fine%vp, ig, fine%vp%partno)
       tt%to_coarse(i) = ig
@@ -244,7 +245,8 @@ contains
       ig = i
       ! translate to a global index
       if(fine%parallel_in_domains) ig = fine%vp%local(ig - 1 + fine%vp%xlocal)
-      mod2 = mod(fine%idx%lxyz(ig, :), 2)
+      call index_to_coords(fine%idx, ig, idx)
+      mod2 = mod(idx, 2)
       
       pt = sum(abs(mod2(1:3)))
       
@@ -277,8 +279,9 @@ contains
       ig = i
       ! translate to a global index
       if(fine%parallel_in_domains) ig = fine%vp%local(ig - 1 + fine%vp%xlocal)
-      x(1:3)    = fine%idx%lxyz(ig, 1:3)/2
-      mod2(1:3) = mod(fine%idx%lxyz(ig, 1:3), 2)
+      call index_to_coords(fine%idx, ig, idx)
+      x(1:3)    = idx(1:3)/2
+      mod2(1:3) = mod(idx(1:3), 2)
 
       pt = sum(abs(mod2(1:3)))
 

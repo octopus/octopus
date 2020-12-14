@@ -63,7 +63,7 @@
       ! translate to a global index
       if(fine_mesh%parallel_in_domains) ipfg = fine_mesh%vp%local(ipf - 1 + fine_mesh%vp%xlocal)
 #endif 
-      xf(1:3) = fine_mesh%idx%lxyz(ipfg, 1:3)
+      call index_to_coords(fine_mesh%idx, ipfg, xf)
 
       dd = mod(xf, 2)
       
@@ -181,7 +181,7 @@
         fn = fine_der%mesh%vp%local(fn - 1 + fine_der%mesh%vp%xlocal)
       end if
 #endif
-      fi(:) = fine_der%mesh%idx%lxyz(fn, :)
+      call index_to_coords(fine_der%mesh%idx, fn, fi)
 
       f_coarse(nn) = M_ZERO
 

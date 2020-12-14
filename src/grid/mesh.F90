@@ -402,7 +402,7 @@ contains
     integer,      intent(out)   :: imin_local
     integer,      intent(out)   :: imin_global
 
-    integer              :: ip, ip_global, idim, ipart
+    integer              :: ip, ip_global, idim, ipart, idx(1:MAX_DIM)
     FLOAT                :: dd, xx(3)
 
     dmin_global = M_HUGE
@@ -410,8 +410,9 @@ contains
       do ipart=1, mesh%vp%npart
         do ip = 1, mesh%vp%np_local_vec(ipart)
           ip_global = mesh%vp%local_vec(mesh%vp%xlocal_vec(ipart) + ip - 1)
+          call index_to_coords(mesh%idx, ip_global, idx)
           do idim = 1, mesh%sb%dim
-            xx(idim) = mesh%idx%lxyz(ip_global,idim) * mesh%spacing(idim)
+            xx(idim) = idx(idim) * mesh%spacing(idim)
           end do
           dd = sqrt(sum((pos(1:3) - xx(1:3))**2))
           if (dd < dmin_global) then
@@ -424,8 +425,9 @@ contains
       end do
     else
       do ip = 1, mesh%np
+        call index_to_coords(mesh%idx, ip, idx)
         do idim = 1, mesh%sb%dim
-          xx(idim) = mesh%idx%lxyz(ip,idim) * mesh%spacing(idim)
+          xx(idim) = idx(idim) * mesh%spacing(idim)
         end do
         dd = sqrt(sum((pos(1:3) - xx(1:3))**2))
         if (dd < dmin_global) then

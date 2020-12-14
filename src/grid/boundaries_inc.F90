@@ -321,18 +321,21 @@ contains
     integer :: ii, jj, kk, ix, iy, iz, dx, dy, dz, i_lev
     FLOAT :: weight
     R_TYPE, allocatable :: ff(:)
+    integer :: idx(1:3)
 
     PUSH_SUB(X(boundaries_set_batch).multiresolution)
 
     SAFE_ALLOCATE(ff(1:boundaries%mesh%np_part))
+    ASSERT(boundaries%mesh%idx%dim == 3)
     
     do ist = 1, ffb%nst_linear
       call batch_get_state(ffb, ist, boundaries%mesh%np_part, ff)
       
       do ip = bndry_start, bndry_end
-        ix = boundaries%mesh%idx%lxyz(ip, 1)
-        iy = boundaries%mesh%idx%lxyz(ip, 2)
-        iz = boundaries%mesh%idx%lxyz(ip, 3)
+        call index_to_coords(boundaries%mesh%idx, ip, idx)
+        ix = idx(1)
+        iy = idx(2)
+        iz = idx(3)
 
         i_lev = boundaries%mesh%resolution(ix,iy,iz)
 
