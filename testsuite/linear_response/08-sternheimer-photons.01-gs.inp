@@ -4,6 +4,8 @@ Dimensions = 1
 DerivativesOrder = 4
 PoisonSolver = direct_sum
 
+EigensolverTolerance = 1e-10
+
 %Species
  'H2'| species_user_defined | potential_formula | "-2.0/sqrt(x^2+1.0)" | valence | 2
 %
