@@ -192,11 +192,16 @@ subroutine X(xc_oep_solve) (namespace, gr, hm, st, is, vxc, oep)
   end if
 
   if (oep%has_photons) then
+#ifdef R_TREAL
     if(.not. lr_is_allocated(oep%photon_lr)) then
       call lr_allocate(oep%photon_lr, st, gr%mesh)
-      oep%photon_lr%X(dl_psi)(:, :, :, :) = M_ZERO
+      oep%photon_lr%ddl_psi(:, :, :, :) = M_ZERO
     end if
-    call X(xc_oep_pt_phi)(namespace, gr, hm, st, is, oep, phi1)
+    call xc_oep_pt_phi(namespace, gr, hm, st, is, oep, phi1)
+#else
+    ! Photons with OEP are only implemented for real states
+    ASSERT(.false.)
+#endif
   end if
 
   ! fix xc potential (needed for Hpsi)
@@ -217,12 +222,17 @@ subroutine X(xc_oep_solve) (namespace, gr, hm, st, is, vxc, oep)
       bb(1:gr%mesh%np, 1) = -(oep%vxc(1:gr%mesh%np, is) - (vxc_bar - oep%uxc_bar(ist, is)))* &
         R_CONJ(psi(:, 1)) + oep%X(lxc)(1:gr%mesh%np, ist, is)
 
-      if (oep%has_photons) call X(xc_oep_pt_rhs)(gr, st, is, oep, phi1, ist, bb)
-
       if (oep%has_photons) then
+#ifdef R_TREAL
+        call xc_oep_pt_rhs(gr, st, is, oep, phi1, ist, bb)
+
         orthogonal = .true.
         orthogonal(ist) = .false.
-        call X(states_elec_orthogonalize_single)(st, gr%mesh, st%nst, is, bb, normalize = .false., mask = orthogonal)
+        call dstates_elec_orthogonalize_single(st, gr%mesh, st%nst, is, bb, normalize = .false., mask = orthogonal)
+#else
+        ! Photons with OEP are only implemented for real states
+        ASSERT(.false.)
+#endif
       else
         call X(lr_orth_vector) (gr%mesh, st, bb, ist, is, R_TOTYPE(M_ZERO))
       end if
@@ -243,7 +253,12 @@ subroutine X(xc_oep_solve) (namespace, gr, hm, st, is, vxc, oep)
       ! ss = ss + 2*dl_psi*psi
       call lalg_axpy(gr%mesh%np, M_TWO, R_REAL(oep%lr%X(dl_psi)(1:gr%mesh%np, 1, ist, is)*psi(:, 1)), ss(:))
       if (oep%has_photons) then
-        call X(xc_oep_pt_inhomog)(gr, st, is, phi1, ist, ss)
+#ifdef R_TREAL
+        call xc_oep_pt_inhomog(gr, st, is, phi1, ist, ss)
+#else
+        ! Photons with OEP are only implemented for real states
+        ASSERT(.false.)
+#endif
       end if
     end do
 
@@ -274,7 +289,12 @@ subroutine X(xc_oep_solve) (namespace, gr, hm, st, is, vxc, oep)
         psi2(:, 1) = real(R_CONJ(psi(:, 1))*psi(:,1))
         vxc_bar = dmf_integrate(gr%mesh, psi2(:, 1)*oep%vxc(1:gr%mesh%np, is))
         if (oep%has_photons) then
-          call X(xc_oep_pt_uxcbar)(gr, st, is, oep, phi1, ist, vxc_bar)
+#ifdef R_TREAL
+          call xc_oep_pt_uxcbar(gr, st, is, oep, phi1, ist, vxc_bar)
+#else
+          ! Photons with OEP are only implemented for real states
+          ASSERT(.false.)
+#endif
 	end if
         oep%vxc(1:gr%mesh%np,is) = oep%vxc(1:gr%mesh%np,is) - (vxc_bar - oep%uxc_bar(ist,is))
       end if

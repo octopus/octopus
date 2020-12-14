@@ -398,6 +398,7 @@ contains
 
 
 #include "xc_kli_pauli_inc.F90"
+#include "xc_oep_qed_inc.F90"
 
 #include "undef.F90"
 #include "real.F90"
@@ -405,7 +406,6 @@ contains
 #include "xc_oep_x_inc.F90"
 #include "xc_oep_sic_inc.F90"
 #include "xc_oep_inc.F90"
-#include "xc_oep_qed_inc.F90"
 
 #include "undef.F90"
 #include "complex.F90"
@@ -413,7 +413,6 @@ contains
 #include "xc_oep_x_inc.F90"
 #include "xc_oep_sic_inc.F90"
 #include "xc_oep_inc.F90"
-#include "xc_oep_qed_inc.F90"
 
 end module xc_oep_oct_m
 
