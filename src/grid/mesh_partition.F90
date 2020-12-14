@@ -558,8 +558,9 @@ contains
     type(mesh_t), intent(inout) :: mesh
     type(mesh_t), intent(in)    :: parent
 
-    integer :: istart, np, ip_local, ip_global, ix, iy, iz, ii
+    integer :: istart, np, ip_local, ip_global
     integer, allocatable :: points(:), part(:)
+    integer :: idx(1:3)
 
     PUSH_SUB(mesh_partition_from_parent)
 
@@ -572,11 +573,8 @@ contains
     SAFE_ALLOCATE(part(1:np))
     do ip_local = 1, np
       ip_global = istart + ip_local - 1
-      ix = 2*mesh%idx%lxyz(ip_global, 1)
-      iy = 2*mesh%idx%lxyz(ip_global, 2)
-      iz = 2*mesh%idx%lxyz(ip_global, 3)
-      ii = parent%idx%lxyz_inv(ix, iy, iz)
-      points(ip_local) = ii
+      call index_to_coords(mesh%idx, ip_global, idx)
+      points(ip_local) = index_from_coords(parent%idx, 2*idx)
     end do
     call partition_get_partition_number(parent%inner_partition, np, points, part)
 

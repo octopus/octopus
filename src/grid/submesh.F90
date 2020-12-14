@@ -24,6 +24,7 @@ module submesh_oct_m
   use boundaries_oct_m
   use comm_oct_m
   use global_oct_m
+  use index_oct_m
   use lalg_basic_oct_m
   use messages_oct_m
   use sort_oct_m
@@ -196,7 +197,7 @@ contains
       do iz = nmin(3), nmax(3)
         do iy = nmin(2), nmax(2)
           do ix = nmin(1), nmax(1)
-            ip = mesh%idx%lxyz_inv(ix, iy, iz)
+            ip = index_from_coords(mesh%idx, [ix, iy, iz])
             if(ip == 0) cycle
             if(mesh%parallel_in_domains) ip = vec_global2local(mesh%vp, ip, mesh%vp%partno)
             if(ip == 0) cycle
@@ -224,7 +225,7 @@ contains
       do iz = nmin(3), nmax(3)
         do iy = nmin(2), nmax(2)
           do ix = nmin(1), nmax(1)
-            ip = mesh%idx%lxyz_inv(ix, iy, iz)
+            ip = index_from_coords(mesh%idx, [ix, iy, iz])
             if(ip == 0) cycle
             if(mesh%parallel_in_domains) ip = vec_global2local(mesh%vp, ip, mesh%vp%partno)
             is = map_inv(ip)

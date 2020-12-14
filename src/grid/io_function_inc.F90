@@ -1081,11 +1081,11 @@ contains
         
         select case(d1)
         case(1)
-          ip = mesh%idx%lxyz_inv( 0, ix, iy)    ! plane_x
+          ip = index_from_coords(mesh%idx, [ 0, ix, iy])    ! plane_x
         case(2)
-          ip = mesh%idx%lxyz_inv(ix,  0, iy)    ! plane_y
+          ip = index_from_coords(mesh%idx, [ix,  0, iy])    ! plane_y
         case(3)
-          ip = mesh%idx%lxyz_inv(ix, iy,  0)    ! plane_z
+          ip = index_from_coords(mesh%idx, [ix, iy,  0])    ! plane_z
         end select
 
         select case(out_what)
