@@ -188,6 +188,7 @@ noinst_HEADERS +=                             \
 	math/lalg_basic_blas_inc.F90          \
 	math/lalg_adv_lapack_inc.F90          \
 	math/math_inc.F90                     \
+	math/nfft_inc.F90                     \
 	math/ode_solver_inc.F90               \
 	math/pnfft_inc.F90                    \
 	math/root_solver_inc.F90              \

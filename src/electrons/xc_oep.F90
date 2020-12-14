@@ -166,6 +166,10 @@ contains
         if (oep%level == XC_OEP_FULL .and. st%d%nspin /= UNPOLARIZED) then
           call messages_not_implemented('Spin-polarized calculations with photon OEP.')
         end if
+
+        if (states_are_complex(st)) then
+          call messages_not_implemented('Photon OEP with complex wavefunctions.')
+        end if
       end if
 
       if(oep%level == XC_OEP_FULL) then
@@ -398,6 +402,7 @@ contains
 
 
 #include "xc_kli_pauli_inc.F90"
+#include "xc_oep_qed_inc.F90"
 
 #include "undef.F90"
 #include "real.F90"
@@ -405,7 +410,6 @@ contains
 #include "xc_oep_x_inc.F90"
 #include "xc_oep_sic_inc.F90"
 #include "xc_oep_inc.F90"
-#include "xc_oep_qed_inc.F90"
 
 #include "undef.F90"
 #include "complex.F90"
@@ -413,7 +417,6 @@ contains
 #include "xc_oep_x_inc.F90"
 #include "xc_oep_sic_inc.F90"
 #include "xc_oep_inc.F90"
-#include "xc_oep_qed_inc.F90"
 
 end module xc_oep_oct_m
 
