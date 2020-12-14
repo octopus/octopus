@@ -166,6 +166,10 @@ contains
         if (oep%level == XC_OEP_FULL .and. st%d%nspin /= UNPOLARIZED) then
           call messages_not_implemented('Spin-polarized calculations with photon OEP.')
         end if
+
+        if (states_are_complex(st)) then
+          call messages_not_implemented('Photon OEP with complex wavefunctions.')
+        end if
       end if
 
       if(oep%level == XC_OEP_FULL) then
