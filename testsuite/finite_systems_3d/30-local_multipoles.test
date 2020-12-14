@@ -19,10 +19,10 @@ Precision: 2.50e-08
 match ;  C    Electrons    ; LINEFIELD(local.general/multipoles/C.multipoles, -1, 3) ; 4.26848515791
 Precision: 1.03e-10
 match ;  C    Multipole x  ; LINEFIELD(local.general/multipoles/C.multipoles, -1, 4) ; -9.382746032915293e-11
-Precision: 3.28e-11
-match ;  C    Multipole y  ; LINEFIELD(local.general/multipoles/C.multipoles, -1, 5) ; -2.9773431781222045e-11
-Precision: 2.49e-10
-match ;  C    Multipole z  ; LINEFIELD(local.general/multipoles/C.multipoles, -1, 6) ; 2.2664409718668116e-10
+Precision: 4.57e-11
+match ;  C    Multipole y  ; LINEFIELD(local.general/multipoles/C.multipoles, -1, 5) ; -4.1501439601532045e-11
+Precision: 2.77e-10
+match ;  C    Multipole z  ; LINEFIELD(local.general/multipoles/C.multipoles, -1, 6) ; 2.5170769092093114e-10
 Precision: 4.90e-09
 match ;  H1   Electrons    ; LINEFIELD(local.general/multipoles/H1.multipoles, -1, 3) ; 1.8534093232445001
 Precision: 3.84e-09
