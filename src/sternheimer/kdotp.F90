@@ -33,6 +33,7 @@ module kdotp_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use multisystem_basic_oct_m
   use namespace_oct_m
   use parser_oct_m
   use pert_oct_m
@@ -45,11 +46,12 @@ module kdotp_oct_m
   use states_elec_dim_oct_m
   use states_elec_restart_oct_m
   use sternheimer_oct_m
-  use system_oct_m
+  use electrons_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use utils_oct_m
-  
+  use v_ks_oct_m
+
   implicit none
 
   private
@@ -83,9 +85,27 @@ module kdotp_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine kdotp_lr_run(sys, fromScratch)
-    type(system_t),      intent(inout) :: sys
-    logical,             intent(inout) :: fromScratch
+  subroutine kdotp_lr_run(system, from_scratch)
+    class(*),        intent(inout) :: system
+    logical,         intent(in)    :: from_scratch
+
+    PUSH_SUB(kdotp_lr_run)
+
+    select type (system)
+    class is (multisystem_basic_t)
+      message(1) = "CalculationMode = kdotp not implemented for multi-system calculations"
+      call messages_fatal(1)
+    type is (electrons_t)
+      call kdotp_lr_run_legacy(system, from_scratch)
+    end select
+
+    POP_SUB(kdotp_lr_run)
+  end subroutine kdotp_lr_run
+
+  ! ---------------------------------------------------------
+  subroutine kdotp_lr_run_legacy(sys, fromScratch)
+    type(electrons_t),   intent(inout) :: sys
+    logical,             intent(in)    :: fromScratch
 
     type(kdotp_t)           :: kdotp_vars
     type(sternheimer_t)     :: sh, sh2
@@ -98,7 +118,7 @@ contains
 	
     type(pert_t)            :: pert2  ! for the second direction in second-order kdotp
 
-    PUSH_SUB(kdotp_lr_run)
+    PUSH_SUB(kdotp_lr_run_legacy)
 
     call messages_experimental("k.p perturbation and calculation of effective masses")
 
@@ -106,6 +126,9 @@ contains
       call messages_not_implemented("PCM for CalculationMode /= gs or td")
     end if
 
+    !TODO: This test belongs to the pert.F90 file, in the case of the velocity operator not been defined 
+    ! from the Hamiltonian
+    ! In this case, there are other terms missing (MGGA, DFT+U for instance).
     if(sys%hm%theory_level == HARTREE_FOCK) then
       call messages_not_implemented('Commutator of Fock operator')
     end if
@@ -120,11 +143,6 @@ contains
        message(1) = "k.p perturbation cannot be used for a finite system."
        call messages_fatal(1)
     end if
-
-    SAFE_ALLOCATE(kdotp_vars%eff_mass_inv(1:pdim, 1:pdim, 1:sys%st%nst, 1:sys%st%d%nik))
-    SAFE_ALLOCATE(kdotp_vars%velocity(1:pdim, 1:sys%st%nst, 1:sys%st%d%nik))
-    kdotp_vars%eff_mass_inv(:,:,:,:) = 0 
-    kdotp_vars%velocity(:,:,:) = 0 
 
     call pert_init(kdotp_vars%perturbation, sys%namespace, PERTURBATION_KDOTP, sys%gr, sys%geo)
     SAFE_ALLOCATE(kdotp_vars%lr(1:1, 1:pdim))
@@ -163,7 +181,7 @@ contains
     ! setup Hamiltonian
     message(1) = 'Info: Setting up Hamiltonian for linear response.'
     call messages_info(1)
-    call system_h_setup(sys)
+    call v_ks_h_setup(sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm)
     
     if(states_are_real(sys%st)) then
       message(1) = 'Info: Using real wavefunctions.'
@@ -174,10 +192,10 @@ contains
 
     message(1) = 'Calculating band velocities.'
     call messages_info(1)
-
-    if(states_are_real(sys%st)) then
-      kdotp_vars%velocity(:,:,:) = M_ZERO
-    else
+ 
+    SAFE_ALLOCATE(kdotp_vars%velocity(1:pdim, 1:sys%st%nst, 1:sys%st%d%nik))
+    kdotp_vars%velocity(:,:,:) = M_ZERO
+    if(states_are_complex(sys%st)) then
       call zcalc_band_velocity(sys, kdotp_vars%perturbation, kdotp_vars%velocity(:,:,:))
     end if
 
@@ -185,6 +203,7 @@ contains
       call io_mkdir(KDOTP_DIR, sys%namespace) ! data output
       call kdotp_write_band_velocity(sys%st, pdim, kdotp_vars%velocity(:,:,:), sys%namespace)
     end if
+    SAFE_DEALLOCATE_P(kdotp_vars%velocity)
 
     call sternheimer_obsolete_variables(sys%namespace, 'KdotP_', 'KdotP')
     call sternheimer_init(sh, sys, complex_response, set_ham_var = 0, &
@@ -317,6 +336,10 @@ contains
       message(1) = "Info: Calculating effective masses."
       call messages_info(1)
 
+      SAFE_ALLOCATE(kdotp_vars%eff_mass_inv(1:pdim, 1:pdim, 1:sys%st%nst, 1:sys%st%d%nik))
+      kdotp_vars%eff_mass_inv(:,:,:,:) = M_ZERO
+
+
       if(states_are_real(sys%st)) then
         call dcalc_eff_mass_inv(sys, kdotp_vars%lr, kdotp_vars%perturbation, &
           kdotp_vars%eff_mass_inv, kdotp_vars%degen_thres)
@@ -327,6 +350,8 @@ contains
 
       call kdotp_write_degeneracies(sys%st, kdotp_vars%degen_thres)
       call kdotp_write_eff_mass(sys%st, sys%gr, kdotp_vars, sys%namespace)
+
+      SAFE_DEALLOCATE_P(kdotp_vars%eff_mass_inv)
     end if
 
     ! clean up some things
@@ -354,10 +379,8 @@ contains
     end if
 
     call states_elec_deallocate_wfns(sys%st)
-    SAFE_DEALLOCATE_P(kdotp_vars%eff_mass_inv)
-    SAFE_DEALLOCATE_P(kdotp_vars%velocity)
 
-    POP_SUB(kdotp_lr_run)
+    POP_SUB(kdotp_lr_run_legacy)
 
   contains
 
@@ -365,7 +388,7 @@ contains
 
     subroutine parse_input()
 
-      PUSH_SUB(kdotp_lr_run.parse_input)
+      PUSH_SUB(kdotp_lr_run_legacy.parse_input)
 
       !%Variable KdotPOccupiedSolutionMethod
       !%Type integer
@@ -435,14 +458,14 @@ contains
       !%End      
       call parse_variable(sys%namespace, 'KdotPCalcSecondOrder', .false., calc_2nd_order)
 
-      POP_SUB(kdotp_lr_run.parse_input)
+      POP_SUB(kdotp_lr_run_legacy.parse_input)
 
    end subroutine parse_input
 
     ! ---------------------------------------------------------
     subroutine info()
 
-      PUSH_SUB(kdotp_lr_run.info)
+      PUSH_SUB(kdotp_lr_run_legacy.info)
 
       call pert_info(kdotp_vars%perturbation)
 
@@ -459,11 +482,11 @@ contains
 
       call messages_print_stress(stdout)
       
-      POP_SUB(kdotp_lr_run.info)
+      POP_SUB(kdotp_lr_run_legacy.info)
 
     end subroutine info
 
-  end subroutine kdotp_lr_run
+  end subroutine kdotp_lr_run_legacy
 
   ! ---------------------------------------------------------
   subroutine kdotp_write_band_velocity(st, periodic_dim, velocity, namespace)

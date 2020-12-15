@@ -7,45 +7,64 @@ Enabled    : Yes
 
 Processors: 4
 Input: 14-fullerene_unpacked.01-gs.inp
-match ; SCF convergence    ; GREPCOUNT(static/info, 'SCF \*not\* converged') ; 1
-match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ;    -344.48255016
-match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ;    3706.61771965
-match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ;     -87.44954379
-match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ;    3996.14665413
-match ; Int[n*v_xc]        ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -138.18268706
-match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ;     -92.39658963
-match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ;     -13.29016932
-match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;     227.63926061
-match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ;   -8143.12279627
 
-match ; Eigenvalue  10     ; GREPFIELD(static/info, ' 10   --', 3) ; -0.740741
-match ; Eigenvalue  20     ; GREPFIELD(static/info, ' 20   --', 3) ; -0.654994
-match ; Eigenvalue  30     ; GREPFIELD(static/info, ' 30   --', 3) ; -0.587552
-match ; Eigenvalue  40     ; GREPFIELD(static/info, ' 40   --', 3) ; -0.477951
-match ; Eigenvalue  50     ; GREPFIELD(static/info, ' 50   --', 3) ; -0.379479
-match ; Eigenvalue  60     ; GREPFIELD(static/info, ' 60   --', 3) ; -0.308527
-match ; Eigenvalue  70     ; GREPFIELD(static/info, ' 70   --', 3) ; -0.251311
-match ; Eigenvalue  80     ; GREPFIELD(static/info, ' 80   --', 3) ; -0.225756
-match ; Eigenvalue  90     ; GREPFIELD(static/info, ' 90   --', 3) ; -0.162714
-match ; Eigenvalue 100     ; GREPFIELD(static/info, '100   --', 3) ; -0.141117
-match ; Eigenvalue 110     ; GREPFIELD(static/info, '110   --', 3) ; -0.059069
-match ; Eigenvalue 120     ; GREPFIELD(static/info, '120   --', 3) ; -0.008812
-match ; Eigenvalue 130     ; GREPFIELD(static/info, '130   --', 3) ;  0.133556
-match ; Eigenvalue 140     ; GREPFIELD(static/info, '140   --', 3) ;  0.194807
+match ; SCF convergence    ; GREPCOUNT(static/info, 'SCF converged') ; 1
+
+Precision: 3.18e-13
+match ;  Total energy        ; GREPFIELD(static/info, 'Total       =', 3) ; -318.47823892
+Precision: 3.71e-12
+match ;  Ion-ion energy      ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; 3706.61771965
+Precision: 6.85e-14
+match ;  Eigenvalues sum     ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -68.51728658
+Precision: 3.99e-12
+match ;  Hartree energy      ; GREPFIELD(static/info, 'Hartree     =', 3) ; 3988.9372006
+Precision: 1.38e-13
+match ;  Int[n*v_xc]         ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -137.61502532
+Precision: 9.20e-14
+match ;  Exchange energy     ; GREPFIELD(static/info, 'Exchange    =', 3) ; -91.98682445
+Precision: 1.33e-14
+match ;  Correlation energy  ; GREPFIELD(static/info, 'Correlation =', 3) ; -13.26967226
+Precision: 2.25e-13
+match ;  Kinetic energy      ; GREPFIELD(static/info, 'Kinetic     =', 3) ; 225.40952724
+Precision: 8.13e-12
+match ;  External energy     ; GREPFIELD(static/info, 'External    =', 3) ; -8134.18591565
+
+Precision: 6.57e-16
+match ;  Eigenvalue  10      ; GREPFIELD(static/info, ' 10   --', 3) ; -0.656765
+match ;  Eigenvalue  20      ; GREPFIELD(static/info, ' 20   --', 3) ; -0.572605
+match ;  Eigenvalue  30      ; GREPFIELD(static/info, ' 30   --', 3) ; -0.505688
+match ;  Eigenvalue  40      ; GREPFIELD(static/info, ' 40   --', 3) ; -0.393505
+match ;  Eigenvalue  50      ; GREPFIELD(static/info, ' 50   --', 3) ; -0.296596
+match ;  Eigenvalue  60      ; GREPFIELD(static/info, ' 60   --', 3) ; -0.225454
+match ;  Eigenvalue  70      ; GREPFIELD(static/info, ' 70   --', 3) ; -0.169664
+match ;  Eigenvalue  80      ; GREPFIELD(static/info, ' 80   --', 3) ; -0.158754
+match ;  Eigenvalue  90      ; GREPFIELD(static/info, ' 90   --', 3) ; -0.079495
+match ;  Eigenvalue 100      ; GREPFIELD(static/info, '100   --', 3) ; -0.064321
+match ;  Eigenvalue 110      ; GREPFIELD(static/info, '110   --', 3) ; 0.007266
+match ;  Eigenvalue 120      ; GREPFIELD(static/info, '120   --', 3) ; 0.057976
+match ;  Eigenvalue 130      ; GREPFIELD(static/info, '130   --', 3) ; 0.198764
+match ;  Eigenvalue 140      ; GREPFIELD(static/info, '140   --', 3) ; 0.270498
+
 
 Input: 14-fullerene_unpacked.02-td-unpacked.inp
-Precision  : 1e-10
-match ; Energy [step  0] ; LINEFIELD(td.general/energy, -21, 3) ; -3.184059208162e+02
-match ; Energy [step 20] ; LINEFIELD(td.general/energy, -1, 3) ; -3.183951422465e+02
-Precision  : 1e-10
-match ; Multipoles [step  0] ; LINEFIELD(td.general/multipoles, -21, 4) ; 8.612131780460e-03
-match ; Multipoles [step 20] ; LINEFIELD(td.general/multipoles,  -1, 4) ; -2.016274380194e+00
+
+Precision: 3.18e-13
+match ;  Energy [step  0]  ; LINEFIELD(td.general/energy, -21, 3) ; -318.4779648656
+match ;  Energy [step 20]  ; LINEFIELD(td.general/energy, -1, 3) ; -318.4657774256
+
+Precision: 6.21e-13
+match ;  Multipoles [step  0]  ; LINEFIELD(td.general/multipoles, -21, 4) ; -0.001164551228992
+Precision: 1.10e-12
+match ;  Multipoles [step 20]  ; LINEFIELD(td.general/multipoles, -1, 4) ; -2.019955528622
+
 
 Input: 14-fullerene_unpacked.03-td-packed.inp
-Precision  : 1e-10
-match ; Energy [step  0] ; LINEFIELD(td.general/energy, -21, 3) ; -3.184059208162e+02
-match ; Energy [step 20] ; LINEFIELD(td.general/energy, -1, 3) ; -3.183951422465e+02
-Precision  : 1e-10
-match ; Multipoles [step  0] ; LINEFIELD(td.general/multipoles, -21, 4) ; 8.612131780460e-03
-match ; Multipoles [step 20] ; LINEFIELD(td.general/multipoles,  -1, 4) ; -2.016274380194e+00
 
+Precision: 3.18e-13
+match ;  Energy [step  0]  ; LINEFIELD(td.general/energy, -21, 3) ; -318.4779648656
+match ;  Energy [step 20]  ; LINEFIELD(td.general/energy, -1, 3) ; -318.4657774256
+
+Precision: 6.21e-13
+match ;  Multipoles [step  0]  ; LINEFIELD(td.general/multipoles, -21, 4) ; -0.001164551228992
+Precision: 1.10e-12
+match ;  Multipoles [step 20]  ; LINEFIELD(td.general/multipoles, -1, 4) ; -2.019955528622

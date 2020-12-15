@@ -26,11 +26,13 @@ dist_doc_DATA = \
 	vars_index.html \
 	Atomic_Orbitals.html \
 	ClassicalParticles.html \
+	DFTBPlusInterface.html \
 	Execution.html \
 	Calculation_Modes.html \
 	Hamiltonian.html \
 	Linear_Response.html \
 	Math.html \
+	Maxwell.html \
 	MaxwellStates.html \
 	Mesh.html \
 	Output.html \
@@ -46,6 +48,7 @@ alpha.js: RUN_SCRIPT
 sections.js: RUN_SCRIPT
 vars_index.html: RUN_SCRIPT
 Atomic_Orbitals.html: RUN_SCRIPT
+DFTBPlusInterface.html: RUN_SCRIPT
 Execution.html: RUN_SCRIPT
 Calculation_Modes.html: RUN_SCRIPT
 Hamiltonian.html: RUN_SCRIPT
@@ -55,6 +58,7 @@ Mesh.html: RUN_SCRIPT
 Output.html: RUN_SCRIPT
 SCF.html: RUN_SCRIPT
 States.html: RUN_SCRIPT
+Maxwell.html: RUN_SCRIPT
 MaxwellStates.html: RUN_SCRIPT
 System.html: RUN_SCRIPT
 Time-Dependent.html: RUN_SCRIPT

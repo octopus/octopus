@@ -542,13 +542,11 @@ contains
       end do
 
       if(st%parallel_in_states .or. st%d%kpt%parallel) then
-#if defined(HAVE_MPI)
         ! total spectrum = sum over all states
         call comm_allreduce(st%st_kpt_mpi_grp%comm, spctrout)
 
         ! orbital spectra
         call comm_allreduce(st%st_kpt_mpi_grp%comm, spctrsum)
-#endif
       end if
 
       ! -----------------------------------------------------------------

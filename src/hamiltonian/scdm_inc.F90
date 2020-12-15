@@ -45,7 +45,7 @@ subroutine X(scdm_localize)(scdm, namespace, st, mesh)
     return
   end if
 
-  call profiling_in(prof_scdm,"SCDM")
+  call profiling_in(prof_scdm,TOSTRING(X(SCDM)))
 
   nval = st%nst ! TODO: check that this is really the number of valence states
 
@@ -74,7 +74,7 @@ subroutine X(scdm_localize)(scdm, namespace, st, mesh)
     end do
   end do
 
-  call profiling_in(prof_scdm_matmul1,"SCDM_matmul1")
+  call profiling_in(prof_scdm_matmul1,TOSTRING(X(SCDM_matmul1)))
 
   SAFE_ALLOCATE(SCDM_temp(1:mesh%np,1:nval))
   SAFE_ALLOCATE(temp_column(1:mesh%np))
@@ -132,7 +132,7 @@ subroutine X(scdm_localize)(scdm, namespace, st, mesh)
   ! invert
   call X(invert)(nval,Pcc)
 
-  call profiling_in(prof_scdm_matmul3,"SCDM_matmul3")
+  call profiling_in(prof_scdm_matmul3,TOSTRING(X(SCDM_matmul3)))
   ! form orthogonal SCDM
   SAFE_ALLOCATE(temp_state(1:mesh%np,1))
   do vv=scdm%st%st_start,scdm%st%st_end
@@ -166,16 +166,14 @@ subroutine X(scdm_localize)(scdm, namespace, st, mesh)
   SAFE_ALLOCATE(lxyz_local(1:mesh%np))
   do ii = 1,3
     lxyz_global(1:mesh%np_global) = mesh%idx%lxyz(1:mesh%np_global,ii)
-#ifdef HAVE_MPI
     call vec_scatter(mesh%vp, 0, lxyz_local, lxyz_global)
-#endif
     lxyz_domains(1:mesh%np,ii) = lxyz_local(1:mesh%np)
   end do
 
   do vv = scdm%st%st_start,scdm%st%st_end
     call states_elec_get_state(scdm%st, mesh, vv, scdm%st%d%nik, temp_state(1:mesh%np,:))
     do ii = 1,3
-      scdm%center(ii,vv) = sum(temp_state(1:mesh%np,1)*R_CONJ(temp_state(1:mesh%np,1))*&
+      scdm%center(ii,vv) = sum(R_REAL(temp_state(1:mesh%np,1)*R_CONJ(temp_state(1:mesh%np,1)))*&
            lxyz_domains(1:mesh%np,ii)*mesh%spacing(ii))*mesh%volume_element
     end do
   end do
@@ -199,10 +197,10 @@ subroutine X(scdm_localize)(scdm, namespace, st, mesh)
 
     ! find integer index of center
     do ii = 1, 3
-      icenter(ii) = scdm%center(ii,vv)/mesh%spacing(ii)
+      icenter(ii) = int(scdm%center(ii,vv)/mesh%spacing(ii))
     end do
     ! find index of center in the mesh
-    ind_center = mesh%idx%lxyz_inv(icenter(1),icenter(2),icenter(3))
+    ind_center = index_from_coords(mesh%idx, [icenter(1),icenter(2),icenter(3)])
 
     ! make sure that box does not fall out of range of the index structure
     call check_box_in_index(mesh%idx,icenter(:),scdm%box_size,out_of_index_range)
@@ -217,9 +215,13 @@ subroutine X(scdm_localize)(scdm, namespace, st, mesh)
 
     ! make list with points in the box
     if (all(out_of_index_range .eqv. (/.false.,.false.,.false./)) ) then
-      temp_box(:,:,:) =  mesh%idx%lxyz_inv(icenter(1)-scdm%box_size:icenter(1)+scdm%box_size, &
-           icenter(2)-scdm%box_size:icenter(2)+scdm%box_size, &
-           icenter(3)-scdm%box_size:icenter(3)+scdm%box_size)
+      do  i1 = icenter(1)-scdm%box_size, icenter(1)+scdm%box_size
+        do  i2 = icenter(2)-scdm%box_size, icenter(2)+scdm%box_size
+          do  i3 = icenter(3)-scdm%box_size, icenter(3)+scdm%box_size
+            temp_box(i1,i2,i3) = index_from_coords(mesh%idx, [i1, i2, i3])
+          end do
+        end do
+      end do
 
       ! check if all indices are within the mesh
       out_of_mesh(1:3) = .false.
@@ -276,7 +278,7 @@ subroutine X(scdm_localize)(scdm, namespace, st, mesh)
             j1 = i1 + scdm%box_size + 1
             j2 = i2 + scdm%box_size + 1
             j3 = i3 + scdm%box_size + 1
-            temp_box(j1,j2,j3) = mesh%idx%lxyz_inv(ix(1),ix(2),ix(3))
+            temp_box(j1,j2,j3) = index_from_coords(mesh%idx, [ix(1),ix(2),ix(3)])
 
             !if(temp_box(j1,j2,j3) < 1 .or. temp_box(j1,j2,j3) > mesh%np_global) then
             !  print *, 'fail'
@@ -317,7 +319,7 @@ subroutine X(scdm_localize)(scdm, namespace, st, mesh)
     end do
 
     ! compute localization error
-    error = error + M_ONE - dot_product(scdm%X(psi)(:,vv),scdm%X(psi)(:,vv))*mesh%volume_element
+    error = error + M_ONE - R_REAL(dot_product(scdm%X(psi)(:,vv),scdm%X(psi)(:,vv)))*mesh%volume_element
 
   end do
 
@@ -382,8 +384,8 @@ subroutine X(invert)(nn, A)
 
   if( ierror == 0 ) then
     !workspace query
-    call X(getri)(nn, A, nn, ipiv, temp, -1, ierror )
-    lwork = temp ! dimension of workspace
+    call X(getri)(nn, A, nn, ipiv(1), temp, -1, ierror )
+    lwork = int(temp) ! dimension of workspace
     allocate(work(lwork*2))
     call X(getri)(nn, A, nn, ipiv, work, lwork, ierror )
   else
@@ -417,7 +419,9 @@ subroutine X(scdm_rrqr)(scdm, namespace, st, mesh, nst, root, ik, jpvt)
   integer :: total_np, nref, info, wsize
   R_TYPE, allocatable :: tau(:), work(:)
   R_TYPE :: tmp
+#ifndef R_TREAL
   FLOAT, allocatable :: rwork(:)
+#endif
   R_TYPE, allocatable ::  state_global(:), temp_state(:,:)
   R_TYPE, allocatable :: KSt(:,:)
   R_TYPE, allocatable :: psi(:, :)
@@ -432,12 +436,10 @@ subroutine X(scdm_rrqr)(scdm, namespace, st, mesh, nst, root, ik, jpvt)
   FLOAT :: tmp2
 #endif
 #endif
-#ifdef HAVE_MPI
   integer :: sender
-#endif
 
   PUSH_SUB(X(scdm_rrqr))
-  call profiling_in(prof_scdm_QR,"SCDM_QR")
+  call profiling_in(prof_scdm_QR,TOSTRING(X(SCDM_QR)))
 
   ASSERT(.not. mesh%use_curvilinear)
   ASSERT(nst == st%nst)
@@ -567,7 +569,6 @@ subroutine X(scdm_rrqr)(scdm, namespace, st, mesh, nst, root, ik, jpvt)
       do ii = 1,nst
         !we are copying states like this:  KSt(i,:) = st%psi(:,dim,i,nik)
         state_global(1:mesh%np_global) = M_ZERO
-#ifdef HAVE_MPI
         sender = 0
         if(state_is_local(st,ii)) then
           call states_elec_get_state(st, mesh, ii, ik, temp_state)
@@ -575,6 +576,7 @@ subroutine X(scdm_rrqr)(scdm, namespace, st, mesh, nst, root, ik, jpvt)
           if(mesh%mpi_grp%rank ==0) sender = mpi_world%rank
         end if
         call comm_allreduce(mpi_world%comm,sender)
+#ifdef HAVE_MPI
         call MPI_Bcast(state_global,mesh%np_global , R_MPITYPE, sender, mpi_world%comm, mpi_err)
 #endif
         ! keep full Kohn-Sham matrix only on root
@@ -599,29 +601,29 @@ subroutine X(scdm_rrqr)(scdm, namespace, st, mesh, nst, root, ik, jpvt)
     if(root) then
       SAFE_ALLOCATE(work(1:1))
       SAFE_ALLOCATE(tau(1:nst))
-      if(.not.states_are_real(st)) then
-         SAFE_ALLOCATE(rwork(1:2*mesh%np_global))
-         call zgeqp3(nst, mesh%np_global, kst, nst, jpvt, tau, work, -1, rwork, info)
-      else
-         call dgeqp3(nst, mesh%np_global, kst, nst, jpvt, tau, work, -1, info)
-      endif
+#ifdef R_TREAL
+      call dgeqp3(nst, mesh%np_global, kst, nst, jpvt, tau, work, -1, info)
+#else
+      SAFE_ALLOCATE(rwork(1:2*mesh%np_global))
+      call zgeqp3(nst, mesh%np_global, kst, nst, jpvt, tau, work, -1, rwork, info)
+#endif
       if (info /= 0) then
          write(message(1),'(A28,I2)') 'Illegal argument in ZGEQP3: ', info
          call messages_fatal(1, namespace=namespace)
       end if
 
-      wsize = work(1)
+      wsize = int(work(1))
       SAFE_DEALLOCATE_A(work)
       SAFE_ALLOCATE(work(1:wsize))
 
       jpvt(:) = 0
       tau(:) = 0.
       ! actual call
-      if(.not.states_are_real(st)) then
-         call zgeqp3(nst, mesh%np_global, kst, nst, jpvt, tau, work, wsize, rwork, info)
-      else
+#ifdef R_TREAL
          call dgeqp3(nst, mesh%np_global, kst, nst, jpvt, tau, work, wsize, info)
-      endif
+#else
+         call zgeqp3(nst, mesh%np_global, kst, nst, jpvt, tau, work, wsize, rwork, info)
+#endif
       if (info /= 0)then
          write(message(1),'(A28,I2)') 'Illegal argument in ZGEQP3: ', info
          call messages_fatal(1, namespace=namespace)

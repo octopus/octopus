@@ -20,6 +20,7 @@
 
 module symmetrizer_oct_m
   use global_oct_m
+  use index_oct_m
   use messages_oct_m
   use mesh_oct_m
   use mpi_oct_m
@@ -59,7 +60,7 @@ contains
     type(symmetrizer_t),         intent(out) :: this
     type(mesh_t),        target, intent(in)  :: mesh
 
-    integer :: nops, ip, iop, idir
+    integer :: nops, ip, iop, idir, idx(MAX_DIM)
     FLOAT :: destpoint(1:3), srcpoint(1:3), srcpoint_inv(1:3), lsize(1:3), offset(1:3)
     type(profile_t), save :: prof
 
@@ -81,10 +82,11 @@ contains
     do ip = 1, mesh%np
       if(mesh%parallel_in_domains) then
         ! convert to global point
-        destpoint(1:3) = TOFLOAT(mesh%idx%lxyz(mesh%vp%local(mesh%vp%xlocal + ip - 1), 1:3)) - offset(1:3)
+        call index_to_coords(mesh%idx, mesh%vp%local(mesh%vp%xlocal + ip - 1), idx)
       else
-        destpoint(1:3) = TOFLOAT(mesh%idx%lxyz(ip, 1:3)) - offset(1:3)
+        call index_to_coords(mesh%idx, ip, idx)
       end if
+      destpoint(1:3) = TOFLOAT(idx(1:3)) - offset(1:3)
       ! offset moves corner of cell to origin, in integer mesh coordinates
 
       ASSERT(all(destpoint >= 0))
@@ -131,8 +133,10 @@ contains
         ASSERT(all(srcpoint_inv < lsize))
         srcpoint_inv(1:3) = srcpoint_inv(1:3) + offset(1:3)
 
-        this%map(ip, iop) = this%mesh%idx%lxyz_inv(nint(srcpoint(1)), nint(srcpoint(2)), nint(srcpoint(3)))
-        this%map_inv(ip, iop) = this%mesh%idx%lxyz_inv(nint(srcpoint_inv(1)), nint(srcpoint_inv(2)), nint(srcpoint_inv(3)))
+        this%map(ip, iop) = index_from_coords(this%mesh%idx, &
+          [nint(srcpoint(1)), nint(srcpoint(2)), nint(srcpoint(3))])
+        this%map_inv(ip, iop) = index_from_coords(this%mesh%idx, &
+          [nint(srcpoint_inv(1)), nint(srcpoint_inv(2)), nint(srcpoint_inv(3))])
       end do
     end do
 

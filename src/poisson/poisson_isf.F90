@@ -83,16 +83,17 @@ contains
 
     integer :: n1, n2, n3
     integer :: i_cnf
-#if defined(HAVE_MPI)
     integer :: m1, m2, m3, md1, md2, md3
     integer :: n(3)
     logical :: init_world_
     integer :: default_nodes
-    integer :: ierr, world_grp, poisson_grp, ii
+    integer :: ii
     integer, allocatable :: ranks(:)
     !data ranks /0, 1/
     integer :: world_size
     integer :: nodes
+#ifdef HAVE_MPI
+    integer :: ierr, world_grp, poisson_grp
 #endif
 
     PUSH_SUB(poisson_isf_init)
@@ -123,7 +124,11 @@ contains
         this%cnf(SERIAL)%nfft1, this%cnf(SERIAL)%nfft2, this%cnf(SERIAL)%nfft3, &
         real(mesh%spacing(1), 8), order_scaling_function, this%cnf(SERIAL)%kernel)
     end if
-#if defined(HAVE_MPI)
+
+#if !defined(HAVE_MPI)
+    POP_SUB(poisson_isf_init)
+    return
+#endif
 
     ! Allocate to configurations. The initialisation, especially the kernel,
     ! depends on the number of nodes used for the calculations. To avoid
@@ -147,8 +152,10 @@ contains
 
     this%all_nodes_comm = all_nodes_comm
 
+#if defined(HAVE_MPI)
     call MPI_Comm_size(all_nodes_comm, world_size, mpi_err)
-
+#endif
+    
     if(nodes <= 0 .or. nodes > world_size) nodes = world_size
     this%cnf(WORLD)%all_nodes = (nodes == mpi_world%size)
 
@@ -160,13 +167,16 @@ contains
 
     !create a new communicator
     !Extract the original group handle and create new comm.
+#if defined(HAVE_MPI)
     call MPI_Comm_group(all_nodes_comm, world_grp, ierr)
     call MPI_Group_incl(world_grp, nodes, ranks, poisson_grp, ierr)
     call MPI_Comm_create(mpi_world%comm, poisson_grp, this%cnf(WORLD)%mpi_grp%comm, ierr)
+#endif
 
     SAFE_DEALLOCATE_A(ranks)
 
     !Fill the new data structure, for all nodes
+#if defined(HAVE_MPI)
     if (this%cnf(WORLD)%mpi_grp%comm /= MPI_COMM_NULL) then
       call MPI_Comm_rank(this%cnf(WORLD)%mpi_grp%comm, this%cnf(WORLD)%mpi_grp%rank, ierr)
       call MPI_Comm_size(this%cnf(WORLD)%mpi_grp%comm, this%cnf(WORLD)%mpi_grp%size, ierr)
@@ -174,6 +184,7 @@ contains
       this%cnf(WORLD)%mpi_grp%rank = -1
       this%cnf(WORLD)%mpi_grp%size = -1
     end if
+#endif
 
     ! Build the kernel for all configurations. At the moment, this is
     ! solving the poisson equation with all nodes (i_cnf == WORLD) and
@@ -207,7 +218,6 @@ contains
         cycle
       end if
     end do
-#endif
 
     POP_SUB(poisson_isf_init)
   end subroutine poisson_isf_init
@@ -264,7 +274,6 @@ contains
         nn(1), nn(2), nn(3), &
         real(mesh%spacing(1), 8), this%cnf(SERIAL)%kernel, rho_cf%dRS)
 
-#if defined(HAVE_MPI)
     else
       nn(1) = this%cnf(i_cnf)%nfft1
       nn(2) = this%cnf(i_cnf)%nfft2
@@ -278,10 +287,11 @@ contains
       ! we need to be sure that the root of every domain-partition has a copy of the potential
       ! for the moment we broadcast to all nodes, but this is more than what we really need 
       if(i_cnf == WORLD .and. .not. this%cnf(WORLD)%all_nodes) then
+#if defined(HAVE_MPI)
         call MPI_Bcast(rho_cf%drs(1, 1, 1), cube%rs_n_global(1)*cube%rs_n_global(2)*cube%rs_n_global(3), &
           MPI_FLOAT, 0, this%all_nodes_comm, mpi_err)
-      end if
 #endif
+      end if
     end if
 
     if(present(sm)) then
@@ -1662,7 +1672,6 @@ contains
     real(8), intent(in) :: hgrid
     integer, intent(in) :: comm
 
-#if defined(HAVE_MPI)
     !Local variables
     integer :: istart,iend,jend,jproc
     real(8) :: scal
@@ -1705,8 +1714,10 @@ contains
     lrhopot(1:m1, 1:m3, 1:jend) = zf(1:m1, 1:m3, 1:jend)
 
     call profiling_in(prof, "ISF_GATHER")
+#if defined(HAVE_MPI)
     call MPI_Allgatherv(lrhopot(1, 1, 1), gather_arr(iproc, 1), MPI_DOUBLE_PRECISION, rhopot(1, 1, 1), gather_arr(0, 1),&
       gather_arr(0, 2), MPI_DOUBLE_PRECISION, comm, mpi_err)
+#endif
     call profiling_out(prof)
 
     SAFE_DEALLOCATE_A(zf)
@@ -1714,7 +1725,6 @@ contains
     SAFE_DEALLOCATE_A(gather_arr)
 
     POP_SUB(pconvxc_off)
-#endif
   end subroutine pconvxc_off
 !!***
 

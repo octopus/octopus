@@ -296,11 +296,18 @@ contains
 
   ! ---------------------------------------------------------
   subroutine internal_laplacian_op(xx, yy)
-    FLOAT, intent(inout) :: xx(:)
+    FLOAT, intent(in)    :: xx(:)
     FLOAT, intent(out)   :: yy(:)
 
+    FLOAT, allocatable :: xx_tmp(:)
+
     PUSH_SUB(internal_laplacian_op)
-    call dderivatives_lapl(der_pointer, xx, yy)
+    
+    SAFE_ALLOCATE(xx_tmp(der_pointer%mesh%np_part))
+    call lalg_copy(der_pointer%mesh%np, xx, xx_tmp)
+    call dderivatives_lapl(der_pointer, xx_tmp, yy)
+
+    SAFE_DEALLOCATE_A(xx_tmp)
     POP_SUB(internal_laplacian_op)
 
   end subroutine internal_laplacian_op
@@ -308,7 +315,7 @@ contains
 
   ! ---------------------------------------------------------
   FLOAT function internal_dotp(xx, yy) result(res)
-    FLOAT, intent(inout) :: xx(:)
+    FLOAT, intent(in)    :: xx(:)
     FLOAT, intent(in)    :: yy(:)
 
     PUSH_SUB(internal_dotp)

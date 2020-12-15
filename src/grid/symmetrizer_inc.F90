@@ -79,9 +79,7 @@ subroutine X(symmetrizer_apply)(this, np, field, field_vector, symmfield, symmfi
   if(present(field)) then
     if(this%mesh%parallel_in_domains) then
       SAFE_ALLOCATE(field_global(1:this%mesh%np_global))
-#ifdef HAVE_MPI
       call vec_allgather(this%mesh%vp, field_global, field)
-#endif
     else
       field_global => field
     end if
@@ -92,9 +90,7 @@ subroutine X(symmetrizer_apply)(this, np, field, field_vector, symmfield, symmfi
     if(this%mesh%parallel_in_domains) then
       SAFE_ALLOCATE(field_global_vector(1:this%mesh%np_global, 1:3))
       do idir = 1, 3
-#ifdef HAVE_MPI
         call vec_allgather(this%mesh%vp, field_global_vector(:, idir), field_vector(:, idir))
-#endif
       end do
     else
       field_global_vector => field_vector
@@ -175,7 +171,7 @@ subroutine X(symmetrizer_apply_single)(this, np, iop, field, symmfield)
 
   PUSH_SUB(X(symmetrizer_apply_single))
 
-  call profiling_in(prof, 'SYMMETRIZE_SINGLE')
+  call profiling_in(prof, TOSTRING(X(SYMMETRIZE_SINGLE)))
 
   ASSERT(ubound(field, dim = 1) >= np)
   ASSERT(ubound(symmfield, dim = 1) >= np)
@@ -189,9 +185,7 @@ subroutine X(symmetrizer_apply_single)(this, np, iop, field, symmfield)
 
   if(this%mesh%parallel_in_domains) then
     SAFE_ALLOCATE(field_global(1:this%mesh%np_global))
-#ifdef HAVE_MPI
     call vec_allgather(this%mesh%vp, field_global, field)
-#endif
   else
     field_global => field
   end if
@@ -255,7 +249,7 @@ subroutine X(symmetrize_magneto_optics_cart)(symm, tensor)
   
   integer :: iop, nops
   R_TYPE  :: tensor_symm(3, 3, 3)
-  FLOAT   :: rot(3, 3)
+  integer :: rot(3, 3)
   integer :: idir1, idir2, idir3, ndir
   integer :: i1, i2, i3, det
   

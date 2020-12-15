@@ -20,8 +20,10 @@
 
 module td_write_oct_m
   use blas_oct_m
+  use clock_oct_m
   use comm_oct_m
   use current_oct_m
+  use density_oct_m
   use excited_states_oct_m
   use gauge_field_oct_m
   use geometry_oct_m
@@ -84,11 +86,9 @@ module td_write_oct_m
     td_write_mxll_iter, &
     td_write_mxll_free_data
 
-  type td_write_prop_t
-    private
-    type(c_ptr) :: handle
-    logical :: write = .false.
-  end type td_write_prop_t
+  ! The following routine is currently unused, but will be used in the near future.
+  ! In order noy to generate warnings about it, we declared it as public
+  public :: td_dump_mxll
 
   integer, parameter ::   &
     OUT_MULTIPOLES  =  1, &
@@ -135,6 +135,16 @@ module td_write_oct_m
     OUT_B_FIELD_SURFACE_Z       = 9, &
     OUT_MAXWELL_MAX             = 9
 
+  type td_write_prop_t
+    type(c_ptr)          :: handle
+    type(c_ptr), pointer :: mult_handles(:)
+    type(mpi_grp_t)      :: mpi_grp
+    integer              :: hand_start
+    integer              :: hand_end
+    logical              :: write = .false.
+    logical              :: resolve_states = .false.    !< Whether to resolve output by state
+  end type td_write_prop_t
+
 
   type td_write_t
     private
@@ -177,7 +187,7 @@ contains
   subroutine td_write_init(writ, namespace, outp, gr, st, hm, geo, ks, ions_move, with_gauge_field, kick, iter, max_iter, dt, mc)
     type(td_write_t), target, intent(out)   :: writ
     type(namespace_t),        intent(in)    :: namespace
-    type(output_t),           intent(out)   :: outp
+    type(output_t),           intent(inout) :: outp
     type(grid_t),             intent(in)    :: gr
     type(states_elec_t),      intent(inout) :: st
     type(hamiltonian_elec_t), intent(inout) :: hm
@@ -194,8 +204,9 @@ contains
     FLOAT :: rmin
     integer :: ierr, first, ii, ist, jj, flags, iout, default
     type(block_t) :: blk
-    character(len=100) :: filename
+    character(len=MAX_PATH_LEN) :: filename
     type(restart_t) :: restart_gs
+    logical :: resolve_states
 
     PUSH_SUB(td_write_init)
 
@@ -346,6 +357,24 @@ contains
         call messages_fatal(1, namespace=namespace)
       end if
     end if
+    
+    !%Variable TDOutputResolveStates
+    !%Type logical
+    !%Default No
+    !%Section Time-Dependent::TD Output
+    !%Description
+    !% Defines whether the output should be resolved by states. 
+    !% 
+    !% So far only TDOutput = multipoles is supported.
+    !%
+    !%End
+    call parse_variable(namespace, 'TDOutputResolveStates', .false., resolve_states)
+    if(.not. writ%out(OUT_MULTIPOLES)%write) then
+       write(message(1),'(a)') "TDOutputResolveStates works only for TDOutput = multipoles."
+       call messages_warning(1)
+    end if
+    
+    
 
     !%Variable TDMultipoleLmax
     !%Type integer
@@ -545,12 +574,39 @@ contains
     end if
 
     call io_mkdir('td.general', namespace)
+    
+
+    ! default
+    writ%out(:)%mpi_grp        = mpi_world
+    
+    if(writ%out(OUT_MULTIPOLES)%write .and. resolve_states) then       
+      !resolve state contribution on multipoles
+      writ%out(OUT_MULTIPOLES)%hand_start       = st%st_start
+      writ%out(OUT_MULTIPOLES)%hand_end         = st%st_end
+      writ%out(OUT_MULTIPOLES)%resolve_states   = .true.
+      writ%out(OUT_MULTIPOLES)%mpi_grp          = gr%mesh%mpi_grp
+
+      SAFE_ALLOCATE(writ%out(OUT_MULTIPOLES)%mult_handles(st%st_start:st%st_end))
+      
+      if (mpi_grp_is_root(writ%out(OUT_MULTIPOLES)%mpi_grp)) then
+        do ist = st%st_start, st%st_end
+          write(filename, '(a,i4.4)') 'td.general/multipoles-ist', ist
+          call write_iter_init(writ%out(OUT_MULTIPOLES)%mult_handles(ist), &
+                               first, units_from_atomic(units_out%time, dt), &
+          trim(io_workpath(filename, namespace)))                    
+        end do
+
+      end if
+    end if
+
 
     if(mpi_grp_is_root(mpi_world)) then
-      if(writ%out(OUT_MULTIPOLES)%write) &
+
+      if(writ%out(OUT_MULTIPOLES)%write .and. .not. resolve_states) then 
         call write_iter_init(writ%out(OUT_MULTIPOLES)%handle, &
-        first, units_from_atomic(units_out%time, dt), &
+                             first, units_from_atomic(units_out%time, dt), &
         trim(io_workpath("td.general/multipoles", namespace)))
+      end if 
 
       if(writ%out(OUT_FTCHD)%write) then
         select case(kick%qkick_mode)
@@ -744,6 +800,12 @@ contains
           first, units_from_atomic(units_out%time, dt),  &
           trim(io_workpath("td.general/effectiveU", namespace))) 
     end if
+    
+    do iout = 1, OUT_MAX
+      if(iout == OUT_MULTIPOLES) cycle
+      if(writ%out(iout)%write)  writ%out(iout)%mpi_grp = mpi_world
+    end do
+    
      
     POP_SUB(td_write_init)
   end subroutine td_write_init
@@ -757,15 +819,27 @@ contains
 
     PUSH_SUB(td_write_end)
 
-    if(mpi_grp_is_root(mpi_world)) then
-      do iout = 1, OUT_MAX
-        if(iout == OUT_LASER) cycle
-        if(writ%out(iout)%write)  call write_iter_end(writ%out(iout)%handle)
-      end do
+    do iout = 1, OUT_MAX
+      if(iout == OUT_LASER) cycle      
+      if(writ%out(iout)%write) then  
+        if (mpi_grp_is_root(writ%out(iout)%mpi_grp)) then
+          if(writ%out(iout)%resolve_states) then
+            do ist = writ%out(iout)%hand_start, writ%out(iout)%hand_end
+              call write_iter_end(writ%out(iout)%mult_handles(ist))
+            end do
+            SAFE_DEALLOCATE_P(writ%out(iout)%mult_handles)
+          else
+            call write_iter_end(writ%out(iout)%handle)
+          end if
+        end if
+      end if
+    end do
      
+    if(mpi_grp_is_root(mpi_world)) then
       do iout = 1, OUT_DFTU_MAX
         if(writ%out_dftu(iout)%write) call write_iter_end(writ%out_dftu(iout)%handle)  
       end do
+      
     end if
 
     if( writ%out(OUT_POPULATIONS)%write ) then
@@ -802,9 +876,11 @@ contains
     PUSH_SUB(td_write_iter)
     call profiling_in(prof, "TD_WRITE_ITER")
 
-    if(writ%out(OUT_MULTIPOLES)%write) &
-      call td_write_multipole(writ%out(OUT_MULTIPOLES)%handle, gr, geo, st, writ%lmax, kick, iter)
-    
+
+    if(writ%out(OUT_MULTIPOLES)%write) then
+      call td_write_multipole(writ%out(OUT_MULTIPOLES), gr, geo, st, writ%lmax, kick, iter)
+    end if
+
     if(writ%out(OUT_FTCHD)%write) &
       call td_write_ftchd(writ%out(OUT_FTCHD)%handle, gr, st, kick, iter)
 
@@ -866,7 +942,7 @@ contains
       call td_write_energy(writ%out(OUT_ENERGY)%handle, hm, iter, geo%kinetic_energy)
 
     if(writ%out(OUT_GAUGE_FIELD)%write) &
-      call td_write_gauge_field(writ%out(OUT_GAUGE_FIELD)%handle, hm, gr, iter)
+      call gauge_field_output_write(hm%ep%gfield, writ%out(OUT_GAUGE_FIELD)%handle, iter)
 
     if(writ%out(OUT_EIGS)%write) &
       call td_write_eigs(writ%out(OUT_EIGS)%handle, st, iter)
@@ -906,17 +982,28 @@ contains
   subroutine td_write_data(writ)
     type(td_write_t),     intent(inout) :: writ
 
-    integer :: iout
+    integer :: iout, ii
     type(profile_t), save :: prof
 
     PUSH_SUB(td_write_data)
     call profiling_in(prof, "TD_WRITE_DATA")
 
+    do iout = 1, OUT_MAX
+      if(iout == OUT_LASER) cycle
+      if(writ%out(iout)%write)  then
+        if (mpi_grp_is_root(writ%out(iout)%mpi_grp)) then
+          if (writ%out(iout)%resolve_states) then
+            do ii = writ%out(iout)%hand_start, writ%out(iout)%hand_end
+              call write_iter_flush(writ%out(iout)%mult_handles(ii))
+            end do
+          else
+            call write_iter_flush(writ%out(iout)%handle)
+          end if
+        end if
+      end if
+    end do
+
     if(mpi_grp_is_root(mpi_world)) then
-      do iout = 1, OUT_MAX
-        if(iout == OUT_LASER) cycle
-        if(writ%out(iout)%write)  call write_iter_flush(writ%out(iout)%handle)
-      end do
       do iout = 1, OUT_DFTU_MAX
         if(writ%out_dftu(iout)%write)  call write_iter_flush(writ%out_dftu(iout)%handle)
       end do
@@ -942,7 +1029,7 @@ contains
     type(profile_t), save :: prof
 
     PUSH_SUB(td_write_output)
-    call profiling_in(prof, "TD_WRITE_DATA")
+    call profiling_in(prof, "TD_WRITE_OUTPUT")
 
     ! now write down the rest
     write(filename, '(a,a,i7.7)') trim(outp%iter_dir),"td.", iter  ! name of directory
@@ -1198,25 +1285,69 @@ contains
     POP_SUB(td_write_angular)
   end subroutine td_write_angular
 
+  ! ---------------------------------------------------------
+  !> resolve state interface
+  subroutine td_write_multipole(out_multip, gr, geo, st, lmax, kick, iter)
+    type(td_write_prop_t), intent(inout) :: out_multip
+    type(grid_t),             intent(in) :: gr   !< The grid
+    type(geometry_t),         intent(in) :: geo  !< Geometry object
+    type(states_elec_t),      intent(in) :: st   !< State object
+    integer,                  intent(in) :: lmax
+    type(kick_t),             intent(in) :: kick !< Kick object
+    integer,                  intent(in) :: iter !< Iteration number
+
+    integer :: ist
+    FLOAT, allocatable :: rho(:,:)
+
+    PUSH_SUB(td_write_multipole)
+    
+    
+    if (out_multip%resolve_states) then
+      SAFE_ALLOCATE(rho(1:gr%fine%mesh%np_part, 1:st%d%nspin))
+      rho(:,:)     = M_ZERO
+
+      do ist = st%st_start, st%st_end
+        call density_calc(st, gr, rho, istin = ist)      
+        call td_write_multipole_r(out_multip%mult_handles(ist), gr, geo, st, lmax, kick, rho, iter, &
+                                  mpi_grp = out_multip%mpi_grp)
+      end do
+
+      SAFE_DEALLOCATE_A(rho)
+
+    else
+      
+      call td_write_multipole_r(out_multip%handle, gr, geo, st, lmax, kick, st%rho, iter)
+
+    end if
+    
+    POP_SUB(td_write_multipole)
+  end subroutine td_write_multipole
 
   ! ---------------------------------------------------------
   !> Subroutine to write multipoles to the corresponding file
-  subroutine td_write_multipole(out_multip, gr, geo, st, lmax, kick, iter)
-    type(c_ptr),         intent(inout) :: out_multip !< C pointer
+  subroutine td_write_multipole_r(out_multip, gr, geo, st, lmax, kick, rho, iter, mpi_grp)
+    type(c_ptr),      intent(inout) :: out_multip !< C pointer
     type(grid_t),        intent(in) :: gr   !< The grid
     type(geometry_t),    intent(in) :: geo  !< Geometry object
     type(states_elec_t), intent(in) :: st   !< State object
     integer,             intent(in) :: lmax
     type(kick_t),        intent(in) :: kick !< Kick object
+    FLOAT,               intent(in) :: rho(:,:)
     integer,             intent(in) :: iter !< Iteration number
+    type(mpi_grp_t), optional, intent(in) :: mpi_grp   
+    
 
     integer :: is, ll, mm, add_lm
     character(len=120) :: aux
     FLOAT, allocatable :: ionic_dipole(:), multipole(:,:)
+    type(mpi_grp_t)    :: mpi_grp_
 
-    PUSH_SUB(td_write_multipole)
+    PUSH_SUB(td_write_multipole_r)
+    
+    mpi_grp_ = mpi_world 
+    if (present(mpi_grp)) mpi_grp_ = mpi_grp
 
-    if(mpi_grp_is_root(mpi_world).and.iter == 0) then
+    if(mpi_grp_is_root(mpi_grp_).and.iter == 0) then
       call td_write_print_header_init(out_multip)
 
       write(aux, '(a15,i2)')      '# nspin        ', st%d%nspin
@@ -1271,23 +1402,23 @@ contains
       call td_write_print_header_end(out_multip)
     end if
 
-    SAFE_ALLOCATE(ionic_dipole(1:gr%mesh%sb%dim))
+    SAFE_ALLOCATE(ionic_dipole(1:gr%sb%dim))
     SAFE_ALLOCATE(multipole(1:(lmax + 1)**2, 1:st%d%nspin))
     ionic_dipole(:) = M_ZERO
     multipole   (:,:) = M_ZERO
 
     do is = 1, st%d%nspin
-      call dmf_multipoles(gr%mesh, st%rho(:,is), lmax, multipole(:,is))
+      call dmf_multipoles(gr%mesh, rho(:,is), lmax, multipole(:,is))
     end do
 
     if (lmax > 0) then
       call geometry_dipole(geo, ionic_dipole)
       do is = 1, st%d%nspin
-        multipole(2:gr%mesh%sb%dim+1, is) = -ionic_dipole(1:gr%mesh%sb%dim)/st%d%nspin - multipole(2:gr%mesh%sb%dim+1, is)
+        multipole(2:gr%sb%dim+1, is) = -ionic_dipole(1:gr%sb%dim)/st%d%nspin - multipole(2:gr%sb%dim+1, is)
       end do
     end if
 
-    if(mpi_grp_is_root(mpi_world)) then
+    if(mpi_grp_is_root(mpi_grp_)) then
       call write_iter_start(out_multip)
       do is = 1, st%d%nspin
         add_lm = 1
@@ -1303,8 +1434,8 @@ contains
 
     SAFE_DEALLOCATE_A(ionic_dipole)
     SAFE_DEALLOCATE_A(multipole)
-    POP_SUB(td_write_multipole)
-  end subroutine td_write_multipole
+    POP_SUB(td_write_multipole_r)
+  end subroutine td_write_multipole_r
 
   ! ---------------------------------------------------------
   subroutine td_write_ftchd(out_ftchd, gr, st, kick, iter)
@@ -1341,7 +1472,7 @@ contains
         write(aux, '(a15, f9.6)') '# qlength      ', kick%qlength
       else ! sin or cos
         write(aux, '(a15)')       '# qvector      '
-        do idir = 1, gr%mesh%sb%dim
+        do idir = 1, gr%sb%dim
           write(aux2, '(f9.5)') kick%qvector(idir,1)
           aux = trim(aux) // trim(aux2)
         end do
@@ -1434,19 +1565,19 @@ contains
       call write_iter_header_start(out_coords)
 
       do iatom = 1, geo%natoms
-        do idir = 1, gr%mesh%sb%dim
+        do idir = 1, gr%sb%dim
           write(aux, '(a2,i3,a1,i3,a1)') 'x(', iatom, ',', idir, ')'
           call write_iter_header(out_coords, aux)
         end do
       end do
       do iatom = 1, geo%natoms
-        do idir = 1, gr%mesh%sb%dim
+        do idir = 1, gr%sb%dim
           write(aux, '(a2,i3,a1,i3,a1)') 'v(', iatom, ',', idir,')'
           call write_iter_header(out_coords, aux)
         end do
       end do
       do iatom = 1, geo%natoms
-        do idir = 1, gr%mesh%sb%dim
+        do idir = 1, gr%sb%dim
           write(aux, '(a2,i3,a1,i3,a1)') 'f(', iatom, ',', idir,')'
           call write_iter_header(out_coords, aux)
         end do
@@ -1468,16 +1599,16 @@ contains
     call write_iter_start(out_coords)
 
     do iatom = 1, geo%natoms
-      tmp(1:gr%mesh%sb%dim) = units_from_atomic(units_out%length, geo%atom(iatom)%x(1:gr%mesh%sb%dim))
-      call write_iter_double(out_coords, tmp, gr%mesh%sb%dim)
+      tmp(1:gr%sb%dim) = units_from_atomic(units_out%length, geo%atom(iatom)%x(1:gr%sb%dim))
+      call write_iter_double(out_coords, tmp, gr%sb%dim)
     end do
     do iatom = 1, geo%natoms
-      tmp(1:gr%mesh%sb%dim) = units_from_atomic(units_out%velocity, geo%atom(iatom)%v(1:gr%mesh%sb%dim))
-      call write_iter_double(out_coords, tmp, gr%mesh%sb%dim)
+      tmp(1:gr%sb%dim) = units_from_atomic(units_out%velocity, geo%atom(iatom)%v(1:gr%sb%dim))
+      call write_iter_double(out_coords, tmp, gr%sb%dim)
     end do
     do iatom = 1, geo%natoms
-      tmp(1:gr%mesh%sb%dim) = units_from_atomic(units_out%force, geo%atom(iatom)%f(1:gr%mesh%sb%dim))
-      call write_iter_double(out_coords, tmp, gr%mesh%sb%dim)
+      tmp(1:gr%sb%dim) = units_from_atomic(units_out%force, geo%atom(iatom)%f(1:gr%sb%dim))
+      call write_iter_double(out_coords, tmp, gr%sb%dim)
     end do
     call write_iter_nl(out_coords)
 
@@ -1510,7 +1641,7 @@ contains
       call write_iter_header_start(out_coords)
 
       do iatom = 1, geo%natoms
-        do idir = 1, gr%mesh%sb%dim
+        do idir = 1, gr%sb%dim
           select case (which)
             case (COORDINATES)
               write(aux, '(a2,i3,a1,i3,a1)') 'x(', iatom, ',', idir, ')'
@@ -1548,18 +1679,18 @@ contains
     select case (which)
       case (COORDINATES)
         do iatom = 1, geo%natoms
-          tmp(1:gr%mesh%sb%dim) = units_from_atomic(units_out%length, geo%atom(iatom)%x(1:gr%mesh%sb%dim))
-          call write_iter_double(out_coords, tmp, gr%mesh%sb%dim)
+          tmp(1:gr%sb%dim) = units_from_atomic(units_out%length, geo%atom(iatom)%x(1:gr%sb%dim))
+          call write_iter_double(out_coords, tmp, gr%sb%dim)
         end do
       case (VELOCITIES)
         do iatom = 1, geo%natoms
-           tmp(1:gr%mesh%sb%dim) = units_from_atomic(units_out%velocity, geo%atom(iatom)%v(1:gr%mesh%sb%dim))
-           call write_iter_double(out_coords, tmp, gr%mesh%sb%dim)
+           tmp(1:gr%sb%dim) = units_from_atomic(units_out%velocity, geo%atom(iatom)%v(1:gr%sb%dim))
+           call write_iter_double(out_coords, tmp, gr%sb%dim)
         end do
       case (FORCES)
         do iatom = 1, geo%natoms
-           tmp(1:gr%mesh%sb%dim) = units_from_atomic(units_out%force, geo%atom(iatom)%f(1:gr%mesh%sb%dim))
-           call write_iter_double(out_coords, tmp, gr%mesh%sb%dim)
+           tmp(1:gr%sb%dim) = units_from_atomic(units_out%force, geo%atom(iatom)%f(1:gr%sb%dim))
+           call write_iter_double(out_coords, tmp, gr%sb%dim)
         end do
     end select
        
@@ -1708,7 +1839,7 @@ contains
 
       ! first line -> column names
       call write_iter_header_start(out_acc)
-      do idim = 1, gr%mesh%sb%dim
+      do idim = 1, gr%sb%dim
         write(aux, '(a4,i1,a1)') 'Acc(', idim, ')'
         call write_iter_header(out_acc, aux)
       end do
@@ -1717,7 +1848,7 @@ contains
       ! second line: units
       call write_iter_string(out_acc, '#[Iter n.]')
       call write_iter_header(out_acc, '[' // trim(units_abbrev(units_out%time)) // ']')
-      do idim = 1, gr%mesh%sb%dim
+      do idim = 1, gr%sb%dim
         call write_iter_header(out_acc, '[' // trim(units_abbrev(units_out%acceleration)) // ']')
       end do
       call write_iter_nl(out_acc)
@@ -1729,7 +1860,7 @@ contains
     if(mpi_grp_is_root(mpi_world)) then
       call write_iter_start(out_acc)
       acc = units_from_atomic(units_out%acceleration, acc)
-      call write_iter_double(out_acc, acc, gr%mesh%sb%dim)
+      call write_iter_double(out_acc, acc, gr%sb%dim)
       call write_iter_nl(out_acc)
     end if
 
@@ -1756,7 +1887,7 @@ contains
 
       ! first line -> column names
       call write_iter_header_start(out_vel)
-      do idim = 1, gr%mesh%sb%dim
+      do idim = 1, gr%sb%dim
         write(aux, '(a4,i1,a1)') 'Vel(', idim, ')'
         call write_iter_header(out_vel, aux)
       end do
@@ -1765,7 +1896,7 @@ contains
       ! second line: units
       call write_iter_string(out_vel, '#[Iter n.]')
       call write_iter_header(out_vel, '[' // trim(units_abbrev(units_out%time)) // ']')
-      do idim = 1, gr%mesh%sb%dim
+      do idim = 1, gr%sb%dim
         call write_iter_header(out_vel, '[' // trim(units_abbrev(units_out%velocity)) // ']')
       end do
       call write_iter_nl(out_vel)
@@ -1776,7 +1907,7 @@ contains
 
     call write_iter_start(out_vel)
     vel = units_from_atomic(units_out%velocity, vel)
-    call write_iter_double(out_vel, vel, gr%mesh%sb%dim)
+    call write_iter_double(out_vel, vel, gr%sb%dim)
     call write_iter_nl(out_vel)
 
     POP_SUB(td_write_vel)
@@ -1812,17 +1943,17 @@ contains
       do il = 1, hm%ep%no_lasers
         select case(laser_kind(hm%ep%lasers(il)))
         case(E_FIELD_ELECTRIC)
-          do idir = 1, gr%mesh%sb%dim
+          do idir = 1, gr%sb%dim
             write(aux, '(a,i1,a)') 'E(', idir, ')'
             call write_iter_header(out_laser, aux)
           end do
         case(E_FIELD_MAGNETIC)
-          do idir = 1, gr%mesh%sb%dim
+          do idir = 1, gr%sb%dim
             write(aux, '(a,i1,a)') 'B(', idir, ')'
             call write_iter_header(out_laser, aux)
           end do
         case(E_FIELD_VECTOR_POTENTIAL)
-          do idir = 1, gr%mesh%sb%dim
+          do idir = 1, gr%sb%dim
             write(aux, '(a,i1,a)') 'A(', idir, ')'
             call write_iter_header(out_laser, aux)
           end do
@@ -1843,12 +1974,12 @@ contains
         select case(laser_kind(hm%ep%lasers(il)))
         case(E_FIELD_ELECTRIC, E_FIELD_MAGNETIC)
           aux = '[' // trim(units_abbrev(units_out%force)) // ']'
-          do idir = 1, gr%mesh%sb%dim
+          do idir = 1, gr%sb%dim
             call write_iter_header(out_laser, aux)
           end do
         case(E_FIELD_VECTOR_POTENTIAL)
           aux = '[' // trim(units_abbrev(units_out%energy)) // ']'
-          do idir = 1, gr%mesh%sb%dim
+          do idir = 1, gr%sb%dim
             call write_iter_header(out_laser, aux)
           end do
         case(E_FIELD_SCALAR_POTENTIAL)
@@ -1869,10 +2000,10 @@ contains
       select case(laser_kind(hm%ep%lasers(il)))
       case(E_FIELD_ELECTRIC, E_FIELD_MAGNETIC)
         field = units_from_atomic(units_out%force, field)
-        call write_iter_double(out_laser, field, gr%mesh%sb%dim)
+        call write_iter_double(out_laser, field, gr%sb%dim)
       case(E_FIELD_VECTOR_POTENTIAL)
         field = units_from_atomic(units_out%energy, field)
-        call write_iter_double(out_laser, field, gr%mesh%sb%dim)
+        call write_iter_double(out_laser, field, gr%sb%dim)
       case(E_FIELD_SCALAR_POTENTIAL)
         call write_iter_double(out_laser, field(1), 1)
       end select
@@ -2145,80 +2276,6 @@ contains
     POP_SUB(td_write_ionch)
   end subroutine td_write_ionch
 
-
-  ! ---------------------------------------------------------
-  subroutine td_write_gauge_field(out_gauge, hm, gr, iter)
-    type(c_ptr),         intent(inout) :: out_gauge
-    type(hamiltonian_elec_t), intent(in) :: hm
-    type(grid_t),        intent(in) :: gr
-    integer,             intent(in) :: iter
-    
-    integer :: idir
-    character(len=50) :: aux
-    FLOAT :: temp(1:MAX_DIM)
-    
-    if(.not.mpi_grp_is_root(mpi_world)) return ! only first node outputs
-
-    PUSH_SUB(td_write_gauge_field)
-    
-    if(iter == 0) then
-      call td_write_print_header_init(out_gauge)
-
-      ! first line: column names
-      call write_iter_header_start(out_gauge)
-
-      do idir = 1, gr%mesh%sb%dim
-        write(aux, '(a2,i1,a1)') 'A(', idir, ')'
-        call write_iter_header(out_gauge, aux)
-      end do
-      do idir = 1, gr%mesh%sb%dim
-        write(aux, '(a6,i1,a1)') 'dA/dt(', idir, ')'
-        call write_iter_header(out_gauge, aux)
-      end do
-      do idir = 1, gr%mesh%sb%dim
-        write(aux, '(a10,i1,a1)') 'd^2A/dt^2(', idir, ')'
-        call write_iter_header(out_gauge, aux)
-      end do
-      call write_iter_nl(out_gauge)
-
-      ! second line: units
-      !call write_iter_string(out_gauge, '#[Iter n.]')
-      !call write_iter_header(out_gauge, '[' // trim(units_abbrev(units_out%time)) // ']')
-      !call write_iter_string(out_gauge, &
-      !  'A Vector potential in '   // trim(units_abbrev(units_out%length)) &
-      !  'A dot in '                // trim(units_abbrev(units_out%length)) &
-      !  'A dot dot in '            // trim(units_abbrev(units_out%length))
-      !call write_iter_nl(out_gauge)
-
-      call td_write_print_header_end(out_gauge)
-    end if
-
-    call write_iter_start(out_gauge)
-
-    ! this complicated stuff here is a workaround for a PGI compiler bug in versions before 9.0-3
-    call gauge_field_get_vec_pot(hm%ep%gfield, temp)
-    do idir = 1, gr%mesh%sb%dim
-      temp(idir) = units_from_atomic(units_out%energy, temp(idir))
-    end do
-    call write_iter_double(out_gauge, temp, gr%mesh%sb%dim)
-
-    call gauge_field_get_vec_pot_vel(hm%ep%gfield, temp)
-    do idir = 1, gr%mesh%sb%dim
-      temp(idir) = units_from_atomic(units_out%energy / units_out%time, temp(idir))
-    end do
-    call write_iter_double(out_gauge, temp, gr%mesh%sb%dim)
-
-    call gauge_field_get_vec_pot_acc(hm%ep%gfield, temp)
-    do idir = 1, gr%mesh%sb%dim
-      temp(idir) = units_from_atomic(units_out%energy / units_out%time**2, temp(idir))
-    end do
-    call write_iter_double(out_gauge, temp, gr%mesh%sb%dim)
-
-    call write_iter_nl(out_gauge)
-    POP_SUB(td_write_gauge_field)
-    
-  end subroutine td_write_gauge_field
-
   ! ---------------------------------------------------------
   subroutine td_write_proj(out_proj, gr, geo, st, gs_st, kick, iter)
     type(c_ptr),         intent(inout) :: out_proj
@@ -2372,9 +2429,7 @@ contains
       SAFE_DEALLOCATE_A(gspsi)
       SAFE_DEALLOCATE_A(psi)
 
-#ifdef HAVE_MPI
       call comm_allreduce(st%dom_st_kpt_mpi_grp%comm, projections)
-#endif
 
       ! n_dip is not defined for more than space%dim
       call geometry_dipole(geo, n_dip)
@@ -2480,11 +2535,9 @@ contains
      end if
     end do
 
-#if defined(HAVE_MPI)        
    if(st%parallel_in_states .or. st%d%kpt%parallel) then
      call comm_allreduce(st%st_kpt_mpi_grp%comm, Nex_kpt)
    end if
-#endif  
 
   Nex = sum(Nex_kpt)
 
@@ -2542,9 +2595,7 @@ contains
     SAFE_DEALLOCATE_A(psi)
     SAFE_DEALLOCATE_A(gspsi)
 
-    #ifdef HAVE_MPI
-      call comm_allreduce(st%dom_st_kpt_mpi_grp%comm, projections)
-    #endif
+    call comm_allreduce(st%dom_st_kpt_mpi_grp%comm, projections)
 
 
     POP_SUB(calc_projections)
@@ -2617,18 +2668,18 @@ contains
        
       ! compute the overlaps as a matrix product
       proj(1:gs_st%nst,1:gs_st%nst) = M_ZERO
-      call zgemm('n',                               &
-                 'c',                               &
-                 gs_st%nst,                         &
-                 gs_st%nst,                         &
-                 mesh%np_global*gs_st%d%dim,        &
-                 cmplx(mesh%volume_element,kind=8), &
-                 psi(1, 1, 1),                      &
-                 ubound(psi, dim = 1),              &
-                 gs_psi(1, 1, 1),                   &
-                 ubound(gs_psi, dim = 1),           &
-                 cmplx(0.,kind=8),                  &
-                 proj(1, 1),                        &
+      call zgemm('n',                                  &
+                 'c',                                  &
+                 gs_st%nst,                            &
+                 gs_st%nst,                            &
+                 mesh%np_global*gs_st%d%dim,           &
+                 TOCMPLX(mesh%volume_element, M_ZERO), &
+                 psi(1, 1, 1),                         &
+                 ubound(psi, dim = 1),                 &
+                 gs_psi(1, 1, 1),                      &
+                 ubound(gs_psi, dim = 1),              &
+                 M_z0,                                 &
+                 proj(1, 1),                           &
                  ubound(proj, dim = 1))
 
       ! write to file 
@@ -2789,18 +2840,18 @@ contains
         call comm_allreduce(mpi_world%comm, psi)
         call comm_allreduce(mpi_world%comm, hpsi)
         hmss(1:nst,1:nst) = M_ZERO
-        call zgemm( 'n',                               &
-                    'c',                               &
-                    nst,                               &
-                    nst,                               &
-                    mesh%np_global*st%d%dim,           &
-                    cmplx(mesh%volume_element,kind=8), &
-                    hpsi(1, 1, 1),                     &
-                    ubound(hpsi, dim = 1),             &
-                    psi(1, 1, 1),                      &
-                    ubound(psi, dim = 1),              &
-                    cmplx(0.,kind=8),                  &
-                    hmss(1, 1),                        &
+        call zgemm( 'n',                                  &
+                    'c',                                  &
+                    nst,                                  &
+                    nst,                                  &
+                    mesh%np_global*st%d%dim,              &
+                    TOCMPLX(mesh%volume_element, M_ZERO), &
+                    hpsi(1, 1, 1),                        &
+                    ubound(hpsi, dim = 1),                &
+                    psi(1, 1, 1),                         &
+                    ubound(psi, dim = 1),                 &
+                    M_z0,                                 &
+                    hmss(1, 1),                           &
                     ubound(hmss, dim = 1))
 
         hmss(1:nst,1:nst) = CONJG(hmss(1:nst,1:nst))
@@ -2943,18 +2994,18 @@ contains
       ! first line: column names
       call write_iter_header_start(out_total_current)
       
-      do idir = 1, gr%mesh%sb%dim
+      do idir = 1, gr%sb%dim
         write(aux, '(a2,i1,a1)') 'I(', idir, ')'
         call write_iter_header(out_total_current, aux)
       end do
 
-      do idir = 1, gr%mesh%sb%dim
+      do idir = 1, gr%sb%dim
         write(aux, '(a2,i1,a1)') 'IntAbs(j)(', idir, ')'
         call write_iter_header(out_total_current, aux)
       end do
       
       do ispin = 1, st%d%nspin
-        do idir = 1, gr%mesh%sb%dim
+        do idir = 1, gr%sb%dim
           write(aux, '(a4,i1,a1,i1,a1)') 'I-sp', ispin, '(', idir, ')'
           call write_iter_header(out_total_current, aux)
         end do
@@ -2993,8 +3044,8 @@ contains
     end if
 
    if(mpi_grp_is_root(mpi_world)) then
-      call write_iter_double(out_total_current, total_current, gr%mesh%sb%dim)
-      call write_iter_double(out_total_current, abs_current, gr%mesh%sb%dim)
+      call write_iter_double(out_total_current, total_current, gr%sb%dim)
+      call write_iter_double(out_total_current, abs_current, gr%sb%dim)
    end if
   
     do ispin = 1, st%d%nspin
@@ -3007,7 +3058,7 @@ contains
         call comm_allreduce(gr%mesh%mpi_grp%comm, total_current, dim = gr%sb%dim)
       end if
       if(mpi_grp_is_root(mpi_world)) &
-        call write_iter_double(out_total_current, total_current, gr%mesh%sb%dim)
+        call write_iter_double(out_total_current, total_current, gr%sb%dim)
     end do
 
     if(mpi_grp_is_root(mpi_world)) &
@@ -3038,7 +3089,7 @@ contains
       ! first line: column names
       call write_iter_header_start(write_obj)
       
-      do idir = 1, gr%mesh%sb%dim
+      do idir = 1, gr%sb%dim
         write(aux, '(a2,i1,a1)') 'Jh(', idir, ')'
         call write_iter_header(write_obj, aux)
       end do
@@ -3064,7 +3115,7 @@ contains
 
     SAFE_DEALLOCATE_A(heat_current)
     
-    if(mpi_grp_is_root(mpi_world)) call write_iter_double(write_obj, total_current, gr%mesh%sb%dim)
+    if(mpi_grp_is_root(mpi_world)) call write_iter_double(write_obj, total_current, gr%sb%dim)
   
     if(mpi_grp_is_root(mpi_world)) call write_iter_nl(write_obj)
       
@@ -3214,14 +3265,13 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_mxll_init(writ, namespace, gr, st, hm, iter, max_iter, dt)
+  subroutine td_write_mxll_init(writ, namespace, gr, st, hm, iter, dt)
     type(td_write_t),         intent(out)   :: writ
     type(namespace_t),        intent(in)    :: namespace
     type(grid_t),             intent(inout) :: gr
     type(states_mxll_t),      intent(inout) :: st
     type(hamiltonian_mxll_t), intent(inout) :: hm
     integer,                  intent(in)    :: iter
-    integer,                  intent(in)    :: max_iter
     FLOAT,                    intent(in)    :: dt
 
     integer :: default, flags, iout, first, idim
@@ -3764,12 +3814,12 @@ contains
       call write_iter_nl(out_poynting)
 
       call write_iter_header_start(out_poynting)
-      do idir = 1, gr%mesh%sb%dim
+      do idir = 1, gr%sb%dim
         write(aux, '(a,i1,a)') 'poynting (', idir, ')'
         call write_iter_header(out_poynting, aux)
       end do
       if (plane_wave_flag) then
-        do idir = 1, gr%mesh%sb%dim
+        do idir = 1, gr%sb%dim
           write(aux, '(a,i1,a)') 'poynting pl. w.(', idir, ')'
           call write_iter_header(out_poynting, aux)
         end do
@@ -3780,7 +3830,7 @@ contains
       call write_iter_header(out_poynting, '[' // trim(units_abbrev(units_out%time)) // ']')
 
       aux = '[' // trim(units_abbrev(units_out%force)) // ']'
-      do idir = 1, 2 * gr%mesh%sb%dim
+      do idir = 1, 2 * gr%sb%dim
         call write_iter_header(out_poynting, aux)
       end do
       call write_iter_nl(out_poynting)
@@ -3791,12 +3841,12 @@ contains
 
     ! Output of mean poynting vector
     field = units_from_atomic(unit_one/units_out%length**2, field)
-    call write_iter_double(out_poynting, field, gr%mesh%sb%dim)
+    call write_iter_double(out_poynting, field, gr%sb%dim)
 
     ! Output of mean poynting vector plane wave
     if (plane_wave_flag) then
       field_2 = units_from_atomic(unit_one/units_out%length**2, field_2)
-      call write_iter_double(out_poynting, field_2, gr%mesh%sb%dim)
+      call write_iter_double(out_poynting, field_2, gr%sb%dim)
     end if
 
     call write_iter_nl(out_poynting)
@@ -3843,19 +3893,19 @@ contains
       call write_iter_header(out_fields, aux)
 
       call write_iter_header_start(out_fields)
-      do idir = 1, gr%mesh%sb%dim
+      do idir = 1, gr%sb%dim
         write(aux, '(a,i1,a)') 'E(', idir, ')'
         call write_iter_header(out_fields, aux)
       end do
-      do idir = 1, gr%mesh%sb%dim
+      do idir = 1, gr%sb%dim
         write(aux, '(a,i1,a)') 'B(', idir, ')'
         call write_iter_header(out_fields, aux)
       end do
-      do idir = 1, gr%mesh%sb%dim
+      do idir = 1, gr%sb%dim
         write(aux, '(a,i1,a)') 'E(', idir, ')'
         call write_iter_header(out_fields, aux)
       end do
-      do idir = 1, gr%mesh%sb%dim
+      do idir = 1, gr%sb%dim
         write(aux, '(a,i1,a)') 'B(', idir, ')'
         call write_iter_header(out_fields, aux)
       end do
@@ -3868,7 +3918,7 @@ contains
       ! (force, force, and energy, respectively). The reason is that the units of E, B or A
       ! are ugly.
       aux = '[' // trim(units_abbrev(units_out%force)) // ']'
-      do idir = 1, 4 * gr%mesh%sb%dim
+      do idir = 1, 4 * gr%sb%dim
         call write_iter_header(out_fields, aux)
       end do
       call write_iter_nl(out_fields)
@@ -3880,21 +3930,21 @@ contains
     ! Output of electric field at selected point
     call get_electric_field_vector(st%selected_points_rs_state(:,1), field(1:st%dim))
     field(1:st%dim) = units_from_atomic(units_out%energy/units_out%length, field(1:st%dim))
-    call write_iter_double(out_fields, field(1:st%dim), gr%mesh%sb%dim)
+    call write_iter_double(out_fields, field(1:st%dim), gr%sb%dim)
     ! Output of magnetic field at selected point
     call get_magnetic_field_vector(st%selected_points_rs_state(:,1), st%rs_sign, field(1:st%dim))
     field(1:st%dim) = units_from_atomic(unit_one/units_out%length**2, field(1:st%dim))
-    call write_iter_double(out_fields, field(1:st%dim), gr%mesh%sb%dim)
+    call write_iter_double(out_fields, field(1:st%dim), gr%sb%dim)
 
     ! Output of transverse electric field at selected point
     call get_electric_field_vector(st%selected_points_rs_state_trans(:,1), field(1:st%dim))
     field(1:st%dim) = units_from_atomic(units_out%energy/units_out%length, field(1:st%dim))
-    call write_iter_double(out_fields, field(1:st%dim), gr%mesh%sb%dim)
+    call write_iter_double(out_fields, field(1:st%dim), gr%sb%dim)
     ! Output of transverse magnetic field at selected point
     call get_magnetic_field_vector(st%selected_points_rs_state_trans(:,1), &
          st%rs_sign, field(1:st%dim))
     field(1:st%dim) = units_from_atomic(unit_one/units_out%length**2, field(1:st%dim))
-    call write_iter_double(out_fields, field(1:st%dim), gr%mesh%sb%dim)
+    call write_iter_double(out_fields, field(1:st%dim), gr%sb%dim)
 
     call write_iter_nl(out_fields)
 
@@ -3903,16 +3953,15 @@ contains
 
 
   !----------------------------------------------------------
-  subroutine td_write_mxll_free_data(writ, namespace, gr, st, hm, geo, outp, iter, dt)
-    type(td_write_t),     intent(inout) :: writ
-    type(namespace_t),    intent(in)    :: namespace
-    type(grid_t),         intent(inout) :: gr
-    type(states_mxll_t),       intent(inout) :: st
-    type(hamiltonian_mxll_t),  intent(inout) :: hm
-    type(geometry_t),     intent(inout) :: geo
-    type(output_t),       intent(in)    :: outp
-    integer,              intent(in)    :: iter
-    FLOAT, optional,      intent(in)    :: dt
+  subroutine td_write_mxll_free_data(writ, namespace, gr, st, hm, geo, outp, clock)
+    type(td_write_t),         intent(inout) :: writ
+    type(namespace_t),        intent(in)    :: namespace
+    type(grid_t),             intent(inout) :: gr
+    type(states_mxll_t),      intent(inout) :: st
+    type(hamiltonian_mxll_t), intent(inout) :: hm
+    type(geometry_t),         intent(inout) :: geo
+    type(output_t),           intent(in)    :: outp
+    type(clock_t),            intent(in)    :: clock
 
     character(len=256) :: filename
     integer :: iout
@@ -3928,9 +3977,10 @@ contains
     end if
 
     ! now write down the rest
-    write(filename, '(a,a,i7.7)') trim(outp%iter_dir),"td.", iter  ! name of directory
+    write(filename, '(a,a,i7.7)') trim(outp%iter_dir),"td.", clock%get_tick()  ! name of directory
 
-    call output_mxll(outp, namespace, gr, st, hm, iter*dt, geo, filename)
+    call output_mxll(outp, namespace, gr, st, hm, clock%time(), geo, filename)
+
     call profiling_out(prof)
     POP_SUB(td_write_maxwell_free_data)
   end subroutine td_write_mxll_free_data
@@ -3963,6 +4013,7 @@ contains
 
     POP_SUB(td_write_print_header_end)
   end subroutine td_write_print_header_end
+
 
 end module td_write_oct_m
 

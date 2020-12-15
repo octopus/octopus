@@ -29,6 +29,7 @@ module vdw_oct_m
   use mesh_oct_m
   use messages_oct_m
   use mpi_oct_m
+  use multisystem_basic_oct_m
   use parser_oct_m
   use pert_oct_m
   use profiling_oct_m
@@ -37,10 +38,11 @@ module vdw_oct_m
   use states_elec_oct_m
   use states_elec_restart_oct_m
   use sternheimer_oct_m
-  use system_oct_m
+  use electrons_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use utils_oct_m
+  use v_ks_oct_m
 
   implicit none
 
@@ -51,9 +53,27 @@ module vdw_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine vdw_run(sys, fromScratch)
-    type(system_t),         intent(inout) :: sys
-    logical,                intent(inout) :: fromScratch
+  subroutine vdw_run(system, from_scratch)
+    class(*),        intent(inout) :: system
+    logical,         intent(in)    :: from_scratch
+
+    PUSH_SUB(vdw_run)
+
+    select type (system)
+    class is (multisystem_basic_t)
+      message(1) = "CalculationMode = vdw not implemented for multi-system calculations"
+      call messages_fatal(1)
+    type is (electrons_t)
+      call vdw_run_legacy(system, from_scratch)
+    end select
+
+    POP_SUB(vdw_run)
+  end subroutine vdw_run
+
+  ! ---------------------------------------------------------
+  subroutine vdw_run_legacy(sys, fromScratch)
+    type(electrons_t),    intent(inout) :: sys
+    logical,              intent(in)    :: fromScratch
 
     type(lr_t) :: lr(MAX_DIM, 1)
     type(sternheimer_t)     :: sh
@@ -68,7 +88,7 @@ contains
 
     type(restart_t) :: restart_dump
 
-    PUSH_SUB(vdw_run)
+    PUSH_SUB(vdw_run_legacy)
 
     if (sys%hm%pcm%run_pcm) then
       call messages_not_implemented("PCM for CalculationMode /= gs or td")
@@ -116,14 +136,14 @@ contains
       write(iunit, '(1x)')
 
       write(iunit, '(3a,es20.12)') "C_3  [", &
-        trim(units_abbrev(units_out%energy * units_out%length**sys%gr%mesh%sb%dim)), "] = ", &
-        units_from_atomic(units_out%energy * units_out%length**sys%gr%mesh%sb%dim, c3)
+        trim(units_abbrev(units_out%energy * units_out%length**sys%gr%sb%dim)), "] = ", &
+        units_from_atomic(units_out%energy * units_out%length**sys%gr%sb%dim, c3)
       write(iunit, '(3a,es20.12)') "C_6  [", &
-        trim(units_abbrev(units_out%energy * units_out%length**(2*sys%gr%mesh%sb%dim))), "] = ", &
-        units_from_atomic(units_out%energy * units_out%length**(2*sys%gr%mesh%sb%dim), c6)
+        trim(units_abbrev(units_out%energy * units_out%length**(2*sys%gr%sb%dim))), "] = ", &
+        units_from_atomic(units_out%energy * units_out%length**(2*sys%gr%sb%dim), c6)
       write(iunit, '(3a,es20.12)') "C_AT [", &
-        trim(units_abbrev(units_out%energy * units_out%length**(3*sys%gr%mesh%sb%dim))), "] = ", &
-        units_from_atomic(units_out%energy * units_out%length**(3*sys%gr%mesh%sb%dim), cat)
+        trim(units_abbrev(units_out%energy * units_out%length**(3*sys%gr%sb%dim))), "] = ", &
+        units_from_atomic(units_out%energy * units_out%length**(3*sys%gr%sb%dim), cat)
 
       call io_close(iunit)
     end if
@@ -131,14 +151,14 @@ contains
     call sternheimer_end(sh)
     call end_()
 
-    POP_SUB(vdw_run)
+    POP_SUB(vdw_run_legacy)
   contains
 
     ! --------------------------------------------------------------------
     subroutine input()
       integer :: equiv_axes
 
-      PUSH_SUB(vdw_run.input)
+      PUSH_SUB(vdw_run_legacy.input)
 
       !%Variable vdWNPoints
       !%Type integer
@@ -156,11 +176,11 @@ contains
 
       select case(equiv_axes)
       case(3);      ndir = 1
-      case(2);      ndir = min(2, sys%gr%mesh%sb%dim)
-      case default; ndir = min(3, sys%gr%mesh%sb%dim)
+      case(2);      ndir = min(2, sys%gr%sb%dim)
+      case default; ndir = min(3, sys%gr%sb%dim)
       end select
 
-      POP_SUB(vdw_run.input)
+      POP_SUB(vdw_run_legacy.input)
     end subroutine input
 
 
@@ -173,7 +193,7 @@ contains
 
       type(restart_t) :: restart_load, gs_restart
 
-      PUSH_SUB(vdw_run.init_)
+      PUSH_SUB(vdw_run_legacy.init_)
 
       ! make some space for static polarizability
       gaus_leg_n = gaus_leg_n + 1
@@ -227,7 +247,7 @@ contains
       ! setup Hamiltonian
       message(1) = 'Info: Setting up Hamiltonian for linear response.'
       call messages_info(1)
-      call system_h_setup(sys)
+      call v_ks_h_setup(sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm)
 
       do dir = 1, ndir
         call lr_init(lr(dir,1))
@@ -258,14 +278,14 @@ contains
 
       call restart_init(restart_dump, sys%namespace, RESTART_VDW, RESTART_TYPE_DUMP, sys%mc, ierr, mesh=sys%gr%mesh)
 
-      POP_SUB(vdw_run.init_)
+      POP_SUB(vdw_run_legacy.init_)
     end subroutine init_
 
     ! --------------------------------------------------------------------
     subroutine end_()
       integer :: dir
 
-      PUSH_SUB(vdw_run.end_)
+      PUSH_SUB(vdw_run_legacy.end_)
 
       SAFE_DEALLOCATE_A(gaus_leg_points)
       SAFE_DEALLOCATE_A(gaus_leg_weights)
@@ -276,7 +296,7 @@ contains
 
       call restart_end(restart_dump)
 
-      POP_SUB(vdw_run.end_)
+      POP_SUB(vdw_run_legacy.end_)
     end subroutine end_
 
 
@@ -287,7 +307,7 @@ contains
       CMPLX        :: alpha(1:MAX_DIM, 1:MAX_DIM)
       type(pert_t) :: perturbation
 
-      PUSH_SUB(vdw_run.get_pol)
+      PUSH_SUB(vdw_run_legacy.get_pol)
 
       call pert_init(perturbation, sys%namespace, PERTURBATION_ELECTRIC, sys%gr, sys%geo)
       do dir = 1, ndir
@@ -306,17 +326,17 @@ contains
       do dir = 1, ndir
         get_pol = get_pol + TOFLOAT(alpha(dir, dir))
       end do
-      do dir = ndir+1, sys%gr%mesh%sb%dim
+      do dir = ndir+1, sys%gr%sb%dim
         get_pol = get_pol + TOFLOAT(alpha(ndir, ndir))
       end do
 
-      get_pol = get_pol / TOFLOAT(sys%gr%mesh%sb%dim)
+      get_pol = get_pol / TOFLOAT(sys%gr%sb%dim)
 
       call pert_end(perturbation)
-      POP_SUB(vdw_run.get_pol)
+      POP_SUB(vdw_run_legacy.get_pol)
     end function get_pol
 
-  end subroutine vdw_run
+  end subroutine vdw_run_legacy
 
 end module vdw_oct_m
 

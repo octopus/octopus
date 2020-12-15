@@ -223,9 +223,9 @@ contains
     case (KICK_DENSITY_MODE)
     case (KICK_SPIN_MODE, KICK_SPIN_DENSITY_MODE)
     case (KICK_MAGNON_MODE)
-      if(nspin /= SPINORS) call messages_input_error(namespace, 'TDDeltaStrengthMode')
+      if(nspin /= SPINORS) call messages_input_error(namespace, 'TDDeltaStrengthMode', 'Magnon kick is incompatible with spinors')
     case default
-      call messages_input_error(namespace, 'TDDeltaStrengthMode')
+      call messages_input_error(namespace, 'TDDeltaStrengthMode', 'Unknown mode')
     end select
 
     if(parse_is_defined(namespace, 'TDDeltaUserDefined')) then
@@ -354,7 +354,7 @@ contains
       if(parse_block(namespace, 'TDPolarization', blk)==0) then
         n_rows = parse_block_n(blk)
 
-        if(n_rows < dim) call messages_input_error(namespace, 'TDPolarization')
+        if(n_rows < dim) call messages_input_error(namespace, 'TDPolarization', 'There should be one line per dimension')
 
         do irow = 1, n_rows
           do idir = 1, 3

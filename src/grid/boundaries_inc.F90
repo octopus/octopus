@@ -28,8 +28,9 @@ subroutine X(vec_ghost_update)(vp, v_local)
 
   R_TYPE,  allocatable :: ghost_send(:)
   integer              :: nsend
+  type(profile_t), save :: prof_update
   
-  call profiling_in(prof_update, "GHOST_UPDATE")
+  call profiling_in(prof_update, TOSTRING(X(GHOST_UPDATE)))
 
   PUSH_SUB(X(vec_ghost_update))
 
@@ -60,8 +61,9 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
   type(pv_handle_batch_t),  intent(out)   :: handle
 
   integer :: ipart, pos, ii, tag, nn, offset
+  type(profile_t), save :: prof_start, prof_irecv, prof_isend
 
-  call profiling_in(prof_start, "GHOST_UPDATE_START")
+  call profiling_in(prof_start, TOSTRING(X(GHOST_UPDATE_START)))
   PUSH_SUB(X(ghost_update_batch_start))
 
   ASSERT(v_local%nst_linear > 0)
@@ -72,6 +74,7 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
 
   SAFE_ALLOCATE(handle%requests(1:2*vp%npart*v_local%nst_linear))
 
+  call profiling_in(prof_irecv, TOSTRING(X(GHOST_UPDATE_IRECV)))
   ! first post the receptions
   select case(v_local%status())
 
@@ -129,6 +132,7 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
     end do
 
   end select
+  call profiling_out(prof_irecv)
 
   call X(batch_init)(handle%ghost_send, v_local%dim, 1, v_local%nst, subarray_size(vp%ghost_spoints), &
     packed=v_local%status()==BATCH_PACKED)
@@ -148,6 +152,7 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
     end if
   end if
 
+  call profiling_in(prof_isend, TOSTRING(X(GHOST_UPDATE_ISEND)))
   select case(v_local%status())
 
   case(BATCH_DEVICE_PACKED)
@@ -187,6 +192,7 @@ subroutine X(ghost_update_batch_start)(vp, v_local, handle)
       end do
     end do
   end select
+  call profiling_out(prof_isend)
 
   POP_SUB(X(ghost_update_batch_start))
   call profiling_out(prof_start)
@@ -199,8 +205,9 @@ subroutine X(ghost_update_batch_finish)(handle)
   type(pv_handle_batch_t),  intent(inout)   :: handle
 
   integer, allocatable :: status(:, :)
+  type(profile_t), save :: prof_wait
 
-  call profiling_in(prof_wait, "GHOST_UPDATE_WAIT")
+  call profiling_in(prof_wait, TOSTRING(X(GHOST_UPDATE_WAIT)))
   PUSH_SUB(X(ghost_update_batch_finish))
   
   ASSERT(handle%nnb > 0)
@@ -244,9 +251,13 @@ subroutine X(boundaries_set_batch)(boundaries, ffb, phase_correction)
   CMPLX,  optional,       intent(in)    :: phase_correction(:)
 
   integer :: bndry_start, bndry_end
+  type(profile_t), save :: set_bc_prof
+  type(profile_t), save :: set_bc_comm_prof
+  type(profile_t), save :: set_bc_precomm_prof
+  type(profile_t), save :: set_bc_postcomm_prof
 
   PUSH_SUB(X(boundaries_set_batch))
-  call profiling_in(set_bc_prof, 'SET_BC')
+  call profiling_in(set_bc_prof, TOSTRING(X(SET_BC)))
   
   ASSERT(ffb%type() == R_TYPE_VAL)
 
@@ -310,18 +321,21 @@ contains
     integer :: ii, jj, kk, ix, iy, iz, dx, dy, dz, i_lev
     FLOAT :: weight
     R_TYPE, allocatable :: ff(:)
+    integer :: idx(1:3)
 
     PUSH_SUB(X(boundaries_set_batch).multiresolution)
 
     SAFE_ALLOCATE(ff(1:boundaries%mesh%np_part))
+    ASSERT(boundaries%mesh%idx%dim == 3)
     
     do ist = 1, ffb%nst_linear
       call batch_get_state(ffb, ist, boundaries%mesh%np_part, ff)
       
       do ip = bndry_start, bndry_end
-        ix = boundaries%mesh%idx%lxyz(ip, 1)
-        iy = boundaries%mesh%idx%lxyz(ip, 2)
-        iz = boundaries%mesh%idx%lxyz(ip, 3)
+        call index_to_coords(boundaries%mesh%idx, ip, idx)
+        ix = idx(1)
+        iy = idx(2)
+        iz = idx(3)
 
         i_lev = boundaries%mesh%resolution(ix,iy,iz)
 
@@ -338,10 +352,10 @@ contains
                   boundaries%mesh%sb%hr_area%interp%ww(jj) *        &
                   boundaries%mesh%sb%hr_area%interp%ww(kk)
 
-                ff(ip) = ff(ip) + weight * ff(boundaries%mesh%idx%lxyz_inv(   &
-                  ix + boundaries%mesh%sb%hr_area%interp%posi(ii) * dx,       &
-                  iy + boundaries%mesh%sb%hr_area%interp%posi(jj) * dy,       &
-                  iz + boundaries%mesh%sb%hr_area%interp%posi(kk) * dz))
+                ff(ip) = ff(ip) + weight * ff(index_from_coords(boundaries%mesh%idx, [ &
+                  ix + boundaries%mesh%sb%hr_area%interp%posi(ii) * dx,   &
+                  iy + boundaries%mesh%sb%hr_area%interp%posi(jj) * dy,   &
+                  iz + boundaries%mesh%sb%hr_area%interp%posi(kk) * dz]))
               end do
             end do
           end do
@@ -377,7 +391,7 @@ contains
 
     if(boundaries%mesh%parallel_in_domains) then
 
-      call profiling_in(set_bc_precomm_prof, 'SET_BC_PRECOMM')
+      call profiling_in(set_bc_precomm_prof, TOSTRING(X(SET_BC_PRECOMM)))
 
       npart = boundaries%mesh%vp%npart
       maxsend = maxval(boundaries%nsend(1:npart))
@@ -456,7 +470,7 @@ contains
 
       call profiling_out(set_bc_precomm_prof)
 
-      call profiling_in(set_bc_comm_prof, 'SET_BC_COMM')
+      call profiling_in(set_bc_comm_prof, TOSTRING(X(SET_BC_COMM)))
 
 #ifdef HAVE_MPI
       call mpi_debug_in(boundaries%mesh%vp%comm, C_MPI_ALLTOALLV)
@@ -470,7 +484,7 @@ contains
 
       call profiling_out(set_bc_comm_prof)
 
-      call profiling_in(set_bc_postcomm_prof, 'SET_BC_POSTCOMM')
+      call profiling_in(set_bc_postcomm_prof, TOSTRING(X(SET_BC_POSTCOMM)))
 
       SAFE_DEALLOCATE_A(send_count)
       SAFE_DEALLOCATE_A(send_disp)
@@ -502,8 +516,13 @@ contains
             do ip = 1, boundaries%nrecv(ipart)
               ip2 = boundaries%per_recv(ip, ipart)
               do ist = 1, ffb%nst_linear
-                ffb%X(ff_linear)(ip2, ist) = recvbuffer(ist, ip, ipart) * &
+#ifdef R_TCOMPLEX
+                ffb%zff_linear(ip2, ist) = recvbuffer(ist, ip, ipart) * &
                   phase_correction(ip2-boundaries%mesh%np)
+#else
+                ! No phase correction for real batches
+                ASSERT(.false.)
+#endif
               end do
             end do
           end do
@@ -531,8 +550,13 @@ contains
             do ip = 1, boundaries%nrecv(ipart)
               ip2 = boundaries%per_recv(ip, ipart)
               do ist = 1, ffb%nst_linear
-                ffb%X(ff_pack)(ist, ip2) = recvbuffer(ist, ip, ipart) * &
+#ifdef R_TCOMPLEX
+                ffb%zff_pack(ist, ip2) = recvbuffer(ist, ip, ipart) * &
                   phase_correction(ip2-boundaries%mesh%np)
+#else
+                ! No phase correction for real batches
+                ASSERT(.false.)
+#endif
               end do
             end do
           end do
@@ -620,9 +644,14 @@ contains
         ASSERT(ubound(phase_correction, 1) == boundaries%mesh%np_part - boundaries%mesh%np)
         do ist = 1, ffb%nst_linear
           do ip = 1, boundaries%nper
+#ifdef R_TCOMPLEX
             ffb%X(ff_linear)(boundaries%per_points(POINT_BOUNDARY, ip), ist) = &
               ffb%X(ff_linear)(boundaries%per_points(POINT_INNER, ip), ist) * &
               phase_correction(boundaries%per_points(POINT_BOUNDARY, ip)-boundaries%mesh%np)
+#else
+            ! No phase correction for real batches
+            ASSERT(.false.)
+#endif
           end do
         end do
       end if
@@ -648,7 +677,12 @@ contains
           ip_bnd = boundaries%per_points(POINT_BOUNDARY, ip)
           ip_inn = boundaries%per_points(POINT_INNER, ip)
           do ist = 1, ffb%nst_linear
+#ifdef R_TCOMPLEX
             ffb%X(ff_pack)(ist, ip_bnd) = ffb%X(ff_pack)(ist, ip_inn) * phase_correction(ip_bnd-boundaries%mesh%np)
+#else
+            ! No phase correction for real batches
+            ASSERT(.false.)
+#endif
           end do
         end do
       end if

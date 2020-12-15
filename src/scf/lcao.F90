@@ -30,6 +30,7 @@ module lcao_oct_m
   use grid_oct_m
   use hamiltonian_elec_oct_m
   use io_oct_m
+  use io_function_oct_m
   use lalg_adv_oct_m
   use lalg_basic_oct_m
   use lapack_oct_m
@@ -58,7 +59,6 @@ module lcao_oct_m
   use states_elec_io_oct_m
   use submesh_oct_m
   use symmetrizer_oct_m
-  use system_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use v_ks_oct_m
@@ -130,9 +130,6 @@ module lcao_oct_m
 
 contains
 
-! uncomment below to use LCAODebug
-!#define LCAO_DEBUG
-
   ! ---------------------------------------------------------
   subroutine lcao_init(this, namespace, gr, geo, st)
     type(lcao_t),         intent(out) :: this
@@ -145,9 +142,7 @@ contains
     integer :: ii, ll, mm
     integer :: mode_default
     FLOAT   :: max_orb_radius
-#ifdef LCAO_DEBUG
     integer :: iunit_o
-#endif
 
     PUSH_SUB(lcao_init)
 
@@ -247,7 +242,7 @@ contains
       message(1) = "LCAOAlternative is not working for spinors."
       call messages_fatal(1)
     end if
-    if(simul_box_is_periodic(gr%mesh%sb) .and. this%alternative) then
+    if(simul_box_is_periodic(gr%sb) .and. this%alternative) then
       call messages_experimental("LCAOAlternative in periodic systems")
       ! specifically, if you get the message about submesh radius > box size, results will probably be totally wrong.
     end if
@@ -270,25 +265,23 @@ contains
       this%complex_ylms = .false.
     end if
 
-    !!%Variable LCAODebug
-    !!%Type logical
-    !!%Default false
-    !!%Section SCF::LCAO
-    !!%Description
-    !!% If this variable is set, detailed information about LCAO will be written to the <tt>static</tt>
-    !!% directory: Hamiltonian matrix (<tt>lcao_hamiltonian</tt>), overlap matrix (<tt>lcao_overlap</tt>),
-    !!% eigenvectors after diagonalization (<tt>lcao_eigenvectors</tt>), and orbital indices (<tt>lcao_orbitals</tt>).
-    !!%End
-#ifdef LCAO_DEBUG
+    !%Variable LCAODebug
+    !%Type logical
+    !%Default false
+    !%Section SCF::LCAO
+    !%Description
+    !% If this variable is set, detailed information about LCAO will be written to the <tt>static</tt>
+    !% directory: Hamiltonian matrix (<tt>lcao_hamiltonian</tt>), overlap matrix (<tt>lcao_overlap</tt>),
+    !% eigenvectors after diagonalization (<tt>lcao_eigenvectors</tt>), and orbital indices (<tt>lcao_orbitals</tt>).
+    !%End
     call parse_variable(namespace, 'LCAODebug', .false., this%debug)
 ! The code to do this exists but is hidden by ifdefs, in src/scf/lcao_inc.F90, because it causes
 ! mysterious problems with optimization on PGI 12.4.0.
 
     if(this%debug .and. mpi_grp_is_root(mpi_world)) then
-      iunit_o = io_open(file=trim(STATIC_DIR)//'lcao_orbitals', namespace, action='write')
+      iunit_o = io_open(trim(STATIC_DIR)//'lcao_orbitals', namespace, action='write')
       write(iunit_o,'(7a6)') 'iorb', 'atom', 'level', 'i', 'l', 'm', 'spin'
     end if
-#endif
 
     if(.not. this%alternative) then
 
@@ -376,21 +369,18 @@ contains
             this%level(iorb) = jj
             this%ddim(iorb) = idim
 
-#ifdef LCAO_DEBUG
             if(this%debug .and. mpi_grp_is_root(mpi_world)) then
               write(iunit_o,'(7i6)') iorb, this%atom(iorb), this%level(iorb), ii, ll, mm, this%ddim(iorb)
             end if
-#endif
 
             iorb = iorb + 1
           end do
         end do
       end do
 
-#ifdef LCAO_DEBUG
-      if(this%debug .and. mpi_grp_is_root(mpi_world)) &
+      if(this%debug .and. mpi_grp_is_root(mpi_world)) then
         call io_close(iunit_o)
-#endif
+      end if
 
       ! some orbitals might have been removed because of their radii
       if(this%maxorbs /= iorb - 1) then
@@ -588,20 +578,17 @@ contains
           this%basis_atom(ibasis) = iatom
           this%basis_orb(ibasis) = iorb
 
-#ifdef LCAO_DEBUG
           ! no stored spin index in alternative mode
           if(this%debug .and. mpi_grp_is_root(mpi_world)) then
             call species_iwf_ilm(geo%atom(iatom)%species, iorb, 1, ii, ll, mm)
             write(iunit_o,'(7i6)') ibasis, iatom, iorb, ii, ll, mm, 1
           end if
-#endif
         end do
       end do
 
-#ifdef LCAO_DEBUG
-      if(this%debug .and. mpi_grp_is_root(mpi_world)) &
+      if(this%debug .and. mpi_grp_is_root(mpi_world)) then
         call io_close(iunit_o)
-#endif
+      end if
 
       ! this is determined by the stencil we are using and the spacing
       this%lapdist = maxval(abs(gr%mesh%idx%enlarge)*gr%mesh%spacing)
@@ -620,7 +607,7 @@ contains
 
         if(this%derivative) maxradius = maxradius + this%lapdist
 
-        maxradius = min(maxradius, M_TWO*maxval(gr%mesh%sb%lsize(1:gr%mesh%sb%dim)))
+        maxradius = min(maxradius, M_TWO*maxval(gr%sb%lsize(1:gr%sb%dim)))
 
         this%radius(iatom) = maxradius
       end do
@@ -686,10 +673,15 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine lcao_run(sys, st_start, lmm_r)
-    type(system_t),      intent(inout) :: sys
-    integer, optional,   intent(in)    :: st_start !< use for unoccupied-states run
-    FLOAT,   optional,   intent(in)    :: lmm_r !< used only if not present(st_start)
+  subroutine lcao_run(namespace, gr, geo, st, ks, hm, st_start, lmm_r)
+    type(namespace_t),        intent(in)    :: namespace
+    type(grid_t),             intent(in)    :: gr
+    type(geometry_t),         intent(in)    :: geo
+    type(states_elec_t),      intent(inout) :: st
+    type(v_ks_t),             intent(inout) :: ks
+    type(hamiltonian_elec_t), intent(inout) :: hm
+    integer,        optional, intent(in)    :: st_start !< use for unoccupied-states run
+    FLOAT,          optional, intent(in)    :: lmm_r !< used only if not present(st_start)
 
     type(lcao_t) :: lcao
     integer :: st_start_random
@@ -701,10 +693,10 @@ contains
     if (present(st_start)) then
       ! If we are doing unocc calculation, do not mess with the correct eigenvalues
       ! of the occupied states.
-      call v_ks_calc(sys%ks, sys%namespace, sys%hm, sys%st, sys%geo, calc_eigenval=.not. present(st_start), calc_current=.false.)
+      call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval=.not. present(st_start), calc_current=.false.)
 
       ASSERT(st_start >= 1)
-      if(st_start > sys%st%nst) then ! nothing to be done in LCAO
+      if (st_start > st%nst) then ! nothing to be done in LCAO
         POP_SUB(lcao_run)
         return
       end if
@@ -712,33 +704,31 @@ contains
 
     call profiling_in(prof, 'LCAO_RUN')
 
-    call lcao_init(lcao, sys%namespace, sys%gr, sys%geo, sys%st)
+    call lcao_init(lcao, namespace, gr, geo, st)
 
-    call lcao_init_orbitals(lcao, sys%st, sys%gr, sys%geo, start = st_start)
+    call lcao_init_orbitals(lcao, st, gr, geo, start = st_start)
 
     if (.not. present(st_start)) then
-      call lcao_guess_density(lcao, sys%namespace, sys%st, sys%gr, sys%gr%sb, sys%geo, sys%st%qtot, sys%st%d%nspin, &
-        sys%st%d%spin_channels, sys%st%rho)
+      call lcao_guess_density(lcao, namespace, st, gr, gr%sb, geo, st%qtot, st%d%nspin, st%d%spin_channels, st%rho)
 
-      if(sys%st%d%ispin > UNPOLARIZED) then
+      if (st%d%ispin > UNPOLARIZED) then
         ASSERT(present(lmm_r))
-        call write_magnetic_moments(stdout, sys%gr%fine%mesh, sys%st, sys%geo, sys%gr%der%boundaries, lmm_r)
+        call write_magnetic_moments(stdout, gr%fine%mesh, st, geo, gr%der%boundaries, lmm_r)
       end if
 
-      ! set up Hamiltonian (we do not call system_h_setup here because we do not want to
+      ! set up Hamiltonian (we do not call v_ks_h_setup here because we do not want to
       ! overwrite the guess density)
       message(1) = 'Info: Setting up Hamiltonian.'
       call messages_info(1)
 
       ! get the effective potential (we don`t need the eigenvalues yet)
-      call v_ks_calc(sys%ks, sys%namespace, sys%hm, sys%st, sys%geo, calc_eigenval=.false., &
-                      calc_berry=.false., calc_current=.false.)
+      call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval=.false., calc_current=.false.)
       ! eigenvalues have nevertheless to be initialized to something
-      if(sys%st%smear%method == SMEAR_SEMICONDUCTOR .and. lcao_is_available(lcao)) then
-        sys%st%eigenval = M_HUGE
+      if(st%smear%method == SMEAR_SEMICONDUCTOR .and. lcao_is_available(lcao)) then
+        st%eigenval = M_HUGE
       else
         !For smearing functions with finite temperature, we cannot set them to M_HUGE
-        sys%st%eigenval = M_ZERO
+        st%eigenval = M_ZERO
       end if
 
     end if
@@ -754,24 +744,24 @@ contains
         call messages_info(1)
       end if
 
-      call lcao_wf(lcao, sys%st, sys%gr, sys%geo, sys%hm, sys%namespace, start = st_start)
+      call lcao_wf(lcao, st, gr, geo, hm, namespace, start = st_start)
 
       if (.not. present(st_start)) then
-        call states_elec_fermi(sys%st, sys%namespace, sys%gr%mesh)
-        call states_elec_write_eigenvalues(stdout, min(sys%st%nst, lcao%norbs), sys%st, sys%gr%sb)
+        call states_elec_fermi(st, namespace, gr%mesh)
+        call states_elec_write_eigenvalues(stdout, min(st%nst, lcao%norbs), st, gr%sb)
 
         ! Update the density and the Hamiltonian
         if (lcao%mode == OPTION__LCAOSTART__LCAO_FULL) then
-          call system_h_setup(sys, calc_eigenval = .false., calc_current=.false.)
-          if(sys%st%d%ispin > UNPOLARIZED) then
+          call v_ks_h_setup(namespace, gr, geo, st, ks, hm, calc_eigenval = .false., calc_current=.false.)
+          if (st%d%ispin > UNPOLARIZED) then
             ASSERT(present(lmm_r))
-            call write_magnetic_moments(stdout, sys%gr%fine%mesh, sys%st, sys%geo, sys%gr%der%boundaries, lmm_r)
+            call write_magnetic_moments(stdout, gr%fine%mesh, st, geo, gr%der%boundaries, lmm_r)
           end if
         end if
       end if
     end if
 
-    if(.not. lcao_done .or. lcao%norbs < sys%st%nst) then
+    if (.not. lcao_done .or. lcao%norbs < st%nst) then
 
       if(lcao_done) then
         st_start_random = lcao%norbs + 1
@@ -786,18 +776,18 @@ contains
       end if
 
       ! Randomly generate the initial wavefunctions.
-      call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb, ist_start_ = st_start_random, normalized = .false.)
+      call states_elec_generate_random(st, gr%mesh, gr%sb, ist_start_ = st_start_random, normalized = .false.)
 
       call messages_write('Orthogonalizing wavefunctions.')
       call messages_info()
-      call states_elec_orthogonalize(sys%st, sys%namespace, sys%gr%mesh)
+      call states_elec_orthogonalize(st, namespace, gr%mesh)
 
       if(.not. lcao_done) then
         ! If we are doing unocc calculation, do not mess with the correct eigenvalues and occupations
         ! of the occupied states.
-        call v_ks_calc(sys%ks, sys%namespace, sys%hm, sys%st, sys%geo, calc_eigenval=.not. present(st_start), calc_current=.false.) ! get potentials
+        call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval=.not. present(st_start), calc_current=.false.) ! get potentials
         if(.not. present(st_start)) then
-          call states_elec_fermi(sys%st, sys%namespace, sys%gr%mesh) ! occupations
+          call states_elec_fermi(st, namespace, gr%mesh) ! occupations
         end if
 
       end if
@@ -807,7 +797,7 @@ contains
       if(st_start > 1) then
         call messages_write('Orthogonalizing wavefunctions.')
         call messages_info()
-        call states_elec_orthogonalize(sys%st, sys%namespace, sys%gr%mesh)
+        call states_elec_orthogonalize(st, namespace, gr%mesh)
       end if
 
     end if
@@ -1212,6 +1202,7 @@ contains
         !Read from AtomsMagnetDirection block 
         if (nspin == 2) then
           call parse_block_float(blk, ia-1, 0, mag(1))
+          mag(2:3) = M_ZERO !Else, this is unitialized and lead to a FPE in the case (lmag > n1+n2) 
           lmag = abs(mag(1))
         elseif (nspin == 4) then
           do idir = 1, 3

@@ -24,6 +24,7 @@ module submesh_oct_m
   use boundaries_oct_m
   use comm_oct_m
   use global_oct_m
+  use index_oct_m
   use lalg_basic_oct_m
   use messages_oct_m
   use sort_oct_m
@@ -103,10 +104,6 @@ module submesh_oct_m
     module procedure ddsubmesh_to_mesh_dotp, zdsubmesh_to_mesh_dotp, zzsubmesh_to_mesh_dotp
   end interface submesh_to_mesh_dotp
 
-   type(profile_t), save ::           &
-       C_PROFILING_SM_REDUCE,         &
-       C_PROFILING_SM_NRM2
-
 contains
   
   subroutine submesh_null(sm)
@@ -128,6 +125,24 @@ contains
 
   ! -------------------------------------------------------------
 
+  ! Multipliers for recursive formulation of n-ellipsoid volume 
+  ! simplifying the Gamma function
+  ! f(n) = 2f(n-2)/n, f(0)=1, f(1)=2
+  recursive FLOAT function f_n(dims) result(fn)
+
+    integer :: dims
+
+    if (dims == 0) then
+      fn = 1.0
+    else if (dims == 1) then
+      fn = 2.0
+    else
+      fn = 2.0 * f_n(dims - 2) / dims
+    end if
+  end function f_n
+
+! -------------------------------------------------------------
+
   subroutine submesh_init(this, sb, mesh, center, rc)
     type(submesh_t),      intent(inout)  :: this !< valgrind objects to intent(out) due to the initializations above
     type(simul_box_t),    intent(in)     :: sb
@@ -135,12 +150,12 @@ contains
     FLOAT,                intent(in)     :: center(:)
     FLOAT,                intent(in)     :: rc
     
-    FLOAT :: r2, xx(1:MAX_DIM)
+    FLOAT :: r2, rc2, xx(1:MAX_DIM), rc_norm_n
     FLOAT, allocatable :: center_copies(:, :), xtmp(:, :)
-    integer :: icell, is, isb, ip, ix, iy, iz
+    integer :: icell, is, isb, ip, ix, iy, iz, max_elements_count
     type(profile_t), save :: submesh_init_prof
     type(periodic_copy_t) :: pp
-    integer, allocatable :: map_inv(:)
+    integer, allocatable :: map_inv(:), map_temp(:)
     integer :: nmax(1:MAX_DIM), nmin(1:MAX_DIM)
     integer, allocatable :: order(:)
 
@@ -155,6 +170,7 @@ contains
     this%center(1:sb%dim) = center(1:sb%dim)
 
     this%radius = rc
+    rc2 = rc**2
 
     ! The spheres are generated differently for periodic coordinates,
     ! mainly for performance reasons.
@@ -181,14 +197,12 @@ contains
       do iz = nmin(3), nmax(3)
         do iy = nmin(2), nmax(2)
           do ix = nmin(1), nmax(1)
-            ip = mesh%idx%lxyz_inv(ix, iy, iz)
-#if defined(HAVE_MPI)
+            ip = index_from_coords(mesh%idx, [ix, iy, iz])
             if(ip == 0) cycle
             if(mesh%parallel_in_domains) ip = vec_global2local(mesh%vp, ip, mesh%vp%partno)
-#endif
             if(ip == 0) cycle
             r2 = sum((mesh%x(ip, 1:sb%dim) - center(1:sb%dim))**2)
-            if(r2 <= rc**2) then
+            if(r2 <= rc2) then
               if(ip > mesh%np) then
                 ! boundary points are marked as negative values
                 isb = isb + 1
@@ -211,11 +225,9 @@ contains
       do iz = nmin(3), nmax(3)
         do iy = nmin(2), nmax(2)
           do ix = nmin(1), nmax(1)
-            ip = mesh%idx%lxyz_inv(ix, iy, iz)
-#if defined(HAVE_MPI)
+            ip = index_from_coords(mesh%idx, [ix, iy, iz])
             if(ip == 0) cycle
             if(mesh%parallel_in_domains) ip = vec_global2local(mesh%vp, ip, mesh%vp%partno)
-#endif
             is = map_inv(ip)
             if(is == 0) cycle
             if(is < 0) then
@@ -248,37 +260,36 @@ contains
         center_copies(1:sb%dim, icell) = periodic_copy_position(pp, sb, icell)
       end do
 
-      is = 0
-      do ip = 1, mesh%np_part
-        do icell = 1, periodic_copy_num(pp)
-          xx(1:sb%dim) = mesh%x(ip, 1:sb%dim) - center_copies(1:sb%dim, icell)
-          r2 = sum(xx(1:sb%dim)**2)
-          if(r2 > rc**2 ) cycle
-          is = is + 1
-        end do
-        if (ip == mesh%np) this%np = is
-      end do
-      
-      this%np_part = is
+      !Recursive formulation for the volume of n-ellipsoid 
+      !Garry Tee, NZ J. Mathematics Vol. 34 (2005) p. 165 eqs. 53,55
+      rc_norm_n = product(ceiling(rc / mesh%spacing(1:sb%dim)) + 1.0)
+      if (mesh%use_curvilinear) rc_norm_n = rc_norm_n / mesh%cv%min_mesh_scaling_product
+      max_elements_count = 3**sb%dim * int(M_PI**floor(0.5 * sb%dim) * rc_norm_n * f_n(sb%dim)) 
 
-      SAFE_ALLOCATE(this%map(1:this%np_part))
-      SAFE_ALLOCATE(xtmp(1:this%np_part, 0:sb%dim))
+      SAFE_ALLOCATE(map_temp(1:max_elements_count))
+      SAFE_ALLOCATE(xtmp(1:max_elements_count, 0:sb%dim))
             
-      !iterate again to fill the tables
       is = 0
       do ip = 1, mesh%np_part
         do icell = 1, periodic_copy_num(pp)
           xx(1:sb%dim) = mesh%x(ip, 1:sb%dim) - center_copies(1:sb%dim, icell)
           r2 = sum(xx(1:sb%dim)**2)
-          if(r2 > rc**2 ) cycle
+          if(r2 > rc2) cycle
           is = is + 1
-          this%map(is) = ip
+          map_temp(is) = ip
           xtmp(is, 0) = sqrt(r2)
           xtmp(is, 1:sb%dim) = xx(1:sb%dim)
           ! Note that xx can be outside the unit cell
-         end do
+        end do
+        if (ip == mesh%np) this%np = is
       end do
 
+      this%np_part = is
+
+      SAFE_ALLOCATE(this%map(1:this%np_part))
+      this%map(1:this%np_part) = map_temp(1:this%np_part)
+
+      SAFE_DEALLOCATE_A(map_temp)
       SAFE_DEALLOCATE_A(center_copies)
       
       call periodic_copy_end(pp)
@@ -450,7 +461,6 @@ contains
 
 #ifdef HAVE_MPI
       call MPI_Bcast(nparray, 3, MPI_INTEGER, root, mpi_grp%comm, mpi_err)
-      call MPI_Barrier(mpi_grp%comm, mpi_err)
 #endif
       this%np = nparray(1)
       this%np_part = nparray(2)
@@ -464,9 +474,7 @@ contains
 #ifdef HAVE_MPI
       if(this%np_part > 0) then
         call MPI_Bcast(this%map(1), this%np_part, MPI_INTEGER, root, mpi_grp%comm, mpi_err)
-        call MPI_Barrier(mpi_grp%comm, mpi_err)
         call MPI_Bcast(this%x(1, 0), this%np_part*(mesh%sb%dim + 1), MPI_FLOAT, root, mpi_grp%comm, mpi_err)
-        call MPI_Barrier(mpi_grp%comm, mpi_err)
       end if
 #endif
 
@@ -604,9 +612,7 @@ contains
     part_np = 0
     part_np(this%mesh%vp%partno) = this%np
 
-  #if defined(HAVE_MPI)
     call comm_allreduce(this%mesh%mpi_grp%comm, part_np)
-  #endif 
     this%np_global = sum(part_np)
 
     SAFE_ALLOCATE(this%x_global(1:this%np_global, 1:this%mesh%sb%dim))
@@ -628,11 +634,9 @@ contains
       ind = ind + part_np(ipart)
     end do 
 
-   #if defined(HAVE_MPI)
     call comm_allreduce(this%mesh%mpi_grp%comm, this%x_global)
     call comm_allreduce(this%mesh%mpi_grp%comm, this%part_v)
     call comm_allreduce(this%mesh%mpi_grp%comm, this%global2local)
-   #endif 
 
     SAFE_DEALLOCATE_A(part_np)
 
@@ -708,10 +712,11 @@ contains
     logical, optional, intent(in) :: reduce
   
     integer :: is, m, ip
+    type(profile_t), save :: prof_sm_reduce
   
     PUSH_SUB(zzsubmesh_to_mesh_dotp)
   
-    dotp = cmplx(M_ZERO, M_ZERO)
+    dotp = M_z0
   
     if(this%mesh%use_curvilinear) then
       do is = 1, this%np
@@ -734,9 +739,9 @@ contains
     end if
   
     if(optional_default(reduce, .true.) .and. this%mesh%parallel_in_domains) then
-      call profiling_in(C_PROFILING_SM_REDUCE, "SM_REDUCE")
+      call profiling_in(prof_sm_reduce, "SM_REDUCE_DOTP")
       call comm_allreduce(this%mesh%vp%comm, dotp)
-      call profiling_out(C_PROFILING_SM_REDUCE)
+      call profiling_out(prof_sm_reduce)
     end if 
  
     POP_SUB(zzsubmesh_to_mesh_dotp)

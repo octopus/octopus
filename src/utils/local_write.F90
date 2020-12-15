@@ -342,7 +342,7 @@ contains
           do ix = 1, gr%mesh%np
             if (inside(ix, id)) st%rho(ix, is) = st_rho(ix)
           end do
-          call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval = .false. , calc_berry = .false. , calc_energy = .false.)
+          call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval = .false. , calc_energy = .false.)
           folder = 'local.general/potential/'//trim(lab(id))//'.potential/'
           write(out_name, '(a,i0,a1,i7.7)')'vxc.',is,'.',iter
           call dio_function_output(how, trim(folder), trim(out_name), namespace, &
@@ -361,7 +361,7 @@ contains
         call dio_function_output(how, trim(folder), trim(out_name), namespace, &
           gr%mesh, hm%vhartree, units_out%length, ierr, geo = geo)
       !Computes global XC potential
-        call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval = .false. , calc_berry = .false. , calc_energy = .false.)
+        call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval = .false. , calc_energy = .false.)
         folder = 'local.general/potential/'
         write(out_name, '(a,i0,a1,i7.7)')'global-vxc.',is,'.',iter
         call dio_function_output(how, trim(folder), trim(out_name), namespace, &
@@ -454,7 +454,7 @@ contains
       !Compute Hartree potential
       call dpoisson_solve(hm%psolver, hm%vhartree, st%rho(1:gr%mesh%np, is))
       !Compute XC potential
-      call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval = .false. , calc_berry = .false. , calc_energy = .false.)
+      call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval = .false. , calc_energy = .false.)
  ! 
       st_rho(:) = st%rho(:, is)
       hm_vxc(:) = hm%vxc(:, is)
@@ -478,7 +478,7 @@ contains
         do ix = 1, gr%mesh%np 
           if (inside(ix, id)) st%rho(ix, is) = st_rho(ix)
         end do
-        call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval = .false. , calc_berry = .false. , calc_energy = .false.)
+        call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval = .false. , calc_energy = .false.)
         tmp_rhoi(1:gr%mesh%np) = st%rho(1:gr%mesh%np, is)
       !eh = Int[n(id)*v_h(id)]
         leh = dmf_integrate(gr%mesh, tmp_rhoi*hm%vhartree(1:gr%mesh%np)) 
@@ -498,7 +498,7 @@ contains
             do ix = 1, gr%mesh%np 
               if (inside(ix, jd)) st%rho(ix, is) = st_rho(ix)
             end do
-            call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval = .false. , calc_berry = .false. , calc_energy = .false.)
+            call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval = .false. , calc_energy = .false.)
             leh = dmf_integrate(gr%mesh, tmp_rhoi*hm%vhartree(1:gr%mesh%np)) 
           !exc = Int[n(id)*v_xc(jd)]
             lexc = dmf_integrate(gr%mesh, tmp_rhoi*hm%vxc(1:gr%mesh%np, is))
@@ -608,7 +608,7 @@ contains
       end do
     end if
 
-    SAFE_ALLOCATE(ionic_dipole(1:gr%mesh%sb%dim, nd))
+    SAFE_ALLOCATE(ionic_dipole(1:gr%sb%dim, nd))
     SAFE_ALLOCATE(multipole(1:(lmax + 1)**2, 1:st%d%nspin, nd))
     ionic_dipole(:,:) = M_ZERO
     multipole   (:,:,:) = M_ZERO
@@ -619,8 +619,8 @@ contains
     ! Setting center of mass as reference needed for non-neutral systems.
     do id = 1, nd
       do is = 1, st%d%nspin
-        multipole(2:gr%mesh%sb%dim+1, is, id) =  multipole(2:gr%mesh%sb%dim+1, is, id) &
-                                   - center(1:gr%mesh%sb%dim, id)*multipole(1, is, id)
+        multipole(2:gr%sb%dim+1, is, id) =  multipole(2:gr%sb%dim+1, is, id) &
+                                   - center(1:gr%sb%dim, id)*multipole(1, is, id)
       end do
     end do
 
@@ -639,8 +639,8 @@ contains
       call local_geometry_dipole(nd, ions_inside, geo, center, ionic_dipole)
       do is = 1, st%d%nspin
         do id = 1, nd
-          multipole(2:gr%mesh%sb%dim+1, is, id) = -ionic_dipole(1:gr%mesh%sb%dim, id)/st%d%nspin & 
-                                                  - multipole(2:gr%mesh%sb%dim+1, is, id)
+          multipole(2:gr%sb%dim+1, is, id) = -ionic_dipole(1:gr%sb%dim, id)/st%d%nspin & 
+                                                  - multipole(2:gr%sb%dim+1, is, id)
         end do
       end do
     end if

@@ -57,7 +57,7 @@ contains
     type(hamiltonian_elec_t), target, intent(inout) :: hm
     type(grid_t),             target, intent(inout) :: gr
     type(states_elec_t),      target, intent(inout) :: st
-    type(propagator_t),       target, intent(inout) :: tr
+    type(propagator_base_t),  target, intent(inout) :: tr
     type(namespace_t),                intent(in)    :: namespace
     FLOAT,                            intent(in)    :: time
     FLOAT,                            intent(in)    :: dt
@@ -121,7 +121,7 @@ contains
     type(hamiltonian_elec_t), target, intent(inout) :: hm
     type(grid_t),             target, intent(inout) :: gr
     type(states_elec_t),      target, intent(inout) :: st
-    type(propagator_t),       target, intent(inout) :: tr
+    type(propagator_base_t),  target, intent(inout) :: tr
     FLOAT,                            intent(in)    :: time
     FLOAT,                            intent(in)    :: dt
     type(ion_dynamics_t),             intent(inout) :: ions

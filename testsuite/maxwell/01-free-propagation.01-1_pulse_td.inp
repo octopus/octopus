@@ -64,7 +64,7 @@
 
  TDSystemPropagator = exp_mid
  TDTimeStep                        = 0.002
- TDMaxSteps                        = 100
+ TDPropagationTime                 = 0.2
 
 
 # ----- Maxwell field variables -------------------------------------------------------------------
@@ -74,18 +74,13 @@
  kx     = omega / c
  Ez     = 0.05
  pw     = 10.0
- ps     = - 5 * 5.0
+ p_s     = - 5 * 5.0
 
  %MaxwellIncidentWaves
    plane_wave_mx_function | 0 | 0 | Ez | "plane_waves_function"
  %
 
  %MaxwellFunctions
-   "plane_waves_function" | mxf_cosinoidal_wave | kx | 0 | 0 | ps | 0 | 0 | pw
+   "plane_waves_function" | mxf_cosinoidal_wave | kx | 0 | 0 | p_s | 0 | 0 | pw
  %
 
- # cosinoidal pulse
- %UserDefinedInitialMaxwellStates
-  3 | formula | electric_field | "      Ez*cos(kx*(x-ps))*cos(pi/2*(x-ps-2*pw)/pw) * step(pw-abs((kx*x-kx*ps)/kx^2)) " 
-  2 | formula | magnetic_field | " -1/c*Ez*cos(kx*(x-ps))*cos(pi/2*(x-ps-2*pw)/pw) * step(pw-abs((kx*x-kx*ps)/kx^2)) " 
- %

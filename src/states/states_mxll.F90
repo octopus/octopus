@@ -104,17 +104,17 @@ module states_mxll_oct_m
     integer, pointer             :: rs_state_fft_map(:,:,:)
     integer, pointer             :: rs_state_fft_map_inv(:,:)
 
-    FLOAT, allocatable            :: energy_rate(:)
-    FLOAT, allocatable            :: delta_energy(:)
-    FLOAT, allocatable            :: energy_via_flux_calc(:)
+    FLOAT                        :: energy_rate
+    FLOAT                        :: delta_energy
+    FLOAT                        :: energy_via_flux_calc
 
-    FLOAT, allocatable            :: trans_energy_rate(:)
-    FLOAT, allocatable            :: trans_delta_energy(:)
-    FLOAT, allocatable            :: trans_energy_via_flux_calc(:)
+    FLOAT                        :: trans_energy_rate
+    FLOAT                        :: trans_delta_energy
+    FLOAT                        :: trans_energy_via_flux_calc
 
-    FLOAT, allocatable            :: plane_waves_energy_rate(:)
-    FLOAT, allocatable            :: plane_waves_delta_energy(:)
-    FLOAT, allocatable            :: plane_waves_energy_via_flux_calc(:)
+    FLOAT                        :: plane_waves_energy_rate
+    FLOAT                        :: plane_waves_delta_energy
+    FLOAT                        :: plane_waves_energy_via_flux_calc
 
     FLOAT                        :: poynting_vector_box_surface(1:2,1:MAX_DIM,1:MAX_DIM) = M_ZERO
     FLOAT                        :: poynting_vector_box_surface_plane_waves(1:2,1:MAX_DIM,1:MAX_DIM) = M_ZERO
@@ -132,9 +132,11 @@ module states_mxll_oct_m
     FLOAT                        :: poynting_mean_plane_waves(MAX_DIM)
 
     integer                      :: inner_points_number
-    integer, pointer             :: inner_points_map(:)
+    integer, allocatable         :: inner_points_map(:)
+    logical, allocatable         :: inner_points_mask(:)
     integer                      :: boundary_points_number
-    integer, pointer             :: boundary_points_map(:)
+    integer, allocatable         :: boundary_points_map(:)
+    logical, allocatable         :: boundary_points_mask(:)
 
     integer                      :: surface_points_number(MAX_DIM)
     integer, pointer             :: surface_points_map(:,:,:)
@@ -165,13 +167,13 @@ module states_mxll_oct_m
 
     ! external current variables
     integer                      :: external_current_number
-    integer,             pointer :: external_current_modus(:)
-    character(len=1024), pointer :: external_current_string(:,:)
-    FLOAT,               pointer :: external_current_amplitude(:,:,:)
-    type(tdf_t),         pointer :: external_current_td_function(:)
-    type(tdf_t),         pointer :: external_current_td_phase(:)
-    FLOAT,               pointer :: external_current_omega(:)
-    FLOAT,               pointer :: external_current_phase(:)
+    integer,             allocatable :: external_current_modus(:)
+    character(len=1024), allocatable :: external_current_string(:,:)
+    FLOAT,               allocatable :: external_current_amplitude(:,:,:)
+    type(tdf_t),         allocatable :: external_current_td_function(:)
+    type(tdf_t),         allocatable :: external_current_td_phase(:)
+    FLOAT,               allocatable :: external_current_omega(:)
+    FLOAT,               allocatable :: external_current_phase(:)
 
     !> used for the user-defined wavefunctions (they are stored as formula strings)
     character(len=1024), allocatable :: user_def_states(:,:,:)
@@ -201,9 +203,6 @@ contains
     call distributed_nullify(st%dist)
     st%wfs_type = TYPE_CMPLX
     st%parallel_in_states = .false.
-#ifdef HAVE_SCALAPACK
-    call blacs_proc_grid_nullify(st%dom_st_proc_grid)
-#endif
     nullify(st%node)
 
     POP_SUB(states_mxll_null)
@@ -222,8 +221,11 @@ contains
     logical :: defaultl
     FLOAT, allocatable   :: pos(:)
     integer :: ix_max, iy_max, iz_max
+    type(profile_t), save :: prof
 
     PUSH_SUB(states_mxll_init)
+
+    call profiling_in(prof, 'STATES_MXLL_INIT')
 
     st%fromScratch = .true. ! this will be reset if restart_read is called
     call states_mxll_null(st)
@@ -323,6 +325,8 @@ contains
     SAFE_ALLOCATE(st%surface_grid_center(1:2, 1:st%dim, 1:ix_max, 1:iy_max))
     SAFE_ALLOCATE(st%surface_grid_points_number(1:st%dim, 1:ix_max, 1:iy_max))
 
+    call profiling_out(prof)
+
     POP_SUB(states_mxll_init)
 
   end subroutine states_mxll_init
@@ -333,7 +337,11 @@ contains
     type(states_mxll_t),    intent(inout)   :: st
     type(mesh_t),           intent(in)      :: mesh
 
+    type(profile_t), save :: prof
+
     PUSH_SUB(states_mxll_allocate)
+
+    call profiling_in(prof, 'STATES_MXLL_ALLOCATE')
 
     SAFE_ALLOCATE(st%rs_state(1:mesh%np_part, 1:st%dim))
     st%rs_state(:,:) = M_z0
@@ -353,6 +361,8 @@ contains
     SAFE_ALLOCATE(st%rs_current_density_restart_t2(1:mesh%np_part, 1:st%dim))
     st%rs_current_density_restart_t2 = M_z0
 
+    call profiling_out(prof)
+
     POP_SUB(states_mxll_allocate)
   end subroutine states_mxll_allocate
 
@@ -360,7 +370,11 @@ contains
   subroutine states_mxll_end(st)
     type(states_mxll_t), intent(inout) :: st
 
+    type(profile_t), save :: prof
+
     PUSH_SUB(states_mxll_end)
+
+    call profiling_in(prof, 'STATES_MXLL_END')
 
     SAFE_DEALLOCATE_A(st%rs_state)
     SAFE_DEALLOCATE_A(st%rs_state_trans)
@@ -378,29 +392,29 @@ contains
     SAFE_DEALLOCATE_A(st%rs_state_const_amp)
     SAFE_DEALLOCATE_A(st%rs_state_plane_waves)
 
-    SAFE_DEALLOCATE_A(st%energy_rate)
-    SAFE_DEALLOCATE_A(st%delta_energy)
-    SAFE_DEALLOCATE_A(st%energy_via_flux_calc)
-    SAFE_DEALLOCATE_A(st%trans_energy_rate)
-    SAFE_DEALLOCATE_A(st%trans_delta_energy)
-    SAFE_DEALLOCATE_A(st%trans_energy_via_flux_calc)
-    SAFE_DEALLOCATE_A(st%plane_waves_energy_rate)
-    SAFE_DEALLOCATE_A(st%plane_waves_delta_energy)
-    SAFE_DEALLOCATE_A(st%plane_waves_energy_via_flux_calc)
-
     SAFE_DEALLOCATE_P(st%surface_grid_center)
     SAFE_DEALLOCATE_P(st%surface_grid_points_number)
     SAFE_DEALLOCATE_P(st%surface_grid_points_map)
-    SAFE_DEALLOCATE_P(st%inner_points_map)
-    SAFE_DEALLOCATE_P(st%boundary_points_map)
+    SAFE_DEALLOCATE_A(st%inner_points_map)
+    SAFE_DEALLOCATE_A(st%boundary_points_map)
+    SAFE_DEALLOCATE_A(st%inner_points_mask)
+    SAFE_DEALLOCATE_A(st%boundary_points_mask)
     SAFE_DEALLOCATE_P(st%ep)
     SAFE_DEALLOCATE_P(st%mu)
 #ifdef HAVE_SCALAPACK
     call blacs_proc_grid_end(st%dom_st_proc_grid)
 #endif
+    SAFE_DEALLOCATE_A(st%external_current_modus)
+    SAFE_DEALLOCATE_A(st%external_current_string)
+    SAFE_DEALLOCATE_A(st%external_current_amplitude)
+    SAFE_DEALLOCATE_A(st%external_current_td_function)
+    SAFE_DEALLOCATE_A(st%external_current_omega)
+    SAFE_DEALLOCATE_A(st%external_current_td_phase)
 
     call distributed_end(st%dist)
     SAFE_DEALLOCATE_P(st%node)
+
+    call profiling_out(prof)
 
     POP_SUB(states_mxll_end)
   end subroutine states_mxll_end
@@ -455,8 +469,11 @@ contains
     integer, optional, intent(in)    :: np
 
     integer :: ip, np_
+    type(profile_t), save :: prof
 
     PUSH_SUB(build_rs_state)
+
+    call profiling_in(prof, 'BUILD_RS_STATE')
 
     np_ = optional_default(np, mesh%np)
 
@@ -469,6 +486,8 @@ contains
                        + M_zI * rs_sign * sqrt(M_ONE/(M_TWO*P_mu)) * b_field(ip, :)
       end if
     end do
+
+   call profiling_out(prof)
 
     POP_SUB(build_rs_state)
 
@@ -516,18 +535,31 @@ contains
     FLOAT,   optional, intent(in)    :: ep_field(:)
     integer, optional, intent(in)    :: np
 
-    integer :: ip, np_
+    integer :: ip, idim, np_, ff_dim
+    type(profile_t), save :: prof
 
     ! no PUSH_SUB, called too often
-    np_ = optional_default(np, mesh%np)
 
-    do ip = 1, np_
-      if (present(ep_field)) then
-        rs_current_state(ip, :) = M_ONE/sqrt(M_TWO*ep_field(ip)) * current_state(ip, :)
-      else
-        rs_current_state(ip, :) = M_ONE/sqrt(M_TWO*P_ep) * current_state(ip, :)
-      end if
-    end do
+    call profiling_in(prof, "BUILD_RS_CURRENT_STATE")
+
+    np_ = optional_default(np, mesh%np)
+    ff_dim = size(current_state, dim=2)
+
+    if(present(ep_field)) then
+      do idim = 1, ff_dim
+        do ip = 1, np_
+          rs_current_state(ip, idim) = M_ONE/sqrt(M_TWO*ep_field(ip)) * current_state(ip, idim)
+        end do
+      end do
+    else
+      do idim = 1, ff_dim
+        do ip = 1, np_
+          rs_current_state(ip, idim) = M_ONE/sqrt(M_TWO*P_ep) * current_state(ip, idim)
+        end do
+      end do
+    end if
+
+    call profiling_out(prof)
 
   end subroutine build_rs_current_state
 
@@ -576,8 +608,11 @@ contains
     integer, optional, intent(in)    :: np
 
     integer :: ip, np_
+    type(profile_t), save :: prof
 
     PUSH_SUB(get_electric_field_state)
+
+    call profiling_in(prof, 'GET_ELECTRIC_FIELD_STATE')
 
     np_ = optional_default(np, mesh%np)
 
@@ -588,6 +623,8 @@ contains
         electric_field(ip,:) = sqrt(M_TWO/P_ep) * TOFLOAT(rs_state(ip, :))
       end if
     end do
+
+    call profiling_out(prof)
 
     POP_SUB(get_electric_field_state)
 
@@ -604,8 +641,11 @@ contains
     integer, optional, intent(in)    :: np
 
     integer :: ip, np_
+    type(profile_t), save :: prof
 
     PUSH_SUB(get_magnetic_field_state)
+
+    call profiling_in(prof, 'GET_MAGNETIC_FIELD_STATE')
 
     np_ = optional_default(np, mesh%np)
 
@@ -616,6 +656,8 @@ contains
         magnetic_field(ip, :) = sqrt(M_TWO*P_mu) * rs_sign * aimag(rs_state(ip, :))
       end if
    end do
+
+   call profiling_out(prof)
 
    POP_SUB(get_magnetic_field_state)
 
@@ -708,7 +750,6 @@ contains
         ztmp(:) = rs_state(pos_index_local,:)
 #ifdef HAVE_MPI
         call MPI_Bcast(ztmp, st%dim, MPI_CMPLX, rankmin, mesh%mpi_grp%comm, mpi_err)
-        call MPI_Barrier(mesh%mpi_grp%comm, mpi_err)
 #endif
       else
         ztmp(:) = rs_state(pos_index_global, :)

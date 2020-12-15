@@ -1,0 +1,78 @@
+# ----- Calculation mode and parallelization ------------------------------------------------------
+
+ CalculationMode   = td
+ RestartWrite = no
+ ExperimentalFeatures = yes
+
+%Systems
+  'Maxwell' | maxwell
+%
+
+ Maxwell.ParDomains = auto
+ Maxwell.ParStates  = no
+
+# ----- Maxwell box variables ---------------------------------------------------------------------
+
+ lsize_mx = 10.0
+ dx_mx    = 0.5
+
+ Maxwell.BoxShape   = parallelepiped
+
+ %Maxwell.Lsize
+  lsize_mx | lsize_mx | lsize_mx
+ %
+
+ %Maxwell.Spacing
+  dx_mx | dx_mx | dx_mx
+ %
+
+ %MaxwellBoundaryConditions
+  zero | zero | zero
+ %
+
+ %MaxwellAbsorbingBoundaries
+  mask | mask | mask
+ %
+
+MaxwellABWidth                 = 5.0
+
+
+# ----- Maxwell calculation variables -------------------------------------------------------------
+
+ MaxwellHamiltonianOperator = faraday_ampere
+
+
+# ----- Output variables --------------------------------------------------------------------------
+
+ OutputFormat                      = axis_x + axis_y + axis_z
+
+# ----- Maxwell output variables ------------------------------------------------------------------
+
+ MaxwellOutput = electric_field + magnetic_field + maxwell_energy_density + trans_electric_field
+
+ MaxwellOutputInterval = 10
+ MaxwellTDOutput       = maxwell_energy + maxwell_fields
+
+
+# ----- Time step variables -----------------------------------------------------------------------
+
+ TDSystemPropagator = exp_mid
+ TDTimeStep                        = 1 / ( sqrt(c^2/dx_mx^2 + c^2/dx_mx^2 + c^2/dx_mx^2) )
+ TDPropagationTime                 = 50*TDTimeStep
+
+# Maxwell field variables
+
+# external current
+ExternalCurrent            = yes
+
+t0    = 2.0 / c
+js    = 00.007297350000
+jmax  = 1.000000000
+
+%UserDefinedMaxwellExternalCurrent
+ current_td_function |  "0" | "0" | " jmax * exp(-x^2/2) * exp(-y^2/2) * exp(-z^2/2) " | 0 | "external_current_envelope_function"
+%
+
+%TDFunctions
+ "external_current_envelope_function" | tdf_gaussian | 1.0 | js | t0
+%

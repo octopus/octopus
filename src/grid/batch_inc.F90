@@ -149,7 +149,7 @@ subroutine X(batch_pack_copy)(this)
   type(profile_t), save :: prof_copy
   ! no push_sub, called too frequently
 
-  call profiling_in(prof_copy, "BATCH_PACK_COPY")
+  call profiling_in(prof_copy, TOSTRING(X(BATCH_PACK_COPY)))
 
   bsize = hardware%X(block_size)
 
@@ -175,7 +175,7 @@ subroutine X(batch_unpack_copy)(this)
   type(profile_t), save :: prof_copy
   ! no push_sub, called too frequently
 
-  call profiling_in(prof_copy, "BATCH_UNPACK_COPY")
+  call profiling_in(prof_copy, TOSTRING(X(BATCH_UNPACK_COPY)))
 
   !$omp parallel do private(ist)
   do ip = 1, this%pack_size(2)

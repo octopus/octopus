@@ -273,11 +273,11 @@ contains
        !             tmp_rs_n(1), tmp_rs_istart(1), tmp_fs_n(1), tmp_fs_istart(1))
     end if
 
-    alloc_size       = tmp_alloc_size
-    rs_n(1:3)        = tmp_rs_n(3:1:-1)
-    fs_n(1:3)        = tmp_fs_n(3:1:-1)
-    rs_istart(1:3)   = tmp_rs_istart(3:1:-1)+1
-    fs_istart(1:3)   = tmp_fs_istart(3:1:-1)+1
+    alloc_size       = int(tmp_alloc_size)
+    rs_n(1:3)        = int(tmp_rs_n(3:1:-1))
+    fs_n(1:3)        = int(tmp_fs_n(3:1:-1))
+    rs_istart(1:3)   = int(tmp_rs_istart(3:1:-1)+1)
+    fs_istart(1:3)   = int(tmp_fs_istart(3:1:-1)+1)
 
     POP_SUB(pfft_get_dims)
   end subroutine pfft_get_dims

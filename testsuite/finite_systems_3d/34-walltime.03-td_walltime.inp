@@ -23,9 +23,10 @@ Radius=8
 
 TDDeltaStrength = 0.01
 TDPolarizationDirection = 1
+TDMaxSteps = 5000
 
 RestartWriteInterval = 200
-Walltime = 0.1
+Walltime = 0.05
 
 FilterPotentials = filter_none
 

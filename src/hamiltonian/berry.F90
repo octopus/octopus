@@ -19,27 +19,170 @@
 #include "global.h"
 
 module berry_oct_m
+  use eigensolver_oct_m
+  use geometry_oct_m
   use global_oct_m
+  use grid_oct_m
+  use hamiltonian_elec_oct_m
   use lalg_adv_oct_m
   use mesh_oct_m
   use mesh_function_oct_m
   use messages_oct_m
   use namespace_oct_m
   use profiling_oct_m
+  use parser_oct_m
   use simul_box_oct_m
   use smear_oct_m
   use states_elec_oct_m
   use states_elec_dim_oct_m
+  use v_ks_oct_m
 
   implicit none
 
   private
   public ::                 &
+    berry_t,                &
+    berry_init,             &
+    berry_perform_internal_scf, &
+    calc_dipole,            &
     berry_dipole,           &
     berry_potential,        &
     berry_energy_correction
 
+  type berry_t
+    private
+
+    integer :: max_iter_berry  !< max number of electronic iterations before updating density, for Berr  y potential
+  end type berry_t
 contains
+
+  ! ---------------------------------------------------------
+  subroutine berry_init(this, namespace)
+    type(berry_t),     intent(inout) :: this
+    type(namespace_t), intent(in)    :: namespace
+
+    PUSH_SUB(berry_init)
+
+    !%Variable MaximumIterBerry
+    !%Type integer
+    !%Default 10
+    !%Section SCF::Convergence
+    !%Description
+    !% Maximum number of iterations for the Berry potential, within each SCF iteration.
+    !% Only applies if a <tt>StaticElectricField</tt> is applied in a periodic direction.
+    !% The code will move on to the next SCF iteration even if convergence
+    !% has not been achieved. -1 means unlimited.
+    !%End
+    call parse_variable(namespace, 'MaximumIterBerry', 10, this%max_iter_berry)
+    if(this%max_iter_berry < 0) this%max_iter_berry = huge(this%max_iter_berry)
+
+
+    POP_SUB(berry_init)
+  end subroutine berry_init
+
+  ! ---------------------------------------------------------
+  subroutine berry_perform_internal_scf(this, namespace, eigens, gr, st, hm, iter, ks, geo)
+    type(berry_t),            intent(in)    :: this
+    type(namespace_t),        intent(in)    :: namespace
+    type(eigensolver_t),      intent(inout) :: eigens
+    type(grid_t),             intent(in)    :: gr
+    type(states_elec_t),      intent(inout) :: st
+    type(hamiltonian_elec_t), intent(inout) :: hm
+    integer,                  intent(in)    :: iter
+    type(v_ks_t),             intent(inout) :: ks
+    type(geometry_t),         intent(in)    :: geo
+
+    integer :: iberry, idir
+    logical :: berry_conv
+    FLOAT :: dipole_prev(1:MAX_DIM), dipole(1:MAX_DIM)
+    FLOAT, parameter :: tol = CNST(1e-5)
+
+    PUSH_SUB(berry_perform_internal_scf)
+
+    ASSERT(associated(hm%vberry))
+
+    if(st%parallel_in_states) then
+      call messages_not_implemented("Berry phase parallel in states", namespace=namespace)
+    end if
+
+    call calc_dipole(dipole, gr, st, geo)
+
+    do iberry = 1, this%max_iter_berry
+      eigens%converged = 0
+      call eigensolver_run(eigens, namespace, gr, st, hm, iter)
+
+      !Calculation of the Berry potential
+      call berry_potential(st, namespace, ks%gr%mesh, hm%ep%E_field, hm%vberry)
+
+      !Calculation of the corresponding energy 
+      hm%energy%berry = berry_energy_correction(st, gr%mesh, &
+         hm%ep%E_field(1:gr%sb%periodic_dim), hm%vberry(1:gr%mesh%np, 1:hm%d%nspin))
+  
+      !We recompute the KS potential
+      call v_ks_calc(ks, namespace, hm, st, geo, calc_current=.false.)
+
+      dipole_prev = dipole
+      call calc_dipole(dipole, gr, st, geo)
+      write(message(1),'(a,9f12.6)') 'Dipole = ', dipole(1:gr%sb%dim)
+      call messages_info(1)
+  
+      berry_conv = .true.
+      do idir = 1, gr%sb%periodic_dim
+        if(abs(dipole_prev(idir)) > CNST(1e-10)) then
+          berry_conv = berry_conv .and. (abs(dipole(idir) - dipole_prev(idir)) < tol &
+            .or.(abs((dipole(idir) - dipole_prev(idir)) / dipole_prev(idir)) < tol))
+        else
+          berry_conv = berry_conv .and. (abs(dipole(idir) - dipole_prev(idir)) < tol)
+        end if
+      end do
+
+      if(berry_conv) exit
+    end do
+
+    POP_SUB(berry_perform_internal_scf)
+  end subroutine berry_perform_internal_scf
+
+  ! ---------------------------------------------------------
+  !TODO: This should be a method of the electronic system directly
+  ! that can be exposed
+  subroutine calc_dipole(dipole, gr, st, geo)
+    FLOAT,                 intent(out)   :: dipole(:)
+    type(grid_t),          intent(in)    :: gr
+    type(states_elec_t),   intent(in)    :: st
+    type(geometry_t),      intent(in)    :: geo
+
+    integer :: ispin, idir
+    FLOAT :: e_dip(MAX_DIM + 1, st%d%nspin), n_dip(MAX_DIM), nquantumpol
+
+    PUSH_SUB(calc_dipole)
+
+    dipole(1:MAX_DIM) = M_ZERO
+
+    do ispin = 1, st%d%nspin
+      call dmf_multipoles(gr%fine%mesh, st%rho(:, ispin), 1, e_dip(:, ispin))
+    end do
+
+    call geometry_dipole(geo, n_dip)
+
+    do idir = 1, gr%sb%dim
+      ! in periodic directions use single-point Berry`s phase calculation
+      if(idir  <=  gr%sb%periodic_dim) then
+        dipole(idir) = -n_dip(idir) - berry_dipole(st, gr%mesh, idir)
+
+        ! use quantum of polarization to reduce to smallest possible magnitude
+        nquantumpol = NINT(dipole(idir)/(CNST(2.0)*gr%sb%lsize(idir)))
+        dipole(idir) = dipole(idir) - nquantumpol * (CNST(2.0) * gr%sb%lsize(idir))
+       ! in aperiodic directions use normal dipole formula
+
+      else
+        e_dip(idir + 1, 1) = sum(e_dip(idir + 1, :))
+        dipole(idir) = -n_dip(idir) - e_dip(idir + 1, 1)
+      end if
+    end do
+
+    POP_SUB(calc_dipole)
+  end subroutine calc_dipole
+
 
   ! ---------------------------------------------------------
   !> Uses the single-point Berry`s phase method to calculate dipole moment in a periodic system
@@ -61,6 +204,10 @@ contains
     CMPLX :: det
 
     PUSH_SUB(berry_dipole)
+
+    !There is a missing reduction here. 
+    !However, as we are limited to a single k-point at the moment, this is not a problem.
+    ASSERT(st%d%nik == 1)
 
     dipole = M_ZERO
     do ik = st%d%kpt%start, st%d%kpt%end ! determinants for different spins and k-points multiply since matrix is block-diagonal
@@ -195,6 +342,14 @@ contains
     CMPLX :: factor, det
 
     PUSH_SUB(berry_potential)
+
+    if(mesh%sb%nonorthogonal) then
+      call messages_not_implemented("Berry phase for non-orthogonal cells.")
+    end if
+  
+    if(st%d%nik > 1) then
+      call messages_not_implemented("Berry phase with k-points.")
+    end if
 
     pot(1:mesh%np, 1:st%d%nspin) = M_ZERO
 

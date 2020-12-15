@@ -1,4 +1,4 @@
-!! Copyright (C) 2016 N. Tancogne-Dejean
+!! Copyright (C) 2016-2020 N. Tancogne-Dejean
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -103,8 +103,7 @@ module lda_u_oct_m
     FLOAT, pointer, public   :: dn_alt(:,:,:,:) !> Stores the renomalized occ. matrices
     CMPLX, pointer, public   :: zn_alt(:,:,:,:) !> if the ACBN0 functional is used
 
-    FLOAT, pointer           :: drenorm_occ(:,:,:,:,:) !> On-site occupations (for the ACBN0 functional)
-    CMPLX, pointer           :: zrenorm_occ(:,:,:,:,:)
+    FLOAT, pointer           :: renorm_occ(:,:,:,:,:) !> On-site occupations (for the ACBN0 functional)
 
     FLOAT, pointer           :: coulomb(:,:,:,:,:) !>Coulomb integrals for all the system
                                                    !> (for the ACBN0 functional)
@@ -137,8 +136,8 @@ module lda_u_oct_m
     type(distributed_t) :: orbs_dist
 
     integer, public     :: maxneighbors
-    FLOAT, pointer      :: dn_ij(:,:,:,:,:), dn_alt_ij(:,:,:,:,:)
-    CMPLX, pointer      :: zn_ij(:,:,:,:,:), zn_alt_ij(:,:,:,:,:)
+    FLOAT, pointer      :: dn_ij(:,:,:,:,:), dn_alt_ij(:,:,:,:,:), dn_alt_ii(:,:,:,:,:)
+    CMPLX, pointer      :: zn_ij(:,:,:,:,:), zn_alt_ij(:,:,:,:,:), zn_alt_ii(:,:,:,:,:)
   end type lda_u_t
 
   integer, public, parameter ::        &
@@ -149,10 +148,6 @@ module lda_u_oct_m
   integer, public, parameter ::        &
     DFT_U_FLL                     = 0, &
     DFT_U_AMF                     = 1
-
-  integer, public, parameter ::        &
-    DFT_U_POISSON_DIRECT          = 0, &
-    DFT_U_POISSON_ISF             = 1
 
 contains
 
@@ -179,7 +174,7 @@ contains
     this%acbn0_screening = M_ONE
     this%rot_inv = .false.
     this%double_couting = DFT_U_FLL
-    this%sm_poisson = DFT_U_POISSON_DIRECT
+    this%sm_poisson = SM_POISSON_DIRECT
 
     nullify(this%dn)
     nullify(this%zn)
@@ -189,13 +184,14 @@ contains
     nullify(this%zV)
     nullify(this%coulomb)
     nullify(this%zcoulomb)
-    nullify(this%drenorm_occ)
-    nullify(this%zrenorm_occ)
+    nullify(this%renorm_occ)
     nullify(this%orbsets)
     nullify(this%dn_ij)
     nullify(this%zn_ij)
     nullify(this%dn_alt_ij)
     nullify(this%zn_alt_ij)
+    nullify(this%dn_alt_ii)
+    nullify(this%zn_alt_ii)
 
     call distributed_nullify(this%orbs_dist, 0)
 
@@ -274,21 +270,45 @@ contains
     !%Option dft_u_poisson_isf 1
     !% (Experimental) ISF Poisson solver on a submesh.
     !% This does not work for non-orthogonal cells nor domain parallelization.
+    !%Option dft_u_poisson_psolver 2
+    !% (Experimental) PSolver Poisson solver on a submesh.
+    !% This does not work for non-orthogonal cells nor domain parallelization.
+    !% Requires the PSolver external library.
+    !%Option dft_u_poisson_fft 3
+    !% (Experimental) FFT Poisson solver on a submesh.
+    !% This uses the 0D periodic version of the FFT kernels.
+    !% This does not work for domain parallelization.
     !%End
-    call parse_variable(namespace, 'DFTUPoissonSolver', DFT_U_POISSON_DIRECT, this%sm_poisson)
+    call parse_variable(namespace, 'DFTUPoissonSolver', SM_POISSON_DIRECT, this%sm_poisson)
     call messages_print_var_option(stdout,  'DFTUPoissonSolver', this%sm_poisson)
-    if(this%sm_poisson /= DFT_U_POISSON_DIRECT) then
+    if(this%sm_poisson /= SM_POISSON_DIRECT) then
       call messages_experimental("DFTUPoissonSolver different from dft_u_poisson_direct")
     end if
-    if(this%sm_poisson == DFT_U_POISSON_ISF) then
+    if(this%sm_poisson == SM_POISSON_ISF) then
       if(gr%mesh%parallel_in_domains) then
         call messages_not_implemented("ISF DFT+U Poisson solver with domain parallelization.")
       end if
-      if(gr%mesh%parallel_in_domains) then
+      if(gr%sb%nonorthogonal) then
         call messages_not_implemented("ISF DFT+U Poisson solver with non-orthogonal cells.")
       end if
     end if
-
+    if(this%sm_poisson == SM_POISSON_PSOLVER) then
+#if !((defined HAVE_LIBISF) || (defined HAVE_PSOLVER))
+      message(1) = "The PSolver Poisson solver cannot be used since the code was not compiled with the PSolver libary."
+      call messages_fatal(1)
+#endif
+      if(gr%mesh%parallel_in_domains) then
+        call messages_not_implemented("PSolver DFT+U Poisson solver with domain parallelization.")
+      end if
+      if(gr%sb%nonorthogonal) then
+        call messages_not_implemented("Psolver DFT+U Poisson solver with non-orthogonal cells.")
+      end if
+    end if
+    if(this%sm_poisson == SM_POISSON_FFT) then
+      if(gr%mesh%parallel_in_domains) then
+        call messages_not_implemented("FFT DFT+U Poisson solver with domain parallelization.")
+      end if
+    end if
 
     if(this%level == DFT_U_ACBN0 ) then
       !%Variable UseAllAtomicOrbitals
@@ -374,18 +394,13 @@ contains
           call messages_fatal(1, namespace=namespace)
         end if
 
-        if(this%sm_poisson /= DFT_U_POISSON_DIRECT) then
-          call messages_write("DFTUPoissonSolver is ignored for intersite Coulomb interaction")
-          call messages_warning(1, namespace=namespace)
-        end if
-
       end if
 
     end if
 
     if(.not.this%basisfromstates) then
 
-      call orbitalbasis_init(this%basis, namespace)
+      call orbitalbasis_init(this%basis, namespace, gr%sb)
 
       if (states_are_real(st)) then
         call dorbitalbasis_build(this%basis, geo, gr%mesh, st%d%kpt, st%d%dim, &
@@ -513,12 +528,13 @@ contains
     SAFE_DEALLOCATE_P(this%zV)
     SAFE_DEALLOCATE_P(this%coulomb)
     SAFE_DEALLOCATE_P(this%zcoulomb)
-    SAFE_DEALLOCATE_P(this%drenorm_occ)
-    SAFE_DEALLOCATE_P(this%zrenorm_occ)
+    SAFE_DEALLOCATE_P(this%renorm_occ)
     SAFE_DEALLOCATE_P(this%dn_ij)
     SAFE_DEALLOCATE_P(this%zn_ij)
     SAFE_DEALLOCATE_P(this%dn_alt_ij)
     SAFE_DEALLOCATE_P(this%zn_alt_ij)
+    SAFE_DEALLOCATE_P(this%dn_alt_ii)
+    SAFE_DEALLOCATE_P(this%zn_alt_ii)
     SAFE_DEALLOCATE_A(this%basisstates)
 
     nullify(this%orbsets)
@@ -572,7 +588,7 @@ contains
       this%maxneighbors = 0
       do ios = 1, this%norbsets
         call orbitalset_init_intersite(this%orbsets(ios), namespace, ios, gr%sb, geo, gr%der, psolver, &
-          this%orbsets, this%norbsets, this%maxnorbs, this%intersite_radius, st%d%kpt, has_phase)
+          this%orbsets, this%norbsets, this%maxnorbs, this%intersite_radius, st%d%kpt, has_phase, this%sm_poisson)
         this%maxneighbors = max(this%maxneighbors, this%orbsets(ios)%nneighbors)
       end do
 
@@ -586,6 +602,9 @@ contains
         SAFE_DEALLOCATE_P(this%dn_alt_ij)
         SAFE_ALLOCATE(this%dn_alt_ij(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors))
         this%dn_alt_ij(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors) = M_ZERO
+        SAFE_DEALLOCATE_P(this%dn_alt_ii)
+        SAFE_ALLOCATE(this%dn_alt_ii(1:2,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors))
+        this%dn_alt_ii(1:2,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors) = M_ZERO
       else
         SAFE_DEALLOCATE_P(this%zn_ij)
         SAFE_ALLOCATE(this%zn_ij(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors))
@@ -593,13 +612,16 @@ contains
         SAFE_DEALLOCATE_P(this%zn_alt_ij)
         SAFE_ALLOCATE(this%zn_alt_ij(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors))
         this%zn_alt_ij(1:maxorbs,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors) = M_Z0
+        SAFE_DEALLOCATE_P(this%zn_alt_ii)
+        SAFE_ALLOCATE(this%zn_alt_ii(1:2,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors))
+        this%zn_alt_ii(1:2,1:maxorbs,1:nspin,1:this%norbsets,1:this%maxneighbors) = M_Z0
       end if
     end if
 
     ! We rebuild the phase for the orbital projection, similarly to the one of the pseudopotentials
     ! In case of a laser field, the phase is recomputed in hamiltonian_elec_update
     if(has_phase) then
-      call lda_u_build_phase_correction(this, gr%mesh%sb, st%d, gr%der%boundaries, namespace)
+      call lda_u_build_phase_correction(this, gr%sb, st%d, gr%der%boundaries, namespace)
     else
       !In case there is no phase, we perform the orthogonalization here
       if(this%basis%orthogonalization) then

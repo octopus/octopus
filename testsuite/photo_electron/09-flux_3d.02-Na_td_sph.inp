@@ -1,0 +1,77 @@
+CalculationMode = td
+
+Dimensions = 3
+FromScratch = YES
+
+ExperimentalFeatures = YES
+
+#############################
+# GS
+#############################
+
+SICCorrection = sic_adsic
+
+%Coordinates
+ "Na" | 0.0 | 0.0 | 0.0
+%
+
+BoxShape = sphere
+Radius = 20
+Spacing = 0.7
+
+#############################
+# Boundaries
+#############################
+AbsorbingBoundaries = cap
+%ABShape
+ 15 | Radius
+%
+ABCapHeight = -1.0
+
+#############################
+# PES
+#############################
+PhotoElectronSpectrum = pes_flux
+
+PES_Flux_Kmax = 2.0
+PES_Flux_DeltaK = 0.01
+PES_Flux_StepsThetaK = 30
+PES_Flux_StepsPhiK = 30
+PES_Flux_Radius = 15
+PES_Flux_Lmax = 4
+
+PES_Flux_RuntimeOutput = yes
+
+##########################
+#LASER
+##########################
+
+amplitude = 1.1763
+omega = 1.194838
+
+tc = 2*pi/omega
+nc = 15
+nu = 2
+ntot = nc + 2*nu
+
+%TDExternalFields
+  vector_potential | 0 | 0 | 1 | omega | "ramp"
+%
+
+%TDFunctions
+ "ramp" | tdf_trapezoidal | amplitude | nc*tc | (nc+2*nu)*tc/2 | nu*tc
+%
+
+#############################
+# TD
+#############################
+
+TDTimeStep = 1.0
+TDPropagator = exp_mid
+TDExponentialMethod = lanczos
+TDExpOrder = 20
+
+TDPropagationTime = ntot*tc
+
+StatesPack = yes
+

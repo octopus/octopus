@@ -85,29 +85,6 @@ if test ! -z "$LIBS_LIBXC"; then
   AC_LINK_IFELSE($testprog3, [acx_libxc_ok=yes], [])
 fi
 
-if test ! -z "$with_libxc_prefix"; then
-  # static linkage, version 5
-  if test x"$acx_libxc_ok" = xno; then
-    LIBS_LIBXC="$with_libxc_prefix/lib/libxcf90.a $with_libxc_prefix/lib/libxc.a"
-    LIBS="$LIBS_LIBXC $acx_libxc_save_LIBS"
-    AC_LINK_IFELSE($testprog5, [acx_libxc_ok=yes; acx_libxc_v5=yes], [])
-  fi
-
-  # static linkage, version 4
-  if test x"$acx_libxc_ok" = xno; then
-    LIBS_LIBXC="$with_libxc_prefix/lib/libxcf03.a $with_libxc_prefix/lib/libxc.a"
-    LIBS="$LIBS_LIBXC $acx_libxc_save_LIBS"
-    AC_LINK_IFELSE($testprog4, [acx_libxc_ok=yes; acx_libxc_v4=yes], [])
-  fi
-  
-  # static linkage, version 3
-  if test x"$acx_libxc_ok" = xno; then
-    LIBS_LIBXC="$with_libxc_prefix/lib/libxcf03.a $with_libxc_prefix/lib/libxc.a"
-    LIBS="$LIBS_LIBXC $acx_libxc_save_LIBS"
-    AC_LINK_IFELSE($testprog3, [acx_libxc_ok=yes; acx_libxc_v3=yes], [])
-  fi
-fi
-
 # dynamic linkage, version 5
 if test x"$acx_libxc_ok" = xno; then
   if test ! -z "$with_libxc_prefix"; then
@@ -142,6 +119,30 @@ if test x"$acx_libxc_ok" = xno; then
   LIBS_LIBXC="$LIBS_LIBXC -lxcf03 -lxc"
   LIBS="$LIBS_LIBXC $acx_libxc_save_LIBS"
   AC_LINK_IFELSE($testprog3, [acx_libxc_ok=yes; acx_libxc_v3=yes], [])
+fi
+
+
+if test ! -z "$with_libxc_prefix"; then
+  # static linkage, version 5
+  if test x"$acx_libxc_ok" = xno; then
+    LIBS_LIBXC="$with_libxc_prefix/lib/libxcf90.a $with_libxc_prefix/lib/libxc.a"
+    LIBS="$LIBS_LIBXC $acx_libxc_save_LIBS"
+    AC_LINK_IFELSE($testprog5, [acx_libxc_ok=yes; acx_libxc_v5=yes], [])
+  fi
+
+  # static linkage, version 4
+  if test x"$acx_libxc_ok" = xno; then
+    LIBS_LIBXC="$with_libxc_prefix/lib/libxcf03.a $with_libxc_prefix/lib/libxc.a"
+    LIBS="$LIBS_LIBXC $acx_libxc_save_LIBS"
+    AC_LINK_IFELSE($testprog4, [acx_libxc_ok=yes; acx_libxc_v4=yes], [])
+  fi
+  
+  # static linkage, version 3
+  if test x"$acx_libxc_ok" = xno; then
+    LIBS_LIBXC="$with_libxc_prefix/lib/libxcf03.a $with_libxc_prefix/lib/libxc.a"
+    LIBS="$LIBS_LIBXC $acx_libxc_save_LIBS"
+    AC_LINK_IFELSE($testprog3, [acx_libxc_ok=yes; acx_libxc_v3=yes], [])
+  fi
 fi
 
 AC_MSG_RESULT([$acx_libxc_ok ($FCFLAGS_LIBXC $LIBS_LIBXC)])

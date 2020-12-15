@@ -51,6 +51,7 @@ subroutine FNAME(swap_1)(n1, dx, dy)
 
   ASSERT(ubound(dx, dim = 1) >= n1)
   ASSERT(ubound(dy, dim = 1) >= n1)
+  ASSERT(not_in_openmp())
 
   call blas_swap(n1, dx(1), 1, dy(1), 1)
 
@@ -69,6 +70,7 @@ subroutine FNAME(swap_2)(n1, n2, dx, dy)
   ASSERT(ubound(dy, dim = 1) == n1)
   ASSERT(ubound(dx, dim = 2) >= n2)
   ASSERT(ubound(dy, dim = 2) >= n2)
+  ASSERT(not_in_openmp())
 
   call blas_swap(n1*n2, dx(1,1), 1, dy(1,1), 1)
 
@@ -89,6 +91,7 @@ subroutine FNAME(swap_3)(n1, n2, n3, dx, dy)
   ASSERT(ubound(dy, dim = 2) == n2)
   ASSERT(ubound(dx, dim = 3) >= n3)
   ASSERT(ubound(dy, dim = 3) >= n3)
+  ASSERT(not_in_openmp())
 
   call blas_swap(n1*n2*n3, dx(1,1,1), 1, dy(1,1,1), 1)
 
@@ -111,6 +114,7 @@ subroutine FNAME(swap_4)(n1, n2, n3, n4, dx, dy)
   ASSERT(ubound(dy, dim = 3) == n3)
   ASSERT(ubound(dx, dim = 4) >= n4)
   ASSERT(ubound(dy, dim = 4) >= n4)
+  ASSERT(not_in_openmp())
 
   call blas_swap(n1*n2*n3*n4, dx(1,1,1,1), 1, dy(1,1,1,1), 1)
 
@@ -131,6 +135,7 @@ subroutine FNAME(scal_1)(n1, da, dx)
   PUSH_SUB(FNAME(scal_1))
 
   ASSERT(ubound(dx, dim = 1) >= n1)
+  ASSERT(not_in_openmp())
 
   call blas_scal(n1, da, dx(1), 1)
 
@@ -148,6 +153,7 @@ subroutine FNAME(scal_2)(n1, n2, da, dx)
 
   ASSERT(ubound(dx, dim = 1) == n1)
   ASSERT(ubound(dx, dim = 2) >= n2)
+  ASSERT(not_in_openmp())
 
   call blas_scal(n1*n2, da, dx(1,1), 1)
 
@@ -166,6 +172,7 @@ subroutine FNAME(scal_3)(n1, n2, n3, da, dx)
   ASSERT(ubound(dx, dim = 1) == n1)
   ASSERT(ubound(dx, dim = 2) == n2)
   ASSERT(ubound(dx, dim = 3) >= n3)
+  ASSERT(not_in_openmp())
 
   call blas_scal(n1*n2*n3, da, dx(1,1,1), 1)
 
@@ -185,6 +192,7 @@ subroutine FNAME(scal_4)(n1, n2, n3, n4, da, dx)
   ASSERT(ubound(dx, dim = 2) == n2)
   ASSERT(ubound(dx, dim = 3) == n3)
   ASSERT(ubound(dx, dim = 4) >= n4)
+  ASSERT(not_in_openmp())
 
   call blas_scal(n1*n2*n3*n4, da, dx(1,1,1,1), 1)
 
@@ -202,6 +210,7 @@ subroutine FNAME(scal_5)(n1, da, dx)
   PUSH_SUB(FNAME(scal_5))
 
   ASSERT(ubound(dx, dim = 1) >= n1)
+  ASSERT(not_in_openmp())
 
   call blas_scal(n1, da, dx(1))
 
@@ -225,8 +234,9 @@ subroutine FNAME(axpy_1)(n1, da, dx, dy)
 
   ASSERT(ubound(dx, dim = 1) >= n1)
   ASSERT(ubound(dy, dim = 1) >= n1)
+  ASSERT(not_in_openmp())
 
-  call profiling_in(axpy_profile, "BLAS_AXPY")
+  call profiling_in(FNAME(axpy_profile), TOSTRING(FNAME(BLAS_AXPY)))
 
   call blas_axpy(n1, da, dx(1), 1, dy(1), 1)
   
@@ -236,7 +246,7 @@ subroutine FNAME(axpy_1)(n1, da, dx, dy)
   call profiling_count_operations(n1*8)
 #endif
 
-  call profiling_out(axpy_profile)
+  call profiling_out(FNAME(axpy_profile))
 
   POP_SUB(FNAME(axpy_1))
 end subroutine FNAME(axpy_1)
@@ -251,12 +261,13 @@ subroutine FNAME(axpy_2)(n1, n2, da, dx, dy)
 
   PUSH_SUB(FNAME(axpy_2))
 
-  call profiling_in(axpy_profile, "BLAS_AXPY")
+  call profiling_in(FNAME(axpy_profile), TOSTRING(FNAME(BLAS_AXPY)))
 
   ASSERT(ubound(dx, dim = 1) == n1)
   ASSERT(ubound(dy, dim = 1) == n1)
   ASSERT(ubound(dx, dim = 2) >= n2)
   ASSERT(ubound(dy, dim = 2) >= n2)
+  ASSERT(not_in_openmp())
 
   call blas_axpy(n1*n2, da, dx(1,1), 1, dy(1,1), 1)
 
@@ -266,7 +277,7 @@ subroutine FNAME(axpy_2)(n1, n2, da, dx, dy)
   call profiling_count_operations(n1*n2*8)
 #endif
 
-  call profiling_out(axpy_profile)
+  call profiling_out(FNAME(axpy_profile))
   POP_SUB(FNAME(axpy_2))
 end subroutine FNAME(axpy_2)
 
@@ -280,7 +291,7 @@ subroutine FNAME(axpy_3)(n1, n2, n3, da, dx, dy)
 
   PUSH_SUB(FNAME(axpy_3))
 
-  call profiling_in(axpy_profile, "BLAS_AXPY")
+  call profiling_in(FNAME(axpy_profile), TOSTRING(FNAME(BLAS_AXPY)))
 
   ASSERT(ubound(dx, dim = 1) == n1)
   ASSERT(ubound(dy, dim = 1) == n1)
@@ -288,6 +299,7 @@ subroutine FNAME(axpy_3)(n1, n2, n3, da, dx, dy)
   ASSERT(ubound(dy, dim = 2) == n2)
   ASSERT(ubound(dx, dim = 3) >= n3)
   ASSERT(ubound(dy, dim = 3) >= n3)
+  ASSERT(not_in_openmp())
 
   call blas_axpy(n1*n2*n3, da, dx(1,1,1), 1, dy(1,1,1), 1)
 
@@ -297,7 +309,7 @@ subroutine FNAME(axpy_3)(n1, n2, n3, da, dx, dy)
   call profiling_count_operations(n1*n2*n3*8)
 #endif
 
-  call profiling_out(axpy_profile)
+  call profiling_out(FNAME(axpy_profile))
   POP_SUB(FNAME(axpy_3))
 end subroutine FNAME(axpy_3)
 
@@ -311,7 +323,7 @@ subroutine FNAME(axpy_4)(n1, n2, n3, n4, da, dx, dy)
 
   PUSH_SUB(FNAME(axpy_4))
 
-  call profiling_in(axpy_profile, "BLAS_AXPY")
+  call profiling_in(FNAME(axpy_profile), TOSTRING(FNAME(BLAS_AXPY)))
 
   ASSERT(ubound(dx, dim = 1) == n1)
   ASSERT(ubound(dy, dim = 1) == n1)
@@ -321,6 +333,7 @@ subroutine FNAME(axpy_4)(n1, n2, n3, n4, da, dx, dy)
   ASSERT(ubound(dy, dim = 3) == n3)
   ASSERT(ubound(dx, dim = 4) >= n4)
   ASSERT(ubound(dy, dim = 4) >= n4)
+  ASSERT(not_in_openmp())
 
   call blas_axpy(n1*n2*n3*n4, da, dx(1,1,1,1), 1, dy(1,1,1,1), 1)
 
@@ -330,7 +343,7 @@ subroutine FNAME(axpy_4)(n1, n2, n3, n4, da, dx, dy)
   call profiling_count_operations(n1*n2*n3*n4*8)
 #endif
 
-  call profiling_out(axpy_profile)
+  call profiling_out(FNAME(axpy_profile))
   POP_SUB(FNAME(axpy_2))
 end subroutine FNAME(axpy_4)
 
@@ -347,14 +360,15 @@ subroutine FNAME(axpy_5)(n1, da, dx, dy)
 
   ASSERT(ubound(dx, dim = 1) >= n1)
   ASSERT(ubound(dy, dim = 1) >= n1)
+  ASSERT(not_in_openmp())
 
-  call profiling_in(axpy_profile, "BLAS_AXPY")
+  call profiling_in(FNAME(axpy_profile), TOSTRING(FNAME(BLAS_AXPY)))
 
   call blas_axpy(n1, da, dx(1), dy(1))
 
   call profiling_count_operations(n1*4)
 
-  call profiling_out(axpy_profile)
+  call profiling_out(FNAME(axpy_profile))
 
   POP_SUB(FNAME(axpy_5))
 end subroutine FNAME(axpy_5)
@@ -370,18 +384,19 @@ subroutine FNAME(axpy_6)(n1, n2, da, dx, dy)
   
   PUSH_SUB(FNAME(axpy_6))
 
-  call profiling_in(axpy_profile, "BLAS_AXPY")
+  call profiling_in(FNAME(axpy_profile), TOSTRING(FNAME(BLAS_AXPY)))
 
   ASSERT(ubound(dx, dim = 1) == n1)
   ASSERT(ubound(dy, dim = 1) == n1)
   ASSERT(ubound(dx, dim = 2) >= n2)
   ASSERT(ubound(dy, dim = 2) >= n2)
+  ASSERT(not_in_openmp())
 
   call blas_axpy(n1*n2, da, dx(1, 1), dy(1, 1))
 
   call profiling_count_operations(n1*n2*4)
 
-  call profiling_out(axpy_profile)
+  call profiling_out(FNAME(axpy_profile))
 
   POP_SUB(FNAME(axpy_6))
 end subroutine FNAME(axpy_6)
@@ -402,14 +417,15 @@ subroutine FNAME(copy_1)(n1, dx, dy)
 
   ASSERT(ubound(dx, dim = 1) >= n1)
   ASSERT(ubound(dy, dim = 1) >= n1)
+  ASSERT(not_in_openmp())
 
-  call profiling_in(copy_profile, "BLAS_COPY")
+  call profiling_in(FNAME(copy_profile), TOSTRING(FNAME(BLAS_COPY)))
 
   call blas_copy(n1, dx(1), 1, dy(1), 1)
 
   call profiling_count_transfers(n1, dx(1))
 
-  call profiling_out(copy_profile)
+  call profiling_out(FNAME(copy_profile))
   POP_SUB(FNAME(copy_1))
 end subroutine FNAME(copy_1)
 
@@ -422,16 +438,17 @@ subroutine FNAME(copy_2)(n1, n2, dx, dy)
 
   PUSH_SUB(FNAME(copy_2))
 
-  call profiling_in(copy_profile, "BLAS_COPY")
+  call profiling_in(FNAME(copy_profile), TOSTRING(FNAME(BLAS_COPY)))
 
   ASSERT(ubound(dx, dim = 1) == n1)
   ASSERT(ubound(dy, dim = 1) == n1)
   ASSERT(ubound(dx, dim = 2) >= n2)
   ASSERT(ubound(dy, dim = 2) >= n2)
+  ASSERT(not_in_openmp())
 
   call blas_copy(n1*n2, dx(1,1), 1, dy(1,1), 1)
 
-  call profiling_out(copy_profile)
+  call profiling_out(FNAME(copy_profile))
   POP_SUB(FNAME(copy_2))
 end subroutine FNAME(copy_2)
 
@@ -444,7 +461,7 @@ subroutine FNAME(copy_3)(n1, n2, n3, dx, dy)
 
   PUSH_SUB(FNAME(copy_3))
 
-  call profiling_in(copy_profile, "BLAS_COPY")
+  call profiling_in(FNAME(copy_profile), TOSTRING(FNAME(BLAS_COPY)))
 
   ASSERT(ubound(dx, dim = 1) == n1)
   ASSERT(ubound(dy, dim = 1) == n1)
@@ -452,10 +469,11 @@ subroutine FNAME(copy_3)(n1, n2, n3, dx, dy)
   ASSERT(ubound(dy, dim = 2) == n2)
   ASSERT(ubound(dx, dim = 3) >= n3)
   ASSERT(ubound(dy, dim = 3) >= n3)
+  ASSERT(not_in_openmp())
 
   call blas_copy (n1*n2*n3, dx(1,1,1), 1, dy(1,1,1), 1)
 
-  call profiling_out(copy_profile)
+  call profiling_out(FNAME(copy_profile))
   POP_SUB(FNAME(copy_3))
 end subroutine FNAME(copy_3)
 
@@ -468,7 +486,7 @@ subroutine FNAME(copy_4)(n1, n2, n3, n4, dx, dy)
 
   PUSH_SUB(FNAME(copy_4))
 
-  call profiling_in(copy_profile, "BLAS_COPY")
+  call profiling_in(FNAME(copy_profile), TOSTRING(FNAME(BLAS_COPY)))
  
   ASSERT(ubound(dx, dim = 1) == n1)
   ASSERT(ubound(dy, dim = 1) == n1)
@@ -478,10 +496,11 @@ subroutine FNAME(copy_4)(n1, n2, n3, n4, dx, dy)
   ASSERT(ubound(dy, dim = 3) == n3)
   ASSERT(ubound(dx, dim = 4) >= n4)
   ASSERT(ubound(dy, dim = 4) >= n4)
+  ASSERT(not_in_openmp())
 
   call blas_copy (n1*n2*n3*n4, dx(1,1,1,1), 1, dy(1,1,1,1), 1)
 
-  call profiling_out(copy_profile)
+  call profiling_out(FNAME(copy_profile))
   POP_SUB(FNAME(copy_4))
 end subroutine FNAME(copy_4)
 
@@ -502,6 +521,7 @@ TYPE2 function FNAME(nrm2)(n, dx) result(nrm2)
   end if
 
   ASSERT(ubound(dx, dim = 1) >= n)
+  ASSERT(not_in_openmp())
 
   nrm2 = blas_nrm2(n, dx(1), 1)
 
@@ -526,10 +546,11 @@ subroutine FNAME(symv_1)(n, alpha, a, x, beta, y)
   ! no push_sub, called too frequently
 
   ASSERT(ubound(a, dim=1) >= n)
+  ASSERT(not_in_openmp())
 
-  call profiling_in(symv_profile, 'BLAS_SYMV')
+  call profiling_in(FNAME(symv_profile), TOSTRING(FNAME(BLAS_SYMV)))
   call blas_symv('U', n, alpha, a(1, 1), lead_dim(a), x(1), 1, beta, y(1), 1)
-  call profiling_out(symv_profile)
+  call profiling_out(FNAME(symv_profile))
 
 end subroutine FNAME(symv_1)
 
@@ -546,10 +567,11 @@ subroutine FNAME(symv_2)(n1, n2, alpha, a, x, beta, y)
   ASSERT(ubound(a, dim=2) == n2) 
   ASSERT(ubound(y, dim=1) == n1)
   ASSERT(ubound(y, dim=2) >= n2)
+  ASSERT(not_in_openmp())
 
-  call profiling_in(symv_profile, 'BLAS_SYMV')
+  call profiling_in(FNAME(symv_profile), TOSTRING(FNAME(BLAS_SYMV)))
   call blas_symv('U', n1*n2, alpha, a(1, 1, 1), n1*n2, x(1), 1, beta, y(1, 1), 1)
-  call profiling_out(symv_profile)
+  call profiling_out(FNAME(symv_profile))
 
   POP_SUB(FNAME(symv_2))
 end subroutine FNAME(symv_2)
@@ -564,10 +586,11 @@ subroutine FNAME(gemv_1)(m, n, alpha, a, x, beta, y)
   PUSH_SUB(FNAME(gemv_1))
 
   ASSERT(ubound(a, dim=1) >= m)
+  ASSERT(not_in_openmp())
 
-  call profiling_in(gemv_profile, "BLAS_GEMV")
+  call profiling_in(FNAME(gemv_profile), TOSTRING(FNAME(BLAS_GEMV)))
   call blas_gemv('N', m, n, alpha, a(1,1), lead_dim(a), x(1), 1, beta, y(1), 1)
-  call profiling_out(gemv_profile)
+  call profiling_out(FNAME(gemv_profile))
 
   POP_SUB(FNAME(gemv_1))
 end subroutine FNAME(gemv_1)
@@ -585,10 +608,11 @@ subroutine FNAME(gemv_2)(m1, m2, n, alpha, a, x, beta, y)
   ASSERT(ubound(a, dim=2) == m2)
   ASSERT(ubound(y, dim=1) == m1)
   ASSERT(ubound(y, dim=2) >= m2)
+  ASSERT(not_in_openmp())
 
-  call profiling_in(gemv_profile, "BLAS_GEMV")
+  call profiling_in(FNAME(gemv_profile), TOSTRING(FNAME(BLAS_GEMV)))
   call blas_gemv('N', m1*m2, n, alpha, a(1,1,1), m1*m2, x(1), 1, beta, y(1,1), 1)
-  call profiling_out(gemv_profile)
+  call profiling_out(FNAME(gemv_profile))
 
   POP_SUB(FNAME(gemv_2))
 end subroutine FNAME(gemv_2)
@@ -616,7 +640,7 @@ subroutine FNAME(gemm_1)(m, n, k, alpha, a, b, beta, c)
   ASSERT(ubound(b, dim=1) >= k)
   ASSERT(ubound(c, dim=1) >= m)
   ASSERT(ubound(c, dim=2) >= n)
- 
+  ASSERT(not_in_openmp())
 
   call blas_gemm('N', 'N', m, n, k, alpha, a(1, 1), lead_dim(a), b(1, 1), lead_dim(b), beta, c(1, 1), lead_dim(c))
 
@@ -638,6 +662,7 @@ subroutine FNAME(gemm_2)(m1, m2, n, k, alpha, a, b, beta, c)
   ASSERT(ubound(c, dim=1) == m1)
   ASSERT(ubound(c, dim=2) == m2)
   ASSERT(ubound(c, dim=3) >= n)
+  ASSERT(not_in_openmp())
 
   call blas_gemm('N', 'N', m1*m2, n, k, alpha, a(1, 1, 1), m1*m2, &
     b(1, 1), lead_dim(b), beta, c(1, 1, 1), m1*m2)
@@ -661,6 +686,7 @@ subroutine FNAME(gemmt_1)(m, n, k, alpha, a, b, beta, c)
   ASSERT(ubound(b, dim=2) >= n)
   ASSERT(ubound(c, dim=1) >= m)
   ASSERT(ubound(c, dim=2) >= n)
+  ASSERT(not_in_openmp())
   
   call blas_gemm('C', 'N', m, n, k, alpha, a(1, 1), lead_dim(a), b(1, 1), lead_dim(b), beta, c(1, 1), lead_dim(c))
 
@@ -683,6 +709,7 @@ subroutine FNAME(gemmt_2)(m1, m2, n1, n2, k, alpha, a, b, beta, c)
   ASSERT(ubound(b, dim=3) >= n1)
   ASSERT(ubound(c, dim=1) >= m1*m2)
   ASSERT(ubound(c, dim=2) >= n1*n2)
+  ASSERT(not_in_openmp())
 
   call blas_gemm('C', 'N', m1*m2, n1*n2, k, alpha, a(1, 1, 1), lead_dim(a), &
     b(1, 1, 1), lead_dim(b), beta, c(1, 1), lead_dim(c))
@@ -702,6 +729,7 @@ subroutine FNAME(symm_1)(m, n, side, alpha, a, b, beta, c)
   !The size specified are for the matrix C
   ASSERT(ubound(c, dim=1) >= m)
   ASSERT(ubound(c, dim=2) >= n)
+  ASSERT(not_in_openmp())
  
   select case(side)
   case('l', 'L') ! Here we compute C := alpha*A*B + beta*C
@@ -731,6 +759,7 @@ subroutine FNAME(trmm_1)(m, n, uplo, transa, side, alpha, a, b)
 
   ASSERT(ubound(b, dim=1) >= m)
   ASSERT(ubound(b, dim=2) >= n)
+  ASSERT(not_in_openmp())
 
   select case(side)
     case('L', 'l')

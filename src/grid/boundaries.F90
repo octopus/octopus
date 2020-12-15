@@ -23,6 +23,7 @@ module boundaries_oct_m
   use batch_oct_m
   use batch_ops_oct_m
   use global_oct_m
+  use index_oct_m
   use math_oct_m
   use messages_oct_m
   use mesh_oct_m
@@ -95,14 +96,6 @@ module boundaries_oct_m
     type(pv_t),      pointer :: vp
   end type pv_handle_batch_t
 
-  type(profile_t), save :: prof_start
-  type(profile_t), save :: prof_wait
-  type(profile_t), save :: prof_update
-  type(profile_t), save :: set_bc_prof
-  type(profile_t), save :: set_bc_comm_prof
-  type(profile_t), save :: set_bc_precomm_prof
-  type(profile_t), save :: set_bc_postcomm_prof
-    
   interface boundaries_set
     module procedure boundaries_set_batch
     module procedure dboundaries_set_single

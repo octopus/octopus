@@ -158,6 +158,20 @@ contains
   end subroutine mpi_grp_copy
 
   ! ---------------------------------------------------------
+  subroutine mpi_grp_duplicate(mpi_grp_out, mpi_grp_in)
+    type(mpi_grp_t), intent(out) :: mpi_grp_out
+    type(mpi_grp_t), intent(in)  :: mpi_grp_in
+
+#if defined(HAVE_MPI)
+    call MPI_Comm_dup(mpi_grp_in%comm, mpi_grp_out%comm, mpi_err)
+    call MPI_Comm_rank(mpi_grp_out%comm, mpi_grp_out%rank, mpi_err)
+    call MPI_Comm_size(mpi_grp_out%comm, mpi_grp_out%size, mpi_err)
+#else
+    call mpi_grp_copy(mpi_grp_out, mpi_grp_in)
+#endif
+  end subroutine mpi_grp_duplicate
+
+  ! ---------------------------------------------------------
   logical function mpi_grp_is_root(grp)
     type(mpi_grp_t), intent(in) :: grp
     

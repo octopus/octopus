@@ -19,6 +19,7 @@
 #include "global.h"
 
 module kdotp_calc_oct_m
+  use comm_oct_m
   use global_oct_m
   use hamiltonian_elec_oct_m
   use linear_response_oct_m
@@ -30,7 +31,7 @@ module kdotp_calc_oct_m
   use profiling_oct_m
   use states_elec_oct_m
   use states_elec_calc_oct_m
-  use system_oct_m
+  use electrons_oct_m
   use utils_oct_m
 
   implicit none
@@ -40,7 +41,6 @@ module kdotp_calc_oct_m
     dcalc_eff_mass_inv,            &
     zcalc_eff_mass_inv,            &
     zcalc_band_velocity,           &
-    zcalc_dipole_periodic,         &
     dkdotp_add_occ,                &
     zkdotp_add_occ,                &
     dkdotp_add_diagonal,           &
@@ -67,17 +67,17 @@ contains
 !> v = (dE_nk/dk)/hbar = -Im < u_nk | -i grad | u_nk >
 !! This is identically zero for real wavefunctions.
 subroutine zcalc_band_velocity(sys, pert, velocity)
-  type(system_t),      intent(inout) :: sys
+  type(electrons_t),   intent(inout) :: sys
   type(pert_t),        intent(inout) :: pert
   FLOAT,               intent(out)   :: velocity(:,:,:)
 
   integer :: ik, ist, idir
   CMPLX, allocatable :: psi(:, :), pertpsi(:,:)
-#ifdef HAVE_MPI
-  FLOAT, allocatable :: vel_temp(:,:,:)
-#endif
+  type(profile_t), save :: prof
 
   PUSH_SUB(zkdotp_calc_band_velocity)
+
+  call profiling_in(prof, "CALC_BAND_VELOCITY")
 
   SAFE_ALLOCATE(psi(1:sys%gr%mesh%np, 1:sys%st%d%dim))
   SAFE_ALLOCATE(pertpsi(1:sys%gr%mesh%np, 1:sys%st%d%dim))
@@ -100,67 +100,12 @@ subroutine zcalc_band_velocity(sys, pert, velocity)
   SAFE_DEALLOCATE_A(psi)
   SAFE_DEALLOCATE_A(pertpsi)
 
-#ifdef HAVE_MPI
-  if(sys%st%parallel_in_states .or. sys%st%d%kpt%parallel) then
-    SAFE_ALLOCATE(vel_temp(1:sys%gr%sb%periodic_dim, 1:sys%st%nst, 1:sys%st%d%nik))
+  call comm_allreduce(sys%st%st_kpt_mpi_grp%comm, velocity)
 
-    call MPI_Allreduce(velocity, vel_temp, sys%gr%sb%periodic_dim * sys%st%nst * sys%st%d%nik, &
-      MPI_FLOAT, MPI_SUM, sys%st%st_kpt_mpi_grp%comm, mpi_err)
-
-    velocity(:,:,:) = vel_temp(:,:,:)
-    SAFE_DEALLOCATE_A(vel_temp)
-  end if
-#endif
+  call profiling_out(prof)
 
   POP_SUB(zkdotp_calc_band_velocity)
 end subroutine zcalc_band_velocity
-
-! ---------------------------------------------------------
-!> This routine cannot be used with d/dk wavefunctions calculated
-!! by perturbation theory.
-!! mu_i = sum(m occ, k) <u_mk(0)|(-id/dk_i|u_mk(0)>)
-!!      = Im sum(m occ, k) <u_mk(0)|(d/dk_i|u_mk(0)>)
-subroutine zcalc_dipole_periodic(sys, lr, dipole)
-  type(system_t), target, intent(inout) :: sys
-  type(lr_t),             intent(in)    :: lr(:,:)
-  CMPLX,                  intent(out)   :: dipole(:)
-
-  integer idir, ist, ik, idim
-  type(mesh_t), pointer :: mesh
-  CMPLX :: term, moment
-  CMPLX, allocatable :: psi(:, :)
-  mesh => sys%gr%mesh
-
-  PUSH_SUB(zcalc_dipole_periodic)
-
-  SAFE_ALLOCATE(psi(1:sys%gr%mesh%np, 1:sys%st%d%dim))
-  
-  do idir = 1, sys%gr%sb%periodic_dim
-    moment = M_ZERO
-
-    do ik = 1, sys%st%d%nik
-      term = M_ZERO
-
-      do ist = 1, sys%st%nst
-
-        call states_elec_get_state(sys%st, sys%gr%mesh, ist, ik, psi)
-        
-        do idim = 1, sys%st%d%dim
-          term = term + zmf_dotp(mesh, psi(1:mesh%np, idim), lr(1, idir)%zdl_psi(1:mesh%np, idim, ist, ik))
-        end do
-        
-      end do
-
-      moment = moment + term*sys%st%d%kweights(ik)*sys%st%smear%el_per_state
-    end do
-
-    dipole(idir) = -moment
-  end do
-
-  SAFE_DEALLOCATE_A(psi)
-
-  POP_SUB(zcalc_dipole_periodic)
-end subroutine zcalc_dipole_periodic
 
 #include "undef.F90"
 #include "real.F90"

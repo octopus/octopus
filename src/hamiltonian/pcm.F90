@@ -828,19 +828,6 @@ contains
     end if
     pcm%counter = 0
 
-!     pcm%n_vertices = 8
-!     cSAFE_ALLOCATE(pcm%ind_vh(1:pcm%n_tesserae, 1:pcm%n_vertices))
-!     pcm%ind_vh = INT(M_ZERO)
-
-!     cSAFE_ALLOCATE(pcm%arg_li(1:pcm%n_tesserae, 1:PCM_DIM_SPACE))
-!     pcm%arg_li = M_ZERO
-
-!     !> Creating the list of the nearest grid points to each tessera
-!     !! to be used to interpolate the Hartree potential at the representative points
-!     do ia = 1, pcm%n_tesserae
-!       call nearest_cube_vertices(pcm%tess(ia)%point, grid%mesh, pcm%ind_vh(ia,:), pcm%arg_li(ia,:))
-!     end do
-
     !>printing out the cavity surface
     if (gamess_benchmark .and. mpi_grp_is_root(mpi_world)) then 
       cav_gamess_unit = io_open(PCM_DIR//'geom_cavity_gamess.out', pcm%namespace, action='write')
@@ -1529,81 +1516,6 @@ contains
 
   ! -----------------------------------------------------------------------------
   
-  !> Creating the list of the nearest 8 cube vertices in real-space 
-  !! to calculate the Hartree potential at 'point'
-  subroutine nearest_cube_vertices(point, mesh, vert_idx, weight_li)
-    FLOAT,        intent(in)  :: point(:)!< (1:PCM_DIM_SPACE)
-    type(mesh_t), intent(in)  :: mesh
-    integer,      intent(out) :: vert_idx(:)
-    FLOAT,        intent(out) :: weight_li(:)
-
-    FLOAT   :: dmin
-    integer :: rankmin
-
-    FLOAT   :: coord_0(1:PCM_DIM_SPACE)
-    integer :: sign_x
-    integer :: sign_y
-    integer :: sign_z
-    integer :: point_0(1:PCM_DIM_SPACE)
-    integer :: point_f(1:PCM_DIM_SPACE)
-
-    PUSH_SUB(nearest_cube_vertices)    
-
-    coord_0 = M_ZERO
-    point_0 = 0
-    point_f = 0
-
-    vert_idx(1) = mesh_nearest_point(mesh, point, dmin, rankmin)
-
-    coord_0 = mesh%x(vert_idx(1), 1:PCM_DIM_SPACE)
-
-    point_0 = nint(coord_0/mesh%spacing(1:PCM_DIM_SPACE))
-
-    sign_x = int(sign(CNST(1.0), point(1) - coord_0(1)))
-    sign_y = int(sign(CNST(1.0), point(2) - coord_0(2)))
-    sign_z = int(sign(CNST(1.0), point(3) - coord_0(3)))
-
-    weight_li = abs(point - coord_0)/mesh%spacing(1:PCM_DIM_SPACE)
-
-    !FRONT CUBE PLANE
-    point_f = point_0
-
-    !POINT P2
-    point_f(2) = point_f(2) + sign_y
-    vert_idx(2) = index_from_coords(mesh%idx, point_f)
-
-    !POINT P3
-    point_f(3) = point_f(3) + sign_z
-    vert_idx(3) = index_from_coords(mesh%idx, point_f)
-
-    !POINT P4
-    point_f(2) = point_f(2) - sign_y
-    vert_idx(4) = index_from_coords(mesh%idx, point_f)
-
-    !REAR CUBE PLANE
-    point_f = point_0 
-
-    !POINT P5
-    point_f(1) = point_f(1) + sign_x
-    vert_idx(5) = index_from_coords(mesh%idx, point_f)
-
-    !POINT P6
-    point_f(2) = point_f(2) + sign_y
-    vert_idx(6) = index_from_coords(mesh%idx, point_f)
-
-    !POINT P7
-    point_f(3) = point_f(3) + sign_z
-    vert_idx(7) = index_from_coords(mesh%idx, point_f)
-
-    !POINT P8
-    point_f(2) = point_f(2) - sign_y
-    vert_idx(8) = index_from_coords(mesh%idx, point_f)
-
-    POP_SUB(nearest_cube_vertices)    
-  end subroutine nearest_cube_vertices
-
-  ! -----------------------------------------------------------------------------
-  
   !> Calculates the polarization charges at each tessera by using the response matrix 'pcm_mat',
   !! provided the value of the molecular electrostatic potential at 
   !! the tesserae: q_pcm(ia) = \sum_{ib}^{n_tess} pcm_mat(ia,ib)*v_cav(ib).
@@ -1681,7 +1593,7 @@ contains
         do i2 = -pcm%tess_nn + 1 , pcm%tess_nn
           do i3 = -pcm%tess_nn + 1 , pcm%tess_nn
             ipt = ipt + 1
-            pt = mesh%idx%lxyz_inv(i1 + nm(1), i2 + nm(2), i3 + nm(3))
+            pt = index_from_coords(mesh%idx, [i1 + nm(1), i2 + nm(2), i3 + nm(3)])
 
             if (pt <= 0 .or. pt > mesh%np_part_global) then 
               in_mesh = .false.
@@ -1764,7 +1676,7 @@ contains
         do i2 = -pcm%tess_nn + 1 , pcm%tess_nn
           do i3 = -pcm%tess_nn + 1 , pcm%tess_nn
             ipt = ipt + 1
-            pt(ipt) = mesh%idx%lxyz_inv(i1 + nm(1), i2 + nm(2), i3 + nm(3))
+            pt(ipt) = index_from_coords(mesh%idx, [i1 + nm(1), i2 + nm(2), i3 + nm(3)])
           end do
         end do
       end do
@@ -3202,7 +3114,7 @@ contains
         write(message(2),'(a)') "Use PCMVdWRadii = pcm_vdw_species, for other vdw radii values" 
         call messages_fatal(2, namespace=namespace)
       end if
-      ia = species_z(species)
+      ia = int(species_z(species))
       vdw_r = vdw_radii(ia)*P_Ang
 
     case (PCM_VDW_SPECIES)

@@ -38,6 +38,7 @@ module hamiltonian_abst_oct_m
     !> Spectral range
     FLOAT :: spectral_middle_point
     FLOAT :: spectral_half_span
+
   contains
     procedure(is_hermitian),              deferred :: is_hermitian
     procedure(hamiltonian_update_span),   deferred :: update_span

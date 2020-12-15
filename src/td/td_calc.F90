@@ -87,7 +87,7 @@ subroutine td_calc_tacc(namespace, gr, geo, st, hm, acc, time)
   field = M_ZERO
   do j = 1, hm%ep%no_lasers
     call laser_electric_field(hm%ep%lasers(j), field(1:gr%sb%dim), time, CNST(0.001))
-    acc(1:gr%mesh%sb%dim) = acc(1:gr%mesh%sb%dim) - st%qtot*field(1:gr%mesh%sb%dim)
+    acc(1:gr%sb%dim) = acc(1:gr%sb%dim) - st%qtot*field(1:gr%sb%dim)
   end do
 
   if(.not. hm%ep%non_local) then
@@ -112,12 +112,12 @@ subroutine td_calc_tacc(namespace, gr, geo, st, hm, acc, time)
       SAFE_ALLOCATE(vnl_xzpsi(1:gr%mesh%np_part, 1:st%d%dim))
       xzpsi = M_z0
       do k = 1, gr%mesh%np
-        do j = 1, gr%mesh%sb%dim
+        do j = 1, gr%sb%dim
           xzpsi(k, 1:st%d%dim, j) = gr%mesh%x(k, j)*zpsi(k, 1:st%d%dim)
         end do
       end do
 
-      do j = 1, gr%mesh%sb%dim
+      do j = 1, gr%sb%dim
         call zhamiltonian_elec_apply_single(hm, namespace, gr%mesh, xzpsi(:, :, j), vnl_xzpsi, ist, ik, &
           terms = TERM_NON_LOCAL_POTENTIAL)
 
@@ -128,12 +128,12 @@ subroutine td_calc_tacc(namespace, gr, geo, st, hm, acc, time)
 
       xzpsi = M_z0
       do k = 1, gr%mesh%np
-        do j = 1, gr%mesh%sb%dim
+        do j = 1, gr%sb%dim
           xzpsi(k, 1:st%d%dim, j) = gr%mesh%x(k, j)*hzpsi(k, 1:st%d%dim)
         end do
       end do
 
-      do j = 1, gr%mesh%sb%dim
+      do j = 1, gr%sb%dim
         call zhamiltonian_elec_apply_single(hm, namespace, gr%mesh, xzpsi(:, :, j), vnl_xzpsi, ist, ik, &
           terms = TERM_NON_LOCAL_POTENTIAL)
 
@@ -151,7 +151,7 @@ subroutine td_calc_tacc(namespace, gr, geo, st, hm, acc, time)
 
 #if defined(HAVE_MPI)
   if(st%parallel_in_states) then
-    call MPI_Allreduce(x(1), y(1), gr%mesh%sb%dim, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
+    call MPI_Allreduce(x(1), y(1), gr%sb%dim, MPI_FLOAT, MPI_SUM, st%mpi_grp%comm, mpi_err)
     x = y
   end if
 #endif
@@ -176,14 +176,14 @@ subroutine td_calc_tvel(gr, st, vel)
   
   PUSH_SUB(td_calc_tvel)
 
-  SAFE_ALLOCATE(momentum(1:gr%mesh%sb%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
+  SAFE_ALLOCATE(momentum(1:gr%sb%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end))
   call states_elec_calc_momentum(st, gr%der, momentum)
 
-  momentum(1:gr%mesh%sb%dim, st%st_start:st%st_end, 1) = & 
-    sum(momentum(1:gr%mesh%sb%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end), 3)
-  momentum(1:gr%mesh%sb%dim, 1, 1) = & 
-    sum(momentum(1:gr%mesh%sb%dim, st%st_start:st%st_end, 1), 2)
-  vel = momentum(1:gr%mesh%sb%dim, 1, 1)
+  momentum(1:gr%sb%dim, st%st_start:st%st_end, 1) = & 
+    sum(momentum(1:gr%sb%dim, st%st_start:st%st_end, st%d%kpt%start:st%d%kpt%end), 3)
+  momentum(1:gr%sb%dim, 1, 1) = & 
+    sum(momentum(1:gr%sb%dim, st%st_start:st%st_end, 1), 2)
+  vel = momentum(1:gr%sb%dim, 1, 1)
 
   SAFE_DEALLOCATE_A(momentum)
   POP_SUB(td_calc_tvel)
@@ -226,12 +226,12 @@ subroutine td_calc_ionch(gr, st, ch, Nch)
   ii = 1
   do ik = 1, st%d%nik
     do ist = 1, st%nst
-      do idim = 1, st%d%dim        
+      do idim = 1, st%d%dim
 
         if (st%st_start <= ist .and. ist <= st%st_end .and. &
               st%d%kpt%start <= ik .and. ik <= st%d%kpt%end) then
           call states_elec_get_state(st, gr%mesh, idim, ist, ik, zpsi)
-          N(ii) = zmf_integrate(gr%mesh, zpsi(:) * conjg(zpsi(:)) ) 
+          N(ii) = real(zmf_dotp(gr%mesh, zpsi, zpsi))
           Nnot(ii) = M_ONE - N(ii)
         end if
 

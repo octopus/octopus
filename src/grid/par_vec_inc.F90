@@ -35,9 +35,10 @@ subroutine X(vec_scatter)(vp, root, v_local, v)
   integer              :: ii        !< Counter.
   integer, allocatable :: displs(:) !< Displacements for scatter.
   R_TYPE,  allocatable :: v_tmp(:)  !< Send buffer.
+  type(profile_t), save :: prof_scatter
 
   PUSH_SUB(X(vec_scatter))
-  call profiling_in(prof_scatter, "VEC_SCATTER")
+  call profiling_in(prof_scatter, TOSTRING(X(VEC_SCATTER)))
 
   ! Skip the MPI call if domain parallelization is not used.
   if(vp%npart < 2) then
@@ -68,9 +69,11 @@ subroutine X(vec_scatter)(vp, root, v_local, v)
   ! But partition numbers from 1 to vp%npart with usually
   ! vp%npart = mpiv%numprocs.
   call mpi_debug_in(vp%comm, C_MPI_SCATTERV)
+#ifdef HAVE_MPI
   call MPI_Scatterv(v_tmp(1), vp%np_local_vec, displs(1), R_MPITYPE, v_local(1), &
                     vp%np_local, R_MPITYPE,                                      &
                     root, vp%comm, mpi_err)
+#endif
   call mpi_debug_out(vp%comm, C_MPI_SCATTERV)
 
   SAFE_DEALLOCATE_A(v_tmp)
@@ -115,9 +118,11 @@ subroutine X(vec_gather)(vp, root, v_local, v)
   SAFE_ALLOCATE(v_tmp(1:vp%np_global))
 
   call mpi_debug_in(vp%comm, C_MPI_GATHERV)
+#ifdef HAVE_MPI
   call MPI_Gatherv(v_local(1), vp%np_local, R_MPITYPE, v_tmp(1), &
                    vp%np_local_vec, displs(1), R_MPITYPE,        &
                    root, vp%comm, mpi_err)
+#endif
   call mpi_debug_out(vp%comm, C_MPI_GATHERV)
 
   ! Copy values from v_tmp to their original position in v.
@@ -148,9 +153,10 @@ subroutine X(vec_allgather)(vp, v, v_local)
   integer              :: ii        !< Counter.
   integer, allocatable :: displs(:) !< Displacements for scatter.
   R_TYPE,  allocatable :: v_tmp(:)  !< Receive buffer.
+  type(profile_t), save :: prof_allgather
 
   PUSH_SUB(X(vec_allgather))
-  call profiling_in(prof_allgather, "VEC_ALLGATHER")
+  call profiling_in(prof_allgather, TOSTRING(X(VEC_ALLGATHER)))
 
   ! Skip the MPI call if domain parallelization is not used.
   if(vp%npart < 2) then
@@ -167,9 +173,11 @@ subroutine X(vec_allgather)(vp, v, v_local)
   SAFE_ALLOCATE(v_tmp(1:vp%np_global))
 
   call mpi_debug_in(vp%comm, C_MPI_ALLGATHERV)
+#ifdef HAVE_MPI
   call MPI_Allgatherv(v_local(1), vp%np_local, R_MPITYPE, v_tmp(1), &
                       vp%np_local_vec, displs(1), R_MPITYPE,        &
                       vp%comm, mpi_err)
+#endif
   call mpi_debug_out(vp%comm, C_MPI_ALLGATHERV)
 
   ! Copy values from v_tmp to their original position in v.

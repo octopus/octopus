@@ -31,7 +31,7 @@
 
     PUSH_SUB(X(multigrid_coarse2fine))
 
-    call profiling_in(interp_prof, "MG_INTERPOLATION")
+    call profiling_in(interp_prof, TOSTRING(X(MG_INTERPOLATION)))
 
     ASSERT(ubound(f_coarse, dim = 1) == coarse_der%mesh%np_part)
     ASSERT(coarse_der%mesh%np == tt%n_coarse)
@@ -63,7 +63,7 @@
       ! translate to a global index
       if(fine_mesh%parallel_in_domains) ipfg = fine_mesh%vp%local(ipf - 1 + fine_mesh%vp%xlocal)
 #endif 
-      xf(1:3) = fine_mesh%idx%lxyz(ipfg, 1:3)
+      call index_to_coords(fine_mesh%idx, ipfg, xf)
 
       dd = mod(xf, 2)
       
@@ -75,7 +75,7 @@
           if(ii == 0) cycle
           xc = xf + (2*ii - sign(1, ii))*dd
           xc = xc/2
-          ipc = coarse_der%mesh%idx%lxyz_inv(xc(1), xc(2), xc(3))
+          ipc = index_from_coords(coarse_der%mesh%idx, [xc(1), xc(2), xc(3)])
 #ifdef HAVE_MPI
             ! translate to a local index
           if(coarse_der%mesh%parallel_in_domains) ipc = vec_global2local(coarse_der%mesh%vp, ipc, coarse_der%mesh%vp%partno)
@@ -133,7 +133,7 @@
     integer :: ii
 
     PUSH_SUB(X(multigrid_injection))
-    call profiling_in(injection_prof, "MG_INJECTION")
+    call profiling_in(injection_prof, TOSTRING(X(MG_INJECTION)))
 
     do ii = 1, tt%n_coarse
       f_coarse(ii) = f_fine(tt%to_coarse(ii))
@@ -156,7 +156,7 @@
     integer :: nn, fn, di, dj, dk, dd, fi(MAX_DIM)
 
     PUSH_SUB(X(multigrid_restriction))
-    call profiling_in(restrict_prof, "MG_RESTRICTION")
+    call profiling_in(restrict_prof, TOSTRING(X(MG_RESTRICTION)))
 
     do di = -1, 1
       do dj = -1, 1
@@ -181,14 +181,14 @@
         fn = fine_der%mesh%vp%local(fn - 1 + fine_der%mesh%vp%xlocal)
       end if
 #endif
-      fi(:) = fine_der%mesh%idx%lxyz(fn, :)
+      call index_to_coords(fine_der%mesh%idx, fn, fi)
 
       f_coarse(nn) = M_ZERO
 
       do di = -1, 1
         do dj = -1, 1
           do dk = -1, 1
-            fn = fine_der%mesh%idx%lxyz_inv(fi(1) + di, fi(2) + dj, fi(3) + dk)
+            fn = index_from_coords(fine_der%mesh%idx, [fi(1) + di, fi(2) + dj, fi(3) + dk])
 
 #ifdef HAVE_MPI
             ! translate to a local index

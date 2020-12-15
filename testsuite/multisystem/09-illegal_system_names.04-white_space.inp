@@ -1,0 +1,6 @@
+CalculationMode = td
+ExperimentalFeatures = yes
+
+%Systems
+ "Su n" | classical_particle
+%

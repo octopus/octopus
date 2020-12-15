@@ -35,6 +35,7 @@ program oct_local_multipoles
   use local_write_oct_m
   use mesh_oct_m
   use messages_oct_m
+  use mpi_oct_m
   use multicomm_oct_m
   use namespace_oct_m
   use parser_oct_m
@@ -44,7 +45,7 @@ program oct_local_multipoles
   use species_oct_m
   use species_pot_oct_m
   use simul_box_oct_m
-  use system_oct_m
+  use electrons_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use utils_oct_m
@@ -65,7 +66,7 @@ program oct_local_multipoles
     type(local_write_t)             :: writ            !< write option for local domains analysis.
   end type local_domain_t
 
-  type(system_t), pointer :: sys
+  type(electrons_t), pointer :: sys
   type(simul_box_t)     :: sb
   integer, parameter    :: BADER = 512
   FLOAT                 :: BaderThreshold
@@ -91,7 +92,8 @@ program oct_local_multipoles
   call restart_module_init(global_namespace)
 
   call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
-  sys => system_init(global_namespace)
+  sys => electrons_t(global_namespace)
+  call sys%init_parallelization(mpi_world)
   call simul_box_init(sb, global_namespace, sys%geo, sys%space)
 
   call local_domains()
@@ -313,7 +315,7 @@ contains
       call messages_experimental('Bader volumes in oct-local_multipoles')
     end if
 
-    call kick_init(kick, global_namespace, sys%gr%mesh%sb, sys%st%d%ispin)
+    call kick_init(kick, global_namespace, sys%gr%sb, sys%st%d%ispin)
     call local_write_init(local%writ, global_namespace, local%nd, local%lab, 0, dt)
 
     !TODO: initialize hamiltonian if needed: check for LDOuput = energy or potential, using local_write_check_hm(local%writ)
@@ -521,7 +523,7 @@ contains
           call messages_fatal(2)
         end if
         call parse_block_float(blk, row, 2, rsize, unit = units_inp%length)
-        if(rsize < M_ZERO) call messages_input_error(namespace, 'radius')
+        if(rsize < M_ZERO) call messages_input_error(namespace, 'radius', row=row, column=2)
         call parse_block_string(blk, row, 3, clist)
         nb = 0
         do ic = 1, sys%geo%natoms
@@ -529,23 +531,23 @@ contains
         end do
       case(SPHERE)
         call parse_block_float(blk, row, 2, rsize, unit = units_inp%length)
-        if(rsize < M_ZERO) call messages_input_error(namespace, 'radius')
+        if(rsize < M_ZERO) call messages_input_error(namespace, 'radius', row=row, column=2)
         do ic = 1, dim 
           call parse_block_float(blk, row, 2 + ic, center(ic), unit = units_inp%length)
         end do
       case(CYLINDER)
         call parse_block_float(blk, row, 2, rsize, unit = units_inp%length)
-        if(rsize < M_ZERO) call messages_input_error(namespace, 'radius')
+        if(rsize < M_ZERO) call messages_input_error(namespace, 'radius', row=row, column=2)
         call parse_block_float(blk, row, 3, xsize, unit = units_inp%length)
         do ic = 1, dim 
           call parse_block_float(blk, row, 3 + ic, center(ic), unit = units_inp%length)
         end do
       case(PARALLELEPIPED)
         do ic = 1, dim 
-          call parse_block_float(blk, row, 2 + ic, lsize(ic), unit = units_inp%length)
+          call parse_block_float(blk, row, 1 + ic, lsize(ic), unit = units_inp%length)
         end do
         do ic = 1, dim 
-          call parse_block_float(blk, row, 2 + dim + ic, center(ic), unit = units_inp%length)
+          call parse_block_float(blk, row, 1 + dim + ic, center(ic), unit = units_inp%length)
         end do
       case(BADER)
         ! FIXME: when input error exists --> segmentation fault appears
@@ -855,8 +857,8 @@ contains
           do ip = 1, sys%gr%mesh%np
             if( all(ion_map(:) /= basins%map(ip)) ) then
               do ia = 1, sys%geo%natoms
-                dd = sum((sys%gr%mesh%x(ip, 1:sys%gr%mesh%sb%dim) & 
-                      - sys%geo%atom(ia)%x(1:sys%gr%mesh%sb%dim))**2)
+                dd = sum((sys%gr%mesh%x(ip, 1:sys%gr%sb%dim) & 
+                      - sys%geo%atom(ia)%x(1:sys%gr%sb%dim))**2)
                 dd = sqrt(dd)
                 if ( dd <= species_vdw_radius(sys%geo%atom(ia)%species) ) basins%map(ip) = ion_map(ia)
               end do

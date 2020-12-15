@@ -35,6 +35,9 @@ dist_share_DATA =                                  \
 	05-hartree_3d_fft.test                     \
 	05-hartree_3d_fft.01-fft.inp               \
 	05-hartree_3d_fft.02-fft_corrected.inp     \
+	05-hartree_3d_fft.03-3d_1d_periodic.inp    \
+	05-hartree_3d_fft.04-3d_3d_periodic.inp    \
+	05-hartree_3d_fft.05-3d_2d_periodic.inp    \
 	06-hartree_3d_isf.test                     \
 	06-hartree_3d_isf.01-isf.inp               \
 	07-cholesky_serial.test                    \
@@ -51,6 +54,9 @@ dist_share_DATA =                                  \
 	10-hartree_pfft.test                       \
 	10-hartree_pfft.01-fft.inp                 \
 	10-hartree_pfft.02-fft_corrected.inp       \
+	10-hartree_pfft.03-3d_1d_periodic.inp      \
+	10-hartree_pfft.04-3d_3d_periodic.inp      \
+	10-hartree_pfft.05-3d_2d_periodic.inp      \
 	11-hartree_cl.test                         \
 	11-hartree_cl.01-fft.inp                   \
 	12-hartree_direct_3d.test                  \
@@ -73,7 +79,14 @@ dist_share_DATA =                                  \
 	18-interpolation.test                      \
 	19-hgh_soc.01-3d.inp                       \
 	19-hgh_soc.test                            \
-	20-dft_u.01-NiO.inp                        \
+	20-dft_u.01-real_mesh.inp                  \
+	20-dft_u.02-real_submesh.inp               \
+	20-dft_u.03-complex_mesh.inp               \
+	20-dft_u.04-complex_submesh.inp            \
+        20-dft_u.05-real_mesh_unpacked.inp         \
+        20-dft_u.06-real_submesh_unpacked.inp      \
+        20-dft_u.07-complex_mesh_unpacked.inp      \
+        20-dft_u.08-complex_submesh_unpacked.inp   \
 	20-dft_u.test                              \
 	21-hamiltonian_apply.01-Si.inp             \
 	21-hamiltonian_apply.test                  \
@@ -90,6 +103,13 @@ dist_share_DATA =                                  \
 	26-batch_ops.03-jellium-spinor.inp         \
 	26-batch_ops.test                          \
 	27-clock.01.inp                            \
-	27-clock.test
+	27-clock.test                              \
+	28-cgal.01.inp                             \
+	28-cgal.02-X.off                           \
+	28-cgal.test                               \
+        29-linear_solver.01-real.inp               \
+        29-linear_solver.test                      \
+        30-eigensolver.01.inp                      \
+        30-eigensolver.test
 
 CLEANFILES = *~ *.bak

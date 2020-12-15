@@ -5,7 +5,7 @@ Program    : octopus
 TestGroups : short-run, linear_response
 Enabled    : Yes
 
-Processors : 4
+Processors : 2
 
 Input: 04-vib_modes.01-ground_state.inp
 match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
@@ -14,18 +14,21 @@ match ; Eigenvalues    ; GREPFIELD(static/info, '1   --', 3) ;        -0.141240
 Precision : 0.00011
 match ; Dipole Moment  ; GREPFIELD(static/info, '<z>', 3) ;            2.24560
 
-Input: 04-vib_modes.02-vib_modes.inp
-Precision: 0.00016
-match ;   Vibrational Frequency     ; LINEFIELD(vib_modes/normal_frequencies_lr, 1, 2) ; 1420.925005135
-Precision: 2.8e-08
-match ;   Infrared Intensity        ; LINEFIELD(vib_modes/infrared, 2, 5) ; 0.304785675
-Precision: 1.2e-07
-match ;   Dynamical Matrix Entry    ; LINEFIELD(vib_modes/dynamical_matrix_lr, 2, 5) ; -0.0180432086705
+Processors : 4
 
-Input: 04-vib_modes.022-vib_modes_restart.inp
-Precision: 0.00016
-match ;   Vibrational Frequency     ; LINEFIELD(vib_modes/normal_frequencies_lr, 1, 2) ; 1420.925005135
-Precision: 2.8e-08
-match ;   Infrared Intensity        ; LINEFIELD(vib_modes/infrared, 2, 5) ; 0.304785675
-Precision: 1.2e-07
-match ;   Dynamical Matrix Entry    ; LINEFIELD(vib_modes/dynamical_matrix_lr, 2, 5) ; -0.0180432086705
+Input: 04-vib_modes.02-vib_modes.inp
+Precision: 1.59e-04
+match ; Vibrational Frequency     ; LINEFIELD(vib_modes/normal_frequencies_lr, 1, 2) ; 1420.930568505
+Precision: 2.20e-08
+match ; Infrared Intensity        ; LINEFIELD(vib_modes/infrared, 2, 5) ; 0.30478202
+Precision: 1.44e-07
+match ; Dynamical Matrix Entry    ; LINEFIELD(vib_modes/dynamical_matrix_lr, 2, 5) ; -0.0180413639942
+
+
+Input: 04-vib_modes.03-vib_modes_restart.inp
+Precision: 1.59e-04
+match ; Vibrational Frequency     ; LINEFIELD(vib_modes/normal_frequencies_lr, 1, 2) ; 1420.930568505
+Precision: 2.20e-08
+match ; Infrared Intensity        ; LINEFIELD(vib_modes/infrared, 2, 5) ; 0.30478202
+Precision: 1.44e-07
+match ; Dynamical Matrix Entry    ; LINEFIELD(vib_modes/dynamical_matrix_lr, 2, 5) ; -0.0180413639942

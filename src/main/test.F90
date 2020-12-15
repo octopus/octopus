@@ -23,6 +23,7 @@ module test_oct_m
   use batch_ops_oct_m
   use boundaries_oct_m
   use calc_mode_par_oct_m
+  use cgal_polyhedra_oct_m
   use clock_oct_m
   use density_oct_m
   use derivatives_oct_m
@@ -31,27 +32,35 @@ module test_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_elec_oct_m
+  use hamiltonian_elec_base_oct_m
   use ion_interaction_oct_m
+  use iso_c_binding
   use io_oct_m
+  use lalg_basic_oct_m
+  use lalg_adv_oct_m
+  use mesh_oct_m
   use mesh_batch_oct_m
   use mesh_function_oct_m
   use mesh_interpolation_oct_m
   use messages_oct_m
+  use mpi_oct_m
   use multicomm_oct_m
   use namespace_oct_m
   use orbitalbasis_oct_m
   use orbitalset_oct_m
   use parser_oct_m
   use poisson_oct_m
+  use preconditioners_oct_m
   use profiling_oct_m
   use projector_oct_m
   use simul_box_oct_m
+  use solvers_oct_m
   use states_abst_oct_m
   use states_elec_oct_m
   use states_elec_calc_oct_m
   use states_elec_dim_oct_m
   use subspace_oct_m
-  use system_oct_m
+  use electrons_oct_m
   use types_oct_m
   use v_ks_oct_m
   use wfs_elec_oct_m
@@ -67,6 +76,11 @@ module test_oct_m
     integer :: min_blocksize
     integer :: max_blocksize
   end type test_parameters_t
+
+  !Auxiliary quantities needed by the linear solver
+  FLOAT :: shift_aux
+  type(derivatives_t), pointer :: der_aux  => null()
+  type(preconditioner_t)       :: prec_aux
 
   public :: test_run
 
@@ -118,6 +132,12 @@ contains
     !% Tests the batch operations
     !%Option clock 18
     !% Tests for clock
+    !%Option linear_solver 19
+    !% Tests the linear solvers
+    !%Option cgal 20
+    !% Tests for cgal interface
+    !%Option dense_eigensolver 21
+    !% Tests for dense eigensolvers (especially parallel ones)
     !%End
     call parse_variable(namespace, 'TestMode', OPTION__TESTMODE__HARTREE, test_mode)
 
@@ -220,6 +240,12 @@ contains
       call test_batch_ops(param, namespace)
     case(OPTION__TESTMODE__CLOCK)
       call test_clock()
+    case(OPTION__TESTMODE__LINEAR_SOLVER)
+      call test_linear_solver(param, namespace)
+    case(OPTION__TESTMODE__CGAL)
+      call test_cgal()
+    case(OPTION__TESTMODE__DENSE_EIGENSOLVER)
+      call test_dense_eigensolver()
     end select
 
     POP_SUB(test_run)
@@ -230,25 +256,142 @@ contains
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
 
-    type(system_t), pointer :: sys
+    type(electrons_t), pointer :: sys
 
     PUSH_SUB(test_hartree)
 
     call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
 
-    sys => system_init(namespace)
+    sys => electrons_t(namespace)
+    call sys%init_parallelization(mpi_world)
     call poisson_test(sys%hm%psolver, sys%gr%mesh, namespace, param%repetitions)
     SAFE_DEALLOCATE_P(sys)
 
     POP_SUB(test_hartree)
   end subroutine test_hartree
 
+  ! ---------------------------------------------------------
+  subroutine test_linear_solver(param, namespace)
+    type(test_parameters_t), intent(in) :: param
+    type(namespace_t),       intent(in) :: namespace
+
+    type(electrons_t), pointer :: sys
+    FLOAT, allocatable :: rho(:), x(:)
+    FLOAT :: center(MAX_DIM)
+    FLOAT :: rr, alpha, beta, res
+    integer :: ip, iter
+
+    FLOAT, parameter :: threshold = CNST(1e-7)
+
+    PUSH_SUB(test_linear_solver)
+
+    call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
+
+    sys => electrons_t(namespace)
+    call sys%init_parallelization(mpi_world)
+
+    ! We need to set up some auxiliary quantities called by the linear solver
+    call mesh_init_mesh_aux(sys%gr%mesh)
+    ! Shift of the linear equation
+    shift_aux = CNST(0.25)
+    ! Preconditioner used for the QMR algorithm
+    call preconditioner_init(prec_aux, namespace, sys%gr, sys%mc)
+    ! Derivative object needed 
+    call set_der_aux(sys%gr%der)
+
+    ! Here we put a Gaussian as the right-hand side of the linear solver
+    ! Values are taken from the poisson_test routine
+    alpha = CNST(4.0)*sys%gr%mesh%spacing(1)
+    beta = M_ONE / ( alpha**sys%gr%sb%dim * sqrt(M_PI)**sys%gr%sb%dim )
+    ! The Gaussian is centered around the origin
+    center = M_ZERO
+
+    SAFE_ALLOCATE(rho(sys%gr%mesh%np))
+    rho = M_ZERO
+    do ip = 1, sys%gr%mesh%np
+      call mesh_r(sys%gr%mesh, ip, rr, origin = center(:))
+      rho(ip) = beta*exp(-(rr/alpha)**2)
+    end do
+
+    SAFE_ALLOCATE(x(sys%gr%mesh%np))
+
+    !Test the CG linear solver
+    x = M_ZERO
+    iter = 1000
+    call dconjugate_gradients(sys%gr%mesh%np, x, rho, laplacian_op, dmf_dotp_aux, iter, res, threshold)
+    write(message(1),'(a,i6,a)')  "Info: CG converged with ", iter, " iterations."
+    write(message(2),'(a,e14.6)')    "Info: The residue is ", res
+    write(message(3),'(a,e14.6)') "Info: Norm solution CG ", dmf_nrm2(sys%gr%mesh, x)
+    call messages_info(3)
+
+    !Test the QMR linear solver
+    x = M_ZERO
+    iter = 1000
+    call dqmr_sym_spec_dotu(sys%gr%mesh%np, x, rho, laplacian_op, prec_op, iter, res, threshold)
+    write(message(1),'(a,i6,a)')  "Info: QMR converged with ", iter, " iterations."
+    write(message(2),'(a,e14.6)')    "Info: The residue is ", res
+    write(message(3),'(a,e14.6)') "Info: Norm solution QMR ", dmf_nrm2(sys%gr%mesh, x)
+    call messages_info(3)
+
+    call preconditioner_end(prec_aux)
+    SAFE_DEALLOCATE_A(x)
+    SAFE_DEALLOCATE_A(rho)
+    SAFE_DEALLOCATE_P(sys)
+
+    POP_SUB(test_linear_solver)
+    contains 
+
+    subroutine set_der_aux(der)
+      type(derivatives_t), target, intent(in) :: der
+      PUSH_SUB(test_linear_solver.set_der_aux)
+      der_aux => der
+      POP_SUB(test_linear_solver.set_der_aux)
+    end subroutine set_der_aux
+
+    ! ---------------------------------------------------------
+    !> Computes Hx = (-\Laplacian + shift) x
+    subroutine laplacian_op(x, hx)
+      FLOAT,            intent(in)    :: x(:)
+      FLOAT,            intent(out)   :: Hx(:)
+
+      FLOAT, allocatable :: tmpx(:)
+
+      ASSERT(associated(mesh_aux))
+
+      SAFE_ALLOCATE(tmpx(mesh_aux%np_part))
+      call lalg_copy(mesh_aux%np, x, tmpx)
+      call dderivatives_lapl(der_aux, tmpx, Hx)
+      call lalg_scal(mesh_aux%np, -M_ONE, hx)
+      call lalg_axpy(mesh_aux%np, shift_aux, x, hx)
+      SAFE_DEALLOCATE_A(tmpx)
+
+     end subroutine laplacian_op
+
+     ! ---------------------------------------------------------
+     subroutine prec_op (x, hx)
+       FLOAT,      intent(in)    :: x(:)   !<  x(gr%mesh%np)
+       FLOAT,      intent(out)   :: hx(:)  !< Hx(gr%mesh%np)
+ 
+       FLOAT, allocatable :: tmpx(:)
+ 
+       ASSERT(associated(mesh_aux))
+  
+       SAFE_ALLOCATE(tmpx(mesh_aux%np_part))
+       call lalg_copy(mesh_aux%np, x, tmpx)
+       call dderivatives_perform(prec_aux%op, der_aux, tmpx, hx)
+       SAFE_DEALLOCATE_A(tmpx)
+
+     end subroutine prec_op
+
+   end subroutine test_linear_solver
+
+
  ! ---------------------------------------------------------
   subroutine test_projector(param, namespace)
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
 
-    type(system_t), pointer :: sys
+    type(electrons_t), pointer :: sys
     type(wfs_elec_t), pointer :: epsib
     integer :: itime
     CMPLX, allocatable :: psi(:, :)
@@ -262,7 +405,8 @@ contains
     call messages_new_line()
     call messages_info()
 
-    sys => system_init(namespace)
+    sys => electrons_t(namespace)
+    call sys%init_parallelization(mpi_world)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh, wfs_type = TYPE_CMPLX)
     call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
@@ -303,8 +447,8 @@ contains
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
 
-    type(system_t), pointer :: sys
-    type(wfs_elec_t), pointer :: epsib
+    type(electrons_t), pointer :: sys
+    type(wfs_elec_t), pointer :: epsib, epsib2
     integer :: itime
     type(orbitalbasis_t) :: basis
     FLOAT, allocatable :: ddot(:,:,:), dweight(:,:)
@@ -319,40 +463,58 @@ contains
     call messages_new_line()
     call messages_info()
 
-    sys => system_init(namespace)
+    sys => electrons_t(namespace)
+    call sys%init_parallelization(mpi_world)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
     call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
     if(sys%st%d%pack_states) call sys%st%pack()
 
     SAFE_ALLOCATE(epsib)
-    call sys%st%group%psib(1, 1)%copy_to(epsib, copy_data = .true.)
+    SAFE_ALLOCATE(epsib2)
+    call sys%st%group%psib(1, 1)%copy_to(epsib2, copy_data = .true.)
+
+    !We set the phase of the batch if needed
+    if(.not.associated(sys%hm%hm_base%phase)) then
+      call sys%st%group%psib(1, 1)%copy_to(epsib, copy_data = .true.)
+    else
+      call sys%st%group%psib(1, 1)%copy_to(epsib)
+      call hamiltonian_elec_base_phase(sys%hm%hm_base, sys%gr%mesh, sys%gr%mesh%np, &
+               .false., epsib, src=sys%st%group%psib(1, 1))
+      epsib2%has_phase = .true.
+    end if
 
     !Initialize the orbital basis
-    call orbitalbasis_init(basis, sys%namespace)
+    call orbitalbasis_init(basis, sys%namespace, sys%gr%sb)
     if (states_are_real(sys%st)) then
       call dorbitalbasis_build(basis, sys%geo, sys%gr%mesh, sys%st%d%kpt, sys%st%d%dim, .false., .false.)
-      SAFE_ALLOCATE(dweight(1:basis%orbsets(1)%sphere%np,1:epsib%nst_linear))
-      SAFE_ALLOCATE(ddot(1:sys%st%d%dim,1:basis%orbsets(1)%norbs, 1:epsib%nst))
+      SAFE_ALLOCATE(dweight(1:basis%orbsets(1)%norbs, 1:epsib%nst_linear))
+      SAFE_ALLOCATE(ddot(1:sys%st%d%dim, 1:basis%orbsets(1)%norbs, 1:epsib%nst))
     else
       call zorbitalbasis_build(basis, sys%geo, sys%gr%mesh, sys%st%d%kpt, sys%st%d%dim, .false., .false.)
       call orbitalset_update_phase(basis%orbsets(1), sys%gr%sb, sys%st%d%kpt, (sys%st%d%ispin==SPIN_POLARIZED))
-      SAFE_ALLOCATE(zweight(1:basis%orbsets(1)%sphere%np,1:epsib%nst_linear))
-      SAFE_ALLOCATE(zdot(1:sys%st%d%dim,1:basis%orbsets(1)%norbs, 1:epsib%nst))
+      SAFE_ALLOCATE(zweight(1:basis%orbsets(1)%norbs, 1:epsib%nst_linear))
+      SAFE_ALLOCATE(zdot(1:sys%st%d%dim, 1:basis%orbsets(1)%norbs, 1:epsib%nst))
+
+      !We set the phase of the orbitals if needed
+      if(associated(sys%hm%hm_base%phase)) then
+        call orbitalset_update_phase(basis%orbsets(1), sys%gr%sb, sys%st%d%kpt, &
+                   (sys%st%d%ispin==SPIN_POLARIZED))
+      end if
     end if
 
     do itime = 1, param%repetitions
-      call batch_set_zero(epsib)
+      call batch_set_zero(epsib2)
       if(states_are_real(sys%st)) then
         dweight = M_ONE
         ddot = M_ZERO
-        call dorbitalset_get_coeff_batch(basis%orbsets(1), 1, sys%st%group%psib(1, 1), .false., ddot)
-        call dorbitalset_add_to_batch(basis%orbsets(1), 1, epsib, .false., dweight)
+        call dorbitalset_get_coeff_batch(basis%orbsets(1), sys%st%d%dim, sys%st%group%psib(1, 1), ddot)
+        call dorbitalset_add_to_batch(basis%orbsets(1), sys%st%d%dim, epsib2, dweight)
       else
         zweight = M_ONE
         zdot = M_ZERO
-        call zorbitalset_get_coeff_batch(basis%orbsets(1), sys%st%d%dim, sys%st%group%psib(1, 1), .false., zdot)
-        call zorbitalset_add_to_batch(basis%orbsets(1), sys%st%d%dim, epsib, .false., zweight)
+        call zorbitalset_get_coeff_batch(basis%orbsets(1), sys%st%d%dim, epsib, zdot)
+        call zorbitalset_add_to_batch(basis%orbsets(1), sys%st%d%dim, epsib2, zweight)
       end if
     end do
 
@@ -360,7 +522,7 @@ contains
       call epsib%do_unpack(force = .true.)
     end if
 
-    call test_prints_info_batch(sys%st, sys%gr, epsib)
+    call test_prints_info_batch(sys%st, sys%gr, epsib2)
 
     SAFE_DEALLOCATE_A(dweight)
     SAFE_DEALLOCATE_A(zweight)
@@ -369,6 +531,8 @@ contains
 
     call epsib%end()
     SAFE_DEALLOCATE_P(epsib)
+    call epsib2%end()
+    SAFE_DEALLOCATE_P(epsib2)
     call orbitalbasis_end(basis)
     call states_elec_deallocate_wfns(sys%st)
     SAFE_DEALLOCATE_P(sys)
@@ -381,7 +545,7 @@ contains
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
 
-    type(system_t), pointer :: sys
+    type(electrons_t), pointer :: sys
     type(wfs_elec_t), pointer :: hpsib
     integer :: itime, terms
 
@@ -413,7 +577,8 @@ contains
     call messages_new_line()
     call messages_info()
 
-    sys => system_init(namespace)
+    sys => electrons_t(namespace)
+    call sys%init_parallelization(mpi_world)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
     call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
@@ -464,7 +629,7 @@ contains
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
 
-    type(system_t), pointer :: sys
+    type(electrons_t), pointer :: sys
     integer :: itime
 
     PUSH_SUB(test_density_calc)
@@ -476,7 +641,8 @@ contains
     call messages_new_line()
     call messages_info()
 
-    sys => system_init(namespace)
+    sys => electrons_t(namespace)
+    call sys%init_parallelization(mpi_world)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
     call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
@@ -501,7 +667,7 @@ contains
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
 
-    type(system_t), pointer :: sys
+    type(electrons_t), pointer :: sys
     integer :: itime
 
     PUSH_SUB(test_density_calc)
@@ -513,7 +679,8 @@ contains
     call messages_new_line()
     call messages_info()
 
-    sys => system_init(namespace)
+    sys => electrons_t(namespace)
+    call sys%init_parallelization(mpi_world)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
     call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
@@ -537,7 +704,7 @@ contains
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
 
-    type(system_t), pointer :: sys
+    type(electrons_t), pointer :: sys
     type(exponential_t) :: te
     integer :: itime
 
@@ -550,7 +717,8 @@ contains
     call messages_new_line()
     call messages_info()
 
-    sys => system_init(namespace)
+    sys => electrons_t(namespace)
+    call sys%init_parallelization(mpi_world)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh, wfs_type=TYPE_CMPLX)
     call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
@@ -587,7 +755,7 @@ contains
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
 
-    type(system_t), pointer :: sys
+    type(electrons_t), pointer :: sys
     integer :: itime
     type(subspace_t) :: sdiag
 
@@ -600,7 +768,8 @@ contains
     call messages_new_line()
     call messages_info()
 
-    sys => system_init(namespace)
+    sys => electrons_t(namespace)
+    call sys%init_parallelization(mpi_world)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
     call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
@@ -634,7 +803,7 @@ contains
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
 
-    type(system_t), pointer :: sys
+    type(electrons_t), pointer :: sys
     integer :: itime, ops, ops_default, ist, jst, nst
     type(wfs_elec_t) :: xx, yy
     FLOAT, allocatable :: tmp(:)
@@ -681,7 +850,8 @@ contains
     call messages_new_line()
     call messages_info()
 
-    sys => system_init(namespace)
+    sys => electrons_t(namespace)
+    call sys%init_parallelization(mpi_world)
 
     call states_elec_allocate_wfns(sys%st, sys%gr%mesh)
     call states_elec_generate_random(sys%st, sys%gr%mesh, sys%gr%sb)
@@ -743,7 +913,7 @@ contains
     end if
 
     if(bitand(ops, OPTION__TESTBATCHOPS__OPS_DOTP_MATRIX) /= 0) then
-    
+
       message(1) = 'Info: Testing dotp_matrix'
       call messages_info(1)
 
@@ -775,11 +945,11 @@ contains
         end do
         SAFE_DEALLOCATE_A(zdot)
       end if
-  
+
       call xx%end()
       call yy%end()    
     end if
-  
+
     if(bitand(ops, OPTION__TESTBATCHOPS__OPS_DOTP_VECTOR) /= 0) then
     
       message(1) = 'Info: Testing dotp_vector'
@@ -808,13 +978,13 @@ contains
         call messages_info(nst)
         SAFE_DEALLOCATE_A(zdotv)
       end if
-  
+
       call xx%end()
       call yy%end()    
     end if
 
     if(bitand(ops, OPTION__TESTBATCHOPS__OPS_DOTP_SELF) /= 0) then
-    
+
       message(1) = 'Info: Testing dotp_self'
       call messages_info(1)
 
@@ -844,7 +1014,7 @@ contains
         end do
         SAFE_DEALLOCATE_A(zdot)
       end if
-  
+
       call xx%end()
     end if
 
@@ -854,17 +1024,17 @@ contains
     POP_SUB(test_batch_ops)
   end subroutine test_batch_ops
 
-
 ! ---------------------------------------------------------
   subroutine test_derivatives(param, namespace)
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
 
-    type(system_t), pointer :: sys
+    type(electrons_t), pointer :: sys
 
     PUSH_SUB(test_derivatives)
 
-    sys => system_init(namespace)
+    sys => electrons_t(namespace)
+    call sys%init_parallelization(mpi_world)
 
     message(1) = 'Info: Testing the finite-differences derivatives.'
     message(2) = ''
@@ -889,7 +1059,7 @@ contains
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
 
-    type(system_t), pointer :: sys
+    type(electrons_t), pointer :: sys
     integer :: itime
 
     PUSH_SUB(test_orthogonalization)
@@ -897,7 +1067,8 @@ contains
     call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
     call calc_mode_par_set_scalapack_compat()
 
-    sys => system_init(namespace)
+    sys => electrons_t(namespace)
+    call sys%init_parallelization(mpi_world)
 
     message(1) = 'Info: Testing orthogonalization.'
     message(2) = ''
@@ -930,11 +1101,12 @@ contains
     type(test_parameters_t), intent(in) :: param
     type(namespace_t),       intent(in) :: namespace
 
-    type(system_t), pointer :: sys
+    type(electrons_t), pointer :: sys
 
     PUSH_SUB(test_interpolation)
 
-    sys => system_init(namespace)
+    sys => electrons_t(namespace)
+    call sys%init_parallelization(mpi_world)
 
     if(param%type == OPTION__TESTTYPE__ALL .or. param%type == OPTION__TESTTYPE__REAL) then
       call messages_write('Info: Testing real interpolation routines')
@@ -966,13 +1138,14 @@ contains
   subroutine test_ion_interaction(namespace)
     type(namespace_t),        intent(in) :: namespace
 
-    type(system_t), pointer :: sys
+    type(electrons_t), pointer :: sys
 
     PUSH_SUB(test_ion_interaction)
 
-    sys => system_init(namespace)
+    sys => electrons_t(namespace)
+    call sys%init_parallelization(mpi_world)
 
-    call ion_interaction_test(sys%geo, sys%namespace, sys%gr%sb)
+    call ion_interaction_test(sys%geo, sys%namespace, sys%gr%sb, sys%mc)
 
     SAFE_DEALLOCATE_P(sys)
 
@@ -1032,50 +1205,127 @@ contains
 
     PUSH_SUB(test_clock)
 
-    test_clock_a = clock_t('test_clock_a', CNST(2.0), CNST(1.0), 100)
-    test_clock_b = clock_t('test_clock_b', CNST(1.0), CNST(1.0))
+    test_clock_a = clock_t(time_step=CNST(2.0), initial_tick=100)
+    test_clock_b = clock_t(time_step=CNST(1.0))
     call test_clock_a%print()
     call test_clock_b%print()
 
     call test_clock_a%set_time(test_clock_b)
     call test_clock_a%print()
-    call test_clock_a%increment()
+    test_clock_a = test_clock_a + CLOCK_TICK
     call test_clock_a%print()
-    call test_clock_a%decrement()
+    test_clock_a = test_clock_a - CLOCK_TICK
     call test_clock_a%print()
-    call test_clock_a%increment()
+    test_clock_a = test_clock_a + CLOCK_TICK
     call test_clock_a%print()
     call test_clock_a%reset()
     call test_clock_a%print()
-    call test_clock_a%increment(3)
+    test_clock_a = test_clock_a + 3*CLOCK_TICK
     call test_clock_a%print()
-    call test_clock_a%decrement(2)
+    test_clock_a = test_clock_a - 2*CLOCK_TICK
     call test_clock_a%print()
     message(1) = test_clock_a%print_str()
     call messages_info(1)
 
     write(message(1),'(A,x,I10.10)') &
-	'clock_get_tick', test_clock_a%get_tick()
+          'clock_get_tick', test_clock_a%get_tick()
     write(message(2),'(A,x,F15.10)') &
-	'clock_get_sim_time', test_clock_a%get_sim_time()
+          'clock_time', test_clock_a%time()
     write(message(3),'(A,x,I1)')     &
-	'clock_is_earlier', abs(transfer(test_clock_a .lt. test_clock_b, 0))
+          'clock_is_earlier', abs(transfer(test_clock_a .lt. test_clock_b, 0))
     write(message(4),'(A,x,I1)')     &
-	'clock_is_equal_or_earlier', abs(transfer(test_clock_a .le. test_clock_b, 0))
+          'clock_is_equal_or_earlier', abs(transfer(test_clock_a .le. test_clock_b, 0))
     write(message(5),'(A,x,I1)')     &
-	'clock_is_later', abs(transfer(test_clock_a .gt. test_clock_b, 0))
+          'clock_is_later', abs(transfer(test_clock_a .gt. test_clock_b, 0))
     write(message(6),'(A,x,I1)')     &
-	'clock_is_equal_or_later', abs(transfer(test_clock_a .ge. test_clock_b, 0))
+          'clock_is_equal_or_later', abs(transfer(test_clock_a .ge. test_clock_b, 0))
     write(message(7),'(A,x,I1)')     &
-	'clock_is_equal', abs(transfer(test_clock_a .eq. test_clock_b, 0))
-    write(message(8),'(A,x,I1)')     &
-	'clock_is_later_with_step', abs(transfer(test_clock_a%is_later_with_step(test_clock_b), 0))
-    call messages_info(8)
-
+          'clock_is_equal', abs(transfer(test_clock_a .eq. test_clock_b, 0))
+    call messages_info(7)
 
     POP_SUB(test_clock)
   end subroutine test_clock
 
+
+  ! ---------------------------------------------------------
+  subroutine test_cgal()
+
+    type(cgal_polyhedra_t) :: cgal_poly
+
+    PUSH_SUB(test_cgal)
+
+    call cgal_polyhedron_init(cgal_poly, "28-cgal.02-X.off", verbose = .true.)
+
+    if(cgal_polyhedron_point_inside(cgal_poly, CNST(30.), CNST(10.), CNST(30.))) then
+       message(1) = "cgal_polyhedron_point_inside"
+       call messages_info(1)
+    end if
+
+    call cgal_polyhedron_end(cgal_poly)
+
+    POP_SUB(test_cgal)
+  end subroutine test_cgal
+
+
+  ! ---------------------------------------------------------
+  subroutine test_dense_eigensolver()
+    integer :: N, ii, jj, N_list(4), i_N
+    FLOAT, allocatable :: matrix(:, :), eigenvectors(:, :), eigenvalues(:), test(:)
+    FLOAT, allocatable :: differences(:)
+
+    PUSH_SUB(test_dense_eigensolver)
+
+    N_list = [15, 32, 100, 500]
+
+    do i_N = 1, 4
+      N = N_list(i_N)
+      SAFE_ALLOCATE(matrix(N, N))
+      SAFE_ALLOCATE(eigenvectors(N, N))
+      SAFE_ALLOCATE(eigenvalues(N))
+      SAFE_ALLOCATE(test(N))
+      SAFE_ALLOCATE(differences(N))
+
+
+      ! set up symmetrix matrix
+      do jj = 1, N
+        do ii = 1, N
+          matrix(ii, jj) = ii * jj
+        end do
+      end do
+
+      ! parallel solver
+      eigenvectors(1:N, 1:N) = matrix(1:N, 1:N)
+      call lalg_eigensolve_parallel(N, eigenvectors, eigenvalues)
+
+      do ii = 1, N
+        test(:) = matmul(matrix, eigenvectors(:, ii)) - eigenvalues(ii) * eigenvectors(:, ii)
+        differences(ii) = sum(abs(test)) / sum(abs(eigenvectors(:, ii)))
+      end do
+      write(message(1), "(A, I3, A, E13.6)") "Parallel solver - N: ", N, &
+        ", average difference: ", sum(differences)/N
+      call messages_info(1)
+
+      ! serial solver
+      eigenvectors(1:N, 1:N) = matrix(1:N, 1:N)
+      call lalg_eigensolve(N, eigenvectors, eigenvalues)
+
+      do ii = 1, N
+        test(:) = matmul(matrix, eigenvectors(:, ii)) - eigenvalues(ii) * eigenvectors(:, ii)
+        differences(ii) = sum(abs(test)) / sum(abs(eigenvectors(:, ii)))
+      end do
+      write(message(1), "(A, I3, A, E13.6)") "Serial solver   - N: ", N, &
+        ", average difference: ", sum(differences)/N
+      call messages_info(1)
+
+      SAFE_DEALLOCATE_A(matrix)
+      SAFE_DEALLOCATE_A(eigenvectors)
+      SAFE_DEALLOCATE_A(eigenvalues)
+      SAFE_DEALLOCATE_A(test)
+      SAFE_DEALLOCATE_A(differences)
+    end do
+
+    POP_SUB(test_dense_eigensolver)
+  end subroutine test_dense_eigensolver
 end module test_oct_m
 
 !! Local Variables:

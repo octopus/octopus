@@ -42,23 +42,23 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
 
   ASSERT(.false.)
 
-  SAFE_ALLOCATE(psi(1:gr%mesh%np_part, 1:gr%mesh%sb%dim))
-  SAFE_ALLOCATE(   gpsi(1:gr%mesh%np, 1:gr%mesh%sb%dim))
-  SAFE_ALLOCATE(gdl_psi(1:gr%mesh%np, 1:gr%mesh%sb%dim))
+  SAFE_ALLOCATE(psi(1:gr%mesh%np_part, 1:gr%sb%dim))
+  SAFE_ALLOCATE(   gpsi(1:gr%mesh%np, 1:gr%sb%dim))
+  SAFE_ALLOCATE(gdl_psi(1:gr%mesh%np, 1:gr%sb%dim))
 
   if(present(lr_m)) then
-    SAFE_ALLOCATE(gdl_psi_m(1:gr%mesh%np, 1:gr%mesh%sb%dim))
+    SAFE_ALLOCATE(gdl_psi_m(1:gr%mesh%np, 1:gr%sb%dim))
   end if
 
-  SAFE_ALLOCATE(   grho(1:gr%mesh%np, 1:gr%mesh%sb%dim))
-  SAFE_ALLOCATE(gdl_rho(1:gr%mesh%np, 1:gr%mesh%sb%dim))
+  SAFE_ALLOCATE(   grho(1:gr%mesh%np, 1:gr%sb%dim))
+  SAFE_ALLOCATE(gdl_rho(1:gr%mesh%np, 1:gr%sb%dim))
 
   SAFE_ALLOCATE(   rho(1:gr%mesh%np_part))
   SAFE_ALLOCATE(dl_rho(1:gr%mesh%np_part))
 
   SAFE_ALLOCATE(   elf(1:gr%mesh%np, 1:st%d%nspin))
   SAFE_ALLOCATE(    de(1:gr%mesh%np, 1:st%d%nspin))
-  SAFE_ALLOCATE(current(1:gr%mesh%np_part, 1:gr%mesh%sb%dim, 1:st%d%nspin))
+  SAFE_ALLOCATE(current(1:gr%mesh%np_part, 1:gr%sb%dim, 1:st%d%nspin))
 
   if( .not. associated(lr%X(dl_de)) ) then
     SAFE_ALLOCATE(lr%X(dl_de)(1:gr%mesh%np, 1:st%d%nspin)) 
@@ -114,7 +114,7 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
           rho(1:gr%mesh%np) = rho(1:gr%mesh%np) + ik_weight * abs(psi(1:gr%mesh%np, idim))**2
 
           !the gradient of the density
-          do idir = 1, gr%mesh%sb%dim
+          do idir = 1, gr%sb%dim
             grho(1:gr%mesh%np, idir) = grho(1:gr%mesh%np, idir) + &
                  ik_weight*M_TWO*R_REAL(R_CONJ(psi(1:gr%mesh%np, idim))*gpsi(1:gr%mesh%np, idir))
           end do
@@ -129,7 +129,7 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
               R_CONJ(psi(1:gr%mesh%np, idim))*lr%X(dl_psi)(1:gr%mesh%np, idim, ist, is) + &
               psi(1:gr%mesh%np, idim)*R_CONJ(lr_m%X(dl_psi)(1:gr%mesh%np, idim, ist, is)))
 
-            do idir = 1, gr%mesh%sb%dim
+            do idir = 1, gr%sb%dim
 
               gdl_rho(1:gr%mesh%np, idir) = gdl_rho(1:gr%mesh%np, idir) + ik_weight*( &
                    R_CONJ(psi(1:gr%mesh%np, idim))*gdl_psi(1:gr%mesh%np, idir) + &
@@ -144,7 +144,7 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
             dl_rho(1:gr%mesh%np) = dl_rho(1:gr%mesh%np) + ik_weight*M_TWO* &
                  R_REAL(R_CONJ(psi(1:gr%mesh%np, idim))*lr%X(dl_psi)(1:gr%mesh%np, idim, ist, is))
 
-            do idir = 1, gr%mesh%sb%dim
+            do idir = 1, gr%sb%dim
               gdl_rho(1:gr%mesh%np, idir) = gdl_rho(1:gr%mesh%np, idir) + ik_weight*M_TWO*(&
                 R_CONJ(psi(1:gr%mesh%np, idim))*gdl_psi(1:gr%mesh%np, idir) + &
                 gpsi(1:gr%mesh%np, idir)*R_CONJ(lr%X(dl_psi)(1:gr%mesh%np, idim, ist, is)))
@@ -178,19 +178,19 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
 
             do ip = 1, gr%mesh%np
               lr%X(dl_de)(ip, is) = lr%X(dl_de)(ip, is) + &
-                dl_rho(ip) * ik_weight * sum(abs(gpsi(ip, 1:gr%mesh%sb%dim))**2) + &
+                dl_rho(ip) * ik_weight * sum(abs(gpsi(ip, 1:gr%sb%dim))**2) + &
                 rho(ip) * ik_weight * &
-                sum(R_CONJ(gpsi(ip, 1:gr%mesh%sb%dim))*gdl_psi(ip, 1:gr%mesh%sb%dim) + &
-                gpsi(ip, 1:gr%mesh%sb%dim) * R_CONJ(gdl_psi_m(ip, 1:gr%mesh%sb%dim)))
+                sum(R_CONJ(gpsi(ip, 1:gr%sb%dim))*gdl_psi(ip, 1:gr%sb%dim) + &
+                gpsi(ip, 1:gr%sb%dim) * R_CONJ(gdl_psi_m(ip, 1:gr%sb%dim)))
             end do
 
           else 
 
             do ip = 1, gr%mesh%np
               lr%X(dl_de)(ip, is) = lr%X(dl_de)(ip, is) + &
-                dl_rho(ip) * ik_weight * sum(abs(gpsi(ip, 1:gr%mesh%sb%dim))**2) + &
+                dl_rho(ip) * ik_weight * sum(abs(gpsi(ip, 1:gr%sb%dim))**2) + &
                 rho(ip) * ik_weight * M_TWO * &
-                (sum(R_CONJ(gpsi(ip, 1:gr%mesh%sb%dim)) * gdl_psi(ip, 1:gr%mesh%sb%dim)))
+                (sum(R_CONJ(gpsi(ip, 1:gr%sb%dim)) * gdl_psi(ip, 1:gr%sb%dim)))
             end do
 
           end if
@@ -203,7 +203,7 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
     do ip = 1, gr%mesh%np
       if(abs(st%rho(ip, is)) >= dmin) then
         lr%X(dl_de)(ip, is) = lr%X(dl_de)(ip, is) - &
-          M_HALF * sum(grho(ip, 1:gr%mesh%sb%dim) * gdl_rho(ip, 1:gr%mesh%sb%dim))
+          M_HALF * sum(grho(ip, 1:gr%sb%dim) * gdl_rho(ip, 1:gr%sb%dim))
       end if
     end do
 
@@ -212,7 +212,7 @@ subroutine X(lr_calc_elf)(st, gr, lr, lr_m)
       do ip = 1, gr%mesh%np
         if(abs(st%rho(ip, is)) >= dmin) then
           lr%zdl_de(ip, is) = lr%zdl_de(ip, is) + &
-            M_TWO * sum(current(ip, 1:gr%mesh%sb%dim, is) * lr%dl_j(ip, 1:gr%mesh%sb%dim, is))
+            M_TWO * sum(current(ip, 1:gr%sb%dim, is) * lr%dl_j(ip, 1:gr%sb%dim, is))
         end if
       end do
     end if
@@ -261,13 +261,13 @@ end subroutine X(lr_calc_elf)
 ! ---------------------------------------------------------
 !> alpha_ij(w) = -e sum(m occ, k) [(<u_mk(0)|-id/dk_i)|u_mkj(1)(w)> + <u_mkj(1)(-w)|(-id/dk_i|u_mk(0)>)]
 subroutine X(calc_polarizability_periodic)(sys, em_lr, kdotp_lr, nsigma, zpol, ndir, zpol_k)
-  type(system_t), target, intent(inout) :: sys
-  type(lr_t),             intent(inout) :: em_lr(:,:)
-  type(lr_t),             intent(inout) :: kdotp_lr(:)
-  integer,                intent(in)    :: nsigma
-  CMPLX,                  intent(out)   :: zpol(:, :) !< (sb%dim, sb%dim)
-  integer, optional,      intent(in)    :: ndir
-  CMPLX, optional,        intent(out)   :: zpol_k(:, :, :)
+  type(electrons_t),   target, intent(inout) :: sys
+  type(lr_t),                  intent(inout) :: em_lr(:,:)
+  type(lr_t),                  intent(inout) :: kdotp_lr(:)
+  integer,                     intent(in)    :: nsigma
+  CMPLX,                       intent(out)   :: zpol(:, :) !< (sb%dim, sb%dim)
+  integer,           optional, intent(in)    :: ndir
+  CMPLX,             optional, intent(out)   :: zpol_k(:, :, :)
 
   integer :: dir1, dir2, ndir_, ist, ik
   CMPLX :: term, subterm
@@ -367,13 +367,13 @@ end subroutine X(calc_polarizability_periodic)
 !> alpha_ij(w) = - sum(m occ) [<psi_m(0)|r_i|psi_mj(1)(w)> + <psi_mj(1)(-w)|r_i|psi_m(0)>]
 !! minus sign is from electronic charge -e
 subroutine X(calc_polarizability_finite)(sys, lr, nsigma, perturbation, zpol, doalldirs, ndir)
-  type(system_t), target, intent(inout) :: sys
-  type(lr_t),             intent(inout) :: lr(:,:)
-  integer,                intent(in)    :: nsigma
-  type(pert_t),           intent(inout) :: perturbation
-  CMPLX,                  intent(out)   :: zpol(1:MAX_DIM, 1:MAX_DIM)
-  logical, optional,      intent(in)    :: doalldirs
-  integer, optional,      intent(in)    :: ndir
+  type(electrons_t),   target, intent(inout) :: sys
+  type(lr_t),                  intent(inout) :: lr(:,:)
+  integer,                     intent(in)    :: nsigma
+  type(pert_t),                intent(inout) :: perturbation
+  CMPLX,                       intent(out)   :: zpol(1:MAX_DIM, 1:MAX_DIM)
+  logical,           optional, intent(in)    :: doalldirs
+  integer,           optional, intent(in)    :: ndir
 
   type(states_elec_t), pointer :: st
   integer :: dir1, dir2, ndir_, startdir, np
@@ -419,11 +419,11 @@ end subroutine X(calc_polarizability_finite)
 
 ! ---------------------------------------------------------
 subroutine X(lr_calc_susceptibility)(sys, lr, nsigma, perturbation, chi_para, chi_dia)
-  type(system_t), target, intent(inout) :: sys
-  type(lr_t),             intent(inout) :: lr(:,:)
-  integer,                intent(in)    :: nsigma
-  type(pert_t),           intent(inout) :: perturbation
-  CMPLX,                  intent(out)   :: chi_para(:,:), chi_dia(:,:)
+  type(electrons_t),   target, intent(inout) :: sys
+  type(lr_t),                  intent(inout) :: lr(:,:)
+  integer,                     intent(in)    :: nsigma
+  type(pert_t),                intent(inout) :: perturbation
+  CMPLX,                       intent(out)   :: chi_para(:,:), chi_dia(:,:)
 
   type(states_elec_t), pointer :: st
   integer :: dir1, dir2, np
@@ -489,14 +489,14 @@ end subroutine X(lr_calc_susceptibility)
 !! kdotp_lr(dir) = kdotp perturbation of ground-state wavefunctions
 !! kdotp_em_lr(dir1, dir2, sigma, omega) = kdotp perturbation of electric-perturbed wfns
 subroutine X(lr_calc_beta) (sh, sys, em_lr, dipole, beta, kdotp_lr, kdotp_em_lr, occ_response, dl_eig)
-  type(sternheimer_t),     intent(inout) :: sh
-  type(system_t), target,  intent(inout) :: sys
-  type(lr_t),              intent(inout) :: em_lr(:,:,:)
-  type(pert_t),            intent(inout) :: dipole
-  CMPLX,                   intent(out)   :: beta(1:MAX_DIM, 1:MAX_DIM, 1:MAX_DIM)
-  type(lr_t),    optional, intent(in)    :: kdotp_lr(:)
-  type(lr_t),    optional, intent(in)    :: kdotp_em_lr(:,:,:,:) !< kdotp dir, em dir, sigma, factor
-  logical,       optional, intent(in)    :: occ_response !< do the wfns include the occ subspace?
+  type(sternheimer_t),         intent(inout) :: sh
+  type(electrons_t),   target, intent(inout) :: sys
+  type(lr_t),                  intent(inout) :: em_lr(:,:,:)
+  type(pert_t),                intent(inout) :: dipole
+  CMPLX,                       intent(out)   :: beta(1:MAX_DIM, 1:MAX_DIM, 1:MAX_DIM)
+  type(lr_t),        optional, intent(in)    :: kdotp_lr(:)
+  type(lr_t),        optional, intent(in)    :: kdotp_em_lr(:,:,:,:) !< kdotp dir, em dir, sigma, factor
+  logical,           optional, intent(in)    :: occ_response !< do the wfns include the occ subspace?
   !< occ_response = yes is based on Baroni et al., RMP 73, 515 (2001), eqn 122
   !! occ_response = no  is based on Baroni et al., RMP 73, 515 (2001), eqn 123
   !!   The occ_response = no version can be used even if the wfns do include the
@@ -519,7 +519,7 @@ subroutine X(lr_calc_beta) (sh, sys, em_lr, dipole, beta, kdotp_lr, kdotp_em_lr,
 
   PUSH_SUB(X(lr_calc_beta))
 
-  call profiling_in(beta_prof, "CALC_BETA")
+  call profiling_in(beta_prof, TOSTRING(X(CALC_BETA)))
 
   st   => sys%st
   mesh => sys%gr%mesh
@@ -804,14 +804,14 @@ end subroutine X(lr_calc_beta)
 
 ! ---------------------------------------------------------
 subroutine X(post_orthogonalize)(sys, nfactor, nsigma, freq_factor, omega, eta, em_lr, kdotp_em_lr)
-  type(system_t), intent(in)    :: sys
-  integer,        intent(in)    :: nfactor
-  integer,        intent(in)    :: nsigma
-  FLOAT,          intent(in)    :: freq_factor(:)
-  FLOAT,          intent(in)    :: omega
-  FLOAT,          intent(in)    :: eta                  !< should be zero when wfns are real
-  type(lr_t),     intent(inout) :: em_lr(:,:,:)         !< em dir, sigma, factor
-  type(lr_t),     intent(inout) :: kdotp_em_lr(:,:,:,:) !< kdotp dir, em dir, sigma, factor
+  type(electrons_t),   intent(in)    :: sys
+  integer,             intent(in)    :: nfactor
+  integer,             intent(in)    :: nsigma
+  FLOAT,               intent(in)    :: freq_factor(:)
+  FLOAT,               intent(in)    :: omega
+  FLOAT,               intent(in)    :: eta                  !< should be zero when wfns are real
+  type(lr_t),          intent(inout) :: em_lr(:,:,:)         !< em dir, sigma, factor
+  type(lr_t),          intent(inout) :: kdotp_em_lr(:,:,:,:) !< kdotp dir, em dir, sigma, factor
 
   integer :: kdotp_dir, em_dir, isigma, ifactor
   R_TYPE :: frequency
@@ -849,7 +849,7 @@ end subroutine X(post_orthogonalize)
 ! but it can be approximated for large cells along the lines of the "single-point Berry phase":
 ! <\psi|-i d/dk|\psi> =~ (L/2 \pi) Im <\psi|exp(2 \pi i x / L)|\psi> ( =~ <\psi|x|\psi> )
 subroutine X(em_resp_calc_eigenvalues)(sys, dl_eig)
-  type(system_t),      intent(in)  :: sys
+  type(electrons_t),   intent(in)  :: sys
   FLOAT,               intent(out) :: dl_eig(:,:,:) !< (ist, ik, idir)
 
   integer :: ik, ist, ip, idim, idir
@@ -874,10 +874,10 @@ subroutine X(em_resp_calc_eigenvalues)(sys, dl_eig)
       do idir = 1, sys%gr%sb%periodic_dim
         do idim = 1, sys%st%d%dim
           do ip = 1, sys%gr%mesh%np
-            integrand(ip) = exp(M_zI*(M_PI/sys%gr%mesh%sb%lsize(idir))*sys%gr%mesh%x(ip, idir)) * abs(psi(ip, idim))**2
+            integrand(ip) = exp(M_zI*(M_PI/sys%gr%sb%lsize(idir))*sys%gr%mesh%x(ip, idir)) * abs(psi(ip, idim))**2
           end do
           dl_eig(ist, ik, idir) = dl_eig(ist, ik, idir) + &
-            (sys%gr%mesh%sb%lsize(idir)/M_PI) * aimag(zmf_integrate(sys%gr%mesh, integrand))
+            (sys%gr%sb%lsize(idir)/M_PI) * aimag(zmf_integrate(sys%gr%mesh, integrand))
         end do
       end do
     end do
@@ -905,7 +905,7 @@ end subroutine X(em_resp_calc_eigenvalues)
 subroutine X(lr_calc_magneto_optics_finite)(sh, sh_mo, sys, nsigma, nfactor, lr_e, &
   lr_b, chi)
   type(sternheimer_t),    intent(inout) :: sh, sh_mo
-  type(system_t),         intent(inout) :: sys
+  type(electrons_t),      intent(inout) :: sys
   integer,                intent(in)    :: nsigma
   integer,                intent(in)    :: nfactor
   type(lr_t),             intent(inout) :: lr_e(:,:,:)
@@ -1138,7 +1138,7 @@ end subroutine X(lr_calc_magneto_optics_finite)
 ! ---------------------------------------------------------
 subroutine X(calc_kvar_energy)(sh_mo, sys, lr1, lr2, lr3, hpol_density)
   type(sternheimer_t),    intent(inout) :: sh_mo
-  type(system_t),         intent(inout) :: sys
+  type(electrons_t),      intent(inout) :: sys
   type(lr_t),             intent(inout) :: lr1, lr2, lr3
   R_TYPE,                 intent(inout) :: hpol_density(:)
     
@@ -1166,7 +1166,7 @@ subroutine X(lr_calc_magneto_optics_periodic)(sh, sh2, sys, nsigma, nfactor, &
   nfactor_ke, freq_factor, lr_e, lr_b, lr_k, lr_k2, lr_ke, lr_kb, frequency, zpol,&
   zpol_kout)
   type(sternheimer_t),  intent(inout) :: sh, sh2
-  type(system_t),       intent(inout) :: sys 
+  type(electrons_t),    intent(inout) :: sys 
   integer,              intent(in)    :: nsigma
   integer,              intent(in)    :: nfactor
   integer,              intent(in)    :: nfactor_ke
@@ -1218,7 +1218,7 @@ subroutine X(lr_calc_magneto_optics_periodic)(sh, sh2, sys, nsigma, nfactor, &
   ASSERT(nfactor == 2)
   
   np = sys%gr%mesh%np
-  ndir = sys%gr%mesh%sb%dim
+  ndir = sys%gr%sb%dim
   ndim = sys%st%d%dim
 
   SAFE_ALLOCATE(gpsi(1:np, 1:ndim, 1:sys%st%nst, 1:nsigma))
@@ -1532,7 +1532,7 @@ subroutine X(lr_calc_magneto_optics_periodic)(sh, sh2, sys, nsigma, nfactor, &
 
   zpol(:,:,:) = -M_zI / (frequency) * zpol(:,:,:) 
   if(nfactor_ke > 1) zpol(:,:,:) = M_HALF * zpol(:,:,:)
-  call zsymmetrize_magneto_optics_cart(sys%gr%mesh%sb%symm, zpol(:,:,:))
+  call zsymmetrize_magneto_optics_cart(sys%gr%sb%symm, zpol(:,:,:))
   
   if(kpt_output) then
     zpol_kout(:,:,:,:) = -M_zI / (frequency) * zpol_kout(:,:,:,:)
@@ -1577,6 +1577,7 @@ contains
     
     type(pert_t)  :: pert_kdotp
     integer       :: ip, idim
+    R_TYPE :: frequency0_
 
     PUSH_SUB(X(lr_calc_magneto_optics_periodic).apply_v)
 
@@ -1593,16 +1594,23 @@ contains
     if((nsigma_h == 2) .and. (nsigma_in == 1)) psi_out(:, :, nsigma_h) = psi_out(:, :, 1)
 
     if(add_hartree .or. add_fxc) then
+#ifdef R_TCOMPLEX
+      frequency0_ = frequency0
+#else
+      ! This can only happen if frequency0 has no imaginary part
+      frequency0_ = real(frequency0)
+#endif
+
       do idim = 1, sys%hm%d%dim
         do ip = 1, sys%gr%mesh%np
-          psi_out(ip, idim, 1) = psi_out(ip, idim, 1) + frequency0 * &
+          psi_out(ip, idim, 1) = psi_out(ip, idim, 1) + frequency0_ * &
             factor_e * hvar_in(ip, 1) * lr_in(1)%X(dl_psi)(ip, idim, ist0, ik0)
         end do
       end do
       if(nsigma_h == 2) then 
         do idim = 1, sys%hm%d%dim
           do ip = 1, sys%gr%mesh%np
-            psi_out(ip, idim, nsigma_h) = psi_out(ip, idim, nsigma_h) - R_CONJ(frequency0) * &
+            psi_out(ip, idim, nsigma_h) = psi_out(ip, idim, nsigma_h) - R_CONJ(frequency0_) * &
               factor_e * hvar_in(ip, nsigma_h) * lr_in(nsigma_in)%X(dl_psi)(ip, idim, ist0, ik0)
           end do
         end do
@@ -1619,7 +1627,7 @@ end subroutine X(lr_calc_magneto_optics_periodic)
 ! See papers Shi et. al Phys. Rev. Lett. 99, 197202 (2007)
 ! K.-T. Chen and P. A. Lee, Phys. Rev. B 84, 205137 (2011)
 subroutine X(lr_calc_magnetization_periodic)(sys, lr_k, magn)
-  type(system_t),       intent(inout) :: sys 
+  type(electrons_t),    intent(inout) :: sys 
   type(lr_t),           intent(inout) :: lr_k(:) 
   CMPLX,                intent(out)   :: magn(:)
 
@@ -1641,7 +1649,7 @@ subroutine X(lr_calc_magnetization_periodic)(sys, lr_k, magn)
 #endif
   
   np = sys%gr%mesh%np
-  ndir = sys%gr%mesh%sb%dim
+  ndir = sys%gr%sb%dim
   ndim = sys%st%d%dim
 
   SAFE_ALLOCATE(Hdl_psi(1:np, 1:ndim, 1:ndir))
@@ -1698,13 +1706,13 @@ end subroutine X(lr_calc_magnetization_periodic)
 ! According to paper X. Gonze and J. W. Zwanziger, Phys. Rev. B 84, 064445 (2011)
 subroutine X(lr_calc_susceptibility_periodic)(sys, nsigma, lr_k, lr_b, &
   lr_kk, lr_kb, magn)
-  type(system_t),       intent(inout) :: sys 
-  integer,                 intent(in) :: nsigma
+  type(electrons_t),    intent(inout) :: sys 
+  integer,              intent(in)    :: nsigma
   type(lr_t),           intent(inout) :: lr_k(:) 
   type(lr_t),           intent(inout) :: lr_b(:) 
   type(lr_t),           intent(inout) :: lr_kk(:,:)
   type(lr_t),           intent(inout) :: lr_kb(:,:) 
-  CMPLX,                  intent(out) :: magn(:,:)
+  CMPLX,                intent(out)   :: magn(:,:)
 
   integer :: idir1, idir2, idir, ist, ispin, idim, ndim 
   integer :: dir1, dir2, dir3, dir4, np, ik, ist_occ, ndir
@@ -1728,7 +1736,7 @@ subroutine X(lr_calc_susceptibility_periodic)(sys, nsigma, lr_k, lr_b, &
 #endif
   
   np = sys%gr%mesh%np
-  ndir = sys%gr%mesh%sb%dim
+  ndir = sys%gr%sb%dim
   ndim = sys%st%d%dim
   
   PUSH_SUB(X(lr_calc_susceptibility_periodic))
@@ -2015,7 +2023,7 @@ subroutine X(lr_calc_susceptibility_periodic)(sys, nsigma, lr_k, lr_b, &
   SAFE_DEALLOCATE_A(Hdl_kb)
   SAFE_DEALLOCATE_A(Hdl_kk) 
 
-  call zsymmetrize_tensor_cart(sys%gr%mesh%sb%symm, magn(:,:))
+  call zsymmetrize_tensor_cart(sys%gr%sb%symm, magn(:,:))
 
 #ifdef HAVE_MPI
   if(sys%st%parallel_in_states) then
@@ -2038,7 +2046,7 @@ end subroutine X(lr_calc_susceptibility_periodic)
 ! perturbations according to the density matrix formulation.
 subroutine X(inhomog_per_component)(sys, idir, ik, & 
   psi_k2, psi_out, factor_tot, factor_k, factor_second)
-  type(system_t),       intent(inout) :: sys 
+  type(electrons_t),    intent(inout) :: sys 
   integer,              intent(in)    :: idir
   integer,              intent(in)    :: ik
   R_TYPE,               intent(inout) :: psi_k2(:,:,:)    
@@ -2128,7 +2136,7 @@ end subroutine X(inhomog_per_component)
 ! perturbations according to the density matrix formulation.  
 subroutine X(inhomog_per_component_2nd_order)(sys, idir, ik, & 
   psi_k2, psi_e, psi_out, factor_tot, factor_k, factor_e)
-  type(system_t),       intent(inout) :: sys 
+  type(electrons_t),    intent(inout) :: sys 
   integer,              intent(in)    :: idir
   integer,              intent(in)    :: ik
   R_TYPE,               intent(inout) :: psi_k2(:,:,:)   
@@ -2214,7 +2222,7 @@ end subroutine X(inhomog_per_component_2nd_order)
 subroutine X(inhomog_B)(sh, sys, idir1, idir2, & 
   lr_k1, lr_k2, psi_out)
   type(sternheimer_t),  intent(inout) :: sh
-  type(system_t),       intent(inout) :: sys
+  type(electrons_t),    intent(inout) :: sys
   integer,              intent(in)    :: idir1
   integer,              intent(in)    :: idir2
   type(lr_t),           intent(inout) :: lr_k1(:) 
@@ -2279,7 +2287,7 @@ end subroutine X(inhomog_B)
 ! --------------------------------------------------------------------------
 subroutine X(inhomog_EB)(sys, ik, add_hartree, add_fxc, & 
   hvar, psi_b, psi_kb, factor_b, psi_out, psi_k1, psi_k2)
-  type(system_t),       intent(inout) :: sys
+  type(electrons_t),    intent(inout) :: sys
   integer,              intent(in)    :: ik
   logical,              intent(in)    :: add_hartree, add_fxc
   R_TYPE,               intent(inout) :: hvar(:)
@@ -2395,7 +2403,7 @@ end subroutine X(inhomog_EB)
 subroutine X(inhomog_BE)(sys, idir1, idir2, ik, & 
   add_hartree, add_fxc, hvar, psi_e1, psi_e2, psi_ek1, &
   psi_ek2, psi_k1, psi_k2, factor_e1, factor_e2, psi_out)
-  type(system_t),       intent(inout) :: sys
+  type(electrons_t),    intent(inout) :: sys
   integer,              intent(in)    :: idir1, idir2
   integer,              intent(in)    :: ik
   logical,              intent(in)    :: add_hartree, add_fxc
@@ -2453,7 +2461,7 @@ end subroutine X(inhomog_BE)
 ! --------------------------------------------------------------------------
 subroutine X(inhomog_KE)(sys, idir, ik, & 
   psi_e, psi_out)
-  type(system_t),       intent(inout) :: sys
+  type(electrons_t),    intent(inout) :: sys
   integer,              intent(in)    :: idir, ik
   R_TYPE,               intent(inout) :: psi_e(:,:,:) 
   R_TYPE,               intent(inout) :: psi_out(:,:,:) 
@@ -2476,7 +2484,7 @@ end subroutine X(inhomog_KE)
 
 subroutine X(inhomog_K2)(sys, idir1, idir2, ik, & 
   psi_k1, psi_k2, psi_out)
-  type(system_t),       intent(inout) :: sys
+  type(electrons_t),    intent(inout) :: sys
   integer,              intent(in)    :: idir1, idir2
   integer,              intent(in)    :: ik
   R_TYPE,               intent(inout) :: psi_k1(:,:,:) 
@@ -2531,7 +2539,7 @@ end subroutine X(inhomog_K2)
 ! --------------------------------------------------------------------------
 subroutine X(inhomog_KB)(sys, idir, idir1, idir2, ik, & 
   psi_b, psi_k, psi_k1, psi_k2, psi_out)
-  type(system_t),       intent(inout) :: sys
+  type(electrons_t),    intent(inout) :: sys
   integer,              intent(in)    :: idir, idir1, idir2
   integer,              intent(in)    :: ik
   R_TYPE,               intent(inout) :: psi_k1(:,:,:)
@@ -2653,7 +2661,7 @@ end subroutine X(inhomog_KB)
 subroutine X(inhomog_KB_tot)(sh, sys, idir, idir1, idir2, & 
   lr_k, lr_b, lr_k1, lr_k2, lr_kk1, lr_kk2, psi_out)
   type(sternheimer_t),  intent(inout) :: sh
-  type(system_t),       intent(inout) :: sys
+  type(electrons_t),    intent(inout) :: sys
   integer,              intent(in)    :: idir, idir1, idir2
   type(lr_t),           intent(inout) :: lr_k(:)
   type(lr_t),           intent(inout) :: lr_b(:)
@@ -2737,7 +2745,7 @@ end subroutine X(inhomog_KB_tot)
 subroutine X(inhomog_KE_tot)(sh, sys, idir, nsigma, & 
   lr_k, lr_e, lr_kk, psi_out)
   type(sternheimer_t),  intent(inout) :: sh
-  type(system_t),       intent(inout) :: sys
+  type(electrons_t),    intent(inout) :: sys
   integer,              intent(in)    :: idir, nsigma
   type(lr_t),           intent(inout) :: lr_e(:) 
   type(lr_t),           intent(inout) :: lr_k(:)  
@@ -2791,7 +2799,7 @@ end subroutine X(inhomog_KE_tot)
 subroutine X(inhomog_K2_tot)(sh, sys, idir1, idir2, & 
   lr_k1, lr_k2, psi_out)
   type(sternheimer_t),  intent(inout) :: sh
-  type(system_t),       intent(inout) :: sys
+  type(electrons_t),    intent(inout) :: sys
   integer,              intent(in)    :: idir1, idir2
   type(lr_t),           intent(inout) :: lr_k1(:) 
   type(lr_t),           intent(inout) :: lr_k2(:) 
@@ -2827,7 +2835,7 @@ end subroutine X(inhomog_K2_tot)
 ! matrix within occupied and unoccupied subspaces
 subroutine X(calc_rho)(sys, factor, factor_sum, factor_e, &
   factor_k, lr_e, lr_k, lr0)
-  type(system_t),       intent(inout) :: sys
+  type(electrons_t),    intent(inout) :: sys
   R_TYPE,               intent(in)    :: factor
   R_TYPE,               intent(in)    :: factor_sum
   R_TYPE,               intent(in)    :: factor_e
@@ -2890,7 +2898,7 @@ end subroutine X(calc_rho)
 ! with kdotp coming from the contribution to the density from elements of
 ! the density matrix within occupied and unoccupied subspaces
 subroutine X(calc_hvar_psi)(sys, ik, hvar, psi_out)
-  type(system_t),       intent(inout) :: sys 
+  type(electrons_t),    intent(inout) :: sys 
   integer,              intent(in)    :: ik
   R_TYPE,               intent(inout) :: hvar(:) 
   R_TYPE,               intent(inout) :: psi_out(:,:,:)   
@@ -2923,7 +2931,7 @@ end subroutine X(calc_hvar_psi)
 ! Calculation of V_{hxc}[n^{(1)}] |  \psi^{(1)}> for second-order perturbations
 subroutine X(calc_hvar_lr)(sys, ik, hvar, psi_in, &
   factor1, factor2, psi_out)
-  type(system_t),       intent(inout) :: sys
+  type(electrons_t),    intent(inout) :: sys
   integer,              intent(in)    :: ik
   R_TYPE,               intent(inout) :: hvar(:)
   R_TYPE,               intent(inout) :: psi_in(:,:,:)

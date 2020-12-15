@@ -28,6 +28,7 @@ module invert_ks_oct_m
   use io_oct_m
   use mesh_function_oct_m
   use messages_oct_m
+  use multisystem_basic_oct_m
   use namespace_oct_m
   use parser_oct_m
   use pcm_oct_m
@@ -35,7 +36,7 @@ module invert_ks_oct_m
   use profiling_oct_m
   use restart_oct_m
   use states_elec_restart_oct_m
-  use system_oct_m
+  use electrons_oct_m
   use xc_ks_inversion_oct_m
   
   implicit none
@@ -46,8 +47,25 @@ module invert_ks_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine invert_ks_run(sys)
-    type(system_t),              intent(inout) :: sys
+  subroutine invert_ks_run(system)
+    class(*), intent(inout) :: system
+
+    PUSH_SUB(invert_ks_run)
+
+    select type (system)
+    class is (multisystem_basic_t)
+      message(1) = "CalculationMode = invert_ks not implemented for multi-system calculations"
+      call messages_fatal(1)
+    type is (electrons_t)
+      call invert_ks_run_legacy(system)
+    end select
+
+    POP_SUB(invert_ks_run)
+  end subroutine invert_ks_run
+
+  ! ---------------------------------------------------------
+  subroutine invert_ks_run_legacy(sys)
+    type(electrons_t), intent(inout) :: sys
 
     integer :: ii, jj, np, ndim, nspin
     integer :: err
@@ -55,7 +73,7 @@ contains
     FLOAT, allocatable :: target_rho(:,:), rho(:)
     type(restart_t) :: restart
       
-    PUSH_SUB(invert_ks_run)
+    PUSH_SUB(invert_ks_run_legacy)
 
     if (sys%hm%pcm%run_pcm) then
       call messages_not_implemented("PCM for CalculationMode /= gs or td")
@@ -70,7 +88,7 @@ contains
 
     !abbreviations
     np      = sys%gr%mesh%np
-    ndim    = sys%gr%mesh%sb%dim
+    ndim    = sys%gr%sb%dim
     nspin   = sys%st%d%nspin
 
     ! read target density
@@ -157,7 +175,7 @@ contains
     SAFE_DEALLOCATE_A(target_rho)
     SAFE_DEALLOCATE_A(rho)
     
-    POP_SUB(invert_ks_run)
+    POP_SUB(invert_ks_run_legacy)
     
   contains
 
@@ -169,7 +187,7 @@ contains
       FLOAT, allocatable :: xx(:,:), ff(:,:)
       character(len=1)   :: char
 
-      PUSH_SUB(invert_ks_run.read_target_rho)
+      PUSH_SUB(invert_ks_run_legacy.read_target_rho)
 
       ! FIXME: just use restart/gs/density*.obf file rather than needing to set this and use a different format.
       
@@ -229,10 +247,10 @@ contains
       SAFE_DEALLOCATE_A(xx)
       SAFE_DEALLOCATE_A(ff)
 
-      POP_SUB(invert_ks_run.read_target_rho)
+      POP_SUB(invert_ks_run_legacy.read_target_rho)
     end subroutine read_target_rho
 
-  end subroutine invert_ks_run
+  end subroutine invert_ks_run_legacy
 
   
 end module invert_ks_oct_m

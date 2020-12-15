@@ -94,21 +94,14 @@ module par_vec_oct_m
 
   private
 
-  public ::                        &
-    pv_t !< parallel information
-
-#if defined(HAVE_MPI)
-  public ::                        &
-    vec_init,                      &
-    vec_end,                       &
-    vec_index2local,               &
-    vec_scatter,                   &
-    vec_gather,                    &
-    vec_allgather
-
-#endif
-
-  public ::                        &
+  public ::            &
+    pv_t,              & !< parallel information
+    vec_init,          &
+    vec_end,           &
+    vec_index2local,   &
+    vec_scatter,       &
+    vec_gather,        &
+    vec_allgather,     &
     vec_global2local    
   
   !> Parallel information
@@ -179,8 +172,6 @@ module par_vec_oct_m
                                                         !! Global vector; vp%total elements
   end type pv_t
 
-#if defined(HAVE_MPI)
-
   interface vec_scatter
     module procedure dvec_scatter
     module procedure zvec_scatter
@@ -199,15 +190,8 @@ module par_vec_oct_m
     module procedure ivec_allgather
   end interface vec_allgather
   
-  type(profile_t), save :: prof_scatter
-  type(profile_t), save :: prof_allgather
-
-#endif
-  
 contains
 
-#ifdef HAVE_MPI
-  
   !> Initializes a pv_type object (parallel vector).
   !! It computes the local-to-global and global-to-local index tables
   !! and the ghost point exchange.
@@ -264,12 +248,16 @@ contains
     PUSH_SUB(vec_init)
 
     ! Shortcuts.
+#ifdef HAVE_MPI
     call MPI_Comm_Size(comm, npart, mpi_err)
+#endif
     np_enl = np_part_global - np_global
 
     ! Store partition number and rank for later reference.
     ! Having both variables is a bit redundant but makes the code readable.
+#ifdef HAVE_MPI
     call MPI_Comm_Rank(comm, vp%rank, mpi_err)
+#endif
     vp%partno = vp%rank + 1
 
     SAFE_ALLOCATE(ghost_flag(1:npart))
@@ -427,7 +415,9 @@ contains
     call partition_get_partition_number(bndry_partition, np_bndry, &
          points_bndry, part_bndry)
     
+#ifdef HAVE_MPI
     call MPI_Barrier(mpi_world%comm, mpi_err)
+#endif
 
     vp%total = 0
     do ip = 1, np_inner
@@ -476,19 +466,25 @@ contains
 
     call init_MPI_Alltoall()
     tmp=0
+#ifdef HAVE_MPI
     call MPI_Allreduce(vp%total, tmp, 1, MPI_INTEGER, MPI_SUM, comm, mpi_err)
+#endif
     vp%total = tmp
     
+#ifdef HAVE_MPI
     call MPI_Alltoall(vp%ghost_rcounts(1), 1, MPI_INTEGER, &
          vp%ghost_scounts(1), 1, MPI_INTEGER, &
          comm, mpi_err)
+#endif
 
     ! Set index tables xghost and xghost_neigh. 
     SAFE_ALLOCATE(np_ghost_tmp(1:npart))
     call mpi_debug_in(comm, C_MPI_ALLGATHER)
+#ifdef HAVE_MPI
     call MPI_Allgather(vp%np_ghost, 1, MPI_INTEGER, &
          np_ghost_tmp(1), 1, MPI_INTEGER, &
          comm, mpi_err)
+#endif
     call mpi_debug_out(comm, C_MPI_ALLGATHER)
    
     SAFE_ALLOCATE(xghost_tmp(1:npart))
@@ -510,9 +506,11 @@ contains
     end do
     ! xghost_neigh_partno is the transposed of xghost_neigh_back
     call mpi_debug_in(comm, C_MPI_ALLTOALL)
+#ifdef HAVE_MPI
     call MPI_Alltoall(xghost_neigh_back(1), 1, MPI_INTEGER, &
            xghost_neigh_partno(1), 1, MPI_INTEGER, &
            comm, mpi_err)
+#endif
     call mpi_debug_out(comm, C_MPI_ALLTOALL)
     
     ! Get space for ghost point vector.
@@ -538,13 +536,17 @@ contains
        size = vp%ghost_rcounts(inode)
 
        call mpi_debug_in(comm, C_MPI_ALLGATHER)
+#ifdef HAVE_MPI
        call MPI_Allgather(init, 1, MPI_INTEGER, &
             init_v(1), 1, MPI_INTEGER, comm, mpi_err)
+#endif
        call mpi_debug_out(comm, C_MPI_ALLGATHER)
 
        call mpi_debug_in(comm, C_MPI_ALLGATHER)
+#ifdef HAVE_MPI
        call MPI_Allgather(size, 1, MPI_INTEGER, &
             size_v(1), 1, MPI_INTEGER, comm, mpi_err)
+#endif
        call mpi_debug_out(comm, C_MPI_ALLGATHER)
 
        init_recv = init_v - 1
@@ -554,9 +556,11 @@ contains
        sbuffer(1:size_v(vp%partno)) = vp%ghost(init_v(vp%partno):init_v(vp%partno)+size_v(vp%partno)-1)
 
        call mpi_debug_in(comm, C_MPI_ALLGATHERV)
+#ifdef HAVE_MPI
        call MPI_Allgatherv(sbuffer(1), size_v(vp%partno), MPI_INTEGER, &
             vp%ghost(1), size_v(1), init_recv(1), MPI_INTEGER, &
             comm, mpi_err)
+#endif
        call mpi_debug_out(comm, C_MPI_ALLGATHERV)
 
        SAFE_DEALLOCATE_A(sbuffer)
@@ -566,8 +570,7 @@ contains
     SAFE_DEALLOCATE_A(init_recv)
     SAFE_DEALLOCATE_A(size_v)
 
-    ! lxyz is not set for hypercube.
-    if(debug%info .and. .not. idx%is_hypercube) then
+    if(debug%info) then
       ! Write numbers and coordinates of each process` ghost points
       ! to a single file (like in mesh_partition_init) called
       ! debug/mesh_partition/ghost_points.###.
@@ -577,7 +580,8 @@ contains
       iunit = io_open('debug/mesh_partition/ghost_points.'//filenum, namespace, action='write')
       do ip = 1, vp%np_ghost
         jp = vp%ghost(xghost_tmp(vp%partno) + ip - 1)
-        write(iunit, '(99i8)') jp, (idx%lxyz(jp, idir), idir = 1, dim)
+        call index_to_coords(idx, jp, p1)
+        write(iunit, '(99i8)') jp, (p1(idir), idir = 1, dim)
       end do
 
       call io_close(iunit)
@@ -686,9 +690,11 @@ contains
       xlocal_tmp = vp%xlocal_vec - 1
       ! Gather all the local vectors in a unique big one
       call mpi_debug_in(comm, C_MPI_ALLGATHERV)
+#ifdef HAVE_MPI
       call MPI_Allgatherv(vp%local(vp%xlocal), vp%np_local, MPI_INTEGER, &
                           vp%local_vec, vp%np_local_vec, xlocal_tmp,  MPI_INTEGER, &
                           comm, mpi_err)
+#endif
       call mpi_debug_out(comm, C_MPI_GATHERV)
       SAFE_DEALLOCATE_A(xlocal_tmp)
 
@@ -834,8 +840,7 @@ contains
 
   end subroutine vec_end
 
-#endif
-  
+
   ! ---------------------------------------------------------
   !> Returns local number of global point ip on partition inode.
   !! If the result is zero, the point is neither a local nor a ghost
@@ -867,8 +872,6 @@ contains
 #endif
 
   end function vec_global2local
-
-#ifdef HAVE_MPI
 
   !> Change the value of one dimension (1=x, 2=y, 3=z) 
   !! according to the given value and return the local point
@@ -917,7 +920,6 @@ contains
 #include "integer.F90"
 #include "par_vec_inc.F90"
 
-#endif
 end module par_vec_oct_m
 
 !! Local Variables:

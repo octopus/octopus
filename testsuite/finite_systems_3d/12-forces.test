@@ -11,29 +11,45 @@ Enabled    : Yes
 # the force on the atoms.
 
 Input: 12-forces.01-N2_gs.inp
+
 match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
-match ; Total energy ; GREPFIELD(static/info, 'Total       =', 3) ; -19.83069427
-match ; Force        ; GREPFIELD(static/info, 'Forces on the ions', 3, 2) ; 0.318750
-match ; Force Ion-ion; LINEFIELD(static/forces, 2, 6)  ; -0.342936E+01
-match ; Force Local  ; LINEFIELD(static/forces, 2, 12) ;  0.322494E+01
-match ; Force NL     ; LINEFIELD(static/forces, 2, 15) ;  0.523198E+00
-match ; Force SCF    ; LINEFIELD(static/forces, 2, 24) ; -0.555902E-07
+
+Precision: 1.98e-14
+match ;  Total energy  ; GREPFIELD(static/info, 'Total       =', 3) ; -19.83063774
+
+Precision: 3.43e-15
+match ;  Force         ; GREPFIELD(static/info, 'Forces on the ions', 3, 2) ; 0.318899
+match ;  Force Ion-ion ; LINEFIELD(static/forces, 2, 6) ; -3.42936
+match ;  Force Local   ; LINEFIELD(static/forces, 2, 12) ; 3.22492
+match ;  Force NL      ; LINEFIELD(static/forces, 2, 15) ; 0.523332
+match ;  Force SCF     ; LINEFIELD(static/forces, 2, 24) ; -1.42073e-08
 
 
 Input: 12-forces.02-N2_gs.inp
+
 match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
-match ; Total energy ; GREPFIELD(static/info, 'Total       =', 3) ; -19.99536317
-match ; Force        ; GREPFIELD(static/info, 'Forces on the ions', 3, 2) ; 0.037895
-match ; Force Ion-ion; LINEFIELD(static/forces, 2, 6)  ; -0.580972E+01
-match ; Force Local  ; LINEFIELD(static/forces, 2, 12) ;  0.469193E+01
-match ; Force NL     ; LINEFIELD(static/forces, 2, 15) ;  0.115566E+01
-match ; Force SCF    ; LINEFIELD(static/forces, 2, 24) ;  0.872235E-07
+
+Precision: 2.00e-14
+match ;  Total energy  ; GREPFIELD(static/info, 'Total       =', 3) ; -19.99536376
+
+Precision: 5.81e-15
+match ;  Force         ; GREPFIELD(static/info, 'Forces on the ions', 3, 2) ; 0.0376828
+match ;  Force Ion-ion ; LINEFIELD(static/forces, 2, 6) ; -5.80972
+match ;  Force Local   ; LINEFIELD(static/forces, 2, 12) ; 4.69183
+match ;  Force NL      ; LINEFIELD(static/forces, 2, 15) ; 1.15557
+match ;  Force SCF     ; LINEFIELD(static/forces, 2, 24) ; -9.05967e-08
+
 
 Input: 12-forces.03-N2_gs.inp
+
 match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
-match ; Total energy ; GREPFIELD(static/info, 'Total       =', 3) ; -19.49489909
-match ; Force        ; GREPFIELD(static/info, 'Forces on the ions', 3, 2) ; -2.630955
-match ; Force Ion-ion; LINEFIELD(static/forces, 2, 6)  ; -0.111111E+02
-match ; Force Local  ; LINEFIELD(static/forces, 2, 12) ;  0.550167E+01
-match ; Force NL     ; LINEFIELD(static/forces, 2, 15) ;  0.297849E+01
-match ; Force SCF    ; LINEFIELD(static/forces, 2, 24) ; -0.716863E-07
+
+Precision: 1.95e-14
+match ;  Total energy  ; GREPFIELD(static/info, 'Total       =', 3) ; -19.49489915
+
+Precision: 1.32e-13
+match ;  Force         ; GREPFIELD(static/info, 'Forces on the ions', 3, 2) ; -2.63087
+match ;  Force Ion-ion ; LINEFIELD(static/forces, 2, 6) ; -11.1111
+match ;  Force Local   ; LINEFIELD(static/forces, 2, 12) ; 5.50181
+match ;  Force NL      ; LINEFIELD(static/forces, 2, 15) ; 2.97843
+match ;  Force SCF     ; LINEFIELD(static/forces, 2, 24) ; -3.57814e-09

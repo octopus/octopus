@@ -90,7 +90,7 @@ subroutine X(hamiltonian_elec_apply_batch) (hm, namespace, mesh, psib, hpsib, te
   integer :: terms_
   type(projection_t) :: projection
   
-  call profiling_in(prof_hamiltonian, "HAMILTONIAN")
+  call profiling_in(prof_hamiltonian, TOSTRING(X(HAMILTONIAN)))
   PUSH_SUB(X(hamiltonian_elec_apply_batch))
 
   ASSERT(psib%status() == hpsib%status())
@@ -140,18 +140,18 @@ subroutine X(hamiltonian_elec_apply_batch) (hm, namespace, mesh, psib, hpsib, te
   end if
 
   if(apply_phase .and. set_phase) then ! we copy psi to epsi applying the exp(i k.r) phase
-    call X(hamiltonian_elec_base_phase)(hm%hm_base, mesh, mesh%np_part, .false., epsib, src = psib)
+    call hamiltonian_elec_base_phase(hm%hm_base, mesh, mesh%np_part, .false., epsib, src = psib)
     hpsib%has_phase = .true.
   end if
 
   !Apply the spiral BC if needed
   if(hm%der%boundaries%spiral .and. apply_phase) then
-    call X(hamiltonian_elec_base_phase_spiral)(hm%hm_base, hm%der, epsib)
+    call hamiltonian_elec_base_phase_spiral(hm%hm_base, hm%der, epsib)
   end if
 
   if(bitand(TERM_KINETIC, terms_) /= 0) then
     ASSERT(associated(hm%hm_base%kinetic))
-    call profiling_in(prof_kinetic_start, "KINETIC_START")
+    call profiling_in(prof_kinetic_start, TOSTRING(X(KINETIC_START)))
     call X(derivatives_batch_start)(hm%hm_base%kinetic, hm%der, epsib, hpsib, handle, set_bc = .false., factor = -M_HALF/hm%mass)
     call profiling_out(prof_kinetic_start)
   end if
@@ -163,7 +163,7 @@ subroutine X(hamiltonian_elec_apply_batch) (hm, namespace, mesh, psib, hpsib, te
   end if
 
   if(bitand(TERM_KINETIC, terms_) /= 0) then
-    call profiling_in(prof_kinetic_finish, "KINETIC_FINISH")
+    call profiling_in(prof_kinetic_finish, TOSTRING(X(KINETIC_FINISH)))
     call X(derivatives_batch_finish)(handle)
     call profiling_out(prof_kinetic_finish)
   else
@@ -192,7 +192,7 @@ subroutine X(hamiltonian_elec_apply_batch) (hm, namespace, mesh, psib, hpsib, te
   end if
   
   if (bitand(TERM_OTHERS, terms_) /= 0 ) then
-    call X(hamiltonian_elec_base_rashba)(hm%hm_base, mesh, hm%der, hm%d, epsib, hpsib)
+    call hamiltonian_elec_base_rashba(hm%hm_base, mesh, hm%der, hm%d, epsib, hpsib)
   end if
 
   ! multiply with occupation number
@@ -202,7 +202,7 @@ subroutine X(hamiltonian_elec_apply_batch) (hm, namespace, mesh, psib, hpsib, te
   
   if (bitand(TERM_OTHERS, terms_) /= 0) then
 
-    call profiling_in(prof_exx, "EXCHANGE_OPERATOR")
+    call profiling_in(prof_exx, TOSTRING(X(EXCHANGE_OPERATOR)))
     select case(hm%theory_level)
 
     case(HARTREE)
@@ -237,7 +237,7 @@ subroutine X(hamiltonian_elec_apply_batch) (hm, namespace, mesh, psib, hpsib, te
   end if  
 
   if(apply_phase .and. set_phase) then
-    call X(hamiltonian_elec_base_phase)(hm%hm_base, mesh, mesh%np, .true., hpsib)
+    call hamiltonian_elec_base_phase(hm%hm_base, mesh, mesh%np, .true., hpsib)
     call epsib%end(copy = .false.)
     SAFE_DEALLOCATE_P(epsib)
   end if
@@ -340,57 +340,6 @@ subroutine X(hamiltonian_elec_apply_single) (hm, namespace, mesh, psi, hpsi, ist
   POP_SUB(X(hamiltonian_elec_apply_single))
 end subroutine X(hamiltonian_elec_apply_single)
 
-! ---------------------------------------------------------
-
-subroutine X(magnus) (hm, namespace, mesh, psi, hpsi, ik, vmagnus, set_phase)
-  type(hamiltonian_elec_t), intent(in)    :: hm
-  type(namespace_t),        intent(in)    :: namespace
-  type(mesh_t),             intent(in)    :: mesh
-  R_TYPE,                   intent(inout) :: psi(:,:)
-  R_TYPE,                   intent(out)   :: hpsi(:,:)
-  integer,                  intent(in)    :: ik
-  FLOAT,                    intent(in)    :: vmagnus(:, :, :)
-  logical, optional,        intent(in)    :: set_phase !< If set to .false. the phase will not be added to the states.
-
-  R_TYPE, allocatable :: auxpsi(:, :), aux2psi(:, :)
-  integer :: idim, ispin
-
-  PUSH_SUB(X(magnus))
-
-  ! We will assume, for the moment, no spinors.
-  if(hm%d%dim /= 1) &
-    call messages_not_implemented("Magnus with spinors", namespace=namespace)
-
-  SAFE_ALLOCATE( auxpsi(1:mesh%np_part, 1:hm%d%dim))
-  SAFE_ALLOCATE(aux2psi(1:mesh%np,      1:hm%d%dim))
-
-  ispin = states_elec_dim_get_spin_index(hm%d, ik)
-
-  ! Compute (T + Vnl)|psi> and store it
-  call X(hamiltonian_elec_apply_single)(hm, namespace, mesh, psi, auxpsi, 1, ik, &
-    terms = TERM_KINETIC + TERM_NON_LOCAL_POTENTIAL, set_phase = set_phase)
-
-  ! H|psi>  =  (T + Vnl)|psi> + Vpsl|psi> + Vmagnus(t2)|psi> + Vborders
-  do idim = 1, hm%d%dim
-    call lalg_copy(mesh%np, auxpsi(:, idim), hpsi(:, idim))
-    hpsi(1:mesh%np, idim) = hpsi(1:mesh%np, idim) + hm%ep%Vpsl(1:mesh%np)*psi(1:mesh%np,idim)
-    call X(vborders)(mesh, hm, psi(:, idim), hpsi(:, idim))
-  end do
-  hpsi(1:mesh%np, 1) = hpsi(1:mesh%np, 1) + vmagnus(1:mesh%np, ispin, 2)*psi(1:mesh%np, 1)
-
-  ! Add first term of the commutator:  - i Vmagnus(t1) (T + Vnl) |psi>
-  hpsi(1:mesh%np, 1) = hpsi(1:mesh%np, 1) - M_zI*vmagnus(1:mesh%np, ispin, 1)*auxpsi(1:mesh%np, 1)
-
-  ! Add second term of commutator:  i (T + Vnl) Vmagnus(t1) |psi>
-  auxpsi(1:mesh%np, 1) = vmagnus(1:mesh%np, ispin, 1)*psi(1:mesh%np, 1)
-  call X(hamiltonian_elec_apply_single)(hm, namespace, mesh, auxpsi, aux2psi, 1, ik, &
-    terms = TERM_KINETIC + TERM_NON_LOCAL_POTENTIAL, set_phase = set_phase)
-  hpsi(1:mesh%np, 1) = hpsi(1:mesh%np, 1) + M_zI*aux2psi(1:mesh%np, 1)
-
-  SAFE_DEALLOCATE_A(auxpsi)
-  SAFE_DEALLOCATE_A(aux2psi)
-  POP_SUB(X(magnus))
-end subroutine X(magnus)
 
 subroutine X(hamiltonian_elec_magnus_apply_batch) (hm, namespace, mesh, psib, hpsib, vmagnus, set_phase)
   type(hamiltonian_elec_t), intent(in)    :: hm
@@ -443,28 +392,6 @@ subroutine X(hamiltonian_elec_magnus_apply_batch) (hm, namespace, mesh, psib, hp
 
   POP_SUB(X(hamiltonian_elec_magnus_apply_batch))
 end subroutine X(hamiltonian_elec_magnus_apply_batch)
-
-
-! ---------------------------------------------------------
-subroutine X(vborders) (mesh, hm, psi, hpsi)
-  type(mesh_t),             intent(in)    :: mesh
-  type(hamiltonian_elec_t), intent(in)    :: hm
-  R_TYPE,              intent(in)    :: psi(:)
-  R_TYPE,              intent(inout) :: hpsi(:)
-
-  integer :: ip
-
-  PUSH_SUB(X(vborders))
-
-  if(hm%bc%abtype == IMAGINARY_ABSORBING) then
-    do ip = 1, mesh%np
-      hpsi(ip) = hpsi(ip) + M_zI*hm%bc%mf(ip)*psi(ip)
-    end do
-  end if
-
-  POP_SUB(X(vborders))
-end subroutine X(vborders)
-
 
 ! ---------------------------------------------------------
 subroutine X(h_mgga_terms) (hm, mesh, psib, hpsib)

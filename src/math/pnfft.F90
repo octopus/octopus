@@ -153,7 +153,7 @@ contains
     
     my_nn = 0
     do ii = 1, 3
-      my_nn(ii) = nn(ii)*pnfft%sigma
+      my_nn(ii) = nn(ii)*int(pnfft%sigma)
       if(optimize_) call loct_fft_optimize(my_nn(ii), 1) ! ask for an odd number
     end do
     
@@ -303,15 +303,15 @@ contains
 
     local_M = pnfft%M(1) * pnfft%M(2) * pnfft%M(3)
 
-    fs_n(1)      = local_N(1) 
-    fs_n(2)      = local_N(3) 
-    fs_n(3)      = local_N(2) 
-    fs_istart(1) = pnfft%N(1)/2 + local_N_start(1) + 1 
-    fs_istart(2) = pnfft%N(3)/2 + local_N_start(3) + 1 
-    fs_istart(3) = pnfft%N(2)/2 + local_N_start(2) + 1 
+    fs_n(1)      = int(local_N(1))
+    fs_n(2)      = int(local_N(3))
+    fs_n(3)      = int(local_N(2))
+    fs_istart(1) = int(pnfft%N(1)/2 + local_N_start(1) + 1)
+    fs_istart(2) = int(pnfft%N(3)/2 + local_N_start(3) + 1) 
+    fs_istart(3) = int(pnfft%N(2)/2 + local_N_start(2) + 1)
 
 
-    rs_n(1:3) = pnfft%M(1:3) 
+    rs_n(1:3) = int(pnfft%M(1:3))
 
     rs_istart(1) = fs_istart(3) 
     rs_istart(2) = fs_istart(2) 
@@ -417,9 +417,9 @@ contains
     
     
     
-    do i1 = 1, pnfft%M(1)
-      do i2 = 1, pnfft%M(2)
-        do i3 = 1, pnfft%M(3)
+    do i1 = 1, int(pnfft%M(1))
+      do i2 = 1, int(pnfft%M(2))
+        do i3 = 1, int(pnfft%M(3))
           pnfft%x(1, i1,i2,i3) = (X(pnfft%M_istart(1)+i1-1, 1)  - cc(1))/len(1)
           pnfft%x(2, i1,i2,i3) = (X(pnfft%M_istart(2)+i2-1, 2)  - cc(2))/len(2)
           pnfft%x(3, i1,i2,i3) = (X(pnfft%M_istart(3)+i3-1, 3)  - cc(3))/len(3)
@@ -521,9 +521,9 @@ contains
       iunit = io_open('debug/PNFFT/rs_partition.'//filenum, &
            namespace, action='write')
            
-      do i1 = 1, pnfft%M(1)
-       do i2 = 1, pnfft%M(2)
-         do i3 = 1, pnfft%M(3)
+      do i1 = 1, int(pnfft%M(1))
+       do i2 = 1, int(pnfft%M(2))
+         do i3 = 1, int(pnfft%M(3))
            write(iunit, '(3f18.8)') pnfft%x(1, i1,i2,i3), pnfft%x(2, i1,i2,i3), pnfft%x(3, i1,i2,i3) 
          end do
        end do

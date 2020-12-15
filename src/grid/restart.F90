@@ -376,7 +376,9 @@ contains
         n_cols = parse_block_cols(blk,iline-1)
 
         call parse_block_integer(blk, iline-1, 0, data_type)
-        if (data_type < 0 .or. data_type > RESTART_N_DATA_TYPES) call messages_input_error(namespace, 'RestartOptions')
+        if (data_type < 0 .or. data_type > RESTART_N_DATA_TYPES) then
+          call messages_input_error(namespace, 'RestartOptions', "Invalid data type", row=iline-1, column=0)
+        end if
         if (data_type == 0) then
           call parse_block_string(blk, iline-1, 1, default_basedir)
         else

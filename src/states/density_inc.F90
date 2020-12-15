@@ -38,7 +38,7 @@ subroutine X(density_accumulate_grad)(gr, st, psib, grad_psib, grad_rho)
 
   select case(psib%status())
   case(BATCH_NOT_PACKED)
-    do idir = 1, gr%mesh%sb%dim
+    do idir = 1, gr%sb%dim
       do ii = 1, psib%nst_linear
         ist = psib%linear_to_ist(ii)
       
@@ -63,7 +63,7 @@ subroutine X(density_accumulate_grad)(gr, st, psib, grad_psib, grad_rho)
       ff = st%d%kweights(psib%ik)*st%occ(ist, psib%ik)*M_TWO
       if(abs(ff) <= M_EPSILON) cycle
 
-      do idir = 1, gr%mesh%sb%dim
+      do idir = 1, gr%sb%dim
         do ip = 1, gr%mesh%np
           
           psi = psib%X(ff_pack)(ii, ip)
@@ -94,7 +94,7 @@ subroutine X(density_accumulate_grad)(gr, st, psib, grad_psib, grad_rho)
     call accel_kernel_start_call(ker_calc_grad_dens, 'forces.cl', TOSTRING(X(density_gradient)), &
       flags = '-D' + R_TYPE_CL)
 
-    do idir = 1, gr%mesh%sb%dim
+    do idir = 1, gr%sb%dim
       call accel_set_kernel_arg(ker_calc_grad_dens, 0, idir - 1)
       call accel_set_kernel_arg(ker_calc_grad_dens, 1, psib%pack_size(1))
       call accel_set_kernel_arg(ker_calc_grad_dens, 2, gr%mesh%np)
@@ -117,7 +117,7 @@ subroutine X(density_accumulate_grad)(gr, st, psib, grad_psib, grad_rho)
 
     call accel_release_buffer(grad_rho_buff)
 
-    do idir = 1, gr%mesh%sb%dim
+    do idir = 1, gr%sb%dim
       do ip = 1, gr%mesh%np
         grad_rho(ip, idir) = grad_rho(ip, idir) + grad_rho_tmp(ip, idir)
       end do

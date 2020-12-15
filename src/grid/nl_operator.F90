@@ -25,7 +25,6 @@ module nl_operator_oct_m
   use global_oct_m
   use index_oct_m
   use iso_c_binding
-  use loct_pointer_oct_m
   use math_oct_m
   use mesh_oct_m
   use messages_oct_m
@@ -140,8 +139,6 @@ module nl_operator_oct_m
   integer :: sfunction_global = -1
   integer :: cfunction_global = -1  
   integer :: function_opencl
-
-  type(profile_t), save :: operate_batch_prof
 
 contains
   
@@ -318,29 +315,29 @@ contains
     opo%np           =  opi%np
     opo%mesh         => opi%mesh
 
-    call loct_pointer_copy(opo%nn, opi%nn)
-    call loct_pointer_copy(opo%index, opi%index)
-    call loct_pointer_copy(opo%w, opi%w)
+    SAFE_ALLOCATE_SOURCE_P(opo%nn, opi%nn)
+    SAFE_ALLOCATE_SOURCE_P(opo%index, opi%index)
+    SAFE_ALLOCATE_SOURCE_P(opo%w, opi%w)
 
     opo%const_w   = opi%const_w
 
     opo%nri       =  opi%nri
     ASSERT(associated(opi%ri))
 
-    call loct_pointer_copy(opo%ri, opi%ri)
-    call loct_pointer_copy(opo%rimap, opi%rimap)
-    call loct_pointer_copy(opo%rimap_inv, opi%rimap_inv)
+    SAFE_ALLOCATE_SOURCE_P(opo%ri, opi%ri)
+    SAFE_ALLOCATE_SOURCE_P(opo%rimap, opi%rimap)
+    SAFE_ALLOCATE_SOURCE_P(opo%rimap_inv, opi%rimap_inv)
     
     if(opi%mesh%parallel_in_domains) then
       opo%inner%nri = opi%inner%nri
-      call loct_pointer_copy(opo%inner%imin, opi%inner%imin)
-      call loct_pointer_copy(opo%inner%imax, opi%inner%imax)
-      call loct_pointer_copy(opo%inner%ri,   opi%inner%ri)      
+      SAFE_ALLOCATE_SOURCE_P(opo%inner%imin, opi%inner%imin)
+      SAFE_ALLOCATE_SOURCE_P(opo%inner%imax, opi%inner%imax)
+      SAFE_ALLOCATE_SOURCE_P(opo%inner%ri,   opi%inner%ri)      
 
       opo%outer%nri = opi%outer%nri
-      call loct_pointer_copy(opo%outer%imin, opi%outer%imin)
-      call loct_pointer_copy(opo%outer%imax, opi%outer%imax)
-      call loct_pointer_copy(opo%outer%ri,   opi%outer%ri)
+      SAFE_ALLOCATE_SOURCE_P(opo%outer%imin, opi%outer%imin)
+      SAFE_ALLOCATE_SOURCE_P(opo%outer%imax, opi%outer%imax)
+      SAFE_ALLOCATE_SOURCE_P(opo%outer%ri,   opi%outer%ri)
     end if
 
 
@@ -357,7 +354,7 @@ contains
 
     integer :: ii, jj, p1(MAX_DIM), time, current, size
     integer, allocatable :: st1(:), st2(:), st1r(:), stencil(:, :)
-    integer :: nn
+    integer :: nn, ip, idx(MAX_DIM)
     integer :: ir, maxp, iinner, iouter
     logical :: change, force_change
     character(len=200) :: flags
@@ -669,8 +666,11 @@ contains
 
         SAFE_ALLOCATE(stencil(1:op%mesh%sb%dim, 1:mesh%np_part))
 
-        do jj = 1, op%mesh%sb%dim
-          stencil(jj, 1:mesh%np_part) = op%mesh%idx%lxyz(1:mesh%np_part, jj) - mesh%idx%nr(1, jj)
+        do ip = 1, mesh%np_part
+          call index_to_coords(op%mesh%idx, ip, idx)
+          do jj = 1, op%mesh%sb%dim
+            stencil(jj, ip) = idx(jj) - mesh%idx%nr(1, jj)
+          end do
         end do
 
         ASSERT(minval(stencil) == 0)
@@ -731,7 +731,6 @@ contains
 
     call nl_operator_copy(opt, op)
 
-#if defined(HAVE_MPI)
     if(mesh%parallel_in_domains) then
       SAFE_ALLOCATE(opg)
       SAFE_ALLOCATE(opgt)
@@ -741,13 +740,10 @@ contains
       SAFE_ALLOCATE(vol_pp(1:mesh%np_global))
       call vec_allgather(mesh%vp, vol_pp, mesh%vol_pp)
     else
-#endif
       opg  => op
       opgt => opt
       vol_pp => mesh%vol_pp
-#if defined(HAVE_MPI)
     end if
-#endif
 
     opgt%w = M_ZERO
     do ip = 1, mesh%np_global
@@ -768,7 +764,6 @@ contains
       end do
     end do
 
-#if defined(HAVE_MPI)
     if(mesh%parallel_in_domains) then
       SAFE_DEALLOCATE_P(vol_pp)
       do ip = 1, mesh%vp%np_local
@@ -779,7 +774,6 @@ contains
       SAFE_DEALLOCATE_P(opg)
       SAFE_DEALLOCATE_P(opgt)
     end if
-#endif
 
     POP_SUB(nl_operator_skewadjoint)
   end subroutine nl_operator_skewadjoint
@@ -801,7 +795,6 @@ contains
     call nl_operator_copy(opt, op)
 
     if(mesh%parallel_in_domains) then
-#if defined(HAVE_MPI)
       SAFE_ALLOCATE(opg)
       SAFE_ALLOCATE(opgt)
       call nl_operator_allgather(op, opg)
@@ -809,11 +802,6 @@ contains
       opgt = opg
       SAFE_ALLOCATE(vol_pp(1:mesh%np_global))
       call vec_allgather(mesh%vp, vol_pp, mesh%vol_pp)
-#else
-      ! avoid appearance of using vol_pp uninitialized
-      vol_pp => mesh%vol_pp
-      ASSERT(.false.)
-#endif
     else      
       opg  => op
       opgt => opt
@@ -841,7 +829,6 @@ contains
       end do
     end do
 
-#if defined(HAVE_MPI)
     if(mesh%parallel_in_domains) then
       SAFE_DEALLOCATE_P(vol_pp)
       do ip = 1, mesh%vp%np_local
@@ -852,13 +839,10 @@ contains
       SAFE_DEALLOCATE_P(opg)
       SAFE_DEALLOCATE_P(opgt)
     end if
-#endif
 
     POP_SUB(nl_operator_selfadjoint)
   end subroutine nl_operator_selfadjoint
 
-
-#if defined(HAVE_MPI)
 
   ! ---------------------------------------------------------
   !> Like nl_operator_gather but opg is present on all nodes
@@ -930,7 +914,6 @@ contains
   ! ---------------------------------------------------------
   ! End of private routines.
   ! ---------------------------------------------------------
-#endif
 
   ! ---------------------------------------------------------
   subroutine nl_operator_end(op)

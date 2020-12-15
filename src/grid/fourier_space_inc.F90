@@ -145,11 +145,11 @@ subroutine X(fourier_space_op_apply)(this, cube, cf)
 
   call cube_function_alloc_fs(cube, cf)
 
-  call profiling_in(prof, "OP_APPLY")
+  call profiling_in(prof, TOSTRING(X(OP_APPLY)))
 
   call X(cube_function_rs2fs)(cube, cf)
    
-  call profiling_in(prof_g,"G_APPLY")
+  call profiling_in(prof_g,TOSTRING(X(G_APPLY)))
 
   if(cube%fft%library == FFTLIB_PFFT) then
     !Note that the function in fourier space returned by PFFT is transposed

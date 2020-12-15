@@ -104,11 +104,15 @@ module mesh_function_oct_m
 
   type(mesh_t), pointer :: mesh_aux => null()
 
-  type(profile_t), save ::            &
-       C_PROFILING_MF_INTEGRATE,      &
-       C_PROFILING_MF_DOTP,           &
-       C_PROFILING_MF_REDUCE,         &
-       C_PROFILING_MF_NRM2
+  type(profile_t), save ::           &
+       dPROFILING_MF_INTEGRATE,      &
+       zPROFILING_MF_INTEGRATE,      &
+       dPROFILING_MF_DOTP,           &
+       zPROFILING_MF_DOTP,           &
+       dPROFILING_MF_REDUCE,         &
+       zPROFILING_MF_REDUCE,         &
+       dPROFILING_MF_NRM2,           &
+       zPROFILING_MF_NRM2
 
 contains
 

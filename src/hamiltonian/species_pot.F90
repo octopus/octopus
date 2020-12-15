@@ -23,6 +23,7 @@ module species_pot_oct_m
   use curvilinear_oct_m
   use global_oct_m
   use io_function_oct_m
+  use index_oct_m
   use mesh_function_oct_m
   use mesh_oct_m
   use messages_oct_m
@@ -867,7 +868,7 @@ contains
   subroutine getrho(xin)
     FLOAT, intent(in) :: xin(:)
 
-    integer :: ip, jp, idir, dim
+    integer :: ip, jp, idir, dim, idx(MAX_DIM)
     FLOAT   :: r, chi(MAX_DIM)
 
     PUSH_SUB(getrho)
@@ -880,7 +881,8 @@ contains
       if(mesh_p%parallel_in_domains) &
         jp = mesh_p%vp%local(mesh_p%vp%xlocal+ip-1)
 
-      chi(1:dim) = mesh_p%idx%lxyz(jp, 1:dim) * mesh_p%spacing(1:dim)
+      call index_to_coords(mesh_p%idx, jp, idx)
+      chi(1:dim) = idx(1:dim) * mesh_p%spacing(1:dim)
 
       r = sqrt( sum( (chi(1:dim) - xin(1:dim))**2 ) )
 

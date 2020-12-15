@@ -61,13 +61,11 @@ subroutine X(restart_write_mesh_function)(restart, filename, mesh, ff, ierr, roo
   end if
 
   if (in_line .and. mesh%parallel_in_domains) then
-#ifdef HAVE_MPI
     if (i_am_root) then
       call vec_gather(mesh%vp, root_(P_STRATEGY_DOMAINS), ff, ff_global)
     else
       call vec_gather(mesh%vp, root_(P_STRATEGY_DOMAINS), ff)
     end if
-#endif
   end if
   
   if (i_am_root) then
@@ -89,10 +87,8 @@ subroutine X(restart_write_mesh_function)(restart, filename, mesh, ff, ierr, roo
   
   if (mesh%parallel_in_domains .and. in_line) then
 #ifdef HAVE_MPI
-    ! I have to broadcast the error code  end if
+    ! I have to broadcast the error code
     call MPI_Bcast(ierr, 1, MPI_INTEGER, root_(P_STRATEGY_DOMAINS), mesh%vp%comm, mpi_err)
-    ! Add a barrier to ensure that the process are synchronized
-    call MPI_Barrier(mesh%vp%comm, mpi_err)
 #endif
   end if
     
@@ -157,7 +153,7 @@ subroutine X(restart_read_mesh_function)(restart, filename, mesh, ff, ierr)
 
   ASSERT(associated(read_ff))
 
-  call profiling_in(prof_io, "RESTART_READ_IO")
+  call profiling_in(prof_io, TOSTRING(X(RESTART_READ_IO)))
 
 #ifdef HAVE_MPI2
   if(mesh%parallel_in_domains) then
@@ -176,7 +172,7 @@ subroutine X(restart_read_mesh_function)(restart, filename, mesh, ff, ierr)
   call profiling_out(prof_io)
 
   if(mesh%parallel_in_domains) then
-    call profiling_in(prof_comm, "RESTART_READ_COMM")
+    call profiling_in(prof_comm, TOSTRING(X(RESTART_READ_COMM)))
     ! this is the global index of the points we read
 
     ff(1:mesh%np) = read_ff(1:mesh%np)
@@ -236,21 +232,14 @@ subroutine X(restart_write_binary1)(restart, filename, np, ff, ierr, root)
     end where
   end if
   
+  ierr = 0
   !Only the root node writes
   if (all(root_ == restart%mc%who_am_i)) then
     call io_binary_write(full_filename, np, ff, ierr)
-  end if
-
-#if defined(HAVE_MPI)
-  if(restart%mpi_grp%size > 1) then
-    call MPI_Bcast(ierr, 1, MPI_INTEGER, 0, restart%mpi_grp%comm, mpi_err)
-    call MPI_Barrier(restart%mpi_grp%comm, mpi_err)
-  end if
-#endif
-
-  if (ierr /= 0) then
-    message(1) = "Unable to write restart information to '"//trim(full_filename)//"'."
-    call messages_warning(1)
+    if (ierr /= 0) then
+      message(1) = "Unable to write restart information to '"//trim(full_filename)//"'."
+      call messages_warning(1, all_nodes=.true.)
+    end if
   end if
 
   POP_SUB(X(restart_write_binary1))
@@ -285,21 +274,14 @@ subroutine X(restart_write_binary2)(restart, filename, np, ff, ierr, root)
     end where
   end if
   
+  ierr = 0
   !Only the root node writes
   if (all(root_ == restart%mc%who_am_i)) then
     call io_binary_write(full_filename, np, ff, ierr)
-  end if
-
-#if defined(HAVE_MPI)
-  if(restart%mpi_grp%size > 1) then
-    call MPI_Bcast(ierr, 1, MPI_INTEGER, 0, restart%mpi_grp%comm, mpi_err)
-    call MPI_Barrier(restart%mpi_grp%comm, mpi_err)
-  end if
-#endif
-
-  if (ierr /= 0) then
-    message(1) = "Unable to write restart information to '"//trim(full_filename)//"'."
-    call messages_warning(1)
+    if (ierr /= 0) then
+      message(1) = "Unable to write restart information to '"//trim(full_filename)//"'."
+      call messages_warning(1, all_nodes=.true.)
+    end if
   end if
 
   POP_SUB(X(restart_write_binary2))
@@ -334,21 +316,14 @@ subroutine X(restart_write_binary3)(restart, filename, np, ff, ierr, root)
     end where
   end if
   
+  ierr = 0
   !Only the root node writes
   if (all(root_ == restart%mc%who_am_i)) then
     call io_binary_write(full_filename, np, ff, ierr)
-  end if
-
-#if defined(HAVE_MPI)
-  if(restart%mpi_grp%size > 1) then
-    call MPI_Bcast(ierr, 1, MPI_INTEGER, 0, restart%mpi_grp%comm, mpi_err)
-    call MPI_Barrier(restart%mpi_grp%comm, mpi_err)
-  end if
-#endif
-
-  if (ierr /= 0) then
-    message(1) = "Unable to write restart information to '"//trim(full_filename)//"'."
-    call messages_warning(1)
+    if (ierr /= 0) then
+      message(1) = "Unable to write restart information to '"//trim(full_filename)//"'."
+      call messages_warning(1, all_nodes=.true.)
+    end if
   end if
 
   POP_SUB(X(restart_write_binary3))
@@ -383,21 +358,14 @@ subroutine X(restart_write_binary5)(restart, filename, np, ff, ierr, root)
     end where
   end if
   
+  ierr = 0
   !Only the root node writes
   if (all(root_ == restart%mc%who_am_i)) then
     call io_binary_write(full_filename, np, ff, ierr)
-  end if
-
-#if defined(HAVE_MPI)
-  if(restart%mpi_grp%size > 1) then
-    call MPI_Bcast(ierr, 1, MPI_INTEGER, 0, restart%mpi_grp%comm, mpi_err)
-    call MPI_Barrier(restart%mpi_grp%comm, mpi_err)
-  endif
-#endif
-
-  if (ierr /= 0) then
-    message(1) = "Unable to write restart information to '"//trim(full_filename)//"'."
-    call messages_warning(1)
+    if (ierr /= 0) then
+      message(1) = "Unable to write restart information to '"//trim(full_filename)//"'."
+      call messages_warning(1, all_nodes=.true.)
+    end if
   end if
 
   POP_SUB(X(restart_write_binary5))

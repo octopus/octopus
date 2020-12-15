@@ -22,17 +22,17 @@
 subroutine X(sternheimer_solve)(                           &
   this, sys, lr, nsigma, omega, perturbation,       &
   restart, rho_tag, wfs_tag, have_restart_rho, have_exact_freq)
-  type(sternheimer_t),    intent(inout) :: this
-  type(system_t), target, intent(inout) :: sys
-  type(lr_t),             intent(inout) :: lr(:) 
-  integer,                intent(in)    :: nsigma 
-  R_TYPE,                 intent(in)    :: omega
-  type(pert_t),           intent(in)    :: perturbation
-  type(restart_t),        intent(inout) :: restart
-  character(len=*),       intent(in)    :: rho_tag
-  character(len=*),       intent(in)    :: wfs_tag
-  logical,      optional, intent(in)    :: have_restart_rho
-  logical,      optional, intent(in)    :: have_exact_freq
+  type(sternheimer_t),         intent(inout) :: this
+  type(electrons_t),   target, intent(inout) :: sys
+  type(lr_t),                  intent(inout) :: lr(:) 
+  integer,                     intent(in)    :: nsigma 
+  R_TYPE,                      intent(in)    :: omega
+  type(pert_t),                intent(in)    :: perturbation
+  type(restart_t),             intent(inout) :: restart
+  character(len=*),            intent(in)    :: rho_tag
+  character(len=*),            intent(in)    :: wfs_tag
+  logical,           optional, intent(in)    :: have_restart_rho
+  logical,           optional, intent(in)    :: have_exact_freq
 
   FLOAT :: tol
   FLOAT, allocatable :: dpsimod(:, :), residue(:, :)
@@ -55,7 +55,7 @@ subroutine X(sternheimer_solve)(                           &
 #endif
   
   PUSH_SUB(X(sternheimer_solve))
-  call profiling_in(prof, "STERNHEIMER")
+  call profiling_in(prof, TOSTRING(X(STERNHEIMER)))
 
   ASSERT(nsigma == 1 .or. nsigma == 2)
 
@@ -353,6 +353,11 @@ subroutine X(sternheimer_solve)(                           &
 
     abs_dens = M_ZERO
 
+    !NTD: This is quite different from the scf criterium.
+    ! In the scf routine, we use a norm 1 to evaluate the change in density
+    ! whereas here we evaluate a norm 2.
+    ! For the spinor case, the present version is most likely not correct, as the off-diagonal term
+    ! will not cancel each other at convergence and the normalization by the charge is thus not correct
     do ispin = 1, st%d%nspin
       do ip = 1, mesh%np
         tmp(ip) = dl_rhoin(ip, ispin, 1) - dl_rhotmp(ip, ispin, 1)
@@ -432,7 +437,7 @@ end subroutine X(sternheimer_solve)
 ! ---------------------------------------------------------
 !> add projection onto occupied states, by sum over states
 subroutine X(sternheimer_add_occ)(sys, lr_psi, rhs, sst, est, ik, omega_sigma, degen_thres)
-  type(system_t),      intent(in)    :: sys
+  type(electrons_t),   intent(in)    :: sys
   R_TYPE,              intent(inout) :: lr_psi(:,:,:)
   R_TYPE,              intent(in)    :: rhs(:,:,:) !< (np, ndim, nst)
   integer,             intent(in)    :: sst !< start state
@@ -490,7 +495,7 @@ end subroutine X(sternheimer_add_occ)
 !--------------------------------------------------------------
 subroutine X(sternheimer_calc_hvar)(this, sys, lr, nsigma, hvar)
   type(sternheimer_t),    intent(inout) :: this
-  type(system_t),         intent(inout) :: sys
+  type(electrons_t),      intent(inout) :: sys
   type(lr_t),             intent(inout) :: lr(:) 
   integer,                intent(in)    :: nsigma 
   R_TYPE,                 intent(out)   :: hvar(:,:,:) !< (1:mesh%np, 1:st%d%nspin, 1:nsigma)
@@ -511,7 +516,7 @@ end subroutine X(sternheimer_calc_hvar)
 !--------------------------------------------------------------
 subroutine X(calc_hvar)(add_hartree, sys, lr_rho, nsigma, hvar, fxc)
   logical,                intent(in)    :: add_hartree
-  type(system_t),         intent(inout) :: sys
+  type(electrons_t),      intent(inout) :: sys
   R_TYPE,                 intent(in)    :: lr_rho(:,:) !< (1:mesh%np, 1:sys%st%d%nspin)
   integer,                intent(in)    :: nsigma 
   R_TYPE,                 intent(out)   :: hvar(:,:,:) !< (1:mesh%np, 1:st%d%nspin, 1:nsigma)
@@ -522,7 +527,7 @@ subroutine X(calc_hvar)(add_hartree, sys, lr_rho, nsigma, hvar, fxc)
   FLOAT :: coeff_hartree
 
   PUSH_SUB(X(calc_hvar))
-  call profiling_in(prof_hvar, "CALC_HVAR")
+  call profiling_in(prof_hvar, TOSTRING(X(CALC_HVAR)))
 
   np = sys%gr%mesh%np
 
@@ -570,7 +575,7 @@ end subroutine X(calc_hvar)
 !--------------------------------------------------------------
 subroutine X(calc_kvar)(this, sys, lr_rho1, lr_rho2, nsigma, kvar)
   type(sternheimer_t),    intent(inout) :: this
-  type(system_t),         intent(inout) :: sys
+  type(electrons_t),      intent(inout) :: sys
   R_TYPE,                 intent(in)    :: lr_rho1(:,:) !< (1:mesh%np, 1:sys%st%d%nspin)
   R_TYPE,                 intent(in)    :: lr_rho2(:,:) !< (1:mesh%np, 1:sys%st%d%nspin)
   integer,                intent(in)    :: nsigma 
@@ -629,26 +634,26 @@ subroutine X(sternheimer_solve_order2)( &
      sh1, sh2, sh_2ndorder, sys, lr1, lr2, nsigma, omega1, omega2, pert1, pert2,       &
      lr_2ndorder, pert_2ndorder, restart, rho_tag, wfs_tag, have_restart_rho, have_exact_freq, &
      give_pert1psi2, give_dl_eig1)
-  type(sternheimer_t),    intent(inout) :: sh1
-  type(sternheimer_t),    intent(inout) :: sh2
-  type(sternheimer_t),    intent(inout) :: sh_2ndorder
-  type(system_t), target, intent(inout) :: sys
-  type(lr_t),             intent(inout) :: lr1(:) 
-  type(lr_t),             intent(inout) :: lr2(:) 
-  integer,                intent(in)    :: nsigma 
-  R_TYPE,                 intent(in)    :: omega1
-  R_TYPE,                 intent(in)    :: omega2
-  type(pert_t),           intent(in)    :: pert1
-  type(pert_t),           intent(in)    :: pert2
-  type(lr_t),             intent(inout) :: lr_2ndorder(:)
-  type(pert_t),           intent(in)    :: pert_2ndorder
-  type(restart_t),        intent(inout) :: restart
-  character(len=*),       intent(in)    :: rho_tag
-  character(len=*),       intent(in)    :: wfs_tag
-  logical,      optional, intent(in)    :: have_restart_rho
-  logical,      optional, intent(in)    :: have_exact_freq
-  R_TYPE,       optional, intent(in)    :: give_pert1psi2(:,:,:,:) !< (np, ndim, ist, ik)
-  FLOAT,        optional, intent(in)    :: give_dl_eig1(:,:) !< (nst, nk) expectation values of bare perturbation
+  type(sternheimer_t),         intent(inout) :: sh1
+  type(sternheimer_t),         intent(inout) :: sh2
+  type(sternheimer_t),         intent(inout) :: sh_2ndorder
+  type(electrons_t),   target, intent(inout) :: sys
+  type(lr_t),                  intent(inout) :: lr1(:) 
+  type(lr_t),                  intent(inout) :: lr2(:) 
+  integer,                     intent(in)    :: nsigma 
+  R_TYPE,                      intent(in)    :: omega1
+  R_TYPE,                      intent(in)    :: omega2
+  type(pert_t),                intent(in)    :: pert1
+  type(pert_t),                intent(in)    :: pert2
+  type(lr_t),                  intent(inout) :: lr_2ndorder(:)
+  type(pert_t),                intent(in)    :: pert_2ndorder
+  type(restart_t),             intent(inout) :: restart
+  character(len=*),            intent(in)    :: rho_tag
+  character(len=*),            intent(in)    :: wfs_tag
+  logical,           optional, intent(in)    :: have_restart_rho
+  logical,           optional, intent(in)    :: have_exact_freq
+  R_TYPE,            optional, intent(in)    :: give_pert1psi2(:,:,:,:) !< (np, ndim, ist, ik)
+  FLOAT,             optional, intent(in)    :: give_dl_eig1(:,:) !< (nst, nk) expectation values of bare perturbation
 
   integer :: isigma, ik, ist, idim, ispin, ip
   R_TYPE :: dl_eig1, dl_eig2

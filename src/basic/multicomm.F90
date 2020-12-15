@@ -167,7 +167,7 @@ contains
   subroutine multicomm_init(mc, namespace, base_grp, parallel_mask, default_mask, n_node, index_range, min_range)
     type(multicomm_t), intent(out)   :: mc
     type(namespace_t), intent(in)    :: namespace
-    type(mpi_grp_t),   intent(inout) :: base_grp
+    type(mpi_grp_t),   intent(in)    :: base_grp
     integer,           intent(in)    :: parallel_mask
     integer,           intent(in)    :: default_mask
     integer,           intent(in)    :: n_node
@@ -535,7 +535,7 @@ contains
         if(.not. multicomm_strategy_is_parallel(mc, kk)) cycle
         ii = ii + 1
         if(kk == slave_level) INCR(real_group_sizes(kk), -num_slaves)
-        write(message(ii),'(3a,i6,a,i8,a)') 'Info: Number of nodes in ', &
+        write(message(ii),'(3a,i6,a,i12,a)') 'Info: Number of nodes in ', &
           par_types(kk), ' group:', real_group_sizes(kk), ' (', index_range(kk), ')'
       end do
       call messages_info(ii)
@@ -643,7 +643,6 @@ contains
             call messages_fatal(1)
           end if
           call mpi_grp_init(reorder_grp, reorder_comm)
-          call mpi_grp_copy(base_grp, reorder_grp)
         else
           call mpi_grp_copy(reorder_grp, base_grp)
         end if
@@ -773,8 +772,8 @@ contains
 
     ! -----------------------------------------------------
 
-    subroutine create_slave_intercommunicators()
 #ifdef HAVE_MPI2
+    subroutine create_slave_intercommunicators()
       integer :: remote_leader
       integer :: tag
       integer :: coords(MAX_INDEX)
@@ -799,8 +798,8 @@ contains
       call MPI_Intercomm_create(mc%group_comm(slave_level), 0, base_grp%comm, remote_leader, tag, mc%slave_intercomm, mpi_err)
 
       POP_SUB(multicomm_init.create_slave_intercommunicators)
-#endif
     end subroutine create_slave_intercommunicators
+#endif
 
   end subroutine multicomm_init
   

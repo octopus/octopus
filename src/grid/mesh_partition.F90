@@ -115,7 +115,7 @@ contains
     integer, allocatable :: istart(:), lsize(:)
 
     type(profile_t), save :: prof
-    integer :: default
+    integer :: default, ierr
 
     call profiling_in(prof, "MESH_PARTITION")
     PUSH_SUB(mesh_partition)
@@ -342,23 +342,27 @@ contains
       SAFE_ALLOCATE(part_global(1:nv_global))
 
       !Now we can call METIS
-#ifdef HAVE_METIS
       select case(method)
       case(RCB)
         message(1) = 'Info: Using METIS 5 multilevel recursive bisection to partition the mesh.'
         call messages_info(1)
-        call oct_metis_partgraphrecursive(nv_global, 1, xadj_global(1), adjncy_global(1), vsize, &
+#ifdef HAVE_METIS
+        ierr = oct_metis_partgraphrecursive(nv_global, 1, xadj_global(1), adjncy_global(1), vsize, &
                                           tpwgts(1), 1.01_4, options(1), edgecut, part_global(1))
+#endif
+        call metis_error_code(ierr)
       case(GRAPH)
         message(1) = 'Info: Using METIS 5 multilevel k-way algorithm to partition the mesh.'
         call messages_info(1)
-        call oct_metis_partgraphkway(nv_global, 1, xadj_global(1), adjncy_global(1), vsize, &
+#ifdef HAVE_METIS
+        ierr = oct_metis_partgraphkway(nv_global, 1, xadj_global(1), adjncy_global(1), vsize, &
                                      tpwgts(1), 1.01_4, options(1), edgecut, part_global(1))
+#endif
+        call metis_error_code(ierr) 
       case default
         message(1) = 'Selected partition method is not available in METIS 5.'
         call messages_fatal(1)
       end select
-#endif
 
       part(1:nv) = part_global(istart(ipart):istart(ipart) + nv - 1)
 
@@ -405,6 +409,30 @@ contains
     call stencil_end(stencil)
     POP_SUB(mesh_partition)
     call profiling_out(prof)
+
+    contains
+
+      subroutine metis_error_code(ierr)
+        integer, intent(in) :: ierr 
+
+        PUSH_SUB(mesh_partition.metis_error_code)
+
+        select case(ierr)
+        case(METIS_OK)
+          !Everything OK
+        case(METIS_ERROR_INPUT)
+          message(1) = "Metis: Input error."
+          call messages_fatal(1, namespace=namespace)
+        case(METIS_ERROR_MEMORY)
+          message(1) = "Metis: Unable to allocate required memory."
+          call messages_fatal(1, namespace=namespace)
+        case(METIS_ERROR)
+          message(1) = "Metis: Some type of error."
+          call messages_fatal(1, namespace=namespace)
+        end select
+
+        POP_SUB(mesh_partition.metis_error_code)
+      end subroutine metis_error_code
 
   end subroutine mesh_partition
 
@@ -530,8 +558,9 @@ contains
     type(mesh_t), intent(inout) :: mesh
     type(mesh_t), intent(in)    :: parent
 
-    integer :: istart, np, ip_local, ip_global, ix, iy, iz, ii
+    integer :: istart, np, ip_local, ip_global
     integer, allocatable :: points(:), part(:)
+    integer :: idx(1:3)
 
     PUSH_SUB(mesh_partition_from_parent)
 
@@ -544,11 +573,8 @@ contains
     SAFE_ALLOCATE(part(1:np))
     do ip_local = 1, np
       ip_global = istart + ip_local - 1
-      ix = 2*mesh%idx%lxyz(ip_global, 1)
-      iy = 2*mesh%idx%lxyz(ip_global, 2)
-      iz = 2*mesh%idx%lxyz(ip_global, 3)
-      ii = parent%idx%lxyz_inv(ix, iy, iz)
-      points(ip_local) = ii
+      call index_to_coords(mesh%idx, ip_global, idx)
+      points(ip_local) = index_from_coords(parent%idx, 2*idx)
     end do
     call partition_get_partition_number(parent%inner_partition, np, points, part)
 

@@ -43,7 +43,7 @@ program oct_floquet
   use simul_box_oct_m
   use states_elec_oct_m
   use states_elec_restart_oct_m
-  use system_oct_m
+  use electrons_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use utils_oct_m
@@ -54,7 +54,7 @@ program oct_floquet
 
   integer :: ierr
 
-  type(system_t), pointer :: sys
+  type(electrons_t), pointer :: sys
   type(simul_box_t) :: sb
   type(states_elec_t) :: st
   type(grid_t)   :: gr
@@ -90,7 +90,8 @@ program oct_floquet
   call restart_module_init(global_namespace)
 
   call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
-  sys => system_init(global_namespace)
+  sys => electrons_t(global_namespace)
+  call sys%init_parallelization(mpi_world)
   call simul_box_init(sb, global_namespace, sys%geo, sys%space)
   ! make shortcut copies
   st = sys%st
@@ -247,18 +248,18 @@ contains
         call comm_allreduce(mpi_world%comm, psi)
         call comm_allreduce(mpi_world%comm, hpsi)
         hmss(1:nst,1:nst) = M_ZERO
-        call zgemm( 'n',                               &
-                    'c',                               &
-                    nst,                               &
-                    nst,                               &
-                    mesh%np_global*st%d%dim,           &
-                    cmplx(mesh%volume_element,kind=8), &
-                    hpsi(1, 1, 1),                     &
-                    ubound(hpsi, dim = 1),             &
-                    psi(1, 1, 1),                      &
-                    ubound(psi, dim = 1),              &
-                    cmplx(0.,kind=8),                  &
-                    hmss(1, 1),                        &
+        call zgemm( 'n',                                  &
+                    'c',                                  &
+                    nst,                                  &
+                    nst,                                  &
+                    mesh%np_global*st%d%dim,              &
+                    TOCMPLX(mesh%volume_element, M_ZERO), &
+                    hpsi(1, 1, 1),                        &
+                    ubound(hpsi, dim = 1),                &
+                    psi(1, 1, 1),                         &
+                    ubound(psi, dim = 1),                 &
+                    M_z0,                                 &
+                    hmss(1, 1),                           &
                     ubound(hmss, dim = 1))
 
         hmss(1:nst,1:nst) = CONJG(hmss(1:nst,1:nst))

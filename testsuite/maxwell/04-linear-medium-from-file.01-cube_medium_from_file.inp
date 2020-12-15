@@ -1,0 +1,97 @@
+# ----- Calculation mode and parallelization ------------------------------------------------------
+
+ CalculationMode   = td
+ RestartWrite = no
+ ExperimentalFeatures = yes
+
+%Systems
+  'Maxwell' | maxwell
+%
+
+ Maxwell.ParDomains = auto
+ Maxwell.ParStates  = no
+
+# ----- Maxwell box variables ---------------------------------------------------------------------
+
+ # free maxwell box limit of 12.0 plus 2.0 for the incident wave boundaries with
+ # der_order = 4 times dx_mx
+
+ lsize_mx = 14.0
+ dx_mx    = 0.5
+
+ Maxwell.BoxShape   = parallelepiped
+
+ %Maxwell.Lsize
+  lsize_mx | lsize_mx | lsize_mx
+ %
+
+ %Maxwell.Spacing
+  dx_mx | dx_mx | dx_mx
+ %
+
+
+# ----- Maxwell calculation variables -------------------------------------------------------------
+
+ MaxwellHamiltonianOperator = faraday_ampere_medium
+
+ %MaxwellBoundaryConditions
+  plane_waves | plane_waves | plane_waves
+ %
+
+ %MaxwellAbsorbingBoundaries
+  not_absorbing | not_absorbing | not_absorbing
+ %
+
+
+# ----- Output variables --------------------------------------------------------------------------
+
+ OutputFormat = axis_x + axis_y + axis_z
+
+
+# ----- Maxwell output variables ------------------------------------------------------------------
+
+ MaxwellOutput = electric_field + magnetic_field + maxwell_energy_density + trans_electric_field
+
+ MaxwellOutputInterval = 10
+ MaxwellTDOutput       = maxwell_energy + maxwell_fields
+
+ %MaxwellFieldsCoordinate
+   0.00 | 0.00 | 0.00
+ %
+
+
+# ----- Time step variables -----------------------------------------------------------------------
+
+ TDSystemPropagator = exp_mid
+ TDTimeStep                        = 1 / ( sqrt(c^2/dx_mx^2 + c^2/dx_mx^2 + c^2/dx_mx^2) )
+ TDPropagationTime                 = 30*TDTimeStep
+
+
+# ----- Maxwell field variables -------------------------------------------------------------------
+
+ lambda = 10.0
+ omega  = 2 * pi * c / lambda
+ kx     = omega / c
+ Ez     = 1.0
+ pw     = 10.0
+ p_s     = -20.0
+
+ %MaxwellIncidentWaves
+   plane_wave_mx_function | 0 | 0 | Ez | "plane_waves_function"
+ %
+
+ %MaxwellFunctions
+   "plane_waves_function" | mxf_cosinoidal_wave | kx | 0 | 0 | p_s | 0 | 0 | pw
+ %
+
+ # cosinoidal pulse
+ %UserDefinedInitialMaxwellStates
+  3 | formula | electric_field | "      Ez*cos(kx*(x-p_s))*(-cos(pi/2*(x-p_s-2*pw)/pw)) * step(pw-abs((kx*x-kx*p_s)/kx^2)) "
+  2 | formula | magnetic_field | " -1/c*Ez*cos(kx*(x-p_s))*(-cos(pi/2*(x-p_s-2*pw)/pw)) * step(pw-abs((kx*x-kx*p_s)/kx^2)) "
+ %
+
+% LinearMediumFromFile
+  "04-linear-medium-from-file.01-cube.off" | 2.0 | 2.0 | 100.0 | 100.0 | edged
+% 
+
+CheckPointsMediumFromFile = yes

@@ -46,18 +46,14 @@ subroutine X(io_function_input)(filename, namespace, mesh, ff, ierr, map)
   R_TYPE,            intent(inout) :: ff(:)
   integer,           intent(out)   :: ierr
   integer, optional, intent(in)    :: map(:)
-  !
 
-#if defined(HAVE_MPI)
   R_TYPE, allocatable :: ff_global(:)
-#endif
-  !
+
   PUSH_SUB(X(io_function_input))
 
   ASSERT(ubound(ff, dim = 1) == mesh%np .or. ubound(ff, dim = 1) == mesh%np_part)
 
   if(mesh%parallel_in_domains) then
-#if defined(HAVE_MPI)
     ! Only root reads. Therefore, only root needs a buffer
     ! ff_global for the whole function.
     SAFE_ALLOCATE(ff_global(1:1))
@@ -71,7 +67,9 @@ subroutine X(io_function_input)(filename, namespace, mesh, ff, ierr, map)
     ! Only root knows if the file was successfully read.
     ! Now, it tells everybody else.
     call mpi_debug_in(mesh%vp%comm, C_MPI_BCAST)
+#if defined(HAVE_MPI)
     call MPI_Bcast(ierr, 1, MPI_INTEGER, mesh%vp%root, mesh%vp%comm, mpi_err)
+#endif
     call mpi_debug_out(mesh%vp%comm, C_MPI_BCAST)
 
     ! Only scatter, when successfully read the file(s).
@@ -80,10 +78,6 @@ subroutine X(io_function_input)(filename, namespace, mesh, ff, ierr, map)
     end if
 
     SAFE_DEALLOCATE_A(ff_global)
-#else
-    ! internal error
-    ASSERT(.false.) 
-#endif
   else
     call X(io_function_input_global)(filename, namespace, mesh, ff, ierr, map)
   end if
@@ -119,7 +113,7 @@ subroutine X(io_function_input_global)(filename, namespace, mesh, ff, ierr, map)
 #endif
   R_TYPE, pointer :: read_ff(:)
 
-  call profiling_in(read_prof, "DISK_READ")
+  call profiling_in(read_prof, TOSTRING(X(DISK_READ)))
   PUSH_SUB(X(io_function_input_global))
 
   ierr = 0
@@ -506,9 +500,7 @@ subroutine X(io_function_output_vector)(how, dir, fname, namespace, mesh, ff, ve
       !lives
 
       do ivd = 1, vector_dim
-#ifdef HAVE_MPI        
         call vec_gather(mesh%vp, root_, ff(:, ivd), ff_global(:, ivd))
-#endif
       end do
       
     else
@@ -549,8 +541,6 @@ subroutine X(io_function_output_vector)(how, dir, fname, namespace, mesh, ff, ve
   if(comm /= MPI_COMM_NULL .and. comm /= 0 .and. .not. is_global_) then
     ! I have to broadcast the error code
     call MPI_Bcast(ierr, 1, MPI_INTEGER, 0, comm, mpi_err)
-    ! Add a barrier to ensure that the process are synchronized
-    call MPI_Barrier(comm, mpi_err)
   end if
 #endif
   
@@ -656,9 +646,7 @@ subroutine X(io_function_output_vector_BZ)(how, dir, fname, namespace, mesh, kpt
     do ivd = 1, vector_dim
       ff_global(kpt%start:kpt%end, ivd) = ff(lbound(ff, 1):ubound(ff, 1), ivd) 
     end do
-#ifdef HAVE_MPI
     call comm_allreduce(comm, ff_global)
-#endif
   else
     ff_global => ff
   end if
@@ -691,8 +679,6 @@ subroutine X(io_function_output_vector_BZ)(how, dir, fname, namespace, mesh, kpt
   if(comm /= MPI_COMM_NULL .and. comm /= 0 ) then
     ! I have to broadcast the error code
     call MPI_Bcast(ierr, 1, MPI_INTEGER, 0, comm, mpi_err)
-    ! Add a barrier to ensure that the process are synchronized
-    call MPI_Barrier(comm, mpi_err)
   end if
 #endif
   
@@ -777,8 +763,6 @@ subroutine X(io_function_output) (how, dir, fname, namespace, mesh, ff, unit, ie
   if(comm /= MPI_COMM_NULL .and. comm /= 0 .and. .not. is_global_) then
     ! I have to broadcast the error code
     call MPI_Bcast(ierr, 1, MPI_INTEGER, 0, comm, mpi_err)
-    ! Add a barrier to ensure that the process are synchronized
-    call MPI_Barrier(comm, mpi_err)
   end if
 
   if(mesh%parallel_in_domains .and. .not. is_global_) then
@@ -815,7 +799,7 @@ subroutine X(io_function_output_global) (how, dir, fname, namespace, mesh, ff, u
   integer            :: iunit, ip, idir, jj, np_max
   FLOAT              :: x0
 
-  call profiling_in(write_prof, "DISK_WRITE")
+  call profiling_in(write_prof, TOSTRING(X(DISK_WRITE)))
   PUSH_SUB(X(io_function_output_global))
 
   call io_mkdir(dir, namespace)
@@ -1097,11 +1081,11 @@ contains
         
         select case(d1)
         case(1)
-          ip = mesh%idx%lxyz_inv( 0, ix, iy)    ! plane_x
+          ip = index_from_coords(mesh%idx, [ 0, ix, iy])    ! plane_x
         case(2)
-          ip = mesh%idx%lxyz_inv(ix,  0, iy)    ! plane_y
+          ip = index_from_coords(mesh%idx, [ix,  0, iy])    ! plane_y
         case(3)
-          ip = mesh%idx%lxyz_inv(ix, iy,  0)    ! plane_z
+          ip = index_from_coords(mesh%idx, [ix, iy,  0])    ! plane_z
         end select
 
         select case(out_what)
@@ -1526,7 +1510,7 @@ subroutine X(io_function_output_global_BZ) (how, dir, fname, namespace, mesh, ff
   character(len=20)  :: mformat, mformat2, mfmtheader
   integer            :: iunit, np_max
 
-  call profiling_in(write_prof, "DISK_WRITE")
+  call profiling_in(write_prof, TOSTRING(X(DISK_WRITE)))
   PUSH_SUB(X(io_function_output_global_BZ))
 
   call io_mkdir(dir, namespace)

@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 #
-# Copyright (C) 2005-2014 H. Appel, M. Marques, X. Andrade, D. Strubbe
+# Copyright (C) 2005-2020 H. Appel, M. Marques, X. Andrade, D. Strubbe, M. Lueders, H. Glawe
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -18,6 +18,8 @@
 # 02110-1301, USA.
 #
 
+use strict;
+
 use warnings;
 use Getopt::Std;
 use File::Basename;
@@ -25,12 +27,13 @@ use File::Spec;
 use Fcntl qw(:mode :flock);
 use Time::HiRes qw(gettimeofday tv_interval);
 use Scalar::Util qw(looks_like_number);
+use File::Temp qw/tempdir/;
 
 sub usage {
 
     print <<EndOfUsage;
 
- Copyright (C) 2005-2016 H. Appel, M. Marques, X. Andrade, D. Strubbe
+ Copyright (C) 2005-2020 H. Appel, M. Marques, X. Andrade, D. Strubbe, M. Lueders, H. Glawe
 
 Usage: oct-run_regression_test.pl [options]
 
@@ -58,6 +61,7 @@ EndOfUsage
     exit 0;
 }
 
+my $precnum;
 
 sub set_precision{
     my $p = $_[0];
@@ -70,6 +74,10 @@ sub set_precision{
 
 # Check whether STDOUT is a terminal. If not, no ANSI sequences are
 # emitted.
+
+my %color_start;
+my %color_end;
+
 if(-t STDOUT) {
     $color_start{blue}="\033[34m";
     $color_end{blue}="\033[0m";
@@ -88,17 +96,10 @@ if(-t STDOUT) {
 
 if (not @ARGV) { usage; }
 
-$opt_f = "";
-$opt_r = "";
+our($opt_f, $opt_r, $opt_h, $opt_s, $opt_l, $opt_D, $opt_G, $opt_m, $opt_p, $opt_n, $opt_v);
+
 getopts("nlvhD:c:f:spmr:G:");
 
-# avoid warnings 'used only once: possible typo'
-$useless = $opt_h;
-$useless = $opt_l;
-$useless = $opt_s;
-
-# Default values
-use File::Temp qw/tempdir/;
 
 # Handle options
 $opt_h && usage;
@@ -117,12 +118,16 @@ if(length($opt_f) == 0) {
     die255("You must supply the name of a test file with the -f option.");
 }
 
-$aexec = get_env("EXEC");
-$global_np = get_env("OCT_TEST_MPI_NPROCS");
+my $aexec = get_env("EXEC");
+my $global_np = get_env("OCT_TEST_MPI_NPROCS");
 
 # FIXME: all test files should declare Processors
 #$np = "serial";
-$is_parallel = 0;
+my $is_parallel = 0;
+my $mpiexec;
+my $mpiexec_raw;
+my $machinelist;
+my ($np, $nslots, $my_nslots, $specify_np);
 
 # FIXME: could bake in mpiexec at configure time
 
@@ -157,13 +162,14 @@ if(!$opt_s) {
 
 # default number of processors for MPI runs is 2
 $np = 2;
-$enabled = ""; # FIXME: should Enabled be optional?
-$options_required = "";
-$options_required_mpi = "";
-$options_are_mpi = 0;
+my $enabled = ""; # FIXME: should Enabled be optional?
+
+my $expect_error = 0; # check for controlled failure 
+my $error_match_done = 1;   # check that at least one error-match has been done. 
+my $command_env;
 
 # Handle GPU offset
-$offset_GPU = defined $opt_G ? $opt_G : -1;
+my $offset_GPU = defined $opt_G ? $opt_G : -1;
 if($offset_GPU >= 0) {
     $command_env = "OCT_PARSE_ENV=1 OCT_AccelDevice=$offset_GPU";
 } else {
@@ -171,16 +177,107 @@ if($offset_GPU >= 0) {
 }
 
 # This variable counts the number of failed testcases.
-$failures = 0;
+my $failures = 0;
 
-$tempdirpath = get_env("TEMPDIRPATH");
+my $tempdirpath = get_env("TEMPDIRPATH");
 if ("$tempdirpath" eq "") { $tempdirpath = '/tmp'; }
 if (! -d $tempdirpath) { mkdir $tempdirpath; }
 
 set_precision("default");
-$test_succeeded = 1;
 
-$pwd = get_env("PWD");
+# Define the parser for the if..elseif..else..endif structures:
+
+# Conditional elements are defined through the if..[elseif..else]..endif structure.
+# The conditions are specified as argument (in parenthesis) of the if [or elseif].
+#
+# Conditions can be of the form: (avail[able] COND1 [(and|,) COND2 ...])
+
+# global variables, defining the state of the parser:
+
+# array to hold a set of conditions:
+my @conditions= ();
+
+my $options_available;
+
+# recursion level of nested if blocks:
+my $if_level = 0;
+
+# array of flags, indicating whether an if..else..endif block has been satisfied.
+# The array index is the recursion level.
+# Once a condition in a if..elseif..else..endif structure has been met, the if_done
+# for this level is set to 1 and further blocks of the same level will be skipped.
+my @if_started = ();
+my @if_done = ();
+
+sub parse_condition {
+
+    # This routine parses a string recursively to look for 'avail*' 'and' and ','
+    # and push found requirements to @($_[1]).
+
+    my $condition = $_[0];
+    my @required = @{$_[1]};
+
+    if ($condition =~ /\s*avail\w*\s*(\w*)\s*$/i ) {
+        parse_condition($1, $_[1]);
+    }
+
+    # parse comma separated options
+    elsif ($condition =~ /\b(\w*)\b\s+and\s+(.*)$/i ) {
+        push(@{$_[1]}, $1);
+        parse_condition($2, $_[1]);
+    }
+
+    # parse 'and' separated options
+    elsif ($condition =~ /\b(\w*)\b\s+,\s+(.*)$/i ) {
+        push(@{$_[1]}, $1);
+        parse_condition($2, $_[1]);
+    }
+
+    elsif ($condition =~ /^(\w*)$/ ) {
+        push(@{$_[1]}, $1);
+    }
+
+    else {
+        die255( "Ill-formed option condition.\n" );
+    }
+}
+
+sub check_conditions {
+
+    # This is a combined test to determine whether a certain step in the test needs to be executed.
+    # This check takes into account:
+    # - the level of the if blocks
+    # - whether a if-block already has been satisfied
+    # - whether prerequisits for a run are fulfilled.
+
+    my @required_options = ();
+    my $result=1;
+
+    if($if_level>0) {
+
+        # collect required options in $_:
+        foreach(@{$_[0]}) {
+            parse_condition($_, \@required_options);
+        }
+    
+        # check whether all required options are present:
+        foreach(@required_options) {
+            $result = $result * ($options_available =~ /$_/i);
+        }
+    }
+    return ((not $if_done[$if_level]) and $result);
+}
+
+
+# Set test_succeeded flag to 'TRUE' (=1). Only change to 'FALSE' (=0) if a test fails.
+my $test_succeeded = 1;
+$if_done[0] = 0;
+
+my $pwd = get_env("PWD");
+my $workdir;
+my $scriptname;
+my $matchdir;
+
 if (!$opt_m) {
     my $name = $opt_f;
     $name =~ s/\.\.\///g;
@@ -208,6 +305,19 @@ open(TESTSUITE, "<".$opt_f ) or die255("Cannot open testsuite file '$opt_f'.");
 
 
 my (%report, $r_match_report, $r_matches_array, $r_input_report);
+my %test;
+my ($test_start, $test_end);
+my ($basename, $basedir, $basecommand, $testname, $command, $command_line);
+my ($input_base, $input_file);
+my ($return_value, $cp_return);
+my $mode;
+my ($workfiles, $file_cp);
+my @wfiles;
+my $elapsed;
+my $value;
+my $name;
+my $line_num;
+
 
 while ($_ = <TESTSUITE>) {
 
@@ -256,18 +366,6 @@ while ($_ = <TESTSUITE>) {
             die255("Unknown option 'Enabled = $enabled' in testsuite file.");
         }
 
-    } elsif ( $_ =~ /^Options\s*:\s*(.*)\s*$/) {
-        $options_required = $1;
-        # note: we could implement Options by baking this into the script via configure...
-        $report{$testname}{"options"} = $options_required;
-        
-    } elsif ( $_ =~ /^Options_MPI\s*:\s*(.*)\s*$/) {
-        if ($is_parallel && $np ne "serial") {
-            $options_required_mpi = $1;
-            $options_are_mpi = 1;
-            $report{$testname}{"options_mpi"} = $options_required_mpi;
-        }
-
     } elsif ( $_ =~ /^Program\s*:\s*(.*)\s*$/) {
         $command = "$exec_directory/$1";
 
@@ -286,28 +384,9 @@ while ($_ = <TESTSUITE>) {
         if($is_parallel && $options_available !~ "mpi") {
             print "Running in serial since executable was not compiled with MPI.\n";
             $is_parallel = 0;
-            $options_are_mpi = 0;
         }
 
-        if($options_are_mpi) {
-            $options_required = $options_required_mpi;
-        }
 
-        if(length($options_required) > 0) {
-            # check if the executable was compiled with the required options
-            foreach my $option (split(/;/, $options_required)){
-                if(" $options_available " !~ " $option ") {
-                    print "\nSkipping test: executable does not have the required option '$option'";
-                    if($options_are_mpi) {
-                        print " for MPI";
-                    }
-                    print ".\n";
-                    print "Executable: $command\n";
-                    print "Available options: $options_available\n\n";
-                    skip_exit();
-                }
-            }
-        }
         # FIXME: import Options to BGW version
     } elsif ( $_ =~ /^TestGroups\s*:\s*(.*)\s*$/) {
         # handled by oct-run_testsuite.sh
@@ -318,7 +397,6 @@ while ($_ = <TESTSUITE>) {
             die255("Testsuite file must set Enabled tag before another (except Test, Program, Options, TestGroups).");
         }
       
-
         if ( $_ =~ /^Util\s*:\s*(.*)\s*$/ || $_ =~ /^MPIUtil\s*:\s*(.*)\s*$/) {
             if( $_ =~ /^Util\s*:\s*(.*)\s*$/) {$np = "serial";}
             $command = "$exec_directory/$1";
@@ -350,112 +428,178 @@ while ($_ = <TESTSUITE>) {
             $np = $1;
         }
 
-        elsif ( $_ =~ /^Input\s*:\s*(.*)\s*$/) {
-            $input_base = $1;
-            $input_file = dirname($opt_f) . "/" . $input_base;
+        elsif ( $_ =~ /^if\s*\((.*)\)\s*;\s*then\s*$/i ) {
+    
+            # Entering an IF region
+            push(@conditions,$1);
+            $if_level += 1;
+            $if_started[$if_level] = 0;
+            $if_done[$if_level] = 0;
+    
+        }
+    
+        elsif ( $_ =~ /^elseif\s\((.*)\)\s*;\s*then\s*$/i ) {
+    
+            $if_done[$if_level] = $if_started[$if_level];
+            $if_started[$if_level] = 0;
+            pop(@conditions);
+            push(@conditions,$1);
+    
+        }
+    
+        elsif ( $_ =~ /^else\s*$/i ) {
 
-            my %input_report;
-            $r_input_report = \%input_report;          
-            $report{$testname}{"input"}{basename($input_file)} = \%input_report;
-          
-            my @matches_array;
-            $r_matches_array = \@matches_array;
-            $input_report{"matches"} = \@matches_array;
-            if($is_parallel) {
-                $input_report{"processors"} = $np;
-            } else {
-                $input_report{"processors"} = 1;
-            }
-      
-            if ( $opt_m ) {
-                print "\n\nFor input file : $input_file\n\n";
-                $return_value = 0;
-                # FIXME: this works from outer directory, but not in archived subdirectories.
-                $matchdir = "$workdir/$input_base";
-            } else {
-                if( -f $input_file ) {
-                    print "\nUsing input file : $input_file\n";
-                    $cp_return = system("cp $input_file $workdir/inp");
-                    if($cp_return != 0) {
-                        die255("Copy failed (cp $input_file $workdir/inp)\n");
-                    }
-                    # Ensure that the input file is writable so that it can
-                    # be overwritten by the next test.
-                    $mode = (stat "$workdir/inp")[2];
-                    chmod $mode|S_IWUSR, "$workdir/inp";
+            $if_done[$if_level] = $if_started[$if_level];
+            $if_started[$if_level] = 0;
+            pop(@conditions);
+        }
+    
+        elsif ( $_ =~ /^endif\s*$/i ) {
+    
+            $if_done[$if_level] = $if_started[$if_level];
+            $if_started[$if_level] = 0;
+            if ($if_level==0) { die255("Ill-formed test file (unpaired endif.)\n"); }
+            # Exiting IF region
+            pop(@conditions);
+            $if_done[$if_level] = undef;
+            $if_level -= 1;
+    
+        }
+
+
+        elsif ( $_ =~ /^\w*Input\s*:\s*(.*)\s*$/  ) {
+
+            if( check_conditions(\@conditions, $options_available)) {
+
+                check_error_resolved();
+
+                $input_base = $1;
+                $input_file = dirname($opt_f) . "/" . $input_base;
+
+                my %input_report;
+                $r_input_report = \%input_report;          
+                $report{$testname}{"input"}{basename($input_file)} = \%input_report;
+
+
+                # The FailingInput is not really necessary, but can be used to make it explicit in the test file that an error is expected due to deliberate input errors.
+
+                if( $_ =~ /^FailingInput/) {
+                    $expect_error = 1;
+                }
+                $input_report{"expected_failure"} = $expect_error?"Yes":"No";
+
+                my @matches_array;
+                $r_matches_array = \@matches_array;
+                $input_report{"matches"} = \@matches_array;
+                if($is_parallel) {
+                    $input_report{"processors"} = $np;
                 } else {
-                    die255("Could not find input file '$input_file'.");
+                    $input_report{"processors"} = 1;
                 }
-      
-                # serial or MPI run?
-                if ( $is_parallel && $np ne "serial") {
-                    if("$global_np" ne "") {
-                        $np = $global_np;
-                    }
-                    if ("$mpiexec" =~ /ibrun/) { # used by SGE parallel environment
-                        $specify_np = "";
-                        $my_nslots = "MY_NSLOTS=$np";
-                    } elsif ("$mpiexec" =~ /runjob/) { # used by BlueGene
-                        $specify_np = "--np $np --exe";
-                        $my_nslots = "";
-                    } elsif ("$mpiexec" =~ /poe/) { # used by IBM PE 
-                        $specify_np = ""; 
-                        $my_nslots = "MP_PROCS=$np"; 
-                    } else { # for mpirun and Cray's aprun
-                        $specify_np = "-n $np";
-                        $my_nslots = "";
-                    }
-                    $command_line = "cd $workdir; $command_env $my_nslots $mpiexec $specify_np $machinelist $aexec $command > out";
+
+                if ( $opt_m ) {
+                    print "\n\nFor input file : $input_file\n\n";
+                    $return_value = 0;
+                    # FIXME: this works from outer directory, but not in archived subdirectories.
+                    $matchdir = "$workdir/$input_base";
                 } else {
-                    $command_line = "cd $workdir; $command_env $aexec $command > out ";
-                }
-
-                # MPI implementations generally permit using more tasks than actual cores, and running tests this way makes it likely for developers to find race conditions.
-                if($np ne "serial") {
-                    if($np > 4) {
-                        print "Note: this run calls for more than the standard maximum of 4 MPI tasks.\n";
-                    }
-                }
-
-                print "Executing: " . $command_line . "\n";
-
-                if ( !$opt_n ) {
-                    $test_start = [gettimeofday];
-                    $return_value = system("$command_line");
-                    $test_end   = [gettimeofday];
-
-                    $elapsed = tv_interval($test_start, $test_end);
-                    printf("\tElapsed time: %8.1f s\n\n", $elapsed);
-
-                    if($return_value == 0) {
-                        printf "%-40s%s", " Execution", ": \t [ $color_start{green}  OK  $color_end{green} ] \n";
-                        $input_report{"execution"} = "success";
-              
+                    if( -f $input_file ) {
+                        print "\nUsing input file : $input_file\n";
+                        $cp_return = system("cp $input_file $workdir/inp");
+                        if($cp_return != 0) {
+                            die255("Copy failed (cp $input_file $workdir/inp)\n");
+                        }
+                        # Ensure that the input file is writable so that it can
+                        # be overwritten by the next test.
+                        $mode = (stat "$workdir/inp")[2];
+                        chmod $mode|S_IWUSR, "$workdir/inp";
                     } else {
-                        print "Test run failed with exit code $return_value.\n";
-                        print "These are the last lines of output:\n\n";
-                        print "----------------------------------------\n";
-                        system("tail -20 $workdir/out");
-                        print "----------------------------------------\n\n";
-
-                        printf "%-40s%s", " Execution", ": \t [ $color_start{red} FAIL $color_end{red} ] \n\n";
-                        $input_report{"execution"} = "fail";
-
-                        $failures++;
-                        $test_succeeded = 0;  
+                        die255("Could not find input file '$input_file'.");
                     }
-                    $test{"run"} = 1;
-                }
 
-                # copy all files of this run to archive directory with the name of the
-                # current input file
-                mkdir "$workdir/$input_base";
-                @wfiles = `ls -d $workdir/* | grep -v inp`;
-                $workfiles = join("",@wfiles);
-                $workfiles =~ s/\n/ /g;
-                $cp_return = system("cp -r $workfiles $workdir/inp $workdir/$input_base");
-                if($cp_return != 0) {
-                    die255("Copy failed (cp -r $workfiles $workdir/inp $workdir/$input_base)\n");
+                    # serial or MPI run?
+                    if ( $is_parallel && $np ne "serial") {
+                        if("$global_np" ne "") {
+                            $np = $global_np;
+                        }
+                        if ("$mpiexec" =~ /ibrun/) { # used by SGE parallel environment
+                            $specify_np = "";
+                            $my_nslots = "MY_NSLOTS=$np";
+                        } elsif ("$mpiexec" =~ /runjob/) { # used by BlueGene
+                            $specify_np = "--np $np --exe";
+                            $my_nslots = "";
+                        } elsif ("$mpiexec" =~ /poe/) { # used by IBM PE 
+                            $specify_np = ""; 
+                            $my_nslots = "MP_PROCS=$np"; 
+                        } else { # for mpirun and Cray's aprun
+                            $specify_np = "-n $np";
+                            $my_nslots = "";
+                        }
+                        $command_line = "cd $workdir; $command_env $my_nslots $mpiexec $specify_np $machinelist $aexec $command ";
+                    } else {
+                        $command_line = "cd $workdir; $command_env $aexec $command ";
+                    }
+
+                    # MPI implementations generally permit using more tasks than actual cores, and running tests this way makes it likely for developers to find race conditions.
+                    if($np ne "serial") {
+                        if($np > 4) {
+                            print "Note: this run calls for more than the standard maximum of 4 MPI tasks.\n";
+                        }
+                    }
+
+                    $command_line = $command_line." > out 2> err";
+
+                    print "Executing: " . $command_line . "\n";
+
+                    if ( !$opt_n ) {
+                        $test_start = [gettimeofday];
+                        $return_value = system("$command_line");
+                        $test_end   = [gettimeofday];
+
+                        $elapsed = tv_interval($test_start, $test_end);
+                        printf("\tElapsed time: %8.1f s\n\n", $elapsed);
+
+                        if($return_value == 0) {
+                            printf "%-40s%s", " Execution", ": \t [ $color_start{green}  OK  $color_end{green} ] \n";
+                            $input_report{"execution"} = "success";
+
+                            # Set $error_match_done to TRUE to indicate that no error match needs to be done.
+                            $error_match_done = 1;
+
+                        } else {
+
+                            # In case of non-zero return value, we will not immediately mark the run as failling, but set a flag that a test for
+                            # the correct error message is obligatory.
+                            #
+                            # If that match was successful (i.e. the correct error message has been printed), we count it as success (passed).
+                            # If that match was unsuccessful or no match has been performed, we mark it as failed.
+
+
+                            print "Test run failed with exit code $return_value.\n";
+                            print "These are the last lines of output:\n\n";
+                            print "----------------------------------------\n";
+                            system("tail -20 $workdir/out");
+                            print "----------------------------------------\n\n";
+                            print "These are the last lines of stderr:\n\n";
+                            print "----------------------------------------\n";
+                            system("tail -20 $workdir/err");
+                            print "----------------------------------------\n\n";
+
+                            $error_match_done = 0;
+                        }
+                        $test{"run"} = 1;
+                    }
+
+                    # copy all files of this run to archive directory with the name of the
+                    # current input file
+                    mkdir "$workdir/$input_base";
+                    @wfiles = `ls -d $workdir/* | grep -v inp`;
+                    $workfiles = join("",@wfiles);
+                    $workfiles =~ s/\n/ /g;
+                    $cp_return = system("cp -r $workfiles $workdir/inp $workdir/$input_base");
+                    if($cp_return != 0) {
+                        die255("Copy failed (cp -r $workfiles $workdir/inp $workdir/$input_base)\n");
+                    }
                 }
             }
         }
@@ -470,29 +614,41 @@ while ($_ = <TESTSUITE>) {
         }
 
         elsif ( $_ =~ /^match/ ) {
-            # FIXME: should we do matches even when execution failed?
+            # matches results when execution was successful
 
-            my %match_report;
-            $r_match_report = \%match_report;
-          
-            if (!$opt_n && $return_value == 0) {
-                push( @{$r_matches_array}, $r_match_report);
-                if(run_match_new($_)){
-                    printf "%-40s%s", "$name", ":\t [ $color_start{green}  OK  $color_end{green} ] \t (Calculated value = $value) \n";
-                    if ($opt_v) { print_hline(); }
-                } else {
-                    printf "%-40s%s", "$name", ":\t [ $color_start{red} FAIL $color_end{red} ] \n";
-                    print_hline();
-                    $test_succeeded = 0;
-                    $failures++;
+            if( check_conditions(\@conditions, $options_available)) {
+
+                my %match_report;
+                $r_match_report = \%match_report;
+
+                # Mark this match-line as error match if it contains "error" in the name.
+                my $error_match = ($_ =~ /error/i);
+
+                if (!$opt_n && ($error_match xor ($return_value == 0) )  ) {
+                    push( @{$r_matches_array}, $r_match_report);
+                    if(run_match_new($_)){
+                        printf "%-40s%s", "$name", ":\t [ $color_start{green}  OK  $color_end{green} ] \t (Calculated value = $value) \n";
+                        if ($opt_v) { print_hline(); }
+                        if ($error_match) { $error_match_done = 1; }
+                    } else {
+                        printf "%-40s%s", "$name", ":\t [ $color_start{red} FAIL $color_end{red} ] \n";
+                        print_hline();
+                        $test_succeeded = 0;
+                        $failures++;
+                    }
                 }
-            }
-        } else {
+                $if_started[$if_level]=1;
+            } 
+        }
+
+        else {
             die255("Unknown command '$_'.");
         }
     }
 
 }
+
+check_error_resolved();
 
 if ($opt_l && !$opt_m && !$opt_n)  { system ("cat $workdir/out >> out.log"); }
 if (!$opt_p && !$opt_m && $test_succeeded) { system ("rm -rf $workdir"); }
@@ -515,7 +671,7 @@ exit $failures;
 
 
 sub run_match_new {
-    die255("Have to run before matching.") if !$test{"run"} && !opt_m;
+    die255("Have to run before matching.") if !$test{"run"} && !$opt_m;
 
     # parse match line
     my ($line, $match, $match_command, $shell_command, $ref_value, $off);
@@ -618,7 +774,7 @@ sub run_match_new {
     # otherwise the error comes only if the last step failed.
     $value = qx(cd $matchdir && $shell_command);    
     # Perl gives error code shifted, for some reason.
-    $exit_code = $? >> 8;
+    my $exit_code = $? >> 8;
     if ($exit_code) {
         print STDERR "ERROR: Match command failed: $shell_command\n";
         return 0;
@@ -652,7 +808,7 @@ sub run_match_new {
     }
 
     # at this point, we know that the command was successful, and returned a number.
-    $success = (abs(($value)-($ref_value)) <= $precnum);
+    my $success = (abs(($value)-($ref_value)) <= $precnum);
 
     if (!$success || $opt_v) {
         print_hline();
@@ -717,5 +873,13 @@ sub skip_exit {
         print "Status: ".$failures." failures\n";
         exit $failures;
         # if a previous step has failed, mark as failed not skipped
+    }
+}
+
+sub check_error_resolved {
+    if (!$opt_n && !$error_match_done) { 
+        print "No error check performed!\n";
+#        $input_report{"execution"} = "fail";
+        $failures++; 
     }
 }

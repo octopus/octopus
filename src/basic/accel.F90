@@ -60,6 +60,7 @@ module accel_oct_m
     accel_kernel_t,               &
     accel_t,                      &
     accel_is_enabled,             &
+    accel_allow_CPU_only,         &
     accel_init,                   &
     accel_end,                    &
     accel_padded_size,            &
@@ -135,6 +136,7 @@ module accel_oct_m
     integer(8)             :: local_memory_size
     integer(8)             :: global_memory_size
     logical                :: enabled
+    logical                :: allow_CPU_only
     logical                :: shared_mem
     logical                :: cuda_mpi
     integer                :: warp_size
@@ -267,6 +269,16 @@ contains
     enabled = .false.
 #endif
   end function accel_is_enabled
+
+  ! ------------------------------------------
+
+  pure logical function accel_allow_CPU_only() result(allow)
+#ifdef HAVE_ACCEL
+    allow = accel%allow_CPU_only
+#else
+    allow = .true.
+#endif
+  end function accel_allow_CPU_only
 
   ! ------------------------------------------
 
@@ -645,15 +657,33 @@ contains
       call messages_info()
     end if
 
+
+    !%Variable AllowCPUonly
+    !%Type logical
+    !%Section Execution::Accel
+    !%Description
+    !% In order to prevent waste of resources, the code will normally stop when the GPU is disabled due to 
+    !% incomplete implementations or incompatibilities. AllowCPUonly = yes overrides this and allows the 
+    !% code execution also in these cases.
+    !%End
+#if defined (HAVE_ACCEL)
+    default = .false.
+#else
+    default = .true.
+#endif
+    call parse_variable(namespace, 'AllowCPUonly', default, accel%allow_CPU_only)
+
+
+
     call messages_print_stress(stdout)
 
     POP_SUB(accel_init)
 
   contains
 
+#if defined(HAVE_MPI) && defined(HAVE_OPENCL)
     subroutine select_device(idevice)
       integer, intent(inout) :: idevice
-#if defined(HAVE_MPI) && defined(HAVE_OPENCL)
       integer :: irank
       character(len=256) :: device_name
 
@@ -676,10 +706,10 @@ contains
         end if
         call MPI_Barrier(base_grp%comm, mpi_err)
       end do
-#endif
 
       POP_SUB(accel_init.select_device)
     end subroutine select_device
+#endif
 
     subroutine device_info()
 #ifdef HAVE_OPENCL
@@ -773,11 +803,11 @@ contains
 #endif
 
       call messages_write('      Device memory          :')
-      call messages_write(accel%global_memory_size, units = unit_megabytes)
+      call messages_write(accel%global_memory_size, units=unit_megabytes)
       call messages_new_line()
 
       call messages_write('      Local/shared memory    :')
-      call messages_write(accel%local_memory_size, units = unit_kilobytes)
+      call messages_write(accel%local_memory_size, units=unit_kilobytes)
       call messages_new_line()
       
     
@@ -822,7 +852,7 @@ contains
   end subroutine accel_init
 
   ! ------------------------------------------
-
+#ifdef HAVE_OPENCL
   integer function get_platform_id(platform_name) result(platform_id)
     character(len=*), intent(in) :: platform_name
 
@@ -832,7 +862,7 @@ contains
     if(index(platform_name, 'NVIDIA') > 0) platform_id = CL_PLAT_NVIDIA
     if(index(platform_name, 'Intel') > 0)  platform_id = CL_PLAT_INTEL
   end function get_platform_id
-
+#endif
   ! ------------------------------------------
 
   subroutine accel_end()
@@ -1058,22 +1088,6 @@ contains
     allocated = this%allocated
   end function accel_buffer_is_allocated
     
-  ! ------------------------------------------
-
-  integer(SIZEOF_SIZE_T) pure function opencl_get_buffer_size(this) result(size)
-    type(accel_mem_t), intent(in) :: this
-
-    size = this%size
-  end function opencl_get_buffer_size
-
-  ! -----------------------------------------
-
-  type(type_t) pure function opencl_get_buffer_type(this) result(type)
-    type(accel_mem_t), intent(in) :: this
-
-    type = this%type
-  end function opencl_get_buffer_type
-
   ! -----------------------------------------
 
   subroutine accel_finish()
@@ -1378,7 +1392,7 @@ contains
 #endif
   
   ! ------------------------------------------------
-
+#ifdef HAVE_OPENCL
   subroutine opencl_print_error(ierr, name)
     integer,          intent(in) :: ierr
     character(len=*), intent(in) :: name
@@ -1387,7 +1401,6 @@ contains
 
     PUSH_SUB(opencl_print_error)
 
-#ifdef HAVE_OPENCL
     select case(ierr)
     case(CL_SUCCESS); errcode = 'CL_SUCCESS '
     case(CL_DEVICE_NOT_FOUND); errcode = 'CL_DEVICE_NOT_FOUND '
@@ -1441,13 +1454,13 @@ contains
       write(errcode, '(i10)') ierr
       errcode = 'UNKNOWN ERROR CODE ('//trim(adjustl(errcode))//')'
     end select
-#endif
     
     message(1) = 'OpenCL '//trim(name)//' '//trim(errcode)
     call messages_fatal(1)
 
     POP_SUB(opencl_print_error)
   end subroutine opencl_print_error
+#endif
 
   ! ----------------------------------------------------
 

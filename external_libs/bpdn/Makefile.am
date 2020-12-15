@@ -18,9 +18,9 @@
 ## $Id: Makefile.am 7479 2011-02-18 11:33:08Z xavier $
 
 
-noinst_LIBRARIES = libbpdn.a
+noinst_LTLIBRARIES = libbpdn.la
 
-libbpdn_a_SOURCES =            \
+libbpdn_la_SOURCES =            \
 	heap.c                 \
 	oneProjectorCore.c     \
 	spgl1_projector.c      \
@@ -31,9 +31,9 @@ noinst_HEADERS =               \
 	heap.h                 \
 	oneProjectorCore.h
 
-spgl1_projector.o : spgl1_projector.c 
-oneProjectorCore.o : oneProjectorCore.c oneProjectorCore.h heap.h
-heap.o : heap.c heap.h
-bpdn.o : bpdn.f90
+spgl1_projector.lo : spgl1_projector.c 
+oneProjectorCore.lo : oneProjectorCore.c oneProjectorCore.h heap.h
+heap.lo : heap.c heap.h
+bpdn.lo : bpdn.f90
 
 CLEANFILES = *~ *.bak *.mod *.MOD *.il *.d *.pc* ifc*

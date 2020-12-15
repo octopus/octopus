@@ -1,0 +1,22 @@
+CalculationMode = td
+ExperimentalFeatures = yes
+FromScratch = yes
+
+Dimensions = 3
+
+%Systems
+ "dftbplus" | dftbplus
+%
+%Coordinates
+'O' |   0.0000000*angstrom | 0.0000000 |  -0.1900000*angstrom
+'H' |   0.7493682*angstrom | 0.0000000 |   0.4424329*angstrom
+'H' |  -0.7493682*angstrom | 0.0000000 |   0.4424329*angstrom
+%
+SccTolerance = 1.0e-12
+%MaxAngularMomentum
+ " O " | " p"
+ " H " | " s "
+%
+TDSystemPropagator = verlet
+TDTimeStep = 1.0
+TDPropagationTime = 200.0

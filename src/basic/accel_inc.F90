@@ -52,7 +52,7 @@ subroutine X(accel_write_buffer_1)(this, size, data, offset, async)
 #endif
 
   PUSH_SUB(X(accel_write_buffer_1))
-  call profiling_in(prof_write, "CL_WRITE_BUFFER")
+  call profiling_in(prof_write, TOSTRING(X(CL_WRITE_BUFFER)))
 
   ! it does not make sense to write a buffer that the kernels cannot read
   ASSERT(this%flags /= ACCEL_MEM_WRITE_ONLY)
@@ -99,7 +99,7 @@ subroutine X(accel_write_buffer_2)(this, size, data, offset, async)
 #endif
 
   PUSH_SUB(X(accel_write_buffer_2))
-  call profiling_in(prof_write, "CL_WRITE_BUFFER")
+  call profiling_in(prof_write, TOSTRING(X(CL_WRITE_BUFFER)))
 
   ! it does not make sense to write a buffer that the kernels cannot read
   ASSERT(this%flags /= ACCEL_MEM_WRITE_ONLY)
@@ -146,7 +146,7 @@ subroutine X(accel_write_buffer_3)(this, size, data, offset, async)
 #endif
 
   PUSH_SUB(X(accel_write_buffer_3))
-  call profiling_in(prof_write, "CL_WRITE_BUFFER")
+  call profiling_in(prof_write, TOSTRING(X(CL_WRITE_BUFFER)))
 
   ! it does not make sense to write a buffer that the kernels cannot read
   ASSERT(this%flags /= ACCEL_MEM_WRITE_ONLY)
@@ -193,7 +193,7 @@ subroutine X(accel_read_buffer_1)(this, size, data, offset, async)
 #endif
 
   PUSH_SUB(X(accel_read_buffer_1))
-  call profiling_in(prof_read, "CL_READ_BUFFER")
+  call profiling_in(prof_read, TOSTRING(X(CL_READ_BUFFER)))
 
   ! it does not make sense to read a buffer that the kernels cannot write
   ASSERT(this%flags /= ACCEL_MEM_READ_ONLY)
@@ -240,7 +240,7 @@ subroutine X(accel_read_buffer_2)(this, size, data, offset, async)
 #endif
   
   PUSH_SUB(X(accel_read_buffer_2))
-  call profiling_in(prof_read, "CL_READ_BUFFER")
+  call profiling_in(prof_read, TOSTRING(X(CL_READ_BUFFER)))
 
   ! it does not make sense to read a buffer that the kernels cannot write
   ASSERT(this%flags /= ACCEL_MEM_READ_ONLY)
@@ -274,7 +274,7 @@ end subroutine X(accel_read_buffer_2)
 ! ---------------------------------------------------------------------------
 
 subroutine X(accel_read_buffer_3)(this, size, data, offset, async)
-  type(accel_mem_t),               intent(in)    :: this
+  type(accel_mem_t),               intent(in)     :: this
   integer,                          intent(in)    :: size
   R_TYPE,                           intent(out)   :: data(:, :, :)
   integer,                optional, intent(in)    :: offset
@@ -287,7 +287,7 @@ subroutine X(accel_read_buffer_3)(this, size, data, offset, async)
 #endif
   
   PUSH_SUB(X(accel_read_buffer_3))
-  call profiling_in(prof_read, "CL_READ_BUFFER")
+  call profiling_in(prof_read, TOSTRING(X(CL_READ_BUFFER)))
 
   ! it does not make sense to read a buffer that the kernels cannot write
   ASSERT(this%flags /= ACCEL_MEM_READ_ONLY)

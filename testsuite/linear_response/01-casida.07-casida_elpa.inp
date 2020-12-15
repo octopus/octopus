@@ -1,0 +1,41 @@
+# -*- coding: utf-8 mode: shell-script -*-
+
+CalculationMode = casida
+ExperimentalFeatures = yes
+
+FromScratch = yes
+
+bond_length = 2.0744
+
+%Coordinates
+"N" |  -bond_length/2 |  0.0 |  0.0 
+"N" |   bond_length/2 |  0.0 |  0.0 
+%
+
+%Species
+"N" | species_pseudo | lmax | 2 | lloc | 0  
+%
+
+BoxShape = sphere
+
+Radius = 12.0
+Spacing = 0.36
+
+XCFunctional = lda_x + lda_c_vwn
+CasidaTheoryLevel = eps_diff + petersilka + lrtddft_casida + tamm_dancoff + variational
+CasidaKohnShamStates = "3-10"
+
+CasidaTransitionDensities = "3-4"
+OutputFormat = xcrysden
+
+CasidaDistributedMatrix = true
+CasidaParallelEigensolver = casida_elpa
+
+PoissonSolver = fft
+PoissonFFTKernel = multipole_correction
+
+ParDomains = 2
+ParOther = 2
+
+MixField = density
+StatesPack = yes

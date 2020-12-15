@@ -38,18 +38,19 @@ subroutine X(states_elec_blockt_mul)(mesh, st, psi1_start, psi2_start, &
   integer              :: psi1_col, psi2_col
   integer, pointer     :: xpsi1_(:), xpsi2_(:)
   type(batch_t)        :: psi1b, psi2b
-#if defined(HAVE_MPI)
   integer              :: jj
   integer              :: size, rank, round, res_col_offset, res_row_offset
-  integer              :: dst, src, kk, ll, recvcnt, sendcnt, left, right, max_count
-  integer              :: stats(MPI_STATUS_SIZE, 2), reqs(2)
+  integer              :: kk, ll, recvcnt, sendcnt, max_count
   integer, pointer     :: xpsi1_count(:), xpsi2_count(:), xpsi1_node(:, :), xpsi2_node(:, :)
   R_TYPE, pointer      :: sendbuf(:, :, :), recvbuf(:, :, :), tmp_ptr(:, :, :)
   R_TYPE, allocatable  :: res_tmp(:, :)
   R_TYPE, allocatable  :: psi1_block(:, :, :), res_local(:, :)
+#if defined(HAVE_MPI)
+  integer              :: src, dst, left, right
+  integer              :: stats(MPI_STATUS_SIZE, 2), reqs(2)
 #endif
 
-  call profiling_in(C_PROFILING_BLOCKT, 'BLOCKT')
+  call profiling_in(C_PROFILING_BLOCKT, TOSTRING(X(BLOCKT)))
   PUSH_SUB(X(states_elec_blockt_mul))
 
   symm_ = .false.
@@ -70,7 +71,6 @@ subroutine X(states_elec_blockt_mul)(mesh, st, psi1_start, psi2_start, &
   end if
 
   if(st%parallel_in_states) then
-#if defined(HAVE_MPI)
     ! Shortcuts.
     size = st%mpi_grp%size
     rank = st%mpi_grp%rank
@@ -87,7 +87,7 @@ subroutine X(states_elec_blockt_mul)(mesh, st, psi1_start, psi2_start, &
     ! Compact psi1 in order to use BLAS gemm on it.
     if(.not.mesh%use_curvilinear) then
       SAFE_ALLOCATE(psi1_block(1:mesh%np, 1:st%d%dim, 1:xpsi1_count(rank)))
-      call profiling_in(C_PROFILING_BLOCKT_CP, 'BLOCKT_CP')
+      call profiling_in(C_PROFILING_BLOCKT_CP, TOSTRING(X(BLOCKT_CP)))
       call X(states_elec_compactify)(st%d%dim, mesh, psi1_start, &
         xpsi1_node(1:xpsi1_count(rank), rank), psi1, psi1_block)
       call profiling_out(C_PROFILING_BLOCKT_CP)
@@ -104,9 +104,11 @@ subroutine X(states_elec_blockt_mul)(mesh, st, psi1_start, psi2_start, &
     call X(states_elec_compactify)(st%d%dim, mesh, psi2_start, xpsi2_node(1:xpsi2_count(rank), rank), psi2, sendbuf)
 
     ! Get neighbours.
+#if defined(HAVE_MPI)
     call MPI_Cart_shift(st%dom_st_mpi_grp%comm, P_STRATEGY_STATES-1, -1, src, dst, mpi_err)
     right = lmpi_translate_rank(st%dom_st_mpi_grp%comm, st%mpi_grp%comm, src)
     left  = lmpi_translate_rank(st%dom_st_mpi_grp%comm, st%mpi_grp%comm, dst)
+#endif
 
     do round = 0, size-1
       kk = mod(rank+round, size)   ! The column of the block currently being calculated.
@@ -114,7 +116,9 @@ subroutine X(states_elec_blockt_mul)(mesh, st, psi1_start, psi2_start, &
       ! In all but the first rounds we have to wait for the data to arrive and
       ! then swap buffers.
       if(round > 0) then
+#if defined(HAVE_MPI)
         call MPI_Waitall(2, reqs, stats, mpi_err)
+#endif
         tmp_ptr => sendbuf
         sendbuf => recvbuf
         recvbuf => tmp_ptr
@@ -124,10 +128,12 @@ subroutine X(states_elec_blockt_mul)(mesh, st, psi1_start, psi2_start, &
       ! accordingly received from the right neighbour.
       if(round < size-1) then
         recvcnt = xpsi2_count(ll)
+#if defined(HAVE_MPI)
         call MPI_Irecv(recvbuf(1, 1, 1), mesh%np*st%d%dim*recvcnt, R_MPITYPE, right, 0, &
           st%mpi_grp%comm, reqs(1), mpi_err)
         call MPI_Isend(sendbuf(1, 1, 1), mesh%np*st%d%dim*sendcnt, R_MPITYPE, left, 0,  & 
           st%mpi_grp%comm, reqs(2), mpi_err)
+#endif
       end if
       ! Do the matrix multiplication.
       res_row_offset = sum(xpsi1_count(0:rank-1))
@@ -136,13 +142,13 @@ subroutine X(states_elec_blockt_mul)(mesh, st, psi1_start, psi2_start, &
         if(xpsi1_count(rank) > 0.and.sendcnt > 0) then
           SAFE_ALLOCATE(res_local(1:xpsi1_count(rank), 1:sendcnt))
 
-          call profiling_in(C_PROFILING_BLOCKT_MM, 'BLOCKT_MM')
+          call profiling_in(C_PROFILING_BLOCKT_MM, TOSTRING(X(BLOCKT_MM)))
           call blas_gemm('C', 'N', xpsi1_count(rank), sendcnt, mesh%np*st%d%dim, &
                R_TOTYPE(mesh%vol_pp(1)), psi1_block(1, 1, 1), mesh%np*st%d%dim, &
                sendbuf(1, 1, 1), mesh%np*st%d%dim, R_TOTYPE(M_ZERO), res_local(1, 1), xpsi1_count(rank))
           call profiling_out(C_PROFILING_BLOCKT_MM)
 
-          call profiling_in(C_PROFILING_BLOCKT_CP, 'BLOCKT_CP')
+          call profiling_in(C_PROFILING_BLOCKT_CP, TOSTRING(X(BLOCKT_CP)))
           res(res_row_offset+1:res_row_offset+xpsi1_count(rank), res_col_offset+1:res_col_offset+sendcnt) = res_local
           call profiling_out(C_PROFILING_BLOCKT_CP)
           SAFE_DEALLOCATE_A(res_local)
@@ -160,19 +166,20 @@ subroutine X(states_elec_blockt_mul)(mesh, st, psi1_start, psi2_start, &
     SAFE_DEALLOCATE_P(sendbuf)
     SAFE_DEALLOCATE_P(recvbuf)
     ! Add up all the individual blocks.
-    call profiling_in(C_PROFILING_BLOCKT_AR, 'BLOCKT_AR')
+    call profiling_in(C_PROFILING_BLOCKT_AR, TOSTRING(X(BLOCKT_AR)))
 #ifndef HAVE_MPI2
     SAFE_ALLOCATE(res_tmp(1:psi1_col, 1:psi2_col))
     res_tmp = res
 #endif
+#if defined(HAVE_MPI)
     call MPI_Allreduce(MPI_IN_PLACE_OR(res_tmp), res, psi1_col*psi2_col, R_MPITYPE, MPI_SUM, st%dom_st_mpi_grp%comm, mpi_err)
+#endif
     call profiling_out(C_PROFILING_BLOCKT_AR)
     SAFE_DEALLOCATE_A(res_tmp)
     SAFE_DEALLOCATE_P(xpsi1_count)
     SAFE_DEALLOCATE_P(xpsi2_count)
     SAFE_DEALLOCATE_P(xpsi1_node)
     SAFE_DEALLOCATE_P(xpsi2_node)
-#endif
   else ! No states parallelization.
 
     if(present(xpsi1)) then
@@ -226,15 +233,16 @@ subroutine X(states_elec_block_matr_mul_add)(mesh, st, alpha, psi_start, res_sta
   integer              :: res_col, psi_col, matr_col
   integer, pointer     :: xpsi_(:), xres_(:)
   R_TYPE, allocatable  :: res_block(:, :, :), matr_block(:, :), psi_block(:, :, :)
-#if defined(HAVE_MPI)
   integer              :: rank, size, round, matr_row_offset, matr_col_offset, ii
-  integer              :: src, dst, left, right, kk, ll, idim, sendcnt, recvcnt, max_count
-  integer              :: stats(MPI_STATUS_SIZE, 2), reqs(2)
+  integer              :: kk, ll, idim, sendcnt, recvcnt, max_count
   integer, pointer     :: xpsi_count(:), xres_count(:), xpsi_node(:, :), xres_node(:, :)
   R_TYPE, pointer      :: sendbuf(:, :, :), recvbuf(:, :, :), tmp_ptr(:, :, :)
+#if defined(HAVE_MPI)
+  integer              :: src, dst, left, right
+  integer              :: stats(MPI_STATUS_SIZE, 2), reqs(2)
 #endif
 
-  call profiling_in(C_PROFILING_BLOCK_MATR, 'BLOCK_MATR')
+  call profiling_in(C_PROFILING_BLOCK_MATR, TOSTRING(X(BLOCK_MATR)))
   PUSH_SUB(X(states_elec_block_matr_mul_add))
 
   ! Calculate global index sets of state block psi and res.
@@ -255,7 +263,6 @@ subroutine X(states_elec_block_matr_mul_add)(mesh, st, alpha, psi_start, res_sta
   ! but the code is easier to understand having it separated (instead a lot of
   ! conditionals and pointers).
   if(st%parallel_in_states) then
-#if defined(HAVE_MPI)
     ! Shortcuts.
     size = st%mpi_grp%size
     rank = st%mpi_grp%rank
@@ -268,7 +275,7 @@ subroutine X(states_elec_block_matr_mul_add)(mesh, st, alpha, psi_start, res_sta
 
     ! Take care of beta first, if necessary, and compact res to res_block.
     if(beta /= R_TOTYPE(M_ZERO)) then
-      call profiling_in(C_PROFILING_BLOCK_MATR_CP, 'BLOCK_MATR_CP')
+      call profiling_in(C_PROFILING_BLOCK_MATR_CP, TOSTRING(X(BLOCK_MATR_CP)))
       do ii = 1, xres_count(rank)
         do idim = 1, st%d%dim
           call lalg_scal(mesh%np, beta, res(:, idim, xres_node(ii, rank)))
@@ -279,7 +286,7 @@ subroutine X(states_elec_block_matr_mul_add)(mesh, st, alpha, psi_start, res_sta
       res = R_TOTYPE(M_ZERO)
     end if
     SAFE_ALLOCATE(res_block(1:mesh%np, 1:st%d%dim, 1:xres_count(rank)))
-    call profiling_in(C_PROFILING_BLOCK_MATR_CP, 'BLOCK_MATR_CP')
+    call profiling_in(C_PROFILING_BLOCK_MATR_CP, TOSTRING(X(BLOCK_MATR_CP)))
     call X(states_elec_compactify)(st%d%dim, mesh, res_start, xres_node(1:xres_count(rank), rank), res, res_block)
     call profiling_out(C_PROFILING_BLOCK_MATR_CP)
 
@@ -291,14 +298,16 @@ subroutine X(states_elec_block_matr_mul_add)(mesh, st, alpha, psi_start, res_sta
 
     ! Compact the local block to send away.
     sendcnt = xpsi_count(rank)
-    call profiling_in(C_PROFILING_BLOCK_MATR_CP, 'BLOCK_MATR_CP')
+    call profiling_in(C_PROFILING_BLOCK_MATR_CP, TOSTRING(X(BLOCK_MATR_CP)))
     call X(states_elec_compactify)(st%d%dim, mesh, psi_start, xpsi_node(1:xpsi_count(rank), rank), psi(:, :, :), sendbuf)
     call profiling_out(C_PROFILING_BLOCK_MATR_CP)
 
     ! Get neighbours.
+#if defined(HAVE_MPI)
     call MPI_Cart_shift(st%dom_st_mpi_grp%comm, P_STRATEGY_STATES-1, -1, src, dst, mpi_err)
     right = lmpi_translate_rank(st%dom_st_mpi_grp%comm, st%mpi_grp%comm, src)
     left  = lmpi_translate_rank(st%dom_st_mpi_grp%comm, st%mpi_grp%comm, dst)
+#endif
 
     ! Asynchronously left-rotate blocks of psi.
     do round = 0, size-1
@@ -308,7 +317,9 @@ subroutine X(states_elec_block_matr_mul_add)(mesh, st, alpha, psi_start, res_sta
       ! then swap buffers, i.e., what we received in the send buffer in the remainder
       ! of this loop, a bit confusing.
       if(round > 0) then
+#if defined(HAVE_MPI)
         call MPI_Waitall(2, reqs, stats, mpi_err)
+#endif
         tmp_ptr => sendbuf
         sendbuf => recvbuf
         recvbuf => tmp_ptr
@@ -318,8 +329,10 @@ subroutine X(states_elec_block_matr_mul_add)(mesh, st, alpha, psi_start, res_sta
       ! accordingly received from the right neighbour.
       if(round < size-1) then
         recvcnt = xpsi_count(ll)
+#if defined(HAVE_MPI)
         call MPI_Irecv(recvbuf, mesh%np*st%d%dim*recvcnt, R_MPITYPE, right, 0, st%mpi_grp%comm, reqs(1), mpi_err)
         call MPI_Isend(sendbuf, mesh%np*st%d%dim*sendcnt, R_MPITYPE, left, 0, st%mpi_grp%comm, reqs(2), mpi_err)
+#endif
       end if
 
       ! Do the matrix multiplication.
@@ -327,11 +340,11 @@ subroutine X(states_elec_block_matr_mul_add)(mesh, st, alpha, psi_start, res_sta
       matr_col_offset = sum(xres_count(0:rank-1))
       SAFE_ALLOCATE(matr_block(1:xpsi_count(kk), 1:xres_count(rank)))
       if(sendcnt > 0.and.xres_count(rank) > 0) then
-        call profiling_in(C_PROFILING_BLOCK_MATR_CP, 'BLOCK_MATR_CP')
+        call profiling_in(C_PROFILING_BLOCK_MATR_CP, TOSTRING(X(BLOCK_MATR_CP)))
         matr_block = matr(matr_row_offset+1:matr_row_offset+xpsi_count(kk), &
           matr_col_offset+1:matr_col_offset+xres_count(rank))
         call profiling_out(C_PROFILING_BLOCK_MATR_CP)
-        call profiling_in(C_PROFILING_BLOCK_MATR_MM, 'BLOCK_MATR_MM')
+        call profiling_in(C_PROFILING_BLOCK_MATR_MM, TOSTRING(X(BLOCK_MATR_MM)))
         call lalg_gemm(mesh%np, st%d%dim, xres_count(rank), sendcnt, alpha, &
           sendbuf, matr_block, R_TOTYPE(M_ONE), res_block)
         call profiling_out(C_PROFILING_BLOCK_MATR_MM)
@@ -340,7 +353,7 @@ subroutine X(states_elec_block_matr_mul_add)(mesh, st, alpha, psi_start, res_sta
     end do
 
     ! Copy result.
-    call profiling_in(C_PROFILING_BLOCK_MATR_CP, 'BLOCK_MATR_CP')
+    call profiling_in(C_PROFILING_BLOCK_MATR_CP, TOSTRING(X(BLOCK_MATR_CP)))
     call X(states_elec_uncompactify)(st%d%dim, mesh, res_start, xres_node(1:xres_count(rank), rank), res_block, res)
     call profiling_out(C_PROFILING_BLOCK_MATR_CP)
 
@@ -351,16 +364,15 @@ subroutine X(states_elec_block_matr_mul_add)(mesh, st, alpha, psi_start, res_sta
     SAFE_DEALLOCATE_P(xres_count)
     SAFE_DEALLOCATE_P(xpsi_node)
     SAFE_DEALLOCATE_P(xres_node)
-#endif
   else ! No states parallelization.
     ! Compact everything to pass it to BLAS.
     SAFE_ALLOCATE(res_block(1:mesh%np, 1:st%d%dim, 1:res_col))
-    call profiling_in(C_PROFILING_BLOCK_MATR_CP, 'BLOCK_MATR_CP')
+    call profiling_in(C_PROFILING_BLOCK_MATR_CP, TOSTRING(X(BLOCK_MATR_CP)))
     call X(states_elec_compactify)(st%d%dim, mesh, res_start, xres_(1:res_col), res, res_block)
     call profiling_out(C_PROFILING_BLOCK_MATR_CP)
 
     SAFE_ALLOCATE(psi_block(1:mesh%np, 1:st%d%dim, 1:psi_col))
-    call profiling_in(C_PROFILING_BLOCK_MATR_CP, 'BLOCK_MATR_CP')
+    call profiling_in(C_PROFILING_BLOCK_MATR_CP, TOSTRING(X(BLOCK_MATR_CP)))
     call X(states_elec_compactify)(st%d%dim, mesh, psi_start, xpsi_(1:psi_col), psi, psi_block)
     call profiling_out(C_PROFILING_BLOCK_MATR_CP)
 
@@ -374,7 +386,7 @@ subroutine X(states_elec_block_matr_mul_add)(mesh, st, alpha, psi_start, res_sta
     SAFE_DEALLOCATE_A(matr_block)
 
     ! Copy result.
-    call profiling_in(C_PROFILING_BLOCK_MATR_CP, 'BLOCK_MATR_CP')
+    call profiling_in(C_PROFILING_BLOCK_MATR_CP, TOSTRING(X(BLOCK_MATR_CP)))
     call X(states_elec_uncompactify)(st%d%dim, mesh, res_start, xres_(1:res_col), res_block, res)
     call profiling_out(C_PROFILING_BLOCK_MATR_CP)
     SAFE_DEALLOCATE_A(res_block)
@@ -402,7 +414,7 @@ subroutine X(states_elec_compactify)(dim, mesh, in_start, idx, in, out)
   integer :: ist, idim, nn
   type(profile_t), save :: prof
 
-  call profiling_in(prof, "STATES_COMPACTIFY")
+  call profiling_in(prof, TOSTRING(X(STATES_COMPACTIFY)))
   PUSH_SUB(X(states_elec_compactify))
 
   nn = ubound(idx, 1)
@@ -433,7 +445,7 @@ subroutine X(states_elec_uncompactify)(dim, mesh, out_start, idx, in, out)
   integer :: ist, idim, nn
   type(profile_t), save :: prof
 
-  call profiling_in(prof, "STATES_UNCOMPACTIFY")
+  call profiling_in(prof, TOSTRING(X(STATES_UNCOMPACTIFY)))
   PUSH_SUB(X(states_elec_uncompactify))
 
   nn = ubound(idx, 1)

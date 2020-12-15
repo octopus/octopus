@@ -128,7 +128,7 @@ subroutine X(modelmb_sym_state)(gr, modelmbparticles, ncombo, young_used, &
     call wfbatch%end()
   else
     norm = TOFLOAT(sum(R_CONJ(fermicompwf(:,1,1))*fermicompwf(:,1,1)))
-    norm = norm * product(gr%mesh%spacing(1:gr%mesh%sb%dim)) !1/units_out%length**gr%mesh%sb%dim
+    norm = norm * product(gr%mesh%spacing(1:gr%sb%dim)) !1/units_out%length**gr%sb%dim
   end if
 
   wf(:) = fermicompwf(:,1,1) / sqrt(norm)
@@ -186,7 +186,7 @@ subroutine X(modelmb_sym_state_1diag)(gr, &
 
   ndimmb=modelmbparticles%ndim
 
-  normalizer = product(gr%mesh%spacing(1:gr%mesh%sb%dim)) !1/units_out%length**gr%mesh%sb%dim
+  normalizer = product(gr%mesh%spacing(1:gr%sb%dim)) !1/units_out%length**gr%sb%dim
 
   ! this is in case _none_ of the particles is symmetrized,
   !   then the whole itype loop is skipped

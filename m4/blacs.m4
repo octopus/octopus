@@ -40,12 +40,15 @@ if test $acx_blacs_ok = no; then
 fi
 
 dnl Generic BLACS library?
-for blacs in blacs blacs-openmpi; do
-  if test x"$blacs" = xblacs-openmpi; then       
-    blacsinit="blacsF77init-openmpi"
-  else
-    blacsinit="blacsF77init"
-  fi
+for blacs in blacs blacs-openmpi mkl_blacs_openmpi_lp64; do
+  case $blacs in
+  blacs-openmpi)
+    blacsinit="blacsF77init-openmpi" ;;
+  mkl_blacs_openmpi_lp64)
+    blacsinit="mkl_blacs_openmpi_lp64" ;;
+  *)
+    blacsinit="blacsF77init" ;;
+  esac
   if test $acx_blacs_ok = no; then
     AC_CHECK_LIB($blacs -l$blacsinit -l$blacs, $blacs_pinfo,
       [acx_blacs_ok=yes; LIBS_BLACS="$LIBS_BLACS -l$blacs -l$blacsinit -l$blacs"], [], [$FLIBS])

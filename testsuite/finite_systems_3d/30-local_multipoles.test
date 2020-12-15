@@ -4,37 +4,104 @@ Test       : Local Multipoles analysis (ld)
 Program    : octopus
 TestGroups : short-run, finite_systems_3d
 Enabled    : Yes
-Processors : 1
 
-Input      : 30-local_multipoles.01-gs.inp
+Input : 30-local_multipoles.01-gs.inp
 match ; SCF convergence    ; GREPCOUNT(static/info, 'SCF converged') ; 1
-match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ;    -1.13848906
-match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ;     0.69719741
-match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ;    -0.74875933
-match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ;     1.28457695
-match ; Int[n*v_xc]        ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -0.84468321
-match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ;    -0.55310083
-match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ;    -0.09393256
-match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;     1.05670421
-match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ;    -3.52993397 
-match ; Partial charge  1  ; GREPFIELD(static/info, 'Partial ionic charges', 3, 2)  ; 1.000
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ;    -219.01349875
+match ; Partial charge  1  ; GREPFIELD(static/info, 'Partial ionic charges', 3, 2)  ; 4.273
+match ; Partial charge  2  ; GREPFIELD(static/info, 'Partial ionic charges', 3, 3)  ; 0.932
 
-Util       : oct-local_multipoles
-Input      : 30-local_multipoles.02-multipoles.inp
+Processors : 1
+MPIUtil : oct-local_multipoles
+Input : 30-local_multipoles.02-multipoles.inp
 
-# The matches of this test are disabled since they always failed in the buildbot due
-# to unconsistent results between platforms.
-#
-#match ; Electrons 1     ; GREPFIELD(local.general/multipoles/H1.multipoles, 'Electrons', 3, 2) ;  1.235842756321e+00
-#match ; Multipole x 1   ; GREPFIELD(local.general/multipoles/H1.multipoles, '\<x\>', 4, 3)     ; -4.210243520428e-02 
-#match ; Start Arrow 1   ; GREPFIELD(local.general/multipoles/H1/H1.0000000.bld, 'arrow', 2)  ;  0.759259
-#match ; End Arrow 1     ; GREPFIELD(local.general/multipoles/H1/H1.0000000.bld, 'arrow', 5)  ;  0.675055
-#match ; Electrons 2     ; GREPFIELD(local.general/multipoles/H2.multipoles, 'Electrons', 3, 2) ;  7.641572436792e-01
-#match ; Multipole x 2   ; GREPFIELD(local.general/multipoles/H2.multipoles, '\<x\>', 4, 3)     ;  4.210243518632e-02 
-#match ; Start Arrow 2   ; GREPFIELD(local.general/multipoles/H2/H2.0000000.bld, 'arrow', 2)  ; -0.759259
-#match ; End Arrow 2     ; GREPFIELD(local.general/multipoles/H2/H2.0000000.bld, 'arrow', 5)  ; -0.675055
-#match ; Restart ld      ; GREPFIELD(restart/ld/ldomains.info, 'Number of local domains', 6)  ;  2
-#match ; Restart shape 1 ; GREPFIELD(restart/ld/ldomains.info, 'H1', 3)  ;  512
-#match ; Restart center1 ; GREPFIELD(restart/ld/ldomains.info, 'H1', 5)  ;  0.717157
-#match ; Restart shape 2 ; GREPFIELD(restart/ld/ldomains.info, 'H2', 3)  ;  512
-#match ; Restart center2 ; GREPFIELD(restart/ld/ldomains.info, 'H2', 5)  ; -0.717157
+Precision: 2.50e-08
+match ;  C    Electrons    ; LINEFIELD(local.general/multipoles/C.multipoles, -1, 3) ; 4.26848515791
+Precision: 1.03e-10
+match ;  C    Multipole x  ; LINEFIELD(local.general/multipoles/C.multipoles, -1, 4) ; -9.382746032915293e-11
+Precision: 4.57e-11
+match ;  C    Multipole y  ; LINEFIELD(local.general/multipoles/C.multipoles, -1, 5) ; -4.1501439601532045e-11
+Precision: 2.77e-10
+match ;  C    Multipole z  ; LINEFIELD(local.general/multipoles/C.multipoles, -1, 6) ; 2.5170769092093114e-10
+Precision: 4.90e-09
+match ;  H1   Electrons    ; LINEFIELD(local.general/multipoles/H1.multipoles, -1, 3) ; 1.8534093232445001
+Precision: 3.84e-09
+match ;  H1   Multipole x  ; LINEFIELD(local.general/multipoles/H1.multipoles, -1, 4) ; 0.39415278971345
+Precision: 3.98e-09
+match ;  H1   Multipole y  ; LINEFIELD(local.general/multipoles/H1.multipoles, -1, 5) ; 0.39415278983900004
+Precision: 4.16e-09
+match ;  H1   Multipole z  ; LINEFIELD(local.general/multipoles/H1.multipoles, -1, 6) ; 0.39415279000610004
+Precision: 4.35e-09
+match ;  H2   Electrons    ; LINEFIELD(local.general/multipoles/H2.multipoles, -1, 3) ; 1.8534093227395
+Precision: 4.14e-09
+match ;  H2   Multipole x  ; LINEFIELD(local.general/multipoles/H2.multipoles, -1, 4) ; -0.3941527899817
+Precision: 4.27e-09
+match ;  H2   Multipole y  ; LINEFIELD(local.general/multipoles/H2.multipoles, -1, 5) ; -0.39415279010445003
+Precision: 4.43e-09
+match ;  H2   Multipole z  ; LINEFIELD(local.general/multipoles/H2.multipoles, -1, 6) ; 0.39415279024985
+Precision: 4.85e-09
+match ;  H3   Electrons    ; LINEFIELD(local.general/multipoles/H3.multipoles, -1, 3) ; 0.83748225168925
+Precision: 1.02e-09
+match ;  H3   Multipole x  ; LINEFIELD(local.general/multipoles/H3.multipoles, -1, 4) ; 0.093190803812955
+Precision: 1.06e-09
+match ;  H3   Multipole y  ; LINEFIELD(local.general/multipoles/H3.multipoles, -1, 5) ; -0.09319080384599501
+Precision: 1.08e-09
+match ;  H3   Multipole z  ; LINEFIELD(local.general/multipoles/H3.multipoles, -1, 6) ; -0.09319080386458001
+Precision: 4.50e-09
+match ;  H4   Electrons    ; LINEFIELD(local.general/multipoles/H4.multipoles, -1, 3) ; 0.74594993021575
+Precision: 8.75e-10
+match ;  H4   Multipole x  ; LINEFIELD(local.general/multipoles/H4.multipoles, -1, 4) ; -0.07825945422196501
+Precision: 7.65e-10
+match ;  H4   Multipole y  ; LINEFIELD(local.general/multipoles/H4.multipoles, -1, 5) ; 0.069032363130115
+Precision: 7.89e-10
+match ;  H4   Multipole z  ; LINEFIELD(local.general/multipoles/H4.multipoles, -1, 6) ; -0.069032363152135
+Precision: 1.29e-08
+match ;  H2-4 Electrons    ; LINEFIELD(local.general/multipoles/H2-4.multipoles, -1, 3) ; 5.310119378244
+Precision: 4.49e-09
+match ;  H2-4 Multipole x  ; LINEFIELD(local.general/multipoles/H2-4.multipoles, -1, 4) ; -0.38630646145860004
+Precision: 4.74e-09
+match ;  H2-4 Multipole y  ; LINEFIELD(local.general/multipoles/H2-4.multipoles, -1, 5) ; -0.38630646168180005
+Precision: 3.47e-09
+match ;  H2-4 Multipole z  ; LINEFIELD(local.general/multipoles/H2-4.multipoles, -1, 6) ; -0.38630646052844997
+
+Precision: 1e-15
+match ; C  Start Arrow x ; GREPFIELD(local.general/multipoles/C/C.0000000.bld, 'arrow', 2)  ;  0.0
+match ; C  End Arrow   x ; GREPFIELD(local.general/multipoles/C/C.0000000.bld, 'arrow', 5)  ;  0.0
+match ; H1 Start Arrow x ; GREPFIELD(local.general/multipoles/H1/H1.0000000.bld, 'arrow', 2) ; 0.495744
+match ; H1 Start Arrow y ; GREPFIELD(local.general/multipoles/H1/H1.0000000.bld, 'arrow', 3) ; 0.495744
+match ; H1 Start Arrow z ; GREPFIELD(local.general/multipoles/H1/H1.0000000.bld, 'arrow', 4) ; 0.495744
+match ; H1 End Arrow   x ; GREPFIELD(local.general/multipoles/H1/H1.0000000.bld, 'arrow', 5) ; 0.889897
+match ; H1 End Arrow   y ; GREPFIELD(local.general/multipoles/H1/H1.0000000.bld, 'arrow', 6) ; 0.889897
+match ; H1 End Arrow   z ; GREPFIELD(local.general/multipoles/H1/H1.0000000.bld, 'arrow', 7) ; 0.889897
+match ; H3 Start Arrow x ; GREPFIELD(local.general/multipoles/H3/H3.0000000.bld, 'arrow', 2) ; 0.646225
+match ; H3 Start Arrow y ; GREPFIELD(local.general/multipoles/H3/H3.0000000.bld, 'arrow', 3) ; -0.646225
+match ; H3 Start Arrow z ; GREPFIELD(local.general/multipoles/H3/H3.0000000.bld, 'arrow', 4) ; -0.646225
+match ; H3 End Arrow   x ; GREPFIELD(local.general/multipoles/H3/H3.0000000.bld, 'arrow', 5) ; 0.739416
+match ; H3 End Arrow   y ; GREPFIELD(local.general/multipoles/H3/H3.0000000.bld, 'arrow', 6) ; -0.739416
+match ; H3 End Arrow   z ; GREPFIELD(local.general/multipoles/H3/H3.0000000.bld, 'arrow', 7) ; -0.739416
+match ; H2-4 Start Arrow x ; GREPFIELD(local.general/multipoles/H2-4/H2-4.0000000.bld, 'arrow', 2) ; -0.037787
+match ; H2-4 Start Arrow y ; GREPFIELD(local.general/multipoles/H2-4/H2-4.0000000.bld, 'arrow', 3) ; -0.037787
+match ; H2-4 Start Arrow z ; GREPFIELD(local.general/multipoles/H2-4/H2-4.0000000.bld, 'arrow', 4) ; -0.037787
+match ; H2-4 End Arrow   x ; GREPFIELD(local.general/multipoles/H2-4/H2-4.0000000.bld, 'arrow', 5) ; -0.424093
+match ; H2-4 End Arrow   y ; GREPFIELD(local.general/multipoles/H2-4/H2-4.0000000.bld, 'arrow', 6) ; -0.424093
+match ; H2-4 End Arrow   z ; GREPFIELD(local.general/multipoles/H2-4/H2-4.0000000.bld, 'arrow', 7) ; -0.424093
+
+match ; Restart ld             ; GREPFIELD(restart/ld/ldomains.info, 'Number of local domains', 6)  ;  6
+match ; C    Restart shape     ; GREPFIELD(restart/ld/ldomains.info, 'C', 3) ; 512
+match ; C    Restart atom list ; GREPFIELD(restart/ld/ldomains.info, 'C', 4) ; 1
+match ; C    Restart center x  ; GREPFIELD(restart/ld/ldomains.info, 'C', 5) ; 0.000000
+match ; H1   Restart shape     ; GREPFIELD(restart/ld/ldomains.info, 'H1', 3) ; 1
+match ; H1   Restart atom list ; GREPFIELD(restart/ld/ldomains.info, 'H1', 4) ; 2
+match ; H1   Restart center x  ; GREPFIELD(restart/ld/ldomains.info, 'H1', 5) ; 1.309241
+match ; H2   Restart shape     ; GREPFIELD(restart/ld/ldomains.info, 'H2', 3) ; 1
+match ; H2   Restart atom list ; GREPFIELD(restart/ld/ldomains.info, 'H2', 4) ; 3
+match ; H2   Restart center x  ; GREPFIELD(restart/ld/ldomains.info, 'H2', 5) ; -1.309241
+match ; H3   Restart shape     ; GREPFIELD(restart/ld/ldomains.info, 'H3', 3) ; 4
+match ; H3   Restart atom list ; GREPFIELD(restart/ld/ldomains.info, 'H3', 4) ; 4
+match ; H3   Restart center x  ; GREPFIELD(restart/ld/ldomains.info, 'H3', 5) ; 1.309241
+match ; H4   Restart shape     ; GREPFIELD(restart/ld/ldomains.info, 'H4', 3) ; 2
+match ; H4   Restart atom list ; GREPFIELD(restart/ld/ldomains.info, 'H4', 4) ; 5
+match ; H4   Restart center x  ; GREPFIELD(restart/ld/ldomains.info, 'H4', 5) ; -1.309241
+match ; H2-4 Restart shape     ; GREPFIELD(restart/ld/ldomains.info, 'H2-4', 3) ; 3
+match ; H2-4 Restart center x  ; GREPFIELD(restart/ld/ldomains.info, 'H2-4', 5) ; -0.436414
+

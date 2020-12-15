@@ -18,11 +18,11 @@
 ## $Id: Makefile.am 7479 2011-02-18 11:33:08Z xavier $
 
 
-noinst_LIBRARIES = libdftd3.a
+noinst_LTLIBRARIES = libdftd3.la
 
 dftd3dir = $(pkgdatadir)/dftd3
 
-libdftd3_a_SOURCES =            \
+libdftd3_la_SOURCES =            \
 	api.f90                 \
 	common.f90              \
 	core.f90                \
@@ -32,10 +32,10 @@ libdftd3_a_SOURCES =            \
 dist_dftd3_DATA =               \
 	pars.dat
 
-interface.o: interface.f90 api.o
-api.o: api.f90 sizes.o core.o common.o
-core.o: core.f90 pars.o sizes.o common.o
-pars.o: pars.f90 common.o sizes.o
+interface.lo: interface.f90 api.lo
+api.lo: api.f90 sizes.lo core.lo common.lo
+core.lo: core.f90 pars.lo sizes.lo common.lo
+pars.lo: pars.f90 common.lo sizes.lo
 
 #the datafile needs to be copied to share/ in the compilation directory for make check to work
 check:
