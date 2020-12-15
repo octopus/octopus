@@ -178,7 +178,7 @@ subroutine X(xc_oep_solve) (namespace, gr, hm, st, is, vxc, oep)
   SAFE_ALLOCATE(vxc_old(1:gr%mesh%np))
   SAFE_ALLOCATE(psi(1:gr%mesh%np, 1:st%d%dim))
   SAFE_ALLOCATE(psi2(1:gr%mesh%np, 1:st%d%dim))
-  SAFE_ALLOCATE(orthogonal(1:oep%noccst))
+  SAFE_ALLOCATE(orthogonal(1:st%nst))
 
   if (oep%has_photons) then
     SAFE_ALLOCATE(phi1(1:gr%mesh%np, 1:st%d%dim, 1:oep%noccst))
@@ -210,9 +210,9 @@ subroutine X(xc_oep_solve) (namespace, gr, hm, st, is, vxc, oep)
   do iter = 1, oep%scftol%max_iter
     ! iteration over all states
     ss = M_ZERO
-    do ist = 1, st%nst !only over occupied states
+    do ist = 1, st%nst
 
-      if(abs(st%occ(ist,1))<= M_EPSILON) cycle
+      if(abs(st%occ(ist,1))<= M_EPSILON) cycle  !only over occupied states
       call states_elec_get_state(st, gr%mesh, ist, is, psi)
       psi2(:, 1) = real(R_CONJ(psi(:, 1))*psi(:,1))
 
