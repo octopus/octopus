@@ -46,7 +46,7 @@ module species_pot_oct_m
 
   private
   public ::                         &
-    species_get_density,            &
+    species_get_long_range_density, &
     species_get_nlcc,               &
     species_get_nlcc_grad,          &
     species_get_local,              &
@@ -546,7 +546,7 @@ contains
 
   ! ---------------------------------------------------------
 
-  subroutine species_get_density(species, namespace, pos, mesh, rho)
+  subroutine species_get_long_range_density(species, namespace, pos, mesh, rho)
     type(species_t),    target, intent(in)  :: species
     type(namespace_t),          intent(in)  :: namespace
     FLOAT,                      intent(in)  :: pos(:)
@@ -573,9 +573,9 @@ contains
     FLOAT, parameter      :: threshold = CNST(1e-6)
     FLOAT                 :: norm_factor
     
-    PUSH_SUB(species_get_density)
+    PUSH_SUB(species_get_long_range_density)
 
-    call profiling_in(prof, "SPECIES_DENSITY")
+    call profiling_in(prof, "SPECIES_LONG_RANGE_DENSITY")
 
     select case(species_type(species))
 
@@ -744,8 +744,8 @@ contains
     end select
 
     call profiling_out(prof)
-    POP_SUB(species_get_density)
-  end subroutine species_get_density
+    POP_SUB(species_get_long_range_density)
+  end subroutine species_get_long_range_density
 
 
   ! ---------------------------------------------------------
