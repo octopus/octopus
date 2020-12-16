@@ -616,11 +616,7 @@ subroutine X(calc_hvar_photons)(this, mesh, st, lr_rho, nsigma, hvar, fxc)
     ! Compute photon q_{\alpha}s and potential for bilinear el-pt coupling
     vp_bilinear_el_pt = M_ZERO
     do ii = 1, nm
-      omg2_lmda_r(1:mesh%np) = - (this%pt_modes%omega(ii))**2*this%pt_modes%lambda(ii) * &
-              (this%pt_modes%pol(ii, 1)*mesh%x(1:mesh%np, 1) +  &
-               this%pt_modes%pol(ii, 2)*mesh%x(1:mesh%np, 2) +  &
-               this%pt_modes%pol(ii, 3)*mesh%x(1:mesh%np, 3))
-      first_moments(ii) = X(mf_integrate)(mesh, omg2_lmda_r(1:mesh%np)*s_lr_rho(1:mesh%np))
+      first_moments(ii) = X(mf_integrate)(mesh, this%omg2_lmda_r(1:mesh%np)*s_lr_rho(1:mesh%np))
 
       this%zphoton_coord_q(ii) = (M_ONE/(M_TWO*(this%pt_modes%omega(ii))**2)) * &
               ((M_ONE/(this%X(omega) - this%pt_modes%omega(ii) + M_zI*this%el_pt_eta)) -  &

@@ -121,6 +121,7 @@ module sternheimer_oct_m
      FLOAT, allocatable, public  :: dphoton_coord_q(:) !< canonical photon coordinate
      CMPLX, allocatable, public  :: zphoton_coord_q(:) !< canonical photon coordinate
      FLOAT                 :: el_pt_eta      !< broadening for photonic subsystem
+     FLOAT, allocatable :: omg2_lmda_r(:)
      type(photon_mode_t)   :: pt_modes
   end type sternheimer_t
   
@@ -145,6 +146,7 @@ contains
     logical,        optional, intent(in)    :: set_last_occ_response
     logical,        optional, intent(in)    :: occ_response_by_sternheimer
 
+    integer :: np, nm, ii
     integer :: ham_var, iunit
     logical :: default_preorthog
 
@@ -289,6 +291,17 @@ contains
       iunit = io_open(EM_RESP_PHOTONS_DIR // 'photon_modes', namespace, action='write')
       call photon_mode_write_info(this%pt_modes, iunit)
       SAFE_ALLOCATE(this%zphoton_coord_q(1:this%pt_modes%nmodes))
+
+      np = gr%mesh%np
+      nm = this%pt_modes%nmodes
+      SAFE_ALLOCATE(this%omg2_lmda_r(1:np))
+      do ii = 1, nm
+        this%omg2_lmda_r(1:np) = - (this%pt_modes%omega(ii))**2*this%pt_modes%lambda(ii) * &
+              (this%pt_modes%pol(ii, 1)*gr%mesh%x(1:np, 1) +  &
+               this%pt_modes%pol(ii, 2)*gr%mesh%x(1:np, 2) +  &
+               this%pt_modes%pol(ii, 3)*gr%mesh%x(1:np, 3))
+      end do
+
     end if
 
     !%Variable ElectronPhotonEta
@@ -327,9 +340,9 @@ contains
 
     PUSH_SUB(sternheimer_end)
 
-    if(this%enable_el_pt_coupling) then
-      SAFE_DEALLOCATE_A(this%zphoton_coord_q)
-    end if
+    SAFE_DEALLOCATE_A(this%zphoton_coord_q)
+    SAFE_DEALLOCATE_A(this%omg2_lmda_r)
+
     call linear_solver_end(this%solver)
     call scf_tol_end(this%scf_tol)
     call mix_end(this%mixer)
