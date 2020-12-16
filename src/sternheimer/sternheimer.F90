@@ -310,16 +310,16 @@ contains
 
     end if
 
-    !%Variable ElectronPhotonEta
+    !%Variable PhotonEta
     !%Type float
-    !%Default 0.000367
+    !%Default 0.0000367
     !%Section Linear Response::Sternheimer
     !%Description
     !% This variable provides the value for the broadening of the photonic spectra
     !% when the coupling of electrons to photons is enabled in the frequency-dependent Sternheimer equation
     !%End
-    call parse_variable(namespace, 'ElectronPhotonEta', CNST(0.000367), this%el_pt_eta, units_inp%energy)
-    write(message(1), '(a,f12.6)') 'Info: Electron-photon Eta: ', this%el_pt_eta
+    call parse_variable(namespace, 'PhotonEta', CNST(0.0000367), this%el_pt_eta, units_inp%energy)
+    write(message(1), '(a,f12.6)') 'Info: Photon Eta: ', this%el_pt_eta
     call messages_info(1)
 
 

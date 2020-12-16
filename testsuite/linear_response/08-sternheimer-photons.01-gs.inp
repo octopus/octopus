@@ -34,4 +34,4 @@ resonance | 0.01 | 1
 %
 
 EnablePhotons = yes
-ElectronPhotonEta = 0.00003675
+PhotonEta = 0.00003675
