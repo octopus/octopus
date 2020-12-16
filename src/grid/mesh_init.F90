@@ -559,6 +559,15 @@ contains
         integer(8), intent(in)       :: index
         integer,    intent(out)      :: point !< (1:3)
       end subroutine hilbert_index_to_point
+
+      subroutine hilbert_point_to_index(dim, nbits, index, point)
+        implicit none
+
+        integer,    intent(in)       :: dim
+        integer,    intent(in)       :: nbits
+        integer(8), intent(out)      :: index
+        integer,    intent(in)       :: point !< (1:3)
+      end subroutine hilbert_point_to_index
     end interface
 
     PUSH_SUB(mesh_init_stage_3.create_x_lxyz)
