@@ -46,26 +46,26 @@ if(available cuda); then
 else
   match ; SCF convergence ; GREPCOUNT(static/info, 'SCF \*not\* converged') ; 1
 
-  Precision: 3.e-14
-  match ;  Eigenvalue  1  ; GREPFIELD(static/info, ' 1   --', 3) ; -27.462798
-  match ;  Eigenvalue  3  ; GREPFIELD(static/info, ' 3   --', 3) ; -26.508381
-  match ;  Eigenvalue  5  ; GREPFIELD(static/info, ' 5   --', 3) ; -17.322515
-  match ;  Eigenvalue  7  ; GREPFIELD(static/info, ' 7   --', 3) ; -15.859156
-  match ;  Eigenvalue  9  ; GREPFIELD(static/info, ' 9   --', 3) ; -14.782144
-  match ;  Eigenvalue 11  ; GREPFIELD(static/info, '11   --', 3) ; -14.754555
-  match ;  Eigenvalue 13  ; GREPFIELD(static/info, '13   --', 3) ; -13.930127
-  match ;  Eigenvalue 15  ; GREPFIELD(static/info, '15   --', 3) ; -13.646336
+  Precision: 2.75e-14
+  match ;  Eigenvalue  1  ; GREPFIELD(static/info, ' 1   --', 3) ; -27.461961
+  match ;  Eigenvalue  3  ; GREPFIELD(static/info, ' 3   --', 3) ; -26.506401
+  match ;  Eigenvalue  5  ; GREPFIELD(static/info, ' 5   --', 3) ; -17.323471
+  match ;  Eigenvalue  7  ; GREPFIELD(static/info, ' 7   --', 3) ; -15.861485
+  match ;  Eigenvalue  9  ; GREPFIELD(static/info, ' 9   --', 3) ; -14.785281
+  match ;  Eigenvalue 11  ; GREPFIELD(static/info, '11   --', 3) ; -14.757
+  match ;  Eigenvalue 13  ; GREPFIELD(static/info, '13   --', 3) ; -13.933233
+  match ;  Eigenvalue 15  ; GREPFIELD(static/info, '15   --', 3) ; -13.646613
 
   Precision: 5.00e-16
   match ;  <Sz>        1  ; GREPFIELD(static/info, ' 1   --', 7) ; 0.5
   match ;  <Sz>        3  ; GREPFIELD(static/info, ' 3   --', 7) ; 0.5
-  match ;  <Sz>        5  ; GREPFIELD(static/info, ' 5   --', 7) ; 0.4742
-  match ;  <Sz>        7  ; GREPFIELD(static/info, ' 7   --', 7) ; 0.1378
-  match ;  <Sz>        9  ; GREPFIELD(static/info, ' 9   --', 7) ; -0.0879
-  match ;  <Sz>       11  ; GREPFIELD(static/info, '11   --', 7) ; 0.1402
-  match ;  <Sz>       13  ; GREPFIELD(static/info, '13   --', 7) ; -0.1132
-  match ;  <Sz>       15  ; GREPFIELD(static/info, '15   --', 7) ; 0.4498
+  match ;  <Sz>        5  ; GREPFIELD(static/info, ' 5   --', 7) ; 0.4741
+  match ;  <Sz>        7  ; GREPFIELD(static/info, ' 7   --', 7) ; 0.1364
+  match ;  <Sz>        9  ; GREPFIELD(static/info, ' 9   --', 7) ; -0.0867
+  match ;  <Sz>       11  ; GREPFIELD(static/info, '11   --', 7) ; 0.1377
+  match ;  <Sz>       13  ; GREPFIELD(static/info, '13   --', 7) ; -0.1105
+  match ;  <Sz>       15  ; GREPFIELD(static/info, '15   --', 7) ; 0.4501
 
-  Precision: 5.98e-16
-  match ;  Force          ; GREPFIELD(static/info, 'Forces on the ions', 3, 2) ; -0.597563
+  Precision: 6.46e-16
+  match ;  Force          ; GREPFIELD(static/info, 'Forces on the ions', 3, 2) ; -0.64579
 endif
