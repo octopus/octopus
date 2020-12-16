@@ -595,7 +595,7 @@ contains
       if(local_potential_has_density(der%mesh%sb, geo%atom(iatom))) then
         SAFE_ALLOCATE(rho(1:der%mesh%np))
 
-        call species_get_density(geo%atom(iatom)%species, namespace, geo%atom(iatom)%x, der%mesh, rho)
+        call species_get_long_range_density(geo%atom(iatom)%species, namespace, geo%atom(iatom)%x, der%mesh, rho)
 
         if(present(density)) then
           do ip = 1, der%mesh%np
