@@ -601,8 +601,6 @@ subroutine X(calc_hvar_photons)(this, mesh, st, lr_rho, nsigma, hvar, fxc)
   ! photonic terms
   if(this%enable_el_pt_coupling) then
     SAFE_ALLOCATE(s_lr_rho(1:mesh%np))
-    SAFE_ALLOCATE(omg2_lmda_r(1:mesh%np))
-    SAFE_ALLOCATE(lambda_dot_r(1:mesh%np))
     SAFE_ALLOCATE(first_moments(1:nm))
     SAFE_ALLOCATE(vp_dip_self_ener(1:mesh%np))
     SAFE_ALLOCATE(vp_bilinear_el_pt(1:mesh%np))
@@ -624,28 +622,19 @@ subroutine X(calc_hvar_photons)(this, mesh, st, lr_rho, nsigma, hvar, fxc)
               first_moments(ii)
 
       vp_bilinear_el_pt = vp_bilinear_el_pt - &
-              this%pt_modes%omega(ii)*this%pt_modes%lambda(ii) * &
-              (this%pt_modes%pol(ii, 1)*mesh%x(1:mesh%np, 1) + &
-               this%pt_modes%pol(ii, 2)*mesh%x(1:mesh%np, 2) + &
-               this%pt_modes%pol(ii, 3)*mesh%x(1:mesh%np, 3))*this%zphoton_coord_q(ii)
+              this%pt_modes%omega(ii)*this%lambda_dot_r(1:mesh%np)*this%zphoton_coord_q(ii)
     end do
 
     ! Compute potential with dipole-self energy contribution
     vp_dip_self_ener = M_ZERO
     do ii = 1, nm
-      lambda_dot_r(1:mesh%np) = this%pt_modes%lambda(ii) * &
-              (this%pt_modes%pol(ii, 1)*mesh%x(1:mesh%np, 1) + &
-               this%pt_modes%pol(ii, 2)*mesh%x(1:mesh%np, 2) + &
-               this%pt_modes%pol(ii, 3)*mesh%x(1:mesh%np, 3))
-       integral_result = X(mf_integrate)(mesh, lambda_dot_r(1:mesh%np)*s_lr_rho(1:mesh%np))
-       vp_dip_self_ener = vp_dip_self_ener + integral_result*lambda_dot_r(1:mesh%np)
+       integral_result = X(mf_integrate)(mesh, this%lambda_dot_r(1:mesh%np)*s_lr_rho(1:mesh%np))
+       vp_dip_self_ener = vp_dip_self_ener + integral_result*this%lambda_dot_r(1:mesh%np)
     end do
 
     hvar(1:mesh%np, 1, 1) = hvar(1:mesh%np, 1, 1) + vp_dip_self_ener(1:mesh%np) + vp_bilinear_el_pt(1:mesh%np)
 
     SAFE_DEALLOCATE_A(s_lr_rho)
-    SAFE_DEALLOCATE_A(omg2_lmda_r)
-    SAFE_DEALLOCATE_A(lambda_dot_r)
     SAFE_DEALLOCATE_A(first_moments)
     SAFE_DEALLOCATE_A(vp_dip_self_ener)
     SAFE_DEALLOCATE_A(vp_bilinear_el_pt)

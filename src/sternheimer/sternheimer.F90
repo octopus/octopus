@@ -122,6 +122,7 @@ module sternheimer_oct_m
      CMPLX, allocatable, public  :: zphoton_coord_q(:) !< canonical photon coordinate
      FLOAT                 :: el_pt_eta      !< broadening for photonic subsystem
      FLOAT, allocatable :: omg2_lmda_r(:)
+     FLOAT, allocatable :: lambda_dot_r(:)
      type(photon_mode_t)   :: pt_modes
   end type sternheimer_t
   
@@ -295,10 +296,15 @@ contains
       np = gr%mesh%np
       nm = this%pt_modes%nmodes
       SAFE_ALLOCATE(this%omg2_lmda_r(1:np))
+      SAFE_ALLOCATE(this%lambda_dot_r(1:np))
       do ii = 1, nm
         this%omg2_lmda_r(1:np) = - (this%pt_modes%omega(ii))**2*this%pt_modes%lambda(ii) * &
               (this%pt_modes%pol(ii, 1)*gr%mesh%x(1:np, 1) +  &
                this%pt_modes%pol(ii, 2)*gr%mesh%x(1:np, 2) +  &
+               this%pt_modes%pol(ii, 3)*gr%mesh%x(1:np, 3))
+        this%lambda_dot_r(1:np) = this%pt_modes%lambda(ii) * &
+              (this%pt_modes%pol(ii, 1)*gr%mesh%x(1:np, 1) + &
+               this%pt_modes%pol(ii, 2)*gr%mesh%x(1:np, 2) + &
                this%pt_modes%pol(ii, 3)*gr%mesh%x(1:np, 3))
       end do
 
@@ -342,6 +348,7 @@ contains
 
     SAFE_DEALLOCATE_A(this%zphoton_coord_q)
     SAFE_DEALLOCATE_A(this%omg2_lmda_r)
+    SAFE_DEALLOCATE_A(this%lambda_dot_r)
 
     call linear_solver_end(this%solver)
     call scf_tol_end(this%scf_tol)
