@@ -180,7 +180,7 @@ contains
     if(this%st%symmetrize_density) call mesh_check_symmetries(this%gr%mesh, this%gr%sb)
 
     call output_init(this%outp, this%namespace, this%gr%sb, this%st, this%st%nst, this%ks)
-    call states_elec_densities_init(this%st, this%gr, this%geo)
+    call states_elec_densities_init(this%st, this%gr)
     call states_elec_exec_init(this%st, this%namespace, this%mc)
 
     call v_ks_init(this%ks, this%namespace, this%gr, this%st, this%geo, this%mc)

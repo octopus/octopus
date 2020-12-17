@@ -74,8 +74,6 @@ module geometry_oct_m
     logical :: only_user_def        !< Do we want to treat only user-defined species?
     logical, private :: species_time_dependent !< For time-dependent user defined species
     FLOAT :: kinetic_energy         !< the ion kinetic energy
-    logical :: nlpp                 !< does any species have non-local pp?
-    logical :: nlcc                 !< does any species have non-local core corrections?
     type(distributed_t) :: atoms_dist
     logical          :: reduced_coordinates !< If true the coordinates are stored in
                                             !! reduced coordinates and need to be converted.
@@ -265,14 +263,6 @@ contains
           exit
         end if
       end do
-    end do
-
-    ! find out if we need non-local core corrections
-    geo%nlcc = .false.
-    geo%nlpp = .false.
-    do i = 1, geo%nspecies
-      geo%nlcc = (geo%nlcc.or.species_has_nlcc(geo%species(i)))
-      geo%nlpp = (geo%nlpp .or. species_is_ps(geo%species(i)))
     end do
 
     POP_SUB(geometry_init_species)
@@ -610,8 +600,6 @@ contains
 
     geo_out%only_user_def     = geo_in%only_user_def
     geo_out%kinetic_energy    = geo_in%kinetic_energy
-    geo_out%nlpp              = geo_in%nlpp
-    geo_out%nlcc              = geo_in%nlcc
 
     call distributed_copy(geo_in%atoms_dist, geo_out%atoms_dist)
 

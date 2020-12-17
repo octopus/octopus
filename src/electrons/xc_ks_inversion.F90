@@ -166,7 +166,7 @@ contains
       call states_elec_generate_random(ks_inv%aux_st, gr%mesh, gr%sb)      
 
       ! initialize densities, hamiltonian and eigensolver
-      call states_elec_densities_init(ks_inv%aux_st, gr, geo)
+      call states_elec_densities_init(ks_inv%aux_st, gr)
       call hamiltonian_elec_init(ks_inv%aux_hm, namespace, gr, geo, ks_inv%aux_st, INDEPENDENT_PARTICLES, xc, mc)
       call eigensolver_init(ks_inv%eigensolver, namespace, gr, ks_inv%aux_st, geo, mc)
     end if
