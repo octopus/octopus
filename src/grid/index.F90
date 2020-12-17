@@ -21,6 +21,7 @@
 module index_oct_m
   use global_oct_m
   use hypercube_oct_m
+  use iihash_oct_m
   use io_oct_m
   use io_binary_oct_m
   use messages_oct_m
@@ -30,12 +31,15 @@ module index_oct_m
   implicit none
 
   private
-  public ::                &
-    index_t,               &
-    index_from_coords,     &
-    index_from_coords_vec, &
-    index_to_coords,       &
-    index_dump_lxyz,       &
+
+  public ::                 &
+    index_t,                &
+    index_from_coords,      &
+    index_from_coords_vec,  &
+    index_to_coords,        &
+    index_hilbert_to_point, &
+    index_point_to_hilbert, &
+    index_dump_lxyz,        &
     index_load_lxyz
 
   type index_t
@@ -49,10 +53,34 @@ module index_oct_m
     integer, allocatable :: lxyz_inv(:,:,:)  !< return points # for each xyz
     integer              :: enlarge(MAX_DIM) !< number of points to add for boundary conditions
     integer(8)           :: checksum
+    integer, allocatable :: grid_to_hilbert(:) !< map: local grid index -> Hilbert index
+    type(iihash_t)       :: hilbert_to_grid    !< inverse map: Hilbert index -> local grid index
+    integer              :: bits               !< bits per dimension for Hilbert index
+    integer              :: offset(MAX_DIM)    !< offset for getting the indices from the Hilbert index
   end type index_t
 
 
   character(len=18), parameter :: dump_tag = '*** index_dump ***'
+
+  interface
+    subroutine hilbert_index_to_point_int(dim, nbits, index, point)
+      implicit none
+
+      integer,    intent(in)       :: dim
+      integer,    intent(in)       :: nbits
+      integer,    intent(in)       :: index
+      integer,    intent(out)      :: point !< (1:3)
+    end subroutine hilbert_index_to_point_int
+
+    subroutine hilbert_point_to_index_int(dim, nbits, index, point)
+      implicit none
+
+      integer,    intent(in)       :: dim
+      integer,    intent(in)       :: nbits
+      integer,    intent(out)      :: index
+      integer,    intent(in)       :: point !< (1:3)
+    end subroutine hilbert_point_to_index_int
+  end interface
 
 contains
 
@@ -223,6 +251,29 @@ contains
     POP_SUB(index_load_lxyz)
   end subroutine index_load_lxyz
 
+  subroutine index_hilbert_to_point(idx, dim, ihilbert, point)
+    type(index_t), intent(in)  :: idx
+    integer,       intent(in)  :: dim
+    integer,       intent(in)  :: ihilbert
+    integer,       intent(out) :: point(:)
+
+    ! no push_sub/pop_sub, called too often
+    call hilbert_index_to_point_int(dim, idx%bits, ihilbert, point(1))
+    point(1:dim) = point(1:dim) - idx%offset(1:dim)
+  end subroutine index_hilbert_to_point
+
+  subroutine index_point_to_hilbert(idx, dim, ihilbert, point)
+    type(index_t), intent(in)  :: idx
+    integer,       intent(in)  :: dim
+    integer,       intent(out) :: ihilbert
+    integer,       intent(in)  :: point(:)
+
+    integer :: point_copy(1:MAX_DIM)
+
+    ! no push_sub/pop_sub, called too often
+    point_copy(1:dim) = point(1:dim) + idx%offset(1:dim)
+    call hilbert_point_to_index_int(dim, idx%bits, ihilbert, point_copy(1))
+  end subroutine index_point_to_hilbert
 end module index_oct_m
 
 !! Local Variables:

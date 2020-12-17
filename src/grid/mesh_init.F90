@@ -24,6 +24,7 @@ module mesh_init_oct_m
   use curvilinear_oct_m
   use global_oct_m
   use hypercube_oct_m
+  use iihash_oct_m
   use index_oct_m
   use math_oct_m
   use mesh_oct_m
@@ -201,6 +202,11 @@ subroutine mesh_init_stage_2(mesh, space, sb, cv, stencil)
   integer :: npoints
   integer, allocatable :: start(:), end(:)
 #endif
+  integer :: global_size, local_size, sizes(1:MAX_DIM), hilbert_size
+  integer :: ihilbert, point(1:MAX_DIM), point_stencil(1:MAX_DIM)
+  integer :: istart, iend, ip, ib, ihilbertb, ib2, np, np_part
+  FLOAT :: pos(1:MAX_DIM)
+  logical :: found
 
   PUSH_SUB(mesh_init_stage_2)
   call profiling_in(mesh_init_prof, "MESH_INIT")
@@ -219,6 +225,68 @@ subroutine mesh_init_stage_2(mesh, space, sb, cv, stencil)
   end if
 
   nr = mesh%idx%nr
+  sizes(1:MAX_DIM) = nr(2, 1:MAX_DIM) - nr(1, 1:MAX_DIM) + 1
+  mesh%idx%offset(1:MAX_DIM) = sizes(1:MAX_DIM)/2
+  if(any(sizes > 2**(31/sb%dim))) then
+    write(message(1), '(A, I10, A, I2, A)') "Error: grid too large, more than ", 2**(31/sb%dim), &
+      " points in one direction for ", sb%dim, " dimensions. This is not supported yet."
+    call messages_fatal(1)
+  end if
+  global_size = product(sizes)
+  ! compute the bits per dimension: sizes(i) <= 2**bits
+  mesh%idx%bits = maxval(ceiling(log(TOFLOAT(sizes))/log(2.)))
+
+  call iihash_init(mesh%idx%hilbert_to_grid)
+
+  hilbert_size = 2**(sb%dim*mesh%idx%bits)
+
+  ! use block data decomposition of hilbert indices
+  istart = floor(hilbert_size * TOFLOAT(mpi_world%rank)/mpi_world%size)
+  iend = floor(hilbert_size * TOFLOAT(mpi_world%rank+1)/mpi_world%size) - 1
+  local_size = iend - istart + 1
+
+  SAFE_ALLOCATE(mesh%idx%grid_to_hilbert(1:local_size * 2))
+
+  ip = 1
+  do ihilbert = istart, iend
+    call index_hilbert_to_point(mesh%idx, sb%dim, ihilbert, point)
+    chi(1:sb%dim) = TOFLOAT(point(1:sb%dim)) * mesh%spacing(1:sb%dim)
+    call curvilinear_chi2x(sb, cv, chi(:), pos(:))
+    if(.not. simul_box_in_box(sb, pos, namespace)) cycle
+    mesh%idx%grid_to_hilbert(ip) = ihilbert
+    call iihash_insert(mesh%idx%hilbert_to_grid, ihilbert, ip)
+    !print*, "Inserted point ", ip, ", Hilbert ", ihilbert
+    ip = ip + 1
+  end do
+  np = ip - 1
+
+  do ib = 1, np
+    call index_hilbert_to_point(mesh%idx, sb%dim, mesh%idx%grid_to_hilbert(ib), point)
+    do is = 1, stencil%size
+      if(stencil%center == is) cycle
+      point_stencil(1:sb%dim) = point(1:sb%dim) + stencil%points(1:sb%dim, is)
+      if(any(point_stencil(1:sb%dim) < mesh%idx%nr(1, 1:sb%dim)) .or. &
+         any(point_stencil(1:sb%dim) >  mesh%idx%nr(2, 1:sb%dim))) cycle
+      call index_point_to_hilbert(mesh%idx, sb%dim, ihilbertb, point_stencil)
+      ib2 = iihash_lookup(mesh%idx%hilbert_to_grid, ihilbertb, found)
+      if(found) cycle
+      mesh%idx%grid_to_hilbert(ip) = ihilbertb
+      call iihash_insert(mesh%idx%hilbert_to_grid, ihilbertb, ip)
+      !print*, "Enlargement point ", ip, ", Hilbert ", ihilbertb, " point ", ib
+      ip = ip + 1
+    end do
+  end do
+  np_part = ip - 1
+
+  ! redistribute
+
+  print *, "Number of bits: ", mesh%idx%bits
+  print *, "Total hilbert size: ", hilbert_size
+  print *, "Local hilbert size: ", local_size
+
+  print *, "Number of points: ", np
+  print *, "Number of total points: ", np_part
+
 
   ! allocate the xyz arrays
   SAFE_ALLOCATE(mesh%idx%lxyz_inv(nr(1, 1):nr(2, 1), nr(1, 2):nr(2, 2), nr(1, 3):nr(2, 3)))
@@ -550,7 +618,7 @@ contains
       ORDER_HILBERT    =  2, &
       ORDER_HILBERT_2D =  3
 
-   interface
+    interface
       subroutine hilbert_index_to_point(dim, nbits, index, point)
         implicit none
 
