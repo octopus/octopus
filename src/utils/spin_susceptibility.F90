@@ -140,6 +140,7 @@ program spin_susceptibility
         m_cart(ii, kk) = m_cart(ii, kk) - m_cart_ref(ii, kk)
       end do
     end do
+    SAFE_DEALLOCATE_A(m_cart_ref)
   end if
 
   !We now perform the change of basis to the rotating basis
