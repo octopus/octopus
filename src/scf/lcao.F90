@@ -722,7 +722,7 @@ contains
       call messages_info(1)
 
       ! get the effective potential (we don`t need the eigenvalues yet)
-      call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval=.false., calc_current=.false.)
+      call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval=.false., calc_current=.false., calc_energy=.false.)
       ! eigenvalues have nevertheless to be initialized to something
       if(st%smear%method == SMEAR_SEMICONDUCTOR .and. lcao_is_available(lcao)) then
         st%eigenval = M_HUGE
