@@ -278,13 +278,8 @@ contains
     !% If set to yes, the photons are coupled to the electronic subsystem in the frequency-dependent
     !% Sternheimer equation
     !%End
-    call parse_variable(namespace, 'EnableElPtCoupling', .false., this%enable_el_pt_coupling)
-    if(this%enable_el_pt_coupling) then
-      message(1) = 'Info: Enable electron photon coupling: yes'
-    else
-      message(1) = 'Info: Enable electron photon coupling: no'
-    end if
-    call messages_info(1)
+    call parse_variable(namespace, 'EnablePhotons', .false., this%enable_el_pt_coupling)
+    call messages_print_var_value(stdout, 'EnablePhotons', this%enable_el_pt_coupling)
 
     if(this%enable_el_pt_coupling) then
       call photon_mode_init(this%pt_modes, namespace, gr%mesh, space%dim, M_ZERO)
