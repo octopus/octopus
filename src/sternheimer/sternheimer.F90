@@ -314,9 +314,7 @@ contains
     !% when the coupling of electrons to photons is enabled in the frequency-dependent Sternheimer equation
     !%End
     call parse_variable(namespace, 'PhotonEta', CNST(0.0000367), this%el_pt_eta, units_inp%energy)
-    write(message(1), '(a,f12.6)') 'Info: Photon Eta: ', this%el_pt_eta
-    call messages_info(1)
-
+    call messages_print_var_value(stdout, 'PhotonEta', this%el_pt_eta, units_inp%energy)
 
     POP_SUB(sternheimer_init)
   end subroutine sternheimer_init
