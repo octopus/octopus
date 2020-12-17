@@ -63,7 +63,7 @@ program oct_local_multipoles
     logical, allocatable            :: inside(:,:)     !< relation of mesh points on each domain.
     logical, allocatable            :: ions_inside(:,:)!< relation of ions inside each domain.
     FLOAT, allocatable              :: dcm(:,:)        !< store the center of mass of each domain on the real space.
-    type(local_write_t)             :: writ            !< write option for local domains analysis.
+    type(local_write_t), allocatable :: writ(:)         !< write option for local domains analysis.
   end type local_domain_t
 
   type(electrons_t), pointer :: sys
@@ -114,7 +114,7 @@ contains
   !! calls the proper function.
   subroutine local_domains()
     type(local_domain_t)           :: local
-    integer                        :: err, iter, l_start, l_end, l_step
+    integer                        :: err, iter, l_start, l_end, l_step, id
     integer                        :: ia, n_spec_def, read_data, iunit, ispec
     integer                        :: length, folder_index
     FLOAT                          :: default_dt, dt
@@ -316,7 +316,9 @@ contains
     end if
 
     call kick_init(kick, global_namespace, sys%gr%sb, sys%st%d%ispin)
-    call local_write_init(local%writ, global_namespace, local%nd, local%lab, 0, dt)
+    do id = 1, local%nd
+      call local_write_init(local%writ(id), global_namespace, local%lab(id), 0, dt)
+    end do
 
     !TODO: initialize hamiltonian if needed: check for LDOuput = energy or potential, using local_write_check_hm(local%writ)
 
@@ -380,8 +382,10 @@ contains
         if (ldupdate) call local_inside_domain(local, global_namespace, sys%st%rho(:,1))
       end if
 
-      call local_write_iter(local%writ, global_namespace, local%nd, local%lab, local%ions_inside, local%inside, local%dcm, & 
-                              sys%gr, sys%st, sys%hm, sys%ks, sys%geo, kick, iter, l_start, ldoverwrite)
+      do id = 1, local%nd
+        call local_write_iter(local%writ(id), global_namespace, local%lab(id), local%ions_inside(:,id), local%inside(:,id), &
+          local%dcm(:,id), sys%gr, sys%st, sys%hm, sys%ks, sys%geo, kick, iter, l_start, ldoverwrite)
+      end do
       call loct_progress_bar(iter-l_start, l_end-l_start) 
     end do
 
@@ -454,6 +458,7 @@ contains
     SAFE_ALLOCATE(local%inside(1:sys%gr%mesh%np, 1:local%nd))
     SAFE_ALLOCATE(local%ions_inside(1:sys%geo%natoms, 1:local%nd))
     SAFE_ALLOCATE(local%dcm(1:sys%space%dim, 1:local%nd))
+    SAFE_ALLOCATE(local%writ(1:local%nd))
 
     block: do id = 1, local%nd
       call parse_block_string(blk, id-1, 0, local%lab(id))
@@ -477,14 +482,15 @@ contains
     PUSH_SUB(local_end)
     do id = 1, local%nd
       call box_union_end(local%domain(id))
+      call local_write_end(local%writ(id))
     end do
-    call local_write_end(local%writ, local%nd)
     SAFE_DEALLOCATE_A(local%lab)
     SAFE_DEALLOCATE_A(local%domain)
     SAFE_DEALLOCATE_A(local%clist)
     SAFE_DEALLOCATE_A(local%dshape)
     SAFE_DEALLOCATE_A(local%inside)
     SAFE_DEALLOCATE_A(local%dcm)
+    SAFE_DEALLOCATE_A(local%writ)
 
     POP_SUB(local_end)
   end subroutine local_end

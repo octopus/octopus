@@ -730,27 +730,6 @@ subroutine X(mf_dipole) (mesh, ff, dipole, inside)
   POP_SUB(X(mf_dipole))
 end subroutine X(mf_dipole)
 
-!--------------------------------------------------------------
-subroutine X(mf_local_multipoles) (mesh, n_domains, ff, lmax, multipole, inside)
-  type(mesh_t),      intent(in)  :: mesh
-  integer,           intent(in)  :: n_domains
-  R_TYPE,            intent(in)  :: ff(:)
-  integer,           intent(in)  :: lmax
-  R_TYPE,            intent(out) :: multipole(:,:) !< ((lmax + 1)**2, n_domains)
-  logical,           intent(in)  :: inside(:,:) !< (mesh%np, n_domains)
-
-  integer :: idom
-
-  PUSH_SUB(X(mf_local_multipoles))
-
-  do idom = 1, n_domains
-    call X(mf_multipoles) (mesh, ff, lmax, multipole(:, idom), inside = inside(:, idom))
-  end do
-
-  POP_SUB(X(mf_local_multipoles))
-end subroutine X(mf_local_multipoles)
-
-
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8
