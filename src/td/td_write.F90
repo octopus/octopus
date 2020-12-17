@@ -759,8 +759,9 @@ contains
     end if
     
     if(writ%out(OUT_TOTAL_CURRENT)%write .or. writ%out(OUT_TOTAL_HEAT_CURRENT)%write) then
+      !TODO: we should only compute the current here, not v_ks
       call v_ks_calculate_current(ks, .true.)
-      call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval=.false., time = iter*dt)
+      call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval=.false., time = iter*dt, calc_energy = .false.)
     end if
 
     if(writ%out(OUT_N_EX)%write .and. writ%compute_interval > 0) then
