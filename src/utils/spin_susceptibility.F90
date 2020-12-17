@@ -39,16 +39,16 @@ program spin_susceptibility
 
   implicit none
 
-  integer :: in_file, out_file, ii, jj, kk, ierr, ib, num_col, num_col_cart
-  integer :: time_steps, energy_steps, istart, iend, ntiter, iq
-  FLOAT   :: dt, tt, ww
+  integer :: in_file, out_file, ref_file, ii, jj, kk, ierr, ib, num_col, num_col_cart
+  integer :: time_steps, time_steps_ref, energy_steps, istart, iend, ntiter, iq
+  FLOAT   :: dt, tt, ww, dt_ref
   FLOAT, allocatable :: ftreal(:,:), ftimag(:,:)
-  FLOAT, allocatable :: m_cart(:,:), magnetization(:,:,:)
+  FLOAT, allocatable :: m_cart(:,:), m_cart_ref(:,:), magnetization(:,:,:)
   type(spectrum_t)  :: spectrum
   type(batch_t)     :: vecpotb, ftrealb, ftimagb
   type(kick_t)      :: kick
   character(len=256) :: header
-  character(len=MAX_PATH_LEN) :: fname
+  character(len=MAX_PATH_LEN) :: fname, ref_filename
   CMPLX, allocatable :: chi(:,:)
 
   ! Initialize stuff
@@ -92,6 +92,56 @@ program spin_susceptibility
   end do
 
   call io_close(in_file)
+
+  if(parse_is_defined(global_namespace, 'TransientMagnetizationReference')) then
+    !%Variable TransientMagnetizationReference
+    !%Type string
+    !%Default "."
+    !%Section Utilities::oct-spin_susceptibility
+    !%Description
+    !% In case of delayed kick, the calculation of the transient spin susceptibility requires 
+    !% to substract a reference calculation, containing dynamics of the magnetization without the kick
+    !% This reference must be computed having
+    !% TDOutput = total_magnetization.
+    !% This variables defined the directory in which the reference total_magnetization file is,
+    !% relative to the current folder
+    !%End
+
+    call parse_variable(global_namespace, 'TransientMagnetizationReference', '.', ref_filename)
+    ref_file = io_open(trim(ref_filename)//'/total_magnetization', global_namespace, action='read', status='old', die=.false.)
+    if(ref_file < 0) then
+      message(1) = "Cannot open reference file '"// &
+        trim(io_workpath(trim(ref_filename)//'/total_magnetization', global_namespace))//"'"
+      call messages_fatal(1)
+    end if
+    call io_skip_header(ref_file)
+    call spectrum_count_time_steps(global_namespace, ref_file, time_steps_ref, dt_ref)
+    time_steps_ref = time_steps_ref + 1
+
+    if(time_steps_ref < time_steps) then
+      message(1) = "The reference calculation does not contain enought time steps"
+      call messages_fatal(1)
+    end if
+
+    if(dt_ref /= dt) then
+      message(1) = "The time step of the reference calculation is different from the current calculation"
+      call messages_fatal(1)
+    end if
+
+    !We remove the reference
+    SAFE_ALLOCATE(m_cart_ref(1:time_steps_ref, num_col_cart))
+    call io_skip_header(ref_file)
+    do ii = 1, time_steps_ref
+      read(ref_file, *) jj, tt, (m_cart_ref(ii, kk), kk = 1, num_col_cart)
+    end do
+    call io_close(ref_file)
+    do ii = 1, time_steps
+      do kk = 1, num_col_cart
+        m_cart(ii, kk) = m_cart(ii, kk) - m_cart_ref(ii, kk)
+      end do
+    end do
+    SAFE_DEALLOCATE_A(m_cart_ref)
+  end if
 
   !We now perform the change of basis to the rotating basis
   !In this basis we have only m_+(q), m_-(q), and m_z(+/-q)
