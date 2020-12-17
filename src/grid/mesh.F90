@@ -118,6 +118,7 @@ module mesh_oct_m
     character(len=256) :: periodic_boundary_mask
 
     type(multiresolution_t) :: hr_area !< high-resolution areas
+    integer, allocatable :: nps(:)
   contains
     procedure :: end => mesh_end
     procedure :: init => mesh_init
