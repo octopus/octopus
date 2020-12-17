@@ -589,7 +589,7 @@ subroutine X(calc_hvar_photons)(this, mesh, st, lr_rho, nsigma, hvar, fxc)
   FLOAT, optional,        intent(in)    :: fxc(:,:,:) !< (1:mesh%np, 1:st%d%nspin, 1:st%d%nspin)
 
   R_TYPE, allocatable :: s_lr_rho(:), vp_dip_self_ener(:), vp_bilinear_el_pt(:)
-  R_TYPE, allocatable :: omg2_lmda_r(:), first_moments(:), lambda_dot_r(:)
+  R_TYPE, allocatable :: first_moments(:)
   integer :: nm, is, ii
   CMPLX :: integral_result
 
