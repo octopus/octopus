@@ -2,7 +2,6 @@ CalculationMode = gs
 
 Dimensions = 1
 DerivativesOrder = 4
-PoisonSolver = direct_sum
 
 EigensolverTolerance = 1e-10
 
@@ -17,21 +16,11 @@ Spacing = 0.0707
  'H2' | 0.0
 %
 
-resonance = 0.67134269
-
-%EMFreqs
-1 | resonance | resonance
-%
-
 EMEta = 0.003675
 
 Preconditioner = no
 LinearSolver = qmr_dotp 
 ExperimentalFeatures = yes
-
-%PhotonModes
-resonance | 0.01 | 1
-%
 
 EnablePhotons = yes
 PhotonEta = 0.00003675

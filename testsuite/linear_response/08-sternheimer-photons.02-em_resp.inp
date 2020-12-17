@@ -2,7 +2,6 @@ CalculationMode = em_resp
 
 Dimensions = 1
 DerivativesOrder = 4
-PoisonSolver = direct_sum
 
 %Species
  'H2'| species_user_defined | potential_formula | "-2.0/sqrt(x^2+1.0)" | valence | 2
@@ -18,7 +17,7 @@ Spacing = 0.0707
 resonance = 0.67134269
 
 %EMFreqs
-1 | resonance | resonance
+1 | resonance
 %
 
 EMEta = 0.003675
