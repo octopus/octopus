@@ -44,11 +44,10 @@ match ;  Eigenvalue  2  ; GREPFIELD(static/info, '#k =  75', 3, 2) ; 0.195378
 match ;  Eigenvalue  3  ; GREPFIELD(static/info, '#k =  75', 3, 3) ; 0.210678
 match ;  Eigenvalue  4  ; GREPFIELD(static/info, '#k =  75', 3, 4) ; 0.21068
 
-Precision: 2.51e-06
-match ;  dipole 2-5  ; LINEFIELD(static/ks_me_dipole.k1_x, 4, 4) ; 3.0635181369564997
-Precision: 8.91e-09
-match ;  dipole 4-7  ; LINEFIELD(static/ks_me_dipole.k1_x, 9, 3) ; 3.1747322178579997
-
+Precision: 4.69e-06
+match ;  dipole 2-5  ; LINEFIELD(static/ks_me_dipole.k1_x, 4, 4) ; 3.0635188278985
+Precision: 1.04e-08
+match ;  dipole 4-7  ; LINEFIELD(static/ks_me_dipole.k1_x, 9, 3) ; 3.174732217858
 
 Input      : 13-primitive.02-graphene.inp
 if(available cuda); then
