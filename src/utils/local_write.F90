@@ -132,7 +132,9 @@ contains
 
     call parse_variable(namespace, 'LDOutput', default, flags)
 
-    if(.not.varinfo_valid_option('LDOutput', flags, is_flag = .true.)) call messages_input_error(namespace, 'LDOutput')
+    if (.not.varinfo_valid_option('LDOutput', flags, is_flag = .true.)) then
+      call messages_input_error(namespace, 'LDOutput')
+    end if
 
     SAFE_ALLOCATE(writ%out(1:LOCAL_OUT_MAX))
     do iout = 1, LOCAL_OUT_MAX
@@ -150,7 +152,7 @@ contains
     !% It can take the same values as <tt>OutputFormat</tt> flag.
     !%End
     call parse_variable(namespace, 'LDOutputFormat', 0, writ%how)
-    if(.not.varinfo_valid_option('OutputFormat', writ%how, is_flag=.true.)) then
+    if (.not.varinfo_valid_option('OutputFormat', writ%how, is_flag=.true.)) then
       call messages_input_error(namespace, 'LDOutputFormat')
     end if
 
@@ -162,36 +164,35 @@ contains
     !% Maximum electric multipole of the density output to the file <tt>local.multipoles/<>domain%<>.multipoles</tt>
     !% during a time-dependent simulation. Must be non-negative.
     !%End
-
     call parse_variable(namespace, 'LDMultipoleLmax', 1, writ%lmax)
     if (writ%lmax < 0) then
       write(message(1), '(a,i6,a)') "Input: '", writ%lmax, "' is not a valid LDMultipoleLmax."
-      message(2) = '(Must be LDMultipoleLmax >= 0 )'
+      message(2) = '(Must be LDMultipoleLmax >= 0)'
       call messages_fatal(2)
     end if
 
     call io_mkdir('local.general', namespace)
 
-    if(mpi_grp_is_root(mpi_world)) then
-      if(writ%out(LOCAL_OUT_MULTIPOLES)%write) then 
+    if (mpi_grp_is_root(mpi_world)) then
+      if (writ%out(LOCAL_OUT_MULTIPOLES)%write) then 
         call io_mkdir('local.general/multipoles', namespace)
         call write_iter_init(writ%out(LOCAL_OUT_MULTIPOLES)%handle, iter, units_from_atomic(units_out%time, dt), &
           trim(io_workpath("local.general/multipoles/"//trim(lab)//".multipoles", namespace)))
       end if
 
-      if(writ%out(LOCAL_OUT_POTENTIAL)%write) then
+      if (writ%out(LOCAL_OUT_POTENTIAL)%write) then
         call io_mkdir('local.general/potential', namespace)
         call write_iter_init(writ%out(LOCAL_OUT_POTENTIAL)%handle, first, units_from_atomic(units_out%time, dt), &
           trim(io_workpath("local.general/potential/"//trim(lab)//".potential", namespace)))
       end if
 
-      if(writ%out(LOCAL_OUT_DENSITY)%write) then
+      if (writ%out(LOCAL_OUT_DENSITY)%write) then
         call io_mkdir('local.general/densities', namespace)
         call write_iter_init(writ%out(LOCAL_OUT_DENSITY)%handle, first, units_from_atomic(units_out%time, dt), &
           trim(io_workpath("local.general/densities/"//trim(lab)//".densities", namespace)))
       end if
 
-      if(writ%out(LOCAL_OUT_ENERGY)%write) then 
+      if (writ%out(LOCAL_OUT_ENERGY)%write) then 
         call io_mkdir('local.general/energy', namespace)
         call write_iter_init(writ%out(LOCAL_OUT_ENERGY)%handle, iter, units_from_atomic(units_out%time, dt), &
           trim(io_workpath("local.general/energy/"//trim(lab)//".energy", namespace)))
@@ -211,7 +212,9 @@ contains
 
     if (mpi_grp_is_root(mpi_world)) then
       do iout = 1, LOCAL_OUT_MAX
-        if(writ%out(iout)%write) call write_iter_end(writ%out(iout)%handle)
+        if (writ%out(iout)%write) then
+          call write_iter_end(writ%out(iout)%handle)
+        end if
       end do
     end if
     SAFE_DEALLOCATE_A(writ%out)
@@ -227,7 +230,7 @@ contains
     character(len=15),        intent(in)    :: lab
     logical,                  intent(in)    :: ions_inside(:)
     logical,                  intent(in)    :: inside(:)
-    FLOAT  ,                  intent(in)    :: center(:)
+    FLOAT,                    intent(in)    :: center(:)
     type(grid_t),             intent(in)    :: gr
     type(states_elec_t),      intent(inout) :: st
     type(hamiltonian_elec_t), intent(inout) :: hm
@@ -285,7 +288,7 @@ contains
 
     integer            :: is, ix, ierr
     character(len=120) :: folder, out_name
-    FLOAT, allocatable :: tmp_rho(:),st_rho(:)
+    FLOAT, allocatable :: tmp_rho(:), st_rho(:)
     FLOAT, allocatable :: tmp_vh(:)
 
     PUSH_SUB(local_write_density)
@@ -296,11 +299,12 @@ contains
 
     ! FIXME: use just v_ks_calc subroutine for either compute vhartree and vxc
     do is = 1, st%d%nspin
-      tmp_rho = M_ZERO
       st_rho(:) = st%rho(:, is)
-      do ix = 1, gr%mesh%np 
-        if (inside(ix)) tmp_rho(ix) = st_rho(ix)
-      end do
+      where (inside)
+        tmp_rho = st_rho
+      elsewhere
+        tmp_rho = M_ZERO
+      end where
 
       if (out_dens%write) then
         folder = 'local.general/densities/'//trim(lab)//'.densities/'
@@ -318,10 +322,11 @@ contains
         call dio_function_output(how, trim(folder), trim(out_name), namespace, &
           gr%mesh, tmp_vh, units_out%length, ierr, geo = geo)
         !Computes XC potential
-        st%rho(:,is) = M_ZERO
-        do ix = 1, gr%mesh%np
-          if (inside(ix)) st%rho(ix, is) = st_rho(ix)
-        end do
+        where (inside)
+          st%rho(:, is) = st_rho
+        elsewhere
+          st%rho(:, is) = M_ZERO
+        end where
         call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval = .false. , calc_energy = .false.)
         folder = 'local.general/potential/'//trim(lab)//'.potential/'
         write(out_name, '(a,i0,a1,i7.7)') 'vxc.', is, '.', iter
@@ -447,13 +452,14 @@ contains
       end if
 
       !Compute Local Values
-      tmp_rhoi = M_ZERO
-      st%rho(:,is) = M_ZERO
       hm%vxc(:,is) = M_ZERO
       hm%vhartree(:) = M_ZERO
-      do ix = 1, gr%mesh%np 
-        if (inside(ix)) st%rho(ix, is) = st_rho(ix)
-      end do
+      where (inside)
+        st%rho(:, is) = st_rho
+      elsewhere
+        st%rho(:, is) = M_ZERO
+      end where
+
       call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval = .false. , calc_energy = .false.)
       tmp_rhoi(1:gr%mesh%np) = st%rho(1:gr%mesh%np, is)
       !eh = Int[n*v_h]
@@ -489,7 +495,9 @@ contains
       st%rho(:,is) = st_rho(:)
       hm%vxc(:,is) = hm_vxc(:)
       hm%vhartree(:) = hm_vh(:)
-      if (mpi_grp_is_root(mpi_world)) call write_iter_nl(out_energy%handle)
+      if (mpi_grp_is_root(mpi_world)) then
+        call write_iter_nl(out_energy%handle)
+      end if
     end do
 
     SAFE_DEALLOCATE_A(hm_vh)
@@ -527,7 +535,7 @@ contains
 
     PUSH_SUB(local_write_multipole)
 
-    if(mpi_grp_is_root(mpi_world).and. iter == l_start .and. start) then
+    if (mpi_grp_is_root(mpi_world).and. iter == l_start .and. start) then
       call local_write_print_header_init(out_multip%handle)
   
       write(aux, '(a15,i2)')      '# nspin        ', st%d%nspin
@@ -614,7 +622,7 @@ contains
       end do
     end if
 
-    if(mpi_grp_is_root(mpi_world)) then
+    if (mpi_grp_is_root(mpi_world)) then
       call write_iter_set(out_multip%handle, iter)
       call write_iter_start(out_multip%handle)
       do is = 1, st%d%nspin
