@@ -168,6 +168,8 @@ contains
        SAFE_ALLOCATE(this%pol(1:this%nmodes, 3))
        SAFE_ALLOCATE(this%pol_dipole(1:mesh%np, 1:this%nmodes))
 
+       this%pol = M_ZERO
+
        do ii = 1, this%nmodes
           ncols = parse_block_cols(blk, ii-1)
 
