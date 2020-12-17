@@ -708,12 +708,14 @@ contains
       end do
     end do
 
-    !Check for atom list inside each domain
-    call local_ions_inside(lcl%nd, lcl%inside, sys%geo, sys%gr%mesh, lcl%ions_inside, lcl%clist)
+    do id = 1, lcl%nd
+      !Check for atom list inside each domain
+      call local_ions_inside(lcl%inside(:,id), sys%geo, sys%gr%mesh, lcl%ions_inside(:,id), lcl%clist(id))
 
-    !Compute center of mass of each domain
-    call local_center_of_mass(lcl%nd, lcl%ions_inside, sys%geo, lcl%dcm)
-    
+      !Compute center of mass of each domain
+      call local_center_of_mass(lcl%ions_inside(:,id), sys%geo, lcl%dcm(:,id))
+    end do
+
     SAFE_DEALLOCATE_A(inside)
 
     POP_SUB(local_restart)
@@ -822,11 +824,13 @@ contains
       SAFE_DEALLOCATE_A(domain_mesh)
     end if
 
-    !Check for atom list inside each domain
-    call local_ions_inside(lcl%nd, lcl%inside, sys%geo, sys%gr%mesh, lcl%ions_inside, lcl%clist)
+    do id = 1, lcl%nd
+      !Check for atom list inside each domain
+      call local_ions_inside(lcl%inside(:,id), sys%geo, sys%gr%mesh, lcl%ions_inside(:,id), lcl%clist(id))
 
-    !Compute center of mass of each domain
-    call local_center_of_mass(lcl%nd, lcl%ions_inside, sys%geo, lcl%dcm)
+      !Compute center of mass of each domain
+      call local_center_of_mass(lcl%ions_inside(:,id), sys%geo, lcl%dcm(:,id))
+    end do
 
     !Write restart file for local domains
     base_folder = "./restart/"
@@ -962,105 +966,87 @@ contains
 
   ! ---------------------------------------------------------
   !Check for the ions inside each local domain.
-  subroutine local_ions_inside(nd, inside, geo, mesh, ions_inside, ions_list)
-    integer,            intent(in)  :: nd 
-    logical,            intent(in)  :: inside(:,:)
+  subroutine local_ions_inside(inside, geo, mesh, ions_inside, ions_list)
+    logical,            intent(in)  :: inside(:)
     type(geometry_t),   intent(in)  :: geo
     type(mesh_t),       intent(in)  :: mesh
-    logical,            intent(out) :: ions_inside(:,:)
-    character(len=500), intent(out) :: ions_list(:)
+    logical,            intent(out) :: ions_inside(:)
+    character(len=500), intent(out) :: ions_list
 
-    integer              :: ia, id, ix, ic
-    integer, allocatable :: inside_tmp(:,:)
+    integer              :: ia, ix, ic
+    integer, allocatable :: inside_tmp(:)
     integer              :: rankmin
     FLOAT                :: dmin
     character(len=500)   :: chtmp
 
     PUSH_SUB(local_ions_inside)
 
-    SAFE_ALLOCATE(inside_tmp(geo%natoms, nd))
+    SAFE_ALLOCATE(inside_tmp(geo%natoms))
     inside_tmp = 0
-    ions_list = ""
    
     do ia = 1, geo%natoms
       ix = mesh_nearest_point(mesh, geo%atom(ia)%x, dmin, rankmin )
       if (rankmin /= mesh%mpi_grp%rank) cycle
-      do id = 1, nd
-        if (inside(ix, id)) inside_tmp(ia, id) = 1
-      end do
+      if (inside(ix)) inside_tmp(ia) = 1
     end do
 
     if(mesh%parallel_in_domains) then
-      call comm_allreduce(mesh%mpi_grp%comm, inside_tmp, dim = (/geo%natoms,nd/))
+      call comm_allreduce(mesh%mpi_grp%comm, inside_tmp, geo%natoms)
     end if                               
     ions_inside = inside_tmp == 1
 
     SAFE_DEALLOCATE_A(inside_tmp)
 
     !print list of atoms
-    do id = 1, nd
-      ic = 0
-      ix = 0
-      chtmp = ions_list(id)
-      do ia = 1, geo%natoms-1
-        if (ions_inside(ia, id)) then
-          if ( ic == 0 .or. .not.ions_inside(ia+1, id)) then
-            write(ions_list(id), '(a,i0)')trim(chtmp),ia
-          end if
-          if (ions_inside(ia+1, id)) then 
-            ic = ic + 1  
-            chtmp = trim(ions_list(id))//"-"
-          else
-            ic = 0
-            chtmp = trim(ions_list(id))//","
-          end if
-
-        else 
-          cycle 
+    ic = 0
+    ix = 0
+    ions_list = ""
+    chtmp = ""
+    do ia = 1, geo%natoms-1
+      if (ions_inside(ia)) then
+        if (ic == 0 .or. .not.ions_inside(ia+1)) then
+          write(ions_list, '(a,i0)') trim(chtmp), ia
         end if
-      end do 
+        if (ions_inside(ia + 1)) then 
+          ic = ic + 1
+          chtmp = trim(ions_list)//"-"
+        else
+          ic = 0
+          chtmp = trim(ions_list)//","
+        end if
 
-      if (ions_inside(geo%natoms, id)) then
-        write(ions_list(id), '(a,i0)') trim(chtmp), ia
+      else
+        cycle 
       end if
-
-!      write(message(1),'(a,1x,i0,1x,a,1x,a)')'Atoms inside domain',id,':',trim(ions_list(id))
-!      call messages_warning(1)
     end do
+
+    if (ions_inside(geo%natoms)) then
+      write(ions_list, '(a,i0)') trim(chtmp), ia
+    end if
 
     POP_SUB(local_ions_inside)
   end subroutine local_ions_inside
 
   ! ---------------------------------------------------------
-  subroutine local_center_of_mass(nd, ions_inside, geo, center)
-    integer,           intent(in)  :: nd 
-    logical,           intent(in)  :: ions_inside(:,:)
+  subroutine local_center_of_mass(ions_inside, geo, center)
+    logical,           intent(in)  :: ions_inside(:)
     type(geometry_t),  intent(in)  :: geo
-    FLOAT,             intent(out) :: center(:,:)
+    FLOAT,             intent(out) :: center(:)
 
-    integer            :: ia, id
-    FLOAT, allocatable :: sumw(:)
+    integer :: ia
+    FLOAT :: sumw
 
     PUSH_SUB(local_center_of_mass)
 
-    SAFE_ALLOCATE(sumw(1:nd))
-    sumw(1:nd) = M_ZERO
-
-    center(:,:) = M_ZERO
+    sumw = M_ZERO
+    center = M_ZERO
     do ia = 1, geo%natoms
-      do id = 1, nd
-        if (ions_inside(ia, id)) then
-          center(1:geo%space%dim, id) = center(1:geo%space%dim,id) &
-                   + geo%atom(ia)%x(1:geo%space%dim)*species_mass(geo%atom(ia)%species)     
-          sumw(id) = sumw(id) + species_mass(geo%atom(ia)%species)
-        end if
-      end do
+      if (ions_inside(ia)) then
+        center(1:geo%space%dim) = center(1:geo%space%dim) + geo%atom(ia)%x(1:geo%space%dim)*species_mass(geo%atom(ia)%species)
+        sumw = sumw + species_mass(geo%atom(ia)%species)
+      end if
     end do
-    do id = 1, nd
-      center(1:geo%space%dim,id) = center(1:geo%space%dim,id) / sumw(id)
-    end do
-
-    SAFE_DEALLOCATE_A(sumw)
+    center(1:geo%space%dim) = center(1:geo%space%dim)/sumw
 
     POP_SUB(local_center_of_mass)
   end subroutine local_center_of_mass
