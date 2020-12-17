@@ -115,6 +115,7 @@ module mesh_oct_m
     logical :: masked_periodic_boundaries
     character(len=256) :: periodic_boundary_mask
 
+    integer, allocatable :: nps(:)
   contains
     procedure :: end => mesh_end
     procedure :: init => mesh_init
