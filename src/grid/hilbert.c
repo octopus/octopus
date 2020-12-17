@@ -29,7 +29,24 @@
 
 */
 
-void InttoTranspose(const int dim, const long long int h, int bits; int * x){
+void Int4toTranspose(const int dim, const int h, int bits, int * x){
+  /* the code uses some funny way of storing the bits */
+
+  int idir, ibit, ifbit;
+
+  for(idir = 0; idir < dim; idir++) x[idir] = 0;
+
+  ifbit = 0;
+  for(ibit = 0; ibit < bits; ibit++){
+    for(idir = dim - 1; idir >= 0; idir--){
+      x[idir] += (((h>>ifbit)&1)<<ibit);
+      ifbit++;
+    }
+  }
+
+}
+
+void InttoTranspose(const int dim, const long long int h, int bits, int * x){
   /* the code uses some funny way of storing the bits */
 
   int idir, ibit, ifbit;
@@ -71,17 +88,33 @@ void TransposetoAxes(int* X, int b, int n ){ /* position, #bits, dimension */
 
 }
 
-void TransposetoInt(const int dim, const long long int h, int bits, int * x){
+void TransposetoInt(const int dim, long long int * h, int bits, int * x){
   /* the code uses some funny way of storing the bits */
 
   int idir, ibit, ifbit;
 
-  h = 0;
+  *h = 0;
 
   ifbit = 0;
   for(ibit = 0; ibit < bits; ibit++){
     for(idir = dim - 1; idir >= 0; idir--){
-      h += (((x[idir]>>ibit)&1)<<ifbit);
+      *h += (((x[idir]>>ibit)&1)<<ifbit);
+      ifbit++;
+    }
+  }
+}
+
+void TransposetoInt4(const int dim, int * h, int bits, int * x){
+  /* the code uses some funny way of storing the bits */
+
+  int idir, ibit, ifbit;
+
+  *h = 0;
+
+  ifbit = 0;
+  for(ibit = 0; ibit < bits; ibit++){
+    for(idir = dim - 1; idir >= 0; idir--){
+      *h += (((x[idir]>>ibit)&1)<<ifbit);
       ifbit++;
     }
   }
@@ -110,16 +143,30 @@ void AxestoTranspose(int* X, int b, int n){ /* position, #bits, dimension */
   for( i = 0; i < n; i++ ) X[i] ^= t;
 }
 
+/* 64 bit integer versions */
 void FC_FUNC_(hilbert_index_to_point, HILBERT_INDEX_TO_POINT)(const int * dim, const int * nbits, const long long int * index, int * point){
   InttoTranspose(*dim, *index, *nbits, point);
   TransposetoAxes(point, *nbits, *dim);
 }
 
-
 void FC_FUNC_(hilbert_point_to_index, HILBERT_POINT_TO_INDEX)(const int * dim, const int * nbits, long long int * index, const int * point){
   /* copy point to not overwrite original data */
-  int point_copy[dim];
-  for (int i = 0; i < dim; i++) point_copy[i] = point[i];
+  int point_copy[*dim];
+  for (int i = 0; i < *dim; i++) point_copy[i] = point[i];
   AxestoTranspose(point_copy, *nbits, *dim);
-  TransposetoInt(*dim, *index, *nbits, point_copy);
+  TransposetoInt(*dim, index, *nbits, point_copy);
+}
+
+/* 32 bit integer versions */
+void FC_FUNC_(hilbert_index_to_point_int, HILBERT_INDEX_TO_POINT_INT)(const int * dim, const int * nbits, const int * index, int * point){
+  Int4toTranspose(*dim, *index, *nbits, point);
+  TransposetoAxes(point, *nbits, *dim);
+}
+
+void FC_FUNC_(hilbert_point_to_index_int, HILBERT_POINT_TO_INDEX_INT)(const int * dim, const int * nbits, int * index, const int * point){
+  /* copy point to not overwrite original data */
+  int point_copy[*dim];
+  for (int i = 0; i < *dim; i++) point_copy[i] = point[i];
+  AxestoTranspose(point_copy, *nbits, *dim);
+  TransposetoInt4(*dim, index, *nbits, point_copy);
 }
