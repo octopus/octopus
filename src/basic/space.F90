@@ -19,7 +19,6 @@
 #include "global.h"
 
 module space_oct_m
-
   use global_oct_m
   use messages_oct_m
   use namespace_oct_m
@@ -31,8 +30,7 @@ module space_oct_m
 
   public ::                   &
     space_t,                  &
-    space_init,               &
-    space_end
+    space_init
 
   type space_t
     ! Components are public by default
@@ -64,13 +62,6 @@ contains
 
     POP_SUB(space_init_simple)
   end subroutine space_init
-
-  ! ---------------------------------------------------------
-  elemental subroutine space_end(this)
-    type(space_t), intent(inout) :: this
-
-    this%dim=0
-  end subroutine space_end
 
 end module space_oct_m
 

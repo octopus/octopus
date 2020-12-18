@@ -163,7 +163,6 @@ program casida_spectrum
   call calc_broad(cs, CASIDA_DIR, 'variational', .false.)
   call calc_broad(cs, CASIDA_DIR, 'casida', .false.)
 
-  call space_end(cs%space)
   call io_end()
   call messages_end()
 

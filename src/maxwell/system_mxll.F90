@@ -671,8 +671,6 @@ contains
     call simul_box_end(this%gr%sb)
     call grid_end(this%gr)
 
-    call space_end(this%space)
-
     SAFE_DEALLOCATE_P(this%gr)
 
     call profiling_out(prof)

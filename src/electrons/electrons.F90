@@ -407,8 +407,6 @@ contains
     call simul_box_end(sys%gr%sb)
     call grid_end(sys%gr)
 
-    call space_end(sys%space)
-
     SAFE_DEALLOCATE_P(sys%gr)
 
     call system_end(sys)

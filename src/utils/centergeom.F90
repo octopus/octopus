@@ -61,7 +61,6 @@ program centergeom
 
   call simul_box_end(sb)
   call geometry_end(geo)
-  call space_end(space)
 
   call io_end()
   call messages_end()
