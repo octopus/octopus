@@ -976,26 +976,31 @@ FLOAT function X(states_elec_residue)(mesh, dim, hf, ee, ff) result(rr)
   FLOAT,             intent(in)  :: ee
   R_TYPE,            intent(in)  :: ff(:,:)
 
-  R_TYPE, allocatable :: res(:,:)
   type(profile_t), save :: prof
   integer :: ip, idim
+  R_TYPE :: tmp
 
   PUSH_SUB(X(states_elec_residue))
 
   call profiling_in(prof, TOSTRING(X(RESIDUE)))
 
-  SAFE_ALLOCATE(res(1:mesh%np, 1:dim))
-
   do idim = 1, dim
     do ip = 1, mesh%np
-      res(ip, idim) = hf(ip, idim) - ee*ff(ip, idim)
+      tmp = hf(ip, idim) - ee*ff(ip, idim)
+#ifdef R_TREAL
+      rr = rr + tmp **2
+#else
+      rr = rr + real(tmp)**2 + aimag(tmp)**2
+#endif
     end do
   end do
+  rr = rr*mesh%volume_element
 
-  call profiling_count_operations(dim*mesh%np*(R_ADD + R_MUL))
+  call comm_allreduce(mesh%mpi_grp%comm, rr)
 
-  rr = X(mf_nrm2)(mesh, dim, res)
-  SAFE_DEALLOCATE_A(res)
+  rr = sqrt(rr) 
+
+  call profiling_count_operations(2*dim*mesh%np*(R_ADD + R_MUL))
 
   call profiling_out(prof)
 

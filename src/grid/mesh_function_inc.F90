@@ -84,7 +84,7 @@ subroutine X(mf_normalize)(mesh, dim, psi, norm)
   end if
 
   do idim = 1, dim
-    call lalg_scal(mesh%np, R_TOTYPE(M_ONE / norm_), psi(1:mesh%np, idim))
+    call lalg_scal(mesh%np, R_TOTYPE(M_ONE/norm_), psi(1:mesh%np, idim))
   end do
 
   if(present(norm)) then
