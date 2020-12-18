@@ -39,7 +39,7 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
 
   R_TYPE, allocatable :: h_psi(:,:), g(:,:), g0(:,:),  cg(:,:), h_cg(:,:), psi(:, :), psi2(:, :), g_prev(:,:), psi_j(:,:)
   R_TYPE   :: gg, gg0, gg1, gamma, norma, dot
-  FLOAT    :: es(2), cg0, e0, res, alpha, beta, theta, old_res, old_energy, first_delta_e, lam, lam_conj, cg_phi
+  FLOAT    :: es(2), cg0, e0, res, alpha, beta, theta, old_res, old_energy, first_delta_e, lam, lam_conj, cg_phi, g0_norm
   FLOAT    :: stheta, stheta2, ctheta, ctheta2
   FLOAT, allocatable :: chi(:, :), omega(:, :), fxc(:, :, :), lam_sym(:)
   FLOAT    :: integral_hartree, integral_xc, tmp
@@ -240,6 +240,14 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
       call X(states_elec_orthogonalize_single_batch)(st, gr%mesh, ist - 1, ik, g0, normalize = .false., &
           against_all=orthogonalize_to_all)
 
+      ! normalize g0 here, needed for consistency
+      g0_norm = X(mf_nrm2) (gr%mesh, st%d%dim, g0)
+      if(.not. g0_norm < M_EPSILON) then
+        do idim = 1, st%d%dim
+          call lalg_scal(gr%mesh%np, M_ONE/g0_norm, g0(1:gr%mesh%np, idim))
+        end do
+      end if
+
 
       ! dot products needed for conjugate gradient
       gg = X(mf_dotp) (gr%mesh, st%d%dim, g0, g, reduce = .false.)
@@ -296,15 +304,19 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
         end do
 
         ! PTA92, eq. 5.21
-        ! cg is not normalized here, but cg0 is computed further down and
-        ! the corresponding coefficients are then divided by cg0
         norma =  X(mf_dotp) (gr%mesh, st%d%dim, psi, cg)
         do idim = 1, st%d%dim
           call lalg_axpy(gr%mesh%np, -norma, psi(1:gr%mesh%np, idim), cg(:, idim))
         end do
-        
 
         call profiling_count_operations(st%d%dim*gr%mesh%np*(2*R_ADD + 2*R_MUL))
+      end if
+      ! normalize cg here
+      cg0 = X(mf_nrm2) (gr%mesh, st%d%dim, cg)
+      if(.not. cg0 < M_EPSILON) then
+        do idim = 1, st%d%dim
+          call lalg_scal(gr%mesh%np, M_ONE/cg0, cg(1:gr%mesh%np, idim))
+        end do
       end if
 
       ! cg contains now the conjugate gradient
@@ -322,30 +334,23 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
       ! Line minimization (eq. 5.23 to 5.38)
       a0 = M_TWO*R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, psi, h_cg, reduce = .false.)) !Eq. 5.26
       b0  = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, cg, h_cg, reduce = .false.))
-      cg0 = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, cg, cg, reduce = .false.))
 
       if(gr%mesh%parallel_in_domains) then
         dsb(1) = a0
         dsb(2) = b0
-        dsb(3) = cg0
-        call comm_allreduce(gr%mesh%vp%comm, dsb, dim = 3)
+        call comm_allreduce(gr%mesh%vp%comm, dsb, dim = 2)
         a0 = dsb(1)
         b0 = dsb(2)
-        cg0 = dsb(3)
       end if
-      ! compute norm of cg here
-      cg0 = sqrt(cg0)
 
       ! compare eq. 5.31
-      a0 = a0 / cg0
-      b0 = b0 / cg0**2
       e0 = st%eigenval(ist, ik)
       alpha = M_TWO * (e0 - b0)
 
       if (additional_terms) then
         ! more terms here, see PTA92 eqs 5.31, 5.32, 5.33, 5.36
         ! Hartree term
-        tmp = M_TWO/cg0
+        tmp = M_TWO
         do idim = 1, st%d%dim
           !$omp parallel do simd schedule(static)
           do ip = 1, gr%mesh%np
@@ -377,7 +382,7 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
         do jst = 1, st%nst
           call states_elec_get_state(st, gr%mesh, jst, ik, psi_j)
           cg_phi = M_TWO*R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, psi_j, cg))
-          beta = beta - cg_phi / cg0 * lam_sym(jst)
+          beta = beta - cg_phi * lam_sym(jst)
         end do
       end if
 
@@ -394,10 +399,10 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
       if (es(2) < es(1)) then
         theta = theta + M_PI*M_HALF
         a0 = ctheta2
-        b0 = stheta2/cg0
+        b0 = stheta2
       else
         a0 = ctheta
-        b0 = stheta/cg0
+        b0 = stheta
       end if
 
       ! PTA92, eq. 5.38
@@ -426,15 +431,17 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
       end if
 
       if(debug%info .and. first_delta_e > M_ZERO) then
-        write(message(1), '(a,i4,a,i4,a,i4,a,es12.5,a,es12.5,a,i4)') 'Debug: CG Eigensolver - ik', ik, ' ist ', ist, &
+        write(message(1), '(a,i4,a,i4,a,i4,a,es12.5,a,es12.5,a,i4,a,es12.5)') 'Debug: CG Eigensolver - ik', ik, ' ist ', ist, &
              ' iter ', iter, ' deltae ', abs(st%eigenval(ist, ik) - old_energy), ' ', &
-             abs(st%eigenval(ist, ik) - old_energy)/first_delta_e, " max ", maxter
+             abs(st%eigenval(ist, ik) - old_energy)/first_delta_e, " max ", maxter, &
+             ' residue ', res
         call messages_info(1)
       end if
 
       if(iter > 1) then
         ! This criterion is discussed in Sec. V.B.6
-        if(abs(st%eigenval(ist, ik) - old_energy) < first_delta_e*energy_change_threshold) then
+        if(abs(st%eigenval(ist, ik) - old_energy) < first_delta_e*energy_change_threshold .and. &
+          abs(st%eigenval(ist, ik) - old_energy) > M_EPSILON) then
           exit iter_loop
         end if
       else
