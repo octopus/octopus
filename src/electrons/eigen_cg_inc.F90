@@ -458,9 +458,7 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
       res = X(states_elec_residue)(gr%mesh, st%d%dim, h_psi, st%eigenval(ist, ik), psi)
     end if
 
-    ! one could orthogonalize against all states here, but it turns out not
-    ! to accelerate convergence
-    call X(states_elec_orthogonalize_single_batch)(st, gr%mesh, ist - 1, ik, psi, normalize = .true.)
+    call X(mf_normalize)(gr%mesh, st%d%dim, psi) 
     call states_elec_set_state(st, gr%mesh, ist, ik, psi)
 
     niter = niter + iter + 1
