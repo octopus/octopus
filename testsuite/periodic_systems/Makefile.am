@@ -104,6 +104,7 @@ dist_share_DATA =                                \
         20-masked_periodic_boundaries.test             \
 	21-magnon.01-gs.inp                      \
         21-magnon.02-td.inp                      \
+        21-magnon.03-susceptibility.inp          \
         21-magnon.test                           \
         22-berry.01-cubic_Si.inp                 \
         22-berry.test                            \
