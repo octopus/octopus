@@ -497,7 +497,6 @@
     
     call simul_box_end(sb)
     call geometry_end(geo)
-    call space_end(space)
 
     SAFE_DEALLOCATE_A(time)
 

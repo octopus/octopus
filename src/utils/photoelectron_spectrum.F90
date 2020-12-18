@@ -468,7 +468,6 @@ program photoelectron_spectrum
 
   call geometry_end(geo)
   call simul_box_end(sb)
-  call space_end(space)
 
   call io_end()
   call messages_end()
