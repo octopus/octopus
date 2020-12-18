@@ -94,7 +94,7 @@ contains
     !% of the forces or other sensitive quantities.
     !% Experimental, and incompatible with domain-parallelization.
     !%End
-    if (gr%sb%dim == 3) then 
+    if (space%dim == 3) then 
       call parse_variable(namespace, 'UseFineMesh', .false., gr%have_fine_mesh)
     else
       gr%have_fine_mesh = .false.
@@ -134,21 +134,21 @@ contains
     !%End
 
     if(parse_block(namespace, 'Spacing', blk) == 0) then
-      if(parse_block_cols(blk,0) < gr%sb%dim) call messages_input_error(namespace, 'Spacing')
-      do idir = 1, gr%sb%dim
+      if(parse_block_cols(blk,0) < space%dim) call messages_input_error(namespace, 'Spacing')
+      do idir = 1, space%dim
         call parse_block_float(blk, 0, idir - 1, grid_spacing(idir), units_inp%length)
         if(def_h > M_ZERO) call messages_check_def(grid_spacing(idir), .true., def_h, 'Spacing', units_out%length)
       end do
       call parse_block_end(blk)
     else
       call parse_variable(namespace, 'Spacing', -M_ONE, grid_spacing(1), units_inp%length)
-      grid_spacing(1:gr%sb%dim) = grid_spacing(1)
+      grid_spacing(1:space%dim) = grid_spacing(1)
       if(def_h > M_ZERO) call messages_check_def(grid_spacing(1), .true., def_h, 'Spacing', units_out%length)
     end if
 
 #if defined(HAVE_GDLIB)
     if(gr%sb%box_shape == BOX_IMAGE) then 
-      do idir = 1, gr%sb%dim
+      do idir = 1, space%dim
         ! default grid_spacing is determined from lsize and the size of the image
         if(grid_spacing(idir) < M_ZERO) then
           grid_spacing(idir) = M_TWO*gr%sb%lsize(idir)/TOFLOAT(gr%sb%image_size(idir))
@@ -157,10 +157,10 @@ contains
     end if
 #endif
 
-    if (any(grid_spacing(1:gr%sb%dim) < M_EPSILON)) then
+    if (any(grid_spacing(1:space%dim) < M_EPSILON)) then
       if (def_h > M_ZERO .and. def_h < huge(def_h)) then
         call geometry_grid_defaults_info(geo)
-        do idir = 1, gr%sb%dim
+        do idir = 1, space%dim
           grid_spacing(idir) = def_h
           write(message(1), '(a,i1,3a,f6.3)') "Info: Using default spacing(", idir, &
             ") [", trim(units_abbrev(units_out%length)), "] = ",                        &
@@ -199,15 +199,15 @@ contains
     call derivatives_init(gr%der, namespace, gr%sb, gr%cv%method /= CURV_METHOD_UNIFORM)
     ! the stencil used to generate the grid is a union of a cube (for
     ! multigrid) and the Laplacian.
-    call stencil_cube_get_lapl(cube, gr%sb%dim, order = 2)
-    call stencil_union(gr%sb%dim, cube, gr%der%lapl%stencil, gr%stencil)
+    call stencil_cube_get_lapl(cube, space%dim, order = 2)
+    call stencil_union(space%dim, cube, gr%der%lapl%stencil, gr%stencil)
     call stencil_end(cube)
 
 
     call double_grid_init(gr%dgrid, namespace, gr%sb)
 
     enlarge = 0
-    enlarge(1:gr%sb%dim) = 2
+    enlarge(1:space%dim) = 2
     enlarge = max(enlarge, double_grid_enlarge(gr%dgrid))
     enlarge = max(enlarge, gr%der%n_ghost)
 
