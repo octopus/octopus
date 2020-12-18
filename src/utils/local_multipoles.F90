@@ -308,7 +308,7 @@ contains
     message(2) = ''
     call messages_info(2)
 
-    call local_init(nd, loc_domains)
+    call local_init(sys%space, sys%gr%mesh, sys%geo, nd, loc_domains)
 
     ! Starting loop over selected densities.
     if (any(loc_domains(:)%dshape == BADER)) then
@@ -326,7 +326,7 @@ contains
       !TODO: check for domains & mesh compatibility 
       call restart_init(restart_ld, global_namespace, RESTART_UNDEFINED, RESTART_TYPE_LOAD, sys%mc, err, &
                         dir=trim(ldrestart_folder), mesh = sys%gr%mesh)
-      call local_restart(nd, loc_domains, restart_ld)
+      call local_restart(sys%gr%mesh, sys%geo, nd, loc_domains, restart_ld)
       call restart_end(restart_ld)
     end if
 
@@ -378,7 +378,7 @@ contains
 
       ! Look for the mesh points inside local domains
       if ((iter == l_start .and. .not. ldrestart) .or. ldupdate) then
-        call local_inside_domain(nd, loc_domains, global_namespace, sys%st%rho(:,1))
+        call local_inside_domain(sys%gr%mesh, sys%geo, sys%mc, nd, loc_domains, global_namespace, sys%st%rho(:,1))
       end if
 
       do id = 1, nd
@@ -403,8 +403,11 @@ contains
   !> Initialize local_domain_t variable, allocating variable 
   !! and reading parameters from input file. 
   ! ---------------------------------------------------------
-  subroutine local_init(nd, loc_domains)
-    integer, intent(out) :: nd
+  subroutine local_init(space, mesh, geo, nd, loc_domains)
+    type(space_t),    intent(in)  :: space
+    type(mesh_t),     intent(in)  :: mesh
+    type(geometry_t), intent(in)  :: geo
+    integer,          intent(out) :: nd
     type(local_domain_t), allocatable, intent(out) :: loc_domains(:)
 
     integer           :: id
@@ -454,11 +457,11 @@ contains
     SAFE_ALLOCATE(loc_domains(1:nd))
 
     block: do id = 1, nd
-      SAFE_ALLOCATE(loc_domains(id)%inside(1:sys%gr%mesh%np))
-      SAFE_ALLOCATE(loc_domains(id)%ions_inside(1:sys%geo%natoms))
-      SAFE_ALLOCATE(loc_domains(id)%dcm(1:sys%space%dim))
+      SAFE_ALLOCATE(loc_domains(id)%inside(1:mesh%np))
+      SAFE_ALLOCATE(loc_domains(id)%ions_inside(1:geo%natoms))
+      SAFE_ALLOCATE(loc_domains(id)%dcm(1:geo%space%dim))
       call parse_block_string(blk, id-1, 0, loc_domains(id)%lab)
-      call local_read_from_block(blk, id-1, loc_domains(id)%domain, loc_domains(id)%dshape, loc_domains(id)%clist, &
+      call local_read_from_block(space, geo, blk, id-1, loc_domains(id)%domain, loc_domains(id)%dshape, loc_domains(id)%clist, &
         global_namespace)
     end do block
     call parse_block_end(blk)
@@ -493,7 +496,9 @@ contains
   end subroutine local_end
 
   ! ---------------------------------------------------------
-  subroutine local_read_from_block(blk, row, dom, shape, clist, namespace)
+  subroutine local_read_from_block(space, geo, blk, row, dom, shape, clist, namespace)
+    type(space_t),     intent(in)        :: space
+    type(geometry_t),  intent(in)        :: geo
     type(block_t),     intent(in)        :: blk
     integer,           intent(in)        :: row
     type(box_union_t), intent(inout)     :: dom
@@ -501,42 +506,40 @@ contains
     character(len=*),  intent(out)       :: clist
     type(namespace_t), intent(in)        :: namespace
     
-    integer                     :: dim, ic, idir, nb
+    integer                     :: ic, idir, nb
     FLOAT                       :: lgst, val, rsize, xsize
     FLOAT                       :: center(MAX_DIM), lsize(MAX_DIM)
    
     PUSH_SUB(local_read_from_block)
 
     ! Initializing variables in dom
-    shape = 1
     nb = 1
     rsize = -M_ONE
     xsize = M_ZERO
     lsize(:) = M_ZERO
     center(:) = M_ZERO
-    dim = sys%space%dim
 
     call parse_block_integer(blk, row, 1, shape)
 
     select case (shape)
     case (MINIMUM)
-      if(sys%geo%reduced_coordinates) then
+      if(geo%reduced_coordinates) then
         message(1) = "The 'minimum' box shape cannot be used if atomic positions"
         message(2) = "are given as reduced coordinates."
         call messages_fatal(2)
       end if
       call parse_block_float(blk, row, 2, rsize, unit = units_inp%length)
-      if(rsize < M_ZERO) call messages_input_error(namespace, 'radius', row=row, column=2)
+      if (rsize < M_ZERO) call messages_input_error(namespace, 'radius', row=row, column=2)
       call parse_block_string(blk, row, 3, clist)
       nb = 0
-      do ic = 1, sys%geo%natoms
+      do ic = 1, geo%natoms
         if(loct_isinstringlist(ic, clist)) nb = nb + 1
       end do
 
     case (SPHERE)
       call parse_block_float(blk, row, 2, rsize, unit = units_inp%length)
       if(rsize < M_ZERO) call messages_input_error(namespace, 'radius', row=row, column=2)
-      do ic = 1, dim 
+      do ic = 1, geo%space%dim 
         call parse_block_float(blk, row, 2 + ic, center(ic), unit = units_inp%length)
       end do
 
@@ -544,23 +547,23 @@ contains
       call parse_block_float(blk, row, 2, rsize, unit = units_inp%length)
       if(rsize < M_ZERO) call messages_input_error(namespace, 'radius', row=row, column=2)
       call parse_block_float(blk, row, 3, xsize, unit = units_inp%length)
-      do ic = 1, dim 
+      do ic = 1, geo%space%dim 
         call parse_block_float(blk, row, 3 + ic, center(ic), unit = units_inp%length)
       end do
 
     case (PARALLELEPIPED)
-      do ic = 1, dim 
+      do ic = 1, geo%space%dim
         call parse_block_float(blk, row, 1 + ic, lsize(ic), unit = units_inp%length)
       end do
-      do ic = 1, dim 
-        call parse_block_float(blk, row, 1 + dim + ic, center(ic), unit = units_inp%length)
+      do ic = 1, geo%space%dim
+        call parse_block_float(blk, row, 1 + space%dim + ic, center(ic), unit = units_inp%length)
       end do
 
     case (BADER)
       ! FIXME: when input error exists --> segmentation fault appears
       call parse_block_string(blk, row, 2, clist)
       nb = 0
-      do ic = 1, sys%geo%natoms
+      do ic = 1, geo%natoms
         if(loct_isinstringlist(ic, clist)) nb = nb + 1
       end do
     end select
@@ -568,28 +571,29 @@ contains
     ! fill in lsize structure
     select case (shape)
     case (SPHERE)
-      lsize(1:dim) = rsize
+      lsize(1:space%dim) = rsize
     case (CYLINDER)       
       lsize(1)     = xsize
-      lsize(2:dim) = rsize
+      lsize(2:space%dim) = rsize
     case (MINIMUM, BADER)
-      do idir = 1, dim
+      do idir = 1, geo%space%dim
         lgst = M_ZERO; val = M_ZERO
-        do ic = 1, sys%geo%natoms
-          if (loct_isinstringlist(ic, clist)) val = abs(sys%geo%atom(ic)%x(idir))
+        do ic = 1, geo%natoms
+          if (loct_isinstringlist(ic, clist)) val = abs(geo%atom(ic)%x(idir))
           if (lgst <= val) lgst = val
         end do
         lsize(idir) =  lgst + rsize
       end do
     end select
-    call local_domains_init(dom, dim, shape, center, rsize, lsize, nb, clist, namespace)
+    call local_domains_init(geo, dom, space%dim, shape, center, rsize, lsize, nb, clist, namespace)
 
     POP_SUB(local_read_from_block)
 
   end subroutine local_read_from_block
 
   !!---------------------------------------------------------------------------^
-  subroutine local_domains_init(dom, dim, shape, center, rsize, lsize, nb, clist, namespace)
+  subroutine local_domains_init(geo, dom, dim, shape, center, rsize, lsize, nb, clist, namespace)
+    type(geometry_t),  intent(in)    :: geo
     type(box_union_t), intent(inout) :: dom
     integer,           intent(in)    :: dim
     integer,           intent(in)    :: shape
@@ -601,7 +605,7 @@ contains
     type(namespace_t), intent(in)    :: namespace
 
     integer                  :: ia, ibox, ic, bshape
-    FLOAT                    :: bcenter(dim), bsize(dim)
+    FLOAT                    :: bcenter(MAX_DIM), bsize(MAX_DIM)
     type(box_t), allocatable :: boxes(:)
 
     PUSH_SUB(local_domains_init)
@@ -611,43 +615,43 @@ contains
     ibox = 1
 
     select case (shape)
-    case (SPHERE, CYLINDER) 
+    case (SPHERE, CYLINDER)
       call box_create(boxes(ibox), shape, dim, lsize, center, namespace)
-    case (PARALLELEPIPED) 
+    case (PARALLELEPIPED)
       bshape         = 3
       call box_create(boxes(ibox), bshape, dim, lsize, center, namespace)
     case (MINIMUM) 
       bshape         = SPHERE
-      do ia = 1, sys%geo%natoms
+      do ia = 1, geo%natoms
         if(loct_isinstringlist(ia, clist))then
-          bcenter(1:dim) = sys%geo%atom(ia)%x(1:dim)
+          bcenter(1:geo%space%dim) = geo%atom(ia)%x(1:geo%space%dim)
           bsize(:) = rsize
-          if (bsize(1) < M_EPSILON) bsize(1) = species_def_rsize(sys%geo%atom(ia)%species)
+          if (bsize(1) < M_EPSILON) bsize(1) = species_def_rsize(geo%atom(ia)%species)
           call box_create(boxes(ibox), bshape, dim, bsize, bcenter, namespace)
           ibox = ibox + 1
         end if
       end do
     case (BADER) 
       bshape         = SPHERE
-      do ia = 1, sys%geo%natoms
+      do ia = 1, geo%natoms
         if(loct_isinstringlist(ia, clist))then
-          bcenter(1:dim) = sys%geo%atom(ia)%x(1:dim)
-          bsize(:) = species_def_h(sys%geo%atom(ia)%species)
+          bcenter(1:geo%space%dim) = geo%atom(ia)%x(1:geo%space%dim)
+          bsize(:) = species_def_h(geo%atom(ia)%species)
           call box_create(boxes(ibox), bshape, dim, bsize, bcenter, namespace)
           ibox = ibox + 1
         end if
       end do
     end select
-            
+
     call box_union_init(dom, nb, boxes)
 
     ! TODO: Check for a conflict between box_union and clist for Bader Volumes
     ic = 0
     if (shape == MINIMUM) then
-      do ia = 1, sys%geo%natoms
-        if (box_union_inside(dom, sys%geo%atom(ia)%x) .and. .not.loct_isinstringlist(ia, clist) ) then
+      do ia = 1, geo%natoms
+        if (box_union_inside(dom, geo%atom(ia)%x) .and. .not.loct_isinstringlist(ia, clist) ) then
           ic = ic + 1
-          if(ic <= 20) write(message(ic),'(a,a,I0,a,a)')'Atom: ',trim(species_label(sys%geo%atom(ia)%species)),ia, &
+          if(ic <= 20) write(message(ic),'(a,a,I0,a,a)')'Atom: ',trim(species_label(geo%atom(ia)%species)),ia, &
                                  ' is inside the union box BUT not in list: ',trim(clist)
         end if
       end do
@@ -672,7 +676,9 @@ contains
   end subroutine local_domains_init
 
   ! ---------------------------------------------------------
-  subroutine local_restart(nd, loc_domains, restart)
+  subroutine local_restart(mesh, geo, nd, loc_domains, restart)
+    type(mesh_t),         intent(in)    :: mesh
+    type(geometry_t),     intent(in)    :: geo
     integer,              intent(in)    :: nd
     type(local_domain_t), intent(inout) :: loc_domains(:)
     type(restart_t),      intent(in)    :: restart
@@ -683,32 +689,32 @@ contains
     FLOAT, allocatable          :: inside(:)
 
     PUSH_SUB(local_restart)
-    
+
     message(1) = 'Info: Reading mesh points inside each local domain'
     call messages_info(1)
 
-    SAFE_ALLOCATE(inside(1:sys%gr%mesh%np))
+    SAFE_ALLOCATE(inside(1:mesh%np))
     !Read local domain information from ldomains.info 
     filename = "ldomains.info"    
     iunit = restart_open(restart, filename, status='old')
     call restart_read(restart, iunit, line, 1, ierr)    
     read(line(1),'(a25,1x,i5)') tmp, ierr
     call restart_close(restart, iunit)
-    
+
     filename = "ldomains"
-    call drestart_read_mesh_function(restart, trim(filename), sys%gr%mesh, inside, ierr) 
+    call drestart_read_mesh_function(restart, trim(filename), mesh, inside, ierr) 
 
     do id = 1, nd
       loc_domains(id)%inside = .false.
-      do ip = 1 , sys%gr%mesh%np
+      do ip = 1 , mesh%np
         if (bitand(int(inside(ip)), 2**id) /= 0) loc_domains(id)%inside(ip) = .true.
       end do
 
       !Check for atom list inside each domain
-      call local_ions_inside(loc_domains(id)%inside, sys%geo, sys%gr%mesh, loc_domains(id)%ions_inside, loc_domains(id)%clist)
+      call local_ions_inside(loc_domains(id)%inside, geo, mesh, loc_domains(id)%ions_inside, loc_domains(id)%clist)
 
       !Compute center of mass of each domain
-      call local_center_of_mass(loc_domains(id)%ions_inside, sys%geo, loc_domains(id)%dcm)
+      call local_center_of_mass(loc_domains(id)%ions_inside, geo, loc_domains(id)%dcm)
     end do
 
     SAFE_DEALLOCATE_A(inside)
@@ -717,7 +723,10 @@ contains
   end subroutine local_restart
 
   ! ---------------------------------------------------------
-  subroutine local_inside_domain(nd, loc_domains, namespace, ff)
+  subroutine local_inside_domain(mesh, geo, mc, nd, loc_domains, namespace, ff)
+    type(mesh_t),           intent(in)    :: mesh
+    type(geometry_t),       intent(in)    :: geo
+    type(multicomm_t),      intent(in)    :: mc
     integer,                intent(in)    :: nd
     type(local_domain_t),   intent(inout) :: loc_domains(:)
     type(namespace_t),      intent(in)    :: namespace
@@ -757,28 +766,28 @@ contains
       end if
     end if
 
-    SAFE_ALLOCATE(ff2(1:sys%gr%mesh%np,1))
-    ff2(1:sys%gr%mesh%np,1) = ff(1:sys%gr%mesh%np)
+    SAFE_ALLOCATE(ff2(1:mesh%np,1))
+    ff2(1:mesh%np,1) = ff(1:mesh%np)
 
     ! First we do the Bader domains
     if (any(loc_domains(:)%dshape == BADER)) then
-      if (sys%gr%mesh%parallel_in_domains) then
+      if (mesh%parallel_in_domains) then
         write(message(1),'(a)') 'Bader volumes can only be computed in serial'
         call messages_fatal(1)
       end if
 
-      call add_dens_to_ion_x(ff2, namespace, sys%geo)
-      call basins_init(basins, sys%gr%mesh)
+      call add_dens_to_ion_x(ff2, namespace, mesh, geo)
+      call basins_init(basins, mesh)
       call parse_variable(namespace, 'LDBaderThreshold', CNST(0.01), BaderThreshold)
-      call basins_analyze(basins, sys%gr%mesh, ff2(:,1), ff2, BaderThreshold)
-      call bader_union_inside(basins, nd, loc_domains)
+      call basins_analyze(basins, mesh, ff2(:,1), ff2, BaderThreshold)
+      call bader_union_inside(basins, mesh, geo, nd, loc_domains)
 
       if (extra_write) then
         filename = 'basinsmap'
-        call dio_function_output(how, trim('local.general'), trim(filename), global_namespace, &
-          sys%gr%mesh, DBLE(basins%map(1:sys%gr%mesh%np)), unit_one, ierr, geo = sys%geo)
-        call dio_function_output(how, trim('local.general'), 'dens_ff2', global_namespace, &
-          sys%gr%mesh, ff2(:,1), unit_one, ierr, geo = sys%geo)
+        call dio_function_output(how, trim('local.general'), trim(filename), global_namespace, mesh, &
+          DBLE(basins%map(1:mesh%np)), unit_one, ierr, geo = geo)
+        call dio_function_output(how, trim('local.general'), 'dens_ff2', global_namespace, mesh, ff2(:,1), unit_one, ierr, &
+          geo = geo)
         call io_close(iunit)
       end if
       call basins_end(basins)
@@ -787,17 +796,17 @@ contains
     ! Then all the remaining domains
     do id = 1, nd
       if (loc_domains(id)%dshape == BADER) cycle
-      call box_union_inside_vec(loc_domains(id)%domain, sys%gr%mesh%np, sys%gr%mesh%x, loc_domains(id)%inside)
+      call box_union_inside_vec(loc_domains(id)%domain, mesh%np, mesh%x, loc_domains(id)%inside)
     end do
 
     if (extra_write) then
       ! Write extra information about domains
-      SAFE_ALLOCATE(dble_domain_map(1:nd, 1:sys%gr%mesh%np))
-      SAFE_ALLOCATE(domain_mesh(1:sys%gr%mesh%np))
+      SAFE_ALLOCATE(dble_domain_map(1:nd, 1:mesh%np))
+      SAFE_ALLOCATE(domain_mesh(1:mesh%np))
 
-      dble_domain_map(1:nd, 1:sys%gr%mesh%np) = M_ZERO
-      domain_mesh(1:sys%gr%mesh%np) = M_ZERO
-      do ip = 1, sys%gr%mesh%np
+      dble_domain_map(1:nd, 1:mesh%np) = M_ZERO
+      domain_mesh(1:mesh%np) = M_ZERO
+      do ip = 1, mesh%np
         do id = 1, nd
           if (loc_domains(id)%inside(ip)) then
             dble_domain_map(id, ip) = TOFLOAT(id)
@@ -807,13 +816,13 @@ contains
       end do
 
       write(filename,'(a,a,a)')'domain.mesh'
-      call dio_function_output(how, trim('local.general'), trim(filename), global_namespace, &
-        sys%gr%mesh, domain_mesh(1:sys%gr%mesh%np), unit_one, ierr, geo = sys%geo)
+      call dio_function_output(how, trim('local.general'), trim(filename), global_namespace, mesh, domain_mesh(1:mesh%np), &
+        unit_one, ierr, geo = geo)
 
       do id = 1, nd
         write(filename,'(a,a,a)')'domain.', trim(loc_domains(id)%lab)
-        call dio_function_output(how, trim('local.general'), trim(filename), global_namespace, &
-          sys%gr%mesh, dble_domain_map(id, 1:sys%gr%mesh%np), unit_one, ierr, geo = sys%geo)
+        call dio_function_output(how, trim('local.general'), trim(filename), global_namespace, mesh, &
+          dble_domain_map(id, 1:mesh%np), unit_one, ierr, geo = geo)
       end do
 
       SAFE_DEALLOCATE_A(dble_domain_map)
@@ -822,10 +831,10 @@ contains
 
     do id = 1, nd
       !Check for atom list inside each domain
-      call local_ions_inside(loc_domains(id)%inside, sys%geo, sys%gr%mesh, loc_domains(id)%ions_inside, loc_domains(id)%clist)
+      call local_ions_inside(loc_domains(id)%inside, geo, mesh, loc_domains(id)%ions_inside, loc_domains(id)%clist)
 
       !Compute center of mass of each domain
-      call local_center_of_mass(loc_domains(id)%ions_inside, sys%geo, loc_domains(id)%dcm)
+      call local_center_of_mass(loc_domains(id)%ions_inside, geo, loc_domains(id)%dcm)
     end do
 
     !Write restart file for local domains
@@ -834,21 +843,21 @@ contains
     filename = "ldomains"
     write(message(1),'(a,a)')'Info: Writing restart info to ', trim(filename)
     call messages_info(1)
-    call restart_init(restart, namespace, RESTART_UNDEFINED, RESTART_TYPE_DUMP, sys%mc, ierr, &
-                      mesh=sys%gr%mesh, dir=trim(base_folder)//trim(folder)) 
+    call restart_init(restart, namespace, RESTART_UNDEFINED, RESTART_TYPE_DUMP, mc, ierr, mesh=mesh, &
+      dir=trim(base_folder)//trim(folder))
     ff2 = M_ZERO
     SAFE_ALLOCATE(lines(1:nd+2))
     write(lines(1),'(a,1x,i5)') 'Number of local domains =', nd
     write(lines(2),'(a3,1x,a15,1x,a5,1x,71x,a9,1x,a14)') '#id', 'label', 'shape', 'Atom list', 'center of mass'
     do id = 1, nd
-      write(frmt,'(a,i0,a)') '(i3,1x,a15,1x,i5,1x,a80,1x', sys%space%dim, '(f10.6,1x))'
+      write(frmt,'(a,i0,a)') '(i3,1x,a15,1x,i5,1x,a80,1x', geo%space%dim, '(f10.6,1x))'
       write(lines(id+2), fmt=trim(frmt))id, trim(loc_domains(id)%lab), loc_domains(id)%dshape, trim(loc_domains(id)%clist), &
-        loc_domains(id)%dcm(1:sys%space%dim)
-      do ip = 1, sys%gr%mesh%np
+        loc_domains(id)%dcm(1:geo%space%dim)
+      do ip = 1, mesh%np
         if (loc_domains(id)%inside(ip)) ff2(ip, 1) = ff2(ip, 1) + 2**DBLE(id)
       end do
     end do
-    call drestart_write_mesh_function(restart, filename, sys%gr%mesh, ff2(1:sys%gr%mesh%np, 1), ierr)
+    call drestart_write_mesh_function(restart, filename, mesh, ff2(1:mesh%np, 1), ierr)
 
     filename = "ldomains.info"
     iunit = restart_open(restart, filename)
@@ -863,8 +872,10 @@ contains
   end subroutine local_inside_domain
 
   ! ---------------------------------------------------------
-  subroutine bader_union_inside(basins, nd, loc_domains)
+  subroutine bader_union_inside(basins, mesh, geo, nd, loc_domains)
     type(basins_t),       intent(inout) :: basins
+    type(mesh_t),         intent(in)    :: mesh
+    type(geometry_t),     intent(in)    :: geo
     integer,              intent(in)    :: nd 
     type(local_domain_t), intent(inout) :: loc_domains(:)
 
@@ -877,7 +888,7 @@ contains
 
     PUSH_SUB(bader_union_inside)
 
-    SAFE_ALLOCATE(xi(1:sys%space%dim))
+    SAFE_ALLOCATE(xi(1:geo%space%dim))
 
     !%Variable LDUseAtomicRadii
     !%Type logical
@@ -888,7 +899,7 @@ contains
     !%End
     call parse_variable(global_namespace, 'LDUseAtomicRadii', .false., lduseatomicradii)
 
-    SAFE_ALLOCATE(ion_map(1:sys%geo%natoms))
+    SAFE_ALLOCATE(ion_map(geo%natoms))
 
     max_check = 1
     do id = 1, nd
@@ -904,16 +915,16 @@ contains
       ! Assign basins%map to ions
       if (lduseatomicradii .and. (id == 1)) then
         ion_map = 0
-        do ia = 1, sys%geo%natoms
-          ion_map(ia) = basins%map(mesh_nearest_point(sys%gr%mesh, sys%geo%atom(ia)%x, dmin, rankmin))
+        do ia = 1, geo%natoms
+          ion_map(ia) = basins%map(mesh_nearest_point(mesh, geo%atom(ia)%x, dmin, rankmin))
         end do
         ! Assign lonely pair to ion in a atomic radii distance
-        do ip = 1, sys%gr%mesh%np
+        do ip = 1, mesh%np
           if (all(ion_map(:) /= basins%map(ip)) ) then
-            do ia = 1, sys%geo%natoms
-              dd = sum((sys%gr%mesh%x(ip, 1:sys%gr%mesh%sb%dim) - sys%geo%atom(ia)%x(1:sys%gr%mesh%sb%dim))**2)
+            do ia = 1, geo%natoms
+              dd = sum((mesh%x(ip, 1:geo%space%dim) - geo%atom(ia)%x(1:geo%space%dim))**2)
               dd = sqrt(dd)
-              if (dd <= species_vdw_radius(sys%geo%atom(ia)%species)) basins%map(ip) = ion_map(ia)
+              if (dd <= species_vdw_radius(geo%atom(ia)%species)) basins%map(ip) = ion_map(ia)
             end do
           end if
         end do
@@ -921,10 +932,10 @@ contains
       domain_map = 0
       do ib = 1, box_union_get_nboxes(loc_domains(id)%domain)
         xi = box_union_get_center(loc_domains(id)%domain, ib)
-        ix = mesh_nearest_point(sys%gr%mesh, xi, dmin, rankmin)
+        ix = mesh_nearest_point(mesh, xi, dmin, rankmin)
         domain_map(id,ib) = basins%map(ix)
       end do
-      do ip = 1, sys%gr%mesh%np
+      do ip = 1, mesh%np
         loc_domains(id)%inside(ip) = any(domain_map(id, 1:box_union_get_nboxes(loc_domains(id)%domain)) == basins%map(ip))
       end do
     end do
@@ -937,21 +948,22 @@ contains
   end subroutine bader_union_inside
 
   ! ---------------------------------------------------------
-  subroutine add_dens_to_ion_x(ff, namespace, geo)
+  subroutine add_dens_to_ion_x(ff, namespace, mesh, geo)
     FLOAT,              intent(inout) :: ff(:,:)
     type(namespace_t),  intent(in)    :: namespace
-    type(geometry_t),   intent(inout) :: geo
+    type(mesh_t),       intent(in)    :: mesh
+    type(geometry_t),   intent(in)    :: geo
 
     integer :: ia, is
     FLOAT, allocatable :: ffs(:)
 
     PUSH_SUB(add_dens_to_ion_x)
 
-    SAFE_ALLOCATE(ffs(1:sys%gr%mesh%np))
+    SAFE_ALLOCATE(ffs(1:mesh%np))
     do ia = 1, geo%natoms
-      call species_get_long_range_density(geo%atom(ia)%species, namespace, geo%atom(ia)%x, sys%gr%mesh, ffs)
-      do is = 1, sys%st%d%nspin
-        ff(1:sys%gr%mesh%np,is) = ff(1:sys%gr%mesh%np, is) - ffs(1:sys%gr%mesh%np)
+      call species_get_long_range_density(geo%atom(ia)%species, namespace, geo%atom(ia)%x, mesh, ffs)
+      do is = 1, ubound(ff, dim=2)
+        ff(1:mesh%np, is) = ff(1:mesh%np, is) - ffs(1:mesh%np)
       end do
     end do
     SAFE_DEALLOCATE_A(ffs)
