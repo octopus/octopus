@@ -55,15 +55,14 @@ program oct_local_multipoles
   implicit none
   
   type local_domain_t
-    integer                         :: nd              !< number of local domains.
-    type(box_union_t), allocatable  :: domain(:)       !< boxes that form each domain.
-    character(len=500), allocatable :: clist(:)        !< list of centers for each domain.
-    character(len=15), allocatable  :: lab(:)          !< declared name for each domain.
-    integer, allocatable            :: dshape(:)       !< shape of box for each domain.
-    logical, allocatable            :: inside(:,:)     !< relation of mesh points on each domain.
-    logical, allocatable            :: ions_inside(:,:)!< relation of ions inside each domain.
-    FLOAT, allocatable              :: dcm(:,:)        !< store the center of mass of each domain on the real space.
-    type(local_write_t), allocatable :: writ(:)         !< write option for local domains analysis.
+    type(box_union_t)    :: domain         !< boxes that form each domain.
+    character(len=500)   :: clist          !< list of centers for each domain.
+    character(len=15)    :: lab            !< declared name for each domain.
+    integer              :: dshape         !< shape of box for each domain.
+    logical, allocatable :: inside(:)      !< relation of mesh points on each domain.
+    logical, allocatable :: ions_inside(:) !< relation of ions inside each domain.
+    FLOAT,   allocatable :: dcm(:)         !< store the center of mass of each domain on the real space.
+    type(local_write_t)  :: writ           !< write option for local domains analysis.
   end type local_domain_t
 
   type(electrons_t), pointer :: sys
@@ -113,7 +112,8 @@ contains
   !! This is a high-level interface that reads the input file and
   !! calls the proper function.
   subroutine local_domains()
-    type(local_domain_t)           :: local
+    integer                        :: nd !< number of local domains.
+    type(local_domain_t), allocatable :: loc_domains(:)
     integer                        :: err, iter, l_start, l_end, l_step, id
     integer                        :: ia, n_spec_def, read_data, iunit, ispec
     integer                        :: length, folder_index
@@ -308,16 +308,16 @@ contains
     message(2) = ''
     call messages_info(2)
 
-    call local_init(local)
+    call local_init(nd, loc_domains)
 
     ! Starting loop over selected densities.
-    if (any(local%dshape(:) == BADER)) then
+    if (any(loc_domains(:)%dshape == BADER)) then
       call messages_experimental('Bader volumes in oct-local_multipoles')
     end if
 
     call kick_init(kick, global_namespace, sys%gr%sb, sys%st%d%ispin)
-    do id = 1, local%nd
-      call local_write_init(local%writ(id), global_namespace, local%lab(id), 0, dt)
+    do id = 1, nd
+      call local_write_init(loc_domains(id)%writ, global_namespace, loc_domains(id)%lab, 0, dt)
     end do
 
     !TODO: initialize hamiltonian if needed: check for LDOuput = energy or potential, using local_write_check_hm(local%writ)
@@ -326,7 +326,7 @@ contains
       !TODO: check for domains & mesh compatibility 
       call restart_init(restart_ld, global_namespace, RESTART_UNDEFINED, RESTART_TYPE_LOAD, sys%mc, err, &
                         dir=trim(ldrestart_folder), mesh = sys%gr%mesh)
-      call local_restart(local, restart_ld)
+      call local_restart(nd, loc_domains, restart_ld)
       call restart_end(restart_ld)
     end if
 
@@ -378,19 +378,19 @@ contains
 
       ! Look for the mesh points inside local domains
       if ((iter == l_start .and. .not. ldrestart) .or. ldupdate) then
-        call local_inside_domain(local, global_namespace, sys%st%rho(:,1))
+        call local_inside_domain(nd, loc_domains, global_namespace, sys%st%rho(:,1))
       end if
 
-      do id = 1, local%nd
-        call local_write_iter(local%writ(id), global_namespace, local%lab(id), local%ions_inside(:,id), local%inside(:,id), &
-          local%dcm(:,id), sys%gr, sys%st, sys%hm, sys%ks, sys%geo, kick, iter, l_start, ldoverwrite)
+      do id = 1, nd
+        call local_write_iter(loc_domains(id)%writ, global_namespace, loc_domains(id)%lab, loc_domains(id)%ions_inside, &
+          loc_domains(id)%inside, loc_domains(id)%dcm, sys%gr, sys%st, sys%hm, sys%ks, sys%geo, kick, iter, l_start, ldoverwrite)
       end do
       call loct_progress_bar(iter-l_start, l_end-l_start) 
     end do
 
     call restart_end(restart)
     call kick_end(kick)
-    call local_end(local)
+    call local_end(nd, loc_domains)
 
     message(1) = 'Info: Exiting local domains'
     message(2) = ''
@@ -403,8 +403,9 @@ contains
   !> Initialize local_domain_t variable, allocating variable 
   !! and reading parameters from input file. 
   ! ---------------------------------------------------------
-  subroutine local_init(local)
-    type(local_domain_t), intent(inout) :: local
+  subroutine local_init(nd, loc_domains)
+    integer, intent(out) :: nd
+    type(local_domain_t), allocatable, intent(out) :: loc_domains(:)
 
     integer           :: id
     type(block_t)     :: blk
@@ -445,23 +446,20 @@ contains
     !%End
 
     ! First, find out if there is a LocalDomains block.
-    local%nd = 0
+    nd = 0
     if (parse_block(global_namespace, 'LocalDomains', blk) == 0) then
-      local%nd = parse_block_n(blk)
+      nd = parse_block_n(blk)
     end if
 
-    SAFE_ALLOCATE(local%domain(1:local%nd))
-    SAFE_ALLOCATE(local%clist(1:local%nd))
-    SAFE_ALLOCATE(local%dshape(1:local%nd))
-    SAFE_ALLOCATE(local%lab(1:local%nd))
-    SAFE_ALLOCATE(local%inside(1:sys%gr%mesh%np, 1:local%nd))
-    SAFE_ALLOCATE(local%ions_inside(1:sys%geo%natoms, 1:local%nd))
-    SAFE_ALLOCATE(local%dcm(1:sys%space%dim, 1:local%nd))
-    SAFE_ALLOCATE(local%writ(1:local%nd))
+    SAFE_ALLOCATE(loc_domains(1:nd))
 
-    block: do id = 1, local%nd
-      call parse_block_string(blk, id-1, 0, local%lab(id))
-      call local_read_from_block(blk, id-1, local%domain(id), local%dshape(id), local%clist(id), global_namespace)
+    block: do id = 1, nd
+      SAFE_ALLOCATE(loc_domains(id)%inside(1:sys%gr%mesh%np))
+      SAFE_ALLOCATE(loc_domains(id)%ions_inside(1:sys%geo%natoms))
+      SAFE_ALLOCATE(loc_domains(id)%dcm(1:sys%space%dim))
+      call parse_block_string(blk, id-1, 0, loc_domains(id)%lab)
+      call local_read_from_block(blk, id-1, loc_domains(id)%domain, loc_domains(id)%dshape, loc_domains(id)%clist, &
+        global_namespace)
     end do block
     call parse_block_end(blk)
     message(1) = ''
@@ -474,24 +472,22 @@ contains
   !> Ending local_domain_t variable, allocating variable 
   !! and reading parameters from input file. 
   ! ---------------------------------------------------------
-  subroutine local_end(local)
-    type(local_domain_t), intent(inout) :: local
+  subroutine local_end(nd, loc_domains)
+    integer,              intent(in)     :: nd
+    type(local_domain_t), allocatable, intent(inout) :: loc_domains(:)
 
     integer :: id
 
     PUSH_SUB(local_end)
 
-    do id = 1, local%nd
-      call box_union_end(local%domain(id))
-      call local_write_end(local%writ(id))
+    do id = 1, nd
+      call box_union_end(loc_domains(id)%domain)
+      call local_write_end(loc_domains(id)%writ)
+      SAFE_DEALLOCATE_A(loc_domains(id)%inside)
+      SAFE_DEALLOCATE_A(loc_domains(id)%ions_inside)
+      SAFE_DEALLOCATE_A(loc_domains(id)%dcm)
     end do
-    SAFE_DEALLOCATE_A(local%lab)
-    SAFE_DEALLOCATE_A(local%domain)
-    SAFE_DEALLOCATE_A(local%clist)
-    SAFE_DEALLOCATE_A(local%dshape)
-    SAFE_DEALLOCATE_A(local%inside)
-    SAFE_DEALLOCATE_A(local%dcm)
-    SAFE_DEALLOCATE_A(local%writ)
+    SAFE_DEALLOCATE_A(loc_domains)
 
     POP_SUB(local_end)
   end subroutine local_end
@@ -676,8 +672,9 @@ contains
   end subroutine local_domains_init
 
   ! ---------------------------------------------------------
-  subroutine local_restart(lcl, restart)
-    type(local_domain_t), intent(inout) :: lcl
+  subroutine local_restart(nd, loc_domains, restart)
+    integer,              intent(in)    :: nd
+    type(local_domain_t), intent(inout) :: loc_domains(:)
     type(restart_t),      intent(in)    :: restart
 
     integer                     :: id, ip, iunit, ierr
@@ -701,19 +698,17 @@ contains
     filename = "ldomains"
     call drestart_read_mesh_function(restart, trim(filename), sys%gr%mesh, inside, ierr) 
 
-    lcl%inside = .false.
-    do ip = 1 , sys%gr%mesh%np
-      do id = 1, lcl%nd
-        if (bitand(int(inside(ip)), 2**id) /= 0) lcl%inside(ip,id) = .true.
+    do id = 1, nd
+      loc_domains(id)%inside = .false.
+      do ip = 1 , sys%gr%mesh%np
+        if (bitand(int(inside(ip)), 2**id) /= 0) loc_domains(id)%inside(ip) = .true.
       end do
-    end do
 
-    do id = 1, lcl%nd
       !Check for atom list inside each domain
-      call local_ions_inside(lcl%inside(:,id), sys%geo, sys%gr%mesh, lcl%ions_inside(:,id), lcl%clist(id))
+      call local_ions_inside(loc_domains(id)%inside, sys%geo, sys%gr%mesh, loc_domains(id)%ions_inside, loc_domains(id)%clist)
 
       !Compute center of mass of each domain
-      call local_center_of_mass(lcl%ions_inside(:,id), sys%geo, lcl%dcm(:,id))
+      call local_center_of_mass(loc_domains(id)%ions_inside, sys%geo, loc_domains(id)%dcm)
     end do
 
     SAFE_DEALLOCATE_A(inside)
@@ -722,8 +717,9 @@ contains
   end subroutine local_restart
 
   ! ---------------------------------------------------------
-  subroutine local_inside_domain(lcl, namespace, ff)
-    type(local_domain_t),   intent(inout) :: lcl
+  subroutine local_inside_domain(nd, loc_domains, namespace, ff)
+    integer,                intent(in)    :: nd
+    type(local_domain_t),   intent(inout) :: loc_domains(:)
     type(namespace_t),      intent(in)    :: namespace
     FLOAT,                  intent(in)    :: ff(:)
     
@@ -765,7 +761,7 @@ contains
     ff2(1:sys%gr%mesh%np,1) = ff(1:sys%gr%mesh%np)
 
     ! First we do the Bader domains
-    if (any(lcl%dshape(:) == BADER)) then
+    if (any(loc_domains(:)%dshape == BADER)) then
       if (sys%gr%mesh%parallel_in_domains) then
         write(message(1),'(a)') 'Bader volumes can only be computed in serial'
         call messages_fatal(1)
@@ -775,7 +771,7 @@ contains
       call basins_init(basins, sys%gr%mesh)
       call parse_variable(namespace, 'LDBaderThreshold', CNST(0.01), BaderThreshold)
       call basins_analyze(basins, sys%gr%mesh, ff2(:,1), ff2, BaderThreshold)
-      call bader_union_inside(basins, lcl%nd, lcl%domain, lcl%dshape, lcl%inside) 
+      call bader_union_inside(basins, nd, loc_domains)
 
       if (extra_write) then
         filename = 'basinsmap'
@@ -789,21 +785,21 @@ contains
     end if
 
     ! Then all the remaining domains
-    do id = 1, lcl%nd
-      if (lcl%dshape(id) == BADER) cycle
-      call box_union_inside_vec(lcl%domain(id), sys%gr%mesh%np, sys%gr%mesh%x, lcl%inside(:,id))
+    do id = 1, nd
+      if (loc_domains(id)%dshape == BADER) cycle
+      call box_union_inside_vec(loc_domains(id)%domain, sys%gr%mesh%np, sys%gr%mesh%x, loc_domains(id)%inside)
     end do
 
     if (extra_write) then
       ! Write extra information about domains
-      SAFE_ALLOCATE(dble_domain_map(1:lcl%nd, 1:sys%gr%mesh%np))
+      SAFE_ALLOCATE(dble_domain_map(1:nd, 1:sys%gr%mesh%np))
       SAFE_ALLOCATE(domain_mesh(1:sys%gr%mesh%np))
 
-      dble_domain_map(1:lcl%nd, 1:sys%gr%mesh%np) = M_ZERO
+      dble_domain_map(1:nd, 1:sys%gr%mesh%np) = M_ZERO
       domain_mesh(1:sys%gr%mesh%np) = M_ZERO
       do ip = 1, sys%gr%mesh%np
-        do id = 1, lcl%nd
-          if (lcl%inside(ip, id)) then
+        do id = 1, nd
+          if (loc_domains(id)%inside(ip)) then
             dble_domain_map(id, ip) = TOFLOAT(id)
             domain_mesh(ip) = domain_mesh(ip) + dble_domain_map(id, ip)
           end if
@@ -814,8 +810,8 @@ contains
       call dio_function_output(how, trim('local.general'), trim(filename), global_namespace, &
         sys%gr%mesh, domain_mesh(1:sys%gr%mesh%np), unit_one, ierr, geo = sys%geo)
 
-      do id = 1, lcl%nd
-        write(filename,'(a,a,a)')'domain.', trim(lcl%lab(id))
+      do id = 1, nd
+        write(filename,'(a,a,a)')'domain.', trim(loc_domains(id)%lab)
         call dio_function_output(how, trim('local.general'), trim(filename), global_namespace, &
           sys%gr%mesh, dble_domain_map(id, 1:sys%gr%mesh%np), unit_one, ierr, geo = sys%geo)
       end do
@@ -824,12 +820,12 @@ contains
       SAFE_DEALLOCATE_A(domain_mesh)
     end if
 
-    do id = 1, lcl%nd
+    do id = 1, nd
       !Check for atom list inside each domain
-      call local_ions_inside(lcl%inside(:,id), sys%geo, sys%gr%mesh, lcl%ions_inside(:,id), lcl%clist(id))
+      call local_ions_inside(loc_domains(id)%inside, sys%geo, sys%gr%mesh, loc_domains(id)%ions_inside, loc_domains(id)%clist)
 
       !Compute center of mass of each domain
-      call local_center_of_mass(lcl%ions_inside(:,id), sys%geo, lcl%dcm(:,id))
+      call local_center_of_mass(loc_domains(id)%ions_inside, sys%geo, loc_domains(id)%dcm)
     end do
 
     !Write restart file for local domains
@@ -841,21 +837,22 @@ contains
     call restart_init(restart, namespace, RESTART_UNDEFINED, RESTART_TYPE_DUMP, sys%mc, ierr, &
                       mesh=sys%gr%mesh, dir=trim(base_folder)//trim(folder)) 
     ff2 = M_ZERO
-    SAFE_ALLOCATE(lines(1:lcl%nd+2))
-    write(lines(1),'(a,1x,i5)') 'Number of local domains =', lcl%nd
+    SAFE_ALLOCATE(lines(1:nd+2))
+    write(lines(1),'(a,1x,i5)') 'Number of local domains =', nd
     write(lines(2),'(a3,1x,a15,1x,a5,1x,71x,a9,1x,a14)') '#id', 'label', 'shape', 'Atom list', 'center of mass'
-    do id = 1, lcl%nd
+    do id = 1, nd
       write(frmt,'(a,i0,a)') '(i3,1x,a15,1x,i5,1x,a80,1x', sys%space%dim, '(f10.6,1x))'
-      write(lines(id+2), fmt=trim(frmt))id, trim(lcl%lab(id)), lcl%dshape(id), trim(lcl%clist(id)), lcl%dcm(1:sys%space%dim, id)
+      write(lines(id+2), fmt=trim(frmt))id, trim(loc_domains(id)%lab), loc_domains(id)%dshape, trim(loc_domains(id)%clist), &
+        loc_domains(id)%dcm(1:sys%space%dim)
       do ip = 1, sys%gr%mesh%np
-        if (lcl%inside(ip, id)) ff2(ip,1) = ff2(ip,1) + 2**DBLE(id)
+        if (loc_domains(id)%inside(ip)) ff2(ip, 1) = ff2(ip, 1) + 2**DBLE(id)
       end do
     end do
     call drestart_write_mesh_function(restart, filename, sys%gr%mesh, ff2(1:sys%gr%mesh%np, 1), ierr)
 
     filename = "ldomains.info"
     iunit = restart_open(restart, filename)
-    call restart_write(restart, iunit, lines, lcl%nd+2, ierr)
+    call restart_write(restart, iunit, lines, nd+2, ierr)
     call restart_end(restart)
     call io_close(iunit)
     SAFE_DEALLOCATE_A(lines)
@@ -866,16 +863,14 @@ contains
   end subroutine local_inside_domain
 
   ! ---------------------------------------------------------
-  subroutine bader_union_inside(basins, nd, dom, dsh, inside)
-    type(basins_t),    intent(inout) :: basins
-    integer,           intent(in)    :: nd 
-    type(box_union_t), intent(in)    :: dom(:)
-    integer,           intent(in)    :: dsh(:)
-    logical,           intent(out)   :: inside(:,:)
+  subroutine bader_union_inside(basins, nd, loc_domains)
+    type(basins_t),       intent(inout) :: basins
+    integer,              intent(in)    :: nd 
+    type(local_domain_t), intent(inout) :: loc_domains(:)
 
     integer               :: ia, ib, id, ip, ix, rankmin
     integer               :: max_check
-    integer, allocatable  :: dunit(:), domain_map(:,:), ion_map(:)
+    integer, allocatable  :: domain_map(:,:), ion_map(:)
     FLOAT                 :: dmin, dd
     FLOAT, allocatable    :: xi(:)
     logical               :: lduseatomicradii
@@ -883,7 +878,6 @@ contains
     PUSH_SUB(bader_union_inside)
 
     SAFE_ALLOCATE(xi(1:sys%space%dim))
-    inside = .false.
 
     !%Variable LDUseAtomicRadii
     !%Type logical
@@ -898,12 +892,14 @@ contains
 
     max_check = 1
     do id = 1, nd
-      if (box_union_get_nboxes(dom(id)) > max_check) max_check = box_union_get_nboxes(dom(id))
+      if (box_union_get_nboxes(loc_domains(id)%domain) > max_check) then
+        max_check = box_union_get_nboxes(loc_domains(id)%domain)
+      end if
     end do
     SAFE_ALLOCATE(domain_map(1:nd, 1:max_check))
 
     do id = 1, nd
-      if (dsh(id) /= BADER) cycle
+      if (loc_domains(id)%dshape /= BADER) cycle
 
       ! Assign basins%map to ions
       if (lduseatomicradii .and. (id == 1)) then
@@ -913,7 +909,7 @@ contains
         end do
         ! Assign lonely pair to ion in a atomic radii distance
         do ip = 1, sys%gr%mesh%np
-          if( all(ion_map(:) /= basins%map(ip)) ) then
+          if (all(ion_map(:) /= basins%map(ip)) ) then
             do ia = 1, sys%geo%natoms
               dd = sum((sys%gr%mesh%x(ip, 1:sys%gr%mesh%sb%dim) - sys%geo%atom(ia)%x(1:sys%gr%mesh%sb%dim))**2)
               dd = sqrt(dd)
@@ -923,20 +919,19 @@ contains
         end do
       end if
       domain_map = 0
-      do ib = 1, box_union_get_nboxes(dom(id))
-        xi = box_union_get_center(dom(id), ib)
+      do ib = 1, box_union_get_nboxes(loc_domains(id)%domain)
+        xi = box_union_get_center(loc_domains(id)%domain, ib)
         ix = mesh_nearest_point(sys%gr%mesh, xi, dmin, rankmin)
         domain_map(id,ib) = basins%map(ix)
       end do
       do ip = 1, sys%gr%mesh%np
-        if(any(domain_map(id, 1:box_union_get_nboxes(dom(id))) == basins%map(ip) ) ) inside(ip,id) = .true.
+        loc_domains(id)%inside(ip) = any(domain_map(id, 1:box_union_get_nboxes(loc_domains(id)%domain)) == basins%map(ip))
       end do
     end do
 
     SAFE_DEALLOCATE_A(domain_map)
     SAFE_DEALLOCATE_A(ion_map)
     SAFE_DEALLOCATE_A(xi)
-    SAFE_DEALLOCATE_A(dunit)
 
     POP_SUB(bader_union_inside)
   end subroutine bader_union_inside
