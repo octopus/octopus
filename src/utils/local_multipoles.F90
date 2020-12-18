@@ -66,7 +66,6 @@ program oct_local_multipoles
   end type local_domain_t
 
   type(electrons_t), pointer :: sys
-  type(simul_box_t)     :: sb
   integer, parameter    :: BADER = 512
   FLOAT                 :: BaderThreshold
 
@@ -93,11 +92,9 @@ program oct_local_multipoles
   call calc_mode_par_set_parallelization(P_STRATEGY_STATES, default = .false.)
   sys => electrons_t(global_namespace)
   call sys%init_parallelization(mpi_world)
-  call simul_box_init(sb, global_namespace, sys%geo, sys%space)
 
   call local_domains()
 
-  call simul_box_end(sb)
   SAFE_DEALLOCATE_P(sys)
   call profiling_end(global_namespace)
   call io_end()
@@ -506,8 +503,8 @@ contains
     character(len=*),  intent(out)       :: clist
     type(namespace_t), intent(in)        :: namespace
     
-    integer                     :: ic, idir, nb
-    FLOAT                       :: lgst, val, rsize, xsize
+    integer                     :: ic, nb
+    FLOAT                       :: rsize, xsize
     FLOAT                       :: center(MAX_DIM), lsize(MAX_DIM)
    
     PUSH_SUB(local_read_from_block)
@@ -542,6 +539,7 @@ contains
       do ic = 1, geo%space%dim 
         call parse_block_float(blk, row, 2 + ic, center(ic), unit = units_inp%length)
       end do
+      lsize(1:space%dim) = rsize
 
     case (CYLINDER)
       call parse_block_float(blk, row, 2, rsize, unit = units_inp%length)
@@ -550,6 +548,8 @@ contains
       do ic = 1, geo%space%dim 
         call parse_block_float(blk, row, 3 + ic, center(ic), unit = units_inp%length)
       end do
+      lsize(1)     = xsize
+      lsize(2:space%dim) = rsize
 
     case (PARALLELEPIPED)
       do ic = 1, geo%space%dim
@@ -568,23 +568,6 @@ contains
       end do
     end select
 
-    ! fill in lsize structure
-    select case (shape)
-    case (SPHERE)
-      lsize(1:space%dim) = rsize
-    case (CYLINDER)       
-      lsize(1)     = xsize
-      lsize(2:space%dim) = rsize
-    case (MINIMUM, BADER)
-      do idir = 1, geo%space%dim
-        lgst = M_ZERO; val = M_ZERO
-        do ic = 1, geo%natoms
-          if (loct_isinstringlist(ic, clist)) val = abs(geo%atom(ic)%x(idir))
-          if (lgst <= val) lgst = val
-        end do
-        lsize(idir) =  lgst + rsize
-      end do
-    end select
     call local_domains_init(geo, dom, space%dim, shape, center, rsize, lsize, nb, clist, namespace)
 
     POP_SUB(local_read_from_block)
@@ -740,7 +723,7 @@ contains
     character(len=MAX_PATH_LEN)   :: filename, base_folder, folder, frmt
     character(len=140), allocatable  :: lines(:)
     type(restart_t)     :: restart
-    FLOAT, allocatable :: dble_domain_map(:,:), domain_mesh(:)
+    FLOAT, allocatable :: dble_domain_map(:), domain_mesh(:)
 
     PUSH_SUB(local_inside_domain)
 
@@ -801,29 +784,27 @@ contains
 
     if (extra_write) then
       ! Write extra information about domains
-      SAFE_ALLOCATE(dble_domain_map(1:nd, 1:mesh%np))
+      SAFE_ALLOCATE(dble_domain_map(1:mesh%np))
       SAFE_ALLOCATE(domain_mesh(1:mesh%np))
 
-      dble_domain_map(1:nd, 1:mesh%np) = M_ZERO
-      domain_mesh(1:mesh%np) = M_ZERO
-      do ip = 1, mesh%np
-        do id = 1, nd
+      domain_mesh = M_ZERO
+      do id = 1, nd
+        dble_domain_map = M_ZERO
+        do ip = 1, mesh%np
           if (loc_domains(id)%inside(ip)) then
-            dble_domain_map(id, ip) = TOFLOAT(id)
-            domain_mesh(ip) = domain_mesh(ip) + dble_domain_map(id, ip)
+            dble_domain_map(ip) = TOFLOAT(id)
+            domain_mesh(ip) = domain_mesh(ip) + dble_domain_map(ip)
           end if
         end do
+
+        write(filename,'(a,a,a)') 'domain.', trim(loc_domains(id)%lab)
+        call dio_function_output(how, trim('local.general'), trim(filename), global_namespace, mesh, &
+          dble_domain_map(1:mesh%np), unit_one, ierr, geo = geo)
       end do
 
-      write(filename,'(a,a,a)')'domain.mesh'
+      write(filename,'(a,a,a)') 'domain.mesh'
       call dio_function_output(how, trim('local.general'), trim(filename), global_namespace, mesh, domain_mesh(1:mesh%np), &
         unit_one, ierr, geo = geo)
-
-      do id = 1, nd
-        write(filename,'(a,a,a)')'domain.', trim(loc_domains(id)%lab)
-        call dio_function_output(how, trim('local.general'), trim(filename), global_namespace, mesh, &
-          dble_domain_map(id, 1:mesh%np), unit_one, ierr, geo = geo)
-      end do
 
       SAFE_DEALLOCATE_A(dble_domain_map)
       SAFE_DEALLOCATE_A(domain_mesh)
@@ -879,9 +860,8 @@ contains
     integer,              intent(in)    :: nd 
     type(local_domain_t), intent(inout) :: loc_domains(:)
 
-    integer               :: ia, ib, id, ip, ix, rankmin
-    integer               :: max_check
-    integer, allocatable  :: domain_map(:,:), ion_map(:)
+    integer               :: ia, ib, id, ip, ix, rankmin, n_boxes
+    integer, allocatable  :: domain_map(:), ion_map(:)
     FLOAT                 :: dmin, dd
     FLOAT, allocatable    :: xi(:)
     logical               :: lduseatomicradii
@@ -901,16 +881,11 @@ contains
 
     SAFE_ALLOCATE(ion_map(geo%natoms))
 
-    max_check = 1
-    do id = 1, nd
-      if (box_union_get_nboxes(loc_domains(id)%domain) > max_check) then
-        max_check = box_union_get_nboxes(loc_domains(id)%domain)
-      end if
-    end do
-    SAFE_ALLOCATE(domain_map(1:nd, 1:max_check))
-
     do id = 1, nd
       if (loc_domains(id)%dshape /= BADER) cycle
+
+      n_boxes = box_union_get_nboxes(loc_domains(id)%domain)
+      SAFE_ALLOCATE(domain_map(1:n_boxes))
 
       ! Assign basins%map to ions
       if (lduseatomicradii .and. (id == 1)) then
@@ -930,17 +905,18 @@ contains
         end do
       end if
       domain_map = 0
-      do ib = 1, box_union_get_nboxes(loc_domains(id)%domain)
+      do ib = 1, n_boxes
         xi = box_union_get_center(loc_domains(id)%domain, ib)
         ix = mesh_nearest_point(mesh, xi, dmin, rankmin)
-        domain_map(id,ib) = basins%map(ix)
+        domain_map(ib) = basins%map(ix)
       end do
       do ip = 1, mesh%np
-        loc_domains(id)%inside(ip) = any(domain_map(id, 1:box_union_get_nboxes(loc_domains(id)%domain)) == basins%map(ip))
+        loc_domains(id)%inside(ip) = any(domain_map(1:n_boxes) == basins%map(ip))
       end do
+
+      SAFE_DEALLOCATE_A(domain_map)
     end do
 
-    SAFE_DEALLOCATE_A(domain_map)
     SAFE_DEALLOCATE_A(ion_map)
     SAFE_DEALLOCATE_A(xi)
 
