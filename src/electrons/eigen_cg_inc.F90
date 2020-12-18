@@ -242,11 +242,12 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
 
       ! normalize g0 here, needed for consistency
       g0_norm = X(mf_nrm2) (gr%mesh, st%d%dim, g0)
-      if(.not. g0_norm < M_EPSILON) then
-        do idim = 1, st%d%dim
-          call lalg_scal(gr%mesh%np, M_ONE/g0_norm, g0(1:gr%mesh%np, idim))
-        end do
+      if(g0_norm < M_EPSILON) then
+        exit
       end if
+      do idim = 1, st%d%dim
+        call lalg_scal(gr%mesh%np, M_ONE/g0_norm, g0(1:gr%mesh%np, idim))
+      end do
 
 
       ! dot products needed for conjugate gradient
@@ -264,7 +265,8 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
         gg  = sb(2)
       end if
 
-      if( sqrt(abs(gg)) < M_EPSILON ) then
+      !if( sqrt(abs(gg)) < M_EPSILON ) then
+      if( abs(gg) < M_EPSILON ) then
         if(converged == ist - 1) converged = ist ! only consider the first converged eigenvectors
         res = sqrt(abs(gg))
 
@@ -313,11 +315,12 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
       end if
       ! normalize cg here
       cg0 = X(mf_nrm2) (gr%mesh, st%d%dim, cg)
-      if(.not. cg0 < M_EPSILON) then
-        do idim = 1, st%d%dim
-          call lalg_scal(gr%mesh%np, M_ONE/cg0, cg(1:gr%mesh%np, idim))
-        end do
+      if(cg0 < M_EPSILON) then
+        exit
       end if
+      do idim = 1, st%d%dim
+        call lalg_scal(gr%mesh%np, M_ONE/cg0, cg(1:gr%mesh%np, idim))
+      end do
 
       ! cg contains now the conjugate gradient
       call X(hamiltonian_elec_apply_single)(hm, namespace, gr%mesh, cg, h_cg, ist, ik)
@@ -444,11 +447,6 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
           abs(st%eigenval(ist, ik) - old_energy) > M_EPSILON) then
           exit iter_loop
         end if
-      else
-        if(first_delta_e <= CNST(2.0)*M_EPSILON) then
-          if(converged == ist - 1) converged = ist ! only consider the first converged eigenvectors
-          exit iter_loop
-        end if
       end if
       old_energy = st%eigenval(ist, ik)
 
@@ -471,9 +469,6 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
       res = X(states_elec_residue)(gr%mesh, st%d%dim, h_psi, st%eigenval(ist, ik), psi)
     end if
 
-    ! one could orthogonalize against all states here, but it turns out not
-    ! to accelerate convergence
-    call X(states_elec_orthogonalize_single_batch)(st, gr%mesh, ist - 1, ik, psi, normalize = .true.)
     call states_elec_set_state(st, gr%mesh, ist, ik, psi)
 
     niter = niter + iter + 1
