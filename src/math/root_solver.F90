@@ -23,9 +23,9 @@ module root_solver_oct_m
   use lalg_adv_oct_m
   use messages_oct_m
   use namespace_oct_m
-  use ode_solver_oct_m
   use parser_oct_m
   use profiling_oct_m
+  use varinfo_oct_m
 
   implicit none
 
@@ -34,13 +34,10 @@ module root_solver_oct_m
     root_solver_t,                        &
     root_solver_init,                     &
     root_solver_read,                     &
-    droot_solver_run,                     &
-    zroot_solver_run,                     &
-    zroot_watterstrom
+    droot_solver_run
 
   integer, public, parameter ::           &
-    ROOT_NEWTON      =  3,                &
-    ROOT_WATTERSTROM =  5
+    ROOT_NEWTON      =  3
 
   type root_solver_t
     private
@@ -50,28 +47,18 @@ module root_solver_oct_m
     integer :: usediter       !< number of iterations actually performed
     FLOAT   :: abs_tolerance
     FLOAT   :: rel_tolerance
-    FLOAT   :: ws_radius      !< radius of circle in complex plane; used for initial values
-    logical :: have_polynomial
-    integer :: poly_order
-    type(ode_solver_t) :: ode_solver !< required for ROOT_WATTERSTROM
   end type root_solver_t
-
-  !> a few variables which we have to define globally
-  !! for this module
-  CMPLX, allocatable :: gbase_coeff(:), gcoeff(:)
-  integer            :: gorder
 
 contains
 
   ! ---------------------------------------------------------
   subroutine root_solver_init(rs, namespace, dimensionality, solver_type, maxiter, &
-    rel_tolerance, abs_tolerance, have_polynomial, ws_radius)
+    rel_tolerance, abs_tolerance)
     type(root_solver_t), intent(out) :: rs
     type(namespace_t),   intent(in)  :: namespace
     integer,             intent(in)  :: dimensionality
     integer, optional,   intent(in)  :: solver_type, maxiter
-    FLOAT, optional,     intent(in)  :: rel_tolerance, abs_tolerance, ws_radius
-    logical, optional,   intent(in)  :: have_polynomial
+    FLOAT, optional,     intent(in)  :: rel_tolerance, abs_tolerance
 
     ! no push_sub, called too often
 
@@ -85,8 +72,6 @@ contains
     if(present(maxiter))         rs%maxiter         = maxiter
     if(present(rel_tolerance))   rs%rel_tolerance   = rel_tolerance
     if(present(abs_tolerance))   rs%abs_tolerance   = abs_tolerance
-    if(present(have_polynomial)) rs%have_polynomial = have_polynomial
-    if(present(ws_radius))       rs%ws_radius       = ws_radius
 
   end subroutine root_solver_init
 
@@ -106,11 +91,9 @@ contains
     !% Specifies what kind of root solver will be used.
     !%Option root_newton 3
     !% Newton method.
-    !%Option root_watterstrom 5
-    !% Watterstrom method.
     !%End
     call parse_variable(namespace, 'RootSolver', ROOT_NEWTON, rs%solver_type)
-    if( rs%solver_type /= ROOT_NEWTON .and. rs%solver_type /= ROOT_WATTERSTROM ) then
+    if (.not. varinfo_valid_option('RootSolver', rs%solver_type)) then
       call messages_input_error(namespace, 'RootSolver')
     end if
 
@@ -142,148 +125,38 @@ contains
     !%End
     call parse_variable(namespace, 'RootSolverAbsTolerance', CNST(1e-10), rs%abs_tolerance)
 
-    !%Variable RootSolverHavePolynomial
-    !%Type logical
-    !%Default no
-    !%Section Math::RootSolver
-    !%Description
-    !%  If set to yes, the coefficients of the polynomial have to be passed to
-    !%  the root solver.
-    !%End
-    call parse_variable(namespace, 'RootSolverHavePolynomial', .false., rs%have_polynomial)
-
-    !%Variable RootSolverWSRadius
-    !%Type float
-    !%Default 1.0
-    !%Section Math::RootSolver
-    !%Description
-    !% Radius of circle in the complex plane. If <tt>RootSolverWSRadius = 1.0</tt>,
-    !% the unit roots of an <i>n</i>th-order polynomial are taken as initial values.
-    !%End
-    call parse_variable(namespace, 'RootSolverWSRadius', CNST( 1.0), rs%ws_radius)
-
-    if(rs%solver_type == ROOT_WATTERSTROM) then
-
-      !%Variable WatterstromODESolver
-      !%Type integer
-      !%Default ode_pd89
-      !%Section Math::RootSolver
-      !%Description
-      !% The Watterstrom method (<i>J. Comp. Phys.</i> <b>8</b>, 304-308 (1971)) transforms
-      !% finding roots for <i>n</i>th-order polynomials into the solution of <i>n</i> uncoupled 
-      !% ODEs. This variable specifies the solver that should be used for the ODE 
-      !% stepping.
-      !%Option ode_rk4 1
-      !% Standard 4th-order Runge-Kutta.
-      !%Option ode_fb78 2
-      !% Fehlberg solver.
-      !%Option ode_vr89 3
-      !% Verner solver.
-      !%Option ode_pd89 4
-      !% Prince-Dormand solver.
-      !%End
-      call parse_variable(namespace, 'WatterstromODESolver', ODE_PD89, rs%ode_solver%solver_type)
-
-      !%Variable WatterstromODESolverNSteps
-      !%Type integer
-      !%Default 400
-      !%Section Math::RootSolver
-      !%Description
-      !% Number of steps which the chosen ODE solver should perform
-      !% in the integration interval [<i>a</i>, <i>b</i>] of the Watterstrom ODE.
-      !%End
-      call parse_variable(namespace, 'WatterstromODESolverNSteps', 400, rs%ode_solver%nsteps)
-
-      ! set up ODE solver
-      rs%ode_solver%nsize       = rs%poly_order
-      rs%ode_solver%tmin        = M_ZERO
-      rs%ode_solver%tmax        = M_ONE
-      call ode_solver_create(rs%ode_solver)
-
-    end if
-
     POP_SUB(root_solver_read)
   end subroutine root_solver_read
 
   ! ---------------------------------------------------------
-  !> Implementation of J. Comp. Phys., 8, (1971), p. 304-308
-  subroutine zroot_watterstrom(rs, roots, coeff)
+  subroutine droot_solver_run(rs, func, root, success, startval)
     type(root_solver_t), intent(in)  :: rs
-    CMPLX,               intent(out) :: roots(:)    !< roots we are searching
-    CMPLX,               intent(in)  :: coeff(:)    !< polynomial coefficients
+    FLOAT,               intent(out) :: root(:)        !< roots we are searching
+    logical,             intent(out) :: success
+    FLOAT, optional,     intent(in)  :: startval(:)    !< start value for the search
+    interface
+      subroutine func(z, f, jf)
+        implicit none
+        FLOAT, intent(in)  :: z(:)
+        FLOAT, intent(out) :: f(:), jf(:, :)
+      end subroutine func
+    end interface
 
-    CMPLX, allocatable    :: base_roots(:)
-    FLOAT   :: theta
-    integer :: order, j
+    ! no push_sub, called too often
 
-    PUSH_SUB(zroot_watterstrom)
+    ! Initializations
+    root = M_ZERO
+    success = .false.
 
-    order  = rs%poly_order
-    gorder = order
+    select case(rs%solver_type)
+    case(ROOT_NEWTON)
+      call droot_newton(rs, func, root, startval, success)
+    case default
+      write(message(1), '(a,i4,a)') "Error in droot_solver_run: '", rs%solver_type, "' is not a valid root solver"
+      call messages_fatal(1)
+    end select
 
-    SAFE_ALLOCATE(gbase_coeff(1:order+1))
-    SAFE_ALLOCATE(gcoeff     (1:order+1))
-    SAFE_ALLOCATE(base_roots (1:order))
-
-    ! normalize polynomial
-    do j = 1, order+1
-      gcoeff(j) = coeff(j)/coeff(order+1)
-    end do
-
-    gbase_coeff = M_ZERO
-    gbase_coeff(1)       = (rs%ws_radius)**order
-    gbase_coeff(order+1) = M_ONE
-
-    do j = 1, order
-      theta = (M_TWO*j-M_ONE)*M_PI/order
-      base_roots(j) = exp(M_zI*theta)*(rs%ws_radius)
-    end do
-
-    call zode_solver_run(rs%ode_solver, func_ws, base_roots, roots)
-
-    SAFE_DEALLOCATE_A(gbase_coeff)
-    SAFE_DEALLOCATE_A(gcoeff)
-    SAFE_DEALLOCATE_A(base_roots)
-
-    POP_SUB(zroot_watterstrom)
-
-  end subroutine zroot_watterstrom
-
-
-  ! ---------------------------------------------------------
-  subroutine func_ws(size, t, z, res)
-    integer, intent(in)  :: size
-    FLOAT,   intent(in)  :: t
-    CMPLX,   intent(in)  :: z(:)
-    CMPLX,   intent(out) :: res(:)
-
-    CMPLX, allocatable   :: numerator(:), denominator(:)
-    integer :: j
-
-    PUSH_SUB(func_ws)
-
-    SAFE_ALLOCATE(  numerator(1:size))
-    SAFE_ALLOCATE(denominator(1:size))
-    numerator   = M_ZERO
-    denominator = M_ZERO
-
-    do j = 0, gorder-1
-      numerator = numerator + (gbase_coeff(j+1)-gcoeff(j+1))*z**j
-    end do
-
-    do j = 1, gorder
-      denominator = denominator + j*( gbase_coeff(j+1)-(gbase_coeff(j+1)-gcoeff(j+1))*t )*z**(j-1)
-    end do
-
-    res = numerator/denominator
-
-    SAFE_DEALLOCATE_A(numerator)
-    SAFE_DEALLOCATE_A(denominator)
-
-    POP_SUB(func_ws)
-
-  end subroutine func_ws
-
+  end subroutine
 
   ! ---------------------------------------------------------
   !> Newton-Raphson scheme can only be used in the real case.
@@ -336,17 +209,6 @@ contains
     SAFE_DEALLOCATE_A(rhs)
 
   end subroutine droot_newton
-
-
-
-#include "undef.F90"
-#include "complex.F90"
-#include "root_solver_inc.F90"
-
-#include "undef.F90"
-#include "real.F90"
-#include "root_solver_inc.F90"
-
 
 end module root_solver_oct_m
 
