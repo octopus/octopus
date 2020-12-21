@@ -149,7 +149,6 @@ math_f_srcs =                                 \
 	math/metis.F90                        \
 	math/minimizer.F90                    \
 	math/nfft.F90                         \
-	math/ode_solver.F90                   \
 	math/pblas.F90                        \
 	math/permutations.F90                 \
 	math/pfft.F90                         \
@@ -189,9 +188,7 @@ noinst_HEADERS +=                             \
 	math/lalg_adv_lapack_inc.F90          \
 	math/math_inc.F90                     \
 	math/nfft_inc.F90                     \
-	math/ode_solver_inc.F90               \
 	math/pnfft_inc.F90                    \
-	math/root_solver_inc.F90              \
 	math/sparskit_inc.F90                 \
 	math/solvers_inc.F90                  \
 	math/symm_op_inc.F90        
