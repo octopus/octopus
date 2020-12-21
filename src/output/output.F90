@@ -1257,7 +1257,7 @@ contains
     if(ks%theory_level == HARTREE .or. ks%theory_level == HARTREE_FOCK .or. xc_is_orbital_dependent(ks%xc)) &
       call messages_not_implemented("BerkeleyGW output with orbital-dependent functionals", namespace=namespace)
 
-    if(geo%nlcc) &
+    if(hm%ep%nlcc) &
       call messages_not_implemented("BerkeleyGW output with NLCC", namespace=namespace)
 
 #ifdef HAVE_BERKELEYGW

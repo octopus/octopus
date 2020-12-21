@@ -787,11 +787,12 @@ contains
   end subroutine func
 
   ! ---------------------------------------------------------
-  subroutine species_get_nlcc(species, pos, mesh, rho_core)
-    type(species_t), target, intent(in)  :: species
-    FLOAT,                   intent(in)  :: pos(MAX_DIM)
-    type(mesh_t),            intent(in)  :: mesh
-    FLOAT,                   intent(out) :: rho_core(:)
+  subroutine species_get_nlcc(species, pos, mesh, rho_core, accumulate)
+    type(species_t), target, intent(in)    :: species
+    FLOAT,                   intent(in)    :: pos(MAX_DIM)
+    type(mesh_t),            intent(in)    :: mesh
+    FLOAT,                   intent(inout) :: rho_core(:)
+    logical, optional,       intent(in)    :: accumulate
 
     FLOAT :: center(MAX_DIM), rr
     integer :: icell, ip
@@ -803,7 +804,7 @@ contains
     ! only for 3D pseudopotentials, please
     if(species_is_ps(species)) then
       ps => species_ps(species)
-      rho_core = M_ZERO
+      if(.not. optional_default(accumulate, .false.)) rho_core = M_ZERO
       call periodic_copy_init(pp, mesh%sb, pos, range = spline_cutoff_radius(ps%core, ps%projectors_sphere_threshold))
       do icell = 1, periodic_copy_num(pp)
         center(1:mesh%sb%dim) = periodic_copy_position(pp, mesh%sb, icell)
@@ -816,7 +817,7 @@ contains
       end do
       call periodic_copy_end(pp)
     else
-      rho_core = M_ZERO
+      if(.not. optional_default(accumulate, .false.)) rho_core = M_ZERO
     end if
 
     POP_SUB(species_get_nlcc)

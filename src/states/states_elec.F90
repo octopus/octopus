@@ -1160,10 +1160,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine states_elec_densities_init(st, gr, geo)
+  subroutine states_elec_densities_init(st, gr)
     type(states_elec_t), target, intent(inout) :: st
     type(grid_t),                intent(in)    :: gr
-    type(geometry_t),            intent(in)    :: geo
 
     FLOAT :: fsize
 
@@ -1171,11 +1170,6 @@ contains
 
     SAFE_ALLOCATE(st%rho(1:gr%fine%mesh%np_part, 1:st%d%nspin))
     st%rho = M_ZERO
-
-    if(geo%nlcc) then
-      SAFE_ALLOCATE(st%rho_core(1:gr%fine%mesh%np))
-      st%rho_core(:) = M_ZERO
-    end if
 
     fsize = gr%mesh%np_part*CNST(8.0)*st%d%block_size
 

@@ -159,8 +159,6 @@ contains
     this%geo%nspecies = 0
     this%geo%only_user_def = .false.
     this%geo%kinetic_energy = M_ZERO
-    this%geo%nlpp = .false.
-    this%geo%nlcc = .false.
     call distributed_nullify(this%geo%atoms_dist, 0)
     this%geo%reduced_coordinates = .false.
     this%geo%periodic_dim = 0
