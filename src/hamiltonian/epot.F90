@@ -139,7 +139,7 @@ module epot_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine epot_init(ep, namespace, gr, st, geo, psolver, ispin, nik, xc_family, mc)
+  subroutine epot_init(ep, namespace, gr, st, geo, psolver, ispin, xc_family, mc)
     type(epot_t),                       intent(out)   :: ep
     type(namespace_t),                  intent(in)    :: namespace
     type(grid_t),                       intent(in)    :: gr
@@ -147,7 +147,6 @@ contains
     type(geometry_t),                   intent(inout) :: geo
     type(poisson_t),  target,           intent(in)    :: psolver
     integer,                            intent(in)    :: ispin
-    integer,                            intent(in)    :: nik
     integer,                            intent(in)    :: xc_family
     type(multicomm_t),                  intent(in)    :: mc
 

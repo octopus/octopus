@@ -406,7 +406,7 @@ contains
       if(bitand(ks%xc_family, XC_FAMILY_OEP) /= 0) then
         if (gr%have_fine_mesh) call messages_not_implemented("OEP functionals with UseFineMesh", namespace=namespace)
         if (ks%xc%functional(FUNC_X,1)%id /= XC_OEP_X_SLATER) then 
-          call xc_oep_init(ks%oep, namespace, ks%xc_family, gr, st, geo, mc)
+          call xc_oep_init(ks%oep, namespace, ks%xc_family, gr, st, mc)
         else
           ks%oep%level = XC_OEP_NONE
         end if
@@ -605,9 +605,8 @@ contains
   ! ---------------------------------------------------------
 
   ! ---------------------------------------------------------
-  subroutine v_ks_end(ks, gr)
+  subroutine v_ks_end(ks)
     type(v_ks_t),     intent(inout) :: ks
-    type(grid_t),     intent(inout) :: gr
 
     PUSH_SUB(v_ks_end)
     
@@ -616,12 +615,10 @@ contains
       call vdw_ts_end(ks%vdw_ts)
     end select
 
-    call current_end(ks%current_calculator)
-
     select case(ks%theory_level)
     case(KOHN_SHAM_DFT)
       if(bitand(ks%xc_family, XC_FAMILY_KS_INVERSION) /= 0) then
-        call xc_ks_inversion_end(ks%ks_inversion, gr)
+        call xc_ks_inversion_end(ks%ks_inversion)
       end if
       if(bitand(ks%xc_family, XC_FAMILY_OEP) /= 0) then
         call xc_oep_end(ks%oep)

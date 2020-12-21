@@ -394,9 +394,7 @@ contains
 
     call multicomm_end(sys%mc)
 
-    call v_ks_end(sys%ks, sys%gr)
-    
-    call output_end(sys%outp)
+    call v_ks_end(sys%ks)
     
     if(associated(sys%st)) then
       call states_elec_end(sys%st)

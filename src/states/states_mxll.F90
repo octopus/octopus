@@ -25,7 +25,6 @@ module states_mxll_oct_m
   use comm_oct_m
   use derivatives_oct_m
   use distributed_oct_m
-  use geometry_oct_m
   use global_oct_m
   use grid_oct_m
   use math_oct_m
@@ -210,11 +209,10 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine states_mxll_init(st, namespace, gr, geo)
+  subroutine states_mxll_init(st, namespace, gr)
     type(states_mxll_t), target, intent(inout) :: st
     type(namespace_t),           intent(in)    :: namespace
     type(grid_t),                intent(in)    :: gr
-    type(geometry_t),            intent(in)    :: geo
     type(block_t)        :: blk
 
     integer :: idim, nlines, ncols, il

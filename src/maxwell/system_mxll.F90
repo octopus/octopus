@@ -165,7 +165,7 @@ contains
     this%geo%lsize = M_ZERO
 
     call grid_init_stage_1(this%gr, this%namespace, this%geo, this%space)
-    call states_mxll_init(this%st, this%namespace, this%gr, this%geo)
+    call states_mxll_init(this%st, this%namespace, this%gr)
 
     this%quantities(E_FIELD)%required = .true.
     this%quantities(E_FIELD)%protected = .true.
@@ -587,7 +587,7 @@ contains
 
     call profiling_in(prof, "SYSTEM_MXLL_OUTPUT_START")
 
-    call td_write_mxll_init(this%write_handler, this%namespace, this%gr, this%st, this%hm, 0, this%prop%dt)
+    call td_write_mxll_init(this%write_handler, this%namespace, 0, this%prop%dt)
     call td_write_mxll_iter(this%write_handler, this%gr, this%st, this%hm, this%prop%dt, 0)
     call td_write_mxll_free_data(this%write_handler, this%namespace, this%gr, this%st, this%hm, this%geo, this%outp, this%clock)
 

@@ -138,9 +138,9 @@ contains
 
     ! self-consistency for occupation numbers and natural orbitals in RDMFT
     if (ks%theory_level == RDMFT) then
-      call rdmft_init(rdm, namespace, gr, st, geo, mc, fromScratch)
+      call rdmft_init(rdm, namespace, gr, st, mc, fromScratch)
       call scf_rdmft(rdm, namespace, gr, geo, st, ks, hm, outp, restart_dump)
-      call rdmft_end(rdm, gr)
+      call rdmft_end(rdm)
     else
       if(.not. fromScratch) then
         call scf_run(scfv, namespace, mc, gr, geo, st, ks, hm, outp, restart_load=restart_load, restart_dump=restart_dump)

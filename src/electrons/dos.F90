@@ -49,7 +49,6 @@ module dos_oct_m
   public ::                    &
     dos_t,                     &
     dos_init,                  &
-    dos_end,                   & 
     dos_write_dos
 
   type dos_t
@@ -147,17 +146,6 @@ contains
 
     POP_SUB(dos_init)
   end subroutine dos_init
-
-  ! ---------------------------------------------------------
-  subroutine dos_end(this)
-    type(dos_t), intent(inout)   :: this
-
-    PUSH_SUB(dos_end)
-
-
-    POP_SUB(dos_end)
-  end subroutine dos_end
-
 
   ! ---------------------------------------------------------
   subroutine dos_write_dos(this, dir, st, sb, geo, mesh, hm, namespace)

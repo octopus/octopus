@@ -241,7 +241,7 @@ contains
     case(OPTION__TESTMODE__CLOCK)
       call test_clock()
     case(OPTION__TESTMODE__LINEAR_SOLVER)
-      call test_linear_solver(param, namespace)
+      call test_linear_solver(namespace)
     case(OPTION__TESTMODE__CGAL)
       call test_cgal()
     case(OPTION__TESTMODE__DENSE_EIGENSOLVER)
@@ -271,8 +271,7 @@ contains
   end subroutine test_hartree
 
   ! ---------------------------------------------------------
-  subroutine test_linear_solver(param, namespace)
-    type(test_parameters_t), intent(in) :: param
+  subroutine test_linear_solver(namespace)
     type(namespace_t),       intent(in) :: namespace
 
     type(electrons_t), pointer :: sys
@@ -740,8 +739,6 @@ contains
     end do
 
     call test_prints_info_batch(sys%st, sys%gr, sys%st%group%psib(1, 1))
-
-    call exponential_end(te)
 
     call states_elec_deallocate_wfns(sys%st)
     SAFE_DEALLOCATE_P(sys)

@@ -46,20 +46,16 @@ module interaction_oct_m
   end type interaction_t
 
   abstract interface
-    logical function interaction_update(this, namespace, requested_time)
+    logical function interaction_update(this, requested_time)
       import interaction_t
       import clock_t
-      import namespace_t
       class(interaction_t),      intent(inout) :: this
-      type(namespace_t),         intent(in)    :: namespace
       class(clock_t),            intent(in)    :: requested_time
     end function interaction_update
 
-    subroutine interaction_calculate(this, namespace)
+    subroutine interaction_calculate(this)
       import interaction_t
-      import namespace_t
       class(interaction_t),      intent(inout) :: this
-      type(namespace_t),         intent(in)    :: namespace
     end subroutine interaction_calculate
   end interface
 

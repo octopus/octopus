@@ -337,10 +337,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine smear_fill_occupations(this, eigenvalues, occupations, kweights, nik, nst)
+  subroutine smear_fill_occupations(this, eigenvalues, occupations, nik, nst)
     type(smear_t),   intent(in)    :: this
     FLOAT,           intent(in)    :: eigenvalues(:,:) 
-    FLOAT,           intent(in)    :: kweights(:)
     FLOAT,           intent(inout) :: occupations(:,:)
     integer,         intent(in)    :: nik, nst
 

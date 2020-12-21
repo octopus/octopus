@@ -455,8 +455,6 @@ contains
       SAFE_DEALLOCATE_P(tr%tdsk)
       
     end select
-    
-    call exponential_end(tr%te)       ! clean propagator method
 
     POP_SUB(propagator_elec_end)
   end subroutine propagator_elec_end

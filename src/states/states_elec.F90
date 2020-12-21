@@ -1640,8 +1640,7 @@ contains
     call smear_find_fermi_energy(st%smear, namespace, st%eigenval, st%occ, st%qtot, &
       st%d%nik, st%nst, st%d%kweights)
 
-    call smear_fill_occupations(st%smear, st%eigenval, st%occ, st%d%kweights, &
-      st%d%nik, st%nst)
+    call smear_fill_occupations(st%smear, st%eigenval, st%occ, st%d%nik, st%nst)
         
     ! check if everything is OK
     charge = M_ZERO

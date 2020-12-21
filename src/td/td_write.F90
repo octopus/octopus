@@ -3266,12 +3266,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_mxll_init(writ, namespace, gr, st, hm, iter, dt)
+  subroutine td_write_mxll_init(writ, namespace, iter, dt)
     type(td_write_t),         intent(out)   :: writ
     type(namespace_t),        intent(in)    :: namespace
-    type(grid_t),             intent(inout) :: gr
-    type(states_mxll_t),      intent(inout) :: st
-    type(hamiltonian_mxll_t), intent(inout) :: hm
     integer,                  intent(in)    :: iter
     FLOAT,                    intent(in)    :: dt
 
@@ -3399,9 +3396,9 @@ contains
     PUSH_SUB(td_write_mxll_end)
 
     if(mpi_grp_is_root(mpi_world)) then    
-       do iout = 1, OUT_MAXWELL_MAX
-          if(writ%out(iout)%write)  call write_iter_end(writ%out(iout)%handle)
-       end do
+      do iout = 1, OUT_MAXWELL_MAX
+        if(writ%out(iout)%write)  call write_iter_end(writ%out(iout)%handle)
+      end do
     end if
 
     POP_SUB(td_write_mxll_end)
@@ -3428,7 +3425,7 @@ contains
 !        call td_write_maxwell_energy(writ%out(OUT_MAXWELL_ENERGY)%handle, hm, st, iter, &
 !                                             hm, geo%kinetic_energy)
 !      else
-        call td_write_maxwell_energy(writ%out(OUT_MAXWELL_ENERGY)%handle, hm, st, iter)
+        call td_write_maxwell_energy(writ%out(OUT_MAXWELL_ENERGY)%handle, hm, iter)
 !      end if
     end if
 
@@ -3441,27 +3438,27 @@ contains
     end if
 
     if (writ%out(OUT_E_FIELD_SURFACE_X)%write) then
-      call td_write_electric_field_box_surface(writ%out(OUT_E_FIELD_SURFACE_X)%handle, hm, st, 1, iter)
+      call td_write_electric_field_box_surface(writ%out(OUT_E_FIELD_SURFACE_X)%handle, st, 1, iter)
     end if
 
     if (writ%out(OUT_E_FIELD_SURFACE_Y)%write) then
-      call td_write_electric_field_box_surface(writ%out(OUT_E_FIELD_SURFACE_Y)%handle, hm, st, 2, iter)
+      call td_write_electric_field_box_surface(writ%out(OUT_E_FIELD_SURFACE_Y)%handle, st, 2, iter)
     end if
 
     if (writ%out(OUT_E_FIELD_SURFACE_Z)%write) then
-      call td_write_electric_field_box_surface(writ%out(OUT_E_FIELD_SURFACE_Z)%handle, hm, st, 3, iter)
+      call td_write_electric_field_box_surface(writ%out(OUT_E_FIELD_SURFACE_Z)%handle, st, 3, iter)
     end if
 
     if (writ%out(OUT_B_FIELD_SURFACE_X)%write) then
-      call td_write_magnetic_field_box_surface(writ%out(OUT_B_FIELD_SURFACE_X)%handle, hm, st, 1, iter)
+      call td_write_magnetic_field_box_surface(writ%out(OUT_B_FIELD_SURFACE_X)%handle, st, 1, iter)
     end if
 
     if (writ%out(OUT_B_FIELD_SURFACE_Y)%write) then
-      call td_write_magnetic_field_box_surface(writ%out(OUT_B_FIELD_SURFACE_Y)%handle, hm, st, 2, iter)
+      call td_write_magnetic_field_box_surface(writ%out(OUT_B_FIELD_SURFACE_Y)%handle, st, 2, iter)
     end if
 
     if (writ%out(OUT_B_FIELD_SURFACE_Z)%write) then
-      call td_write_magnetic_field_box_surface(writ%out(OUT_B_FIELD_SURFACE_Z)%handle, hm, st, 3, iter)
+      call td_write_magnetic_field_box_surface(writ%out(OUT_B_FIELD_SURFACE_Z)%handle, st, 3, iter)
     end if
 
     call profiling_out(prof)
@@ -3553,10 +3550,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_maxwell_energy(out_maxwell_energy, hm, st, iter)
+  subroutine td_write_maxwell_energy(out_maxwell_energy, hm, iter)
     type(c_ptr),                   intent(inout) :: out_maxwell_energy
     type(hamiltonian_mxll_t),      intent(in)    :: hm
-    type(states_mxll_t),           intent(in)    :: st
     integer,                       intent(in)    :: iter
 
     integer :: ii
@@ -3615,9 +3611,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_electric_field_box_surface(out_field_surf, hm, st, dim, iter)
+  subroutine td_write_electric_field_box_surface(out_field_surf, st, dim, iter)
     type(c_ptr),                   intent(inout) :: out_field_surf
-    type(hamiltonian_mxll_t),      intent(in)    :: hm
     type(states_mxll_t),           intent(in)    :: st
     integer,                       intent(in)    :: dim
     integer,                       intent(in)    :: iter
@@ -3696,9 +3691,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_magnetic_field_box_surface(out_field_surf, hm, st, dim, iter)
+  subroutine td_write_magnetic_field_box_surface(out_field_surf, st, dim, iter)
     type(c_ptr),                   intent(inout) :: out_field_surf
-    type(hamiltonian_mxll_t),      intent(in)    :: hm
     type(states_mxll_t),           intent(in)    :: st
     integer,                       intent(in)    :: dim
     integer,                       intent(in)    :: iter
