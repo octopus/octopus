@@ -154,8 +154,10 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
       call X(hamiltonian_elec_apply_single)(hm, namespace, gr%mesh, h_psi, psi2, ist, ik)
       ! h_psi = (H-shift)^2 psi
       do idim = 1, st%d%dim
-        h_psi(1:gr%mesh%np, idim) = psi2(1:gr%mesh%np, idim) - M_TWO*shift(ist,ik)*h_psi(1:gr%mesh%np, idim) &
-                                  + shift(ist,ik)**2*psi(1:gr%mesh%np, idim)
+        !$omp parallel do simd schedule(static)
+        do ip = 1, gr%mesh%np
+          h_psi(ip, idim) = psi2(ip, idim) - M_TWO*shift(ist,ik)*h_psi(ip, idim) + shift(ist,ik)**2*psi(ip, idim)
+        end do
       end do
     end if
 
@@ -177,6 +179,7 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
 
       ! PTA92, eq. 5.10
       do idim = 1, st%d%dim
+        !$omp parallel do simd schedule(static)
         do ip = 1, gr%mesh%np
           g(ip, idim) = h_psi(ip, idim) - st%eigenval(ist, ik)*psi(ip, idim)
         end do
@@ -286,6 +289,7 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
 
         ! PTA92, eq. 5.19
         do idim = 1, st%d%dim
+          !$omp parallel do simd schedule(static)
           do ip = 1, gr%mesh%np
             cg(ip, idim) = gamma*cg(ip, idim) + g0(ip, idim)
           end do
@@ -343,6 +347,7 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
         ! Hartree term
         tmp = M_TWO/cg0
         do idim = 1, st%d%dim
+          !$omp parallel do simd schedule(static)
           do ip = 1, gr%mesh%np
             chi(ip, idim) = tmp * R_REAL(R_CONJ(cg(ip, idim)) * psi(ip, idim))
           end do
@@ -397,6 +402,7 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
 
       ! PTA92, eq. 5.38
       do idim = 1, st%d%dim
+        !$omp parallel do simd schedule(static)
         do ip = 1, gr%mesh%np
           psi(ip, idim) = a0*psi(ip, idim) + b0*cg(ip, idim)
           h_psi(ip, idim) = a0*h_psi(ip, idim) + b0*h_cg(ip, idim)
