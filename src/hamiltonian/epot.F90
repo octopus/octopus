@@ -133,7 +133,7 @@ module epot_oct_m
     logical,     private :: global_force
     type(tdf_t), private :: global_force_function
 
-    logical              :: nlcc   !< does any species have non-local core corrections?
+    logical              :: nlcc = .false.   !< does any species have non-local core corrections?
   end type epot_t
 
 contains
