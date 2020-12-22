@@ -1340,7 +1340,8 @@ contains
 
     integer :: is, ll, mm, add_lm
     character(len=120) :: aux
-    FLOAT, allocatable :: ionic_dipole(:), multipole(:,:)
+    FLOAT :: ionic_dipole(MAX_DIM)
+    FLOAT, allocatable :: multipole(:,:)
     type(mpi_grp_t)    :: mpi_grp_
 
     PUSH_SUB(td_write_multipole_r)
@@ -1403,7 +1404,6 @@ contains
       call td_write_print_header_end(out_multip)
     end if
 
-    SAFE_ALLOCATE(ionic_dipole(1:gr%sb%dim))
     SAFE_ALLOCATE(multipole(1:(lmax + 1)**2, 1:st%d%nspin))
     ionic_dipole(:) = M_ZERO
     multipole   (:,:) = M_ZERO
@@ -1413,7 +1413,7 @@ contains
     end do
 
     if (lmax > 0) then
-      call geometry_dipole(geo, ionic_dipole)
+      ionic_dipole = geometry_dipole(geo)
       do is = 1, st%d%nspin
         multipole(2:gr%sb%dim+1, is) = -ionic_dipole(1:gr%sb%dim)/st%d%nspin - multipole(2:gr%sb%dim+1, is)
       end do
@@ -1433,7 +1433,6 @@ contains
       call write_iter_nl(out_multip)
     end if
 
-    SAFE_DEALLOCATE_A(ionic_dipole)
     SAFE_DEALLOCATE_A(multipole)
     POP_SUB(td_write_multipole_r)
   end subroutine td_write_multipole_r
@@ -2433,7 +2432,7 @@ contains
       call comm_allreduce(st%dom_st_kpt_mpi_grp%comm, projections)
 
       ! n_dip is not defined for more than space%dim
-      call geometry_dipole(geo, n_dip)
+      n_dip = geometry_dipole(geo)
       do ik = 1, st%d%nik
         do ist = gs_st%st_start, st%nst
           do uist = gs_st%st_start, gs_st%st_end

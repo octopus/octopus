@@ -445,9 +445,8 @@ contains
   end function geometry_species_time_dependent
 
   ! ---------------------------------------------------------
-  subroutine geometry_val_charge(geo, val_charge)
+  FLOAT function geometry_val_charge(geo) result(val_charge)
     type(geometry_t), intent(in) :: geo
-    FLOAT,            intent(out) :: val_charge
 
     integer :: iatom
 
@@ -459,18 +458,18 @@ contains
     end do
 
     POP_SUB(geometry_val_charge)
-  end subroutine geometry_val_charge
+  end function geometry_val_charge
 
   ! ---------------------------------------------------------
-  subroutine geometry_dipole(geo, dipole)
+  function geometry_dipole(geo) result(dipole)
     type(geometry_t), intent(in)  :: geo
-    FLOAT,            intent(out) :: dipole(:)
+    FLOAT :: dipole(MAX_DIM)
 
     integer :: ia
 
     PUSH_SUB(geometry_dipole)
 
-    dipole(1:geo%space%dim) = M_ZERO
+    dipole = M_ZERO
     do ia = 1, geo%natoms
       dipole(1:geo%space%dim) = dipole(1:geo%space%dim) + &
         species_zval(geo%atom(ia)%species)*geo%atom(ia)%x(1:geo%space%dim)
@@ -478,7 +477,7 @@ contains
     dipole = P_PROTON_CHARGE*dipole
 
     POP_SUB(geometry_dipole)
-  end subroutine geometry_dipole
+  end function geometry_dipole
 
   ! ---------------------------------------------------------
   function geometry_center_of_mass(geo, pseudo) result(pos)

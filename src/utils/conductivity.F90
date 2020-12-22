@@ -60,7 +60,7 @@
     integer :: skip
     logical :: from_forces
     character(len=120) :: header
-    FLOAT :: excess_charge, val_charge, qtot    
+    FLOAT :: excess_charge, qtot
 
     ! Initialize stuff
     call global_init(is_serial = .true.) 
@@ -115,8 +115,7 @@
 
     !We need the total charge
     call parse_variable(global_namespace, 'ExcessCharge', M_ZERO, excess_charge)
-    call geometry_val_charge(geo, val_charge)
-    qtot = -(val_charge + excess_charge)
+    qtot = -(geometry_val_charge(geo) + excess_charge)
 
     if(from_forces) then
 
