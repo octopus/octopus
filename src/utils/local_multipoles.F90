@@ -719,7 +719,6 @@ contains
     integer             :: id, ip, iunit, ierr
     type(basins_t)      :: basins
     FLOAT, allocatable  :: ff2(:,:)
-    logical             :: extra_write
     character(len=MAX_PATH_LEN)   :: filename, base_folder, folder, frmt
     character(len=140), allocatable  :: lines(:)
     type(restart_t)     :: restart
@@ -731,18 +730,7 @@ contains
     message(1) = 'Info: Assigning mesh points inside each local domain'
     call messages_info(1)
 
-    !TODO: replace this with the Debug = info flag
-    !%Variable LDExtraWrite
-    !%Type logical
-    !%Default false
-    !%Section Utilities::oct-local_multipoles
-    !%Description
-    !% Writes additional information to files, when computing local multipoles. For
-    !% example, it writes coordinates of each local domain.
-    !%End
-    call parse_variable(global_namespace, 'LDExtraWrite', .false., extra_write)
-    if (extra_write) then
-      call messages_obsolete_variable(namespace, 'LDOutputHow', 'LDOutputFormat')
+    if (debug%info) then
       call parse_variable(global_namespace, 'LDOutputFormat', 0, how)
       if (.not.varinfo_valid_option('OutputFormat', how, is_flag=.true.)) then
         call messages_input_error(global_namespace, 'LDOutputFormat')
@@ -765,7 +753,7 @@ contains
       call basins_analyze(basins, mesh, ff2(:,1), ff2, BaderThreshold)
       call bader_union_inside(basins, mesh, geo, nd, loc_domains)
 
-      if (extra_write) then
+      if (debug%info) then
         filename = 'basinsmap'
         call dio_function_output(how, trim('local.general'), trim(filename), global_namespace, mesh, &
           DBLE(basins%map(1:mesh%np)), unit_one, ierr, geo = geo)
@@ -782,7 +770,7 @@ contains
       call box_union_inside_vec(loc_domains(id)%domain, mesh%np, mesh%x, loc_domains(id)%inside)
     end do
 
-    if (extra_write) then
+    if (debug%info) then
       ! Write extra information about domains
       SAFE_ALLOCATE(dble_domain_map(1:mesh%np))
       SAFE_ALLOCATE(domain_mesh(1:mesh%np))
