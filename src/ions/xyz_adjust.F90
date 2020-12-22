@@ -21,7 +21,6 @@
 module xyz_adjust_oct_m
   use global_oct_m
   use geometry_oct_m
-  use lalg_adv_oct_m
   use messages_oct_m
   use namespace_oct_m
   use parser_oct_m
@@ -34,8 +33,7 @@ module xyz_adjust_oct_m
 
   private
   public :: &
-    xyz_adjust_it,  &
-    geometry_rotate
+    xyz_adjust_it
 
 contains
 
@@ -121,23 +119,23 @@ contains
 
       select case(axis_type)
       case(NONE, INERTIA, PSEUDO)
-        call find_center_of_mass(geo, center, pseudo = (axis_type==PSEUDO))
+        center = geometry_center_of_mass(geo, pseudo = (axis_type==PSEUDO))
 
         write(message(1),'(3a,99f15.6)') 'Center of mass [', trim(units_abbrev(units_out%length)), '] = ', &
           (units_from_atomic(units_out%length, center(idir)), idir = 1, geo%space%dim)
         call messages_info(1)
 
-        call translate(geo, center)
-        call axis_inertia(geo, x1, x2, pseudo = (axis_type==PSEUDO))
+        call geometry_translate(geo, center)
+        call geometry_axis_inertia(geo, x1, x2, pseudo = (axis_type==PSEUDO))
       case(LARGE)
-        call find_center(geo, center)
+        center = geometry_center(geo)
 
         write(message(1),'(3a,99f15.6)') 'Center [', trim(units_abbrev(units_out%length)), '] = ', &
           (units_from_atomic(units_out%length, center(idir)), idir = 1, geo%space%dim)
         call messages_info(1)
 
-        call translate(geo, center)
-        call axis_large(geo, x1, x2)
+        call geometry_translate(geo, center)
+        call geometry_axis_large(geo, x1, x2)
       case default
         write(message(1), '(a,i2,a)') 'AxisType = ', axis_type, ' not known by Octopus.'
         call messages_fatal(1, namespace=namespace)
@@ -152,298 +150,11 @@ contains
     end if
 
     ! recenter
-    call find_center(geo, center)
-    call translate(geo, center)
+    center = geometry_center(geo)
+    call geometry_translate(geo, center)
 
     POP_SUB(xyz_adjust_it)
   end subroutine xyz_adjust_it
-
-
-  ! ---------------------------------------------------------
-  subroutine find_center(geo, x)
-    type(geometry_t), intent(in) :: geo
-    FLOAT, intent(out) :: x(MAX_DIM)
-
-    FLOAT :: xmin(MAX_DIM), xmax(MAX_DIM)
-    integer  :: i, j
-
-    PUSH_SUB(find_center)
-
-    xmin =  CNST(1e10)
-    xmax = -CNST(1e10)
-    do i = 1, geo%natoms
-      do j = 1, geo%space%dim
-        if(geo%atom(i)%x(j) > xmax(j)) xmax(j) = geo%atom(i)%x(j)
-        if(geo%atom(i)%x(j) < xmin(j)) xmin(j) = geo%atom(i)%x(j)
-      end do
-    end do
-
-    x = M_ZERO
-    x(1:geo%space%dim) = (xmax(1:geo%space%dim) + xmin(1:geo%space%dim))/M_TWO
-
-    POP_SUB(find_center)
-  end subroutine find_center
-
-
-  ! ---------------------------------------------------------
-  subroutine find_center_of_mass(geo, x, pseudo)
-    type(geometry_t), intent(in) :: geo
-    FLOAT,  intent(out) :: x(MAX_DIM)
-    logical, intent(in) :: pseudo
-
-    FLOAT :: sm, m
-    integer  :: i
-
-    PUSH_SUB(find_center_of_mass)
-
-    x = M_ZERO
-    m = M_ONE
-    sm = M_ZERO
-    do i = 1, geo%natoms
-      if(.not.pseudo) m = species_mass(geo%atom(i)%species)
-      sm = sm + m
-      x = x + m * geo%atom(i)%x
-    end do
-
-    x = x / sm
-
-    POP_SUB(find_center_of_mass)
-  end subroutine find_center_of_mass
-
-
-  ! ---------------------------------------------------------
-  subroutine axis_large(geo, x, x2)
-    type(geometry_t), intent(in) :: geo
-    FLOAT, intent(out) :: x(MAX_DIM), x2(MAX_DIM)
-
-    integer  :: i, j
-    FLOAT :: rmax, r, r2
-
-    PUSH_SUB(axis_large)
-
-    ! first get the further apart atoms
-    rmax = -CNST(1e10)
-    do i = 1, geo%natoms
-      do j = 1, geo%natoms/2 + 1
-        r = sqrt(sum((geo%atom(i)%x(1:geo%space%dim)-geo%atom(j)%x(1:geo%space%dim))**2))
-        if(r > rmax) then
-          rmax = r
-          x = geo%atom(i)%x - geo%atom(j)%x
-        end if
-      end do
-    end do
-    x  = x /sqrt(sum(x(1:geo%space%dim)**2))
-
-    ! now let us find out what is the second most important axis
-    rmax = -CNST(1e10)
-    do i = 1, geo%natoms
-      r2 = sum(x(1:geo%space%dim) * geo%atom(i)%x(1:geo%space%dim))
-      r = sqrt(sum((geo%atom(i)%x(1:geo%space%dim) - r2*x(1:geo%space%dim))**2))
-      if(r > rmax) then
-        rmax = r
-        x2 = geo%atom(i)%x - r2*x
-      end if
-    end do
-
-    POP_SUB(axis_large)
-  end subroutine axis_large
-
-
-  ! ---------------------------------------------------------
-  !> This subroutine assumes that the origin of the coordinates is the
-  !! center of mass of the system
-  subroutine axis_inertia(geo, x, x2, pseudo)
-    type(geometry_t), intent(in) :: geo
-    FLOAT,  intent(out) :: x(MAX_DIM), x2(MAX_DIM)
-    logical, intent(in) :: pseudo
-
-    FLOAT :: m, tinertia(MAX_DIM, MAX_DIM), eigenvalues(MAX_DIM)
-    integer :: ii, jj, iatom
-    type(unit_t) :: unit
-
-    PUSH_SUB(axis_inertia)
-
-    ! first calculate the inertia tensor
-    tinertia = M_ZERO
-    m = M_ONE
-    do iatom = 1, geo%natoms
-      if(.not.pseudo) m = species_mass(geo%atom(iatom)%species)
-      do ii = 1, geo%space%dim
-        do jj = 1, geo%space%dim
-          tinertia(ii, jj) = tinertia(ii, jj) - m*geo%atom(iatom)%x(ii)*geo%atom(iatom)%x(jj)
-        end do
-        tinertia(ii, ii) = tinertia(ii, ii) + m*sum(geo%atom(iatom)%x(:)**2)
-      end do
-    end do
-
-    unit = units_out%length**2
-    ! note: we always use amu for atomic masses, so no unit conversion to/from atomic is needed.
-    if(pseudo) then
-      write(message(1),'(a)') 'Moment of pseudo-inertia tensor [' // trim(units_abbrev(unit)) // ']'
-    else
-      write(message(1),'(a)') 'Moment of inertia tensor [amu*' // trim(units_abbrev(unit)) // ']'
-    end if
-    call messages_info(1)
-    call output_tensor(stdout, tinertia, geo%space%dim, unit, write_average = .true.)
-
-    call lalg_eigensolve(geo%space%dim, tinertia, eigenvalues)
-
-    write(message(1),'(a,6f25.6)') 'Eigenvalues: ', &
-      (units_from_atomic(unit, eigenvalues(jj)), jj = 1, geo%space%dim)
-    call messages_info(1)
-
-    ! make a choice to fix the sign of the axis.
-    do ii = 1, 2
-      jj = maxloc(abs(tinertia(:,ii)), dim = 1)
-      if(tinertia(jj,ii) < M_ZERO) tinertia(:,ii) = -tinertia(:,ii)
-    end do
-    x  = tinertia(:,1)
-    x2 = tinertia(:,2)
-
-    POP_SUB(axis_inertia)
-  end subroutine axis_inertia
-
-
-  ! ---------------------------------------------------------
-  subroutine translate(geo, x)
-    type(geometry_t), intent(inout) :: geo
-    FLOAT,            intent(in)    :: x(MAX_DIM)
-
-    integer  :: iatom
-
-    PUSH_SUB(translate)
-
-    do iatom = 1, geo%natoms
-      geo%atom(iatom)%x = geo%atom(iatom)%x - x
-    end do
-    do iatom = 1, geo%ncatoms
-      geo%catom(iatom)%x = geo%catom(iatom)%x - x
-    end do
-
-    POP_SUB(translate)
-  end subroutine translate
-
-
-  ! ---------------------------------------------------------
-  subroutine geometry_rotate(geo, namespace, from, from2, to)
-    type(geometry_t),  intent(inout) :: geo
-    type(namespace_t), intent(in)    :: namespace
-    FLOAT,             intent(in)    :: from(MAX_DIM)   !< assumed to be normalized
-    FLOAT,             intent(in)    :: from2(MAX_DIM)  !< assumed to be normalized
-    FLOAT,             intent(in)    :: to(MAX_DIM)     !< assumed to be normalized
-
-    integer :: iatom, idim
-    FLOAT :: m1(MAX_DIM, MAX_DIM), m2(MAX_DIM, MAX_DIM)
-    FLOAT :: m3(MAX_DIM, MAX_DIM), f2(MAX_DIM), per(MAX_DIM)
-    FLOAT :: alpha, r
-
-    PUSH_SUB(geometry_rotate)
-
-    if(geo%space%dim /= 3) &
-      call messages_not_implemented("geometry_rotate in other than 3 dimensions", namespace=namespace)
-
-    ! initialize matrices
-    m1 = M_ZERO
-    do idim = 1, MAX_DIM
-      m1(idim, idim) = M_ONE
-    end do
-
-    ! rotate the to-axis to the z-axis
-    if(to(2) /= M_ZERO) then
-      alpha = atan2(to(2), to(1))
-      call rotate(m1, alpha, 3)
-    end if
-    alpha = atan2(sqrt(to(1)**2 + to(2)**2), to(3))
-    call rotate(m1, -alpha, 2)
-
-    ! get perpendicular to z and from
-    f2 = matmul(m1, from)
-    per(1) = -f2(2)
-    per(2) =  f2(1)
-    per(3) = M_ZERO
-    r = sqrt(sum(per(1:3)**2))
-    if(r > M_ZERO) then
-      per(1:3) = per(1:3)/r
-    else
-      per(2) = M_ONE
-    end if
-
-    ! rotate perpendicular axis to the y-axis
-    m2 = M_ZERO; m2(1,1) = M_ONE; m2(2,2) = M_ONE; m2(3,3) = M_ONE
-    alpha = atan2(per(1), per(2))
-    call rotate(m2, -alpha, 3)
-
-    ! rotate from => to (around the y-axis)
-    m3 = M_ZERO; m3(1,1) = M_ONE; m3(2,2) = M_ONE; m3(3,3) = M_ONE
-    alpha = acos(sum(from*to))
-    call rotate(m3, -alpha, 2)
-
-    ! join matrices
-    m2 = matmul(transpose(m2), matmul(m3, m2))
-
-    ! rotate around the z-axis to get the second axis
-    per = matmul(m2, matmul(m1, from2))
-    alpha = atan2(per(1), per(2))
-    call rotate(m2, -alpha, 3) ! second axis is now y
-
-    ! get combined transformation
-    m1 = matmul(transpose(m1), matmul(m2, m1))
-
-    ! now transform the coordinates
-    ! it is written in this way to avoid what I consider a bug in the Intel compiler
-    do iatom = 1, geo%natoms
-      f2 = geo%atom(iatom)%x
-      geo%atom(iatom)%x = matmul(m1, f2)
-    end do
-
-    do iatom = 1, geo%ncatoms
-      f2 = geo%catom(iatom)%x
-      geo%catom(iatom)%x = matmul(m1, f2)
-    end do
-
-    POP_SUB(geometry_rotate)
-  end subroutine geometry_rotate
-
-
-  ! ---------------------------------------------------------
-  subroutine rotate(m, angle, dir)
-    FLOAT,   intent(inout) :: m(MAX_DIM, MAX_DIM)
-    FLOAT,   intent(in)    :: angle
-    integer, intent(in)    :: dir
-
-    FLOAT :: aux(MAX_DIM, MAX_DIM), ca, sa
-
-    PUSH_SUB(rotate)
-
-    ca = cos(angle)
-    sa = sin(angle)
-
-    aux = M_ZERO
-    select case (dir)
-    case (1)
-      aux(1, 1) = M_ONE
-      aux(2, 2) = ca
-      aux(3, 3) = ca
-      aux(2, 3) = sa
-      aux(3, 2) = -sa
-    case (2)
-      aux(2, 2) = M_ONE
-      aux(1, 1) = ca
-      aux(3, 3) = ca
-      aux(1, 3) = sa
-      aux(3, 1) = -sa
-    case (3)
-      aux(3, 3) = M_ONE
-      aux(1, 1) = ca
-      aux(2, 2) = ca
-      aux(1, 2) = sa
-      aux(2, 1) = -sa
-    end select
-
-    m = matmul(aux, m)
-
-    POP_SUB(rotate)
-  end subroutine rotate
 
 end module xyz_adjust_oct_m
 

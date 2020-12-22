@@ -24,6 +24,7 @@ module geometry_oct_m
   use distributed_oct_m
   use global_oct_m
   use io_oct_m
+  use lalg_adv_oct_m
   use messages_oct_m
   use multicomm_oct_m
   use mpi_oct_m
@@ -35,6 +36,7 @@ module geometry_oct_m
   use species_oct_m
   use unit_oct_m
   use unit_system_oct_m
+  use utils_oct_m
   use varinfo_oct_m
 
   implicit none
@@ -48,8 +50,6 @@ module geometry_oct_m
     geometry_end,                    &
     geometry_dipole,                 &
     geometry_min_distance,           &
-    cm_pos,                          &
-    cm_vel,                          &
     geometry_write_xyz,              &
     geometry_read_xyz,               &
     geometry_val_charge,             &
@@ -57,7 +57,14 @@ module geometry_oct_m
     geometry_grid_defaults_info,     &
     geometry_species_time_dependent, &
     geometry_get_positions,          &
-    geometry_set_positions
+    geometry_set_positions,          &
+    geometry_center_of_mass,         &
+    geometry_center_of_mass_vel,     &
+    geometry_center,                 &
+    geometry_axis_large,             &
+    geometry_axis_inertia,           &
+    geometry_translate,              &
+    geometry_rotate
 
   type geometry_t
     ! Components are public by default
@@ -367,50 +374,6 @@ contains
   end function geometry_min_distance
 
   ! ---------------------------------------------------------
-  subroutine cm_pos(geo, pos)
-    type(geometry_t), intent(in)  :: geo
-    FLOAT,            intent(out) :: pos(:)
-
-    FLOAT :: mass
-    integer :: ia
-
-    PUSH_SUB(cm_pos)
-
-    pos = M_ZERO
-    mass = M_ZERO
-    do ia = 1, geo%natoms
-      pos = pos + species_mass(geo%atom(ia)%species) * geo%atom(ia)%x
-      mass = mass + species_mass(geo%atom(ia)%species)
-    end do
-    pos = pos/mass
-
-    POP_SUB(cm_pos)
-  end subroutine cm_pos
-
-
-  ! ---------------------------------------------------------
-  subroutine cm_vel(geo, vel)
-    type(geometry_t), intent(in)  :: geo
-    FLOAT,            intent(out) :: vel(:)
-
-    FLOAT :: mass
-    integer :: iatom
-
-    PUSH_SUB(cm_vel)
-
-    vel = M_ZERO
-    mass = M_ZERO
-    do iatom = 1, geo%natoms
-      vel = vel + species_mass(geo%atom(iatom)%species) * geo%atom(iatom)%v
-      mass = mass + species_mass(geo%atom(iatom)%species)
-    end do
-    vel = vel / mass
-
-    POP_SUB(cm_vel)
-  end subroutine cm_vel
-
-
-  ! ---------------------------------------------------------
   subroutine geometry_write_xyz(geo, fname, namespace, append, comment)
     type(geometry_t),    intent(in) :: geo
     character(len=*),    intent(in) :: fname
@@ -618,6 +581,309 @@ contains
     POP_SUB(geometry_get_positions)
   end subroutine geometry_set_positions
 
+  ! ---------------------------------------------------------
+  function geometry_center_of_mass(geo, pseudo) result(pos)
+    type(geometry_t),  intent(in) :: geo
+    logical, optional, intent(in) :: pseudo !< calculate center considering all species to have equal mass.
+    FLOAT                         :: pos(MAX_DIM)
+
+    FLOAT :: mass, total_mass
+    integer :: ia
+
+    PUSH_SUB(geometry_center_of_mass)
+
+    pos = M_ZERO
+    total_mass = M_ZERO
+    mass = M_ONE
+    do ia = 1, geo%natoms
+      if (.not. optional_default(pseudo, .false.)) then
+        mass = species_mass(geo%atom(ia)%species)
+      end if
+      pos(1:geo%space%dim) = pos(1:geo%space%dim) + mass*geo%atom(ia)%x(1:geo%space%dim)
+      total_mass = total_mass + mass
+    end do
+    pos(1:geo%space%dim) = pos(1:geo%space%dim)/total_mass
+
+    POP_SUB(geometry_center_of_mass)
+  end function geometry_center_of_mass
+
+  ! ---------------------------------------------------------
+  function geometry_center_of_mass_vel(geo) result(vel)
+    type(geometry_t), intent(in) :: geo
+    FLOAT                        :: vel(MAX_DIM)
+
+    FLOAT :: mass, total_mass
+    integer :: iatom
+
+    PUSH_SUB(geometry_center_of_mass_vel)
+
+    vel = M_ZERO
+    total_mass = M_ZERO
+    do iatom = 1, geo%natoms
+      mass = species_mass(geo%atom(iatom)%species)
+      total_mass = total_mass + mass
+      vel(1:geo%space%dim) = vel(1:geo%space%dim) + mass*geo%atom(iatom)%v(1:geo%space%dim)
+    end do
+    vel(1:geo%space%dim) = vel(1:geo%space%dim)/total_mass
+
+    POP_SUB(geometry_center_of_mass_vel)
+  end function geometry_center_of_mass_vel
+
+  ! ---------------------------------------------------------
+  function geometry_center(geo) result(pos)
+    type(geometry_t), intent(in) :: geo
+    FLOAT                        :: pos(MAX_DIM)
+
+    FLOAT :: xmin(MAX_DIM), xmax(MAX_DIM)
+    integer  :: i, j
+
+    PUSH_SUB(geometry_center)
+
+    xmin =  CNST(1e10)
+    xmax = -CNST(1e10)
+    do i = 1, geo%natoms
+      do j = 1, geo%space%dim
+        if(geo%atom(i)%x(j) > xmax(j)) xmax(j) = geo%atom(i)%x(j)
+        if(geo%atom(i)%x(j) < xmin(j)) xmin(j) = geo%atom(i)%x(j)
+      end do
+    end do
+
+    pos = M_ZERO
+    pos(1:geo%space%dim) = (xmax(1:geo%space%dim) + xmin(1:geo%space%dim))/M_TWO
+
+    POP_SUB(geometry_center)
+  end function geometry_center
+
+  ! ---------------------------------------------------------
+  subroutine geometry_axis_large(geo, x, x2)
+    type(geometry_t), intent(in) :: geo
+    FLOAT, intent(out) :: x(MAX_DIM), x2(MAX_DIM)
+
+    integer  :: i, j
+    FLOAT :: rmax, r, r2
+
+    PUSH_SUB(geometry_axis_large)
+
+    ! first get the further apart atoms
+    rmax = -CNST(1e10)
+    do i = 1, geo%natoms
+      do j = 1, geo%natoms/2 + 1
+        r = sqrt(sum((geo%atom(i)%x(1:geo%space%dim)-geo%atom(j)%x(1:geo%space%dim))**2))
+        if(r > rmax) then
+          rmax = r
+          x = geo%atom(i)%x - geo%atom(j)%x
+        end if
+      end do
+    end do
+    x  = x /sqrt(sum(x(1:geo%space%dim)**2))
+
+    ! now let us find out what is the second most important axis
+    rmax = -CNST(1e10)
+    do i = 1, geo%natoms
+      r2 = sum(x(1:geo%space%dim) * geo%atom(i)%x(1:geo%space%dim))
+      r = sqrt(sum((geo%atom(i)%x(1:geo%space%dim) - r2*x(1:geo%space%dim))**2))
+      if(r > rmax) then
+        rmax = r
+        x2 = geo%atom(i)%x - r2*x
+      end if
+    end do
+
+    POP_SUB(geometry_axis_large)
+  end subroutine geometry_axis_large
+
+  ! ---------------------------------------------------------
+  !> This subroutine assumes that the origin of the coordinates is the
+  !! center of mass of the system
+  subroutine geometry_axis_inertia(geo, x, x2, pseudo)
+    type(geometry_t), intent(in) :: geo
+    FLOAT,   intent(out) :: x(MAX_DIM), x2(MAX_DIM)
+    logical, intent(in)  :: pseudo !< calculate axis considering all species to have equal mass.
+
+    FLOAT :: mass, tinertia(MAX_DIM, MAX_DIM), eigenvalues(MAX_DIM)
+    integer :: ii, jj, iatom
+    type(unit_t) :: unit
+
+    PUSH_SUB(geometry_axis_inertia)
+
+    ! first calculate the inertia tensor
+    tinertia = M_ZERO
+    mass = M_ONE
+    do iatom = 1, geo%natoms
+      if(.not.pseudo) mass = species_mass(geo%atom(iatom)%species)
+      do ii = 1, geo%space%dim
+        do jj = 1, geo%space%dim
+          tinertia(ii, jj) = tinertia(ii, jj) - mass*geo%atom(iatom)%x(ii)*geo%atom(iatom)%x(jj)
+        end do
+        tinertia(ii, ii) = tinertia(ii, ii) + mass*sum(geo%atom(iatom)%x(:)**2)
+      end do
+    end do
+
+    unit = units_out%length**2
+    ! note: we always use amu for atomic masses, so no unit conversion to/from atomic is needed.
+    if(pseudo) then
+      write(message(1),'(a)') 'Moment of pseudo-inertia tensor [' // trim(units_abbrev(unit)) // ']'
+    else
+      write(message(1),'(a)') 'Moment of inertia tensor [amu*' // trim(units_abbrev(unit)) // ']'
+    end if
+    call messages_info(1)
+    call output_tensor(stdout, tinertia, geo%space%dim, unit, write_average = .true.)
+
+    call lalg_eigensolve(geo%space%dim, tinertia, eigenvalues)
+
+    write(message(1),'(a,6f25.6)') 'Eigenvalues: ', &
+      (units_from_atomic(unit, eigenvalues(jj)), jj = 1, geo%space%dim)
+    call messages_info(1)
+
+    ! make a choice to fix the sign of the axis.
+    do ii = 1, 2
+      jj = maxloc(abs(tinertia(:,ii)), dim = 1)
+      if(tinertia(jj,ii) < M_ZERO) tinertia(:,ii) = -tinertia(:,ii)
+    end do
+    x  = tinertia(:,1)
+    x2 = tinertia(:,2)
+
+    POP_SUB(geometry_axis_inertia)
+  end subroutine geometry_axis_inertia
+
+  ! ---------------------------------------------------------
+  subroutine geometry_translate(geo, x)
+    type(geometry_t), intent(inout) :: geo
+    FLOAT,            intent(in)    :: x(MAX_DIM)
+
+    integer  :: iatom
+
+    PUSH_SUB(geometry_translate)
+
+    do iatom = 1, geo%natoms
+      geo%atom(iatom)%x(1:geo%space%dim) = geo%atom(iatom)%x(1:geo%space%dim) - x(1:geo%space%dim)
+    end do
+    do iatom = 1, geo%ncatoms
+      geo%catom(iatom)%x(1:geo%space%dim) = geo%catom(iatom)%x(1:geo%space%dim) - x(1:geo%space%dim)
+    end do
+
+    POP_SUB(geometry_translate)
+  end subroutine geometry_translate
+
+  ! ---------------------------------------------------------
+  subroutine geometry_rotate(geo, namespace, from, from2, to)
+    type(geometry_t),  intent(inout) :: geo
+    type(namespace_t), intent(in)    :: namespace
+    FLOAT,             intent(in)    :: from(MAX_DIM)   !< assumed to be normalized
+    FLOAT,             intent(in)    :: from2(MAX_DIM)  !< assumed to be normalized
+    FLOAT,             intent(in)    :: to(MAX_DIM)     !< assumed to be normalized
+
+    integer :: iatom, idim
+    FLOAT :: m1(MAX_DIM, MAX_DIM), m2(MAX_DIM, MAX_DIM)
+    FLOAT :: m3(MAX_DIM, MAX_DIM), f2(MAX_DIM), per(MAX_DIM)
+    FLOAT :: alpha, r
+
+    PUSH_SUB(geometry_rotate)
+
+    if(geo%space%dim /= 3) &
+      call messages_not_implemented("geometry_rotate in other than 3 dimensions", namespace=namespace)
+
+    ! initialize matrices
+    m1 = M_ZERO
+    do idim = 1, MAX_DIM
+      m1(idim, idim) = M_ONE
+    end do
+
+    ! rotate the to-axis to the z-axis
+    if(to(2) /= M_ZERO) then
+      alpha = atan2(to(2), to(1))
+      call rotate(m1, alpha, 3)
+    end if
+    alpha = atan2(sqrt(to(1)**2 + to(2)**2), to(3))
+    call rotate(m1, -alpha, 2)
+
+    ! get perpendicular to z and from
+    f2 = matmul(m1, from)
+    per(1) = -f2(2)
+    per(2) =  f2(1)
+    per(3) = M_ZERO
+    r = sqrt(sum(per(1:3)**2))
+    if(r > M_ZERO) then
+      per(1:3) = per(1:3)/r
+    else
+      per(2) = M_ONE
+    end if
+
+    ! rotate perpendicular axis to the y-axis
+    m2 = M_ZERO; m2(1,1) = M_ONE; m2(2,2) = M_ONE; m2(3,3) = M_ONE
+    alpha = atan2(per(1), per(2))
+    call rotate(m2, -alpha, 3)
+
+    ! rotate from => to (around the y-axis)
+    m3 = M_ZERO; m3(1,1) = M_ONE; m3(2,2) = M_ONE; m3(3,3) = M_ONE
+    alpha = acos(sum(from*to))
+    call rotate(m3, -alpha, 2)
+
+    ! join matrices
+    m2 = matmul(transpose(m2), matmul(m3, m2))
+
+    ! rotate around the z-axis to get the second axis
+    per = matmul(m2, matmul(m1, from2))
+    alpha = atan2(per(1), per(2))
+    call rotate(m2, -alpha, 3) ! second axis is now y
+
+    ! get combined transformation
+    m1 = matmul(transpose(m1), matmul(m2, m1))
+
+    ! now transform the coordinates
+    ! it is written in this way to avoid what I consider a bug in the Intel compiler
+    do iatom = 1, geo%natoms
+      f2 = geo%atom(iatom)%x
+      geo%atom(iatom)%x = matmul(m1, f2)
+    end do
+
+    do iatom = 1, geo%ncatoms
+      f2 = geo%catom(iatom)%x
+      geo%catom(iatom)%x = matmul(m1, f2)
+    end do
+
+    POP_SUB(geometry_rotate)
+  contains
+    ! ---------------------------------------------------------
+    subroutine rotate(m, angle, dir)
+      FLOAT,   intent(inout) :: m(MAX_DIM, MAX_DIM)
+      FLOAT,   intent(in)    :: angle
+      integer, intent(in)    :: dir
+
+      FLOAT :: aux(MAX_DIM, MAX_DIM), ca, sa
+
+      PUSH_SUB(geometry_rotate.rotate)
+
+      ca = cos(angle)
+      sa = sin(angle)
+
+      aux = M_ZERO
+      select case (dir)
+      case (1)
+        aux(1, 1) = M_ONE
+        aux(2, 2) = ca
+        aux(3, 3) = ca
+        aux(2, 3) = sa
+        aux(3, 2) = -sa
+      case (2)
+        aux(2, 2) = M_ONE
+        aux(1, 1) = ca
+        aux(3, 3) = ca
+        aux(1, 3) = sa
+        aux(3, 1) = -sa
+      case (3)
+        aux(3, 3) = M_ONE
+        aux(1, 1) = ca
+        aux(2, 2) = ca
+        aux(1, 2) = sa
+        aux(2, 1) = -sa
+      end select
+
+      m = matmul(aux, m)
+
+      POP_SUB(rotate)
+    end subroutine rotate
+
+  end subroutine geometry_rotate
 
 end module geometry_oct_m
 
