@@ -134,7 +134,7 @@ contains
         
         type(alloc_cache_t),   intent(inout) :: alloc_cache
         integer(8),            intent(in)    :: size
-        integer,               intent(in)    :: found
+        integer,               intent(out)   :: found
 #ifdef HAVE_OPENCL
         type(cl_mem),          intent(out)   :: loc
 #else
