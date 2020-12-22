@@ -43,8 +43,6 @@ module geometry_oct_m
   public ::                          &
     geometry_t,                      &
     geometry_init,                   &
-    geometry_init_xyz,               &
-    geometry_init_species,           &
     geometry_partition,              &
     geometry_copy,                   &
     geometry_end,                    &
