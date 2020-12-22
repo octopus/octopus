@@ -445,8 +445,9 @@ contains
   end function geometry_species_time_dependent
 
   ! ---------------------------------------------------------
-  FLOAT function geometry_val_charge(geo) result(val_charge)
-    type(geometry_t), intent(in) :: geo
+  FLOAT function geometry_val_charge(geo, mask) result(val_charge)
+    type(geometry_t),          intent(in) :: geo
+    logical,         optional, intent(in) :: mask(:)
 
     integer :: iatom
 
@@ -454,6 +455,9 @@ contains
 
     val_charge = M_ZERO
     do iatom = 1, geo%natoms
+      if (present(mask)) then
+        if (.not. mask(iatom)) cycle
+      end if
       val_charge = val_charge - species_zval(geo%atom(iatom)%species)
     end do
 
@@ -461,8 +465,9 @@ contains
   end function geometry_val_charge
 
   ! ---------------------------------------------------------
-  function geometry_dipole(geo) result(dipole)
-    type(geometry_t), intent(in)  :: geo
+  function geometry_dipole(geo, mask) result(dipole)
+    type(geometry_t),           intent(in) :: geo
+    logical,          optional, intent(in) :: mask(:)
     FLOAT :: dipole(MAX_DIM)
 
     integer :: ia
@@ -471,6 +476,9 @@ contains
 
     dipole = M_ZERO
     do ia = 1, geo%natoms
+      if (present(mask)) then
+        if (.not. mask(ia)) cycle
+      end if
       dipole(1:geo%space%dim) = dipole(1:geo%space%dim) + &
         species_zval(geo%atom(ia)%species)*geo%atom(ia)%x(1:geo%space%dim)
     end do
@@ -480,8 +488,9 @@ contains
   end function geometry_dipole
 
   ! ---------------------------------------------------------
-  function geometry_center_of_mass(geo, pseudo) result(pos)
+  function geometry_center_of_mass(geo, mask, pseudo) result(pos)
     type(geometry_t),           intent(in) :: geo
+    logical,          optional, intent(in) :: mask(:)
     logical,          optional, intent(in) :: pseudo !< calculate center considering all species to have equal mass.
     FLOAT :: pos(MAX_DIM)
 
@@ -494,6 +503,9 @@ contains
     total_mass = M_ZERO
     mass = M_ONE
     do ia = 1, geo%natoms
+      if (present(mask)) then
+        if (.not. mask(ia)) cycle
+      end if
       if (.not. optional_default(pseudo, .false.)) then
         mass = species_mass(geo%atom(ia)%species)
       end if
