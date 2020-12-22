@@ -50,7 +50,6 @@ module geometry_oct_m
     geometry_end,                    &
     geometry_dipole,                 &
     geometry_min_distance,           &
-    geometry_mass,                   &
     cm_pos,                          &
     cm_vel,                          &
     geometry_write_xyz,              &
@@ -512,21 +511,6 @@ contains
 
     POP_SUB(geometry_val_charge)
   end subroutine geometry_val_charge
-
-
-  ! ---------------------------------------------------------
-
-  FLOAT pure function geometry_mass(geo) result(mass)
-    type(geometry_t), intent(in) :: geo
-
-    integer :: iatom
-
-    mass = M_ZERO
-    do iatom = 1, geo%natoms
-      mass = mass + species_mass(geo%atom(iatom)%species)
-    end do
-
-  end function geometry_mass
 
   ! ---------------------------------------------------------
   subroutine geometry_grid_defaults(geo, def_h, def_rsize)
