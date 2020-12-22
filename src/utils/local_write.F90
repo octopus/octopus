@@ -223,14 +223,13 @@ contains
   end subroutine local_write_end
 
   ! ---------------------------------------------------------
-  subroutine local_write_iter(writ, namespace, lab, ions_inside, inside, center, gr, st, hm, ks, geo, kick, iter, l_start, &
+  subroutine local_write_iter(writ, namespace, lab, ions_inside, inside, gr, st, hm, ks, geo, kick, iter, l_start, &
                               ldoverwrite)
     type(local_write_t),      intent(inout) :: writ
     type(namespace_t),        intent(in)    :: namespace
     character(len=15),        intent(in)    :: lab
     logical,                  intent(in)    :: ions_inside(:)
     logical,                  intent(in)    :: inside(:)
-    FLOAT,                    intent(in)    :: center(:)
     type(grid_t),             intent(in)    :: gr
     type(states_elec_t),      intent(inout) :: st
     type(hamiltonian_elec_t), intent(inout) :: hm
@@ -247,7 +246,7 @@ contains
     call profiling_in(prof, "LOCAL_WRITE_ITER")
 
     if (writ%out(LOCAL_OUT_MULTIPOLES)%write) then
-      call local_write_multipole(writ%out(LOCAL_OUT_MULTIPOLES), namespace, lab, ions_inside, inside, center, gr, geo, st, &
+      call local_write_multipole(writ%out(LOCAL_OUT_MULTIPOLES), namespace, lab, ions_inside, inside, gr, geo, st, &
         writ%lmax, kick, iter, l_start, ldoverwrite, writ%how)
       if(mpi_grp_is_root(mpi_world)) then
         call write_iter_flush(writ%out(LOCAL_OUT_MULTIPOLES)%handle)
@@ -286,7 +285,7 @@ contains
     integer,                  intent(in) :: iter
     integer(8),               intent(in) :: how
 
-    integer            :: is, ix, ierr
+    integer            :: is, ierr
     character(len=120) :: folder, out_name
     FLOAT, allocatable :: tmp_rho(:), st_rho(:)
     FLOAT, allocatable :: tmp_vh(:)
@@ -375,7 +374,8 @@ contains
     integer,                  intent(in)    :: l_start
     logical,                  intent(in)    :: start
 
-    integer :: ii, is, ix
+    !integer :: ix
+    integer :: ii, is
     character(len=120) :: aux
     FLOAT              :: geh, gexc, leh, lexc
     FLOAT, allocatable :: tmp_rhoi(:), st_rho(:)
@@ -509,14 +509,13 @@ contains
   end subroutine local_write_energy
 
   ! ---------------------------------------------------------
-  subroutine local_write_multipole(out_multip, namespace, lab, ions_inside, inside, center, & 
-                                gr, geo, st, lmax, kick, iter, l_start, start, how)
+  subroutine local_write_multipole(out_multip, namespace, lab, ions_inside, inside, gr, geo, st, lmax, kick, iter, &
+    l_start, start, how)
     type(local_write_prop_t), intent(inout) :: out_multip
     type(namespace_t),        intent(in)    :: namespace
     character(len=15),        intent(in)    :: lab
     logical,                  intent(in)    :: ions_inside(:)
     logical,                  intent(in)    :: inside(:)
-    FLOAT,                    intent(in)    :: center(:)
     type(grid_t),             intent(in)    :: gr
     type(geometry_t),         intent(in)    :: geo
     type(states_elec_t),      intent(in)    :: st
@@ -529,7 +528,8 @@ contains
 
     integer :: is, ll, mm, add_lm
     character(len=120) :: aux
-    FLOAT, allocatable :: ionic_dipole(:), multipole(:,:)
+    FLOAT :: ionic_dipole(MAX_DIM), center(MAX_DIM)
+    FLOAT, allocatable :: multipole(:,:)
     CMPLX, allocatable :: zmultipole(:,:)
     logical :: use_ionic_dipole
 
@@ -591,9 +591,9 @@ contains
       call write_iter_flush(out_multip%handle)
     end if
 
-    SAFE_ALLOCATE(ionic_dipole(1:gr%sb%dim))
+    center = geometry_center_of_mass(geo, mask=ions_inside)
+
     SAFE_ALLOCATE(multipole(1:(lmax + 1)**2, 1:st%d%nspin))
-    ionic_dipole(:) = M_ZERO
     multipole   (:,:) = M_ZERO
 
     do is = 1, st%d%nspin
@@ -616,7 +616,9 @@ contains
     !%End
     call parse_variable(namespace, 'LDIonicDipole', .true., use_ionic_dipole)
     if (use_ionic_dipole) then
-      call local_geometry_dipole(ions_inside, geo, center, ionic_dipole)
+      ! Calculate ionic dipole, setting the center of mass as reference, as that is needed for non-neutral systems.
+      ionic_dipole = geometry_dipole(geo, mask=ions_inside) + P_PROTON_CHARGE*geometry_val_charge(geo, mask=ions_inside)*center
+
       do is = 1, st%d%nspin
         multipole(2:gr%sb%dim+1, is) = -ionic_dipole(1:gr%sb%dim)/st%d%nspin - multipole(2:gr%sb%dim+1, is)
       end do
@@ -644,42 +646,11 @@ contains
       call out_bld_multipoles(namespace, multipole(2:4, is), center, lab, iter)
     end if
 
-    SAFE_DEALLOCATE_A(ionic_dipole)
     SAFE_DEALLOCATE_A(multipole)
     SAFE_DEALLOCATE_A(zmultipole)
 
     POP_SUB(local_write_multipole)
   end subroutine local_write_multipole
-
-  ! ---------------------------------------------------------
-  subroutine local_geometry_dipole(ions_inside, geo, center, dipole)
-    logical,           intent(in)  :: ions_inside(:)
-    type(geometry_t),  intent(in)  :: geo
-    FLOAT,             intent(in)  :: center(:)
-    FLOAT,             intent(inout) :: dipole(:)
-
-    integer :: ia
-    FLOAT :: ion_charge
-
-    PUSH_SUB(local_geometry_dipole)
-
-    ion_charge = M_ZERO
-
-    dipole(:) = M_ZERO
-    do ia = 1, geo%natoms
-      if (ions_inside(ia)) then
-        dipole(1:geo%space%dim) = dipole(1:geo%space%dim) + &
-          species_zval(geo%atom(ia)%species)*(geo%atom(ia)%x(1:geo%space%dim))
-        ion_charge = ion_charge + species_zval(geo%atom(ia)%species)
-      end if
-    end do
-
-    dipole = P_PROTON_CHARGE*dipole
-    ! Setting center of mass as reference needed for non-neutral systems.
-    dipole(1:geo%space%dim) = dipole(1:geo%space%dim) - P_PROTON_CHARGE*ion_charge*center(1:geo%space%dim)
-
-    POP_SUB(local_geometry_dipole)
-  end subroutine local_geometry_dipole
 
   ! ---------------------------------------------------------
   subroutine out_bld_multipoles(namespace, multipoles, center, label, iter)

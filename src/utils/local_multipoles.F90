@@ -61,7 +61,6 @@ program oct_local_multipoles
     integer              :: dshape         !< shape of box for each domain.
     logical, allocatable :: inside(:)      !< relation of mesh points on each domain.
     logical, allocatable :: ions_inside(:) !< relation of ions inside each domain.
-    FLOAT,   allocatable :: dcm(:)         !< store the center of mass of each domain on the real space.
     type(local_write_t)  :: writ           !< write option for local domains analysis.
   end type local_domain_t
 
@@ -380,7 +379,7 @@ contains
 
       do id = 1, nd
         call local_write_iter(loc_domains(id)%writ, global_namespace, loc_domains(id)%lab, loc_domains(id)%ions_inside, &
-          loc_domains(id)%inside, loc_domains(id)%dcm, sys%gr, sys%st, sys%hm, sys%ks, sys%geo, kick, iter, l_start, ldoverwrite)
+          loc_domains(id)%inside, sys%gr, sys%st, sys%hm, sys%ks, sys%geo, kick, iter, l_start, ldoverwrite)
       end do
       call loct_progress_bar(iter-l_start, l_end-l_start) 
     end do
@@ -456,7 +455,6 @@ contains
     block: do id = 1, nd
       SAFE_ALLOCATE(loc_domains(id)%inside(1:mesh%np))
       SAFE_ALLOCATE(loc_domains(id)%ions_inside(1:geo%natoms))
-      SAFE_ALLOCATE(loc_domains(id)%dcm(1:geo%space%dim))
       call parse_block_string(blk, id-1, 0, loc_domains(id)%lab)
       call local_read_from_block(space, geo, blk, id-1, loc_domains(id)%domain, loc_domains(id)%dshape, loc_domains(id)%clist, &
         global_namespace)
@@ -485,7 +483,6 @@ contains
       call local_write_end(loc_domains(id)%writ)
       SAFE_DEALLOCATE_A(loc_domains(id)%inside)
       SAFE_DEALLOCATE_A(loc_domains(id)%ions_inside)
-      SAFE_DEALLOCATE_A(loc_domains(id)%dcm)
     end do
     SAFE_DEALLOCATE_A(loc_domains)
 
@@ -695,9 +692,6 @@ contains
 
       !Check for atom list inside each domain
       call local_ions_inside(loc_domains(id)%inside, geo, mesh, loc_domains(id)%ions_inside, loc_domains(id)%clist)
-
-      !Compute center of mass of each domain
-      call local_center_of_mass(loc_domains(id)%ions_inside, geo, loc_domains(id)%dcm)
     end do
 
     SAFE_DEALLOCATE_A(inside)
@@ -801,9 +795,6 @@ contains
     do id = 1, nd
       !Check for atom list inside each domain
       call local_ions_inside(loc_domains(id)%inside, geo, mesh, loc_domains(id)%ions_inside, loc_domains(id)%clist)
-
-      !Compute center of mass of each domain
-      call local_center_of_mass(loc_domains(id)%ions_inside, geo, loc_domains(id)%dcm)
     end do
 
     !Write restart file for local domains
@@ -820,8 +811,7 @@ contains
     write(lines(2),'(a3,1x,a15,1x,a5,1x,71x,a9,1x,a14)') '#id', 'label', 'shape', 'Atom list', 'center of mass'
     do id = 1, nd
       write(frmt,'(a,i0,a)') '(i3,1x,a15,1x,i5,1x,a80,1x', geo%space%dim, '(f10.6,1x))'
-      write(lines(id+2), fmt=trim(frmt))id, trim(loc_domains(id)%lab), loc_domains(id)%dshape, trim(loc_domains(id)%clist), &
-        loc_domains(id)%dcm(1:geo%space%dim)
+      write(lines(id+2), fmt=trim(frmt))id, trim(loc_domains(id)%lab), loc_domains(id)%dshape, trim(loc_domains(id)%clist)
       do ip = 1, mesh%np
         if (loc_domains(id)%inside(ip)) ff2(ip, 1) = ff2(ip, 1) + 2**DBLE(id)
       end do
@@ -997,30 +987,6 @@ contains
 
     POP_SUB(local_ions_inside)
   end subroutine local_ions_inside
-
-  ! ---------------------------------------------------------
-  subroutine local_center_of_mass(ions_inside, geo, center)
-    logical,           intent(in)  :: ions_inside(:)
-    type(geometry_t),  intent(in)  :: geo
-    FLOAT,             intent(out) :: center(:)
-
-    integer :: ia
-    FLOAT :: sumw
-
-    PUSH_SUB(local_center_of_mass)
-
-    sumw = M_ZERO
-    center = M_ZERO
-    do ia = 1, geo%natoms
-      if (ions_inside(ia)) then
-        center(1:geo%space%dim) = center(1:geo%space%dim) + geo%atom(ia)%x(1:geo%space%dim)*species_mass(geo%atom(ia)%species)
-        sumw = sumw + species_mass(geo%atom(ia)%species)
-      end if
-    end do
-    center(1:geo%space%dim) = center(1:geo%space%dim)/sumw
-
-    POP_SUB(local_center_of_mass)
-  end subroutine local_center_of_mass
 
 end program oct_local_multipoles
 
