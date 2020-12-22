@@ -597,7 +597,7 @@ contains
     multipole   (:,:) = M_ZERO
 
     do is = 1, st%d%nspin
-      call dmf_multipoles(gr%mesh, st%rho(:,is), lmax, multipole(:,is), inside=inside)
+      call dmf_multipoles(gr%mesh, st%rho(:,is), lmax, multipole(:,is), mask=inside)
     end do
     ! Setting center of mass as reference needed for non-neutral systems.
     do is = 1, st%d%nspin

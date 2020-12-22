@@ -658,12 +658,12 @@ end function X(mf_line_integral_vector)
 !!   multipole(6, is) = Integral [ f * Y_{2, -1} ].
 !! And so on.
 !! -----------------------------------------------------------------------------
-subroutine X(mf_multipoles) (mesh, ff, lmax, multipole, inside)
+subroutine X(mf_multipoles) (mesh, ff, lmax, multipole, mask)
   type(mesh_t),      intent(in)  :: mesh
   R_TYPE,            intent(in)  :: ff(:)
   integer,           intent(in)  :: lmax
   R_TYPE,            intent(out) :: multipole(:) !< ((lmax + 1)**2)
-  logical, optional, intent(in)  :: inside(:) !< (mesh%np)
+  logical, optional, intent(in)  :: mask(:) !< (mesh%np)
 
   integer :: idim, ip, ll, lm, add_lm
   FLOAT   :: xx(MAX_DIM), rr, ylm
@@ -676,12 +676,12 @@ subroutine X(mf_multipoles) (mesh, ff, lmax, multipole, inside)
   SAFE_ALLOCATE(ff2(1:mesh%np))
 
   ff2(1:mesh%np) = ff(1:mesh%np)
-  multipole(1) = X(mf_integrate)(mesh, ff2, mask = inside)
+  multipole(1) = X(mf_integrate)(mesh, ff2, mask = mask)
   
   if(lmax > 0) then
     do idim = 1, 3
       ff2(1:mesh%np) = ff(1:mesh%np) * mesh%x(1:mesh%np, idim)
-      multipole(idim+1) = X(mf_integrate)(mesh, ff2, mask = inside)
+      multipole(idim+1) = X(mf_integrate)(mesh, ff2, mask = mask)
     end do
   end if
   
@@ -694,7 +694,7 @@ subroutine X(mf_multipoles) (mesh, ff, lmax, multipole, inside)
           call loct_ylm(1, xx(1), xx(2), xx(3), ll, lm, ylm)
           ff2(ip) = ff(ip) * ylm * rr**ll
         end do
-        multipole(add_lm) = X(mf_integrate)(mesh, ff2, mask = inside)
+        multipole(add_lm) = X(mf_integrate)(mesh, ff2, mask = mask)
         add_lm = add_lm + 1
       end do
     end do
@@ -706,11 +706,11 @@ end subroutine X(mf_multipoles)
 
 ! -----------------------------------------------------------------------------
 !> This routine calculates the dipole of a function ff, for arbitrary dimensions
-subroutine X(mf_dipole) (mesh, ff, dipole, inside)
+subroutine X(mf_dipole) (mesh, ff, dipole, mask)
   type(mesh_t),      intent(in)  :: mesh
   R_TYPE,            intent(in)  :: ff(:)
   R_TYPE,            intent(out) :: dipole(:) !< (mesh%sb%dim)
-  logical, optional, intent(in)  :: inside(:) !< (mesh%np)
+  logical, optional, intent(in)  :: mask(:)   !< (mesh%np)
 
   integer :: idim
   R_TYPE, allocatable :: ff2(:)
@@ -723,7 +723,7 @@ subroutine X(mf_dipole) (mesh, ff, dipole, inside)
 
   do idim = 1, mesh%sb%dim
     ff2(1:mesh%np) = ff(1:mesh%np) * mesh%x(1:mesh%np, idim)
-    dipole(idim) = X(mf_integrate)(mesh, ff2, mask = inside)
+    dipole(idim) = X(mf_integrate)(mesh, ff2, mask = mask)
   end do
 
   SAFE_DEALLOCATE_A(ff2)
