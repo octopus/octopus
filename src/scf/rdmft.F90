@@ -107,12 +107,11 @@ module rdmft_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine rdmft_init(rdm, namespace, gr, st, geo, mc, fromScratch)
+  subroutine rdmft_init(rdm, namespace, gr, st, mc, fromScratch)
     type(rdm_t),         intent(out)   :: rdm
     type(namespace_t),   intent(in)    :: namespace
     type(grid_t),        intent(inout) :: gr  !< grid
     type(states_elec_t), intent(in)    :: st  !< States
-    type(geometry_t),    intent(in)    :: geo
     type(multicomm_t),   intent(in)    :: mc
     logical,             intent(in)    :: fromScratch
 
@@ -221,7 +220,7 @@ contains
       end do
     else
       ! initialize eigensolver. 
-      call eigensolver_init(rdm%eigens, namespace, gr, st, geo, mc)
+      call eigensolver_init(rdm%eigens, namespace, gr, st, mc)
       if (rdm%eigens%additional_terms) call messages_not_implemented("CG Additional Terms with RDMFT.")
     end if
 
@@ -246,9 +245,8 @@ contains
 
   ! ----------------------------------------
 
-  subroutine rdmft_end(rdm, gr)
+  subroutine rdmft_end(rdm)
     type(rdm_t),  intent(inout) :: rdm
-    type(grid_t), intent(inout) :: gr
 
     PUSH_SUB(rdmft_end)
 
@@ -268,7 +266,7 @@ contains
       SAFE_DEALLOCATE_A(rdm%Coul)
       SAFE_DEALLOCATE_A(rdm%Exch)
     else
-      call eigensolver_end(rdm%eigens, gr)
+      call eigensolver_end(rdm%eigens)
     end if
 
     POP_SUB(rdmft_end)

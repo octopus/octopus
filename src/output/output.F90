@@ -97,7 +97,6 @@ module output_oct_m
     output_t,            &
     output_bgw_t,        &
     output_init,         &
-    output_end,          &
     output_states,       &
     doutput_modelmb,     &
     zoutput_modelmb,     &
@@ -642,17 +641,6 @@ contains
   end subroutine output_init
 
   ! ---------------------------------------------------------
-
-  subroutine output_end(outp)
-    type(output_t), intent(inout) :: outp
-
-    PUSH_SUB(output_end)
-    
-    POP_SUB(output_end)
-
-  end subroutine output_end
-
-  ! ---------------------------------------------------------
   subroutine output_all(outp, namespace, dir, gr, geo, st, hm, ks)
     type(output_t),           intent(in)    :: outp
     type(namespace_t),        intent(in)    :: namespace
@@ -722,7 +710,7 @@ contains
       call output_berkeleygw(outp%bgw, namespace, dir, st, gr, ks, hm, geo)
     end if
     
-    call output_energy_density(outp, namespace, dir, hm, ks, st, gr%der, geo, gr, st%st_kpt_mpi_grp)
+    call output_energy_density(outp, namespace, dir, hm, ks, st, geo, gr)
 
     if(hm%lda_u_level /= DFT_U_NONE) then
       if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__OCC_MATRICES) /= 0)&
@@ -924,17 +912,15 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine output_energy_density(outp, namespace, dir, hm, ks, st, der, geo, gr, grp)
+  subroutine output_energy_density(outp, namespace, dir, hm, ks, st, geo, gr)
     type(output_t),            intent(in) :: outp
     type(namespace_t),         intent(in) :: namespace
     character(len=*),          intent(in) :: dir
     type(hamiltonian_elec_t),  intent(in) :: hm
     type(v_ks_t),           intent(inout) :: ks
     type(states_elec_t),       intent(in) :: st
-    type(derivatives_t),       intent(in) :: der
     type(geometry_t),          intent(in) :: geo
     type(grid_t),              intent(in) :: gr
-    type(mpi_grp_t), optional, intent(in) :: grp !< the group that shares the same data, must contain the domains group
 
     integer :: is, ierr, ip
     character(len=MAX_PATH_LEN) :: fname

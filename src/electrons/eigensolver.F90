@@ -26,7 +26,6 @@ module eigensolver_oct_m
   use eigen_lobpcg_oct_m
   use eigen_rmmdiis_oct_m
   use exponential_oct_m
-  use geometry_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_elec_oct_m
@@ -114,12 +113,11 @@ module eigensolver_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine eigensolver_init(eigens, namespace, gr, st, geo, mc)
+  subroutine eigensolver_init(eigens, namespace, gr, st, mc)
     type(eigensolver_t), intent(out)   :: eigens
     type(namespace_t),   intent(in)    :: namespace
-    type(grid_t),        intent(inout) :: gr
+    type(grid_t),        intent(in)    :: gr
     type(states_elec_t), intent(in)    :: st
-    type(geometry_t),    intent(in)    :: geo
     type(multicomm_t),   intent(in)    :: mc
 
     integer :: default_iter, default_es
@@ -415,17 +413,14 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine eigensolver_end(eigens, gr)
+  subroutine eigensolver_end(eigens)
     type(eigensolver_t), intent(inout) :: eigens
-    type(grid_t),        intent(inout) :: gr
 
     PUSH_SUB(eigensolver_end)
 
     select case(eigens%es_type)
     case(RS_PLAN, RS_CG, RS_LOBPCG, RS_RMMDIIS, RS_PSD)
       call preconditioner_end(eigens%pre)
-    case(RS_EVO)
-      call exponential_end(eigens%exponential_operator)
     end select
 
     SAFE_DEALLOCATE_P(eigens%converged)

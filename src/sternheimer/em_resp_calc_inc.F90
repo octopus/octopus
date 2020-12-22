@@ -1162,9 +1162,8 @@ subroutine X(calc_kvar_energy)(sh_mo, sys, lr1, lr2, lr3, hpol_density)
 end subroutine X(calc_kvar_energy)
 
 ! ---------------------------------------------------------
-subroutine X(lr_calc_magneto_optics_periodic)(sh, sh2, sys, nsigma, nfactor, &
-  nfactor_ke, freq_factor, lr_e, lr_b, lr_k, lr_k2, lr_ke, lr_kb, frequency, zpol,&
-  zpol_kout)
+subroutine X(lr_calc_magneto_optics_periodic)(sh, sh2, sys, nsigma, nfactor, nfactor_ke, freq_factor, lr_e, lr_b, lr_k, lr_ke, &
+  lr_kb, frequency, zpol, zpol_kout)
   type(sternheimer_t),  intent(inout) :: sh, sh2
   type(electrons_t),    intent(inout) :: sys 
   integer,              intent(in)    :: nsigma
@@ -1174,7 +1173,6 @@ subroutine X(lr_calc_magneto_optics_periodic)(sh, sh2, sys, nsigma, nfactor, &
   type(lr_t),           intent(inout) :: lr_e(:,:,:)
   type(lr_t),           intent(inout) :: lr_b(:,:)
   type(lr_t),           intent(inout) :: lr_k(:,:)
-  type(lr_t),           intent(inout) :: lr_k2(:,:,:)
   type(lr_t),           intent(inout) :: lr_ke(:,:,:,:)
   type(lr_t),           intent(inout) :: lr_kb(:,:,:)
   CMPLX,                intent(in)    :: frequency
@@ -1704,10 +1702,8 @@ end subroutine X(lr_calc_magnetization_periodic)
 
 !--------------------------------------------------------
 ! According to paper X. Gonze and J. W. Zwanziger, Phys. Rev. B 84, 064445 (2011)
-subroutine X(lr_calc_susceptibility_periodic)(sys, nsigma, lr_k, lr_b, &
-  lr_kk, lr_kb, magn)
+subroutine X(lr_calc_susceptibility_periodic)(sys, lr_k, lr_b, lr_kk, lr_kb, magn)
   type(electrons_t),    intent(inout) :: sys 
-  integer,              intent(in)    :: nsigma
   type(lr_t),           intent(inout) :: lr_k(:) 
   type(lr_t),           intent(inout) :: lr_b(:) 
   type(lr_t),           intent(inout) :: lr_kk(:,:)
@@ -2482,12 +2478,10 @@ end subroutine X(inhomog_KE)
 
 ! --------------------------------------------------------------------------
 
-subroutine X(inhomog_K2)(sys, idir1, idir2, ik, & 
-  psi_k1, psi_k2, psi_out)
+subroutine X(inhomog_k2)(sys, idir1, idir2, ik, psi_k2, psi_out)
   type(electrons_t),    intent(inout) :: sys
   integer,              intent(in)    :: idir1, idir2
   integer,              intent(in)    :: ik
-  R_TYPE,               intent(inout) :: psi_k1(:,:,:) 
   R_TYPE,               intent(inout) :: psi_k2(:,:,:) 
   R_TYPE,               intent(inout) :: psi_out(:,:,:)
 
@@ -2537,14 +2531,12 @@ subroutine X(inhomog_K2)(sys, idir1, idir2, ik, &
 end subroutine X(inhomog_K2)
 
 ! --------------------------------------------------------------------------
-subroutine X(inhomog_KB)(sys, idir, idir1, idir2, ik, & 
-  psi_b, psi_k, psi_k1, psi_k2, psi_out)
+subroutine X(inhomog_kb)(sys, idir, idir1, idir2, ik, psi_b, psi_k1, psi_k2, psi_out)
   type(electrons_t),    intent(inout) :: sys
   integer,              intent(in)    :: idir, idir1, idir2
   integer,              intent(in)    :: ik
   R_TYPE,               intent(inout) :: psi_k1(:,:,:)
   R_TYPE,               intent(inout) :: psi_k2(:,:,:)
-  R_TYPE,               intent(inout) :: psi_k(:,:,:) 
   R_TYPE,               intent(inout) :: psi_b(:,:,:)
   R_TYPE,               intent(inout) :: psi_out(:,:,:) 
 
@@ -2555,7 +2547,7 @@ subroutine X(inhomog_KB)(sys, idir, idir1, idir2, ik, &
   type(pert_t)  :: pert_kdotp2
   R_TYPE, allocatable :: psi(:,:,:)
 
-  PUSH_SUB(X(inhomog_KB))
+  PUSH_SUB(X(inhomog_kb))
   
   ASSERT(sys%gr%sb%dim .ne. -1)
   ASSERT(idir .ne. -1)
@@ -2653,8 +2645,8 @@ subroutine X(inhomog_KB)(sys, idir, idir1, idir2, ik, &
   SAFE_DEALLOCATE_A(f_out2)
   SAFE_DEALLOCATE_A(psi)
   
-  POP_SUB(X(inhomog_KB))
-end subroutine X(inhomog_KB)
+  POP_SUB(X(inhomog_kb))
+end subroutine X(inhomog_kb)
 
 
  ! --------------------------------------------------------------------------
@@ -2722,10 +2714,8 @@ subroutine X(inhomog_KB_tot)(sh, sys, idir, idir1, idir2, &
   
   do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
     ik0 = ik-sys%st%d%kpt%start+1
-    call X(inhomog_KB)(sys, idir, idir1, idir2, ik, & 
-      lr_b(1)%X(dl_psi)(:, :, :, ik), lr_k(1)%X(dl_psi)(:, :, :, ik), &
-      lr_k1(1)%X(dl_psi)(:, :, :, ik), lr_k2(1)%X(dl_psi)(:, :, :, ik), &
-      psi_out(:, :, :, ik0, 1))
+    call X(inhomog_kb)(sys, idir, idir1, idir2, ik, lr_b(1)%X(dl_psi)(:, :, :, ik), lr_k1(1)%X(dl_psi)(:, :, :, ik), &
+      lr_k2(1)%X(dl_psi)(:, :, :, ik), psi_out(:, :, :, ik0, 1))
     
     ispin = states_elec_dim_get_spin_index(sys%st%d, ik)
     call X(inhomog_BE)(sys, idir1, idir2, ik, & 
@@ -2796,38 +2786,32 @@ subroutine X(inhomog_KE_tot)(sh, sys, idir, nsigma, &
 end subroutine X(inhomog_KE_tot)
  
 ! --------------------------------------------------------------------------
-subroutine X(inhomog_K2_tot)(sh, sys, idir1, idir2, & 
-  lr_k1, lr_k2, psi_out)
-  type(sternheimer_t),  intent(inout) :: sh
+subroutine X(inhomog_k2_tot)(sys, idir1, idir2, lr_k1, lr_k2, psi_out)
   type(electrons_t),    intent(inout) :: sys
   integer,              intent(in)    :: idir1, idir2
-  type(lr_t),           intent(inout) :: lr_k1(:) 
-  type(lr_t),           intent(inout) :: lr_k2(:) 
+  type(lr_t),           intent(inout) :: lr_k1(:)
+  type(lr_t),           intent(inout) :: lr_k2(:)
   R_TYPE,               intent(inout) :: psi_out(:,:,:,:,:) 
 
   integer :: ik, ik0
   
-  PUSH_SUB(X(inhomog_K2_tot))
+  PUSH_SUB(X(inhomog_k2_tot))
 
   psi_out(:,:,:,:,:) = M_ZERO
 
   do ik = sys%st%d%kpt%start, sys%st%d%kpt%end
     ik0 = ik-sys%st%d%kpt%start+1
-    call X(inhomog_K2)(sys, idir1, idir2, ik, & 
-      lr_k1(1)%X(dl_psi)(:,:,:, ik), lr_k2(1)%X(dl_psi)(:,:,:, ik), &
-      psi_out(:,:,:, ik0, 1))
+    call X(inhomog_k2)(sys, idir1, idir2, ik, lr_k2(1)%X(dl_psi)(:,:,:, ik), psi_out(:,:,:, ik0, 1))
 
     if(idir1 == idir2) then
       psi_out(:,:,:, ik0, 1) = M_TWO * psi_out(:,:,:, ik0, 1)
     else
-      call X(inhomog_K2)(sys, idir2, idir1, ik, & 
-        lr_k2(1)%X(dl_psi)(:,:,:, ik), lr_k1(1)%X(dl_psi)(:,:,:, ik), &
-        psi_out(:,:,:, ik0, 1))
+      call X(inhomog_k2)(sys, idir2, idir1, ik, lr_k1(1)%X(dl_psi)(:,:,:, ik), psi_out(:,:,:, ik0, 1))
     end if
   end do
 
-  POP_SUB(X(inhomog_K2_tot))
-end subroutine X(inhomog_K2_tot)
+  POP_SUB(X(inhomog_k2_tot))
+end subroutine X(inhomog_k2_tot)
 
 !----------------------------------------------------------
 ! Calculation of contribution to the density for second-order perturbations

@@ -22,7 +22,6 @@ module linear_solver_oct_m
   use batch_oct_m
   use batch_ops_oct_m
   use derivatives_oct_m
-  use geometry_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_elec_oct_m
@@ -86,12 +85,11 @@ module linear_solver_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine linear_solver_init(this, namespace, gr, states_are_real, geo, mc)
+  subroutine linear_solver_init(this, namespace, gr, states_are_real, mc)
     type(linear_solver_t),  intent(out)   :: this
     type(namespace_t),      intent(in)    :: namespace
     type(grid_t),           intent(inout) :: gr
     logical,                intent(in)    :: states_are_real !< for choosing solver
-    type(geometry_t),       intent(in)    :: geo
     type(multicomm_t),      intent(in)    :: mc
 
     integer :: fsolver

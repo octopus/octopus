@@ -561,8 +561,7 @@ program photoelectron_spectrum
           call pes_mask_output_power_totalM(pesP_out,outfile('./PES_energy',ist, ispin, 'sum'), &
                                             global_namespace, Lg, llp, dim, Emax, Estep, interpolate = .true.)
         case (OPTION__PHOTOELECTRONSPECTRUM__PES_FLUX)
-          call pes_flux_out_energy(pflux, pesP_out, outfile('./PES_energy',ist, ispin, 'sum'), global_namespace,&
-                                   llp, pmesh, Ekin, dim)                                     
+          call pes_flux_out_energy(pflux, pesP_out, outfile('./PES_energy',ist, ispin, 'sum'), global_namespace, llp, Ekin, dim)
         end select 
         
       end if

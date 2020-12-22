@@ -67,7 +67,6 @@ module current_oct_m
   public ::                               &
     current_t,                            &
     current_init,                         &
-    current_end,                          &
     current_calculate,                    &
     current_heat_calculate,               &
     current_calculate_mel
@@ -112,17 +111,6 @@ contains
     
     POP_SUB(current_init)
   end subroutine current_init
-
-  ! ---------------------------------------------------------
-
-  subroutine current_end(this)
-    type(current_t), intent(inout) :: this
-
-    PUSH_SUB(current_end)
-
-
-    POP_SUB(current_end)
-  end subroutine current_end
 
   ! ---------------------------------------------------------
 

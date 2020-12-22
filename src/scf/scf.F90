@@ -121,7 +121,6 @@ module scf_oct_m
     integer :: mixdim1
     logical :: forced_finish !< remember if 'touch stop' was triggered earlier.
     type(lda_u_mixer_t) :: lda_u_mix
-    type(grid_t), pointer :: gr 
     type(berry_t) :: berry
   end type scf_t
 
@@ -130,8 +129,8 @@ contains
   ! ---------------------------------------------------------
   subroutine scf_init(scf, namespace, gr, geo, st, mc, hm, ks)
     type(scf_t),              intent(inout) :: scf
+    type(grid_t),             intent(in)    :: gr
     type(namespace_t),        intent(in)    :: namespace
-    type(grid_t),     target, intent(inout) :: gr
     type(geometry_t),         intent(in)    :: geo
     type(states_elec_t),      intent(in)    :: st
     type(multicomm_t),        intent(in)    :: mc
@@ -380,7 +379,7 @@ contains
     end if
 
     ! now the eigensolver stuff
-    call eigensolver_init(scf%eigens, namespace, gr, st, geo, mc)
+    call eigensolver_init(scf%eigens, namespace, gr, st, mc)
 
     !The evolution operator is a very specific propagation that requires a specific 
     !setting to work in the current framework
@@ -520,8 +519,6 @@ contains
 
     scf%forced_finish = .false.
 
-    scf%gr => gr
-    
     POP_SUB(scf_init)
   end subroutine scf_init
 
@@ -532,7 +529,7 @@ contains
     
     PUSH_SUB(scf_end)
 
-    call eigensolver_end(scf%eigens, scf%gr)
+    call eigensolver_end(scf%eigens)
 
     if(scf%mix_field /= OPTION__MIXFIELD__NONE) call mix_end(scf%smix)
 

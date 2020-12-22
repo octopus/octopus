@@ -65,9 +65,8 @@ contains
   end function ghost_interaction_init
 
   ! ---------------------------------------------------------
-  subroutine ghost_interaction_calculate(this, namespace)
+  subroutine ghost_interaction_calculate(this)
     class(ghost_interaction_t), intent(inout) :: this
-    type(namespace_t),          intent(in)    :: namespace
 
     PUSH_SUB(ghost_interaction_calculate)
 

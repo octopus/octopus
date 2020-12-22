@@ -68,19 +68,17 @@ contains
     this%mesh => mesh
 
     POP_SUB(mesh_interpolation_init)
-   
   end subroutine mesh_interpolation_init
   
   ! ---------------------------------------------------
-
-
   subroutine mesh_interpolation_end(this)
     type(mesh_interpolation_t), intent(inout)   :: this
 
     PUSH_SUB(mesh_interpolation_end)
-    
-    POP_SUB(mesh_interpolation_end)
-   
+
+    nullify(this%mesh)
+
+    POP_SUB(mesh_interpolation_end)  
   end subroutine mesh_interpolation_end
 
 

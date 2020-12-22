@@ -49,9 +49,8 @@ module interaction_with_partner_oct_m
 contains
 
   ! ---------------------------------------------------------
-  logical function interaction_with_partner_update(this, namespace, requested_time) result(updated)
+  logical function interaction_with_partner_update(this, requested_time) result(updated)
     class(interaction_with_partner_t), intent(inout) :: this
-    type(namespace_t),                 intent(in)    :: namespace
     class(clock_t),                    intent(in)    :: requested_time
 
     logical :: allowed_to_update
@@ -65,7 +64,7 @@ contains
 
     if (allowed_to_update) then
       ! We can now compute the interaction from the updated quantities
-      call this%calculate(namespace)
+      call this%calculate()
 
       ! Update was successful, so set new interaction time
       updated = .true.
