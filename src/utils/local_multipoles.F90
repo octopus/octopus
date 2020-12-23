@@ -380,7 +380,7 @@ contains
 
       do id = 1, nd
         call local_write_iter(loc_domains(id)%writ, global_namespace, loc_domains(id)%lab, loc_domains(id)%ions_inside, &
-          loc_domains(id)%inside, sys%gr, sys%st, sys%hm, sys%ks, sys%geo, kick, iter, l_start, ldoverwrite)
+          loc_domains(id)%inside, sys%gr%mesh, sys%st, sys%hm, sys%ks, sys%geo, kick, iter, l_start, ldoverwrite)
       end do
       call loct_progress_bar(iter-l_start, l_end-l_start) 
     end do
@@ -569,7 +569,6 @@ contains
     call local_domains_init(geo, dom, space%dim, shape, center, rsize, lsize, nb, clist, namespace)
 
     POP_SUB(local_read_from_block)
-
   end subroutine local_read_from_block
 
   !!---------------------------------------------------------------------------^
@@ -850,7 +849,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine bader_union_inside(basins, mesh, geo, nd, loc_domains)
-    type(basins_t),       intent(inout) :: basins
+    type(basins_t),       intent(in)    :: basins
     type(mesh_t),         intent(in)    :: mesh
     type(geometry_t),     intent(in)    :: geo
     integer,              intent(in)    :: nd 
