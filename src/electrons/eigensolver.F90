@@ -93,7 +93,6 @@ module eigensolver_oct_m
     logical, public :: orthogonalize_to_all
     integer, public :: conjugate_direction
     logical, public :: additional_terms
-    FLOAT,   public :: energy_change_threshold
 
     type(exponential_t) :: exponential_operator
   end type eigensolver_t
@@ -222,22 +221,6 @@ contains
       if(eigens%additional_terms) then
         call messages_experimental("The additional terms for the CG eigensolver are not tested for all cases.")
       end if
-
-      !%Variable CGEnergyChangeThreshold
-      !%Type float
-      !%Section SCF::Eigensolver
-      !%Default 0.1
-      !%Description
-      !% Used by the cg solver only.
-      !% For each band, the CG iterations are stopped when the change in energy is smaller than the
-      !% change in the first iteration multiplied by this factor. This limits the number of CG
-      !% iterations for each band, while still showing good convergence for the SCF cycle. The criterion
-      !% is discussed in Sec. V.B.6 of Payne et al. (1992), Rev. Mod. Phys. 64, 4.
-      !% The default value is 0.1, which is usually a good choice for LDA and GGA potentials. If you
-      !% are solving the OEP equation, you might want to set this value to 1e-3 or smaller. In general,
-      !% smaller values might help if you experience convergence problems.
-      !%End
-      call parse_variable(namespace, 'CGEnergyChangeThreshold', CNST(0.1), eigens%energy_change_threshold)
 
     case(RS_PLAN)
     case(RS_EVO)

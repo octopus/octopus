@@ -19,7 +19,7 @@
 ! ---------------------------------------------------------
 !> conjugate-gradients method.
 subroutine X(eigensolver_cg) (namespace, gr, st, hm, xc, pre, tol, niter, converged, ik, diff, orthogonalize_to_all, &
-  conjugate_direction, additional_terms, energy_change_threshold, shift)
+  conjugate_direction, additional_terms, shift)
   type(namespace_t),        intent(in)    :: namespace
   type(grid_t),             intent(in)    :: gr
   type(states_elec_t),      intent(inout) :: st
@@ -34,7 +34,6 @@ subroutine X(eigensolver_cg) (namespace, gr, st, hm, xc, pre, tol, niter, conver
   logical,                  intent(in)    :: orthogonalize_to_all
   integer,                  intent(in)    :: conjugate_direction
   logical,                  intent(in)    :: additional_terms
-  FLOAT,                    intent(in)    :: energy_change_threshold
   FLOAT, pointer, optional, intent(in)   :: shift(:,:)
 
   R_TYPE, allocatable :: h_psi(:,:), sd(:,:), sd_precond(:,:), cg(:,:), h_cg(:,:)
