@@ -45,10 +45,10 @@ module eigen_cg_oct_m
   implicit none
 
   private
-  public ::                 &
-    deigensolver_cg2,       &
-    zeigensolver_cg2,       &
-    deigensolver_cg_jiang,   &
+  public ::                &
+    deigensolver_cg,       &
+    zeigensolver_cg,       &
+    deigensolver_cg_jiang, &
     zeigensolver_cg_jiang
 
 contains
