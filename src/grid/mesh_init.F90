@@ -56,6 +56,7 @@ module mesh_init_oct_m
 
   integer, parameter :: INNER_POINT = 1
   integer, parameter :: ENLARGEMENT_POINT = 2
+  integer, parameter :: BOUNDARY = -1
   
 contains
 
@@ -254,8 +255,6 @@ subroutine mesh_init_stage_2(mesh, space, sb, cv, stencil)
     call curvilinear_chi2x(sb, cv, chi(:), pos(:))
     if(.not. simul_box_in_box(sb, pos, namespace)) cycle
     mesh%idx%grid_to_hilbert(ip) = ihilbert
-    call iihash_insert(mesh%idx%hilbert_to_grid, ihilbert, ip)
-    !print*, "Inserted point ", ip, ", Hilbert ", ihilbert
     ip = ip + 1
   end do
   mesh%np = ip - 1
@@ -546,6 +545,18 @@ subroutine mesh_init_stage_3(mesh, namespace, space, stencil, mc, parent)
   integer, allocatable :: recvcounts(:), rdispls(:), sendcounts(:), sdispls(:)
   integer, allocatable :: requests(:), mesh_ranks(:)
   integer :: irecv, isend, right_global, left_global, right_local, left_local, ireq
+  integer :: ib, ighost, iboundary, nghost, nboundary, point(MAX_DIM), point_stencil(MAX_DIM)
+  FLOAT :: pos(MAX_DIM), chi(MAX_DIM)
+  logical :: found
+  integer :: is, ihilbert
+  integer, allocatable :: boundary_to_hilbert(:), ghost_to_hilbert(:), temp(:)
+  integer :: size_boundary, size_ghost
+  integer, allocatable :: hilbert_boundaries(:)
+  integer, allocatable :: ghost_sdispls(:), ghost_scounts(:), ghost_sendpos(:), ghost_sindex(:)
+  integer, allocatable :: ghost_rdispls(:), ghost_rcounts(:), ghost_recvpos(:), ghost_rindex(:)
+  integer :: size_send, size_recv
+  integer, allocatable :: ghost_boundary_rankmap(:), ghost_rankmap(:)
+  type(iihash_t) :: hilbert_to_ghost
 
   PUSH_SUB(mesh_init_stage_3)
   call profiling_in(mesh_init_prof, "MESH_INIT")
@@ -570,7 +581,7 @@ subroutine mesh_init_stage_3(mesh, namespace, space, stencil, mc, parent)
     offsets(rank_mesh) = floor(mesh%np_global * TOFLOAT(rank_mesh)/mpi_grp%size)
   end do
   do rank_mesh = 0, mpi_grp%size - 1
-    sizes(rank_mesh) = offsets(rank_mesh + 1) - offsets(rank_mesh) + 1
+    sizes(rank_mesh) = offsets(rank_mesh + 1) - offsets(rank_mesh)
   end do
 
   ! now get data distributed over mpi_world to mpi_grp
@@ -580,6 +591,7 @@ subroutine mesh_init_stage_3(mesh, namespace, space, stencil, mc, parent)
     offsets_global(rank_global) = offsets_global(rank_global - 1) + mesh%nps(rank_global)
   end do
 
+  mesh%np = sizes(mpi_grp%rank)
   SAFE_ALLOCATE(grid_to_hilbert(1:sizes(mpi_grp%rank)))
 
   SAFE_ALLOCATE(recvcounts(0:mpi_world%size-1))
@@ -683,23 +695,175 @@ subroutine mesh_init_stage_3(mesh, namespace, space, stencil, mc, parent)
   SAFE_DEALLOCATE_A(sendcounts)
   SAFE_DEALLOCATE_A(sdispls)
 
-  !do ib = 1, np
-  !  call index_hilbert_to_point(mesh%idx, sb%dim, mesh%idx%grid_to_hilbert(ib), point)
-  !  do is = 1, stencil%size
-  !    if(stencil%center == is) cycle
-  !    point_stencil(1:sb%dim) = point(1:sb%dim) + stencil%points(1:sb%dim, is)
-  !    if(any(point_stencil(1:sb%dim) < mesh%idx%nr(1, 1:sb%dim)) .or. &
-  !       any(point_stencil(1:sb%dim) >  mesh%idx%nr(2, 1:sb%dim))) cycle
-  !    call index_point_to_hilbert(mesh%idx, sb%dim, ihilbertb, point_stencil)
-  !    ib2 = iihash_lookup(mesh%idx%hilbert_to_grid, ihilbertb, found)
-  !    if(found) cycle
-  !    mesh%idx%grid_to_hilbert(ip) = ihilbertb
-  !    call iihash_insert(mesh%idx%hilbert_to_grid, ihilbertb, ip)
-  !    !print*, "Enlargement point ", ip, ", Hilbert ", ihilbertb, " point ", ib
-  !    ip = ip + 1
-  !  end do
-  !end do
-  !np_part = ip - 1
+  ! create inverse mapping
+  do ip = 1, mesh%np
+    call iihash_insert(mesh%idx%hilbert_to_grid, grid_to_hilbert(ip), ip)
+  end do
+  size_boundary = mesh%np
+  size_ghost = mesh%np
+  SAFE_ALLOCATE(boundary_to_hilbert(1:size_boundary))
+  SAFE_ALLOCATE(ghost_to_hilbert(1:size_ghost))
+
+  ! count ghost points: all points not in grid points
+  ! afterwards, ask other processes if these points belong to them
+  ! all points that belong to other processes are ghost points, the rest is the boundary
+  ighost = 1
+  call iihash_init(hilbert_to_ghost)
+  print*, mpi_grp%rank, "Count points"
+  do ip = 1, mesh%np
+    call index_hilbert_to_point(mesh%idx, mesh%sb%dim, grid_to_hilbert(ip), point)
+    do is = 1, stencil%size
+      if(stencil%center == is) cycle
+      point_stencil(1:mesh%sb%dim) = point(1:mesh%sb%dim) + stencil%points(1:mesh%sb%dim, is)
+      if(any(point_stencil(1:mesh%sb%dim) < mesh%idx%nr(1, 1:mesh%sb%dim)) .or. &
+         any(point_stencil(1:mesh%sb%dim) >  mesh%idx%nr(2, 1:mesh%sb%dim))) cycle
+      call index_point_to_hilbert(mesh%idx, mesh%sb%dim, ihilbert, point_stencil)
+      ib = iihash_lookup(mesh%idx%hilbert_to_grid, ihilbert, found)
+      if(found) cycle
+      ib = iihash_lookup(hilbert_to_ghost, ihilbert, found)
+      if(found) cycle
+      ghost_to_hilbert(ighost) = ihilbert
+      call iihash_insert(hilbert_to_ghost, ihilbert, ighost)
+      ighost = ighost + 1
+      if(ighost == size_ghost) then
+        print *, mpi_grp%rank, "resizing from ", size_ghost, " to ", size_ghost*2
+        size_ghost = size_ghost * 2
+        SAFE_ALLOCATE(temp(1:size_ghost))
+        temp(1:ighost) = ghost_to_hilbert(1:ighost)
+        SAFE_DEALLOCATE_A(ghost_to_hilbert)
+        call move_alloc(temp, ghost_to_hilbert)
+      end if
+    end do
+  end do
+  print*, mpi_grp%rank, "Count points done"
+  ighost = ighost - 1
+  mesh%np_part = mesh%np + ighost
+
+  ! ghost contains ghost and boundary
+
+  SAFE_DEALLOCATE_A(mesh%idx%grid_to_hilbert)
+  SAFE_ALLOCATE(mesh%idx%grid_to_hilbert(1:mesh%np_part))
+
+  do ip = 1, mesh%np
+    mesh%idx%grid_to_hilbert(ip) = grid_to_hilbert(ip)
+  end do
+  SAFE_DEALLOCATE_A(grid_to_hilbert)
+
+  ! communicate ghost points
+  print*, mpi_grp%rank, "exchange Hilbert boundaries"
+  SAFE_ALLOCATE(hilbert_boundaries(0:mpi_grp%size-1))
+  call MPI_Allgather(mesh%idx%grid_to_hilbert(mesh%np), 1, MPI_INTEGER, &
+    hilbert_boundaries(0), 1, MPI_INTEGER, mpi_grp%comm, mpi_err)
+  hilbert_boundaries(mpi_grp%size - 1) = 2**(mesh%idx%dim*mesh%idx%bits)
+  print*, hilbert_boundaries
+
+  SAFE_ALLOCATE(ghost_scounts(0:mpi_grp%size-1))
+  SAFE_ALLOCATE(ghost_sdispls(0:mpi_grp%size-1))
+  SAFE_ALLOCATE(ghost_sindex(0:mpi_grp%size-1))
+  SAFE_ALLOCATE(ghost_rcounts(0:mpi_grp%size-1))
+  SAFE_ALLOCATE(ghost_rdispls(0:mpi_grp%size-1))
+  SAFE_ALLOCATE(ghost_rindex(0:mpi_grp%size-1))
+
+  SAFE_ALLOCATE(ghost_boundary_rankmap(1:ighost))
+
+  ! get number of points to send
+  ghost_scounts = 0
+  do ip = 1, ighost
+    do rank_mesh = 0, mpi_grp%size - 1
+      if(ghost_to_hilbert(ip) <= hilbert_boundaries(rank_mesh)) then
+        ghost_boundary_rankmap(ip) = rank_mesh
+        ghost_scounts(rank_mesh) = ghost_scounts(rank_mesh) + 1
+        exit
+      end if
+    end do
+  end do
+  print*, mpi_grp%rank, "computed number of points to send"
+  ghost_sdispls(0) = 0
+  do rank_mesh = 1, mpi_grp%size - 1
+    ghost_sdispls(rank_mesh) = ghost_sdispls(rank_mesh - 1) + ghost_scounts(rank_mesh - 1)
+  end do
+  size_send = ghost_sdispls(mpi_grp%size - 1) + ghost_scounts(mpi_grp%size - 1)
+  print*, mpi_grp%rank, ghost_scounts
+  ASSERT(size_send == mesh%np_part - mesh%np)
+  print*, mpi_grp%rank, "computed number of points to send done", size_send
+  SAFE_ALLOCATE(ghost_sendpos(1:size_send))
+  ghost_sindex = 0
+  do ip = 1, ighost
+    irank = ghost_boundary_rankmap(ip)
+    ghost_sendpos(1+ghost_sdispls(irank) + ghost_sindex(irank)) = ghost_to_hilbert(ip)
+    ghost_sindex(irank) = ghost_sindex(irank) + 1
+  end do
+  ASSERT(all(ghost_sindex - ghost_scounts == 0))
+
+  print*, mpi_grp%rank, "exchange sizes"
+  call MPI_Alltoall(ghost_scounts(0), 1, MPI_INTEGER, &
+       ghost_rcounts(0), 1, MPI_INTEGER, mpi_grp%comm, mpi_err)
+
+  ghost_rdispls(0) = 0
+  do rank_mesh = 1, mpi_grp%size - 1
+    ghost_rdispls(rank_mesh) = ghost_rdispls(rank_mesh - 1) + ghost_rcounts(rank_mesh - 1)
+  end do
+  size_recv = ghost_rdispls(mpi_grp%size - 1) + ghost_rcounts(mpi_grp%size - 1)
+  print*, mpi_grp%rank, "receive sizes ", ghost_rcounts, size_recv
+  SAFE_ALLOCATE(ghost_recvpos(1:size_recv))
+
+  print*, mpi_grp%rank, "exchange hilbert indices"
+  call MPI_Alltoallv(ghost_sendpos(1), ghost_scounts(0), ghost_sdispls(0), MPI_INTEGER, &
+                     ghost_recvpos(1), ghost_rcounts(0), ghost_rdispls(0), MPI_INTEGER, &
+                     mpi_grp%comm, mpi_err)
+
+  do ip = 1, size_recv
+    ib = iihash_lookup(mesh%idx%hilbert_to_grid, ghost_recvpos(ip), found)
+    if(.not. found) then
+      ! not a local point on this processor, set to BOUNDARY = -1
+      ghost_recvpos(ip) = BOUNDARY
+    else
+      ! a local point on this processor, set to local index
+      ghost_recvpos(ip) = ib
+    end if
+  end do
+
+  print*, mpi_grp%rank, "exchange grid indices"
+  call MPI_Alltoallv(ghost_recvpos(1), ghost_rcounts(0), ghost_rdispls(0), MPI_INTEGER, &
+                     ghost_sendpos(1), ghost_scounts(0), ghost_sdispls(0), MPI_INTEGER, &
+                     mpi_grp%comm, mpi_err)
+
+  ighost = 1
+  iboundary = 1
+  do ip = 1, size_send
+    if(ghost_sendpos(ip) == BOUNDARY) then
+      ! not on other processor, must be boundary point
+      iboundary = iboundary + 1
+    else
+      ! on other processor, thus a ghost point
+      ighost = ighost + 1
+    end if
+  end do
+  nghost = ighost - 1
+  nboundary = iboundary - 1
+  ASSERT(mesh%np_part == mesh%np + nghost + nboundary)
+
+  print *, mpi_world%rank, "np, np_part, ghost, boundary", mesh%np, mesh%np_part,  nghost, nboundary
+
+
+  SAFE_ALLOCATE(ghost_rankmap(1:nghost))
+  ighost = 1
+  iboundary = 1
+  do ip = 1, size_send
+    if(ghost_sendpos(ip) == BOUNDARY) then
+      mesh%idx%grid_to_hilbert(mesh%np+nghost+iboundary) = ghost_to_hilbert(ip)
+      call iihash_insert(mesh%idx%hilbert_to_grid, ghost_to_hilbert(ip), mesh%np+nghost+iboundary)
+      iboundary = iboundary + 1
+    else
+      mesh%idx%grid_to_hilbert(mesh%np+ighost) = ghost_to_hilbert(ip)
+      call iihash_insert(mesh%idx%hilbert_to_grid, ghost_to_hilbert(ip), mesh%np+ighost)
+      ghost_rankmap(ighost) = ghost_boundary_rankmap(ip)
+      ighost = ighost + 1
+    end if
+  end do
+
+  SAFE_DEALLOCATE_A(boundary_to_hilbert)
+  SAFE_DEALLOCATE_A(ghost_to_hilbert)
 
 
 
