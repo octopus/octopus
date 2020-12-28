@@ -274,6 +274,9 @@ subroutine mesh_init_stage_2(mesh, space, sb, cv, stencil)
   print *, "Local number of points: ", mesh%np
   print *, "Global number of points: ", mesh%np_global
 
+  call profiling_out(mesh_init_prof)
+  POP_SUB(mesh_init_stage_2)
+  return
 
   ! allocate the xyz arrays
   SAFE_ALLOCATE(mesh%idx%lxyz_inv(nr(1, 1):nr(2, 1), nr(1, 2):nr(2, 2), nr(1, 3):nr(2, 3)))
@@ -845,6 +848,14 @@ subroutine mesh_init_stage_3(mesh, namespace, space, stencil, mc, parent)
 
   print *, mpi_world%rank, "np, np_part, ghost, boundary", mesh%np, mesh%np_part,  nghost, nboundary
 
+  SAFE_ALLOCATE(mesh%np_parts(1:mpi_world%size))
+#ifdef HAVE_MPI
+  call MPI_Allgather(mesh%np_part, 1, MPI_INTEGER, mesh%np_parts(1), 1, MPI_INTEGER, mpi_world%comm, mpi_err)
+#else
+  mesh%np_parts(1) = mesh%np_part
+#endif
+  mesh%np_part_global = sum(mesh%np_parts)
+
 
   SAFE_ALLOCATE(ghost_rankmap(1:nghost))
   ighost = 1
@@ -865,41 +876,47 @@ subroutine mesh_init_stage_3(mesh, namespace, space, stencil, mc, parent)
   SAFE_DEALLOCATE_A(boundary_to_hilbert)
   SAFE_DEALLOCATE_A(ghost_to_hilbert)
 
+  SAFE_ALLOCATE(mesh%x(1:mesh%np_part, 1:space%dim))
+  mesh%x(:, :) = M_ZERO
+  ! Do the inner points
+  do ip = 1, mesh%np_part
+    mesh%x(ip, 1:space%dim) = mesh_x_global(mesh, ip)
+  end do
 
 
-  if(.not. mesh%parallel_in_domains) then
-    ! When running parallel, x is computed later.
-    SAFE_ALLOCATE(mesh%x(1:mesh%np_part_global, 1:space%dim))
-  end if
-  
-  if(.not. mesh%idx%is_hypercube) then
-    call create_x_lxyz()
-  else if(.not. mesh%parallel_in_domains) then
-    do ip = 1, mesh%np_part_global
-      mesh%x(ip, 1:space%dim) = mesh_x_global(mesh, ip, force=.true.)
-    end do
-  end if
+  !if(.not. mesh%parallel_in_domains) then
+  !  ! When running parallel, x is computed later.
+  !  !AFE_ALLOCATE(mesh%x(1:mesh%np_part_global, 1:space%dim))
+  !end if
+  !
+  !if(.not. mesh%idx%is_hypercube) then
+  !  call create_x_lxyz()
+  !else if(.not. mesh%parallel_in_domains) then
+  !  do ip = 1, mesh%np_part_global
+  !    mesh%x(ip, 1:space%dim) = mesh_x_global(mesh, ip, force=.true.)
+  !  end do
+  !end if
 
   mesh%mpi_grp = mpi_grp 
   
-  if(mesh%parallel_in_domains) then
+  !if(mesh%parallel_in_domains) then
 
-    call do_partition()
+  !  call do_partition()
 
-  else
+  !else
 
-    ! When running serially those two are the same.
-    mesh%np      = mesh%np_global
-    mesh%np_part = mesh%np_part_global
+  !  ! When running serially those two are the same.
+  !  mesh%np      = mesh%np_global
+  !  mesh%np_part = mesh%np_part_global
 
-    ! These must be initialized for vec_gather, vec_scatter to work
-    ! as copy operations when running without domain parallelization.
-    mesh%vp%np_global = mesh%np_global
-    mesh%vp%np_ghost = 0
-    mesh%vp%np_bndry = mesh%np_part - mesh%np
-    mesh%vp%npart = 1
-    mesh%vp%xlocal = 1
-  end if
+  !  ! These must be initialized for vec_gather, vec_scatter to work
+  !  ! as copy operations when running without domain parallelization.
+  !  mesh%vp%np_global = mesh%np_global
+  !  mesh%vp%np_ghost = 0
+  !  mesh%vp%np_bndry = mesh%np_part - mesh%np
+  !  mesh%vp%npart = 1
+  !  mesh%vp%xlocal = 1
+  !end if
 
   call mesh_cube_map_init(mesh%cube_map, mesh%idx, mesh%np_global)
 

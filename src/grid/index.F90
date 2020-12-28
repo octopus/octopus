@@ -92,6 +92,8 @@ contains
     integer,       intent(in)    :: ix(:)
 
     integer :: ix2(MAX_DIM), idir
+    integer :: ihilbert
+    logical :: found
 
     ! No PUSH SUB, called too often
 
@@ -103,7 +105,10 @@ contains
     end do
 
     if(.not. idx%is_hypercube) then
-      index = idx%lxyz_inv(ix2(1), ix2(2), ix2(3))
+      !index = idx%lxyz_inv(ix2(1), ix2(2), ix2(3))
+      call index_point_to_hilbert(idx, idx%dim, ihilbert, ix2)
+      index = iihash_lookup(idx%hilbert_to_grid, ihilbert, found)
+      if(.not. found) index = 0
     else
       call hypercube_x_to_i(idx%hypercube, idx%dim, idx%nr, idx%enlarge(1), ix, index)
     end if
@@ -119,6 +124,8 @@ contains
     integer,       intent(out)   :: index(:)
 
     integer :: ix2(MAX_DIM), idir, ip
+    integer :: ihilbert
+    logical :: found
 
     ! No PUSH SUB, called too often
     ix2 = 0
@@ -128,7 +135,10 @@ contains
         do idir = 1, idx%dim
           ix2(idir) = ix(idir, ip)
         end do
-        index(ip) = idx%lxyz_inv(ix2(1), ix2(2), ix2(3))
+        !index(ip) = idx%lxyz_inv(ix2(1), ix2(2), ix2(3))
+        call index_point_to_hilbert(idx, idx%dim, ihilbert, ix2)
+        index(ip) = iihash_lookup(idx%hilbert_to_grid, ihilbert, found)
+        ASSERT(found)
       end do
     else
       do ip = 1, npoints
@@ -141,7 +151,7 @@ contains
 
   !> Given a _global_ point index, this function returns the set of
   !! integer coordinates of the point.
-  pure subroutine index_to_coords(idx, ip, ix)
+  subroutine index_to_coords(idx, ip, ix)
     type(index_t), intent(in)    :: idx
     integer,       intent(in)    :: ip
     integer,       intent(out)   :: ix(:)
@@ -152,9 +162,10 @@ contains
     ! undefined on exit).
     ix = 0
     if(.not. idx%is_hypercube) then
-      do idir = 1, idx%dim
-        ix(idir) = idx%lxyz(ip, idir)
-      end do
+      !do idir = 1, idx%dim
+      !  ix(idir) = idx%lxyz(ip, idir)
+      !end do
+      call index_hilbert_to_point(idx, idx%dim, idx%grid_to_hilbert(ip), ix)
     else
       call hypercube_i_to_x(idx%hypercube, idx%dim, idx%nr, idx%enlarge(1), ip, ix)
     end if
@@ -174,6 +185,8 @@ contains
     PUSH_SUB(index_dump_lxyz)
 
     ierr = 0
+    POP_SUB(index_dump_lxyz)
+    return
 
     if (.not. idx%is_hypercube) then
       if (mpi_grp_is_root(mpi_grp)) then
