@@ -18,7 +18,7 @@
 
 ! ---------------------------------------------------------
 !> conjugate-gradients method.
-subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, converged, ik, diff, orthogonalize_to_all, &
+subroutine X(eigensolver_cg) (namespace, gr, st, hm, xc, pre, tol, niter, converged, ik, diff, orthogonalize_to_all, &
   conjugate_direction, additional_terms, energy_change_threshold, shift)
   type(namespace_t),        intent(in)    :: namespace
   type(grid_t),             intent(in)    :: gr
@@ -50,7 +50,7 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
   logical  :: add_xc_term
   type(states_elec_group_t) :: hpsi_j
 
-  PUSH_SUB(X(eigensolver_cg2))
+  PUSH_SUB(X(eigensolver_cg))
 
   ! if the optional shift argument is present, assume we are computing a folded spectrum
   fold_ =  present(shift)
@@ -464,8 +464,8 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
     call states_elec_group_end(hpsi_j, st%d)
   end if
 
-  POP_SUB(X(eigensolver_cg2))
-end subroutine X(eigensolver_cg2)
+  POP_SUB(X(eigensolver_cg))
+end subroutine X(eigensolver_cg)
 
 
 ! ---------------------------------------------------------

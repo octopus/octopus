@@ -35,7 +35,7 @@
     case(RS_CG_NEW)
       call X(eigensolver_cg2_new)(namespace, gr, st, hm, eigens%tolerance, maxiter, eigens%converged(ik), ik, eigens%diff(:, ik))
     case(RS_CG)
-      call X(eigensolver_cg2)(namespace, gr, st, hm, hm%xc, eigens%pre, eigens%tolerance, maxiter, &
+      call X(eigensolver_cg)(namespace, gr, st, hm, hm%xc, eigens%pre, eigens%tolerance, maxiter, &
         eigens%converged(ik), ik, eigens%diff(:, ik), eigens%orthogonalize_to_all, &
         eigens%conjugate_direction, eigens%additional_terms, eigens%energy_change_threshold)
     case(RS_PLAN)

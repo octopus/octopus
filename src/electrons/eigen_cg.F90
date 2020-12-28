@@ -46,8 +46,8 @@ module eigen_cg_oct_m
 
   private
   public ::                 &
-    deigensolver_cg2,       &
-    zeigensolver_cg2,       &
+    deigensolver_cg,       &
+    zeigensolver_cg,       &
     deigensolver_cg2_new,   &
     zeigensolver_cg2_new
 
