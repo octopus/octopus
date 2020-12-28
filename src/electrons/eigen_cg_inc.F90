@@ -37,9 +37,10 @@ subroutine X(eigensolver_cg) (namespace, gr, st, hm, xc, pre, tol, niter, conver
   FLOAT,                    intent(in)    :: energy_change_threshold
   FLOAT, pointer, optional, intent(in)   :: shift(:,:)
 
-  R_TYPE, allocatable :: h_psi(:,:), g(:,:), g0(:,:),  cg(:,:), h_cg(:,:), psi(:, :), psi2(:, :), g_prev(:,:), psi_j(:,:)
-  R_TYPE   :: gg, gg0, gg1, gamma, norma, dot
-  FLOAT    :: es(2), cg0, e0, res, alpha, beta, theta, old_energy, lam, lam_conj, cg_phi, g0_norm, g_norm
+  R_TYPE, allocatable :: h_psi(:,:), sd(:,:), sd_precond(:,:), cg(:,:), h_cg(:,:)
+  R_TYPE, allocatable :: psi(:, :), psi2(:, :), sd_previous(:,:), psi_j(:,:)
+  R_TYPE   :: sd_product, sd_product_previous, sd_product_mixed, gamma, overlap, dot
+  FLOAT    :: es(2), cg_norm, e0, res, alpha, beta, theta, old_energy, lam, lam_conj, cg_phi, sd_norm
   FLOAT    :: stheta, stheta2, ctheta, ctheta2
   FLOAT, allocatable :: chi(:, :), omega(:, :), fxc(:, :, :), lam_sym(:)
   FLOAT    :: integral_hartree, integral_xc, tmp
@@ -83,13 +84,13 @@ subroutine X(eigensolver_cg) (namespace, gr, st, hm, xc, pre, tol, niter, conver
   maxter = niter
   niter = 0
 
-  SAFE_ALLOCATE(  psi(1:gr%mesh%np_part, 1:st%d%dim))
-  SAFE_ALLOCATE(   cg(1:gr%mesh%np_part, 1:st%d%dim))
-  SAFE_ALLOCATE(    g(1:gr%mesh%np_part, 1:st%d%dim))
-  SAFE_ALLOCATE(   g0(1:gr%mesh%np,      1:st%d%dim))
-  SAFE_ALLOCATE(g_prev(1:gr%mesh%np,     1:st%d%dim))
+  SAFE_ALLOCATE(psi(1:gr%mesh%np_part, 1:st%d%dim))
+  SAFE_ALLOCATE(cg(1:gr%mesh%np_part, 1:st%d%dim))
+  SAFE_ALLOCATE(sd(1:gr%mesh%np_part, 1:st%d%dim))
+  SAFE_ALLOCATE(sd_precond(1:gr%mesh%np, 1:st%d%dim))
+  SAFE_ALLOCATE(sd_previous(1:gr%mesh%np, 1:st%d%dim))
   if(additional_terms) then
-    SAFE_ALLOCATE(  chi(1:gr%mesh%np_part, 1:st%d%dim))
+    SAFE_ALLOCATE(chi(1:gr%mesh%np_part, 1:st%d%dim))
     SAFE_ALLOCATE(omega(1:gr%mesh%np_part, 1:st%d%dim))
     if(st%d%ispin == UNPOLARIZED) then
       SAFE_ALLOCATE(fxc(1:gr%mesh%np, 1:1, 1:1))
@@ -116,11 +117,11 @@ subroutine X(eigensolver_cg) (namespace, gr, st, hm, xc, pre, tol, niter, conver
   end if
 
   h_psi = R_TOTYPE(M_ZERO)
-  cg    = R_TOTYPE(M_ZERO)
-  g     = R_TOTYPE(M_ZERO)
-  g0    = R_TOTYPE(M_ZERO)
-  h_cg  = R_TOTYPE(M_ZERO)
-  g_prev = R_TOTYPE(M_ZERO)
+  cg = R_TOTYPE(M_ZERO)
+  sd = R_TOTYPE(M_ZERO)
+  sd_precond = R_TOTYPE(M_ZERO)
+  h_cg = R_TOTYPE(M_ZERO)
+  sd_previous = R_TOTYPE(M_ZERO)
 
   ! get derivative once here -> the density does not change in the loop
   if(add_xc_term) then
@@ -137,7 +138,7 @@ subroutine X(eigensolver_cg) (namespace, gr, st, hm, xc, pre, tol, niter, conver
   ! The steps in this loop follow closely the algorithm from
   ! Payne et al. (1992), Rev. Mod. Phys. 64, 4, section V.B
   eigenfunction_loop : do ist = converged + 1, st%nst
-    gg1   = R_TOTYPE(M_ZERO)
+    sd_product_mixed   = R_TOTYPE(M_ZERO)
 
     call states_elec_get_state(st, gr%mesh, ist, ik, psi)
 
@@ -161,20 +162,20 @@ subroutine X(eigensolver_cg) (namespace, gr, st, hm, xc, pre, tol, niter, conver
 
     ! Starts iteration for this band
     iter_loop: do iter = 1, maxter
-      ! need to save g from previous iteration for Polak-Ribiere method
+      ! need to save sd from previous iteration for Polak-Ribiere method
       if(conjugate_direction == OPTION__CGDIRECTION__POLAK) then
         if(iter /= 1) then
-          g_prev = g
+          sd_previous = sd
         else
-          g_prev = M_ZERO
+          sd_previous = M_ZERO
         end if
       end if
 
-      ! PTA92, eq. 5.10
+      ! PTA92, eq. 5.10 (get steepest descent vector)
       do idim = 1, st%d%dim
         !$omp parallel do simd schedule(static)
         do ip = 1, gr%mesh%np
-          g(ip, idim) = -h_psi(ip, idim) + st%eigenval(ist, ik)*psi(ip, idim)
+          sd(ip, idim) = -h_psi(ip, idim) + st%eigenval(ist, ik)*psi(ip, idim)
         end do
       end do
 
@@ -206,7 +207,7 @@ subroutine X(eigensolver_cg) (namespace, gr, st, hm, xc, pre, tol, niter, conver
             lam_sym(jst) = lam + lam_conj
 
             do idim = 1, st%d%dim
-              call lalg_axpy(gr%mesh%np, -lam_conj, psi_j(:, idim), g(:, idim))
+              call lalg_axpy(gr%mesh%np, -lam_conj, psi_j(:, idim), sd(:, idim))
             end do
           end if
         end do
@@ -214,94 +215,95 @@ subroutine X(eigensolver_cg) (namespace, gr, st, hm, xc, pre, tol, niter, conver
 
       ! PTA92, eq. 5.12
       ! Orthogonalize to all states
-      call X(states_elec_orthogonalize_single_batch)(st, gr%mesh, ist - 1, ik, g, normalize = .false., &
+      call X(states_elec_orthogonalize_single_batch)(st, gr%mesh, ist - 1, ik, sd, normalize = .false., &
           against_all=orthogonalize_to_all)
-      g_norm = X(mf_nrm2) (gr%mesh, st%d%dim, g)
-      if(g_norm /= M_ZERO) then
+      sd_norm = X(mf_nrm2) (gr%mesh, st%d%dim, sd)
+      if(sd_norm /= M_ZERO) then
         do idim = 1, st%d%dim
-          call lalg_scal(gr%mesh%np, M_ONE/g_norm, g(1:gr%mesh%np, idim))
+          call lalg_scal(gr%mesh%np, M_ONE/sd_norm, sd(1:gr%mesh%np, idim))
         end do
       end if
 
       ! PTA92, eq. 5.17
       ! Approximate inverse preconditioner
-      call  X(preconditioner_apply)(pre, namespace, gr, hm, g(:,:), g0(:,:), ik)
+      call  X(preconditioner_apply)(pre, namespace, gr, hm, sd(:,:), sd_precond(:,:), ik)
 
       ! PTA92, eq. 5.18
-      dot = X(mf_dotp) (gr%mesh, st%d%dim, psi, g0)
+      dot = X(mf_dotp) (gr%mesh, st%d%dim, psi, sd_precond)
       ! This needs to be done before the orthogonalization_single call, as psi is not guaranted
       ! to be orthogonal to the other bands here
       do idim = 1, st%d%dim
-        call lalg_axpy(gr%mesh%np, -dot, psi(:, idim), g0(:, idim))
+        call lalg_axpy(gr%mesh%np, -dot, psi(:, idim), sd_precond(:, idim))
       end do
 
       ! orthogonalize against previous or all states, depending on the optional argument orthogonalize_to_all
-      call X(states_elec_orthogonalize_single_batch)(st, gr%mesh, ist - 1, ik, g0, normalize = .false., &
+      call X(states_elec_orthogonalize_single_batch)(st, gr%mesh, ist - 1, ik, sd_precond, normalize = .false., &
           against_all=orthogonalize_to_all)
 
-      ! normalize g0 here, needed for consistency
-      g0_norm = X(mf_nrm2) (gr%mesh, st%d%dim, g0)
-      if(g0_norm /= M_ZERO) then
+      ! normalize sd_precond here, needed for consistency
+      sd_norm = X(mf_nrm2) (gr%mesh, st%d%dim, sd_precond)
+      if(sd_norm /= M_ZERO) then
         do idim = 1, st%d%dim
-          call lalg_scal(gr%mesh%np, M_ONE/g0_norm, g0(1:gr%mesh%np, idim))
+          call lalg_scal(gr%mesh%np, M_ONE/sd_norm, sd_precond(1:gr%mesh%np, idim))
         end do
       end if
 
       ! dot products needed for conjugate gradient
-      gg = X(mf_dotp) (gr%mesh, st%d%dim, g0, g, reduce = .false.)
+      sd_product = X(mf_dotp) (gr%mesh, st%d%dim, sd_precond, sd, reduce = .false.)
       if(iter /= 1 .and. conjugate_direction == OPTION__CGDIRECTION__POLAK) then
         ! only needed for Polak-Ribiere
-        gg1 = X(mf_dotp) (gr%mesh, st%d%dim, g0, g_prev, reduce = .false.)
+        sd_product_mixed = X(mf_dotp) (gr%mesh, st%d%dim, sd_precond, sd_previous, reduce = .false.)
       end if
 
       if(gr%mesh%parallel_in_domains) then
-        sb(1) = gg1
-        sb(2) = gg
+        sb(1) = sd_product_mixed
+        sb(2) = sd_product
         call comm_allreduce(gr%mesh%vp%comm, sb, dim = 2)
-        gg1 = sb(1)
-        gg  = sb(2)
+        sd_product_mixed = sb(1)
+        sd_product  = sb(2)
       end if
 
-      ! Starting or following iterations...
       if(iter  ==  1) then
-        gg0 = gg
+        ! simply use the preconditioned steepest descent vector in the first iteration
+        sd_product_previous = sd_product
         do idim = 1, st%d%dim
-          call lalg_copy(gr%mesh%np, g0(:, idim), cg(:, idim))
+          call lalg_copy(gr%mesh%np, sd_precond(:, idim), cg(:, idim))
         end do
       else
+        ! compute conjugate gradient vector from current and previous iteration
         select case (conjugate_direction)
         case (OPTION__CGDIRECTION__FLETCHER)
           ! PTA eq. 5.20
-          gamma = gg/gg0        ! (Fletcher-Reeves)
+          gamma = sd_product/sd_product_previous        ! (Fletcher-Reeves)
         case (OPTION__CGDIRECTION__POLAK)
-          gamma = (gg - gg1)/gg0   ! (Polack-Ribiere)
+          gamma = (sd_product - sd_product_mixed)/sd_product_previous   ! (Polack-Ribiere)
         case default
           call messages_input_error(namespace, 'Conjugate Direction')
         end select
         ! save for next iteration
-        gg0 = gg
+        sd_product_previous = sd_product
 
         ! PTA92, eq. 5.19
         do idim = 1, st%d%dim
           !$omp parallel do simd schedule(static)
           do ip = 1, gr%mesh%np
-            cg(ip, idim) = gamma*cg(ip, idim) + g0(ip, idim)
+            cg(ip, idim) = sd_precond(ip, idim) + gamma*cg(ip, idim)
           end do
         end do
         call profiling_count_operations(st%d%dim*gr%mesh%np*(2*R_ADD + 2*R_MUL))
       end if
 
       ! PTA92, eq. 5.21
-      norma =  X(mf_dotp) (gr%mesh, st%d%dim, psi, cg)
+      overlap =  X(mf_dotp) (gr%mesh, st%d%dim, psi, cg)
       do idim = 1, st%d%dim
-        call lalg_axpy(gr%mesh%np, -norma, psi(1:gr%mesh%np, idim), cg(:, idim))
+        call lalg_axpy(gr%mesh%np, -overlap, psi(1:gr%mesh%np, idim), cg(:, idim))
       end do
 
       ! normalize cg here (PTA92, eq. 5.22)
-      cg0 = X(mf_nrm2) (gr%mesh, st%d%dim, cg)
-      if(cg0 /= M_ZERO) then
+      cg_norm = X(mf_nrm2) (gr%mesh, st%d%dim, cg)
+      if(cg_norm /= M_ZERO) then
         do idim = 1, st%d%dim
-          call lalg_scal(gr%mesh%np, M_ONE/cg0, cg(1:gr%mesh%np, idim))
+          call lalg_scal(gr%mesh%np, M_ONE/cg_norm, cg(1:gr%mesh%np, idim))
         end do
       end if
 
@@ -384,19 +386,16 @@ subroutine X(eigensolver_cg) (namespace, gr, st, hm, xc, pre, tol, niter, conver
       ! Choose the minimum solutions.
       if (es(2) < es(1)) then
         theta = theta + M_PI*M_HALF
-        a0 = ctheta2
-        b0 = stheta2
-      else
-        a0 = ctheta
-        b0 = stheta
+        ctheta = ctheta2
+        stheta = stheta2
       end if
 
       ! PTA92, eq. 5.38
       do idim = 1, st%d%dim
         !$omp parallel do simd schedule(static)
         do ip = 1, gr%mesh%np
-          psi(ip, idim) = a0*psi(ip, idim) + b0*cg(ip, idim)
-          h_psi(ip, idim) = a0*h_psi(ip, idim) + b0*h_cg(ip, idim)
+          psi(ip, idim) = ctheta*psi(ip, idim) + stheta*cg(ip, idim)
+          h_psi(ip, idim) = ctheta*h_psi(ip, idim) + stheta*h_cg(ip, idim)
         end do
       end do
 
@@ -413,7 +412,7 @@ subroutine X(eigensolver_cg) (namespace, gr, st, hm, xc, pre, tol, niter, conver
 
       if(debug%info) then
         write(message(1), '(a,i4,a,i4,a,i4,a,es12.5,a,i4,a,es12.5,a,es12.5,a,es12.5,es12.5)') 'Debug: CG Eigensolver - ik', ik, ' ist ', ist, &
-             ' iter ', iter, " max ", maxter, &
+             ' iter ', iter, ' max ', maxter, &
              ' deltae ', abs(st%eigenval(ist, ik) - old_energy), &
              ' residue ', res
         call messages_info(1)
@@ -422,7 +421,7 @@ subroutine X(eigensolver_cg) (namespace, gr, st, hm, xc, pre, tol, niter, conver
       old_energy = st%eigenval(ist, ik)
 
       ! Test convergence of residual
-      if(res < tol .or. abs(gg0) < M_EPSILON) then
+      if(res < tol .or. abs(sd_product_previous) < M_EPSILON) then
         if(converged == ist - 1) converged = ist ! only consider the first converged eigenvectors
         exit iter_loop
       end if
@@ -450,8 +449,8 @@ subroutine X(eigensolver_cg) (namespace, gr, st, hm, xc, pre, tol, niter, conver
   ! Deallocation of variables
   SAFE_DEALLOCATE_A(psi)
   SAFE_DEALLOCATE_A(h_psi)
-  SAFE_DEALLOCATE_A(g)
-  SAFE_DEALLOCATE_A(g0)
+  SAFE_DEALLOCATE_A(sd)
+  SAFE_DEALLOCATE_A(sd_precond)
   SAFE_DEALLOCATE_A(cg)
   SAFE_DEALLOCATE_A(h_cg)
   SAFE_DEALLOCATE_A(chi)
