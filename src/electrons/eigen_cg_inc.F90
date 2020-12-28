@@ -105,7 +105,7 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
     SAFE_ALLOCATE(h_psi(1:gr%mesh%np, 1:st%d%dim))
     SAFE_ALLOCATE( h_cg(1:gr%mesh%np, 1:st%d%dim))
   end if
-  
+
   if(hm%theory_level == RDMFT) then
     SAFE_ALLOCATE(psi_j(1:gr%mesh%np, 1:st%d%dim))
     SAFE_ALLOCATE(lam_sym(1:st%nst))
@@ -138,7 +138,7 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
   ! Payne et al. (1992), Rev. Mod. Phys. 64, 4, section V.B
   eigenfunction_loop : do ist = converged + 1, st%nst
     gg1   = R_TOTYPE(M_ZERO)
-    
+
     call states_elec_get_state(st, gr%mesh, ist, ik, psi)
 
     ! Calculate starting gradient: |hpsi> = H|psi>
@@ -229,7 +229,7 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
 
       ! PTA92, eq. 5.18
       dot = X(mf_dotp) (gr%mesh, st%d%dim, psi, g0)
-      ! This needs to be done before the orthogonalization_single call, as psi is not guaranted 
+      ! This needs to be done before the orthogonalization_single call, as psi is not guaranted
       ! to be orthogonal to the other bands here
       do idim = 1, st%d%dim
         call lalg_axpy(gr%mesh%np, -dot, psi(:, idim), g0(:, idim))
@@ -307,7 +307,7 @@ subroutine X(eigensolver_cg2) (namespace, gr, st, hm, xc, pre, tol, niter, conve
 
       ! cg contains now the conjugate gradient
       call X(hamiltonian_elec_apply_single)(hm, namespace, gr%mesh, cg, h_cg, ist, ik)
-    
+
       if(fold_) then
         call X(hamiltonian_elec_apply_single)(hm, namespace, gr%mesh, h_cg, psi2, ist, ik)
         ! h_psi = (H-shift)^2 psi
