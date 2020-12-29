@@ -29,6 +29,7 @@ module system_dftb_oct_m
   use interaction_oct_m
   use interactions_factory_oct_m
   use io_oct_m
+  use ion_dynamics_oct_m
   use iso_c_binding
   use messages_oct_m
   use mpi_oct_m
@@ -60,12 +61,16 @@ module system_dftb_oct_m
     FLOAT, allocatable :: vel(:,:)
     FLOAT, allocatable :: prev_tot_force(:,:) !< Used for the SCF convergence criterium
     integer, allocatable :: species(:)
+    integer              :: dynamics
+    FLOAT,        public :: dt             !< time step
+    integer,      public :: max_steps      !< maximum number of steps to perform
     FLOAT, allocatable :: mass(:)
     character(len=LABEL_LEN), allocatable  :: labels(:)
     FLOAT, allocatable :: prev_acc(:,:,:) !< A storage of the prior times.
     FLOAT :: scc_tolerance
     type(geometry_t) :: geo
     type(c_ptr) :: output_handle(2)
+    type(ion_dynamics_t) :: ions
 #ifdef HAVE_DFTBPLUS
     type(TDftbPlus) :: dftbp
 #endif
@@ -89,6 +94,11 @@ module system_dftb_oct_m
   interface system_dftb_t
     procedure system_dftb_constructor
   end interface system_dftb_t
+
+  !> Parameters.
+  integer, parameter :: &
+    EHRENFEST = 1,   &
+    BO        = 2
 
 contains
 
@@ -120,17 +130,18 @@ contains
     class(system_dftb_t), target, intent(inout) :: this
     type(namespace_t),            intent(in)    :: namespace
 
-    integer :: ii, jj, ispec
+    integer :: ii, jj, ispec, default
     character(len=MAX_PATH_LEN) :: slako_dir
     character(len=1), allocatable  :: max_ang_mom(:)
     character(len=LABEL_LEN) :: this_max_ang_mom, this_label
     integer :: n_maxang_block
     type(block_t) :: blk
+    FLOAT   :: spacing, default_dt, propagation_time
 
 #ifdef HAVE_DFTBPLUS
     type(TDftbPlusInput) :: input
     type(fnode), pointer :: pRoot, pGeo, pHam, pDftb, pMaxAng, pSlakos, pType2Files, pAnalysis
-    type(fnode), pointer :: pParserOpts
+    type(fnode), pointer :: pParserOpts, pElecDyn, pPerturb, pLaser
 #endif
 
     PUSH_SUB(system_dftb_init)
@@ -220,6 +231,64 @@ contains
     call parse_variable(namespace, 'SlakoDir', './', slako_dir)
 
 
+    ! Dynamics variables
+
+    call ion_dynamics_init(this%ions, namespace, this%geo)
+
+    !%Variable TDDynamics
+    !%Type integer
+    !%Default ehrenfest
+    !%Section DFTBPlusInterface
+    !%Description
+    !% Type of dynamics for DFTB time propagation.
+    !% For BO, you must set <tt>MoveIons = yes</tt>.
+    !%Option ehrenfest 1
+    !% Ehrenfest dynamics.
+    !%Option bo 2
+    !% Born-Oppenheimer dynamics.
+    !%End
+    call parse_variable(namespace, 'TDDynamics', BO, this%dynamics)
+    call messages_print_var_option(stdout, 'TDDynamics', this%dynamics)
+    if (this%dynamics .ne. EHRENFEST) then
+      if (.not. ion_dynamics_ions_move(this%ions)) call messages_input_error(namespace, 'TDDynamics')
+    end if
+
+    !%Variable TDTimeStep
+    !%Type float
+    !%Section DFTBPlusInterface
+    !%Description
+    !% The time-step for the DFTB time propagation. A value between 0.1 and 0.2 a.u.
+    !% usually works.
+    !%End
+    default_dt = CNST(0.1)
+    call parse_variable(namespace, 'TDTimeStep', default_dt, this%dt, unit = units_inp%time)
+    if (this%dt <= M_ZERO) then
+      write(message(1),'(a)') 'Input: TDTimeStep must be positive.'
+      call messages_fatal(1, namespace=namespace)
+    end if
+    call messages_print_var_value(stdout, 'TDTimeStep', this%dt, unit = units_out%time)
+
+    !%Variable TDPropagationTime
+    !%Type float
+    !%Section DFTBPlusInterface
+    !%Description
+    !% The total time for propagation. You cannot set this variable
+    !% at the same time as <tt>TDMaxSteps</tt>.
+    !%End
+    call parse_variable(namespace, 'TDPropagationTime', CNST(-1.0), propagation_time, unit = units_inp%time)
+
+    !%Variable TDMaxSteps
+    !%Type integer
+    !%Default 10
+    !%Section DFTBPlusInterface
+    !%Description
+    !% Number of DFTB time-propagation steps that will be performed. You
+    !% cannot use this variable together with <tt>TDPropagationTime</tt>.
+    !%End
+    default = 10
+    if (propagation_time > CNST(0.0)) default = nint(propagation_time/this%dt)
+    call parse_variable(namespace, 'TDMaxSteps', default, this%max_steps)
+
 #ifdef HAVE_DFTBPLUS
     call TDftbPlus_init(this%dftbp, mpicomm=mpi_world%comm)
 
@@ -266,7 +335,27 @@ contains
 
     call setChild(pRoot, "ParserOptions", pParserOpts)
     call setChildValue(pParserOpts, "ParserVersion", 5)
+#endif
 
+    if (this%dynamics == EHRENFEST) then
+#ifdef HAVE_DFTBPLUS_DEVEL
+      call setChild(pRoot, "ElectronDynamics", pElecDyn)
+      call setChildValue(pElecDyn, "Steps", this%max_steps)
+      call setChildValue(pElecDyn, "TimeStep", this%dt)
+      call setChildValue(pElecDyn, "FieldStrength", CNST(1.0))
+      call setChildValue(pElecDyn, "IonDynamics", ion_dynamics_ions_move(this%ions))
+      call setChildValue(pElecDyn, "InitialTemperature", M_zero)
+
+      call setChild(pElecDyn, "Perturbation", pPerturb)
+      call setChild(pPerturb, "Laser", pLaser)
+      call setChildValue(pLaser, "PolarizationDirection", (/ CNST(1.0) , CNST(0.0) , CNST(0.0) /))
+      call setChildValue(pLaser, "LaserEnergy", CNST(1.0))
+#else
+      message(1) = "DFTB Ehrenfest dynamics enabled only in DFTB development library"
+#endif
+    end if
+
+#ifdef HAVE_DFTBPLUS
     message(1) = 'Input tree in HSD format:'
     call messages_info(1)
     call dumpHsd(input%hsdTree, stdout)

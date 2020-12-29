@@ -402,7 +402,7 @@ contains
       !% velocity of 3.4 velocity units.
       !%
       !% Note: It is important for the velocities to maintain the ordering 
-      !% in which the atoms were defined in the coordinates specifications.
+      !% in which the atomss were defined in the coordinates specifications.
       !%End
 
       call read_coords_init(xyz)
