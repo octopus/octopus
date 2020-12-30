@@ -70,11 +70,11 @@ module lasers_oct_m
 
   type laser_t
     private
-    integer :: field      = E_FIELD_NONE  !< which kind of external field it is (electric, magnetic...)
-    CMPLX :: pol(MAX_DIM) = M_z0          !< the polarization of the laser.
-    type(tdf_t) :: f                      !< The envelope.
-    type(tdf_t) :: phi                    !< The phase
-    FLOAT :: omega        = M_ZERO        !< The main, "carrier", frequency.
+    integer :: field      = E_FIELD_NONE          !< which kind of external field it is (electric, magnetic...)
+    CMPLX, public :: pol(MAX_DIM) = M_z0          !< the polarization of the laser.
+    type(tdf_t), public :: f                      !< The envelope.
+    type(tdf_t), public :: phi                    !< The phase
+    FLOAT, public :: omega        = M_ZERO        !< The main, "carrier", frequency.
 
     FLOAT, pointer :: v(:)    => NULL()
     FLOAT, pointer :: a(:, :) => NULL()

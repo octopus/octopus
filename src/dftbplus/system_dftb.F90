@@ -31,6 +31,7 @@ module system_dftb_oct_m
   use io_oct_m
   use ion_dynamics_oct_m
   use iso_c_binding
+  use lasers_oct_m
   use messages_oct_m
   use mpi_oct_m
   use namespace_oct_m
@@ -42,6 +43,7 @@ module system_dftb_oct_m
   use space_oct_m
   use species_oct_m
   use system_oct_m
+  use tdfunction_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use write_iter_oct_m
@@ -62,15 +64,18 @@ module system_dftb_oct_m
     FLOAT, allocatable :: prev_tot_force(:,:) !< Used for the SCF convergence criterium
     integer, allocatable :: species(:)
     integer              :: dynamics
-    FLOAT,        public :: dt             !< time step
-    integer,      public :: max_steps      !< maximum number of steps to perform
     FLOAT, allocatable :: mass(:)
+    FLOAT, allocatable :: atom_charges(:,:) !< shape is (n_atoms, n_spin)
     character(len=LABEL_LEN), allocatable  :: labels(:)
     FLOAT, allocatable :: prev_acc(:,:,:) !< A storage of the prior times.
     FLOAT :: scc_tolerance
     type(geometry_t) :: geo
     type(c_ptr) :: output_handle(2)
     type(ion_dynamics_t) :: ions
+    integer                :: no_lasers            !< number of laser pulses used
+    type(laser_t), pointer :: lasers(:)            !< lasers stuff
+    FLOAT :: field(3)
+    FLOAT :: energy
 #ifdef HAVE_DFTBPLUS
     type(TDftbPlus) :: dftbp
 #endif
@@ -130,13 +135,14 @@ contains
     class(system_dftb_t), target, intent(inout) :: this
     type(namespace_t),            intent(in)    :: namespace
 
-    integer :: ii, jj, ispec, default
+    integer :: ii, jj, ispec, il, ierr
     character(len=MAX_PATH_LEN) :: slako_dir
     character(len=1), allocatable  :: max_ang_mom(:)
     character(len=LABEL_LEN) :: this_max_ang_mom, this_label
     integer :: n_maxang_block
     type(block_t) :: blk
-    FLOAT   :: spacing, default_dt, propagation_time
+    character(len=200) :: envelope_expression, phase_expression
+    FLOAT :: omega0
 
 #ifdef HAVE_DFTBPLUS
     type(TDftbPlusInput) :: input
@@ -161,6 +167,7 @@ contains
     SAFE_ALLOCATE(this%gradients(3, this%n_atom))
     SAFE_ALLOCATE(this%species(this%n_atom))
     SAFE_ALLOCATE(this%mass(this%n_atom))
+    SAFE_ALLOCATE(this%atom_charges(this%n_atom, 1))
     SAFE_ALLOCATE(this%labels(this%geo%nspecies))
     SAFE_ALLOCATE(max_ang_mom(this%geo%nspecies))
 
@@ -253,41 +260,60 @@ contains
       if (.not. ion_dynamics_ions_move(this%ions)) call messages_input_error(namespace, 'TDDynamics')
     end if
 
-    !%Variable TDTimeStep
-    !%Type float
+    !%Variable TDExternalFields
+    !%Type block
     !%Section DFTBPlusInterface
     !%Description
-    !% The time-step for the DFTB time propagation. A value between 0.1 and 0.2 a.u.
-    !% usually works.
+    !% The block <tt>TDExternalFields</tt> describes the type and shape of time-dependent
+    !% external perturbations that are applied to the system (see further documentation in the Time-Dependent
+    !% section). Each line of the block describes an external field. Only fields of type type = <tt>electric field</tt>
+    !% allowed for the moment.
+    !% The syntax is:
+    !%
+    !% <tt>%TDExternalFields
+    !% <br>&nbsp;&nbsp; nx | ny | nz | omega | envelope_function_name | phase
+    !% <br>%</tt>
+    !%
+    !% The three (possibly complex) numbers (<tt>nx</tt>, <tt>ny</tt>, <tt>nz</tt>) mark the polarization
+    !% direction of the field.
+    !%
     !%End
-    default_dt = CNST(0.1)
-    call parse_variable(namespace, 'TDTimeStep', default_dt, this%dt, unit = units_inp%time)
-    if (this%dt <= M_ZERO) then
-      write(message(1),'(a)') 'Input: TDTimeStep must be positive.'
-      call messages_fatal(1, namespace=namespace)
+
+    this%no_lasers = 0
+    if(parse_block(namespace, 'TDExternalFields', blk) == 0) then
+      this%no_lasers = parse_block_n(blk)
+      SAFE_ALLOCATE(this%lasers(1:this%no_lasers))
+
+      do il = 1, this%no_lasers
+
+        call parse_block_cmplx(blk, il-1, 0, this%lasers(il)%pol(1))
+        call parse_block_cmplx(blk, il-1, 1, this%lasers(il)%pol(2))
+        call parse_block_cmplx(blk, il-1, 2, this%lasers(il)%pol(3))
+        call parse_block_float(blk, il-1, 4, omega0)
+        omega0 = units_to_atomic(units_inp%energy, omega0)
+        this%lasers(il)%omega = omega0
+
+        call parse_block_string(blk, il-1, 5, envelope_expression)
+        call tdf_read(this%lasers(il)%f, namespace, trim(envelope_expression), ierr)
+
+        ! Check if there is a phase.
+        if(parse_block_cols(blk, il-1) > 6) then
+          call parse_block_string(blk, il-1, 6, phase_expression)
+          call tdf_read(this%lasers(il)%phi, namespace, trim(phase_expression), ierr)
+          if (ierr /= 0) then
+            write(message(1),'(3A)') 'Error in the "', trim(envelope_expression), '" field defined in the TDExternalFields block:'
+            write(message(2),'(3A)') 'Time-dependent phase function "', trim(phase_expression), '" not found.'
+            call messages_warning(2, namespace=namespace)
+          end if
+        else
+          call tdf_init(this%lasers(il)%phi)
+        end if
+
+        this%lasers(il)%pol(:) = this%lasers(il)%pol(:)/sqrt(sum(abs(this%lasers(il)%pol(:))**2))
+      end do
+
+      call parse_block_end(blk)
     end if
-    call messages_print_var_value(stdout, 'TDTimeStep', this%dt, unit = units_out%time)
-
-    !%Variable TDPropagationTime
-    !%Type float
-    !%Section DFTBPlusInterface
-    !%Description
-    !% The total time for propagation. You cannot set this variable
-    !% at the same time as <tt>TDMaxSteps</tt>.
-    !%End
-    call parse_variable(namespace, 'TDPropagationTime', CNST(-1.0), propagation_time, unit = units_inp%time)
-
-    !%Variable TDMaxSteps
-    !%Type integer
-    !%Default 10
-    !%Section DFTBPlusInterface
-    !%Description
-    !% Number of DFTB time-propagation steps that will be performed. You
-    !% cannot use this variable together with <tt>TDPropagationTime</tt>.
-    !%End
-    default = 10
-    if (propagation_time > CNST(0.0)) default = nint(propagation_time/this%dt)
-    call parse_variable(namespace, 'TDMaxSteps', default, this%max_steps)
 
 #ifdef HAVE_DFTBPLUS
     call TDftbPlus_init(this%dftbp, mpicomm=mpi_world%comm)
@@ -340,15 +366,16 @@ contains
     if (this%dynamics == EHRENFEST) then
 #ifdef HAVE_DFTBPLUS_DEVEL
       call setChild(pRoot, "ElectronDynamics", pElecDyn)
-      call setChildValue(pElecDyn, "Steps", this%max_steps)
-      call setChildValue(pElecDyn, "TimeStep", this%dt)
+      ! initialize with wrong arguments for the moment, will be overriden later
+      call setChildValue(pElecDyn, "Steps", 1)
+      call setChildValue(pElecDyn, "TimeStep", CNST(0.1))
       call setChildValue(pElecDyn, "FieldStrength", CNST(1.0))
       call setChildValue(pElecDyn, "IonDynamics", ion_dynamics_ions_move(this%ions))
       call setChildValue(pElecDyn, "InitialTemperature", M_zero)
 
       call setChild(pElecDyn, "Perturbation", pPerturb)
       call setChild(pPerturb, "Laser", pLaser)
-      call setChildValue(pLaser, "PolarizationDirection", (/ CNST(1.0) , CNST(0.0) , CNST(0.0) /))
+      call setChildValue(pLaser, "PolarizationDirection", [ CNST(1.0) , CNST(0.0) , CNST(0.0) ])
       call setChildValue(pLaser, "LaserEnergy", CNST(1.0))
 #else
       message(1) = "DFTB Ehrenfest dynamics enabled only in DFTB development library"
@@ -362,11 +389,19 @@ contains
 
     ! initialise the DFTB+ calculator
     call this%dftbp%setupCalculator(input)
-
     call this%dftbp%setGeometry(this%coords)
-    call this%dftbp%getGradients(this%gradients)
-    this%tot_force = -this%gradients
 #endif
+
+    if (this%dynamics == BO) then
+#ifdef HAVE_DFTBPLUS
+      call this%dftbp%getGradients(this%gradients)
+      this%tot_force = -this%gradients
+#endif
+    else
+#ifdef HAVE_DFTBPLUS_DEVEL
+      call this%dftbp%getEnergy(this%energy)
+#endif
+    end if
 
     POP_SUB(system_dftb_init)
   end subroutine system_dftb_init
@@ -403,7 +438,9 @@ contains
     class(system_dftb_t),    intent(inout) :: this
     class(algorithmic_operation_t), intent(in)    :: operation
 
-    integer :: ii, jj
+    integer :: ii, jj, il
+    CMPLX :: amp
+    FLOAT :: time
 
     PUSH_SUB(system_dftb_do_td)
 
@@ -414,41 +451,63 @@ contains
       ! Do nothing
 
     case (VERLET_START)
-      SAFE_ALLOCATE(this%prev_acc(1:this%space%dim, this%n_atom, 1))
+       if (this%dynamics == EHRENFEST) then
+         this%field = M_zero
+         do il = 1, this%no_lasers
+           time = this%clock%time()
+           amp = tdf(this%lasers(il)%f, time) * exp(M_zI * ( this%lasers(il)%omega*time + tdf(this%lasers(il)%phi, time) ) )
+           this%field(1:3) = this%field(1:3) + TOFLOAT(amp*this%lasers(il)%pol(1:3))
+         end do
 
-      do jj = 1, this%n_atom
-        this%acc(1:this%space%dim, jj) = this%tot_force(1:this%space%dim, jj) / this%mass(jj)
-      end do
+       else
+         SAFE_ALLOCATE(this%prev_acc(1:this%space%dim, this%n_atom, 1))
+         do jj = 1, this%n_atom
+           this%acc(1:this%space%dim, jj) = this%tot_force(1:this%space%dim, jj) / this%mass(jj)
+         end do
+      end if
 
     case (VERLET_FINISH)
       SAFE_DEALLOCATE_A(this%prev_acc)
 
     case (VERLET_UPDATE_POS)
-      do jj = 1, this%n_atom
-        this%coords(1:this%space%dim, jj) = this%coords(1:this%space%dim, jj) + this%prop%dt * this%vel(1:this%space%dim, jj) &
-                                         + M_HALF * this%prop%dt**2 * this%acc(1:this%space%dim, jj)
-      end do
-      this%quantities(POSITION)%clock = this%quantities(POSITION)%clock + CLOCK_TICK
+       if (this%dynamics == EHRENFEST) then
+#ifdef HAVE_DFTBPLUS_DEVEL
+         call this%dftbp%setTdElectricField(this%clock%get_tick(), this%field)
+         call this%dftbp%doOneTdStep(this%clock%get_tick(), atomNetCharges=this%atom_charges, coord=this%coords,&
+              force=this%tot_force, energy=this%energy)
+#endif
+
+       else
+         do jj = 1, this%n_atom
+           this%coords(1:this%space%dim, jj) = this%coords(1:this%space%dim, jj) + this%prop%dt * this%vel(1:this%space%dim, jj) &
+                + M_HALF * this%prop%dt**2 * this%acc(1:this%space%dim, jj)
+         end do
+         this%quantities(POSITION)%clock = this%quantities(POSITION)%clock + CLOCK_TICK
+       end if
 
     case (VERLET_COMPUTE_ACC)
-      do ii = size(this%prev_acc, dim=3) - 1, 1, -1
-        this%prev_acc(1:this%space%dim, 1:this%n_atom, ii + 1) = this%prev_acc(1:this%space%dim, 1:this%n_atom, ii)
-      end do
-      this%prev_acc(1:this%space%dim, 1:this%n_atom, 1) = this%acc(1:this%space%dim, 1:this%n_atom)
+       if (this%dynamics /= EHRENFEST) then
+         do ii = size(this%prev_acc, dim=3) - 1, 1, -1
+           this%prev_acc(1:this%space%dim, 1:this%n_atom, ii + 1) = this%prev_acc(1:this%space%dim, 1:this%n_atom, ii)
+         end do
+         this%prev_acc(1:this%space%dim, 1:this%n_atom, 1) = this%acc(1:this%space%dim, 1:this%n_atom)
 #ifdef HAVE_DFTBPLUS
-      call this%dftbp%setGeometry(this%coords)
-      call this%dftbp%getGradients(this%gradients)
-      this%tot_force = -this%gradients
+         call this%dftbp%setGeometry(this%coords)
+         call this%dftbp%getGradients(this%gradients)
+         this%tot_force = -this%gradients
 #endif
-      do jj = 1, this%n_atom
-        this%acc(1:this%space%dim, jj) = this%tot_force(1:this%space%dim, jj) / this%mass(jj)
-      end do
+         do jj = 1, this%n_atom
+           this%acc(1:this%space%dim, jj) = this%tot_force(1:this%space%dim, jj) / this%mass(jj)
+         end do
+       end if
 
     case (VERLET_COMPUTE_VEL)
-      this%vel(1:this%space%dim, 1:this%n_atom) = this%vel(1:this%space%dim, 1:this%n_atom) &
-           + M_HALF * this%prop%dt * (this%prev_acc(1:this%space%dim, 1:this%n_atom, 1) + &
-           this%acc(1:this%space%dim, 1:this%n_atom))
-      this%quantities(VELOCITY)%clock = this%quantities(VELOCITY)%clock + CLOCK_TICK
+      if (this%dynamics /= EHRENFEST) then
+        this%vel(1:this%space%dim, 1:this%n_atom) = this%vel(1:this%space%dim, 1:this%n_atom) &
+             + M_HALF * this%prop%dt * (this%prev_acc(1:this%space%dim, 1:this%n_atom, 1) + &
+             this%acc(1:this%space%dim, 1:this%n_atom))
+        this%quantities(VELOCITY)%clock = this%quantities(VELOCITY)%clock + CLOCK_TICK
+      end if
 
     case default
       message(1) = "Unsupported TD operation."
@@ -699,6 +758,7 @@ contains
     SAFE_DEALLOCATE_A(this%species)
     SAFE_DEALLOCATE_A(this%mass)
     call geometry_end(this%geo)
+    call laser_end(this%no_lasers, this%lasers)
 
     call system_end(this)
 
