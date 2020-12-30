@@ -76,6 +76,7 @@ module system_dftb_oct_m
     type(laser_t), pointer :: lasers(:)            !< lasers stuff
     FLOAT :: field(3)
     FLOAT :: energy
+    FLOAT :: final_time
 #ifdef HAVE_DFTBPLUS
     type(TDftbPlus) :: dftbp
 #endif
@@ -139,7 +140,7 @@ contains
     character(len=MAX_PATH_LEN) :: slako_dir
     character(len=1), allocatable  :: max_ang_mom(:)
     character(len=LABEL_LEN) :: this_max_ang_mom, this_label
-    integer :: n_maxang_block
+    integer :: n_maxang_block, nsteps
     type(block_t) :: blk
     character(len=200) :: envelope_expression, phase_expression
     FLOAT :: omega0
@@ -242,6 +243,10 @@ contains
 
     call ion_dynamics_init(this%ions, namespace, this%geo)
 
+    ! Get final propagation time from input
+    ! This variable is also defined (and properly documented) in td/td.F90.
+    call parse_variable(namespace, 'TDPropagationTime', CNST(-1.0), this%final_time, unit = units_inp%time)
+
     !%Variable TDDynamics
     !%Type integer
     !%Default ehrenfest
@@ -289,16 +294,16 @@ contains
         call parse_block_cmplx(blk, il-1, 0, this%lasers(il)%pol(1))
         call parse_block_cmplx(blk, il-1, 1, this%lasers(il)%pol(2))
         call parse_block_cmplx(blk, il-1, 2, this%lasers(il)%pol(3))
-        call parse_block_float(blk, il-1, 4, omega0)
+        call parse_block_float(blk, il-1, 3, omega0)
         omega0 = units_to_atomic(units_inp%energy, omega0)
         this%lasers(il)%omega = omega0
 
-        call parse_block_string(blk, il-1, 5, envelope_expression)
+        call parse_block_string(blk, il-1, 4, envelope_expression)
         call tdf_read(this%lasers(il)%f, namespace, trim(envelope_expression), ierr)
 
         ! Check if there is a phase.
-        if(parse_block_cols(blk, il-1) > 6) then
-          call parse_block_string(blk, il-1, 6, phase_expression)
+        if(parse_block_cols(blk, il-1) > 5) then
+          call parse_block_string(blk, il-1, 5, phase_expression)
           call tdf_read(this%lasers(il)%phi, namespace, trim(phase_expression), ierr)
           if (ierr /= 0) then
             write(message(1),'(3A)') 'Error in the "', trim(envelope_expression), '" field defined in the TDExternalFields block:'
@@ -366,13 +371,13 @@ contains
     if (this%dynamics == EHRENFEST) then
 #ifdef HAVE_DFTBPLUS_DEVEL
       call setChild(pRoot, "ElectronDynamics", pElecDyn)
+      call setChildValue(pElecDyn, "IonDynamics", ion_dynamics_ions_move(this%ions))
+
       ! initialize with wrong arguments for the moment, will be overriden later
       call setChildValue(pElecDyn, "Steps", 1)
-      call setChildValue(pElecDyn, "TimeStep", CNST(0.1))
+      call setChildValue(pElecDyn, "TimeStep", CNST(1.0))
       call setChildValue(pElecDyn, "FieldStrength", CNST(1.0))
-      call setChildValue(pElecDyn, "IonDynamics", ion_dynamics_ions_move(this%ions))
       call setChildValue(pElecDyn, "InitialTemperature", M_zero)
-
       call setChild(pElecDyn, "Perturbation", pPerturb)
       call setChild(pPerturb, "Laser", pLaser)
       call setChildValue(pLaser, "PolarizationDirection", [ CNST(1.0) , CNST(0.0) , CNST(0.0) ])
@@ -391,17 +396,6 @@ contains
     call this%dftbp%setupCalculator(input)
     call this%dftbp%setGeometry(this%coords)
 #endif
-
-    if (this%dynamics == BO) then
-#ifdef HAVE_DFTBPLUS
-      call this%dftbp%getGradients(this%gradients)
-      this%tot_force = -this%gradients
-#endif
-    else
-#ifdef HAVE_DFTBPLUS_DEVEL
-      call this%dftbp%getEnergy(this%energy)
-#endif
-    end if
 
     POP_SUB(system_dftb_init)
   end subroutine system_dftb_init
@@ -427,8 +421,23 @@ contains
     class(system_dftb_t), intent(inout) :: this
     logical,                 intent(in)    :: from_scratch
 
+    integer :: nsteps
+
     PUSH_SUB(system_dftb_initial_conditions)
 
+    nsteps = int(this%final_time/this%prop%dt)
+    print *,nsteps,this%prop%dt
+    if (this%dynamics == BO) then
+#ifdef HAVE_DFTBPLUS
+      call this%dftbp%getGradients(this%gradients)
+      this%tot_force = -this%gradients
+#endif
+    else
+#ifdef HAVE_DFTBPLUS_DEVEL
+      call this%dftbp%getEnergy(this%energy)
+      call this%dftbp%initializeTimeProp(nsteps, this%prop%dt)
+#endif
+    end if
 
     POP_SUB(system_dftb_initial_conditions)
   end subroutine system_dftb_initial_conditions
