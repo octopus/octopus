@@ -143,7 +143,7 @@ contains
     integer :: n_maxang_block, nsteps
     type(block_t) :: blk
     character(len=200) :: envelope_expression, phase_expression
-    FLOAT :: omega0
+    FLOAT :: omega0, initial_temp
 
 #ifdef HAVE_DFTBPLUS
     type(TDftbPlusInput) :: input
@@ -265,6 +265,17 @@ contains
       if (.not. ion_dynamics_ions_move(this%ions)) call messages_input_error(namespace, 'TDDynamics')
     end if
 
+    !%Variable InitialIonicTemperature
+    !%Type float
+    !%Default 0.0
+    !%Section DFTBPlusInterface
+    !%Description
+    !% If this variable is present, the ions will have initial velocities
+    !% velocities to the atoms following a Boltzmann distribution with
+    !% this temperature (in Kelvin).
+    !%End
+    call parse_variable(namespace, 'InitialIonicTemperature', M_zero, initial_temp, unit = unit_kelvin)
+
     !%Variable TDExternalFields
     !%Type block
     !%Section DFTBPlusInterface
@@ -372,12 +383,12 @@ contains
 #ifdef HAVE_DFTBPLUS_DEVEL
       call setChild(pRoot, "ElectronDynamics", pElecDyn)
       call setChildValue(pElecDyn, "IonDynamics", ion_dynamics_ions_move(this%ions))
+      call setChildValue(pElecDyn, "InitialTemperature", initial_temp)
 
       ! initialize with wrong arguments for the moment, will be overriden later
       call setChildValue(pElecDyn, "Steps", 1)
       call setChildValue(pElecDyn, "TimeStep", CNST(1.0))
       call setChildValue(pElecDyn, "FieldStrength", CNST(1.0))
-      call setChildValue(pElecDyn, "InitialTemperature", M_zero)
       call setChild(pElecDyn, "Perturbation", pPerturb)
       call setChild(pPerturb, "Laser", pLaser)
       call setChildValue(pLaser, "PolarizationDirection", [ CNST(1.0) , CNST(0.0) , CNST(0.0) ])
