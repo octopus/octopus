@@ -460,19 +460,11 @@ contains
       ! Do nothing
 
     case (VERLET_START)
-       if (this%dynamics == EHRENFEST) then
-         this%field = M_zero
-         do il = 1, this%no_lasers
-           time = this%clock%time()
-           amp = tdf(this%lasers(il)%f, time) * exp(M_zI * ( this%lasers(il)%omega*time + tdf(this%lasers(il)%phi, time) ) )
-           this%field(1:3) = this%field(1:3) + TOFLOAT(amp*this%lasers(il)%pol(1:3))
-         end do
-
-       else
-         SAFE_ALLOCATE(this%prev_acc(1:this%space%dim, this%n_atom, 1))
-         do jj = 1, this%n_atom
-           this%acc(1:this%space%dim, jj) = this%tot_force(1:this%space%dim, jj) / this%mass(jj)
-         end do
+      if (this%dynamics /= EHRENFEST) then
+        SAFE_ALLOCATE(this%prev_acc(1:this%space%dim, this%n_atom, 1))
+        do jj = 1, this%n_atom
+          this%acc(1:this%space%dim, jj) = this%tot_force(1:this%space%dim, jj) / this%mass(jj)
+        end do
       end if
 
     case (VERLET_FINISH)
@@ -480,6 +472,12 @@ contains
 
     case (VERLET_UPDATE_POS)
        if (this%dynamics == EHRENFEST) then
+         this%field = M_zero
+         time = this%clock%time()
+         do il = 1, this%no_lasers
+           amp = tdf(this%lasers(il)%f, time) * exp(M_zI * ( this%lasers(il)%omega*time + tdf(this%lasers(il)%phi, time) ) )
+           this%field(1:3) = this%field(1:3) + TOFLOAT(amp*this%lasers(il)%pol(1:3))
+         end do
 #ifdef HAVE_DFTBPLUS_DEVEL
          call this%dftbp%setTdElectricField(this%clock%get_tick(), this%field)
          call this%dftbp%doOneTdStep(this%clock%get_tick(), atomNetCharges=this%atom_charges, coord=this%coords,&
