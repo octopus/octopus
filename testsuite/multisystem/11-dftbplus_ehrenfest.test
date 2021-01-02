@@ -1,0 +1,47 @@
+# -*- coding: utf-8 mode: shell-script -*-
+
+Test       : Multisystem DFTB+ Ehrenfest run
+Program    : octopus
+TestGroups : short-run, multisystem
+Enabled    : Yes
+
+Processors: 1
+
+ExtraFile: C-H.skf
+ExtraFile: C-C.skf
+ExtraFile: H-C.skf
+ExtraFile: H-H.skf
+Input: 11-dftbplus_ehrenfest.01-benzene.inp
+
+if (available dftbplus); then
+# Final coordinates
+match ; y (C1) (t=400 au) ; LINEFIELD(dftbplus/td.general/coordinates, -1, 4) ;   0.41728094 
+match ; y (C2) (t=400 au) ; LINEFIELD(dftbplus/td.general/coordinates, -1, 7) ;	  1.36277781 
+match ; y (C3) (t=400 au) ; LINEFIELD(dftbplus/td.general/coordinates, -1, 10);   0.94550560 
+match ; y (C4) (t=400 au) ; LINEFIELD(dftbplus/td.general/coordinates, -1, 13);	 -0.41728098 
+match ; y (C5) (t=400 au) ; LINEFIELD(dftbplus/td.general/coordinates, -1, 16);	 -1.36277794 
+match ; y (C6) (t=400 au) ; LINEFIELD(dftbplus/td.general/coordinates, -1, 19);	 -0.94550560 
+
+match ; z (C1) (t=400 au) ; LINEFIELD(dftbplus/td.general/coordinates, -1, 5) ;   1.34035635 
+match ; z (C2) (t=400 au) ; LINEFIELD(dftbplus/td.general/coordinates, -1, 8) ;	  0.31265103 
+match ; z (C3) (t=400 au) ; LINEFIELD(dftbplus/td.general/coordinates, -1, 11);	 -1.02004389 
+match ; z (C4) (t=400 au) ; LINEFIELD(dftbplus/td.general/coordinates, -1, 14);	 -1.32501521 
+match ; z (C5) (t=400 au) ; LINEFIELD(dftbplus/td.general/coordinates, -1, 17);	 -0.29730979 
+match ; z (C6) (t=400 au) ; LINEFIELD(dftbplus/td.general/coordinates, -1, 20);	  1.03538516 
+ 
+match ; y (H1) (t=400 au) ; LINEFIELD(dftbplus/td.general/coordinates, -1, 22);   0.74548789
+match ; y (H2) (t=400 au) ; LINEFIELD(dftbplus/td.general/coordinates, -1, 25);   2.43472553
+match ; y (H3) (t=400 au) ; LINEFIELD(dftbplus/td.general/coordinates, -1, 28);   1.68922884
+match ; y (H4) (t=400 au) ; LINEFIELD(dftbplus/td.general/coordinates, -1, 31);	 -0.74548727
+match ; y (H5) (t=400 au) ; LINEFIELD(dftbplus/td.general/coordinates, -1, 34);	 -2.43472480
+match ; y (H6) (t=400 au) ; LINEFIELD(dftbplus/td.general/coordinates, -1, 37);	 -1.68922827
+
+match ; z (H1) (t=400 au) ; LINEFIELD(dftbplus/td.general/coordinates, -1, 23);   2.38863806 
+match ; z (H2) (t=400 au) ; LINEFIELD(dftbplus/td.general/coordinates, -1, 26);   0.55252586 
+match ; z (H3) (t=400 au) ; LINEFIELD(dftbplus/td.general/coordinates, -1, 29);  -1.82843558 
+match ; z (H4) (t=400 au) ; LINEFIELD(dftbplus/td.general/coordinates, -1, 32);  -2.37329606 
+match ; z (H5) (t=400 au) ; LINEFIELD(dftbplus/td.general/coordinates, -1, 35);  -0.53718399 
+match ; z (H6) (t=400 au) ; LINEFIELD(dftbplus/td.general/coordinates, -1, 38);   1.84377743
+else
+match ; Error dftbplus_devel_not_linked        ; GREPCOUNT(err, 'DFTB'); 1
+endif
