@@ -74,7 +74,7 @@ testprogramdevel="AC_LANG_PROGRAM([],[
     type(TDftbPlus) :: dftbp
 
     call TDftbPlus_init(dftbp)
-    call dftbp%initializeTimeProp()
+    call dftbp%initializeTimeProp(200, 0.2d0)
   ])"
 
 if test $acx_dftbplusdevel_ok = no; then
