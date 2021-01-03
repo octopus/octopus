@@ -74,6 +74,7 @@ module system_dftb_oct_m
     type(ion_dynamics_t) :: ions
     integer                :: no_lasers            !< number of laser pulses used
     type(laser_t), pointer :: lasers(:)            !< lasers stuff
+    logical :: laser_field
     FLOAT :: field(3)
     FLOAT :: energy
     FLOAT :: final_time
@@ -272,7 +273,8 @@ contains
     !%Description
     !% If this variable is present, the ions will have initial velocities
     !% velocities to the atoms following a Boltzmann distribution with
-    !% this temperature (in Kelvin).
+    !% this temperature (in Kelvin). Used only if <tt>TDDynamics = Ehrenfest</tt>
+    !% and  <tt>MoveIons = yes</tt>.
     !%End
     call parse_variable(namespace, 'InitialIonicTemperature', M_zero, initial_temp, unit = unit_kelvin)
 
@@ -297,6 +299,7 @@ contains
 
     this%no_lasers = 0
     if(parse_block(namespace, 'TDExternalFields', blk) == 0) then
+      this%laser_field = .true.
       this%no_lasers = parse_block_n(blk)
       SAFE_ALLOCATE(this%lasers(1:this%no_lasers))
 
@@ -329,6 +332,8 @@ contains
       end do
 
       call parse_block_end(blk)
+    else
+      this%laser_field = .false.
     end if
 
 #ifdef HAVE_DFTBPLUS
@@ -383,16 +388,22 @@ contains
 #ifdef HAVE_DFTBPLUS_DEVEL
       call setChild(pRoot, "ElectronDynamics", pElecDyn)
       call setChildValue(pElecDyn, "IonDynamics", ion_dynamics_ions_move(this%ions))
-      call setChildValue(pElecDyn, "InitialTemperature", initial_temp)
+      if (ion_dynamics_ions_move(this%ions)) then
+        call setChildValue(pElecDyn, "InitialTemperature", initial_temp)
+      end if
 
       ! initialize with wrong arguments for the moment, will be overriden later
       call setChildValue(pElecDyn, "Steps", 1)
       call setChildValue(pElecDyn, "TimeStep", CNST(1.0))
-      call setChildValue(pElecDyn, "FieldStrength", CNST(1.0))
       call setChild(pElecDyn, "Perturbation", pPerturb)
-      call setChild(pPerturb, "Laser", pLaser)
-      call setChildValue(pLaser, "PolarizationDirection", [ CNST(1.0) , CNST(0.0) , CNST(0.0) ])
-      call setChildValue(pLaser, "LaserEnergy", CNST(1.0))
+      if (this%laser_field) then
+        call setChild(pPerturb, "Laser", pLaser)
+        call setChildValue(pLaser, "PolarizationDirection", [ CNST(1.0) , CNST(0.0) , CNST(0.0) ])
+        call setChildValue(pLaser, "LaserEnergy", CNST(1.0))
+        call setChildValue(pElecDyn, "FieldStrength", CNST(1.0))
+      else
+        call setChild(pPerturb, "None", pLaser)
+      end if
 #else
       message(1) = "DFTB Ehrenfest dynamics enabled only in DFTB development library"
 #endif
