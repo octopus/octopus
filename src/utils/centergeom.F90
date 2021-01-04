@@ -67,7 +67,18 @@ program centergeom
   ! is there something to do
   if (geo%natoms > 1) then
 
-    ! get to axis
+    !%Variable MainAxis
+    !%Type block
+    !%Section Utilities::oct-center-geom
+    !%Description 
+    !% A vector of reals defining the axis to which the molecule
+    !% should be aligned. If not present, the default value will
+    !% be the x-axis. For example in 3D:
+    !% <tt>
+    !% <br>%MainAxis
+    !% <br> 1 | 0 | 0 
+    !% <br>%</tt>
+    !%End
     if(parse_block(global_namespace, 'MainAxis', blk)==0) then
       do idir = 1, geo%space%dim
         call parse_block_float(blk, 0, idir - 1, to(idir))
@@ -81,19 +92,6 @@ program centergeom
 
     write(message(1),'(a,6f15.6)') 'Using main axis ', to(1:geo%space%dim)
     call messages_info(1)
-
-    !%Variable MainAxis
-    !%Type block
-    !%Section Utilities::oct-center-geom
-    !%Description 
-    !% A vector of reals defining the axis to which the molecule
-    !% should be aligned. If not present, the default value will
-    !% be the x-axis. For example in 3D:
-    !% <tt>
-    !% <br>%MainAxis
-    !% <br> 1 | 0 | 0 
-    !% <br>%</tt>
-    !%End
 
     !%Variable AxisType
     !%Type integer
