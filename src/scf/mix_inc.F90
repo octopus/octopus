@@ -80,7 +80,7 @@ subroutine X(mixing_broyden)(smix, vin, vout, vnew, iter)
   R_TYPE,         intent(out)   :: vnew(:, :, :)
   integer,        intent(in)    :: iter
 
-  integer :: ipos, iter_used, i, j, d1, d2, d3
+  integer :: ipos, iter_used, d1, d2, d3
   R_TYPE, allocatable :: f(:, :, :)
 
   PUSH_SUB(X(mixing_broyden))
