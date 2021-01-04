@@ -152,6 +152,7 @@ contains
     type(TDftbPlusInput) :: input
     type(fnode), pointer :: pRoot, pGeo, pHam, pDftb, pMaxAng, pSlakos, pType2Files, pAnalysis
     type(fnode), pointer :: pParserOpts
+#endif
 #ifdef HAVE_DFTBPLUS_DEVEL
     type(fnode), pointer :: pElecDyn, pPerturb, pLaser
 #endif
