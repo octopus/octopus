@@ -194,7 +194,7 @@ contains
     case(RS_CG)
       !%Variable CGOrthogonalizeAll
       !%Type logical
-      !%Default no
+      !%Default yes
       !%Section SCF::Eigensolver
       !%Description
       !% Used by the cg solver only.
@@ -203,7 +203,7 @@ contains
       !% against all other bands can improve convergence properties, whereas
       !% orthogonalizing against lower bands needs less operations.
       !%End
-      call parse_variable(namespace, 'CGOrthogonalizeAll', .false., eigens%orthogonalize_to_all)
+      call parse_variable(namespace, 'CGOrthogonalizeAll', .true., eigens%orthogonalize_to_all)
 
       !%Variable CGDirection
       !%Type integer
