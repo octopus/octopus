@@ -57,6 +57,8 @@ module lasers_oct_m
     laser_set_phi,                &
     laser_set_f_value,            &
     laser_carrier_frequency,      &
+    laser_set_frequency,          &
+    laser_set_polarization,       &
     vlaser_operator_linear,       &
     vlaser_operator_quadratic
 
@@ -70,11 +72,11 @@ module lasers_oct_m
 
   type laser_t
     private
-    integer :: field      = E_FIELD_NONE          !< which kind of external field it is (electric, magnetic...)
-    CMPLX, public :: pol(MAX_DIM) = M_z0          !< the polarization of the laser.
-    type(tdf_t), public :: f                      !< The envelope.
-    type(tdf_t), public :: phi                    !< The phase
-    FLOAT, public :: omega        = M_ZERO        !< The main, "carrier", frequency.
+    integer :: field      = E_FIELD_NONE  !< which kind of external field it is (electric, magnetic...)
+    CMPLX :: pol(MAX_DIM) = M_z0          !< the polarization of the laser.
+    type(tdf_t) :: f                      !< The envelope.
+    type(tdf_t) :: phi                    !< The phase
+    FLOAT :: omega        = M_ZERO        !< The main, "carrier", frequency.
 
     FLOAT, pointer :: v(:)    => NULL()
     FLOAT, pointer :: a(:, :) => NULL()
@@ -160,15 +162,21 @@ contains
   ! ---------------------------------------------------------
 
 
+  !> When phi is present, it sets the proper phase. If not present,
+  !> it initializes an empty TD function.
   ! ---------------------------------------------------------
   subroutine laser_set_phi(laser, phi)
-    type(laser_t), intent(inout) :: laser
-    type(tdf_t),   intent(inout) :: phi
+    type(laser_t),          intent(inout) :: laser
+    type(tdf_t), optional,  intent(inout) :: phi
 
     PUSH_SUB(laser_set_phi)
 
-    call tdf_end(laser%phi)
-    call tdf_copy(laser%phi, phi)
+    if (present(phi)) then
+      call tdf_end(laser%phi)
+      call tdf_copy(laser%phi, phi)
+    else
+      call tdf_init(laser%phi)
+    end if
 
     POP_SUB(laser_set_phi)
   end subroutine laser_set_phi
@@ -186,6 +194,32 @@ contains
 
     POP_SUB(laser_set_f_value)
   end subroutine laser_set_f_value
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  subroutine laser_set_frequency(laser, omega)
+    type(laser_t), intent(inout) :: laser
+    FLOAT,         intent(in)    :: omega
+
+    PUSH_SUB(laser_carrier_frequency)
+    laser%omega = omega
+
+    POP_SUB(laser_set_frequency)
+  end subroutine laser_set_frequency
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  subroutine laser_set_polarization(laser, pol)
+    type(laser_t), intent(inout) :: laser
+    CMPLX,         intent(in)    :: pol(MAX_DIM)
+
+    PUSH_SUB(laser_set_polarization)
+    laser%pol(1:MAX_DIM) = pol(1:MAX_DIM)
+
+    POP_SUB(laser_set_polarization)
+  end subroutine laser_set_polarization
   ! ---------------------------------------------------------
 
 

@@ -145,6 +145,8 @@ contains
     type(block_t) :: blk
     character(len=200) :: envelope_expression, phase_expression
     FLOAT :: omega0, initial_temp
+    CMPLX :: pol(MAX_DIM)
+    type(tdf_t) :: ff, phi
 
 #ifdef HAVE_DFTBPLUS
     type(TDftbPlusInput) :: input
@@ -306,30 +308,34 @@ contains
 
       do il = 1, this%no_lasers
 
-        call parse_block_cmplx(blk, il-1, 0, this%lasers(il)%pol(1))
-        call parse_block_cmplx(blk, il-1, 1, this%lasers(il)%pol(2))
-        call parse_block_cmplx(blk, il-1, 2, this%lasers(il)%pol(3))
+        pol(1:MAX_DIM) = M_z0
+        call parse_block_cmplx(blk, il-1, 0, pol(1))
+        call parse_block_cmplx(blk, il-1, 1, pol(2))
+        call parse_block_cmplx(blk, il-1, 2, pol(3))
         call parse_block_float(blk, il-1, 3, omega0)
         omega0 = units_to_atomic(units_inp%energy, omega0)
-        this%lasers(il)%omega = omega0
+
+        call laser_set_frequency(this%lasers(il), omega0)
+        pol(1:3) = pol(1:3)/sqrt(sum(abs(pol(1:3))**2))
+        call laser_set_polarization(this%lasers(il), pol)
 
         call parse_block_string(blk, il-1, 4, envelope_expression)
-        call tdf_read(this%lasers(il)%f, namespace, trim(envelope_expression), ierr)
+        call tdf_read(ff, namespace, trim(envelope_expression), ierr)
+        call laser_set_f(this%lasers(il), ff)
 
         ! Check if there is a phase.
         if(parse_block_cols(blk, il-1) > 5) then
           call parse_block_string(blk, il-1, 5, phase_expression)
-          call tdf_read(this%lasers(il)%phi, namespace, trim(phase_expression), ierr)
+          call tdf_read(phi, namespace, trim(phase_expression), ierr)
+          call laser_set_phi(this%lasers(il), phi)
           if (ierr /= 0) then
             write(message(1),'(3A)') 'Error in the "', trim(envelope_expression), '" field defined in the TDExternalFields block:'
             write(message(2),'(3A)') 'Time-dependent phase function "', trim(phase_expression), '" not found.'
             call messages_warning(2, namespace=namespace)
           end if
         else
-          call tdf_init(this%lasers(il)%phi)
+          call laser_set_phi(this%lasers(il))
         end if
-
-        this%lasers(il)%pol(:) = this%lasers(il)%pol(:)/sqrt(sum(abs(this%lasers(il)%pol(:))**2))
       end do
 
       call parse_block_end(blk)
@@ -472,8 +478,9 @@ contains
     class(algorithmic_operation_t), intent(in)    :: operation
 
     integer :: ii, jj, il
-    CMPLX :: amp
-    FLOAT :: time
+    type(tdf_t) :: ff, phi
+    CMPLX :: amp, pol(MAX_DIM)
+    FLOAT :: time, omega
 
     PUSH_SUB(system_dftb_do_td)
 
@@ -544,8 +551,14 @@ contains
       this%field = M_zero
       time = this%clock%time()
       do il = 1, this%no_lasers
-        amp = tdf(this%lasers(il)%f, time) * exp(M_zI * ( this%lasers(il)%omega*time + tdf(this%lasers(il)%phi, time) ) )
-        this%field(1:3) = this%field(1:3) + TOFLOAT(amp*this%lasers(il)%pol(1:3))
+        ! get properties of laser
+        call laser_get_f(this%lasers(il), ff)
+        call laser_get_phi(this%lasers(il), phi)
+        omega = laser_carrier_frequency(this%lasers(il))
+        pol = laser_polarization(this%lasers(il))
+        ! calculate electric field from laser
+        amp = tdf(ff, time) * exp(M_zI * (omega*time + tdf(phi, time)))
+        this%field(1:3) = this%field(1:3) + TOFLOAT(amp*pol(1:3))
       end do
 #ifdef HAVE_DFTBPLUS_DEVEL
       call this%dftbp%setTdElectricField(this%clock%get_tick(), this%field)
