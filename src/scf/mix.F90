@@ -214,8 +214,10 @@ contains
     !%Description
     !% (Experimental) If set to yes, Octopus will use a preconditioner
     !% for the mixing operator.
+    !% This preconditioner is disabled for systems with dimension other than 3.
     !%End
     call parse_variable(namespace, trim(prefix)+'MixingPreconditioner', .false., smix%precondition)
+    if (der%mesh%sb%dim /= 3) smix%precondition = .false.
     if(smix%precondition) call messages_experimental('MixingPreconditioner')
     
     !%Variable Mixing
