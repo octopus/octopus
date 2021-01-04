@@ -334,7 +334,7 @@ contains
 
       kin1 = ion_dynamics_kinetic_energy(geo)
 
-      call cm_vel(geo, x)
+      x = geometry_center_of_mass_vel(geo)
       do i = 1, geo%natoms
         geo%atom(i)%v = geo%atom(i)%v - x
       end do

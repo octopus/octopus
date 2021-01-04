@@ -252,8 +252,7 @@ ions_f_srcs =                                 \
 	ions/simul_box.F90                    \
 	ions/spglib_f08.f90                   \
 	ions/symmetries.F90                   \
-	ions/vibrations.F90                   \
-	ions/xyz_adjust.F90
+	ions/vibrations.F90
 
 ions_c_srcs =                                 \
 	ions/symmetries_finite.c

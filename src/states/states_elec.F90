@@ -385,7 +385,7 @@ contains
     ! For non-periodic systems this should just return the Gamma point
     call states_elec_choose_kpoints(st%d, gr%sb, namespace)
 
-    call geometry_val_charge(geo, st%val_charge)
+    st%val_charge = geometry_val_charge(geo)
 
     st%qtot = -(st%val_charge + excess_charge)
 

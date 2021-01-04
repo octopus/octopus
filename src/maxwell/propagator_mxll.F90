@@ -64,7 +64,6 @@ module propagator_mxll_oct_m
   use string_oct_m
   use tdfunction_oct_m
   use varinfo_oct_m
-  use xyz_adjust_oct_m
 
   implicit none
 

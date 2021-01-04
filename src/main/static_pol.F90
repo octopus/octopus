@@ -254,7 +254,7 @@ contains
     end if
 
     if(mpi_grp_is_root(mpi_world)) then
-      call geometry_dipole(sys%geo, ionic_dipole)
+      ionic_dipole = geometry_dipole(sys%geo)
       print_dipole(1:sys%gr%sb%dim) = center_dipole(1:sys%gr%sb%dim) + ionic_dipole(1:sys%gr%sb%dim)
       call output_dipole(stdout, print_dipole, sys%gr%sb%dim)
     end if
