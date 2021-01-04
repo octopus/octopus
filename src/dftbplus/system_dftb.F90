@@ -450,17 +450,18 @@ contains
     PUSH_SUB(system_dftb_initial_conditions)
 
     nsteps = int(this%final_time/this%prop%dt)
-    if (this%dynamics == BO) then
+    select case (this%dynamics)
+    case (BO)
 #ifdef HAVE_DFTBPLUS
       call this%dftbp%getGradients(this%gradients)
       this%tot_force = -this%gradients
 #endif
-    else
+    case (EHRENFEST)
 #ifdef HAVE_DFTBPLUS_DEVEL
       call this%dftbp%getEnergy(this%energy)
       call this%dftbp%initializeTimeProp(nsteps, this%prop%dt)
 #endif
-    end if
+    end select
 
     POP_SUB(system_dftb_initial_conditions)
   end subroutine system_dftb_initial_conditions
@@ -476,6 +477,10 @@ contains
 
     PUSH_SUB(system_dftb_do_td)
 
+    select case(this%dynamics)
+    ! Born-Oppenheimer dynamics
+    case (BO)
+
     select case (operation%id)
     case (SKIP)
       ! Do nothing
@@ -483,67 +488,80 @@ contains
       ! Do nothing
 
     case (VERLET_START)
-      if (this%dynamics /= EHRENFEST) then
-        SAFE_ALLOCATE(this%prev_acc(1:this%space%dim, this%n_atom, 1))
-        do jj = 1, this%n_atom
-          this%acc(1:this%space%dim, jj) = this%tot_force(1:this%space%dim, jj) / this%mass(jj)
-        end do
-      end if
+      SAFE_ALLOCATE(this%prev_acc(1:this%space%dim, this%n_atom, 1))
+      do jj = 1, this%n_atom
+        this%acc(1:this%space%dim, jj) = this%tot_force(1:this%space%dim, jj) / this%mass(jj)
+      end do
 
     case (VERLET_FINISH)
       SAFE_DEALLOCATE_A(this%prev_acc)
 
     case (VERLET_UPDATE_POS)
-       if (this%dynamics == EHRENFEST) then
-         this%field = M_zero
-         time = this%clock%time()
-         do il = 1, this%no_lasers
-           amp = tdf(this%lasers(il)%f, time) * exp(M_zI * ( this%lasers(il)%omega*time + tdf(this%lasers(il)%phi, time) ) )
-           this%field(1:3) = this%field(1:3) + TOFLOAT(amp*this%lasers(il)%pol(1:3))
-         end do
-#ifdef HAVE_DFTBPLUS_DEVEL
-         call this%dftbp%setTdElectricField(this%clock%get_tick(), this%field)
-         call this%dftbp%doOneTdStep(this%clock%get_tick(), atomNetCharges=this%atom_charges, coord=this%coords,&
-              force=this%tot_force, energy=this%energy)
-#endif
-
-       else
-         do jj = 1, this%n_atom
-           this%coords(1:this%space%dim, jj) = this%coords(1:this%space%dim, jj) + this%prop%dt * this%vel(1:this%space%dim, jj) &
-                + M_HALF * this%prop%dt**2 * this%acc(1:this%space%dim, jj)
-         end do
-         this%quantities(POSITION)%clock = this%quantities(POSITION)%clock + CLOCK_TICK
-       end if
+      do jj = 1, this%n_atom
+        this%coords(1:this%space%dim, jj) = this%coords(1:this%space%dim, jj) + this%prop%dt * this%vel(1:this%space%dim, jj) &
+             + M_HALF * this%prop%dt**2 * this%acc(1:this%space%dim, jj)
+      end do
+      this%quantities(POSITION)%clock = this%quantities(POSITION)%clock + CLOCK_TICK
 
     case (VERLET_COMPUTE_ACC)
-       if (this%dynamics /= EHRENFEST) then
-         do ii = size(this%prev_acc, dim=3) - 1, 1, -1
-           this%prev_acc(1:this%space%dim, 1:this%n_atom, ii + 1) = this%prev_acc(1:this%space%dim, 1:this%n_atom, ii)
-         end do
-         this%prev_acc(1:this%space%dim, 1:this%n_atom, 1) = this%acc(1:this%space%dim, 1:this%n_atom)
+      do ii = size(this%prev_acc, dim=3) - 1, 1, -1
+        this%prev_acc(1:this%space%dim, 1:this%n_atom, ii + 1) = this%prev_acc(1:this%space%dim, 1:this%n_atom, ii)
+      end do
+      this%prev_acc(1:this%space%dim, 1:this%n_atom, 1) = this%acc(1:this%space%dim, 1:this%n_atom)
 #ifdef HAVE_DFTBPLUS
-         call this%dftbp%setGeometry(this%coords)
-         call this%dftbp%getGradients(this%gradients)
-         this%tot_force = -this%gradients
+      call this%dftbp%setGeometry(this%coords)
+      call this%dftbp%getGradients(this%gradients)
+      this%tot_force = -this%gradients
 #endif
-         do jj = 1, this%n_atom
-           this%acc(1:this%space%dim, jj) = this%tot_force(1:this%space%dim, jj) / this%mass(jj)
-         end do
-       end if
+      do jj = 1, this%n_atom
+        this%acc(1:this%space%dim, jj) = this%tot_force(1:this%space%dim, jj) / this%mass(jj)
+      end do
 
     case (VERLET_COMPUTE_VEL)
-      if (this%dynamics /= EHRENFEST) then
-        this%vel(1:this%space%dim, 1:this%n_atom) = this%vel(1:this%space%dim, 1:this%n_atom) &
-             + M_HALF * this%prop%dt * (this%prev_acc(1:this%space%dim, 1:this%n_atom, 1) + &
-             this%acc(1:this%space%dim, 1:this%n_atom))
-        this%quantities(VELOCITY)%clock = this%quantities(VELOCITY)%clock + CLOCK_TICK
-      end if
+      this%vel(1:this%space%dim, 1:this%n_atom) = this%vel(1:this%space%dim, 1:this%n_atom) &
+           + M_HALF * this%prop%dt * (this%prev_acc(1:this%space%dim, 1:this%n_atom, 1) + &
+           this%acc(1:this%space%dim, 1:this%n_atom))
+      this%quantities(VELOCITY)%clock = this%quantities(VELOCITY)%clock + CLOCK_TICK
 
     case default
       message(1) = "Unsupported TD operation."
       call messages_fatal(1, namespace=this%namespace)
     end select
 
+    ! Ehrenfest dynamics
+    case (EHRENFEST)
+
+    select case (operation%id)
+    case (SKIP)
+      ! Do nothing
+    case (STORE_CURRENT_STATUS)
+      ! Do nothing
+    case (VERLET_START)
+      !Do nothing
+    case (VERLET_FINISH)
+      !Do nothing
+    case (VERLET_UPDATE_POS)
+      this%field = M_zero
+      time = this%clock%time()
+      do il = 1, this%no_lasers
+        amp = tdf(this%lasers(il)%f, time) * exp(M_zI * ( this%lasers(il)%omega*time + tdf(this%lasers(il)%phi, time) ) )
+        this%field(1:3) = this%field(1:3) + TOFLOAT(amp*this%lasers(il)%pol(1:3))
+      end do
+#ifdef HAVE_DFTBPLUS_DEVEL
+      call this%dftbp%setTdElectricField(this%clock%get_tick(), this%field)
+      call this%dftbp%doOneTdStep(this%clock%get_tick(), atomNetCharges=this%atom_charges, coord=this%coords,&
+           force=this%tot_force, energy=this%energy)
+#endif
+    case (VERLET_COMPUTE_ACC)
+      !Do nothing
+    case (VERLET_COMPUTE_VEL)
+      !Do nothing
+    case default
+      message(1) = "Unsupported TD operation."
+      call messages_fatal(1, namespace=this%namespace)
+    end select
+
+    end select
    POP_SUB(system_dftb_do_td)
   end subroutine system_dftb_do_td
 
