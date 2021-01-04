@@ -149,7 +149,9 @@ contains
 #ifdef HAVE_DFTBPLUS
     type(TDftbPlusInput) :: input
     type(fnode), pointer :: pRoot, pGeo, pHam, pDftb, pMaxAng, pSlakos, pType2Files, pAnalysis
-    type(fnode), pointer :: pParserOpts, pElecDyn, pPerturb, pLaser
+    type(fnode), pointer :: pParserOpts
+#ifdef HAVE_DFTBPLUS_DEVEL
+    type(fnode), pointer :: pElecDyn, pPerturb, pLaser
 #endif
 
     PUSH_SUB(system_dftb_init)
@@ -254,7 +256,6 @@ contains
     !%Section DFTBPlusInterface
     !%Description
     !% Type of dynamics for DFTB time propagation.
-    !% For BO, you must set <tt>MoveIons = yes</tt>.
     !%Option ehrenfest 1
     !% Ehrenfest dynamics.
     !%Option bo 2
@@ -262,8 +263,8 @@ contains
     !%End
     call parse_variable(namespace, 'TDDynamics', BO, this%dynamics)
     call messages_print_var_option(stdout, 'TDDynamics', this%dynamics)
-    if (this%dynamics .ne. EHRENFEST) then
-      if (.not. ion_dynamics_ions_move(this%ions)) call messages_input_error(namespace, 'TDDynamics')
+    if (this%dynamics == BO) then
+      call ion_dynamics_unfreeze(this%ions)
     end if
 
     !%Variable InitialIonicTemperature
@@ -406,6 +407,7 @@ contains
       end if
 #else
       message(1) = "DFTB Ehrenfest dynamics enabled only in DFTB development library"
+      call messages_fatal(1)
 #endif
     end if
 
@@ -448,7 +450,6 @@ contains
     PUSH_SUB(system_dftb_initial_conditions)
 
     nsteps = int(this%final_time/this%prop%dt)
-    print *,nsteps,this%prop%dt
     if (this%dynamics == BO) then
 #ifdef HAVE_DFTBPLUS
       call this%dftbp%getGradients(this%gradients)
