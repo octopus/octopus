@@ -249,7 +249,7 @@ contains
     
     !%Variable MixNumberSteps
     !%Type integer
-    !%Default 3
+    !%Default 5
     !%Section SCF::Mixing
     !%Description
     !% In the Broyden and Bowler_Gillan schemes, the new input density or potential is constructed
@@ -257,7 +257,7 @@ contains
     !% This number is set by this variable. Must be greater than 1.
     !%End
     if (smix%scheme /= OPTION__MIXINGSCHEME__LINEAR) then
-      call parse_variable(namespace, trim(prefix)//'MixNumberSteps', 3, smix%ns)
+      call parse_variable(namespace, trim(prefix)//'MixNumberSteps', 5, smix%ns)
       if(smix%ns <= 1) call messages_input_error(namespace, 'MixNumberSteps')
     else
       smix%ns = 0
