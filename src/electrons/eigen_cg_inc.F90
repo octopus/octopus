@@ -410,9 +410,9 @@ subroutine X(eigensolver_cg) (namespace, gr, st, hm, xc, pre, tol, niter, conver
       end if
 
       if(debug%info) then
-        write(message(1), '(a,i4,a,i4,a,i4,a,es12.5,a,i4,a,es12.5,a,es12.5,a,es12.5,es12.5)') 'Debug: CG Eigensolver - ik', ik, ' ist ', ist, &
+        write(message(1), '(a,i4,a,i4,a,i4,a,i4,a,es12.5,a,2es12.5)') 'Debug: CG Eigensolver - ik', ik, ' ist ', ist, &
              ' iter ', iter, ' max ', maxter, &
-             ' deltae ', abs(st%eigenval(ist, ik) - old_energy), &
+             ' deltae ', abs(st%eigenval(ist, ik) - old_energy)/old_energy, &
              ' residue ', res
         call messages_info(1)
       end if
