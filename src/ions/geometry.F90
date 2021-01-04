@@ -537,8 +537,8 @@ contains
 
     PUSH_SUB(geometry_center)
 
-    xmin =  CNST(1e10)
-    xmax = -CNST(1e10)
+    xmin =  M_HUGE
+    xmax = -M_HUGE
     do i = 1, geo%natoms
       do j = 1, geo%space%dim
         if (geo%atom(i)%x(j) > xmax(j)) xmax(j) = geo%atom(i)%x(j)
@@ -563,7 +563,7 @@ contains
     PUSH_SUB(geometry_axis_large)
 
     ! first get the further apart atoms
-    rmax = -CNST(1e10)
+    rmax = -M_HUGE
     do i = 1, geo%natoms
       do j = 1, geo%natoms/2 + 1
         r = sqrt(sum((geo%atom(i)%x(1:geo%space%dim)-geo%atom(j)%x(1:geo%space%dim))**2))
@@ -576,7 +576,7 @@ contains
     x  = x /sqrt(sum(x(1:geo%space%dim)**2))
 
     ! now let us find out what is the second most important axis
-    rmax = -CNST(1e10)
+    rmax = -M_HUGE
     do i = 1, geo%natoms
       r2 = sum(x(1:geo%space%dim) * geo%atom(i)%x(1:geo%space%dim))
       r = sqrt(sum((geo%atom(i)%x(1:geo%space%dim) - r2*x(1:geo%space%dim))**2))
@@ -814,14 +814,14 @@ contains
 
     do ispec = 1, geo%nspecies
       call messages_write("Species '"//trim(species_label(geo%species(ispec)))//"': spacing = ")
-      if (species_def_h(geo%species(ispec)) > CNST(0.0)) then
+      if (species_def_h(geo%species(ispec)) > M_ZERO) then
         call messages_write(species_def_h(geo%species(ispec)), fmt = '(f7.3)')
         call messages_write(" b")
       else
         call messages_write(" unknown")
       end if
       call messages_write(", radius = ")
-      if (species_def_rsize(geo%species(ispec)) > CNST(0.0)) then
+      if (species_def_rsize(geo%species(ispec)) > M_ZERO) then
         call messages_write(species_def_rsize(geo%species(ispec)), fmt = '(f5.1)')
         call messages_write(" b.")
       else
