@@ -963,6 +963,11 @@ contains
       ! save information for the next iteration
       rhoin(1:gr%fine%mesh%np, 1, 1:nspin) = st%rho(1:gr%fine%mesh%np, 1:nspin)
 
+      ! restart mixing
+      if (scf%smix%ns_restart > 0) then
+        if (mod(iter, scf%smix%ns_restart) == 0) call scf_mix_clear(scf)
+      end if
+
       select case(scf%mix_field)
         case(OPTION__MIXFIELD__POTENTIAL)
           call mixfield_set_vin(scf%mixfield, hm%vhxc(1:gr%mesh%np, 1:nspin))

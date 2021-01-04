@@ -104,7 +104,8 @@ module mix_oct_m
     integer :: iter             !< number of SCF iterations already done. In case of restart, this number must
                                 !< include the iterations done in previous calculations.
 
-    integer :: ns               !< number of steps used to extrapolate the new vector
+    integer, public :: ns       !< number of steps used to extrapolate the new vector
+    integer, public :: ns_restart !< number of steps after which the mixing is restarted
 
     integer :: ipos             !< For auxiliary mixing fields
     integer :: last_ipos        !< where is the information about the last iteration stored in arrays df and dv
@@ -260,6 +261,21 @@ contains
       if(smix%ns <= 1) call messages_input_error(namespace, 'MixNumberSteps')
     else
       smix%ns = 0
+    end if
+
+    !%Variable MixingRestart
+    !%Type integer
+    !%Default 15
+    !%Section SCF::Mixing
+    !%Description
+    !% In the Broyden and Bowler_Gillan schemes, the mixing is restarted after
+    !% the number of iterations given by this variable.
+    !%End
+    if (smix%scheme /= OPTION__MIXINGSCHEME__LINEAR) then
+      call parse_variable(namespace, trim(prefix)//'MixingRestart', 15, smix%ns_restart)
+      if(smix%ns_restart <= 1) call messages_input_error(namespace, 'MixingRestart')
+    else
+      smix%ns_restart = 0
     end if
     
     !%Variable MixInterval
