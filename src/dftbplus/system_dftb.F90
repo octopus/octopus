@@ -141,7 +141,7 @@ contains
     character(len=MAX_PATH_LEN) :: slako_dir
     character(len=1), allocatable  :: max_ang_mom(:)
     character(len=LABEL_LEN) :: this_max_ang_mom, this_label
-    integer :: n_maxang_block, nsteps
+    integer :: n_maxang_block
     type(block_t) :: blk
     character(len=200) :: envelope_expression, phase_expression
     FLOAT :: omega0, initial_temp
@@ -820,6 +820,7 @@ contains
     SAFE_DEALLOCATE_A(this%mass)
     call geometry_end(this%geo)
     call laser_end(this%no_lasers, this%lasers)
+    call ion_dynamics_end(this%ions)
 
     call system_end(this)
 
