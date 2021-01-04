@@ -89,7 +89,6 @@ module eigensolver_oct_m
 
     logical :: skip_finite_weight_kpoints
     logical, public :: folded_spectrum
-    FLOAT, pointer   :: spectrum_shift(:,:)
 
     ! cg options
     logical, public :: orthogonalize_to_all
