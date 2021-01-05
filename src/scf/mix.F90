@@ -265,14 +265,14 @@ contains
 
     !%Variable MixingRestart
     !%Type integer
-    !%Default 15
+    !%Default 5
     !%Section SCF::Mixing
     !%Description
     !% In the Broyden and Bowler_Gillan schemes, the mixing is restarted after
     !% the number of iterations given by this variable.
     !%End
     if (smix%scheme /= OPTION__MIXINGSCHEME__LINEAR) then
-      call parse_variable(namespace, trim(prefix)//'MixingRestart', 15, smix%ns_restart)
+      call parse_variable(namespace, trim(prefix)//'MixingRestart', 5, smix%ns_restart)
       if(smix%ns_restart <= 1) call messages_input_error(namespace, 'MixingRestart')
     else
       smix%ns_restart = 0

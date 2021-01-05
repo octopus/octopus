@@ -139,11 +139,9 @@ contains
       !%Section SCF::Eigensolver
       !%Description
       !% This variable controls how much filter preconditioner is
-      !% applied. A value of 1.0 means no preconditioning, 0.5 is the
-      !% standard.
+      !% applied. A value of 1.0 means no preconditioning.
       !%
-      !% The default is 0.5, except for periodic systems where the
-      !% default is 0.6.
+      !% The default is 0.5.
       !%
       !% If you observe that the first eigenvectors are not converging
       !% properly, especially for periodic systems, you should
@@ -152,8 +150,7 @@ contains
       !% The allowed range for this parameter is between 0.5 and 1.0.
       !% For other values, the SCF may converge to wrong results.
       !%End
-      default_alpha = CNST(0.5)
-      if(simul_box_is_periodic(gr%sb)) default_alpha = CNST(0.6)
+      default_alpha = CNST(0.6)
 
       call parse_variable(namespace, 'PreconditionerFilterFactor', default_alpha, alpha)
 
