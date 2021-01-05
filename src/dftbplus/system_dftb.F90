@@ -72,7 +72,7 @@ module system_dftb_oct_m
     type(geometry_t) :: geo
     type(c_ptr) :: output_handle(2)
     type(ion_dynamics_t) :: ions
-    integer                :: no_lasers            !< number of laser pulses used
+    integer                :: n_lasers            !< number of laser pulses used
     type(laser_t), pointer :: lasers(:)            !< lasers stuff
     logical :: laser_field
     FLOAT :: field(3)
@@ -301,13 +301,13 @@ contains
     !%
     !%End
 
-    this%no_lasers = 0
+    this%n_lasers = 0
     if(parse_block(namespace, 'TDExternalFields', blk) == 0) then
       this%laser_field = .true.
-      this%no_lasers = parse_block_n(blk)
-      SAFE_ALLOCATE(this%lasers(1:this%no_lasers))
+      this%n_lasers = parse_block_n(blk)
+      SAFE_ALLOCATE(this%lasers(1:this%n_lasers))
 
-      do il = 1, this%no_lasers
+      do il = 1, this%n_lasers
 
         pol(1:MAX_DIM) = M_z0
         call parse_block_cmplx(blk, il-1, 0, pol(1))
@@ -551,7 +551,7 @@ contains
     case (VERLET_UPDATE_POS)
       this%field = M_zero
       time = this%clock%time()
-      do il = 1, this%no_lasers
+      do il = 1, this%n_lasers
         ! get properties of laser
         call laser_get_f(this%lasers(il), ff)
         call laser_get_phi(this%lasers(il), phi)
@@ -820,7 +820,7 @@ contains
     SAFE_DEALLOCATE_A(this%species)
     SAFE_DEALLOCATE_A(this%mass)
     call geometry_end(this%geo)
-    call laser_end(this%no_lasers, this%lasers)
+    call laser_end(this%n_lasers, this%lasers)
     call ion_dynamics_end(this%ions)
 
     call system_end(this)
