@@ -55,6 +55,7 @@ module lasers_oct_m
     laser_set_f,                  &
     laser_get_phi,                &
     laser_set_phi,                &
+    laser_set_empty_phi,          &
     laser_set_f_value,            &
     laser_carrier_frequency,      &
     laser_set_frequency,          &
@@ -162,26 +163,32 @@ contains
   ! ---------------------------------------------------------
 
 
-  !> When phi is present, it sets the proper phase. If not present,
-  !> it initializes an empty TD function.
   ! ---------------------------------------------------------
   subroutine laser_set_phi(laser, phi)
-    type(laser_t),          intent(inout) :: laser
-    type(tdf_t), optional,  intent(inout) :: phi
+    type(laser_t), intent(inout) :: laser
+    type(tdf_t),   intent(inout) :: phi
 
     PUSH_SUB(laser_set_phi)
 
-    if (present(phi)) then
-      call tdf_end(laser%phi)
-      call tdf_copy(laser%phi, phi)
-    else
-      call tdf_init(laser%phi)
-    end if
+    call tdf_end(laser%phi)
+    call tdf_copy(laser%phi, phi)
 
     POP_SUB(laser_set_phi)
   end subroutine laser_set_phi
   ! ---------------------------------------------------------
 
+
+  ! ---------------------------------------------------------
+  subroutine laser_set_empty_phi(laser)
+    type(laser_t),          intent(inout) :: laser
+
+    PUSH_SUB(laser_set_empty_phi)
+
+    call tdf_init(laser%phi)
+
+    POP_SUB(laser_set_empty_phi)
+  end subroutine laser_set_empty_phi
+  ! ---------------------------------------------------------
 
   ! ---------------------------------------------------------
   subroutine laser_set_f_value(laser, ii, xx)

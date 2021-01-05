@@ -335,7 +335,7 @@ contains
             call messages_warning(2, namespace=namespace)
           end if
         else
-          call laser_set_phi(this%lasers(il))
+          call laser_set_empty_phi(this%lasers(il))
         end if
       end do
 
