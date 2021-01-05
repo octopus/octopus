@@ -489,91 +489,91 @@ contains
     ! Born-Oppenheimer dynamics
     case (BO)
 
-    select case (operation%id)
-    case (SKIP)
-      ! Do nothing
-    case (STORE_CURRENT_STATUS)
-      ! Do nothing
+      select case (operation%id)
+      case (SKIP)
+        ! Do nothing
+      case (STORE_CURRENT_STATUS)
+        ! Do nothing
 
-    case (VERLET_START)
-      SAFE_ALLOCATE(this%prev_acc(1:this%space%dim, this%n_atom, 1))
-      do jj = 1, this%n_atom
-        this%acc(1:this%space%dim, jj) = this%tot_force(1:this%space%dim, jj) / this%mass(jj)
-      end do
+      case (VERLET_START)
+        SAFE_ALLOCATE(this%prev_acc(1:this%space%dim, this%n_atom, 1))
+        do jj = 1, this%n_atom
+          this%acc(1:this%space%dim, jj) = this%tot_force(1:this%space%dim, jj) / this%mass(jj)
+        end do
 
-    case (VERLET_FINISH)
-      SAFE_DEALLOCATE_A(this%prev_acc)
+      case (VERLET_FINISH)
+        SAFE_DEALLOCATE_A(this%prev_acc)
 
-    case (VERLET_UPDATE_POS)
-      do jj = 1, this%n_atom
-        this%coords(1:this%space%dim, jj) = this%coords(1:this%space%dim, jj) + this%prop%dt * this%vel(1:this%space%dim, jj) &
-             + M_HALF * this%prop%dt**2 * this%acc(1:this%space%dim, jj)
-      end do
-      this%quantities(POSITION)%clock = this%quantities(POSITION)%clock + CLOCK_TICK
+      case (VERLET_UPDATE_POS)
+        do jj = 1, this%n_atom
+          this%coords(1:this%space%dim, jj) = this%coords(1:this%space%dim, jj) + this%prop%dt * this%vel(1:this%space%dim, jj) &
+               + M_HALF * this%prop%dt**2 * this%acc(1:this%space%dim, jj)
+        end do
+        this%quantities(POSITION)%clock = this%quantities(POSITION)%clock + CLOCK_TICK
 
-    case (VERLET_COMPUTE_ACC)
-      do ii = size(this%prev_acc, dim=3) - 1, 1, -1
-        this%prev_acc(1:this%space%dim, 1:this%n_atom, ii + 1) = this%prev_acc(1:this%space%dim, 1:this%n_atom, ii)
-      end do
-      this%prev_acc(1:this%space%dim, 1:this%n_atom, 1) = this%acc(1:this%space%dim, 1:this%n_atom)
+      case (VERLET_COMPUTE_ACC)
+        do ii = size(this%prev_acc, dim=3) - 1, 1, -1
+          this%prev_acc(1:this%space%dim, 1:this%n_atom, ii + 1) = this%prev_acc(1:this%space%dim, 1:this%n_atom, ii)
+        end do
+        this%prev_acc(1:this%space%dim, 1:this%n_atom, 1) = this%acc(1:this%space%dim, 1:this%n_atom)
 #ifdef HAVE_DFTBPLUS
-      call this%dftbp%setGeometry(this%coords)
-      call this%dftbp%getGradients(this%gradients)
-      this%tot_force = -this%gradients
+        call this%dftbp%setGeometry(this%coords)
+        call this%dftbp%getGradients(this%gradients)
+        this%tot_force = -this%gradients
 #endif
-      do jj = 1, this%n_atom
-        this%acc(1:this%space%dim, jj) = this%tot_force(1:this%space%dim, jj) / this%mass(jj)
-      end do
+        do jj = 1, this%n_atom
+          this%acc(1:this%space%dim, jj) = this%tot_force(1:this%space%dim, jj) / this%mass(jj)
+        end do
 
-    case (VERLET_COMPUTE_VEL)
-      this%vel(1:this%space%dim, 1:this%n_atom) = this%vel(1:this%space%dim, 1:this%n_atom) &
-           + M_HALF * this%prop%dt * (this%prev_acc(1:this%space%dim, 1:this%n_atom, 1) + &
-           this%acc(1:this%space%dim, 1:this%n_atom))
-      this%quantities(VELOCITY)%clock = this%quantities(VELOCITY)%clock + CLOCK_TICK
+      case (VERLET_COMPUTE_VEL)
+        this%vel(1:this%space%dim, 1:this%n_atom) = this%vel(1:this%space%dim, 1:this%n_atom) &
+            + M_HALF * this%prop%dt * (this%prev_acc(1:this%space%dim, 1:this%n_atom, 1) + &
+              this%acc(1:this%space%dim, 1:this%n_atom))
+        this%quantities(VELOCITY)%clock = this%quantities(VELOCITY)%clock + CLOCK_TICK
 
-    case default
-      message(1) = "Unsupported TD operation."
-      call messages_fatal(1, namespace=this%namespace)
-    end select
+      case default
+        message(1) = "Unsupported TD operation."
+        call messages_fatal(1, namespace=this%namespace)
+      end select
 
     ! Ehrenfest dynamics
     case (EHRENFEST)
 
-    select case (operation%id)
-    case (SKIP)
-      ! Do nothing
-    case (STORE_CURRENT_STATUS)
-      ! Do nothing
-    case (VERLET_START)
-      !Do nothing
-    case (VERLET_FINISH)
-      !Do nothing
-    case (VERLET_UPDATE_POS)
-      this%field = M_zero
-      time = this%clock%time()
-      do il = 1, this%n_lasers
-        ! get properties of laser
-        call laser_get_f(this%lasers(il), ff)
-        call laser_get_phi(this%lasers(il), phi)
-        omega = laser_carrier_frequency(this%lasers(il))
-        pol = laser_polarization(this%lasers(il))
-        ! calculate electric field from laser
-        amp = tdf(ff, time) * exp(M_zI * (omega*time + tdf(phi, time)))
-        this%field(1:3) = this%field(1:3) + TOFLOAT(amp*pol(1:3))
-      end do
+      select case (operation%id)
+      case (SKIP)
+        ! Do nothing
+      case (STORE_CURRENT_STATUS)
+        ! Do nothing
+      case (VERLET_START)
+        !Do nothing
+      case (VERLET_FINISH)
+        !Do nothing
+      case (VERLET_UPDATE_POS)
+        this%field = M_zero
+        time = this%clock%time()
+        do il = 1, this%n_lasers
+          ! get properties of laser
+          call laser_get_f(this%lasers(il), ff)
+          call laser_get_phi(this%lasers(il), phi)
+          omega = laser_carrier_frequency(this%lasers(il))
+          pol = laser_polarization(this%lasers(il))
+          ! calculate electric field from laser
+          amp = tdf(ff, time) * exp(M_zI * (omega*time + tdf(phi, time)))
+          this%field(1:3) = this%field(1:3) + TOFLOAT(amp*pol(1:3))
+        end do
 #ifdef HAVE_DFTBPLUS_DEVEL
-      call this%dftbp%setTdElectricField(this%clock%get_tick(), this%field)
-      call this%dftbp%doOneTdStep(this%clock%get_tick(), atomNetCharges=this%atom_charges, coord=this%coords,&
-           force=this%tot_force, energy=this%energy)
+        call this%dftbp%setTdElectricField(this%clock%get_tick(), this%field)
+        call this%dftbp%doOneTdStep(this%clock%get_tick(), atomNetCharges=this%atom_charges, coord=this%coords,&
+             force=this%tot_force, energy=this%energy)
 #endif
-    case (VERLET_COMPUTE_ACC)
-      !Do nothing
-    case (VERLET_COMPUTE_VEL)
-      !Do nothing
-    case default
-      message(1) = "Unsupported TD operation."
-      call messages_fatal(1, namespace=this%namespace)
-    end select
+      case (VERLET_COMPUTE_ACC)
+        !Do nothing
+      case (VERLET_COMPUTE_VEL)
+        !Do nothing
+      case default
+        message(1) = "Unsupported TD operation."
+        call messages_fatal(1, namespace=this%namespace)
+      end select
 
     end select
    POP_SUB(system_dftb_do_td)
