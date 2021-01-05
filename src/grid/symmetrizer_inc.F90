@@ -52,9 +52,12 @@ subroutine X(symmetrizer_apply)(this, np, field, field_vector, symmfield, symmfi
 
   ASSERT(associated(this%mesh))
 
-  !If the quantity to be symmetrized is uniformly zero, we don`t symmetrize
+  ! If the quantity to be symmetrized is uniformly zero, we don`t symmetrize
   if(present(field)) then
     maxabs = maxval(abs(field(1:np)))
+    if(this%mesh%parallel_in_domains) then
+      call comm_allreduce(this%mesh%mpi_grp%comm, maxabs)
+    end if
     if(maxabs < M_EPSILON) then
       symmfield(1:np) = field(1:np)
       POP_SUB(X(symmetrizer_apply))
@@ -63,6 +66,9 @@ subroutine X(symmetrizer_apply)(this, np, field, field_vector, symmfield, symmfi
   end if
   if(present(field_vector)) then
     maxabs = maxval(abs(field_vector(1:np, 1:3)))
+    if(this%mesh%parallel_in_domains) then
+      call comm_allreduce(this%mesh%mpi_grp%comm, maxabs)
+    end if
     if(maxabs < M_EPSILON) then
       symmfield_vector(1:np, 1:3) = field_vector(1:np, 1:3)
       POP_SUB(X(symmetrizer_apply))
