@@ -138,13 +138,29 @@ subroutine X(broyden_extrapolation)(this, coeff, d1, d2, d3, vin, vnew, iter_use
   FLOAT :: w0
   integer  :: i, j, k, l
   R_TYPE    :: gamma
-  R_TYPE, allocatable :: beta(:, :), work(:)
+  R_TYPE, allocatable :: beta(:, :), work(:), tmp(:), lapl(:), tmp2(:)
 
   PUSH_SUB(X(broyden_extrapolation))
+
+  mesh_aux => this%der%mesh
+  SAFE_ALLOCATE(tmp(this%der%mesh%np_part))
+  SAFE_ALLOCATE(tmp2(this%der%mesh%np_part))
+  SAFE_ALLOCATE(lapl(this%der%mesh%np_part))
+
+  ASSERT(this%der%mesh%np == d1)
   
   if (iter_used == 0) then
     ! linear mixing...
-    vnew(1:d1, 1:d2, 1:d3) = vin(1:d1, 1:d2, 1:d3) + coeff*f(1:d1, 1:d2, 1:d3)
+    do k = 1, d2
+      do l = 1, d3
+        if (this%kerker) then
+          call kerker(f(1:d1, k, l), tmp2(1:d1))
+          vnew(1:d1, k, l) = vin(1:d1, k, l) + tmp2(1:d1)
+        else
+          vnew(1:d1, k, l) = vin(1:d1, k, l) + coeff*f(1:this%der%mesh%np, k, l)
+        end if
+      end do
+    end do
 
     do i = 1, this%nauxmixfield
       if(this%auxmixfield(i)%p%func_type == TYPE_FLOAT) then
@@ -210,12 +226,30 @@ subroutine X(broyden_extrapolation)(this, coeff, d1, d2, d3, vin, vnew, iter_use
   end do
 
   ! linear mixing term
-  vnew(1:d1, 1:d2, 1:d3) = vin(1:d1, 1:d2, 1:d3) + coeff*f(1:d1, 1:d2, 1:d3)
+  do k = 1, d2
+    do l = 1, d3
+      if (this%kerker) then
+        call kerker(f(1:d1, k, l), tmp2(1:d1))
+        vnew(1:d1, k, l) = vin(1:d1, k, l) + tmp2(1:d1)
+      else
+        vnew(1:d1, k, l) = vin(1:d1, k, l) + coeff*f(1:d1, k, l)
+      end if
+    end do
+  end do
   
   ! other terms
   do i = 1, iter_used
     gamma = ww*sum(beta(:, i)*work(:))
-    vnew(1:d1, 1:d2, 1:d3) = vnew(1:d1, 1:d2, 1:d3) - ww*gamma*(coeff*df(1:d1, 1:d2, 1:d3, i) + dv(1:d1, 1:d2, 1:d3, i))
+    do k = 1, d2
+      do l = 1, d3
+        if (this%kerker) then
+          call kerker(df(1:d1, k, l, i), tmp2(1:d1))
+        else
+          tmp2(1:d1) = coeff * df(1:d1, k, l, i)
+        end if
+        vnew(1:d1, k, l) = vnew(1:d1, k, l) - ww*gamma*(tmp2(1:d1) + dv(1:d1, k, l, i))
+      end do
+    end do
   end do
   
   do i = 1, this%nauxmixfield
@@ -228,8 +262,52 @@ subroutine X(broyden_extrapolation)(this, coeff, d1, d2, d3, vin, vnew, iter_use
 
   SAFE_DEALLOCATE_A(beta)
   SAFE_DEALLOCATE_A(work)
+
+  SAFE_DEALLOCATE_A(tmp)
+  SAFE_DEALLOCATE_A(tmp2)
+  SAFE_DEALLOCATE_A(lapl)
   
   POP_SUB(X(broyden_extrapolation))
+  contains
+    ! Kerker preconditioner for the mixing operator in real space
+    ! Solves fout = A (\Delta - q_0**2)^-1 \Delta deltaf
+    ! which corresponds in Fourier space to A q^2/(q^2 + q_0^2)
+    subroutine kerker(deltaf, fout)
+      R_TYPE, intent(in)    :: deltaf(:)
+      R_TYPE, intent(inout) :: fout(:)
+      integer :: iter
+      R_TYPE :: res
+      FLOAT :: threshold
+
+      PUSH_SUB(X(broyden_extrapolation).kerker)
+
+      ! make the threshold relative to the norm of deltaf
+      threshold = X(mf_nrm2)(this%der%mesh, deltaf) * CNST(1e-10)
+      tmp(1:this%der%mesh%np) = coeff*deltaf(1:this%der%mesh%np)
+      iter = 500
+      ! compute Laplacian
+      call X(derivatives_lapl)(this%der, tmp, lapl)
+      tmp(1:this%der%mesh%np) = lapl(1:this%der%mesh%np)
+      ! now solve (\Delta - q_0**2) fout = \Delta deltaf using CG
+      call X(conjugate_gradients)(this%der%mesh%np, tmp, lapl, laplacian_op, X(mf_dotp_aux), iter, res, threshold)
+      fout(1:d1) = tmp(1:d1)
+
+      POP_SUB(X(broyden_extrapolation).kerker)
+    end subroutine kerker
+    ! ---------------------------------------------------------
+    !> computes shifted laplacian
+    subroutine laplacian_op(x, lx)
+      R_TYPE, intent(in)    :: x(:)
+      R_TYPE, intent(out)   :: lx(:)
+
+      R_TYPE, allocatable :: tmpx(:)
+
+      SAFE_ALLOCATE(tmpx(this%der%mesh%np_part))
+      call lalg_copy(this%der%mesh%np, x, tmpx)
+      call X(derivatives_lapl)(this%der, tmpx, lx)
+      call lalg_axpy(this%der%mesh%np, -this%kerker_factor**2, x, lx)
+      SAFE_DEALLOCATE_A(tmpx)
+     end subroutine laplacian_op
 end subroutine X(broyden_extrapolation)
 
 !--------------------------------------------------------------------

@@ -32,6 +32,7 @@ module mix_oct_m
   use parser_oct_m
   use profiling_oct_m
   use restart_oct_m
+  use solvers_oct_m
   use stencil_cube_oct_m
   use types_oct_m
   use varinfo_oct_m
@@ -118,6 +119,9 @@ module mix_oct_m
     type(nl_operator_t)          :: preconditioner
 
     FLOAT :: residual_coeff
+
+    logical :: kerker
+    FLOAT :: kerker_factor
     
   end type mix_t
 
@@ -294,6 +298,27 @@ contains
     if(smix%interval < 1) call messages_input_error(namespace, 'MixInterval', 'MixInterval must be larger or equal than 1')
     
     smix%iter = 0
+
+    !%Variable MixingKerker
+    !%Type logical
+    !%Default false
+    !%Section SCF::Mixing
+    !%Description
+    !% (Experimental) If set to yes, Octopus will use the Kerker preconditioner
+    !% for the mixing operator.
+    !% The implementation follows: Yoshinori Shiihara et al., Modelling Simul. Mater. Sci. Eng. 16 (2008), 035004
+    !%End
+    call parse_variable(namespace, trim(prefix)+'MixingKerker', .false., smix%kerker)
+    if(smix%kerker) call messages_experimental('MixingKerker')
+
+    !%Variable MixingKerkerFactor
+    !%Type float
+    !%Default 1.0
+    !%Section SCF::Mixing
+    !%Description
+    !% The factor q_0 in the Kerker preconditioner.
+    !%End
+    call parse_variable(namespace, trim(prefix)+'MixingKerkerFactor', CNST(1.0), smix%kerker_factor)
 
     smix%nauxmixfield = 0
     do ii = 1,MAX_AUXMIXFIELD
