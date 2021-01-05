@@ -13,7 +13,7 @@ ExtraFile: H-C.skf
 ExtraFile: H-H.skf
 Input: 11-dftbplus_ehrenfest.01-benzene.inp
 
-if (available dftbplus); then
+if (available dftbplus_devel); then
 # Final coordinates
 match ; y (C1) (t=400 au) ; LINEFIELD(dftbplus/td.general/coordinates, -1, 4) ;   0.41728094 
 match ; y (C2) (t=400 au) ; LINEFIELD(dftbplus/td.general/coordinates, -1, 7) ;	  1.36277781 
