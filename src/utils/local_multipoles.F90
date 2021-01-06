@@ -66,7 +66,6 @@ program oct_local_multipoles
 
   type(electrons_t), pointer :: sys
   integer, parameter    :: BADER = 512
-  FLOAT                 :: BaderThreshold
 
   ! Initialize stuff
   call global_init(is_serial = .false.)
@@ -167,16 +166,6 @@ contains
         basename = trim(basename(1:length-4))
       end if
     end if
-
-    !%Variable LDBaderThreshold
-    !%Type float
-    !%Default 0.01
-    !%Section Utilities::oct-local_multipoles
-    !%Description
-    !% This variable sets the threshold for the basins calculations. Recommended values: 
-    !% 0.01 -> intramolecular volumes; 0.2 -> intermolecular volumes.
-    !%End
-    call parse_variable(global_namespace, 'LDBaderThreshold', CNST(0.01), BaderThreshold)
 
     !%Variable LDUpdate
     !%Type logical
@@ -713,10 +702,9 @@ contains
     type(local_domain_t), intent(inout) :: loc_domains(:)
     type(restart_t),      intent(in)    :: restart
 
-    integer                     :: id, ip, iunit, ierr
-    character(len=MAX_PATH_LEN) :: filename, tmp
-    character(len=31) :: line(1)
-    FLOAT, allocatable          :: inside(:)
+    integer            :: id, ip, iunit, ierr
+    character(len=31)  :: line(1), tmp
+    FLOAT, allocatable :: inside(:)
 
     PUSH_SUB(local_restart_read)
 
@@ -724,15 +712,14 @@ contains
     call messages_info(1)
 
     SAFE_ALLOCATE(inside(1:mesh%np))
+
     !Read local domain information from ldomains.info 
-    filename = "ldomains.info"    
-    iunit = restart_open(restart, filename, status='old')
+    iunit = restart_open(restart, "ldomains.info", status='old')
     call restart_read(restart, iunit, line, 1, ierr)    
     read(line(1),'(a25,1x,i5)') tmp, ierr
     call restart_close(restart, iunit)
 
-    filename = "ldomains"
-    call drestart_read_mesh_function(restart, trim(filename), mesh, inside, ierr) 
+    call drestart_read_mesh_function(restart, "ldomains", mesh, inside, ierr) 
 
     do id = 1, nd
       loc_domains(id)%inside = .false.
@@ -761,7 +748,6 @@ contains
     integer(8)          :: how
     integer             :: id, ip, ierr
     type(basins_t)      :: basins
-    FLOAT, allocatable  :: ff2(:,:)
     character(len=MAX_PATH_LEN) :: filename
     FLOAT, allocatable :: dble_domain_map(:), domain_mesh(:)
 
@@ -771,47 +757,38 @@ contains
     message(1) = 'Info: Assigning mesh points inside each local domain'
     call messages_info(1)
 
-    if (debug%info) then
-      call parse_variable(namespace, 'LDOutputFormat', 0, how)
-      if (.not.varinfo_valid_option('OutputFormat', how, is_flag=.true.)) then
-        call messages_input_error(namespace, 'LDOutputFormat')
-      end if
-    end if
-
-    ! First we do the Bader domains
+    ! If we have Bader domains, then we need to get the basins
     if (any(loc_domains(:)%dshape == BADER)) then
       if (mesh%parallel_in_domains) then
         write(message(1),'(a)') 'Bader volumes can only be computed in serial'
         call messages_fatal(1)
       end if
-
-      SAFE_ALLOCATE(ff2(1:mesh%np,1))
-      ff2(1:mesh%np,1) = ff(1:mesh%np)
-
-      call add_dens_to_ion_x(ff2, namespace, mesh, geo)
-      call basins_init(basins, mesh)
-      call parse_variable(namespace, 'LDBaderThreshold', CNST(0.01), BaderThreshold)
-      call basins_analyze(basins, mesh, ff2(:,1), ff2, BaderThreshold)
-      call bader_union_inside(basins, mesh, geo, nd, loc_domains)
-
-      if (debug%info) then
-        filename = 'basinsmap'
-        call dio_function_output(how, trim('local.general'), trim(filename), namespace, mesh, &
-          DBLE(basins%map(1:mesh%np)), unit_one, ierr, geo = geo)
-        call dio_function_output(how, trim('local.general'), 'dens_ff2', namespace, mesh, ff2(:,1), unit_one, ierr, &
-          geo = geo)
-      end if
-      call basins_end(basins)
-      SAFE_DEALLOCATE_A(ff2)
+      call create_basins(namespace, mesh, geo, ff, basins)
     end if
 
-    ! Then all the remaining domains
     do id = 1, nd
-      if (loc_domains(id)%dshape == BADER) cycle
-      call box_union_inside_vec(loc_domains(id)%domain, mesh%np, mesh%x, loc_domains(id)%inside)
+      ! Create the mask that tells which mesh points are inside the domain
+      select case (loc_domains(id)%dshape)
+      case (BADER)
+        call bader_union_inside(loc_domains(id)%domain, basins, mesh, geo, loc_domains(id)%inside)
+      case default
+        call box_union_inside_vec(loc_domains(id)%domain, mesh%np, mesh%x, loc_domains(id)%inside)
+      end select
+
+      !Check for atom list inside each domain
+      call local_ions_inside(loc_domains(id)%inside, geo, mesh, loc_domains(id)%ions_inside, loc_domains(id)%clist)
     end do
 
+    if (any(loc_domains(:)%dshape == BADER)) then
+      call basins_end(basins)
+    end if
+
     if (debug%info) then
+      call parse_variable(namespace, 'LDOutputFormat', 0, how)
+      if (.not.varinfo_valid_option('OutputFormat', how, is_flag=.true.)) then
+        call messages_input_error(namespace, 'LDOutputFormat')
+      end if
+
       ! Write extra information about domains
       SAFE_ALLOCATE(dble_domain_map(1:mesh%np))
       SAFE_ALLOCATE(domain_mesh(1:mesh%np))
@@ -826,44 +803,75 @@ contains
           end if
         end do
 
-        write(filename,'(a,a,a)') 'domain.', trim(loc_domains(id)%lab)
-        call dio_function_output(how, trim('local.general'), trim(filename), namespace, mesh, &
-          dble_domain_map(1:mesh%np), unit_one, ierr, geo = geo)
+        write(filename,'(a,a)') 'domain.', trim(loc_domains(id)%lab)
+        call dio_function_output(how, 'local.general', trim(filename), namespace, mesh, dble_domain_map, unit_one, ierr, &
+          geo = geo)
       end do
 
-      write(filename,'(a,a,a)') 'domain.mesh'
-      call dio_function_output(how, trim('local.general'), trim(filename), namespace, mesh, domain_mesh(1:mesh%np), &
-        unit_one, ierr, geo = geo)
+      call dio_function_output(how, 'local.general', 'domain.mesh', namespace, mesh, domain_mesh, unit_one, ierr, geo = geo)
 
       SAFE_DEALLOCATE_A(dble_domain_map)
       SAFE_DEALLOCATE_A(domain_mesh)
     end if
-
-    do id = 1, nd
-      !Check for atom list inside each domain
-      call local_ions_inside(loc_domains(id)%inside, geo, mesh, loc_domains(id)%ions_inside, loc_domains(id)%clist)
-    end do
     
     POP_SUB(local_inside_domain)
   end subroutine local_inside_domain
 
   ! ---------------------------------------------------------
-  subroutine bader_union_inside(basins, mesh, geo, nd, loc_domains)
-    type(basins_t),       intent(in)    :: basins
-    type(mesh_t),         intent(in)    :: mesh
-    type(geometry_t),     intent(in)    :: geo
-    integer,              intent(in)    :: nd 
-    type(local_domain_t), intent(inout) :: loc_domains(:)
+  subroutine create_basins(namespace, mesh, geo, ff, basins)
+    type(namespace_t),  intent(in)    :: namespace
+    type(mesh_t),       intent(in)    :: mesh
+    type(geometry_t),   intent(in)    :: geo
+    FLOAT,              intent(in)    :: ff(:)
+    type(basins_t),     intent(inout) :: basins
 
-    integer               :: ia, ib, id, ip, ix, rankmin, n_boxes
-    integer, allocatable  :: domain_map(:), ion_map(:)
-    FLOAT                 :: dmin, dd
-    FLOAT, allocatable    :: xi(:)
-    logical               :: lduseatomicradii
+    logical               :: use_atomic_radii
+    integer               :: ip, ierr, ia, is, rankmin
+    integer(8)            :: how
+    FLOAT                 :: bader_threshold, dmin, dd
+    integer, allocatable  :: ion_map(:)
+    FLOAT,   allocatable  :: ff2(:,:), ffs(:)
 
-    PUSH_SUB(bader_union_inside)
+    PUSH_SUB(create_basins)
 
-    SAFE_ALLOCATE(xi(1:geo%space%dim))
+    !%Variable LDBaderThreshold
+    !%Type float
+    !%Default 0.01
+    !%Section Utilities::oct-local_multipoles
+    !%Description
+    !% This variable sets the threshold for the basins calculations. Recommended values:
+    !% 0.01 -> intramolecular volumes; 0.2 -> intermolecular volumes.
+    !%End
+    call parse_variable(namespace, 'LDBaderThreshold', CNST(0.01), bader_threshold)
+
+    ! Copy function used to construct the basins, as we need to modify it
+    SAFE_ALLOCATE(ff2(1:mesh%np,1))
+    ff2(1:mesh%np,1) = ff(1:mesh%np)
+
+    ! Add long range density from atoms
+    SAFE_ALLOCATE(ffs(1:mesh%np))
+    do ia = 1, geo%natoms
+      call species_get_long_range_density(geo%atom(ia)%species, namespace, geo%atom(ia)%x, mesh, ffs)
+      do is = 1, ubound(ff2, dim=2)
+        ff2(1:mesh%np, is) = ff2(1:mesh%np, is) - ffs(1:mesh%np)
+      end do
+    end do
+    SAFE_DEALLOCATE_A(ffs)
+
+    call basins_init(basins, mesh)
+    call basins_analyze(basins, mesh, ff2(:,1), ff2, bader_threshold)
+
+    if (debug%info) then
+      call parse_variable(namespace, 'LDOutputFormat', 0, how)
+      if (.not. varinfo_valid_option('OutputFormat', how, is_flag=.true.)) then
+        call messages_input_error(namespace, 'LDOutputFormat')
+      end if
+
+      call dio_function_output(how, 'local.general', 'basinsmap', namespace, mesh, DBLE(basins%map(1:mesh%np)), unit_one, ierr, &
+        geo = geo)
+      call dio_function_output(how, 'local.general', 'dens_ff2', namespace, mesh, ff2(:,1), unit_one, ierr, geo = geo)
+    end if
+    SAFE_DEALLOCATE_A(ff2)
 
     !%Variable LDUseAtomicRadii
     !%Type logical
@@ -872,75 +880,69 @@ contains
     !%Description
     !% If set, atomic radii will be used to assign lone pairs to ion. 
     !%End
-    call parse_variable(global_namespace, 'LDUseAtomicRadii', .false., lduseatomicradii)
+    call parse_variable(global_namespace, 'LDUseAtomicRadii', .false., use_atomic_radii)
 
-    SAFE_ALLOCATE(ion_map(geo%natoms))
-
-    do id = 1, nd
-      if (loc_domains(id)%dshape /= BADER) cycle
-
-      n_boxes = box_union_get_nboxes(loc_domains(id)%domain)
-      SAFE_ALLOCATE(domain_map(1:n_boxes))
-
-      ! Assign basins%map to ions
-      if (lduseatomicradii .and. (id == 1)) then
-        ion_map = 0
-        do ia = 1, geo%natoms
-          ion_map(ia) = basins%map(mesh_nearest_point(mesh, geo%atom(ia)%x, dmin, rankmin))
-        end do
-        ! Assign lonely pair to ion in a atomic radii distance
-        do ip = 1, mesh%np
-          if (all(ion_map(:) /= basins%map(ip)) ) then
-            do ia = 1, geo%natoms
-              dd = sum((mesh%x(ip, 1:geo%space%dim) - geo%atom(ia)%x(1:geo%space%dim))**2)
-              dd = sqrt(dd)
-              if (dd <= species_vdw_radius(geo%atom(ia)%species)) basins%map(ip) = ion_map(ia)
-            end do
-          end if
-        end do
-      end if
-      domain_map = 0
-      do ib = 1, n_boxes
-        xi = box_union_get_center(loc_domains(id)%domain, ib)
-        ix = mesh_nearest_point(mesh, xi, dmin, rankmin)
-        domain_map(ib) = basins%map(ix)
+    if (use_atomic_radii) then
+      SAFE_ALLOCATE(ion_map(geo%natoms))
+      ion_map = 0
+      do ia = 1, geo%natoms
+        ion_map(ia) = basins%map(mesh_nearest_point(mesh, geo%atom(ia)%x, dmin, rankmin))
       end do
+
       do ip = 1, mesh%np
-        loc_domains(id)%inside(ip) = any(domain_map(1:n_boxes) == basins%map(ip))
+        ! Check if lonely pair has no ions assigned to it
+        if (all(ion_map(:) /= basins%map(ip)) ) then
+          ! Assign lonely pair to ion in a atomic radii distance
+          do ia = 1, geo%natoms
+            dd = sum((mesh%x(ip, 1:geo%space%dim) - geo%atom(ia)%x(1:geo%space%dim))**2)
+            dd = sqrt(dd)
+            if (dd <= species_vdw_radius(geo%atom(ia)%species)) basins%map(ip) = ion_map(ia)
+          end do
+        end if
       end do
 
-      SAFE_DEALLOCATE_A(domain_map)
+      SAFE_DEALLOCATE_A(ion_map)
+    end if
+
+    POP_SUB(create_basins)
+  end subroutine create_basins
+
+  ! ---------------------------------------------------------
+  subroutine bader_union_inside(domain, basins, mesh, geo, inside)
+    type(box_union_t),    intent(in)    :: domain
+    type(basins_t),       intent(in)    :: basins
+    type(mesh_t),         intent(in)    :: mesh
+    type(geometry_t),     intent(in)    :: geo
+    logical,              intent(out)   :: inside(:)
+
+    integer               :: ib, ip, ix, n_boxes, rankmin
+    FLOAT                 :: dmin
+    integer, allocatable  :: domain_map(:)
+    FLOAT, allocatable    :: xi(:)
+
+    PUSH_SUB(bader_union_inside)
+
+    ! Assign basins%map to ions
+    SAFE_ALLOCATE(xi(1:geo%space%dim))
+    n_boxes = box_union_get_nboxes(domain)
+
+    SAFE_ALLOCATE(domain_map(1:n_boxes))
+    domain_map = 0
+
+    do ib = 1, n_boxes
+      xi = box_union_get_center(domain, ib)
+      ix = mesh_nearest_point(mesh, xi, dmin, rankmin)
+      domain_map(ib) = basins%map(ix)
+    end do
+    do ip = 1, mesh%np
+      inside(ip) = any(domain_map(1:n_boxes) == basins%map(ip))
     end do
 
-    SAFE_DEALLOCATE_A(ion_map)
+    SAFE_DEALLOCATE_A(domain_map)
     SAFE_DEALLOCATE_A(xi)
 
     POP_SUB(bader_union_inside)
   end subroutine bader_union_inside
-
-  ! ---------------------------------------------------------
-  subroutine add_dens_to_ion_x(ff, namespace, mesh, geo)
-    FLOAT,              intent(inout) :: ff(:,:)
-    type(namespace_t),  intent(in)    :: namespace
-    type(mesh_t),       intent(in)    :: mesh
-    type(geometry_t),   intent(in)    :: geo
-
-    integer :: ia, is
-    FLOAT, allocatable :: ffs(:)
-
-    PUSH_SUB(add_dens_to_ion_x)
-
-    SAFE_ALLOCATE(ffs(1:mesh%np))
-    do ia = 1, geo%natoms
-      call species_get_long_range_density(geo%atom(ia)%species, namespace, geo%atom(ia)%x, mesh, ffs)
-      do is = 1, ubound(ff, dim=2)
-        ff(1:mesh%np, is) = ff(1:mesh%np, is) - ffs(1:mesh%np)
-      end do
-    end do
-    SAFE_DEALLOCATE_A(ffs)
-
-    POP_SUB(add_dens_to_ion_x)
-  end subroutine add_dens_to_ion_x
 
   ! ---------------------------------------------------------
   !Check for the ions inside each local domain.
