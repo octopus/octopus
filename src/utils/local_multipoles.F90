@@ -376,7 +376,11 @@ contains
 
     call restart_end(restart)
     call kick_end(kick)
-    call local_end(nd, loc_domains)
+
+    do id = 1, nd
+      call local_end(loc_domains(id))
+    end do
+    SAFE_DEALLOCATE_A(loc_domains)
 
     message(1) = 'Info: Exiting local domains'
     message(2) = ''
@@ -446,8 +450,7 @@ contains
       SAFE_ALLOCATE(loc_domains(id)%mesh_mask(1:mesh%np))
       SAFE_ALLOCATE(loc_domains(id)%ions_mask(1:geo%natoms))
       call parse_block_string(blk, id-1, 0, loc_domains(id)%lab)
-      call local_read_from_block(space, geo, blk, id-1, loc_domains(id)%box, loc_domains(id)%dshape, loc_domains(id)%clist, &
-        global_namespace)
+      call local_read_from_block(loc_domains(id), space, geo, blk, id-1, global_namespace)
     end do block
     call parse_block_end(blk)
     message(1) = ''
@@ -460,38 +463,30 @@ contains
   !> Ending local_domain_t variable, allocating variable 
   !! and reading parameters from input file. 
   ! ---------------------------------------------------------
-  subroutine local_end(nd, loc_domains)
-    integer,              intent(in)     :: nd
-    type(local_domain_t), allocatable, intent(inout) :: loc_domains(:)
-
-    integer :: id
+  subroutine local_end(domain)
+    type(local_domain_t), intent(inout) :: domain
 
     PUSH_SUB(local_end)
 
-    do id = 1, nd
-      if (loc_domains(id)%dshape /= BADER) then
-        call box_union_end(loc_domains(id)%box)
-      end if
-      call local_write_end(loc_domains(id)%writ)
-      SAFE_DEALLOCATE_A(loc_domains(id)%mesh_mask)
-      SAFE_DEALLOCATE_A(loc_domains(id)%ions_mask)
-    end do
-    SAFE_DEALLOCATE_A(loc_domains)
+    if (domain%dshape /= BADER) then
+      call box_union_end(domain%box)
+    end if
+    call local_write_end(domain%writ)
+    SAFE_DEALLOCATE_A(domain%mesh_mask)
+    SAFE_DEALLOCATE_A(domain%ions_mask)
 
     POP_SUB(local_end)
   end subroutine local_end
 
   ! ---------------------------------------------------------
-  subroutine local_read_from_block(space, geo, blk, row, box, shape, clist, namespace)
-    type(space_t),     intent(in)        :: space
-    type(geometry_t),  intent(in)        :: geo
-    type(block_t),     intent(in)        :: blk
-    integer,           intent(in)        :: row
-    type(box_union_t), intent(inout)     :: box
-    integer,           intent(out)       :: shape
-    character(len=*),  intent(out)       :: clist
-    type(namespace_t), intent(in)        :: namespace
-    
+  subroutine local_read_from_block(domain, space, geo, blk, row, namespace)
+    type(local_domain_t), intent(inout) :: domain 
+    type(space_t),        intent(in)    :: space
+    type(geometry_t),     intent(in)    :: geo
+    type(block_t),        intent(in)    :: blk
+    integer,              intent(in)    :: row
+    type(namespace_t),    intent(in)    :: namespace
+
     integer                  :: ic, nb, ia, ibox
     FLOAT                    :: rsize, xsize
     FLOAT                    :: center(MAX_DIM), lsize(MAX_DIM), bsize(MAX_DIM)
@@ -505,9 +500,9 @@ contains
     lsize = M_ZERO
     center = M_ZERO
 
-    call parse_block_integer(blk, row, 1, shape)
+    call parse_block_integer(blk, row, 1, domain%dshape)
 
-    select case (shape)
+    select case (domain%dshape)
     case (MINIMUM)
       if (geo%reduced_coordinates) then
         message(1) = "The 'minimum' box shape cannot be used if atomic positions"
@@ -516,16 +511,16 @@ contains
       end if
       call parse_block_float(blk, row, 2, rsize, unit = units_inp%length)
       if (rsize < M_ZERO) call messages_input_error(namespace, 'radius', row=row, column=2)
-      call parse_block_string(blk, row, 3, clist)
+      call parse_block_string(blk, row, 3, domain%clist)
 
       nb = 0
       do ic = 1, geo%natoms
-        if(loct_isinstringlist(ic, clist)) nb = nb + 1
+        if(loct_isinstringlist(ic, domain%clist)) nb = nb + 1
       end do
       SAFE_ALLOCATE(boxes(1:nb))
       ibox = 1
       do ia = 1, geo%natoms
-        if (loct_isinstringlist(ia, clist)) then
+        if (loct_isinstringlist(ia, domain%clist)) then
           bsize(:) = rsize
           if (bsize(1) < M_EPSILON) bsize(1) = species_def_rsize(geo%atom(ia)%species)
           call box_create(boxes(ibox), SPHERE, space%dim, bsize, geo%atom(ia)%x, namespace)
@@ -533,14 +528,14 @@ contains
         end if
       end do
 
-      call box_union_init(box, nb, boxes)
+      call box_union_init(domain%box, nb, boxes)
 
       ic = 0
       do ia = 1, geo%natoms
-        if (box_union_inside(box, geo%atom(ia)%x) .and. .not.loct_isinstringlist(ia, clist) ) then
+        if (box_union_inside(domain%box, geo%atom(ia)%x) .and. .not.loct_isinstringlist(ia, domain%clist) ) then
           ic = ic + 1
-          if(ic <= 20) write(message(ic),'(a,a,I0,a,a)')'Atom: ',trim(species_label(geo%atom(ia)%species)),ia, &
-                                 ' is inside the union box BUT not in list: ',trim(clist)
+          if(ic <= 20) write(message(ic),'(a,a,I0,a,a)')'Atom: ',trim(species_label(geo%atom(ia)%species)), ia, &
+            ' is inside the union box BUT not in list: ', trim(domain%clist)
         end if
       end do
       if (ic > 0) then 
@@ -569,7 +564,7 @@ contains
 
       SAFE_ALLOCATE(boxes(1))
       call box_create(boxes(1), SPHERE, space%dim, lsize, center, namespace)
-      call box_union_init(box, 1, boxes)
+      call box_union_init(domain%box, 1, boxes)
       call box_end(boxes(1))
       SAFE_DEALLOCATE_A(boxes)
 
@@ -585,7 +580,7 @@ contains
 
       SAFE_ALLOCATE(boxes(1))
       call box_create(boxes(1), CYLINDER, space%dim, lsize, center, namespace)
-      call box_union_init(box, 1, boxes)
+      call box_union_init(domain%box, 1, boxes)
       call box_end(boxes(1))
       SAFE_DEALLOCATE_A(boxes)
 
@@ -599,12 +594,12 @@ contains
 
       SAFE_ALLOCATE(boxes(1))
       call box_create(boxes(1), 3, space%dim, lsize, center, namespace)
-      call box_union_init(box, 1, boxes)
+      call box_union_init(domain%box, 1, boxes)
       call box_end(boxes(1))
       SAFE_DEALLOCATE_A(boxes)
 
     case (BADER)
-      call parse_block_string(blk, row, 2, clist)
+      call parse_block_string(blk, row, 2, domain%clist)
     end select
 
     POP_SUB(local_read_from_block)
