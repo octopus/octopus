@@ -1,4 +1,5 @@
 !! Copyright (C) 2014 M. Oliveira, J. Jornet-Somoza
+!! Copyright (C) 2020-2021 M. Oliveira
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -293,7 +294,7 @@ contains
     message(2) = ''
     call messages_info(2)
 
-    call local_init(sys%space, sys%gr%mesh, sys%geo, nd, loc_domains)
+    call local_init(sys%space, sys%geo, nd, loc_domains)
 
     ! Starting loop over selected densities.
     if (any(loc_domains(:)%dshape == BADER)) then
@@ -393,9 +394,8 @@ contains
   !> Initialize local_domain_t variable, allocating variable 
   !! and reading parameters from input file. 
   ! ---------------------------------------------------------
-  subroutine local_init(space, mesh, geo, nd, loc_domains)
+  subroutine local_init(space, geo, nd, loc_domains)
     type(space_t),    intent(in)  :: space
-    type(mesh_t),     intent(in)  :: mesh
     type(geometry_t), intent(in)  :: geo
     integer,          intent(out) :: nd
     type(local_domain_t), allocatable, intent(out) :: loc_domains(:)
@@ -447,7 +447,6 @@ contains
     SAFE_ALLOCATE(loc_domains(1:nd))
 
     block: do id = 1, nd
-      SAFE_ALLOCATE(loc_domains(id)%mesh_mask(1:mesh%np))
       SAFE_ALLOCATE(loc_domains(id)%ions_mask(1:geo%natoms))
       call parse_block_string(blk, id-1, 0, loc_domains(id)%lab)
       call local_read_from_block(loc_domains(id), space, geo, blk, id-1, global_namespace)
@@ -671,6 +670,10 @@ contains
     message(1) = 'Info: Reading mesh points inside each local domain'
     call messages_info(1)
 
+    do id = 1, nd
+      SAFE_ALLOCATE(loc_domains(id)%mesh_mask(1:mesh%np))
+    end do
+
     SAFE_ALLOCATE(mask(1:mesh%np))
 
     !Read local domain information from ldomains.info 
@@ -730,9 +733,9 @@ contains
       ! Create the mask that tells which mesh points are inside the domain
       select case (loc_domains(id)%dshape)
       case (BADER)
-        call bader_union_mask(loc_domains(id)%clist, basins, mesh, geo, loc_domains(id)%mesh_mask)
+        call bader_domain_create_mask(loc_domains(id), basins, mesh, geo)
       case default
-        call box_union_inside_vec(loc_domains(id)%box, mesh%np, mesh%x, loc_domains(id)%mesh_mask)
+        call box_domain_create_mask(loc_domains(id), mesh)
       end select
 
       !Check for atom list inside each domain
@@ -868,23 +871,36 @@ contains
   end subroutine create_basins
 
   ! ---------------------------------------------------------
-  subroutine bader_union_mask(clist, basins, mesh, geo, mask)
-    character(len=500),   intent(in)    :: clist
-    type(basins_t),       intent(in)    :: basins
-    type(mesh_t),         intent(in)    :: mesh
-    type(geometry_t),     intent(in)    :: geo
-    logical,              intent(out)   :: mask(:)
+  subroutine box_domain_create_mask(domain, mesh)
+    class(local_domain_t), intent(inout) :: domain
+    type(mesh_t),          intent(in)    :: mesh
+
+    PUSH_SUB(box_domain_create_mask)
+
+    SAFE_ALLOCATE(domain%mesh_mask(1:mesh%np))
+
+    call box_union_inside_vec(domain%box, mesh%np, mesh%x, domain%mesh_mask)
+
+    POP_SUB(box_domain_create_mask)
+  end subroutine box_domain_create_mask
+  
+  ! ---------------------------------------------------------
+  subroutine bader_domain_create_mask(domain, basins, mesh, geo)
+    class(local_domain_t), intent(inout) :: domain
+    type(basins_t),        intent(in)    :: basins
+    type(mesh_t),          intent(in)    :: mesh
+    type(geometry_t),      intent(in)    :: geo
 
     integer               :: ia, ib, ip, ix, n_basins, rankmin
     FLOAT                 :: dmin, xi(MAX_DIM)
     integer, allocatable  :: domain_map(:)
 
-    PUSH_SUB(bader_union_mask)
+    PUSH_SUB(bader_domain_create_mask)
 
     ! Count then number of basins to consider. That is the number of ions specified in the input by the user
     n_basins = 0
     do ia = 1, geo%natoms
-      if (loct_isinstringlist(ia, clist)) n_basins = n_basins + 1
+      if (loct_isinstringlist(ia, domain%clist)) n_basins = n_basins + 1
     end do
 
     SAFE_ALLOCATE(domain_map(1:n_basins))
@@ -893,7 +909,7 @@ contains
     domain_map = 0
     ib = 0
     do ia = 1, geo%natoms
-      if (.not. loct_isinstringlist(ia, clist)) cycle
+      if (.not. loct_isinstringlist(ia, domain%clist)) cycle
       ib = ib + 1
       xi(1:geo%space%dim) = geo%atom(ia)%x(1:geo%space%dim)
       ix = mesh_nearest_point(mesh, xi, dmin, rankmin)
@@ -902,14 +918,15 @@ contains
 
     ! Now construct the mask: a point belongs to this Bader domain if it is part
     ! of at least one basin that is part of this domain
+    SAFE_ALLOCATE(domain%mesh_mask(1:mesh%np))
     do ip = 1, mesh%np
-      mask(ip) = any(domain_map(1:n_basins) == basins%map(ip))
+      domain%mesh_mask(ip) = any(domain_map(1:n_basins) == basins%map(ip))
     end do
 
     SAFE_DEALLOCATE_A(domain_map)
 
-    POP_SUB(bader_union_mask)
-  end subroutine bader_union_mask
+    POP_SUB(bader_domain_create_mask)
+  end subroutine bader_domain_create_mask
 
   ! ---------------------------------------------------------
   !Check for the ions inside each local domain.
