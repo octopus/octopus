@@ -770,7 +770,7 @@ contains
       ! Create the mask that tells which mesh points are inside the domain
       select case (loc_domains(id)%dshape)
       case (BADER)
-        call bader_union_inside(loc_domains(id)%domain, basins, mesh, geo, loc_domains(id)%inside)
+        call bader_union_inside(loc_domains(id)%clist, basins, mesh, geo, loc_domains(id)%inside)
       case default
         call box_union_inside_vec(loc_domains(id)%domain, mesh%np, mesh%x, loc_domains(id)%inside)
       end select
@@ -908,38 +908,45 @@ contains
   end subroutine create_basins
 
   ! ---------------------------------------------------------
-  subroutine bader_union_inside(domain, basins, mesh, geo, inside)
-    type(box_union_t),    intent(in)    :: domain
+  subroutine bader_union_inside(clist, basins, mesh, geo, inside)
+    character(len=500),   intent(in)    :: clist
     type(basins_t),       intent(in)    :: basins
     type(mesh_t),         intent(in)    :: mesh
     type(geometry_t),     intent(in)    :: geo
     logical,              intent(out)   :: inside(:)
 
-    integer               :: ib, ip, ix, n_boxes, rankmin
-    FLOAT                 :: dmin
+    integer               :: ia, ib, ip, ix, n_basins, rankmin
+    FLOAT                 :: dmin, xi(MAX_DIM)
     integer, allocatable  :: domain_map(:)
-    FLOAT, allocatable    :: xi(:)
 
     PUSH_SUB(bader_union_inside)
 
-    ! Assign basins%map to ions
-    SAFE_ALLOCATE(xi(1:geo%space%dim))
-    n_boxes = box_union_get_nboxes(domain)
+    ! Count then number of basins to consider. That is the number of ions specified in the input by the user
+    n_basins = 0
+    do ia = 1, geo%natoms
+      if (loct_isinstringlist(ia, clist)) n_basins = n_basins + 1
+    end do
 
-    SAFE_ALLOCATE(domain_map(1:n_boxes))
+    SAFE_ALLOCATE(domain_map(1:n_basins))
+
+    ! Assign basins to ions
     domain_map = 0
-
-    do ib = 1, n_boxes
-      xi = box_union_get_center(domain, ib)
+    ib = 0
+    do ia = 1, geo%natoms
+      if (.not. loct_isinstringlist(ia, clist)) cycle
+      ib = ib + 1
+      xi(1:geo%space%dim) = geo%atom(ia)%x(1:geo%space%dim)
       ix = mesh_nearest_point(mesh, xi, dmin, rankmin)
       domain_map(ib) = basins%map(ix)
     end do
+
+    ! Now construct the mask: a point belongs to this Bader domain if it is part
+    ! of at least one basin that is part of this domain
     do ip = 1, mesh%np
-      inside(ip) = any(domain_map(1:n_boxes) == basins%map(ip))
+      inside(ip) = any(domain_map(1:n_basins) == basins%map(ip))
     end do
 
     SAFE_DEALLOCATE_A(domain_map)
-    SAFE_DEALLOCATE_A(xi)
 
     POP_SUB(bader_union_inside)
   end subroutine bader_union_inside
