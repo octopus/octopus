@@ -223,13 +223,13 @@ contains
   end subroutine local_write_end
 
   ! ---------------------------------------------------------
-  subroutine local_write_iter(writ, namespace, lab, ions_inside, inside, mesh, st, hm, ks, geo, kick, iter, l_start, &
+  subroutine local_write_iter(writ, namespace, lab, ions_mask, mesh_mask, mesh, st, hm, ks, geo, kick, iter, l_start, &
                               ldoverwrite)
     type(local_write_t),      intent(inout) :: writ
     type(namespace_t),        intent(in)    :: namespace
     character(len=15),        intent(in)    :: lab
-    logical,                  intent(in)    :: ions_inside(:)
-    logical,                  intent(in)    :: inside(:)
+    logical,                  intent(in)    :: ions_mask(:)
+    logical,                  intent(in)    :: mesh_mask(:)
     type(mesh_t),             intent(in)    :: mesh
     type(states_elec_t),      intent(inout) :: st
     type(hamiltonian_elec_t), intent(inout) :: hm
@@ -246,7 +246,7 @@ contains
     call profiling_in(prof, "LOCAL_WRITE_ITER")
 
     if (writ%out(LOCAL_OUT_MULTIPOLES)%write) then
-      call local_write_multipole(writ%out(LOCAL_OUT_MULTIPOLES), namespace, lab, ions_inside, inside, mesh, geo, st, &
+      call local_write_multipole(writ%out(LOCAL_OUT_MULTIPOLES), namespace, lab, ions_mask, mesh_mask, mesh, geo, st, &
         writ%lmax, kick, iter, l_start, ldoverwrite, writ%how)
       if(mpi_grp_is_root(mpi_world)) then
         call write_iter_flush(writ%out(LOCAL_OUT_MULTIPOLES)%handle)
@@ -254,12 +254,12 @@ contains
     end if
 
     if (writ%out(LOCAL_OUT_DENSITY)%write .or. writ%out(LOCAL_OUT_POTENTIAL)%write) then
-      call local_write_density(writ%out(LOCAL_OUT_DENSITY), namespace, writ%out(LOCAL_OUT_POTENTIAL), lab, inside, mesh, geo, &
+      call local_write_density(writ%out(LOCAL_OUT_DENSITY), namespace, writ%out(LOCAL_OUT_POTENTIAL), lab, mesh_mask, mesh, geo, &
         st, hm, ks, iter, writ%how)
     end if
 
     if (writ%out(LOCAL_OUT_ENERGY)%write) then
-      call local_write_energy(writ%out(LOCAL_OUT_ENERGY), namespace, lab, inside, mesh, geo, st, hm, ks, iter, l_start, &
+      call local_write_energy(writ%out(LOCAL_OUT_ENERGY), namespace, lab, mesh_mask, mesh, geo, st, hm, ks, iter, l_start, &
         ldoverwrite)
       if(mpi_grp_is_root(mpi_world)) then
         call write_iter_flush(writ%out(LOCAL_OUT_ENERGY)%handle)
@@ -271,12 +271,12 @@ contains
   end subroutine local_write_iter
 
   ! ---------------------------------------------------------
-  subroutine local_write_density(out_dens, namespace, out_pot, lab, inside, mesh, geo, st, hm, ks, iter, how)
+  subroutine local_write_density(out_dens, namespace, out_pot, lab, mesh_mask, mesh, geo, st, hm, ks, iter, how)
     type(local_write_prop_t), intent(inout) :: out_dens
     type(namespace_t),        intent(in)    :: namespace
     type(local_write_prop_t), intent(inout) :: out_pot
     character(len=15),        intent(in)    :: lab
-    logical,                  intent(in)    :: inside(:)
+    logical,                  intent(in)    :: mesh_mask(:)
     type(mesh_t),             intent(in)    :: mesh
     type(geometry_t),         intent(inout) :: geo
     type(states_elec_t),      intent(inout) :: st
@@ -299,7 +299,7 @@ contains
     ! FIXME: use just v_ks_calc subroutine for either compute vhartree and vxc
     do is = 1, st%d%nspin
       st_rho(:) = st%rho(:, is)
-      where (inside)
+      where (mesh_mask)
         tmp_rho = st_rho
       elsewhere
         tmp_rho = M_ZERO
@@ -320,7 +320,7 @@ contains
         write(out_name, '(a,i0,a1,i7.7)') 'vh.', is, '.', iter
         call dio_function_output(how, trim(folder), trim(out_name), namespace, mesh, tmp_vh, units_out%length, ierr, geo = geo)
         !Computes XC potential
-        where (inside)
+        where (mesh_mask)
           st%rho(:, is) = st_rho
         elsewhere
           st%rho(:, is) = M_ZERO
@@ -359,11 +359,11 @@ contains
   end subroutine local_write_density
 
   ! ---------------------------------------------------------
-  subroutine local_write_energy(out_energy, namespace, lab, inside, mesh, geo, st, hm, ks, iter, l_start, start)
+  subroutine local_write_energy(out_energy, namespace, lab, mesh_mask, mesh, geo, st, hm, ks, iter, l_start, start)
     type(local_write_prop_t), intent(inout) :: out_energy
     type(namespace_t),        intent(in)    :: namespace
     character(len=15),        intent(in)    :: lab
-    logical,                  intent(in)    :: inside(:)
+    logical,                  intent(in)    :: mesh_mask(:)
     type(mesh_t),             intent(in)    :: mesh
     type(geometry_t),         intent(inout) :: geo
     type(states_elec_t),      intent(inout) :: st
@@ -453,7 +453,7 @@ contains
       !Compute Local Values
       hm%vxc(:,is) = M_ZERO
       hm%vhartree(:) = M_ZERO
-      where (inside)
+      where (mesh_mask)
         st%rho(:, is) = st_rho
       elsewhere
         st%rho(:, is) = M_ZERO
@@ -479,7 +479,7 @@ contains
 !          hm%vxc(:,is) = M_ZERO
 !          hm%vhartree(:) = M_ZERO
 !          do ix = 1, mesh%np 
-!            if (inside(ix, jd)) st%rho(ix, is) = st_rho(ix)
+!            if (mesh_mask(ix, jd)) st%rho(ix, is) = st_rho(ix)
 !          end do
 !          call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval = .false. , calc_energy = .false.)
 !          leh = dmf_integrate(mesh, tmp_rhoi*hm%vhartree(1:mesh%np)) 
@@ -508,13 +508,13 @@ contains
   end subroutine local_write_energy
 
   ! ---------------------------------------------------------
-  subroutine local_write_multipole(out_multip, namespace, lab, ions_inside, inside, mesh, geo, st, lmax, kick, iter, l_start, &
+  subroutine local_write_multipole(out_multip, namespace, lab, ions_mask, mesh_mask, mesh, geo, st, lmax, kick, iter, l_start, &
     start, how)
     type(local_write_prop_t), intent(inout) :: out_multip
     type(namespace_t),        intent(in)    :: namespace
     character(len=15),        intent(in)    :: lab
-    logical,                  intent(in)    :: ions_inside(:)
-    logical,                  intent(in)    :: inside(:)
+    logical,                  intent(in)    :: ions_mask(:)
+    logical,                  intent(in)    :: mesh_mask(:)
     type(mesh_t),             intent(in)    :: mesh
     type(geometry_t),         intent(in)    :: geo
     type(states_elec_t),      intent(in)    :: st
@@ -589,13 +589,13 @@ contains
       call write_iter_flush(out_multip%handle)
     end if
 
-    center = geometry_center_of_mass(geo, mask=ions_inside)
+    center = geometry_center_of_mass(geo, mask=ions_mask)
 
     SAFE_ALLOCATE(multipole(1:(lmax + 1)**2, 1:st%d%nspin))
     multipole = M_ZERO
 
     do is = 1, st%d%nspin
-      call dmf_multipoles(mesh, st%rho(:,is), lmax, multipole(:,is), mask=inside)
+      call dmf_multipoles(mesh, st%rho(:,is), lmax, multipole(:,is), mask=mesh_mask)
     end do
     ! Setting center of mass as reference needed for non-neutral systems.
     do is = 1, st%d%nspin
@@ -615,7 +615,7 @@ contains
     call parse_variable(namespace, 'LDIonicDipole', .true., use_ionic_dipole)
     if (use_ionic_dipole) then
       ! Calculate ionic dipole, setting the center of mass as reference, as that is needed for non-neutral systems.
-      ionic_dipole = geometry_dipole(geo, mask=ions_inside) + P_PROTON_CHARGE*geometry_val_charge(geo, mask=ions_inside)*center
+      ionic_dipole = geometry_dipole(geo, mask=ions_mask) + P_PROTON_CHARGE*geometry_val_charge(geo, mask=ions_mask)*center
 
       do is = 1, st%d%nspin
         multipole(2:4, is) = -ionic_dipole(1:3)/st%d%nspin - multipole(2:4, is)

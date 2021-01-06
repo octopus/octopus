@@ -55,13 +55,13 @@ program oct_local_multipoles
   implicit none
   
   type local_domain_t
-    type(box_union_t)    :: domain         !< boxes that form each domain.
-    character(len=500)   :: clist          !< list of centers for each domain.
-    character(len=15)    :: lab            !< declared name for each domain.
-    integer              :: dshape         !< shape of box for each domain.
-    logical, allocatable :: inside(:)      !< relation of mesh points on each domain.
-    logical, allocatable :: ions_inside(:) !< relation of ions inside each domain.
-    type(local_write_t)  :: writ           !< write option for local domains analysis.
+    type(box_union_t)    :: box            !< box defining the domain
+    character(len=500)   :: clist          !< list of centers
+    character(len=15)    :: lab            !< declared name
+    integer              :: dshape         !< shape of domain
+    logical, allocatable :: mesh_mask(:)   !< mesh points inside the domain
+    logical, allocatable :: ions_mask(:)   !< ions inside the domain
+    type(local_write_t)  :: writ           !< write handler for local domains analysis
   end type local_domain_t
 
   type(electrons_t), pointer :: sys
@@ -368,8 +368,8 @@ contains
       end if
 
       do id = 1, nd
-        call local_write_iter(loc_domains(id)%writ, global_namespace, loc_domains(id)%lab, loc_domains(id)%ions_inside, &
-          loc_domains(id)%inside, sys%gr%mesh, sys%st, sys%hm, sys%ks, sys%geo, kick, iter, l_start, ldoverwrite)
+        call local_write_iter(loc_domains(id)%writ, global_namespace, loc_domains(id)%lab, loc_domains(id)%ions_mask, &
+          loc_domains(id)%mesh_mask, sys%gr%mesh, sys%st, sys%hm, sys%ks, sys%geo, kick, iter, l_start, ldoverwrite)
       end do
       call loct_progress_bar(iter-l_start, l_end-l_start) 
     end do
@@ -443,10 +443,10 @@ contains
     SAFE_ALLOCATE(loc_domains(1:nd))
 
     block: do id = 1, nd
-      SAFE_ALLOCATE(loc_domains(id)%inside(1:mesh%np))
-      SAFE_ALLOCATE(loc_domains(id)%ions_inside(1:geo%natoms))
+      SAFE_ALLOCATE(loc_domains(id)%mesh_mask(1:mesh%np))
+      SAFE_ALLOCATE(loc_domains(id)%ions_mask(1:geo%natoms))
       call parse_block_string(blk, id-1, 0, loc_domains(id)%lab)
-      call local_read_from_block(space, geo, blk, id-1, loc_domains(id)%domain, loc_domains(id)%dshape, loc_domains(id)%clist, &
+      call local_read_from_block(space, geo, blk, id-1, loc_domains(id)%box, loc_domains(id)%dshape, loc_domains(id)%clist, &
         global_namespace)
     end do block
     call parse_block_end(blk)
@@ -470,11 +470,11 @@ contains
 
     do id = 1, nd
       if (loc_domains(id)%dshape /= BADER) then
-        call box_union_end(loc_domains(id)%domain)
+        call box_union_end(loc_domains(id)%box)
       end if
       call local_write_end(loc_domains(id)%writ)
-      SAFE_DEALLOCATE_A(loc_domains(id)%inside)
-      SAFE_DEALLOCATE_A(loc_domains(id)%ions_inside)
+      SAFE_DEALLOCATE_A(loc_domains(id)%mesh_mask)
+      SAFE_DEALLOCATE_A(loc_domains(id)%ions_mask)
     end do
     SAFE_DEALLOCATE_A(loc_domains)
 
@@ -482,12 +482,12 @@ contains
   end subroutine local_end
 
   ! ---------------------------------------------------------
-  subroutine local_read_from_block(space, geo, blk, row, dom, shape, clist, namespace)
+  subroutine local_read_from_block(space, geo, blk, row, box, shape, clist, namespace)
     type(space_t),     intent(in)        :: space
     type(geometry_t),  intent(in)        :: geo
     type(block_t),     intent(in)        :: blk
     integer,           intent(in)        :: row
-    type(box_union_t), intent(inout)     :: dom
+    type(box_union_t), intent(inout)     :: box
     integer,           intent(out)       :: shape
     character(len=*),  intent(out)       :: clist
     type(namespace_t), intent(in)        :: namespace
@@ -533,11 +533,11 @@ contains
         end if
       end do
 
-      call box_union_init(dom, nb, boxes)
+      call box_union_init(box, nb, boxes)
 
       ic = 0
       do ia = 1, geo%natoms
-        if (box_union_inside(dom, geo%atom(ia)%x) .and. .not.loct_isinstringlist(ia, clist) ) then
+        if (box_union_inside(box, geo%atom(ia)%x) .and. .not.loct_isinstringlist(ia, clist) ) then
           ic = ic + 1
           if(ic <= 20) write(message(ic),'(a,a,I0,a,a)')'Atom: ',trim(species_label(geo%atom(ia)%species)),ia, &
                                  ' is inside the union box BUT not in list: ',trim(clist)
@@ -569,7 +569,7 @@ contains
 
       SAFE_ALLOCATE(boxes(1))
       call box_create(boxes(1), SPHERE, space%dim, lsize, center, namespace)
-      call box_union_init(dom, 1, boxes)
+      call box_union_init(box, 1, boxes)
       call box_end(boxes(1))
       SAFE_DEALLOCATE_A(boxes)
 
@@ -585,7 +585,7 @@ contains
 
       SAFE_ALLOCATE(boxes(1))
       call box_create(boxes(1), CYLINDER, space%dim, lsize, center, namespace)
-      call box_union_init(dom, 1, boxes)
+      call box_union_init(box, 1, boxes)
       call box_end(boxes(1))
       SAFE_DEALLOCATE_A(boxes)
 
@@ -599,7 +599,7 @@ contains
 
       SAFE_ALLOCATE(boxes(1))
       call box_create(boxes(1), 3, space%dim, lsize, center, namespace)
-      call box_union_init(dom, 1, boxes)
+      call box_union_init(box, 1, boxes)
       call box_end(boxes(1))
       SAFE_DEALLOCATE_A(boxes)
 
@@ -649,7 +649,7 @@ contains
     ff = M_ZERO
     do id = 1, nd
       do ip = 1, mesh%np
-        if (loc_domains(id)%inside(ip)) ff(ip, 1) = ff(ip, 1) + 2**DBLE(id)
+        if (loc_domains(id)%mesh_mask(ip)) ff(ip, 1) = ff(ip, 1) + 2**DBLE(id)
       end do
     end do
     call drestart_write_mesh_function(restart, "ldomains", mesh, ff(1:mesh%np, 1), ierr)
@@ -670,14 +670,14 @@ contains
 
     integer            :: id, ip, iunit, ierr
     character(len=31)  :: line(1), tmp
-    FLOAT, allocatable :: inside(:)
+    FLOAT, allocatable :: mask(:)
 
     PUSH_SUB(local_restart_read)
 
     message(1) = 'Info: Reading mesh points inside each local domain'
     call messages_info(1)
 
-    SAFE_ALLOCATE(inside(1:mesh%np))
+    SAFE_ALLOCATE(mask(1:mesh%np))
 
     !Read local domain information from ldomains.info 
     iunit = restart_open(restart, "ldomains.info", status='old')
@@ -685,19 +685,19 @@ contains
     read(line(1),'(a25,1x,i5)') tmp, ierr
     call restart_close(restart, iunit)
 
-    call drestart_read_mesh_function(restart, "ldomains", mesh, inside, ierr) 
+    call drestart_read_mesh_function(restart, "ldomains", mesh, mask, ierr) 
 
     do id = 1, nd
-      loc_domains(id)%inside = .false.
+      loc_domains(id)%mesh_mask = .false.
       do ip = 1 , mesh%np
-        if (bitand(int(inside(ip)), 2**id) /= 0) loc_domains(id)%inside(ip) = .true.
+        if (bitand(int(mask(ip)), 2**id) /= 0) loc_domains(id)%mesh_mask(ip) = .true.
       end do
 
       !Check for atom list inside each domain
-      call local_ions_inside(loc_domains(id)%inside, geo, mesh, loc_domains(id)%ions_inside, loc_domains(id)%clist)
+      call local_ions_mask(loc_domains(id)%mesh_mask, geo, mesh, loc_domains(id)%ions_mask, loc_domains(id)%clist)
     end do
 
-    SAFE_DEALLOCATE_A(inside)
+    SAFE_DEALLOCATE_A(mask)
 
     POP_SUB(local_restart_read)
   end subroutine local_restart_read
@@ -736,13 +736,13 @@ contains
       ! Create the mask that tells which mesh points are inside the domain
       select case (loc_domains(id)%dshape)
       case (BADER)
-        call bader_union_inside(loc_domains(id)%clist, basins, mesh, geo, loc_domains(id)%inside)
+        call bader_union_mask(loc_domains(id)%clist, basins, mesh, geo, loc_domains(id)%mesh_mask)
       case default
-        call box_union_inside_vec(loc_domains(id)%domain, mesh%np, mesh%x, loc_domains(id)%inside)
+        call box_union_inside_vec(loc_domains(id)%box, mesh%np, mesh%x, loc_domains(id)%mesh_mask)
       end select
 
       !Check for atom list inside each domain
-      call local_ions_inside(loc_domains(id)%inside, geo, mesh, loc_domains(id)%ions_inside, loc_domains(id)%clist)
+      call local_ions_mask(loc_domains(id)%mesh_mask, geo, mesh, loc_domains(id)%ions_mask, loc_domains(id)%clist)
     end do
 
     if (any(loc_domains(:)%dshape == BADER)) then
@@ -763,7 +763,7 @@ contains
       do id = 1, nd
         dble_domain_map = M_ZERO
         do ip = 1, mesh%np
-          if (loc_domains(id)%inside(ip)) then
+          if (loc_domains(id)%mesh_mask(ip)) then
             dble_domain_map(ip) = TOFLOAT(id)
             domain_mesh(ip) = domain_mesh(ip) + dble_domain_map(ip)
           end if
@@ -874,18 +874,18 @@ contains
   end subroutine create_basins
 
   ! ---------------------------------------------------------
-  subroutine bader_union_inside(clist, basins, mesh, geo, inside)
+  subroutine bader_union_mask(clist, basins, mesh, geo, mask)
     character(len=500),   intent(in)    :: clist
     type(basins_t),       intent(in)    :: basins
     type(mesh_t),         intent(in)    :: mesh
     type(geometry_t),     intent(in)    :: geo
-    logical,              intent(out)   :: inside(:)
+    logical,              intent(out)   :: mask(:)
 
     integer               :: ia, ib, ip, ix, n_basins, rankmin
     FLOAT                 :: dmin, xi(MAX_DIM)
     integer, allocatable  :: domain_map(:)
 
-    PUSH_SUB(bader_union_inside)
+    PUSH_SUB(bader_union_mask)
 
     ! Count then number of basins to consider. That is the number of ions specified in the input by the user
     n_basins = 0
@@ -909,46 +909,46 @@ contains
     ! Now construct the mask: a point belongs to this Bader domain if it is part
     ! of at least one basin that is part of this domain
     do ip = 1, mesh%np
-      inside(ip) = any(domain_map(1:n_basins) == basins%map(ip))
+      mask(ip) = any(domain_map(1:n_basins) == basins%map(ip))
     end do
 
     SAFE_DEALLOCATE_A(domain_map)
 
-    POP_SUB(bader_union_inside)
-  end subroutine bader_union_inside
+    POP_SUB(bader_union_mask)
+  end subroutine bader_union_mask
 
   ! ---------------------------------------------------------
   !Check for the ions inside each local domain.
-  subroutine local_ions_inside(inside, geo, mesh, ions_inside, ions_list)
-    logical,            intent(in)  :: inside(:)
+  subroutine local_ions_mask(mesh_mask, geo, mesh, ions_mask, ions_list)
+    logical,            intent(in)  :: mesh_mask(:)
     type(geometry_t),   intent(in)  :: geo
     type(mesh_t),       intent(in)  :: mesh
-    logical,            intent(out) :: ions_inside(:)
+    logical,            intent(out) :: ions_mask(:)
     character(len=500), intent(out) :: ions_list
 
     integer              :: ia, ix, ic
-    integer, allocatable :: inside_tmp(:)
+    integer, allocatable :: mask_tmp(:)
     integer              :: rankmin
     FLOAT                :: dmin
     character(len=500)   :: chtmp
 
-    PUSH_SUB(local_ions_inside)
+    PUSH_SUB(local_ions_mask)
 
-    SAFE_ALLOCATE(inside_tmp(geo%natoms))
-    inside_tmp = 0
-   
+    SAFE_ALLOCATE(mask_tmp(geo%natoms))
+    mask_tmp = 0
+
     do ia = 1, geo%natoms
       ix = mesh_nearest_point(mesh, geo%atom(ia)%x, dmin, rankmin )
       if (rankmin /= mesh%mpi_grp%rank) cycle
-      if (inside(ix)) inside_tmp(ia) = 1
+      if (mesh_mask(ix)) mask_tmp(ia) = 1
     end do
 
     if(mesh%parallel_in_domains) then
-      call comm_allreduce(mesh%mpi_grp%comm, inside_tmp, geo%natoms)
+      call comm_allreduce(mesh%mpi_grp%comm, mask_tmp, geo%natoms)
     end if                               
-    ions_inside = inside_tmp == 1
+    ions_mask = mask_tmp == 1
 
-    SAFE_DEALLOCATE_A(inside_tmp)
+    SAFE_DEALLOCATE_A(mask_tmp)
 
     !print list of atoms
     ic = 0
@@ -956,11 +956,11 @@ contains
     ions_list = ""
     chtmp = ""
     do ia = 1, geo%natoms-1
-      if (ions_inside(ia)) then
-        if (ic == 0 .or. .not.ions_inside(ia+1)) then
+      if (ions_mask(ia)) then
+        if (ic == 0 .or. .not.ions_mask(ia+1)) then
           write(ions_list, '(a,i0)') trim(chtmp), ia
         end if
-        if (ions_inside(ia + 1)) then 
+        if (ions_mask(ia + 1)) then 
           ic = ic + 1
           chtmp = trim(ions_list)//"-"
         else
@@ -973,12 +973,12 @@ contains
       end if
     end do
 
-    if (ions_inside(geo%natoms)) then
+    if (ions_mask(geo%natoms)) then
       write(ions_list, '(a,i0)') trim(chtmp), ia
     end if
 
-    POP_SUB(local_ions_inside)
-  end subroutine local_ions_inside
+    POP_SUB(local_ions_mask)
+  end subroutine local_ions_mask
 
 end program oct_local_multipoles
 
