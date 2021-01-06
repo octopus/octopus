@@ -469,7 +469,9 @@ contains
     PUSH_SUB(local_end)
 
     do id = 1, nd
-      call box_union_end(loc_domains(id)%domain)
+      if (loc_domains(id)%dshape /= BADER) then
+        call box_union_end(loc_domains(id)%domain)
+      end if
       call local_write_end(loc_domains(id)%writ)
       SAFE_DEALLOCATE_A(loc_domains(id)%inside)
       SAFE_DEALLOCATE_A(loc_domains(id)%ions_inside)
@@ -490,24 +492,24 @@ contains
     character(len=*),  intent(out)       :: clist
     type(namespace_t), intent(in)        :: namespace
     
-    integer                     :: ic, nb
-    FLOAT                       :: rsize, xsize
-    FLOAT                       :: center(MAX_DIM), lsize(MAX_DIM)
-   
+    integer                  :: ic, nb, ia, ibox
+    FLOAT                    :: rsize, xsize
+    FLOAT                    :: center(MAX_DIM), lsize(MAX_DIM), bsize(MAX_DIM)
+    type(box_t), allocatable :: boxes(:)
+
     PUSH_SUB(local_read_from_block)
 
     ! Initializing variables in dom
-    nb = 1
     rsize = -M_ONE
     xsize = M_ZERO
-    lsize(:) = M_ZERO
-    center(:) = M_ZERO
+    lsize = M_ZERO
+    center = M_ZERO
 
     call parse_block_integer(blk, row, 1, shape)
 
     select case (shape)
     case (MINIMUM)
-      if(geo%reduced_coordinates) then
+      if (geo%reduced_coordinates) then
         message(1) = "The 'minimum' box shape cannot be used if atomic positions"
         message(2) = "are given as reduced coordinates."
         call messages_fatal(2)
@@ -515,108 +517,25 @@ contains
       call parse_block_float(blk, row, 2, rsize, unit = units_inp%length)
       if (rsize < M_ZERO) call messages_input_error(namespace, 'radius', row=row, column=2)
       call parse_block_string(blk, row, 3, clist)
+
       nb = 0
       do ic = 1, geo%natoms
         if(loct_isinstringlist(ic, clist)) nb = nb + 1
       end do
-
-    case (SPHERE)
-      call parse_block_float(blk, row, 2, rsize, unit = units_inp%length)
-      if(rsize < M_ZERO) call messages_input_error(namespace, 'radius', row=row, column=2)
-      do ic = 1, geo%space%dim 
-        call parse_block_float(blk, row, 2 + ic, center(ic), unit = units_inp%length)
-      end do
-      lsize(1:space%dim) = rsize
-
-    case (CYLINDER)
-      call parse_block_float(blk, row, 2, rsize, unit = units_inp%length)
-      if(rsize < M_ZERO) call messages_input_error(namespace, 'radius', row=row, column=2)
-      call parse_block_float(blk, row, 3, xsize, unit = units_inp%length)
-      do ic = 1, geo%space%dim 
-        call parse_block_float(blk, row, 3 + ic, center(ic), unit = units_inp%length)
-      end do
-      lsize(1)     = xsize
-      lsize(2:space%dim) = rsize
-
-    case (PARALLELEPIPED)
-      do ic = 1, geo%space%dim
-        call parse_block_float(blk, row, 1 + ic, lsize(ic), unit = units_inp%length)
-      end do
-      do ic = 1, geo%space%dim
-        call parse_block_float(blk, row, 1 + space%dim + ic, center(ic), unit = units_inp%length)
-      end do
-
-    case (BADER)
-      ! FIXME: when input error exists --> segmentation fault appears
-      call parse_block_string(blk, row, 2, clist)
-      nb = 0
-      do ic = 1, geo%natoms
-        if(loct_isinstringlist(ic, clist)) nb = nb + 1
-      end do
-    end select
-
-    call local_domains_init(geo, dom, space%dim, shape, center, rsize, lsize, nb, clist, namespace)
-
-    POP_SUB(local_read_from_block)
-  end subroutine local_read_from_block
-
-  !!---------------------------------------------------------------------------^
-  subroutine local_domains_init(geo, dom, dim, shape, center, rsize, lsize, nb, clist, namespace)
-    type(geometry_t),  intent(in)    :: geo
-    type(box_union_t), intent(inout) :: dom
-    integer,           intent(in)    :: dim
-    integer,           intent(in)    :: shape
-    FLOAT,             intent(in)    :: center(dim)
-    FLOAT,             intent(in)    :: rsize
-    FLOAT,             intent(in)    :: lsize(MAX_DIM)
-    integer,           intent(in)    :: nb
-    character(len=*),  intent(in)    :: clist
-    type(namespace_t), intent(in)    :: namespace
-
-    integer                  :: ia, ibox, ic, bshape
-    FLOAT                    :: bcenter(MAX_DIM), bsize(MAX_DIM)
-    type(box_t), allocatable :: boxes(:)
-
-    PUSH_SUB(local_domains_init)
-
-    SAFE_ALLOCATE(boxes(1:nb))
-    bsize(:) = M_ZERO
-    ibox = 1
-
-    select case (shape)
-    case (SPHERE, CYLINDER)
-      call box_create(boxes(ibox), shape, dim, lsize, center, namespace)
-    case (PARALLELEPIPED)
-      bshape         = 3
-      call box_create(boxes(ibox), bshape, dim, lsize, center, namespace)
-    case (MINIMUM) 
-      bshape         = SPHERE
+      SAFE_ALLOCATE(boxes(1:nb))
+      ibox = 1
       do ia = 1, geo%natoms
-        if(loct_isinstringlist(ia, clist))then
-          bcenter(1:geo%space%dim) = geo%atom(ia)%x(1:geo%space%dim)
+        if (loct_isinstringlist(ia, clist)) then
           bsize(:) = rsize
           if (bsize(1) < M_EPSILON) bsize(1) = species_def_rsize(geo%atom(ia)%species)
-          call box_create(boxes(ibox), bshape, dim, bsize, bcenter, namespace)
+          call box_create(boxes(ibox), SPHERE, space%dim, bsize, geo%atom(ia)%x, namespace)
           ibox = ibox + 1
         end if
       end do
-    case (BADER) 
-      bshape         = SPHERE
-      do ia = 1, geo%natoms
-        if(loct_isinstringlist(ia, clist))then
-          bcenter(1:geo%space%dim) = geo%atom(ia)%x(1:geo%space%dim)
-          bsize(:) = species_def_h(geo%atom(ia)%species)
-          call box_create(boxes(ibox), bshape, dim, bsize, bcenter, namespace)
-          ibox = ibox + 1
-        end if
-      end do
-    end select
 
-    call box_union_init(dom, nb, boxes)
+      call box_union_init(dom, nb, boxes)
 
-    ! TODO: Check for a conflict between box_union and clist for Bader Volumes
-    ic = 0
-    if (shape == MINIMUM) then
+      ic = 0
       do ia = 1, geo%natoms
         if (box_union_inside(dom, geo%atom(ia)%x) .and. .not.loct_isinstringlist(ia, clist) ) then
           ic = ic + 1
@@ -634,15 +553,62 @@ contains
           call messages_warning(1)
         end if
       end if
-    end if
 
-    do ibox = 1, nb 
-      call box_end(boxes(ibox))
-    end do
-    SAFE_DEALLOCATE_A(boxes)
+      do ibox = 1, nb 
+        call box_end(boxes(ibox))
+      end do
+      SAFE_DEALLOCATE_A(boxes)
 
-    POP_SUB(local_domains_init)
-  end subroutine local_domains_init
+    case (SPHERE)
+      call parse_block_float(blk, row, 2, rsize, unit = units_inp%length)
+      if(rsize < M_ZERO) call messages_input_error(namespace, 'radius', row=row, column=2)
+      do ic = 1, geo%space%dim 
+        call parse_block_float(blk, row, 2 + ic, center(ic), unit = units_inp%length)
+      end do
+      lsize(1:space%dim) = rsize
+
+      SAFE_ALLOCATE(boxes(1))
+      call box_create(boxes(1), SPHERE, space%dim, lsize, center, namespace)
+      call box_union_init(dom, 1, boxes)
+      call box_end(boxes(1))
+      SAFE_DEALLOCATE_A(boxes)
+
+    case (CYLINDER)
+      call parse_block_float(blk, row, 2, rsize, unit = units_inp%length)
+      if(rsize < M_ZERO) call messages_input_error(namespace, 'radius', row=row, column=2)
+      call parse_block_float(blk, row, 3, xsize, unit = units_inp%length)
+      do ic = 1, geo%space%dim 
+        call parse_block_float(blk, row, 3 + ic, center(ic), unit = units_inp%length)
+      end do
+      lsize(1)     = xsize
+      lsize(2:space%dim) = rsize
+
+      SAFE_ALLOCATE(boxes(1))
+      call box_create(boxes(1), CYLINDER, space%dim, lsize, center, namespace)
+      call box_union_init(dom, 1, boxes)
+      call box_end(boxes(1))
+      SAFE_DEALLOCATE_A(boxes)
+
+    case (PARALLELEPIPED)
+      do ic = 1, geo%space%dim
+        call parse_block_float(blk, row, 1 + ic, lsize(ic), unit = units_inp%length)
+      end do
+      do ic = 1, geo%space%dim
+        call parse_block_float(blk, row, 1 + space%dim + ic, center(ic), unit = units_inp%length)
+      end do
+
+      SAFE_ALLOCATE(boxes(1))
+      call box_create(boxes(1), 3, space%dim, lsize, center, namespace)
+      call box_union_init(dom, 1, boxes)
+      call box_end(boxes(1))
+      SAFE_DEALLOCATE_A(boxes)
+
+    case (BADER)
+      call parse_block_string(blk, row, 2, clist)
+    end select
+
+    POP_SUB(local_read_from_block)
+  end subroutine local_read_from_block
 
   ! ---------------------------------------------------------
   !> Write restart files for local domains
