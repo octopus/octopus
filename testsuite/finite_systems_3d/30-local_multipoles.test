@@ -88,15 +88,10 @@ match ; H2-4 End Arrow   z ; GREPFIELD(local.general/multipoles/H2-4/H2-4.000000
 
 match ; Restart ld             ; GREPFIELD(restart/ld/ldomains.info, 'Number of local domains', 6)  ;  6
 match ; C    Restart shape     ; GREPFIELD(restart/ld/ldomains.info, 'C', 3) ; 512
-match ; C    Restart atom list ; GREPFIELD(restart/ld/ldomains.info, 'C', 4) ; 1
 match ; H1   Restart shape     ; GREPFIELD(restart/ld/ldomains.info, 'H1', 3) ; 1
-match ; H1   Restart atom list ; GREPFIELD(restart/ld/ldomains.info, 'H1', 4) ; 2
 match ; H2   Restart shape     ; GREPFIELD(restart/ld/ldomains.info, 'H2', 3) ; 1
-match ; H2   Restart atom list ; GREPFIELD(restart/ld/ldomains.info, 'H2', 4) ; 3
 match ; H3   Restart shape     ; GREPFIELD(restart/ld/ldomains.info, 'H3', 3) ; 4
-match ; H3   Restart atom list ; GREPFIELD(restart/ld/ldomains.info, 'H3', 4) ; 4
 match ; H4   Restart shape     ; GREPFIELD(restart/ld/ldomains.info, 'H4', 3) ; 2
-match ; H4   Restart atom list ; GREPFIELD(restart/ld/ldomains.info, 'H4', 4) ; 5
 match ; H2-4 Restart shape     ; GREPFIELD(restart/ld/ldomains.info, 'H2-4', 3) ; 3
 
 

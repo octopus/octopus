@@ -630,10 +630,9 @@ contains
 
     SAFE_ALLOCATE(lines(1:nd+2))
     write(lines(1),'(a,1x,i5)') 'Number of local domains =', nd
-    write(lines(2),'(a3,1x,a15,1x,a5,1x,71x,a9)') '#id', 'label', 'shape', 'Atom list'
+    write(lines(2),'(a3,1x,a15,1x,a5,1x)') '#id', 'label', 'shape'
     do id = 1, nd
-      write(lines(id+2), '(i3,1x,a15,1x,i5,1x,a80)') id, trim(loc_domains(id)%lab), loc_domains(id)%dshape, &
-        trim(loc_domains(id)%clist)
+      write(lines(id+2), '(i3,1x,a15,1x,i5)') id, trim(loc_domains(id)%lab), loc_domains(id)%dshape
     end do
     iunit = restart_open(restart, "ldomains.info")
     call restart_write(restart, iunit, lines, nd+2, ierr)
@@ -689,7 +688,7 @@ contains
       end do
 
       !Check for atom list inside each domain
-      call local_ions_mask(loc_domains(id)%mesh_mask, geo, mesh, loc_domains(id)%ions_mask, loc_domains(id)%clist)
+      call local_ions_mask(loc_domains(id)%mesh_mask, geo, mesh, loc_domains(id)%ions_mask)
     end do
 
     SAFE_DEALLOCATE_A(mask)
@@ -737,7 +736,7 @@ contains
       end select
 
       !Check for atom list inside each domain
-      call local_ions_mask(loc_domains(id)%mesh_mask, geo, mesh, loc_domains(id)%ions_mask, loc_domains(id)%clist)
+      call local_ions_mask(loc_domains(id)%mesh_mask, geo, mesh, loc_domains(id)%ions_mask)
     end do
 
     if (any(loc_domains(:)%dshape == BADER)) then
@@ -914,18 +913,16 @@ contains
 
   ! ---------------------------------------------------------
   !Check for the ions inside each local domain.
-  subroutine local_ions_mask(mesh_mask, geo, mesh, ions_mask, ions_list)
+  subroutine local_ions_mask(mesh_mask, geo, mesh, ions_mask)
     logical,            intent(in)  :: mesh_mask(:)
     type(geometry_t),   intent(in)  :: geo
     type(mesh_t),       intent(in)  :: mesh
     logical,            intent(out) :: ions_mask(:)
-    character(len=500), intent(out) :: ions_list
 
-    integer              :: ia, ix, ic
+    integer              :: ia, ix
     integer, allocatable :: mask_tmp(:)
     integer              :: rankmin
     FLOAT                :: dmin
-    character(len=500)   :: chtmp
 
     PUSH_SUB(local_ions_mask)
 
@@ -944,33 +941,6 @@ contains
     ions_mask = mask_tmp == 1
 
     SAFE_DEALLOCATE_A(mask_tmp)
-
-    !print list of atoms
-    ic = 0
-    ix = 0
-    ions_list = ""
-    chtmp = ""
-    do ia = 1, geo%natoms-1
-      if (ions_mask(ia)) then
-        if (ic == 0 .or. .not.ions_mask(ia+1)) then
-          write(ions_list, '(a,i0)') trim(chtmp), ia
-        end if
-        if (ions_mask(ia + 1)) then 
-          ic = ic + 1
-          chtmp = trim(ions_list)//"-"
-        else
-          ic = 0
-          chtmp = trim(ions_list)//","
-        end if
-
-      else
-        cycle 
-      end if
-    end do
-
-    if (ions_mask(geo%natoms)) then
-      write(ions_list, '(a,i0)') trim(chtmp), ia
-    end if
 
     POP_SUB(local_ions_mask)
   end subroutine local_ions_mask
