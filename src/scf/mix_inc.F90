@@ -92,6 +92,10 @@ subroutine X(mixing_broyden)(smix, vin, vout, vnew, iter)
   SAFE_ALLOCATE(f(1:d1, 1:d2, 1:d3))
   
   f(1:d1, 1:d2, 1:d3) = vout(1:d1, 1:d2, 1:d3) - vin(1:d1, 1:d2, 1:d3)
+  ! According to Johnson (1988), df and dv should be normalized here.
+  ! However, it turns out that this blocks convergence to very high
+  ! accuracies. Also, the normalization is not present in the description
+  ! by Kresse & Furthmueller (1996). Thus, we do not normalize here.
   if(iter > 1) then
     ! Store df and dv from current iteration
     ipos = mod(smix%last_ipos, smix%ns) + 1
@@ -128,6 +132,8 @@ subroutine X(broyden_extrapolation)(this, coeff, d1, d2, d3, vin, vnew, iter_use
   R_TYPE,      intent(in)    :: df(:, :, :, :), dv(:, :, :, :)
   R_TYPE,      intent(out)   :: vnew(:, :, :)
   
+  ! The parameter ww does not influence the mixing (see description
+  ! in Kresse & Furthmueller 1996). Thus we choose it to be one.
   FLOAT, parameter :: ww = M_ONE
   FLOAT :: w0
   integer  :: i, j, k, l
@@ -171,7 +177,12 @@ subroutine X(broyden_extrapolation)(this, coeff, d1, d2, d3, vin, vnew, iter_use
 
   if(this%der%mesh%parallel_in_domains) call comm_allreduce(this%der%mesh%mpi_grp%comm, beta)
 
-  ! compute w0 as 0.01 of minimum of diagonal for numerical stability
+  ! According to Johnson (1988), w0 is chosen as 0.01. Because we do not
+  ! normalize the components, we need to choose w0 differently. Its purpose
+  ! is to stabilize the inversion by adding a small number to the diagonal.
+  ! Thus we compute w0 as 0.01 of the minimum of the values on the diagonal
+  ! to improve the numerical stability. This enables convergence to very
+  ! high accuracies.
   w0 = M_HUGE
   do i = 1, iter_used
     w0 = min(w0, TOFLOAT(beta(i, i)))
