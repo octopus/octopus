@@ -5,7 +5,7 @@ FromScratch = yes
 Dimensions = 3
 
 %Systems
- "dftbplus" | dftbplus
+ "benzene" | dftbplus
 %
 %Coordinates
    'C' |    0.00000000  |     0.41727209*angstrom  |    1.34035331*angstrom
