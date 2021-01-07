@@ -436,7 +436,7 @@ subroutine X(eigensolver_cg) (namespace, gr, st, hm, xc, pre, tol, niter, conver
     if (.not. orthogonalize_to_all) then
       ! do the orthogonalization here only if not done during the iteration
       call X(states_elec_orthogonalize_single_batch)(st, gr%mesh, ist - 1, ik, psi, &
-        normalize = .true., against_all=.true.)
+        normalize = .true., against_all=.false.)
     end if
     call states_elec_set_state(st, gr%mesh, ist, ik, psi)
 
