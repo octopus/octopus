@@ -281,19 +281,8 @@ contains
     !%Type block
     !%Section DFTBPlusInterface
     !%Description
-    !% The block <tt>TDExternalFields</tt> describes the type and shape of time-dependent
-    !% external perturbations that are applied to the system (see further documentation in the Time-Dependent
-    !% section). Each line of the block describes an external field. Only fields of type type = <tt>electric field</tt>
-    !% allowed for the moment.
-    !% The syntax is:
-    !%
-    !% <tt>%TDExternalFields
-    !% <br>&nbsp;&nbsp; nx | ny | nz | omega | envelope_function_name | phase
-    !% <br>%</tt>
-    !%
-    !% The three (possibly complex) numbers (<tt>nx</tt>, <tt>ny</tt>, <tt>nz</tt>) mark the polarization
-    !% direction of the field.
-    !%
+    !% See documentation in the  in the Time-Dependent section).
+    !% For DFTB runs, only fields of type type = <tt>electric field</tt> are allowed for the moment.
     !%End
 
     this%n_lasers = 0
