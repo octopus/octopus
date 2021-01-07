@@ -77,7 +77,6 @@ module system_dftb_oct_m
     logical :: laser_field
     FLOAT :: field(3)
     FLOAT :: energy
-    FLOAT :: final_time
 #ifdef HAVE_DFTBPLUS
     type(TDftbPlus) :: dftbp
 #endif
@@ -248,10 +247,6 @@ contains
     ! Dynamics variables
 
     call ion_dynamics_init(this%ions, namespace, this%geo)
-
-    ! Get final propagation time from input
-    ! This variable is also defined (and properly documented) in td/td.F90.
-    call parse_variable(namespace, 'TDPropagationTime', CNST(-1.0), this%final_time, unit = units_inp%time)
 
     !%Variable TDDynamics
     !%Type integer
@@ -452,11 +447,8 @@ contains
     class(system_dftb_t), intent(inout) :: this
     logical,                 intent(in)    :: from_scratch
 
-    integer :: nsteps
-
     PUSH_SUB(system_dftb_initial_conditions)
 
-    nsteps = int(this%final_time/this%prop%dt)
     select case (this%dynamics)
     case (BO)
 #ifdef HAVE_DFTBPLUS
@@ -466,7 +458,7 @@ contains
     case (EHRENFEST)
 #ifdef HAVE_DFTBPLUS_DEVEL
       call this%dftbp%getEnergy(this%energy)
-      call this%dftbp%initializeTimeProp(nsteps, this%prop%dt)
+      call this%dftbp%initializeTimeProp(this%prop%dt, this%laser_field)
 #endif
     end select
 
@@ -562,7 +554,7 @@ contains
           this%field(1:3) = this%field(1:3) + TOFLOAT(amp*pol(1:3))
         end do
 #ifdef HAVE_DFTBPLUS_DEVEL
-        call this%dftbp%setTdElectricField(this%clock%get_tick(), this%field)
+        call this%dftbp%setTdElectricField(this%field)
         call this%dftbp%doOneTdStep(this%clock%get_tick(), atomNetCharges=this%atom_charges, coord=this%coords,&
              force=this%tot_force, energy=this%energy)
 #endif
