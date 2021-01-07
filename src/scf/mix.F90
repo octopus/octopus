@@ -185,6 +185,7 @@ contains
     !%Option broyden 2
     !% Broyden scheme [C. G Broyden, <i>Math. Comp.</i> <b>19</b>, 577 (1965); 
     !% D. D. Johnson, <i>Phys. Rev. B</i> <b>38</b>, 12807 (1988)].
+    !% The scheme is slightly adapted, see the comments in the code.
     !% For complex functions (e.g. Sternheimer with <tt>EMEta</tt> > 0), we use the generalization
     !% with a complex dot product.
     !%Option diis 9
