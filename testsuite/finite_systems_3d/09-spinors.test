@@ -22,16 +22,24 @@ Precision: 0.0001
 
 Input: 09-spinors.02-rmmdiis.inp
 match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
-match ; Total energy ; GREPFIELD(static/info, 'Total       =', 3) ; -0.17669575
-match ; External energy ; GREPFIELD(static/info, 'External    =', 3) ; -0.29125111
-match ; Eigenvalue   ; GREPFIELD(static/info, '1   --', 3) ; -0.085321
-match ; <Sx>         ; GREPFIELD(static/info, '1   --', 5) ; 0.1975
-match ; <Sy>         ; GREPFIELD(static/info, '1   --', 6) ; 0.1975
-match ; <Sz>         ; GREPFIELD(static/info, '1   --', 7) ; 0.4147
-Precision : 0.00031
-match ; mx           ; GREPFIELD(static/info, 'Local Magnetic Moments', 3, 2) ; 0.394958
-match ; my           ; GREPFIELD(static/info, 'Local Magnetic Moments', 4, 2) ; 0.394958
-match ; mz           ; GREPFIELD(static/info, 'Local Magnetic Moments', 5, 2) ; 0.829468
+Precision: 1.77e-16
+match ;  Total energy  ; GREPFIELD(static/info, 'Total       =', 3) ; -0.17669589
+Precision: 2.91e-16
+match ;  External energy  ; GREPFIELD(static/info, 'External    =', 3) ; -0.29125116
+Precision: 8.53e-17
+match ;  Eigenvalue    ; GREPFIELD(static/info, '1   --', 3) ; -0.085321
+Precision: 1.99e-16
+match ;  <Sx>          ; GREPFIELD(static/info, '1   --', 5) ; 0.1988
+Precision: 1.99e-16
+match ;  <Sy>          ; GREPFIELD(static/info, '1   --', 6) ; 0.1988
+Precision: 4.13e-16
+match ;  <Sz>          ; GREPFIELD(static/info, '1   --', 7) ; 0.4134
+Precision: 5.50e-07
+match ;  mx            ; GREPFIELD(static/info, 'Local Magnetic Moments', 3, 2) ; 0.3976725
+Precision: 5.50e-07
+match ;  my            ; GREPFIELD(static/info, 'Local Magnetic Moments', 4, 2) ; 0.3976725
+Precision: 5.50e-07
+match ;  mz            ; GREPFIELD(static/info, 'Local Magnetic Moments', 5, 2) ; 0.8268694999999999
 # This differs significantly from the initial magnetization.
 # It is due to the small radius and large spacing.
 
@@ -39,20 +47,21 @@ Input: 09-spinors.03-rmmdiis_extra_states.inp
 
 match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
 
-Precision: 1.10e-08
+Precision: 1.77e-16
 match ;  Total energy  ; GREPFIELD(static/info, 'Total       =', 3) ; -0.17669589
 Precision: 5.50e-09
-match ;  External energy  ; GREPFIELD(static/info, 'External    =', 3) ; -0.29125116500000003
-
+match ;  External energy  ; GREPFIELD(static/info, 'External    =', 3) ; -0.291251155
 Precision: 8.53e-17
 match ;  Eigenvalue    ; GREPFIELD(static/info, '1   --', 3) ; -0.085321
-
-Precision: 4.87e-16
-match ;  <Sx>          ; GREPFIELD(static/info, '1   --', 5) ; 0.0793
-match ;  <Sy>          ; GREPFIELD(static/info, '1   --', 6) ; 0.0793
-match ;  <Sz>          ; GREPFIELD(static/info, '1   --', 7) ; 0.4873
-
-Precision: 3.85e-06
-match ;  mx            ; GREPFIELD(static/info, 'Local Magnetic Moments', 3, 2) ; 0.1585125
-match ;  my            ; GREPFIELD(static/info, 'Local Magnetic Moments', 4, 2) ; 0.1585125
-match ;  mz            ; GREPFIELD(static/info, 'Local Magnetic Moments', 5, 2) ; 0.97455
+Precision: 8.60e-17
+match ;  <Sx>          ; GREPFIELD(static/info, '1   --', 5) ; 0.086
+Precision: 8.60e-17
+match ;  <Sy>          ; GREPFIELD(static/info, '1   --', 6) ; 0.086
+Precision: 4.85e-16
+match ;  <Sz>          ; GREPFIELD(static/info, '1   --', 7) ; 0.485
+Precision: 1.72e-16
+match ;  mx            ; GREPFIELD(static/info, 'Local Magnetic Moments', 3, 2) ; 0.172065
+Precision: 1.72e-16
+match ;  my            ; GREPFIELD(static/info, 'Local Magnetic Moments', 4, 2) ; 0.172065
+Precision: 9.70e-16
+match ;  mz            ; GREPFIELD(static/info, 'Local Magnetic Moments', 5, 2) ; 0.969942

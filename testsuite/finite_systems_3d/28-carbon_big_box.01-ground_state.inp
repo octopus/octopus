@@ -14,6 +14,11 @@ radius = 180.0
 
 ExtraStates = 2
 
+MixingScheme = linear
+Mixing = 0.05
+MaximumIter = 500
+EigensolverTolerance = 1e-10
+
 SpinComponents = spin_polarized
 
 %Occupations

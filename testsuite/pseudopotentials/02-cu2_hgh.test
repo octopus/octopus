@@ -33,7 +33,7 @@ match ; Eigenvalue  9      ; GREPFIELD(static/info, '  9   --', 3)        ; -0.2
 match ; Eigenvalue  10     ; GREPFIELD(static/info, ' 10   --', 3)        ; -0.2013245
 match ; Eigenvalue  11     ; GREPFIELD(static/info, ' 11   --', 3)        ; -0.194088
 match ; Eigenvalue  12     ; GREPFIELD(static/info, ' 12   --', 3)        ; -0.194088
-match ; Eigenvalue  13     ; GREPFIELD(static/info, ' 13   --', 3)        ; -0.0799255
+match ; Eigenvalue  13     ; GREPFIELD(static/info, ' 13   --', 3)        ; -0.079927
 
 match ; Force 1 x      ; GREPFIELD(static/info, 'Forces on the ions', 3, 2)  ;  1.15e-05
 match ; Force 1 y      ; GREPFIELD(static/info, 'Forces on the ions', 4, 2)  ;  0.0
@@ -69,7 +69,7 @@ match ; Eigenvalue  9      ; GREPFIELD(static/info, '  9   --', 3)        ; -0.2
 match ; Eigenvalue  10     ; GREPFIELD(static/info, ' 10   --', 3)        ; -0.199308
 match ; Eigenvalue  11     ; GREPFIELD(static/info, ' 11   --', 3)        ; -0.179296
 match ; Eigenvalue  12     ; GREPFIELD(static/info, ' 12   --', 3)        ; -0.174489
-match ; Eigenvalue  13     ; GREPFIELD(static/info, ' 13   --', 3)        ; -0.075510
+match ; Eigenvalue  13     ; GREPFIELD(static/info, ' 13   --', 3)        ; -0.075509
 
 match ; Current  1 pos ; LINEFIELD(static/current-y.x\=0\,y\=0, 12, 1)       ; -4.00000000000000E+000
 match ; Current  1 val ; LINEFIELD(static/current-y.x\=0\,y\=0, 12, 2)       ; -1.21934638046051E-002

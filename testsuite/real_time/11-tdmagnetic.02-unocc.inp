@@ -23,11 +23,10 @@ DerivativesOrder = 4
 
 TheoryLevel = independent_particles
 
-MaximumIter = 2
-ConvAbsDens = 1e-10
+ConvRelDens = 1e-10
 
 EigenSolver = plan
-EigenSolverTolerance = 1e-6
+EigenSolverTolerance = 1e-11
 
 magfield = 3.0
 

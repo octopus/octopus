@@ -11,22 +11,36 @@ Input      : 21-magnon.01-gs.inp
 
 match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
 
-match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -123.76448015
-match ; Ion-ion energy     ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -78.31680646
-match ; Eigenvalues sum    ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -17.30322105
-match ; Hartree energy     ; GREPFIELD(static/info, 'Hartree     =', 3) ;  28.56613373
-match ; Exchange energy    ; GREPFIELD(static/info, 'Exchange    =', 3) ; -15.49092881
-match ; Correlation energy ; GREPFIELD(static/info, 'Correlation =', 3) ; -1.33255609
-match ; Kinetic energy     ; GREPFIELD(static/info, 'Kinetic     =', 3) ;  50.91547279
-match ; External energy    ; GREPFIELD(static/info, 'External    =', 3) ; -108.10579541
-
-match ; k-point 2 (x)  ; GREPFIELD(static/info, '#k =   2', 7) ;   0.000000
-match ; k-point 2 (y)  ; GREPFIELD(static/info, '#k =   2', 8) ;   0.500000
-match ; k-point 2 (z)  ; GREPFIELD(static/info, '#k =   2', 9) ;   0.000000
-match ; Eigenvalue  1  ; GREPFIELD(static/info, '#k =   2', 3, 1) ; -3.315769
-match ; Eigenvalue  2  ; GREPFIELD(static/info, '#k =   2', 3, 2) ; -3.307522
-match ; Eigenvalue  3  ; GREPFIELD(static/info, '#k =   2', 3, 3) ; -1.908756
-match ; Eigenvalue  4  ; GREPFIELD(static/info, '#k =   2', 3, 5) ; -1.897163
+Precision: 1.26e-07
+match ;  Total energy        ; GREPFIELD(static/info, 'Total       =', 3) ; -123.76628614500001
+Precision: 7.83e-14
+match ;  Ion-ion energy      ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -78.31680646
+Precision: 5.50e-08
+match ;  Eigenvalues sum     ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -17.308850720000002
+Precision: 7.70e-08
+match ;  Hartree energy      ; GREPFIELD(static/info, 'Hartree     =', 3) ; 28.56218571
+Precision: 5.50e-09
+match ;  Exchange energy     ; GREPFIELD(static/info, 'Exchange    =', 3) ; -15.489887805
+Precision: 1.33e-15
+match ;  Correlation energy  ; GREPFIELD(static/info, 'Correlation =', 3) ; -1.33260953
+Precision: 8.25e-08
+match ;  Kinetic energy      ; GREPFIELD(static/info, 'Kinetic     =', 3) ; 50.910261065
+Precision: 1.49e-07
+match ;  External energy     ; GREPFIELD(static/info, 'External    =', 3) ; -108.099429165
+Precision: 1.00e-15
+match ;  k-point 2 (x)   ; GREPFIELD(static/info, '#k =   2', 7) ; 0.0
+Precision: 5.00e-16
+match ;  k-point 2 (y)   ; GREPFIELD(static/info, '#k =   2', 8) ; 0.5
+Precision: 1.00e-15
+match ;  k-point 2 (z)   ; GREPFIELD(static/info, '#k =   2', 9) ; 0.0
+Precision: 3.32e-15
+match ;  Eigenvalue  1   ; GREPFIELD(static/info, '#k =   2', 3, 1) ; -3.315766
+Precision: 3.31e-15
+match ;  Eigenvalue  2   ; GREPFIELD(static/info, '#k =   2', 3, 2) ; -3.308331
+Precision: 5.50e-07
+match ;  Eigenvalue  3   ; GREPFIELD(static/info, '#k =   2', 3, 3) ; -1.9071065
+Precision: 1.90e-15
+match ;  Eigenvalue  4   ; GREPFIELD(static/info, '#k =   2', 3, 5) ; -1.897707
 
 Input      : 21-magnon.02-td.inp
 Precision : 0.0001
@@ -36,9 +50,9 @@ match ; Total magnet. [step 100] ; LINEFIELD(td.general/total_magnetization, -1,
 match ; Total magnet. [step 100] ; LINEFIELD(td.general/total_magnetization, -1, 4) ;  -5.468013650141e-02
 
 Util : oct-spin_susceptibility
-Input : 21-magnon.02-td.inp
+Input : 21-magnon.03-susceptibility.inp
 
-Precision : 0.25
-match ; Spin susceptibilty Re [omega=2.7eV] ; LINEFIELD(td.general/spin_susceptibility_q001, 30, 2) ; -0.138790E+02
-Precision : 0.02
-match ; Spin susceptibilty Im [omega=2.7eV] ; LINEFIELD(td.general/spin_susceptibility_q001, 30, 3) ; -0.138125E+01
+Precision: 4.40e-02
+match ;  Spin susceptibilty Re [omega=2.7eV]  ; LINEFIELD(td.general/spin_susceptibility_q001, 30, 2) ; -13.841899999999999
+Precision: 2.69e-02
+match ;  Spin susceptibilty Im [omega=2.7eV]  ; LINEFIELD(td.general/spin_susceptibility_q001, 30, 3) ; -1.1196100000000002

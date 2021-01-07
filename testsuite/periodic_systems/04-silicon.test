@@ -52,7 +52,7 @@ match ; k-point 4 (z) ; GREPFIELD(static/info, '#k =   4', 9) ; 0.375000
 match ; Eigenvalue  1 ; GREPFIELD(static/info, '#k =   4', 3, 1) ; -0.224912
 match ; Eigenvalue  8 ; GREPFIELD(static/info, '#k =   4', 3, 8) ; -0.067345
 match ; Eigenvalue 16 ; GREPFIELD(static/info, '#k =   4', 3, 16) ; 0.109820
-match ; Eigenvalue 17 ; GREPFIELD(static/info, '#k =   4', 3, 17) ; 0.214726
+match ; Eigenvalue 17 ; GREPFIELD(static/info, '#k =   4', 3, 17) ; 0.223391
 
 match ; geometry size  ; LINEFIELD(static/geometry.xyz,  1, 1) ;  8
 match ; geometry  4 1  ; LINEFIELD(static/geometry.xyz,  6, 2) ;  0.0
@@ -71,10 +71,10 @@ match ; crystal  70 2  ; LINEFIELD(static/crystal.xyz, 72, 3) ; -5.1
 match ; crystal  70 3  ; LINEFIELD(static/crystal.xyz, 72, 4) ;  10.2
 
 match ; DOS E Fermi    ; LINEFIELD(static/total-dos-efermi.dat, 2, 1);   0.139406
-match ; DOS energy 2   ; LINEFIELD(static/total-dos.dat,   2, 1);       -0.404230
-match ; DOS value  2   ; LINEFIELD(static/total-dos.dat,   2, 2);        0.472034
-match ; DOS energy 442 ; LINEFIELD(static/total-dos.dat, 442, 1);        0.250698
-match ; DOS value  442 ; LINEFIELD(static/total-dos.dat, 442, 2);        1.858955
+match ; DOS energy 2   ; LINEFIELD(static/total-dos.dat,   2, 1);       -0.406396
+match ; DOS value  2   ; LINEFIELD(static/total-dos.dat,   2, 2);        0.463291
+match ; DOS energy 442 ; LINEFIELD(static/total-dos.dat, 442, 1);        0.259992
+match ; DOS value  442 ; LINEFIELD(static/total-dos.dat, 442, 2);        1.542786947
 
 match ; Direct gap ; GREPFIELD(static/info, 'Direct gap', 7, 0) ; 0.0337
 match ; Indirect gap ; GREPFIELD(static/info, 'Indirect gap', 10, 0) ; 0.0337

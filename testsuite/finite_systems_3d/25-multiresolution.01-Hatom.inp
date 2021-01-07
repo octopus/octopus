@@ -1,5 +1,7 @@
 # -*- coding: utf-8 mode: shell-script -*-
 
+Debug = trace
+
 %Coordinates
  'H_f' | 0 | 0 | 0
 %

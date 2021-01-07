@@ -7,7 +7,7 @@ Enabled    : Yes
 
 Input: 01-octopus_basics-getting_started.01-H_atom.inp
 match ; SCF convergence          ; GREPCOUNT(static/info, 'SCF converged') ; 1
-match ; Number of SCF iterations ; GREPFIELD(static/info, 'SCF converged in', 4) ; 18
+match ; Number of SCF iterations ; GREPFIELD(static/info, 'SCF converged in', 4) ; 10
 match ; Eigenvalue               ; GREPFIELD(static/info, '1   --', 3)           ; -0.233013
 match ; Total Energy             ; GREPFIELD(static/info, 'Total  ', 3)          ; -0.44637705
 

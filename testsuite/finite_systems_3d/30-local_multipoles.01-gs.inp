@@ -13,5 +13,8 @@ CH = 1.2*angstrom
  "H" | -CH/sqrt(3) | CH/sqrt(3) | -CH/sqrt(3)
 %
 
+ConvRelDens = 1e-12
+EigensolverTolerance = 1e-13
+
 SCFCalculatePartialCharges = yes
 ExperimentalFeatures = yes

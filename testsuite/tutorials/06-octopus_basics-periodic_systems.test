@@ -9,7 +9,7 @@ Input: 06-octopus_basics-periodic_systems.01-silicon.inp
 match ; SCF convergence          ; GREPCOUNT(static/info, 'SCF converged') ; 1
 match ; Space group              ; GREPFIELD(out,         'Space group No.', 4) ; 227
 match ; Number of k-points       ; GREPFIELD(out,         'k-points generated from parameters', 1) ; 2
-match ; Number of SCF iterations ; GREPFIELD(out,         'Info: SCF converged in', 5) ; 12
+match ; Number of SCF iterations ; GREPFIELD(out,         'Info: SCF converged in', 5) ; 11
 match ; Total Energy             ; GREPFIELD(static/info, 'Total  ', 3) ; -7.92843852
 
 Input: 06-octopus_basics-periodic_systems.02-silicon_converged.inp

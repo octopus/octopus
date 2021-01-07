@@ -29,6 +29,8 @@ Spacing = a/14
 %
 
 ExtraStates = 1
-ConvRelDens = 1e-7
+ConvRelDens = 1e-6
 EigensolverTolerance = 1e-8
+EigensolverMaxIter = 50
+MaximumIterBerry = 10
 

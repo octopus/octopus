@@ -20,3 +20,4 @@ Poisson1DSoftCoulombParam = 1
 %
 ExtraStates = 26
 
+CGOrthogonalizeAll = no

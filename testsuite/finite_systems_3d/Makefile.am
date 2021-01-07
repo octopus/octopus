@@ -116,6 +116,8 @@ dist_share_DATA = \
 	25-multiresolution.test \
 	27-fine_mesh.test                            \
 	27-fine_mesh.01-gs.inp \
+	28-carbon_big_box.01-ground_state.inp        \
+	28-carbon_big_box.test                       \
         29-pcm_chlorine_anion.01-ground_state-n60.inp \
         29-pcm_chlorine_anion.02-td_prop-n60.inp      \
         29-pcm_chlorine_anion.03-ground_state-n60-poisson.inp \

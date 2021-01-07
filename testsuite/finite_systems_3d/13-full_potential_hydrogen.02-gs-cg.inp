@@ -1,4 +1,5 @@
 # -*- coding: utf-8 mode: shell-script -*-
+Debug = trace
 
 %Coordinates
  'H_f' | 0 | 0 | 0
@@ -15,7 +16,8 @@ fromScratch = yes
 
 TheoryLevel = independent_particles
 
-EigenSolverMaxIter = 300
+ConvRelDens = 1e-10
+EigensolverTolerance = 1e-11
 
 PoissonSolver=cg_corrected
 

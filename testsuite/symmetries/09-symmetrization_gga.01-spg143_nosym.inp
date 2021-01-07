@@ -15,8 +15,8 @@ Spacing = 0.55
 FilterPotentials = filter_none
 ExtraStates = 2
 
-ConvRelDens = 5e-5
-EigensolverTolerance = 1e-7
+ConvRelDens = 1e-8
+EigensolverTolerance = 1e-9
 
 Smearing = 0.1*eV
 SmearingFunction = fermi_dirac

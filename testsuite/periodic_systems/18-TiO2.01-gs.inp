@@ -2,6 +2,7 @@ CalculationMode = gs
 PeriodicDimensions = 3
 BoxShape = parallelepiped
 ExperimentalFeatures = yes
+ParKpoints = 1
 
 PseudopotentialSet = pseudodojo_pbe
 
@@ -34,9 +35,9 @@ FromScratch = yes
 
 KPointsUseSymmetries = yes
 ExtraStates = 2
-EigenSolver = rmmdiis
-#ConvRelDens = 1e-7
-ParKPoints = no
+ConvRelDens = 1e-7
+EigensolverTolerance = 1e-8
+
 
 %KPointsGrid
  2 | 2 | 2
@@ -48,5 +49,3 @@ OutputMEStart = 24
 OutputMEEnd = 25
 
 StatesPack = yes
-LCAOStart = lcao_full
-

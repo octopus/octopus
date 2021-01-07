@@ -22,5 +22,7 @@ match ; RDMFT highest occupation number  ; GREPFIELD(static/info, '1 ', 2) ; 1.9
 Input: 06-rdmft.03-gs_grid.inp
 Precision: 0.001
 match ; SCF convergence                  ; GREPCOUNT(static/info, 'SCF converged') ; 1
-match ; RDMFT converged energy           ; GREPFIELD(static/info, 'Total Energy ', 4) ; -1.1758699330E+00
-match ; RDMFT highest occupation number  ; GREPFIELD(static/info, '1 ', 2) ; 1.946806716954
+Precision: 3.24e-08
+match ;  RDMFT converged energy            ; GREPFIELD(static/info, 'Total Energy ', 4) ; -1.17580252835
+Precision: 0.001
+match ; RDMFT highest occupation number  ; GREPFIELD(static/info, '   1 ', 2) ; 1.946806716954

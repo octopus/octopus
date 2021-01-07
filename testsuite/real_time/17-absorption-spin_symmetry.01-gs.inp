@@ -12,10 +12,12 @@ FromScratch = yes
 Spacing = 0.32*angstrom
 Radius = 6.0*angstrom
 
+ConvRelDens = 1e-8
+EigensolverTolerance = 1e-9
+
 SpinComponents = spin_polarized
 
 FilterPotentials = filter_none
 
 MixField = density
 StatesPack = yes
-LCAOStart = lcao_full

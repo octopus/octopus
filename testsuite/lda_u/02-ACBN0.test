@@ -64,41 +64,54 @@ if(available cuda); then
   match ; Error match ; GREPCOUNT(err, 'Calculation will not be continued.') ; 1
 else
   match ;  SCF convergence  ; GREPCOUNT(static/info, 'SCF converged') ; 1.0
-
-  Precision: 5e-14
-  match ;  Total energy        ; GREPFIELD(static/info, 'Total       =', 3) ; -24.296618
+  Precision: 2.43e-14
+  match ;  Total energy        ; GREPFIELD(static/info, 'Total       =', 3) ; -24.2966112
+  Precision: 1.44e-14
   match ;  Ion-ion energy      ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -14.42250723
-  match ;  Eigenvalues sum     ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -4.49533031
-  match ;  Hartree energy      ; GREPFIELD(static/info, 'Hartree     =', 3) ; 8.26582147
-  match ;  Exchange energy     ; GREPFIELD(static/info, 'Exchange    =', 3) ; -4.37612059
-  match ;  Correlation energy  ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.49327265
-  match ;  Kinetic energy      ; GREPFIELD(static/info, 'Kinetic     =', 3) ; 17.57041599
-  match ;  Hubbard energy      ; GREPFIELD(static/info, 'Hubbard     =', 3) ; 0.05491975
-
+  Precision: 4.50e-15
+  match ;  Eigenvalues sum     ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -4.49532415
+  Precision: 8.27e-15
+  match ;  Hartree energy      ; GREPFIELD(static/info, 'Hartree     =', 3) ; 8.26581992
+  Precision: 4.38e-15
+  match ;  Exchange energy     ; GREPFIELD(static/info, 'Exchange    =', 3) ; -4.37612027
+  Precision: 4.93e-16
+  match ;  Correlation energy  ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.49327263
+  Precision: 1.76e-14
+  match ;  Kinetic energy      ; GREPFIELD(static/info, 'Kinetic     =', 3) ; 17.57041577
+  Precision: 5.49e-17
+  match ;  Hubbard energy      ; GREPFIELD(static/info, 'Hubbard     =', 3) ; 0.0549198
   Precision: 1.00e-15
   match ;  Total Magnetic Moment  ; GREPFIELD(static/info, 'mz = ', 3) ; 0.0
+  Precision: 1.00e-15
   match ;  Local Magnetic Moment (Li)  ; GREPFIELD(static/info, '1        Li', 3) ; 0.0
+  Precision: 1.00e-15
   match ;  Local Magnetic Moment (F)   ; GREPFIELD(static/info, '2         F', 3) ; 0.0
-
   Precision: 1.00e-15
   match ;  k-point 2 (x)  ; GREPFIELD(static/info, '#k =   2', 7) ; 0.0
+  Precision: 5.00e-16
   match ;  k-point 2 (y)  ; GREPFIELD(static/info, '#k =   2', 8) ; 0.5
+  Precision: 1.00e-15
   match ;  k-point 2 (z)  ; GREPFIELD(static/info, '#k =   2', 9) ; 0.0
-
-  Precision: 1.00e-15
-  match ;  Eigenvalue  1 up  ; GREPFIELD(static/info, '#k =   2', 3, 1) ; -0.942692
-  match ;  Eigenvalue  1 dn  ; GREPFIELD(static/info, '#k =   2', 3, 2) ; -0.942692
-  match ;  Eigenvalue  3 up  ; GREPFIELD(static/info, '#k =   2', 3, 5) ; -0.409535
+  Precision: 9.43e-16
+  match ;  Eigenvalue  1 up  ; GREPFIELD(static/info, '#k =   2', 3, 1) ; -0.942691
+  Precision: 9.43e-16
+  match ;  Eigenvalue  1 dn  ; GREPFIELD(static/info, '#k =   2', 3, 2) ; -0.942691
+  Precision: 4.10e-16
+  match ;  Eigenvalue  3 up  ; GREPFIELD(static/info, '#k =   2', 3, 5) ; -0.409534
+  Precision: 4.09e-16
   match ;  Eigenvalue  4 up  ; GREPFIELD(static/info, '#k =   2', 3, 7) ; -0.408932
+  Precision: 2.84e-16
   match ;  Eigenvalue  5 up  ; GREPFIELD(static/info, '#k =   2', 3, 9) ; 0.283877
-
-  Precision: 1.00e-15
-  match ;  Occupation F down 2p2  ; LINEFIELD(static/occ_matrices, -2, 3) ; 0.96139696
-  match ;  Occupation F down 2p3  ; LINEFIELD(static/occ_matrices, -1, 5) ; 0.96139696
-
-  Precision: 1.00e-15
+  Precision: 9.61e-16
+  match ;  Occupation F down 2p2  ; LINEFIELD(static/occ_matrices, -2, 3) ; 0.96139677
+  Precision: 9.61e-16
+  match ;  Occupation F down 2p3  ; LINEFIELD(static/occ_matrices, -1, 5) ; 0.96139677
+  Precision: 4.93e-16
   match ;  U2p F    ; LINEFIELD(static/effectiveU, -7, 4) ; 0.493266
+  Precision: 8.65e-16
   match ;  Kanamori U    ; LINEFIELD(static/kanamoriU, -7, 4) ; 0.865337
-  match ;  Kanamori Up   ; LINEFIELD(static/kanamoriU, -4, 4) ; 0.779382
+  Precision: 7.79e-16
+  match ;  Kanamori Up   ; LINEFIELD(static/kanamoriU, -4, 4) ; 0.779381
+  Precision: 4.37e-17
   match ;  Kanamori J    ; LINEFIELD(static/kanamoriU, -1, 4) ; 0.043705
 endif

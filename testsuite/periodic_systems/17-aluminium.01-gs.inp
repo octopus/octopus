@@ -27,10 +27,13 @@ PseudopotentialSet = pseudodojo_lda
 SmearingFunction = fermi_dirac
 Smearing = 0.1*eV
 
+ConvRelDens = 1e-8
+EigensolverTolerance = 1e-9
+ConvEigenError = yes
+
 ExtraStates = 2
 
 ExperimentalFeatures = yes
 
 FromScratch = yes
 StatesPack = yes
-LCAOStart = lcao_full

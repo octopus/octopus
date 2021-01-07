@@ -27,6 +27,7 @@ Lsize = a/2
 %
 
 ExtraStates = 2
+ConvEigenError = yes
 
 ExperimentalFeatures = yes
 Output = wfs + wfs_fourier + density + geometry

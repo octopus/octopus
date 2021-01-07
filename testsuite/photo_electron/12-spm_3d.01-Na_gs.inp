@@ -19,5 +19,7 @@ BoxShape = sphere
 Radius = 20
 Spacing = 0.7
 
+MixField = density
+
 StatesPack = yes
 

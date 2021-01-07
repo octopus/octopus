@@ -46,7 +46,7 @@ Precision : 0.000000001
 match ; Plane value 10   ; LINEFIELD(static/density.x\=0, 9, 3)   ; 2.2347505445645253e-05
 match ; Plane value 30   ; LINEFIELD(static/density.x\=0, 29, 3)  ; 0.0001897651429879145
 Precision: 1.3e-09
-match ; Plane value 295  ; LINEFIELD(static/density.x\=0, 294, 3) ; 0.00606672446448198
+match ; Plane value 295  ; LINEFIELD(static/density.x\=0, 294, 3) ; 0.006066722754378669
 Precision : 0.000000001
 match ; Plane value 10 Grad-y v0 ; LINEFIELD(static/grad_v0-y.x\=0,   9, 3) ; -1.42667157278682E+001
 

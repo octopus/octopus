@@ -33,5 +33,7 @@ AOLoewdin = yes
 UseAllAtomicOrbitals = yes
 OutputLDA_U = occ_matrices + effectiveU
 StatesPack = yes
+ConvRelDens = 1e-7
+EigensolverTolerance = 1e-8
 
 LCAOStart = lcao_full

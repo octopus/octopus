@@ -35,6 +35,7 @@ LinearSolver = cg
 ConvAbsEv = 5e-7
 ConvAbsDens = 5e-7
 EigenSolverTolerance = 5e-8
+EigensolverMaxIter = 50
 LRTolFinalTol = 5e-7
 LRConvAbsDens = 5e-7
 

@@ -15,6 +15,7 @@ GuessMagnetDensity = user_defined
 %
 
 Eigensolver = rmmdiis
+EigensolverTolerance = 1e-12
 
 ExtraStates = 5
 

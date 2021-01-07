@@ -8,23 +8,21 @@ Radius = 3
 
 Spacing = 0.6
 
-EigenSolver = rmmdiis
 
 LCAOAlternative = yes
 
+Eigensolver = rmmdiis
 ConvRelDens = 2e-6
+EigensolverTolerance = 1e-7
 
 ExtraStates = 20
-
-StatesBlocksize = 32
 
 ReportMemory = yes
 
 MixingScheme = bowler_gillan
+MixingRestart = 100
 
 XYZCoordinates = "10-fullerene.geometry.xyz"
-
-ParStates = 2
 
 SCFCalculatePartialCharges = yes
 

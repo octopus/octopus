@@ -8,7 +8,7 @@ Enabled    : Yes
 Input: 06-carbon_dojo_pbe.01-gs.inp
 Precision: 0.00011
 match ; SCF convergence    ; GREPCOUNT(static/info, 'SCF converged') ; 1
-match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -156.14478897499998
+match ; Total energy       ; GREPFIELD(static/info, 'Total       =', 3) ; -156.14458129
 Precision: 0.00011
 match ; Eigenvalue   [1up] ; GREPFIELD(static/info, '1   up', 3) ; -14.651344
 match ; Occupation   [1up] ; GREPFIELD(static/info, '1   up', 4) ;   1.000000

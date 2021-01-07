@@ -11,6 +11,8 @@ Processors : 2
 Input      : 09-flux_3d.01-Na_gs_sph.inp
 if(available cuda); then
   match ; Error match ; GREPCOUNT(err, 'Calculation will not be continued.') ; 1
+else
+  match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
 endif
 
 
