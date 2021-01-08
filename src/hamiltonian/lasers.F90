@@ -352,6 +352,9 @@ contains
     !% The scalar potential is any expression of the spatial coordinates given by the string
     !% "spatial_expression", allowing a field beyond the dipole approximation.
     !%
+    !% For DFTB runs, only fields of type type = <tt>electric field</tt> are allowed for the moment, and the
+    !% <tt>type</tt> keyword is omitted.
+    !%
     !% A NOTE ON UNITS:
     !%
     !% It is very common to describe the strength of a laser field by its intensity, rather

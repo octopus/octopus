@@ -248,17 +248,6 @@ contains
 
     call ion_dynamics_init(this%ions, namespace, this%geo)
 
-    !%Variable TDDynamics
-    !%Type integer
-    !%Default ehrenfest
-    !%Section DFTBPlusInterface
-    !%Description
-    !% Type of dynamics for DFTB time propagation.
-    !%Option ehrenfest 1
-    !% Ehrenfest dynamics.
-    !%Option bo 2
-    !% Born-Oppenheimer dynamics.
-    !%End
     call parse_variable(namespace, 'TDDynamics', BO, this%dynamics)
     call messages_print_var_option(stdout, 'TDDynamics', this%dynamics)
     if (this%dynamics == BO) then
@@ -276,14 +265,6 @@ contains
     !% and  <tt>MoveIons = yes</tt>.
     !%End
     call parse_variable(namespace, 'InitialIonicTemperature', M_zero, initial_temp, unit = unit_kelvin)
-
-    !%Variable TDExternalFields
-    !%Type block
-    !%Section DFTBPlusInterface
-    !%Description
-    !% See documentation in the  in the Time-Dependent section).
-    !% For DFTB runs, only fields of type type = <tt>electric field</tt> are allowed for the moment.
-    !%End
 
     this%n_lasers = 0
     if(parse_block(namespace, 'TDExternalFields', blk) == 0) then
