@@ -642,7 +642,7 @@ contains
     ff = M_ZERO
     do id = 1, nd
       do ip = 1, mesh%np
-        if (loc_domains(id)%mesh_mask(ip)) ff(ip, 1) = ff(ip, 1) + 2**DBLE(id)
+        if (loc_domains(id)%mesh_mask(ip)) ff(ip, 1) = ff(ip, 1) + 2**TOFLOAT(id)
       end do
     end do
     call drestart_write_mesh_function(restart, "ldomains", mesh, ff(1:mesh%np, 1), ierr)
@@ -830,7 +830,7 @@ contains
         call messages_input_error(namespace, 'LDOutputFormat')
       end if
 
-      call dio_function_output(how, 'local.general', 'basinsmap', namespace, mesh, DBLE(basins%map(1:mesh%np)), unit_one, ierr, &
+      call dio_function_output(how, 'local.general', 'basinsmap', namespace, mesh, TOFLOAT(basins%map(1:mesh%np)), unit_one, ierr, &
         geo = geo)
       call dio_function_output(how, 'local.general', 'dens_ff2', namespace, mesh, ff2(:,1), unit_one, ierr, geo = geo)
     end if
