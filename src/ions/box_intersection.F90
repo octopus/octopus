@@ -18,7 +18,7 @@
 
 #include "global.h"
 
-module box_union_oct_m
+module box_intersection_oct_m
   use box_oct_m
   use multibox_oct_m
   use global_oct_m
@@ -30,28 +30,28 @@ module box_union_oct_m
 
   private
   public ::           &
-    box_union_t
+    box_intersection_t
 
-  !> Class implementing a box that is an union other boxes.
-  type, extends(multibox_t) :: box_union_t
+  !> Class implementing a box that is an intersection other boxes.
+  type, extends(multibox_t) :: box_intersection_t
     private
   contains
-    procedure :: contains_points => box_union_contains_points
-    final     :: box_union_finalize
-  end type box_union_t
+    procedure :: contains_points => box_intersection_contains_points
+    final     :: box_intersection_finalize
+  end type box_intersection_t
 
-  interface box_union_t
-    procedure box_union_constructor
-  end interface box_union_t
+  interface box_intersection_t
+    procedure box_intersection_constructor
+  end interface box_intersection_t
 
 contains
 
   !--------------------------------------------------------------
-  function box_union_constructor(dim) result(box)
+  function box_intersection_constructor(dim) result(box)
     integer, intent(in) :: dim
-    class(box_union_t), pointer :: box
+    class(box_intersection_t), pointer :: box
 
-    PUSH_SUB(box_union_constructor)
+    PUSH_SUB(box_intersection_constructor)
 
     ! Allocate memory
     SAFE_ALLOCATE(box)
@@ -59,25 +59,25 @@ contains
     ! Initialize box
     box%dim = dim
 
-    POP_SUB(box_union_constructor)
-  end function box_union_constructor
+    POP_SUB(box_intersection_constructor)
+  end function box_intersection_constructor
 
   !--------------------------------------------------------------
-  subroutine box_union_finalize(this)
-    type(box_union_t), intent(inout) :: this
+  subroutine box_intersection_finalize(this)
+    type(box_intersection_t), intent(inout) :: this
 
-    PUSH_SUB(box_union_finalize)
+    PUSH_SUB(box_intersection_finalize)
 
     call multibox_end(this)
 
-    POP_SUB(box_union_finalize)
-  end subroutine box_union_finalize
+    POP_SUB(box_intersection_finalize)
+  end subroutine box_intersection_finalize
 
   !--------------------------------------------------------------
-  recursive function box_union_contains_points(this, nn, xx) result(contained)
-    class(box_union_t), intent(in) :: this
-    integer,            intent(in) :: nn
-    FLOAT,              intent(in) :: xx(:,:)
+  recursive function box_intersection_contains_points(this, nn, xx) result(contained)
+    class(box_intersection_t), intent(in) :: this
+    integer,           intent(in) :: nn
+    FLOAT,             intent(in) :: xx(:,:)
     logical :: contained(nn)
 
     integer :: ip
@@ -85,24 +85,24 @@ contains
     type(box_iterator_t) :: iter
     class(box_t), pointer :: box
 
-    ! A point must be inside at least one box to be considered inside an union of boxes
+    ! A point must be inside all boxes to be considered inside an intersection of boxes
     do ip = 1, nn
       point(1:this%dim) = xx(ip, 1:this%dim)
-      contained(ip) = .false.
+      contained(ip) = .true.
 
       call iter%start(this%list)
       do while (iter%has_next())
         box => iter%get_next()
         contained(ip) = box%contains_point(point)
-        if (contained(ip)) exit
+        if (.not. contained(ip)) exit
       end do
 
       contained(ip) = contained(ip) .neqv. this%is_inside_out()
     end do
 
-  end function box_union_contains_points
+  end function box_intersection_contains_points
 
-end module box_union_oct_m
+end module box_intersection_oct_m
 
 !! Local Variables:
 !! mode: f90
