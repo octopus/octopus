@@ -27,7 +27,7 @@ AC_ARG_WITH(dftbplus-prefix, [AS_HELP_STRING([--with-dftbplus-prefix=<path>], [h
 case $with_dftbplus_prefix in
   yes | "") ;;
   no) acx_dftbplus_ok=disable ;;
-  *) LIBS_DFTBPLUS="-L$with_dftbplus_prefix/lib -ldftbplus -lmudpack -fopenmp";
+  *) LIBS_DFTBPLUS="-L$with_dftbplus_prefix/lib -ldftbplus -lmudpack";
      FCFLAGS_DFTBPLUS="$ax_cv_f90_modflag$with_dftbplus_prefix/include/dftbplus/modfiles" ;;
 esac
 
