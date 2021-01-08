@@ -294,7 +294,7 @@ contains
     message(2) = ''
     call messages_info(2)
 
-    call local_init(sys%space, sys%geo, nd, loc_domains)
+    call local_init(sys%space, sys%gr%mesh, sys%geo, nd, loc_domains)
 
     ! Starting loop over selected densities.
     if (any(loc_domains(:)%dshape == BADER)) then
@@ -394,8 +394,9 @@ contains
   !> Initialize local_domain_t variable, allocating variable 
   !! and reading parameters from input file. 
   ! ---------------------------------------------------------
-  subroutine local_init(space, geo, nd, loc_domains)
+  subroutine local_init(space, mesh, geo, nd, loc_domains)
     type(space_t),    intent(in)  :: space
+    type(mesh_t),     intent(in)  :: mesh
     type(geometry_t), intent(in)  :: geo
     integer,          intent(out) :: nd
     type(local_domain_t), allocatable, intent(out) :: loc_domains(:)
@@ -447,6 +448,7 @@ contains
     SAFE_ALLOCATE(loc_domains(1:nd))
 
     block: do id = 1, nd
+      SAFE_ALLOCATE(loc_domains(id)%mesh_mask(1:mesh%np))
       SAFE_ALLOCATE(loc_domains(id)%ions_mask(1:geo%natoms))
       call parse_block_string(blk, id-1, 0, loc_domains(id)%lab)
       call local_read_from_block(loc_domains(id), space, geo, blk, id-1, global_namespace)
@@ -670,10 +672,6 @@ contains
     message(1) = 'Info: Reading mesh points inside each local domain'
     call messages_info(1)
 
-    do id = 1, nd
-      SAFE_ALLOCATE(loc_domains(id)%mesh_mask(1:mesh%np))
-    end do
-
     SAFE_ALLOCATE(mask(1:mesh%np))
 
     !Read local domain information from ldomains.info 
@@ -877,8 +875,6 @@ contains
 
     PUSH_SUB(box_domain_create_mask)
 
-    SAFE_ALLOCATE(domain%mesh_mask(1:mesh%np))
-
     call box_union_inside_vec(domain%box, mesh%np, mesh%x, domain%mesh_mask)
 
     POP_SUB(box_domain_create_mask)
@@ -918,7 +914,6 @@ contains
 
     ! Now construct the mask: a point belongs to this Bader domain if it is part
     ! of at least one basin that is part of this domain
-    SAFE_ALLOCATE(domain%mesh_mask(1:mesh%np))
     do ip = 1, mesh%np
       domain%mesh_mask(ip) = any(domain_map(1:n_basins) == basins%map(ip))
     end do
