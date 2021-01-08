@@ -188,6 +188,10 @@ subroutine X(broyden_extrapolation)(this, coeff, d1, d2, d3, vin, vnew, iter_use
     w0 = min(w0, TOFLOAT(beta(i, i)))
   end do
   w0 = w0 * 0.01
+  ! safeguard if w0 should be exactly zero
+  if (w0 == M_ZERO) then
+    w0 = 0.01
+  end if
   do i = 1, iter_used
     beta(i, i) = w0**2 + beta(i, i)
   end do
