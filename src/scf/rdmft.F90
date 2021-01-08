@@ -1021,7 +1021,7 @@ contains
     type(hamiltonian_elec_t), intent(inout) :: hm !< Hamiltonian
     FLOAT,                    intent(out)   :: energy
 
-    integer            :: ik, ist
+    integer            :: ik, ist, maxiter
     
     type(profile_t), save :: prof_orb_cg
     
@@ -1037,7 +1037,8 @@ contains
     end if
     do ik = st%d%kpt%start, st%d%kpt%end
       rdm%eigens%matvec = 0  
-      call deigensolver_cg(namespace, gr, st, hm, hm%xc, rdm%eigens%pre, rdm%eigens%tolerance, rdm%eigens%es_maxiter, &
+      maxiter = rdm%eigens%es_maxiter
+      call deigensolver_cg(namespace, gr, st, hm, hm%xc, rdm%eigens%pre, rdm%eigens%tolerance, maxiter, &
         rdm%eigens%converged(ik), ik, rdm%eigens%diff(:, ik), rdm%eigens%orthogonalize_to_all, &
         rdm%eigens%conjugate_direction, rdm%eigens%additional_terms)
   
