@@ -280,9 +280,6 @@ contains
 #ifdef HAVE_BLUE_GENE_Q
     get_config_opts = trim(get_config_opts)//' bluegene/q'
 #endif
-#ifdef HAVE_LIBXC4
-    get_config_opts = trim(get_config_opts)//' libxc4'
-#endif
 #ifdef HAVE_LIBXC5
     get_config_opts = trim(get_config_opts)//' libxc5'
 #endif
