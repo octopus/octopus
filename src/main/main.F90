@@ -131,13 +131,6 @@ program octopus
   
   call print_header()
 
-#if !defined(HAVE_LIBXC4) && !defined(HAVE_LIBXC5)
-  call messages_write('You have compiled Octopus with version 3 of Libxc.', new_line = .true.)
-  call messages_write('Support for this version of Libxc has been deprecated and', new_line = .true.)
-  call messages_write('will be removed in one of the next major releases of Octopus.', new_line = .true.)
-  call messages_warning()
-#endif
-  
   ! now we really start
   call run(global_namespace, inp_calc_mode)
   

@@ -105,10 +105,7 @@ contains
     integer,           intent(in)  :: spin_channels
 
     integer :: interact_1d
-    FLOAT   :: alpha
-#if defined HAVE_LIBXC4 || defined HAVE_LIBXC5
-    FLOAT   :: parameters(2)
-#endif
+    FLOAT   :: alpha, parameters(2)
     logical :: ok
 
     PUSH_SUB(xc_functl_init_functl)
@@ -255,13 +252,9 @@ contains
       !% The parameter of the Slater X<math>\alpha</math> functional. Applies only for
       !% <tt>XCFunctional = xc_lda_c_xalpha</tt>.
       !%End
-      call parse_variable(namespace, 'Xalpha', M_ONE, alpha)
-#if defined HAVE_LIBXC4 || defined HAVE_LIBXC5
-      parameters(1) = alpha
+      call parse_variable(namespace, 'Xalpha', M_ONE, parameters(1))
+      
       call XC_F90(func_set_ext_params)(functl%conf, parameters(1))
-#else
-      call XC_F90(lda_c_xalpha_set_params)(functl%conf, alpha)
-#endif
       
       ! FIXME: doesn`t this apply to other 1D functionals?
     case(XC_LDA_X_1D, XC_LDA_C_1D_CSC)
@@ -291,25 +284,13 @@ contains
       !%End
       call messages_obsolete_variable(namespace, 'SoftInteraction1D_alpha', 'Interaction1DScreening')
       call parse_variable(namespace, 'Interaction1DScreening', M_ONE, alpha)
-#if defined HAVE_LIBXC4 || defined HAVE_LIBXC5
       parameters(1) = TOFLOAT(interact_1d)
       parameters(2) = alpha
       call XC_F90(func_set_ext_params)(functl%conf, parameters(1))
-#else
-      if(functl%id == XC_LDA_X_1D) then
-        call XC_F90(lda_x_1d_set_params)(functl%conf, interact_1d, alpha)
-      else
-        call XC_F90(lda_c_1d_csc_set_params)(functl%conf, interact_1d, alpha)
-      end if
-#endif
       
     case(XC_LDA_C_2D_PRM)
-#if defined HAVE_LIBXC4 || defined HAVE_LIBXC5
       parameters(1) = nel
       call XC_F90(func_set_ext_params)(functl%conf, parameters(1))
-#else
-      call XC_F90(lda_c_2d_prm_set_params)(functl%conf, nel)
-#endif
 
     case (XC_GGA_X_LB)
       if (parse_is_defined(namespace, 'LB94_modified')) then
@@ -352,11 +333,7 @@ contains
 
     character(len=120) :: family
     integer :: ii
-#ifdef HAVE_LIBXC3
-    character(len=120) :: ref
-#else
     type(XC_F90(func_reference_t)) :: ref
-#endif
 
     PUSH_SUB(xc_functl_write_info)
 
@@ -413,21 +390,12 @@ contains
       call messages_info(2, iunit)
 
       ii = 0
-#ifdef HAVE_LIBXC3
-      ref = XC_F90(func_info_get_refs(functl%info, ii))
+      ref = XC_F90(func_info_get_references)(functl%info, ii)
       do while(ii >= 0)
-        write(message(1), '(4x,a,i1,2a)') '[', ii, '] ', trim(ref)
+        write(message(1), '(4x,a,i1,2a)') '[', ii, '] ', trim(XC_F90(func_reference_get_ref)(ref))
         call messages_info(1, iunit)
-        ref = XC_F90(func_info_get_refs(functl%info, ii))
+        ref = XC_F90(func_info_get_references)(functl%info, ii)
       end do
-#else
-      ref = XC_F90(func_info_get_references(functl%info, ii))
-      do while(ii >= 0)
-        write(message(1), '(4x,a,i1,2a)') '[', ii, '] ', trim(XC_F90(func_reference_get_ref(ref)))
-        call messages_info(1, iunit)
-        ref = XC_F90(func_info_get_references(functl%info, ii))
-      end do
-#endif
     end if
 
     POP_SUB(xc_functl_write_info)
