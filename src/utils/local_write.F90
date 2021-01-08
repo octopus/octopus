@@ -618,7 +618,7 @@ contains
       ionic_dipole = geometry_dipole(geo, mask=ions_mask) + P_PROTON_CHARGE*geometry_val_charge(geo, mask=ions_mask)*center
 
       do is = 1, st%d%nspin
-        multipole(2:4, is) = -ionic_dipole(1:3)/st%d%nspin - multipole(2:4, is)
+        multipole(2:geo%space%dim+1, is) = -ionic_dipole(1:geo%space%dim)/st%d%nspin - multipole(2:geo%space%dim+1, is)
       end do
     end if
 
