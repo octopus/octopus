@@ -32,9 +32,7 @@ module box_union_oct_m
     box_union_init,           &
     box_union_end,            &
     box_union_inside_vec,     &
-    box_union_inside,         &
-    box_union_get_nboxes,     &
-    box_union_get_center
+    box_union_inside
 
   type box_union_t
     private
@@ -125,29 +123,6 @@ contains
 
   end function box_union_inside
 
-  !--------------------------------------------------------------
-  !> Returns number of boxes inside domain
-  pure integer function box_union_get_nboxes(union) result(nbox)
-    type(box_union_t),  intent(in)  :: union
-    
-    ! no push_sub because this function is called very frequently
-    
-    nbox = union%n_boxes
-    
-  end function box_union_get_nboxes
-
-  !--------------------------------------------------------------
-  !> Returns number of boxes inside domain
-  pure function box_union_get_center(union, ibox) result(x)
-    type(box_union_t),  intent(in)  :: union
-    integer,            intent(in)  :: ibox
-    FLOAT, dimension(MAX_DIM)       :: x
-    
-    ! no push_sub because this function is called very frequently
-    
-    x = box_get_center(union%boxes(ibox))
-    
-  end function box_union_get_center
 end module box_union_oct_m
 
 

@@ -1,0 +1,29 @@
+UnitsOutput = eV_Angstrom
+
+Radius = 3.5*angstrom
+Spacing = 0.22*angstrom
+
+CH = 1.2*angstrom
+%Coordinates
+ "C" |           0 |          0 |           0
+ "H" |  CH/sqrt(3) | CH/sqrt(3) |  CH/sqrt(3)
+ "H" | -CH/sqrt(3) |-CH/sqrt(3) |  CH/sqrt(3)
+ "H" |  CH/sqrt(3) |-CH/sqrt(3) | -CH/sqrt(3)
+ "H" | -CH/sqrt(3) | CH/sqrt(3) | -CH/sqrt(3)
+%
+
+%LocalDomains
+ 'C'    | bader          | '1'
+ 'H1'   | sphere         | 0.9*CH  |  CH/sqrt(3) |  CH/sqrt(3) |  CH/sqrt(3)
+ 'H2'   | sphere         | 0.9*CH  | -CH/sqrt(3) | -CH/sqrt(3) |  CH/sqrt(3)
+ 'H3'   | parallelepiped | 0.45*CH | 0.45*CH | 0.45*CH |  CH/sqrt(3) | -CH/sqrt(3) | -CH/sqrt(3)
+ 'H4'   | cylinder       | 0.45*CH | 0.45*CH  | -CH/sqrt(3) |  CH/sqrt(3) | -CH/sqrt(3)
+ 'H2-4' | minimum        | 0.9*CH  | '3-5'
+%
+LDOutput = multipole
+LDOutputFormat = bild
+LDFolder = "restart/gs"
+LDRestart = yes
+LDRestartFolder = "restart/ld"
+
+ExperimentalFeatures = yes

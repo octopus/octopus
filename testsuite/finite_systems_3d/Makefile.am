@@ -123,6 +123,7 @@ dist_share_DATA = \
         29-pcm_chlorine_anion.test \
         30-local_multipoles.01-gs.inp \
         30-local_multipoles.02-multipoles.inp \
+        30-local_multipoles.03-multipoles_restart.inp \
         30-local_multipoles.test                     \
 	31-acetylene_b3lyp.test                      \
 	31-acetylene_b3lyp.01-gs.inp \
