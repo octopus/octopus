@@ -88,7 +88,7 @@ module output_oct_m
   use young_oct_m
   use xc_oct_m
   use xc_oep_oct_m
-  use XC_F90(lib_m)
+  use xc_f03_lib_m
 
   implicit none
 

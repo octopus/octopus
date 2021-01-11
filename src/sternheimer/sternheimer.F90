@@ -54,7 +54,7 @@ module sternheimer_oct_m
   use v_ks_oct_m
   use wfs_elec_oct_m
   use xc_oct_m
-  use XC_F90(lib_m)
+  use xc_f03_lib_m
 
   implicit none
 

@@ -73,7 +73,7 @@ subroutine xc_get_kxc(xcs, mesh, namespace, rho, ispin, kxc)
 
       select case(functl(ixc)%family)
       case(XC_FAMILY_LDA)
-        call XC_F90(lda_kxc)(functl(ixc)%conf, int(1, XC_SIZE_T), l_dens, l_dedd)
+        call xc_f03_lda_kxc(functl(ixc)%conf, int(1, XC_SIZE_T), l_dens, l_dedd)
 
       case default
         cycle

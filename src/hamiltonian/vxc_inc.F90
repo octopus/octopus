@@ -206,12 +206,12 @@ subroutine xc_get_vxc(der, xcs, st, psolver, namespace, rho, ispin, vxc, ex, ec,
         ! we get the xc energy and potential
         select case(functl(ixc)%family)
         case(XC_FAMILY_LDA, XC_FAMILY_LIBVDWXC)
-          call XC_F90(lda_exc_vxc)(functl(ixc)%conf, int(n_block, XC_SIZE_T), l_dens, l_zk, l_dedd)
+          call xc_f03_lda_exc_vxc(functl(ixc)%conf, int(n_block, XC_SIZE_T), l_dens, l_zk, l_dedd)
 
         case(XC_FAMILY_GGA, XC_FAMILY_HYB_GGA)
-          call XC_F90(gga_exc_vxc)(functl(ixc)%conf, int(n_block, XC_SIZE_T), l_dens, l_sigma, l_zk, l_dedd, l_vsigma)
+          call xc_f03_gga_exc_vxc(functl(ixc)%conf, int(n_block, XC_SIZE_T), l_dens, l_sigma, l_zk, l_dedd, l_vsigma)
         case(XC_FAMILY_MGGA, XC_FAMILY_HYB_MGGA)
-          call XC_F90(mgga_exc_vxc)(functl(ixc)%conf, int(n_block, XC_SIZE_T), l_dens, l_sigma, l_ldens, l_tau, l_zk, l_dedd, &
+          call xc_f03_mgga_exc_vxc(functl(ixc)%conf, int(n_block, XC_SIZE_T), l_dens, l_sigma, l_ldens, l_tau, l_zk, l_dedd, &
             l_vsigma, l_dedldens, l_dedtau)
 
         case default
@@ -224,13 +224,13 @@ subroutine xc_get_vxc(der, xcs, st, psolver, namespace, rho, ispin, vxc, ex, ec,
 
         select case(functl(ixc)%family)
         case(XC_FAMILY_LDA, XC_FAMILY_LIBVDWXC)
-          call XC_F90(lda_vxc)(functl(ixc)%conf, int(n_block, XC_SIZE_T), l_dens, l_dedd)
+          call xc_f03_lda_vxc(functl(ixc)%conf, int(n_block, XC_SIZE_T), l_dens, l_dedd)
 
         case(XC_FAMILY_GGA, XC_FAMILY_HYB_GGA)
-          call XC_F90(gga_vxc)(functl(ixc)%conf, int(n_block, XC_SIZE_T), l_dens, l_sigma, l_dedd, l_vsigma)
+          call xc_f03_gga_vxc(functl(ixc)%conf, int(n_block, XC_SIZE_T), l_dens, l_sigma, l_dedd, l_vsigma)
 
         case(XC_FAMILY_MGGA, XC_FAMILY_HYB_MGGA)
-          call XC_F90(mgga_vxc)(functl(ixc)%conf, int(n_block, XC_SIZE_T), l_dens, l_sigma, l_ldens, l_tau, l_dedd, &
+          call xc_f03_mgga_vxc(functl(ixc)%conf, int(n_block, XC_SIZE_T), l_dens, l_sigma, l_ldens, l_tau, l_dedd, &
             l_vsigma, l_dedldens, l_dedtau)
 
         case default
@@ -269,12 +269,12 @@ subroutine xc_get_vxc(der, xcs, st, psolver, namespace, rho, ispin, vxc, ex, ec,
         
         select case(functl(ixc)%family)
         case(XC_FAMILY_LDA)
-          call XC_F90(lda_vxc)(xcs%functional(ixc, 1)%conf, int(n_block, XC_SIZE_T), unp_dens, unp_dedd)
+          call xc_f03_lda_vxc(xcs%functional(ixc, 1)%conf, int(n_block, XC_SIZE_T), unp_dens, unp_dedd)
           
         case(XC_FAMILY_GGA, XC_FAMILY_HYB_GGA, XC_FAMILY_MGGA, XC_FAMILY_HYB_MGGA)
           call messages_not_implemented('XC density correction for GGA/mGGA', namespace=namespace)
           
-          call XC_F90(gga_vxc)(xcs%functional(ixc, 1)%conf, int(n_block, XC_SIZE_T), unp_dens, l_sigma, unp_dedd, l_vsigma)
+          call xc_f03_gga_vxc(xcs%functional(ixc, 1)%conf, int(n_block, XC_SIZE_T), unp_dens, l_sigma, unp_dedd, l_vsigma)
         end select
         
         do ib = 1, n_block
@@ -736,7 +736,7 @@ contains
       parameters(1) = alpha
       parameters(2) = xcs%cam_omega
       parameters(3) = xcs%cam_omega
-      call XC_F90(func_set_ext_params)(functl(FUNC_C)%conf, parameters)
+      call xc_f03_func_set_ext_params(functl(FUNC_C)%conf, parameters)
       !The name is confusing. Here alpha is the beta of hybrids in functionals, 
       !but is called alpha in the original paper.
       xcs%cam_beta = alpha
@@ -757,7 +757,7 @@ contains
 
 #if defined HAVE_LIBXC5
       parameters(1) = alpha
-      call XC_F90(func_set_ext_params)(functl(FUNC_C)%conf, parameters)
+      call xc_f03_func_set_ext_params(functl(FUNC_C)%conf, parameters)
 #else
       call messages_not_implemented("MVORB with PBE0 requires libxc 5", namespace=namespace)
 #endif
@@ -799,7 +799,7 @@ contains
 
     parameters(1) =  -CNST(0.012) + CNST(1.023)*sqrt(dmf_integrate(der%mesh, gnon)/der%mesh%sb%rcell_volume)
 
-    call XC_F90(func_set_ext_params)(functl(1)%conf, parameters)
+    call xc_f03_func_set_ext_params(functl(1)%conf, parameters)
 
     SAFE_DEALLOCATE_A(gnon)
 
