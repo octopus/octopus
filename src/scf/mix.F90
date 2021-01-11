@@ -98,9 +98,6 @@ module mix_oct_m
 
     FLOAT :: coeff              !< the mixing coefficient (in linear mixing: vnew = (1-coeff)*vin + coeff*vout)
 
-    FLOAT :: dgamma             !< The gamma coefficient of the Broyden mixing scheme
-    CMPLX :: zgamma             !< which is stored here for possible auxiliarry mixfields
-
     integer :: iter             !< number of SCF iterations already done. In case of restart, this number must
                                 !< include the iterations done in previous calculations.
 
