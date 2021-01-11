@@ -455,6 +455,7 @@ subroutine X(eigensolver_cg) (namespace, gr, st, hm, xc, pre, tol, niter, conver
   SAFE_DEALLOCATE_A(h_psi)
   SAFE_DEALLOCATE_A(sd)
   SAFE_DEALLOCATE_A(sd_precond)
+  SAFE_DEALLOCATE_A(sd_previous)
   SAFE_DEALLOCATE_A(cg)
   SAFE_DEALLOCATE_A(h_cg)
   SAFE_DEALLOCATE_A(chi)
