@@ -174,7 +174,6 @@ module hamiltonian_elec_oct_m
     logical, public :: time_zero
 
     type(exchange_operator_t), public :: exxop
-    type(namespace_t), pointer :: namespace
 
     type(partner_list_t) :: external_potentials  !< List with all the external potentials
     FLOAT, allocatable, public  :: v_ext_pot(:)  !< the potential comming from external potentials
@@ -207,7 +206,7 @@ contains
   ! ---------------------------------------------------------
   subroutine hamiltonian_elec_init(hm, namespace, gr, geo, st, theory_level, xc, mc, need_exchange)
     type(hamiltonian_elec_t),                   intent(out)   :: hm
-    type(namespace_t),                  target, intent(in)    :: namespace
+    type(namespace_t),                          intent(in)    :: namespace
     type(grid_t),                       target, intent(inout) :: gr
     type(geometry_t),                   target, intent(inout) :: geo
     type(states_elec_t),                target, intent(inout) :: st
@@ -231,8 +230,6 @@ contains
     ! make a couple of local copies
     hm%theory_level = theory_level
     call states_elec_dim_copy(hm%d, st%d)
-
-    hm%namespace => namespace
 
     !%Variable ParticleMass
     !%Type float
@@ -847,8 +844,6 @@ contains
 
     SAFE_DEALLOCATE_P(hm%energy)
 
-    nullify(hm%namespace)
-     
     if (hm%pcm%run_pcm) call pcm_end(hm%pcm)
 
     call iter%start(hm%external_potentials)
