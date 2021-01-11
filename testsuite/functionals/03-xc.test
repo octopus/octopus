@@ -19,19 +19,11 @@ match ; lda_x Eigenvalue dn                    ; GREPFIELD(static/info, '  1   d
 match ; lda_x Exchange                         ; GREPFIELD(static/info, 'Exchange    =', 3) ; -0.27231872
 match ; lda_x Int[n*v_xc]                      ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -0.36309178
 
-if (available libxc4); then
-   Input: 03-xc.lda_c_wigner.inp
-   match ; lda_c_wigner Eigenvalue up (libxc4)    ; GREPFIELD(static/info, '  1   up', 3)      ; -0.538328
-   match ; lda_c_wigner Eigenvalue dn (libxc4)    ; GREPFIELD(static/info, '  1   dn', 3)      ; -0.663081
-   match ; lda_c_wigner Correlation   (libxc4)    ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.02734082
-   match ; lda_c_wigner Int[n*v_xc]   (libxc4)    ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -0.02931811
-else
-   Input: 03-xc.lda_c_wigner.inp
-   match ; lda_c_wigner Eigenvalue up (libxc5)    ; GREPFIELD(static/info, '  1   up', 3)      ; -0.538328
-   match ; lda_c_wigner Eigenvalue dn (libxc5)    ; GREPFIELD(static/info, '  1   dn', 3)      ; -0.663081
-   match ; lda_c_wigner Correlation   (libxc5)    ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.02734082
-   match ; lda_c_wigner Int[n*v_xc]   (libxc5)    ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -0.02931811
-endif
+Input: 03-xc.lda_c_wigner.inp
+match ; lda_c_wigner Eigenvalue up             ; GREPFIELD(static/info, '  1   up', 3)      ; -0.538328
+match ; lda_c_wigner Eigenvalue dn             ; GREPFIELD(static/info, '  1   dn', 3)      ; -0.663081
+match ; lda_c_wigner Correlation               ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.02734082
+match ; lda_c_wigner Int[n*v_xc]               ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -0.02931811
 
 Input: 03-xc.lda_c_rpa.inp
 match ; lda_c_rpa Eigenvalue up                ; GREPFIELD(static/info, '  1   up', 3)      ; -0.585214
@@ -304,17 +296,18 @@ match ; gga_c_xpbe Correlation                 ; GREPFIELD(static/info, 'Correla
 match ; gga_c_xpbe Int[n*v_xc]                 ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -0.02022460
 
 Input: 03-xc.gga_c_lm.inp
-if (available libxc4); then
+if (available libxc5); then
+    match ; gga_c_lm Eigenvalue up (libxc5)        ; GREPFIELD(static/info, '  1   up', 3)      ; -0.590285
+    match ; gga_c_lm Eigenvalue dn (libxc5)        ; GREPFIELD(static/info, '  1   dn', 3)      ; -0.650397
+    match ; gga_c_lm Correlation   (libxc5)        ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.07244175
+    match ; gga_c_lm Int[n*v_xc]   (libxc5)        ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -0.06834732
+else
     match ; gga_c_lm Eigenvalue up (libxc4)        ; GREPFIELD(static/info, '  1   up', 3)      ; -0.598427
     match ; gga_c_lm Eigenvalue dn (libxc4)        ; GREPFIELD(static/info, '  1   dn', 3)      ; -0.664505
     match ; gga_c_lm Correlation   (libxc4)        ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.08293354
     match ; gga_c_lm Int[n*v_xc]   (libxc4)        ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -0.07768182
-else
-    match ; gga_c_lm Eigenvalue up (libxc5)        ; GREPFIELD(static/info, '  1   up', 3)      ; -0.598427
-    match ; gga_c_lm Eigenvalue dn (libxc5)        ; GREPFIELD(static/info, '  1   dn', 3)      ; -0.664505
-    match ; gga_c_lm Correlation   (libxc5)        ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.08293354
-    match ; gga_c_lm Int[n*v_xc]   (libxc5)        ; GREPFIELD(static/info, 'Int\[n\*v_xc\] =', 3) ; -0.07768182
 endif
+
 
 Input: 03-xc.gga_c_pbe_jrgx.inp
 match ; gga_c_pbe_jrgx Eigenvalue up           ; GREPFIELD(static/info, '  1   up', 3)      ; -0.550659
