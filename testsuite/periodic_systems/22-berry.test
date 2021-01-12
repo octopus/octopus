@@ -3,7 +3,7 @@
 Test       : Berry-phase test
 Program    : octopus
 TestGroups : long-run, periodic_systems, symmetries
-Enabled    : Yes
+Enabled    : No
 Input      : 22-berry.01-cubic_Si.inp
 
 match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 1
