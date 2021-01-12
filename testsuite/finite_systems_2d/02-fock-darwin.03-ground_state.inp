@@ -101,10 +101,6 @@ SpinComponents = spinors
 
 TheoryLevel = independent_particles
 
-EigenSolver = cg
-EigenSolverTolerance = 1e-6
-EigenSolverMaxIter = 25
-
 Output = wfs
 OutputFormat = axis_x
 

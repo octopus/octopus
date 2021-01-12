@@ -33,12 +33,8 @@ DerivativesOrder = 1
 
 XCFunctional = no
 
-EigenSolverMaxIter = 50
 
 PoissonSolver = fft
-
-
-
 
 MixField = density
 StatesPack = yes

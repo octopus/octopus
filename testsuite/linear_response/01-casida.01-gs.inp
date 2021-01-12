@@ -23,16 +23,12 @@ Spacing = 0.36
 XCFunctional = lda_x + lda_c_vwn
 
 ConvRelDens = 1e-9
+EigenSolverTolerance = 1e-9
 
 LCAODimension = 18
 LCAOMaximumOrbitalRadius = 50
-
-EigenSolver = cg_new
-EigenSolverTolerance = 1e-6
-EigenSolverMaxIter = 20
 
 PoissonSolver = fft
 PoissonFFTKernel = multipole_correction
 MixField = density
 StatesPack = yes
-LCAOStart = lcao_full

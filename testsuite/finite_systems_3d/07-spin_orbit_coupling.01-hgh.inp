@@ -20,9 +20,6 @@ ExcessCharge = 1
 SpinComponents = non_collinear
 RelativisticCorrection = spin_orbit
 
-EigenSolverTolerance = 1e-10
-EigenSolverMaxIter = 20
-
 GuessMagnetDensity = user_defined
 %AtomsMagnetDirection
  0.0 | 0.0 | 1.0 

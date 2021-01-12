@@ -18,9 +18,6 @@ acell = 10
 %
 spacing = 0.2
 
-ConvRelDens = 2e-12
-ConvAbsEv = 1e-16
-Eigensolver = cg_new
 EigensolverTolerance = 1e-9
 EigensolverMaxIter = 50
 ConvEigenError = yes

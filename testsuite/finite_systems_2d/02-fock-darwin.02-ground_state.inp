@@ -22,8 +22,4 @@ SpinComponents = spinors
 
 TheoryLevel = independent_particles
 
-EigenSolver = cg
-EigenSolverTolerance = 1e-6
-#EigenSolverMaxIter = 250
-
 RashbaSpinOrbitCoupling = 0.01

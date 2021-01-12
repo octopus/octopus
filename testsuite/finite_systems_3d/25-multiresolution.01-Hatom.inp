@@ -16,9 +16,6 @@ fromScratch = yes
 
 TheoryLevel = independent_particles
 
-EigenSolverMaxIter = 300
-
-EigenSolver = cg_new
 
 %MultiResolutionArea
   0.0 |  0.0 |  0.0 | 2.40

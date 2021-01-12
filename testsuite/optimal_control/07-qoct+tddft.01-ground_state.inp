@@ -23,7 +23,6 @@ DerivativesOrder = 4
 # GS RUN Parameters
 # ------------------
 
-EigenSolver = cg_new
 EigenSolverTolerance = 1e-8
 MixingScheme = broyden
 Mixing = 0.5
