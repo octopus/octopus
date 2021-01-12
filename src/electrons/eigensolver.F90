@@ -186,7 +186,7 @@ contains
     call messages_obsolete_variable(namespace, 'EigensolverVerbose')
     call messages_obsolete_variable(namespace, 'EigensolverSubspaceDiag', 'SubspaceDiagonalization')
 
-    default_iter = 25
+    default_iter = 20
     default_tol = CNST(1e-7)
 
     select case(eigens%es_type)
