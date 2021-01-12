@@ -39,7 +39,8 @@ subroutine X(eigensolver_cg) (namespace, gr, st, hm, xc, pre, tol, niter, conver
   R_TYPE, allocatable :: h_psi(:,:), sd(:,:), sd_precond(:,:), cg(:,:), h_cg(:,:)
   R_TYPE, allocatable :: psi(:, :), psi2(:, :), sd_previous(:,:), psi_j(:,:)
   R_TYPE   :: sd_product, sd_product_previous, sd_product_mixed, gamma, overlap, dot
-  FLOAT    :: es(2), cg_norm, e0, res, alpha, beta, theta, old_energy, lam, lam_conj, cg_phi, sd_norm
+  FLOAT    :: es(2), cg_norm, e0, alpha, beta, theta, old_energy, lam, lam_conj, cg_phi, sd_norm
+  FLOAT    :: residue, residue_initial, residue_previous
   FLOAT    :: stheta, stheta2, ctheta, ctheta2
   FLOAT, allocatable :: chi(:, :), omega(:, :), fxc(:, :, :), lam_sym(:)
   FLOAT    :: integral_hartree, integral_xc, tmp
@@ -48,6 +49,7 @@ subroutine X(eigensolver_cg) (namespace, gr, st, hm, xc, pre, tol, niter, conver
   FLOAT    :: a0, b0, dsb(3)
   logical  :: fold_ ! use folded spectrum operator (H-shift)^2
   logical  :: add_xc_term
+  logical  :: small_residual_change
   type(states_elec_group_t) :: hpsi_j
 
   PUSH_SUB(X(eigensolver_cg))
@@ -159,6 +161,7 @@ subroutine X(eigensolver_cg) (namespace, gr, st, hm, xc, pre, tol, niter, conver
     st%eigenval(ist, ik) = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, psi, h_psi))
     old_energy = st%eigenval(ist, ik)
 
+    small_residual_change = .false.
     ! Starts iteration for this band
     iter_loop: do iter = 1, maxter
       ! need to save sd from previous iteration for Polak-Ribiere method
@@ -213,9 +216,9 @@ subroutine X(eigensolver_cg) (namespace, gr, st, hm, xc, pre, tol, niter, conver
       end if
 
       ! PTA92, eq. 5.12
-      ! Orthogonalize to all states
-      call X(states_elec_orthogonalize_single_batch)(st, gr%mesh, ist - 1, ik, sd, normalize = .false., &
-          against_all=orthogonalize_to_all)
+      ! Orthogonalize to all states -> seems not to be needed
+      !call X(states_elec_orthogonalize_single_batch)(st, gr%mesh, ist - 1, ik, sd, normalize = .false., &
+      !    against_all=orthogonalize_to_all)
       sd_norm = X(mf_nrm2) (gr%mesh, st%d%dim, sd)
       if(sd_norm /= M_ZERO) then
         do idim = 1, st%d%dim
@@ -401,7 +404,7 @@ subroutine X(eigensolver_cg) (namespace, gr, st, hm, xc, pre, tol, niter, conver
       call profiling_count_operations(st%d%dim*gr%mesh%np*(2*R_ADD + 4*R_MUL))
 
       st%eigenval(ist, ik) = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, psi, h_psi))
-      res = X(states_elec_residue)(gr%mesh, st%d%dim, h_psi, st%eigenval(ist, ik), psi)
+      residue = X(states_elec_residue)(gr%mesh, st%d%dim, h_psi, st%eigenval(ist, ik), psi)
 
       if (hm%theory_level == RDMFT) then
         do idim = 1, st%d%dim
@@ -413,24 +416,41 @@ subroutine X(eigensolver_cg) (namespace, gr, st, hm, xc, pre, tol, niter, conver
         write(message(1), '(a,i4,a,i4,a,i4,a,i4,a,es12.5,a,2es12.5)') 'Debug: CG Eigensolver - ik', ik, ' ist ', ist, &
              ' iter ', iter, ' max ', maxter, &
              ' deltae ', abs(st%eigenval(ist, ik) - old_energy)/old_energy, &
-             ' residue ', res
+             ' residue ', residue
         call messages_info(1)
       end if
 
       old_energy = st%eigenval(ist, ik)
 
       ! Test convergence of residual
-      if(res < tol .or. abs(sd_product_previous) < M_EPSILON) then
+      if(residue < tol .or. abs(sd_product_previous) < M_EPSILON) then
         if(converged == ist - 1) converged = ist ! only consider the first converged eigenvectors
         exit iter_loop
       end if
+      ! some early exit conditions if we are far away from the tolerance
+      if (iter > 1 .and. residue > 5*tol) then
+        ! exit loop if residue is much smaller than initial residue
+        if (residue/residue_initial < 0.3) exit iter_loop
+        ! exit loop if change in residue is small
+        if (abs(residue-residue_previous)/residue_previous < 0.3) then
+          if (small_residual_change) then
+            exit iter_loop
+          else
+            small_residual_change = .true.
+          end if
+        else
+          small_residual_change = .false.
+        end if
+      end if
+      residue_previous = residue
+      if (iter == 1) residue_initial = residue
     end do iter_loop
 
     ! if the folded operator was used, compute the actual eigenvalue
     if(fold_) then
       call X(hamiltonian_elec_apply_single)(hm, namespace, gr%mesh, psi, h_psi, ist, ik)
       st%eigenval(ist, ik) = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, psi, h_psi, reduce = .true.))
-      res = X(states_elec_residue)(gr%mesh, st%d%dim, h_psi, st%eigenval(ist, ik), psi)
+      residue = X(states_elec_residue)(gr%mesh, st%d%dim, h_psi, st%eigenval(ist, ik), psi)
     end if
 
     if (.not. orthogonalize_to_all) then
@@ -442,7 +462,7 @@ subroutine X(eigensolver_cg) (namespace, gr, st, hm, xc, pre, tol, niter, conver
 
     niter = niter + iter + 1
 
-    diff(ist) = res
+    diff(ist) = residue
 
     if(mpi_grp_is_root(mpi_world) .and. .not. debug%info) then
       call loct_progress_bar(st%lnst*(ik - 1) +  ist, st%lnst*st%d%kpt%nlocal)
