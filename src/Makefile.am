@@ -576,7 +576,8 @@ noinst_HEADERS +=                                  \
 	electrons/xc_oep_qed_inc.F90               \
 	electrons/xc_oep_sic_inc.F90               \
 	electrons/xc_oep_x_inc.F90                 \
-        electrons/xc_slater_inc.F90
+        electrons/xc_slater_inc.F90                \
+        electrons/x_fbe_inc.F90
 
 # Sources in maxwell
 maxwell_f_srcs =                                 \
