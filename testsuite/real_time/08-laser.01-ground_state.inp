@@ -17,10 +17,6 @@ Spacing = 0.3/0.529177
 ExcessCharge = 1
 TheoryLevel = independent_particles
 
-ConvRelDens = 5.0e-4
-
-EigenSolverTolerance = 1e-7
-EigenSolverMaxIter = 200
 
 FilterPotentials = filter_none
 

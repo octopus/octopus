@@ -1,4 +1,5 @@
 # -*- coding: utf-8 mode: shell-script -*-
+Debug = trace
 
 %Coordinates
  'H_f' | 0 | 0 | 0
@@ -14,5 +15,10 @@ Spacing = 0.4
 fromScratch = yes
 
 TheoryLevel = independent_particles
+
+ConvRelDens = 1e-10
+EigensolverTolerance = 1e-11
+
+PoissonSolver=cg_corrected
 
 StatesPack = yes

@@ -34,11 +34,8 @@ DerivativesOrder = 1
 
 XCFunctional = lda_x_2d + lda_c_2d_amgb
 
-EigenSolverMaxIter = 50
 
 PoissonSolver = fft
-
-
 
 
 MixField = density

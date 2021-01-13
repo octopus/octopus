@@ -40,10 +40,7 @@ ConvRelDens = 1e-6
 EigenSolverTolerance = 1e-7
 
 LinearSolver = cg
-Preconditioner = no
 LRMaximumIter = 20
-
-MixingScheme = linear
 
 ExperimentalFeatures = yes
 StatesPack = yes

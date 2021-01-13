@@ -22,11 +22,6 @@ ExcessCharge = 1
 SpinComponents = non_collinear
 RelativisticCorrection = spin_orbit
 
-MaximumIter = 2
-
-EigenSolverTolerance = 1e-5
-EigenSolverMaxIter = 2000
-
 GuessMagnetDensity = user_defined
 %AtomsMagnetDirection
  0.0 | 0.0 | 1.0 
@@ -35,5 +30,3 @@ GuessMagnetDensity = user_defined
 
 ExperimentalFeatures = yes
 StatesPack = yes
-LCAOStart = lcao_full
-

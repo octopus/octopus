@@ -11,6 +11,7 @@ FromScratch = yes
 
 ExtraStates = 1
 SpinComponents = polarized
+ConvEigenError = yes
 
 StatesPack = yes
 

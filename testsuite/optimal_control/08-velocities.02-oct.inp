@@ -50,9 +50,10 @@ a = 0.758
 
 SCFCalculateForces = yes
 
-EigenSolver = cg_new
-EigenSolverTolerance = 1.0e-9
+EigenSolver = cg
+EigenSolverTolerance = 1.0e-13
 ConvRelDens = 1.0e-12
+Debug = trace
 
 Mixing = 1.0
 MixingScheme = linear

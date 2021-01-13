@@ -25,6 +25,9 @@ Output = current
 OutputFormat = axis_z
 
 ConvRelDens = 1e-6
+EigensolverTolerance = 1e-7
+ConvEigenError = yes
+MaximumIter = 400
 StatesPack = yes
 
 SCFCalculateForces = no

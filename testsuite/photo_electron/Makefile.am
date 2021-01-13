@@ -38,6 +38,24 @@ dist_share_DATA =                        \
           05-pfft.03-ba.inp              \
           06-2D.test                     \
           06-2D.01-Na_gs.inp             \
-          06-2D.02-Na_few_cy.inp         
+          06-2D.02-Na_few_cy.inp         \
+          07-flux_1d.01-h1d_lin.inp      \
+          07-flux_1d.02-h1d_ati.inp      \
+          07-flux_1d.test                \
+          09-flux_3d.01-Na_gs_sph.inp    \
+          09-flux_3d.02-Na_td_sph.inp    \
+          09-flux_3d.03-Na_gs_cub.inp    \
+          09-flux_3d.04-Na_td_cub.inp    \
+          09-flux_3d.test                \
+          10-spm_1d.h1d_lin.inp          \
+          10-spm_1d.test                 \
+          12-spm_3d.01-Na_gs.inp         \
+          12-spm_3d.02-Na_td.inp         \
+          12-spm_3d.test                 \
+          13-arpes_2d.01-gs.inp          \
+          13-arpes_2d.02-td.inp          \
+          13-arpes_2d.03-restart.inp     \
+          13-arpes_2d.04-spectrum.inp    \
+          13-arpes_2d.test
 
 CLEANFILES = *~ *.bak

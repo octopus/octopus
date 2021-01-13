@@ -28,7 +28,11 @@ Spacing = a/14
  1 | 0 | 0
 %
 
-#ExtraStates = 1
+
+ExtraStates = 1
+
 EigensolverMaxIter = 50
+MaximumIterBerry = 10
+
 MixingRestart = 0
 MixNumberSteps = 3

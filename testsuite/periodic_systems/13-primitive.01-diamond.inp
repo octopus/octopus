@@ -28,6 +28,7 @@ Spacing = 0.4
 ExtraStates = 4
 ConvRelDens = 1e-7
 EigensolverTolerance = 1e-8
+ConvEigenError = yes
 
 Output = matrix_elements
 OutputMatrixElements = dipole
@@ -133,4 +134,3 @@ OutputMEEnd = 7
 0.000000 | 0.500000 | 0.000000 | 0.500000 
 %
 StatesPack = yes
-LCAOStart = lcao_full

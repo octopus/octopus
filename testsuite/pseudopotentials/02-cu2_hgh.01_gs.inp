@@ -18,6 +18,8 @@ Smearing = 0.1 * eV
 SmearingFunction = fermi_dirac
 
 ConvRelDens = 1e-6
+EigensolverTolerance = 1e-7
+ConvEigenError = yes
 StatesPack = yes
 
 SCFCalculateForces = yes

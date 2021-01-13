@@ -35,9 +35,7 @@ DressedOrbitals = yes
 
 Extrastates = 5
 
-Eigensolver = cg_new
-EigensolverTolerance = 1e-14
-EigensolverMaxIter = 300
-
 ConvRelDens = 1e-13
+EigensolverTolerance = 1e-14
+
 StatesPack = yes

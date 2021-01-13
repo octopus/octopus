@@ -14,12 +14,7 @@ BoxShape = parallelepiped
 
 Spacing = 0.45
 
-EigenSolver = rmmdiis
-
-TotalStates = 128
-
 SCFCalculatePartialCharges = yes
 
 ExperimentalFeatures = yes
 StatesPack = yes
-LCAOStart = lcao_full

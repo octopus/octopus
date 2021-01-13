@@ -21,14 +21,11 @@ Spacing = 0.36
 XCFunctional = lda_x + lda_c_vwn
 
 ConvRelDens = 1e-9
+EigenSolverTolerance = 1e-9
+EigenSolverMaxIter = 30
 
 LCAODimension = 18
-LCAOStart = lcao_full
 
-EigenSolver = cg_new
-EigenSolverTolerance = 1e-6
-
-EigenSolverMaxIter = 20
 
 MaximumIter = 1
 ExtraStates = 9

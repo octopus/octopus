@@ -34,7 +34,7 @@ MixField = potential
 ConvAbsEv = 5e-7
 ConvAbsDens = 5e-7
 EigenSolverTolerance = 5e-8
-EigensolverMaxIter = 100
+EigensolverMaxIter = 50
 CGEnergyChangeThreshold = 1e-4
 
 LinearSolver = cg

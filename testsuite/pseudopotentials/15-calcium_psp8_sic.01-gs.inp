@@ -15,7 +15,10 @@ ExperimentalFeatures = yes
 Radius = 5.0
 Spacing = 0.3
 
-Debug = info
+Eigensolver = plan
+ConvRelDens = 1e-9
+EigensolverTolerance = 1e-10
+EigensolverMaxIter = 50
 
 FromScratch = yes
 
