@@ -122,6 +122,7 @@ module scf_oct_m
     logical :: forced_finish !< remember if 'touch stop' was triggered earlier.
     type(lda_u_mixer_t) :: lda_u_mix
     type(berry_t) :: berry
+    integer :: matvec !< number matrix-vector products
   end type scf_t
 
 contains
@@ -721,6 +722,8 @@ contains
     end if
     converged_current = .false.
 
+    scf%matvec = 0
+
     ! SCF cycle
     itime = loct_clock()
     
@@ -761,6 +764,8 @@ contains
           call eigensolver_run(scf%eigens, namespace, gr, st, hm, iter)
         end if
       end if
+
+      scf%matvec = scf%matvec + scf%eigens%matvec
 
       ! occupations
       call states_elec_fermi(st, namespace, gr%mesh)
@@ -1025,6 +1030,9 @@ contains
       write(message(1), '(a,i4,a)') 'SCF *not* converged after ', iter - 1, ' iterations.'
       call messages_warning(1)
     end if
+
+    write(message(1), '(a,i10)') 'Info: Number of matrix-vector products: ', scf%matvec
+    call messages_info(1)
 
     ! calculate forces
     if(scf%calc_force) then
