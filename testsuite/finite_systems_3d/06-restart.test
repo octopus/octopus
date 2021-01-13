@@ -19,8 +19,8 @@ match ; Eigenvalue [dn] ; GREPFIELD(workdir/static/info, '1   dn', 3) ; -0.09933
 # Now restart the previous calculation reading the states, the density, and the mixing
 Input: 06-restart.02-restart_gs_mixrho.inp
 match ; SCF convergence ; GREPCOUNT(workdir/static/info, 'SCF \*not\* converged') ; 1
-match ; Eigenvalue [up] ; GREPFIELD(workdir/static/info, '1   up', 3) ; -0.014391
-match ; Eigenvalue [dn] ; GREPFIELD(workdir/static/info, '1   dn', 3) ; -0.085669
+match ;  Eigenvalue [up]  ; GREPFIELD(workdir/static/info, '1   up', 3) ; -0.014632
+match ;  Eigenvalue [dn]  ; GREPFIELD(workdir/static/info, '1   dn', 3) ; -0.085835
 
 
 # Start again a ground state calculation, this time using the mixing of the potential
@@ -33,8 +33,8 @@ match ; Eigenvalue [dn] ; GREPFIELD(workdir/static/info, '1   dn', 3) ; -0.09509
 # Now restart the previous calculation reading the states, the potential, and the mixing
 Input: 06-restart.04-restart_gs_mixvhxc.inp
 match ; SCF convergence ; GREPCOUNT(workdir/static/info, 'SCF \*not\* converged') ; 1
-match ; Eigenvalue [up] ; GREPFIELD(workdir/static/info, '1   up', 3) ; -0.014131
-match ; Eigenvalue [dn] ; GREPFIELD(workdir/static/info, '1   dn', 3) ; -0.085382
+match ;  Eigenvalue [up]  ; GREPFIELD(workdir/static/info, '1   up', 3) ; -0.014278
+match ;  Eigenvalue [dn]  ; GREPFIELD(workdir/static/info, '1   dn', 3) ; -0.085491
 
 
 # Restart the previous calculation reading only the states

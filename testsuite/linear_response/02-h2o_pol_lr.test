@@ -18,7 +18,7 @@ match ; Polarizability ZZ w=0.0    ; LINEFIELD(em_resp/freq_0.0000/alpha, 4, 3) 
 
 match ; Polarizability XX w=0.1    ; LINEFIELD(em_resp/freq_0.1000/alpha, 2, 1) ; 15.943344
 match ; Polarizability YY w=0.1    ; LINEFIELD(em_resp/freq_0.1000/alpha, 3, 2) ; 12.856808
-match ; Polarizability ZZ w=0.1    ; LINEFIELD(em_resp/freq_0.1000/alpha, 4, 3) ; 29.766976
+match ; Polarizability ZZ w=0.1    ; LINEFIELD(em_resp/freq_0.1000/alpha, 4, 3) ; 29.7670835
 
 match ; Born charge O  XX w=0.0    ; LINEFIELD(em_resp/freq_0.0000/Born_charges, 3, 1) ; -0.151322
 match ; Born charge O  YY w=0.0    ; LINEFIELD(em_resp/freq_0.0000/Born_charges, 4, 2) ; -0.349310

@@ -116,5 +116,4 @@ Program : oct-convert
 Input : 05-output.03-convert-op.inp
 Precision: 3e-09
 match ; Convert to dx (line 513)   ; LINEFIELD(convert/density.dx, 671, 1) ; 0.000244202526628
-Precision: 2e-09
-match ; Convert to dx (line 29355) ; LINEFIELD(convert/density.dx, 9048, 1) ; 7.281647378e-06
+match ; Convert to dx (line 29355) ; LINEFIELD(convert/density.dx, 9048, 1) ; 7.279592822e-06
