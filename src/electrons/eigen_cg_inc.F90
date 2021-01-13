@@ -41,6 +41,7 @@ subroutine X(eigensolver_cg) (namespace, gr, st, hm, xc, pre, tol, niter, conver
   R_TYPE   :: sd_product, sd_product_previous, sd_product_mixed, gamma, overlap, dot
   FLOAT    :: es(2), cg_norm, e0, alpha, beta, theta, old_energy, lam, lam_conj, cg_phi, sd_norm
   FLOAT    :: residue, residue_initial, residue_previous
+  FLOAT    :: delta_e, first_delta_e
   FLOAT    :: stheta, stheta2, ctheta, ctheta2
   FLOAT, allocatable :: chi(:, :), omega(:, :), fxc(:, :, :), lam_sym(:)
   FLOAT    :: integral_hartree, integral_xc, tmp
@@ -142,6 +143,9 @@ subroutine X(eigensolver_cg) (namespace, gr, st, hm, xc, pre, tol, niter, conver
     sd_product_mixed   = R_TOTYPE(M_ZERO)
 
     call states_elec_get_state(st, gr%mesh, ist, ik, psi)
+    ! Orthogonalize starting eigenfunctions to those already calculated...
+    if(ist > 1) call X(states_elec_orthogonalize_single)(st, gr%mesh, ist - 1, ik, psi, normalize = .true.)
+    !if (ist > 1) call X(states_elec_orthogonalize_single_batch)(st, gr%mesh, ist - 1, ik, psi, normalize = .true.)
 
     ! Calculate starting gradient: |hpsi> = H|psi>
     call X(hamiltonian_elec_apply_single)(hm, namespace, gr%mesh, psi, h_psi, ist, ik)
@@ -219,12 +223,12 @@ subroutine X(eigensolver_cg) (namespace, gr, st, hm, xc, pre, tol, niter, conver
       ! Orthogonalize to all states -> seems not to be needed
       !call X(states_elec_orthogonalize_single_batch)(st, gr%mesh, ist - 1, ik, sd, normalize = .false., &
       !    against_all=orthogonalize_to_all)
-      sd_norm = X(mf_nrm2) (gr%mesh, st%d%dim, sd)
-      if(sd_norm /= M_ZERO) then
-        do idim = 1, st%d%dim
-          call lalg_scal(gr%mesh%np, M_ONE/sd_norm, sd(1:gr%mesh%np, idim))
-        end do
-      end if
+      !sd_norm = X(mf_nrm2) (gr%mesh, st%d%dim, sd)
+      !if(sd_norm /= M_ZERO) then
+      !  do idim = 1, st%d%dim
+      !    call lalg_scal(gr%mesh%np, M_ONE/sd_norm, sd(1:gr%mesh%np, idim))
+      !  end do
+      !end if
 
       ! PTA92, eq. 5.17
       ! Approximate inverse preconditioner
@@ -405,6 +409,8 @@ subroutine X(eigensolver_cg) (namespace, gr, st, hm, xc, pre, tol, niter, conver
 
       st%eigenval(ist, ik) = R_REAL(X(mf_dotp) (gr%mesh, st%d%dim, psi, h_psi))
       residue = X(states_elec_residue)(gr%mesh, st%d%dim, h_psi, st%eigenval(ist, ik), psi)
+      delta_e = st%eigenval(ist, ik) - old_energy
+      if(iter == 1) first_delta_e = delta_e
 
       if (hm%theory_level == RDMFT) then
         do idim = 1, st%d%dim
@@ -429,10 +435,12 @@ subroutine X(eigensolver_cg) (namespace, gr, st, hm, xc, pre, tol, niter, conver
       end if
       ! some early exit conditions if we are far away from the tolerance
       if (iter > 1 .and. residue > 5*tol) then
+        ! exit if change in energy is too small
+        if (abs(delta_e/first_delta_e) < 0.3) exit iter_loop
         ! exit loop if residue is much smaller than initial residue
         if (residue/residue_initial < 0.3) exit iter_loop
         ! exit loop if change in residue is small
-        if (abs(residue-residue_previous)/residue_previous < 0.3) then
+        if (abs(residue-residue_previous)/residue_previous < 0.1) then
           if (small_residual_change) then
             exit iter_loop
           else
@@ -441,6 +449,10 @@ subroutine X(eigensolver_cg) (namespace, gr, st, hm, xc, pre, tol, niter, conver
         else
           small_residual_change = .false.
         end if
+      end if
+      ! only smaller change of energy if nearer to tolerance
+      if (iter > 1 .and. residue > 2*tol) then
+        if (abs(delta_e/first_delta_e) < 0.1) exit iter_loop
       end if
       residue_previous = residue
       if (iter == 1) residue_initial = residue
