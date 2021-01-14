@@ -47,7 +47,7 @@ module xc_oep_oct_m
   use scf_tol_oct_m
   use varinfo_oct_m
   use xc_oct_m
-  use XC_F90(lib_m)
+  use xc_f03_lib_m
   use xc_functl_oct_m
 
   implicit none

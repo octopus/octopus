@@ -71,7 +71,7 @@ module hamiltonian_elec_oct_m
   use unit_system_oct_m
   use wfs_elec_oct_m
   use xc_oct_m
-  use XC_F90(lib_m)
+  use xc_f03_lib_m
 
   implicit none
 

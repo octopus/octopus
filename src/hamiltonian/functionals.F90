@@ -24,7 +24,7 @@ module xc_functl_oct_m
   use messages_oct_m
   use namespace_oct_m
   use parser_oct_m
-  use XC_F90(lib_m)
+  use xc_f03_lib_m
 
   implicit none
 
@@ -71,9 +71,9 @@ module xc_functl_oct_m
     integer         :: spin_channels     !< XC_UNPOLARIZED | XC_POLARIZED
     integer         :: flags             !< XC_FLAGS_HAVE_EXC + XC_FLAGS_HAVE_VXC + ...
 
-    type(XC_F90(func_t))               :: conf         !< the pointer used to call the library
-    type(XC_F90(func_info_t)), private :: info         !< information about the functional
-    type(libvdwxc_t)                   :: libvdwxc     !< libvdwxc data for van der Waals functionals
+    type(xc_f03_func_t)               :: conf         !< the pointer used to call the library
+    type(xc_f03_func_info_t), private :: info         !< information about the functional
+    type(libvdwxc_t)                  :: libvdwxc     !< libvdwxc data for van der Waals functionals
   end type xc_functl_t
 
 contains
@@ -119,7 +119,7 @@ contains
       functl%family = XC_FAMILY_NONE
     else
       ! get the family of the functional
-      functl%family = XC_F90(family_from_id)(functl%id)
+      functl%family = xc_f03_family_from_id(functl%id)
       ! this also ensures it is actually a functional defined by the linked version of libxc
 
       if(functl%family == XC_FAMILY_UNKNOWN) then
@@ -159,10 +159,10 @@ contains
       functl%type = XC_EXCHANGE_CORRELATION
 
     else if(functl%family == XC_FAMILY_LIBVDWXC) then
-      call XC_F90(func_init)(functl%conf, XC_LDA_C_PW, spin_channels)
-      functl%info = XC_F90(func_get_info(functl%conf))
-      functl%type = XC_F90(func_info_get_kind)(functl%info)
-      functl%flags = XC_F90(func_info_get_flags)(functl%info)
+      call xc_f03_func_init(functl%conf, XC_LDA_C_PW, spin_channels)
+      functl%info = xc_f03_func_get_info(functl%conf)
+      functl%type = xc_f03_func_info_get_kind(functl%info)
+      functl%flags = xc_f03_func_info_get_flags(functl%info)
       ! Convert Octopus code for functional into corresponding libvdwxc code:
       call libvdwxc_init(functl%libvdwxc, namespace, functl%id - XC_VDW_C_VDWDF + 1)
 
@@ -179,17 +179,17 @@ contains
       !For the two MVORB functionals, we initialize libxc with the non-MVORB functionals
       select case(functl%id)
       case(XC_HYB_GGA_XC_MVORB_HSE06)
-        call XC_F90(func_init)(functl%conf, XC_HYB_GGA_XC_HSE06, spin_channels)
+        call xc_f03_func_init(functl%conf, XC_HYB_GGA_XC_HSE06, spin_channels)
 
       case(XC_HYB_GGA_XC_MVORB_PBEH)
-        call XC_F90(func_init)(functl%conf, XC_HYB_GGA_XC_PBEH, spin_channels)
+        call xc_f03_func_init(functl%conf, XC_HYB_GGA_XC_PBEH, spin_channels)
 
       case default
-        call XC_F90(func_init)(functl%conf, functl%id, spin_channels)
+        call xc_f03_func_init(functl%conf, functl%id, spin_channels)
       end select
-      functl%info     = XC_F90(func_get_info(functl%conf))
-      functl%type     = XC_F90(func_info_get_kind)(functl%info)
-      functl%flags    = XC_F90(func_info_get_flags)(functl%info)
+      functl%info     = xc_f03_func_get_info(functl%conf)
+      functl%type     = xc_f03_func_info_get_kind(functl%info)
+      functl%flags    = xc_f03_func_info_get_flags(functl%info)
 
       ! FIXME: no need to say this for kernel
       if(bitand(functl%flags, XC_FLAGS_HAVE_EXC) == 0) then
@@ -254,7 +254,7 @@ contains
       !%End
       call parse_variable(namespace, 'Xalpha', M_ONE, parameters(1))
       
-      call XC_F90(func_set_ext_params)(functl%conf, parameters(1))
+      call xc_f03_func_set_ext_params(functl%conf, parameters(1))
       
       ! FIXME: doesn`t this apply to other 1D functionals?
     case(XC_LDA_X_1D, XC_LDA_C_1D_CSC)
@@ -286,11 +286,11 @@ contains
       call parse_variable(namespace, 'Interaction1DScreening', M_ONE, alpha)
       parameters(1) = TOFLOAT(interact_1d)
       parameters(2) = alpha
-      call XC_F90(func_set_ext_params)(functl%conf, parameters(1))
+      call xc_f03_func_set_ext_params(functl%conf, parameters(1))
       
     case(XC_LDA_C_2D_PRM)
       parameters(1) = nel
-      call XC_F90(func_set_ext_params)(functl%conf, parameters(1))
+      call xc_f03_func_set_ext_params(functl%conf, parameters(1))
 
     case (XC_GGA_X_LB)
       if (parse_is_defined(namespace, 'LB94_modified')) then
@@ -314,7 +314,7 @@ contains
 
     if (functl%family /= XC_FAMILY_NONE .and. functl%family /= XC_FAMILY_OEP .and. &
         functl%family /= XC_FAMILY_KS_INVERSION .and. functl%id /= XC_HALF_HARTREE ) then
-      call XC_F90(func_end)(functl%conf)
+      call xc_f03_func_end(functl%conf)
     end if
 
     if(functl%family == XC_FAMILY_LIBVDWXC) then
@@ -333,7 +333,7 @@ contains
 
     character(len=120) :: family
     integer :: ii
-    type(XC_F90(func_reference_t)) :: ref
+    type(xc_f03_func_reference_t) :: ref
 
     PUSH_SUB(xc_functl_write_info)
 
@@ -386,15 +386,15 @@ contains
       case (XC_FAMILY_HYB_MGGA);  write(family,'(a)') "Hybrid MGGA"
       case (XC_FAMILY_MGGA);      write(family,'(a)') "MGGA"
       end select
-      write(message(2), '(4x,4a)') trim(XC_F90(func_info_get_name)(functl%info)), ' (', trim(family), ')'
+      write(message(2), '(4x,4a)') trim(xc_f03_func_info_get_name(functl%info)), ' (', trim(family), ')'
       call messages_info(2, iunit)
 
       ii = 0
-      ref = XC_F90(func_info_get_references)(functl%info, ii)
+      ref = xc_f03_func_info_get_references(functl%info, ii)
       do while(ii >= 0)
-        write(message(1), '(4x,a,i1,2a)') '[', ii, '] ', trim(XC_F90(func_reference_get_ref)(ref))
+        write(message(1), '(4x,a,i1,2a)') '[', ii, '] ', trim(xc_f03_func_reference_get_ref(ref))
         call messages_info(1, iunit)
-        ref = XC_F90(func_info_get_references)(functl%info, ii)
+        ref = xc_f03_func_info_get_references(functl%info, ii)
       end do
     end if
 

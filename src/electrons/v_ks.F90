@@ -61,7 +61,7 @@ module v_ks_oct_m
   use varinfo_oct_m
   use vdw_ts_oct_m
   use xc_oct_m
-  use XC_F90(lib_m)
+  use xc_f03_lib_m
   use xc_functl_oct_m
   use xc_ks_inversion_oct_m
   use xc_OEP_oct_m

@@ -41,7 +41,7 @@ module xc_oct_m
   use states_elec_oct_m
   use states_elec_dim_oct_m
   use unit_system_oct_m
-  use XC_F90(lib_m)
+  use xc_f03_lib_m
   use xc_functl_oct_m
 
   implicit none
@@ -194,7 +194,7 @@ contains
       ! get the mixing coefficient for hybrids
       if(bitand(xcs%functional(FUNC_C,1)%family, XC_FAMILY_HYB_GGA) /= 0 .or. &
          bitand(xcs%functional(FUNC_C,1)%family, XC_FAMILY_HYB_MGGA) /= 0) then        
-        call XC_F90(hyb_cam_coef)(xcs%functional(FUNC_C,1)%conf, xcs%cam_omega, &
+        call xc_f03_hyb_cam_coef(xcs%functional(FUNC_C,1)%conf, xcs%cam_omega, &
                                      xcs%cam_alpha, xcs%cam_beta)
 
       else
