@@ -241,8 +241,16 @@ subroutine X(xc_oep_solve) (namespace, gr, hm, st, is, vxc, oep)
       end if
 
       ! Sternheimer equation [H-E_i]psi_i = bb_i, where psi_i the orbital shift, see Eq. 21
-      call X(linear_solver_solve_HXeY)(oep%solver, namespace, hm, gr, st, ist, is, oep%lr%X(dl_psi)(:,:, ist, is), bb, &
+      call X(linear_solver_solve_HXeY)(oep%solver, namespace, hm, gr, st, ist, is, &
+           oep%lr%X(dl_psi)(:,:, ist, is), bb, &
            R_TOTYPE(-st%eigenval(ist, is)), oep%scftol%final_tol, residue, iter_used)
+      
+      if(debug%info) then
+        write(message(1),'(a,i3,a,es14.6,a,es14.6,a,i4)') "Debug: OEP - iter ", iter, &
+          " linear solver residual ", residue, " tol ", &
+          oep%scftol%final_tol, " iter_used ", iter_used
+        call messages_info(1)
+      end if
 
       !We project out the occupied bands 
       if (oep%has_photons) then
@@ -316,6 +324,12 @@ subroutine X(xc_oep_solve) (namespace, gr, hm, st, is, vxc, oep)
     end do
 
     ff = dmf_nrm2(gr%mesh, ss)
+
+    if(debug%info) then
+      write(message(1),'(a,i3,a,es14.6,a,i4)') "Debug: OEP - iter ", iter, " residual ", ff, " max ", oep%scftol%max_iter
+      call messages_info(1) 
+    end if
+
     if(ff < oep%scftol%conv_abs_dens) exit
   end do
 
