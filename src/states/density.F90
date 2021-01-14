@@ -827,7 +827,7 @@ contains
 
     integer :: ik, ist
 
-    PUSH_SUB(states_elec_freeze_adjust_occs)
+    PUSH_SUB(states_elec_freeze_adjust_qtot)
 
     ! Change the smearing method by fixing the occupations to  
     ! that of the ground-state such that the unfrozen states inherit 
