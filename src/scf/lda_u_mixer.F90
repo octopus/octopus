@@ -93,7 +93,6 @@ contains
      call mix_add_auxmixfield(smix, mixer%mixfield_U)
      mixer%mixU = .true.
    else
-     call mixfield_nullify(mixer%mixfield_U)
      mixer%mixU = .false.
    end if
 

@@ -564,65 +564,65 @@ R_TYPE function X(mix_dotp)(this, xx, yy, reduce) result(dotp)
   
 end function X(mix_dotp)
 
-  ! --------------------------------------------------------------
-  subroutine X(mixfield_set_vin2)(mixfield, vin)
-    type(mixfield_t),         intent(in) :: mixfield
-    R_TYPE,  intent(in)  :: vin(:, :)
+! --------------------------------------------------------------
+subroutine X(mixfield_set_vin2)(mixfield, vin)
+  type(mixfield_t), intent(inout) :: mixfield
+  R_TYPE,           intent(in)    :: vin(:, :)
 
-    PUSH_SUB(X(mixfield_set_vin2))
+  PUSH_SUB(X(mixfield_set_vin2))
 
-    mixfield%X(vin)(1:mixfield%d1, 1, 1:mixfield%d3) = vin(1:mixfield%d1, 1:mixfield%d3)
+  mixfield%X(vin)(1:mixfield%d1, 1, 1:mixfield%d3) = vin(1:mixfield%d1, 1:mixfield%d3)
 
-    POP_SUB(X(mixfield_set_vin2))
-  end subroutine X(mixfield_set_vin2)
+  POP_SUB(X(mixfield_set_vin2))
+end subroutine X(mixfield_set_vin2)
 
-  ! --------------------------------------------------------------
-  subroutine X(mixfield_set_vin3)(mixfield, vin)
-    type(mixfield_t),         intent(in) :: mixfield
-    R_TYPE,  intent(in)  :: vin(:, :, :)
+! --------------------------------------------------------------
+subroutine X(mixfield_set_vin3)(mixfield, vin)
+  type(mixfield_t), intent(inout) :: mixfield
+  R_TYPE,           intent(in)    :: vin(:, :, :)
 
-    PUSH_SUB(X(mixfield_set_vin3))
+  PUSH_SUB(X(mixfield_set_vin3))
 
-    call lalg_copy(mixfield%d1, mixfield%d2, mixfield%d3, vin(:, :, :), mixfield%X(vin)(:, :, :))
+  call lalg_copy(mixfield%d1, mixfield%d2, mixfield%d3, vin(:, :, :), mixfield%X(vin)(:, :, :))
 
-    POP_SUB(X(mixfield_set_vin3))
-  end subroutine X(mixfield_set_vin3)
+  POP_SUB(X(mixfield_set_vin3))
+end subroutine X(mixfield_set_vin3)
 
-  ! --------------------------------------------------------------
-  subroutine X(mixfield_set_vout2)(mixfield, vout)
-    type(mixfield_t),         intent(inout) :: mixfield
-    R_TYPE,  intent(in)  :: vout(:, :)
+! --------------------------------------------------------------
+subroutine X(mixfield_set_vout2)(mixfield, vout)
+  type(mixfield_t), intent(inout) :: mixfield
+  R_TYPE,           intent(in)    :: vout(:, :)
 
-    PUSH_SUB(X(mixfield_set_vout2))
+  PUSH_SUB(X(mixfield_set_vout2))
 
-    mixfield%X(vout)(1:mixfield%d1, 1, 1:mixfield%d3) = vout(1:mixfield%d1, 1:mixfield%d3)
+  mixfield%X(vout)(1:mixfield%d1, 1, 1:mixfield%d3) = vout(1:mixfield%d1, 1:mixfield%d3)
 
-    POP_SUB(X(mixfield_set_vout2))
-  end subroutine X(mixfield_set_vout2)
+  POP_SUB(X(mixfield_set_vout2))
+end subroutine X(mixfield_set_vout2)
 
-  ! --------------------------------------------------------------
-  subroutine X(mixfield_set_vout3)(mixfield, vout)
-    type(mixfield_t),         intent(inout) :: mixfield
-    R_TYPE,  intent(in)  :: vout(:, :, :)
+! --------------------------------------------------------------
+subroutine X(mixfield_set_vout3)(mixfield, vout)
+  type(mixfield_t), intent(inout) :: mixfield
+  R_TYPE,           intent(in)    :: vout(:, :, :)
 
-    PUSH_SUB(X(mixfield_set_vout3))
+  PUSH_SUB(X(mixfield_set_vout3))
 
-    call lalg_copy(mixfield%d1, mixfield%d2, mixfield%d3, vout(:, :, :), mixfield%X(vout)(:, :, :))
+  call lalg_copy(mixfield%d1, mixfield%d2, mixfield%d3, vout(:, :, :), mixfield%X(vout)(:, :, :))
 
-    POP_SUB(X(mixfield_set_vout3))
-  end subroutine X(mixfield_set_vout3)
+  POP_SUB(X(mixfield_set_vout3))
+end subroutine X(mixfield_set_vout3)
 
-  ! --------------------------------------------------------------
-  subroutine X(mixfield_get_vnew)(mixfield, vnew)
-    type(mixfield_t),   intent(in) :: mixfield
-    R_TYPE,          intent(inout)  :: vnew(:,:)
+! --------------------------------------------------------------
+subroutine X(mixfield_get_vnew)(mixfield, vnew)
+  type(mixfield_t), intent(in)    :: mixfield
+  R_TYPE,           intent(inout) :: vnew(:,:)
 
-    PUSH_SUB(X(mixfield_get_vnew))
+  PUSH_SUB(X(mixfield_get_vnew))
 
-    vnew(1:mixfield%d1, 1:mixfield%d3) = mixfield%X(vnew)(1:mixfield%d1, 1, 1:mixfield%d3)
+  vnew(1:mixfield%d1, 1:mixfield%d3) = mixfield%X(vnew)(1:mixfield%d1, 1, 1:mixfield%d3)
 
-    POP_SUB(X(mixfield_get_vnew))
-  end subroutine X(mixfield_get_vnew)
+  POP_SUB(X(mixfield_get_vnew))
+end subroutine X(mixfield_get_vnew)
 
 
 !! Local Variables:
