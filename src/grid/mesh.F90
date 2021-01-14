@@ -839,7 +839,7 @@ contains
     type(mesh_t),       intent(in) :: mesh
     integer,            intent(in) :: ip
     logical, optional,  intent(in) :: force
-    FLOAT                          :: xx(1:MAX_DIM)
+    FLOAT                          :: xx(1:mesh%sb%dim)
 
     FLOAT :: chi(1:MAX_DIM)
     integer :: ix(1:MAX_DIM)
@@ -856,9 +856,8 @@ contains
       chi(mesh%sb%dim + 1:MAX_DIM) = M_ZERO
       xx = M_ZERO ! this initialization is required by gfortran 4.4 or we get NaNs
       call curvilinear_chi2x(mesh%sb, mesh%cv, chi, xx)
-      xx(mesh%sb%dim + 1:MAX_DIM) = M_ZERO
     else
-      xx(1:MAX_DIM) = mesh%x(ip, 1:MAX_DIM)
+      xx(1:mesh%sb%dim) = mesh%x(ip, 1:mesh%sb%dim)
     end if
 
   end function mesh_x_global

@@ -1098,7 +1098,7 @@ contains
     type(block_t) :: blk
     integer :: ip, id, is, ik, nstates, state_from, ierr, ncols
     integer :: ib, idim, inst, inik, normalize
-    FLOAT :: xx(MAX_DIM), rr, psi_re, psi_im
+    FLOAT :: xx(1:mesh%sb%dim), rr, psi_re, psi_im
     character(len=150) :: filename
     CMPLX, allocatable :: zpsi(:, :)
 
@@ -1211,7 +1211,7 @@ contains
                 ! fill states with user-defined formulas
                 do ip = 1, mesh%np
                   xx = mesh%x(ip, :)
-                  rr = sqrt(sum(xx(:)**2))
+                  rr = sqrt(sum(xx**2))
 
                   ! parse user-defined expressions
                   call parse_expression(psi_re, psi_im, mesh%sb%dim, xx, rr, M_ZERO, st%user_def_states(id, is, ik))

@@ -35,7 +35,7 @@ subroutine poisson_solve_direct(this, pot, rho)
 
   logical              :: include_diag
 
-  FLOAT                :: xg(MAX_DIM)
+  FLOAT                :: xg(this%der%mesh%sb%dim)
   integer, allocatable :: ip_v(:), part_v(:)
   FLOAT, allocatable   :: pvec(:), tmp(:)
 

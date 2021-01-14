@@ -27,7 +27,7 @@
 
     integer             :: no_states, ib, ip, idim, inst, inik, id, ist, ik
     type(block_t)       :: blk
-    FLOAT               :: xx(MAX_DIM), rr, psi_re, psi_im
+    FLOAT               :: xx(1:gr%sb%dim), rr, psi_re, psi_im
     CMPLX, allocatable  :: zpsi(:, :)
     
     PUSH_SUB(target_init_userdefined)
@@ -77,7 +77,7 @@
               
               do ip = 1, gr%mesh%np
                 xx = gr%mesh%x(ip, :)
-                rr = sqrt(sum(xx(:)**2))
+                rr = sqrt(sum(xx**2))
                 
                 ! parse user-defined expressions
                 call parse_expression(psi_re, psi_im, &

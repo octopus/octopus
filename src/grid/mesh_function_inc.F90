@@ -463,10 +463,10 @@ subroutine X(mf_interpolate_on_plane)(mesh, plane, ff, f_in_plane)
 
   PUSH_SUB(X(mf_interpolate_on_plane))
 
-  SAFE_ALLOCATE(xglobal(1:mesh%np_part_global, 1:MAX_DIM))
+  SAFE_ALLOCATE(xglobal(1:mesh%np_part_global, 1:mesh%sb%dim))
   !$omp parallel do
   do ip = 1, mesh%np_part_global
-    xglobal(ip, 1:) = mesh_x_global(mesh, ip)
+    xglobal(ip, 1:mesh%sb%dim) = mesh_x_global(mesh, ip)
   end do
 
   SAFE_ALLOCATE(f_global(1:mesh%np_global))
@@ -512,10 +512,10 @@ subroutine X(mf_interpolate_on_line)(mesh, line, ff, f_in_line)
 
   PUSH_SUB(X(mf_interpolate_on_line))
 
-  SAFE_ALLOCATE(xglobal(1:mesh%np_part_global, 1:MAX_DIM))
+  SAFE_ALLOCATE(xglobal(1:mesh%np_part_global, 1:mesh%sb%dim))
   !$omp parallel do
   do ip = 1, mesh%np_part_global
-    xglobal(ip, 1:MAX_DIM) = mesh_x_global(mesh, ip)
+    xglobal(ip, 1:mesh%sb%dim) = mesh_x_global(mesh, ip)
   end do
   
   SAFE_ALLOCATE(f_global(1:mesh%np_global))
