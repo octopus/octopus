@@ -166,7 +166,7 @@ contains
     else 
       func_type = TYPE_FLOAT
     end if
-    prefix = ""
+    prefix = ''
     if(present(prefix_)) prefix = prefix_
 
     call messages_obsolete_variable(namespace, 'TypeOfMixing', 'MixingScheme')
@@ -267,13 +267,18 @@ contains
     !%Description
     !% In the Broyden and Bowler_Gillan schemes, the mixing is restarted after
     !% the number of iterations given by this variable.
+    !% Set this to zero to disable restarting the mixing.
     !%End
     if (smix%scheme /= OPTION__MIXINGSCHEME__LINEAR) then
       call parse_variable(namespace, trim(prefix)//'MixingRestart', 20, smix%ns_restart)
-      if(smix%ns_restart <= 1) call messages_input_error(namespace, 'MixingRestart')
+      if(smix%ns_restart < 0) call messages_input_error(namespace, 'MixingRestart')
     else
       smix%ns_restart = 0
     end if
+
+    write(message(1), '(A,I4,A,I4,A)') "Info: Mixing uses ", smix%ns, " steps and restarts after ", &
+      smix%ns_restart, " steps."
+    call messages_info(1)
     
     !%Variable MixInterval
     !%Type integer
