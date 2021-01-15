@@ -429,6 +429,14 @@ int parse_block_int(const sym_block *blk, int l, int col, int *r)
   return 0;
 }
 
+int parse_block_int8(const sym_block *blk, int l, int col, int64_t *r)
+{
+  char *mtxel_name = get_mtxel_name(blk->name, l, col);
+  *r = parse_int(mtxel_name, 0);
+  free(mtxel_name);
+  return 0;
+}
+
 int parse_block_double(const sym_block *blk, int l, int col, double *r)
 {
   char *mtxel_name = get_mtxel_name(blk->name, l, col);

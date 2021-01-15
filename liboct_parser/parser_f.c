@@ -259,6 +259,15 @@ void FC_FUNC_(oct_parse_block_int, OCT_PARSE_BLOCK_INT)
 
 
 /* --------------------------------------------------------- */
+void FC_FUNC_(oct_parse_block_int8, OCT_PARSE_BLOCK_INT8)
+	(sym_block **blk, int *l, int *c, int64_t *res)
+{
+  if(parse_block_int8(*blk, *l, *c, res) != 0)
+    parse_block_error("int", (*blk)->name, *l, *c);
+}
+
+
+/* --------------------------------------------------------- */
 void FC_FUNC_(oct_parse_block_double, OCT_PARSE_BLOCK_DOUBLE)
 	(sym_block **blk, int *l, int *c, double *res)
 {
