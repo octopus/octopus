@@ -76,7 +76,7 @@ contains
 
     integer :: isp, ip, in_points, icell
     FLOAT :: rr, x, pos(1:MAX_DIM), nrm, rmax
-    FLOAT :: xx(MAX_DIM), yy(MAX_DIM), rerho, imrho
+    FLOAT :: xx(sb%dim), yy(sb%dim), rerho, imrho
     type(species_t), pointer :: species
     type(ps_t), pointer :: ps
     type(volume_t) :: volume
@@ -557,7 +557,7 @@ contains
     logical :: conv
     integer :: dim
     FLOAT   :: x(1:MAX_DIM+1), chi0(MAX_DIM), startval(MAX_DIM + 1)
-    FLOAT   :: delta, alpha, beta, xx(MAX_DIM), yy(MAX_DIM), rr, imrho1, rerho
+    FLOAT   :: delta, alpha, beta, xx(mesh%sb%dim), yy(mesh%sb%dim), rr, imrho1, rerho
     FLOAT   :: dist2, dist2_min
     integer :: icell, ipos, ip
     type(periodic_copy_t) :: pp
@@ -914,7 +914,7 @@ contains
     FLOAT,                   intent(out) :: vl(:)
 
     FLOAT :: a1, a2, Rb2 ! for jellium
-    FLOAT :: xx(MAX_DIM), x_atom_per(MAX_DIM), r, r2, threshold
+    FLOAT :: xx(mesh%sb%dim), x_atom_per(MAX_DIM), r, r2, threshold
     integer :: ip, err, idim, icell
     type(ps_t), pointer :: ps
     CMPLX :: zpot
@@ -939,7 +939,7 @@ contains
         do icell = 1, periodic_copy_num(pp)
           x_atom_per(1:mesh%sb%dim) = periodic_copy_position(pp, mesh%sb, icell)
           do ip = 1, mesh%np
-            call mesh_r(mesh, ip, r, origin = x_atom_per, coords = xx)
+            call mesh_r(mesh, ip, r, origin = x_atom_per)
             r2 = r*r
             vl(ip) = vl(ip) -species_zval(species)/sqrt(r2+species_sc_alpha(species))
           end do

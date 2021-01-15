@@ -666,7 +666,7 @@ subroutine X(mf_multipoles) (mesh, ff, lmax, multipole, mask)
   logical, optional, intent(in)  :: mask(:) !< (mesh%np)
 
   integer :: idim, ip, ll, lm, add_lm
-  FLOAT   :: xx(MAX_DIM), rr, ylm
+  FLOAT   :: xx(mesh%sb%dim), rr, ylm
   R_TYPE, allocatable :: ff2(:)
 
   PUSH_SUB(X(mf_multipoles))

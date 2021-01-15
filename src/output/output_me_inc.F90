@@ -38,7 +38,7 @@ subroutine X(output_me_ks_multipoles)(fname, namespace, st, gr, ll, mm, ik)
   
   integer :: ist, jst, ip, iunit
   FLOAT, allocatable :: multipole(:)
-  FLOAT :: rr, xx(MAX_DIM), ylm
+  FLOAT :: rr, xx(1:gr%sb%dim), ylm
   R_TYPE :: multip_element
   R_TYPE, allocatable :: psii(:, :), psij(:, :)
 
@@ -60,7 +60,6 @@ subroutine X(output_me_ks_multipoles)(fname, namespace, st, gr, ll, mm, ik)
   
   SAFE_ALLOCATE(multipole(1:gr%mesh%np))
 
-  multipole = M_ZERO
   do ip = 1, gr%mesh%np
     call mesh_r(gr%mesh, ip, rr, coords = xx)
     call loct_ylm(1, xx(1), xx(2), xx(3), ll, mm, ylm)
@@ -123,7 +122,6 @@ subroutine X(output_me_ks_multipoles2d)(fname, namespace, st, gr, dir, ik)
     
   integer :: ist, jst, ip, iunit
   FLOAT, allocatable :: dipole(:)
-  FLOAT :: rr, xx(MAX_DIM)
   R_TYPE :: dipole_element
   R_TYPE, allocatable :: psii(:, :), psij(:, :)
 
@@ -145,10 +143,8 @@ subroutine X(output_me_ks_multipoles2d)(fname, namespace, st, gr, dir, ik)
   
   SAFE_ALLOCATE(dipole(1:gr%mesh%np))
 
-  dipole = M_ZERO
   do ip = 1, gr%mesh%np
-    call mesh_r(gr%mesh, ip, rr, coords = xx)
-    dipole(ip) = xx(dir)
+    dipole(ip) = gr%mesh%x(ip, dir)
   end do
   
   ASSERT(.not. st%parallel_in_states)
@@ -202,7 +198,6 @@ subroutine X(output_me_ks_multipoles1d)(fname, namespace, st, gr, ll, ik)
 
   integer :: iunit, ip, ist, jst
   FLOAT, allocatable :: dipole(:)
-  FLOAT :: rr, xx(MAX_DIM)
   R_TYPE :: dipole_element
   R_TYPE, allocatable :: psii(:, :), psij(:, :)
 
@@ -224,11 +219,8 @@ subroutine X(output_me_ks_multipoles1d)(fname, namespace, st, gr, ll, ik)
   
   SAFE_ALLOCATE(dipole(1:gr%mesh%np))
 
-
-  dipole = M_ZERO
   do ip = 1, gr%mesh%np
-    call mesh_r(gr%mesh, ip, rr, coords = xx)
-    dipole(ip) = xx(1)**ll
+    dipole(ip) = gr%mesh%x(ip, 1)**ll
   end do
   
   ASSERT(.not. st%parallel_in_states)

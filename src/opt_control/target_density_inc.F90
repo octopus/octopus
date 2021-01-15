@@ -26,9 +26,9 @@
     type(td_t),          intent(in)    :: td
     type(restart_t),     intent(inout) :: restart
 
-    integer             :: ip, ist, jst, cstr_dim(MAX_DIM), ib, idim, jj, no_constraint, no_ptpair, iqn
+    integer             :: ip, ist, jst, cstr_dim(gr%sb%dim), ib, idim, jj, no_constraint, no_ptpair, iqn
     type(block_t)       :: blk
-    FLOAT               :: psi_re, psi_im, xx(MAX_DIM), rr, fact, xend, xstart
+    FLOAT               :: psi_re, psi_im, xx(gr%sb%dim), rr, fact, xend, xstart
     FLOAT, allocatable  :: xp(:), tmp_box(:, :)
     CMPLX, allocatable  :: rotation_matrix(:, :), psi(:, :)
     type(states_elec_t) :: tmp_st
