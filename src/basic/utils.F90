@@ -305,6 +305,9 @@ contains
 #ifdef HAVE_DFTBPLUS
     get_optional_libraries = trim(get_optional_libraries)//' DFTBPlus'
 #endif
+#ifdef HAVE_DFTBPLUS_DEVEL
+    get_optional_libraries = trim(get_optional_libraries)//' DFTBPlus_devel'
+#endif
 #ifdef HAVE_ELPA
     get_optional_libraries = trim(get_optional_libraries)//' ELPA'
 #endif

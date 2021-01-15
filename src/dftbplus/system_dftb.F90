@@ -29,7 +29,9 @@ module system_dftb_oct_m
   use interaction_oct_m
   use interactions_factory_oct_m
   use io_oct_m
+  use ion_dynamics_oct_m
   use iso_c_binding
+  use lasers_oct_m
   use messages_oct_m
   use mpi_oct_m
   use namespace_oct_m
@@ -41,6 +43,7 @@ module system_dftb_oct_m
   use space_oct_m
   use species_oct_m
   use system_oct_m
+  use tdfunction_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use write_iter_oct_m
@@ -60,12 +63,20 @@ module system_dftb_oct_m
     FLOAT, allocatable :: vel(:,:)
     FLOAT, allocatable :: prev_tot_force(:,:) !< Used for the SCF convergence criterium
     integer, allocatable :: species(:)
+    integer              :: dynamics
     FLOAT, allocatable :: mass(:)
+    FLOAT, allocatable :: atom_charges(:,:) !< shape is (n_atoms, n_spin)
     character(len=LABEL_LEN), allocatable  :: labels(:)
     FLOAT, allocatable :: prev_acc(:,:,:) !< A storage of the prior times.
     FLOAT :: scc_tolerance
     type(geometry_t) :: geo
     type(c_ptr) :: output_handle(2)
+    type(ion_dynamics_t) :: ions
+    integer                :: n_lasers            !< number of laser pulses used
+    type(laser_t), pointer :: lasers(:)            !< lasers stuff
+    logical :: laser_field
+    FLOAT :: field(3)
+    FLOAT :: energy
 #ifdef HAVE_DFTBPLUS
     type(TDftbPlus) :: dftbp
 #endif
@@ -89,6 +100,11 @@ module system_dftb_oct_m
   interface system_dftb_t
     procedure system_dftb_constructor
   end interface system_dftb_t
+
+  !> Parameters.
+  integer, parameter :: &
+    EHRENFEST = 1,   &
+    BO        = 2
 
 contains
 
@@ -120,17 +136,24 @@ contains
     class(system_dftb_t), target, intent(inout) :: this
     type(namespace_t),            intent(in)    :: namespace
 
-    integer :: ii, jj, ispec
+    integer :: ii, jj, ispec, il, ierr
     character(len=MAX_PATH_LEN) :: slako_dir
     character(len=1), allocatable  :: max_ang_mom(:)
     character(len=LABEL_LEN) :: this_max_ang_mom, this_label
     integer :: n_maxang_block
     type(block_t) :: blk
+    character(len=200) :: envelope_expression, phase_expression
+    FLOAT :: omega0, initial_temp
+    CMPLX :: pol(MAX_DIM)
+    type(tdf_t) :: ff, phi
 
 #ifdef HAVE_DFTBPLUS
     type(TDftbPlusInput) :: input
     type(fnode), pointer :: pRoot, pGeo, pHam, pDftb, pMaxAng, pSlakos, pType2Files, pAnalysis
     type(fnode), pointer :: pParserOpts
+#endif
+#ifdef HAVE_DFTBPLUS_DEVEL
+    type(fnode), pointer :: pElecDyn, pPerturb, pLaser
 #endif
 
     PUSH_SUB(system_dftb_init)
@@ -150,6 +173,7 @@ contains
     SAFE_ALLOCATE(this%gradients(3, this%n_atom))
     SAFE_ALLOCATE(this%species(this%n_atom))
     SAFE_ALLOCATE(this%mass(this%n_atom))
+    SAFE_ALLOCATE(this%atom_charges(this%n_atom, 1))
     SAFE_ALLOCATE(this%labels(this%geo%nspecies))
     SAFE_ALLOCATE(max_ang_mom(this%geo%nspecies))
 
@@ -220,6 +244,71 @@ contains
     call parse_variable(namespace, 'SlakoDir', './', slako_dir)
 
 
+    ! Dynamics variables
+
+    call ion_dynamics_init(this%ions, namespace, this%geo)
+
+    call parse_variable(namespace, 'TDDynamics', BO, this%dynamics)
+    call messages_print_var_option(stdout, 'TDDynamics', this%dynamics)
+    if (this%dynamics == BO) then
+      call ion_dynamics_unfreeze(this%ions)
+    end if
+
+    !%Variable InitialIonicTemperature
+    !%Type float
+    !%Default 0.0
+    !%Section DFTBPlusInterface
+    !%Description
+    !% If this variable is present, the ions will have initial velocities
+    !% velocities to the atoms following a Boltzmann distribution with
+    !% this temperature (in Kelvin). Used only if <tt>TDDynamics = Ehrenfest</tt>
+    !% and  <tt>MoveIons = yes</tt>.
+    !%End
+    call parse_variable(namespace, 'InitialIonicTemperature', M_zero, initial_temp, unit = unit_kelvin)
+
+    this%n_lasers = 0
+    if(parse_block(namespace, 'TDExternalFields', blk) == 0) then
+      this%laser_field = .true.
+      this%n_lasers = parse_block_n(blk)
+      SAFE_ALLOCATE(this%lasers(1:this%n_lasers))
+
+      do il = 1, this%n_lasers
+
+        pol(1:MAX_DIM) = M_z0
+        call parse_block_cmplx(blk, il-1, 0, pol(1))
+        call parse_block_cmplx(blk, il-1, 1, pol(2))
+        call parse_block_cmplx(blk, il-1, 2, pol(3))
+        call parse_block_float(blk, il-1, 3, omega0)
+        omega0 = units_to_atomic(units_inp%energy, omega0)
+
+        call laser_set_frequency(this%lasers(il), omega0)
+        pol(1:3) = pol(1:3)/sqrt(sum(abs(pol(1:3))**2))
+        call laser_set_polarization(this%lasers(il), pol)
+
+        call parse_block_string(blk, il-1, 4, envelope_expression)
+        call tdf_read(ff, namespace, trim(envelope_expression), ierr)
+        call laser_set_f(this%lasers(il), ff)
+
+        ! Check if there is a phase.
+        if(parse_block_cols(blk, il-1) > 5) then
+          call parse_block_string(blk, il-1, 5, phase_expression)
+          call tdf_read(phi, namespace, trim(phase_expression), ierr)
+          call laser_set_phi(this%lasers(il), phi)
+          if (ierr /= 0) then
+            write(message(1),'(3A)') 'Error in the "', trim(envelope_expression), '" field defined in the TDExternalFields block:'
+            write(message(2),'(3A)') 'Time-dependent phase function "', trim(phase_expression), '" not found.'
+            call messages_warning(2, namespace=namespace)
+          end if
+        else
+          call laser_set_empty_phi(this%lasers(il))
+        end if
+      end do
+
+      call parse_block_end(blk)
+    else
+      this%laser_field = .false.
+    end if
+
 #ifdef HAVE_DFTBPLUS
     call TDftbPlus_init(this%dftbp, mpicomm=mpi_world%comm)
 
@@ -266,17 +355,42 @@ contains
 
     call setChild(pRoot, "ParserOptions", pParserOpts)
     call setChildValue(pParserOpts, "ParserVersion", 5)
+#endif
 
+    if (this%dynamics == EHRENFEST) then
+#ifdef HAVE_DFTBPLUS_DEVEL
+      call setChild(pRoot, "ElectronDynamics", pElecDyn)
+      call setChildValue(pElecDyn, "IonDynamics", ion_dynamics_ions_move(this%ions))
+      if (ion_dynamics_ions_move(this%ions)) then
+        call setChildValue(pElecDyn, "InitialTemperature", initial_temp)
+      end if
+
+      ! initialize with wrong arguments for the moment, will be overriden later
+      call setChildValue(pElecDyn, "Steps", 1)
+      call setChildValue(pElecDyn, "TimeStep", CNST(1.0))
+      call setChild(pElecDyn, "Perturbation", pPerturb)
+      if (this%laser_field) then
+        call setChild(pPerturb, "Laser", pLaser)
+        call setChildValue(pLaser, "PolarizationDirection", [ CNST(1.0) , CNST(0.0) , CNST(0.0) ])
+        call setChildValue(pLaser, "LaserEnergy", CNST(1.0))
+        call setChildValue(pElecDyn, "FieldStrength", CNST(1.0))
+      else
+        call setChild(pPerturb, "None", pLaser)
+      end if
+#else
+      message(1) = "DFTB Ehrenfest dynamics enabled only in DFTB development library"
+      call messages_fatal(1)
+#endif
+    end if
+
+#ifdef HAVE_DFTBPLUS
     message(1) = 'Input tree in HSD format:'
     call messages_info(1)
     call dumpHsd(input%hsdTree, stdout)
 
     ! initialise the DFTB+ calculator
     call this%dftbp%setupCalculator(input)
-
     call this%dftbp%setGeometry(this%coords)
-    call this%dftbp%getGradients(this%gradients)
-    this%tot_force = -this%gradients
 #endif
 
     POP_SUB(system_dftb_init)
@@ -305,6 +419,18 @@ contains
 
     PUSH_SUB(system_dftb_initial_conditions)
 
+    select case (this%dynamics)
+    case (BO)
+#ifdef HAVE_DFTBPLUS
+      call this%dftbp%getGradients(this%gradients)
+      this%tot_force = -this%gradients
+#endif
+    case (EHRENFEST)
+#ifdef HAVE_DFTBPLUS_DEVEL
+      call this%dftbp%getEnergy(this%energy)
+      call this%dftbp%initializeTimeProp(this%prop%dt, this%laser_field)
+#endif
+    end select
 
     POP_SUB(system_dftb_initial_conditions)
   end subroutine system_dftb_initial_conditions
@@ -314,58 +440,104 @@ contains
     class(system_dftb_t),    intent(inout) :: this
     class(algorithmic_operation_t), intent(in)    :: operation
 
-    integer :: ii, jj
+    integer :: ii, jj, il
+    type(tdf_t) :: ff, phi
+    CMPLX :: amp, pol(MAX_DIM)
+    FLOAT :: time, omega
 
     PUSH_SUB(system_dftb_do_td)
 
-    select case (operation%id)
-    case (SKIP)
-      ! Do nothing
-    case (STORE_CURRENT_STATUS)
-      ! Do nothing
+    select case(this%dynamics)
+    ! Born-Oppenheimer dynamics
+    case (BO)
 
-    case (VERLET_START)
-      SAFE_ALLOCATE(this%prev_acc(1:this%space%dim, this%n_atom, 1))
+      select case (operation%id)
+      case (SKIP)
+        ! Do nothing
+      case (STORE_CURRENT_STATUS)
+        ! Do nothing
 
-      do jj = 1, this%n_atom
-        this%acc(1:this%space%dim, jj) = this%tot_force(1:this%space%dim, jj) / this%mass(jj)
-      end do
+      case (VERLET_START)
+        SAFE_ALLOCATE(this%prev_acc(1:this%space%dim, this%n_atom, 1))
+        do jj = 1, this%n_atom
+          this%acc(1:this%space%dim, jj) = this%tot_force(1:this%space%dim, jj) / this%mass(jj)
+        end do
 
-    case (VERLET_FINISH)
-      SAFE_DEALLOCATE_A(this%prev_acc)
+      case (VERLET_FINISH)
+        SAFE_DEALLOCATE_A(this%prev_acc)
 
-    case (VERLET_UPDATE_POS)
-      do jj = 1, this%n_atom
-        this%coords(1:this%space%dim, jj) = this%coords(1:this%space%dim, jj) + this%prop%dt * this%vel(1:this%space%dim, jj) &
-                                         + M_HALF * this%prop%dt**2 * this%acc(1:this%space%dim, jj)
-      end do
-      this%quantities(POSITION)%clock = this%quantities(POSITION)%clock + CLOCK_TICK
+      case (VERLET_UPDATE_POS)
+        do jj = 1, this%n_atom
+          this%coords(1:this%space%dim, jj) = this%coords(1:this%space%dim, jj) + this%prop%dt * this%vel(1:this%space%dim, jj) &
+               + M_HALF * this%prop%dt**2 * this%acc(1:this%space%dim, jj)
+        end do
+        this%quantities(POSITION)%clock = this%quantities(POSITION)%clock + CLOCK_TICK
 
-    case (VERLET_COMPUTE_ACC)
-      do ii = size(this%prev_acc, dim=3) - 1, 1, -1
-        this%prev_acc(1:this%space%dim, 1:this%n_atom, ii + 1) = this%prev_acc(1:this%space%dim, 1:this%n_atom, ii)
-      end do
-      this%prev_acc(1:this%space%dim, 1:this%n_atom, 1) = this%acc(1:this%space%dim, 1:this%n_atom)
+      case (VERLET_COMPUTE_ACC)
+        do ii = size(this%prev_acc, dim=3) - 1, 1, -1
+          this%prev_acc(1:this%space%dim, 1:this%n_atom, ii + 1) = this%prev_acc(1:this%space%dim, 1:this%n_atom, ii)
+        end do
+        this%prev_acc(1:this%space%dim, 1:this%n_atom, 1) = this%acc(1:this%space%dim, 1:this%n_atom)
 #ifdef HAVE_DFTBPLUS
-      call this%dftbp%setGeometry(this%coords)
-      call this%dftbp%getGradients(this%gradients)
-      this%tot_force = -this%gradients
+        call this%dftbp%setGeometry(this%coords)
+        call this%dftbp%getGradients(this%gradients)
+        this%tot_force = -this%gradients
 #endif
-      do jj = 1, this%n_atom
-        this%acc(1:this%space%dim, jj) = this%tot_force(1:this%space%dim, jj) / this%mass(jj)
-      end do
+        do jj = 1, this%n_atom
+          this%acc(1:this%space%dim, jj) = this%tot_force(1:this%space%dim, jj) / this%mass(jj)
+        end do
 
-    case (VERLET_COMPUTE_VEL)
-      this%vel(1:this%space%dim, 1:this%n_atom) = this%vel(1:this%space%dim, 1:this%n_atom) &
-           + M_HALF * this%prop%dt * (this%prev_acc(1:this%space%dim, 1:this%n_atom, 1) + &
-           this%acc(1:this%space%dim, 1:this%n_atom))
-      this%quantities(VELOCITY)%clock = this%quantities(VELOCITY)%clock + CLOCK_TICK
+      case (VERLET_COMPUTE_VEL)
+        this%vel(1:this%space%dim, 1:this%n_atom) = this%vel(1:this%space%dim, 1:this%n_atom) &
+            + M_HALF * this%prop%dt * (this%prev_acc(1:this%space%dim, 1:this%n_atom, 1) + &
+              this%acc(1:this%space%dim, 1:this%n_atom))
+        this%quantities(VELOCITY)%clock = this%quantities(VELOCITY)%clock + CLOCK_TICK
 
-    case default
-      message(1) = "Unsupported TD operation."
-      call messages_fatal(1, namespace=this%namespace)
+      case default
+        message(1) = "Unsupported TD operation."
+        call messages_fatal(1, namespace=this%namespace)
+      end select
+
+    ! Ehrenfest dynamics
+    case (EHRENFEST)
+
+      select case (operation%id)
+      case (SKIP)
+        ! Do nothing
+      case (STORE_CURRENT_STATUS)
+        ! Do nothing
+      case (VERLET_START)
+        !Do nothing
+      case (VERLET_FINISH)
+        !Do nothing
+      case (VERLET_UPDATE_POS)
+        this%field = M_zero
+        time = this%clock%time()
+        do il = 1, this%n_lasers
+          ! get properties of laser
+          call laser_get_f(this%lasers(il), ff)
+          call laser_get_phi(this%lasers(il), phi)
+          omega = laser_carrier_frequency(this%lasers(il))
+          pol = laser_polarization(this%lasers(il))
+          ! calculate electric field from laser
+          amp = tdf(ff, time) * exp(M_zI * (omega*time + tdf(phi, time)))
+          this%field(1:3) = this%field(1:3) + TOFLOAT(amp*pol(1:3))
+        end do
+#ifdef HAVE_DFTBPLUS_DEVEL
+        call this%dftbp%setTdElectricField(this%field)
+        call this%dftbp%doOneTdStep(this%clock%get_tick(), atomNetCharges=this%atom_charges, coord=this%coords,&
+             force=this%tot_force, energy=this%energy)
+#endif
+      case (VERLET_COMPUTE_ACC)
+        !Do nothing
+      case (VERLET_COMPUTE_VEL)
+        !Do nothing
+      case default
+        message(1) = "Unsupported TD operation."
+        call messages_fatal(1, namespace=this%namespace)
+      end select
+
     end select
-
    POP_SUB(system_dftb_do_td)
   end subroutine system_dftb_do_td
 
@@ -610,6 +782,8 @@ contains
     SAFE_DEALLOCATE_A(this%species)
     SAFE_DEALLOCATE_A(this%mass)
     call geometry_end(this%geo)
+    call laser_end(this%n_lasers, this%lasers)
+    call ion_dynamics_end(this%ions)
 
     call system_end(this)
 

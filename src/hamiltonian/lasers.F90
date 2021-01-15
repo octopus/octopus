@@ -55,8 +55,11 @@ module lasers_oct_m
     laser_set_f,                  &
     laser_get_phi,                &
     laser_set_phi,                &
+    laser_set_empty_phi,          &
     laser_set_f_value,            &
     laser_carrier_frequency,      &
+    laser_set_frequency,          &
+    laser_set_polarization,       &
     vlaser_operator_linear,       &
     vlaser_operator_quadratic
 
@@ -176,6 +179,18 @@ contains
 
 
   ! ---------------------------------------------------------
+  subroutine laser_set_empty_phi(laser)
+    type(laser_t),          intent(inout) :: laser
+
+    PUSH_SUB(laser_set_empty_phi)
+
+    call tdf_init(laser%phi)
+
+    POP_SUB(laser_set_empty_phi)
+  end subroutine laser_set_empty_phi
+  ! ---------------------------------------------------------
+
+  ! ---------------------------------------------------------
   subroutine laser_set_f_value(laser, ii, xx)
     type(laser_t), intent(inout) :: laser
     integer,       intent(in)    :: ii
@@ -186,6 +201,32 @@ contains
 
     POP_SUB(laser_set_f_value)
   end subroutine laser_set_f_value
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  subroutine laser_set_frequency(laser, omega)
+    type(laser_t), intent(inout) :: laser
+    FLOAT,         intent(in)    :: omega
+
+    PUSH_SUB(laser_carrier_frequency)
+    laser%omega = omega
+
+    POP_SUB(laser_set_frequency)
+  end subroutine laser_set_frequency
+  ! ---------------------------------------------------------
+
+
+  ! ---------------------------------------------------------
+  subroutine laser_set_polarization(laser, pol)
+    type(laser_t), intent(inout) :: laser
+    CMPLX,         intent(in)    :: pol(MAX_DIM)
+
+    PUSH_SUB(laser_set_polarization)
+    laser%pol(1:MAX_DIM) = pol(1:MAX_DIM)
+
+    POP_SUB(laser_set_polarization)
+  end subroutine laser_set_polarization
   ! ---------------------------------------------------------
 
 
@@ -310,6 +351,9 @@ contains
     !%
     !% The scalar potential is any expression of the spatial coordinates given by the string
     !% "spatial_expression", allowing a field beyond the dipole approximation.
+    !%
+    !% For DFTB runs, only fields of type type = <tt>electric field</tt> are allowed for the moment, and the
+    !% <tt>type</tt> keyword is omitted.
     !%
     !% A NOTE ON UNITS:
     !%
