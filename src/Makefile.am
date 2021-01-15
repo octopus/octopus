@@ -243,10 +243,16 @@ noinst_HEADERS +=                                \
 ions_f_srcs =                                 \
 	ions/atom.F90                         \
 	ions/box.F90                          \
+	ions/box_cylinder.F90                 \
+	ions/box_intersection.F90             \
+	ions/box_parallelepiped.F90           \
+	ions/box_shape.F90                    \
+	ions/box_sphere.F90                   \
 	ions/box_union.F90                    \
 	ions/geometry.F90                     \
 	ions/ion_dynamics.F90                 \
 	ions/kpoints.F90                      \
+	ions/multibox.F90                     \
 	ions/periodic_copy.F90                \
 	ions/read_coords.F90                  \
 	ions/simul_box.F90                    \

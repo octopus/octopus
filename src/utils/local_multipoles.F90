@@ -22,7 +22,10 @@
 program oct_local_multipoles
   use atom_oct_m
   use basins_oct_m
+  use box_cylinder_oct_m
   use box_oct_m
+  use box_parallelepiped_oct_m
+  use box_sphere_oct_m
   use box_union_oct_m
   use calc_mode_par_oct_m
   use comm_oct_m
@@ -56,13 +59,13 @@ program oct_local_multipoles
   implicit none
   
   type local_domain_t
-    type(box_union_t)    :: box            !< box defining the domain
-    character(len=500)   :: clist          !< list of centers
-    character(len=15)    :: lab            !< declared name
-    integer              :: dshape         !< shape of domain
-    logical, allocatable :: mesh_mask(:)   !< mesh points inside the domain
-    logical, allocatable :: ions_mask(:)   !< ions inside the domain
-    type(local_write_t)  :: writ           !< write handler for local domains analysis
+    class(box_t), pointer :: box            !< box defining the domain
+    character(len=500)    :: clist          !< list of centers
+    character(len=15)     :: lab            !< declared name
+    integer               :: dshape         !< shape of domain
+    logical,  allocatable :: mesh_mask(:)   !< mesh points inside the domain
+    logical,  allocatable :: ions_mask(:)   !< ions inside the domain
+    type(local_write_t)   :: writ           !< write handler for local domains analysis
   end type local_domain_t
 
   type(electrons_t), pointer :: sys
@@ -467,10 +470,13 @@ contains
   subroutine local_end(domain)
     type(local_domain_t), intent(inout) :: domain
 
+    class(box_t), pointer :: box
+
     PUSH_SUB(local_end)
 
     if (domain%dshape /= BADER) then
-      call box_union_end(domain%box)
+      box => domain%box
+      SAFE_DEALLOCATE_P(box)
     end if
     call local_write_end(domain%writ)
     SAFE_DEALLOCATE_A(domain%mesh_mask)
@@ -488,18 +494,11 @@ contains
     integer,              intent(in)    :: row
     type(namespace_t),    intent(in)    :: namespace
 
-    integer                  :: ic, nb, ia, ibox
-    FLOAT                    :: rsize, xsize
-    FLOAT                    :: center(MAX_DIM), lsize(MAX_DIM), bsize(MAX_DIM)
-    type(box_t), allocatable :: boxes(:)
+    integer :: ic, ia
+    FLOAT   :: radius, center(space%dim), length(space%dim)
+    class(box_union_t), pointer :: minimum_box
 
     PUSH_SUB(local_read_from_block)
-
-    ! Initializing variables in dom
-    rsize = -M_ONE
-    xsize = M_ZERO
-    lsize = M_ZERO
-    center = M_ZERO
 
     call parse_block_integer(blk, row, 1, domain%dshape)
 
@@ -510,30 +509,24 @@ contains
         message(2) = "are given as reduced coordinates."
         call messages_fatal(2)
       end if
-      call parse_block_float(blk, row, 2, rsize, unit = units_inp%length)
-      if (rsize < M_ZERO) call messages_input_error(namespace, 'radius', row=row, column=2)
+      call parse_block_float(blk, row, 2, radius, unit = units_inp%length)
+      if (radius < M_ZERO) call messages_input_error(namespace, 'radius', row=row, column=2)
       call parse_block_string(blk, row, 3, domain%clist)
 
-      nb = 0
-      do ic = 1, geo%natoms
-        if(loct_isinstringlist(ic, domain%clist)) nb = nb + 1
-      end do
-      SAFE_ALLOCATE(boxes(1:nb))
-      ibox = 1
+      minimum_box => box_union_t(space%dim)
       do ia = 1, geo%natoms
         if (loct_isinstringlist(ia, domain%clist)) then
-          bsize(:) = rsize
-          if (bsize(1) < M_EPSILON) bsize(1) = species_def_rsize(geo%atom(ia)%species)
-          call box_create(boxes(ibox), SPHERE, space%dim, bsize, geo%atom(ia)%x, namespace)
-          ibox = ibox + 1
+          if (radius < M_EPSILON) then
+            radius = species_def_rsize(geo%atom(ia)%species)
+          end if
+          call minimum_box%add_box(box_sphere_t(space%dim, geo%atom(ia)%x(1:space%dim), radius))
         end if
       end do
-
-      call box_union_init(domain%box, nb, boxes)
+      domain%box => minimum_box
 
       ic = 0
       do ia = 1, geo%natoms
-        if (box_union_inside(domain%box, geo%atom(ia)%x) .and. .not.loct_isinstringlist(ia, domain%clist) ) then
+        if (domain%box%contains_point(geo%atom(ia)%x) .and. .not. loct_isinstringlist(ia, domain%clist)) then
           ic = ic + 1
           if(ic <= 20) write(message(ic),'(a,a,I0,a,a)')'Atom: ',trim(species_label(geo%atom(ia)%species)), ia, &
             ' is inside the union box BUT not in list: ', trim(domain%clist)
@@ -550,57 +543,41 @@ contains
         end if
       end if
 
-      do ibox = 1, nb 
-        call box_end(boxes(ibox))
-      end do
-      SAFE_DEALLOCATE_A(boxes)
-
     case (SPHERE)
-      call parse_block_float(blk, row, 2, rsize, unit = units_inp%length)
-      if(rsize < M_ZERO) call messages_input_error(namespace, 'radius', row=row, column=2)
-      do ic = 1, geo%space%dim 
+      call parse_block_float(blk, row, 2, radius, unit = units_inp%length)
+      if (radius < M_ZERO) call messages_input_error(namespace, 'radius', row=row, column=2)
+      do ic = 1, space%dim
         call parse_block_float(blk, row, 2 + ic, center(ic), unit = units_inp%length)
       end do
-      lsize(1:space%dim) = rsize
 
-      SAFE_ALLOCATE(boxes(1))
-      call box_create(boxes(1), SPHERE, space%dim, lsize, center, namespace)
-      call box_union_init(domain%box, 1, boxes)
-      call box_end(boxes(1))
-      SAFE_DEALLOCATE_A(boxes)
+      domain%box => box_sphere_t(space%dim, center, radius)
 
     case (CYLINDER)
-      call parse_block_float(blk, row, 2, rsize, unit = units_inp%length)
-      if(rsize < M_ZERO) call messages_input_error(namespace, 'radius', row=row, column=2)
-      call parse_block_float(blk, row, 3, xsize, unit = units_inp%length)
-      do ic = 1, geo%space%dim 
+      call parse_block_float(blk, row, 2, radius, unit = units_inp%length)
+      if (radius < M_ZERO) then
+        call messages_input_error(namespace, 'radius', row=row, column=2)
+      end if
+      call parse_block_float(blk, row, 3, length(1), unit = units_inp%length)
+      do ic = 1, space%dim 
         call parse_block_float(blk, row, 3 + ic, center(ic), unit = units_inp%length)
       end do
-      lsize(1)     = xsize
-      lsize(2:space%dim) = rsize
 
-      SAFE_ALLOCATE(boxes(1))
-      call box_create(boxes(1), CYLINDER, space%dim, lsize, center, namespace)
-      call box_union_init(domain%box, 1, boxes)
-      call box_end(boxes(1))
-      SAFE_DEALLOCATE_A(boxes)
+      domain%box => box_cylinder_t(space%dim, center, radius, 1, length(1)*M_TWO, namespace)
 
     case (PARALLELEPIPED)
-      do ic = 1, geo%space%dim
-        call parse_block_float(blk, row, 1 + ic, lsize(ic), unit = units_inp%length)
+      do ic = 1, space%dim
+        call parse_block_float(blk, row, 1 + ic, length(ic), unit = units_inp%length)
       end do
-      do ic = 1, geo%space%dim
+      do ic = 1, space%dim
         call parse_block_float(blk, row, 1 + space%dim + ic, center(ic), unit = units_inp%length)
       end do
 
-      SAFE_ALLOCATE(boxes(1))
-      call box_create(boxes(1), 3, space%dim, lsize, center, namespace)
-      call box_union_init(domain%box, 1, boxes)
-      call box_end(boxes(1))
-      SAFE_DEALLOCATE_A(boxes)
+      domain%box => box_parallelepiped_t(space%dim, center, length*M_TWO)
 
     case (BADER)
       call parse_block_string(blk, row, 2, domain%clist)
+      POP_SUB(local_read_from_block)
+      return
     end select
 
     POP_SUB(local_read_from_block)
@@ -875,7 +852,7 @@ contains
 
     PUSH_SUB(box_domain_create_mask)
 
-    call box_union_inside_vec(domain%box, mesh%np, mesh%x, domain%mesh_mask)
+    domain%mesh_mask = domain%box%contains_points(mesh%np, mesh%x)
 
     POP_SUB(box_domain_create_mask)
   end subroutine box_domain_create_mask

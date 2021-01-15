@@ -1,5 +1,4 @@
-!! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
-!! Copyright (C) 2013 M. Oliveira
+!! Copyright (C) 2021 M. Oliveira
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -21,186 +20,126 @@
 
 module box_oct_m
   use global_oct_m
-  use messages_oct_m
-  use namespace_oct_m
-  use profiling_oct_m
+  use linked_list_oct_m
 
   implicit none
 
   private
-  public ::           &
-    box_t,            &
-    box_create,       &
-    box_end,          &
-    box_inside,       &
-    box_inside_vec,   &
-    box_copy,         &
-    box_get_center
+  public ::        &
+    box_t,         &
+    box_list_t,    &
+    box_iterator_t
 
-
-  integer, parameter, public :: &
-    BOX_SPHERE         = 1,     &
-    BOX_CYLINDER       = 2,     &
-    BOX_PARALLELEPIPED = 3
-
-  type box_t
+  !> The purpose of a box is to tell if something is inside or outside of it.
+  !! To do that it provides a function that tells if a given list of points are
+  !! inside or outside the box. Furthermore, a box might be turned inside out,
+  !! i.e., in that case what is usually considered inside becomes outside and
+  !! vice-versa.
+  type, abstract :: box_t
     private
-
-    integer :: dim
-    integer :: shape
-
-    FLOAT :: center(MAX_DIM)  !< where is the box centered
-
-    FLOAT :: rsize          !< the radius of the sphere or of the cylinder
-    FLOAT :: xsize          !< the length of the cylinder in the x-direction
-    FLOAT :: lsize(MAX_DIM) !< half of the length of the parallelepiped in each direction.
+    integer, public :: dim                    !< dimensions of the space the box lives in
+    logical :: inside_out = .false.           !< if the box is inside out or not
+  contains
+    procedure(box_contains_points), deferred :: contains_points
+    procedure, non_overridable :: contains_point => box_contains_point
+    procedure, non_overridable :: is_inside_out => box_is_inside_out
+    procedure, non_overridable :: turn_inside_out => box_turn_inside_out
   end type box_t
+
+  abstract interface
+    !> Given a list of points, this function should return an array indicating
+    !! for each point if it is inside the box or not.
+    recursive function box_contains_points(this, nn, xx) result(contained)
+      import :: box_t
+      class(box_t), intent(in) :: this
+      integer,      intent(in) :: nn      !< number of points to check
+      FLOAT,        intent(in) :: xx(:,:) !< points to check. The sizes are
+                                          !! (1:,1:this%dim), so that it is
+                                          !! possible to pass an array with more
+                                          !! points than the ones we are
+                                          !! checking.
+      logical :: contained(1:nn)
+    end function box_contains_points
+  end interface
+
+  !> These classes extends the list and list iterator to create a box list.
+  type, extends(linked_list_t) :: box_list_t
+    private
+  contains
+    procedure :: add => box_list_add_node
+  end type box_list_t
+
+  type, extends(linked_list_iterator_t) :: box_iterator_t
+    private
+  contains
+    procedure :: get_next => box_iterator_get_next
+  end type box_iterator_t
 
 contains
 
-  !--------------------------------------------------------------
-  subroutine box_create(box, shape, dim, sizes, center, namespace)
-    type(box_t),       intent(out) :: box
-    integer,           intent(in)  :: shape
-    integer,           intent(in)  :: dim
-    FLOAT,             intent(in)  :: sizes(MAX_DIM)
-    FLOAT,             intent(in)  :: center(dim)
-    type(namespace_t), intent(in) :: namespace
+  !!--------------------------------------------------------------
+  !> Turn a box inside out.
+  subroutine box_turn_inside_out(this)
+    class(box_t), intent(inout) :: this
 
-    PUSH_SUB(box_create)
+    this%inside_out = .not. this%inside_out
 
-    box%shape = shape
-    box%dim = dim
-    box%center(1:dim) = center(1:dim)
+  end subroutine box_turn_inside_out
 
-    select case (shape)
-    case (BOX_SPHERE)
-      box%rsize = sizes(1)
+  !!--------------------------------------------------------------
+  !> Is the box inside out?
+  logical function box_is_inside_out(this)
+    class(box_t), intent(in) :: this
 
-    case (BOX_CYLINDER)
-      if (dim == 2) then
-        message(1) = "Cannot create a cylinder in 2D. Use sphere if you want a circle."
-        call messages_fatal(1, namespace=namespace)
-      end if
-      box%rsize = sizes(1)
-      box%xsize = sizes(2)
+    box_is_inside_out = this%inside_out
 
-    case (BOX_PARALLELEPIPED)
-      box%lsize(1:dim) = sizes(1:dim)
+  end function box_is_inside_out
 
-    case default
-      message(1) = "Unknown box shape in box_create."
-      call messages_fatal(1, namespace=namespace)
+  !!---------------------------------------------------------------
+  !> Convenience function to check if a single point is inside the box when that
+  !! point is passed as a rank-one array.
+  recursive logical function box_contains_point(this, xx) result(contained)
+    class(box_t),         intent(in) :: this
+    FLOAT,        target, intent(in) :: xx(1:this%dim)
 
-    end select
-    
-    POP_SUB(box_create)
-  end subroutine box_create
+    FLOAT, pointer :: xx_ptr(:,:)
+    logical :: points_contained(1)
 
-  !--------------------------------------------------------------
-  subroutine box_end(box)
-    type(box_t), intent(inout) :: box
+    xx_ptr(1:1, 1:this%dim) => xx(1:this%dim)
+    points_contained = this%contains_points(1, xx_ptr)
+    contained = points_contained(1)
 
-    PUSH_SUB(box_end)
+  end function box_contains_point
 
-    box%shape = 0
-    box%dim = 0
+  ! ---------------------------------------------------------
+  subroutine box_list_add_node(this, box)
+    class(box_list_t)    :: this
+    class(box_t), target :: box
 
-    POP_SUB(box_end)
-  end subroutine box_end
-
-  !--------------------------------------------------------------
-  !> Checks if a point is inside the box.
-  logical function box_inside(box, point) result(inside)
-    type(box_t), intent(in) :: box
-    FLOAT,       intent(in) :: point(:)
-
-    FLOAT :: xx(1, 1:MAX_DIM)
-    logical :: inside2(1)
-
-    ! no push_sub because this function is called very frequently
-
-    xx(1, 1:box%dim) = point(1:box%dim)
-
-    call box_inside_vec(box, 1, xx, inside2)
-    inside = inside2(1)
-
-  end function box_inside
-
-  !--------------------------------------------------------------
-  !> Checks if a vector of points are inside the box.
-  subroutine box_inside_vec(box, npoints, points, inside)
-    type(box_t),  intent(in)  :: box
-    integer,      intent(in)  :: npoints
-    FLOAT,        intent(in)  :: points(:, :)
-    logical,      intent(out) :: inside(:)
-
-    integer :: ip
-    FLOAT, parameter :: DELTA = CNST(1e-12)
-    FLOAT :: llimit(MAX_DIM), ulimit(MAX_DIM)
-    FLOAT :: rr
-    FLOAT, allocatable :: xx(:, :)
-
-    ! no push_sub because this function is called very frequently
-
-    SAFE_ALLOCATE(xx(1:box%dim, 1:npoints))
-    do ip = 1, npoints
-      xx(1:box%dim, ip) = points(ip, 1:box%dim) - box%center(1:box%dim)
-    end do
-
-    select case(box%shape)
-    case(BOX_SPHERE)
-      do ip = 1, npoints
-        inside(ip) = sum(xx(1:box%dim, ip)**2) <= (box%rsize + DELTA)**2
-      end do
-
-    case(BOX_CYLINDER)
-      do ip = 1, npoints
-        rr = sqrt(sum(xx(2:box%dim, ip)**2))
-        inside(ip) = (rr <= box%rsize + DELTA .and. abs(xx(1, ip)) <= box%xsize + DELTA)
-      end do
-
-    case(BOX_PARALLELEPIPED) 
-      llimit(1:box%dim) = -box%lsize(1:box%dim) - DELTA
-      ulimit(1:box%dim) =  box%lsize(1:box%dim) + DELTA
-
-      do ip = 1, npoints
-        inside(ip) = all(xx(1:box%dim, ip) >= llimit(1:box%dim) .and. xx(1:box%dim, ip) <= ulimit(1:box%dim))
-      end do
-
+    select type (box)
+    class is (box_t)
+      call this%add_ptr(box)
+    class default
+      ASSERT(.false.)
     end select
 
-    SAFE_DEALLOCATE_A(xx)
+  end subroutine box_list_add_node
 
-  end subroutine box_inside_vec
+  ! ---------------------------------------------------------
+  function box_iterator_get_next(this) result(box)
+    class(box_iterator_t), intent(inout) :: this
+    class(box_t),          pointer       :: box
 
-  ! --------------------------------------------------------------
-  recursive subroutine box_copy(boxout, boxin)
-    type(box_t), intent(out) :: boxout
-    type(box_t), intent(in)  :: boxin
+    select type (ptr => this%get_next_ptr())
+    class is (box_t)
+      box => ptr
+    class default
+      ASSERT(.false.)
+    end select
 
-    PUSH_SUB(box_copy)
+  end function box_iterator_get_next
 
-    boxout%shape               = boxin%shape
-    boxout%dim                 = boxin%dim
-    boxout%center(1:boxin%dim) = boxin%center(1:boxin%dim)
-    boxout%rsize               = boxin%rsize
-    boxout%xsize               = boxin%xsize
-    boxout%lsize(1:boxin%dim) = boxin%lsize(1:boxin%dim)
-
-    POP_SUB(box_copy)
-  end subroutine box_copy
-
-  ! --------------------------------------------------------------
-  pure function box_get_center(box) result(x)
-    type(box_t), intent(in) :: box
-    FLOAT, dimension(MAX_DIM) :: x
-
-    x(1:box%dim) = box%center(1:box%dim)
-
-  end function box_get_center
 end module box_oct_m
-
 
 !! Local Variables:
 !! mode: f90
