@@ -151,6 +151,8 @@ end subroutine X(xc_OEP_calc)
 
 
 ! ---------------------------------------------------------
+!> This routine follows closely the one of PRB 68, 035103 (2003)
+!> Below we refer to the equation number of this paper
 subroutine X(xc_oep_solve) (namespace, gr, hm, st, is, vxc, oep)
   type(namespace_t),        intent(in)    :: namespace
   type(grid_t),             intent(in)    :: gr
@@ -219,6 +221,7 @@ subroutine X(xc_oep_solve) (namespace, gr, hm, st, is, vxc, oep)
       ! evaluate right-hand side
       vxc_bar = dmf_integrate(gr%mesh, psi2(:, 1)*oep%vxc(1:gr%mesh%np, is))
 
+      ! This the right-hand side of Eq. 21
       bb(1:gr%mesh%np, 1) = -(oep%vxc(1:gr%mesh%np, is) - (vxc_bar - oep%uxc_bar(ist, is)))* &
         R_CONJ(psi(:, 1)) + oep%X(lxc)(1:gr%mesh%np, ist, is)
 
@@ -237,9 +240,11 @@ subroutine X(xc_oep_solve) (namespace, gr, hm, st, is, vxc, oep)
         call X(lr_orth_vector) (gr%mesh, st, bb, ist, is, R_TOTYPE(M_ZERO))
       end if
 
+      ! Sternheimer equation [H-E_i]psi_i = bb_i, where psi_i the orbital shift, see Eq. 21
       call X(linear_solver_solve_HXeY)(oep%solver, namespace, hm, gr, st, ist, is, oep%lr%X(dl_psi)(:,:, ist, is), bb, &
            R_TOTYPE(-st%eigenval(ist, is)), oep%scftol%final_tol, residue, iter_used)
 
+      !We project out the occupied bands 
       if (oep%has_photons) then
         orthogonal = .true.
         orthogonal(ist) = .false.
@@ -251,6 +256,7 @@ subroutine X(xc_oep_solve) (namespace, gr, hm, st, is, vxc, oep)
 
       ! calculate this funny function ss
       ! ss = ss + 2*dl_psi*psi
+      ! This is Eq. 25
       call lalg_axpy(gr%mesh%np, M_TWO, R_REAL(oep%lr%X(dl_psi)(1:gr%mesh%np, 1, ist, is)*psi(:, 1)), ss(:))
       if (oep%has_photons) then
 #ifdef R_TREAL
@@ -262,12 +268,19 @@ subroutine X(xc_oep_solve) (namespace, gr, hm, st, is, vxc, oep)
       end if
     end do
 
+    !Here we mix the xc potential
     select case (oep%mixing_scheme)
     case (OEP_MIXING_SCHEME_CONST)
+      !This is Eq. 26
       call lalg_axpy(gr%mesh%np, oep%mixing, ss(:), oep%vxc(:, is))
+
     case (OEP_MIXING_SCHEME_DENS)
+
       call lalg_axpy(gr%mesh%np, oep%mixing, ss(:)/st%rho(:,is), oep%vxc(:, is))
+
     case (OEP_MIXING_SCHEME_BB)
+      !This is the Barzilai-Borwein scheme, as explained in 
+      !Hollins, et al. PRB 85, 235126 (2012)
       if (dmf_nrm2(gr%mesh, oep%vxc_old(1:gr%mesh%np,is)) > M_EPSILON ) then ! do not do it for the first run
         oep%mixing = -dmf_dotp(gr%mesh, oep%vxc(1:gr%mesh%np,is) - oep%vxc_old(1:gr%mesh%np,is), ss - oep%ss_old(:, is)) &
           / dmf_dotp(gr%mesh, ss - oep%ss_old(:, is), ss - oep%ss_old(:, is))
@@ -281,8 +294,10 @@ subroutine X(xc_oep_solve) (namespace, gr, hm, st, is, vxc, oep)
       call lalg_copy(gr%mesh%np, is, oep%vxc, oep%vxc_old)
       call lalg_copy(gr%mesh%np, ss, oep%ss_old(:, is))
       call lalg_axpy(gr%mesh%np, oep%mixing, ss(:), oep%vxc(:, is))
+
     end select
 
+    !Here we enforce Eq. (24), see the discussion below Eq. 26 
     do ist = 1, st%nst
       if(oep%eigen_type(ist) == 2) then
         call states_elec_get_state(st, gr%mesh, ist, is, psi)
