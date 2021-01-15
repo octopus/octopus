@@ -27,10 +27,13 @@
 #include <gsl/gsl_sf_legendre.h>
 
 /* normalization constants for the spherical harmonics */
-static double sph_cnsts[9] = {
+static double sph_cnsts[16] = {
 	0.282094791773878, /* l = 0 */
 	0.488602511902920, 0.488602511902920, 0.488602511902920, /* l = 1 */
-	0.182091405098680, 0.364182810197360, 0.630783130505040, 0.364182810197360, 0.182091405098680
+        /* l = 2 */
+	0.182091405098680, 0.364182810197360, 0.630783130505040, 0.364182810197360, 0.182091405098680,
+        /* l = 3 */
+        0.59004359, 2.890611444, 0.4570458, 0.373176333, 0.4570458, 1.445305722, 0.59004359
 };
 
 /* Computes real spherical harmonics ylm in the direction of vector r:
@@ -42,7 +45,7 @@ static double sph_cnsts[9] = {
 void FC_FUNC_(oct_ylm, OCT_YLM)
      (const fint * np, const double *x, const double *y, const double *z, const fint *l, const fint *m, double * restrict ylm)
 {
-  double r, r2, rr, rx, ry, rz, cosphi, sinphi, cosm, sinm, phase;
+  double r, r2, r3, rr, rx, ry, rz, cosphi, sinphi, cosm, sinm, phase;
   int i, ip;
 
   if(l[0] == 0) {
@@ -80,6 +83,24 @@ void FC_FUNC_(oct_ylm, OCT_YLM)
 	continue;
       case  2: ylm[ip] =  sph_cnsts[8]*3.0*(x[ip]*x[ip] - y[ip]*y[ip])/r2; 
 	continue;
+      }
+    case 3:
+      r3 = r2 * sqrt(r2);
+      switch(m[0]){
+        case -3: ylm[ip] = sph_cnsts[9] *((3.0*x[ip]*x[ip]-y[ip]*y[ip]) * y[ip])/r3;
+          continue;
+        case -2: ylm[ip] = sph_cnsts[10]*(x[ip]*y[ip]*z[ip])/r3;
+          continue;
+        case -1: ylm[ip] = sph_cnsts[11]*(y[ip]*(5.0*z[ip]*z[ip]-r2))/r3;
+          continue;
+        case  0: ylm[ip] = sph_cnsts[12]*(z[ip]*(5.0*z[ip]*z[ip]-3.0*r2))/r3;
+          continue;
+        case  1: ylm[ip] = sph_cnsts[13]*(x[ip]*(5.0*z[ip]*z[ip]-r2))/r3;
+          continue;
+        case  2: ylm[ip] = sph_cnsts[14]*((x[ip]*x[ip]-y[ip]*y[ip])*z[ip])/r3;
+          continue;
+        case  3: ylm[ip] = sph_cnsts[15]*((x[ip]*x[ip]-3.0*y[ip]*y[ip])*x[ip])/r3;
+          continue;
       }
     }
 

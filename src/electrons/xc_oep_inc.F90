@@ -291,7 +291,7 @@ subroutine X(xc_oep_solve) (namespace, gr, hm, st, is, vxc, oep)
        call messages_info(1)
       end if
 
-      call lalg_copy(gr%mesh%np, is, oep%vxc, oep%vxc_old)
+      call lalg_copy(gr%mesh%np, oep%vxc(:,is), oep%vxc_old(:,is))
       call lalg_copy(gr%mesh%np, ss, oep%ss_old(:, is))
       call lalg_axpy(gr%mesh%np, oep%mixing, ss(:), oep%vxc(:, is))
 
