@@ -791,11 +791,13 @@ contains
 
     if (scheme /= OPTION__MIXINGSCHEME__LINEAR) then
       if(mixfield%func_type == TYPE_FLOAT) then
+        ASSERT(allocated(mixfield%ddf))
         mixfield%ddf(1:d1, 1:d2, 1:d3, 1:d4) = M_ZERO
         mixfield%ddv(1:d1, 1:d2, 1:d3, 1:d4) = M_ZERO
         mixfield%dvin_old(1:d1, 1:d2, 1:d3) = M_ZERO
         mixfield%df_old(1:d1, 1:d2, 1:d3) = M_ZERO
       else
+        ASSERT(allocated(mixfield%zdf))
         mixfield%zdf(1:d1, 1:d2, 1:d3, 1:d4) = M_z0
         mixfield%zdv(1:d1, 1:d2, 1:d3, 1:d4) = M_z0
         mixfield%zvin_old(1:d1, 1:d2, 1:d3) = M_z0

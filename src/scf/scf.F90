@@ -964,8 +964,14 @@ contains
       rhoin(1:gr%fine%mesh%np, 1, 1:nspin) = st%rho(1:gr%fine%mesh%np, 1:nspin)
 
       ! restart mixing
-      if (scf%smix%ns_restart > 0) then
-        if (mod(iter, scf%smix%ns_restart) == 0) call scf_mix_clear(scf)
+      if (scf%mix_field /= OPTION__MIXFIELD__NONE) then
+        if (scf%smix%ns_restart > 0) then
+          if (mod(iter, scf%smix%ns_restart) == 0) then
+            message(1) = "Info: restarting mixing."
+            call messages_info(1)
+            call scf_mix_clear(scf)
+          end if
+        end if
       end if
 
       select case(scf%mix_field)
