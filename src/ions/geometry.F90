@@ -792,7 +792,7 @@ contains
 
       m = matmul(aux, m)
 
-      POP_SUB(rotate)
+      POP_SUB(geometry_rotate.rotate)
     end subroutine rotate
 
   end subroutine geometry_rotate

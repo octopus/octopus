@@ -504,7 +504,7 @@ contains
     
     if(.not.mpi_grp_is_root(mpi_world)) return ! only first node outputs
 
-    PUSH_SUB(td_write_gauge_field)
+    PUSH_SUB(gauge_field_output_write)
     
     if(iter == 0) then
       call write_iter_clear(out_gauge)
@@ -562,8 +562,8 @@ contains
     call write_iter_double(out_gauge, temp, this%ndim)
 
     call write_iter_nl(out_gauge)
+
     POP_SUB(gauge_field_output_write)
-    
   end subroutine gauge_field_output_write
 
 
