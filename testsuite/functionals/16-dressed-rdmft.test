@@ -18,7 +18,7 @@ match ; SCF convergence               ; GREPCOUNT(static/info, 'SCF converged') 
 Precision: 1e-8
 match ; dHF converged energy          ; GREPFIELD(static/info, 'Total Energy ', 4) ; -0.780547043815
 match ; dHF highest occupation number ; GREPFIELD(static/info, 'Natural occupation numbers', 2, 2) ; 2.0
-Precision: 1e-6
+Precision: 1.1e-6
 match ; dHF total mode occupation     ; GREPFIELD(static/info, 'Total mode occupation', 4) ;0.066690295387
 
 
