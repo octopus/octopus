@@ -264,7 +264,7 @@ contains
 
     integer :: ii
     type(unit_t) :: unit_vol
-    FLOAT :: xx(1:MAX_DIM)
+    FLOAT :: xx(1:mesh%sb%dim)
 
     PUSH_SUB(basins_write)
 

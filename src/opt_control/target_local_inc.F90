@@ -26,7 +26,7 @@
     type(td_t),        intent(in)    :: td
 
     integer             :: ip
-    FLOAT               :: xx(MAX_DIM), rr, psi_re, psi_im
+    FLOAT               :: xx(1:gr%sb%dim), rr, psi_re, psi_im
     character(len=1024) :: expression
     PUSH_SUB(target_init_local)
 

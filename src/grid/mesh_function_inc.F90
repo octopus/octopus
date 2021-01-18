@@ -463,10 +463,10 @@ subroutine X(mf_interpolate_on_plane)(mesh, plane, ff, f_in_plane)
 
   PUSH_SUB(X(mf_interpolate_on_plane))
 
-  SAFE_ALLOCATE(xglobal(1:mesh%np_part_global, 1:MAX_DIM))
+  SAFE_ALLOCATE(xglobal(1:mesh%np_part_global, 1:mesh%sb%dim))
   !$omp parallel do
   do ip = 1, mesh%np_part_global
-    xglobal(ip, 1:) = mesh_x_global(mesh, ip)
+    xglobal(ip, 1:mesh%sb%dim) = mesh_x_global(mesh, ip)
   end do
 
   SAFE_ALLOCATE(f_global(1:mesh%np_global))
@@ -512,10 +512,10 @@ subroutine X(mf_interpolate_on_line)(mesh, line, ff, f_in_line)
 
   PUSH_SUB(X(mf_interpolate_on_line))
 
-  SAFE_ALLOCATE(xglobal(1:mesh%np_part_global, 1:MAX_DIM))
+  SAFE_ALLOCATE(xglobal(1:mesh%np_part_global, 1:mesh%sb%dim))
   !$omp parallel do
   do ip = 1, mesh%np_part_global
-    xglobal(ip, 1:MAX_DIM) = mesh_x_global(mesh, ip)
+    xglobal(ip, 1:mesh%sb%dim) = mesh_x_global(mesh, ip)
   end do
   
   SAFE_ALLOCATE(f_global(1:mesh%np_global))
@@ -666,7 +666,7 @@ subroutine X(mf_multipoles) (mesh, ff, lmax, multipole, mask)
   logical, optional, intent(in)  :: mask(:) !< (mesh%np)
 
   integer :: idim, ip, ll, lm, add_lm
-  FLOAT   :: xx(MAX_DIM), rr, ylm
+  FLOAT   :: xx(mesh%sb%dim), rr, ylm
   R_TYPE, allocatable :: ff2(:)
 
   PUSH_SUB(X(mf_multipoles))
@@ -680,12 +680,20 @@ subroutine X(mf_multipoles) (mesh, ff, lmax, multipole, mask)
   
   if(lmax > 0) then
     do idim = 1, 3
-      ff2(1:mesh%np) = ff(1:mesh%np) * mesh%x(1:mesh%np, idim)
-      multipole(idim+1) = X(mf_integrate)(mesh, ff2, mask = mask)
+      if (idim <= mesh%sb%dim) then
+        ff2(1:mesh%np) = ff(1:mesh%np) * mesh%x(1:mesh%np, idim)
+        multipole(idim+1) = X(mf_integrate)(mesh, ff2, mask = mask)
+      else
+        multipole(idim+1) = M_ZERO
+      end if
     end do
   end if
   
   if(lmax>1) then
+    if (mesh%sb%dim /= 3) then
+      message(1) = "multipoles for l > 1 are only available in 3D."
+      call messages_fatal(1)
+    end if
     add_lm = 5
     do ll = 2, lmax
       do lm = -ll, ll

@@ -480,14 +480,14 @@ subroutine mesh_init_stage_3(mesh, namespace, stencil, mc, parent)
 
   if(.not. mesh%parallel_in_domains) then
     ! When running parallel, x is computed later.
-    SAFE_ALLOCATE(mesh%x(1:mesh%np_part_global, 1:MAX_DIM))
+    SAFE_ALLOCATE(mesh%x(1:mesh%np_part_global, 1:mesh%sb%dim))
   end if
   
   if(.not. mesh%idx%is_hypercube) then
     call create_x_lxyz()
   else if(.not. mesh%parallel_in_domains) then
     do ip = 1, mesh%np_part_global
-      mesh%x(ip, 1:MAX_DIM) = mesh_x_global(mesh, ip, force=.true.)
+      mesh%x(ip, 1:mesh%sb%dim) = mesh_x_global(mesh, ip, force=.true.)
     end do
   end if
 
@@ -649,7 +649,7 @@ contains
                   if(.not. mesh%parallel_in_domains) then
 #endif
                     call curvilinear_chi2x(mesh%sb, mesh%cv, chi, xx)
-                    mesh%x(il, 1:MAX_DIM) = xx(1:MAX_DIM)
+                    mesh%x(il, 1:mesh%sb%dim) = xx(1:mesh%sb%dim)
 #ifdef HAVE_MPI
                   end if
 #endif                                   
@@ -713,7 +713,7 @@ contains
           chi(3) = TOFLOAT(iz)*mesh%spacing(3)
 
           call curvilinear_chi2x(mesh%sb, mesh%cv, chi, xx)
-          mesh%x(il, 1:MAX_DIM) = xx(1:MAX_DIM)
+          mesh%x(il, 1:mesh%sb%dim) = xx(1:mesh%sb%dim)
 #ifdef HAVE_MPI
         end if
 #endif                 
@@ -778,7 +778,7 @@ contains
               chi(3) = TOFLOAT(iz)*mesh%spacing(3)
 
               call curvilinear_chi2x(mesh%sb, mesh%cv, chi, xx)
-              mesh%x(il, 1:MAX_DIM) = xx(1:MAX_DIM)
+              mesh%x(il, 1:mesh%sb%dim) = xx(1:mesh%sb%dim)
 #ifdef HAVE_MPI
             end if
 #endif          
@@ -962,22 +962,22 @@ contains
     ! x consists of three parts: the local points, the
     ! ghost points, and the boundary points; in this order
     ! (just as for any other vector, which is distributed).
-    SAFE_ALLOCATE(mesh%x(1:mesh%np_part, 1:MAX_DIM))
+    SAFE_ALLOCATE(mesh%x(1:mesh%np_part, 1:mesh%sb%dim))
     mesh%x(:, :) = M_ZERO
     ! Do the inner points
     do ii = 1, mesh%np
       jj = mesh%vp%local(mesh%vp%xlocal + ii - 1)
-      mesh%x(ii, 1:MAX_DIM) = mesh_x_global(mesh, jj)
+      mesh%x(ii, 1:mesh%sb%dim) = mesh_x_global(mesh, jj)
     end do
     ! Do the ghost points
     do ii = 1, mesh%vp%np_ghost
       jj = mesh%vp%ghost(mesh%vp%xghost + ii - 1) 
-      mesh%x(ii+mesh%np, 1:MAX_DIM) = mesh_x_global(mesh, jj)
+      mesh%x(ii+mesh%np, 1:mesh%sb%dim) = mesh_x_global(mesh, jj)
     end do
     ! Do the boundary points
     do ii = 1, mesh%vp%np_bndry
       jj = mesh%vp%bndry(mesh%vp%xbndry + ii - 1)
-      mesh%x(ii + mesh%np + mesh%vp%np_ghost, 1:MAX_DIM) = mesh_x_global(mesh, jj)
+      mesh%x(ii + mesh%np + mesh%vp%np_ghost, 1:mesh%sb%dim) = mesh_x_global(mesh, jj)
     end do
 
     !%Variable PartitionPrint

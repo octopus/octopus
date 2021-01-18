@@ -67,10 +67,10 @@ contains
     type(geometry_t),         intent(in)  :: geo
 
     integer             :: ip
-    FLOAT               :: bounds(1:MAX_DIM,1:2)
+    FLOAT               :: bounds(1:sb%dim, 1:2)
     integer             :: cols_abshape_block, imdim, maxdim
 
-    FLOAT               :: xx(1:MAX_DIM), rr
+    FLOAT               :: xx(1:sb%dim), rr
     FLOAT               :: ufn_re, ufn_im
     character(len=1024) :: user_def_expr
 
@@ -197,9 +197,8 @@ contains
           call parse_block_float( blk, 0, 1, bounds(1,2), units_inp%length)
           call parse_block_string(blk, 0, 2, user_def_expr)
           do ip = 1, mesh%np
-            xx = M_ZERO
-            xx(1:MAX_DIM) = mesh%x(ip, 1:MAX_DIM)
-            rr = units_from_atomic(units_inp%length, sqrt(sum(xx(1:sb%dim)**2)))
+            xx = mesh%x(ip, :)
+            rr = units_from_atomic(units_inp%length, sqrt(sum(xx**2)))
             do imdim = 1, sb%dim
               xx(imdim) = units_from_atomic(units_inp%length, xx(imdim))
             end do
@@ -227,7 +226,7 @@ contains
 !       call messages_obsolete_variable('ABWidth', 'ABShape')
       abwidth_def = bounds(1,2)-bounds(1,1)
       call parse_variable(namespace, 'ABWidth', abwidth_def, abwidth, units_inp%length)
-      bounds(1:sb%dim,1) = bounds(1:sb%dim,2) - abwidth
+      bounds(:, 1) = bounds(:, 2) - abwidth
 
       maxdim = sb%dim
       if(sb%box_shape == SPHERE .or. this%ab_user_def) maxdim = 1
@@ -310,12 +309,12 @@ contains
     type(mesh_t),             intent(in)    :: mesh
     type(simul_box_t),        intent(in)    :: sb
     type(geometry_t),         intent(in)    :: geo
-    FLOAT,                    intent(in)    :: bounds(1:MAX_DIM, 1:2)
+    FLOAT,                    intent(in)    :: bounds(1:sb%dim, 1:2)
     FLOAT,                    intent(inout) :: mf(:)
 
     integer :: ip, dir
-    FLOAT   :: width(MAX_DIM)
-    FLOAT   :: xx(1:MAX_DIM), rr, dd, ddv(1:MAX_DIM), tmp(1:MAX_DIM)
+    FLOAT   :: width(1:sb%dim)
+    FLOAT   :: xx(1:sb%dim), rr, dd, ddv(1:sb%dim), tmp(1:sb%dim)
 
     PUSH_SUB(bc_generate_mf)
 
@@ -323,12 +322,11 @@ contains
 
     mf = M_ZERO
 
-    width(1:sb%dim) = bounds(1:sb%dim,2) - bounds(1:sb%dim,1)
-    xx = M_ZERO
+    width = bounds(:, 2) - bounds(:,1)
 
     do ip = 1, mesh%np
-      xx(1:sb%dim) = mesh%x(ip, 1:sb%dim)
-      rr = sqrt(dot_product(xx(1:sb%dim), xx(1:sb%dim)))
+      xx = mesh%x(ip, :)
+      rr = sqrt(dot_product(xx, xx))
  
       if(this%ab_user_def) then
         dd = this%ab_ufn(ip) - bounds(1,1)
@@ -359,8 +357,8 @@ contains
           ! We are filling from the center opposite to the spherical case
           tmp = M_ONE
           mf(ip) = M_ONE
-          ddv(:) = abs(xx(:)) -  bounds(:,1)
-          do dir=1, sb%dim
+          ddv = abs(xx) -  bounds(:, 1)
+          do dir = 1, sb%dim
             if(ddv(dir) > M_ZERO ) then 
               if (ddv(dir)  <  width(dir)) then
                 tmp(dir) = M_ONE - sin(ddv(dir) * M_PI / (M_TWO * (width(dir)) ))**2

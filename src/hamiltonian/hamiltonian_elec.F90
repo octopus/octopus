@@ -573,7 +573,7 @@ contains
     ! ---------------------------------------------------------
     subroutine init_phase
       integer :: ip, ik, sp, ip_global, ip_inner
-      FLOAT   :: kpoint(1:MAX_DIM), x_global(1:MAX_DIM)
+      FLOAT   :: kpoint(1:MAX_DIM), x_global(1:gr%sb%dim)
       
 
       PUSH_SUB(hamiltonian_elec_init.init_phase)
@@ -1075,7 +1075,7 @@ contains
     subroutine build_phase()
       integer :: ik, imat, nmat, max_npoints, offset
       integer :: ip, ip_global, ip_inner, sp
-      FLOAT   :: kpoint(1:MAX_DIM), x_global(1:MAX_DIM)
+      FLOAT   :: kpoint(1:MAX_DIM), x_global(1:mesh%sb%dim)
       integer :: iphase, nphase
 
       PUSH_SUB(hamiltonian_elec_update.build_phase)

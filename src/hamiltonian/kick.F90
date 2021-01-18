@@ -868,7 +868,7 @@ contains
     logical, optional,    intent(in)    :: to_interpolate
 
     integer :: ip, im
-    FLOAT   :: xx(MAX_DIM)
+    FLOAT   :: xx(mesh%sb%dim)
     FLOAT   :: rkick, ikick, rr, ylm
 
     integer :: np
@@ -881,6 +881,7 @@ contains
     end if
 
     if(abs(kick%qlength) > M_EPSILON .or. kick%delta_strength_mode == KICK_MAGNON_MODE) then ! q-vector is set
+      ASSERT(mesh%sb%dim == 3)
 
       select case (kick%qkick_mode)
         case (QKICKMODE_COS)
@@ -901,16 +902,16 @@ contains
 
       kick_function = M_z0
       do ip = 1, np
-        call mesh_r(mesh, ip, rr, coords = xx)
+        xx = mesh%x(ip, :)
         select case (kick%qkick_mode)
           case (QKICKMODE_COS)
-            kick_function(ip) = kick_function(ip) + cos(sum(kick%qvector(:, iq) * xx(:)))
+            kick_function(ip) = kick_function(ip) + cos(sum(kick%qvector(1:3, iq) * xx(1:3)))
           case (QKICKMODE_SIN)
-            kick_function(ip) = kick_function(ip) + sin(sum(kick%qvector(:, iq) * xx(:)))
+            kick_function(ip) = kick_function(ip) + sin(sum(kick%qvector(1:3, iq) * xx(1:3)))
           case (QKICKMODE_SIN+QKICKMODE_COS)
-            kick_function(ip) = kick_function(ip) + sin(sum(kick%qvector(:, iq) * xx(:)))
+            kick_function(ip) = kick_function(ip) + sin(sum(kick%qvector(1:3, iq) * xx(1:3)))
           case (QKICKMODE_EXP)
-            kick_function(ip) = kick_function(ip) + exp(M_zI * sum(kick%qvector(:, iq) * xx(:)))
+            kick_function(ip) = kick_function(ip) + exp(M_zI * sum(kick%qvector(1:3, iq) * xx(1:3)))
           case (QKICKMODE_BESSEL)
             call grylmr(mesh%x(ip, 1), mesh%x(ip, 2), mesh%x(ip, 3), kick%qbessel_l, kick%qbessel_m, ylm)
               kick_function(ip) = kick_function(ip) + loct_sph_bessel(kick%qbessel_l, kick%qlength*sqrt(sum(xx(:)**2)))*ylm

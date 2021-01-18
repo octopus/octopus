@@ -228,7 +228,7 @@ contains
     FLOAT,        intent(in),  optional :: origin(:) !< origin(sb%dim)
     FLOAT,        intent(out), optional :: coords(:) !< coords(sb%dim)
    
-    FLOAT :: xx(MAX_DIM)
+    FLOAT :: xx(1:mesh%sb%dim)
 
     ! no push_sub because it is called too frequently
     
@@ -237,7 +237,6 @@ contains
     rr = sqrt(dot_product(xx(1:mesh%sb%dim), xx(1:mesh%sb%dim)))
     
     if(present(coords)) then
-      coords(1:MAX_DIM) = M_ZERO
       coords(1:mesh%sb%dim) = xx(1:mesh%sb%dim)
     end if
 
@@ -266,7 +265,7 @@ contains
     FLOAT,            intent(out) :: dist   
     
     integer :: iatom, jatom, idir
-    FLOAT   :: xx(MAX_DIM), rr, dd, radius
+    FLOAT   :: xx(mesh%sb%dim), rr, dd, radius
     
     ! no PUSH SUB, called too often
 
@@ -275,7 +274,7 @@ contains
 
     select case(mesh%sb%box_shape)
     case(SPHERE)
-      call mesh_r(mesh, ip, rr, coords=xx)
+      call mesh_r(mesh, ip, rr)
       dd = rr - (mesh%sb%rsize - width)
       if(dd > M_ZERO) then
         is_on_border = .true.
@@ -300,7 +299,7 @@ contains
     case(MINIMUM)
       radius = mesh%sb%rsize
       do iatom = 1, geo%natoms
-        call mesh_r(mesh, ip, rr, origin=geo%atom(iatom)%x, coords=xx)
+        call mesh_r(mesh, ip, rr, origin=geo%atom(iatom)%x)
         if(mesh%sb%rsize < M_ZERO) radius = species_def_rsize(geo%atom(iatom)%species)
         dd = rr - (radius - width)
 	! check if the point is on the spherical shell of atom # iatom
@@ -839,7 +838,7 @@ contains
     type(mesh_t),       intent(in) :: mesh
     integer,            intent(in) :: ip
     logical, optional,  intent(in) :: force
-    FLOAT                          :: xx(1:MAX_DIM)
+    FLOAT                          :: xx(1:mesh%sb%dim)
 
     FLOAT :: chi(1:MAX_DIM)
     integer :: ix(1:MAX_DIM)
@@ -856,9 +855,8 @@ contains
       chi(mesh%sb%dim + 1:MAX_DIM) = M_ZERO
       xx = M_ZERO ! this initialization is required by gfortran 4.4 or we get NaNs
       call curvilinear_chi2x(mesh%sb, mesh%cv, chi, xx)
-      xx(mesh%sb%dim + 1:MAX_DIM) = M_ZERO
     else
-      xx(1:MAX_DIM) = mesh%x(ip, 1:MAX_DIM)
+      xx(1:mesh%sb%dim) = mesh%x(ip, 1:mesh%sb%dim)
     end if
 
   end function mesh_x_global

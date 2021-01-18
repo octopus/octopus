@@ -1509,7 +1509,7 @@ contains
       integrand = M_ZERO
       do is = 1, st%d%nspin
         do ip = 1, gr%mesh%np
-          integrand(ip) = integrand(ip) + st%rho(ip, is) * exp(-M_zI*sum(gr%mesh%x(ip,:)*kick%qvector(:,1)))
+          integrand(ip) = integrand(ip) + st%rho(ip, is) * exp(-M_zI*sum(gr%mesh%x(ip, 1:gr%sb%dim)*kick%qvector(1:gr%sb%dim, 1)))
         end do
       end do
       ftchd = zmf_integrate(gr%mesh, integrand)

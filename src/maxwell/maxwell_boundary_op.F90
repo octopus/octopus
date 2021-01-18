@@ -1332,7 +1332,7 @@ contains
     do idim = 1, 3
       do ip_in = 1, bc%medium%points_number(idim)
         ip = bc%medium%points_map(ip_in,idim)
-        xx(:) = gr%mesh%x(ip,:)
+        xx(:) = gr%mesh%x(ip, :)
         dd_min = M_HUGE
         do ip_bd = 1, bc%medium%bdry_number(idim)
           ipp = bc%medium%bdry_map(ip_bd, idim)

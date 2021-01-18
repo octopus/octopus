@@ -296,7 +296,7 @@ contains
     integer           :: il, ip, jj, ierr
     character(len=200) :: scalar_pot_expression
     character(len=200) :: envelope_expression, phase_expression
-    FLOAT :: omega0, rr, pot_re, pot_im, xx(MAX_DIM)
+    FLOAT :: omega0, rr, pot_re, pot_im, xx(mesh%sb%dim)
     integer :: iop 
 
     PUSH_SUB(laser_init)
@@ -461,6 +461,9 @@ contains
               lasers(il)%a(ip, :) = (/ xx(2)*real(lasers(il)%pol(3)) - xx(3)*real(lasers(il)%pol(2)), &
                                 xx(3)*real(lasers(il)%pol(1)) - xx(1)*real(lasers(il)%pol(3)), &
                                 xx(1)*real(lasers(il)%pol(2)) - xx(2)*real(lasers(il)%pol(1))  /)
+            case default
+              message(1) = "Magnetic fields only allowed in 2 or 3D."
+              call messages_fatal(1, namespace=namespace)
             end select
           end do
           lasers(il)%a = -M_HALF * lasers(il)%a 

@@ -901,8 +901,8 @@ contains
 
     integer :: ip, dir
     FLOAT   :: width
-    FLOAT   :: xx(1:MAX_DIM), rr, dd, ddv(1:MAX_DIM), tmp(1:MAX_DIM)
-    CMPLX,allocatable :: mask_fn(:)
+    FLOAT   :: xx(1:mesh%sb%dim), rr, dd, ddv(1:mesh%sb%dim), tmp(1:mesh%sb%dim)
+    CMPLX, allocatable :: mask_fn(:)
     logical :: local_
 
     PUSH_SUB(pes_mask_generate_mask_function)
@@ -924,8 +924,8 @@ contains
         if(local_) then
           call mesh_r(mesh, ip, rr, coords=xx)
         else
-          xx=mesh_x_global(mesh, ip) 
-          rr = sqrt(dot_product(xx(1:mesh%sb%dim), xx(1:mesh%sb%dim)))
+          xx = mesh_x_global(mesh, ip) 
+          rr = sqrt(dot_product(xx, xx))
         end if
 
         if(mask%user_def) then
@@ -956,7 +956,7 @@ contains
             ! We are filling from the center opposite to the spherical case
             tmp = M_ONE
             mask_fn(ip) = M_ONE
-            ddv(:) = abs(xx(:)) -  R(1) 
+            ddv = abs(xx) -  R(1) 
             do dir=1, mesh%sb%dim 
               if(ddv(dir) > M_ZERO ) then 
                 if (ddv(dir)  <  width) then
@@ -978,8 +978,8 @@ contains
         if(local_) then
           call mesh_r(mesh, ip, rr, coords=xx)
         else
-          xx=mesh_x_global(mesh, ip) 
-          rr = sqrt(dot_product(xx(1:mesh%sb%dim), xx(1:mesh%sb%dim)))
+          xx = mesh_x_global(mesh, ip) 
+          rr = sqrt(dot_product(xx, xx))
         end if
         dd = rr - R(1) 
         if(dd > M_ZERO ) then 
