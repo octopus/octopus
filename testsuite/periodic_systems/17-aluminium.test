@@ -22,7 +22,7 @@ match ;  Correlation energy  ; GREPFIELD(static/info, 'Correlation =', 3) ; -0.6
 match ;  Kinetic energy      ; GREPFIELD(static/info, 'Kinetic     =', 3) ; 3.09381646
 match ;  External energy     ; GREPFIELD(static/info, 'External    =', 3) ; 1.587874885
 
-Precision: 5.0e-6
+Precision: 5.1e-6
 match ;  Eigenvalue      [ k = 1, n = 1 ]  ; GREPFIELD(static/info, '#k =   1', 3, 1) ; -0.023446
 match ;  Eigenvalue      [ k = 1, n = 2 ]  ; GREPFIELD(static/info, '#k =   1', 3, 2) ; -0.023446
 match ;  Eigenvalue      [ k = 1, n = 4 ]  ; GREPFIELD(static/info, '#k =   1', 3, 4) ; -0.023446
