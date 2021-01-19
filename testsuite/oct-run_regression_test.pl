@@ -582,7 +582,7 @@ while ($_ = <TESTSUITE>) {
                             print "----------------------------------------\n\n";
                             print "These are the last lines of stderr:\n\n";
                             print "----------------------------------------\n";
-                            system("tail -20 $workdir/err");
+                            system("tail -50 $workdir/err");
                             print "----------------------------------------\n\n";
 
                             $error_match_done = 0;
