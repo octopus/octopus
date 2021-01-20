@@ -165,12 +165,11 @@ end subroutine mesh_init_stage_1
 !> This subroutine checks if every grid point belongs to the internal
 !! mesh, based on the global lxyz_inv matrix. Afterwards, it counts
 !! how many points has the mesh and the enlargement.
-subroutine mesh_init_stage_2(mesh, sb, cv, stencil, namespace)
+subroutine mesh_init_stage_2(mesh, sb, cv, stencil)
   type(mesh_t),        intent(inout) :: mesh
   type(simul_box_t),   intent(in)    :: sb
   type(curvilinear_t), intent(in)    :: cv
   type(stencil_t),     intent(in)    :: stencil
-  type(namespace_t),   intent(in)    :: namespace
 
   integer :: il, ik, ix, iy, iz, is
   integer :: newi, newj, newk, ii, jj, kk, dx, dy, dz, i_lev
@@ -248,7 +247,7 @@ subroutine mesh_init_stage_2(mesh, sb, cv, stencil, namespace)
         call curvilinear_chi2x(sb, cv, chi(:), xx(ix, :))
       end do
 
-      call simul_box_in_box_vec(sb, mesh%idx%nr(2,1) - mesh%idx%nr(1,1) + 1, xx, in_box, namespace)
+      call simul_box_in_box_vec(sb, mesh%idx%nr(2,1) - mesh%idx%nr(1,1) + 1, xx, in_box)
 
       do ix = mesh%idx%nr(1,1), mesh%idx%nr(2,1)
         if (.not.in_box(ix)) cycle

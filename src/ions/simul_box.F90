@@ -302,7 +302,7 @@ contains
       type(block_t) :: blk
 
       FLOAT :: default
-      integer :: default_boxshape, idir
+      integer :: default_boxshape, idir, iatom
 #if defined(HAVE_GDLIB)
       logical :: found
       integer :: box_npts
@@ -409,6 +409,18 @@ contains
         default=sb%rsize
         call parse_variable(namespace, 'radius', default, sb%rsize, units_inp%length)
         if(sb%rsize < M_ZERO .and. def_rsize < M_ZERO) call messages_input_error(namespace, 'Radius')
+
+        if (sb%rsize <= M_ZERO) then
+          do iatom = 1, sb%geo%natoms
+            if (species_def_rsize(sb%geo%atom(iatom)%species) < -M_EPSILON) then
+              write(message(1),'(a,a,a)') 'Using default radii for minimum box, but radius for ', &
+                trim(species_label(sb%geo%atom(iatom)%species)), ' is negative or undefined.'
+              message(2) = "Define it properly in the Species block or set the Radius variable explicitly."
+              call messages_fatal(2, namespace=namespace)
+            end if
+          end do
+        end if
+
       end select
 
       if(sb%box_shape == CYLINDER) then
@@ -859,7 +871,7 @@ contains
         geo%atom(iatom)%x(pd + 1:sb%dim) = M_TWO*sb%lsize(pd + 1:sb%dim)*geo%atom(iatom)%x(pd + 1:sb%dim)
       end if
 
-      if( .not. simul_box_in_box(sb, geo%atom(iatom)%x, namespace) ) then
+      if( .not. simul_box_in_box(sb, geo%atom(iatom)%x) ) then
         write(message(1), '(a,i5,a)') "Atom ", iatom, " is outside the box." 
         if (sb%periodic_dim /= sb%dim) then
           ! FIXME: This could fail for partial periodicity systems
@@ -1136,10 +1148,9 @@ contains
 
   !--------------------------------------------------------------
   !> Checks if a mesh point belongs to the actual mesh.
-  logical function simul_box_in_box(sb, yy, namespace) result(in_box)
+  logical function simul_box_in_box(sb, yy) result(in_box)
     type(simul_box_t),  intent(in) :: sb
     FLOAT,              intent(in) :: yy(:)
-    type(namespace_t),  intent(in) :: namespace
 
     FLOAT :: xx(1, 1:MAX_DIM)
     logical :: in_box2(1)
@@ -1148,7 +1159,7 @@ contains
 
     xx(1, 1:sb%dim) = yy(1:sb%dim)
 
-    call simul_box_in_box_vec(sb, 1, xx, in_box2, namespace)
+    call simul_box_in_box_vec(sb, 1, xx, in_box2)
     in_box = in_box2(1)
 
   end function simul_box_in_box
@@ -1156,12 +1167,11 @@ contains
 
   !--------------------------------------------------------------
   !> Checks if a group of mesh points belong to the actual mesh.
-  subroutine simul_box_in_box_vec(sb, npoints, point, in_box, namespace)
+  subroutine simul_box_in_box_vec(sb, npoints, point, in_box)
     type(simul_box_t),  intent(in)  :: sb
     integer,            intent(in)  :: npoints
     FLOAT,              intent(in)  :: point(:, :)
     logical,            intent(out) :: in_box(:)
-    type(namespace_t),  intent(in)  :: namespace
 
     FLOAT, parameter :: DELTA = CNST(1e-12)
     FLOAT :: rr, re, im, dist2, radius
@@ -1211,12 +1221,6 @@ contains
       else
         radius = M_ZERO
         do iatom = 1, sb%geo%natoms
-          if(species_def_rsize(sb%geo%atom(iatom)%species) < -M_EPSILON) then
-            write(message(1),'(a,a,a)') 'Using default radii for minimum box, but radius for ', &
-              trim(species_label(sb%geo%atom(iatom)%species)), ' is negative or undefined.'
-            message(2) = "Define it properly in the Species block or set the Radius variable explicitly."
-            call messages_fatal(2, namespace=namespace)
-          end if
           radius = max(radius, species_def_rsize(sb%geo%atom(iatom)%species))
         end do
       end if
