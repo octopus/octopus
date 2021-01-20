@@ -217,7 +217,7 @@ contains
  ! ---------------------------------------------------------
  subroutine lda_u_mixer_get_vnew(this, mixer, st)
    type(lda_u_t),       intent(inout) :: this
-   type(lda_u_mixer_t), intent(in)    :: mixer
+   type(lda_u_mixer_t), intent(inout) :: mixer
    type(states_elec_t), intent(in)    :: st
 
    if(.not. mixer%apply) return
