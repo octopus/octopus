@@ -848,9 +848,9 @@ subroutine mesh_init_stage_3(mesh, namespace, space, stencil, mc, parent)
 
   print *, mpi_world%rank, "np, np_part, ghost, boundary", mesh%np, mesh%np_part,  nghost, nboundary
 
-  SAFE_ALLOCATE(mesh%np_parts(1:mpi_world%size))
+  SAFE_ALLOCATE(mesh%np_parts(1:mpi_grp%size))
 #ifdef HAVE_MPI
-  call MPI_Allgather(mesh%np_part, 1, MPI_INTEGER, mesh%np_parts(1), 1, MPI_INTEGER, mpi_world%comm, mpi_err)
+  call MPI_Allgather(mesh%np_part, 1, MPI_INTEGER, mesh%np_parts(1), 1, MPI_INTEGER, mpi_grp%comm, mpi_err)
 #else
   mesh%np_parts(1) = mesh%np_part
 #endif
@@ -918,7 +918,8 @@ subroutine mesh_init_stage_3(mesh, namespace, space, stencil, mc, parent)
   !  mesh%vp%xlocal = 1
   !end if
 
-  call mesh_cube_map_init(mesh%cube_map, mesh%idx, mesh%np_global)
+  !call mesh_cube_map_init(mesh%cube_map, mesh%idx, mesh%np_global)
+  call mesh_cube_map_init(mesh%cube_map, mesh%idx, mesh%np)
 
   call mesh_get_vol_pp(mesh%sb)
 
