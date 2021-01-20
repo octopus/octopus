@@ -216,7 +216,7 @@ subroutine mesh_init_stage_2(mesh, sb, cv, stencil, namespace)
 
   mesh%idx%lxyz_inv(:,:,:) = 0
   res = 1
-  SAFE_ALLOCATE(xx(1:MAX_DIM, mesh%idx%nr(1,1):mesh%idx%nr(2,1)))
+  SAFE_ALLOCATE(xx(mesh%idx%nr(1,1):mesh%idx%nr(2,1), 1:MAX_DIM))
   SAFE_ALLOCATE(in_box(mesh%idx%nr(1,1):mesh%idx%nr(2,1)))
   chi = M_ZERO
 
@@ -245,7 +245,7 @@ subroutine mesh_init_stage_2(mesh, sb, cv, stencil, namespace)
       chi(2) = TOFLOAT(iy) * mesh%spacing(2)
       do ix = mesh%idx%nr(1,1), mesh%idx%nr(2,1)
         chi(1) = TOFLOAT(ix) * mesh%spacing(1)
-        call curvilinear_chi2x(sb, cv, chi(:), xx(:, ix))
+        call curvilinear_chi2x(sb, cv, chi(:), xx(ix, :))
       end do
 
       call simul_box_in_box_vec(sb, mesh%idx%nr(2,1) - mesh%idx%nr(1,1) + 1, xx, in_box, namespace)
@@ -331,15 +331,15 @@ contains
     PUSH_SUB(mesh_init_stage_2.multiresolution_mark_inner_point)
     ! First check: is the point beyond the multiresolution areas
     n_mod = 2**sb%hr_area%num_radii
-    if (sum((xx(:,ix)-sb%hr_area%center(:))**2) > sb%hr_area%radius(sb%hr_area%num_radii)**2 .and. &
-         mod(ix, n_mod) == 0 .and. mod(iy, n_mod) == 0 .and. mod(iz,n_mod) == 0) then
+    if (sum((xx(ix, :) - sb%hr_area%center(:))**2) > sb%hr_area%radius(sb%hr_area%num_radii)**2 .and. &
+         mod(ix, n_mod) == 0 .and. mod(iy, n_mod) == 0 .and. mod(iz, n_mod) == 0) then
       mesh%idx%lxyz_inv(ix, iy, iz) = ibset(mesh%idx%lxyz_inv(ix, iy, iz), INNER_POINT)
     end if
     ! Other option: must be inside the multiresolution area and satisfy coordinate index conditions
     if(.not.btest(mesh%idx%lxyz_inv(ix, iy, iz), INNER_POINT)) then
       do i_lev = 1,sb%hr_area%num_radii
         n_mod = 2**(i_lev-1)
-        if( sum((xx(:,ix)-sb%hr_area%center(:))**2) < sb%hr_area%radius(i_lev)**2 + DELTA .and. &
+        if( sum((xx(ix, :) - sb%hr_area%center(:))**2) < sb%hr_area%radius(i_lev)**2 + DELTA .and. &
             mod(ix, n_mod) == 0 .and. mod(iy, n_mod) == 0 .and. mod(iz,n_mod) == 0) then
           mesh%idx%lxyz_inv(ix, iy, iz) = ibset(mesh%idx%lxyz_inv(ix,iy, iz), INNER_POINT)
         end if

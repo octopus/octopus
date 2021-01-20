@@ -1141,12 +1141,12 @@ contains
     FLOAT,              intent(in) :: yy(:)
     type(namespace_t),  intent(in) :: namespace
 
-    FLOAT :: xx(1:MAX_DIM, 1)
+    FLOAT :: xx(1, 1:MAX_DIM)
     logical :: in_box2(1)
 
     ! no push_sub because this function is called very frequently
 
-    xx(1:sb%dim, 1) = yy(1:sb%dim)
+    xx(1, 1:sb%dim) = yy(1:sb%dim)
 
     call simul_box_in_box_vec(sb, 1, xx, in_box2, namespace)
     in_box = in_box2(1)
@@ -1176,31 +1176,31 @@ contains
 #endif
 
     ! no push_sub because this function is called very frequently
-    SAFE_ALLOCATE(xx(1:sb%dim, 1:npoints))
+    SAFE_ALLOCATE(xx(1:npoints, 1:sb%dim))
     xx = M_ZERO
     
     !convert from Cartesian to reduced lattice coord 
-    if(npoints == 1) then
-      xx(1:sb%dim, 1) = matmul(point(1:sb%dim, 1), sb%klattice_primitive(1:sb%dim, 1:sb%dim))
+    if (npoints == 1) then
+      xx(1, 1:sb%dim) = matmul(point(1, 1:sb%dim), sb%klattice_primitive(1:sb%dim, 1:sb%dim))
     else
-      call lalg_gemmt(sb%dim, npoints, sb%dim, M_ONE, sb%klattice_primitive, point, M_ZERO, xx)
+      call lalg_gemm(npoints, sb%dim, sb%dim, M_ONE, point, sb%klattice_primitive, M_ZERO, xx)
     end if
 
     select case(sb%box_shape)
     case(SPHERE)
       do ip = 1, npoints
-        in_box(ip) = sum(xx(1:sb%dim, ip)**2) <= (sb%rsize+DELTA)**2
+        in_box(ip) = sum(xx(ip, 1:sb%dim)**2) <= (sb%rsize+DELTA)**2
       end do
 
     case(CYLINDER)
       do ip = 1, npoints
-        rr = sqrt(sum(xx(2:sb%dim, ip)**2))
+        rr = sqrt(sum(xx(ip, 2:sb%dim)**2))
         in_box(ip) = rr <= sb%rsize + DELTA
         if(sb%periodic_dim >= 1) then
-          in_box(ip) = in_box(ip) .and. xx(1, ip) >= -sb%xsize - DELTA
-          in_box(ip) = in_box(ip) .and. xx(1, ip) <=  sb%xsize - DELTA
+          in_box(ip) = in_box(ip) .and. xx(ip, 1) >= -sb%xsize - DELTA
+          in_box(ip) = in_box(ip) .and. xx(ip, 1) <=  sb%xsize - DELTA
         else
-          in_box(ip) = in_box(ip) .and. abs(xx(1, ip)) <= sb%xsize + DELTA
+          in_box(ip) = in_box(ip) .and. abs(xx(ip, 1)) <= sb%xsize + DELTA
         end if
       end do
 
@@ -1241,7 +1241,7 @@ contains
           in_box(ip) = .false.
           do ilist = 1, nlist(ip)
             iatom = list(ilist, ip)
-            dist2 = sum((xx(1:sb%dim, ip) - sb%geo%atom(iatom)%x(1:sb%dim))**2)
+            dist2 = sum((xx(ip, 1:sb%dim) - sb%geo%atom(iatom)%x(1:sb%dim))**2)
             if(dist2 < species_def_rsize(sb%geo%atom(iatom)%species)**2) then
               in_box(ip) = .true.
               exit
@@ -1259,7 +1259,7 @@ contains
       ulimit(1:sb%periodic_dim)  = sb%lsize(1:sb%periodic_dim) - DELTA
 
       do ip = 1, npoints
-        in_box(ip) = all(xx(1:sb%dim, ip) >= llimit(1:sb%dim) .and. xx(1:sb%dim, ip) <= ulimit(1:sb%dim))
+        in_box(ip) = all(xx(ip, 1:sb%dim) >= llimit(1:sb%dim) .and. xx(ip, 1:sb%dim) <= ulimit(1:sb%dim))
       end do
 
 #if defined(HAVE_GDLIB)
@@ -1269,8 +1269,8 @@ contains
 
     case(BOX_IMAGE)
       do ip = 1, npoints
-        ix = nint(( xx(1, ip) + sb%lsize(1)) * sb%image_size(1) / (M_TWO * sb%lsize(1)))
-        iy = nint((-xx(2, ip) + sb%lsize(2)) * sb%image_size(2) / (M_TWO * sb%lsize(2)))
+        ix = nint(( xx(ip, 1) + sb%lsize(1)) * sb%image_size(1) / (M_TWO * sb%lsize(1)))
+        iy = nint((-xx(ip, 2) + sb%lsize(2)) * sb%image_size(2) / (M_TWO * sb%lsize(2)))
         call gdlib_image_get_pixel_rgb(sb%image, ix, iy, red, green, blue)
         in_box(ip) = (red == 255) .and. (green == 255) .and. (blue == 255)
       end do
@@ -1279,15 +1279,15 @@ contains
     case(BOX_USDEF)
       ! is it inside the user-given boundaries?
       do ip = 1, npoints
-        in_box(ip) =  all(xx(1:sb%dim, ip) >= -sb%lsize(1:sb%dim) - DELTA) &
-          .and. all(xx(1:sb%dim, ip) <= sb%lsize(1:sb%dim) + DELTA)
+        in_box(ip) =  all(xx(ip, 1:sb%dim) >= -sb%lsize(1:sb%dim) - DELTA) &
+          .and. all(xx(ip, 1:sb%dim) <= sb%lsize(1:sb%dim) + DELTA)
 
         ! and inside the simulation box?
         do idir = 1, sb%dim
-          xx(idir, ip) = units_from_atomic(units_inp%length, xx(idir, ip))
+          xx(ip, idir) = units_from_atomic(units_inp%length, xx(ip, idir))
         end do
-        rr = sqrt(sum(xx(1:sb%dim, ip)**2))
-        call parse_expression(re, im, sb%dim, xx(:, ip), rr, M_ZERO, sb%user_def)
+        rr = sqrt(sum(xx(ip, 1:sb%dim)**2))
+        call parse_expression(re, im, sb%dim, xx(ip, :), rr, M_ZERO, sb%user_def)
         in_box(ip) = in_box(ip) .and. (re /= M_ZERO)
       end do
     end select
