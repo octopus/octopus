@@ -161,10 +161,10 @@ contains
       if(ignore_external_ions) then
         SAFE_ALLOCATE(in_box(1:natom))
         do iatom = 1, geo%natoms
-          in_box(iatom) = simul_box_in_box(sb, geo%atom(iatom)%x)
+          in_box(iatom) = sb%contains_point(geo%atom(iatom)%x)
         end do
         do iatom = 1, geo%ncatoms
-          in_box(geo%natoms + iatom) = simul_box_in_box(sb, geo%catom(iatom)%x)
+          in_box(geo%natoms + iatom) = sb%contains_point(geo%catom(iatom)%x)
         end do
       end if
       

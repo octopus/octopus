@@ -99,7 +99,7 @@ subroutine mesh_init_stage_1(mesh, sb, cv, spacing, enlarge)
         call curvilinear_chi2x(sb, cv, chi(1:sb%dim), x(1:sb%dim))
         out = x(idir) > sb%lsize(idir) + DELTA_
       else
-        ! do the same comparison here as in simul_box_in_box_vec
+        ! do the same comparison here as in simul_box_contains_points
         out = chi(idir) > sb%lsize(idir) + DELTA_
       end if
     end do
@@ -247,7 +247,7 @@ subroutine mesh_init_stage_2(mesh, sb, cv, stencil)
         call curvilinear_chi2x(sb, cv, chi(:), xx(ix, :))
       end do
 
-      call simul_box_in_box_vec(sb, mesh%idx%nr(2,1) - mesh%idx%nr(1,1) + 1, xx, in_box)
+      in_box = sb%contains_points(mesh%idx%nr(2,1) - mesh%idx%nr(1,1) + 1, xx)
 
       do ix = mesh%idx%nr(1,1), mesh%idx%nr(2,1)
         if (.not.in_box(ix)) cycle
