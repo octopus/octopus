@@ -53,8 +53,8 @@ module index_oct_m
     integer, allocatable :: lxyz_inv(:,:,:)  !< return points # for each xyz
     integer              :: enlarge(MAX_DIM) !< number of points to add for boundary conditions
     integer(8)           :: checksum
-    integer, allocatable :: grid_to_hilbert(:) !< map: local grid index -> Hilbert index
-    type(iihash_t)       :: hilbert_to_grid    !< inverse map: Hilbert index -> local grid index
+    integer(8), allocatable :: grid_to_hilbert(:) !< map: local grid index -> Hilbert index
+    type(lihash_t)       :: hilbert_to_grid    !< inverse map: Hilbert index -> local grid index
     integer              :: bits               !< bits per dimension for Hilbert index
     integer              :: offset(MAX_DIM)    !< offset for getting the indices from the Hilbert index
   end type index_t
@@ -92,7 +92,7 @@ contains
     integer,       intent(in)    :: ix(:)
 
     integer :: ix2(MAX_DIM), idir
-    integer :: ihilbert
+    integer(8) :: ihilbert
     logical :: found
 
     ! No PUSH SUB, called too often
@@ -107,7 +107,7 @@ contains
     if(.not. idx%is_hypercube) then
       !index = idx%lxyz_inv(ix2(1), ix2(2), ix2(3))
       call index_point_to_hilbert(idx, idx%dim, ihilbert, ix2)
-      index = iihash_lookup(idx%hilbert_to_grid, ihilbert, found)
+      index = lihash_lookup(idx%hilbert_to_grid, ihilbert, found)
       if(.not. found) index = 0
     else
       call hypercube_x_to_i(idx%hypercube, idx%dim, idx%nr, idx%enlarge(1), ix, index)
@@ -124,7 +124,7 @@ contains
     integer,       intent(out)   :: index(:)
 
     integer :: ix2(MAX_DIM), idir, ip
-    integer :: ihilbert
+    integer(8) :: ihilbert
     logical :: found
 
     ! No PUSH SUB, called too often
@@ -137,7 +137,7 @@ contains
         end do
         !index(ip) = idx%lxyz_inv(ix2(1), ix2(2), ix2(3))
         call index_point_to_hilbert(idx, idx%dim, ihilbert, ix2)
-        index(ip) = iihash_lookup(idx%hilbert_to_grid, ihilbert, found)
+        index(ip) = lihash_lookup(idx%hilbert_to_grid, ihilbert, found)
         ASSERT(found)
       end do
     else
@@ -271,25 +271,25 @@ contains
   subroutine index_hilbert_to_point(idx, dim, ihilbert, point)
     type(index_t), intent(in)  :: idx
     integer,       intent(in)  :: dim
-    integer,       intent(in)  :: ihilbert
+    integer(8),    intent(in)  :: ihilbert
     integer,       intent(out) :: point(:)
 
     ! no push_sub/pop_sub, called too often
-    call hilbert_index_to_point_int(dim, idx%bits, ihilbert, point(1))
+    call hilbert_index_to_point(dim, idx%bits, ihilbert, point(1))
     point(1:dim) = point(1:dim) - idx%offset(1:dim)
   end subroutine index_hilbert_to_point
 
   subroutine index_point_to_hilbert(idx, dim, ihilbert, point)
     type(index_t), intent(in)  :: idx
     integer,       intent(in)  :: dim
-    integer,       intent(out) :: ihilbert
+    integer(8),    intent(out) :: ihilbert
     integer,       intent(in)  :: point(:)
 
     integer :: point_copy(1:MAX_DIM)
 
     ! no push_sub/pop_sub, called too often
     point_copy(1:dim) = point(1:dim) + idx%offset(1:dim)
-    call hilbert_point_to_index_int(dim, idx%bits, ihilbert, point_copy(1))
+    call hilbert_point_to_index(dim, idx%bits, ihilbert, point_copy(1))
   end subroutine index_point_to_hilbert
 end module index_oct_m
 
