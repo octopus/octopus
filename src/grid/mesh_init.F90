@@ -203,9 +203,10 @@ subroutine mesh_init_stage_2(mesh, space, sb, cv, stencil)
   integer :: npoints
   integer, allocatable :: start(:), end(:)
 #endif
-  integer :: global_size, local_size, sizes(1:MAX_DIM), hilbert_size
-  integer :: ihilbert, point(1:MAX_DIM), point_stencil(1:MAX_DIM)
-  integer :: istart, iend, ip, ib, ihilbertb, ib2, np, np_part
+  integer :: point(1:MAX_DIM), point_stencil(1:MAX_DIM)
+  integer(8) :: global_size, local_size, sizes(1:MAX_DIM)
+  integer(8) :: ihilbert, ihilbertb, istart, iend, hilbert_size
+  integer :: ip, ib, ib2, np, np_part
   FLOAT :: pos(1:MAX_DIM)
   logical :: found
 
@@ -228,8 +229,8 @@ subroutine mesh_init_stage_2(mesh, space, sb, cv, stencil)
   nr = mesh%idx%nr
   sizes(1:MAX_DIM) = nr(2, 1:MAX_DIM) - nr(1, 1:MAX_DIM) + 1
   mesh%idx%offset(1:MAX_DIM) = sizes(1:MAX_DIM)/2
-  if(any(sizes > 2**(31/sb%dim))) then
-    write(message(1), '(A, I10, A, I2, A)') "Error: grid too large, more than ", 2**(31/sb%dim), &
+  if(any(sizes > 2**(63/sb%dim))) then
+    write(message(1), '(A, I10, A, I2, A)') "Error: grid too large, more than ", 2**(63/sb%dim), &
       " points in one direction for ", sb%dim, " dimensions. This is not supported yet."
     call messages_fatal(1)
   end if
@@ -237,7 +238,7 @@ subroutine mesh_init_stage_2(mesh, space, sb, cv, stencil)
   ! compute the bits per dimension: sizes(i) <= 2**bits
   mesh%idx%bits = maxval(ceiling(log(TOFLOAT(sizes))/log(2.)))
 
-  call iihash_init(mesh%idx%hilbert_to_grid)
+  call lihash_init(mesh%idx%hilbert_to_grid)
 
   hilbert_size = 2**(sb%dim*mesh%idx%bits)
 
@@ -544,22 +545,24 @@ subroutine mesh_init_stage_3(mesh, namespace, space, stencil, mc, parent)
   type(mpi_grp_t) :: mpi_grp
   integer, allocatable :: offsets(:), sizes(:), offsets_global(:)
   integer :: rank_mesh, rank_global, irank
-  integer, allocatable :: grid_to_hilbert(:)
+  integer(8), allocatable :: grid_to_hilbert(:)
   integer, allocatable :: recvcounts(:), rdispls(:), sendcounts(:), sdispls(:)
   integer, allocatable :: requests(:), mesh_ranks(:)
   integer :: irecv, isend, right_global, left_global, right_local, left_local, ireq
   integer :: ib, ighost, iboundary, nghost, nboundary, point(MAX_DIM), point_stencil(MAX_DIM)
   FLOAT :: pos(MAX_DIM), chi(MAX_DIM)
   logical :: found
-  integer :: is, ihilbert
-  integer, allocatable :: boundary_to_hilbert(:), ghost_to_hilbert(:), temp(:)
+  integer :: is
+  integer(8) :: ihilbert
+  integer(8), allocatable :: boundary_to_hilbert(:), ghost_to_hilbert(:), temp(:)
   integer :: size_boundary, size_ghost
-  integer, allocatable :: hilbert_boundaries(:)
-  integer, allocatable :: ghost_sdispls(:), ghost_scounts(:), ghost_sendpos(:), ghost_sindex(:)
-  integer, allocatable :: ghost_rdispls(:), ghost_rcounts(:), ghost_recvpos(:), ghost_rindex(:)
+  integer(8), allocatable :: hilbert_boundaries(:)
+  integer, allocatable :: ghost_sdispls(:), ghost_scounts(:), ghost_sindex(:)
+  integer, allocatable :: ghost_rdispls(:), ghost_rcounts(:), ghost_rindex(:)
+  integer(8), allocatable :: ghost_sendpos(:), ghost_recvpos(:)
   integer :: size_send, size_recv
   integer, allocatable :: ghost_boundary_rankmap(:), ghost_rankmap(:)
-  type(iihash_t) :: hilbert_to_ghost
+  type(lihash_t) :: hilbert_to_ghost
 
   PUSH_SUB(mesh_init_stage_3)
   call profiling_in(mesh_init_prof, "MESH_INIT")
@@ -670,7 +673,7 @@ subroutine mesh_init_stage_3(mesh, namespace, space, stencil, mc, parent)
     if(rank_global > mpi_world%size - 1) rank_global = rank_global - mpi_world%size
     if(recvcounts(rank_global) == 0) cycle
     call MPI_Irecv(grid_to_hilbert(rdispls(rank_global)+1), recvcounts(rank_global), &
-      MPI_INTEGER, rank_global, 0, mpi_world%comm, requests(ireq), mpi_err)
+      MPI_LONG_LONG, rank_global, 0, mpi_world%comm, requests(ireq), mpi_err)
     ireq = ireq + 1
   end do
 
@@ -681,7 +684,7 @@ subroutine mesh_init_stage_3(mesh, namespace, space, stencil, mc, parent)
     rank_mesh = mesh_ranks(rank_global)
     if(sendcounts(rank_mesh) == 0) cycle
     call MPI_Isend(mesh%idx%grid_to_hilbert(sdispls(rank_mesh)+1), sendcounts(rank_mesh), &
-      MPI_INTEGER, rank_global, 0, mpi_world%comm, requests(ireq), mpi_err)
+      MPI_LONG_LONG, rank_global, 0, mpi_world%comm, requests(ireq), mpi_err)
     ireq = ireq + 1
   end do
 
@@ -700,7 +703,7 @@ subroutine mesh_init_stage_3(mesh, namespace, space, stencil, mc, parent)
 
   ! create inverse mapping
   do ip = 1, mesh%np
-    call iihash_insert(mesh%idx%hilbert_to_grid, grid_to_hilbert(ip), ip)
+    call lihash_insert(mesh%idx%hilbert_to_grid, grid_to_hilbert(ip), ip)
   end do
   size_boundary = mesh%np
   size_ghost = mesh%np
@@ -711,7 +714,7 @@ subroutine mesh_init_stage_3(mesh, namespace, space, stencil, mc, parent)
   ! afterwards, ask other processes if these points belong to them
   ! all points that belong to other processes are ghost points, the rest is the boundary
   ighost = 1
-  call iihash_init(hilbert_to_ghost)
+  call lihash_init(hilbert_to_ghost)
   print*, mpi_grp%rank, "Count points"
   do ip = 1, mesh%np
     call index_hilbert_to_point(mesh%idx, mesh%sb%dim, grid_to_hilbert(ip), point)
@@ -721,12 +724,12 @@ subroutine mesh_init_stage_3(mesh, namespace, space, stencil, mc, parent)
       if(any(point_stencil(1:mesh%sb%dim) < mesh%idx%nr(1, 1:mesh%sb%dim)) .or. &
          any(point_stencil(1:mesh%sb%dim) >  mesh%idx%nr(2, 1:mesh%sb%dim))) cycle
       call index_point_to_hilbert(mesh%idx, mesh%sb%dim, ihilbert, point_stencil)
-      ib = iihash_lookup(mesh%idx%hilbert_to_grid, ihilbert, found)
+      ib = lihash_lookup(mesh%idx%hilbert_to_grid, ihilbert, found)
       if(found) cycle
-      ib = iihash_lookup(hilbert_to_ghost, ihilbert, found)
+      ib = lihash_lookup(hilbert_to_ghost, ihilbert, found)
       if(found) cycle
       ghost_to_hilbert(ighost) = ihilbert
-      call iihash_insert(hilbert_to_ghost, ihilbert, ighost)
+      call lihash_insert(hilbert_to_ghost, ihilbert, ighost)
       ighost = ighost + 1
       if(ighost == size_ghost) then
         print *, mpi_grp%rank, "resizing from ", size_ghost, " to ", size_ghost*2
@@ -755,8 +758,8 @@ subroutine mesh_init_stage_3(mesh, namespace, space, stencil, mc, parent)
   ! communicate ghost points
   print*, mpi_grp%rank, "exchange Hilbert boundaries"
   SAFE_ALLOCATE(hilbert_boundaries(0:mpi_grp%size-1))
-  call MPI_Allgather(mesh%idx%grid_to_hilbert(mesh%np), 1, MPI_INTEGER, &
-    hilbert_boundaries(0), 1, MPI_INTEGER, mpi_grp%comm, mpi_err)
+  call MPI_Allgather(mesh%idx%grid_to_hilbert(mesh%np), 1, MPI_LONG_LONG, &
+    hilbert_boundaries(0), 1, MPI_LONG_LONG, mpi_grp%comm, mpi_err)
   hilbert_boundaries(mpi_grp%size - 1) = 2**(mesh%idx%dim*mesh%idx%bits)
   print*, hilbert_boundaries
 
@@ -811,12 +814,12 @@ subroutine mesh_init_stage_3(mesh, namespace, space, stencil, mc, parent)
   SAFE_ALLOCATE(ghost_recvpos(1:size_recv))
 
   print*, mpi_grp%rank, "exchange hilbert indices"
-  call MPI_Alltoallv(ghost_sendpos(1), ghost_scounts(0), ghost_sdispls(0), MPI_INTEGER, &
-                     ghost_recvpos(1), ghost_rcounts(0), ghost_rdispls(0), MPI_INTEGER, &
+  call MPI_Alltoallv(ghost_sendpos(1), ghost_scounts(0), ghost_sdispls(0), MPI_LONG_LONG, &
+                     ghost_recvpos(1), ghost_rcounts(0), ghost_rdispls(0), MPI_LONG_LONG, &
                      mpi_grp%comm, mpi_err)
 
   do ip = 1, size_recv
-    ib = iihash_lookup(mesh%idx%hilbert_to_grid, ghost_recvpos(ip), found)
+    ib = lihash_lookup(mesh%idx%hilbert_to_grid, ghost_recvpos(ip), found)
     if(.not. found) then
       ! not a local point on this processor, set to BOUNDARY = -1
       ghost_recvpos(ip) = BOUNDARY
@@ -827,8 +830,8 @@ subroutine mesh_init_stage_3(mesh, namespace, space, stencil, mc, parent)
   end do
 
   print*, mpi_grp%rank, "exchange grid indices"
-  call MPI_Alltoallv(ghost_recvpos(1), ghost_rcounts(0), ghost_rdispls(0), MPI_INTEGER, &
-                     ghost_sendpos(1), ghost_scounts(0), ghost_sdispls(0), MPI_INTEGER, &
+  call MPI_Alltoallv(ghost_recvpos(1), ghost_rcounts(0), ghost_rdispls(0), MPI_LONG_LONG, &
+                     ghost_sendpos(1), ghost_scounts(0), ghost_sdispls(0), MPI_LONG_LONG, &
                      mpi_grp%comm, mpi_err)
 
   ighost = 1
@@ -863,11 +866,11 @@ subroutine mesh_init_stage_3(mesh, namespace, space, stencil, mc, parent)
   do ip = 1, size_send
     if(ghost_sendpos(ip) == BOUNDARY) then
       mesh%idx%grid_to_hilbert(mesh%np+nghost+iboundary) = ghost_to_hilbert(ip)
-      call iihash_insert(mesh%idx%hilbert_to_grid, ghost_to_hilbert(ip), mesh%np+nghost+iboundary)
+      call lihash_insert(mesh%idx%hilbert_to_grid, ghost_to_hilbert(ip), mesh%np+nghost+iboundary)
       iboundary = iboundary + 1
     else
       mesh%idx%grid_to_hilbert(mesh%np+ighost) = ghost_to_hilbert(ip)
-      call iihash_insert(mesh%idx%hilbert_to_grid, ghost_to_hilbert(ip), mesh%np+ighost)
+      call lihash_insert(mesh%idx%hilbert_to_grid, ghost_to_hilbert(ip), mesh%np+ighost)
       ghost_rankmap(ighost) = ghost_boundary_rankmap(ip)
       ighost = ighost + 1
     end if
