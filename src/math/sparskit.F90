@@ -339,9 +339,9 @@ contains
   end subroutine sparskit_solver_end
 
   ! ---------------------------------------------------------
-  subroutine sparskit_solver_copy(ski, sko)
-    type(sparskit_solver_t), intent(in)  :: ski
-    type(sparskit_solver_t), intent(out) :: sko
+  subroutine sparskit_solver_copy(sko, ski)
+    type(sparskit_solver_t), intent(inout) :: sko
+    type(sparskit_solver_t), intent(in)    :: ski
 
     PUSH_SUB(sparskit_solver_end)
     
