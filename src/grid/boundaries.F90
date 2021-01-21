@@ -125,8 +125,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine boundaries_init(this, namespace, mesh)
-    type(boundaries_t),   intent(out)   :: this
-    type(namespace_t),       intent(in)    :: namespace
+    type(boundaries_t),   intent(inout) :: this
+    type(namespace_t),    intent(in)    :: namespace
     type(mesh_t), target, intent(in)    :: mesh
 
     integer :: sp, ip, ip_inner, iper, ip_global, idir
