@@ -722,7 +722,8 @@ contains
       call messages_info(1)
 
       ! get the effective potential (we don`t need the eigenvalues yet)
-      call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval=.false., calc_current=.false., calc_energy=.false.)
+      call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval=.false., calc_current=.false., &
+               calc_energy=.false., skip_orb_dep_xc=.true.)
       ! eigenvalues have nevertheless to be initialized to something
       if(st%smear%method == SMEAR_SEMICONDUCTOR .and. lcao_is_available(lcao)) then
         st%eigenval = M_HUGE
@@ -785,7 +786,8 @@ contains
       if(.not. lcao_done) then
         ! If we are doing unocc calculation, do not mess with the correct eigenvalues and occupations
         ! of the occupied states.
-        call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval=.not. present(st_start), calc_current=.false.) ! get potentials
+        call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval=.not. present(st_start), &
+                 calc_current=.false., skip_orb_dep_xc=.true.) ! get potentials
         if(.not. present(st_start)) then
           call states_elec_fermi(st, namespace, gr%mesh) ! occupations
         end if

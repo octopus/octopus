@@ -725,7 +725,8 @@ contains
   end subroutine v_ks_h_setup
 
   ! ---------------------------------------------------------
-  subroutine v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval, time, calc_energy, calc_current)
+  subroutine v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval, time, calc_energy, calc_current, &
+                   skip_orb_dep_xc)
     type(v_ks_t),               intent(inout) :: ks
     type(namespace_t),          intent(in)    :: namespace
     type(hamiltonian_elec_t),   intent(inout) :: hm
@@ -735,6 +736,9 @@ contains
     FLOAT,            optional, intent(in)    :: time
     logical,          optional, intent(in)    :: calc_energy
     logical,          optional, intent(in)    :: calc_current
+    logical,          optional, intent(in)    :: skip_orb_dep_xc !> In some rare case, like LCAO
+                                                 ! we want to not compute orbital-dependent functionals
+                                                 ! as the wavefunctions are not known on the full grid
 
     logical :: calc_current_
 
@@ -742,7 +746,7 @@ contains
 
     calc_current_ = optional_default(calc_current, .true.)
 
-    call v_ks_calc_start(ks, namespace, hm, st, geo, time, calc_energy, calc_current_)
+    call v_ks_calc_start(ks, namespace, hm, st, geo, time, calc_energy, calc_current_, skip_orb_dep_xc)
     call v_ks_calc_finish(ks, hm, namespace)
 
     if(optional_default(calc_eigenval, .false.)) then
@@ -758,7 +762,7 @@ contains
   !! potential. The routine v_ks_calc_finish must be called to finish
   !! the calculation. The argument hm is not modified. The argument st
   !! can be modified after the function have been used.
-  subroutine v_ks_calc_start(ks, namespace, hm, st, geo, time, calc_energy, calc_current) 
+  subroutine v_ks_calc_start(ks, namespace, hm, st, geo, time, calc_energy, calc_current, skip_orb_dep_xc) 
     type(v_ks_t),              target, intent(inout) :: ks
     type(namespace_t),                 intent(in)    :: namespace
     type(hamiltonian_elec_t),  target, intent(in)    :: hm !< This MUST be intent(in), changes to hm are done in v_ks_calc_finish.
@@ -767,6 +771,10 @@ contains
     FLOAT,                   optional, intent(in)    :: time 
     logical,                 optional, intent(in)    :: calc_energy
     logical,                 optional, intent(in)    :: calc_current
+    logical,                 optional, intent(in)    :: skip_orb_dep_xc !> In some rare case, like LCAO
+                                              ! we want to not compute orbital-dependent functionals
+                                              ! as the wavefunctions are not known on the full grid
+
 
     type(profile_t), save :: prof
     logical :: calc_current_
@@ -1038,7 +1046,8 @@ contains
             else
               call  zxc_slater_calc(namespace, hm%psolver, ks%gr%mesh, st, ks%calc%energy%exchange, vxc = ks%calc%vxc)
             end if
-          else
+
+          else if(.not.optional_default(skip_orb_dep_xc, .false.)) then
 
             if (states_are_real(st)) then
               call dxc_oep_calc(ks%oep, namespace, ks%xc, (ks%sic_type == SIC_PZ), ks%gr, &
@@ -1055,7 +1064,8 @@ contains
           end if
         end if
 
-        if(bitand(ks%xc_family, XC_FAMILY_KS_INVERSION) /= 0) then
+        if(bitand(ks%xc_family, XC_FAMILY_KS_INVERSION) /= 0 &
+                .and. .not. optional_default(skip_orb_dep_xc, .false.)) then
           ! Also treat KS inversion separately (not part of libxc)
           call xc_ks_inversion_calc(ks%ks_inversion, namespace, ks%gr, hm, st, vxc = ks%calc%vxc, &
             time = ks%calc%time)
