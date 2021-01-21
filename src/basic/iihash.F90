@@ -42,22 +42,27 @@ module iihash_oct_m
     iihash_init,   &
     iihash_end,    &
     iihash_insert, &
-    iihash_lookup
+    iihash_lookup, &
+    lihash_t,      &
+    lihash_init,   &
+    lihash_end,    &
+    lihash_insert, &
+    lihash_lookup
 
   type iihash_t
     private
-    
     type(c_ptr) :: map
   end type iihash_t
-  
+
+  type lihash_t
+    private
+    type(c_ptr) :: map
+  end type lihash_t
+
 contains
 
   ! ---------------------------------------------------------
-  !> Initialize a hash table h with size entries. Since we use separate
-  !! chaining, the number of entries in the hash table is, in
-  !! principle, unlimited. We take the smallest prime number as table
-  !! size that is greater or equal than the requested size to reduce
-  !! collisions.
+  !> Initialize a hash table h
   subroutine iihash_init(h)
     type(iihash_t), intent(out) :: h
 
@@ -65,16 +70,16 @@ contains
       subroutine iihash_map_init(map)
         use iso_c_binding
         implicit none
-        
+
         type(c_ptr), intent(inout) :: map
       end subroutine iihash_map_init
     end interface
-    
-    
+
+
     PUSH_SUB(iihash_init)
 
     call iihash_map_init(h%map)
-    
+
     POP_SUB(iihash_init)
   end subroutine iihash_init
 
@@ -83,20 +88,20 @@ contains
   !> Free a hash table.
   subroutine iihash_end(h)
     type(iihash_t), intent(inout) :: h
-    
+
     interface
       subroutine iihash_map_end(map)
         use iso_c_binding
         implicit none
-        
+
         type(c_ptr), intent(inout) :: map
       end subroutine iihash_map_end
     end interface
-    
+
     PUSH_SUB(iihash_end)
-    
+
     call iihash_map_end(h%map)
-    
+
     POP_SUB(iihash_end)
   end subroutine iihash_end
 
@@ -112,13 +117,13 @@ contains
       subroutine iihash_map_insert(map, key, val)
         use iso_c_binding
         implicit none
-        
+
         type(c_ptr), intent(inout) :: map
         integer,     intent(in)    :: key
         integer,     intent(in)    :: val
       end subroutine iihash_map_insert
     end interface
-    
+
     call iihash_map_insert(h%map, key, val)
   end subroutine iihash_insert
 
@@ -137,7 +142,7 @@ contains
       subroutine iihash_map_lookup(map, key, ifound, val)
         use iso_c_binding
         implicit none
-        
+
         type(c_ptr), intent(in)    :: map
         integer,     intent(in)    :: key
         integer,     intent(out)   :: ifound
@@ -156,8 +161,108 @@ contains
 
   end function iihash_lookup
 
+  ! ---------------------------------------------------------
+  !> Initialize a hash table h
+  subroutine lihash_init(h)
+    type(lihash_t), intent(out) :: h
+
+    interface
+      subroutine lihash_map_init(map)
+        use iso_c_binding
+        implicit none
+
+        type(c_ptr), intent(inout) :: map
+      end subroutine lihash_map_init
+    end interface
+
+
+    PUSH_SUB(lihash_init)
+
+    call lihash_map_init(h%map)
+
+    POP_SUB(lihash_init)
+  end subroutine lihash_init
+
+
+  ! ---------------------------------------------------------
+  !> Free a hash table.
+  subroutine lihash_end(h)
+    type(lihash_t), intent(inout) :: h
+
+    interface
+      subroutine lihash_map_end(map)
+        use iso_c_binding
+        implicit none
+
+        type(c_ptr), intent(inout) :: map
+      end subroutine lihash_map_end
+    end interface
+
+    PUSH_SUB(lihash_end)
+
+    call lihash_map_end(h%map)
+
+    POP_SUB(lihash_end)
+  end subroutine lihash_end
+
+
+  ! ---------------------------------------------------------
+  !> Insert a (key, val) pair into the hash table h.
+  subroutine lihash_insert(h, key, val)
+    type(lihash_t),    intent(inout) :: h
+    integer(8),        intent(in)    :: key
+    integer,           intent(in)    :: val
+
+    interface
+      subroutine lihash_map_insert(map, key, val)
+        use iso_c_binding
+        implicit none
+
+        type(c_ptr), intent(inout) :: map
+        integer(8),  intent(in)    :: key
+        integer,     intent(in)    :: val
+      end subroutine lihash_map_insert
+    end interface
+
+    call lihash_map_insert(h%map, key, val)
+  end subroutine lihash_insert
+
+
+  ! ---------------------------------------------------------
+  !> Look up a value in the hash table h. If found is present, it
+  !! indicates if key could be found in the table. If found = .false.,
+  !! the return value of lihash_lookup is meaningless (and essentially
+  !! undefined).
+  integer function lihash_lookup(h, key, found)
+    type(lihash_t),    intent(in)  :: h
+    integer(8),        intent(in)  :: key
+    logical, optional, intent(out) :: found
+
+    interface
+      subroutine lihash_map_lookup(map, key, ifound, val)
+        use iso_c_binding
+        implicit none
+
+        type(c_ptr), intent(in)    :: map
+        integer(8),  intent(in)    :: key
+        integer,     intent(out)   :: ifound
+        integer,     intent(out)   :: val
+      end subroutine lihash_map_lookup
+    end interface
+
+    integer :: ifound, val
+
+    call lihash_map_lookup(h%map, key, ifound, val)
+
+    found = (ifound == 1)
+
+    lihash_lookup = -1
+    if(found) lihash_lookup = val
+
+  end function lihash_lookup
+
 end module iihash_oct_m
-  
+
 !! Local Variables:
 !! mode: f90
 !! coding: utf-8
