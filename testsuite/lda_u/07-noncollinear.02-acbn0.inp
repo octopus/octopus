@@ -8,8 +8,11 @@ ExperimentalFeatures = yes
 
 EigenSolver = cg
 EigensolverTolerance = 1e-8
-CGOrthogonalizeAll = yes
 ExtraStates = 4
+
+MixingPreconditioner = yes
+
+MaximumIter = 300
 
 a = 7.8809
 

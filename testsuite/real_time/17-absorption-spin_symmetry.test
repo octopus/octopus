@@ -57,8 +57,8 @@ match ;  Sigma       8  ; LINEFIELD(cross_section_tensor, -21, 2) ; 0.29053954
 match ;  Anisotropy  8  ; LINEFIELD(cross_section_tensor, -21, 3) ; 0.27189914
 
 match ;  Energy      9  ; LINEFIELD(cross_section_tensor, -11, 1) ; 9.0
-match ;  Sigma       9  ; LINEFIELD(cross_section_tensor, -11, 2) ; 0.14929395
-match ;  Anisotropy  9  ; LINEFIELD(cross_section_tensor, -11, 3) ; 0.133137
+match ;  Sigma       9  ; LINEFIELD(cross_section_tensor, -11, 2) ; 0.14929385
+match ;  Anisotropy  9  ; LINEFIELD(cross_section_tensor, -11, 3) ; 0.1331369
 
 match ;  Energy     10  ; LINEFIELD(cross_section_tensor, -1, 1) ; 10.0
 match ;  Sigma      10  ; LINEFIELD(cross_section_tensor, -1, 2) ; 0.036312973

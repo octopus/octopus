@@ -13,9 +13,9 @@ GuessMagnetDensity = user_defined
 %AtomsMagnetDirection
  1 | 1 | 0
 %
+
+PseudopotentialSet = hgh_lda
+
 Eigensolver = plan
-
-FilterPotentials = filter_none
-
-MixField = density
-LCAOStart = lcao_full
+EigensolverMaxIter = 200
+ConvEigenError = yes

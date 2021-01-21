@@ -2,7 +2,7 @@
 
 Test       : Hartree FFT
 Program    : octopus
-TestGroups : short-run, components
+TestGroups : long-run, components
 Enabled    : Yes
 
 Precision : 1e-8

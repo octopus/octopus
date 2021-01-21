@@ -54,7 +54,6 @@ module mix_oct_m
     mix_d4,                     &
     mix_get_field,              &
     mixfield_t,                 &
-    mixfield_nullify,           &
     mixfield_init,              &
     mixfield_clear,             &
     mixfield_end,               &
@@ -65,21 +64,21 @@ module mix_oct_m
 
   type mixfield_t
     private
-    FLOAT, pointer :: ddf(:, :, :, :)
-    FLOAT, pointer :: ddv(:, :, :, :)
-    FLOAT, pointer :: df_old(:, :, :)
-    FLOAT, pointer :: dvin_old(:, :, :)
-    FLOAT, pointer :: dvin(:, :, :)
-    FLOAT, pointer :: dvout(:, :, :)
-    FLOAT, pointer :: dvnew(:, :, :)
+    FLOAT, allocatable :: ddf(:, :, :, :)
+    FLOAT, allocatable :: ddv(:, :, :, :)
+    FLOAT, allocatable :: df_old(:, :, :)
+    FLOAT, allocatable :: dvin_old(:, :, :)
+    FLOAT, allocatable :: dvin(:, :, :)
+    FLOAT, allocatable :: dvout(:, :, :)
+    FLOAT, allocatable :: dvnew(:, :, :)
 
-    CMPLX, pointer :: zdf(:, :, :, :)
-    CMPLX, pointer :: zdv(:, :, :, :)
-    CMPLX, pointer :: zf_old(:, :, :)
-    CMPLX, pointer :: zvin_old(:, :, :)
-    CMPLX, pointer :: zvin(:, :, :)
-    CMPLX, pointer :: zvout(:, :, :)
-    CMPLX, pointer :: zvnew(:, :, :)
+    CMPLX, allocatable :: zdf(:, :, :, :)
+    CMPLX, allocatable :: zdv(:, :, :, :)
+    CMPLX, allocatable :: zf_old(:, :, :)
+    CMPLX, allocatable :: zvin_old(:, :, :)
+    CMPLX, allocatable :: zvin(:, :, :)
+    CMPLX, allocatable :: zvout(:, :, :)
+    CMPLX, allocatable :: zvnew(:, :, :)
 
     type(type_t) :: func_type   !< type of the functions to be mixed
     integer :: d1, d2, d3, d4   !< the dimensions of the arrays that store the information from the previous iterations
@@ -98,13 +97,11 @@ module mix_oct_m
 
     FLOAT :: coeff              !< the mixing coefficient (in linear mixing: vnew = (1-coeff)*vin + coeff*vout)
 
-    FLOAT :: dgamma             !< The gamma coefficient of the Broyden mixing scheme
-    CMPLX :: zgamma             !< which is stored here for possible auxiliarry mixfields
-
     integer :: iter             !< number of SCF iterations already done. In case of restart, this number must
                                 !< include the iterations done in previous calculations.
 
-    integer :: ns               !< number of steps used to extrapolate the new vector
+    integer, public :: ns       !< number of steps used to extrapolate the new vector
+    integer, public :: ns_restart !< number of steps after which the mixing is restarted
 
     integer :: ipos             !< For auxiliary mixing fields
     integer :: last_ipos        !< where is the information about the last iteration stored in arrays df and dv
@@ -169,7 +166,7 @@ contains
     else 
       func_type = TYPE_FLOAT
     end if
-    prefix = ""
+    prefix = ''
     if(present(prefix_)) prefix = prefix_
 
     call messages_obsolete_variable(namespace, 'TypeOfMixing', 'MixingScheme')
@@ -187,6 +184,7 @@ contains
     !%Option broyden 2
     !% Broyden scheme [C. G Broyden, <i>Math. Comp.</i> <b>19</b>, 577 (1965); 
     !% D. D. Johnson, <i>Phys. Rev. B</i> <b>38</b>, 12807 (1988)].
+    !% The scheme is slightly adapted, see the comments in the code.
     !% For complex functions (e.g. Sternheimer with <tt>EMEta</tt> > 0), we use the generalization
     !% with a complex dot product.
     !%Option diis 9
@@ -214,8 +212,10 @@ contains
     !%Description
     !% (Experimental) If set to yes, Octopus will use a preconditioner
     !% for the mixing operator.
+    !% This preconditioner is disabled for systems with dimension other than 3.
     !%End
     call parse_variable(namespace, trim(prefix)+'MixingPreconditioner', .false., smix%precondition)
+    if (der%mesh%sb%dim /= 3) smix%precondition = .false.
     if(smix%precondition) call messages_experimental('MixingPreconditioner')
     
     !%Variable Mixing
@@ -246,7 +246,7 @@ contains
     
     !%Variable MixNumberSteps
     !%Type integer
-    !%Default 3
+    !%Default 4
     !%Section SCF::Mixing
     !%Description
     !% In the Broyden and Bowler_Gillan schemes, the new input density or potential is constructed
@@ -254,11 +254,31 @@ contains
     !% This number is set by this variable. Must be greater than 1.
     !%End
     if (smix%scheme /= OPTION__MIXINGSCHEME__LINEAR) then
-      call parse_variable(namespace, trim(prefix)//'MixNumberSteps', 3, smix%ns)
+      call parse_variable(namespace, trim(prefix)//'MixNumberSteps', 4, smix%ns)
       if(smix%ns <= 1) call messages_input_error(namespace, 'MixNumberSteps')
     else
       smix%ns = 0
     end if
+
+    !%Variable MixingRestart
+    !%Type integer
+    !%Default 20
+    !%Section SCF::Mixing
+    !%Description
+    !% In the Broyden and Bowler_Gillan schemes, the mixing is restarted after
+    !% the number of iterations given by this variable.
+    !% Set this to zero to disable restarting the mixing.
+    !%End
+    if (smix%scheme /= OPTION__MIXINGSCHEME__LINEAR) then
+      call parse_variable(namespace, trim(prefix)//'MixingRestart', 20, smix%ns_restart)
+      if(smix%ns_restart < 0) call messages_input_error(namespace, 'MixingRestart')
+    else
+      smix%ns_restart = 0
+    end if
+
+    write(message(1), '(A,I4,A,I4,A)') "Info: Mixing uses ", smix%ns, " steps and restarts after ", &
+      smix%ns_restart, " steps."
+    call messages_info(1)
     
     !%Variable MixInterval
     !%Type integer
@@ -679,30 +699,6 @@ contains
     POP_SUB(mix_add_auxmixfield)
   end subroutine mix_add_auxmixfield
 
-  subroutine mixfield_nullify( mixfield )
-    type(mixfield_t), intent(inout) :: mixfield
-
-    PUSH_SUB(mixfield_nullify)
-
-    nullify(mixfield%ddf)
-    nullify(mixfield%ddv)
-    nullify(mixfield%df_old)
-    nullify(mixfield%dvin_old)
-    nullify(mixfield%dvin)
-    nullify(mixfield%dvout)
-    nullify(mixfield%dvnew)
-
-    nullify(mixfield%zdf)
-    nullify(mixfield%zdv)
-    nullify(mixfield%zf_old)
-    nullify(mixfield%zvin_old)
-    nullify(mixfield%zvin)
-    nullify(mixfield%zvout)
-    nullify(mixfield%zvnew)
-
-    POP_SUB(mixfield_nullify)
-  end subroutine mixfield_nullify
-
   subroutine mixfield_init( smix, mixfield, d1, d2, d3, d4, func_type ) 
     type(mix_t),      intent(inout) :: smix
     type(mixfield_t), intent(inout) :: mixfield
@@ -710,8 +706,6 @@ contains
     type(type_t),     intent(in)    :: func_type
 
     PUSH_SUB(mixfield_init)
-
-    call mixfield_nullify( mixfield )
 
     mixfield%d1 = d1
     mixfield%d2 = d2
@@ -723,13 +717,13 @@ contains
     if (smix%scheme /= OPTION__MIXINGSCHEME__LINEAR) then
       if(mixfield%func_type == TYPE_FLOAT) then
         SAFE_ALLOCATE(     mixfield%ddf(1:d1, 1:d2, 1:d3, 1:d4))
-        SAFE_ALLOCATE(mixfield%dvin_old(1:d1, 1:d2, 1:d3))
         SAFE_ALLOCATE(     mixfield%ddv(1:d1, 1:d2, 1:d3, 1:d4))
+        SAFE_ALLOCATE(mixfield%dvin_old(1:d1, 1:d2, 1:d3))
         SAFE_ALLOCATE(  mixfield%df_old(1:d1, 1:d2, 1:d3))
       else
         SAFE_ALLOCATE(     mixfield%zdf(1:d1, 1:d2, 1:d3, 1:d4))
-        SAFE_ALLOCATE(mixfield%zvin_old(1:d1, 1:d2, 1:d3))
         SAFE_ALLOCATE(     mixfield%zdv(1:d1, 1:d2, 1:d3, 1:d4))
+        SAFE_ALLOCATE(mixfield%zvin_old(1:d1, 1:d2, 1:d3))
         SAFE_ALLOCATE(  mixfield%zf_old(1:d1, 1:d2, 1:d3))
       end if
     end if
@@ -756,23 +750,28 @@ contains
 
     ! Arrays got allocated for all mixing schemes, except linear mixing
     if (smix%scheme /= OPTION__MIXINGSCHEME__LINEAR) then
-      SAFE_DEALLOCATE_P(mixfield%ddf)
-      SAFE_DEALLOCATE_P(mixfield%ddv)
-      SAFE_DEALLOCATE_P(mixfield%dvin_old)
-      SAFE_DEALLOCATE_P(mixfield%df_old)
-
-      SAFE_DEALLOCATE_P(mixfield%zdf)
-      SAFE_DEALLOCATE_P(mixfield%zdv)
-      SAFE_DEALLOCATE_P(mixfield%zvin_old)
-      SAFE_DEALLOCATE_P(mixfield%zf_old)
+      if(mixfield%func_type == TYPE_FLOAT) then
+        SAFE_DEALLOCATE_A(mixfield%ddf)
+        SAFE_DEALLOCATE_A(mixfield%ddv)
+        SAFE_DEALLOCATE_A(mixfield%dvin_old)
+        SAFE_DEALLOCATE_A(mixfield%df_old)
+      else
+        SAFE_DEALLOCATE_A(mixfield%zdf)
+        SAFE_DEALLOCATE_A(mixfield%zdv)
+        SAFE_DEALLOCATE_A(mixfield%zvin_old)
+        SAFE_DEALLOCATE_A(mixfield%zf_old)
+      end if
     end if
 
-    SAFE_DEALLOCATE_P(mixfield%dvin)
-    SAFE_DEALLOCATE_P(mixfield%dvout)
-    SAFE_DEALLOCATE_P(mixfield%dvnew)
-    SAFE_DEALLOCATE_P(mixfield%zvin)
-    SAFE_DEALLOCATE_P(mixfield%zvout)
-    SAFE_DEALLOCATE_P(mixfield%zvnew)
+    if(mixfield%func_type == TYPE_FLOAT) then
+      SAFE_DEALLOCATE_A(mixfield%dvin)
+      SAFE_DEALLOCATE_A(mixfield%dvout)
+      SAFE_DEALLOCATE_A(mixfield%dvnew)
+    else
+      SAFE_DEALLOCATE_A(mixfield%zvin)
+      SAFE_DEALLOCATE_A(mixfield%zvout)
+      SAFE_DEALLOCATE_A(mixfield%zvnew)
+    end if
 
     POP_SUB(mixfield_end)
   end subroutine mixfield_end
@@ -781,31 +780,39 @@ contains
   subroutine mixfield_clear(scheme, mixfield)
     integer,             intent(in) :: scheme
     type(mixfield_t), intent(inout) :: mixfield
+    integer :: d1, d2, d3, d4
 
     PUSH_SUB(mixfield_clear)
 
+    d1 = mixfield%d1
+    d2 = mixfield%d2
+    d3 = mixfield%d3
+    d4 = mixfield%d4
+
     if (scheme /= OPTION__MIXINGSCHEME__LINEAR) then
       if(mixfield%func_type == TYPE_FLOAT) then
-        mixfield%ddf = M_ZERO
-        mixfield%ddv = M_ZERO
-        mixfield%dvin_old = M_ZERO
-        mixfield%df_old = M_ZERO
+        ASSERT(allocated(mixfield%ddf))
+        mixfield%ddf(1:d1, 1:d2, 1:d3, 1:d4) = M_ZERO
+        mixfield%ddv(1:d1, 1:d2, 1:d3, 1:d4) = M_ZERO
+        mixfield%dvin_old(1:d1, 1:d2, 1:d3) = M_ZERO
+        mixfield%df_old(1:d1, 1:d2, 1:d3) = M_ZERO
       else
-        mixfield%zdf = M_z0
-        mixfield%zdv = M_z0
-        mixfield%zvin_old = M_z0
-        mixfield%zf_old = M_z0
+        ASSERT(allocated(mixfield%zdf))
+        mixfield%zdf(1:d1, 1:d2, 1:d3, 1:d4) = M_z0
+        mixfield%zdv(1:d1, 1:d2, 1:d3, 1:d4) = M_z0
+        mixfield%zvin_old(1:d1, 1:d2, 1:d3) = M_z0
+        mixfield%zf_old(1:d1, 1:d2, 1:d3) = M_z0
       end if
     end if
 
     if(mixfield%func_type == TYPE_FLOAT) then
-      mixfield%dvin  = M_ZERO
-      mixfield%dvout = M_ZERO
-      mixfield%dvnew = M_ZERO
+      mixfield%dvin(1:d1, 1:d2, 1:d3)  = M_ZERO
+      mixfield%dvout(1:d1, 1:d2, 1:d3) = M_ZERO
+      mixfield%dvnew(1:d1, 1:d2, 1:d3) = M_ZERO
     else
-      mixfield%zvin  = M_z0
-      mixfield%zvout = M_z0
-      mixfield%zvnew = M_z0
+      mixfield%zvin(1:d1, 1:d2, 1:d3)  = M_z0
+      mixfield%zvout(1:d1, 1:d2, 1:d3) = M_z0
+      mixfield%zvnew(1:d1, 1:d2, 1:d3) = M_z0
     end if
 
     POP_SUB(mixfield_clear)
