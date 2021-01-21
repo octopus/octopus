@@ -25,6 +25,7 @@
 #include <fortran_types.h>
 
 typedef std::unordered_map<fint, fint> map_type;
+typedef std::unordered_map<fint8, fint> map_type8;
 
 extern "C" void FC_FUNC_(iihash_map_init, IIHASH_MAP_INIT)(map_type ** map){
   *map = new map_type;
@@ -50,6 +51,33 @@ extern "C" void FC_FUNC_(iihash_map_lookup, IIHASH_MAP_LOOKUP)(const map_type **
     *found = 1;
     *val = it->second;
   }
-  
+
+}
+
+/* functions for mapping of long long to int */
+extern "C" void FC_FUNC_(lihash_map_init, LIHASH_MAP_INIT)(map_type8 ** map){
+  *map = new map_type8;
+}
+
+
+extern "C" void FC_FUNC_(lihash_map_end, LIHASH_MAP_END)(map_type8 ** map){
+  delete *map;
+}
+
+
+extern "C" void FC_FUNC_(lihash_map_insert, LIHASH_MAP_INSERT)(map_type8 ** map, const fint * key, const fint * val){
+  (**map)[*key] = *val;
+}
+
+extern "C" void FC_FUNC_(lihash_map_lookup, LIHASH_MAP_LOOKUP)(const map_type8 ** map, const fint * key, fint * found, fint * val){
+
+  auto it = (*map)->find(*key);
+
+  if(it == (*map)->end()){
+    *found = 0;
+  } else {
+    *found = 1;
+    *val = it->second;
+  }
 }
 
