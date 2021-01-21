@@ -342,8 +342,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine derivatives_get_stencil_lapl(der, sb)
-    type(derivatives_t),      intent(inout) :: der
-    type(simul_box_t), optional,intent(in)  :: sb
+    type(derivatives_t), intent(inout) :: der
+    type(simul_box_t),   intent(in)    :: sb
 
     PUSH_SUB(derivatives_get_stencil_lapl)
 

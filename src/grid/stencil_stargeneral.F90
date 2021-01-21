@@ -229,9 +229,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine stencil_stargeneral_get_lapl(this, dim, order)
-    type(stencil_t), intent(out) :: this
-    integer,         intent(in)  :: dim
-    integer,         intent(in)  :: order
+    type(stencil_t), intent(inout) :: this
+    integer,         intent(in)    :: dim
+    integer,         intent(in)    :: order
 
     integer :: i, j, n
     logical :: got_center

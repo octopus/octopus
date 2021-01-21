@@ -56,7 +56,7 @@ contains
 
   !-------------------------------------------------------  
   subroutine stencil_allocate(this, size)
-    type(stencil_t), intent(out) :: this
+    type(stencil_t), intent(inout) :: this
     integer,         intent(in)  :: size
 
     PUSH_SUB(stencil_allocate)
