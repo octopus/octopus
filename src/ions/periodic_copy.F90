@@ -49,7 +49,7 @@ module periodic_copy_oct_m
     FLOAT :: pos_chi(1:MAX_DIM)
     FLOAT :: range
     integer :: nbmax(1:MAX_DIM), nbmin(1:MAX_DIM)
-    integer, pointer :: icell(:, :) !< (sb%dim, num)
+    integer, allocatable :: icell(:, :) !< (sb%dim, num)
   end type periodic_copy_t
 
 contains
@@ -73,7 +73,6 @@ contains
       this%num = 1
       this%nbmin = 0
       this%nbmax = 0
-      nullify(this%icell)
 
       POP_SUB(periodic_copy_init)
       return
@@ -110,7 +109,7 @@ contains
 
     PUSH_SUB(periodic_copy_end)
 
-    SAFE_DEALLOCATE_P(this%icell)
+    SAFE_DEALLOCATE_A(this%icell)
 
     this%nbmin = 0
     this%nbmax = 0
