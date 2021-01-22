@@ -34,7 +34,6 @@ module rkb_projector_oct_m
   private
   public :: &
        rkb_projector_t,    &
-       rkb_projector_null, &
        rkb_projector_init, &
        rkb_project,        &
        rkb_project_bra,    &
@@ -46,26 +45,14 @@ module rkb_projector_oct_m
   !! This way the spin-orbit coupling in straighforwardly included.
   type rkb_projector_t
     private
-    integer          :: n_s !< number of points inside the sphere
-    CMPLX,   pointer :: bra(:, :)
-    CMPLX,   pointer :: ket(:, :, :, :)
-    FLOAT            :: f(2, 2, 2)
+    integer            :: n_s !< number of points inside the sphere
+    CMPLX, allocatable :: bra(:, :)
+    CMPLX, allocatable :: ket(:, :, :, :)
+    FLOAT              :: f(2, 2, 2)
   end type rkb_projector_t
 
 
 contains
-
-  ! ---------------------------------------------------------
-  subroutine rkb_projector_null(rkb_p)
-    type(rkb_projector_t), intent(out) :: rkb_p
-
-    PUSH_SUB(rkb_projector_null)
-
-    nullify(rkb_p%bra)
-    nullify(rkb_p%ket)
-
-    POP_SUB(rkb_projector_null)
-  end subroutine rkb_projector_null
 
   ! ---------------------------------------------------------
   subroutine rkb_projector_init(rkb_p, sm, a, l, lm, so_strength)
@@ -129,8 +116,8 @@ contains
 
     PUSH_SUB(rkb_projector_end)
 
-    SAFE_DEALLOCATE_P(rkb_p%bra)
-    SAFE_DEALLOCATE_P(rkb_p%ket)
+    SAFE_DEALLOCATE_A(rkb_p%bra)
+    SAFE_DEALLOCATE_A(rkb_p%ket)
 
     POP_SUB(rkb_projector_end)
   end subroutine rkb_projector_end
