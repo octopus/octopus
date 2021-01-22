@@ -52,9 +52,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine stencil_cube_get_lapl(this, dim, order)
-    type(stencil_t), intent(out) :: this
-    integer,         intent(in)  :: dim
-    integer,         intent(in)  :: order
+    type(stencil_t), intent(inout) :: this
+    integer,         intent(in)    :: dim
+    integer,         intent(in)    :: order
 
     integer :: i, j, k, n
 
@@ -157,9 +157,9 @@ contains
 
   ! ---------------------------------------------------------
   subroutine stencil_cube_get_grad(this, dim, order)
-    type(stencil_t), intent(out) :: this
-    integer,         intent(in)  :: dim
-    integer,         intent(in)  :: order
+    type(stencil_t), intent(inout) :: this
+    integer,         intent(in)    :: dim
+    integer,         intent(in)    :: order
 
     PUSH_SUB(stencil_cube_get_grad)
 
