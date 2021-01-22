@@ -669,7 +669,7 @@ contains
     type(mpi_grp_t),      intent(in)  :: mpi_grp
     logical,              intent(out) :: grid_changed
     logical,              intent(out) :: grid_reordered
-    integer, pointer,     intent(out) :: map(:)
+    integer, allocatable, intent(out) :: map(:)
     integer,              intent(out) :: ierr
 
     integer :: ip, read_np_part, read_np, xx(MAX_DIM), err
@@ -679,7 +679,6 @@ contains
 
     ierr = 0
 
-    nullify(map)
     grid_changed = .false.
     grid_reordered = .false.
 
