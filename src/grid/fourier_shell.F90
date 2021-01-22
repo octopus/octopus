@@ -39,10 +39,10 @@ module fourier_shell_oct_m
 
   type fourier_shell_t
     ! Components are public by default
-    integer          :: ngvectors
-    FLOAT            :: ekin_cutoff
-    integer, pointer :: coords(:, :)
-    integer, pointer :: red_gvec(:, :)   
+    integer              :: ngvectors
+    FLOAT                :: ekin_cutoff
+    integer, allocatable :: coords(:, :)
+    integer, allocatable :: red_gvec(:, :)   
   end type fourier_shell_t
 
 contains
@@ -152,8 +152,8 @@ contains
     
     PUSH_SUB(fourier_shell_end)
 
-    SAFE_DEALLOCATE_P(this%coords)
-    SAFE_DEALLOCATE_P(this%red_gvec)
+    SAFE_DEALLOCATE_A(this%coords)
+    SAFE_DEALLOCATE_A(this%red_gvec)
 
     POP_SUB(fourier_shell_end)
   end subroutine fourier_shell_end
