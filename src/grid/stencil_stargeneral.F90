@@ -57,6 +57,7 @@ contains
     vec2(:) = M_ZERO
     
     this%stargeneral%narms = 0
+    this%stargeneral%arms = 0
 
     if (dim == 1 ) then 
       !we are done 
