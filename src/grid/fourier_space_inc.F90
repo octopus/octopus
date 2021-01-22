@@ -65,10 +65,10 @@ end subroutine X(cube_function_fs2rs)
 
 ! ---------------------------------------------------------
 subroutine X(fourier_space_op_init)(this, cube, op, in_device)
-  type(fourier_space_op_t), intent(out) :: this
-  type(cube_t),             intent(in)  :: cube
-  R_TYPE,                   intent(in)  :: op(:, :, :)
-  logical, optional,        intent(in)  :: in_device
+  type(fourier_space_op_t), intent(inout) :: this
+  type(cube_t),             intent(in)    :: cube
+  R_TYPE,                   intent(in)    :: op(:, :, :)
+  logical, optional,        intent(in)    :: in_device
 
   integer :: ii, jj, kk, ii_linear, size
   R_TYPE, allocatable :: op_linear(:)
