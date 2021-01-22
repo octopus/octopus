@@ -125,8 +125,6 @@ subroutine modelmb_1part_nullify(this)
   nullify(this%ll)
   nullify(this%h_1part)
 
-  call hypercube_nullify(this%hypercube_1part)
-
   POP_SUB(modelmb_1part_nullify)
 end subroutine modelmb_1part_nullify
 
