@@ -99,7 +99,7 @@ contains
   subroutine lookup_get_list(this, npoint, points, radius, nlist, list)
     type(lookup_t), intent(in)  :: this
     integer,        intent(in)  :: npoint
-    FLOAT,          intent(in)  :: points(:, :)
+    FLOAT,          intent(in)  :: points(:, :) !< (1:npoint, 1:this%dim)
     FLOAT,          intent(in)  :: radius
     integer,        intent(out) :: nlist(:)
     integer, optional, pointer  :: list(:, :)
@@ -115,9 +115,9 @@ contains
 
     nlist(1:npoint) = 0    
 
-    do ipoint = 1, npoint
-      do ii = 1, this%nobjs
-        r2 = sum((this%pos(1:this%dim, ii) - points(1:this%dim, ipoint))**2)
+    do ii = 1, this%nobjs
+      do ipoint = 1, npoint
+        r2 = sum((this%pos(1:this%dim, ii) - points(ipoint, 1:this%dim))**2)
         if(r2 < radius**2) then
           nlist(ipoint) = nlist(ipoint) + 1
 !This is a PGI pragma to force the optimization level of this file to -O0.

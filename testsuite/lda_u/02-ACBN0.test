@@ -65,9 +65,8 @@ if(available cuda); then
 else
   match ;  SCF convergence  ; GREPCOUNT(static/info, 'SCF converged') ; 1.0
 
-  Precision: 2.20e-08
-  match ;  Total energy        ; GREPFIELD(static/info, 'Total       =', 3) ; -24.296610280000003
-  Precision: 1.44e-14
+  Precision: 5.5e-06
+  match ;  Total energy        ; GREPFIELD(static/info, 'Total       =', 3) ; -24.296618
   match ;  Ion-ion energy      ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -14.42250723
   Precision: 4.50e-15
   match ;  Eigenvalues sum     ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -4.49532306
@@ -91,16 +90,16 @@ else
   match ;  k-point 2 (y)  ; GREPFIELD(static/info, '#k =   2', 8) ; 0.5
   match ;  k-point 2 (z)  ; GREPFIELD(static/info, '#k =   2', 9) ; 0.0
 
-  Precision: 9.43e-16
-  match ;  Eigenvalue  1 up  ; GREPFIELD(static/info, '#k =   2', 3, 1) ; -0.942691
-  match ;  Eigenvalue  1 dn  ; GREPFIELD(static/info, '#k =   2', 3, 2) ; -0.942691
-  match ;  Eigenvalue  3 up  ; GREPFIELD(static/info, '#k =   2', 3, 5) ; -0.409534
-  match ;  Eigenvalue  4 up  ; GREPFIELD(static/info, '#k =   2', 3, 7) ; -0.408931
+  Precision: 1.10e-6
+  match ;  Eigenvalue  1 up  ; GREPFIELD(static/info, '#k =   2', 3, 1) ; -0.942692
+  match ;  Eigenvalue  1 dn  ; GREPFIELD(static/info, '#k =   2', 3, 2) ; -0.942692
+  match ;  Eigenvalue  3 up  ; GREPFIELD(static/info, '#k =   2', 3, 5) ; -0.409535
+  match ;  Eigenvalue  4 up  ; GREPFIELD(static/info, '#k =   2', 3, 7) ; -0.408932
   match ;  Eigenvalue  5 up  ; GREPFIELD(static/info, '#k =   2', 3, 9) ; 0.283877
 
-  Precision: 9.61e-16
-  match ;  Occupation F down 2p2  ; LINEFIELD(static/occ_matrices, -2, 3) ; 0.96139677
-  match ;  Occupation F down 2p3  ; LINEFIELD(static/occ_matrices, -1, 5) ; 0.96139677
+  Precision: 2e-7
+  match ;  Occupation F down 2p2  ; LINEFIELD(static/occ_matrices, -2, 3) ; 0.96139696
+  match ;  Occupation F down 2p3  ; LINEFIELD(static/occ_matrices, -1, 5) ; 0.96139696
 
   Precision: 4.93e-16
   match ;  U2p F    ; LINEFIELD(static/effectiveU, -7, 4) ; 0.493266

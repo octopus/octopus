@@ -64,7 +64,6 @@ module propagator_mxll_oct_m
   use string_oct_m
   use tdfunction_oct_m
   use varinfo_oct_m
-  use xyz_adjust_oct_m
 
   implicit none
 
@@ -1839,12 +1838,12 @@ contains
       do ip = 1, gr%mesh%np
         if (wn == 1) rs_state(ip,:) = M_Z0
         nn = sqrt(st%ep(ip)/P_ep*st%mu(ip)/P_mu)
-        x_prop(:) = gr%mesh%x(ip,1:gr%sb%dim) - vv(:) * time
+        x_prop = gr%mesh%x(ip,:) - vv * time
         rr = sqrt(sum(x_prop(1:gr%sb%dim)**2))
         select case (bc%plane_wave%modus(wn))
         case (OPTION__MAXWELLINCIDENTWAVES__PLANE_WAVE_PARSER)
-          do idim = 1, gr%mesh%sb%dim
-            call parse_expression(e_field(idim), dummy(idim), gr%mesh%sb%dim, x_prop, rr, M_ZERO, &
+          do idim = 1, gr%sb%dim
+            call parse_expression(e_field(idim), dummy(idim), gr%sb%dim, x_prop, rr, M_ZERO, &
               bc%plane_wave%e_field_string(idim,wn))
             e_field(idim) = units_to_atomic(units_inp%energy/units_inp%length, e_field(idim))
           end do

@@ -50,7 +50,6 @@ module exponential_oct_m
     exponential_t,               &
     exponential_init,            &
     exponential_copy,            &
-    exponential_end,             &
     exponential_apply_batch,     &
     exponential_apply,           &
     exponential_apply_all
@@ -191,15 +190,6 @@ contains
 
     POP_SUB(exponential_init)
   end subroutine exponential_init
-
-  ! ---------------------------------------------------------
-  subroutine exponential_end(te)
-    type(exponential_t), intent(inout) :: te
-
-    PUSH_SUB(exponential_end)
-
-    POP_SUB(exponential_end)
-  end subroutine exponential_end
 
   ! ---------------------------------------------------------
   subroutine exponential_copy(teo, tei)

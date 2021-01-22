@@ -113,9 +113,8 @@ contains
   end subroutine gravity_init
 
   ! ---------------------------------------------------------
-  subroutine gravity_calculate(this, namespace)
+  subroutine gravity_calculate(this)
     class(gravity_t),             intent(inout) :: this
-    type(namespace_t),            intent(in)    :: namespace
 
     FLOAT, parameter :: GG = CNST(6.67430e-11) ! In S.I. units!
     FLOAT :: dist3

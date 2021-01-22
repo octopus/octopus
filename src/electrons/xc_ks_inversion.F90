@@ -39,7 +39,7 @@ module xc_ks_inversion_oct_m
   use unit_oct_m
   use unit_system_oct_m
   use varinfo_oct_m
-  use XC_F90(lib_m) 
+  use xc_f03_lib_m
   use xc_oct_m
 
   implicit none
@@ -166,9 +166,9 @@ contains
       call states_elec_generate_random(ks_inv%aux_st, gr%mesh, gr%sb)      
 
       ! initialize densities, hamiltonian and eigensolver
-      call states_elec_densities_init(ks_inv%aux_st, gr, geo)
+      call states_elec_densities_init(ks_inv%aux_st, gr)
       call hamiltonian_elec_init(ks_inv%aux_hm, namespace, gr, geo, ks_inv%aux_st, INDEPENDENT_PARTICLES, xc, mc)
-      call eigensolver_init(ks_inv%eigensolver, namespace, gr, ks_inv%aux_st, geo, mc)
+      call eigensolver_init(ks_inv%eigensolver, namespace, gr, ks_inv%aux_st, mc)
     end if
 
     POP_SUB(xc_ks_inversion_init)
@@ -176,15 +176,14 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine xc_ks_inversion_end(ks_inv, gr)
+  subroutine xc_ks_inversion_end(ks_inv)
     type(xc_ks_inversion_t), intent(inout) :: ks_inv
-    type(grid_t),            intent(inout) :: gr
 
     PUSH_SUB(xc_ks_inversion_end)
 
     if(ks_inv%level /= XC_KS_INVERSION_NONE) then
       ! cleanup
-      call eigensolver_end(ks_inv%eigensolver, gr)
+      call eigensolver_end(ks_inv%eigensolver)
       call hamiltonian_elec_end(ks_inv%aux_hm)
       call states_elec_end(ks_inv%aux_st)
     end if

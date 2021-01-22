@@ -168,8 +168,8 @@ contains
   subroutine curvilinear_chi2x(sb, cv, chi, x)
     type(simul_box_t),   intent(in)  :: sb
     type(curvilinear_t), intent(in)  :: cv
-    FLOAT,               intent(in)  :: chi(MAX_DIM)  !< chi(conf%dim)
-    FLOAT,               intent(out) :: x(MAX_DIM)    !< x(conf%dim)
+    FLOAT,               intent(in)  :: chi(:)  !< chi(1:sb%dim)
+    FLOAT,               intent(out) :: x(:)    !< x(1:sb%dim)
 
     ! no push_sub because called too frequently
     x = M_ZERO

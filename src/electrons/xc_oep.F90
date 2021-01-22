@@ -23,7 +23,6 @@ module xc_oep_oct_m
   use comm_oct_m
   use derivatives_oct_m
   use exchange_operator_oct_m
-  use geometry_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_elec_oct_m
@@ -48,7 +47,7 @@ module xc_oep_oct_m
   use scf_tol_oct_m
   use varinfo_oct_m
   use xc_oct_m
-  use XC_F90(lib_m)
+  use xc_f03_lib_m
   use xc_functl_oct_m
 
   implicit none
@@ -106,13 +105,12 @@ module xc_oep_oct_m
 contains
 
   ! ---------------------------------------------------------
-  subroutine xc_oep_init(oep, namespace, family, gr, st, geo, mc)
+  subroutine xc_oep_init(oep, namespace, family, gr, st, mc)
     type(xc_oep_t),      intent(out)   :: oep
     type(namespace_t),   intent(in)    :: namespace
     integer,             intent(in)    :: family
     type(grid_t),        intent(inout) :: gr
     type(states_elec_t), intent(in)    :: st
-    type(geometry_t),    intent(in)    :: geo
     type(multicomm_t),   intent(in)    :: mc
 
     PUSH_SUB(xc_oep_init)
@@ -165,6 +163,10 @@ contains
         end if
         if (oep%level == XC_OEP_FULL .and. st%d%nspin /= UNPOLARIZED) then
           call messages_not_implemented('Spin-polarized calculations with photon OEP.')
+        end if
+
+        if (states_are_complex(st)) then
+          call messages_not_implemented('Photon OEP with complex wavefunctions.')
         end if
       end if
 
@@ -240,7 +242,7 @@ contains
       ! when performing full OEP, we need to solve a linear equation
       if((oep%level == XC_OEP_FULL).or.(oep%has_photons)) then 
         call scf_tol_init(oep%scftol, namespace, st%qtot, def_maximumiter=10)
-        call linear_solver_init(oep%solver, namespace, gr, states_are_real(st), geo, mc)
+        call linear_solver_init(oep%solver, namespace, gr, states_are_real(st), mc)
         call lr_init(oep%lr)
         if(oep%has_photons) then
           call lr_init(oep%photon_lr)
@@ -398,6 +400,7 @@ contains
 
 
 #include "xc_kli_pauli_inc.F90"
+#include "xc_oep_qed_inc.F90"
 
 #include "undef.F90"
 #include "real.F90"
@@ -405,7 +408,6 @@ contains
 #include "xc_oep_x_inc.F90"
 #include "xc_oep_sic_inc.F90"
 #include "xc_oep_inc.F90"
-#include "xc_oep_qed_inc.F90"
 
 #include "undef.F90"
 #include "complex.F90"
@@ -413,7 +415,6 @@ contains
 #include "xc_oep_x_inc.F90"
 #include "xc_oep_sic_inc.F90"
 #include "xc_oep_inc.F90"
-#include "xc_oep_qed_inc.F90"
 
 end module xc_oep_oct_m
 

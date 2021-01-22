@@ -283,19 +283,19 @@ contains
       do iatom = 1, geo%natoms
 
         vrnl = M_ZERO
-        do idir = 1, gr%mesh%sb%dim
+        do idir = 1, gr%sb%dim
           if(this%dir == idir) cycle ! this direction is not used in the cross product
           call X(projector_commute_r)(hm%ep%proj(iatom), gr%mesh, gr%der%boundaries, hm%d%dim, idir, ik, f_in_copy, vrnl(:, :, idir))
         end do
         
-        xx(1:gr%mesh%sb%dim) = geo%atom(iatom)%x(1:gr%mesh%sb%dim)
+        xx(1:gr%sb%dim) = geo%atom(iatom)%x(1:gr%sb%dim)
         
         do idim = 1, hm%d%dim
           do ip = 1, gr%mesh%np
             
-            if(this%gauge == GAUGE_ICL) xx(1:gr%mesh%sb%dim) = gr%mesh%x(ip, 1:gr%mesh%sb%dim)
+            if(this%gauge == GAUGE_ICL) xx(1:gr%sb%dim) = gr%mesh%x(ip, 1:gr%sb%dim)
             
-            vv(1:gr%mesh%sb%dim) = vrnl(ip, idim, 1:gr%mesh%sb%dim)
+            vv(1:gr%sb%dim) = vrnl(ip, idim, 1:gr%sb%dim)
             
             cross(1) = xx(2) * vv(3) - xx(3) * vv(2)
             cross(2) = xx(3) * vv(1) - xx(1) * vv(3)
@@ -330,7 +330,7 @@ contains
     f_out(1:gr%mesh%np, 1) = M_ZERO
     
     do iatom = 1, geo%natoms
-      do idir = 1, gr%mesh%sb%dim
+      do idir = 1, gr%sb%dim
 
         if (this%ionic%pure_dir .and. iatom /= this%atom1 .and. idir /= this%dir) cycle
 
@@ -482,7 +482,7 @@ contains
 
     do idim = 1, hm%d%dim
       do ip = 1, gr%mesh%np
-        rdelta = sum(gr%mesh%x(ip, 1:gr%mesh%sb%dim)**2)*ddelta(this%dir, this%dir2)
+        rdelta = sum(gr%mesh%x(ip, 1:gr%sb%dim)**2)*ddelta(this%dir, this%dir2)
         f_out(ip, idim) = M_FOURTH*(rdelta - gr%mesh%x(ip, this%dir)*gr%mesh%x(ip, this%dir2))*f_in_copy(ip, idim)
       end do
     end do
@@ -493,9 +493,9 @@ contains
       bdir(this%dir,  1)   = M_ONE
       bdir(this%dir2, 2)   = M_ONE
 
-      SAFE_ALLOCATE(f_in2(1:gr%mesh%np_part, 1:hm%d%dim, 1:gr%mesh%sb%dim))
+      SAFE_ALLOCATE(f_in2(1:gr%mesh%np_part, 1:hm%d%dim, 1:gr%sb%dim))
       SAFE_ALLOCATE( vrnl(1:gr%mesh%np_part, 1:hm%d%dim))
-      SAFE_ALLOCATE(  dnl(1:gr%mesh%np, 1:hm%d%dim, 1:gr%mesh%sb%dim))
+      SAFE_ALLOCATE(  dnl(1:gr%mesh%np, 1:hm%d%dim, 1:gr%sb%dim))
       SAFE_ALLOCATE(   xf(1:gr%mesh%np, 1:hm%d%dim))
 
       f_in2 = R_TOTYPE(M_ZERO)
@@ -590,8 +590,8 @@ contains
     f_out(1:gr%mesh%np, 1) = M_ZERO
     
     do iatom = 1, geo%natoms
-      do idir = 1, gr%mesh%sb%dim
-        do jdir = 1, gr%mesh%sb%dim
+      do idir = 1, gr%sb%dim
+        do jdir = 1, gr%sb%dim
           
           if (this%ionic%pure_dir &
                .and. iatom /= this%atom1 .and. idir /= this%dir &

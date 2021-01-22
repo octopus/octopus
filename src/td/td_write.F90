@@ -759,8 +759,9 @@ contains
     end if
     
     if(writ%out(OUT_TOTAL_CURRENT)%write .or. writ%out(OUT_TOTAL_HEAT_CURRENT)%write) then
+      !TODO: we should only compute the current here, not v_ks
       call v_ks_calculate_current(ks, .true.)
-      call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval=.false., time = iter*dt)
+      call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval=.false., time = iter*dt, calc_energy = .false.)
     end if
 
     if(writ%out(OUT_N_EX)%write .and. writ%compute_interval > 0) then
@@ -1339,7 +1340,8 @@ contains
 
     integer :: is, ll, mm, add_lm
     character(len=120) :: aux
-    FLOAT, allocatable :: ionic_dipole(:), multipole(:,:)
+    FLOAT :: ionic_dipole(MAX_DIM)
+    FLOAT, allocatable :: multipole(:,:)
     type(mpi_grp_t)    :: mpi_grp_
 
     PUSH_SUB(td_write_multipole_r)
@@ -1402,7 +1404,6 @@ contains
       call td_write_print_header_end(out_multip)
     end if
 
-    SAFE_ALLOCATE(ionic_dipole(1:gr%mesh%sb%dim))
     SAFE_ALLOCATE(multipole(1:(lmax + 1)**2, 1:st%d%nspin))
     ionic_dipole(:) = M_ZERO
     multipole   (:,:) = M_ZERO
@@ -1412,9 +1413,9 @@ contains
     end do
 
     if (lmax > 0) then
-      call geometry_dipole(geo, ionic_dipole)
+      ionic_dipole = geometry_dipole(geo)
       do is = 1, st%d%nspin
-        multipole(2:gr%mesh%sb%dim+1, is) = -ionic_dipole(1:gr%mesh%sb%dim)/st%d%nspin - multipole(2:gr%mesh%sb%dim+1, is)
+        multipole(2:gr%sb%dim+1, is) = -ionic_dipole(1:gr%sb%dim)/st%d%nspin - multipole(2:gr%sb%dim+1, is)
       end do
     end if
 
@@ -1432,7 +1433,6 @@ contains
       call write_iter_nl(out_multip)
     end if
 
-    SAFE_DEALLOCATE_A(ionic_dipole)
     SAFE_DEALLOCATE_A(multipole)
     POP_SUB(td_write_multipole_r)
   end subroutine td_write_multipole_r
@@ -1472,7 +1472,7 @@ contains
         write(aux, '(a15, f9.6)') '# qlength      ', kick%qlength
       else ! sin or cos
         write(aux, '(a15)')       '# qvector      '
-        do idir = 1, gr%mesh%sb%dim
+        do idir = 1, gr%sb%dim
           write(aux2, '(f9.5)') kick%qvector(idir,1)
           aux = trim(aux) // trim(aux2)
         end do
@@ -1509,7 +1509,7 @@ contains
       integrand = M_ZERO
       do is = 1, st%d%nspin
         do ip = 1, gr%mesh%np
-          integrand(ip) = integrand(ip) + st%rho(ip, is) * exp(-M_zI*sum(gr%mesh%x(ip,:)*kick%qvector(:,1)))
+          integrand(ip) = integrand(ip) + st%rho(ip, is) * exp(-M_zI*sum(gr%mesh%x(ip, 1:gr%sb%dim)*kick%qvector(1:gr%sb%dim, 1)))
         end do
       end do
       ftchd = zmf_integrate(gr%mesh, integrand)
@@ -1565,19 +1565,19 @@ contains
       call write_iter_header_start(out_coords)
 
       do iatom = 1, geo%natoms
-        do idir = 1, gr%mesh%sb%dim
+        do idir = 1, gr%sb%dim
           write(aux, '(a2,i3,a1,i3,a1)') 'x(', iatom, ',', idir, ')'
           call write_iter_header(out_coords, aux)
         end do
       end do
       do iatom = 1, geo%natoms
-        do idir = 1, gr%mesh%sb%dim
+        do idir = 1, gr%sb%dim
           write(aux, '(a2,i3,a1,i3,a1)') 'v(', iatom, ',', idir,')'
           call write_iter_header(out_coords, aux)
         end do
       end do
       do iatom = 1, geo%natoms
-        do idir = 1, gr%mesh%sb%dim
+        do idir = 1, gr%sb%dim
           write(aux, '(a2,i3,a1,i3,a1)') 'f(', iatom, ',', idir,')'
           call write_iter_header(out_coords, aux)
         end do
@@ -1599,16 +1599,16 @@ contains
     call write_iter_start(out_coords)
 
     do iatom = 1, geo%natoms
-      tmp(1:gr%mesh%sb%dim) = units_from_atomic(units_out%length, geo%atom(iatom)%x(1:gr%mesh%sb%dim))
-      call write_iter_double(out_coords, tmp, gr%mesh%sb%dim)
+      tmp(1:gr%sb%dim) = units_from_atomic(units_out%length, geo%atom(iatom)%x(1:gr%sb%dim))
+      call write_iter_double(out_coords, tmp, gr%sb%dim)
     end do
     do iatom = 1, geo%natoms
-      tmp(1:gr%mesh%sb%dim) = units_from_atomic(units_out%velocity, geo%atom(iatom)%v(1:gr%mesh%sb%dim))
-      call write_iter_double(out_coords, tmp, gr%mesh%sb%dim)
+      tmp(1:gr%sb%dim) = units_from_atomic(units_out%velocity, geo%atom(iatom)%v(1:gr%sb%dim))
+      call write_iter_double(out_coords, tmp, gr%sb%dim)
     end do
     do iatom = 1, geo%natoms
-      tmp(1:gr%mesh%sb%dim) = units_from_atomic(units_out%force, geo%atom(iatom)%f(1:gr%mesh%sb%dim))
-      call write_iter_double(out_coords, tmp, gr%mesh%sb%dim)
+      tmp(1:gr%sb%dim) = units_from_atomic(units_out%force, geo%atom(iatom)%f(1:gr%sb%dim))
+      call write_iter_double(out_coords, tmp, gr%sb%dim)
     end do
     call write_iter_nl(out_coords)
 
@@ -1641,7 +1641,7 @@ contains
       call write_iter_header_start(out_coords)
 
       do iatom = 1, geo%natoms
-        do idir = 1, gr%mesh%sb%dim
+        do idir = 1, gr%sb%dim
           select case (which)
             case (COORDINATES)
               write(aux, '(a2,i3,a1,i3,a1)') 'x(', iatom, ',', idir, ')'
@@ -1679,18 +1679,18 @@ contains
     select case (which)
       case (COORDINATES)
         do iatom = 1, geo%natoms
-          tmp(1:gr%mesh%sb%dim) = units_from_atomic(units_out%length, geo%atom(iatom)%x(1:gr%mesh%sb%dim))
-          call write_iter_double(out_coords, tmp, gr%mesh%sb%dim)
+          tmp(1:gr%sb%dim) = units_from_atomic(units_out%length, geo%atom(iatom)%x(1:gr%sb%dim))
+          call write_iter_double(out_coords, tmp, gr%sb%dim)
         end do
       case (VELOCITIES)
         do iatom = 1, geo%natoms
-           tmp(1:gr%mesh%sb%dim) = units_from_atomic(units_out%velocity, geo%atom(iatom)%v(1:gr%mesh%sb%dim))
-           call write_iter_double(out_coords, tmp, gr%mesh%sb%dim)
+           tmp(1:gr%sb%dim) = units_from_atomic(units_out%velocity, geo%atom(iatom)%v(1:gr%sb%dim))
+           call write_iter_double(out_coords, tmp, gr%sb%dim)
         end do
       case (FORCES)
         do iatom = 1, geo%natoms
-           tmp(1:gr%mesh%sb%dim) = units_from_atomic(units_out%force, geo%atom(iatom)%f(1:gr%mesh%sb%dim))
-           call write_iter_double(out_coords, tmp, gr%mesh%sb%dim)
+           tmp(1:gr%sb%dim) = units_from_atomic(units_out%force, geo%atom(iatom)%f(1:gr%sb%dim))
+           call write_iter_double(out_coords, tmp, gr%sb%dim)
         end do
     end select
        
@@ -1839,7 +1839,7 @@ contains
 
       ! first line -> column names
       call write_iter_header_start(out_acc)
-      do idim = 1, gr%mesh%sb%dim
+      do idim = 1, gr%sb%dim
         write(aux, '(a4,i1,a1)') 'Acc(', idim, ')'
         call write_iter_header(out_acc, aux)
       end do
@@ -1848,7 +1848,7 @@ contains
       ! second line: units
       call write_iter_string(out_acc, '#[Iter n.]')
       call write_iter_header(out_acc, '[' // trim(units_abbrev(units_out%time)) // ']')
-      do idim = 1, gr%mesh%sb%dim
+      do idim = 1, gr%sb%dim
         call write_iter_header(out_acc, '[' // trim(units_abbrev(units_out%acceleration)) // ']')
       end do
       call write_iter_nl(out_acc)
@@ -1860,7 +1860,7 @@ contains
     if(mpi_grp_is_root(mpi_world)) then
       call write_iter_start(out_acc)
       acc = units_from_atomic(units_out%acceleration, acc)
-      call write_iter_double(out_acc, acc, gr%mesh%sb%dim)
+      call write_iter_double(out_acc, acc, gr%sb%dim)
       call write_iter_nl(out_acc)
     end if
 
@@ -1887,7 +1887,7 @@ contains
 
       ! first line -> column names
       call write_iter_header_start(out_vel)
-      do idim = 1, gr%mesh%sb%dim
+      do idim = 1, gr%sb%dim
         write(aux, '(a4,i1,a1)') 'Vel(', idim, ')'
         call write_iter_header(out_vel, aux)
       end do
@@ -1896,7 +1896,7 @@ contains
       ! second line: units
       call write_iter_string(out_vel, '#[Iter n.]')
       call write_iter_header(out_vel, '[' // trim(units_abbrev(units_out%time)) // ']')
-      do idim = 1, gr%mesh%sb%dim
+      do idim = 1, gr%sb%dim
         call write_iter_header(out_vel, '[' // trim(units_abbrev(units_out%velocity)) // ']')
       end do
       call write_iter_nl(out_vel)
@@ -1907,7 +1907,7 @@ contains
 
     call write_iter_start(out_vel)
     vel = units_from_atomic(units_out%velocity, vel)
-    call write_iter_double(out_vel, vel, gr%mesh%sb%dim)
+    call write_iter_double(out_vel, vel, gr%sb%dim)
     call write_iter_nl(out_vel)
 
     POP_SUB(td_write_vel)
@@ -1943,17 +1943,17 @@ contains
       do il = 1, hm%ep%no_lasers
         select case(laser_kind(hm%ep%lasers(il)))
         case(E_FIELD_ELECTRIC)
-          do idir = 1, gr%mesh%sb%dim
+          do idir = 1, gr%sb%dim
             write(aux, '(a,i1,a)') 'E(', idir, ')'
             call write_iter_header(out_laser, aux)
           end do
         case(E_FIELD_MAGNETIC)
-          do idir = 1, gr%mesh%sb%dim
+          do idir = 1, gr%sb%dim
             write(aux, '(a,i1,a)') 'B(', idir, ')'
             call write_iter_header(out_laser, aux)
           end do
         case(E_FIELD_VECTOR_POTENTIAL)
-          do idir = 1, gr%mesh%sb%dim
+          do idir = 1, gr%sb%dim
             write(aux, '(a,i1,a)') 'A(', idir, ')'
             call write_iter_header(out_laser, aux)
           end do
@@ -1974,12 +1974,12 @@ contains
         select case(laser_kind(hm%ep%lasers(il)))
         case(E_FIELD_ELECTRIC, E_FIELD_MAGNETIC)
           aux = '[' // trim(units_abbrev(units_out%force)) // ']'
-          do idir = 1, gr%mesh%sb%dim
+          do idir = 1, gr%sb%dim
             call write_iter_header(out_laser, aux)
           end do
         case(E_FIELD_VECTOR_POTENTIAL)
           aux = '[' // trim(units_abbrev(units_out%energy)) // ']'
-          do idir = 1, gr%mesh%sb%dim
+          do idir = 1, gr%sb%dim
             call write_iter_header(out_laser, aux)
           end do
         case(E_FIELD_SCALAR_POTENTIAL)
@@ -2000,10 +2000,10 @@ contains
       select case(laser_kind(hm%ep%lasers(il)))
       case(E_FIELD_ELECTRIC, E_FIELD_MAGNETIC)
         field = units_from_atomic(units_out%force, field)
-        call write_iter_double(out_laser, field, gr%mesh%sb%dim)
+        call write_iter_double(out_laser, field, gr%sb%dim)
       case(E_FIELD_VECTOR_POTENTIAL)
         field = units_from_atomic(units_out%energy, field)
-        call write_iter_double(out_laser, field, gr%mesh%sb%dim)
+        call write_iter_double(out_laser, field, gr%sb%dim)
       case(E_FIELD_SCALAR_POTENTIAL)
         call write_iter_double(out_laser, field(1), 1)
       end select
@@ -2432,7 +2432,7 @@ contains
       call comm_allreduce(st%dom_st_kpt_mpi_grp%comm, projections)
 
       ! n_dip is not defined for more than space%dim
-      call geometry_dipole(geo, n_dip)
+      n_dip = geometry_dipole(geo)
       do ik = 1, st%d%nik
         do ist = gs_st%st_start, st%nst
           do uist = gs_st%st_start, gs_st%st_end
@@ -2994,18 +2994,18 @@ contains
       ! first line: column names
       call write_iter_header_start(out_total_current)
       
-      do idir = 1, gr%mesh%sb%dim
+      do idir = 1, gr%sb%dim
         write(aux, '(a2,i1,a1)') 'I(', idir, ')'
         call write_iter_header(out_total_current, aux)
       end do
 
-      do idir = 1, gr%mesh%sb%dim
+      do idir = 1, gr%sb%dim
         write(aux, '(a2,i1,a1)') 'IntAbs(j)(', idir, ')'
         call write_iter_header(out_total_current, aux)
       end do
       
       do ispin = 1, st%d%nspin
-        do idir = 1, gr%mesh%sb%dim
+        do idir = 1, gr%sb%dim
           write(aux, '(a4,i1,a1,i1,a1)') 'I-sp', ispin, '(', idir, ')'
           call write_iter_header(out_total_current, aux)
         end do
@@ -3044,8 +3044,8 @@ contains
     end if
 
    if(mpi_grp_is_root(mpi_world)) then
-      call write_iter_double(out_total_current, total_current, gr%mesh%sb%dim)
-      call write_iter_double(out_total_current, abs_current, gr%mesh%sb%dim)
+      call write_iter_double(out_total_current, total_current, gr%sb%dim)
+      call write_iter_double(out_total_current, abs_current, gr%sb%dim)
    end if
   
     do ispin = 1, st%d%nspin
@@ -3058,7 +3058,7 @@ contains
         call comm_allreduce(gr%mesh%mpi_grp%comm, total_current, dim = gr%sb%dim)
       end if
       if(mpi_grp_is_root(mpi_world)) &
-        call write_iter_double(out_total_current, total_current, gr%mesh%sb%dim)
+        call write_iter_double(out_total_current, total_current, gr%sb%dim)
     end do
 
     if(mpi_grp_is_root(mpi_world)) &
@@ -3089,7 +3089,7 @@ contains
       ! first line: column names
       call write_iter_header_start(write_obj)
       
-      do idir = 1, gr%mesh%sb%dim
+      do idir = 1, gr%sb%dim
         write(aux, '(a2,i1,a1)') 'Jh(', idir, ')'
         call write_iter_header(write_obj, aux)
       end do
@@ -3115,7 +3115,7 @@ contains
 
     SAFE_DEALLOCATE_A(heat_current)
     
-    if(mpi_grp_is_root(mpi_world)) call write_iter_double(write_obj, total_current, gr%mesh%sb%dim)
+    if(mpi_grp_is_root(mpi_world)) call write_iter_double(write_obj, total_current, gr%sb%dim)
   
     if(mpi_grp_is_root(mpi_world)) call write_iter_nl(write_obj)
       
@@ -3265,12 +3265,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_mxll_init(writ, namespace, gr, st, hm, iter, dt)
+  subroutine td_write_mxll_init(writ, namespace, iter, dt)
     type(td_write_t),         intent(out)   :: writ
     type(namespace_t),        intent(in)    :: namespace
-    type(grid_t),             intent(inout) :: gr
-    type(states_mxll_t),      intent(inout) :: st
-    type(hamiltonian_mxll_t), intent(inout) :: hm
     integer,                  intent(in)    :: iter
     FLOAT,                    intent(in)    :: dt
 
@@ -3398,9 +3395,9 @@ contains
     PUSH_SUB(td_write_mxll_end)
 
     if(mpi_grp_is_root(mpi_world)) then    
-       do iout = 1, OUT_MAXWELL_MAX
-          if(writ%out(iout)%write)  call write_iter_end(writ%out(iout)%handle)
-       end do
+      do iout = 1, OUT_MAXWELL_MAX
+        if(writ%out(iout)%write)  call write_iter_end(writ%out(iout)%handle)
+      end do
     end if
 
     POP_SUB(td_write_mxll_end)
@@ -3427,7 +3424,7 @@ contains
 !        call td_write_maxwell_energy(writ%out(OUT_MAXWELL_ENERGY)%handle, hm, st, iter, &
 !                                             hm, geo%kinetic_energy)
 !      else
-        call td_write_maxwell_energy(writ%out(OUT_MAXWELL_ENERGY)%handle, hm, st, iter)
+        call td_write_maxwell_energy(writ%out(OUT_MAXWELL_ENERGY)%handle, hm, iter)
 !      end if
     end if
 
@@ -3440,27 +3437,27 @@ contains
     end if
 
     if (writ%out(OUT_E_FIELD_SURFACE_X)%write) then
-      call td_write_electric_field_box_surface(writ%out(OUT_E_FIELD_SURFACE_X)%handle, hm, st, 1, iter)
+      call td_write_electric_field_box_surface(writ%out(OUT_E_FIELD_SURFACE_X)%handle, st, 1, iter)
     end if
 
     if (writ%out(OUT_E_FIELD_SURFACE_Y)%write) then
-      call td_write_electric_field_box_surface(writ%out(OUT_E_FIELD_SURFACE_Y)%handle, hm, st, 2, iter)
+      call td_write_electric_field_box_surface(writ%out(OUT_E_FIELD_SURFACE_Y)%handle, st, 2, iter)
     end if
 
     if (writ%out(OUT_E_FIELD_SURFACE_Z)%write) then
-      call td_write_electric_field_box_surface(writ%out(OUT_E_FIELD_SURFACE_Z)%handle, hm, st, 3, iter)
+      call td_write_electric_field_box_surface(writ%out(OUT_E_FIELD_SURFACE_Z)%handle, st, 3, iter)
     end if
 
     if (writ%out(OUT_B_FIELD_SURFACE_X)%write) then
-      call td_write_magnetic_field_box_surface(writ%out(OUT_B_FIELD_SURFACE_X)%handle, hm, st, 1, iter)
+      call td_write_magnetic_field_box_surface(writ%out(OUT_B_FIELD_SURFACE_X)%handle, st, 1, iter)
     end if
 
     if (writ%out(OUT_B_FIELD_SURFACE_Y)%write) then
-      call td_write_magnetic_field_box_surface(writ%out(OUT_B_FIELD_SURFACE_Y)%handle, hm, st, 2, iter)
+      call td_write_magnetic_field_box_surface(writ%out(OUT_B_FIELD_SURFACE_Y)%handle, st, 2, iter)
     end if
 
     if (writ%out(OUT_B_FIELD_SURFACE_Z)%write) then
-      call td_write_magnetic_field_box_surface(writ%out(OUT_B_FIELD_SURFACE_Z)%handle, hm, st, 3, iter)
+      call td_write_magnetic_field_box_surface(writ%out(OUT_B_FIELD_SURFACE_Z)%handle, st, 3, iter)
     end if
 
     call profiling_out(prof)
@@ -3552,10 +3549,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_maxwell_energy(out_maxwell_energy, hm, st, iter)
+  subroutine td_write_maxwell_energy(out_maxwell_energy, hm, iter)
     type(c_ptr),                   intent(inout) :: out_maxwell_energy
     type(hamiltonian_mxll_t),      intent(in)    :: hm
-    type(states_mxll_t),           intent(in)    :: st
     integer,                       intent(in)    :: iter
 
     integer :: ii
@@ -3614,9 +3610,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_electric_field_box_surface(out_field_surf, hm, st, dim, iter)
+  subroutine td_write_electric_field_box_surface(out_field_surf, st, dim, iter)
     type(c_ptr),                   intent(inout) :: out_field_surf
-    type(hamiltonian_mxll_t),      intent(in)    :: hm
     type(states_mxll_t),           intent(in)    :: st
     integer,                       intent(in)    :: dim
     integer,                       intent(in)    :: iter
@@ -3695,9 +3690,8 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine td_write_magnetic_field_box_surface(out_field_surf, hm, st, dim, iter)
+  subroutine td_write_magnetic_field_box_surface(out_field_surf, st, dim, iter)
     type(c_ptr),                   intent(inout) :: out_field_surf
-    type(hamiltonian_mxll_t),      intent(in)    :: hm
     type(states_mxll_t),           intent(in)    :: st
     integer,                       intent(in)    :: dim
     integer,                       intent(in)    :: iter
@@ -3814,12 +3808,12 @@ contains
       call write_iter_nl(out_poynting)
 
       call write_iter_header_start(out_poynting)
-      do idir = 1, gr%mesh%sb%dim
+      do idir = 1, gr%sb%dim
         write(aux, '(a,i1,a)') 'poynting (', idir, ')'
         call write_iter_header(out_poynting, aux)
       end do
       if (plane_wave_flag) then
-        do idir = 1, gr%mesh%sb%dim
+        do idir = 1, gr%sb%dim
           write(aux, '(a,i1,a)') 'poynting pl. w.(', idir, ')'
           call write_iter_header(out_poynting, aux)
         end do
@@ -3830,7 +3824,7 @@ contains
       call write_iter_header(out_poynting, '[' // trim(units_abbrev(units_out%time)) // ']')
 
       aux = '[' // trim(units_abbrev(units_out%force)) // ']'
-      do idir = 1, 2 * gr%mesh%sb%dim
+      do idir = 1, 2 * gr%sb%dim
         call write_iter_header(out_poynting, aux)
       end do
       call write_iter_nl(out_poynting)
@@ -3841,12 +3835,12 @@ contains
 
     ! Output of mean poynting vector
     field = units_from_atomic(unit_one/units_out%length**2, field)
-    call write_iter_double(out_poynting, field, gr%mesh%sb%dim)
+    call write_iter_double(out_poynting, field, gr%sb%dim)
 
     ! Output of mean poynting vector plane wave
     if (plane_wave_flag) then
       field_2 = units_from_atomic(unit_one/units_out%length**2, field_2)
-      call write_iter_double(out_poynting, field_2, gr%mesh%sb%dim)
+      call write_iter_double(out_poynting, field_2, gr%sb%dim)
     end if
 
     call write_iter_nl(out_poynting)
@@ -3893,19 +3887,19 @@ contains
       call write_iter_header(out_fields, aux)
 
       call write_iter_header_start(out_fields)
-      do idir = 1, gr%mesh%sb%dim
+      do idir = 1, gr%sb%dim
         write(aux, '(a,i1,a)') 'E(', idir, ')'
         call write_iter_header(out_fields, aux)
       end do
-      do idir = 1, gr%mesh%sb%dim
+      do idir = 1, gr%sb%dim
         write(aux, '(a,i1,a)') 'B(', idir, ')'
         call write_iter_header(out_fields, aux)
       end do
-      do idir = 1, gr%mesh%sb%dim
+      do idir = 1, gr%sb%dim
         write(aux, '(a,i1,a)') 'E(', idir, ')'
         call write_iter_header(out_fields, aux)
       end do
-      do idir = 1, gr%mesh%sb%dim
+      do idir = 1, gr%sb%dim
         write(aux, '(a,i1,a)') 'B(', idir, ')'
         call write_iter_header(out_fields, aux)
       end do
@@ -3918,7 +3912,7 @@ contains
       ! (force, force, and energy, respectively). The reason is that the units of E, B or A
       ! are ugly.
       aux = '[' // trim(units_abbrev(units_out%force)) // ']'
-      do idir = 1, 4 * gr%mesh%sb%dim
+      do idir = 1, 4 * gr%sb%dim
         call write_iter_header(out_fields, aux)
       end do
       call write_iter_nl(out_fields)
@@ -3930,21 +3924,21 @@ contains
     ! Output of electric field at selected point
     call get_electric_field_vector(st%selected_points_rs_state(:,1), field(1:st%dim))
     field(1:st%dim) = units_from_atomic(units_out%energy/units_out%length, field(1:st%dim))
-    call write_iter_double(out_fields, field(1:st%dim), gr%mesh%sb%dim)
+    call write_iter_double(out_fields, field(1:st%dim), gr%sb%dim)
     ! Output of magnetic field at selected point
     call get_magnetic_field_vector(st%selected_points_rs_state(:,1), st%rs_sign, field(1:st%dim))
     field(1:st%dim) = units_from_atomic(unit_one/units_out%length**2, field(1:st%dim))
-    call write_iter_double(out_fields, field(1:st%dim), gr%mesh%sb%dim)
+    call write_iter_double(out_fields, field(1:st%dim), gr%sb%dim)
 
     ! Output of transverse electric field at selected point
     call get_electric_field_vector(st%selected_points_rs_state_trans(:,1), field(1:st%dim))
     field(1:st%dim) = units_from_atomic(units_out%energy/units_out%length, field(1:st%dim))
-    call write_iter_double(out_fields, field(1:st%dim), gr%mesh%sb%dim)
+    call write_iter_double(out_fields, field(1:st%dim), gr%sb%dim)
     ! Output of transverse magnetic field at selected point
     call get_magnetic_field_vector(st%selected_points_rs_state_trans(:,1), &
          st%rs_sign, field(1:st%dim))
     field(1:st%dim) = units_from_atomic(unit_one/units_out%length**2, field(1:st%dim))
-    call write_iter_double(out_fields, field(1:st%dim), gr%mesh%sb%dim)
+    call write_iter_double(out_fields, field(1:st%dim), gr%sb%dim)
 
     call write_iter_nl(out_fields)
 

@@ -104,11 +104,11 @@ module kick_oct_m
     !!                 weight(i) * (\hbar / a_0^l) * r^l(i) * Y_{l(i),m(i)} (\vec{r}) * \delta(t)
     !! \f]
     integer              :: n_multipoles
-    integer, pointer     :: l(:), m(:)
-    FLOAT, pointer       :: weight(:)
+    integer, allocatable :: l(:), m(:)
+    FLOAT,   allocatable :: weight(:)
     integer              :: nqmult(1:MAX_DIM)
     integer              :: nqvec
-    FLOAT, allocatable   :: qvector(:,:)
+    FLOAT,   allocatable :: qvector(:,:)
     FLOAT                :: trans_vec(MAX_DIM,2)
     FLOAT                :: qlength
     integer              :: qkick_mode
@@ -170,9 +170,6 @@ contains
     !%End
     call parse_variable(namespace, 'TDDeltaStrength', M_ZERO, kick%delta_strength, units_inp%length**(-1))
 
-    nullify(kick%l)
-    nullify(kick%m)
-    nullify(kick%weight)
     kick%function_mode = KICK_FUNCTION_DIPOLE
 
     if(abs(kick%delta_strength) <= M_EPSILON) then
@@ -674,9 +671,9 @@ contains
     kick%pol_dir = 0
     kick%wprime = M_ZERO
     if (kick%n_multipoles > 0) then
-      SAFE_DEALLOCATE_P(kick%l)
-      SAFE_DEALLOCATE_P(kick%m)
-      SAFE_DEALLOCATE_P(kick%weight)
+      SAFE_DEALLOCATE_A(kick%l)
+      SAFE_DEALLOCATE_A(kick%m)
+      SAFE_DEALLOCATE_A(kick%weight)
     end if
     kick%n_multipoles = 0
     kick%qkick_mode = QKICKMODE_NONE
@@ -720,8 +717,6 @@ contains
     else
       kick%function_mode = KICK_FUNCTION_DIPOLE
       kick%n_multipoles = 0
-      nullify(kick%l)
-      nullify(kick%m)
       backspace(iunit)
 
       read(iunit, '(15x,3f18.12)') kick%pol(1:3, 1)
@@ -868,7 +863,7 @@ contains
     logical, optional,    intent(in)    :: to_interpolate
 
     integer :: ip, im
-    FLOAT   :: xx(MAX_DIM)
+    FLOAT   :: xx(mesh%sb%dim)
     FLOAT   :: rkick, ikick, rr, ylm
 
     integer :: np
@@ -881,6 +876,7 @@ contains
     end if
 
     if(abs(kick%qlength) > M_EPSILON .or. kick%delta_strength_mode == KICK_MAGNON_MODE) then ! q-vector is set
+      ASSERT(mesh%sb%dim == 3)
 
       select case (kick%qkick_mode)
         case (QKICKMODE_COS)
@@ -901,16 +897,16 @@ contains
 
       kick_function = M_z0
       do ip = 1, np
-        call mesh_r(mesh, ip, rr, coords = xx)
+        xx = mesh%x(ip, :)
         select case (kick%qkick_mode)
           case (QKICKMODE_COS)
-            kick_function(ip) = kick_function(ip) + cos(sum(kick%qvector(:, iq) * xx(:)))
+            kick_function(ip) = kick_function(ip) + cos(sum(kick%qvector(1:3, iq) * xx(1:3)))
           case (QKICKMODE_SIN)
-            kick_function(ip) = kick_function(ip) + sin(sum(kick%qvector(:, iq) * xx(:)))
+            kick_function(ip) = kick_function(ip) + sin(sum(kick%qvector(1:3, iq) * xx(1:3)))
           case (QKICKMODE_SIN+QKICKMODE_COS)
-            kick_function(ip) = kick_function(ip) + sin(sum(kick%qvector(:, iq) * xx(:)))
+            kick_function(ip) = kick_function(ip) + sin(sum(kick%qvector(1:3, iq) * xx(1:3)))
           case (QKICKMODE_EXP)
-            kick_function(ip) = kick_function(ip) + exp(M_zI * sum(kick%qvector(:, iq) * xx(:)))
+            kick_function(ip) = kick_function(ip) + exp(M_zI * sum(kick%qvector(1:3, iq) * xx(1:3)))
           case (QKICKMODE_BESSEL)
             call grylmr(mesh%x(ip, 1), mesh%x(ip, 2), mesh%x(ip, 3), kick%qbessel_l, kick%qbessel_m, ylm)
               kick_function(ip) = kick_function(ip) + loct_sph_bessel(kick%qbessel_l, kick%qlength*sqrt(sum(xx(:)**2)))*ylm

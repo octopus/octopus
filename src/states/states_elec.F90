@@ -224,7 +224,6 @@ contains
     st%parallel_in_states = .false.
     nullify(st%node)
     nullify(st%st_kpt_task)
-    nullify(st%ap%schedule)
 
     st%packed = .false.
 
@@ -385,7 +384,7 @@ contains
     ! For non-periodic systems this should just return the Gamma point
     call states_elec_choose_kpoints(st%d, gr%sb, namespace)
 
-    call geometry_val_charge(geo, st%val_charge)
+    st%val_charge = geometry_val_charge(geo)
 
     st%qtot = -(st%val_charge + excess_charge)
 
@@ -1160,10 +1159,9 @@ contains
 
 
   ! ---------------------------------------------------------
-  subroutine states_elec_densities_init(st, gr, geo)
+  subroutine states_elec_densities_init(st, gr)
     type(states_elec_t), target, intent(inout) :: st
     type(grid_t),                intent(in)    :: gr
-    type(geometry_t),            intent(in)    :: geo
 
     FLOAT :: fsize
 
@@ -1171,11 +1169,6 @@ contains
 
     SAFE_ALLOCATE(st%rho(1:gr%fine%mesh%np_part, 1:st%d%nspin))
     st%rho = M_ZERO
-
-    if(geo%nlcc) then
-      SAFE_ALLOCATE(st%rho_core(1:gr%fine%mesh%np))
-      st%rho_core(:) = M_ZERO
-    end if
 
     fsize = gr%mesh%np_part*CNST(8.0)*st%d%block_size
 
@@ -1194,12 +1187,12 @@ contains
     PUSH_SUB(states_elec_allocate_current)
     
     if(.not. associated(st%current)) then
-      SAFE_ALLOCATE(st%current(1:gr%mesh%np_part, 1:gr%mesh%sb%dim, 1:st%d%nspin))
+      SAFE_ALLOCATE(st%current(1:gr%mesh%np_part, 1:gr%sb%dim, 1:st%d%nspin))
       st%current = M_ZERO
     end if
 
     if(.not. associated(st%current_kpt)) then
-      SAFE_ALLOCATE(st%current_kpt(1:gr%mesh%np,1:gr%mesh%sb%dim,st%d%kpt%start:st%d%kpt%end))
+      SAFE_ALLOCATE(st%current_kpt(1:gr%mesh%np,1:gr%sb%dim,st%d%kpt%start:st%d%kpt%end))
       st%current_kpt = M_ZERO
     end if
 
@@ -1456,7 +1449,7 @@ contains
     SAFE_DEALLOCATE_P(st%st_kpt_task)
 
     if(st%parallel_in_states) then
-      SAFE_DEALLOCATE_P(st%ap%schedule)
+      SAFE_DEALLOCATE_A(st%ap%schedule)
     end if
 
     POP_SUB(states_elec_end)
@@ -1646,8 +1639,7 @@ contains
     call smear_find_fermi_energy(st%smear, namespace, st%eigenval, st%occ, st%qtot, &
       st%d%nik, st%nst, st%d%kweights)
 
-    call smear_fill_occupations(st%smear, st%eigenval, st%occ, st%d%kweights, &
-      st%d%nik, st%nst)
+    call smear_fill_occupations(st%smear, st%eigenval, st%occ, st%d%nik, st%nst)
         
     ! check if everything is OK
     charge = M_ZERO

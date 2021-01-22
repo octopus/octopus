@@ -85,25 +85,25 @@ module ion_dynamics_oct_m
     FLOAT            :: dt
     FLOAT            :: current_temperature
 
-    FLOAT, pointer   :: oldforce(:, :)
+    FLOAT, allocatable :: oldforce(:, :)
 
     !> the old positions for Verlet (used for the Nose-Hoover)
-    FLOAT, pointer :: old_pos(:, :)    
+    FLOAT, allocatable :: old_pos(:, :)    
 
     !> variables for the Nose-Hoover thermostat
     type(nose_hoover_t) :: nh(1:2)
     type(tdf_t) :: temperature_function
       
     logical :: drive_ions  
-    type(ion_td_displacement_t), pointer ::  td_displacements(:) !> Time-dependent displacements driving the ions
+    type(ion_td_displacement_t), allocatable ::  td_displacements(:) !> Time-dependent displacements driving the ions
     type(geometry_t), pointer :: geo_t0
   end type ion_dynamics_t
 
   type ion_state_t
     private
-    FLOAT, pointer :: pos(:, :)
-    FLOAT, pointer :: vel(:, :)
-    FLOAT, pointer :: old_pos(:, :)
+    FLOAT, allocatable :: pos(:, :)
+    FLOAT, allocatable :: vel(:, :)
+    FLOAT, allocatable :: old_pos(:, :)
     type(nose_hoover_t) :: nh(1:2)
   end type ion_state_t  
 
@@ -127,8 +127,6 @@ contains
     character(len=200) :: expression
 
     PUSH_SUB(ion_dynamics_init)
-
-    nullify(this%oldforce)
 
     have_velocities = .false.
     this%drive_ions = .false.
@@ -334,7 +332,7 @@ contains
 
       kin1 = ion_dynamics_kinetic_energy(geo)
 
-      call cm_vel(geo, x)
+      x = geometry_center_of_mass_vel(geo)
       do i = 1, geo%natoms
         geo%atom(i)%v = geo%atom(i)%v - x
       end do
@@ -456,25 +454,22 @@ contains
     type(ion_dynamics_t), intent(inout) :: this
 
     PUSH_SUB(ion_dynamics_end)
-    SAFE_DEALLOCATE_P(this%oldforce)
+    SAFE_DEALLOCATE_A(this%oldforce)
 
     if(this%thermostat /= THERMO_NONE) then
       call tdf_end(this%temperature_function)
     end if
 
-    if (this%drive_ions .and. associated(this%td_displacements) ) then
+    if (this%drive_ions .and. allocated(this%td_displacements) ) then
       if (any (this%td_displacements(1:this%geo_t0%natoms)%move)) then
         ! geometry end cannot be called here, otherwise the species are destroyed twice
         ! call geometry_end(this%geo_t0)
       end if
-      SAFE_DEALLOCATE_P(this%td_displacements)
+      SAFE_DEALLOCATE_A(this%td_displacements)
       if (any (this%td_displacements(:)%move)) then
         call geometry_end(this%geo_t0)
       end if
     end if
-
-      
-
 
     POP_SUB(ion_dynamics_end)
   end subroutine ion_dynamics_end
@@ -792,11 +787,11 @@ contains
       this%old_pos(1:geo%space%dim, 1:geo%natoms) = state%old_pos(1:geo%space%dim, 1:geo%natoms)
       this%nh(1:2)%pos = state%nh(1:2)%pos
       this%nh(1:2)%vel = state%nh(1:2)%vel
-      SAFE_DEALLOCATE_P(state%old_pos)
+      SAFE_DEALLOCATE_A(state%old_pos)
     end if
 
-    SAFE_DEALLOCATE_P(state%pos)
-    SAFE_DEALLOCATE_P(state%vel)
+    SAFE_DEALLOCATE_A(state%pos)
+    SAFE_DEALLOCATE_A(state%vel)
     
     POP_SUB(ion_dynamics_restore_state)
   end subroutine ion_dynamics_restore_state

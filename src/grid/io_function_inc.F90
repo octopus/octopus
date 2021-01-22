@@ -892,7 +892,7 @@ contains
     integer, intent(in) :: d1, d2, d3
     
     integer :: ixvect(MAX_DIM)
-    FLOAT   :: xx(1:MAX_DIM)
+    FLOAT   :: xx(1:mesh%sb%dim)
     R_TYPE  :: fu
 
     PUSH_SUB(X(io_function_output_global).out_axis)
@@ -923,7 +923,7 @@ contains
     integer :: ix, iy, iz, jdim
     integer :: ixvect(MAX_DIM)
     integer :: ixvect_test(MAX_DIM)
-    FLOAT   :: xx(1:MAX_DIM)
+    FLOAT   :: xx(1:mesh%sb%dim)
     R_TYPE  :: fu
 
     PUSH_SUB(X(io_function_output_global).out_plane)
@@ -985,7 +985,7 @@ contains
 
     integer :: ix, iy, iz, np
     integer :: ixvect(MAX_DIM)
-    FLOAT   :: xx(1:MAX_DIM), zz
+    FLOAT   :: xx(1:mesh%sb%dim), zz
     R_TYPE  :: fu
 
     PUSH_SUB(X(io_function_output_global).out_integrate_plane)
@@ -1038,7 +1038,7 @@ contains
     integer :: ix, iy, record_length
     integer :: min_d2, min_d3, max_d2, max_d3
     FLOAT, allocatable :: out_vec(:)
-    FLOAT :: xx(MAX_DIM)
+    FLOAT :: xx(1:mesh%sb%dim)
     R_TYPE  :: fu
 
     PUSH_SUB(X(io_function_output_global).out_matlab)
@@ -1081,11 +1081,11 @@ contains
         
         select case(d1)
         case(1)
-          ip = mesh%idx%lxyz_inv( 0, ix, iy)    ! plane_x
+          ip = index_from_coords(mesh%idx, [ 0, ix, iy])    ! plane_x
         case(2)
-          ip = mesh%idx%lxyz_inv(ix,  0, iy)    ! plane_y
+          ip = index_from_coords(mesh%idx, [ix,  0, iy])    ! plane_y
         case(3)
-          ip = mesh%idx%lxyz_inv(ix, iy,  0)    ! plane_z
+          ip = index_from_coords(mesh%idx, [ix, iy,  0])    ! plane_z
         end select
 
         select case(out_what)
@@ -1126,7 +1126,7 @@ contains
 
   ! ---------------------------------------------------------
   subroutine out_mesh_index()
-    FLOAT :: xx(1:MAX_DIM)
+    FLOAT :: xx(1:mesh%sb%dim)
     R_TYPE :: fu
 
     integer :: idir

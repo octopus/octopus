@@ -27,9 +27,6 @@ module test_oct_m
   use clock_oct_m
   use density_oct_m
   use derivatives_oct_m
-#ifdef HAVE_DFTBPLUS
-  use dftbplus
-#endif
   use epot_oct_m
   use exponential_oct_m
   use global_oct_m
@@ -67,8 +64,6 @@ module test_oct_m
   use types_oct_m
   use v_ks_oct_m
   use wfs_elec_oct_m
-  use XC_F90(lib_m)
-  use xc_oct_m
 
   implicit none
 
@@ -133,8 +128,6 @@ contains
     !% Tests the subspace diagonalization
     !%Option batch_ops 13
     !% Tests the batch operations
-    !%Option dftbplus 14
-    !% Small test to showcase the usage of the dftbplus library in octopus
     !%Option clock 18
     !% Tests for clock
     !%Option linear_solver 19
@@ -243,12 +236,10 @@ contains
       call test_subspace_diagonalization(param, namespace)
     case(OPTION__TESTMODE__BATCH_OPS)
       call test_batch_ops(param, namespace)
-    case(OPTION__TESTMODE__DFTBPLUS)
-      call test_dftbplus(namespace)
     case(OPTION__TESTMODE__CLOCK)
       call test_clock()
     case(OPTION__TESTMODE__LINEAR_SOLVER)
-      call test_linear_solver(param, namespace)
+      call test_linear_solver(namespace)
     case(OPTION__TESTMODE__CGAL)
       call test_cgal()
     case(OPTION__TESTMODE__DENSE_EIGENSOLVER)
@@ -278,8 +269,7 @@ contains
   end subroutine test_hartree
 
   ! ---------------------------------------------------------
-  subroutine test_linear_solver(param, namespace)
-    type(test_parameters_t), intent(in) :: param
+  subroutine test_linear_solver(namespace)
     type(namespace_t),       intent(in) :: namespace
 
     type(electrons_t), pointer :: sys
@@ -309,7 +299,7 @@ contains
     ! Here we put a Gaussian as the right-hand side of the linear solver
     ! Values are taken from the poisson_test routine
     alpha = CNST(4.0)*sys%gr%mesh%spacing(1)
-    beta = M_ONE / ( alpha**sys%gr%mesh%sb%dim * sqrt(M_PI)**sys%gr%mesh%sb%dim )
+    beta = M_ONE / ( alpha**sys%gr%sb%dim * sqrt(M_PI)**sys%gr%sb%dim )
     ! The Gaussian is centered around the origin
     center = M_ZERO
 
@@ -488,10 +478,11 @@ contains
       call sys%st%group%psib(1, 1)%copy_to(epsib)
       call hamiltonian_elec_base_phase(sys%hm%hm_base, sys%gr%mesh, sys%gr%mesh%np, &
                .false., epsib, src=sys%st%group%psib(1, 1))
+      epsib2%has_phase = .true.
     end if
 
     !Initialize the orbital basis
-    call orbitalbasis_init(basis, sys%namespace)
+    call orbitalbasis_init(basis, sys%namespace, sys%gr%sb)
     if (states_are_real(sys%st)) then
       call dorbitalbasis_build(basis, sys%geo, sys%gr%mesh, sys%st%d%kpt, sys%st%d%dim, .false., .false.)
       SAFE_ALLOCATE(dweight(1:basis%orbsets(1)%norbs, 1:epsib%nst_linear))
@@ -504,7 +495,7 @@ contains
 
       !We set the phase of the orbitals if needed
       if(associated(sys%hm%hm_base%phase)) then
-        call orbitalset_update_phase(basis%orbsets(1), sys%gr%mesh%sb, sys%st%d%kpt, &
+        call orbitalset_update_phase(basis%orbsets(1), sys%gr%sb, sys%st%d%kpt, &
                    (sys%st%d%ispin==SPIN_POLARIZED))
       end if
     end if
@@ -514,13 +505,13 @@ contains
       if(states_are_real(sys%st)) then
         dweight = M_ONE
         ddot = M_ZERO
-        call dorbitalset_get_coeff_batch(basis%orbsets(1), 1, sys%st%group%psib(1, 1), .false., ddot)
-        call dorbitalset_add_to_batch(basis%orbsets(1), 1, epsib2, .false., dweight)
+        call dorbitalset_get_coeff_batch(basis%orbsets(1), sys%st%d%dim, sys%st%group%psib(1, 1), ddot)
+        call dorbitalset_add_to_batch(basis%orbsets(1), sys%st%d%dim, epsib2, dweight)
       else
         zweight = M_ONE
         zdot = M_ZERO
-        call zorbitalset_get_coeff_batch(basis%orbsets(1), sys%st%d%dim, epsib, .false., zdot)
-        call zorbitalset_add_to_batch(basis%orbsets(1), sys%st%d%dim, epsib2, .false., zweight)
+        call zorbitalset_get_coeff_batch(basis%orbsets(1), sys%st%d%dim, epsib, zdot)
+        call zorbitalset_add_to_batch(basis%orbsets(1), sys%st%d%dim, epsib2, zweight)
       end if
     end do
 
@@ -746,8 +737,6 @@ contains
     end do
 
     call test_prints_info_batch(sys%st, sys%gr, sys%st%group%psib(1, 1))
-
-    call exponential_end(te)
 
     call states_elec_deallocate_wfns(sys%st)
     SAFE_DEALLOCATE_P(sys)
@@ -1029,223 +1018,6 @@ contains
 
     POP_SUB(test_batch_ops)
   end subroutine test_batch_ops
-
-
-  ! ---------------------------------------------------------
-  ! This test is wrapping the dftbplus test example taken from
-  ! https://github.com/dftbplus/dftbplus/blob/master/test/api/mm/testers/test_extpot.f90
-  subroutine test_dftbplus(namespace)
-    type(namespace_t),       intent(in) :: namespace
-
-    integer, parameter :: nAtom = 3
-    integer, parameter :: nExtChrg = 2
-    character(len=MAX_PATH_LEN) :: slako_dir
-
-    ! H2O coordinates (atomic units)
-    FLOAT, parameter :: initialCoords(3, nAtom) = reshape([ &
-      M_ZERO, CNST(-0.188972598857892E+01), M_ZERO, &
-      M_ZERO, M_ZERO, CNST(0.147977639152057E+01), &
-      M_ZERO, M_ZERO, CNST(-0.147977639152057E+01) &
-      ], [3, nAtom])
-
-    ! H2O atom types
-    integer, parameter :: species(nAtom) = [1, 2, 2]
-
-    ! External charges (positions and charges, again atomic units)
-    FLOAT, parameter :: extCharges(4, nExtChrg) = reshape([&
-      CNST(-0.94486343888717805E+00), CNST(-0.94486343888717794E+01), CNST(0.17007541899969201E+01), CNST( 2.5), &
-      CNST( 0.43463718188810203E+01), CNST(-0.58581533211004997E+01), CNST(0.26456176288841000E+01), CNST(-1.9)  &
-      ], [4, nExtChrg])
-
-#ifdef HAVE_DFTBPLUS
-    FLOAT :: merminEnergy
-    FLOAT :: coords(3, nAtom), gradients(3, nAtom), extPot(nAtom), extPotGrad(3, nAtom)
-    FLOAT :: atomCharges(nAtom), extChargeGrads(3, nExtChrg)
-    
-    type(TDftbPlus) :: dftbp
-    type(TDftbPlusInput) :: input
-    type(fnode), pointer :: pRoot, pGeo, pHam, pDftb, pMaxAng, pSlakos, pType2Files, pAnalysis
-    type(fnode), pointer :: pParserOpts
-#endif
-
-    PUSH_SUB(test_dftbplus)
-
-    !%Variable SlakoDir
-    !%Type string
-    !%Default "./"
-    !%Section Execution::IO
-    !%Description
-    !% Folder containing the Slako files
-    !%End
-    call parse_variable(namespace, 'SlakoDir', './', slako_dir)
-
-#ifdef HAVE_DFTBPLUS
-    ! Note: setting the global standard output to /dev/null will also suppress run-time error messages
-    !open(newunit=devNull, file="/dev/null", action="write")
-    !call TDftbPlus_init(dftbp, outputUnit=devNull)
-    call TDftbPlus_init(dftbp, mpicomm=mpi_world%comm)
-
-    call dftbp%getEmptyInput(input)
-    call input%getRootNode(pRoot)
-    call setChild(pRoot, "Geometry", pGeo)
-    call setChildValue(pGeo, "Periodic", .false.)
-    call setChildValue(pGeo, "TypeNames", ["O", "H"])
-    coords(:,:) = M_ZERO
-    call setChildValue(pGeo, "TypesAndCoordinates", reshape(species, [1, size(species)]), coords)
-    call setChild(pRoot, "Hamiltonian", pHam)
-    call setChild(pHam, "Dftb", pDftb)
-    call setChildValue(pDftb, "Scc", .true.)
-    call setChildValue(pDftb, "SccTolerance", CNST(1e-12))
-
-    ! sub-block inside hamiltonian for the maximum angular momenta
-    call setChild(pDftb, "MaxAngularMomentum", pMaxAng)
-    ! explicitly set the maximum angular momenta for the species
-    call setChildValue(pMaxAng, "O", "p")
-    call setChildValue(pMaxAng, "H", "s")
-
-    ! get the SK data
-    ! You should provide the skfiles as found in the external/slakos/origin/mio-1-1/ folder. These can
-    ! be downloaded with the utils/get_opt_externals script
-    call setChild(pDftb, "SlaterKosterFiles", pSlakos)
-    call setChild(pSlakos, "Type2FileNames", pType2Files)
-    call setChildValue(pType2Files, "Prefix", slako_dir)
-    call setChildValue(pType2Files, "Separator", "-")
-    call setChildValue(pType2Files, "Suffix", ".skf")
-
-    !  set up analysis options
-    call setChild(pRoot, "Analysis", pAnalysis)
-    call setChildValue(pAnalysis, "CalculateForces", .true.)
-
-    call setChild(pRoot, "ParserOptions", pParserOpts)
-    call setChildValue(pParserOpts, "ParserVersion", 5)
-
-    message(1) = 'Input tree in HSD format:'
-    call messages_info(1)
-    call dumpHsd(input%hsdTree, stdout)
-
-    ! initialise the DFTB+ calculator
-    call dftbp%setupCalculator(input)
-
-    ! Replace coordinates
-    coords(:,:) = initialCoords
-    call dftbp%setGeometry(coords)
-
-    ! add external point charges
-    call getPointChargePotential(extCharges(1:3,:), extCharges(4,:), coords, extPot, extPotGrad)
-    call dftbp%setExternalPotential(atomPot=extPot, potGrad=extPotGrad)
-
-    ! get results
-    call dftbp%getEnergy(merminEnergy)
-    call dftbp%getGradients(gradients)
-    call dftbp%getGrossCharges(atomCharges)
-    call getPointChargeGradients(coords, atomCharges, extCharges(1:3,:), extCharges(4,:),&
-        & extChargeGrads)
-
-    write(message(1), "(A,F15.10)") 'Obtained Mermin Energy:', merminEnergy
-    write(message(2), "(A,3F15.10)") 'Obtained gross charges:', atomCharges
-    write(message(3), "(A,3F15.10)") 'Obtained gradient of atom 1:', gradients(:,1)
-    write(message(4), "(A,3F15.10)") 'Obtained gradient of atom 2:', gradients(:,2)
-    write(message(5), "(A,3F15.10)") 'Obtained gradient of atom 3:', gradients(:,3)
-    write(message(6), "(A,3F15.10)") 'Obtained gradient of charge 1:', extChargeGrads(:,1)
-    write(message(7), "(A,3F15.10)") 'Obtained gradient of charge 2:', extChargeGrads(:,2)
-    call messages_info(7)
-
-    call TDftbPlus_destruct(dftbp)
-#else
-    message(1) = "The DFTB+ API cannot be tested, as Octopus was compiled without DFTB+ support."
-    call messages_fatal(1)
-#endif
-
-    POP_SUB(test_dftbplus)
-  contains
-#ifdef HAVE_DFTBPLUS
-    !> Calculate the potential and its first derivatives at DFTB atoms due to external electrostatic
-    !> charges (perhaps from a surrounding MM region)
-    subroutine getPointChargePotential(coordsMm, chargesMm, coordsQm, extPot, extPotGrad)
-      !> Coordinates of the external charges (xyz,:nAtomMm) in atomic units
-      FLOAT, intent(in) :: coordsMm(:,:)
-
-      !> Charges of MM region atoms, in atomic units (:nAtomMm)
-      FLOAT, intent(in) :: chargesMm(:)
-
-      !> Coordinates of DFTB QM atoms (xyz,:nAtomQm) in atomic units
-      FLOAT, intent(in) :: coordsQm(:,:)
-
-      !> Potentials at DFTB atomic sites (:nAtomQm)
-      FLOAT, intent(out) :: extPot(:)
-
-      !> Gradient of potentials with respect to DFTB atom displacement (xyz,:nAtomQm)
-      FLOAT, intent(out) :: extPotGrad(:,:)
-
-      FLOAT :: atomPosQm(3), atomPosMm(3)
-      FLOAT :: chargeMm, dist
-      integer :: nAtomQm, nAtomMm
-      integer :: iAtQm, iAtMm
-
-      PUSH_SUB(test_dftbplus.getPointChargePotential)
-
-      nAtomQm = size(coordsQm, dim=2)
-      nAtomMm = size(coordsMm, dim=2)
-      extPot(:) = M_ZERO
-      extPotGrad(:,:) = M_ZERO
-      do iAtQm = 1, nAtomQm
-        atomPosQm(:) = coordsQm(:, iAtQm)
-        do iAtMm = 1, nAtomMm
-          atomPosMm(:) = coordsMm(1:3, iAtMm)
-          chargeMm = chargesMm(iAtMm)
-          dist = sqrt(sum((atomPosQm - atomPosMm)**2))
-          extPot(iAtQm) = extPot(iAtQm) - chargeMm / (dist + M_EPSILON)
-          extPotGrad(:, iAtQm) = extPotGrad(:, iAtQm) + chargeMm * (atomPosQm - atomPosMm) / (dist**3 + M_EPSILON)
-        end do
-      end do
-
-      POP_SUB(test_dftbplus.getPointChargePotential)
-    end subroutine getPointChargePotential
-
-    !> Calculate the gradient of the electrostatic energy wrt to external charges in the field from
-    !> the charges of DFTB atoms
-    subroutine getPointChargeGradients(coordsQm, chargesQm, coordsMm, chargesMm, gradients)
-      !> Coordinates of the DFTB QM atoms (xyz,:nAtomQm) in atomic units
-      FLOAT, intent(in) :: coordsQm(:,:)
-
-      !> Charges of QM DFTB region atoms, in atomic units (:nAtomMm)
-      FLOAT, intent(in) :: chargesQm(:)
-
-      !> Coordinates of the external charges (xyz,:nAtomMm) in atomic units
-      FLOAT, intent(in) :: coordsMm(:,:)
-
-      !> Charges of MM region atoms, in atomic units (:nAtomMm)
-      FLOAT, intent(in) :: chargesMm(:)
-
-      !> Gradient of potentials with respect to MM atom displacement (xyz,:nAtomMm)
-      FLOAT, intent(out) :: gradients(:,:)
-
-      FLOAT :: atomPosQm(3), atomPosMm(3)
-      FLOAT :: chargeQm, chargeMm, dist
-      integer :: nAtomQm, nAtomMm
-      integer :: iAtQm, iAtMm
-
-      PUSH_SUB(test_dftbplus.getPointChargeGradients)
-
-      gradients(:,:) = M_ZERO
-      nAtomQm = size(coordsQm, dim=2)
-      nAtomMm = size(coordsMm, dim=2)
-      do iAtMm = 1, nAtomMm
-        atomPosMm(:) = coordsMm(:, iAtMm)
-        chargeMm = chargesMm(iAtMm)
-        do iAtQm = 1, nAtomQm
-          atomPosQm(:) = coordsQm(:, iAtQm)
-          chargeQm = chargesQm(iAtQm)
-          dist = sqrt(sum((atomPosQm - atomPosMm)**2))
-          gradients(:, iAtMm) = gradients(:, iAtMm) &
-            + chargeQm * chargeMm * (atomPosMm - atomPosQm) / (dist**3 + M_EPSILON)
-        end do
-      end do
-
-      POP_SUB(test_dftbplus.getPointChargeGradients)
-    end subroutine getPointChargeGradients
-#endif
-  end subroutine test_dftbplus
 
 ! ---------------------------------------------------------
   subroutine test_derivatives(param, namespace)

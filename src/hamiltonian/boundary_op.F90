@@ -67,10 +67,10 @@ contains
     type(geometry_t),         intent(in)  :: geo
 
     integer             :: ip
-    FLOAT               :: bounds(1:MAX_DIM,1:2)
+    FLOAT               :: bounds(1:sb%dim, 1:2)
     integer             :: cols_abshape_block, imdim, maxdim
 
-    FLOAT               :: xx(1:MAX_DIM), rr
+    FLOAT               :: xx(1:sb%dim), rr
     FLOAT               :: ufn_re, ufn_im
     character(len=1024) :: user_def_expr
 
@@ -152,21 +152,22 @@ contains
         message(1) = "Input: ABShape not specified. Using default values for absorbing boundaries."
         call messages_info(1)
       
-        if (mesh%sb%box_shape == SPHERE) then
-          bounds(1,1)=mesh%sb%rsize/M_TWO
-          bounds(1,2)=mesh%sb%rsize
-        else if(mesh%sb%box_shape == PARALLELEPIPED) then
-          bounds(1:mesh%sb%dim,1)=mesh%sb%lsize(1:mesh%sb%dim)/M_TWO
-          bounds(1:mesh%sb%dim,2)=mesh%sb%lsize(1:mesh%sb%dim)
-        else if(mesh%sb%box_shape == CYLINDER) then
-          bounds(1,2)=mesh%sb%xsize
-          bounds(2,2)=mesh%sb%rsize
-          bounds(1,1)=bounds(1,1)/M_TWO
-          bounds(2,1)=bounds(2,2)/M_TWO
-        else
-          bounds(:,1)=M_ZERO
-          bounds(:,2)=CNST(0.4)
-        end if
+        select case (sb%box_shape)
+        case (SPHERE)
+          bounds(1,1) = sb%rsize/M_TWO
+          bounds(1,2) = sb%rsize
+        case (PARALLELEPIPED)
+          bounds(1:sb%dim,1)=sb%lsize(1:sb%dim)/M_TWO
+          bounds(1:sb%dim,2)=sb%lsize(1:sb%dim)
+        case (CYLINDER)
+          bounds(1,2) = sb%xsize
+          bounds(2,2) = sb%rsize
+          bounds(1,1) = bounds(1,1)/M_TWO
+          bounds(2,1) = bounds(2,2)/M_TWO
+        case default
+          bounds(:,1) = M_ZERO
+          bounds(:,2) = CNST(0.4)
+        end select
       else
         cols_abshape_block = parse_block_cols(blk, 0)
       
@@ -174,17 +175,17 @@ contains
         case(2)
           call parse_block_float(blk, 0, 0, bounds(1,1), units_inp%length)
           call parse_block_float(blk, 0, 1, bounds(1,2), units_inp%length)
-          if (mesh%sb%box_shape == SPHERE) then
-            if(bounds(1,2) > mesh%sb%rsize)  bounds(1,2) = mesh%sb%rsize 
+          if (sb%box_shape == SPHERE) then
+            if(bounds(1,2) > sb%rsize)  bounds(1,2) = sb%rsize 
             message(1) = "Info: using spherical absorbing boundaries."
-          else if (mesh%sb%box_shape == PARALLELEPIPED) then
-            do imdim = 1, mesh%sb%dim
-              if(bounds(imdim,2) > mesh%sb%lsize(imdim))  bounds(imdim,2) = mesh%sb%lsize(imdim) 
+          else if (sb%box_shape == PARALLELEPIPED) then
+            do imdim = 1, sb%dim
+              if(bounds(imdim,2) > sb%lsize(imdim))  bounds(imdim,2) = sb%lsize(imdim) 
             end do
             message(1) = "Info: using cubic absorbing boundaries."
-          else if (mesh%sb%box_shape == CYLINDER) then
-            if(bounds(1,2) > mesh%sb%xsize)  bounds(1,2) = mesh%sb%xsize
-            if(bounds(1,2) > mesh%sb%rsize)  bounds(1,2) = mesh%sb%rsize            
+          else if (sb%box_shape == CYLINDER) then
+            if(bounds(1,2) > sb%xsize)  bounds(1,2) = sb%xsize
+            if(bounds(1,2) > sb%rsize)  bounds(1,2) = sb%rsize            
             message(1) = "Info: using cylindrical absorbing boundaries."
           end if    
           call messages_info(1)
@@ -196,13 +197,12 @@ contains
           call parse_block_float( blk, 0, 1, bounds(1,2), units_inp%length)
           call parse_block_string(blk, 0, 2, user_def_expr)
           do ip = 1, mesh%np
-            xx = M_ZERO
-            xx(1:MAX_DIM) = mesh%x(ip, 1:MAX_DIM)
-            rr = units_from_atomic(units_inp%length, sqrt(sum(xx(1:mesh%sb%dim)**2)))
-            do imdim = 1, mesh%sb%dim
+            xx = mesh%x(ip, :)
+            rr = units_from_atomic(units_inp%length, sqrt(sum(xx**2)))
+            do imdim = 1, sb%dim
               xx(imdim) = units_from_atomic(units_inp%length, xx(imdim))
             end do
-            call parse_expression(ufn_re, ufn_im, mesh%sb%dim, xx, rr, M_ZERO, user_def_expr)
+            call parse_expression(ufn_re, ufn_im, sb%dim, xx, rr, M_ZERO, user_def_expr)
             this%ab_ufn(ip) = ufn_re
           end do
           message(1) = "Input: using user-defined function from expression:"
@@ -226,11 +226,11 @@ contains
 !       call messages_obsolete_variable('ABWidth', 'ABShape')
       abwidth_def = bounds(1,2)-bounds(1,1)
       call parse_variable(namespace, 'ABWidth', abwidth_def, abwidth, units_inp%length)
-      bounds(1:mesh%sb%dim,1) = bounds(1:mesh%sb%dim,2) - abwidth
+      bounds(:, 1) = bounds(:, 2) - abwidth
 
-      maxdim = mesh%sb%dim
-      if(mesh%sb%box_shape == SPHERE .or. this%ab_user_def) maxdim = 1
-      if(mesh%sb%box_shape == CYLINDER) maxdim = 2
+      maxdim = sb%dim
+      if(sb%box_shape == SPHERE .or. this%ab_user_def) maxdim = 1
+      if(sb%box_shape == CYLINDER) maxdim = 2
       write(message(1),'(a,2a,9f12.6)') & 
           "  Lower bound [", trim(units_abbrev(units_inp%length)), '] =', & 
           (units_from_atomic(units_inp%length, bounds(imdim,1)), imdim=1,maxdim)
@@ -241,7 +241,7 @@ contains
       
       ! generate boundary function
       SAFE_ALLOCATE(mf(1:mesh%np))
-      call bc_generate_mf(this, mesh, geo, bounds, mf)
+      call bc_generate_mf(this, mesh, sb, geo, bounds, mf)
       
       ! mask or cap
       SAFE_ALLOCATE(this%mf(1:mesh%np))
@@ -304,16 +304,17 @@ contains
   end subroutine bc_write_info
 
   ! ---------------------------------------------------------
-  subroutine bc_generate_mf(this, mesh, geo, bounds, mf)
+  subroutine bc_generate_mf(this, mesh, sb, geo, bounds, mf)
     type(bc_t),               intent(inout) :: this
     type(mesh_t),             intent(in)    :: mesh
+    type(simul_box_t),        intent(in)    :: sb
     type(geometry_t),         intent(in)    :: geo
-    FLOAT,                    intent(in)    :: bounds(1:MAX_DIM, 1:2)
+    FLOAT,                    intent(in)    :: bounds(1:sb%dim, 1:2)
     FLOAT,                    intent(inout) :: mf(:)
 
     integer :: ip, dir
-    FLOAT   :: width(MAX_DIM)
-    FLOAT   :: xx(1:MAX_DIM), rr, dd, ddv(1:MAX_DIM), tmp(1:MAX_DIM)
+    FLOAT   :: width(1:sb%dim)
+    FLOAT   :: xx(1:sb%dim), rr, dd, ddv(1:sb%dim), tmp(1:sb%dim)
 
     PUSH_SUB(bc_generate_mf)
 
@@ -321,12 +322,11 @@ contains
 
     mf = M_ZERO
 
-    width(1:mesh%sb%dim) = bounds(1:mesh%sb%dim,2) - bounds(1:mesh%sb%dim,1)
-    xx = M_ZERO
+    width = bounds(:, 2) - bounds(:,1)
 
     do ip = 1, mesh%np
-      xx(1:mesh%sb%dim) = mesh%x(ip, 1:mesh%sb%dim)
-      rr = sqrt(dot_product(xx(1:mesh%sb%dim), xx(1:mesh%sb%dim)))
+      xx = mesh%x(ip, :)
+      rr = sqrt(dot_product(xx, xx))
  
       if(this%ab_user_def) then
         dd = this%ab_ufn(ip) - bounds(1,1)
@@ -340,7 +340,8 @@ contains
  
       else ! this%ab_user_def == .false.
  
-        if(mesh%sb%box_shape == SPHERE) then
+        select case (sb%box_shape)
+        case (SPHERE)
         
           dd = rr -  bounds(1,1) 
           if(dd > M_ZERO ) then 
@@ -351,13 +352,13 @@ contains
             end if
           end if
  
-        else if (mesh%sb%box_shape == PARALLELEPIPED) then
+        case (PARALLELEPIPED)
 
           ! We are filling from the center opposite to the spherical case
           tmp = M_ONE
           mf(ip) = M_ONE
-          ddv(:) = abs(xx(:)) -  bounds(:,1)
-          do dir=1, mesh%sb%dim
+          ddv = abs(xx) -  bounds(:, 1)
+          do dir = 1, sb%dim
             if(ddv(dir) > M_ZERO ) then 
               if (ddv(dir)  <  width(dir)) then
                 tmp(dir) = M_ONE - sin(ddv(dir) * M_PI / (M_TWO * (width(dir)) ))**2
@@ -369,9 +370,9 @@ contains
           end do
           mf(ip) = M_ONE - mf(ip)
           
-        else if (mesh%sb%box_shape == CYLINDER) then
+        case (CYLINDER)
           
-          rr = sqrt(dot_product(xx(2:mesh%sb%dim), xx(2:mesh%sb%dim)))
+          rr = sqrt(dot_product(xx(2:sb%dim), xx(2:sb%dim)))
           tmp = M_ONE
           mf(ip) = M_ONE
           ddv(1) = abs(xx(1)) - bounds(1,1) 
@@ -387,15 +388,14 @@ contains
           mf(ip) = mf(ip) * tmp(dir)
           end do
           mf(ip) = M_ONE - mf(ip)
-            
-            
 
-        else
+        case default
 
-          if(mesh_inborder(mesh, geo, ip, dd, width(1))) &
+          if (mesh_inborder(mesh, geo, ip, dd, width(1))) then
             mf(ip) = M_ONE - sin(dd * M_PI / (M_TWO * width(1)))**2
+          end if
 
-        end if
+        end select
       end if
     end do
 

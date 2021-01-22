@@ -80,12 +80,12 @@ subroutine X(forces_from_local_potential)(gr, namespace, geo, ep, gdensity, forc
   SAFE_ALLOCATE(vloc(1:gr%mesh%np))
   SAFE_ALLOCATE(zvloc(1:gr%mesh%np))
 
-  SAFE_ALLOCATE(force_tmp(1:gr%mesh%sb%dim, 1:geo%natoms))
+  SAFE_ALLOCATE(force_tmp(1:gr%sb%dim, 1:geo%natoms))
   force_tmp = M_ZERO
   
   do iatom = geo%atoms_dist%start, geo%atoms_dist%end
 
-    if(.not.simul_box_in_box(gr%mesh%sb, geo%atom(iatom)%x, namespace) .and. ep%ignore_external_ions) then
+    if (.not. gr%sb%contains_point(geo%atom(iatom)%x) .and. ep%ignore_external_ions) then
       cycle
     end if
     
@@ -96,7 +96,7 @@ subroutine X(forces_from_local_potential)(gr, namespace, geo, ep, gdensity, forc
       zvloc(ip) = vloc(ip)
     end do
 
-    do idir = 1, gr%mesh%sb%dim
+    do idir = 1, gr%sb%dim
       force_tmp(idir, iatom) = -X(mf_dotp)(gr%mesh, zvloc, gdensity(:, idir), reduce = .false.)
     end do
 
@@ -107,7 +107,7 @@ subroutine X(forces_from_local_potential)(gr, namespace, geo, ep, gdensity, forc
 
   if(gr%mesh%parallel_in_domains) call comm_allreduce(gr%mesh%mpi_grp%comm, force_tmp) 
 
-  force(1:gr%mesh%sb%dim, 1:geo%natoms) = force(1:gr%mesh%sb%dim, 1:geo%natoms) + force_tmp(1:gr%mesh%sb%dim, 1:geo%natoms)
+  force(1:gr%sb%dim, 1:geo%natoms) = force(1:gr%sb%dim, 1:geo%natoms) + force_tmp(1:gr%sb%dim, 1:geo%natoms)
 
   SAFE_DEALLOCATE_A(vloc)
   SAFE_DEALLOCATE_P(zvloc)
@@ -155,11 +155,11 @@ subroutine X(forces_from_potential)(gr, namespace, geo, hm, st, force, force_loc
   np = gr%mesh%np
   np_part = gr%mesh%np_part
 
-  SAFE_ALLOCATE(grad_psi(1:np, 1:gr%mesh%sb%dim, 1:st%d%dim))
-  SAFE_ALLOCATE(grad_rho(1:np, 1:gr%mesh%sb%dim))
+  SAFE_ALLOCATE(grad_psi(1:np, 1:gr%sb%dim, 1:st%d%dim))
+  SAFE_ALLOCATE(grad_rho(1:np, 1:gr%sb%dim))
   grad_rho = M_ZERO
 
-  SAFE_ALLOCATE(force_psi(1:gr%mesh%sb%dim))
+  SAFE_ALLOCATE(force_psi(1:gr%sb%dim))
 
   force = M_ZERO
   force_loc = M_ZERO
@@ -191,7 +191,7 @@ subroutine X(forces_from_potential)(gr, namespace, geo, hm, st, force, force_loc
       end if
 
       ! calculate the gradient
-      do idir = 1, gr%mesh%sb%dim
+      do idir = 1, gr%sb%dim
         call psib%copy_to(grad_psib(idir))
         call X(derivatives_batch_perform)(gr%der%grad(idir), gr%der, psib, grad_psib(idir), set_bc = .false.)
       end do
@@ -204,7 +204,7 @@ subroutine X(forces_from_potential)(gr, namespace, geo, hm, st, force, force_loc
         .not. (st%symmetrize_density .and. gr%sb%kpoints%use_symmetries)) then
 
         call X(hamiltonian_elec_base_nlocal_force)(hm%hm_base, gr%mesh, st, gr%der%boundaries, iq, &
-                   gr%mesh%sb%dim, psib, grad_psib, force_nl)
+                   gr%sb%dim, psib, grad_psib, force_nl)
 
       else 
 
@@ -215,12 +215,12 @@ subroutine X(forces_from_potential)(gr, namespace, geo, hm, st, force, force_loc
           ! get the state and its gradient out of the batches (for the moment)
           do idim = 1, st%d%dim
             call batch_get_state(psib, (/ist, idim/), gr%mesh%np_part, psi(:, idim))
-            do idir = 1, gr%mesh%sb%dim
+            do idir = 1, gr%sb%dim
               call batch_get_state(grad_psib(idir), (/ist, idim/), gr%mesh%np, grad_psi(:, idir, idim))
             end do
           end do
 
-          call profiling_count_operations(np*st%d%dim*gr%mesh%sb%dim*(2 + R_MUL))
+          call profiling_count_operations(np*st%d%dim*gr%sb%dim*(2 + R_MUL))
 
           if(st%symmetrize_density .and. gr%sb%kpoints%use_symmetries) then
 
@@ -266,21 +266,21 @@ subroutine X(forces_from_potential)(gr, namespace, geo, hm, st, force, force_loc
                   call messages_fatal(2, namespace=namespace)
                 end if
 
-                do idir = 1, gr%mesh%sb%dim
+                do idir = 1, gr%sb%dim
                   force_psi(idir) = - M_TWO * kweight * st%occ(ist, iq) * &
       R_REAL(X(projector_matrix_element)(hm%ep%proj(iatom_symm), gr%der%boundaries, st%d%dim, iq, psi, grad_psi(:, idir, :)))
                 end do
 
                 ! We convert the force to Cartesian coordinates before symmetrization
                 ! Grad_xyw = Bt Grad_uvw, see Chelikowsky after Eq. 10
-                if (simul_box_is_periodic(gr%mesh%sb) .and. gr%mesh%sb%nonorthogonal ) then 
-                  force_psi(1:gr%mesh%sb%dim) = matmul(gr%mesh%sb%klattice_primitive(1:gr%mesh%sb%dim, 1:gr%mesh%sb%dim), &
-                                                            force_psi(1:gr%mesh%sb%dim))
+                if (simul_box_is_periodic(gr%sb) .and. gr%sb%nonorthogonal ) then 
+                  force_psi(1:gr%sb%dim) = matmul(gr%sb%klattice_primitive(1:gr%sb%dim, 1:gr%sb%dim), &
+                                                            force_psi(1:gr%sb%dim))
                 end if
 
                 !Let us now apply the symmetry to the force
                 !Note: here we are working with reduced quantities
-                force_nl(1:gr%sb%dim, iatom) = force_nl(1:gr%mesh%sb%dim, iatom) + &
+                force_nl(1:gr%sb%dim, iatom) = force_nl(1:gr%sb%dim, iatom) + &
                   symm_op_apply_cart(gr%sb%symm%ops(iop), force_psi)
 
               end do
@@ -293,18 +293,18 @@ subroutine X(forces_from_potential)(gr, namespace, geo, hm, st, force, force_loc
             do iatom = 1, geo%natoms
               if(projector_is_null(hm%ep%proj(iatom))) cycle
 
-              do idir = 1, gr%mesh%sb%dim
+              do idir = 1, gr%sb%dim
                 force_psi(idir) = - M_TWO * st%d%kweights(iq) * st%occ(ist, iq) * &
                   R_REAL(X(projector_matrix_element)(hm%ep%proj(iatom), gr%der%boundaries, st%d%dim, iq, psi, grad_psi(:, idir, :)))
               end do
 
               ! We convert the forces to Cartesian coordinates
-              if (simul_box_is_periodic(gr%mesh%sb) .and. gr%mesh%sb%nonorthogonal ) then
-                force_psi(1:gr%mesh%sb%dim) = matmul(gr%mesh%sb%klattice_primitive(1:gr%mesh%sb%dim, 1:gr%mesh%sb%dim), &
-                                                             force_psi(1:gr%mesh%sb%dim))
+              if (simul_box_is_periodic(gr%sb) .and. gr%sb%nonorthogonal ) then
+                force_psi(1:gr%sb%dim) = matmul(gr%sb%klattice_primitive(1:gr%sb%dim, 1:gr%sb%dim), &
+                                                             force_psi(1:gr%sb%dim))
               end if
 
-              force_nl(1:gr%mesh%sb%dim, iatom) = force_nl(1:gr%mesh%sb%dim, iatom) + force_psi(1:gr%mesh%sb%dim)
+              force_nl(1:gr%sb%dim, iatom) = force_nl(1:gr%sb%dim, iatom) + force_psi(1:gr%sb%dim)
             end do
 
           end if
@@ -314,11 +314,11 @@ subroutine X(forces_from_potential)(gr, namespace, geo, hm, st, force, force_loc
       end if
 
       !The Hubbard forces
-      call X(lda_u_force)(hm%lda_u, namespace, gr%mesh, st, iq, gr%mesh%sb%dim, psib, grad_psib, &
+      call X(lda_u_force)(hm%lda_u, namespace, gr%mesh, st, iq, gr%sb%dim, psib, grad_psib, &
                             force_u, associated(hm%hm_base%phase))  
 
       call psib%end()
-      do idir = 1, gr%mesh%sb%dim
+      do idir = 1, gr%sb%dim
         call grad_psib(idir)%end()
       end do
 
@@ -333,10 +333,10 @@ subroutine X(forces_from_potential)(gr, namespace, geo, hm, st, force, force_loc
  if(hm%hm_base%apply_projector_matrices .and. .not. accel_is_enabled() .and. &
         .not. (st%symmetrize_density .and. gr%sb%kpoints%use_symmetries)) then
    ! We convert the forces to Cartesian coordinates
-   if (simul_box_is_periodic(gr%mesh%sb) .and. gr%mesh%sb%nonorthogonal ) then
+   if (simul_box_is_periodic(gr%sb) .and. gr%sb%nonorthogonal ) then
      do iatom = 1, geo%natoms
-       force_nl(1:gr%mesh%sb%dim,iatom) = matmul(gr%mesh%sb%klattice_primitive(1:gr%mesh%sb%dim, 1:gr%mesh%sb%dim), &
-                                                   force_nl(1:gr%mesh%sb%dim,iatom))
+       force_nl(1:gr%sb%dim,iatom) = matmul(gr%sb%klattice_primitive(1:gr%sb%dim, 1:gr%sb%dim), &
+                                                   force_nl(1:gr%sb%dim,iatom))
      end do
    end if
  end if
@@ -354,19 +354,19 @@ subroutine X(forces_from_potential)(gr, namespace, geo, hm, st, force, force_loc
   ! We convert the gradient of the density to cartesian coordinates before symmetrization
   ! as the two operation do not commute
   ! Grad_xyw = Bt Grad_uvw, see Chelikowsky after Eq. 10
-  if (simul_box_is_periodic(gr%mesh%sb) .and. gr%mesh%sb%nonorthogonal )  then
+  if (simul_box_is_periodic(gr%sb) .and. gr%sb%nonorthogonal )  then
     do ip = 1, gr%mesh%np
-      grad_rho(ip, 1:gr%mesh%sb%dim) = matmul(gr%mesh%sb%klattice_primitive(1:gr%mesh%sb%dim, 1:gr%mesh%sb%dim), &
-                                                   grad_rho(ip, 1:gr%mesh%sb%dim))
+      grad_rho(ip, 1:gr%sb%dim) = matmul(gr%sb%klattice_primitive(1:gr%sb%dim, 1:gr%sb%dim), &
+                                                   grad_rho(ip, 1:gr%sb%dim))
     end do
   end if
 
   if(st%symmetrize_density) then
     call symmetrizer_init(symmetrizer, gr%mesh)
-    SAFE_ALLOCATE(symmtmp(1:gr%mesh%np, 1:gr%mesh%sb%dim))
+    SAFE_ALLOCATE(symmtmp(1:gr%mesh%np, 1:gr%sb%dim))
 
     call dsymmetrizer_apply(symmetrizer, gr%mesh%np, field_vector = grad_rho, symmfield_vector = symmtmp, suppress_warning = .true.)
-    grad_rho(1:gr%mesh%np, 1:gr%mesh%sb%dim) = symmtmp(1:gr%mesh%np, 1:gr%mesh%sb%dim)
+    grad_rho(1:gr%mesh%np, 1:gr%sb%dim) = symmtmp(1:gr%mesh%np, 1:gr%sb%dim)
 
     SAFE_DEALLOCATE_A(symmtmp)
     call symmetrizer_end(symmetrizer)
@@ -375,7 +375,7 @@ subroutine X(forces_from_potential)(gr, namespace, geo, hm, st, force, force_loc
   call dforces_from_local_potential(gr, namespace, geo, hm%ep, grad_rho, force_loc)
 
   do iatom = 1, geo%natoms
-    do idir = 1, gr%mesh%sb%dim
+    do idir = 1, gr%sb%dim
       force(idir, iatom) = force_nl(idir, iatom) + force_loc(idir, iatom) + force_u(idir, iatom)
     end do
   end do
@@ -415,10 +415,10 @@ subroutine X(total_force_from_potential)(gr, geo, ep, st, x, lda_u_level)
   np = gr%mesh%np
   np_part = gr%mesh%np_part
 
-  SAFE_ALLOCATE(grad_psi(1:np, 1:gr%mesh%sb%dim, 1:st%d%dim))
-  SAFE_ALLOCATE(grad_rho(1:np, 1:gr%mesh%sb%dim))
+  SAFE_ALLOCATE(grad_psi(1:np, 1:gr%sb%dim, 1:st%d%dim))
+  SAFE_ALLOCATE(grad_rho(1:np, 1:gr%sb%dim))
   grad_rho = M_ZERO
-  SAFE_ALLOCATE(force(1:gr%mesh%sb%dim, 1:geo%natoms))
+  SAFE_ALLOCATE(force(1:gr%sb%dim, 1:geo%natoms))
   force = M_ZERO
 
   ! even if there is no fine mesh, we need to make another copy
@@ -457,7 +457,7 @@ subroutine X(total_force_from_potential)(gr, geo, ep, st, x, lda_u_level)
 
         call X(derivatives_grad)(gr%der, psi(:, idim), grad_psi(:, :, idim), set_bc = .false.)
 
-        do idir = 1, gr%mesh%sb%dim
+        do idir = 1, gr%sb%dim
           do ip = 1, np
             grad_rho(ip, idir) = grad_rho(ip, idir) + ff*R_REAL(R_CONJ(psi(ip, idim))*grad_psi(ip, idir, idim))
           end do
@@ -465,12 +465,12 @@ subroutine X(total_force_from_potential)(gr, geo, ep, st, x, lda_u_level)
 
       end do
 
-      call profiling_count_operations(np*st%d%dim*gr%mesh%sb%dim*(2 + R_MUL))
+      call profiling_count_operations(np*st%d%dim*gr%sb%dim*(2 + R_MUL))
 
       ! iterate over the projectors
       do iatom = 1, geo%natoms
         if(projector_is_null(ep%proj(iatom))) cycle
-        do idir = 1, gr%mesh%sb%dim
+        do idir = 1, gr%sb%dim
 
           force(idir, iatom) = force(idir, iatom) - M_TWO * st%d%kweights(iq) * st%occ(ist, iq) * &
             R_REAL(X(projector_matrix_element)(ep%proj(iatom), gr%der%boundaries, st%d%dim, iq, psi, grad_psi(:, idir, :)))
@@ -496,7 +496,7 @@ subroutine X(total_force_from_potential)(gr, geo, ep, st, x, lda_u_level)
   call total_force_from_local_potential(gr, ep, grad_rho, x)
 
   do iatom = 1, geo%natoms
-    do idir = 1, gr%mesh%sb%dim
+    do idir = 1, gr%sb%dim
       x(idir) = x(idir) - force(idir, iatom)
     end do
   end do
@@ -515,7 +515,7 @@ subroutine X(forces_derivative)(gr, namespace, geo, ep, st, lr, lr2, force_deriv
   type(states_elec_t),            intent(in)    :: st
   type(lr_t),                     intent(in)    :: lr
   type(lr_t),                     intent(in)    :: lr2
-  CMPLX,                          intent(out)   :: force_deriv(:,:) !< (gr%mesh%sb%dim, geo%natoms)
+  CMPLX,                          intent(out)   :: force_deriv(:,:) !< (gr%sb%dim, geo%natoms)
   integer,                        intent(in)    :: lda_u_level
 
   integer :: iatom, ist, iq, idim, idir, np, np_part, ip, ikpoint
@@ -539,10 +539,10 @@ subroutine X(forces_derivative)(gr, namespace, geo, ep, st, lr, lr2, force_deriv
   np      = gr%mesh%np
   np_part = gr%mesh%np_part
 
-  SAFE_ALLOCATE(grad_dl_psi(1:np, 1:gr%mesh%sb%dim, 1:st%d%dim))
-  SAFE_ALLOCATE(grad_dl_psi2(1:np, 1:gr%mesh%sb%dim, 1:st%d%dim))
-  SAFE_ALLOCATE(grad_psi(1:np, 1:gr%mesh%sb%dim, 1:st%d%dim))
-  SAFE_ALLOCATE(grad_rho(1:np, 1:gr%mesh%sb%dim))
+  SAFE_ALLOCATE(grad_dl_psi(1:np, 1:gr%sb%dim, 1:st%d%dim))
+  SAFE_ALLOCATE(grad_dl_psi2(1:np, 1:gr%sb%dim, 1:st%d%dim))
+  SAFE_ALLOCATE(grad_psi(1:np, 1:gr%sb%dim, 1:st%d%dim))
+  SAFE_ALLOCATE(grad_rho(1:np, 1:gr%sb%dim))
   grad_rho = M_ZERO
   force_deriv = M_ZERO
 
@@ -593,7 +593,7 @@ subroutine X(forces_derivative)(gr, namespace, geo, ep, st, lr, lr2, force_deriv
         call X(derivatives_grad)(gr%der, dl_psi2(:, idim), grad_dl_psi2(:, :, idim), set_bc = .false.)
 
         !accumulate to calculate the gradient of the density
-        do idir = 1, gr%mesh%sb%dim
+        do idir = 1, gr%sb%dim
           do ip = 1, np
             grad_rho(ip, idir) = grad_rho(ip, idir) + ff * &
               (R_CONJ(grad_psi(ip, idir, idim)) * dl_psi(ip, idim) + R_CONJ(psi(ip, idim)) * grad_dl_psi(ip, idir, idim) &
@@ -605,7 +605,7 @@ subroutine X(forces_derivative)(gr, namespace, geo, ep, st, lr, lr2, force_deriv
       ! iterate over the projectors
       do iatom = 1, geo%natoms
         if(projector_is_null(ep%proj(iatom))) cycle
-        do idir = 1, gr%mesh%sb%dim
+        do idir = 1, gr%sb%dim
 
           force_deriv(idir, iatom) = force_deriv(idir, iatom) - ff * &
             (X(projector_matrix_element)(ep%proj(iatom), gr%der%boundaries, st%d%dim, iq, grad_psi(:, idir, :), dl_psi) &
@@ -629,7 +629,7 @@ subroutine X(forces_derivative)(gr, namespace, geo, ep, st, lr, lr2, force_deriv
 #if defined(HAVE_MPI)
   if(st%parallel_in_states .or. st%d%kpt%parallel) then
     call profiling_in(prof_comm, TOSTRING(X(FORCES_COMM)))
-    call comm_allreduce(st%st_kpt_mpi_grp%comm, force_deriv, dim = (/gr%mesh%sb%dim, geo%natoms/))
+    call comm_allreduce(st%st_kpt_mpi_grp%comm, force_deriv, dim = (/gr%sb%dim, geo%natoms/))
     call comm_allreduce(st%st_kpt_mpi_grp%comm, grad_rho)
     call profiling_out(prof_comm)
   end if
@@ -654,8 +654,8 @@ subroutine X(forces_born_charges)(gr, namespace, geo, ep, st, lr, lr2, born_char
   type(geometry_t),               intent(in)    :: geo
   type(epot_t),                   intent(in)    :: ep
   type(states_elec_t),            intent(in)    :: st
-  type(lr_t),                     intent(in)    :: lr(:)  !< (gr%mesh%sb%dim)
-  type(lr_t),                     intent(in)    :: lr2(:) !< (gr%mesh%sb%dim)
+  type(lr_t),                     intent(in)    :: lr(:)  !< (gr%sb%dim)
+  type(lr_t),                     intent(in)    :: lr2(:) !< (gr%sb%dim)
   type(born_charges_t),           intent(inout) :: born_charges
   integer,                        intent(in)    :: lda_u_level
 
@@ -664,9 +664,9 @@ subroutine X(forces_born_charges)(gr, namespace, geo, ep, st, lr, lr2, born_char
 
   PUSH_SUB(X(forces_born_charges))
 
-  SAFE_ALLOCATE(force_deriv(1:gr%mesh%sb%dim, 1:geo%natoms))
+  SAFE_ALLOCATE(force_deriv(1:gr%sb%dim, 1:geo%natoms))
 
-  do idir = 1, gr%mesh%sb%dim
+  do idir = 1, gr%sb%dim
     call X(forces_derivative)(gr, namespace, geo, ep, st, lr(idir), lr2(idir), force_deriv, lda_u_level)
     do iatom = 1, geo%natoms
       born_charges%charge(:, idir, iatom) = force_deriv(:, iatom)

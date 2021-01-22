@@ -110,9 +110,8 @@ contains
   end subroutine coulomb_force_init
 
   ! ---------------------------------------------------------
-  subroutine coulomb_force_calculate(this, namespace)
+  subroutine coulomb_force_calculate(this)
     class(coulomb_force_t),             intent(inout) :: this
-    type(namespace_t),                  intent(in)    :: namespace
 
     FLOAT, parameter :: COULCONST = M_ONE ! Coulomb constant in atomic units
     FLOAT :: dist3

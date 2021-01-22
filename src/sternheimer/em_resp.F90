@@ -1198,10 +1198,10 @@ contains
       end do
 
       write(iunit, '(a)') '# Real part of dielectric constant'
-      call output_tensor(iunit, TOFLOAT(epsilon(1:gr%sb%dim, 1:gr%mesh%sb%dim)), gr%sb%dim, unit_one)
+      call output_tensor(iunit, TOFLOAT(epsilon(1:gr%sb%dim, 1:gr%sb%dim)), gr%sb%dim, unit_one)
       write(iunit, '(a)')
       write(iunit, '(a)') '# Imaginary part of dielectric constant'
-      call output_tensor(iunit, aimag(epsilon(1:gr%sb%dim, 1:gr%mesh%sb%dim)), gr%sb%dim, unit_one)
+      call output_tensor(iunit, aimag(epsilon(1:gr%sb%dim, 1:gr%sb%dim)), gr%sb%dim, unit_one)
 
       if(em_vars%lrc_kernel) then
         write(iunit, '(a)')
@@ -1214,10 +1214,10 @@ contains
         end do
 
         write(iunit, '(a)') '# Real part of dielectric constant'
-        call output_tensor(iunit, TOFLOAT(epsilon(1:gr%sb%dim, 1:gr%mesh%sb%dim)), gr%sb%dim, unit_one)
+        call output_tensor(iunit, TOFLOAT(epsilon(1:gr%sb%dim, 1:gr%sb%dim)), gr%sb%dim, unit_one)
         write(iunit, '(a)')
         write(iunit, '(a)') '# Imaginary part of dielectric constant'
-        call output_tensor(iunit, aimag(epsilon(1:gr%sb%dim, 1:gr%mesh%sb%dim)), gr%sb%dim, unit_one)
+        call output_tensor(iunit, aimag(epsilon(1:gr%sb%dim, 1:gr%sb%dim)), gr%sb%dim, unit_one)
       end if
 
       call io_close(iunit)

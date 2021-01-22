@@ -71,7 +71,7 @@ module hamiltonian_elec_oct_m
   use unit_system_oct_m
   use wfs_elec_oct_m
   use xc_oct_m
-  use XC_F90(lib_m)
+  use xc_f03_lib_m
 
   implicit none
 
@@ -322,7 +322,7 @@ contains
     end if
   
     !Initialize external potential
-    call epot_init(hm%ep, namespace, gr, hm%geo, hm%psolver, hm%d%ispin, hm%d%nik, hm%xc%family, mc)
+    call epot_init(hm%ep, namespace, gr, st, hm%geo, hm%psolver, hm%d%ispin, hm%xc%family, mc)
 
     ! Calculate initial value of the gauge vector field
     call gauge_field_init(hm%ep%gfield, namespace, gr%sb)
@@ -367,7 +367,7 @@ contains
     end if
 
     ! Boundaries
-    call bc_init(hm%bc, namespace, gr%mesh, gr%mesh%sb, hm%geo)
+    call bc_init(hm%bc, namespace, gr%mesh, gr%sb, hm%geo)
 
     !%Variable MassScaling
     !%Type block
@@ -531,7 +531,7 @@ contains
         end if
       end if
 
-      if (.not. simul_box_is_periodic(gr%mesh%sb)) then
+      if (.not. simul_box_is_periodic(gr%sb)) then
         do il = 1, hm%ep%no_lasers
           if (laser_kind(hm%ep%lasers(il)) == E_FIELD_VECTOR_POTENTIAL) then
             if(accel_allow_CPU_only()) then
@@ -573,7 +573,7 @@ contains
     ! ---------------------------------------------------------
     subroutine init_phase
       integer :: ip, ik, sp, ip_global, ip_inner
-      FLOAT   :: kpoint(1:MAX_DIM), x_global(1:MAX_DIM)
+      FLOAT   :: kpoint(1:MAX_DIM), x_global(1:gr%sb%dim)
       
 
       PUSH_SUB(hamiltonian_elec_init.init_phase)
@@ -649,7 +649,7 @@ contains
 
       ! We rebuild the phase for the orbital projection, similarly to the one of the pseudopotentials
       if(hm%lda_u_level /= DFT_U_NONE) then
-        call lda_u_build_phase_correction(hm%lda_u, gr%mesh%sb, hm%d, gr%der%boundaries, namespace )
+        call lda_u_build_phase_correction(hm%lda_u, gr%sb, hm%d, gr%der%boundaries, namespace )
       end if
 
       POP_SUB(hamiltonian_elec_init.init_phase)
@@ -700,7 +700,7 @@ contains
             hm%ep%E_field(1:gr%sb%dim) = hm%ep%E_field(1:gr%sb%dim) + potential%E_field(1:gr%sb%dim)
 
             !In the fully periodic case, we use Berry phases
-            if(gr%mesh%sb%periodic_dim < gr%mesh%sb%dim) then
+            if(gr%sb%periodic_dim < gr%sb%dim) then
               if(.not.associated(hm%ep%v_static)) then
                 SAFE_ALLOCATE(hm%ep%v_static(1:gr%mesh%np))
                 hm%ep%v_static(1:gr%mesh%np) = M_ZERO
@@ -1075,7 +1075,7 @@ contains
     subroutine build_phase()
       integer :: ik, imat, nmat, max_npoints, offset
       integer :: ip, ip_global, ip_inner, sp
-      FLOAT   :: kpoint(1:MAX_DIM), x_global(1:MAX_DIM)
+      FLOAT   :: kpoint(1:MAX_DIM), x_global(1:mesh%sb%dim)
       integer :: iphase, nphase
 
       PUSH_SUB(hamiltonian_elec_update.build_phase)

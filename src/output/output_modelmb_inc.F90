@@ -106,7 +106,7 @@ subroutine X(output_modelmb) (outp, namespace, dir, gr, st, geo)
     end if
 
     if(bitand(outp%what, OPTION__OUTPUT__MMB_WFS) /= 0 .and. symmetries_satisfied) then
-      fn_unit = units_out%length**(-gr%mesh%sb%dim)
+      fn_unit = units_out%length**(-gr%sb%dim)
       write(filename, '(a,i4.4)') 'wf-st', mm
       call X(io_function_output)(outp%how, trim(dirname), trim(filename), namespace, &
         gr%mesh, wf, fn_unit, ierr, geo = geo)

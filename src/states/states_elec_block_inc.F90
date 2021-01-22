@@ -21,7 +21,7 @@
 !> Multiplication of two blocks of states:
 !! res <- psi1(xpsi1)^+ * psi2(xpsi2) with the index sets xpsi1 and xpsi2.
 subroutine X(states_elec_blockt_mul)(mesh, st, psi1_start, psi2_start, &
-  psi1, psi2, res, xpsi1, xpsi2, symm)
+  psi1, psi2, res, xpsi1, xpsi2)
   type(mesh_t),                   intent(in)  :: mesh
   type(states_elec_t),            intent(in)  :: st
   integer,                        intent(in)  :: psi1_start
@@ -31,9 +31,7 @@ subroutine X(states_elec_blockt_mul)(mesh, st, psi1_start, psi2_start, &
   R_TYPE,                         intent(out) :: res(:, :)
   integer, optional, contiguous,  intent(in)  :: xpsi1(:)
   integer, optional, contiguous,  intent(in)  :: xpsi2(:)
-  logical, optional,              intent(in)  :: symm    !< Indicates if res(j, i) can be calculated as res(i, j)*.
 
-  logical              :: symm_
   integer              :: ii
   integer              :: psi1_col, psi2_col
   integer, pointer     :: xpsi1_(:), xpsi2_(:)
@@ -52,11 +50,6 @@ subroutine X(states_elec_blockt_mul)(mesh, st, psi1_start, psi2_start, &
 
   call profiling_in(C_PROFILING_BLOCKT, TOSTRING(X(BLOCKT)))
   PUSH_SUB(X(states_elec_blockt_mul))
-
-  symm_ = .false.
-  if(present(symm)) then
-    symm_ = symm
-  end if
 
   ! Calculate index sets of state block psi1 and psi2.
   if(present(xpsi1)) then
@@ -200,7 +193,7 @@ subroutine X(states_elec_blockt_mul)(mesh, st, psi1_start, psi2_start, &
       call batch_init(psi2b, st%d%dim, 1, psi2_col, psi2(:, :, :))
     end if
 
-    call X(mesh_batch_dotp_matrix)(mesh, psi1b, psi2b, res, symm = symm_)
+    call X(mesh_batch_dotp_matrix)(mesh, psi1b, psi2b, res)
     
     call psi1b%end()
     call psi2b%end()

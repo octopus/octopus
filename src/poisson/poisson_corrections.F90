@@ -74,10 +74,12 @@ contains
     integer,              intent(in)  :: ml
     type(mesh_t),         intent(in)  :: mesh
 
-    FLOAT :: alpha, gamma, ylm, rr, xx(MAX_DIM)
+    FLOAT :: alpha, gamma, ylm, rr, xx(mesh%sb%dim)
     integer :: ip, ll, add_lm, lldfac, jj, mm
 
     PUSH_SUB(poisson_corrections_init)
+
+    ASSERT(mesh%sb%dim == 3)
 
     if(simul_box_is_periodic(mesh%sb)) &
       call messages_not_implemented("Poisson boundary corrections for periodic systems")
@@ -333,10 +335,12 @@ contains
     FLOAT,                intent(inout) :: pot(:)  !< pot(mesh%np_part)
 
     integer :: ip, add_lm, ll, mm, bp_lower
-    FLOAT   :: xx(MAX_DIM), rr, s1, sa
+    FLOAT   :: xx(mesh%sb%dim), rr, s1, sa
     FLOAT, allocatable :: mult(:)
 
     PUSH_SUB(poisson_boundary_conditions)
+
+    ASSERT(mesh%sb%dim == 3)
 
     SAFE_ALLOCATE(mult(1:(this%maxl+1)**2))
 

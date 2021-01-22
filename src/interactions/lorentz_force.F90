@@ -114,9 +114,8 @@ contains
   end subroutine lorentz_force_init
 
   ! ---------------------------------------------------------
-  subroutine lorentz_force_calculate(this, namespace)
+  subroutine lorentz_force_calculate(this)
     class(lorentz_force_t),             intent(inout) :: this
-    type(namespace_t),                  intent(in)    :: namespace
 
     PUSH_SUB(lorentz_force_calculate)
 

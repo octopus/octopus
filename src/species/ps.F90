@@ -362,8 +362,6 @@ contains
         ASSERT(ps%llocal <= ps%lmax)
       end if
       
-      nullify(ps%g%drdi, ps%g%s)
-      
       ps%g%nrval = ps_xml%grid_size
       
       SAFE_ALLOCATE(ps%g%rofi(1:ps%g%nrval))

@@ -242,7 +242,7 @@ contains
       message(1) = "LCAOAlternative is not working for spinors."
       call messages_fatal(1)
     end if
-    if(simul_box_is_periodic(gr%mesh%sb) .and. this%alternative) then
+    if(simul_box_is_periodic(gr%sb) .and. this%alternative) then
       call messages_experimental("LCAOAlternative in periodic systems")
       ! specifically, if you get the message about submesh radius > box size, results will probably be totally wrong.
     end if
@@ -607,7 +607,7 @@ contains
 
         if(this%derivative) maxradius = maxradius + this%lapdist
 
-        maxradius = min(maxradius, M_TWO*maxval(gr%mesh%sb%lsize(1:gr%mesh%sb%dim)))
+        maxradius = min(maxradius, M_TWO*maxval(gr%sb%lsize(1:gr%sb%dim)))
 
         this%radius(iatom) = maxradius
       end do
@@ -722,7 +722,7 @@ contains
       call messages_info(1)
 
       ! get the effective potential (we don`t need the eigenvalues yet)
-      call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval=.false., calc_current=.false.)
+      call v_ks_calc(ks, namespace, hm, st, geo, calc_eigenval=.false., calc_current=.false., calc_energy=.false.)
       ! eigenvalues have nevertheless to be initialized to something
       if(st%smear%method == SMEAR_SEMICONDUCTOR .and. lcao_is_available(lcao)) then
         st%eigenval = M_HUGE

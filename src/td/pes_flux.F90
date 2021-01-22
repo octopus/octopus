@@ -2428,7 +2428,7 @@ contains
     FLOAT,            intent(in)    :: fc_ptdens
 
     integer, allocatable  :: which_surface(:)
-    FLOAT                 :: xx(1:MAX_DIM), dd, area, dS(1:MAX_DIM, 1:2), factor
+    FLOAT                 :: xx(1:mesh%sb%dim), dd, area, dS(1:MAX_DIM, 1:2), factor
     integer               :: mdim, imdim, idir, isp, pm,nface, idim, ndir, iu,iv, iuv(1:2)
     integer               :: ip_global, npface
     integer               :: rankmin, nsurfaces
@@ -2572,7 +2572,7 @@ contains
       
         nsurfaces = 0
 
-        xx(1:MAX_DIM) = mesh%x(ip_local, 1:MAX_DIM) - offset(1:MAX_DIM)
+        xx(1:mdim) = mesh%x(ip_local, 1:mdim) - offset(1:mdim)
 
         ! eventually check whether we are in absorbing zone
         select case(hm%bc%abtype)
@@ -2635,7 +2635,7 @@ contains
             if(abs(which_surface(ip_global)) == idir .and. sign(1, which_surface(ip_global)) == pm) then
               isp = isp + 1
               ! coordinate of surface point
-              xx(1:MAX_DIM) = mesh_x_global(mesh, ip_global)
+              xx(1:mdim) = mesh_x_global(mesh, ip_global)
               this%rcoords(1:mdim, isp) = xx(1:mdim)
               ! local ip & node which has the surface point
               this%srfcpnt(isp) = mesh_nearest_point(mesh, this%rcoords(1:mdim, isp), dd, rankmin)

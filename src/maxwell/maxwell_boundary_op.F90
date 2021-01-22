@@ -19,13 +19,13 @@
 
 module maxwell_boundary_op_oct_m
   use derivatives_oct_m
-  use io_oct_m
-  use io_function_oct_m
-  use io_oct_m
   use cube_function_oct_m
   use geometry_oct_m
   use global_oct_m
   use grid_oct_m
+  use index_oct_m
+  use io_oct_m
+  use io_function_oct_m
   use maxwell_function_oct_m
   use medium_mxll_oct_m
   use mesh_function_oct_m
@@ -256,7 +256,7 @@ contains
 
       end select
 
-      select case (gr%mesh%sb%box_shape)
+      select case (gr%sb%box_shape)
       case(SPHERE)
         ab_shape_dim = 1
         if (sb%periodic_dim /= 0) then
@@ -309,7 +309,7 @@ contains
         bc%bc_bounds(:, idim) = bounds(:, idim)
       end select
 
-      if (gr%mesh%sb%box_shape == PARALLELEPIPED) then
+      if (gr%sb%box_shape == PARALLELEPIPED) then
 
         select case (bc%bc_ab_type(idim))
         case(MXLL_AB_CPML)
@@ -1085,13 +1085,13 @@ contains
     call profiling_in(prof, 'BC_MXLL_GENERATE_PML')
 
     SAFE_ALLOCATE(tmp(gr%mesh%np_part))
-    SAFE_ALLOCATE(tmp_grad(gr%mesh%np, 1:gr%mesh%sb%dim))
+    SAFE_ALLOCATE(tmp_grad(gr%mesh%np, 1:gr%sb%dim))
 
-    SAFE_ALLOCATE(pml%kappa(1:pml%points_number, 1:gr%mesh%sb%dim))
-    SAFE_ALLOCATE(pml%sigma_e(1:pml%points_number, 1:gr%mesh%sb%dim))
-    SAFE_ALLOCATE(pml%sigma_m(1:pml%points_number, 1:gr%mesh%sb%dim))
-    SAFE_ALLOCATE(pml%a(1:pml%points_number, 1:gr%mesh%sb%dim))
-    SAFE_ALLOCATE(pml%b(1:pml%points_number, 1:gr%mesh%sb%dim))
+    SAFE_ALLOCATE(pml%kappa(1:pml%points_number, 1:gr%sb%dim))
+    SAFE_ALLOCATE(pml%sigma_e(1:pml%points_number, 1:gr%sb%dim))
+    SAFE_ALLOCATE(pml%sigma_m(1:pml%points_number, 1:gr%sb%dim))
+    SAFE_ALLOCATE(pml%a(1:pml%points_number, 1:gr%sb%dim))
+    SAFE_ALLOCATE(pml%b(1:pml%points_number, 1:gr%sb%dim))
     SAFE_ALLOCATE(pml%c(1:pml%points_number, 1:3))
     SAFE_ALLOCATE(pml%mask(1:pml%points_number))
     SAFE_ALLOCATE(pml%conv_plus(1:pml%points_number, 1:3, 1:3))
@@ -1119,7 +1119,7 @@ contains
     do ip_in = 1, pml%points_number
       ip = pml%points_map(ip_in)
       ddv(1:3) = abs(gr%mesh%x(ip, 1:3)) - bounds(1, 1:3)
-      do idim = 1, gr%mesh%sb%dim
+      do idim = 1, gr%sb%dim
         if (ddv(idim) >= M_ZERO) then
           gg     = (ddv(idim)/pml%width)**pml%power
           hh     = (M_ONE-ddv(idim)/pml%width)**pml%power
@@ -1155,7 +1155,7 @@ contains
     end do
 
     ! PML auxiliary epsilon for all boundary points
-    do idim = 1, gr%mesh%sb%dim
+    do idim = 1, gr%sb%dim
       tmp = P_ep
       do ip_in = 1, pml%points_number
         ip = pml%points_map(ip_in)
@@ -1169,7 +1169,7 @@ contains
     end do
 
     ! PML auxiliary mu
-    do idim = 1, gr%mesh%sb%dim
+    do idim = 1, gr%sb%dim
       tmp = P_mu
       do ip_in = 1, pml%points_number
         ip = pml%points_map(ip_in)
@@ -1183,7 +1183,7 @@ contains
     end do
 
     ! PML auxiliary c for all boundary points
-    do idim = 1, gr%mesh%sb%dim
+    do idim = 1, gr%sb%dim
       do ip_in = 1, pml%points_number
         pml%c(ip_in, idim) = P_c/pml%kappa(ip_in, idim)
       end do
@@ -1266,15 +1266,15 @@ contains
 
     ip_in_max = maxval(bc%medium%points_number(:))
 
-    SAFE_ALLOCATE(bc%medium%aux_ep(ip_in_max,gr%mesh%sb%dim, 3))
-    SAFE_ALLOCATE(bc%medium%aux_mu(ip_in_max,gr%mesh%sb%dim, 3))
+    SAFE_ALLOCATE(bc%medium%aux_ep(ip_in_max,gr%sb%dim, 3))
+    SAFE_ALLOCATE(bc%medium%aux_mu(ip_in_max,gr%sb%dim, 3))
     SAFE_ALLOCATE(bc%medium%ep(ip_in_max, 3))
     SAFE_ALLOCATE(bc%medium%mu(ip_in_max, 3))
     SAFE_ALLOCATE(bc%medium%sigma_e(ip_in_max, 3))
     SAFE_ALLOCATE(bc%medium%sigma_m(ip_in_max, 3))
     SAFE_ALLOCATE(bc%medium%c(ip_in_max, 3))
     SAFE_ALLOCATE(tmp(gr%mesh%np_part))
-    SAFE_ALLOCATE(tmp_grad(gr%mesh%np_part,1:gr%mesh%sb%dim))
+    SAFE_ALLOCATE(tmp_grad(gr%mesh%np_part,1:gr%sb%dim))
     bc%medium%aux_ep = M_ZERO
     bc%medium%aux_mu = M_ZERO
     bc%medium%c = P_c
@@ -1332,7 +1332,7 @@ contains
     do idim = 1, 3
       do ip_in = 1, bc%medium%points_number(idim)
         ip = bc%medium%points_map(ip_in,idim)
-        xx(:) = gr%mesh%x(ip,:)
+        xx(:) = gr%mesh%x(ip, :)
         dd_min = M_HUGE
         do ip_bd = 1, bc%medium%bdry_number(idim)
           ipp = bc%medium%bdry_map(ip_bd, idim)
@@ -1819,60 +1819,60 @@ contains
 
     SAFE_ALLOCATE(nn(1:2, 1:3, 1:3, 1:3))
 
-    st%surface_grid_center(1, 1, :, :) = -bounds(1,1)
+    st%surface_grid_center(1, 1, :, :) = -int(bounds(1,1))
     do iy = 1, iy_max
       do iz = 1, iz_max
         rr(2) = -bounds(1,2) + delta(2)/M_TWO + (iy-1) * delta(2)
         rr(3) = -bounds(1,3) + delta(3)/M_TWO + (iz-1) * delta(3)
-        st%surface_grid_center(1, 2, iy, iz) = rr(2)
-        st%surface_grid_center(1, 3, iy, iz) = rr(3)
+        st%surface_grid_center(1, 2, iy, iz) = int(rr(2))
+        st%surface_grid_center(1, 3, iy, iz) = int(rr(3))
       end do
     end do
-    st%surface_grid_center(2, 1, :, :) = bounds(1,1)
+    st%surface_grid_center(2, 1, :, :) = int(bounds(1,1))
     do iy = 1, iy_max
       do iz = 1, iz_max
         rr(2) = -bounds(1,2) + delta(2)/M_TWO + (iy-1) * delta(2)
         rr(3) = -bounds(1,3) + delta(3)/M_TWO + (iz-1) * delta(3)
-        st%surface_grid_center(2, 2, iy, iz) = rr(2)
-        st%surface_grid_center(2, 3, iy, iz) = rr(3)
+        st%surface_grid_center(2, 2, iy, iz) = int(rr(2))
+        st%surface_grid_center(2, 3, iy, iz) = int(rr(3))
       end do
     end do
 
-    st%surface_grid_center(1, 2, :, :) = -bounds(1,2)
+    st%surface_grid_center(1, 2, :, :) = -int(bounds(1,2))
     do ix = 1, ix_max
       do iz = 1, iz_max
         rr(1) = -bounds(1,1) + delta(1)/M_TWO + (ix-1) * delta(1)
         rr(3) = -bounds(1,3) + delta(3)/M_TWO + (iz-1) * delta(3)
-        st%surface_grid_center(1, 1, ix, iz) = rr(1)
-        st%surface_grid_center(1, 3, ix, iz) = rr(3)
+        st%surface_grid_center(1, 1, ix, iz) = int(rr(1))
+        st%surface_grid_center(1, 3, ix, iz) = int(rr(3))
       end do
     end do
-    st%surface_grid_center(2, 2, :, :) = bounds(1,2)
+    st%surface_grid_center(2, 2, :, :) = int(bounds(1,2))
     do ix = 1, ix_max
       do iz = 1, iz_max
         rr(1) = -bounds(1,2) + delta(1)/M_TWO + (ix-1) * delta(1)
         rr(3) = -bounds(1,3) + delta(3)/M_TWO + (iz-1) * delta(3)
-        st%surface_grid_center(2, 1, ix, iz) = rr(1)
-        st%surface_grid_center(2, 3, ix, iz) = rr(3)
+        st%surface_grid_center(2, 1, ix, iz) = int(rr(1))
+        st%surface_grid_center(2, 3, ix, iz) = int(rr(3))
       end do
     end do
 
-    st%surface_grid_center(1, 3, :, :) = -bounds(1,3)
+    st%surface_grid_center(1, 3, :, :) = -int(bounds(1,3))
     do ix = 1, ix_max
       do iy = 1, iy_max
         rr(1) = -bounds(1,1) + delta(1)/M_TWO + (ix-1) * delta(1)
         rr(2) = -bounds(1,2) + delta(2)/M_TWO + (iy-1) * delta(2)
-        st%surface_grid_center(1, 1, ix, iy) = rr(1)
-        st%surface_grid_center(1, 2, ix, iy) = rr(2)
+        st%surface_grid_center(1, 1, ix, iy) = int(rr(1))
+        st%surface_grid_center(1, 2, ix, iy) = int(rr(2))
       end do
     end do
-    st%surface_grid_center(2, 3, :, :) = bounds(1,3)
+    st%surface_grid_center(2, 3, :, :) = int(bounds(1,3))
     do ix = 1, ix_max
       do iy = 1, iy_max
         rr(1) = -bounds(1,2) + delta(1)/M_TWO + (ix-1) * delta(1)
         rr(2) = -bounds(1,2) + delta(2)/M_TWO + (iy-1) * delta(2)
-        st%surface_grid_center(2, 1, ix, iy) = rr(1)
-        st%surface_grid_center(2, 2, ix, iy) = rr(2)
+        st%surface_grid_center(2, 1, ix, iy) = int(rr(1))
+        st%surface_grid_center(2, 2, ix, iy) = int(rr(2))
       end do
     end do
 
@@ -1970,14 +1970,14 @@ contains
           rr(2) = iiy * mesh%spacing(2)
           rr(3) = iiz * mesh%spacing(3)
           iix = int(-bounds(1,1)/mesh%spacing(1))
-          ip_global = mesh%idx%lxyz_inv(iix, iiy, iiz)
+          ip_global = index_from_coords(mesh%idx, [iix, iiy, iiz])
           st%surface_grid_points_map(1, 1, idx1, idx2, nn(1, 1, idx1, idx2)) = ip_global
           nn(2, 1, idx1, idx2) = nn(2, 1, idx1, idx2) + 1
           rr(1) = bounds(1,1)
           rr(2) = iiy * mesh%spacing(2)
           rr(3) = iiz * mesh%spacing(3)
           iix = int(bounds(1,1)/mesh%spacing(1))
-          ip_global = mesh%idx%lxyz_inv(iix, iiy, iiz)
+          ip_global = index_from_coords(mesh%idx, [iix, iiy, iiz])
           st%surface_grid_points_map(2, 1, idx1, idx2, nn(2, 1, idx1, idx2)) = ip_global
         end if
       end do
@@ -2002,14 +2002,14 @@ contains
           rr(2) = -bounds(1, 2)
           rr(3) = iiz * mesh%spacing(3)
           iiy = int(-bounds(1,2)/mesh%spacing(2))
-          ip_global = mesh%idx%lxyz_inv(iix, iiy, iiz)
+          ip_global = index_from_coords(mesh%idx, [iix, iiy, iiz])
           st%surface_grid_points_map(1, 2, idx1, idx2, nn(1, 2, idx1, idx2)) = ip_global
           nn(2, 2, idx1, idx2) = nn(2, 2, idx1, idx2) + 1
           rr(1) = iix * mesh%spacing(1)
           rr(2) = bounds(1,2)
           rr(3) = iiz * mesh%spacing(3)
           iiy = int(bounds(1,2)/mesh%spacing(2))
-          ip_global = mesh%idx%lxyz_inv(iix, iiy, iiz)
+          ip_global = index_from_coords(mesh%idx, [iix, iiy, iiz])
           st%surface_grid_points_map(2, 2, idx1, idx2, nn(2, 2, idx1, idx2)) = ip_global
         end if
       end do
@@ -2034,14 +2034,14 @@ contains
           rr(2) = iiy * mesh%spacing(2)
           rr(3) = -bounds(1,3)
           iiz = int(-bounds(1,3)/mesh%spacing(3))
-          ip_global = mesh%idx%lxyz_inv(iix, iiy, iiz)
+          ip_global = index_from_coords(mesh%idx, [iix, iiy, iiz])
           st%surface_grid_points_map(1, 3, idx1, idx2, nn(1, 3, idx1, idx2)) = ip_global
           nn(2, 3, idx1, idx2) = nn(2, 3, idx1, idx2) + 1
           rr(1) = iix * mesh%spacing(1)
           rr(2) = iiy * mesh%spacing(2)
           rr(3) = bounds(1,3)
           iiz = int(bounds(1,3)/mesh%spacing(3))
-          ip_global = mesh%idx%lxyz_inv(iix, iiy, iiz)
+          ip_global = index_from_coords(mesh%idx, [iix, iiy, iiz])
           st%surface_grid_points_map(2, 3, idx1, idx2, nn(2, 3, idx1, idx2)) = ip_global
         end if
       end do

@@ -500,7 +500,7 @@ contains
       ! check if input makes sense
       ncols = parse_block_cols(blk, 0)
 
-      if(ncols /= gr%mesh%sb%dim ) then ! wrong size
+      if(ncols /= gr%sb%dim ) then ! wrong size
 
         if(mpi_grp_is_root(mpi_world)) then
           call messages_write('Inconsistent size of momentum-transfer vector. It will not be used in the TPA calculation.')
@@ -510,9 +510,9 @@ contains
       else ! correct size
 
         use_qvector = .true.
-        SAFE_ALLOCATE(qvector(1:gr%mesh%sb%dim))
+        SAFE_ALLOCATE(qvector(1:gr%sb%dim))
 
-        do icoord = 1,gr%mesh%sb%dim    !for x,y,z
+        do icoord = 1,gr%sb%dim    !for x,y,z
           call parse_block_float(blk, 0, icoord-1, qvector(icoord))
           qvector(icoord) = units_to_atomic(unit_one / units_inp%length, qvector(icoord))
         end do
@@ -527,7 +527,7 @@ contains
     if(use_qvector) then
       SAFE_ALLOCATE(cff(1:gr%mesh%np))
     end if
-    SAFE_ALLOCATE(osc(1:gr%mesh%sb%dim))
+    SAFE_ALLOCATE(osc(1:gr%sb%dim))
 
     ! root writes output to file
 
@@ -538,15 +538,15 @@ contains
       ! header
       if(use_qvector) then
         write (message(1),'(a1,a30,3(es14.5,1x),a1)') '#', ' momentum-transfer vector : (', &
-          (units_from_atomic(unit_one / units_out%length, qvector(icoord)), icoord=1, gr%mesh%sb%dim),')'
-        select case(gr%mesh%sb%dim)
+          (units_from_atomic(unit_one / units_out%length, qvector(icoord)), icoord=1, gr%sb%dim),')'
+        select case(gr%sb%dim)
           case(1); write(message(2), '(a1,4(a15,1x))') '#', 'E' , '<x>', '<f>', 'S(q,omega)'
           case(2); write(message(2), '(a1,5(a15,1x))') '#', 'E' , '<x>', '<y>', '<f>', 'S(q,omega)'
           case(3); write(message(2), '(a1,6(a15,1x))') '#', 'E' , '<x>', '<y>', '<z>', '<f>', 'S(q,omega)'
         end select
         call messages_info(2,iunit)
       else
-        select case(gr%mesh%sb%dim)
+        select case(gr%sb%dim)
           case(1); write(message(1), '(a1,3(a15,1x))') '#', 'E' , '<x>', '<f>'
           case(2); write(message(1), '(a1,4(a15,1x))') '#', 'E' , '<x>', '<y>', '<f>'
           case(3); write(message(1), '(a1,5(a15,1x))') '#', 'E' , '<x>', '<y>', '<z>', '<f>'
@@ -573,12 +573,12 @@ contains
         transition_energy = st%eigenval(ist, tpa_initialk) - st%eigenval(tpa_initialst, tpa_initialk)
 
         ! dipole matrix elements <f|x|i> etc. -> oscillator strengths
-        do icoord = 1, gr%mesh%sb%dim    ! for x,y,z
+        do icoord = 1, gr%sb%dim    ! for x,y,z
 
           ff(1:gr%mesh%np) = psi_initial(1:gr%mesh%np, 1)*gr%mesh%x(1:gr%mesh%np, icoord)* &
             psi_ist(1:gr%mesh%np, 1)
           osc(icoord)  = dmf_integrate(gr%mesh, ff)
-          osc_strength = osc_strength + CNST(2.0)/real(gr%mesh%sb%dim)*transition_energy*abs(osc(icoord))**2
+          osc_strength = osc_strength + CNST(2.0)/real(gr%sb%dim)*transition_energy*abs(osc(icoord))**2
 
         end do
 
@@ -587,7 +587,7 @@ contains
 
           cff(1:gr%mesh%np) = psi_initial(1:gr%mesh%np, 1)*psi_ist(1:gr%mesh%np, 1)
 
-          do icoord = 1, gr%mesh%sb%dim    ! for x,y,z
+          do icoord = 1, gr%sb%dim    ! for x,y,z
             cff(1:gr%mesh%np) = cff(1:gr%mesh%np)*exp(M_zI*gr%mesh%x(1:gr%mesh%np, icoord)*qvector(icoord))
           end do
 
@@ -656,7 +656,6 @@ contains
     logical :: projection
     integer :: ii, ll, mm, nn, work, norb, work2
     integer :: ia, iorb, idim, maxnorb
-    FLOAT   :: norm
     FLOAT, allocatable :: dpsi(:,:), ddot(:,:)
     CMPLX, allocatable :: zpsi(:,:), zdot(:,:)
     FLOAT, allocatable :: weight(:,:,:,:,:)
@@ -756,7 +755,7 @@ contains
           end do
           os%norbs = work2
           os%ndim = 1
-          os%submeshforperiodic = .false.
+          os%submesh = .false.
           os%spec => geo%atom(ia)%species
           call submesh_null(os%sphere)
 
@@ -764,26 +763,13 @@ contains
             ! We obtain the orbital
             if(states_are_real(st)) then
               call dget_atomic_orbital(geo, mesh, os%sphere, ia, os%ii, os%ll, os%jj, &
-                                                os, iorb, os%radius, os%ndim)
-              norm = M_ZERO
-              do idim = 1, os%ndim
-                norm = norm + dsm_nrm2(os%sphere, os%dorb(1:os%sphere%np,idim,iorb))**2
-              end do
-              norm = sqrt(norm)
-              do idim = 1, os%ndim
-                os%dorb(1:os%sphere%np,idim,iorb) =  os%dorb(1:os%sphere%np,idim,iorb)/norm
-              end do
+                                                os, iorb, os%radius, os%ndim, use_mesh=.not.os%submesh, &
+                                                normalize = .true.)
             else
               call zget_atomic_orbital(geo, mesh, os%sphere, ia, os%ii, os%ll, os%jj, &
-                                                os, iorb, os%radius, os%ndim)
-              norm = M_ZERO
-              do idim = 1, os%ndim
-                norm = norm + zsm_nrm2(os%sphere, os%zorb(1:os%sphere%np,idim,iorb))**2
-              end do
-              norm = sqrt(norm)
-              do idim = 1, os%ndim
-                os%zorb(1:os%sphere%np,idim,iorb) =  os%zorb(1:os%sphere%np,idim,iorb)/norm
-              end do
+                                                os, iorb, os%radius, os%ndim, &
+                                                use_mesh =.not.associated(phase) .and. .not.os%submesh, &
+                                                normalize = .true.)
             end if
           end do !iorb
 
@@ -792,7 +778,7 @@ contains
             ! In case of complex wavefunction, we allocate the array for the phase correction
             SAFE_ALLOCATE(os%phase(1:os%sphere%np, st%d%kpt%start:st%d%kpt%end))
             os%phase(:,:) = M_ZERO
-            if(simul_box_is_periodic(mesh%sb) .and. .not. os%submeshforperiodic) then
+            if(.not. os%submesh) then
               SAFE_ALLOCATE(os%eorb_mesh(1:mesh%np, 1:os%norbs, 1:os%ndim, st%d%kpt%start:st%d%kpt%end))
               os%eorb_mesh(:,:,:,:) = M_ZERO
             else
@@ -814,7 +800,7 @@ contains
             if(ik < st%d%nik-npath+1 ) cycle ! We only want points inside the k-point path
             if(states_are_real(st)) then
               call states_elec_get_state(st, mesh, ist, ik, dpsi )
-              call dorbitalset_get_coefficients(os, st%d%dim, dpsi, ik, .false., .false., ddot(1:st%d%dim,1:os%norbs))
+              call dorbitalset_get_coefficients(os, st%d%dim, dpsi, ik, .false., ddot(1:st%d%dim,1:os%norbs))
               do iorb = 1, os%norbs
                 do idim = 1, st%d%dim
                   weight(ik,ist,iorb,norb,ia) = weight(ik,ist,iorb,norb,ia) + abs(ddot(idim,iorb))**2
@@ -826,7 +812,7 @@ contains
                 ! Apply the phase that contains both the k-point and vector-potential terms.
                 call states_elec_set_phase(st%d, zpsi, phase(:,ik), mesh%np, .false.)
               end if
-              call zorbitalset_get_coefficients(os, st%d%dim, zpsi, ik, associated(phase), .false.,&
+              call zorbitalset_get_coefficients(os, st%d%dim, zpsi, ik, associated(phase), &
                                  zdot(1:st%d%dim,1:os%norbs))
               do iorb = 1, os%norbs
                 do idim = 1, st%d%dim

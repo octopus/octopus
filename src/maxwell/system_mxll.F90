@@ -28,6 +28,7 @@ module system_mxll_oct_m
   use global_oct_m
   use grid_oct_m
   use hamiltonian_mxll_oct_m
+  use index_oct_m
   use interaction_oct_m
   use interactions_factory_oct_m
   use iso_c_binding
@@ -158,16 +159,13 @@ contains
     this%geo%nspecies = 0
     this%geo%only_user_def = .false.
     this%geo%kinetic_energy = M_ZERO
-    this%geo%nlpp = .false.
-    this%geo%nlcc = .false.
     call distributed_nullify(this%geo%atoms_dist, 0)
     this%geo%reduced_coordinates = .false.
     this%geo%periodic_dim = 0
     this%geo%lsize = M_ZERO
 
-    call grid_init_stage_0(this%gr, this%namespace, this%geo, this%space)
-    call states_mxll_init(this%st, this%namespace, this%gr, this%geo)
-    call grid_init_stage_1(this%gr, this%namespace, this%geo)
+    call grid_init_stage_1(this%gr, this%namespace, this%geo, this%space)
+    call states_mxll_init(this%st, this%namespace, this%gr)
 
     this%quantities(E_FIELD)%required = .true.
     this%quantities(E_FIELD)%protected = .true.
@@ -222,7 +220,7 @@ contains
     call multicomm_init(this%mc, this%namespace, mpi_world, calc_mode_par_parallel_mask(), &
          &calc_mode_par_default_parallel_mask(),mpi_world%size, index_range, (/ 5000, 1, 1, 1 /))
 
-    call grid_init_stage_2(this%gr, this%namespace, this%mc, this%geo)
+    call grid_init_stage_2(this%gr, this%namespace, this%mc)
     call output_mxll_init(this%outp, this%namespace, this%gr%sb)
     call hamiltonian_mxll_init(this%hm, this%namespace, this%gr, this%st)
 
@@ -357,7 +355,7 @@ contains
       call spatial_constant_calculation(this%tr_mxll%bc_constant, this%st, this%gr, this%hm, M_ZERO, &
            this%prop%dt/this%tr_mxll%inter_steps, this%tr_mxll%delay_time, this%st%rs_state, &
            set_initial_state = .true.)
-      this%st%rs_state_const(:) = this%st%rs_state(this%gr%mesh%idx%lxyz_inv(0,0,0),:)
+      this%st%rs_state_const(:) = this%st%rs_state(index_from_coords(this%gr%mesh%idx, [0,0,0]),:)
     end if
 
     if (parse_is_defined(this%namespace, 'UserDefinedInitialMaxwellStates')) then
@@ -589,7 +587,7 @@ contains
 
     call profiling_in(prof, "SYSTEM_MXLL_OUTPUT_START")
 
-    call td_write_mxll_init(this%write_handler, this%namespace, this%gr, this%st, this%hm, 0, this%prop%dt)
+    call td_write_mxll_init(this%write_handler, this%namespace, 0, this%prop%dt)
     call td_write_mxll_iter(this%write_handler, this%gr, this%st, this%hm, this%prop%dt, 0)
     call td_write_mxll_free_data(this%write_handler, this%namespace, this%gr, this%st, this%hm, this%geo, this%outp, this%clock)
 
@@ -670,8 +668,6 @@ contains
 
     call simul_box_end(this%gr%sb)
     call grid_end(this%gr)
-
-    call space_end(this%space)
 
     SAFE_DEALLOCATE_P(this%gr)
 

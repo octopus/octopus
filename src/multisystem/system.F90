@@ -514,7 +514,7 @@ contains
         end do
 
         ! We can now try to update the interaction
-        all_updated = interaction%update(this%namespace, this%prop%clock) .and. all_updated
+        all_updated = interaction%update(this%prop%clock) .and. all_updated
       end if
     end do
 

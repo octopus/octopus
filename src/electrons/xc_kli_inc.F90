@@ -46,7 +46,7 @@ subroutine X(xc_KLI_solve) (namespace, mesh, gr, hm, st, is, oep, first)
   SAFE_ALLOCATE(psi(1:mesh%np, 1:st%d%dim))
 
   if (oep%has_photons) then
-
+#ifdef R_TREAL
     if (oep%coc_translation) then
       SAFE_ALLOCATE(coctranslation(1:mesh%np))
       coctranslation(1:mesh%np) = oep%pt%pol_dipole(1:mesh%np, 1)
@@ -60,10 +60,14 @@ subroutine X(xc_KLI_solve) (namespace, mesh, gr, hm, st, is, oep, first)
 
     if(.not. lr_is_allocated(oep%photon_lr)) then
       call lr_allocate(oep%photon_lr, st, gr%mesh)
-      oep%photon_lr%X(dl_psi)(:,:, :, :) = M_ZERO
+      oep%photon_lr%ddl_psi(:,:, :, :) = M_ZERO
     end if
 
-    if (.not. first) call X(xc_oep_pt_phi)(namespace, gr, hm, st, is, oep, phi1)
+    if (.not. first) call xc_oep_pt_phi(namespace, gr, hm, st, is, oep, phi1)
+#else
+    ! Photons with OEP are only implemented for real states
+    ASSERT(.false.)
+#endif
   end if
 
   do ist = st%st_start, st%st_end
@@ -91,13 +95,18 @@ subroutine X(xc_KLI_solve) (namespace, mesh, gr, hm, st, is, oep, first)
   do ist = st%st_start, st%st_end
     call states_elec_get_state(st, mesh, ist, is, psi)
     if (oep%has_photons) then
+#ifdef R_TREAL
       if (ist>(oep%eigen_n + 1)) exit ! included to guarantee that the photonic KLI finishes correctly but the parallel in states feature of the normal KLI works still
       bb(:,1) = oep%X(lxc)(1:gr%mesh%np, ist, is)
       if (ist /= oep%eigen_n + 1) bb(:,1) = bb(:,1) - oep%uxc_bar(ist, is)*R_CONJ(psi(:, 1))
       if (.not.first) then
-        call X(xc_oep_pt_rhs)(gr, st, is, oep, phi1, ist, bb)
+        call xc_oep_pt_rhs(gr, st, is, oep, phi1, ist, bb)
       end if
       oep%vxc(:, 1) = oep%vxc(:, 1) + oep%socc*st%occ(ist, is)*bb(:, 1)*psi(:, 1)
+#else
+      ! Photons with OEP are only implemented for real states
+      ASSERT(.false.)
+#endif
     else
       do ip = 1, mesh%np
         oep%vxc(ip, 1) = oep%vxc(ip, 1) + oep%socc*st%occ(ist, is)*R_REAL(oep%X(lxc)(ip, ist, is)*psi(ip, 1))

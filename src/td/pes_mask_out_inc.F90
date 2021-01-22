@@ -496,7 +496,7 @@ subroutine pes_mask_output_states(namespace, st, gr, geo, dir, outp, mask)
 
   ! THE OUTPUT 
   if(bitand(outp%what, OPTION__OUTPUT__PES_DENSITY) /= 0) then
-    fn_unit = units_out%length**(-gr%mesh%sb%dim)
+    fn_unit = units_out%length**(-gr%sb%dim)
     do is = 1, st%d%nspin
       if(st%d%nspin == 1) then
         write(fname, '(a)') 'pes_den'
@@ -510,7 +510,7 @@ subroutine pes_mask_output_states(namespace, st, gr, geo, dir, outp, mask)
 
 
   if(bitand(outp%what, OPTION__OUTPUT__PES_WFS) /= 0) then
-    fn_unit = sqrt(units_out%length**(-gr%mesh%sb%dim))
+    fn_unit = sqrt(units_out%length**(-gr%sb%dim))
     do ist = st%st_start, st%st_end
 !        if(loct_isinstringlist(ist, outp%wfs_list)) then
         do ik = st%d%kpt%start, st%d%kpt%end

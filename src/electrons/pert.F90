@@ -94,8 +94,8 @@ module pert_oct_m
     !! If pure_dir is .true., next mix1 and mix2 arrays are allocated
     !! If pure_dir is .false., atom, dir, atom2 and dir2 are used
     logical :: pure_dir
-    FLOAT, pointer :: mix1(:,:) !< mix1(natoms, ndim)
-    FLOAT, pointer :: mix2(:,:)
+    FLOAT, allocatable :: mix1(:,:) !< mix1(natoms, ndim)
+    FLOAT, allocatable :: mix2(:,:)
   end type pert_ionic_t
 
   type pert_t
@@ -130,9 +130,6 @@ contains
     this%dir2 = -1 
     this%atom1 = -1
     this%atom2 = -1
-
-    nullify(this%ionic%mix1)
-    nullify(this%ionic%mix2)
 
     if ( this%pert_type == PERTURBATION_MAGNETIC ) then
 
@@ -198,8 +195,8 @@ contains
 
     PUSH_SUB(pert_end)
 
-    SAFE_DEALLOCATE_P(this%ionic%mix1)
-    SAFE_DEALLOCATE_P(this%ionic%mix2)
+    SAFE_DEALLOCATE_A(this%ionic%mix1)
+    SAFE_DEALLOCATE_A(this%ionic%mix2)
 
     POP_SUB(pert_end)
   end subroutine pert_end

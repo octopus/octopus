@@ -59,6 +59,12 @@ dist_share_DATA =                                                       \
 	09-illegal_system_names.02-empty.inp                            \
 	09-illegal_system_names.03-illegal_character.inp                \
 	09-illegal_system_names.04-white_space.inp                      \
+        10-dftbplus_verlet.test                                         \
+	10-dftbplus_verlet.01-water.inp                                 \
+	H-H.skf                                                         \
+	H-O.skf                                                         \
+	O-H.skf                                                         \
+	O-O.skf                                                         \
 	99-carbon_hydrogen.test                                         \
 	99-carbon_hydrogen.01-gs.inp                                    \
 	99-carbon_hydrogen.02-td.inp                                    \

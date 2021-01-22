@@ -149,7 +149,6 @@ math_f_srcs =                                 \
 	math/metis.F90                        \
 	math/minimizer.F90                    \
 	math/nfft.F90                         \
-	math/ode_solver.F90                   \
 	math/pblas.F90                        \
 	math/permutations.F90                 \
 	math/pfft.F90                         \
@@ -188,9 +187,8 @@ noinst_HEADERS +=                             \
 	math/lalg_basic_blas_inc.F90          \
 	math/lalg_adv_lapack_inc.F90          \
 	math/math_inc.F90                     \
-	math/ode_solver_inc.F90               \
+	math/nfft_inc.F90                     \
 	math/pnfft_inc.F90                    \
-	math/root_solver_inc.F90              \
 	math/sparskit_inc.F90                 \
 	math/solvers_inc.F90                  \
 	math/symm_op_inc.F90        
@@ -246,17 +244,22 @@ noinst_HEADERS +=                                \
 ions_f_srcs =                                 \
 	ions/atom.F90                         \
 	ions/box.F90                          \
+	ions/box_cylinder.F90                 \
+	ions/box_intersection.F90             \
+	ions/box_parallelepiped.F90           \
+	ions/box_shape.F90                    \
+	ions/box_sphere.F90                   \
 	ions/box_union.F90                    \
 	ions/geometry.F90                     \
 	ions/ion_dynamics.F90                 \
 	ions/kpoints.F90                      \
+	ions/multibox.F90                     \
 	ions/periodic_copy.F90                \
 	ions/read_coords.F90                  \
 	ions/simul_box.F90                    \
 	ions/spglib_f08.f90                   \
 	ions/symmetries.F90                   \
-	ions/vibrations.F90                   \
-	ions/xyz_adjust.F90
+	ions/vibrations.F90
 
 ions_c_srcs =                                 \
 	ions/symmetries_finite.c
@@ -588,6 +591,12 @@ maxwell_f_srcs =                                 \
 
 maxwell_srcs = $(maxwell_f_srcs)
 
+# Sources in dftbplus
+dftbplus_f_srcs =                                \
+	dftbplus/system_dftb.F90
+
+dftbplus_srcs = $(dftplus_f_srcs)
+
 # Sources in scf
 scf_f_srcs =                                 \
 	scf/electrons_ground_state.F90       \
@@ -690,7 +699,7 @@ noinst_HEADERS +=                                    \
 all_f_srcs = $(basic_f_srcs) $(basis_set_f_srcs) $(math_f_srcs) $(species_f_srcs) \
 	     $(ions_f_srcs) $(grid_f_srcs) $(poisson_f_srcs) $(states_f_srcs) \
 	     $(hamiltonian_f_srcs) $(multisystem_f_srcs) $(interactions_f_srcs) $(classical_f_srcs) \
-	     $(output_f_srcs) $(electrons_f_srcs) $(maxwell_f_srcs) \
+	     $(output_f_srcs) $(electrons_f_srcs) $(maxwell_f_srcs) $(dftbplus_f_srcs)\
 	     $(scf_f_srcs)  $(td_f_srcs) $(opt_control_f_srcs) $(sternheimer_f_srcs)
 
 all_c_srcs = $(basic_c_srcs) $(math_c_srcs) $(species_c_srcs) $(ions_c_srcs) \

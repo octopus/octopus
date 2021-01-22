@@ -4,7 +4,8 @@ Test       : Berry-phase test
 Program    : octopus
 TestGroups : long-run, periodic_systems, symmetries
 Enabled    : Yes
-Input      : 22-berry.01-cubic_Si.inp
+
+Input      : 22-berry.01-cubic_Si_gs.inp
 
 match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 1
 match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 1
@@ -12,38 +13,68 @@ match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 227
 match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ;  24
 match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
 
-Precision: 3.34e-06
-match ;  Total energy        ; GREPFIELD(static/info, 'Total       =', 3) ; 20.024809605
+Precision: 2.09e-07
+match ;   Total energy         ; GREPFIELD(static/info, 'Total       =', 3) ; -31.31281901
 Precision: 3.14e-14
-match ;  Ion-ion energy      ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -31.4312028
-Precision: 3.73e-06
-match ;  Eigenvalues sum     ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -235.430110375
-Precision: 1.26e-07
-match ;  Hartree energy      ; GREPFIELD(static/info, 'Hartree     =', 3) ; 35.958866375
-Precision: 1.65e-08
-match ;  Exchange energy     ; GREPFIELD(static/info, 'Exchange    =', 3) ; -12.599478995
-Precision: 1.79e-15
-match ;  Correlation energy  ; GREPFIELD(static/info, 'Correlation =', 3) ; -1.78778787
-Precision: 1.27e-07
-match ;  Kinetic energy      ; GREPFIELD(static/info, 'Kinetic     =', 3) ; 30.343686345000002
-Precision: 2.53e-07
-match ;  External energy     ; GREPFIELD(static/info, 'External    =', 3) ; -0.45927436
-Precision: 8.14e-07
-match ;  Berry energy        ; GREPFIELD(static/info, 'Berry       =', 3) ; 318.41818416
+match ;   Ion-ion energy       ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -31.4312028
+Precision: 1.54e-07
+match ;   Eigenvalues sum      ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -0.35979191
+Precision: 6.60e-08
+match ;   Hartree energy       ; GREPFIELD(static/info, 'Hartree     =', 3) ; 2.48943031
+Precision: 2.20e-08
+match ;   Exchange energy      ; GREPFIELD(static/info, 'Exchange    =', 3) ; -8.25068855
+Precision: 1.51e-15
+match ;   Correlation energy   ; GREPFIELD(static/info, 'Correlation =', 3) ; -1.50838602
+Precision: 7.15e-08
+match ;   Kinetic energy       ; GREPFIELD(static/info, 'Kinetic     =', 3) ; 12.986714865
+Precision: 1.04e-07
+match ;   External energy      ; GREPFIELD(static/info, 'External    =', 3) ; -5.598687115
 
-match ;  k-point 1 (x)  ; GREPFIELD(static/info, '#k =   1', 7) ; 0.0
-match ;  k-point 1 (y)  ; GREPFIELD(static/info, '#k =   1', 8) ; 0.0
-match ;  k-point 1 (z)  ; GREPFIELD(static/info, '#k =   1', 9) ; 0.0
 
-Precision: 7.83e-15
-match ;  Eigenvalue  1  ; GREPFIELD(static/info, '#k =   1', 3, 1) ; -7.831651
-Precision: 7.47e-15
-match ;  Eigenvalue  8  ; GREPFIELD(static/info, '#k =   1', 3, 8) ; -7.470475
-Precision: 6.99e-15
-match ;  Eigenvalue 16  ; GREPFIELD(static/info, '#k =   1', 3, 16) ; -6.985576
-Precision: 6.93e-15
-match ;  Eigenvalue 17  ; GREPFIELD(static/info, '#k =   1', 3, 17) ; -6.931227
-Precision: 5.43e-17
-match ;  Direct gap  ; GREPFIELD(static/info, 'Direct gap', 7, 0) ; 0.0543
-Precision: 5.43e-17
-match ;  Indirect gap  ; GREPFIELD(static/info, 'Indirect gap', 10, 0) ; 0.0543
+Input      : 22-berry.02-cubic_Si.inp
+
+match ; Total k-points   ; GREPFIELD(static/info, 'Total number of k-points', 6) ; 1
+match ; Reduced k-points ; GREPFIELD(static/info, 'Number of symmetry-reduced k-points', 6) ; 1
+match ; Space group        ; GREPFIELD(out, 'Space group', 4) ; 227
+match ; No. of symmetries  ; GREPFIELD(out, 'symmetries that can be used', 5)  ;  24
+match ; SCF convergence ; GREPCOUNT(static/info, 'SCF converged') ; 1
+
+Precision: 3.93e-05
+match ;   Total energy         ; GREPFIELD(static/info, 'Total       =', 3) ; 20.024812355
+Precision: 3.14e-14
+match ;   Ion-ion energy       ; GREPFIELD(static/info, 'Ion-ion     =', 3) ; -31.4312028
+Precision: 5.27e-05
+match ;   Eigenvalues sum      ; GREPFIELD(static/info, 'Eigenvalues =', 3) ; -235.430101365
+Precision: 5.83e-07
+match ;   Hartree energy       ; GREPFIELD(static/info, 'Hartree     =', 3) ; 35.95886668
+Precision: 9.90e-08
+match ;   Exchange energy      ; GREPFIELD(static/info, 'Exchange    =', 3) ; -12.59947908
+Precision: 5.50e-09
+match ;   Correlation energy   ; GREPFIELD(static/info, 'Correlation =', 3) ; -1.787787875
+Precision: 7.64e-07
+match ;   Kinetic energy       ; GREPFIELD(static/info, 'Kinetic     =', 3) ; 30.343686984999998
+Precision: 2.59e-06
+match ;   External energy      ; GREPFIELD(static/info, 'External    =', 3) ; -0.459276005
+Precision: 1.38e-05
+match ;   Berry energy         ; GREPFIELD(static/info, 'Berry       =', 3) ; 318.41817824
+
+Precision: 1.00e-15
+match ;   k-point 1 (x)   ; GREPFIELD(static/info, '#k =   1', 7) ; 0.0
+match ;   k-point 1 (y)   ; GREPFIELD(static/info, '#k =   1', 8) ; 0.0
+match ;   k-point 1 (z)   ; GREPFIELD(static/info, '#k =   1', 9) ; 0.0
+
+Precision: 1.65e-06
+match ;   Eigenvalue  1   ; GREPFIELD(static/info, '#k =   1', 3, 1) ; -7.8316505
+Precision: 1.10e-06
+match ;   Eigenvalue  8   ; GREPFIELD(static/info, '#k =   1', 3, 8) ; -7.470475
+Precision: 1.65e-06
+match ;   Eigenvalue 16   ; GREPFIELD(static/info, '#k =   1', 3, 16) ; -6.9855754999999995
+
+
+# convergence is erratic with one extra state
+#Precision: 6.93e-15
+#match ;  Eigenvalue 17  ; GREPFIELD(static/info, '#k =   1', 3, 17) ; -6.931227
+#Precision: 5.43e-17
+#match ;  Direct gap  ; GREPFIELD(static/info, 'Direct gap', 7, 0) ; 0.0543
+#Precision: 5.43e-17
+#match ;  Indirect gap  ; GREPFIELD(static/info, 'Indirect gap', 10, 0) ; 0.0543

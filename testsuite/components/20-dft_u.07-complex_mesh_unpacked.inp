@@ -37,5 +37,11 @@ FilterPotentials = filter_none
 Debug = trace
 
 AOSubmesh = no
-ForceComplex = yes
 StatesPack = no
+
+#We want a non-zero phase here
+%KPointsGrid
+ 1 | 1 | 1
+ 0.1 | 0.2 | 0.3
+%
+

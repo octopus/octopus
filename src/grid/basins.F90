@@ -40,14 +40,14 @@ module basins_oct_m
 
   type basins_t
     private
-    integer, pointer, public :: map(:)
+    integer, allocatable, public :: map(:)
 
-    integer          :: number
-    integer, pointer :: position(:)
-    FLOAT,   pointer :: val(:)
-    FLOAT,   pointer :: volume(:)
+    integer              :: number
+    integer, allocatable :: position(:)
+    FLOAT,   allocatable :: val(:)
+    FLOAT,   allocatable :: volume(:)
 
-    FLOAT,   pointer :: population(:)
+    FLOAT,   allocatable :: population(:)
   end type basins_t
 
 contains
@@ -75,15 +75,13 @@ contains
 
     PUSH_SUB(basins_end)
 
-    ASSERT(associated(this%map))
-    SAFE_DEALLOCATE_P(this%map)
+    ASSERT(allocated(this%map))
+    SAFE_DEALLOCATE_A(this%map)
 
-    if(associated(this%position)) then
-      SAFE_DEALLOCATE_P(this%position)
-      SAFE_DEALLOCATE_P(this%val)
-      SAFE_DEALLOCATE_P(this%volume)
-      SAFE_DEALLOCATE_P(this%population)
-    end if
+    SAFE_DEALLOCATE_A(this%position)
+    SAFE_DEALLOCATE_A(this%val)
+    SAFE_DEALLOCATE_A(this%volume)
+    SAFE_DEALLOCATE_A(this%population)
     
     POP_SUB(basins_end)
   end subroutine basins_end
@@ -102,7 +100,7 @@ contains
 
     PUSH_SUB(basins_analyze)
 
-    ASSERT(associated(this%map))
+    ASSERT(allocated(this%map))
 
     cur_color = 0
 
@@ -264,7 +262,7 @@ contains
 
     integer :: ii
     type(unit_t) :: unit_vol
-    FLOAT :: xx(1:MAX_DIM)
+    FLOAT :: xx(1:mesh%sb%dim)
 
     PUSH_SUB(basins_write)
 

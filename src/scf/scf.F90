@@ -74,7 +74,7 @@ module scf_oct_m
 !  use xc_functl_oct_m
   use walltimer_oct_m
   use wfs_elec_oct_m
-  use XC_F90(lib_m)
+  use xc_f03_lib_m
   use xc_oep_oct_m
   
   implicit none
@@ -121,7 +121,6 @@ module scf_oct_m
     integer :: mixdim1
     logical :: forced_finish !< remember if 'touch stop' was triggered earlier.
     type(lda_u_mixer_t) :: lda_u_mix
-    type(grid_t), pointer :: gr 
     type(berry_t) :: berry
   end type scf_t
 
@@ -130,8 +129,8 @@ contains
   ! ---------------------------------------------------------
   subroutine scf_init(scf, namespace, gr, geo, st, mc, hm, ks)
     type(scf_t),              intent(inout) :: scf
+    type(grid_t),             intent(in)    :: gr
     type(namespace_t),        intent(in)    :: namespace
-    type(grid_t),     target, intent(inout) :: gr
     type(geometry_t),         intent(in)    :: geo
     type(states_elec_t),      intent(in)    :: st
     type(multicomm_t),        intent(in)    :: mc
@@ -380,7 +379,7 @@ contains
     end if
 
     ! now the eigensolver stuff
-    call eigensolver_init(scf%eigens, namespace, gr, st, geo, mc)
+    call eigensolver_init(scf%eigens, namespace, gr, st, mc)
 
     !The evolution operator is a very specific propagation that requires a specific 
     !setting to work in the current framework
@@ -520,8 +519,6 @@ contains
 
     scf%forced_finish = .false.
 
-    scf%gr => gr
-    
     POP_SUB(scf_init)
   end subroutine scf_init
 
@@ -532,7 +529,7 @@ contains
     
     PUSH_SUB(scf_end)
 
-    call eigensolver_end(scf%eigens, scf%gr)
+    call eigensolver_end(scf%eigens)
 
     if(scf%mix_field /= OPTION__MIXFIELD__NONE) call mix_end(scf%smix)
 
@@ -966,6 +963,17 @@ contains
       ! save information for the next iteration
       rhoin(1:gr%fine%mesh%np, 1, 1:nspin) = st%rho(1:gr%fine%mesh%np, 1:nspin)
 
+      ! restart mixing
+      if (scf%mix_field /= OPTION__MIXFIELD__NONE) then
+        if (scf%smix%ns_restart > 0) then
+          if (mod(iter, scf%smix%ns_restart) == 0) then
+            message(1) = "Info: restarting mixing."
+            call messages_info(1)
+            call scf_mix_clear(scf)
+          end if
+        end if
+      end if
+
       select case(scf%mix_field)
         case(OPTION__MIXFIELD__POTENTIAL)
           call mixfield_set_vin(scf%mixfield, hm%vhxc(1:gr%mesh%np, 1:nspin))
@@ -990,7 +998,7 @@ contains
     if(scf%lcao_restricted) call lcao_end(lcao)
 
     if((scf%max_iter > 0 .and. scf%mix_field == OPTION__MIXFIELD__POTENTIAL) .or. output_needs_current(outp, states_are_real(st))) then
-      call v_ks_calc(ks, namespace, hm, st, geo)
+      call v_ks_calc(ks, namespace, hm, st, geo, calc_current=output_needs_current(outp, states_are_real(st)))
     end if
 
     select case(scf%mix_field)
@@ -1134,12 +1142,12 @@ contains
         call io_mkdir(dir, namespace)
         iunit = io_open(trim(dir) // "/" // trim(fname), namespace, action='write')
 
-        call grid_write_info(gr, geo, iunit)
+        call grid_write_info(gr, iunit)
  
-        call symmetries_write_info(gr%mesh%sb%symm, namespace, gr%sb%dim, gr%sb%periodic_dim, iunit)
+        call symmetries_write_info(gr%sb%symm, namespace, gr%sb%dim, gr%sb%periodic_dim, iunit)
 
         if(simul_box_is_periodic(gr%sb)) then
-          call kpoints_write_info(gr%mesh%sb%kpoints, namespace, iunit)
+          call kpoints_write_info(gr%sb%kpoints, namespace, iunit)
           write(iunit,'(1x)')
         end if
 
@@ -1263,7 +1271,7 @@ contains
       PUSH_SUB(scf_run.write_dipole)
 
       if(mpi_grp_is_root(mpi_world)) then
-        call output_dipole(iunit, dipole, gr%mesh%sb%dim)
+        call output_dipole(iunit, dipole, gr%sb%dim)
 
         if (simul_box_is_periodic(gr%sb)) then
           write(iunit, '(a)') "Defined only up to quantum of polarization (e * lattice vector)."

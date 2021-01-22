@@ -251,8 +251,7 @@ subroutine X(run_sternheimer)()
       do idir2 = 1, idir
         message(1)="Info: Calculating response for K2-perturbation"
         call messages_info(1)
-        call X(inhomog_k2_tot)(sh_kmo, sys, idir, idir2,& 
-          kdotp_lr(idir, 1:1), kdotp_lr(idir2, 1:1), inhomog)
+        call X(inhomog_k2_tot)(sys, idir, idir2, kdotp_lr(idir, 1:1), kdotp_lr(idir2, 1:1), inhomog)
         call X(sternheimer_set_inhomog)(sh_kmo, inhomog)
         call X(sternheimer_solve)(sh_kmo, sys, k2_lr(idir, idir2, 1:1), 1, &
           R_TOPREC(frequency_zero), pert2_none, restart_dump, "null", &
@@ -397,8 +396,7 @@ subroutine X(run_sternheimer)()
                   if(idir2 <= idir) then
                     message(1) = "Info: Calculating response for K2-perturbation"
                     call messages_info(1)
-                    call X(inhomog_k2_tot)(sh_kmo, sys, idir, idir2, & 
-                      kdotp_lr(idir, 1:1), kdotp_lr(idir2, 1:1),inhomog)
+                    call X(inhomog_k2_tot)(sys, idir, idir2, kdotp_lr(idir, 1:1), kdotp_lr(idir2, 1:1), inhomog)
                     call X(sternheimer_set_inhomog)(sh_kmo, inhomog)
                     call X(sternheimer_solve)(sh_kmo, sys, k2_lr(idir, idir2, 1:1), 1, &
                       R_TOPREC(frequency_zero), pert2_none, restart_dump, "null", &
@@ -526,13 +524,13 @@ subroutine X(calc_properties_linear)()
       if(use_kdotp) then
         if(abs(frequency) > M_EPSILON) then
           if(.not. em_vars%kpt_output) then
-            call X(lr_calc_magneto_optics_periodic)(sh, sh_mo, sys, em_vars%nsigma, em_vars%nfactor, &
-              nfactor_ke, em_vars%freq_factor, em_vars%lr(:, :, :), b_lr(:, :), kdotp_lr(:, :), &
-              k2_lr(:, :, :), ke_lr(:, :, :, :), kb_lr(:, :, :), -frequency_eta, em_vars%alpha_be(:, :, :))   
+            call X(lr_calc_magneto_optics_periodic)(sh, sh_mo, sys, em_vars%nsigma, em_vars%nfactor, nfactor_ke, &
+              em_vars%freq_factor, em_vars%lr(:, :, :), b_lr(:, :), kdotp_lr(:, :), ke_lr(:, :, :, :), kb_lr(:, :, :), &
+              -frequency_eta, em_vars%alpha_be(:, :, :))   
           else
-            call X(lr_calc_magneto_optics_periodic)(sh, sh_mo, sys, em_vars%nsigma, em_vars%nfactor, &
-              nfactor_ke, em_vars%freq_factor, em_vars%lr(:, :, :), b_lr(:, :), kdotp_lr(:, :), &
-              k2_lr(:, :, :), ke_lr(:, :, :, :), kb_lr(:, :, :), -frequency_eta, em_vars%alpha_be(:, :, :), &
+            call X(lr_calc_magneto_optics_periodic)(sh, sh_mo, sys, em_vars%nsigma, em_vars%nfactor, nfactor_ke, &
+              em_vars%freq_factor, em_vars%lr(:, :, :), b_lr(:, :), kdotp_lr(:, :), ke_lr(:, :, :, :), kb_lr(:, :, :), &
+              -frequency_eta, em_vars%alpha_be(:, :, :), &
               zpol_kout = em_vars%alpha_be_k(:, :, :, :))
           end if
           if(em_vars%lrc_kernel) then
@@ -549,8 +547,8 @@ subroutine X(calc_properties_linear)()
         if(iomega == 1) then
           message(1) = "Info: Calculating magnetic susceptibilities."
           call messages_info(1)
-          call X(lr_calc_susceptibility_periodic)(sys, em_vars%nsigma, kdotp_lr(:, 1), b_lr(:, 1),&
-            k2_lr(:, :, 1), kb_lr(:, :, 1), em_vars%chi_dia(:, :))
+          call X(lr_calc_susceptibility_periodic)(sys, kdotp_lr(:, 1), b_lr(:, 1), k2_lr(:, :, 1), kb_lr(:, :, 1), &
+            em_vars%chi_dia(:, :))
           em_vars%chi_para(:, :) = M_ZERO  
           call X(lr_calc_magnetization_periodic)(sys, kdotp_lr(:, 1), em_vars%magn(:))
         end if
@@ -567,8 +565,8 @@ subroutine X(calc_properties_linear)()
     call messages_info(1)
   
     if(use_kdotp) then
-      call X(lr_calc_susceptibility_periodic)(sys, em_vars%nsigma, kdotp_lr(:, 1), em_vars%lr(:, 1, ifactor),&
-        k2_lr(:, :, 1), kb_lr(:, :, 1), em_vars%chi_dia(:, :))
+      call X(lr_calc_susceptibility_periodic)(sys, kdotp_lr(:, 1), em_vars%lr(:, 1, ifactor), k2_lr(:, :, 1), kb_lr(:, :, 1), &
+        em_vars%chi_dia(:, :))
         em_vars%chi_para(:, :) = M_ZERO
       call X(lr_calc_magnetization_periodic)(sys, kdotp_lr(:, 1), em_vars%magn(:))
     else

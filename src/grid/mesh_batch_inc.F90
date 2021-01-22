@@ -16,12 +16,11 @@
 !! 02110-1301, USA.
 !!
 
-subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, symm, reduce)
+subroutine X(mesh_batch_dotp_matrix)(mesh, aa, bb, dot, reduce)
   type(mesh_t),      intent(in)    :: mesh
   class(batch_t),    intent(in)    :: aa
   class(batch_t),    intent(in)    :: bb
   R_TYPE,            intent(inout) :: dot(:, :)
-  logical, optional, intent(in)    :: symm         !< for the moment it is ignored
   logical, optional, intent(in)    :: reduce
 
   integer :: ist, jst, idim, sp, block_size, ep, ip, ldaa, ldbb, indb, jndb

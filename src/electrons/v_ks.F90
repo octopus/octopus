@@ -61,7 +61,7 @@ module v_ks_oct_m
   use varinfo_oct_m
   use vdw_ts_oct_m
   use xc_oct_m
-  use XC_F90(lib_m)
+  use xc_f03_lib_m
   use xc_functl_oct_m
   use xc_ks_inversion_oct_m
   use xc_OEP_oct_m
@@ -235,7 +235,7 @@ contains
       if(pseudo_x_functional /= PSEUDO_EXCHANGE_ANY) then
         default = pseudo_x_functional
       else
-        select case(gr%mesh%sb%dim)
+        select case(gr%sb%dim)
         case(3); default = XC_LDA_X   
         case(2); default = XC_LDA_X_2D
         case(1); default = XC_LDA_X_1D
@@ -249,7 +249,7 @@ contains
       if(pseudo_c_functional /= PSEUDO_CORRELATION_ANY) then
         default = default + 1000*pseudo_c_functional
       else
-        select case(gr%mesh%sb%dim)
+        select case(gr%sb%dim)
         case(3); default = default + 1000*XC_LDA_C_PZ_MOD
         case(2); default = default + 1000*XC_LDA_C_2D_AMGB
         case(1); default = default + 1000*XC_LDA_C_1D_CSC
@@ -317,7 +317,7 @@ contains
     ! but it might become Hartree-Fock later. This is safe because it
     ! becomes Hartree-Fock in the cases where the functional is hybrid
     ! and the ifs inside check for both conditions.
-    call xc_init(ks%xc, namespace, gr%mesh%sb%dim, gr%mesh%sb%periodic_dim, st%qtot, &
+    call xc_init(ks%xc, namespace, gr%sb%dim, gr%sb%periodic_dim, st%qtot, &
       x_id, c_id, xk_id, ck_id, hartree_fock = ks%theory_level == HARTREE_FOCK)
 
     if(bitand(ks%xc%family, XC_FAMILY_LIBVDWXC) /= 0) then
@@ -360,13 +360,13 @@ contains
       ks%sic_type = SIC_NONE
     case(HARTREE)
       call messages_experimental("Hartree theory level")
-      if(gr%mesh%sb%periodic_dim == gr%mesh%sb%dim) &
+      if(gr%sb%periodic_dim == gr%sb%dim) &
         call messages_experimental("Hartree in fully periodic system")
-      if(gr%mesh%sb%kpoints%full%npoints > 1) &
+      if(gr%sb%kpoints%full%npoints > 1) &
         call messages_not_implemented("Hartree with k-points", namespace=namespace)
 
     case(HARTREE_FOCK)
-      if(gr%mesh%sb%kpoints%full%npoints > 1) &
+      if(gr%sb%kpoints%full%npoints > 1) &
         call messages_experimental("Hartree-Fock with k-points")
       
       ks%sic_type = SIC_NONE
@@ -406,7 +406,7 @@ contains
       if(bitand(ks%xc_family, XC_FAMILY_OEP) /= 0) then
         if (gr%have_fine_mesh) call messages_not_implemented("OEP functionals with UseFineMesh", namespace=namespace)
         if (ks%xc%functional(FUNC_X,1)%id /= XC_OEP_X_SLATER) then 
-          call xc_oep_init(ks%oep, namespace, ks%xc_family, gr, st, geo, mc)
+          call xc_oep_init(ks%oep, namespace, ks%xc_family, gr, st, mc)
         else
           ks%oep%level = XC_OEP_NONE
         end if
@@ -605,9 +605,8 @@ contains
   ! ---------------------------------------------------------
 
   ! ---------------------------------------------------------
-  subroutine v_ks_end(ks, gr)
+  subroutine v_ks_end(ks)
     type(v_ks_t),     intent(inout) :: ks
-    type(grid_t),     intent(inout) :: gr
 
     PUSH_SUB(v_ks_end)
     
@@ -616,12 +615,10 @@ contains
       call vdw_ts_end(ks%vdw_ts)
     end select
 
-    call current_end(ks%current_calculator)
-
     select case(ks%theory_level)
     case(KOHN_SHAM_DFT)
       if(bitand(ks%xc_family, XC_FAMILY_KS_INVERSION) /= 0) then
-        call xc_ks_inversion_end(ks%ks_inversion, gr)
+        call xc_ks_inversion_end(ks%ks_inversion)
       end if
       if(bitand(ks%xc_family, XC_FAMILY_OEP) /= 0) then
         call xc_oep_end(ks%oep)
@@ -802,7 +799,7 @@ contains
     if(ks%frozen_hxc) then      
       if(calc_current_ ) then
         call states_elec_allocate_current(st, ks%gr)
-        call current_calculate(ks%current_calculator, namespace, ks%gr%der, hm, geo, st, st%current, st%current_kpt)
+        call current_calculate(ks%current_calculator, namespace, ks%gr%der, hm, geo, st)
       end if
 
       POP_SUB(v_ks_calc_start)
@@ -837,7 +834,7 @@ contains
 
     if(calc_current_ ) then
       call states_elec_allocate_current(st, ks%gr)
-      call current_calculate(ks%current_calculator, namespace, ks%gr%der, hm, geo, st, st%current, st%current_kpt)
+      call current_calculate(ks%current_calculator, namespace, ks%gr%der, hm, geo, st)
     end if
 
     nullify(ks%calc%hf_st)

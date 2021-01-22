@@ -23,6 +23,7 @@ module boundaries_oct_m
   use batch_oct_m
   use batch_ops_oct_m
   use global_oct_m
+  use index_oct_m
   use math_oct_m
   use messages_oct_m
   use mesh_oct_m
@@ -124,8 +125,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine boundaries_init(this, namespace, mesh)
-    type(boundaries_t),   intent(out)   :: this
-    type(namespace_t),       intent(in)    :: namespace
+    type(boundaries_t),   intent(inout) :: this
+    type(namespace_t),    intent(in)    :: namespace
     type(mesh_t), target, intent(in)    :: mesh
 
     integer :: sp, ip, ip_inner, iper, ip_global, idir

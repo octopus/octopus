@@ -570,8 +570,7 @@ contains
     SAFE_DEALLOCATE_A(init_recv)
     SAFE_DEALLOCATE_A(size_v)
 
-    ! lxyz is not set for hypercube.
-    if(debug%info .and. .not. idx%is_hypercube) then
+    if(debug%info) then
       ! Write numbers and coordinates of each process` ghost points
       ! to a single file (like in mesh_partition_init) called
       ! debug/mesh_partition/ghost_points.###.
@@ -581,7 +580,8 @@ contains
       iunit = io_open('debug/mesh_partition/ghost_points.'//filenum, namespace, action='write')
       do ip = 1, vp%np_ghost
         jp = vp%ghost(xghost_tmp(vp%partno) + ip - 1)
-        write(iunit, '(99i8)') jp, (idx%lxyz(jp, idir), idir = 1, dim)
+        call index_to_coords(idx, jp, p1)
+        write(iunit, '(99i8)') jp, (p1(idir), idir = 1, dim)
       end do
 
       call io_close(iunit)

@@ -106,7 +106,8 @@ dist_share_DATA =                                \
         21-magnon.02-td.inp                      \
         21-magnon.03-susceptibility.inp          \
         21-magnon.test                           \
-        22-berry.01-cubic_Si.inp                 \
+        22-berry.01-cubic_Si_gs.inp              \
+        22-berry.02-cubic_Si.inp                 \
         22-berry.test                            \
         23-hybrids.01-ace.inp                    \
         23-hybrids.test

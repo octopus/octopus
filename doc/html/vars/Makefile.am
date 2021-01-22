@@ -26,6 +26,7 @@ dist_doc_DATA = \
 	vars_index.html \
 	Atomic_Orbitals.html \
 	ClassicalParticles.html \
+	DFTBPlusInterface.html \
 	Execution.html \
 	Calculation_Modes.html \
 	Hamiltonian.html \
@@ -47,6 +48,7 @@ alpha.js: RUN_SCRIPT
 sections.js: RUN_SCRIPT
 vars_index.html: RUN_SCRIPT
 Atomic_Orbitals.html: RUN_SCRIPT
+DFTBPlusInterface.html: RUN_SCRIPT
 Execution.html: RUN_SCRIPT
 Calculation_Modes.html: RUN_SCRIPT
 Hamiltonian.html: RUN_SCRIPT

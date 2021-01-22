@@ -151,6 +151,8 @@ end subroutine X(xc_OEP_calc)
 
 
 ! ---------------------------------------------------------
+!> This routine follows closely the one of PRB 68, 035103 (2003)
+!> Below we refer to the equation number of this paper
 subroutine X(xc_oep_solve) (namespace, gr, hm, st, is, vxc, oep)
   type(namespace_t),        intent(in)    :: namespace
   type(grid_t),             intent(in)    :: gr
@@ -163,8 +165,8 @@ subroutine X(xc_oep_solve) (namespace, gr, hm, st, is, vxc, oep)
   integer :: iter, ist, iter_used
   FLOAT :: vxc_bar, ff, residue
   FLOAT, allocatable :: ss(:), vxc_old(:)
-  R_TYPE, allocatable :: bb(:,:), psi(:, :), psi2(:,:)
-  R_TYPE, allocatable :: phi1(:,:,:)
+  FLOAT, allocatable :: psi2(:,:)
+  R_TYPE, allocatable :: bb(:,:), psi(:, :), phi1(:,:,:)
   logical, allocatable :: orthogonal(:)
   
   call profiling_in(C_PROFILING_XC_OEP_FULL, TOSTRING(X(XC_OEP_FULL)))
@@ -178,7 +180,7 @@ subroutine X(xc_oep_solve) (namespace, gr, hm, st, is, vxc, oep)
   SAFE_ALLOCATE(vxc_old(1:gr%mesh%np))
   SAFE_ALLOCATE(psi(1:gr%mesh%np, 1:st%d%dim))
   SAFE_ALLOCATE(psi2(1:gr%mesh%np, 1:st%d%dim))
-  SAFE_ALLOCATE(orthogonal(1:oep%noccst))
+  SAFE_ALLOCATE(orthogonal(1:st%nst))
 
   if (oep%has_photons) then
     SAFE_ALLOCATE(phi1(1:gr%mesh%np, 1:st%d%dim, 1:oep%noccst))
@@ -192,11 +194,16 @@ subroutine X(xc_oep_solve) (namespace, gr, hm, st, is, vxc, oep)
   end if
 
   if (oep%has_photons) then
+#ifdef R_TREAL
     if(.not. lr_is_allocated(oep%photon_lr)) then
       call lr_allocate(oep%photon_lr, st, gr%mesh)
-      oep%photon_lr%X(dl_psi)(:, :, :, :) = M_ZERO
+      oep%photon_lr%ddl_psi(:, :, :, :) = M_ZERO
     end if
-    call X(xc_oep_pt_phi)(namespace, gr, hm, st, is, oep, phi1)
+    call xc_oep_pt_phi(namespace, gr, hm, st, is, oep, phi1)
+#else
+    ! Photons with OEP are only implemented for real states
+    ASSERT(.false.)
+#endif
   end if
 
   ! fix xc potential (needed for Hpsi)
@@ -205,31 +212,47 @@ subroutine X(xc_oep_solve) (namespace, gr, hm, st, is, vxc, oep)
   do iter = 1, oep%scftol%max_iter
     ! iteration over all states
     ss = M_ZERO
-    do ist = 1, st%nst !only over occupied states
+    do ist = 1, st%nst
 
-      if(abs(st%occ(ist,1))<= M_EPSILON) cycle
+      if(abs(st%occ(ist,1))<= M_EPSILON) cycle  !only over occupied states
       call states_elec_get_state(st, gr%mesh, ist, is, psi)
-      psi2(:, 1) = R_CONJ(psi(:, 1))*psi(:,1)
+      psi2(:, 1) = real(R_CONJ(psi(:, 1))*psi(:,1))
 
       ! evaluate right-hand side
-      vxc_bar = X(mf_integrate)(gr%mesh, psi2(:, 1)*oep%vxc(1:gr%mesh%np, is))
+      vxc_bar = dmf_integrate(gr%mesh, psi2(:, 1)*oep%vxc(1:gr%mesh%np, is))
 
+      ! This the right-hand side of Eq. 21
       bb(1:gr%mesh%np, 1) = -(oep%vxc(1:gr%mesh%np, is) - (vxc_bar - oep%uxc_bar(ist, is)))* &
         R_CONJ(psi(:, 1)) + oep%X(lxc)(1:gr%mesh%np, ist, is)
 
-      if (oep%has_photons) call X(xc_oep_pt_rhs)(gr, st, is, oep, phi1, ist, bb)
-
       if (oep%has_photons) then
+#ifdef R_TREAL
+        call xc_oep_pt_rhs(gr, st, is, oep, phi1, ist, bb)
+
         orthogonal = .true.
         orthogonal(ist) = .false.
-        call X(states_elec_orthogonalize_single)(st, gr%mesh, st%nst, is, bb, normalize = .false., mask = orthogonal)
+        call dstates_elec_orthogonalize_single(st, gr%mesh, st%nst, is, bb, normalize = .false., mask = orthogonal)
+#else
+        ! Photons with OEP are only implemented for real states
+        ASSERT(.false.)
+#endif
       else
         call X(lr_orth_vector) (gr%mesh, st, bb, ist, is, R_TOTYPE(M_ZERO))
       end if
 
-      call X(linear_solver_solve_HXeY)(oep%solver, namespace, hm, gr, st, ist, is, oep%lr%X(dl_psi)(:,:, ist, is), bb, &
+      ! Sternheimer equation [H-E_i]psi_i = bb_i, where psi_i the orbital shift, see Eq. 21
+      call X(linear_solver_solve_HXeY)(oep%solver, namespace, hm, gr, st, ist, is, &
+           oep%lr%X(dl_psi)(:,:, ist, is), bb, &
            R_TOTYPE(-st%eigenval(ist, is)), oep%scftol%final_tol, residue, iter_used)
+      
+      if(debug%info) then
+        write(message(1),'(a,i3,a,es14.6,a,es14.6,a,i4)') "Debug: OEP - iter ", iter, &
+          " linear solver residual ", residue, " tol ", &
+          oep%scftol%final_tol, " iter_used ", iter_used
+        call messages_info(1)
+      end if
 
+      !We project out the occupied bands 
       if (oep%has_photons) then
         orthogonal = .true.
         orthogonal(ist) = .false.
@@ -241,18 +264,31 @@ subroutine X(xc_oep_solve) (namespace, gr, hm, st, is, vxc, oep)
 
       ! calculate this funny function ss
       ! ss = ss + 2*dl_psi*psi
+      ! This is Eq. 25
       call lalg_axpy(gr%mesh%np, M_TWO, R_REAL(oep%lr%X(dl_psi)(1:gr%mesh%np, 1, ist, is)*psi(:, 1)), ss(:))
       if (oep%has_photons) then
-        call X(xc_oep_pt_inhomog)(gr, st, is, phi1, ist, ss)
+#ifdef R_TREAL
+        call xc_oep_pt_inhomog(gr, st, is, phi1, ist, ss)
+#else
+        ! Photons with OEP are only implemented for real states
+        ASSERT(.false.)
+#endif
       end if
     end do
 
+    !Here we mix the xc potential
     select case (oep%mixing_scheme)
     case (OEP_MIXING_SCHEME_CONST)
+      !This is Eq. 26
       call lalg_axpy(gr%mesh%np, oep%mixing, ss(:), oep%vxc(:, is))
+
     case (OEP_MIXING_SCHEME_DENS)
+
       call lalg_axpy(gr%mesh%np, oep%mixing, ss(:)/st%rho(:,is), oep%vxc(:, is))
+
     case (OEP_MIXING_SCHEME_BB)
+      !This is the Barzilai-Borwein scheme, as explained in 
+      !Hollins, et al. PRB 85, 235126 (2012)
       if (dmf_nrm2(gr%mesh, oep%vxc_old(1:gr%mesh%np,is)) > M_EPSILON ) then ! do not do it for the first run
         oep%mixing = -dmf_dotp(gr%mesh, oep%vxc(1:gr%mesh%np,is) - oep%vxc_old(1:gr%mesh%np,is), ss - oep%ss_old(:, is)) &
           / dmf_dotp(gr%mesh, ss - oep%ss_old(:, is), ss - oep%ss_old(:, is))
@@ -263,24 +299,37 @@ subroutine X(xc_oep_solve) (namespace, gr, hm, st, is, vxc, oep)
        call messages_info(1)
       end if
 
-      call lalg_copy(gr%mesh%np, is, oep%vxc, oep%vxc_old)
+      call lalg_copy(gr%mesh%np, oep%vxc(:,is), oep%vxc_old(:,is))
       call lalg_copy(gr%mesh%np, ss, oep%ss_old(:, is))
       call lalg_axpy(gr%mesh%np, oep%mixing, ss(:), oep%vxc(:, is))
+
     end select
 
+    !Here we enforce Eq. (24), see the discussion below Eq. 26 
     do ist = 1, st%nst
       if(oep%eigen_type(ist) == 2) then
         call states_elec_get_state(st, gr%mesh, ist, is, psi)
-        psi2(:, 1) = R_CONJ(psi(:, 1))*psi(:,1)
-        vxc_bar = X(mf_integrate)(gr%mesh, psi2(:, 1)*oep%vxc(1:gr%mesh%np, is))
+        psi2(:, 1) = real(R_CONJ(psi(:, 1))*psi(:,1))
+        vxc_bar = dmf_integrate(gr%mesh, psi2(:, 1)*oep%vxc(1:gr%mesh%np, is))
         if (oep%has_photons) then
-          call X(xc_oep_pt_uxcbar)(gr, st, is, oep, phi1, ist, vxc_bar)
+#ifdef R_TREAL
+          call xc_oep_pt_uxcbar(gr, st, is, oep, phi1, ist, vxc_bar)
+#else
+          ! Photons with OEP are only implemented for real states
+          ASSERT(.false.)
+#endif
 	end if
         oep%vxc(1:gr%mesh%np,is) = oep%vxc(1:gr%mesh%np,is) - (vxc_bar - oep%uxc_bar(ist,is))
       end if
     end do
 
     ff = dmf_nrm2(gr%mesh, ss)
+
+    if(debug%info) then
+      write(message(1),'(a,i3,a,es14.6,a,i4)') "Debug: OEP - iter ", iter, " residual ", ff, " max ", oep%scftol%max_iter
+      call messages_info(1) 
+    end if
+
     if(ff < oep%scftol%conv_abs_dens) exit
   end do
 

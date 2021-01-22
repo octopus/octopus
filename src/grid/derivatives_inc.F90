@@ -403,7 +403,7 @@ subroutine X(derivatives_test)(this, namespace, repetitions, min_blocksize, max_
 
 
   do ip = 1, this%mesh%np_part
-    ff(ip) = bb*exp(-aa*sum(this%mesh%x(ip, 1:this%mesh%sb%dim)**2)) + cc
+    ff(ip) = bb*exp(-aa*sum(this%mesh%x(ip, :)**2)) + cc
   end do
   do ip = 1, this%mesh%np
     do idir = 1, this%mesh%sb%dim

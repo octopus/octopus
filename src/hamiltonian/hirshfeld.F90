@@ -49,15 +49,13 @@ module hirshfeld_oct_m
     hirshfeld_position_derivative
   
   type hirshfeld_t
-
     private
     type(mesh_t),        pointer     :: mesh
     type(geometry_t),    pointer     :: geo
     type(states_elec_t), pointer     :: st
-    FLOAT,               pointer     :: total_density(:)  !< (mesh%np)
-    FLOAT,               pointer     :: free_volume(:)    !< (natoms)
-    FLOAT,               pointer     :: free_vol_r3(:,:)  !< (natoms,mesh%np)
-
+    FLOAT,               allocatable :: total_density(:)  !< (mesh%np)
+    FLOAT,               allocatable :: free_volume(:)    !< (natoms)
+    FLOAT,               allocatable :: free_vol_r3(:,:)  !< (natoms,mesh%np)
   end type hirshfeld_t
 
   FLOAT, parameter, public :: TOL_HIRSHFELD = CNST(1e-9)
@@ -144,14 +142,14 @@ contains
 
     PUSH_SUB(hirshfeld_end)
 
-    SAFE_DEALLOCATE_P(this%total_density)
-    SAFE_DEALLOCATE_P(this%free_volume)
-    SAFE_DEALLOCATE_P(this%free_vol_r3)
+    SAFE_DEALLOCATE_A(this%total_density)
+    SAFE_DEALLOCATE_A(this%free_volume)
+    SAFE_DEALLOCATE_A(this%free_vol_r3)
 
     nullify(this%mesh)
     nullify(this%geo)
     nullify(this%st)
-    
+
     POP_SUB(hirshfeld_end)    
   end subroutine hirshfeld_end
 
@@ -173,7 +171,7 @@ contains
 
     call profiling_in(prof, "HIRSHFELD_CHARGE")
 
-    ASSERT(associated(this%total_density))
+    ASSERT(allocated(this%total_density))
     
     SAFE_ALLOCATE(atom_density(1:this%mesh%np, this%st%d%nspin))
     SAFE_ALLOCATE(hirshfeld_density(1:this%mesh%np))
@@ -216,7 +214,7 @@ contains
 
     call profiling_in(prof, "HIRSHFELD_VOLUME_RATIO")
 
-    ASSERT(associated(this%total_density))
+    ASSERT(allocated(this%total_density))
     
     SAFE_ALLOCATE(atom_density(1:this%mesh%np, this%st%d%nspin))
     SAFE_ALLOCATE(hirshfeld_density(1:this%mesh%np))

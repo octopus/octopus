@@ -244,7 +244,7 @@ contains
 
     if(pes%calc_mask) call pes_mask_output (pes%mask, mesh, st, outp, namespace, "td.general/PESM", gr, geo,iter)
 
-    if(pes%calc_flux) call pes_flux_output(pes%flux, mesh, mesh%sb, st, namespace)
+    if(pes%calc_flux) call pes_flux_output(pes%flux, mesh%sb, st, namespace)
 
     POP_SUB(pes_output)
   end subroutine pes_output

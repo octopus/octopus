@@ -354,7 +354,7 @@ contains
 
     integer :: ii, jj, p1(MAX_DIM), time, current, size
     integer, allocatable :: st1(:), st2(:), st1r(:), stencil(:, :)
-    integer :: nn
+    integer :: nn, ip, idx(MAX_DIM)
     integer :: ir, maxp, iinner, iouter
     logical :: change, force_change
     character(len=200) :: flags
@@ -666,8 +666,11 @@ contains
 
         SAFE_ALLOCATE(stencil(1:op%mesh%sb%dim, 1:mesh%np_part))
 
-        do jj = 1, op%mesh%sb%dim
-          stencil(jj, 1:mesh%np_part) = op%mesh%idx%lxyz(1:mesh%np_part, jj) - mesh%idx%nr(1, jj)
+        do ip = 1, mesh%np_part
+          call index_to_coords(op%mesh%idx, ip, idx)
+          do jj = 1, op%mesh%sb%dim
+            stencil(jj, ip) = idx(jj) - mesh%idx%nr(1, jj)
+          end do
         end do
 
         ASSERT(minval(stencil) == 0)

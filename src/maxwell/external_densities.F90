@@ -84,7 +84,7 @@ contains
 
     type(block_t)        :: blk
     integer              :: ip, il, nlines, ncols, idir, ierr
-    FLOAT                :: j_vector(MAX_DIM), dummy(MAX_DIM), xx(MAX_DIM), rr, omega
+    FLOAT                :: j_vector(MAX_DIM), dummy(MAX_DIM), xx(1:mesh%sb%dim), rr, omega
     character(len=1024)  :: tdf_expression, phase_expression
 
     type(profile_t), save :: prof
@@ -190,7 +190,7 @@ contains
     FLOAT,               intent(inout) :: current(:,:)
 
     integer :: ip, jn, idir
-    FLOAT   :: xx(MAX_DIM), rr, tt, j_vector(MAX_DIM), dummy(MAX_DIM), amp(MAX_DIM)
+    FLOAT   :: xx(mesh%sb%dim), rr, tt, j_vector(MAX_DIM), dummy(MAX_DIM), amp(MAX_DIM)
     CMPLX   :: exp_arg
     type(profile_t), save :: prof
     FLOAT   :: tmp_amp, phase

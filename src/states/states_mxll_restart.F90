@@ -66,7 +66,7 @@ contains
 
     type(block_t)      :: blk
     integer            :: il, nlines, idim, ncols, ip, state_from, ierr, maxwell_field
-    FLOAT              :: xx(MAX_DIM), rr, e_value, dummy, b_value
+    FLOAT              :: xx(1:mesh%sb%dim), rr, e_value, dummy, b_value
     FLOAT, allocatable :: e_field(:), b_field(:)
     FLOAT, allocatable :: total_efield(:,:), total_bfield(:,:)
     CMPLX, allocatable :: rs_state_add(:), rs_state(:,:)
@@ -184,7 +184,7 @@ contains
             ! fill Maxwell states with user-defined formulas
             do ip = 1, mesh%np
               xx = mesh%x(ip, :)
-              rr = sqrt(sum(xx(:)**2))
+              rr = sqrt(sum(xx**2))
               ! parse user-defined expressions
               call parse_expression(e_value, dummy, st%dim, xx, rr, M_ZERO, &
                                     st%user_def_e_field(idim))
@@ -195,7 +195,7 @@ contains
             ! fill Maxwell states with user-defined formulas
             do ip = 1, mesh%np
               xx = mesh%x(ip, :)
-              rr = sqrt(sum(xx(:)**2))
+              rr = sqrt(sum(xx**2))
 
               call parse_expression(b_value, dummy, st%dim, xx, rr, M_ZERO, &
                                       st%user_def_b_field(idim))

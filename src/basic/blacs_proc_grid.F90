@@ -45,7 +45,7 @@ module blacs_proc_grid_oct_m
     integer, private :: iam           !< Process indentifier.
     integer          :: myrow         !< The row of the processor in the processor grid.
     integer          :: mycol         !< The column of the processor in the processor grid.
-    integer, pointer :: usermap(:, :) !< The index of each processor in the grid.
+    integer, allocatable :: usermap(:, :) !< The index of each processor in the grid.
   end type blacs_proc_grid_t
 
 contains
@@ -151,7 +151,7 @@ contains
   #ifdef HAVE_SCALAPACK
       call blacs_gridexit(this%context)
   #endif
-      SAFE_DEALLOCATE_P(this%usermap)
+      SAFE_DEALLOCATE_A(this%usermap)
     end if
 
     this%context = -1
@@ -182,8 +182,7 @@ contains
     if(cout%context /= -1) then
       ! we have to create a new context
       call blacs_get(-1, what = 0, val = cout%context)
-      SAFE_ALLOCATE(cout%usermap(1:cout%nprow, 1:cout%npcol))
-      cout%usermap = cin%usermap
+      SAFE_ALLOCATE_SOURCE_A(cout%usermap, cin%usermap)
       call blacs_gridmap(cout%context, cout%usermap(1, 1), cout%nprow, cout%nprow, cout%npcol)
     end if
     

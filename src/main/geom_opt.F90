@@ -49,7 +49,6 @@ module geom_opt_oct_m
   use unit_system_oct_m
   use v_ks_oct_m
   use varinfo_oct_m
-  use xyz_adjust_oct_m
 
   implicit none
 
@@ -248,7 +247,7 @@ contains
       g_opt%st     => sys%st
       g_opt%hm     => sys%hm
       g_opt%syst   => sys
-      g_opt%dim    =  sys%gr%mesh%sb%dim
+      g_opt%dim    =  sys%gr%sb%dim
 
       g_opt%size = g_opt%dim*g_opt%geo%natoms
 
@@ -604,7 +603,9 @@ contains
 
     call from_coords(g_opt, coords)
 
-    if(g_opt%fixed_atom /= 0) call xyz_adjust_it(g_opt%geo, g_opt%syst%namespace, rotate = .false.)
+    if(g_opt%fixed_atom /= 0) then
+      call geometry_translate(g_opt%geo, geometry_center(g_opt%geo))
+    end if
 
     call simul_box_atoms_in_box(g_opt%syst%gr%sb, g_opt%geo, g_opt%syst%namespace, &
       warn_if_not = .false., die_if_not = .true.)

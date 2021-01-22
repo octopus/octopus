@@ -187,7 +187,7 @@
     FLOAT,          intent(in)    :: time
 
     integer :: ip
-    FLOAT :: xx(MAX_DIM), rr, re, im
+    FLOAT :: xx(gr%sb%dim), rr, re, im
 
     PUSH_SUB(target_build_tdlocal)
 

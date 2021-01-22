@@ -126,7 +126,7 @@ contains
     call v_ks_h_setup(sys%namespace, sys%gr, sys%geo, sys%st, sys%ks, sys%hm, calc_eigenval = .false.) ! we read them from restart
 
     ! Allocate the dipole
-    SAFE_ALLOCATE(dipole(1:sys%gr%mesh%sb%dim, 1:sys%gr%mesh%sb%dim, 1:2))
+    SAFE_ALLOCATE(dipole(1:sys%gr%sb%dim, 1:sys%gr%sb%dim, 1:2))
     dipole = M_ZERO
 
     i_start = 1
@@ -151,16 +151,16 @@ contains
         read(iunit, fmt=*, iostat = ios) e_field_saved
         field_written = (ios  ==  0)
 
-        read(iunit, fmt=*, iostat = ios) (center_dipole(jj), jj = 1, sys%gr%mesh%sb%dim)
+        read(iunit, fmt=*, iostat = ios) (center_dipole(jj), jj = 1, sys%gr%sb%dim)
         center_written = (ios  ==  0)
 
         do ii = 1, 3
-          read(iunit, fmt=*, iostat = ios) ((dipole(ii, jj, isign), jj = 1, sys%gr%mesh%sb%dim), isign = 1, 2)
+          read(iunit, fmt=*, iostat = ios) ((dipole(ii, jj, isign), jj = 1, sys%gr%sb%dim), isign = 1, 2)
           if(ios /= 0) exit
           i_start = i_start + 1
         end do
 
-        read(iunit, fmt=*, iostat = ios) (diag_dipole(jj), jj = 1, sys%gr%mesh%sb%dim)
+        read(iunit, fmt=*, iostat = ios) (diag_dipole(jj), jj = 1, sys%gr%sb%dim)
         diagonal_done = (ios  ==  0)
 
         call restart_close(restart_load, iunit)
@@ -217,7 +217,7 @@ contains
 
     call output_init_()
     call scf_init(scfv, sys%namespace, sys%gr, sys%geo, sys%st, sys%mc, sys%hm, sys%ks)
-    call born_charges_init(Born_charges, sys%namespace, sys%geo, sys%st, sys%gr%mesh%sb%dim)
+    call born_charges_init(Born_charges, sys%namespace, sys%geo, sys%st, sys%gr%sb%dim)
 
     ! now calculate the dipole without field
 
@@ -237,14 +237,14 @@ contains
     end do
 
     ! calculate dipole
-    do jj = 1, sys%gr%mesh%sb%dim
+    do jj = 1, sys%gr%sb%dim
        center_dipole(jj) = dmf_moment(sys%gr%mesh, trrho, jj, 1)
     end do
 
     ! Writes the dipole to file
     if(.not. center_written) then 
       iunit = restart_open(restart_dump, RESTART_FILE, position='append')
-      write(line(1), fmt='(6e20.12)') (center_dipole(jj), jj = 1, sys%gr%mesh%sb%dim)
+      write(line(1), fmt='(6e20.12)') (center_dipole(jj), jj = 1, sys%gr%sb%dim)
       call restart_write(restart_dump, iunit, line, 1, ierr)
       if (ierr /= 0) then
         message(1) = "Unsuccessful write of center dipole."
@@ -254,12 +254,12 @@ contains
     end if
 
     if(mpi_grp_is_root(mpi_world)) then
-      call geometry_dipole(sys%geo, ionic_dipole)
-      print_dipole(1:sys%gr%mesh%sb%dim) = center_dipole(1:sys%gr%mesh%sb%dim) + ionic_dipole(1:sys%gr%mesh%sb%dim)
-      call output_dipole(stdout, print_dipole, sys%gr%mesh%sb%dim)
+      ionic_dipole = geometry_dipole(sys%geo)
+      print_dipole(1:sys%gr%sb%dim) = center_dipole(1:sys%gr%sb%dim) + ionic_dipole(1:sys%gr%sb%dim)
+      call output_dipole(stdout, print_dipole, sys%gr%sb%dim)
     end if
 
-    do ii = i_start, sys%gr%mesh%sb%dim
+    do ii = i_start, sys%gr%sb%dim
       do isign = 1, 2
         write(message(1), '(a)')
         write(message(2), '(a,f6.4,5a)') 'Info: Calculating dipole moment for field ', &
@@ -308,13 +308,13 @@ contains
         end do
 
         ! calculate dipole
-        do jj = 1, sys%gr%mesh%sb%dim
+        do jj = 1, sys%gr%sb%dim
           dipole(ii, jj, isign) = dmf_moment(sys%gr%mesh, trrho, jj, 1)
         end do
 
         if(mpi_grp_is_root(mpi_world)) then
-          print_dipole(1:sys%gr%mesh%sb%dim) = dipole(ii, 1:sys%gr%mesh%sb%dim, isign) + ionic_dipole(1:sys%gr%mesh%sb%dim)
-          call output_dipole(stdout, print_dipole, sys%gr%mesh%sb%dim)
+          print_dipole(1:sys%gr%sb%dim) = dipole(ii, 1:sys%gr%sb%dim, isign) + ionic_dipole(1:sys%gr%sb%dim)
+          call output_dipole(stdout, print_dipole, sys%gr%sb%dim)
         end if
 
         call output_cycle_()
@@ -332,7 +332,7 @@ contains
 
       ! Writes the dipole to file
       iunit = restart_open(restart_dump, RESTART_FILE, position='append')
-      write(line(1), '(6e20.12)') ((dipole(ii, jj, isign), jj = 1, sys%gr%mesh%sb%dim), isign = 1, 2)
+      write(line(1), '(6e20.12)') ((dipole(ii, jj, isign), jj = 1, sys%gr%sb%dim), isign = 1, 2)
       call restart_write(restart_dump, iunit, line, 1, ierr)
       if (ierr /= 0) then
         message(1) = "Unsuccessful write of dipole."
@@ -389,18 +389,18 @@ contains
       end do
   
       ! calculate dipole
-      do jj = 1, sys%gr%mesh%sb%dim
+      do jj = 1, sys%gr%sb%dim
         diag_dipole(jj) = dmf_moment(sys%gr%mesh, trrho, jj, 1)
       end do
 
       if(mpi_grp_is_root(mpi_world)) then
-        print_dipole(1:sys%gr%mesh%sb%dim) = diag_dipole(1:sys%gr%mesh%sb%dim) + ionic_dipole(1:sys%gr%mesh%sb%dim)
-        call output_dipole(stdout, print_dipole, sys%gr%mesh%sb%dim)
+        print_dipole(1:sys%gr%sb%dim) = diag_dipole(1:sys%gr%sb%dim) + ionic_dipole(1:sys%gr%sb%dim)
+        call output_dipole(stdout, print_dipole, sys%gr%sb%dim)
       end if
   
       ! Writes the dipole to file
       iunit = restart_open(restart_dump, RESTART_FILE, position='append')
-      write(line(1), fmt='(3e20.12)') (diag_dipole(jj), jj = 1, sys%gr%mesh%sb%dim)
+      write(line(1), fmt='(3e20.12)') (diag_dipole(jj), jj = 1, sys%gr%sb%dim)
       call restart_write(restart_dump, iunit, line, 1, ierr)
       if (ierr /= 0) then
         message(1) = "Unsuccessful write of dipole."
@@ -559,10 +559,10 @@ contains
         do iatom = 1, sys%geo%natoms
           if(isign == 1) then
           ! temporary assignment for use in next cycle when isign == 2
-            Born_charges%charge(ii, 1:sys%gr%mesh%sb%dim, iatom) = sys%geo%atom(iatom)%f(1:sys%gr%mesh%sb%dim)
+            Born_charges%charge(ii, 1:sys%gr%sb%dim, iatom) = sys%geo%atom(iatom)%f(1:sys%gr%sb%dim)
           else
-            Born_charges%charge(ii, 1:sys%gr%mesh%sb%dim, iatom) = &
-              (sys%geo%atom(iatom)%f(1:sys%gr%mesh%sb%dim) - Born_charges%charge(ii, 1:sys%gr%mesh%sb%dim, iatom)) &
+            Born_charges%charge(ii, 1:sys%gr%sb%dim, iatom) = &
+              (sys%geo%atom(iatom)%f(1:sys%gr%sb%dim) - Born_charges%charge(ii, 1:sys%gr%sb%dim, iatom)) &
               / (M_TWO*e_field)
             Born_charges%charge(ii, ii, iatom) = Born_charges%charge(ii, ii, iatom) + species_zval(sys%geo%atom(iatom)%species)
             ! since the efield is applied in the SCF calculation by just altering the external potential felt by the electrons,
@@ -602,7 +602,7 @@ contains
 
               ! save the trouble of writing many copies of each density, since ii,jj = jj,ii
               fn_unit = units_out%length**(2-sys%gr%sb%dim) / units_out%energy**2
-              do jj = ii, sys%gr%mesh%sb%dim
+              do jj = ii, sys%gr%sb%dim
                 write(fname, '(a,i1,4a)') 'fd2_density-sp', is, '-', index2axis(ii), '-', index2axis(jj)
                 call dio_function_output(sys%outp%how, EM_RESP_FD_DIR, trim(fname),&
                   sys%namespace, sys%gr%mesh, lr_rho2(:, is), fn_unit, ierr, geo = sys%geo)
@@ -610,7 +610,7 @@ contains
             end if
 
             if(bitand(sys%outp%what, OPTION__OUTPUT__POL_DENSITY) /= 0) then
-              do jj = ii, sys%gr%mesh%sb%dim
+              do jj = ii, sys%gr%sb%dim
                 fn_unit = units_out%length**(2-sys%gr%sb%dim) / units_out%energy
                 write(fname, '(a,i1,4a)') 'alpha_density-sp', is, '-', index2axis(ii), '-', index2axis(jj)
                 call dio_function_output(sys%outp%how, EM_RESP_FD_DIR, trim(fname), &
@@ -698,17 +698,17 @@ contains
         iunit = io_open(EM_RESP_FD_DIR//'alpha', sys%namespace, action='write')
         write(iunit, '(3a)') '# Polarizability tensor [', trim(units_abbrev(units_out%polarizability)), ']'
 
-        alpha(1:sys%gr%mesh%sb%dim, 1:sys%gr%mesh%sb%dim) = (dipole(1:sys%gr%mesh%sb%dim, 1:sys%gr%mesh%sb%dim, 1) - &
-             dipole(1:sys%gr%mesh%sb%dim, 1:sys%gr%mesh%sb%dim, 2)) / (M_TWO * e_field)
+        alpha(1:sys%gr%sb%dim, 1:sys%gr%sb%dim) = (dipole(1:sys%gr%sb%dim, 1:sys%gr%sb%dim, 1) - &
+             dipole(1:sys%gr%sb%dim, 1:sys%gr%sb%dim, 2)) / (M_TWO * e_field)
 
         beta = M_ZERO
 
-        do idir = 1, sys%gr%mesh%sb%dim
-          beta(1:sys%gr%mesh%sb%dim, idir, idir) = &
-            -(dipole(idir, 1:sys%gr%mesh%sb%dim, 1) + dipole(idir, 1:sys%gr%mesh%sb%dim, 2) - &
-            M_TWO * center_dipole(1:sys%gr%mesh%sb%dim)) / e_field**2
-          beta(idir, 1:sys%gr%mesh%sb%dim, idir) = beta(1:sys%gr%mesh%sb%dim, idir, idir) 
-          beta(idir, idir, 1:sys%gr%mesh%sb%dim) = beta(1:sys%gr%mesh%sb%dim, idir, idir)
+        do idir = 1, sys%gr%sb%dim
+          beta(1:sys%gr%sb%dim, idir, idir) = &
+            -(dipole(idir, 1:sys%gr%sb%dim, 1) + dipole(idir, 1:sys%gr%sb%dim, 2) - &
+            M_TWO * center_dipole(1:sys%gr%sb%dim)) / e_field**2
+          beta(idir, 1:sys%gr%sb%dim, idir) = beta(1:sys%gr%sb%dim, idir, idir) 
+          beta(idir, idir, 1:sys%gr%sb%dim) = beta(1:sys%gr%sb%dim, idir, idir)
         end do
 
         if(calc_diagonal) then
@@ -723,14 +723,14 @@ contains
         beta(1, 3, 2) = beta(1, 2, 3)
         beta(2, 1, 3) = beta(1, 2, 3)
 
-        call output_tensor(iunit, alpha, sys%gr%mesh%sb%dim, units_out%polarizability)
+        call output_tensor(iunit, alpha, sys%gr%sb%dim, units_out%polarizability)
         call io_close(iunit)
         
         freq_factor(1:3) = M_ZERO ! for compatibility with em_resp version
         call out_hyperpolarizability(sys%gr%sb, beta, freq_factor(1:3), .true., EM_RESP_FD_DIR, sys%namespace)
 
         if(calc_Born) then
-          call out_Born_charges(Born_charges, sys%geo, sys%namespace, sys%gr%mesh%sb%dim, &
+          call out_Born_charges(Born_charges, sys%geo, sys%namespace, sys%gr%sb%dim, &
             EM_RESP_FD_DIR, states_are_real(sys%st))
         end if
       end if

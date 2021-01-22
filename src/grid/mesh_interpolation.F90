@@ -20,8 +20,9 @@
 
 module mesh_interpolation_oct_m
   use comm_oct_m
-  use iso_c_binding
   use global_oct_m
+  use index_oct_m
+  use iso_c_binding
   use loct_math_oct_m
   use mesh_oct_m
   use messages_oct_m
@@ -67,19 +68,17 @@ contains
     this%mesh => mesh
 
     POP_SUB(mesh_interpolation_init)
-   
   end subroutine mesh_interpolation_init
   
   ! ---------------------------------------------------
-
-
   subroutine mesh_interpolation_end(this)
     type(mesh_interpolation_t), intent(inout)   :: this
 
     PUSH_SUB(mesh_interpolation_end)
-    
-    POP_SUB(mesh_interpolation_end)
-   
+
+    nullify(this%mesh)
+
+    POP_SUB(mesh_interpolation_end)  
   end subroutine mesh_interpolation_end
 
 
