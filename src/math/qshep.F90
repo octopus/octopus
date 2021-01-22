@@ -35,11 +35,11 @@ module qshep_oct_m
   type qshepr_t
    private
    integer :: npoints, nq, nw, nr, dim
-   integer, pointer :: lcell(:, :, :), lnext(:)
-   real(8), pointer :: rsq(:), a(:, :)
+   integer, allocatable :: lcell(:, :, :), lnext(:)
+   real(8), allocatable :: rsq(:), a(:, :)
    real(8) :: xmin, ymin, dx, dy, rmax, xyzmin(3), xyzdel(3)
 
-   real(8), pointer :: x(:), y(:), z(:)
+   real(8), allocatable :: x(:), y(:), z(:)
   end type qshepr_t
 
   type qshep_t
@@ -356,17 +356,13 @@ contains
 
     PUSH_SUB(qshepr_end)
 
-    if(associated(interp%lcell)) then
-      SAFE_DEALLOCATE_P(interp%lcell)
-      SAFE_DEALLOCATE_P(interp%lnext)
-      SAFE_DEALLOCATE_P(interp%rsq)
-      SAFE_DEALLOCATE_P(interp%a)
-      SAFE_DEALLOCATE_P(interp%x)
-      SAFE_DEALLOCATE_P(interp%y)
-      if(interp%dim .eq. 3) then
-         SAFE_DEALLOCATE_P(interp%z)
-      end if
-    end if
+    SAFE_DEALLOCATE_A(interp%lcell)
+    SAFE_DEALLOCATE_A(interp%lnext)
+    SAFE_DEALLOCATE_A(interp%rsq)
+    SAFE_DEALLOCATE_A(interp%a)
+    SAFE_DEALLOCATE_A(interp%x)
+    SAFE_DEALLOCATE_A(interp%y)
+    SAFE_DEALLOCATE_A(interp%z)
 
     POP_SUB(qshepr_end)
   end subroutine qshepr_end
