@@ -47,7 +47,7 @@ module batch_oct_m
     integer                                :: np
 
     integer                                :: ndims
-    integer,               pointer         :: ist_idim_index(:, :)
+    integer,           allocatable         :: ist_idim_index(:, :)
     integer,           allocatable, public :: ist(:)
 
     logical                                :: is_allocated
@@ -158,7 +158,7 @@ contains
       call this%deallocate_unpacked_host()
     end if
 
-    SAFE_DEALLOCATE_P(this%ist_idim_index)
+    SAFE_DEALLOCATE_A(this%ist_idim_index)
     SAFE_DEALLOCATE_A(this%ist)
 
     POP_SUB(batch_end)
