@@ -178,8 +178,6 @@ subroutine X(modelmb_sym_state_1diag)(gr, &
 
   PUSH_SUB(X(modelmb_sym_state_1diag))
 
-  call permutations_nullify(perms_up)
-  call permutations_nullify(perms_down)
   call young_nullify (young)
 
   sym_ok_alltypes = 0
