@@ -485,7 +485,7 @@ contains
     if(ep%nlcc) st%rho_core = M_ZERO
 
     do ia = geo%atoms_dist%start, geo%atoms_dist%end
-      if(.not.simul_box_in_box(sb, geo%atom(ia)%x, namespace) .and. ep%ignore_external_ions) cycle
+      if (.not. sb%contains_point(geo%atom(ia)%x) .and. ep%ignore_external_ions) cycle
 
       call epot_local_potential(ep, namespace, gr%der, gr%dgrid, geo, ia, ep%vpsl, density = density)
 
@@ -519,12 +519,12 @@ contains
     SAFE_DEALLOCATE_A(density)
 
     ! we assume that we need to recalculate the ion-ion energy
-    call ion_interaction_calculate(ep%ion_interaction, geo, sb, namespace, ep%ignore_external_ions, ep%eii, ep%fii)
+    call ion_interaction_calculate(ep%ion_interaction, geo, sb, ep%ignore_external_ions, ep%eii, ep%fii)
 
     ! the pseudopotential part.
     do ia = 1, geo%natoms
-      if(.not. species_is_ps(geo%atom(ia)%species)) cycle
-      if(.not.simul_box_in_box(sb, geo%atom(ia)%x, namespace) .and. ep%ignore_external_ions) cycle
+      if (.not. species_is_ps(geo%atom(ia)%species)) cycle
+      if (.not. sb%contains_point(geo%atom(ia)%x) .and. ep%ignore_external_ions) cycle
       call projector_end(ep%proj(ia))
       call projector_init(ep%proj(ia), geo%atom(ia), namespace, st%d%dim, ep%reltype)
     end do

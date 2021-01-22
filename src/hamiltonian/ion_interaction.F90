@@ -104,12 +104,11 @@ contains
   ! ---------------------------------------------------------
   !> For details about this routine, see
   !! http://octopus-code.org/wiki/Developers:Ion-Ion_interaction
-  subroutine ion_interaction_calculate(this, geo, sb, namespace, ignore_external_ions, energy, &
+  subroutine ion_interaction_calculate(this, geo, sb, ignore_external_ions, energy, &
       force, energy_components, force_components)
     type(ion_interaction_t),  intent(inout) :: this
     type(geometry_t), target, intent(in)    :: geo
     type(simul_box_t),        intent(in)    :: sb
-    type(namespace_t),        intent(in)    :: namespace
     logical,                  intent(in)    :: ignore_external_ions
     FLOAT,                    intent(out)   :: energy
     FLOAT,                    intent(out)   :: force(:, :)
@@ -162,10 +161,10 @@ contains
       if(ignore_external_ions) then
         SAFE_ALLOCATE(in_box(1:natom))
         do iatom = 1, geo%natoms
-          in_box(iatom) = simul_box_in_box(sb, geo%atom(iatom)%x, namespace)
+          in_box(iatom) = sb%contains_point(geo%atom(iatom)%x)
         end do
         do iatom = 1, geo%ncatoms
-          in_box(geo%natoms + iatom) = simul_box_in_box(sb, geo%catom(iatom)%x, namespace)
+          in_box(geo%natoms + iatom) = sb%contains_point(geo%catom(iatom)%x)
         end do
       end if
       
@@ -675,7 +674,7 @@ contains
     SAFE_ALLOCATE(force(1:sb%dim, 1:geo%natoms))
     SAFE_ALLOCATE(force_components(1:sb%dim, 1:geo%natoms, ION_NUM_COMPONENTS))
     
-    call ion_interaction_calculate(ion_interaction, geo, sb, namespace, .false., energy, force, &
+    call ion_interaction_calculate(ion_interaction, geo, sb, .false., energy, force, &
       energy_components = energy_components, force_components = force_components)
 
     call messages_write('Ionic energy        =')

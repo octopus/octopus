@@ -1,5 +1,5 @@
 !! Copyright (C) 2002-2006 M. Marques, A. Castro, A. Rubio, G. Bertsch
-!! Copyright (C) 2013 M. Oliveira
+!! Copyright (C) 2013,2021 M. Oliveira
 !!
 !! This program is free software; you can redistribute it and/or modify
 !! it under the terms of the GNU General Public License as published by
@@ -21,6 +21,7 @@
 
 module simul_box_oct_m
   use atom_oct_m
+  use box_oct_m
   use iso_c_binding
   use gdlib_oct_m
   use geometry_oct_m
@@ -59,8 +60,6 @@ module simul_box_oct_m
     simul_box_write_short_info, &
     simul_box_is_periodic,      &
     simul_box_has_zero_bc,      &
-    simul_box_in_box,           &
-    simul_box_in_box_vec,       &
     simul_box_atoms_in_box,     &
     simul_box_copy,             &
     simul_box_periodic_atom_in_box, &
@@ -96,7 +95,7 @@ module simul_box_oct_m
     FLOAT            :: center(MAX_DIM) !< central point
   end type multiresolution_t
 
-  type simul_box_t
+  type, extends(box_t) :: simul_box_t
     ! Components are public by default
     type(symmetries_t) :: symm
     !> 1->sphere, 2->cylinder, 3->sphere around each atom,
@@ -130,7 +129,6 @@ module simul_box_oct_m
     
     type(kpoints_t) :: kpoints                   !< the k-points
 
-    integer :: dim
     integer :: periodic_dim
 
     !> for the box defined through an image
@@ -138,6 +136,8 @@ module simul_box_oct_m
     type(c_ptr), private         :: image
     character(len=200), private  :: filename
 
+  contains
+    procedure :: contains_points => simul_box_contains_points
   end type simul_box_t
 
   character(len=22), parameter :: dump_tag = '*** simul_box_dump ***'
@@ -302,7 +302,7 @@ contains
       type(block_t) :: blk
 
       FLOAT :: default
-      integer :: default_boxshape, idir
+      integer :: default_boxshape, idir, iatom
 #if defined(HAVE_GDLIB)
       logical :: found
       integer :: box_npts
@@ -409,6 +409,18 @@ contains
         default=sb%rsize
         call parse_variable(namespace, 'radius', default, sb%rsize, units_inp%length)
         if(sb%rsize < M_ZERO .and. def_rsize < M_ZERO) call messages_input_error(namespace, 'Radius')
+
+        if (sb%rsize <= M_ZERO) then
+          do iatom = 1, sb%geo%natoms
+            if (species_def_rsize(sb%geo%atom(iatom)%species) < -M_EPSILON) then
+              write(message(1),'(a,a,a)') 'Using default radii for minimum box, but radius for ', &
+                trim(species_label(sb%geo%atom(iatom)%species)), ' is negative or undefined.'
+              message(2) = "Define it properly in the Species block or set the Radius variable explicitly."
+              call messages_fatal(2, namespace=namespace)
+            end if
+          end do
+        end if
+
       end select
 
       if(sb%box_shape == CYLINDER) then
@@ -859,11 +871,11 @@ contains
         geo%atom(iatom)%x(pd + 1:sb%dim) = M_TWO*sb%lsize(pd + 1:sb%dim)*geo%atom(iatom)%x(pd + 1:sb%dim)
       end if
 
-      if( .not. simul_box_in_box(sb, geo%atom(iatom)%x, namespace) ) then
+      if( .not. sb%contains_point(geo%atom(iatom)%x)) then
         write(message(1), '(a,i5,a)') "Atom ", iatom, " is outside the box." 
         if (sb%periodic_dim /= sb%dim) then
           ! FIXME: This could fail for partial periodicity systems
-          ! because simul_box_in_box is too strict with atoms close to
+          ! because contains_point is too strict with atoms close to
           ! the upper boundary to the cell.
           if(warn_if_not) call messages_warning(1, namespace=namespace)
           if(die_if_not_) call messages_fatal(1, namespace=namespace)
@@ -1135,38 +1147,17 @@ contains
   end subroutine simul_box_write_short_info
 
   !--------------------------------------------------------------
-  !> Checks if a mesh point belongs to the actual mesh.
-  logical function simul_box_in_box(sb, yy, namespace) result(in_box)
-    type(simul_box_t),  intent(in) :: sb
-    FLOAT,              intent(in) :: yy(:)
-    type(namespace_t),  intent(in) :: namespace
-
-    FLOAT :: xx(1:MAX_DIM, 1)
-    logical :: in_box2(1)
-
-    ! no push_sub because this function is called very frequently
-
-    xx(1:sb%dim, 1) = yy(1:sb%dim)
-
-    call simul_box_in_box_vec(sb, 1, xx, in_box2, namespace)
-    in_box = in_box2(1)
-
-  end function simul_box_in_box
-
-
-  !--------------------------------------------------------------
   !> Checks if a group of mesh points belong to the actual mesh.
-  subroutine simul_box_in_box_vec(sb, npoints, point, in_box, namespace)
-    type(simul_box_t),  intent(in)  :: sb
-    integer,            intent(in)  :: npoints
-    FLOAT,              intent(in)  :: point(:, :)
-    logical,            intent(out) :: in_box(:)
-    type(namespace_t),  intent(in)  :: namespace
+  function simul_box_contains_points(this, nn, xx) result(contained)
+    class(simul_box_t), intent(in)  :: this
+    integer,            intent(in)  :: nn
+    FLOAT,              intent(in)  :: xx(:, :) !< (1:, 1:this%dim)
+    logical :: contained(1:nn)
 
     FLOAT, parameter :: DELTA = CNST(1e-12)
     FLOAT :: rr, re, im, dist2, radius
     FLOAT :: llimit(MAX_DIM), ulimit(MAX_DIM)
-    FLOAT, allocatable :: xx(:, :)
+    FLOAT, allocatable :: xx_red(:, :)
     integer :: ip, idir, iatom, ilist
     integer, allocatable :: nlist(:)
     integer, pointer :: list(:, :)
@@ -1176,74 +1167,68 @@ contains
 #endif
 
     ! no push_sub because this function is called very frequently
-    SAFE_ALLOCATE(xx(1:sb%dim, 1:npoints))
-    xx = M_ZERO
+    SAFE_ALLOCATE(xx_red(1:nn, 1:this%dim))
+    xx_red = M_ZERO
     
     !convert from Cartesian to reduced lattice coord 
-    if(npoints == 1) then
-      xx(1:sb%dim, 1) = matmul(point(1:sb%dim, 1), sb%klattice_primitive(1:sb%dim, 1:sb%dim))
+    if (nn == 1) then
+      xx_red(1, 1:this%dim) = matmul(xx(1, 1:this%dim), this%klattice_primitive(1:this%dim, 1:this%dim))
     else
-      call lalg_gemmt(sb%dim, npoints, sb%dim, M_ONE, sb%klattice_primitive, point, M_ZERO, xx)
+      call lalg_gemm(nn, this%dim, this%dim, M_ONE, xx, this%klattice_primitive, M_ZERO, xx_red)
     end if
 
-    select case(sb%box_shape)
+    select case(this%box_shape)
     case(SPHERE)
-      do ip = 1, npoints
-        in_box(ip) = sum(xx(1:sb%dim, ip)**2) <= (sb%rsize+DELTA)**2
+      do ip = 1, nn
+        contained(ip) = sum(xx_red(ip, 1:this%dim)**2) <= (this%rsize + DELTA)**2
       end do
 
     case(CYLINDER)
-      do ip = 1, npoints
-        rr = sqrt(sum(xx(2:sb%dim, ip)**2))
-        in_box(ip) = rr <= sb%rsize + DELTA
-        if(sb%periodic_dim >= 1) then
-          in_box(ip) = in_box(ip) .and. xx(1, ip) >= -sb%xsize - DELTA
-          in_box(ip) = in_box(ip) .and. xx(1, ip) <=  sb%xsize - DELTA
+      do ip = 1, nn
+        rr = sqrt(sum(xx_red(ip, 2:this%dim)**2))
+        contained(ip) = rr <= this%rsize + DELTA
+        if(this%periodic_dim >= 1) then
+          contained(ip) = contained(ip) .and. xx_red(ip, 1) >= -this%xsize - DELTA
+          contained(ip) = contained(ip) .and. xx_red(ip, 1) <=  this%xsize - DELTA
         else
-          in_box(ip) = in_box(ip) .and. abs(xx(1, ip)) <= sb%xsize + DELTA
+          contained(ip) = contained(ip) .and. abs(xx_red(ip, 1)) <= this%xsize + DELTA
         end if
       end do
 
     case(MINIMUM)
 
-      if(sb%rsize > M_ZERO) then
-        radius = sb%rsize
+      if(this%rsize > M_ZERO) then
+        radius = this%rsize
       else
         radius = M_ZERO
-        do iatom = 1, sb%geo%natoms
-          if(species_def_rsize(sb%geo%atom(iatom)%species) < -M_EPSILON) then
-            write(message(1),'(a,a,a)') 'Using default radii for minimum box, but radius for ', &
-              trim(species_label(sb%geo%atom(iatom)%species)), ' is negative or undefined.'
-            message(2) = "Define it properly in the Species block or set the Radius variable explicitly."
-            call messages_fatal(2, namespace=namespace)
-          end if
-          radius = max(radius, species_def_rsize(sb%geo%atom(iatom)%species))
+        do iatom = 1, this%geo%natoms
+          radius = max(radius, species_def_rsize(this%geo%atom(iatom)%species))
         end do
       end if
 
       radius = radius + DELTA
 
-      SAFE_ALLOCATE(nlist(1:npoints))
+      SAFE_ALLOCATE(nlist(1:nn))
 
-      if(sb%rsize > M_ZERO) then
+      if(this%rsize > M_ZERO) then
         nullify(list)
-        call lookup_get_list(sb%atom_lookup, npoints, xx, radius, nlist)
+        call lookup_get_list(this%atom_lookup, nn, xx_red, radius, nlist)
       else
-        call lookup_get_list(sb%atom_lookup, npoints, xx, radius, nlist, list = list)
+        call lookup_get_list(this%atom_lookup, nn, xx_red, radius, nlist, list = list)
       end if
 
-      if(sb%rsize > M_ZERO) then
-        do ip = 1, npoints
-          in_box(ip) = (nlist(ip) /= 0)
+      if(this%rsize > M_ZERO) then
+        do ip = 1, nn
+          contained(ip) = (nlist(ip) /= 0)
         end do
       else
-        do ip = 1, npoints
-          in_box(ip) = .false.
+        do ip = 1, nn
+          contained(ip) = .false.
           do ilist = 1, nlist(ip)
             iatom = list(ilist, ip)
-            dist2 = sum((xx(1:sb%dim, ip) - sb%geo%atom(iatom)%x(1:sb%dim))**2)
-            if(dist2 < species_def_rsize(sb%geo%atom(iatom)%species)**2) then
-              in_box(ip) = .true.
+            dist2 = sum((xx_red(ip, 1:this%dim) - this%geo%atom(iatom)%x(1:this%dim))**2)
+            if(dist2 < species_def_rsize(this%geo%atom(iatom)%species)**2) then
+              contained(ip) = .true.
               exit
             end if
           end do
@@ -1254,12 +1239,12 @@ contains
       SAFE_DEALLOCATE_P(list)
 
     case(PARALLELEPIPED, HYPERCUBE) 
-      llimit(1:sb%dim) = -sb%lsize(1:sb%dim) - DELTA
-      ulimit(1:sb%dim) =  sb%lsize(1:sb%dim) + DELTA
-      ulimit(1:sb%periodic_dim)  = sb%lsize(1:sb%periodic_dim) - DELTA
+      llimit(1:this%dim) = -this%lsize(1:this%dim) - DELTA
+      ulimit(1:this%dim) =  this%lsize(1:this%dim) + DELTA
+      ulimit(1:this%periodic_dim)  = this%lsize(1:this%periodic_dim) - DELTA
 
-      do ip = 1, npoints
-        in_box(ip) = all(xx(1:sb%dim, ip) >= llimit(1:sb%dim) .and. xx(1:sb%dim, ip) <= ulimit(1:sb%dim))
+      do ip = 1, nn
+        contained(ip) = all(xx_red(ip, 1:this%dim) >= llimit(1:this%dim) .and. xx_red(ip, 1:this%dim) <= ulimit(1:this%dim))
       end do
 
 #if defined(HAVE_GDLIB)
@@ -1268,33 +1253,33 @@ contains
 ! as in standard graphing. ... The top left corner of the screen is (0,0).
 
     case(BOX_IMAGE)
-      do ip = 1, npoints
-        ix = nint(( xx(1, ip) + sb%lsize(1)) * sb%image_size(1) / (M_TWO * sb%lsize(1)))
-        iy = nint((-xx(2, ip) + sb%lsize(2)) * sb%image_size(2) / (M_TWO * sb%lsize(2)))
-        call gdlib_image_get_pixel_rgb(sb%image, ix, iy, red, green, blue)
-        in_box(ip) = (red == 255) .and. (green == 255) .and. (blue == 255)
+      do ip = 1, nn
+        ix = nint(( xx_red(ip, 1) + this%lsize(1)) * this%image_size(1) / (M_TWO * this%lsize(1)))
+        iy = nint((-xx_red(ip, 2) + this%lsize(2)) * this%image_size(2) / (M_TWO * this%lsize(2)))
+        call gdlib_image_get_pixel_rgb(this%image, ix, iy, red, green, blue)
+        contained(ip) = (red == 255) .and. (green == 255) .and. (blue == 255)
       end do
 #endif
 
     case(BOX_USDEF)
       ! is it inside the user-given boundaries?
-      do ip = 1, npoints
-        in_box(ip) =  all(xx(1:sb%dim, ip) >= -sb%lsize(1:sb%dim) - DELTA) &
-          .and. all(xx(1:sb%dim, ip) <= sb%lsize(1:sb%dim) + DELTA)
+      do ip = 1, nn
+        contained(ip) =  all(xx_red(ip, 1:this%dim) >= -this%lsize(1:this%dim) - DELTA) &
+          .and. all(xx(ip, 1:this%dim) <= this%lsize(1:this%dim) + DELTA)
 
         ! and inside the simulation box?
-        do idir = 1, sb%dim
-          xx(idir, ip) = units_from_atomic(units_inp%length, xx(idir, ip))
+        do idir = 1, this%dim
+          xx_red(ip, idir) = units_from_atomic(units_inp%length, xx_red(ip, idir))
         end do
-        rr = sqrt(sum(xx(1:sb%dim, ip)**2))
-        call parse_expression(re, im, sb%dim, xx(:, ip), rr, M_ZERO, sb%user_def)
-        in_box(ip) = in_box(ip) .and. (re /= M_ZERO)
+        rr = sqrt(sum(xx_red(ip, 1:this%dim)**2))
+        call parse_expression(re, im, this%dim, xx_red(ip, :), rr, M_ZERO, this%user_def)
+        contained(ip) = contained(ip) .and. (re /= M_ZERO)
       end do
     end select
 
-    SAFE_DEALLOCATE_A(xx)
+    SAFE_DEALLOCATE_A(xx_red)
 
-  end subroutine simul_box_in_box_vec
+  end function simul_box_contains_points
 
 
   !--------------------------------------------------------------
