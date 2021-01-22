@@ -299,12 +299,12 @@ contains
       call mesh_end(gr%fine%mesh)
       SAFE_DEALLOCATE_P(gr%fine%mesh)
       SAFE_DEALLOCATE_P(gr%fine%der)
-      SAFE_DEALLOCATE_P(gr%fine%tt%to_coarse)
-      SAFE_DEALLOCATE_P(gr%fine%tt%to_fine1)
-      SAFE_DEALLOCATE_P(gr%fine%tt%to_fine2)
-      SAFE_DEALLOCATE_P(gr%fine%tt%to_fine4)
-      SAFE_DEALLOCATE_P(gr%fine%tt%to_fine8)
-      SAFE_DEALLOCATE_P(gr%fine%tt%fine_i)
+      SAFE_DEALLOCATE_A(gr%fine%tt%to_coarse)
+      SAFE_DEALLOCATE_A(gr%fine%tt%to_fine1)
+      SAFE_DEALLOCATE_A(gr%fine%tt%to_fine2)
+      SAFE_DEALLOCATE_A(gr%fine%tt%to_fine4)
+      SAFE_DEALLOCATE_A(gr%fine%tt%to_fine8)
+      SAFE_DEALLOCATE_A(gr%fine%tt%fine_i)
     end if
 
     call double_grid_end(gr%dgrid)
