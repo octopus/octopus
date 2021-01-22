@@ -78,7 +78,6 @@ contains
 
     !this%method
     !call exponential_nullify(this%te)
-    call potential_interpolation_nullify(this%vksold)
     this%vmagnus => null() 
     !this%scf_propagation_steps 
     !this%first
