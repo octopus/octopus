@@ -76,9 +76,9 @@ module eigensolver_oct_m
     FLOAT           :: imag_time
 
     !> Stores information about how well it performed.
-    FLOAT, pointer,   public :: diff(:, :)
-    integer,          public :: matvec
-    integer, pointer, public :: converged(:)
+    FLOAT, allocatable,   public :: diff(:, :)
+    integer,              public :: matvec
+    integer, allocatable, public :: converged(:)
 
     !> Stores information about the preconditioning.
     type(preconditioner_t), public :: pre
@@ -360,7 +360,6 @@ contains
       call preconditioner_null(eigens%pre)
     end if
 
-    nullify(eigens%diff)
     SAFE_ALLOCATE(eigens%diff(1:st%nst, 1:st%d%nik))
     eigens%diff(1:st%nst, 1:st%d%nik) = 0
 
@@ -423,8 +422,8 @@ contains
       call preconditioner_end(eigens%pre)
     end select
 
-    SAFE_DEALLOCATE_P(eigens%converged)
-    SAFE_DEALLOCATE_P(eigens%diff)
+    SAFE_DEALLOCATE_A(eigens%converged)
+    SAFE_DEALLOCATE_A(eigens%diff)
 
     POP_SUB(eigensolver_end)
   end subroutine eigensolver_end
