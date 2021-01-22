@@ -363,9 +363,9 @@
   ! ----------------------------------------------------------------------
   !> 
   FLOAT function target_j1_density(gr, tg, psi) result(j1)
-    type(grid_t),        intent(in) :: gr
-    type(target_t),      intent(in) :: tg
-    type(states_elec_t), intent(in) :: psi
+    type(grid_t),        intent(in)    :: gr
+    type(target_t),      intent(in)    :: tg
+    type(states_elec_t), intent(inout) :: psi
 
     integer :: ip, maxiter
     FLOAT :: currfunc_tmp
@@ -413,7 +413,7 @@
   subroutine target_chi_density(tg, gr, psi_in, chi_out)
     type(target_t),      intent(in)    :: tg
     type(grid_t),        intent(in)    :: gr
-    type(states_elec_t), intent(in)    :: psi_in
+    type(states_elec_t), intent(inout) :: psi_in
     type(states_elec_t), intent(inout) :: chi_out
 
     integer :: no_electrons, ip, ist, ib, ik
@@ -491,7 +491,7 @@
   subroutine target_tdcalc_density(tg, gr, psi, time)
     type(target_t),      intent(inout) :: tg
     type(grid_t),        intent(in)    :: gr
-    type(states_elec_t), intent(in)    :: psi
+    type(states_elec_t), intent(inout) :: psi
     integer,             intent(in)    :: time
 
     PUSH_SUB(target_tdcalc_density)
@@ -510,9 +510,9 @@
   !> Calculates a current functional that may be combined with
   !! other functionals found in function target_j1.
   FLOAT function jcurr_functional(tg, gr, psi) result(jcurr)
-    type(target_t),      intent(in) :: tg
-    type(grid_t),        intent(in) :: gr
-    type(states_elec_t), intent(in) :: psi
+    type(target_t),      intent(in)    :: tg
+    type(grid_t),        intent(in)    :: gr
+    type(states_elec_t), intent(inout) :: psi
 
     integer :: ip
     FLOAT, allocatable :: semilocal_function(:)
@@ -573,7 +573,7 @@
     type(target_t),       intent(in)    :: tg
     type(grid_t),         intent(in)    :: gr
     FLOAT,                intent(in)    :: factor
-    type(states_elec_t),  intent(in)    :: psi_in
+    type(states_elec_t),  intent(inout) :: psi_in
     type(states_elec_t),  intent(inout) :: chi
 
     CMPLX, allocatable :: grad_psi_in(:,:,:), zpsi(:, :), zchi(:, :)

@@ -178,11 +178,11 @@ contains
 
   ! ---------------------------------------------------------
   subroutine derivatives_init(der, namespace, sb, use_curvilinear, order)
-    type(derivatives_t), target, intent(out) :: der
-    type(namespace_t),           intent(in)  :: namespace
-    type(simul_box_t),           intent(in)  :: sb
-    logical,                     intent(in)  :: use_curvilinear
-    integer, optional,           intent(in)  :: order
+    type(derivatives_t), target, intent(inout) :: der
+    type(namespace_t),           intent(in)    :: namespace
+    type(simul_box_t),           intent(in)    :: sb
+    logical,                     intent(in)    :: use_curvilinear
+    integer, optional,           intent(in)    :: order
 
     integer :: idir
     integer :: default_stencil
@@ -342,8 +342,8 @@ contains
 
   ! ---------------------------------------------------------
   subroutine derivatives_get_stencil_lapl(der, sb)
-    type(derivatives_t),      intent(inout) :: der
-    type(simul_box_t), optional,intent(in)  :: sb
+    type(derivatives_t), intent(inout) :: der
+    type(simul_box_t),   intent(in)    :: sb
 
     PUSH_SUB(derivatives_get_stencil_lapl)
 
