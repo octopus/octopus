@@ -96,12 +96,12 @@ contains
     logical, optional,     intent(in)    :: force_alloc  
       
     integer :: n1, n2, n3
-    logical :: allocated
+    logical :: is_allocated
     
     PUSH_SUB(cube_function_alloc_fs)
     
     ASSERT(.not. associated(cf%fs))
-    ASSERT(associated(cube%fft))
+    ASSERT(allocated(cube%fft))
     
     cf%forced_alloc = optional_default(force_alloc, .false.)
 
@@ -109,37 +109,35 @@ contains
     n2 = max(1, cube%fs_n(2))
     n3 = max(1, cube%fs_n(3))
 
-    allocated = .false.
+    is_allocated = .false.
     
     select case(cube%fft%library)
     case(FFTLIB_PFFT)
       if(.not. cf%forced_alloc) then 
-        allocated = .true.
-        ASSERT(associated(cube%fft))  
+        is_allocated = .true.
         if(any(cube%fs_n(1:3) == 0)) then
           cf%fs => cube%fft%fs_data(1:1,1:1,1:1)
         else
           cf%fs => cube%fft%fs_data(1:n3,1:n1,1:n2)
         end if
       else ! force allocate transposed with PFFT  
-        allocated = .true.
+        is_allocated = .true.
         SAFE_ALLOCATE(cf%fs(1:n3, 1:n1, 1:n2))
       end if
     case(FFTLIB_ACCEL)
       if(cf%in_device_memory) then
-        allocated = .true.
+        is_allocated = .true.
         call accel_create_buffer(cf%fourier_space_buffer, ACCEL_MEM_READ_WRITE, TYPE_CMPLX, product(cube%fs_n(1:3)))
       end if
 
     case(FFTLIB_FFTW)
       if(.not. cf%forced_alloc) then
-        allocated = .true.
-        ASSERT(associated(cube%fft))
+        is_allocated = .true.
         cf%fs => cube%fft%fs_data(1:cube%fs_n(1), 1:cube%fs_n(2), 1:cube%fs_n(3))
       end if
     end select
 
-    if(.not. allocated) then
+    if(.not. is_allocated) then
       SAFE_ALLOCATE(cf%fs(1:cube%fs_n(1), 1:cube%fs_n(2), 1:cube%fs_n(3)))
     end if
     
@@ -157,7 +155,7 @@ contains
 
     PUSH_SUB(cube_function_free_fs)
 
-    ASSERT(associated(cube%fft))
+    ASSERT(allocated(cube%fft))
 
     deallocated = .false.
 

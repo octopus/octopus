@@ -26,7 +26,7 @@ subroutine X(cube_function_rs2fs)(cube, cf)
 
   PUSH_SUB(X(cube_function_rs2fs))
 
-  ASSERT(associated(cube%fft))
+  ASSERT(allocated(cube%fft))
   ASSERT(cube%fft%library /= FFTLIB_NONE)
 
   if(cf%in_device_memory) then
@@ -48,7 +48,7 @@ subroutine X(cube_function_fs2rs)(cube, cf)
 
   PUSH_SUB(X(cube_function_fs2rs))
 
-  ASSERT(associated(cube%fft))
+  ASSERT(allocated(cube%fft))
   ASSERT(cube%fft%library /= FFTLIB_NONE)
 
   if(cf%in_device_memory) then
@@ -75,7 +75,7 @@ subroutine X(fourier_space_op_init)(this, cube, op, in_device)
 
   PUSH_SUB(X(fourier_space_op_init))
 
-  ASSERT(associated(cube%fft))
+  ASSERT(allocated(cube%fft))
   ASSERT(cube%fft%library /= FFTLIB_NONE)
 
 #ifdef R_TREAL
@@ -136,7 +136,7 @@ subroutine X(fourier_space_op_apply)(this, cube, cf)
 
   PUSH_SUB(X(fourier_space_op_apply))
 
-  ASSERT(associated(cube%fft))
+  ASSERT(allocated(cube%fft))
   ASSERT(cube%fft%library /= FFTLIB_NONE)
   ASSERT(cf%in_device_memory .eqv. this%in_device_memory)
 

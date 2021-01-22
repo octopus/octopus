@@ -28,43 +28,41 @@ subroutine X(cube_function_alloc_rs)(cube, cf, in_device, force_alloc)
   logical, optional,     intent(in)    :: in_device
   logical, optional,     intent(in)    :: force_alloc
 
-  logical :: allocated
+  logical :: is_allocated
   
   PUSH_SUB(X(cube_function_alloc_rs))
 
   ASSERT(.not.associated(cf%X(rs)))
 
-  allocated = .false.
+  is_allocated = .false.
 
   cf%forced_alloc = optional_default(force_alloc, .false.)
 
-  if(associated(cube%fft)) then
+  if (allocated(cube%fft)) then
     select case(cube%fft%library)
     case(FFTLIB_PFFT)
 
-      ASSERT(associated(cube%fft))
       if(.not. cf%forced_alloc) then 
-        allocated = .true.
+        is_allocated = .true.
         cf%X(rs) => cube%fft%X(rs_data)(1:cube%rs_n(1), 1:cube%rs_n(2), 1:cube%rs_n(3))
       end if
     case(FFTLIB_ACCEL)
       if(optional_default(in_device, .true.)) then
-        allocated = .true.
+        is_allocated = .true.
         cf%in_device_memory = .true.
         call accel_create_buffer(cf%real_space_buffer, ACCEL_MEM_READ_WRITE, R_TYPE_VAL, product(cube%rs_n(1:3)))
       end if
     !We use aligned memory for FFTW
     case(FFTLIB_FFTW)
       if(.not. cf%forced_alloc) then
-        ASSERT(associated(cube%fft))
         ASSERT(cube%fft%aligned_memory)
-        allocated = .true.
+        is_allocated = .true.
         cf%X(rs) => cube%fft%X(rs_data)(1:cube%rs_n(1), 1:cube%rs_n(2), 1:cube%rs_n(3))
       end if
     end select
   end if
 
-  if(.not. allocated) then
+  if(.not. is_allocated) then
     SAFE_ALLOCATE(cf%X(rs)(1:cube%rs_n(1), 1:cube%rs_n(2), 1:cube%rs_n(3)))
   end if
 
@@ -84,7 +82,7 @@ subroutine X(cube_function_free_rs)(cube, cf)
 
   deallocated = .false.
 
-  if(associated(cube%fft)) then
+  if (allocated(cube%fft)) then
      select case(cube%fft%library)
      case(FFTLIB_PFFT)
         if(.not. cf%forced_alloc) then
