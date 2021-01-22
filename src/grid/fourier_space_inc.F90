@@ -78,9 +78,6 @@ subroutine X(fourier_space_op_init)(this, cube, op, in_device)
   ASSERT(associated(cube%fft))
   ASSERT(cube%fft%library /= FFTLIB_NONE)
 
-  nullify(this%dop)
-  nullify(this%zop)
-
 #ifdef R_TREAL
   this%real_op = .true.
 #else

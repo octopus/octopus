@@ -54,8 +54,8 @@ module fourier_space_oct_m
 
   type fourier_space_op_t
     private
-    FLOAT, pointer :: dop(:, :, :)
-    CMPLX, pointer :: zop(:, :, :)
+    FLOAT, allocatable :: dop(:, :, :)
+    CMPLX, allocatable :: zop(:, :, :)
     logical :: in_device_memory
     type(accel_mem_t) :: op_buffer
     logical :: real_op
@@ -74,8 +74,6 @@ contains
 
     PUSH_SUB(fourier_space_op_end)
 
-    nullify(this%dop)
-    nullify(this%zop) 
     this%in_device_memory = .false.
  
     !We just set a very large q to guaranty that the kernel is always
@@ -200,8 +198,8 @@ contains
       call accel_release_buffer(this%op_buffer)
       this%in_device_memory = .false.
     end if
-    SAFE_DEALLOCATE_P(this%dop)
-    SAFE_DEALLOCATE_P(this%zop)
+    SAFE_DEALLOCATE_A(this%dop)
+    SAFE_DEALLOCATE_A(this%zop)
     
 
     POP_SUB(fourier_space_op_end)
