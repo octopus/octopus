@@ -40,10 +40,10 @@ module volume_oct_m
 
   type volume_t
     private
-    integer          :: n_elements
-    logical, pointer :: join(:)      => NULL()         ! Add or subtract the volume
-    integer, pointer :: type(:)      => NULL()         ! sphere, slab, etc.
-    FLOAT,   pointer :: params(:,:)  => NULL()         ! parameters of the elements
+    integer              :: n_elements
+    logical, allocatable :: join(:)         ! Add or subtract the volume
+    integer, allocatable :: type(:)         ! sphere, slab, etc.
+    FLOAT,   allocatable :: params(:,:)     ! parameters of the elements
   end type volume_t
 
 contains
@@ -57,9 +57,9 @@ contains
   subroutine volume_end(vol)
     type(volume_t),   intent(inout) :: vol
 
-    SAFE_DEALLOCATE_P(vol%join)
-    SAFE_DEALLOCATE_P(vol%type)
-    SAFE_DEALLOCATE_P(vol%params)
+    SAFE_DEALLOCATE_A(vol%join)
+    SAFE_DEALLOCATE_A(vol%type)
+    SAFE_DEALLOCATE_A(vol%params)
   end subroutine volume_end
 
   subroutine volume_read_from_block(vol, namespace, block_name)
