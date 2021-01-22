@@ -33,7 +33,6 @@ module modelmb_1part_oct_m
   private
 
   public :: modelmb_1part_init, &
-            modelmb_1part_nullify, &
             modelmb_1part_end, &
             modelmb_1part_t
 
@@ -43,12 +42,12 @@ module modelmb_1part_oct_m
     integer :: ndim1part
     integer, private :: npt_part
     integer :: npt
-    FLOAT :: vol_elem_1part
-    FLOAT, pointer :: origin(:)
-    integer, pointer :: enlarge_1part(:)
-    integer, pointer :: nr_1part(:,:)
-    integer, pointer, private :: ll(:)
-    FLOAT, pointer :: h_1part(:)
+    FLOAT   :: vol_elem_1part
+    FLOAT,   allocatable :: origin(:)
+    integer, allocatable :: enlarge_1part(:)
+    integer, allocatable :: nr_1part(:,:)
+    integer, allocatable, private :: ll(:)
+    FLOAT,   allocatable :: h_1part(:)
     type(hypercube_t) :: hypercube_1part
   end type modelmb_1part_t
 
@@ -114,31 +113,16 @@ subroutine modelmb_1part_init(this, mesh, ikeeppart, ndim1part)
 end subroutine modelmb_1part_init
 
 
-subroutine modelmb_1part_nullify(this)
-  type(modelmb_1part_t), intent(out) :: this
-
-  PUSH_SUB(modelmb_1part_nullify)
-
-  nullify(this%origin)
-  nullify(this%enlarge_1part)
-  nullify(this%nr_1part)
-  nullify(this%ll)
-  nullify(this%h_1part)
-
-  POP_SUB(modelmb_1part_nullify)
-end subroutine modelmb_1part_nullify
-
-
 subroutine modelmb_1part_end(this)
   type(modelmb_1part_t), intent(inout) :: this
 
   PUSH_SUB(modelmb_1part_end)
 
-  SAFE_DEALLOCATE_P(this%origin)
-  SAFE_DEALLOCATE_P(this%enlarge_1part)
-  SAFE_DEALLOCATE_P(this%nr_1part)
-  SAFE_DEALLOCATE_P(this%ll)
-  SAFE_DEALLOCATE_P(this%h_1part)
+  SAFE_DEALLOCATE_A(this%origin)
+  SAFE_DEALLOCATE_A(this%enlarge_1part)
+  SAFE_DEALLOCATE_A(this%nr_1part)
+  SAFE_DEALLOCATE_A(this%ll)
+  SAFE_DEALLOCATE_A(this%h_1part)
 
   call hypercube_end(this%hypercube_1part)
 
