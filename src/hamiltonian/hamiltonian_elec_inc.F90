@@ -105,7 +105,7 @@ subroutine X(hamiltonian_elec_apply_batch) (hm, namespace, mesh, psib, hpsib, te
   ASSERT(psib%nst == hpsib%nst)
   ASSERT(psib%ik >= hm%d%kpt%start .and. psib%ik <= hm%d%kpt%end)
 
-  apply_phase = associated(hm%hm_base%phase)
+  apply_phase = allocated(hm%hm_base%phase)
 
   pack = hamiltonian_elec_apply_packed(hm) &
     .and. (accel_is_enabled() .or. psib%nst_linear > 1) &

@@ -364,7 +364,7 @@ contains
              call boundaries_set(der%boundaries, psi(:, idim))
           end do
           
-          if(associated(hm%hm_base%phase)) then 
+          if (allocated(hm%hm_base%phase)) then 
             call states_elec_set_phase(st%d, psi, hm%hm_base%phase(1:der%mesh%np_part, ik), der%mesh%np_part,.false.)  
           end if
           
@@ -547,7 +547,7 @@ contains
              call boundaries_set(der%boundaries, psi(:, idim))
           end do
 
-          if(associated(hm%hm_base%phase)) then 
+          if (allocated(hm%hm_base%phase)) then 
             call states_elec_set_phase(st%d, psi, hm%hm_base%phase(1:der%mesh%np_part, ik), der%mesh%np_part, .false.)
           end if
           

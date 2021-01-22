@@ -427,8 +427,6 @@ contains
       end if 
     end if
  
-
-    nullify(hm%hm_base%phase)
     if (.not. kpoints_gamma_only(gr%sb%kpoints)) then
       call init_phase()
     end if
@@ -792,7 +790,7 @@ contains
 
     call hamiltonian_elec_base_end(hm%hm_base)
 
-    if(associated(hm%hm_base%phase) .and. accel_is_enabled()) then
+    if (allocated(hm%hm_base%phase) .and. accel_is_enabled()) then
       call accel_release_buffer(hm%hm_base%buff_phase)
     end if
 
@@ -800,7 +798,7 @@ contains
       call accel_release_buffer(hm%hm_base%buff_phase_spiral)
     end if
 
-    SAFE_DEALLOCATE_P(hm%hm_base%phase)
+    SAFE_DEALLOCATE_A(hm%hm_base%phase)
     SAFE_DEALLOCATE_A(hm%hm_base%phase_corr)
     SAFE_DEALLOCATE_A(hm%hm_base%phase_spiral)
     SAFE_DEALLOCATE_A(hm%vhartree)
@@ -1085,7 +1083,7 @@ contains
 
       if(allocated(this%hm_base%uniform_vector_potential)) then
 
-        if(.not. associated(this%hm_base%phase)) then
+        if(.not. allocated(this%hm_base%phase)) then
           SAFE_ALLOCATE(this%hm_base%phase(1:mesh%np_part, this%d%kpt%start:this%d%kpt%end))
           if(accel_is_enabled()) then
             call accel_create_buffer(this%hm_base%buff_phase, ACCEL_MEM_READ_ONLY, TYPE_CMPLX, mesh%np_part*this%d%kpt%nlocal)
@@ -1145,7 +1143,7 @@ contains
       nmat = this%hm_base%nprojector_matrices
 
 
-      if(associated(this%hm_base%phase) .and. allocated(this%hm_base%projector_matrices)) then
+      if (allocated(this%hm_base%phase) .and. allocated(this%hm_base%projector_matrices)) then
 
         nphase = 1
         if(this%der%boundaries%spiralBC) nphase = 3
@@ -1309,7 +1307,7 @@ contains
 
     end if
 
-    call lda_u_update_basis(this%lda_u, gr, geo, st, this%psolver, namespace, associated(this%hm_base%phase))
+    call lda_u_update_basis(this%lda_u, gr, geo, st, this%psolver, namespace, allocated(this%hm_base%phase))
 
     POP_SUB(hamiltonian_elec_epot_generate)
   end subroutine hamiltonian_elec_epot_generate
@@ -1661,7 +1659,7 @@ contains
       end if
 
       if(allocated(this%hm_base%uniform_vector_potential)) then
-        if(.not. associated(this%hm_base%phase)) then
+        if (.not. allocated(this%hm_base%phase)) then
           SAFE_ALLOCATE(this%hm_base%phase(1:mesh%np_part, this%d%kpt%start:this%d%kpt%end))
           if(accel_is_enabled()) then
             call accel_create_buffer(this%hm_base%buff_phase, ACCEL_MEM_READ_ONLY, TYPE_CMPLX, mesh%np_part*this%d%kpt%nlocal)
@@ -1687,7 +1685,7 @@ contains
       nmat = this%hm_base%nprojector_matrices
 
 
-      if(associated(this%hm_base%phase) .and. allocated(this%hm_base%projector_matrices)) then
+      if (allocated(this%hm_base%phase) .and. allocated(this%hm_base%projector_matrices)) then
 
         nphase = 1
         if(this%der%boundaries%spiralBC) nphase = 3

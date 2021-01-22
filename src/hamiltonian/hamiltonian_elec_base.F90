@@ -122,7 +122,7 @@ module hamiltonian_elec_base_oct_m
     type(accel_mem_t)                             :: buff_invmap
     type(accel_mem_t),                     public :: buff_projector_phases
     type(accel_mem_t)                             :: buff_mix
-    CMPLX,                    pointer,     public :: phase(:, :)
+    CMPLX,                    allocatable, public :: phase(:, :)
     CMPLX,                    allocatable, public :: phase_corr(:,:)
     CMPLX,                    allocatable, public :: phase_spiral(:,:)
     type(accel_mem_t),                     public :: buff_phase
@@ -844,8 +844,7 @@ contains
     PUSH_SUB(hamiltonian_elec_base_set_phase_corr)
 
     ! check if we only want a phase correction for the boundary points
-    phase_correction = .false.
-    if(associated(hm_base%phase)) phase_correction = .true.
+    phase_correction = allocated(hm_base%phase)
 
     !We apply the phase only to np points, and the phase for the np+1 to np_part points
     !will be treated as a phase correction in the Hamiltonian
@@ -854,7 +853,6 @@ contains
     end if
 
     POP_SUB(hamiltonian_elec_base_set_phase_corr)
-
   end subroutine hamiltonian_elec_base_set_phase_corr
 
   ! ----------------------------------------------------------------------------------
@@ -869,17 +867,15 @@ contains
     PUSH_SUB(hamiltonian_elec_base_unset_phase_corr)
 
     ! check if we only want a phase correction for the boundary points
-    phase_correction = .false.
-    if(associated(hm_base%phase)) phase_correction = .true.
+    phase_correction = allocated(hm_base%phase)
 
     !We apply the phase only to np points, and the phase for the np+1 to np_part points
     !will be treated as a phase correction in the Hamiltonian
-    if(phase_correction) then
+    if (phase_correction) then
       call hamiltonian_elec_base_phase(hm_base, mesh, mesh%np, .true., psib)
     end if
 
     POP_SUB(hamiltonian_elec_base_unset_phase_corr)
-
   end subroutine hamiltonian_elec_base_unset_phase_corr
 
   ! ---------------------------------------------------------------------------------------

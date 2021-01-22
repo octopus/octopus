@@ -635,7 +635,7 @@ contains
     if (states_are_real(st)) then
       call dupdate_occ_matrices(this, namespace, mesh, st, energy%dft_u)
     else
-      if(associated(hm_base%phase)) then
+      if (allocated(hm_base%phase)) then
         call zupdate_occ_matrices(this, namespace, mesh, st, energy%dft_u, hm_base%phase)
       else
         call zupdate_occ_matrices(this, namespace, mesh, st, energy%dft_u)

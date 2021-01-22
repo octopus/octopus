@@ -1286,7 +1286,7 @@ contains
             call dexchange_operator_ACE(hm%exxop, ks%gr%der, ks%calc%hf_st)
           else
             call zexchange_operator_compute_potentials(hm%exxop, namespace, ks%gr%der, ks%gr%sb, ks%calc%hf_st)
-            if(associated(hm%hm_base%phase)) then
+            if (allocated(hm%hm_base%phase)) then
               call zexchange_operator_ACE(hm%exxop, ks%gr%der, ks%calc%hf_st, &
                     hm%hm_base%phase(1:ks%gr%der%mesh%np, ks%calc%hf_st%d%kpt%start:ks%calc%hf_st%d%kpt%end))
             else

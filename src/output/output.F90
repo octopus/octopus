@@ -723,7 +723,7 @@ contains
         call lda_u_write_magnetization(dir, hm%lda_u, geo, gr%mesh, st, namespace)
 
       if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__LOCAL_ORBITALS) /= 0)&
-        call output_dftu_orbitals(outp, dir, namespace, hm%lda_u, st, gr%mesh, geo, associated(hm%hm_base%phase))
+        call output_dftu_orbitals(outp, dir, namespace, hm%lda_u, st, gr%mesh, geo, allocated(hm%hm_base%phase))
 
       if(iand(outp%what_lda_u, OPTION__OUTPUTLDA_U__KANAMORIU) /= 0)&
         call lda_u_write_kanamoriU(dir, st, hm%lda_u, namespace)
