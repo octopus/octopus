@@ -46,10 +46,10 @@ module logrid_oct_m
     FLOAT    :: a, b
     integer  :: nrval
 
-    FLOAT, pointer :: rofi(:)  !< r value of the point i
-    FLOAT, pointer :: r2ofi(:) !< r value of the point i
-    FLOAT, pointer :: drdi(:)  !< Jacobian, i.e., the derivative of r in terms of i
-    FLOAT, pointer :: s(:)     !< sqrt of drdi
+    FLOAT, allocatable :: rofi(:)  !< r value of the point i
+    FLOAT, allocatable :: r2ofi(:) !< r value of the point i
+    FLOAT, allocatable :: drdi(:)  !< Jacobian, i.e., the derivative of r in terms of i
+    FLOAT, allocatable :: s(:)     !< sqrt of drdi
   end type logrid_t
 
 contains
@@ -117,10 +117,10 @@ contains
 
     PUSH_SUB(logrid_end)
 
-    SAFE_DEALLOCATE_P(grid%rofi)
-    SAFE_DEALLOCATE_P(grid%r2ofi)
-    SAFE_DEALLOCATE_P(grid%drdi)
-    SAFE_DEALLOCATE_P(grid%s)
+    SAFE_DEALLOCATE_A(grid%rofi)
+    SAFE_DEALLOCATE_A(grid%r2ofi)
+    SAFE_DEALLOCATE_A(grid%drdi)
+    SAFE_DEALLOCATE_A(grid%s)
 
     POP_SUB(logrid_end)
   end subroutine logrid_end

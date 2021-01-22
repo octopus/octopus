@@ -104,11 +104,11 @@ module kick_oct_m
     !!                 weight(i) * (\hbar / a_0^l) * r^l(i) * Y_{l(i),m(i)} (\vec{r}) * \delta(t)
     !! \f]
     integer              :: n_multipoles
-    integer, pointer     :: l(:), m(:)
-    FLOAT, pointer       :: weight(:)
+    integer, allocatable :: l(:), m(:)
+    FLOAT,   allocatable :: weight(:)
     integer              :: nqmult(1:MAX_DIM)
     integer              :: nqvec
-    FLOAT, allocatable   :: qvector(:,:)
+    FLOAT,   allocatable :: qvector(:,:)
     FLOAT                :: trans_vec(MAX_DIM,2)
     FLOAT                :: qlength
     integer              :: qkick_mode
@@ -170,9 +170,6 @@ contains
     !%End
     call parse_variable(namespace, 'TDDeltaStrength', M_ZERO, kick%delta_strength, units_inp%length**(-1))
 
-    nullify(kick%l)
-    nullify(kick%m)
-    nullify(kick%weight)
     kick%function_mode = KICK_FUNCTION_DIPOLE
 
     if(abs(kick%delta_strength) <= M_EPSILON) then
@@ -674,9 +671,9 @@ contains
     kick%pol_dir = 0
     kick%wprime = M_ZERO
     if (kick%n_multipoles > 0) then
-      SAFE_DEALLOCATE_P(kick%l)
-      SAFE_DEALLOCATE_P(kick%m)
-      SAFE_DEALLOCATE_P(kick%weight)
+      SAFE_DEALLOCATE_A(kick%l)
+      SAFE_DEALLOCATE_A(kick%m)
+      SAFE_DEALLOCATE_A(kick%weight)
     end if
     kick%n_multipoles = 0
     kick%qkick_mode = QKICKMODE_NONE
@@ -720,8 +717,6 @@ contains
     else
       kick%function_mode = KICK_FUNCTION_DIPOLE
       kick%n_multipoles = 0
-      nullify(kick%l)
-      nullify(kick%m)
       backspace(iunit)
 
       read(iunit, '(15x,3f18.12)') kick%pol(1:3, 1)

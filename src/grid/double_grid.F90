@@ -61,7 +61,7 @@ module double_grid_oct_m
      integer :: interpolation_max
      integer :: nn
      logical :: use_double_grid
-     FLOAT, pointer :: co(:)
+     FLOAT, allocatable :: co(:)
   end type double_grid_t
 
   type(profile_t), save :: double_grid_local_prof, double_grid_nonlocal_prof
@@ -145,9 +145,10 @@ contains
     type(double_grid_t), intent(inout) :: this
  
     PUSH_SUB(double_grid_end)
-    SAFE_DEALLOCATE_P(this%co)
-    POP_SUB(double_grid_end)
 
+    SAFE_DEALLOCATE_A(this%co)
+
+    POP_SUB(double_grid_end)
   end subroutine double_grid_end
   
   FLOAT function double_grid_get_hmax(this, mesh) result(hmax)

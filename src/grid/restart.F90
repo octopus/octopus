@@ -102,7 +102,7 @@ module restart_oct_m
     type(mpi_grp_t)   :: mpi_grp   !< Some operations require an mpi group to be used.
     type(multicomm_t), pointer :: mc
     logical           :: has_mesh  !< If no, mesh info is not written or read, and mesh functions cannot be written or read.
-    integer, pointer  :: map(:)    !< Map between the points of the stored mesh and the mesh used in the current calculations.
+    integer, allocatable :: map(:) !< Map between the points of the stored mesh and the mesh used in the current calculations.
   end type restart_t
 
 
@@ -436,7 +436,6 @@ contains
 
     ! Some initializations
     restart%type = type
-    nullify(restart%map)
     restart%mc => mc
     call mpi_grp_init(restart%mpi_grp, mc%master_comm)
     restart%format = io_function_fill_how("Binary")
@@ -650,7 +649,7 @@ contains
     restart%type = 0
     restart%data_type = 0
     restart%skip = .true.
-    SAFE_DEALLOCATE_P(restart%map)
+    SAFE_DEALLOCATE_A(restart%map)
     restart%has_mesh = .false.
     nullify(restart%mc)
     
@@ -901,7 +900,7 @@ contains
   logical pure function restart_has_map(restart)
     type(restart_t), intent(in) :: restart
 
-    restart_has_map = associated(restart%map)
+    restart_has_map = allocated(restart%map)
 
   end function restart_has_map
 

@@ -95,8 +95,8 @@ module sternheimer_oct_m
      type(linear_solver_t) :: solver
      type(mix_t)           :: mixer
      type(scf_tol_t)       :: scf_tol
-     FLOAT, pointer        :: fxc(:,:,:)    !< linear change of the XC potential (fxc)
-     FLOAT, pointer        :: kxc(:,:,:,:)  !< quadratic change of the XC potential (kxc)
+     FLOAT, allocatable    :: fxc(:,:,:)    !< linear change of the XC potential (fxc)
+     FLOAT, allocatable    :: kxc(:,:,:,:)  !< quadratic change of the XC potential (kxc)
      FLOAT, pointer        :: drhs(:, :, :, :) !< precomputed bare perturbation on RHS
      CMPLX, pointer        :: zrhs(:, :, :, :)
      FLOAT, pointer        :: dinhomog(:, :, :, :, :) !< fixed inhomogeneous term on RHS
@@ -259,8 +259,6 @@ contains
     nullify(this%zrhs)
     nullify(this%dinhomog)
     nullify(this%zinhomog)
-    nullify(this%fxc)
-    nullify(this%kxc)
 
     POP_SUB(sternheimer_nullify)
   end subroutine sternheimer_nullify
@@ -275,7 +273,7 @@ contains
     call scf_tol_end(this%scf_tol)
     call mix_end(this%mixer)
 
-    SAFE_DEALLOCATE_P(this%fxc)
+    SAFE_DEALLOCATE_A(this%fxc)
 
     POP_SUB(sternheimer_end)
   end subroutine sternheimer_end
@@ -338,7 +336,7 @@ contains
     
     PUSH_SUB(sternheimer_unset_kxc)
 
-    SAFE_DEALLOCATE_P(this%kxc)
+    SAFE_DEALLOCATE_A(this%kxc)
 
     POP_SUB(sternheimer_unset_kxc)
   end subroutine sternheimer_unset_kxc

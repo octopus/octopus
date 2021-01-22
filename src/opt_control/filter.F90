@@ -43,9 +43,9 @@ module filter_oct_m
   type filter_t
     private
     integer :: no_filters
-    type(tdf_t), pointer :: f(:) => null()
-    character(len=1024), pointer :: expression(:) => null()
-    integer, pointer :: domain(:) => null()
+    type(tdf_t), allocatable :: f(:)
+    character(len=1024), allocatable :: expression(:)
+    integer, allocatable :: domain(:)
   end type filter_t
 
   integer, parameter, public  ::  &
@@ -68,8 +68,6 @@ contains
     PUSH_SUB(filter_init)
 
     filter%no_filters = 0
-    nullify(filter%domain)
-    nullify(filter%expression)
         
     !%Variable OCTFilter
     !%Type block
@@ -285,10 +283,10 @@ contains
     do i = 1, filter%no_filters
       call tdf_end(filter%f(i))
     end do
-    SAFE_DEALLOCATE_P(filter%f)
+    SAFE_DEALLOCATE_A(filter%f)
     filter%no_filters = 0
-    SAFE_DEALLOCATE_P(filter%expression)
-    SAFE_DEALLOCATE_P(filter%domain)
+    SAFE_DEALLOCATE_A(filter%expression)
+    SAFE_DEALLOCATE_A(filter%domain)
 
     POP_SUB(filter_end)
   end subroutine filter_end

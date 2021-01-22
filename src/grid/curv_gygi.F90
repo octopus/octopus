@@ -50,7 +50,7 @@ module curv_gygi_oct_m
     FLOAT, public :: A             !< local reduction in grid spacing is 1/(1+A)
     FLOAT, public :: alpha         !< range of enhancement of the resolution
     FLOAT, public :: beta          !< distance over which Euclidian coordinates are recovered
-    FLOAT, pointer :: pos(:, :)
+    FLOAT, allocatable :: pos(:, :)
     integer :: npos
   end type curv_gygi_t
 
@@ -136,7 +136,7 @@ contains
     this_out%A=this_in%A
     this_out%alpha=this_in%alpha
     this_out%beta=this_in%beta
-    SAFE_ALLOCATE_SOURCE_P(this_out%pos, this_in%pos)
+    SAFE_ALLOCATE_SOURCE_A(this_out%pos, this_in%pos)
     this_out%npos=this_in%npos
     POP_SUB(curv_gygi_copy)
     return
@@ -148,7 +148,7 @@ contains
 
     PUSH_SUB(curv_gygi_end)
 
-    SAFE_DEALLOCATE_P(cv%pos)
+    SAFE_DEALLOCATE_A(cv%pos)
 
     POP_SUB(curv_gygi_end)
   end subroutine curv_gygi_end

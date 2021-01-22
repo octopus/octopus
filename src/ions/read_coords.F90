@@ -69,7 +69,7 @@ module read_coords_oct_m
     integer :: flags
 
     integer :: n                !< number of atoms in file
-    type(read_coords_atom), pointer :: atom(:)
+    type(read_coords_atom), allocatable :: atom(:)
 
     !> variables for passing info from XSF input to simul_box_init
     integer :: periodic_dim
@@ -88,7 +88,6 @@ contains
     gf%source = READ_COORDS_ERR
     gf%flags     = 0
     gf%n         = 0
-    nullify(gf%atom)
 
     gf%periodic_dim = -1
     gf%lsize(:) = -M_ONE
@@ -103,9 +102,7 @@ contains
 
     PUSH_SUB(read_coords_end)
 
-    if(associated(gf%atom)) then
-      SAFE_DEALLOCATE_P(gf%atom)
-    end if
+    SAFE_DEALLOCATE_A(gf%atom)
     call read_coords_init(gf)
 
     POP_SUB(read_coords_end)

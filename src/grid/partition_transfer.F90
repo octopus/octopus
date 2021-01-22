@@ -40,10 +40,10 @@ module partition_transfer_oct_m
     private
     integer :: comm
 
-    integer, pointer :: rdispls(:)
-    integer, pointer :: sdispls(:)
-    integer, pointer :: rcounts(:)
-    integer, pointer :: scounts(:)
+    integer, allocatable :: rdispls(:)
+    integer, allocatable :: sdispls(:)
+    integer, allocatable :: rcounts(:)
+    integer, allocatable :: scounts(:)
   end type partition_transfer_t
 
   type(profile_t), save :: prof_transfer
@@ -238,10 +238,10 @@ contains
 
     PUSH_SUB(partition_transfer_end)
 
-    SAFE_DEALLOCATE_P(this%rdispls)
-    SAFE_DEALLOCATE_P(this%sdispls)
-    SAFE_DEALLOCATE_P(this%rcounts)
-    SAFE_DEALLOCATE_P(this%scounts)
+    SAFE_DEALLOCATE_A(this%rdispls)
+    SAFE_DEALLOCATE_A(this%sdispls)
+    SAFE_DEALLOCATE_A(this%rcounts)
+    SAFE_DEALLOCATE_A(this%scounts)
 
     POP_SUB(partition_transfer_end)
   end subroutine partition_transfer_end
