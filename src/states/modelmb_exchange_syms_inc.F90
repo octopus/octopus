@@ -53,8 +53,6 @@ subroutine X(modelmb_sym_state)(gr, modelmbparticles, ncombo, young_used, &
 
   symmetries_satisfied = .false.
 
-  call young_nullify (young)
-
   SAFE_ALLOCATE(sym_ok_alltypes(1:modelmbparticles%ntype_of_particle))
 
   !set up combinations of young diagrams (1 for each type)
@@ -177,8 +175,6 @@ subroutine X(modelmb_sym_state_1diag)(gr, &
   R_TYPE :: wfdotp(1,1)
 
   PUSH_SUB(X(modelmb_sym_state_1diag))
-
-  call young_nullify (young)
 
   sym_ok_alltypes = 0
 
