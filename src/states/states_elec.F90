@@ -224,7 +224,6 @@ contains
     st%parallel_in_states = .false.
     nullify(st%node)
     nullify(st%st_kpt_task)
-    nullify(st%ap%schedule)
 
     st%packed = .false.
 
@@ -1450,7 +1449,7 @@ contains
     SAFE_DEALLOCATE_P(st%st_kpt_task)
 
     if(st%parallel_in_states) then
-      SAFE_DEALLOCATE_P(st%ap%schedule)
+      SAFE_DEALLOCATE_A(st%ap%schedule)
     end if
 
     POP_SUB(states_elec_end)

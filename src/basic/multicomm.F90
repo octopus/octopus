@@ -140,7 +140,7 @@ module multicomm_oct_m
     private
     type(mpi_grp_t)  :: grp                    !< Schedule for this group.
     integer          :: rounds                 !< This many comm. rounds.
-    integer, pointer, public :: schedule(:, :) !< This is the schedule.
+    integer, allocatable, public :: schedule(:, :) !< This is the schedule.
   end type multicomm_all_pairs_t
 
 contains
@@ -154,7 +154,7 @@ contains
 
     call mpi_grp_copy(apout%grp, apin%grp)
     apout%rounds = apin%rounds
-    if(associated(apin%schedule)) then
+    if (allocated(apin%schedule)) then
       SAFE_ALLOCATE(apout%schedule(1:size(apin%schedule, 1), 1:size(apin%schedule, 2)))
       apout%schedule = apin%schedule
     end if    
