@@ -42,10 +42,10 @@ module ps_fhi_oct_m
   !> remember that the FHI format is basically the CPI format with a header
   type ps_fhi_t
     ! Components are public by default
-    type(ps_fhi_file_t), pointer, private :: fhi_file !< This just includes the extra header
-    type(ps_cpi_file_t), pointer, private :: cpi_file !< This includes the real pseudopotential
-    type(ps_in_grid_t),  pointer          :: ps_grid  !< the pseudopotential in the grid
-    type(valconf_t),     pointer, private :: conf
+    type(ps_fhi_file_t), allocatable, private :: fhi_file !< This just includes the extra header
+    type(ps_cpi_file_t), allocatable, private :: cpi_file !< This includes the real pseudopotential
+    type(ps_in_grid_t),  allocatable          :: ps_grid  !< the pseudopotential in the grid
+    type(valconf_t),     allocatable, private :: conf
   end type ps_fhi_t
 
 contains
@@ -90,14 +90,14 @@ contains
 
     PUSH_SUB(ps_fhi_end)
 
-    SAFE_DEALLOCATE_P(ps_fhi%fhi_file)
+    SAFE_DEALLOCATE_A(ps_fhi%fhi_file)
 
     call ps_cpi_file_end(ps_fhi%cpi_file)
-    SAFE_DEALLOCATE_P(ps_fhi%cpi_file)
-    SAFE_DEALLOCATE_P(ps_fhi%conf)
+    SAFE_DEALLOCATE_A(ps_fhi%cpi_file)
+    SAFE_DEALLOCATE_A(ps_fhi%conf)
 
     call ps_in_grid_end(ps_fhi%ps_grid)
-    SAFE_DEALLOCATE_P(ps_fhi%ps_grid)
+    SAFE_DEALLOCATE_A(ps_fhi%ps_grid)
 
     POP_SUB(ps_fhi_end)
   end subroutine ps_fhi_end

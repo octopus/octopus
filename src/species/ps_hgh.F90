@@ -60,11 +60,11 @@ module ps_hgh_oct_m
     type(valconf_t)  :: conf
     integer          :: l_max     !< Maximum l for the Kleinman-Bylander component.
 
-    FLOAT, pointer   :: vlocal(:) !< Local potential
-    FLOAT, pointer   :: kb(:,:,:) !< KB projectors
-    FLOAT, pointer   :: kbr(:)    !< KB radii
-    FLOAT, pointer   :: rphi(:,:)
-    FLOAT, pointer, private :: eigen(:)
+    FLOAT, allocatable   :: vlocal(:) !< Local potential
+    FLOAT, allocatable   :: kb(:,:,:) !< KB projectors
+    FLOAT, allocatable   :: kbr(:)    !< KB radii
+    FLOAT, allocatable   :: rphi(:,:)
+    FLOAT, allocatable, private :: eigen(:)
 
     !> Logarithmic grid parameters
     type(logrid_t) :: g
@@ -128,12 +128,12 @@ contains
     PUSH_SUB(hgh_end)
 
     if(psp%l_max >= 0) then
-      SAFE_DEALLOCATE_P(psp%kbr)
-      SAFE_DEALLOCATE_P(psp%kb)
+      SAFE_DEALLOCATE_A(psp%kbr)
+      SAFE_DEALLOCATE_A(psp%kb)
     end if
-    SAFE_DEALLOCATE_P(psp%vlocal)
-    SAFE_DEALLOCATE_P(psp%rphi)
-    SAFE_DEALLOCATE_P(psp%eigen)
+    SAFE_DEALLOCATE_A(psp%vlocal)
+    SAFE_DEALLOCATE_A(psp%rphi)
+    SAFE_DEALLOCATE_A(psp%eigen)
     call logrid_end(psp%g)
 
     POP_SUB(hgh_end)

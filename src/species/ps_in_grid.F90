@@ -44,27 +44,27 @@ module ps_in_grid_oct_m
     ! Components are public by default
     type(logrid_t) :: g                !< log grid where the pseudos are defined
 
-    FLOAT          :: zval             !< valence charge
+    FLOAT              :: zval             !< valence charge
 
-    integer        :: no_l_channels    !< number of l channels to consider
-    FLOAT, pointer :: vps(:, :)        !< the pseudopotential (l=0 .. no_l_channels-1)
-    FLOAT, pointer :: KB(:,:)          !< Kleinman-Bylander projectors
-    FLOAT, pointer :: dkbcos(:)        !< Kleinman-Bylander cosine
-    FLOAT, pointer, private :: dknorm(:)        !< Kleinman-Bylander norm
-    FLOAT, pointer :: kb_radius(:)     !< radius of KB projectors
+    integer            :: no_l_channels    !< number of l channels to consider
+    FLOAT, allocatable :: vps(:, :)        !< the pseudopotential (l=0 .. no_l_channels-1)
+    FLOAT, allocatable :: KB(:,:)          !< Kleinman-Bylander projectors
+    FLOAT, allocatable :: dkbcos(:)        !< Kleinman-Bylander cosine
+    FLOAT, allocatable, private :: dknorm(:)        !< Kleinman-Bylander norm
+    FLOAT, allocatable :: kb_radius(:)     !< radius of KB projectors
 
-    integer        :: so_no_l_channels
-    FLOAT, pointer :: so_vps(:,:)      !< spin-orbit components (l=1 .. so_no_l_channels)
-    FLOAT, pointer, private :: so_KB(:,:)       !< Kleinman-Bylander projectors
-    FLOAT, pointer, private :: so_dkbcos(:)     !< Kleinman-Bylander cosine
-    FLOAT, pointer, private :: so_dknorm(:)     !< Kleinman-Bylander norm
-    FLOAT, pointer, private :: so_kb_radius(:)  !< radius of KB projectors
+    integer            :: so_no_l_channels
+    FLOAT, allocatable :: so_vps(:,:)      !< spin-orbit components (l=1 .. so_no_l_channels)
+    FLOAT, allocatable, private :: so_KB(:,:)       !< Kleinman-Bylander projectors
+    FLOAT, allocatable, private :: so_dkbcos(:)     !< Kleinman-Bylander cosine
+    FLOAT, allocatable, private :: so_dknorm(:)     !< Kleinman-Bylander norm
+    FLOAT, allocatable, private :: so_kb_radius(:)  !< radius of KB projectors
     
-    FLOAT, pointer :: vlocal(:)        !< local part of the pseudopotential
-    FLOAT, pointer :: rphi(:, :,:)     !< pseudo wavefunctions
+    FLOAT, allocatable :: vlocal(:)        !< local part of the pseudopotential
+    FLOAT, allocatable :: rphi(:, :,:)     !< pseudo wavefunctions
 
-    logical        :: core_corrections
-    FLOAT, pointer :: chcore(:)        !< core charge density
+    logical            :: core_corrections
+    FLOAT, allocatable :: chcore(:)        !< core charge density
 
   end type ps_in_grid_t
 
@@ -114,22 +114,22 @@ contains
 
     PUSH_SUB(ps_in_grid_end)
 
-    SAFE_DEALLOCATE_P(ps%vps)
-    SAFE_DEALLOCATE_P(ps%chcore)
-    SAFE_DEALLOCATE_P(ps%vlocal)
+    SAFE_DEALLOCATE_A(ps%vps)
+    SAFE_DEALLOCATE_A(ps%chcore)
+    SAFE_DEALLOCATE_A(ps%vlocal)
 
-    SAFE_DEALLOCATE_P(ps%rphi)
-    SAFE_DEALLOCATE_P(ps%KB)
-    SAFE_DEALLOCATE_P(ps%dkbcos)
-    SAFE_DEALLOCATE_P(ps%dknorm)
-    SAFE_DEALLOCATE_P(ps%kb_radius)
+    SAFE_DEALLOCATE_A(ps%rphi)
+    SAFE_DEALLOCATE_A(ps%KB)
+    SAFE_DEALLOCATE_A(ps%dkbcos)
+    SAFE_DEALLOCATE_A(ps%dknorm)
+    SAFE_DEALLOCATE_A(ps%kb_radius)
 
     if(ps%so_no_l_channels > 0) then
-      SAFE_DEALLOCATE_P(ps%so_vps)
-      SAFE_DEALLOCATE_P(ps%so_KB)
-      SAFE_DEALLOCATE_P(ps%so_dkbcos)
-      SAFE_DEALLOCATE_P(ps%so_dknorm)
-      SAFE_DEALLOCATE_P(ps%so_kb_radius)
+      SAFE_DEALLOCATE_A(ps%so_vps)
+      SAFE_DEALLOCATE_A(ps%so_KB)
+      SAFE_DEALLOCATE_A(ps%so_dkbcos)
+      SAFE_DEALLOCATE_A(ps%so_dknorm)
+      SAFE_DEALLOCATE_A(ps%so_kb_radius)
     end if
 
     call logrid_end(ps%g)
